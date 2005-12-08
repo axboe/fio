@@ -336,7 +336,7 @@ static int str_cnv(char *p, unsigned long long *val)
 	char *str;
 	int len;
 
-	str = strstr(p, "=");
+	str = strchr(p, '=');
 	if (!str)
 		return 1;
 
@@ -384,7 +384,7 @@ static int check_str(char *p, char *name, str_cb_fn *cb, struct thread_data *td)
 	if (!s)
 		return 1;
 
-	s = strstr(s, "=");
+	s = strchr(s, '=');
 	if (!s)
 		return 1;
 
@@ -400,7 +400,7 @@ static int check_strstore(char *p, char *name, char *dest)
 	if (!s)
 		return 1;
 
-	s = strstr(p, "=");
+	s = strchr(p, '=');
 	if (!s)
 		return 1;
 
@@ -470,14 +470,19 @@ static int check_range(char *p, char *name, unsigned long *s, unsigned long *e)
 
 static int check_int(char *p, char *name, unsigned int *val)
 {
-	char str[128];
+	char *str;
 
-	sprintf(str, "%s=%%d", name);
-	if (sscanf(p, str, val) == 1)
-		return 0;
+	str = strstr(p, name);
+	if (!str)
+		return 1;
 
-	sprintf(str, "%s = %%d", name);
-	if (sscanf(p, str, val) == 1)
+	str = strchr(p, '=');
+	if (!str)
+		return 1;
+
+	str++;
+
+	if (sscanf(str, "%u", val) == 1)
 		return 0;
 
 	return 1;
