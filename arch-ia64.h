@@ -1,0 +1,29 @@
+#ifndef ARCH_IA64_H
+#define ARCH_IA64_H
+
+#define ARCH	(arch_ia64)
+
+#ifndef __NR_ioprio_set
+#define __NR_ioprio_set		1274
+#define __NR_ioprio_get		1275
+#endif
+
+#ifndef __NR_fadvise64
+#define __NR_fadvise64		1234
+#endif
+
+#define nop	asm volatile ("hint @pause" ::: "memory");
+
+#define ia64_popcnt(x)							\
+({									\
+	unsigned long ia64_intri_res;					\
+	asm ("popcnt %0=%1" : "=r" (ia64_intri_res) : "r" (x));		\
+	ia64_intri_res;							\
+})
+
+static inline unsigned long ffz(unsigned long bitmask)
+{
+	return ia64_popcnt(bitmask & (~bitmask - 1));
+}
+
+#endif

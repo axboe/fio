@@ -1,0 +1,203 @@
+fio
+---
+
+fio is a tool that will spawn a number of thread doing a particular
+type of io action as specified by the user. fio takes a number of
+global parameters, each inherited by the thread unless otherwise
+parameters given to them overriding that setting is given.
+
+Options
+-------
+
+$ fio
+	-s IO is sequential
+	-b block size in KiB for each io
+	-t <sec> Runtime in seconds
+	-r For random io, sequence must be repeatable
+	-R <on> If one thread fails to meet rate, quit all
+	-o <on> Use direct IO is 1, buffered if 0
+	-l Generate per-job latency logs
+	-w Generate per-job bandwidth logs
+	-f <file> Read <file> for job descriptions
+	-v Print version information and exit
+
+The <jobs> format is as follows:
+
+	directory=x	Use 'x' as the top level directory for storing files
+	rw=x		'x' may be: read, randread, write, or randwrite
+	size=x		Set file size to x bytes (x string can include k/m/g)
+	ioengine=x	'x' may be: aio/libaio/linuxaio for Linux aio,
+			posixaio for POSIX aio, sync for regular read/write io,
+			mmap for mmap'ed io, or sgio for direct SG_IO io. The
+			latter only works on Linux on SCSI (or SCSI-like
+			devices, such as usb-storage or sata/libata driven)
+			devices.
+	iodepth=x	For async io, allow 'x' ios in flight
+	overwrite=x	If 'x', layout a write file first.
+	prio=x		Run io at prio X, 0-7 is the kernel allowed range
+	prioclass=x	Run io at prio class X
+	bs=x		Use 'x' for thread blocksize. May include k/m postfix.
+	bsrange=x-y	Mix thread block sizes randomly between x and y. May
+			also include k/m postfix.
+	direct=x	1 for direct IO, 0 for buffered IO
+	thinktime=x	"Think" x usec after each io
+	rate=x		Throttle rate to x KiB/sec
+	ratemin=x	Quit if rate of x KiB/sec can't be met
+	ratecycle=x	ratemin averaged over x msecs
+	cpumask=x	Only allow job to run on CPUs defined by mask.
+	fsync=x		If writing, fsync after every x blocks have been written
+	startdelay=x	Start this thread x seconds after startup
+	timeout=x	Terminate x seconds after startup
+	offset=x	Start io at offset x (x string can include k/m/g)
+	invalidate=x	Invalidate page cache for file prior to doing io
+	sync=x		Use sync writes if x and writing
+	mem=x		If x == malloc, use malloc for buffers. If x == shm,
+			use shm for buffers. If x == mmap, use anon mmap.
+	exitall		When one thread quits, terminate the others
+	bwavgtime=x	Average bandwidth stats over an x msec window.
+	create_serialize=x	If 'x', serialize file creation.
+	create_fsync=x	If 'x', run fsync() after file creation.
+	loops=x		Run the job 'x' number of times.
+	verify=x	If 'x' == md5, use md5 for verifies. If 'x' == crc32,
+			use crc32 for verifies. md5 is 'safer', but crc32 is
+			a lot faster. Only makes sense for writing to a file.
+	stonewall	Wait for preceeding jobs to end before running.
+	numjobs=x	Create 'x' similar entries for this job
+	thread		Use pthreads instead of forked jobs
+
+
+Examples using a job file
+-------------------------
+
+A sample job file doing the same as above would look like this:
+
+[read_file]
+rw=0
+bs=4096
+
+[write_file]
+rw=1
+bs=16384
+
+And fio would be invoked as:
+
+$ fio -o1 -s -f file_with_above
+
+The second example would look like this:
+
+[rf1]
+rw=0
+prio=6
+
+[rf2]
+rw=0
+prio=3
+
+[rf3]
+rw=0
+prio=0
+direct=1
+
+And fio would be invoked as:
+
+$ fio -o0 -s -b4096 -f file_with_above
+
+'global' is a reserved keyword. When used as the filename, it sets the
+default options for the threads following that section. It is possible
+to have more than one global section in the file, as it only affects
+subsequent jobs.
+
+Also see the examples/ dir for sample job files.
+
+
+Interpreting the output
+-----------------------
+
+fio spits out a lot of output. While running, fio will display the
+status of the jobs created. An example of that would be:
+
+Threads now running: 2 : [ww] [5.73% done]
+
+The characters inside the square brackets denote the current status of
+each thread. The possible values (in typical life cycle order) are:
+
+Idle	Run
+----    ---
+P		Thread setup, but not started.
+C		Thread created and running, but not doing anything yet
+	R	Running, doing sequential reads.
+	r	Running, doing random reads.
+	W	Running, doing sequential writes.
+	w	Running, doing random writes.
+V		Running, doing verification of written data.
+E		Thread exited, not reaped by main thread yet.
+_		Thread reaped.
+
+The other values are fairly self explanatory - number of thread currently
+running and doing io, and the estimated completion percentage.
+
+When fio is done (or interrupted by ctrl-c), it will show the data for
+each thread, group of threads, and disks in that order. For each data
+direction, the output looks like:
+
+Client1 (g=0): err= 0:
+  write: io=    32MiB, bw=   666KiB/s, runt= 50320msec
+    slat (msec): min=    0, max=  136, avg= 0.03, dev= 1.92
+    clat (msec): min=    0, max=  631, avg=48.50, dev=86.82
+    bw (KiB/s) : min=    0, max= 1196, per=51.00%, avg=664.02, dev=681.68
+  cpu        : usr=1.49%, sys=0.25%, ctx=7969
+
+The client number is printed, along with the group id and error of that
+thread. Below is the io statistics, here for writes. In the order listed,
+they denote:
+
+io=		Number of megabytes io performed
+bw=		Average bandwidth rate
+runt=		The runtime of that thread
+	slat=	Submission latency (avg being the average, dev being the
+		standard deviation). This is the time it took to submit
+		the io. For sync io, the slat is really the completion
+		latency, since queue/complete is one operation there.
+	clat=	Completion latency. Same names as slat, this denotes the
+		time from submission to completion of the io pieces. For
+		sync io, clat will usually be equal (or very close) to 0,
+		as the time from submit to complete is basically just
+		CPU time (io has already been done, see slat explanation).
+	bw=	Bandwidth. Same names as the xlat stats, but also includes
+		an approximate percentage of total aggregate bandwidth
+		this thread received in this group. This last value is
+		only really useful if the threads in this group are on the
+		same disk, since they are then competing for disk access.
+cpu=		CPU usage. User and system time, along with the number
+		of context switches this thread went through.
+
+After each client has been listed, the group statistics are printed. They
+will look like this:
+
+Run status group 0 (all jobs):
+   READ: io=64MiB, aggrb=22178, minb=11355, maxb=11814, mint=2840msec, maxt=2955msec
+  WRITE: io=64MiB, aggrb=1302, minb=666, maxb=669, mint=50093msec, maxt=50320msec
+
+For each data direction, it prints:
+
+io=		Number of megabytes io performed.
+aggrb=		Aggregate bandwidth of threads in this group.
+minb=		The minimum average bandwidth a thread saw.
+maxb=		The maximum average bandwidth a thread saw.
+mint=		The minimum runtime of a thread.
+maxt=		The maximum runtime of a thread.
+
+And finally, the disk statistics are printed. They will look like this:
+
+Disk stats (read/write):
+  sda: ios=16398/16511, merge=30/162, ticks=6853/819634, in_queue=826487, util=100.00%
+
+Each value is printed for both reads and writes, with reads first. The
+numbers denote:
+
+ios=		Number of ios performed by all groups.
+merge=		Number of merges io the io scheduler.
+ticks=		Number of ticks we kept the disk busy.
+io_queue=	Total time spent in the disk queue.
+util=		The disk utilization. A value of 100% means we kept the disk
+		busy constantly, 50% would be a disk idling half of the time.
