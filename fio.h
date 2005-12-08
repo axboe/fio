@@ -148,8 +148,6 @@ struct thread_data {
 
 	int shm_id;
 
-	unsigned long long cur_off;
-
 	void *io_data;
 	char io_engine_name[16];
 	int (*io_prep)(struct thread_data *, struct io_u *);

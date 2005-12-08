@@ -897,8 +897,6 @@ static void do_verify(struct thread_data *td)
 			break;
 		}
 
-		td->cur_off = v_io_u->offset + v_io_u->buflen;
-
 		/*
 		 * if we can't submit more io, we need to verify now
 		 */
@@ -1609,7 +1607,6 @@ static void clear_io_state(struct thread_data *td)
 	if (td->io_engine == FIO_SYNCIO)
 		lseek(td->fd, SEEK_SET, 0);
 
-	td->cur_off = 0;
 	td->last_bytes = 0;
 	td->stat_io_bytes[0] = td->stat_io_bytes[1] = 0;
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;

@@ -352,11 +352,9 @@ static struct io_u *fio_syncio_event(struct thread_data *td, int event)
 
 static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 {
-	if (td->cur_off != io_u->offset) {
-		if (lseek(td->fd, io_u->offset, SEEK_SET) == -1) {
-			td_verror(td, errno);
-			return 1;
-		}
+	if (lseek(td->fd, io_u->offset, SEEK_SET) == -1) {
+		td_verror(td, errno);
+		return 1;
 	}
 
 	return 0;
