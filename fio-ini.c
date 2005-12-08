@@ -35,7 +35,7 @@
 #define DEF_USE_THREAD	(0)
 #define DEF_FILE_SIZE	(1024 * 1024 * 1024UL)
 
-static char fio_version_string[] = "fio 1.0";
+static char fio_version_string[] = "fio 1.1";
 
 static int repeatable = DEF_RAND_REPEAT;
 static char *ini_file;
