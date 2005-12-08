@@ -6,6 +6,20 @@ type of io action as specified by the user. fio takes a number of
 global parameters, each inherited by the thread unless otherwise
 parameters given to them overriding that setting is given.
 
+
+Source
+------
+
+fio resides in a git repo, the canonical place is:
+
+git://brick.kernel.dk/data/git/fio.git
+
+Snapshots are frequently generated as well and they include the git
+meta data as well. You can download them here:
+
+http://brick.kernel.dk/snaps/
+
+
 Options
 -------
 
