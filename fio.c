@@ -51,6 +51,7 @@ static char run_str[MAX_JOBS + 1];
 int shm_id = 0;
 static LIST_HEAD(disk_list);
 static struct itimerval itimer;
+static struct timeval genesis;
 
 static void update_io_ticks(void);
 static void disk_util_timer_arm(void);
@@ -156,6 +157,11 @@ static unsigned long mtime_since_now(struct timeval *s)
 static inline unsigned long msec_now(struct timeval *s)
 {
 	return s->tv_sec * 1000 + s->tv_usec / 1000;
+}
+
+static unsigned long time_since_now(struct timeval *s)
+{
+	return mtime_since_now(s) / 1000;
 }
 
 static int random_map_free(struct thread_data *td, unsigned long long block)
@@ -1866,10 +1872,39 @@ static void check_str_update(struct thread_data *td)
 	td->old_runstate = td->runstate;
 }
 
+static void eta_to_str(char *str, int eta_sec)
+{
+	unsigned int d, h, m, s;
+	static int always_d, always_h;
+
+	d = h = m = s = 0;
+
+	s = eta_sec % 60;
+	eta_sec /= 60;
+	m = eta_sec % 60;
+	eta_sec /= 60;
+	h = eta_sec % 24;
+	eta_sec /= 24;
+	d = eta_sec;
+
+	if (d || always_d) {
+		always_d = 1;
+		str += sprintf(str, "%02dd:", d);
+	}
+	if (h || always_h) {
+		always_h = 1;
+		str += sprintf(str, "%02dh:", h);
+	}
+
+	str += sprintf(str, "%02dm:", m);
+	str += sprintf(str, "%02ds", s);
+}
+
 static void print_thread_status(void)
 {
 	unsigned long long bytes_done, bytes_total;
-	int i, nr_running, t_rate, m_rate;
+	int i, nr_running, t_rate, m_rate, eta_sec;
+	char eta_str[32];
 	double perc;
 
 	bytes_done = bytes_total = 0;
@@ -1893,16 +1928,31 @@ static void print_thread_status(void)
 	}
 
 	perc = 0;
+	eta_sec = 0;
 	if (bytes_total && bytes_done) {
-		perc = (double) 100 * bytes_done / (double) bytes_total;
-		if (perc > 100.0)
-			perc = 100.0;
+		unsigned long runtime;
+
+		perc = (double) bytes_done / (double) bytes_total;
+		if (perc > 1.0)
+			perc = 1.0;
+
+		runtime = time_since_now(&genesis);
+		if (runtime >= 5) {
+			memset(eta_str, 0, sizeof(eta_str));
+			eta_sec = (runtime * (1.0 / perc)) - runtime;
+			eta_to_str(eta_str, eta_sec);
+		}
+
+		perc *= 100.0;
 	}
 
-	printf("Threads now running: %d", nr_running);
+	printf("Threads now running (%d)", nr_running);
 	if (m_rate || t_rate)
 		printf(", commitrate %d/%dKiB/sec", t_rate, m_rate);
-	printf(" : [%s] [%3.2f%% done]\r", run_str, perc);
+	printf(": [%s] [%3.2f%% done]", run_str, perc);
+	if (eta_sec)
+		printf(" [eta %s]", eta_str);
+	printf("\r");
 	fflush(stdout);
 }
 
@@ -1937,7 +1987,6 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 
 static void run_threads(void)
 {
-	struct timeval genesis;
 	struct thread_data *td;
 	unsigned long spent;
 	int i, todo, nr_running, m_rate, t_rate, nr_started;
