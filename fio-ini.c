@@ -414,35 +414,58 @@ static int check_strstore(char *p, char *name, char *dest)
 	return 0;
 }
 
-static int check_range(char *p, char *name, unsigned long *s, unsigned long *e)
+static int __check_range(char *str, unsigned long *val)
 {
-	char str[128];
-	char s1, s2;
+	char suffix;
 
-	sprintf(str, "%s=%%lu%%c-%%lu%%c", name);
-	if (sscanf(p, str, s, &s1, e, &s2) == 4) {
-		*s *= get_mult(s1);
-		*e *= get_mult(s2);
+	if (sscanf(str, "%lu%c", val, &suffix) == 2) {
+		*val *= get_mult(suffix);
 		return 0;
 	}
 
-	sprintf(str, "%s = %%lu%%c-%%lu%%c", name);
-	if (sscanf(p, str, s, &s1, e, &s2) == 4) {
-		*s *= get_mult(s1);
-		*e *= get_mult(s2);
-		return 0;
-	}
-
-	sprintf(str, "%s=%%lu-%%lu", name);
-	if (sscanf(p, str, s, e) == 2)
-		return 0;
-
-	sprintf(str, "%s = %%lu-%%lu", name);
-	if (sscanf(p, str, s, e) == 2)
+	if (sscanf(str, "%lu", val) == 1)
 		return 0;
 
 	return 1;
+}
 
+static int check_range(char *p, char *name, unsigned long *s, unsigned long *e)
+{
+	char option[128];
+	char *str, *p1, *p2;
+
+	strcpy(option, p);
+	p = option;
+
+	str = strstr(p, name);
+	if (!str)
+		return 1;
+
+	p += strlen(name);
+
+	str = strchr(p, '=');
+	if (!str)
+		return 1;
+
+	/*
+	 * 'p' now holds whatever is after the '=' sign
+	 */
+	p1 = str + 1;
+
+	/*
+	 * terminate p1 at the '-' sign
+	 */
+	p = strchr(p1, '-');
+	if (!p)
+		return 1;
+
+	p2 = p + 1;
+	*p = '\0';
+
+	if (!__check_range(p1, s) && !__check_range(p2, e))
+		return 0;
+
+	return 1;
 }
 
 static int check_int(char *p, char *name, unsigned int *val)
