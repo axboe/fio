@@ -12,28 +12,30 @@
 
 #include "fio.h"
 
-#define DEF_BS		(4096)
-#define DEF_TIMEOUT	(0)
-#define DEF_RATE_CYCLE	(1000)
-#define DEF_ODIRECT	(1)
-#define DEF_IO_ENGINE	(FIO_SYNCIO)
+#define DEF_BS			(4096)
+#define DEF_TIMEOUT		(0)
+#define DEF_RATE_CYCLE		(1000)
+#define DEF_ODIRECT		(1)
+#define DEF_IO_ENGINE		(FIO_SYNCIO)
 #define DEF_IO_ENGINE_NAME	"sync"
-#define DEF_SEQUENTIAL	(1)
-#define DEF_RAND_REPEAT	(1)
-#define DEF_OVERWRITE	(1)
-#define DEF_CREATE	(1)
-#define DEF_INVALIDATE	(1)
-#define DEF_SYNCIO	(0)
-#define DEF_RANDSEED	(0xb1899bedUL)
-#define DEF_BWAVGTIME	(500)
-#define DEF_CREATE_SER	(1)
+#define DEF_SEQUENTIAL		(1)
+#define DEF_RAND_REPEAT		(1)
+#define DEF_OVERWRITE		(1)
+#define DEF_CREATE		(1)
+#define DEF_INVALIDATE		(1)
+#define DEF_SYNCIO		(0)
+#define DEF_RANDSEED		(0xb1899bedUL)
+#define DEF_BWAVGTIME		(500)
+#define DEF_CREATE_SER		(1)
 #define DEF_CREATE_FSYNC	(1)
-#define DEF_LOOPS	(1)
-#define DEF_VERIFY	(0)
-#define DEF_STONEWALL	(0)
-#define DEF_NUMJOBS	(1)
-#define DEF_USE_THREAD	(0)
-#define DEF_FILE_SIZE	(1024 * 1024 * 1024UL)
+#define DEF_LOOPS		(1)
+#define DEF_VERIFY		(0)
+#define DEF_STONEWALL		(0)
+#define DEF_NUMJOBS		(1)
+#define DEF_USE_THREAD		(0)
+#define DEF_FILE_SIZE		(1024 * 1024 * 1024UL)
+#define DEF_ZONE_SIZE		(0)
+#define DEF_ZONE_SKIP		(0)
 
 static char fio_version_string[] = "fio 1.1";
 
@@ -130,6 +132,8 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 	td->invalidate_cache = parent->invalidate_cache;
 	td->file_size = parent->file_size;
 	td->file_offset = parent->file_offset;
+	td->zone_size = parent->zone_size;
+	td->zone_skip = parent->zone_skip;
 	td->rate = parent->rate;
 	td->ratemin = parent->ratemin;
 	td->ratecycle = parent->ratecycle;
@@ -192,6 +196,12 @@ static int add_job(struct thread_data *td, const char *jobname, int prioclass,
 		if (!td->iodepth)
 			td->iodepth = 1;
 	}
+
+	/*
+	 * only really works for sequential io for now
+	 */
+	if (td->zone_size && !td->sequential)
+		td->zone_size = 0;
 
 	td->filetype = FIO_TYPE_FILE;
 	if (!stat(jobname, &sb) && S_ISBLK(sb.st_mode))
@@ -353,7 +363,7 @@ static int str_cnv(char *p, unsigned long long *val)
 
 static int check_strcnv(char *p, char *name, unsigned long long *val)
 {
-	if (!strstr(p, name))
+	if (strncmp(p, name, strlen(name) - 1))
 		return 1;
 
 	return str_cnv(p, val);
@@ -752,6 +762,14 @@ int parse_jobs_ini(char *file)
 				continue;
 			}
 			if (!check_strcnv(p, "offset", &td->file_offset)) {
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_strcnv(p, "zonesize", &td->zone_size)) {
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_strcnv(p, "zoneskip", &td->zone_skip)) {
 				fgetpos(f, &off);
 				continue;
 			}

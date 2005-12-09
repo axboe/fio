@@ -134,6 +134,8 @@ struct thread_data {
 	unsigned int loops;
 	unsigned long long file_size;
 	unsigned long long file_offset;
+	unsigned long long zone_size;
+	unsigned long long zone_skip;
 	unsigned int sync_io;
 	unsigned int mem_type;
 	unsigned int verify;
@@ -176,8 +178,9 @@ struct thread_data {
 
 	unsigned long io_blocks[2];
 	unsigned long io_bytes[2];
+	unsigned long zone_bytes;
 	unsigned long this_io_bytes[2];
-	unsigned long last_bytes;
+	unsigned long long last_pos;
 	sem_t mutex;
 
 	struct drand48_data random_state;

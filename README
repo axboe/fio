@@ -78,6 +78,12 @@ The <jobs> format is as follows:
 	stonewall	Wait for preceeding jobs to end before running.
 	numjobs=x	Create 'x' similar entries for this job
 	thread		Use pthreads instead of forked jobs
+	zonesize=x
+	zoneskip=y	Zone options must be paired. If given, the job
+			will skip y bytes for every x read/written. This
+			can be used to gauge hard drive speed over the entire
+			platter, without reading everything. Both x/y can
+			include k/m/g suffix.
 
 
 Examples using a job file

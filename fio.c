@@ -216,55 +216,6 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 		io_u->buflen = blocks * td->min_bs;
 }
 
-static int get_next_offset(struct thread_data *td, unsigned long long *offset)
-{
-	unsigned long long b, rb;
-	long r;
-
-	if (!td->sequential) {
-		unsigned long max_blocks = td->io_size / td->min_bs;
-		int loops = 50;
-
-		do {
-			lrand48_r(&td->random_state, &r);
-			b = ((max_blocks - 1) * r / (RAND_MAX+1.0));
-			rb = b + (td->file_offset / td->min_bs);
-			loops--;
-		} while (!random_map_free(td, rb) && loops);
-
-		if (!loops) {
-			if (get_next_free_block(td, &b))
-				return 1;
-		}
-	} else
-		b = td->last_bytes / td->min_bs;
-
-	*offset = (b * td->min_bs) + td->file_offset;
-	if (*offset > td->file_size)
-		return 1;
-
-	return 0;
-}
-
-static unsigned int get_next_buflen(struct thread_data *td)
-{
-	unsigned int buflen;
-	long r;
-
-	if (td->min_bs == td->max_bs)
-		buflen = td->min_bs;
-	else {
-		lrand48_r(&td->bsrange_state, &r);
-		buflen = (1 + (double) (td->max_bs - 1) * r / (RAND_MAX + 1.0));
-		buflen = (buflen + td->min_bs - 1) & ~(td->min_bs - 1);
-	}
-
-	if (buflen > td->io_size - td->this_io_bytes[td->ddir])
-		buflen = td->io_size - td->this_io_bytes[td->ddir];
-
-	return buflen;
-}
-
 static inline void add_stat_sample(struct io_stat *is, unsigned long val)
 {
 	if (val > is->max_val)
@@ -325,6 +276,55 @@ static void add_bw_sample(struct thread_data *td, int ddir)
 
 	gettimeofday(&td->stat_sample_time[ddir], NULL);
 	td->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
+}
+
+static int get_next_offset(struct thread_data *td, unsigned long long *offset)
+{
+	unsigned long long b, rb;
+	long r;
+
+	if (!td->sequential) {
+		unsigned long max_blocks = td->io_size / td->min_bs;
+		int loops = 50;
+
+		do {
+			lrand48_r(&td->random_state, &r);
+			b = ((max_blocks - 1) * r / (RAND_MAX+1.0));
+			rb = b + (td->file_offset / td->min_bs);
+			loops--;
+		} while (!random_map_free(td, rb) && loops);
+
+		if (!loops) {
+			if (get_next_free_block(td, &b))
+				return 1;
+		}
+	} else
+		b = td->last_pos / td->min_bs;
+
+	*offset = (b * td->min_bs) + td->file_offset;
+	if (*offset > td->file_size)
+		return 1;
+
+	return 0;
+}
+
+static unsigned int get_next_buflen(struct thread_data *td)
+{
+	unsigned int buflen;
+	long r;
+
+	if (td->min_bs == td->max_bs)
+		buflen = td->min_bs;
+	else {
+		lrand48_r(&td->bsrange_state, &r);
+		buflen = (1 + (double) (td->max_bs - 1) * r / (RAND_MAX + 1.0));
+		buflen = (buflen + td->min_bs - 1) & ~(td->min_bs - 1);
+	}
+
+	if (buflen > td->io_size - td->this_io_bytes[td->ddir])
+		buflen = td->io_size - td->this_io_bytes[td->ddir];
+
+	return buflen;
 }
 
 /*
@@ -566,6 +566,19 @@ static void populate_io_u(struct thread_data *td, struct io_u *io_u)
 	memcpy(io_u->buf, &hdr, sizeof(hdr));
 }
 
+static int td_io_prep(struct thread_data *td, struct io_u *io_u, int read)
+{
+	if (read)
+		io_u->ddir = DDIR_READ;
+	else
+		io_u->ddir = DDIR_WRITE;
+
+	if (td->io_prep && td->io_prep(td, io_u))
+		return 1;
+
+	return 0;
+}
+
 static void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	list_del(&io_u->list);
@@ -591,19 +604,6 @@ static struct io_u *__get_io_u(struct thread_data *td)
 	return io_u;
 }
 
-static int td_io_prep(struct thread_data *td, struct io_u *io_u, int read)
-{
-	if (read)
-		io_u->ddir = DDIR_READ;
-	else
-		io_u->ddir = DDIR_WRITE;
-
-	if (td->io_prep && td->io_prep(td, io_u))
-		return 1;
-
-	return 0;
-}
-
 static struct io_u *get_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
@@ -611,6 +611,11 @@ static struct io_u *get_io_u(struct thread_data *td)
 	io_u = __get_io_u(td);
 	if (!io_u)
 		return NULL;
+
+	if (td->zone_bytes >= td->zone_size) {
+		td->zone_bytes = 0;
+		td->last_pos += td->zone_skip;
+	}
 
 	if (get_next_offset(td, &io_u->offset)) {
 		put_io_u(td, io_u);
@@ -634,7 +639,7 @@ static struct io_u *get_io_u(struct thread_data *td)
 	if (!td->sequential)
 		mark_random_map(td, io_u);
 
-	td->last_bytes += io_u->buflen;
+	td->last_pos += io_u->buflen;
 
 	if (td->verify != VERIFY_NONE)
 		populate_io_u(td, io_u);
@@ -751,11 +756,13 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	gettimeofday(&e, NULL);
 
 	if (!io_u->error) {
+		unsigned int bytes = io_u->buflen - io_u->resid;
 		int idx = io_u->ddir;
 
 		td->io_blocks[idx]++;
-		td->io_bytes[idx] += (io_u->buflen - io_u->resid);
-		td->this_io_bytes[idx] += (io_u->buflen - io_u->resid);
+		td->io_bytes[idx] += bytes;
+		td->zone_bytes += bytes;
+		td->this_io_bytes[idx] += bytes;
 
 		msec = mtime_since(&io_u->issue_time, &e);
 
@@ -765,7 +772,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		if (td_write(td) && io_u->ddir == DDIR_WRITE)
 			log_io_piece(td, io_u);
 
-		icd->bytes_done[idx] += (io_u->buflen - io_u->resid);
+		icd->bytes_done[idx] += bytes;
 	} else
 		icd->error = io_u->error;
 }
@@ -1246,6 +1253,9 @@ static int get_file_size(struct thread_data *td)
 		return 1;
 	}
 
+	if (!td->zone_size)
+		td->zone_size = td->io_size;
+
 	td->total_io_size = td->io_size * td->loops;
 	return 0;
 }
@@ -1613,9 +1623,10 @@ static void clear_io_state(struct thread_data *td)
 	if (td->io_engine == FIO_SYNCIO)
 		lseek(td->fd, SEEK_SET, 0);
 
-	td->last_bytes = 0;
+	td->last_pos = 0;
 	td->stat_io_bytes[0] = td->stat_io_bytes[1] = 0;
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
+	td->zone_bytes = 0;
 
 	if (td->file_map)
 		memset(td->file_map, 0, td->num_maps * sizeof(long));
@@ -1922,6 +1933,9 @@ static void print_thread_status(void)
 		if (td->verify)
 			bytes_total += td->total_io_size;
 
+		if (td->zone_size)
+			bytes_total /= (td->zone_skip / td->zone_size);
+	
 		bytes_done += td->io_bytes[DDIR_READ] +td->io_bytes[DDIR_WRITE];
 
 		check_str_update(td);
