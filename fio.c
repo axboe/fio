@@ -1933,7 +1933,7 @@ static void print_thread_status(void)
 		if (td->verify)
 			bytes_total += td->total_io_size;
 
-		if (td->zone_size)
+		if (td->zone_size && td->zone_skip)
 			bytes_total /= (td->zone_skip / td->zone_size);
 	
 		bytes_done += td->io_bytes[DDIR_READ] +td->io_bytes[DDIR_WRITE];

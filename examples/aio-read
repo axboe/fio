@@ -3,6 +3,7 @@
 ioengine=libaio
 rw=randread
 bs=128k
+size=512m
 
 [/data1/file1]
 iodepth=4
