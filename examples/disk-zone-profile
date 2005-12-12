@@ -1,0 +1,13 @@
+; Read disk in zones of 128m/2g, generating a plot of that afterwards
+; should give a nice picture of the zoning of this drive
+
+[global]
+bs=64k
+direct=1
+rw=read
+ioengine=libaio
+iodepth=2
+zonesize=128m
+zoneskip=2g
+
+[/dev/sdb]
