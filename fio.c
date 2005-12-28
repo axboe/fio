@@ -1211,7 +1211,7 @@ static int file_size(struct thread_data *td)
 
 static int bdev_size(struct thread_data *td)
 {
-	size_t bytes;
+	unsigned long long bytes;
 	int r;
 
 	r = blockdev_size(td->fd, &bytes);
@@ -1797,7 +1797,7 @@ static void show_ddir_status(struct thread_data *td, struct group_run_stats *rs,
 		return;
 
 	bw = td->io_bytes[ddir] / td->runtime[ddir];
-	printf("  %s: io=%6luMiB, bw=%6luKiB/s, runt=%6lumsec\n", ddir_str[ddir], td->io_bytes[ddir] >> 20, bw, td->runtime[ddir]);
+	printf("  %s: io=%6lluMiB, bw=%6luKiB/s, runt=%6lumsec\n", ddir_str[ddir], td->io_bytes[ddir] >> 20, bw, td->runtime[ddir]);
 
 	if (calc_lat(&td->slat_stat[ddir], &min, &max, &mean, &dev))
 		printf("    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, dev=%5.02f\n", min, max, mean, dev);
@@ -2124,9 +2124,9 @@ static void show_group_stats(struct group_run_stats *rs, int id)
 	printf("\nRun status group %d (all jobs):\n", id);
 
 	if (rs->max_run[DDIR_READ])
-		printf("   READ: io=%luMiB, aggrb=%lu, minb=%lu, maxb=%lu, mint=%lumsec, maxt=%lumsec\n", rs->io_mb[0], rs->agg[0], rs->min_bw[0], rs->max_bw[0], rs->min_run[0], rs->max_run[0]);
+		printf("   READ: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_mb[0], rs->agg[0], rs->min_bw[0], rs->max_bw[0], rs->min_run[0], rs->max_run[0]);
 	if (rs->max_run[DDIR_WRITE])
-		printf("  WRITE: io=%luMiB, aggrb=%lu, minb=%lu, maxb=%lu, mint=%lumsec, maxt=%lumsec\n", rs->io_mb[1], rs->agg[1], rs->min_bw[1], rs->max_bw[1], rs->min_run[1], rs->max_run[1]);
+		printf("  WRITE: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_mb[1], rs->agg[1], rs->min_bw[1], rs->max_bw[1], rs->min_run[1], rs->max_run[1]);
 }
 
 static void show_disk_util(void)

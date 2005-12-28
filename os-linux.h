@@ -42,7 +42,7 @@ enum {
 #define BLKGETSIZE64	_IOR(0x12,114,size_t)
 #endif
 
-static inline int blockdev_size(int fd, size_t *bytes)
+static inline int blockdev_size(int fd, unsigned long long *bytes)
 {
 	if (!ioctl(fd, BLKGETSIZE64, bytes))
 		return 0;

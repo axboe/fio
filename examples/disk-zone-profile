@@ -7,7 +7,7 @@ direct=1
 rw=read
 ioengine=libaio
 iodepth=2
-zonesize=128m
+zonesize=256m
 zoneskip=2g
 
 [/dev/sdb]

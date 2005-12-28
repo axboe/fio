@@ -15,7 +15,7 @@ typedef unsigned long os_cpu_mask_t;
 /*
  * FIXME
  */
-static inline int blockdev_size(int fd, size_t *bytes)
+static inline int blockdev_size(int fd, unsigned long long *bytes)
 {
 	return 1;
 }

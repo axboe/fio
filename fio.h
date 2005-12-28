@@ -90,10 +90,10 @@ struct verify_header {
 };
 
 struct group_run_stats {
-	unsigned long max_run[2], min_run[2];
-	unsigned long max_bw[2], min_bw[2];
-	unsigned long io_mb[2];
-	unsigned long agg[2];
+	unsigned long long max_run[2], min_run[2];
+	unsigned long long max_bw[2], min_bw[2];
+	unsigned long long io_mb[2];
+	unsigned long long agg[2];
 };
 
 struct thread_data {
@@ -176,10 +176,10 @@ struct thread_data {
 	unsigned long long io_size;
 	unsigned long long total_io_size;
 
-	unsigned long io_blocks[2];
-	unsigned long io_bytes[2];
-	unsigned long zone_bytes;
-	unsigned long this_io_bytes[2];
+	unsigned long long io_blocks[2];
+	unsigned long long io_bytes[2];
+	unsigned long long zone_bytes;
+	unsigned long long this_io_bytes[2];
 	unsigned long long last_pos;
 	sem_t mutex;
 
@@ -194,7 +194,7 @@ struct thread_data {
 	struct io_stat slat_stat[2];		/* submission latency */
 	struct io_stat bw_stat[2];		/* bandwidth stats */
 
-	unsigned long stat_io_bytes[2];
+	unsigned long long stat_io_bytes[2];
 	struct timeval stat_sample_time[2];
 
 	struct io_log *slat_log;
