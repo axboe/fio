@@ -302,7 +302,7 @@ static int get_next_offset(struct thread_data *td, unsigned long long *offset)
 		b = td->last_pos / td->min_bs;
 
 	*offset = (b * td->min_bs) + td->file_offset;
-	if (*offset > td->file_size)
+	if (*offset > td->real_file_size)
 		return 1;
 
 	return 0;
@@ -628,8 +628,8 @@ static struct io_u *get_io_u(struct thread_data *td)
 		return NULL;
 	}
 
-	if (io_u->buflen + io_u->offset > td->file_size)
-		io_u->buflen = td->file_size - io_u->offset;
+	if (io_u->buflen + io_u->offset > td->real_file_size)
+		io_u->buflen = td->real_file_size - io_u->offset;
 
 	if (!io_u->buflen) {
 		put_io_u(td, io_u);
@@ -1203,8 +1203,10 @@ static int file_size(struct thread_data *td)
 		return 1;
 	}
 
-	if (!td->file_size)
-		td->file_size = st.st_size;
+	td->real_file_size = st.st_size;
+
+	if (!td->file_size || td->file_size > td->real_file_size)
+		td->file_size = td->real_file_size;
 
 	return 0;
 }
@@ -1220,11 +1222,13 @@ static int bdev_size(struct thread_data *td)
 		return 1;
 	}
 
+	td->real_file_size = bytes;
+
 	/*
 	 * no extend possibilities, so limit size to device size if too large
 	 */
-	if (!td->file_size || td->file_size > bytes)
-		td->file_size = bytes;
+	if (!td->file_size || td->file_size > td->real_file_size)
+		td->file_size = td->real_file_size;
 
 	return 0;
 }
@@ -1241,12 +1245,12 @@ static int get_file_size(struct thread_data *td)
 	if (ret)
 		return ret;
 
-	if (td->file_offset > td->file_size) {
-		fprintf(stderr, "Client%d: offset larger than length (%Lu > %Lu)\n", td->thread_number, td->file_offset, td->file_size);
+	if (td->file_offset + td->file_size > td->real_file_size) {
+		fprintf(stderr, "Client%d: offset extends end (%Lu > %Lu)\n", td->thread_number, td->file_offset + td->file_size, td->real_file_size);
 		return 1;
 	}
 
-	td->io_size = td->file_size - td->file_offset;
+	td->io_size = td->file_size;
 	if (td->io_size == 0) {
 		fprintf(stderr, "Client%d: no io blocks\n", td->thread_number);
 		td_verror(td, EINVAL);

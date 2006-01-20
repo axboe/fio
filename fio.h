@@ -133,6 +133,7 @@ struct thread_data {
 	unsigned int create_fsync;
 	unsigned int loops;
 	unsigned long long file_size;
+	unsigned long long real_file_size;
 	unsigned long long file_offset;
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
