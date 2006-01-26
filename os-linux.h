@@ -9,6 +9,7 @@
 #define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_DISK_UTIL
 #define FIO_HAVE_SGIO
+#define FIO_HAVE_IOPRIO
 
 #define OS_MAP_ANON		(MAP_ANONYMOUS)
 
