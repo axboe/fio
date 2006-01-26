@@ -1599,17 +1599,23 @@ static void init_disk_util(struct thread_data *td)
 		return;
 
 	/*
-	 * if this is inside a partition dir, jump back to parent
+	 * for md/dm, there's no queue dir. we already have the right place
 	 */
-	sprintf(tmp, "%s/queue", foo);
+	sprintf(tmp, "%s/stat", foo);
 	if (stat(tmp, &st)) {
-		p = dirname(foo);
-		sprintf(tmp, "%s/queue", p);
+		/*
+		 * if this is inside a partition dir, jump back to parent
+		 */
+		sprintf(tmp, "%s/queue", foo);
 		if (stat(tmp, &st)) {
-			fprintf(stderr, "unknown sysfs layout\n");
-			return;
+			p = dirname(foo);
+			sprintf(tmp, "%s/queue", p);
+			if (stat(tmp, &st)) {
+				fprintf(stderr, "unknown sysfs layout\n");
+				return;
+			}
+			sprintf(foo, "%s", p);
 		}
-		sprintf(foo, "%s", p);
 	}
 
 	disk_util_add(dev, foo);
