@@ -579,7 +579,7 @@ static int td_io_prep(struct thread_data *td, struct io_u *io_u, int read)
 	return 0;
 }
 
-static void put_io_u(struct thread_data *td, struct io_u *io_u)
+void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	list_del(&io_u->list);
 	list_add(&io_u->list, &td->io_u_freelist);
@@ -588,7 +588,7 @@ static void put_io_u(struct thread_data *td, struct io_u *io_u)
 
 #define queue_full(td)	(list_empty(&(td)->io_u_freelist))
 
-static struct io_u *__get_io_u(struct thread_data *td)
+struct io_u *__get_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
 
@@ -1113,6 +1113,7 @@ static int init_io_u(struct thread_data *td)
 		INIT_LIST_HEAD(&io_u->list);
 
 		io_u->buf = p + td->max_bs * i;
+		io_u->index = i;
 		list_add(&io_u->list, &td->io_u_freelist);
 	}
 

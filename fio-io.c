@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <time.h>
 #include <sys/mman.h>
+#include <sys/poll.h>
 #include "fio.h"
 #include "os.h"
 
@@ -459,42 +460,110 @@ int fio_mmapio_init(struct thread_data *td)
 
 #ifdef FIO_HAVE_SGIO
 
+struct sgio_cmd {
+	char cdb[10];
+	int nr;
+};
+
 struct sgio_data {
-	struct io_u *last_io_u;
-	unsigned char cdb[10];
+	struct sgio_cmd *cmds;
+	struct io_u **events;
 	unsigned int bs;
 };
 
-static inline void sgio_hdr_init(struct sgio_data *sd, struct sg_io_hdr *hdr,
-				 struct io_u *io_u)
+static void sgio_hdr_init(struct sgio_data *sd, struct sg_io_hdr *hdr,
+			  struct io_u *io_u, int fs)
 {
+	struct sgio_cmd *sc = &sd->cmds[io_u->index];
+
 	memset(hdr, 0, sizeof(*hdr));
-	memset(sd->cdb, 0, sizeof(sd->cdb));
+	memset(sc->cdb, 0, sizeof(sc->cdb));
 
 	hdr->interface_id = 'S';
-	hdr->cmdp = sd->cdb;
-	hdr->cmd_len = sizeof(sd->cdb);
+	hdr->cmdp = sc->cdb;
+	hdr->cmd_len = sizeof(sc->cdb);
+	hdr->pack_id = io_u->index;
+	hdr->usr_ptr = io_u;
 
-	if (io_u) {
+	if (fs) {
 		hdr->dxferp = io_u->buf;
 		hdr->dxfer_len = io_u->buflen;
 	}
 }
 
-static int fio_sgio_doio(struct thread_data *td, struct sg_io_hdr *hdr)
+static int fio_sgio_getevents(struct thread_data *td, int min, int max,
+			      struct timespec *t)
 {
+	struct sgio_data *sd = td->io_data;
+	struct pollfd pfd = { .fd = td->fd, .events = POLLIN };
+	void *buf = malloc(max * sizeof(struct sg_io_hdr));
+	int left = max, ret, events, i, r = 0, fl;
+
+	/*
+	 * don't block for !events
+	 */
+	if (!min) {
+		fl = fcntl(td->fd, F_GETFL);
+		fcntl(td->fd, F_SETFL, fl | O_NONBLOCK);
+	}
+
+	while (left) {
+		do {
+			if (!min)
+				break;
+			poll(&pfd, 1, -1);
+			if (pfd.revents & POLLIN)
+				break;
+		} while (1);
+
+		ret = read(td->fd, buf, left * sizeof(struct sg_io_hdr));
+		if (ret < 0) {
+			if (errno == EAGAIN)
+				break;
+			td_verror(td, errno);
+			r = -1;
+			break;
+		} else if (!ret)
+			break;
+
+		events = ret / sizeof(struct sg_io_hdr);
+		left -= events;
+		r += events;
+
+		for (i = 0; i < events; i++) {
+			struct sg_io_hdr *hdr = (struct sg_io_hdr *) buf + i;
+
+			sd->events[i] = hdr->usr_ptr;
+		}
+	}
+
+	if (!min)
+		fcntl(td->fd, F_SETFL, fl);
+
+	free(buf);
+	return r;
+}
+
+static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int sync)
+{
+	struct sgio_data *sd = td->io_data;
+	struct sg_io_hdr *hdr = &io_u->hdr;
 	int ret;
 
-	if (td->filetype == FIO_TYPE_BD)
-		return ioctl(td->fd, SG_IO, &hdr);
+	if (td->filetype == FIO_TYPE_BD) {
+		sd->events[0] = io_u;
+		return ioctl(td->fd, SG_IO, hdr);
+	}
 
 	ret = write(td->fd, hdr, sizeof(*hdr));
 	if (ret < 0)
 		return errno;
 
-	ret = read(td->fd, hdr, sizeof(*hdr));
-	if (ret < 0)
-		return errno;
+	if (sync) {
+		ret = read(td->fd, hdr, sizeof(*hdr));
+		if (ret < 0)
+			return errno;
+	}
 
 	return 0;
 }
@@ -502,14 +571,23 @@ static int fio_sgio_doio(struct thread_data *td, struct sg_io_hdr *hdr)
 static int fio_sgio_sync(struct thread_data *td)
 {
 	struct sgio_data *sd = td->io_data;
-	struct sg_io_hdr hdr;
+	struct sg_io_hdr *hdr;
+	struct io_u *io_u;
+	int ret;
 
-	sgio_hdr_init(sd, &hdr, NULL);
-	hdr.dxfer_direction = SG_DXFER_NONE;
+	io_u = __get_io_u(td);
+	if (!io_u)
+		return ENOMEM;
 
-	hdr.cmdp[0] = 0x35;
+	hdr = &io_u->hdr;
+	sgio_hdr_init(sd, hdr, io_u, 0);
+	hdr->dxfer_direction = SG_DXFER_NONE;
 
-	return fio_sgio_doio(td, &hdr);
+	hdr->cmdp[0] = 0x35;
+
+	ret = fio_sgio_doio(td, io_u, 1);
+	put_io_u(td, io_u);
+	return ret;
 }
 
 static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
@@ -523,7 +601,7 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 		return EINVAL;
 	}
 
-	sgio_hdr_init(sd, hdr, io_u);
+	sgio_hdr_init(sd, hdr, io_u, 1);
 
 	if (io_u->ddir == DDIR_READ) {
 		hdr->dxfer_direction = SG_DXFER_FROM_DEV;
@@ -547,10 +625,9 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 static int fio_sgio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct sg_io_hdr *hdr = &io_u->hdr;
-	struct sgio_data *sd = td->io_data;
 	int ret;
 
-	ret = fio_sgio_doio(td, hdr);
+	ret = fio_sgio_doio(td, io_u, 0);
 
 	if (ret < 0)
 		io_u->error = errno;
@@ -559,9 +636,6 @@ static int fio_sgio_queue(struct thread_data *td, struct io_u *io_u)
 		io_u->error = EIO;
 	}
 
-	if (!io_u->error)
-		sd->last_io_u = io_u;
-
 	return io_u->error;
 }
 
@@ -569,31 +643,37 @@ static struct io_u *fio_sgio_event(struct thread_data *td, int event)
 {
 	struct sgio_data *sd = td->io_data;
 
-	assert(event == 0);
-
-	return sd->last_io_u;
+	return sd->events[event];
 }
 
 static int fio_sgio_get_bs(struct thread_data *td, unsigned int *bs)
 {
 	struct sgio_data *sd = td->io_data;
-	struct sg_io_hdr hdr;
+	struct io_u *io_u;
+	struct sg_io_hdr *hdr;
 	unsigned char buf[8];
 	int ret;
 
-	sgio_hdr_init(sd, &hdr, NULL);
+	io_u = __get_io_u(td);
+	assert(io_u);
+
+	hdr = &io_u->hdr;
+	sgio_hdr_init(sd, hdr, io_u, 0);
 	memset(buf, 0, sizeof(buf));
 
-	hdr.cmdp[0] = 0x25;
-	hdr.dxfer_direction = SG_DXFER_FROM_DEV;
-	hdr.dxferp = buf;
-	hdr.dxfer_len = sizeof(buf);
+	hdr->cmdp[0] = 0x25;
+	hdr->dxfer_direction = SG_DXFER_FROM_DEV;
+	hdr->dxferp = buf;
+	hdr->dxfer_len = sizeof(buf);
 
-	ret = fio_sgio_doio(td, &hdr);
-	if (ret)
+	ret = fio_sgio_doio(td, io_u, 1);
+	if (ret) {
+		put_io_u(td, io_u);
 		return ret;
+	}
 
 	*bs = (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | buf[7];
+	put_io_u(td, io_u);
 	return 0;
 }
 
@@ -604,7 +684,8 @@ int fio_sgio_init(struct thread_data *td)
 	int ret;
 
 	sd = malloc(sizeof(*sd));
-	sd->last_io_u = NULL;
+	sd->cmds = malloc(td->iodepth * sizeof(struct sgio_cmd));
+	sd->events = malloc(td->iodepth * sizeof(struct io_u *));
 	td->io_data = sd;
 
 	if (td->filetype == FIO_TYPE_BD) {
@@ -632,7 +713,12 @@ int fio_sgio_init(struct thread_data *td)
 
 	td->io_prep = fio_sgio_prep;
 	td->io_queue = fio_sgio_queue;
-	td->io_getevents = fio_syncio_getevents;
+
+	if (td->filetype == FIO_TYPE_BD)
+		td->io_getevents = fio_syncio_getevents;
+	else
+		td->io_getevents = fio_sgio_getevents;
+
 	td->io_event = fio_sgio_event;
 	td->io_cancel = NULL;
 	td->io_cleanup = fio_syncio_cleanup;

@@ -61,6 +61,7 @@ struct io_u {
 	char *buf;
 	unsigned int buflen;
 	unsigned long long offset;
+	unsigned int index;
 
 	unsigned int resid;
 	unsigned int error;
@@ -228,6 +229,8 @@ extern int parse_jobs_ini(char *);
 extern int parse_options(int, char **);
 extern void finish_log(struct thread_data *, struct io_log *, const char *);
 extern int init_random_state(struct thread_data *);
+extern struct io_u *__get_io_u(struct thread_data *);
+extern void put_io_u(struct thread_data *, struct io_u *);
 
 extern int rate_quit;
 extern int write_lat_log;
