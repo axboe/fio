@@ -461,7 +461,7 @@ int fio_mmapio_init(struct thread_data *td)
 #ifdef FIO_HAVE_SGIO
 
 struct sgio_cmd {
-	char cdb[10];
+	unsigned char cdb[10];
 	int nr;
 };
 
@@ -497,7 +497,7 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 	struct sgio_data *sd = td->io_data;
 	struct pollfd pfd = { .fd = td->fd, .events = POLLIN };
 	void *buf = malloc(max * sizeof(struct sg_io_hdr));
-	int left = max, ret, events, i, r = 0, fl;
+	int left = max, ret, events, i, r = 0, fl = 0;
 
 	/*
 	 * don't block for !events
