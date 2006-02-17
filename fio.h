@@ -259,6 +259,7 @@ enum {
 enum {
 	FIO_TYPE_FILE = 1,
 	FIO_TYPE_BD,
+	FIO_TYPE_CHAR,
 };
 
 enum {

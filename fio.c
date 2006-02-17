@@ -1235,12 +1235,14 @@ static int bdev_size(struct thread_data *td)
 
 static int get_file_size(struct thread_data *td)
 {
-	int ret;
+	int ret = 0;
 
 	if (td->filetype == FIO_TYPE_FILE)
 		ret = file_size(td);
-	else
+	else if (td->filetype == FIO_TYPE_BD)
 		ret = bdev_size(td);
+	else
+		td->real_file_size = -1;
 
 	if (ret)
 		return ret;
@@ -1356,9 +1358,14 @@ static int setup_file(struct thread_data *td)
 	if (td->odirect)
 		flags |= O_DIRECT;
 
-	if (td_read(td))
-		td->fd = open(td->file_name, flags | O_RDONLY);
-	else {
+	if (td_read(td)) {
+		if (td->filetype == FIO_TYPE_CHAR)
+			flags |= O_RDWR;
+		else
+			flags |= O_RDONLY;
+
+		td->fd = open(td->file_name, flags);
+	} else {
 		if (td->filetype == FIO_TYPE_FILE) {
 			if (!td->overwrite)
 				flags |= O_TRUNC;

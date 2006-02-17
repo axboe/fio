@@ -204,8 +204,12 @@ static int add_job(struct thread_data *td, const char *jobname, int prioclass,
 		td->zone_size = 0;
 
 	td->filetype = FIO_TYPE_FILE;
-	if (!stat(jobname, &sb) && S_ISBLK(sb.st_mode))
-		td->filetype = FIO_TYPE_BD;
+	if (!stat(jobname, &sb)) {
+		if (S_ISBLK(sb.st_mode))
+			td->filetype = FIO_TYPE_BD;
+		else if (S_ISCHR(sb.st_mode))
+			td->filetype = FIO_TYPE_CHAR;
+	}
 
 	if (td->filetype == FIO_TYPE_FILE) {
 		if (td->directory[0] != '\0')

@@ -481,6 +481,24 @@ static inline void sgio_hdr_init(struct sgio_data *sd, struct sg_io_hdr *hdr,
 	}
 }
 
+static int fio_sgio_doio(struct thread_data *td, struct sg_io_hdr *hdr)
+{
+	int ret;
+
+	if (td->filetype == FIO_TYPE_BD)
+		return ioctl(td->fd, SG_IO, &hdr);
+
+	ret = write(td->fd, hdr, sizeof(*hdr));
+	if (ret < 0)
+		return errno;
+
+	ret = read(td->fd, hdr, sizeof(*hdr));
+	if (ret < 0)
+		return errno;
+
+	return 0;
+}
+
 static int fio_sgio_sync(struct thread_data *td)
 {
 	struct sgio_data *sd = td->io_data;
@@ -491,7 +509,7 @@ static int fio_sgio_sync(struct thread_data *td)
 
 	hdr.cmdp[0] = 0x35;
 
-	return ioctl(td->fd, SG_IO, &hdr);
+	return fio_sgio_doio(td, &hdr);
 }
 
 static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
@@ -532,7 +550,8 @@ static int fio_sgio_queue(struct thread_data *td, struct io_u *io_u)
 	struct sgio_data *sd = td->io_data;
 	int ret;
 
-	ret = ioctl(td->fd, SG_IO, hdr);
+	ret = fio_sgio_doio(td, hdr);
+
 	if (ret < 0)
 		io_u->error = errno;
 	else if (hdr->status) {
@@ -555,22 +574,60 @@ static struct io_u *fio_sgio_event(struct thread_data *td, int event)
 	return sd->last_io_u;
 }
 
+static int fio_sgio_get_bs(struct thread_data *td, unsigned int *bs)
+{
+	struct sgio_data *sd = td->io_data;
+	struct sg_io_hdr hdr;
+	unsigned char buf[8];
+	int ret;
+
+	sgio_hdr_init(sd, &hdr, NULL);
+	memset(buf, 0, sizeof(buf));
+
+	hdr.cmdp[0] = 0x25;
+	hdr.dxfer_direction = SG_DXFER_FROM_DEV;
+	hdr.dxferp = buf;
+	hdr.dxfer_len = sizeof(buf);
+
+	ret = fio_sgio_doio(td, &hdr);
+	if (ret)
+		return ret;
+
+	*bs = (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | buf[7];
+	return 0;
+}
+
 int fio_sgio_init(struct thread_data *td)
 {
 	struct sgio_data *sd;
-	int bs;
+	unsigned int bs;
+	int ret;
 
-	if (td->filetype != FIO_TYPE_BD) {
+	sd = malloc(sizeof(*sd));
+	sd->last_io_u = NULL;
+	td->io_data = sd;
+
+	if (td->filetype == FIO_TYPE_BD) {
+		if (ioctl(td->fd, BLKSSZGET, &bs) < 0) {
+			td_verror(td, errno);
+			return 1;
+		}
+	} else if (td->filetype == FIO_TYPE_CHAR) {
+		int version;
+
+		if (ioctl(td->fd, SG_GET_VERSION_NUM, &version) < 0) {
+			td_verror(td, errno);
+			return 1;
+		}
+
+		ret = fio_sgio_get_bs(td, &bs);
+		if (ret)
+			return ret;
+	} else {
 		fprintf(stderr, "ioengine sgio only works on block devices\n");
 		return 1;
 	}
 
-	if (ioctl(td->fd, BLKSSZGET, &bs) < 0) {
-		td_verror(td, errno);
-		return 1;
-	}
-
-	sd = malloc(sizeof(*sd));
 	sd->bs = bs;
 
 	td->io_prep = fio_sgio_prep;
@@ -585,9 +642,6 @@ int fio_sgio_init(struct thread_data *td)
 	 * we want to do it, regardless of whether odirect is set or not
 	 */
 	td->override_sync = 1;
-
-	sd->last_io_u = NULL;
-	td->io_data = sd;
 	return 0;
 }
 
