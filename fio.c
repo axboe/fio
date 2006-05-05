@@ -1209,6 +1209,7 @@ static int file_size(struct thread_data *td)
 	if (!td->file_size || td->file_size > td->real_file_size)
 		td->file_size = td->real_file_size;
 
+	td->file_size -= td->file_offset;
 	return 0;
 }
 
@@ -1231,6 +1232,7 @@ static int bdev_size(struct thread_data *td)
 	if (!td->file_size || td->file_size > td->real_file_size)
 		td->file_size = td->real_file_size;
 
+	td->file_size -= td->file_offset;
 	return 0;
 }
 
@@ -1248,8 +1250,8 @@ static int get_file_size(struct thread_data *td)
 	if (ret)
 		return ret;
 
-	if (td->file_offset + td->file_size > td->real_file_size) {
-		fprintf(stderr, "Client%d: offset extends end (%Lu > %Lu)\n", td->thread_number, td->file_offset + td->file_size, td->real_file_size);
+	if (td->file_offset > td->real_file_size) {
+		fprintf(stderr, "Client%d: offset extends end (%Lu > %Lu)\n", td->thread_number, td->file_offset, td->real_file_size);
 		return 1;
 	}
 

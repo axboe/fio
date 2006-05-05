@@ -37,7 +37,7 @@
 #define DEF_ZONE_SIZE		(0)
 #define DEF_ZONE_SKIP		(0)
 
-static char fio_version_string[] = "fio 1.1";
+static char fio_version_string[] = "fio 1.3";
 
 static int repeatable = DEF_RAND_REPEAT;
 static char *ini_file;
