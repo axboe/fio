@@ -1350,7 +1350,7 @@ static int setup_file(struct thread_data *td)
 		if (create_file(td, td->file_size, 0))
 			return 1;
 	} else if (td->filetype == FIO_TYPE_FILE) {
-		if (st.st_size < td->file_size) {
+		if (st.st_size < (off_t) td->file_size) {
 			if (create_file(td, td->file_size - st.st_size, 1))
 				return 1;
 		}
@@ -1929,14 +1929,70 @@ static void eta_to_str(char *str, int eta_sec)
 	str += sprintf(str, "%02ds", s);
 }
 
+static int thread_eta(struct thread_data *td, unsigned long elapsed)
+{
+	unsigned long long bytes_total, bytes_done;
+	unsigned int eta_sec = 0;
+
+	bytes_total = td->total_io_size;
+	if (td->verify)
+		bytes_total <<= 1;
+	if (td->zone_size && td->zone_skip)
+		bytes_total /= (td->zone_skip / td->zone_size);
+
+	if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING) {
+		double perc;
+		bytes_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE];
+		perc = (double) bytes_done / (double) bytes_total;
+		if (perc > 1.0)
+			perc = 1.0;
+
+		eta_sec = (elapsed * (1.0 / perc)) - elapsed;
+
+		if (eta_sec > (td->timeout - elapsed))
+			eta_sec = td->timeout - elapsed;
+	} else if (td->runstate == TD_NOT_CREATED || td->runstate == TD_CREATED) {
+		int t_eta = 0, r_eta = 0;
+
+		/*
+		 * We can only guess - assume it'll run the full timeout
+		 * if given, otherwise assume it'll run at the specified rate.
+		 */
+		if (td->timeout)
+			t_eta = td->timeout + td->start_delay - elapsed;
+		if (td->rate) {
+			r_eta = (bytes_total / 1024) / td->rate;
+			r_eta += td->start_delay - elapsed;
+		}
+
+		if (r_eta && t_eta)
+			eta_sec = min(r_eta, t_eta);
+		else if (r_eta)
+			eta_sec = r_eta;
+		else if (t_eta)
+			eta_sec = t_eta;
+		else
+			eta_sec = INT_MAX;
+	} else {
+		/*
+		 * thread is already done
+		 */
+		eta_sec = 0;
+	}
+
+	return eta_sec;
+}
+
 static void print_thread_status(void)
 {
-	unsigned long long bytes_done, bytes_total;
-	int i, nr_running, t_rate, m_rate, eta_sec;
+	unsigned long elapsed = time_since_now(&genesis);
+	int i, nr_running, t_rate, m_rate, *eta_secs, eta_sec;
 	char eta_str[32];
-	double perc;
+	double perc = 0.0;
 
-	bytes_done = bytes_total = 0;
+	eta_secs = malloc(thread_number * sizeof(int));
+	memset(eta_secs, 0, thread_number * sizeof(int));
+
 	nr_running = t_rate = m_rate = 0;
 	for (i = 0; i < thread_number; i++) {
 		struct thread_data *td = &threads[i];
@@ -1947,45 +2003,45 @@ static void print_thread_status(void)
 			m_rate += td->ratemin;
 		}
 
-		bytes_total += td->total_io_size;
-		if (td->verify)
-			bytes_total += td->total_io_size;
-
-		if (td->zone_size && td->zone_skip)
-			bytes_total /= (td->zone_skip / td->zone_size);
-	
-		bytes_done += td->io_bytes[DDIR_READ] +td->io_bytes[DDIR_WRITE];
+		if (elapsed >= 3)
+			eta_secs[i] = thread_eta(td, elapsed);
 
 		check_str_update(td);
 	}
 
-	perc = 0;
-	eta_sec = 0;
-	if (bytes_total && bytes_done) {
-		unsigned long runtime;
+	if (exitall_on_terminate)
+		eta_sec = INT_MAX;
+	else
+		eta_sec = 0;
 
-		perc = (double) bytes_done / (double) bytes_total;
-		if (perc > 1.0)
-			perc = 1.0;
-
-		runtime = time_since_now(&genesis);
-		if (runtime >= 5) {
-			memset(eta_str, 0, sizeof(eta_str));
-			eta_sec = (runtime * (1.0 / perc)) - runtime;
-			eta_to_str(eta_str, eta_sec);
+	for (i = 0; i < thread_number; i++) {
+		if (exitall_on_terminate) {
+			if (eta_secs[i] < eta_sec)
+				eta_sec = eta_secs[i];
+		} else {
+			if (eta_secs[i] > eta_sec)
+				eta_sec = eta_secs[i];
 		}
+	}
 
-		perc *= 100.0;
+	if (eta_sec == INT_MAX)
+		eta_sec = 0;
+
+	if (eta_sec) {
+		perc = (double) elapsed / (double) (elapsed + eta_sec);
+		eta_to_str(eta_str, eta_sec);
 	}
 
 	printf("Threads now running (%d)", nr_running);
 	if (m_rate || t_rate)
 		printf(", commitrate %d/%dKiB/sec", t_rate, m_rate);
-	printf(": [%s] [%3.2f%% done]", run_str, perc);
-	if (eta_sec)
-		printf(" [eta %s]", eta_str);
+	if (eta_sec) {
+		perc *= 100.0;
+		printf(": [%s] [%3.2f%% done] [eta %s]", run_str, perc,eta_str);
+	}
 	printf("\r");
 	fflush(stdout);
+	free(eta_secs);
 }
 
 static void reap_threads(int *nr_running, int *t_rate, int *m_rate)

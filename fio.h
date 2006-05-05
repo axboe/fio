@@ -315,4 +315,8 @@ struct io_completion_data {
 
 #define DISK_UTIL_MSEC	(250)
 
+#ifndef min
+#define min(a, b)	((a) < (b) ? (a) : (b))
+#endif
+
 #endif
