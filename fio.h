@@ -146,6 +146,7 @@ struct thread_data {
 	unsigned int use_thread;
 	unsigned int iodepth;
 	os_cpu_mask_t cpumask;
+	unsigned int jobnum;
 
 	struct drand48_data bsrange_state;
 	struct drand48_data verify_state;

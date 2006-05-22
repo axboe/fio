@@ -213,9 +213,9 @@ static int add_job(struct thread_data *td, const char *jobname, int prioclass,
 
 	if (td->filetype == FIO_TYPE_FILE) {
 		if (td->directory[0] != '\0')
-			sprintf(td->file_name, "%s/%s.%d", td->directory, jobname, td->thread_number);
+			sprintf(td->file_name, "%s/%s.%d", td->directory, jobname, td->jobnum);
 		else
-			sprintf(td->file_name, "%s.%d", jobname, td->thread_number);
+			sprintf(td->file_name, "%s.%d", jobname, td->jobnum);
 	} else
 		strcpy(td->file_name, jobname);
 
@@ -263,6 +263,7 @@ static int add_job(struct thread_data *td, const char *jobname, int prioclass,
 
 		td_new->numjobs = 1;
 		td_new->stonewall = 0;
+		td_new->jobnum = numjobs;
 
 		if (add_job(td_new, jobname, prioclass, prio))
 			goto err;
