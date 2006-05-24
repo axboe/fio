@@ -544,16 +544,20 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 	return r;
 }
 
-static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int sync)
+static int fio_sgio_ioctl_doio(struct thread_data *td, struct io_u *io_u)
 {
 	struct sgio_data *sd = td->io_data;
 	struct sg_io_hdr *hdr = &io_u->hdr;
-	int ret;
 
-	if (td->filetype == FIO_TYPE_BD) {
-		sd->events[0] = io_u;
-		return ioctl(td->fd, SG_IO, hdr);
-	}
+	sd->events[0] = io_u;
+
+	return ioctl(td->fd, SG_IO, hdr);
+}
+
+static int fio_sgio_rw_doio(struct thread_data *td, struct io_u *io_u, int sync)
+{
+	struct sg_io_hdr *hdr = &io_u->hdr;
+	int ret;
 
 	ret = write(td->fd, hdr, sizeof(*hdr));
 	if (ret < 0)
@@ -566,6 +570,14 @@ static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int sync)
 	}
 
 	return 0;
+}
+
+static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int sync)
+{
+	if (td->filetype == FIO_TYPE_BD)
+		return fio_sgio_ioctl_doio(td, io_u);
+
+	return fio_sgio_rw_doio(td, io_u, sync);
 }
 
 static int fio_sgio_sync(struct thread_data *td)
