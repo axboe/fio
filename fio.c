@@ -1944,6 +1944,7 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 
 	if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING) {
 		double perc;
+
 		bytes_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE];
 		perc = (double) bytes_done / (double) bytes_total;
 		if (perc > 1.0)
@@ -1951,7 +1952,7 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 
 		eta_sec = (elapsed * (1.0 / perc)) - elapsed;
 
-		if (eta_sec > (td->timeout - elapsed))
+		if (td->timeout && eta_sec > (td->timeout - elapsed))
 			eta_sec = td->timeout - elapsed;
 	} else if (td->runstate == TD_NOT_CREATED || td->runstate == TD_CREATED) {
 		int t_eta = 0, r_eta = 0;
@@ -2007,6 +2008,8 @@ static void print_thread_status(void)
 
 		if (elapsed >= 3)
 			eta_secs[i] = thread_eta(td, elapsed);
+		else
+			eta_secs[i] = INT_MAX;
 
 		check_str_update(td);
 	}
@@ -2026,10 +2029,7 @@ static void print_thread_status(void)
 		}
 	}
 
-	if (eta_sec == INT_MAX)
-		eta_sec = 0;
-
-	if (eta_sec) {
+	if (eta_sec != INT_MAX && elapsed) {
 		perc = (double) elapsed / (double) (elapsed + eta_sec);
 		eta_to_str(eta_str, eta_sec);
 	}
@@ -2037,7 +2037,7 @@ static void print_thread_status(void)
 	printf("Threads now running (%d)", nr_running);
 	if (m_rate || t_rate)
 		printf(", commitrate %d/%dKiB/sec", t_rate, m_rate);
-	if (eta_sec) {
+	if (eta_sec != INT_MAX) {
 		perc *= 100.0;
 		printf(": [%s] [%3.2f%% done] [eta %s]", run_str, perc,eta_str);
 	}
