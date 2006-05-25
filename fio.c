@@ -69,7 +69,7 @@ enum {
 	TD_REAPED,
 };
 
-#define should_fsync(td)	(td_write(td) && (!(td)->odirect || (td)->override_sync))
+#define should_fsync(td)	((td_write(td) || td_rw(td)) && (!(td)->odirect || (td)->override_sync))
 
 static sem_t startup_sem;
 
@@ -541,6 +541,49 @@ static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
 	memcpy(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash));
 }
 
+unsigned int hweight32(unsigned int w)
+{
+	unsigned int res = w - ((w >> 1) & 0x55555555);
+
+	res = (res & 0x33333333) + ((res >> 2) & 0x33333333);
+	res = (res + (res >> 4)) & 0x0F0F0F0F;
+	res = res + (res >> 8);
+
+	return (res + (res >> 16)) & 0x000000FF;
+}
+
+unsigned long hweight64(unsigned long long w)
+{
+#if __WORDSIZE == 32
+        return hweight32((unsigned int)(w >> 32)) + hweight32((unsigned int)w);
+#elif __WORDSIZE == 64
+	unsigned long long v = w - ((w >> 1) & 0x5555555555555555ul);
+
+	v = (v & 0x3333333333333333ul) + ((v >> 2) & 0x3333333333333333ul);
+	v = (v + (v >> 4)) & 0x0F0F0F0F0F0F0F0Ful;
+	v = v + (v >> 8);
+	v = v + (v >> 16);
+
+	return (v + (v >> 32)) & 0x00000000000000FFul;
+#else
+#error __WORDSIZE not defined
+#endif
+}
+
+static int get_rw_ddir(struct thread_data *td)
+{
+	/*
+	 * perhaps cheasy, but use the hamming weight of the position
+	 * as a randomizer for data direction.
+	 */
+	if (td_rw(td))
+		return hweight64(td->last_pos) & 1;
+	else if (td_read(td))
+		return DDIR_READ;
+	else
+		return DDIR_WRITE;
+}
+
 /*
  * fill body of io_u->buf with random data and add a header with the
  * (eg) sha1sum of that data.
@@ -644,7 +687,7 @@ static struct io_u *get_io_u(struct thread_data *td)
 	if (td->verify != VERIFY_NONE)
 		populate_io_u(td, io_u);
 
-	if (td_io_prep(td, io_u, td_read(td))) {
+	if (td_io_prep(td, io_u, get_rw_ddir(td))) {
 		put_io_u(td, io_u);
 		return NULL;
 	}
@@ -757,7 +800,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 	if (!io_u->error) {
 		unsigned int bytes = io_u->buflen - io_u->resid;
-		int idx = io_u->ddir;
+		const int idx = io_u->ddir;
 
 		td->io_blocks[idx]++;
 		td->io_bytes[idx] += bytes;
@@ -766,10 +809,10 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 		msec = mtime_since(&io_u->issue_time, &e);
 
-		add_clat_sample(td, io_u->ddir, msec);
-		add_bw_sample(td, io_u->ddir);
+		add_clat_sample(td, idx, msec);
+		add_bw_sample(td, idx);
 
-		if (td_write(td) && io_u->ddir == DDIR_WRITE)
+		if ((td_rw(td) || td_write(td)) && idx == DDIR_WRITE)
 			log_io_piece(td, io_u);
 
 		icd->bytes_done[idx] += bytes;
@@ -1273,14 +1316,15 @@ static int setup_file_mmap(struct thread_data *td)
 {
 	int flags;
 
-	if (td_read(td))
-		flags = PROT_READ;
-	else {
+	if (td_rw(td))
+		flags = PROT_READ | PROT_WRITE;
+	else if (td_write(td)) {
 		flags = PROT_WRITE;
 
 		if (td->verify != VERIFY_NONE)
 			flags |= PROT_READ;
-	}
+	} else
+		flags = PROT_READ;
 
 	td->mmap = mmap(NULL, td->file_size, flags, MAP_SHARED, td->fd, td->file_offset);
 	if (td->mmap == MAP_FAILED) {
@@ -1361,14 +1405,7 @@ static int setup_file(struct thread_data *td)
 	if (td->odirect)
 		flags |= O_DIRECT;
 
-	if (td_read(td)) {
-		if (td->filetype == FIO_TYPE_CHAR)
-			flags |= O_RDWR;
-		else
-			flags |= O_RDONLY;
-
-		td->fd = open(td->file_name, flags);
-	} else {
+	if (td_write(td) || td_rw(td)) {
 		if (td->filetype == FIO_TYPE_FILE) {
 			if (!td->overwrite)
 				flags |= O_TRUNC;
@@ -1381,6 +1418,13 @@ static int setup_file(struct thread_data *td)
 		flags |= O_RDWR;
 
 		td->fd = open(td->file_name, flags, 0600);
+	} else {
+		if (td->filetype == FIO_TYPE_CHAR)
+			flags |= O_RDWR;
+		else
+			flags |= O_RDONLY;
+
+		td->fd = open(td->file_name, flags);
 	}
 
 	if (td->fd == -1) {
@@ -1720,6 +1764,9 @@ static void *thread_main(void *data)
 		do_io(td);
 
 		td->runtime[td->ddir] += mtime_since_now(&td->start);
+		if (td_rw(td))
+			td->runtime[td->ddir ^ 1] = td->runtime[td->ddir];
+
 		update_rusage_stat(td);
 
 		if (td->error || td->terminate)
@@ -1874,7 +1921,12 @@ static void check_str_update(struct thread_data *td)
 			c = 'E';
 			break;
 		case TD_RUNNING:
-			if (td_read(td)) {
+			if (td_rw(td)) {
+				if (td->sequential)
+					c = 'M';
+				else
+					c = 'm';
+			} else if (td_read(td)) {
 				if (td->sequential)
 					c = 'R';
 				else
@@ -1937,8 +1989,17 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 	unsigned int eta_sec = 0;
 
 	bytes_total = td->total_io_size;
-	if (td->verify)
-		bytes_total <<= 1;
+
+	/*
+	 * if writing, bytes_total will be twice the size. If mixing,
+	 * assume a 50/50 split and thus bytes_total will be 50% larger.
+	 */
+	if (td->verify) {
+		if (td_rw(td))
+			bytes_total = bytes_total * 3 / 2;
+		else
+			bytes_total <<= 1;
+	}
 	if (td->zone_size && td->zone_skip)
 		bytes_total /= (td->zone_skip / td->zone_size);
 

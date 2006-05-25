@@ -38,7 +38,8 @@ $ fio
 The <jobs> format is as follows:
 
 	directory=x	Use 'x' as the top level directory for storing files
-	rw=x		'x' may be: read, randread, write, or randwrite
+	rw=x		'x' may be: read, randread, write, randwrite,
+			rw (read-write mix), randrw (read-write random mix)
 	size=x		Set file size to x bytes (x string can include k/m/g)
 	ioengine=x	'x' may be: aio/libaio/linuxaio for Linux aio,
 			posixaio for POSIX aio, sync for regular read/write io,

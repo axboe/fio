@@ -164,7 +164,8 @@ static void put_job(struct thread_data *td)
 static int add_job(struct thread_data *td, const char *jobname, int prioclass,
 		   int prio)
 {
-	char *ddir_str[] = { "read", "write", "randread", "randwrite" };
+	char *ddir_str[] = { "read", "write", "randread", "randwrite",
+			     "rw", NULL, "randrw" };
 	struct stat sb;
 	int numjobs, ddir;
 
@@ -229,7 +230,7 @@ static int add_job(struct thread_data *td, const char *jobname, int prioclass,
 		td->min_bs = td->bs;
 	if (td->max_bs == -1U)
 		td->max_bs = td->bs;
-	if (td_read(td))
+	if (td_read(td) && !td_rw(td))
 		td->verify = 0;
 
 	if (td->stonewall && td->thread_number > 1)
@@ -247,7 +248,7 @@ static int add_job(struct thread_data *td, const char *jobname, int prioclass,
 	if (write_bw_log)
 		setup_log(&td->bw_log);
 
-	ddir = td->ddir + (!td->sequential << 1);
+	ddir = td->ddir + (!td->sequential << 1) + (td->iomix << 2);
 	printf("Client%d (g=%d): rw=%s, prio=%d/%d, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->thread_number, td->groupid, ddir_str[ddir], prioclass, prio, td->odirect, td->min_bs, td->max_bs, td->rate, td->io_engine_name, td->iodepth);
 
 	/*
@@ -538,6 +539,16 @@ static int str_rw_cb(struct thread_data *td, char *mem)
 		return 0;
 	} else if (!strncmp(mem, "randwrite", 9)) {
 		td->ddir = DDIR_WRITE;
+		td->sequential = 0;
+		return 0;
+	} else if (!strncmp(mem, "rw", 2)) {
+		td->ddir = 0;
+		td->iomix = 1;
+		td->sequential = 1;
+		return 0;
+	} else if (!strncmp(mem, "randrw", 6)) {
+		td->ddir = 0;
+		td->iomix = 1;
 		td->sequential = 0;
 		return 0;
 	}
@@ -846,6 +857,7 @@ static int fill_def_thread(void)
 	 * fill globals
 	 */
 	def_thread.ddir = DDIR_READ;
+	def_thread.iomix = 0;
 	def_thread.bs = DEF_BS;
 	def_thread.min_bs = -1;
 	def_thread.max_bs = -1;

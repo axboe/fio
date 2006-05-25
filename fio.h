@@ -115,6 +115,7 @@ struct thread_data {
 	volatile int runstate;
 	volatile int old_runstate;
 	unsigned int ddir;
+	unsigned int iomix;
 	unsigned int ioprio;
 	unsigned int sequential;
 	unsigned int bs;
@@ -276,6 +277,7 @@ enum {
 
 #define td_read(td)		((td)->ddir == DDIR_READ)
 #define td_write(td)		((td)->ddir == DDIR_WRITE)
+#define td_rw(td)		((td)->iomix != 0)
 
 #define BLOCKS_PER_MAP		(8 * sizeof(long))
 #define TO_MAP_BLOCK(td, b)	((b) - ((td)->file_offset / (td)->min_bs))
