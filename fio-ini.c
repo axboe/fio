@@ -887,11 +887,25 @@ static int fill_def_thread(void)
 	return 0;
 }
 
+static void usage(char *name)
+{
+	printf("%s\n", fio_version_string);
+	printf("\t-s IO is sequential\n");
+	printf("\t-b Block size in KiB for each IO\n");
+	printf("\t-t Runtime in seconds\n");
+	printf("\t-R Exit all threads on failure to meet rate goal\n");
+	printf("\t-o Use O_DIRECT\n");
+	printf("\t-l Generate per-job latency logs\n");
+	printf("\t-w Generate per-job bandwidth logs\n");
+	printf("\t-f Job file (Required)\n");
+	printf("\t-v Print version info and exit\n");
+}
+
 static void parse_cmd_line(int argc, char *argv[])
 {
 	int c;
 
-	while ((c = getopt(argc, argv, "s:b:t:r:R:o:f:lwv")) != EOF) {
+	while ((c = getopt(argc, argv, "s:b:t:r:R:o:f:lwvh")) != EOF) {
 		switch (c) {
 			case 's':
 				def_thread.sequential = !!atoi(optarg);
@@ -925,6 +939,9 @@ static void parse_cmd_line(int argc, char *argv[])
 			case 'w':
 				write_bw_log = 1;
 				break;
+			case 'h':
+				usage(argv[0]);
+				exit(0);
 			case 'v':
 				printf("%s\n", fio_version_string);
 				exit(0);
@@ -987,6 +1004,7 @@ int parse_options(int argc, char *argv[])
 
 	if (!ini_file) {
 		printf("Need job file\n");
+		usage(argv[0]);
 		return 1;
 	}
 
