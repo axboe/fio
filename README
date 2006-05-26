@@ -86,6 +86,11 @@ The <jobs> format is as follows:
 			can be used to gauge hard drive speed over the entire
 			platter, without reading everything. Both x/y can
 			include k/m/g suffix.
+	iolog=x		Open and read io pattern from file 'x'. The file must
+			contain one io action per line in the following format:
+			rw, offset, length
+			where with rw=0/1 for read/write, and the offset
+			and length entries being in bytes.
 
 
 Examples using a job file

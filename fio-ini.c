@@ -81,11 +81,11 @@ static void setup_log(struct io_log **log)
 
 void finish_log(struct thread_data *td, struct io_log *log, const char *name)
 {
-	char file_name[128];
+	char file_name[256];
 	FILE *f;
 	unsigned int i;
 
-	sprintf(file_name, "client%d_%s.log", td->thread_number, name);
+	snprintf(file_name, 200, "client%d_%s.log", td->thread_number, name);
 	f = fopen(file_name, "w");
 	if (!f) {
 		perror("fopen log");
@@ -218,7 +218,7 @@ static int add_job(struct thread_data *td, const char *jobname, int prioclass,
 		else
 			sprintf(td->file_name, "%s.%d", jobname, td->jobnum);
 	} else
-		strcpy(td->file_name, jobname);
+		strncpy(td->file_name, jobname, sizeof(td->file_name) - 1);
 
 	sem_init(&td->mutex, 0, 0);
 
@@ -389,6 +389,14 @@ static void strip_blank_end(char *p)
 		*p = '\0';
 		p--;
 	}
+}
+
+static void terminate_line(char *p)
+{
+	while (*p != '\n' && *p != '\0')
+		p++;
+
+	*p = '\0';
 }
 
 typedef int (str_cb_fn)(struct thread_data *, char *);
@@ -620,6 +628,13 @@ static int str_ioengine_cb(struct thread_data *td, char *str)
 	return 1;
 }
 
+static int str_iolog_cb(struct thread_data *td, char *file)
+{
+	terminate_line(file);
+	strncpy(td->iolog_file, file, sizeof(td->iolog_file) - 1);
+
+	return 0;
+}
 
 int parse_jobs_ini(char *file)
 {
@@ -634,7 +649,7 @@ int parse_jobs_ini(char *file)
 
 	f = fopen(file, "r");
 	if (!f) {
-		perror("fopen");
+		perror("fopen job file");
 		return 1;
 	}
 
@@ -664,6 +679,7 @@ int parse_jobs_ini(char *file)
 				continue;
 			if (strstr(p, "["))
 				break;
+
 			if (!check_int(p, "prio", &prio)) {
 #ifndef FIO_HAVE_IOPRIO
 				fprintf(stderr, "io priorities not available\n");
@@ -829,8 +845,14 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
+			if (!check_str(p, "iolog", str_iolog_cb, td)) {
+				td->iolog = 1;
+				fgetpos(f, &off);
+				continue;
+			}
 
 			printf("Client%d: bad option %s\n",td->thread_number,p);
+			return 1;
 		}
 		fsetpos(f, &off);
 

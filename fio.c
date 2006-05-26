@@ -609,13 +609,8 @@ static void populate_io_u(struct thread_data *td, struct io_u *io_u)
 	memcpy(io_u->buf, &hdr, sizeof(hdr));
 }
 
-static int td_io_prep(struct thread_data *td, struct io_u *io_u, int read)
+static int td_io_prep(struct thread_data *td, struct io_u *io_u)
 {
-	if (read)
-		io_u->ddir = DDIR_READ;
-	else
-		io_u->ddir = DDIR_WRITE;
-
 	if (td->io_prep && td->io_prep(td, io_u))
 		return 1;
 
@@ -627,6 +622,41 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 	list_del(&io_u->list);
 	list_add(&io_u->list, &td->io_u_freelist);
 	td->cur_depth--;
+}
+
+static int fill_io_u(struct thread_data *td, struct io_u *io_u)
+{
+	/*
+	 * If using an iolog, grab next piece if any available.
+	 */
+	if (td->iolog) {
+		struct io_piece *ipo;
+
+		if (list_empty(&td->io_log_list))
+			return 1;
+
+		ipo = list_entry(td->io_log_list.next, struct io_piece, list);
+		list_del(&ipo->list);
+		io_u->offset = ipo->offset;
+		io_u->buflen = ipo->len;
+		io_u->ddir = ipo->ddir;
+		free(ipo);
+		return 0;
+	}
+
+	/*
+	 * No log, let the seq/rand engine retrieve the next position.
+	 */
+	if (!get_next_offset(td, &io_u->offset)) {
+		io_u->buflen = get_next_buflen(td);
+
+		if (io_u->buflen) {
+			io_u->ddir = get_rw_ddir(td);
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
 #define queue_full(td)	(list_empty(&(td)->io_u_freelist))
@@ -660,13 +690,7 @@ static struct io_u *get_io_u(struct thread_data *td)
 		td->last_pos += td->zone_skip;
 	}
 
-	if (get_next_offset(td, &io_u->offset)) {
-		put_io_u(td, io_u);
-		return NULL;
-	}
-
-	io_u->buflen = get_next_buflen(td);
-	if (!io_u->buflen) {
+	if (fill_io_u(td, io_u)) {
 		put_io_u(td, io_u);
 		return NULL;
 	}
@@ -679,7 +703,7 @@ static struct io_u *get_io_u(struct thread_data *td)
 		return NULL;
 	}
 
-	if (!td->sequential)
+	if (!td->iolog && !td->sequential)
 		mark_random_map(td, io_u);
 
 	td->last_pos += io_u->buflen;
@@ -687,7 +711,7 @@ static struct io_u *get_io_u(struct thread_data *td)
 	if (td->verify != VERIFY_NONE)
 		populate_io_u(td, io_u);
 
-	if (td_io_prep(td, io_u, get_rw_ddir(td))) {
+	if (td_io_prep(td, io_u)) {
 		put_io_u(td, io_u);
 		return NULL;
 	}
@@ -702,8 +726,7 @@ static inline void td_set_runstate(struct thread_data *td, int runstate)
 	td->runstate = runstate;
 }
 
-static int get_next_verify(struct thread_data *td,
-			   unsigned long long *offset, unsigned int *len)
+static int get_next_verify(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
 
@@ -713,8 +736,9 @@ static int get_next_verify(struct thread_data *td,
 	ipo = list_entry(td->io_hist_list.next, struct io_piece, list);
 	list_del(&ipo->list);
 
-	*offset = ipo->offset;
-	*len = ipo->len;
+	io_u->offset = ipo->offset;
+	io_u->buflen = ipo->len;
+	io_u->ddir = DDIR_READ;
 	free(ipo);
 	return 0;
 }
@@ -765,6 +789,68 @@ static void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	}
 
 	list_add(&ipo->list, entry);
+}
+
+static int init_iolog(struct thread_data *td)
+{
+	unsigned long long offset;
+	unsigned int bytes;
+	char *str, *p;
+	FILE *f;
+	int rw, i, reads, writes;
+
+	if (!td->iolog)
+		return 0;
+
+	f = fopen(td->iolog_file, "r");
+	if (!f) {
+		perror("fopen iolog");
+		return 1;
+	}
+
+	str = malloc(4096);
+	reads = writes = i = 0;
+	while ((p = fgets(str, 4096, f)) != NULL) {
+		struct io_piece *ipo;
+
+		if (sscanf(p, "%d,%llu,%u", &rw, &offset, &bytes) != 3) {
+			fprintf(stderr, "bad iolog: %s\n", p);
+			continue;
+		}
+		if (rw == DDIR_READ)
+			reads++;
+		else if (rw == DDIR_WRITE)
+			writes++;
+		else {
+			fprintf(stderr, "bad ddir: %d\n", rw);
+			continue;
+		}
+
+		ipo = malloc(sizeof(*ipo));
+		INIT_LIST_HEAD(&ipo->list);
+		ipo->offset = offset;
+		ipo->len = bytes;
+		if (bytes > td->max_bs)
+			td->max_bs = bytes;
+		ipo->ddir = rw;
+		list_add_tail(&ipo->list, &td->io_log_list);
+		i++;
+	}
+
+	free(str);
+	fclose(f);
+
+	if (!i)
+		return 1;
+
+	if (reads && !writes)
+		td->ddir = DDIR_READ;
+	else if (!reads && writes)
+		td->ddir = DDIR_READ;
+	else
+		td->iomix = 1;
+
+	return 0;
 }
 
 static int sync_td(struct thread_data *td)
@@ -910,12 +996,12 @@ static void do_verify(struct thread_data *td)
 		if (!io_u)
 			break;
 
-		if (get_next_verify(td, &io_u->offset, &io_u->buflen)) {
+		if (get_next_verify(td, io_u)) {
 			put_io_u(td, io_u);
 			break;
 		}
 
-		if (td_io_prep(td, io_u, 1)) {
+		if (td_io_prep(td, io_u)) {
 			put_io_u(td, io_u);
 			break;
 		}
@@ -1144,10 +1230,6 @@ static int init_io_u(struct thread_data *td)
 			return 1;
 		}
 	}
-
-	INIT_LIST_HEAD(&td->io_u_freelist);
-	INIT_LIST_HEAD(&td->io_u_busylist);
-	INIT_LIST_HEAD(&td->io_hist_list);
 
 	p = ALIGN(td->orig_buffer);
 	for (i = 0; i < max_units; i++) {
@@ -1721,6 +1803,11 @@ static void *thread_main(void *data)
 
 	td->pid = getpid();
 
+	INIT_LIST_HEAD(&td->io_u_freelist);
+	INIT_LIST_HEAD(&td->io_u_busylist);
+	INIT_LIST_HEAD(&td->io_hist_list);
+	INIT_LIST_HEAD(&td->io_log_list);
+
 	if (init_io_u(td))
 		goto err;
 
@@ -1730,6 +1817,9 @@ static void *thread_main(void *data)
 	}
 
 	if (init_io(td))
+		goto err;
+
+	if (init_iolog(td))
 		goto err;
 
 	if (td->ioprio) {
@@ -1764,7 +1854,7 @@ static void *thread_main(void *data)
 		do_io(td);
 
 		td->runtime[td->ddir] += mtime_since_now(&td->start);
-		if (td_rw(td))
+		if (td_rw(td) && td->io_bytes[td->ddir ^ 1])
 			td->runtime[td->ddir ^ 1] = td->runtime[td->ddir];
 
 		update_rusage_stat(td);
@@ -1891,7 +1981,8 @@ static void show_thread_status(struct thread_data *td,
 	printf("Client%d (groupid=%d): err=%2d:\n", td->thread_number, td->groupid, td->error);
 
 	show_ddir_status(td, rs, td->ddir);
-	show_ddir_status(td, rs, td->ddir ^ 1);
+	if (td->io_bytes[td->ddir ^ 1])
+		show_ddir_status(td, rs, td->ddir ^ 1);
 
 	if (td->runtime[0] + td->runtime[1]) {
 		double runt = td->runtime[0] + td->runtime[1];

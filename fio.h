@@ -38,6 +38,7 @@ struct io_piece {
 	struct list_head list;
 	unsigned long long offset;
 	unsigned int len;
+	int ddir;
 };
 
 /*
@@ -148,6 +149,9 @@ struct thread_data {
 	unsigned int iodepth;
 	os_cpu_mask_t cpumask;
 	unsigned int jobnum;
+	unsigned int iolog;
+
+	char iolog_file[256];
 
 	struct drand48_data bsrange_state;
 	struct drand48_data verify_state;
@@ -218,6 +222,7 @@ struct thread_data {
 	unsigned int override_sync;
 
 	struct list_head io_hist_list;
+	struct list_head io_log_list;
 };
 
 #define td_verror(td, err)						\
