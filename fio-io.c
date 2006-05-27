@@ -760,7 +760,7 @@ struct spliceio_data {
 
 static struct io_u *fio_spliceio_event(struct thread_data *td, int event)
 {
-	struct syncio_data *sd = td->io_data;
+	struct spliceio_data *sd = td->io_data;
 
 	assert(event == 0);
 
@@ -780,7 +780,7 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 
 	buflen = io_u->buflen;
 	p = io_u->buf;
-	do {
+	while (buflen) {
 		off_t off = io_u->offset;
 
 		ret = splice(td->fd, &off, sd->pipe[1], NULL, buflen, 0);
@@ -797,7 +797,7 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 			ret -= ret2;
 			p += ret2;
 		}
-	} while (buflen);
+	}
 
 	return io_u->buflen;
 }
