@@ -751,3 +751,161 @@ int fio_sgio_init(struct thread_data *td)
 }
 
 #endif /* FIO_HAVE_SGIO */
+
+#ifdef FIO_HAVE_SPLICE
+struct spliceio_data {
+	struct io_u *last_io_u;
+	int pipe[2];
+};
+
+static struct io_u *fio_spliceio_event(struct thread_data *td, int event)
+{
+	struct syncio_data *sd = td->io_data;
+
+	assert(event == 0);
+
+	return sd->last_io_u;
+}
+
+/*
+ * For splice reading, we unfortunately cannot (yet) vmsplice the other way.
+ * So just splice the data from the file into the pipe, and use regular
+ * read to fill the buffer. Doesn't make a lot of sense, but...
+ */
+static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
+{
+	struct spliceio_data *sd = td->io_data;
+	int ret, ret2, buflen;
+	void *p;
+
+	buflen = io_u->buflen;
+	p = io_u->buf;
+	do {
+		off_t off = io_u->offset;
+
+		ret = splice(td->fd, &off, sd->pipe[1], NULL, buflen, 0);
+		if (ret < 0)
+			return errno;
+
+		buflen -= ret;
+
+		while (ret) {
+			ret2 = read(sd->pipe[0], p, ret);
+			if (ret2 < 0)
+				return errno;
+
+			ret -= ret2;
+			p += ret2;
+		}
+	} while (buflen);
+
+	return io_u->buflen;
+}
+
+/*
+ * For splice writing, we can vmsplice our data buffer directly into a
+ * pipe and then splice that to a file.
+ */
+static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
+{
+	struct spliceio_data *sd = td->io_data;
+	struct iovec iov[1] = {
+		{
+			.iov_base = io_u->buf,
+			.iov_len = io_u->buflen,
+		}
+	};
+	struct pollfd pfd = { .fd = sd->pipe[1], .events = POLLOUT, };
+	int ret, ret2;
+
+	while (iov[0].iov_len) {
+		if (poll(&pfd, 1, -1) < 0)
+			return errno;
+
+		ret = vmsplice(sd->pipe[1], iov, 1, SPLICE_F_NONBLOCK);
+		if (ret < 0)
+			return errno;
+
+		iov[0].iov_len -= ret;
+		iov[0].iov_base += ret;
+
+		while (ret) {
+			off_t off = io_u->offset;
+
+			ret2 = splice(sd->pipe[0], NULL, td->fd, &off, ret, 0);
+			if (ret2 < 0)
+				return errno;
+
+			ret -= ret2;
+		}
+	}
+
+	return io_u->buflen;
+}
+
+static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
+{
+	struct spliceio_data *sd = td->io_data;
+	int ret;
+
+	if (io_u->ddir == DDIR_READ)
+		ret = fio_splice_read(td, io_u);
+	else
+		ret = fio_splice_write(td, io_u);
+
+	if ((unsigned int) ret != io_u->buflen) {
+		if (ret > 0) {
+			io_u->resid = io_u->buflen - ret;
+			io_u->error = ENODATA;
+		} else
+			io_u->error = errno;
+	}
+
+	if (!io_u->error)
+		sd->last_io_u = io_u;
+
+	return io_u->error;
+}
+
+static void fio_spliceio_cleanup(struct thread_data *td)
+{
+	struct spliceio_data *sd = td->io_data;
+
+	if (sd) {
+		close(sd->pipe[0]);
+		close(sd->pipe[1]);
+		free(sd);
+		td->io_data = NULL;
+	}
+}
+
+int fio_spliceio_init(struct thread_data *td)
+{
+	struct spliceio_data *sd = malloc(sizeof(*sd));
+
+	td->io_queue = fio_spliceio_queue;
+	td->io_getevents = fio_syncio_getevents;
+	td->io_event = fio_spliceio_event;
+	td->io_cancel = NULL;
+	td->io_cleanup = fio_spliceio_cleanup;
+	td->io_sync = fio_io_sync;
+
+	sd->last_io_u = NULL;
+	if (pipe(sd->pipe) < 0) {
+		td_verror(td, errno);
+		free(sd);
+		return 1;
+	}
+
+	td->io_data = sd;
+	return 0;
+}
+
+#else /* FIO_HAVE_SPLICE */
+
+int fio_spliceio_init(struct thread_data *td)
+{
+	return EINVAL;
+}
+
+#endif /* FIO_HAVE_SPLICE */

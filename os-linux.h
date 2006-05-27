@@ -2,6 +2,8 @@
 #define FIO_OS_LINUX_H
 
 #include <sys/ioctl.h>
+#include <sys/uio.h>
+#include <asm/unistd.h>
 
 #define FIO_HAVE_LIBAIO
 #define FIO_HAVE_POSIXAIO
@@ -10,6 +12,7 @@
 #define FIO_HAVE_DISK_UTIL
 #define FIO_HAVE_SGIO
 #define FIO_HAVE_IOPRIO
+#define FIO_HAVE_SPLICE
 
 #define OS_MAP_ANON		(MAP_ANONYMOUS)
 
@@ -30,6 +33,34 @@ static inline int ioprio_set(int which, int who, int ioprio)
 {
 	return syscall(__NR_ioprio_set, which, who, ioprio);
 }
+
+static _syscall6(int, sys_splice, int, fdin, loff_t *, off_in, int, fdout, loff_t *, off_out, size_t, len, unsigned int, flags);
+static _syscall4(int, sys_vmsplice, int, fd, const struct iovec *, iov, unsigned long, nr_segs, unsigned int, flags);
+static _syscall4(int, sys_tee, int, fdin, int, fdout, size_t, len, unsigned int, flags);
+
+static inline int splice(int fdin, loff_t *off_in, int fdout, loff_t *off_out,
+			 size_t len, unsigned long flags)
+{
+	return sys_splice(fdin, off_in, fdout, off_out, len, flags);
+}
+
+static inline int tee(int fdin, int fdout, size_t len, unsigned int flags)
+{
+	return sys_tee(fdin, fdout, len, flags);
+}
+
+static inline int vmsplice(int fd, const struct iovec *iov,
+			   unsigned long nr_segs, unsigned int flags)
+{
+	return sys_vmsplice(fd, iov, nr_segs, flags);
+}
+
+#define SPLICE_F_MOVE	(0x01)	/* move pages instead of copying */
+#define SPLICE_F_NONBLOCK (0x02) /* don't block on the pipe splicing (but */
+				 /* we may still block on the fd we splice */
+				 /* from/to, of course */
+#define SPLICE_F_MORE	(0x04)	/* expect more data */
+#define SPLICE_F_GIFT   (0x08)  /* pages passed in are a gift */
 
 enum {
 	IOPRIO_WHO_PROCESS = 1,

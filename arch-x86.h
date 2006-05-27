@@ -12,6 +12,12 @@
 #define __NR_fadvise64		250
 #endif
 
+#ifndef __NR_sys_splice
+#define __NR_sys_splice		313
+#define __NR_sys_tee		315
+#define __NR_sys_vmsplice	316
+#endif
+
 #define nop	__asm__ __volatile__("rep;nop": : :"memory")
 
 static inline unsigned long ffz(unsigned long bitmask)

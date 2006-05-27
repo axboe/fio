@@ -1158,6 +1158,8 @@ static int init_io(struct thread_data *td)
 		return fio_posixaio_init(td);
 	else if (td->io_engine == FIO_SGIO)
 		return fio_sgio_init(td);
+	else if (td->io_engine == FIO_SPLICEIO)
+		return fio_spliceio_init(td);
 	else {
 		fprintf(stderr, "bad io_engine %d\n", td->io_engine);
 		return 1;

@@ -44,10 +44,10 @@ The <jobs> format is as follows:
 	size=x		Set file size to x bytes (x string can include k/m/g)
 	ioengine=x	'x' may be: aio/libaio/linuxaio for Linux aio,
 			posixaio for POSIX aio, sync for regular read/write io,
-			mmap for mmap'ed io, or sgio for direct SG_IO io. The
-			latter only works on Linux on SCSI (or SCSI-like
-			devices, such as usb-storage or sata/libata driven)
-			devices.
+			mmap for mmap'ed io, splice for using splice/vmsplice,
+			or sgio for direct SG_IO io. The latter only works on
+			Linux on SCSI (or SCSI-like devices, such as
+			usb-storage or sata/libata driven) devices.
 	iodepth=x	For async io, allow 'x' ios in flight
 	overwrite=x	If 'x', layout a write file first.
 	prio=x		Run io at prio X, 0-7 is the kernel allowed range

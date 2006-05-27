@@ -12,6 +12,12 @@
 #define __NR_fadvise64		233
 #endif
 
+#ifndef __NR_sys_splice
+#define __NR_sys_splice		283
+#define __NR_sys_tee		284
+#define __NR_sys_vmsplice	285
+#endif
+
 #define nop	do { } while (0)
 
 static inline int __ilog2(unsigned long bitmask)

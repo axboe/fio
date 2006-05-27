@@ -278,6 +278,7 @@ enum {
 	FIO_LIBAIO	= 1 << 2,
 	FIO_POSIXAIO	= 1 << 3,
 	FIO_SGIO	= 1 << 4,
+	FIO_SPLICEIO	= 1 << 5 | FIO_SYNCIO,
 };
 
 #define td_read(td)		((td)->ddir == DDIR_READ)

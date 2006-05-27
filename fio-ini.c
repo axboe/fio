@@ -161,8 +161,7 @@ static void put_job(struct thread_data *td)
 	thread_number--;
 }
 
-static int add_job(struct thread_data *td, const char *jobname, int prioclass,
-		   int prio)
+static int add_job(struct thread_data *td, const char *jobname)
 {
 	char *ddir_str[] = { "read", "write", "randread", "randwrite",
 			     "rw", NULL, "randrw" };
@@ -180,9 +179,6 @@ static int add_job(struct thread_data *td, const char *jobname, int prioclass,
 		fprintf(stderr, "posix aio not available\n");
 		return 1;
 	}
-#endif
-#ifdef FIO_HAVE_IOPRIO
-	td->ioprio = (prioclass << IOPRIO_CLASS_SHIFT) | prio;
 #endif
 
 	/*
@@ -249,7 +245,7 @@ static int add_job(struct thread_data *td, const char *jobname, int prioclass,
 		setup_log(&td->bw_log);
 
 	ddir = td->ddir + (!td->sequential << 1) + (td->iomix << 2);
-	printf("Client%d (g=%d): rw=%s, prio=%d/%d, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->thread_number, td->groupid, ddir_str[ddir], prioclass, prio, td->odirect, td->min_bs, td->max_bs, td->rate, td->io_engine_name, td->iodepth);
+	printf("Client%d (g=%d): rw=%s, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->thread_number, td->groupid, ddir_str[ddir], td->odirect, td->min_bs, td->max_bs, td->rate, td->io_engine_name, td->iodepth);
 
 	/*
 	 * recurse add identical jobs, clear numjobs and stonewall options
@@ -266,7 +262,7 @@ static int add_job(struct thread_data *td, const char *jobname, int prioclass,
 		td_new->stonewall = 0;
 		td_new->jobnum = numjobs;
 
-		if (add_job(td_new, jobname, prioclass, prio))
+		if (add_job(td_new, jobname))
 			goto err;
 	}
 	return 0;
@@ -622,6 +618,10 @@ static int str_ioengine_cb(struct thread_data *td, char *str)
 		strcpy(td->io_engine_name, "sgio");
 		td->io_engine = FIO_SGIO;
 		return 0;
+	} else if (!strncmp(str, "splice", 6)) {
+		strcpy(td->io_engine_name, "splice");
+		td->io_engine = FIO_SPLICEIO;
+		return 0;
 	}
 
 	fprintf(stderr, "bad ioengine type: %s\n", str);
@@ -670,9 +670,6 @@ int parse_jobs_ini(char *file)
 		if (!td)
 			return 1;
 
-		prioclass = 2;
-		prio = 4;
-
 		fgetpos(f, &off);
 		while ((p = fgets(string, 4096, f)) != NULL) {
 			if (is_empty_or_comment(p))
@@ -685,6 +682,7 @@ int parse_jobs_ini(char *file)
 				fprintf(stderr, "io priorities not available\n");
 				return 1;
 #endif
+				td->ioprio |= prio;
 				fgetpos(f, &off);
 				continue;
 			}
@@ -693,6 +691,7 @@ int parse_jobs_ini(char *file)
 				fprintf(stderr, "io priorities not available\n");
 				return 1;
 #endif
+				td->ioprio |= prioclass << IOPRIO_CLASS_SHIFT;
 				fgetpos(f, &off);
 				continue;
 			}
@@ -856,7 +855,7 @@ int parse_jobs_ini(char *file)
 		}
 		fsetpos(f, &off);
 
-		if (add_job(td, name, prioclass, prio))
+		if (add_job(td, name))
 			return 1;
 	}
 
