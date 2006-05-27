@@ -969,6 +969,9 @@ static void parse_cmd_line(int argc, char *argv[])
 				exit(0);
 		}
 	}
+
+	if (!ini_file && argc > 1 && argv[argc - 1][0] != '-')
+		ini_file = strdup(argv[argc - 1]);
 }
 
 static void free_shm(void)
@@ -1030,8 +1033,10 @@ int parse_options(int argc, char *argv[])
 		return 1;
 	}
 
-	if (parse_jobs_ini(ini_file))
+	if (parse_jobs_ini(ini_file)) {
+		usage(argv[0]);
 		return 1;
+	}
 
 	return 0;
 }
