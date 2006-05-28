@@ -62,6 +62,8 @@ static inline int vmsplice(int fd, const struct iovec *iov,
 #define SPLICE_F_MORE	(0x04)	/* expect more data */
 #define SPLICE_F_GIFT   (0x08)  /* pages passed in are a gift */
 
+#define SPLICE_DEF_SIZE	(64*1024)
+
 enum {
 	IOPRIO_WHO_PROCESS = 1,
 	IOPRIO_WHO_PGRP,

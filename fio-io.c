@@ -776,16 +776,25 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 {
 	struct spliceio_data *sd = td->io_data;
 	int ret, ret2, buflen;
+	off_t offset;
 	void *p;
 
+	offset = io_u->offset;
 	buflen = io_u->buflen;
 	p = io_u->buf;
 	while (buflen) {
-		off_t off = io_u->offset;
+		int this_len = buflen;
 
-		ret = splice(td->fd, &off, sd->pipe[1], NULL, buflen, 0);
-		if (ret < 0)
+		if (this_len > SPLICE_DEF_SIZE)
+			this_len = SPLICE_DEF_SIZE;
+
+		ret = splice(td->fd, &offset, sd->pipe[1], NULL, this_len, SPLICE_F_MORE);
+		if (ret < 0) {
+			if (errno == ENODATA || errno == EAGAIN)
+				continue;
+
 			return errno;
+		}
 
 		buflen -= ret;
 
@@ -816,6 +825,7 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 		}
 	};
 	struct pollfd pfd = { .fd = sd->pipe[1], .events = POLLOUT, };
+	off_t off = io_u->offset;
 	int ret, ret2;
 
 	while (iov[0].iov_len) {
@@ -830,8 +840,6 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 		iov[0].iov_base += ret;
 
 		while (ret) {
-			off_t off = io_u->offset;
-
 			ret2 = splice(sd->pipe[0], NULL, td->fd, &off, ret, 0);
 			if (ret2 < 0)
 				return errno;
