@@ -362,7 +362,7 @@ static int str_cnv(char *p, unsigned long long *val)
 	if (*val == ULONG_MAX && errno == ERANGE)
 		return 1;
 
-	*val *= get_mult(str[len - 2]);
+	*val *= get_mult(str[len - 1]);
 	return 0;
 }
 
