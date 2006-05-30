@@ -486,6 +486,9 @@ static int check_int(char *p, char *name, unsigned int *val)
 {
 	char *str;
 
+	if (strncmp(p, name, strlen(name)))
+		return 1;
+
 	str = strstr(p, name);
 	if (!str)
 		return 1;
@@ -669,6 +672,7 @@ int parse_jobs_ini(char *file)
 				continue;
 			if (strstr(p, "["))
 				break;
+			strip_blank_front(&p);
 			strip_blank_end(p);
 
 			if (!check_int(p, "prio", &prio)) {
