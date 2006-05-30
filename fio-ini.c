@@ -110,7 +110,10 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 		return NULL;
 
 	td = &threads[thread_number++];
-	memset(td, 0, sizeof(*td));
+	if (parent)
+		*td = *parent;
+	else
+		memset(td, 0, sizeof(*td));
 
 	td->fd = -1;
 	td->thread_number = thread_number;
@@ -375,24 +378,18 @@ static void strip_blank_front(char **p)
 {
 	char *s = *p;
 
-	while (isblank(*s))
+	while (isspace(*s))
 		s++;
 }
 
 static void strip_blank_end(char *p)
 {
-	while (isblank(*p)) {
-		*p = '\0';
-		p--;
-	}
-}
+	char *s = p + strlen(p) - 1;
 
-static void terminate_line(char *p)
-{
-	while (*p != '\n' && *p != '\0')
-		p++;
+	while (isspace(*s) || iscntrl(*s))
+		s--;
 
-	*p = '\0';
+	*(s + 1) = '\0';
 }
 
 typedef int (str_cb_fn)(struct thread_data *, char *);
@@ -428,9 +425,6 @@ static int check_strstore(char *p, char *name, char *dest)
 	strip_blank_front(&s);
 
 	strcpy(dest, s);
-
-	s = dest + strlen(dest) - 1;
-	strip_blank_end(s);
 	return 0;
 }
 
@@ -630,7 +624,6 @@ static int str_ioengine_cb(struct thread_data *td, char *str)
 
 static int str_iolog_cb(struct thread_data *td, char *file)
 {
-	terminate_line(file);
 	strncpy(td->iolog_file, file, sizeof(td->iolog_file) - 1);
 
 	return 0;
@@ -676,6 +669,7 @@ int parse_jobs_ini(char *file)
 				continue;
 			if (strstr(p, "["))
 				break;
+			strip_blank_end(p);
 
 			if (!check_int(p, "prio", &prio)) {
 #ifndef FIO_HAVE_IOPRIO
