@@ -1136,7 +1136,7 @@ static void do_io(struct thread_data *td)
 	if (td->cur_depth)
 		cleanup_pending_aio(td);
 
-	if (should_fsync(td) && td->fsync_blocks)
+	if (should_fsync(td) && td->end_fsync)
 		sync_td(td);
 }
 

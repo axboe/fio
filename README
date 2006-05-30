@@ -73,6 +73,7 @@ The <jobs> format is as follows:
 	bwavgtime=x	Average bandwidth stats over an x msec window.
 	create_serialize=x	If 'x', serialize file creation.
 	create_fsync=x	If 'x', run fsync() after file creation.
+	end_fsync=x	If 'x', run fsync() after end-of-job.
 	loops=x		Run the job 'x' number of times.
 	verify=x	If 'x' == md5, use md5 for verifies. If 'x' == crc32,
 			use crc32 for verifies. md5 is 'safer', but crc32 is

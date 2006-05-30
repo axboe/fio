@@ -726,6 +726,7 @@ int parse_jobs_ini(char *file)
 			}
 			if (!check_int(p, "fsync", &td->fsync_blocks)) {
 				fgetpos(f, &off);
+				td->end_fsync = 1;
 				continue;
 			}
 			if (!check_int(p, "startdelay", &td->start_delay)) {
@@ -757,6 +758,10 @@ int parse_jobs_ini(char *file)
 				continue;
 			}
 			if (!check_int(p, "create_fsync", &td->create_fsync)) {
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_int(p, "end_fsync", &td->end_fsync)) {
 				fgetpos(f, &off);
 				continue;
 			}
