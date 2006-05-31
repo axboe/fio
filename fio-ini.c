@@ -280,7 +280,7 @@ int init_random_state(struct thread_data *td)
 	unsigned long seed;
 	int fd, num_maps, blocks;
 
-	fd = open("/dev/random", O_RDONLY);
+	fd = open("/dev/urandom", O_RDONLY);
 	if (fd == -1) {
 		td_verror(td, errno);
 		return 1;
