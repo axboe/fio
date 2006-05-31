@@ -57,6 +57,8 @@ static void update_io_ticks(void);
 static void disk_util_timer_arm(void);
 static void print_thread_status(void);
 
+extern unsigned long long mlock_size;
+
 /*
  * thread life cycle
  */
@@ -2234,8 +2236,23 @@ static void run_threads(void)
 	struct thread_data *td;
 	unsigned long spent;
 	int i, todo, nr_running, m_rate, t_rate, nr_started;
+	void *mlocked_mem = NULL;
 
 	printf("Starting %d thread%s\n", thread_number, thread_number > 1 ? "s" : "");
+
+	if (mlock_size) {
+		mlocked_mem = malloc(mlock_size);
+		if (!mlocked_mem) {
+			perror("malloc locked mem");
+			return;
+		}
+		if (mlock(mlocked_mem, mlock_size) < 0) {
+			free(mlocked_mem);
+			perror("mlock");
+			return;
+		}
+	}
+
 	fflush(stdout);
 
 	signal(SIGINT, sig_handler);
@@ -2347,6 +2364,12 @@ static void run_threads(void)
 	}
 
 	update_io_ticks();
+
+	if (mlocked_mem) {
+		if (munlock(mlocked_mem, mlock_size) < 0)
+			perror("munlock");
+		free(mlocked_mem);
+	}
 }
 
 static void show_group_stats(struct group_run_stats *rs, int id)

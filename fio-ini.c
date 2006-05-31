@@ -50,6 +50,7 @@ int rate_quit = 0;
 int write_lat_log = 0;
 int write_bw_log = 0;
 int exitall_on_terminate = 0;
+unsigned long long mlock_size = 0;
 
 static int setup_rate(struct thread_data *td)
 {
@@ -800,6 +801,10 @@ int parse_jobs_ini(char *file)
 				continue;
 			}
 			if (!check_strcnv(p, "zoneskip", &td->zone_skip)) {
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_strcnv(p, "lockmem", &mlock_size)) {
 				fgetpos(f, &off);
 				continue;
 			}
