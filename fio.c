@@ -1739,23 +1739,19 @@ static void init_disk_util(struct thread_data *td)
 		return;
 
 	/*
-	 * for md/dm, there's no queue dir. we already have the right place
+	 * If there's a ../queue/ directory there, we are inside a partition.
+	 * Check if that is the case and jump back. For loop/md/dm etc we
+	 * are already in the right spot.
 	 */
-	sprintf(tmp, "%s/stat", foo);
-	if (stat(tmp, &st)) {
-		/*
-		 * if this is inside a partition dir, jump back to parent
-		 */
-		sprintf(tmp, "%s/queue", foo);
+	sprintf(tmp, "%s/../queue", foo);
+	if (!stat(tmp, &st)) {
+		p = dirname(foo);
+		sprintf(tmp, "%s/queue", p);
 		if (stat(tmp, &st)) {
-			p = dirname(foo);
-			sprintf(tmp, "%s/queue", p);
-			if (stat(tmp, &st)) {
-				fprintf(stderr, "unknown sysfs layout\n");
-				return;
-			}
-			sprintf(foo, "%s", p);
+			fprintf(stderr, "unknown sysfs layout\n");
+			return;
 		}
+		sprintf(foo, "%s", p);
 	}
 
 	disk_util_add(dev, foo);
