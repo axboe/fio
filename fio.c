@@ -2231,31 +2231,66 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 	}
 }
 
+static void fio_unpin_memory(void *pinned)
+{
+	if (pinned) {
+		if (munlock(pinned, mlock_size) < 0)
+			perror("munlock");
+		munmap(pinned, mlock_size);
+	}
+}
+
+static void *fio_pin_memory(void)
+{
+	long pagesize, pages;
+	void *ptr;
+
+	if (!mlock_size)
+		return NULL;
+
+	/*
+	 * Don't allow mlock of more than real_mem-128MB
+	 */
+	pagesize = sysconf(_SC_PAGESIZE);
+	pages = sysconf(_SC_PHYS_PAGES);
+	if (pages != -1 && pagesize != -1) {
+		unsigned long long real_mem = pages * pagesize;
+
+		if ((mlock_size + 128 * 1024 * 1024) > real_mem) {
+			mlock_size = real_mem - 128 * 1024 * 1024;
+			printf("fio: limiting mlocked memory to %lluMiB\n",
+							mlock_size >> 20);
+		}
+	}
+
+	ptr = mmap(NULL, mlock_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | OS_MAP_ANON, 0, 0);
+	if (!ptr) {
+		perror("malloc locked mem");
+		return NULL;
+	}
+	if (mlock(ptr, mlock_size) < 0) {
+		munmap(ptr, mlock_size);
+		perror("mlock");
+		return NULL;
+	}
+
+	return ptr;
+}
+
 static void run_threads(void)
 {
 	struct thread_data *td;
 	unsigned long spent;
 	int i, todo, nr_running, m_rate, t_rate, nr_started;
-	void *mlocked_mem = NULL;
+	void *mlocked_mem;
+
+	mlocked_mem = fio_pin_memory();
 
 	printf("Starting %d thread%s\n", thread_number, thread_number > 1 ? "s" : "");
+	fflush(stdout);
 
 	signal(SIGINT, sig_handler);
 	signal(SIGALRM, sig_handler);
-
-	if (mlock_size) {
-		mlocked_mem = mmap(NULL, mlock_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | OS_MAP_ANON, 0, 0);
-		if (!mlocked_mem) {
-			perror("mmap locked mem");
-			return;
-		}
-		if (mlock(mlocked_mem, mlock_size) < 0) {
-			munmap(mlocked_mem, mlock_size);
-			return;
-		}
-	}
-
-	fflush(stdout);
 
 	todo = thread_number;
 	nr_running = 0;
@@ -2363,12 +2398,7 @@ static void run_threads(void)
 	}
 
 	update_io_ticks();
-
-	if (mlocked_mem) {
-		if (munlock(mlocked_mem, mlock_size) < 0)
-			perror("munlock");
-		munmap(mlocked_mem, mlock_size);
-	}
+	fio_unpin_memory(mlocked_mem);
 }
 
 static void show_group_stats(struct group_run_stats *rs, int id)
