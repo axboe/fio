@@ -2240,23 +2240,22 @@ static void run_threads(void)
 
 	printf("Starting %d thread%s\n", thread_number, thread_number > 1 ? "s" : "");
 
+	signal(SIGINT, sig_handler);
+	signal(SIGALRM, sig_handler);
+
 	if (mlock_size) {
-		mlocked_mem = malloc(mlock_size);
+		mlocked_mem = mmap(NULL, mlock_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | OS_MAP_ANON, 0, 0);
 		if (!mlocked_mem) {
-			perror("malloc locked mem");
+			perror("mmap locked mem");
 			return;
 		}
 		if (mlock(mlocked_mem, mlock_size) < 0) {
-			free(mlocked_mem);
-			perror("mlock");
+			munmap(mlocked_mem, mlock_size);
 			return;
 		}
 	}
 
 	fflush(stdout);
-
-	signal(SIGINT, sig_handler);
-	signal(SIGALRM, sig_handler);
 
 	todo = thread_number;
 	nr_running = 0;
@@ -2368,7 +2367,7 @@ static void run_threads(void)
 	if (mlocked_mem) {
 		if (munlock(mlocked_mem, mlock_size) < 0)
 			perror("munlock");
-		free(mlocked_mem);
+		munmap(mlocked_mem, mlock_size);
 	}
 }
 
