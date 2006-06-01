@@ -197,7 +197,7 @@ static int get_next_free_block(struct thread_data *td, unsigned long long *b)
 
 static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 {
-	unsigned long block = io_u->offset / td->min_bs;
+	unsigned long long block = io_u->offset / (unsigned long long) td->min_bs;
 	unsigned int blocks = 0;
 
 	while (blocks < (io_u->buflen / td->min_bs)) {
@@ -1950,14 +1950,15 @@ static void show_ddir_status(struct thread_data *td, struct group_run_stats *rs,
 			     int ddir)
 {
 	char *ddir_str[] = { "read ", "write" };
-	unsigned long min, max, bw;
+	unsigned long min, max;
+	unsigned long long bw;
 	double mean, dev;
 
 	if (!td->runtime[ddir])
 		return;
 
 	bw = td->io_bytes[ddir] / td->runtime[ddir];
-	printf("  %s: io=%6lluMiB, bw=%6luKiB/s, runt=%6lumsec\n", ddir_str[ddir], td->io_bytes[ddir] >> 20, bw, td->runtime[ddir]);
+	printf("  %s: io=%6lluMiB, bw=%6lluKiB/s, runt=%6lumsec\n", ddir_str[ddir], td->io_bytes[ddir] >> 20, bw, td->runtime[ddir]);
 
 	if (calc_lat(&td->slat_stat[ddir], &min, &max, &mean, &dev))
 		printf("    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, dev=%5.02f\n", min, max, mean, dev);
@@ -2499,7 +2500,7 @@ static void show_run_stats(void)
 	}
 
 	for (i = 0; i < thread_number; i++) {
-		unsigned long rbw, wbw;
+		unsigned long long rbw, wbw;
 
 		td = &threads[i];
 
@@ -2521,9 +2522,9 @@ static void show_run_stats(void)
 
 		rbw = wbw = 0;
 		if (td->runtime[0])
-			rbw = td->io_bytes[0] / td->runtime[0];
+			rbw = td->io_bytes[0] / (unsigned long long) td->runtime[0];
 		if (td->runtime[1])
-			wbw = td->io_bytes[1] / td->runtime[1];
+			wbw = td->io_bytes[1] / (unsigned long long) td->runtime[1];
 
 		if (rbw < rs->min_bw[0])
 			rs->min_bw[0] = rbw;
