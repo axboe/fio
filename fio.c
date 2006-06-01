@@ -65,6 +65,7 @@ extern unsigned long long mlock_size;
 enum {
 	TD_NOT_CREATED = 0,
 	TD_CREATED,
+	TD_INITIALIZED,
 	TD_RUNNING,
 	TD_VERIFYING,
 	TD_EXITED,
@@ -76,6 +77,7 @@ enum {
 static sem_t startup_sem;
 
 #define TERMINATE_ALL		(-1)
+#define JOB_START_TIMEOUT	(5 * 1000)
 
 static void terminate_threads(int group_id)
 {
@@ -1829,13 +1831,14 @@ static void *thread_main(void *data)
 		}
 	}
 
+	if (init_random_state(td))
+		goto err;
+
+	td_set_runstate(td, TD_INITIALIZED);
 	sem_post(&startup_sem);
 	sem_wait(&td->mutex);
 
 	if (!td->create_serialize && setup_file(td))
-		goto err;
-
-	if (init_random_state(td))
 		goto err;
 
 	gettimeofday(&td->epoch, NULL);
@@ -2035,6 +2038,9 @@ static void check_str_update(struct thread_data *td)
 		case TD_CREATED:
 			c = 'C';
 			break;
+		case TD_INITIALIZED:
+			c = 'I';
+			break;
 		case TD_NOT_CREATED:
 			c = 'P';
 			break;
@@ -2106,7 +2112,8 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 
 		if (td->timeout && eta_sec > (td->timeout - elapsed))
 			eta_sec = td->timeout - elapsed;
-	} else if (td->runstate == TD_NOT_CREATED || td->runstate == TD_CREATED) {
+	} else if (td->runstate == TD_NOT_CREATED || td->runstate == TD_CREATED
+			|| td->runstate == TD_INITIALIZED) {
 		int t_eta = 0, r_eta = 0;
 
 		/*
@@ -2317,6 +2324,10 @@ static void run_threads(void)
 	gettimeofday(&genesis, NULL);
 
 	while (todo) {
+		struct thread_data *map[MAX_JOBS];
+		struct timeval this_start;
+		int this_jobs = 0, left;
+
 		/*
 		 * create threads (TD_NOT_CREATED -> TD_CREATED)
 		 */
@@ -2345,9 +2356,13 @@ static void run_threads(void)
 			if (td->stonewall && (nr_started || nr_running))
 				break;
 
+			/*
+			 * Set state to created. Thread will transition
+			 * to TD_INITIALIZED when it's done setting up.
+			 */
 			td_set_runstate(td, TD_CREATED);
+			map[this_jobs++] = td;
 			sem_init(&startup_sem, 0, 1);
-			todo--;
 			nr_started++;
 
 			if (td->use_thread) {
@@ -2366,12 +2381,50 @@ static void run_threads(void)
 		}
 
 		/*
-		 * start created threads (TD_CREATED -> TD_RUNNING)
+		 * Wait for the started threads to transition to
+		 * TD_INITIALIZED.
 		 */
+		printf("fio: Waiting for threads to initialize...\n");
+		gettimeofday(&this_start, NULL);
+		left = this_jobs;
+		while (left) {
+			if (mtime_since_now(&this_start) > JOB_START_TIMEOUT)
+				break;
+
+			usleep(100000);
+
+			for (i = 0; i < this_jobs; i++) {
+				td = map[i];
+				if (!td)
+					continue;
+				if (td->runstate == TD_INITIALIZED ||
+				    td->runstate >= TD_EXITED) {
+					map[i] = NULL;
+					left--;
+					continue;
+				}
+			}
+		}
+
+		if (left) {
+			fprintf(stderr, "fio: %d jobs failed to start\n", left);
+			for (i = 0; i < this_jobs; i++) {
+				td = map[i];
+				if (!td)
+					continue;
+				kill(td->pid, SIGTERM);
+			}
+			break;
+		}
+
+		/*
+		 * start created threads (TD_INITIALIZED -> TD_RUNNING)
+		 */
+		printf("fio: Go for launch\n");
 		for (i = 0; i < thread_number; i++) {
 			td = &threads[i];
 
-			if (td->runstate != TD_CREATED)
+			if (td->runstate != TD_INITIALIZED)
 				continue;
 
 			td_set_runstate(td, TD_RUNNING);
@@ -2379,6 +2432,7 @@ static void run_threads(void)
 			nr_started--;
 			m_rate += td->ratemin;
 			t_rate += td->rate;
+			todo--;
 			sem_post(&td->mutex);
 		}
 

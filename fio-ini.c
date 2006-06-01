@@ -165,7 +165,7 @@ static void put_job(struct thread_data *td)
 	thread_number--;
 }
 
-static int add_job(struct thread_data *td, const char *jobname)
+static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 {
 	char *ddir_str[] = { "read", "write", "randread", "randwrite",
 			     "rw", NULL, "randrw" };
@@ -249,7 +249,11 @@ static int add_job(struct thread_data *td, const char *jobname)
 		setup_log(&td->bw_log);
 
 	ddir = td->ddir + (!td->sequential << 1) + (td->iomix << 2);
-	printf("Client%d (g=%d): rw=%s, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->thread_number, td->groupid, ddir_str[ddir], td->odirect, td->min_bs, td->max_bs, td->rate, td->io_engine_name, td->iodepth);
+
+	if (!job_add_num)
+		printf("Client%d (g=%d): rw=%s, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->thread_number, td->groupid, ddir_str[ddir], td->odirect, td->min_bs, td->max_bs, td->rate, td->io_engine_name, td->iodepth);
+	else if (job_add_num == 1)
+		printf("...\n");
 
 	/*
 	 * recurse add identical jobs, clear numjobs and stonewall options
@@ -265,8 +269,9 @@ static int add_job(struct thread_data *td, const char *jobname)
 		td_new->numjobs = 1;
 		td_new->stonewall = 0;
 		td_new->jobnum = numjobs;
+		job_add_num = numjobs - 1;
 
-		if (add_job(td_new, jobname))
+		if (add_job(td_new, jobname, job_add_num))
 			goto err;
 	}
 	return 0;
@@ -863,7 +868,7 @@ int parse_jobs_ini(char *file)
 		}
 		fsetpos(f, &off);
 
-		if (add_job(td, name))
+		if (add_job(td, name, 0))
 			return 1;
 	}
 
