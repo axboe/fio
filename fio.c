@@ -288,12 +288,12 @@ static int get_next_offset(struct thread_data *td, unsigned long long *offset)
 	long r;
 
 	if (!td->sequential) {
-		unsigned long max_blocks = td->io_size / td->min_bs;
+		unsigned long long max_blocks = td->io_size / td->min_bs;
 		int loops = 50;
 
 		do {
 			lrand48_r(&td->random_state, &r);
-			b = ((max_blocks - 1) * r / (RAND_MAX+1.0));
+			b = ((max_blocks - 1) * r / (unsigned long long) (RAND_MAX+1.0));
 			rb = b + (td->file_offset / td->min_bs);
 			loops--;
 		} while (!random_map_free(td, rb) && loops);
