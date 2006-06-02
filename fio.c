@@ -1872,7 +1872,6 @@ static void *thread_main(void *data)
 	td_set_runstate(td, TD_INITIALIZED);
 	sem_post(&startup_sem);
 	sem_wait(&td->mutex);
-	ret = 0;
 
 	if (!td->create_serialize && setup_file(td))
 		goto err;
