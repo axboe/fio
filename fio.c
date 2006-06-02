@@ -545,44 +545,32 @@ static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
 	memcpy(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash));
 }
 
-unsigned int hweight32(unsigned int w)
-{
-	unsigned int res = w - ((w >> 1) & 0x55555555);
-
-	res = (res & 0x33333333) + ((res >> 2) & 0x33333333);
-	res = (res + (res >> 4)) & 0x0F0F0F0F;
-	res = res + (res >> 8);
-
-	return (res + (res >> 16)) & 0x000000FF;
-}
-
-unsigned long hweight64(unsigned long long w)
-{
-#if __WORDSIZE == 32
-        return hweight32((unsigned int)(w >> 32)) + hweight32((unsigned int)w);
-#elif __WORDSIZE == 64
-	unsigned long long v = w - ((w >> 1) & 0x5555555555555555ul);
-
-	v = (v & 0x3333333333333333ul) + ((v >> 2) & 0x3333333333333333ul);
-	v = (v + (v >> 4)) & 0x0F0F0F0F0F0F0F0Ful;
-	v = v + (v >> 8);
-	v = v + (v >> 16);
-
-	return (v + (v >> 32)) & 0x00000000000000FFul;
-#else
-#error __WORDSIZE not defined
-#endif
-}
-
 static int get_rw_ddir(struct thread_data *td)
 {
-	/*
-	 * perhaps cheasy, but use the hamming weight of the position
-	 * as a randomizer for data direction.
-	 */
-	if (td_rw(td))
-		return hweight64(td->last_pos) & 1;
-	else if (td_read(td))
+	if (td_rw(td)) {
+		struct timeval now;
+		unsigned long elapsed;
+
+		gettimeofday(&now, NULL);
+	 	elapsed = mtime_since_now(&td->rwmix_switch);
+
+		/*
+		 * Check if it's time to seed a new data direction.
+		 */
+		if (elapsed >= td->rwmixcycle) {
+			unsigned long v;
+			long r;
+
+			lrand48_r(&td->random_state, &r);
+			v = 100UL * r / (unsigned long) (RAND_MAX + 1.0);
+			if (v < td->rwmixread)
+				td->rwmix_ddir = DDIR_READ;
+			else
+				td->rwmix_ddir = DDIR_WRITE;
+			memcpy(&td->rwmix_switch, &now, sizeof(now));
+		}
+		return td->rwmix_ddir;
+	} else if (td_read(td))
 		return DDIR_READ;
 	else
 		return DDIR_WRITE;

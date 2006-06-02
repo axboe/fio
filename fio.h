@@ -151,6 +151,8 @@ struct thread_data {
 	os_cpu_mask_t cpumask;
 	unsigned int jobnum;
 	unsigned int iolog;
+	unsigned int rwmixcycle;
+	unsigned int rwmixread;
 
 	char iolog_file[256];
 
@@ -221,6 +223,10 @@ struct thread_data {
 
 	unsigned int do_disk_util;
 	unsigned int override_sync;
+
+	struct drand48_data rwmix_state;
+	struct timeval rwmix_switch;
+	int rwmix_ddir;
 
 	struct list_head io_hist_list;
 	struct list_head io_log_list;

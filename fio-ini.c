@@ -36,6 +36,8 @@
 #define DEF_FILE_SIZE		(1024 * 1024 * 1024UL)
 #define DEF_ZONE_SIZE		(0)
 #define DEF_ZONE_SKIP		(0)
+#define DEF_RWMIX_CYCLE		(500)
+#define DEF_RWMIX_READ		(50)
 
 static char fio_version_string[] = "fio 1.3";
 
@@ -282,7 +284,7 @@ err:
 
 int init_random_state(struct thread_data *td)
 {
-	unsigned long seed;
+	unsigned long seeds[4];
 	int fd, num_maps, blocks;
 
 	fd = open("/dev/urandom", O_RDONLY);
@@ -291,7 +293,7 @@ int init_random_state(struct thread_data *td)
 		return 1;
 	}
 
-	if (read(fd, &seed, sizeof(seed)) < (int) sizeof(seed)) {
+	if (read(fd, seeds, sizeof(seeds)) < (int) sizeof(seeds)) {
 		td_verror(td, EIO);
 		close(fd);
 		return 1;
@@ -299,14 +301,15 @@ int init_random_state(struct thread_data *td)
 
 	close(fd);
 
-	srand48_r(seed, &td->bsrange_state);
-	srand48_r(seed, &td->verify_state);
+	srand48_r(seeds[0], &td->bsrange_state);
+	srand48_r(seeds[1], &td->verify_state);
+	srand48_r(seeds[2], &td->rwmix_state);
 
 	if (td->sequential)
 		return 0;
 
 	if (repeatable)
-		seed = DEF_RANDSEED;
+		seeds[3] = DEF_RANDSEED;
 
 	blocks = (td->io_size + td->min_bs - 1) / td->min_bs;
 	num_maps = blocks / BLOCKS_PER_MAP;
@@ -314,7 +317,7 @@ int init_random_state(struct thread_data *td)
 	td->num_maps = num_maps;
 	memset(td->file_map, 0, num_maps * sizeof(long));
 
-	srand48_r(seed, &td->random_state);
+	srand48_r(seeds[3], &td->random_state);
 	return 0;
 }
 
@@ -640,7 +643,7 @@ static int str_iolog_cb(struct thread_data *td, char *file)
 
 int parse_jobs_ini(char *file)
 {
-	unsigned int prioclass, prio, cpu, global;
+	unsigned int prioclass, prio, cpu, global, il;
 	unsigned long long ull;
 	unsigned long ul1, ul2;
 	struct thread_data *td;
@@ -781,6 +784,24 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
+			if (!check_int(p, "rwmixcycle", &td->rwmixcycle)) {
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_int(p, "rwmixread", &il)) {
+				if (il > 100)
+					il = 100;
+				td->rwmixread = il;
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_int(p, "rwmixwrite", &il)) {
+				if (il > 100)
+					il = 100;
+				td->rwmixread = 100 - il;
+				fgetpos(f, &off);
+				continue;
+			}
 			if (!check_range(p, "bsrange", &ul1, &ul2)) {
 				if (ul1 > ul2) {
 					td->max_bs = ul1;
@@ -914,6 +935,8 @@ static int fill_def_thread(void)
 	def_thread.stonewall = DEF_STONEWALL;
 	def_thread.numjobs = DEF_NUMJOBS;
 	def_thread.use_thread = DEF_USE_THREAD;
+	def_thread.rwmixcycle = DEF_RWMIX_CYCLE;
+	def_thread.rwmixread = DEF_RWMIX_READ;
 #ifdef FIO_HAVE_DISK_UTIL
 	def_thread.do_disk_util = 1;
 #endif

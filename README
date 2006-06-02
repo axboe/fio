@@ -41,6 +41,13 @@ The <jobs> format is as follows:
 	directory=x	Use 'x' as the top level directory for storing files
 	rw=x		'x' may be: read, randread, write, randwrite,
 			rw (read-write mix), randrw (read-write random mix)
+	rwmixcycle=x	Base cycle for switching between read and write
+			in msecs.
+	rwmixread=x	'x' percentage of rw mix ios will be reads. If
+			rwmixwrite is also given, the last of the two will
+			 be used if they don't add up to 100%.
+	rwmixwrite=x	'x' percentage of rw mix ios will be writes. See
+			rwmixread.
 	size=x		Set file size to x bytes (x string can include k/m/g)
 	ioengine=x	'x' may be: aio/libaio/linuxaio for Linux aio,
 			posixaio for POSIX aio, sync for regular read/write io,
