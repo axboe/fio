@@ -150,9 +150,12 @@ struct thread_data {
 	unsigned int iodepth;
 	os_cpu_mask_t cpumask;
 	unsigned int jobnum;
-	unsigned int iolog;
+	unsigned int read_iolog;
+	unsigned int write_iolog;
 
 	char iolog_file[256];
+	void *iolog_buf;
+	FILE *iolog_f;
 
 	struct drand48_data bsrange_state;
 	struct drand48_data verify_state;

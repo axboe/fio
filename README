@@ -92,6 +92,9 @@ The <jobs> format is as follows:
 			rw, offset, length
 			where with rw=0/1 for read/write, and the offset
 			and length entries being in bytes.
+	write_iolog=x	Write an iolog to file 'x' in the same format as iolog.
+			The iolog options are exclusive, if both given the
+			read iolog will be performed.
 	lockmem=x	Lock down x amount of memory on the machine, to
 			simulate a machine with less memory available. x can
 			include k/m/g suffix.

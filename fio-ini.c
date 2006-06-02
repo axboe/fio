@@ -402,8 +402,12 @@ typedef int (str_cb_fn)(struct thread_data *, char *);
 
 static int check_str(char *p, char *name, str_cb_fn *cb, struct thread_data *td)
 {
-	char *s = strstr(p, name);
+	char *s;
 
+	if (strncmp(p, name, strlen(name)))
+		return 1;
+
+	s = strstr(p, name);
 	if (!s)
 		return 1;
 
@@ -418,8 +422,12 @@ static int check_str(char *p, char *name, str_cb_fn *cb, struct thread_data *td)
 
 static int check_strstore(char *p, char *name, char *dest)
 {
-	char *s = strstr(p, name);
+	char *s;
 
+	if (strncmp(p, name, strlen(name)))
+		return 1;
+
+	s = strstr(p, name);
 	if (!s)
 		return 1;
 
@@ -453,6 +461,9 @@ static int check_range(char *p, char *name, unsigned long *s, unsigned long *e)
 {
 	char option[128];
 	char *str, *p1, *p2;
+
+	if (strncmp(p, name, strlen(name)))
+		return 1;
 
 	strcpy(option, p);
 	p = option;
@@ -634,7 +645,6 @@ static int str_ioengine_cb(struct thread_data *td, char *str)
 static int str_iolog_cb(struct thread_data *td, char *file)
 {
 	strncpy(td->iolog_file, file, sizeof(td->iolog_file) - 1);
-
 	return 0;
 }
 
@@ -858,7 +868,16 @@ int parse_jobs_ini(char *file)
 				continue;
 			}
 			if (!check_str(p, "iolog", str_iolog_cb, td)) {
-				td->iolog = 1;
+				printf("got read iolog\n");
+				td->read_iolog = 1;
+				td->write_iolog = 0;
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!td->read_iolog &&
+			    !check_str(p, "write_iolog", str_iolog_cb, td)) {
+				printf("got write iolog\n");
+				td->write_iolog = 1;
 				fgetpos(f, &off);
 				continue;
 			}
