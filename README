@@ -102,6 +102,7 @@ The <jobs> format is as follows:
 	lockmem=x	Lock down x amount of memory on the machine, to
 			simulate a machine with less memory available. x can
 			include k/m/g suffix.
+	nice=x		Run job at given nice value.
 
 Examples using a job file
 -------------------------

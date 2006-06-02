@@ -153,6 +153,7 @@ struct thread_data {
 	unsigned int iolog;
 	unsigned int rwmixcycle;
 	unsigned int rwmixread;
+	unsigned int nice;
 
 	char iolog_file[256];
 

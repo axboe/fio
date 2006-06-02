@@ -38,6 +38,7 @@
 #define DEF_ZONE_SKIP		(0)
 #define DEF_RWMIX_CYCLE		(500)
 #define DEF_RWMIX_READ		(50)
+#define DEF_NICE		(0)
 
 static char fio_version_string[] = "fio 1.3";
 
@@ -802,6 +803,10 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
+			if (!check_int(p, "nice", &td->nice)) {
+				fgetpos(f, &off);
+				continue;
+			}
 			if (!check_range(p, "bsrange", &ul1, &ul2)) {
 				if (ul1 > ul2) {
 					td->max_bs = ul1;
@@ -937,6 +942,7 @@ static int fill_def_thread(void)
 	def_thread.use_thread = DEF_USE_THREAD;
 	def_thread.rwmixcycle = DEF_RWMIX_CYCLE;
 	def_thread.rwmixread = DEF_RWMIX_READ;
+	def_thread.nice = DEF_NICE;
 #ifdef FIO_HAVE_DISK_UTIL
 	def_thread.do_disk_util = 1;
 #endif

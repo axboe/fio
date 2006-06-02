@@ -1786,7 +1786,6 @@ static void update_rusage_stat(struct thread_data *td)
 static void *thread_main(void *data)
 {
 	struct thread_data *td = data;
-	int ret = 1;
 
 	if (!td->use_thread)
 		setsid();
@@ -1817,6 +1816,11 @@ static void *thread_main(void *data)
 			td_verror(td, errno);
 			goto err;
 		}
+	}
+
+	if (nice(td->nice) < 0) {
+		td_verror(td, errno);
+		goto err;
 	}
 
 	if (init_random_state(td))
@@ -1867,8 +1871,6 @@ static void *thread_main(void *data)
 			break;
 	}
 
-	ret = 0;
-
 	if (td->bw_log)
 		finish_log(td, td->bw_log, "bw");
 	if (td->slat_log)
@@ -1888,10 +1890,6 @@ err:
 		munmap(td->mmap, td->file_size);
 	cleanup_io(td);
 	cleanup_io_u(td);
-	if (ret) {
-		sem_post(&startup_sem);
-		sem_wait(&td->mutex);
-	}
 	td_set_runstate(td, TD_EXITED);
 	return NULL;
 
@@ -2386,11 +2384,14 @@ static void run_threads(void)
 				td = map[i];
 				if (!td)
 					continue;
-				if (td->runstate == TD_INITIALIZED ||
-				    td->runstate >= TD_EXITED) {
+				if (td->runstate == TD_INITIALIZED) {
 					map[i] = NULL;
 					left--;
-					continue;
+				} else if (td->runstate >= TD_EXITED) {
+					map[i] = NULL;
+					left--;
+					todo--;
+					nr_running++; /* work-around... */
 				}
 			}
 		}
@@ -2407,7 +2408,7 @@ static void run_threads(void)
 		}
 
 		/*
-		 * start created threads (TD_INITIALIZED -> TD_RUNNING)
+		 * start created threads (TD_INITIALIZED -> TD_RUNNING).
 		 */
 		printf("fio: Go for launch\n");
 		for (i = 0; i < thread_number; i++) {
