@@ -616,17 +616,16 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 	td->cur_depth--;
 }
 
-static int fill_io_u(struct thread_data *td, struct io_u *io_u)
+static void write_iolog_put(struct thread_data *td, struct io_u *io_u)
 {
-	/*
-	 * If using an iolog, grab next piece if any available.
-	 */
-	if (td->iolog) {
-		struct io_piece *ipo;
+	fprintf(td->iolog_f, "%d,%llu,%u\n", io_u->ddir, io_u->offset, io_u->buflen);
+}
 
-		if (list_empty(&td->io_log_list))
-			return 1;
+static int read_iolog_get(struct thread_data *td, struct io_u *io_u)
+{
+	struct io_piece *ipo;
 
+	if (!list_empty(&td->io_log_list)) {
 		ipo = list_entry(td->io_log_list.next, struct io_piece, list);
 		list_del(&ipo->list);
 		io_u->offset = ipo->offset;
@@ -636,6 +635,17 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 		return 0;
 	}
 
+	return 1;
+}
+
+static int fill_io_u(struct thread_data *td, struct io_u *io_u)
+{
+	/*
+	 * If using an iolog, grab next piece if any available.
+	 */
+	if (td->read_iolog)
+		return read_iolog_get(td, io_u);
+
 	/*
 	 * No log, let the seq/rand engine retrieve the next position.
 	 */
@@ -644,6 +654,13 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 
 		if (io_u->buflen) {
 			io_u->ddir = get_rw_ddir(td);
+
+			/*
+			 * If using a write iolog, store this entry.
+			 */
+			if (td->write_iolog)
+				write_iolog_put(td, io_u);
+
 			return 0;
 		}
 	}
@@ -695,7 +712,7 @@ static struct io_u *get_io_u(struct thread_data *td)
 		return NULL;
 	}
 
-	if (!td->iolog && !td->sequential)
+	if (!td->read_iolog && !td->sequential)
 		mark_random_map(td, io_u);
 
 	td->last_pos += io_u->buflen;
@@ -783,6 +800,13 @@ static void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	list_add(&ipo->list, entry);
 }
 
+static void write_iolog_close(struct thread_data *td)
+{
+	fflush(td->iolog_f);
+	fclose(td->iolog_f);
+	free(td->iolog_buf);
+}
+
 static int init_iolog(struct thread_data *td)
 {
 	unsigned long long offset;
@@ -791,15 +815,34 @@ static int init_iolog(struct thread_data *td)
 	FILE *f;
 	int rw, i, reads, writes;
 
-	if (!td->iolog)
+	if (!td->read_iolog && !td->write_iolog)
 		return 0;
 
-	f = fopen(td->iolog_file, "r");
+	if (td->read_iolog)
+		f = fopen(td->iolog_file, "r");
+	else
+		f = fopen(td->iolog_file, "w");
+
 	if (!f) {
 		perror("fopen iolog");
+		printf("file %s, %d/%d\n", td->iolog_file, td->read_iolog, td->write_iolog);
 		return 1;
 	}
 
+	/*
+	 * That's it for writing, setup a log buffer and we're done.
+	  */
+	if (td->write_iolog) {
+		td->iolog_f = f;
+		td->iolog_buf = malloc(8192);
+		setvbuf(f, td->iolog_buf, _IOFBF, 8192);
+		return 0;
+	}
+
+	/*
+	 * Read in the read iolog and store it, reuse the infrastructure
+	 * for doing verifications.
+	 */
 	str = malloc(4096);
 	reads = writes = i = 0;
 	while ((p = fgets(str, 4096, f)) != NULL) {
@@ -1829,6 +1872,7 @@ static void *thread_main(void *data)
 	td_set_runstate(td, TD_INITIALIZED);
 	sem_post(&startup_sem);
 	sem_wait(&td->mutex);
+	ret = 0;
 
 	if (!td->create_serialize && setup_file(td))
 		goto err;
@@ -1877,6 +1921,8 @@ static void *thread_main(void *data)
 		finish_log(td, td->slat_log, "slat");
 	if (td->clat_log)
 		finish_log(td, td->clat_log, "clat");
+	if (td->write_iolog)
+		write_iolog_close(td);
 
 	if (exitall_on_terminate)
 		terminate_threads(td->groupid);
