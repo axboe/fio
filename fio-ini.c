@@ -40,7 +40,7 @@
 #define DEF_RWMIX_READ		(50)
 #define DEF_NICE		(0)
 
-static char fio_version_string[] = "fio 1.3";
+static char fio_version_string[] = "fio 1.4";
 
 static int repeatable = DEF_RAND_REPEAT;
 static char *ini_file;
