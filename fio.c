@@ -1933,6 +1933,10 @@ err:
 	}
 	if (td->mmap)
 		munmap(td->mmap, td->file_size);
+	if (td->directory)
+		free(td->directory);
+	if (td->iolog_file)
+		free(td->iolog_file);
 	cleanup_io(td);
 	cleanup_io_u(td);
 	td_set_runstate(td, TD_EXITED);

@@ -216,7 +216,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	}
 
 	if (td->filetype == FIO_TYPE_FILE) {
-		if (td->directory[0] != '\0')
+		if (td->directory && td->directory[0] != '\0')
 			sprintf(td->file_name, "%s/%s.%d", td->directory, jobname, td->jobnum);
 		else
 			sprintf(td->file_name, "%s.%d", jobname, td->jobnum);
@@ -648,7 +648,7 @@ static int str_ioengine_cb(struct thread_data *td, char *str)
 
 static int str_iolog_cb(struct thread_data *td, char *file)
 {
-	strncpy(td->iolog_file, file, sizeof(td->iolog_file) - 1);
+	td->iolog_file = strdup(file);
 	return 0;
 }
 
@@ -658,7 +658,7 @@ int parse_jobs_ini(char *file)
 	unsigned long long ull;
 	unsigned long ul1, ul2;
 	struct thread_data *td;
-	char *string, *name;
+	char *string, *name, *tmpbuf;
 	fpos_t off;
 	FILE *f;
 	char *p;
@@ -671,6 +671,7 @@ int parse_jobs_ini(char *file)
 
 	string = malloc(4096);
 	name = malloc(256);
+	tmpbuf = malloc(4096);
 
 	while ((p = fgets(string, 4096, f)) != NULL) {
 		if (is_empty_or_comment(p))
@@ -853,7 +854,8 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_strstore(p, "directory", td->directory)) {
+			if (!check_strstore(p, "directory", tmpbuf)) {
+				td->directory = strdup(tmpbuf);
 				fgetpos(f, &off);
 				continue;
 			}
@@ -917,6 +919,7 @@ int parse_jobs_ini(char *file)
 
 	free(string);
 	free(name);
+	free(tmpbuf);
 	fclose(f);
 	return 0;
 }

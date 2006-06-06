@@ -100,7 +100,7 @@ struct group_run_stats {
 
 struct thread_data {
 	char file_name[256];
-	char directory[256];
+	char *directory;
 	char verror[80];
 	pthread_t thread;
 	int thread_number;
@@ -157,7 +157,7 @@ struct thread_data {
 	unsigned int rwmixread;
 	unsigned int nice;
 
-	char iolog_file[256];
+	char *iolog_file;
 	void *iolog_buf;
 	FILE *iolog_f;
 
