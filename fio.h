@@ -94,7 +94,7 @@ struct verify_header {
 struct group_run_stats {
 	unsigned long long max_run[2], min_run[2];
 	unsigned long long max_bw[2], min_bw[2];
-	unsigned long long io_mb[2];
+	unsigned long long io_kb[2];
 	unsigned long long agg[2];
 };
 

@@ -2565,9 +2565,9 @@ static void show_group_stats(struct group_run_stats *rs, int id)
 	printf("\nRun status group %d (all jobs):\n", id);
 
 	if (rs->max_run[DDIR_READ])
-		printf("   READ: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_mb[0], rs->agg[0], rs->min_bw[0], rs->max_bw[0], rs->min_run[0], rs->max_run[0]);
+		printf("   READ: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_kb[0] >> 10, rs->agg[0], rs->min_bw[0], rs->max_bw[0], rs->min_run[0], rs->max_run[0]);
 	if (rs->max_run[DDIR_WRITE])
-		printf("  WRITE: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_mb[1], rs->agg[1], rs->min_bw[1], rs->max_bw[1], rs->min_run[1], rs->max_run[1]);
+		printf("  WRITE: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_kb[1] >> 10, rs->agg[1], rs->min_bw[1], rs->max_bw[1], rs->min_run[1], rs->max_run[1]);
 }
 
 static void show_disk_util(void)
@@ -2643,17 +2643,17 @@ static void show_run_stats(void)
 		if (wbw > rs->max_bw[1])
 			rs->max_bw[1] = wbw;
 
-		rs->io_mb[0] += td->io_bytes[0] >> 20;
-		rs->io_mb[1] += td->io_bytes[1] >> 20;
+		rs->io_kb[0] += td->io_bytes[0] >> 10;
+		rs->io_kb[1] += td->io_bytes[1] >> 10;
 	}
 
 	for (i = 0; i < groupid + 1; i++) {
 		rs = &runstats[i];
 
 		if (rs->max_run[0])
-			rs->agg[0] = (rs->io_mb[0]*1024*1024) / rs->max_run[0];
+			rs->agg[0] = (rs->io_kb[0]*1024) / rs->max_run[0];
 		if (rs->max_run[1])
-			rs->agg[1] = (rs->io_mb[1]*1024*1024) / rs->max_run[1];
+			rs->agg[1] = (rs->io_kb[1]*1024) / rs->max_run[1];
 	}
 
 	/*
