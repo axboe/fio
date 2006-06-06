@@ -652,6 +652,18 @@ static int str_iolog_cb(struct thread_data *td, char *file)
 	return 0;
 }
 
+static int str_prerun_cb(struct thread_data *td, char *file)
+{
+	td->exec_prerun = strdup(file);
+	return 0;
+}
+
+static int str_postrun_cb(struct thread_data *td, char *file)
+{
+	td->exec_postrun = strdup(file);
+	return 0;
+}
+
 int parse_jobs_ini(char *file)
 {
 	unsigned int prioclass, prio, cpu, global, il;
@@ -904,6 +916,14 @@ int parse_jobs_ini(char *file)
 			if (!td->read_iolog &&
 			    !check_str(p, "write_iolog", str_iolog_cb, td)) {
 				td->write_iolog = 1;
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_str(p, "exec_prerun", str_prerun_cb, td)) {
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_str(p, "exec_postrun", str_postrun_cb, td)) {
 				fgetpos(f, &off);
 				continue;
 			}

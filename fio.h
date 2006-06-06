@@ -233,6 +233,12 @@ struct thread_data {
 	struct timeval rwmix_switch;
 	int rwmix_ddir;
 
+	/*
+	 * Pre-run and post-run shell
+	 */
+	char *exec_prerun;
+	char *exec_postrun;
+
 	struct list_head io_hist_list;
 	struct list_head io_log_list;
 };

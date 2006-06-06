@@ -1878,6 +1878,9 @@ static void *thread_main(void *data)
 
 	gettimeofday(&td->epoch, NULL);
 
+	if (td->exec_prerun)
+		system(td->exec_prerun);
+
 	while (td->loops--) {
 		getrusage(RUSAGE_SELF, &td->ru_start);
 		gettimeofday(&td->start, NULL);
@@ -1922,6 +1925,8 @@ static void *thread_main(void *data)
 		finish_log(td, td->clat_log, "clat");
 	if (td->write_iolog)
 		write_iolog_close(td);
+	if (td->exec_postrun)
+		system(td->exec_postrun);
 
 	if (exitall_on_terminate)
 		terminate_threads(td->groupid);
@@ -1937,6 +1942,10 @@ err:
 		free(td->directory);
 	if (td->iolog_file)
 		free(td->iolog_file);
+	if (td->exec_prerun)
+		free(td->exec_prerun);
+	if (td->exec_postrun)
+		free(td->exec_postrun);
 	cleanup_io(td);
 	cleanup_io_u(td);
 	td_set_runstate(td, TD_EXITED);

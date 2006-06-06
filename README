@@ -111,6 +111,8 @@ The <jobs> format is as follows:
 			simulate a machine with less memory available. x can
 			include k/m/g suffix.
 	nice=x		Run job at given nice value.
+	exec_prerun=x	Run 'x' before job io is begun.
+	exec_postrun=x	Run 'x' after job io has finished.
 
 Examples using a job file
 -------------------------
