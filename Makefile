@@ -9,10 +9,13 @@ fio: fio.o fio-io.o fio-ini.o fio-stat.o fio-log.o fio-time.o md5.o crc32.o
 	$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) -lpthread -laio -lm -lrt
 
 clean:
-	-rm -f *.o .depend $(PROGS)
+	-rm -f *.o .depend cscope.out $(PROGS)
 
 depend:
 	@$(CC) -MM $(ALL_CFLAGS) *.c 1> .depend
+
+cscope:
+	@cscope -b
 
 INSTALL = install
 prefix = /usr/local
