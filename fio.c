@@ -2651,9 +2651,9 @@ static void show_run_stats(void)
 		rs = &runstats[i];
 
 		if (rs->max_run[0])
-			rs->agg[0] = (rs->io_mb[0]*1024*1000) / rs->max_run[0];
+			rs->agg[0] = (rs->io_mb[0]*1024*1024) / rs->max_run[0];
 		if (rs->max_run[1])
-			rs->agg[1] = (rs->io_mb[1]*1024*1000) / rs->max_run[1];
+			rs->agg[1] = (rs->io_mb[1]*1024*1024) / rs->max_run[1];
 	}
 
 	/*
