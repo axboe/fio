@@ -7,6 +7,9 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <semaphore.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include "list.h"
 #include "md5.h"

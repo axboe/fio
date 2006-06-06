@@ -26,11 +26,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <time.h>
-#include <math.h>
 #include <assert.h>
-#include <dirent.h>
-#include <libgen.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
@@ -41,6 +37,10 @@
 #include "fio.h"
 #include "os.h"
 
+#include "fio-time.h"
+#include "fio-stat.h"
+#include "fio-log.h"
+
 #define MASK	(4095)
 
 #define ALIGN(buf)	(char *) (((unsigned long) (buf) + MASK) & ~(MASK))
@@ -49,12 +49,8 @@ int groupid = 0;
 int thread_number = 0;
 static char run_str[MAX_JOBS + 1];
 int shm_id = 0;
-static LIST_HEAD(disk_list);
-static struct itimerval itimer;
 static struct timeval genesis;
 
-static void update_io_ticks(void);
-static void disk_util_timer_arm(void);
 static void print_thread_status(void);
 
 extern unsigned long long mlock_size;
@@ -109,65 +105,6 @@ static void sig_handler(int sig)
 	}
 }
 
-static unsigned long utime_since(struct timeval *s, struct timeval *e)
-{
-	double sec, usec;
-
-	sec = e->tv_sec - s->tv_sec;
-	usec = e->tv_usec - s->tv_usec;
-	if (sec > 0 && usec < 0) {
-		sec--;
-		usec += 1000000;
-	}
-
-	sec *= (double) 1000000;
-
-	return sec + usec;
-}
-
-static unsigned long utime_since_now(struct timeval *s)
-{
-	struct timeval t;
-
-	gettimeofday(&t, NULL);
-	return utime_since(s, &t);
-}
-
-static unsigned long mtime_since(struct timeval *s, struct timeval *e)
-{
-	double sec, usec;
-
-	sec = e->tv_sec - s->tv_sec;
-	usec = e->tv_usec - s->tv_usec;
-	if (sec > 0 && usec < 0) {
-		sec--;
-		usec += 1000000;
-	}
-
-	sec *= (double) 1000;
-	usec /= (double) 1000;
-
-	return sec + usec;
-}
-
-static unsigned long mtime_since_now(struct timeval *s)
-{
-	struct timeval t;
-
-	gettimeofday(&t, NULL);
-	return mtime_since(s, &t);
-}
-
-static inline unsigned long msec_now(struct timeval *s)
-{
-	return s->tv_sec * 1000 + s->tv_usec / 1000;
-}
-
-static unsigned long time_since_now(struct timeval *s)
-{
-	return mtime_since_now(s) / 1000;
-}
-
 static int random_map_free(struct thread_data *td, unsigned long long block)
 {
 	unsigned int idx = RAND_MAP_IDX(td, block);
@@ -220,68 +157,6 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 		io_u->buflen = blocks * td->min_bs;
 }
 
-static inline void add_stat_sample(struct io_stat *is, unsigned long val)
-{
-	if (val > is->max_val)
-		is->max_val = val;
-	if (val < is->min_val)
-		is->min_val = val;
-
-	is->val += val;
-	is->val_sq += val * val;
-	is->samples++;
-}
-
-static void add_log_sample(struct thread_data *td, struct io_log *iolog,
-			   unsigned long val, int ddir)
-{
-	if (iolog->nr_samples == iolog->max_samples) {
-		int new_size = sizeof(struct io_sample) * iolog->max_samples*2;
-
-		iolog->log = realloc(iolog->log, new_size);
-		iolog->max_samples <<= 1;
-	}
-
-	iolog->log[iolog->nr_samples].val = val;
-	iolog->log[iolog->nr_samples].time = mtime_since_now(&td->epoch);
-	iolog->log[iolog->nr_samples].ddir = ddir;
-	iolog->nr_samples++;
-}
-
-static void add_clat_sample(struct thread_data *td, int ddir,unsigned long msec)
-{
-	add_stat_sample(&td->clat_stat[ddir], msec);
-
-	if (td->clat_log)
-		add_log_sample(td, td->clat_log, msec, ddir);
-}
-
-static void add_slat_sample(struct thread_data *td, int ddir,unsigned long msec)
-{
-	add_stat_sample(&td->slat_stat[ddir], msec);
-
-	if (td->slat_log)
-		add_log_sample(td, td->slat_log, msec, ddir);
-}
-
-static void add_bw_sample(struct thread_data *td, int ddir)
-{
-	unsigned long spent = mtime_since_now(&td->stat_sample_time[ddir]);
-	unsigned long rate;
-
-	if (spent < td->bw_avg_time)
-		return;
-
-	rate = (td->this_io_bytes[ddir] - td->stat_io_bytes[ddir]) / spent;
-	add_stat_sample(&td->bw_stat[ddir], rate);
-
-	if (td->bw_log)
-		add_log_sample(td, td->bw_log, rate, ddir);
-
-	gettimeofday(&td->stat_sample_time[ddir], NULL);
-	td->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
-}
-
 static int get_next_offset(struct thread_data *td, unsigned long long *offset)
 {
 	unsigned long long b, rb;
@@ -329,70 +204,6 @@ static unsigned int get_next_buflen(struct thread_data *td)
 		buflen = td->io_size - td->this_io_bytes[td->ddir];
 
 	return buflen;
-}
-
-/*
- * busy looping version for the last few usec
- */
-static void __usec_sleep(unsigned int usec)
-{
-	struct timeval start;
-
-	gettimeofday(&start, NULL);
-	while (utime_since_now(&start) < usec)
-		nop;
-}
-
-static void usec_sleep(struct thread_data *td, unsigned long usec)
-{
-	struct timespec req, rem;
-
-	req.tv_sec = usec / 1000000;
-	req.tv_nsec = usec * 1000 - req.tv_sec * 1000000;
-
-	do {
-		if (usec < 5000) {
-			__usec_sleep(usec);
-			break;
-		}
-
-		rem.tv_sec = rem.tv_nsec = 0;
-		if (nanosleep(&req, &rem) < 0)
-			break;
-
-		if ((rem.tv_sec + rem.tv_nsec) == 0)
-			break;
-
-		req.tv_nsec = rem.tv_nsec;
-		req.tv_sec = rem.tv_sec;
-
-		usec = rem.tv_sec * 1000000 + rem.tv_nsec / 1000;
-	} while (!td->terminate);
-}
-
-static void rate_throttle(struct thread_data *td, unsigned long time_spent,
-			  unsigned int bytes)
-{
-	unsigned long usec_cycle;
-
-	if (!td->rate)
-		return;
-
-	usec_cycle = td->rate_usec_cycle * (bytes / td->min_bs);
-
-	if (time_spent < usec_cycle) {
-		unsigned long s = usec_cycle - time_spent;
-
-		td->rate_pending_usleep += s;
-		if (td->rate_pending_usleep >= 100000) {
-			usec_sleep(td, td->rate_pending_usleep);
-			td->rate_pending_usleep = 0;
-		}
-	} else {
-		long overtime = time_spent - usec_cycle;
-
-		td->rate_pending_usleep -= overtime;
-	}
 }
 
 static int check_min_rate(struct thread_data *td, struct timeval *now)
@@ -616,28 +427,6 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 	td->cur_depth--;
 }
 
-static void write_iolog_put(struct thread_data *td, struct io_u *io_u)
-{
-	fprintf(td->iolog_f, "%d,%llu,%u\n", io_u->ddir, io_u->offset, io_u->buflen);
-}
-
-static int read_iolog_get(struct thread_data *td, struct io_u *io_u)
-{
-	struct io_piece *ipo;
-
-	if (!list_empty(&td->io_log_list)) {
-		ipo = list_entry(td->io_log_list.next, struct io_piece, list);
-		list_del(&ipo->list);
-		io_u->offset = ipo->offset;
-		io_u->buflen = ipo->len;
-		io_u->ddir = ipo->ddir;
-		free(ipo);
-		return 0;
-	}
-
-	return 1;
-}
-
 static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	/*
@@ -749,142 +538,6 @@ static int get_next_verify(struct thread_data *td, struct io_u *io_u)
 	io_u->buflen = ipo->len;
 	io_u->ddir = DDIR_READ;
 	free(ipo);
-	return 0;
-}
-
-static void prune_io_piece_log(struct thread_data *td)
-{
-	struct io_piece *ipo;
-
-	while (!list_empty(&td->io_hist_list)) {
-		ipo = list_entry(td->io_hist_list.next, struct io_piece, list);
-
-		list_del(&ipo->list);
-		free(ipo);
-	}
-}
-
-/*
- * log a succesful write, so we can unwind the log for verify
- */
-static void log_io_piece(struct thread_data *td, struct io_u *io_u)
-{
-	struct io_piece *ipo = malloc(sizeof(struct io_piece));
-	struct list_head *entry;
-
-	INIT_LIST_HEAD(&ipo->list);
-	ipo->offset = io_u->offset;
-	ipo->len = io_u->buflen;
-
-	/*
-	 * for random io where the writes extend the file, it will typically
-	 * be laid out with the block scattered as written. it's faster to
-	 * read them in in that order again, so don't sort
-	 */
-	if (td->sequential || !td->overwrite) {
-		list_add_tail(&ipo->list, &td->io_hist_list);
-		return;
-	}
-
-	/*
-	 * for random io, sort the list so verify will run faster
-	 */
-	entry = &td->io_hist_list;
-	while ((entry = entry->prev) != &td->io_hist_list) {
-		struct io_piece *__ipo = list_entry(entry, struct io_piece, list);
-
-		if (__ipo->offset < ipo->offset)
-			break;
-	}
-
-	list_add(&ipo->list, entry);
-}
-
-static void write_iolog_close(struct thread_data *td)
-{
-	fflush(td->iolog_f);
-	fclose(td->iolog_f);
-	free(td->iolog_buf);
-}
-
-static int init_iolog(struct thread_data *td)
-{
-	unsigned long long offset;
-	unsigned int bytes;
-	char *str, *p;
-	FILE *f;
-	int rw, i, reads, writes;
-
-	if (!td->read_iolog && !td->write_iolog)
-		return 0;
-
-	if (td->read_iolog)
-		f = fopen(td->iolog_file, "r");
-	else
-		f = fopen(td->iolog_file, "w");
-
-	if (!f) {
-		perror("fopen iolog");
-		printf("file %s, %d/%d\n", td->iolog_file, td->read_iolog, td->write_iolog);
-		return 1;
-	}
-
-	/*
-	 * That's it for writing, setup a log buffer and we're done.
-	  */
-	if (td->write_iolog) {
-		td->iolog_f = f;
-		td->iolog_buf = malloc(8192);
-		setvbuf(f, td->iolog_buf, _IOFBF, 8192);
-		return 0;
-	}
-
-	/*
-	 * Read in the read iolog and store it, reuse the infrastructure
-	 * for doing verifications.
-	 */
-	str = malloc(4096);
-	reads = writes = i = 0;
-	while ((p = fgets(str, 4096, f)) != NULL) {
-		struct io_piece *ipo;
-
-		if (sscanf(p, "%d,%llu,%u", &rw, &offset, &bytes) != 3) {
-			fprintf(stderr, "bad iolog: %s\n", p);
-			continue;
-		}
-		if (rw == DDIR_READ)
-			reads++;
-		else if (rw == DDIR_WRITE)
-			writes++;
-		else {
-			fprintf(stderr, "bad ddir: %d\n", rw);
-			continue;
-		}
-
-		ipo = malloc(sizeof(*ipo));
-		INIT_LIST_HEAD(&ipo->list);
-		ipo->offset = offset;
-		ipo->len = bytes;
-		if (bytes > td->max_bs)
-			td->max_bs = bytes;
-		ipo->ddir = rw;
-		list_add_tail(&ipo->list, &td->io_log_list);
-		i++;
-	}
-
-	free(str);
-	fclose(f);
-
-	if (!i)
-		return 1;
-
-	if (reads && !writes)
-		td->ddir = DDIR_READ;
-	else if (!reads && writes)
-		td->ddir = DDIR_READ;
-	else
-		td->iomix = 1;
-
 	return 0;
 }
 
@@ -1576,237 +1229,6 @@ static int setup_file(struct thread_data *td)
 		return setup_file_mmap(td);
 }
 
-static int check_dev_match(dev_t dev, char *path)
-{
-	unsigned int major, minor;
-	char line[256], *p;
-	FILE *f;
-
-	f = fopen(path, "r");
-	if (!f) {
-		perror("open path");
-		return 1;
-	}
-
-	p = fgets(line, sizeof(line), f);
-	if (!p) {
-		fclose(f);
-		return 1;
-	}
-
-	if (sscanf(p, "%u:%u", &major, &minor) != 2) {
-		fclose(f);
-		return 1;
-	}
-
-	if (((major << 8) | minor) == dev) {
-		fclose(f);
-		return 0;
-	}
-
-	fclose(f);
-	return 1;
-}
-
-static int find_block_dir(dev_t dev, char *path)
-{
-	struct dirent *dir;
-	struct stat st;
-	int found = 0;
-	DIR *D;
-
-	D = opendir(path);
-	if (!D)
-		return 0;
-
-	while ((dir = readdir(D)) != NULL) {
-		char full_path[256];
-
-		if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, ".."))
-			continue;
-		if (!strcmp(dir->d_name, "device"))
-			continue;
-
-		sprintf(full_path, "%s/%s", path, dir->d_name);
-
-		if (!strcmp(dir->d_name, "dev")) {
-			if (!check_dev_match(dev, full_path)) {
-				found = 1;
-				break;
-			}
-		}
-
-		if (stat(full_path, &st) == -1) {
-			perror("stat");
-			break;
-		}
-
-		if (!S_ISDIR(st.st_mode) || S_ISLNK(st.st_mode))
-			continue;
-
-		found = find_block_dir(dev, full_path);
-		if (found) {
-			strcpy(path, full_path);
-			break;
-		}
-	}
-
-	closedir(D);
-	return found;
-}
-
-static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
-{
-	unsigned in_flight;
-	char line[256];
-	FILE *f;
-	char *p;
-
-	f = fopen(du->path, "r");
-	if (!f)
-		return 1;
-
-	p = fgets(line, sizeof(line), f);
-	if (!p) {
-		fclose(f);
-		return 1;
-	}
-
-	if (sscanf(p, "%u %u %llu %u %u %u %llu %u %u %u %u\n", &dus->ios[0], &dus->merges[0], &dus->sectors[0], &dus->ticks[0], &dus->ios[1], &dus->merges[1], &dus->sectors[1], &dus->ticks[1], &in_flight, &dus->io_ticks, &dus->time_in_queue) != 11) {
-		fclose(f);
-		return 1;
-	}
-
-	fclose(f);
-	return 0;
-}
-
-static void update_io_tick_disk(struct disk_util *du)
-{
-	struct disk_util_stat __dus, *dus, *ldus;
-	struct timeval t;
-
-	if (get_io_ticks(du, &__dus))
-		return;
-
-	dus = &du->dus;
-	ldus = &du->last_dus;
-
-	dus->sectors[0] += (__dus.sectors[0] - ldus->sectors[0]);
-	dus->sectors[1] += (__dus.sectors[1] - ldus->sectors[1]);
-	dus->ios[0] += (__dus.ios[0] - ldus->ios[0]);
-	dus->ios[1] += (__dus.ios[1] - ldus->ios[1]);
-	dus->merges[0] += (__dus.merges[0] - ldus->merges[0]);
-	dus->merges[1] += (__dus.merges[1] - ldus->merges[1]);
-	dus->ticks[0] += (__dus.ticks[0] - ldus->ticks[0]);
-	dus->ticks[1] += (__dus.ticks[1] - ldus->ticks[1]);
-	dus->io_ticks += (__dus.io_ticks - ldus->io_ticks);
-	dus->time_in_queue += (__dus.time_in_queue - ldus->time_in_queue);
-
-	gettimeofday(&t, NULL);
-	du->msec += mtime_since(&du->time, &t);
-	memcpy(&du->time, &t, sizeof(t));
-	memcpy(ldus, &__dus, sizeof(__dus));
-}
-
-static void update_io_ticks(void)
-{
-	struct list_head *entry;
-	struct disk_util *du;
-
-	list_for_each(entry, &disk_list) {
-		du = list_entry(entry, struct disk_util, list);
-		update_io_tick_disk(du);
-	}
-}
-
-static int disk_util_exists(dev_t dev)
-{
-	struct list_head *entry;
-	struct disk_util *du;
-
-	list_for_each(entry, &disk_list) {
-		du = list_entry(entry, struct disk_util, list);
-
-		if (du->dev == dev)
-			return 1;
-	}
-
-	return 0;
-}
-
-static void disk_util_add(dev_t dev, char *path)
-{
-	struct disk_util *du = malloc(sizeof(*du));
-
-	memset(du, 0, sizeof(*du));
-	INIT_LIST_HEAD(&du->list);
-	sprintf(du->path, "%s/stat", path);
-	du->name = strdup(basename(path));
-	du->dev = dev;
-
-	gettimeofday(&du->time, NULL);
-	get_io_ticks(du, &du->last_dus);
-
-	list_add_tail(&du->list, &disk_list);
-}
-
-static void init_disk_util(struct thread_data *td)
-{
-	struct stat st;
-	char foo[256], tmp[256];
-	dev_t dev;
-	char *p;
-
-	if (!td->do_disk_util)
-		return;
-
-	if (!stat(td->file_name, &st)) {
-		if (S_ISBLK(st.st_mode))
-			dev = st.st_rdev;
-		else
-			dev = st.st_dev;
-	} else {
-		/*
-		 * must be a file, open "." in that path
-		 */
-		strcpy(foo, td->file_name);
-		p = dirname(foo);
-		if (stat(p, &st)) {
-			perror("disk util stat");
-			return;
-		}
-
-		dev = st.st_dev;
-	}
-
-	if (disk_util_exists(dev))
-		return;
-		
-	sprintf(foo, "/sys/block");
-	if (!find_block_dir(dev, foo))
-		return;
-
-	/*
-	 * If there's a ../queue/ directory there, we are inside a partition.
-	 * Check if that is the case and jump back. For loop/md/dm etc we
-	 * are already in the right spot.
-	 */
-	sprintf(tmp, "%s/../queue", foo);
-	if (!stat(tmp, &st)) {
-		p = dirname(foo);
-		sprintf(tmp, "%s/queue", p);
-		if (stat(tmp, &st)) {
-			fprintf(stderr, "unknown sysfs layout\n");
-			return;
-		}
-		sprintf(foo, "%s", p);
-	}
-
-	td->sysfs_root = strdup(foo);
-	disk_util_add(dev, foo);
-}
-
 static int switch_ioscheduler(struct thread_data *td)
 {
 	char tmp[256], tmp2[128];
@@ -1855,13 +1277,6 @@ static int switch_ioscheduler(struct thread_data *td)
 	return 0;
 }
 
-static void disk_util_timer_arm(void)
-{
-	itimer.it_value.tv_sec = 0;
-	itimer.it_value.tv_usec = DISK_UTIL_MSEC * 1000;
-	setitimer(ITIMER_REAL, &itimer, NULL);
-}
-
 static void clear_io_state(struct thread_data *td)
 {
 	if (td->io_engine == FIO_SYNCIO)
@@ -1874,21 +1289,6 @@ static void clear_io_state(struct thread_data *td)
 
 	if (td->file_map)
 		memset(td->file_map, 0, td->num_maps * sizeof(long));
-}
-
-static void update_rusage_stat(struct thread_data *td)
-{
-	if (!(td->runtime[0] + td->runtime[1]))
-		return;
-
-	getrusage(RUSAGE_SELF, &td->ru_end);
-
-	td->usr_time += mtime_since(&td->ru_start.ru_utime, &td->ru_end.ru_utime);
-	td->sys_time += mtime_since(&td->ru_start.ru_stime, &td->ru_end.ru_stime);
-	td->ctx += td->ru_end.ru_nvcsw + td->ru_end.ru_nivcsw - (td->ru_start.ru_nvcsw + td->ru_start.ru_nivcsw);
-
-	
-	memcpy(&td->ru_start, &td->ru_end, sizeof(td->ru_end));
 }
 
 static void *thread_main(void *data)
@@ -2029,81 +1429,6 @@ static void *fork_main(int shmid, int offset)
 	thread_main(td);
 	shmdt(data);
 	return NULL;
-}
-
-static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
-		    double *mean, double *dev)
-{
-	double n;
-
-	if (is->samples == 0)
-		return 0;
-
-	*min = is->min_val;
-	*max = is->max_val;
-
-	n = (double) is->samples;
-	*mean = (double) is->val / n;
-	*dev = sqrt(((double) is->val_sq - (*mean * *mean) / n) / (n - 1));
-	if (!(*min + *max) && !(*mean + *dev))
-		return 0;
-
-	return 1;
-}
-
-static void show_ddir_status(struct thread_data *td, struct group_run_stats *rs,
-			     int ddir)
-{
-	char *ddir_str[] = { "read ", "write" };
-	unsigned long min, max;
-	unsigned long long bw;
-	double mean, dev;
-
-	if (!td->runtime[ddir])
-		return;
-
-	bw = td->io_bytes[ddir] / td->runtime[ddir];
-	printf("  %s: io=%6lluMiB, bw=%6lluKiB/s, runt=%6lumsec\n", ddir_str[ddir], td->io_bytes[ddir] >> 20, bw, td->runtime[ddir]);
-
-	if (calc_lat(&td->slat_stat[ddir], &min, &max, &mean, &dev))
-		printf("    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, dev=%5.02f\n", min, max, mean, dev);
-
-	if (calc_lat(&td->clat_stat[ddir], &min, &max, &mean, &dev))
-		printf("    clat (msec): min=%5lu, max=%5lu, avg=%5.02f, dev=%5.02f\n", min, max, mean, dev);
-
-	if (calc_lat(&td->bw_stat[ddir], &min, &max, &mean, &dev)) {
-		double p_of_agg;
-
-		p_of_agg = mean * 100 / (double) rs->agg[ddir];
-		printf("    bw (KiB/s) : min=%5lu, max=%5lu, per=%3.2f%%, avg=%5.02f, dev=%5.02f\n", min, max, p_of_agg, mean, dev);
-	}
-}
-
-static void show_thread_status(struct thread_data *td,
-			       struct group_run_stats *rs)
-{
-	double usr_cpu, sys_cpu;
-
-	if (!(td->io_bytes[0] + td->io_bytes[1]) && !td->error)
-		return;
-
-	printf("Client%d (groupid=%d): err=%2d:\n", td->thread_number, td->groupid, td->error);
-
-	show_ddir_status(td, rs, td->ddir);
-	if (td->io_bytes[td->ddir ^ 1])
-		show_ddir_status(td, rs, td->ddir ^ 1);
-
-	if (td->runtime[0] + td->runtime[1]) {
-		double runt = td->runtime[0] + td->runtime[1];
-
-		usr_cpu = (double) td->usr_time * 100 / runt;
-		sys_cpu = (double) td->sys_time * 100 / runt;
-	} else {
-		usr_cpu = 0;
-		sys_cpu = 0;
-	}
-
-	printf("  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, td->ctx);
 }
 
 static void check_str_update(struct thread_data *td)
@@ -2558,120 +1883,6 @@ static void run_threads(void)
 
 	update_io_ticks();
 	fio_unpin_memory(mlocked_mem);
-}
-
-static void show_group_stats(struct group_run_stats *rs, int id)
-{
-	printf("\nRun status group %d (all jobs):\n", id);
-
-	if (rs->max_run[DDIR_READ])
-		printf("   READ: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_kb[0] >> 10, rs->agg[0], rs->min_bw[0], rs->max_bw[0], rs->min_run[0], rs->max_run[0]);
-	if (rs->max_run[DDIR_WRITE])
-		printf("  WRITE: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_kb[1] >> 10, rs->agg[1], rs->min_bw[1], rs->max_bw[1], rs->min_run[1], rs->max_run[1]);
-}
-
-static void show_disk_util(void)
-{
-	struct disk_util_stat *dus;
-	struct list_head *entry;
-	struct disk_util *du;
-	double util;
-
-	printf("\nDisk stats (read/write):\n");
-
-	list_for_each(entry, &disk_list) {
-		du = list_entry(entry, struct disk_util, list);
-		dus = &du->dus;
-
-		util = (double) 100 * du->dus.io_ticks / (double) du->msec;
-		if (util > 100.0)
-			util = 100.0;
-
-		printf("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, in_queue=%u, util=%3.2f%%\n", du->name, dus->ios[0], dus->ios[1], dus->merges[0], dus->merges[1], dus->ticks[0], dus->ticks[1], dus->time_in_queue, util);
-	}
-}
-
-static void show_run_stats(void)
-{
-	struct group_run_stats *runstats, *rs;
-	struct thread_data *td;
-	int i;
-
-	runstats = malloc(sizeof(struct group_run_stats) * (groupid + 1));
-
-	for (i = 0; i < groupid + 1; i++) {
-		rs = &runstats[i];
-
-		memset(rs, 0, sizeof(*rs));
-		rs->min_bw[0] = rs->min_run[0] = ~0UL;
-		rs->min_bw[1] = rs->min_run[1] = ~0UL;
-	}
-
-	for (i = 0; i < thread_number; i++) {
-		unsigned long long rbw, wbw;
-
-		td = &threads[i];
-
-		if (td->error) {
-			printf("Client%d: %s\n", td->thread_number, td->verror);
-			continue;
-		}
-
-		rs = &runstats[td->groupid];
-
-		if (td->runtime[0] < rs->min_run[0] || !rs->min_run[0])
-			rs->min_run[0] = td->runtime[0];
-		if (td->runtime[0] > rs->max_run[0])
-			rs->max_run[0] = td->runtime[0];
-		if (td->runtime[1] < rs->min_run[1] || !rs->min_run[1])
-			rs->min_run[1] = td->runtime[1];
-		if (td->runtime[1] > rs->max_run[1])
-			rs->max_run[1] = td->runtime[1];
-
-		rbw = wbw = 0;
-		if (td->runtime[0])
-			rbw = td->io_bytes[0] / (unsigned long long) td->runtime[0];
-		if (td->runtime[1])
-			wbw = td->io_bytes[1] / (unsigned long long) td->runtime[1];
-
-		if (rbw < rs->min_bw[0])
-			rs->min_bw[0] = rbw;
-		if (wbw < rs->min_bw[1])
-			rs->min_bw[1] = wbw;
-		if (rbw > rs->max_bw[0])
-			rs->max_bw[0] = rbw;
-		if (wbw > rs->max_bw[1])
-			rs->max_bw[1] = wbw;
-
-		rs->io_kb[0] += td->io_bytes[0] >> 10;
-		rs->io_kb[1] += td->io_bytes[1] >> 10;
-	}
-
-	for (i = 0; i < groupid + 1; i++) {
-		rs = &runstats[i];
-
-		if (rs->max_run[0])
-			rs->agg[0] = (rs->io_kb[0]*1024) / rs->max_run[0];
-		if (rs->max_run[1])
-			rs->agg[1] = (rs->io_kb[1]*1024) / rs->max_run[1];
-	}
-
-	/*
-	 * don't overwrite last signal output
-	 */
-	printf("\n");
-
-	for (i = 0; i < thread_number; i++) {
-		td = &threads[i];
-		rs = &runstats[td->groupid];
-
-		show_thread_status(td, rs);
-	}
-
-	for (i = 0; i < groupid + 1; i++)
-		show_group_stats(&runstats[i], i);
-
-	show_disk_util();
 }
 
 int main(int argc, char *argv[])

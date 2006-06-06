@@ -3,6 +3,8 @@
 
 #include <sys/ioctl.h>
 #include <sys/uio.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 #include <asm/unistd.h>
 
 #define FIO_HAVE_LIBAIO
