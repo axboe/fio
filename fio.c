@@ -1787,7 +1787,56 @@ static void init_disk_util(struct thread_data *td)
 		sprintf(foo, "%s", p);
 	}
 
+	td->sysfs_root = strdup(foo);
 	disk_util_add(dev, foo);
+}
+
+static int switch_ioscheduler(struct thread_data *td)
+{
+	char tmp[256], tmp2[128];
+	FILE *f;
+	int ret;
+
+	sprintf(tmp, "%s/queue/scheduler", td->sysfs_root);
+
+	f = fopen(tmp, "r+");
+	if (!f) {
+		td_verror(td, errno);
+		return 1;
+	}
+
+	/*
+	 * Set io scheduler.
+	 */
+	ret = fwrite(td->ioscheduler, strlen(td->ioscheduler), 1, f);
+	if (ferror(f) || ret != 1) {
+		td_verror(td, errno);
+		fclose(f);
+		return 1;
+	}
+
+	rewind(f);
+
+	/*
+	 * Read back and check that the selected scheduler is now the default.
+	 */
+	ret = fread(tmp, 1, sizeof(tmp), f);
+	if (ferror(f) || ret < 0) {
+		td_verror(td, errno);
+		fclose(f);
+		return 1;
+	}
+
+	sprintf(tmp2, "[%s]", td->ioscheduler);
+	if (!strstr(tmp, tmp2)) {
+		fprintf(stderr, "fio: io scheduler %s not found\n", td->ioscheduler);
+		td_verror(td, EINVAL);
+		fclose(f);
+		return 1;
+	}
+
+	fclose(f);
+	return 0;
 }
 
 static void disk_util_timer_arm(void)
@@ -1869,6 +1918,9 @@ static void *thread_main(void *data)
 	if (init_random_state(td))
 		goto err;
 
+	if (td->ioscheduler && switch_ioscheduler(td))
+		goto err;
+
 	td_set_runstate(td, TD_INITIALIZED);
 	sem_post(&startup_sem);
 	sem_wait(&td->mutex);
@@ -1946,6 +1998,10 @@ err:
 		free(td->exec_prerun);
 	if (td->exec_postrun)
 		free(td->exec_postrun);
+	if (td->ioscheduler)
+		free(td->ioscheduler);
+	if (td->sysfs_root)
+		free(td->sysfs_root);
 	cleanup_io(td);
 	cleanup_io_u(td);
 	td_set_runstate(td, TD_EXITED);

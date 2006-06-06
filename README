@@ -113,6 +113,7 @@ The <jobs> format is as follows:
 	nice=x		Run job at given nice value.
 	exec_prerun=x	Run 'x' before job io is begun.
 	exec_postrun=x	Run 'x' after job io has finished.
+	ioscheduler=x	Use ioscheduler 'x' for this job.
 
 Examples using a job file
 -------------------------

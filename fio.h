@@ -161,6 +161,10 @@ struct thread_data {
 	void *iolog_buf;
 	FILE *iolog_f;
 
+	char *sysfs_root;
+
+	char *ioscheduler;
+
 	struct drand48_data bsrange_state;
 	struct drand48_data verify_state;
 

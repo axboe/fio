@@ -664,6 +664,12 @@ static int str_postrun_cb(struct thread_data *td, char *file)
 	return 0;
 }
 
+static int str_iosched_cb(struct thread_data *td, char *file)
+{
+	td->ioscheduler = strdup(file);
+	return 0;
+}
+
 int parse_jobs_ini(char *file)
 {
 	unsigned int prioclass, prio, cpu, global, il;
@@ -924,6 +930,10 @@ int parse_jobs_ini(char *file)
 				continue;
 			}
 			if (!check_str(p, "exec_postrun", str_postrun_cb, td)) {
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_str(p, "ioscheduler", str_iosched_cb, td)) {
 				fgetpos(f, &off);
 				continue;
 			}
