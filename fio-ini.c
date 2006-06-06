@@ -894,7 +894,6 @@ int parse_jobs_ini(char *file)
 				continue;
 			}
 			if (!check_str(p, "iolog", str_iolog_cb, td)) {
-				printf("got read iolog\n");
 				td->read_iolog = 1;
 				td->write_iolog = 0;
 				fgetpos(f, &off);
@@ -902,7 +901,6 @@ int parse_jobs_ini(char *file)
 			}
 			if (!td->read_iolog &&
 			    !check_str(p, "write_iolog", str_iolog_cb, td)) {
-				printf("got write iolog\n");
 				td->write_iolog = 1;
 				fgetpos(f, &off);
 				continue;
