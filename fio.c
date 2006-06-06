@@ -1282,6 +1282,22 @@ static int init_io_u(struct thread_data *td)
 	return 0;
 }
 
+static void cleanup_allocs(struct thread_data *td)
+{
+	if (td->directory)
+		free(td->directory);
+	if (td->iolog_file)
+		free(td->iolog_file);
+	if (td->exec_prerun)
+		free(td->exec_prerun);
+	if (td->exec_postrun)
+		free(td->exec_postrun);
+	if (td->ioscheduler)
+		free(td->ioscheduler);
+	if (td->sysfs_root)
+		free(td->sysfs_root);
+}
+
 static int create_file(struct thread_data *td, unsigned long long size,
 		       int extend)
 {
@@ -1990,18 +2006,7 @@ err:
 	}
 	if (td->mmap)
 		munmap(td->mmap, td->file_size);
-	if (td->directory)
-		free(td->directory);
-	if (td->iolog_file)
-		free(td->iolog_file);
-	if (td->exec_prerun)
-		free(td->exec_prerun);
-	if (td->exec_postrun)
-		free(td->exec_postrun);
-	if (td->ioscheduler)
-		free(td->ioscheduler);
-	if (td->sysfs_root)
-		free(td->sysfs_root);
+	cleanup_allocs(td);
 	cleanup_io(td);
 	cleanup_io_u(td);
 	td_set_runstate(td, TD_EXITED);
