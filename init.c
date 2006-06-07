@@ -871,16 +871,19 @@ int parse_jobs_ini(char *file)
 				continue;
 			}
 			if (!check_strstore(p, "iolog", tmpbuf)) {
+				if (td->iolog_file)
+					free(td->iolog_file);
 				td->iolog_file = strdup(tmpbuf);
 				td->read_iolog = 1;
 				td->write_iolog = 0;
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!td->read_iolog &&
-			    !check_strstore(p, "write_iolog", tmpbuf)) {
-				td->iolog_file = strdup(tmpbuf);
-				td->write_iolog = 1;
+			if (!check_strstore(p, "write_iolog", tmpbuf)) {
+				if (!td->read_iolog) {
+					td->iolog_file = strdup(tmpbuf);
+					td->write_iolog = 1;
+				}
 				fgetpos(f, &off);
 				continue;
 			}
