@@ -578,7 +578,7 @@ static int str_rw_cb(struct thread_data *td, char *mem)
 		return 0;
 	}
 
-	fprintf(stderr, "bad data direction: %s\n", mem);
+	fprintf(stderr, "fio: data direction: read, write, randread, randwrite, rw, randrw\n");
 	return 1;
 }
 
@@ -595,7 +595,7 @@ static int str_verify_cb(struct thread_data *td, char *mem)
 		return 0;
 	}
 
-	fprintf(stderr, "bad verify type: %s\n", mem);
+	fprintf(stderr, "fio: verify types: md5, crc32\n");
 	return 1;
 }
 
@@ -612,7 +612,7 @@ static int str_mem_cb(struct thread_data *td, char *mem)
 		return 0;
 	}
 
-	fprintf(stderr, "bad mem type: %s\n", mem);
+	fprintf(stderr, "fio: mem type: malloc, shm, mmap\n");
 	return 1;
 }
 
@@ -645,10 +645,13 @@ static int str_ioengine_cb(struct thread_data *td, char *str)
 		return 0;
 	}
 
-	fprintf(stderr, "bad ioengine type: %s\n", str);
+	fprintf(stderr, "fio: ioengine: { linuxaio, aio, libaio }, posixaio, sync, mmap, sgio, splice\n");
 	return 1;
 }
 
+/*
+ * This is our [ini] type file parser.
+ */
 int parse_jobs_ini(char *file)
 {
 	unsigned int prioclass, prio, cpu, global, il;
@@ -1113,10 +1116,8 @@ int parse_options(int argc, char *argv[])
 		return 1;
 	}
 
-	if (parse_jobs_ini(ini_file)) {
-		usage(argv[0]);
+	if (parse_jobs_ini(ini_file))
 		return 1;
-	}
 
 	return 0;
 }
