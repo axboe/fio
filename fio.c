@@ -160,7 +160,7 @@ static int get_next_offset(struct thread_data *td, unsigned long long *offset)
 		int loops = 50;
 
 		do {
-			lrand48_r(&td->random_state, &r);
+			r = os_random_long(&td->random_state);
 			b = ((max_blocks - 1) * r / (unsigned long long) (RAND_MAX+1.0));
 			rb = b + (td->file_offset / td->min_bs);
 			loops--;
@@ -188,7 +188,7 @@ static unsigned int get_next_buflen(struct thread_data *td)
 	if (td->min_bs == td->max_bs)
 		buflen = td->min_bs;
 	else {
-		lrand48_r(&td->bsrange_state, &r);
+		r = os_random_long(&td->bsrange_state);
 		buflen = (1 + (double) (td->max_bs - 1) * r / (RAND_MAX + 1.0));
 		buflen = (buflen + td->min_bs - 1) & ~(td->min_bs - 1);
 	}
@@ -250,7 +250,7 @@ static void fill_random_bytes(struct thread_data *td,
 	double r;
 
 	while (len) {
-		drand48_r(&td->verify_state, &r);
+		r = os_random_double(&td->verify_state);
 
 		/*
 		 * lrand48_r seems to be broken and only fill the bottom
@@ -363,7 +363,7 @@ static int get_rw_ddir(struct thread_data *td)
 			unsigned long v;
 			long r;
 
-			lrand48_r(&td->random_state, &r);
+			r = os_random_long(&td->random_state);
 			v = 100UL * r / (unsigned long) (RAND_MAX + 1.0);
 			if (v < td->rwmixread)
 				td->rwmix_ddir = DDIR_READ;

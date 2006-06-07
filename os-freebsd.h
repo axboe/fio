@@ -11,6 +11,7 @@
 #define OS_MAP_ANON		(MAP_ANON)
 
 typedef unsigned long os_cpu_mask_t;
+typedef unsigned int os_random_state_t;
 
 /*
  * FIXME
@@ -30,4 +31,24 @@ static inline unsigned long long os_phys_mem(void)
 	return mem;
 }
 
+static inline void os_random_seed(unsigned long seed, os_random_state_t *rs)
+{
+	srand(seed);
+}
+
+static inline long os_random_long(os_random_state_t *rs)
+{
+	long val;
+
+	val = rand_r(rs);
+	return val;
+}
+
+static inline double os_random_double(os_random_state_t *rs)
+{
+	double val;
+
+	val = (double) rand_r(rs);
+	return val;
+}
 #endif

@@ -256,9 +256,9 @@ int init_random_state(struct thread_data *td)
 
 	close(fd);
 
-	srand48_r(seeds[0], &td->bsrange_state);
-	srand48_r(seeds[1], &td->verify_state);
-	srand48_r(seeds[2], &td->rwmix_state);
+	os_random_seed(seeds[0], &td->bsrange_state);
+	os_random_seed(seeds[1], &td->verify_state);
+	os_random_seed(seeds[2], &td->rwmix_state);
 
 	if (td->sequential)
 		return 0;
@@ -272,7 +272,7 @@ int init_random_state(struct thread_data *td)
 	td->num_maps = num_maps;
 	memset(td->file_map, 0, num_maps * sizeof(long));
 
-	srand48_r(seeds[3], &td->random_state);
+	os_random_seed(seeds[3], &td->random_state);
 	return 0;
 }
 

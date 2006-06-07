@@ -20,6 +20,7 @@
 #define OS_MAP_ANON		(MAP_ANONYMOUS)
 
 typedef cpu_set_t os_cpu_mask_t;
+typedef struct drand48_data os_random_state_t;
 
 /*
  * we want fadvise64 really, but it's so tangled... later
@@ -97,6 +98,27 @@ static inline unsigned long long os_phys_mem(void)
 		return 0;
 
 	return (unsigned long long) pages * (unsigned long long) pagesize;
+}
+
+static inline void os_random_seed(unsigned long seed, os_random_state_t *rs)
+{
+	srand48_r(seed, rs);
+}
+
+static inline long os_random_long(os_random_state_t *rs)
+{
+	long val;
+
+	lrand48_r(rs, &val);
+	return val;
+}
+
+static inline double os_random_double(os_random_state_t *rs)
+{
+	double val;
+
+	drand48_r(rs, &val);
+	return val;
 }
 
 #endif

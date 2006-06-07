@@ -169,8 +169,8 @@ struct thread_data {
 
 	char *ioscheduler;
 
-	struct drand48_data bsrange_state;
-	struct drand48_data verify_state;
+	os_random_state_t bsrange_state;
+	os_random_state_t verify_state;
 
 	int shm_id;
 
@@ -207,7 +207,7 @@ struct thread_data {
 	unsigned long long last_pos;
 	sem_t mutex;
 
-	struct drand48_data random_state;
+	os_random_state_t random_state;
 	unsigned long *file_map;
 	unsigned int num_maps;
 
@@ -237,7 +237,7 @@ struct thread_data {
 	unsigned int do_disk_util;
 	unsigned int override_sync;
 
-	struct drand48_data rwmix_state;
+	os_random_state_t rwmix_state;
 	struct timeval rwmix_switch;
 	int rwmix_ddir;
 
