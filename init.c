@@ -871,11 +871,13 @@ int parse_jobs_ini(char *file)
 				continue;
 			}
 			if (!check_strstore(p, "iolog", tmpbuf)) {
-				if (td->iolog_file)
+				if (td->write_iolog) {
+					fprintf(stderr, "fio: read iolog overrides given write_iolog\n");
 					free(td->iolog_file);
+					td->write_iolog = 0;
+				}
 				td->iolog_file = strdup(tmpbuf);
 				td->read_iolog = 1;
-				td->write_iolog = 0;
 				fgetpos(f, &off);
 				continue;
 			}
@@ -883,7 +885,8 @@ int parse_jobs_ini(char *file)
 				if (!td->read_iolog) {
 					td->iolog_file = strdup(tmpbuf);
 					td->write_iolog = 1;
-				}
+				} else
+					fprintf(stderr, "fio: read iolog overrides given write_iolog\n");
 				fgetpos(f, &off);
 				continue;
 			}
