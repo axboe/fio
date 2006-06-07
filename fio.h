@@ -6,7 +6,6 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include <semaphore.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -205,7 +204,7 @@ struct thread_data {
 	unsigned long long zone_bytes;
 	unsigned long long this_io_bytes[2];
 	unsigned long long last_pos;
-	sem_t mutex;
+	volatile int mutex;
 
 	os_random_state_t random_state;
 	unsigned long *file_map;
@@ -390,5 +389,29 @@ extern void rate_throttle(struct thread_data *, unsigned long, unsigned int);
  */
 extern int parse_options(int, char **);
 extern int init_random_state(struct thread_data *);
+
+/*
+ * This is a pretty crappy semaphore implementation, but with the use that fio
+ * has (just signalling start/go conditions), it doesn't have to be better.
+ * Naturally this would not work for any type of contended semaphore or
+ * for real locking.
+ */
+static inline void fio_sem_init(volatile int volatile *sem, int val)
+{
+	*sem = val;
+}
+
+static inline void fio_sem_down(volatile int volatile *sem)
+{
+	while (*sem == 0)
+		usleep(10000);
+
+	(*sem)--;
+}
+
+static inline void fio_sem_up(volatile int volatile *sem)
+{
+	(*sem)++;
+}
 
 #endif

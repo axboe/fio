@@ -63,7 +63,7 @@ enum {
 
 #define should_fsync(td)	((td_write(td) || td_rw(td)) && (!(td)->odirect || (td)->override_sync))
 
-static sem_t startup_sem;
+static volatile int startup_sem;
 
 #define TERMINATE_ALL		(-1)
 #define JOB_START_TIMEOUT	(5 * 1000)
@@ -1336,8 +1336,8 @@ static void *thread_main(void *data)
 		goto err;
 
 	td_set_runstate(td, TD_INITIALIZED);
-	sem_post(&startup_sem);
-	sem_wait(&td->mutex);
+	fio_sem_up(&startup_sem);
+	fio_sem_down(&td->mutex);
 
 	if (!td->create_serialize && setup_file(td))
 		goto err;
@@ -1788,7 +1788,7 @@ static void run_threads(void)
 			 */
 			td_set_runstate(td, TD_CREATED);
 			map[this_jobs++] = td;
-			sem_init(&startup_sem, 0, 1);
+			fio_sem_init(&startup_sem, 1);
 			nr_started++;
 
 			if (td->use_thread) {
@@ -1798,7 +1798,7 @@ static void run_threads(void)
 				}
 			} else {
 				if (fork())
-					sem_wait(&startup_sem);
+					fio_sem_down(&startup_sem);
 				else {
 					fork_main(shm_id, i);
 					exit(0);
@@ -1862,7 +1862,7 @@ static void run_threads(void)
 			m_rate += td->ratemin;
 			t_rate += td->rate;
 			todo--;
-			sem_post(&td->mutex);
+			fio_sem_up(&td->mutex);
 		}
 
 		reap_threads(&nr_running, &t_rate, &m_rate);

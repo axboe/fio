@@ -25,6 +25,17 @@ can find them here:
 http://linux01.gwdg.de/~pbleser/rpm-navigation.php?cat=System/fio
 
 
+Building
+--------
+
+Just type 'make' and 'make install'. If on FreeBSD, for now you have to
+specify the FreeBSD Makefile with -f, eg:
+
+$ make -f Makefile.Freebsd && make -f Makefile.FreeBSD install
+
+This might change in the future if I opt for an autoconf type setup.
+
+
 Options
 -------
 

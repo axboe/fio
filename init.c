@@ -174,7 +174,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	} else
 		strncpy(td->file_name, jobname, sizeof(td->file_name) - 1);
 
-	sem_init(&td->mutex, 0, 0);
+	fio_sem_init(&td->mutex, 0);
 
 	td->clat_stat[0].min_val = td->clat_stat[1].min_val = ULONG_MAX;
 	td->slat_stat[0].min_val = td->slat_stat[1].min_val = ULONG_MAX;
