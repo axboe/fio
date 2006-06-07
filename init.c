@@ -649,30 +649,6 @@ static int str_ioengine_cb(struct thread_data *td, char *str)
 	return 1;
 }
 
-static int str_iolog_cb(struct thread_data *td, char *file)
-{
-	td->iolog_file = strdup(file);
-	return 0;
-}
-
-static int str_prerun_cb(struct thread_data *td, char *file)
-{
-	td->exec_prerun = strdup(file);
-	return 0;
-}
-
-static int str_postrun_cb(struct thread_data *td, char *file)
-{
-	td->exec_postrun = strdup(file);
-	return 0;
-}
-
-static int str_iosched_cb(struct thread_data *td, char *file)
-{
-	td->ioscheduler = strdup(file);
-	return 0;
-}
-
 int parse_jobs_ini(char *file)
 {
 	unsigned int prioclass, prio, cpu, global, il;
@@ -921,27 +897,32 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_str(p, "iolog", str_iolog_cb, td)) {
+			if (!check_strstore(p, "iolog", tmpbuf)) {
+				td->iolog_file = strdup(tmpbuf);
 				td->read_iolog = 1;
 				td->write_iolog = 0;
 				fgetpos(f, &off);
 				continue;
 			}
 			if (!td->read_iolog &&
-			    !check_str(p, "write_iolog", str_iolog_cb, td)) {
+			    !check_strstore(p, "write_iolog", tmpbuf)) {
+				td->iolog_file = strdup(tmpbuf);
 				td->write_iolog = 1;
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_str(p, "exec_prerun", str_prerun_cb, td)) {
+			if (!check_strstore(p, "exec_prerun", tmpbuf)) {
+				td->exec_prerun = strdup(tmpbuf);
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_str(p, "exec_postrun", str_postrun_cb, td)) {
+			if (!check_strstore(p, "exec_postrun", tmpbuf)) {
+				td->exec_postrun = strdup(tmpbuf);
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_str(p, "ioscheduler", str_iosched_cb, td)) {
+			if (!check_strstore(p, "ioscheduler", tmpbuf)) {
+				td->ioscheduler = strdup(tmpbuf);
 				fgetpos(f, &off);
 				continue;
 			}
