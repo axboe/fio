@@ -351,7 +351,7 @@ static void show_thread_status(struct thread_data *td,
 	if (!(td->io_bytes[0] + td->io_bytes[1]) && !td->error)
 		return;
 
-	printf("Client%d (groupid=%d): err=%2d:\n", td->thread_number, td->groupid, td->error);
+	printf("%s: (groupid=%d): err=%2d:\n",td->name, td->groupid, td->error);
 
 	show_ddir_status(td, rs, td->ddir);
 	if (td->io_bytes[td->ddir ^ 1])
@@ -392,7 +392,7 @@ void show_run_stats(void)
 		td = &threads[i];
 
 		if (td->error) {
-			printf("Client%d: %s\n", td->thread_number, td->verror);
+			printf("%s: %s\n", td->name, td->verror);
 			continue;
 		}
 

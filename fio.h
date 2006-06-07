@@ -102,6 +102,7 @@ struct group_run_stats {
 };
 
 struct thread_data {
+	char name[64];
 	char file_name[256];
 	char *directory;
 	char verror[80];

@@ -43,6 +43,7 @@ $ fio
 
 The <jobs> format is as follows:
 
+	name=x		Use 'x' as the identifier for this job.
 	directory=x	Use 'x' as the top level directory for storing files
 	rw=x		'x' may be: read, randread, write, randwrite,
 			rw (read-write mix), randrw (read-write random mix)

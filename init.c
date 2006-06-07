@@ -251,10 +251,13 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (write_bw_log)
 		setup_log(&td->bw_log);
 
+	if (td->name[0] == '\0')
+		snprintf(td->name, sizeof(td->name)-1, "client%d", td->thread_number);
+
 	ddir = td->ddir + (!td->sequential << 1) + (td->iomix << 2);
 
 	if (!job_add_num)
-		printf("Client%d (g=%d): rw=%s, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->thread_number, td->groupid, ddir_str[ddir], td->odirect, td->min_bs, td->max_bs, td->rate, td->io_engine_name, td->iodepth);
+		printf("%s: (g=%d): rw=%s, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->name, td->groupid, ddir_str[ddir], td->odirect, td->min_bs, td->max_bs, td->rate, td->io_engine_name, td->iodepth);
 	else if (job_add_num == 1)
 		printf("...\n");
 
@@ -874,6 +877,11 @@ int parse_jobs_ini(char *file)
 			}
 			if (!check_strstore(p, "directory", tmpbuf)) {
 				td->directory = strdup(tmpbuf);
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_strstore(p, "name", tmpbuf)) {
+				snprintf(td->name, sizeof(td->name)-1, "%s%d", tmpbuf, td->thread_number);
 				fgetpos(f, &off);
 				continue;
 			}

@@ -221,7 +221,7 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 
 		rate = (td->this_io_bytes[ddir] - td->rate_bytes) / spent;
 		if (rate < td->ratemin) {
-			printf("Client%d: min rate %d not met, got %ldKiB/sec\n", td->thread_number, td->ratemin, rate);
+			printf("%s: min rate %d not met, got %ldKiB/sec\n", td->name, td->ratemin, rate);
 			if (rate_quit)
 				terminate_threads(td->groupid);
 			return 1;
@@ -966,10 +966,10 @@ static int create_file(struct thread_data *td, unsigned long long size,
 
 	if (!extend) {
 		oflags = O_CREAT | O_TRUNC;
-		printf("Client%d: Laying out IO file (%LuMiB)\n", td->thread_number, size >> 20);
+		printf("%s: Laying out IO file (%LuMiB)\n", td->name, size >> 20);
 	} else {
 		oflags = O_APPEND;
-		printf("Client%d: Extending IO file (%Lu -> %LuMiB)\n", td->thread_number, (td->file_size - size) >> 20, td->file_size >> 20);
+		printf("%s: Extending IO file (%Lu -> %LuMiB)\n", td->name, (td->file_size - size) >> 20, td->file_size >> 20);
 	}
 
 	td->fd = open(td->file_name, O_WRONLY | oflags, 0644);
@@ -1075,13 +1075,13 @@ static int get_file_size(struct thread_data *td)
 		return ret;
 
 	if (td->file_offset > td->real_file_size) {
-		fprintf(stderr, "Client%d: offset extends end (%Lu > %Lu)\n", td->thread_number, td->file_offset, td->real_file_size);
+		fprintf(stderr, "%s: offset extends end (%Lu > %Lu)\n", td->name, td->file_offset, td->real_file_size);
 		return 1;
 	}
 
 	td->io_size = td->file_size;
 	if (td->io_size == 0) {
-		fprintf(stderr, "Client%d: no io blocks\n", td->thread_number);
+		fprintf(stderr, "%s: no io blocks\n", td->name);
 		td_verror(td, EINVAL);
 		return 1;
 	}
