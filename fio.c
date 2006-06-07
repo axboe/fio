@@ -281,38 +281,36 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u)
 {
 	unsigned char *p = (unsigned char *) io_u->buf;
 	unsigned long c;
-	int ret;
 
 	p += sizeof(*hdr);
 	c = crc32(p, hdr->len - sizeof(*hdr));
-	ret = c != hdr->crc32;
 
-	if (ret) {
+	if (c != hdr->crc32) {
 		fprintf(stderr, "crc32: verify failed at %llu/%u\n", io_u->offset, io_u->buflen);
 		fprintf(stderr, "crc32: wanted %lx, got %lx\n", hdr->crc32, c);
+		return 1;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u)
 {
 	unsigned char *p = (unsigned char *) io_u->buf;
 	struct md5_ctx md5_ctx;
-	int ret;
 
 	memset(&md5_ctx, 0, sizeof(md5_ctx));
 	p += sizeof(*hdr);
 	md5_update(&md5_ctx, p, hdr->len - sizeof(*hdr));
 
-	ret = memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash));
-	if (ret) {
+	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash))) {
 		fprintf(stderr, "md5: verify failed at %llu/%u\n", io_u->offset, io_u->buflen);
 		hexdump(hdr->md5_digest, sizeof(hdr->md5_digest));
 		hexdump(md5_ctx.hash, sizeof(md5_ctx.hash));
+		return 1;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int verify_io_u(struct io_u *io_u)
@@ -382,7 +380,7 @@ static int get_rw_ddir(struct thread_data *td)
 
 /*
  * fill body of io_u->buf with random data and add a header with the
- * (eg) sha1sum of that data.
+ * crc32 or md5 sum of that data.
  */
 static void populate_io_u(struct thread_data *td, struct io_u *io_u)
 {
@@ -450,21 +448,22 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	return 1;
 }
 
-#define queue_full(td)	(list_empty(&(td)->io_u_freelist))
+#define queue_full(td)	list_empty(&(td)->io_u_freelist)
 
 struct io_u *__get_io_u(struct thread_data *td)
 {
-	struct io_u *io_u;
+	struct io_u *io_u = NULL;
 
-	if (queue_full(td))
-		return NULL;
+	if (!queue_full(td)) {
+		io_u = list_entry(td->io_u_freelist.next, struct io_u, list);
 
-	io_u = list_entry(td->io_u_freelist.next, struct io_u, list);
-	io_u->error = 0;
-	io_u->resid = 0;
-	list_del(&io_u->list);
-	list_add(&io_u->list, &td->io_u_busylist);
-	td->cur_depth++;
+		io_u->error = 0;
+		io_u->resid = 0;
+		list_del(&io_u->list);
+		list_add(&io_u->list, &td->io_u_busylist);
+		td->cur_depth++;
+	}
+
 	return io_u;
 }
 
@@ -521,17 +520,19 @@ static int get_next_verify(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
 
-	if (list_empty(&td->io_hist_list))
-		return 1;
+	if (!list_empty(&td->io_hist_list)) {
+		ipo = list_entry(td->io_hist_list.next, struct io_piece, list);
 
-	ipo = list_entry(td->io_hist_list.next, struct io_piece, list);
-	list_del(&ipo->list);
+		list_del(&ipo->list);
 
-	io_u->offset = ipo->offset;
-	io_u->buflen = ipo->len;
-	io_u->ddir = DDIR_READ;
-	free(ipo);
-	return 0;
+		io_u->offset = ipo->offset;
+		io_u->buflen = ipo->len;
+		io_u->ddir = DDIR_READ;
+		free(ipo);
+		return 0;
+	}
+
+	return 1;
 }
 
 static int sync_td(struct thread_data *td)

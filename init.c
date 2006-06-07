@@ -884,9 +884,15 @@ int parse_jobs_ini(char *file)
 				continue;
 			}
 			if (!check_strstore(p, "ioscheduler", tmpbuf)) {
+#ifndef FIO_HAVE_IOSCHED_SWITCH
+				fprintf(stderr, "io scheduler switching not available\n");
+				ret = 1;
+				break;
+#else
 				td->ioscheduler = strdup(tmpbuf);
 				fgetpos(f, &off);
 				continue;
+#endif
 			}
 
 			/*
