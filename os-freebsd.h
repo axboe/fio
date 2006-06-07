@@ -20,4 +20,14 @@ static inline int blockdev_size(int fd, unsigned long long *bytes)
 	return 1;
 }
 
+static inline unsigned long long os_phys_mem(void)
+{
+	int mib[2] = { CTL_HW, HW_PHYSMEM };
+	unsigned long long mem;
+	size_t len = sizeof(mem);
+
+	sysctl(mib, 2, &mem, &len, NULL, 0);
+	return mem;
+}
+
 #endif

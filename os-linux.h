@@ -87,4 +87,16 @@ static inline int blockdev_size(int fd, unsigned long long *bytes)
 	return errno;
 }
 
+static inline unsigned long long os_phys_mem(void)
+{
+	long pagesize, pages;
+
+	pagesize = sysconf(_SC_PAGESIZE);
+	pages = sysconf(_SC_PHYS_PAGES);
+	if (pages == -1 || pagesize == -1)
+		return 0;
+
+	return (unsigned long long) pages * (unsigned long long) pagesize;
+}
+
 #endif

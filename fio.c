@@ -737,6 +737,10 @@ static void do_verify(struct thread_data *td)
 	td_set_runstate(td, TD_RUNNING);
 }
 
+/*
+ * Main IO worker functions. It retrieves io_u's to process and queues
+ * and reaps them, checking for rate and errors along the way.
+ */
 static void do_io(struct thread_data *td)
 {
 	struct io_completion_data icd;
@@ -1670,7 +1674,7 @@ static void fio_unpin_memory(void *pinned)
 
 static void *fio_pin_memory(void)
 {
-	long pagesize, pages;
+	unsigned long long phys_mem;
 	void *ptr;
 
 	if (!mlock_size)
@@ -1679,13 +1683,10 @@ static void *fio_pin_memory(void)
 	/*
 	 * Don't allow mlock of more than real_mem-128MB
 	 */
-	pagesize = sysconf(_SC_PAGESIZE);
-	pages = sysconf(_SC_PHYS_PAGES);
-	if (pages != -1 && pagesize != -1) {
-		unsigned long long real_mem = pages * pagesize;
-
-		if ((mlock_size + 128 * 1024 * 1024) > real_mem) {
-			mlock_size = real_mem - 128 * 1024 * 1024;
+	phys_mem = os_phys_mem();
+	if (phys_mem) {
+		if ((mlock_size + 128 * 1024 * 1024) > phys_mem) {
+			mlock_size = phys_mem - 128 * 1024 * 1024;
 			printf("fio: limiting mlocked memory to %lluMiB\n",
 							mlock_size >> 20);
 		}
