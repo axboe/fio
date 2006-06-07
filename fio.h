@@ -353,4 +353,36 @@ struct io_completion_data {
 #define min(a, b)	((a) < (b) ? (a) : (b))
 #endif
 
+/*
+ * Log exports
+ */
+extern int read_iolog_get(struct thread_data *, struct io_u *);
+extern void write_iolog_put(struct thread_data *, struct io_u *);
+extern int init_iolog(struct thread_data *td);
+extern void log_io_piece(struct thread_data *, struct io_u *);
+extern void prune_io_piece_log(struct thread_data *);
+extern void write_iolog_close(struct thread_data *);
+
+/*
+ * Logging
+ */
+extern void add_clat_sample(struct thread_data *, int, unsigned long);
+extern void add_slat_sample(struct thread_data *, int, unsigned long);
+extern void add_bw_sample(struct thread_data *, int);
+extern void show_run_stats(void);
+extern void init_disk_util(struct thread_data *);
+extern void update_rusage_stat(struct thread_data *);
+extern void update_io_ticks(void);
+extern void disk_util_timer_arm(void);
+
+/*
+ * Time functions
+ */
+extern unsigned long utime_since(struct timeval *, struct timeval *);
+extern unsigned long mtime_since(struct timeval *, struct timeval *);
+extern unsigned long mtime_since_now(struct timeval *);
+extern unsigned long time_since_now(struct timeval *);
+extern void usec_sleep(struct thread_data *, unsigned long);
+extern void rate_throttle(struct thread_data *, unsigned long, unsigned int);
+
 #endif

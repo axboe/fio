@@ -34,10 +34,6 @@
 #include "fio.h"
 #include "os.h"
 
-#include "fio-time.h"
-#include "fio-stat.h"
-#include "fio-log.h"
-
 #define MASK	(4095)
 
 #define ALIGN(buf)	(char *) (((unsigned long) (buf) + MASK) & ~(MASK))

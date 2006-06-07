@@ -5,7 +5,7 @@ SCRIPTS = fio_generate_plots
 
 all: depend $(PROGS) $(SCRIPTS)
 
-fio: fio.o fio-io.o fio-ini.o fio-stat.o fio-log.o fio-time.o md5.o crc32.o
+fio: fio.o ioengines.o init.o stat.o log.o time.o md5.o crc32.o
 	$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) -lpthread -laio -lm -lrt
 
 clean:

@@ -7,7 +7,6 @@
 #include <math.h>
 
 #include "fio.h"
-#include "fio-time.h"
 
 static struct itimerval itimer;
 static LIST_HEAD(disk_list);
