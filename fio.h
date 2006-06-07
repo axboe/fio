@@ -258,10 +258,6 @@ struct thread_data {
 		snprintf(td->verror, sizeof(td->verror) - 1, "file:%s:%d, error=%s", __FILE__, __LINE__, strerror(e));	\
 	} while (0)
 
-extern int parse_jobs_ini(char *);
-extern int parse_options(int, char **);
-extern void finish_log(struct thread_data *, struct io_log *, const char *);
-extern int init_random_state(struct thread_data *);
 extern struct io_u *__get_io_u(struct thread_data *);
 extern void put_io_u(struct thread_data *, struct io_u *);
 
@@ -375,6 +371,9 @@ extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
 extern void update_io_ticks(void);
 extern void disk_util_timer_arm(void);
+extern void setup_log(struct io_log **);
+extern void finish_log(struct thread_data *, struct io_log *, const char *);
+extern int setup_rate(struct thread_data *);
 
 /*
  * Time functions
@@ -385,5 +384,11 @@ extern unsigned long mtime_since_now(struct timeval *);
 extern unsigned long time_since_now(struct timeval *);
 extern void usec_sleep(struct thread_data *, unsigned long);
 extern void rate_throttle(struct thread_data *, unsigned long, unsigned int);
+
+/*
+ * Init functions
+ */
+extern int parse_options(int, char **);
+extern int init_random_state(struct thread_data *);
 
 #endif

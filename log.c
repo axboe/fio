@@ -160,3 +160,52 @@ int init_iolog(struct thread_data *td)
 
 	return 0;
 }
+
+int setup_rate(struct thread_data *td)
+{
+	int nr_reads_per_sec;
+
+	if (!td->rate)
+		return 0;
+
+	if (td->rate < td->ratemin) {
+		fprintf(stderr, "min rate larger than nominal rate\n");
+		return -1;
+	}
+
+	nr_reads_per_sec = (td->rate * 1024) / td->min_bs;
+	td->rate_usec_cycle = 1000000 / nr_reads_per_sec;
+	td->rate_pending_usleep = 0;
+	return 0;
+}
+
+void setup_log(struct io_log **log)
+{
+	struct io_log *l = malloc(sizeof(*l));
+
+	l->nr_samples = 0;
+	l->max_samples = 1024;
+	l->log = malloc(l->max_samples * sizeof(struct io_sample));
+	*log = l;
+}
+
+void finish_log(struct thread_data *td, struct io_log *log, const char *name)
+{
+	char file_name[256];
+	FILE *f;
+	unsigned int i;
+
+	snprintf(file_name, 200, "client%d_%s.log", td->thread_number, name);
+	f = fopen(file_name, "w");
+	if (!f) {
+		perror("fopen log");
+		return;
+	}
+
+	for (i = 0; i < log->nr_samples; i++)
+		fprintf(f, "%lu, %lu, %u\n", log->log[i].time, log->log[i].val, log->log[i].ddir);
+
+	fclose(f);
+	free(log->log);
+	free(log);
+}
