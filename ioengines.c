@@ -15,19 +15,11 @@
 #include <errno.h>
 #include <assert.h>
 #include <time.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/poll.h>
 #include "fio.h"
 #include "os.h"
-
-#ifdef FIO_HAVE_LIBAIO
-
-#define ev_to_iou(ev)	(struct io_u *) ((unsigned long) (ev)->obj)
-
-static int fio_io_sync(struct thread_data *td)
-{
-	return fsync(td->fd);
-}
 
 static int fill_timespec(struct timespec *ts)
 {
@@ -59,6 +51,15 @@ static unsigned long long ts_utime_since_now(struct timespec *t)
 	nsec /= 1000;
 	return sec + nsec;
 }
+
+static int fio_io_sync(struct thread_data *td)
+{
+	return fsync(td->fd);
+}
+
+#ifdef FIO_HAVE_LIBAIO
+
+#define ev_to_iou(ev)	(struct io_u *) ((unsigned long) (ev)->obj)
 
 struct libaio_data {
 	io_context_t aio_ctx;
@@ -374,7 +375,7 @@ static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 	if ((unsigned int) ret != io_u->buflen) {
 		if (ret > 0) {
 			io_u->resid = io_u->buflen - ret;
-			io_u->error = ENODATA;
+			io_u->error = EIO;
 		} else
 			io_u->error = errno;
 	}

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <dirent.h>
 #include <libgen.h>
 #include <math.h>
@@ -9,7 +10,7 @@
 #include "fio.h"
 
 static struct itimerval itimer;
-static LIST_HEAD(disk_list);
+static struct list_head disk_list = LIST_HEAD_INIT(disk_list);
 
 static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 {

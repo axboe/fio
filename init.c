@@ -667,10 +667,11 @@ int parse_jobs_ini(char *file)
 				fprintf(stderr, "io priorities not available\n");
 				ret = 1;
 				break;
-#endif
+#else
 				td->ioprio |= prioclass << IOPRIO_CLASS_SHIFT;
 				fgetpos(f, &off);
 				continue;
+#endif
 			}
 			if (!check_int(p, "direct", &td->odirect)) {
 				fgetpos(f, &off);

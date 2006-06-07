@@ -1,6 +1,8 @@
 #ifndef FIO_OS_FREEBSD_H
 #define FIO_OS_FREEBSD_H
 
+#include <sys/sysctl.h>
+
 #undef FIO_HAVE_LIBAIO
 #define FIO_HAVE_POSIXAIO
 #undef FIO_HAVE_FADVISE
