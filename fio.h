@@ -100,15 +100,50 @@ struct group_run_stats {
 	unsigned long long agg[2];
 };
 
+enum fio_ddir {
+	DDIR_READ = 0,
+	DDIR_WRITE,
+};
+
+/*
+ * What type of allocation to use for io buffers
+ */
+enum fio_memtype {
+	MEM_MALLOC = 0,	/* ordinary malloc */
+	MEM_SHM,	/* use shared memory segments */
+	MEM_MMAP,	/* use anonynomous mmap */
+};
+
+/*
+ * The type of object we are working on
+ */
+enum fio_filetype {
+	FIO_TYPE_FILE = 1,
+	FIO_TYPE_BD,
+	FIO_TYPE_CHAR,
+};
+
+enum fio_iotype {
+	FIO_SYNCIO	= 1 << 0,
+	FIO_MMAPIO	= 1 << 1 | FIO_SYNCIO,
+	FIO_LIBAIO	= 1 << 2,
+	FIO_POSIXAIO	= 1 << 3,
+	FIO_SGIO	= 1 << 4,
+	FIO_SPLICEIO	= 1 << 5 | FIO_SYNCIO,
+};
+
+/*
+ * This describes a single thread/process executing a fio job.
+ */
 struct thread_data {
-	char name[64];
-	char file_name[256];
+	char name[32];
+	char *file_name;
 	char *directory;
 	char verror[80];
 	pthread_t thread;
 	int thread_number;
 	int groupid;
-	int filetype;
+	enum fio_filetype filetype;
 	int error;
 	int fd;
 	void *mmap;
@@ -118,38 +153,42 @@ struct thread_data {
 	volatile int terminate;
 	volatile int runstate;
 	volatile int old_runstate;
-	unsigned int ddir;
+	enum fio_ddir ddir;
 	unsigned int iomix;
 	unsigned int ioprio;
-	unsigned int sequential;
+
+	unsigned char sequential;
+	unsigned char odirect;
+	unsigned char create_file;
+	unsigned char invalidate_cache;
+	unsigned char create_serialize;
+	unsigned char create_fsync;
+	unsigned char end_fsync;
+	unsigned char sync_io;
+	unsigned char verify;
+	unsigned char use_thread;
+	unsigned char do_disk_util;
+	unsigned char override_sync;
+
 	unsigned int bs;
 	unsigned int min_bs;
 	unsigned int max_bs;
-	unsigned int odirect;
 	unsigned int thinktime;
 	unsigned int fsync_blocks;
 	unsigned int start_delay;
 	unsigned int timeout;
-	unsigned int io_engine;
-	unsigned int create_file;
+	enum fio_iotype io_engine;
 	unsigned int overwrite;
-	unsigned int invalidate_cache;
 	unsigned int bw_avg_time;
-	unsigned int create_serialize;
-	unsigned int create_fsync;
-	unsigned int end_fsync;
 	unsigned int loops;
 	unsigned long long file_size;
 	unsigned long long real_file_size;
 	unsigned long long file_offset;
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
-	unsigned int sync_io;
-	unsigned int mem_type;
-	unsigned int verify;
+	enum fio_memtype mem_type;
 	unsigned int stonewall;
 	unsigned int numjobs;
-	unsigned int use_thread;
 	unsigned int iodepth;
 	os_cpu_mask_t cpumask;
 	unsigned int jobnum;
@@ -165,7 +204,6 @@ struct thread_data {
 	FILE *iolog_f;
 
 	char *sysfs_root;
-
 	char *ioscheduler;
 
 	os_random_state_t bsrange_state;
@@ -173,6 +211,10 @@ struct thread_data {
 
 	int shm_id;
 
+	/*
+	 * IO engine hooks, contains everything needed to submit an io_u
+	 * to any of the available IO engines.
+	 */
 	void *io_data;
 	char io_engine_name[16];
 	int (*io_prep)(struct thread_data *, struct io_u *);
@@ -183,10 +225,16 @@ struct thread_data {
 	void (*io_cleanup)(struct thread_data *);
 	int (*io_sync)(struct thread_data *);
 
+	/*
+	 * Current IO depth and list of free and busy io_u's.
+	 */
 	unsigned int cur_depth;
 	struct list_head io_u_freelist;
 	struct list_head io_u_busylist;
 
+	/*
+	 * Rate state
+	 */
 	unsigned int rate;
 	unsigned int ratemin;
 	unsigned int ratecycle;
@@ -206,6 +254,9 @@ struct thread_data {
 	unsigned long long last_pos;
 	volatile int mutex;
 
+	/*
+	 * State for random io, a bitmap of blocks done vs not done
+	 */
 	os_random_state_t random_state;
 	unsigned long *file_map;
 	unsigned int num_maps;
@@ -227,18 +278,21 @@ struct thread_data {
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
 
+	/*
+	 * fio system usage accounting
+	 */
 	struct rusage ru_start;
 	struct rusage ru_end;
 	unsigned long usr_time;
 	unsigned long sys_time;
 	unsigned long ctx;
 
-	unsigned int do_disk_util;
-	unsigned int override_sync;
-
+	/*
+	 * read/write mixed workload state
+	 */
 	os_random_state_t rwmix_state;
 	struct timeval rwmix_switch;
-	int rwmix_ddir;
+	enum fio_ddir rwmix_ddir;
 
 	/*
 	 * Pre-run and post-run shell
@@ -246,6 +300,9 @@ struct thread_data {
 	char *exec_prerun;
 	char *exec_postrun;
 
+	/*
+	 * IO historic logs
+	 */
 	struct list_head io_hist_list;
 	struct list_head io_log_list;
 };
@@ -269,38 +326,6 @@ extern int shm_id;
 extern int groupid;
 
 extern struct thread_data *threads;
-
-enum {
-	DDIR_READ = 0,
-	DDIR_WRITE,
-};
-
-/*
- * What type of allocation to use for io buffers
- */
-enum {
-	MEM_MALLOC,	/* ordinary malloc */
-	MEM_SHM,	/* use shared memory segments */
-	MEM_MMAP,	/* use anonynomous mmap */
-};
-
-/*
- * The type of object we are working on
- */
-enum {
-	FIO_TYPE_FILE = 1,
-	FIO_TYPE_BD,
-	FIO_TYPE_CHAR,
-};
-
-enum {
-	FIO_SYNCIO	= 1 << 0,
-	FIO_MMAPIO	= 1 << 1 | FIO_SYNCIO,
-	FIO_LIBAIO	= 1 << 2,
-	FIO_POSIXAIO	= 1 << 3,
-	FIO_SGIO	= 1 << 4,
-	FIO_SPLICEIO	= 1 << 5 | FIO_SYNCIO,
-};
 
 #define td_read(td)		((td)->ddir == DDIR_READ)
 #define td_write(td)		((td)->ddir == DDIR_WRITE)

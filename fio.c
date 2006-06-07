@@ -947,6 +947,8 @@ static void cleanup_allocs(struct thread_data *td)
 		free(td->ioscheduler);
 	if (td->sysfs_root)
 		free(td->sysfs_root);
+	if (td->file_name)
+		free(td->file_name);
 }
 
 static int create_file(struct thread_data *td, unsigned long long size,

@@ -167,12 +167,15 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	}
 
 	if (td->filetype == FIO_TYPE_FILE) {
+		char tmp[PATH_MAX];
+
 		if (td->directory && td->directory[0] != '\0')
-			sprintf(td->file_name, "%s/%s.%d", td->directory, jobname, td->jobnum);
+			sprintf(tmp, "%s/%s.%d", td->directory, jobname, td->jobnum);
 		else
-			sprintf(td->file_name, "%s.%d", jobname, td->jobnum);
+			sprintf(tmp, "%s.%d", jobname, td->jobnum);
+		td->file_name = strdup(tmp);
 	} else
-		strncpy(td->file_name, jobname, sizeof(td->file_name) - 1);
+		td->file_name = strdup(jobname);
 
 	fio_sem_init(&td->mutex, 0);
 
@@ -673,7 +676,8 @@ int parse_jobs_ini(char *file)
 				continue;
 #endif
 			}
-			if (!check_int(p, "direct", &td->odirect)) {
+			if (!check_int(p, "direct", &il)) {
+				td->odirect = il;
 				fgetpos(f, &off);
 				continue;
 			}
@@ -716,7 +720,8 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_int(p, "invalidate",&td->invalidate_cache)) {
+			if (!check_int(p, "invalidate", &il)) {
+				td->invalidate_cache = il;
 				fgetpos(f, &off);
 				continue;
 			}
@@ -724,7 +729,8 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_int(p, "sync", &td->sync_io)) {
+			if (!check_int(p, "sync", &il)) {
+				td->sync_io = il;
 				fgetpos(f, &off);
 				continue;
 			}
@@ -732,15 +738,18 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_int(p, "create_serialize", &td->create_serialize)) {
+			if (!check_int(p, "create_serialize", &il)) {
+				td->create_serialize = il;
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_int(p, "create_fsync", &td->create_fsync)) {
+			if (!check_int(p, "create_fsync", &il)) {
+				td->create_fsync = il;
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_int(p, "end_fsync", &td->end_fsync)) {
+			if (!check_int(p, "end_fsync", &il)) {
+				td->end_fsync = il;
 				fgetpos(f, &off);
 				continue;
 			}
@@ -752,7 +761,8 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_int(p, "overwrite", &td->overwrite)) {
+			if (!check_int(p, "overwrite", &il)) {
+				td->overwrite = il;
 				fgetpos(f, &off);
 				continue;
 			}
