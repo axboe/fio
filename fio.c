@@ -360,11 +360,11 @@ static int get_rw_ddir(struct thread_data *td)
 		 * Check if it's time to seed a new data direction.
 		 */
 		if (elapsed >= td->rwmixcycle) {
-			unsigned long v;
+			int v;
 			long r;
 
-			r = os_random_long(&td->random_state);
-			v = 100UL * r / (unsigned long) (RAND_MAX + 1.0);
+			r = os_random_long(&td->rwmix_state);
+			v = 1 + (int) (100.0 * (r / (RAND_MAX + 1.0)));
 			if (v < td->rwmixread)
 				td->rwmix_ddir = DDIR_READ;
 			else
