@@ -662,6 +662,7 @@ int parse_jobs_ini(char *file)
 	fpos_t off;
 	FILE *f;
 	char *p;
+	int ret = 0;
 
 	f = fopen(file, "r");
 	if (!f) {
@@ -674,6 +675,8 @@ int parse_jobs_ini(char *file)
 	tmpbuf = malloc(4096);
 
 	while ((p = fgets(string, 4096, f)) != NULL) {
+		if (ret)
+			break;
 		if (is_empty_or_comment(p))
 			continue;
 		if (sscanf(p, "[%s]", name) != 1)
@@ -684,8 +687,10 @@ int parse_jobs_ini(char *file)
 		name[strlen(name) - 1] = '\0';
 
 		td = get_new_job(global, &def_thread);
-		if (!td)
-			return 1;
+		if (!td) {
+			ret = 1;
+			break;
+		}
 
 		fgetpos(f, &off);
 		while ((p = fgets(string, 4096, f)) != NULL) {
@@ -699,7 +704,8 @@ int parse_jobs_ini(char *file)
 			if (!check_int(p, "prio", &prio)) {
 #ifndef FIO_HAVE_IOPRIO
 				fprintf(stderr, "io priorities not available\n");
-				return 1;
+				ret = 1;
+				break;
 #endif
 				td->ioprio |= prio;
 				fgetpos(f, &off);
@@ -708,7 +714,8 @@ int parse_jobs_ini(char *file)
 			if (!check_int(p, "prioclass", &prioclass)) {
 #ifndef FIO_HAVE_IOPRIO
 				fprintf(stderr, "io priorities not available\n");
-				return 1;
+				ret = 1;
+				break;
 #endif
 				td->ioprio |= prioclass << IOPRIO_CLASS_SHIFT;
 				fgetpos(f, &off);
@@ -737,7 +744,8 @@ int parse_jobs_ini(char *file)
 			if (!check_int(p, "cpumask", &cpu)) {
 #ifndef FIO_HAVE_CPU_AFFINITY
 				fprintf(stderr, "cpu affinity not available\n");
-				return 1;
+				ret = 1;
+				break;
 #endif
 				fill_cpu_mask(td->cpumask, cpu);
 				fgetpos(f, &off);
@@ -930,20 +938,28 @@ int parse_jobs_ini(char *file)
 				continue;
 			}
 
+			/*
+			 * Don't break here, continue parsing options so we
+			 * dump all the bad ones. Makes trial/error fixups
+			 * easier on the user.
+			 */
 			printf("Client%d: bad option %s\n",td->thread_number,p);
-			return 1;
+			ret = 1;
 		}
-		fsetpos(f, &off);
 
-		if (add_job(td, name, 0))
-			return 1;
+		if (!ret) {
+			fsetpos(f, &off);
+			ret = add_job(td, name, 0);
+		}
+		if (ret)
+			break;
 	}
 
 	free(string);
 	free(name);
 	free(tmpbuf);
 	fclose(f);
-	return 0;
+	return ret;
 }
 
 static int fill_def_thread(void)
