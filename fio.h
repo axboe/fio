@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "list.h"
 #include "md5.h"
