@@ -42,7 +42,9 @@
 #endif
 
 #ifndef FIO_HAVE_ODIRECT
-#define OS_O_DIRECT			(0)
+#define OS_O_DIRECT			0
+#else
+#define OS_O_DIRECT			O_DIRECT
 #endif
 
 struct thread_data;
