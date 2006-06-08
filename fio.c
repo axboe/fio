@@ -513,7 +513,6 @@ static struct io_u *get_io_u(struct thread_data *td)
 
 static inline void td_set_runstate(struct thread_data *td, int runstate)
 {
-	td->old_runstate = td->runstate;
 	td->runstate = runstate;
 }
 
@@ -1421,9 +1420,6 @@ static void check_str_update(struct thread_data *td)
 {
 	char c = run_str[td->thread_number - 1];
 
-	if (td->runstate == td->old_runstate)
-		return;
-
 	switch (td->runstate) {
 		case TD_REAPED:
 			c = '_';
@@ -1469,7 +1465,6 @@ static void check_str_update(struct thread_data *td)
 	}
 
 	run_str[td->thread_number - 1] = c;
-	td->old_runstate = td->runstate;
 }
 
 static void eta_to_str(char *str, int eta_sec)
@@ -1613,6 +1608,9 @@ static void print_thread_status(void)
 		perc = (double) elapsed / (double) (elapsed + eta_sec);
 		eta_to_str(eta_str, eta_sec);
 	}
+
+	if (!nr_running)
+		return;
 
 	printf("Threads now running (%d)", nr_running);
 	if (m_rate || t_rate)

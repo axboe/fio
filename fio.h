@@ -153,7 +153,6 @@ struct thread_data {
 	size_t orig_buffer_size;
 	volatile int terminate;
 	volatile int runstate;
-	volatile int old_runstate;
 	enum fio_ddir ddir;
 	unsigned int iomix;
 	unsigned int ioprio;
