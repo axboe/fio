@@ -65,50 +65,19 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 		return NULL;
 
 	td = &threads[thread_number++];
-	if (parent)
-		*td = *parent;
-	else
-		memset(td, 0, sizeof(*td));
+	*td = *parent;
+	td->name[0] = '\0';
 
 	td->fd = -1;
 	td->thread_number = thread_number;
 
-	td->ddir = parent->ddir;
-	td->ioprio = parent->ioprio;
-	td->sequential = parent->sequential;
-	td->bs = parent->bs;
-	td->min_bs = parent->min_bs;
-	td->max_bs = parent->max_bs;
-	td->odirect = parent->odirect;
-	td->thinktime = parent->thinktime;
-	td->fsync_blocks = parent->fsync_blocks;
-	td->start_delay = parent->start_delay;
-	td->timeout = parent->timeout;
-	td->io_engine = parent->io_engine;
-	td->create_file = parent->create_file;
-	td->overwrite = parent->overwrite;
-	td->invalidate_cache = parent->invalidate_cache;
-	td->file_size = parent->file_size;
-	td->file_offset = parent->file_offset;
-	td->zone_size = parent->zone_size;
-	td->zone_skip = parent->zone_skip;
-	td->rate = parent->rate;
-	td->ratemin = parent->ratemin;
-	td->ratecycle = parent->ratecycle;
-	td->iodepth = parent->iodepth;
-	td->sync_io = parent->sync_io;
-	td->mem_type = parent->mem_type;
-	td->bw_avg_time = parent->bw_avg_time;
-	td->create_serialize = parent->create_serialize;
-	td->create_fsync = parent->create_fsync;
-	td->loops = parent->loops;
-	td->verify = parent->verify;
-	td->stonewall = parent->stonewall;
-	td->numjobs = parent->numjobs;
-	td->use_thread = parent->use_thread;
-	td->do_disk_util = parent->do_disk_util;
-	memcpy(&td->cpumask, &parent->cpumask, sizeof(td->cpumask));
-	strcpy(td->io_engine_name, parent->io_engine_name);
+	td->directory = NULL;
+	td->iolog_file = NULL;
+	td->exec_prerun = NULL;
+	td->exec_postrun = NULL;
+	td->ioscheduler = NULL;
+	td->sysfs_root = NULL;
+	td->file_name = NULL;
 
 	return td;
 }
