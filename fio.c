@@ -1563,14 +1563,14 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 static void print_thread_status(void)
 {
 	unsigned long elapsed = time_since_now(&genesis);
-	int i, nr_running, t_rate, m_rate, *eta_secs, eta_sec;
+	int i, nr_running, nr_pending, t_rate, m_rate, *eta_secs, eta_sec;
 	char eta_str[32];
 	double perc = 0.0;
 
 	eta_secs = malloc(thread_number * sizeof(int));
 	memset(eta_secs, 0, thread_number * sizeof(int));
 
-	nr_running = t_rate = m_rate = 0;
+	nr_pending = nr_running = t_rate = m_rate = 0;
 	for (i = 0; i < thread_number; i++) {
 		struct thread_data *td = &threads[i];
 
@@ -1579,7 +1579,8 @@ static void print_thread_status(void)
 			nr_running++;
 			t_rate += td->rate;
 			m_rate += td->ratemin;
-		}
+		} else if (td->runstate < TD_RUNNING)
+			nr_pending++;
 
 		if (elapsed >= 3)
 			eta_secs[i] = thread_eta(td, elapsed);
@@ -1609,7 +1610,7 @@ static void print_thread_status(void)
 		eta_to_str(eta_str, eta_sec);
 	}
 
-	if (!nr_running)
+	if (!nr_running && !nr_pending)
 		return;
 
 	printf("Threads now running (%d)", nr_running);
