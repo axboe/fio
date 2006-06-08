@@ -33,6 +33,7 @@ specify the FreeBSD Makefile with -f, eg:
 
 $ make -f Makefile.Freebsd && make -f Makefile.FreeBSD install
 
+Likewise with OpenSolaris, use the Makefile.solaris to compile there.
 This might change in the future if I opt for an autoconf type setup.
 
 
