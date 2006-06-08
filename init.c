@@ -91,13 +91,13 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 #ifndef FIO_HAVE_LIBAIO
 	if (td->io_engine == FIO_LIBAIO) {
-		fprintf(f_err, "Linux libaio not available\n");
+		log_err("Linux libaio not available\n");
 		return 1;
 	}
 #endif
 #ifndef FIO_HAVE_POSIXAIO
 	if (td->io_engine == FIO_POSIXAIO) {
-		fprintf(f_err, "posix aio not available\n");
+		log_err("posix aio not available\n");
 		return 1;
 	}
 #endif
@@ -495,7 +495,7 @@ static int str_rw_cb(struct thread_data *td, char *mem)
 		return 0;
 	}
 
-	fprintf(f_err, "fio: data direction: read, write, randread, randwrite, rw, randrw\n");
+	log_err("fio: data direction: read, write, randread, randwrite, rw, randrw\n");
 	return 1;
 }
 
@@ -512,7 +512,7 @@ static int str_verify_cb(struct thread_data *td, char *mem)
 		return 0;
 	}
 
-	fprintf(f_err, "fio: verify types: md5, crc32\n");
+	log_err("fio: verify types: md5, crc32\n");
 	return 1;
 }
 
@@ -529,7 +529,7 @@ static int str_mem_cb(struct thread_data *td, char *mem)
 		return 0;
 	}
 
-	fprintf(f_err, "fio: mem type: malloc, shm, mmap\n");
+	log_err("fio: mem type: malloc, shm, mmap\n");
 	return 1;
 }
 
@@ -562,7 +562,7 @@ static int str_ioengine_cb(struct thread_data *td, char *str)
 		return 0;
 	}
 
-	fprintf(f_err, "fio: ioengine: { linuxaio, aio, libaio }, posixaio, sync, mmap, sgio, splice\n");
+	log_err("fio: ioengine: { linuxaio, aio, libaio }, posixaio, sync, mmap, sgio, splice\n");
 	return 1;
 }
 
@@ -620,7 +620,7 @@ int parse_jobs_ini(char *file)
 
 			if (!check_int(p, "prio", &prio)) {
 #ifndef FIO_HAVE_IOPRIO
-				fprintf(f_err, "io priorities not available\n");
+				log_err("io priorities not available\n");
 				ret = 1;
 				break;
 #endif
@@ -630,7 +630,7 @@ int parse_jobs_ini(char *file)
 			}
 			if (!check_int(p, "prioclass", &prioclass)) {
 #ifndef FIO_HAVE_IOPRIO
-				fprintf(f_err, "io priorities not available\n");
+				log_err("io priorities not available\n");
 				ret = 1;
 				break;
 #else
@@ -662,7 +662,7 @@ int parse_jobs_ini(char *file)
 			}
 			if (!check_int(p, "cpumask", &cpu)) {
 #ifndef FIO_HAVE_CPU_AFFINITY
-				fprintf(f_err, "cpu affinity not available\n");
+				log_err("cpu affinity not available\n");
 				ret = 1;
 				break;
 #endif
@@ -835,7 +835,7 @@ int parse_jobs_ini(char *file)
 			}
 			if (!check_strstore(p, "iolog", tmpbuf)) {
 				if (td->write_iolog) {
-					fprintf(f_err, "fio: read iolog overrides given write_iolog\n");
+					log_err("fio: read iolog overrides given write_iolog\n");
 					free(td->iolog_file);
 					td->write_iolog = 0;
 				}
@@ -849,7 +849,7 @@ int parse_jobs_ini(char *file)
 					td->iolog_file = strdup(tmpbuf);
 					td->write_iolog = 1;
 				} else
-					fprintf(f_err, "fio: read iolog overrides given write_iolog\n");
+					log_err("fio: read iolog overrides given write_iolog\n");
 				fgetpos(f, &off);
 				continue;
 			}
@@ -865,7 +865,7 @@ int parse_jobs_ini(char *file)
 			}
 			if (!check_strstore(p, "ioscheduler", tmpbuf)) {
 #ifndef FIO_HAVE_IOSCHED_SWITCH
-				fprintf(f_err, "io scheduler switching not available\n");
+				log_err("io scheduler switching not available\n");
 				ret = 1;
 				break;
 #else
@@ -1076,7 +1076,7 @@ int parse_options(int argc, char *argv[])
 	parse_cmd_line(argc, argv);
 
 	if (!ini_file) {
-		fprintf(f_err, "Need job file\n");
+		log_err("Need job file\n");
 		usage(argv[0]);
 		return 1;
 	}

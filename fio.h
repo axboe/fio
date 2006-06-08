@@ -441,4 +441,13 @@ static inline void fio_sem_up(volatile int volatile *sem)
 	(*sem)++;
 }
 
+/*
+ * If logging output to a file, stderr should go to both stderr and f_err
+ */
+#define log_err(args...)	do {		\
+	fprintf(f_err, ##args);			\
+	if (f_err != stderr)			\
+		fprintf(stderr, ##args);	\
+	} while (0)
+
 #endif

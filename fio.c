@@ -287,8 +287,8 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u)
 	c = crc32(p, hdr->len - sizeof(*hdr));
 
 	if (c != hdr->crc32) {
-		fprintf(f_err, "crc32: verify failed at %llu/%u\n", io_u->offset, io_u->buflen);
-		fprintf(f_err, "crc32: wanted %lx, got %lx\n", hdr->crc32, c);
+		log_err("crc32: verify failed at %llu/%u\n", io_u->offset, io_u->buflen);
+		log_err("crc32: wanted %lx, got %lx\n", hdr->crc32, c);
 		return 1;
 	}
 
@@ -305,7 +305,7 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u)
 	md5_update(&md5_ctx, p, hdr->len - sizeof(*hdr));
 
 	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash))) {
-		fprintf(f_err, "md5: verify failed at %llu/%u\n", io_u->offset, io_u->buflen);
+		log_err("md5: verify failed at %llu/%u\n", io_u->offset, io_u->buflen);
 		hexdump(hdr->md5_digest, sizeof(hdr->md5_digest));
 		hexdump(md5_ctx.hash, sizeof(md5_ctx.hash));
 		return 1;
@@ -327,7 +327,7 @@ static int verify_io_u(struct io_u *io_u)
 	else if (hdr->verify_type == VERIFY_CRC32)
 		ret = verify_io_u_crc32(hdr, io_u);
 	else {
-		fprintf(f_err, "Bad verify type %d\n", hdr->verify_type);
+		log_err("Bad verify type %d\n", hdr->verify_type);
 		ret = 1;
 	}
 
@@ -851,7 +851,7 @@ static int init_io(struct thread_data *td)
 	else if (td->io_engine == FIO_SPLICEIO)
 		return fio_spliceio_init(td);
 	else {
-		fprintf(f_err, "bad io_engine %d\n", td->io_engine);
+		log_err("bad io_engine %d\n", td->io_engine);
 		return 1;
 	}
 }
@@ -878,7 +878,7 @@ static void cleanup_io_u(struct thread_data *td)
 	} else if (td->mem_type == MEM_MMAP)
 		munmap(td->orig_buffer, td->orig_buffer_size);
 	else
-		fprintf(f_err, "Bad memory type %d\n", td->mem_type);
+		log_err("Bad memory type %d\n", td->mem_type);
 
 	td->orig_buffer = NULL;
 }
@@ -952,7 +952,7 @@ static int create_file(struct thread_data *td, unsigned long long size,
 		return 0;
 
 	if (!size) {
-		fprintf(f_err, "Need size for create\n");
+		log_err("Need size for create\n");
 		td_verror(td, EINVAL);
 		return 1;
 	}
@@ -1068,13 +1068,13 @@ static int get_file_size(struct thread_data *td)
 		return ret;
 
 	if (td->file_offset > td->real_file_size) {
-		fprintf(f_err, "%s: offset extends end (%Lu > %Lu)\n", td->name, td->file_offset, td->real_file_size);
+		log_err("%s: offset extends end (%Lu > %Lu)\n", td->name, td->file_offset, td->real_file_size);
 		return 1;
 	}
 
 	td->io_size = td->file_size;
 	if (td->io_size == 0) {
-		fprintf(f_err, "%s: no io blocks\n", td->name);
+		log_err("%s: no io blocks\n", td->name);
 		td_verror(td, EINVAL);
 		return 1;
 	}
@@ -1253,7 +1253,7 @@ static int switch_ioscheduler(struct thread_data *td)
 
 	sprintf(tmp2, "[%s]", td->ioscheduler);
 	if (!strstr(tmp, tmp2)) {
-		fprintf(f_err, "fio: io scheduler %s not found\n", td->ioscheduler);
+		log_err("fio: io scheduler %s not found\n", td->ioscheduler);
 		td_verror(td, EINVAL);
 		fclose(f);
 		return 1;
@@ -1461,7 +1461,7 @@ static void check_str_update(struct thread_data *td)
 			c = 'P';
 			break;
 		default:
-			fprintf(f_err, "state %d\n", td->runstate);
+			log_err("state %d\n", td->runstate);
 	}
 
 	run_str[td->thread_number - 1] = c;
@@ -1826,7 +1826,7 @@ static void run_threads(void)
 		}
 
 		if (left) {
-			fprintf(f_err, "fio: %d jobs failed to start\n", left);
+			log_err("fio: %d jobs failed to start\n", left);
 			for (i = 0; i < this_jobs; i++) {
 				td = map[i];
 				if (!td)
@@ -1876,7 +1876,7 @@ int main(int argc, char *argv[])
 		return 1;
 
 	if (!thread_number) {
-		fprintf(f_err, "Nothing to do\n");
+		log_err("Nothing to do\n");
 		return 1;
 	}
 

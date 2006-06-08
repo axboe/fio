@@ -610,7 +610,7 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 	int nr_blocks, lba;
 
 	if (io_u->buflen & (sd->bs - 1)) {
-		fprintf(f_err, "read/write not sector aligned\n");
+		log_err("read/write not sector aligned\n");
 		return EINVAL;
 	}
 
@@ -718,7 +718,7 @@ int fio_sgio_init(struct thread_data *td)
 		if (ret)
 			return ret;
 	} else {
-		fprintf(f_err, "ioengine sgio only works on block devices\n");
+		log_err("ioengine sgio only works on block devices\n");
 		return 1;
 	}
 

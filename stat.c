@@ -233,7 +233,7 @@ void init_disk_util(struct thread_data *td)
 		p = dirname(foo);
 		sprintf(tmp, "%s/queue", p);
 		if (stat(tmp, &st)) {
-			fprintf(f_err, "unknown sysfs layout\n");
+			log_err("unknown sysfs layout\n");
 			return;
 		}
 		sprintf(foo, "%s", p);

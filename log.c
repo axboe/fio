@@ -122,7 +122,7 @@ int init_iolog(struct thread_data *td)
 		struct io_piece *ipo;
 
 		if (sscanf(p, "%d,%llu,%u", &rw, &offset, &bytes) != 3) {
-			fprintf(f_err, "bad iolog: %s\n", p);
+			log_err("bad iolog: %s\n", p);
 			continue;
 		}
 		if (rw == DDIR_READ)
@@ -130,7 +130,7 @@ int init_iolog(struct thread_data *td)
 		else if (rw == DDIR_WRITE)
 			writes++;
 		else {
-			fprintf(f_err, "bad ddir: %d\n", rw);
+			log_err("bad ddir: %d\n", rw);
 			continue;
 		}
 
@@ -169,7 +169,7 @@ int setup_rate(struct thread_data *td)
 		return 0;
 
 	if (td->rate < td->ratemin) {
-		fprintf(f_err, "min rate larger than nominal rate\n");
+		log_err("min rate larger than nominal rate\n");
 		return -1;
 	}
 
