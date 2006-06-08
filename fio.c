@@ -222,7 +222,7 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 
 		rate = (td->this_io_bytes[ddir] - td->rate_bytes) / spent;
 		if (rate < td->ratemin) {
-			printf("%s: min rate %d not met, got %ldKiB/sec\n", td->name, td->ratemin, rate);
+			fprintf(f_out, "%s: min rate %d not met, got %ldKiB/sec\n", td->name, td->ratemin, rate);
 			if (rate_quit)
 				terminate_threads(td->groupid);
 			return 1;
@@ -274,8 +274,8 @@ static void hexdump(void *buffer, int len)
 	int i;
 
 	for (i = 0; i < len; i++)
-		printf("%02x", p[i]);
-	printf("\n");
+		fprintf(f_out, "%02x", p[i]);
+	fprintf(f_out, "\n");
 }
 
 static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u)
@@ -287,8 +287,8 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u)
 	c = crc32(p, hdr->len - sizeof(*hdr));
 
 	if (c != hdr->crc32) {
-		fprintf(stderr, "crc32: verify failed at %llu/%u\n", io_u->offset, io_u->buflen);
-		fprintf(stderr, "crc32: wanted %lx, got %lx\n", hdr->crc32, c);
+		fprintf(f_err, "crc32: verify failed at %llu/%u\n", io_u->offset, io_u->buflen);
+		fprintf(f_err, "crc32: wanted %lx, got %lx\n", hdr->crc32, c);
 		return 1;
 	}
 
@@ -305,7 +305,7 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u)
 	md5_update(&md5_ctx, p, hdr->len - sizeof(*hdr));
 
 	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash))) {
-		fprintf(stderr, "md5: verify failed at %llu/%u\n", io_u->offset, io_u->buflen);
+		fprintf(f_err, "md5: verify failed at %llu/%u\n", io_u->offset, io_u->buflen);
 		hexdump(hdr->md5_digest, sizeof(hdr->md5_digest));
 		hexdump(md5_ctx.hash, sizeof(md5_ctx.hash));
 		return 1;
@@ -327,7 +327,7 @@ static int verify_io_u(struct io_u *io_u)
 	else if (hdr->verify_type == VERIFY_CRC32)
 		ret = verify_io_u_crc32(hdr, io_u);
 	else {
-		fprintf(stderr, "Bad verify type %d\n", hdr->verify_type);
+		fprintf(f_err, "Bad verify type %d\n", hdr->verify_type);
 		ret = 1;
 	}
 
@@ -851,7 +851,7 @@ static int init_io(struct thread_data *td)
 	else if (td->io_engine == FIO_SPLICEIO)
 		return fio_spliceio_init(td);
 	else {
-		fprintf(stderr, "bad io_engine %d\n", td->io_engine);
+		fprintf(f_err, "bad io_engine %d\n", td->io_engine);
 		return 1;
 	}
 }
@@ -878,7 +878,7 @@ static void cleanup_io_u(struct thread_data *td)
 	} else if (td->mem_type == MEM_MMAP)
 		munmap(td->orig_buffer, td->orig_buffer_size);
 	else
-		fprintf(stderr, "Bad memory type %d\n", td->mem_type);
+		fprintf(f_err, "Bad memory type %d\n", td->mem_type);
 
 	td->orig_buffer = NULL;
 }
@@ -952,17 +952,17 @@ static int create_file(struct thread_data *td, unsigned long long size,
 		return 0;
 
 	if (!size) {
-		fprintf(stderr, "Need size for create\n");
+		fprintf(f_err, "Need size for create\n");
 		td_verror(td, EINVAL);
 		return 1;
 	}
 
 	if (!extend) {
 		oflags = O_CREAT | O_TRUNC;
-		printf("%s: Laying out IO file (%LuMiB)\n", td->name, size >> 20);
+		fprintf(f_out, "%s: Laying out IO file (%LuMiB)\n", td->name, size >> 20);
 	} else {
 		oflags = O_APPEND;
-		printf("%s: Extending IO file (%Lu -> %LuMiB)\n", td->name, (td->file_size - size) >> 20, td->file_size >> 20);
+		fprintf(f_out, "%s: Extending IO file (%Lu -> %LuMiB)\n", td->name, (td->file_size - size) >> 20, td->file_size >> 20);
 	}
 
 	td->fd = open(td->file_name, O_WRONLY | oflags, 0644);
@@ -1068,13 +1068,13 @@ static int get_file_size(struct thread_data *td)
 		return ret;
 
 	if (td->file_offset > td->real_file_size) {
-		fprintf(stderr, "%s: offset extends end (%Lu > %Lu)\n", td->name, td->file_offset, td->real_file_size);
+		fprintf(f_err, "%s: offset extends end (%Lu > %Lu)\n", td->name, td->file_offset, td->real_file_size);
 		return 1;
 	}
 
 	td->io_size = td->file_size;
 	if (td->io_size == 0) {
-		fprintf(stderr, "%s: no io blocks\n", td->name);
+		fprintf(f_err, "%s: no io blocks\n", td->name);
 		td_verror(td, EINVAL);
 		return 1;
 	}
@@ -1253,7 +1253,7 @@ static int switch_ioscheduler(struct thread_data *td)
 
 	sprintf(tmp2, "[%s]", td->ioscheduler);
 	if (!strstr(tmp, tmp2)) {
-		fprintf(stderr, "fio: io scheduler %s not found\n", td->ioscheduler);
+		fprintf(f_err, "fio: io scheduler %s not found\n", td->ioscheduler);
 		td_verror(td, EINVAL);
 		fclose(f);
 		return 1;
@@ -1461,7 +1461,7 @@ static void check_str_update(struct thread_data *td)
 			c = 'P';
 			break;
 		default:
-			printf("state %d\n", td->runstate);
+			fprintf(f_err, "state %d\n", td->runstate);
 	}
 
 	run_str[td->thread_number - 1] = c;
@@ -1613,7 +1613,7 @@ static void print_thread_status(void)
 	if (!nr_running && !nr_pending)
 		return;
 
-	printf("Threads now running (%d)", nr_running);
+	printf("Threads running: %d", nr_running);
 	if (m_rate || t_rate)
 		printf(", commitrate %d/%dKiB/sec", t_rate, m_rate);
 	if (eta_sec != INT_MAX) {
@@ -1678,8 +1678,7 @@ static void *fio_pin_memory(void)
 	if (phys_mem) {
 		if ((mlock_size + 128 * 1024 * 1024) > phys_mem) {
 			mlock_size = phys_mem - 128 * 1024 * 1024;
-			printf("fio: limiting mlocked memory to %lluMiB\n",
-							mlock_size >> 20);
+			fprintf(f_out, "fio: limiting mlocked memory to %lluMiB\n", mlock_size >> 20);
 		}
 	}
 
@@ -1827,7 +1826,7 @@ static void run_threads(void)
 		}
 
 		if (left) {
-			fprintf(stderr, "fio: %d jobs failed to start\n", left);
+			fprintf(f_err, "fio: %d jobs failed to start\n", left);
 			for (i = 0; i < this_jobs; i++) {
 				td = map[i];
 				if (!td)
@@ -1877,7 +1876,7 @@ int main(int argc, char *argv[])
 		return 1;
 
 	if (!thread_number) {
-		printf("Nothing to do\n");
+		fprintf(f_err, "Nothing to do\n");
 		return 1;
 	}
 

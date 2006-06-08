@@ -324,6 +324,8 @@ extern int exitall_on_terminate;
 extern int thread_number;
 extern int shm_id;
 extern int groupid;
+extern FILE *f_out;
+extern FILE *f_err;
 
 extern struct thread_data *threads;
 

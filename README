@@ -50,6 +50,7 @@ $ fio
 	-l Generate per-job latency logs
 	-w Generate per-job bandwidth logs
 	-f <file> Read <file> for job descriptions
+	-O <file> Log output to file
 	-h Print help info
 	-v Print version information and exit
 

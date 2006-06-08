@@ -233,7 +233,7 @@ void init_disk_util(struct thread_data *td)
 		p = dirname(foo);
 		sprintf(tmp, "%s/queue", p);
 		if (stat(tmp, &st)) {
-			fprintf(stderr, "unknown sysfs layout\n");
+			fprintf(f_err, "unknown sysfs layout\n");
 			return;
 		}
 		sprintf(foo, "%s", p);
@@ -287,12 +287,12 @@ static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 
 static void show_group_stats(struct group_run_stats *rs, int id)
 {
-	printf("\nRun status group %d (all jobs):\n", id);
+	fprintf(f_out, "\nRun status group %d (all jobs):\n", id);
 
 	if (rs->max_run[DDIR_READ])
-		printf("   READ: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_kb[0] >> 10, rs->agg[0], rs->min_bw[0], rs->max_bw[0], rs->min_run[0], rs->max_run[0]);
+		fprintf(f_out, "   READ: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_kb[0] >> 10, rs->agg[0], rs->min_bw[0], rs->max_bw[0], rs->min_run[0], rs->max_run[0]);
 	if (rs->max_run[DDIR_WRITE])
-		printf("  WRITE: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_kb[1] >> 10, rs->agg[1], rs->min_bw[1], rs->max_bw[1], rs->min_run[1], rs->max_run[1]);
+		fprintf(f_out, "  WRITE: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_kb[1] >> 10, rs->agg[1], rs->min_bw[1], rs->max_bw[1], rs->min_run[1], rs->max_run[1]);
 }
 
 static void show_disk_util(void)
@@ -302,7 +302,7 @@ static void show_disk_util(void)
 	struct disk_util *du;
 	double util;
 
-	printf("\nDisk stats (read/write):\n");
+	fprintf(f_out, "\nDisk stats (read/write):\n");
 
 	list_for_each(entry, &disk_list) {
 		du = list_entry(entry, struct disk_util, list);
@@ -312,7 +312,7 @@ static void show_disk_util(void)
 		if (util > 100.0)
 			util = 100.0;
 
-		printf("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, in_queue=%u, util=%3.2f%%\n", du->name, dus->ios[0], dus->ios[1], dus->merges[0], dus->merges[1], dus->ticks[0], dus->ticks[1], dus->time_in_queue, util);
+		fprintf(f_out, "  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, in_queue=%u, util=%3.2f%%\n", du->name, dus->ios[0], dus->ios[1], dus->merges[0], dus->merges[1], dus->ticks[0], dus->ticks[1], dus->time_in_queue, util);
 	}
 }
 
@@ -328,19 +328,19 @@ static void show_ddir_status(struct thread_data *td, struct group_run_stats *rs,
 		return;
 
 	bw = td->io_bytes[ddir] / td->runtime[ddir];
-	printf("  %s: io=%6lluMiB, bw=%6lluKiB/s, runt=%6lumsec\n", ddir_str[ddir], td->io_bytes[ddir] >> 20, bw, td->runtime[ddir]);
+	fprintf(f_out, "  %s: io=%6lluMiB, bw=%6lluKiB/s, runt=%6lumsec\n", ddir_str[ddir], td->io_bytes[ddir] >> 20, bw, td->runtime[ddir]);
 
 	if (calc_lat(&td->slat_stat[ddir], &min, &max, &mean, &dev))
-		printf("    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, dev=%5.02f\n", min, max, mean, dev);
+		fprintf(f_out, "    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, dev=%5.02f\n", min, max, mean, dev);
 
 	if (calc_lat(&td->clat_stat[ddir], &min, &max, &mean, &dev))
-		printf("    clat (msec): min=%5lu, max=%5lu, avg=%5.02f, dev=%5.02f\n", min, max, mean, dev);
+		fprintf(f_out, "    clat (msec): min=%5lu, max=%5lu, avg=%5.02f, dev=%5.02f\n", min, max, mean, dev);
 
 	if (calc_lat(&td->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
 
 		p_of_agg = mean * 100 / (double) rs->agg[ddir];
-		printf("    bw (KiB/s) : min=%5lu, max=%5lu, per=%3.2f%%, avg=%5.02f, dev=%5.02f\n", min, max, p_of_agg, mean, dev);
+		fprintf(f_out, "    bw (KiB/s) : min=%5lu, max=%5lu, per=%3.2f%%, avg=%5.02f, dev=%5.02f\n", min, max, p_of_agg, mean, dev);
 	}
 }
 
@@ -352,7 +352,7 @@ static void show_thread_status(struct thread_data *td,
 	if (!(td->io_bytes[0] + td->io_bytes[1]) && !td->error)
 		return;
 
-	printf("%s: (groupid=%d): err=%2d:\n",td->name, td->groupid, td->error);
+	fprintf(f_out, "%s: (groupid=%d): err=%2d:\n",td->name, td->groupid, td->error);
 
 	show_ddir_status(td, rs, td->ddir);
 	if (td->io_bytes[td->ddir ^ 1])
@@ -368,7 +368,7 @@ static void show_thread_status(struct thread_data *td,
 		sys_cpu = 0;
 	}
 
-	printf("  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, td->ctx);
+	fprintf(f_out, "  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, td->ctx);
 }
 
 void show_run_stats(void)
@@ -393,7 +393,7 @@ void show_run_stats(void)
 		td = &threads[i];
 
 		if (td->error) {
-			printf("%s: %s\n", td->name, td->verror);
+			fprintf(f_out, "%s: %s\n", td->name, td->verror);
 			continue;
 		}
 
