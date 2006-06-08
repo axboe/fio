@@ -71,14 +71,6 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 	td->fd = -1;
 	td->thread_number = thread_number;
 
-	td->directory = NULL;
-	td->iolog_file = NULL;
-	td->exec_prerun = NULL;
-	td->exec_postrun = NULL;
-	td->ioscheduler = NULL;
-	td->sysfs_root = NULL;
-	td->file_name = NULL;
-
 	return td;
 }
 
