@@ -1173,7 +1173,7 @@ static int setup_file(struct thread_data *td)
 	}
 
 	if (td->odirect)
-		flags |= O_DIRECT;
+		flags |= OS_O_DIRECT;
 
 	if (td_write(td) || td_rw(td)) {
 		if (td->filetype == FIO_TYPE_FILE) {

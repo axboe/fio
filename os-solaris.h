@@ -1,7 +1,5 @@
-#ifndef FIO_OS_FREEBSD_H
-#define FIO_OS_FREEBSD_H
-
-#include <sys/sysctl.h>
+#ifndef FIO_OS_SOLARIS_H
+#define FIO_OS_SOLARIS_H
 
 #undef FIO_HAVE_LIBAIO
 #define FIO_HAVE_POSIXAIO
@@ -9,7 +7,7 @@
 #undef FIO_HAVE_CPU_AFFINITY
 #undef FIO_HAVE_DISK_UTIL
 #undef FIO_HAVE_SGIO
-#define FIO_HAVE_ODIRECT
+#undef FIO_HAVE_ODIRECT
 
 #define OS_MAP_ANON		(MAP_ANON)
 
@@ -26,12 +24,16 @@ static inline int blockdev_size(int fd, unsigned long long *bytes)
 
 static inline unsigned long long os_phys_mem(void)
 {
+#if 0
 	int mib[2] = { CTL_HW, HW_PHYSMEM };
 	unsigned long long mem;
 	size_t len = sizeof(mem);
 
 	sysctl(mib, 2, &mem, &len, NULL, 0);
 	return mem;
+#else
+	return 0;
+#endif
 }
 
 static inline void os_random_seed(unsigned long seed, os_random_state_t *rs)
@@ -54,4 +56,5 @@ static inline double os_random_double(os_random_state_t *rs)
 	val = (double) rand_r(rs);
 	return val;
 }
+
 #endif

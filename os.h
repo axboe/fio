@@ -5,6 +5,8 @@
 #include "os-linux.h"
 #elif defined(__FreeBSD__)
 #include "os-freebsd.h"
+#elif defined(__sun__)
+#include "os-solaris.h"
 #else
 #error "unsupported os"
 #endif
@@ -37,6 +39,10 @@
 
 #ifndef FIO_HAVE_IOPRIO
 #define ioprio_set(which, who, prio)	(0)
+#endif
+
+#ifndef FIO_HAVE_ODIRECT
+#define OS_O_DIRECT			(0)
 #endif
 
 struct thread_data;

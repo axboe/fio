@@ -1013,7 +1013,7 @@ static void free_shm(void)
 	struct shmid_ds sbuf;
 
 	if (threads) {
-		shmdt(threads);
+		shmdt((void *) threads);
 		threads = NULL;
 		shmctl(shm_id, IPC_RMID, &sbuf);
 	}
