@@ -57,6 +57,7 @@ enum {
 	TD_INITIALIZED,
 	TD_RUNNING,
 	TD_VERIFYING,
+	TD_FSYNCING,
 	TD_EXITED,
 	TD_REAPED,
 };
@@ -747,6 +748,8 @@ static void do_io(struct thread_data *td)
 	struct timeval s, e;
 	unsigned long usec;
 
+	td_set_runstate(td, TD_RUNNING);
+
 	while (td->this_io_bytes[td->ddir] < td->io_size) {
 		struct timespec ts = { .tv_sec = 0, .tv_nsec = 0};
 		struct timespec *timeout;
@@ -822,8 +825,10 @@ static void do_io(struct thread_data *td)
 	if (td->cur_depth)
 		cleanup_pending_aio(td);
 
-	if (should_fsync(td) && td->end_fsync)
+	if (should_fsync(td) && td->end_fsync) {
+		td_set_runstate(td, TD_FSYNCING);
 		sync_td(td);
+	}
 }
 
 static void cleanup_io(struct thread_data *td)
@@ -1447,6 +1452,9 @@ static void check_str_update(struct thread_data *td)
 		case TD_VERIFYING:
 			c = 'V';
 			break;
+		case TD_FSYNCING:
+			c = 'F';
+			break;
 		case TD_CREATED:
 			c = 'C';
 			break;
@@ -1549,7 +1557,7 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 			eta_sec = INT_MAX;
 	} else {
 		/*
-		 * thread is already done
+		 * thread is already done or waiting for fsync
 		 */
 		eta_sec = 0;
 	}
@@ -1571,7 +1579,8 @@ static void print_thread_status(void)
 	for (i = 0; i < thread_number; i++) {
 		struct thread_data *td = &threads[i];
 
-		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING){
+		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING||
+		    td->runstate == TD_FSYNCING) {
 			nr_running++;
 			t_rate += td->rate;
 			m_rate += td->ratemin;
