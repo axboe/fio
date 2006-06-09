@@ -1552,7 +1552,7 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 		else if (t_eta)
 			eta_sec = t_eta;
 		else
-			eta_sec = INT_MAX;
+			eta_sec = 0;
 	} else {
 		/*
 		 * thread is already done or waiting for fsync
@@ -1803,7 +1803,6 @@ static void run_threads(void)
 		 * Wait for the started threads to transition to
 		 * TD_INITIALIZED.
 		 */
-		printf("fio: Waiting for threads to initialize...\n");
 		gettimeofday(&this_start, NULL);
 		left = this_jobs;
 		while (left) {
@@ -1842,7 +1841,6 @@ static void run_threads(void)
 		/*
 		 * start created threads (TD_INITIALIZED -> TD_RUNNING).
 		 */
-		printf("fio: Go for launch\n");
 		for (i = 0; i < thread_number; i++) {
 			td = &threads[i];
 

@@ -40,10 +40,15 @@
 #define DEF_RWMIX_READ		(50)
 #define DEF_NICE		(0)
 
+static int def_sequential = DEF_SEQUENTIAL;
+static int def_bs = DEF_BS;
+static int def_timeout = DEF_TIMEOUT;
+static int def_repeatable = DEF_RAND_REPEAT;
+static int def_odirect = DEF_ODIRECT;
+
 static char fio_version_string[] = "fio 1.4";
 
-static int repeatable = DEF_RAND_REPEAT;
-static char *ini_file;
+static char **ini_file;
 static int max_jobs = MAX_JOBS;
 
 struct thread_data def_thread;
@@ -72,7 +77,6 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 
 	td->fd = -1;
 	td->thread_number = thread_number;
-
 	return td;
 }
 
@@ -229,7 +233,7 @@ int init_random_state(struct thread_data *td)
 	if (td->sequential)
 		return 0;
 
-	if (repeatable)
+	if (def_repeatable)
 		seeds[3] = DEF_RANDSEED;
 
 	blocks = (td->io_size + td->min_bs - 1) / td->min_bs;
@@ -579,7 +583,7 @@ int parse_jobs_ini(char *file)
 	fpos_t off;
 	FILE *f;
 	char *p;
-	int ret = 0;
+	int ret = 0, stonewall = 1;
 
 	f = fopen(file, "r");
 	if (!f) {
@@ -607,6 +611,14 @@ int parse_jobs_ini(char *file)
 		if (!td) {
 			ret = 1;
 			break;
+		}
+
+		/*
+		 * Seperate multiple job files by a stonewall
+		 */
+		if (stonewall) {
+			td->stonewall = stonewall;
+			stonewall = 0;
 		}
 
 		fgetpos(f, &off);
@@ -913,15 +925,15 @@ static int fill_def_thread(void)
 	 */
 	def_thread.ddir = DDIR_READ;
 	def_thread.iomix = 0;
-	def_thread.bs = DEF_BS;
+	def_thread.bs = def_bs;
 	def_thread.min_bs = -1;
 	def_thread.max_bs = -1;
 	def_thread.io_engine = DEF_IO_ENGINE;
 	strcpy(def_thread.io_engine_name, DEF_IO_ENGINE_NAME);
-	def_thread.odirect = DEF_ODIRECT;
+	def_thread.odirect = def_odirect;
 	def_thread.ratecycle = DEF_RATE_CYCLE;
-	def_thread.sequential = DEF_SEQUENTIAL;
-	def_thread.timeout = DEF_TIMEOUT;
+	def_thread.sequential = def_sequential;
+	def_thread.timeout = def_timeout;
 	def_thread.create_file = DEF_CREATE;
 	def_thread.overwrite = DEF_OVERWRITE;
 	def_thread.invalidate_cache = DEF_INVALIDATE;
@@ -959,43 +971,54 @@ static void usage(char *name)
 	printf("\t-v Print version info and exit\n");
 }
 
-static void parse_cmd_line(int argc, char *argv[])
+static int parse_cmd_line(int argc, char *argv[])
 {
-	int c;
+	int c, idx = 1, ini_idx = 0;
 
 	while ((c = getopt(argc, argv, "s:b:t:r:R:o:f:lwvhO:")) != EOF) {
 		switch (c) {
 			case 's':
-				def_thread.sequential = !!atoi(optarg);
+				def_sequential = !!atoi(optarg);
+				idx++;
 				break;
 			case 'b':
-				def_thread.bs = atoi(optarg);
-				def_thread.bs <<= 10;
-				if (!def_thread.bs) {
+				def_bs = atoi(optarg);
+				def_bs <<= 10;
+				if (!def_bs) {
 					printf("bad block size\n");
-					def_thread.bs = DEF_BS;
+					def_bs = DEF_BS;
 				}
+				idx++;
 				break;
 			case 't':
-				def_thread.timeout = atoi(optarg);
+				def_timeout = atoi(optarg);
+				idx++;
 				break;
 			case 'r':
-				repeatable = !!atoi(optarg);
+				def_repeatable = !!atoi(optarg);
+				idx++;
 				break;
 			case 'R':
 				rate_quit = !!atoi(optarg);
+				idx++;
 				break;
 			case 'o':
-				def_thread.odirect = !!atoi(optarg);
+				def_odirect = !!atoi(optarg);
+				idx++;
 				break;
 			case 'f':
-				ini_file = strdup(optarg);
+				ini_idx++;
+				ini_file = realloc(ini_file, ini_idx * sizeof(char *));
+				ini_file[ini_idx - 1] = strdup(optarg);
+				idx++;
 				break;
 			case 'l':
 				write_lat_log = 1;
+				idx++;
 				break;
 			case 'w':
 				write_bw_log = 1;
+				idx++;
 				break;
 			case 'O':
 				f_out = fopen(optarg, "w+");
@@ -1004,6 +1027,7 @@ static void parse_cmd_line(int argc, char *argv[])
 					exit(1);
 				}
 				f_err = f_out;
+				idx++;
 				break;
 			case 'h':
 				usage(argv[0]);
@@ -1014,12 +1038,19 @@ static void parse_cmd_line(int argc, char *argv[])
 		}
 	}
 
-	if (!ini_file && argc > 1 && argv[argc - 1][0] != '-')
-		ini_file = strdup(argv[argc - 1]);
+	while (idx < argc) {
+		ini_idx++;
+		ini_file = realloc(ini_file, ini_idx * sizeof(char *));
+		ini_file[ini_idx - 1] = strdup(argv[idx]);
+		idx++;
+	}
+		
 	if (!f_out) {
 		f_out = stdout;
 		f_err = stderr;
 	}
+
+	return ini_idx;
 }
 
 static void free_shm(void)
@@ -1068,21 +1099,26 @@ static int setup_thread_area(void)
 
 int parse_options(int argc, char *argv[])
 {
+	int job_files, i;
+
 	if (setup_thread_area())
 		return 1;
 	if (fill_def_thread())
 		return 1;
 
-	parse_cmd_line(argc, argv);
-
-	if (!ini_file) {
-		log_err("Need job file\n");
+	job_files = parse_cmd_line(argc, argv);
+	if (!job_files) {
+		log_err("Need job file(s)\n");
 		usage(argv[0]);
 		return 1;
 	}
 
-	if (parse_jobs_ini(ini_file))
-		return 1;
+	for (i = 0; i < job_files; i++) {
+		if (fill_def_thread())
+			return 1;
+		if (parse_jobs_ini(ini_file[i]))
+			return 1;
+	}
 
 	return 0;
 }

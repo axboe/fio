@@ -39,8 +39,8 @@ Likewise with OpenSolaris, use the Makefile.solaris to compile there.
 This might change in the future if I opt for an autoconf type setup.
 
 
-Options
--------
+Command line
+------------
 
 $ fio
 	-s IO is sequential
@@ -55,6 +55,10 @@ $ fio
 	-O <file> Log output to file
 	-h Print help info
 	-v Print version information and exit
+
+Any parameters following the options will be assumed to be job files.
+You can add as many as you want, each job file will be regarded as a
+separate group and fio will stonewall it's execution.
 
 
 Job file
@@ -209,7 +213,7 @@ Interpreting the output
 fio spits out a lot of output. While running, fio will display the
 status of the jobs created. An example of that would be:
 
-Threads now running: 2 : [ww] [5.73% done]
+Threads running: 1: [_r] [24.79% done] [eta 00h:01m:31s]
 
 The characters inside the square brackets denote the current status of
 each thread. The possible values (in typical life cycle order) are:
@@ -232,7 +236,8 @@ _		Thread reaped.
 
 The other values are fairly self explanatory - number of threads
 currently running and doing io, and the estimated completion percentage
-and time.
+and time for the running group. It's impossible to estimate runtime
+of the following groups (if any).
 
 When fio is done (or interrupted by ctrl-c), it will show the data for
 each thread, group of threads, and disks in that order. For each data
