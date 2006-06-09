@@ -4,15 +4,16 @@ ioengine=libaio
 rw=randread
 bs=128k
 size=512m
+directory=/data1
 
-[/data1/file1]
+[file1]
 iodepth=4
 
-[/data1/file2]
+[file2]
 iodepth=32
 
-[/data1/file3]
+[file3]
 iodepth=8
 
-[/data1/file4]
+[file4]
 iodepth=16

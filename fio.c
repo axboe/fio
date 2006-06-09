@@ -49,7 +49,10 @@ static void print_thread_status(void);
 extern unsigned long long mlock_size;
 
 /*
- * thread life cycle
+ * Thread life cycle. Once a thread has a runstate beyond TD_INITIALIZED, it
+ * will never back again. It may cycle between running/verififying/fsyncing.
+ * Once the thread reaches TD_EXITED, it is just waiting for the core to
+ * reap it.
  */
 enum {
 	TD_NOT_CREATED = 0,

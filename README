@@ -1,10 +1,12 @@
 fio
 ---
 
-fio is a tool that will spawn a number of thread doing a particular
-type of io action as specified by the user. fio takes a number of
-global parameters, each inherited by the thread unless otherwise
-parameters given to them overriding that setting is given.
+fio is a tool that will spawn a number of threads or processes doing a
+particular type of io action as specified by the user. fio takes a
+number of global parameters, each inherited by the thread unless
+otherwise parameters given to them overriding that setting is given.
+The typical use of fio is to write a job file matching the io load
+one wants to simulate.
 
 
 Source
@@ -14,8 +16,8 @@ fio resides in a git repo, the canonical place is:
 
 git://brick.kernel.dk/data/git/fio.git
 
-Snapshots are frequently generated as well and they include the git
-meta data as well. You can download them here:
+Snapshots are frequently generated and they include the git meta data as
+well. You can download them here:
 
 http://brick.kernel.dk/snaps/
 
@@ -54,7 +56,16 @@ $ fio
 	-h Print help info
 	-v Print version information and exit
 
-The <jobs> format is as follows:
+
+Job file
+--------
+
+Only a few options can be controlled with command line parameters,
+generally it's a lot easier to just write a simple job file to describe
+the workload. The job file format is in the ini style format, as it's
+easy to read and write for the user.
+
+The job file parameters are:
 
 	name=x		Use 'x' as the identifier for this job.
 	directory=x	Use 'x' as the top level directory for storing files
@@ -129,48 +140,67 @@ The <jobs> format is as follows:
 	exec_postrun=x	Run 'x' after job io has finished.
 	ioscheduler=x	Use ioscheduler 'x' for this job.
 
+
 Examples using a job file
 -------------------------
 
-A sample job file doing the same as above would look like this:
+Example 1) Two random readers
 
-[read_file]
-rw=0
-bs=4096
+Lets say we want to simulate two threads reading randomly from a file
+each. They will be doing IO in 4KiB chunks, using raw (O_DIRECT) IO.
+Since they share most parameters, we'll put those in the [global]
+section. Job 1 will use a 128MiB file, job 2 will use a 256MiB file.
 
-[write_file]
-rw=1
-bs=16384
+; ---snip---
 
-And fio would be invoked as:
-
-$ fio -o1 -s -f file_with_above
-
-The second example would look like this:
-
-[rf1]
-rw=0
-prio=6
-
-[rf2]
-rw=0
-prio=3
-
-[rf3]
-rw=0
-prio=0
+[global]
+ioengine=sync	; regular read/write(2), the default
+rw=randread
+bs=4k
 direct=1
 
-And fio would be invoked as:
+[file1]
+size=128m
 
-$ fio -o0 -s -b4096 -f file_with_above
+[file2]
+size=256m
 
-'global' is a reserved keyword. When used as the filename, it sets the
-default options for the threads following that section. It is possible
-to have more than one global section in the file, as it only affects
-subsequent jobs.
+; ---snip---
 
-Also see the examples/ dir for sample job files.
+Generally the [] bracketed name specifies a file name, but the "global"
+keyword is reserved for setting options that are inherited by each
+subsequent job description. It's possible to have several [global]
+sections in the job file, each one adds options that are inherited by
+jobs defined below it. The name can also point to a block device, such
+as /dev/sda. To run the above job file, simply do:
+
+$ fio jobfile
+
+Example 2) Many random writers
+
+Say we want to exercise the IO subsystem some more. We'll define 64
+threads doing random buffered writes. We'll let each thread use async io
+with a depth of 4 ios in flight. A job file would then look like this:
+
+; ---snip---
+
+[global]
+ioengine=libaio
+iodepth=4
+rw=randwrite
+bs=32k
+direct=0
+size=64m
+
+[files]
+numjobs=64
+
+; ---snip---
+
+This will create files.[0-63] and perform the random writes to them.
+
+There are endless ways to define jobs, the examples/ directory contains
+a few more examples.
 
 
 Interpreting the output
@@ -187,17 +217,22 @@ each thread. The possible values (in typical life cycle order) are:
 Idle	Run
 ----    ---
 P		Thread setup, but not started.
-C		Thread created and running, but not doing anything yet
+C		Thread created.
+I		Thread initialized, waiting.
 	R	Running, doing sequential reads.
 	r	Running, doing random reads.
 	W	Running, doing sequential writes.
 	w	Running, doing random writes.
+	M	Running, doing mixed sequential reads/writes.
+	m	Running, doing mixed random reads/writes.
+	F	Running, currently waiting for fsync()
 V		Running, doing verification of written data.
 E		Thread exited, not reaped by main thread yet.
 _		Thread reaped.
 
-The other values are fairly self explanatory - number of thread currently
-running and doing io, and the estimated completion percentage.
+The other values are fairly self explanatory - number of threads
+currently running and doing io, and the estimated completion percentage
+and time.
 
 When fio is done (or interrupted by ctrl-c), it will show the data for
 each thread, group of threads, and disks in that order. For each data
@@ -247,8 +282,8 @@ io=		Number of megabytes io performed.
 aggrb=		Aggregate bandwidth of threads in this group.
 minb=		The minimum average bandwidth a thread saw.
 maxb=		The maximum average bandwidth a thread saw.
-mint=		The minimum runtime of a thread.
-maxt=		The maximum runtime of a thread.
+mint=		The smallest runtime of the threads in that group.
+maxt=		The longest runtime of the threads in that group.
 
 And finally, the disk statistics are printed. They will look like this:
 
@@ -264,3 +299,16 @@ ticks=		Number of ticks we kept the disk busy.
 io_queue=	Total time spent in the disk queue.
 util=		The disk utilization. A value of 100% means we kept the disk
 		busy constantly, 50% would be a disk idling half of the time.
+
+
+Author
+------
+
+Fio was written by Jens Axboe <axboe@suse.de> to enable flexible testing
+of the Linux IO subsystem and schedulers. He got tired of writing
+specific test applications to simulate a given workload, and found that
+the existing io benchmark/test tools out there weren't flexible enough
+to do what he wanted.
+
+Jens Axboe <axboe@suse.de> 20060609
+
