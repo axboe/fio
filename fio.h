@@ -191,7 +191,6 @@ struct thread_data {
 	unsigned int numjobs;
 	unsigned int iodepth;
 	os_cpu_mask_t cpumask;
-	unsigned int jobnum;
 	unsigned int iolog;
 	unsigned int read_iolog;
 	unsigned int write_iolog;

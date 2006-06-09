@@ -137,9 +137,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		char tmp[PATH_MAX];
 
 		if (td->directory && td->directory[0] != '\0')
-			sprintf(tmp, "%s/%s.%d", td->directory, jobname, td->jobnum);
+			sprintf(tmp, "%s/%s.%d", td->directory, jobname, td->thread_number);
 		else
-			sprintf(tmp, "%s.%d", jobname, td->jobnum);
+			sprintf(tmp, "%s.%d", jobname, td->thread_number);
 		td->file_name = strdup(tmp);
 	} else
 		td->file_name = strdup(jobname);
@@ -195,7 +195,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 		td_new->numjobs = 1;
 		td_new->stonewall = 0;
-		td_new->jobnum = numjobs;
 		job_add_num = numjobs - 1;
 
 		if (add_job(td_new, jobname, job_add_num))
@@ -616,7 +615,7 @@ int parse_jobs_ini(char *file)
 		/*
 		 * Seperate multiple job files by a stonewall
 		 */
-		if (stonewall) {
+		if (!global && stonewall) {
 			td->stonewall = stonewall;
 			stonewall = 0;
 		}
