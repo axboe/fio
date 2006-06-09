@@ -1118,7 +1118,9 @@ int parse_options(int argc, char *argv[])
 			return 1;
 		if (parse_jobs_ini(ini_file[i]))
 			return 1;
+		free(ini_file[i]);
 	}
 
+	free(ini_file);
 	return 0;
 }

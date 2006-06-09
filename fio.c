@@ -43,6 +43,7 @@ int thread_number = 0;
 static char run_str[MAX_JOBS + 1];
 int shm_id = 0;
 static struct timeval genesis;
+static int temp_stall_ts;
 
 static void print_thread_status(void);
 
@@ -960,6 +961,8 @@ static int create_file(struct thread_data *td, unsigned long long size,
 		return 1;
 	}
 
+	temp_stall_ts = 1;
+
 	if (!extend) {
 		oflags = O_CREAT | O_TRUNC;
 		fprintf(f_out, "%s: Laying out IO file (%LuMiB)\n", td->name, size >> 20);
@@ -971,11 +974,13 @@ static int create_file(struct thread_data *td, unsigned long long size,
 	td->fd = open(td->file_name, O_WRONLY | oflags, 0644);
 	if (td->fd < 0) {
 		td_verror(td, errno);
+		temp_stall_ts = 0;
 		return 1;
 	}
 
 	if (!extend && ftruncate(td->fd, td->file_size) == -1) {
 		td_verror(td, errno);
+		temp_stall_ts = 0;
 		return 1;
 	}
 
@@ -1009,6 +1014,7 @@ static int create_file(struct thread_data *td, unsigned long long size,
 	else if (td->create_fsync)
 		fsync(td->fd);
 
+	temp_stall_ts = 0;
 	close(td->fd);
 	td->fd = -1;
 	free(b);
@@ -1569,6 +1575,9 @@ static void print_thread_status(void)
 	int i, nr_running, nr_pending, t_rate, m_rate, *eta_secs, eta_sec;
 	char eta_str[32];
 	double perc = 0.0;
+
+	if (temp_stall_ts)
+		return;
 
 	eta_secs = malloc(thread_number * sizeof(int));
 	memset(eta_secs, 0, thread_number * sizeof(int));
