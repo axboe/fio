@@ -952,8 +952,10 @@ static int create_file(struct thread_data *td, unsigned long long size,
 	/*
 	 * unless specifically asked for overwrite, let normal io extend it
 	 */
-	if (td_write(td) && !td->overwrite)
+	if (td_write(td) && !td->overwrite) {
+		td->real_file_size = size;
 		return 0;
+	}
 
 	if (!size) {
 		log_err("Need size for create\n");
@@ -974,14 +976,12 @@ static int create_file(struct thread_data *td, unsigned long long size,
 	td->fd = open(td->file_name, O_WRONLY | oflags, 0644);
 	if (td->fd < 0) {
 		td_verror(td, errno);
-		temp_stall_ts = 0;
-		return 1;
+		goto done_noclose;
 	}
 
 	if (!extend && ftruncate(td->fd, td->file_size) == -1) {
 		td_verror(td, errno);
-		temp_stall_ts = 0;
-		return 1;
+		goto done;
 	}
 
 	td->io_size = td->file_size;
@@ -1014,10 +1014,12 @@ static int create_file(struct thread_data *td, unsigned long long size,
 	else if (td->create_fsync)
 		fsync(td->fd);
 
-	temp_stall_ts = 0;
+	free(b);
+done:
 	close(td->fd);
 	td->fd = -1;
-	free(b);
+done_noclose:
+	temp_stall_ts = 0;
 	return 0;
 }
 
@@ -1025,15 +1027,17 @@ static int file_size(struct thread_data *td)
 {
 	struct stat st;
 
-	if (fstat(td->fd, &st) == -1) {
-		td_verror(td, errno);
-		return 1;
+	if (td->overwrite) {
+		if (fstat(td->fd, &st) == -1) {
+			td_verror(td, errno);
+			return 1;
+		}
+
+		td->real_file_size = st.st_size;
+
+		if (!td->file_size || td->file_size > td->real_file_size)
+			td->file_size = td->real_file_size;
 	}
-
-	td->real_file_size = st.st_size;
-
-	if (!td->file_size || td->file_size > td->real_file_size)
-		td->file_size = td->real_file_size;
 
 	td->file_size -= td->file_offset;
 	return 0;
