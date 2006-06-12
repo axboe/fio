@@ -968,9 +968,6 @@ static int create_file(struct thread_data *td, unsigned long long size,
 	if (!extend) {
 		oflags = O_CREAT | O_TRUNC;
 		fprintf(f_out, "%s: Laying out IO file (%LuMiB)\n", td->name, size >> 20);
-	} else {
-		oflags = O_APPEND;
-		fprintf(f_out, "%s: Extending IO file (%Lu -> %LuMiB)\n", td->name, (td->file_size - size) >> 20, td->file_size >> 20);
 	}
 
 	td->fd = open(td->file_name, O_WRONLY | oflags, 0644);
