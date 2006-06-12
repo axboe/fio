@@ -961,11 +961,8 @@ static int fill_def_thread(void)
 static void usage(char *name)
 {
 	printf("%s\n", fio_version_string);
-	printf("\t-s IO is sequential\n");
-	printf("\t-b Block size in KiB for each IO\n");
+	printf("\t-o Write output to file\n");
 	printf("\t-t Runtime in seconds\n");
-	printf("\t-R Exit all threads on failure to meet rate goal\n");
-	printf("\t-o Use O_DIRECT\n");
 	printf("\t-l Generate per-job latency logs\n");
 	printf("\t-w Generate per-job bandwidth logs\n");
 	printf("\t-f Job file (Required)\n");
