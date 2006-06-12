@@ -43,16 +43,11 @@ Command line
 ------------
 
 $ fio
-	-s IO is sequential
-	-b block size in KiB for each io
 	-t <sec> Runtime in seconds
-	-r For random io, sequence must be repeatable
-	-R <on> If one thread fails to meet rate, quit all
-	-o <on> Use direct IO is 1, buffered if 0
 	-l Generate per-job latency logs
 	-w Generate per-job bandwidth logs
 	-f <file> Read <file> for job descriptions
-	-O <file> Log output to file
+	-o <file> Log output to file
 	-h Print help info
 	-v Print version information and exit
 
@@ -82,6 +77,8 @@ The job file parameters are:
 			 be used if they don't add up to 100%.
 	rwmixwrite=x	'x' percentage of rw mix ios will be writes. See
 			rwmixread.
+	rand_repeatable=x  The sequence of random io blocks can be repeatable
+			across runs, if 'x' is 1.
 	size=x		Set file size to x bytes (x string can include k/m/g)
 	ioengine=x	'x' may be: aio/libaio/linuxaio for Linux aio,
 			posixaio for POSIX aio, sync for regular read/write io,

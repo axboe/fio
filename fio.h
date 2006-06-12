@@ -169,6 +169,7 @@ struct thread_data {
 	unsigned char use_thread;
 	unsigned char do_disk_util;
 	unsigned char override_sync;
+	unsigned char rand_repeatable;
 
 	unsigned int bs;
 	unsigned int min_bs;

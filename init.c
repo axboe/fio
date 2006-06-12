@@ -40,11 +40,7 @@
 #define DEF_RWMIX_READ		(50)
 #define DEF_NICE		(0)
 
-static int def_sequential = DEF_SEQUENTIAL;
-static int def_bs = DEF_BS;
 static int def_timeout = DEF_TIMEOUT;
-static int def_repeatable = DEF_RAND_REPEAT;
-static int def_odirect = DEF_ODIRECT;
 
 static char fio_version_string[] = "fio 1.4";
 
@@ -232,7 +228,7 @@ int init_random_state(struct thread_data *td)
 	if (td->sequential)
 		return 0;
 
-	if (def_repeatable)
+	if (td->rand_repeatable)
 		seeds[3] = DEF_RANDSEED;
 
 	blocks = (td->io_size + td->min_bs - 1) / td->min_bs;
@@ -655,6 +651,11 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
+			if (!check_int(p, "rand_repeatable", &il)) {
+				td->rand_repeatable = il;
+				fgetpos(f, &off);
+				continue;
+			}
 			if (!check_int(p, "rate", &td->rate)) {
 				fgetpos(f, &off);
 				continue;
@@ -924,14 +925,14 @@ static int fill_def_thread(void)
 	 */
 	def_thread.ddir = DDIR_READ;
 	def_thread.iomix = 0;
-	def_thread.bs = def_bs;
+	def_thread.bs = DEF_BS;
 	def_thread.min_bs = -1;
 	def_thread.max_bs = -1;
 	def_thread.io_engine = DEF_IO_ENGINE;
 	strcpy(def_thread.io_engine_name, DEF_IO_ENGINE_NAME);
-	def_thread.odirect = def_odirect;
+	def_thread.odirect = DEF_ODIRECT;
 	def_thread.ratecycle = DEF_RATE_CYCLE;
-	def_thread.sequential = def_sequential;
+	def_thread.sequential = DEF_SEQUENTIAL;
 	def_thread.timeout = def_timeout;
 	def_thread.create_file = DEF_CREATE;
 	def_thread.overwrite = DEF_OVERWRITE;
@@ -949,6 +950,7 @@ static int fill_def_thread(void)
 	def_thread.rwmixcycle = DEF_RWMIX_CYCLE;
 	def_thread.rwmixread = DEF_RWMIX_READ;
 	def_thread.nice = DEF_NICE;
+	def_thread.rand_repeatable = DEF_RAND_REPEAT;
 #ifdef FIO_HAVE_DISK_UTIL
 	def_thread.do_disk_util = 1;
 #endif
@@ -974,35 +976,10 @@ static int parse_cmd_line(int argc, char *argv[])
 {
 	int c, idx = 1, ini_idx = 0;
 
-	while ((c = getopt(argc, argv, "s:b:t:r:R:o:f:lwvhO:")) != EOF) {
+	while ((c = getopt(argc, argv, "t:o:f:lwvh")) != EOF) {
 		switch (c) {
-			case 's':
-				def_sequential = !!atoi(optarg);
-				idx++;
-				break;
-			case 'b':
-				def_bs = atoi(optarg);
-				def_bs <<= 10;
-				if (!def_bs) {
-					printf("bad block size\n");
-					def_bs = DEF_BS;
-				}
-				idx++;
-				break;
 			case 't':
 				def_timeout = atoi(optarg);
-				idx++;
-				break;
-			case 'r':
-				def_repeatable = !!atoi(optarg);
-				idx++;
-				break;
-			case 'R':
-				rate_quit = !!atoi(optarg);
-				idx++;
-				break;
-			case 'o':
-				def_odirect = !!atoi(optarg);
 				idx++;
 				break;
 			case 'f':
@@ -1019,7 +996,7 @@ static int parse_cmd_line(int argc, char *argv[])
 				write_bw_log = 1;
 				idx++;
 				break;
-			case 'O':
+			case 'o':
 				f_out = fopen(optarg, "w+");
 				if (!f_out) {
 					perror("fopen output");
