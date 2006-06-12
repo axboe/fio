@@ -279,8 +279,6 @@ static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 	n = (double) is->samples;
 	*mean = (double) is->val / n;
 	*dev = sqrt(((double) is->val_sq - (*mean * *mean) / n) / (n - 1));
-	if (!(*min + *max) && !(*mean + *dev))
-		return 0;
 
 	return 1;
 }
