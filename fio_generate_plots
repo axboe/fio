@@ -7,6 +7,12 @@ if [ "$1"x == "x" ]; then
 	exit 1
 fi
 
+GNUPLOT=$(which gnuplot)
+if [ ! -x $GNUPLOT ]; then
+	echo You need gnuplot installed to generate graphs
+	exit 1
+fi
+
 TITLE=$1
 
 PLOT_LINE=""
@@ -23,7 +29,7 @@ done
 
 if [ "$PLOT_LINE"x != "x" ]; then
 	echo Making bw logs
-	echo "set title 'Bandwidth - $TITLE'; set xlabel 'time (msec)'; set ylabel 'KiB/sec'; set terminal png; set output '$TITLE-bw.png'; plot " $PLOT_LINE | gnuplot -
+	echo "set title 'Bandwidth - $TITLE'; set xlabel 'time (msec)'; set ylabel 'KiB/sec'; set terminal png; set output '$TITLE-bw.png'; plot " $PLOT_LINE | $GNUPLOT -
 fi
 
 PLOT_LINE=""
@@ -40,7 +46,7 @@ done
 
 if [ "$PLOT_LINE"x != "x" ]; then
 	echo Making slat logs $PLOT_LINE
-	echo "set title 'Submission latency - $TITLE'; set xlabel 'time (msec)'; set ylabel 'latency (msec)'; set terminal png; set output '$TITLE-slat.png'; plot " $PLOT_LINE | gnuplot -
+	echo "set title 'Submission latency - $TITLE'; set xlabel 'time (msec)'; set ylabel 'latency (msec)'; set terminal png; set output '$TITLE-slat.png'; plot " $PLOT_LINE | $GNUPLOT -
 fi
 
 PLOT_LINE=""
@@ -57,5 +63,5 @@ done
 
 if [ "$PLOT_LINE"x != "x" ]; then
 	echo Making clat logs $PLOT_LINE
-	echo "set title 'Completion latency - $TITLE'; set xlabel 'time (msec)'; set ylabel 'latency (msec)'; set terminal png; set output '$TITLE-clat.png'; plot " $PLOT_LINE | gnuplot -
+	echo "set title 'Completion latency - $TITLE'; set xlabel 'time (msec)'; set ylabel 'latency (msec)'; set terminal png; set output '$TITLE-clat.png'; plot " $PLOT_LINE | $GNUPLOT -
 fi
