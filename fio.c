@@ -1184,7 +1184,7 @@ static int setup_file(struct thread_data *td)
 			return 1;
 	} else if (td->filetype == FIO_TYPE_FILE) {
 		if (st.st_size < (off_t) td->file_size) {
-			if (create_file(td, td->file_size - st.st_size, 1))
+			if (create_file(td, td->file_size, 1))
 				return 1;
 		}
 	}
