@@ -54,6 +54,7 @@ int rate_quit = 0;
 int write_lat_log = 0;
 int write_bw_log = 0;
 int exitall_on_terminate = 0;
+int terse_output = 0;
 unsigned long long mlock_size = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
@@ -173,10 +174,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	ddir = td->ddir + (!td->sequential << 1) + (td->iomix << 2);
 
-	if (!job_add_num)
-		fprintf(f_out, "%s: (g=%d): rw=%s, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->name, td->groupid, ddir_str[ddir], td->odirect, td->min_bs, td->max_bs, td->rate, td->io_engine_name, td->iodepth);
-	else if (job_add_num == 1)
-		fprintf(f_out, "...\n");
+	if (!terse_output) {
+		if (!job_add_num)
+			fprintf(f_out, "%s: (g=%d): rw=%s, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->name, td->groupid, ddir_str[ddir], td->odirect, td->min_bs, td->max_bs, td->rate, td->io_engine_name, td->iodepth);
+		else if (job_add_num == 1)
+			fprintf(f_out, "...\n");
+	}
 
 	/*
 	 * recurse add identical jobs, clear numjobs and stonewall options
@@ -965,6 +968,7 @@ static void usage(char *name)
 	printf("\t-t Runtime in seconds\n");
 	printf("\t-l Generate per-job latency logs\n");
 	printf("\t-w Generate per-job bandwidth logs\n");
+	printf("\t-m Minimal (terse) output\n");
 	printf("\t-f Job file (Required)\n");
 	printf("\t-v Print version info and exit\n");
 }
@@ -973,7 +977,7 @@ static int parse_cmd_line(int argc, char *argv[])
 {
 	int c, idx = 1, ini_idx = 0;
 
-	while ((c = getopt(argc, argv, "t:o:f:lwvh")) != EOF) {
+	while ((c = getopt(argc, argv, "t:o:f:lwvhm")) != EOF) {
 		switch (c) {
 			case 't':
 				def_timeout = atoi(optarg);
@@ -1000,6 +1004,10 @@ static int parse_cmd_line(int argc, char *argv[])
 					exit(1);
 				}
 				f_err = f_out;
+				idx++;
+				break;
+			case 'm':
+				terse_output = 1;
 				idx++;
 				break;
 			case 'h':

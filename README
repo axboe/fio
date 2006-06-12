@@ -48,6 +48,7 @@ $ fio
 	-w Generate per-job bandwidth logs
 	-f <file> Read <file> for job descriptions
 	-o <file> Log output to file
+	-m Minimal (terse) output
 	-h Print help info
 	-v Print version information and exit
 
@@ -301,6 +302,31 @@ ticks=		Number of ticks we kept the disk busy.
 io_queue=	Total time spent in the disk queue.
 util=		The disk utilization. A value of 100% means we kept the disk
 		busy constantly, 50% would be a disk idling half of the time.
+
+
+Terse output
+------------
+
+For scripted usage where you typically want to generate tables or graphs
+of the results, fio can output the results in a comma seperated format.
+The format is one long line of values, such as:
+
+client1,0,0,936,331,2894,0,0,0.000000,0.000000,1,170,22.115385,34.290410,16,714,84.252874%,366.500000,566.417819,3496,1237,2894,0,0,0.000000,0.000000,0,246,6.671625,21.436952,0,2534,55.465300%,1406.600000,2008.044216,0.000000%,0.431928%,1109
+
+Split up, the format is as follows:
+
+	jobname, groupid, error
+	READ status:
+		KiB IO, bandwidth (KiB/sec), runtime (msec)
+		Submission latency: min, max, mean, deviation
+		Completion latency: min, max, mean, deviation
+		Bw: min, max, aggreate percentage of total, mean, deviation
+	WRITE status:
+		KiB IO, bandwidth (KiB/sec), runtime (msec)
+		Submission latency: min, max, mean, deviation
+		Completion latency: min, max, mean, deviation
+		Bw: min, max, aggreate percentage of total, mean, deviation
+	CPU usage: user, system, context switches
 
 
 Author

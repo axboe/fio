@@ -1576,7 +1576,7 @@ static void print_thread_status(void)
 	char eta_str[32];
 	double perc = 0.0;
 
-	if (temp_stall_ts)
+	if (temp_stall_ts || terse_output)
 		return;
 
 	eta_secs = malloc(thread_number * sizeof(int));
@@ -1717,8 +1717,10 @@ static void run_threads(void)
 
 	mlocked_mem = fio_pin_memory();
 
-	printf("Starting %d thread%s\n", thread_number, thread_number > 1 ? "s" : "");
-	fflush(stdout);
+	if (!terse_output) {
+		printf("Starting %d thread%s\n", thread_number, thread_number > 1 ? "s" : "");
+		fflush(stdout);
+	}
 
 	signal(SIGINT, sig_handler);
 	signal(SIGALRM, sig_handler);

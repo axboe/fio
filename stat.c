@@ -369,6 +369,63 @@ static void show_thread_status(struct thread_data *td,
 	fprintf(f_out, "  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, td->ctx);
 }
 
+static void show_ddir_status_terse(struct thread_data *td,
+				   struct group_run_stats *rs, int ddir)
+{
+	unsigned long min, max;
+	unsigned long long bw;
+	double mean, dev;
+
+	bw = 0;
+	if (td->runtime[ddir])
+		bw = td->io_bytes[ddir] / td->runtime[ddir];
+
+	fprintf(f_out, ",%llu,%llu,%lu", td->io_bytes[ddir] >> 10, bw, td->runtime[ddir]);
+
+	if (calc_lat(&td->slat_stat[ddir], &min, &max, &mean, &dev))
+		fprintf(f_out, ",%lu,%lu,%f,%f", min, max, mean, dev);
+	else
+		fprintf(f_out, ",%lu,%lu,%f,%f", 0UL, 0UL, 0.0, 0.0);
+
+	if (calc_lat(&td->clat_stat[ddir], &min, &max, &mean, &dev))
+		fprintf(f_out, ",%lu,%lu,%f,%f", min, max, mean, dev);
+	else
+		fprintf(f_out, ",%lu,%lu,%f,%f", 0UL, 0UL, 0.0, 0.0);
+
+	if (calc_lat(&td->bw_stat[ddir], &min, &max, &mean, &dev)) {
+		double p_of_agg;
+
+		p_of_agg = mean * 100 / (double) rs->agg[ddir];
+		fprintf(f_out, ",%lu,%lu,%f%%,%f,%f", min, max, p_of_agg, mean, dev);
+	} else
+		fprintf(f_out, ",%lu,%lu,%f%%,%f,%f", 0UL, 0UL, 0.0, 0.0, 0.0);
+		
+}
+
+
+static void show_thread_status_terse(struct thread_data *td,
+				     struct group_run_stats *rs)
+{
+	double usr_cpu, sys_cpu;
+
+	fprintf(f_out, "%s,%d,%d",td->name, td->groupid, td->error);
+
+	show_ddir_status_terse(td, rs, 0);
+	show_ddir_status_terse(td, rs, 1);
+
+	if (td->runtime[0] + td->runtime[1]) {
+		double runt = td->runtime[0] + td->runtime[1];
+
+		usr_cpu = (double) td->usr_time * 100 / runt;
+		sys_cpu = (double) td->sys_time * 100 / runt;
+	} else {
+		usr_cpu = 0;
+		sys_cpu = 0;
+	}
+
+	fprintf(f_out, ",%f%%,%f%%,%lu\n", usr_cpu, sys_cpu, td->ctx);
+}
+
 void show_run_stats(void)
 {
 	struct group_run_stats *runstats, *rs;
@@ -437,19 +494,25 @@ void show_run_stats(void)
 	/*
 	 * don't overwrite last signal output
 	 */
-	printf("\n");
+	if (!terse_output)
+		printf("\n");
 
 	for (i = 0; i < thread_number; i++) {
 		td = &threads[i];
 		rs = &runstats[td->groupid];
 
-		show_thread_status(td, rs);
+		if (terse_output)
+			show_thread_status_terse(td, rs);
+		else
+			show_thread_status(td, rs);
 	}
 
-	for (i = 0; i < groupid + 1; i++)
-		show_group_stats(&runstats[i], i);
+	if (!terse_output) {
+		for (i = 0; i < groupid + 1; i++)
+			show_group_stats(&runstats[i], i);
 
-	show_disk_util();
+		show_disk_util();
+	}
 }
 
 static inline void add_stat_sample(struct io_stat *is, unsigned long val)
