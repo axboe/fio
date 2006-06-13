@@ -1,3 +1,7 @@
+/*
+ * This file contains the ini and command liner parser. It will create
+ * and initialize the specified jobs.
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -12,6 +16,9 @@
 
 #include "fio.h"
 
+/*
+ * The default options
+ */
 #define DEF_BS			(4096)
 #define DEF_TIMEOUT		(0)
 #define DEF_RATE_CYCLE		(1000)
@@ -59,6 +66,9 @@ unsigned long long mlock_size = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
 
+/*
+ * Return a free job structure.
+ */
 static struct thread_data *get_new_job(int global, struct thread_data *parent)
 {
 	struct thread_data *td;
@@ -83,6 +93,11 @@ static void put_job(struct thread_data *td)
 	thread_number--;
 }
 
+/*
+ * Adds a job to the list of things todo. Sanitizes the various options
+ * to make sure we don't have conflicts, and initializes various
+ * members of td.
+ */
 static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 {
 	char *ddir_str[] = { "read", "write", "randread", "randwrite",
@@ -211,6 +226,10 @@ err:
 	return -1;
 }
 
+/*
+ * Initialize the various random states we need (random io, block size ranges,
+ * read/write mix, etc).
+ */
 int init_random_state(struct thread_data *td)
 {
 	unsigned long seeds[4];
@@ -264,7 +283,24 @@ static void fill_cpu_mask(os_cpu_mask_t cpumask, int cpu)
 #endif
 }
 
-static unsigned long get_mult(char c)
+static unsigned long get_mult_time(char c)
+{
+	switch (c) {
+		case 'm':
+		case 'M':
+			return 60;
+		case 'h':
+		case 'H':
+			return 60 * 60;
+		case 'd':
+		case 'D':
+			return 24 * 60 * 60;
+		default:
+			return 1;
+	}
+}
+
+static unsigned long get_mult_bytes(char c)
 {
 	switch (c) {
 		case 'k':
@@ -284,7 +320,7 @@ static unsigned long get_mult(char c)
 /*
  * convert string after '=' into decimal value, noting any size suffix
  */
-static int str_cnv(char *p, unsigned long long *val)
+static int str_to_decimal(char *p, unsigned long long *val, int kilo)
 {
 	char *str;
 	int len;
@@ -300,16 +336,27 @@ static int str_cnv(char *p, unsigned long long *val)
 	if (*val == ULONG_MAX && errno == ERANGE)
 		return 1;
 
-	*val *= get_mult(str[len - 1]);
+	if (kilo)
+		*val *= get_mult_bytes(str[len - 1]);
+	else
+		*val *= get_mult_time(str[len - 1]);
 	return 0;
 }
 
-static int check_strcnv(char *p, char *name, unsigned long long *val)
+static int check_str_bytes(char *p, char *name, unsigned long long *val)
 {
 	if (strncmp(p, name, strlen(name) - 1))
 		return 1;
 
-	return str_cnv(p, val);
+	return str_to_decimal(p, val, 1);
+}
+
+static int check_str_time(char *p, char *name, unsigned long long *val)
+{
+	if (strncmp(p, name, strlen(name) - 1))
+		return 1;
+
+	return str_to_decimal(p, val, 0);
 }
 
 static void strip_blank_front(char **p)
@@ -374,12 +421,12 @@ static int check_strstore(char *p, char *name, char *dest)
 	return 0;
 }
 
-static int __check_range(char *str, unsigned long *val)
+static int __check_range_bytes(char *str, unsigned long *val)
 {
 	char suffix;
 
 	if (sscanf(str, "%lu%c", val, &suffix) == 2) {
-		*val *= get_mult(suffix);
+		*val *= get_mult_bytes(suffix);
 		return 0;
 	}
 
@@ -389,7 +436,8 @@ static int __check_range(char *str, unsigned long *val)
 	return 1;
 }
 
-static int check_range(char *p, char *name, unsigned long *s, unsigned long *e)
+static int check_range_bytes(char *p, char *name, unsigned long *s,
+			     unsigned long *e)
 {
 	char option[128];
 	char *str, *p1, *p2;
@@ -425,7 +473,7 @@ static int check_range(char *p, char *name, unsigned long *s, unsigned long *e)
 	p2 = p + 1;
 	*p = '\0';
 
-	if (!__check_range(p1, s) && !__check_range(p2, e))
+	if (!__check_range_bytes(p1, s) && !__check_range_bytes(p2, e))
 		return 0;
 
 	return 1;
@@ -700,7 +748,8 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_int(p, "timeout", &td->timeout)) {
+			if (!check_str_time(p, "timeout", &ull)) {
+				td->timeout = ul1;
 				fgetpos(f, &off);
 				continue;
 			}
@@ -772,7 +821,7 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_range(p, "bsrange", &ul1, &ul2)) {
+			if (!check_range_bytes(p, "bsrange", &ul1, &ul2)) {
 				if (ul1 > ul2) {
 					td->max_bs = ul1;
 					td->min_bs = ul2;
@@ -783,28 +832,28 @@ int parse_jobs_ini(char *file)
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_strcnv(p, "bs", &ull)) {
+			if (!check_str_bytes(p, "bs", &ull)) {
 				td->bs = ull;
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_strcnv(p, "size", &td->file_size)) {
+			if (!check_str_bytes(p, "size", &td->file_size)) {
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_strcnv(p, "offset", &td->file_offset)) {
+			if (!check_str_bytes(p, "offset", &td->file_offset)) {
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_strcnv(p, "zonesize", &td->zone_size)) {
+			if (!check_str_bytes(p, "zonesize", &td->zone_size)) {
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_strcnv(p, "zoneskip", &td->zone_skip)) {
+			if (!check_str_bytes(p, "zoneskip", &td->zone_skip)) {
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_strcnv(p, "lockmem", &mlock_size)) {
+			if (!check_str_bytes(p, "lockmem", &mlock_size)) {
 				fgetpos(f, &off);
 				continue;
 			}
@@ -1051,6 +1100,11 @@ static void free_shm(void)
 	}
 }
 
+/*
+ * The thread area is shared between the main process and the job
+ * threads/processes. So setup a shared memory segment that will hold
+ * all the job info.
+ */
 static int setup_thread_area(void)
 {
 	/*
@@ -1058,9 +1112,9 @@ static int setup_thread_area(void)
 	 * we get a failure that looks like too large a shm segment
 	 */
 	do {
-		int s = max_jobs * sizeof(struct thread_data);
+		size_t size = max_jobs * sizeof(struct thread_data);
 
-		shm_id = shmget(0, s, IPC_CREAT | 0600);
+		shm_id = shmget(0, size, IPC_CREAT | 0600);
 		if (shm_id != -1)
 			break;
 		if (errno != EINVAL) {

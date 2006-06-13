@@ -177,7 +177,7 @@ struct thread_data {
 	unsigned int thinktime;
 	unsigned int fsync_blocks;
 	unsigned int start_delay;
-	unsigned int timeout;
+	unsigned long timeout;
 	enum fio_iotype io_engine;
 	unsigned int overwrite;
 	unsigned int bw_avg_time;

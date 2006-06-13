@@ -103,6 +103,10 @@ static void sig_handler(int sig)
 	}
 }
 
+/*
+ * The ->file_map[] contains a map of blocks we have or have not done io
+ * to yet. Used to make sure we cover the entire range in a fair fashion.
+ */
 static int random_map_free(struct thread_data *td, unsigned long long block)
 {
 	unsigned int idx = RAND_MAP_IDX(td, block);
@@ -111,6 +115,9 @@ static int random_map_free(struct thread_data *td, unsigned long long block)
 	return (td->file_map[idx] & (1UL << bit)) == 0;
 }
 
+/*
+ * Return the next free block in the map.
+ */
 static int get_next_free_block(struct thread_data *td, unsigned long long *b)
 {
 	int i;
@@ -130,6 +137,9 @@ static int get_next_free_block(struct thread_data *td, unsigned long long *b)
 	return 1;
 }
 
+/*
+ * Mark a given offset as used in the map.
+ */
 static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 {
 	unsigned long long block = io_u->offset / (unsigned long long) td->min_bs;
@@ -155,6 +165,11 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 		io_u->buflen = blocks * td->min_bs;
 }
 
+/*
+ * For random io, generate a random new block and see if it's used. Repeat
+ * until we find a free one. For sequential io, just return the end of
+ * the last io issued.
+ */
 static int get_next_offset(struct thread_data *td, unsigned long long *offset)
 {
 	unsigned long long b, rb;
@@ -204,6 +219,9 @@ static unsigned int get_next_buflen(struct thread_data *td)
 	return buflen;
 }
 
+/*
+ * Check if we are above the minimum rate given.
+ */
 static int check_min_rate(struct thread_data *td, struct timeval *now)
 {
 	unsigned long spent;
@@ -352,6 +370,11 @@ static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
 	memcpy(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash));
 }
 
+/*
+ * Return the data direction for the next io_u. If the job is a
+ * mixed read/write workload, check the rwmix cycle and switch if
+ * necessary.
+ */
 static int get_rw_ddir(struct thread_data *td)
 {
 	if (td_rw(td)) {
@@ -472,6 +495,10 @@ struct io_u *__get_io_u(struct thread_data *td)
 	return io_u;
 }
 
+/*
+ * Return an io_u to be processed. Gets a buflen and offset, sets direction,
+ * etc. The returned io_u is fully ready to be prepped and submitted.
+ */
 static struct io_u *get_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
@@ -608,6 +635,10 @@ static void ios_completed(struct thread_data *td,struct io_completion_data *icd)
 	}
 }
 
+/*
+ * When job exits, we can cancel the in-flight IO if we are using async
+ * io. Attempt to do so.
+ */
 static void cleanup_pending_aio(struct thread_data *td)
 {
 	struct timespec ts = { .tv_sec = 0, .tv_nsec = 0};
@@ -661,6 +692,10 @@ static int do_io_u_verify(struct thread_data *td, struct io_u **io_u)
 	return ret;
 }
 
+/*
+ * The main verify engine. Runs over the writes we previusly submitted,
+ * reads the blocks back in, and checks the crc/md5 of the data.
+ */
 static void do_verify(struct thread_data *td)
 {
 	struct timeval t;
@@ -742,7 +777,7 @@ static void do_verify(struct thread_data *td)
 }
 
 /*
- * Main IO worker functions. It retrieves io_u's to process and queues
+ * Main IO worker function. It retrieves io_u's to process and queues
  * and reaps them, checking for rate and errors along the way.
  */
 static void do_io(struct thread_data *td)
@@ -1281,6 +1316,10 @@ static void clear_io_state(struct thread_data *td)
 		memset(td->file_map, 0, td->num_maps * sizeof(long));
 }
 
+/*
+ * Entry point for the thread based jobs. The process based jobs end up
+ * here as well, after a little setup.
+ */
 static void *thread_main(void *data)
 {
 	struct thread_data *td = data;
@@ -1403,6 +1442,10 @@ err:
 
 }
 
+/*
+ * We cannot pass the td data into a forked process, so attach the td and
+ * pass it to the thread worker.
+ */
 static void *fork_main(int shmid, int offset)
 {
 	struct thread_data *td;
@@ -1420,6 +1463,9 @@ static void *fork_main(int shmid, int offset)
 	return NULL;
 }
 
+/*
+ * Sets the status of the 'td' in the printed status map.
+ */
 static void check_str_update(struct thread_data *td)
 {
 	char c = run_str[td->thread_number - 1];
@@ -1471,6 +1517,9 @@ static void check_str_update(struct thread_data *td)
 	run_str[td->thread_number - 1] = c;
 }
 
+/*
+ * Convert seconds to a printable string.
+ */
 static void eta_to_str(char *str, int eta_sec)
 {
 	unsigned int d, h, m, s;
@@ -1499,6 +1548,9 @@ static void eta_to_str(char *str, int eta_sec)
 	str += sprintf(str, "%02ds", s);
 }
 
+/*
+ * Best effort calculation of the estimated pending runtime of a job.
+ */
 static int thread_eta(struct thread_data *td, unsigned long elapsed)
 {
 	unsigned long long bytes_total, bytes_done;
@@ -1564,6 +1616,10 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 	return eta_sec;
 }
 
+/*
+ * Print status of the jobs we know about. This includes rate estimates,
+ * ETA, thread state, etc.
+ */
 static void print_thread_status(void)
 {
 	unsigned long elapsed = time_since_now(&genesis);
@@ -1632,6 +1688,9 @@ static void print_thread_status(void)
 	free(eta_secs);
 }
 
+/*
+ * Run over the job map and reap the threads that have exited, if any.
+ */
 static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 {
 	int i;
@@ -1703,6 +1762,9 @@ static void *fio_pin_memory(void)
 	return ptr;
 }
 
+/*
+ * Main function for kicking off and reaping jobs, as needed.
+ */
 static void run_threads(void)
 {
 	struct thread_data *td;
