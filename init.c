@@ -625,7 +625,7 @@ static int str_ioengine_cb(struct thread_data *td, char *str)
 /*
  * This is our [ini] type file parser.
  */
-int parse_jobs_ini(char *file)
+int parse_jobs_ini(char *file, int stonewall_flag)
 {
 	unsigned int prioclass, prio, cpu, global, il;
 	unsigned long long ull;
@@ -635,7 +635,7 @@ int parse_jobs_ini(char *file)
 	fpos_t off;
 	FILE *f;
 	char *p;
-	int ret = 0, stonewall = 1;
+	int ret = 0, stonewall;
 
 	f = fopen(file, "r");
 	if (!f) {
@@ -647,6 +647,7 @@ int parse_jobs_ini(char *file)
 	name = malloc(256);
 	tmpbuf = malloc(4096);
 
+	stonewall = stonewall_flag;
 	while ((p = fgets(string, 4096, f)) != NULL) {
 		if (ret)
 			break;
@@ -1157,7 +1158,7 @@ int parse_options(int argc, char *argv[])
 	for (i = 0; i < job_files; i++) {
 		if (fill_def_thread())
 			return 1;
-		if (parse_jobs_ini(ini_file[i]))
+		if (parse_jobs_ini(ini_file[i], i))
 			return 1;
 		free(ini_file[i]);
 	}
