@@ -49,7 +49,7 @@
 
 static int def_timeout = DEF_TIMEOUT;
 
-static char fio_version_string[] = "fio 1.4";
+static char fio_version_string[] = "fio 1.5";
 
 static char **ini_file;
 static int max_jobs = MAX_JOBS;
