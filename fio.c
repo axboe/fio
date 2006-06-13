@@ -941,18 +941,17 @@ static int init_io_u(struct thread_data *td)
 	return 0;
 }
 
-static int create_file(struct thread_data *td, unsigned long long size,
-		       int extend)
+static int create_file(struct thread_data *td, unsigned long long size)
 {
 	unsigned long long left;
 	unsigned int bs;
-	int r, oflags;
 	char *b;
+	int r;
 
 	/*
 	 * unless specifically asked for overwrite, let normal io extend it
 	 */
-	if (td_write(td) && !td->overwrite) {
+	if (!td->overwrite) {
 		td->real_file_size = size;
 		return 0;
 	}
@@ -964,19 +963,15 @@ static int create_file(struct thread_data *td, unsigned long long size,
 	}
 
 	temp_stall_ts = 1;
+	fprintf(f_out, "%s: Laying out IO file (%LuMiB)\n",td->name,size >> 20);
 
-	if (!extend) {
-		oflags = O_CREAT | O_TRUNC;
-		fprintf(f_out, "%s: Laying out IO file (%LuMiB)\n", td->name, size >> 20);
-	}
-
-	td->fd = open(td->file_name, O_WRONLY | oflags, 0644);
+	td->fd = open(td->file_name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (td->fd < 0) {
 		td_verror(td, errno);
 		goto done_noclose;
 	}
 
-	if (!extend && ftruncate(td->fd, td->file_size) == -1) {
+	if (ftruncate(td->fd, td->file_size) == -1) {
 		td_verror(td, errno);
 		goto done;
 	}
@@ -1177,13 +1172,12 @@ static int setup_file(struct thread_data *td)
 			td_verror(td, ENOENT);
 			return 1;
 		}
-		if (create_file(td, td->file_size, 0))
+		if (create_file(td, td->file_size))
 			return 1;
-	} else if (td->filetype == FIO_TYPE_FILE) {
-		if (st.st_size < (off_t) td->file_size) {
-			if (create_file(td, td->file_size, 1))
-				return 1;
-		}
+	} else if (td->filetype == FIO_TYPE_FILE &&
+		   st.st_size < (off_t) td->file_size) {
+		if (create_file(td, td->file_size))
+			return 1;
 	}
 
 	if (td->odirect)

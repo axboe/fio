@@ -122,6 +122,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td->zone_size && !td->sequential)
 		td->zone_size = 0;
 
+	/*
+	 * Reads can do overwrites, we always need to pre-create the file
+	 */
+	if (td_read(td) || td_rw(td))
+		td->overwrite = 1;
+
 	td->filetype = FIO_TYPE_FILE;
 	if (!stat(jobname, &sb)) {
 		if (S_ISBLK(sb.st_mode))
