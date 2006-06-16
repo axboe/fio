@@ -46,7 +46,6 @@ $ fio
 	-t <sec> Runtime in seconds
 	-l Generate per-job latency logs
 	-w Generate per-job bandwidth logs
-	-f <file> Read <file> for job descriptions
 	-o <file> Log output to file
 	-m Minimal (terse) output
 	-h Print help info

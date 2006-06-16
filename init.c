@@ -1033,16 +1033,10 @@ static int parse_cmd_line(int argc, char *argv[])
 {
 	int c, idx = 1, ini_idx = 0;
 
-	while ((c = getopt(argc, argv, "t:o:f:lwvhm")) != EOF) {
+	while ((c = getopt(argc, argv, "t:o:lwvhm")) != EOF) {
 		switch (c) {
 			case 't':
 				def_timeout = atoi(optarg);
-				idx++;
-				break;
-			case 'f':
-				ini_idx++;
-				ini_file = realloc(ini_file, ini_idx * sizeof(char *));
-				ini_file[ini_idx - 1] = strdup(optarg);
 				idx++;
 				break;
 			case 'l':
