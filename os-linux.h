@@ -5,7 +5,7 @@
 #include <sys/uio.h>
 #include <sys/syscall.h>
 #include <unistd.h>
-#include <asm/unistd.h>
+#include <linux/unistd.h>
 
 #define FIO_HAVE_LIBAIO
 #define FIO_HAVE_POSIXAIO
