@@ -750,7 +750,7 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 				continue;
 			}
 			if (!check_str_time(p, "timeout", &ull)) {
-				td->timeout = ul1;
+				td->timeout = ull;
 				fgetpos(f, &off);
 				continue;
 			}
