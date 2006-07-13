@@ -424,12 +424,12 @@ extern int init_random_state(struct thread_data *);
  * Naturally this would not work for any type of contended semaphore or
  * for real locking.
  */
-static inline void fio_sem_init(volatile int volatile *sem, int val)
+static inline void fio_sem_init(volatile int *sem, int val)
 {
 	*sem = val;
 }
 
-static inline void fio_sem_down(volatile int volatile *sem)
+static inline void fio_sem_down(volatile int *sem)
 {
 	while (*sem == 0)
 		usleep(10000);
@@ -437,7 +437,7 @@ static inline void fio_sem_down(volatile int volatile *sem)
 	(*sem)--;
 }
 
-static inline void fio_sem_up(volatile int volatile *sem)
+static inline void fio_sem_up(volatile int *sem)
 {
 	(*sem)++;
 }

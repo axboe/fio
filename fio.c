@@ -1355,7 +1355,7 @@ static void *thread_main(void *data)
 		}
 	}
 
-	if (nice(td->nice) < 0) {
+	if (nice(td->nice) == -1) {
 		td_verror(td, errno);
 		goto err;
 	}
