@@ -156,8 +156,6 @@ static int find_block_dir(dev_t dev, char *path)
 
 		if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, ".."))
 			continue;
-		if (!strcmp(dir->d_name, "device"))
-			continue;
 
 		sprintf(full_path, "%s/%s", path, dir->d_name);
 
@@ -168,7 +166,7 @@ static int find_block_dir(dev_t dev, char *path)
 			}
 		}
 
-		if (stat(full_path, &st) == -1) {
+		if (lstat(full_path, &st) == -1) {
 			perror("stat");
 			break;
 		}
