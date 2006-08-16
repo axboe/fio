@@ -87,7 +87,7 @@ static int fio_libaio_getevents(struct thread_data *td, int min, int max,
 				struct timespec *t)
 {
 	struct libaio_data *ld = td->io_data;
-	int r;
+	long r;
 
 	do {
 		r = io_getevents(ld->aio_ctx, min, max, ld->aio_events, t);
@@ -100,14 +100,14 @@ static int fio_libaio_getevents(struct thread_data *td, int min, int max,
 			break;
 	} while (1);
 
-	return r;
+	return (int) r;
 }
 
 static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct libaio_data *ld = td->io_data;
 	struct iocb *iocb = &io_u->iocb;
-	int ret;
+	long ret;
 
 	do {
 		ret = io_submit(ld->aio_ctx, 1, &iocb);
@@ -121,7 +121,7 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 			break;
 	} while (1);
 
-	return ret;
+	return (int) ret;
 
 }
 
