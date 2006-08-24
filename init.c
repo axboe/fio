@@ -1036,15 +1036,15 @@ static int parse_cmd_line(int argc, char *argv[])
 		switch (c) {
 			case 't':
 				def_timeout = atoi(optarg);
-				idx++;
+				idx = optind;
 				break;
 			case 'l':
 				write_lat_log = 1;
-				idx++;
+				idx = optind;
 				break;
 			case 'w':
 				write_bw_log = 1;
-				idx++;
+				idx = optind;
 				break;
 			case 'o':
 				f_out = fopen(optarg, "w+");
@@ -1053,11 +1053,11 @@ static int parse_cmd_line(int argc, char *argv[])
 					exit(1);
 				}
 				f_err = f_out;
-				idx++;
+				idx = optind;
 				break;
 			case 'm':
 				terse_output = 1;
-				idx++;
+				idx = optind;
 				break;
 			case 'h':
 				usage(argv[0]);
@@ -1074,7 +1074,7 @@ static int parse_cmd_line(int argc, char *argv[])
 		ini_file[ini_idx - 1] = strdup(argv[idx]);
 		idx++;
 	}
-		
+
 	if (!f_out) {
 		f_out = stdout;
 		f_err = stderr;
