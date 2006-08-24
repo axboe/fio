@@ -1025,7 +1025,6 @@ static void usage(char *name)
 	printf("\t-l Generate per-job latency logs\n");
 	printf("\t-w Generate per-job bandwidth logs\n");
 	printf("\t-m Minimal (terse) output\n");
-	printf("\t-f Job file (Required)\n");
 	printf("\t-v Print version info and exit\n");
 }
 
