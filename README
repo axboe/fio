@@ -333,11 +333,11 @@ Split up, the format is as follows:
 Author
 ------
 
-Fio was written by Jens Axboe <axboe@suse.de> to enable flexible testing
+Fio was written by Jens Axboe <axboe@kernel.dk> to enable flexible testing
 of the Linux IO subsystem and schedulers. He got tired of writing
 specific test applications to simulate a given workload, and found that
 the existing io benchmark/test tools out there weren't flexible enough
 to do what he wanted.
 
-Jens Axboe <axboe@suse.de> 20060609
+Jens Axboe <axboe@kernel.dk> 20060905
 
