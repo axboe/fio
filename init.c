@@ -196,9 +196,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	ddir = td->ddir + (!td->sequential << 1) + (td->iomix << 2);
 
 	if (!terse_output) {
-		if (!job_add_num)
-			fprintf(f_out, "%s: (g=%d): rw=%s, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->name, td->groupid, ddir_str[ddir], td->odirect, td->min_bs, td->max_bs, td->rate, td->io_engine_name, td->iodepth);
-		else if (job_add_num == 1)
+		if (!job_add_num) {
+			if (td->io_engine == FIO_CPUIO)
+				fprintf(f_out, "%s: ioengine=cpu, cpuload=%u, cpucycle=%u\n", td->name, td->cpuload, td->cpucycle);
+			else
+				fprintf(f_out, "%s: (g=%d): rw=%s, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->name, td->groupid, ddir_str[ddir], td->odirect, td->min_bs, td->max_bs, td->rate, td->io_engine_name, td->iodepth);
+		} else if (job_add_num == 1)
 			fprintf(f_out, "...\n");
 	}
 
@@ -616,9 +619,13 @@ static int str_ioengine_cb(struct thread_data *td, char *str)
 		strcpy(td->io_engine_name, "splice");
 		td->io_engine = FIO_SPLICEIO;
 		return 0;
+	} else if (!strncmp(str, "cpu", 3)) {
+		strcpy(td->io_engine_name, "cpu");
+		td->io_engine = FIO_CPUIO;
+		return 0;
 	}
 
-	log_err("fio: ioengine: { linuxaio, aio, libaio }, posixaio, sync, mmap, sgio, splice\n");
+	log_err("fio: ioengine: { linuxaio, aio, libaio }, posixaio, sync, mmap, sgio, splice, cpu\n");
 	return 1;
 }
 
@@ -723,6 +730,14 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 				continue;
 			}
 			if (!check_int(p, "ratecycle", &td->ratecycle)) {
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_int(p, "cpuload", &td->cpuload)) {
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_int(p, "cpuchunks", &td->cpucycle)) {
 				fgetpos(f, &off);
 				continue;
 			}

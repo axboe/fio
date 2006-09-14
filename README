@@ -142,6 +142,9 @@ The job file parameters are:
 	exec_prerun=x	Run 'x' before job io is begun.
 	exec_postrun=x	Run 'x' after job io has finished.
 	ioscheduler=x	Use ioscheduler 'x' for this job.
+	cpuload=x	For a CPU io thread, percentage of CPU time to attempt
+			to burn.
+	cpuchunks=x	Split burn cycles into pieces of x.
 
 
 Examples using a job file

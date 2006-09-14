@@ -918,3 +918,17 @@ int fio_spliceio_init(struct thread_data *td)
 }
 
 #endif /* FIO_HAVE_SPLICE */
+
+int fio_cpuio_init(struct thread_data *td)
+{
+	if (!td->cpuload) {
+		td_vmsg(td, EINVAL, "cpu thread needs rate");
+		return 1;
+	} else if (td->cpuload > 100)
+		td->cpuload = 100;
+
+	td->read_iolog = td->write_iolog = 0;
+	td->fd = -1;
+
+	return 0;
+}

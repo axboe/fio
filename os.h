@@ -54,5 +54,6 @@ extern int fio_syncio_init(struct thread_data *);
 extern int fio_mmapio_init(struct thread_data *);
 extern int fio_sgio_init(struct thread_data *);
 extern int fio_spliceio_init(struct thread_data *);
+extern int fio_cpuio_init(struct thread_data *);
 
 #endif

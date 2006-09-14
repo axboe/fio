@@ -778,6 +778,31 @@ static void do_verify(struct thread_data *td)
 }
 
 /*
+ * Not really an io thread, all it does is burn CPU cycles in the specified
+ * manner.
+ */
+static void do_cpuio(struct thread_data *td)
+{
+	struct timeval e;
+	int split = 100 / td->cpuload;
+	int i = 0;
+
+	while (!td->terminate) {
+		gettimeofday(&e, NULL);
+
+		if (runtime_exceeded(td, &e))
+			break;
+
+		if (!(i % split))
+			__usec_sleep(10000);
+		else
+			usec_sleep(td, 10000);
+
+		i++;
+	}
+}
+
+/*
  * Main IO worker function. It retrieves io_u's to process and queues
  * and reaps them, checking for rate and errors along the way.
  */
@@ -890,6 +915,8 @@ static int init_io(struct thread_data *td)
 		return fio_sgio_init(td);
 	else if (td->io_engine == FIO_SPLICEIO)
 		return fio_spliceio_init(td);
+	else if (td->io_engine == FIO_CPUIO)
+		return fio_cpuio_init(td);
 	else {
 		log_err("bad io_engine %d\n", td->io_engine);
 		return 1;
@@ -928,6 +955,9 @@ static int init_io_u(struct thread_data *td)
 	struct io_u *io_u;
 	int i, max_units;
 	char *p;
+
+	if (td->io_engine == FIO_CPUIO)
+		return 0;
 
 	if (td->io_engine & FIO_SYNCIO)
 		max_units = 1;
@@ -1199,6 +1229,9 @@ static int setup_file(struct thread_data *td)
 	struct stat st;
 	int flags = 0;
 
+	if (td->io_engine == FIO_CPUIO)
+		return 0;
+
 	if (stat(td->file_name, &st) == -1) {
 		if (errno != ENOENT) {
 			td_verror(td, errno);
@@ -1390,7 +1423,10 @@ static void *thread_main(void *data)
 		clear_io_state(td);
 		prune_io_piece_log(td);
 
-		do_io(td);
+		if (td->io_engine == FIO_CPUIO)
+			do_cpuio(td);
+		else
+			do_io(td);
 
 		td->runtime[td->ddir] += mtime_since_now(&td->start);
 		if (td_rw(td) && td->io_bytes[td->ddir ^ 1])
@@ -1694,13 +1730,16 @@ static void print_thread_status(void)
  */
 static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 {
-	int i;
+	int i, cputhreads;
 
 	/*
 	 * reap exited threads (TD_EXITED -> TD_REAPED)
 	 */
-	for (i = 0; i < thread_number; i++) {
+	for (i = 0, cputhreads = 0; i < thread_number; i++) {
 		struct thread_data *td = &threads[i];
+
+		if (td->io_engine == FIO_CPUIO)
+			cputhreads++;
 
 		if (td->runstate != TD_EXITED)
 			continue;
@@ -1719,6 +1758,9 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		(*m_rate) -= td->ratemin;
 		(*t_rate) -= td->rate;
 	}
+
+	if (*nr_running == cputhreads)
+		terminate_threads(TERMINATE_ALL);
 }
 
 static void fio_unpin_memory(void *pinned)

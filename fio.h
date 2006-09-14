@@ -131,6 +131,7 @@ enum fio_iotype {
 	FIO_POSIXAIO	= 1 << 3,
 	FIO_SGIO	= 1 << 4,
 	FIO_SPLICEIO	= 1 << 5 | FIO_SYNCIO,
+	FIO_CPUIO	= 1 << 6,
 };
 
 /*
@@ -262,6 +263,12 @@ struct thread_data {
 	unsigned int num_maps;
 
 	/*
+	 * CPU "io" cycle burner
+	 */
+	unsigned int cpuload;
+	unsigned int cpucycle;
+
+	/*
 	 * bandwidth and latency stats
 	 */
 	struct io_stat clat_stat[2];		/* completion latency */
@@ -307,12 +314,16 @@ struct thread_data {
 	struct list_head io_log_list;
 };
 
-#define td_verror(td, err)						\
+#define __td_verror(td, err, msg)					\
 	do {								\
 		int e = (err);						\
 		(td)->error = e;					\
-		snprintf(td->verror, sizeof(td->verror) - 1, "file:%s:%d, error=%s", __FILE__, __LINE__, strerror(e));	\
+		snprintf(td->verror, sizeof(td->verror) - 1, "file:%s:%d, error=%s", __FILE__, __LINE__, (msg));	\
 	} while (0)
+
+
+#define td_verror(td, err)	__td_verror((td), (err), strerror((err)))
+#define td_vmsg(td, err, msg)	__td_verror((td), (err), (msg))
 
 extern struct io_u *__get_io_u(struct thread_data *);
 extern void put_io_u(struct thread_data *, struct io_u *);
@@ -409,6 +420,7 @@ extern unsigned long utime_since(struct timeval *, struct timeval *);
 extern unsigned long mtime_since(struct timeval *, struct timeval *);
 extern unsigned long mtime_since_now(struct timeval *);
 extern unsigned long time_since_now(struct timeval *);
+extern void __usec_sleep(unsigned int);
 extern void usec_sleep(struct thread_data *, unsigned long);
 extern void rate_throttle(struct thread_data *, unsigned long, unsigned int);
 

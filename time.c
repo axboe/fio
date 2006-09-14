@@ -60,7 +60,7 @@ unsigned long time_since_now(struct timeval *s)
 /*
  * busy looping version for the last few usec
  */
-static void __usec_sleep(unsigned int usec)
+void __usec_sleep(unsigned int usec)
 {
 	struct timeval start;
 
