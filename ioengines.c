@@ -46,6 +46,12 @@ struct ioengine_ops *load_ioengine(struct thread_data *td, char *name)
 		return NULL;
 	}
 
+	if (ops->version != FIO_IOOPS_VERSION) {
+		log_err("bad ioops version %d (want %d)\n", ops->version, FIO_IOOPS_VERSION);
+		dlclose(dlhandle);
+		return NULL;
+	}
+
 	ops->dlhandle = dlhandle;
 	return ops;
 }
