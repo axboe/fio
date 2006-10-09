@@ -34,12 +34,17 @@ struct ioengine_ops *load_ioengine(struct thread_data *td, char *name)
 	sprintf(engine_lib, "/usr/local/lib/fio/fio-engine-%s.o", engine);
 	dlerror();
 	dlhandle = dlopen(engine_lib, RTLD_LAZY);
-	if (!dlhandle)
-		printf("bla: %s\n", dlerror());
+	if (!dlhandle) {
+		td_vmsg(td, -1, dlerror());
+		return NULL;
+	}
 
 	ops = dlsym(dlhandle, "ioengine");
-	if (!ops)
-		printf("get ops failed\n");
+	if (!ops) {
+		td_vmsg(td, -1, dlerror());
+		dlclose(dlhandle);
+		return NULL;
+	}
 
 	ops->dlhandle = dlhandle;
 	return ops;
