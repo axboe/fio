@@ -124,14 +124,10 @@ enum fio_filetype {
 	FIO_TYPE_CHAR,
 };
 
-enum fio_iotype {
+enum fio_ioengine_flags {
 	FIO_SYNCIO	= 1 << 0,
-	FIO_MMAPIO	= 1 << 1 | FIO_SYNCIO,
-	FIO_LIBAIO	= 1 << 2,
-	FIO_POSIXAIO	= 1 << 3,
-	FIO_SGIO	= 1 << 4,
-	FIO_SPLICEIO	= 1 << 5 | FIO_SYNCIO,
-	FIO_CPUIO	= 1 << 6,
+	FIO_CPUIO	= 1 << 1,
+	FIO_MMAPIO	= 1 << 2,
 };
 
 /*
@@ -179,7 +175,6 @@ struct thread_data {
 	unsigned int fsync_blocks;
 	unsigned int start_delay;
 	unsigned long timeout;
-	enum fio_iotype io_engine;
 	unsigned int overwrite;
 	unsigned int bw_avg_time;
 	unsigned int loops;
@@ -216,15 +211,7 @@ struct thread_data {
 	 * IO engine hooks, contains everything needed to submit an io_u
 	 * to any of the available IO engines.
 	 */
-	void *io_data;
-	char io_engine_name[16];
-	int (*io_prep)(struct thread_data *, struct io_u *);
-	int (*io_queue)(struct thread_data *, struct io_u *);
-	int (*io_getevents)(struct thread_data *, int, int, struct timespec *);
-	struct io_u *(*io_event)(struct thread_data *, int);
-	int (*io_cancel)(struct thread_data *, struct io_u *);
-	void (*io_cleanup)(struct thread_data *);
-	int (*io_sync)(struct thread_data *);
+	struct ioengine_ops *io_ops;
 
 	/*
 	 * Current IO depth and list of free and busy io_u's.
@@ -462,5 +449,31 @@ static inline void fio_sem_up(volatile int *sem)
 	if (f_err != stderr)			\
 		fprintf(stderr, ##args);	\
 	} while (0)
+
+struct ioengine_ops {
+	char name[16];
+	int version;
+	int flags;
+	int (*init)(struct thread_data *);
+	int (*prep)(struct thread_data *, struct io_u *);
+	int (*queue)(struct thread_data *, struct io_u *);
+	int (*getevents)(struct thread_data *, int, int, struct timespec *);
+	struct io_u *(*event)(struct thread_data *, int);
+	int (*cancel)(struct thread_data *, struct io_u *);
+	void (*cleanup)(struct thread_data *);
+	int (*sync)(struct thread_data *);
+	void *data;
+	void *dlhandle;
+};
+
+#define FIO_IOOPS_VERSION	1
+
+extern struct ioengine_ops *load_ioengine(struct thread_data *, char *);
+extern void close_ioengine(struct thread_data *);
+
+/*
+ * Mark unused variables passed to ops functions as unused, to silence gcc
+ */
+#define fio_unused	__attribute((__unused__))
 
 #endif

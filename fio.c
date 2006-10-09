@@ -434,7 +434,7 @@ static void populate_io_u(struct thread_data *td, struct io_u *io_u)
 
 static int td_io_prep(struct thread_data *td, struct io_u *io_u)
 {
-	if (td->io_prep && td->io_prep(td, io_u))
+	if (td->io_ops->prep && td->io_ops->prep(td, io_u))
 		return 1;
 
 	return 0;
@@ -569,8 +569,8 @@ static int get_next_verify(struct thread_data *td, struct io_u *io_u)
 
 static int sync_td(struct thread_data *td)
 {
-	if (td->io_sync)
-		return td->io_sync(td);
+	if (td->io_ops->sync)
+		return td->io_ops->sync(td);
 
 	return 0;
 }
@@ -578,14 +578,14 @@ static int sync_td(struct thread_data *td)
 static int io_u_getevents(struct thread_data *td, int min, int max,
 			  struct timespec *t)
 {
-	return td->io_getevents(td, min, max, t);
+	return td->io_ops->getevents(td, min, max, t);
 }
 
 static int io_u_queue(struct thread_data *td, struct io_u *io_u)
 {
 	gettimeofday(&io_u->issue_time, NULL);
 
-	return td->io_queue(td, io_u);
+	return td->io_ops->queue(td, io_u);
 }
 
 #define iocb_time(iocb)	((unsigned long) (iocb)->data)
@@ -629,7 +629,7 @@ static void ios_completed(struct thread_data *td,struct io_completion_data *icd)
 	icd->bytes_done[0] = icd->bytes_done[1] = 0;
 
 	for (i = 0; i < icd->nr; i++) {
-		io_u = td->io_event(td, i);
+		io_u = td->io_ops->event(td, i);
 
 		io_completed(td, io_u, icd);
 		put_io_u(td, io_u);
@@ -660,11 +660,11 @@ static void cleanup_pending_aio(struct thread_data *td)
 	/*
 	 * now cancel remaining active events
 	 */
-	if (td->io_cancel) {
+	if (td->io_ops->cancel) {
 		list_for_each_safe(entry, n, &td->io_u_busylist) {
 			io_u = list_entry(entry, struct io_u, list);
 
-			r = td->io_cancel(td, io_u);
+			r = td->io_ops->cancel(td, io_u);
 			if (!r)
 				put_io_u(td, io_u);
 		}
@@ -749,7 +749,7 @@ static void do_verify(struct thread_data *td)
 			break;
 		}
 
-		v_io_u = td->io_event(td, 0);
+		v_io_u = td->io_ops->event(td, 0);
 		icd.nr = 1;
 		icd.error = 0;
 		io_completed(td, v_io_u, &icd);
@@ -895,32 +895,12 @@ static void do_io(struct thread_data *td)
 	}
 }
 
-static void cleanup_io(struct thread_data *td)
-{
-	if (td->io_cleanup)
-		td->io_cleanup(td);
-}
-
 static int init_io(struct thread_data *td)
 {
-	if (td->io_engine == FIO_SYNCIO)
-		return fio_syncio_init(td);
-	else if (td->io_engine == FIO_MMAPIO)
-		return fio_mmapio_init(td);
-	else if (td->io_engine == FIO_LIBAIO)
-		return fio_libaio_init(td);
-	else if (td->io_engine == FIO_POSIXAIO)
-		return fio_posixaio_init(td);
-	else if (td->io_engine == FIO_SGIO)
-		return fio_sgio_init(td);
-	else if (td->io_engine == FIO_SPLICEIO)
-		return fio_spliceio_init(td);
-	else if (td->io_engine == FIO_CPUIO)
-		return fio_cpuio_init(td);
-	else {
-		log_err("bad io_engine %d\n", td->io_engine);
-		return 1;
-	}
+	if (td->io_ops->init)
+		return td->io_ops->init(td);
+
+	return 0;
 }
 
 static void cleanup_io_u(struct thread_data *td)
@@ -956,10 +936,10 @@ static int init_io_u(struct thread_data *td)
 	int i, max_units;
 	char *p;
 
-	if (td->io_engine == FIO_CPUIO)
+	if (td->io_ops->flags & FIO_CPUIO)
 		return 0;
 
-	if (td->io_engine & FIO_SYNCIO)
+	if (td->io_ops->flags & FIO_SYNCIO)
 		max_units = 1;
 	else
 		max_units = td->iodepth;
@@ -1229,7 +1209,7 @@ static int setup_file(struct thread_data *td)
 	struct stat st;
 	int flags = 0;
 
-	if (td->io_engine == FIO_CPUIO)
+	if (td->io_ops->flags & FIO_CPUIO)
 		return 0;
 
 	if (stat(td->file_name, &st) == -1) {
@@ -1282,10 +1262,10 @@ static int setup_file(struct thread_data *td)
 	if (get_file_size(td))
 		return 1;
 
-	if (td->io_engine != FIO_MMAPIO)
-		return setup_file_plain(td);
-	else
+	if (td->io_ops->flags & FIO_MMAPIO)
 		return setup_file_mmap(td);
+	else
+		return setup_file_plain(td);
 }
 
 static int switch_ioscheduler(struct thread_data *td)
@@ -1338,7 +1318,7 @@ static int switch_ioscheduler(struct thread_data *td)
 
 static void clear_io_state(struct thread_data *td)
 {
-	if (td->io_engine == FIO_SYNCIO)
+	if (td->io_ops->flags & FIO_SYNCIO)
 		lseek(td->fd, SEEK_SET, 0);
 
 	td->last_pos = 0;
@@ -1423,7 +1403,7 @@ static void *thread_main(void *data)
 		clear_io_state(td);
 		prune_io_piece_log(td);
 
-		if (td->io_engine == FIO_CPUIO)
+		if (td->io_ops->flags & FIO_CPUIO)
 			do_cpuio(td);
 		else
 			do_io(td);
@@ -1472,7 +1452,7 @@ err:
 	}
 	if (td->mmap)
 		munmap(td->mmap, td->file_size);
-	cleanup_io(td);
+	close_ioengine(td);
 	cleanup_io_u(td);
 	td_set_runstate(td, TD_EXITED);
 	return NULL;
@@ -1738,7 +1718,7 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 	for (i = 0, cputhreads = 0; i < thread_number; i++) {
 		struct thread_data *td = &threads[i];
 
-		if (td->io_engine == FIO_CPUIO)
+		if (td->io_ops->flags & FIO_CPUIO)
 			cputhreads++;
 
 		if (td->runstate != TD_EXITED)

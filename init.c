@@ -124,7 +124,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td == &def_thread)
 		return 0;
 
-	if (td->io_engine & FIO_SYNCIO)
+	if (td->io_ops->flags & FIO_SYNCIO)
 		td->iodepth = 1;
 	else {
 		if (!td->iodepth)
@@ -197,10 +197,10 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	if (!terse_output) {
 		if (!job_add_num) {
-			if (td->io_engine == FIO_CPUIO)
+			if (td->io_ops->flags & FIO_CPUIO)
 				fprintf(f_out, "%s: ioengine=cpu, cpuload=%u, cpucycle=%u\n", td->name, td->cpuload, td->cpucycle);
 			else
-				fprintf(f_out, "%s: (g=%d): rw=%s, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->name, td->groupid, ddir_str[ddir], td->odirect, td->min_bs, td->max_bs, td->rate, td->io_engine_name, td->iodepth);
+				fprintf(f_out, "%s: (g=%d): rw=%s, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->name, td->groupid, ddir_str[ddir], td->odirect, td->min_bs, td->max_bs, td->rate, td->io_ops->name, td->iodepth);
 		} else if (job_add_num == 1)
 			fprintf(f_out, "...\n");
 	}
@@ -594,36 +594,12 @@ static int str_mem_cb(struct thread_data *td, char *mem)
 
 static int str_ioengine_cb(struct thread_data *td, char *str)
 {
-	if (!strncmp(str, "linuxaio", 8) || !strncmp(str, "aio", 3) ||
-	    !strncmp(str, "libaio", 6)) {
-		strcpy(td->io_engine_name, "libaio");
-		td->io_engine = FIO_LIBAIO;
+	if (!str)
+		str = DEF_IO_ENGINE_NAME;
+
+	td->io_ops = load_ioengine(td, str);
+	if (td->io_ops)
 		return 0;
-	} else if (!strncmp(str, "posixaio", 8)) {
-		strcpy(td->io_engine_name, "posixaio");
-		td->io_engine = FIO_POSIXAIO;
-		return 0;
-	} else if (!strncmp(str, "sync", 4)) {
-		strcpy(td->io_engine_name, "sync");
-		td->io_engine = FIO_SYNCIO;
-		return 0;
-	} else if (!strncmp(str, "mmap", 4)) {
-		strcpy(td->io_engine_name, "mmap");
-		td->io_engine = FIO_MMAPIO;
-		return 0;
-	} else if (!strncmp(str, "sgio", 4)) {
-		strcpy(td->io_engine_name, "sgio");
-		td->io_engine = FIO_SGIO;
-		return 0;
-	} else if (!strncmp(str, "splice", 6)) {
-		strcpy(td->io_engine_name, "splice");
-		td->io_engine = FIO_SPLICEIO;
-		return 0;
-	} else if (!strncmp(str, "cpu", 3)) {
-		strcpy(td->io_engine_name, "cpu");
-		td->io_engine = FIO_CPUIO;
-		return 0;
-	}
 
 	log_err("fio: ioengine: { linuxaio, aio, libaio }, posixaio, sync, mmap, sgio, splice, cpu\n");
 	return 1;
@@ -1002,8 +978,6 @@ static int fill_def_thread(void)
 	def_thread.bs = DEF_BS;
 	def_thread.min_bs = -1;
 	def_thread.max_bs = -1;
-	def_thread.io_engine = DEF_IO_ENGINE;
-	strcpy(def_thread.io_engine_name, DEF_IO_ENGINE_NAME);
 	def_thread.odirect = DEF_ODIRECT;
 	def_thread.ratecycle = DEF_RATE_CYCLE;
 	def_thread.sequential = DEF_SEQUENTIAL;
