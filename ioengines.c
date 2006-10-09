@@ -31,7 +31,7 @@ struct ioengine_ops *load_ioengine(struct thread_data *td, char *name)
 	if (!strncmp(engine, "linuxaio", 8) || !strncmp(engine, "aio", 3))
 		strcpy(engine, "libaio");
 
-	sprintf(engine_lib, "/usr/local/lib/fio/fio-engine-%s.o", engine);
+	sprintf(engine_lib, "%s/lib/fio/fio-engine-%s.o", fio_inst_prefix, engine);
 	dlerror();
 	dlhandle = dlopen(engine_lib, RTLD_LAZY);
 	if (!dlhandle) {

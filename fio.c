@@ -45,6 +45,7 @@ static char run_str[MAX_JOBS + 1];
 int shm_id = 0;
 static struct timeval genesis;
 static int temp_stall_ts;
+char *fio_inst_prefix = _INST_PREFIX;
 
 static void print_thread_status(void);
 

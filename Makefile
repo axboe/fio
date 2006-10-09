@@ -3,6 +3,15 @@ CFLAGS	= -Wall -O2 -g -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 PROGS	= fio
 SCRIPTS = fio_generate_plots
 
+INSTALL = install
+prefix = /usr/local
+bindir = $(prefix)/bin
+libdir = $(prefix)/lib/fio
+
+FIO_INST_DIR = $(subst ','\'',$(prefix))
+
+CFLAGS += '-D_INST_PREFIX="$(FIO_INST_DIR)"'
+
 all: depend $(PROGS) $(SCRIPTS)
 	$(MAKE) -C engines
 
@@ -17,11 +26,6 @@ depend:
 
 cscope:
 	@cscope -b
-
-INSTALL = install
-prefix = /usr/local
-bindir = $(prefix)/bin
-libdir = $(prefix)/lib/fio
 
 install: $(PROGS) $(SCRIPTS)
 	$(INSTALL) -m755 -d $(DESTDIR)$(bindir)
