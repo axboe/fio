@@ -1210,8 +1210,8 @@ static int setup_file(struct thread_data *td)
 	struct stat st;
 	int flags = 0;
 
-	if (td->io_ops->flags & FIO_CPUIO)
-		return 0;
+	if (td->io_ops->setup)
+		return td->io_ops->setup(td);
 
 	if (stat(td->file_name, &st) == -1) {
 		if (errno != ENOENT) {

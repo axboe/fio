@@ -455,6 +455,7 @@ struct ioengine_ops {
 	char name[16];
 	int version;
 	int flags;
+	int (*setup)(struct thread_data *);
 	int (*init)(struct thread_data *);
 	int (*prep)(struct thread_data *, struct io_u *);
 	int (*queue)(struct thread_data *, struct io_u *);

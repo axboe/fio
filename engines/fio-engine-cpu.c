@@ -1,6 +1,11 @@
 #include "fio.h"
 #include "os.h"
 
+static int fio_cpuio_setup(struct thread_data fio_unused *td)
+{
+	return 0;
+}
+
 static int fio_cpuio_init(struct thread_data *td)
 {
 	if (!td->cpuload) {
@@ -19,5 +24,6 @@ struct ioengine_ops ioengine = {
 	.name		= "cpuio",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_cpuio_init,
+	.setup		= fio_cpuio_setup,
 	.flags		= FIO_CPUIO,
 };
