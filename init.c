@@ -124,6 +124,17 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td == &def_thread)
 		return 0;
 
+	/*
+	 * Set default io engine, if none set
+	 */
+	if (!td->io_ops) {
+		td->io_ops = load_ioengine(td, DEF_IO_ENGINE_NAME);
+		if (!td->io_ops) {
+			log_err("default engine %s not there?\n", DEF_IO_ENGINE_NAME);
+			return 1;
+		}
+	}
+
 	if (td->io_ops->flags & FIO_SYNCIO)
 		td->iodepth = 1;
 	else {
@@ -594,9 +605,6 @@ static int str_mem_cb(struct thread_data *td, char *mem)
 
 static int str_ioengine_cb(struct thread_data *td, char *str)
 {
-	if (!str)
-		str = DEF_IO_ENGINE_NAME;
-
 	td->io_ops = load_ioengine(td, str);
 	if (td->io_ops)
 		return 0;
