@@ -364,6 +364,8 @@ void close_files(struct thread_data *td)
 		struct fio_file *f = &td->files[i];
 
 		if (f->fd != -1) {
+			if (td->unlink && td->filetype == FIO_TYPE_FILE)
+				unlink(f->file_name);
 			close(f->fd);
 			f->fd = -1;
 		}

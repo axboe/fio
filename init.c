@@ -47,6 +47,7 @@
 #define DEF_RWMIX_READ		(50)
 #define DEF_NICE		(0)
 #define DEF_NR_FILES		(1)
+#define DEF_UNLINK		(0)
 
 static int def_timeout = DEF_TIMEOUT;
 
@@ -937,6 +938,11 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 				fgetpos(f, &off);
 				continue;
 			}
+			if (!check_strset(p, "unlink")) {
+				td->unlink = 1;
+				fgetpos(f, &off);
+				continue;
+			}
 			if (!check_strstore(p, "iolog", tmpbuf)) {
 				if (td->write_iolog) {
 					log_err("fio: read iolog overrides given write_iolog\n");
@@ -1042,6 +1048,7 @@ static int fill_def_thread(void)
 	def_thread.nice = DEF_NICE;
 	def_thread.rand_repeatable = DEF_RAND_REPEAT;
 	def_thread.nr_files = DEF_NR_FILES;
+	def_thread.unlink = DEF_UNLINK;
 #ifdef FIO_HAVE_DISK_UTIL
 	def_thread.do_disk_util = 1;
 #endif

@@ -189,6 +189,7 @@ struct thread_data {
 	unsigned char sync_io;
 	unsigned char verify;
 	unsigned char use_thread;
+	unsigned char unlink;
 	unsigned char do_disk_util;
 	unsigned char override_sync;
 	unsigned char rand_repeatable;
