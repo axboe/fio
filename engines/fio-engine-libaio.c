@@ -17,12 +17,13 @@ struct libaio_data {
 	struct io_event *aio_events;
 };
 
-static int fio_libaio_sync(struct thread_data *td, struct fio_file *f)
+static int fio_libaio_sync(struct thread_data fio_unused *td,
+			   struct fio_file *f)
 {
 	return fsync(f->fd);
 }
 
-static int fio_libaio_prep(struct thread_data *td, struct io_u *io_u)
+static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 

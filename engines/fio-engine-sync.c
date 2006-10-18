@@ -14,7 +14,8 @@ struct syncio_data {
 	struct io_u *last_io_u;
 };
 
-static int fio_syncio_sync(struct thread_data *td, struct fio_file *f)
+static int fio_syncio_sync(struct thread_data fio_unused *td,
+			   struct fio_file *f)
 {
 	return fsync(f->fd);
 }

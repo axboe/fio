@@ -67,7 +67,8 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 	return io_u->error;
 }
 
-static int fio_mmapio_sync(struct thread_data *td, struct fio_file *f)
+static int fio_mmapio_sync(struct thread_data fio_unused *td,
+			   struct fio_file *f)
 {
 	return msync(f->mmap, f->file_size, MS_SYNC);
 }

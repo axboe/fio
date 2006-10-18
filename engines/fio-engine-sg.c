@@ -112,8 +112,8 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 	return r;
 }
 
-static int fio_sgio_ioctl_doio(struct thread_data *td, struct fio_file *f,
-			       struct io_u *io_u)
+static int fio_sgio_ioctl_doio(struct thread_data *td,
+			       struct fio_file *f, struct io_u *io_u)
 {
 	struct sgio_data *sd = td->io_ops->data;
 	struct sg_io_hdr *hdr = &io_u->hdr;
@@ -123,8 +123,7 @@ static int fio_sgio_ioctl_doio(struct thread_data *td, struct fio_file *f,
 	return ioctl(f->fd, SG_IO, hdr);
 }
 
-static int fio_sgio_rw_doio(struct thread_data *td, struct fio_file *f,
-			    struct io_u *io_u, int sync)
+static int fio_sgio_rw_doio(struct fio_file *f, struct io_u *io_u, int sync)
 {
 	struct sg_io_hdr *hdr = &io_u->hdr;
 	int ret;
@@ -149,10 +148,10 @@ static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int sync)
 	if (td->filetype == FIO_TYPE_BD)
 		return fio_sgio_ioctl_doio(td, f, io_u);
 
-	return fio_sgio_rw_doio(td, f, io_u, sync);
+	return fio_sgio_rw_doio(f, io_u, sync);
 }
 
-static int fio_sgio_sync(struct thread_data *td, struct fio_file *f)
+static int fio_sgio_sync(struct thread_data *td, struct fio_file fio_unused *f)
 {
 	struct sgio_data *sd = td->io_ops->data;
 	struct sg_io_hdr *hdr;

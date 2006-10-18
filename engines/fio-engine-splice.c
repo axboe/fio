@@ -16,7 +16,8 @@ struct spliceio_data {
 	int pipe[2];
 };
 
-static int fio_spliceio_sync(struct thread_data *td, struct fio_file *f)
+static int fio_spliceio_sync(struct thread_data fio_unused *td,
+			     struct fio_file *f)
 {
 	return fsync(f->fd);
 }
