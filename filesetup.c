@@ -12,8 +12,20 @@ static int create_file(struct thread_data *td, struct fio_file *f)
 {
 	unsigned long long left;
 	unsigned int bs;
+	struct stat st;
 	char *b;
 	int r;
+
+	if (td->filetype != FIO_TYPE_FILE)
+		return 0;
+
+	if (stat(f->file_name, &st) == -1) {
+		if (!td->create_file) {
+			td_verror(td, ENOENT);
+			return 1;
+		}
+	} else if (st.st_size >= (off_t) f->file_size)
+		return 0;
 
 	f->fd = open(f->file_name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (f->fd < 0) {
@@ -95,6 +107,7 @@ static int create_files(struct thread_data *td)
 	for_each_file(td, f, i) {
 		f->file_size = td->total_file_size / td->nr_files;
 		err = create_file(td, f);
+		if (err)
 			break;
 
 		td->io_size += f->file_size;
@@ -267,25 +280,7 @@ static int setup_files_plain(struct thread_data *td)
 
 static int setup_file(struct thread_data *td, struct fio_file *f)
 {
-	struct stat st;
 	int flags = 0;
-
-	if (stat(f->file_name, &st) == -1) {
-		if (errno != ENOENT) {
-			td_verror(td, errno);
-			return 1;
-		}
-		if (!td->create_file) {
-			td_verror(td, ENOENT);
-			return 1;
-		}
-		if (create_file(td, f))
-			return 1;
-	} else if (td->filetype == FIO_TYPE_FILE &&
-		   st.st_size < (off_t) f->file_size) {
-		if (create_file(td, f))
-			return 1;
-	}
 
 	if (td->odirect)
 		flags |= OS_O_DIRECT;

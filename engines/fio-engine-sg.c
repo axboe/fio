@@ -326,5 +326,5 @@ struct ioengine_ops ioengine = {
 	.event		= fio_sgio_event,
 	.cleanup	= fio_sgio_cleanup,
 	.sync		= fio_sgio_sync,
-	.flags		= FIO_SYNCIO,
+	.flags		= FIO_SYNCIO | FIO_RAWIO,
 };

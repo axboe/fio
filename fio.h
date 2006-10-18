@@ -131,6 +131,7 @@ enum fio_ioengine_flags {
 	FIO_SYNCIO	= 1 << 0,
 	FIO_CPUIO	= 1 << 1,
 	FIO_MMAPIO	= 1 << 2,
+	FIO_RAWIO	= 1 << 3,
 };
 
 struct fio_file {
@@ -150,6 +151,8 @@ struct fio_file {
 
 	unsigned long *file_map;
 	unsigned int num_maps;
+
+	int fileno;
 };
 
 /*
@@ -504,6 +507,6 @@ extern void close_ioengine(struct thread_data *);
 #define fio_unused	__attribute((__unused__))
 
 #define for_each_file(td, f, i)	\
-	for ((i) = 0, (f) = &(td)->files[(i)]; (i) < (td)->nr_files; (i)++, (f) = &(td)->files[(i)])
+	for ((i) = 0, (f) = &(td)->files[0]; (i) < (td)->nr_files; (i)++, (f) = &(td)->files[(i)])
 
 #endif

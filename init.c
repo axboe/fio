@@ -163,6 +163,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 			td->filetype = FIO_TYPE_CHAR;
 	}
 
+	if (td->odirect)
+		td->io_ops->flags |= FIO_RAWIO;
+
 	if (td->filetype == FIO_TYPE_FILE) {
 		char tmp[PATH_MAX];
 		int len = 0;
@@ -176,6 +179,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		for_each_file(td, f, i) {
 			memset(f, 0, sizeof(*f));
 			f->fd = -1;
+			f->fileno = i;
 
 			sprintf(tmp + len, "%s.%d.%d", jobname, td->thread_number, i);
 			f->file_name = strdup(tmp);

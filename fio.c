@@ -219,8 +219,16 @@ static unsigned int get_next_buflen(struct thread_data *td)
 		buflen = (buflen + td->min_bs - 1) & ~(td->min_bs - 1);
 	}
 
-	if (buflen > td->io_size - td->this_io_bytes[td->ddir])
+	if (buflen > td->io_size - td->this_io_bytes[td->ddir]) {
+		/*
+		 * if using direct/raw io, we may not be able to
+		 * shrink the size. so just fail it.
+		 */
+		if (td->io_ops->flags & FIO_RAWIO)
+			return 0;
+
 		buflen = td->io_size - td->this_io_bytes[td->ddir];
+	}
 
 	return buflen;
 }
@@ -526,8 +534,14 @@ static struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 		return NULL;
 	}
 
-	if (io_u->buflen + io_u->offset > f->file_size)
+	if (io_u->buflen + io_u->offset > f->file_size) {
+		if (td->io_ops->flags & FIO_RAWIO) {
+			put_io_u(td, io_u);
+			return NULL;
+		}
+
 		io_u->buflen = f->file_size - io_u->offset;
+	}
 
 	if (!io_u->buflen) {
 		put_io_u(td, io_u);
@@ -577,11 +591,21 @@ static int get_next_verify(struct thread_data *td, struct io_u *io_u)
 
 static struct fio_file *get_next_file(struct thread_data *td)
 {
-	struct fio_file *f = &td->files[td->next_file];
+	int old_next_file = td->next_file;
+	struct fio_file *f;
 
-	td->next_file++;
-	if (td->next_file >= td->nr_files)
-		td->next_file = 0;
+	do {
+		f = &td->files[td->next_file];
+
+		td->next_file++;
+		if (td->next_file >= td->nr_files)
+			td->next_file = 0;
+
+		if (f->fd != -1)
+			break;
+
+		f = NULL;
+	} while (td->next_file != old_next_file);
 
 	return f;
 }
