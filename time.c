@@ -3,6 +3,8 @@
 
 #include "fio.h"
 
+static struct timeval genesis;
+
 unsigned long utime_since(struct timeval *s, struct timeval *e)
 {
 	double sec, usec;
@@ -119,4 +121,14 @@ void rate_throttle(struct thread_data *td, unsigned long time_spent,
 
 		td->rate_pending_usleep -= overtime;
 	}
+}
+
+unsigned long mtime_since_genesis(void)
+{
+	return mtime_since_now(&genesis);
+}
+
+void time_init(void)
+{
+	gettimeofday(&genesis, NULL);
 }

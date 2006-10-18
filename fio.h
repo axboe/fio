@@ -427,10 +427,12 @@ extern int setup_rate(struct thread_data *);
 /*
  * Time functions
  */
+extern void time_init(void);
 extern unsigned long utime_since(struct timeval *, struct timeval *);
 extern unsigned long mtime_since(struct timeval *, struct timeval *);
 extern unsigned long mtime_since_now(struct timeval *);
 extern unsigned long time_since_now(struct timeval *);
+extern unsigned long mtime_since_genesis(void);
 extern void __usec_sleep(unsigned int);
 extern void usec_sleep(struct thread_data *, unsigned long);
 extern void rate_throttle(struct thread_data *, unsigned long, unsigned int);
@@ -446,6 +448,29 @@ extern int init_random_state(struct thread_data *);
  */
 extern void close_files(struct thread_data *);
 extern int setup_files(struct thread_data *);
+
+/*
+ * ETA/status stuff
+ */
+extern void print_thread_status(void);
+extern void print_status_init(int);
+
+/*
+ * Thread life cycle. Once a thread has a runstate beyond TD_INITIALIZED, it
+ * will never back again. It may cycle between running/verififying/fsyncing.
+ * Once the thread reaches TD_EXITED, it is just waiting for the core to
+ * reap it.
+ */
+enum {
+	TD_NOT_CREATED = 0,
+	TD_CREATED,
+	TD_INITIALIZED,
+	TD_RUNNING,
+	TD_VERIFYING,
+	TD_FSYNCING,
+	TD_EXITED,
+	TD_REAPED,
+};
 
 /*
  * This is a pretty crappy semaphore implementation, but with the use that fio
