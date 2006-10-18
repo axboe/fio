@@ -46,6 +46,7 @@
 #define DEF_RWMIX_CYCLE		(500)
 #define DEF_RWMIX_READ		(50)
 #define DEF_NICE		(0)
+#define DEF_NR_FILES		(1)
 
 static int def_timeout = DEF_TIMEOUT;
 
@@ -82,7 +83,6 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 	*td = *parent;
 	td->name[0] = '\0';
 
-	td->fd = -1;
 	td->thread_number = thread_number;
 	return td;
 }
@@ -103,7 +103,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	char *ddir_str[] = { "read", "write", "randread", "randwrite",
 			     "rw", NULL, "randrw" };
 	struct stat sb;
-	int numjobs, ddir;
+	int numjobs, ddir, i;
+	struct fio_file *f;
 
 #ifndef FIO_HAVE_LIBAIO
 	if (td->io_engine == FIO_LIBAIO) {
@@ -143,9 +144,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	}
 
 	/*
-	 * only really works for sequential io for now
+	 * only really works for sequential io for now, and with 1 file
 	 */
-	if (td->zone_size && !td->sequential)
+	if (td->zone_size && !td->sequential && td->nr_files == 1)
 		td->zone_size = 0;
 
 	/*
@@ -164,15 +165,36 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	if (td->filetype == FIO_TYPE_FILE) {
 		char tmp[PATH_MAX];
+		int len = 0;
+		int i;
 
 		if (td->directory && td->directory[0] != '\0')
-			sprintf(tmp, "%s/%s.%d", td->directory, jobname, td->thread_number);
-		else
-			sprintf(tmp, "%s.%d", jobname, td->thread_number);
-		td->file_name = strdup(tmp);
-	} else
-		td->file_name = strdup(jobname);
+			sprintf(tmp, "%s/", td->directory);
 
+		td->files = malloc(sizeof(struct fio_file) * td->nr_files);
+
+		for_each_file(td, f, i) {
+			memset(f, 0, sizeof(*f));
+			f->fd = -1;
+
+			sprintf(tmp + len, "%s.%d.%d", jobname, td->thread_number, i);
+			f->file_name = strdup(tmp);
+		}
+	} else {
+		td->nr_files = 1;
+		td->files = malloc(sizeof(struct fio_file));
+		f = &td->files[0];
+
+		memset(f, 0, sizeof(*f));
+		f->fd = -1;
+		f->file_name = strdup(jobname);
+	}
+
+	for_each_file(td, f, i) {
+		f->file_size = td->total_file_size / td->nr_files;
+		f->file_offset = td->start_offset;
+	}
+		
 	fio_sem_init(&td->mutex, 0);
 
 	td->clat_stat[0].min_val = td->clat_stat[1].min_val = ULONG_MAX;
@@ -247,7 +269,7 @@ err:
 int init_random_state(struct thread_data *td)
 {
 	unsigned long seeds[4];
-	int fd, num_maps, blocks;
+	int fd, num_maps, blocks, i;
 
 	fd = open("/dev/urandom", O_RDONLY);
 	if (fd == -1) {
@@ -273,11 +295,15 @@ int init_random_state(struct thread_data *td)
 	if (td->rand_repeatable)
 		seeds[3] = DEF_RANDSEED;
 
-	blocks = (td->io_size + td->min_bs - 1) / td->min_bs;
-	num_maps = blocks / BLOCKS_PER_MAP;
-	td->file_map = malloc(num_maps * sizeof(long));
-	td->num_maps = num_maps;
-	memset(td->file_map, 0, num_maps * sizeof(long));
+	for (i = 0; i < td->nr_files; i++) {
+		struct fio_file *f = &td->files[i];
+
+		blocks = (f->file_size + td->min_bs - 1) / td->min_bs;
+		num_maps = blocks / BLOCKS_PER_MAP;
+		f->file_map = malloc(num_maps * sizeof(long));
+		f->num_maps = num_maps;
+		memset(f->file_map, 0, num_maps * sizeof(long));
+	}
 
 	os_random_seed(seeds[3], &td->random_state);
 	return 0;
@@ -821,6 +847,10 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 				fgetpos(f, &off);
 				continue;
 			}
+			if (!check_int(p, "nrfiles", &td->nr_files)) {
+				fgetpos(f, &off);
+				continue;
+			}
 			if (!check_range_bytes(p, "bsrange", &ul1, &ul2)) {
 				if (ul1 > ul2) {
 					td->max_bs = ul1;
@@ -837,11 +867,11 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_str_bytes(p, "size", &td->file_size)) {
+			if (!check_str_bytes(p, "size", &td->total_file_size)) {
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_str_bytes(p, "offset", &td->file_offset)) {
+			if (!check_str_bytes(p, "offset", &td->start_offset)) {
 				fgetpos(f, &off);
 				continue;
 			}
@@ -1007,6 +1037,7 @@ static int fill_def_thread(void)
 	def_thread.rwmixread = DEF_RWMIX_READ;
 	def_thread.nice = DEF_NICE;
 	def_thread.rand_repeatable = DEF_RAND_REPEAT;
+	def_thread.nr_files = DEF_NR_FILES;
 #ifdef FIO_HAVE_DISK_UTIL
 	def_thread.do_disk_util = 1;
 #endif

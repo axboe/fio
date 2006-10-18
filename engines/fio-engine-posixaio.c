@@ -45,14 +45,15 @@ static unsigned long long ts_utime_since_now(struct timespec *t)
 	return sec + nsec;
 }
 
-static int fio_posixaio_sync(struct thread_data *td)
+static int fio_posixaio_sync(struct thread_data *td, struct fio_file *f)
 {
-	return fsync(td->fd);
+	return fsync(f->fd);
 }
 
 static int fio_posixaio_cancel(struct thread_data *td, struct io_u *io_u)
 {
-	int r = aio_cancel(td->fd, &io_u->aiocb);
+	struct fio_file *f = io_u->file;
+	int r = aio_cancel(f->fd, &io_u->aiocb);
 
 	if (r == 1 || r == AIO_CANCELED)
 		return 0;
@@ -63,8 +64,9 @@ static int fio_posixaio_cancel(struct thread_data *td, struct io_u *io_u)
 static int fio_posixaio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct aiocb *aiocb = &io_u->aiocb;
+	struct fio_file *f = io_u->file;
 
-	aiocb->aio_fildes = td->fd;
+	aiocb->aio_fildes = f->fd;
 	aiocb->aio_buf = io_u->buf;
 	aiocb->aio_nbytes = io_u->buflen;
 	aiocb->aio_offset = io_u->offset;

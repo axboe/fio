@@ -14,9 +14,9 @@ struct syncio_data {
 	struct io_u *last_io_u;
 };
 
-static int fio_syncio_sync(struct thread_data *td)
+static int fio_syncio_sync(struct thread_data *td, struct fio_file *f)
 {
-	return fsync(td->fd);
+	return fsync(f->fd);
 }
 
 static int fio_syncio_getevents(struct thread_data *td, int fio_unused min,
@@ -45,7 +45,9 @@ static struct io_u *fio_syncio_event(struct thread_data *td, int event)
 
 static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 {
-	if (lseek(td->fd, io_u->offset, SEEK_SET) == -1) {
+	struct fio_file *f = io_u->file;
+
+	if (lseek(f->fd, io_u->offset, SEEK_SET) == -1) {
 		td_verror(td, errno);
 		return 1;
 	}
@@ -56,12 +58,13 @@ static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct syncio_data *sd = td->io_ops->data;
+	struct fio_file *f = io_u->file;
 	int ret;
 
 	if (io_u->ddir == DDIR_READ)
-		ret = read(td->fd, io_u->buf, io_u->buflen);
+		ret = read(f->fd, io_u->buf, io_u->buflen);
 	else
-		ret = write(td->fd, io_u->buf, io_u->buflen);
+		ret = write(f->fd, io_u->buf, io_u->buflen);
 
 	if ((unsigned int) ret != io_u->buflen) {
 		if (ret > 0) {

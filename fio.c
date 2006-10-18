@@ -44,7 +44,7 @@ int thread_number = 0;
 static char run_str[MAX_JOBS + 1];
 int shm_id = 0;
 static struct timeval genesis;
-static int temp_stall_ts;
+int temp_stall_ts;
 char *fio_inst_prefix = _INST_PREFIX;
 
 static void print_thread_status(void);
@@ -109,26 +109,28 @@ static void sig_handler(int sig)
  * The ->file_map[] contains a map of blocks we have or have not done io
  * to yet. Used to make sure we cover the entire range in a fair fashion.
  */
-static int random_map_free(struct thread_data *td, unsigned long long block)
+static int random_map_free(struct thread_data *td, struct fio_file *f,
+			   unsigned long long block)
 {
-	unsigned int idx = RAND_MAP_IDX(td, block);
-	unsigned int bit = RAND_MAP_BIT(td, block);
+	unsigned int idx = RAND_MAP_IDX(td, f, block);
+	unsigned int bit = RAND_MAP_BIT(td, f, block);
 
-	return (td->file_map[idx] & (1UL << bit)) == 0;
+	return (f->file_map[idx] & (1UL << bit)) == 0;
 }
 
 /*
  * Return the next free block in the map.
  */
-static int get_next_free_block(struct thread_data *td, unsigned long long *b)
+static int get_next_free_block(struct thread_data *td, struct fio_file *f,
+			       unsigned long long *b)
 {
 	int i;
 
 	*b = 0;
 	i = 0;
-	while ((*b) * td->min_bs < td->io_size) {
-		if (td->file_map[i] != -1UL) {
-			*b += ffz(td->file_map[i]);
+	while ((*b) * td->min_bs < f->file_size) {
+		if (f->file_map[i] != -1UL) {
+			*b += ffz(f->file_map[i]);
 			return 0;
 		}
 
@@ -142,7 +144,8 @@ static int get_next_free_block(struct thread_data *td, unsigned long long *b)
 /*
  * Mark a given offset as used in the map.
  */
-static void mark_random_map(struct thread_data *td, struct io_u *io_u)
+static void mark_random_map(struct thread_data *td, struct fio_file *f,
+			    struct io_u *io_u)
 {
 	unsigned long long block = io_u->offset / (unsigned long long) td->min_bs;
 	unsigned int blocks = 0;
@@ -150,15 +153,15 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 	while (blocks < (io_u->buflen / td->min_bs)) {
 		unsigned int idx, bit;
 
-		if (!random_map_free(td, block))
+		if (!random_map_free(td, f, block))
 			break;
 
-		idx = RAND_MAP_IDX(td, block);
-		bit = RAND_MAP_BIT(td, block);
+		idx = RAND_MAP_IDX(td, f, block);
+		bit = RAND_MAP_BIT(td, f, block);
 
-		assert(idx < td->num_maps);
+		assert(idx < f->num_maps);
 
-		td->file_map[idx] |= (1UL << bit);
+		f->file_map[idx] |= (1UL << bit);
 		block++;
 		blocks++;
 	}
@@ -172,7 +175,8 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
  * until we find a free one. For sequential io, just return the end of
  * the last io issued.
  */
-static int get_next_offset(struct thread_data *td, unsigned long long *offset)
+static int get_next_offset(struct thread_data *td, struct fio_file *f,
+			   unsigned long long *offset)
 {
 	unsigned long long b, rb;
 	long r;
@@ -184,19 +188,19 @@ static int get_next_offset(struct thread_data *td, unsigned long long *offset)
 		do {
 			r = os_random_long(&td->random_state);
 			b = ((max_blocks - 1) * r / (unsigned long long) (RAND_MAX+1.0));
-			rb = b + (td->file_offset / td->min_bs);
+			rb = b + (f->file_offset / td->min_bs);
 			loops--;
-		} while (!random_map_free(td, rb) && loops);
+		} while (!random_map_free(td, f, rb) && loops);
 
 		if (!loops) {
-			if (get_next_free_block(td, &b))
+			if (get_next_free_block(td, f, &b))
 				return 1;
 		}
 	} else
-		b = td->last_pos / td->min_bs;
+		b = f->last_pos / td->min_bs;
 
-	*offset = (b * td->min_bs) + td->file_offset;
-	if (*offset > td->real_file_size)
+	*offset = (b * td->min_bs) + f->file_offset;
+	if (*offset > f->file_size)
 		return 1;
 
 	return 0;
@@ -443,12 +447,14 @@ static int td_io_prep(struct thread_data *td, struct io_u *io_u)
 
 void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
+	io_u->file = NULL;
 	list_del(&io_u->list);
 	list_add(&io_u->list, &td->io_u_freelist);
 	td->cur_depth--;
 }
 
-static int fill_io_u(struct thread_data *td, struct io_u *io_u)
+static int fill_io_u(struct thread_data *td, struct fio_file *f,
+		     struct io_u *io_u)
 {
 	/*
 	 * If using an iolog, grab next piece if any available.
@@ -459,7 +465,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * No log, let the seq/rand engine retrieve the next position.
 	 */
-	if (!get_next_offset(td, &io_u->offset)) {
+	if (!get_next_offset(td, f, &io_u->offset)) {
 		io_u->buflen = get_next_buflen(td);
 
 		if (io_u->buflen) {
@@ -471,6 +477,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 			if (td->write_iolog)
 				write_iolog_put(td, io_u);
 
+			io_u->file = f;
 			return 0;
 		}
 	}
@@ -501,7 +508,7 @@ struct io_u *__get_io_u(struct thread_data *td)
  * Return an io_u to be processed. Gets a buflen and offset, sets direction,
  * etc. The returned io_u is fully ready to be prepped and submitted.
  */
-static struct io_u *get_io_u(struct thread_data *td)
+static struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 {
 	struct io_u *io_u;
 
@@ -511,16 +518,16 @@ static struct io_u *get_io_u(struct thread_data *td)
 
 	if (td->zone_bytes >= td->zone_size) {
 		td->zone_bytes = 0;
-		td->last_pos += td->zone_skip;
+		f->last_pos += td->zone_skip;
 	}
 
-	if (fill_io_u(td, io_u)) {
+	if (fill_io_u(td, f, io_u)) {
 		put_io_u(td, io_u);
 		return NULL;
 	}
 
-	if (io_u->buflen + io_u->offset > td->real_file_size)
-		io_u->buflen = td->real_file_size - io_u->offset;
+	if (io_u->buflen + io_u->offset > f->file_size)
+		io_u->buflen = f->file_size - io_u->offset;
 
 	if (!io_u->buflen) {
 		put_io_u(td, io_u);
@@ -528,9 +535,9 @@ static struct io_u *get_io_u(struct thread_data *td)
 	}
 
 	if (!td->read_iolog && !td->sequential)
-		mark_random_map(td, io_u);
+		mark_random_map(td, f, io_u);
 
-	td->last_pos += io_u->buflen;
+	f->last_pos += io_u->buflen;
 
 	if (td->verify != VERIFY_NONE)
 		populate_io_u(td, io_u);
@@ -568,10 +575,21 @@ static int get_next_verify(struct thread_data *td, struct io_u *io_u)
 	return 1;
 }
 
-static int sync_td(struct thread_data *td)
+static struct fio_file *get_next_file(struct thread_data *td)
+{
+	struct fio_file *f = &td->files[td->next_file];
+
+	td->next_file++;
+	if (td->next_file >= td->nr_files)
+		td->next_file = 0;
+
+	return f;
+}
+
+static int td_io_sync(struct thread_data *td, struct fio_file *f)
 {
 	if (td->io_ops->sync)
-		return td->io_ops->sync(td);
+		return td->io_ops->sync(td, f);
 
 	return 0;
 }
@@ -703,6 +721,7 @@ static void do_verify(struct thread_data *td)
 	struct timeval t;
 	struct io_u *io_u, *v_io_u = NULL;
 	struct io_completion_data icd;
+	struct fio_file *f;
 	int ret;
 
 	td_set_runstate(td, TD_VERIFYING);
@@ -723,6 +742,12 @@ static void do_verify(struct thread_data *td)
 			put_io_u(td, io_u);
 			break;
 		}
+
+		f = get_next_file(td);
+		if (!f)
+			break;
+
+		io_u->file = f;
 
 		if (td_io_prep(td, io_u)) {
 			put_io_u(td, io_u);
@@ -812,6 +837,8 @@ static void do_io(struct thread_data *td)
 	struct io_completion_data icd;
 	struct timeval s, e;
 	unsigned long usec;
+	struct fio_file *f;
+	int i;
 
 	td_set_runstate(td, TD_RUNNING);
 
@@ -824,7 +851,11 @@ static void do_io(struct thread_data *td)
 		if (td->terminate)
 			break;
 
-		io_u = get_io_u(td);
+		f = get_next_file(td);
+		if (!f)
+			break;
+
+		io_u = get_io_u(td, f);
 		if (!io_u)
 			break;
 
@@ -884,7 +915,7 @@ static void do_io(struct thread_data *td)
 
 		if (should_fsync(td) && td->fsync_blocks &&
 		    (td->io_blocks[DDIR_WRITE] % td->fsync_blocks) == 0)
-			sync_td(td);
+			td_io_sync(td, f);
 	}
 
 	if (td->cur_depth)
@@ -892,7 +923,8 @@ static void do_io(struct thread_data *td)
 
 	if (should_fsync(td) && td->end_fsync) {
 		td_set_runstate(td, TD_FSYNCING);
-		sync_td(td);
+		for_each_file(td, f, i)
+			td_io_sync(td, f);
 	}
 }
 
@@ -988,287 +1020,6 @@ static int init_io_u(struct thread_data *td)
 	return 0;
 }
 
-static int create_file(struct thread_data *td, unsigned long long size)
-{
-	unsigned long long left;
-	unsigned int bs;
-	char *b;
-	int r;
-
-	/*
-	 * unless specifically asked for overwrite, let normal io extend it
-	 */
-	if (!td->overwrite) {
-		td->real_file_size = size;
-		return 0;
-	}
-
-	if (!size) {
-		log_err("Need size for create\n");
-		td_verror(td, EINVAL);
-		return 1;
-	}
-
-	temp_stall_ts = 1;
-	fprintf(f_out, "%s: Laying out IO file (%LuMiB)\n",td->name,size >> 20);
-
-	td->fd = open(td->file_name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (td->fd < 0) {
-		td_verror(td, errno);
-		goto done_noclose;
-	}
-
-	if (ftruncate(td->fd, td->file_size) == -1) {
-		td_verror(td, errno);
-		goto done;
-	}
-
-	td->io_size = td->file_size;
-	b = malloc(td->max_bs);
-	memset(b, 0, td->max_bs);
-
-	left = size;
-	while (left && !td->terminate) {
-		bs = td->max_bs;
-		if (bs > left)
-			bs = left;
-
-		r = write(td->fd, b, bs);
-
-		if (r == (int) bs) {
-			left -= bs;
-			continue;
-		} else {
-			if (r < 0)
-				td_verror(td, errno);
-			else
-				td_verror(td, EIO);
-
-			break;
-		}
-	}
-
-	if (td->terminate)
-		unlink(td->file_name);
-	else if (td->create_fsync)
-		fsync(td->fd);
-
-	free(b);
-done:
-	close(td->fd);
-	td->fd = -1;
-done_noclose:
-	temp_stall_ts = 0;
-	return 0;
-}
-
-static int file_size(struct thread_data *td)
-{
-	struct stat st;
-
-	if (td->overwrite) {
-		if (fstat(td->fd, &st) == -1) {
-			td_verror(td, errno);
-			return 1;
-		}
-
-		td->real_file_size = st.st_size;
-
-		if (!td->file_size || td->file_size > td->real_file_size)
-			td->file_size = td->real_file_size;
-	}
-
-	td->file_size -= td->file_offset;
-	return 0;
-}
-
-static int bdev_size(struct thread_data *td)
-{
-	unsigned long long bytes;
-	int r;
-
-	r = blockdev_size(td->fd, &bytes);
-	if (r) {
-		td_verror(td, r);
-		return 1;
-	}
-
-	td->real_file_size = bytes;
-
-	/*
-	 * no extend possibilities, so limit size to device size if too large
-	 */
-	if (!td->file_size || td->file_size > td->real_file_size)
-		td->file_size = td->real_file_size;
-
-	td->file_size -= td->file_offset;
-	return 0;
-}
-
-static int get_file_size(struct thread_data *td)
-{
-	int ret = 0;
-
-	if (td->filetype == FIO_TYPE_FILE)
-		ret = file_size(td);
-	else if (td->filetype == FIO_TYPE_BD)
-		ret = bdev_size(td);
-	else
-		td->real_file_size = -1;
-
-	if (ret)
-		return ret;
-
-	if (td->file_offset > td->real_file_size) {
-		log_err("%s: offset extends end (%Lu > %Lu)\n", td->name, td->file_offset, td->real_file_size);
-		return 1;
-	}
-
-	td->io_size = td->file_size;
-	if (td->io_size == 0) {
-		log_err("%s: no io blocks\n", td->name);
-		td_verror(td, EINVAL);
-		return 1;
-	}
-
-	if (!td->zone_size)
-		td->zone_size = td->io_size;
-
-	td->total_io_size = td->io_size * td->loops;
-	return 0;
-}
-
-static int setup_file_mmap(struct thread_data *td)
-{
-	int flags;
-
-	if (td_rw(td))
-		flags = PROT_READ | PROT_WRITE;
-	else if (td_write(td)) {
-		flags = PROT_WRITE;
-
-		if (td->verify != VERIFY_NONE)
-			flags |= PROT_READ;
-	} else
-		flags = PROT_READ;
-
-	td->mmap = mmap(NULL, td->file_size, flags, MAP_SHARED, td->fd, td->file_offset);
-	if (td->mmap == MAP_FAILED) {
-		td->mmap = NULL;
-		td_verror(td, errno);
-		return 1;
-	}
-
-	if (td->invalidate_cache) {
-		if (madvise(td->mmap, td->file_size, MADV_DONTNEED) < 0) {
-			td_verror(td, errno);
-			return 1;
-		}
-	}
-
-	if (td->sequential) {
-		if (madvise(td->mmap, td->file_size, MADV_SEQUENTIAL) < 0) {
-			td_verror(td, errno);
-			return 1;
-		}
-	} else {
-		if (madvise(td->mmap, td->file_size, MADV_RANDOM) < 0) {
-			td_verror(td, errno);
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-static int setup_file_plain(struct thread_data *td)
-{
-	if (td->invalidate_cache) {
-		if (fadvise(td->fd, td->file_offset, td->file_size, POSIX_FADV_DONTNEED) < 0) {
-			td_verror(td, errno);
-			return 1;
-		}
-	}
-
-	if (td->sequential) {
-		if (fadvise(td->fd, td->file_offset, td->file_size, POSIX_FADV_SEQUENTIAL) < 0) {
-			td_verror(td, errno);
-			return 1;
-		}
-	} else {
-		if (fadvise(td->fd, td->file_offset, td->file_size, POSIX_FADV_RANDOM) < 0) {
-			td_verror(td, errno);
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-static int setup_file(struct thread_data *td)
-{
-	struct stat st;
-	int flags = 0;
-
-	if (td->io_ops->setup)
-		return td->io_ops->setup(td);
-
-	if (stat(td->file_name, &st) == -1) {
-		if (errno != ENOENT) {
-			td_verror(td, errno);
-			return 1;
-		}
-		if (!td->create_file) {
-			td_verror(td, ENOENT);
-			return 1;
-		}
-		if (create_file(td, td->file_size))
-			return 1;
-	} else if (td->filetype == FIO_TYPE_FILE &&
-		   st.st_size < (off_t) td->file_size) {
-		if (create_file(td, td->file_size))
-			return 1;
-	}
-
-	if (td->odirect)
-		flags |= OS_O_DIRECT;
-
-	if (td_write(td) || td_rw(td)) {
-		if (td->filetype == FIO_TYPE_FILE) {
-			if (!td->overwrite)
-				flags |= O_TRUNC;
-
-			flags |= O_CREAT;
-		}
-		if (td->sync_io)
-			flags |= O_SYNC;
-
-		flags |= O_RDWR;
-
-		td->fd = open(td->file_name, flags, 0600);
-	} else {
-		if (td->filetype == FIO_TYPE_CHAR)
-			flags |= O_RDWR;
-		else
-			flags |= O_RDONLY;
-
-		td->fd = open(td->file_name, flags);
-	}
-
-	if (td->fd == -1) {
-		td_verror(td, errno);
-		return 1;
-	}
-
-	if (get_file_size(td))
-		return 1;
-
-	if (td->io_ops->flags & FIO_MMAPIO)
-		return setup_file_mmap(td);
-	else
-		return setup_file_plain(td);
-}
-
 static int switch_ioscheduler(struct thread_data *td)
 {
 	char tmp[256], tmp2[128];
@@ -1319,16 +1070,21 @@ static int switch_ioscheduler(struct thread_data *td)
 
 static void clear_io_state(struct thread_data *td)
 {
-	if (td->io_ops->flags & FIO_SYNCIO)
-		lseek(td->fd, SEEK_SET, 0);
+	struct fio_file *f;
+	int i;
 
-	td->last_pos = 0;
 	td->stat_io_bytes[0] = td->stat_io_bytes[1] = 0;
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
 	td->zone_bytes = 0;
 
-	if (td->file_map)
-		memset(td->file_map, 0, td->num_maps * sizeof(long));
+	for_each_file(td, f, i) {
+		f->last_pos = 0;
+		if (td->io_ops->flags & FIO_SYNCIO)
+			lseek(f->fd, SEEK_SET, 0);
+
+		if (f->file_map)
+			memset(f->file_map, 0, f->num_maps * sizeof(long));
+	}
 }
 
 /*
@@ -1385,7 +1141,7 @@ static void *thread_main(void *data)
 	fio_sem_up(&startup_sem);
 	fio_sem_down(&td->mutex);
 
-	if (!td->create_serialize && setup_file(td))
+	if (!td->create_serialize && setup_files(td))
 		goto err;
 
 	gettimeofday(&td->epoch, NULL);
@@ -1447,12 +1203,7 @@ static void *thread_main(void *data)
 		terminate_threads(td->groupid);
 
 err:
-	if (td->fd != -1) {
-		close(td->fd);
-		td->fd = -1;
-	}
-	if (td->mmap)
-		munmap(td->mmap, td->file_size);
+	close_files(td);
 	close_ioengine(td);
 	cleanup_io_u(td);
 	td_set_runstate(td, TD_EXITED);
@@ -1826,7 +1577,7 @@ static void run_threads(void)
 		 * we don't want X number of threads getting their
 		 * client data interspersed on disk
 		 */
-		if (setup_file(td)) {
+		if (setup_files(td)) {
 			td_set_runstate(td, TD_REAPED);
 			todo--;
 		}

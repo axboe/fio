@@ -42,21 +42,22 @@ static struct io_u *fio_mmapio_event(struct thread_data *td, int event)
 
 static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 {
-	unsigned long long real_off = io_u->offset - td->file_offset;
+	struct fio_file *f = io_u->file;
+	unsigned long long real_off = io_u->offset - f->file_offset;
 	struct mmapio_data *sd = td->io_ops->data;
 
 	if (io_u->ddir == DDIR_READ)
-		memcpy(io_u->buf, td->mmap + real_off, io_u->buflen);
+		memcpy(io_u->buf, f->mmap + real_off, io_u->buflen);
 	else
-		memcpy(td->mmap + real_off, io_u->buf, io_u->buflen);
+		memcpy(f->mmap + real_off, io_u->buf, io_u->buflen);
 
 	/*
 	 * not really direct, but should drop the pages from the cache
 	 */
 	if (td->odirect) {
-		if (msync(td->mmap + real_off, io_u->buflen, MS_SYNC) < 0)
+		if (msync(f->mmap + real_off, io_u->buflen, MS_SYNC) < 0)
 			io_u->error = errno;
-		if (madvise(td->mmap + real_off, io_u->buflen,  MADV_DONTNEED) < 0)
+		if (madvise(f->mmap + real_off, io_u->buflen,  MADV_DONTNEED) < 0)
 			io_u->error = errno;
 	}
 
@@ -66,9 +67,9 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 	return io_u->error;
 }
 
-static int fio_mmapio_sync(struct thread_data *td)
+static int fio_mmapio_sync(struct thread_data *td, struct fio_file *f)
 {
-	return msync(td->mmap, td->file_size, MS_SYNC);
+	return msync(f->mmap, f->file_size, MS_SYNC);
 }
 
 static void fio_mmapio_cleanup(struct thread_data *td)

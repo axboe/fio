@@ -61,8 +61,9 @@ static int fio_sgio_ioctl_getevents(struct thread_data *td, int fio_unused min,
 static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 			      struct timespec fio_unused *t)
 {
+	struct fio_file *f = &td->files[0];
 	struct sgio_data *sd = td->io_ops->data;
-	struct pollfd pfd = { .fd = td->fd, .events = POLLIN };
+	struct pollfd pfd = { .fd = f->fd, .events = POLLIN };
 	void *buf = malloc(max * sizeof(struct sg_io_hdr));
 	int left = max, ret, events, i, r = 0, fl = 0;
 
@@ -70,8 +71,8 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 	 * don't block for !events
 	 */
 	if (!min) {
-		fl = fcntl(td->fd, F_GETFL);
-		fcntl(td->fd, F_SETFL, fl | O_NONBLOCK);
+		fl = fcntl(f->fd, F_GETFL);
+		fcntl(f->fd, F_SETFL, fl | O_NONBLOCK);
 	}
 
 	while (left) {
@@ -83,7 +84,7 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 				break;
 		} while (1);
 
-		ret = read(td->fd, buf, left * sizeof(struct sg_io_hdr));
+		ret = read(f->fd, buf, left * sizeof(struct sg_io_hdr));
 		if (ret < 0) {
 			if (errno == EAGAIN)
 				break;
@@ -105,33 +106,35 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 	}
 
 	if (!min)
-		fcntl(td->fd, F_SETFL, fl);
+		fcntl(f->fd, F_SETFL, fl);
 
 	free(buf);
 	return r;
 }
 
-static int fio_sgio_ioctl_doio(struct thread_data *td, struct io_u *io_u)
+static int fio_sgio_ioctl_doio(struct thread_data *td, struct fio_file *f,
+			       struct io_u *io_u)
 {
 	struct sgio_data *sd = td->io_ops->data;
 	struct sg_io_hdr *hdr = &io_u->hdr;
 
 	sd->events[0] = io_u;
 
-	return ioctl(td->fd, SG_IO, hdr);
+	return ioctl(f->fd, SG_IO, hdr);
 }
 
-static int fio_sgio_rw_doio(struct thread_data *td, struct io_u *io_u, int sync)
+static int fio_sgio_rw_doio(struct thread_data *td, struct fio_file *f,
+			    struct io_u *io_u, int sync)
 {
 	struct sg_io_hdr *hdr = &io_u->hdr;
 	int ret;
 
-	ret = write(td->fd, hdr, sizeof(*hdr));
+	ret = write(f->fd, hdr, sizeof(*hdr));
 	if (ret < 0)
 		return errno;
 
 	if (sync) {
-		ret = read(td->fd, hdr, sizeof(*hdr));
+		ret = read(f->fd, hdr, sizeof(*hdr));
 		if (ret < 0)
 			return errno;
 	}
@@ -141,13 +144,15 @@ static int fio_sgio_rw_doio(struct thread_data *td, struct io_u *io_u, int sync)
 
 static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int sync)
 {
-	if (td->filetype == FIO_TYPE_BD)
-		return fio_sgio_ioctl_doio(td, io_u);
+	struct fio_file *f = io_u->file;
 
-	return fio_sgio_rw_doio(td, io_u, sync);
+	if (td->filetype == FIO_TYPE_BD)
+		return fio_sgio_ioctl_doio(td, f, io_u);
+
+	return fio_sgio_rw_doio(td, f, io_u, sync);
 }
 
-static int fio_sgio_sync(struct thread_data *td)
+static int fio_sgio_sync(struct thread_data *td, struct fio_file *f)
 {
 	struct sgio_data *sd = td->io_ops->data;
 	struct sg_io_hdr *hdr;
@@ -266,6 +271,7 @@ static void fio_sgio_cleanup(struct thread_data *td)
 
 static int fio_sgio_init(struct thread_data *td)
 {
+	struct fio_file *f = &td->files[0];
 	struct sgio_data *sd;
 	unsigned int bs;
 	int ret;
@@ -276,14 +282,14 @@ static int fio_sgio_init(struct thread_data *td)
 	td->io_ops->data = sd;
 
 	if (td->filetype == FIO_TYPE_BD) {
-		if (ioctl(td->fd, BLKSSZGET, &bs) < 0) {
+		if (ioctl(f->fd, BLKSSZGET, &bs) < 0) {
 			td_verror(td, errno);
 			return 1;
 		}
 	} else if (td->filetype == FIO_TYPE_CHAR) {
 		int version;
 
-		if (ioctl(td->fd, SG_GET_VERSION_NUM, &version) < 0) {
+		if (ioctl(f->fd, SG_GET_VERSION_NUM, &version) < 0) {
 			td_verror(td, errno);
 			return 1;
 		}

@@ -88,6 +88,8 @@ The job file parameters are:
 			usb-storage or sata/libata driven) devices.
 	iodepth=x	For async io, allow 'x' ios in flight
 	overwrite=x	If 'x', layout a write file first.
+	nrfiles=x	Spread io load over 'x' number of files per job,
+			if possible.
 	prio=x		Run io at prio X, 0-7 is the kernel allowed range
 	prioclass=x	Run io at prio class X
 	bs=x		Use 'x' for thread blocksize. May include k/m postfix.

@@ -17,17 +17,19 @@ struct libaio_data {
 	struct io_event *aio_events;
 };
 
-static int fio_libaio_sync(struct thread_data *td)
+static int fio_libaio_sync(struct thread_data *td, struct fio_file *f)
 {
-	return fsync(td->fd);
+	return fsync(f->fd);
 }
 
 static int fio_libaio_prep(struct thread_data *td, struct io_u *io_u)
 {
+	struct fio_file *f = io_u->file;
+
 	if (io_u->ddir == DDIR_READ)
-		io_prep_pread(&io_u->iocb, td->fd, io_u->buf, io_u->buflen, io_u->offset);
+		io_prep_pread(&io_u->iocb, f->fd, io_u->buf, io_u->buflen, io_u->offset);
 	else
-		io_prep_pwrite(&io_u->iocb, td->fd, io_u->buf, io_u->buflen, io_u->offset);
+		io_prep_pwrite(&io_u->iocb, f->fd, io_u->buf, io_u->buflen, io_u->offset);
 
 	return 0;
 }

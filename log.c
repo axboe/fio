@@ -18,6 +18,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 		io_u->offset = ipo->offset;
 		io_u->buflen = ipo->len;
 		io_u->ddir = ipo->ddir;
+		io_u->file = ipo->file;
 		free(ipo);
 		return 0;
 	}
@@ -46,6 +47,7 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	struct list_head *entry;
 
 	INIT_LIST_HEAD(&ipo->list);
+	ipo->file = io_u->file;
 	ipo->offset = io_u->offset;
 	ipo->len = io_u->buflen;
 

@@ -15,7 +15,7 @@ static int fio_cpuio_init(struct thread_data *td)
 		td->cpuload = 100;
 
 	td->read_iolog = td->write_iolog = 0;
-	td->fd = -1;
+	td->nr_files = 0;
 
 	return 0;
 }

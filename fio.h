@@ -39,6 +39,7 @@ struct io_log {
 
 struct io_piece {
 	struct list_head list;
+	struct fio_file *file;
 	unsigned long long offset;
 	unsigned int len;
 	int ddir;
@@ -72,6 +73,8 @@ struct io_u {
 
 	unsigned char seen;
 	unsigned char ddir;
+
+	struct fio_file *file;
 
 	struct list_head list;
 };
@@ -130,21 +133,40 @@ enum fio_ioengine_flags {
 	FIO_MMAPIO	= 1 << 2,
 };
 
+struct fio_file {
+	/*
+	 * A file may not be a file descriptor, let the io engine decide
+	 */
+	union {
+		unsigned long file_data;
+		int fd;
+	};
+	char *file_name;
+	void *mmap;
+	unsigned long long file_size;
+	unsigned long long real_file_size;
+	unsigned long long file_offset;
+	unsigned long long last_pos;
+
+	unsigned long *file_map;
+	unsigned int num_maps;
+};
+
 /*
  * This describes a single thread/process executing a fio job.
  */
 struct thread_data {
 	char name[32];
-	char *file_name;
 	char *directory;
 	char verror[80];
 	pthread_t thread;
 	int thread_number;
 	int groupid;
 	enum fio_filetype filetype;
+	struct fio_file *files;
+	unsigned int nr_files;
+	unsigned int next_file;
 	int error;
-	int fd;
-	void *mmap;
 	pid_t pid;
 	char *orig_buffer;
 	size_t orig_buffer_size;
@@ -178,9 +200,6 @@ struct thread_data {
 	unsigned int overwrite;
 	unsigned int bw_avg_time;
 	unsigned int loops;
-	unsigned long long file_size;
-	unsigned long long real_file_size;
-	unsigned long long file_offset;
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
 	enum fio_memtype mem_type;
@@ -233,21 +252,20 @@ struct thread_data {
 
 	unsigned long runtime[2];		/* msec */
 	unsigned long long io_size;
+	unsigned long long total_file_size;
+	unsigned long long start_offset;
 	unsigned long long total_io_size;
 
 	unsigned long long io_blocks[2];
 	unsigned long long io_bytes[2];
 	unsigned long long zone_bytes;
 	unsigned long long this_io_bytes[2];
-	unsigned long long last_pos;
 	volatile int mutex;
 
 	/*
 	 * State for random io, a bitmap of blocks done vs not done
 	 */
 	os_random_state_t random_state;
-	unsigned long *file_map;
-	unsigned int num_maps;
 
 	/*
 	 * CPU "io" cycle burner
@@ -326,6 +344,7 @@ extern int terse_output;
 extern FILE *f_out;
 extern FILE *f_err;
 extern char *fio_inst_prefix;
+extern int temp_stall_ts;
 
 extern struct thread_data *threads;
 
@@ -334,9 +353,9 @@ extern struct thread_data *threads;
 #define td_rw(td)		((td)->iomix != 0)
 
 #define BLOCKS_PER_MAP		(8 * sizeof(long))
-#define TO_MAP_BLOCK(td, b)	((b) - ((td)->file_offset / (td)->min_bs))
-#define RAND_MAP_IDX(td, b)	(TO_MAP_BLOCK(td, b) / BLOCKS_PER_MAP)
-#define RAND_MAP_BIT(td, b)	(TO_MAP_BLOCK(td, b) & (BLOCKS_PER_MAP - 1))
+#define TO_MAP_BLOCK(td, f, b)	((b) - ((f)->file_offset / (td)->min_bs))
+#define RAND_MAP_IDX(td, f, b)	(TO_MAP_BLOCK(td, f, b) / BLOCKS_PER_MAP)
+#define RAND_MAP_BIT(td, f, b)	(TO_MAP_BLOCK(td, f, b) & (BLOCKS_PER_MAP - 1))
 
 #define MAX_JOBS	(1024)
 
@@ -419,6 +438,12 @@ extern int parse_options(int, char **);
 extern int init_random_state(struct thread_data *);
 
 /*
+ * File setup/shutdown
+ */
+extern void close_files(struct thread_data *);
+extern int setup_files(struct thread_data *);
+
+/*
  * This is a pretty crappy semaphore implementation, but with the use that fio
  * has (just signalling start/go conditions), it doesn't have to be better.
  * Naturally this would not work for any type of contended semaphore or
@@ -463,12 +488,12 @@ struct ioengine_ops {
 	struct io_u *(*event)(struct thread_data *, int);
 	int (*cancel)(struct thread_data *, struct io_u *);
 	void (*cleanup)(struct thread_data *);
-	int (*sync)(struct thread_data *);
+	int (*sync)(struct thread_data *, struct fio_file *);
 	void *data;
 	void *dlhandle;
 };
 
-#define FIO_IOOPS_VERSION	1
+#define FIO_IOOPS_VERSION	2
 
 extern struct ioengine_ops *load_ioengine(struct thread_data *, char *);
 extern void close_ioengine(struct thread_data *);
@@ -477,5 +502,8 @@ extern void close_ioengine(struct thread_data *);
  * Mark unused variables passed to ops functions as unused, to silence gcc
  */
 #define fio_unused	__attribute((__unused__))
+
+#define for_each_file(td, f, i)	\
+	for ((i) = 0, (f) = &(td)->files[(i)]; (i) < (td)->nr_files; (i)++, (f) = &(td)->files[(i)])
 
 #endif

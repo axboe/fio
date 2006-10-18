@@ -16,9 +16,9 @@ struct spliceio_data {
 	int pipe[2];
 };
 
-static int fio_spliceio_sync(struct thread_data *td)
+static int fio_spliceio_sync(struct thread_data *td, struct fio_file *f)
 {
-	return fsync(td->fd);
+	return fsync(f->fd);
 }
 
 static int fio_spliceio_getevents(struct thread_data *td, int fio_unused min,
@@ -53,6 +53,7 @@ static struct io_u *fio_spliceio_event(struct thread_data *td, int event)
 static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 {
 	struct spliceio_data *sd = td->io_ops->data;
+	struct fio_file *f = io_u->file;
 	int ret, ret2, buflen;
 	off_t offset;
 	void *p;
@@ -66,7 +67,7 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 		if (this_len > SPLICE_DEF_SIZE)
 			this_len = SPLICE_DEF_SIZE;
 
-		ret = splice(td->fd, &offset, sd->pipe[1], NULL, this_len, SPLICE_F_MORE);
+		ret = splice(f->fd, &offset, sd->pipe[1], NULL, this_len, SPLICE_F_MORE);
 		if (ret < 0) {
 			if (errno == ENODATA || errno == EAGAIN)
 				continue;
@@ -103,6 +104,7 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 		}
 	};
 	struct pollfd pfd = { .fd = sd->pipe[1], .events = POLLOUT, };
+	struct fio_file *f = io_u->file;
 	off_t off = io_u->offset;
 	int ret, ret2;
 
@@ -118,7 +120,7 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 		iov[0].iov_base += ret;
 
 		while (ret) {
-			ret2 = splice(sd->pipe[0], NULL, td->fd, &off, ret, 0);
+			ret2 = splice(sd->pipe[0], NULL, f->fd, &off, ret, 0);
 			if (ret2 < 0)
 				return errno;
 

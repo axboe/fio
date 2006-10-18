@@ -187,6 +187,7 @@ static int find_block_dir(dev_t dev, char *path)
 
 void init_disk_util(struct thread_data *td)
 {
+	struct fio_file *f;
 	struct stat st;
 	char foo[256], tmp[256];
 	dev_t dev;
@@ -195,7 +196,11 @@ void init_disk_util(struct thread_data *td)
 	if (!td->do_disk_util)
 		return;
 
-	if (!stat(td->file_name, &st)) {
+	/*
+	 * Just use the same file, they are on the same device.
+	 */
+	f = &td->files[0];
+	if (!stat(f->file_name, &st)) {
 		if (S_ISBLK(st.st_mode))
 			dev = st.st_rdev;
 		else
@@ -204,7 +209,7 @@ void init_disk_util(struct thread_data *td)
 		/*
 		 * must be a file, open "." in that path
 		 */
-		strcpy(foo, td->file_name);
+		strcpy(foo, f->file_name);
 		p = dirname(foo);
 		if (stat(p, &st)) {
 			perror("disk util stat");
