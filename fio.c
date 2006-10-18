@@ -1351,16 +1351,6 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 
 	bytes_total = td->total_io_size;
 
-	/*
-	 * if writing, bytes_total will be twice the size. If mixing,
-	 * assume a 50/50 split and thus bytes_total will be 50% larger.
-	 */
-	if (td->verify) {
-		if (td_rw(td))
-			bytes_total = bytes_total * 3 / 2;
-		else
-			bytes_total <<= 1;
-	}
 	if (td->zone_size && td->zone_skip)
 		bytes_total /= (td->zone_skip / td->zone_size);
 
