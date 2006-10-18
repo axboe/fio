@@ -553,25 +553,11 @@ static void cleanup_pending_aio(struct thread_data *td)
 	}
 }
 
-static int do_io_u_verify(struct thread_data *td, struct io_u **io_u)
-{
-	struct io_u *v_io_u = *io_u;
-	int ret = 0;
-
-	if (v_io_u) {
-		ret = verify_io_u(v_io_u);
-		put_io_u(td, v_io_u);
-		*io_u = NULL;
-	}
-
-	return ret;
-}
-
 /*
  * The main verify engine. Runs over the writes we previusly submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
  */
-static void do_verify(struct thread_data *td)
+void do_verify(struct thread_data *td)
 {
 	struct timeval t;
 	struct io_u *io_u, *v_io_u = NULL;

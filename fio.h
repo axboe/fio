@@ -477,7 +477,7 @@ enum {
  */
 extern void populate_verify_io_u(struct thread_data *, struct io_u *);
 extern int get_next_verify(struct thread_data *td, struct io_u *);
-extern int verify_io_u(struct io_u *);
+extern int do_io_u_verify(struct thread_data *, struct io_u **);
 
 /*
  * This is a pretty crappy semaphore implementation, but with the use that fio

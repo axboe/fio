@@ -78,7 +78,7 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u)
 	return 0;
 }
 
-int verify_io_u(struct io_u *io_u)
+static int verify_io_u(struct io_u *io_u)
 {
 	struct verify_header *hdr = (struct verify_header *) io_u->buf;
 	int ret;
@@ -154,4 +154,18 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 	}
 
 	return 1;
+}
+
+int do_io_u_verify(struct thread_data *td, struct io_u **io_u)
+{
+	struct io_u *v_io_u = *io_u;
+	int ret = 0;
+
+	if (v_io_u) {
+		ret = verify_io_u(v_io_u);
+		put_io_u(td, v_io_u);
+		*io_u = NULL;
+	}
+
+	return ret;
 }
