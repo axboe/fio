@@ -473,6 +473,13 @@ enum {
 };
 
 /*
+ * Verify helpers
+ */
+extern void populate_verify_io_u(struct thread_data *, struct io_u *);
+extern int get_next_verify(struct thread_data *td, struct io_u *);
+extern int verify_io_u(struct io_u *);
+
+/*
  * This is a pretty crappy semaphore implementation, but with the use that fio
  * has (just signalling start/go conditions), it doesn't have to be better.
  * Naturally this would not work for any type of contended semaphore or
