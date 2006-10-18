@@ -618,13 +618,13 @@ static int td_io_sync(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
-static int io_u_getevents(struct thread_data *td, int min, int max,
+static int td_io_getevents(struct thread_data *td, int min, int max,
 			  struct timespec *t)
 {
 	return td->io_ops->getevents(td, min, max, t);
 }
 
-static int io_u_queue(struct thread_data *td, struct io_u *io_u)
+static int td_io_queue(struct thread_data *td, struct io_u *io_u)
 {
 	gettimeofday(&io_u->issue_time, NULL);
 
@@ -694,7 +694,7 @@ static void cleanup_pending_aio(struct thread_data *td)
 	/*
 	 * get immediately available events, if any
 	 */
-	r = io_u_getevents(td, 0, td->cur_depth, &ts);
+	r = td_io_getevents(td, 0, td->cur_depth, &ts);
 	if (r > 0) {
 		icd.nr = r;
 		ios_completed(td, &icd);
@@ -714,7 +714,7 @@ static void cleanup_pending_aio(struct thread_data *td)
 	}
 
 	if (td->cur_depth) {
-		r = io_u_getevents(td, td->cur_depth, td->cur_depth, NULL);
+		r = td_io_getevents(td, td->cur_depth, td->cur_depth, NULL);
 		if (r > 0) {
 			icd.nr = r;
 			ios_completed(td, &icd);
@@ -778,7 +778,7 @@ static void do_verify(struct thread_data *td)
 			break;
 		}
 
-		ret = io_u_queue(td, io_u);
+		ret = td_io_queue(td, io_u);
 		if (ret) {
 			put_io_u(td, io_u);
 			td_verror(td, ret);
@@ -792,7 +792,7 @@ static void do_verify(struct thread_data *td)
 		if (do_io_u_verify(td, &v_io_u))
 			break;
 
-		ret = io_u_getevents(td, 1, 1, NULL);
+		ret = td_io_getevents(td, 1, 1, NULL);
 		if (ret != 1) {
 			if (ret < 0)
 				td_verror(td, ret);
@@ -885,7 +885,7 @@ static void do_io(struct thread_data *td)
 
 		memcpy(&s, &io_u->start_time, sizeof(s));
 
-		ret = io_u_queue(td, io_u);
+		ret = td_io_queue(td, io_u);
 		if (ret) {
 			put_io_u(td, io_u);
 			td_verror(td, ret);
@@ -902,7 +902,7 @@ static void do_io(struct thread_data *td)
 			min_evts = 1;
 		}
 
-		ret = io_u_getevents(td, min_evts, td->cur_depth, timeout);
+		ret = td_io_getevents(td, min_evts, td->cur_depth, timeout);
 		if (ret < 0) {
 			td_verror(td, ret);
 			break;
@@ -952,7 +952,7 @@ static void do_io(struct thread_data *td)
 	}
 }
 
-static int init_io(struct thread_data *td)
+static int td_io_init(struct thread_data *td)
 {
 	if (td->io_ops->init)
 		return td->io_ops->init(td);
@@ -1137,7 +1137,7 @@ static void *thread_main(void *data)
 		goto err;
 	}
 
-	if (init_io(td))
+	if (td_io_init(td))
 		goto err;
 
 	if (init_iolog(td))
