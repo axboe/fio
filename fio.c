@@ -277,7 +277,7 @@ static int get_rw_ddir(struct thread_data *td)
 		 * Check if it's time to seed a new data direction.
 		 */
 		if (elapsed >= td->rwmixcycle) {
-			int v;
+			unsigned int v;
 			long r;
 
 			r = os_random_long(&td->rwmix_state);
@@ -422,7 +422,7 @@ static inline void td_set_runstate(struct thread_data *td, int runstate)
 
 static struct fio_file *get_next_file(struct thread_data *td)
 {
-	int old_next_file = td->next_file;
+	unsigned int old_next_file = td->next_file;
 	struct fio_file *f;
 
 	do {

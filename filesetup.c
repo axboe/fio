@@ -358,11 +358,10 @@ int setup_files(struct thread_data *td)
 
 void close_files(struct thread_data *td)
 {
+	struct fio_file *f;
 	int i;
 
-	for (i = 0; i < td->nr_files; i++) {
-		struct fio_file *f = &td->files[i];
-
+	for_each_file(td, f, i) {
 		if (f->fd != -1) {
 			if (td->unlink && td->filetype == FIO_TYPE_FILE)
 				unlink(f->file_name);

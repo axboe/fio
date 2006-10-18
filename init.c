@@ -275,6 +275,7 @@ int init_random_state(struct thread_data *td)
 {
 	unsigned long seeds[4];
 	int fd, num_maps, blocks, i;
+	struct fio_file *f;
 
 	fd = open("/dev/urandom", O_RDONLY);
 	if (fd == -1) {
@@ -300,9 +301,7 @@ int init_random_state(struct thread_data *td)
 	if (td->rand_repeatable)
 		seeds[3] = DEF_RANDSEED;
 
-	for (i = 0; i < td->nr_files; i++) {
-		struct fio_file *f = &td->files[i];
-
+	for_each_file(td, f, i) {
 		blocks = (f->file_size + td->min_bs - 1) / td->min_bs;
 		num_maps = blocks / BLOCKS_PER_MAP;
 		f->file_map = malloc(num_maps * sizeof(long));
@@ -1056,7 +1055,7 @@ static int fill_def_thread(void)
 	return 0;
 }
 
-static void usage(char *name)
+static void usage(void)
 {
 	printf("%s\n", fio_version_string);
 	printf("\t-o Write output to file\n");
@@ -1099,7 +1098,7 @@ static int parse_cmd_line(int argc, char *argv[])
 				idx = optind;
 				break;
 			case 'h':
-				usage(argv[0]);
+				usage();
 				exit(0);
 			case 'v':
 				printf("%s\n", fio_version_string);
@@ -1183,7 +1182,7 @@ int parse_options(int argc, char *argv[])
 	job_files = parse_cmd_line(argc, argv);
 	if (!job_files) {
 		log_err("Need job file(s)\n");
-		usage(argv[0]);
+		usage();
 		return 1;
 	}
 

@@ -540,6 +540,6 @@ extern void close_ioengine(struct thread_data *);
 #define fio_unused	__attribute((__unused__))
 
 #define for_each_file(td, f, i)	\
-	for ((i) = 0, (f) = &(td)->files[0]; (i) < (td)->nr_files; (i)++, (f) = &(td)->files[(i)])
+	for ((i) = 0, (f) = &(td)->files[0]; (i) < (int) (td)->nr_files; (i)++, (f) = &(td)->files[(i)])
 
 #endif
