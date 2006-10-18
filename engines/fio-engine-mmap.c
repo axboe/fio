@@ -98,5 +98,5 @@ struct ioengine_ops ioengine = {
 	.event		= fio_mmapio_event,
 	.cleanup	= fio_mmapio_cleanup,
 	.sync		= fio_mmapio_sync,
-	.flags		= FIO_SYNCIO,
+	.flags		= FIO_SYNCIO | FIO_MMAPIO,
 };
