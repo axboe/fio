@@ -86,7 +86,6 @@ static int create_files(struct thread_data *td)
 	 * unless specifically asked for overwrite, let normal io extend it
 	 */
 	if (!td->overwrite) {
-		td->io_size = td->total_file_size;
 		for_each_file(td, f, i)
 			f->file_size = td->total_file_size / td->nr_files;
 
@@ -109,10 +108,9 @@ static int create_files(struct thread_data *td)
 		err = create_file(td, f);
 		if (err)
 			break;
-
-		td->io_size += f->file_size;
 	}
 
+	td->io_size = td->total_file_size;
 	temp_stall_ts = 0;
 	return err;
 }
@@ -179,7 +177,6 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	td->io_size += f->file_size;
 	return 0;
 }
 
