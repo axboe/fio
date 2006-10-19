@@ -563,7 +563,16 @@ void do_verify(struct thread_data *td)
 	struct io_u *io_u, *v_io_u = NULL;
 	struct io_completion_data icd;
 	struct fio_file *f;
-	int ret;
+	int ret, i;
+
+	/*
+	 * sync io first and invalidate cache, to make sure we really
+	 * read from disk.
+	 */
+	for_each_file(td, f, i) {
+		td_io_sync(td, f);
+		file_invalidate_cache(td, f);
+	}
 
 	td_set_runstate(td, TD_VERIFYING);
 

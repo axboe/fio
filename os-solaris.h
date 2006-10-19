@@ -19,7 +19,12 @@ typedef unsigned int os_random_state_t;
  */
 static inline int blockdev_size(int fd, unsigned long long *bytes)
 {
-	return 1;
+	return EINVAL;
+}
+
+static inline int blockdev_invalidate_cache(int fd)
+{
+	return EINVAL;
 }
 
 static inline unsigned long long os_phys_mem(void)

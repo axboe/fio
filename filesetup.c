@@ -183,6 +183,30 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
+int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
+{
+	int ret = 0;
+
+	/*
+	 * FIXME: add blockdev flushing too
+	 */
+	if (td->io_ops->flags & FIO_MMAPIO)
+		ret = madvise(f->mmap, f->file_size, MADV_DONTNEED);
+	else if (td->filetype == FIO_TYPE_FILE)
+		ret = fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_DONTNEED);
+	else if (td->filetype == FIO_TYPE_BD)
+		ret = blockdev_invalidate_cache(f->fd);
+	else if (td->filetype == FIO_TYPE_CHAR)
+		ret = 0;
+
+	if (ret < 0) {
+		td_verror(td, errno);
+		return 1;
+	}
+
+	return 0;
+}
+
 static int __setup_file_mmap(struct thread_data *td, struct fio_file *f)
 {
 	int flags;
@@ -204,12 +228,8 @@ static int __setup_file_mmap(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	if (td->invalidate_cache) {
-		if (madvise(f->mmap, f->file_size, MADV_DONTNEED) < 0) {
-			td_verror(td, errno);
-			return 1;
-		}
-	}
+	if (td->invalidate_cache && file_invalidate_cache(td, f))
+		return 1;
 
 	if (td->sequential) {
 		if (madvise(f->mmap, f->file_size, MADV_SEQUENTIAL) < 0) {
@@ -242,12 +262,8 @@ static int setup_files_mmap(struct thread_data *td)
 
 static int __setup_file_plain(struct thread_data *td, struct fio_file *f)
 {
-	if (td->invalidate_cache) {
-		if (fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_DONTNEED) < 0) {
-			td_verror(td, errno);
-			return 1;
-		}
-	}
+	if (td->invalidate_cache && file_invalidate_cache(td, f))
+		return 1;
 
 	if (td->sequential) {
 		if (fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_SEQUENTIAL) < 0) {

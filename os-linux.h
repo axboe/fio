@@ -84,6 +84,18 @@ enum {
 #define BLKGETSIZE64	_IOR(0x12,114,size_t)
 #endif
 
+#ifndef BLKFLSBUF
+#define BLKFLSBUF	_IO(0x12,97)
+#endif
+
+static inline int blockdev_invalidate_cache(int fd)
+{
+	if (!ioctl(fd, BLKFLSBUF))
+		return 0;
+
+	return errno;
+}
+
 static inline int blockdev_size(int fd, unsigned long long *bytes)
 {
 	if (!ioctl(fd, BLKGETSIZE64, bytes))
