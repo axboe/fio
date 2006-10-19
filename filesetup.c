@@ -8,24 +8,30 @@
 #include "fio.h"
 #include "os.h"
 
-static int create_file(struct thread_data *td, struct fio_file *f)
+/*
+ * Check if the file exists and it's large enough.
+ */
+static int file_ok(struct thread_data *td, struct fio_file *f)
 {
-	unsigned long long left;
-	unsigned int bs;
 	struct stat st;
-	char *b;
-	int r;
 
 	if (td->filetype != FIO_TYPE_FILE)
 		return 0;
 
-	if (stat(f->file_name, &st) == -1) {
-		if (!td->create_file) {
-			td_verror(td, ENOENT);
-			return 1;
-		}
-	} else if (st.st_size >= (off_t) f->file_size)
-		return 0;
+	if (stat(f->file_name, &st) == -1)
+		return 1;
+	else if (st.st_size < (off_t) f->file_size)
+		return 1;
+
+	return 0;
+}
+
+static int create_file(struct thread_data *td, struct fio_file *f)
+{
+	unsigned long long left;
+	unsigned int bs;
+	char *b;
+	int r;
 
 	f->fd = open(f->file_name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (f->fd < 0) {
@@ -80,7 +86,7 @@ err:
 static int create_files(struct thread_data *td)
 {
 	struct fio_file *f;
-	int i, err;
+	int i, err, need_create;
 
 	/*
 	 * unless specifically asked for overwrite, let normal io extend it
@@ -98,19 +104,32 @@ static int create_files(struct thread_data *td)
 		return 1;
 	}
 
-	temp_stall_ts = 1;
-	fprintf(f_out, "%s: Laying out IO file(s) (%LuMiB)\n",
-					td->name, td->total_file_size >> 20);
-
-	err = 0;
+	need_create = 0;
 	for_each_file(td, f, i) {
 		f->file_size = td->total_file_size / td->nr_files;
-		err = create_file(td, f);
-		if (err)
-			break;
+		need_create += file_ok(td, f);
 	}
 
 	td->io_size = td->total_file_size;
+
+	if (!need_create)
+		return 0;
+
+	temp_stall_ts = 1;
+	fprintf(f_out, "%s: Laying out IO file(s) (%d x %LuMiB == %LuMiB)\n",
+				td->name, td->nr_files,
+				(td->total_file_size >> 20) / td->nr_files,
+				td->total_file_size >> 20);
+
+	err = 0;
+	for_each_file(td, f, i) {
+		if (file_ok(td, f)) {
+			err = create_file(td, f);
+			if (err)
+				break;
+		}
+	}
+
 	temp_stall_ts = 0;
 	return err;
 }

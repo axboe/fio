@@ -28,7 +28,6 @@
 #define DEF_SEQUENTIAL		(1)
 #define DEF_RAND_REPEAT		(1)
 #define DEF_OVERWRITE		(1)
-#define DEF_CREATE		(1)
 #define DEF_INVALIDATE		(1)
 #define DEF_SYNCIO		(0)
 #define DEF_RANDSEED		(0xb1899bedUL)
@@ -917,11 +916,6 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 				fgetpos(f, &off);
 				continue;
 			}
-			if (!check_strset(p, "create")) {
-				td->create_file = 1;
-				fgetpos(f, &off);
-				continue;
-			}
 			if (!check_strset(p, "exitall")) {
 				exitall_on_terminate = 1;
 				fgetpos(f, &off);
@@ -1029,7 +1023,6 @@ static int fill_def_thread(void)
 	def_thread.ratecycle = DEF_RATE_CYCLE;
 	def_thread.sequential = DEF_SEQUENTIAL;
 	def_thread.timeout = def_timeout;
-	def_thread.create_file = DEF_CREATE;
 	def_thread.overwrite = DEF_OVERWRITE;
 	def_thread.invalidate_cache = DEF_INVALIDATE;
 	def_thread.sync_io = DEF_SYNCIO;

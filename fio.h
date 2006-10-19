@@ -181,7 +181,6 @@ struct thread_data {
 
 	unsigned char sequential;
 	unsigned char odirect;
-	unsigned char create_file;
 	unsigned char invalidate_cache;
 	unsigned char create_serialize;
 	unsigned char create_fsync;
