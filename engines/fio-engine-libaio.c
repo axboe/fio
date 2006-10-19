@@ -55,7 +55,7 @@ static int fio_libaio_getevents(struct thread_data *td, int min, int max,
 			continue;
 		} else if (r == -EINTR)
 			continue;
-		else
+		else if (r != 0)
 			break;
 	} while (1);
 
@@ -72,7 +72,7 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 		ret = io_submit(ld->aio_ctx, 1, &iocb);
 		if (ret == 1)
 			return 0;
-		else if (ret == -EAGAIN)
+		else if (ret == -EAGAIN || !ret)
 			usleep(100);
 		else if (ret == -EINTR)
 			continue;
@@ -80,8 +80,9 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 			break;
 	} while (1);
 
-	return (int) ret;
+	assert(ret);
 
+	return (int) ret;
 }
 
 static int fio_libaio_cancel(struct thread_data *td, struct io_u *io_u)
@@ -116,6 +117,7 @@ static int fio_libaio_init(struct thread_data *td)
 	}
 
 	ld->aio_events = malloc(td->iodepth * sizeof(struct io_event));
+	memset(ld->aio_events, 0, td->iodepth * sizeof(struct io_event));
 	td->io_ops->data = ld;
 	return 0;
 }

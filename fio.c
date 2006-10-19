@@ -688,14 +688,14 @@ static void do_io(struct thread_data *td)
 	struct timeval s, e;
 	unsigned long usec;
 	struct fio_file *f;
-	int i;
+	int i, ret = 0;
 
 	td_set_runstate(td, TD_RUNNING);
 
 	while (td->this_io_bytes[td->ddir] < td->io_size) {
 		struct timespec ts = { .tv_sec = 0, .tv_nsec = 0};
 		struct timespec *timeout;
-		int ret, min_evts = 0;
+		int min_evts = 0;
 		struct io_u *io_u;
 
 		if (td->terminate)
@@ -728,9 +728,10 @@ static void do_io(struct thread_data *td)
 			min_evts = 1;
 		}
 
+
 		ret = td_io_getevents(td, min_evts, td->cur_depth, timeout);
 		if (ret < 0) {
-			td_verror(td, ret);
+			td_verror(td, -ret);
 			break;
 		} else if (!ret)
 			continue;
@@ -768,13 +769,15 @@ static void do_io(struct thread_data *td)
 			td_io_sync(td, f);
 	}
 
-	if (td->cur_depth)
-		cleanup_pending_aio(td);
+	if (!ret) {
+		if (td->cur_depth)
+			cleanup_pending_aio(td);
 
-	if (should_fsync(td) && td->end_fsync) {
-		td_set_runstate(td, TD_FSYNCING);
-		for_each_file(td, f, i)
-			td_io_sync(td, f);
+		if (should_fsync(td) && td->end_fsync) {
+			td_set_runstate(td, TD_FSYNCING);
+			for_each_file(td, f, i)
+				td_io_sync(td, f);
+		}
 	}
 }
 
@@ -1095,7 +1098,11 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 	for (i = 0, cputhreads = 0; i < thread_number; i++) {
 		struct thread_data *td = &threads[i];
 
-		if (td->io_ops->flags & FIO_CPUIO)
+		/*
+		 * ->io_ops is NULL for a thread that has closed its
+		 * io engine
+		 */
+		if (td->io_ops && td->io_ops->flags & FIO_CPUIO)
 			cputhreads++;
 
 		if (td->runstate != TD_EXITED)

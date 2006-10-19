@@ -239,7 +239,8 @@ void init_disk_util(struct thread_data *td)
 			log_err("unknown sysfs layout\n");
 			return;
 		}
-		sprintf(foo, "%s", p);
+		strcpy(tmp, p);
+		sprintf(foo, "%s", tmp);
 	}
 
 	td->sysfs_root = strdup(foo);

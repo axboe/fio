@@ -20,7 +20,7 @@
 struct ioengine_ops *load_ioengine(struct thread_data *td, char *name)
 {
 	char engine[16], engine_lib[256];
-	struct ioengine_ops *ops;
+	struct ioengine_ops *ops, *ret;
 	void *dlhandle;
 
 	strcpy(engine, name);
@@ -52,8 +52,12 @@ struct ioengine_ops *load_ioengine(struct thread_data *td, char *name)
 		return NULL;
 	}
 
-	ops->dlhandle = dlhandle;
-	return ops;
+	ret = malloc(sizeof(*ret));
+	memcpy(ret, ops, sizeof(*ret));
+	ret->data = NULL;
+	ret->dlhandle = dlhandle;
+
+	return ret;
 }
 
 void close_ioengine(struct thread_data *td)
@@ -62,4 +66,6 @@ void close_ioengine(struct thread_data *td)
 		td->io_ops->cleanup(td);
 
 	dlclose(td->io_ops->dlhandle);
+	free(td->io_ops);
+	td->io_ops = NULL;
 }

@@ -16,7 +16,7 @@ all: depend $(PROGS) $(SCRIPTS)
 	$(MAKE) -C engines
 
 fio: fio.o ioengines.o init.o stat.o log.o time.o md5.o crc32.o filesetup.o eta.o verify.o
-	$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) -lpthread -laio -lm -lrt -ldl
+	$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) -lpthread -lm -lrt -ldl
 
 clean:
 	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o
