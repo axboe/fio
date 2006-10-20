@@ -170,11 +170,15 @@ static int init_iolog_write(struct thread_data *td)
 
 int init_iolog(struct thread_data *td)
 {
-	if (td->read_iolog)
-		return init_iolog_read(td);
-	else if (td->write_iolog)
-		return init_iolog_write(td);
+	int ret = 0;
 
+	if (td->read_iolog)
+		ret = init_iolog_read(td);
+	else if (td->write_iolog)
+		ret = init_iolog_write(td);
+
+	free(td->iolog_file);
+	td->iolog_file = NULL;
 	return 0;
 }
 

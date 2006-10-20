@@ -300,7 +300,7 @@ static void show_group_stats(struct group_run_stats *rs, int id)
 static void show_disk_util(void)
 {
 	struct disk_util_stat *dus;
-	struct list_head *entry;
+	struct list_head *entry, *next;
 	struct disk_util *du;
 	double util;
 
@@ -315,6 +315,16 @@ static void show_disk_util(void)
 			util = 100.0;
 
 		fprintf(f_out, "  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, in_queue=%u, util=%3.2f%%\n", du->name, dus->ios[0], dus->ios[1], dus->merges[0], dus->merges[1], dus->ticks[0], dus->ticks[1], dus->time_in_queue, util);
+	}
+
+	/*
+	 * now free the list
+	 */
+	list_for_each_safe(entry, next, &disk_list) {
+		list_del(entry);
+		du = list_entry(entry, struct disk_util, list);
+		free(du->name);
+		free(du);
 	}
 }
 

@@ -406,6 +406,8 @@ void close_files(struct thread_data *td)
 		if (f->fd != -1) {
 			if (td->unlink && td->filetype == FIO_TYPE_FILE)
 				unlink(f->file_name);
+			free(f->file_name);
+			f->file_name = NULL;
 			close(f->fd);
 			f->fd = -1;
 		}
@@ -414,4 +416,8 @@ void close_files(struct thread_data *td)
 			f->mmap = NULL;
 		}
 	}
+
+	free(td->files);
+	td->files = NULL;
+	td->nr_files = 0;
 }
