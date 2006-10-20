@@ -17,6 +17,9 @@ clean:
 fio-engine-libaio.o: fio-engine-libaio.c
 	$(CC) $(ALL_CFLAGS) -laio -o $*.o $<
 
+fio-engine-posixaio.o: fio-engine-posixaio.c
+	$(CC) $(ALL_CFLAGS) -lrt -o $*.o $<
+
 ifneq ($(wildcard .depend),)
 include .depend
 endif
