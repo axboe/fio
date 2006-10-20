@@ -590,6 +590,7 @@ static void *thread_main(void *data)
 		int ret = switch_ioscheduler(td);
 
 		free(td->ioscheduler);
+		free(td->sysfs_root);
 		if (ret)
 			goto err;
 	}

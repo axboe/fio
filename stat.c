@@ -243,7 +243,9 @@ void init_disk_util(struct thread_data *td)
 		sprintf(foo, "%s", tmp);
 	}
 
-	td->sysfs_root = strdup(foo);
+	if (td->ioscheduler)
+		td->sysfs_root = strdup(foo);
+
 	disk_util_add(dev, foo);
 }
 
@@ -524,6 +526,8 @@ void show_run_stats(void)
 
 		show_disk_util();
 	}
+
+	free(runstats);
 }
 
 static inline void add_stat_sample(struct io_stat *is, unsigned long val)

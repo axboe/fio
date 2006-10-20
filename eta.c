@@ -215,6 +215,8 @@ void print_thread_status(void)
 		}
 	}
 
+	free(eta_secs);
+
 	if (eta_sec != INT_MAX && elapsed) {
 		perc = (double) elapsed / (double) (elapsed + eta_sec);
 		eta_to_str(eta_str, eta_sec);
@@ -232,7 +234,6 @@ void print_thread_status(void)
 	}
 	printf("\r");
 	fflush(stdout);
-	free(eta_secs);
 }
 
 void print_status_init(int thread_number)
