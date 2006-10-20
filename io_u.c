@@ -22,6 +22,35 @@ static int random_map_free(struct thread_data *td, struct fio_file *f,
 }
 
 /*
+ * Mark a given offset as used in the map.
+ */
+static void mark_random_map(struct thread_data *td, struct fio_file *f,
+			    struct io_u *io_u)
+{
+	unsigned long long block = io_u->offset / (unsigned long long) td->min_bs;
+	unsigned int blocks = 0;
+
+	while (blocks < (io_u->buflen / td->min_bs)) {
+		unsigned int idx, bit;
+
+		if (!random_map_free(td, f, block))
+			break;
+
+		idx = RAND_MAP_IDX(td, f, block);
+		bit = RAND_MAP_BIT(td, f, block);
+
+		assert(idx < f->num_maps);
+
+		f->file_map[idx] |= (1UL << bit);
+		block++;
+		blocks++;
+	}
+
+	if ((blocks * td->min_bs) < io_u->buflen)
+		io_u->buflen = blocks * td->min_bs;
+}
+
+/*
  * Return the next free block in the map.
  */
 static int get_next_free_block(struct thread_data *td, struct fio_file *f,
@@ -141,35 +170,6 @@ static int get_rw_ddir(struct thread_data *td)
 		return DDIR_READ;
 	else
 		return DDIR_WRITE;
-}
-
-/*
- * Mark a given offset as used in the map.
- */
-static void mark_random_map(struct thread_data *td, struct fio_file *f,
-			    struct io_u *io_u)
-{
-	unsigned long long block = io_u->offset / (unsigned long long) td->min_bs;
-	unsigned int blocks = 0;
-
-	while (blocks < (io_u->buflen / td->min_bs)) {
-		unsigned int idx, bit;
-
-		if (!random_map_free(td, f, block))
-			break;
-
-		idx = RAND_MAP_IDX(td, f, block);
-		bit = RAND_MAP_BIT(td, f, block);
-
-		assert(idx < f->num_maps);
-
-		f->file_map[idx] |= (1UL << bit);
-		block++;
-		blocks++;
-	}
-
-	if ((blocks * td->min_bs) < io_u->buflen)
-		io_u->buflen = blocks * td->min_bs;
 }
 
 void put_io_u(struct thread_data *td, struct io_u *io_u)
