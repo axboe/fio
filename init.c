@@ -140,7 +140,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		td->iodepth = 1;
 	else {
 		if (!td->iodepth)
-			td->iodepth = 1;
+			td->iodepth = td->nr_files;
 	}
 
 	/*
