@@ -424,14 +424,6 @@ static void do_io(struct thread_data *td)
 	}
 }
 
-static int td_io_init(struct thread_data *td)
-{
-	if (td->io_ops->init)
-		return td->io_ops->init(td);
-
-	return 0;
-}
-
 static void cleanup_io_u(struct thread_data *td)
 {
 	struct list_head *entry, *n;

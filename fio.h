@@ -497,6 +497,7 @@ extern void io_completed(struct thread_data *, struct io_u *, struct io_completi
 /*
  * io engine entry points
  */
+extern int td_io_init(struct thread_data *);
 extern int td_io_prep(struct thread_data *, struct io_u *);
 extern int td_io_queue(struct thread_data *, struct io_u *);
 extern int td_io_sync(struct thread_data *, struct fio_file *);

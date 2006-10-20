@@ -14,8 +14,33 @@
 #include <unistd.h>
 #include <string.h>
 #include <dlfcn.h>
+
 #include "fio.h"
 #include "os.h"
+
+static int check_engine_ops(struct ioengine_ops *ops)
+{
+	/*
+	 * cpu thread doesn't need to provide anything
+	 */
+	if (ops->flags & FIO_CPUIO)
+		return 0;
+
+	if (!ops->event) {
+		log_err("%s: no event handler)\n", ops->name);
+		return 1;
+	}
+	if (!ops->getevents) {
+		log_err("%s: no getevents handler)\n", ops->name);
+		return 1;
+	}
+	if (!ops->queue) {
+		log_err("%s: no queue handler)\n", ops->name);
+		return 1;
+	}
+		
+	return 0;
+}
 
 struct ioengine_ops *load_ioengine(struct thread_data *td, char *name)
 {
@@ -48,6 +73,14 @@ struct ioengine_ops *load_ioengine(struct thread_data *td, char *name)
 
 	if (ops->version != FIO_IOOPS_VERSION) {
 		log_err("bad ioops version %d (want %d)\n", ops->version, FIO_IOOPS_VERSION);
+		dlclose(dlhandle);
+		return NULL;
+	}
+
+	/*
+	 * Check that the required methods are there.
+	 */
+	if (check_engine_ops(ops)) {
 		dlclose(dlhandle);
 		return NULL;
 	}
@@ -97,4 +130,12 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	gettimeofday(&io_u->issue_time, NULL);
 
 	return td->io_ops->queue(td, io_u);
+}
+
+int td_io_init(struct thread_data *td)
+{
+	if (td->io_ops->init)
+		return td->io_ops->init(td);
+
+	return 0;
 }
