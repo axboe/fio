@@ -9,5 +9,6 @@ ioengine=libaio
 iodepth=2
 zonesize=256m
 zoneskip=2g
+write_bw_log
 
 [/dev/sdb]
