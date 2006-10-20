@@ -56,11 +56,10 @@ static volatile int startup_sem;
 
 static void terminate_threads(int group_id)
 {
+	struct thread_data *td;
 	int i;
 
-	for (i = 0; i < thread_number; i++) {
-		struct thread_data *td = &threads[i];
-
+	for_each_td(td, i) {
 		if (group_id == TERMINATE_ALL || groupid == td->groupid) {
 			td->terminate = 1;
 			td->start_delay = 0;
@@ -1090,14 +1089,14 @@ static void *fork_main(int shmid, int offset)
  */
 static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 {
+	struct thread_data *td;
 	int i, cputhreads;
 
 	/*
 	 * reap exited threads (TD_EXITED -> TD_REAPED)
 	 */
-	for (i = 0, cputhreads = 0; i < thread_number; i++) {
-		struct thread_data *td = &threads[i];
-
+	cputhreads = 0;
+	for_each_td(td, i) {
 		/*
 		 * ->io_ops is NULL for a thread that has closed its
 		 * io engine
@@ -1194,9 +1193,7 @@ static void run_threads(void)
 	nr_started = 0;
 	m_rate = t_rate = 0;
 
-	for (i = 0; i < thread_number; i++) {
-		td = &threads[i];
-
+	for_each_td(td, i) {
 		print_status_init(td->thread_number - 1);
 
 		init_disk_util(td);
@@ -1225,9 +1222,7 @@ static void run_threads(void)
 		/*
 		 * create threads (TD_NOT_CREATED -> TD_CREATED)
 		 */
-		for (i = 0; i < thread_number; i++) {
-			td = &threads[i];
-
+		for_each_td(td, i) {
 			if (td->runstate != TD_NOT_CREATED)
 				continue;
 
@@ -1316,9 +1311,7 @@ static void run_threads(void)
 		/*
 		 * start created threads (TD_INITIALIZED -> TD_RUNNING).
 		 */
-		for (i = 0; i < thread_number; i++) {
-			td = &threads[i];
-
+		for_each_td(td, i) {
 			if (td->runstate != TD_INITIALIZED)
 				continue;
 

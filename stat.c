@@ -446,10 +446,8 @@ void show_run_stats(void)
 		rs->min_bw[1] = rs->min_run[1] = ~0UL;
 	}
 
-	for (i = 0; i < thread_number; i++) {
+	for_each_td(td, i) {
 		unsigned long long rbw, wbw;
-
-		td = &threads[i];
 
 		if (td->error) {
 			fprintf(f_out, "%s: %s\n", td->name, td->verror);
@@ -501,8 +499,7 @@ void show_run_stats(void)
 	if (!terse_output)
 		printf("\n");
 
-	for (i = 0; i < thread_number; i++) {
-		td = &threads[i];
+	for_each_td(td, i) {
 		rs = &runstats[td->groupid];
 
 		if (terse_output)

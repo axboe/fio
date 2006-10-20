@@ -172,6 +172,7 @@ void print_thread_status(void)
 {
 	unsigned long elapsed = mtime_since_genesis() / 1000;
 	int i, nr_running, nr_pending, t_rate, m_rate, *eta_secs, eta_sec;
+	struct thread_data *td;
 	char eta_str[32];
 	double perc = 0.0;
 
@@ -182,9 +183,7 @@ void print_thread_status(void)
 	memset(eta_secs, 0, thread_number * sizeof(int));
 
 	nr_pending = nr_running = t_rate = m_rate = 0;
-	for (i = 0; i < thread_number; i++) {
-		struct thread_data *td = &threads[i];
-
+	for_each_td(td, i) {
 		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING||
 		    td->runstate == TD_FSYNCING) {
 			nr_running++;
@@ -206,7 +205,7 @@ void print_thread_status(void)
 	else
 		eta_sec = 0;
 
-	for (i = 0; i < thread_number; i++) {
+	for_each_td(td, i) {
 		if (exitall_on_terminate) {
 			if (eta_secs[i] < eta_sec)
 				eta_sec = eta_secs[i];
