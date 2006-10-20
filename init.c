@@ -47,6 +47,8 @@
 #define DEF_NICE		(0)
 #define DEF_NR_FILES		(1)
 #define DEF_UNLINK		(0)
+#define DEF_WRITE_BW_LOG	(0)
+#define DEF_WRITE_LAT_LOG	(0)
 
 static int def_timeout = DEF_TIMEOUT;
 
@@ -59,13 +61,14 @@ struct thread_data def_thread;
 struct thread_data *threads = NULL;
 
 int rate_quit = 0;
-int write_lat_log = 0;
-int write_bw_log = 0;
 int exitall_on_terminate = 0;
 int terse_output = 0;
 unsigned long long mlock_size = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
+
+static int write_lat_log = DEF_WRITE_LAT_LOG;
+static int write_bw_log = DEF_WRITE_BW_LOG;
 
 /*
  * Return a free job structure.
@@ -220,11 +223,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (setup_rate(td))
 		goto err;
 
-	if (write_lat_log) {
+	if (td->write_lat_log) {
 		setup_log(&td->slat_log);
 		setup_log(&td->clat_log);
 	}
-	if (write_bw_log)
+	if (td->write_bw_log)
 		setup_log(&td->bw_log);
 
 	if (td->name[0] == '\0')
@@ -936,6 +939,16 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 				fgetpos(f, &off);
 				continue;
 			}
+			if (!check_strset(p, "write_bw_log")) {
+				td->write_bw_log = 1;
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_strset(p, "write_lat_log")) {
+				td->write_lat_log = 1;
+				fgetpos(f, &off);
+				continue;
+			}
 			if (!check_strstore(p, "iolog", tmpbuf)) {
 				if (td->write_iolog) {
 					log_err("fio: read iolog overrides given write_iolog\n");
@@ -1041,6 +1054,8 @@ static int fill_def_thread(void)
 	def_thread.rand_repeatable = DEF_RAND_REPEAT;
 	def_thread.nr_files = DEF_NR_FILES;
 	def_thread.unlink = DEF_UNLINK;
+	def_thread.write_bw_log = write_bw_log;
+	def_thread.write_lat_log = write_lat_log;
 #ifdef FIO_HAVE_DISK_UTIL
 	def_thread.do_disk_util = 1;
 #endif

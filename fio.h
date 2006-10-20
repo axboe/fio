@@ -192,6 +192,8 @@ struct thread_data {
 	unsigned char do_disk_util;
 	unsigned char override_sync;
 	unsigned char rand_repeatable;
+	unsigned char write_lat_log;
+	unsigned char write_bw_log;
 
 	unsigned int bs;
 	unsigned int min_bs;
@@ -337,8 +339,6 @@ extern struct io_u *__get_io_u(struct thread_data *);
 extern void put_io_u(struct thread_data *, struct io_u *);
 
 extern int rate_quit;
-extern int write_lat_log;
-extern int write_bw_log;
 extern int exitall_on_terminate;
 extern int thread_number;
 extern int shm_id;
