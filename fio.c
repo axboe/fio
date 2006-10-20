@@ -45,8 +45,6 @@ int shm_id = 0;
 int temp_stall_ts;
 char *fio_inst_prefix = _INST_PREFIX;
 
-extern unsigned long long mlock_size;
-
 #define should_fsync(td)	((td_write(td) || td_rw(td)) && (!(td)->odirect || (td)->override_sync))
 
 static volatile int startup_sem;
@@ -237,8 +235,6 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 		rate = (td->this_io_bytes[ddir] - td->rate_bytes) / spent;
 		if (rate < td->ratemin) {
 			fprintf(f_out, "%s: min rate %d not met, got %ldKiB/sec\n", td->name, td->ratemin, rate);
-			if (rate_quit)
-				terminate_threads(td->groupid);
 			return 1;
 		}
 	}
@@ -753,6 +749,8 @@ static void do_io(struct thread_data *td)
 		rate_throttle(td, usec, icd.bytes_done[td->ddir]);
 
 		if (check_min_rate(td, &e)) {
+			if (rate_quit)
+				terminate_threads(td->groupid);
 			td_verror(td, ENOMEM);
 			break;
 		}
@@ -800,19 +798,7 @@ static void cleanup_io_u(struct thread_data *td)
 		free(io_u);
 	}
 
-	if (td->mem_type == MEM_MALLOC)
-		free(td->orig_buffer);
-	else if (td->mem_type == MEM_SHM) {
-		struct shmid_ds sbuf;
-
-		shmdt(td->orig_buffer);
-		shmctl(td->shm_id, IPC_RMID, &sbuf);
-	} else if (td->mem_type == MEM_MMAP)
-		munmap(td->orig_buffer, td->orig_buffer_size);
-	else
-		log_err("Bad memory type %d\n", td->mem_type);
-
-	td->orig_buffer = NULL;
+	free_io_mem(td);
 }
 
 static int init_io_u(struct thread_data *td)
@@ -831,32 +817,8 @@ static int init_io_u(struct thread_data *td)
 
 	td->orig_buffer_size = td->max_bs * max_units + MASK;
 
-	if (td->mem_type == MEM_MALLOC)
-		td->orig_buffer = malloc(td->orig_buffer_size);
-	else if (td->mem_type == MEM_SHM) {
-		td->shm_id = shmget(IPC_PRIVATE, td->orig_buffer_size, IPC_CREAT | 0600);
-		if (td->shm_id < 0) {
-			td_verror(td, errno);
-			perror("shmget");
-			return 1;
-		}
-
-		td->orig_buffer = shmat(td->shm_id, NULL, 0);
-		if (td->orig_buffer == (void *) -1) {
-			td_verror(td, errno);
-			perror("shmat");
-			td->orig_buffer = NULL;
-			return 1;
-		}
-	} else if (td->mem_type == MEM_MMAP) {
-		td->orig_buffer = mmap(NULL, td->orig_buffer_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | OS_MAP_ANON, 0, 0);
-		if (td->orig_buffer == MAP_FAILED) {
-			td_verror(td, errno);
-			perror("mmap");
-			td->orig_buffer = NULL;
-			return 1;
-		}
-	}
+	if (allocate_io_mem(td))
+		return 1;
 
 	p = ALIGN(td->orig_buffer);
 	for (i = 0; i < max_units; i++) {
@@ -1126,48 +1088,6 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		terminate_threads(TERMINATE_ALL);
 }
 
-static void fio_unpin_memory(void *pinned)
-{
-	if (pinned) {
-		if (munlock(pinned, mlock_size) < 0)
-			perror("munlock");
-		munmap(pinned, mlock_size);
-	}
-}
-
-static void *fio_pin_memory(void)
-{
-	unsigned long long phys_mem;
-	void *ptr;
-
-	if (!mlock_size)
-		return NULL;
-
-	/*
-	 * Don't allow mlock of more than real_mem-128MB
-	 */
-	phys_mem = os_phys_mem();
-	if (phys_mem) {
-		if ((mlock_size + 128 * 1024 * 1024) > phys_mem) {
-			mlock_size = phys_mem - 128 * 1024 * 1024;
-			fprintf(f_out, "fio: limiting mlocked memory to %lluMiB\n", mlock_size >> 20);
-		}
-	}
-
-	ptr = mmap(NULL, mlock_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | OS_MAP_ANON, 0, 0);
-	if (!ptr) {
-		perror("malloc locked mem");
-		return NULL;
-	}
-	if (mlock(ptr, mlock_size) < 0) {
-		munmap(ptr, mlock_size);
-		perror("mlock");
-		return NULL;
-	}
-
-	return ptr;
-}
-
 /*
  * Main function for kicking off and reaping jobs, as needed.
  */
@@ -1176,9 +1096,9 @@ static void run_threads(void)
 	struct thread_data *td;
 	unsigned long spent;
 	int i, todo, nr_running, m_rate, t_rate, nr_started;
-	void *mlocked_mem;
 
-	mlocked_mem = fio_pin_memory();
+	if (fio_pin_memory())
+		return;
 
 	if (!terse_output) {
 		printf("Starting %d thread%s\n", thread_number, thread_number > 1 ? "s" : "");
@@ -1336,7 +1256,7 @@ static void run_threads(void)
 	}
 
 	update_io_ticks();
-	fio_unpin_memory(mlocked_mem);
+	fio_unpin_memory();
 }
 
 int main(int argc, char *argv[])

@@ -480,6 +480,14 @@ extern int get_next_verify(struct thread_data *td, struct io_u *);
 extern int do_io_u_verify(struct thread_data *, struct io_u **);
 
 /*
+ * Memory helpers
+ */
+extern int fio_pin_memory(void);
+extern void fio_unpin_memory(void);
+extern int allocate_io_mem(struct thread_data *);
+extern void free_io_mem(struct thread_data *);
+
+/*
  * This is a pretty crappy semaphore implementation, but with the use that fio
  * has (just signalling start/go conditions), it doesn't have to be better.
  * Naturally this would not work for any type of contended semaphore or
