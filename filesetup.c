@@ -98,22 +98,23 @@ static int create_files(struct thread_data *td)
 		return 0;
 	}
 
+	need_create = 0;
+	for_each_file(td, f, i) {
+		if (td->filetype == FIO_TYPE_FILE) {
+			f->file_size = td->total_file_size / td->nr_files;
+			need_create += file_ok(td, f);
+		} else
+			td->total_file_size += f->file_size;
+	}
+
+	if (!need_create)
+		return 0;
+
 	if (!td->total_file_size) {
 		log_err("Need size for create\n");
 		td_verror(td, EINVAL);
 		return 1;
 	}
-
-	need_create = 0;
-	for_each_file(td, f, i) {
-		f->file_size = td->total_file_size / td->nr_files;
-		need_create += file_ok(td, f);
-	}
-
-	td->io_size = td->total_file_size;
-
-	if (!need_create)
-		return 0;
 
 	temp_stall_ts = 1;
 	fprintf(f_out, "%s: Laying out IO file(s) (%d x %LuMiB == %LuMiB)\n",
@@ -347,6 +348,7 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 	if (get_file_size(td, f))
 		return 1;
 
+	td->total_file_size += f->file_size;
 	return 0;
 }
 
@@ -365,12 +367,17 @@ int setup_files(struct thread_data *td)
 	if (create_files(td))
 		return 1;
 
+	err = 0;
 	for_each_file(td, f, i) {
 		err = setup_file(td, f);
 		if (err)
 			break;
 	}
 
+	if (err)
+		return err;
+
+	td->io_size = td->total_file_size;
 	if (td->io_size == 0) {
 		log_err("%s: no io blocks\n", td->name);
 		td_verror(td, EINVAL);
