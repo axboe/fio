@@ -335,9 +335,6 @@ struct thread_data {
 #define td_verror(td, err)	__td_verror((td), (err), strerror((err)))
 #define td_vmsg(td, err, msg)	__td_verror((td), (err), (msg))
 
-extern struct io_u *__get_io_u(struct thread_data *);
-extern void put_io_u(struct thread_data *, struct io_u *);
-
 extern int rate_quit;
 extern int exitall_on_terminate;
 extern int thread_number;
@@ -486,6 +483,24 @@ extern int fio_pin_memory(void);
 extern void fio_unpin_memory(void);
 extern int allocate_io_mem(struct thread_data *);
 extern void free_io_mem(struct thread_data *);
+
+/*
+ * io unit handling
+ */
+#define queue_full(td)	list_empty(&(td)->io_u_freelist)
+extern struct io_u *__get_io_u(struct thread_data *);
+extern struct io_u *get_io_u(struct thread_data *, struct fio_file *);
+extern void put_io_u(struct thread_data *, struct io_u *);
+extern void ios_completed(struct thread_data *, struct io_completion_data *);
+extern void io_completed(struct thread_data *, struct io_u *, struct io_completion_data *);
+
+/*
+ * io engine entry points
+ */
+extern int td_io_prep(struct thread_data *, struct io_u *);
+extern int td_io_queue(struct thread_data *, struct io_u *);
+extern int td_io_sync(struct thread_data *, struct fio_file *);
+extern int td_io_getevents(struct thread_data *, int, int, struct timespec *);
 
 /*
  * This is a pretty crappy semaphore implementation, but with the use that fio

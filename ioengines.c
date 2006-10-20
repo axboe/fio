@@ -69,3 +69,32 @@ void close_ioengine(struct thread_data *td)
 	free(td->io_ops);
 	td->io_ops = NULL;
 }
+
+int td_io_prep(struct thread_data *td, struct io_u *io_u)
+{
+	if (td->io_ops->prep && td->io_ops->prep(td, io_u))
+		return 1;
+
+	return 0;
+}
+
+int td_io_sync(struct thread_data *td, struct fio_file *f)
+{
+	if (td->io_ops->sync)
+		return td->io_ops->sync(td, f);
+
+	return 0;
+}
+
+int td_io_getevents(struct thread_data *td, int min, int max,
+		    struct timespec *t)
+{
+	return td->io_ops->getevents(td, min, max, t);
+}
+
+int td_io_queue(struct thread_data *td, struct io_u *io_u)
+{
+	gettimeofday(&io_u->issue_time, NULL);
+
+	return td->io_ops->queue(td, io_u);
+}
