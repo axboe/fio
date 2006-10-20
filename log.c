@@ -82,36 +82,21 @@ void write_iolog_close(struct thread_data *td)
 	free(td->iolog_buf);
 }
 
-int init_iolog(struct thread_data *td)
+/*
+ * Open a stored log and read in the entries.
+ */
+static int init_iolog_read(struct thread_data *td)
 {
 	unsigned long long offset;
 	unsigned int bytes;
 	char *str, *p;
 	FILE *f;
-	int rw, i, reads, writes;
+	int rw, reads, writes;
 
-	if (!td->read_iolog && !td->write_iolog)
-		return 0;
-
-	if (td->read_iolog)
-		f = fopen(td->iolog_file, "r");
-	else
-		f = fopen(td->iolog_file, "w");
-
+	f = fopen(td->iolog_file, "r");
 	if (!f) {
-		perror("fopen iolog");
-		printf("file %s, %d/%d\n", td->iolog_file, td->read_iolog, td->write_iolog);
+		perror("fopen read iolog");
 		return 1;
-	}
-
-	/*
-	 * That's it for writing, setup a log buffer and we're done.
-	  */
-	if (td->write_iolog) {
-		td->iolog_f = f;
-		td->iolog_buf = malloc(8192);
-		setvbuf(f, td->iolog_buf, _IOFBF, 8192);
-		return 0;
 	}
 
 	/*
@@ -119,7 +104,7 @@ int init_iolog(struct thread_data *td)
 	 * for doing verifications.
 	 */
 	str = malloc(4096);
-	reads = writes = i = 0;
+	reads = writes = 0;
 	while ((p = fgets(str, 4096, f)) != NULL) {
 		struct io_piece *ipo;
 
@@ -144,21 +129,51 @@ int init_iolog(struct thread_data *td)
 			td->max_bs = bytes;
 		ipo->ddir = rw;
 		list_add_tail(&ipo->list, &td->io_log_list);
-		i++;
 	}
 
 	free(str);
 	fclose(f);
 
-	if (!i)
+	if (!reads && !writes)
 		return 1;
-
-	if (reads && !writes)
+	else if (reads && !writes)
 		td->ddir = DDIR_READ;
 	else if (!reads && writes)
 		td->ddir = DDIR_READ;
 	else
 		td->iomix = 1;
+
+	return 0;
+}
+
+/*
+ * Setup a log for storing io patterns.
+ */
+static int init_iolog_write(struct thread_data *td)
+{
+	FILE *f = fopen(td->iolog_file, "w");
+
+	f = fopen(td->iolog_file, "w");
+	if (!f) {
+		perror("fopen write iolog");
+		return 1;
+	}
+
+	/*
+	 * That's it for writing, setup a log buffer and we're done.
+	  */
+	td->iolog_f = f;
+	td->iolog_buf = malloc(8192);
+	setvbuf(f, td->iolog_buf, _IOFBF, 8192);
+	return 0;
+}
+
+int init_iolog(struct thread_data *td)
+{
+	if (td->read_iolog)
+		return init_iolog_read(td);
+	else if (td->write_iolog)
+		return init_iolog_write(td);
 
 	return 0;
 }
