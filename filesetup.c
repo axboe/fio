@@ -99,13 +99,9 @@ static int create_files(struct thread_data *td)
 	}
 
 	need_create = 0;
-	for_each_file(td, f, i) {
-		if (td->filetype == FIO_TYPE_FILE) {
-			f->file_size = td->total_file_size / td->nr_files;
+	if (td->filetype == FIO_TYPE_FILE)
+		for_each_file(td, f, i)
 			need_create += file_ok(td, f);
-		} else
-			td->total_file_size += f->file_size;
-	}
 
 	if (!need_create)
 		return 0;
@@ -348,7 +344,6 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 	if (get_file_size(td, f))
 		return 1;
 
-	td->total_file_size += f->file_size;
 	return 0;
 }
 
@@ -376,6 +371,13 @@ int setup_files(struct thread_data *td)
 
 	if (err)
 		return err;
+
+	/*
+	 * Recalculate the total file size now that files are set up.
+	 */
+	td->total_file_size = 0;
+	for_each_file(td, f, i)
+		td->total_file_size += f->file_size;
 
 	td->io_size = td->total_file_size;
 	if (td->io_size == 0) {
