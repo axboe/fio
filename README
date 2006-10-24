@@ -68,6 +68,10 @@ The job file parameters are:
 
 	name=x		Use 'x' as the identifier for this job.
 	directory=x	Use 'x' as the top level directory for storing files
+	filename=x	Force the use of 'x' as the filename for all files
+			in this thread. If not given, fio will make up
+			a suitable filename based on the thread and file
+			number.
 	rw=x		'x' may be: read, randread, write, randwrite,
 			rw (read-write mix), randrw (read-write random mix)
 	rwmixcycle=x	Base cycle for switching between read and write
