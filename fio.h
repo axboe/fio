@@ -151,8 +151,6 @@ struct fio_file {
 
 	unsigned long *file_map;
 	unsigned int num_maps;
-
-	int fileno;
 };
 
 /*
