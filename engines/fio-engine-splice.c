@@ -129,7 +129,7 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct spliceio_data *sd = td->io_ops->data;
-	int ret;
+	unsigned int ret;
 
 	if (io_u->ddir == DDIR_READ)
 		ret = fio_splice_read(td, io_u);
@@ -138,7 +138,7 @@ static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 	else
 		ret = fsync(io_u->file->fd);
 
-	if ((unsigned int) ret != io_u->buflen) {
+	if (ret != io_u->buflen) {
 		if (ret > 0) {
 			io_u->resid = io_u->buflen - ret;
 			io_u->error = ENODATA;

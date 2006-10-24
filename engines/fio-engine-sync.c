@@ -57,7 +57,7 @@ static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct syncio_data *sd = td->io_ops->data;
 	struct fio_file *f = io_u->file;
-	int ret;
+	unsigned int ret;
 
 	if (io_u->ddir == DDIR_READ)
 		ret = read(f->fd, io_u->buf, io_u->buflen);
@@ -66,7 +66,7 @@ static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 	else
 		ret = fsync(f->fd);
 
-	if ((unsigned int) ret != io_u->buflen) {
+	if (ret != io_u->buflen) {
 		if (ret > 0) {
 			io_u->resid = io_u->buflen - ret;
 			io_u->error = EIO;

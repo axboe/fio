@@ -229,6 +229,7 @@ struct io_u *__get_io_u(struct thread_data *td)
 	if (!queue_full(td)) {
 		io_u = list_entry(td->io_u_freelist.next, struct io_u, list);
 
+		io_u->buflen = 0;
 		io_u->error = 0;
 		io_u->resid = 0;
 		list_del(&io_u->list);
