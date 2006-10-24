@@ -66,13 +66,19 @@ struct io_u {
 	char *buf;
 	unsigned int buflen;
 	unsigned long long offset;
-	unsigned int index;
 
 	unsigned int resid;
 	unsigned int error;
 
-	unsigned char seen;
 	unsigned char ddir;
+
+	/*
+	 * io engine private data
+	 */
+	union {
+		unsigned int index;
+		unsigned int seen;
+	};
 
 	struct fio_file *file;
 
