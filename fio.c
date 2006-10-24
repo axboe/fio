@@ -194,6 +194,50 @@ static void cleanup_pending_aio(struct thread_data *td)
 }
 
 /*
+ * Helper to handle the final sync of a file. Works just like the normal
+ * io path, just does everything sync.
+ */
+static int fio_io_sync(struct thread_data *td, struct fio_file *f)
+{
+	struct io_u *io_u = __get_io_u(td);
+	struct io_completion_data icd;
+	int ret;
+
+	if (!io_u)
+		return 1;
+
+	io_u->ddir = DDIR_SYNC;
+	io_u->file = f;
+
+	if (td_io_prep(td, io_u)) {
+		put_io_u(td, io_u);
+		return 1;
+	}
+
+	ret = td_io_queue(td, io_u);
+	if (ret) {
+		put_io_u(td, io_u);
+		td_verror(td, ret);
+		return 1;
+	}
+
+	ret = td_io_getevents(td, 1, td->cur_depth, NULL);
+	if (ret < 0) {
+		td_verror(td, -ret);
+		return 1;
+	}
+
+	icd.nr = ret;
+	ios_completed(td, &icd);
+	if (icd.error) {
+		td_verror(td, icd.error);
+		return 1;
+	}
+
+	return 0;
+}
+
+/*
  * The main verify engine. Runs over the writes we previusly submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
  */
@@ -210,7 +254,7 @@ void do_verify(struct thread_data *td)
 	 * read from disk.
 	 */
 	for_each_file(td, f, i) {
-		td_io_sync(td, f);
+		fio_io_sync(td, f);
 		file_invalidate_cache(td, f);
 	}
 
@@ -413,7 +457,7 @@ static void do_io(struct thread_data *td)
 		if (should_fsync(td) && td->end_fsync) {
 			td_set_runstate(td, TD_FSYNCING);
 			for_each_file(td, f, i)
-				td_io_sync(td, f);
+				fio_io_sync(td, f);
 		}
 	}
 }

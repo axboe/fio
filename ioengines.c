@@ -111,46 +111,6 @@ int td_io_prep(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-int td_io_sync(struct thread_data *td, struct fio_file *f)
-{
-	struct io_u *io_u = __get_io_u(td);
-	struct io_completion_data icd;
-	int ret;
-
-	if (!io_u)
-		return 1;
-
-	io_u->ddir = DDIR_SYNC;
-	io_u->file = f;
-
-	if (td_io_prep(td, io_u)) {
-		put_io_u(td, io_u);
-		return 1;
-	}
-
-	ret = td_io_queue(td, io_u);
-	if (ret) {
-		put_io_u(td, io_u);
-		td_verror(td, ret);
-		return 1;
-	}
-
-	ret = td_io_getevents(td, 1, td->cur_depth, NULL);
-	if (ret < 0) {
-		td_verror(td, -ret);
-		return 1;
-	}
-
-	icd.nr = ret;
-	ios_completed(td, &icd);
-	if (icd.error) {
-		td_verror(td, icd.error);
-		return 1;
-	}
-
-	return 0;
-}
-
 int td_io_getevents(struct thread_data *td, int min, int max,
 		    struct timespec *t)
 {
