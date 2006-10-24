@@ -404,8 +404,11 @@ void close_files(struct thread_data *td)
 
 	for_each_file(td, f, i) {
 		if (f->fd != -1) {
-			if (td->unlink && td->filetype == FIO_TYPE_FILE)
+			if (td->unlink && td->filetype == FIO_TYPE_FILE &&
+			    td->filename) {
 				unlink(f->file_name);
+				td->filename = NULL;
+			}
 			free(f->file_name);
 			f->file_name = NULL;
 			close(f->fd);
