@@ -586,14 +586,8 @@ static void *thread_main(void *data)
 	if (init_random_state(td))
 		goto err;
 
-	if (td->ioscheduler) {
-		int ret = switch_ioscheduler(td);
-
-		free(td->ioscheduler);
-		free(td->sysfs_root);
-		if (ret)
-			goto err;
-	}
+	if (td->ioscheduler && switch_ioscheduler(td))
+		goto err;
 
 	td_set_runstate(td, TD_INITIALIZED);
 	fio_sem_up(&startup_sem);
@@ -604,10 +598,8 @@ static void *thread_main(void *data)
 
 	gettimeofday(&td->epoch, NULL);
 
-	if (td->exec_prerun) {
+	if (td->exec_prerun)
 		system(td->exec_prerun);
-		free(td->exec_prerun);
-	}
 
 	while (td->loops--) {
 		getrusage(RUSAGE_SELF, &td->ru_start);
@@ -656,10 +648,8 @@ static void *thread_main(void *data)
 		finish_log(td, td->clat_log, "clat");
 	if (td->write_iolog)
 		write_iolog_close(td);
-	if (td->exec_postrun) {
+	if (td->exec_postrun)
 		system(td->exec_postrun);
-		free(td->exec_postrun);
-	}
 
 	if (exitall_on_terminate)
 		terminate_threads(td->groupid);

@@ -177,8 +177,6 @@ int init_iolog(struct thread_data *td)
 	else if (td->write_iolog)
 		ret = init_iolog_write(td);
 
-	free(td->iolog_file);
-	td->iolog_file = NULL;
 	return 0;
 }
 
