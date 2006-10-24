@@ -169,7 +169,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
 
-	if (td->filetype == FIO_TYPE_FILE) {
+	if (td->filename)
+		td->nr_uniq_files = 1;
+	else
+		td->nr_uniq_files = td->nr_files;
+
+	if (td->filetype == FIO_TYPE_FILE || td->filename) {
 		char tmp[PATH_MAX];
 		int len = 0;
 		int i;
@@ -184,7 +189,10 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 			f->fd = -1;
 			f->fileno = i;
 
-			sprintf(tmp + len, "%s.%d.%d", jobname, td->thread_number, i);
+			if (td->filename)
+				sprintf(tmp + len, "%s", td->filename);
+			else
+				sprintf(tmp + len, "%s.%d.%d", jobname, td->thread_number, i);
 			f->file_name = strdup(tmp);
 		}
 	} else {
@@ -895,6 +903,11 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 			}
 			if (!check_strstore(p, "directory", tmpbuf)) {
 				td->directory = strdup(tmpbuf);
+				fgetpos(f, &off);
+				continue;
+			}
+			if (!check_strstore(p, "filename", tmpbuf)) {
+				td->filename = strdup(tmpbuf);
 				fgetpos(f, &off);
 				continue;
 			}

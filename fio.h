@@ -161,6 +161,7 @@ struct fio_file {
 struct thread_data {
 	char name[32];
 	char *directory;
+	char *filename;
 	char verror[80];
 	pthread_t thread;
 	int thread_number;
@@ -168,6 +169,7 @@ struct thread_data {
 	enum fio_filetype filetype;
 	struct fio_file *files;
 	unsigned int nr_files;
+	unsigned int nr_uniq_files;
 	unsigned int next_file;
 	int error;
 	pid_t pid;
