@@ -105,22 +105,24 @@ The job file parameters are:
 	ratemin=x	Quit if rate of x KiB/sec can't be met
 	ratecycle=x	ratemin averaged over x msecs
 	cpumask=x	Only allow job to run on CPUs defined by mask.
-	fsync=x		If writing, fsync after every x blocks have been written
+	fsync=x		If writing with buffered IO, fsync after every
+			'x' blocks have been written.
+	end_fsync=x	If 'x', run fsync() after end-of-job.
 	startdelay=x	Start this thread x seconds after startup
 	timeout=x	Terminate x seconds after startup. Can include a
 			normal time suffix if not given in seconds, such as
 			'm' for minutes, 'h' for hours, and 'd' for days.
 	offset=x	Start io at offset x (x string can include k/m/g)
 	invalidate=x	Invalidate page cache for file prior to doing io
-	sync=x		Use sync writes if x and writing
+	sync=x		Use sync writes if x and writing buffered IO.
 	mem=x		If x == malloc, use malloc for buffers. If x == shm,
-			use shm for buffers. If x == mmap, use anon mmap.
+			use shared memory for buffers. If x == mmap, use
+			anonymous mmap.
 	exitall		When one thread quits, terminate the others
 	bwavgtime=x	Average bandwidth stats over an x msec window.
 	create_serialize=x	If 'x', serialize file creation.
 	create_fsync=x	If 'x', run fsync() after file creation.
 	unlink		If set, unlink files when done.
-	end_fsync=x	If 'x', run fsync() after end-of-job.
 	loops=x		Run the job 'x' number of times.
 	verify=x	If 'x' == md5, use md5 for verifies. If 'x' == crc32,
 			use crc32 for verifies. md5 is 'safer', but crc32 is
