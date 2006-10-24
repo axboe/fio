@@ -17,20 +17,18 @@ struct libaio_data {
 	struct io_event *aio_events;
 };
 
-static int fio_libaio_sync(struct thread_data fio_unused *td,
-			   struct fio_file *f)
-{
-	return fsync(f->fd);
-}
-
 static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 
 	if (io_u->ddir == DDIR_READ)
 		io_prep_pread(&io_u->iocb, f->fd, io_u->buf, io_u->buflen, io_u->offset);
-	else
+	else if (io_u->ddir == DDIR_WRITE)
 		io_prep_pwrite(&io_u->iocb, f->fd, io_u->buf, io_u->buflen, io_u->offset);
+	else if (io_u->ddir == DDIR_SYNC)
+		io_prep_fsync(&io_u->iocb, f->fd);
+	else
+		return 1;
 
 	return 0;
 }
@@ -59,7 +57,7 @@ static int fio_libaio_getevents(struct thread_data *td, int min, int max,
 			break;
 	} while (1);
 
-	return (int) r;
+	return (int) -r;
 }
 
 static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
@@ -82,7 +80,7 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 
 	assert(ret);
 
-	return (int) ret;
+	return (int) -ret;
 }
 
 static int fio_libaio_cancel(struct thread_data *td, struct io_u *io_u)
@@ -132,5 +130,4 @@ struct ioengine_ops ioengine = {
 	.getevents	= fio_libaio_getevents,
 	.event		= fio_libaio_event,
 	.cleanup	= fio_libaio_cleanup,
-	.sync		= fio_libaio_sync,
 };

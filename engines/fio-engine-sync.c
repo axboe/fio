@@ -14,12 +14,6 @@ struct syncio_data {
 	struct io_u *last_io_u;
 };
 
-static int fio_syncio_sync(struct thread_data fio_unused *td,
-			   struct fio_file *f)
-{
-	return fsync(f->fd);
-}
-
 static int fio_syncio_getevents(struct thread_data *td, int fio_unused min,
 				int max, struct timespec fio_unused *t)
 {
@@ -48,6 +42,9 @@ static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 
+	if (io_u->ddir == DDIR_SYNC)
+		return 0;
+
 	if (lseek(f->fd, io_u->offset, SEEK_SET) == -1) {
 		td_verror(td, errno);
 		return 1;
@@ -64,8 +61,10 @@ static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 
 	if (io_u->ddir == DDIR_READ)
 		ret = read(f->fd, io_u->buf, io_u->buflen);
-	else
+	else if (io_u->ddir == DDIR_WRITE)
 		ret = write(f->fd, io_u->buf, io_u->buflen);
+	else
+		ret = fsync(f->fd);
 
 	if ((unsigned int) ret != io_u->buflen) {
 		if (ret > 0) {
@@ -107,6 +106,5 @@ struct ioengine_ops ioengine = {
 	.getevents	= fio_syncio_getevents,
 	.event		= fio_syncio_event,
 	.cleanup	= fio_syncio_cleanup,
-	.sync		= fio_syncio_sync,
 	.flags		= FIO_SYNCIO,
 };

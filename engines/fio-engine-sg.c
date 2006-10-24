@@ -151,28 +151,6 @@ static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int sync)
 	return fio_sgio_rw_doio(f, io_u, sync);
 }
 
-static int fio_sgio_sync(struct thread_data *td, struct fio_file fio_unused *f)
-{
-	struct sgio_data *sd = td->io_ops->data;
-	struct sg_io_hdr *hdr;
-	struct io_u *io_u;
-	int ret;
-
-	io_u = __get_io_u(td);
-	if (!io_u)
-		return ENOMEM;
-
-	hdr = &io_u->hdr;
-	sgio_hdr_init(sd, hdr, io_u, 0);
-	hdr->dxfer_direction = SG_DXFER_NONE;
-
-	hdr->cmdp[0] = 0x35;
-
-	ret = fio_sgio_doio(td, io_u, 1);
-	put_io_u(td, io_u);
-	return ret;
-}
-
 static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct sg_io_hdr *hdr = &io_u->hdr;
@@ -184,24 +162,34 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 		return EINVAL;
 	}
 
-	sgio_hdr_init(sd, hdr, io_u, 1);
-
 	if (io_u->ddir == DDIR_READ) {
+		sgio_hdr_init(sd, hdr, io_u, 1);
+
 		hdr->dxfer_direction = SG_DXFER_FROM_DEV;
 		hdr->cmdp[0] = 0x28;
-	} else {
+	} else if (io_u->ddir == DDIR_WRITE) {
+		sgio_hdr_init(sd, hdr, io_u, 1);
+
 		hdr->dxfer_direction = SG_DXFER_TO_DEV;
 		hdr->cmdp[0] = 0x2a;
+	} else {
+		sgio_hdr_init(sd, hdr, io_u, 0);
+
+		hdr->dxfer_direction = SG_DXFER_NONE;
+		hdr->cmdp[0] = 0x35;
 	}
 
-	nr_blocks = io_u->buflen / sd->bs;
-	lba = io_u->offset / sd->bs;
-	hdr->cmdp[2] = (lba >> 24) & 0xff;
-	hdr->cmdp[3] = (lba >> 16) & 0xff;
-	hdr->cmdp[4] = (lba >>  8) & 0xff;
-	hdr->cmdp[5] = lba & 0xff;
-	hdr->cmdp[7] = (nr_blocks >> 8) & 0xff;
-	hdr->cmdp[8] = nr_blocks & 0xff;
+	if (hdr->dxfer_direction != SG_DXFER_NONE) {
+		nr_blocks = io_u->buflen / sd->bs;
+		lba = io_u->offset / sd->bs;
+		hdr->cmdp[2] = (lba >> 24) & 0xff;
+		hdr->cmdp[3] = (lba >> 16) & 0xff;
+		hdr->cmdp[4] = (lba >>  8) & 0xff;
+		hdr->cmdp[5] = lba & 0xff;
+		hdr->cmdp[7] = (nr_blocks >> 8) & 0xff;
+		hdr->cmdp[8] = nr_blocks & 0xff;
+	}
+
 	return 0;
 }
 
@@ -210,7 +198,7 @@ static int fio_sgio_queue(struct thread_data *td, struct io_u *io_u)
 	struct sg_io_hdr *hdr = &io_u->hdr;
 	int ret;
 
-	ret = fio_sgio_doio(td, io_u, 0);
+	ret = fio_sgio_doio(td, io_u, io_u->ddir == DDIR_SYNC);
 
 	if (ret < 0)
 		io_u->error = errno;
@@ -324,6 +312,5 @@ struct ioengine_ops ioengine = {
 	.getevents	= fio_sgio_getevents,
 	.event		= fio_sgio_event,
 	.cleanup	= fio_sgio_cleanup,
-	.sync		= fio_sgio_sync,
 	.flags		= FIO_SYNCIO | FIO_RAWIO,
 };

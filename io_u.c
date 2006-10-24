@@ -190,6 +190,16 @@ static int fill_io_u(struct thread_data *td, struct fio_file *f,
 		return read_iolog_get(td, io_u);
 
 	/*
+	 * see if it's time to sync
+	 */
+	if (td->fsync_blocks && !(td->io_blocks[DDIR_WRITE] % td->fsync_blocks)
+	    && should_fsync(td)) {
+		io_u->ddir = DDIR_SYNC;
+		io_u->file = f;
+		return 0;
+	}
+
+	/*
 	 * No log, let the seq/rand engine retrieve the next position.
 	 */
 	if (!get_next_offset(td, f, &io_u->offset)) {
@@ -260,18 +270,20 @@ struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 		io_u->buflen = f->file_size - io_u->offset;
 	}
 
-	if (!io_u->buflen) {
-		put_io_u(td, io_u);
-		return NULL;
+	if (io_u->ddir != DDIR_SYNC) {
+		if (!io_u->buflen) {
+			put_io_u(td, io_u);
+			return NULL;
+		}
+
+		if (!td->read_iolog && !td->sequential)
+			mark_random_map(td, f, io_u);
+
+		f->last_pos += io_u->buflen;
+
+		if (td->verify != VERIFY_NONE)
+			populate_verify_io_u(td, io_u);
 	}
-
-	if (!td->read_iolog && !td->sequential)
-		mark_random_map(td, f, io_u);
-
-	f->last_pos += io_u->buflen;
-
-	if (td->verify != VERIFY_NONE)
-		populate_verify_io_u(td, io_u);
 
 	if (td_io_prep(td, io_u)) {
 		put_io_u(td, io_u);
@@ -287,6 +299,13 @@ void io_completed(struct thread_data *td, struct io_u *io_u,
 {
 	struct timeval e;
 	unsigned long msec;
+
+	if (io_u->ddir == DDIR_SYNC) {
+		td->last_was_sync = 1;
+		return;
+	}
+
+	td->last_was_sync = 0;
 
 	gettimeofday(&e, NULL);
 

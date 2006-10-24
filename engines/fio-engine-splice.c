@@ -16,12 +16,6 @@ struct spliceio_data {
 	int pipe[2];
 };
 
-static int fio_spliceio_sync(struct thread_data fio_unused *td,
-			     struct fio_file *f)
-{
-	return fsync(f->fd);
-}
-
 static int fio_spliceio_getevents(struct thread_data *td, int fio_unused min,
 				  int max, struct timespec fio_unused *t)
 {
@@ -139,8 +133,10 @@ static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 
 	if (io_u->ddir == DDIR_READ)
 		ret = fio_splice_read(td, io_u);
-	else
+	else if (io_u->ddir == DDIR_WRITE)
 		ret = fio_splice_write(td, io_u);
+	else
+		ret = fsync(io_u->file->fd);
 
 	if ((unsigned int) ret != io_u->buflen) {
 		if (ret > 0) {
@@ -191,6 +187,5 @@ struct ioengine_ops ioengine = {
 	.getevents	= fio_spliceio_getevents,
 	.event		= fio_spliceio_event,
 	.cleanup	= fio_spliceio_cleanup,
-	.sync		= fio_spliceio_sync,
 	.flags		= FIO_SYNCIO,
 };

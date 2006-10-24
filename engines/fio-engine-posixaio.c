@@ -45,12 +45,6 @@ static unsigned long long ts_utime_since_now(struct timespec *t)
 	return sec + nsec;
 }
 
-static int fio_posixaio_sync(struct thread_data fio_unused *td,
-			     struct fio_file *f)
-{
-	return fsync(f->fd);
-}
-
 static int fio_posixaio_cancel(struct thread_data fio_unused *td,
 			       struct io_u *io_u)
 {
@@ -149,8 +143,10 @@ static int fio_posixaio_queue(struct thread_data fio_unused *td,
 
 	if (io_u->ddir == DDIR_READ)
 		ret = aio_read(aiocb);
-	else
+	else if (io_u->ddir == DDIR_WRITE)
 		ret = aio_write(aiocb);
+	else
+		ret = aio_fsync(O_SYNC, aiocb);
 
 	if (ret)
 		io_u->error = errno;
@@ -189,5 +185,4 @@ struct ioengine_ops ioengine = {
 	.getevents	= fio_posixaio_getevents,
 	.event		= fio_posixaio_event,
 	.cleanup	= fio_posixaio_cleanup,
-	.sync		= fio_posixaio_sync,
 };

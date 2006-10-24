@@ -48,8 +48,10 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 
 	if (io_u->ddir == DDIR_READ)
 		memcpy(io_u->buf, f->mmap + real_off, io_u->buflen);
-	else
+	else if (io_u->ddir == DDIR_WRITE)
 		memcpy(f->mmap + real_off, io_u->buf, io_u->buflen);
+	else if (io_u->ddir == DDIR_SYNC)
+		return msync(f->mmap, f->file_size, MS_SYNC);
 
 	/*
 	 * not really direct, but should drop the pages from the cache
@@ -65,12 +67,6 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 		sd->last_io_u = io_u;
 
 	return io_u->error;
-}
-
-static int fio_mmapio_sync(struct thread_data fio_unused *td,
-			   struct fio_file *f)
-{
-	return msync(f->mmap, f->file_size, MS_SYNC);
 }
 
 static void fio_mmapio_cleanup(struct thread_data *td)
@@ -98,6 +94,5 @@ struct ioengine_ops ioengine = {
 	.getevents	= fio_mmapio_getevents,
 	.event		= fio_mmapio_event,
 	.cleanup	= fio_mmapio_cleanup,
-	.sync		= fio_mmapio_sync,
 	.flags		= FIO_SYNCIO | FIO_MMAPIO,
 };

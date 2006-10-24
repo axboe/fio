@@ -113,6 +113,7 @@ struct group_run_stats {
 enum fio_ddir {
 	DDIR_READ = 0,
 	DDIR_WRITE,
+	DDIR_SYNC,
 };
 
 /*
@@ -184,6 +185,7 @@ struct thread_data {
 	enum fio_ddir ddir;
 	unsigned int iomix;
 	unsigned int ioprio;
+	unsigned int last_was_sync;
 
 	unsigned char sequential;
 	unsigned char odirect;
@@ -364,6 +366,18 @@ extern struct thread_data *threads;
 #define RAND_MAP_BIT(td, f, b)	(TO_MAP_BLOCK(td, f, b) & (BLOCKS_PER_MAP - 1))
 
 #define MAX_JOBS	(1024)
+
+static inline int should_fsync(struct thread_data *td)
+{
+	if (td->last_was_sync)
+		return 0;
+	if (td->odirect)
+		return 0;
+	if (td_write(td) || td_rw(td) || td->override_sync)
+		return 1;
+
+	return 0;
+}
 
 struct disk_util_stat {
 	unsigned ios[2];
@@ -554,12 +568,11 @@ struct ioengine_ops {
 	struct io_u *(*event)(struct thread_data *, int);
 	int (*cancel)(struct thread_data *, struct io_u *);
 	void (*cleanup)(struct thread_data *);
-	int (*sync)(struct thread_data *, struct fio_file *);
 	void *data;
 	void *dlhandle;
 };
 
-#define FIO_IOOPS_VERSION	2
+#define FIO_IOOPS_VERSION	3
 
 extern struct ioengine_ops *load_ioengine(struct thread_data *, char *);
 extern void close_ioengine(struct thread_data *);

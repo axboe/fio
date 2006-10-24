@@ -45,8 +45,6 @@ int shm_id = 0;
 int temp_stall_ts;
 char *fio_inst_prefix = _INST_PREFIX;
 
-#define should_fsync(td)	((td_write(td) || td_rw(td)) && (!(td)->odirect || (td)->override_sync))
-
 static volatile int startup_sem;
 
 #define TERMINATE_ALL		(-1)
@@ -372,7 +370,7 @@ static void do_io(struct thread_data *td)
 
 		ret = td_io_getevents(td, min_evts, td->cur_depth, timeout);
 		if (ret < 0) {
-			td_verror(td, -ret);
+			td_verror(td, ret);
 			break;
 		} else if (!ret)
 			continue;
@@ -406,10 +404,6 @@ static void do_io(struct thread_data *td)
 
 		if (td->thinktime)
 			usec_sleep(td, td->thinktime);
-
-		if (should_fsync(td) && td->fsync_blocks &&
-		    (td->io_blocks[DDIR_WRITE] % td->fsync_blocks) == 0)
-			td_io_sync(td, f);
 	}
 
 	if (!ret) {
