@@ -1,0 +1,527 @@
+Table of contents
+-----------------
+
+1. Overview
+2. How fio works
+3. Running fio
+4. Job file format
+5. Detailed list of parameters
+6. Normal output
+7. Terse output
+
+
+1.0 Overview and history
+------------------------
+fio was originally written to save me the hassle of writing special test
+case programs when I wanted to test a specific workload, either for
+performance reasons or to find/reproduce a bug. The process of writing
+such a test app can be tiresome, especially if you have to do it often.
+Hence I needed a tool that would be able to simulate a given io workload
+without resorting to writing a tailored test case again and again.
+
+A test work load is difficult to define, though. There can be any number
+of processes or threads involved, and they can each be using their own
+way of generating io. You could have someone dirtying large amounts of
+memory in an memory mapped file, or maybe several threads issuing
+reads using asynchronous io. fio needed to be flexible enough to
+simulate both of these cases, and many more.
+
+2.0 How fio works
+-----------------
+The first step in getting fio to simulate a desired io workload, is
+writing a job file describing that specific setup. A job file may contain
+any number of threads and/or files - the typical contents of the job file
+is a global section defining shared parameters, and one or more job
+sections describing the jobs involved. When run, fio parses this file
+and sets everything up as described. If we break down a job from top to
+bottom, it contains the following basic parameters:
+
+	IO type		Defines the io pattern issued to the file(s).
+			We may only be reading sequentially from this
+			file(s), or we may be writing randomly. Or even
+			mixing reads and writes, sequentially or randomly.
+
+	Block size	In how large chunks are we issuing io? This may be
+			a single value, or it may describe a range of
+			block sizes.
+
+	IO size		How much data are we going to be reading/writing.
+
+	IO engine	How do we issue io? We could be memory mapping the
+			file, we could be using regular read/write, we
+			could be using splice, async io, or even
+			SG (SCSI generic sg).
+
+	IO depth	If the io engine is async, how large a queueing
+			depth do we want to maintain?
+
+	IO type		Should we be doing buffered io, or direct/raw io?
+
+	Num files	How many files are we spreading the workload over.
+
+	Num threads	How many threads or processes should we spread
+			this workload over.
+	
+The above are the basic parameters defined for a workload, in addition
+there's a multitude of parameters that modify other aspects of how this
+job behaves.
+
+
+3.0 Running fio
+---------------
+See the README file for command line parameters, there are only a few
+of them.
+
+Running fio is normally the easiest part - you just give it the job file
+(or job files) as parameters:
+
+$ fio job_file
+
+and it will start doing what the job_file tells it to do. You can give
+more than one job file on the command line, fio will serialize the running
+of those files. Internally that is the same as using the 'stonewall'
+parameter described the the parameter section.
+
+fio does not need to run as root, except if the files or devices specified
+in the job section requires that. Some other options may also be restricted,
+such as memory locking, io scheduler switching, and descreasing the nice value.
+
+
+4.0 Job file format
+-------------------
+As previously described, fio accepts one or more job files describing
+what it is supposed to do. The job file format is the classic ini file,
+where the names enclosed in [] brackets define the job name. You are free
+to use any ascii name you want, except 'global' which has special meaning.
+A global section sets defaults for the jobs described in that file. A job
+may override a global section parameter, and a job file may even have
+several global sections if so desired. A job is only affected by a global
+section residing above it. If the first character in a line is a ';', the
+entire line is discarded as a comment.
+
+So lets look at a really simple job file that define to threads, each
+randomly reading from a 128MiB file.
+
+; -- start job file --
+[global]
+rw=randread
+size=128m
+
+[job1]
+
+[job2]
+
+; -- end job file --
+
+As you can see, the job file sections themselves are empty as all the
+described parameters are shared. As no filename= option is given, fio
+makes up a filename for each of the jobs as it sees fit.
+
+Lets look at an example that have a number of processes writing randomly
+to files.
+
+; -- start job file --
+[random-writers]
+ioengine=libaio
+iodepth=4
+rw=randwrite
+bs=32k
+direct=0
+size=64m
+numjobs=4
+
+; -- end job file --
+
+Here we have no global section, as we only have one job defined anyway.
+We want to use async io here, with a depth of 4 for each file. We also
+increased the buffer size used to 32KiB and define numjobs to 4 to
+fork 4 identical jobs. The result is 4 processes each randomly writing
+to their own 64MiB file.
+
+fio ships with a few example job files, you can also look there for
+inspiration.
+
+
+5.0 Detailed list of parameters
+-------------------------------
+
+This section describes in details each parameter associated with a job.
+Some parameters take an option of a given type, such as an integer or
+a string. The following types are used:
+
+str	String. This is a sequence of alpha characters.
+int	Integer. A whole number value, may be negative.
+siint	SI integer. A whole number value, which may contain a postfix
+	describing the base of the number. Accepted postfixes are k/m/g,
+	meaning kilo, mega, and giga. So if you want to specifiy 4096,
+	you could either write out '4096' or just give 4k. The postfixes
+	signify base 2 values, so 1024 is 1k and 1024k is 1m and so on.
+bool	Boolean. Usually parsed as an integer, however only defined for
+	true and false (1 and 0).
+irange	Integer range with postfix. Allows value range to be given, such
+	as 1024-4096. Also see siint.
+
+With the above in mind, here follows the complete list of fio job
+parameters.
+
+name=str	ASCII name of the job. This may be used to override the
+		name printed by fio for this job. Otherwise the job
+		name is used.
+
+directory=str	Prefix filenames with this directory. Used to places files
+		in a different location than "./".
+
+filename=str	Fio normally makes up a filename based on the job name,
+		thread number, and file number. If you want to share
+		files between threads in a job or several jobs, specify
+		a filename for each of them to override the default.
+
+rw=str		Type of io pattern. Accepted values are:
+
+			read		Sequential reads
+			write		Sequential writes
+			randwrite	Random writes
+			randread	Random reads
+			rw		Sequential mixed reads and writes
+			randrw		Random mixed reads and writes
+
+		For the mixed io types, the default is to split them 50/50.
+		For certain types of io the result may still be skewed a bit,
+		since the speed may be different.
+
+size=siint	The total size of file io for this job. This may describe
+		the size of the single file the job uses, or it may be
+		divided between the number of files in the job. If the
+		file already exists, the file size will be adjusted to this
+		size if larger than the current file size. If this parameter
+		is not given and the file exists, the file size will be used.
+
+bs=siint	The block size used for the io units. Defaults to 4k.
+
+bsrange=irange	Instead of giving a single block size, specify a range
+		and fio will mix the issued io block sizes. The issued
+		io unit will always be a multiple of the minimum value
+		given.
+
+nrfiles=int	Number of files to use for this job. Defaults to 1.
+
+ioengine=str	Defines how the job issues io to the file. The following
+		types are defined:
+
+			sync	Basic read(2) or write(2) io. lseek(2) is
+				used to position the io location.
+
+			libaio	Linux native asynchronous io.
+
+			posixaio glibc posix asynchronous io.
+
+			mmap	File is memory mapped and data copied
+				to/from using memcpy(3).
+
+			splice	splice(2) is used to transfer the data and
+				vmsplice(2) to transfer data from user
+				space to the kernel.
+
+			sg	SCSI generic sg v3 io. May either be
+				syncrhonous using the SG_IO ioctl, or if
+				the target is an sg character device
+				we use read(2) and write(2) for asynchronous
+				io.
+
+iodepth=int	This defines how many io units to keep in flight against
+		the file. The default is 1 for each file defined in this
+		job, can be overridden with a larger value for higher
+		concurrency.
+
+direct=bool	If value is true, use non-buffered io. This is usually
+		O_DIRECT. Defaults to true.
+
+offset=siint	Start io at the given offset in the file. The data before
+		the given offset will not be touched. This effectively
+		caps the file size at real_size - offset.
+
+fsync=int	If writing to a file, issue a sync of the dirty data
+		for every number of blocks given. For example, if you give
+		32 as a parameter, fio will sync the file for every 32
+		writes issued. If fio is using non-buffered io, we may
+		not sync the file. The exception is the sg io engine, which
+		syncronizes the disk cache anyway.
+
+overwrite=bool	If writing to a file, setup the file first and do overwrites.
+
+end_fsync=bool	If true, fsync file contents when the job exits.
+
+rwmixcycle=int	Value in miliseconds describing how often to switch between
+		reads and writes for a mixed workload. The default is
+		500 msecs.
+
+rwmixread=int	How large a percentage of the mix should be reads.
+
+rwmixwrite=int	How large a percentage of the mix should be writes. If both
+		rwmixread and rwmixwrite is given and the values do not add
+		up to 100%, the latter of the two will be used to override
+		the first.
+
+nice=int	Run the job with the given nice value. See man nice(2).
+
+prio=int	Set the io priority value of this job. Linux limits us to
+		a positive value between 0 and 7, with 0 being the highest.
+		See man ionice(1).
+
+prioclass=int	Set the io priority class. See man ionice(1).
+
+thinktime=int	Stall the job x microseconds after an io has completed before
+		issuing the next. May be used to simulate processing being
+		done by an application.
+
+rate=int	Cap the bandwidth used by this job to this number of KiB/sec.
+
+ratemin=int	Tell fio to do whatever it can to maintain at least this
+		bandwidth.
+
+ratecycle=int	Average bandwidth for 'rate' and 'ratemin' over this number
+		of miliseconds.
+
+cpumask=int	Set the CPU affinity of this job. The parameter given is a
+		bitmask of allowed CPU's the job may run on. See man
+		sched_setaffinity(2).
+
+startdelay=int	Start this job the specified number of seconds after fio
+		has started. Only useful if the job file contains several
+		jobs, and you want to delay starting some jobs to a certain
+		time.
+
+timeout=int	Tell fio to terminate processing after the specified number
+		of seconds. It can be quite hard to determine for how long
+		a specified job will run, so this parameter is handy to
+		cap the total runtime to a given time.
+
+invalidate=bool	Invalidate the buffer/page cache parts for this file prior
+		to starting io. Defaults to true.
+
+sync=bool	Use sync io for buffered writes. For the majority of the
+		io engines, this means using O_SYNC.
+
+mem=str		Fio can use various types of memory as the io unit buffer.
+		The allowed values are:
+
+			malloc	Use memory from malloc(3) as the buffers.
+
+			shm	Use shared memory as the buffers. Allocated
+				through shmget(2).
+
+			mmap	Use anonymous memory maps as the buffers.
+				Allocated through mmap(2).
+
+		The area allocated is a function of the maximum allowed
+		bs size for the job, multiplied by the io depth given.
+
+exitall		When one job finishes, terminate the rest. The default is
+		to wait for each job to finish, sometimes that is not the
+		desired action.
+
+bwavgtime=int	Average the calculated bandwidth over the given time. Value
+		is specified in miliseconds.
+
+create_serialize=bool	If true, serialize the file creating for the jobs.
+			This may be handy to avoid interleaving of data
+			files, which may greatly depend on the filesystem
+			used and even the number of processors in the system.
+
+create_fsync=bool	fsync the data file after creation. This is the
+			default.
+
+unlink		Unlink the job files when done. fio defaults to doing this,
+		if it created the file itself.
+
+loops=int	Run the specified number of iterations of this job. Used
+		to repeat the same workload a given number of times. Defaults
+		to 1.
+
+verify=str	If writing to a file, fio can verify the file contents
+		after each iteration of the job. The allowed values are:
+
+			md5	Use an md5 sum of the data area and store
+				it in the header of each block.
+
+			crc32	Use a crc32 sum of the data area and store
+				it in the header of each block.
+
+		This option can be used for repeated burnin tests of a
+		system to make sure that the written data is also
+		correctly read back.
+
+stonewall	Wait for preceeding jobs in the job file to exit, before
+		starting this one. Can be used to insert serialization
+		points in the job file.
+
+numjobs=int	Create the specified number of clones of this job. May be
+		used to setup a larger number of threads/processes doing
+		the same thing.
+
+thread		fio defaults to forking jobs, however if this option is
+		given, fio will use pthread_create(3) to create threads
+		instead.
+
+zonesize=siint	Divide a file into zones of the specified size. See zoneskip.
+
+zoneskip=siint	Skip the specified number of bytes when zonesize data has
+		been read. The two zone options can be used to only do
+		io on zones of a file.
+
+write_iolog=str	Write the issued io patterns to the specified file. See iolog.
+
+iolog=str	Open an iolog with the specified file name and replay the
+		io patterns it contains. This can be used to store a
+		workload and replay it sometime later.
+
+write_bw_log	If given, write a bandwidth log of the jobs in this job
+		file. Can be used to store data of the bandwidth of the
+		jobs in their lifetime.
+
+write_lat_log	Same as write_bw_log, except that this option stores io
+		completion latencies instead.
+
+lockmem=siint	Pin down the specified amount of memory with mlock(2). Can
+		potentially be used instead of removing memory or booting
+		with less memory to simulate a smaller amount of memory.
+
+exec_prerun=str	Before running this job, issue the command specified
+		through system(3).
+
+exec_postrun=str After the job completes, issue the command specified
+		 though system(3).
+
+ioscheduler=str	Attempt to switch the device hosting the file to the specified
+		io scheduler before running.
+
+cpuload=int	If the job is a CPU cycle eater, attempt to use the specified
+		percentage of CPU cycles.
+
+cpuchunks=int	If the job is a CPU cycle eater, split the load into
+		cycles of the given time. In miliseconds.
+
+
+6.0 Interpreting the output
+---------------------------
+
+fio spits out a lot of output. While running, fio will display the
+status of the jobs created. An example of that would be:
+
+Threads running: 1: [_r] [24.79% done] [eta 00h:01m:31s]
+
+The characters inside the square brackets denote the current status of
+each thread. The possible values (in typical life cycle order) are:
+
+Idle	Run
+----    ---
+P		Thread setup, but not started.
+C		Thread created.
+I		Thread initialized, waiting.
+	R	Running, doing sequential reads.
+	r	Running, doing random reads.
+	W	Running, doing sequential writes.
+	w	Running, doing random writes.
+	M	Running, doing mixed sequential reads/writes.
+	m	Running, doing mixed random reads/writes.
+	F	Running, currently waiting for fsync()
+V		Running, doing verification of written data.
+E		Thread exited, not reaped by main thread yet.
+_		Thread reaped.
+
+The other values are fairly self explanatory - number of threads
+currently running and doing io, and the estimated completion percentage
+and time for the running group. It's impossible to estimate runtime
+of the following groups (if any).
+
+When fio is done (or interrupted by ctrl-c), it will show the data for
+each thread, group of threads, and disks in that order. For each data
+direction, the output looks like:
+
+Client1 (g=0): err= 0:
+  write: io=    32MiB, bw=   666KiB/s, runt= 50320msec
+    slat (msec): min=    0, max=  136, avg= 0.03, dev= 1.92
+    clat (msec): min=    0, max=  631, avg=48.50, dev=86.82
+    bw (KiB/s) : min=    0, max= 1196, per=51.00%, avg=664.02, dev=681.68
+  cpu        : usr=1.49%, sys=0.25%, ctx=7969
+
+The client number is printed, along with the group id and error of that
+thread. Below is the io statistics, here for writes. In the order listed,
+they denote:
+
+io=		Number of megabytes io performed
+bw=		Average bandwidth rate
+runt=		The runtime of that thread
+	slat=	Submission latency (avg being the average, dev being the
+		standard deviation). This is the time it took to submit
+		the io. For sync io, the slat is really the completion
+		latency, since queue/complete is one operation there.
+	clat=	Completion latency. Same names as slat, this denotes the
+		time from submission to completion of the io pieces. For
+		sync io, clat will usually be equal (or very close) to 0,
+		as the time from submit to complete is basically just
+		CPU time (io has already been done, see slat explanation).
+	bw=	Bandwidth. Same names as the xlat stats, but also includes
+		an approximate percentage of total aggregate bandwidth
+		this thread received in this group. This last value is
+		only really useful if the threads in this group are on the
+		same disk, since they are then competing for disk access.
+cpu=		CPU usage. User and system time, along with the number
+		of context switches this thread went through.
+
+After each client has been listed, the group statistics are printed. They
+will look like this:
+
+Run status group 0 (all jobs):
+   READ: io=64MiB, aggrb=22178, minb=11355, maxb=11814, mint=2840msec, maxt=2955msec
+  WRITE: io=64MiB, aggrb=1302, minb=666, maxb=669, mint=50093msec, maxt=50320msec
+
+For each data direction, it prints:
+
+io=		Number of megabytes io performed.
+aggrb=		Aggregate bandwidth of threads in this group.
+minb=		The minimum average bandwidth a thread saw.
+maxb=		The maximum average bandwidth a thread saw.
+mint=		The smallest runtime of the threads in that group.
+maxt=		The longest runtime of the threads in that group.
+
+And finally, the disk statistics are printed. They will look like this:
+
+Disk stats (read/write):
+  sda: ios=16398/16511, merge=30/162, ticks=6853/819634, in_queue=826487, util=100.00%
+
+Each value is printed for both reads and writes, with reads first. The
+numbers denote:
+
+ios=		Number of ios performed by all groups.
+merge=		Number of merges io the io scheduler.
+ticks=		Number of ticks we kept the disk busy.
+io_queue=	Total time spent in the disk queue.
+util=		The disk utilization. A value of 100% means we kept the disk
+		busy constantly, 50% would be a disk idling half of the time.
+
+
+7.0 Terse output
+----------------
+
+For scripted usage where you typically want to generate tables or graphs
+of the results, fio can output the results in a comma seperated format.
+The format is one long line of values, such as:
+
+client1,0,0,936,331,2894,0,0,0.000000,0.000000,1,170,22.115385,34.290410,16,714,84.252874%,366.500000,566.417819,3496,1237,2894,0,0,0.000000,0.000000,0,246,6.671625,21.436952,0,2534,55.465300%,1406.600000,2008.044216,0.000000%,0.431928%,1109
+
+Split up, the format is as follows:
+
+	jobname, groupid, error
+	READ status:
+		KiB IO, bandwidth (KiB/sec), runtime (msec)
+		Submission latency: min, max, mean, deviation
+		Completion latency: min, max, mean, deviation
+		Bw: min, max, aggreate percentage of total, mean, deviation
+	WRITE status:
+		KiB IO, bandwidth (KiB/sec), runtime (msec)
+		Submission latency: min, max, mean, deviation
+		Completion latency: min, max, mean, deviation
+		Bw: min, max, aggreate percentage of total, mean, deviation
+	CPU usage: user, system, context switches
+
