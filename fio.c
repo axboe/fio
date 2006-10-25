@@ -218,14 +218,14 @@ static int fio_io_sync(struct thread_data *td, struct fio_file *f)
 
 	ret = td_io_queue(td, io_u);
 	if (ret) {
+		td_verror(td, io_u->error);
 		put_io_u(td, io_u);
-		td_verror(td, ret);
 		return 1;
 	}
 
 	ret = td_io_getevents(td, 1, td->cur_depth, NULL);
 	if (ret < 0) {
-		td_verror(td, -ret);
+		td_verror(td, ret);
 		return 1;
 	}
 
@@ -292,8 +292,8 @@ void do_verify(struct thread_data *td)
 
 		ret = td_io_queue(td, io_u);
 		if (ret) {
+			td_verror(td, io_u->error);
 			put_io_u(td, io_u);
-			td_verror(td, ret);
 			break;
 		}
 
@@ -399,8 +399,8 @@ static void do_io(struct thread_data *td)
 
 		ret = td_io_queue(td, io_u);
 		if (ret) {
+			td_verror(td, io_u->error);
 			put_io_u(td, io_u);
-			td_verror(td, ret);
 			break;
 		}
 

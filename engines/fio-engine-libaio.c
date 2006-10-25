@@ -78,9 +78,13 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 			break;
 	} while (1);
 
-	assert(ret);
+	if (ret <= 0) {
+		io_u->resid = io_u->buflen;
+		io_u->error = -ret;
+		return 1;
+	}
 
-	return (int) -ret;
+	return 0;
 }
 
 static int fio_libaio_cancel(struct thread_data *td, struct io_u *io_u)
