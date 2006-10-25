@@ -44,6 +44,11 @@ static int create_file(struct thread_data *td, struct fio_file *f)
 		goto err;
 	}
 
+	if (posix_fallocate(f->fd, 0, f->file_size) < 0) {
+		td_verror(td, errno);
+		goto err;
+	}
+
 	b = malloc(td->max_bs);
 	memset(b, 0, td->max_bs);
 
