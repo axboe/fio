@@ -377,7 +377,9 @@ iolog=str	Open an iolog with the specified file name and replay the
 
 write_bw_log	If given, write a bandwidth log of the jobs in this job
 		file. Can be used to store data of the bandwidth of the
-		jobs in their lifetime.
+		jobs in their lifetime. The included fio_generate_plots
+		script uses gnuplot to turn these text files into nice
+		graphs.
 
 write_lat_log	Same as write_bw_log, except that this option stores io
 		completion latencies instead.
