@@ -225,6 +225,7 @@ struct thread_data {
 	unsigned int write_iolog;
 	unsigned int rwmixcycle;
 	unsigned int rwmixread;
+	unsigned int rwmixwrite;
 	unsigned int nice;
 
 	char *iolog_file;

@@ -46,18 +46,13 @@ static unsigned long get_mult_bytes(char c)
 }
 
 /*
- * convert string after '=' into decimal value, noting any size suffix
+ * convert string into decimal value, noting any size suffix
  */
 static int str_to_decimal(char *p, unsigned long long *val, int kilo)
 {
-	char *str;
+	char *str = p;
 	int len;
 
-	str = strchr(p, '=');
-	if (!str)
-		return 1;
-
-	str++;
 	len = strlen(str);
 
 	*val = strtoul(str, NULL, 10);
@@ -71,19 +66,13 @@ static int str_to_decimal(char *p, unsigned long long *val, int kilo)
 	return 0;
 }
 
-int check_str_bytes(char *p, char *name, unsigned long long *val)
+static int check_str_bytes(char *p, unsigned long long *val)
 {
-	if (strncmp(p, name, strlen(name) - 1))
-		return 1;
-
 	return str_to_decimal(p, val, 1);
 }
 
-int check_str_time(char *p, char *name, unsigned long long *val)
+static int check_str_time(char *p, unsigned long long *val)
 {
-	if (strncmp(p, name, strlen(name) - 1))
-		return 1;
-
 	return str_to_decimal(p, val, 0);
 }
 
@@ -105,49 +94,7 @@ void strip_blank_end(char *p)
 	*(s + 1) = '\0';
 }
 
-int check_str(char *p, char *name, str_cb_fn *cb, void *data)
-{
-	char *s;
-
-	if (strncmp(p, name, strlen(name)))
-		return 1;
-
-	s = strstr(p, name);
-	if (!s)
-		return 1;
-
-	s = strchr(s, '=');
-	if (!s)
-		return 1;
-
-	s++;
-	strip_blank_front(&s);
-	return cb(data, s);
-}
-
-int check_strstore(char *p, char *name, char *dest)
-{
-	char *s;
-
-	if (strncmp(p, name, strlen(name)))
-		return 1;
-
-	s = strstr(p, name);
-	if (!s)
-		return 1;
-
-	s = strchr(p, '=');
-	if (!s)
-		return 1;
-
-	s++;
-	strip_blank_front(&s);
-
-	strcpy(dest, s);
-	return 0;
-}
-
-static int __check_range_bytes(char *str, unsigned long *val)
+static int check_range_bytes(char *str, unsigned long *val)
 {
 	char suffix;
 
@@ -162,66 +109,9 @@ static int __check_range_bytes(char *str, unsigned long *val)
 	return 1;
 }
 
-int check_range_bytes(char *p, char *name, unsigned long *s, unsigned long *e)
+int check_int(char *p, unsigned int *val)
 {
-	char option[128];
-	char *str, *p1, *p2;
-
-	if (strncmp(p, name, strlen(name)))
-		return 1;
-
-	strcpy(option, p);
-	p = option;
-
-	str = strstr(p, name);
-	if (!str)
-		return 1;
-
-	p += strlen(name);
-
-	str = strchr(p, '=');
-	if (!str)
-		return 1;
-
-	/*
-	 * 'p' now holds whatever is after the '=' sign
-	 */
-	p1 = str + 1;
-
-	/*
-	 * terminate p1 at the '-' sign
-	 */
-	p = strchr(p1, '-');
-	if (!p)
-		return 1;
-
-	p2 = p + 1;
-	*p = '\0';
-
-	if (!__check_range_bytes(p1, s) && !__check_range_bytes(p2, e))
-		return 0;
-
-	return 1;
-}
-
-int check_int(char *p, char *name, unsigned int *val)
-{
-	char *str;
-
-	if (strncmp(p, name, strlen(name)))
-		return 1;
-
-	str = strstr(p, name);
-	if (!str)
-		return 1;
-
-	str = strchr(p, '=');
-	if (!str)
-		return 1;
-
-	str++;
-
-	if (sscanf(str, "%u", val) == 1)
+	if (sscanf(p, "%u", val) == 1)
 		return 0;
 
 	return 1;
@@ -232,3 +122,161 @@ int check_strset(char *p, char *name)
 	return strncmp(p, name, strlen(name));
 }
 
+static struct fio_option *find_option(struct fio_option *options,
+				      const char *opt)
+{
+	struct fio_option *o;
+	int i = 0;
+
+	do {
+		o = &options[i];
+		if (!o->name)
+			break;
+
+		if (!strcmp(o->name, opt))
+			return o;
+
+		i++;
+	} while (1);
+
+	return NULL;
+}
+
+static int handle_option(struct fio_option *o, char *ptr, void *data)
+{
+	unsigned int il, *ilp;
+	unsigned long long ull, *ullp;
+	unsigned long ul1, ul2, *ulp1, *ulp2;
+	char *tmpbuf, **cp;
+	int ret = 0, is_time = 0;
+
+	tmpbuf = malloc(4096);
+
+	switch (o->type) {
+	case FIO_OPT_STR: {
+		fio_opt_str_fn *fn = o->cb;
+
+		ret = fn(data, ptr);
+		break;
+	}
+	case FIO_OPT_STR_VAL_TIME:
+		is_time = 1;
+	case FIO_OPT_STR_VAL: {
+		fio_opt_str_val_fn *fn = o->cb;
+
+		if (is_time)
+			ret = check_str_time(ptr, &ull);
+		else
+			ret = check_str_bytes(ptr, &ull);
+
+		if (ret)
+			break;
+
+		if (o->max_val && ull > o->max_val)
+			ull = o->max_val;
+
+		if (fn)
+			ret = fn(data, &ull);
+		else {
+			ullp = td_var(data, o->off1);
+			*ullp = ull;
+		}
+		break;
+	}
+	case FIO_OPT_STR_STORE:
+		cp = td_var(data, o->off1);
+		*cp = strdup(ptr);
+		break;
+	case FIO_OPT_RANGE: {
+		char *p1, *p2;
+
+		p1 = strchr(ptr, '-');
+		if (!p1) {
+			ret = 1;
+			break;
+		}
+
+		p2 = p1 + 1;
+		*p1 = '\0';
+
+		ret = 1;
+		if (!check_range_bytes(p1, &ul1) && !check_range_bytes(p2, &ul2)) {
+			ret = 0;
+			ulp1 = td_var(data, o->off1);
+			ulp2 = td_var(data, o->off2);
+			if (ul1 > ul2) {
+				*ulp1 = ul2;
+				*ulp2 = ul1;
+			} else {
+				*ulp2 = ul2;
+				*ulp1 = ul1;
+			}
+		}	
+			
+		break;
+	}
+	case FIO_OPT_INT: {
+		fio_opt_int_fn *fn = o->cb;
+
+		ret = check_int(ptr, &il);
+		if (ret)
+			break;
+
+		if (o->max_val && il > o->max_val)
+			il = o->max_val;
+
+		if (fn)
+			ret = fn(data, &il);
+		else {
+			ilp = td_var(data, o->off1);
+			*ilp = il;
+		}
+		break;
+	}
+	case FIO_OPT_STR_SET: {
+		fio_opt_str_set_fn *fn = o->cb;
+
+		if (fn)
+			ret = fn(data);
+		else {
+			ilp = td_var(data, o->off1);
+			*ilp = 1;
+		}
+		break;
+	}
+	default:
+		fprintf(stderr, "Bad option type %d\n", o->type);
+		ret = 1;
+	}
+
+	free(tmpbuf);
+	return ret;
+}
+
+int parse_option(const char *opt, struct fio_option *options, void *data)
+{
+	struct fio_option *o = find_option(options, opt);
+	char *pre, *post;
+	char tmp[64];
+
+	strcpy(tmp, opt);
+
+	pre = strchr(tmp, '=');
+	if (pre) {
+		post = pre;
+		*pre = '\0';
+		pre = tmp;
+		post++;
+		o = find_option(options, pre);
+	} else {
+		o = find_option(options, tmp);
+		post = NULL;
+	}
+
+	if (!o) {
+		fprintf(stderr, "Bad option %s\n", tmp);
+		return 1;
+	}
+
+	return handle_option(o, post, data);
+}

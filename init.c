@@ -50,6 +50,301 @@
 #define DEF_WRITE_BW_LOG	(0)
 #define DEF_WRITE_LAT_LOG	(0)
 
+#define td_var_offset(var)	((size_t) &((struct thread_data *)0)->var)
+
+static int str_rw_cb(void *, char *);
+static int str_ioengine_cb(void *, char *);
+static int str_mem_cb(void *, char *);
+static int str_verify_cb(void *, char *);
+static int str_lockmem_cb(void *, unsigned long *);
+static int str_prio_cb(void *, unsigned int *);
+static int str_prioclass_cb(void *, unsigned int *);
+static int str_exitall_cb(void);
+static int str_cpumask_cb(void *, unsigned int *);
+
+/*
+ * Map of job/command line options
+ */
+static struct fio_option options[] = {
+	{
+		.name	= "name",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(name),
+	},
+	{
+		.name	= "directory",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(directory),
+	},
+	{
+		.name	= "filename",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(filename),
+	},
+	{
+		.name	= "rw",
+		.type	= FIO_OPT_STR,
+		.cb	= str_rw_cb,
+	},
+	{
+		.name	= "ioengine",
+		.type	= FIO_OPT_STR,
+		.cb	= str_ioengine_cb,
+	},
+	{
+		.name	= "mem",
+		.type	= FIO_OPT_STR,
+		.cb	= str_mem_cb,
+	},
+	{
+		.name	= "verify",
+		.type	= FIO_OPT_STR,
+		.cb	= str_verify_cb,
+	},
+	{
+		.name	= "write_iolog",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(write_iolog),
+	},
+	{
+		.name	= "iolog",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(iolog),
+	},
+	{
+		.name	= "exec_prerun",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(exec_prerun),
+	},
+	{
+		.name	= "exec_postrun",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(exec_postrun),
+	},
+#ifdef FIO_HAVE_IOSCHED_SWITCH
+	{
+		.name	= "ioscheduler",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(ioscheduler),
+	},
+#endif
+	{
+		.name	= "size",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(total_file_size),
+	},
+	{
+		.name	= "bs",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(bs),
+	},
+	{
+		.name	= "offset",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(start_offset),
+	},
+	{
+		.name	= "zonesize",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(zone_size),
+	},
+	{
+		.name	= "zoneskip",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(zone_skip),
+	},
+	{
+		.name	= "lockmem",
+		.type	= FIO_OPT_STR_VAL,
+		.cb	= str_lockmem_cb,
+	},
+	{
+		.name	= "bsrange",
+		.type	= FIO_OPT_RANGE,
+		.off1	= td_var_offset(min_bs),
+		.off2	= td_var_offset(max_bs),
+	},
+	{
+		.name	= "nrfiles",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(nr_files),
+	},
+	{
+		.name	= "iodepth",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(iodepth),
+	},
+	{
+		.name	= "fsync",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(fsync_blocks),
+	},
+	{
+		.name	= "rwmixcycle",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(rwmixcycle),
+	},
+	{
+		.name	= "rwmixread",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(rwmixread),
+		.max_val= 100,
+	},
+	{
+		.name	= "rwmixwrite",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(rwmixwrite),
+		.max_val= 100,
+	},
+	{
+		.name	= "nice",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(nice),
+	},
+#ifdef FIO_HAVE_IOPRIO
+	{
+		.name	= "prio",
+		.type	= FIO_OPT_INT,
+		.cb	= str_prio_cb,
+	},
+	{
+		.name	= "prioclass",
+		.type	= FIO_OPT_INT,
+		.cb	= str_prioclass_cb,
+	},
+#endif
+	{
+		.name	= "thinktime",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(thinktime)
+	},
+	{
+		.name	= "rate",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(rate)
+	},
+	{
+		.name	= "ratemin",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(ratemin)
+	},
+	{
+		.name	= "ratecycle",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(ratecycle)
+	},
+	{
+		.name	= "startdelay",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(start_delay)
+	},
+	{
+		.name	= "timeout",
+		.type	= FIO_OPT_STR_VAL_TIME,
+		.off1	= td_var_offset(timeout)
+	},
+	{
+		.name	= "invalidate",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(invalidate_cache)
+	},
+	{
+		.name	= "sync",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(sync_io)
+	},
+	{
+		.name	= "bwavgtime",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(bw_avg_time)
+	},
+	{
+		.name	= "create_serialize",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(create_serialize)
+	},
+	{
+		.name	= "create_fsync",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(create_fsync)
+	},
+	{
+		.name	= "loops",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(loops)
+	},
+	{
+		.name	= "numjobs",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(numjobs)
+	},
+	{
+		.name	= "cpuload",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(cpuload)
+	},
+	{
+		.name	= "cpuchunks",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(cpucycle)
+	},
+	{
+		.name	= "direct",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(odirect)
+	},
+	{
+		.name	= "overwrite",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(overwrite)
+	},
+#ifdef FIO_HAVE_CPU_AFFINITY
+	{
+		.name	= "cpumask",
+		.type	= FIO_OPT_INT,
+		.cb	= str_cpumask_cb,
+	},
+#endif
+	{
+		.name	= "end_fsync",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(end_fsync)
+	},
+	{
+		.name	= "unlink",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(unlink),
+	},
+	{
+		.name	= "exitall",
+		.type	= FIO_OPT_STR_SET,
+		.cb	= str_exitall_cb,
+	},
+	{
+		.name	= "stonewall",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(stonewall),
+	},
+	{
+		.name	= "thread",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(thread),
+	},
+	{
+		.name	= "write_bw_log",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(write_bw_log),
+	},
+	{
+		.name	= "write_lat_log",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(write_lat_log),
+	},
+	{
+		.name = NULL,
+	},
+};
+
 static int def_timeout = DEF_TIMEOUT;
 
 static char fio_version_string[] = "fio 1.5";
@@ -96,6 +391,17 @@ static void put_job(struct thread_data *td)
 	thread_number--;
 }
 
+static void fixup_options(struct thread_data *td)
+{
+	if (!td->min_bs)
+		td->min_bs = td->bs;
+	if (!td->max_bs)
+		td->max_bs = td->bs;
+
+	if (!td->rwmixread && td->rwmixwrite)
+		td->rwmixread = 100 - td->rwmixwrite;
+}
+
 /*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
@@ -121,6 +427,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		return 1;
 	}
 #endif
+
+	fixup_options(td);
 
 	/*
 	 * the def_thread is just for options, it's not a real job
@@ -436,14 +744,48 @@ static int str_ioengine_cb(void *data, char *str)
 	return 1;
 }
 
+static int str_lockmem_cb(void fio_unused *data, unsigned long *val)
+{
+	mlock_size = *val;
+	return 0;
+}
+
+static int str_prioclass_cb(void *data, unsigned int *val)
+{
+	struct thread_data *td = data;
+
+	td->ioprio |= *val << IOPRIO_CLASS_SHIFT;
+	return 0;
+}
+
+static int str_prio_cb(void *data, unsigned int *val)
+{
+	struct thread_data *td = data;
+
+	td->ioprio |= *val;
+	return 0;
+}
+
+static int str_exitall_cb(void)
+{
+	exitall_on_terminate = 1;
+	return 0;
+}
+
+static int str_cpumask_cb(void *data, unsigned int *val)
+{
+	struct thread_data *td = data;
+
+	fill_cpu_mask(td->cpumask, *val);
+	return 0;
+}
+
 /*
  * This is our [ini] type file parser.
  */
 int parse_jobs_ini(char *file, int stonewall_flag)
 {
-	unsigned int prioclass, prio, cpu, global, il;
-	unsigned long long ull;
-	unsigned long ul1, ul2;
+	unsigned int global;
 	struct thread_data *td;
 	char *string, *name, *tmpbuf;
 	fpos_t off;
@@ -494,306 +836,18 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 				continue;
 			if (strstr(p, "["))
 				break;
+
 			strip_blank_front(&p);
 			strip_blank_end(p);
 
-			if (!check_int(p, "prio", &prio)) {
-#ifndef FIO_HAVE_IOPRIO
-				log_err("io priorities not available\n");
-				ret = 1;
-				break;
-#endif
-				td->ioprio |= prio;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "prioclass", &prioclass)) {
-#ifndef FIO_HAVE_IOPRIO
-				log_err("io priorities not available\n");
-				ret = 1;
-				break;
-#else
-				td->ioprio |= prioclass << IOPRIO_CLASS_SHIFT;
-				fgetpos(f, &off);
-				continue;
-#endif
-			}
-			if (!check_int(p, "direct", &il)) {
-				td->odirect = il;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "rand_repeatable", &il)) {
-				td->rand_repeatable = il;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "rate", &td->rate)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "ratemin", &td->ratemin)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "ratecycle", &td->ratecycle)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "cpuload", &td->cpuload)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "cpuchunks", &td->cpucycle)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "thinktime", &td->thinktime)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "cpumask", &cpu)) {
-#ifndef FIO_HAVE_CPU_AFFINITY
-				log_err("cpu affinity not available\n");
-				ret = 1;
-				break;
-#endif
-				fill_cpu_mask(td->cpumask, cpu);
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "fsync", &td->fsync_blocks)) {
-				fgetpos(f, &off);
-				td->end_fsync = 1;
-				continue;
-			}
-			if (!check_int(p, "startdelay", &td->start_delay)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_str_time(p, "timeout", &ull)) {
-				td->timeout = ull;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "invalidate", &il)) {
-				td->invalidate_cache = il;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "iodepth", &td->iodepth)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "sync", &il)) {
-				td->sync_io = il;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "bwavgtime", &td->bw_avg_time)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "create_serialize", &il)) {
-				td->create_serialize = il;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "create_fsync", &il)) {
-				td->create_fsync = il;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "end_fsync", &il)) {
-				td->end_fsync = il;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "loops", &td->loops)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "numjobs", &td->numjobs)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "overwrite", &il)) {
-				td->overwrite = il;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "rwmixcycle", &td->rwmixcycle)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "rwmixread", &il)) {
-				if (il > 100)
-					il = 100;
-				td->rwmixread = il;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "rwmixwrite", &il)) {
-				if (il > 100)
-					il = 100;
-				td->rwmixread = 100 - il;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "nice", &td->nice)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_int(p, "nrfiles", &td->nr_files)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_range_bytes(p, "bsrange", &ul1, &ul2)) {
-				if (ul1 > ul2) {
-					td->max_bs = ul1;
-					td->min_bs = ul2;
-				} else {
-					td->max_bs = ul2;
-					td->min_bs = ul1;
-				}
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_str_bytes(p, "bs", &ull)) {
-				td->bs = ull;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_str_bytes(p, "size", &td->total_file_size)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_str_bytes(p, "offset", &td->start_offset)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_str_bytes(p, "zonesize", &td->zone_size)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_str_bytes(p, "zoneskip", &td->zone_skip)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_str_bytes(p, "lockmem", &mlock_size)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strstore(p, "directory", tmpbuf)) {
-				td->directory = strdup(tmpbuf);
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strstore(p, "filename", tmpbuf)) {
-				td->filename = strdup(tmpbuf);
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strstore(p, "name", tmpbuf)) {
-				snprintf(td->name, sizeof(td->name)-1, "%s%d", tmpbuf, td->thread_number);
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_str(p, "mem", str_mem_cb, td)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_str(p, "verify", str_verify_cb, td)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_str(p, "rw", str_rw_cb, td)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_str(p, "ioengine", str_ioengine_cb, td)) {
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strset(p, "exitall")) {
-				exitall_on_terminate = 1;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strset(p, "stonewall")) {
-				td->stonewall = 1;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strset(p, "thread")) {
-				td->use_thread = 1;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strset(p, "unlink")) {
-				td->unlink = 1;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strset(p, "write_bw_log")) {
-				td->write_bw_log = 1;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strset(p, "write_lat_log")) {
-				td->write_lat_log = 1;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strstore(p, "iolog", tmpbuf)) {
-				if (td->write_iolog) {
-					log_err("fio: read iolog overrides given write_iolog\n");
-					free(td->iolog_file);
-					td->write_iolog = 0;
-				}
-				td->iolog_file = strdup(tmpbuf);
-				td->read_iolog = 1;
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strstore(p, "write_iolog", tmpbuf)) {
-				if (!td->read_iolog) {
-					td->iolog_file = strdup(tmpbuf);
-					td->write_iolog = 1;
-				} else
-					log_err("fio: read iolog overrides given write_iolog\n");
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strstore(p, "exec_prerun", tmpbuf)) {
-				td->exec_prerun = strdup(tmpbuf);
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strstore(p, "exec_postrun", tmpbuf)) {
-				td->exec_postrun = strdup(tmpbuf);
-				fgetpos(f, &off);
-				continue;
-			}
-			if (!check_strstore(p, "ioscheduler", tmpbuf)) {
-#ifndef FIO_HAVE_IOSCHED_SWITCH
-				log_err("io scheduler switching not available\n");
-				ret = 1;
-				break;
-#else
-				td->ioscheduler = strdup(tmpbuf);
-				fgetpos(f, &off);
-				continue;
-#endif
-			}
+			fgetpos(f, &off);
 
 			/*
 			 * Don't break here, continue parsing options so we
 			 * dump all the bad ones. Makes trial/error fixups
 			 * easier on the user.
 			 */
-			printf("Client%d: bad option %s\n",td->thread_number,p);
-			ret = 1;
+			ret = parse_option(p, options, td);
 		}
 
 		if (!ret) {
