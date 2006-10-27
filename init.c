@@ -604,6 +604,9 @@ int init_random_state(struct thread_data *td)
 	int fd, num_maps, blocks, i;
 	struct fio_file *f;
 
+	if (td->io_ops->flags & FIO_CPUIO)
+		return 0;
+
 	fd = open("/dev/urandom", O_RDONLY);
 	if (fd == -1) {
 		td_verror(td, errno);

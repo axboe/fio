@@ -518,6 +518,9 @@ static int switch_ioscheduler(struct thread_data *td)
 	FILE *f;
 	int ret;
 
+	if (td->io_ops->flags & FIO_CPUIO)
+		return 0;
+
 	sprintf(tmp, "%s/queue/scheduler", td->sysfs_root);
 
 	f = fopen(tmp, "r+");

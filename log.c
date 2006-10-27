@@ -172,6 +172,9 @@ int init_iolog(struct thread_data *td)
 {
 	int ret = 0;
 
+	if (td->io_ops->flags & FIO_CPUIO)
+		return 0;
+
 	if (td->read_iolog_file)
 		ret = init_iolog_read(td);
 	else if (td->write_iolog_file)
