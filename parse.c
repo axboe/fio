@@ -93,7 +93,7 @@ void strip_blank_end(char *p)
 	*(s + 1) = '\0';
 }
 
-static int check_range_bytes(char *str, unsigned long *val)
+static int check_range_bytes(const char *str, unsigned long *val)
 {
 	char suffix;
 
@@ -175,9 +175,12 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 		*cp = strdup(ptr);
 		break;
 	case FIO_OPT_RANGE: {
+		char tmp[128];
 		char *p1, *p2;
 
-		p1 = strchr(ptr, '-');
+		strcpy(tmp, ptr);
+
+		p1 = strchr(tmp, '-');
 		if (!p1) {
 			ret = 1;
 			break;
@@ -185,7 +188,7 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 
 		p2 = p1 + 1;
 		*p1 = '\0';
-		p1 = ptr;
+		p1 = tmp;
 
 		ret = 1;
 		if (!check_range_bytes(p1, &ul1) && !check_range_bytes(p2, &ul2)) {
