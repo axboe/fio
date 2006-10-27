@@ -109,7 +109,7 @@ static int check_range_bytes(char *str, unsigned long *val)
 	return 1;
 }
 
-int check_int(char *p, unsigned int *val)
+static int check_int(char *p, unsigned int *val)
 {
 	if (sscanf(p, "%u", val) == 1)
 		return 0;
@@ -117,27 +117,17 @@ int check_int(char *p, unsigned int *val)
 	return 1;
 }
 
-int check_strset(char *p, char *name)
-{
-	return strncmp(p, name, strlen(name));
-}
-
 static struct fio_option *find_option(struct fio_option *options,
 				      const char *opt)
 {
-	struct fio_option *o;
-	int i = 0;
+	struct fio_option *o = &options[0];
 
-	do {
-		o = &options[i];
-		if (!o->name)
-			break;
-
+	while (o->name) {
 		if (!strcmp(o->name, opt))
 			return o;
 
-		i++;
-	} while (1);
+		o++;
+	}
 
 	return NULL;
 }
