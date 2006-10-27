@@ -48,9 +48,8 @@ static unsigned long get_mult_bytes(char c)
 /*
  * convert string into decimal value, noting any size suffix
  */
-static int str_to_decimal(char *p, unsigned long long *val, int kilo)
+static int str_to_decimal(const char *str, unsigned long long *val, int kilo)
 {
-	char *str = p;
 	int len;
 
 	len = strlen(str);
@@ -66,12 +65,12 @@ static int str_to_decimal(char *p, unsigned long long *val, int kilo)
 	return 0;
 }
 
-static int check_str_bytes(char *p, unsigned long long *val)
+static int check_str_bytes(const char *p, unsigned long long *val)
 {
 	return str_to_decimal(p, val, 1);
 }
 
-static int check_str_time(char *p, unsigned long long *val)
+static int check_str_time(const char *p, unsigned long long *val)
 {
 	return str_to_decimal(p, val, 0);
 }
@@ -109,7 +108,7 @@ static int check_range_bytes(char *str, unsigned long *val)
 	return 1;
 }
 
-static int check_int(char *p, unsigned int *val)
+static int check_int(const char *p, unsigned int *val)
 {
 	if (sscanf(p, "%u", val) == 1)
 		return 0;
@@ -132,15 +131,13 @@ static struct fio_option *find_option(struct fio_option *options,
 	return NULL;
 }
 
-static int handle_option(struct fio_option *o, char *ptr, void *data)
+static int handle_option(struct fio_option *o, const char *ptr, void *data)
 {
 	unsigned int il, *ilp;
 	unsigned long long ull, *ullp;
 	unsigned long ul1, ul2, *ulp1, *ulp2;
-	char *tmpbuf, **cp;
+	char **cp;
 	int ret = 0, is_time = 0;
-
-	tmpbuf = malloc(4096);
 
 	switch (o->type) {
 	case FIO_OPT_STR: {
@@ -239,13 +236,26 @@ static int handle_option(struct fio_option *o, char *ptr, void *data)
 		ret = 1;
 	}
 
-	free(tmpbuf);
 	return ret;
+}
+
+int parse_cmd_option(const char *opt, const char *val,
+		     struct fio_option *options, void *data)
+{
+	struct fio_option *o;
+
+	o = find_option(options, opt);
+	if (!o) {
+		fprintf(stderr, "Bad option %s\n", opt);
+		return 1;
+	}
+
+	return handle_option(o, val, data);
 }
 
 int parse_option(const char *opt, struct fio_option *options, void *data)
 {
-	struct fio_option *o = find_option(options, opt);
+	struct fio_option *o;
 	char *pre, *post;
 	char tmp[64];
 

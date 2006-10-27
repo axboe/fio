@@ -82,6 +82,12 @@ more than one job file on the command line, fio will serialize the running
 of those files. Internally that is the same as using the 'stonewall'
 parameter described the the parameter section.
 
+If the job file contains only one job, you may as well just give the
+parameters on the command line. The command line parameters are identical
+to the job parameters, with a few extra that control global parameters
+(see README). For example, for the job file parameter iodepth=2, the
+mirror command line option would be --iodepth 2 or --iodepth=2.
+
 fio does not need to run as root, except if the files or devices specified
 in the job section requires that. Some other options may also be restricted,
 such as memory locking, io scheduler switching, and descreasing the nice value.
@@ -136,7 +142,11 @@ Here we have no global section, as we only have one job defined anyway.
 We want to use async io here, with a depth of 4 for each file. We also
 increased the buffer size used to 32KiB and define numjobs to 4 to
 fork 4 identical jobs. The result is 4 processes each randomly writing
-to their own 64MiB file.
+to their own 64MiB file. Instead of using the above job file, you could
+have given the parameters on the command line. For this case, you would
+specify:
+
+$ fio --name=random-writers --ioengine=libaio --iodepth=4 --rw=randwrite --bs=32k --direct=0 --size=64m --numjobs=4
 
 fio ships with a few example job files, you can also look there for
 inspiration.

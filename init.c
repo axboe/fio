@@ -8,6 +8,8 @@
 #include <ctype.h>
 #include <string.h>
 #include <errno.h>
+#include <getopt.h>
+#include <assert.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/types.h>
@@ -52,10 +54,10 @@
 
 #define td_var_offset(var)	((size_t) &((struct thread_data *)0)->var)
 
-static int str_rw_cb(void *, char *);
-static int str_ioengine_cb(void *, char *);
-static int str_mem_cb(void *, char *);
-static int str_verify_cb(void *, char *);
+static int str_rw_cb(void *, const char *);
+static int str_ioengine_cb(void *, const char *);
+static int str_mem_cb(void *, const char *);
+static int str_verify_cb(void *, const char *);
 static int str_lockmem_cb(void *, unsigned long *);
 static int str_prio_cb(void *, unsigned int *);
 static int str_prioclass_cb(void *, unsigned int *);
@@ -345,9 +347,53 @@ static struct fio_option options[] = {
 	},
 };
 
+#define FIO_JOB_OPTS	(sizeof(options) / sizeof(struct fio_option))
+#define FIO_CMD_OPTS	(16)
+#define FIO_GETOPT_JOB	(0x89988998)
+
+/*
+ * Command line options. These will contain the above, plus a few
+ * extra that only pertain to fio itself and not jobs.
+ */
+static struct option long_options[FIO_JOB_OPTS + FIO_CMD_OPTS] = {
+	{
+		.name		= "output",
+		.has_arg	= required_argument,
+		.val		= 'o',
+	},
+	{
+		.name		= "timeout",
+		.has_arg	= required_argument,
+		.val		= 't',
+	},
+	{
+		.name		= "latency-log",
+		.has_arg	= required_argument,
+		.val		= 'l',
+	},
+	{
+		.name		= "bandwidth-log",
+		.has_arg	= required_argument,
+		.val		= 'b',
+	},
+	{
+		.name		= "minimal",
+		.has_arg	= optional_argument,
+		.val		= 'm',
+	},
+	{
+		.name		= "version",
+		.has_arg	= no_argument,
+		.val		= 'v',
+	},
+	{
+		.name		= NULL,
+	},
+};
+
 static int def_timeout = DEF_TIMEOUT;
 
-static char fio_version_string[] = "fio 1.5";
+static char fio_version_string[] = "fio 1.7";
 
 static char **ini_file;
 static int max_jobs = MAX_JOBS;
@@ -379,7 +425,6 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 
 	td = &threads[thread_number++];
 	*td = *parent;
-	td->name[0] = '\0';
 
 	td->thread_number = thread_number;
 	return td;
@@ -555,8 +600,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td->write_bw_log)
 		setup_log(&td->bw_log);
 
-	if (td->name[0] == '\0')
-		snprintf(td->name, sizeof(td->name)-1, "client%d", td->thread_number);
+	if (!td->name)
+		td->name = strdup(jobname);
 
 	ddir = td->ddir + (!td->sequential << 1) + (td->iomix << 2);
 
@@ -671,7 +716,7 @@ static int is_empty_or_comment(char *line)
 	return 1;
 }
 
-static int str_rw_cb(void *data, char *mem)
+static int str_rw_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
 
@@ -707,7 +752,7 @@ static int str_rw_cb(void *data, char *mem)
 	return 1;
 }
 
-static int str_verify_cb(void *data, char *mem)
+static int str_verify_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
 
@@ -726,7 +771,7 @@ static int str_verify_cb(void *data, char *mem)
 	return 1;
 }
 
-static int str_mem_cb(void *data, char *mem)
+static int str_mem_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
 
@@ -745,7 +790,7 @@ static int str_mem_cb(void *data, char *mem)
 	return 1;
 }
 
-static int str_ioengine_cb(void *data, char *str)
+static int str_ioengine_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
 
@@ -929,64 +974,83 @@ static int fill_def_thread(void)
 static void usage(void)
 {
 	printf("%s\n", fio_version_string);
-	printf("\t-o Write output to file\n");
-	printf("\t-t Runtime in seconds\n");
-	printf("\t-l Generate per-job latency logs\n");
-	printf("\t-w Generate per-job bandwidth logs\n");
-	printf("\t-m Minimal (terse) output\n");
-	printf("\t-v Print version info and exit\n");
+	printf("\t--output\tWrite output to file\n");
+	printf("\t--timeout\tRuntime in seconds\n");
+	printf("\t--latency-log\tGenerate per-job latency logs\n");
+	printf("\t--bandwidth-log\tGenerate per-job bandwidth logs\n");
+	printf("\t--minimal\tMinimal (terse) output\n");
+	printf("\t--version\tPrint version info and exit\n");
 }
 
 static int parse_cmd_line(int argc, char *argv[])
 {
-	int c, idx = 1, ini_idx = 0;
+	struct thread_data *td = NULL;
+	int c, ini_idx = 0, lidx;
 
-	while ((c = getopt(argc, argv, "t:o:lwvhm")) != EOF) {
+	while ((c = getopt_long(argc, argv, "", long_options, &lidx)) != -1) {
 		switch (c) {
-			case 't':
-				def_timeout = atoi(optarg);
-				idx = optind;
-				break;
-			case 'l':
-				write_lat_log = 1;
-				idx = optind;
-				break;
-			case 'w':
-				write_bw_log = 1;
-				idx = optind;
-				break;
-			case 'o':
-				f_out = fopen(optarg, "w+");
-				if (!f_out) {
-					perror("fopen output");
-					exit(1);
-				}
-				f_err = f_out;
-				idx = optind;
-				break;
-			case 'm':
-				terse_output = 1;
-				idx = optind;
-				break;
-			case 'h':
-				usage();
-				exit(0);
-			case 'v':
-				printf("%s\n", fio_version_string);
-				exit(0);
+		case 't':
+			def_timeout = atoi(optarg);
+			break;
+		case 'l':
+			write_lat_log = 1;
+			break;
+		case 'w':
+			write_bw_log = 1;
+			break;
+		case 'o':
+			f_out = fopen(optarg, "w+");
+			if (!f_out) {
+				perror("fopen output");
+				exit(1);
+			}
+			f_err = f_out;
+			break;
+		case 'm':
+			terse_output = 1;
+			break;
+		case 'h':
+			usage();
+			exit(0);
+		case 'v':
+			printf("%s\n", fio_version_string);
+			exit(0);
+		case FIO_GETOPT_JOB: {
+			const char *opt = long_options[lidx].name;
+			char *val = optarg;
+
+			if (!td) {
+				td = get_new_job(0, &def_thread);
+				if (!td)
+					return 0;
+			}
+			if (parse_cmd_option(opt, val, options, td))
+				printf("foo\n");
+			break;
+		}
+		default:
+			printf("optarg <<%s>>\n", argv[optind]);
+			break;
 		}
 	}
 
-	while (idx < argc) {
-		ini_idx++;
-		ini_file = realloc(ini_file, ini_idx * sizeof(char *));
-		ini_file[ini_idx - 1] = strdup(argv[idx]);
-		idx++;
+	if (td) {
+		const char *name = td->name;
+		int ret;
+
+		if (!name)
+			name = "fio";
+
+		ret = add_job(td, name, 0);
+		if (ret)
+			put_job(td);
 	}
 
-	if (!f_out) {
-		f_out = stdout;
-		f_err = stderr;
+	while (optind < argc) {
+		ini_idx++;
+		ini_file = realloc(ini_file, ini_idx * sizeof(char *));
+		ini_file[ini_idx - 1] = strdup(argv[optind]);
+		optind++;
 	}
 
 	return ini_idx;
@@ -1041,9 +1105,42 @@ static int setup_thread_area(void)
 	return 0;
 }
 
+/*
+ * Copy the fio options into the long options map, so we mirror
+ * job and cmd line options.
+ */
+static void dupe_job_options(void)
+{
+	struct fio_option *o;
+	unsigned int i;
+
+	i = 0;
+	while (long_options[i].name)
+		i++;
+
+	o = &options[0];
+	while (o->name) {
+		long_options[i].name = o->name;
+		long_options[i].val = FIO_GETOPT_JOB;
+		if (o->type == FIO_OPT_STR_SET)
+			long_options[i].has_arg = no_argument;
+		else
+			long_options[i].has_arg = required_argument;
+
+		i++;
+		o++;
+		assert(i < FIO_JOB_OPTS + FIO_CMD_OPTS);
+	}
+}
+
 int parse_options(int argc, char *argv[])
 {
 	int job_files, i;
+
+	f_out = stdout;
+	f_err = stderr;
+
+	dupe_job_options();
 
 	if (setup_thread_area())
 		return 1;
@@ -1051,11 +1148,6 @@ int parse_options(int argc, char *argv[])
 		return 1;
 
 	job_files = parse_cmd_line(argc, argv);
-	if (!job_files) {
-		log_err("Need job file(s)\n");
-		usage();
-		return 1;
-	}
 
 	for (i = 0; i < job_files; i++) {
 		if (fill_def_thread())
@@ -1066,5 +1158,12 @@ int parse_options(int argc, char *argv[])
 	}
 
 	free(ini_file);
+
+	if (!thread_number) {
+		log_err("No jobs defined(s)\n");
+		usage();
+		return 1;
+	}
+
 	return 0;
 }

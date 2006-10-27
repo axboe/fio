@@ -29,6 +29,7 @@ struct fio_option {
 typedef int (str_cb_fn)(void *, char *);
 
 extern int parse_option(const char *, struct fio_option *, void *);
+extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, void *);
 
 extern void strip_blank_front(char **);
 extern void strip_blank_end(char *);
@@ -36,7 +37,7 @@ extern void strip_blank_end(char *);
 /*
  * Handlers for the options
  */
-typedef int (fio_opt_str_fn)(void *, char *);
+typedef int (fio_opt_str_fn)(void *, const char *);
 typedef int (fio_opt_str_val_fn)(void *, unsigned long long *);
 typedef int (fio_opt_int_fn)(void *, unsigned int *);
 typedef int (fio_opt_str_set_fn)(void *);

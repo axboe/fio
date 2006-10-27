@@ -164,7 +164,7 @@ struct fio_file {
  * This describes a single thread/process executing a fio job.
  */
 struct thread_data {
-	char name[32];
+	char *name;
 	char *directory;
 	char *filename;
 	char verror[80];
@@ -575,7 +575,7 @@ struct ioengine_ops {
 
 #define FIO_IOOPS_VERSION	3
 
-extern struct ioengine_ops *load_ioengine(struct thread_data *, char *);
+extern struct ioengine_ops *load_ioengine(struct thread_data *, const char *);
 extern void close_ioengine(struct thread_data *);
 
 /*

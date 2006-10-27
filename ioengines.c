@@ -42,7 +42,7 @@ static int check_engine_ops(struct ioengine_ops *ops)
 	return 0;
 }
 
-struct ioengine_ops *load_ioengine(struct thread_data *td, char *name)
+struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
 {
 	char engine[16], engine_lib[256];
 	struct ioengine_ops *ops, *ret;
