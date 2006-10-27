@@ -369,9 +369,10 @@ zoneskip=siint	Skip the specified number of bytes when zonesize data has
 		been read. The two zone options can be used to only do
 		io on zones of a file.
 
-write_iolog=str	Write the issued io patterns to the specified file. See iolog.
+write_iolog=str	Write the issued io patterns to the specified file. See
+		read_iolog.
 
-iolog=str	Open an iolog with the specified file name and replay the
+read_iolog=str	Open an iolog with the specified file name and replay the
 		io patterns it contains. This can be used to store a
 		workload and replay it sometime later.
 

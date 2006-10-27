@@ -211,7 +211,7 @@ static int fill_io_u(struct thread_data *td, struct fio_file *f,
 			/*
 			 * If using a write iolog, store this entry.
 			 */
-			if (td->write_iolog)
+			if (td->write_iolog_file)
 				write_iolog_put(td, io_u);
 
 			io_u->file = f;

@@ -103,13 +103,13 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "write_iolog",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(write_iolog),
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(write_iolog_file),
 	},
 	{
-		.name	= "iolog",
+		.name	= "read_iolog",
 		.type	= FIO_OPT_STR_STORE,
-		.off1	= td_var_offset(iolog),
+		.off1	= td_var_offset(read_iolog_file),
 	},
 	{
 		.name	= "exec_prerun",
@@ -405,8 +405,11 @@ static void fixup_options(struct thread_data *td)
 	if (!td->rwmixread && td->rwmixwrite)
 		td->rwmixread = 100 - td->rwmixwrite;
 
-	if (td->iolog && !td->write_iolog)
-		td->read_iolog = 1;
+	if (td->write_iolog_file && td->read_iolog_file) {
+		log_err("fio: read iolog overrides write_iolog\n");
+		free(td->write_iolog_file);
+		td->write_iolog_file = NULL;
+	}
 }
 
 /*

@@ -686,7 +686,7 @@ static void *thread_main(void *data)
 		finish_log(td, td->slat_log, "slat");
 	if (td->clat_log)
 		finish_log(td, td->clat_log, "clat");
-	if (td->write_iolog)
+	if (td->write_iolog_file)
 		write_iolog_close(td);
 	if (td->exec_postrun)
 		system(td->exec_postrun);

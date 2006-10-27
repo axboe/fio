@@ -93,7 +93,7 @@ static int init_iolog_read(struct thread_data *td)
 	FILE *f;
 	int rw, reads, writes;
 
-	f = fopen(td->iolog_file, "r");
+	f = fopen(td->read_iolog_file, "r");
 	if (!f) {
 		perror("fopen read iolog");
 		return 1;
@@ -151,9 +151,9 @@ static int init_iolog_read(struct thread_data *td)
  */
 static int init_iolog_write(struct thread_data *td)
 {
-	FILE *f = fopen(td->iolog_file, "w");
+	FILE *f;
 
-	f = fopen(td->iolog_file, "w");
+	f = fopen(td->write_iolog_file, "w+");
 	if (!f) {
 		perror("fopen write iolog");
 		return 1;
@@ -172,9 +172,9 @@ int init_iolog(struct thread_data *td)
 {
 	int ret = 0;
 
-	if (td->read_iolog)
+	if (td->read_iolog_file)
 		ret = init_iolog_read(td);
-	else if (td->write_iolog)
+	else if (td->write_iolog_file)
 		ret = init_iolog_write(td);
 
 	return 0;

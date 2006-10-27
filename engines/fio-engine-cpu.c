@@ -14,7 +14,6 @@ static int fio_cpuio_init(struct thread_data *td)
 	} else if (td->cpuload > 100)
 		td->cpuload = 100;
 
-	td->read_iolog = td->write_iolog = 0;
 	td->nr_files = 0;
 
 	return 0;

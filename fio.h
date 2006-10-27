@@ -222,13 +222,13 @@ struct thread_data {
 	os_cpu_mask_t cpumask;
 	unsigned int iolog;
 	unsigned int read_iolog;
-	unsigned int write_iolog;
 	unsigned int rwmixcycle;
 	unsigned int rwmixread;
 	unsigned int rwmixwrite;
 	unsigned int nice;
 
-	char *iolog_file;
+	char *read_iolog_file;
+	char *write_iolog_file;
 	void *iolog_buf;
 	FILE *iolog_f;
 
