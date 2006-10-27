@@ -57,7 +57,10 @@ static int fio_libaio_getevents(struct thread_data *td, int min, int max,
 			break;
 	} while (1);
 
-	return (int) -r;
+	if (r < 0)
+		r = -r;
+
+	return (int) r;
 }
 
 static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
