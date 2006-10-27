@@ -187,21 +187,21 @@ struct thread_data {
 	unsigned int ioprio;
 	unsigned int last_was_sync;
 
-	unsigned char sequential;
-	unsigned char odirect;
-	unsigned char invalidate_cache;
-	unsigned char create_serialize;
-	unsigned char create_fsync;
-	unsigned char end_fsync;
-	unsigned char sync_io;
-	unsigned char verify;
-	unsigned char use_thread;
-	unsigned char unlink;
-	unsigned char do_disk_util;
-	unsigned char override_sync;
-	unsigned char rand_repeatable;
-	unsigned char write_lat_log;
-	unsigned char write_bw_log;
+	unsigned int sequential;
+	unsigned int odirect;
+	unsigned int invalidate_cache;
+	unsigned int create_serialize;
+	unsigned int create_fsync;
+	unsigned int end_fsync;
+	unsigned int sync_io;
+	unsigned int verify;
+	unsigned int use_thread;
+	unsigned int unlink;
+	unsigned int do_disk_util;
+	unsigned int override_sync;
+	unsigned int rand_repeatable;
+	unsigned int write_lat_log;
+	unsigned int write_bw_log;
 
 	unsigned int bs;
 	unsigned int min_bs;
