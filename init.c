@@ -103,7 +103,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "write_iolog",
-		.type	= FIO_OPT_STR_STORE,
+		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(write_iolog),
 	},
 	{
@@ -391,6 +391,10 @@ static void put_job(struct thread_data *td)
 	thread_number--;
 }
 
+/*
+ * Lazy way of fixing up options that depend on each other. We could also
+ * define option callback handlers, but this is easier.
+ */
 static void fixup_options(struct thread_data *td)
 {
 	if (!td->min_bs)
@@ -400,6 +404,9 @@ static void fixup_options(struct thread_data *td)
 
 	if (!td->rwmixread && td->rwmixwrite)
 		td->rwmixread = 100 - td->rwmixwrite;
+
+	if (td->iolog && !td->write_iolog)
+		td->read_iolog = 1;
 }
 
 /*
