@@ -185,6 +185,7 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 
 		p2 = p1 + 1;
 		*p1 = '\0';
+		p1 = ptr;
 
 		ret = 1;
 		if (!check_range_bytes(p1, &ul1) && !check_range_bytes(p2, &ul2)) {
