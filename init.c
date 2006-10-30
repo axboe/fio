@@ -432,6 +432,9 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 
 static void put_job(struct thread_data *td)
 {
+	if (td == &def_thread)
+		return;
+
 	memset(&threads[td->thread_number - 1], 0, sizeof(*td));
 	thread_number--;
 }
