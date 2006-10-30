@@ -445,11 +445,6 @@ static void put_job(struct thread_data *td)
  */
 static void fixup_options(struct thread_data *td)
 {
-	if (!td->min_bs)
-		td->min_bs = td->bs;
-	if (!td->max_bs)
-		td->max_bs = td->bs;
-
 	if (!td->rwmixread && td->rwmixwrite)
 		td->rwmixread = 100 - td->rwmixwrite;
 
@@ -458,6 +453,32 @@ static void fixup_options(struct thread_data *td)
 		free(td->write_iolog_file);
 		td->write_iolog_file = NULL;
 	}
+
+	if (td->io_ops->flags & FIO_SYNCIO)
+		td->iodepth = 1;
+	else {
+		if (!td->iodepth)
+			td->iodepth = td->nr_files;
+	}
+
+	/*
+	 * only really works for sequential io for now, and with 1 file
+	 */
+	if (td->zone_size && !td->sequential && td->nr_files == 1)
+		td->zone_size = 0;
+
+	/*
+	 * Reads can do overwrites, we always need to pre-create the file
+	 */
+	if (td_read(td) || td_rw(td))
+		td->overwrite = 1;
+
+	if (!td->min_bs)
+		td->min_bs = td->bs;
+	if (!td->max_bs)
+		td->max_bs = td->bs;
+	if (td_read(td) && !td_rw(td))
+		td->verify = 0;
 }
 
 /*
@@ -486,8 +507,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	}
 #endif
 
-	fixup_options(td);
-
 	/*
 	 * the def_thread is just for options, it's not a real job
 	 */
@@ -505,24 +524,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		}
 	}
 
-	if (td->io_ops->flags & FIO_SYNCIO)
-		td->iodepth = 1;
-	else {
-		if (!td->iodepth)
-			td->iodepth = td->nr_files;
-	}
-
-	/*
-	 * only really works for sequential io for now, and with 1 file
-	 */
-	if (td->zone_size && !td->sequential && td->nr_files == 1)
-		td->zone_size = 0;
-
-	/*
-	 * Reads can do overwrites, we always need to pre-create the file
-	 */
-	if (td_read(td) || td_rw(td))
-		td->overwrite = 1;
+	fixup_options(td);
 
 	td->filetype = FIO_TYPE_FILE;
 	if (!stat(jobname, &sb)) {
@@ -580,13 +582,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	td->clat_stat[0].min_val = td->clat_stat[1].min_val = ULONG_MAX;
 	td->slat_stat[0].min_val = td->slat_stat[1].min_val = ULONG_MAX;
 	td->bw_stat[0].min_val = td->bw_stat[1].min_val = ULONG_MAX;
-
-	if (td->min_bs == -1U)
-		td->min_bs = td->bs;
-	if (td->max_bs == -1U)
-		td->max_bs = td->bs;
-	if (td_read(td) && !td_rw(td))
-		td->verify = 0;
 
 	if (td->stonewall && td->thread_number > 1)
 		groupid++;
@@ -941,8 +936,8 @@ static int fill_def_thread(void)
 	def_thread.ddir = DDIR_READ;
 	def_thread.iomix = 0;
 	def_thread.bs = DEF_BS;
-	def_thread.min_bs = -1;
-	def_thread.max_bs = -1;
+	def_thread.min_bs = 0;
+	def_thread.max_bs = 0;
 	def_thread.odirect = DEF_ODIRECT;
 	def_thread.ratecycle = DEF_RATE_CYCLE;
 	def_thread.sequential = DEF_SEQUENTIAL;
