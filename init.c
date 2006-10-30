@@ -843,7 +843,7 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 {
 	unsigned int global;
 	struct thread_data *td;
-	char *string, *name, *tmpbuf;
+	char *string, *name;
 	fpos_t off;
 	FILE *f;
 	char *p;
@@ -857,7 +857,7 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 
 	string = malloc(4096);
 	name = malloc(256);
-	tmpbuf = malloc(4096);
+	memset(name, 0, 256);
 
 	stonewall = stonewall_flag;
 	while ((p = fgets(string, 4096, f)) != NULL) {
@@ -865,7 +865,7 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 			break;
 		if (is_empty_or_comment(p))
 			continue;
-		if (sscanf(p, "[%s]", name) != 1)
+		if (sscanf(p, "[%255s]", name) != 1)
 			continue;
 
 		global = !strncmp(name, "global", 6);
@@ -916,7 +916,6 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 
 	free(string);
 	free(name);
-	free(tmpbuf);
 	fclose(f);
 	return ret;
 }
