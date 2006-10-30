@@ -1028,14 +1028,14 @@ static int parse_cmd_line(int argc, char *argv[])
 				td = NULL;
 			}
 			if (!td) {
-				int global = !strncmp(opt, "global", 6);
+				int global = !strncmp(val, "global", 6);
 
 				td = get_new_job(global, &def_thread);
 				if (!td)
 					return 0;
 			}
-			if (parse_cmd_option(opt, val, options, td))
-				printf("foo\n");
+
+			parse_cmd_option(opt, val, options, td);
 			break;
 		}
 		default:
