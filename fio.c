@@ -479,6 +479,19 @@ static void cleanup_io_u(struct thread_data *td)
 	free_io_mem(td);
 }
 
+/*
+ * "randomly" fill the buffer contents
+ */
+static void fill_rand_buf(struct io_u *io_u, unsigned int max_bs)
+{
+	unsigned int *ptr = io_u->buf;
+
+	while ((void *) ptr - io_u->buf < max_bs) {
+		*ptr = rand() * 0x9e370001;
+		ptr++;
+	}
+}
+
 static int init_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
@@ -505,6 +518,9 @@ static int init_io_u(struct thread_data *td)
 		INIT_LIST_HEAD(&io_u->list);
 
 		io_u->buf = p + td->max_bs * i;
+		if (td_write(td) || td_rw(td))
+			fill_rand_buf(io_u, td->max_bs);
+
 		io_u->index = i;
 		list_add(&io_u->list, &td->io_u_freelist);
 	}

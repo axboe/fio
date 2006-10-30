@@ -63,7 +63,7 @@ struct io_u {
 	struct timeval start_time;
 	struct timeval issue_time;
 
-	char *buf;
+	void *buf;
 	unsigned int buflen;
 	unsigned long long offset;
 
