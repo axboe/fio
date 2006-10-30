@@ -86,7 +86,13 @@ If the job file contains only one job, you may as well just give the
 parameters on the command line. The command line parameters are identical
 to the job parameters, with a few extra that control global parameters
 (see README). For example, for the job file parameter iodepth=2, the
-mirror command line option would be --iodepth 2 or --iodepth=2.
+mirror command line option would be --iodepth 2 or --iodepth=2. You can
+also use the command line for giving more than one job entry. For each
+--name option that fio sees, it will start a new job with that name.
+Command line entries following a --name entry will apply to that job,
+until there are no more entries or a new --name entry is seen. This is
+similar to the job file options, where each option applies to the current
+job until a new [] job entry is seen.
 
 fio does not need to run as root, except if the files or devices specified
 in the job section requires that. Some other options may also be restricted,
@@ -121,7 +127,11 @@ size=128m
 
 As you can see, the job file sections themselves are empty as all the
 described parameters are shared. As no filename= option is given, fio
-makes up a filename for each of the jobs as it sees fit.
+makes up a filename for each of the jobs as it sees fit. On the command
+line, this job would look as follows:
+
+$ fio --name=global --rw=randread --size=128m --name=job1 --name=job2
+
 
 Lets look at an example that have a number of processes writing randomly
 to files.
@@ -176,7 +186,9 @@ parameters.
 
 name=str	ASCII name of the job. This may be used to override the
 		name printed by fio for this job. Otherwise the job
-		name is used.
+		name is used. On the command line this parameter has the
+		special purpose of also signalling the start of a new
+		job.
 
 directory=str	Prefix filenames with this directory. Used to places files
 		in a different location than "./".

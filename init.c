@@ -985,7 +985,7 @@ static void usage(void)
 static int parse_cmd_line(int argc, char *argv[])
 {
 	struct thread_data *td = NULL;
-	int c, ini_idx = 0, lidx;
+	int c, ini_idx = 0, lidx, ret;
 
 	while ((c = getopt_long(argc, argv, "", long_options, &lidx)) != -1) {
 		switch (c) {
@@ -1019,8 +1019,18 @@ static int parse_cmd_line(int argc, char *argv[])
 			const char *opt = long_options[lidx].name;
 			char *val = optarg;
 
+			if (!strncmp(opt, "name", 4) && td) {
+				ret = add_job(td, td->name ?: "fio", 0);
+				if (ret) {
+					put_job(td);
+					return 0;
+				}
+				td = NULL;
+			}
 			if (!td) {
-				td = get_new_job(0, &def_thread);
+				int global = !strncmp(opt, "global", 6);
+
+				td = get_new_job(global, &def_thread);
 				if (!td)
 					return 0;
 			}
@@ -1035,13 +1045,7 @@ static int parse_cmd_line(int argc, char *argv[])
 	}
 
 	if (td) {
-		const char *name = td->name;
-		int ret;
-
-		if (!name)
-			name = "fio";
-
-		ret = add_job(td, name, 0);
+		ret = add_job(td, td->name ?: "fio", 0);
 		if (ret)
 			put_job(td);
 	}
