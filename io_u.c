@@ -121,7 +121,8 @@ static unsigned int get_next_buflen(struct thread_data *td)
 	else {
 		r = os_random_long(&td->bsrange_state);
 		buflen = (1 + (double) (td->max_bs - 1) * r / (RAND_MAX + 1.0));
-		buflen = (buflen + td->min_bs - 1) & ~(td->min_bs - 1);
+		if (!td->bs_unaligned)
+			buflen = (buflen + td->min_bs - 1) & ~(td->min_bs - 1);
 	}
 
 	if (buflen > td->io_size - td->this_io_bytes[td->ddir]) {

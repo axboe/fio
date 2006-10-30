@@ -349,6 +349,11 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(norandommap),
 	},
 	{
+		.name	= "bs_unaligned",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(bs_unaligned),
+	},
+	{
 		.name = NULL,
 	},
 };
@@ -490,6 +495,8 @@ static void fixup_options(struct thread_data *td)
 		log_err("fio: norandommap given, verify disabled\n");
 		td->verify = VERIFY_NONE;
 	}
+	if (td->bs_unaligned && (td->odirect || td->io_ops->flags & FIO_RAWIO))
+		log_err("fio: bs_unaligned may not work with raw io\n");
 }
 
 /*
@@ -535,6 +542,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		}
 	}
 
+	if (td->odirect)
+		td->io_ops->flags |= FIO_RAWIO;
+
 	fixup_options(td);
 
 	td->filetype = FIO_TYPE_FILE;
@@ -544,9 +554,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		else if (S_ISCHR(sb.st_mode))
 			td->filetype = FIO_TYPE_CHAR;
 	}
-
-	if (td->odirect)
-		td->io_ops->flags |= FIO_RAWIO;
 
 	if (td->filename)
 		td->nr_uniq_files = 1;

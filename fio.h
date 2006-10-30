@@ -203,6 +203,7 @@ struct thread_data {
 	unsigned int write_lat_log;
 	unsigned int write_bw_log;
 	unsigned int norandommap;
+	unsigned int bs_unaligned;
 
 	unsigned int bs;
 	unsigned int min_bs;

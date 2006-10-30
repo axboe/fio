@@ -223,7 +223,11 @@ bs=siint	The block size used for the io units. Defaults to 4k.
 bsrange=irange	Instead of giving a single block size, specify a range
 		and fio will mix the issued io block sizes. The issued
 		io unit will always be a multiple of the minimum value
-		given.
+		given (also see bs_unaligned).
+
+bs_unaligned	If this option is given, any byte size value within bsrange
+		may be used as a block range. This typically wont work with
+		direct IO, as that normally requires sector alignment.
 
 nrfiles=int	Number of files to use for this job. Defaults to 1.
 
