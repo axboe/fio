@@ -860,8 +860,9 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 	memset(name, 0, 256);
 
 	stonewall = stonewall_flag;
-	while ((p = fgets(string, 4096, f)) != NULL) {
-		if (ret)
+	do {
+		p = fgets(string, 4095, f);
+		if (!p)
 			break;
 		if (is_empty_or_comment(p))
 			continue;
@@ -890,10 +891,12 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 		while ((p = fgets(string, 4096, f)) != NULL) {
 			if (is_empty_or_comment(p))
 				continue;
-			if (strstr(p, "["))
-				break;
 
 			strip_blank_front(&p);
+
+			if (p[0] == '[')
+				break;
+
 			strip_blank_end(p);
 
 			fgetpos(f, &off);
@@ -903,16 +906,14 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 			 * dump all the bad ones. Makes trial/error fixups
 			 * easier on the user.
 			 */
-			ret = parse_option(p, options, td);
+			ret |= parse_option(p, options, td);
 		}
 
 		if (!ret) {
 			fsetpos(f, &off);
 			ret = add_job(td, name, 0);
 		}
-		if (ret)
-			break;
-	}
+	} while (!ret);
 
 	free(string);
 	free(name);
