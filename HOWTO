@@ -284,6 +284,13 @@ rwmixwrite=int	How large a percentage of the mix should be writes. If both
 		up to 100%, the latter of the two will be used to override
 		the first.
 
+norandommap	Normally fio will cover every block of the file when doing
+		random IO. If this option is given, fio will just get a
+		new random offset without looking at past io history. This
+		means that some blocks may not be read or written, and that
+		some blocks may be read/written more than once. This option
+		is mutually exclusive with verify= for that reason.
+
 nice=int	Run the job with the given nice value. See man nice(2).
 
 prio=int	Set the io priority value of this job. Linux limits us to

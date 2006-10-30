@@ -91,6 +91,8 @@ static int get_next_offset(struct thread_data *td, struct fio_file *f,
 		do {
 			r = os_random_long(&td->random_state);
 			b = ((max_blocks - 1) * r / (unsigned long long) (RAND_MAX+1.0));
+			if (td->norandommap)
+				break;
 			rb = b + (f->file_offset / td->min_bs);
 			loops--;
 		} while (!random_map_free(td, f, rb) && loops);
@@ -277,7 +279,7 @@ struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 			return NULL;
 		}
 
-		if (!td->read_iolog && !td->sequential)
+		if (!td->read_iolog && !td->sequential && !td->norandommap)
 			mark_random_map(td, f, io_u);
 
 		f->last_pos += io_u->buflen;

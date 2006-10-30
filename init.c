@@ -51,6 +51,7 @@
 #define DEF_UNLINK		(0)
 #define DEF_WRITE_BW_LOG	(0)
 #define DEF_WRITE_LAT_LOG	(0)
+#define DEF_NO_RAND_MAP		(0)
 
 #define td_var_offset(var)	((size_t) &((struct thread_data *)0)->var)
 
@@ -343,6 +344,11 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(write_lat_log),
 	},
 	{
+		.name	= "norandommap",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(norandommap),
+	},
+	{
 		.name = NULL,
 	},
 };
@@ -479,6 +485,11 @@ static void fixup_options(struct thread_data *td)
 		td->max_bs = td->bs;
 	if (td_read(td) && !td_rw(td))
 		td->verify = 0;
+
+	if (td->norandommap && td->verify != VERIFY_NONE) {
+		log_err("fio: norandommap given, verify disabled\n");
+		td->verify = VERIFY_NONE;
+	}
 }
 
 /*
@@ -674,12 +685,14 @@ int init_random_state(struct thread_data *td)
 	if (td->rand_repeatable)
 		seeds[3] = DEF_RANDSEED;
 
-	for_each_file(td, f, i) {
-		blocks = (f->file_size + td->min_bs - 1) / td->min_bs;
-		num_maps = blocks / BLOCKS_PER_MAP;
-		f->file_map = malloc(num_maps * sizeof(long));
-		f->num_maps = num_maps;
-		memset(f->file_map, 0, num_maps * sizeof(long));
+	if (!td->norandommap) {
+		for_each_file(td, f, i) {
+			blocks = (f->file_size + td->min_bs - 1) / td->min_bs;
+			num_maps = blocks / BLOCKS_PER_MAP;
+			f->file_map = malloc(num_maps * sizeof(long));
+			f->num_maps = num_maps;
+			memset(f->file_map, 0, num_maps * sizeof(long));
+		}
 	}
 
 	os_random_seed(seeds[3], &td->random_state);
@@ -962,6 +975,7 @@ static int fill_def_thread(void)
 	def_thread.unlink = DEF_UNLINK;
 	def_thread.write_bw_log = write_bw_log;
 	def_thread.write_lat_log = write_lat_log;
+	def_thread.norandommap = DEF_NO_RAND_MAP;
 #ifdef FIO_HAVE_DISK_UTIL
 	def_thread.do_disk_util = 1;
 #endif
