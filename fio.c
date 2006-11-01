@@ -482,9 +482,9 @@ static void cleanup_io_u(struct thread_data *td)
 /*
  * "randomly" fill the buffer contents
  */
-static void fill_rand_buf(struct io_u *io_u, unsigned int max_bs)
+static void fill_rand_buf(struct io_u *io_u, int max_bs)
 {
-	unsigned int *ptr = io_u->buf;
+	int *ptr = io_u->buf;
 
 	while ((void *) ptr - io_u->buf < max_bs) {
 		*ptr = rand() * 0x9e370001;
