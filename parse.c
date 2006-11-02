@@ -240,9 +240,6 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 		ret = 1;
 	}
 
-	if (ret)
-		fprintf(stderr, "fio: failed parsing %s=%s\n", o->name, ptr);
-
 	return ret;
 }
 
@@ -257,7 +254,11 @@ int parse_cmd_option(const char *opt, const char *val,
 		return 1;
 	}
 
-	return handle_option(o, val, data);
+	if (!handle_option(o, val, data))
+		return 0;
+
+	fprintf(stderr, "fio: failed parsing %s=%s\n", opt, val);
+	return 1;
 }
 
 int parse_option(const char *opt, struct fio_option *options, void *data)
@@ -285,5 +286,9 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 		return 1;
 	}
 
-	return handle_option(o, post, data);
+	if (!handle_option(o, post, data))
+		return 0;
+
+	fprintf(stderr, "fio: failed parsing %s\n", opt);
+	return 1;
 }

@@ -932,6 +932,9 @@ int parse_jobs_ini(char *file, int stonewall_flag)
 		if (!ret) {
 			fsetpos(f, &off);
 			ret = add_job(td, name, 0);
+		} else {
+			log_err("fio: job %s dropped\n", name);
+			put_job(td);
 		}
 	} while (!ret);
 
@@ -1054,7 +1057,12 @@ static int parse_cmd_line(int argc, char *argv[])
 					return 0;
 			}
 
-			parse_cmd_option(opt, val, options, td);
+			ret = parse_cmd_option(opt, val, options, td);
+			if (ret) {
+				log_err("fio: job dropped\n");
+				put_job(td);
+				td = NULL;
+			}
 			break;
 		}
 		default:
@@ -1184,7 +1192,6 @@ int parse_options(int argc, char *argv[])
 
 	if (!thread_number) {
 		log_err("No jobs defined(s)\n");
-		usage();
 		return 1;
 	}
 
