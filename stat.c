@@ -189,7 +189,7 @@ void init_disk_util(struct thread_data *td)
 {
 	struct fio_file *f;
 	struct stat st;
-	char foo[256], tmp[256];
+	char foo[PATH_MAX], tmp[PATH_MAX];
 	dev_t dev;
 	char *p;
 
@@ -209,7 +209,7 @@ void init_disk_util(struct thread_data *td)
 		/*
 		 * must be a file, open "." in that path
 		 */
-		strcpy(foo, f->file_name);
+		strncpy(foo, f->file_name, PATH_MAX - 1);
 		p = dirname(foo);
 		if (stat(p, &st)) {
 			perror("disk util stat");
@@ -239,7 +239,7 @@ void init_disk_util(struct thread_data *td)
 			log_err("unknown sysfs layout\n");
 			return;
 		}
-		strcpy(tmp, p);
+		strncpy(tmp, p, PATH_MAX - 1);
 		sprintf(foo, "%s", tmp);
 	}
 

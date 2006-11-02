@@ -178,7 +178,7 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 		char tmp[128];
 		char *p1, *p2;
 
-		strcpy(tmp, ptr);
+		strncpy(tmp, ptr, sizeof(tmp) - 1);
 
 		p1 = strchr(tmp, '-');
 		if (!p1) {
@@ -267,7 +267,7 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 	char *pre, *post;
 	char tmp[64];
 
-	strcpy(tmp, opt);
+	strncpy(tmp, opt, sizeof(tmp) - 1);
 
 	pre = strchr(tmp, '=');
 	if (pre) {

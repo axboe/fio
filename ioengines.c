@@ -48,7 +48,7 @@ struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
 	struct ioengine_ops *ops, *ret;
 	void *dlhandle;
 
-	strcpy(engine, name);
+	strncpy(engine, name, sizeof(engine) - 1);
 
 	/*
 	 * linux libaio has alias names, so convert to what we want
