@@ -240,6 +240,9 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 		ret = 1;
 	}
 
+	if (ret)
+		fprintf(stderr, "fio: failed parsing %s=%s\n", o->name, ptr);
+
 	return ret;
 }
 
