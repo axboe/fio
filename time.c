@@ -132,3 +132,8 @@ void time_init(void)
 {
 	gettimeofday(&genesis, NULL);
 }
+
+void fill_start_time(struct timeval *t)
+{
+	memcpy(t, &genesis, sizeof(genesis));
+}
