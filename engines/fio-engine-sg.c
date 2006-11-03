@@ -11,6 +11,8 @@
 #include "fio.h"
 #include "os.h"
 
+#ifdef FIO_HAVE_SGIO
+
 struct sgio_cmd {
 	unsigned char cdb[10];
 	int nr;
@@ -314,3 +316,24 @@ struct ioengine_ops ioengine = {
 	.cleanup	= fio_sgio_cleanup,
 	.flags		= FIO_SYNCIO | FIO_RAWIO,
 };
+
+#else /* FIO_HAVE_SGIO */
+
+/*
+ * When we have a proper configure system in place, we simply wont build
+ * and install this io engine. For now install a crippled version that
+ * just complains and fails to load.
+ */
+static int fio_sgio_init(struct thread_data fio_unused *td)
+{
+	fprintf(stderr, "fio: sgio not available\n");
+	return 1;
+}
+
+struct ioengine_ops ioengine = {
+	.name		= "sgio",
+	.version	= FIO_IOOPS_VERSION,
+	.init		= fio_sgio_init,
+};
+
+#endif

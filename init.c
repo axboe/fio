@@ -60,8 +60,10 @@ static int str_ioengine_cb(void *, const char *);
 static int str_mem_cb(void *, const char *);
 static int str_verify_cb(void *, const char *);
 static int str_lockmem_cb(void *, unsigned long *);
+#ifdef FIO_HAVE_IOPRIO
 static int str_prio_cb(void *, unsigned int *);
 static int str_prioclass_cb(void *, unsigned int *);
+#endif
 static int str_exitall_cb(void);
 static int str_cpumask_cb(void *, unsigned int *);
 
@@ -844,6 +846,7 @@ static int str_lockmem_cb(void fio_unused *data, unsigned long *val)
 	return 0;
 }
 
+#ifdef FIO_HAVE_IOPRIO
 static int str_prioclass_cb(void *data, unsigned int *val)
 {
 	struct thread_data *td = data;
@@ -859,6 +862,7 @@ static int str_prio_cb(void *data, unsigned int *val)
 	td->ioprio |= *val;
 	return 0;
 }
+#endif
 
 static int str_exitall_cb(void)
 {

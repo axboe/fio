@@ -11,6 +11,8 @@
 #include "fio.h"
 #include "os.h"
 
+#ifdef FIO_HAVE_SPLICE
+
 struct spliceio_data {
 	struct io_u *last_io_u;
 	int pipe[2];
@@ -189,3 +191,24 @@ struct ioengine_ops ioengine = {
 	.cleanup	= fio_spliceio_cleanup,
 	.flags		= FIO_SYNCIO,
 };
+
+#else /* FIO_HAVE_SPLICE */
+
+/*
+ * When we have a proper configure system in place, we simply wont build
+ * and install this io engine. For now install a crippled version that
+ * just complains and fails to load.
+ */
+static int fio_spliceio_init(struct thread_data fio_unused *td)
+{
+	fprintf(stderr, "fio: splice not available\n");
+	return 1;
+}
+
+struct ioengine_ops ioengine = {
+	.name		= "splice",
+	.version	= FIO_IOOPS_VERSION,
+	.init		= fio_spliceio_init,
+};
+
+#endif

@@ -10,6 +10,8 @@
 #include "fio.h"
 #include "os.h"
 
+#ifdef FIO_HAVE_POSIXAIO
+
 struct posixaio_data {
 	struct io_u **aio_events;
 };
@@ -186,3 +188,24 @@ struct ioengine_ops ioengine = {
 	.event		= fio_posixaio_event,
 	.cleanup	= fio_posixaio_cleanup,
 };
+
+#else /* FIO_HAVE_POSIXAIO */
+
+/*
+ * When we have a proper configure system in place, we simply wont build
+ * and install this io engine. For now install a crippled version that
+ * just complains and fails to load.
+ */
+static int fio_posixaio_init(struct thread_data fio_unused *td)
+{
+	fprintf(stderr, "fio: posixaio not available\n");
+	return 1;
+}
+
+struct ioengine_ops ioengine = {
+	.name		= "posixaio",
+	.version	= FIO_IOOPS_VERSION,
+	.init		= fio_posixaio_init,
+};
+
+#endif

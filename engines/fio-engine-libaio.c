@@ -10,6 +10,8 @@
 #include "fio.h"
 #include "os.h"
 
+#ifdef FIO_HAVE_LIBAIO
+
 #define ev_to_iou(ev)	(struct io_u *) ((unsigned long) (ev)->obj)
 
 struct libaio_data {
@@ -138,3 +140,24 @@ struct ioengine_ops ioengine = {
 	.event		= fio_libaio_event,
 	.cleanup	= fio_libaio_cleanup,
 };
+
+#else /* FIO_HAVE_LIBAIO */
+
+/*
+ * When we have a proper configure system in place, we simply wont build
+ * and install this io engine. For now install a crippled version that
+ * just complains and fails to load.
+ */
+static int fio_libaio_init(struct thread_data fio_unused *td)
+{
+	fprintf(stderr, "fio: libaio not available\n");
+	return 1;
+}
+
+struct ioengine_ops ioengine = {
+	.name		= "libaio",
+	.version	= FIO_IOOPS_VERSION,
+	.init		= fio_libaio_init,
+};
+
+#endif
