@@ -133,9 +133,9 @@ static struct fio_option *find_option(struct fio_option *options,
 
 static int handle_option(struct fio_option *o, const char *ptr, void *data)
 {
-	unsigned int il, *ilp;
+	unsigned int il, *ilp1, *ilp2;
 	unsigned long long ull, *ullp;
-	unsigned long ul1, ul2, *ulp1, *ulp2;
+	unsigned long ul1, ul2;
 	char **cp;
 	int ret = 0, is_time = 0;
 
@@ -148,7 +148,8 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 	}
 	case FIO_OPT_STR_VAL_TIME:
 		is_time = 1;
-	case FIO_OPT_STR_VAL: {
+	case FIO_OPT_STR_VAL:
+	case FIO_OPT_STR_VAL_INT: {
 		fio_opt_str_val_fn *fn = o->cb;
 
 		if (is_time)
@@ -165,8 +166,13 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 		if (fn)
 			ret = fn(data, &ull);
 		else {
-			ullp = td_var(data, o->off1);
-			*ullp = ull;
+			if (o->type == FIO_OPT_STR_VAL_INT) {
+				ilp1 = td_var(data, o->off1);
+				*ilp1 = ull;
+			} else {
+				ullp = td_var(data, o->off1);
+				*ullp = ull;
+			}
 		}
 		break;
 	}
@@ -193,14 +199,14 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 		ret = 1;
 		if (!check_range_bytes(p1, &ul1) && !check_range_bytes(p2, &ul2)) {
 			ret = 0;
-			ulp1 = td_var(data, o->off1);
-			ulp2 = td_var(data, o->off2);
+			ilp1 = td_var(data, o->off1);
+			ilp2 = td_var(data, o->off2);
 			if (ul1 > ul2) {
-				*ulp1 = ul2;
-				*ulp2 = ul1;
+				*ilp1 = ul2;
+				*ilp2 = ul1;
 			} else {
-				*ulp2 = ul2;
-				*ulp1 = ul1;
+				*ilp2 = ul2;
+				*ilp1 = ul1;
 			}
 		}	
 			
@@ -219,8 +225,8 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 		if (fn)
 			ret = fn(data, &il);
 		else {
-			ilp = td_var(data, o->off1);
-			*ilp = il;
+			ilp1 = td_var(data, o->off1);
+			*ilp1 = il;
 		}
 		break;
 	}
@@ -230,8 +236,8 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 		if (fn)
 			ret = fn(data);
 		else {
-			ilp = td_var(data, o->off1);
-			*ilp = 1;
+			ilp1 = td_var(data, o->off1);
+			*ilp1 = 1;
 		}
 		break;
 	}

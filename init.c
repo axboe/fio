@@ -138,17 +138,17 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "bs",
-		.type	= FIO_OPT_STR_VAL,
+		.type	= FIO_OPT_STR_VAL_INT,
 		.off1	= td_var_offset(bs[DDIR_READ]),
 	},
 	{
 		.name	= "read_bs",
-		.type	= FIO_OPT_STR_VAL,
+		.type	= FIO_OPT_STR_VAL_INT,
 		.off1	= td_var_offset(bs[DDIR_READ]),
 	},
 	{
 		.name	= "write_bs",
-		.type	= FIO_OPT_STR_VAL,
+		.type	= FIO_OPT_STR_VAL_INT,
 		.off1	= td_var_offset(bs[DDIR_WRITE]),
 	},
 	{
@@ -513,9 +513,9 @@ static void fixup_options(struct thread_data *td)
 	if (!td->max_bs[DDIR_READ])
 		td->max_bs[DDIR_READ] = td->bs[DDIR_READ];
 	if (!td->min_bs[DDIR_WRITE])
-		td->min_bs[DDIR_WRITE]= td->bs[DDIR_READ];
+		td->min_bs[DDIR_WRITE]= td->bs[DDIR_WRITE];
 	if (!td->max_bs[DDIR_WRITE])
-		td->max_bs[DDIR_WRITE] = td->bs[DDIR_READ];
+		td->max_bs[DDIR_WRITE] = td->bs[DDIR_WRITE];
 
 	td->rw_min_bs = min(td->min_bs[DDIR_READ], td->min_bs[DDIR_WRITE]);
 
