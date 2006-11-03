@@ -176,12 +176,22 @@ void print_thread_status(void)
 	char eta_str[32];
 	double perc = 0.0;
 
+	static unsigned long long prev_io_bytes[2];
+	static struct timeval prev_time;
+	static unsigned int r_rate, w_rate;
+	unsigned long long io_bytes[2];
+	unsigned long mtime;
+
 	if (temp_stall_ts || terse_output)
 		return;
+
+	if (!prev_io_bytes[0] && !prev_io_bytes[1])
+		fill_start_time(&prev_time);
 
 	eta_secs = malloc(thread_number * sizeof(int));
 	memset(eta_secs, 0, thread_number * sizeof(int));
 
+	io_bytes[0] = io_bytes[1] = 0;
 	nr_pending = nr_running = t_rate = m_rate = 0;
 	for_each_td(td, i) {
 		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING||
@@ -198,6 +208,8 @@ void print_thread_status(void)
 			eta_secs[i] = INT_MAX;
 
 		check_str_update(td);
+		io_bytes[0] += td->io_bytes[0];
+		io_bytes[1] += td->io_bytes[1];
 	}
 
 	if (exitall_on_terminate)
@@ -222,6 +234,14 @@ void print_thread_status(void)
 		eta_to_str(eta_str, eta_sec);
 	}
 
+	mtime = mtime_since_now(&prev_time);
+	if (mtime > 1000) {
+		r_rate = (io_bytes[0] - prev_io_bytes[0]) / mtime;
+		w_rate = (io_bytes[1] - prev_io_bytes[1]) / mtime;
+		gettimeofday(&prev_time, NULL);
+		memcpy(prev_io_bytes, io_bytes, sizeof(io_bytes));
+	}
+
 	if (!nr_running && !nr_pending)
 		return;
 
@@ -230,7 +250,7 @@ void print_thread_status(void)
 		printf(", commitrate %d/%dKiB/sec", t_rate, m_rate);
 	if (eta_sec != INT_MAX && nr_running) {
 		perc *= 100.0;
-		printf(": [%s] [%3.2f%% done] [eta %s]", run_str, perc,eta_str);
+		printf(": [%s] [%3.2f%% done] [%6u/%6u kb/s] [eta %s]", run_str, perc, r_rate, w_rate, eta_str);
 	}
 	printf("\r");
 	fflush(stdout);

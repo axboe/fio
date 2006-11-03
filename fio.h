@@ -459,6 +459,7 @@ extern unsigned long mtime_since_genesis(void);
 extern void __usec_sleep(unsigned int);
 extern void usec_sleep(struct thread_data *, unsigned long);
 extern void rate_throttle(struct thread_data *, unsigned long, unsigned int, int);
+extern void fill_start_time(struct timeval *);
 
 /*
  * Init functions
