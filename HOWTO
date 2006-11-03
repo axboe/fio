@@ -52,7 +52,7 @@ bottom, it contains the following basic parameters:
 			could be using splice, async io, or even
 			SG (SCSI generic sg).
 
-	IO depth	If the io engine is async, how large a queueing
+	IO depth	If the io engine is async, how large a queuing
 			depth do we want to maintain?
 
 	IO type		Should we be doing buffered io, or direct/raw io?
@@ -96,7 +96,7 @@ job until a new [] job entry is seen.
 
 fio does not need to run as root, except if the files or devices specified
 in the job section requires that. Some other options may also be restricted,
-such as memory locking, io scheduler switching, and descreasing the nice value.
+such as memory locking, io scheduler switching, and decreasing the nice value.
 
 
 4.0 Job file format
@@ -173,7 +173,7 @@ str	String. This is a sequence of alpha characters.
 int	Integer. A whole number value, may be negative.
 siint	SI integer. A whole number value, which may contain a postfix
 	describing the base of the number. Accepted postfixes are k/m/g,
-	meaning kilo, mega, and giga. So if you want to specifiy 4096,
+	meaning kilo, mega, and giga. So if you want to specify 4096,
 	you could either write out '4096' or just give 4k. The postfixes
 	signify base 2 values, so 1024 is 1k and 1024k is 1m and so on.
 bool	Boolean. Usually parsed as an integer, however only defined for
@@ -187,7 +187,7 @@ parameters.
 name=str	ASCII name of the job. This may be used to override the
 		name printed by fio for this job. Otherwise the job
 		name is used. On the command line this parameter has the
-		special purpose of also signalling the start of a new
+		special purpose of also signaling the start of a new
 		job.
 
 directory=str	Prefix filenames with this directory. Used to places files
@@ -222,7 +222,7 @@ bs=siint	The block size used for the io units. Defaults to 4k.
 
 read_bs=siint
 write_bs=siint	If the workload is a mixed read-write workload, you can use
-		these options to set seperate block sizes.
+		these options to set separate block sizes.
 
 bsrange=irange	Instead of giving a single block size, specify a range
 		and fio will mix the issued io block sizes. The issued
@@ -259,7 +259,7 @@ ioengine=str	Defines how the job issues io to the file. The following
 				space to the kernel.
 
 			sg	SCSI generic sg v3 io. May either be
-				syncrhonous using the SG_IO ioctl, or if
+				synchronous using the SG_IO ioctl, or if
 				the target is an sg character device
 				we use read(2) and write(2) for asynchronous
 				io.
@@ -281,13 +281,13 @@ fsync=int	If writing to a file, issue a sync of the dirty data
 		32 as a parameter, fio will sync the file for every 32
 		writes issued. If fio is using non-buffered io, we may
 		not sync the file. The exception is the sg io engine, which
-		syncronizes the disk cache anyway.
+		synchronizes the disk cache anyway.
 
 overwrite=bool	If writing to a file, setup the file first and do overwrites.
 
 end_fsync=bool	If true, fsync file contents when the job exits.
 
-rwmixcycle=int	Value in miliseconds describing how often to switch between
+rwmixcycle=int	Value in milliseconds describing how often to switch between
 		reads and writes for a mixed workload. The default is
 		500 msecs.
 
@@ -323,7 +323,7 @@ ratemin=int	Tell fio to do whatever it can to maintain at least this
 		bandwidth.
 
 ratecycle=int	Average bandwidth for 'rate' and 'ratemin' over this number
-		of miliseconds.
+		of milliseconds.
 
 cpumask=int	Set the CPU affinity of this job. The parameter given is a
 		bitmask of allowed CPU's the job may run on. See man
@@ -364,7 +364,7 @@ exitall		When one job finishes, terminate the rest. The default is
 		desired action.
 
 bwavgtime=int	Average the calculated bandwidth over the given time. Value
-		is specified in miliseconds.
+		is specified in milliseconds.
 
 create_serialize=bool	If true, serialize the file creating for the jobs.
 			This may be handy to avoid interleaving of data
@@ -390,7 +390,7 @@ verify=str	If writing to a file, fio can verify the file contents
 			crc32	Use a crc32 sum of the data area and store
 				it in the header of each block.
 
-		This option can be used for repeated burnin tests of a
+		This option can be used for repeated burn-in tests of a
 		system to make sure that the written data is also
 		correctly read back.
 
@@ -445,7 +445,7 @@ cpuload=int	If the job is a CPU cycle eater, attempt to use the specified
 		percentage of CPU cycles.
 
 cpuchunks=int	If the job is a CPU cycle eater, split the load into
-		cycles of the given time. In miliseconds.
+		cycles of the given time. In milliseconds.
 
 
 6.0 Interpreting the output
@@ -551,7 +551,7 @@ util=		The disk utilization. A value of 100% means we kept the disk
 ----------------
 
 For scripted usage where you typically want to generate tables or graphs
-of the results, fio can output the results in a comma seperated format.
+of the results, fio can output the results in a comma separated format.
 The format is one long line of values, such as:
 
 client1,0,0,936,331,2894,0,0,0.000000,0.000000,1,170,22.115385,34.290410,16,714,84.252874%,366.500000,566.417819,3496,1237,2894,0,0,0.000000,0.000000,0,246,6.671625,21.436952,0,2534,55.465300%,1406.600000,2008.044216,0.000000%,0.431928%,1109
@@ -563,11 +563,11 @@ Split up, the format is as follows:
 		KiB IO, bandwidth (KiB/sec), runtime (msec)
 		Submission latency: min, max, mean, deviation
 		Completion latency: min, max, mean, deviation
-		Bw: min, max, aggreate percentage of total, mean, deviation
+		Bw: min, max, aggregate percentage of total, mean, deviation
 	WRITE status:
 		KiB IO, bandwidth (KiB/sec), runtime (msec)
 		Submission latency: min, max, mean, deviation
 		Completion latency: min, max, mean, deviation
-		Bw: min, max, aggreate percentage of total, mean, deviation
+		Bw: min, max, aggregate percentage of total, mean, deviation
 	CPU usage: user, system, context switches
 
