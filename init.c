@@ -543,19 +543,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	int numjobs, ddir, i;
 	struct fio_file *f;
 
-#ifndef FIO_HAVE_LIBAIO
-	if (td->io_engine == FIO_LIBAIO) {
-		log_err("Linux libaio not available\n");
-		return 1;
-	}
-#endif
-#ifndef FIO_HAVE_POSIXAIO
-	if (td->io_engine == FIO_POSIXAIO) {
-		log_err("posix aio not available\n");
-		return 1;
-	}
-#endif
-
 	/*
 	 * the def_thread is just for options, it's not a real job
 	 */
