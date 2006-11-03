@@ -139,7 +139,17 @@ static struct fio_option options[] = {
 	{
 		.name	= "bs",
 		.type	= FIO_OPT_STR_VAL,
-		.off1	= td_var_offset(bs),
+		.off1	= td_var_offset(bs[DDIR_READ]),
+	},
+	{
+		.name	= "read_bs",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(bs[DDIR_READ]),
+	},
+	{
+		.name	= "write_bs",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(bs[DDIR_WRITE]),
 	},
 	{
 		.name	= "offset",
@@ -164,8 +174,20 @@ static struct fio_option options[] = {
 	{
 		.name	= "bsrange",
 		.type	= FIO_OPT_RANGE,
-		.off1	= td_var_offset(min_bs),
-		.off2	= td_var_offset(max_bs),
+		.off1	= td_var_offset(min_bs[DDIR_READ]),
+		.off2	= td_var_offset(max_bs[DDIR_READ]),
+	},
+	{
+		.name	= "read_bsrange",
+		.type	= FIO_OPT_RANGE,
+		.off1	= td_var_offset(min_bs[DDIR_READ]),
+		.off2	= td_var_offset(max_bs[DDIR_READ]),
+	},
+	{
+		.name	= "write_bsrange",
+		.type	= FIO_OPT_RANGE,
+		.off1	= td_var_offset(min_bs[DDIR_WRITE]),
+		.off2	= td_var_offset(max_bs[DDIR_WRITE]),
 	},
 	{
 		.name	= "nrfiles",
@@ -484,10 +506,19 @@ static void fixup_options(struct thread_data *td)
 	if (td_read(td) || td_rw(td))
 		td->overwrite = 1;
 
-	if (!td->min_bs)
-		td->min_bs = td->bs;
-	if (!td->max_bs)
-		td->max_bs = td->bs;
+	if (td->bs[DDIR_READ] != DEF_BS)
+		td->bs[DDIR_WRITE] = td->bs[DDIR_READ];
+	if (!td->min_bs[DDIR_READ])
+		td->min_bs[DDIR_READ]= td->bs[DDIR_READ];
+	if (!td->max_bs[DDIR_READ])
+		td->max_bs[DDIR_READ] = td->bs[DDIR_READ];
+	if (!td->min_bs[DDIR_WRITE])
+		td->min_bs[DDIR_WRITE]= td->bs[DDIR_READ];
+	if (!td->max_bs[DDIR_WRITE])
+		td->max_bs[DDIR_WRITE] = td->bs[DDIR_READ];
+
+	td->rw_min_bs = min(td->min_bs[DDIR_READ], td->min_bs[DDIR_WRITE]);
+
 	if (td_read(td) && !td_rw(td))
 		td->verify = 0;
 
@@ -626,7 +657,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 			if (td->io_ops->flags & FIO_CPUIO)
 				fprintf(f_out, "%s: ioengine=cpu, cpuload=%u, cpucycle=%u\n", td->name, td->cpuload, td->cpucycle);
 			else
-				fprintf(f_out, "%s: (g=%d): rw=%s, odir=%d, bs=%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->name, td->groupid, ddir_str[ddir], td->odirect, td->min_bs, td->max_bs, td->rate, td->io_ops->name, td->iodepth);
+				fprintf(f_out, "%s: (g=%d): rw=%s, odir=%d, bs=%d-%d/%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->name, td->groupid, ddir_str[ddir], td->odirect, td->min_bs[DDIR_READ], td->max_bs[DDIR_READ], td->min_bs[DDIR_WRITE], td->max_bs[DDIR_WRITE], td->rate, td->io_ops->name, td->iodepth);
 		} else if (job_add_num == 1)
 			fprintf(f_out, "...\n");
 	}
@@ -694,7 +725,7 @@ int init_random_state(struct thread_data *td)
 
 	if (!td->norandommap) {
 		for_each_file(td, f, i) {
-			blocks = (f->file_size + td->min_bs - 1) / td->min_bs;
+			blocks = (f->file_size + td->rw_min_bs - 1) / td->rw_min_bs;
 			num_maps = (blocks + BLOCKS_PER_MAP-1)/ BLOCKS_PER_MAP;
 			f->file_map = malloc(num_maps * sizeof(long));
 			f->num_maps = num_maps;
@@ -958,9 +989,10 @@ static int fill_def_thread(void)
 	 */
 	def_thread.ddir = DDIR_READ;
 	def_thread.iomix = 0;
-	def_thread.bs = DEF_BS;
-	def_thread.min_bs = 0;
-	def_thread.max_bs = 0;
+	def_thread.bs[DDIR_READ] = DEF_BS;
+	def_thread.bs[DDIR_WRITE] = DEF_BS;
+	def_thread.min_bs[DDIR_READ] = def_thread.min_bs[DDIR_WRITE] = 0;
+	def_thread.max_bs[DDIR_READ] = def_thread.max_bs[DDIR_WRITE] = 0;
 	def_thread.odirect = DEF_ODIRECT;
 	def_thread.ratecycle = DEF_RATE_CYCLE;
 	def_thread.sequential = DEF_SEQUENTIAL;

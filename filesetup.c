@@ -49,12 +49,12 @@ static int create_file(struct thread_data *td, struct fio_file *f)
 		goto err;
 	}
 
-	b = malloc(td->max_bs);
-	memset(b, 0, td->max_bs);
+	b = malloc(td->max_bs[DDIR_WRITE]);
+	memset(b, 0, td->max_bs[DDIR_WRITE]);
 
 	left = f->file_size;
 	while (left && !td->terminate) {
-		bs = td->max_bs;
+		bs = td->max_bs[DDIR_WRITE];
 		if (bs > left)
 			bs = left;
 

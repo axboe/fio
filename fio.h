@@ -205,9 +205,10 @@ struct thread_data {
 	unsigned int norandommap;
 	unsigned int bs_unaligned;
 
-	unsigned int bs;
-	unsigned int min_bs;
-	unsigned int max_bs;
+	unsigned int bs[2];
+	unsigned int min_bs[2];
+	unsigned int max_bs[2];
+	unsigned int rw_min_bs;
 	unsigned int thinktime;
 	unsigned int fsync_blocks;
 	unsigned int start_delay;
@@ -364,7 +365,7 @@ extern struct thread_data *threads;
 #define td_rw(td)		((td)->iomix != 0)
 
 #define BLOCKS_PER_MAP		(8 * sizeof(long))
-#define TO_MAP_BLOCK(td, f, b)	((b) - ((f)->file_offset / (td)->min_bs))
+#define TO_MAP_BLOCK(td, f, b)	((b) - ((f)->file_offset / (td)->rw_min_bs))
 #define RAND_MAP_IDX(td, f, b)	(TO_MAP_BLOCK(td, f, b) / BLOCKS_PER_MAP)
 #define RAND_MAP_BIT(td, f, b)	(TO_MAP_BLOCK(td, f, b) & (BLOCKS_PER_MAP - 1))
 
@@ -417,6 +418,9 @@ struct io_completion_data {
 #ifndef min
 #define min(a, b)	((a) < (b) ? (a) : (b))
 #endif
+#ifndef max
+#define max(a, b)	((a) > (b) ? (a) : (b))
+#endif
 
 /*
  * Log exports
@@ -454,7 +458,7 @@ extern unsigned long time_since_now(struct timeval *);
 extern unsigned long mtime_since_genesis(void);
 extern void __usec_sleep(unsigned int);
 extern void usec_sleep(struct thread_data *, unsigned long);
-extern void rate_throttle(struct thread_data *, unsigned long, unsigned int);
+extern void rate_throttle(struct thread_data *, unsigned long, unsigned int, int);
 
 /*
  * Init functions

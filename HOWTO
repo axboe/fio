@@ -220,10 +220,20 @@ size=siint	The total size of file io for this job. This may describe
 
 bs=siint	The block size used for the io units. Defaults to 4k.
 
+read_bs=siint
+write_bs=siint	If the workload is a mixed read-write workload, you can use
+		these options to set seperate block sizes.
+
 bsrange=irange	Instead of giving a single block size, specify a range
 		and fio will mix the issued io block sizes. The issued
 		io unit will always be a multiple of the minimum value
 		given (also see bs_unaligned).
+
+read_bsrange=irange
+write_bsrange=irange
+		If the workload is a mixed read-write workload, you can use
+		one of these options to set separate block size ranges for
+		reads and writes.
 
 bs_unaligned	If this option is given, any byte size value within bsrange
 		may be used as a block range. This typically wont work with

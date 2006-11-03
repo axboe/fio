@@ -436,7 +436,7 @@ static void do_io(struct thread_data *td)
 		gettimeofday(&e, NULL);
 		usec = utime_since(&s, &e);
 
-		rate_throttle(td, usec, icd.bytes_done[td->ddir]);
+		rate_throttle(td, usec, icd.bytes_done[td->ddir], td->ddir);
 
 		if (check_min_rate(td, &e)) {
 			if (rate_quit)
@@ -495,6 +495,7 @@ static void fill_rand_buf(struct io_u *io_u, int max_bs)
 static int init_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
+	unsigned int max_bs;
 	int i, max_units;
 	char *p;
 
@@ -506,7 +507,8 @@ static int init_io_u(struct thread_data *td)
 	else
 		max_units = td->iodepth;
 
-	td->orig_buffer_size = td->max_bs * max_units + MASK;
+	max_bs = max(td->max_bs[DDIR_READ], td->max_bs[DDIR_WRITE]);
+	td->orig_buffer_size = max_bs * max_units + MASK;
 
 	if (allocate_io_mem(td))
 		return 1;
@@ -517,9 +519,9 @@ static int init_io_u(struct thread_data *td)
 		memset(io_u, 0, sizeof(*io_u));
 		INIT_LIST_HEAD(&io_u->list);
 
-		io_u->buf = p + td->max_bs * i;
+		io_u->buf = p + max_bs * i;
 		if (td_write(td) || td_rw(td))
-			fill_rand_buf(io_u, td->max_bs);
+			fill_rand_buf(io_u, max_bs);
 
 		io_u->index = i;
 		list_add(&io_u->list, &td->io_u_freelist);

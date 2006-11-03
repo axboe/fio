@@ -125,9 +125,9 @@ static int init_iolog_read(struct thread_data *td)
 		INIT_LIST_HEAD(&ipo->list);
 		ipo->offset = offset;
 		ipo->len = bytes;
-		if (bytes > td->max_bs)
-			td->max_bs = bytes;
 		ipo->ddir = rw;
+		if (bytes > td->max_bs[rw])
+			td->max_bs[rw] = bytes;
 		list_add_tail(&ipo->list, &td->io_log_list);
 	}
 
@@ -195,7 +195,7 @@ int setup_rate(struct thread_data *td)
 		return -1;
 	}
 
-	nr_reads_per_sec = (td->rate * 1024) / td->min_bs;
+	nr_reads_per_sec = (td->rate * 1024) / td->min_bs[DDIR_READ];
 	td->rate_usec_cycle = 1000000 / nr_reads_per_sec;
 	td->rate_pending_usleep = 0;
 	return 0;

@@ -27,10 +27,13 @@ static int random_map_free(struct thread_data *td, struct fio_file *f,
 static void mark_random_map(struct thread_data *td, struct fio_file *f,
 			    struct io_u *io_u)
 {
-	unsigned long long block = io_u->offset / (unsigned long long) td->min_bs;
-	unsigned int blocks = 0;
+	unsigned int min_bs = td->min_bs[io_u->ddir];
+	unsigned long long block;
+	unsigned int blocks;
 
-	while (blocks < (io_u->buflen / td->min_bs)) {
+	block = io_u->offset / (unsigned long long) min_bs;
+	blocks = 0;
+	while (blocks < (io_u->buflen / min_bs)) {
 		unsigned int idx, bit;
 
 		if (!random_map_free(td, f, block))
@@ -46,8 +49,8 @@ static void mark_random_map(struct thread_data *td, struct fio_file *f,
 		blocks++;
 	}
 
-	if ((blocks * td->min_bs) < io_u->buflen)
-		io_u->buflen = blocks * td->min_bs;
+	if ((blocks * min_bs) < io_u->buflen)
+		io_u->buflen = blocks * min_bs;
 }
 
 /*
@@ -60,7 +63,7 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 
 	*b = 0;
 	i = 0;
-	while ((*b) * td->min_bs < f->file_size) {
+	while ((*b) * td->rw_min_bs < f->file_size) {
 		if (f->file_map[i] != -1UL) {
 			*b += ffz(f->file_map[i]);
 			return 0;
@@ -79,13 +82,13 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
  * the last io issued.
  */
 static int get_next_offset(struct thread_data *td, struct fio_file *f,
-			   unsigned long long *offset)
+			   unsigned long long *offset, int ddir)
 {
 	unsigned long long b, rb;
 	long r;
 
 	if (!td->sequential) {
-		unsigned long long max_blocks = td->io_size / td->min_bs;
+		unsigned long long max_blocks = td->io_size / td->min_bs[ddir];
 		int loops = 50;
 
 		do {
@@ -93,7 +96,7 @@ static int get_next_offset(struct thread_data *td, struct fio_file *f,
 			b = ((max_blocks - 1) * r / (unsigned long long) (RAND_MAX+1.0));
 			if (td->norandommap)
 				break;
-			rb = b + (f->file_offset / td->min_bs);
+			rb = b + (f->file_offset / td->min_bs[ddir]);
 			loops--;
 		} while (!random_map_free(td, f, rb) && loops);
 
@@ -102,30 +105,30 @@ static int get_next_offset(struct thread_data *td, struct fio_file *f,
 				return 1;
 		}
 	} else
-		b = f->last_pos / td->min_bs;
+		b = f->last_pos / td->min_bs[ddir];
 
-	*offset = (b * td->min_bs) + f->file_offset;
+	*offset = (b * td->min_bs[ddir]) + f->file_offset;
 	if (*offset > f->file_size)
 		return 1;
 
 	return 0;
 }
 
-static unsigned int get_next_buflen(struct thread_data *td)
+static unsigned int get_next_buflen(struct thread_data *td, int ddir)
 {
 	unsigned int buflen;
 	long r;
 
-	if (td->min_bs == td->max_bs)
-		buflen = td->min_bs;
+	if (td->min_bs[ddir] == td->max_bs[ddir])
+		buflen = td->min_bs[ddir];
 	else {
 		r = os_random_long(&td->bsrange_state);
-		buflen = (1 + (double) (td->max_bs - 1) * r / (RAND_MAX + 1.0));
+		buflen = (1 + (double) (td->max_bs[ddir] - 1) * r / (RAND_MAX + 1.0));
 		if (!td->bs_unaligned)
-			buflen = (buflen + td->min_bs - 1) & ~(td->min_bs - 1);
+			buflen = (buflen + td->min_bs[ddir] - 1) & ~(td->min_bs[ddir] - 1);
 	}
 
-	if (buflen > td->io_size - td->this_io_bytes[td->ddir]) {
+	if (buflen > td->io_size - td->this_io_bytes[ddir]) {
 		/*
 		 * if using direct/raw io, we may not be able to
 		 * shrink the size. so just fail it.
@@ -133,7 +136,7 @@ static unsigned int get_next_buflen(struct thread_data *td)
 		if (td->io_ops->flags & FIO_RAWIO)
 			return 0;
 
-		buflen = td->io_size - td->this_io_bytes[td->ddir];
+		buflen = td->io_size - td->this_io_bytes[ddir];
 	}
 
 	return buflen;
@@ -202,15 +205,14 @@ static int fill_io_u(struct thread_data *td, struct fio_file *f,
 		return 0;
 	}
 
+	io_u->ddir = get_rw_ddir(td);
+
 	/*
 	 * No log, let the seq/rand engine retrieve the next position.
 	 */
-	if (!get_next_offset(td, f, &io_u->offset)) {
-		io_u->buflen = get_next_buflen(td);
-
+	if (!get_next_offset(td, f, &io_u->offset, io_u->ddir)) {
+		io_u->buflen = get_next_buflen(td, io_u->ddir);
 		if (io_u->buflen) {
-			io_u->ddir = get_rw_ddir(td);
-
 			/*
 			 * If using a write iolog, store this entry.
 			 */
