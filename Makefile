@@ -15,7 +15,7 @@ FIO_INST_DIR = $(subst ','\'',$(prefix))
 CFLAGS += '-D_INST_PREFIX="$(FIO_INST_DIR)"'
 
 all: depend $(PROGS) $(SCRIPTS)
-	$(MAKE) -C engines
+	@$(MAKE) -C engines
 
 fio: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) -lpthread -lm -ldl
