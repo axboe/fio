@@ -517,7 +517,7 @@ static void fixup_options(struct thread_data *td)
 static char *to_kmg(unsigned int val)
 {
 	char *buf = malloc(32);
-	char post[] = { 0, 'K', 'G', 'P', -1 };
+	char post[] = { 0, 'K', 'M', 'G', 'P', -1 };
 	char *p = post;
 
 	while (*p != -1) {
