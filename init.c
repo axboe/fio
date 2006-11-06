@@ -142,16 +142,7 @@ static struct fio_option options[] = {
 		.name	= "bs",
 		.type	= FIO_OPT_STR_VAL_INT,
 		.off1	= td_var_offset(bs[DDIR_READ]),
-	},
-	{
-		.name	= "read_bs",
-		.type	= FIO_OPT_STR_VAL_INT,
-		.off1	= td_var_offset(bs[DDIR_READ]),
-	},
-	{
-		.name	= "write_bs",
-		.type	= FIO_OPT_STR_VAL_INT,
-		.off1	= td_var_offset(bs[DDIR_WRITE]),
+		.off2	= td_var_offset(bs[DDIR_WRITE]),
 	},
 	{
 		.name	= "offset",
@@ -178,18 +169,8 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_RANGE,
 		.off1	= td_var_offset(min_bs[DDIR_READ]),
 		.off2	= td_var_offset(max_bs[DDIR_READ]),
-	},
-	{
-		.name	= "read_bsrange",
-		.type	= FIO_OPT_RANGE,
-		.off1	= td_var_offset(min_bs[DDIR_READ]),
-		.off2	= td_var_offset(max_bs[DDIR_READ]),
-	},
-	{
-		.name	= "write_bsrange",
-		.type	= FIO_OPT_RANGE,
-		.off1	= td_var_offset(min_bs[DDIR_WRITE]),
-		.off2	= td_var_offset(max_bs[DDIR_WRITE]),
+		.off3	= td_var_offset(min_bs[DDIR_WRITE]),
+		.off4	= td_var_offset(max_bs[DDIR_WRITE]),
 	},
 	{
 		.name	= "nrfiles",
@@ -508,8 +489,6 @@ static void fixup_options(struct thread_data *td)
 	if (td_read(td) || td_rw(td))
 		td->overwrite = 1;
 
-	if (td->bs[DDIR_READ] != DEF_BS)
-		td->bs[DDIR_WRITE] = td->bs[DDIR_READ];
 	if (!td->min_bs[DDIR_READ])
 		td->min_bs[DDIR_READ]= td->bs[DDIR_READ];
 	if (!td->max_bs[DDIR_READ])

@@ -53,6 +53,8 @@ static int str_to_decimal(const char *str, unsigned long long *val, int kilo)
 	int len;
 
 	len = strlen(str);
+	if (!len)
+		return 1;
 
 	*val = strtoul(str, NULL, 10);
 	if (*val == ULONG_MAX && errno == ERANGE)
@@ -131,7 +133,8 @@ static struct fio_option *find_option(struct fio_option *options,
 	return NULL;
 }
 
-static int handle_option(struct fio_option *o, const char *ptr, void *data)
+static int __handle_option(struct fio_option *o, const char *ptr, void *data,
+			   int first)
 {
 	unsigned int il, *ilp1, *ilp2;
 	unsigned long long ull, *ullp;
@@ -167,11 +170,29 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 			ret = fn(data, &ull);
 		else {
 			if (o->type == FIO_OPT_STR_VAL_INT) {
-				ilp1 = td_var(data, o->off1);
-				*ilp1 = ull;
+				if (first) {
+					ilp1 = td_var(data, o->off1);
+					*ilp1 = ull;
+					if (o->off2) {
+						ilp1 = td_var(data, o->off2);
+						*ilp1 = ull;
+					}
+				} else if (o->off2) {
+					ilp1 = td_var(data, o->off2);
+					*ilp1 = ull;
+				}
 			} else {
-				ullp = td_var(data, o->off1);
-				*ullp = ull;
+				if (first) {
+					ullp = td_var(data, o->off1);
+					*ullp = ull;
+					if (o->off2) {
+						ullp = td_var(data, o->off2);
+						*ullp = ull;
+					}
+				} else if (o->off2) {
+					ullp = td_var(data, o->off2);
+					*ullp = ull;
+				}
 			}
 		}
 		break;
@@ -199,14 +220,29 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 		ret = 1;
 		if (!check_range_bytes(p1, &ul1) && !check_range_bytes(p2, &ul2)) {
 			ret = 0;
-			ilp1 = td_var(data, o->off1);
-			ilp2 = td_var(data, o->off2);
 			if (ul1 > ul2) {
-				*ilp1 = ul2;
-				*ilp2 = ul1;
-			} else {
-				*ilp2 = ul2;
+				unsigned long foo = ul1;
+
+				ul1 = ul2;
+				ul2 = foo;
+			}
+
+			if (first) {
+				ilp1 = td_var(data, o->off1);
+				ilp2 = td_var(data, o->off2);
 				*ilp1 = ul1;
+				*ilp2 = ul2;
+				if (o->off3 && o->off4) {
+					ilp1 = td_var(data, o->off3);
+					ilp2 = td_var(data, o->off4);
+					*ilp1 = ul1;
+					*ilp2 = ul2;
+				}
+			} else if (o->off3 && o->off4) {
+				ilp1 = td_var(data, o->off3);
+				ilp2 = td_var(data, o->off4);
+				*ilp1 = ul1;
+				*ilp2 = ul2;
 			}
 		}	
 			
@@ -225,7 +261,11 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 		if (fn)
 			ret = fn(data, &il);
 		else {
-			ilp1 = td_var(data, o->off1);
+			if (first || !o->off2)
+				ilp1 = td_var(data, o->off1);
+			else
+				ilp1 = td_var(data, o->off2);
+
 			*ilp1 = il;
 		}
 		break;
@@ -236,7 +276,11 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 		if (fn)
 			ret = fn(data);
 		else {
-			ilp1 = td_var(data, o->off1);
+			if (first || !o->off2)
+				ilp1 = td_var(data, o->off1);
+			else
+				ilp1 = td_var(data, o->off2);
+
 			*ilp1 = 1;
 		}
 		break;
@@ -247,6 +291,26 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 	}
 
 	return ret;
+}
+
+static int handle_option(struct fio_option *o, const char *ptr, void *data)
+{
+	const char *ptr2;
+	int ret;
+
+	ret = __handle_option(o, ptr, data, 1);
+	if (ret)
+		return ret;
+
+	/*
+	 * See if we have a second set of parameters, hidden after a comma
+	 */
+	ptr2 = strchr(ptr, ',');
+	if (!ptr2)
+		return 0;
+
+	ptr2++;
+	return __handle_option(o, ptr2, data, 0);
 }
 
 int parse_cmd_option(const char *opt, const char *val,

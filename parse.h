@@ -23,6 +23,8 @@ struct fio_option {
 	enum fio_opt_type type;
 	unsigned int off1;
 	unsigned int off2;
+	unsigned int off3;
+	unsigned int off4;
 	unsigned int max_val;
 	void *cb;
 };
