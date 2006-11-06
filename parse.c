@@ -64,6 +64,7 @@ static int str_to_decimal(const char *str, unsigned long long *val, int kilo)
 		*val *= get_mult_bytes(str[len - 1]);
 	else
 		*val *= get_mult_time(str[len - 1]);
+
 	return 0;
 }
 
@@ -99,6 +100,9 @@ static int check_range_bytes(const char *str, unsigned long *val)
 {
 	char suffix;
 
+	if (!strlen(str))
+		return 1;
+
 	if (sscanf(str, "%lu%c", val, &suffix) == 2) {
 		*val *= get_mult_bytes(suffix);
 		return 0;
@@ -112,6 +116,8 @@ static int check_range_bytes(const char *str, unsigned long *val)
 
 static int check_int(const char *p, unsigned int *val)
 {
+	if (!strlen(p))
+		return 1;
 	if (sscanf(p, "%u", val) == 1)
 		return 0;
 
@@ -140,7 +146,7 @@ static struct fio_option *find_option(struct fio_option *options,
 	} while (0)
 
 static int __handle_option(struct fio_option *o, const char *ptr, void *data,
-			   int first)
+			   int first, int more)
 {
 	unsigned int il, *ilp;
 	unsigned long long ull, *ullp;
@@ -178,12 +184,12 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			if (o->type == FIO_OPT_STR_VAL_INT) {
 				if (first)
 					val_store(ilp, ull, o->off1, data);
-				if (o->off2)
+				if (!more && o->off2)
 					val_store(ilp, ull, o->off2, data);
 			} else {
 				if (first)
 					val_store(ullp, ull, o->off1, data);
-				if (o->off2)
+				if (!more && o->off2)
 					val_store(ullp, ull, o->off2, data);
 			}
 		}
@@ -223,7 +229,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 				val_store(ilp, ul1, o->off1, data);
 				val_store(ilp, ul2, o->off2, data);
 			}
-			if (o->off3 && o->off4) {
+			if (!more && o->off3 && o->off4) {
 				val_store(ilp, ul1, o->off3, data);
 				val_store(ilp, ul2, o->off4, data);
 			}
@@ -246,7 +252,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		else {
 			if (first)
 				val_store(ilp, il, o->off1, data);
-			if (o->off2)
+			if (!more && o->off2)
 				val_store(ilp, il, o->off2, data);
 		}
 		break;
@@ -259,7 +265,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		else {
 			if (first)
 				val_store(ilp, 1, o->off1, data);
-			if (o->off2)
+			if (!more && o->off2)
 				val_store(ilp, 1, o->off2, data);
 		}
 		break;
@@ -275,21 +281,29 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 static int handle_option(struct fio_option *o, const char *ptr, void *data)
 {
 	const char *ptr2;
-	int ret;
-
-	ret = __handle_option(o, ptr, data, 1);
-	if (ret)
-		return ret;
+	int r1, r2;
 
 	/*
-	 * See if we have a second set of parameters, hidden after a comma
+	 * See if we have a second set of parameters, hidden after a comma.
+	 * Do this before parsing the first round, to check if we should
+	 * copy set 1 options to set 2.
 	 */
 	ptr2 = strchr(ptr, ',');
+
+	/*
+	 * Don't return early if parsing the first option fails - if
+	 * we are doing multiple arguments, we can allow the first one
+	 * being empty.
+	 */
+	r1 = __handle_option(o, ptr, data, 1, !!ptr2);
+
 	if (!ptr2)
-		return 0;
+		return r1;
 
 	ptr2++;
-	return __handle_option(o, ptr2, data, 0);
+	r2 = __handle_option(o, ptr2, data, 0, 0);
+
+	return r1 && r2;
 }
 
 int parse_cmd_option(const char *opt, const char *val,

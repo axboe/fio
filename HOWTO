@@ -224,7 +224,9 @@ bs=siint	The block size used for the io units. Defaults to 4k. Values
 		after a comma, it will apply to writes only. In other words,
 		the format is either bs=read_and_write or bs=read,write.
 		bs=4k,8k will thus use 4k blocks for reads, and 8k blocks
-		for writes.
+		for writes. If you only wish to set the write size, you
+		can do so by passing an empty read size - bs=,8k will set
+		8k for writes and leave the read default value.
 
 bsrange=irange	Instead of giving a single block size, specify a range
 		and fio will mix the issued io block sizes. The issued
