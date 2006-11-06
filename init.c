@@ -409,7 +409,7 @@ static struct option long_options[FIO_JOB_OPTS + FIO_CMD_OPTS] = {
 
 static int def_timeout = DEF_TIMEOUT;
 
-static char fio_version_string[] = "fio 1.7";
+static char fio_version_string[] = "fio 1.8";
 
 static char **ini_file;
 static int max_jobs = MAX_JOBS;
