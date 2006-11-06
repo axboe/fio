@@ -512,6 +512,27 @@ static void fixup_options(struct thread_data *td)
 }
 
 /*
+ * This function leaks the buffer
+ */
+static char *to_kmg(unsigned int val)
+{
+	char *buf = malloc(32);
+	char post[] = { 0, 'K', 'G', 'P', -1 };
+	char *p = post;
+
+	while (*p != -1) {
+		if (val & 1023)
+			break;
+
+		val >>= 10;
+		p++;
+	}
+
+	snprintf(buf, 31, "%u%c", val, *p);
+	return buf;
+}
+
+/*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
  * members of td.
@@ -624,8 +645,21 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		if (!job_add_num) {
 			if (td->io_ops->flags & FIO_CPUIO)
 				fprintf(f_out, "%s: ioengine=cpu, cpuload=%u, cpucycle=%u\n", td->name, td->cpuload, td->cpucycle);
-			else
-				fprintf(f_out, "%s: (g=%d): rw=%s, odir=%d, bs=%d-%d/%d-%d, rate=%d, ioengine=%s, iodepth=%d\n", td->name, td->groupid, ddir_str[ddir], td->odirect, td->min_bs[DDIR_READ], td->max_bs[DDIR_READ], td->min_bs[DDIR_WRITE], td->max_bs[DDIR_WRITE], td->rate, td->io_ops->name, td->iodepth);
+			else {
+				char *c1, *c2, *c3, *c4;
+
+				c1 = to_kmg(td->min_bs[DDIR_READ]);
+				c2 = to_kmg(td->max_bs[DDIR_READ]);
+				c3 = to_kmg(td->min_bs[DDIR_WRITE]);
+				c4 = to_kmg(td->max_bs[DDIR_WRITE]);
+
+				fprintf(f_out, "%s: (g=%d): rw=%s, odir=%d, bs=%s-%s/%s-%s, rate=%d, ioengine=%s, iodepth=%d\n", td->name, td->groupid, ddir_str[ddir], td->odirect, c1, c2, c3, c4, td->rate, td->io_ops->name, td->iodepth);
+
+				free(c1);
+				free(c2);
+				free(c3);
+				free(c4);
+			}
 		} else if (job_add_num == 1)
 			fprintf(f_out, "...\n");
 	}
