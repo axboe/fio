@@ -98,6 +98,10 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 		return NULL;
 	}
 
+	/*
+	 * Unlike the included modules, external engines should have a
+	 * non-static ioengine structure that we can reference.
+	 */
 	ops = dlsym(dlhandle, "ioengine");
 	if (!ops) {
 		td_vmsg(td, -1, dlerror());
