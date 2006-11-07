@@ -333,7 +333,7 @@ static void show_disk_util(void)
 static void show_ddir_status(struct thread_data *td, struct group_run_stats *rs,
 			     int ddir)
 {
-	char *ddir_str[] = { "read ", "write" };
+	const char *ddir_str[] = { "read ", "write" };
 	unsigned long min, max;
 	unsigned long long bw;
 	double mean, dev;

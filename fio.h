@@ -356,7 +356,7 @@ extern int groupid;
 extern int terse_output;
 extern FILE *f_out;
 extern FILE *f_err;
-extern char *fio_inst_prefix;
+extern const char *fio_inst_prefix;
 extern int temp_stall_ts;
 
 extern struct thread_data *threads;

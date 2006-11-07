@@ -539,8 +539,8 @@ static char *to_kmg(unsigned int val)
  */
 static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 {
-	char *ddir_str[] = { "read", "write", "randread", "randwrite",
-			     "rw", NULL, "randrw" };
+	const char *ddir_str[] = { "read", "write", "randread", "randwrite",
+				   "rw", NULL, "randrw" };
 	struct stat sb;
 	int numjobs, ddir, i;
 	struct fio_file *f;

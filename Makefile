@@ -1,5 +1,5 @@
 CC	= gcc
-CFLAGS	= -W -Wall -O2 -g -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+CFLAGS	= -W -Wwrite-strings -Wall -O2 -g -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 PROGS	= fio
 SCRIPTS = fio_generate_plots
 OBJS = fio.o ioengines.o init.o stat.o log.o time.o md5.o crc32.o \

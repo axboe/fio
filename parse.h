@@ -19,7 +19,7 @@ enum fio_opt_type {
  * Option define
  */
 struct fio_option {
-	char *name;
+	const char *name;
 	enum fio_opt_type type;
 	unsigned int off1;
 	unsigned int off2;
