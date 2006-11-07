@@ -280,7 +280,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 static int handle_option(struct fio_option *o, const char *ptr, void *data)
 {
-	const char *ptr2;
+	const char *ptr2 = NULL;
 	int r1, r2;
 
 	/*
@@ -288,7 +288,8 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 	 * Do this before parsing the first round, to check if we should
 	 * copy set 1 options to set 2.
 	 */
-	ptr2 = strchr(ptr, ',');
+	if (ptr)
+		ptr2 = strchr(ptr, ',');
 
 	/*
 	 * Don't return early if parsing the first option fails - if
