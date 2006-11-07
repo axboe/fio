@@ -849,6 +849,7 @@ static int str_ioengine_cb(void *data, const char *str)
 		return 0;
 
 	log_err("fio: ioengine: { linuxaio, aio, libaio }, posixaio, sync, mmap, sgio, splice, cpu\n");
+	log_err("fio: or specify path to dynamic ioengine module\n");
 	return 1;
 }
 

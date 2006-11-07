@@ -7,8 +7,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
-#include "fio.h"
-#include "os.h"
+
+#include "../fio.h"
+#include "../os.h"
 
 #ifdef FIO_HAVE_LIBAIO
 
@@ -130,7 +131,7 @@ static int fio_libaio_init(struct thread_data *td)
 	return 0;
 }
 
-struct ioengine_ops ioengine = {
+static struct ioengine_ops ioengine = {
 	.name		= "libaio",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_libaio_init,
@@ -155,10 +156,20 @@ static int fio_libaio_init(struct thread_data fio_unused *td)
 	return 1;
 }
 
-struct ioengine_ops ioengine = {
+static struct ioengine_ops ioengine = {
 	.name		= "libaio",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_libaio_init,
 };
 
 #endif
+
+static void fio_init fio_libaio_register(void)
+{
+	register_ioengine(&ioengine);
+}
+
+static void fio_exit fio_libaio_unregister(void)
+{
+	unregister_ioengine(&ioengine);
+}

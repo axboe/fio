@@ -7,8 +7,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
-#include "fio.h"
-#include "os.h"
+
+#include "../fio.h"
+#include "../os.h"
 
 #ifdef FIO_HAVE_POSIXAIO
 
@@ -179,7 +180,7 @@ static int fio_posixaio_init(struct thread_data *td)
 	return 0;
 }
 
-struct ioengine_ops ioengine = {
+static struct ioengine_ops ioengine = {
 	.name		= "posixaio",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_posixaio_init,
@@ -204,10 +205,20 @@ static int fio_posixaio_init(struct thread_data fio_unused *td)
 	return 1;
 }
 
-struct ioengine_ops ioengine = {
+static struct ioengine_ops ioengine = {
 	.name		= "posixaio",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_posixaio_init,
 };
 
 #endif
+
+static void fio_init fio_posixaio_register(void)
+{
+	register_ioengine(&ioengine);
+}
+
+static void fio_exit fio_posixaio_unregister(void)
+{
+	unregister_ioengine(&ioengine);
+}

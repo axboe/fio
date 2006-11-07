@@ -7,8 +7,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
-#include "fio.h"
-#include "os.h"
+
+#include "../fio.h"
+#include "../os.h"
 
 struct syncio_data {
 	struct io_u *last_io_u;
@@ -97,7 +98,7 @@ static int fio_syncio_init(struct thread_data *td)
 	return 0;
 }
 
-struct ioengine_ops ioengine = {
+static struct ioengine_ops ioengine = {
 	.name		= "sync",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_syncio_init,
@@ -108,3 +109,13 @@ struct ioengine_ops ioengine = {
 	.cleanup	= fio_syncio_cleanup,
 	.flags		= FIO_SYNCIO,
 };
+
+static void fio_init fio_syncio_register(void)
+{
+	register_ioengine(&ioengine);
+}
+
+static void fio_exit fio_syncio_unregister(void)
+{
+	unregister_ioengine(&ioengine);
+}

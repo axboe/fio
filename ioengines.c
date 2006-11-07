@@ -18,8 +18,15 @@
 #include "fio.h"
 #include "os.h"
 
+static LIST_HEAD(engine_list);
+
 static int check_engine_ops(struct ioengine_ops *ops)
 {
+	if (ops->version != FIO_IOOPS_VERSION) {
+		log_err("bad ioops version %d (want %d)\n", ops->version, FIO_IOOPS_VERSION);
+		return 1;
+	}
+
 	/*
 	 * cpu thread doesn't need to provide anything
 	 */
@@ -42,21 +49,48 @@ static int check_engine_ops(struct ioengine_ops *ops)
 	return 0;
 }
 
-struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
+void unregister_ioengine(struct ioengine_ops *ops)
 {
-	char engine[16], engine_lib[256];
-	struct ioengine_ops *ops, *ret;
-	void *dlhandle;
+	list_del(&ops->list);
+	INIT_LIST_HEAD(&ops->list);
+}
+
+int register_ioengine(struct ioengine_ops *ops)
+{
+	if (check_engine_ops(ops))
+		return 1;
+
+	INIT_LIST_HEAD(&ops->list);
+	list_add_tail(&ops->list, &engine_list);
+	return 0;
+}
+
+static struct ioengine_ops *find_ioengine(const char *name)
+{
+	struct ioengine_ops *ops;
+	struct list_head *entry;
+	char engine[16];
 
 	strncpy(engine, name, sizeof(engine) - 1);
 
-	/*
-	 * linux libaio has alias names, so convert to what we want
-	 */
 	if (!strncmp(engine, "linuxaio", 8) || !strncmp(engine, "aio", 3))
 		strcpy(engine, "libaio");
 
-	sprintf(engine_lib, "%s/lib/fio/fio-engine-%s.o", fio_inst_prefix, engine);
+	list_for_each(entry, &engine_list) {
+		ops = list_entry(entry, struct ioengine_ops, list);
+		if (!strcmp(engine, ops->name))
+			return ops;
+	}
+
+	return NULL;
+}
+
+static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
+					    const char *engine_lib)
+{
+	struct ioengine_ops *ops;
+	void *dlhandle;
+
 	dlerror();
 	dlhandle = dlopen(engine_lib, RTLD_LAZY);
 	if (!dlhandle) {
@@ -71,24 +105,41 @@ struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
 		return NULL;
 	}
 
-	if (ops->version != FIO_IOOPS_VERSION) {
-		log_err("bad ioops version %d (want %d)\n", ops->version, FIO_IOOPS_VERSION);
-		dlclose(dlhandle);
+	ops->dlhandle = dlhandle;
+	return ops;
+}
+
+struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
+{
+	struct ioengine_ops *ops, *ret;
+	char engine[16];
+
+	strncpy(engine, name, sizeof(engine) - 1);
+
+	/*
+	 * linux libaio has alias names, so convert to what we want
+	 */
+	if (!strncmp(engine, "linuxaio", 8) || !strncmp(engine, "aio", 3))
+		strcpy(engine, "libaio");
+
+	ops = find_ioengine(engine);
+	if (!ops)
+		ops = dlopen_ioengine(td, name);
+
+	if (!ops) {
+		log_err("fio: engine %s not loadable\n", name);
 		return NULL;
 	}
 
 	/*
 	 * Check that the required methods are there.
 	 */
-	if (check_engine_ops(ops)) {
-		dlclose(dlhandle);
+	if (check_engine_ops(ops))
 		return NULL;
-	}
 
 	ret = malloc(sizeof(*ret));
 	memcpy(ret, ops, sizeof(*ret));
 	ret->data = NULL;
-	ret->dlhandle = dlhandle;
 
 	return ret;
 }
@@ -98,7 +149,9 @@ void close_ioengine(struct thread_data *td)
 	if (td->io_ops->cleanup)
 		td->io_ops->cleanup(td);
 
-	dlclose(td->io_ops->dlhandle);
+	if (td->io_ops->dlhandle)
+		dlclose(td->io_ops->dlhandle);
+
 	free(td->io_ops);
 	td->io_ops = NULL;
 }

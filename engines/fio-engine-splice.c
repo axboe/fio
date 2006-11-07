@@ -8,8 +8,9 @@
 #include <errno.h>
 #include <assert.h>
 #include <sys/poll.h>
-#include "fio.h"
-#include "os.h"
+
+#include "../fio.h"
+#include "../os.h"
 
 #ifdef FIO_HAVE_SPLICE
 
@@ -181,7 +182,7 @@ static int fio_spliceio_init(struct thread_data *td)
 	return 0;
 }
 
-struct ioengine_ops ioengine = {
+static struct ioengine_ops ioengine = {
 	.name		= "splice",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_spliceio_init,
@@ -205,10 +206,20 @@ static int fio_spliceio_init(struct thread_data fio_unused *td)
 	return 1;
 }
 
-struct ioengine_ops ioengine = {
+static struct ioengine_ops ioengine = {
 	.name		= "splice",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_spliceio_init,
 };
 
 #endif
+
+static void fio_init fio_spliceio_register(void)
+{
+	register_ioengine(&ioengine);
+}
+
+static void fio_exit fio_spliceio_unregister(void)
+{
+	unregister_ioengine(&ioengine);
+}

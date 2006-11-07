@@ -565,6 +565,7 @@ static inline void fio_sem_up(volatile int *sem)
 	} while (0)
 
 struct ioengine_ops {
+	struct list_head list;
 	char name[16];
 	int version;
 	int flags;
@@ -583,12 +584,16 @@ struct ioengine_ops {
 #define FIO_IOOPS_VERSION	3
 
 extern struct ioengine_ops *load_ioengine(struct thread_data *, const char *);
+extern int register_ioengine(struct ioengine_ops *);
+extern void unregister_ioengine(struct ioengine_ops *);
 extern void close_ioengine(struct thread_data *);
 
 /*
  * Mark unused variables passed to ops functions as unused, to silence gcc
  */
 #define fio_unused	__attribute((__unused__))
+#define fio_init	__attribute__((constructor))
+#define fio_exit	__attribute__((destructor))
 
 #define for_each_td(td, i)	\
 	for ((i) = 0, (td) = &threads[0]; (i) < (int) thread_number; (i)++, (td)++)

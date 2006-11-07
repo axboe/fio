@@ -8,8 +8,9 @@
 #include <errno.h>
 #include <assert.h>
 #include <sys/poll.h>
-#include "fio.h"
-#include "os.h"
+
+#include "../fio.h"
+#include "../os.h"
 
 #ifdef FIO_HAVE_SGIO
 
@@ -313,7 +314,7 @@ err:
 	return 1;
 }
 
-struct ioengine_ops ioengine = {
+static struct ioengine_ops ioengine = {
 	.name		= "sg",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_sgio_init,
@@ -338,10 +339,20 @@ static int fio_sgio_init(struct thread_data fio_unused *td)
 	return 1;
 }
 
-struct ioengine_ops ioengine = {
+static struct ioengine_ops ioengine = {
 	.name		= "sgio",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_sgio_init,
 };
 
 #endif
+
+static void fio_init fio_sgio_register(void)
+{
+	register_ioengine(&ioengine);
+}
+
+static void fio_exit fio_sgio_unregister(void)
+{
+	unregister_ioengine(&ioengine);
+}

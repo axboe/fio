@@ -1,5 +1,5 @@
-#include "fio.h"
-#include "os.h"
+#include "../fio.h"
+#include "../os.h"
 
 static int fio_cpuio_setup(struct thread_data fio_unused *td)
 {
@@ -19,10 +19,20 @@ static int fio_cpuio_init(struct thread_data *td)
 	return 0;
 }
 
-struct ioengine_ops ioengine = {
+static struct ioengine_ops ioengine = {
 	.name		= "cpuio",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_cpuio_init,
 	.setup		= fio_cpuio_setup,
 	.flags		= FIO_CPUIO,
 };
+
+static void fio_init fio_cpuio_register(void)
+{
+	register_ioengine(&ioengine);
+}
+
+static void fio_exit fio_cpuio_unregister(void)
+{
+	unregister_ioengine(&ioengine);
+}
