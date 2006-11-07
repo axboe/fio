@@ -266,29 +266,32 @@ static int fio_sgio_init(struct thread_data *td)
 	int ret;
 
 	sd = malloc(sizeof(*sd));
+	memset(sd, 0, sizeof(*sd));
 	sd->cmds = malloc(td->iodepth * sizeof(struct sgio_cmd));
+	memset(sd->cmds, 0, td->iodepth * sizeof(struct sgio_cmd));
 	sd->events = malloc(td->iodepth * sizeof(struct io_u *));
+	memset(sd->events, 0, td->iodepth * sizeof(struct io_u *));
 	td->io_ops->data = sd;
 
 	if (td->filetype == FIO_TYPE_BD) {
 		if (ioctl(f->fd, BLKSSZGET, &bs) < 0) {
 			td_verror(td, errno);
-			return 1;
+			goto err;
 		}
 	} else if (td->filetype == FIO_TYPE_CHAR) {
 		int version;
 
 		if (ioctl(f->fd, SG_GET_VERSION_NUM, &version) < 0) {
 			td_verror(td, errno);
-			return 1;
+			goto err;
 		}
 
 		ret = fio_sgio_get_bs(td, &bs);
 		if (ret)
-			return ret;
+			goto err;
 	} else {
 		log_err("ioengine sgio only works on block devices\n");
-		return 1;
+		goto err;
 	}
 
 	sd->bs = bs;
@@ -303,6 +306,11 @@ static int fio_sgio_init(struct thread_data *td)
 	 */
 	td->override_sync = 1;
 	return 0;
+err:
+	free(sd->events);
+	free(sd->cmds);
+	free(sd);
+	return 1;
 }
 
 struct ioengine_ops ioengine = {

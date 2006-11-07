@@ -120,6 +120,7 @@ static int fio_libaio_init(struct thread_data *td)
 	memset(ld, 0, sizeof(*ld));
 	if (io_queue_init(td->iodepth, &ld->aio_ctx)) {
 		td_verror(td, errno);
+		free(ld);
 		return 1;
 	}
 
