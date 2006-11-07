@@ -439,7 +439,7 @@ static void do_io(struct thread_data *td)
 		rate_throttle(td, usec, icd.bytes_done[td->ddir], td->ddir);
 
 		if (check_min_rate(td, &e)) {
-			if (rate_quit)
+			if (exitall_on_terminate)
 				terminate_threads(td->groupid);
 			td_verror(td, ENOMEM);
 			break;

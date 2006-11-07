@@ -348,7 +348,6 @@ struct thread_data {
 #define td_verror(td, err)	__td_verror((td), (err), strerror((err)))
 #define td_vmsg(td, err, msg)	__td_verror((td), (err), (msg))
 
-extern int rate_quit;
 extern int exitall_on_terminate;
 extern int thread_number;
 extern int shm_id;

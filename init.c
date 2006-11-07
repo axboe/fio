@@ -417,7 +417,6 @@ static int max_jobs = MAX_JOBS;
 struct thread_data def_thread;
 struct thread_data *threads = NULL;
 
-int rate_quit = 0;
 int exitall_on_terminate = 0;
 int terse_output = 0;
 unsigned long long mlock_size = 0;
