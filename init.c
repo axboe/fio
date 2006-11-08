@@ -516,16 +516,16 @@ static void fixup_options(struct thread_data *td)
 static char *to_kmg(unsigned int val)
 {
 	char *buf = malloc(32);
-	char post[] = { 0, 'K', 'M', 'G', 'P', -1 };
+	char post[] = { 0, 'K', 'M', 'G', 'P', 0 };
 	char *p = post;
 
-	while (*p != -1) {
+	do {
 		if (val & 1023)
 			break;
 
 		val >>= 10;
 		p++;
-	}
+	} while (*p);
 
 	snprintf(buf, 31, "%u%c", val, *p);
 	return buf;
