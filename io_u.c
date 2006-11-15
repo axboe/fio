@@ -88,7 +88,7 @@ static int get_next_offset(struct thread_data *td, struct fio_file *f,
 	long r;
 
 	if (!td->sequential) {
-		unsigned long long max_blocks = td->io_size / td->min_bs[ddir];
+		unsigned long long max_blocks = f->file_size / td->min_bs[ddir];
 		int loops = 50;
 
 		do {

@@ -93,15 +93,14 @@ static int create_files(struct thread_data *td)
 	struct fio_file *f;
 	int i, err, need_create;
 
+	for_each_file(td, f, i)
+		f->file_size = td->total_file_size / td->nr_files;
+
 	/*
 	 * unless specifically asked for overwrite, let normal io extend it
 	 */
-	if (!td->overwrite) {
-		for_each_file(td, f, i)
-			f->file_size = td->total_file_size / td->nr_files;
-
+	if (!td->overwrite)
 		return 0;
-	}
 
 	need_create = 0;
 	if (td->filetype == FIO_TYPE_FILE)
