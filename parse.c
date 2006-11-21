@@ -154,6 +154,11 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	char **cp;
 	int ret = 0, is_time = 0;
 
+	if (!ptr && o->type != FIO_OPT_STR_SET) {
+		fprintf(stderr, "Option %s requires an argument\n", o->name);
+		return 1;
+	}
+
 	switch (o->type) {
 	case FIO_OPT_STR: {
 		fio_opt_str_fn *fn = o->cb;
