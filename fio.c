@@ -45,7 +45,6 @@ int groupid = 0;
 int thread_number = 0;
 int shm_id = 0;
 int temp_stall_ts;
-const char *fio_inst_prefix = _INST_PREFIX;
 
 static volatile int startup_sem;
 

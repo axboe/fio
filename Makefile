@@ -18,10 +18,6 @@ prefix = /usr/local
 bindir = $(prefix)/bin
 libdir = $(prefix)/lib/fio
 
-FIO_INST_DIR = $(subst ','\'',$(prefix))
-
-CFLAGS += '-D_INST_PREFIX="$(FIO_INST_DIR)"'
-
 all: depend $(PROGS) $(SCRIPTS)
 
 fio: $(OBJS)
