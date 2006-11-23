@@ -472,6 +472,7 @@ extern int init_random_state(struct thread_data *);
  */
 extern void close_files(struct thread_data *);
 extern int setup_files(struct thread_data *);
+extern int open_files(struct thread_data *);
 extern int file_invalidate_cache(struct thread_data *, struct fio_file *);
 
 /*

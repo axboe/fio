@@ -656,6 +656,8 @@ static void *thread_main(void *data)
 
 	if (!td->create_serialize && setup_files(td))
 		goto err;
+	if (open_files(td))
+		goto err;
 
 	gettimeofday(&td->epoch, NULL);
 

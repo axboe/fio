@@ -351,10 +351,24 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
+int open_files(struct thread_data *td)
+{
+	struct fio_file *f;
+	int i, err = 0;
+
+	for_each_file(td, f, i) {
+		err = setup_file(td, f);
+		if (err)
+			break;
+	}
+
+	return err;
+}
+
 int setup_files(struct thread_data *td)
 {
 	struct fio_file *f;
-	int i, err;
+	int err, i;
 
 	/*
 	 * if ioengine defines a setup() method, it's responsible for
@@ -366,13 +380,7 @@ int setup_files(struct thread_data *td)
 	if (create_files(td))
 		return 1;
 
-	err = 0;
-	for_each_file(td, f, i) {
-		err = setup_file(td, f);
-		if (err)
-			break;
-	}
-
+	err = open_files(td);
 	if (err)
 		return err;
 
@@ -396,9 +404,18 @@ int setup_files(struct thread_data *td)
 	td->total_io_size = td->io_size * td->loops;
 
 	if (td->io_ops->flags & FIO_MMAPIO)
-		return setup_files_mmap(td);
+		err = setup_files_mmap(td);
 	else
-		return setup_files_plain(td);
+		err = setup_files_plain(td);
+
+	for_each_file(td, f, i) {
+		if (f->fd != -1) {
+			close(f->fd);
+			f->fd = -1;
+		}
+	}
+
+	return err;
 }
 
 void close_files(struct thread_data *td)
@@ -407,15 +424,14 @@ void close_files(struct thread_data *td)
 	int i;
 
 	for_each_file(td, f, i) {
-		if (f->fd != -1) {
-			file_invalidate_cache(td, f);
-			close(f->fd);
-			f->fd = -1;
-		}
 		if (td->unlink && td->filetype == FIO_TYPE_FILE) {
 			unlink(f->file_name);
 			free(f->file_name);
 			f->file_name = NULL;
+		}
+		if (f->fd != -1) {
+			close(f->fd);
+			f->fd = -1;
 		}
 		if (f->mmap) {
 			munmap(f->mmap, f->file_size);
