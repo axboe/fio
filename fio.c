@@ -452,7 +452,7 @@ static void do_io(struct thread_data *td)
 			usec_sleep(td, td->thinktime);
 	}
 
-	if (!ret) {
+	if (!td->error) {
 		if (td->cur_depth)
 			cleanup_pending_aio(td);
 
@@ -751,12 +751,12 @@ static void *fork_main(int shmid, int offset)
 static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 {
 	struct thread_data *td;
-	int i, cputhreads;
+	int i, cputhreads, pending;
 
 	/*
 	 * reap exited threads (TD_EXITED -> TD_REAPED)
 	 */
-	cputhreads = 0;
+	pending = cputhreads = 0;
 	for_each_td(td, i) {
 		/*
 		 * ->io_ops is NULL for a thread that has closed its
@@ -765,8 +765,12 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		if (td->io_ops && td->io_ops->flags & FIO_CPUIO)
 			cputhreads++;
 
-		if (td->runstate != TD_EXITED)
+		if (td->runstate != TD_EXITED) {
+			if (td->runstate < TD_RUNNING)
+				pending++;
+
 			continue;
+		}
 
 		td_set_runstate(td, TD_REAPED);
 
@@ -783,7 +787,7 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		(*t_rate) -= td->rate;
 	}
 
-	if (*nr_running == cputhreads)
+	if (*nr_running == cputhreads && !pending)
 		terminate_threads(TERMINATE_ALL);
 }
 
