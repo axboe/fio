@@ -408,15 +408,14 @@ void close_files(struct thread_data *td)
 
 	for_each_file(td, f, i) {
 		if (f->fd != -1) {
-			if (td->unlink && td->filetype == FIO_TYPE_FILE &&
-			    td->filename) {
-				unlink(f->file_name);
-				td->filename = NULL;
-			}
-			free(f->file_name);
-			f->file_name = NULL;
+			file_invalidate_cache(td, f);
 			close(f->fd);
 			f->fd = -1;
+		}
+		if (td->unlink && td->filetype == FIO_TYPE_FILE) {
+			unlink(f->file_name);
+			free(f->file_name);
+			f->file_name = NULL;
 		}
 		if (f->mmap) {
 			munmap(f->mmap, f->file_size);
@@ -424,6 +423,7 @@ void close_files(struct thread_data *td)
 		}
 	}
 
+	td->filename = NULL;
 	free(td->files);
 	td->files = NULL;
 	td->nr_files = 0;
