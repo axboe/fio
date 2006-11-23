@@ -317,18 +317,18 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 
 	if (td->odirect)
 		flags |= OS_O_DIRECT;
+	if (td->sync_io)
+		flags |= O_SYNC;
 
 	if (td_write(td) || td_rw(td)) {
+		flags |= O_RDWR;
+
 		if (td->filetype == FIO_TYPE_FILE) {
 			if (!td->overwrite)
 				flags |= O_TRUNC;
 
 			flags |= O_CREAT;
 		}
-		if (td->sync_io)
-			flags |= O_SYNC;
-
-		flags |= O_RDWR;
 
 		f->fd = open(f->file_name, flags, 0600);
 	} else {
@@ -360,6 +360,16 @@ int open_files(struct thread_data *td)
 		err = setup_file(td, f);
 		if (err)
 			break;
+	}
+
+	if (!err)
+		return 0;
+
+	for_each_file(td, f, i) {
+		if (f->fd != -1) {
+			close(f->fd);
+			f->fd = -1;
+		}
 	}
 
 	return err;
