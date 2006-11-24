@@ -25,7 +25,7 @@ static unsigned long utime_since_now(struct timeval *s)
 {
 	struct timeval t;
 
-	gettimeofday(&t, NULL);
+	fio_gettime(&t, NULL);
 	return utime_since(s, &t);
 }
 
@@ -49,8 +49,9 @@ unsigned long mtime_since(struct timeval *s, struct timeval *e)
 unsigned long mtime_since_now(struct timeval *s)
 {
 	struct timeval t;
+	void *p = __builtin_return_address(0);
 
-	gettimeofday(&t, NULL);
+	fio_gettime(&t, p);
 	return mtime_since(s, &t);
 }
 
@@ -66,7 +67,7 @@ void __usec_sleep(unsigned int usec)
 {
 	struct timeval start;
 
-	gettimeofday(&start, NULL);
+	fio_gettime(&start, NULL);
 	while (utime_since_now(&start) < usec)
 		nop;
 }
@@ -128,9 +129,9 @@ unsigned long mtime_since_genesis(void)
 	return mtime_since_now(&genesis);
 }
 
-void time_init(void)
+static void fio_init time_init(void)
 {
-	gettimeofday(&genesis, NULL);
+	fio_gettime(&genesis, NULL);
 }
 
 void fill_start_time(struct timeval *t)

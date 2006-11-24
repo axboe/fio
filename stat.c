@@ -60,7 +60,7 @@ static void update_io_tick_disk(struct disk_util *du)
 	dus->io_ticks += (__dus.io_ticks - ldus->io_ticks);
 	dus->time_in_queue += (__dus.time_in_queue - ldus->time_in_queue);
 
-	gettimeofday(&t, NULL);
+	fio_gettime(&t, NULL);
 	du->msec += mtime_since(&du->time, &t);
 	memcpy(&du->time, &t, sizeof(t));
 	memcpy(ldus, &__dus, sizeof(__dus));
@@ -102,7 +102,7 @@ static void disk_util_add(dev_t dev, char *path)
 	du->name = strdup(basename(path));
 	du->dev = dev;
 
-	gettimeofday(&du->time, NULL);
+	fio_gettime(&du->time, NULL);
 	get_io_ticks(du, &du->last_dus);
 
 	list_add_tail(&du->list, &disk_list);
@@ -574,9 +574,9 @@ void add_slat_sample(struct thread_data *td, int ddir, unsigned long msec)
 		add_log_sample(td, td->slat_log, msec, ddir);
 }
 
-void add_bw_sample(struct thread_data *td, int ddir)
+void add_bw_sample(struct thread_data *td, int ddir, struct timeval *t)
 {
-	unsigned long spent = mtime_since_now(&td->stat_sample_time[ddir]);
+	unsigned long spent = mtime_since(&td->stat_sample_time[ddir], t);
 	unsigned long rate;
 
 	if (spent < td->bw_avg_time)
@@ -588,7 +588,7 @@ void add_bw_sample(struct thread_data *td, int ddir)
 	if (td->bw_log)
 		add_log_sample(td, td->bw_log, rate, ddir);
 
-	gettimeofday(&td->stat_sample_time[ddir], NULL);
+	fio_gettime(&td->stat_sample_time[ddir], NULL);
 	td->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
 }
 

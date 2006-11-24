@@ -238,7 +238,7 @@ void print_thread_status(void)
 	if (mtime > 1000) {
 		r_rate = (io_bytes[0] - prev_io_bytes[0]) / mtime;
 		w_rate = (io_bytes[1] - prev_io_bytes[1]) / mtime;
-		gettimeofday(&prev_time, NULL);
+		fio_gettime(&prev_time, NULL);
 		memcpy(prev_io_bytes, io_bytes, sizeof(io_bytes));
 	}
 

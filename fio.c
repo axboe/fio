@@ -244,7 +244,6 @@ static int fio_io_sync(struct thread_data *td, struct fio_file *f)
  */
 void do_verify(struct thread_data *td)
 {
-	struct timeval t;
 	struct io_u *io_u, *v_io_u = NULL;
 	struct io_completion_data icd;
 	struct fio_file *f;
@@ -265,13 +264,14 @@ void do_verify(struct thread_data *td)
 		if (td->terminate)
 			break;
 
-		gettimeofday(&t, NULL);
-		if (runtime_exceeded(td, &t))
-			break;
-
 		io_u = __get_io_u(td);
 		if (!io_u)
 			break;
+
+		if (runtime_exceeded(td, &io_u->start_time)) {
+			put_io_u(td, io_u);
+			break;
+		}
 
 		if (get_next_verify(td, io_u)) {
 			put_io_u(td, io_u);
@@ -313,6 +313,7 @@ void do_verify(struct thread_data *td)
 		v_io_u = td->io_ops->event(td, 0);
 		icd.nr = 1;
 		icd.error = 0;
+		fio_gettime(&icd.time, NULL);
 		io_completed(td, v_io_u, &icd);
 
 		if (icd.error) {
@@ -349,7 +350,7 @@ static void do_cpuio(struct thread_data *td)
 	int i = 0;
 
 	while (!td->terminate) {
-		gettimeofday(&e, NULL);
+		fio_gettime(&e, NULL);
 
 		if (runtime_exceeded(td, &e))
 			break;
@@ -370,7 +371,7 @@ static void do_cpuio(struct thread_data *td)
 static void do_io(struct thread_data *td)
 {
 	struct io_completion_data icd;
-	struct timeval s, e;
+	struct timeval s;
 	unsigned long usec;
 	struct fio_file *f;
 	int i, ret = 0;
@@ -432,19 +433,18 @@ static void do_io(struct thread_data *td)
 		 * of completions except the very first one which may look
 		 * a little bursty
 		 */
-		gettimeofday(&e, NULL);
-		usec = utime_since(&s, &e);
+		usec = utime_since(&s, &icd.time);
 
 		rate_throttle(td, usec, icd.bytes_done[td->ddir], td->ddir);
 
-		if (check_min_rate(td, &e)) {
+		if (check_min_rate(td, &icd.time)) {
 			if (exitall_on_terminate)
 				terminate_threads(td->groupid);
 			td_verror(td, ENOMEM);
 			break;
 		}
 
-		if (runtime_exceeded(td, &e))
+		if (runtime_exceeded(td, &icd.time))
 			break;
 
 		if (td->thinktime)
@@ -658,14 +658,14 @@ static void *thread_main(void *data)
 	if (open_files(td))
 		goto err;
 
-	gettimeofday(&td->epoch, NULL);
+	fio_gettime(&td->epoch, NULL);
 
 	if (td->exec_prerun)
 		system(td->exec_prerun);
 
 	while (td->loops--) {
 		getrusage(RUSAGE_SELF, &td->ru_start);
-		gettimeofday(&td->start, NULL);
+		fio_gettime(&td->start, NULL);
 		memcpy(&td->stat_sample_time, &td->start, sizeof(td->start));
 
 		if (td->ratemin)
@@ -692,7 +692,7 @@ static void *thread_main(void *data)
 			continue;
 
 		clear_io_state(td);
-		gettimeofday(&td->start, NULL);
+		fio_gettime(&td->start, NULL);
 
 		do_verify(td);
 
@@ -836,8 +836,6 @@ static void run_threads(void)
 		}
 	}
 
-	time_init();
-
 	while (todo) {
 		struct thread_data *map[MAX_JOBS];
 		struct timeval this_start;
@@ -897,7 +895,7 @@ static void run_threads(void)
 		 * Wait for the started threads to transition to
 		 * TD_INITIALIZED.
 		 */
-		gettimeofday(&this_start, NULL);
+		fio_gettime(&this_start, NULL);
 		left = this_jobs;
 		while (left) {
 			if (mtime_since_now(&this_start) > JOB_START_TIMEOUT)

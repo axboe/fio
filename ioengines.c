@@ -176,7 +176,7 @@ int td_io_getevents(struct thread_data *td, int min, int max,
 
 int td_io_queue(struct thread_data *td, struct io_u *io_u)
 {
-	gettimeofday(&io_u->issue_time, NULL);
+	fio_gettime(&io_u->issue_time, NULL);
 
 	return td->io_ops->queue(td, io_u);
 }

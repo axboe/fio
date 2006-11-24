@@ -153,7 +153,7 @@ static int get_rw_ddir(struct thread_data *td)
 		struct timeval now;
 		unsigned long elapsed;
 
-		gettimeofday(&now, NULL);
+		fio_gettime(&now, NULL);
 	 	elapsed = mtime_since_now(&td->rwmix_switch);
 
 		/*
@@ -296,14 +296,13 @@ struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 		return NULL;
 	}
 
-	gettimeofday(&io_u->start_time, NULL);
+	fio_gettime(&io_u->start_time, NULL);
 	return io_u;
 }
 
 void io_completed(struct thread_data *td, struct io_u *io_u,
 		  struct io_completion_data *icd)
 {
-	struct timeval e;
 	unsigned long msec;
 
 	if (io_u->ddir == DDIR_SYNC) {
@@ -312,8 +311,6 @@ void io_completed(struct thread_data *td, struct io_u *io_u,
 	}
 
 	td->last_was_sync = 0;
-
-	gettimeofday(&e, NULL);
 
 	if (!io_u->error) {
 		unsigned int bytes = io_u->buflen - io_u->resid;
@@ -324,10 +321,12 @@ void io_completed(struct thread_data *td, struct io_u *io_u,
 		td->zone_bytes += bytes;
 		td->this_io_bytes[idx] += bytes;
 
-		msec = mtime_since(&io_u->issue_time, &e);
+		io_u->file->last_completed_pos = io_u->offset + io_u->buflen;
+
+		msec = mtime_since(&io_u->issue_time, &icd->time);
 
 		add_clat_sample(td, idx, msec);
-		add_bw_sample(td, idx);
+		add_bw_sample(td, idx, &icd->time);
 
 		if ((td_rw(td) || td_write(td)) && idx == DDIR_WRITE)
 			log_io_piece(td, io_u);
@@ -341,6 +340,8 @@ void ios_completed(struct thread_data *td, struct io_completion_data *icd)
 {
 	struct io_u *io_u;
 	int i;
+
+	fio_gettime(&icd->time, NULL);
 
 	icd->error = 0;
 	icd->bytes_done[0] = icd->bytes_done[1] = 0;

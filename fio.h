@@ -156,6 +156,7 @@ struct fio_file {
 	unsigned long long real_file_size;
 	unsigned long long file_offset;
 	unsigned long long last_pos;
+	unsigned long long last_completed_pos;
 
 	unsigned long *file_map;
 	unsigned int num_maps;
@@ -410,6 +411,7 @@ struct io_completion_data {
 
 	int error;			/* output */
 	unsigned long bytes_done[2];	/* output */
+	struct timeval time;		/* output */
 };
 
 #define DISK_UTIL_MSEC	(250)
@@ -436,7 +438,7 @@ extern void write_iolog_close(struct thread_data *);
  */
 extern void add_clat_sample(struct thread_data *, int, unsigned long);
 extern void add_slat_sample(struct thread_data *, int, unsigned long);
-extern void add_bw_sample(struct thread_data *, int);
+extern void add_bw_sample(struct thread_data *, int, struct timeval *);
 extern void show_run_stats(void);
 extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
@@ -449,7 +451,6 @@ extern int setup_rate(struct thread_data *);
 /*
  * Time functions
  */
-extern void time_init(void);
 extern unsigned long utime_since(struct timeval *, struct timeval *);
 extern unsigned long mtime_since(struct timeval *, struct timeval *);
 extern unsigned long mtime_since_now(struct timeval *);
@@ -459,6 +460,7 @@ extern void __usec_sleep(unsigned int);
 extern void usec_sleep(struct thread_data *, unsigned long);
 extern void rate_throttle(struct thread_data *, unsigned long, unsigned int, int);
 extern void fill_start_time(struct timeval *);
+extern void fio_gettime(struct timeval *, void *);
 
 /*
  * Init functions
