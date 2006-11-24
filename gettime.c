@@ -1,6 +1,7 @@
 /*
- * Memory helpers
+ * Clock functions
  */
+
 #include <unistd.h>
 #include <sys/time.h>
 
