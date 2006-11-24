@@ -605,6 +605,7 @@ static void clear_io_state(struct thread_data *td)
  */
 static void *thread_main(void *data)
 {
+	unsigned long long runtime[2];
 	struct thread_data *td = data;
 
 	if (!td->use_thread)
@@ -658,11 +659,12 @@ static void *thread_main(void *data)
 	if (open_files(td))
 		goto err;
 
-	fio_gettime(&td->epoch, NULL);
-
 	if (td->exec_prerun)
 		system(td->exec_prerun);
 
+	fio_gettime(&td->epoch, NULL);
+
+	runtime[0] = runtime[1] = 0;
 	while (td->loops--) {
 		getrusage(RUSAGE_SELF, &td->ru_start);
 		fio_gettime(&td->start, NULL);
@@ -679,9 +681,9 @@ static void *thread_main(void *data)
 		else
 			do_io(td);
 
-		td->runtime[td->ddir] += mtime_since_now(&td->start);
+		runtime[td->ddir] += utime_since_now(&td->start);
 		if (td_rw(td) && td->io_bytes[td->ddir ^ 1])
-			td->runtime[td->ddir ^ 1] = td->runtime[td->ddir];
+			runtime[td->ddir ^ 1] = runtime[td->ddir];
 
 		update_rusage_stat(td);
 
@@ -696,11 +698,15 @@ static void *thread_main(void *data)
 
 		do_verify(td);
 
-		td->runtime[DDIR_READ] += mtime_since_now(&td->start);
+		runtime[DDIR_READ] += utime_since_now(&td->start);
 
 		if (td->error || td->terminate)
 			break;
 	}
+
+	fio_gettime(&td->end_time, NULL);
+	td->runtime[0] = runtime[0] / 1000;
+	td->runtime[1] = runtime[1] / 1000;
 
 	if (td->bw_log)
 		finish_log(td, td->bw_log, "bw");

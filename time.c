@@ -21,7 +21,7 @@ unsigned long utime_since(struct timeval *s, struct timeval *e)
 	return sec + usec;
 }
 
-static unsigned long utime_since_now(struct timeval *s)
+unsigned long utime_since_now(struct timeval *s)
 {
 	struct timeval t;
 

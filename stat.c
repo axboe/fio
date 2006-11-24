@@ -258,9 +258,6 @@ void disk_util_timer_arm(void)
 
 void update_rusage_stat(struct thread_data *td)
 {
-	if (!(td->runtime[0] + td->runtime[1]))
-		return;
-
 	getrusage(RUSAGE_SELF, &td->ru_end);
 
 	td->usr_time += mtime_since(&td->ru_start.ru_utime, &td->ru_end.ru_utime);
@@ -362,6 +359,7 @@ static void show_thread_status(struct thread_data *td,
 			       struct group_run_stats *rs)
 {
 	double usr_cpu, sys_cpu;
+	unsigned long runtime;
 
 	if (!(td->io_bytes[0] + td->io_bytes[1]) && !td->error)
 		return;
@@ -372,8 +370,9 @@ static void show_thread_status(struct thread_data *td,
 	if (td->io_bytes[td->ddir ^ 1])
 		show_ddir_status(td, rs, td->ddir ^ 1);
 
-	if (td->runtime[0] + td->runtime[1]) {
-		double runt = td->runtime[0] + td->runtime[1];
+	runtime = mtime_since(&td->epoch, &td->end_time);
+	if (runtime) {
+		double runt = runtime;
 
 		usr_cpu = (double) td->usr_time * 100 / runt;
 		sys_cpu = (double) td->sys_time * 100 / runt;

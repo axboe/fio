@@ -308,6 +308,7 @@ struct thread_data {
 
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
+	struct timeval end_time;/* time job ended */
 
 	/*
 	 * fio system usage accounting
@@ -452,6 +453,7 @@ extern int setup_rate(struct thread_data *);
  * Time functions
  */
 extern unsigned long utime_since(struct timeval *, struct timeval *);
+extern unsigned long utime_since_now(struct timeval *);
 extern unsigned long mtime_since(struct timeval *, struct timeval *);
 extern unsigned long mtime_since_now(struct timeval *);
 extern unsigned long time_since_now(struct timeval *);
