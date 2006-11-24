@@ -90,7 +90,9 @@ The job file parameters are:
 			mmap for mmap'ed io, splice for using splice/vmsplice,
 			or sgio for direct SG_IO io. The latter only works on
 			Linux on SCSI (or SCSI-like devices, such as
-			usb-storage or sata/libata driven) devices.
+			usb-storage or sata/libata driven) devices. Fio also
+			has a null io engine, which is mainly used for testing
+			fio itself.
 	iodepth=x	For async io, allow 'x' ios in flight
 	overwrite=x	If 'x', layout a write file first.
 	nrfiles=x	Spread io load over 'x' number of files per job,

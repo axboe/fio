@@ -12,6 +12,7 @@ OBJS += engines/fio-engine-posixaio.o
 OBJS += engines/fio-engine-sg.o
 OBJS += engines/fio-engine-splice.o
 OBJS += engines/fio-engine-sync.o
+OBJS += engines/fio-engine-null.o
 
 INSTALL = install
 prefix = /usr/local

@@ -264,6 +264,10 @@ ioengine=str	Defines how the job issues io to the file. The following
 				we use read(2) and write(2) for asynchronous
 				io.
 
+			null	Doesn't transfer any data, just pretends
+				to. This is mainly used to exercise fio
+				itself and for debugging/testing purposes.
+
 iodepth=int	This defines how many io units to keep in flight against
 		the file. The default is 1 for each file defined in this
 		job, can be overridden with a larger value for higher
