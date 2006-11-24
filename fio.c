@@ -663,10 +663,10 @@ static void *thread_main(void *data)
 		system(td->exec_prerun);
 
 	fio_gettime(&td->epoch, NULL);
+	getrusage(RUSAGE_SELF, &td->ru_start);
 
 	runtime[0] = runtime[1] = 0;
 	while (td->loops--) {
-		getrusage(RUSAGE_SELF, &td->ru_start);
 		fio_gettime(&td->start, NULL);
 		memcpy(&td->stat_sample_time, &td->start, sizeof(td->start));
 
@@ -685,8 +685,6 @@ static void *thread_main(void *data)
 		if (td_rw(td) && td->io_bytes[td->ddir ^ 1])
 			runtime[td->ddir ^ 1] = runtime[td->ddir];
 
-		update_rusage_stat(td);
-
 		if (td->error || td->terminate)
 			break;
 
@@ -704,6 +702,7 @@ static void *thread_main(void *data)
 			break;
 	}
 
+	update_rusage_stat(td);
 	fio_gettime(&td->end_time, NULL);
 	td->runtime[0] = runtime[0] / 1000;
 	td->runtime[1] = runtime[1] / 1000;
