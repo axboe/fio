@@ -14,7 +14,7 @@ OBJS += engines/fio-engine-null.o
 all: depend $(PROGS) $(SCRIPTS)
 
 fio: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) -lc -lpthread -lm -laio -lrt
+	$(CC) $(CFLAGS) -o $@ $(OBJS) -lc -lpthread -lm -laio -lrt -ldl
 
 clean:
 	-rm -f *.o .depend cscope.out $(PROGS)
