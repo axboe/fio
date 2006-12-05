@@ -582,7 +582,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td->filetype == FIO_TYPE_FILE || td->filename) {
 		char tmp[PATH_MAX];
 		int len = 0;
-		int i;
 
 		if (td->directory && td->directory[0] != '\0')
 			sprintf(tmp, "%s/", td->directory);
@@ -652,7 +651,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 				c3 = to_kmg(td->min_bs[DDIR_WRITE]);
 				c4 = to_kmg(td->max_bs[DDIR_WRITE]);
 
-				fprintf(f_out, "%s: (g=%d): rw=%s, odir=%d, bs=%s-%s/%s-%s, rate=%d, ioengine=%s, iodepth=%d\n", td->name, td->groupid, ddir_str[ddir], td->odirect, c1, c2, c3, c4, td->rate, td->io_ops->name, td->iodepth);
+				fprintf(f_out, "%s: (g=%d): rw=%s, odir=%u, bs=%s-%s/%s-%s, rate=%u, ioengine=%s, iodepth=%u\n", td->name, td->groupid, ddir_str[ddir], td->odirect, c1, c2, c3, c4, td->rate, td->io_ops->name, td->iodepth);
 
 				free(c1);
 				free(c2);
@@ -787,12 +786,12 @@ static int str_rw_cb(void *data, const char *mem)
 		td->sequential = 0;
 		return 0;
 	} else if (!strncmp(mem, "rw", 2)) {
-		td->ddir = 0;
+		td->ddir = DDIR_READ;
 		td->iomix = 1;
 		td->sequential = 1;
 		return 0;
 	} else if (!strncmp(mem, "randrw", 6)) {
-		td->ddir = 0;
+		td->ddir = DDIR_READ;
 		td->iomix = 1;
 		td->sequential = 0;
 		return 0;
@@ -894,7 +893,7 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 /*
  * This is our [ini] type file parser.
  */
-int parse_jobs_ini(char *file, int stonewall_flag)
+static int parse_jobs_ini(char *file, int stonewall_flag)
 {
 	unsigned int global;
 	struct thread_data *td;

@@ -8,7 +8,6 @@
 #include "fio.h"
 #include "os.h"
 
-extern unsigned long long mlock_size;
 static void *pinned_mem;
 
 void fio_unpin_memory(void)
@@ -102,7 +101,7 @@ void free_io_mem(struct thread_data *td)
 	} else if (td->mem_type == MEM_MMAP)
 		munmap(td->orig_buffer, td->orig_buffer_size);
 	else
-		log_err("Bad memory type %d\n", td->mem_type);
+		log_err("Bad memory type %u\n", td->mem_type);
 
 	td->orig_buffer = NULL;
 }

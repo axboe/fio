@@ -84,15 +84,15 @@ static void eta_to_str(char *str, int eta_sec)
 
 	if (d || always_d) {
 		always_d = 1;
-		str += sprintf(str, "%02dd:", d);
+		str += sprintf(str, "%02ud:", d);
 	}
 	if (h || always_h) {
 		always_h = 1;
-		str += sprintf(str, "%02dh:", h);
+		str += sprintf(str, "%02uh:", h);
 	}
 
-	str += sprintf(str, "%02dm:", m);
-	str += sprintf(str, "%02ds", s);
+	str += sprintf(str, "%02um:", m);
+	str += sprintf(str, "%02us", s);
 }
 
 /*
@@ -101,7 +101,7 @@ static void eta_to_str(char *str, int eta_sec)
 static int thread_eta(struct thread_data *td, unsigned long elapsed)
 {
 	unsigned long long bytes_total, bytes_done;
-	unsigned int eta_sec = 0;
+	unsigned long eta_sec = 0;
 
 	bytes_total = td->total_io_size;
 
@@ -127,7 +127,7 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 		if (perc > 1.0)
 			perc = 1.0;
 
-		eta_sec = (elapsed * (1.0 / perc)) - elapsed;
+		eta_sec = (unsigned long) (elapsed * (1.0 / perc)) - elapsed;
 
 		if (td->timeout && eta_sec > (td->timeout - elapsed))
 			eta_sec = td->timeout - elapsed;

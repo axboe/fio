@@ -101,15 +101,17 @@ static void fio_init gtod_init(void)
 
 #endif /* FIO_DEBUG_TIME */
 
+#ifdef FIO_DEBUG_TIME
 void fio_gettime(struct timeval *tp, void *caller)
+#else
+void fio_gettime(struct timeval *tp, void fio_unused *caller)
+#endif
 {
 #ifdef FIO_DEBUG_TIME
 	if (!caller)
 		caller = __builtin_return_address(0);
 
 	gtod_log_caller(caller);
-#else
-	caller = NULL;
 #endif
 repeat:
 	if (!clock_gettime_works)

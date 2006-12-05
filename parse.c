@@ -276,7 +276,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		break;
 	}
 	default:
-		fprintf(stderr, "Bad option type %d\n", o->type);
+		fprintf(stderr, "Bad option type %u\n", o->type);
 		ret = 1;
 	}
 

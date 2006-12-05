@@ -117,7 +117,7 @@ static int create_files(struct thread_data *td)
 	}
 
 	temp_stall_ts = 1;
-	fprintf(f_out, "%s: Laying out IO file(s) (%d x %LuMiB == %LuMiB)\n",
+	fprintf(f_out, "%s: Laying out IO file(s) (%u x %LuMiB == %LuMiB)\n",
 				td->name, td->nr_uniq_files,
 				(td->total_file_size >> 20) / td->nr_uniq_files,
 				td->total_file_size >> 20);

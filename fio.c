@@ -105,7 +105,7 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 
 		rate = (td->this_io_bytes[ddir] - td->rate_bytes) / spent;
 		if (rate < td->ratemin) {
-			fprintf(f_out, "%s: min rate %d not met, got %ldKiB/sec\n", td->name, td->ratemin, rate);
+			fprintf(f_out, "%s: min rate %u not met, got %luKiB/sec\n", td->name, td->ratemin, rate);
 			return 1;
 		}
 	}
@@ -242,7 +242,7 @@ static int fio_io_sync(struct thread_data *td, struct fio_file *f)
  * The main verify engine. Runs over the writes we previusly submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
  */
-void do_verify(struct thread_data *td)
+static void do_verify(struct thread_data *td)
 {
 	struct io_u *io_u, *v_io_u = NULL;
 	struct io_completion_data icd;

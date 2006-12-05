@@ -18,6 +18,12 @@
 #include "arch.h"
 #include "os.h"
 
+enum fio_ddir {
+	DDIR_READ = 0,
+	DDIR_WRITE,
+	DDIR_SYNC,
+};
+
 struct io_stat {
 	unsigned long val;
 	unsigned long val_sq;
@@ -29,7 +35,7 @@ struct io_stat {
 struct io_sample {
 	unsigned long time;
 	unsigned long val;
-	unsigned int ddir;
+	enum fio_ddir ddir;
 };
 
 struct io_log {
@@ -43,7 +49,7 @@ struct io_piece {
 	struct fio_file *file;
 	unsigned long long offset;
 	unsigned int len;
-	int ddir;
+	enum fio_ddir ddir;
 };
 
 /*
@@ -71,7 +77,7 @@ struct io_u {
 	unsigned int resid;
 	unsigned int error;
 
-	unsigned char ddir;
+	enum fio_ddir ddir;
 
 	/*
 	 * io engine private data
@@ -109,12 +115,6 @@ struct group_run_stats {
 	unsigned long long max_bw[2], min_bw[2];
 	unsigned long long io_kb[2];
 	unsigned long long agg[2];
-};
-
-enum fio_ddir {
-	DDIR_READ = 0,
-	DDIR_WRITE,
-	DDIR_SYNC,
 };
 
 /*
@@ -358,6 +358,7 @@ extern int terse_output;
 extern FILE *f_out;
 extern FILE *f_err;
 extern int temp_stall_ts;
+extern unsigned long long mlock_size;
 
 extern struct thread_data *threads;
 
@@ -437,9 +438,9 @@ extern void write_iolog_close(struct thread_data *);
 /*
  * Logging
  */
-extern void add_clat_sample(struct thread_data *, int, unsigned long);
-extern void add_slat_sample(struct thread_data *, int, unsigned long);
-extern void add_bw_sample(struct thread_data *, int, struct timeval *);
+extern void add_clat_sample(struct thread_data *, enum fio_ddir, unsigned long);
+extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long);
+extern void add_bw_sample(struct thread_data *, enum fio_ddir, struct timeval *);
 extern void show_run_stats(void);
 extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);

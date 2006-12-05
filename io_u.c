@@ -123,7 +123,7 @@ static unsigned int get_next_buflen(struct thread_data *td, int ddir)
 		buflen = td->min_bs[ddir];
 	else {
 		r = os_random_long(&td->bsrange_state);
-		buflen = (1 + (double) (td->max_bs[ddir] - 1) * r / (RAND_MAX + 1.0));
+		buflen = (unsigned int) (1 + (double) (td->max_bs[ddir] - 1) * r / (RAND_MAX + 1.0));
 		if (!td->bs_unaligned)
 			buflen = (buflen + td->min_bs[ddir] - 1) & ~(td->min_bs[ddir] - 1);
 	}
@@ -147,7 +147,7 @@ static unsigned int get_next_buflen(struct thread_data *td, int ddir)
  * mixed read/write workload, check the rwmix cycle and switch if
  * necessary.
  */
-static int get_rw_ddir(struct thread_data *td)
+static enum fio_ddir get_rw_ddir(struct thread_data *td)
 {
 	if (td_rw(td)) {
 		struct timeval now;
@@ -314,7 +314,7 @@ void io_completed(struct thread_data *td, struct io_u *io_u,
 
 	if (!io_u->error) {
 		unsigned int bytes = io_u->buflen - io_u->resid;
-		const int idx = io_u->ddir;
+		const enum fio_ddir idx = io_u->ddir;
 
 		td->io_blocks[idx]++;
 		td->io_bytes[idx] += bytes;

@@ -185,12 +185,12 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 	if (hdr->dxfer_direction != SG_DXFER_NONE) {
 		nr_blocks = io_u->buflen / sd->bs;
 		lba = io_u->offset / sd->bs;
-		hdr->cmdp[2] = (lba >> 24) & 0xff;
-		hdr->cmdp[3] = (lba >> 16) & 0xff;
-		hdr->cmdp[4] = (lba >>  8) & 0xff;
-		hdr->cmdp[5] = lba & 0xff;
-		hdr->cmdp[7] = (nr_blocks >> 8) & 0xff;
-		hdr->cmdp[8] = nr_blocks & 0xff;
+		hdr->cmdp[2] = (unsigned char) ((lba >> 24) & 0xff);
+		hdr->cmdp[3] = (unsigned char) ((lba >> 16) & 0xff);
+		hdr->cmdp[4] = (unsigned char) ((lba >>  8) & 0xff);
+		hdr->cmdp[5] = (unsigned char) (lba & 0xff);
+		hdr->cmdp[7] = (unsigned char) ((nr_blocks >> 8) & 0xff);
+		hdr->cmdp[8] = (unsigned char) (nr_blocks & 0xff);
 	}
 
 	return 0;

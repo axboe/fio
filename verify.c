@@ -91,7 +91,7 @@ static int verify_io_u(struct io_u *io_u)
 	else if (hdr->verify_type == VERIFY_CRC32)
 		ret = verify_io_u_crc32(hdr, io_u);
 	else {
-		log_err("Bad verify type %d\n", hdr->verify_type);
+		log_err("Bad verify type %u\n", hdr->verify_type);
 		ret = 1;
 	}
 

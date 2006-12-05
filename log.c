@@ -5,7 +5,7 @@
 
 void write_iolog_put(struct thread_data *td, struct io_u *io_u)
 {
-	fprintf(td->iolog_f, "%d,%llu,%u\n", io_u->ddir, io_u->offset, io_u->buflen);
+	fprintf(td->iolog_f, "%u,%llu,%u\n", io_u->ddir, io_u->offset, io_u->buflen);
 }
 
 int read_iolog_get(struct thread_data *td, struct io_u *io_u)
@@ -125,7 +125,7 @@ static int init_iolog_read(struct thread_data *td)
 		INIT_LIST_HEAD(&ipo->list);
 		ipo->offset = offset;
 		ipo->len = bytes;
-		ipo->ddir = rw;
+		ipo->ddir = (enum fio_ddir) rw;
 		if (bytes > td->max_bs[rw])
 			td->max_bs[rw] = bytes;
 		list_add_tail(&ipo->list, &td->io_log_list);
@@ -180,7 +180,7 @@ int init_iolog(struct thread_data *td)
 	else if (td->write_iolog_file)
 		ret = init_iolog_write(td);
 
-	return 0;
+	return ret;
 }
 
 int setup_rate(struct thread_data *td)

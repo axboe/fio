@@ -372,7 +372,7 @@ static void show_thread_status(struct thread_data *td,
 
 	runtime = mtime_since(&td->epoch, &td->end_time);
 	if (runtime) {
-		double runt = runtime;
+		double runt = (double) runtime;
 
 		usr_cpu = (double) td->usr_time * 100 / runt;
 		sys_cpu = (double) td->sys_time * 100 / runt;
@@ -429,7 +429,7 @@ static void show_thread_status_terse(struct thread_data *td,
 	show_ddir_status_terse(td, rs, 1);
 
 	if (td->runtime[0] + td->runtime[1]) {
-		double runt = td->runtime[0] + td->runtime[1];
+		double runt = (double) (td->runtime[0] + td->runtime[1]);
 
 		usr_cpu = (double) td->usr_time * 100 / runt;
 		sys_cpu = (double) td->sys_time * 100 / runt;
@@ -542,7 +542,7 @@ static inline void add_stat_sample(struct io_stat *is, unsigned long val)
 }
 
 static void add_log_sample(struct thread_data *td, struct io_log *iolog,
-			   unsigned long val, int ddir)
+			   unsigned long val, enum fio_ddir ddir)
 {
 	if (iolog->nr_samples == iolog->max_samples) {
 		int new_size = sizeof(struct io_sample) * iolog->max_samples*2;
@@ -557,7 +557,8 @@ static void add_log_sample(struct thread_data *td, struct io_log *iolog,
 	iolog->nr_samples++;
 }
 
-void add_clat_sample(struct thread_data *td, int ddir, unsigned long msec)
+void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
+		     unsigned long msec)
 {
 	add_stat_sample(&td->clat_stat[ddir], msec);
 
@@ -565,7 +566,8 @@ void add_clat_sample(struct thread_data *td, int ddir, unsigned long msec)
 		add_log_sample(td, td->clat_log, msec, ddir);
 }
 
-void add_slat_sample(struct thread_data *td, int ddir, unsigned long msec)
+void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
+		     unsigned long msec)
 {
 	add_stat_sample(&td->slat_stat[ddir], msec);
 
@@ -573,7 +575,8 @@ void add_slat_sample(struct thread_data *td, int ddir, unsigned long msec)
 		add_log_sample(td, td->slat_log, msec, ddir);
 }
 
-void add_bw_sample(struct thread_data *td, int ddir, struct timeval *t)
+void add_bw_sample(struct thread_data *td, enum fio_ddir ddir,
+		   struct timeval *t)
 {
 	unsigned long spent = mtime_since(&td->stat_sample_time[ddir], t);
 	unsigned long rate;

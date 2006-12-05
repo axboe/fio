@@ -1,5 +1,6 @@
-CC	= gcc
-CFLAGS	= -W -Wwrite-strings -Wall -O2 -g -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+#CC	= /opt/intel/cce/9.1.045/bin/icc
+CC	= gcc -W
+CFLAGS	= -Wwrite-strings -Wall -O2 -g -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 PROGS	= fio
 SCRIPTS = fio_generate_plots
 OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o md5.o crc32.o \

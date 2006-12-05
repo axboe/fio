@@ -7,7 +7,7 @@ static struct timeval genesis;
 
 unsigned long utime_since(struct timeval *s, struct timeval *e)
 {
-	double sec, usec;
+	long sec, usec;
 
 	sec = e->tv_sec - s->tv_sec;
 	usec = e->tv_usec - s->tv_usec;
@@ -31,7 +31,7 @@ unsigned long utime_since_now(struct timeval *s)
 
 unsigned long mtime_since(struct timeval *s, struct timeval *e)
 {
-	double sec, usec;
+	long sec, usec;
 
 	sec = e->tv_sec - s->tv_sec;
 	usec = e->tv_usec - s->tv_usec;
