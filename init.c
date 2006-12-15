@@ -29,7 +29,7 @@
 #define DEF_IO_ENGINE_NAME	"sync"
 #define DEF_SEQUENTIAL		(1)
 #define DEF_RAND_REPEAT		(1)
-#define DEF_OVERWRITE		(1)
+#define DEF_OVERWRITE		(0)
 #define DEF_INVALIDATE		(1)
 #define DEF_SYNCIO		(0)
 #define DEF_RANDSEED		(0xb1899bedUL)
@@ -48,7 +48,7 @@
 #define DEF_RWMIX_READ		(50)
 #define DEF_NICE		(0)
 #define DEF_NR_FILES		(1)
-#define DEF_UNLINK		(0)
+#define DEF_UNLINK		(1)
 #define DEF_WRITE_BW_LOG	(0)
 #define DEF_WRITE_LAT_LOG	(0)
 #define DEF_NO_RAND_MAP		(0)
