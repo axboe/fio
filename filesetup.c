@@ -124,7 +124,12 @@ static int create_files(struct thread_data *td)
 
 	err = 0;
 	for_each_file(td, f, i) {
+		/*
+		 * Only unlink files that we created.
+		 */
+		f->unlink = 0;
 		if (file_ok(td, f)) {
+			f->unlink = td->unlink;
 			err = create_file(td, f);
 			if (err)
 				break;
@@ -434,7 +439,7 @@ void close_files(struct thread_data *td)
 	int i;
 
 	for_each_file(td, f, i) {
-		if (!td->filename && td->unlink &&
+		if (!td->filename && f->unlink &&
 		    td->filetype == FIO_TYPE_FILE) {
 			unlink(f->file_name);
 			free(f->file_name);
