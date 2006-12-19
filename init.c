@@ -833,9 +833,17 @@ static int str_mem_cb(void *data, const char *mem)
 	} else if (!strncmp(mem, "mmap", 4)) {
 		td->mem_type = MEM_MMAP;
 		return 0;
+	} else if (!strncmp(mem, "shmhuge", 7)) {
+#ifdef FIO_HAVE_HUGETLB
+		td->mem_type = MEM_SHMHUGE;
+		return 0;
+#else
+		log_err("fio: shmhuge not available\n");
+		return 1;
+#endif
 	}
 
-	log_err("fio: mem type: malloc, shm, mmap\n");
+	log_err("fio: mem type: malloc, shm, mmap, shmhuge\n");
 	return 1;
 }
 

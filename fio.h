@@ -123,6 +123,7 @@ struct group_run_stats {
 enum fio_memtype {
 	MEM_MALLOC = 0,	/* ordinary malloc */
 	MEM_SHM,	/* use shared memory segments */
+	MEM_SHMHUGE,	/* use shared memory segments with huge pages */
 	MEM_MMAP,	/* use anonynomous mmap */
 };
 

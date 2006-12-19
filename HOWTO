@@ -357,6 +357,8 @@ mem=str		Fio can use various types of memory as the io unit buffer.
 			shm	Use shared memory as the buffers. Allocated
 				through shmget(2).
 
+			shmhuge	Same as shm, but use huge pages as backing.
+
 			mmap	Use anonymous memory maps as the buffers.
 				Allocated through mmap(2).
 

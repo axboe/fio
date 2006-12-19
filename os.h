@@ -47,4 +47,11 @@
 #define OS_O_DIRECT			O_DIRECT
 #endif
 
+#ifndef FIO_HAVE_HUGETLB
+#define SHM_HUGETLB			0
+#define FIO_HUGE_PAGE			0
+#else
+#define FIO_HUGE_PAGE			(2048 * 1024)
+#endif
+
 #endif

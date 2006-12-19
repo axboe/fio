@@ -61,8 +61,13 @@ int allocate_io_mem(struct thread_data *td)
 {
 	if (td->mem_type == MEM_MALLOC)
 		td->orig_buffer = malloc(td->orig_buffer_size);
-	else if (td->mem_type == MEM_SHM) {
-		td->shm_id = shmget(IPC_PRIVATE, td->orig_buffer_size, IPC_CREAT | 0600);
+	else if (td->mem_type == MEM_SHM || td->mem_type == MEM_SHMHUGE) {
+		int flags = IPC_CREAT | SHM_R | SHM_W;
+
+		if (td->mem_type == MEM_SHMHUGE)
+			flags |= SHM_HUGETLB;
+
+		td->shm_id = shmget(IPC_PRIVATE, td->orig_buffer_size, flags);
 		if (td->shm_id < 0) {
 			td_verror(td, errno);
 			perror("shmget");
