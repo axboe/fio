@@ -510,7 +510,7 @@ static int init_io_u(struct thread_data *td)
 	td->orig_buffer_size = max_bs * max_units;
 
 	if (td->mem_type == MEM_SHMHUGE || td->mem_type == MEM_MMAPHUGE)
-		td->orig_buffer_size = (td->orig_buffer_size + FIO_HUGE_PAGE - 1) & ~(FIO_HUGE_PAGE - 1);
+		td->orig_buffer_size = (td->orig_buffer_size + td->hugepage_size - 1) & ~(td->hugepage_size - 1);
 	else
 		td->orig_buffer_size += MASK;
 

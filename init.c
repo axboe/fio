@@ -52,6 +52,7 @@
 #define DEF_WRITE_BW_LOG	(0)
 #define DEF_WRITE_LAT_LOG	(0)
 #define DEF_NO_RAND_MAP		(0)
+#define DEF_HUGEPAGE_SIZE	FIO_HUGE_PAGE
 
 #define td_var_offset(var)	((size_t) &((struct thread_data *)0)->var)
 
@@ -357,6 +358,11 @@ static struct fio_option options[] = {
 		.name	= "bs_unaligned",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(bs_unaligned),
+	},
+	{
+		.name	= "hugepage-size",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(hugepage_size),
 	},
 	{
 		.name = NULL,
@@ -1058,6 +1064,7 @@ static int fill_def_thread(void)
 	def_thread.write_bw_log = write_bw_log;
 	def_thread.write_lat_log = write_lat_log;
 	def_thread.norandommap = DEF_NO_RAND_MAP;
+	def_thread.hugepage_size = DEF_HUGEPAGE_SIZE;
 #ifdef FIO_HAVE_DISK_UTIL
 	def_thread.do_disk_util = 1;
 #endif

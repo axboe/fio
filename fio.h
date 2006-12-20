@@ -214,6 +214,7 @@ struct thread_data {
 	unsigned int bs[2];
 	unsigned int min_bs[2];
 	unsigned int max_bs[2];
+	unsigned int hugepage_size;
 	unsigned int rw_min_bs;
 	unsigned int thinktime;
 	unsigned int fsync_blocks;

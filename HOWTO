@@ -378,11 +378,15 @@ mem=str		Fio can use various types of memory as the io unit buffer.
 		divide that number by the huge page size. You can see the
 		size of the huge pages in /proc/meminfo. If no huge pages
 		are allocated by having a non-zero number in nr_hugepages,
-		using mmaphuge or shmhuge will fail.
+		using mmaphuge or shmhuge will fail. Also see hugepage-size.
 
 		mmaphuge also needs to have hugetlbfs mounted and the file
 		location should point there. So if it's mounted in /huge,
 		you would use mem=mmaphuge:/huge/somefile.
+
+hugepage-size=siint
+		Defines the size of a huge page. Must at least be equal
+		to the system setting, see /proc/meminfo. Defaults to 4MiB.
 
 exitall		When one job finishes, terminate the rest. The default is
 		to wait for each job to finish, sometimes that is not the
