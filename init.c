@@ -508,6 +508,12 @@ static void fixup_options(struct thread_data *td)
 	}
 	if (td->bs_unaligned && (td->odirect || td->io_ops->flags & FIO_RAWIO))
 		log_err("fio: bs_unaligned may not work with raw io\n");
+
+	/*
+	 * O_DIRECT and char doesn't mix, clear that flag if necessary.
+	 */
+	if (td->filetype == FIO_TYPE_CHAR && td->odirect)
+		td->odirect = 0;
 }
 
 /*
@@ -564,8 +570,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
 
-	fixup_options(td);
-
 	td->filetype = FIO_TYPE_FILE;
 	if (!stat(jobname, &sb)) {
 		if (S_ISBLK(sb.st_mode))
@@ -573,6 +577,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		else if (S_ISCHR(sb.st_mode))
 			td->filetype = FIO_TYPE_CHAR;
 	}
+
+	fixup_options(td);
 
 	if (td->filename)
 		td->nr_uniq_files = 1;
