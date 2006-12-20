@@ -387,6 +387,9 @@ mem=str		Fio can use various types of memory as the io unit buffer.
 hugepage-size=siint
 		Defines the size of a huge page. Must at least be equal
 		to the system setting, see /proc/meminfo. Defaults to 4MiB.
+		Should probably always be a multiple of megabytes, so using
+		hugepage-size=Xm is the preferred way to set this to avoid
+		setting a non-pow-2 bad value.
 
 exitall		When one job finishes, terminate the rest. The default is
 		to wait for each job to finish, sometimes that is not the
