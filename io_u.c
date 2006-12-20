@@ -63,7 +63,7 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 
 	*b = 0;
 	i = 0;
-	while ((*b) * td->rw_min_bs < f->file_size) {
+	while ((*b) * td->rw_min_bs < f->real_file_size) {
 		if (f->file_map[i] != -1UL) {
 			*b += ffz(f->file_map[i]);
 			return 0;
@@ -108,7 +108,7 @@ static int get_next_offset(struct thread_data *td, struct fio_file *f,
 		b = f->last_pos / td->min_bs[ddir];
 
 	*offset = (b * td->min_bs[ddir]) + f->file_offset;
-	if (*offset > f->file_size)
+	if (*offset > f->real_file_size)
 		return 1;
 
 	return 0;
@@ -267,13 +267,13 @@ struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 		return NULL;
 	}
 
-	if (io_u->buflen + io_u->offset > f->file_size) {
+	if (io_u->buflen + io_u->offset > f->real_file_size) {
 		if (td->io_ops->flags & FIO_RAWIO) {
 			put_io_u(td, io_u);
 			return NULL;
 		}
 
-		io_u->buflen = f->file_size - io_u->offset;
+		io_u->buflen = f->real_file_size - io_u->offset;
 	}
 
 	if (io_u->ddir != DDIR_SYNC) {
