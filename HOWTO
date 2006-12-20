@@ -367,7 +367,22 @@ mem=str		Fio can use various types of memory as the io unit buffer.
 				mem=mmaphuge:/hugetlbfs/file
 
 		The area allocated is a function of the maximum allowed
-		bs size for the job, multiplied by the io depth given.
+		bs size for the job, multiplied by the io depth given. Note
+		that for shmhuge and mmaphuge to work, the system must have
+		free huge pages allocated. This can normally be checked
+		and set by reading/writing /proc/sys/vm/nr_hugepages on a
+		Linux system. Fio assumes a huge page is 4MiB in size. So
+		to calculate the number of huge pages you need for a given
+		job file, add up the io depth of all jobs (normally one unless
+		iodepth= is used) and multiply by the maximum bs set. Then
+		divide that number by the huge page size. You can see the
+		size of the huge pages in /proc/meminfo. If no huge pages
+		are allocated by having a non-zero number in nr_hugepages,
+		using mmaphuge or shmhuge will fail.
+
+		mmaphuge also needs to have hugetlbfs mounted and the file
+		location should point there. So if it's mounted in /huge,
+		you would use mem=mmaphuge:/huge/somefile.
 
 exitall		When one job finishes, terminate the rest. The default is
 		to wait for each job to finish, sometimes that is not the
