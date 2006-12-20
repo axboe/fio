@@ -98,7 +98,7 @@ void free_io_mem(struct thread_data *td)
 {
 	if (td->mem_type == MEM_MALLOC)
 		free(td->orig_buffer);
-	else if (td->mem_type == MEM_SHM) {
+	else if (td->mem_type == MEM_SHM || td->mem_type == MEM_SHMHUGE) {
 		struct shmid_ds sbuf;
 
 		shmdt(td->orig_buffer);

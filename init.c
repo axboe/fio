@@ -827,9 +827,6 @@ static int str_mem_cb(void *data, const char *mem)
 	if (!strncmp(mem, "malloc", 6)) {
 		td->mem_type = MEM_MALLOC;
 		return 0;
-	} else if (!strncmp(mem, "shm", 3)) {
-		td->mem_type = MEM_SHM;
-		return 0;
 	} else if (!strncmp(mem, "mmap", 4)) {
 		td->mem_type = MEM_MMAP;
 		return 0;
@@ -841,6 +838,9 @@ static int str_mem_cb(void *data, const char *mem)
 		log_err("fio: shmhuge not available\n");
 		return 1;
 #endif
+	} else if (!strncmp(mem, "shm", 3)) {
+		td->mem_type = MEM_SHM;
+		return 0;
 	}
 
 	log_err("fio: mem type: malloc, shm, mmap, shmhuge\n");
