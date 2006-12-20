@@ -87,7 +87,6 @@ int allocate_io_mem(struct thread_data *td)
 		td->hugefd = 0;
 
 		if (td->mem_type == MEM_MMAPHUGE) {
-			fprintf(stderr, "file=%s\n", td->hugefile);
 			td->hugefd = open(td->hugefile, O_RDWR|O_CREAT, 0644);
 
 			if (td->hugefd < 0) {
@@ -99,9 +98,7 @@ int allocate_io_mem(struct thread_data *td)
 		} else
 			flags |= OS_MAP_ANON;
 
-		fprintf(stderr, "mmaping %lu\n", (unsigned long) td->orig_buffer_size);
 		td->orig_buffer = mmap(NULL, td->orig_buffer_size, PROT_READ | PROT_WRITE, flags, td->hugefd, 0);
-		fprintf(stderr, "mmaped %p\n", td->orig_buffer);
 		if (td->orig_buffer == MAP_FAILED) {
 			td_verror(td, errno);
 			perror("mmap");
