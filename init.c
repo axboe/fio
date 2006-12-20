@@ -833,6 +833,29 @@ static int str_mem_cb(void *data, const char *mem)
 	if (!strncmp(mem, "malloc", 6)) {
 		td->mem_type = MEM_MALLOC;
 		return 0;
+	} else if (!strncmp(mem, "mmaphuge", 8)) {
+#ifdef FIO_HAVE_HUGETLB
+		char *hugefile;
+
+		/*
+		 * mmaphuge must be appended with the actual file
+		 */
+		hugefile = strstr(mem, ":");
+		if (!hugefile) {
+			log_err("fio: mmaphuge:/path/to/file\n");
+			return 1;
+		}
+
+		hugefile++;
+		strip_blank_front(&hugefile);
+		strip_blank_end(hugefile);
+		td->hugefile = strdup(hugefile);
+		td->mem_type = MEM_MMAPHUGE;
+		return 0;
+#else
+		log_err("fio: mmaphuge not available\n");
+		return 1;
+#endif
 	} else if (!strncmp(mem, "mmap", 4)) {
 		td->mem_type = MEM_MMAP;
 		return 0;
@@ -849,7 +872,7 @@ static int str_mem_cb(void *data, const char *mem)
 		return 0;
 	}
 
-	log_err("fio: mem type: malloc, shm, mmap, shmhuge\n");
+	log_err("fio: mem type: malloc, shm, shmhuge, mmap, mmaphuge\n");
 	return 1;
 }
 

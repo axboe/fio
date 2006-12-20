@@ -125,6 +125,7 @@ enum fio_memtype {
 	MEM_SHM,	/* use shared memory segments */
 	MEM_SHMHUGE,	/* use shared memory segments with huge pages */
 	MEM_MMAP,	/* use anonynomous mmap */
+	MEM_MMAPHUGE,	/* memory mapped huge file */
 };
 
 /*
@@ -224,6 +225,8 @@ struct thread_data {
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
 	enum fio_memtype mem_type;
+	char *hugefile;
+	int hugefd;
 	unsigned int stonewall;
 	unsigned int numjobs;
 	unsigned int iodepth;

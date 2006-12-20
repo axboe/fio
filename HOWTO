@@ -362,6 +362,10 @@ mem=str		Fio can use various types of memory as the io unit buffer.
 			mmap	Use anonymous memory maps as the buffers.
 				Allocated through mmap(2).
 
+			mmaphuge Use a memory mapped huge file as the buffer
+				backing. Append filename after mmaphuge, ala
+				mem=mmaphuge:/hugetlbfs/file
+
 		The area allocated is a function of the maximum allowed
 		bs size for the job, multiplied by the io depth given.
 
