@@ -359,8 +359,10 @@ mem=str		Fio can use various types of memory as the io unit buffer.
 
 			shmhuge	Same as shm, but use huge pages as backing.
 
-			mmap	Use anonymous memory maps as the buffers.
-				Allocated through mmap(2).
+			mmap	Use mmap to allocate buffers. May either be
+				anonymous memory, or can be file backed if
+				a filename is given after the option. The
+				format is mem=mmap:/path/to/file.
 
 			mmaphuge Use a memory mapped huge file as the buffer
 				backing. Append filename after mmaphuge, ala

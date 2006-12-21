@@ -832,6 +832,22 @@ static int str_verify_cb(void *data, const char *mem)
 	return 1;
 }
 
+/*
+ * Check if mmap/mmaphuge has a :/foo/bar/file at the end. If so, return that.
+ */
+static char *get_mmap_file(const char *str)
+{
+	char *p = strstr(str, ":");
+
+	if (!p)
+		return NULL;
+
+	p++;
+	strip_blank_front(&p);
+	strip_blank_end(p);
+	return strdup(p);
+}
+
 static int str_mem_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
@@ -841,21 +857,15 @@ static int str_mem_cb(void *data, const char *mem)
 		return 0;
 	} else if (!strncmp(mem, "mmaphuge", 8)) {
 #ifdef FIO_HAVE_HUGETLB
-		char *hugefile;
-
 		/*
 		 * mmaphuge must be appended with the actual file
 		 */
-		hugefile = strstr(mem, ":");
-		if (!hugefile) {
+		td->mmapfile = get_mmap_file(mem);
+		if (!td->mmapfile) {
 			log_err("fio: mmaphuge:/path/to/file\n");
 			return 1;
 		}
 
-		hugefile++;
-		strip_blank_front(&hugefile);
-		strip_blank_end(hugefile);
-		td->hugefile = strdup(hugefile);
 		td->mem_type = MEM_MMAPHUGE;
 		return 0;
 #else
@@ -863,6 +873,11 @@ static int str_mem_cb(void *data, const char *mem)
 		return 1;
 #endif
 	} else if (!strncmp(mem, "mmap", 4)) {
+		/*
+		 * Check if the user wants file backed memory. It's ok
+		 * if there's no file given, we'll just use anon mamp then.
+		 */
+		td->mmapfile = get_mmap_file(mem);
 		td->mem_type = MEM_MMAP;
 		return 0;
 	} else if (!strncmp(mem, "shmhuge", 7)) {

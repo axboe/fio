@@ -226,8 +226,8 @@ struct thread_data {
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
 	enum fio_memtype mem_type;
-	char *hugefile;
-	int hugefd;
+	char *mmapfile;
+	int mmapfd;
 	unsigned int stonewall;
 	unsigned int numjobs;
 	unsigned int iodepth;

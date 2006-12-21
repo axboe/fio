@@ -84,27 +84,29 @@ int allocate_io_mem(struct thread_data *td)
 	} else if (td->mem_type == MEM_MMAP || td->mem_type == MEM_MMAPHUGE) {
 		int flags = MAP_PRIVATE;
 
-		td->hugefd = 0;
+		td->mmapfd = 0;
 
-		if (td->mem_type == MEM_MMAPHUGE) {
-			td->hugefd = open(td->hugefile, O_RDWR|O_CREAT, 0644);
+		if (td->mmapfile) {
+			td->mmapfd = open(td->mmapfile, O_RDWR|O_CREAT, 0644);
 
-			if (td->hugefd < 0) {
+			if (td->mmapfd < 0) {
 				td_verror(td, errno);
-				perror("open huge file");
+				perror("open mmap file");
 				td->orig_buffer = NULL;
 				return 1;
 			}
 		} else
 			flags |= OS_MAP_ANON;
 
-		td->orig_buffer = mmap(NULL, td->orig_buffer_size, PROT_READ | PROT_WRITE, flags, td->hugefd, 0);
+		td->orig_buffer = mmap(NULL, td->orig_buffer_size, PROT_READ | PROT_WRITE, flags, td->mmapfd, 0);
 		if (td->orig_buffer == MAP_FAILED) {
 			td_verror(td, errno);
 			perror("mmap");
 			td->orig_buffer = NULL;
-			if (td->hugefd)
-				close(td->hugefd);
+			if (td->mmapfd) {
+				close(td->mmapfd);
+				unlink(td->mmapfile);
+			}
 				
 			return 1;
 		}
@@ -124,10 +126,10 @@ void free_io_mem(struct thread_data *td)
 		shmctl(td->shm_id, IPC_RMID, &sbuf);
 	} else if (td->mem_type == MEM_MMAP || td->mem_type == MEM_MMAPHUGE) {
 		munmap(td->orig_buffer, td->orig_buffer_size);
-		if (td->mem_type == MEM_MMAPHUGE) {
-			close(td->hugefd);
-			unlink(td->hugefile);
-			free(td->hugefile);
+		if (td->mmapfile) {
+			close(td->mmapfd);
+			unlink(td->mmapfile);
+			free(td->mmapfile);
 		}
 	} else
 		log_err("Bad memory type %u\n", td->mem_type);
