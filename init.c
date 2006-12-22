@@ -1160,7 +1160,6 @@ static int parse_cmd_line(int argc, char *argv[])
 			break;
 		}
 		default:
-			printf("optarg <<%s>>\n", argv[optind]);
 			break;
 		}
 	}
