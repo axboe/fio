@@ -37,7 +37,6 @@ cscope:
 install: $(PROGS) $(SCRIPTS)
 	$(INSTALL) -m755 -d $(DESTDIR)$(bindir)
 	$(INSTALL) $(PROGS) $(SCRIPTS) $(DESTDIR)$(bindir)
-	$(INSTALL) -m755 -d $(DESTDIR) $(libdir)
 
 ifneq ($(wildcard .depend),)
 include .depend
