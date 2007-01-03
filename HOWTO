@@ -319,7 +319,13 @@ prioclass=int	Set the io priority class. See man ionice(1).
 
 thinktime=int	Stall the job x microseconds after an io has completed before
 		issuing the next. May be used to simulate processing being
-		done by an application.
+		done by an application. See thinktime_blocks.
+
+thinktime_blocks
+		Only valid if thinktime is set - control how many blocks
+		to issue, before waiting 'thinktime' usecs. If not set,
+		defaults to 1 which will make fio wait 'thinktime' usecs
+		after every block.
 
 rate=int	Cap the bandwidth used by this job to this number of KiB/sec.
 

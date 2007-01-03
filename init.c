@@ -53,6 +53,7 @@
 #define DEF_WRITE_LAT_LOG	(0)
 #define DEF_NO_RAND_MAP		(0)
 #define DEF_HUGEPAGE_SIZE	FIO_HUGE_PAGE
+#define DEF_THINKTIME_BLOCKS	(1)
 
 #define td_var_offset(var)	((size_t) &((struct thread_data *)0)->var)
 
@@ -226,6 +227,11 @@ static struct fio_option options[] = {
 		.name	= "thinktime",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(thinktime)
+	},
+	{
+		.name	= "thinktime_blocks",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(thinktime_blocks)
 	},
 	{
 		.name	= "rate",
@@ -1080,6 +1086,7 @@ static int fill_def_thread(void)
 	def_thread.write_lat_log = write_lat_log;
 	def_thread.norandommap = DEF_NO_RAND_MAP;
 	def_thread.hugepage_size = DEF_HUGEPAGE_SIZE;
+	def_thread.thinktime_blocks = DEF_THINKTIME_BLOCKS;
 #ifdef FIO_HAVE_DISK_UTIL
 	def_thread.do_disk_util = 1;
 #endif

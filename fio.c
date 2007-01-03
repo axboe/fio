@@ -447,8 +447,13 @@ static void do_io(struct thread_data *td)
 		if (runtime_exceeded(td, &icd.time))
 			break;
 
-		if (td->thinktime)
-			usec_sleep(td, td->thinktime);
+		if (td->thinktime) {
+			unsigned long long b;
+
+			b = td->io_blocks[0] + td->io_blocks[1];
+			if (!(td->thinktime_blocks % b))
+				usec_sleep(td, td->thinktime);
+		}
 	}
 
 	if (!td->error) {
