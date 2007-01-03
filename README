@@ -27,6 +27,16 @@ can find them here:
 http://linux01.gwdg.de/~pbleser/rpm-navigation.php?cat=System/fio
 
 
+Mailing list
+------------
+
+There's a mailing list associated with fio. It's meant for general
+discussion, bug reporting, questions - basically anything that has to
+do with fio. An automated mail detailing recent commits is automatically
+sent to the list at most daily. The list address is fio-devel@kernel.dk,
+subscribe by sending an empty email to fio-devel+subscribe@kernel.dk.
+
+
 Building
 --------
 
