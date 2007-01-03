@@ -226,92 +226,92 @@ static struct fio_option options[] = {
 	{
 		.name	= "thinktime",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(thinktime)
+		.off1	= td_var_offset(thinktime),
 	},
 	{
 		.name	= "thinktime_blocks",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(thinktime_blocks)
+		.off1	= td_var_offset(thinktime_blocks),
 	},
 	{
 		.name	= "rate",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(rate)
+		.off1	= td_var_offset(rate),
 	},
 	{
 		.name	= "ratemin",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(ratemin)
+		.off1	= td_var_offset(ratemin),
 	},
 	{
 		.name	= "ratecycle",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(ratecycle)
+		.off1	= td_var_offset(ratecycle),
 	},
 	{
 		.name	= "startdelay",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(start_delay)
+		.off1	= td_var_offset(start_delay),
 	},
 	{
 		.name	= "timeout",
 		.type	= FIO_OPT_STR_VAL_TIME,
-		.off1	= td_var_offset(timeout)
+		.off1	= td_var_offset(timeout),
 	},
 	{
 		.name	= "invalidate",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(invalidate_cache)
+		.off1	= td_var_offset(invalidate_cache),
 	},
 	{
 		.name	= "sync",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(sync_io)
+		.off1	= td_var_offset(sync_io),
 	},
 	{
 		.name	= "bwavgtime",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(bw_avg_time)
+		.off1	= td_var_offset(bw_avg_time),
 	},
 	{
 		.name	= "create_serialize",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(create_serialize)
+		.off1	= td_var_offset(create_serialize),
 	},
 	{
 		.name	= "create_fsync",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(create_fsync)
+		.off1	= td_var_offset(create_fsync),
 	},
 	{
 		.name	= "loops",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(loops)
+		.off1	= td_var_offset(loops),
 	},
 	{
 		.name	= "numjobs",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(numjobs)
+		.off1	= td_var_offset(numjobs),
 	},
 	{
 		.name	= "cpuload",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(cpuload)
+		.off1	= td_var_offset(cpuload),
 	},
 	{
 		.name	= "cpuchunks",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(cpucycle)
+		.off1	= td_var_offset(cpucycle),
 	},
 	{
 		.name	= "direct",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(odirect)
+		.off1	= td_var_offset(odirect),
 	},
 	{
 		.name	= "overwrite",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(overwrite)
+		.off1	= td_var_offset(overwrite),
 	},
 #ifdef FIO_HAVE_CPU_AFFINITY
 	{
@@ -323,7 +323,7 @@ static struct fio_option options[] = {
 	{
 		.name	= "end_fsync",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(end_fsync)
+		.off1	= td_var_offset(end_fsync),
 	},
 	{
 		.name	= "unlink",
