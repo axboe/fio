@@ -25,8 +25,8 @@ enum fio_ddir {
 };
 
 struct io_stat {
-	unsigned long val;
-	unsigned long val_sq;
+	unsigned long long val;
+	unsigned long long val_sq;
 	unsigned long max_val;
 	unsigned long min_val;
 	unsigned long samples;

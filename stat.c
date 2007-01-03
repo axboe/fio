@@ -271,7 +271,7 @@ void update_rusage_stat(struct thread_data *td)
 static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 		    double *mean, double *dev)
 {
-	double n;
+	double n, o;
 
 	if (is->samples == 0)
 		return 0;
@@ -281,12 +281,17 @@ static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 
 	n = (double) is->samples;
 	*mean = (double) is->val / n;
-	*dev = 0;
+	*dev = 0.01;
 
-	if (n <= 1)
+	if (n <= 1.0)
 		return 1;
 
-	*dev = sqrt(((double) is->val_sq - (*mean * *mean) / n) / (n - 1));
+	o = (double) is->val_sq - ((*mean * *mean) / n);
+	if (o < 0.0)
+		*dev = -1.0;
+	else
+		*dev = sqrt(o / (n - 1.0));
+
 	return 1;
 }
 
