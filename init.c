@@ -327,7 +327,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "unlink",
-		.type	= FIO_OPT_STR_SET,
+		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(unlink),
 	},
 	{
@@ -602,7 +602,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		int len = 0;
 
 		if (td->directory && td->directory[0] != '\0')
-			sprintf(tmp, "%s/", td->directory);
+			len = sprintf(tmp, "%s/", td->directory);
 
 		td->files = malloc(sizeof(struct fio_file) * td->nr_files);
 
@@ -615,6 +615,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 			else
 				sprintf(tmp + len, "%s.%d.%d", jobname, td->thread_number, i);
 			f->file_name = strdup(tmp);
+			fprintf(stderr, "%s\n", f->file_name);
 		}
 	} else {
 		td->nr_files = 1;

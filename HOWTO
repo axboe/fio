@@ -414,7 +414,7 @@ create_serialize=bool	If true, serialize the file creating for the jobs.
 create_fsync=bool	fsync the data file after creation. This is the
 			default.
 
-unlink		Unlink the job files when done. fio defaults to doing this,
+unlink=bool	Unlink the job files when done. fio defaults to doing this,
 		if it created the file itself.
 
 loops=int	Run the specified number of iterations of this job. Used
