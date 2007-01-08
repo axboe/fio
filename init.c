@@ -615,7 +615,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 			else
 				sprintf(tmp + len, "%s.%d.%d", jobname, td->thread_number, i);
 			f->file_name = strdup(tmp);
-			fprintf(stderr, "%s\n", f->file_name);
 		}
 	} else {
 		td->nr_files = 1;
