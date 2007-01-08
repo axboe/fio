@@ -94,13 +94,25 @@ static int disk_util_exists(dev_t dev)
 
 static void disk_util_add(dev_t dev, char *path)
 {
-	struct disk_util *du = malloc(sizeof(*du));
+	struct disk_util *du, *__du;
+	struct list_head *entry;
 
+	du = malloc(sizeof(*du));
 	memset(du, 0, sizeof(*du));
 	INIT_LIST_HEAD(&du->list);
 	sprintf(du->path, "%s/stat", path);
 	du->name = strdup(basename(path));
 	du->dev = dev;
+
+	list_for_each(entry, &disk_list) {
+		__du = list_entry(entry, struct disk_util, list);
+
+		if (!strcmp(du->name, __du->name)) {
+			free(du->name);
+			free(du);
+			return;
+		}
+	}
 
 	fio_gettime(&du->time, NULL);
 	get_io_ticks(du, &du->last_dus);
