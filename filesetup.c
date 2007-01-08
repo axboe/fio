@@ -154,9 +154,9 @@ static int file_size(struct thread_data *td, struct fio_file *f)
 
 		if (!f->file_size || f->file_size > f->real_file_size)
 			f->file_size = f->real_file_size;
-	}
+	} else
+		f->real_file_size = f->file_size;
 
-	f->file_size = f->real_file_size - f->file_offset;
 	return 0;
 }
 
