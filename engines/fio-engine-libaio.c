@@ -51,7 +51,9 @@ static int fio_libaio_getevents(struct thread_data *td, int min, int max,
 
 	do {
 		r = io_getevents(ld->aio_ctx, min, max, ld->aio_events, t);
-		if (r == -EAGAIN) {
+		if (r >= min)
+			break;
+		else if (r == -EAGAIN) {
 			usleep(100);
 			continue;
 		} else if (r == -EINTR)
