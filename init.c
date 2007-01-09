@@ -1205,8 +1205,8 @@ static int parse_cmd_line(int argc, char *argv[])
 			usage();
 			exit(0);
 		case 'c':
-			show_cmd_help(options, optarg);
-			exit(0);
+			ret = show_cmd_help(options, optarg);
+			exit(ret);
 		case 'v':
 			printf("%s\n", fio_version_string);
 			exit(0);

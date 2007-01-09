@@ -376,11 +376,13 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		"integer value (opt=100)",
 		"no argument (opt)",
 	};
+	int found = 0;
 
 	while (o->name) {
 		int match = !strcmp(name, o->name);
 
 		if (show_all || match) {
+			found = 1;
 			printf("%s: %s\n", o->name, o->help);
 			if (match)
 				printf("type: %s\n", typehelp[o->type]);
@@ -389,6 +391,9 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		o++;
 	}
 
+	if (found)
+		return 0;
 
-	return 0;
+	printf("No such command: %s\n", name);
+	return 1;
 }
