@@ -361,3 +361,34 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 	fprintf(stderr, "fio: failed parsing %s\n", opt);
 	return 1;
 }
+
+int show_cmd_help(struct fio_option *options, const char *name)
+{
+	int show_all = !strcmp(name, "all");
+	struct fio_option *o = &options[0];
+	const char *typehelp[] = {
+		"string (opt=bla)",
+		"string with possible k/m/g postfix (opt=4k)",
+		"string with range and postfix (opt=1k-4k)",
+		"string with time postfix (opt=10s)",
+		"string (opt=bla)",
+		"string with dual range (opt=1k-4k,4k-8k)",
+		"integer value (opt=100)",
+		"no argument (opt)",
+	};
+
+	while (o->name) {
+		int match = !strcmp(name, o->name);
+
+		if (show_all || match) {
+			printf("%s: %s\n", o->name, o->help);
+			if (match)
+				printf("type: %s\n", typehelp[o->type]);
+		}
+
+		o++;
+	}
+
+
+	return 0;
+}

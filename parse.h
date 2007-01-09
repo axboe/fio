@@ -27,12 +27,14 @@ struct fio_option {
 	unsigned int off4;
 	unsigned int max_val;
 	void *cb;
+	const char *help;
 };
 
 typedef int (str_cb_fn)(void *, char *);
 
 extern int parse_option(const char *, struct fio_option *, void *);
 extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, void *);
+extern int show_cmd_help(struct fio_option *, const char *);
 
 extern void strip_blank_front(char **);
 extern void strip_blank_end(char *);

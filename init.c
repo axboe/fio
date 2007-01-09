@@ -77,94 +77,112 @@ static struct fio_option options[] = {
 		.name	= "name",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(name),
+		.help	= "Name of this job",
 	},
 	{
 		.name	= "directory",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(directory),
+		.help	= "Directory to store files in",
 	},
 	{
 		.name	= "filename",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(filename),
+		.help	= "Force the use of a specific file",
 	},
 	{
 		.name	= "rw",
 		.type	= FIO_OPT_STR,
 		.cb	= str_rw_cb,
+		.help	= "IO direction (read, write, rw, etc)",
 	},
 	{
 		.name	= "ioengine",
 		.type	= FIO_OPT_STR,
 		.cb	= str_ioengine_cb,
+		.help	= "IO engine to use (sync, aio, etc)",
 	},
 	{
 		.name	= "mem",
 		.type	= FIO_OPT_STR,
 		.cb	= str_mem_cb,
+		.help	= "Backing type for IO buffers (malloc, shm, etc)",
 	},
 	{
 		.name	= "verify",
 		.type	= FIO_OPT_STR,
 		.cb	= str_verify_cb,
+		.help	= "Verify sum function (md5 or crc32)",
 	},
 	{
 		.name	= "write_iolog",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(write_iolog_file),
+		.help	= "Store IO pattern to file",
 	},
 	{
 		.name	= "read_iolog",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(read_iolog_file),
+		.help	= "Playback IO pattern from file",
 	},
 	{
 		.name	= "exec_prerun",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(exec_prerun),
+		.help	= "Execute this file prior to running job",
 	},
 	{
 		.name	= "exec_postrun",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(exec_postrun),
+		.help	= "Execute this file after running job",
 	},
 #ifdef FIO_HAVE_IOSCHED_SWITCH
 	{
 		.name	= "ioscheduler",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(ioscheduler),
+		.help	= "Use this IO scheduler on the backing device",
 	},
 #endif
 	{
 		.name	= "size",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(total_file_size),
+		.help	= "Size of device or file",
 	},
 	{
 		.name	= "bs",
 		.type	= FIO_OPT_STR_VAL_INT,
 		.off1	= td_var_offset(bs[DDIR_READ]),
 		.off2	= td_var_offset(bs[DDIR_WRITE]),
+		.help	= "Block size unit",
 	},
 	{
 		.name	= "offset",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(start_offset),
+		.help	= "Start IO from this offset",
 	},
 	{
 		.name	= "zonesize",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(zone_size),
+		.help	= "Give size of an IO zone",
 	},
 	{
 		.name	= "zoneskip",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(zone_skip),
+		.help	= "Space between IO zones",
 	},
 	{
 		.name	= "lockmem",
 		.type	= FIO_OPT_STR_VAL,
 		.cb	= str_lockmem_cb,
+		.help	= "Lock down this amount of memory",
 	},
 	{
 		.name	= "bsrange",
@@ -173,202 +191,241 @@ static struct fio_option options[] = {
 		.off2	= td_var_offset(max_bs[DDIR_READ]),
 		.off3	= td_var_offset(min_bs[DDIR_WRITE]),
 		.off4	= td_var_offset(max_bs[DDIR_WRITE]),
+		.help	= "Set block size range",
 	},
 	{
 		.name	= "nrfiles",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(nr_files),
+		.help	= "Split job workload between this number of files",
 	},
 	{
 		.name	= "iodepth",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(iodepth),
+		.help	= "Amount of IO buffers to keep in flight",
 	},
 	{
 		.name	= "fsync",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(fsync_blocks),
+		.help	= "Issue fsync for writes every given number of blocks",
 	},
 	{
 		.name	= "rwmixcycle",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rwmixcycle),
+		.help	= "Cycle period for mixed read/write workloads",
 	},
 	{
 		.name	= "rwmixread",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rwmixread),
 		.max_val= 100,
+		.help	= "Percentage of mixed workload that is reads",
 	},
 	{
 		.name	= "rwmixwrite",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rwmixwrite),
 		.max_val= 100,
+		.help	= "Percentage of mixed workload that is writes",
 	},
 	{
 		.name	= "nice",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(nice),
+		.help	= "Set job CPU nice value",
 	},
 #ifdef FIO_HAVE_IOPRIO
 	{
 		.name	= "prio",
 		.type	= FIO_OPT_INT,
 		.cb	= str_prio_cb,
+		.help	= "Set job IO priority value",
 	},
 	{
 		.name	= "prioclass",
 		.type	= FIO_OPT_INT,
 		.cb	= str_prioclass_cb,
+		.help	= "Set job IO priority class",
 	},
 #endif
 	{
 		.name	= "thinktime",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(thinktime),
+		.help	= "Idle time between IO buffers",
 	},
 	{
 		.name	= "thinktime_blocks",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(thinktime_blocks),
+		.help	= "IO buffer period between 'thinktime'",
 	},
 	{
 		.name	= "rate",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rate),
+		.help	= "Set bandwidth rate",
 	},
 	{
 		.name	= "ratemin",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratemin),
+		.help	= "The bottom limit accepted",
 	},
 	{
 		.name	= "ratecycle",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratecycle),
+		.name	= "Window average for rate limits",
 	},
 	{
 		.name	= "startdelay",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(start_delay),
+		.help	= "Only start job when this period has passed",
 	},
 	{
 		.name	= "timeout",
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= td_var_offset(timeout),
+		.help	= "Stop workload when this amount of time has passed",
 	},
 	{
 		.name	= "invalidate",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(invalidate_cache),
+		.help	= "Invalidate buffer/page cache prior to running job",
 	},
 	{
 		.name	= "sync",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(sync_io),
+		.help	= "Use O_SYNC for buffered writes",
 	},
 	{
 		.name	= "bwavgtime",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(bw_avg_time),
+		.help	= "Time window over which to calculate bandwidth",
 	},
 	{
 		.name	= "create_serialize",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(create_serialize),
+		.help	= "Serialize creating of job files",
 	},
 	{
 		.name	= "create_fsync",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(create_fsync),
+		.help	= "Fsync file after creation",
 	},
 	{
 		.name	= "loops",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(loops),
+		.help	= "Number of times to run the job",
 	},
 	{
 		.name	= "numjobs",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(numjobs),
+		.help	= "Duplicate this job this many times",
 	},
 	{
 		.name	= "cpuload",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(cpuload),
+		.help	= "Use this percentage of CPU",
 	},
 	{
 		.name	= "cpuchunks",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(cpucycle),
+		.help	= "Length of the CPU burn cycles",
 	},
 	{
 		.name	= "direct",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(odirect),
+		.help	= "Use O_DIRECT IO",
 	},
 	{
 		.name	= "overwrite",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(overwrite),
+		.help	= "When writing, set whether to overwrite current data",
 	},
 #ifdef FIO_HAVE_CPU_AFFINITY
 	{
 		.name	= "cpumask",
 		.type	= FIO_OPT_INT,
 		.cb	= str_cpumask_cb,
+		.help	= "CPU affinity mask",
 	},
 #endif
 	{
 		.name	= "end_fsync",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(end_fsync),
+		.help	= "Include fsync at the end of job",
 	},
 	{
 		.name	= "unlink",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(unlink),
+		.help	= "Unlink files after job has completed",
 	},
 	{
 		.name	= "exitall",
 		.type	= FIO_OPT_STR_SET,
 		.cb	= str_exitall_cb,
+		.help	= "Terminate all jobs when one exits",
 	},
 	{
 		.name	= "stonewall",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(stonewall),
+		.help	= "Insert a hard barrier between this job and previous",
 	},
 	{
 		.name	= "thread",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(thread),
+		.help	= "Use threads instead of forks",
 	},
 	{
 		.name	= "write_bw_log",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(write_bw_log),
+		.help	= "Write log of bandwidth during run",
 	},
 	{
 		.name	= "write_lat_log",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(write_lat_log),
+		.help	= "Write log of latency during run",
 	},
 	{
 		.name	= "norandommap",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(norandommap),
+		.help	= "Accept potential duplicate random blocks",
 	},
 	{
 		.name	= "bs_unaligned",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(bs_unaligned),
+		.help	= "Don't sector align IO buffer sizes",
 	},
 	{
 		.name	= "hugepage-size",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(hugepage_size),
+		.help	= "When using hugepages, specify size of each page",
 	},
 	{
 		.name = NULL,
@@ -413,6 +470,16 @@ static struct option long_options[FIO_JOB_OPTS + FIO_CMD_OPTS] = {
 		.name		= "version",
 		.has_arg	= no_argument,
 		.val		= 'v',
+	},
+	{
+		.name		= "help",
+		.has_arg	= no_argument,
+		.val		= 'h',
+	},
+	{
+		.name		= "cmdhelp",
+		.has_arg	= required_argument,
+		.val		= 'c',
 	},
 	{
 		.name		= NULL,
@@ -1103,6 +1170,8 @@ static void usage(void)
 	printf("\t--bandwidth-log\tGenerate per-job bandwidth logs\n");
 	printf("\t--minimal\tMinimal (terse) output\n");
 	printf("\t--version\tPrint version info and exit\n");
+	printf("\t--help\t\tPrint this page\n");
+	printf("\t--cmdhelp=cmd\tPrint command help, \"all\" for all of them\n");
 }
 
 static int parse_cmd_line(int argc, char *argv[])
@@ -1134,6 +1203,9 @@ static int parse_cmd_line(int argc, char *argv[])
 			break;
 		case 'h':
 			usage();
+			exit(0);
+		case 'c':
+			show_cmd_help(options, optarg);
 			exit(0);
 		case 'v':
 			printf("%s\n", fio_version_string);

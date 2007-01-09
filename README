@@ -59,6 +59,8 @@ $ fio
         --bandwidth-log Generate per-job bandwidth logs
         --minimal       Minimal (terse) output
         --version       Print version info and exit
+	--help		Print this page
+	--cmdhelp=cmd	Print command help, "all" for all of them
 
 Any parameters following the options will be assumed to be job files,
 unless they match a job file parameter. You can add as many as you want,
