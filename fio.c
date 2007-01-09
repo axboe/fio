@@ -379,7 +379,6 @@ static void do_io(struct thread_data *td)
 	td_set_runstate(td, TD_RUNNING);
 
 	while (td->this_io_bytes[td->ddir] < td->io_size) {
-		struct timespec ts = { .tv_sec = 0, .tv_nsec = 0};
 		struct timespec *timeout;
 		int min_evts = 0;
 		struct io_u *io_u;
@@ -407,6 +406,8 @@ static void do_io(struct thread_data *td)
 		add_slat_sample(td, io_u->ddir, mtime_since(&io_u->start_time, &io_u->issue_time));
 
 		if (td->cur_depth < td->iodepth) {
+			struct timespec ts = { .tv_sec = 0, .tv_nsec = 0};
+
 			timeout = &ts;
 			min_evts = 0;
 		} else {
