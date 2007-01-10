@@ -56,8 +56,8 @@ static int str_to_decimal(const char *str, long long *val, int kilo)
 	if (!len)
 		return 1;
 
-	*val = strtoul(str, NULL, 10);
-	if (*val == ULONG_MAX && errno == ERANGE)
+	*val = strtol(str, NULL, 10);
+	if (*val == LONG_MAX && errno == ERANGE)
 		return 1;
 
 	if (kilo)
