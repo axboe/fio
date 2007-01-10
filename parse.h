@@ -19,15 +19,18 @@ enum fio_opt_type {
  * Option define
  */
 struct fio_option {
-	const char *name;
-	enum fio_opt_type type;
-	unsigned int off1;
+	const char *name;		/* option name */
+	enum fio_opt_type type;		/* option type */
+	unsigned int off1;		/* potential parameters */
 	unsigned int off2;
 	unsigned int off3;
 	unsigned int off4;
-	unsigned int max_val;
-	void *cb;
-	const char *help;
+	unsigned int maxval;		/* max and min value */
+	unsigned int minval;
+	void *cb;			/* callback */
+	const char *help;		/* help text for option */
+	const char *def;		/* default setting */
+	char opt_set;			/* option was set */
 };
 
 typedef int (str_cb_fn)(void *, char *);
@@ -35,6 +38,7 @@ typedef int (str_cb_fn)(void *, char *);
 extern int parse_option(const char *, struct fio_option *, void *);
 extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, void *);
 extern int show_cmd_help(struct fio_option *, const char *);
+extern void fill_default_options(void *, struct fio_option *);
 
 extern void strip_blank_front(char **);
 extern void strip_blank_end(char *);

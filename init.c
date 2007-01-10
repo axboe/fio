@@ -18,42 +18,7 @@
 #include "fio.h"
 #include "parse.h"
 
-/*
- * The default options
- */
-#define DEF_BS			(4096)
-#define DEF_TIMEOUT		(0)
-#define DEF_RATE_CYCLE		(1000)
-#define DEF_ODIRECT		(1)
-#define DEF_IO_ENGINE		(FIO_SYNCIO)
-#define DEF_IO_ENGINE_NAME	"sync"
-#define DEF_SEQUENTIAL		(1)
-#define DEF_RAND_REPEAT		(1)
-#define DEF_OVERWRITE		(0)
-#define DEF_INVALIDATE		(1)
-#define DEF_SYNCIO		(0)
-#define DEF_RANDSEED		(0xb1899bedUL)
-#define DEF_BWAVGTIME		(500)
-#define DEF_CREATE_SER		(1)
-#define DEF_CREATE_FSYNC	(1)
-#define DEF_LOOPS		(1)
-#define DEF_VERIFY		(0)
-#define DEF_STONEWALL		(0)
-#define DEF_NUMJOBS		(1)
-#define DEF_USE_THREAD		(0)
-#define DEF_FILE_SIZE		(1024 * 1024 * 1024UL)
-#define DEF_ZONE_SIZE		(0)
-#define DEF_ZONE_SKIP		(0)
-#define DEF_RWMIX_CYCLE		(500)
-#define DEF_RWMIX_READ		(50)
-#define DEF_NICE		(0)
-#define DEF_NR_FILES		(1)
-#define DEF_UNLINK		(1)
-#define DEF_WRITE_BW_LOG	(0)
-#define DEF_WRITE_LAT_LOG	(0)
-#define DEF_NO_RAND_MAP		(0)
-#define DEF_HUGEPAGE_SIZE	FIO_HUGE_PAGE
-#define DEF_THINKTIME_BLOCKS	(1)
+#define FIO_RANDSEED		(0xb1899bedUL)
 
 #define td_var_offset(var)	((size_t) &((struct thread_data *)0)->var)
 
@@ -68,6 +33,9 @@ static int str_prioclass_cb(void *, unsigned int *);
 #endif
 static int str_exitall_cb(void);
 static int str_cpumask_cb(void *, unsigned int *);
+
+#define __stringify_1(x)	#x
+#define __stringify(x)		__stringify_1(x)
 
 /*
  * Map of job/command line options
@@ -96,24 +64,28 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR,
 		.cb	= str_rw_cb,
 		.help	= "IO direction (read, write, rw, etc)",
+		.def	= "read",
 	},
 	{
 		.name	= "ioengine",
 		.type	= FIO_OPT_STR,
 		.cb	= str_ioengine_cb,
 		.help	= "IO engine to use (sync, aio, etc)",
+		.def	= "sync",
 	},
 	{
 		.name	= "mem",
 		.type	= FIO_OPT_STR,
 		.cb	= str_mem_cb,
 		.help	= "Backing type for IO buffers (malloc, shm, etc)",
+		.def	= "malloc",
 	},
 	{
 		.name	= "verify",
 		.type	= FIO_OPT_STR,
 		.cb	= str_verify_cb,
 		.help	= "Verify sum function (md5 or crc32)",
+		.def	= "0",
 	},
 	{
 		.name	= "write_iolog",
@@ -159,30 +131,35 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(bs[DDIR_READ]),
 		.off2	= td_var_offset(bs[DDIR_WRITE]),
 		.help	= "Block size unit",
+		.def	= "4k",
 	},
 	{
 		.name	= "offset",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(start_offset),
 		.help	= "Start IO from this offset",
+		.def	= "0",
 	},
 	{
 		.name	= "zonesize",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(zone_size),
 		.help	= "Give size of an IO zone",
+		.def	= "0",
 	},
 	{
 		.name	= "zoneskip",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(zone_skip),
 		.help	= "Space between IO zones",
+		.def	= "0",
 	},
 	{
 		.name	= "lockmem",
 		.type	= FIO_OPT_STR_VAL,
 		.cb	= str_lockmem_cb,
 		.help	= "Lock down this amount of memory",
+		.def	= "0",
 	},
 	{
 		.name	= "bsrange",
@@ -194,48 +171,63 @@ static struct fio_option options[] = {
 		.help	= "Set block size range",
 	},
 	{
+		.name	= "randrepeat",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(rand_repeatable),
+		.help	= "Use repeatable random IO pattern",
+		.def	= "1",
+	},
+	{
 		.name	= "nrfiles",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(nr_files),
 		.help	= "Split job workload between this number of files",
+		.def	= "1",
 	},
 	{
 		.name	= "iodepth",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(iodepth),
 		.help	= "Amount of IO buffers to keep in flight",
+		.def	= "1",
 	},
 	{
 		.name	= "fsync",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(fsync_blocks),
 		.help	= "Issue fsync for writes every given number of blocks",
+		.def	= "0",
 	},
 	{
 		.name	= "rwmixcycle",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rwmixcycle),
-		.help	= "Cycle period for mixed read/write workloads",
+		.help	= "Cycle period for mixed read/write workloads (msec)",
+		.def	= "500",
 	},
 	{
 		.name	= "rwmixread",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rwmixread),
-		.max_val= 100,
+		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is reads",
+		.def	= "50",
 	},
 	{
 		.name	= "rwmixwrite",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rwmixwrite),
-		.max_val= 100,
+		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is writes",
+		.def	= "50",
 	},
 	{
 		.name	= "nice",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(nice),
 		.help	= "Set job CPU nice value",
+		.maxval	= 20,
+		.def	= "0",
 	},
 #ifdef FIO_HAVE_IOPRIO
 	{
@@ -256,12 +248,14 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(thinktime),
 		.help	= "Idle time between IO buffers",
+		.def	= "0",
 	},
 	{
 		.name	= "thinktime_blocks",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(thinktime_blocks),
 		.help	= "IO buffer period between 'thinktime'",
+		.def	= "1",
 	},
 	{
 		.name	= "rate",
@@ -279,61 +273,71 @@ static struct fio_option options[] = {
 		.name	= "ratecycle",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratecycle),
-		.name	= "Window average for rate limits",
+		.name	= "Window average for rate limits (msec)",
+		.def	= "1000",
 	},
 	{
 		.name	= "startdelay",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(start_delay),
 		.help	= "Only start job when this period has passed",
+		.def	= "0",
 	},
 	{
 		.name	= "timeout",
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= td_var_offset(timeout),
 		.help	= "Stop workload when this amount of time has passed",
+		.def	= "0",
 	},
 	{
 		.name	= "invalidate",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(invalidate_cache),
 		.help	= "Invalidate buffer/page cache prior to running job",
+		.def	= "1",
 	},
 	{
 		.name	= "sync",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(sync_io),
 		.help	= "Use O_SYNC for buffered writes",
+		.def	= "0",
 	},
 	{
 		.name	= "bwavgtime",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(bw_avg_time),
-		.help	= "Time window over which to calculate bandwidth",
+		.help	= "Time window over which to calculate bandwidth (msec)",
+		.def	= "500",
 	},
 	{
 		.name	= "create_serialize",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(create_serialize),
 		.help	= "Serialize creating of job files",
+		.def	= "1",
 	},
 	{
 		.name	= "create_fsync",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(create_fsync),
 		.help	= "Fsync file after creation",
+		.def	= "1",
 	},
 	{
 		.name	= "loops",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(loops),
 		.help	= "Number of times to run the job",
+		.def	= "1",
 	},
 	{
 		.name	= "numjobs",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(numjobs),
 		.help	= "Duplicate this job this many times",
+		.def	= "1",
 	},
 	{
 		.name	= "cpuload",
@@ -352,12 +356,14 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(odirect),
 		.help	= "Use O_DIRECT IO",
+		.def	= "1",
 	},
 	{
 		.name	= "overwrite",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(overwrite),
 		.help	= "When writing, set whether to overwrite current data",
+		.def	= "0",
 	},
 #ifdef FIO_HAVE_CPU_AFFINITY
 	{
@@ -372,12 +378,14 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(end_fsync),
 		.help	= "Include fsync at the end of job",
+		.def	= "0",
 	},
 	{
 		.name	= "unlink",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(unlink),
-		.help	= "Unlink files after job has completed",
+		.help	= "Unlink created files after job has completed",
+		.def	= "1",
 	},
 	{
 		.name	= "exitall",
@@ -426,6 +434,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(hugepage_size),
 		.help	= "When using hugepages, specify size of each page",
+		.def	= __stringify(FIO_HUGE_PAGE),
 	},
 	{
 		.name = NULL,
@@ -486,7 +495,7 @@ static struct option long_options[FIO_JOB_OPTS + FIO_CMD_OPTS] = {
 	},
 };
 
-static int def_timeout = DEF_TIMEOUT;
+static int def_timeout = 0;
 
 static char fio_version_string[] = "fio 1.11";
 
@@ -502,8 +511,8 @@ unsigned long long mlock_size = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
 
-static int write_lat_log = DEF_WRITE_LAT_LOG;
-static int write_bw_log = DEF_WRITE_BW_LOG;
+static int write_lat_log = 0;
+static int write_bw_log = 0;
 
 /*
  * Return a free job structure.
@@ -635,16 +644,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td == &def_thread)
 		return 0;
 
-	/*
-	 * Set default io engine, if none set
-	 */
-	if (!td->io_ops) {
-		td->io_ops = load_ioengine(td, DEF_IO_ENGINE_NAME);
-		if (!td->io_ops) {
-			log_err("default engine %s not there?\n", DEF_IO_ENGINE_NAME);
-			return 1;
-		}
-	}
+	assert(td->io_ops);
 
 	if (td->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
@@ -806,7 +806,7 @@ int init_random_state(struct thread_data *td)
 		return 0;
 
 	if (td->rand_repeatable)
-		seeds[3] = DEF_RANDSEED;
+		seeds[3] = FIO_RANDSEED;
 
 	if (!td->norandommap) {
 		for_each_file(td, f, i) {
@@ -1119,41 +1119,14 @@ static int fill_def_thread(void)
 	}
 
 	/*
-	 * fill globals
+	 * fill default options
 	 */
-	def_thread.ddir = DDIR_READ;
-	def_thread.iomix = 0;
-	def_thread.bs[DDIR_READ] = DEF_BS;
-	def_thread.bs[DDIR_WRITE] = DEF_BS;
-	def_thread.min_bs[DDIR_READ] = def_thread.min_bs[DDIR_WRITE] = 0;
-	def_thread.max_bs[DDIR_READ] = def_thread.max_bs[DDIR_WRITE] = 0;
-	def_thread.odirect = DEF_ODIRECT;
-	def_thread.ratecycle = DEF_RATE_CYCLE;
-	def_thread.sequential = DEF_SEQUENTIAL;
+	fill_default_options(&def_thread, options);
+
 	def_thread.timeout = def_timeout;
-	def_thread.overwrite = DEF_OVERWRITE;
-	def_thread.invalidate_cache = DEF_INVALIDATE;
-	def_thread.sync_io = DEF_SYNCIO;
-	def_thread.mem_type = MEM_MALLOC;
-	def_thread.bw_avg_time = DEF_BWAVGTIME;
-	def_thread.create_serialize = DEF_CREATE_SER;
-	def_thread.create_fsync = DEF_CREATE_FSYNC;
-	def_thread.loops = DEF_LOOPS;
-	def_thread.verify = DEF_VERIFY;
-	def_thread.stonewall = DEF_STONEWALL;
-	def_thread.numjobs = DEF_NUMJOBS;
-	def_thread.use_thread = DEF_USE_THREAD;
-	def_thread.rwmixcycle = DEF_RWMIX_CYCLE;
-	def_thread.rwmixread = DEF_RWMIX_READ;
-	def_thread.nice = DEF_NICE;
-	def_thread.rand_repeatable = DEF_RAND_REPEAT;
-	def_thread.nr_files = DEF_NR_FILES;
-	def_thread.unlink = DEF_UNLINK;
 	def_thread.write_bw_log = write_bw_log;
 	def_thread.write_lat_log = write_lat_log;
-	def_thread.norandommap = DEF_NO_RAND_MAP;
-	def_thread.hugepage_size = DEF_HUGEPAGE_SIZE;
-	def_thread.thinktime_blocks = DEF_THINKTIME_BLOCKS;
+
 #ifdef FIO_HAVE_DISK_UTIL
 	def_thread.do_disk_util = 1;
 #endif

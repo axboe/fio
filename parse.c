@@ -180,8 +180,10 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (ret)
 			break;
 
-		if (o->max_val && ull > o->max_val)
-			ull = o->max_val;
+		if (o->maxval && ull > o->maxval)
+			ull = o->maxval;
+		if (o->minval && ull < o->minval)
+			ull = o->minval;
 
 		if (fn)
 			ret = fn(data, &ull);
@@ -249,8 +251,10 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (ret)
 			break;
 
-		if (o->max_val && il > o->max_val)
-			il = o->max_val;
+		if (o->maxval && il > o->maxval)
+			il = o->maxval;
+		if (o->minval && il < o->minval)
+			il = o->minval;
 
 		if (fn)
 			ret = fn(data, &il);
@@ -384,8 +388,13 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		if (show_all || match) {
 			found = 1;
 			printf("%s: %s\n", o->name, o->help);
-			if (match)
+			if (match) {
 				printf("type: %s\n", typehelp[o->type]);
+				if (o->def)
+					printf("default: %s\n", o->def);
+				else
+					printf("defaults: no default\n");
+			}
 		}
 
 		o++;
@@ -396,4 +405,15 @@ int show_cmd_help(struct fio_option *options, const char *name)
 
 	printf("No such command: %s\n", name);
 	return 1;
+}
+
+void fill_default_options(void *data, struct fio_option *options)
+{
+	struct fio_option *o = &options[0];
+
+	while (o->name) {
+		if (o->def)
+			handle_option(o, o->def, data);
+		o++;
+	}
 }
