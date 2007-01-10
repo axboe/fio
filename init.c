@@ -413,7 +413,7 @@ static struct fio_option options[] = {
 	{
 		.name	= "thread",
 		.type	= FIO_OPT_STR_SET,
-		.off1	= td_var_offset(thread),
+		.off1	= td_var_offset(use_thread),
 		.help	= "Use threads instead of forks",
 	},
 	{
