@@ -27,7 +27,7 @@ struct fio_option {
 	unsigned int off3;
 	unsigned int off4;
 	unsigned int maxval;		/* max and min value */
-	unsigned int minval;
+	int minval;
 	void *cb;			/* callback */
 	const char *help;		/* help text for option */
 	const char *def;		/* default setting */
@@ -49,8 +49,8 @@ extern void strip_blank_end(char *);
  * Handlers for the options
  */
 typedef int (fio_opt_str_fn)(void *, const char *);
-typedef int (fio_opt_str_val_fn)(void *, unsigned long long *);
-typedef int (fio_opt_int_fn)(void *, unsigned int *);
+typedef int (fio_opt_str_val_fn)(void *, long long *);
+typedef int (fio_opt_int_fn)(void *, int *);
 typedef int (fio_opt_str_set_fn)(void *);
 
 #define td_var(start, offset)	((void *) start + (offset))

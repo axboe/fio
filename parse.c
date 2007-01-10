@@ -48,7 +48,7 @@ static unsigned long get_mult_bytes(char c)
 /*
  * convert string into decimal value, noting any size suffix
  */
-static int str_to_decimal(const char *str, unsigned long long *val, int kilo)
+static int str_to_decimal(const char *str, long long *val, int kilo)
 {
 	int len;
 
@@ -68,12 +68,12 @@ static int str_to_decimal(const char *str, unsigned long long *val, int kilo)
 	return 0;
 }
 
-static int check_str_bytes(const char *p, unsigned long long *val)
+static int check_str_bytes(const char *p, long long *val)
 {
 	return str_to_decimal(p, val, 1);
 }
 
-static int check_str_time(const char *p, unsigned long long *val)
+static int check_str_time(const char *p, long long *val)
 {
 	return str_to_decimal(p, val, 0);
 }
@@ -96,7 +96,7 @@ void strip_blank_end(char *p)
 	*(s + 1) = '\0';
 }
 
-static int check_range_bytes(const char *str, unsigned long *val)
+static int check_range_bytes(const char *str, long *val)
 {
 	char suffix;
 
@@ -114,7 +114,7 @@ static int check_range_bytes(const char *str, unsigned long *val)
 	return 1;
 }
 
-static int check_int(const char *p, unsigned int *val)
+static int check_int(const char *p, int *val)
 {
 	if (!strlen(p))
 		return 1;
@@ -148,9 +148,9 @@ static struct fio_option *find_option(struct fio_option *options,
 static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			   int first, int more)
 {
-	unsigned int il, *ilp;
-	unsigned long long ull, *ullp;
-	unsigned long ul1, ul2;
+	int il, *ilp;
+	long long ull, *ullp;
+	long ul1, ul2;
 	char **cp;
 	int ret = 0, is_time = 0;
 
@@ -252,7 +252,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (ret)
 			break;
 
-		if (o->maxval && il > o->maxval)
+		if (o->maxval && il > (int) o->maxval)
 			il = o->maxval;
 		if (o->minval && il < o->minval)
 			il = o->minval;
