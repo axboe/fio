@@ -283,7 +283,7 @@ void update_rusage_stat(struct thread_data *td)
 static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 		    double *mean, double *dev)
 {
-	double n, o;
+	double n = is->samples;
 
 	if (is->samples == 0)
 		return 0;
@@ -292,17 +292,12 @@ static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 	*max = is->max_val;
 
 	n = (double) is->samples;
-	*mean = (double) is->val / n;
-	*dev = 0.01;
+	*mean = is->mean;
 
-	if (n <= 1.0)
-		return 1;
-
-	o = ((double) is->val_sq - (*mean * is->val)) / n;
-	if (o < 0.0)
-		*dev = -1.0;
+	if (n > 1.0)
+		*dev = sqrt(is->S / (n - 1.0));
 	else
-		*dev = sqrt(o);
+		*dev = -1.0;
 
 	return 1;
 }
@@ -550,15 +545,21 @@ void show_run_stats(void)
 	free(runstats);
 }
 
-static inline void add_stat_sample(struct io_stat *is, unsigned long val)
+static inline void add_stat_sample(struct io_stat *is, unsigned long data)
 {
-	if (val > is->max_val)
-		is->max_val = val;
-	if (val < is->min_val)
-		is->min_val = val;
+	double val = data;
+	double delta, n;
 
-	is->val += val;
-	is->val_sq += val * val;
+	if (data > is->max_val)
+		is->max_val = data;
+	if (data < is->min_val)
+		is->min_val = data;
+
+	delta = val - is->mean;
+	n = is->samples + 1.0;
+	is->mean += delta / n;
+	is->S += delta * (val - is->mean);
+
 	is->samples++;
 }
 

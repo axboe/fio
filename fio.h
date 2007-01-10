@@ -25,11 +25,12 @@ enum fio_ddir {
 };
 
 struct io_stat {
-	unsigned long long val;
-	unsigned long long val_sq;
 	unsigned long max_val;
 	unsigned long min_val;
 	unsigned long samples;
+
+	double mean;
+	double S;
 };
 
 struct io_sample {
