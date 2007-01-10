@@ -387,13 +387,10 @@ int show_cmd_help(struct fio_option *options, const char *name)
 
 		if (show_all || match) {
 			found = 1;
-			printf("%s: %s\n", o->name, o->help);
+			printf("%16s: %s\n", o->name, o->help);
 			if (match) {
-				printf("type: %s\n", typehelp[o->type]);
-				if (o->def)
-					printf("default: %s\n", o->def);
-				else
-					printf("defaults: no default\n");
+				printf("%16s: %s\n", "type", typehelp[o->type]);
+				printf("%16s: %s\n", "default", o->def ? o->def : "no default");
 			}
 		}
 
