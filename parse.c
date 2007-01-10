@@ -244,7 +244,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 		break;
 	}
-	case FIO_OPT_INT: {
+	case FIO_OPT_INT:
+	case FIO_OPT_BOOL: {
 		fio_opt_int_fn *fn = o->cb;
 
 		ret = check_int(ptr, &il);
@@ -410,6 +411,7 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		"string (opt=bla)",
 		"string with dual range (opt=1k-4k,4k-8k)",
 		"integer value (opt=100)",
+		"boolean value (opt=1)",
 		"no argument (opt)",
 	};
 	int found = 0;
@@ -438,6 +440,9 @@ int show_cmd_help(struct fio_option *options, const char *name)
 	return 1;
 }
 
+/*
+ * Handle parsing of default parameters.
+ */
 void fill_default_options(void *data, struct fio_option *options)
 {
 	struct fio_option *o = &options[0];
@@ -445,6 +450,23 @@ void fill_default_options(void *data, struct fio_option *options)
 	while (o->name) {
 		if (o->def)
 			handle_option(o, o->def, data);
+		o++;
+	}
+}
+
+/*
+ * Sanitize the options structure. For now it just sets min/max for bool
+ * values.
+ */
+void options_init(struct fio_option *options)
+{
+	struct fio_option *o = &options[0];
+
+	while (o->name) {
+		if (o->type == FIO_OPT_BOOL) {
+			o->minval = 0;
+			o->maxval = 1;
+		}
 		o++;
 	}
 }

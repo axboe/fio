@@ -178,7 +178,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "randrepeat",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(rand_repeatable),
 		.help	= "Use repeatable random IO pattern",
 		.def	= "1",
@@ -303,14 +303,14 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "invalidate",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(invalidate_cache),
 		.help	= "Invalidate buffer/page cache prior to running job",
 		.def	= "1",
 	},
 	{
 		.name	= "sync",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(sync_io),
 		.help	= "Use O_SYNC for buffered writes",
 		.def	= "0",
@@ -324,14 +324,14 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "create_serialize",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(create_serialize),
 		.help	= "Serialize creating of job files",
 		.def	= "1",
 	},
 	{
 		.name	= "create_fsync",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(create_fsync),
 		.help	= "Fsync file after creation",
 		.def	= "1",
@@ -364,14 +364,14 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "direct",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(odirect),
 		.help	= "Use O_DIRECT IO",
 		.def	= "1",
 	},
 	{
 		.name	= "overwrite",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(overwrite),
 		.help	= "When writing, set whether to overwrite current data",
 		.def	= "0",
@@ -386,14 +386,14 @@ static struct fio_option options[] = {
 #endif
 	{
 		.name	= "end_fsync",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(end_fsync),
 		.help	= "Include fsync at the end of job",
 		.def	= "0",
 	},
 	{
 		.name	= "unlink",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(unlink),
 		.help	= "Unlink created files after job has completed",
 		.def	= "1",
@@ -1326,6 +1326,8 @@ int parse_options(int argc, char *argv[])
 
 	f_out = stdout;
 	f_err = stderr;
+
+	options_init(options);
 
 	dupe_job_options();
 

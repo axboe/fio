@@ -12,6 +12,7 @@ enum fio_opt_type {
 	FIO_OPT_STR_STORE,
 	FIO_OPT_RANGE,
 	FIO_OPT_INT,
+	FIO_OPT_BOOL,
 	FIO_OPT_STR_SET,
 };
 
@@ -39,6 +40,7 @@ extern int parse_option(const char *, struct fio_option *, void *);
 extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, void *);
 extern int show_cmd_help(struct fio_option *, const char *);
 extern void fill_default_options(void *, struct fio_option *);
+extern void options_init(struct fio_option *);
 
 extern void strip_blank_front(char **);
 extern void strip_blank_end(char *);
