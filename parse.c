@@ -180,10 +180,14 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (ret)
 			break;
 
-		if (o->maxval && ull > o->maxval)
-			ull = o->maxval;
-		if (o->minval && ull < o->minval)
-			ull = o->minval;
+		if (o->maxval && ull > o->maxval) {
+			fprintf(stderr, "max value out of range: %lld (%d max)\n", ull, o->maxval);
+			return 1;
+		}
+		if (o->minval && ull < o->minval) {
+			fprintf(stderr, "min value out of range: %lld (%d min)\n", ull, o->minval);
+			return 1;
+		}
 
 		if (fn)
 			ret = fn(data, &ull);
@@ -252,10 +256,14 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (ret)
 			break;
 
-		if (o->maxval && il > (int) o->maxval)
-			il = o->maxval;
-		if (o->minval && il < o->minval)
-			il = o->minval;
+		if (o->maxval && il > (int) o->maxval) {
+			fprintf(stderr, "max value out of range: %d (%d max)\n", il, o->maxval);
+			return 1;
+		}
+		if (o->minval && il < o->minval) {
+			fprintf(stderr, "min value out of range: %d (%d min)\n", il, o->minval);
+			return 1;
+		}
 
 		if (fn)
 			ret = fn(data, &il);
