@@ -366,6 +366,38 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 	return 1;
 }
 
+static void show_option_range(struct fio_option *o)
+{
+	if (!o->minval && !o->maxval)
+		return;
+
+	printf("%16s: min=%d, max=%d\n", "range", o->minval, o->maxval);
+}
+
+static void show_option_values(struct fio_option *o)
+{
+	const char *msg;
+	int i = 0;
+
+	if (!o->posval)
+		return;
+
+	do {
+		msg = o->posval[i];
+		if (!msg)
+			break;
+
+		if (!i)
+			printf("%16s: ", "valid values");
+
+		printf("%s,", msg);
+		i++;
+	} while (1);
+
+	if (i)
+		printf("\n");
+}
+
 int show_cmd_help(struct fio_option *options, const char *name)
 {
 	int show_all = !strcmp(name, "all");
@@ -391,6 +423,8 @@ int show_cmd_help(struct fio_option *options, const char *name)
 			if (match) {
 				printf("%16s: %s\n", "type", typehelp[o->type]);
 				printf("%16s: %s\n", "default", o->def ? o->def : "no default");
+				show_option_range(o);
+				show_option_values(o);
 			}
 		}
 

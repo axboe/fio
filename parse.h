@@ -30,6 +30,7 @@ struct fio_option {
 	void *cb;			/* callback */
 	const char *help;		/* help text for option */
 	const char *def;		/* default setting */
+	const char *posval[16];		/* possible values */
 };
 
 typedef int (str_cb_fn)(void *, char *);
