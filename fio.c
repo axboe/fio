@@ -452,7 +452,7 @@ static void do_io(struct thread_data *td)
 			unsigned long long b;
 
 			b = td->io_blocks[0] + td->io_blocks[1];
-			if (!(td->thinktime_blocks % b))
+			if (!(b % td->thinktime_blocks))
 				usec_sleep(td, td->thinktime);
 		}
 	}
