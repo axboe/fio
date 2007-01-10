@@ -273,7 +273,7 @@ static struct fio_option options[] = {
 		.name	= "ratecycle",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratecycle),
-		.name	= "Window average for rate limits (msec)",
+		.help	= "Window average for rate limits (msec)",
 		.def	= "1000",
 	},
 	{

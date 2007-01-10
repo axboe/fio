@@ -30,7 +30,6 @@ struct fio_option {
 	void *cb;			/* callback */
 	const char *help;		/* help text for option */
 	const char *def;		/* default setting */
-	char opt_set;			/* option was set */
 };
 
 typedef int (str_cb_fn)(void *, char *);
