@@ -298,11 +298,11 @@ static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 	if (n <= 1.0)
 		return 1;
 
-	o = (double) is->val_sq - ((*mean * *mean) / n);
+	o = ((double) is->val_sq - (*mean * is->val)) / n;
 	if (o < 0.0)
 		*dev = -1.0;
 	else
-		*dev = sqrt(o / (n - 1.0));
+		*dev = sqrt(o);
 
 	return 1;
 }
