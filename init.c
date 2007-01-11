@@ -321,7 +321,7 @@ static struct fio_option options[] = {
 		.name	= "thinktime",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(thinktime),
-		.help	= "Idle time between IO buffers",
+		.help	= "Idle time between IO buffers (usec)",
 		.def	= "0",
 	},
 	{
