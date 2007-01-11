@@ -503,7 +503,7 @@ cpuchunks=int	If the job is a CPU cycle eater, split the load into
 fio spits out a lot of output. While running, fio will display the
 status of the jobs created. An example of that would be:
 
-Threads running: 1: [_r] [24.79% done] [ 13509/  8334 kb/s] [eta 00h:01m:31s]
+Threads: 1: [_r] [24.8% done] [ 13509/  8334 kb/s] [eta 00h:01m:31s]
 
 The characters inside the square brackets denote the current status of
 each thread. The possible values (in typical life cycle order) are:
