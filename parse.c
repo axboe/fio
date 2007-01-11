@@ -127,15 +127,13 @@ static int check_int(const char *p, int *val)
 static struct fio_option *find_option(struct fio_option *options,
 				      const char *opt)
 {
-	struct fio_option *o = &options[0];
+	struct fio_option *o;
 
-	while (o->name) {
+	for (o = &options[0]; o->name; o++) {
 		if (!strcmp(o->name, opt))
 			return o;
 		else if (o->alias && !strcmp(o->alias, opt))
 			return o;
-
-		o++;
 	}
 
 	return NULL;
@@ -415,7 +413,6 @@ static void show_option_values(struct fio_option *o)
 int show_cmd_help(struct fio_option *options, const char *name)
 {
 	int show_all = !strcmp(name, "all");
-	struct fio_option *o = &options[0];
 	const char *typehelp[] = {
 		"string (opt=bla)",
 		"string with possible k/m/g postfix (opt=4k)",
@@ -427,23 +424,23 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		"boolean value (opt=1)",
 		"no argument (opt)",
 	};
+	struct fio_option *o;
 	int found = 0;
 
-	while (o->name) {
+	for (o = &options[0]; o->name; o++) {
 		int match = !strcmp(name, o->name);
 
 		if (show_all || match) {
 			found = 1;
 			printf("%16s: %s\n", o->name, o->help);
-			if (match) {
-				printf("%16s: %s\n", "type", typehelp[o->type]);
-				printf("%16s: %s\n", "default", o->def ? o->def : "no default");
-				show_option_range(o);
-				show_option_values(o);
-			}
+			if (show_all)
+				continue;
 		}
 
-		o++;
+		printf("%16s: %s\n", "type", typehelp[o->type]);
+		printf("%16s: %s\n", "default", o->def ? o->def : "no default");
+		show_option_range(o);
+		show_option_values(o);
 	}
 
 	if (found)
@@ -458,13 +455,11 @@ int show_cmd_help(struct fio_option *options, const char *name)
  */
 void fill_default_options(void *data, struct fio_option *options)
 {
-	struct fio_option *o = &options[0];
+	struct fio_option *o;
 
-	while (o->name) {
+	for (o = &options[0]; o->name; o++)
 		if (o->def)
 			handle_option(o, o->def, data);
-		o++;
-	}
 }
 
 /*
@@ -473,13 +468,12 @@ void fill_default_options(void *data, struct fio_option *options)
  */
 void options_init(struct fio_option *options)
 {
-	struct fio_option *o = &options[0];
+	struct fio_option *o;
 
-	while (o->name) {
+	for (o = &options[0]; o->name; o++) {
 		if (o->type == FIO_OPT_BOOL) {
 			o->minval = 0;
 			o->maxval = 1;
 		}
-		o++;
 	}
 }
