@@ -347,7 +347,7 @@ startdelay=int	Start this job the specified number of seconds after fio
 		jobs, and you want to delay starting some jobs to a certain
 		time.
 
-timeout=int	Tell fio to terminate processing after the specified number
+runtime=int	Tell fio to terminate processing after the specified number
 		of seconds. It can be quite hard to determine for how long
 		a specified job will run, so this parameter is handy to
 		cap the total runtime to a given time.

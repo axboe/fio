@@ -54,7 +54,7 @@ Command line
 
 $ fio
         --output        Write output to file
-        --timeout       Runtime in seconds
+        --runtime       Runtime in seconds
         --latency-log   Generate per-job latency logs
         --bandwidth-log Generate per-job bandwidth logs
         --minimal       Minimal (terse) output
@@ -124,7 +124,7 @@ The job file parameters are:
 			'x' blocks have been written.
 	end_fsync=x	If 'x', run fsync() after end-of-job.
 	startdelay=x	Start this thread x seconds after startup
-	timeout=x	Terminate x seconds after startup. Can include a
+	runtime=x	Terminate x seconds after startup. Can include a
 			normal time suffix if not given in seconds, such as
 			'm' for minutes, 'h' for hours, and 'd' for days.
 	offset=x	Start io at offset x (x string can include k/m/g)

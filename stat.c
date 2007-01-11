@@ -275,7 +275,6 @@ void update_rusage_stat(struct thread_data *td)
 	td->usr_time += mtime_since(&td->ru_start.ru_utime, &td->ru_end.ru_utime);
 	td->sys_time += mtime_since(&td->ru_start.ru_stime, &td->ru_end.ru_stime);
 	td->ctx += td->ru_end.ru_nvcsw + td->ru_end.ru_nivcsw - (td->ru_start.ru_nvcsw + td->ru_start.ru_nivcsw);
-
 	
 	memcpy(&td->ru_start, &td->ru_end, sizeof(td->ru_end));
 }

@@ -132,6 +132,8 @@ static struct fio_option *find_option(struct fio_option *options,
 	while (o->name) {
 		if (!strcmp(o->name, opt))
 			return o;
+		else if (o->alias && !strcmp(o->alias, opt))
+			return o;
 
 		o++;
 	}

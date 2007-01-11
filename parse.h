@@ -21,6 +21,7 @@ enum fio_opt_type {
  */
 struct fio_option {
 	const char *name;		/* option name */
+	const char *alias;		/* possible old allowed name */
 	enum fio_opt_type type;		/* option type */
 	unsigned int off1;		/* potential parameters */
 	unsigned int off2;
