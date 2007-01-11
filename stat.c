@@ -357,16 +357,16 @@ static void show_ddir_status(struct thread_data *td, struct group_run_stats *rs,
 	fprintf(f_out, "  %s: io=%6lluMiB, bw=%6lluKiB/s, runt=%6lumsec\n", ddir_str[ddir], td->io_bytes[ddir] >> 20, bw, td->runtime[ddir]);
 
 	if (calc_lat(&td->slat_stat[ddir], &min, &max, &mean, &dev))
-		fprintf(f_out, "    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, dev=%5.02f\n", min, max, mean, dev);
+		fprintf(f_out, "    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
 
 	if (calc_lat(&td->clat_stat[ddir], &min, &max, &mean, &dev))
-		fprintf(f_out, "    clat (msec): min=%5lu, max=%5lu, avg=%5.02f, dev=%5.02f\n", min, max, mean, dev);
+		fprintf(f_out, "    clat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
 
 	if (calc_lat(&td->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
 
 		p_of_agg = mean * 100 / (double) rs->agg[ddir];
-		fprintf(f_out, "    bw (KiB/s) : min=%5lu, max=%5lu, per=%3.2f%%, avg=%5.02f, dev=%5.02f\n", min, max, p_of_agg, mean, dev);
+		fprintf(f_out, "    bw (KiB/s) : min=%5lu, max=%5lu, per=%3.2f%%, avg=%5.02f, stdev=%5.02f\n", min, max, p_of_agg, mean, dev);
 	}
 }
 

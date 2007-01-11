@@ -532,9 +532,9 @@ direction, the output looks like:
 
 Client1 (g=0): err= 0:
   write: io=    32MiB, bw=   666KiB/s, runt= 50320msec
-    slat (msec): min=    0, max=  136, avg= 0.03, dev= 1.92
-    clat (msec): min=    0, max=  631, avg=48.50, dev=86.82
-    bw (KiB/s) : min=    0, max= 1196, per=51.00%, avg=664.02, dev=681.68
+    slat (msec): min=    0, max=  136, avg= 0.03, stdev= 1.92
+    clat (msec): min=    0, max=  631, avg=48.50, stdev=86.82
+    bw (KiB/s) : min=    0, max= 1196, per=51.00%, avg=664.02, stdev=681.68
   cpu        : usr=1.49%, sys=0.25%, ctx=7969
 
 The client number is printed, along with the group id and error of that
