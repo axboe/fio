@@ -179,7 +179,10 @@ siint	SI integer. A whole number value, which may contain a postfix
 bool	Boolean. Usually parsed as an integer, however only defined for
 	true and false (1 and 0).
 irange	Integer range with postfix. Allows value range to be given, such
-	as 1024-4096. Also see siint.
+	as 1024-4096. A colon may also be used as the seperator, eg
+	1k:4k. If the option allows two sets of ranges, they can be
+	specified with a ',' or '/' delimiter: 1k-4k/8k-32k. Also see
+	siint.
 
 With the above in mind, here follows the complete list of fio job
 parameters.
