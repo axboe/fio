@@ -836,10 +836,10 @@ static void run_threads(void)
 	for_each_td(td, i) {
 		print_status_init(td->thread_number - 1);
 
-		init_disk_util(td);
-
-		if (!td->create_serialize)
+		if (!td->create_serialize) {
+			init_disk_util(td);
 			continue;
+		}
 
 		/*
 		 * do file setup here so it happens sequentially,
@@ -850,6 +850,8 @@ static void run_threads(void)
 			td_set_runstate(td, TD_REAPED);
 			todo--;
 		}
+
+		init_disk_util(td);
 	}
 
 	while (todo) {
