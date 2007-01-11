@@ -673,7 +673,6 @@ static void *thread_main(void *data)
 	if (td->exec_prerun)
 		system(td->exec_prerun);
 
-	init_disk_util(td);
 	fio_gettime(&td->epoch, NULL);
 	getrusage(RUSAGE_SELF, &td->ru_start);
 
@@ -836,6 +835,8 @@ static void run_threads(void)
 
 	for_each_td(td, i) {
 		print_status_init(td->thread_number - 1);
+
+		init_disk_util(td);
 
 		if (!td->create_serialize)
 			continue;
