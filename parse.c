@@ -267,6 +267,9 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			return 1;
 		}
 
+		if (o->neg)
+			il = !il;
+
 		if (fn)
 			ret = fn(data, &il);
 		else {

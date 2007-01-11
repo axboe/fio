@@ -29,6 +29,7 @@ struct fio_option {
 	unsigned int off4;
 	unsigned int maxval;		/* max and min value */
 	int minval;
+	int neg;			/* negate value stored */
 	void *cb;			/* callback */
 	const char *help;		/* help text for option */
 	const char *def;		/* default setting */

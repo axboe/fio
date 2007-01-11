@@ -277,7 +277,10 @@ iodepth=int	This defines how many io units to keep in flight against
 		concurrency.
 
 direct=bool	If value is true, use non-buffered io. This is usually
-		O_DIRECT. Defaults to true.
+		O_DIRECT.
+
+buffered=bool	If value is true, use buffered io. This is the opposite
+		of the 'direct' option. Defaults to true.
 
 offset=siint	Start io at the given offset in the file. The data before
 		the given offset will not be touched. This effectively

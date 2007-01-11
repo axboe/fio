@@ -151,7 +151,15 @@ static struct fio_option options[] = {
 		.name	= "direct",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(odirect),
-		.help	= "Use O_DIRECT IO",
+		.help	= "Use O_DIRECT IO (negates buffered)",
+		.def	= "0",
+	},
+	{
+		.name	= "buffered",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(odirect),
+		.neg	= 1,
+		.help	= "Use buffered IO (negates direct)",
 		.def	= "1",
 	},
 	{
