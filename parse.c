@@ -437,6 +437,9 @@ int show_cmd_help(struct fio_option *options, const char *name)
 				continue;
 		}
 
+		if (!match)
+			continue;
+
 		printf("%16s: %s\n", "type", typehelp[o->type]);
 		printf("%16s: %s\n", "default", o->def ? o->def : "no default");
 		show_option_range(o);
