@@ -464,7 +464,7 @@ void fill_default_options(void *data, struct fio_option *options)
 
 /*
  * Sanitize the options structure. For now it just sets min/max for bool
- * values.
+ * values and whether both callback and offsets are given.
  */
 void options_init(struct fio_option *options)
 {
@@ -475,5 +475,7 @@ void options_init(struct fio_option *options)
 			o->minval = 0;
 			o->maxval = 1;
 		}
+		if (o->cb && (o->off1 || o->off2 || o->off3 || o->off4))
+			fprintf(stderr, "Option %s: both cb and offset given\n", o->name);
 	}
 }
