@@ -756,7 +756,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 				c3 = to_kmg(td->min_bs[DDIR_WRITE]);
 				c4 = to_kmg(td->max_bs[DDIR_WRITE]);
 
-				fprintf(f_out, "%s: (g=%d): rw=%s, odir=%u, bs=%s-%s/%s-%s, rate=%u, ioengine=%s, iodepth=%u\n", td->name, td->groupid, ddir_str[ddir], td->odirect, c1, c2, c3, c4, td->rate, td->io_ops->name, td->iodepth);
+				fprintf(f_out, "%s: (g=%d): rw=%s, bs=%s-%s/%s-%s, ioengine=%s, iodepth=%u\n", td->name, td->groupid, ddir_str[ddir], c1, c2, c3, c4, td->io_ops->name, td->iodepth);
 
 				free(c1);
 				free(c2);
