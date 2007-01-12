@@ -47,11 +47,17 @@ int shm_id = 0;
 int temp_stall_ts;
 
 static volatile int startup_sem;
+static volatile int fio_abort;
 
 #define TERMINATE_ALL		(-1)
 #define JOB_START_TIMEOUT	(5 * 1000)
 
-static void terminate_threads(int group_id)
+static inline void td_set_runstate(struct thread_data *td, int runstate)
+{
+	td->runstate = runstate;
+}
+
+static void terminate_threads(int group_id, int forced_kill)
 {
 	struct thread_data *td;
 	int i;
@@ -60,6 +66,8 @@ static void terminate_threads(int group_id)
 		if (group_id == TERMINATE_ALL || groupid == td->groupid) {
 			td->terminate = 1;
 			td->start_delay = 0;
+			if (forced_kill)
+				td_set_runstate(td, TD_EXITED);
 		}
 	}
 }
@@ -72,10 +80,15 @@ static void sig_handler(int sig)
 			disk_util_timer_arm();
 			print_thread_status();
 			break;
+		case SIGSEGV:
+			fprintf(stderr, "fio: got segfault, aborting\n");
+			terminate_threads(TERMINATE_ALL, 1);
+			fio_abort = 1;
+			exit(0);
 		default:
-			printf("\nfio: terminating on signal\n");
+			printf("\nfio: terminating on signal %d\n", sig);
 			fflush(stdout);
-			terminate_threads(TERMINATE_ALL);
+			terminate_threads(TERMINATE_ALL, 0);
 			break;
 	}
 }
@@ -123,11 +136,6 @@ static inline int runtime_exceeded(struct thread_data *td, struct timeval *t)
 		return 1;
 
 	return 0;
-}
-
-static inline void td_set_runstate(struct thread_data *td, int runstate)
-{
-	td->runstate = runstate;
 }
 
 static struct fio_file *get_next_file(struct thread_data *td)
@@ -440,7 +448,7 @@ static void do_io(struct thread_data *td)
 
 		if (check_min_rate(td, &icd.time)) {
 			if (exitall_on_terminate)
-				terminate_threads(td->groupid);
+				terminate_threads(td->groupid, 0);
 			td_verror(td, ENOMEM);
 			break;
 		}
@@ -730,7 +738,7 @@ static void *thread_main(void *data)
 		system(td->exec_postrun);
 
 	if (exitall_on_terminate)
-		terminate_threads(td->groupid);
+		terminate_threads(td->groupid, 0);
 
 err:
 	close_files(td);
@@ -805,7 +813,7 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 	}
 
 	if (*nr_running == cputhreads && !pending)
-		terminate_threads(TERMINATE_ALL);
+		terminate_threads(TERMINATE_ALL, 0);
 }
 
 /*
@@ -827,6 +835,7 @@ static void run_threads(void)
 
 	signal(SIGINT, sig_handler);
 	signal(SIGALRM, sig_handler);
+	signal(SIGSEGV, sig_handler);
 
 	todo = thread_number;
 	nr_running = 0;
@@ -915,7 +924,7 @@ static void run_threads(void)
 		 */
 		fio_gettime(&this_start, NULL);
 		left = this_jobs;
-		while (left) {
+		while (left && !fio_abort) {
 			if (mtime_since_now(&this_start) > JOB_START_TIMEOUT)
 				break;
 
@@ -992,7 +1001,9 @@ int main(int argc, char *argv[])
 	disk_util_timer_arm();
 
 	run_threads();
-	show_run_stats();
+
+	if (!fio_abort)
+		show_run_stats();
 
 	return 0;
 }
