@@ -113,26 +113,18 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 
 	gtod_log_caller(caller);
 #endif
-repeat:
-	if (!clock_gettime_works)
+	if (!clock_gettime_works) {
+gtod:
 		gettimeofday(tp, NULL);
-	else {
+	} else {
 		struct timespec ts;
 
 		if (clock_gettime(CLOCK_MONOTONIC, &ts) < 0) {
 			clock_gettime_works = 0;
-			goto repeat;
+			goto gtod;
 		}
 
 		tp->tv_sec = ts.tv_sec;
 		tp->tv_usec = ts.tv_nsec / 1000;
 	}
-}
-
-static void fio_init check_clock(void)
-{
-	struct timespec ts;
-
-	if (clock_getres(CLOCK_MONOTONIC, &ts) < 0)
-		clock_gettime_works = 0;
 }
