@@ -4,6 +4,7 @@
 #include "fio.h"
 
 static struct timeval genesis;
+static unsigned long ns_granularity;
 
 unsigned long utime_since(struct timeval *s, struct timeval *e)
 {
@@ -74,28 +75,36 @@ void __usec_sleep(unsigned int usec)
 
 void usec_sleep(struct thread_data *td, unsigned long usec)
 {
-	struct timespec req, rem;
-
-	req.tv_sec = usec / 1000000;
-	req.tv_nsec = usec * 1000 - req.tv_sec * 1000000;
+	struct timespec req;
+	struct timeval tv;
 
 	do {
-		if (usec < 5000) {
+		unsigned long ts = usec;
+
+		if (usec < ns_granularity) {
 			__usec_sleep(usec);
 			break;
 		}
 
-		rem.tv_sec = rem.tv_nsec = 0;
-		if (nanosleep(&req, &rem) < 0)
+		ts = usec - ns_granularity;
+
+		if (ts >= 1000000) {
+			req.tv_sec = ts / 1000000;
+			ts -= 1000000 * req.tv_sec;
+		} else
+			req.tv_sec = 0;
+
+		req.tv_nsec = ts * 1000;
+		fio_gettime(&tv, NULL);
+
+		if (nanosleep(&req, NULL) < 0)
 			break;
 
-		if ((rem.tv_sec + rem.tv_nsec) == 0)
+		ts = utime_since_now(&tv);
+		if (ts >= usec)
 			break;
 
-		req.tv_nsec = rem.tv_nsec;
-		req.tv_sec = rem.tv_sec;
-
-		usec = rem.tv_sec * 1000000 + rem.tv_nsec / 1000;
+		usec -= ts;
 	} while (!td->terminate);
 }
 
@@ -131,7 +140,28 @@ unsigned long mtime_since_genesis(void)
 
 static void fio_init time_init(void)
 {
+	int i;
+
 	fio_gettime(&genesis, NULL);
+
+	/*
+	 * Check the granularity of the nanosleep function
+	 */
+	for (i = 0; i < 10; i++) {
+		struct timeval tv;
+		struct timespec ts;
+		unsigned long elapsed;
+
+		fio_gettime(&tv, NULL);
+		ts.tv_sec = 0;
+		ts.tv_nsec = 1000;
+
+		nanosleep(&ts, NULL);
+		elapsed = utime_since_now(&tv);
+
+		if (elapsed > ns_granularity)
+			ns_granularity = elapsed;
+	}
 }
 
 void fill_start_time(struct timeval *t)

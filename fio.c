@@ -449,7 +449,7 @@ static void do_io(struct thread_data *td)
 		if (check_min_rate(td, &icd.time)) {
 			if (exitall_on_terminate)
 				terminate_threads(td->groupid, 0);
-			td_verror(td, ENOMEM);
+			td_verror(td, ENODATA);
 			break;
 		}
 
