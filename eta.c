@@ -247,7 +247,7 @@ void print_thread_status(void)
 
 	printf("Threads: %d", nr_running);
 	if (m_rate || t_rate)
-		printf(", commitrate %d/%dKiB/sec", t_rate, m_rate);
+		printf(", CR=%d/%d KiB/s", t_rate, m_rate);
 	if (eta_sec != INT_MAX && nr_running) {
 		perc *= 100.0;
 		printf(": [%s] [%3.1f%% done] [%6u/%6u kb/s] [eta %s]", run_str, perc, r_rate, w_rate, eta_str);
