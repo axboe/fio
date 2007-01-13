@@ -227,6 +227,31 @@ static int fill_io_u(struct thread_data *td, struct fio_file *f,
 	return 1;
 }
 
+static void io_u_mark_depth(struct thread_data *td)
+{
+	int index = 0;
+
+	switch (td->cur_depth) {
+	default:
+		index++;
+	case 32 ... 63:
+		index++;
+	case 16 ... 31:
+		index++;
+	case 8 ... 15:
+		index++;
+	case 4 ... 7:
+		index++;
+	case 2 ... 3:
+		index++;
+	case 1:
+		break;
+	}
+
+	td->io_u_map[index]++;
+	td->total_io_u++;
+}
+
 struct io_u *__get_io_u(struct thread_data *td)
 {
 	struct io_u *io_u = NULL;
@@ -240,6 +265,7 @@ struct io_u *__get_io_u(struct thread_data *td)
 		list_del(&io_u->list);
 		list_add(&io_u->list, &td->io_u_busylist);
 		td->cur_depth++;
+		io_u_mark_depth(td);
 	}
 
 	return io_u;

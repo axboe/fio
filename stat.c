@@ -375,6 +375,8 @@ static void show_thread_status(struct thread_data *td,
 {
 	double usr_cpu, sys_cpu;
 	unsigned long runtime;
+	double io_u_dist[FIO_IO_U_MAP_NR];
+	int i;
 
 	if (!(td->io_bytes[0] + td->io_bytes[1]) && !td->error)
 		return;
@@ -397,6 +399,16 @@ static void show_thread_status(struct thread_data *td,
 	}
 
 	fprintf(f_out, "  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, td->ctx);
+
+	/*
+	 * Do depth distribution calculations
+	 */
+	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
+		io_u_dist[i] = (double) td->io_u_map[i] / (double) td->total_io_u;
+		io_u_dist[i] *= 100.0;
+	}
+
+	fprintf(f_out, "  IO depths    : 1=%3.1f%%, 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%, 16=%3.1f%%, 32=%3.1f%%, >32=%3.1f%%\n", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
 }
 
 static void show_ddir_status_terse(struct thread_data *td,
