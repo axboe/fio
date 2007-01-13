@@ -417,7 +417,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(unlink),
 		.help	= "Unlink created files after job has completed",
-		.def	= "1",
+		.def	= "0",
 	},
 	{
 		.name	= "exitall",
