@@ -103,9 +103,18 @@ static int create_files(struct thread_data *td)
 		return 0;
 
 	need_create = 0;
-	if (td->filetype == FIO_TYPE_FILE)
-		for_each_file(td, f, i)
-			need_create += file_ok(td, f);
+	if (td->filetype == FIO_TYPE_FILE) {
+		for_each_file(td, f, i) {
+			int file_there = !file_ok(td, f);
+
+			if (file_there && td->ddir == WRITE && !td->overwrite) {
+				unlink(f->file_name);
+				file_there = 0;
+			}
+
+			need_create += !file_there;
+		}
+	}
 
 	if (!need_create)
 		return 0;
