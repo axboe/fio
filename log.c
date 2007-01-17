@@ -218,14 +218,12 @@ void setup_log(struct io_log **log)
 	*log = l;
 }
 
-void finish_log(struct thread_data *td, struct io_log *log, const char *name)
+void __finish_log(struct io_log *log, const char *name)
 {
-	char file_name[256];
-	FILE *f;
 	unsigned int i;
+	FILE *f;
 
-	snprintf(file_name, 200, "client%d_%s.log", td->thread_number, name);
-	f = fopen(file_name, "w");
+	f = fopen(name, "w");
 	if (!f) {
 		perror("fopen log");
 		return;
@@ -237,4 +235,12 @@ void finish_log(struct thread_data *td, struct io_log *log, const char *name)
 	fclose(f);
 	free(log->log);
 	free(log);
+}
+
+void finish_log(struct thread_data *td, struct io_log *log, const char *name)
+{
+	char file_name[256];
+
+	snprintf(file_name, 200, "client%d_%s.log", td->thread_number, name);
+	__finish_log(log, file_name);
 }

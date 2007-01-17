@@ -381,7 +381,7 @@ static void show_thread_status(struct thread_data *td,
 	if (!(td->io_bytes[0] + td->io_bytes[1]) && !td->error)
 		return;
 
-	fprintf(f_out, "%s: (groupid=%d): err=%2d:\n",td->name, td->groupid, td->error);
+	fprintf(f_out, "%s: (groupid=%d): err=%2d: pid=%d\n",td->name, td->groupid, td->error, td->pid);
 
 	show_ddir_status(td, rs, td->ddir);
 	if (td->io_bytes[td->ddir ^ 1])
@@ -574,8 +574,8 @@ static inline void add_stat_sample(struct io_stat *is, unsigned long data)
 	is->samples++;
 }
 
-static void add_log_sample(struct thread_data *td, struct io_log *iolog,
-			   unsigned long val, enum fio_ddir ddir)
+static void __add_log_sample(struct io_log *iolog, unsigned long val,
+			     enum fio_ddir ddir, unsigned long time)
 {
 	if (iolog->nr_samples == iolog->max_samples) {
 		int new_size = sizeof(struct io_sample) * iolog->max_samples*2;
@@ -585,9 +585,22 @@ static void add_log_sample(struct thread_data *td, struct io_log *iolog,
 	}
 
 	iolog->log[iolog->nr_samples].val = val;
-	iolog->log[iolog->nr_samples].time = mtime_since_now(&td->epoch);
+	iolog->log[iolog->nr_samples].time = time;
 	iolog->log[iolog->nr_samples].ddir = ddir;
 	iolog->nr_samples++;
+}
+
+static void add_log_sample(struct thread_data *td, struct io_log *iolog,
+			   unsigned long val, enum fio_ddir ddir)
+{
+	__add_log_sample(iolog, val, ddir, mtime_since_now(&td->epoch));
+}
+
+void add_agg_sample(unsigned long val, enum fio_ddir ddir)
+{
+	struct io_log *iolog = agg_io_log[ddir];
+
+	__add_log_sample(iolog, val, ddir, mtime_since_genesis());
 }
 
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,

@@ -49,6 +49,8 @@ int temp_stall_ts;
 static volatile int startup_sem;
 static volatile int fio_abort;
 
+struct io_log *agg_io_log[2];
+
 #define TERMINATE_ALL		(-1)
 #define JOB_START_TIMEOUT	(5 * 1000)
 
@@ -998,12 +1000,22 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	if (write_bw_log) {
+		setup_log(&agg_io_log[DDIR_READ]);
+		setup_log(&agg_io_log[DDIR_WRITE]);
+	}
+
 	disk_util_timer_arm();
 
 	run_threads();
 
-	if (!fio_abort)
+	if (!fio_abort) {
 		show_run_stats();
+		if (write_bw_log) {
+			__finish_log(agg_io_log[DDIR_READ],"agg-read_bw.log");
+			__finish_log(agg_io_log[DDIR_WRITE],"agg-write_bw.log");
+		}
+	}
 
 	return 0;
 }

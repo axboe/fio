@@ -180,7 +180,7 @@ void print_thread_status(void)
 	static struct timeval prev_time;
 	static unsigned int r_rate, w_rate;
 	unsigned long long io_bytes[2];
-	unsigned long mtime;
+	unsigned long mtime, bw_avg_time;
 
 	if (temp_stall_ts || terse_output)
 		return;
@@ -193,7 +193,10 @@ void print_thread_status(void)
 
 	io_bytes[0] = io_bytes[1] = 0;
 	nr_pending = nr_running = t_rate = m_rate = 0;
+	bw_avg_time = ULONG_MAX;
 	for_each_td(td, i) {
+		if (td->bw_avg_time < bw_avg_time)
+			bw_avg_time = td->bw_avg_time;
 		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING||
 		    td->runstate == TD_FSYNCING) {
 			nr_running++;
@@ -235,10 +238,12 @@ void print_thread_status(void)
 	}
 
 	mtime = mtime_since_now(&prev_time);
-	if (mtime > 1000) {
+	if (mtime > bw_avg_time) {
 		r_rate = (io_bytes[0] - prev_io_bytes[0]) / mtime;
 		w_rate = (io_bytes[1] - prev_io_bytes[1]) / mtime;
 		fio_gettime(&prev_time, NULL);
+		add_agg_sample(r_rate, DDIR_READ);
+		add_agg_sample(w_rate, DDIR_WRITE);
 		memcpy(prev_io_bytes, io_bytes, sizeof(io_bytes));
 	}
 

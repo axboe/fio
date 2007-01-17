@@ -464,7 +464,11 @@ extern void update_io_ticks(void);
 extern void disk_util_timer_arm(void);
 extern void setup_log(struct io_log **);
 extern void finish_log(struct thread_data *, struct io_log *, const char *);
+extern void __finish_log(struct io_log *, const char *);
 extern int setup_rate(struct thread_data *);
+extern struct io_log *agg_io_log[2];
+extern int write_bw_log;
+extern void add_agg_sample(unsigned long, enum fio_ddir);
 
 /*
  * Time functions

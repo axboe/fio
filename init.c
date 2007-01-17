@@ -532,7 +532,7 @@ FILE *f_out = NULL;
 FILE *f_err = NULL;
 
 static int write_lat_log = 0;
-static int write_bw_log = 0;
+int write_bw_log = 0;
 
 /*
  * Return a free job structure.
