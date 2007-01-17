@@ -242,8 +242,10 @@ void print_thread_status(void)
 		r_rate = (io_bytes[0] - prev_io_bytes[0]) / mtime;
 		w_rate = (io_bytes[1] - prev_io_bytes[1]) / mtime;
 		fio_gettime(&prev_time, NULL);
-		add_agg_sample(r_rate, DDIR_READ);
-		add_agg_sample(w_rate, DDIR_WRITE);
+		if (write_bw_log) {
+			add_agg_sample(r_rate, DDIR_READ);
+			add_agg_sample(w_rate, DDIR_WRITE);
+		}
 		memcpy(prev_io_bytes, io_bytes, sizeof(io_bytes));
 	}
 
