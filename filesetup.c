@@ -107,7 +107,8 @@ static int create_files(struct thread_data *td)
 		for_each_file(td, f, i) {
 			int file_there = !file_ok(td, f);
 
-			if (file_there && td->ddir == WRITE && !td->overwrite) {
+			if (file_there && td->ddir == DDIR_WRITE &&
+			    !td->overwrite) {
 				unlink(f->file_name);
 				file_there = 0;
 			}
