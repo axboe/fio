@@ -311,6 +311,7 @@ err:
 	free(sd->events);
 	free(sd->cmds);
 	free(sd);
+	td->io_ops->data = NULL;
 	return 1;
 }
 
