@@ -647,9 +647,6 @@ static void *thread_main(void *data)
 		goto err;
 	}
 
-	if (td_io_init(td))
-		goto err;
-
 	if (init_iolog(td))
 		goto err;
 
@@ -678,6 +675,13 @@ static void *thread_main(void *data)
 	if (!td->create_serialize && setup_files(td))
 		goto err;
 	if (open_files(td))
+		goto err;
+
+	/*
+	 * Do this late, as some IO engines would like to have the
+	 * files setup prior to initializing structures.
+	 */
+	if (td_io_init(td))
 		goto err;
 
 	if (td->exec_prerun)
