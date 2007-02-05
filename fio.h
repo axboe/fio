@@ -176,6 +176,7 @@ struct fio_file {
  * This describes a single thread/process executing a fio job.
  */
 struct thread_data {
+	char *description;
 	char *name;
 	char *directory;
 	char *filename;

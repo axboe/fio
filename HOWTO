@@ -193,6 +193,10 @@ name=str	ASCII name of the job. This may be used to override the
 		special purpose of also signaling the start of a new
 		job.
 
+description=str	Text description of the job. Doesn't do anything except
+		dump this text description when this job is run. It's
+		not parsed.
+
 directory=str	Prefix filenames with this directory. Used to places files
 		in a different location than "./".
 

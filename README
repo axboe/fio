@@ -80,6 +80,7 @@ is in the ini style format, as it's easy to read and write for the user.
 The job file parameters are:
 
 	name=x		Use 'x' as the identifier for this job.
+	description=x	'x' is a text description of the job.
 	directory=x	Use 'x' as the top level directory for storing files
 	filename=x	Force the use of 'x' as the filename for all files
 			in this thread. If not given, fio will make up

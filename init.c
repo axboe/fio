@@ -42,6 +42,12 @@ static int str_cpumask_cb(void *, unsigned int *);
  */
 static struct fio_option options[] = {
 	{
+		.name	= "description",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(description),
+		.help	= "Text job description",
+	},
+	{
 		.name	= "name",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(name),
