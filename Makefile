@@ -7,14 +7,14 @@ SCRIPTS = fio_generate_plots
 OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o md5.o crc32.o \
 	filesetup.o eta.o verify.o memory.o io_u.o parse.o
 
-OBJS += engines/fio-engine-cpu.o
-OBJS += engines/fio-engine-libaio.o
-OBJS += engines/fio-engine-mmap.o
-OBJS += engines/fio-engine-posixaio.o
-OBJS += engines/fio-engine-sg.o
-OBJS += engines/fio-engine-splice.o
-OBJS += engines/fio-engine-sync.o
-OBJS += engines/fio-engine-null.o
+OBJS += engines/cpu.o
+OBJS += engines/libaio.o
+OBJS += engines/mmap.o
+OBJS += engines/posixaio.o
+OBJS += engines/sg.o
+OBJS += engines/splice.o
+OBJS += engines/sync.o
+OBJS += engines/null.o
 
 INSTALL = install
 prefix = /usr/local
