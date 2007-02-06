@@ -57,6 +57,12 @@ static int fio_skeleton_cancel(struct thread_data *td, struct io_u *io_u)
  * The ->queue() hook is responsible for initiating io on the io_u
  * being passed in. If the io engine is a synchronous one, io may complete
  * before ->queue() returns. Required.
+ *
+ * The io engine must transfer in the direction noted by io_u->ddir
+ * to the buffer pointed to by io_u->xfer_buf for as many bytes as
+ * io_u->xfer_buflen. Residual data count may be set in io_u->residual
+ * for a short read/write. Should return 0 for io_u complete, < 0 for
+ * an error, and > 0 for the number of bytes transferred.
  */
 static int fio_skeleton_queue(struct thread_data *td, struct io_u *io_u)
 {
