@@ -37,9 +37,9 @@
 #include "fio.h"
 #include "os.h"
 
-#define MASK	(4095)
-
-#define ALIGN(buf)	(char *) (((unsigned long) (buf) + MASK) & ~(MASK))
+static unsigned long page_mask;
+#define ALIGN(buf)	\
+	(char *) (((unsigned long) (buf) + page_mask) & ~page_mask)
 
 int groupid = 0;
 int thread_number = 0;
@@ -528,7 +528,7 @@ static int init_io_u(struct thread_data *td)
 	if (td->mem_type == MEM_SHMHUGE || td->mem_type == MEM_MMAPHUGE)
 		td->orig_buffer_size = (td->orig_buffer_size + td->hugepage_size - 1) & ~(td->hugepage_size - 1);
 	else
-		td->orig_buffer_size += MASK;
+		td->orig_buffer_size += page_mask;
 
 	if (allocate_io_mem(td))
 		return 1;
@@ -996,6 +996,8 @@ static void run_threads(void)
 
 int main(int argc, char *argv[])
 {
+	long ps;
+
 	if (parse_options(argc, argv))
 		return 1;
 
@@ -1003,6 +1005,14 @@ int main(int argc, char *argv[])
 		log_err("Nothing to do\n");
 		return 1;
 	}
+
+	ps = sysconf(_SC_PAGESIZE);
+	if (ps < 0) {
+		log_err("Failed to get page size\n");
+		return 1;
+	}
+
+	page_mask = ps - 1;
 
 	if (write_bw_log) {
 		setup_log(&agg_io_log[DDIR_READ]);
