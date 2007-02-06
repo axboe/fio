@@ -25,9 +25,9 @@ static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 	struct fio_file *f = io_u->file;
 
 	if (io_u->ddir == DDIR_READ)
-		io_prep_pread(&io_u->iocb, f->fd, io_u->buf, io_u->buflen, io_u->offset);
+		io_prep_pread(&io_u->iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 	else if (io_u->ddir == DDIR_WRITE)
-		io_prep_pwrite(&io_u->iocb, f->fd, io_u->buf, io_u->buflen, io_u->offset);
+		io_prep_pwrite(&io_u->iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 	else if (io_u->ddir == DDIR_SYNC)
 		io_prep_fsync(&io_u->iocb, f->fd);
 	else
@@ -87,7 +87,7 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 	} while (1);
 
 	if (ret <= 0) {
-		io_u->resid = io_u->buflen;
+		io_u->resid = io_u->xfer_buflen;
 		io_u->error = -ret;
 		return 1;
 	}

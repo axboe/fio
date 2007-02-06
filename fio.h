@@ -75,6 +75,9 @@ struct io_u {
 	unsigned int buflen;
 	unsigned long long offset;
 
+	void *xfer_buf;
+	unsigned int xfer_buflen;
+
 	unsigned int resid;
 	unsigned int error;
 

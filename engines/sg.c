@@ -40,8 +40,8 @@ static void sgio_hdr_init(struct sgio_data *sd, struct sg_io_hdr *hdr,
 	hdr->usr_ptr = io_u;
 
 	if (fs) {
-		hdr->dxferp = io_u->buf;
-		hdr->dxfer_len = io_u->buflen;
+		hdr->dxferp = io_u->xfer_buf;
+		hdr->dxfer_len = io_u->xfer_buflen;
 	}
 }
 
@@ -160,7 +160,7 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 	struct sgio_data *sd = td->io_ops->data;
 	int nr_blocks, lba;
 
-	if (io_u->buflen & (sd->bs - 1)) {
+	if (io_u->xfer_buflen & (sd->bs - 1)) {
 		log_err("read/write not sector aligned\n");
 		return EINVAL;
 	}
@@ -183,7 +183,7 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (hdr->dxfer_direction != SG_DXFER_NONE) {
-		nr_blocks = io_u->buflen / sd->bs;
+		nr_blocks = io_u->xfer_buflen / sd->bs;
 		lba = io_u->offset / sd->bs;
 		hdr->cmdp[2] = (unsigned char) ((lba >> 24) & 0xff);
 		hdr->cmdp[3] = (unsigned char) ((lba >> 16) & 0xff);

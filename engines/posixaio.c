@@ -67,8 +67,8 @@ static int fio_posixaio_prep(struct thread_data fio_unused *td,
 	struct fio_file *f = io_u->file;
 
 	aiocb->aio_fildes = f->fd;
-	aiocb->aio_buf = io_u->buf;
-	aiocb->aio_nbytes = io_u->buflen;
+	aiocb->aio_buf = io_u->xfer_buf;
+	aiocb->aio_nbytes = io_u->xfer_buflen;
 	aiocb->aio_offset = io_u->offset;
 
 	io_u->seen = 0;

@@ -406,11 +406,22 @@ static void do_io(struct thread_data *td)
 
 		memcpy(&s, &io_u->start_time, sizeof(s));
 
+requeue:
 		ret = td_io_queue(td, io_u);
 		if (ret) {
-			td_verror(td, io_u->error);
-			put_io_u(td, io_u);
-			break;
+			if (ret > 0 && (io_u->xfer_buflen != io_u->resid) &&
+			    io_u->resid) {
+				/*
+				 * short read/write. requeue.
+				 */
+				io_u->xfer_buflen = io_u->resid;
+				io_u->xfer_buf += ret;
+				goto requeue;
+			} else {
+				td_verror(td, io_u->error);
+				put_io_u(td, io_u);
+				break;
+			}
 		}
 
 		add_slat_sample(td, io_u->ddir, mtime_since(&io_u->start_time, &io_u->issue_time));

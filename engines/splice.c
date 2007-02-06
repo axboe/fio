@@ -57,8 +57,8 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 	void *p;
 
 	offset = io_u->offset;
-	buflen = io_u->buflen;
-	p = io_u->buf;
+	buflen = io_u->xfer_buflen;
+	p = io_u->xfer_buf;
 	while (buflen) {
 		int this_len = buflen;
 
@@ -85,7 +85,7 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 		}
 	}
 
-	return io_u->buflen;
+	return io_u->xfer_buflen;
 }
 
 /*
@@ -97,8 +97,8 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 	struct spliceio_data *sd = td->io_ops->data;
 	struct iovec iov[1] = {
 		{
-			.iov_base = io_u->buf,
-			.iov_len = io_u->buflen,
+			.iov_base = io_u->xfer_buf,
+			.iov_len = io_u->xfer_buflen,
 		}
 	};
 	struct pollfd pfd = { .fd = sd->pipe[1], .events = POLLOUT, };
@@ -126,13 +126,13 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 		}
 	}
 
-	return io_u->buflen;
+	return io_u->xfer_buflen;
 }
 
 static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct spliceio_data *sd = td->io_ops->data;
-	unsigned int ret;
+	int ret;
 
 	if (io_u->ddir == DDIR_READ)
 		ret = fio_splice_read(td, io_u);
@@ -141,10 +141,11 @@ static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 	else
 		ret = fsync(io_u->file->fd);
 
-	if (ret != io_u->buflen) {
+	if (ret != (int) io_u->xfer_buflen) {
 		if (ret > 0) {
-			io_u->resid = io_u->buflen - ret;
-			io_u->error = ENODATA;
+			io_u->resid = io_u->xfer_buflen - ret;
+			io_u->error = 0;
+			return ret;
 		} else
 			io_u->error = errno;
 	}

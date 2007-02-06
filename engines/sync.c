@@ -60,19 +60,20 @@ static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct syncio_data *sd = td->io_ops->data;
 	struct fio_file *f = io_u->file;
-	unsigned int ret;
+	int ret;
 
 	if (io_u->ddir == DDIR_READ)
-		ret = read(f->fd, io_u->buf, io_u->buflen);
+		ret = read(f->fd, io_u->xfer_buf, io_u->xfer_buflen);
 	else if (io_u->ddir == DDIR_WRITE)
-		ret = write(f->fd, io_u->buf, io_u->buflen);
+		ret = write(f->fd, io_u->xfer_buf, io_u->xfer_buflen);
 	else
 		ret = fsync(f->fd);
 
-	if (ret != io_u->buflen) {
+	if (ret != (int) io_u->xfer_buflen) {
 		if (ret > 0) {
-			io_u->resid = io_u->buflen - ret;
-			io_u->error = EIO;
+			io_u->resid = io_u->xfer_buflen - ret;
+			io_u->error = 0;
+			return ret;
 		} else
 			io_u->error = errno;
 	}
