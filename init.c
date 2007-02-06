@@ -81,7 +81,7 @@ static struct fio_option options[] = {
 		.help	= "IO engine to use",
 		.def	= "sync",
 		.posval	= { "sync", "libaio", "posixaio", "mmap", "splice",
-				"sg", "null", },
+				"sg", "null", "net", },
 	},
 	{
 		.name	= "iodepth",

@@ -10,6 +10,7 @@ OBJS += engines/mmap.o
 OBJS += engines/posixaio.o
 OBJS += engines/sync.o
 OBJS += engines/null.o
+OBJS += engines/net.o
 
 all: depend $(PROGS) $(SCRIPTS)
 

@@ -15,6 +15,7 @@ OBJS += engines/sg.o
 OBJS += engines/splice.o
 OBJS += engines/sync.o
 OBJS += engines/null.o
+OBJS += engines/net.o
 
 INSTALL = install
 prefix = /usr/local

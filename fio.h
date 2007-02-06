@@ -143,6 +143,7 @@ enum fio_ioengine_flags {
 	FIO_CPUIO	= 1 << 1,
 	FIO_MMAPIO	= 1 << 2,
 	FIO_RAWIO	= 1 << 3,
+	FIO_NETIO	= 1 << 4,
 };
 
 struct fio_file {

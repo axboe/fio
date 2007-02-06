@@ -205,7 +205,7 @@ void init_disk_util(struct thread_data *td)
 	dev_t dev;
 	char *p;
 
-	if (!td->do_disk_util)
+	if (!td->do_disk_util || (td->io_ops->flags & FIO_NETIO))
 		return;
 
 	/*

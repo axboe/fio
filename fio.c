@@ -841,7 +841,6 @@ static void run_threads(void)
 
 	signal(SIGINT, sig_handler);
 	signal(SIGALRM, sig_handler);
-	signal(SIGSEGV, sig_handler);
 
 	todo = thread_number;
 	nr_running = 0;
