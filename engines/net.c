@@ -103,6 +103,7 @@ static int fio_netio_setup_connect(struct thread_data *td, const char *host,
 {
 	struct sockaddr_in addr;
 	struct fio_file *f;
+	int i;
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
@@ -119,17 +120,17 @@ static int fio_netio_setup_connect(struct thread_data *td, const char *host,
 		memcpy(&addr.sin_addr, hent->h_addr, 4);
 	}
 
-	f = &td->files[0];
+	for_each_file(td, f, i) {
+		f->fd = socket(AF_INET, SOCK_STREAM, 0);
+		if (f->fd < 0) {
+			td_vmsg(td, errno, "socket");
+			return 1;
+		}
 
-	f->fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (f->fd < 0) {
-		td_vmsg(td, errno, "socket");
-		return 1;
-	}
-
-	if (connect(f->fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		td_vmsg(td, errno, "connect");
-		return 1;
+		if (connect(f->fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+			td_vmsg(td, errno, "connect");
+			return 1;
+		}
 	}
 
 	return 0;
@@ -140,7 +141,8 @@ static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 {
 	struct sockaddr_in addr;
 	socklen_t socklen;
-	int fd, opt;
+	struct fio_file *f;
+	int fd, opt, i;
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
@@ -168,11 +170,15 @@ static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 		return 1;
 	}
 
+	fprintf(f_out, "fio: waiting for %u connections\n", td->nr_files);
+
 	socklen = sizeof(addr);
-	td->files[0].fd = accept(fd, (struct sockaddr *) &addr, &socklen);
-	if (td->files[0].fd < 0) {
-		td_vmsg(td, errno, "accept");
-		return 1;
+	for_each_file(td, f, i) {
+		f->fd = accept(fd, (struct sockaddr *) &addr, &socklen);
+		if (f->fd < 0) {
+			td_vmsg(td, errno, "accept");
+			return 1;
+		}
 	}
 
 	return 0;
@@ -183,8 +189,9 @@ static int fio_netio_setup(struct thread_data *td)
 	char host[64], buf[128];
 	struct net_data *nd;
 	unsigned short port;
+	struct fio_file *f;
 	char *sep;
-	int ret;
+	int ret, i;
 
 	/*
 	 * work around for late init call
@@ -196,10 +203,6 @@ static int fio_netio_setup(struct thread_data *td)
 
 	if (td->iomix) {
 		log_err("fio: network connections must be read OR write\n");
-		return 1;
-	}
-	if (td->nr_files > 1) {
-		log_err("fio: only one file supported for network\n");
 		return 1;
 	}
 
@@ -224,13 +227,18 @@ static int fio_netio_setup(struct thread_data *td)
 		ret = fio_netio_setup_connect(td, host, port);
 	}
 
-	if (!ret) {
-		td->io_size = td->total_file_size;
-		td->total_io_size = td->io_size;
-		td->files[0].real_file_size = td->io_size;
+	if (ret)
+		return ret;
+
+	td->io_size = td->total_file_size;
+	td->total_io_size = td->io_size;
+
+	for_each_file(td, f, i) {
+		f->file_size = td->total_file_size / td->nr_files;
+		f->real_file_size = f->file_size;
 	}
 
-	return ret;
+	return 0;
 }
 
 static void fio_netio_cleanup(struct thread_data *td)
