@@ -65,6 +65,10 @@ static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 	if (io_u->offset == f->last_completed_pos)
 		return 0;
 
+	/*
+	 * If offset is different from last end position, it's a seek.
+	 * As network io is purely sequential, we don't allow seeks.
+	 */
 	td_verror(td, EINVAL);
 	return 1;
 }
@@ -95,14 +99,14 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 }
 
 static int fio_netio_setup_connect(struct thread_data *td, const char *host,
-				   const char *port)
+				   unsigned short port)
 {
 	struct sockaddr_in addr;
 	struct fio_file *f;
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(atoi(port));
+	addr.sin_port = htons(port);
 
 	if (inet_aton(host, &addr.sin_addr) != 1) {
 		struct hostent *hent = gethostbyname(host);
@@ -132,7 +136,7 @@ static int fio_netio_setup_connect(struct thread_data *td, const char *host,
 
 }
 
-static int fio_netio_setup_listen(struct thread_data *td, const char *port)
+static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 {
 	struct sockaddr_in addr;
 	socklen_t socklen;
@@ -153,7 +157,7 @@ static int fio_netio_setup_listen(struct thread_data *td, const char *port)
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	addr.sin_port = htons(atoi(port));
+	addr.sin_port = htons(port);
 
 	if (bind(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
 		td_vmsg(td, errno, "bind");
@@ -176,8 +180,9 @@ static int fio_netio_setup_listen(struct thread_data *td, const char *port)
 
 static int fio_netio_setup(struct thread_data *td)
 {
-	char host[64], port[64], buf[128];
+	char host[64], buf[128];
 	struct net_data *nd;
+	unsigned short port;
 	char *sep;
 	int ret;
 
@@ -209,7 +214,7 @@ static int fio_netio_setup(struct thread_data *td)
 	*sep = '\0';
 	sep++;
 	strcpy(host, buf);
-	strcpy(port, sep);
+	port = atoi(sep);
 
 	if (td->ddir == READ) {
 		nd->send_to_net = 0;
@@ -240,6 +245,10 @@ static int fio_netio_init(struct thread_data *td)
 {
 	struct net_data *nd;
 
+	/*
+	 * Hack to work-around the ->setup() function calling init on its
+	 * own, since it needs ->io_ops->data to be set up.
+	 */
 	if (td->io_ops->data)
 		return 0;
 
