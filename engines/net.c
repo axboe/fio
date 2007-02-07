@@ -48,18 +48,16 @@ static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 	struct net_data *nd = td->io_ops->data;
 	struct fio_file *f = io_u->file;
 
-	if (nd->send_to_net) {
-		if (io_u->ddir == DDIR_READ) {
-			td_verror(td, EINVAL);
-			return 1;
-		}
-	} else {
-		if (io_u->ddir == DDIR_WRITE) {
-			td_verror(td, EINVAL);
-			return 1;
-		}
+	/*
+	 * Make sure we don't see spurious reads to a receiver, and vice versa
+	 */
+	if ((nd->send_to_net && io_u->ddir == DDIR_READ) ||
+	    (!nd->send_to_net && io_u->ddir == DDIR_WRITE)) {
+		printf("boo!\n");
+		td_verror(td, EINVAL);
+		return 1;
 	}
-
+		
 	if (io_u->ddir == DDIR_SYNC)
 		return 0;
 	if (io_u->offset == f->last_completed_pos)
@@ -77,12 +75,23 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct net_data *nd = td->io_ops->data;
 	struct fio_file *f = io_u->file;
-	int ret = 0;
+	int ret;
 
-	if (io_u->ddir == DDIR_WRITE)
-		ret = write(f->fd, io_u->xfer_buf, io_u->xfer_buflen);
-	else if (io_u->ddir == DDIR_READ)
-		ret = read(f->fd, io_u->xfer_buf, io_u->xfer_buflen);
+	if (io_u->ddir == DDIR_WRITE) {
+		int flags = 0;
+
+		/*
+		 * if we are going to write more, set MSG_MORE
+		 */
+		if (td->this_io_bytes[DDIR_WRITE] + io_u->xfer_buflen <
+		    td->io_size)
+			flags = MSG_MORE;
+
+		ret = send(f->fd, io_u->xfer_buf, io_u->xfer_buflen, flags);
+	} else if (io_u->ddir == DDIR_READ)
+		ret = recv(f->fd, io_u->xfer_buf, io_u->xfer_buflen, MSG_WAITALL);
+	else
+		ret = 0;	/* must be a SYNC */
 
 	if (ret != (int) io_u->xfer_buflen) {
 		if (ret > 0) {
@@ -111,8 +120,9 @@ static int fio_netio_setup_connect(struct thread_data *td, const char *host,
 	addr.sin_port = htons(port);
 
 	if (inet_aton(host, &addr.sin_addr) != 1) {
-		struct hostent *hent = gethostbyname(host);
+		struct hostent *hent;
 
+		hent = gethostbyname(host);
 		if (!hent) {
 			td_vmsg(td, errno, "gethostbyname");
 			return 1;
@@ -193,6 +203,11 @@ static int fio_netio_setup(struct thread_data *td)
 	struct fio_file *f;
 	char *sep;
 	int ret, i;
+
+	if (!td->total_file_size) {
+		log_err("fio: need size= set\n");
+		return 1;
+	}
 
 	/*
 	 * work around for late init call
