@@ -23,7 +23,7 @@ prefix = /usr/local
 bindir = $(prefix)/bin
 libdir = $(prefix)/lib/fio
 
-all: depend $(PROGS) $(SCRIPTS)
+all: $(PROGS) $(SCRIPTS)
 
 fio: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) -lpthread -lm -ldl -laio -lrt
@@ -36,6 +36,8 @@ depend:
 
 cscope:
 	@cscope -b
+
+$(PROGS): | depend
 
 install: $(PROGS) $(SCRIPTS)
 	$(INSTALL) -m755 -d $(DESTDIR)$(bindir)
