@@ -70,7 +70,7 @@ static void check_str_update(struct thread_data *td)
 static void eta_to_str(char *str, int eta_sec)
 {
 	unsigned int d, h, m, s;
-	static int always_d, always_h;
+	int disp_hour = 0;
 
 	d = h = m = s = 0;
 
@@ -82,14 +82,13 @@ static void eta_to_str(char *str, int eta_sec)
 	eta_sec /= 24;
 	d = eta_sec;
 
-	if (d || always_d) {
-		always_d = 1;
+	if (d) {
+		disp_hour = 1;
 		str += sprintf(str, "%02ud:", d);
 	}
-	if (h || always_h) {
-		always_h = 1;
+
+	if (h || disp_hour)
 		str += sprintf(str, "%02uh:", h);
-	}
 
 	str += sprintf(str, "%02um:", m);
 	str += sprintf(str, "%02us", s);

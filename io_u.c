@@ -322,8 +322,12 @@ struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 		return NULL;
 	}
 
+	/*
+	 * Set io data pointers.
+	 */
 	io_u->xfer_buf = io_u->buf;
 	io_u->xfer_buflen = io_u->buflen;
+
 	fio_gettime(&io_u->start_time, NULL);
 	return io_u;
 }
@@ -381,5 +385,3 @@ void ios_completed(struct thread_data *td, struct io_completion_data *icd)
 		put_io_u(td, io_u);
 	}
 }
-
-
