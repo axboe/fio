@@ -690,8 +690,10 @@ static void *thread_main(void *data)
 	if (td_io_init(td))
 		goto err;
 
-	if (td->exec_prerun)
-		system(td->exec_prerun);
+	if (td->exec_prerun) {
+		if (system(td->exec_prerun) < 0)
+			goto err;
+	}
 
 	fio_gettime(&td->epoch, NULL);
 	getrusage(RUSAGE_SELF, &td->ru_start);
@@ -746,8 +748,10 @@ static void *thread_main(void *data)
 		finish_log(td, td->clat_log, "clat");
 	if (td->write_iolog_file)
 		write_iolog_close(td);
-	if (td->exec_postrun)
-		system(td->exec_postrun);
+	if (td->exec_postrun) {
+		if (system(td->exec_postrun) < 0)
+			log_err("fio: postrun %s failed\n", td->exec_postrun);
+	}
 
 	if (exitall_on_terminate)
 		terminate_threads(td->groupid, 0);
