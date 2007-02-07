@@ -124,7 +124,7 @@ static int fio_netio_setup_connect(struct thread_data *td, const char *host,
 
 		hent = gethostbyname(host);
 		if (!hent) {
-			td_vmsg(td, errno, "gethostbyname");
+			td_verror(td, errno);
 			return 1;
 		}
 
@@ -132,14 +132,14 @@ static int fio_netio_setup_connect(struct thread_data *td, const char *host,
 	}
 
 	for_each_file(td, f, i) {
-		f->fd = socket(AF_INET, SOCK_STREAM, 0);
+		f->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		if (f->fd < 0) {
-			td_vmsg(td, errno, "socket");
+			td_verror(td, errno);
 			return 1;
 		}
 
 		if (connect(f->fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-			td_vmsg(td, errno, "connect");
+			td_verror(td, errno);
 			return 1;
 		}
 	}
@@ -155,17 +155,23 @@ static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 	struct fio_file *f;
 	int fd, opt, i;
 
-	fd = socket(AF_INET, SOCK_STREAM, 0);
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (fd < 0) {
-		td_vmsg(td, errno, "socket");
+		td_verror(td, errno);
 		return 1;
 	}
 
 	opt = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-		td_vmsg(td, errno, "setsockopt");
+		td_verror(td, errno);
 		return 1;
 	}
+#ifdef SO_REUSEPORT
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+		td_verror(td, errno);
+		return 1;
+	}
+#endif
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
@@ -173,11 +179,11 @@ static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 	addr.sin_port = htons(port);
 
 	if (bind(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		td_vmsg(td, errno, "bind");
+		td_verror(td, errno);
 		return 1;
 	}
 	if (listen(fd, 1) < 0) {
-		td_vmsg(td, errno, "listen");
+		td_verror(td, errno);
 		return 1;
 	}
 
@@ -187,7 +193,7 @@ static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 	for_each_file(td, f, i) {
 		f->fd = accept(fd, (struct sockaddr *) &addr, &socklen);
 		if (f->fd < 0) {
-			td_vmsg(td, errno, "accept");
+			td_verror(td, errno);
 			return 1;
 		}
 	}
