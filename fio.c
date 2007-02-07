@@ -82,11 +82,6 @@ static void sig_handler(int sig)
 			disk_util_timer_arm();
 			print_thread_status();
 			break;
-		case SIGSEGV:
-			fprintf(stderr, "fio: got segfault, aborting\n");
-			terminate_threads(TERMINATE_ALL, 1);
-			fio_abort = 1;
-			exit(0);
 		default:
 			printf("\nfio: terminating on signal %d\n", sig);
 			fflush(stdout);
