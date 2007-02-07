@@ -1,7 +1,8 @@
 #CC	= /opt/intel/cce/9.1.045/bin/icc
 CC	= gcc -W
+DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -fstack-protector
 OPTFLAGS= -O2 -g
-CFLAGS	= -Wwrite-strings -Wall -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(OPTFLAGS)
+CFLAGS	= -Wwrite-strings -Wall -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(OPTFLAGS) $(DEBUGFLAGS)
 PROGS	= fio
 SCRIPTS = fio_generate_plots
 OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o md5.o crc32.o \
