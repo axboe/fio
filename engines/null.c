@@ -70,7 +70,7 @@ static struct ioengine_ops ioengine = {
 	.getevents	= fio_null_getevents,
 	.event		= fio_null_event,
 	.cleanup	= fio_null_cleanup,
-	.flags		= FIO_SYNCIO,
+	.flags		= FIO_SYNCIO | FIO_NULLIO,
 };
 
 static void fio_init fio_null_register(void)

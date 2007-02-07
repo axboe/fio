@@ -15,7 +15,7 @@ static int file_ok(struct thread_data *td, struct fio_file *f)
 {
 	struct stat st;
 
-	if (td->filetype != FIO_TYPE_FILE)
+	if (td->filetype != FIO_TYPE_FILE || (td->io_ops->flags & FIO_NULLIO))
 		return 0;
 
 	if (stat(f->file_name, &st) == -1)
@@ -332,29 +332,38 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 
 	if (td->io_ops->flags & FIO_NETIO)
 		return 0;
-	if (td->odirect)
-		flags |= OS_O_DIRECT;
-	if (td->sync_io)
-		flags |= O_SYNC;
 
-	if (td_write(td) || td_rw(td)) {
-		flags |= O_RDWR;
+	/*
+	 * we need a valid file descriptor, but don't create a real file.
+	 * lets just dup stdout, seems like a sensible approach.
+	 */
+	if (td->io_ops->flags & FIO_NULLIO)
+		f->fd = dup(STDOUT_FILENO);
+	else {
+		if (td->odirect)
+			flags |= OS_O_DIRECT;
+		if (td->sync_io)
+			flags |= O_SYNC;
 
-		if (td->filetype == FIO_TYPE_FILE) {
-			if (!td->overwrite)
-				flags |= O_TRUNC;
-
-			flags |= O_CREAT;
-		}
-
-		f->fd = open(f->file_name, flags, 0600);
-	} else {
-		if (td->filetype == FIO_TYPE_CHAR)
+		if (td_write(td) || td_rw(td)) {
 			flags |= O_RDWR;
-		else
-			flags |= O_RDONLY;
 
-		f->fd = open(f->file_name, flags);
+			if (td->filetype == FIO_TYPE_FILE) {
+				if (!td->overwrite)
+					flags |= O_TRUNC;
+
+				flags |= O_CREAT;
+			}
+
+			f->fd = open(f->file_name, flags, 0600);
+		} else {
+			if (td->filetype == FIO_TYPE_CHAR)
+				flags |= O_RDWR;
+			else
+				flags |= O_RDONLY;
+
+			f->fd = open(f->file_name, flags);
+		}
 	}
 
 	if (f->fd == -1) {
