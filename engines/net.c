@@ -1,6 +1,5 @@
 /*
- * Transfer data over the net. Pretty basic setup, will only support
- * 1 file per thread/job.
+ * Transfer data over the net.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,11 +74,9 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct net_data *nd = td->io_ops->data;
 	struct fio_file *f = io_u->file;
-	int ret;
+	int ret, flags = 0;
 
 	if (io_u->ddir == DDIR_WRITE) {
-		int flags = 0;
-
 		/*
 		 * if we are going to write more, set MSG_MORE
 		 */
@@ -88,9 +85,10 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 			flags = MSG_MORE;
 
 		ret = send(f->fd, io_u->xfer_buf, io_u->xfer_buflen, flags);
-	} else if (io_u->ddir == DDIR_READ)
-		ret = recv(f->fd, io_u->xfer_buf, io_u->xfer_buflen, MSG_WAITALL);
-	else
+	} else if (io_u->ddir == DDIR_READ) {
+		flags = MSG_WAITALL;
+		ret = recv(f->fd, io_u->xfer_buf, io_u->xfer_buflen, flags);
+	} else
 		ret = 0;	/* must be a SYNC */
 
 	if (ret != (int) io_u->xfer_buflen) {
