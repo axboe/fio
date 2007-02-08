@@ -60,44 +60,96 @@ static int fio_sgio_ioctl_getevents(struct thread_data *td, int fio_unused min,
 	return 1;
 }
 
+static int pollin_events(struct pollfd *pfds, int fds)
+{
+	int i;
+
+	for (i = 0; i < fds; i++)
+		if (pfds[i].revents & POLLIN)
+			return 1;
+
+	return 0;
+}
 
 static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 			      struct timespec fio_unused *t)
 {
+	/*
+	 * normally hard coding &td->files[0] is a bug that needs to be fixed,
+	 * but it's ok here as all files should point to the same device.
+	 */
 	struct fio_file *f = &td->files[0];
 	struct sgio_data *sd = td->io_ops->data;
-	struct pollfd pfd = { .fd = f->fd, .events = POLLIN };
-	void *buf = malloc(max * sizeof(struct sg_io_hdr));
-	int left = max, ret, events, i, r = 0, fl = 0;
+	int left = max, ret, events, i, r = 0, *fl;
+	struct pollfd *pfds;
+	void *buf;
 
 	/*
-	 * don't block for !events
+	 * Fill in the file descriptors
 	 */
-	if (!min) {
-		fl = fcntl(f->fd, F_GETFL);
-		fcntl(f->fd, F_SETFL, fl | O_NONBLOCK);
+	pfds = malloc(sizeof(struct pollfd) * td->nr_files);
+	fl = malloc(sizeof(int) * td->nr_files);
+
+	for_each_file(td, f, i) {
+		/*
+		 * don't block for min events == 0
+		 */
+		if (!min) {
+			fl[i] = fcntl(f->fd, F_GETFL);
+			fcntl(f->fd, F_SETFL, fl[i] | O_NONBLOCK);
+		}
+		pfds[i].fd = f->fd;
+		pfds[i].events = POLLIN;
 	}
 
+	buf = malloc(max * sizeof(struct sg_io_hdr));
 	while (left) {
+		void *p;
+
 		do {
 			if (!min)
 				break;
-			poll(&pfd, 1, -1);
-			if (pfd.revents & POLLIN)
+
+			ret = poll(pfds, td->nr_files, -1);
+			if (ret < 0) {
+				td_verror(td, errno);
+				if (!r)
+					r = -1;
+				break;
+			} else if (!ret)
+				continue;
+
+			if (pollin_events(pfds, td->nr_files))
 				break;
 		} while (1);
 
-		ret = read(f->fd, buf, left * sizeof(struct sg_io_hdr));
-		if (ret < 0) {
-			if (errno == EAGAIN)
-				break;
-			td_verror(td, errno);
-			r = -1;
-			break;
-		} else if (!ret)
+		if (r < 0)
 			break;
 
-		events = ret / sizeof(struct sg_io_hdr);
+re_read:
+		p = buf;
+		events = 0;
+		for_each_file(td, f, i) {
+			ret = read(f->fd, p, left * sizeof(struct sg_io_hdr));
+			if (ret < 0) {
+				if (errno == EAGAIN)
+					continue;
+				td_verror(td, errno);
+				r = -1;
+				break;
+			} else if (ret) {
+				p += ret;
+				events += ret / sizeof(struct sg_io_hdr);
+			}
+		}
+
+		if (r < 0)
+			break;
+		if (!events) {
+			usleep(1000);
+			goto re_read;
+		}
+
 		left -= events;
 		r += events;
 
@@ -108,10 +160,14 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 		}
 	}
 
-	if (!min)
-		fcntl(f->fd, F_SETFL, fl);
+	if (!min) {
+		for_each_file(td, f, i)
+			fcntl(f->fd, F_SETFL, fl[i]);
+	}
 
 	free(buf);
+	free(pfds);
+	free(fl);
 	return r;
 }
 
