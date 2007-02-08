@@ -22,6 +22,9 @@ struct sgio_cmd {
 struct sgio_data {
 	struct sgio_cmd *cmds;
 	struct io_u **events;
+	struct pollfd *pfds;
+	int *fd_flags;
+	void *sgbuf;
 	unsigned int bs;
 };
 
@@ -80,29 +83,24 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 	 */
 	struct fio_file *f = &td->files[0];
 	struct sgio_data *sd = td->io_ops->data;
-	int left = max, ret, events, i, r = 0, *fl;
-	struct pollfd *pfds;
-	void *buf;
+	int left = max, ret, events, i, r = 0;
+	void *buf = sd->sgbuf;
 
 	/*
 	 * Fill in the file descriptors
 	 */
-	pfds = malloc(sizeof(struct pollfd) * td->nr_files);
-	fl = malloc(sizeof(int) * td->nr_files);
-
 	for_each_file(td, f, i) {
 		/*
 		 * don't block for min events == 0
 		 */
 		if (!min) {
-			fl[i] = fcntl(f->fd, F_GETFL);
-			fcntl(f->fd, F_SETFL, fl[i] | O_NONBLOCK);
+			sd->fd_flags[i] = fcntl(f->fd, F_GETFL);
+			fcntl(f->fd, F_SETFL, sd->fd_flags[i] | O_NONBLOCK);
 		}
-		pfds[i].fd = f->fd;
-		pfds[i].events = POLLIN;
+		sd->pfds[i].fd = f->fd;
+		sd->pfds[i].events = POLLIN;
 	}
 
-	buf = malloc(max * sizeof(struct sg_io_hdr));
 	while (left) {
 		void *p;
 
@@ -110,7 +108,7 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 			if (!min)
 				break;
 
-			ret = poll(pfds, td->nr_files, -1);
+			ret = poll(sd->pfds, td->nr_files, -1);
 			if (ret < 0) {
 				td_verror(td, errno);
 				if (!r)
@@ -119,7 +117,7 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 			} else if (!ret)
 				continue;
 
-			if (pollin_events(pfds, td->nr_files))
+			if (pollin_events(sd->pfds, td->nr_files))
 				break;
 		} while (1);
 
@@ -162,12 +160,9 @@ re_read:
 
 	if (!min) {
 		for_each_file(td, f, i)
-			fcntl(f->fd, F_SETFL, fl[i]);
+			fcntl(f->fd, F_SETFL, sd->fd_flags[i]);
 	}
 
-	free(buf);
-	free(pfds);
-	free(fl);
 	return r;
 }
 
@@ -310,8 +305,16 @@ static int fio_sgio_get_bs(struct thread_data *td, unsigned int *bs)
 
 static void fio_sgio_cleanup(struct thread_data *td)
 {
-	if (td->io_ops->data) {
-		free(td->io_ops->data);
+	struct sgio_data *sd = td->io_ops->data;
+
+	if (sd) {
+		free(sd->events);
+		free(sd->cmds);
+		free(sd->fd_flags);
+		free(sd->pfds);
+		free(sd->sgbuf);
+		free(sd);
+
 		td->io_ops->data = NULL;
 	}
 }
@@ -329,6 +332,13 @@ static int fio_sgio_init(struct thread_data *td)
 	memset(sd->cmds, 0, td->iodepth * sizeof(struct sgio_cmd));
 	sd->events = malloc(td->iodepth * sizeof(struct io_u *));
 	memset(sd->events, 0, td->iodepth * sizeof(struct io_u *));
+	sd->pfds = malloc(sizeof(struct pollfd) * td->nr_files);
+	memset(sd->pfds, 0, sizeof(struct pollfd) * td->nr_files);
+	sd->fd_flags = malloc(sizeof(int) * td->nr_files);
+	memset(sd->fd_flags, 0, sizeof(int) * td->nr_files);
+	sd->sgbuf = malloc(sizeof(struct sg_io_hdr) * td->iodepth);
+	memset(sd->sgbuf, 0, sizeof(struct sg_io_hdr) * td->iodepth);
+
 	td->io_ops->data = sd;
 
 	if (td->filetype == FIO_TYPE_BD) {
@@ -367,6 +377,9 @@ static int fio_sgio_init(struct thread_data *td)
 err:
 	free(sd->events);
 	free(sd->cmds);
+	free(sd->fd_flags);
+	free(sd->pfds);
+	free(sd->sgbuf);
 	free(sd);
 	td->io_ops->data = NULL;
 	return 1;
