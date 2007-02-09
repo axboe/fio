@@ -239,7 +239,7 @@ static int fio_netio_setup(struct thread_data *td)
 	strcpy(host, buf);
 	port = atoi(sep);
 
-	if (td->ddir == READ) {
+	if (td->ddir == DDIR_READ) {
 		nd->send_to_net = 0;
 		ret = fio_netio_setup_listen(td, port);
 	} else {
