@@ -163,6 +163,15 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 	return eta_sec;
 }
 
+static void calc_rate(unsigned long mtime, unsigned long long *io_bytes,
+		      unsigned long long *prev_io_bytes, unsigned int *rate)
+{
+	rate[0] = (io_bytes[0] - prev_io_bytes[0]) / mtime;
+	rate[1] = (io_bytes[1] - prev_io_bytes[1]) / mtime;
+	prev_io_bytes[0] = io_bytes[0];
+	prev_io_bytes[1] = io_bytes[1];
+}
+	
 /*
  * Print status of the jobs we know about. This includes rate estimates,
  * ETA, thread state, etc.
@@ -174,18 +183,22 @@ void print_thread_status(void)
 	struct thread_data *td;
 	char eta_str[32];
 	double perc = 0.0;
-
-	static unsigned long long prev_io_bytes[2];
-	static struct timeval prev_time;
-	static unsigned int r_rate, w_rate;
 	unsigned long long io_bytes[2];
-	unsigned long mtime, bw_avg_time;
+	unsigned long rate_time, disp_time, bw_avg_time;
+	struct timeval now;
+
+	static unsigned long long rate_io_bytes[2];
+	static unsigned long long disp_io_bytes[2];
+	static struct timeval rate_prev_time, disp_prev_time;
+	static unsigned int rate[2];
 
 	if (temp_stall_ts || terse_output)
 		return;
 
-	if (!prev_io_bytes[0] && !prev_io_bytes[1])
-		fill_start_time(&prev_time);
+	if (!rate_io_bytes[0] && !rate_io_bytes[1])
+		fill_start_time(&rate_prev_time);
+	if (!disp_io_bytes[0] && !disp_io_bytes[1])
+		fill_start_time(&disp_prev_time);
 
 	eta_secs = malloc(thread_number * sizeof(int));
 	memset(eta_secs, 0, thread_number * sizeof(int));
@@ -196,8 +209,8 @@ void print_thread_status(void)
 	for_each_td(td, i) {
 		if (td->bw_avg_time < bw_avg_time)
 			bw_avg_time = td->bw_avg_time;
-		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING||
-		    td->runstate == TD_FSYNCING) {
+		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING
+		    || td->runstate == TD_FSYNCING) {
 			nr_running++;
 			t_rate += td->rate;
 			m_rate += td->ratemin;
@@ -236,17 +249,22 @@ void print_thread_status(void)
 		eta_to_str(eta_str, eta_sec);
 	}
 
-	mtime = mtime_since_now(&prev_time);
-	if (mtime > bw_avg_time) {
-		r_rate = (io_bytes[0] - prev_io_bytes[0]) / mtime;
-		w_rate = (io_bytes[1] - prev_io_bytes[1]) / mtime;
-		fio_gettime(&prev_time, NULL);
-		if (write_bw_log) {
-			add_agg_sample(r_rate, DDIR_READ);
-			add_agg_sample(w_rate, DDIR_WRITE);
-		}
-		memcpy(prev_io_bytes, io_bytes, sizeof(io_bytes));
+	fio_gettime(&now, NULL);
+	rate_time = mtime_since(&rate_prev_time, &now);
+
+	if (write_bw_log && rate_time> bw_avg_time) {
+		calc_rate(rate_time, io_bytes, rate_io_bytes, rate);
+		memcpy(&rate_prev_time, &now, sizeof(now));
+		add_agg_sample(rate[DDIR_READ], DDIR_READ);
+		add_agg_sample(rate[DDIR_WRITE], DDIR_WRITE);
 	}
+
+	disp_time = mtime_since(&disp_prev_time, &now);
+	if (disp_time < 1000)
+		return;
+
+	calc_rate(disp_time, io_bytes, disp_io_bytes, rate);
+	memcpy(&disp_prev_time, &now, sizeof(now));
 
 	if (!nr_running && !nr_pending)
 		return;
@@ -256,7 +274,7 @@ void print_thread_status(void)
 		printf(", CR=%d/%d KiB/s", t_rate, m_rate);
 	if (eta_sec != INT_MAX && nr_running) {
 		perc *= 100.0;
-		printf(": [%s] [%3.1f%% done] [%6u/%6u kb/s] [eta %s]", run_str, perc, r_rate, w_rate, eta_str);
+		printf(": [%s] [%3.1f%% done] [%6u/%6u kb/s] [eta %s]", run_str, perc, rate[0], rate[1], eta_str);
 	}
 	printf("\r");
 	fflush(stdout);
