@@ -26,6 +26,7 @@
 #include <string.h>
 #include <signal.h>
 #include <time.h>
+#include <locale.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
@@ -1004,6 +1005,13 @@ static void run_threads(void)
 int main(int argc, char *argv[])
 {
 	long ps;
+
+	/*
+	 * We need locale for number printing, if it isn't set then just
+	 * go with the US format.
+	 */
+	if (!getenv("LC_NUMERIC"))
+		setlocale(LC_NUMERIC, "en_US");
 
 	if (parse_options(argc, argv))
 		return 1;

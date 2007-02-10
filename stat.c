@@ -12,6 +12,46 @@
 static struct itimerval itimer;
 static struct list_head disk_list = LIST_HEAD_INIT(disk_list);
 
+/*
+ * Cheasy number->string conversion, complete with carry rounding error.
+ */
+static char *num2str(unsigned long num, int maxlen, int base)
+{
+	/*
+	 * could be passed in for 10^3 base, but every caller expects
+	 * 2^10 base right now.
+	 */
+	const int thousand = 1024;
+	char postfix[] = { 'K', 'M', 'G', 'P' };
+	char *buf;
+	int i;
+
+	buf = malloc(128);
+
+	for (i = 0; base > 1; i++)
+		base /= thousand;
+
+	do {
+		int len, carry = 0;
+
+		len = sprintf(buf, "%'lu", num);
+		if (len <= maxlen) {
+			buf[len] = postfix[i];
+			buf[len + 1] = '\0';
+			return buf;
+		}
+
+		if ((num % thousand) >= (thousand / 2))
+			carry = 1;
+
+		num /= thousand;
+		num += carry;
+		i++;
+	} while (i <= 4);
+
+	return buf;
+}
+
 static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 {
 	unsigned in_flight;
@@ -303,12 +343,28 @@ static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 
 static void show_group_stats(struct group_run_stats *rs, int id)
 {
+	char *p1, *p2, *p3, *p4;
+	const char *ddir_str[] = { "   READ", "  WRITE" };
+	int i;
+
 	fprintf(f_out, "\nRun status group %d (all jobs):\n", id);
 
-	if (rs->max_run[DDIR_READ])
-		fprintf(f_out, "   READ: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_kb[0] >> 10, rs->agg[0], rs->min_bw[0], rs->max_bw[0], rs->min_run[0], rs->max_run[0]);
-	if (rs->max_run[DDIR_WRITE])
-		fprintf(f_out, "  WRITE: io=%lluMiB, aggrb=%llu, minb=%llu, maxb=%llu, mint=%llumsec, maxt=%llumsec\n", rs->io_kb[1] >> 10, rs->agg[1], rs->min_bw[1], rs->max_bw[1], rs->min_run[1], rs->max_run[1]);
+	for (i = 0; i <= DDIR_WRITE; i++) {
+		if (!rs->max_run[i])
+			continue;
+
+		p1 = num2str(rs->io_kb[i], 6, 1);
+		p2 = num2str(rs->agg[i], 6, 1);
+		p3 = num2str(rs->min_bw[i], 6, 1);
+		p4 = num2str(rs->max_bw[i], 6, 1);
+
+		fprintf(f_out, "%s: io=%siB, aggrb=%siB/s, minb=%siB/s, maxb=%siB/s, mint=%llumsec, maxt=%llumsec\n", ddir_str[i], p1, p2, p3, p4, rs->min_run[0], rs->max_run[0]);
+
+		free(p1);
+		free(p2);
+		free(p3);
+		free(p4);
+	}
 }
 
 static void show_disk_util(void)
@@ -349,12 +405,19 @@ static void show_ddir_status(struct thread_data *td, struct group_run_stats *rs,
 	unsigned long min, max;
 	unsigned long long bw;
 	double mean, dev;
+	char *io_p, *bw_p;
 
 	if (!td->runtime[ddir])
 		return;
 
 	bw = td->io_bytes[ddir] / td->runtime[ddir];
-	fprintf(f_out, "  %s: io=%6lluMiB, bw=%6lluKiB/s, runt=%6lumsec\n", ddir_str[ddir], td->io_bytes[ddir] >> 20, bw, td->runtime[ddir]);
+	io_p = num2str(td->io_bytes[ddir] >> 10, 6, 1);
+	bw_p = num2str(bw, 6, 1);
+
+	fprintf(f_out, "  %s: io=%siB, bw=%siB/s, runt=%6lumsec\n", ddir_str[ddir], io_p, bw_p, td->runtime[ddir]);
+
+	free(io_p);
+	free(bw_p);
 
 	if (calc_lat(&td->slat_stat[ddir], &min, &max, &mean, &dev))
 		fprintf(f_out, "    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
