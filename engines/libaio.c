@@ -82,7 +82,17 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 			usleep(100);
 		else if (ret == -EINTR)
 			continue;
-		else
+		else if (ret == -EINVAL && io_u->ddir == DDIR_SYNC) {
+			/*
+			 * the async fsync doesn't currently seem to be
+			 * supported, so just fsync if we fail with EINVAL
+			 * for a sync. since buffered io is also sync
+			 * with libaio (still), we don't have pending
+			 * requests to flush first.
+			 */
+			ret = fsync(io_u->file->fd);
+			break;
+		} else
 			break;
 	} while (1);
 
