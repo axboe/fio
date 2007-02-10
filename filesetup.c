@@ -154,6 +154,16 @@ static int file_size(struct thread_data *td, struct fio_file *f)
 {
 	struct stat st;
 
+	/*
+	 * if we are not doing real io, just pretend the file is as large
+	 * as the size= given. this works fine with nrfiles > 1 as well,
+	 * we only really care about it being at least as big as size=
+	 */
+	if (td->io_ops->flags & FIO_NULLIO) {
+		f->real_file_size = f->file_size = td->total_file_size;
+		return 0;
+	}
+
 	if (td->overwrite) {
 		if (fstat(f->fd, &st) == -1) {
 			td_verror(td, errno);
