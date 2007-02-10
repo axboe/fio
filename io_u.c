@@ -27,13 +27,13 @@ static int random_map_free(struct thread_data *td, struct fio_file *f,
 static void mark_random_map(struct thread_data *td, struct fio_file *f,
 			    struct io_u *io_u)
 {
-	unsigned int min_bs = td->min_bs[io_u->ddir];
+	unsigned int min_bs = td->rw_min_bs;
 	unsigned long long block;
 	unsigned int blocks;
 
 	block = io_u->offset / (unsigned long long) min_bs;
 	blocks = 0;
-	while (blocks < (io_u->buflen / min_bs)) {
+	while (blocks < ((io_u->buflen + min_bs - 1) / min_bs)) {
 		unsigned int idx, bit;
 
 		if (!random_map_free(td, f, block))
