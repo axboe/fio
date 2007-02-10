@@ -26,12 +26,10 @@
 #include <string.h>
 #include <signal.h>
 #include <time.h>
-#include <assert.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-#include <sys/ioctl.h>
 #include <sys/mman.h>
 
 #include "fio.h"
