@@ -441,10 +441,13 @@ static void show_thread_status(struct thread_data *td,
 	double io_u_dist[FIO_IO_U_MAP_NR];
 	int i;
 
-	if (!(td->io_bytes[0] + td->io_bytes[1]) && !td->error)
+	if (!(td->io_bytes[0] + td->io_bytes[1]))
 		return;
 
-	fprintf(f_out, "%s: (groupid=%d): err=%2d: pid=%d\n",td->name, td->groupid, td->error, td->pid);
+	if (!td->error)
+		fprintf(f_out, "%s: (groupid=%d): err=%2d: pid=%d\n",td->name, td->groupid, td->error, td->pid);
+	else
+		fprintf(f_out, "%s: (groupid=%d): err=%2d (%s): pid=%d\n",td->name, td->groupid, td->error, td->verror, td->pid);
 
 	show_ddir_status(td, rs, td->ddir);
 	if (td->io_bytes[td->ddir ^ 1])
@@ -552,11 +555,6 @@ void show_run_stats(void)
 
 	for_each_td(td, i) {
 		unsigned long long rbw, wbw;
-
-		if (td->error) {
-			fprintf(f_out, "%s: %s\n", td->name, td->verror);
-			continue;
-		}
 
 		rs = &runstats[td->groupid];
 
