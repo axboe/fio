@@ -181,7 +181,7 @@ void print_thread_status(void)
 	unsigned long elapsed = mtime_since_genesis() / 1000;
 	int i, nr_running, nr_pending, t_rate, m_rate, *eta_secs, eta_sec;
 	struct thread_data *td;
-	char eta_str[32];
+	char eta_str[128];
 	double perc = 0.0;
 	unsigned long long io_bytes[2];
 	unsigned long rate_time, disp_time, bw_avg_time;
