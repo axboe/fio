@@ -18,6 +18,7 @@
 struct libaio_data {
 	io_context_t aio_ctx;
 	struct io_event *aio_events;
+	struct io_u *sync_io_u;
 };
 
 static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
@@ -40,6 +41,13 @@ static struct io_u *fio_libaio_event(struct thread_data *td, int event)
 {
 	struct libaio_data *ld = td->io_ops->data;
 
+	if (ld->sync_io_u) {
+		struct io_u *ret = ld->sync_io_u;
+
+		ld->sync_io_u = NULL;
+		return ret;
+	}
+
 	return ev_to_iou(ld->aio_events + event);
 }
 
@@ -48,6 +56,9 @@ static int fio_libaio_getevents(struct thread_data *td, int min, int max,
 {
 	struct libaio_data *ld = td->io_ops->data;
 	long r;
+
+	if (ld->sync_io_u)
+		return 1;
 
 	do {
 		r = io_getevents(ld->aio_ctx, min, max, ld->aio_events, t);
@@ -91,6 +102,7 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 			 * requests to flush first.
 			 */
 			ret = fsync(io_u->file->fd);
+			ld->sync_io_u = io_u;
 			break;
 		} else
 			break;
