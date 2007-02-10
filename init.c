@@ -564,6 +564,9 @@ static void put_job(struct thread_data *td)
 	if (td == &def_thread)
 		return;
 
+	if (td->error)
+		fprintf(f_out, "fio: %s\n", td->verror);
+
 	memset(&threads[td->thread_number - 1], 0, sizeof(*td));
 	thread_number--;
 }
@@ -694,8 +697,18 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		char tmp[PATH_MAX];
 		int len = 0;
 
-		if (td->directory && td->directory[0] != '\0')
+		if (td->directory && td->directory[0] != '\0') {
+			if (lstat(td->directory, &sb) < 0) {
+				log_err("fio: %s is not a directory\n", td->directory);
+				td_verror(td, errno);
+				return 1;
+			}
+			if (!S_ISDIR(sb.st_mode)) {
+				log_err("fio: %s is not a directory\n", td->directory);
+				return 1;
+			}
 			len = sprintf(tmp, "%s/", td->directory);
+		}
 
 		td->files = malloc(sizeof(struct fio_file) * td->nr_files);
 
