@@ -30,10 +30,13 @@ static void mark_random_map(struct thread_data *td, struct fio_file *f,
 	unsigned int min_bs = td->rw_min_bs;
 	unsigned long long block;
 	unsigned int blocks;
+	unsigned int nr_blocks;
 
 	block = io_u->offset / (unsigned long long) min_bs;
 	blocks = 0;
-	while (blocks < ((io_u->buflen + min_bs - 1) / min_bs)) {
+	nr_blocks = (io_u->buflen + min_bs - 1) / min_bs;
+
+	while (blocks < nr_blocks) {
 		unsigned int idx, bit;
 
 		if (!random_map_free(td, f, block))
@@ -61,11 +64,12 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 {
 	int i;
 
-	*b = 0;
-	i = 0;
+	i = f->last_free_lookup;
+	*b = (i * BLOCKS_PER_MAP);
 	while ((*b) * td->rw_min_bs < f->real_file_size) {
 		if (f->file_map[i] != -1UL) {
 			*b += ffz(f->file_map[i]);
+			f->last_free_lookup = i;
 			return 0;
 		}
 
@@ -82,14 +86,15 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
  * the last io issued.
  */
 static int get_next_offset(struct thread_data *td, struct fio_file *f,
-			   unsigned long long *offset, int ddir)
+			   struct io_u *io_u)
 {
+	const int ddir = io_u->ddir;
 	unsigned long long b, rb;
 	long r;
 
 	if (!td->sequential) {
 		unsigned long long max_blocks = f->file_size / td->min_bs[ddir];
-		int loops = 50;
+		int loops = 5;
 
 		do {
 			r = os_random_long(&td->random_state);
@@ -103,12 +108,14 @@ static int get_next_offset(struct thread_data *td, struct fio_file *f,
 		if (!loops) {
 			if (get_next_free_block(td, f, &b))
 				return 1;
+
+			b += f->file_offset / td->min_bs[ddir];
 		}
 	} else
 		b = f->last_pos / td->min_bs[ddir];
 
-	*offset = (b * td->min_bs[ddir]) + f->file_offset;
-	if (*offset > f->real_file_size)
+	io_u->offset = (b * td->min_bs[ddir]) + f->file_offset;
+	if (io_u->offset > f->real_file_size)
 		return 1;
 
 	return 0;
@@ -208,11 +215,19 @@ static int fill_io_u(struct thread_data *td, struct fio_file *f,
 	io_u->ddir = get_rw_ddir(td);
 
 	/*
-	 * No log, let the seq/rand engine retrieve the next position.
+	 * No log, let the seq/rand engine retrieve the next buflen and
+	 * position.
 	 */
-	if (!get_next_offset(td, f, &io_u->offset, io_u->ddir)) {
-		io_u->buflen = get_next_buflen(td, io_u->ddir);
-		if (io_u->buflen) {
+	io_u->buflen = get_next_buflen(td, io_u->ddir);
+	if (io_u->buflen) {
+		if (!get_next_offset(td, f, io_u)) {
+			/*
+			 * mark entry before potentially trimming io_u
+			 */
+			if (!td->read_iolog && !td->sequential &&
+			    !td->norandommap)
+				mark_random_map(td, f, io_u);
+
 			/*
 			 * If using a write iolog, store this entry.
 			 */
@@ -307,9 +322,6 @@ struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 			put_io_u(td, io_u);
 			return NULL;
 		}
-
-		if (!td->read_iolog && !td->sequential && !td->norandommap)
-			mark_random_map(td, f, io_u);
 
 		f->last_pos += io_u->buflen;
 

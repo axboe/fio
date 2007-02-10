@@ -170,6 +170,8 @@ struct fio_file {
 	unsigned int num_maps;
 
 	unsigned int unlink;
+
+	unsigned int last_free_lookup;
 };
 
 /*
