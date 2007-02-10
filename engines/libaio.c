@@ -88,7 +88,7 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 	do {
 		ret = io_submit(ld->aio_ctx, 1, &iocb);
 		if (ret == 1)
-			return 0;
+			break;
 		else if (ret == -EAGAIN || !ret)
 			usleep(100);
 		else if (ret == -EINTR)
@@ -101,8 +101,12 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 			 * with libaio (still), we don't have pending
 			 * requests to flush first.
 			 */
-			ret = fsync(io_u->file->fd);
-			ld->sync_io_u = io_u;
+			if (fsync(io_u->file->fd) < 0)
+				ret = errno;
+			else {
+				ret = 1;
+				ld->sync_io_u = io_u;
+			}
 			break;
 		} else
 			break;
