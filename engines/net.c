@@ -179,6 +179,12 @@ static int fio_netio_accept_connections(struct thread_data *td, int fd,
 		} else if (!ret)
 			continue;
 
+		/*
+		 * should be impossible
+		 */
+		if (!(pfd.revents & POLLIN))
+			continue;
+
 		for_each_file(td, f, i) {
 			if (f->fd != -1)
 				continue;
