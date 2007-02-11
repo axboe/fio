@@ -24,6 +24,9 @@ enum fio_ddir {
 	DDIR_SYNC,
 };
 
+/*
+ * Use for maintaining statistics
+ */
 struct io_stat {
 	unsigned long max_val;
 	unsigned long min_val;
@@ -33,18 +36,27 @@ struct io_stat {
 	double S;
 };
 
+/*
+ * A single data sample
+ */
 struct io_sample {
 	unsigned long time;
 	unsigned long val;
 	enum fio_ddir ddir;
 };
 
+/*
+ * Dynamically growing data sample log
+ */
 struct io_log {
 	unsigned long nr_samples;
 	unsigned long max_samples;
 	struct io_sample *log;
 };
 
+/*
+ * When logging io actions, this matches a single sent io_u
+ */
 struct io_piece {
 	struct list_head list;
 	struct fio_file *file;
@@ -71,10 +83,17 @@ struct io_u {
 	struct timeval start_time;
 	struct timeval issue_time;
 
+	/*
+	 * Allocated/set buffer and length
+	 */
 	void *buf;
 	unsigned int buflen;
 	unsigned long long offset;
 
+	/*
+	 * IO engine state, may be different from above when we get
+	 * partial transfers / residual data counts
+	 */
 	void *xfer_buf;
 	unsigned int xfer_buflen;
 
@@ -99,11 +118,14 @@ struct io_u {
 #define FIO_HDR_MAGIC	0xf00baaef
 
 enum {
-	VERIFY_NONE = 0,
-	VERIFY_MD5,
-	VERIFY_CRC32,
+	VERIFY_NONE = 0,		/* no verification */
+	VERIFY_MD5,			/* md5 sum data blocks */
+	VERIFY_CRC32,			/* crc32 sum data blocks */
 };
 
+/*
+ * A header structure associated with each checksummed data block
+ */
 struct verify_header {
 	unsigned int fio_magic;
 	unsigned int len;
@@ -136,20 +158,24 @@ enum fio_memtype {
  * The type of object we are working on
  */
 enum fio_filetype {
-	FIO_TYPE_FILE = 1,
-	FIO_TYPE_BD,
-	FIO_TYPE_CHAR,
+	FIO_TYPE_FILE = 1,		/* plain file */
+	FIO_TYPE_BD,			/* block device */
+	FIO_TYPE_CHAR,			/* character device */
 };
 
 enum fio_ioengine_flags {
-	FIO_SYNCIO	= 1 << 0,
-	FIO_CPUIO	= 1 << 1,
-	FIO_MMAPIO	= 1 << 2,
-	FIO_RAWIO	= 1 << 3,
-	FIO_NETIO	= 1 << 4,
-	FIO_NULLIO	= 1 << 5,
+	FIO_SYNCIO	= 1 << 0,	/* io engine has synchronous ->queue */
+	FIO_CPUIO	= 1 << 1,	/* cpu burner, doesn't do real io */
+	FIO_MMAPIO	= 1 << 2,	/* uses memory mapped io */
+	FIO_RAWIO	= 1 << 3,	/* some sort of direct/raw io */
+	FIO_NETIO	= 1 << 4,	/* networked io */
+	FIO_NULLIO	= 1 << 5,	/* no real data transfer (cpu/null) */
 };
 
+/*
+ * Each thread_data structure has a number of files associated with it,
+ * this structure holds state information for a single file.
+ */
 struct fio_file {
 	/*
 	 * A file may not be a file descriptor, let the io engine decide
@@ -166,12 +192,14 @@ struct fio_file {
 	unsigned long long last_pos;
 	unsigned long long last_completed_pos;
 
+	/*
+	 * block map for random io
+	 */
 	unsigned long *file_map;
 	unsigned int num_maps;
+	unsigned int last_free_lookup;
 
 	unsigned int unlink;
-
-	unsigned int last_free_lookup;
 };
 
 /*
@@ -409,6 +437,9 @@ static inline int should_fsync(struct thread_data *td)
 	return 0;
 }
 
+/*
+ * Disk utils as read in /sys/block/<dev>/stat
+ */
 struct disk_util_stat {
 	unsigned ios[2];
 	unsigned merges[2];
@@ -418,6 +449,9 @@ struct disk_util_stat {
 	unsigned time_in_queue;
 };
 
+/*
+ * Per-device disk util management
+ */
 struct disk_util {
 	struct list_head list;
 
@@ -432,6 +466,9 @@ struct disk_util {
 	struct timeval time;
 };
 
+/*
+ * Used for passing io_u completion data
+ */
 struct io_completion_data {
 	int nr;				/* input */
 
