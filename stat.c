@@ -21,7 +21,7 @@ static char *num2str(unsigned long num, int maxlen, int base)
 	 * could be passed in for 10^3 base, but every caller expects
 	 * 2^10 base right now.
 	 */
-	const int thousand = 1024;
+	const unsigned int thousand = 1024;
 	char postfix[] = { 'K', 'M', 'G', 'P' };
 	char *buf;
 	int i;
