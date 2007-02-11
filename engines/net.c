@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/poll.h>
 
 #include "../fio.h"
 #include "../os.h"
@@ -148,12 +149,57 @@ static int fio_netio_setup_connect(struct thread_data *td, const char *host,
 
 }
 
+static int fio_netio_accept_connections(struct thread_data *td, int fd,
+					struct sockaddr_in *addr)
+{
+	socklen_t socklen = sizeof(*addr);
+	unsigned int accepts = 0;
+	struct pollfd pfd;
+
+	fprintf(f_out, "fio: waiting for %u connections\n", td->nr_files);
+
+	/*
+	 * Accept loop. poll for incoming events, accept them. Repeat until we
+	 * have all connections.
+	 */
+	while (!td->terminate && accepts < td->nr_files) {
+		struct fio_file *f;
+		int ret, i;
+
+		pfd.fd = fd;
+		pfd.events = POLLIN;
+
+		ret = poll(&pfd, 1, -1);
+		if (ret < 0) {
+			if (errno == EINTR)
+				continue;
+
+			td_verror(td, errno);
+			break;
+		} else if (!ret)
+			continue;
+
+		for_each_file(td, f, i) {
+			if (f->fd != -1)
+				continue;
+
+			f->fd = accept(fd, (struct sockaddr *) addr, &socklen);
+			if (f->fd < 0) {
+				td_verror(td, errno);
+				return 1;
+			}
+			accepts++;
+			break;
+		}
+	}
+
+	return 0;
+}
+
 static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 {
 	struct sockaddr_in addr;
-	socklen_t socklen;
-	struct fio_file *f;
-	int fd, opt, i;
+	int fd, opt;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (fd < 0) {
@@ -187,18 +233,7 @@ static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 		return 1;
 	}
 
-	fprintf(f_out, "fio: waiting for %u connections\n", td->nr_files);
-
-	socklen = sizeof(addr);
-	for_each_file(td, f, i) {
-		f->fd = accept(fd, (struct sockaddr *) &addr, &socklen);
-		if (f->fd < 0) {
-			td_verror(td, errno);
-			return 1;
-		}
-	}
-
-	return 0;
+	return fio_netio_accept_connections(td, fd, &addr);
 }
 
 static int fio_netio_setup(struct thread_data *td)
