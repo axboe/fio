@@ -412,7 +412,6 @@ requeue:
 				io_u->xfer_buf += ret;
 				goto requeue;
 			} else {
-				td_verror(td, io_u->error);
 				put_io_u(td, io_u);
 				break;
 			}

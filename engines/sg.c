@@ -261,7 +261,12 @@ static int fio_sgio_queue(struct thread_data *td, struct io_u *io_u)
 		io_u->error = EIO;
 	}
 
-	return io_u->error;
+	if (io_u->error) {
+		td_verror(td, io_u->error);
+		return io_u->error;
+	}
+
+	return 0;
 }
 
 static struct io_u *fio_sgio_event(struct thread_data *td, int event)

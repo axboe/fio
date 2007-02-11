@@ -102,6 +102,8 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 
 	if (!io_u->error)
 		nd->last_io_u = io_u;
+	else
+		td_verror(td, io_u->error);
 
 	return io_u->error;
 }

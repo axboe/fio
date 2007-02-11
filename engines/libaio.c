@@ -115,6 +115,7 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 	if (ret <= 0) {
 		io_u->resid = io_u->xfer_buflen;
 		io_u->error = -ret;
+		td_verror(td, io_u->error);
 		return 1;
 	}
 

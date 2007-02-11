@@ -151,8 +151,10 @@ static int fio_posixaio_queue(struct thread_data fio_unused *td,
 	else
 		ret = aio_fsync(O_SYNC, aiocb);
 
-	if (ret)
+	if (ret) {
 		io_u->error = errno;
+		td_verror(td, io_u->error);
+	}
 		
 	return io_u->error;
 }
