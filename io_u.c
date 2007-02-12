@@ -138,13 +138,6 @@ static unsigned int get_next_buflen(struct thread_data *td, struct fio_file *f,
 	}
 
 	while (buflen + io_u->offset > f->real_file_size) {
-		/*
-		 * if using direct/raw io, we may not be able to
-		 * shrink the size. so just fail it.
-		 */
-		if (td->io_ops->flags & FIO_RAWIO)
-			return 0;
-
 		if (buflen == td->min_bs[ddir])
 			return 0;
 
