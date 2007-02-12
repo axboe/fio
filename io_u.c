@@ -105,24 +105,26 @@ static int get_next_offset(struct thread_data *td, struct fio_file *f,
 			loops--;
 		} while (!random_map_free(td, f, rb) && loops);
 
-		if (!loops) {
-			if (get_next_free_block(td, f, &b))
-				return 1;
-
-			b += f->file_offset / td->min_bs[ddir];
-		}
+		/*
+		 * if we failed to retrieve a truly random offset within
+		 * the loops assigned, see if there are free ones left at all
+		 */
+		if (!loops && get_next_free_block(td, f, &b))
+			return 1;
 	} else
 		b = f->last_pos / td->min_bs[ddir];
 
 	io_u->offset = (b * td->min_bs[ddir]) + f->file_offset;
-	if (io_u->offset > f->real_file_size)
+	if (io_u->offset >= f->real_file_size)
 		return 1;
 
 	return 0;
 }
 
-static unsigned int get_next_buflen(struct thread_data *td, int ddir)
+static unsigned int get_next_buflen(struct thread_data *td, struct fio_file *f,
+				    struct io_u *io_u)
 {
+	const int ddir = io_u->ddir;
 	unsigned int buflen;
 	long r;
 
@@ -135,7 +137,7 @@ static unsigned int get_next_buflen(struct thread_data *td, int ddir)
 			buflen = (buflen + td->min_bs[ddir] - 1) & ~(td->min_bs[ddir] - 1);
 	}
 
-	if (buflen > td->io_size - td->this_io_bytes[ddir]) {
+	while (buflen + io_u->offset > f->real_file_size) {
 		/*
 		 * if using direct/raw io, we may not be able to
 		 * shrink the size. so just fail it.
@@ -143,7 +145,10 @@ static unsigned int get_next_buflen(struct thread_data *td, int ddir)
 		if (td->io_ops->flags & FIO_RAWIO)
 			return 0;
 
-		buflen = td->io_size - td->this_io_bytes[ddir];
+		if (buflen == td->min_bs[ddir])
+			return 0;
+
+		buflen = td->min_bs[ddir];
 	}
 
 	return buflen;
@@ -218,28 +223,27 @@ static int fill_io_u(struct thread_data *td, struct fio_file *f,
 	 * No log, let the seq/rand engine retrieve the next buflen and
 	 * position.
 	 */
-	io_u->buflen = get_next_buflen(td, io_u->ddir);
-	if (io_u->buflen) {
-		if (!get_next_offset(td, f, io_u)) {
-			/*
-			 * mark entry before potentially trimming io_u
-			 */
-			if (!td->read_iolog && !td->sequential &&
-			    !td->norandommap)
-				mark_random_map(td, f, io_u);
+	if (get_next_offset(td, f, io_u))
+		return 1;
 
-			/*
-			 * If using a write iolog, store this entry.
-			 */
-			if (td->write_iolog_file)
-				write_iolog_put(td, io_u);
+	io_u->buflen = get_next_buflen(td, f, io_u);
+	if (!io_u->buflen)
+		return 1;
 
-			io_u->file = f;
-			return 0;
-		}
-	}
+	/*
+	 * mark entry before potentially trimming io_u
+	 */
+	if (!td->read_iolog && !td->sequential && !td->norandommap)
+		mark_random_map(td, f, io_u);
 
-	return 1;
+	/*
+	 * If using a write iolog, store this entry.
+	 */
+	if (td->write_iolog_file)
+		write_iolog_put(td, io_u);
+
+	io_u->file = f;
+	return 0;
 }
 
 static void io_u_mark_depth(struct thread_data *td)
