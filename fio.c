@@ -47,6 +47,7 @@ int temp_stall_ts;
 
 static volatile int startup_sem;
 static volatile int fio_abort;
+static int exit_value;
 
 struct io_log *agg_io_log[2];
 
@@ -811,6 +812,9 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 			continue;
 		}
 
+		if (td->error)
+			exit_value++;
+
 		td_set_runstate(td, TD_REAPED);
 
 		if (td->use_thread) {
@@ -1045,5 +1049,5 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	return 0;
+	return exit_value;
 }

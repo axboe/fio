@@ -674,6 +674,7 @@ extern void close_ioengine(struct thread_data *);
 	if (!(cond)) {			\
 		fprintf(stderr, "file:%s:%d, assert %s failed\n", __FILE__, __LINE__, #cond);	\
 		(td)->runstate = TD_EXITED;	\
+		(td)->error = EFAULT;		\
 		exit(0);			\
 	}	\
 } while (0)
