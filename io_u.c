@@ -3,7 +3,6 @@
 #include <string.h>
 #include <signal.h>
 #include <time.h>
-#include <assert.h>
 
 #include "fio.h"
 #include "os.h"
@@ -45,7 +44,8 @@ static void mark_random_map(struct thread_data *td, struct fio_file *f,
 		idx = RAND_MAP_IDX(td, f, block);
 		bit = RAND_MAP_BIT(td, f, block);
 
-		assert(idx < f->num_maps);
+		idx = f->num_maps;
+		fio_assert(td, idx < f->num_maps);
 
 		f->file_map[idx] |= (1UL << bit);
 		block++;

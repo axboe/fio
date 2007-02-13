@@ -670,4 +670,12 @@ extern void close_ioengine(struct thread_data *);
 #define for_each_file(td, f, i)	\
 	for ((i) = 0, (f) = &(td)->files[0]; (i) < (int) (td)->nr_files; (i)++, (f)++)
 
+#define fio_assert(td, cond)	do {	\
+	if (!(cond)) {			\
+		fprintf(stderr, "file:%s:%d, assert %s failed\n", __FILE__, __LINE__, #cond);	\
+		(td)->runstate = TD_EXITED;	\
+		exit(0);			\
+	}	\
+} while (0)
+
 #endif
