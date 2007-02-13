@@ -849,7 +849,7 @@ int init_random_state(struct thread_data *td)
 
 	if (!td->norandommap) {
 		for_each_file(td, f, i) {
-			blocks = (f->file_size + td->rw_min_bs - 1) / td->rw_min_bs;
+			blocks = (f->real_file_size + td->rw_min_bs - 1) / td->rw_min_bs;
 			num_maps = (blocks + BLOCKS_PER_MAP-1)/ BLOCKS_PER_MAP;
 			f->file_map = malloc(num_maps * sizeof(long));
 			f->num_maps = num_maps;
