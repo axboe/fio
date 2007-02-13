@@ -44,7 +44,6 @@ static void mark_random_map(struct thread_data *td, struct fio_file *f,
 		idx = RAND_MAP_IDX(td, f, block);
 		bit = RAND_MAP_BIT(td, f, block);
 
-		idx = f->num_maps;
 		fio_assert(td, idx < f->num_maps);
 
 		f->file_map[idx] |= (1UL << bit);
