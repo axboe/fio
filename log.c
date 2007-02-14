@@ -5,7 +5,7 @@
 
 void write_iolog_put(struct thread_data *td, struct io_u *io_u)
 {
-	fprintf(td->iolog_f, "%u,%llu,%u\n", io_u->ddir, io_u->offset, io_u->buflen);
+	fprintf(td->iolog_f, "%u,%llu,%lu\n", io_u->ddir, io_u->offset, io_u->buflen);
 }
 
 int read_iolog_get(struct thread_data *td, struct io_u *io_u)

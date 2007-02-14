@@ -19,6 +19,7 @@
 #define FIO_HAVE_IOSCHED_SWITCH
 #define FIO_HAVE_ODIRECT
 #define FIO_HAVE_HUGETLB
+#define FIO_HAVE_SYSLET
 
 #define OS_MAP_ANON		(MAP_ANONYMOUS)
 
@@ -72,6 +73,34 @@ static inline int vmsplice(int fd, const struct iovec *iov,
 #endif
 
 #define SPLICE_DEF_SIZE	(64*1024)
+
+/*
+ * syslet stuff
+ */
+static inline long async_register(void *uah, unsigned int len)
+{
+	return syscall(__NR_async_register, uah, len);
+}
+
+static inline void *async_exec(void *data)
+{
+	return (void *) syscall(__NR_async_exec, data);
+}
+
+static inline long async_wait(unsigned long min_events)
+{
+	return syscall(__NR_async_wait, min_events);
+}
+
+static inline long async_unregister(void *uah, unsigned int len)
+{
+	return syscall(__NR_async_unregister, uah, len);
+}
+
+static inline long umem_add(unsigned long *uptr, unsigned long inc)
+{
+	return syscall(__NR_umem_add, uptr, inc);
+}
 
 enum {
 	IOPRIO_WHO_PROCESS = 1,

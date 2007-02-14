@@ -51,7 +51,7 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u)
 	c = crc32(p, hdr->len - sizeof(*hdr));
 
 	if (c != hdr->crc32) {
-		log_err("crc32: verify failed at %llu/%u\n", io_u->offset, io_u->buflen);
+		log_err("crc32: verify failed at %llu/%lu\n", io_u->offset, io_u->buflen);
 		log_err("crc32: wanted %lx, got %lx\n", hdr->crc32, c);
 		return 1;
 	}
@@ -69,7 +69,7 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u)
 	md5_update(&md5_ctx, p, hdr->len - sizeof(*hdr));
 
 	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash))) {
-		log_err("md5: verify failed at %llu/%u\n", io_u->offset, io_u->buflen);
+		log_err("md5: verify failed at %llu/%lu\n", io_u->offset, io_u->buflen);
 		hexdump(hdr->md5_digest, sizeof(hdr->md5_digest));
 		hexdump(md5_ctx.hash, sizeof(md5_ctx.hash));
 		return 1;

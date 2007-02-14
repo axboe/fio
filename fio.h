@@ -18,6 +18,8 @@
 #include "arch.h"
 #include "os.h"
 
+#include "syslet.h"
+
 enum fio_ddir {
 	DDIR_READ = 0,
 	DDIR_WRITE,
@@ -61,9 +63,17 @@ struct io_piece {
 	struct list_head list;
 	struct fio_file *file;
 	unsigned long long offset;
-	unsigned int len;
+	unsigned long len;
 	enum fio_ddir ddir;
 };
+
+#ifdef FIO_HAVE_SYSLET
+struct syslet_req {
+	struct syslet_uatom atom;
+	unsigned long cmd;
+	long ret;
+};
+#endif
 
 /*
  * The io unit
@@ -79,6 +89,10 @@ struct io_u {
 #ifdef FIO_HAVE_SGIO
 		struct sg_io_hdr hdr;
 #endif
+#ifdef FIO_HAVE_SYSLET
+		struct syslet_req rw_atom;
+		struct syslet_req seek_atom;
+#endif
 	};
 	struct timeval start_time;
 	struct timeval issue_time;
@@ -87,7 +101,7 @@ struct io_u {
 	 * Allocated/set buffer and length
 	 */
 	void *buf;
-	unsigned int buflen;
+	unsigned long buflen;
 	unsigned long long offset;
 
 	/*
@@ -95,7 +109,7 @@ struct io_u {
 	 * partial transfers / residual data counts
 	 */
 	void *xfer_buf;
-	unsigned int xfer_buflen;
+	unsigned long xfer_buflen;
 
 	unsigned int resid;
 	unsigned int error;
@@ -182,7 +196,7 @@ struct fio_file {
 	 */
 	union {
 		unsigned long file_data;
-		int fd;
+		long fd;
 	};
 	char *file_name;
 	void *mmap;
