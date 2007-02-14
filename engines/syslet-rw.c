@@ -185,7 +185,7 @@ static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 	return io_u->error;
 }
 
-static void async_head_init(struct syslet_data *sd, unsigned int depth)
+static int async_head_init(struct syslet_data *sd, unsigned int depth)
 {
 	struct async_head_user ahu;
 	unsigned long ring_size;
@@ -199,8 +199,14 @@ static void async_head_init(struct syslet_data *sd, unsigned int depth)
 	ahu.ring_size_bytes = ring_size;
 	ahu.max_nr_threads = -1;
 
-	if (async_register(&ahu, sizeof(ahu)) < 0)
+	if (async_register(&ahu, sizeof(ahu)) < 0) {
 		perror("async_register");
+		fprintf(stderr, "fio: syslet likely not supported\n");
+		free(sd->ring);
+		return 1;
+	}
+
+	return 0;
 }
 
 static void async_head_exit(struct syslet_data *sd, unsigned int depth)
@@ -231,12 +237,22 @@ static int fio_syslet_init(struct thread_data *td)
 {
 	struct syslet_data *sd;
 
+
 	sd = malloc(sizeof(*sd));
 	memset(sd, 0, sizeof(*sd));
 	sd->events = malloc(sizeof(struct io_u *) * td->iodepth);
 	memset(sd->events, 0, sizeof(struct io_u *) * td->iodepth);
+
+	/*
+	 * This will handily fail for kernels where syslet isn't available
+	 */
+	if (async_head_init(sd, td->iodepth)) {
+		free(sd->events);
+		free(sd);
+		return 1;
+	}
+
 	td->io_ops->data = sd;
-	async_head_init(sd, td->iodepth);
 	return 0;
 }
 
