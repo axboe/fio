@@ -17,6 +17,7 @@ struct syslet_data {
 	struct io_u **events;
 	unsigned int nr_events;
 	
+	struct async_head_user *ahu;
 	struct syslet_uatom **ring;
 	unsigned int ring_index;
 };
@@ -177,37 +178,33 @@ static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 
 static int async_head_init(struct syslet_data *sd, unsigned int depth)
 {
-	struct async_head_user ahu;
 	unsigned long ring_size;
+
+	sd->ahu = malloc(sizeof(struct async_head_user));
+	memset(sd->ahu, 0, sizeof(struct async_head_user));
 
 	ring_size = sizeof(struct syslet_uatom *) * depth;
 	sd->ring = malloc(ring_size);
 	memset(sd->ring, 0, ring_size);
 
-	memset(&ahu, 0, sizeof(ahu));
-	ahu.completion_ring = sd->ring;
-	ahu.ring_size_bytes = ring_size;
-	ahu.max_nr_threads = -1;
+	sd->ahu->completion_ring = sd->ring;
+	sd->ahu->ring_size_bytes = ring_size;
+	sd->ahu->max_nr_threads = -1;
 
-	if (async_register(&ahu, sizeof(ahu)) < 0) {
+	if (async_register(sd->ahu, sizeof(*sd->ahu)) < 0) {
 		perror("async_register");
 		fprintf(stderr, "fio: syslet likely not supported\n");
 		free(sd->ring);
+		free(sd->ahu);
 		return 1;
 	}
 
 	return 0;
 }
 
-static void async_head_exit(struct syslet_data *sd, unsigned int depth)
+static void async_head_exit(struct syslet_data *sd)
 {
-	struct async_head_user ahu;
-
-	memset(&ahu, 0, sizeof(ahu));
-	ahu.completion_ring = sd->ring;
-	ahu.ring_size_bytes = sizeof(struct syslet_uatom *) * depth;
-
-	if (async_unregister(&ahu, sizeof(ahu)) < 0)
+	if (async_unregister(sd->ahu, sizeof(*sd->ahu)) < 0)
 		perror("async_register");
 }
 
@@ -216,7 +213,7 @@ static void fio_syslet_cleanup(struct thread_data *td)
 	struct syslet_data *sd = td->io_ops->data;
 
 	if (sd) {
-		async_head_exit(sd, td->iodepth);
+		async_head_exit(sd);
 		free(sd->events);
 		free(sd);
 		td->io_ops->data = NULL;
