@@ -49,7 +49,7 @@ bottom, it contains the following basic parameters:
 
 	IO engine	How do we issue io? We could be memory mapping the
 			file, we could be using regular read/write, we
-			could be using splice, async io, or even
+			could be using splice, async io, syslet, or even
 			SG (SCSI generic sg).
 
 	IO depth	If the io engine is async, how large a queuing
@@ -269,6 +269,9 @@ ioengine=str	Defines how the job issues io to the file. The following
 			splice	splice(2) is used to transfer the data and
 				vmsplice(2) to transfer data from user
 				space to the kernel.
+
+			syslet-rw Use the syslet system calls to make
+				regular read/write async.
 
 			sg	SCSI generic sg v3 io. May either be
 				synchronous using the SG_IO ioctl, or if

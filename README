@@ -100,7 +100,8 @@ The job file parameters are:
 	size=x		Set file size to x bytes (x string can include k/m/g)
 	ioengine=x	'x' may be: aio/libaio/linuxaio for Linux aio,
 			posixaio for POSIX aio, sync for regular read/write io,
-			mmap for mmap'ed io, splice for using splice/vmsplice,
+			mmap for mmap'ed io, syslet-rw for syslet driven
+			read/write, splice for using splice/vmsplice,
 			sgio for direct SG_IO io, or net for network io. sgio
 			only works on Linux on SCSI (or SCSI-like devices,
 			such as usb-storage or sata/libata driven) devices.
