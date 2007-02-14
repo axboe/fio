@@ -40,6 +40,9 @@ static unsigned long get_mult_bytes(char c)
 		case 'g':
 		case 'G':
 			return 1024 * 1024 * 1024;
+		case 'e':
+		case 'E':
+			return 1024 * 1024 * 1024 * 1024UL;
 		default:
 			return 1;
 	}

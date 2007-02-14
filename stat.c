@@ -22,7 +22,7 @@ static char *num2str(unsigned long num, int maxlen, int base)
 	 * 2^10 base right now.
 	 */
 	const unsigned int thousand = 1024;
-	char postfix[] = { 'K', 'M', 'G', 'P' };
+	char postfix[] = { 'K', 'M', 'G', 'P', 'E' };
 	char *buf;
 	int i;
 
@@ -47,7 +47,7 @@ static char *num2str(unsigned long num, int maxlen, int base)
 		num /= thousand;
 		num += carry;
 		i++;
-	} while (i <= 4);
+	} while (i <= 5);
 
 	return buf;
 }
