@@ -113,7 +113,7 @@ static void init_atom(struct syslet_uatom *atom, int nr, void *arg0,
 static void fio_syslet_prep_sync(struct io_u *io_u, struct fio_file *f)
 {
 	init_atom(&io_u->req.atom, __NR_fsync, &f->fd, NULL, NULL, NULL,
-		  &io_u->req.ret, SYSLET_STOP_ON_NEGATIVE, io_u);
+		  &io_u->req.ret, 0, io_u);
 }
 
 static void fio_syslet_prep_rw(struct io_u *io_u, struct fio_file *f)
@@ -129,8 +129,7 @@ static void fio_syslet_prep_rw(struct io_u *io_u, struct fio_file *f)
 		nr = __NR_pwrite64;
 
 	init_atom(&io_u->req.atom, nr, &f->fd, &io_u->xfer_buf,
-		  &io_u->xfer_buflen, &io_u->offset, &io_u->req.ret,
-		  SYSLET_STOP_ON_NEGATIVE, io_u);
+		  &io_u->xfer_buflen, &io_u->offset, &io_u->req.ret, 0, io_u);
 }
 
 static int fio_syslet_prep(struct thread_data fio_unused *td, struct io_u *io_u)
@@ -148,11 +147,13 @@ static int fio_syslet_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct syslet_data *sd = td->io_ops->data;
-	struct syslet_uatom *done;
 	long ret;
 
-	done = async_exec(&io_u->req.atom);
-	if (!done)
+	/*
+	 * On sync completion, the atom is returned. So on NULL return
+	 * it's queued asynchronously.
+	 */
+	if (!async_exec(&io_u->req.atom))
 		return 0;
 
 	/*
