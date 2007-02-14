@@ -57,9 +57,6 @@ void unregister_ioengine(struct ioengine_ops *ops)
 
 int register_ioengine(struct ioengine_ops *ops)
 {
-	if (check_engine_ops(ops))
-		return 1;
-
 	INIT_LIST_HEAD(&ops->list);
 	list_add_tail(&ops->list, &engine_list);
 	return 0;
