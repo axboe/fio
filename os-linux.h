@@ -19,7 +19,13 @@
 #define FIO_HAVE_IOSCHED_SWITCH
 #define FIO_HAVE_ODIRECT
 #define FIO_HAVE_HUGETLB
+
+/*
+ * Only for x86 currently
+ */
+#if defined(__i386__)
 #define FIO_HAVE_SYSLET
+#endif
 
 #define OS_MAP_ANON		(MAP_ANONYMOUS)
 
@@ -74,6 +80,7 @@ static inline int vmsplice(int fd, const struct iovec *iov,
 
 #define SPLICE_DEF_SIZE	(64*1024)
 
+#ifdef FIO_HAVE_SYSLET
 /*
  * syslet stuff
  */
@@ -101,6 +108,7 @@ static inline long umem_add(unsigned long *uptr, unsigned long inc)
 {
 	return syscall(__NR_umem_add, uptr, inc);
 }
+#endif /* FIO_HAVE_SYSLET */
 
 enum {
 	IOPRIO_WHO_PROCESS = 1,

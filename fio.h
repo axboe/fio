@@ -18,7 +18,9 @@
 #include "arch.h"
 #include "os.h"
 
+#ifdef FIO_HAVE_SYSLET
 #include "syslet.h"
+#endif
 
 enum fio_ddir {
 	DDIR_READ = 0,
