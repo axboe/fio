@@ -70,7 +70,6 @@ struct io_piece {
 #ifdef FIO_HAVE_SYSLET
 struct syslet_req {
 	struct syslet_uatom atom;
-	unsigned long cmd;
 	long ret;
 };
 #endif
@@ -90,8 +89,7 @@ struct io_u {
 		struct sg_io_hdr hdr;
 #endif
 #ifdef FIO_HAVE_SYSLET
-		struct syslet_req rw_atom;
-		struct syslet_req seek_atom;
+		struct syslet_req req;
 #endif
 	};
 	struct timeval start_time;

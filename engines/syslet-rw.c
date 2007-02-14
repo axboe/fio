@@ -91,17 +91,18 @@ static struct io_u *fio_syslet_event(struct thread_data *td, int event)
 }
 
 static void init_atom(struct syslet_uatom *atom, int nr, void *arg0,
-		      void *arg1, void *arg2, void *ret_ptr,
-		      unsigned long flags, void *priv,struct syslet_uatom *next)
+		      void *arg1, void *arg2, void *arg3, void *ret_ptr,
+		      unsigned long flags, void *priv)
 {
 	atom->flags = flags;
 	atom->nr = nr;
 	atom->ret_ptr = ret_ptr;
-	atom->next = next;
+	atom->next = NULL;
 	atom->arg_ptr[0] = arg0;
 	atom->arg_ptr[1] = arg1;
 	atom->arg_ptr[2] = arg2;
-	atom->arg_ptr[3] = atom->arg_ptr[4] = atom->arg_ptr[5] = NULL;
+	atom->arg_ptr[3] = arg3;
+	atom->arg_ptr[4] = atom->arg_ptr[5] = NULL;
 	atom->private = priv;
 }
 
@@ -110,8 +111,8 @@ static void init_atom(struct syslet_uatom *atom, int nr, void *arg0,
  */
 static void fio_syslet_prep_sync(struct io_u *io_u, struct fio_file *f)
 {
-	init_atom(&io_u->seek_atom.atom, __NR_fsync, &f->fd, NULL, NULL,
-		  &io_u->seek_atom.ret, SYSLET_STOP_ON_NEGATIVE, io_u, NULL);
+	init_atom(&io_u->req.atom, __NR_fsync, &f->fd, NULL, NULL, NULL,
+		  &io_u->req.ret, SYSLET_STOP_ON_NEGATIVE, io_u);
 }
 
 static void fio_syslet_prep_rw(struct io_u *io_u, struct fio_file *f)
@@ -119,27 +120,16 @@ static void fio_syslet_prep_rw(struct io_u *io_u, struct fio_file *f)
 	int nr;
 
 	/*
-	 * prepare seek
-	 */
-	io_u->seek_atom.cmd = SEEK_SET;
-	init_atom(&io_u->seek_atom.atom, __NR_lseek, &f->fd, &io_u->offset,
-		  &io_u->seek_atom.cmd, &io_u->seek_atom.ret,
-		  SYSLET_STOP_ON_NEGATIVE | SYSLET_NO_COMPLETE |
-			SYSLET_SKIP_TO_NEXT_ON_STOP,
-		  NULL, &io_u->rw_atom.atom);
-
-	/*
 	 * prepare rw
 	 */
 	if (io_u->ddir == DDIR_READ)
-		nr = __NR_read;
+		nr = __NR_pread64;
 	else
-		nr = __NR_write;
+		nr = __NR_pwrite64;
 
-	init_atom(&io_u->rw_atom.atom, nr, &f->fd, &io_u->xfer_buf,
-		  &io_u->xfer_buflen, &io_u->rw_atom.ret,
-		  SYSLET_STOP_ON_NEGATIVE | SYSLET_SKIP_TO_NEXT_ON_STOP,
-		  io_u, NULL);
+	init_atom(&io_u->req.atom, nr, &f->fd, &io_u->xfer_buf,
+		  &io_u->xfer_buflen, &io_u->offset, &io_u->req.ret,
+		  SYSLET_STOP_ON_NEGATIVE, io_u);
 }
 
 static int fio_syslet_prep(struct thread_data fio_unused *td, struct io_u *io_u)
@@ -160,14 +150,14 @@ static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 	struct syslet_uatom *done;
 	long ret;
 
-	done = async_exec(&io_u->seek_atom.atom);
+	done = async_exec(&io_u->req.atom);
 	if (!done)
 		return 0;
 
 	/*
 	 * completed sync
 	 */
-	ret = io_u->rw_atom.ret;
+	ret = io_u->req.ret;
 	if (ret != (long) io_u->xfer_buflen) {
 		if (ret > 0) {
 			io_u->resid = io_u->xfer_buflen - ret;
