@@ -206,6 +206,9 @@ static void async_head_exit(struct syslet_data *sd)
 {
 	if (async_unregister(sd->ahu, sizeof(*sd->ahu)) < 0)
 		perror("async_register");
+
+	free(sd->ahu);
+	free(sd->ring);
 }
 
 static void fio_syslet_cleanup(struct thread_data *td)
