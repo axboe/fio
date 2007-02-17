@@ -439,6 +439,7 @@ static void show_thread_status(struct thread_data *td,
 	double usr_cpu, sys_cpu;
 	unsigned long runtime;
 	double io_u_dist[FIO_IO_U_MAP_NR];
+	double io_u_lat[FIO_IO_U_LAT_NR];
 	int i;
 
 	if (!(td->io_bytes[0] + td->io_bytes[1]))
@@ -475,6 +476,17 @@ static void show_thread_status(struct thread_data *td,
 	}
 
 	fprintf(f_out, "  IO depths    : 1=%3.1f%%, 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%, 16=%3.1f%%, 32=%3.1f%%, >=64=%3.1f%%\n", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
+
+	/*
+	 * Do latency distribution calculations
+	 */
+	for (i = 0; i < FIO_IO_U_LAT_NR; i++) {
+		io_u_lat[i] = (double) td->io_u_lat[i] / (double) td->total_io_u;
+		io_u_lat[i] *= 100.0;
+	}
+
+	fprintf(f_out, "     lat (msec): 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%, 16=%3.1f%%, 32=%3.1f%%, 64=%3.1f%%, 128=%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5], io_u_lat[6]);
+	fprintf(f_out, "     lat (msec): 256=%3.1f%%, 512=%3.1f%%, 1024=%3.1f%%, >=2048=%3.1f%%\n", io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
 
 	if (td->description)
 		fprintf(f_out, "%s\n", td->description);

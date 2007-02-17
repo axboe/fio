@@ -556,6 +556,8 @@ Client1 (g=0): err= 0:
     bw (KiB/s) : min=    0, max= 1196, per=51.00%, avg=664.02, stdev=681.68
   cpu        : usr=1.49%, sys=0.25%, ctx=7969
   IO depths    : 1=0.1%, 2=0.3%, 4=0.5%, 8=99.0%, 16=0.0%, 32=0.0%, >32=0.0%
+     lat (msec): 2=1.6%, 4=0.0%, 8=3.2%, 16=12.8%, 32=38.4%, 64=24.8%, 128=15.2%
+     lat (msec): 256=4.0%, 512=0.0%, 1024=0.0%, >=2048=0.0%
 
 The client number is printed, along with the group id and error of that
 thread. Below is the io statistics, here for writes. In the order listed,
@@ -585,6 +587,12 @@ IO depths=	The distribution of io depths over the job life time. The
 		16= entries includes depths up to that value but higher
 		than the previous entry. In other words, it covers the
 		range from 16 to 31.
+IO latencies=	The distribution of IO completion latencies. This is the
+		time from when IO leaves fio and when it gets completed.
+		The numbers follow the same pattern as the IO depths,
+		meaning that 2=1.6% means that 1.6% of the IO completed
+		within 2 msecs, 16=12.8% means that 12.8% of the IO
+		took more than 8 msecs, but less than (or equal to) 16 msecs.
 
 After each client has been listed, the group statistics are printed. They
 will look like this:

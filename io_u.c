@@ -263,6 +263,40 @@ static void io_u_mark_depth(struct thread_data *td)
 	td->total_io_u++;
 }
 
+static void io_u_mark_latency(struct thread_data *td, unsigned long msec)
+{
+	int index = 0;
+
+	switch (msec) {
+	default:
+		index++;
+	case 1024 ... 2047:
+		index++;
+	case 512 ... 1023:
+		index++;
+	case 256 ... 511:
+		index++;
+	case 128 ... 255:
+		index++;
+	case 64 ... 127:
+		index++;
+	case 32 ... 63:
+		index++;
+	case 16 ... 31:
+		index++;
+	case 8 ... 15:
+		index++;
+	case 4 ... 7:
+		index++;
+	case 2 ... 3:
+		index++;
+	case 0 ... 1:
+		break;
+	}
+
+	td->io_u_lat[index]++;
+}
+
 struct io_u *__get_io_u(struct thread_data *td)
 {
 	struct io_u *io_u = NULL;
@@ -367,6 +401,7 @@ void io_completed(struct thread_data *td, struct io_u *io_u,
 
 		add_clat_sample(td, idx, msec);
 		add_bw_sample(td, idx, &icd->time);
+		io_u_mark_latency(td, msec);
 
 		if ((td_rw(td) || td_write(td)) && idx == DDIR_WRITE)
 			log_io_piece(td, io_u);

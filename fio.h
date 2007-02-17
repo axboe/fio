@@ -220,6 +220,7 @@ struct fio_file {
  * How many depth levels to log
  */
 #define FIO_IO_U_MAP_NR	8
+#define FIO_IO_U_LAT_NR 12
 
 /*
  * This describes a single thread/process executing a fio job.
@@ -320,6 +321,7 @@ struct thread_data {
 	 */
 	unsigned int cur_depth;
 	unsigned int io_u_map[FIO_IO_U_MAP_NR];
+	unsigned int io_u_lat[FIO_IO_U_LAT_NR];
 	unsigned long total_io_u;
 	struct list_head io_u_freelist;
 	struct list_head io_u_busylist;
