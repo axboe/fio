@@ -331,6 +331,13 @@ static struct fio_option options[] = {
 		.def	= "0",
 	},
 	{
+		.name	= "thinktime_spin",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(thinktime_spin),
+		.help	= "Start thinktime by spinning this amount (usec)",
+		.def	= "0",
+	},
+	{
 		.name	= "thinktime_blocks",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(thinktime_blocks),
@@ -631,6 +638,12 @@ static void fixup_options(struct thread_data *td)
 	 */
 	if (td->filetype == FIO_TYPE_CHAR && td->odirect)
 		td->odirect = 0;
+
+	/*
+	 * thinktime_spin must be less than thinktime
+	 */
+	if (td->thinktime_spin > td->thinktime)
+		td->thinktime_spin = td->thinktime;
 }
 
 /*

@@ -466,8 +466,16 @@ requeue:
 			unsigned long long b;
 
 			b = td->io_blocks[0] + td->io_blocks[1];
-			if (!(b % td->thinktime_blocks))
-				usec_sleep(td, td->thinktime);
+			if (!(b % td->thinktime_blocks)) {
+				int left;
+
+				if (td->thinktime_spin)
+					__usec_sleep(td->thinktime_spin);
+
+				left = td->thinktime - td->thinktime_spin;
+				if (left)
+					usec_sleep(td, left);
+			}
 		}
 	}
 

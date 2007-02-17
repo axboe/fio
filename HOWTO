@@ -343,7 +343,14 @@ prioclass=int	Set the io priority class. See man ionice(1).
 
 thinktime=int	Stall the job x microseconds after an io has completed before
 		issuing the next. May be used to simulate processing being
-		done by an application. See thinktime_blocks.
+		done by an application. See thinktime_blocks and
+		thinktime_spin.
+
+thinktime_spin=int
+		Only valid if thinktime is set - pretend to spend CPU time
+		doing something with the data received, before falling back
+		to sleeping for the rest of the period specified by
+		thinktime.
 
 thinktime_blocks
 		Only valid if thinktime is set - control how many blocks
