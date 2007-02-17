@@ -400,7 +400,6 @@ static void do_io(struct thread_data *td)
 			break;
 
 		memcpy(&s, &io_u->start_time, sizeof(s));
-
 requeue:
 		ret = td_io_queue(td, io_u);
 		if (ret) {
@@ -756,12 +755,13 @@ static void *thread_main(void *data)
 		terminate_threads(td->groupid, 0);
 
 err:
+	if (td->error)
+		printf("fio: pid=%d, err=%d/%s\n", td->pid, td->error, td->verror);
 	close_files(td);
 	close_ioengine(td);
 	cleanup_io_u(td);
 	td_set_runstate(td, TD_EXITED);
 	return NULL;
-
 }
 
 /*
@@ -873,6 +873,9 @@ static void run_threads(void)
 		 * client data interspersed on disk
 		 */
 		if (setup_files(td)) {
+			exit_value++;
+			if (td->error)
+				log_err("fio: pid=%d, err=%d/%s\n", td->pid, td->error, td->verror);
 			td_set_runstate(td, TD_REAPED);
 			todo--;
 		}
