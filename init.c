@@ -845,7 +845,7 @@ int init_random_state(struct thread_data *td)
 		return 0;
 
 	if (td->rand_repeatable)
-		seeds[3] = FIO_RANDSEED;
+		seeds[3] = FIO_RANDSEED * td->thread_number;
 
 	if (!td->norandommap) {
 		for_each_file(td, f, i) {
