@@ -761,28 +761,30 @@ err:
 	close_ioengine(td);
 	cleanup_io_u(td);
 	td_set_runstate(td, TD_EXITED);
-	return NULL;
+	return (void *) td->error;
 }
 
 /*
  * We cannot pass the td data into a forked process, so attach the td and
  * pass it to the thread worker.
  */
-static void *fork_main(int shmid, int offset)
+static int fork_main(int shmid, int offset)
 {
 	struct thread_data *td;
-	void *data;
+	void *data, *ret;
 
 	data = shmat(shmid, NULL, 0);
 	if (data == (void *) -1) {
+		int __err = errno;
+
 		perror("shmat");
-		return NULL;
+		return __err;
 	}
 
 	td = data + offset * sizeof(struct thread_data);
-	thread_main(td);
+	ret = thread_main(td);
 	shmdt(data);
-	return NULL;
+	return (int) ret;
 }
 
 /*
@@ -822,8 +824,15 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 
 			if (pthread_join(td->thread, (void *) &ret))
 				perror("thread_join");
-		} else
-			waitpid(td->pid, NULL, 0);
+		} else {
+			int status;
+
+			waitpid(td->pid, &status, 0);
+			if (WIFEXITED(status) && WEXITSTATUS(status)) {
+				if (!exit_value)
+					exit_value++;
+			}
+		}
 
 		(*nr_running)--;
 		(*m_rate) -= td->ratemin;
@@ -932,8 +941,9 @@ static void run_threads(void)
 				if (fork())
 					fio_sem_down(&startup_sem);
 				else {
-					fork_main(shm_id, i);
-					exit(0);
+					int ret = fork_main(shm_id, i);
+
+					exit(ret);
 				}
 			}
 		}
