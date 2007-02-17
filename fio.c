@@ -793,7 +793,7 @@ static int fork_main(int shmid, int offset)
 static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 {
 	struct thread_data *td;
-	int i, cputhreads, pending;
+	int i, cputhreads, pending, status, ret;
 
 	/*
 	 * reap exited threads (TD_EXITED -> TD_REAPED)
@@ -806,6 +806,22 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		 */
 		if (td->io_ops && td->io_ops->flags & FIO_CPUIO)
 			cputhreads++;
+
+		if (td->runstate < TD_EXITED) {
+			/*
+			 * check if someone quit or got killed in an unusual way
+			 */
+			ret = waitpid(td->pid, &status, WNOHANG);
+			if (ret < 0)
+				perror("waitpid");
+			else if ((ret == td->pid) && WIFSIGNALED(status)) {
+				int sig = WTERMSIG(status);
+
+				log_err("fio: pid=%d, got signal=%d\n", td->pid, sig);
+				td_set_runstate(td, TD_REAPED);
+				goto reaped;
+			}
+		}
 
 		if (td->runstate != TD_EXITED) {
 			if (td->runstate < TD_RUNNING)
@@ -827,13 +843,16 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		} else {
 			int status;
 
-			waitpid(td->pid, &status, 0);
+			ret = waitpid(td->pid, &status, 0);
+			if (ret < 0)
+				perror("waitpid");
 			if (WIFEXITED(status) && WEXITSTATUS(status)) {
 				if (!exit_value)
 					exit_value++;
 			}
 		}
 
+reaped:
 		(*nr_running)--;
 		(*m_rate) -= td->ratemin;
 		(*t_rate) -= td->rate;
