@@ -196,7 +196,7 @@ struct fio_file {
 	 */
 	union {
 		unsigned long file_data;
-		long fd;
+		int fd;
 	};
 	char *file_name;
 	void *mmap;
