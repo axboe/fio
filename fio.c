@@ -846,7 +846,7 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 			ret = waitpid(td->pid, &status, 0);
 			if (ret < 0)
 				perror("waitpid");
-			if (WIFEXITED(status) && WEXITSTATUS(status)) {
+			else if (WIFEXITED(status) && WEXITSTATUS(status)) {
 				if (!exit_value)
 					exit_value++;
 			}
