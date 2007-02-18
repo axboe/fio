@@ -33,16 +33,27 @@ static int check_engine_ops(struct ioengine_ops *ops)
 	if (ops->flags & FIO_CPUIO)
 		return 0;
 
+	if (!ops->queue) {
+		log_err("%s: no queue handler\n", ops->name);
+		return 1;
+	}
+
+	/*
+	 * sync engines only need a ->queue()
+	 */
+	if (ops->flags & FIO_SYNCIO)
+		return 0;
+	
 	if (!ops->event) {
-		log_err("%s: no event handler)\n", ops->name);
+		log_err("%s: no event handler\n", ops->name);
 		return 1;
 	}
 	if (!ops->getevents) {
-		log_err("%s: no getevents handler)\n", ops->name);
+		log_err("%s: no getevents handler\n", ops->name);
 		return 1;
 	}
 	if (!ops->queue) {
-		log_err("%s: no queue handler)\n", ops->name);
+		log_err("%s: no queue handler\n", ops->name);
 		return 1;
 	}
 		
@@ -159,8 +170,8 @@ void close_ioengine(struct thread_data *td)
 
 int td_io_prep(struct thread_data *td, struct io_u *io_u)
 {
-	if (td->io_ops->prep && td->io_ops->prep(td, io_u))
-		return 1;
+	if (td->io_ops->prep)
+		return td->io_ops->prep(td, io_u);
 
 	return 0;
 }
@@ -168,7 +179,10 @@ int td_io_prep(struct thread_data *td, struct io_u *io_u)
 int td_io_getevents(struct thread_data *td, int min, int max,
 		    struct timespec *t)
 {
-	return td->io_ops->getevents(td, min, max, t);
+	if (td->io_ops->getevents)
+		return td->io_ops->getevents(td, min, max, t);
+
+	return 0;
 }
 
 int td_io_queue(struct thread_data *td, struct io_u *io_u)

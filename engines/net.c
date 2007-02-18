@@ -14,46 +14,17 @@
 #include "../fio.h"
 #include "../os.h"
 
-struct net_data {
-	int send_to_net;
-	struct io_u *last_io_u;
-};
-
-static int fio_netio_getevents(struct thread_data *td, int fio_unused min,
-				int max, struct timespec fio_unused *t)
-{
-	assert(max <= 1);
-
-	/*
-	 * we can only have one finished io_u for sync io, since the depth
-	 * is always 1
-	 */
-	if (list_empty(&td->io_u_busylist))
-		return 0;
-
-	return 1;
-}
-
-static struct io_u *fio_netio_event(struct thread_data *td, int event)
-{
-	struct net_data *nd = td->io_ops->data;
-
-	assert(event == 0);
-
-	return nd->last_io_u;
-}
+#define send_to_net(td)	((td)->io_ops->priv)
 
 static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 {
-	struct net_data *nd = td->io_ops->data;
 	struct fio_file *f = io_u->file;
 
 	/*
 	 * Make sure we don't see spurious reads to a receiver, and vice versa
 	 */
-	if ((nd->send_to_net && io_u->ddir == DDIR_READ) ||
-	    (!nd->send_to_net && io_u->ddir == DDIR_WRITE)) {
-		printf("boo!\n");
+	if ((send_to_net(td) && io_u->ddir == DDIR_READ) ||
+	    (!send_to_net(td) && io_u->ddir == DDIR_WRITE)) {
 		td_verror(td, EINVAL);
 		return 1;
 	}
@@ -73,7 +44,6 @@ static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 
 static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 {
-	struct net_data *nd = td->io_ops->data;
 	struct fio_file *f = io_u->file;
 	int ret, flags = 0;
 
@@ -96,17 +66,15 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 		if (ret > 0) {
 			io_u->resid = io_u->xfer_buflen - ret;
 			io_u->error = 0;
-			return ret;
+			return FIO_Q_COMPLETED;
 		} else
 			io_u->error = errno;
 	}
 
-	if (!io_u->error)
-		nd->last_io_u = io_u;
-	else
+	if (io_u->error)
 		td_verror(td, io_u->error);
 
-	return io_u->error;
+	return FIO_Q_COMPLETED;
 }
 
 static int fio_netio_setup_connect(struct thread_data *td, const char *host,
@@ -245,7 +213,6 @@ static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 static int fio_netio_setup(struct thread_data *td)
 {
 	char host[64], buf[128];
-	struct net_data *nd;
 	unsigned short port;
 	struct fio_file *f;
 	char *sep;
@@ -255,14 +222,6 @@ static int fio_netio_setup(struct thread_data *td)
 		log_err("fio: need size= set\n");
 		return 1;
 	}
-
-	/*
-	 * work around for late init call
-	 */
-	if (td->io_ops->init(td))
-		return 1;
-
-	nd = td->io_ops->data;
 
 	if (td->iomix) {
 		log_err("fio: network connections must be read OR write\n");
@@ -283,10 +242,10 @@ static int fio_netio_setup(struct thread_data *td)
 	port = atoi(sep);
 
 	if (td->ddir == DDIR_READ) {
-		nd->send_to_net = 0;
+		send_to_net(td) = 0;
 		ret = fio_netio_setup_listen(td, port);
 	} else {
-		nd->send_to_net = 1;
+		send_to_net(td) = 1;
 		ret = fio_netio_setup_connect(td, host, port);
 	}
 
@@ -304,40 +263,11 @@ static int fio_netio_setup(struct thread_data *td)
 	return 0;
 }
 
-static void fio_netio_cleanup(struct thread_data *td)
-{
-	if (td->io_ops->data) {
-		free(td->io_ops->data);
-		td->io_ops->data = NULL;
-	}
-}
-
-static int fio_netio_init(struct thread_data *td)
-{
-	struct net_data *nd;
-
-	/*
-	 * Hack to work-around the ->setup() function calling init on its
-	 * own, since it needs ->io_ops->data to be set up.
-	 */
-	if (td->io_ops->data)
-		return 0;
-
-	nd  = malloc(sizeof(*nd));
-	nd->last_io_u = NULL;
-	td->io_ops->data = nd;
-	return 0;
-}
-
 static struct ioengine_ops ioengine = {
 	.name		= "net",
 	.version	= FIO_IOOPS_VERSION,
-	.init		= fio_netio_init,
 	.prep		= fio_netio_prep,
 	.queue		= fio_netio_queue,
-	.getevents	= fio_netio_getevents,
-	.event		= fio_netio_event,
-	.cleanup	= fio_netio_cleanup,
 	.setup		= fio_netio_setup,
 	.flags		= FIO_SYNCIO | FIO_NETIO,
 };

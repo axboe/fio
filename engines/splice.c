@@ -15,33 +15,8 @@
 #ifdef FIO_HAVE_SPLICE
 
 struct spliceio_data {
-	struct io_u *last_io_u;
 	int pipe[2];
 };
-
-static int fio_spliceio_getevents(struct thread_data *td, int fio_unused min,
-				  int max, struct timespec fio_unused *t)
-{
-	assert(max <= 1);
-
-	/*
-	 * we can only have one finished io_u for sync io, since the depth
-	 * is always 1
-	 */
-	if (list_empty(&td->io_u_busylist))
-		return 0;
-
-	return 1;
-}
-
-static struct io_u *fio_spliceio_event(struct thread_data *td, int event)
-{
-	struct spliceio_data *sd = td->io_ops->data;
-
-	assert(event == 0);
-
-	return sd->last_io_u;
-}
 
 /*
  * For splice reading, we unfortunately cannot (yet) vmsplice the other way.
@@ -131,7 +106,6 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 
 static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 {
-	struct spliceio_data *sd = td->io_ops->data;
 	int ret;
 
 	if (io_u->ddir == DDIR_READ)
@@ -145,17 +119,15 @@ static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 		if (ret > 0) {
 			io_u->resid = io_u->xfer_buflen - ret;
 			io_u->error = 0;
-			return ret;
+			return FIO_Q_COMPLETED;
 		} else
 			io_u->error = errno;
 	}
 
-	if (!io_u->error)
-		sd->last_io_u = io_u;
-	else
+	if (io_u->error)
 		td_verror(td, io_u->error);
 
-	return io_u->error;
+	return FIO_Q_COMPLETED;
 }
 
 static void fio_spliceio_cleanup(struct thread_data *td)
@@ -174,7 +146,6 @@ static int fio_spliceio_init(struct thread_data *td)
 {
 	struct spliceio_data *sd = malloc(sizeof(*sd));
 
-	sd->last_io_u = NULL;
 	if (pipe(sd->pipe) < 0) {
 		td_verror(td, errno);
 		free(sd);
@@ -190,8 +161,6 @@ static struct ioengine_ops ioengine = {
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_spliceio_init,
 	.queue		= fio_spliceio_queue,
-	.getevents	= fio_spliceio_getevents,
-	.event		= fio_spliceio_event,
 	.cleanup	= fio_spliceio_cleanup,
 	.flags		= FIO_SYNCIO,
 };

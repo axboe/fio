@@ -27,6 +27,7 @@
 #include <signal.h>
 #include <time.h>
 #include <locale.h>
+#include <assert.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
@@ -221,23 +222,32 @@ static int fio_io_sync(struct thread_data *td, struct fio_file *f)
 	}
 
 	ret = td_io_queue(td, io_u);
-	if (ret) {
+	if (ret < 0) {
 		td_verror(td, io_u->error);
 		put_io_u(td, io_u);
 		return 1;
-	}
+	} else if (ret == FIO_Q_QUEUED) {
+		ret = td_io_getevents(td, 1, td->cur_depth, NULL);
+		if (ret < 0) {
+			td_verror(td, ret);
+			return 1;
+		}
 
-	ret = td_io_getevents(td, 1, td->cur_depth, NULL);
-	if (ret < 0) {
-		td_verror(td, ret);
-		return 1;
-	}
+		icd.nr = ret;
+		ios_completed(td, &icd);
+		if (icd.error) {
+			td_verror(td, icd.error);
+			return 1;
+		}
+	} else if (ret == FIO_Q_COMPLETED) {
+		if (io_u->error) {
+			td_verror(td, io_u->error);
+			return 1;
+		}
 
-	icd.nr = ret;
-	ios_completed(td, &icd);
-	if (icd.error) {
-		td_verror(td, icd.error);
-		return 1;
+		init_icd(&icd);
+		io_completed(td, io_u, &icd);
+		put_io_u(td, io_u);
 	}
 
 	return 0;
@@ -249,9 +259,8 @@ static int fio_io_sync(struct thread_data *td, struct fio_file *f)
  */
 static void do_verify(struct thread_data *td)
 {
-	struct io_u *io_u, *v_io_u = NULL;
-	struct io_completion_data icd;
 	struct fio_file *f;
+	struct io_u *io_u;
 	int ret, i;
 
 	/*
@@ -265,78 +274,66 @@ static void do_verify(struct thread_data *td)
 
 	td_set_runstate(td, TD_VERIFYING);
 
-	do {
-		if (td->terminate)
-			break;
-
+	io_u = NULL;
+	while (!td->terminate) {
 		io_u = __get_io_u(td);
 		if (!io_u)
 			break;
 
-		if (runtime_exceeded(td, &io_u->start_time)) {
-			put_io_u(td, io_u);
-			break;
-		}
-
-		if (get_next_verify(td, io_u)) {
-			put_io_u(td, io_u);
-			break;
-		}
-
-		f = get_next_file(td);
-		if (!f)
+		if (runtime_exceeded(td, &io_u->start_time))
 			break;
 
-		io_u->file = f;
-
-		if (td_io_prep(td, io_u)) {
-			put_io_u(td, io_u);
+		if (get_next_verify(td, io_u))
 			break;
-		}
 
+		if (td_io_prep(td, io_u))
+			break;
+
+requeue:
 		ret = td_io_queue(td, io_u);
-		if (ret) {
-			td_verror(td, io_u->error);
-			put_io_u(td, io_u);
+
+		switch (ret) {
+		case FIO_Q_COMPLETED:
+			if (io_u->error)
+				ret = io_u->error;
+			if (io_u->xfer_buflen != io_u->resid && io_u->resid) {
+				int bytes = io_u->xfer_buflen - io_u->resid;
+
+				io_u->xfer_buflen = io_u->resid;
+				io_u->xfer_buf += bytes;
+				goto requeue;
+			}
+			if (do_io_u_verify(td, &io_u)) {
+				ret = -EIO;
+				break;
+			}
+			continue;
+		case FIO_Q_QUEUED:
+			break;
+		default:
+			assert(ret < 0);
+			td_verror(td, ret);
 			break;
 		}
 
 		/*
-		 * we have one pending to verify, do that while
-		 * we are doing io on the next one
+		 * We get here for a queued request, in the future we
+		 * want to later make this take full advantage of
+		 * keeping IO in flight while verifying others.
 		 */
-		if (do_io_u_verify(td, &v_io_u))
-			break;
-
 		ret = td_io_getevents(td, 1, 1, NULL);
-		if (ret != 1) {
-			if (ret < 0)
-				td_verror(td, ret);
-			break;
-		}
-
-		v_io_u = td->io_ops->event(td, 0);
-		icd.nr = 1;
-		icd.error = 0;
-		fio_gettime(&icd.time, NULL);
-		io_completed(td, v_io_u, &icd);
-
-		if (icd.error) {
-			td_verror(td, icd.error);
-			put_io_u(td, v_io_u);
-			v_io_u = NULL;
-			break;
-		}
-
-		/*
-		 * if we can't submit more io, we need to verify now
-		 */
-		if (queue_full(td) && do_io_u_verify(td, &v_io_u))
+		if (ret < 0)
 			break;
 
-	} while (1);
+		assert(ret == 1);
+		io_u = td->io_ops->event(td, 0);
 
-	do_io_u_verify(td, &v_io_u);
+		if (do_io_u_verify(td, &io_u))
+			break;
+	}
+
+	if (io_u)
+		put_io_u(td, io_u);
 
 	if (td->cur_depth)
 		cleanup_pending_aio(td);
@@ -402,45 +399,63 @@ static void do_io(struct thread_data *td)
 		memcpy(&s, &io_u->start_time, sizeof(s));
 requeue:
 		ret = td_io_queue(td, io_u);
-		if (ret) {
-			if (ret > 0 && (io_u->xfer_buflen != io_u->resid) &&
-			    io_u->resid) {
-				/*
-				 * short read/write. requeue.
-				 */
-				io_u->xfer_buflen = io_u->resid;
-				io_u->xfer_buf += ret;
-				goto requeue;
-			} else {
-				put_io_u(td, io_u);
+
+		switch (ret) {
+		case FIO_Q_COMPLETED:
+			if (io_u->error) {
+				ret = io_u->error;
 				break;
 			}
+			if (io_u->xfer_buflen != io_u->resid && io_u->resid) {
+				int bytes = io_u->xfer_buflen - io_u->resid;
+
+				io_u->xfer_buflen = io_u->resid;
+				io_u->xfer_buf += bytes;
+				goto requeue;
+			}
+			init_icd(&icd);
+			io_completed(td, io_u, &icd);
+			put_io_u(td, io_u);
+			break;
+		case FIO_Q_QUEUED:
+			break;
+		default:
+			assert(ret < 0);
+			put_io_u(td, io_u);
+			break;
 		}
+
+		if (ret < 0)
+			break;
 
 		add_slat_sample(td, io_u->ddir, mtime_since(&io_u->start_time, &io_u->issue_time));
 
-		if (td->cur_depth < td->iodepth) {
-			struct timespec ts = { .tv_sec = 0, .tv_nsec = 0};
+		if (ret == FIO_Q_QUEUED) {
+			if (td->cur_depth < td->iodepth) {
+				struct timespec ts;
 
-			timeout = &ts;
-			min_evts = 0;
-		} else {
-			timeout = NULL;
-			min_evts = 1;
-		}
+				ts.tv_sec = 0;
+				ts.tv_nsec = 0;
+				timeout = &ts;
+				min_evts = 0;
+			} else {
+				timeout = NULL;
+				min_evts = 1;
+			}
 
-		ret = td_io_getevents(td, min_evts, td->cur_depth, timeout);
-		if (ret < 0) {
-			td_verror(td, ret);
-			break;
-		} else if (!ret)
-			continue;
+			ret = td_io_getevents(td, min_evts, td->cur_depth, timeout);
+			if (ret < 0) {
+				td_verror(td, ret);
+				break;
+			} else if (!ret)
+				continue;
 
-		icd.nr = ret;
-		ios_completed(td, &icd);
-		if (icd.error) {
-			td_verror(td, icd.error);
-			break;
+			icd.nr = ret;
+			ios_completed(td, &icd);
+			if (icd.error) {
+				td_verror(td, icd.error);
+				break;
+			}
 		}
 
 		/*

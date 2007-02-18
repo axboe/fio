@@ -129,6 +129,14 @@ struct io_u {
 	struct list_head list;
 };
 
+/*
+ * io_ops->queue() return values
+ */
+enum {
+	FIO_Q_COMPLETED	= 0,		/* completed sync */
+	FIO_Q_QUEUED	= 1,		/* queued, will complete async */
+};
+
 #define FIO_HDR_MAGIC	0xf00baaef
 
 enum {
@@ -608,6 +616,7 @@ extern struct io_u *get_io_u(struct thread_data *, struct fio_file *);
 extern void put_io_u(struct thread_data *, struct io_u *);
 extern void ios_completed(struct thread_data *, struct io_completion_data *);
 extern void io_completed(struct thread_data *, struct io_u *, struct io_completion_data *);
+extern void init_icd(struct io_completion_data *);
 
 /*
  * io engine entry points
@@ -666,9 +675,10 @@ struct ioengine_ops {
 	void (*cleanup)(struct thread_data *);
 	void *data;
 	void *dlhandle;
+	unsigned long priv;
 };
 
-#define FIO_IOOPS_VERSION	3
+#define FIO_IOOPS_VERSION	4
 
 extern struct ioengine_ops *load_ioengine(struct thread_data *, const char *);
 extern int register_ioengine(struct ioengine_ops *);

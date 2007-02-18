@@ -12,40 +12,10 @@
 #include "../fio.h"
 #include "../os.h"
 
-struct mmapio_data {
-	struct io_u *last_io_u;
-};
-
-static int fio_mmapio_getevents(struct thread_data *td, int fio_unused min,
-				int max, struct timespec fio_unused *t)
-{
-	assert(max <= 1);
-
-	/*
-	 * we can only have one finished io_u for sync io, since the depth
-	 * is always 1
-	 */
-	if (list_empty(&td->io_u_busylist))
-		return 0;
-
-	return 1;
-}
-
-static struct io_u *fio_mmapio_event(struct thread_data *td, int event)
-{
-	struct mmapio_data *sd = td->io_ops->data;
-
-	assert(event == 0);
-
-	return sd->last_io_u;
-}
-
-
 static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	unsigned long long real_off = io_u->offset - f->file_offset;
-	struct mmapio_data *sd = td->io_ops->data;
 
 	if (io_u->ddir == DDIR_READ)
 		memcpy(io_u->xfer_buf, f->mmap + real_off, io_u->xfer_buflen);
@@ -66,39 +36,16 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 			io_u->error = errno;
 	}
 
-	if (!io_u->error)
-		sd->last_io_u = io_u;
-	else
+	if (io_u->error)
 		td_verror(td, io_u->error);
 
-	return io_u->error;
-}
-
-static void fio_mmapio_cleanup(struct thread_data *td)
-{
-	if (td->io_ops->data) {
-		free(td->io_ops->data);
-		td->io_ops->data = NULL;
-	}
-}
-
-static int fio_mmapio_init(struct thread_data *td)
-{
-	struct mmapio_data *sd = malloc(sizeof(*sd));
-
-	sd->last_io_u = NULL;
-	td->io_ops->data = sd;
-	return 0;
+	return FIO_Q_COMPLETED;
 }
 
 static struct ioengine_ops ioengine = {
 	.name		= "mmap",
 	.version	= FIO_IOOPS_VERSION,
-	.init		= fio_mmapio_init,
 	.queue		= fio_mmapio_queue,
-	.getevents	= fio_mmapio_getevents,
-	.event		= fio_mmapio_event,
-	.cleanup	= fio_mmapio_cleanup,
 	.flags		= FIO_SYNCIO | FIO_MMAPIO,
 };
 

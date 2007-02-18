@@ -61,12 +61,17 @@ static int fio_skeleton_cancel(struct thread_data *td, struct io_u *io_u)
  * The io engine must transfer in the direction noted by io_u->ddir
  * to the buffer pointed to by io_u->xfer_buf for as many bytes as
  * io_u->xfer_buflen. Residual data count may be set in io_u->residual
- * for a short read/write. Should return 0 for io_u complete, < 0 for
- * an error, and > 0 for the number of bytes transferred.
+ * for a short read/write.
  */
 static int fio_skeleton_queue(struct thread_data *td, struct io_u *io_u)
 {
-	return 0;
+	/*
+	 * Could return FIO_Q_QUEUED for a queued request,
+	 * FIO_Q_COMPLETED for a completed request, and FIO_Q_BUSY
+	 * if we could queue no more at this point (you'd have to
+	 * define ->commit() to handle that.
+	 */
+	return FIO_Q_COMPLETED;
 }
 
 /*

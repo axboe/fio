@@ -18,7 +18,6 @@
 struct libaio_data {
 	io_context_t aio_ctx;
 	struct io_event *aio_events;
-	struct io_u *sync_io_u;
 };
 
 static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
@@ -41,13 +40,6 @@ static struct io_u *fio_libaio_event(struct thread_data *td, int event)
 {
 	struct libaio_data *ld = td->io_ops->data;
 
-	if (ld->sync_io_u) {
-		struct io_u *ret = ld->sync_io_u;
-
-		ld->sync_io_u = NULL;
-		return ret;
-	}
-
 	return ev_to_iou(ld->aio_events + event);
 }
 
@@ -56,9 +48,6 @@ static int fio_libaio_getevents(struct thread_data *td, int min, int max,
 {
 	struct libaio_data *ld = td->io_ops->data;
 	long r;
-
-	if (ld->sync_io_u)
-		return 1;
 
 	do {
 		r = io_getevents(ld->aio_ctx, min, max, ld->aio_events, t);
@@ -88,7 +77,7 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 	do {
 		ret = io_submit(ld->aio_ctx, 1, &iocb);
 		if (ret == 1)
-			break;
+			return FIO_Q_QUEUED;
 		else if (ret == -EAGAIN || !ret)
 			usleep(100);
 		else if (ret == -EINTR)
@@ -103,10 +92,8 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 			 */
 			if (fsync(io_u->file->fd) < 0)
 				ret = errno;
-			else {
-				ret = 1;
-				ld->sync_io_u = io_u;
-			}
+			else
+				ret = FIO_Q_COMPLETED;
 			break;
 		} else
 			break;
@@ -116,10 +103,10 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 		io_u->resid = io_u->xfer_buflen;
 		io_u->error = -ret;
 		td_verror(td, io_u->error);
-		return 1;
+		return FIO_Q_COMPLETED;
 	}
 
-	return 0;
+	return ret;
 }
 
 static int fio_libaio_cancel(struct thread_data *td, struct io_u *io_u)

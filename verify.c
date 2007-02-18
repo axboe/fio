@@ -83,8 +83,10 @@ static int verify_io_u(struct io_u *io_u)
 	struct verify_header *hdr = (struct verify_header *) io_u->buf;
 	int ret;
 
-	if (hdr->fio_magic != FIO_HDR_MAGIC)
+	if (hdr->fio_magic != FIO_HDR_MAGIC) {
+		log_err("Bad verify header %x\n", hdr->fio_magic);
 		return 1;
+	}
 
 	if (hdr->verify_type == VERIFY_MD5)
 		ret = verify_io_u_md5(hdr, io_u);
@@ -148,7 +150,10 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 
 		io_u->offset = ipo->offset;
 		io_u->buflen = ipo->len;
+		io_u->file = ipo->file;
 		io_u->ddir = DDIR_READ;
+		io_u->xfer_buf = io_u->buf;
+		io_u->xfer_buflen = io_u->buflen;
 		free(ipo);
 		return 0;
 	}
@@ -162,7 +167,11 @@ int do_io_u_verify(struct thread_data *td, struct io_u **io_u)
 	int ret = 0;
 
 	if (v_io_u) {
+		struct io_completion_data icd;
+
 		ret = verify_io_u(v_io_u);
+		init_icd(&icd);
+		io_completed(td, v_io_u, &icd);
 		put_io_u(td, v_io_u);
 		*io_u = NULL;
 	}

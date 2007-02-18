@@ -353,15 +353,10 @@ struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 			return NULL;
 		}
 
-		f->last_pos += io_u->buflen;
+		f->last_pos = io_u->offset + io_u->buflen;
 
 		if (td->verify != VERIFY_NONE)
 			populate_verify_io_u(td, io_u);
-	}
-
-	if (td_io_prep(td, io_u)) {
-		put_io_u(td, io_u);
-		return NULL;
 	}
 
 	/*
@@ -369,6 +364,11 @@ struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 	 */
 	io_u->xfer_buf = io_u->buf;
 	io_u->xfer_buflen = io_u->buflen;
+
+	if (td_io_prep(td, io_u)) {
+		put_io_u(td, io_u);
+		return NULL;
+	}
 
 	fio_gettime(&io_u->start_time, NULL);
 	return io_u;
@@ -411,15 +411,20 @@ void io_completed(struct thread_data *td, struct io_u *io_u,
 		icd->error = io_u->error;
 }
 
+void init_icd(struct io_completion_data *icd)
+{
+	fio_gettime(&icd->time, NULL);
+
+	icd->error = 0;
+	icd->bytes_done[0] = icd->bytes_done[1] = 0;
+}
+
 void ios_completed(struct thread_data *td, struct io_completion_data *icd)
 {
 	struct io_u *io_u;
 	int i;
 
-	fio_gettime(&icd->time, NULL);
-
-	icd->error = 0;
-	icd->bytes_done[0] = icd->bytes_done[1] = 0;
+	init_icd(icd);
 
 	for (i = 0; i < icd->nr; i++) {
 		io_u = td->io_ops->event(td, i);

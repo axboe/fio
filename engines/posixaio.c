@@ -154,9 +154,10 @@ static int fio_posixaio_queue(struct thread_data fio_unused *td,
 	if (ret) {
 		io_u->error = errno;
 		td_verror(td, io_u->error);
+		return FIO_Q_COMPLETED;
 	}
-		
-	return io_u->error;
+
+	return FIO_Q_QUEUED;
 }
 
 static void fio_posixaio_cleanup(struct thread_data *td)

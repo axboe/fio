@@ -154,7 +154,7 @@ static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 	 * it's queued asynchronously.
 	 */
 	if (!async_exec(&io_u->req.atom))
-		return 0;
+		return FIO_Q_QUEUED;
 
 	/*
 	 * completed sync
@@ -164,7 +164,7 @@ static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 		if (ret > 0) {
 			io_u->resid = io_u->xfer_buflen - ret;
 			io_u->error = 0;
-			return ret;
+			return FIO_Q_COMPLETED;
 		} else
 			io_u->error = errno;
 	}
@@ -174,7 +174,7 @@ static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 	else
 		td_verror(td, io_u->error);
 
-	return io_u->error;
+	return FIO_Q_COMPLETED;
 }
 
 static int async_head_init(struct syslet_data *sd, unsigned int depth)
