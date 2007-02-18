@@ -492,17 +492,9 @@ struct disk_util {
 };
 
 /*
- * Used for passing io_u completion data
+ * Callback for io completion
  */
-typedef int (icd_handler)(struct io_u *);
-struct io_completion_data {
-	int nr;				/* input */
-	icd_handler *handler;		/* input */
-
-	int error;			/* output */
-	unsigned long bytes_done[2];	/* output */
-	struct timeval time;		/* output */
-};
+typedef int (endio_handler)(struct io_u *);
 
 #define DISK_UTIL_MSEC	(250)
 
@@ -616,9 +608,8 @@ extern void free_io_mem(struct thread_data *);
 extern struct io_u *__get_io_u(struct thread_data *);
 extern struct io_u *get_io_u(struct thread_data *, struct fio_file *);
 extern void put_io_u(struct thread_data *, struct io_u *);
-extern void ios_completed(struct thread_data *, struct io_completion_data *);
-extern void io_completed(struct thread_data *, struct io_u *, struct io_completion_data *);
-extern void init_icd(struct io_completion_data *, icd_handler *, int);
+extern long io_u_sync_complete(struct thread_data *, struct io_u *, endio_handler *);
+extern long io_u_queued_complete(struct thread_data *, int, endio_handler *);
 
 /*
  * io engine entry points

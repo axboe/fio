@@ -7,6 +7,15 @@
 #include "fio.h"
 #include "os.h"
 
+struct io_completion_data {
+	int nr;				/* input */
+	endio_handler *handler;		/* input */
+
+	int error;			/* output */
+	unsigned long bytes_done[2];	/* output */
+	struct timeval time;		/* output */
+};
+
 /*
  * The ->file_map[] contains a map of blocks we have or have not done io
  * to yet. Used to make sure we cover the entire range in a fair fashion.
@@ -374,8 +383,8 @@ struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 	return io_u;
 }
 
-void io_completed(struct thread_data *td, struct io_u *io_u,
-		  struct io_completion_data *icd)
+static void io_completed(struct thread_data *td, struct io_u *io_u,
+			 struct io_completion_data *icd)
 {
 	unsigned long msec;
 
@@ -418,7 +427,8 @@ void io_completed(struct thread_data *td, struct io_u *io_u,
 		icd->error = io_u->error;
 }
 
-void init_icd(struct io_completion_data *icd, icd_handler *handler, int nr)
+static void init_icd(struct io_completion_data *icd, endio_handler *handler,
+		     int nr)
 {
 	fio_gettime(&icd->time, NULL);
 
@@ -429,7 +439,8 @@ void init_icd(struct io_completion_data *icd, icd_handler *handler, int nr)
 	icd->bytes_done[0] = icd->bytes_done[1] = 0;
 }
 
-void ios_completed(struct thread_data *td, struct io_completion_data *icd)
+static void ios_completed(struct thread_data *td,
+			  struct io_completion_data *icd)
 {
 	struct io_u *io_u;
 	int i;
@@ -440,4 +451,48 @@ void ios_completed(struct thread_data *td, struct io_completion_data *icd)
 		io_completed(td, io_u, icd);
 		put_io_u(td, io_u);
 	}
+}
+
+long io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
+			endio_handler *handler)
+{
+	struct io_completion_data icd;
+
+	init_icd(&icd, handler, 1);
+	io_completed(td, io_u, &icd);
+	put_io_u(td, io_u);
+
+	if (!icd.error)
+		return icd.bytes_done[0] + icd.bytes_done[1];
+
+	td_verror(td, icd.error);
+	return -1;
+}
+
+long io_u_queued_complete(struct thread_data *td, int min_events,
+			  endio_handler *handler)
+
+{
+	struct timespec ts = { .tv_sec = 0, .tv_nsec = 0, };
+	struct timespec *tsp = NULL;
+	struct io_completion_data icd;
+	int ret;
+
+	if (min_events > 0)
+		tsp = &ts;
+
+	ret = td_io_getevents(td, min_events, td->cur_depth, tsp);
+	if (ret < 0) {
+		td_verror(td, -ret);
+		return ret;
+	} else if (!ret)
+		return ret;
+
+	init_icd(&icd, handler, ret);
+	ios_completed(td, &icd);
+	if (!icd.error)
+		return icd.bytes_done[0] + icd.bytes_done[1];
+
+	td_verror(td, icd.error);
+	return -1;
 }
