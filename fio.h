@@ -494,8 +494,10 @@ struct disk_util {
 /*
  * Used for passing io_u completion data
  */
+typedef int (icd_handler)(struct io_u *);
 struct io_completion_data {
 	int nr;				/* input */
+	icd_handler *handler;		/* input */
 
 	int error;			/* output */
 	unsigned long bytes_done[2];	/* output */
@@ -597,7 +599,7 @@ enum {
  */
 extern void populate_verify_io_u(struct thread_data *, struct io_u *);
 extern int get_next_verify(struct thread_data *td, struct io_u *);
-extern int do_io_u_verify(struct thread_data *, struct io_u **);
+extern int verify_io_u(struct io_u *);
 
 /*
  * Memory helpers
@@ -616,7 +618,7 @@ extern struct io_u *get_io_u(struct thread_data *, struct fio_file *);
 extern void put_io_u(struct thread_data *, struct io_u *);
 extern void ios_completed(struct thread_data *, struct io_completion_data *);
 extern void io_completed(struct thread_data *, struct io_u *, struct io_completion_data *);
-extern void init_icd(struct io_completion_data *);
+extern void init_icd(struct io_completion_data *, icd_handler *, int);
 
 /*
  * io engine entry points

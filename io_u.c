@@ -389,6 +389,7 @@ void io_completed(struct thread_data *td, struct io_u *io_u,
 	if (!io_u->error) {
 		unsigned int bytes = io_u->buflen - io_u->resid;
 		const enum fio_ddir idx = io_u->ddir;
+		int ret;
 
 		td->io_blocks[idx]++;
 		td->io_bytes[idx] += bytes;
@@ -407,13 +408,22 @@ void io_completed(struct thread_data *td, struct io_u *io_u,
 			log_io_piece(td, io_u);
 
 		icd->bytes_done[idx] += bytes;
+
+		if (icd->handler) {
+			ret = icd->handler(io_u);
+			if (ret && !icd->error)
+				icd->error = ret;
+		}
 	} else
 		icd->error = io_u->error;
 }
 
-void init_icd(struct io_completion_data *icd)
+void init_icd(struct io_completion_data *icd, icd_handler *handler, int nr)
 {
 	fio_gettime(&icd->time, NULL);
+
+	icd->handler = handler;
+	icd->nr = nr;
 
 	icd->error = 0;
 	icd->bytes_done[0] = icd->bytes_done[1] = 0;
@@ -423,8 +433,6 @@ void ios_completed(struct thread_data *td, struct io_completion_data *icd)
 {
 	struct io_u *io_u;
 	int i;
-
-	init_icd(icd);
 
 	for (i = 0; i < icd->nr; i++) {
 		io_u = td->io_ops->event(td, i);
