@@ -229,7 +229,7 @@ static int fio_io_sync(struct thread_data *td, struct fio_file *f)
 	} else if (ret == FIO_Q_QUEUED) {
 		ret = td_io_getevents(td, 1, td->cur_depth, NULL);
 		if (ret < 0) {
-			td_verror(td, ret);
+			td_verror(td, -ret);
 			return 1;
 		}
 
@@ -298,7 +298,7 @@ requeue:
 		switch (ret) {
 		case FIO_Q_COMPLETED:
 			if (io_u->error)
-				ret = io_u->error;
+				ret = -io_u->error;
 			if (io_u->xfer_buflen != io_u->resid && io_u->resid) {
 				int bytes = io_u->xfer_buflen - io_u->resid;
 
@@ -318,7 +318,7 @@ requeue:
 			break;
 		default:
 			assert(ret < 0);
-			td_verror(td, ret);
+			td_verror(td, -ret);
 			break;
 		}
 
@@ -346,9 +346,10 @@ requeue:
 		 * verification on them through the callback handler
 		 */
 		ret = td_io_getevents(td, min_events, td->cur_depth, timeout);
-		if (ret < 0)
+		if (ret < 0) {
+			td_verror(td, -ret);
 			break;
-		else if (!ret)
+		} else if (!ret)
 			continue;
 
 		init_icd(&icd, verify_io_u, ret);
@@ -473,7 +474,7 @@ requeue:
 
 			ret = td_io_getevents(td, min_evts, td->cur_depth, timeout);
 			if (ret < 0) {
-				td_verror(td, ret);
+				td_verror(td, -ret);
 				break;
 			} else if (!ret)
 				continue;

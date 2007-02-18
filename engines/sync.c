@@ -41,7 +41,7 @@ static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 		ret = fsync(f->fd);
 
 	if (ret != (int) io_u->xfer_buflen) {
-		if (ret > 0) {
+		if (ret >= 0) {
 			io_u->resid = io_u->xfer_buflen - ret;
 			io_u->error = 0;
 			return FIO_Q_COMPLETED;

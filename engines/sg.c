@@ -95,9 +95,9 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 
 			ret = poll(sd->pfds, td->nr_files, -1);
 			if (ret < 0) {
-				td_verror(td, errno);
 				if (!r)
-					r = -1;
+					r = -errno;
+				td_verror(td, errno);
 				break;
 			} else if (!ret)
 				continue;
@@ -117,8 +117,8 @@ re_read:
 			if (ret < 0) {
 				if (errno == EAGAIN)
 					continue;
+				r = -errno;
 				td_verror(td, errno);
-				r = -1;
 				break;
 			} else if (ret) {
 				p += ret;
@@ -162,7 +162,7 @@ static int fio_sgio_ioctl_doio(struct thread_data *td,
 
 	ret = ioctl(f->fd, SG_IO, hdr);
 	if (ret < 0)
-		return ret;
+		return -errno;
 
 	return FIO_Q_COMPLETED;
 }
@@ -179,7 +179,7 @@ static int fio_sgio_rw_doio(struct fio_file *f, struct io_u *io_u, int sync)
 	if (sync) {
 		ret = read(f->fd, hdr, sizeof(*hdr));
 		if (ret < 0)
-			return errno;
+			return -errno;
 		return FIO_Q_COMPLETED;
 	}
 

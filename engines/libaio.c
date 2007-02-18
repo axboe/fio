@@ -62,10 +62,7 @@ static int fio_libaio_getevents(struct thread_data *td, int min, int max,
 			break;
 	} while (1);
 
-	if (r < 0)
-		r = -r;
-
-	return (int) r;
+	return r;
 }
 
 static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
@@ -91,7 +88,7 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 			 * requests to flush first.
 			 */
 			if (fsync(io_u->file->fd) < 0)
-				ret = errno;
+				ret = -errno;
 			else
 				ret = FIO_Q_COMPLETED;
 			break;
