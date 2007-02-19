@@ -209,6 +209,7 @@ static int fio_io_sync(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
+requeue:
 	ret = td_io_queue(td, io_u);
 	if (ret < 0) {
 		td_verror(td, io_u->error);
@@ -224,6 +225,10 @@ static int fio_io_sync(struct thread_data *td, struct fio_file *f)
 		}
 
 		io_u_sync_complete(td, io_u, NULL);
+	} else if (ret == FIO_Q_BUSY) {
+		if (td_io_commit(td))
+			return 1;
+		goto requeue;
 	}
 
 	return 0;
@@ -285,6 +290,10 @@ requeue:
 			continue;
 		case FIO_Q_QUEUED:
 			break;
+		case FIO_Q_BUSY:
+			requeue_io_u(td, &io_u);
+			ret = td_io_commit(td);
+			break;
 		default:
 			assert(ret < 0);
 			td_verror(td, -ret);
@@ -299,7 +308,7 @@ requeue:
 		 * completed io_u's first.
 		 */
 		min_events = 0;
-		if (queue_full(td))
+		if (queue_full(td) || ret == FIO_Q_BUSY)
 			min_events = 1;
 
 		/*
@@ -403,6 +412,10 @@ requeue:
 			break;
 		case FIO_Q_QUEUED:
 			break;
+		case FIO_Q_BUSY:
+			requeue_io_u(td, &io_u);
+			ret = td_io_commit(td);
+			break;
 		default:
 			assert(ret < 0);
 			put_io_u(td, io_u);
@@ -412,14 +425,15 @@ requeue:
 		if (ret < 0 || td->error)
 			break;
 
-		add_slat_sample(td, io_u->ddir, mtime_since(&io_u->start_time, &io_u->issue_time));
+		if (io_u)
+			add_slat_sample(td, io_u->ddir, mtime_since(&io_u->start_time, &io_u->issue_time));
 
 		/*
 		 * See if we need to complete some commands
 		 */
-		if (ret == FIO_Q_QUEUED) {
+		if (ret == FIO_Q_QUEUED || ret == FIO_Q_BUSY) {
 			min_evts = 0;
-			if (queue_full(td))
+			if (queue_full(td) || ret == FIO_Q_BUSY)
 				min_evts = 1;
 
 			fio_gettime(&comp_time, NULL);
@@ -633,6 +647,7 @@ static void *thread_main(void *data)
 
 	INIT_LIST_HEAD(&td->io_u_freelist);
 	INIT_LIST_HEAD(&td->io_u_busylist);
+	INIT_LIST_HEAD(&td->io_u_requeues);
 	INIT_LIST_HEAD(&td->io_hist_list);
 	INIT_LIST_HEAD(&td->io_log_list);
 

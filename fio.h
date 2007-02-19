@@ -135,6 +135,7 @@ struct io_u {
 enum {
 	FIO_Q_COMPLETED	= 0,		/* completed sync */
 	FIO_Q_QUEUED	= 1,		/* queued, will complete async */
+	FIO_Q_BUSY	= 2,		/* no more room, call ->commit() */
 };
 
 #define FIO_HDR_MAGIC	0xf00baaef
@@ -334,6 +335,7 @@ struct thread_data {
 	unsigned long total_io_u;
 	struct list_head io_u_freelist;
 	struct list_head io_u_busylist;
+	struct list_head io_u_requeues;
 
 	/*
 	 * Rate state
@@ -352,6 +354,7 @@ struct thread_data {
 	unsigned long long start_offset;
 	unsigned long long total_io_size;
 
+	unsigned long io_issues[2];
 	unsigned long long io_blocks[2];
 	unsigned long long io_bytes[2];
 	unsigned long long zone_bytes;
@@ -608,6 +611,7 @@ extern void free_io_mem(struct thread_data *);
 extern struct io_u *__get_io_u(struct thread_data *);
 extern struct io_u *get_io_u(struct thread_data *, struct fio_file *);
 extern void put_io_u(struct thread_data *, struct io_u *);
+extern void requeue_io_u(struct thread_data *, struct io_u **);
 extern long io_u_sync_complete(struct thread_data *, struct io_u *, endio_handler *);
 extern long io_u_queued_complete(struct thread_data *, int, endio_handler *);
 
@@ -619,6 +623,7 @@ extern int td_io_prep(struct thread_data *, struct io_u *);
 extern int td_io_queue(struct thread_data *, struct io_u *);
 extern int td_io_sync(struct thread_data *, struct fio_file *);
 extern int td_io_getevents(struct thread_data *, int, int, struct timespec *);
+extern int td_io_commit(struct thread_data *);
 
 /*
  * This is a pretty crappy semaphore implementation, but with the use that fio
@@ -662,6 +667,7 @@ struct ioengine_ops {
 	int (*init)(struct thread_data *);
 	int (*prep)(struct thread_data *, struct io_u *);
 	int (*queue)(struct thread_data *, struct io_u *);
+	int (*commit)(struct thread_data *);
 	int (*getevents)(struct thread_data *, int, int, struct timespec *);
 	struct io_u *(*event)(struct thread_data *, int);
 	int (*cancel)(struct thread_data *, struct io_u *);
@@ -671,7 +677,7 @@ struct ioengine_ops {
 	unsigned long priv;
 };
 
-#define FIO_IOOPS_VERSION	4
+#define FIO_IOOPS_VERSION	5
 
 extern struct ioengine_ops *load_ioengine(struct thread_data *, const char *);
 extern int register_ioengine(struct ioengine_ops *);

@@ -189,6 +189,9 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 {
 	fio_gettime(&io_u->issue_time, NULL);
 
+	if (io_u->ddir != DDIR_SYNC)
+		td->io_issues[io_u->ddir]++;
+
 	return td->io_ops->queue(td, io_u);
 }
 
@@ -196,6 +199,14 @@ int td_io_init(struct thread_data *td)
 {
 	if (td->io_ops->init)
 		return td->io_ops->init(td);
+
+	return 0;
+}
+
+int td_io_commit(struct thread_data *td)
+{
+	if (td->io_ops->commit)
+		return td->io_ops->commit(td);
 
 	return 0;
 }

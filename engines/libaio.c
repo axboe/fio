@@ -18,6 +18,8 @@
 struct libaio_data {
 	io_context_t aio_ctx;
 	struct io_event *aio_events;
+	struct iocb **iocbs;
+	int iocbs_nr;
 };
 
 static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
@@ -68,40 +70,60 @@ static int fio_libaio_getevents(struct thread_data *td, int min, int max,
 static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct libaio_data *ld = td->io_ops->data;
-	struct iocb *iocb = &io_u->iocb;
-	long ret;
 
+	if (ld->iocbs_nr == (int) td->iodepth)
+		return FIO_Q_BUSY;
+
+	/*
+	 * fsync is tricky, since it can fail and we need to do it
+	 * serialized with other io. the reason is that linux doesn't
+	 * support aio fsync yet. So return busy for the case where we
+	 * have pending io, to let fio complete those first.
+	 */
+	if (io_u->ddir == DDIR_SYNC) {
+		if (ld->iocbs_nr)
+			return FIO_Q_BUSY;
+		if (fsync(io_u->file->fd) < 0)
+			io_u->error = errno;
+
+		return FIO_Q_COMPLETED;
+	}
+
+	ld->iocbs[ld->iocbs_nr] = &io_u->iocb;
+	ld->iocbs_nr++;
+	return FIO_Q_QUEUED;
+}
+
+static int fio_libaio_commit(struct thread_data *td)
+{
+	struct libaio_data *ld = td->io_ops->data;
+	struct iocb **iocbs;
+	int ret, iocbs_nr;
+
+	if (!ld->iocbs_nr)
+		return 0;
+
+	iocbs_nr = ld->iocbs_nr;
+	iocbs = ld->iocbs;
 	do {
-		ret = io_submit(ld->aio_ctx, 1, &iocb);
-		if (ret == 1)
-			return FIO_Q_QUEUED;
-		else if (ret == -EAGAIN || !ret)
+		ret = io_submit(ld->aio_ctx, iocbs_nr, iocbs);
+		if (ret == iocbs_nr) {
+			ret = 0;
+			break;
+		} else if (ret > 0) {
+			iocbs += ret;
+			iocbs_nr -= ret;
+			continue;
+		} else if (ret == -EAGAIN || !ret)
 			usleep(100);
 		else if (ret == -EINTR)
 			continue;
-		else if (ret == -EINVAL && io_u->ddir == DDIR_SYNC) {
-			/*
-			 * the async fsync doesn't currently seem to be
-			 * supported, so just fsync if we fail with EINVAL
-			 * for a sync. since buffered io is also sync
-			 * with libaio (still), we don't have pending
-			 * requests to flush first.
-			 */
-			if (fsync(io_u->file->fd) < 0)
-				ret = -errno;
-			else
-				ret = FIO_Q_COMPLETED;
-			break;
-		} else
+		else
 			break;
 	} while (1);
 
-	if (ret <= 0) {
-		io_u->resid = io_u->xfer_buflen;
-		io_u->error = -ret;
-		td_verror(td, io_u->error);
-		return FIO_Q_COMPLETED;
-	}
+	if (!ret)
+		ld->iocbs_nr = 0;
 
 	return ret;
 }
@@ -121,6 +143,8 @@ static void fio_libaio_cleanup(struct thread_data *td)
 		io_destroy(ld->aio_ctx);
 		if (ld->aio_events)
 			free(ld->aio_events);
+		if (ld->iocbs)
+			free(ld->iocbs);
 
 		free(ld);
 		td->io_ops->data = NULL;
@@ -140,6 +164,10 @@ static int fio_libaio_init(struct thread_data *td)
 
 	ld->aio_events = malloc(td->iodepth * sizeof(struct io_event));
 	memset(ld->aio_events, 0, td->iodepth * sizeof(struct io_event));
+	ld->iocbs = malloc(td->iodepth * sizeof(struct iocb *));
+	memset(ld->iocbs, 0, sizeof(struct iocb *));
+	ld->iocbs_nr = 0;
+
 	td->io_ops->data = ld;
 	return 0;
 }
@@ -150,6 +178,7 @@ static struct ioengine_ops ioengine = {
 	.init		= fio_libaio_init,
 	.prep		= fio_libaio_prep,
 	.queue		= fio_libaio_queue,
+	.commit		= fio_libaio_commit,
 	.cancel		= fio_libaio_cancel,
 	.getevents	= fio_libaio_getevents,
 	.event		= fio_libaio_event,

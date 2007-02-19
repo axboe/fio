@@ -199,6 +199,16 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 	td->cur_depth--;
 }
 
+void requeue_io_u(struct thread_data *td, struct io_u **io_u)
+{
+	struct io_u *__io_u = *io_u;
+
+	list_del(&__io_u->list);
+	list_add_tail(&__io_u->list, &td->io_u_requeues);
+	td->cur_depth--;
+	*io_u = NULL;
+}
+
 static int fill_io_u(struct thread_data *td, struct fio_file *f,
 		     struct io_u *io_u)
 {
@@ -211,8 +221,8 @@ static int fill_io_u(struct thread_data *td, struct fio_file *f,
 	/*
 	 * see if it's time to sync
 	 */
-	if (td->fsync_blocks && !(td->io_blocks[DDIR_WRITE] % td->fsync_blocks)
-	    && should_fsync(td)) {
+	if (td->fsync_blocks && !(td->io_issues[DDIR_WRITE] % td->fsync_blocks)
+	    && td->io_issues[DDIR_WRITE] && should_fsync(td)) {
 		io_u->ddir = DDIR_SYNC;
 		io_u->file = f;
 		return 0;
@@ -310,12 +320,18 @@ struct io_u *__get_io_u(struct thread_data *td)
 {
 	struct io_u *io_u = NULL;
 
-	if (!queue_full(td)) {
+	if (!list_empty(&td->io_u_requeues))
+		io_u = list_entry(td->io_u_requeues.next, struct io_u, list);
+	else if (!queue_full(td)) {
 		io_u = list_entry(td->io_u_freelist.next, struct io_u, list);
 
 		io_u->buflen = 0;
-		io_u->error = 0;
 		io_u->resid = 0;
+		io_u->file = NULL;
+	}
+
+	if (io_u) {
+		io_u->error = 0;
 		list_del(&io_u->list);
 		list_add(&io_u->list, &td->io_u_busylist);
 		td->cur_depth++;
@@ -336,6 +352,12 @@ struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 	io_u = __get_io_u(td);
 	if (!io_u)
 		return NULL;
+
+	/*
+	 * from a requeue, io_u already setup
+	 */
+	if (io_u->file)
+		return io_u;
 
 	if (td->zone_bytes >= td->zone_size) {
 		td->zone_bytes = 0;
@@ -477,8 +499,14 @@ long io_u_queued_complete(struct thread_data *td, int min_events,
 	struct io_completion_data icd;
 	int ret;
 
-	if (min_events > 0)
+	if (min_events > 0) {
 		tsp = &ts;
+		ret = td_io_commit(td);
+		if (ret < 0) {
+			td_verror(td, -ret);
+			return ret;
+		}
+	}
 
 	ret = td_io_getevents(td, min_events, td->cur_depth, tsp);
 	if (ret < 0) {
