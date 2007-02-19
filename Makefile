@@ -30,7 +30,7 @@ fio: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) -lpthread -lm -ldl -laio -lrt
 
 clean:
-	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o
+	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o core.* core
 
 depend:
 	@$(CC) -MM $(ALL_CFLAGS) *.c 1> .depend
