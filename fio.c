@@ -597,7 +597,11 @@ static void clear_io_state(struct thread_data *td)
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
 	td->zone_bytes = 0;
 
+	td->last_was_sync = 0;
+
 	for_each_file(td, f, i) {
+		f->last_completed_pos = 0;
+
 		f->last_pos = 0;
 		if (td->io_ops->flags & FIO_SYNCIO)
 			lseek(f->fd, SEEK_SET, 0);
