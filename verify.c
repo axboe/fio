@@ -143,6 +143,12 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
 
+	/*
+	 * this io_u is from a requeue, we already filled the offsets
+	 */
+	if (io_u->file)
+		return 0;
+
 	if (!list_empty(&td->io_hist_list)) {
 		ipo = list_entry(td->io_hist_list.next, struct io_piece, list);
 
