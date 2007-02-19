@@ -379,7 +379,7 @@ struct io_u *get_io_u(struct thread_data *td)
 	 * from a requeue, io_u already setup
 	 */
 	if (io_u->file)
-		return io_u;
+		goto out;
 
 	f = get_next_file(td);
 	if (!f) {
@@ -423,6 +423,7 @@ struct io_u *get_io_u(struct thread_data *td)
 	/*
 	 * Set io data pointers.
 	 */
+out:
 	io_u->xfer_buf = io_u->buf;
 	io_u->xfer_buflen = io_u->buflen;
 
