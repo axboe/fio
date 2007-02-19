@@ -465,7 +465,6 @@ long io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
 	if (!icd.error)
 		return icd.bytes_done[0] + icd.bytes_done[1];
 
-	td_verror(td, icd.error);
 	return -1;
 }
 
@@ -493,6 +492,5 @@ long io_u_queued_complete(struct thread_data *td, int min_events,
 	if (!icd.error)
 		return icd.bytes_done[0] + icd.bytes_done[1];
 
-	td_verror(td, icd.error);
 	return -1;
 }

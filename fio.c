@@ -279,7 +279,8 @@ requeue:
 				io_u->xfer_buf += bytes;
 				goto requeue;
 			}
-			if (io_u_sync_complete(td, io_u, verify_io_u))
+			ret = io_u_sync_complete(td, io_u, verify_io_u);
+			if (ret)
 				break;
 			continue;
 		case FIO_Q_QUEUED:
@@ -290,7 +291,7 @@ requeue:
 			break;
 		}
 
-		if (ret < 0)
+		if (ret < 0 || td->error)
 			break;
 
 		/*
@@ -397,6 +398,8 @@ requeue:
 			}
 			fio_gettime(&comp_time, NULL);
 			bytes_done = io_u_sync_complete(td, io_u, NULL);
+			if (bytes_done < 0)
+				ret = bytes_done;
 			break;
 		case FIO_Q_QUEUED:
 			break;
@@ -406,7 +409,7 @@ requeue:
 			break;
 		}
 
-		if (ret < 0)
+		if (ret < 0 || td->error)
 			break;
 
 		add_slat_sample(td, io_u->ddir, mtime_since(&io_u->start_time, &io_u->issue_time));
