@@ -524,13 +524,10 @@ long io_u_queued_complete(struct thread_data *td, int min_events,
 			  endio_handler *handler)
 
 {
-	struct timespec ts = { .tv_sec = 0, .tv_nsec = 0, };
-	struct timespec *tsp = NULL;
 	struct io_completion_data icd;
 	int ret;
 
 	if (min_events > 0) {
-		tsp = &ts;
 		ret = td_io_commit(td);
 		if (ret < 0) {
 			td_verror(td, -ret);
@@ -538,7 +535,7 @@ long io_u_queued_complete(struct thread_data *td, int min_events,
 		}
 	}
 
-	ret = td_io_getevents(td, min_events, td->cur_depth, tsp);
+	ret = td_io_getevents(td, min_events, td->cur_depth, NULL);
 	if (ret < 0) {
 		td_verror(td, -ret);
 		return ret;
