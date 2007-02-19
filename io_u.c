@@ -316,6 +316,27 @@ static void io_u_mark_latency(struct thread_data *td, unsigned long msec)
 	td->io_u_lat[index]++;
 }
 
+static struct fio_file *get_next_file(struct thread_data *td)
+{
+	unsigned int old_next_file = td->next_file;
+	struct fio_file *f;
+
+	do {
+		f = &td->files[td->next_file];
+
+		td->next_file++;
+		if (td->next_file >= td->nr_files)
+			td->next_file = 0;
+
+		if (f->fd != -1)
+			break;
+
+		f = NULL;
+	} while (td->next_file != old_next_file);
+
+	return f;
+}
+
 struct io_u *__get_io_u(struct thread_data *td)
 {
 	struct io_u *io_u = NULL;
@@ -345,8 +366,9 @@ struct io_u *__get_io_u(struct thread_data *td)
  * Return an io_u to be processed. Gets a buflen and offset, sets direction,
  * etc. The returned io_u is fully ready to be prepped and submitted.
  */
-struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
+struct io_u *get_io_u(struct thread_data *td)
 {
+	struct fio_file *f;
 	struct io_u *io_u;
 
 	io_u = __get_io_u(td);
@@ -358,6 +380,14 @@ struct io_u *get_io_u(struct thread_data *td, struct fio_file *f)
 	 */
 	if (io_u->file)
 		return io_u;
+
+	f = get_next_file(td);
+	if (!f) {
+		put_io_u(td, io_u);
+		return NULL;
+	}
+
+	io_u->file = f;
 
 	if (td->zone_bytes >= td->zone_size) {
 		td->zone_bytes = 0;

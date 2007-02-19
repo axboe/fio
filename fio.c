@@ -136,27 +136,6 @@ static inline int runtime_exceeded(struct thread_data *td, struct timeval *t)
 	return 0;
 }
 
-static struct fio_file *get_next_file(struct thread_data *td)
-{
-	unsigned int old_next_file = td->next_file;
-	struct fio_file *f;
-
-	do {
-		f = &td->files[td->next_file];
-
-		td->next_file++;
-		if (td->next_file >= td->nr_files)
-			td->next_file = 0;
-
-		if (f->fd != -1)
-			break;
-
-		f = NULL;
-	} while (td->next_file != old_next_file);
-
-	return f;
-}
-
 /*
  * When job exits, we can cancel the in-flight IO if we are using async
  * io. Attempt to do so.
@@ -361,7 +340,6 @@ static void do_io(struct thread_data *td)
 {
 	struct timeval s;
 	unsigned long usec;
-	struct fio_file *f;
 	int i, ret = 0;
 
 	td_set_runstate(td, TD_RUNNING);
@@ -375,11 +353,7 @@ static void do_io(struct thread_data *td)
 		if (td->terminate)
 			break;
 
-		f = get_next_file(td);
-		if (!f)
-			break;
-
-		io_u = get_io_u(td, f);
+		io_u = get_io_u(td);
 		if (!io_u)
 			break;
 
@@ -479,6 +453,8 @@ requeue:
 	}
 
 	if (!td->error) {
+		struct fio_file *f;
+
 		if (td->cur_depth)
 			cleanup_pending_aio(td);
 

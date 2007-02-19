@@ -609,7 +609,7 @@ extern void free_io_mem(struct thread_data *);
  */
 #define queue_full(td)	list_empty(&(td)->io_u_freelist)
 extern struct io_u *__get_io_u(struct thread_data *);
-extern struct io_u *get_io_u(struct thread_data *, struct fio_file *);
+extern struct io_u *get_io_u(struct thread_data *);
 extern void put_io_u(struct thread_data *, struct io_u *);
 extern void requeue_io_u(struct thread_data *, struct io_u **);
 extern long io_u_sync_complete(struct thread_data *, struct io_u *, endio_handler *);
