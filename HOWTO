@@ -108,8 +108,8 @@ to use any ascii name you want, except 'global' which has special meaning.
 A global section sets defaults for the jobs described in that file. A job
 may override a global section parameter, and a job file may even have
 several global sections if so desired. A job is only affected by a global
-section residing above it. If the first character in a line is a ';', the
-entire line is discarded as a comment.
+section residing above it. If the first character in a line is a ';' or a
+'#', the entire line is discarded as a comment.
 
 So lets look at a really simple job file that define to threads, each
 randomly reading from a 128MiB file.
