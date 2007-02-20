@@ -526,6 +526,7 @@ long io_u_queued_complete(struct thread_data *td, int min_events,
 
 {
 	struct io_completion_data icd;
+	struct timespec *tvp = NULL;
 	int ret;
 
 	if (min_events > 0) {
@@ -534,9 +535,13 @@ long io_u_queued_complete(struct thread_data *td, int min_events,
 			td_verror(td, -ret);
 			return ret;
 		}
+	} else {
+		struct timespec ts = { .tv_sec = 0, .tv_nsec = 0, };
+
+		tvp = &ts;
 	}
 
-	ret = td_io_getevents(td, min_events, td->cur_depth, NULL);
+	ret = td_io_getevents(td, min_events, td->cur_depth, tvp);
 	if (ret < 0) {
 		td_verror(td, -ret);
 		return ret;
