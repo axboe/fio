@@ -10,6 +10,10 @@
  * User-space API/ABI definitions:
  */
 
+#ifndef __user
+# define __user
+#endif
+
 /*
  * This is the 'Syslet Atom' - the basic unit of execution
  * within the syslet framework. A syslet always represents
