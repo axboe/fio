@@ -310,13 +310,15 @@ void disk_util_timer_arm(void)
 
 void update_rusage_stat(struct thread_data *td)
 {
-	getrusage(RUSAGE_SELF, &td->ru_end);
+	struct thread_stat *ts = &td->ts;
 
-	td->usr_time += mtime_since(&td->ru_start.ru_utime, &td->ru_end.ru_utime);
-	td->sys_time += mtime_since(&td->ru_start.ru_stime, &td->ru_end.ru_stime);
-	td->ctx += td->ru_end.ru_nvcsw + td->ru_end.ru_nivcsw - (td->ru_start.ru_nvcsw + td->ru_start.ru_nivcsw);
+	getrusage(RUSAGE_SELF, &ts->ru_end);
+
+	ts->usr_time += mtime_since(&ts->ru_start.ru_utime, &ts->ru_end.ru_utime);
+	ts->sys_time += mtime_since(&ts->ru_start.ru_stime, &ts->ru_end.ru_stime);
+	ts->ctx += ts->ru_end.ru_nvcsw + ts->ru_end.ru_nivcsw - (ts->ru_start.ru_nvcsw + ts->ru_start.ru_nivcsw);
 	
-	memcpy(&td->ru_start, &td->ru_end, sizeof(td->ru_end));
+	memcpy(&ts->ru_start, &ts->ru_end, sizeof(ts->ru_end));
 }
 
 static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
@@ -402,6 +404,7 @@ static void show_ddir_status(struct thread_data *td, struct group_run_stats *rs,
 			     int ddir)
 {
 	const char *ddir_str[] = { "read ", "write" };
+	struct thread_stat *ts;
 	unsigned long min, max;
 	unsigned long long bw;
 	double mean, dev;
@@ -419,13 +422,14 @@ static void show_ddir_status(struct thread_data *td, struct group_run_stats *rs,
 	free(io_p);
 	free(bw_p);
 
-	if (calc_lat(&td->slat_stat[ddir], &min, &max, &mean, &dev))
+	ts = &td->ts;
+	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
 		fprintf(f_out, "    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
 
-	if (calc_lat(&td->clat_stat[ddir], &min, &max, &mean, &dev))
+	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
 		fprintf(f_out, "    clat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
 
-	if (calc_lat(&td->bw_stat[ddir], &min, &max, &mean, &dev)) {
+	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
 
 		p_of_agg = mean * 100 / (double) rs->agg[ddir];
@@ -458,14 +462,14 @@ static void show_thread_status(struct thread_data *td,
 	if (runtime) {
 		double runt = (double) runtime;
 
-		usr_cpu = (double) td->usr_time * 100 / runt;
-		sys_cpu = (double) td->sys_time * 100 / runt;
+		usr_cpu = (double) td->ts.usr_time * 100 / runt;
+		sys_cpu = (double) td->ts.sys_time * 100 / runt;
 	} else {
 		usr_cpu = 0;
 		sys_cpu = 0;
 	}
 
-	fprintf(f_out, "  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, td->ctx);
+	fprintf(f_out, "  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, td->ts.ctx);
 
 	/*
 	 * Do depth distribution calculations
@@ -495,6 +499,7 @@ static void show_thread_status(struct thread_data *td,
 static void show_ddir_status_terse(struct thread_data *td,
 				   struct group_run_stats *rs, int ddir)
 {
+	struct thread_stat *ts = &td->ts;
 	unsigned long min, max;
 	unsigned long long bw;
 	double mean, dev;
@@ -505,17 +510,17 @@ static void show_ddir_status_terse(struct thread_data *td,
 
 	fprintf(f_out, ",%llu,%llu,%lu", td->io_bytes[ddir] >> 10, bw, td->runtime[ddir]);
 
-	if (calc_lat(&td->slat_stat[ddir], &min, &max, &mean, &dev))
+	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
 		fprintf(f_out, ",%lu,%lu,%f,%f", min, max, mean, dev);
 	else
 		fprintf(f_out, ",%lu,%lu,%f,%f", 0UL, 0UL, 0.0, 0.0);
 
-	if (calc_lat(&td->clat_stat[ddir], &min, &max, &mean, &dev))
+	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
 		fprintf(f_out, ",%lu,%lu,%f,%f", min, max, mean, dev);
 	else
 		fprintf(f_out, ",%lu,%lu,%f,%f", 0UL, 0UL, 0.0, 0.0);
 
-	if (calc_lat(&td->bw_stat[ddir], &min, &max, &mean, &dev)) {
+	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
 
 		p_of_agg = mean * 100 / (double) rs->agg[ddir];
@@ -539,14 +544,14 @@ static void show_thread_status_terse(struct thread_data *td,
 	if (td->runtime[0] + td->runtime[1]) {
 		double runt = (double) (td->runtime[0] + td->runtime[1]);
 
-		usr_cpu = (double) td->usr_time * 100 / runt;
-		sys_cpu = (double) td->sys_time * 100 / runt;
+		usr_cpu = (double) td->ts.usr_time * 100 / runt;
+		sys_cpu = (double) td->ts.sys_time * 100 / runt;
 	} else {
 		usr_cpu = 0;
 		sys_cpu = 0;
 	}
 
-	fprintf(f_out, ",%f%%,%f%%,%lu\n", usr_cpu, sys_cpu, td->ctx);
+	fprintf(f_out, ",%f%%,%f%%,%lu\n", usr_cpu, sys_cpu, td->ts.ctx);
 }
 
 void show_run_stats(void)
@@ -682,38 +687,41 @@ void add_agg_sample(unsigned long val, enum fio_ddir ddir)
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long msec)
 {
-	add_stat_sample(&td->clat_stat[ddir], msec);
+	struct thread_stat *ts = &td->ts;
 
-	if (td->clat_log)
-		add_log_sample(td, td->clat_log, msec, ddir);
+	add_stat_sample(&ts->clat_stat[ddir], msec);
+
+	if (ts->clat_log)
+		add_log_sample(td, ts->clat_log, msec, ddir);
 }
 
 void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long msec)
 {
-	add_stat_sample(&td->slat_stat[ddir], msec);
+	struct thread_stat *ts = &td->ts;
 
-	if (td->slat_log)
-		add_log_sample(td, td->slat_log, msec, ddir);
+	add_stat_sample(&ts->slat_stat[ddir], msec);
+
+	if (ts->slat_log)
+		add_log_sample(td, ts->slat_log, msec, ddir);
 }
 
 void add_bw_sample(struct thread_data *td, enum fio_ddir ddir,
 		   struct timeval *t)
 {
-	unsigned long spent = mtime_since(&td->stat_sample_time[ddir], t);
+	struct thread_stat *ts = &td->ts;
+	unsigned long spent = mtime_since(&ts->stat_sample_time[ddir], t);
 	unsigned long rate;
 
 	if (spent < td->bw_avg_time)
 		return;
 
-	rate = (td->this_io_bytes[ddir] - td->stat_io_bytes[ddir]) / spent;
-	add_stat_sample(&td->bw_stat[ddir], rate);
+	rate = (td->this_io_bytes[ddir] - ts->stat_io_bytes[ddir]) / spent;
+	add_stat_sample(&ts->bw_stat[ddir], rate);
 
-	if (td->bw_log)
-		add_log_sample(td, td->bw_log, rate, ddir);
+	if (ts->bw_log)
+		add_log_sample(td, ts->bw_log, rate, ddir);
 
-	fio_gettime(&td->stat_sample_time[ddir], NULL);
-	td->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
+	fio_gettime(&ts->stat_sample_time[ddir], NULL);
+	ts->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
 }
-
-

@@ -752,9 +752,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		
 	fio_sem_init(&td->mutex, 0);
 
-	td->clat_stat[0].min_val = td->clat_stat[1].min_val = ULONG_MAX;
-	td->slat_stat[0].min_val = td->slat_stat[1].min_val = ULONG_MAX;
-	td->bw_stat[0].min_val = td->bw_stat[1].min_val = ULONG_MAX;
+	td->ts.clat_stat[0].min_val = td->ts.clat_stat[1].min_val = ULONG_MAX;
+	td->ts.slat_stat[0].min_val = td->ts.slat_stat[1].min_val = ULONG_MAX;
+	td->ts.bw_stat[0].min_val = td->ts.bw_stat[1].min_val = ULONG_MAX;
 
 	if (td->stonewall && td->thread_number > 1)
 		groupid++;
@@ -765,11 +765,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		goto err;
 
 	if (td->write_lat_log) {
-		setup_log(&td->slat_log);
-		setup_log(&td->clat_log);
+		setup_log(&td->ts.slat_log);
+		setup_log(&td->ts.clat_log);
 	}
 	if (td->write_bw_log)
-		setup_log(&td->bw_log);
+		setup_log(&td->ts.bw_log);
 
 	if (!td->name)
 		td->name = strdup(jobname);

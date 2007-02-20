@@ -225,6 +225,31 @@ struct fio_file {
 	unsigned int unlink;
 };
 
+struct thread_stat {
+	struct io_log *slat_log;
+	struct io_log *clat_log;
+	struct io_log *bw_log;
+
+	/*
+	 * bandwidth and latency stats
+	 */
+	struct io_stat clat_stat[2];		/* completion latency */
+	struct io_stat slat_stat[2];		/* submission latency */
+	struct io_stat bw_stat[2];		/* bandwidth stats */
+
+	unsigned long long stat_io_bytes[2];
+	struct timeval stat_sample_time[2];
+
+	/*
+	 * fio system usage accounting
+	 */
+	struct rusage ru_start;
+	struct rusage ru_end;
+	unsigned long usr_time;
+	unsigned long sys_time;
+	unsigned long ctx;
+};
+
 /*
  * How many depth levels to log
  */
@@ -243,6 +268,7 @@ struct thread_data {
 	pthread_t thread;
 	int thread_number;
 	int groupid;
+	struct thread_stat ts;
 	enum fio_filetype filetype;
 	struct fio_file *files;
 	unsigned int nr_files;
@@ -357,8 +383,8 @@ struct thread_data {
 	unsigned long io_issues[2];
 	unsigned long long io_blocks[2];
 	unsigned long long io_bytes[2];
-	unsigned long long zone_bytes;
 	unsigned long long this_io_bytes[2];
+	unsigned long long zone_bytes;
 	volatile int mutex;
 
 	/*
@@ -372,32 +398,9 @@ struct thread_data {
 	unsigned int cpuload;
 	unsigned int cpucycle;
 
-	/*
-	 * bandwidth and latency stats
-	 */
-	struct io_stat clat_stat[2];		/* completion latency */
-	struct io_stat slat_stat[2];		/* submission latency */
-	struct io_stat bw_stat[2];		/* bandwidth stats */
-
-	unsigned long long stat_io_bytes[2];
-	struct timeval stat_sample_time[2];
-
-	struct io_log *slat_log;
-	struct io_log *clat_log;
-	struct io_log *bw_log;
-
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
 	struct timeval end_time;/* time job ended */
-
-	/*
-	 * fio system usage accounting
-	 */
-	struct rusage ru_start;
-	struct rusage ru_end;
-	unsigned long usr_time;
-	unsigned long sys_time;
-	unsigned long ctx;
 
 	/*
 	 * read/write mixed workload state
