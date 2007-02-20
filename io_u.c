@@ -506,6 +506,9 @@ static void ios_completed(struct thread_data *td,
 	}
 }
 
+/*
+ * Complete a single io_u for the sync engines.
+ */
 long io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
 			endio_handler *handler)
 {
@@ -521,6 +524,9 @@ long io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
 	return -1;
 }
 
+/*
+ * Called to complete min_events number of io for the async engines.
+ */
 long io_u_queued_complete(struct thread_data *td, int min_events,
 			  endio_handler *handler)
 
