@@ -895,6 +895,8 @@ static int is_empty_or_comment(char *line)
 	for (i = 0; i < strlen(line); i++) {
 		if (line[i] == ';')
 			return 1;
+		if (line[i] == '#')
+			return 1;
 		if (!isspace(line[i]) && !iscntrl(line[i]))
 			return 0;
 	}
