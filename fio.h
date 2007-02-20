@@ -515,9 +515,9 @@ typedef int (endio_handler)(struct io_u *);
 /*
  * Log exports
  */
-extern int read_iolog_get(struct thread_data *, struct io_u *);
+extern int __must_check read_iolog_get(struct thread_data *, struct io_u *);
 extern void write_iolog_put(struct thread_data *, struct io_u *);
-extern int init_iolog(struct thread_data *td);
+extern int __must_check init_iolog(struct thread_data *td);
 extern void log_io_piece(struct thread_data *, struct io_u *);
 extern void prune_io_piece_log(struct thread_data *);
 extern void write_iolog_close(struct thread_data *);
@@ -559,8 +559,8 @@ extern void fio_gettime(struct timeval *, void *);
 /*
  * Init functions
  */
-extern int parse_options(int, char **);
-extern int init_random_state(struct thread_data *);
+extern int __must_check parse_options(int, char **);
+extern int __must_check init_random_state(struct thread_data *);
 
 /*
  * File setup/shutdown
