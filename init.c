@@ -656,8 +656,6 @@ static void fixup_options(struct thread_data *td)
 	 */
 	if (td->iodepth_low > td->iodepth || !td->iodepth_low)
 		td->iodepth_low = td->iodepth;
-
-	printf("io depth %d/%d\n", td->iodepth_low, td->iodepth);
 }
 
 /*
