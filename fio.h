@@ -325,6 +325,7 @@ struct thread_data {
 	unsigned int stonewall;
 	unsigned int numjobs;
 	unsigned int iodepth;
+	unsigned int iodepth_low;
 	os_cpu_mask_t cpumask;
 	unsigned int iolog;
 	unsigned int read_iolog;

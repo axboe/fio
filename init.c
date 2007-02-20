@@ -91,6 +91,12 @@ static struct fio_option options[] = {
 		.def	= "1",
 	},
 	{
+		.name	= "iodepth_low",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(iodepth_low),
+		.help	= "Low water mark for queuing depth",
+	},
+	{
 		.name	= "size",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(total_file_size),
@@ -644,6 +650,14 @@ static void fixup_options(struct thread_data *td)
 	 */
 	if (td->thinktime_spin > td->thinktime)
 		td->thinktime_spin = td->thinktime;
+
+	/*
+	 * The low water mark cannot be bigger than the iodepth
+	 */
+	if (td->iodepth_low > td->iodepth || !td->iodepth_low)
+		td->iodepth_low = td->iodepth;
+
+	printf("io depth %d/%d\n", td->iodepth_low, td->iodepth);
 }
 
 /*
