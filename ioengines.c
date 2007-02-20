@@ -187,12 +187,15 @@ int td_io_getevents(struct thread_data *td, int min, int max,
 
 int td_io_queue(struct thread_data *td, struct io_u *io_u)
 {
-	fio_gettime(&io_u->issue_time, NULL);
+	int ret;
+
 
 	if (io_u->ddir != DDIR_SYNC)
 		td->io_issues[io_u->ddir]++;
 
-	return td->io_ops->queue(td, io_u);
+	ret = td->io_ops->queue(td, io_u);
+	fio_gettime(&io_u->issue_time, NULL);
+	return ret;
 }
 
 int td_io_init(struct thread_data *td)

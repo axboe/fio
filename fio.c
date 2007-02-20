@@ -385,6 +385,13 @@ requeue:
 				ret = bytes_done;
 			break;
 		case FIO_Q_QUEUED:
+			/*
+			 * if the engine doesn't have a commit hook,
+			 * the io_u is really queued. if it does have such
+			 * a hook, it has to call io_u_queued() itself.
+			 */
+			if (td->io_ops->commit == NULL)
+				io_u_queued(td, io_u);
 			break;
 		case FIO_Q_BUSY:
 			requeue_io_u(td, &io_u);
@@ -398,9 +405,6 @@ requeue:
 
 		if (ret < 0 || td->error)
 			break;
-
-		if (io_u)
-			add_slat_sample(td, io_u->ddir, mtime_since(&io_u->start_time, &io_u->issue_time));
 
 		/*
 		 * See if we need to complete some commands

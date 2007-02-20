@@ -555,3 +555,14 @@ long io_u_queued_complete(struct thread_data *td, int min_events,
 
 	return -1;
 }
+
+/*
+ * Call when io_u is really queued, to update the submission latency.
+ */
+void io_u_queued(struct thread_data *td, struct io_u *io_u)
+{
+	unsigned long slat_time;
+
+	slat_time = mtime_since(&io_u->start_time, &io_u->issue_time);
+	add_slat_sample(td, io_u->ddir, slat_time);
+}

@@ -19,6 +19,7 @@ struct libaio_data {
 	io_context_t aio_ctx;
 	struct io_event *aio_events;
 	struct iocb **iocbs;
+	struct io_u **io_us;
 	int iocbs_nr;
 };
 
@@ -90,27 +91,49 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 	}
 
 	ld->iocbs[ld->iocbs_nr] = &io_u->iocb;
+	ld->io_us[ld->iocbs_nr] = io_u;
 	ld->iocbs_nr++;
 	return FIO_Q_QUEUED;
+}
+
+static void fio_libaio_queued(struct thread_data *td, struct io_u **io_us,
+			      unsigned int nr)
+{
+	struct timeval now;
+	unsigned int i;
+
+	fio_gettime(&now, NULL);
+
+	for (i = 0; i < nr; i++) {
+		struct io_u *io_u = io_us[i];
+
+		memcpy(&io_u->issue_time, &now, sizeof(now));
+		io_u_queued(td, io_u);
+	}
 }
 
 static int fio_libaio_commit(struct thread_data *td)
 {
 	struct libaio_data *ld = td->io_ops->data;
 	struct iocb **iocbs;
+	struct io_u **io_us;
 	int ret, iocbs_nr;
 
 	if (!ld->iocbs_nr)
 		return 0;
 
 	iocbs_nr = ld->iocbs_nr;
+	io_us = ld->io_us;
 	iocbs = ld->iocbs;
 	do {
 		ret = io_submit(ld->aio_ctx, iocbs_nr, iocbs);
 		if (ret == iocbs_nr) {
+			fio_libaio_queued(td, io_us, ret);
 			ret = 0;
 			break;
 		} else if (ret > 0) {
+			fio_libaio_queued(td, io_us, ret);
+			io_us += ret;
 			iocbs += ret;
 			iocbs_nr -= ret;
 			continue;
@@ -141,11 +164,9 @@ static void fio_libaio_cleanup(struct thread_data *td)
 
 	if (ld) {
 		io_destroy(ld->aio_ctx);
-		if (ld->aio_events)
-			free(ld->aio_events);
-		if (ld->iocbs)
-			free(ld->iocbs);
-
+		free(ld->aio_events);
+		free(ld->iocbs);
+		free(ld->io_us);
 		free(ld);
 		td->io_ops->data = NULL;
 	}
@@ -166,6 +187,8 @@ static int fio_libaio_init(struct thread_data *td)
 	memset(ld->aio_events, 0, td->iodepth * sizeof(struct io_event));
 	ld->iocbs = malloc(td->iodepth * sizeof(struct iocb *));
 	memset(ld->iocbs, 0, sizeof(struct iocb *));
+	ld->io_us = malloc(td->iodepth * sizeof(struct io_u *));
+	memset(ld->io_us, 0, td->iodepth * sizeof(struct io_u *));
 	ld->iocbs_nr = 0;
 
 	td->io_ops->data = ld;
