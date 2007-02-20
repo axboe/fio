@@ -66,11 +66,10 @@ void unregister_ioengine(struct ioengine_ops *ops)
 	INIT_LIST_HEAD(&ops->list);
 }
 
-int register_ioengine(struct ioengine_ops *ops)
+void register_ioengine(struct ioengine_ops *ops)
 {
 	INIT_LIST_HEAD(&ops->list);
 	list_add_tail(&ops->list, &engine_list);
-	return 0;
 }
 
 static struct ioengine_ops *find_ioengine(const char *name)

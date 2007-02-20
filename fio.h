@@ -566,9 +566,9 @@ extern int init_random_state(struct thread_data *);
  * File setup/shutdown
  */
 extern void close_files(struct thread_data *);
-extern int setup_files(struct thread_data *);
-extern int open_files(struct thread_data *);
-extern int file_invalidate_cache(struct thread_data *, struct fio_file *);
+extern int __must_check setup_files(struct thread_data *);
+extern int __must_check open_files(struct thread_data *);
+extern int __must_check file_invalidate_cache(struct thread_data *, struct fio_file *);
 
 /*
  * ETA/status stuff
@@ -597,15 +597,15 @@ enum {
  * Verify helpers
  */
 extern void populate_verify_io_u(struct thread_data *, struct io_u *);
-extern int get_next_verify(struct thread_data *td, struct io_u *);
-extern int verify_io_u(struct io_u *);
+extern int __must_check get_next_verify(struct thread_data *td, struct io_u *);
+extern int __must_check verify_io_u(struct io_u *);
 
 /*
  * Memory helpers
  */
-extern int fio_pin_memory(void);
+extern int __must_check fio_pin_memory(void);
 extern void fio_unpin_memory(void);
-extern int allocate_io_mem(struct thread_data *);
+extern int __must_check allocate_io_mem(struct thread_data *);
 extern void free_io_mem(struct thread_data *);
 
 /*
@@ -616,19 +616,19 @@ extern struct io_u *__get_io_u(struct thread_data *);
 extern struct io_u *get_io_u(struct thread_data *);
 extern void put_io_u(struct thread_data *, struct io_u *);
 extern void requeue_io_u(struct thread_data *, struct io_u **);
-extern long io_u_sync_complete(struct thread_data *, struct io_u *, endio_handler *);
-extern long io_u_queued_complete(struct thread_data *, int, endio_handler *);
+extern long __must_check io_u_sync_complete(struct thread_data *, struct io_u *, endio_handler *);
+extern long __must_check io_u_queued_complete(struct thread_data *, int, endio_handler *);
 extern void io_u_queued(struct thread_data *, struct io_u *);
 
 /*
  * io engine entry points
  */
-extern int td_io_init(struct thread_data *);
-extern int td_io_prep(struct thread_data *, struct io_u *);
-extern int td_io_queue(struct thread_data *, struct io_u *);
-extern int td_io_sync(struct thread_data *, struct fio_file *);
-extern int td_io_getevents(struct thread_data *, int, int, struct timespec *);
-extern int td_io_commit(struct thread_data *);
+extern int __must_check td_io_init(struct thread_data *);
+extern int __must_check td_io_prep(struct thread_data *, struct io_u *);
+extern int __must_check td_io_queue(struct thread_data *, struct io_u *);
+extern int __must_check td_io_sync(struct thread_data *, struct fio_file *);
+extern int __must_check td_io_getevents(struct thread_data *, int, int, struct timespec *);
+extern int __must_check td_io_commit(struct thread_data *);
 
 /*
  * This is a pretty crappy semaphore implementation, but with the use that fio
@@ -685,7 +685,7 @@ struct ioengine_ops {
 #define FIO_IOOPS_VERSION	5
 
 extern struct ioengine_ops *load_ioengine(struct thread_data *, const char *);
-extern int register_ioengine(struct ioengine_ops *);
+extern void register_ioengine(struct ioengine_ops *);
 extern void unregister_ioengine(struct ioengine_ops *);
 extern void close_ioengine(struct thread_data *);
 

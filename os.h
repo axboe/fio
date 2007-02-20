@@ -54,4 +54,10 @@
 #define FIO_HUGE_PAGE			(4096 * 1024)
 #endif
 
+#if __GNUC__ < 3
+#define __must_check
+#else
+#define __must_check			__attribute__((warn_unused_result))
+#endif
+
 #endif

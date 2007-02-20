@@ -149,7 +149,9 @@ static void cleanup_pending_aio(struct thread_data *td)
 	/*
 	 * get immediately available events, if any
 	 */
-	io_u_queued_complete(td, 0, NULL);
+	r = io_u_queued_complete(td, 0, NULL);
+	if (r < 0)
+		return;
 
 	/*
 	 * now cancel remaining active events
@@ -165,7 +167,7 @@ static void cleanup_pending_aio(struct thread_data *td)
 	}
 
 	if (td->cur_depth)
-		io_u_queued_complete(td, td->cur_depth, NULL);
+		r = io_u_queued_complete(td, td->cur_depth, NULL);
 }
 
 /*
@@ -203,7 +205,8 @@ requeue:
 			return 1;
 		}
 
-		io_u_sync_complete(td, io_u, NULL);
+		if (io_u_sync_complete(td, io_u, NULL) < 0)
+			return 1;
 	} else if (ret == FIO_Q_BUSY) {
 		if (td_io_commit(td))
 			return 1;
@@ -228,9 +231,14 @@ static void do_verify(struct thread_data *td)
 	 * read from disk.
 	 */
 	for_each_file(td, f, i) {
-		fio_io_sync(td, f);
-		file_invalidate_cache(td, f);
+		if (fio_io_sync(td, f))
+			break;
+		if (file_invalidate_cache(td, f))
+			break;
 	}
+
+	if (td->error)
+		return;
 
 	td_set_runstate(td, TD_VERIFYING);
 
