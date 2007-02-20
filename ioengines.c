@@ -189,12 +189,17 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 {
 	int ret;
 
+	if (td->io_ops->flags & FIO_SYNCIO)
+		fio_gettime(&io_u->issue_time, NULL);
 
 	if (io_u->ddir != DDIR_SYNC)
 		td->io_issues[io_u->ddir]++;
 
 	ret = td->io_ops->queue(td, io_u);
-	fio_gettime(&io_u->issue_time, NULL);
+
+	if ((td->io_ops->flags & FIO_SYNCIO) == 0)
+		fio_gettime(&io_u->issue_time, NULL);
+
 	return ret;
 }
 
