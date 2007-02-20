@@ -42,10 +42,33 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 	return FIO_Q_COMPLETED;
 }
 
+static int fio_mmapio_init(struct thread_data *td)
+{
+	struct fio_file *f;
+	int i;
+
+	if (td->ddir == DDIR_READ && !td_rw(td))
+		return 0;
+
+	/*
+	 * We need to truncate the files to the right size, if
+	 * we are writing to it.
+	 */
+	for_each_file(td, f, i) {
+		if (ftruncate(f->fd, f->file_size) < 0) {
+			td_verror(td, errno);
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 static struct ioengine_ops ioengine = {
 	.name		= "mmap",
 	.version	= FIO_IOOPS_VERSION,
 	.queue		= fio_mmapio_queue,
+	.init		= fio_mmapio_init,
 	.flags		= FIO_SYNCIO | FIO_MMAPIO,
 };
 
