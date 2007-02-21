@@ -310,9 +310,6 @@ requeue:
 			break;
 	}
 
-	if (io_u)
-		put_io_u(td, io_u);
-
 	if (td->cur_depth)
 		cleanup_pending_aio(td);
 
