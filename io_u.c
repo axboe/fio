@@ -289,23 +289,23 @@ static void io_u_mark_latency(struct thread_data *td, unsigned long msec)
 	switch (msec) {
 	default:
 		index++;
-	case 1024 ... 2047:
+	case 1000 ... 1999:
 		index++;
-	case 512 ... 1023:
+	case 750 ... 999:
 		index++;
-	case 256 ... 511:
+	case 500 ... 749:
 		index++;
-	case 128 ... 255:
+	case 250 ... 499:
 		index++;
-	case 64 ... 127:
+	case 100 ... 249:
 		index++;
-	case 32 ... 63:
+	case 50 ... 99:
 		index++;
-	case 16 ... 31:
+	case 20 ... 49:
 		index++;
-	case 8 ... 15:
+	case 10 ... 19:
 		index++;
-	case 4 ... 7:
+	case 4 ... 9:
 		index++;
 	case 2 ... 3:
 		index++;

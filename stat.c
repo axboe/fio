@@ -489,8 +489,8 @@ static void show_thread_status(struct thread_data *td,
 		io_u_lat[i] *= 100.0;
 	}
 
-	fprintf(f_out, "     lat (msec): 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%, 16=%3.1f%%, 32=%3.1f%%, 64=%3.1f%%, 128=%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5], io_u_lat[6]);
-	fprintf(f_out, "     lat (msec): 256=%3.1f%%, 512=%3.1f%%, 1024=%3.1f%%, >=2048=%3.1f%%\n", io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
+	fprintf(f_out, "     lat (msec): 2=%3.1f%%, 4=%3.1f%%, 10=%3.1f%%, 20=%3.1f%%, 50=%3.1f%%, 100=%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
+	fprintf(f_out, "     lat (msec): 250=%3.1f%%, 500=%3.1f%%, 750=%3.1f%%, 1000=%3.1f%%, >=2000=%3.1f%%\n", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
 
 	if (td->description)
 		fprintf(f_out, "%s\n", td->description);
