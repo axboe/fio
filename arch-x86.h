@@ -18,12 +18,11 @@
 #define __NR_sys_vmsplice	316
 #endif
 
-#ifndef __NR_async_register
-#define __NR_async_register	320
-#define	__NR_async_exec		321
-#define __NR_async_wait		322
-#define	__NR_async_unregister	323
-#define __NR_umem_add		324
+#ifndef __NR_async_exec
+# define __NR_async_exec	320
+# define __NR_async_wait	321
+# define __NR_umem_add		322
+# define __NR_async_thread	323
 #endif
 
 #define nop	__asm__ __volatile__("rep;nop": : :"memory")

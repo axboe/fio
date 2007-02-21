@@ -78,7 +78,7 @@ struct syslet_uatom {
 
 /*
  * Execution control: conditions upon the return code
- * of the previous syslet atom. 'Stop' means syslet
+ * of the just executed syslet atom. 'Stop' means syslet
  * execution is stopped and the atom is put into the
  * completion ring:
  */
@@ -105,36 +105,51 @@ struct syslet_uatom {
 
 /*
  * This is the (per-user-context) descriptor of the async completion
- * ring. This gets registered via sys_async_register().
+ * ring. This gets passed in to sys_async_exec():
  */
 struct async_head_user {
 	/*
-	 * Pointers to completed async syslets (i.e. syslets that
+	 * Current completion ring index - managed by the kernel:
+	 */
+	unsigned long				kernel_ring_idx;
+	/*
+	 * User-side ring index:
+	 */
+	unsigned long				user_ring_idx;
+
+	/*
+	 * Ring of pointers to completed async syslets (i.e. syslets that
 	 * generated a cachemiss and went async, returning -EASYNCSYSLET
 	 * to the user context by sys_async_exec()) are queued here.
-	 * Syslets that were executed synchronously are not queued here.
+	 * Syslets that were executed synchronously (cached) are not
+	 * queued here.
 	 *
 	 * Note: the final atom that generated the exit condition is
 	 * queued here. Normally this would be the last atom of a syslet.
 	 */
 	struct syslet_uatom __user		**completion_ring;
+
 	/*
 	 * Ring size in bytes:
 	 */
 	unsigned long				ring_size_bytes;
 
 	/*
-	 * Maximum number of asynchronous contexts the kernel creates.
-	 *
-	 * -1UL has a special meaning: the kernel manages the optimal
-	 * size of the async pool.
-	 *
-	 * Note: this field should be valid for the lifetime of async
-	 * processing, because future kernels detect changes to this
-	 * field. (enabling user-space to control the size of the async
-	 * pool in a low-overhead fashion)
+	 * The head task can become a cachemiss thread later on
+	 * too, if it blocks - so it needs its separate thread
+	 * stack and start address too:
 	 */
-	unsigned long				max_nr_threads;
+	unsigned long				head_stack;
+	unsigned long				head_eip;
+
+	/*
+	 * Newly started async kernel threads will take their
+	 * user stack and user start address from here. User-space
+	 * code has to check for new_thread_stack going to NULL
+	 * and has to refill it with a new stack if that happens.
+	 */
+	unsigned long				new_thread_stack;
+	unsigned long				new_thread_eip;
 };
 
 #endif
