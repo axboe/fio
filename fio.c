@@ -248,15 +248,20 @@ static void do_verify(struct thread_data *td)
 		if (!io_u)
 			break;
 
-		if (runtime_exceeded(td, &io_u->start_time))
+		if (runtime_exceeded(td, &io_u->start_time)) {
+			put_io_u(td, io_u);
 			break;
+		}
 
-		if (get_next_verify(td, io_u))
+		if (get_next_verify(td, io_u)) {
+			put_io_u(td, io_u);
 			break;
+		}
 
-		if (td_io_prep(td, io_u))
+		if (td_io_prep(td, io_u)) {
+			put_io_u(td, io_u);
 			break;
-
+		}
 requeue:
 		ret = td_io_queue(td, io_u);
 
