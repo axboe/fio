@@ -769,7 +769,7 @@ err:
 	close_ioengine(td);
 	cleanup_io_u(td);
 	td_set_runstate(td, TD_EXITED);
-	return (void *) td->error;
+	return (void *) (unsigned long) td->error;
 }
 
 /*
@@ -792,7 +792,7 @@ static int fork_main(int shmid, int offset)
 	td = data + offset * sizeof(struct thread_data);
 	ret = thread_main(td);
 	shmdt(data);
-	return (int) ret;
+	return (int) (unsigned long) ret;
 }
 
 /*
