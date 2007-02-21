@@ -425,6 +425,8 @@ struct thread_data {
 
 #define __td_verror(td, err, msg)					\
 	do {								\
+		if ((td)->error)					\
+			break;						\
 		int e = (err);						\
 		(td)->error = e;					\
 		snprintf(td->verror, sizeof(td->verror) - 1, "file:%s:%d, error=%s", __FILE__, __LINE__, (msg));	\
