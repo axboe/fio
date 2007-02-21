@@ -22,7 +22,6 @@ OBJS += engines/syslet-rw.o
 INSTALL = install
 prefix = /usr/local
 bindir = $(prefix)/bin
-libdir = $(prefix)/lib/fio
 
 all: $(PROGS) $(SCRIPTS)
 
