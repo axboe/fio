@@ -197,7 +197,7 @@ requeue:
 		put_io_u(td, io_u);
 		return 1;
 	} else if (ret == FIO_Q_QUEUED) {
-		if (io_u_queued_complete(td, 1, NULL))
+		if (io_u_queued_complete(td, 1, NULL) < 0)
 			return 1;
 	} else if (ret == FIO_Q_COMPLETED) {
 		if (io_u->error) {
@@ -272,7 +272,7 @@ requeue:
 				goto requeue;
 			}
 			ret = io_u_sync_complete(td, io_u, verify_io_u);
-			if (ret)
+			if (ret < 0)
 				break;
 			continue;
 		case FIO_Q_QUEUED:
@@ -306,7 +306,7 @@ requeue:
 		 * Reap required number of io units, if any, and do the
 		 * verification on them through the callback handler
 		 */
-		if (io_u_queued_complete(td, min_events, verify_io_u))
+		if (io_u_queued_complete(td, min_events, verify_io_u) < 0)
 			break;
 	}
 
