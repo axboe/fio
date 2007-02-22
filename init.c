@@ -1044,7 +1044,7 @@ static int str_ioengine_cb(void *data, const char *str)
 	if (td->io_ops)
 		return 0;
 
-	log_err("fio: ioengine= libaio, posixaio, sync, mmap, sgio, splice, cpu, null\n");
+	log_err("fio: ioengine= libaio, posixaio, sync, syslet-rw, mmap, sgio, splice, cpu, null\n");
 	log_err("fio: or specify path to dynamic ioengine module\n");
 	return 1;
 }
