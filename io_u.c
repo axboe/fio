@@ -8,6 +8,11 @@
 #include "fio.h"
 #include "os.h"
 
+/*
+ * Change this define to play with the timeout handling
+ */
+#undef FIO_USE_TIMEOUT
+
 struct io_completion_data {
 	int nr;				/* input */
 	endio_handler *handler;		/* input */
@@ -595,6 +600,16 @@ void io_u_set_timeout(struct thread_data *td)
 	setitimer(ITIMER_REAL, &td->timer, NULL);
 	fio_gettime(&td->timeout_end, NULL);
 }
+
+static void io_u_dump(struct io_u *io_u)
+{
+	unsigned long t_start = mtime_since_now(&io_u->start_time);
+	unsigned long t_issue = mtime_since_now(&io_u->issue_time);
+
+	log_err("io_u=%p, t_start=%lu, t_issue=%lu\n", io_u, t_start, t_issue);
+	log_err("  buf=%p/%p, len=%lu/%lu, offset=%llu\n", io_u->buf, io_u->xfer_buf, io_u->buflen, io_u->xfer_buflen, io_u->offset);
+	log_err("  ddir=%d, fname=%s\n", io_u->ddir, io_u->file->file_name);
+}
 #else
 void io_u_set_timeout(struct thread_data fio_unused *td)
 {
@@ -606,6 +621,8 @@ static void io_u_timeout_handler(int fio_unused sig)
 {
 	struct thread_data *td, *__td;
 	pid_t pid = getpid();
+	struct list_head *entry;
+	struct io_u *io_u;
 	int i;
 
 	log_err("fio: io_u timeout\n");
@@ -632,7 +649,14 @@ static void io_u_timeout_handler(int fio_unused sig)
 	}
 
 	log_err("fio: io_u timeout: job=%s, pid=%d\n", td->name, td->pid);
-	td->error = ETIMEDOUT;
+
+	list_for_each(entry, &td->io_u_busylist) {
+		io_u = list_entry(entry, struct io_u, list);
+
+		io_u_dump(io_u);
+	}
+
+	td_verror(td, ETIMEDOUT, "io_u timeout");
 	exit(1);
 }
 #endif
