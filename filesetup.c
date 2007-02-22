@@ -18,9 +18,15 @@ static int file_ok(struct thread_data *td, struct fio_file *f)
 	if (td->filetype != FIO_TYPE_FILE || (td->io_ops->flags & FIO_NULLIO))
 		return 0;
 
-	if (stat(f->file_name, &st) == -1)
+	if (lstat(f->file_name, &st) == -1)
 		return 1;
-	else if (st.st_size < (off_t) f->file_size)
+
+	/*
+	 * if it's a special file, size is always ok for now
+	 */
+	if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode))
+		return 0;
+	if (st.st_size < (off_t) f->file_size)
 		return 1;
 
 	return 0;
