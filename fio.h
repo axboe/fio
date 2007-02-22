@@ -428,7 +428,20 @@ struct thread_data {
 	 */
 	struct list_head io_hist_list;
 	struct list_head io_log_list;
+
+	/*
+	 * timeout handling
+	 */
+	struct timeval timeout_end;
+	struct itimerval timer;
 };
+
+/*
+ * 30 second per-io_u timeout, with 5 second intervals to avoid resetting
+ * the timer on each queue operation.
+ */
+#define IO_U_TIMEOUT_INC	5
+#define IO_U_TIMEOUT		30
 
 #define __td_verror(td, err, msg)					\
 	do {								\
@@ -628,6 +641,8 @@ extern void requeue_io_u(struct thread_data *, struct io_u **);
 extern long __must_check io_u_sync_complete(struct thread_data *, struct io_u *, endio_handler *);
 extern long __must_check io_u_queued_complete(struct thread_data *, int, endio_handler *);
 extern void io_u_queued(struct thread_data *, struct io_u *);
+extern void io_u_init_timeout(void);
+extern void io_u_set_timeout(struct thread_data *);
 
 /*
  * io engine entry points

@@ -192,16 +192,31 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	assert((io_u->flags & IO_U_F_FLIGHT) == 0);
 	io_u->flags |= IO_U_F_FLIGHT;
 
-	if (td->io_ops->flags & FIO_SYNCIO)
+	if (td->io_ops->flags & FIO_SYNCIO) {
 		fio_gettime(&io_u->issue_time, NULL);
+
+		/*
+		 * for a sync engine, set the timeout upfront
+		 */
+		if (mtime_since(&td->timeout_end, &io_u->issue_time) < IO_U_TIMEOUT)
+			io_u_set_timeout(td);
+	}
 
 	if (io_u->ddir != DDIR_SYNC)
 		td->io_issues[io_u->ddir]++;
 
 	ret = td->io_ops->queue(td, io_u);
 
-	if ((td->io_ops->flags & FIO_SYNCIO) == 0)
+	if ((td->io_ops->flags & FIO_SYNCIO) == 0) {
 		fio_gettime(&io_u->issue_time, NULL);
+
+		/*
+		 * async engine, set the timeout here
+		 */
+		if (ret == FIO_Q_QUEUED &&
+		    mtime_since(&td->timeout_end, &io_u->issue_time) < IO_U_TIMEOUT)
+			io_u_set_timeout(td);
+	}
 
 	return ret;
 }

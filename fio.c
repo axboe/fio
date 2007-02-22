@@ -567,6 +567,8 @@ static int init_io_u(struct thread_data *td)
 		list_add(&io_u->list, &td->io_u_freelist);
 	}
 
+	io_u_init_timeout();
+
 	return 0;
 }
 
@@ -715,6 +717,7 @@ static void *thread_main(void *data)
 	}
 
 	fio_gettime(&td->epoch, NULL);
+	memcpy(&td->timeout_end, &td->epoch, sizeof(td->epoch));
 	getrusage(RUSAGE_SELF, &td->ts.ru_start);
 
 	runtime[0] = runtime[1] = 0;
@@ -833,9 +836,14 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 			 * check if someone quit or got killed in an unusual way
 			 */
 			ret = waitpid(td->pid, &status, WNOHANG);
-			if (ret < 0)
+			if (ret < 0) {
+				if (errno == ECHILD) {
+					log_err("fio: pid=%d disappeared\n", td->pid);
+					td_set_runstate(td, TD_REAPED);
+					goto reaped;
+				}
 				perror("waitpid");
-			else if ((ret == td->pid) && WIFSIGNALED(status)) {
+			} else if ((ret == td->pid) && WIFSIGNALED(status)) {
 				int sig = WTERMSIG(status);
 
 				log_err("fio: pid=%d, got signal=%d\n", td->pid, sig);
@@ -865,9 +873,14 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 			int status;
 
 			ret = waitpid(td->pid, &status, 0);
-			if (ret < 0)
+			if (ret < 0) {
+				if (errno == ECHILD) {
+					log_err("fio: pid=%d disappeared\n", td->pid);
+					td_set_runstate(td, TD_REAPED);
+					goto reaped;
+				}
 				perror("waitpid");
-			else if (WIFEXITED(status) && WEXITSTATUS(status)) {
+			} else if (WIFEXITED(status) && WEXITSTATUS(status)) {
 				if (!exit_value)
 					exit_value++;
 			}

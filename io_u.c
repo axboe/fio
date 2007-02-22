@@ -582,3 +582,54 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 	slat_time = mtime_since(&io_u->start_time, &io_u->issue_time);
 	add_slat_sample(td, io_u->ddir, slat_time);
 }
+
+void io_u_set_timeout(struct thread_data *td)
+{
+	assert(td->cur_depth);
+
+	td->timer.it_interval.tv_sec = 0;
+	td->timer.it_interval.tv_usec = 0;
+	td->timer.it_value.tv_sec = IO_U_TIMEOUT + IO_U_TIMEOUT_INC;
+	td->timer.it_value.tv_usec = 0;
+	setitimer(ITIMER_REAL, &td->timer, NULL);
+	fio_gettime(&td->timeout_end, NULL);
+}
+
+static void io_u_timeout_handler(int fio_unused sig)
+{
+	struct thread_data *td, *__td;
+	pid_t pid = getpid();
+	int i;
+
+	log_err("fio: io_u timeout\n");
+
+	/*
+	 * TLS would be nice...
+	 */
+	td = NULL;
+	for_each_td(__td, i) {
+		if (__td->pid == pid) {
+			td = __td;
+			break;
+		}
+	}
+
+	if (!td) {
+		log_err("fio: io_u timeout, can't find job\n");
+		exit(1);
+	}
+
+	if (!td->cur_depth) {
+		log_err("fio: timeout without pending work?\n");
+		return;
+	}
+
+	log_err("fio: io_u timeout: job=%s, pid=%d\n", td->name, td->pid);
+	td->error = ETIMEDOUT;
+	exit(1);
+}
+
+void io_u_init_timeout(void)
+{
+	signal(SIGALRM, io_u_timeout_handler);
+}
