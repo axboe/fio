@@ -824,7 +824,7 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 	 */
 	pending = cputhreads = 0;
 	for_each_td(td, i) {
-		int flags;
+		int flags = 0;
 
 		/*
 		 * ->io_ops is NULL for a thread that has closed its
@@ -835,6 +835,13 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 
 		if (!td->pid || td->runstate == TD_REAPED)
 			continue;
+		if (td->use_thread) {
+			if (td->runstate == TD_EXITED) {
+				td_set_runstate(td, TD_REAPED);
+				goto reaped;
+			}
+			continue;
+		}
 
 		flags = WNOHANG;
 		if (td->runstate == TD_EXITED)
@@ -844,7 +851,7 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		 * check if someone quit or got killed in an unusual way
 		 */
 		ret = waitpid(td->pid, &status, flags);
-		if (ret < 0 && !td->use_thread) {
+		if (ret < 0) {
 			if (errno == ECHILD) {
 				log_err("fio: pid=%d disappeared %d\n", td->pid, td->runstate);
 				td_set_runstate(td, TD_REAPED);
@@ -862,12 +869,7 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 			if (WIFEXITED(status)) {
 				if (WEXITSTATUS(status) && !td->error)
 					td->error = WEXITSTATUS(status);
-				if (td->use_thread) {
-					long ret;
 
-					if (pthread_join(td->thread, (void *) &ret))
-						perror("pthread_join");
-				}
 				td_set_runstate(td, TD_REAPED);
 				goto reaped;
 			}
@@ -878,6 +880,13 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		 */
 		continue;
 reaped:
+		if (td->use_thread) {
+			long ret;
+
+			if (pthread_join(td->thread, (void *) &ret))
+				perror("pthread_join");
+		}
+
 		(*nr_running)--;
 		(*m_rate) -= td->ratemin;
 		(*t_rate) -= td->rate;
