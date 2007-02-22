@@ -75,7 +75,7 @@ static int fio_syslet_getevents(struct thread_data *td, int min,
 		get_events = min - sd->nr_events;
 		ret = async_wait(get_events, sd->ahu.user_ring_idx, &sd->ahu);
 		if (ret < 0)
-			return errno;
+			return -errno;
 	} while (1);
 
 	ret = sd->nr_events;
@@ -187,13 +187,9 @@ static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 			io_u->error = errno;
 	}
 
-	if (sd->nr_events >= td->iodepth)
-		printf("ouch! %d\n", sd->nr_events);
+	assert(sd->nr_events < td->iodepth);
 
-	if (!io_u->error)
-		/* nothing */;
-	else
-		td_verror(td, io_u->error);
+	if (io_u->error)
 
 	return FIO_Q_COMPLETED;
 }
