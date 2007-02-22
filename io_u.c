@@ -3,6 +3,7 @@
 #include <string.h>
 #include <signal.h>
 #include <time.h>
+#include <assert.h>
 
 #include "fio.h"
 #include "os.h"
@@ -193,6 +194,9 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 
 void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
+	assert((io_u->flags & IO_U_F_FREE) == 0);
+	io_u->flags |= IO_U_F_FREE;
+
 	io_u->file = NULL;
 	list_del(&io_u->list);
 	list_add(&io_u->list, &td->io_u_freelist);
@@ -352,6 +356,9 @@ struct io_u *__get_io_u(struct thread_data *td)
 	}
 
 	if (io_u) {
+		assert(io_u->flags & IO_U_F_FREE);
+		io_u->flags &= ~IO_U_F_FREE;
+
 		io_u->error = 0;
 		list_del(&io_u->list);
 		list_add(&io_u->list, &td->io_u_busylist);
@@ -440,6 +447,9 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 			 struct io_completion_data *icd)
 {
 	unsigned long msec;
+
+	assert(io_u->flags & IO_U_F_FLIGHT);
+	io_u->flags &= ~IO_U_F_FLIGHT;
 
 	if (io_u->ddir == DDIR_SYNC) {
 		td->last_was_sync = 1;

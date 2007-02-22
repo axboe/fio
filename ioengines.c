@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <assert.h>
 
 #include "fio.h"
 #include "os.h"
@@ -187,6 +188,9 @@ int td_io_getevents(struct thread_data *td, int min, int max,
 int td_io_queue(struct thread_data *td, struct io_u *io_u)
 {
 	int ret;
+
+	assert((io_u->flags & IO_U_F_FLIGHT) == 0);
+	io_u->flags |= IO_U_F_FLIGHT;
 
 	if (td->io_ops->flags & FIO_SYNCIO)
 		fio_gettime(&io_u->issue_time, NULL);

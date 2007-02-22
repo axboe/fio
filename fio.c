@@ -160,9 +160,19 @@ static void cleanup_pending_aio(struct thread_data *td)
 		list_for_each_safe(entry, n, &td->io_u_busylist) {
 			io_u = list_entry(entry, struct io_u, list);
 
-			r = td->io_ops->cancel(td, io_u);
-			if (!r)
+			/*
+			 * if the io_u isn't in flight, then that generally
+			 * means someone leaked an io_u. complain but fix
+			 * it up, so we don't stall here.
+			 */
+			if ((io_u->flags & IO_U_F_FLIGHT) == 0) {
+				log_err("fio: non-busy IO on busy list\n");
 				put_io_u(td, io_u);
+			} else {
+				r = td->io_ops->cancel(td, io_u);
+				if (!r)
+					put_io_u(td, io_u);
+			}
 		}
 	}
 
@@ -553,6 +563,7 @@ static int init_io_u(struct thread_data *td)
 			fill_rand_buf(io_u, max_bs);
 
 		io_u->index = i;
+		io_u->flags = IO_U_F_FREE;
 		list_add(&io_u->list, &td->io_u_freelist);
 	}
 

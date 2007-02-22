@@ -76,6 +76,11 @@ struct syslet_req {
 };
 #endif
 
+enum {
+	IO_U_F_FREE	= 1 << 0,
+	IO_U_F_FLIGHT	= 1 << 1,
+};
+
 /*
  * The io unit
  */
@@ -123,6 +128,8 @@ struct io_u {
 		unsigned int index;
 		unsigned int seen;
 	};
+
+	unsigned int flags;
 
 	struct fio_file *file;
 
