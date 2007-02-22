@@ -844,7 +844,7 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		 * check if someone quit or got killed in an unusual way
 		 */
 		ret = waitpid(td->pid, &status, flags);
-		if (ret < 0) {
+		if (ret < 0 && !td->use_thread) {
 			if (errno == ECHILD) {
 				log_err("fio: pid=%d disappeared %d\n", td->pid, td->runstate);
 				td_set_runstate(td, TD_REAPED);
