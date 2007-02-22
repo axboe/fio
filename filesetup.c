@@ -387,7 +387,7 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 
 		td_verror(td, __e, "open");
 		if (__e == EINVAL && td->odirect)
-			log_err("fio: destinations does not support O_DIRECT\n");
+			log_err("fio: destination does not support O_DIRECT\n");
 		return 1;
 	}
 
