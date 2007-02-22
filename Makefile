@@ -32,7 +32,7 @@ clean:
 	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o core.* core
 
 depend:
-	@$(CC) -MM $(ALL_CFLAGS) *.c 1> .depend
+	@$(CC) -MM $(ALL_CFLAGS) *.c engines/*.c 1> .depend
 
 cscope:
 	@cscope -b
