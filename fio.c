@@ -824,6 +824,8 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 	 */
 	pending = cputhreads = 0;
 	for_each_td(td, i) {
+		int flags;
+
 		/*
 		 * ->io_ops is NULL for a thread that has closed its
 		 * io engine
@@ -831,65 +833,57 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		if (td->io_ops && td->io_ops->flags & FIO_CPUIO)
 			cputhreads++;
 
-		if (td->runstate < TD_EXITED) {
-			/*
-			 * check if someone quit or got killed in an unusual way
-			 */
-			ret = waitpid(td->pid, &status, WNOHANG);
-			if (ret < 0) {
-				if (errno == ECHILD) {
-					log_err("fio: pid=%d disappeared\n", td->pid);
-					td_set_runstate(td, TD_REAPED);
-					goto reaped;
-				}
-				perror("waitpid");
-			} else if ((ret == td->pid) && WIFSIGNALED(status)) {
+		if (!td->pid || td->runstate == TD_REAPED)
+			continue;
+
+		flags = WNOHANG;
+		if (td->runstate == TD_EXITED)
+			flags = 0;
+
+		/*
+		 * check if someone quit or got killed in an unusual way
+		 */
+		ret = waitpid(td->pid, &status, flags);
+		if (ret < 0) {
+			if (errno == ECHILD) {
+				log_err("fio: pid=%d disappeared %d\n", td->pid, td->runstate);
+				td_set_runstate(td, TD_REAPED);
+				goto reaped;
+			}
+			perror("waitpid");
+		} else if (ret == td->pid) {
+			if (WIFSIGNALED(status)) {
 				int sig = WTERMSIG(status);
 
 				log_err("fio: pid=%d, got signal=%d\n", td->pid, sig);
 				td_set_runstate(td, TD_REAPED);
 				goto reaped;
 			}
-		}
+			if (WIFEXITED(status)) {
+				if (WEXITSTATUS(status) && !td->error)
+					td->error = WEXITSTATUS(status);
+				if (td->use_thread) {
+					long ret;
 
-		if (td->runstate != TD_EXITED) {
-			if (td->runstate < TD_RUNNING)
-				pending++;
-
-			continue;
-		}
-
-		if (td->error)
-			exit_value++;
-
-		td_set_runstate(td, TD_REAPED);
-
-		if (td->use_thread) {
-			long ret;
-
-			if (pthread_join(td->thread, (void *) &ret))
-				perror("thread_join");
-		} else {
-			int status;
-
-			ret = waitpid(td->pid, &status, 0);
-			if (ret < 0) {
-				if (errno == ECHILD) {
-					log_err("fio: pid=%d disappeared\n", td->pid);
-					td_set_runstate(td, TD_REAPED);
-					goto reaped;
+					if (pthread_join(td->thread, (void *) &ret))
+						perror("pthread_join");
 				}
-				perror("waitpid");
-			} else if (WIFEXITED(status) && WEXITSTATUS(status)) {
-				if (!exit_value)
-					exit_value++;
+				td_set_runstate(td, TD_REAPED);
+				goto reaped;
 			}
 		}
 
+		/*
+		 * thread is not dead, continue
+		 */
+		continue;
 reaped:
 		(*nr_running)--;
 		(*m_rate) -= td->ratemin;
 		(*t_rate) -= td->rate;
+
+		if (td->error)
+			exit_value++;
 	}
 
 	if (*nr_running == cputhreads && !pending)
@@ -944,6 +938,8 @@ static void run_threads(void)
 
 		init_disk_util(td);
 	}
+
+	set_genesis_time();
 
 	while (todo) {
 		struct thread_data *map[MAX_JOBS];
@@ -1102,6 +1098,8 @@ int main(int argc, char *argv[])
 		setup_log(&agg_io_log[DDIR_READ]);
 		setup_log(&agg_io_log[DDIR_WRITE]);
 	}
+
+	set_genesis_time();
 
 	disk_util_timer_arm();
 

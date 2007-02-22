@@ -142,8 +142,6 @@ static void fio_init time_init(void)
 {
 	int i;
 
-	fio_gettime(&genesis, NULL);
-
 	/*
 	 * Check the granularity of the nanosleep function
 	 */
@@ -162,6 +160,11 @@ static void fio_init time_init(void)
 		if (elapsed > ns_granularity)
 			ns_granularity = elapsed;
 	}
+}
+
+void set_genesis_time(void)
+{
+	fio_gettime(&genesis, NULL);
 }
 
 void fill_start_time(struct timeval *t)

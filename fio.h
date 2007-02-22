@@ -577,6 +577,7 @@ extern void usec_sleep(struct thread_data *, unsigned long);
 extern void rate_throttle(struct thread_data *, unsigned long, unsigned int, int);
 extern void fill_start_time(struct timeval *);
 extern void fio_gettime(struct timeval *, void *);
+extern void set_genesis_time(void);
 
 /*
  * Init functions
