@@ -443,18 +443,20 @@ struct thread_data {
 #define IO_U_TIMEOUT_INC	5
 #define IO_U_TIMEOUT		30
 
-#define __td_verror(td, err, msg)					\
+#define __td_verror(td, err, msg, func)					\
 	do {								\
 		if ((td)->error)					\
 			break;						\
 		int e = (err);						\
 		(td)->error = e;					\
-		snprintf(td->verror, sizeof(td->verror) - 1, "file:%s:%d, error=%s", __FILE__, __LINE__, (msg));	\
+		snprintf(td->verror, sizeof(td->verror) - 1, "file:%s:%d, func=%s, error=%s", __FILE__, __LINE__, (func), (msg));	\
 	} while (0)
 
 
-#define td_verror(td, err)	__td_verror((td), (err), strerror((err)))
-#define td_vmsg(td, err, msg)	__td_verror((td), (err), (msg))
+#define td_verror(td, err, func)	\
+	__td_verror((td), (err), strerror((err)), (func))
+#define td_vmsg(td, err, msg, func)	\
+	__td_verror((td), (err), (msg), (func))
 
 extern int exitall_on_terminate;
 extern int thread_number;

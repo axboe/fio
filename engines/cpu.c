@@ -9,7 +9,7 @@ static int fio_cpuio_setup(struct thread_data fio_unused *td)
 static int fio_cpuio_init(struct thread_data *td)
 {
 	if (!td->cpuload) {
-		td_vmsg(td, EINVAL, "cpu thread needs rate");
+		td_vmsg(td, EINVAL, "cpu thread needs rate", "cpu_load");
 		return 1;
 	} else if (td->cpuload > 100)
 		td->cpuload = 100;

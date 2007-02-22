@@ -69,14 +69,14 @@ int allocate_io_mem(struct thread_data *td)
 
 		td->shm_id = shmget(IPC_PRIVATE, td->orig_buffer_size, flags);
 		if (td->shm_id < 0) {
-			td_verror(td, errno);
+			td_verror(td, errno, "shmget");
 			perror("shmget");
 			return 1;
 		}
 
 		td->orig_buffer = shmat(td->shm_id, NULL, 0);
 		if (td->orig_buffer == (void *) -1) {
-			td_verror(td, errno);
+			td_verror(td, errno, "shmat");
 			perror("shmat");
 			td->orig_buffer = NULL;
 			return 1;
@@ -90,7 +90,7 @@ int allocate_io_mem(struct thread_data *td)
 			td->mmapfd = open(td->mmapfile, O_RDWR|O_CREAT, 0644);
 
 			if (td->mmapfd < 0) {
-				td_verror(td, errno);
+				td_verror(td, errno, "open");
 				perror("open mmap file");
 				td->orig_buffer = NULL;
 				return 1;
@@ -100,7 +100,7 @@ int allocate_io_mem(struct thread_data *td)
 
 		td->orig_buffer = mmap(NULL, td->orig_buffer_size, PROT_READ | PROT_WRITE, flags, td->mmapfd, 0);
 		if (td->orig_buffer == MAP_FAILED) {
-			td_verror(td, errno);
+			td_verror(td, errno, "mmap");
 			perror("mmap");
 			td->orig_buffer = NULL;
 			if (td->mmapfd) {

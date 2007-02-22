@@ -153,7 +153,7 @@ static int fio_posixaio_queue(struct thread_data fio_unused *td,
 
 	if (ret) {
 		io_u->error = errno;
-		td_verror(td, io_u->error);
+		td_verror(td, io_u->error, "xfer");
 		return FIO_Q_COMPLETED;
 	}
 

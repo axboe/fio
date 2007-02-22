@@ -548,7 +548,7 @@ long io_u_queued_complete(struct thread_data *td, int min_events,
 	if (min_events > 0) {
 		ret = td_io_commit(td);
 		if (ret < 0) {
-			td_verror(td, -ret);
+			td_verror(td, -ret, "td_io_commit");
 			return ret;
 		}
 	} else {
@@ -559,7 +559,7 @@ long io_u_queued_complete(struct thread_data *td, int min_events,
 
 	ret = td_io_getevents(td, min_events, td->cur_depth, tvp);
 	if (ret < 0) {
-		td_verror(td, -ret);
+		td_verror(td, -ret, "td_io_getevents");
 		return ret;
 	} else if (!ret)
 		return ret;

@@ -37,7 +37,7 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (io_u->error)
-		td_verror(td, io_u->error);
+		td_verror(td, io_u->error, "sync");
 
 	return FIO_Q_COMPLETED;
 }
@@ -56,7 +56,7 @@ static int fio_mmapio_init(struct thread_data *td)
 	 */
 	for_each_file(td, f, i) {
 		if (ftruncate(f->fd, f->file_size) < 0) {
-			td_verror(td, errno);
+			td_verror(td, errno, "ftruncate");
 			return 1;
 		}
 	}

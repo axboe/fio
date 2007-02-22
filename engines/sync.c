@@ -21,7 +21,7 @@ static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 		return 0;
 
 	if (lseek(f->fd, io_u->offset, SEEK_SET) == -1) {
-		td_verror(td, errno);
+		td_verror(td, errno, "lseek");
 		return 1;
 	}
 
@@ -50,7 +50,7 @@ static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (io_u->error)
-		td_verror(td, io_u->error);
+		td_verror(td, io_u->error, "xfer");
 
 	return FIO_Q_COMPLETED;
 }

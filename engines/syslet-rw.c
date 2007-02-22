@@ -190,7 +190,7 @@ static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 	assert(sd->nr_events < td->iodepth);
 
 	if (io_u->error)
-		td_verror(td, io_u->error);
+		td_verror(td, io_u->error, "xfer");
 
 	return FIO_Q_COMPLETED;
 }

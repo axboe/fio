@@ -97,7 +97,7 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 			if (ret < 0) {
 				if (!r)
 					r = -errno;
-				td_verror(td, errno);
+				td_verror(td, errno, "poll");
 				break;
 			} else if (!ret)
 				continue;
@@ -118,7 +118,7 @@ re_read:
 				if (errno == EAGAIN)
 					continue;
 				r = -errno;
-				td_verror(td, errno);
+				td_verror(td, errno, "read");
 				break;
 			} else if (ret) {
 				p += ret;
@@ -253,7 +253,7 @@ static int fio_sgio_queue(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (io_u->error) {
-		td_verror(td, io_u->error);
+		td_verror(td, io_u->error, "xfer");
 		return FIO_Q_COMPLETED;
 	}
 
@@ -339,14 +339,14 @@ static int fio_sgio_init(struct thread_data *td)
 
 	if (td->filetype == FIO_TYPE_BD) {
 		if (ioctl(f->fd, BLKSSZGET, &bs) < 0) {
-			td_verror(td, errno);
+			td_verror(td, errno, "ioctl");
 			goto err;
 		}
 	} else if (td->filetype == FIO_TYPE_CHAR) {
 		int version;
 
 		if (ioctl(f->fd, SG_GET_VERSION_NUM, &version) < 0) {
-			td_verror(td, errno);
+			td_verror(td, errno, "ioctl");
 			goto err;
 		}
 

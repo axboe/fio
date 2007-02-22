@@ -25,7 +25,7 @@ static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 	 */
 	if ((send_to_net(td) && io_u->ddir == DDIR_READ) ||
 	    (!send_to_net(td) && io_u->ddir == DDIR_WRITE)) {
-		td_verror(td, EINVAL);
+		td_verror(td, EINVAL, "bad direction");
 		return 1;
 	}
 		
@@ -38,7 +38,7 @@ static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 	 * If offset is different from last end position, it's a seek.
 	 * As network io is purely sequential, we don't allow seeks.
 	 */
-	td_verror(td, EINVAL);
+	td_verror(td, EINVAL, "cannot seek");
 	return 1;
 }
 
@@ -72,7 +72,7 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (io_u->error)
-		td_verror(td, io_u->error);
+		td_verror(td, io_u->error, "xfer");
 
 	return FIO_Q_COMPLETED;
 }
@@ -93,7 +93,7 @@ static int fio_netio_setup_connect(struct thread_data *td, const char *host,
 
 		hent = gethostbyname(host);
 		if (!hent) {
-			td_verror(td, errno);
+			td_verror(td, errno, "gethostbyname");
 			return 1;
 		}
 
@@ -103,12 +103,12 @@ static int fio_netio_setup_connect(struct thread_data *td, const char *host,
 	for_each_file(td, f, i) {
 		f->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		if (f->fd < 0) {
-			td_verror(td, errno);
+			td_verror(td, errno, "socket");
 			return 1;
 		}
 
 		if (connect(f->fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-			td_verror(td, errno);
+			td_verror(td, errno, "connect");
 			return 1;
 		}
 	}
@@ -142,7 +142,7 @@ static int fio_netio_accept_connections(struct thread_data *td, int fd,
 			if (errno == EINTR)
 				continue;
 
-			td_verror(td, errno);
+			td_verror(td, errno, "poll");
 			break;
 		} else if (!ret)
 			continue;
@@ -159,7 +159,7 @@ static int fio_netio_accept_connections(struct thread_data *td, int fd,
 
 			f->fd = accept(fd, (struct sockaddr *) addr, &socklen);
 			if (f->fd < 0) {
-				td_verror(td, errno);
+				td_verror(td, errno, "accept");
 				return 1;
 			}
 			accepts++;
@@ -177,18 +177,18 @@ static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (fd < 0) {
-		td_verror(td, errno);
+		td_verror(td, errno, "socket");
 		return 1;
 	}
 
 	opt = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-		td_verror(td, errno);
+		td_verror(td, errno, "setsockopt");
 		return 1;
 	}
 #ifdef SO_REUSEPORT
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
-		td_verror(td, errno);
+		td_verror(td, errno, "setsockopt");
 		return 1;
 	}
 #endif
@@ -199,11 +199,11 @@ static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 	addr.sin_port = htons(port);
 
 	if (bind(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		td_verror(td, errno);
+		td_verror(td, errno, "bind");
 		return 1;
 	}
 	if (listen(fd, 1) < 0) {
-		td_verror(td, errno);
+		td_verror(td, errno, "listen");
 		return 1;
 	}
 

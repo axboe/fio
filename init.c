@@ -725,7 +725,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		if (td->directory && td->directory[0] != '\0') {
 			if (lstat(td->directory, &sb) < 0) {
 				log_err("fio: %s is not a directory\n", td->directory);
-				td_verror(td, errno);
+				td_verror(td, errno, "lstat");
 				return 1;
 			}
 			if (!S_ISDIR(sb.st_mode)) {
@@ -850,12 +850,12 @@ int init_random_state(struct thread_data *td)
 
 	fd = open("/dev/urandom", O_RDONLY);
 	if (fd == -1) {
-		td_verror(td, errno);
+		td_verror(td, errno, "open");
 		return 1;
 	}
 
 	if (read(fd, seeds, sizeof(seeds)) < (int) sizeof(seeds)) {
-		td_verror(td, EIO);
+		td_verror(td, EIO, "read");
 		close(fd);
 		return 1;
 	}

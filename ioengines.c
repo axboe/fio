@@ -102,7 +102,7 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 	dlerror();
 	dlhandle = dlopen(engine_lib, RTLD_LAZY);
 	if (!dlhandle) {
-		td_vmsg(td, -1, dlerror());
+		td_vmsg(td, -1, dlerror(), "dlopen");
 		return NULL;
 	}
 
@@ -112,7 +112,7 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 	 */
 	ops = dlsym(dlhandle, "ioengine");
 	if (!ops) {
-		td_vmsg(td, -1, dlerror());
+		td_vmsg(td, -1, dlerror(), "dlsym");
 		dlclose(dlhandle);
 		return NULL;
 	}
@@ -234,6 +234,8 @@ int td_io_init(struct thread_data *td)
 
 int td_io_commit(struct thread_data *td)
 {
+	if (!td->cur_depth)
+		return 0;
 	if (td->io_ops->commit)
 		return td->io_ops->commit(td);
 

@@ -41,17 +41,17 @@ static int create_file(struct thread_data *td, struct fio_file *f)
 
 	f->fd = open(f->file_name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (f->fd < 0) {
-		td_verror(td, errno);
+		td_verror(td, errno, "open");
 		return 1;
 	}
 
 	if (ftruncate(f->fd, f->file_size) == -1) {
-		td_verror(td, errno);
+		td_verror(td, errno, "ftruncate");
 		goto err;
 	}
 
 	if (posix_fallocate(f->fd, 0, f->file_size) < 0) {
-		td_verror(td, errno);
+		td_verror(td, errno, "posix_fallocate");
 		goto err;
 	}
 
@@ -71,9 +71,9 @@ static int create_file(struct thread_data *td, struct fio_file *f)
 			continue;
 		} else {
 			if (r < 0)
-				td_verror(td, errno);
+				td_verror(td, errno, "write");
 			else
-				td_verror(td, EIO);
+				td_verror(td, EIO, "write");
 
 			break;
 		}
@@ -128,7 +128,7 @@ static int create_files(struct thread_data *td)
 
 	if (!td->total_file_size) {
 		log_err("Need size for create\n");
-		td_verror(td, EINVAL);
+		td_verror(td, EINVAL, "file_size");
 		return 1;
 	}
 
@@ -172,7 +172,7 @@ static int file_size(struct thread_data *td, struct fio_file *f)
 
 	if (td->overwrite) {
 		if (fstat(f->fd, &st) == -1) {
-			td_verror(td, errno);
+			td_verror(td, errno, "fstat");
 			return 1;
 		}
 
@@ -193,7 +193,7 @@ static int bdev_size(struct thread_data *td, struct fio_file *f)
 
 	r = blockdev_size(f->fd, &bytes);
 	if (r) {
-		td_verror(td, r);
+		td_verror(td, r, "blockdev_size");
 		return 1;
 	}
 
@@ -248,7 +248,7 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 		ret = 0;
 
 	if (ret < 0) {
-		td_verror(td, errno);
+		td_verror(td, errno, "invalidate_cache");
 		return 1;
 	}
 
@@ -272,7 +272,7 @@ static int __setup_file_mmap(struct thread_data *td, struct fio_file *f)
 	f->mmap = mmap(NULL, f->file_size, flags, MAP_SHARED, f->fd, f->file_offset);
 	if (f->mmap == MAP_FAILED) {
 		f->mmap = NULL;
-		td_verror(td, errno);
+		td_verror(td, errno, "mmap");
 		return 1;
 	}
 
@@ -281,12 +281,12 @@ static int __setup_file_mmap(struct thread_data *td, struct fio_file *f)
 
 	if (td->sequential) {
 		if (madvise(f->mmap, f->file_size, MADV_SEQUENTIAL) < 0) {
-			td_verror(td, errno);
+			td_verror(td, errno, "madvise");
 			return 1;
 		}
 	} else {
 		if (madvise(f->mmap, f->file_size, MADV_RANDOM) < 0) {
-			td_verror(td, errno);
+			td_verror(td, errno, "madvise");
 			return 1;
 		}
 	}
@@ -315,12 +315,12 @@ static int __setup_file_plain(struct thread_data *td, struct fio_file *f)
 
 	if (td->sequential) {
 		if (fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_SEQUENTIAL) < 0) {
-			td_verror(td, errno);
+			td_verror(td, errno, "fadvise");
 			return 1;
 		}
 	} else {
 		if (fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_RANDOM) < 0) {
-			td_verror(td, errno);
+			td_verror(td, errno, "fadvise");
 			return 1;
 		}
 	}
@@ -383,7 +383,11 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 	}
 
 	if (f->fd == -1) {
-		td_verror(td, errno);
+		int __e = errno;
+
+		td_verror(td, __e, "open");
+		if (__e == EINVAL && td->odirect)
+			log_err("fio: destinations does not support O_DIRECT\n");
 		return 1;
 	}
 
@@ -446,7 +450,7 @@ int setup_files(struct thread_data *td)
 	td->io_size = td->total_file_size;
 	if (td->io_size == 0) {
 		log_err("%s: no io blocks\n", td->name);
-		td_verror(td, EINVAL);
+		td_verror(td, EINVAL, "total_file_size");
 		return 1;
 	}
 

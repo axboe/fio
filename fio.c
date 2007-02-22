@@ -203,7 +203,7 @@ static int fio_io_sync(struct thread_data *td, struct fio_file *f)
 requeue:
 	ret = td_io_queue(td, io_u);
 	if (ret < 0) {
-		td_verror(td, io_u->error);
+		td_verror(td, io_u->error, "td_io_queue");
 		put_io_u(td, io_u);
 		return 1;
 	} else if (ret == FIO_Q_QUEUED) {
@@ -211,7 +211,7 @@ requeue:
 			return 1;
 	} else if (ret == FIO_Q_COMPLETED) {
 		if (io_u->error) {
-			td_verror(td, io_u->error);
+			td_verror(td, io_u->error, "td_io_queue");
 			return 1;
 		}
 
@@ -298,7 +298,7 @@ requeue:
 			break;
 		default:
 			assert(ret < 0);
-			td_verror(td, -ret);
+			td_verror(td, -ret, "td_io_queue");
 			break;
 		}
 
@@ -463,7 +463,7 @@ requeue:
 		if (check_min_rate(td, &comp_time)) {
 			if (exitall_on_terminate)
 				terminate_threads(td->groupid, 0);
-			td_verror(td, ENODATA);
+			td_verror(td, ENODATA, "check_min_rate");
 			break;
 		}
 
@@ -585,7 +585,7 @@ static int switch_ioscheduler(struct thread_data *td)
 
 	f = fopen(tmp, "r+");
 	if (!f) {
-		td_verror(td, errno);
+		td_verror(td, errno, "fopen");
 		return 1;
 	}
 
@@ -594,7 +594,7 @@ static int switch_ioscheduler(struct thread_data *td)
 	 */
 	ret = fwrite(td->ioscheduler, strlen(td->ioscheduler), 1, f);
 	if (ferror(f) || ret != 1) {
-		td_verror(td, errno);
+		td_verror(td, errno, "fwrite");
 		fclose(f);
 		return 1;
 	}
@@ -606,7 +606,7 @@ static int switch_ioscheduler(struct thread_data *td)
 	 */
 	ret = fread(tmp, 1, sizeof(tmp), f);
 	if (ferror(f) || ret < 0) {
-		td_verror(td, errno);
+		td_verror(td, errno, "fread");
 		fclose(f);
 		return 1;
 	}
@@ -614,7 +614,7 @@ static int switch_ioscheduler(struct thread_data *td)
 	sprintf(tmp2, "[%s]", td->ioscheduler);
 	if (!strstr(tmp, tmp2)) {
 		log_err("fio: io scheduler %s not found\n", td->ioscheduler);
-		td_verror(td, EINVAL);
+		td_verror(td, EINVAL, "iosched_switch");
 		fclose(f);
 		return 1;
 	}
@@ -670,7 +670,7 @@ static void *thread_main(void *data)
 		goto err;
 
 	if (fio_setaffinity(td) == -1) {
-		td_verror(td, errno);
+		td_verror(td, errno, "cpu_set_affinity");
 		goto err;
 	}
 
@@ -679,13 +679,13 @@ static void *thread_main(void *data)
 
 	if (td->ioprio) {
 		if (ioprio_set(IOPRIO_WHO_PROCESS, 0, td->ioprio) == -1) {
-			td_verror(td, errno);
+			td_verror(td, errno, "ioprio_set");
 			goto err;
 		}
 	}
 
 	if (nice(td->nice) == -1) {
-		td_verror(td, errno);
+		td_verror(td, errno, "nice");
 		goto err;
 	}
 
