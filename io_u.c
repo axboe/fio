@@ -583,6 +583,7 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 	add_slat_sample(td, io_u->ddir, slat_time);
 }
 
+#ifdef FIO_USE_TIMEOUT
 void io_u_set_timeout(struct thread_data *td)
 {
 	assert(td->cur_depth);
@@ -594,7 +595,13 @@ void io_u_set_timeout(struct thread_data *td)
 	setitimer(ITIMER_REAL, &td->timer, NULL);
 	fio_gettime(&td->timeout_end, NULL);
 }
+#else
+void io_u_set_timeout(struct thread_data fio_unused *td)
+{
+}
+#endif
 
+#ifdef FIO_USE_TIMEOUT
 static void io_u_timeout_handler(int fio_unused sig)
 {
 	struct thread_data *td, *__td;
@@ -628,8 +635,11 @@ static void io_u_timeout_handler(int fio_unused sig)
 	td->error = ETIMEDOUT;
 	exit(1);
 }
+#endif
 
 void io_u_init_timeout(void)
 {
+#ifdef FIO_USE_TIMEOUT
 	signal(SIGALRM, io_u_timeout_handler);
+#endif
 }
