@@ -991,8 +991,6 @@ static int str_ioengine_cb(void *data, const char *str)
 	if (td->io_ops)
 		return 0;
 
-	log_err("fio: ioengine= libaio, posixaio, sync, syslet-rw, mmap, sgio, splice, cpu, null\n");
-	log_err("fio: or specify path to dynamic ioengine module\n");
 	return 1;
 }
 
@@ -1217,10 +1215,8 @@ static int parse_cmd_line(int argc, char *argv[])
 			}
 
 			ret = parse_cmd_option(opt, val, options, td);
-			if (ret) {
+			if (ret)
 				dont_add_job = 1;
-				log_err("fio: job dropped\n");
-			}
 			break;
 		}
 		default:
