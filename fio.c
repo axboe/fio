@@ -96,6 +96,7 @@ static void sig_handler(int sig)
  */
 static int check_min_rate(struct thread_data *td, struct timeval *now)
 {
+	unsigned long long bytes = 0;
 	unsigned long spent;
 	unsigned long rate;
 
@@ -105,20 +106,18 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 	if (mtime_since(&td->start, now) < 2000)
 		return 0;
 
+	if (td_read(td))
+		bytes += td->this_io_bytes[DDIR_READ];
+	if (td_write(td))
+		bytes += td->this_io_bytes[DDIR_WRITE];
+
 	/*
 	 * if rate blocks is set, sample is running
 	 */
 	if (td->rate_bytes) {
-		unsigned long long bytes = 0;
-
 		spent = mtime_since(&td->lastrate, now);
 		if (spent < td->ratecycle)
 			return 0;
-
-		if (td_read(td))
-			bytes += td->this_io_bytes[DDIR_READ];
-		if (td_write(td))
-			bytes += td->this_io_bytes[DDIR_WRITE];
 
 		if (bytes < td->rate_bytes) {
 			fprintf(f_out, "%s: min rate %u not met\n", td->name, td->ratemin);
@@ -130,9 +129,9 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 				return 1;
 			}
 		}
-		td->rate_bytes = bytes;
 	}
 
+	td->rate_bytes = bytes;
 	memcpy(&td->lastrate, now, sizeof(*now));
 	return 0;
 }
