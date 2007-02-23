@@ -22,10 +22,8 @@
 
 #define td_var_offset(var)	((size_t) &((struct thread_data *)0)->var)
 
-static int str_rw_cb(void *, const char *);
 static int str_ioengine_cb(void *, const char *);
 static int str_mem_cb(void *, const char *);
-static int str_verify_cb(void *, const char *);
 static int str_lockmem_cb(void *, unsigned long *);
 #ifdef FIO_HAVE_IOPRIO
 static int str_prio_cb(void *, unsigned int *);
@@ -33,7 +31,6 @@ static int str_prioclass_cb(void *, unsigned int *);
 #endif
 static int str_exitall_cb(void);
 static int str_cpumask_cb(void *, unsigned int *);
-static int str_file_service_cb(void *, const char *);
 
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
@@ -69,11 +66,17 @@ static struct fio_option options[] = {
 	{
 		.name	= "rw",
 		.type	= FIO_OPT_STR,
-		.cb	= str_rw_cb,
+		.off1	= td_var_offset(td_ddir),
 		.help	= "IO direction",
 		.def	= "read",
-		.posval	= { "read", "write", "randwrite", "randread", "rw",
-				"randrw", },
+		.posval = {
+			  { .ival = "read", .oval = TD_DDIR_READ },
+			  { .ival = "write", .oval = TD_DDIR_WRITE },
+			  { .ival = "randread", .oval = TD_DDIR_RANDREAD },
+			  { .ival = "randwrite", .oval = TD_DDIR_RANDWRITE },
+			  { .ival = "rw", .oval = TD_DDIR_RW },
+			  { .ival = "randrw", .oval = TD_DDIR_RANDRW },
+			  },
 	},
 	{
 		.name	= "ioengine",
@@ -81,8 +84,13 @@ static struct fio_option options[] = {
 		.cb	= str_ioengine_cb,
 		.help	= "IO engine to use",
 		.def	= "sync",
-		.posval	= { "sync", "libaio", "posixaio", "mmap", "splice",
-				"sg", "null", "net", "syslet-rw" },
+		.posval	= {
+			  { .ival = "sync", }, { .ival = "libaio", },
+			  { .ival = "posixaio", }, { .ival = "mmap", },
+			  { .ival = "splice", }, { .ival = "sg", },
+			  { .ival = "null", }, { .ival = "net", },
+			  { .ival = "syslet-rw", },
+			  },
 	},
 	{
 		.name	= "iodepth",
@@ -156,10 +164,13 @@ static struct fio_option options[] = {
 	{
 		.name	= "file_service_type",
 		.type	= FIO_OPT_STR,
-		.cb	= str_file_service_cb,
+		.off1	= td_var_offset(file_service_type),
 		.help	= "How to select which file to service next",
 		.def	= "roundrobin",
-		.posval	= { "random", "roundrobin" },
+		.posval	= {
+			  { .ival = "random", .oval = FIO_FSERVICE_RANDOM },
+			  { .ival = "roundrobin", .oval = FIO_FSERVICE_RR },
+			  },
 	},
 	{
 		.name	= "fsync",
@@ -223,17 +234,32 @@ static struct fio_option options[] = {
 		.name	= "mem",
 		.type	= FIO_OPT_STR,
 		.cb	= str_mem_cb,
+		.off1	= td_var_offset(mem_type),
 		.help	= "Backing type for IO buffers",
 		.def	= "malloc",
-		.posval	=  { "malloc", "shm", "shmhuge", "mmap", "mmaphuge", },
+		.posval	= {
+			  { .ival = "malloc", .oval = MEM_MALLOC },
+			  { .ival = "shm", .oval = MEM_SHM },
+#ifdef FIO_HAVE_HUGETLB
+			  { .ival = "shmhuge", .oval = MEM_SHMHUGE },
+#endif
+			  { .ival = "mmap", .oval = MEM_MMAP },
+#ifdef FIO_HAVE_HUGETLB
+			  { .ival = "mmaphuge", .oval = MEM_MMAPHUGE },
+#endif
+			  },
 	},
 	{
 		.name	= "verify",
 		.type	= FIO_OPT_STR,
-		.cb	= str_verify_cb,
+		.off1	= td_var_offset(verify),
 		.help	= "Verify sum function",
 		.def	= "0",
-		.posval	= { "crc32", "md5", },
+		.posval = {
+			  { .ival = "0", .oval = VERIFY_NONE },
+			  { .ival = "crc32", .oval = VERIFY_CRC32 },
+			  { .ival = "md5", .oval = VERIFY_MD5 },
+			  },
 	},
 	{
 		.name	= "write_iolog",
@@ -926,53 +952,6 @@ static int is_empty_or_comment(char *line)
 	return 1;
 }
 
-static int str_rw_cb(void *data, const char *mem)
-{
-	struct thread_data *td = data;
-
-	if (!strncmp(mem, "read", 4) || !strncmp(mem, "0", 1)) {
-		td->td_ddir = TD_DDIR_READ;
-		return 0;
-	} else if (!strncmp(mem, "randread", 8)) {
-		td->td_ddir = TD_DDIR_READ | TD_DDIR_RAND;
-		return 0;
-	} else if (!strncmp(mem, "write", 5) || !strncmp(mem, "1", 1)) {
-		td->td_ddir = TD_DDIR_WRITE;
-		return 0;
-	} else if (!strncmp(mem, "randwrite", 9)) {
-		td->td_ddir = TD_DDIR_WRITE | TD_DDIR_RAND;
-		return 0;
-	} else if (!strncmp(mem, "rw", 2)) {
-		td->td_ddir = TD_DDIR_RW;
-		return 0;
-	} else if (!strncmp(mem, "randrw", 6)) {
-		td->td_ddir = TD_DDIR_RW | TD_DDIR_RAND;
-		return 0;
-	}
-
-	log_err("fio: data direction: read, write, randread, randwrite, rw, randrw\n");
-	return 1;
-}
-
-static int str_verify_cb(void *data, const char *mem)
-{
-	struct thread_data *td = data;
-
-	if (!strncmp(mem, "0", 1)) {
-		td->verify = VERIFY_NONE;
-		return 0;
-	} else if (!strncmp(mem, "md5", 3) || !strncmp(mem, "1", 1)) {
-		td->verify = VERIFY_MD5;
-		return 0;
-	} else if (!strncmp(mem, "crc32", 5)) {
-		td->verify = VERIFY_CRC32;
-		return 0;
-	}
-
-	log_err("fio: verify types: md5, crc32\n");
-	return 1;
-}
-
 /*
  * Check if mmap/mmaphuge has a :/foo/bar/file at the end. If so, return that.
  */
@@ -993,49 +972,15 @@ static int str_mem_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
 
-	if (!strncmp(mem, "malloc", 6)) {
-		td->mem_type = MEM_MALLOC;
-		return 0;
-	} else if (!strncmp(mem, "mmaphuge", 8)) {
-#ifdef FIO_HAVE_HUGETLB
-		/*
-		 * mmaphuge must be appended with the actual file
-		 */
+	if (td->mem_type == MEM_MMAPHUGE || td->mem_type == MEM_MMAP) {
 		td->mmapfile = get_mmap_file(mem);
-		if (!td->mmapfile) {
+		if (td->mem_type == MEM_MMAPHUGE && !td->mmapfile) {
 			log_err("fio: mmaphuge:/path/to/file\n");
 			return 1;
 		}
-
-		td->mem_type = MEM_MMAPHUGE;
-		return 0;
-#else
-		log_err("fio: mmaphuge not available\n");
-		return 1;
-#endif
-	} else if (!strncmp(mem, "mmap", 4)) {
-		/*
-		 * Check if the user wants file backed memory. It's ok
-		 * if there's no file given, we'll just use anon mamp then.
-		 */
-		td->mmapfile = get_mmap_file(mem);
-		td->mem_type = MEM_MMAP;
-		return 0;
-	} else if (!strncmp(mem, "shmhuge", 7)) {
-#ifdef FIO_HAVE_HUGETLB
-		td->mem_type = MEM_SHMHUGE;
-		return 0;
-#else
-		log_err("fio: shmhuge not available\n");
-		return 1;
-#endif
-	} else if (!strncmp(mem, "shm", 3)) {
-		td->mem_type = MEM_SHM;
-		return 0;
 	}
 
-	log_err("fio: mem type: malloc, shm, shmhuge, mmap, mmaphuge\n");
-	return 1;
+	return 0;
 }
 
 static int str_ioengine_cb(void *data, const char *str)
@@ -1087,22 +1032,6 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 
 	fill_cpu_mask(td->cpumask, *val);
 	return 0;
-}
-
-static int str_file_service_cb(void *data, const char *str)
-{
-	struct thread_data *td = data;
-
-	if (!strncmp(str, "random", 6)) {
-		td->file_service_type = FIO_FSERVICE_RANDOM;
-		return 0;
-	} else if (!strncmp(str, "roundrobin", 10)) {
-		td->file_service_type = FIO_FSERVICE_RR;
-		return 0;
-	}
-
-	log_err("fio: file_service= random, roundrobin\n");
-	return 1;
 }
 
 /*
@@ -1234,7 +1163,7 @@ static void usage(void)
 static int parse_cmd_line(int argc, char *argv[])
 {
 	struct thread_data *td = NULL;
-	int c, ini_idx = 0, lidx, ret;
+	int c, ini_idx = 0, lidx, ret, dont_add_job = 0;
 
 	while ((c = getopt_long(argc, argv, "", long_options, &lidx)) != -1) {
 		switch (c) {
@@ -1289,9 +1218,8 @@ static int parse_cmd_line(int argc, char *argv[])
 
 			ret = parse_cmd_option(opt, val, options, td);
 			if (ret) {
+				dont_add_job = 1;
 				log_err("fio: job dropped\n");
-				put_job(td);
-				td = NULL;
 			}
 			break;
 		}
@@ -1301,9 +1229,13 @@ static int parse_cmd_line(int argc, char *argv[])
 	}
 
 	if (td) {
-		ret = add_job(td, td->name ?: "fio", 0);
-		if (ret)
+		if (dont_add_job)
 			put_job(td);
+		else {
+			ret = add_job(td, td->name ?: "fio", 0);
+			if (ret)
+				put_job(td);
+		}
 	}
 
 	while (optind < argc) {

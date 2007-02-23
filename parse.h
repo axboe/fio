@@ -17,6 +17,16 @@ enum fio_opt_type {
 };
 
 /*
+ * Match a possible value string with the integer option.
+ */
+struct value_pair {
+	const char *ival;		/* string option */
+	unsigned int oval;		/* output value */
+};
+
+#define PARSE_MAX_VP	16
+
+/*
  * Option define
  */
 struct fio_option {
@@ -33,7 +43,7 @@ struct fio_option {
 	void *cb;			/* callback */
 	const char *help;		/* help text for option */
 	const char *def;		/* default setting */
-	const char *posval[16];		/* possible values */
+	const struct value_pair posval[PARSE_MAX_VP];/* possible values */
 };
 
 typedef int (str_cb_fn)(void *, char *);

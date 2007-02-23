@@ -29,10 +29,13 @@ enum fio_ddir {
 };
 
 enum td_ddir {
-	TD_DDIR_READ	= 1 << 0,
-	TD_DDIR_WRITE	= 1 << 1,
-	TD_DDIR_RAND	= 1 << 2,
-	TD_DDIR_RW	= TD_DDIR_READ | TD_DDIR_WRITE,
+	TD_DDIR_READ		= 1 << 0,
+	TD_DDIR_WRITE		= 1 << 1,
+	TD_DDIR_RAND		= 1 << 2,
+	TD_DDIR_RW		= TD_DDIR_READ | TD_DDIR_WRITE,
+	TD_DDIR_RANDREAD	= TD_DDIR_READ | TD_DDIR_RAND,
+	TD_DDIR_RANDWRITE	= TD_DDIR_WRITE | TD_DDIR_READ,
+	TD_DDIR_RANDRW		= TD_DDIR_RW | TD_DDIR_RAND,
 };
 
 /*
@@ -274,6 +277,7 @@ struct thread_stat {
  * This describes a single thread/process executing a fio job.
  */
 struct thread_data {
+	int pad;
 	char *description;
 	char *name;
 	char *directory;

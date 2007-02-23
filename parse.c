@@ -11,6 +11,35 @@
 
 #include "parse.h"
 
+static void show_option_range(struct fio_option *o)
+{
+	if (!o->minval && !o->maxval)
+		return;
+
+	printf("%16s: min=%d, max=%d\n", "range", o->minval, o->maxval);
+}
+
+static void show_option_values(struct fio_option *o)
+{
+	const char *msg;
+	int i = 0;
+
+	do {
+		msg = o->posval[i].ival;
+		if (!msg)
+			break;
+
+		if (!i)
+			printf("%16s: ", "valid values");
+
+		printf("%s,", msg);
+		i++;
+	} while (i < PARSE_MAX_VP);
+
+	if (i)
+		printf("\n");
+}
+
 static unsigned long get_mult_time(char c)
 {
 	switch (c) {
@@ -165,8 +194,27 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	switch (o->type) {
 	case FIO_OPT_STR: {
 		fio_opt_str_fn *fn = o->cb;
+		const struct value_pair *vp;
+		int i;
 
-		ret = fn(data, ptr);
+		ret = 1;
+		for (i = 0; i < PARSE_MAX_VP; i++) {
+			vp = &o->posval[i];
+			if (!vp->ival || vp->ival[0] == '\0')
+				break;
+			if (!strncmp(vp->ival, ptr, strlen(vp->ival))) {
+				ret = 0;
+				if (!o->off1)
+					break;
+				val_store(ilp, vp->oval, o->off1, data);
+				break;
+			}
+		}
+
+		if (ret)
+			show_option_values(o);
+		else if (fn)
+			ret = fn(data, ptr);
 		break;
 	}
 	case FIO_OPT_STR_VAL_TIME:
@@ -387,38 +435,6 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 	return 1;
 }
 
-static void show_option_range(struct fio_option *o)
-{
-	if (!o->minval && !o->maxval)
-		return;
-
-	printf("%16s: min=%d, max=%d\n", "range", o->minval, o->maxval);
-}
-
-static void show_option_values(struct fio_option *o)
-{
-	const char *msg;
-	int i = 0;
-
-	if (!o->posval)
-		return;
-
-	do {
-		msg = o->posval[i];
-		if (!msg)
-			break;
-
-		if (!i)
-			printf("%16s: ", "valid values");
-
-		printf("%s,", msg);
-		i++;
-	} while (1);
-
-	if (i)
-		printf("\n");
-}
-
 int show_cmd_help(struct fio_option *options, const char *name)
 {
 	int show_all = !strcmp(name, "all");
@@ -487,6 +503,10 @@ void options_init(struct fio_option *options)
 			o->minval = 0;
 			o->maxval = 1;
 		}
+		if (!o->cb && !o->off1)
+			fprintf(stderr, "Option %s: neither cb nor offset given\n", o->name);
+		if (o->type == FIO_OPT_STR)
+			continue;
 		if (o->cb && (o->off1 || o->off2 || o->off3 || o->off4))
 			fprintf(stderr, "Option %s: both cb and offset given\n", o->name);
 	}
