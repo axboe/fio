@@ -187,6 +187,7 @@ int setup_rate(struct thread_data *td)
 {
 	unsigned long long rate;
 	int nr_reads_per_msec;
+	unsigned int bs;
 
 	if (!td->rate)
 		return 0;
@@ -196,8 +197,15 @@ int setup_rate(struct thread_data *td)
 		return -1;
 	}
 
+	if (td_rw(td))
+		bs = td->rw_min_bs;
+	else if (td_read(td))
+		bs = td->min_bs[DDIR_READ];
+	else
+		bs = td->min_bs[DDIR_WRITE];
+
 	rate = td->rate;
-	nr_reads_per_msec = (rate * 1024 * 1000) / td->min_bs[DDIR_READ];
+	nr_reads_per_msec = (rate * 1024 * 1000) / bs;
 	if (!nr_reads_per_msec) {
 		log_err("rate lower than supported\n");
 		return -1;
