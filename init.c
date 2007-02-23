@@ -618,7 +618,7 @@ static void fixup_options(struct thread_data *td)
 	/*
 	 * only really works for sequential io for now, and with 1 file
 	 */
-	if (td->zone_size && !td->sequential && td->nr_files == 1)
+	if (td->zone_size && td_random(td) && td->nr_files == 1)
 		td->zone_size = 0;
 
 	/*
@@ -695,10 +695,10 @@ static char *to_kmg(unsigned int val)
  */
 static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 {
-	const char *ddir_str[] = { "read", "write", "randread", "randwrite",
-				   "rw", NULL, "randrw" };
+	const char *ddir_str[] = { NULL, "read", "write", "rw", NULL,
+				   "randread", "randwrite", "randrw" };
 	struct stat sb;
-	int numjobs, ddir, i;
+	int numjobs, i;
 	struct fio_file *f;
 
 	/*
@@ -795,8 +795,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (!td->name)
 		td->name = strdup(jobname);
 
-	ddir = td->ddir + (!td->sequential << 1) + (td->iomix << 2);
-
 	if (!terse_output) {
 		if (!job_add_num) {
 			if (td->io_ops->flags & FIO_CPUIO)
@@ -809,7 +807,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 				c3 = to_kmg(td->min_bs[DDIR_WRITE]);
 				c4 = to_kmg(td->max_bs[DDIR_WRITE]);
 
-				fprintf(f_out, "%s: (g=%d): rw=%s, bs=%s-%s/%s-%s, ioengine=%s, iodepth=%u\n", td->name, td->groupid, ddir_str[ddir], c1, c2, c3, c4, td->io_ops->name, td->iodepth);
+				fprintf(f_out, "%s: (g=%d): rw=%s, bs=%s-%s/%s-%s, ioengine=%s, iodepth=%u\n", td->name, td->groupid, ddir_str[td->td_ddir], c1, c2, c3, c4, td->io_ops->name, td->iodepth);
 
 				free(c1);
 				free(c2);
@@ -874,9 +872,11 @@ int init_random_state(struct thread_data *td)
 	os_random_seed(seeds[0], &td->bsrange_state);
 	os_random_seed(seeds[1], &td->verify_state);
 	os_random_seed(seeds[2], &td->rwmix_state);
-	os_random_seed(seeds[3], &td->next_file_state);
 
-	if (td->sequential)
+	if (td->file_service_type == FIO_FSERVICE_RANDOM)
+		os_random_seed(seeds[3], &td->next_file_state);
+
+	if (!td_random(td))
 		return 0;
 
 	if (td->rand_repeatable)
@@ -931,30 +931,22 @@ static int str_rw_cb(void *data, const char *mem)
 	struct thread_data *td = data;
 
 	if (!strncmp(mem, "read", 4) || !strncmp(mem, "0", 1)) {
-		td->ddir = DDIR_READ;
-		td->sequential = 1;
+		td->td_ddir = TD_DDIR_READ;
 		return 0;
 	} else if (!strncmp(mem, "randread", 8)) {
-		td->ddir = DDIR_READ;
-		td->sequential = 0;
+		td->td_ddir = TD_DDIR_READ | TD_DDIR_RAND;
 		return 0;
 	} else if (!strncmp(mem, "write", 5) || !strncmp(mem, "1", 1)) {
-		td->ddir = DDIR_WRITE;
-		td->sequential = 1;
+		td->td_ddir = TD_DDIR_WRITE;
 		return 0;
 	} else if (!strncmp(mem, "randwrite", 9)) {
-		td->ddir = DDIR_WRITE;
-		td->sequential = 0;
+		td->td_ddir = TD_DDIR_WRITE | TD_DDIR_RAND;
 		return 0;
 	} else if (!strncmp(mem, "rw", 2)) {
-		td->ddir = DDIR_READ;
-		td->iomix = 1;
-		td->sequential = 1;
+		td->td_ddir = TD_DDIR_RW;
 		return 0;
 	} else if (!strncmp(mem, "randrw", 6)) {
-		td->ddir = DDIR_READ;
-		td->iomix = 1;
-		td->sequential = 0;
+		td->td_ddir = TD_DDIR_RW | TD_DDIR_RAND;
 		return 0;
 	}
 

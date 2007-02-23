@@ -106,7 +106,7 @@ static int get_next_offset(struct thread_data *td, struct fio_file *f,
 	unsigned long long b, rb;
 	long r;
 
-	if (!td->sequential) {
+	if (td_random(td)) {
 		unsigned long long max_blocks = f->file_size / td->min_bs[ddir];
 		int loops = 5;
 
@@ -253,7 +253,7 @@ static int fill_io_u(struct thread_data *td, struct fio_file *f,
 	/*
 	 * mark entry before potentially trimming io_u
 	 */
-	if (!td->read_iolog && !td->sequential && !td->norandommap)
+	if (!td->read_iolog && td_random(td) && !td->norandommap)
 		mark_random_map(td, f, io_u);
 
 	/*

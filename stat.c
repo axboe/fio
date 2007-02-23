@@ -454,9 +454,10 @@ static void show_thread_status(struct thread_data *td,
 	else
 		fprintf(f_out, "%s: (groupid=%d): err=%2d (%s): pid=%d\n",td->name, td->groupid, td->error, td->verror, td->pid);
 
-	show_ddir_status(td, rs, td->ddir);
-	if (td->io_bytes[td->ddir ^ 1])
-		show_ddir_status(td, rs, td->ddir ^ 1);
+	if (td_read(td))
+		show_ddir_status(td, rs, DDIR_READ);
+	if (td_write(td))
+		show_ddir_status(td, rs, DDIR_WRITE);
 
 	runtime = mtime_since(&td->epoch, &td->end_time);
 	if (runtime) {

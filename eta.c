@@ -26,20 +26,20 @@ static void check_str_update(struct thread_data *td)
 			break;
 		case TD_RUNNING:
 			if (td_rw(td)) {
-				if (td->sequential)
-					c = 'M';
-				else
+				if (td_random(td))
 					c = 'm';
+				else
+					c = 'M';
 			} else if (td_read(td)) {
-				if (td->sequential)
-					c = 'R';
-				else
+				if (td_random(td))
 					c = 'r';
-			} else {
-				if (td->sequential)
-					c = 'W';
 				else
+					c = 'R';
+			} else {
+				if (td_random(td))
 					c = 'w';
+				else
+					c = 'W';
 			}
 			break;
 		case TD_VERIFYING:

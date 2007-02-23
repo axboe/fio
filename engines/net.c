@@ -223,7 +223,7 @@ static int fio_netio_setup(struct thread_data *td)
 		return 1;
 	}
 
-	if (td->iomix) {
+	if (td_rw(td)) {
 		log_err("fio: network connections must be read OR write\n");
 		return 1;
 	}
@@ -241,7 +241,7 @@ static int fio_netio_setup(struct thread_data *td)
 	strcpy(host, buf);
 	port = atoi(sep);
 
-	if (td->ddir == DDIR_READ) {
+	if (td_read(td)) {
 		send_to_net(td) = 0;
 		ret = fio_netio_setup_listen(td, port);
 	} else {

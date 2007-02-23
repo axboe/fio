@@ -47,7 +47,7 @@ static int fio_mmapio_init(struct thread_data *td)
 	struct fio_file *f;
 	int i;
 
-	if (td->ddir == DDIR_READ && !td_rw(td))
+	if (!td_write(td))
 		return 0;
 
 	/*

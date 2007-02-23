@@ -98,7 +98,6 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 {
 	unsigned long spent;
 	unsigned long rate;
-	int ddir = td->ddir;
 
 	/*
 	 * allow a 2 second settle period in the beginning
@@ -110,18 +109,30 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 	 * if rate blocks is set, sample is running
 	 */
 	if (td->rate_bytes) {
+		unsigned long long bytes = 0;
+
 		spent = mtime_since(&td->lastrate, now);
 		if (spent < td->ratecycle)
 			return 0;
 
-		rate = (td->this_io_bytes[ddir] - td->rate_bytes) / spent;
-		if (rate < td->ratemin) {
-			fprintf(f_out, "%s: min rate %u not met, got %luKiB/sec\n", td->name, td->ratemin, rate);
+		if (td_read(td))
+			bytes += td->this_io_bytes[DDIR_READ];
+		if (td_write(td))
+			bytes += td->this_io_bytes[DDIR_WRITE];
+
+		if (bytes < td->rate_bytes) {
+			fprintf(f_out, "%s: min rate %u not met\n", td->name, td->ratemin);
 			return 1;
+		} else {
+			rate = (bytes - td->rate_bytes) / spent;
+			if (rate < td->ratemin || bytes < td->rate_bytes) {
+				fprintf(f_out, "%s: min rate %u not met, got %luKiB/sec\n", td->name, td->ratemin, rate);
+				return 1;
+			}
 		}
+		td->rate_bytes = bytes;
 	}
 
-	td->rate_bytes = td->this_io_bytes[ddir];
 	memcpy(&td->lastrate, now, sizeof(*now));
 	return 0;
 }
@@ -458,7 +469,7 @@ requeue:
 		 */
 		usec = utime_since(&s, &comp_time);
 
-		rate_throttle(td, usec, bytes_done, td->ddir);
+		rate_throttle(td, usec, bytes_done);
 
 		if (check_min_rate(td, &comp_time)) {
 			if (exitall_on_terminate)
@@ -736,10 +747,11 @@ static void *thread_main(void *data)
 		else
 			do_io(td);
 
-		runtime[td->ddir] += utime_since_now(&td->start);
-		if (td_rw(td) && td->io_bytes[td->ddir ^ 1])
-			runtime[td->ddir ^ 1] = runtime[td->ddir];
-
+		if (td_read(td) && td->io_bytes[DDIR_READ])
+			runtime[DDIR_READ] += utime_since_now(&td->start);
+		if (td_write(td) && td->io_bytes[DDIR_WRITE])
+			runtime[DDIR_WRITE] += utime_since_now(&td->start);
+		
 		if (td->error || td->terminate)
 			break;
 

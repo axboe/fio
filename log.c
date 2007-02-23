@@ -56,7 +56,7 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	 * be laid out with the block scattered as written. it's faster to
 	 * read them in in that order again, so don't sort
 	 */
-	if (td->sequential || !td->overwrite) {
+	if (!td_random(td) || !td->overwrite) {
 		list_add_tail(&ipo->list, &td->io_hist_list);
 		return;
 	}
@@ -137,11 +137,11 @@ static int init_iolog_read(struct thread_data *td)
 	if (!reads && !writes)
 		return 1;
 	else if (reads && !writes)
-		td->ddir = DDIR_READ;
+		td->td_ddir = TD_DDIR_READ;
 	else if (!reads && writes)
-		td->ddir = DDIR_READ;
+		td->td_ddir = TD_DDIR_READ;
 	else
-		td->iomix = 1;
+		td->td_ddir = TD_DDIR_RW;
 
 	return 0;
 }

@@ -28,6 +28,13 @@ enum fio_ddir {
 	DDIR_SYNC,
 };
 
+enum td_ddir {
+	TD_DDIR_READ	= 1 << 0,
+	TD_DDIR_WRITE	= 1 << 1,
+	TD_DDIR_RAND	= 1 << 2,
+	TD_DDIR_RW	= TD_DDIR_READ | TD_DDIR_WRITE,
+};
+
 /*
  * Use for maintaining statistics
  */
@@ -290,12 +297,10 @@ struct thread_data {
 	size_t orig_buffer_size;
 	volatile int terminate;
 	volatile int runstate;
-	enum fio_ddir ddir;
-	unsigned int iomix;
+	enum td_ddir td_ddir;
 	unsigned int ioprio;
 	unsigned int last_was_sync;
 
-	unsigned int sequential;
 	unsigned int odirect;
 	unsigned int invalidate_cache;
 	unsigned int create_serialize;
@@ -482,9 +487,10 @@ extern unsigned long long mlock_size;
 
 extern struct thread_data *threads;
 
-#define td_read(td)		((td)->ddir == DDIR_READ)
-#define td_write(td)		((td)->ddir == DDIR_WRITE)
-#define td_rw(td)		((td)->iomix != 0)
+#define td_read(td)		((td)->td_ddir & TD_DDIR_READ)
+#define td_write(td)		((td)->td_ddir & TD_DDIR_WRITE)
+#define td_rw(td)		(((td)->td_ddir & TD_DDIR_RW) == TD_DDIR_RW)
+#define td_random(td)		((td)->td_ddir & TD_DDIR_RAND)
 
 #define BLOCKS_PER_MAP		(8 * sizeof(long))
 #define TO_MAP_BLOCK(td, f, b)	((b) - ((f)->file_offset / (td)->rw_min_bs))
@@ -588,7 +594,7 @@ extern unsigned long time_since_now(struct timeval *);
 extern unsigned long mtime_since_genesis(void);
 extern void __usec_sleep(unsigned int);
 extern void usec_sleep(struct thread_data *, unsigned long);
-extern void rate_throttle(struct thread_data *, unsigned long, unsigned int, int);
+extern void rate_throttle(struct thread_data *, unsigned long, unsigned int);
 extern void fill_start_time(struct timeval *);
 extern void fio_gettime(struct timeval *, void *);
 extern void set_genesis_time(void);

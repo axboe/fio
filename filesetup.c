@@ -113,8 +113,7 @@ static int create_files(struct thread_data *td)
 		for_each_file(td, f, i) {
 			int file_there = !file_ok(td, f);
 
-			if (file_there && td->ddir == DDIR_WRITE &&
-			    !td->overwrite) {
+			if (file_there && td_write(td) && !td->overwrite) {
 				unlink(f->file_name);
 				file_there = 0;
 			}
@@ -279,7 +278,7 @@ static int __setup_file_mmap(struct thread_data *td, struct fio_file *f)
 	if (td->invalidate_cache && file_invalidate_cache(td, f))
 		return 1;
 
-	if (td->sequential) {
+	if (!td_random(td)) {
 		if (madvise(f->mmap, f->file_size, MADV_SEQUENTIAL) < 0) {
 			td_verror(td, errno, "madvise");
 			return 1;
@@ -313,7 +312,7 @@ static int __setup_file_plain(struct thread_data *td, struct fio_file *f)
 	if (td->invalidate_cache && file_invalidate_cache(td, f))
 		return 1;
 
-	if (td->sequential) {
+	if (!td_random(td)) {
 		if (fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_SEQUENTIAL) < 0) {
 			td_verror(td, errno, "fadvise");
 			return 1;
