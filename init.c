@@ -33,6 +33,7 @@ static int str_prioclass_cb(void *, unsigned int *);
 #endif
 static int str_exitall_cb(void);
 static int str_cpumask_cb(void *, unsigned int *);
+static int str_file_service_cb(void *, const char *);
 
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
@@ -151,6 +152,14 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(nr_files),
 		.help	= "Split job workload between this number of files",
 		.def	= "1",
+	},
+	{
+		.name	= "file_service_type",
+		.type	= FIO_OPT_STR,
+		.cb	= str_file_service_cb,
+		.help	= "How to select which file to service next",
+		.def	= "roundrobin",
+		.posval	= { "random", "roundrobin" },
 	},
 	{
 		.name	= "fsync",
@@ -841,7 +850,7 @@ err:
  */
 int init_random_state(struct thread_data *td)
 {
-	unsigned long seeds[4];
+	unsigned long seeds[5];
 	int fd, num_maps, blocks, i;
 	struct fio_file *f;
 
@@ -865,12 +874,13 @@ int init_random_state(struct thread_data *td)
 	os_random_seed(seeds[0], &td->bsrange_state);
 	os_random_seed(seeds[1], &td->verify_state);
 	os_random_seed(seeds[2], &td->rwmix_state);
+	os_random_seed(seeds[3], &td->next_file_state);
 
 	if (td->sequential)
 		return 0;
 
 	if (td->rand_repeatable)
-		seeds[3] = FIO_RANDSEED * td->thread_number;
+		seeds[4] = FIO_RANDSEED * td->thread_number;
 
 	if (!td->norandommap) {
 		for_each_file(td, f, i) {
@@ -882,7 +892,7 @@ int init_random_state(struct thread_data *td)
 		}
 	}
 
-	os_random_seed(seeds[3], &td->random_state);
+	os_random_seed(seeds[4], &td->random_state);
 	return 0;
 }
 
@@ -1085,6 +1095,22 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 
 	fill_cpu_mask(td->cpumask, *val);
 	return 0;
+}
+
+static int str_file_service_cb(void *data, const char *str)
+{
+	struct thread_data *td = data;
+
+	if (!strncmp(str, "random", 6)) {
+		td->file_service_type = FIO_FSERVICE_RANDOM;
+		return 0;
+	} else if (!strncmp(str, "roundrobin", 10)) {
+		td->file_service_type = FIO_FSERVICE_RR;
+		return 0;
+	}
+
+	log_err("fio: file_service= random, roundrobin\n");
+	return 1;
 }
 
 /*

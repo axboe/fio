@@ -280,7 +280,10 @@ struct thread_data {
 	struct fio_file *files;
 	unsigned int nr_files;
 	unsigned int nr_uniq_files;
-	unsigned int next_file;
+	union {
+		unsigned int next_file;
+		os_random_state_t next_file_state;
+	};
 	int error;
 	pid_t pid;
 	char *orig_buffer;
@@ -340,6 +343,7 @@ struct thread_data {
 	unsigned int rwmixread;
 	unsigned int rwmixwrite;
 	unsigned int nice;
+	unsigned int file_service_type;
 
 	char *read_iolog_file;
 	char *write_iolog_file;
@@ -434,6 +438,14 @@ struct thread_data {
 	 */
 	struct timeval timeout_end;
 	struct itimerval timer;
+};
+
+/*
+ * roundrobin available files, or choose one at random.
+ */
+enum {
+	FIO_FSERVICE_RANDOM	= 1,
+	FIO_FSERVICE_RR		= 2,
 };
 
 /*

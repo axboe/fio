@@ -325,7 +325,27 @@ static void io_u_mark_latency(struct thread_data *td, unsigned long msec)
 	td->io_u_lat[index]++;
 }
 
-static struct fio_file *get_next_file(struct thread_data *td)
+/*
+ * Get next file to service by choosing one at random
+ */
+static struct fio_file *get_next_file_rand(struct thread_data *td)
+{
+	long r = os_random_long(&td->next_file_state);
+	unsigned int fileno;
+	struct fio_file *f;
+
+	do {
+		fileno = (unsigned int) ((double) (td->nr_files - 1) * r / (RAND_MAX + 1.0));
+		f = &td->files[fileno];
+		if (f->fd != -1)
+			return f;
+	} while (1);
+}
+
+/*
+ * Get next file to service by doing round robin between all available ones
+ */
+static struct fio_file *get_next_file_rr(struct thread_data *td)
 {
 	unsigned int old_next_file = td->next_file;
 	struct fio_file *f;
@@ -393,7 +413,11 @@ struct io_u *get_io_u(struct thread_data *td)
 	if (io_u->file)
 		goto out;
 
-	f = get_next_file(td);
+	if (td->file_service_type == FIO_FSERVICE_RR)
+		f = get_next_file_rr(td);
+	else
+		f = get_next_file_rand(td);
+
 	if (!f) {
 		put_io_u(td, io_u);
 		return NULL;
