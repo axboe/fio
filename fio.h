@@ -144,6 +144,11 @@ struct io_u {
 	struct fio_file *file;
 
 	struct list_head list;
+
+	/*
+	 * Callback for io completion
+	 */
+	int (*end_io)(struct io_u *);
 };
 
 /*
@@ -544,11 +549,6 @@ struct disk_util {
 	struct timeval time;
 };
 
-/*
- * Callback for io completion
- */
-typedef int (endio_handler)(struct io_u *);
-
 #define DISK_UTIL_MSEC	(250)
 
 #ifndef min
@@ -663,8 +663,8 @@ extern struct io_u *__get_io_u(struct thread_data *);
 extern struct io_u *get_io_u(struct thread_data *);
 extern void put_io_u(struct thread_data *, struct io_u *);
 extern void requeue_io_u(struct thread_data *, struct io_u **);
-extern long __must_check io_u_sync_complete(struct thread_data *, struct io_u *, endio_handler *);
-extern long __must_check io_u_queued_complete(struct thread_data *, int, endio_handler *);
+extern long __must_check io_u_sync_complete(struct thread_data *, struct io_u *);
+extern long __must_check io_u_queued_complete(struct thread_data *, int);
 extern void io_u_queued(struct thread_data *, struct io_u *);
 extern void io_u_init_timeout(void);
 extern void io_u_set_timeout(struct thread_data *);

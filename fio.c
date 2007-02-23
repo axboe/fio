@@ -159,7 +159,7 @@ static void cleanup_pending_aio(struct thread_data *td)
 	/*
 	 * get immediately available events, if any
 	 */
-	r = io_u_queued_complete(td, 0, NULL);
+	r = io_u_queued_complete(td, 0);
 	if (r < 0)
 		return;
 
@@ -187,7 +187,7 @@ static void cleanup_pending_aio(struct thread_data *td)
 	}
 
 	if (td->cur_depth)
-		r = io_u_queued_complete(td, td->cur_depth, NULL);
+		r = io_u_queued_complete(td, td->cur_depth);
 }
 
 /*
@@ -217,7 +217,7 @@ requeue:
 		put_io_u(td, io_u);
 		return 1;
 	} else if (ret == FIO_Q_QUEUED) {
-		if (io_u_queued_complete(td, 1, NULL) < 0)
+		if (io_u_queued_complete(td, 1) < 0)
 			return 1;
 	} else if (ret == FIO_Q_COMPLETED) {
 		if (io_u->error) {
@@ -225,7 +225,7 @@ requeue:
 			return 1;
 		}
 
-		if (io_u_sync_complete(td, io_u, NULL) < 0)
+		if (io_u_sync_complete(td, io_u) < 0)
 			return 1;
 	} else if (ret == FIO_Q_BUSY) {
 		if (td_io_commit(td))
@@ -282,6 +282,8 @@ static void do_verify(struct thread_data *td)
 			put_io_u(td, io_u);
 			break;
 		}
+
+		io_u->end_io = verify_io_u;
 requeue:
 		ret = td_io_queue(td, io_u);
 
@@ -296,7 +298,7 @@ requeue:
 				io_u->xfer_buf += bytes;
 				goto requeue;
 			}
-			ret = io_u_sync_complete(td, io_u, verify_io_u);
+			ret = io_u_sync_complete(td, io_u);
 			if (ret < 0)
 				break;
 			continue;
@@ -331,7 +333,7 @@ requeue:
 		 * Reap required number of io units, if any, and do the
 		 * verification on them through the callback handler
 		 */
-		if (io_u_queued_complete(td, min_events, verify_io_u) < 0)
+		if (io_u_queued_complete(td, min_events) < 0)
 			break;
 	}
 
@@ -414,7 +416,7 @@ requeue:
 				goto requeue;
 			}
 			fio_gettime(&comp_time, NULL);
-			bytes_done = io_u_sync_complete(td, io_u, NULL);
+			bytes_done = io_u_sync_complete(td, io_u);
 			if (bytes_done < 0)
 				ret = bytes_done;
 			break;
@@ -453,7 +455,7 @@ requeue:
 			}
 
 			fio_gettime(&comp_time, NULL);
-			bytes_done = io_u_queued_complete(td, min_evts, NULL);
+			bytes_done = io_u_queued_complete(td, min_evts);
 			if (bytes_done < 0)
 				break;
 		}

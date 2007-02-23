@@ -15,7 +15,6 @@
 
 struct io_completion_data {
 	int nr;				/* input */
-	endio_handler *handler;		/* input */
 
 	int error;			/* output */
 	unsigned long bytes_done[2];	/* output */
@@ -378,6 +377,7 @@ struct io_u *__get_io_u(struct thread_data *td)
 		io_u->buflen = 0;
 		io_u->resid = 0;
 		io_u->file = NULL;
+		io_u->end_io = NULL;
 	}
 
 	if (io_u) {
@@ -510,8 +510,8 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 		icd->bytes_done[idx] += bytes;
 
-		if (icd->handler) {
-			ret = icd->handler(io_u);
+		if (io_u->end_io) {
+			ret = io_u->end_io(io_u);
 			if (ret && !icd->error)
 				icd->error = ret;
 		}
@@ -519,12 +519,10 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		icd->error = io_u->error;
 }
 
-static void init_icd(struct io_completion_data *icd, endio_handler *handler,
-		     int nr)
+static void init_icd(struct io_completion_data *icd, int nr)
 {
 	fio_gettime(&icd->time, NULL);
 
-	icd->handler = handler;
 	icd->nr = nr;
 
 	icd->error = 0;
@@ -548,12 +546,11 @@ static void ios_completed(struct thread_data *td,
 /*
  * Complete a single io_u for the sync engines.
  */
-long io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
-			endio_handler *handler)
+long io_u_sync_complete(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_completion_data icd;
 
-	init_icd(&icd, handler, 1);
+	init_icd(&icd, 1);
 	io_completed(td, io_u, &icd);
 	put_io_u(td, io_u);
 
@@ -566,9 +563,7 @@ long io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
 /*
  * Called to complete min_events number of io for the async engines.
  */
-long io_u_queued_complete(struct thread_data *td, int min_events,
-			  endio_handler *handler)
-
+long io_u_queued_complete(struct thread_data *td, int min_events)
 {
 	struct io_completion_data icd;
 	struct timespec *tvp = NULL;
@@ -593,7 +588,7 @@ long io_u_queued_complete(struct thread_data *td, int min_events,
 	} else if (!ret)
 		return ret;
 
-	init_icd(&icd, handler, ret);
+	init_icd(&icd, ret);
 	ios_completed(td, &icd);
 	if (!icd.error)
 		return icd.bytes_done[0] + icd.bytes_done[1];
