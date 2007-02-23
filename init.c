@@ -85,11 +85,24 @@ static struct fio_option options[] = {
 		.help	= "IO engine to use",
 		.def	= "sync",
 		.posval	= {
-			  { .ival = "sync", }, { .ival = "libaio", },
-			  { .ival = "posixaio", }, { .ival = "mmap", },
-			  { .ival = "splice", }, { .ival = "sg", },
+			  { .ival = "sync", },
+#ifdef FIO_HAVE_LIBAIO
+			  { .ival = "libaio", },
+#endif
+#ifdef FIO_HAVE_POSIXAIO
+			  { .ival = "posixaio", },
+#endif
+			  { .ival = "mmap", },
+#ifdef FIO_HAVE_SPLICE
+			  { .ival = "splice", },
+#endif
+#ifdef FIO_HAVE_SGIO
+			  { .ival = "sg", },
+#endif
 			  { .ival = "null", }, { .ival = "net", },
+#ifdef FIO_HAVE_SYSLET
 			  { .ival = "syslet-rw", },
+#endif
 			  },
 	},
 	{
