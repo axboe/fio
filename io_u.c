@@ -211,6 +211,9 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 {
 	struct io_u *__io_u = *io_u;
 
+	__io_u->flags |= IO_U_F_FREE;
+	__io_u->flags &= ~IO_U_F_FLIGHT;
+
 	list_del(&__io_u->list);
 	list_add_tail(&__io_u->list, &td->io_u_requeues);
 	td->cur_depth--;
