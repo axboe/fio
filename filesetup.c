@@ -239,11 +239,13 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 	 */
 	if (td->io_ops->flags & FIO_MMAPIO)
 		ret = madvise(f->mmap, f->file_size, MADV_DONTNEED);
-	else if (td->filetype == FIO_TYPE_FILE)
-		ret = fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_DONTNEED);
-	else if (td->filetype == FIO_TYPE_BD)
-		ret = blockdev_invalidate_cache(f->fd);
-	else if (td->filetype == FIO_TYPE_CHAR)
+	else if (td->filetype == FIO_TYPE_FILE) {
+		if (!td->odirect)
+			ret = fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_DONTNEED);
+	} else if (td->filetype == FIO_TYPE_BD) {
+		if (!td->odirect)
+			ret = blockdev_invalidate_cache(f->fd);
+	} else if (td->filetype == FIO_TYPE_CHAR)
 		ret = 0;
 
 	if (ret < 0) {
@@ -251,7 +253,7 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	return 0;
+	return ret;
 }
 
 static int __setup_file_mmap(struct thread_data *td, struct fio_file *f)
