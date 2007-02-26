@@ -182,6 +182,12 @@ int td_io_prep(struct thread_data *td, struct io_u *io_u)
 int td_io_getevents(struct thread_data *td, int min, int max,
 		    struct timespec *t)
 {
+	if (min > 0 && td->io_ops->commit) {
+		int r = td->io_ops->commit(td);
+
+		if (r < 0)
+			return r;
+	}
 	if (td->io_ops->getevents)
 		return td->io_ops->getevents(td, min, max, t);
 

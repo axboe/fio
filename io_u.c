@@ -572,13 +572,7 @@ long io_u_queued_complete(struct thread_data *td, int min_events)
 	struct timespec *tvp = NULL;
 	int ret;
 
-	if (min_events > 0) {
-		ret = td_io_commit(td);
-		if (ret < 0) {
-			td_verror(td, -ret, "td_io_commit");
-			return ret;
-		}
-	} else {
+	if (!min_events) {
 		struct timespec ts = { .tv_sec = 0, .tv_nsec = 0, };
 
 		tvp = &ts;
