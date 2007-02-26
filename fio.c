@@ -433,8 +433,6 @@ requeue:
 			 */
 			if (td->io_ops->commit == NULL)
 				io_u_queued(td, io_u);
-			else if (td->io_u_queued >= td->iodepth_batch)
-				ret = td_io_commit(td);
 			break;
 		case FIO_Q_BUSY:
 			requeue_io_u(td, &io_u);

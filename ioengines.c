@@ -216,8 +216,16 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	ret = td->io_ops->queue(td, io_u);
 
-	if (ret == FIO_Q_QUEUED)
+	if (ret == FIO_Q_QUEUED) {
+		int r;
+
 		td->io_u_queued++;
+		if (td->io_u_queued > td->iodepth_batch) {
+			r = td_io_commit(td);
+			if (r < 0)
+				return r;
+		}
+	}
 
 	if ((td->io_ops->flags & FIO_SYNCIO) == 0) {
 		fio_gettime(&io_u->issue_time, NULL);
