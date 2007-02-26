@@ -16,7 +16,7 @@ static void show_option_range(struct fio_option *o)
 	if (!o->minval && !o->maxval)
 		return;
 
-	printf("%16s: min=%d, max=%d\n", "range", o->minval, o->maxval);
+	printf("%20s: min=%d, max=%d\n", "range", o->minval, o->maxval);
 }
 
 static void show_option_values(struct fio_option *o)
@@ -30,7 +30,7 @@ static void show_option_values(struct fio_option *o)
 			break;
 
 		if (!i)
-			printf("%16s: ", "valid values");
+			printf("%20s: ", "valid values");
 
 		printf("%s,", msg);
 		i++;
@@ -457,7 +457,7 @@ int show_cmd_help(struct fio_option *options, const char *name)
 
 		if (show_all || match) {
 			found = 1;
-			printf("%16s: %s\n", o->name, o->help);
+			printf("%20s: %s\n", o->name, o->help);
 			if (show_all)
 				continue;
 		}
@@ -465,8 +465,8 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		if (!match)
 			continue;
 
-		printf("%16s: %s\n", "type", typehelp[o->type]);
-		printf("%16s: %s\n", "default", o->def ? o->def : "no default");
+		printf("%20s: %s\n", "type", typehelp[o->type]);
+		printf("%20s: %s\n", "default", o->def ? o->def : "no default");
 		show_option_range(o);
 		show_option_values(o);
 	}
