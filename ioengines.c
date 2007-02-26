@@ -216,6 +216,9 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	ret = td->io_ops->queue(td, io_u);
 
+	if (ret == FIO_Q_QUEUED)
+		td->io_u_queued++;
+
 	if ((td->io_ops->flags & FIO_SYNCIO) == 0) {
 		fio_gettime(&io_u->issue_time, NULL);
 
@@ -242,6 +245,8 @@ int td_io_commit(struct thread_data *td)
 {
 	if (!td->cur_depth)
 		return 0;
+
+	td->io_u_queued = 0;
 	if (td->io_ops->commit)
 		return td->io_ops->commit(td);
 

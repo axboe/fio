@@ -113,6 +113,12 @@ static struct fio_option options[] = {
 		.def	= "1",
 	},
 	{
+		.name	= "iodepth_batch",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(iodepth_batch),
+		.help	= "Number of IO to submit in one go",
+	},
+	{
 		.name	= "iodepth_low",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(iodepth_low),
@@ -704,6 +710,12 @@ static void fixup_options(struct thread_data *td)
 	 */
 	if (td->iodepth_low > td->iodepth || !td->iodepth_low)
 		td->iodepth_low = td->iodepth;
+
+	/*
+	 * If batch number isn't set, default to the same as iodepth
+	 */
+	if (td->iodepth_batch > td->iodepth || !td->iodepth_batch)
+		td->iodepth_batch = td->iodepth;
 }
 
 /*

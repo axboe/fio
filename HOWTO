@@ -294,6 +294,10 @@ iodepth=int	This defines how many io units to keep in flight against
 		job, can be overridden with a larger value for higher
 		concurrency.
 
+iodepth_batch=int This defines how many pieces of IO to submit at once.
+		It defaults to the same as iodepth, but can be set lower
+		if one so desires.
+
 iodepth_low=int	The low water mark indicating when to start filling
 		the queue again. Defaults to the same as iodepth, meaning
 		that fio will attempt to keep the queue full at all times.

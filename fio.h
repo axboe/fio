@@ -351,6 +351,7 @@ struct thread_data {
 	unsigned int numjobs;
 	unsigned int iodepth;
 	unsigned int iodepth_low;
+	unsigned int iodepth_batch;
 	os_cpu_mask_t cpumask;
 	unsigned int iolog;
 	unsigned int read_iolog;
@@ -389,6 +390,7 @@ struct thread_data {
 	struct list_head io_u_freelist;
 	struct list_head io_u_busylist;
 	struct list_head io_u_requeues;
+	unsigned int io_u_queued;
 
 	/*
 	 * Rate state
