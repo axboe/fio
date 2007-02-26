@@ -194,7 +194,7 @@ static int fio_syslet_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 static void cachemiss_thread_start(void)
 {
 	while (1)
-		async_thread();
+		async_thread(NULL, NULL);
 }
 
 #define THREAD_STACK_SIZE (16384)

@@ -102,9 +102,9 @@ async_wait(unsigned long min_wait_events, unsigned long user_ring_idx,
 			user_ring_idx, ahu);
 }
 
-static inline long async_thread(void)
+static inline long async_thread(void *event, struct async_head_user *ahu)
 {
-	return syscall(__NR_async_thread);
+	return syscall(__NR_async_thread, event, ahu);
 }
 
 static inline long umem_add(unsigned long *uptr, unsigned long inc)
