@@ -337,7 +337,12 @@ requeue:
 			break;
 	}
 
-	if (td->cur_depth)
+	if (!td->error) {
+		min_events = td->cur_depth;
+
+		if (min_events)
+			ret = io_u_queued_complete(td, min_events);
+	} else
 		cleanup_pending_aio(td);
 
 	td_set_runstate(td, TD_RUNNING);
@@ -499,15 +504,17 @@ requeue:
 	if (!td->error) {
 		struct fio_file *f;
 
-		if (td->cur_depth)
-			cleanup_pending_aio(td);
+		i = td->cur_depth;
+		if (i)
+			ret = io_u_queued_complete(td, i);
 
 		if (should_fsync(td) && td->end_fsync) {
 			td_set_runstate(td, TD_FSYNCING);
 			for_each_file(td, f, i)
 				fio_io_sync(td, f);
 		}
-	}
+	} else
+		cleanup_pending_aio(td);
 }
 
 static void cleanup_io_u(struct thread_data *td)
