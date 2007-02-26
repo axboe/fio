@@ -11,6 +11,7 @@
 
 static struct itimerval itimer;
 static struct list_head disk_list = LIST_HEAD_INIT(disk_list);
+static dev_t last_dev;
 
 /*
  * Cheasy number->string conversion, complete with carry rounding error.
@@ -273,6 +274,17 @@ void init_disk_util(struct thread_data *td)
 
 	if (disk_util_exists(dev))
 		return;
+
+	/*
+	 * for an fs without a device, we will repeatedly stat through
+	 * sysfs which can take oodles of time for thousands of files. so
+	 * cache the last lookup and compare with that before going through
+	 * everything again.
+	 */
+	if (dev == last_dev)
+		return;
+
+	last_dev = dev;
 		
 	sprintf(foo, "/sys/block");
 	if (!find_block_dir(dev, foo))
