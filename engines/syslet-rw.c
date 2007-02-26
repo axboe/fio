@@ -21,41 +21,29 @@ struct syslet_data {
 	struct syslet_uatom **ring;
 
 	struct syslet_uatom *head, *tail;
-	struct syslet_uatom **event_map;
-	unsigned int event_map_idx;
 };
 
 static void fio_syslet_complete_atom(struct thread_data *td,
 				     struct syslet_uatom *atom)
 {
 	struct syslet_data *sd = td->io_ops->data;
+	struct syslet_uatom *last;
 	struct io_u *io_u;
-	int i, end;
-
-	if (!sd->event_map_idx)
-		return;
 
 	/*
-	 * Find the start of the string of atoms for this sequence
+	 * complete from the beginning of the sequence up to (and
+	 * including) this atom
 	 */
-	for (end = sd->event_map_idx - 1; end >= 0; end--)
-		if (atom == sd->event_map[end])
-			break;
-
-	if (end < 0 || atom != sd->event_map[end]) {
-		printf("didn't find atom\n");
-		return;
-	}
-
-	//printf("end=%d, total %d\n", end, sd->event_map_idx);
+	last = atom;
+	io_u = atom->private;
+	atom = io_u->req.head;
 
 	/*
 	 * now complete in right order
 	 */
-	for (i = 0; i <= end; i++) {
+	do {
 		long ret;
 
-		atom = sd->event_map[i];
 		io_u = atom->private;
 		ret = *atom->ret_ptr;
 		if (ret > 0)
@@ -65,19 +53,14 @@ static void fio_syslet_complete_atom(struct thread_data *td,
 
 		assert(sd->nr_events < td->iodepth);
 		sd->events[sd->nr_events++] = io_u;
-	}
 
-	/*
-	 * Move later completions to the front, if we didn't complete all
-	 */
-	if (end == (int) sd->event_map_idx - 1)
-		sd->event_map_idx = 0;
-	else {
-		int nr = sd->event_map_idx - end - 1;
+		if (atom == last)
+			break;
 
-		memmove(sd->event_map, &sd->event_map[end + 1], nr * sizeof(struct syslet_uatom *));
-		sd->event_map_idx = nr;
-	}
+		atom = atom->next;
+	} while (1);
+
+	assert(!last->next);
 }
 
 /*
@@ -201,7 +184,7 @@ static void cachemiss_thread_start(void)
 
 static unsigned long thread_stack_alloc()
 {
-	return (unsigned long)malloc(THREAD_STACK_SIZE) + THREAD_STACK_SIZE;
+	return (unsigned long) malloc(THREAD_STACK_SIZE) + THREAD_STACK_SIZE;
 }
 
 static int fio_syslet_commit(struct thread_data *td)
@@ -211,6 +194,8 @@ static int fio_syslet_commit(struct thread_data *td)
 
 	if (!sd->head)
 		return 0;
+
+	assert(!sd->tail->next);
 
 	if (!sd->ahu.new_thread_stack)
 		sd->ahu.new_thread_stack = thread_stack_alloc();
@@ -239,7 +224,7 @@ static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 	} else
 		sd->head = sd->tail = &io_u->req.atom;
 
-	sd->event_map[sd->event_map_idx++] = sd->tail;
+	io_u->req.head = sd->head;
 	return FIO_Q_QUEUED;
 }
 
@@ -257,8 +242,8 @@ static int async_head_init(struct syslet_data *sd, unsigned int depth)
 	sd->ahu.completion_ring = sd->ring;
 	sd->ahu.ring_size_bytes = ring_size;
 	sd->ahu.head_stack = thread_stack_alloc();
-	sd->ahu.head_eip = (unsigned long)cachemiss_thread_start;
-	sd->ahu.new_thread_eip = (unsigned long)cachemiss_thread_start;
+	sd->ahu.head_eip = (unsigned long) cachemiss_thread_start;
+	sd->ahu.new_thread_eip = (unsigned long) cachemiss_thread_start;
 
 	return 0;
 }
@@ -275,7 +260,6 @@ static void fio_syslet_cleanup(struct thread_data *td)
 	if (sd) {
 		async_head_exit(sd);
 		free(sd->events);
-		free(sd->event_map);
 		free(sd);
 		td->io_ops->data = NULL;
 	}
@@ -290,8 +274,6 @@ static int fio_syslet_init(struct thread_data *td)
 	memset(sd, 0, sizeof(*sd));
 	sd->events = malloc(sizeof(struct io_u *) * td->iodepth);
 	memset(sd->events, 0, sizeof(struct io_u *) * td->iodepth);
-	sd->event_map = malloc(sizeof(struct syslet_uatom *) * td->iodepth);
-	memset(sd->event_map, 0, sizeof(struct syslet_uatom *) * td->iodepth);
 
 	/*
 	 * This will handily fail for kernels where syslet isn't available

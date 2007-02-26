@@ -81,8 +81,9 @@ struct io_piece {
 
 #ifdef FIO_HAVE_SYSLET
 struct syslet_req {
-	struct syslet_uatom atom;
-	long ret;
+	struct syslet_uatom atom;	/* the atom to submit */
+	struct syslet_uatom *head;	/* head of the sequence */
+	long ret;			/* syscall return value */
 };
 #endif
 
