@@ -187,6 +187,23 @@ static unsigned long thread_stack_alloc()
 	return (unsigned long) malloc(THREAD_STACK_SIZE) + THREAD_STACK_SIZE;
 }
 
+static void fio_syslet_queued(struct thread_data *td, struct syslet_data *sd)
+{
+	struct syslet_uatom *atom;
+	struct timeval now;
+
+	fio_gettime(&now, NULL);
+
+	atom = sd->head;
+	while (atom) {
+		struct io_u *io_u = atom->private;
+
+		memcpy(&io_u->issue_time, &now, sizeof(now));
+		io_u_queued(td, io_u);
+		atom = atom->next;
+	}
+}
+
 static int fio_syslet_commit(struct thread_data *td)
 {
 	struct syslet_data *sd = td->io_ops->data;
@@ -199,6 +216,8 @@ static int fio_syslet_commit(struct thread_data *td)
 
 	if (!sd->ahu.new_thread_stack)
 		sd->ahu.new_thread_stack = thread_stack_alloc();
+
+	fio_syslet_queued(td, sd);
 
 	/*
 	 * On sync completion, the atom is returned. So on NULL return
