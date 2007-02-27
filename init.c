@@ -708,8 +708,17 @@ static void fixup_options(struct thread_data *td)
 	/*
 	 * The low water mark cannot be bigger than the iodepth
 	 */
-	if (td->iodepth_low > td->iodepth || !td->iodepth_low)
-		td->iodepth_low = td->iodepth;
+	if (td->iodepth_low > td->iodepth || !td->iodepth_low) {
+		/*
+		 * syslet work around - if the workload is sequential,
+		 * we want to let the queue drain all the way down to
+		 * avoid seeking between async threads
+		 */
+		if (!strcmp(td->io_ops->name, "syslet-rw") && !td_random(td))
+			td->iodepth_low = 1;
+		else
+			td->iodepth_low = td->iodepth;
+	}
 
 	/*
 	 * If batch number isn't set, default to the same as iodepth
