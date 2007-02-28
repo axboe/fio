@@ -103,6 +103,7 @@ static struct fio_option options[] = {
 #ifdef FIO_HAVE_SYSLET
 			  { .ival = "syslet-rw", },
 #endif
+			  { .ival = "external", },
 			  },
 	},
 	{
@@ -1017,11 +1018,26 @@ static int str_mem_cb(void *data, const char *mem)
 	return 0;
 }
 
+/* External engines are specified by "external:name.o") */
+static const char *get_engine_name(const char *str)
+{
+	char *p = strstr(str, ":");
+
+	if (!p)
+		return str;
+
+	p++;
+	strip_blank_front(&p);
+	strip_blank_end(p);
+	return p;
+}
+
 static int str_ioengine_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
+	const char *name = get_engine_name(str);
 
-	td->io_ops = load_ioengine(td, str);
+	td->io_ops = load_ioengine(td, name);
 	if (td->io_ops)
 		return 0;
 
