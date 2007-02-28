@@ -18,6 +18,15 @@
 #define __NR_sys_vmsplice	278
 #endif
 
+#ifndef __NR_async_exec
+#define __NR_async_exec		280
+#define __NR_async_wait		281
+#define __NR_umem_add		282
+#define __NR_async_thread	283
+#endif
+
+#define FIO_HAVE_SYSLET
+
 #define nop	__asm__ __volatile__("rep;nop": : :"memory")
 
 static inline unsigned long ffz(unsigned long bitmask)
