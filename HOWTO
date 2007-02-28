@@ -289,6 +289,11 @@ ioengine=str	Defines how the job issues io to the file. The following
 				or receive, if the latter only the port
 				argument is used.
 
+			external Prefix to specify loading an external
+				IO engine object file. Append the engine
+				filename, eg ioengine=external:/tmp/foo.o
+				to load ioengine foo.o in /tmp.
+
 iodepth=int	This defines how many io units to keep in flight against
 		the file. The default is 1 for each file defined in this
 		job, can be overridden with a larger value for higher
