@@ -19,10 +19,10 @@
 #endif
 
 #ifndef __NR_async_exec
-# define __NR_async_exec	320
-# define __NR_async_wait	321
-# define __NR_umem_add		322
-# define __NR_async_thread	323
+#define __NR_async_exec		320
+#define __NR_async_wait		321
+#define __NR_umem_add		322
+#define __NR_async_thread	323
 #endif
 
 #define FIO_HAVE_SYSLET
