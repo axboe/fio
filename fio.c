@@ -101,6 +101,12 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 	unsigned long rate;
 
 	/*
+	 * No minimum rate set, always ok
+	 */
+	if (!td->ratemin)
+		return 0;
+
+	/*
 	 * allow a 2 second settle period in the beginning
 	 */
 	if (mtime_since(&td->start, now) < 2000)
