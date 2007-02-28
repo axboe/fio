@@ -77,16 +77,10 @@ static struct ioengine_ops *find_ioengine(const char *name)
 {
 	struct ioengine_ops *ops;
 	struct list_head *entry;
-	char engine[16];
-
-	strncpy(engine, name, sizeof(engine) - 1);
-
-	if (!strncmp(engine, "linuxaio", 8) || !strncmp(engine, "aio", 3))
-		strcpy(engine, "libaio");
 
 	list_for_each(entry, &engine_list) {
 		ops = list_entry(entry, struct ioengine_ops, list);
-		if (!strcmp(engine, ops->name))
+		if (!strcmp(name, ops->name))
 			return ops;
 	}
 
