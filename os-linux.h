@@ -20,13 +20,6 @@
 #define FIO_HAVE_ODIRECT
 #define FIO_HAVE_HUGETLB
 
-/*
- * Only for x86 currently
- */
-#if defined(__i386__)
-#define FIO_HAVE_SYSLET
-#endif
-
 #define OS_MAP_ANON		(MAP_ANONYMOUS)
 
 typedef cpu_set_t os_cpu_mask_t;

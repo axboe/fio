@@ -25,6 +25,8 @@
 # define __NR_async_thread	323
 #endif
 
+#define FIO_HAVE_SYSLET
+
 #define nop	__asm__ __volatile__("rep;nop": : :"memory")
 
 static inline unsigned long ffz(unsigned long bitmask)
