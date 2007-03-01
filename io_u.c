@@ -365,6 +365,17 @@ static struct fio_file *get_next_file_rr(struct thread_data *td)
 	return f;
 }
 
+static struct fio_file *get_next_file(struct thread_data *td)
+{
+	if (!td->nr_open_files)
+		return NULL;
+
+	if (td->file_service_type == FIO_FSERVICE_RR)
+		return get_next_file_rr(td);
+	else
+		return get_next_file_rand(td);
+}
+
 struct io_u *__get_io_u(struct thread_data *td)
 {
 	struct io_u *io_u = NULL;
@@ -413,23 +424,24 @@ struct io_u *get_io_u(struct thread_data *td)
 	if (io_u->file)
 		goto out;
 
-	if (td->file_service_type == FIO_FSERVICE_RR)
-		f = get_next_file_rr(td);
-	else
-		f = get_next_file_rand(td);
+	do {
+		f = get_next_file(td);
+		if (!f) {
+			put_io_u(td, io_u);
+			return NULL;
+		}
 
-	if (!f) {
-		put_io_u(td, io_u);
-		return NULL;
-	}
+		io_u->file = f;
 
-	io_u->file = f;
+		if (!fill_io_u(td, io_u))
+			break;
 
-
-	if (fill_io_u(td, io_u)) {
-		put_io_u(td, io_u);
-		return NULL;
-	}
+		/*
+		 * No more to do for this file, close it
+		 */
+		io_u->file = NULL;
+		close_file(td, f);
+	} while (1);
 
 	if (td->zone_bytes >= td->zone_size) {
 		td->zone_bytes = 0;

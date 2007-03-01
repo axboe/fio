@@ -8,6 +8,30 @@
 #include "fio.h"
 #include "os.h"
 
+int open_file(struct thread_data *td, struct fio_file *f, int flags, int perm)
+{
+	if (flags & O_CREAT)
+		f->fd = open(f->file_name, flags, perm);
+	else
+		f->fd = open(f->file_name, flags);
+
+	if (f->fd != -1) {
+		td->nr_open_files++;
+		return 0;
+	}
+
+	return 1;
+}
+
+void close_file(struct thread_data *td, struct fio_file *f)
+{
+	if (f->fd != -1) {
+		close(f->fd);
+		f->fd = -1;
+		td->nr_open_files--;
+	}
+}
+
 /*
  * Check if the file exists and it's large enough.
  */
@@ -372,14 +396,14 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 				flags |= O_CREAT;
 			}
 
-			f->fd = open(f->file_name, flags, 0600);
+			open_file(td, f, flags, 0600);
 		} else {
 			if (td->filetype == FIO_TYPE_CHAR)
 				flags |= O_RDWR;
 			else
 				flags |= O_RDONLY;
 
-			f->fd = open(f->file_name, flags);
+			open_file(td, f, flags, 0);
 		}
 	}
 
@@ -392,8 +416,10 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	if (get_file_size(td, f))
+	if (get_file_size(td, f)) {
+		close_file(td, f);
 		return 1;
+	}
 
 	return 0;
 }
@@ -412,12 +438,8 @@ int open_files(struct thread_data *td)
 	if (!err)
 		return 0;
 
-	for_each_file(td, f, i) {
-		if (f->fd != -1) {
-			close(f->fd);
-			f->fd = -1;
-		}
-	}
+	for_each_file(td, f, i)
+		close_file(td, f);
 
 	return err;
 }
@@ -465,12 +487,8 @@ int setup_files(struct thread_data *td)
 	else
 		err = setup_files_plain(td);
 
-	for_each_file(td, f, i) {
-		if (f->fd != -1) {
-			close(f->fd);
-			f->fd = -1;
-		}
-	}
+	for_each_file(td, f, i)
+		close_file(td, f);
 
 	return err;
 }
@@ -487,10 +505,9 @@ void close_files(struct thread_data *td)
 			free(f->file_name);
 			f->file_name = NULL;
 		}
-		if (f->fd != -1) {
-			close(f->fd);
-			f->fd = -1;
-		}
+
+		close_file(td, f);
+
 		if (f->mmap) {
 			munmap(f->mmap, f->file_size);
 			f->mmap = NULL;
