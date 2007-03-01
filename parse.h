@@ -67,4 +67,11 @@ typedef int (fio_opt_str_set_fn)(void *);
 
 #define td_var(start, offset)	((void *) start + (offset))
 
+#ifndef min
+#define min(a, b)	((a) < (b) ? (a) : (b))
+#endif
+#ifndef max
+#define max(a, b)	((a) > (b) ? (a) : (b))
+#endif
+
 #endif

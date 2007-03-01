@@ -437,7 +437,46 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 	return 1;
 }
 
-int show_cmd_help(struct fio_option *options, const char *name)
+/*
+ * Option match, levenshtein distance. Handy for not quite remembering what
+ * the option name is.
+ */
+static int string_distance(const char *s1, const char *s2)
+{
+	unsigned int s1_len = strlen(s1);
+	unsigned int s2_len = strlen(s2);
+	unsigned int *p, *q, *r;
+	unsigned int i, j;
+
+	p = malloc(sizeof(unsigned int) * (s2_len + 1));
+	q = malloc(sizeof(unsigned int) * (s2_len + 1));
+
+	p[0] = 0;
+	for (i = 1; i <= s2_len; i++)
+		p[i] = p[i - 1] + 1;
+
+	for (i = 1; i <= s1_len; i++) {
+		q[0] = p[0] + 1;
+		for (j = 1; j <= s2_len; j++) {
+			unsigned int sub = p[j - 1];
+
+			if (s1[i - 1] != s2[j - 1])
+				sub++;
+
+			q[j] = min(p[j] + 1, min(q[j - 1] + 1, sub));
+		}
+		r = p;
+		p = q;
+		q = r;
+	}
+
+	i = p[s2_len];
+	free(p);
+	free(q);
+	return i;
+}
+
+static void show_option_help(struct fio_option *o)
 {
 	const char *typehelp[] = {
 		"string (opt=bla)",
@@ -450,18 +489,41 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		"boolean value (opt=1)",
 		"no argument (opt)",
 	};
-	struct fio_option *o;
+
+	printf("%20s: %s\n", "type", typehelp[o->type]);
+	printf("%20s: %s\n", "default", o->def ? o->def : "no default");
+	show_option_range(o);
+	show_option_values(o);
+}
+
+int show_cmd_help(struct fio_option *options, const char *name)
+{
+	struct fio_option *o, *closest;
+	unsigned int best_dist;
 	int found = 0;
 	int show_all = 0;
 
 	if (!name || !strcmp(name, "all"))
 		show_all = 1;
 
+	closest = NULL;
+	best_dist = -1;
 	for (o = &options[0]; o->name; o++) {
 		int match = 0;
 
-		if (name && !strcmp(name, o->name))
-			match = 1;
+		if (name) {
+			if (!strcmp(name, o->name))
+				match = 1;
+			else {
+				unsigned int dist;
+
+				dist = string_distance(name, o->name);
+				if (dist < best_dist) {
+					best_dist = dist;
+					closest = o;
+				}
+			}
+		}
 
 		if (show_all || match) {
 			found = 1;
@@ -473,16 +535,20 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		if (!match)
 			continue;
 
-		printf("%20s: %s\n", "type", typehelp[o->type]);
-		printf("%20s: %s\n", "default", o->def ? o->def : "no default");
-		show_option_range(o);
-		show_option_values(o);
+		show_option_help(o);
 	}
 
 	if (found)
 		return 0;
 
-	printf("No such command: %s\n", name);
+	printf("No such command: %s", name);
+	if (closest) {
+		printf(" - showing closest match\n");
+		printf("%20s: %s\n", closest->name, closest->help);
+		show_option_help(closest);
+	} else
+		printf("\n");
+
 	return 1;
 }
 
