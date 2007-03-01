@@ -197,9 +197,6 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		const struct value_pair *vp;
 		int i;
 
-		if (!first)
-			break;
-
 		ret = 1;
 		for (i = 0; i < PARSE_MAX_VP; i++) {
 			vp = &o->posval[i];
@@ -366,7 +363,9 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 	 * Do this before parsing the first round, to check if we should
 	 * copy set 1 options to set 2.
 	 */
-	if (ptr && (o->type != FIO_OPT_STR_STORE)) {
+	if (ptr &&
+	    (o->type != FIO_OPT_STR_STORE) &&
+	    (o->type != FIO_OPT_STR)) {
 		ptr2 = strchr(ptr, ',');
 		if (!ptr2)
 			ptr2 = strchr(ptr, ':');
