@@ -439,7 +439,6 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 
 int show_cmd_help(struct fio_option *options, const char *name)
 {
-	int show_all = !strcmp(name, "all");
 	const char *typehelp[] = {
 		"string (opt=bla)",
 		"string with possible k/m/g postfix (opt=4k)",
@@ -453,9 +452,16 @@ int show_cmd_help(struct fio_option *options, const char *name)
 	};
 	struct fio_option *o;
 	int found = 0;
+	int show_all = 0;
+
+	if (!name || !strcmp(name, "all"))
+		show_all = 1;
 
 	for (o = &options[0]; o->name; o++) {
-		int match = !strcmp(name, o->name);
+		int match = 0;
+
+		if (name && !strcmp(name, o->name))
+			match = 1;
 
 		if (show_all || match) {
 			found = 1;

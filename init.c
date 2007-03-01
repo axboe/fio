@@ -581,7 +581,7 @@ static struct option long_options[FIO_JOB_OPTS + FIO_CMD_OPTS] = {
 	},
 	{
 		.name		= "cmdhelp",
-		.has_arg	= required_argument,
+		.has_arg	= optional_argument,
 		.val		= 'c',
 	},
 	{
