@@ -329,11 +329,12 @@ static void io_u_mark_latency(struct thread_data *td, unsigned long msec)
  */
 static struct fio_file *get_next_file_rand(struct thread_data *td)
 {
-	long r = os_random_long(&td->next_file_state);
 	unsigned int fileno;
 	struct fio_file *f;
 
 	do {
+		long r = os_random_long(&td->next_file_state);
+
 		fileno = (unsigned int) ((double) (td->nr_files - 1) * r / (RAND_MAX + 1.0));
 		f = &td->files[fileno];
 		if (f->fd != -1)
