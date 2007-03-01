@@ -1223,7 +1223,7 @@ static int parse_cmd_line(int argc, char *argv[])
 	struct thread_data *td = NULL;
 	int c, ini_idx = 0, lidx, ret, dont_add_job = 0;
 
-	while ((c = getopt_long(argc, argv, "", long_options, &lidx)) != -1) {
+	while ((c = getopt_long_only(argc, argv, "", long_options, &lidx)) != -1) {
 		switch (c) {
 		case 't':
 			def_timeout = atoi(optarg);
