@@ -253,6 +253,14 @@ bs_unaligned	If this option is given, any byte size value within bsrange
 
 nrfiles=int	Number of files to use for this job. Defaults to 1.
 
+file_service_type=str  Defines how fio decides which file from a job to
+		service next. The following types are defined:
+
+			random	Just choose a file at random.
+
+			roundrobin  Round robin over open files. This
+				is the default.
+
 ioengine=str	Defines how the job issues io to the file. The following
 		types are defined:
 
