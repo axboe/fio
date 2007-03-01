@@ -715,6 +715,9 @@ static inline void fio_sem_up(volatile int *sem)
 		fprintf(stderr, ##args);	\
 	} while (0)
 
+FILE *get_f_out(void);
+FILE *get_f_err(void);
+
 struct ioengine_ops {
 	struct list_head list;
 	char name[16];
