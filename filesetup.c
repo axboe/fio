@@ -347,7 +347,7 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 {
 	int flags = 0;
 
-	if (td->io_ops->flags & FIO_NETIO)
+	if (td->io_ops->flags & FIO_SELFOPEN)
 		return 0;
 
 	/*

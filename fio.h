@@ -214,8 +214,9 @@ enum fio_ioengine_flags {
 	FIO_CPUIO	= 1 << 1,	/* cpu burner, doesn't do real io */
 	FIO_MMAPIO	= 1 << 2,	/* uses memory mapped io */
 	FIO_RAWIO	= 1 << 3,	/* some sort of direct/raw io */
-	FIO_NETIO	= 1 << 4,	/* networked io */
-	FIO_NULLIO	= 1 << 5,	/* no real data transfer (cpu/null) */
+	FIO_DISKLESSIO	= 1 << 4,	/* no disk involved */
+	FIO_SELFOPEN	= 1 << 5,       /* opens its own devices */
+	FIO_NULLIO	= 1 << 6,	/* no real data transfer (cpu/null) */
 };
 
 /*

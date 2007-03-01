@@ -269,7 +269,7 @@ static struct ioengine_ops ioengine = {
 	.prep		= fio_netio_prep,
 	.queue		= fio_netio_queue,
 	.setup		= fio_netio_setup,
-	.flags		= FIO_SYNCIO | FIO_NETIO,
+	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_SELFOPEN,
 };
 
 static void fio_init fio_netio_register(void)
