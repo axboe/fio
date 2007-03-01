@@ -22,7 +22,7 @@ static struct ioengine_ops ioengine = {
 	.name		= "null",
 	.version	= FIO_IOOPS_VERSION,
 	.queue		= fio_null_queue,
-	.flags		= FIO_SYNCIO | FIO_NULLIO,
+	.flags		= FIO_SYNCIO | FIO_NULLIO | FIO_DISKLESSIO,
 };
 
 static void fio_init fio_null_register(void)
