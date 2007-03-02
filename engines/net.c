@@ -210,7 +210,7 @@ static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 	return fio_netio_accept_connections(td, fd, &addr);
 }
 
-static int fio_netio_setup(struct thread_data *td)
+static int fio_netio_init(struct thread_data *td)
 {
 	char host[64], buf[128];
 	unsigned short port;
@@ -264,12 +264,18 @@ static int fio_netio_setup(struct thread_data *td)
 	return 0;
 }
 
+static int fio_netio_setup(struct thread_data fio_unused *td)
+{
+	return 0;
+}
+
 static struct ioengine_ops ioengine = {
 	.name		= "net",
 	.version	= FIO_IOOPS_VERSION,
 	.prep		= fio_netio_prep,
 	.queue		= fio_netio_queue,
 	.setup		= fio_netio_setup,
+	.init		= fio_netio_init,
 	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_SELFOPEN,
 };
 
