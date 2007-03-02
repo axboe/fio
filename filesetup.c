@@ -39,7 +39,7 @@ static int file_ok(struct thread_data *td, struct fio_file *f)
 {
 	struct stat st;
 
-	if (td->filetype != FIO_TYPE_FILE || (td->io_ops->flags & FIO_NULLIO))
+	if (td->filetype != FIO_TYPE_FILE)
 		return 0;
 
 	if (lstat(f->file_name, &st) == -1)
@@ -182,16 +182,6 @@ static int create_files(struct thread_data *td)
 static int file_size(struct thread_data *td, struct fio_file *f)
 {
 	struct stat st;
-
-	/*
-	 * if we are not doing real io, just pretend the file is as large
-	 * as the size= given. this works fine with nrfiles > 1 as well,
-	 * we only really care about it being at least as big as size=
-	 */
-	if (td->io_ops->flags & FIO_NULLIO) {
-		f->real_file_size = f->file_size = td->total_file_size;
-		return 0;
-	}
 
 	if (td->overwrite) {
 		if (fstat(f->fd, &st) == -1) {
@@ -374,37 +364,29 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 	if (td->io_ops->flags & FIO_SELFOPEN)
 		return 0;
 
-	/*
-	 * we need a valid file descriptor, but don't create a real file.
-	 * lets just dup stdout, seems like a sensible approach.
-	 */
-	if (td->io_ops->flags & FIO_NULLIO)
-		f->fd = dup(STDOUT_FILENO);
-	else {
-		if (td->odirect)
-			flags |= OS_O_DIRECT;
-		if (td->sync_io)
-			flags |= O_SYNC;
+	if (td->odirect)
+		flags |= OS_O_DIRECT;
+	if (td->sync_io)
+		flags |= O_SYNC;
 
-		if (td_write(td) || td_rw(td)) {
-			flags |= O_RDWR;
+	if (td_write(td) || td_rw(td)) {
+		flags |= O_RDWR;
 
-			if (td->filetype == FIO_TYPE_FILE) {
-				if (!td->overwrite)
-					flags |= O_TRUNC;
+		if (td->filetype == FIO_TYPE_FILE) {
+			if (!td->overwrite)
+				flags |= O_TRUNC;
 
-				flags |= O_CREAT;
-			}
-
-			open_file(td, f, flags, 0600);
-		} else {
-			if (td->filetype == FIO_TYPE_CHAR)
-				flags |= O_RDWR;
-			else
-				flags |= O_RDONLY;
-
-			open_file(td, f, flags, 0);
+			flags |= O_CREAT;
 		}
+
+		open_file(td, f, flags, 0600);
+	} else {
+		if (td->filetype == FIO_TYPE_CHAR)
+			flags |= O_RDWR;
+		else
+			flags |= O_RDONLY;
+
+		open_file(td, f, flags, 0);
 	}
 
 	if (f->fd == -1) {

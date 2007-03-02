@@ -18,11 +18,35 @@ static int fio_null_queue(struct thread_data fio_unused *td, struct io_u *io_u)
 	return FIO_Q_COMPLETED;
 }
 
+static int fio_null_setup(struct thread_data *td)
+{
+	struct fio_file *f;
+	int i;
+
+	if (!td->total_file_size) {
+		log_err("fio: need size= set\n");
+		return 1;
+	}
+
+	td->io_size = td->total_file_size;
+	td->total_io_size = td->io_size;
+
+	for_each_file(td, f, i) {
+		f->fd = dup(STDOUT_FILENO);
+		f->real_file_size = td->total_io_size / td->nr_files;
+		f->file_size = f->real_file_size;
+	}
+
+	td->nr_open_files = td->nr_files;
+	return 0;
+}
+
 static struct ioengine_ops ioengine = {
 	.name		= "null",
 	.version	= FIO_IOOPS_VERSION,
+	.setup		= fio_null_setup,
 	.queue		= fio_null_queue,
-	.flags		= FIO_SYNCIO | FIO_NULLIO | FIO_DISKLESSIO,
+	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_SELFOPEN,
 };
 
 static void fio_init fio_null_register(void)

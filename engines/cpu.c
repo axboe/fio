@@ -24,7 +24,7 @@ static struct ioengine_ops ioengine = {
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_cpuio_init,
 	.setup		= fio_cpuio_setup,
-	.flags		= FIO_CPUIO | FIO_NULLIO,
+	.flags		= FIO_CPUIO,
 };
 
 static void fio_init fio_cpuio_register(void)

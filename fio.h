@@ -216,7 +216,6 @@ enum fio_ioengine_flags {
 	FIO_RAWIO	= 1 << 3,	/* some sort of direct/raw io */
 	FIO_DISKLESSIO	= 1 << 4,	/* no disk involved */
 	FIO_SELFOPEN	= 1 << 5,       /* opens its own devices */
-	FIO_NULLIO	= 1 << 6,	/* no real data transfer (cpu/null) */
 };
 
 /*
