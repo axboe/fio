@@ -167,6 +167,7 @@ static int fio_netio_accept_connections(struct thread_data *td, int fd,
 		}
 	}
 
+	td->nr_open_files = accepts;
 	return 0;
 }
 
