@@ -14,7 +14,7 @@ static struct list_head disk_list = LIST_HEAD_INIT(disk_list);
 static dev_t last_dev;
 
 /*
- * Cheasy number->string conversion, complete with carry rounding error.
+ * Cheesy number->string conversion, complete with carry rounding error.
  */
 static char *num2str(unsigned long num, int maxlen, int base)
 {

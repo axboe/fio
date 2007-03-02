@@ -39,7 +39,7 @@ void prune_io_piece_log(struct thread_data *td)
 }
 
 /*
- * log a succesful write, so we can unwind the log for verify
+ * log a successful write, so we can unwind the log for verify
  */
 void log_io_piece(struct thread_data *td, struct io_u *io_u)
 {

@@ -243,7 +243,7 @@ requeue:
 }
 
 /*
- * The main verify engine. Runs over the writes we previusly submitted,
+ * The main verify engine. Runs over the writes we previously submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
  */
 static void do_verify(struct thread_data *td)

@@ -395,7 +395,7 @@ static struct fio_option options[] = {
 		.name	= "thinktime_spin",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(thinktime_spin),
-		.help	= "Start thinktime by spinning this amount (usec)",
+		.help	= "Start think time by spinning this amount (usec)",
 		.def	= "0",
 	},
 	{

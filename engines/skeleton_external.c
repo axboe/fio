@@ -77,7 +77,7 @@ static int fio_skeleton_queue(struct thread_data *td, struct io_u *io_u)
 /*
  * The ->prep() function is called for each io_u prior to being submitted
  * with ->queue(). This hook allows the io engine to perform any
- * preperatory actions on the io_u, before being submitted. Not required.
+ * preparatory actions on the io_u, before being submitted. Not required.
  */
 static int fio_skeleton_prep(struct thread_data *td, struct io_u *io_u)
 {
