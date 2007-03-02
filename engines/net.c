@@ -167,7 +167,6 @@ static int fio_netio_accept_connections(struct thread_data *td, int fd,
 		}
 	}
 
-	td->nr_open_files = accepts;
 	return 0;
 }
 
@@ -261,6 +260,7 @@ static int fio_netio_setup(struct thread_data *td)
 		f->real_file_size = f->file_size;
 	}
 
+	td->nr_open_files = td->nr_files;
 	return 0;
 }
 
