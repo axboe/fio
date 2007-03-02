@@ -42,8 +42,21 @@ static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 static struct io_u *fio_libaio_event(struct thread_data *td, int event)
 {
 	struct libaio_data *ld = td->io_ops->data;
+	struct io_event *ev;
+	struct io_u *io_u;
 
-	return ev_to_iou(ld->aio_events + event);
+	ev = ld->aio_events + event;
+	io_u = ev_to_iou(ev);
+
+	if (ev->res != io_u->xfer_buflen) {
+		if (ev->res > io_u->xfer_buflen)
+			io_u->error = -ev->res;
+		else
+			io_u->resid = io_u->xfer_buflen - ev->res;
+	} else
+		io_u->error = 0;
+
+	return io_u;
 }
 
 static int fio_libaio_getevents(struct thread_data *td, int min, int max,
