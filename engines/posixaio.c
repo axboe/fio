@@ -100,6 +100,7 @@ restart:
 			default:
 				io_u->error = err;
 			case ECANCELED:
+				io_u->resid = io_u->xfer_buflen;
 			case 0:
 				pd->aio_events[r++] = io_u;
 				io_u->seen = 1;
