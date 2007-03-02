@@ -288,7 +288,7 @@ struct thread_data {
 	char *name;
 	char *directory;
 	char *filename;
-	char verror[80];
+	char verror[128];
 	pthread_t thread;
 	int thread_number;
 	int groupid;
