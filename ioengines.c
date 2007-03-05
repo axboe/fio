@@ -195,6 +195,9 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	assert((io_u->flags & IO_U_F_FLIGHT) == 0);
 	io_u->flags |= IO_U_F_FLIGHT;
 
+	io_u->error = 0;
+	io_u->resid = 0;
+
 	if (td->io_ops->flags & FIO_SYNCIO) {
 		fio_gettime(&io_u->issue_time, NULL);
 
