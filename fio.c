@@ -67,7 +67,11 @@ static void terminate_threads(int group_id)
 
 	for_each_td(td, i) {
 		if (group_id == TERMINATE_ALL || groupid == td->groupid) {
-			kill(td->pid, SIGQUIT);
+			/*
+			 * if the thread is running, just let it exit
+			 */
+			if (td->runstate < TD_RUNNING)
+				kill(td->pid, SIGQUIT);
 			td->terminate = 1;
 			td->start_delay = 0;
 		}
