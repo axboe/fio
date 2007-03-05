@@ -67,6 +67,7 @@ static void terminate_threads(int group_id, int forced_kill)
 
 	for_each_td(td, i) {
 		if (group_id == TERMINATE_ALL || groupid == td->groupid) {
+			kill(td->pid, SIGQUIT);
 			td->terminate = 1;
 			td->start_delay = 0;
 			if (forced_kill)
@@ -893,7 +894,8 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 			if (WIFSIGNALED(status)) {
 				int sig = WTERMSIG(status);
 
-				log_err("fio: pid=%d, got signal=%d\n", td->pid, sig);
+				if (sig != SIGQUIT)
+					log_err("fio: pid=%d, got signal=%d\n", td->pid, sig);
 				td_set_runstate(td, TD_REAPED);
 				goto reaped;
 			}
