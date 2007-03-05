@@ -60,7 +60,7 @@ static inline void td_set_runstate(struct thread_data *td, int runstate)
 	td->runstate = runstate;
 }
 
-static void terminate_threads(int group_id, int forced_kill)
+static void terminate_threads(int group_id)
 {
 	struct thread_data *td;
 	int i;
@@ -70,8 +70,6 @@ static void terminate_threads(int group_id, int forced_kill)
 			kill(td->pid, SIGQUIT);
 			td->terminate = 1;
 			td->start_delay = 0;
-			if (forced_kill)
-				td_set_runstate(td, TD_EXITED);
 		}
 	}
 }
@@ -87,7 +85,7 @@ static void sig_handler(int sig)
 		default:
 			printf("\nfio: terminating on signal %d\n", sig);
 			fflush(stdout);
-			terminate_threads(TERMINATE_ALL, 0);
+			terminate_threads(TERMINATE_ALL);
 			break;
 	}
 }
@@ -491,7 +489,7 @@ requeue:
 
 		if (check_min_rate(td, &comp_time)) {
 			if (exitall_on_terminate)
-				terminate_threads(td->groupid, 0);
+				terminate_threads(td->groupid);
 			td_verror(td, ENODATA, "check_min_rate");
 			break;
 		}
@@ -808,7 +806,7 @@ static void *thread_main(void *data)
 	}
 
 	if (exitall_on_terminate)
-		terminate_threads(td->groupid, 0);
+		terminate_threads(td->groupid);
 
 err:
 	if (td->error)
@@ -929,7 +927,7 @@ reaped:
 	}
 
 	if (*nr_running == cputhreads && !pending)
-		terminate_threads(TERMINATE_ALL, 0);
+		terminate_threads(TERMINATE_ALL);
 }
 
 /*
