@@ -486,6 +486,23 @@ out:
 	return io_u;
 }
 
+void io_u_log_error(struct thread_data *td, struct io_u *io_u)
+{
+	const char *msg[] = { "read", "write", "sync" };
+
+	log_err("fio: io_u error");
+
+	if (io_u->file)
+		log_err(" on file %s", io_u->file->file_name);
+
+	log_err(": %s\n", strerror(io_u->error));
+
+	log_err("     %s offset=%llu, buflen=%lu\n", msg[io_u->ddir], io_u->offset, io_u->xfer_buflen);
+
+	if (!td->error)
+		td_verror(td, io_u->error, "io_u error");
+}
+
 static void io_completed(struct thread_data *td, struct io_u *io_u,
 			 struct io_completion_data *icd)
 {
@@ -529,8 +546,10 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 			if (ret && !icd->error)
 				icd->error = ret;
 		}
-	} else
+	} else {
 		icd->error = io_u->error;
+		io_u_log_error(td, io_u);
+	}
 }
 
 static void init_icd(struct io_completion_data *icd, int nr)

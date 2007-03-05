@@ -270,6 +270,8 @@ static void do_verify(struct thread_data *td)
 
 	io_u = NULL;
 	while (!td->terminate) {
+		int ret2;
+
 		io_u = __get_io_u(td);
 		if (!io_u)
 			break;
@@ -297,7 +299,7 @@ requeue:
 		case FIO_Q_COMPLETED:
 			if (io_u->error)
 				ret = -io_u->error;
-			if (io_u->xfer_buflen != io_u->resid && io_u->resid) {
+			else if (io_u->xfer_buflen != io_u->resid && io_u->resid) {
 				int bytes = io_u->xfer_buflen - io_u->resid;
 
 				io_u->xfer_buflen = io_u->resid;
@@ -312,7 +314,9 @@ requeue:
 			break;
 		case FIO_Q_BUSY:
 			requeue_io_u(td, &io_u);
-			ret = td_io_commit(td);
+			ret2 = td_io_commit(td);
+			if (ret2 < 0)
+				ret = ret2;
 			break;
 		default:
 			assert(ret < 0);
@@ -396,6 +400,7 @@ static void do_io(struct thread_data *td)
 		long bytes_done = 0;
 		int min_evts = 0;
 		struct io_u *io_u;
+		int ret2;
 
 		if (td->terminate)
 			break;
@@ -415,11 +420,9 @@ requeue:
 
 		switch (ret) {
 		case FIO_Q_COMPLETED:
-			if (io_u->error) {
-				ret = io_u->error;
-				break;
-			}
-			if (io_u->xfer_buflen != io_u->resid && io_u->resid) {
+			if (io_u->error)
+				ret = -io_u->error;
+			else if (io_u->xfer_buflen != io_u->resid && io_u->resid) {
 				int bytes = io_u->xfer_buflen - io_u->resid;
 
 				io_u->xfer_buflen = io_u->resid;
@@ -442,7 +445,9 @@ requeue:
 			break;
 		case FIO_Q_BUSY:
 			requeue_io_u(td, &io_u);
-			ret = td_io_commit(td);
+			ret2 = td_io_commit(td);
+			if (ret2 < 0)
+				ret = ret2;
 			break;
 		default:
 			assert(ret < 0);
