@@ -291,9 +291,8 @@ static void do_verify(struct thread_data *td)
 		}
 
 		io_u->end_io = verify_io_u;
-requeue:
-		ret = td_io_queue(td, io_u);
 
+		ret = td_io_queue(td, io_u);
 		switch (ret) {
 		case FIO_Q_COMPLETED:
 			if (io_u->error)
@@ -303,11 +302,12 @@ requeue:
 
 				io_u->xfer_buflen = io_u->resid;
 				io_u->xfer_buf += bytes;
-				goto requeue;
+				requeue_io_u(td, &io_u);
+			} else {
+				ret = io_u_sync_complete(td, io_u);
+				if (ret < 0)
+					break;
 			}
-			ret = io_u_sync_complete(td, io_u);
-			if (ret < 0)
-				break;
 			continue;
 		case FIO_Q_QUEUED:
 			break;
@@ -414,9 +414,8 @@ static void do_io(struct thread_data *td)
 			put_io_u(td, io_u);
 			break;
 		}
-requeue:
-		ret = td_io_queue(td, io_u);
 
+		ret = td_io_queue(td, io_u);
 		switch (ret) {
 		case FIO_Q_COMPLETED:
 			if (io_u->error)
@@ -426,12 +425,13 @@ requeue:
 
 				io_u->xfer_buflen = io_u->resid;
 				io_u->xfer_buf += bytes;
-				goto requeue;
+				requeue_io_u(td, &io_u);
+			} else {
+				fio_gettime(&comp_time, NULL);
+				bytes_done = io_u_sync_complete(td, io_u);
+				if (bytes_done < 0)
+					ret = bytes_done;
 			}
-			fio_gettime(&comp_time, NULL);
-			bytes_done = io_u_sync_complete(td, io_u);
-			if (bytes_done < 0)
-				ret = bytes_done;
 			break;
 		case FIO_Q_QUEUED:
 			/*
