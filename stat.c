@@ -651,11 +651,21 @@ void show_run_stats(void)
 		members++;
 
 		if (!ts->groupid) {
+			/*
+			 * These are per-group shared already
+			 */
 			ts->name = td->name;
 			ts->description = td->description;
-			ts->error = td->error;
 			ts->groupid = td->groupid;
+
+			/*
+			 * first pid in group, not very useful...
+			 */
 			ts->pid = td->pid;
+		}
+
+		if (td->error && !ts->error) {
+			ts->error = td->error;
 			ts->verror = td->verror;
 		}
 
