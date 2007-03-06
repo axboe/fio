@@ -261,6 +261,7 @@ struct thread_stat {
 	int groupid;
 	pid_t pid;
 	char *description;
+	int members;
 
 	struct io_log *slat_log;
 	struct io_log *clat_log;

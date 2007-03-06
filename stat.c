@@ -485,9 +485,9 @@ static void show_thread_status(struct thread_stat *ts,
 		return;
 
 	if (!ts->error)
-		fprintf(f_out, "%s: (groupid=%d): err=%2d: pid=%d\n", ts->name, ts->groupid, ts->error, ts->pid);
+		fprintf(f_out, "%s: (groupid=%d, jobs=%d): err=%2d: pid=%d\n", ts->name, ts->groupid, ts->members, ts->error, ts->pid);
 	else
-		fprintf(f_out, "%s: (groupid=%d): err=%2d (%s): pid=%d\n", ts->name, ts->groupid, ts->error, ts->verror, ts->pid);
+		fprintf(f_out, "%s: (groupid=%d, jobs=%d): err=%2d (%s): pid=%d\n", ts->name, ts->groupid, ts->members, ts->error, ts->verror, ts->pid);
 
 	if (ts->io_bytes[DDIR_READ])
 		show_ddir_status(rs, ts, DDIR_READ);
@@ -676,6 +676,7 @@ void show_run_stats(void)
 		ts = &threadstats[j];
 
 		members++;
+		ts->members++;
 
 		if (!ts->groupid) {
 			/*
