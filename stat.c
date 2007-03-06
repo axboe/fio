@@ -412,6 +412,32 @@ static void show_disk_util(void)
 	}
 }
 
+static void stat_calc_dist(struct thread_stat *ts, double *io_u_dist)
+{
+	int i;
+
+	/*
+	 * Do depth distribution calculations
+	 */
+	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
+		io_u_dist[i] = (double) ts->io_u_map[i] / (double) ts->total_io_u;
+		io_u_dist[i] *= 100.0;
+	}
+}
+
+static void stat_calc_lat(struct thread_stat *ts, double *io_u_lat)
+{
+	int i;
+
+	/*
+	 * Do latency distribution calculations
+	 */
+	for (i = 0; i < FIO_IO_U_LAT_NR; i++) {
+		io_u_lat[i] = (double) ts->io_u_lat[i] / (double) ts->total_io_u;
+		io_u_lat[i] *= 100.0;
+	}
+}
+
 static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			     int ddir)
 {
@@ -454,7 +480,6 @@ static void show_thread_status(struct thread_stat *ts,
 	unsigned long runtime;
 	double io_u_dist[FIO_IO_U_MAP_NR];
 	double io_u_lat[FIO_IO_U_LAT_NR];
-	int i;
 
 	if (!(ts->io_bytes[0] + ts->io_bytes[1]))
 		return;
@@ -482,23 +507,10 @@ static void show_thread_status(struct thread_stat *ts,
 
 	fprintf(f_out, "  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, ts->ctx);
 
-	/*
-	 * Do depth distribution calculations
-	 */
-	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
-		io_u_dist[i] = (double) ts->io_u_map[i] / (double) ts->total_io_u;
-		io_u_dist[i] *= 100.0;
-	}
+	stat_calc_dist(ts, io_u_dist);
+	stat_calc_lat(ts, io_u_lat);
 
 	fprintf(f_out, "  IO depths    : 1=%3.1f%%, 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%, 16=%3.1f%%, 32=%3.1f%%, >=64=%3.1f%%\n", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
-
-	/*
-	 * Do latency distribution calculations
-	 */
-	for (i = 0; i < FIO_IO_U_LAT_NR; i++) {
-		io_u_lat[i] = (double) ts->io_u_lat[i] / (double) ts->total_io_u;
-		io_u_lat[i] *= 100.0;
-	}
 
 	fprintf(f_out, "     lat (msec): 2=%3.1f%%, 4=%3.1f%%, 10=%3.1f%%, 20=%3.1f%%, 50=%3.1f%%, 100=%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
 	fprintf(f_out, "     lat (msec): 250=%3.1f%%, 500=%3.1f%%, 750=%3.1f%%, 1000=%3.1f%%, >=2000=%3.1f%%\n", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
@@ -543,6 +555,8 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 static void show_thread_status_terse(struct thread_stat *ts,
 				     struct group_run_stats *rs)
 {
+	double io_u_dist[FIO_IO_U_MAP_NR];
+	double io_u_lat[FIO_IO_U_LAT_NR];
 	double usr_cpu, sys_cpu;
 
 	fprintf(f_out, "%s,%d,%d", ts->name, ts->groupid, ts->error);
@@ -560,7 +574,20 @@ static void show_thread_status_terse(struct thread_stat *ts,
 		sys_cpu = 0;
 	}
 
-	fprintf(f_out, ",%f%%,%f%%,%lu\n", usr_cpu, sys_cpu, ts->ctx);
+	fprintf(f_out, ",%f%%,%f%%,%lu", usr_cpu, sys_cpu, ts->ctx);
+
+	stat_calc_dist(ts, io_u_dist);
+	stat_calc_lat(ts, io_u_lat);
+
+	fprintf(f_out, ",%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
+
+	fprintf(f_out, "%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
+	fprintf(f_out, "%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
+
+	if (ts->description)
+		fprintf(f_out, ",%s", ts->description);
+
+	fprintf(f_out, "\n");
 }
 
 static void __sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
