@@ -489,6 +489,9 @@ static void show_thread_status(struct thread_stat *ts,
 	else
 		fprintf(f_out, "%s: (groupid=%d, jobs=%d): err=%2d (%s): pid=%d\n", ts->name, ts->groupid, ts->members, ts->error, ts->verror, ts->pid);
 
+	if (ts->description)
+		fprintf(f_out, "  Description  : [%s]\n", ts->description);
+
 	if (ts->io_bytes[DDIR_READ])
 		show_ddir_status(rs, ts, DDIR_READ);
 	if (ts->io_bytes[DDIR_WRITE])
@@ -514,9 +517,6 @@ static void show_thread_status(struct thread_stat *ts,
 
 	fprintf(f_out, "     lat (msec): 2=%3.1f%%, 4=%3.1f%%, 10=%3.1f%%, 20=%3.1f%%, 50=%3.1f%%, 100=%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
 	fprintf(f_out, "     lat (msec): 250=%3.1f%%, 500=%3.1f%%, 750=%3.1f%%, 1000=%3.1f%%, >=2000=%3.1f%%\n", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
-
-	if (ts->description)
-		fprintf(f_out, "%s\n", ts->description);
 }
 
 static void show_ddir_status_terse(struct thread_stat *ts,
