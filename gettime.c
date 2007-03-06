@@ -10,7 +10,7 @@
 
 #include "hash.h"
 
-static int clock_gettime_works = 1;
+static int clock_gettime_works = 0;
 
 #ifdef FIO_DEBUG_TIME
 
