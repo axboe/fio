@@ -6,7 +6,6 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <math.h>
-#include <assert.h>
 
 #include "fio.h"
 
@@ -720,9 +719,9 @@ void show_run_stats(void)
 
 		rbw = wbw = 0;
 		if (ts->runtime[0])
-			rbw = td->io_bytes[0] / (unsigned long long) ts->runtime[0];
+			rbw = ts->io_bytes[0] / (unsigned long long) ts->runtime[0];
 		if (ts->runtime[1])
-			wbw = td->io_bytes[1] / (unsigned long long) ts->runtime[1];
+			wbw = ts->io_bytes[1] / (unsigned long long) ts->runtime[1];
 
 		if (rbw < rs->min_bw[0])
 			rs->min_bw[0] = rbw;
