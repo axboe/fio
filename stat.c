@@ -530,25 +530,25 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	if (ts->runtime[ddir])
 		bw = ts->io_bytes[ddir] / ts->runtime[ddir];
 
-	fprintf(f_out, ",%llu,%llu,%lu", ts->io_bytes[ddir] >> 10, bw, ts->runtime[ddir]);
+	fprintf(f_out, ";%llu;%llu;%lu", ts->io_bytes[ddir] >> 10, bw, ts->runtime[ddir]);
 
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
-		fprintf(f_out, ",%lu,%lu,%f,%f", min, max, mean, dev);
+		fprintf(f_out, ";%lu;%lu;%f;%f", min, max, mean, dev);
 	else
-		fprintf(f_out, ",%lu,%lu,%f,%f", 0UL, 0UL, 0.0, 0.0);
+		fprintf(f_out, ";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
 
 	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
-		fprintf(f_out, ",%lu,%lu,%f,%f", min, max, mean, dev);
+		fprintf(f_out, ";%lu;%lu;%f;%f", min, max, mean, dev);
 	else
-		fprintf(f_out, ",%lu,%lu,%f,%f", 0UL, 0UL, 0.0, 0.0);
+		fprintf(f_out, ";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
 
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
 
 		p_of_agg = mean * 100 / (double) rs->agg[ddir];
-		fprintf(f_out, ",%lu,%lu,%f%%,%f,%f", min, max, p_of_agg, mean, dev);
+		fprintf(f_out, ";%lu;%lu;%f%%;%f;%f", min, max, p_of_agg, mean, dev);
 	} else
-		fprintf(f_out, ",%lu,%lu,%f%%,%f,%f", 0UL, 0UL, 0.0, 0.0, 0.0);
+		fprintf(f_out, ";%lu;%lu;%f%%;%f;%f", 0UL, 0UL, 0.0, 0.0, 0.0);
 }
 
 
@@ -559,7 +559,7 @@ static void show_thread_status_terse(struct thread_stat *ts,
 	double io_u_lat[FIO_IO_U_LAT_NR];
 	double usr_cpu, sys_cpu;
 
-	fprintf(f_out, "%s,%d,%d", ts->name, ts->groupid, ts->error);
+	fprintf(f_out, "%s;%d;%d", ts->name, ts->groupid, ts->error);
 
 	show_ddir_status_terse(ts, rs, 0);
 	show_ddir_status_terse(ts, rs, 1);
@@ -574,18 +574,18 @@ static void show_thread_status_terse(struct thread_stat *ts,
 		sys_cpu = 0;
 	}
 
-	fprintf(f_out, ",%f%%,%f%%,%lu", usr_cpu, sys_cpu, ts->ctx);
+	fprintf(f_out, ";%f%%;%f%%;%lu", usr_cpu, sys_cpu, ts->ctx);
 
 	stat_calc_dist(ts, io_u_dist);
 	stat_calc_lat(ts, io_u_lat);
 
-	fprintf(f_out, ",%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
+	fprintf(f_out, ";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
 
-	fprintf(f_out, "%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
-	fprintf(f_out, "%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%,%3.1f%%", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
+	fprintf(f_out, ";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
+	fprintf(f_out, ";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
 
 	if (ts->description)
-		fprintf(f_out, ",%s", ts->description);
+		fprintf(f_out, ";%s", ts->description);
 
 	fprintf(f_out, "\n");
 }

@@ -669,10 +669,11 @@ util=		The disk utilization. A value of 100% means we kept the disk
 ----------------
 
 For scripted usage where you typically want to generate tables or graphs
-of the results, fio can output the results in a comma separated format.
+of the results, fio can output the results in a semicolon separated format.
 The format is one long line of values, such as:
 
-client1,0,0,936,331,2894,0,0,0.000000,0.000000,1,170,22.115385,34.290410,16,714,84.252874%,366.500000,566.417819,3496,1237,2894,0,0,0.000000,0.000000,0,246,6.671625,21.436952,0,2534,55.465300%,1406.600000,2008.044216,0.000000%,0.431928%,1109
+client1;0;0;1906777;1090804;1790;0;0;0.000000;0.000000;0;0;0.000000;0.000000;929380;1152890;25.510151%;1078276.333333;128948.113404;0;0;0;0;0;0.000000;0.000000;0;0;0.000000;0.000000;0;0;0.000000%;0.000000;0.000000;100.000000%;0.000000%;324;100.0%;0.0%;0.0%;0.0%;0.0%;0.0%;0.0%;100.0%;0.0%;0.0%;0.0%;0.0%;0.0%
+;0.0%;0.0%;0.0%;0.0%;0.0%
 
 Split up, the format is as follows:
 
