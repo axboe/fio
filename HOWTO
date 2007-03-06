@@ -496,7 +496,15 @@ stonewall	Wait for preceeding jobs in the job file to exit, before
 
 numjobs=int	Create the specified number of clones of this job. May be
 		used to setup a larger number of threads/processes doing
-		the same thing.
+		the same thing. We regard that grouping of jobs as a
+		specific group.
+
+group_reporting	If 'numjobs' is set, it may be interesting to display
+		statistics for the group as a whole instead of for each
+		individual job. This is especially true of 'numjobs' is
+		large, looking at individual thread/process output quickly
+		becomes unwieldy. If 'group_reporting' is specified, fio
+		will show the final report per-group instead of per-job.
 
 thread		fio defaults to forking jobs, however if this option is
 		given, fio will use pthread_create(3) to create threads
