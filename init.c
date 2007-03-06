@@ -531,6 +531,12 @@ static struct fio_option options[] = {
 		.def	= __stringify(FIO_HUGE_PAGE),
 	},
 	{
+		.name	= "group_reporting",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(group_reporting),
+		.help	= "Do reporting on a per-group basis",
+	},
+	{
 		.name = NULL,
 	},
 };
@@ -778,6 +784,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td == &def_thread)
 		return 0;
 
+	/*
+	 * this will later be shared between thread for group reporting
+	 */
+	td->ts = &td->__ts;
+	memset(td->ts, 0, sizeof(*td->ts));
+
 	assert(td->io_ops);
 
 	if (td->odirect)
@@ -844,9 +856,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		
 	fio_sem_init(&td->mutex, 0);
 
-	td->ts.clat_stat[0].min_val = td->ts.clat_stat[1].min_val = ULONG_MAX;
-	td->ts.slat_stat[0].min_val = td->ts.slat_stat[1].min_val = ULONG_MAX;
-	td->ts.bw_stat[0].min_val = td->ts.bw_stat[1].min_val = ULONG_MAX;
+	td->ts->clat_stat[0].min_val = td->ts->clat_stat[1].min_val = ULONG_MAX;
+	td->ts->slat_stat[0].min_val = td->ts->slat_stat[1].min_val = ULONG_MAX;
+	td->ts->bw_stat[0].min_val = td->ts->bw_stat[1].min_val = ULONG_MAX;
 
 	if (td->stonewall && td->thread_number > 1)
 		groupid++;
@@ -857,11 +869,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		goto err;
 
 	if (td->write_lat_log) {
-		setup_log(&td->ts.slat_log);
-		setup_log(&td->ts.clat_log);
+		setup_log(&td->ts->slat_log);
+		setup_log(&td->ts->clat_log);
 	}
 	if (td->write_bw_log)
-		setup_log(&td->ts.bw_log);
+		setup_log(&td->ts->bw_log);
 
 	if (!td->name)
 		td->name = strdup(jobname);

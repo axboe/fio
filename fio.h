@@ -248,6 +248,12 @@ struct fio_file {
 	unsigned int unlink;
 };
 
+/*
+ * How many depth levels to log
+ */
+#define FIO_IO_U_MAP_NR	8
+#define FIO_IO_U_LAT_NR 12
+
 struct thread_stat {
 	struct io_log *slat_log;
 	struct io_log *clat_log;
@@ -271,13 +277,14 @@ struct thread_stat {
 	unsigned long usr_time;
 	unsigned long sys_time;
 	unsigned long ctx;
-};
 
-/*
- * How many depth levels to log
- */
-#define FIO_IO_U_MAP_NR	8
-#define FIO_IO_U_LAT_NR 12
+	/*
+	 * IO depth and latency stats
+	 */
+	unsigned int io_u_map[FIO_IO_U_MAP_NR];
+	unsigned int io_u_lat[FIO_IO_U_LAT_NR];
+	unsigned long total_io_u;
+};
 
 /*
  * This describes a single thread/process executing a fio job.
@@ -292,7 +299,8 @@ struct thread_data {
 	pthread_t thread;
 	int thread_number;
 	int groupid;
-	struct thread_stat ts;
+	struct thread_stat *ts;
+	struct thread_stat __ts;
 	enum fio_filetype filetype;
 	struct fio_file *files;
 	unsigned int nr_files;
@@ -361,6 +369,7 @@ struct thread_data {
 	unsigned int rwmixwrite;
 	unsigned int nice;
 	unsigned int file_service_type;
+	unsigned int group_reporting;
 
 	char *read_iolog_file;
 	char *write_iolog_file;
@@ -385,9 +394,6 @@ struct thread_data {
 	 * Current IO depth and list of free and busy io_u's.
 	 */
 	unsigned int cur_depth;
-	unsigned int io_u_map[FIO_IO_U_MAP_NR];
-	unsigned int io_u_lat[FIO_IO_U_LAT_NR];
-	unsigned long total_io_u;
 	struct list_head io_u_freelist;
 	struct list_head io_u_busylist;
 	struct list_head io_u_requeues;

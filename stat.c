@@ -322,7 +322,7 @@ void disk_util_timer_arm(void)
 
 void update_rusage_stat(struct thread_data *td)
 {
-	struct thread_stat *ts = &td->ts;
+	struct thread_stat *ts = td->ts;
 
 	getrusage(RUSAGE_SELF, &ts->ru_end);
 
@@ -434,7 +434,7 @@ static void show_ddir_status(struct thread_data *td, struct group_run_stats *rs,
 	free(io_p);
 	free(bw_p);
 
-	ts = &td->ts;
+	ts = td->ts;
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
 		fprintf(f_out, "    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
 
@@ -475,20 +475,20 @@ static void show_thread_status(struct thread_data *td,
 	if (runtime) {
 		double runt = (double) runtime;
 
-		usr_cpu = (double) td->ts.usr_time * 100 / runt;
-		sys_cpu = (double) td->ts.sys_time * 100 / runt;
+		usr_cpu = (double) td->ts->usr_time * 100 / runt;
+		sys_cpu = (double) td->ts->sys_time * 100 / runt;
 	} else {
 		usr_cpu = 0;
 		sys_cpu = 0;
 	}
 
-	fprintf(f_out, "  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, td->ts.ctx);
+	fprintf(f_out, "  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, td->ts->ctx);
 
 	/*
 	 * Do depth distribution calculations
 	 */
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
-		io_u_dist[i] = (double) td->io_u_map[i] / (double) td->total_io_u;
+		io_u_dist[i] = (double) td->ts->io_u_map[i] / (double) td->ts->total_io_u;
 		io_u_dist[i] *= 100.0;
 	}
 
@@ -498,7 +498,7 @@ static void show_thread_status(struct thread_data *td,
 	 * Do latency distribution calculations
 	 */
 	for (i = 0; i < FIO_IO_U_LAT_NR; i++) {
-		io_u_lat[i] = (double) td->io_u_lat[i] / (double) td->total_io_u;
+		io_u_lat[i] = (double) td->ts->io_u_lat[i] / (double) td->ts->total_io_u;
 		io_u_lat[i] *= 100.0;
 	}
 
@@ -512,7 +512,7 @@ static void show_thread_status(struct thread_data *td,
 static void show_ddir_status_terse(struct thread_data *td,
 				   struct group_run_stats *rs, int ddir)
 {
-	struct thread_stat *ts = &td->ts;
+	struct thread_stat *ts = td->ts;
 	unsigned long min, max;
 	unsigned long long bw;
 	double mean, dev;
@@ -557,14 +557,14 @@ static void show_thread_status_terse(struct thread_data *td,
 	if (td->runtime[0] + td->runtime[1]) {
 		double runt = (double) (td->runtime[0] + td->runtime[1]);
 
-		usr_cpu = (double) td->ts.usr_time * 100 / runt;
-		sys_cpu = (double) td->ts.sys_time * 100 / runt;
+		usr_cpu = (double) td->ts->usr_time * 100 / runt;
+		sys_cpu = (double) td->ts->sys_time * 100 / runt;
 	} else {
 		usr_cpu = 0;
 		sys_cpu = 0;
 	}
 
-	fprintf(f_out, ",%f%%,%f%%,%lu\n", usr_cpu, sys_cpu, td->ts.ctx);
+	fprintf(f_out, ",%f%%,%f%%,%lu\n", usr_cpu, sys_cpu, td->ts->ctx);
 }
 
 void show_run_stats(void)
@@ -700,7 +700,7 @@ void add_agg_sample(unsigned long val, enum fio_ddir ddir)
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long msec)
 {
-	struct thread_stat *ts = &td->ts;
+	struct thread_stat *ts = td->ts;
 
 	add_stat_sample(&ts->clat_stat[ddir], msec);
 
@@ -711,7 +711,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long msec)
 {
-	struct thread_stat *ts = &td->ts;
+	struct thread_stat *ts = td->ts;
 
 	add_stat_sample(&ts->slat_stat[ddir], msec);
 
@@ -722,7 +722,7 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 void add_bw_sample(struct thread_data *td, enum fio_ddir ddir,
 		   struct timeval *t)
 {
-	struct thread_stat *ts = &td->ts;
+	struct thread_stat *ts = td->ts;
 	unsigned long spent = mtime_since(&ts->stat_sample_time[ddir], t);
 	unsigned long rate;
 
