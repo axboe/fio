@@ -785,7 +785,7 @@ void show_run_stats(void)
 static inline void add_stat_sample(struct io_stat *is, unsigned long data)
 {
 	double val = data;
-	double delta, n;
+	double delta;
 
 	if (data > is->max_val)
 		is->max_val = data;
@@ -793,8 +793,7 @@ static inline void add_stat_sample(struct io_stat *is, unsigned long data)
 		is->min_val = data;
 
 	delta = val - is->mean;
-	n = is->samples + 1.0;
-	is->mean += delta / n;
+	is->mean += delta / (is->samples + 1.0);
 	is->S += delta * (val - is->mean);
 
 	is->samples++;
