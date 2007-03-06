@@ -255,6 +255,13 @@ struct fio_file {
 #define FIO_IO_U_LAT_NR 12
 
 struct thread_stat {
+	char *name;
+	char *verror;
+	int error;
+	int groupid;
+	pid_t pid;
+	char *description;
+
 	struct io_log *slat_log;
 	struct io_log *clat_log;
 	struct io_log *bw_log;
@@ -284,6 +291,10 @@ struct thread_stat {
 	unsigned int io_u_map[FIO_IO_U_MAP_NR];
 	unsigned int io_u_lat[FIO_IO_U_LAT_NR];
 	unsigned long total_io_u;
+
+	unsigned long long io_bytes[2];
+	unsigned long runtime[2];
+	unsigned long total_run_time;
 };
 
 /*
@@ -299,8 +310,7 @@ struct thread_data {
 	pthread_t thread;
 	int thread_number;
 	int groupid;
-	struct thread_stat *ts;
-	struct thread_stat __ts;
+	struct thread_stat ts;
 	enum fio_filetype filetype;
 	struct fio_file *files;
 	unsigned int nr_files;
@@ -410,7 +420,6 @@ struct thread_data {
 	unsigned long rate_bytes;
 	struct timeval lastrate;
 
-	unsigned long runtime[2];		/* msec */
 	unsigned long long io_size;
 	unsigned long long total_file_size;
 	unsigned long long start_offset;
@@ -436,7 +445,6 @@ struct thread_data {
 
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
-	struct timeval end_time;/* time job ended */
 
 	/*
 	 * read/write mixed workload state

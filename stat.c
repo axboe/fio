@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <math.h>
+#include <assert.h>
 
 #include "fio.h"
 
@@ -322,7 +323,7 @@ void disk_util_timer_arm(void)
 
 void update_rusage_stat(struct thread_data *td)
 {
-	struct thread_stat *ts = td->ts;
+	struct thread_stat *ts = &td->ts;
 
 	getrusage(RUSAGE_SELF, &ts->ru_end);
 
@@ -412,29 +413,27 @@ static void show_disk_util(void)
 	}
 }
 
-static void show_ddir_status(struct thread_data *td, struct group_run_stats *rs,
+static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			     int ddir)
 {
 	const char *ddir_str[] = { "read ", "write" };
-	struct thread_stat *ts;
 	unsigned long min, max;
 	unsigned long long bw;
 	double mean, dev;
 	char *io_p, *bw_p;
 
-	if (!td->runtime[ddir])
+	if (!ts->runtime[ddir])
 		return;
 
-	bw = td->io_bytes[ddir] / td->runtime[ddir];
-	io_p = num2str(td->io_bytes[ddir] >> 10, 6, 1);
+	bw = ts->io_bytes[ddir] / ts->runtime[ddir];
+	io_p = num2str(ts->io_bytes[ddir] >> 10, 6, 1);
 	bw_p = num2str(bw, 6, 1);
 
-	fprintf(f_out, "  %s: io=%siB, bw=%siB/s, runt=%6lumsec\n", ddir_str[ddir], io_p, bw_p, td->runtime[ddir]);
+	fprintf(f_out, "  %s: io=%siB, bw=%siB/s, runt=%6lumsec\n", ddir_str[ddir], io_p, bw_p, ts->runtime[ddir]);
 
 	free(io_p);
 	free(bw_p);
 
-	ts = td->ts;
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
 		fprintf(f_out, "    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
 
@@ -449,7 +448,7 @@ static void show_ddir_status(struct thread_data *td, struct group_run_stats *rs,
 	}
 }
 
-static void show_thread_status(struct thread_data *td,
+static void show_thread_status(struct thread_stat *ts,
 			       struct group_run_stats *rs)
 {
 	double usr_cpu, sys_cpu;
@@ -458,37 +457,37 @@ static void show_thread_status(struct thread_data *td,
 	double io_u_lat[FIO_IO_U_LAT_NR];
 	int i;
 
-	if (!(td->io_bytes[0] + td->io_bytes[1]))
+	if (!(ts->io_bytes[0] + ts->io_bytes[1]))
 		return;
 
-	if (!td->error)
-		fprintf(f_out, "%s: (groupid=%d): err=%2d: pid=%d\n",td->name, td->groupid, td->error, td->pid);
+	if (!ts->error)
+		fprintf(f_out, "%s: (groupid=%d): err=%2d: pid=%d\n", ts->name, ts->groupid, ts->error, ts->pid);
 	else
-		fprintf(f_out, "%s: (groupid=%d): err=%2d (%s): pid=%d\n",td->name, td->groupid, td->error, td->verror, td->pid);
+		fprintf(f_out, "%s: (groupid=%d): err=%2d (%s): pid=%d\n", ts->name, ts->groupid, ts->error, ts->verror, ts->pid);
 
-	if (td_read(td))
-		show_ddir_status(td, rs, DDIR_READ);
-	if (td_write(td))
-		show_ddir_status(td, rs, DDIR_WRITE);
+	if (ts->io_bytes[DDIR_READ])
+		show_ddir_status(rs, ts, DDIR_READ);
+	if (ts->io_bytes[DDIR_WRITE])
+		show_ddir_status(rs, ts, DDIR_WRITE);
 
-	runtime = mtime_since(&td->epoch, &td->end_time);
+	runtime = ts->total_run_time;
 	if (runtime) {
 		double runt = (double) runtime;
 
-		usr_cpu = (double) td->ts->usr_time * 100 / runt;
-		sys_cpu = (double) td->ts->sys_time * 100 / runt;
+		usr_cpu = (double) ts->usr_time * 100 / runt;
+		sys_cpu = (double) ts->sys_time * 100 / runt;
 	} else {
 		usr_cpu = 0;
 		sys_cpu = 0;
 	}
 
-	fprintf(f_out, "  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, td->ts->ctx);
+	fprintf(f_out, "  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, ts->ctx);
 
 	/*
 	 * Do depth distribution calculations
 	 */
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
-		io_u_dist[i] = (double) td->ts->io_u_map[i] / (double) td->ts->total_io_u;
+		io_u_dist[i] = (double) ts->io_u_map[i] / (double) ts->total_io_u;
 		io_u_dist[i] *= 100.0;
 	}
 
@@ -498,30 +497,29 @@ static void show_thread_status(struct thread_data *td,
 	 * Do latency distribution calculations
 	 */
 	for (i = 0; i < FIO_IO_U_LAT_NR; i++) {
-		io_u_lat[i] = (double) td->ts->io_u_lat[i] / (double) td->ts->total_io_u;
+		io_u_lat[i] = (double) ts->io_u_lat[i] / (double) ts->total_io_u;
 		io_u_lat[i] *= 100.0;
 	}
 
 	fprintf(f_out, "     lat (msec): 2=%3.1f%%, 4=%3.1f%%, 10=%3.1f%%, 20=%3.1f%%, 50=%3.1f%%, 100=%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
 	fprintf(f_out, "     lat (msec): 250=%3.1f%%, 500=%3.1f%%, 750=%3.1f%%, 1000=%3.1f%%, >=2000=%3.1f%%\n", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
 
-	if (td->description)
-		fprintf(f_out, "%s\n", td->description);
+	if (ts->description)
+		fprintf(f_out, "%s\n", ts->description);
 }
 
-static void show_ddir_status_terse(struct thread_data *td,
+static void show_ddir_status_terse(struct thread_stat *ts,
 				   struct group_run_stats *rs, int ddir)
 {
-	struct thread_stat *ts = td->ts;
 	unsigned long min, max;
 	unsigned long long bw;
 	double mean, dev;
 
 	bw = 0;
-	if (td->runtime[ddir])
-		bw = td->io_bytes[ddir] / td->runtime[ddir];
+	if (ts->runtime[ddir])
+		bw = ts->io_bytes[ddir] / ts->runtime[ddir];
 
-	fprintf(f_out, ",%llu,%llu,%lu", td->io_bytes[ddir] >> 10, bw, td->runtime[ddir]);
+	fprintf(f_out, ",%llu,%llu,%lu", ts->io_bytes[ddir] >> 10, bw, ts->runtime[ddir]);
 
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
 		fprintf(f_out, ",%lu,%lu,%f,%f", min, max, mean, dev);
@@ -540,38 +538,68 @@ static void show_ddir_status_terse(struct thread_data *td,
 		fprintf(f_out, ",%lu,%lu,%f%%,%f,%f", min, max, p_of_agg, mean, dev);
 	} else
 		fprintf(f_out, ",%lu,%lu,%f%%,%f,%f", 0UL, 0UL, 0.0, 0.0, 0.0);
-		
 }
 
 
-static void show_thread_status_terse(struct thread_data *td,
+static void show_thread_status_terse(struct thread_stat *ts,
 				     struct group_run_stats *rs)
 {
 	double usr_cpu, sys_cpu;
 
-	fprintf(f_out, "%s,%d,%d",td->name, td->groupid, td->error);
+	fprintf(f_out, "%s,%d,%d", ts->name, ts->groupid, ts->error);
 
-	show_ddir_status_terse(td, rs, 0);
-	show_ddir_status_terse(td, rs, 1);
+	show_ddir_status_terse(ts, rs, 0);
+	show_ddir_status_terse(ts, rs, 1);
 
-	if (td->runtime[0] + td->runtime[1]) {
-		double runt = (double) (td->runtime[0] + td->runtime[1]);
+	if (ts->total_run_time) {
+		double runt = (double) ts->total_run_time;
 
-		usr_cpu = (double) td->ts->usr_time * 100 / runt;
-		sys_cpu = (double) td->ts->sys_time * 100 / runt;
+		usr_cpu = (double) ts->usr_time * 100 / runt;
+		sys_cpu = (double) ts->sys_time * 100 / runt;
 	} else {
 		usr_cpu = 0;
 		sys_cpu = 0;
 	}
 
-	fprintf(f_out, ",%f%%,%f%%,%lu\n", usr_cpu, sys_cpu, td->ts->ctx);
+	fprintf(f_out, ",%f%%,%f%%,%lu\n", usr_cpu, sys_cpu, ts->ctx);
+}
+
+static void __sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
+{
+	double mean, S;
+
+	dst->min_val = min(dst->min_val, src->min_val);
+	dst->max_val = max(dst->max_val, src->max_val);
+	dst->samples += src->samples;
+
+	/*
+	 * Needs a new method for calculating stddev, we cannot just
+	 * average them we do below for nr > 1
+	 */
+	if (nr == 1) {
+		mean = src->mean;
+		S = src->S;
+	} else {
+		mean = ((src->mean * (double) nr) + dst->mean) / ((double) nr + 1.0);
+		S = ((src->S * (double) nr) + dst->S) / ((double) nr + 1.0);
+	}
+
+	dst->mean = mean;
+	dst->S = S;
+}
+
+static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
+{
+	__sum_stat(&dst[DDIR_READ], &src[DDIR_READ], nr);
+	__sum_stat(&dst[DDIR_WRITE], &src[DDIR_WRITE], nr);
 }
 
 void show_run_stats(void)
 {
 	struct group_run_stats *runstats, *rs;
 	struct thread_data *td;
-	int i;
+	struct thread_stat *threadstats, *ts;
+	int i, j, k, nr_ts, last_ts, members;
 
 	runstats = malloc(sizeof(struct group_run_stats) * (groupid + 1));
 
@@ -583,25 +611,118 @@ void show_run_stats(void)
 		rs->min_bw[1] = rs->min_run[1] = ~0UL;
 	}
 
+	/*
+	 * find out how many threads stats we need. if group reporting isn't
+	 * enabled, it's one-per-td.
+	 */
+	nr_ts = 0;
+	last_ts = -1;
 	for_each_td(td, i) {
+		if (!td->group_reporting) {
+			nr_ts++;
+			continue;
+		}
+		if (last_ts == td->groupid)
+			continue;
+
+		last_ts = td->groupid;
+		nr_ts++;
+	}
+
+	threadstats = malloc(nr_ts * sizeof(struct thread_stat));
+
+	for (i = 0; i < nr_ts; i++) {
+		ts = &threadstats[i];
+
+		memset(ts, 0, sizeof(*ts));
+		ts->clat_stat[0].min_val = -1UL;
+		ts->clat_stat[1].min_val = -1UL;
+		ts->slat_stat[0].min_val = -1UL;
+		ts->slat_stat[1].min_val = -1UL;
+		ts->bw_stat[0].min_val = -1UL;
+		ts->bw_stat[1].min_val = -1UL;
+	}
+
+	j = 0;
+	last_ts = -1;
+	members = 0;
+	for_each_td(td, i) {
+		ts = &threadstats[j];
+
+		members++;
+
+		if (!ts->groupid) {
+			ts->name = td->name;
+			ts->description = td->description;
+			ts->error = td->error;
+			ts->groupid = td->groupid;
+			ts->pid = td->pid;
+			ts->verror = td->verror;
+		}
+
+		sum_stat(ts->clat_stat, td->ts.clat_stat, members);
+		sum_stat(ts->slat_stat, td->ts.slat_stat, members);
+		sum_stat(ts->bw_stat, td->ts.bw_stat, members);
+
+		ts->stat_io_bytes[0] += td->ts.stat_io_bytes[0];
+		ts->stat_io_bytes[1] += td->ts.stat_io_bytes[1];
+
+		ts->usr_time += td->ts.usr_time;
+		ts->sys_time += td->ts.sys_time;
+		ts->ctx += td->ts.ctx;
+
+		for (k = 0; k < FIO_IO_U_MAP_NR; k++)
+			ts->io_u_map[k] += td->ts.io_u_map[k];
+		for (k = 0; k < FIO_IO_U_LAT_NR; k++)
+			ts->io_u_lat[k] += td->ts.io_u_lat[k];
+
+		ts->total_io_u += td->ts.total_io_u;
+		ts->io_bytes[0] += td->ts.io_bytes[0];
+		ts->io_bytes[1] += td->ts.io_bytes[1];
+
+		if (ts->runtime[0] < td->ts.runtime[0])
+			ts->runtime[0] = td->ts.runtime[0];
+		if (ts->runtime[1] < td->ts.runtime[1])
+			ts->runtime[1] = td->ts.runtime[1];
+
+		ts->total_run_time += td->ts.total_run_time;
+
+		if (!td->group_reporting) {
+			members = 0;
+			j++;
+			continue;
+		}
+		if (last_ts == td->groupid)
+			continue;
+
+		if (last_ts != -1) {
+			members = 0;
+			j++;
+		}
+
+		last_ts = td->groupid;
+	}
+
+	for (i = 0; i < nr_ts; i++) {
 		unsigned long long rbw, wbw;
 
-		rs = &runstats[td->groupid];
+		ts = &threadstats[i];
+		rs = &runstats[ts->groupid];
 
-		if (td->runtime[0] < rs->min_run[0] || !rs->min_run[0])
-			rs->min_run[0] = td->runtime[0];
-		if (td->runtime[0] > rs->max_run[0])
-			rs->max_run[0] = td->runtime[0];
-		if (td->runtime[1] < rs->min_run[1] || !rs->min_run[1])
-			rs->min_run[1] = td->runtime[1];
-		if (td->runtime[1] > rs->max_run[1])
-			rs->max_run[1] = td->runtime[1];
+		if (ts->runtime[0] < rs->min_run[0] || !rs->min_run[0])
+			rs->min_run[0] = ts->runtime[0];
+		if (ts->runtime[0] > rs->max_run[0])
+			rs->max_run[0] = ts->runtime[0];
+		if (ts->runtime[1] < rs->min_run[1] || !rs->min_run[1])
+			rs->min_run[1] = ts->runtime[1];
+		if (ts->runtime[1] > rs->max_run[1])
+			rs->max_run[1] = ts->runtime[1];
 
 		rbw = wbw = 0;
-		if (td->runtime[0])
-			rbw = td->io_bytes[0] / (unsigned long long) td->runtime[0];
-		if (td->runtime[1])
-			wbw = td->io_bytes[1] / (unsigned long long) td->runtime[1];
+		if (ts->runtime[0])
+			rbw = td->io_bytes[0] / (unsigned long long) ts->runtime[0];
+		if (ts->runtime[1])
+			wbw = td->io_bytes[1] / (unsigned long long) ts->runtime[1];
 
 		if (rbw < rs->min_bw[0])
 			rs->min_bw[0] = rbw;
@@ -612,8 +733,8 @@ void show_run_stats(void)
 		if (wbw > rs->max_bw[1])
 			rs->max_bw[1] = wbw;
 
-		rs->io_kb[0] += td->io_bytes[0] >> 10;
-		rs->io_kb[1] += td->io_bytes[1] >> 10;
+		rs->io_kb[0] += ts->io_bytes[0] >> 10;
+		rs->io_kb[1] += ts->io_bytes[1] >> 10;
 	}
 
 	for (i = 0; i < groupid + 1; i++) {
@@ -631,13 +752,14 @@ void show_run_stats(void)
 	if (!terse_output)
 		printf("\n");
 
-	for_each_td(td, i) {
-		rs = &runstats[td->groupid];
+	for (i = 0; i < nr_ts; i++) {
+		ts = &threadstats[i];
+		rs = &runstats[ts->groupid];
 
 		if (terse_output)
-			show_thread_status_terse(td, rs);
+			show_thread_status_terse(ts, rs);
 		else
-			show_thread_status(td, rs);
+			show_thread_status(ts, rs);
 	}
 
 	if (!terse_output) {
@@ -648,6 +770,7 @@ void show_run_stats(void)
 	}
 
 	free(runstats);
+	free(threadstats);
 }
 
 static inline void add_stat_sample(struct io_stat *is, unsigned long data)
@@ -700,7 +823,7 @@ void add_agg_sample(unsigned long val, enum fio_ddir ddir)
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long msec)
 {
-	struct thread_stat *ts = td->ts;
+	struct thread_stat *ts = &td->ts;
 
 	add_stat_sample(&ts->clat_stat[ddir], msec);
 
@@ -711,7 +834,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long msec)
 {
-	struct thread_stat *ts = td->ts;
+	struct thread_stat *ts = &td->ts;
 
 	add_stat_sample(&ts->slat_stat[ddir], msec);
 
@@ -722,7 +845,7 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 void add_bw_sample(struct thread_data *td, enum fio_ddir ddir,
 		   struct timeval *t)
 {
-	struct thread_stat *ts = td->ts;
+	struct thread_stat *ts = &td->ts;
 	unsigned long spent = mtime_since(&ts->stat_sample_time[ddir], t);
 	unsigned long rate;
 

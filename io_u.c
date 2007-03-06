@@ -286,8 +286,8 @@ static void io_u_mark_depth(struct thread_data *td)
 		break;
 	}
 
-	td->ts->io_u_map[index]++;
-	td->ts->total_io_u++;
+	td->ts.io_u_map[index]++;
+	td->ts.total_io_u++;
 }
 
 static void io_u_mark_latency(struct thread_data *td, unsigned long msec)
@@ -321,7 +321,7 @@ static void io_u_mark_latency(struct thread_data *td, unsigned long msec)
 		break;
 	}
 
-	td->ts->io_u_lat[index]++;
+	td->ts.io_u_lat[index]++;
 }
 
 /*

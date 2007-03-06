@@ -661,7 +661,7 @@ static void clear_io_state(struct thread_data *td)
 	struct fio_file *f;
 	int i;
 
-	td->ts->stat_io_bytes[0] = td->ts->stat_io_bytes[1] = 0;
+	td->ts.stat_io_bytes[0] = td->ts.stat_io_bytes[1] = 0;
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
 	td->zone_bytes = 0;
 
@@ -751,15 +751,15 @@ static void *thread_main(void *data)
 
 	fio_gettime(&td->epoch, NULL);
 	memcpy(&td->timeout_end, &td->epoch, sizeof(td->epoch));
-	getrusage(RUSAGE_SELF, &td->ts->ru_start);
+	getrusage(RUSAGE_SELF, &td->ts.ru_start);
 
 	runtime[0] = runtime[1] = 0;
 	while (td->loops--) {
 		fio_gettime(&td->start, NULL);
-		memcpy(&td->ts->stat_sample_time, &td->start, sizeof(td->start));
+		memcpy(&td->ts.stat_sample_time, &td->start, sizeof(td->start));
 
 		if (td->ratemin)
-			memcpy(&td->lastrate, &td->ts->stat_sample_time, sizeof(td->lastrate));
+			memcpy(&td->lastrate, &td->ts.stat_sample_time, sizeof(td->lastrate));
 
 		clear_io_state(td);
 		prune_io_piece_log(td);
@@ -792,16 +792,18 @@ static void *thread_main(void *data)
 	}
 
 	update_rusage_stat(td);
-	fio_gettime(&td->end_time, NULL);
-	td->runtime[0] = runtime[0] / 1000;
-	td->runtime[1] = runtime[1] / 1000;
+	td->ts.runtime[0] = runtime[0] / 1000;
+	td->ts.runtime[1] = runtime[1] / 1000;
+	td->ts.total_run_time = mtime_since_now(&td->epoch);
+	td->ts.io_bytes[0] = td->io_bytes[0];
+	td->ts.io_bytes[1] = td->io_bytes[1];
 
-	if (td->ts->bw_log)
-		finish_log(td, td->ts->bw_log, "bw");
-	if (td->ts->slat_log)
-		finish_log(td, td->ts->slat_log, "slat");
-	if (td->ts->clat_log)
-		finish_log(td, td->ts->clat_log, "clat");
+	if (td->ts.bw_log)
+		finish_log(td, td->ts.bw_log, "bw");
+	if (td->ts.slat_log)
+		finish_log(td, td->ts.slat_log, "slat");
+	if (td->ts.clat_log)
+		finish_log(td, td->ts.clat_log, "clat");
 	if (td->write_iolog_file)
 		write_iolog_close(td);
 	if (td->exec_postrun) {
