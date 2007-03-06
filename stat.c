@@ -579,8 +579,8 @@ static void __sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
 		mean = src->mean;
 		S = src->S;
 	} else {
-		mean = ((src->mean * (double) nr) + dst->mean) / ((double) nr + 1.0);
-		S = ((src->S * (double) nr) + dst->S) / ((double) nr + 1.0);
+		mean = ((src->mean * (double) (nr - 1)) + dst->mean) / ((double) nr);
+		S = ((src->S * (double) (nr - 1)) + dst->S) / ((double) nr);
 	}
 
 	dst->mean = mean;
