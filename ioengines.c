@@ -261,6 +261,7 @@ int td_io_commit(struct thread_data *td)
 int td_io_open_file(struct thread_data *td, struct fio_file *f)
 {
 	if (!td->io_ops->open_file(td, f)) {
+		f->open = 1;
 		td->nr_open_files++;
 		return 0;
 	}
@@ -270,7 +271,10 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 
 void td_io_close_file(struct thread_data *td, struct fio_file *f)
 {
-	if (td->io_ops->close_file)
-		td->io_ops->close_file(td, f);
-	td->nr_open_files--;
+	if (f->open) {
+		if (td->io_ops->close_file)
+			td->io_ops->close_file(td, f);
+		td->nr_open_files--;
+		f->open = 0;
+	}
 }

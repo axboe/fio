@@ -244,6 +244,7 @@ struct fio_file {
 	unsigned int last_free_lookup;
 
 	unsigned int unlink;
+	unsigned int open;
 };
 
 /*
