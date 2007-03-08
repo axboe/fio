@@ -227,7 +227,7 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 
 	if (!td->invalidate_cache)
 		return 0;
-	if (!td->odirect)
+	if (td->odirect)
 		return 0;
 
 	/*
