@@ -107,7 +107,7 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 
 	if (td_random(td)) {
 		unsigned long long max_blocks = f->file_size / td->min_bs[ddir];
-		int loops = 2;
+		int loops = 5;
 
 		do {
 			r = os_random_long(&td->random_state);
