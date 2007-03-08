@@ -8,30 +8,6 @@
 #include "fio.h"
 #include "os.h"
 
-int open_file(struct thread_data *td, struct fio_file *f, int flags, int perm)
-{
-	if (flags & O_CREAT)
-		f->fd = open(f->file_name, flags, perm);
-	else
-		f->fd = open(f->file_name, flags);
-
-	if (f->fd != -1) {
-		td->nr_open_files++;
-		return 0;
-	}
-
-	return 1;
-}
-
-void close_file(struct thread_data *td, struct fio_file *f)
-{
-	if (f->fd != -1) {
-		close(f->fd);
-		f->fd = -1;
-		td->nr_open_files--;
-	}
-}
-
 /*
  * Check if the file exists and it's large enough.
  */
@@ -39,7 +15,8 @@ static int file_ok(struct thread_data *td, struct fio_file *f)
 {
 	struct stat st;
 
-	if (td->filetype != FIO_TYPE_FILE)
+	if (td->filetype != FIO_TYPE_FILE ||
+	    (td->io_ops->flags & FIO_DISKLESSIO))
 		return 0;
 
 	if (lstat(f->file_name, &st) == -1)
@@ -248,17 +225,20 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 {
 	int ret = 0;
 
+	if (!td->invalidate_cache)
+		return 0;
+	if (!td->odirect)
+		return 0;
+
 	/*
 	 * FIXME: add blockdev flushing too
 	 */
-	if (td->io_ops->flags & FIO_MMAPIO)
+	if (f->mmap)
 		ret = madvise(f->mmap, f->file_size, MADV_DONTNEED);
 	else if (td->filetype == FIO_TYPE_FILE) {
-		if (!td->odirect)
-			ret = fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_DONTNEED);
+		ret = fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_DONTNEED);
 	} else if (td->filetype == FIO_TYPE_BD) {
-		if (!td->odirect)
-			ret = blockdev_invalidate_cache(f->fd);
+		ret = blockdev_invalidate_cache(f->fd);
 	} else if (td->filetype == FIO_TYPE_CHAR)
 		ret = 0;
 
@@ -270,99 +250,15 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 	return ret;
 }
 
-static int __setup_file_mmap(struct thread_data *td, struct fio_file *f)
+void generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 {
-	int flags;
-
-	if (td_rw(td))
-		flags = PROT_READ | PROT_WRITE;
-	else if (td_write(td)) {
-		flags = PROT_WRITE;
-
-		if (td->verify != VERIFY_NONE)
-			flags |= PROT_READ;
-	} else
-		flags = PROT_READ;
-
-	f->mmap = mmap(NULL, f->file_size, flags, MAP_SHARED, f->fd, f->file_offset);
-	if (f->mmap == MAP_FAILED) {
-		f->mmap = NULL;
-		td_verror(td, errno, "mmap");
-		return 1;
-	}
-
-	if (td->invalidate_cache && file_invalidate_cache(td, f))
-		return 1;
-
-	if (!td_random(td)) {
-		if (madvise(f->mmap, f->file_size, MADV_SEQUENTIAL) < 0) {
-			td_verror(td, errno, "madvise");
-			return 1;
-		}
-	} else {
-		if (madvise(f->mmap, f->file_size, MADV_RANDOM) < 0) {
-			td_verror(td, errno, "madvise");
-			return 1;
-		}
-	}
-
-	return 0;
+	close(f->fd);
+	f->fd = -1;
 }
 
-static int setup_files_mmap(struct thread_data *td)
-{
-	struct fio_file *f;
-	int i, err = 0;
-
-	for_each_file(td, f, i) {
-		err = __setup_file_mmap(td, f);
-		if (err)
-			break;
-	}
-
-	return err;
-}
-
-static int __setup_file_plain(struct thread_data *td, struct fio_file *f)
-{
-	if (td->invalidate_cache && file_invalidate_cache(td, f))
-		return 1;
-
-	if (!td_random(td)) {
-		if (fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_SEQUENTIAL) < 0) {
-			td_verror(td, errno, "fadvise");
-			return 1;
-		}
-	} else {
-		if (fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_RANDOM) < 0) {
-			td_verror(td, errno, "fadvise");
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-static int setup_files_plain(struct thread_data *td)
-{
-	struct fio_file *f;
-	int i, err = 0;
-
-	for_each_file(td, f, i) {
-		err = __setup_file_plain(td, f);
-		if (err)
-			break;
-	}
-
-	return err;
-}
-
-static int setup_file(struct thread_data *td, struct fio_file *f)
+int generic_open_file(struct thread_data *td, struct fio_file *f)
 {
 	int flags = 0;
-
-	if (td->io_ops->flags & FIO_SELFOPEN)
-		return 0;
 
 	if (td->odirect)
 		flags |= OS_O_DIRECT;
@@ -379,14 +275,14 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 			flags |= O_CREAT;
 		}
 
-		open_file(td, f, flags, 0600);
+		f->fd = open(f->file_name, flags, 0600);
 	} else {
 		if (td->filetype == FIO_TYPE_CHAR)
 			flags |= O_RDWR;
 		else
 			flags |= O_RDONLY;
 
-		open_file(td, f, flags, 0);
+		f->fd = open(f->file_name, flags);
 	}
 
 	if (f->fd == -1) {
@@ -398,12 +294,41 @@ static int setup_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	if (get_file_size(td, f)) {
-		close_file(td, f);
-		return 1;
+	if (get_file_size(td, f))
+		goto err;
+
+	if (file_invalidate_cache(td, f))
+		goto err;
+
+	if (!td_random(td)) {
+		if (fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_SEQUENTIAL) < 0) {
+			td_verror(td, errno, "fadvise");
+			goto err;
+		}
+	} else {
+		if (fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_RANDOM) < 0) {
+			td_verror(td, errno, "fadvise");
+			goto err;
+		}
 	}
 
 	return 0;
+err:
+	close(f->fd);
+	return 1;
+}
+
+int reopen_file(struct thread_data *td, struct fio_file *f)
+{
+	f->last_free_lookup = 0;
+	f->last_completed_pos = 0;
+	f->last_pos = 0;
+
+	if (f->file_map)
+		memset(f->file_map, 0, f->num_maps * sizeof(long));
+
+	printf("setting up %s again\n", f->file_name);
+	return td_io_open_file(td, f);
 }
 
 int open_files(struct thread_data *td)
@@ -412,8 +337,11 @@ int open_files(struct thread_data *td)
 	int i, err = 0;
 
 	for_each_file(td, f, i) {
-		err = setup_file(td, f);
+		err = td_io_open_file(td, f);
 		if (err)
+			break;
+
+		if (td->open_files == td->nr_open_files)
 			break;
 	}
 
@@ -421,7 +349,7 @@ int open_files(struct thread_data *td)
 		return 0;
 
 	for_each_file(td, f, i)
-		close_file(td, f);
+		td_io_close_file(td, f);
 
 	return err;
 }
@@ -464,13 +392,8 @@ int setup_files(struct thread_data *td)
 
 	td->total_io_size = td->io_size * td->loops;
 
-	if (td->io_ops->flags & FIO_MMAPIO)
-		err = setup_files_mmap(td);
-	else
-		err = setup_files_plain(td);
-
 	for_each_file(td, f, i)
-		close_file(td, f);
+		td_io_close_file(td, f);
 
 	return err;
 }
@@ -488,12 +411,7 @@ void close_files(struct thread_data *td)
 			f->file_name = NULL;
 		}
 
-		close_file(td, f);
-
-		if (f->mmap) {
-			munmap(f->mmap, f->file_size);
-			f->mmap = NULL;
-		}
+		td_io_close_file(td, f);
 	}
 
 	td->filename = NULL;

@@ -60,6 +60,8 @@ static struct ioengine_ops ioengine = {
 	.version	= FIO_IOOPS_VERSION,
 	.prep		= fio_syncio_prep,
 	.queue		= fio_syncio_queue,
+	.open_file	= generic_open_file,
+	.close_file	= generic_close_file,
 	.flags		= FIO_SYNCIO,
 };
 

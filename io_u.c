@@ -107,7 +107,7 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 
 	if (td_random(td)) {
 		unsigned long long max_blocks = f->file_size / td->min_bs[ddir];
-		int loops = 5;
+		int loops = 2;
 
 		do {
 			r = os_random_long(&td->random_state);
@@ -335,7 +335,7 @@ static struct fio_file *get_next_file_rand(struct thread_data *td)
 	do {
 		long r = os_random_long(&td->next_file_state);
 
-		fileno = (unsigned int) ((double) (td->nr_files - 1) * r / (RAND_MAX + 1.0));
+		fileno = (unsigned int) ((double) (td->open_files - 1) * r / (RAND_MAX + 1.0));
 		f = &td->files[fileno];
 		if (f->fd != -1)
 			return f;
@@ -354,7 +354,7 @@ static struct fio_file *get_next_file_rr(struct thread_data *td)
 		f = &td->files[td->next_file];
 
 		td->next_file++;
-		if (td->next_file >= td->nr_files)
+		if (td->next_file >= td->open_files)
 			td->next_file = 0;
 
 		if (f->fd != -1)
@@ -441,7 +441,15 @@ struct io_u *get_io_u(struct thread_data *td)
 		 * No more to do for this file, close it
 		 */
 		io_u->file = NULL;
-		close_file(td, f);
+		td_io_close_file(td, f);
+
+		/*
+		 * probably not the right place to do this, but see
+		 * if we need to open a new file
+		 */
+		if (td->nr_open_files < td->nr_files &&
+		    td->open_files != td->nr_files)
+			reopen_file(td, f);
 	} while (1);
 
 	if (td->zone_bytes >= td->zone_size) {

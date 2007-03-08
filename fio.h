@@ -212,10 +212,8 @@ enum fio_filetype {
 enum fio_ioengine_flags {
 	FIO_SYNCIO	= 1 << 0,	/* io engine has synchronous ->queue */
 	FIO_CPUIO	= 1 << 1,	/* cpu burner, doesn't do real io */
-	FIO_MMAPIO	= 1 << 2,	/* uses memory mapped io */
-	FIO_RAWIO	= 1 << 3,	/* some sort of direct/raw io */
-	FIO_DISKLESSIO	= 1 << 4,	/* no disk involved */
-	FIO_SELFOPEN	= 1 << 5,       /* opens its own devices */
+	FIO_RAWIO	= 1 << 2,	/* some sort of direct/raw io */
+	FIO_DISKLESSIO	= 1 << 3,	/* no disk involved */
 };
 
 /*
@@ -381,6 +379,7 @@ struct thread_data {
 	unsigned int nice;
 	unsigned int file_service_type;
 	unsigned int group_reporting;
+	unsigned int open_files;
 
 	char *read_iolog_file;
 	char *write_iolog_file;
@@ -634,9 +633,10 @@ extern int __must_check init_random_state(struct thread_data *);
 extern void close_files(struct thread_data *);
 extern int __must_check setup_files(struct thread_data *);
 extern int __must_check open_files(struct thread_data *);
-extern int open_file(struct thread_data *, struct fio_file *, int, int);
-extern void close_file(struct thread_data *, struct fio_file *);
+extern int reopen_file(struct thread_data *, struct fio_file *);
 extern int __must_check file_invalidate_cache(struct thread_data *, struct fio_file *);
+extern int __must_check generic_open_file(struct thread_data *, struct fio_file *);
+extern void generic_close_file(struct thread_data *, struct fio_file *);
 
 /*
  * ETA/status stuff
@@ -700,6 +700,8 @@ extern int __must_check td_io_queue(struct thread_data *, struct io_u *);
 extern int __must_check td_io_sync(struct thread_data *, struct fio_file *);
 extern int __must_check td_io_getevents(struct thread_data *, int, int, struct timespec *);
 extern int __must_check td_io_commit(struct thread_data *);
+extern int __must_check td_io_open_file(struct thread_data *, struct fio_file *);
+extern void td_io_close_file(struct thread_data *, struct fio_file *);
 
 /*
  * This is a pretty crappy semaphore implementation, but with the use that fio
@@ -751,12 +753,13 @@ struct ioengine_ops {
 	struct io_u *(*event)(struct thread_data *, int);
 	int (*cancel)(struct thread_data *, struct io_u *);
 	void (*cleanup)(struct thread_data *);
+	int (*open_file)(struct thread_data *, struct fio_file *);
+	void (*close_file)(struct thread_data *, struct fio_file *);
 	void *data;
 	void *dlhandle;
-	unsigned long priv;
 };
 
-#define FIO_IOOPS_VERSION	5
+#define FIO_IOOPS_VERSION	6
 
 extern struct ioengine_ops *load_ioengine(struct thread_data *, const char *);
 extern void register_ioengine(struct ioengine_ops *);
@@ -773,7 +776,7 @@ extern void close_ioengine(struct thread_data *);
 #define for_each_td(td, i)	\
 	for ((i) = 0, (td) = &threads[0]; (i) < (int) thread_number; (i)++, (td)++)
 #define for_each_file(td, f, i)	\
-	for ((i) = 0, (f) = &(td)->files[0]; (i) < (int) (td)->nr_files; (i)++, (f)++)
+	for ((i) = 0, (f) = &(td)->files[0]; (i) < (int) (td)->open_files; (i)++, (f)++)
 
 #define fio_assert(td, cond)	do {	\
 	if (!(cond)) {			\

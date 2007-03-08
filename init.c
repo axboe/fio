@@ -182,6 +182,12 @@ static struct fio_option options[] = {
 		.def	= "1",
 	},
 	{
+		.name	= "openfiles",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(open_files),
+		.help	= "Number of files to keep open at the same time",
+	},
+	{
 		.name	= "file_service_type",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(file_service_type),
@@ -674,13 +680,13 @@ static void fixup_options(struct thread_data *td)
 		td->iodepth = 1;
 	else {
 		if (!td->iodepth)
-			td->iodepth = td->nr_files;
+			td->iodepth = td->open_files;
 	}
 
 	/*
 	 * only really works for sequential io for now, and with 1 file
 	 */
-	if (td->zone_size && td_random(td) && td->nr_files == 1)
+	if (td->zone_size && td_random(td) && td->open_files == 1)
 		td->zone_size = 0;
 
 	/*
@@ -742,6 +748,9 @@ static void fixup_options(struct thread_data *td)
 	 */
 	if (td->iodepth_batch > td->iodepth || !td->iodepth_batch)
 		td->iodepth_batch = td->iodepth;
+
+	if (td->open_files > td->nr_files || !td->open_files)
+		td->open_files = td->nr_files;
 }
 
 /*
@@ -821,7 +830,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 			len = sprintf(tmp, "%s/", td->directory);
 		}
 
-		td->files = malloc(sizeof(struct fio_file) * td->nr_files);
+		td->files = malloc(sizeof(struct fio_file) * td->open_files);
 
 		for_each_file(td, f, i) {
 			memset(f, 0, sizeof(*f));
@@ -834,7 +843,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 			f->file_name = strdup(tmp);
 		}
 	} else {
-		td->nr_files = 1;
+		td->open_files = td->nr_files = 1;
 		td->files = malloc(sizeof(struct fio_file));
 		f = &td->files[0];
 

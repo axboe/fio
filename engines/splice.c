@@ -162,6 +162,8 @@ static struct ioengine_ops ioengine = {
 	.init		= fio_spliceio_init,
 	.queue		= fio_spliceio_queue,
 	.cleanup	= fio_spliceio_cleanup,
+	.open_file	= generic_open_file,
+	.close_file	= generic_close_file,
 	.flags		= FIO_SYNCIO,
 };
 

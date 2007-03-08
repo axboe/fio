@@ -26,6 +26,7 @@ struct sgio_data {
 	int *fd_flags;
 	void *sgbuf;
 	unsigned int bs;
+	int type_checked;
 };
 
 static void sgio_hdr_init(struct sgio_data *sd, struct sg_io_hdr *hdr,
@@ -317,10 +318,7 @@ static void fio_sgio_cleanup(struct thread_data *td)
 
 static int fio_sgio_init(struct thread_data *td)
 {
-	struct fio_file *f = &td->files[0];
 	struct sgio_data *sd;
-	unsigned int bs;
-	int ret;
 
 	sd = malloc(sizeof(*sd));
 	memset(sd, 0, sizeof(*sd));
@@ -337,25 +335,37 @@ static int fio_sgio_init(struct thread_data *td)
 
 	td->io_ops->data = sd;
 
+	/*
+	 * we want to do it, regardless of whether odirect is set or not
+	 */
+	td->override_sync = 1;
+	return 0;
+}
+
+static int fio_sgio_type_check(struct thread_data *td, struct fio_file *f)
+{
+	struct sgio_data *sd = td->io_ops->data;
+	unsigned int bs;
+
 	if (td->filetype == FIO_TYPE_BD) {
 		if (ioctl(f->fd, BLKSSZGET, &bs) < 0) {
 			td_verror(td, errno, "ioctl");
-			goto err;
+			return 1;
 		}
 	} else if (td->filetype == FIO_TYPE_CHAR) {
-		int version;
+		int version, ret;
 
 		if (ioctl(f->fd, SG_GET_VERSION_NUM, &version) < 0) {
 			td_verror(td, errno, "ioctl");
-			goto err;
+			return 1;
 		}
 
 		ret = fio_sgio_get_bs(td, &bs);
 		if (ret)
-			goto err;
+			return 1;
 	} else {
 		log_err("ioengine sgio only works on block devices\n");
-		goto err;
+		return 1;
 	}
 
 	sd->bs = bs;
@@ -365,20 +375,24 @@ static int fio_sgio_init(struct thread_data *td)
 		td->io_ops->event = NULL;
 	}
 
-	/*
-	 * we want to do it, regardless of whether odirect is set or not
-	 */
-	td->override_sync = 1;
 	return 0;
-err:
-	free(sd->events);
-	free(sd->cmds);
-	free(sd->fd_flags);
-	free(sd->pfds);
-	free(sd->sgbuf);
-	free(sd);
-	td->io_ops->data = NULL;
-	return 1;
+}
+
+static int fio_sgio_open(struct thread_data *td, struct fio_file *f)
+{
+	struct sgio_data *sd = td->io_ops->data;
+	int ret;
+
+	ret = generic_open_file(td, f);
+	if (ret)
+		return ret;
+
+	if (!sd->type_checked && fio_sgio_type_check(td, f)) {
+		generic_close_file(td, f);
+		return 1;
+	}
+
+	return 0;
 }
 
 static struct ioengine_ops ioengine = {
@@ -390,6 +404,8 @@ static struct ioengine_ops ioengine = {
 	.getevents	= fio_sgio_getevents,
 	.event		= fio_sgio_event,
 	.cleanup	= fio_sgio_cleanup,
+	.open_file	= fio_sgio_open,
+	.close_file	= generic_close_file,
 	.flags		= FIO_SYNCIO | FIO_RAWIO,
 };
 

@@ -14,17 +14,23 @@
 #include "../fio.h"
 #include "../os.h"
 
-#define send_to_net(td)	((td)->io_ops->priv)
+struct netio_data {
+	int listenfd;
+	int send_to_net;
+	char host[64];
+	struct sockaddr_in addr;
+};
 
 static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 {
+	struct netio_data *nd = td->io_ops->data;
 	struct fio_file *f = io_u->file;
 
 	/*
 	 * Make sure we don't see spurious reads to a receiver, and vice versa
 	 */
-	if ((send_to_net(td) && io_u->ddir == DDIR_READ) ||
-	    (!send_to_net(td) && io_u->ddir == DDIR_WRITE)) {
+	if ((nd->send_to_net && io_u->ddir == DDIR_READ) ||
+	    (!nd->send_to_net && io_u->ddir == DDIR_WRITE)) {
 		td_verror(td, EINVAL, "bad direction");
 		return 1;
 	}
@@ -77,64 +83,39 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 	return FIO_Q_COMPLETED;
 }
 
-static int fio_netio_setup_connect(struct thread_data *td, const char *host,
-				   unsigned short port)
+static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 {
-	struct sockaddr_in addr;
-	struct fio_file *f;
-	int i;
+	struct netio_data *nd = td->io_ops->data;
 
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-
-	if (inet_aton(host, &addr.sin_addr) != 1) {
-		struct hostent *hent;
-
-		hent = gethostbyname(host);
-		if (!hent) {
-			td_verror(td, errno, "gethostbyname");
-			return 1;
-		}
-
-		memcpy(&addr.sin_addr, hent->h_addr, 4);
+	f->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (f->fd < 0) {
+		td_verror(td, errno, "socket");
+		return 1;
 	}
 
-	for_each_file(td, f, i) {
-		f->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-		if (f->fd < 0) {
-			td_verror(td, errno, "socket");
-			return 1;
-		}
-
-		if (connect(f->fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-			td_verror(td, errno, "connect");
-			return 1;
-		}
+	if (connect(f->fd, (struct sockaddr *) &nd->addr, sizeof(nd->addr)) < 0) {
+		td_verror(td, errno, "connect");
+		return 1;
 	}
 
 	return 0;
-
 }
 
-static int fio_netio_accept_connections(struct thread_data *td, int fd,
-					struct sockaddr_in *addr)
+static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 {
-	socklen_t socklen = sizeof(*addr);
-	unsigned int accepts = 0;
+	struct netio_data *nd = td->io_ops->data;
+	socklen_t socklen = sizeof(nd->addr);
 	struct pollfd pfd;
+	int ret;
 
-	fprintf(f_out, "fio: waiting for %u connections\n", td->nr_files);
+	fprintf(f_out, "fio: waiting for connection\n");
 
 	/*
 	 * Accept loop. poll for incoming events, accept them. Repeat until we
 	 * have all connections.
 	 */
-	while (!td->terminate && accepts < td->nr_files) {
-		struct fio_file *f;
-		int ret, i;
-
-		pfd.fd = fd;
+	while (!td->terminate) {
+		pfd.fd = nd->listenfd;
 		pfd.events = POLLIN;
 
 		ret = poll(&pfd, 1, -1);
@@ -153,26 +134,52 @@ static int fio_netio_accept_connections(struct thread_data *td, int fd,
 		if (!(pfd.revents & POLLIN))
 			continue;
 
-		for_each_file(td, f, i) {
-			if (f->fd != -1)
-				continue;
-
-			f->fd = accept(fd, (struct sockaddr *) addr, &socklen);
-			if (f->fd < 0) {
-				td_verror(td, errno, "accept");
-				return 1;
-			}
-			accepts++;
-			break;
+		f->fd = accept(nd->listenfd, (struct sockaddr *) &nd->addr, &socklen);
+		if (f->fd < 0) {
+			td_verror(td, errno, "accept");
+			return 1;
 		}
+		break;
 	}
 
 	return 0;
 }
 
-static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
+
+static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
 {
-	struct sockaddr_in addr;
+	if (td_read(td))
+		return fio_netio_accept(td, f);
+	else
+		return fio_netio_connect(td, f);
+}
+
+static int fio_netio_setup_connect(struct thread_data *td, const char *host,
+				   unsigned short port)
+{
+	struct netio_data *nd = td->io_ops->data;
+
+	nd->addr.sin_family = AF_INET;
+	nd->addr.sin_port = htons(port);
+
+	if (inet_aton(host, &nd->addr.sin_addr) != 1) {
+		struct hostent *hent;
+
+		hent = gethostbyname(host);
+		if (!hent) {
+			td_verror(td, errno, "gethostbyname");
+			return 1;
+		}
+
+		memcpy(&nd->addr.sin_addr, hent->h_addr, 4);
+	}
+
+	return 0;
+}
+
+static int fio_netio_setup_listen(struct thread_data *td, short port)
+{
+	struct netio_data *nd = td->io_ops->data;
 	int fd, opt;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -193,12 +200,11 @@ static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 	}
 #endif
 
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	addr.sin_port = htons(port);
+	nd->addr.sin_family = AF_INET;
+	nd->addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	nd->addr.sin_port = htons(port);
 
-	if (bind(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+	if (bind(fd, (struct sockaddr *) &nd->addr, sizeof(nd->addr)) < 0) {
 		td_verror(td, errno, "bind");
 		return 1;
 	}
@@ -207,14 +213,16 @@ static int fio_netio_setup_listen(struct thread_data *td, unsigned short port)
 		return 1;
 	}
 
-	return fio_netio_accept_connections(td, fd, &addr);
+	nd->listenfd = fd;
+	return 0;
 }
 
 static int fio_netio_init(struct thread_data *td)
 {
-	char host[64], buf[128];
+	struct netio_data *nd = td->io_ops->data;
 	unsigned short port;
 	struct fio_file *f;
+	char host[64], buf[128];
 	char *sep;
 	int ret, i;
 
@@ -242,10 +250,10 @@ static int fio_netio_init(struct thread_data *td)
 	port = atoi(sep);
 
 	if (td_read(td)) {
-		send_to_net(td) = 0;
+		nd->send_to_net = 0;
 		ret = fio_netio_setup_listen(td, port);
 	} else {
-		send_to_net(td) = 1;
+		nd->send_to_net = 1;
 		ret = fio_netio_setup_connect(td, host, port);
 	}
 
@@ -264,8 +272,23 @@ static int fio_netio_init(struct thread_data *td)
 	return 0;
 }
 
-static int fio_netio_setup(struct thread_data fio_unused *td)
+static void fio_netio_cleanup(struct thread_data *td)
 {
+	struct netio_data *nd = td->io_ops->data;
+
+	if (nd) {
+		free(nd);
+		td->io_ops->data = NULL;
+	}
+}
+
+static int fio_netio_setup(struct thread_data *td)
+{
+	struct netio_data *nd = malloc(sizeof(*nd));
+
+	memset(nd, 0, sizeof(*nd));
+	nd->listenfd = -1;
+	td->io_ops->data = nd;
 	return 0;
 }
 
@@ -276,7 +299,10 @@ static struct ioengine_ops ioengine = {
 	.queue		= fio_netio_queue,
 	.setup		= fio_netio_setup,
 	.init		= fio_netio_init,
-	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_SELFOPEN,
+	.cleanup	= fio_netio_cleanup,
+	.open_file	= fio_netio_open_file,
+	.close_file	= generic_close_file,
+	.flags		= FIO_SYNCIO | FIO_DISKLESSIO,
 };
 
 static void fio_init fio_netio_register(void)

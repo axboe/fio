@@ -104,6 +104,23 @@ static void fio_skeleton_cleanup(struct thread_data *td)
 }
 
 /*
+ * Hook for opening the given file. Unless the engine has special
+ * needs, it usually just provides generic_file_open() as the handler.
+ */
+static int fio_skeleton_open(struct thread_data *td, struct fio_file *f)
+{
+	return generic_file_open(td, f);
+}
+
+/*
+ * Hook for closing a file. See fio_skeleton_open().
+ */
+static int fio_skeleton_close(struct thread_data *td, struct fio_file *f)
+{
+	generic_file_close(td, f);
+}
+
+/*
  * Note that the structure is exported, so that fio can get it via
  * dlsym(..., "ioengine");
  */
@@ -117,4 +134,6 @@ struct ioengine_ops ioengine = {
 	.getevents	= fio_skeleton_getevents,
 	.event		= fio_skeleton_event,
 	.cleanup	= fio_skeleton_cleanup,
+	.open_file	= fio_skeleton_open,
+	.close_file	= fio_skeleton_close,
 };

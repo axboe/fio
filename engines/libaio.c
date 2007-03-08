@@ -219,6 +219,8 @@ static struct ioengine_ops ioengine = {
 	.getevents	= fio_libaio_getevents,
 	.event		= fio_libaio_event,
 	.cleanup	= fio_libaio_cleanup,
+	.open_file	= generic_open_file,
+	.close_file	= generic_close_file,
 };
 
 #else /* FIO_HAVE_LIBAIO */

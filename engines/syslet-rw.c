@@ -317,6 +317,8 @@ static struct ioengine_ops ioengine = {
 	.getevents	= fio_syslet_getevents,
 	.event		= fio_syslet_event,
 	.cleanup	= fio_syslet_cleanup,
+	.open_file	= generic_open_file,
+	.close_file	= generic_close_file,
 };
 
 #else /* FIO_HAVE_SYSLET */

@@ -41,12 +41,19 @@ static int fio_null_setup(struct thread_data *td)
 	return 0;
 }
 
+static int fio_null_open(struct thread_data fio_unused *td,
+			 struct fio_file fio_unused *f)
+{
+	return 0;
+}
+
 static struct ioengine_ops ioengine = {
 	.name		= "null",
 	.version	= FIO_IOOPS_VERSION,
 	.setup		= fio_null_setup,
 	.queue		= fio_null_queue,
-	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_SELFOPEN,
+	.open_file	= fio_null_open,
+	.flags		= FIO_SYNCIO | FIO_DISKLESSIO,
 };
 
 static void fio_init fio_null_register(void)
