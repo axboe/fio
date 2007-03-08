@@ -655,7 +655,7 @@ void show_run_stats(void)
 		ts = &threadstats[i];
 
 		memset(ts, 0, sizeof(*ts));
-		for (j = 0; j < 2; j++) {
+		for (j = 0; j <= DDIR_WRITE; j++) {
 			ts->clat_stat[j].min_val = -1UL;
 			ts->slat_stat[j].min_val = -1UL;
 			ts->bw_stat[j].min_val = -1UL;
@@ -690,7 +690,7 @@ void show_run_stats(void)
 			ts->verror = td->verror;
 		}
 
-		for (l = 0; l < 2; l++) {
+		for (l = 0; l <= DDIR_WRITE; l++) {
 			sum_stat(&ts->clat_stat[l], &td->ts.clat_stat[l], idx);
 			sum_stat(&ts->slat_stat[l], &td->ts.slat_stat[l], idx);
 			sum_stat(&ts->bw_stat[l], &td->ts.bw_stat[l], idx);
@@ -737,7 +737,7 @@ void show_run_stats(void)
 		ts = &threadstats[i];
 		rs = &runstats[ts->groupid];
 
-		for (j = 0; j < 2; j++) {
+		for (j = 0; j <= DDIR_WRITE; j++) {
 			if (!ts->runtime[j])
 				continue;
 			if (ts->runtime[j] < rs->min_run[j] || !rs->min_run[j])
