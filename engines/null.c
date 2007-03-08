@@ -32,7 +32,6 @@ static int fio_null_setup(struct thread_data *td)
 	td->total_io_size = td->io_size;
 
 	for_each_file(td, f, i) {
-		f->fd = dup(STDOUT_FILENO);
 		f->real_file_size = td->total_io_size / td->nr_files;
 		f->file_size = f->real_file_size;
 	}
@@ -43,6 +42,7 @@ static int fio_null_setup(struct thread_data *td)
 static int fio_null_open(struct thread_data fio_unused *td,
 			 struct fio_file fio_unused *f)
 {
+	f->fd = 0;
 	return 0;
 }
 
