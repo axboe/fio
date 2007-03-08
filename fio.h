@@ -17,6 +17,7 @@
 #include "crc32.h"
 #include "arch.h"
 #include "os.h"
+#include "mutex.h"
 
 #ifdef FIO_HAVE_SYSLET
 #include "syslet.h"
@@ -431,7 +432,7 @@ struct thread_data {
 	unsigned long long io_bytes[2];
 	unsigned long long this_io_bytes[2];
 	unsigned long long zone_bytes;
-	volatile int mutex;
+	struct fio_sem *mutex;
 
 	/*
 	 * State for random io, a bitmap of blocks done vs not done
@@ -702,30 +703,6 @@ extern int __must_check td_io_getevents(struct thread_data *, int, int, struct t
 extern int __must_check td_io_commit(struct thread_data *);
 extern int __must_check td_io_open_file(struct thread_data *, struct fio_file *);
 extern void td_io_close_file(struct thread_data *, struct fio_file *);
-
-/*
- * This is a pretty crappy semaphore implementation, but with the use that fio
- * has (just signalling start/go conditions), it doesn't have to be better.
- * Naturally this would not work for any type of contended semaphore or
- * for real locking.
- */
-static inline void fio_sem_init(volatile int *sem, int val)
-{
-	*sem = val;
-}
-
-static inline void fio_sem_down(volatile int *sem)
-{
-	while (*sem == 0)
-		usleep(10000);
-
-	(*sem)--;
-}
-
-static inline void fio_sem_up(volatile int *sem)
-{
-	(*sem)++;
-}
 
 /*
  * If logging output to a file, stderr should go to both stderr and f_err

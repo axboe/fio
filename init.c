@@ -857,7 +857,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		f->file_offset = td->start_offset;
 	}
 		
-	fio_sem_init(&td->mutex, 0);
+	td->mutex = fio_sem_init(0);
 
 	td->ts.clat_stat[0].min_val = td->ts.clat_stat[1].min_val = ULONG_MAX;
 	td->ts.slat_stat[0].min_val = td->ts.slat_stat[1].min_val = ULONG_MAX;

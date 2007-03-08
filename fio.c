@@ -46,7 +46,7 @@ int thread_number = 0;
 int shm_id = 0;
 int temp_stall_ts;
 
-static volatile int startup_sem;
+static struct fio_sem *startup_sem;
 static volatile int fio_abort;
 static int exit_value;
 
@@ -731,8 +731,8 @@ static void *thread_main(void *data)
 		goto err;
 
 	td_set_runstate(td, TD_INITIALIZED);
-	fio_sem_up(&startup_sem);
-	fio_sem_down(&td->mutex);
+	fio_sem_up(startup_sem);
+	fio_sem_down(td->mutex);
 
 	if (!td->create_serialize && setup_files(td))
 		goto err;
@@ -930,6 +930,8 @@ reaped:
 				perror("pthread_join");
 		}
 
+		fio_sem_remove(td->mutex);
+
 		(*nr_running)--;
 		(*m_rate) -= td->ratemin;
 		(*t_rate) -= td->rate;
@@ -1030,7 +1032,6 @@ static void run_threads(void)
 			 */
 			td_set_runstate(td, TD_CREATED);
 			map[this_jobs++] = td;
-			fio_sem_init(&startup_sem, 1);
 			nr_started++;
 
 			if (td->use_thread) {
@@ -1039,14 +1040,13 @@ static void run_threads(void)
 					nr_started--;
 				}
 			} else {
-				if (fork())
-					fio_sem_down(&startup_sem);
-				else {
+				if (!fork()) {
 					int ret = fork_main(shm_id, i);
 
 					exit(ret);
 				}
 			}
+			fio_sem_down(startup_sem);
 		}
 
 		/*
@@ -1101,7 +1101,7 @@ static void run_threads(void)
 			m_rate += td->ratemin;
 			t_rate += td->rate;
 			todo--;
-			fio_sem_up(&td->mutex);
+			fio_sem_up(td->mutex);
 		}
 
 		reap_threads(&nr_running, &t_rate, &m_rate);
@@ -1151,6 +1151,8 @@ int main(int argc, char *argv[])
 		setup_log(&agg_io_log[DDIR_WRITE]);
 	}
 
+	startup_sem = fio_sem_init(0);
+
 	set_genesis_time();
 
 	disk_util_timer_arm();
@@ -1165,5 +1167,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	fio_sem_remove(startup_sem);
 	return exit_value;
 }
