@@ -37,7 +37,6 @@ static int fio_null_setup(struct thread_data *td)
 		f->file_size = f->real_file_size;
 	}
 
-	td->nr_open_files = td->nr_files;
 	return 0;
 }
 

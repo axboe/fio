@@ -268,7 +268,6 @@ static int fio_netio_init(struct thread_data *td)
 		f->real_file_size = f->file_size;
 	}
 
-	td->nr_open_files = td->nr_files;
 	return 0;
 }
 
