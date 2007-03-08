@@ -335,7 +335,7 @@ static struct fio_file *get_next_file_rand(struct thread_data *td)
 	do {
 		long r = os_random_long(&td->next_file_state);
 
-		fileno = (unsigned int) ((double) (td->open_files - 1) * r / (RAND_MAX + 1.0));
+		fileno = (unsigned int) ((double) (td->open_files * r) / (RAND_MAX + 1.0));
 		f = &td->files[fileno];
 		if (f->fd != -1)
 			return f;
