@@ -327,7 +327,6 @@ int reopen_file(struct thread_data *td, struct fio_file *f)
 	if (f->file_map)
 		memset(f->file_map, 0, f->num_maps * sizeof(long));
 
-	printf("setting up %s again\n", f->file_name);
 	return td_io_open_file(td, f);
 }
 
@@ -379,6 +378,8 @@ int setup_files(struct thread_data *td)
 	td->total_file_size = 0;
 	for_each_file(td, f, i)
 		td->total_file_size += f->file_size;
+
+	td->total_file_size = (td->total_file_size * td->nr_files) / td->open_files;
 
 	td->io_size = td->total_file_size;
 	if (td->io_size == 0) {

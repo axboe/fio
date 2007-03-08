@@ -811,7 +811,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td->filename)
 		td->nr_uniq_files = 1;
 	else
-		td->nr_uniq_files = td->nr_files;
+		td->nr_uniq_files = td->open_files;
 
 	if (td->filetype == FIO_TYPE_FILE || td->filename) {
 		char tmp[PATH_MAX];
