@@ -741,37 +741,29 @@ void show_run_stats(void)
 	}
 
 	for (i = 0; i < nr_ts; i++) {
-		unsigned long long rbw, wbw;
+		unsigned long long bw;
 
 		ts = &threadstats[i];
 		rs = &runstats[ts->groupid];
 
-		if (ts->runtime[0] < rs->min_run[0] || !rs->min_run[0])
-			rs->min_run[0] = ts->runtime[0];
-		if (ts->runtime[0] > rs->max_run[0])
-			rs->max_run[0] = ts->runtime[0];
-		if (ts->runtime[1] < rs->min_run[1] || !rs->min_run[1])
-			rs->min_run[1] = ts->runtime[1];
-		if (ts->runtime[1] > rs->max_run[1])
-			rs->max_run[1] = ts->runtime[1];
+		for (j = 0; j < 2; j++) {
+			if (!ts->runtime[j])
+				continue;
+			if (ts->runtime[j] < rs->min_run[j] || !rs->min_run[j])
+				rs->min_run[j] = ts->runtime[j];
+			if (ts->runtime[j] > rs->max_run[j])
+				rs->max_run[j] = ts->runtime[j];
 
-		rbw = wbw = 0;
-		if (ts->runtime[0])
-			rbw = ts->io_bytes[0] / (unsigned long long) ts->runtime[0];
-		if (ts->runtime[1])
-			wbw = ts->io_bytes[1] / (unsigned long long) ts->runtime[1];
+			bw = 0;
+			if (ts->runtime[j])
+				bw = ts->io_bytes[j] / (unsigned long long) ts->runtime[j];
+			if (bw < rs->min_bw[j])
+				rs->min_bw[j] = bw;
+			if (bw > rs->max_bw[j])
+				rs->max_bw[j] = bw;
 
-		if (rbw < rs->min_bw[0])
-			rs->min_bw[0] = rbw;
-		if (wbw < rs->min_bw[1])
-			rs->min_bw[1] = wbw;
-		if (rbw > rs->max_bw[0])
-			rs->max_bw[0] = rbw;
-		if (wbw > rs->max_bw[1])
-			rs->max_bw[1] = wbw;
-
-		rs->io_kb[0] += ts->io_bytes[0] >> 10;
-		rs->io_kb[1] += ts->io_bytes[1] >> 10;
+			rs->io_kb[j] += ts->io_bytes[j] >> 10;
+		}
 	}
 
 	for (i = 0; i < groupid + 1; i++) {
