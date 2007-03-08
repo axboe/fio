@@ -448,8 +448,14 @@ struct io_u *get_io_u(struct thread_data *td)
 		 * if we need to open a new file
 		 */
 		if (td->nr_open_files < td->nr_files &&
-		    td->open_files != td->nr_files)
-			reopen_file(td, f);
+		    td->open_files != td->nr_files) {
+			int ret = td_io_open_file(td, f);
+
+			if (ret) {
+				put_io_u(td, io_u);
+				return NULL;
+			}
+		}
 	} while (1);
 
 	if (td->zone_bytes >= td->zone_size) {

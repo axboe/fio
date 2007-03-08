@@ -260,13 +260,19 @@ int td_io_commit(struct thread_data *td)
 
 int td_io_open_file(struct thread_data *td, struct fio_file *f)
 {
-	if (!td->io_ops->open_file(td, f)) {
-		f->open = 1;
-		td->nr_open_files++;
-		return 0;
-	}
+	if (td->io_ops->open_file(td, f))
+		return 1;
 
-	return 1;
+	f->last_free_lookup = 0;
+	f->last_completed_pos = 0;
+	f->last_pos = 0;
+	f->open = 1;
+
+	if (f->file_map)
+		memset(f->file_map, 0, f->num_maps * sizeof(long));
+
+	td->nr_open_files++;
+	return 0;
 }
 
 void td_io_close_file(struct thread_data *td, struct fio_file *f)

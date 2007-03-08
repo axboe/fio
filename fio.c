@@ -656,10 +656,10 @@ static int switch_ioscheduler(struct thread_data *td)
 	return 0;
 }
 
-static void clear_io_state(struct thread_data *td)
+static int clear_io_state(struct thread_data *td)
 {
 	struct fio_file *f;
-	int i;
+	int i, ret;
 
 	td->ts.stat_io_bytes[0] = td->ts.stat_io_bytes[1] = 0;
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
@@ -667,16 +667,17 @@ static void clear_io_state(struct thread_data *td)
 
 	td->last_was_sync = 0;
 
+	for_each_file(td, f, i)
+		td_io_close_file(td, f);
+
+	ret = 0;
 	for_each_file(td, f, i) {
-		f->last_completed_pos = 0;
-
-		f->last_pos = 0;
-		if (td->io_ops->flags & FIO_SYNCIO)
-			lseek(f->fd, SEEK_SET, 0);
-
-		if (f->file_map)
-			memset(f->file_map, 0, f->num_maps * sizeof(long));
+		ret = td_io_open_file(td, f);
+		if (ret)
+			break;
 	}
+
+	return ret;
 }
 
 /*
@@ -687,6 +688,7 @@ static void *thread_main(void *data)
 {
 	unsigned long long runtime[2];
 	struct thread_data *td = data;
+	int clear_state;
 
 	if (!td->use_thread)
 		setsid();
@@ -751,6 +753,7 @@ static void *thread_main(void *data)
 	getrusage(RUSAGE_SELF, &td->ts.ru_start);
 
 	runtime[0] = runtime[1] = 0;
+	clear_state = 0;
 	while (td->loops--) {
 		fio_gettime(&td->start, NULL);
 		memcpy(&td->ts.stat_sample_time, &td->start, sizeof(td->start));
@@ -758,13 +761,17 @@ static void *thread_main(void *data)
 		if (td->ratemin)
 			memcpy(&td->lastrate, &td->ts.stat_sample_time, sizeof(td->lastrate));
 
-		clear_io_state(td);
+		if (clear_state && clear_io_state(td))
+			break;
+
 		prune_io_piece_log(td);
 
 		if (td->io_ops->flags & FIO_CPUIO)
 			do_cpuio(td);
 		else
 			do_io(td);
+
+		clear_state = 1;
 
 		if (td_read(td) && td->io_bytes[DDIR_READ])
 			runtime[DDIR_READ] += utime_since_now(&td->start);
@@ -777,7 +784,9 @@ static void *thread_main(void *data)
 		if (td->verify == VERIFY_NONE)
 			continue;
 
-		clear_io_state(td);
+		if (clear_io_state(td))
+			break;
+
 		fio_gettime(&td->start, NULL);
 
 		do_verify(td);

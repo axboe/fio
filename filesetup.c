@@ -318,18 +318,6 @@ err:
 	return 1;
 }
 
-int reopen_file(struct thread_data *td, struct fio_file *f)
-{
-	f->last_free_lookup = 0;
-	f->last_completed_pos = 0;
-	f->last_pos = 0;
-
-	if (f->file_map)
-		memset(f->file_map, 0, f->num_maps * sizeof(long));
-
-	return td_io_open_file(td, f);
-}
-
 int open_files(struct thread_data *td)
 {
 	struct fio_file *f;

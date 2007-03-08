@@ -634,7 +634,6 @@ extern int __must_check init_random_state(struct thread_data *);
 extern void close_files(struct thread_data *);
 extern int __must_check setup_files(struct thread_data *);
 extern int __must_check open_files(struct thread_data *);
-extern int reopen_file(struct thread_data *, struct fio_file *);
 extern int __must_check file_invalidate_cache(struct thread_data *, struct fio_file *);
 extern int __must_check generic_open_file(struct thread_data *, struct fio_file *);
 extern void generic_close_file(struct thread_data *, struct fio_file *);
