@@ -372,7 +372,7 @@ static void show_group_stats(struct group_run_stats *rs, int id)
 		p3 = num2str(rs->min_bw[i], 6, 1);
 		p4 = num2str(rs->max_bw[i], 6, 1);
 
-		fprintf(f_out, "%s: io=%siB, aggrb=%siB/s, minb=%siB/s, maxb=%siB/s, mint=%llumsec, maxt=%llumsec\n", ddir_str[i], p1, p2, p3, p4, rs->min_run[0], rs->max_run[0]);
+		fprintf(f_out, "%s: io=%siB, aggrb=%siB/s, minb=%siB/s, maxb=%siB/s, mint=%llumsec, maxt=%llumsec\n", ddir_str[i], p1, p2, p3, p4, rs->min_run[i], rs->max_run[i]);
 
 		free(p1);
 		free(p2);
@@ -590,7 +590,7 @@ static void show_thread_status_terse(struct thread_stat *ts,
 	fprintf(f_out, "\n");
 }
 
-static void __sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
+static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
 {
 	double mean, S;
 
@@ -614,18 +614,12 @@ static void __sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
 	dst->S = S;
 }
 
-static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
-{
-	__sum_stat(&dst[DDIR_READ], &src[DDIR_READ], nr);
-	__sum_stat(&dst[DDIR_WRITE], &src[DDIR_WRITE], nr);
-}
-
 void show_run_stats(void)
 {
 	struct group_run_stats *runstats, *rs;
 	struct thread_data *td;
 	struct thread_stat *threadstats, *ts;
-	int i, j, k, nr_ts, last_ts, members;
+	int i, j, k, l, nr_ts, last_ts, idx;
 
 	runstats = malloc(sizeof(struct group_run_stats) * (groupid + 1));
 
@@ -661,21 +655,20 @@ void show_run_stats(void)
 		ts = &threadstats[i];
 
 		memset(ts, 0, sizeof(*ts));
-		ts->clat_stat[0].min_val = -1UL;
-		ts->clat_stat[1].min_val = -1UL;
-		ts->slat_stat[0].min_val = -1UL;
-		ts->slat_stat[1].min_val = -1UL;
-		ts->bw_stat[0].min_val = -1UL;
-		ts->bw_stat[1].min_val = -1UL;
+		for (j = 0; j < 2; j++) {
+			ts->clat_stat[j].min_val = -1UL;
+			ts->slat_stat[j].min_val = -1UL;
+			ts->bw_stat[j].min_val = -1UL;
+		}
 	}
 
 	j = 0;
 	last_ts = -1;
-	members = 0;
+	idx = 0;
 	for_each_td(td, i) {
 		ts = &threadstats[j];
 
-		members++;
+		idx++;
 		ts->members++;
 
 		if (!ts->groupid) {
@@ -697,12 +690,17 @@ void show_run_stats(void)
 			ts->verror = td->verror;
 		}
 
-		sum_stat(ts->clat_stat, td->ts.clat_stat, members);
-		sum_stat(ts->slat_stat, td->ts.slat_stat, members);
-		sum_stat(ts->bw_stat, td->ts.bw_stat, members);
+		for (l = 0; l < 2; l++) {
+			sum_stat(&ts->clat_stat[l], &td->ts.clat_stat[l], idx);
+			sum_stat(&ts->slat_stat[l], &td->ts.slat_stat[l], idx);
+			sum_stat(&ts->bw_stat[l], &td->ts.bw_stat[l], idx);
 
-		ts->stat_io_bytes[0] += td->ts.stat_io_bytes[0];
-		ts->stat_io_bytes[1] += td->ts.stat_io_bytes[1];
+			ts->stat_io_bytes[l] += td->ts.stat_io_bytes[l];
+			ts->io_bytes[l] += td->ts.io_bytes[l];
+
+			if (ts->runtime[l] < td->ts.runtime[l])
+				ts->runtime[l] = td->ts.runtime[l];
+		}
 
 		ts->usr_time += td->ts.usr_time;
 		ts->sys_time += td->ts.sys_time;
@@ -714,18 +712,11 @@ void show_run_stats(void)
 			ts->io_u_lat[k] += td->ts.io_u_lat[k];
 
 		ts->total_io_u += td->ts.total_io_u;
-		ts->io_bytes[0] += td->ts.io_bytes[0];
-		ts->io_bytes[1] += td->ts.io_bytes[1];
-
-		if (ts->runtime[0] < td->ts.runtime[0])
-			ts->runtime[0] = td->ts.runtime[0];
-		if (ts->runtime[1] < td->ts.runtime[1])
-			ts->runtime[1] = td->ts.runtime[1];
 
 		ts->total_run_time += td->ts.total_run_time;
 
 		if (!td->group_reporting) {
-			members = 0;
+			idx = 0;
 			j++;
 			continue;
 		}
@@ -733,7 +724,7 @@ void show_run_stats(void)
 			continue;
 
 		if (last_ts != -1) {
-			members = 0;
+			idx = 0;
 			j++;
 		}
 
