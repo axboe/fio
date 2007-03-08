@@ -16,8 +16,8 @@ void fio_sem_remove(struct fio_sem *sem)
 
 struct fio_sem *fio_sem_init(int value)
 {
+	struct fio_sem *sem = NULL;
 	pthread_mutexattr_t attr;
-	struct fio_sem *sem;
 	char sem_name[32];
 	int fd;
 
@@ -30,7 +30,7 @@ struct fio_sem *fio_sem_init(int value)
 
 	if (ftruncate(fd, sizeof(struct fio_sem)) < 0) {
 		perror("ftruncate sem");
-		return NULL;
+		goto err;
 	}
 
 	sem = mmap(NULL, sizeof(struct fio_sem), PROT_READ | PROT_WRITE,
@@ -38,8 +38,8 @@ struct fio_sem *fio_sem_init(int value)
 	if (sem == MAP_FAILED) {
 		perror("mmap sem");
 		close(fd);
-		unlink(sem_name);
-		return NULL;
+		sem = NULL;
+		goto err;
 	}
 
 	close(fd);
@@ -61,7 +61,8 @@ struct fio_sem *fio_sem_init(int value)
 
 	return sem;
 err:
-	munmap(sem, sizeof(*sem));
+	if (sem)
+		munmap(sem, sizeof(*sem));
 	unlink(sem_name);
 	return NULL;
 }
