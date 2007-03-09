@@ -401,6 +401,9 @@ void close_files(struct thread_data *td)
 		}
 
 		td_io_close_file(td, f);
+
+		if (f->file_map)
+			free(f->file_map);
 	}
 
 	td->filename = NULL;
