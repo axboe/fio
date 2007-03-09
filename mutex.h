@@ -8,7 +8,7 @@ struct fio_sem {
 	pthread_cond_t cond;
 	unsigned int value;
 
-	char sem_name[32];
+	int sem_fd;
 };
 
 extern struct fio_sem *fio_sem_init(int);

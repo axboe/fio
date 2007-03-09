@@ -10,18 +10,17 @@
 
 void fio_sem_remove(struct fio_sem *sem)
 {
-	unlink(sem->sem_name);
+	close(sem->sem_fd);
 	munmap(sem, sizeof(*sem));
 }
 
 struct fio_sem *fio_sem_init(int value)
 {
+	char sem_name[] = "/tmp/.fio_sem.XXXXXX";
 	struct fio_sem *sem = NULL;
 	pthread_mutexattr_t attr;
-	char sem_name[32];
 	int fd;
 
-	sprintf(sem_name, "/tmp/.fio_lock.XXXXXX");
 	fd = mkstemp(sem_name);
 	if (fd < 0) {
 		perror("open sem");
@@ -42,9 +41,9 @@ struct fio_sem *fio_sem_init(int value)
 		goto err;
 	}
 
-	close(fd);
+	unlink(sem_name);
+	sem->sem_fd = fd;
 	sem->value = value;
-	strcpy(sem->sem_name, sem_name);
 
 	if (pthread_mutexattr_init(&attr)) {
 		perror("pthread_mutexattr_init");
@@ -62,7 +61,8 @@ struct fio_sem *fio_sem_init(int value)
 	return sem;
 err:
 	if (sem)
-		munmap(sem, sizeof(*sem));
+		fio_sem_remove(sem);
+
 	unlink(sem_name);
 	return NULL;
 }
