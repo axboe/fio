@@ -24,14 +24,17 @@ static struct io_u *fio_null_event(struct thread_data *td, int event)
 	return nd->io_us[event];
 }
 
-static int fio_null_getevents(struct thread_data *td, int fio_unused min,
+static int fio_null_getevents(struct thread_data *td, int min_events,
 			      int fio_unused max, struct timespec fio_unused *t)
 {
 	struct null_data *nd = td->io_ops->data;
-	int ret;
+	int ret = 0;
+	
+	if (min_events) {
+		ret = nd->events;
+		nd->events = 0;
+	}
 
-	ret = nd->events;
-	nd->events = 0;
 	return ret;
 }
 
@@ -39,7 +42,7 @@ static int fio_null_commit(struct thread_data *td)
 {
 	struct null_data *nd = td->io_ops->data;
 
-	nd->events = nd->queued;
+	nd->events += nd->queued;
 	nd->queued = 0;
 	return 0;
 }
