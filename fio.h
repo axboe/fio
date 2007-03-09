@@ -212,9 +212,8 @@ enum fio_filetype {
 
 enum fio_ioengine_flags {
 	FIO_SYNCIO	= 1 << 0,	/* io engine has synchronous ->queue */
-	FIO_CPUIO	= 1 << 1,	/* cpu burner, doesn't do real io */
-	FIO_RAWIO	= 1 << 2,	/* some sort of direct/raw io */
-	FIO_DISKLESSIO	= 1 << 3,	/* no disk involved */
+	FIO_RAWIO	= 1 << 1,	/* some sort of direct/raw io */
+	FIO_DISKLESSIO	= 1 << 2,	/* no disk involved */
 };
 
 /*

@@ -28,12 +28,6 @@ static int check_engine_ops(struct ioengine_ops *ops)
 		return 1;
 	}
 
-	/*
-	 * cpu thread doesn't need to provide anything
-	 */
-	if (ops->flags & FIO_CPUIO)
-		return 0;
-
 	if (!ops->queue) {
 		log_err("%s: no queue handler\n", ops->name);
 		return 1;

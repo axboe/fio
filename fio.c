@@ -362,31 +362,6 @@ static void do_verify(struct thread_data *td)
 }
 
 /*
- * Not really an io thread, all it does is burn CPU cycles in the specified
- * manner.
- */
-static void do_cpuio(struct thread_data *td)
-{
-	struct timeval e;
-	int split = 100 / td->cpuload;
-	int i = 0;
-
-	while (!td->terminate) {
-		fio_gettime(&e, NULL);
-
-		if (runtime_exceeded(td, &e))
-			break;
-
-		if (!(i % split))
-			__usec_sleep(10000);
-		else
-			usec_sleep(td, 10000);
-
-		i++;
-	}
-}
-
-/*
  * Main IO worker function. It retrieves io_u's to process and queues
  * and reaps them, checking for rate and errors along the way.
  */
@@ -566,9 +541,6 @@ static int init_io_u(struct thread_data *td)
 	int i, max_units;
 	char *p;
 
-	if (td->io_ops->flags & FIO_CPUIO)
-		return 0;
-
 	if (td->io_ops->flags & FIO_SYNCIO)
 		max_units = 1;
 	else
@@ -611,7 +583,7 @@ static int switch_ioscheduler(struct thread_data *td)
 	FILE *f;
 	int ret;
 
-	if (td->io_ops->flags & FIO_CPUIO)
+	if (td->io_ops->flags & FIO_DISKLESSIO)
 		return 0;
 
 	sprintf(tmp, "%s/queue/scheduler", td->sysfs_root);
@@ -772,10 +744,7 @@ static void *thread_main(void *data)
 
 		prune_io_piece_log(td);
 
-		if (td->io_ops->flags & FIO_CPUIO)
-			do_cpuio(td);
-		else
-			do_io(td);
+		do_io(td);
 
 		clear_state = 1;
 
@@ -878,7 +847,7 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		 * ->io_ops is NULL for a thread that has closed its
 		 * io engine
 		 */
-		if (td->io_ops && td->io_ops->flags & FIO_CPUIO)
+		if (td->io_ops && !strcmp(td->io_ops->name, "cpuio"))
 			cputhreads++;
 
 		if (!td->pid || td->runstate == TD_REAPED)

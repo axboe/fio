@@ -102,6 +102,7 @@ static struct fio_option options[] = {
 #ifdef FIO_HAVE_SYSLET
 			  { .ival = "syslet-rw", },
 #endif
+			  { .ival = "cpuio", },
 			  { .ival = "external", },
 			  },
 	},
@@ -474,7 +475,8 @@ static struct fio_option options[] = {
 		.name	= "cpuchunks",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(cpucycle),
-		.help	= "Length of the CPU burn cycles",
+		.help	= "Length of the CPU burn cycles (usecs)",
+		.def	= "50000",
 	},
 #ifdef FIO_HAVE_CPU_AFFINITY
 	{
@@ -902,7 +904,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	if (!terse_output) {
 		if (!job_add_num) {
-			if (td->io_ops->flags & FIO_CPUIO)
+			if (!strcmp(td->io_ops->name, "cpuio"))
 				fprintf(f_out, "%s: ioengine=cpu, cpuload=%u, cpucycle=%u\n", td->name, td->cpuload, td->cpucycle);
 			else {
 				char *c1, *c2, *c3, *c4;
@@ -957,7 +959,7 @@ int init_random_state(struct thread_data *td)
 	int fd, num_maps, blocks, i;
 	struct fio_file *f;
 
-	if (td->io_ops->flags & FIO_CPUIO)
+	if (td->io_ops->flags & FIO_DISKLESSIO)
 		return 0;
 
 	fd = open("/dev/urandom", O_RDONLY);

@@ -301,6 +301,12 @@ ioengine=str	Defines how the job issues io to the file. The following
 				or receive, if the latter only the port
 				argument is used.
 
+			cpu	Doesn't transfer any data, but burns CPU
+				cycles according to the cpuload= and
+				cpucycle= options. Setting cpuload=85
+				will cause that job to do nothing but burn
+				85% of the CPU.
+
 			external Prefix to specify loading an external
 				IO engine object file. Append the engine
 				filename, eg ioengine=external:/tmp/foo.o

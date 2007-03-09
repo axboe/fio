@@ -106,11 +106,11 @@ The job file parameters are:
 			posixaio for POSIX aio, sync for regular read/write io,
 			mmap for mmap'ed io, syslet-rw for syslet driven
 			read/write, splice for using splice/vmsplice,
-			sgio for direct SG_IO io, or net for network io. sgio
-			only works on Linux on SCSI (or SCSI-like devices,
-			such as usb-storage or sata/libata driven) devices.
-			Fio also has a null io engine, which is mainly used
-			for testing fio itself.
+			sgio for direct SG_IO io, net for network io, or cpuio
+			for a cycler burner load. sgio only works on Linux on
+			SCSI (or SCSI-like devices, such as usb-storage or
+			sata/libata driven) devices. Fio also has a null io
+			engine, which is mainly used for testing fio itself.
 	iodepth=x	For async io, allow 'x' ios in flight
 	overwrite=x	If 'x', layout a write file first.
 	nrfiles=x	Spread io load over 'x' number of files per job,
@@ -176,7 +176,7 @@ The job file parameters are:
 	ioscheduler=x	Use ioscheduler 'x' for this job.
 	cpuload=x	For a CPU io thread, percentage of CPU time to attempt
 			to burn.
-	cpuchunks=x	Split burn cycles into pieces of x.
+	cpuchunks=x	Split burn cycles into pieces of x usecs.
 
 
 Author
