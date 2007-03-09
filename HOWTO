@@ -253,6 +253,10 @@ bs_unaligned	If this option is given, any byte size value within bsrange
 
 nrfiles=int	Number of files to use for this job. Defaults to 1.
 
+openfiles=int	Number of files to keep open at the same time. Defaults to
+		the same as nrfiles, can be set smaller to limit the number
+		simultaneous opens.
+
 file_service_type=str  Defines how fio decides which file from a job to
 		service next. The following types are defined:
 
