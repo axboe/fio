@@ -734,6 +734,12 @@ static void *thread_main(void *data)
 	fio_sem_up(startup_sem);
 	fio_sem_down(td->mutex);
 
+	/*
+	 * the ->mutex semaphore is now no longer used, close it to avoid
+	 * eating a file descriptor
+	 */
+	fio_sem_remove(td->mutex);
+
 	if (!td->create_serialize && setup_files(td))
 		goto err;
 
@@ -929,8 +935,6 @@ reaped:
 			if (pthread_join(td->thread, (void *) &ret))
 				perror("pthread_join");
 		}
-
-		fio_sem_remove(td->mutex);
 
 		(*nr_running)--;
 		(*m_rate) -= td->ratemin;
