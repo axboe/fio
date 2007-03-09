@@ -22,7 +22,6 @@
 
 #define td_var_offset(var)	((size_t) &((struct thread_data *)0)->var)
 
-static int str_ioengine_cb(void *, const char *);
 static int str_mem_cb(void *, const char *);
 static int str_lockmem_cb(void *, unsigned long *);
 #ifdef FIO_HAVE_IOPRIO
@@ -80,8 +79,8 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "ioengine",
-		.type	= FIO_OPT_STR,
-		.cb	= str_ioengine_cb,
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(ioengine),
 		.help	= "IO engine to use",
 		.def	= "sync",
 		.posval	= {
@@ -774,6 +773,20 @@ static char *to_kmg(unsigned int val)
 	return buf;
 }
 
+/* External engines are specified by "external:name.o") */
+static const char *get_engine_name(const char *str)
+{
+	char *p = strstr(str, ":");
+
+	if (!p)
+		return str;
+
+	p++;
+	strip_blank_front(&p);
+	strip_blank_end(p);
+	return p;
+}
+
 /*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
@@ -786,6 +799,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	struct stat sb;
 	int numjobs, i;
 	struct fio_file *f;
+	const char *engine;
 
 	/*
 	 * the def_thread is just for options, it's not a real job
@@ -793,7 +807,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td == &def_thread)
 		return 0;
 
-	assert(td->io_ops);
+	engine = get_engine_name(td->ioengine);
+	td->io_ops = load_ioengine(td, engine);
+	if (!td->io_ops) {
+		log_err("fio: failed to load engine %s\n", engine);
+		return 1;
+	}
 
 	if (td->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
@@ -1041,32 +1060,6 @@ static int str_mem_cb(void *data, const char *mem)
 	}
 
 	return 0;
-}
-
-/* External engines are specified by "external:name.o") */
-static const char *get_engine_name(const char *str)
-{
-	char *p = strstr(str, ":");
-
-	if (!p)
-		return str;
-
-	p++;
-	strip_blank_front(&p);
-	strip_blank_end(p);
-	return p;
-}
-
-static int str_ioengine_cb(void *data, const char *str)
-{
-	struct thread_data *td = data;
-	const char *name = get_engine_name(str);
-
-	td->io_ops = load_ioengine(td, name);
-	if (td->io_ops)
-		return 0;
-
-	return 1;
 }
 
 static int str_lockmem_cb(void fio_unused *data, unsigned long *val)

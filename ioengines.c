@@ -158,10 +158,7 @@ void close_ioengine(struct thread_data *td)
 	if (td->io_ops->dlhandle)
 		dlclose(td->io_ops->dlhandle);
 
-#if 0
-	/* we can't do this for threads, so just leak it, it's exiting */
 	free(td->io_ops);
-#endif
 	td->io_ops = NULL;
 }
 
