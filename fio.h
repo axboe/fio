@@ -291,7 +291,7 @@ struct thread_stat {
 	 */
 	unsigned int io_u_map[FIO_IO_U_MAP_NR];
 	unsigned int io_u_lat[FIO_IO_U_LAT_NR];
-	unsigned long total_io_u;
+	unsigned long total_io_u[2];
 
 	unsigned long long io_bytes[2];
 	unsigned long runtime[2];
@@ -700,6 +700,7 @@ extern void io_u_queued(struct thread_data *, struct io_u *);
 extern void io_u_log_error(struct thread_data *, struct io_u *);
 extern void io_u_init_timeout(void);
 extern void io_u_set_timeout(struct thread_data *);
+extern void io_u_mark_depth(struct thread_data *, struct io_u *);
 
 /*
  * io engine entry points

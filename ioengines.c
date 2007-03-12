@@ -202,6 +202,8 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	if (io_u->ddir != DDIR_SYNC)
 		td->io_issues[io_u->ddir]++;
 
+	io_u_mark_depth(td, io_u);
+
 	ret = td->io_ops->queue(td, io_u);
 
 	if (ret == FIO_Q_QUEUED) {

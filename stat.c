@@ -16,16 +16,17 @@ static dev_t last_dev;
 /*
  * Cheesy number->string conversion, complete with carry rounding error.
  */
-static char *num2str(unsigned long num, int maxlen, int base)
+static char *num2str(unsigned long num, int maxlen, int base, int pow2)
 {
-	/*
-	 * could be passed in for 10^3 base, but every caller expects
-	 * 2^10 base right now.
-	 */
-	const unsigned int thousand = 1024;
-	char postfix[] = { 'K', 'M', 'G', 'P', 'E' };
+	char postfix[] = { ' ', 'K', 'M', 'G', 'P', 'E' };
+	unsigned int thousand;
 	char *buf;
 	int i;
+
+	if (pow2)
+		thousand = 1024;
+	else
+		thousand = 1000;
 
 	buf = malloc(128);
 
@@ -37,8 +38,10 @@ static char *num2str(unsigned long num, int maxlen, int base)
 
 		len = sprintf(buf, "%'lu", num);
 		if (len <= maxlen) {
-			buf[len] = postfix[i];
-			buf[len + 1] = '\0';
+			if (i >= 1) {
+				buf[len] = postfix[i];
+				buf[len + 1] = '\0';
+			}
 			return buf;
 		}
 
@@ -367,10 +370,10 @@ static void show_group_stats(struct group_run_stats *rs, int id)
 		if (!rs->max_run[i])
 			continue;
 
-		p1 = num2str(rs->io_kb[i], 6, 1);
-		p2 = num2str(rs->agg[i], 6, 1);
-		p3 = num2str(rs->min_bw[i], 6, 1);
-		p4 = num2str(rs->max_bw[i], 6, 1);
+		p1 = num2str(rs->io_kb[i], 6, 1000, 1);
+		p2 = num2str(rs->agg[i], 6, 1000, 1);
+		p3 = num2str(rs->min_bw[i], 6, 1000, 1);
+		p4 = num2str(rs->max_bw[i], 6, 1000, 1);
 
 		fprintf(f_out, "%s: io=%siB, aggrb=%siB/s, minb=%siB/s, maxb=%siB/s, mint=%llumsec, maxt=%llumsec\n", ddir_str[i], p1, p2, p3, p4, rs->min_run[i], rs->max_run[i]);
 
@@ -412,6 +415,9 @@ static void show_disk_util(void)
 	}
 }
 
+#define ts_total_io_u(ts)	\
+	((ts)->total_io_u[0] + (ts)->total_io_u[1])
+
 static void stat_calc_dist(struct thread_stat *ts, double *io_u_dist)
 {
 	int i;
@@ -420,7 +426,7 @@ static void stat_calc_dist(struct thread_stat *ts, double *io_u_dist)
 	 * Do depth distribution calculations
 	 */
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
-		io_u_dist[i] = (double) ts->io_u_map[i] / (double) ts->total_io_u;
+		io_u_dist[i] = (double) ts->io_u_map[i] / (double) ts_total_io_u(ts);
 		io_u_dist[i] *= 100.0;
 	}
 }
@@ -433,7 +439,7 @@ static void stat_calc_lat(struct thread_stat *ts, double *io_u_lat)
 	 * Do latency distribution calculations
 	 */
 	for (i = 0; i < FIO_IO_U_LAT_NR; i++) {
-		io_u_lat[i] = (double) ts->io_u_lat[i] / (double) ts->total_io_u;
+		io_u_lat[i] = (double) ts->io_u_lat[i] / (double) ts_total_io_u(ts);
 		io_u_lat[i] *= 100.0;
 	}
 }
@@ -443,21 +449,24 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 {
 	const char *ddir_str[] = { "read ", "write" };
 	unsigned long min, max;
-	unsigned long long bw;
+	unsigned long long bw, iops;
 	double mean, dev;
-	char *io_p, *bw_p;
+	char *io_p, *bw_p, *iops_p;
 
 	if (!ts->runtime[ddir])
 		return;
 
 	bw = ts->io_bytes[ddir] / ts->runtime[ddir];
-	io_p = num2str(ts->io_bytes[ddir] >> 10, 6, 1);
-	bw_p = num2str(bw, 6, 1);
+	iops = (1000 * ts->total_io_u[ddir]) / ts->runtime[ddir];
+	io_p = num2str(ts->io_bytes[ddir] >> 10, 6, 1000, 1);
+	bw_p = num2str(bw, 6, 1000, 1);
+	iops_p = num2str(iops, 6, 1, 0);
 
-	fprintf(f_out, "  %s: io=%siB, bw=%siB/s, runt=%6lumsec\n", ddir_str[ddir], io_p, bw_p, ts->runtime[ddir]);
+	fprintf(f_out, "  %s: io=%siB, bw=%siB/s, iops=%s, runt=%6lumsec\n", ddir_str[ddir], io_p, bw_p, iops_p, ts->runtime[ddir]);
 
 	free(io_p);
 	free(bw_p);
+	free(iops_p);
 
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
 		fprintf(f_out, "    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
@@ -711,7 +720,8 @@ void show_run_stats(void)
 		for (k = 0; k < FIO_IO_U_LAT_NR; k++)
 			ts->io_u_lat[k] += td->ts.io_u_lat[k];
 
-		ts->total_io_u += td->ts.total_io_u;
+		for (k = 0; k <= DDIR_WRITE; k++)
+			ts->total_io_u[k] += td->ts.total_io_u[k];
 
 		ts->total_run_time += td->ts.total_run_time;
 

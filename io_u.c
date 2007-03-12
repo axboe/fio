@@ -265,9 +265,12 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-static void io_u_mark_depth(struct thread_data *td)
+void io_u_mark_depth(struct thread_data *td, struct io_u *io_u)
 {
 	int index = 0;
+
+	if (io_u->ddir == DDIR_SYNC)
+		return;
 
 	switch (td->cur_depth) {
 	default:
@@ -287,7 +290,7 @@ static void io_u_mark_depth(struct thread_data *td)
 	}
 
 	td->ts.io_u_map[index]++;
-	td->ts.total_io_u++;
+	td->ts.total_io_u[io_u->ddir]++;
 }
 
 static void io_u_mark_latency(struct thread_data *td, unsigned long msec)
@@ -410,7 +413,6 @@ struct io_u *__get_io_u(struct thread_data *td)
 		list_del(&io_u->list);
 		list_add(&io_u->list, &td->io_u_busylist);
 		td->cur_depth++;
-		io_u_mark_depth(td);
 	}
 
 	return io_u;
