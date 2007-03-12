@@ -214,6 +214,7 @@ enum fio_ioengine_flags {
 	FIO_SYNCIO	= 1 << 0,	/* io engine has synchronous ->queue */
 	FIO_RAWIO	= 1 << 1,	/* some sort of direct/raw io */
 	FIO_DISKLESSIO	= 1 << 2,	/* no disk involved */
+	FIO_NOEXTEND	= 1 << 3,	/* engine can't extend file */
 };
 
 /*

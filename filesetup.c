@@ -98,7 +98,7 @@ err:
 static int create_files(struct thread_data *td)
 {
 	struct fio_file *f;
-	int i, err, need_create;
+	int i, err, need_create, can_extend;
 
 	for_each_file(td, f, i)
 		f->file_size = td->total_file_size / td->nr_files;
@@ -106,7 +106,8 @@ static int create_files(struct thread_data *td)
 	/*
 	 * unless specifically asked for overwrite, let normal io extend it
 	 */
-	if (!td->overwrite)
+	can_extend = !td->overwrite && !(td->io_ops->flags & FIO_NOEXTEND);
+	if (can_extend)
 		return 0;
 
 	need_create = 0;
@@ -114,7 +115,7 @@ static int create_files(struct thread_data *td)
 		for_each_file(td, f, i) {
 			int file_there = !file_ok(td, f);
 
-			if (file_there && td_write(td) && !td->overwrite) {
+			if (file_there && td_write(td) && !can_extend) {
 				unlink(f->file_name);
 				file_there = 0;
 			}
@@ -225,8 +226,6 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 {
 	int ret = 0;
 
-	if (!td->invalidate_cache)
-		return 0;
 	if (td->odirect)
 		return 0;
 
@@ -268,12 +267,8 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	if (td_write(td) || td_rw(td)) {
 		flags |= O_RDWR;
 
-		if (td->filetype == FIO_TYPE_FILE) {
-			if (!td->overwrite)
-				flags |= O_TRUNC;
-
+		if (td->filetype == FIO_TYPE_FILE)
 			flags |= O_CREAT;
-		}
 
 		f->fd = open(f->file_name, flags, 0600);
 	} else {
@@ -297,7 +292,7 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	if (get_file_size(td, f))
 		goto err;
 
-	if (file_invalidate_cache(td, f))
+	if (td->invalidate_cache && file_invalidate_cache(td, f))
 		goto err;
 
 	if (!td_random(td)) {

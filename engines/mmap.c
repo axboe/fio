@@ -42,28 +42,6 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 	return FIO_Q_COMPLETED;
 }
 
-static int fio_mmapio_init(struct thread_data *td)
-{
-	struct fio_file *f;
-	int i;
-
-	if (!td_write(td))
-		return 0;
-
-	/*
-	 * We need to truncate the files to the right size, if
-	 * we are writing to it.
-	 */
-	for_each_file(td, f, i) {
-		if (ftruncate(f->fd, f->file_size) < 0) {
-			td_verror(td, errno, "ftruncate");
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 static int fio_mmapio_open(struct thread_data *td, struct fio_file *f)
 {
 	int ret, flags;
@@ -107,9 +85,7 @@ static int fio_mmapio_open(struct thread_data *td, struct fio_file *f)
 	return 0;
 
 err:
-	if (f->mmap)
-		munmap(f->mmap, f->file_size);
-	generic_close_file(td, f);
+	td->io_ops->close_file(td, f);
 	return 1;
 }
 
@@ -120,16 +96,16 @@ static void fio_mmapio_close(struct thread_data fio_unused *td,
 		munmap(f->mmap, f->file_size);
 		f->mmap = NULL;
 	}
+	generic_close_file(td, f);
 }
 
 static struct ioengine_ops ioengine = {
 	.name		= "mmap",
 	.version	= FIO_IOOPS_VERSION,
 	.queue		= fio_mmapio_queue,
-	.init		= fio_mmapio_init,
 	.open_file	= fio_mmapio_open,
 	.close_file	= fio_mmapio_close,
-	.flags		= FIO_SYNCIO,
+	.flags		= FIO_SYNCIO | FIO_NOEXTEND,
 };
 
 static void fio_init fio_mmapio_register(void)
