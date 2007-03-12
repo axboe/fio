@@ -804,6 +804,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	int numjobs, i;
 	struct fio_file *f;
 	const char *engine;
+	int fn_given;
 
 	/*
 	 * the def_thread is just for options, it's not a real job
@@ -826,6 +827,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
 
+	fn_given = (int) td->filename;
 	if (!td->filename)
 		td->filename = strdup(jobname);
 
@@ -844,7 +846,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	else
 		td->nr_uniq_files = td->open_files;
 
-	if (td->filetype == FIO_TYPE_FILE || td->filename) {
+	if (td->filetype == FIO_TYPE_FILE) {
 		char tmp[PATH_MAX];
 		int len = 0;
 
@@ -867,10 +869,10 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 			memset(f, 0, sizeof(*f));
 			f->fd = -1;
 
-			if (td->filename)
+			if (fn_given)
 				sprintf(tmp + len, "%s", td->filename);
 			else
-				sprintf(tmp + len, "%s.%d.%d", jobname, td->thread_number, i);
+				sprintf(tmp + len, "%s.%d.%d", td->filename, td->thread_number, i);
 			f->file_name = strdup(tmp);
 		}
 	} else {
