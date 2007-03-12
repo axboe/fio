@@ -669,18 +669,27 @@ void show_run_stats(void)
 			ts->slat_stat[j].min_val = -1UL;
 			ts->bw_stat[j].min_val = -1UL;
 		}
+		ts->groupid = -1;
 	}
 
 	j = 0;
 	last_ts = -1;
 	idx = 0;
 	for_each_td(td, i) {
+		if (idx && (!td->group_reporting ||
+		    (td->group_reporting && last_ts != td->groupid))) {
+			idx = 0;
+			j++;
+		}
+
+		last_ts = td->groupid;
+
 		ts = &threadstats[j];
 
 		idx++;
 		ts->members++;
 
-		if (!ts->groupid) {
+		if (ts->groupid == -1) {
 			/*
 			 * These are per-group shared already
 			 */
@@ -724,21 +733,6 @@ void show_run_stats(void)
 			ts->total_io_u[k] += td->ts.total_io_u[k];
 
 		ts->total_run_time += td->ts.total_run_time;
-
-		if (!td->group_reporting) {
-			idx = 0;
-			j++;
-			continue;
-		}
-		if (last_ts == td->groupid)
-			continue;
-
-		if (last_ts != -1) {
-			idx = 0;
-			j++;
-		}
-
-		last_ts = td->groupid;
 	}
 
 	for (i = 0; i < nr_ts; i++) {
