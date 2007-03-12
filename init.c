@@ -623,6 +623,8 @@ FILE *f_err = NULL;
 static int write_lat_log = 0;
 int write_bw_log = 0;
 
+static int prev_group_jobs;
+
 FILE *get_f_out()
 {
 	return f_out;
@@ -896,10 +898,13 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	td->ts.slat_stat[0].min_val = td->ts.slat_stat[1].min_val = ULONG_MAX;
 	td->ts.bw_stat[0].min_val = td->ts.bw_stat[1].min_val = ULONG_MAX;
 
-	if (td->stonewall && td->thread_number > 1)
+	if ((td->stonewall || td->numjobs > 1) && prev_group_jobs) {
+		prev_group_jobs = 0;
 		groupid++;
+	}
 
 	td->groupid = groupid;
+	prev_group_jobs++;
 
 	if (setup_rate(td))
 		goto err;
@@ -955,6 +960,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		if (add_job(td_new, jobname, job_add_num))
 			goto err;
 	}
+
+	if (td->numjobs > 1) {
+		groupid++;
+		prev_group_jobs = 0;
+	}
+
 	return 0;
 err:
 	put_job(td);
