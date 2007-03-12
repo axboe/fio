@@ -827,7 +827,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
 
-	fn_given = (int) td->filename;
+	fn_given = (long) td->filename;
 	if (!td->filename)
 		td->filename = strdup(jobname);
 
