@@ -85,7 +85,7 @@ int verify_io_u(struct io_u *io_u)
 
 	if (hdr->fio_magic != FIO_HDR_MAGIC) {
 		log_err("Bad verify header %x\n", hdr->fio_magic);
-		return 1;
+		return EIO;
 	}
 
 	if (hdr->verify_type == VERIFY_MD5)
@@ -97,7 +97,10 @@ int verify_io_u(struct io_u *io_u)
 		ret = 1;
 	}
 
-	return ret;
+	if (ret)
+		return EIO;
+
+	return 0;
 }
 
 static void fill_crc32(struct verify_header *hdr, void *p, unsigned int len)
