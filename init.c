@@ -841,7 +841,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	fixup_options(td);
 
-	if (td->filename)
+	if (fn_given)
 		td->nr_uniq_files = 1;
 	else
 		td->nr_uniq_files = td->open_files;
