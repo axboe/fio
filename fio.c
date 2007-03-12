@@ -43,6 +43,8 @@ static unsigned long page_mask;
 
 int groupid = 0;
 int thread_number = 0;
+int nr_process = 0;
+int nr_thread = 0;
 int shm_id = 0;
 int temp_stall_ts;
 
@@ -951,7 +953,15 @@ static void run_threads(void)
 		return;
 
 	if (!terse_output) {
-		printf("Starting %d thread%s\n", thread_number, thread_number > 1 ? "s" : "");
+		printf("Starting ");
+		if (nr_thread)
+			printf("%d thread%s", nr_thread, nr_thread > 1 ? "s" : "");
+		if (nr_process) {
+			if (nr_thread)
+				printf(" and ");
+			printf("%d process%s", nr_process, nr_process > 1 ? "es" : "");
+		}
+		printf("\n");
 		fflush(stdout);
 	}
 

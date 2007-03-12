@@ -507,6 +507,7 @@ enum {
 
 extern int exitall_on_terminate;
 extern int thread_number;
+extern int nr_process, nr_thread;
 extern int shm_id;
 extern int groupid;
 extern int terse_output;

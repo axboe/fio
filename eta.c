@@ -269,7 +269,7 @@ void print_thread_status(void)
 	if (!nr_running && !nr_pending)
 		return;
 
-	printf("Threads: %d", nr_running);
+	printf("Jobs: %d", nr_running);
 	if (m_rate || t_rate)
 		printf(", CR=%d/%d KiB/s", t_rate, m_rate);
 	if (eta_sec != INT_MAX && nr_running) {

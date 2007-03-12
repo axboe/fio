@@ -816,6 +816,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		return 1;
 	}
 
+	if (td->use_thread)
+		nr_thread++;
+	else
+		nr_process++;
+
 	if (td->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
 
