@@ -1029,6 +1029,7 @@ static void run_threads(void)
 				if (pthread_create(&td->thread, NULL, thread_main, td)) {
 					perror("thread_create");
 					nr_started--;
+					break;
 				}
 			} else {
 				if (!fork()) {
