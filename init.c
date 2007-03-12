@@ -819,8 +819,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
 
+	if (!td->filename)
+		td->filename = strdup(jobname);
+
 	td->filetype = FIO_TYPE_FILE;
-	if (td->filename && !lstat(td->filename, &sb)) {
+	if (!lstat(td->filename, &sb)) {
 		if (S_ISBLK(sb.st_mode))
 			td->filetype = FIO_TYPE_BD;
 		else if (S_ISCHR(sb.st_mode))
