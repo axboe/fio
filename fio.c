@@ -301,9 +301,17 @@ static void do_verify(struct thread_data *td)
 		case FIO_Q_COMPLETED:
 			if (io_u->error)
 				ret = -io_u->error;
-			else if (io_u->xfer_buflen != io_u->resid && io_u->resid) {
+			else if (io_u->resid) {
 				int bytes = io_u->xfer_buflen - io_u->resid;
 
+				/*
+				 * zero read, fail
+				 */
+				if (!bytes) {
+					td_verror(td, ENODATA, "full resid");
+					put_io_u(td, io_u);
+					break;
+				}
 				io_u->xfer_buflen = io_u->resid;
 				io_u->xfer_buf += bytes;
 				requeue_io_u(td, &io_u);
@@ -399,8 +407,17 @@ static void do_io(struct thread_data *td)
 		case FIO_Q_COMPLETED:
 			if (io_u->error)
 				ret = -io_u->error;
-			else if (io_u->xfer_buflen != io_u->resid && io_u->resid) {
+			else if (io_u->resid) {
 				int bytes = io_u->xfer_buflen - io_u->resid;
+
+				/*
+				 * zero read, fail
+				 */
+				if (!bytes) {
+					td_verror(td, ENODATA, "full resid");
+					put_io_u(td, io_u);
+					break;
+				}
 
 				io_u->xfer_buflen = io_u->resid;
 				io_u->xfer_buf += bytes;
