@@ -46,7 +46,7 @@ static void fio_syslet_complete_atom(struct thread_data *td,
 
 		io_u = atom->private;
 		ret = *atom->ret_ptr;
-		if (ret > 0)
+		if (ret >= 0)
 			io_u->resid = io_u->xfer_buflen - ret;
 		else if (ret < 0)
 			io_u->error = ret;
