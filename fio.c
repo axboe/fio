@@ -636,6 +636,7 @@ static int clear_io_state(struct thread_data *td)
 	td->ts.stat_io_bytes[0] = td->ts.stat_io_bytes[1] = 0;
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
 	td->zone_bytes = 0;
+	td->rate_bytes = 0;
 
 	td->last_was_sync = 0;
 
