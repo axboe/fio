@@ -30,6 +30,7 @@ static int str_prioclass_cb(void *, unsigned int *);
 #endif
 static int str_exitall_cb(void);
 static int str_cpumask_cb(void *, unsigned int *);
+static int str_fst_cb(void *, const char *);
 
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
@@ -190,6 +191,7 @@ static struct fio_option options[] = {
 	{
 		.name	= "file_service_type",
 		.type	= FIO_OPT_STR,
+		.cb	= str_fst_cb,
 		.off1	= td_var_offset(file_service_type),
 		.help	= "How to select which file to service next",
 		.def	= "roundrobin",
@@ -1048,7 +1050,7 @@ static int is_empty_or_comment(char *line)
 /*
  * Check if mmap/mmaphuge has a :/foo/bar/file at the end. If so, return that.
  */
-static char *get_mmap_file(const char *str)
+static char *get_opt_postfix(const char *str)
 {
 	char *p = strstr(str, ":");
 
@@ -1066,7 +1068,7 @@ static int str_mem_cb(void *data, const char *mem)
 	struct thread_data *td = data;
 
 	if (td->mem_type == MEM_MMAPHUGE || td->mem_type == MEM_MMAP) {
-		td->mmapfile = get_mmap_file(mem);
+		td->mmapfile = get_opt_postfix(mem);
 		if (td->mem_type == MEM_MMAPHUGE && !td->mmapfile) {
 			log_err("fio: mmaphuge:/path/to/file\n");
 			return 1;
@@ -1111,6 +1113,18 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 	struct thread_data *td = data;
 
 	fill_cpu_mask(td->cpumask, *val);
+	return 0;
+}
+
+static int str_fst_cb(void *data, const char *str)
+{
+	struct thread_data *td = data;
+	char *nr = get_opt_postfix(str);
+
+	td->file_service_nr = 1;
+	if (nr)
+		td->file_service_nr = atoi(nr);
+
 	return 0;
 }
 

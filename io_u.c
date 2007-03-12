@@ -368,13 +368,23 @@ static struct fio_file *get_next_file_rr(struct thread_data *td)
 
 static struct fio_file *get_next_file(struct thread_data *td)
 {
+	struct fio_file *f;
+
 	if (!td->nr_open_files)
 		return NULL;
 
+	f = td->file_service_file;
+	if (f && f->open && td->file_service_left--)
+		return f;
+
 	if (td->file_service_type == FIO_FSERVICE_RR)
-		return get_next_file_rr(td);
+		f = get_next_file_rr(td);
 	else
-		return get_next_file_rand(td);
+		f = get_next_file_rand(td);
+
+	td->file_service_file = f;
+	td->file_service_left = td->file_service_nr - 1;
+	return f;
 }
 
 struct io_u *__get_io_u(struct thread_data *td)

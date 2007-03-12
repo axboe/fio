@@ -473,6 +473,13 @@ struct thread_data {
 	 */
 	struct timeval timeout_end;
 	struct itimerval timer;
+
+	/*
+	 * for fileservice, how often to switch to a new file
+	 */
+	unsigned int file_service_nr;
+	unsigned int file_service_left;
+	struct fio_file *file_service_file;
 };
 
 /*
