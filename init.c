@@ -997,6 +997,10 @@ int init_random_state(struct thread_data *td)
 			blocks = (f->real_file_size + td->rw_min_bs - 1) / td->rw_min_bs;
 			num_maps = (blocks + BLOCKS_PER_MAP-1)/ BLOCKS_PER_MAP;
 			f->file_map = malloc(num_maps * sizeof(long));
+			if (!f->file_map) {
+				log_err("fio: failed allocating random map. If running a large number of jobs, try the 'norandommap' option\n");
+				return 1;
+			}
 			f->num_maps = num_maps;
 			memset(f->file_map, 0, num_maps * sizeof(long));
 		}

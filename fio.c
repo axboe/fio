@@ -692,33 +692,33 @@ static void *thread_main(void *data)
 	INIT_LIST_HEAD(&td->io_log_list);
 
 	if (init_io_u(td))
-		goto err;
+		goto err_sem;
 
 	if (fio_setaffinity(td) == -1) {
 		td_verror(td, errno, "cpu_set_affinity");
-		goto err;
+		goto err_sem;
 	}
 
 	if (init_iolog(td))
-		goto err;
+		goto err_sem;
 
 	if (td->ioprio) {
 		if (ioprio_set(IOPRIO_WHO_PROCESS, 0, td->ioprio) == -1) {
 			td_verror(td, errno, "ioprio_set");
-			goto err;
+			goto err_sem;
 		}
 	}
 
 	if (nice(td->nice) == -1) {
 		td_verror(td, errno, "nice");
-		goto err;
+		goto err_sem;
 	}
 
 	if (init_random_state(td))
-		goto err;
+		goto err_sem;
 
 	if (td->ioscheduler && switch_ioscheduler(td))
-		goto err;
+		goto err_sem;
 
 	td_set_runstate(td, TD_INITIALIZED);
 	fio_sem_up(startup_sem);
@@ -821,6 +821,9 @@ err:
 	cleanup_io_u(td);
 	td_set_runstate(td, TD_EXITED);
 	return (void *) (unsigned long) td->error;
+err_sem:
+	fio_sem_up(startup_sem);
+	goto err;
 }
 
 /*
