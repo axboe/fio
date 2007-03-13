@@ -445,3 +445,23 @@ void add_file(struct thread_data *td, const char *fname)
 	td->open_files++;
 	td->nr_uniq_files = td->open_files;
 }
+
+void get_file(struct fio_file *f)
+{
+	f->references++;
+}
+
+void put_file(struct thread_data *td, struct fio_file *f)
+{
+	if (!(f->flags & FIO_FILE_OPEN))
+		return;
+
+	assert(f->references);
+	if (--f->references)
+		return;
+
+	if (td->io_ops->close_file)
+		td->io_ops->close_file(td, f);
+	td->nr_open_files--;
+	f->flags &= ~FIO_FILE_OPEN;
+}

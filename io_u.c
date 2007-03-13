@@ -340,7 +340,8 @@ static struct fio_file *get_next_file_rand(struct thread_data *td)
 
 		fileno = (unsigned int) ((double) (td->open_files * r) / (RAND_MAX + 1.0));
 		f = &td->files[fileno];
-		if (f->flags & FIO_FILE_OPEN)
+		if ((f->flags & FIO_FILE_OPEN) &&
+		    !(f->flags & FIO_FILE_CLOSING))
 			return f;
 	} while (1);
 }
@@ -360,7 +361,8 @@ static struct fio_file *get_next_file_rr(struct thread_data *td)
 		if (td->next_file >= td->open_files)
 			td->next_file = 0;
 
-		if (f->flags & FIO_FILE_OPEN)
+		if ((f->flags & FIO_FILE_OPEN) &&
+		    !(f->flags & FIO_FILE_CLOSING))
 			break;
 
 		f = NULL;
@@ -536,6 +538,8 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 	assert(io_u->flags & IO_U_F_FLIGHT);
 	io_u->flags &= ~IO_U_F_FLIGHT;
+
+	put_file(td, io_u->file);
 
 	if (io_u->ddir == DDIR_SYNC) {
 		td->last_was_sync = 1;

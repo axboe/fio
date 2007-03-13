@@ -219,8 +219,9 @@ enum fio_ioengine_flags {
 };
 
 enum fio_file_flags {
-	FIO_FILE_OPEN		= 1 << 0,
-	FIO_FILE_UNLINK		= 1 << 1,
+	FIO_FILE_OPEN		= 1 << 0,	/* file is open */
+	FIO_FILE_UNLINK		= 1 << 1,	/* unlink on close */
+	FIO_FILE_CLOSING	= 1 << 2,	/* file being closed */
 };
 
 /*
@@ -252,6 +253,7 @@ struct fio_file {
 	unsigned int num_maps;
 	unsigned int last_free_lookup;
 
+	int references;
 	enum fio_file_flags flags;
 };
 
@@ -654,6 +656,8 @@ extern int __must_check file_invalidate_cache(struct thread_data *, struct fio_f
 extern int __must_check generic_open_file(struct thread_data *, struct fio_file *);
 extern void generic_close_file(struct thread_data *, struct fio_file *);
 extern void add_file(struct thread_data *, const char *);
+extern void get_file(struct fio_file *);
+extern void put_file(struct thread_data *, struct fio_file *);
 
 /*
  * ETA/status stuff

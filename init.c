@@ -752,7 +752,9 @@ static void fixup_options(struct thread_data *td)
 	if (td->iodepth_batch > td->iodepth || !td->iodepth_batch)
 		td->iodepth_batch = td->iodepth;
 
-	if (td->open_files > td->nr_files || !td->open_files)
+	if (!td->nr_files)
+		td->nr_files = td->open_files;
+	else if (td->open_files > td->nr_files || !td->open_files)
 		td->open_files = td->nr_files;
 }
 
@@ -1103,9 +1105,12 @@ static int str_filename_cb(void *data, const char *input)
 	struct thread_data *td = data;
 	char *fname, *str;
 
+	td->nr_files = 0;
 	str = strdup(input);
-	while ((fname = strsep(&str, ":")) != NULL)
+	while ((fname = strsep(&str, ":")) != NULL) {
 		add_file(td, fname);
+		td->nr_files++;
+	}
 
 	return 0;
 }

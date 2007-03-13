@@ -206,6 +206,9 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	ret = td->io_ops->queue(td, io_u);
 
+	if (ret == FIO_Q_QUEUED || ret == FIO_Q_COMPLETED)
+		get_file(io_u->file);
+
 	if (ret == FIO_Q_QUEUED) {
 		int r;
 
@@ -260,20 +263,23 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 	f->last_completed_pos = 0;
 	f->last_pos = 0;
 	f->flags |= FIO_FILE_OPEN;
+	f->flags &= ~FIO_FILE_CLOSING;
 
 	if (f->file_map)
 		memset(f->file_map, 0, f->num_maps * sizeof(long));
 
 	td->nr_open_files++;
+	get_file(f);
 	return 0;
 }
 
 void td_io_close_file(struct thread_data *td, struct fio_file *f)
 {
-	if (f->flags & FIO_FILE_OPEN) {
-		if (td->io_ops->close_file)
-			td->io_ops->close_file(td, f);
-		td->nr_open_files--;
-		f->flags &= ~FIO_FILE_OPEN;
-	}
+	/*
+	 * mark as closing, do real close when last io on it has completed
+	 */
+	f->flags |= FIO_FILE_CLOSING;
+
+	put_file(td, f);
 }
+
