@@ -299,6 +299,8 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 		td_verror(td, __e, "open");
 		if (__e == EINVAL && td->odirect)
 			log_err("fio: destination does not support O_DIRECT\n");
+		if (__e == EMFILE)
+			log_err("fio: try reducing/setting openfiles (failed at %u of %u)\n", td->nr_open_files, td->nr_files);
 		return 1;
 	}
 
