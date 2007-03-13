@@ -436,7 +436,7 @@ static void get_file_type(struct fio_file *f)
 
 void add_file(struct thread_data *td, const char *fname)
 {
-	int cur_files = td->open_files;
+	int cur_files = td->files_index;
 	struct fio_file *f;
 
 	td->files = realloc(td->files, (cur_files + 1) * sizeof(*f));
@@ -448,7 +448,7 @@ void add_file(struct thread_data *td, const char *fname)
 
 	get_file_type(f);
 
-	td->open_files++;
+	td->files_index++;
 	if (f->filetype == FIO_TYPE_FILE)
 		td->nr_normal_files++;
 }
