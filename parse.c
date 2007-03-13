@@ -197,11 +197,11 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		const struct value_pair *vp;
 		int i;
 
-		ret = 1;
 		for (i = 0; i < PARSE_MAX_VP; i++) {
 			vp = &o->posval[i];
 			if (!vp->ival || vp->ival[0] == '\0')
 				break;
+			ret = 1;
 			if (!strncmp(vp->ival, ptr, strlen(vp->ival))) {
 				ret = 0;
 				if (!o->off1)
