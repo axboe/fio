@@ -259,7 +259,7 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 	f->last_free_lookup = 0;
 	f->last_completed_pos = 0;
 	f->last_pos = 0;
-	f->open = 1;
+	f->flags |= FIO_FILE_OPEN;
 
 	if (f->file_map)
 		memset(f->file_map, 0, f->num_maps * sizeof(long));
@@ -270,10 +270,10 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 
 void td_io_close_file(struct thread_data *td, struct fio_file *f)
 {
-	if (f->open) {
+	if (f->flags & FIO_FILE_OPEN) {
 		if (td->io_ops->close_file)
 			td->io_ops->close_file(td, f);
 		td->nr_open_files--;
-		f->open = 0;
+		f->flags &= ~FIO_FILE_OPEN;
 	}
 }

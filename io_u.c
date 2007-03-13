@@ -340,7 +340,7 @@ static struct fio_file *get_next_file_rand(struct thread_data *td)
 
 		fileno = (unsigned int) ((double) (td->open_files * r) / (RAND_MAX + 1.0));
 		f = &td->files[fileno];
-		if (f->open)
+		if (f->flags & FIO_FILE_OPEN)
 			return f;
 	} while (1);
 }
@@ -360,7 +360,7 @@ static struct fio_file *get_next_file_rr(struct thread_data *td)
 		if (td->next_file >= td->open_files)
 			td->next_file = 0;
 
-		if (f->open)
+		if (f->flags & FIO_FILE_OPEN)
 			break;
 
 		f = NULL;
@@ -377,7 +377,7 @@ static struct fio_file *get_next_file(struct thread_data *td)
 		return NULL;
 
 	f = td->file_service_file;
-	if (f && f->open && td->file_service_left--)
+	if (f && (f->flags & FIO_FILE_OPEN) && td->file_service_left--)
 		return f;
 
 	if (td->file_service_type == FIO_FSERVICE_RR)

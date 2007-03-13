@@ -218,6 +218,11 @@ enum fio_ioengine_flags {
 	FIO_NODISKUTIL  = 1 << 4,       /* diskutil can't handle filename */
 };
 
+enum fio_file_flags {
+	FIO_FILE_OPEN		= 1 << 0,
+	FIO_FILE_UNLINK		= 1 << 1,
+};
+
 /*
  * Each thread_data structure has a number of files associated with it,
  * this structure holds state information for a single file.
@@ -247,8 +252,7 @@ struct fio_file {
 	unsigned int num_maps;
 	unsigned int last_free_lookup;
 
-	unsigned int unlink;
-	unsigned int open;
+	enum fio_file_flags flags;
 };
 
 /*
