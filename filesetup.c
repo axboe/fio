@@ -375,8 +375,6 @@ int setup_files(struct thread_data *td)
 	for_each_file(td, f, i)
 		td->total_file_size += f->file_size;
 
-	td->total_file_size = (td->total_file_size * td->nr_files) / td->open_files;
-
 	td->io_size = td->total_file_size;
 	if (td->io_size == 0) {
 		log_err("%s: no io blocks\n", td->name);
