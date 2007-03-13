@@ -1111,7 +1111,13 @@ static int str_filename_cb(void *data, const char *input)
 
 	td->nr_files = 0;
 	p = str = strdup(input);
+
+	strip_blank_front(&str);
+	strip_blank_end(str);
+
 	while ((fname = strsep(&str, ":")) != NULL) {
+		if (!strlen(fname))
+			break;
 		add_file(td, fname);
 		td->nr_files++;
 	}
