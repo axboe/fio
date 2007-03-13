@@ -414,13 +414,13 @@ void close_files(struct thread_data *td)
 	td->nr_files = 0;
 }
 
-static void get_file_type(struct thread_data *td, struct fio_file *f)
+static void get_file_type(struct fio_file *f)
 {
 	struct stat sb;
 
 	f->filetype = FIO_TYPE_FILE;
 
-	if (!lstat(td->filename, &sb)) {
+	if (!lstat(f->file_name, &sb)) {
 		if (S_ISBLK(sb.st_mode))
 			f->filetype = FIO_TYPE_BD;
 		else if (S_ISCHR(sb.st_mode))
@@ -440,7 +440,7 @@ void add_file(struct thread_data *td, const char *fname)
 	f->fd = -1;
 	f->file_name = strdup(fname);
 
-	get_file_type(td, f);
+	get_file_type(f);
 
 	td->open_files++;
 	td->nr_uniq_files = td->open_files;
