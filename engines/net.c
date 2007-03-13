@@ -239,9 +239,9 @@ static int fio_netio_init(struct thread_data *td)
 
 	strcpy(buf, td->filename);
 
-	sep = strchr(buf, ':');
+	sep = strchr(buf, '/');
 	if (!sep) {
-		log_err("fio: bad network host:port <<%s>>\n", td->filename);
+		log_err("fio: bad network host/port <<%s>>\n", td->filename);
 		return 1;
 	}
 
