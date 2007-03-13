@@ -393,6 +393,7 @@ struct thread_data {
 	unsigned int file_service_type;
 	unsigned int group_reporting;
 	unsigned int open_files;
+	char *opendir;
 
 	char *read_iolog_file;
 	char *write_iolog_file;
@@ -660,6 +661,7 @@ extern void generic_close_file(struct thread_data *, struct fio_file *);
 extern void add_file(struct thread_data *, const char *);
 extern void get_file(struct fio_file *);
 extern void put_file(struct thread_data *, struct fio_file *);
+extern int add_dir_files(struct thread_data *, const char *);
 
 /*
  * ETA/status stuff

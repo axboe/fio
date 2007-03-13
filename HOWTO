@@ -211,6 +211,9 @@ filename=str	Fio normally makes up a filename based on the job name,
 		a job to open /dev/sda and /dev/sdb as the two working files,
 		you would use filename=/dev/sda:/dev/sdb
 
+opendir=str	Tell fio to recursively add any file it can find in this
+		directory and down the file system tree.
+
 rw=str		Type of io pattern. Accepted values are:
 
 			read		Sequential reads

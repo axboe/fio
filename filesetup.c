@@ -2,8 +2,10 @@
 #include <fcntl.h>
 #include <string.h>
 #include <assert.h>
+#include <dirent.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/types.h>
 
 #include "fio.h"
 #include "os.h"
@@ -472,4 +474,51 @@ void put_file(struct thread_data *td, struct fio_file *f)
 		td->io_ops->close_file(td, f);
 	td->nr_open_files--;
 	f->flags &= ~FIO_FILE_OPEN;
+}
+
+static int recurse_dir(struct thread_data *td, const char *dirname)
+{
+	struct dirent *dir;
+	int ret = 0;
+	DIR *D;
+
+	D = opendir(dirname);
+	if (!D) {
+		td_verror(td, errno, "opendir");
+		return 1;
+	}
+
+	while ((dir = readdir(D)) != NULL) {
+		char full_path[PATH_MAX];
+		struct stat sb;
+
+		sprintf(full_path, "%s/%s", dirname, dir->d_name);
+
+		if (lstat(full_path, &sb) == -1) {
+			if (errno != ENOENT) {
+				td_verror(td, errno, "stat");
+				return 1;
+			}
+		}
+
+		if (S_ISREG(sb.st_mode)) {
+			add_file(td, full_path);
+			td->nr_files++;
+			continue;
+		}
+
+		if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, ".."))
+			continue;
+
+		if ((ret = recurse_dir(td, full_path)) != 0)
+			break;
+	}
+
+	closedir(D);
+	return ret;
+}
+
+int add_dir_files(struct thread_data *td, const char *path)
+{
+	return recurse_dir(td, path);
 }

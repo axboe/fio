@@ -33,6 +33,7 @@ static int str_cpumask_cb(void *, unsigned int *);
 static int str_fst_cb(void *, const char *);
 static int str_filename_cb(void *, const char *);
 static int str_directory_cb(void *, const char *);
+static int str_opendir_cb(void *, const char *);
 
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
@@ -66,6 +67,13 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(filename),
 		.cb	= str_filename_cb,
 		.help	= "File(s) to use for the workload",
+	},
+	{
+		.name	= "opendir",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(opendir),
+		.cb	= str_opendir_cb,
+		.help	= "Recursively add files from this directory and down",
 	},
 	{
 		.name	= "rw",
@@ -759,9 +767,7 @@ static void fixup_options(struct thread_data *td)
 	if (td->iodepth_batch > td->iodepth || !td->iodepth_batch)
 		td->iodepth_batch = td->iodepth;
 
-	if (!td->nr_files)
-		td->nr_files = td->files_index;
-	else if (td->nr_files > td->files_index)
+	if (td->nr_files > td->files_index)
 		td->nr_files = td->files_index;
 
 	if (td->open_files > td->nr_files || !td->open_files)
@@ -839,7 +845,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
 
-	if (!td->filename) {
+	if (!td->filename && !td->files_index) {
 		td->filename = strdup(jobname);
 
 		if (td->nr_files == 1)
@@ -1121,10 +1127,14 @@ static int str_filename_cb(void *data, const char *input)
 	strip_blank_front(&str);
 	strip_blank_end(str);
 
+	if (!td->files_index)
+		td->nr_files = 0;
+
 	while ((fname = strsep(&str, ":")) != NULL) {
 		if (!strlen(fname))
 			break;
 		add_file(td, fname);
+		td->nr_files++;
 	}
 
 	free(p);
@@ -1147,6 +1157,16 @@ static int str_directory_cb(void *data, const char fio_unused *str)
 	}
 
 	return 0;
+}
+
+static int str_opendir_cb(void *data, const char fio_unused *str)
+{
+	struct thread_data *td = data;
+
+	if (!td->files_index)
+		td->nr_files = 0;
+
+	return add_dir_files(td, td->opendir);
 }
 
 /*
