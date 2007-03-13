@@ -1103,15 +1103,16 @@ static int str_fst_cb(void *data, const char *str)
 static int str_filename_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
-	char *fname, *str;
+	char *fname, *str, *p;
 
 	td->nr_files = 0;
-	str = strdup(input);
+	p = str = strdup(input);
 	while ((fname = strsep(&str, ":")) != NULL) {
 		add_file(td, fname);
 		td->nr_files++;
 	}
 
+	free(p);
 	return 0;
 }
 

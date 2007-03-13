@@ -438,7 +438,7 @@ void add_file(struct thread_data *td, const char *fname)
 	f = &td->files[cur_files];
 	memset(f, 0, sizeof(*f));
 	f->fd = -1;
-	f->file_name = fname;
+	f->file_name = strdup(fname);
 
 	get_file_type(td, f);
 
