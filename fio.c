@@ -263,6 +263,8 @@ static void do_verify(struct thread_data *td)
 	 * read from disk.
 	 */
 	for_each_file(td, f, i) {
+		if (!(f->flags & FIO_FILE_OPEN))
+			continue;
 		if (fio_io_sync(td, f))
 			break;
 		if (file_invalidate_cache(td, f))
@@ -520,8 +522,12 @@ static void do_io(struct thread_data *td)
 
 		if (should_fsync(td) && td->end_fsync) {
 			td_set_runstate(td, TD_FSYNCING);
-			for_each_file(td, f, i)
+
+			for_each_file(td, f, i) {
+				if (!(f->flags & FIO_FILE_OPEN))
+					continue;
 				fio_io_sync(td, f);
+			}
 		}
 	} else
 		cleanup_pending_aio(td);

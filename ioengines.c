@@ -186,6 +186,8 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	assert((io_u->flags & IO_U_F_FLIGHT) == 0);
 	io_u->flags |= IO_U_F_FLIGHT;
 
+	assert(io_u->file->flags & FIO_FILE_OPEN);
+
 	io_u->error = 0;
 	io_u->resid = 0;
 
