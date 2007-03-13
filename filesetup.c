@@ -465,6 +465,9 @@ void put_file(struct thread_data *td, struct fio_file *f)
 	if (--f->references)
 		return;
 
+	if (should_fsync(td) && td->fsync_on_close)
+		fsync(f->fd);
+
 	if (td->io_ops->close_file)
 		td->io_ops->close_file(td, f);
 	td->nr_open_files--;

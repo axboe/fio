@@ -500,6 +500,13 @@ static struct fio_option options[] = {
 		.def	= "0",
 	},
 	{
+		.name	= "fsync_on_close",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(fsync_on_close),
+		.help	= "fsync files on close",
+		.def	= "0",
+	},
+	{
 		.name	= "unlink",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(unlink),

@@ -358,6 +358,10 @@ overwrite=bool	If writing to a file, setup the file first and do overwrites.
 
 end_fsync=bool	If true, fsync file contents when the job exits.
 
+fsync_on_close=bool	If true, fio will fsync() a dirty file on close.
+		This differs from end_fsync in that it will happen on every
+		file close, not just at the end of the job.
+
 rwmixcycle=int	Value in milliseconds describing how often to switch between
 		reads and writes for a mixed workload. The default is
 		500 msecs.

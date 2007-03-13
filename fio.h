@@ -357,6 +357,7 @@ struct thread_data {
 	unsigned int write_bw_log;
 	unsigned int norandommap;
 	unsigned int bs_unaligned;
+	unsigned int fsync_on_close;
 
 	unsigned int bs[2];
 	unsigned int min_bs[2];
