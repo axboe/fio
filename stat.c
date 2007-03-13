@@ -241,22 +241,13 @@ static int find_block_dir(dev_t dev, char *path)
 	return found;
 }
 
-void init_disk_util(struct thread_data *td)
+static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 {
-	struct fio_file *f;
 	struct stat st;
 	char foo[PATH_MAX], tmp[PATH_MAX];
 	dev_t dev;
 	char *p;
 
-	if (!td->do_disk_util ||
-	    (td->io_ops->flags & (FIO_DISKLESSIO | FIO_NODISKUTIL)))
-		return;
-
-	/*
-	 * Just use the same file, they are on the same device.
-	 */
-	f = &td->files[0];
 	if (!stat(f->file_name, &st)) {
 		if (S_ISBLK(st.st_mode))
 			dev = st.st_rdev;
@@ -311,10 +302,23 @@ void init_disk_util(struct thread_data *td)
 		sprintf(foo, "%s", tmp);
 	}
 
-	if (td->ioscheduler)
+	if (td->ioscheduler && !td->sysfs_root)
 		td->sysfs_root = strdup(foo);
 
 	disk_util_add(dev, foo);
+}
+
+void init_disk_util(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	if (!td->do_disk_util ||
+	    (td->io_ops->flags & (FIO_DISKLESSIO | FIO_NODISKUTIL)))
+		return;
+
+	for_each_file(td, f, i)
+		__init_disk_util(td, f);
 }
 
 void disk_util_timer_arm(void)
