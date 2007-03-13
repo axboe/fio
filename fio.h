@@ -215,6 +215,7 @@ enum fio_ioengine_flags {
 	FIO_RAWIO	= 1 << 1,	/* some sort of direct/raw io */
 	FIO_DISKLESSIO	= 1 << 2,	/* no disk involved */
 	FIO_NOEXTEND	= 1 << 3,	/* engine can't extend file */
+	FIO_NODISKUTIL  = 1 << 4,       /* diskutil can't handle filename */
 };
 
 /*
