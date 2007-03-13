@@ -832,9 +832,13 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (!td->filename) {
 		td->filename = strdup(jobname);
 
-		for (i = 0; i < td->nr_files; i++) {
-			sprintf(fname, "%s.%d.%d", td->filename, td->thread_number, i);
-			add_file(td, fname);
+		if (td->nr_files == 1)
+			add_file(td, td->filename);
+		else {
+			for (i = 0; i < td->nr_files; i++) {
+				sprintf(fname, "%s.%d.%d", td->filename, td->thread_number, i);
+				add_file(td, fname);
+			}
 		}
 	}
 
