@@ -205,7 +205,11 @@ filename=str	Fio normally makes up a filename based on the job name,
 		files between threads in a job or several jobs, specify
 		a filename for each of them to override the default. If
 		the ioengine used is 'net', the filename is the host and
-		port to connect to in the format of =host:port.
+		port to connect to in the format of =host:port. If the
+		ioengine is file based, you can specify a number of files
+		by seperating the names with a ':' colon. So if you wanted
+		a job to open /dev/sda and /dev/sdb as the two working files,
+		you would use filename=/dev/sda:/dev/sdb
 
 rw=str		Type of io pattern. Accepted values are:
 

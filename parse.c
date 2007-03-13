@@ -257,10 +257,20 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		}
 		break;
 	}
-	case FIO_OPT_STR_STORE:
+	case FIO_OPT_STR_STORE: {
+		fio_opt_str_fn *fn = o->cb;
+
 		cp = td_var(data, o->off1);
 		*cp = strdup(ptr);
+		if (fn) {
+			ret = fn(data, ptr);
+			if (ret) {
+				free(*cp);
+				*cp = NULL;
+			}
+		}
 		break;
+	}
 	case FIO_OPT_RANGE: {
 		char tmp[128];
 		char *p1, *p2;
@@ -579,7 +589,7 @@ void options_init(struct fio_option *options)
 		}
 		if (!o->cb && !o->off1)
 			fprintf(stderr, "Option %s: neither cb nor offset given\n", o->name);
-		if (o->type == FIO_OPT_STR)
+		if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE)
 			continue;
 		if (o->cb && (o->off1 || o->off2 || o->off3 || o->off4))
 			fprintf(stderr, "Option %s: both cb and offset given\n", o->name);

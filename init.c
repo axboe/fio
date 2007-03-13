@@ -31,6 +31,8 @@ static int str_prioclass_cb(void *, unsigned int *);
 static int str_exitall_cb(void);
 static int str_cpumask_cb(void *, unsigned int *);
 static int str_fst_cb(void *, const char *);
+static int str_filename_cb(void *, const char *);
+static int str_directory_cb(void *, const char *);
 
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
@@ -55,13 +57,15 @@ static struct fio_option options[] = {
 		.name	= "directory",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(directory),
+		.cb	= str_directory_cb,
 		.help	= "Directory to store files in",
 	},
 	{
 		.name	= "filename",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(filename),
-		.help	= "Force the use of a specific file",
+		.cb	= str_filename_cb,
+		.help	= "File(s) to use for the workload",
 	},
 	{
 		.name	= "rw",
@@ -722,12 +726,6 @@ static void fixup_options(struct thread_data *td)
 		log_err("fio: bs_unaligned may not work with raw io\n");
 
 	/*
-	 * O_DIRECT and char doesn't mix, clear that flag if necessary.
-	 */
-	if (td->filetype == FIO_TYPE_CHAR && td->odirect)
-		td->odirect = 0;
-
-	/*
 	 * thinktime_spin must be less than thinktime
 	 */
 	if (td->thinktime_spin > td->thinktime)
@@ -802,11 +800,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 {
 	const char *ddir_str[] = { NULL, "read", "write", "rw", NULL,
 				   "randread", "randwrite", "randrw" };
-	struct stat sb;
-	int numjobs, i;
+	unsigned int i;
 	struct fio_file *f;
 	const char *engine;
-	int fn_given;
+	char fname[PATH_MAX];
+	int numjobs;
 
 	/*
 	 * the def_thread is just for options, it's not a real job
@@ -829,65 +827,23 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
 
-	fn_given = (long) td->filename;
-	if (!td->filename)
+	if (!td->filename) {
 		td->filename = strdup(jobname);
 
-	td->filetype = FIO_TYPE_FILE;
-	if (!lstat(td->filename, &sb)) {
-		if (S_ISBLK(sb.st_mode))
-			td->filetype = FIO_TYPE_BD;
-		else if (S_ISCHR(sb.st_mode))
-			td->filetype = FIO_TYPE_CHAR;
+		for (i = 0; i < td->nr_files; i++) {
+			sprintf(fname, "%s.%d.%d", td->filename, td->thread_number, i);
+			add_file(td, fname);
+		}
 	}
 
 	fixup_options(td);
 
-	if (fn_given)
-		td->nr_uniq_files = 1;
-	else
-		td->nr_uniq_files = td->open_files;
-
-	if (td->filetype == FIO_TYPE_FILE) {
-		char tmp[PATH_MAX];
-		int len = 0;
-
-		if (td->directory && td->directory[0] != '\0') {
-			if (lstat(td->directory, &sb) < 0) {
-				log_err("fio: %s is not a directory\n", td->directory);
-				td_verror(td, errno, "lstat");
-				return 1;
-			}
-			if (!S_ISDIR(sb.st_mode)) {
-				log_err("fio: %s is not a directory\n", td->directory);
-				return 1;
-			}
-			len = sprintf(tmp, "%s/", td->directory);
-		}
-
-		td->files = malloc(sizeof(struct fio_file) * td->open_files);
-
-		for_each_file(td, f, i) {
-			memset(f, 0, sizeof(*f));
-			f->fd = -1;
-
-			if (fn_given)
-				sprintf(tmp + len, "%s", td->filename);
-			else
-				sprintf(tmp + len, "%s.%d.%d", td->filename, td->thread_number, i);
-			f->file_name = strdup(tmp);
-		}
-	} else {
-		td->open_files = td->nr_files = 1;
-		td->files = malloc(sizeof(struct fio_file));
-		f = &td->files[0];
-
-		memset(f, 0, sizeof(*f));
-		f->fd = -1;
-		f->file_name = strdup(td->filename);
-	}
-
 	for_each_file(td, f, i) {
+		if (td->directory && f->filetype == FIO_TYPE_FILE) {
+			sprintf(fname, "%s/%s", td->directory, f->file_name);
+			f->file_name = strdup(fname);
+		}
+
 		f->file_size = td->total_file_size / td->nr_files;
 		f->file_offset = td->start_offset;
 	}
@@ -979,8 +935,9 @@ err:
 int init_random_state(struct thread_data *td)
 {
 	unsigned long seeds[5];
-	int fd, num_maps, blocks, i;
+	int fd, num_maps, blocks;
 	struct fio_file *f;
+	unsigned int i;
 
 	if (td->io_ops->flags & FIO_DISKLESSIO)
 		return 0;
@@ -1137,6 +1094,36 @@ static int str_fst_cb(void *data, const char *str)
 	td->file_service_nr = 1;
 	if (nr)
 		td->file_service_nr = atoi(nr);
+
+	return 0;
+}
+
+static int str_filename_cb(void *data, const char *input)
+{
+	struct thread_data *td = data;
+	char *fname, *str;
+
+	str = strdup(input);
+	while ((fname = strsep(&str, ":")) != NULL)
+		add_file(td, fname);
+
+	return 0;
+}
+
+static int str_directory_cb(void *data, const char fio_unused *str)
+{
+	struct thread_data *td = data;
+	struct stat sb;
+
+	if (lstat(td->directory, &sb) < 0) {
+		log_err("fio: %s is not a directory\n", td->directory);
+		td_verror(td, errno, "lstat");
+		return 1;
+	}
+	if (!S_ISDIR(sb.st_mode)) {
+		log_err("fio: %s is not a directory\n", td->directory);
+		return 1;
+	}
 
 	return 0;
 }

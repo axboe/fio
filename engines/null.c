@@ -61,7 +61,7 @@ static int fio_null_queue(struct thread_data fio_unused *td, struct io_u *io_u)
 static int fio_null_setup(struct thread_data *td)
 {
 	struct fio_file *f;
-	int i;
+	unsigned int i;
 
 	if (!td->total_file_size) {
 		log_err("fio: need size= set\n");

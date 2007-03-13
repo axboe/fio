@@ -69,8 +69,9 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 	 */
 	struct fio_file *f = &td->files[0];
 	struct sgio_data *sd = td->io_ops->data;
-	int left = max, ret, events, i, r = 0;
+	int left = max, ret, r = 0;
 	void *buf = sd->sgbuf;
+	unsigned int i, events;
 
 	/*
 	 * Fill in the file descriptors
@@ -191,7 +192,7 @@ static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int sync)
 {
 	struct fio_file *f = io_u->file;
 
-	if (td->filetype == FIO_TYPE_BD)
+	if (f->filetype == FIO_TYPE_BD)
 		return fio_sgio_ioctl_doio(td, f, io_u);
 
 	return fio_sgio_rw_doio(f, io_u, sync);
@@ -347,12 +348,12 @@ static int fio_sgio_type_check(struct thread_data *td, struct fio_file *f)
 	struct sgio_data *sd = td->io_ops->data;
 	unsigned int bs;
 
-	if (td->filetype == FIO_TYPE_BD) {
+	if (f->filetype == FIO_TYPE_BD) {
 		if (ioctl(f->fd, BLKSSZGET, &bs) < 0) {
 			td_verror(td, errno, "ioctl");
 			return 1;
 		}
-	} else if (td->filetype == FIO_TYPE_CHAR) {
+	} else if (f->filetype == FIO_TYPE_CHAR) {
 		int version, ret;
 
 		if (ioctl(f->fd, SG_GET_VERSION_NUM, &version) < 0) {
@@ -370,7 +371,7 @@ static int fio_sgio_type_check(struct thread_data *td, struct fio_file *f)
 
 	sd->bs = bs;
 
-	if (td->filetype == FIO_TYPE_BD) {
+	if (f->filetype == FIO_TYPE_BD) {
 		td->io_ops->getevents = NULL;
 		td->io_ops->event = NULL;
 	}

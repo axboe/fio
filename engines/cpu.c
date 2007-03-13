@@ -10,7 +10,7 @@ static int fio_cpuio_queue(struct thread_data *td, struct io_u fio_unused *io_u)
 static int fio_cpuio_setup(struct thread_data fio_unused *td)
 {
 	struct fio_file *f;
-	int i;
+	unsigned int i;
 
 	td->total_file_size = -1;
 	td->io_size = td->total_file_size;

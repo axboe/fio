@@ -15,7 +15,7 @@ static int file_ok(struct thread_data *td, struct fio_file *f)
 {
 	struct stat st;
 
-	if (td->filetype != FIO_TYPE_FILE ||
+	if (f->filetype != FIO_TYPE_FILE ||
 	    (td->io_ops->flags & FIO_DISKLESSIO))
 		return 0;
 
@@ -98,7 +98,8 @@ err:
 static int create_files(struct thread_data *td)
 {
 	struct fio_file *f;
-	int i, err, need_create, can_extend;
+	int err, need_create, can_extend;
+	unsigned int i;
 
 	for_each_file(td, f, i)
 		f->file_size = td->total_file_size / td->nr_files;
@@ -111,17 +112,20 @@ static int create_files(struct thread_data *td)
 		return 0;
 
 	need_create = 0;
-	if (td->filetype == FIO_TYPE_FILE) {
-		for_each_file(td, f, i) {
-			int file_there = !file_ok(td, f);
+	for_each_file(td, f, i) {
+		int file_there;
 
-			if (file_there && td_write(td) && !td->overwrite) {
-				unlink(f->file_name);
-				file_there = 0;
-			}
+		if (f->filetype != FIO_TYPE_FILE)
+			continue;
 
-			need_create += !file_there;
+		file_there = !file_ok(td, f);
+
+		if (file_there && td_write(td) && !td->overwrite) {
+			unlink(f->file_name);
+			file_there = 0;
 		}
+
+		need_create += !file_there;
 	}
 
 	if (!need_create)
@@ -204,9 +208,9 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 {
 	int ret = 0;
 
-	if (td->filetype == FIO_TYPE_FILE)
+	if (f->filetype == FIO_TYPE_FILE)
 		ret = file_size(td, f);
-	else if (td->filetype == FIO_TYPE_BD)
+	else if (f->filetype == FIO_TYPE_BD)
 		ret = bdev_size(td, f);
 	else
 		f->real_file_size = -1;
@@ -234,11 +238,11 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 	 */
 	if (f->mmap)
 		ret = madvise(f->mmap, f->file_size, MADV_DONTNEED);
-	else if (td->filetype == FIO_TYPE_FILE) {
+	else if (f->filetype == FIO_TYPE_FILE) {
 		ret = fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_DONTNEED);
-	} else if (td->filetype == FIO_TYPE_BD) {
+	} else if (f->filetype == FIO_TYPE_BD) {
 		ret = blockdev_invalidate_cache(f->fd);
-	} else if (td->filetype == FIO_TYPE_CHAR)
+	} else if (f->filetype == FIO_TYPE_CHAR)
 		ret = 0;
 
 	if (ret < 0) {
@@ -267,12 +271,12 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	if (td_write(td) || td_rw(td)) {
 		flags |= O_RDWR;
 
-		if (td->filetype == FIO_TYPE_FILE)
+		if (f->filetype == FIO_TYPE_FILE)
 			flags |= O_CREAT;
 
 		f->fd = open(f->file_name, flags, 0600);
 	} else {
-		if (td->filetype == FIO_TYPE_CHAR)
+		if (f->filetype == FIO_TYPE_CHAR)
 			flags |= O_RDWR;
 		else
 			flags |= O_RDONLY;
@@ -316,7 +320,8 @@ err:
 int open_files(struct thread_data *td)
 {
 	struct fio_file *f;
-	int i, err = 0;
+	unsigned int i;
+	int err = 0;
 
 	for_each_file(td, f, i) {
 		err = td_io_open_file(td, f);
@@ -339,7 +344,8 @@ int open_files(struct thread_data *td)
 int setup_files(struct thread_data *td)
 {
 	struct fio_file *f;
-	int err, i;
+	unsigned int i;
+	int err;
 
 	/*
 	 * if ioengine defines a setup() method, it's responsible for
@@ -385,13 +391,12 @@ int setup_files(struct thread_data *td)
 void close_files(struct thread_data *td)
 {
 	struct fio_file *f;
-	int i;
+	unsigned int i;
 
 	for_each_file(td, f, i) {
 		if (!td->filename && f->unlink &&
-		    td->filetype == FIO_TYPE_FILE) {
+		    f->filetype == FIO_TYPE_FILE) {
 			unlink(f->file_name);
-			free(f->file_name);
 			f->file_name = NULL;
 		}
 
@@ -405,4 +410,36 @@ void close_files(struct thread_data *td)
 	free(td->files);
 	td->files = NULL;
 	td->nr_files = 0;
+}
+
+static void get_file_type(struct thread_data *td, struct fio_file *f)
+{
+	struct stat sb;
+
+	f->filetype = FIO_TYPE_FILE;
+
+	if (!lstat(td->filename, &sb)) {
+		if (S_ISBLK(sb.st_mode))
+			f->filetype = FIO_TYPE_BD;
+		else if (S_ISCHR(sb.st_mode))
+			f->filetype = FIO_TYPE_CHAR;
+	}
+}
+
+void add_file(struct thread_data *td, const char *fname)
+{
+	int cur_files = td->open_files;
+	struct fio_file *f;
+
+	td->files = realloc(td->files, (cur_files + 1) * sizeof(*f));
+
+	f = &td->files[cur_files];
+	memset(f, 0, sizeof(*f));
+	f->fd = -1;
+	f->file_name = fname;
+
+	get_file_type(td, f);
+
+	td->open_files++;
+	td->nr_uniq_files = td->open_files;
 }

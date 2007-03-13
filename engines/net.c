@@ -223,8 +223,9 @@ static int fio_netio_init(struct thread_data *td)
 	unsigned short port;
 	struct fio_file *f;
 	char host[64], buf[128];
+	unsigned int i;
 	char *sep;
-	int ret, i;
+	int ret;
 
 	if (!td->total_file_size) {
 		log_err("fio: need size= set\n");

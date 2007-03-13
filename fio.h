@@ -223,6 +223,8 @@ enum fio_ioengine_flags {
  * this structure holds state information for a single file.
  */
 struct fio_file {
+	enum fio_filetype filetype;
+
 	/*
 	 * A file may not be a file descriptor, let the io engine decide
 	 */
@@ -230,7 +232,7 @@ struct fio_file {
 		unsigned long file_data;
 		int fd;
 	};
-	char *file_name;
+	const char *file_name;
 	void *mmap;
 	unsigned long long file_size;
 	unsigned long long real_file_size;
@@ -314,7 +316,6 @@ struct thread_data {
 	int thread_number;
 	int groupid;
 	struct thread_stat ts;
-	enum fio_filetype filetype;
 	struct fio_file *files;
 	unsigned int nr_files;
 	unsigned int nr_open_files;
@@ -648,6 +649,7 @@ extern int __must_check open_files(struct thread_data *);
 extern int __must_check file_invalidate_cache(struct thread_data *, struct fio_file *);
 extern int __must_check generic_open_file(struct thread_data *, struct fio_file *);
 extern void generic_close_file(struct thread_data *, struct fio_file *);
+extern void add_file(struct thread_data *, const char *);
 
 /*
  * ETA/status stuff
@@ -764,7 +766,7 @@ extern void close_ioengine(struct thread_data *);
 #define for_each_td(td, i)	\
 	for ((i) = 0, (td) = &threads[0]; (i) < (int) thread_number; (i)++, (td)++)
 #define for_each_file(td, f, i)	\
-	for ((i) = 0, (f) = &(td)->files[0]; (i) < (int) (td)->open_files; (i)++, (f)++)
+	for ((i) = 0, (f) = &(td)->files[0]; (i) < (td)->open_files; (i)++, (f)++)
 
 #define fio_assert(td, cond)	do {	\
 	if (!(cond)) {			\

@@ -255,7 +255,8 @@ static void do_verify(struct thread_data *td)
 {
 	struct fio_file *f;
 	struct io_u *io_u;
-	int ret, i, min_events;
+	int ret, min_events;
+	unsigned int i;
 
 	/*
 	 * sync io first and invalidate cache, to make sure we really
@@ -379,7 +380,8 @@ static void do_io(struct thread_data *td)
 {
 	struct timeval s;
 	unsigned long usec;
-	int i, ret = 0;
+	unsigned int i;
+	int ret = 0;
 
 	td_set_runstate(td, TD_RUNNING);
 
@@ -650,7 +652,8 @@ static int switch_ioscheduler(struct thread_data *td)
 static int clear_io_state(struct thread_data *td)
 {
 	struct fio_file *f;
-	int i, ret;
+	unsigned int i;
+	int ret;
 
 	td->ts.stat_io_bytes[0] = td->ts.stat_io_bytes[1] = 0;
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
