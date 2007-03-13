@@ -330,18 +330,19 @@ static void io_u_mark_latency(struct thread_data *td, unsigned long msec)
 /*
  * Get next file to service by choosing one at random
  */
-static struct fio_file *get_next_file_rand(struct thread_data *td)
+static struct fio_file *get_next_file_rand(struct thread_data *td, int goodf,
+					   int badf)
 {
-	unsigned int fileno;
 	struct fio_file *f;
+	int fno;
 
 	do {
 		long r = os_random_long(&td->next_file_state);
 
-		fileno = (unsigned int) ((double) (td->open_files * r) / (RAND_MAX + 1.0));
-		f = &td->files[fileno];
-		if ((f->flags & FIO_FILE_OPEN) &&
-		    !(f->flags & FIO_FILE_CLOSING))
+		fno = (unsigned int) ((double) td->nr_files * (r / (RAND_MAX + 1.0)));
+		f = &td->files[fno];
+
+		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf))
 			return f;
 	} while (1);
 }
@@ -349,7 +350,8 @@ static struct fio_file *get_next_file_rand(struct thread_data *td)
 /*
  * Get next file to service by doing round robin between all available ones
  */
-static struct fio_file *get_next_file_rr(struct thread_data *td)
+static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
+					 int badf)
 {
 	unsigned int old_next_file = td->next_file;
 	struct fio_file *f;
@@ -358,11 +360,10 @@ static struct fio_file *get_next_file_rr(struct thread_data *td)
 		f = &td->files[td->next_file];
 
 		td->next_file++;
-		if (td->next_file >= td->open_files)
+		if (td->next_file >= td->nr_files)
 			td->next_file = 0;
 
-		if ((f->flags & FIO_FILE_OPEN) &&
-		    !(f->flags & FIO_FILE_CLOSING))
+		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf))
 			break;
 
 		f = NULL;
@@ -375,6 +376,8 @@ static struct fio_file *get_next_file(struct thread_data *td)
 {
 	struct fio_file *f;
 
+	assert(td->nr_files <= td->files_index);
+
 	if (!td->nr_open_files)
 		return NULL;
 
@@ -383,12 +386,24 @@ static struct fio_file *get_next_file(struct thread_data *td)
 		return f;
 
 	if (td->file_service_type == FIO_FSERVICE_RR)
-		f = get_next_file_rr(td);
+		f = get_next_file_rr(td, FIO_FILE_OPEN, FIO_FILE_CLOSING);
 	else
-		f = get_next_file_rand(td);
+		f = get_next_file_rand(td, FIO_FILE_OPEN, FIO_FILE_CLOSING);
 
 	td->file_service_file = f;
 	td->file_service_left = td->file_service_nr - 1;
+	return f;
+}
+
+static struct fio_file *find_next_new_file(struct thread_data *td)
+{
+	struct fio_file *f;
+
+	if (td->file_service_type == FIO_FSERVICE_RR)
+		f = get_next_file_rr(td, 0, FIO_FILE_OPEN);
+	else
+		f = get_next_file_rand(td, 0, FIO_FILE_OPEN);
+
 	return f;
 }
 
@@ -428,6 +443,7 @@ struct io_u *get_io_u(struct thread_data *td)
 {
 	struct fio_file *f;
 	struct io_u *io_u;
+	int ret;
 
 	io_u = __get_io_u(td);
 	if (!io_u)
@@ -446,6 +462,7 @@ struct io_u *get_io_u(struct thread_data *td)
 			return NULL;
 		}
 
+set_file:
 		io_u->file = f;
 
 		if (!fill_io_u(td, io_u))
@@ -463,12 +480,13 @@ struct io_u *get_io_u(struct thread_data *td)
 		 */
 		if (td->nr_open_files < td->nr_files &&
 		    td->open_files != td->nr_files) {
-			int ret = td_io_open_file(td, f);
+			f = find_next_new_file(td);
 
-			if (ret) {
+			if (!f || (ret = td_io_open_file(td, f))) {
 				put_io_u(td, io_u);
-				return NULL;
+				break;
 			}
+			goto set_file;
 		}
 	} while (1);
 

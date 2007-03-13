@@ -775,9 +775,7 @@ extern void close_ioengine(struct thread_data *);
 #define for_each_td(td, i)	\
 	for ((i) = 0, (td) = &threads[0]; (i) < (int) thread_number; (i)++, (td)++)
 #define for_each_file(td, f, i)	\
-	for ((i) = 0, (f) = &(td)->files[0]; (i) < (td)->open_files; (i)++, (f)++)
-#define for_all_files(td, f, i)	\
-	for ((i) = 0, (f) = &(td)->files[0]; (i) < (td)->files_index; (i)++, (f)++)
+	for ((i) = 0, (f) = &(td)->files[0]; (i) < (td)->nr_files; (i)++, (f)++)
 
 #define fio_assert(td, cond)	do {	\
 	if (!(cond)) {			\

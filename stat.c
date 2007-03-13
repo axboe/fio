@@ -317,7 +317,7 @@ void init_disk_util(struct thread_data *td)
 	    (td->io_ops->flags & (FIO_DISKLESSIO | FIO_NODISKUTIL)))
 		return;
 
-	for_all_files(td, f, i)
+	for_each_file(td, f, i)
 		__init_disk_util(td, f);
 }
 
