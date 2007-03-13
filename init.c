@@ -849,9 +849,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 			sprintf(fname, "%s/%s", td->directory, f->file_name);
 			f->file_name = strdup(fname);
 		}
-
-		f->file_size = td->total_file_size / td->nr_files;
-		f->file_offset = td->start_offset;
 	}
 		
 	td->mutex = fio_sem_init(0);
@@ -1109,7 +1106,9 @@ static int str_filename_cb(void *data, const char *input)
 	struct thread_data *td = data;
 	char *fname, *str, *p;
 
-	td->nr_files = 0;
+	if (!td->filename)
+		td->nr_files = 0;
+
 	p = str = strdup(input);
 
 	strip_blank_front(&str);

@@ -101,8 +101,13 @@ static int create_files(struct thread_data *td)
 	int err, need_create, can_extend;
 	unsigned int i;
 
-	for_each_file(td, f, i)
-		f->file_size = td->total_file_size / td->nr_files;
+	for_each_file(td, f, i) {
+		if (f->filetype != FIO_TYPE_FILE)
+			continue;
+
+		f->file_size = td->total_file_size / td->nr_normal_files;
+		f->file_offset = td->start_offset;
+	}
 
 	/*
 	 * unless specifically asked for overwrite, let normal io extend it
@@ -139,8 +144,8 @@ static int create_files(struct thread_data *td)
 
 	temp_stall_ts = 1;
 	fprintf(f_out, "%s: Laying out IO file(s) (%u x %LuMiB == %LuMiB)\n",
-				td->name, td->nr_uniq_files,
-				(td->total_file_size >> 20) / td->nr_uniq_files,
+				td->name, td->nr_normal_files,
+				(td->total_file_size >> 20) / td->nr_normal_files,
 				td->total_file_size >> 20);
 
 	err = 0;
@@ -444,7 +449,8 @@ void add_file(struct thread_data *td, const char *fname)
 	get_file_type(f);
 
 	td->open_files++;
-	td->nr_uniq_files = td->open_files;
+	if (f->filetype == FIO_TYPE_FILE)
+		td->nr_normal_files++;
 }
 
 void get_file(struct fio_file *f)

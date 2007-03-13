@@ -325,7 +325,7 @@ struct thread_data {
 	struct fio_file *files;
 	unsigned int nr_files;
 	unsigned int nr_open_files;
-	unsigned int nr_uniq_files;
+	unsigned int nr_normal_files;
 	union {
 		unsigned int next_file;
 		os_random_state_t next_file_state;
