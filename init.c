@@ -884,7 +884,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 		memset(f, 0, sizeof(*f));
 		f->fd = -1;
-		f->file_name = strdup(jobname);
+		f->file_name = strdup(td->filename);
 	}
 
 	for_each_file(td, f, i) {
