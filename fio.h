@@ -238,7 +238,7 @@ struct fio_file {
 		unsigned long file_data;
 		int fd;
 	};
-	const char *file_name;
+	char *file_name;
 	void *mmap;
 	unsigned long long file_size;
 	unsigned long long real_file_size;
