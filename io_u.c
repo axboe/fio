@@ -487,7 +487,7 @@ set_file:
 
 			if (!f || (ret = td_io_open_file(td, f))) {
 				put_io_u(td, io_u);
-				break;
+				return NULL;
 			}
 			goto set_file;
 		}
