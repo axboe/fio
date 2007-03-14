@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
+#include <asm/unistd.h>
 
 #include "../fio.h"
 #include "../os.h"
