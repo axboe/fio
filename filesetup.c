@@ -101,14 +101,25 @@ static int create_files(struct thread_data *td)
 {
 	struct fio_file *f;
 	int err, need_create, can_extend;
+	unsigned long long total_file_size;
 	unsigned int i;
 
+	total_file_size = td->total_file_size;
 	for_each_file(td, f, i) {
+		unsigned long long s;
+
+		f->file_offset = td->start_offset;
+
 		if (f->filetype != FIO_TYPE_FILE)
 			continue;
 
-		f->file_size = td->total_file_size / td->nr_normal_files;
-		f->file_offset = td->start_offset;
+		if (f->flags & FIO_FILE_EXISTS) {
+			s = f->file_size;
+			if (s > total_file_size)
+				s = total_file_size;
+
+			total_file_size -= s;
+		}
 	}
 
 	/*
@@ -124,6 +135,10 @@ static int create_files(struct thread_data *td)
 
 		if (f->filetype != FIO_TYPE_FILE)
 			continue;
+		if (f->flags & FIO_FILE_EXISTS)
+			continue;
+
+		f->file_size = total_file_size / td->nr_normal_files;
 
 		file_there = !file_ok(td, f);
 
@@ -217,9 +232,10 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 {
 	int ret = 0;
 
-	if (f->filetype == FIO_TYPE_FILE)
-		ret = file_size(td, f);
-	else if (f->filetype == FIO_TYPE_BD)
+	if (f->filetype == FIO_TYPE_FILE) {
+		if (!(f->flags & FIO_FILE_EXISTS))
+			ret = file_size(td, f);
+	} else if (f->filetype == FIO_TYPE_BD)
 		ret = bdev_size(td, f);
 	else
 		f->real_file_size = -1;
@@ -429,10 +445,19 @@ static void get_file_type(struct fio_file *f)
 	f->filetype = FIO_TYPE_FILE;
 
 	if (!lstat(f->file_name, &sb)) {
+		f->flags |= FIO_FILE_EXISTS;
+
 		if (S_ISBLK(sb.st_mode))
 			f->filetype = FIO_TYPE_BD;
 		else if (S_ISCHR(sb.st_mode))
 			f->filetype = FIO_TYPE_CHAR;
+		else {
+			/*
+			 * might as well do this here, and save a stat later on
+			 */
+			f->real_file_size = sb.st_size;
+			f->file_size = f->real_file_size;
+		}
 	}
 }
 
@@ -493,6 +518,10 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 	while ((dir = readdir(D)) != NULL) {
 		char full_path[PATH_MAX];
 		struct stat sb;
+
+		/*
+		 * check d_ino here?
+		 */
 
 		sprintf(full_path, "%s/%s", dirname, dir->d_name);
 

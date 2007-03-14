@@ -222,6 +222,7 @@ enum fio_file_flags {
 	FIO_FILE_OPEN		= 1 << 0,	/* file is open */
 	FIO_FILE_UNLINK		= 1 << 1,	/* unlink on close */
 	FIO_FILE_CLOSING	= 1 << 2,	/* file being closed */
+	FIO_FILE_EXISTS		= 1 << 3,	/* no need to create */
 };
 
 /*
