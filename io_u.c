@@ -481,7 +481,7 @@ set_file:
 		 * probably not the right place to do this, but see
 		 * if we need to open a new file
 		 */
-		if (td->nr_open_files < td->nr_files &&
+		if (td->nr_open_files < td->open_files &&
 		    td->open_files != td->nr_files) {
 			f = find_next_new_file(td);
 
