@@ -82,13 +82,31 @@ static struct fio_option options[] = {
 		.help	= "IO direction",
 		.def	= "read",
 		.posval = {
-			  { .ival = "read", .oval = TD_DDIR_READ },
-			  { .ival = "write", .oval = TD_DDIR_WRITE },
-			  { .ival = "randread", .oval = TD_DDIR_RANDREAD },
-			  { .ival = "randwrite", .oval = TD_DDIR_RANDWRITE },
-			  { .ival = "rw", .oval = TD_DDIR_RW },
-			  { .ival = "randrw", .oval = TD_DDIR_RANDRW },
+			  { .ival = "read",
+			    .oval = TD_DDIR_READ,
+			    .help = "Sequential read",
 			  },
+			  { .ival = "write",
+			    .oval = TD_DDIR_WRITE,
+			    .help = "Sequential write",
+			  },
+			  { .ival = "randread",
+			    .oval = TD_DDIR_RANDREAD,
+			    .help = "Random read",
+			  },
+			  { .ival = "randwrite",
+			    .oval = TD_DDIR_RANDWRITE,
+			    .help = "Random write",
+			   },
+			  { .ival = "rw",
+			    .oval = TD_DDIR_RW,
+			    .help = "Sequential read and write mix",
+			  },
+			  { .ival = "randrw",
+			    .oval = TD_DDIR_RANDRW,
+			    .help = "Random read and write mix"
+			  },
+		},
 	},
 	{
 		.name	= "ioengine",
@@ -97,27 +115,50 @@ static struct fio_option options[] = {
 		.help	= "IO engine to use",
 		.def	= "sync",
 		.posval	= {
-			  { .ival = "sync", },
+			  { .ival = "sync",
+			    .help = "Use read/write",
+			  },
 #ifdef FIO_HAVE_LIBAIO
-			  { .ival = "libaio", },
+			  { .ival = "libaio",
+			    .help = "Linux native asynchronous IO",
+			  },
 #endif
 #ifdef FIO_HAVE_POSIXAIO
-			  { .ival = "posixaio", },
+			  { .ival = "posixaio",
+			    .help = "POSIX asynchronous IO",
+			  },
 #endif
-			  { .ival = "mmap", },
+			  { .ival = "mmap",
+			    .help = "Memory mapped IO",
+			  },
 #ifdef FIO_HAVE_SPLICE
-			  { .ival = "splice", },
+			  { .ival = "splice",
+			    .help = "splice/vmsplice based IO",
+			  },
 #endif
 #ifdef FIO_HAVE_SGIO
-			  { .ival = "sg", },
-#endif
-			  { .ival = "null", }, { .ival = "net", },
-#ifdef FIO_HAVE_SYSLET
-			  { .ival = "syslet-rw", },
-#endif
-			  { .ival = "cpuio", },
-			  { .ival = "external", },
+			  { .ival = "sg",
+			    .help = "SCSI generic v3 IO",
 			  },
+#endif
+			  { .ival = "null",
+			    .help = "Testing engine (no data transfer)",
+			  },
+			  { .ival = "net",
+			    .help = "Network IO",
+			  },
+#ifdef FIO_HAVE_SYSLET
+			  { .ival = "syslet-rw",
+			    .help = "syslet enabled async pread/pwrite IO",
+			  },
+#endif
+			  { .ival = "cpuio",
+			    .help = "CPU cycler burner engine",
+			  },
+			  { .ival = "external",
+			    .help = "Load external engine (append name)",
+			  },
+		},
 	},
 	{
 		.name	= "iodepth",
@@ -208,9 +249,15 @@ static struct fio_option options[] = {
 		.help	= "How to select which file to service next",
 		.def	= "roundrobin",
 		.posval	= {
-			  { .ival = "random", .oval = FIO_FSERVICE_RANDOM },
-			  { .ival = "roundrobin", .oval = FIO_FSERVICE_RR },
+			  { .ival = "random",
+			    .oval = FIO_FSERVICE_RANDOM,
+			    .help = "Choose a file at random",
 			  },
+			  { .ival = "roundrobin",
+			    .oval = FIO_FSERVICE_RR,
+			    .help = "Round robin select files",
+			  },
+		},
 	},
 	{
 		.name	= "fsync",
@@ -278,16 +325,31 @@ static struct fio_option options[] = {
 		.help	= "Backing type for IO buffers",
 		.def	= "malloc",
 		.posval	= {
-			  { .ival = "malloc", .oval = MEM_MALLOC },
-			  { .ival = "shm", .oval = MEM_SHM },
-#ifdef FIO_HAVE_HUGETLB
-			  { .ival = "shmhuge", .oval = MEM_SHMHUGE },
-#endif
-			  { .ival = "mmap", .oval = MEM_MMAP },
-#ifdef FIO_HAVE_HUGETLB
-			  { .ival = "mmaphuge", .oval = MEM_MMAPHUGE },
-#endif
+			  { .ival = "malloc",
+			    .oval = MEM_MALLOC,
+			    .help = "Use malloc(3) for IO buffers",
 			  },
+			  { .ival = "shm",
+			    .oval = MEM_SHM,
+			    .help = "Use shared memory segments for IO buffers",
+			  },
+#ifdef FIO_HAVE_HUGETLB
+			  { .ival = "shmhuge",
+			    .oval = MEM_SHMHUGE,
+			    .help = "Like shm, but use huge pages",
+			  },
+#endif
+			  { .ival = "mmap",
+			    .oval = MEM_MMAP,
+			    .help = "Use mmap(2) (file or anon) for IO buffers",
+			  },
+#ifdef FIO_HAVE_HUGETLB
+			  { .ival = "mmaphuge",
+			    .oval = MEM_MMAPHUGE,
+			    .help = "Like mmap, but use huge pages",
+			  },
+#endif
+		  },
 	},
 	{
 		.name	= "verify",
@@ -296,10 +358,19 @@ static struct fio_option options[] = {
 		.help	= "Verify sum function",
 		.def	= "0",
 		.posval = {
-			  { .ival = "0", .oval = VERIFY_NONE },
-			  { .ival = "crc32", .oval = VERIFY_CRC32 },
-			  { .ival = "md5", .oval = VERIFY_MD5 },
+			  { .ival = "0",
+			    .oval = VERIFY_NONE,
+			    .help = "Don't do IO verification",
 			  },
+			  { .ival = "crc32",
+			    .oval = VERIFY_CRC32,
+			    .help = "Use crc32 checksums for verification",
+			  },
+			  { .ival = "md5",
+			    .oval = VERIFY_MD5,
+			    .help = "Use md5 checksums for verification",
+			  },
+		},
 	},
 	{
 		.name	= "write_iolog",

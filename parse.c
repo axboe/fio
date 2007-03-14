@@ -21,18 +21,18 @@ static void show_option_range(struct fio_option *o)
 
 static void show_option_values(struct fio_option *o)
 {
-	const char *msg;
 	int i = 0;
 
 	do {
-		msg = o->posval[i].ival;
-		if (!msg)
+		const struct value_pair *vp = &o->posval[i];
+
+		if (!vp->ival)
 			break;
 
-		if (!i)
-			printf("%20s: ", "valid values");
-
-		printf("%s,", msg);
+		printf("%20s: %-10s", i == 0 ? "valid values" : "", vp->ival);
+		if (vp->help)
+			printf(" %s", vp->help);
+		printf("\n");
 		i++;
 	} while (i < PARSE_MAX_VP);
 
