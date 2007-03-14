@@ -22,22 +22,30 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 	else if (io_u->ddir == DDIR_WRITE)
 		memcpy(f->mmap + real_off, io_u->xfer_buf, io_u->xfer_buflen);
 	else if (io_u->ddir == DDIR_SYNC) {
-		if (msync(f->mmap, f->file_size, MS_SYNC))
+		size_t len = (f->file_size + page_size - 1) & ~page_mask;
+
+		if (msync(f->mmap, len, MS_SYNC)) {
 			io_u->error = errno;
+			td_verror(td, io_u->error, "msync");
+		}
 	}
 
 	/*
 	 * not really direct, but should drop the pages from the cache
 	 */
 	if (td->odirect && io_u->ddir != DDIR_SYNC) {
-		if (msync(f->mmap + real_off, io_u->xfer_buflen, MS_SYNC) < 0)
-			io_u->error = errno;
-		if (madvise(f->mmap + real_off, io_u->xfer_buflen,  MADV_DONTNEED) < 0)
-			io_u->error = errno;
-	}
+		size_t len = (io_u->xfer_buflen + page_size - 1) & ~page_mask;
+		unsigned long long off = real_off & ~page_mask;
 
-	if (io_u->error)
-		td_verror(td, io_u->error, "sync");
+		if (msync(f->mmap + off, len, MS_SYNC) < 0) {
+			io_u->error = errno;
+			td_verror(td, io_u->error, "msync");
+		}
+		if (madvise(f->mmap + off, len,  MADV_DONTNEED) < 0) {
+			io_u->error = errno;
+			td_verror(td, io_u->error, "madvise");
+		}
+	}
 
 	return FIO_Q_COMPLETED;
 }

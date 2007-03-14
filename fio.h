@@ -534,6 +534,7 @@ extern FILE *f_out;
 extern FILE *f_err;
 extern int temp_stall_ts;
 extern unsigned long long mlock_size;
+extern unsigned long page_mask, page_size;
 
 extern struct thread_data *threads;
 

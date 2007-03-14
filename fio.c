@@ -37,7 +37,8 @@
 #include "fio.h"
 #include "os.h"
 
-static unsigned long page_mask;
+unsigned long page_mask;
+unsigned long page_size;
 #define ALIGN(buf)	\
 	(char *) (((unsigned long) (buf) + page_mask) & ~page_mask)
 
@@ -1158,6 +1159,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	page_size = ps;
 	page_mask = ps - 1;
 
 	if (write_bw_log) {
