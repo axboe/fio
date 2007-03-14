@@ -22,6 +22,7 @@ enum fio_opt_type {
 struct value_pair {
 	const char *ival;		/* string option */
 	unsigned int oval;		/* output value */
+	const char *help;		/* help text for sub option */
 };
 
 #define PARSE_MAX_VP	16
