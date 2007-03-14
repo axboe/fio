@@ -102,8 +102,9 @@ static int create_files(struct thread_data *td)
 	struct fio_file *f;
 	int err, need_create, can_extend;
 	unsigned long long total_file_size;
-	unsigned int i;
+	unsigned int i, new_files;
 
+	new_files = 0;
 	total_file_size = td->total_file_size;
 	for_each_file(td, f, i) {
 		unsigned long long s;
@@ -119,7 +120,8 @@ static int create_files(struct thread_data *td)
 				s = total_file_size;
 
 			total_file_size -= s;
-		}
+		} else
+			new_files++;
 	}
 
 	/*
@@ -138,7 +140,7 @@ static int create_files(struct thread_data *td)
 		if (f->flags & FIO_FILE_EXISTS)
 			continue;
 
-		f->file_size = total_file_size / td->nr_normal_files;
+		f->file_size = total_file_size / new_files;
 
 		file_there = !file_ok(td, f);
 
@@ -161,9 +163,9 @@ static int create_files(struct thread_data *td)
 
 	temp_stall_ts = 1;
 	fprintf(f_out, "%s: Laying out IO file(s) (%u x %LuMiB == %LuMiB)\n",
-				td->name, td->nr_normal_files,
-				(td->total_file_size >> 20) / td->nr_normal_files,
-				td->total_file_size >> 20);
+				td->name, new_files,
+				(total_file_size >> 20) / new_files,
+				total_file_size >> 20);
 
 	err = 0;
 	for_each_file(td, f, i) {
