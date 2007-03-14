@@ -97,7 +97,7 @@ static struct fio_option options[] = {
 			  { .ival = "randwrite",
 			    .oval = TD_DDIR_RANDWRITE,
 			    .help = "Random write",
-			   },
+			  },
 			  { .ival = "rw",
 			    .oval = TD_DDIR_RW,
 			    .help = "Sequential read and write mix",
@@ -355,7 +355,7 @@ static struct fio_option options[] = {
 		.name	= "verify",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(verify),
-		.help	= "Verify sum function",
+		.help	= "Verify data written",
 		.def	= "0",
 		.posval = {
 			  { .ival = "0",
