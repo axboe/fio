@@ -17,6 +17,14 @@
 
 #ifdef FIO_HAVE_SYSLET
 
+#ifdef __NR_pread64
+#define __NR_fio_pread	__NR_pread64
+#define __NR_fio_pwrite	__NR_pwrite64
+#else
+#define __NR_fio_pread	__NR_pread
+#define __NR_fio_pwrite	__NR_pwrite
+#endif
+
 struct syslet_data {
 	struct io_u **events;
 	unsigned int nr_events;
@@ -158,9 +166,9 @@ static void fio_syslet_prep_rw(struct io_u *io_u, struct fio_file *f)
 	 * prepare rw
 	 */
 	if (io_u->ddir == DDIR_READ)
-		nr = __NR_pread64;
+		nr = __NR_fio_pread;
 	else
-		nr = __NR_pwrite64;
+		nr = __NR_fio_pwrite;
 
 	init_atom(&io_u->req.atom, nr, &f->fd, &io_u->xfer_buf,
 		  &io_u->xfer_buflen, &io_u->offset, &io_u->req.ret, 0, io_u);
