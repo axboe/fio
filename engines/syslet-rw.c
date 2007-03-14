@@ -1,5 +1,8 @@
 /*
- * read/write() engine that uses syslet to be async
+ * syslet engine
+ *
+ * IO engine that does regular pread(2)/pwrite(2) to transfer data, but
+ * with syslets to make the execution async.
  *
  */
 #include <stdio.h>

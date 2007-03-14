@@ -1,5 +1,8 @@
 /*
- * regular read/write sync io engine
+ * mmap engine
+ *
+ * IO engine that reads/writes from files by doing memcpy to/from
+ * a memory mapped region of the file.
  *
  */
 #include <stdio.h>

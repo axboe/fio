@@ -1,5 +1,8 @@
 /*
- * null engine - doesn't do any transfers. Used to test fio.
+ * null engine
+ *
+ * IO engine that doesn't do any real IO transfers, it just pretends to.
+ * The main purpose is to test fio itself.
  *
  */
 #include <stdio.h>

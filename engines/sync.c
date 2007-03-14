@@ -1,5 +1,8 @@
 /*
- * regular read/write sync io engine
+ * sync engine
+ *
+ * IO engine that does regular read(2)/write(2) with lseek(2) to transfer
+ * data.
  *
  */
 #include <stdio.h>

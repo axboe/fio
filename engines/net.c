@@ -1,5 +1,8 @@
 /*
- * Transfer data over the net.
+ * net engine
+ *
+ * IO engine that reads/writes to/from sockets.
+ *
  */
 #include <stdio.h>
 #include <stdlib.h>

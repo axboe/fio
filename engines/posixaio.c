@@ -1,5 +1,7 @@
 /*
- * posix aio io engine
+ * posixaio engine
+ *
+ * IO engine that uses the posix defined aio interface.
  *
  */
 #include <stdio.h>

@@ -1,5 +1,7 @@
 /*
- * native linux aio io engine
+ * libaio engine
+ *
+ * IO engine using the Linux native aio interface.
  *
  */
 #include <stdio.h>

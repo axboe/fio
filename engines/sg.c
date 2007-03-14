@@ -1,5 +1,7 @@
 /*
- * scsi generic sg v3 io engine
+ * sg engine
+ *
+ * IO engine that uses the Linux SG v3 interface to talk to SCSI devices
  *
  */
 #include <stdio.h>

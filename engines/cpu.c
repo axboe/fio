@@ -1,3 +1,10 @@
+/*
+ * CPU engine
+ *
+ * Doesn't transfer any data, merely burns CPU cycles according to
+ * the settings.
+ *
+ */
 #include "../fio.h"
 #include "../os.h"
 

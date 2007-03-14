@@ -1,5 +1,8 @@
 /*
- * splice io engine
+ * splice engine
+ *
+ * IO engine that transfers data by doing splices to/from pipes and
+ * the files.
  *
  */
 #include <stdio.h>
