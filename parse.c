@@ -537,9 +537,12 @@ int show_cmd_help(struct fio_option *options, const char *name)
 
 		if (show_all || match) {
 			found = 1;
-			printf("%20s: %s\n", o->name, o->help);
-			if (show_all)
+			if (match)
+				printf("%20s: %s\n", o->name, o->help);
+			if (show_all) {
+				printf("%-20s: %s\n", o->name, o->help);
 				continue;
+			}
 		}
 
 		if (!match)
