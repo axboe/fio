@@ -519,9 +519,8 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 		char full_path[PATH_MAX];
 		struct stat sb;
 
-		/*
-		 * check d_ino here?
-		 */
+		if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, ".."))
+			continue;
 
 		sprintf(full_path, "%s/%s", dirname, dir->d_name);
 
@@ -537,9 +536,6 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 			td->nr_files++;
 			continue;
 		}
-
-		if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, ".."))
-			continue;
 
 		if ((ret = recurse_dir(td, full_path)) != 0)
 			break;
