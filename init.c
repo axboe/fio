@@ -880,6 +880,19 @@ static const char *get_engine_name(const char *str)
 	return p;
 }
 
+static int exists_and_not_file(const char *filename)
+{
+	struct stat sb;
+
+	if (lstat(filename, &sb) == -1)
+		return 0;
+
+	if (S_ISREG(sb.st_mode))
+		return 0;
+
+	return 1;
+}
+
 /*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
@@ -893,7 +906,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	struct fio_file *f;
 	const char *engine;
 	char fname[PATH_MAX];
-	int numjobs;
+	int numjobs, file_alloced;
 
 	/*
 	 * the def_thread is just for options, it's not a real job
@@ -916,14 +929,15 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
 
+	file_alloced = 0;
 	if (!td->filename && !td->files_index) {
-		td->filename = strdup(jobname);
+		file_alloced = 1;
 
-		if (td->nr_files == 1)
-			add_file(td, td->filename);
+		if (td->nr_files == 1 && exists_and_not_file(jobname))
+			add_file(td, jobname);
 		else {
 			for (i = 0; i < td->nr_files; i++) {
-				sprintf(fname, "%s.%d.%d", td->filename, td->thread_number, i);
+				sprintf(fname, "%s.%d.%d", jobname, td->thread_number, i);
 				add_file(td, fname);
 			}
 		}
@@ -1001,6 +1015,13 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 		td_new->numjobs = 1;
 		td_new->stonewall = 0;
+
+		if (file_alloced) {
+			td_new->filename = NULL;
+			td_new->files_index = 0;
+			td_new->files = NULL;
+		}
+
 		job_add_num = numjobs - 1;
 
 		if (add_job(td_new, jobname, job_add_num))
