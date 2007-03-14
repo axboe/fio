@@ -435,7 +435,6 @@ void close_files(struct thread_data *td)
 	}
 
 	td->filename = NULL;
-	free(td->files);
 	td->files = NULL;
 	td->nr_files = 0;
 }
