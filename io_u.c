@@ -109,12 +109,12 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 		unsigned long long max_blocks = f->file_size / td->min_bs[ddir];
 		int loops = 5;
 
-		if (!max_blocks)
-			return 1;
-
 		do {
 			r = os_random_long(&td->random_state);
-			b = ((max_blocks - 1) * r / (unsigned long long) (RAND_MAX+1.0));
+			if (!max_blocks)
+				b = 0;
+			else
+				b = ((max_blocks - 1) * r / (unsigned long long) (RAND_MAX+1.0));
 			if (td->norandommap)
 				break;
 			rb = b + (f->file_offset / td->min_bs[ddir]);
@@ -154,8 +154,14 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 	}
 
 	while (buflen + io_u->offset > f->real_file_size) {
-		if (buflen == td->min_bs[ddir])
+		if (buflen == td->min_bs[ddir]) {
+			if (!td->odirect) {
+				assert(io_u->offset <= f->real_file_size);
+				buflen = f->real_file_size - io_u->offset;
+				return buflen;
+			}
 			return 0;
+		}
 
 		buflen = td->min_bs[ddir];
 	}
