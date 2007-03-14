@@ -98,18 +98,20 @@ restart:
 			continue;
 
 		err = aio_error(&io_u->aiocb);
-		switch (err) {
-			default:
-				io_u->error = err;
-			case ECANCELED:
-				io_u->resid = io_u->xfer_buflen;
-			case 0:
-				pd->aio_events[r++] = io_u;
-				io_u->seen = 1;
-				break;
-			case EINPROGRESS:
-				break;
-		}
+		if (err == EINPROGRESS)
+			continue;
+
+		io_u->seen = 1;
+		pd->aio_events[r++] = io_u;
+
+		if (err == ECANCELED)
+			io_u->resid = io_u->xfer_buflen;
+		else if (!err) {
+			ssize_t retval = aio_return(&io_u->aiocb);
+
+			io_u->resid = io_u->xfer_buflen - retval;
+		} else
+			io_u->error = err;
 
 		if (r >= max)
 			break;
