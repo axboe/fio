@@ -153,18 +153,21 @@ static int create_files(struct thread_data *td)
 	if (can_extend)
 		return 0;
 
-	need_create = 0;
 	local_file_size = total_file_size;
 	if (!local_file_size)
 		local_file_size = -1;
 
+	total_file_size = 0;
+	need_create = 0;
 	for_each_file(td, f, i) {
 		int file_there;
 
 		if (f->filetype != FIO_TYPE_FILE)
 			continue;
-		if (f->flags & FIO_FILE_EXISTS)
+		if (f->flags & FIO_FILE_EXISTS) {
+			total_file_size += f->file_size;
 			continue;
+		}
 
 		if (!td->file_size_low)
 			f->file_size = total_file_size / new_files;
@@ -184,6 +187,7 @@ static int create_files(struct thread_data *td)
 			local_file_size -= f->file_size;
 		}
 
+		total_file_size += f->file_size;
 		file_there = !file_ok(td, f);
 
 		if (file_there && td_write(td) && !td->overwrite) {
