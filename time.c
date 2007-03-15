@@ -130,9 +130,13 @@ void rate_throttle(struct thread_data *td, unsigned long time_spent,
 		unsigned long s = usec_cycle - time_spent;
 
 		td->rate_pending_usleep += s;
+
 		if (td->rate_pending_usleep >= 100000) {
+			struct timeval t;
+
+			fio_gettime(&t, NULL);
 			usec_sleep(td, td->rate_pending_usleep);
-			td->rate_pending_usleep = 0;
+			td->rate_pending_usleep -= utime_since_now(&t);
 		}
 	} else {
 		long overtime = time_spent - usec_cycle;
