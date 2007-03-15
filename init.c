@@ -355,7 +355,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	td->io_ops = load_ioengine(td, engine);
 	if (!td->io_ops) {
 		log_err("fio: failed to load engine %s\n", engine);
-		return 1;
+		goto err;
 	}
 
 	if (td->use_thread)
