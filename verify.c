@@ -38,8 +38,8 @@ static void hexdump(void *buffer, int len)
 	int i;
 
 	for (i = 0; i < len; i++)
-		fprintf(f_out, "%02x", p[i]);
-	fprintf(f_out, "\n");
+		log_info("%02x", p[i]);
+	log_info("\n");
 }
 
 static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u)

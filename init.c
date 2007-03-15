@@ -757,7 +757,7 @@ static void put_job(struct thread_data *td)
 		return;
 
 	if (td->error)
-		fprintf(f_out, "fio: %s\n", td->verror);
+		log_info("fio: %s\n", td->verror);
 
 	memset(&threads[td->thread_number - 1], 0, sizeof(*td));
 	thread_number--;
@@ -1054,7 +1054,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (!terse_output) {
 		if (!job_add_num) {
 			if (!strcmp(td->io_ops->name, "cpuio"))
-				fprintf(f_out, "%s: ioengine=cpu, cpuload=%u, cpucycle=%u\n", td->name, td->cpuload, td->cpucycle);
+				log_info("%s: ioengine=cpu, cpuload=%u, cpucycle=%u\n", td->name, td->cpuload, td->cpucycle);
 			else {
 				char *c1, *c2, *c3, *c4;
 
@@ -1063,7 +1063,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 				c3 = to_kmg(td->min_bs[DDIR_WRITE]);
 				c4 = to_kmg(td->max_bs[DDIR_WRITE]);
 
-				fprintf(f_out, "%s: (g=%d): rw=%s, bs=%s-%s/%s-%s, ioengine=%s, iodepth=%u\n", td->name, td->groupid, ddir_str[td->td_ddir], c1, c2, c3, c4, td->io_ops->name, td->iodepth);
+				log_info("%s: (g=%d): rw=%s, bs=%s-%s/%s-%s, ioengine=%s, iodepth=%u\n", td->name, td->groupid, ddir_str[td->td_ddir], c1, c2, c3, c4, td->io_ops->name, td->iodepth);
 
 				free(c1);
 				free(c2);
@@ -1071,7 +1071,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 				free(c4);
 			}
 		} else if (job_add_num == 1)
-			fprintf(f_out, "...\n");
+			log_info("...\n");
 	}
 
 	/*

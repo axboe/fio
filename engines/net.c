@@ -111,7 +111,7 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 	struct pollfd pfd;
 	int ret;
 
-	fprintf(f_out, "fio: waiting for connection\n");
+	log_info("fio: waiting for connection\n");
 
 	/*
 	 * Accept loop. poll for incoming events, accept them. Repeat until we

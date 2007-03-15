@@ -132,12 +132,12 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 			return 0;
 
 		if (bytes < td->rate_bytes) {
-			fprintf(f_out, "%s: min rate %u not met\n", td->name, td->ratemin);
+			log_err("%s: min rate %u not met\n", td->name, td->ratemin);
 			return 1;
 		} else {
 			rate = (bytes - td->rate_bytes) / spent;
 			if (rate < td->ratemin || bytes < td->rate_bytes) {
-				fprintf(f_out, "%s: min rate %u not met, got %luKiB/sec\n", td->name, td->ratemin, rate);
+				log_err("%s: min rate %u not met, got %luKiB/sec\n", td->name, td->ratemin, rate);
 				return 1;
 			}
 		}

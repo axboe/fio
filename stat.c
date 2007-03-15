@@ -369,7 +369,7 @@ static void show_group_stats(struct group_run_stats *rs, int id)
 	const char *ddir_str[] = { "   READ", "  WRITE" };
 	int i;
 
-	fprintf(f_out, "\nRun status group %d (all jobs):\n", id);
+	log_info("\nRun status group %d (all jobs):\n", id);
 
 	for (i = 0; i <= DDIR_WRITE; i++) {
 		if (!rs->max_run[i])
@@ -380,7 +380,7 @@ static void show_group_stats(struct group_run_stats *rs, int id)
 		p3 = num2str(rs->min_bw[i], 6, 1000, 1);
 		p4 = num2str(rs->max_bw[i], 6, 1000, 1);
 
-		fprintf(f_out, "%s: io=%siB, aggrb=%siB/s, minb=%siB/s, maxb=%siB/s, mint=%llumsec, maxt=%llumsec\n", ddir_str[i], p1, p2, p3, p4, rs->min_run[i], rs->max_run[i]);
+		log_info("%s: io=%siB, aggrb=%siB/s, minb=%siB/s, maxb=%siB/s, mint=%llumsec, maxt=%llumsec\n", ddir_str[i], p1, p2, p3, p4, rs->min_run[i], rs->max_run[i]);
 
 		free(p1);
 		free(p2);
@@ -396,7 +396,7 @@ static void show_disk_util(void)
 	struct disk_util *du;
 	double util;
 
-	fprintf(f_out, "\nDisk stats (read/write):\n");
+	log_info("\nDisk stats (read/write):\n");
 
 	list_for_each(entry, &disk_list) {
 		du = list_entry(entry, struct disk_util, list);
@@ -406,7 +406,7 @@ static void show_disk_util(void)
 		if (util > 100.0)
 			util = 100.0;
 
-		fprintf(f_out, "  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, in_queue=%u, util=%3.2f%%\n", du->name, dus->ios[0], dus->ios[1], dus->merges[0], dus->merges[1], dus->ticks[0], dus->ticks[1], dus->time_in_queue, util);
+		log_info("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, in_queue=%u, util=%3.2f%%\n", du->name, dus->ios[0], dus->ios[1], dus->merges[0], dus->merges[1], dus->ticks[0], dus->ticks[1], dus->time_in_queue, util);
 	}
 
 	/*
@@ -467,23 +467,23 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	bw_p = num2str(bw, 6, 1000, 1);
 	iops_p = num2str(iops, 6, 1, 0);
 
-	fprintf(f_out, "  %s: io=%siB, bw=%siB/s, iops=%s, runt=%6lumsec\n", ddir_str[ddir], io_p, bw_p, iops_p, ts->runtime[ddir]);
+	log_info("  %s: io=%siB, bw=%siB/s, iops=%s, runt=%6lumsec\n", ddir_str[ddir], io_p, bw_p, iops_p, ts->runtime[ddir]);
 
 	free(io_p);
 	free(bw_p);
 	free(iops_p);
 
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
-		fprintf(f_out, "    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
+		log_info("    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
 
 	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
-		fprintf(f_out, "    clat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
+		log_info("    clat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
 
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
 
 		p_of_agg = mean * 100 / (double) rs->agg[ddir];
-		fprintf(f_out, "    bw (KiB/s) : min=%5lu, max=%5lu, per=%3.2f%%, avg=%5.02f, stdev=%5.02f\n", min, max, p_of_agg, mean, dev);
+		log_info("    bw (KiB/s) : min=%5lu, max=%5lu, per=%3.2f%%, avg=%5.02f, stdev=%5.02f\n", min, max, p_of_agg, mean, dev);
 	}
 }
 
@@ -499,12 +499,12 @@ static void show_thread_status(struct thread_stat *ts,
 		return;
 
 	if (!ts->error)
-		fprintf(f_out, "%s: (groupid=%d, jobs=%d): err=%2d: pid=%d\n", ts->name, ts->groupid, ts->members, ts->error, ts->pid);
+		log_info("%s: (groupid=%d, jobs=%d): err=%2d: pid=%d\n", ts->name, ts->groupid, ts->members, ts->error, ts->pid);
 	else
-		fprintf(f_out, "%s: (groupid=%d, jobs=%d): err=%2d (%s): pid=%d\n", ts->name, ts->groupid, ts->members, ts->error, ts->verror, ts->pid);
+		log_info("%s: (groupid=%d, jobs=%d): err=%2d (%s): pid=%d\n", ts->name, ts->groupid, ts->members, ts->error, ts->verror, ts->pid);
 
 	if (ts->description)
-		fprintf(f_out, "  Description  : [%s]\n", ts->description);
+		log_info("  Description  : [%s]\n", ts->description);
 
 	if (ts->io_bytes[DDIR_READ])
 		show_ddir_status(rs, ts, DDIR_READ);
@@ -522,15 +522,15 @@ static void show_thread_status(struct thread_stat *ts,
 		sys_cpu = 0;
 	}
 
-	fprintf(f_out, "  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, ts->ctx);
+	log_info("  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, ts->ctx);
 
 	stat_calc_dist(ts, io_u_dist);
 	stat_calc_lat(ts, io_u_lat);
 
-	fprintf(f_out, "  IO depths    : 1=%3.1f%%, 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%, 16=%3.1f%%, 32=%3.1f%%, >=64=%3.1f%%\n", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
+	log_info("  IO depths    : 1=%3.1f%%, 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%, 16=%3.1f%%, 32=%3.1f%%, >=64=%3.1f%%\n", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
 
-	fprintf(f_out, "     lat (msec): 2=%3.1f%%, 4=%3.1f%%, 10=%3.1f%%, 20=%3.1f%%, 50=%3.1f%%, 100=%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
-	fprintf(f_out, "     lat (msec): 250=%3.1f%%, 500=%3.1f%%, 750=%3.1f%%, 1000=%3.1f%%, >=2000=%3.1f%%\n", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
+	log_info("     lat (msec): 2=%3.1f%%, 4=%3.1f%%, 10=%3.1f%%, 20=%3.1f%%, 50=%3.1f%%, 100=%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
+	log_info("     lat (msec): 250=%3.1f%%, 500=%3.1f%%, 750=%3.1f%%, 1000=%3.1f%%, >=2000=%3.1f%%\n", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
 }
 
 static void show_ddir_status_terse(struct thread_stat *ts,
@@ -544,25 +544,25 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	if (ts->runtime[ddir])
 		bw = ts->io_bytes[ddir] / ts->runtime[ddir];
 
-	fprintf(f_out, ";%llu;%llu;%lu", ts->io_bytes[ddir] >> 10, bw, ts->runtime[ddir]);
+	log_info(";%llu;%llu;%lu", ts->io_bytes[ddir] >> 10, bw, ts->runtime[ddir]);
 
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
-		fprintf(f_out, ";%lu;%lu;%f;%f", min, max, mean, dev);
+		log_info(";%lu;%lu;%f;%f", min, max, mean, dev);
 	else
-		fprintf(f_out, ";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
+		log_info(";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
 
 	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
-		fprintf(f_out, ";%lu;%lu;%f;%f", min, max, mean, dev);
+		log_info(";%lu;%lu;%f;%f", min, max, mean, dev);
 	else
-		fprintf(f_out, ";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
+		log_info(";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
 
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
 
 		p_of_agg = mean * 100 / (double) rs->agg[ddir];
-		fprintf(f_out, ";%lu;%lu;%f%%;%f;%f", min, max, p_of_agg, mean, dev);
+		log_info(";%lu;%lu;%f%%;%f;%f", min, max, p_of_agg, mean, dev);
 	} else
-		fprintf(f_out, ";%lu;%lu;%f%%;%f;%f", 0UL, 0UL, 0.0, 0.0, 0.0);
+		log_info(";%lu;%lu;%f%%;%f;%f", 0UL, 0UL, 0.0, 0.0, 0.0);
 }
 
 
@@ -573,7 +573,7 @@ static void show_thread_status_terse(struct thread_stat *ts,
 	double io_u_lat[FIO_IO_U_LAT_NR];
 	double usr_cpu, sys_cpu;
 
-	fprintf(f_out, "%s;%d;%d", ts->name, ts->groupid, ts->error);
+	log_info("%s;%d;%d", ts->name, ts->groupid, ts->error);
 
 	show_ddir_status_terse(ts, rs, 0);
 	show_ddir_status_terse(ts, rs, 1);
@@ -588,20 +588,20 @@ static void show_thread_status_terse(struct thread_stat *ts,
 		sys_cpu = 0;
 	}
 
-	fprintf(f_out, ";%f%%;%f%%;%lu", usr_cpu, sys_cpu, ts->ctx);
+	log_info(";%f%%;%f%%;%lu", usr_cpu, sys_cpu, ts->ctx);
 
 	stat_calc_dist(ts, io_u_dist);
 	stat_calc_lat(ts, io_u_lat);
 
-	fprintf(f_out, ";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
+	log_info(";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
 
-	fprintf(f_out, ";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
-	fprintf(f_out, ";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
+	log_info(";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
+	log_info(";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
 
 	if (ts->description)
-		fprintf(f_out, ";%s", ts->description);
+		log_info(";%s", ts->description);
 
-	fprintf(f_out, "\n");
+	log_info("\n");
 }
 
 static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)

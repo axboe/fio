@@ -204,9 +204,8 @@ static int create_files(struct thread_data *td)
 	}
 
 	temp_stall_ts = 1;
-	fprintf(f_out, "%s: Laying out IO file(s) (%u files / %LuMiB)\n",
-				td->name, new_files,
-				total_file_size >> 20);
+	log_info("%s: Laying out IO file(s) (%u files / %LuMiB)\n",
+				td->name, new_files, total_file_size >> 20);
 
 	err = 0;
 	for_each_file(td, f, i) {
