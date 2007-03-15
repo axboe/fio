@@ -237,6 +237,11 @@ size=siint	The total size of file io for this job. This may describe
 		size if larger than the current file size. If this parameter
 		is not given and the file exists, the file size will be used.
 
+filesize=siint	Individual file sizes. May be a range, in which case fio
+		will select sizes for files at random within the given range
+		and limited to 'size' in total (if that is given). If not
+		given, each created file is the same size.
+
 bs=siint	The block size used for the io units. Defaults to 4k. Values
 		can be given for both read and writes. If a single siint is
 		given, it will apply to both. If a second siint is specified

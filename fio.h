@@ -492,6 +492,13 @@ struct thread_data {
 	unsigned int file_service_nr;
 	unsigned int file_service_left;
 	struct fio_file *file_service_file;
+
+	/*
+	 * For generating file sizes
+	 */
+	os_random_state_t file_size_state;
+	unsigned long long file_size_low;
+	unsigned long long file_size_high;
 };
 
 /*
@@ -649,7 +656,6 @@ extern void set_genesis_time(void);
  * Init functions
  */
 extern int __must_check parse_options(int, char **);
-extern int __must_check init_random_state(struct thread_data *);
 
 /*
  * File setup/shutdown
@@ -739,6 +745,8 @@ extern void td_io_close_file(struct thread_data *, struct fio_file *);
 	if (f_err != stderr)			\
 		fprintf(stderr, ##args);	\
 	} while (0)
+
+#define log_info(args...)	fprintf(f_out, ##args)
 
 FILE *get_f_out(void);
 FILE *get_f_err(void);

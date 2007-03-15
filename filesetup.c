@@ -97,11 +97,33 @@ err:
 	return 1;
 }
 
+static unsigned long long set_rand_file_size(struct thread_data *td,
+					     unsigned long long total_size)
+{
+	unsigned long long upper = total_size;
+	unsigned long long ret;
+	long r;
+
+	if (upper > td->file_size_high)
+		upper = td->file_size_high;
+	else if (upper < td->file_size_low)
+		return 0;
+	else if (!upper)
+		return 0;
+
+	r = os_random_long(&td->file_size_state);
+	ret = td->file_size_low + (unsigned long long) ((double) upper * (r / (RAND_MAX + 1.0)));
+	ret -= (ret % td->rw_min_bs);
+	if (ret > upper)
+		ret = upper;
+	return ret;
+}
+
 static int create_files(struct thread_data *td)
 {
 	struct fio_file *f;
 	int err, need_create, can_extend;
-	unsigned long long total_file_size;
+	unsigned long long total_file_size, local_file_size;
 	unsigned int i, new_files;
 
 	new_files = 0;
@@ -132,6 +154,10 @@ static int create_files(struct thread_data *td)
 		return 0;
 
 	need_create = 0;
+	local_file_size = total_file_size;
+	if (!local_file_size)
+		local_file_size = -1;
+
 	for_each_file(td, f, i) {
 		int file_there;
 
@@ -140,7 +166,23 @@ static int create_files(struct thread_data *td)
 		if (f->flags & FIO_FILE_EXISTS)
 			continue;
 
-		f->file_size = total_file_size / new_files;
+		if (!td->file_size_low)
+			f->file_size = total_file_size / new_files;
+		else {
+			/*
+			 * If we don't have enough space left for a file
+			 * of the minimum size, bail.
+			 */
+			if (local_file_size < td->file_size_low) {
+				log_info("fio: limited to %d files\n", i);
+				new_files -= (td->nr_files - i);
+				td->nr_files = i;
+				break;
+			}
+
+			f->file_size = set_rand_file_size(td, local_file_size);
+			local_file_size -= f->file_size;
+		}
 
 		file_there = !file_ok(td, f);
 
@@ -162,9 +204,8 @@ static int create_files(struct thread_data *td)
 	}
 
 	temp_stall_ts = 1;
-	fprintf(f_out, "%s: Laying out IO file(s) (%u x %LuMiB == %LuMiB)\n",
+	fprintf(f_out, "%s: Laying out IO file(s) (%u files / %LuMiB)\n",
 				td->name, new_files,
-				(total_file_size >> 20) / new_files,
 				total_file_size >> 20);
 
 	err = 0;

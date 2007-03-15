@@ -726,9 +726,6 @@ static void *thread_main(void *data)
 		goto err_sem;
 	}
 
-	if (init_random_state(td))
-		goto err_sem;
-
 	if (td->ioscheduler && switch_ioscheduler(td))
 		goto err_sem;
 

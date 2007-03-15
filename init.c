@@ -183,7 +183,14 @@ static struct fio_option options[] = {
 		.name	= "size",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(total_file_size),
-		.help	= "Size of device or file",
+		.help	= "Total size of device or files",
+	},
+	{
+		.name	= "filesize",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(file_size_low),
+		.off2	= td_var_offset(file_size_high),
+		.help	= "Size of individual files",
 	},
 	{
 		.name	= "bs",
@@ -801,6 +808,9 @@ static void fixup_options(struct thread_data *td)
 
 	td->rw_min_bs = min(td->min_bs[DDIR_READ], td->min_bs[DDIR_WRITE]);
 
+	if (!td->file_size_high)
+		td->file_size_high = td->file_size_low;
+
 	if (td_read(td) && !td_rw(td))
 		td->verify = 0;
 
@@ -894,6 +904,65 @@ static int exists_and_not_file(const char *filename)
 }
 
 /*
+ * Initialize the various random states we need (random io, block size ranges,
+ * read/write mix, etc).
+ */
+static int init_random_state(struct thread_data *td)
+{
+	unsigned long seeds[6];
+	int fd, num_maps, blocks;
+	struct fio_file *f;
+	unsigned int i;
+
+	fd = open("/dev/urandom", O_RDONLY);
+	if (fd == -1) {
+		td_verror(td, errno, "open");
+		return 1;
+	}
+
+	if (read(fd, seeds, sizeof(seeds)) < (int) sizeof(seeds)) {
+		td_verror(td, EIO, "read");
+		close(fd);
+		return 1;
+	}
+
+	close(fd);
+
+	os_random_seed(seeds[0], &td->bsrange_state);
+	os_random_seed(seeds[1], &td->verify_state);
+	os_random_seed(seeds[2], &td->rwmix_state);
+
+	if (td->file_service_type == FIO_FSERVICE_RANDOM)
+		os_random_seed(seeds[3], &td->next_file_state);
+
+	os_random_seed(seeds[5], &td->file_size_state);
+
+	if (!td_random(td))
+		return 0;
+
+	if (td->rand_repeatable)
+		seeds[4] = FIO_RANDSEED * td->thread_number;
+
+	if (!td->norandommap) {
+		for_each_file(td, f, i) {
+			blocks = (f->real_file_size + td->rw_min_bs - 1) / td->rw_min_bs;
+			num_maps = (blocks + BLOCKS_PER_MAP-1)/ BLOCKS_PER_MAP;
+			f->file_map = malloc(num_maps * sizeof(long));
+			if (!f->file_map) {
+				log_err("fio: failed allocating random map. If running a large number of jobs, try the 'norandommap' option\n");
+				return 1;
+			}
+			f->num_maps = num_maps;
+			memset(f->file_map, 0, num_maps * sizeof(long));
+		}
+	}
+
+	os_random_seed(seeds[4], &td->random_state);
+	return 0;
+}
+
+
+/*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
  * members of td.
@@ -966,6 +1035,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	td->groupid = groupid;
 	prev_group_jobs++;
 
+	if (init_random_state(td))
+		goto err;
+
 	if (setup_rate(td))
 		goto err;
 
@@ -1037,65 +1109,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 err:
 	put_job(td);
 	return -1;
-}
-
-/*
- * Initialize the various random states we need (random io, block size ranges,
- * read/write mix, etc).
- */
-int init_random_state(struct thread_data *td)
-{
-	unsigned long seeds[5];
-	int fd, num_maps, blocks;
-	struct fio_file *f;
-	unsigned int i;
-
-	if (td->io_ops->flags & FIO_DISKLESSIO)
-		return 0;
-
-	fd = open("/dev/urandom", O_RDONLY);
-	if (fd == -1) {
-		td_verror(td, errno, "open");
-		return 1;
-	}
-
-	if (read(fd, seeds, sizeof(seeds)) < (int) sizeof(seeds)) {
-		td_verror(td, EIO, "read");
-		close(fd);
-		return 1;
-	}
-
-	close(fd);
-
-	os_random_seed(seeds[0], &td->bsrange_state);
-	os_random_seed(seeds[1], &td->verify_state);
-	os_random_seed(seeds[2], &td->rwmix_state);
-
-	if (td->file_service_type == FIO_FSERVICE_RANDOM)
-		os_random_seed(seeds[3], &td->next_file_state);
-
-	if (!td_random(td))
-		return 0;
-
-	if (td->rand_repeatable)
-		seeds[4] = FIO_RANDSEED * td->thread_number;
-
-	if (!td->norandommap) {
-		for_each_file(td, f, i) {
-			blocks = (f->real_file_size + td->rw_min_bs - 1) / td->rw_min_bs;
-			num_maps = (blocks + BLOCKS_PER_MAP-1)/ BLOCKS_PER_MAP;
-			f->file_map = malloc(num_maps * sizeof(long));
-			if (!f->file_map) {
-				log_err("fio: failed allocating random map. If running a large number of jobs, try the 'norandommap' option\n");
-				return 1;
-			}
-			f->num_maps = num_maps;
-			memset(f->file_map, 0, num_maps * sizeof(long));
-		}
-	}
-
-	os_random_seed(seeds[4], &td->random_state);
-	return 0;
 }
 
 static void fill_cpu_mask(os_cpu_mask_t cpumask, int cpu)
