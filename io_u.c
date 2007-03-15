@@ -754,7 +754,7 @@ static void io_u_timeout_handler(int fio_unused sig)
 		return;
 	}
 
-	log_err("fio: io_u timeout: job=%s, pid=%d\n", td->name, td->pid);
+	log_err("fio: io_u timeout: job=%s, pid=%d\n", td->o.name, td->pid);
 
 	list_for_each(entry, &td->io_u_busylist) {
 		io_u = list_entry(entry, struct io_u, list);
