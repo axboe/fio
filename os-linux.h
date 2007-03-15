@@ -124,10 +124,7 @@ enum {
 
 static inline int blockdev_invalidate_cache(int fd)
 {
-	if (!ioctl(fd, BLKFLSBUF))
-		return 0;
-
-	return errno;
+	return ioctl(fd, BLKFLSBUF);
 }
 
 static inline int blockdev_size(int fd, unsigned long long *bytes)
