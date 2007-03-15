@@ -502,6 +502,9 @@ static void show_option_help(struct fio_option *o)
 		"no argument (opt)",
 	};
 
+	if (o->alias)
+		printf("%20s: %s\n", "alias", o->alias);
+
 	printf("%20s: %s\n", "type", typehelp[o->type]);
 	printf("%20s: %s\n", "default", o->def ? o->def : "no default");
 	show_option_range(o);
