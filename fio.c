@@ -773,6 +773,9 @@ static void *thread_main(void *data)
 	if (open_files(td))
 		goto err;
 
+	if (init_random_map(td))
+		goto err;
+
 	if (td->o.exec_prerun) {
 		if (system(td->o.exec_prerun) < 0)
 			goto err;

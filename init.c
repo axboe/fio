@@ -323,9 +323,7 @@ static int exists_and_not_file(const char *filename)
 static int init_random_state(struct thread_data *td)
 {
 	unsigned long seeds[6];
-	int fd, num_maps, blocks;
-	struct fio_file *f;
-	unsigned int i;
+	int fd;
 
 	fd = open("/dev/urandom", O_RDONLY);
 	if (fd == -1) {
@@ -355,20 +353,6 @@ static int init_random_state(struct thread_data *td)
 
 	if (td->o.rand_repeatable)
 		seeds[4] = FIO_RANDSEED * td->thread_number;
-
-	if (!td->o.norandommap) {
-		for_each_file(td, f, i) {
-			blocks = (f->real_file_size + td->o.rw_min_bs - 1) / td->o.rw_min_bs;
-			num_maps = (blocks + BLOCKS_PER_MAP-1)/ BLOCKS_PER_MAP;
-			f->file_map = malloc(num_maps * sizeof(long));
-			if (!f->file_map) {
-				log_err("fio: failed allocating random map. If running a large number of jobs, try the 'norandommap' option\n");
-				return 1;
-			}
-			f->num_maps = num_maps;
-			memset(f->file_map, 0, num_maps * sizeof(long));
-		}
-	}
 
 	os_random_seed(seeds[4], &td->random_state);
 	return 0;

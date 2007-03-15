@@ -119,6 +119,28 @@ static unsigned long long set_rand_file_size(struct thread_data *td,
 	return ret;
 }
 
+static int fill_file_size(struct thread_data *td, struct fio_file *f,
+			  unsigned long long *file_size, int new_files)
+{
+	if (!td->o.file_size_low) {
+		f->file_size = *file_size / new_files;
+		f->real_file_size = f->file_size;
+	} else {
+		/*
+		 * If we don't have enough space left for a file
+		 * of the minimum size, bail.
+		 */
+		if (*file_size < td->o.file_size_low)
+			return 1;
+
+		f->file_size = set_rand_file_size(td, *file_size);
+		f->real_file_size = f->file_size;
+		*file_size -= f->file_size;
+	}
+
+	return 0;
+}
+
 static int create_files(struct thread_data *td)
 {
 	struct fio_file *f;
@@ -150,8 +172,17 @@ static int create_files(struct thread_data *td)
 	 * unless specifically asked for overwrite, let normal io extend it
 	 */
 	can_extend = !td->o.overwrite && !(td->io_ops->flags & FIO_NOEXTEND);
-	if (can_extend)
+	if (can_extend) {
+		for_each_file(td, f, i) {
+			if (fill_file_size(td, f, &total_file_size, new_files)) {
+				log_info("fio: limited to %d files\n", i);
+				td->o.nr_files = i;
+				break;
+			}
+		}
+
 		return 0;
+	}
 
 	local_file_size = total_file_size;
 	if (!local_file_size)
@@ -170,22 +201,11 @@ static int create_files(struct thread_data *td)
 			continue;
 		}
 
-		if (!td->o.file_size_low)
-			f->file_size = total_file_size / new_files;
-		else {
-			/*
-			 * If we don't have enough space left for a file
-			 * of the minimum size, bail.
-			 */
-			if (local_file_size < td->o.file_size_low) {
-				log_info("fio: limited to %d files\n", i);
-				new_files -= (td->o.nr_files - i);
-				td->o.nr_files = i;
-				break;
-			}
-
-			f->file_size = set_rand_file_size(td, local_file_size);
-			local_file_size -= f->file_size;
+		if (fill_file_size(td, f, &local_file_size, new_files)) {
+			log_info("fio: limited to %d files\n", i);
+			new_files -= (td->o.nr_files - i);
+			td->o.nr_files = i;
+			break;
 		}
 
 		total_file_size += f->file_size;
@@ -459,6 +479,30 @@ int setup_files(struct thread_data *td)
 		td_io_close_file(td, f);
 
 	return err;
+}
+
+int init_random_map(struct thread_data *td)
+{
+	int num_maps, blocks;
+	struct fio_file *f;
+	unsigned int i;
+
+	if (td->o.norandommap)
+		return 0;
+
+	for_each_file(td, f, i) {
+		blocks = (f->real_file_size + td->o.rw_min_bs - 1) / td->o.rw_min_bs;
+		num_maps = (blocks + BLOCKS_PER_MAP-1)/ BLOCKS_PER_MAP;
+		f->file_map = malloc(num_maps * sizeof(long));
+		if (!f->file_map) {
+			log_err("fio: failed allocating random map. If running a large number of jobs, try the 'norandommap' option\n");
+			return 1;
+		}
+		f->num_maps = num_maps;
+		memset(f->file_map, 0, num_maps * sizeof(long));
+	}
+
+	return 0;
 }
 
 void close_files(struct thread_data *td)
