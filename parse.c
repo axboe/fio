@@ -379,6 +379,8 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 		ptr2 = strchr(ptr, ',');
 		if (!ptr2)
 			ptr2 = strchr(ptr, ':');
+		if (!ptr2)
+			ptr2 = strchr(ptr, '-');
 	}
 
 	/*
