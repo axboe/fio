@@ -201,6 +201,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "rw",
+		.alias	= "readwrite",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(td_ddir),
 		.help	= "IO direction",
@@ -318,6 +319,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "bs",
+		.alias	= "blocksize",
 		.type	= FIO_OPT_STR_VAL_INT,
 		.off1	= td_var_offset(bs[DDIR_READ]),
 		.off2	= td_var_offset(bs[DDIR_WRITE]),
@@ -326,6 +328,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "bsrange",
+		.alias	= "blocksize_range",
 		.type	= FIO_OPT_RANGE,
 		.off1	= td_var_offset(min_bs[DDIR_READ]),
 		.off2	= td_var_offset(max_bs[DDIR_READ]),
@@ -335,6 +338,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "bs_unaligned",
+		.alias	= "blocksize_unaligned",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(bs_unaligned),
 		.help	= "Don't sector align IO buffer sizes",
@@ -450,6 +454,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "mem",
+		.alias	= "iomem",
 		.type	= FIO_OPT_STR,
 		.cb	= str_mem_cb,
 		.off1	= td_var_offset(mem_type),

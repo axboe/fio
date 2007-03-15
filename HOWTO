@@ -216,6 +216,7 @@ filename=str	Fio normally makes up a filename based on the job name,
 opendir=str	Tell fio to recursively add any file it can find in this
 		directory and down the file system tree.
 
+readwrite=str
 rw=str		Type of io pattern. Accepted values are:
 
 			read		Sequential reads
@@ -244,6 +245,7 @@ filesize=siint	Individual file sizes. May be a range, in which case fio
 		and limited to 'size' in total (if that is given). If not
 		given, each created file is the same size.
 
+blocksize=siint
 bs=siint	The block size used for the io units. Defaults to 4k. Values
 		can be given for both read and writes. If a single siint is
 		given, it will apply to both. If a second siint is specified
@@ -254,6 +256,7 @@ bs=siint	The block size used for the io units. Defaults to 4k. Values
 		can do so by passing an empty read size - bs=,8k will set
 		8k for writes and leave the read default value.
 
+blocksize_range=irange
 bsrange=irange	Instead of giving a single block size, specify a range
 		and fio will mix the issued io block sizes. The issued
 		io unit will always be a multiple of the minimum value
@@ -261,6 +264,7 @@ bsrange=irange	Instead of giving a single block size, specify a range
 		writes, however a second range can be given after a comma.
 		See bs=.
 
+blocksize_unaligned
 bs_unaligned	If this option is given, any byte size value within bsrange
 		may be used as a block range. This typically wont work with
 		direct IO, as that normally requires sector alignment.
@@ -452,6 +456,7 @@ invalidate=bool	Invalidate the buffer/page cache parts for this file prior
 sync=bool	Use sync io for buffered writes. For the majority of the
 		io engines, this means using O_SYNC.
 
+iomem=str
 mem=str		Fio can use various types of memory as the io unit buffer.
 		The allowed values are:
 
