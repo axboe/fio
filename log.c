@@ -183,38 +183,6 @@ int init_iolog(struct thread_data *td)
 	return ret;
 }
 
-int setup_rate(struct thread_data *td)
-{
-	unsigned long long rate;
-	int nr_reads_per_msec;
-	unsigned int bs;
-
-	if (!td->rate && !td->rate_iops)
-		return 0;
-
-	if (td_rw(td))
-		bs = td->rw_min_bs;
-	else if (td_read(td))
-		bs = td->min_bs[DDIR_READ];
-	else
-		bs = td->min_bs[DDIR_WRITE];
-
-	if (td->rate) {
-		rate = td->rate;
-		nr_reads_per_msec = (rate * 1024 * 1000) / bs;
-	} else
-		nr_reads_per_msec = td->rate_iops * 1000;
-
-	if (!nr_reads_per_msec) {
-		log_err("rate lower than supported\n");
-		return -1;
-	}
-
-	td->rate_usec_cycle = 1000000000ULL / nr_reads_per_msec;
-	td->rate_pending_usleep = 0;
-	return 0;
-}
-
 void setup_log(struct io_log **log)
 {
 	struct io_log *l = malloc(sizeof(*l));
