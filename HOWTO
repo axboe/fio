@@ -418,7 +418,16 @@ thinktime_blocks
 rate=int	Cap the bandwidth used by this job to this number of KiB/sec.
 
 ratemin=int	Tell fio to do whatever it can to maintain at least this
-		bandwidth.
+		bandwidth. Failing to meet this requirement, will cause
+		the job to exit.
+
+rate_iops=int	Cap the bandwidth to this number of IOPS. Basically the same
+		as rate, just specified independently of bandwidth. If the
+		job is given a block size range instead of a fixed value,
+		the smallest block size is used as the metric.
+
+rate_iops_min=int If fio doesn't meet this rate of IO, it will cause
+		the job to exit.
 
 ratecycle=int	Average bandwidth for 'rate' and 'ratemin' over this number
 		of milliseconds.

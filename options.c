@@ -637,7 +637,19 @@ static struct fio_option options[] = {
 		.name	= "ratemin",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratemin),
-		.help	= "The bottom limit accepted",
+		.help	= "Job must meet this rate or it will be shutdown",
+	},
+	{
+		.name	= "rate_iops",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(rate_iops),
+		.help	= "Limit IO used to this number of IO operations/sec",
+	},
+	{
+		.name	= "rate_iops_min",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(rate_iops_min),
+		.help	= "Job must meet this rate or it will be shutdown",
 	},
 	{
 		.name	= "ratecycle",

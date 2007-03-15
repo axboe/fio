@@ -135,7 +135,7 @@ static void put_job(struct thread_data *td)
  * Lazy way of fixing up options that depend on each other. We could also
  * define option callback handlers, but this is easier.
  */
-static void fixup_options(struct thread_data *td)
+static int fixup_options(struct thread_data *td)
 {
 	if (!td->rwmixread && td->rwmixwrite)
 		td->rwmixread = 100 - td->rwmixwrite;
@@ -221,6 +221,17 @@ static void fixup_options(struct thread_data *td)
 
 	if (td->open_files > td->nr_files || !td->open_files)
 		td->open_files = td->nr_files;
+
+	if ((td->rate && td->rate_iops) || (td->ratemin && td->rate_iops_min)) {
+		log_err("fio: rate and rate_iops are mutually exclusive\n");
+		return 1;
+	}
+	if ((td->rate < td->ratemin) || (td->rate_iops < td->rate_iops_min)) {
+		log_err("fio: minimum rate exceeds rate\n");
+		return 1;
+	}
+
+	return 0;
 }
 
 /*
@@ -380,7 +391,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		}
 	}
 
-	fixup_options(td);
+	if (fixup_options(td))
+		goto err;
 
 	for_each_file(td, f, i) {
 		if (td->directory && f->filetype == FIO_TYPE_FILE) {

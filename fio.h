@@ -431,9 +431,12 @@ struct thread_data {
 	unsigned int rate;
 	unsigned int ratemin;
 	unsigned int ratecycle;
+	unsigned int rate_iops;
+	unsigned int rate_iops_min;
 	unsigned long rate_usec_cycle;
 	long rate_pending_usleep;
 	unsigned long rate_bytes;
+	unsigned long rate_blocks;
 	struct timeval lastrate;
 
 	unsigned long long io_size;

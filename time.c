@@ -114,7 +114,7 @@ void rate_throttle(struct thread_data *td, unsigned long time_spent,
 	unsigned long usec_cycle;
 	unsigned int bs;
 
-	if (!td->rate)
+	if (!td->rate && !td->rate_iops)
 		return;
 
 	if (td_rw(td))

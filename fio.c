@@ -103,13 +103,14 @@ static void sig_handler(int sig)
 static int check_min_rate(struct thread_data *td, struct timeval *now)
 {
 	unsigned long long bytes = 0;
+	unsigned long iops = 0;
 	unsigned long spent;
 	unsigned long rate;
 
 	/*
 	 * No minimum rate set, always ok
 	 */
-	if (!td->ratemin)
+	if (!td->ratemin && !td->rate_iops_min)
 		return 0;
 
 	/*
@@ -118,32 +119,55 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 	if (mtime_since(&td->start, now) < 2000)
 		return 0;
 
-	if (td_read(td))
+	if (td_read(td)) {
+		iops += td->io_blocks[DDIR_READ];
 		bytes += td->this_io_bytes[DDIR_READ];
-	if (td_write(td))
+	}
+	if (td_write(td)) {
+		iops += td->io_blocks[DDIR_WRITE];
 		bytes += td->this_io_bytes[DDIR_WRITE];
+	}
 
 	/*
 	 * if rate blocks is set, sample is running
 	 */
-	if (td->rate_bytes) {
+	if (td->rate_bytes || td->rate_blocks) {
 		spent = mtime_since(&td->lastrate, now);
 		if (spent < td->ratecycle)
 			return 0;
 
-		if (bytes < td->rate_bytes) {
-			log_err("%s: min rate %u not met\n", td->name, td->ratemin);
-			return 1;
-		} else {
-			rate = (bytes - td->rate_bytes) / spent;
-			if (rate < td->ratemin || bytes < td->rate_bytes) {
-				log_err("%s: min rate %u not met, got %luKiB/sec\n", td->name, td->ratemin, rate);
+		if (td->rate) {
+			/*
+			 * check bandwidth specified rate
+			 */
+			if (bytes < td->rate_bytes) {
+				log_err("%s: min rate %u not met\n", td->name, td->ratemin);
 				return 1;
+			} else {
+				rate = (bytes - td->rate_bytes) / spent;
+				if (rate < td->ratemin || bytes < td->rate_bytes) {
+					log_err("%s: min rate %u not met, got %luKiB/sec\n", td->name, td->ratemin, rate);
+					return 1;
+				}
+			}
+		} else {
+			/*
+			 * checks iops specified rate
+			 */
+			if (iops < td->rate_iops) {
+				log_err("%s: min iops rate %u not met\n", td->name, td->rate_iops);
+				return 1;
+			} else {
+				rate = (iops - td->rate_blocks) / spent;
+				if (rate < td->rate_iops_min || iops < td->rate_blocks) {
+					log_err("%s: min iops rate %u not met, got %lu\n", td->name, td->rate_iops_min, rate);
+				}
 			}
 		}
 	}
 
 	td->rate_bytes = bytes;
+	td->rate_blocks = iops;
 	memcpy(&td->lastrate, now, sizeof(*now));
 	return 0;
 }
@@ -666,6 +690,7 @@ static int clear_io_state(struct thread_data *td)
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
 	td->zone_bytes = 0;
 	td->rate_bytes = 0;
+	td->rate_blocks = 0;
 
 	td->last_was_sync = 0;
 
