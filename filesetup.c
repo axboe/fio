@@ -123,7 +123,7 @@ static int create_files(struct thread_data *td)
 {
 	struct fio_file *f;
 	int err, need_create, can_extend;
-	unsigned long long total_file_size, local_file_size;
+	unsigned long long total_file_size, local_file_size, create_size;
 	unsigned int i, new_files;
 
 	new_files = 0;
@@ -159,6 +159,7 @@ static int create_files(struct thread_data *td)
 
 	total_file_size = 0;
 	need_create = 0;
+	create_size = 0;
 	for_each_file(td, f, i) {
 		int file_there;
 
@@ -188,6 +189,7 @@ static int create_files(struct thread_data *td)
 		}
 
 		total_file_size += f->file_size;
+		create_size += f->file_size;
 		file_there = !file_ok(td, f);
 
 		if (file_there && td_write(td) && !td->overwrite) {
@@ -201,7 +203,7 @@ static int create_files(struct thread_data *td)
 	if (!need_create)
 		return 0;
 
-	if (!td->total_file_size) {
+	if (!td->total_file_size && !total_file_size) {
 		log_err("Need size for create\n");
 		td_verror(td, EINVAL, "file_size");
 		return 1;
@@ -209,7 +211,7 @@ static int create_files(struct thread_data *td)
 
 	temp_stall_ts = 1;
 	log_info("%s: Laying out IO file(s) (%u files / %LuMiB)\n",
-				td->name, new_files, total_file_size >> 20);
+				td->name, new_files, create_size >> 20);
 
 	err = 0;
 	for_each_file(td, f, i) {
