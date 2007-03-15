@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <getopt.h>
 
 #include "list.h"
 #include "md5.h"
@@ -653,9 +654,16 @@ extern void fio_gettime(struct timeval *, void *);
 extern void set_genesis_time(void);
 
 /*
- * Init functions
+ * Init/option functions
  */
 extern int __must_check parse_options(int, char **);
+extern int fio_option_parse(struct thread_data *, const char *);
+extern int fio_cmd_option_parse(struct thread_data *, const char *, char *);
+extern void fio_fill_default_options(struct thread_data *);
+extern int fio_show_option_help(const char *);
+extern void fio_options_dup_and_init(struct option *);
+#define FIO_GETOPT_JOB		0x89988998
+#define FIO_NR_OPTIONS		128
 
 /*
  * File setup/shutdown

@@ -6,7 +6,7 @@ CFLAGS	= -Wwrite-strings -Wall -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_
 PROGS	= fio
 SCRIPTS = fio_generate_plots
 OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o md5.o crc32.o \
-	filesetup.o eta.o verify.o memory.o io_u.o parse.o mutex.o
+	filesetup.o eta.o verify.o memory.o io_u.o parse.o mutex.o options.o
 
 OBJS += engines/cpu.o
 OBJS += engines/libaio.o
