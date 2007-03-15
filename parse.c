@@ -524,7 +524,8 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		int match = 0;
 
 		if (name) {
-			if (!strcmp(name, o->name))
+			if (!strcmp(name, o->name) ||
+			    (o->alias && !strcmp(name, o->alias)))
 				match = 1;
 			else {
 				unsigned int dist;
