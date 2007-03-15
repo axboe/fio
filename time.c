@@ -114,15 +114,15 @@ void rate_throttle(struct thread_data *td, unsigned long time_spent,
 	unsigned long usec_cycle;
 	unsigned int bs;
 
-	if (!td->rate && !td->rate_iops)
+	if (!td->o.rate && !td->o.rate_iops)
 		return;
 
 	if (td_rw(td))
-		bs = td->rw_min_bs;
+		bs = td->o.rw_min_bs;
 	else if (td_read(td))
-		bs = td->min_bs[DDIR_READ];
+		bs = td->o.min_bs[DDIR_READ];
 	else
-		bs = td->min_bs[DDIR_WRITE];
+		bs = td->o.min_bs[DDIR_WRITE];
 
 	usec_cycle = td->rate_usec_cycle * (bytes / bs);
 

@@ -59,12 +59,12 @@ int fio_pin_memory(void)
  */
 int allocate_io_mem(struct thread_data *td)
 {
-	if (td->mem_type == MEM_MALLOC)
+	if (td->o.mem_type == MEM_MALLOC)
 		td->orig_buffer = malloc(td->orig_buffer_size);
-	else if (td->mem_type == MEM_SHM || td->mem_type == MEM_SHMHUGE) {
+	else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE) {
 		int flags = IPC_CREAT | SHM_R | SHM_W;
 
-		if (td->mem_type == MEM_SHMHUGE)
+		if (td->o.mem_type == MEM_SHMHUGE)
 			flags |= SHM_HUGETLB;
 
 		td->shm_id = shmget(IPC_PRIVATE, td->orig_buffer_size, flags);
@@ -81,7 +81,8 @@ int allocate_io_mem(struct thread_data *td)
 			td->orig_buffer = NULL;
 			return 1;
 		}
-	} else if (td->mem_type == MEM_MMAP || td->mem_type == MEM_MMAPHUGE) {
+	} else if (td->o.mem_type == MEM_MMAP ||
+		   td->o.mem_type == MEM_MMAPHUGE) {
 		int flags = MAP_PRIVATE;
 
 		td->mmapfd = 0;
@@ -117,14 +118,15 @@ int allocate_io_mem(struct thread_data *td)
 
 void free_io_mem(struct thread_data *td)
 {
-	if (td->mem_type == MEM_MALLOC)
+	if (td->o.mem_type == MEM_MALLOC)
 		free(td->orig_buffer);
-	else if (td->mem_type == MEM_SHM || td->mem_type == MEM_SHMHUGE) {
+	else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE) {
 		struct shmid_ds sbuf;
 
 		shmdt(td->orig_buffer);
 		shmctl(td->shm_id, IPC_RMID, &sbuf);
-	} else if (td->mem_type == MEM_MMAP || td->mem_type == MEM_MMAPHUGE) {
+	} else if (td->o.mem_type == MEM_MMAP ||
+		   td->o.mem_type == MEM_MMAPHUGE) {
 		munmap(td->orig_buffer, td->orig_buffer_size);
 		if (td->mmapfile) {
 			close(td->mmapfd);
@@ -132,7 +134,7 @@ void free_io_mem(struct thread_data *td)
 			free(td->mmapfile);
 		}
 	} else
-		log_err("Bad memory type %u\n", td->mem_type);
+		log_err("Bad memory type %u\n", td->o.mem_type);
 
 	td->orig_buffer = NULL;
 }

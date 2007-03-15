@@ -309,39 +309,30 @@ struct thread_stat {
 	unsigned long total_run_time;
 };
 
-/*
- * This describes a single thread/process executing a fio job.
- */
-struct thread_data {
+struct thread_options {
 	int pad;
 	char *description;
 	char *name;
 	char *directory;
 	char *filename;
+	char *opendir;
 	char *ioengine;
-	char verror[128];
-	pthread_t thread;
-	int thread_number;
-	int groupid;
-	struct thread_stat ts;
-	struct fio_file *files;
-	unsigned int files_index;
-	unsigned int nr_files;
-	unsigned int nr_open_files;
-	unsigned int nr_normal_files;
-	union {
-		unsigned int next_file;
-		os_random_state_t next_file_state;
-	};
-	int error;
-	pid_t pid;
-	char *orig_buffer;
-	size_t orig_buffer_size;
-	volatile int terminate;
-	volatile int runstate;
 	enum td_ddir td_ddir;
-	unsigned int ioprio;
-	unsigned int last_was_sync;
+	unsigned int iodepth;
+	unsigned int iodepth_low;
+	unsigned int iodepth_batch;
+
+	unsigned long long size;
+	unsigned long long file_size_low;
+	unsigned long long file_size_high;
+	unsigned long long start_offset;
+
+	unsigned int bs[2];
+	unsigned int min_bs[2];
+	unsigned int max_bs[2];
+
+	unsigned int nr_files;
+	unsigned int open_files;
 
 	unsigned int odirect;
 	unsigned int invalidate_cache;
@@ -361,9 +352,6 @@ struct thread_data {
 	unsigned int bs_unaligned;
 	unsigned int fsync_on_close;
 
-	unsigned int bs[2];
-	unsigned int min_bs[2];
-	unsigned int max_bs[2];
 	unsigned int hugepage_size;
 	unsigned int rw_min_bs;
 	unsigned int thinktime;
@@ -378,13 +366,9 @@ struct thread_data {
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
 	enum fio_memtype mem_type;
-	char *mmapfile;
-	int mmapfd;
+
 	unsigned int stonewall;
 	unsigned int numjobs;
-	unsigned int iodepth;
-	unsigned int iodepth_low;
-	unsigned int iodepth_batch;
 	os_cpu_mask_t cpumask;
 	unsigned int iolog;
 	unsigned int read_iolog;
@@ -394,16 +378,65 @@ struct thread_data {
 	unsigned int nice;
 	unsigned int file_service_type;
 	unsigned int group_reporting;
-	unsigned int open_files;
-	char *opendir;
 
 	char *read_iolog_file;
 	char *write_iolog_file;
+
+	/*
+	 * Pre-run and post-run shell
+	 */
+	char *exec_prerun;
+	char *exec_postrun;
+
+	unsigned int rate;
+	unsigned int ratemin;
+	unsigned int ratecycle;
+	unsigned int rate_iops;
+	unsigned int rate_iops_min;
+
+	char *ioscheduler;
+
+	/*
+	 * CPU "io" cycle burner
+	 */
+	unsigned int cpuload;
+	unsigned int cpucycle;
+};
+
+/*
+ * This describes a single thread/process executing a fio job.
+ */
+struct thread_data {
+	struct thread_options o;
+	char verror[128];
+	pthread_t thread;
+	int thread_number;
+	int groupid;
+	struct thread_stat ts;
+	struct fio_file *files;
+	unsigned int files_index;
+	unsigned int nr_open_files;
+	unsigned int nr_normal_files;
+	union {
+		unsigned int next_file;
+		os_random_state_t next_file_state;
+	};
+	int error;
+	pid_t pid;
+	char *orig_buffer;
+	size_t orig_buffer_size;
+	volatile int terminate;
+	volatile int runstate;
+	unsigned int ioprio;
+	unsigned int last_was_sync;
+
+	char *mmapfile;
+	int mmapfd;
+
 	void *iolog_buf;
 	FILE *iolog_f;
 
 	char *sysfs_root;
-	char *ioscheduler;
 
 	os_random_state_t bsrange_state;
 	os_random_state_t verify_state;
@@ -428,11 +461,6 @@ struct thread_data {
 	/*
 	 * Rate state
 	 */
-	unsigned int rate;
-	unsigned int ratemin;
-	unsigned int ratecycle;
-	unsigned int rate_iops;
-	unsigned int rate_iops_min;
 	unsigned long rate_usec_cycle;
 	long rate_pending_usleep;
 	unsigned long rate_bytes;
@@ -440,8 +468,6 @@ struct thread_data {
 	struct timeval lastrate;
 
 	unsigned long long io_size;
-	unsigned long long total_file_size;
-	unsigned long long start_offset;
 	unsigned long long total_io_size;
 
 	unsigned long io_issues[2];
@@ -456,12 +482,6 @@ struct thread_data {
 	 */
 	os_random_state_t random_state;
 
-	/*
-	 * CPU "io" cycle burner
-	 */
-	unsigned int cpuload;
-	unsigned int cpucycle;
-
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
 
@@ -471,12 +491,6 @@ struct thread_data {
 	os_random_state_t rwmix_state;
 	struct timeval rwmix_switch;
 	enum fio_ddir rwmix_ddir;
-
-	/*
-	 * Pre-run and post-run shell
-	 */
-	char *exec_prerun;
-	char *exec_postrun;
 
 	/*
 	 * IO historic logs
@@ -501,8 +515,6 @@ struct thread_data {
 	 * For generating file sizes
 	 */
 	os_random_state_t file_size_state;
-	unsigned long long file_size_low;
-	unsigned long long file_size_high;
 };
 
 /*
@@ -549,13 +561,13 @@ extern unsigned long page_mask, page_size;
 
 extern struct thread_data *threads;
 
-#define td_read(td)		((td)->td_ddir & TD_DDIR_READ)
-#define td_write(td)		((td)->td_ddir & TD_DDIR_WRITE)
-#define td_rw(td)		(((td)->td_ddir & TD_DDIR_RW) == TD_DDIR_RW)
-#define td_random(td)		((td)->td_ddir & TD_DDIR_RAND)
+#define td_read(td)		((td)->o.td_ddir & TD_DDIR_READ)
+#define td_write(td)		((td)->o.td_ddir & TD_DDIR_WRITE)
+#define td_rw(td)		(((td)->o.td_ddir & TD_DDIR_RW) == TD_DDIR_RW)
+#define td_random(td)		((td)->o.td_ddir & TD_DDIR_RAND)
 
 #define BLOCKS_PER_MAP		(8 * sizeof(long))
-#define TO_MAP_BLOCK(td, f, b)	((b) - ((f)->file_offset / (td)->rw_min_bs))
+#define TO_MAP_BLOCK(td, f, b)	((b) - ((f)->file_offset / (td)->o.rw_min_bs))
 #define RAND_MAP_IDX(td, f, b)	(TO_MAP_BLOCK(td, f, b) / BLOCKS_PER_MAP)
 #define RAND_MAP_BIT(td, f, b)	(TO_MAP_BLOCK(td, f, b) & (BLOCKS_PER_MAP - 1))
 
@@ -565,9 +577,9 @@ static inline int should_fsync(struct thread_data *td)
 {
 	if (td->last_was_sync)
 		return 0;
-	if (td->odirect)
+	if (td->o.odirect)
 		return 0;
-	if (td_write(td) || td_rw(td) || td->override_sync)
+	if (td_write(td) || td_rw(td) || td->o.override_sync)
 		return 1;
 
 	return 0;
@@ -798,7 +810,7 @@ extern void close_ioengine(struct thread_data *);
 #define for_each_td(td, i)	\
 	for ((i) = 0, (td) = &threads[0]; (i) < (int) thread_number; (i)++, (td)++)
 #define for_each_file(td, f, i)	\
-	for ((i) = 0, (f) = &(td)->files[0]; (i) < (td)->nr_files; (i)++, (f)++)
+	for ((i) = 0, (f) = &(td)->files[0]; (i) < (td)->o.nr_files; (i)++, (f)++)
 
 #define fio_assert(td, cond)	do {	\
 	if (!(cond)) {			\

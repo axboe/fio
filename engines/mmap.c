@@ -36,7 +36,7 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * not really direct, but should drop the pages from the cache
 	 */
-	if (td->odirect && io_u->ddir != DDIR_SYNC) {
+	if (td->o.odirect && io_u->ddir != DDIR_SYNC) {
 		size_t len = (io_u->xfer_buflen + page_size - 1) & ~page_mask;
 		unsigned long long off = real_off & ~page_mask;
 
@@ -66,7 +66,7 @@ static int fio_mmapio_open(struct thread_data *td, struct fio_file *f)
 	else if (td_write(td)) {
 		flags = PROT_WRITE;
 
-		if (td->verify != VERIFY_NONE)
+		if (td->o.verify != VERIFY_NONE)
 			flags |= PROT_READ;
 	} else
 		flags = PROT_READ;

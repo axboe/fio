@@ -87,7 +87,7 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct libaio_data *ld = td->io_ops->data;
 
-	if (ld->iocbs_nr == (int) td->iodepth)
+	if (ld->iocbs_nr == (int) td->o.iodepth)
 		return FIO_Q_BUSY;
 
 	/*
@@ -192,18 +192,18 @@ static int fio_libaio_init(struct thread_data *td)
 	struct libaio_data *ld = malloc(sizeof(*ld));
 
 	memset(ld, 0, sizeof(*ld));
-	if (io_queue_init(td->iodepth, &ld->aio_ctx)) {
+	if (io_queue_init(td->o.iodepth, &ld->aio_ctx)) {
 		td_verror(td, errno, "io_queue_init");
 		free(ld);
 		return 1;
 	}
 
-	ld->aio_events = malloc(td->iodepth * sizeof(struct io_event));
-	memset(ld->aio_events, 0, td->iodepth * sizeof(struct io_event));
-	ld->iocbs = malloc(td->iodepth * sizeof(struct iocb *));
+	ld->aio_events = malloc(td->o.iodepth * sizeof(struct io_event));
+	memset(ld->aio_events, 0, td->o.iodepth * sizeof(struct io_event));
+	ld->iocbs = malloc(td->o.iodepth * sizeof(struct iocb *));
 	memset(ld->iocbs, 0, sizeof(struct iocb *));
-	ld->io_us = malloc(td->iodepth * sizeof(struct io_u *));
-	memset(ld->io_us, 0, td->iodepth * sizeof(struct io_u *));
+	ld->io_us = malloc(td->o.iodepth * sizeof(struct io_u *));
+	memset(ld->io_us, 0, td->o.iodepth * sizeof(struct io_u *));
 	ld->iocbs_nr = 0;
 
 	td->io_ops->data = ld;

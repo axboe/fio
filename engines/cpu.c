@@ -10,7 +10,7 @@
 
 static int fio_cpuio_queue(struct thread_data *td, struct io_u fio_unused *io_u)
 {
-	__usec_sleep(td->cpucycle);
+	__usec_sleep(td->o.cpucycle);
 	return FIO_Q_COMPLETED;
 }
 
@@ -19,8 +19,8 @@ static int fio_cpuio_setup(struct thread_data fio_unused *td)
 	struct fio_file *f;
 	unsigned int i;
 
-	td->total_file_size = -1;
-	td->io_size = td->total_file_size;
+	td->o.size = -1;
+	td->io_size = td->o.size;
 	td->total_io_size = td->io_size;
 
 	for_each_file(td, f, i) {
@@ -33,22 +33,24 @@ static int fio_cpuio_setup(struct thread_data fio_unused *td)
 
 static int fio_cpuio_init(struct thread_data *td)
 {
-	if (!td->cpuload) {
+	struct thread_options *o = &td->o;
+
+	if (!o->cpuload) {
 		td_vmsg(td, EINVAL, "cpu thread needs rate (cpuload=)","cpuio");
 		return 1;
 	}
 
-	if (td->cpuload > 100)
-		td->cpuload = 100;
+	if (o->cpuload > 100)
+		o->cpuload = 100;
 
 	/*
 	 * set thinktime_sleep and thinktime_spin appropriately
 	 */
-	td->thinktime_blocks = 1;
-	td->thinktime_spin = 0;
-	td->thinktime = (td->cpucycle * (100 - td->cpuload)) / td->cpuload;
+	o->thinktime_blocks = 1;
+	o->thinktime_spin = 0;
+	o->thinktime = (o->cpucycle * (100 - o->cpuload)) / o->cpuload;
 
-	td->nr_files = td->open_files = 1;
+	o->nr_files = o->open_files = 1;
 	return 0;
 }
 

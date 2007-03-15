@@ -230,7 +230,7 @@ static int fio_netio_init(struct thread_data *td)
 	char *sep;
 	int ret;
 
-	if (!td->total_file_size) {
+	if (!td->o.size) {
 		log_err("fio: need size= set\n");
 		return 1;
 	}
@@ -240,11 +240,11 @@ static int fio_netio_init(struct thread_data *td)
 		return 1;
 	}
 
-	strcpy(buf, td->filename);
+	strcpy(buf, td->o.filename);
 
 	sep = strchr(buf, '/');
 	if (!sep) {
-		log_err("fio: bad network host/port <<%s>>\n", td->filename);
+		log_err("fio: bad network host/port <<%s>>\n", td->o.filename);
 		return 1;
 	}
 
@@ -264,11 +264,11 @@ static int fio_netio_init(struct thread_data *td)
 	if (ret)
 		return ret;
 
-	td->io_size = td->total_file_size;
+	td->io_size = td->o.size;
 	td->total_io_size = td->io_size;
 
 	for_each_file(td, f, i) {
-		f->file_size = td->total_file_size / td->nr_files;
+		f->file_size = td->o.size / td->o.nr_files;
 		f->real_file_size = f->file_size;
 	}
 

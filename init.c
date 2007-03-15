@@ -137,21 +137,21 @@ static int setup_rate(struct thread_data *td)
 	unsigned long long rate;
 	unsigned int bs;
 
-	if (!td->rate && !td->rate_iops)
+	if (!td->o.rate && !td->o.rate_iops)
 		return 0;
 
 	if (td_rw(td))
-		bs = td->rw_min_bs;
+		bs = td->o.rw_min_bs;
 	else if (td_read(td))
-		bs = td->min_bs[DDIR_READ];
+		bs = td->o.min_bs[DDIR_READ];
 	else
-		bs = td->min_bs[DDIR_WRITE];
+		bs = td->o.min_bs[DDIR_WRITE];
 
-	if (td->rate) {
-		rate = td->rate;
+	if (td->o.rate) {
+		rate = td->o.rate;
 		nr_reads_per_msec = (rate * 1024 * 1000LL) / bs;
 	} else
-		nr_reads_per_msec = td->rate_iops * 1000UL;
+		nr_reads_per_msec = td->o.rate_iops * 1000UL;
 
 	if (!nr_reads_per_msec) {
 		log_err("rate lower than supported\n");
@@ -169,96 +169,98 @@ static int setup_rate(struct thread_data *td)
  */
 static int fixup_options(struct thread_data *td)
 {
-	if (!td->rwmixread && td->rwmixwrite)
-		td->rwmixread = 100 - td->rwmixwrite;
+	struct thread_options *o = &td->o;
 
-	if (td->write_iolog_file && td->read_iolog_file) {
+	if (!o->rwmixread && o->rwmixwrite)
+		o->rwmixread = 100 - o->rwmixwrite;
+
+	if (o->write_iolog_file && o->read_iolog_file) {
 		log_err("fio: read iolog overrides write_iolog\n");
-		free(td->write_iolog_file);
-		td->write_iolog_file = NULL;
+		free(o->write_iolog_file);
+		o->write_iolog_file = NULL;
 	}
 
 	if (td->io_ops->flags & FIO_SYNCIO)
-		td->iodepth = 1;
+		o->iodepth = 1;
 	else {
-		if (!td->iodepth)
-			td->iodepth = td->open_files;
+		if (!o->iodepth)
+			o->iodepth = o->open_files;
 	}
 
 	/*
 	 * only really works for sequential io for now, and with 1 file
 	 */
-	if (td->zone_size && td_random(td) && td->open_files == 1)
-		td->zone_size = 0;
+	if (o->zone_size && td_random(td) && o->open_files == 1)
+		o->zone_size = 0;
 
 	/*
 	 * Reads can do overwrites, we always need to pre-create the file
 	 */
 	if (td_read(td) || td_rw(td))
-		td->overwrite = 1;
+		o->overwrite = 1;
 
-	if (!td->min_bs[DDIR_READ])
-		td->min_bs[DDIR_READ]= td->bs[DDIR_READ];
-	if (!td->max_bs[DDIR_READ])
-		td->max_bs[DDIR_READ] = td->bs[DDIR_READ];
-	if (!td->min_bs[DDIR_WRITE])
-		td->min_bs[DDIR_WRITE]= td->bs[DDIR_WRITE];
-	if (!td->max_bs[DDIR_WRITE])
-		td->max_bs[DDIR_WRITE] = td->bs[DDIR_WRITE];
+	if (!o->min_bs[DDIR_READ])
+		o->min_bs[DDIR_READ]= o->bs[DDIR_READ];
+	if (!o->max_bs[DDIR_READ])
+		o->max_bs[DDIR_READ] = o->bs[DDIR_READ];
+	if (!o->min_bs[DDIR_WRITE])
+		o->min_bs[DDIR_WRITE]= o->bs[DDIR_WRITE];
+	if (!o->max_bs[DDIR_WRITE])
+		o->max_bs[DDIR_WRITE] = o->bs[DDIR_WRITE];
 
-	td->rw_min_bs = min(td->min_bs[DDIR_READ], td->min_bs[DDIR_WRITE]);
+	o->rw_min_bs = min(o->min_bs[DDIR_READ], o->min_bs[DDIR_WRITE]);
 
-	if (!td->file_size_high)
-		td->file_size_high = td->file_size_low;
+	if (!o->file_size_high)
+		o->file_size_high = o->file_size_low;
 
 	if (td_read(td) && !td_rw(td))
-		td->verify = 0;
+		o->verify = 0;
 
-	if (td->norandommap && td->verify != VERIFY_NONE) {
+	if (o->norandommap && o->verify != VERIFY_NONE) {
 		log_err("fio: norandommap given, verify disabled\n");
-		td->verify = VERIFY_NONE;
+		o->verify = VERIFY_NONE;
 	}
-	if (td->bs_unaligned && (td->odirect || td->io_ops->flags & FIO_RAWIO))
+	if (o->bs_unaligned && (o->odirect || td->io_ops->flags & FIO_RAWIO))
 		log_err("fio: bs_unaligned may not work with raw io\n");
 
 	/*
 	 * thinktime_spin must be less than thinktime
 	 */
-	if (td->thinktime_spin > td->thinktime)
-		td->thinktime_spin = td->thinktime;
+	if (o->thinktime_spin > o->thinktime)
+		o->thinktime_spin = o->thinktime;
 
 	/*
 	 * The low water mark cannot be bigger than the iodepth
 	 */
-	if (td->iodepth_low > td->iodepth || !td->iodepth_low) {
+	if (o->iodepth_low > o->iodepth || !o->iodepth_low) {
 		/*
 		 * syslet work around - if the workload is sequential,
 		 * we want to let the queue drain all the way down to
 		 * avoid seeking between async threads
 		 */
 		if (!strcmp(td->io_ops->name, "syslet-rw") && !td_random(td))
-			td->iodepth_low = 1;
+			o->iodepth_low = 1;
 		else
-			td->iodepth_low = td->iodepth;
+			o->iodepth_low = o->iodepth;
 	}
 
 	/*
 	 * If batch number isn't set, default to the same as iodepth
 	 */
-	if (td->iodepth_batch > td->iodepth || !td->iodepth_batch)
-		td->iodepth_batch = td->iodepth;
+	if (o->iodepth_batch > o->iodepth || !o->iodepth_batch)
+		o->iodepth_batch = o->iodepth;
 
-	if (td->nr_files > td->files_index)
-		td->nr_files = td->files_index;
+	if (o->nr_files > td->files_index)
+		o->nr_files = td->files_index;
 
-	if (td->open_files > td->nr_files || !td->open_files)
-		td->open_files = td->nr_files;
+	if (o->open_files > o->nr_files || !o->open_files)
+		o->open_files = o->nr_files;
 
-	if ((td->rate && td->rate_iops) || (td->ratemin && td->rate_iops_min)) {
+	if ((o->rate && o->rate_iops) || (o->ratemin && o->rate_iops_min)) {
 		log_err("fio: rate and rate_iops are mutually exclusive\n");
 		return 1;
 	}
-	if ((td->rate < td->ratemin) || (td->rate_iops < td->rate_iops_min)) {
+	if ((o->rate < o->ratemin) || (o->rate_iops < o->rate_iops_min)) {
 		log_err("fio: minimum rate exceeds rate\n");
 		return 1;
 	}
@@ -343,7 +345,7 @@ static int init_random_state(struct thread_data *td)
 	os_random_seed(seeds[1], &td->verify_state);
 	os_random_seed(seeds[2], &td->rwmix_state);
 
-	if (td->file_service_type == FIO_FSERVICE_RANDOM)
+	if (td->o.file_service_type == FIO_FSERVICE_RANDOM)
 		os_random_seed(seeds[3], &td->next_file_state);
 
 	os_random_seed(seeds[5], &td->file_size_state);
@@ -351,12 +353,12 @@ static int init_random_state(struct thread_data *td)
 	if (!td_random(td))
 		return 0;
 
-	if (td->rand_repeatable)
+	if (td->o.rand_repeatable)
 		seeds[4] = FIO_RANDSEED * td->thread_number;
 
-	if (!td->norandommap) {
+	if (!td->o.norandommap) {
 		for_each_file(td, f, i) {
-			blocks = (f->real_file_size + td->rw_min_bs - 1) / td->rw_min_bs;
+			blocks = (f->real_file_size + td->o.rw_min_bs - 1) / td->o.rw_min_bs;
 			num_maps = (blocks + BLOCKS_PER_MAP-1)/ BLOCKS_PER_MAP;
 			f->file_map = malloc(num_maps * sizeof(long));
 			if (!f->file_map) {
@@ -394,29 +396,29 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td == &def_thread)
 		return 0;
 
-	engine = get_engine_name(td->ioengine);
+	engine = get_engine_name(td->o.ioengine);
 	td->io_ops = load_ioengine(td, engine);
 	if (!td->io_ops) {
 		log_err("fio: failed to load engine %s\n", engine);
 		goto err;
 	}
 
-	if (td->use_thread)
+	if (td->o.use_thread)
 		nr_thread++;
 	else
 		nr_process++;
 
-	if (td->odirect)
+	if (td->o.odirect)
 		td->io_ops->flags |= FIO_RAWIO;
 
 	file_alloced = 0;
-	if (!td->filename && !td->files_index) {
+	if (!td->o.filename && !td->files_index) {
 		file_alloced = 1;
 
-		if (td->nr_files == 1 && exists_and_not_file(jobname))
+		if (td->o.nr_files == 1 && exists_and_not_file(jobname))
 			add_file(td, jobname);
 		else {
-			for (i = 0; i < td->nr_files; i++) {
+			for (i = 0; i < td->o.nr_files; i++) {
 				sprintf(fname, "%s.%d.%d", jobname, td->thread_number, i);
 				add_file(td, fname);
 			}
@@ -427,8 +429,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		goto err;
 
 	for_each_file(td, f, i) {
-		if (td->directory && f->filetype == FIO_TYPE_FILE) {
-			sprintf(fname, "%s/%s", td->directory, f->file_name);
+		if (td->o.directory && f->filetype == FIO_TYPE_FILE) {
+			sprintf(fname, "%s/%s", td->o.directory, f->file_name);
 			f->file_name = strdup(fname);
 		}
 	}
@@ -439,7 +441,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	td->ts.slat_stat[0].min_val = td->ts.slat_stat[1].min_val = ULONG_MAX;
 	td->ts.bw_stat[0].min_val = td->ts.bw_stat[1].min_val = ULONG_MAX;
 
-	if ((td->stonewall || td->numjobs > 1) && prev_group_jobs) {
+	if ((td->o.stonewall || td->o.numjobs > 1) && prev_group_jobs) {
 		prev_group_jobs = 0;
 		groupid++;
 	}
@@ -453,29 +455,29 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (setup_rate(td))
 		goto err;
 
-	if (td->write_lat_log) {
+	if (td->o.write_lat_log) {
 		setup_log(&td->ts.slat_log);
 		setup_log(&td->ts.clat_log);
 	}
-	if (td->write_bw_log)
+	if (td->o.write_bw_log)
 		setup_log(&td->ts.bw_log);
 
-	if (!td->name)
-		td->name = strdup(jobname);
+	if (!td->o.name)
+		td->o.name = strdup(jobname);
 
 	if (!terse_output) {
 		if (!job_add_num) {
 			if (!strcmp(td->io_ops->name, "cpuio"))
-				log_info("%s: ioengine=cpu, cpuload=%u, cpucycle=%u\n", td->name, td->cpuload, td->cpucycle);
+				log_info("%s: ioengine=cpu, cpuload=%u, cpucycle=%u\n", td->o.name, td->o.cpuload, td->o.cpucycle);
 			else {
 				char *c1, *c2, *c3, *c4;
 
-				c1 = to_kmg(td->min_bs[DDIR_READ]);
-				c2 = to_kmg(td->max_bs[DDIR_READ]);
-				c3 = to_kmg(td->min_bs[DDIR_WRITE]);
-				c4 = to_kmg(td->max_bs[DDIR_WRITE]);
+				c1 = to_kmg(td->o.min_bs[DDIR_READ]);
+				c2 = to_kmg(td->o.max_bs[DDIR_READ]);
+				c3 = to_kmg(td->o.min_bs[DDIR_WRITE]);
+				c4 = to_kmg(td->o.max_bs[DDIR_WRITE]);
 
-				log_info("%s: (g=%d): rw=%s, bs=%s-%s/%s-%s, ioengine=%s, iodepth=%u\n", td->name, td->groupid, ddir_str[td->td_ddir], c1, c2, c3, c4, td->io_ops->name, td->iodepth);
+				log_info("%s: (g=%d): rw=%s, bs=%s-%s/%s-%s, ioengine=%s, iodepth=%u\n", td->o.name, td->groupid, ddir_str[td->o.td_ddir], c1, c2, c3, c4, td->io_ops->name, td->o.iodepth);
 
 				free(c1);
 				free(c2);
@@ -490,18 +492,18 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	 * recurse add identical jobs, clear numjobs and stonewall options
 	 * as they don't apply to sub-jobs
 	 */
-	numjobs = td->numjobs;
+	numjobs = td->o.numjobs;
 	while (--numjobs) {
 		struct thread_data *td_new = get_new_job(0, td);
 
 		if (!td_new)
 			goto err;
 
-		td_new->numjobs = 1;
-		td_new->stonewall = 0;
+		td_new->o.numjobs = 1;
+		td_new->o.stonewall = 0;
 
 		if (file_alloced) {
-			td_new->filename = NULL;
+			td_new->o.filename = NULL;
 			td_new->files_index = 0;
 			td_new->files = NULL;
 		}
@@ -512,7 +514,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 			goto err;
 	}
 
-	if (td->numjobs > 1) {
+	if (td->o.numjobs > 1) {
 		groupid++;
 		prev_group_jobs = 0;
 	}
@@ -586,7 +588,7 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 		 * Seperate multiple job files by a stonewall
 		 */
 		if (!global && stonewall) {
-			td->stonewall = stonewall;
+			td->o.stonewall = stonewall;
 			stonewall = 0;
 		}
 
@@ -631,7 +633,7 @@ static int fill_def_thread(void)
 {
 	memset(&def_thread, 0, sizeof(def_thread));
 
-	if (fio_getaffinity(getpid(), &def_thread.cpumask) == -1) {
+	if (fio_getaffinity(getpid(), &def_thread.o.cpumask) == -1) {
 		perror("sched_getaffinity");
 		return 1;
 	}
@@ -641,12 +643,12 @@ static int fill_def_thread(void)
 	 */
 	fio_fill_default_options(&def_thread);
 
-	def_thread.timeout = def_timeout;
-	def_thread.write_bw_log = write_bw_log;
-	def_thread.write_lat_log = write_lat_log;
+	def_thread.o.timeout = def_timeout;
+	def_thread.o.write_bw_log = write_bw_log;
+	def_thread.o.write_lat_log = write_lat_log;
 
 #ifdef FIO_HAVE_DISK_UTIL
-	def_thread.do_disk_util = 1;
+	def_thread.o.do_disk_util = 1;
 #endif
 
 	return 0;
@@ -754,7 +756,7 @@ static int parse_cmd_line(int argc, char *argv[])
 			char *val = optarg;
 
 			if (!strncmp(opt, "name", 4) && td) {
-				ret = add_job(td, td->name ?: "fio", 0);
+				ret = add_job(td, td->o.name ?: "fio", 0);
 				if (ret) {
 					put_job(td);
 					return 0;
@@ -783,7 +785,7 @@ static int parse_cmd_line(int argc, char *argv[])
 		if (dont_add_job)
 			put_job(td);
 		else {
-			ret = add_job(td, td->name ?: "fio", 0);
+			ret = add_job(td, td->o.name ?: "fio", 0);
 			if (ret)
 				put_job(td);
 		}

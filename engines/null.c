@@ -66,16 +66,16 @@ static int fio_null_setup(struct thread_data *td)
 	struct fio_file *f;
 	unsigned int i;
 
-	if (!td->total_file_size) {
+	if (!td->o.size) {
 		log_err("fio: need size= set\n");
 		return 1;
 	}
 
-	td->io_size = td->total_file_size;
+	td->io_size = td->o.size;
 	td->total_io_size = td->io_size;
 
 	for_each_file(td, f, i) {
-		f->real_file_size = td->total_io_size / td->nr_files;
+		f->real_file_size = td->total_io_size / td->o.nr_files;
 		f->file_size = f->real_file_size;
 	}
 
@@ -107,9 +107,9 @@ static int fio_null_init(struct thread_data *td)
 
 	memset(nd, 0, sizeof(*nd));
 
-	if (td->iodepth != 1) {
-		nd->io_us = malloc(td->iodepth * sizeof(struct io_u *));
-		memset(nd->io_us, 0, td->iodepth * sizeof(struct io_u *));
+	if (td->o.iodepth != 1) {
+		nd->io_us = malloc(td->o.iodepth * sizeof(struct io_u *));
+		memset(nd->io_us, 0, td->o.iodepth * sizeof(struct io_u *));
 	} else
 		td->io_ops->flags |= FIO_SYNCIO;
 

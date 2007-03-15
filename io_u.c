@@ -39,7 +39,7 @@ static int random_map_free(struct thread_data *td, struct fio_file *f,
  */
 static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 {
-	unsigned int min_bs = td->rw_min_bs;
+	unsigned int min_bs = td->o.rw_min_bs;
 	struct fio_file *f = io_u->file;
 	unsigned long long block;
 	unsigned int blocks;
@@ -79,7 +79,7 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 
 	i = f->last_free_lookup;
 	*b = (i * BLOCKS_PER_MAP);
-	while ((*b) * td->rw_min_bs < f->real_file_size) {
+	while ((*b) * td->o.rw_min_bs < f->real_file_size) {
 		if (f->file_map[i] != -1UL) {
 			*b += ffz(f->file_map[i]);
 			f->last_free_lookup = i;
@@ -106,7 +106,7 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 	long r;
 
 	if (td_random(td)) {
-		unsigned long long max_blocks = f->file_size / td->min_bs[ddir];
+		unsigned long long max_blocks = f->file_size / td->o.min_bs[ddir];
 		int loops = 5;
 
 		do {
@@ -115,9 +115,9 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 				b = 0;
 			else
 				b = ((max_blocks - 1) * r / (unsigned long long) (RAND_MAX+1.0));
-			if (td->norandommap)
+			if (td->o.norandommap)
 				break;
-			rb = b + (f->file_offset / td->min_bs[ddir]);
+			rb = b + (f->file_offset / td->o.min_bs[ddir]);
 			loops--;
 		} while (!random_map_free(td, f, rb) && loops);
 
@@ -128,9 +128,9 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 		if (!loops && get_next_free_block(td, f, &b))
 			return 1;
 	} else
-		b = f->last_pos / td->min_bs[ddir];
+		b = f->last_pos / td->o.min_bs[ddir];
 
-	io_u->offset = (b * td->min_bs[ddir]) + f->file_offset;
+	io_u->offset = (b * td->o.min_bs[ddir]) + f->file_offset;
 	if (io_u->offset >= f->real_file_size)
 		return 1;
 
@@ -144,18 +144,18 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 	unsigned int buflen;
 	long r;
 
-	if (td->min_bs[ddir] == td->max_bs[ddir])
-		buflen = td->min_bs[ddir];
+	if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
+		buflen = td->o.min_bs[ddir];
 	else {
 		r = os_random_long(&td->bsrange_state);
-		buflen = (unsigned int) (1 + (double) (td->max_bs[ddir] - 1) * r / (RAND_MAX + 1.0));
-		if (!td->bs_unaligned)
-			buflen = (buflen + td->min_bs[ddir] - 1) & ~(td->min_bs[ddir] - 1);
+		buflen = (unsigned int) (1 + (double) (td->o.max_bs[ddir] - 1) * r / (RAND_MAX + 1.0));
+		if (!td->o.bs_unaligned)
+			buflen = (buflen + td->o.min_bs[ddir] - 1) & ~(td->o.min_bs[ddir] - 1);
 	}
 
 	while (buflen + io_u->offset > f->real_file_size) {
-		if (buflen == td->min_bs[ddir]) {
-			if (!td->odirect) {
+		if (buflen == td->o.min_bs[ddir]) {
+			if (!td->o.odirect) {
 				assert(io_u->offset <= f->real_file_size);
 				buflen = f->real_file_size - io_u->offset;
 				return buflen;
@@ -163,7 +163,7 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 			return 0;
 		}
 
-		buflen = td->min_bs[ddir];
+		buflen = td->o.min_bs[ddir];
 	}
 
 	return buflen;
@@ -186,13 +186,13 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 		/*
 		 * Check if it's time to seed a new data direction.
 		 */
-		if (elapsed >= td->rwmixcycle) {
+		if (elapsed >= td->o.rwmixcycle) {
 			unsigned int v;
 			long r;
 
 			r = os_random_long(&td->rwmix_state);
 			v = 1 + (int) (100.0 * (r / (RAND_MAX + 1.0)));
-			if (v < td->rwmixread)
+			if (v < td->o.rwmixread)
 				td->rwmix_ddir = DDIR_READ;
 			else
 				td->rwmix_ddir = DDIR_WRITE;
@@ -234,14 +234,15 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * If using an iolog, grab next piece if any available.
 	 */
-	if (td->read_iolog)
+	if (td->o.read_iolog)
 		return read_iolog_get(td, io_u);
 
 	/*
 	 * see if it's time to sync
 	 */
-	if (td->fsync_blocks && !(td->io_issues[DDIR_WRITE] % td->fsync_blocks)
-	    && td->io_issues[DDIR_WRITE] && should_fsync(td)) {
+	if (td->o.fsync_blocks &&
+	   !(td->io_issues[DDIR_WRITE] % td->o.fsync_blocks) &&
+	     td->io_issues[DDIR_WRITE] && should_fsync(td)) {
 		io_u->ddir = DDIR_SYNC;
 		return 0;
 	}
@@ -262,13 +263,13 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * mark entry before potentially trimming io_u
 	 */
-	if (!td->read_iolog && td_random(td) && !td->norandommap)
+	if (!td->o.read_iolog && td_random(td) && !td->o.norandommap)
 		mark_random_map(td, io_u);
 
 	/*
 	 * If using a write iolog, store this entry.
 	 */
-	if (td->write_iolog_file)
+	if (td->o.write_iolog_file)
 		write_iolog_put(td, io_u);
 
 	return 0;
@@ -348,7 +349,7 @@ static struct fio_file *get_next_file_rand(struct thread_data *td, int goodf,
 	do {
 		long r = os_random_long(&td->next_file_state);
 
-		fno = (unsigned int) ((double) td->nr_files * (r / (RAND_MAX + 1.0)));
+		fno = (unsigned int) ((double) td->o.nr_files * (r / (RAND_MAX + 1.0)));
 		f = &td->files[fno];
 
 		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf))
@@ -369,7 +370,7 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 		f = &td->files[td->next_file];
 
 		td->next_file++;
-		if (td->next_file >= td->nr_files)
+		if (td->next_file >= td->o.nr_files)
 			td->next_file = 0;
 
 		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf))
@@ -385,7 +386,7 @@ static struct fio_file *get_next_file(struct thread_data *td)
 {
 	struct fio_file *f;
 
-	assert(td->nr_files <= td->files_index);
+	assert(td->o.nr_files <= td->files_index);
 
 	if (!td->nr_open_files)
 		return NULL;
@@ -394,7 +395,7 @@ static struct fio_file *get_next_file(struct thread_data *td)
 	if (f && (f->flags & FIO_FILE_OPEN) && td->file_service_left--)
 		return f;
 
-	if (td->file_service_type == FIO_FSERVICE_RR)
+	if (td->o.file_service_type == FIO_FSERVICE_RR)
 		f = get_next_file_rr(td, FIO_FILE_OPEN, FIO_FILE_CLOSING);
 	else
 		f = get_next_file_rand(td, FIO_FILE_OPEN, FIO_FILE_CLOSING);
@@ -408,7 +409,7 @@ static struct fio_file *find_next_new_file(struct thread_data *td)
 {
 	struct fio_file *f;
 
-	if (td->file_service_type == FIO_FSERVICE_RR)
+	if (td->o.file_service_type == FIO_FSERVICE_RR)
 		f = get_next_file_rr(td, 0, FIO_FILE_OPEN);
 	else
 		f = get_next_file_rand(td, 0, FIO_FILE_OPEN);
@@ -487,8 +488,8 @@ set_file:
 		 * probably not the right place to do this, but see
 		 * if we need to open a new file
 		 */
-		if (td->nr_open_files < td->open_files &&
-		    td->open_files != td->nr_files) {
+		if (td->nr_open_files < td->o.open_files &&
+		    td->o.open_files != td->o.nr_files) {
 			f = find_next_new_file(td);
 
 			if (!f || (ret = td_io_open_file(td, f))) {
@@ -499,9 +500,9 @@ set_file:
 		}
 	} while (1);
 
-	if (td->zone_bytes >= td->zone_size) {
+	if (td->zone_bytes >= td->o.zone_size) {
 		td->zone_bytes = 0;
-		f->last_pos += td->zone_skip;
+		f->last_pos += td->o.zone_skip;
 	}
 
 	if (io_u->buflen + io_u->offset > f->real_file_size) {
@@ -521,7 +522,7 @@ set_file:
 
 		f->last_pos = io_u->offset + io_u->buflen;
 
-		if (td->verify != VERIFY_NONE)
+		if (td->o.verify != VERIFY_NONE)
 			populate_verify_io_u(td, io_u);
 	}
 

@@ -181,8 +181,8 @@ static int fio_posixaio_init(struct thread_data *td)
 	struct posixaio_data *pd = malloc(sizeof(*pd));
 
 	memset(pd, 0, sizeof(*pd));
-	pd->aio_events = malloc(td->iodepth * sizeof(struct io_u *));
-	memset(pd->aio_events, 0, td->iodepth * sizeof(struct io_u *));
+	pd->aio_events = malloc(td->o.iodepth * sizeof(struct io_u *));
+	memset(pd->aio_events, 0, td->o.iodepth * sizeof(struct io_u *));
 
 	td->io_ops->data = pd;
 	return 0;

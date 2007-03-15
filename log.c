@@ -56,7 +56,7 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	 * be laid out with the block scattered as written. it's faster to
 	 * read them in in that order again, so don't sort
 	 */
-	if (!td_random(td) || !td->overwrite) {
+	if (!td_random(td) || !td->o.overwrite) {
 		list_add_tail(&ipo->list, &td->io_hist_list);
 		return;
 	}
@@ -93,7 +93,7 @@ static int init_iolog_read(struct thread_data *td)
 	FILE *f;
 	int rw, reads, writes;
 
-	f = fopen(td->read_iolog_file, "r");
+	f = fopen(td->o.read_iolog_file, "r");
 	if (!f) {
 		perror("fopen read iolog");
 		return 1;
@@ -126,8 +126,8 @@ static int init_iolog_read(struct thread_data *td)
 		ipo->offset = offset;
 		ipo->len = bytes;
 		ipo->ddir = (enum fio_ddir) rw;
-		if (bytes > td->max_bs[rw])
-			td->max_bs[rw] = bytes;
+		if (bytes > td->o.max_bs[rw])
+			td->o.max_bs[rw] = bytes;
 		list_add_tail(&ipo->list, &td->io_log_list);
 	}
 
@@ -137,11 +137,11 @@ static int init_iolog_read(struct thread_data *td)
 	if (!reads && !writes)
 		return 1;
 	else if (reads && !writes)
-		td->td_ddir = TD_DDIR_READ;
+		td->o.td_ddir = TD_DDIR_READ;
 	else if (!reads && writes)
-		td->td_ddir = TD_DDIR_READ;
+		td->o.td_ddir = TD_DDIR_READ;
 	else
-		td->td_ddir = TD_DDIR_RW;
+		td->o.td_ddir = TD_DDIR_RW;
 
 	return 0;
 }
@@ -153,7 +153,7 @@ static int init_iolog_write(struct thread_data *td)
 {
 	FILE *f;
 
-	f = fopen(td->write_iolog_file, "w+");
+	f = fopen(td->o.write_iolog_file, "w+");
 	if (!f) {
 		perror("fopen write iolog");
 		return 1;
@@ -175,9 +175,9 @@ int init_iolog(struct thread_data *td)
 	if (td->io_ops->flags & FIO_DISKLESSIO)
 		return 0;
 
-	if (td->read_iolog_file)
+	if (td->o.read_iolog_file)
 		ret = init_iolog_read(td);
-	else if (td->write_iolog_file)
+	else if (td->o.write_iolog_file)
 		ret = init_iolog_write(td);
 
 	return ret;

@@ -58,12 +58,12 @@ static int create_file(struct thread_data *td, struct fio_file *f)
 		goto err;
 	}
 
-	b = malloc(td->max_bs[DDIR_WRITE]);
-	memset(b, 0, td->max_bs[DDIR_WRITE]);
+	b = malloc(td->o.max_bs[DDIR_WRITE]);
+	memset(b, 0, td->o.max_bs[DDIR_WRITE]);
 
 	left = f->file_size;
 	while (left && !td->terminate) {
-		bs = td->max_bs[DDIR_WRITE];
+		bs = td->o.max_bs[DDIR_WRITE];
 		if (bs > left)
 			bs = left;
 
@@ -84,7 +84,7 @@ static int create_file(struct thread_data *td, struct fio_file *f)
 
 	if (td->terminate)
 		unlink(f->file_name);
-	else if (td->create_fsync)
+	else if (td->o.create_fsync)
 		fsync(f->fd);
 
 	free(b);
@@ -104,16 +104,16 @@ static unsigned long long set_rand_file_size(struct thread_data *td,
 	unsigned long long ret;
 	long r;
 
-	if (upper > td->file_size_high)
-		upper = td->file_size_high;
-	else if (upper < td->file_size_low)
+	if (upper > td->o.file_size_high)
+		upper = td->o.file_size_high;
+	else if (upper < td->o.file_size_low)
 		return 0;
 	else if (!upper)
 		return 0;
 
 	r = os_random_long(&td->file_size_state);
-	ret = td->file_size_low + (unsigned long long) ((double) upper * (r / (RAND_MAX + 1.0)));
-	ret -= (ret % td->rw_min_bs);
+	ret = td->o.file_size_low + (unsigned long long) ((double) upper * (r / (RAND_MAX + 1.0)));
+	ret -= (ret % td->o.rw_min_bs);
 	if (ret > upper)
 		ret = upper;
 	return ret;
@@ -127,11 +127,11 @@ static int create_files(struct thread_data *td)
 	unsigned int i, new_files;
 
 	new_files = 0;
-	total_file_size = td->total_file_size;
+	total_file_size = td->o.size;
 	for_each_file(td, f, i) {
 		unsigned long long s;
 
-		f->file_offset = td->start_offset;
+		f->file_offset = td->o.start_offset;
 
 		if (f->filetype != FIO_TYPE_FILE)
 			continue;
@@ -149,7 +149,7 @@ static int create_files(struct thread_data *td)
 	/*
 	 * unless specifically asked for overwrite, let normal io extend it
 	 */
-	can_extend = !td->overwrite && !(td->io_ops->flags & FIO_NOEXTEND);
+	can_extend = !td->o.overwrite && !(td->io_ops->flags & FIO_NOEXTEND);
 	if (can_extend)
 		return 0;
 
@@ -170,17 +170,17 @@ static int create_files(struct thread_data *td)
 			continue;
 		}
 
-		if (!td->file_size_low)
+		if (!td->o.file_size_low)
 			f->file_size = total_file_size / new_files;
 		else {
 			/*
 			 * If we don't have enough space left for a file
 			 * of the minimum size, bail.
 			 */
-			if (local_file_size < td->file_size_low) {
+			if (local_file_size < td->o.file_size_low) {
 				log_info("fio: limited to %d files\n", i);
-				new_files -= (td->nr_files - i);
-				td->nr_files = i;
+				new_files -= (td->o.nr_files - i);
+				td->o.nr_files = i;
 				break;
 			}
 
@@ -192,7 +192,7 @@ static int create_files(struct thread_data *td)
 		create_size += f->file_size;
 		file_there = !file_ok(td, f);
 
-		if (file_there && td_write(td) && !td->overwrite) {
+		if (file_there && td_write(td) && !td->o.overwrite) {
 			unlink(f->file_name);
 			file_there = 0;
 		}
@@ -203,7 +203,7 @@ static int create_files(struct thread_data *td)
 	if (!need_create)
 		return 0;
 
-	if (!td->total_file_size && !total_file_size) {
+	if (!td->o.size && !total_file_size) {
 		log_err("Need size for create\n");
 		td_verror(td, EINVAL, "file_size");
 		return 1;
@@ -211,7 +211,7 @@ static int create_files(struct thread_data *td)
 
 	temp_stall_ts = 1;
 	log_info("%s: Laying out IO file(s) (%u files / %LuMiB)\n",
-				td->name, new_files, create_size >> 20);
+				td->o.name, new_files, create_size >> 20);
 
 	err = 0;
 	for_each_file(td, f, i) {
@@ -220,7 +220,7 @@ static int create_files(struct thread_data *td)
 		 */
 		f->flags &= ~FIO_FILE_UNLINK;
 		if (file_ok(td, f)) {
-			if (td->unlink)
+			if (td->o.unlink)
 				f->flags |= FIO_FILE_UNLINK;
 
 			err = create_file(td, f);
@@ -237,7 +237,7 @@ static int file_size(struct thread_data *td, struct fio_file *f)
 {
 	struct stat st;
 
-	if (td->overwrite) {
+	if (td->o.overwrite) {
 		if (fstat(f->fd, &st) == -1) {
 			td_verror(td, errno, "fstat");
 			return 1;
@@ -292,7 +292,7 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 		return ret;
 
 	if (f->file_offset > f->real_file_size) {
-		log_err("%s: offset extends end (%Lu > %Lu)\n", td->name, f->file_offset, f->real_file_size);
+		log_err("%s: offset extends end (%Lu > %Lu)\n", td->o.name, f->file_offset, f->real_file_size);
 		return 1;
 	}
 
@@ -303,7 +303,7 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 {
 	int ret = 0;
 
-	if (td->odirect)
+	if (td->o.odirect)
 		return 0;
 
 	/*
@@ -336,9 +336,9 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 {
 	int flags = 0;
 
-	if (td->odirect)
+	if (td->o.odirect)
 		flags |= OS_O_DIRECT;
-	if (td->sync_io)
+	if (td->o.sync_io)
 		flags |= O_SYNC;
 
 	if (td_write(td) || td_rw(td)) {
@@ -361,17 +361,17 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 		int __e = errno;
 
 		td_verror(td, __e, "open");
-		if (__e == EINVAL && td->odirect)
+		if (__e == EINVAL && td->o.odirect)
 			log_err("fio: destination does not support O_DIRECT\n");
 		if (__e == EMFILE)
-			log_err("fio: try reducing/setting openfiles (failed at %u of %u)\n", td->nr_open_files, td->nr_files);
+			log_err("fio: try reducing/setting openfiles (failed at %u of %u)\n", td->nr_open_files, td->o.nr_files);
 		return 1;
 	}
 
 	if (get_file_size(td, f))
 		goto err;
 
-	if (td->invalidate_cache && file_invalidate_cache(td, f))
+	if (td->o.invalidate_cache && file_invalidate_cache(td, f))
 		goto err;
 
 	if (!td_random(td)) {
@@ -403,7 +403,7 @@ int open_files(struct thread_data *td)
 		if (err)
 			break;
 
-		if (td->open_files == td->nr_open_files)
+		if (td->o.open_files == td->nr_open_files)
 			break;
 	}
 
@@ -439,21 +439,21 @@ int setup_files(struct thread_data *td)
 	/*
 	 * Recalculate the total file size now that files are set up.
 	 */
-	td->total_file_size = 0;
+	td->o.size = 0;
 	for_each_file(td, f, i)
-		td->total_file_size += f->file_size;
+		td->o.size += f->file_size;
 
-	td->io_size = td->total_file_size;
+	td->io_size = td->o.size;
 	if (td->io_size == 0) {
-		log_err("%s: no io blocks\n", td->name);
+		log_err("%s: no io blocks\n", td->o.name);
 		td_verror(td, EINVAL, "total_file_size");
 		return 1;
 	}
 
-	if (!td->zone_size)
-		td->zone_size = td->io_size;
+	if (!td->o.zone_size)
+		td->o.zone_size = td->io_size;
 
-	td->total_io_size = td->io_size * td->loops;
+	td->total_io_size = td->io_size * td->o.loops;
 
 	for_each_file(td, f, i)
 		td_io_close_file(td, f);
@@ -480,9 +480,9 @@ void close_files(struct thread_data *td)
 			free(f->file_map);
 	}
 
-	td->filename = NULL;
+	td->o.filename = NULL;
 	td->files = NULL;
-	td->nr_files = 0;
+	td->o.nr_files = 0;
 }
 
 static void get_file_type(struct fio_file *f)
@@ -541,7 +541,7 @@ void put_file(struct thread_data *td, struct fio_file *f)
 	if (--f->references)
 		return;
 
-	if (should_fsync(td) && td->fsync_on_close)
+	if (should_fsync(td) && td->o.fsync_on_close)
 		fsync(f->fd);
 
 	if (td->io_ops->close_file)
@@ -580,7 +580,7 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 
 		if (S_ISREG(sb.st_mode)) {
 			add_file(td, full_path);
-			td->nr_files++;
+			td->o.nr_files++;
 			continue;
 		}
 

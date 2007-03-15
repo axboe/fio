@@ -97,7 +97,7 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 			if (!min)
 				break;
 
-			ret = poll(sd->pfds, td->nr_files, -1);
+			ret = poll(sd->pfds, td->o.nr_files, -1);
 			if (ret < 0) {
 				if (!r)
 					r = -errno;
@@ -106,7 +106,7 @@ static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 			} else if (!ret)
 				continue;
 
-			if (pollin_events(sd->pfds, td->nr_files))
+			if (pollin_events(sd->pfds, td->o.nr_files))
 				break;
 		} while (1);
 
@@ -325,23 +325,23 @@ static int fio_sgio_init(struct thread_data *td)
 
 	sd = malloc(sizeof(*sd));
 	memset(sd, 0, sizeof(*sd));
-	sd->cmds = malloc(td->iodepth * sizeof(struct sgio_cmd));
-	memset(sd->cmds, 0, td->iodepth * sizeof(struct sgio_cmd));
-	sd->events = malloc(td->iodepth * sizeof(struct io_u *));
-	memset(sd->events, 0, td->iodepth * sizeof(struct io_u *));
-	sd->pfds = malloc(sizeof(struct pollfd) * td->nr_files);
-	memset(sd->pfds, 0, sizeof(struct pollfd) * td->nr_files);
-	sd->fd_flags = malloc(sizeof(int) * td->nr_files);
-	memset(sd->fd_flags, 0, sizeof(int) * td->nr_files);
-	sd->sgbuf = malloc(sizeof(struct sg_io_hdr) * td->iodepth);
-	memset(sd->sgbuf, 0, sizeof(struct sg_io_hdr) * td->iodepth);
+	sd->cmds = malloc(td->o.iodepth * sizeof(struct sgio_cmd));
+	memset(sd->cmds, 0, td->o.iodepth * sizeof(struct sgio_cmd));
+	sd->events = malloc(td->o.iodepth * sizeof(struct io_u *));
+	memset(sd->events, 0, td->o.iodepth * sizeof(struct io_u *));
+	sd->pfds = malloc(sizeof(struct pollfd) * td->o.nr_files);
+	memset(sd->pfds, 0, sizeof(struct pollfd) * td->o.nr_files);
+	sd->fd_flags = malloc(sizeof(int) * td->o.nr_files);
+	memset(sd->fd_flags, 0, sizeof(int) * td->o.nr_files);
+	sd->sgbuf = malloc(sizeof(struct sg_io_hdr) * td->o.iodepth);
+	memset(sd->sgbuf, 0, sizeof(struct sg_io_hdr) * td->o.iodepth);
 
 	td->io_ops->data = sd;
 
 	/*
 	 * we want to do it, regardless of whether odirect is set or not
 	 */
-	td->override_sync = 1;
+	td->o.override_sync = 1;
 	return 0;
 }
 

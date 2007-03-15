@@ -108,15 +108,15 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 	 * if writing, bytes_total will be twice the size. If mixing,
 	 * assume a 50/50 split and thus bytes_total will be 50% larger.
 	 */
-	if (td->verify) {
+	if (td->o.verify) {
 		if (td_rw(td))
 			bytes_total = bytes_total * 3 / 2;
 		else
 			bytes_total <<= 1;
 	}
 
-	if (td->zone_size && td->zone_skip)
-		bytes_total /= (td->zone_skip / td->zone_size);
+	if (td->o.zone_size && td->o.zone_skip)
+		bytes_total /= (td->o.zone_skip / td->o.zone_size);
 
 	if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING) {
 		double perc;
@@ -128,8 +128,8 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 
 		eta_sec = (unsigned long) (elapsed * (1.0 / perc)) - elapsed;
 
-		if (td->timeout && eta_sec > (td->timeout - elapsed))
-			eta_sec = td->timeout - elapsed;
+		if (td->o.timeout && eta_sec > (td->o.timeout - elapsed))
+			eta_sec = td->o.timeout - elapsed;
 	} else if (td->runstate == TD_NOT_CREATED || td->runstate == TD_CREATED
 			|| td->runstate == TD_INITIALIZED) {
 		int t_eta = 0, r_eta = 0;
@@ -138,11 +138,11 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 		 * We can only guess - assume it'll run the full timeout
 		 * if given, otherwise assume it'll run at the specified rate.
 		 */
-		if (td->timeout)
-			t_eta = td->timeout + td->start_delay - elapsed;
-		if (td->rate) {
-			r_eta = (bytes_total / 1024) / td->rate;
-			r_eta += td->start_delay - elapsed;
+		if (td->o.timeout)
+			t_eta = td->o.timeout + td->o.start_delay - elapsed;
+		if (td->o.rate) {
+			r_eta = (bytes_total / 1024) / td->o.rate;
+			r_eta += td->o.start_delay - elapsed;
 		}
 
 		if (r_eta && t_eta)
@@ -207,13 +207,13 @@ void print_thread_status(void)
 	nr_pending = nr_running = t_rate = m_rate = 0;
 	bw_avg_time = ULONG_MAX;
 	for_each_td(td, i) {
-		if (td->bw_avg_time < bw_avg_time)
-			bw_avg_time = td->bw_avg_time;
+		if (td->o.bw_avg_time < bw_avg_time)
+			bw_avg_time = td->o.bw_avg_time;
 		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING
 		    || td->runstate == TD_FSYNCING) {
 			nr_running++;
-			t_rate += td->rate;
-			m_rate += td->ratemin;
+			t_rate += td->o.rate;
+			m_rate += td->o.ratemin;
 		} else if (td->runstate < TD_RUNNING)
 			nr_pending++;
 

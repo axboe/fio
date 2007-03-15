@@ -63,7 +63,7 @@ static void fio_syslet_complete_atom(struct thread_data *td,
 		else if (ret < 0)
 			io_u->error = ret;
 
-		assert(sd->nr_events < td->iodepth);
+		assert(sd->nr_events < td->o.iodepth);
 		sd->events[sd->nr_events++] = io_u;
 
 		if (atom == last)
@@ -90,7 +90,7 @@ static void fio_syslet_complete(struct thread_data *td)
 			break;
 
 		sd->ring[sd->ahu.user_ring_idx] = NULL;
-		if (++sd->ahu.user_ring_idx == td->iodepth)
+		if (++sd->ahu.user_ring_idx == td->o.iodepth)
 			sd->ahu.user_ring_idx = 0;
 
 		fio_syslet_complete_atom(td, atom);
@@ -303,13 +303,13 @@ static int fio_syslet_init(struct thread_data *td)
 
 	sd = malloc(sizeof(*sd));
 	memset(sd, 0, sizeof(*sd));
-	sd->events = malloc(sizeof(struct io_u *) * td->iodepth);
-	memset(sd->events, 0, sizeof(struct io_u *) * td->iodepth);
+	sd->events = malloc(sizeof(struct io_u *) * td->o.iodepth);
+	memset(sd->events, 0, sizeof(struct io_u *) * td->o.iodepth);
 
 	/*
 	 * This will handily fail for kernels where syslet isn't available
 	 */
-	if (async_head_init(sd, td->iodepth)) {
+	if (async_head_init(sd, td->o.iodepth)) {
 		free(sd->events);
 		free(sd);
 		return 1;

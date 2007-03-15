@@ -131,7 +131,7 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	p += sizeof(hdr);
 	fill_random_bytes(td, p, io_u->buflen - sizeof(hdr));
 
-	if (td->verify == VERIFY_MD5) {
+	if (td->o.verify == VERIFY_MD5) {
 		fill_md5(&hdr, p, io_u->buflen - sizeof(hdr));
 		hdr.verify_type = VERIFY_MD5;
 	} else {

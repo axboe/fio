@@ -215,7 +215,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 		int r;
 
 		td->io_u_queued++;
-		if (td->io_u_queued > td->iodepth_batch) {
+		if (td->io_u_queued > td->o.iodepth_batch) {
 			r = td_io_commit(td);
 			if (r < 0)
 				return r;

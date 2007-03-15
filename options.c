@@ -9,7 +9,7 @@
 #include "fio.h"
 #include "parse.h"
 
-#define td_var_offset(var)	((size_t) &((struct thread_data *)0)->var)
+#define td_var_offset(var)	((size_t) &((struct thread_options *)0)->var)
 
 /*
  * Check if mmap/mmaphuge has a :/foo/bar/file at the end. If so, return that.
@@ -31,9 +31,9 @@ static int str_mem_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
 
-	if (td->mem_type == MEM_MMAPHUGE || td->mem_type == MEM_MMAP) {
+	if (td->o.mem_type == MEM_MMAPHUGE || td->o.mem_type == MEM_MMAP) {
 		td->mmapfile = get_opt_postfix(mem);
-		if (td->mem_type == MEM_MMAPHUGE && !td->mmapfile) {
+		if (td->o.mem_type == MEM_MMAPHUGE && !td->mmapfile) {
 			log_err("fio: mmaphuge:/path/to/file\n");
 			return 1;
 		}
@@ -90,7 +90,7 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 {
 	struct thread_data *td = data;
 
-	fill_cpu_mask(td->cpumask, *val);
+	fill_cpu_mask(td->o.cpumask, *val);
 	return 0;
 }
 
@@ -117,13 +117,13 @@ static int str_filename_cb(void *data, const char *input)
 	strip_blank_end(str);
 
 	if (!td->files_index)
-		td->nr_files = 0;
+		td->o.nr_files = 0;
 
 	while ((fname = strsep(&str, ":")) != NULL) {
 		if (!strlen(fname))
 			break;
 		add_file(td, fname);
-		td->nr_files++;
+		td->o.nr_files++;
 	}
 
 	free(p);
@@ -135,13 +135,13 @@ static int str_directory_cb(void *data, const char fio_unused *str)
 	struct thread_data *td = data;
 	struct stat sb;
 
-	if (lstat(td->directory, &sb) < 0) {
-		log_err("fio: %s is not a directory\n", td->directory);
+	if (lstat(td->o.directory, &sb) < 0) {
+		log_err("fio: %s is not a directory\n", td->o.directory);
 		td_verror(td, errno, "lstat");
 		return 1;
 	}
 	if (!S_ISDIR(sb.st_mode)) {
-		log_err("fio: %s is not a directory\n", td->directory);
+		log_err("fio: %s is not a directory\n", td->o.directory);
 		return 1;
 	}
 
@@ -153,9 +153,9 @@ static int str_opendir_cb(void *data, const char fio_unused *str)
 	struct thread_data *td = data;
 
 	if (!td->files_index)
-		td->nr_files = 0;
+		td->o.nr_files = 0;
 
-	return add_dir_files(td, td->opendir);
+	return add_dir_files(td, td->o.opendir);
 }
 
 
@@ -307,7 +307,7 @@ static struct fio_option options[] = {
 	{
 		.name	= "size",
 		.type	= FIO_OPT_STR_VAL,
-		.off1	= td_var_offset(total_file_size),
+		.off1	= td_var_offset(size),
 		.help	= "Total size of device or files",
 	},
 	{

@@ -302,7 +302,7 @@ static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 		sprintf(foo, "%s", tmp);
 	}
 
-	if (td->ioscheduler && !td->sysfs_root)
+	if (td->o.ioscheduler && !td->sysfs_root)
 		td->sysfs_root = strdup(foo);
 
 	disk_util_add(dev, foo);
@@ -313,7 +313,7 @@ void init_disk_util(struct thread_data *td)
 	struct fio_file *f;
 	unsigned int i;
 
-	if (!td->do_disk_util ||
+	if (!td->o.do_disk_util ||
 	    (td->io_ops->flags & (FIO_DISKLESSIO | FIO_NODISKUTIL)))
 		return;
 
@@ -652,7 +652,7 @@ void show_run_stats(void)
 	nr_ts = 0;
 	last_ts = -1;
 	for_each_td(td, i) {
-		if (!td->group_reporting) {
+		if (!td->o.group_reporting) {
 			nr_ts++;
 			continue;
 		}
@@ -681,8 +681,8 @@ void show_run_stats(void)
 	last_ts = -1;
 	idx = 0;
 	for_each_td(td, i) {
-		if (idx && (!td->group_reporting ||
-		    (td->group_reporting && last_ts != td->groupid))) {
+		if (idx && (!td->o.group_reporting ||
+		    (td->o.group_reporting && last_ts != td->groupid))) {
 			idx = 0;
 			j++;
 		}
@@ -698,8 +698,8 @@ void show_run_stats(void)
 			/*
 			 * These are per-group shared already
 			 */
-			ts->name = td->name;
-			ts->description = td->description;
+			ts->name = td->o.name;
+			ts->description = td->o.description;
 			ts->groupid = td->groupid;
 
 			/*
@@ -877,7 +877,7 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir,
 	unsigned long spent = mtime_since(&ts->stat_sample_time[ddir], t);
 	unsigned long rate;
 
-	if (spent < td->bw_avg_time)
+	if (spent < td->o.bw_avg_time)
 		return;
 
 	rate = (td->this_io_bytes[ddir] - ts->stat_io_bytes[ddir]) / spent;

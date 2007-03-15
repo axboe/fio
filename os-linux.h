@@ -32,7 +32,7 @@ typedef struct drand48_data os_random_state_t;
 	posix_fadvise((fd), (off_t)(off), (len), (advice))
 
 #define fio_setaffinity(td)		\
-	sched_setaffinity((td)->pid, sizeof((td)->cpumask), &(td)->cpumask)
+	sched_setaffinity((td)->pid, sizeof((td)->o.cpumask), &(td)->o.cpumask)
 #define fio_getaffinity(pid, ptr)	\
 	sched_getaffinity((pid), sizeof(cpu_set_t), (ptr))
 
