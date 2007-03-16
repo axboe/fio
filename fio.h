@@ -489,6 +489,7 @@ struct thread_data {
 	 * read/write mixed workload state
 	 */
 	os_random_state_t rwmix_state;
+	unsigned long long rwmix_bytes;
 	struct timeval rwmix_switch;
 	enum fio_ddir rwmix_ddir;
 

@@ -169,6 +169,24 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 	return buflen;
 }
 
+static void set_rwmix_bytes(struct thread_data *td)
+{
+	unsigned long long rbytes;
+	unsigned int diff;
+
+	/*
+	 * we do time or byte based switch. this is needed because
+	 * buffered writes may issue a lot quicker than they complete,
+	 * whereas reads do not.
+	 */
+	rbytes = td->io_bytes[td->rwmix_ddir] - td->rwmix_bytes;
+	diff = td->o.rwmixread;
+	if (td->rwmix_ddir == DDIR_WRITE)
+		diff = 100 - diff;
+
+	td->rwmix_bytes = td->io_bytes[td->rwmix_ddir] + (rbytes * (100 - diff)) / diff;
+}
+
 /*
  * Return the data direction for the next io_u. If the job is a
  * mixed read/write workload, check the rwmix cycle and switch if
@@ -179,23 +197,34 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 	if (td_rw(td)) {
 		struct timeval now;
 		unsigned long elapsed;
+		unsigned int cycle;
 
 		fio_gettime(&now, NULL);
 	 	elapsed = mtime_since_now(&td->rwmix_switch);
 
+		cycle = td->o.rwmixcycle;
+		if (!td->rwmix_bytes)
+			cycle /= 10;
+
 		/*
 		 * Check if it's time to seed a new data direction.
 		 */
-		if (elapsed >= td->o.rwmixcycle) {
+		if (elapsed >= cycle &&
+		    td->io_bytes[td->rwmix_ddir] >= td->rwmix_bytes) {
 			unsigned int v;
 			long r;
 
 			r = os_random_long(&td->rwmix_state);
 			v = 1 + (int) (100.0 * (r / (RAND_MAX + 1.0)));
-			if (v < td->o.rwmixread)
+			if (v < td->o.rwmixread) {
+				if (td->rwmix_ddir != DDIR_READ)
+					set_rwmix_bytes(td);
 				td->rwmix_ddir = DDIR_READ;
-			else
+			} else {
+				if (td->rwmix_ddir != DDIR_WRITE)
+					set_rwmix_bytes(td);
 				td->rwmix_ddir = DDIR_WRITE;
+			}
 			memcpy(&td->rwmix_switch, &now, sizeof(now));
 		}
 		return td->rwmix_ddir;
