@@ -180,6 +180,7 @@ void print_thread_status(void)
 {
 	unsigned long elapsed = mtime_since_genesis() / 1000;
 	int i, nr_running, nr_pending, t_rate, m_rate, *eta_secs, eta_sec;
+	int t_iops, m_iops;
 	struct thread_data *td;
 	char eta_str[128];
 	double perc = 0.0;
@@ -204,7 +205,7 @@ void print_thread_status(void)
 	memset(eta_secs, 0, thread_number * sizeof(int));
 
 	io_bytes[0] = io_bytes[1] = 0;
-	nr_pending = nr_running = t_rate = m_rate = 0;
+	nr_pending = nr_running = t_rate = m_rate = t_iops = m_iops = 0;
 	bw_avg_time = ULONG_MAX;
 	for_each_td(td, i) {
 		if (td->o.bw_avg_time < bw_avg_time)
@@ -214,6 +215,8 @@ void print_thread_status(void)
 			nr_running++;
 			t_rate += td->o.rate;
 			m_rate += td->o.ratemin;
+			t_iops += td->o.rate_iops;
+			m_iops += td->o.rate_iops_min;
 		} else if (td->runstate < TD_RUNNING)
 			nr_pending++;
 
@@ -272,6 +275,8 @@ void print_thread_status(void)
 	printf("Jobs: %d", nr_running);
 	if (m_rate || t_rate)
 		printf(", CR=%d/%d KiB/s", t_rate, m_rate);
+	else if (m_iops || t_iops)
+		printf(", CR=%d/%d IOPS", t_iops, m_iops);
 	if (eta_sec != INT_MAX && nr_running) {
 		perc *= 100.0;
 		printf(": [%s] [%3.1f%% done] [%6u/%6u kb/s] [eta %s]", run_str, perc, rate[0], rate[1], eta_str);
