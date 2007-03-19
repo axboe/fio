@@ -70,6 +70,9 @@ int allocate_io_mem(struct thread_data *td)
 		td->shm_id = shmget(IPC_PRIVATE, td->orig_buffer_size, flags);
 		if (td->shm_id < 0) {
 			td_verror(td, errno, "shmget");
+			if (geteuid() != 0 && errno == ENOMEM)
+				log_err("fio: you may need to run this job as root\n");
+			
 			return 1;
 		}
 
