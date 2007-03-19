@@ -11,6 +11,32 @@
 
 #include "parse.h"
 
+static int vp_cmp(const void *p1, const void *p2)
+{
+	const struct value_pair *vp1 = p1;
+	const struct value_pair *vp2 = p2;
+
+	return strlen(vp2->ival) - strlen(vp1->ival);
+}
+
+static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
+{
+	const struct value_pair *vp;
+	int entries;
+
+	memset(vpmap, 0, PARSE_MAX_VP * sizeof(struct value_pair));
+
+	for (entries = 0; entries < PARSE_MAX_VP; entries++) {
+		vp = &o->posval[entries];
+		if (!vp->ival || vp->ival[0] == '\0')
+			break;
+
+		memcpy(&vpmap[entries], vp, sizeof(*vp));
+	}
+
+	qsort(vpmap, entries, sizeof(struct value_pair), vp_cmp);
+}
+
 static void show_option_range(struct fio_option *o)
 {
 	if (!o->minval && !o->maxval)
@@ -195,10 +221,13 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	case FIO_OPT_STR: {
 		fio_opt_str_fn *fn = o->cb;
 		const struct value_pair *vp;
+		struct value_pair posval[PARSE_MAX_VP];
 		int i;
 
+		posval_sort(o, posval);
+
 		for (i = 0; i < PARSE_MAX_VP; i++) {
-			vp = &o->posval[i];
+			vp = &posval[i];
 			if (!vp->ival || vp->ival[0] == '\0')
 				break;
 			ret = 1;
