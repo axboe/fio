@@ -96,6 +96,11 @@ int allocate_io_mem(struct thread_data *td)
 				td->orig_buffer = NULL;
 				return 1;
 			}
+			if (ftruncate(td->mmapfd, td->orig_buffer_size) < 0) {
+				td_verror(td, errno, "truncate mmap file");
+				td->orig_buffer = NULL;
+				return 1;
+			}
 		} else
 			flags |= OS_MAP_ANON;
 
