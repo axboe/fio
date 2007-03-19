@@ -465,26 +465,26 @@ static struct fio_option options[] = {
 			    .oval = MEM_MALLOC,
 			    .help = "Use malloc(3) for IO buffers",
 			  },
-#ifdef FIO_HAVE_HUGETLB
-			  { .ival = "shmhuge",
-			    .oval = MEM_SHMHUGE,
-			    .help = "Like shm, but use huge pages",
-			  },
 			  { .ival = "shm",
 			    .oval = MEM_SHM,
 			    .help = "Use shared memory segments for IO buffers",
 			  },
-#endif
 #ifdef FIO_HAVE_HUGETLB
-			  { .ival = "mmaphuge",
-			    .oval = MEM_MMAPHUGE,
-			    .help = "Like mmap, but use huge pages",
+			  { .ival = "shmhuge",
+			    .oval = MEM_SHMHUGE,
+			    .help = "Like shm, but use huge pages",
 			  },
 #endif
 			  { .ival = "mmap",
 			    .oval = MEM_MMAP,
 			    .help = "Use mmap(2) (file or anon) for IO buffers",
 			  },
+#ifdef FIO_HAVE_HUGETLB
+			  { .ival = "mmaphuge",
+			    .oval = MEM_MMAPHUGE,
+			    .help = "Like mmap, but use huge pages",
+			  },
+#endif
 		  },
 	},
 	{
