@@ -603,8 +603,8 @@ static int init_io_u(struct thread_data *td)
 
 	if (td->o.mem_type == MEM_SHMHUGE || td->o.mem_type == MEM_MMAPHUGE)
 		td->orig_buffer_size = (td->orig_buffer_size + td->o.hugepage_size - 1) & ~(td->o.hugepage_size - 1);
-	else
-		td->orig_buffer_size += page_mask;
+	else if (td->orig_buffer_size & page_mask)
+		td->orig_buffer_size = (td->orig_buffer_size + page_mask) & ~page_mask;
 
 	if (allocate_io_mem(td))
 		return 1;
