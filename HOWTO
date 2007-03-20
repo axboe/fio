@@ -652,7 +652,7 @@ they denote:
 io=		Number of megabytes io performed
 bw=		Average bandwidth rate
 runt=		The runtime of that thread
-	slat=	Submission latency (avg being the average, dev being the
+	slat=	Submission latency (avg being the average, stdev being the
 		standard deviation). This is the time it took to submit
 		the io. For sync io, the slat is really the completion
 		latency, since queue/complete is one operation there.
