@@ -157,8 +157,14 @@ static int create_files(struct thread_data *td)
 
 		if (f->filetype != FIO_TYPE_FILE)
 			continue;
+		if (!total_file_size)
+			continue;
 
 		if (f->flags & FIO_FILE_EXISTS) {
+			if ((f->file_size > td->o.size / td->o.nr_files) ||
+			    !f->file_size)
+				f->file_size = td->o.size / td->o.nr_files;
+
 			s = f->file_size;
 			if (s > total_file_size)
 				s = total_file_size;
