@@ -190,10 +190,13 @@ static void fio_libaio_cleanup(struct thread_data *td)
 static int fio_libaio_init(struct thread_data *td)
 {
 	struct libaio_data *ld = malloc(sizeof(*ld));
+	int err;
 
 	memset(ld, 0, sizeof(*ld));
-	if (io_queue_init(td->o.iodepth, &ld->aio_ctx)) {
-		td_verror(td, errno, "io_queue_init");
+
+	err = io_queue_init(td->o.iodepth, &ld->aio_ctx);
+	if (err) {
+		td_verror(td, -err, "io_queue_init");
 		free(ld);
 		return 1;
 	}
