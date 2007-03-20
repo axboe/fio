@@ -238,10 +238,15 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 int td_io_init(struct thread_data *td)
 {
-	if (td->io_ops->init)
-		return td->io_ops->init(td);
+	int ret = 0;
 
-	return 0;
+	if (td->io_ops->init) {
+		ret = td->io_ops->init(td);
+		if (ret && td->o.iodepth > 1)
+			log_err("fio: io engine init failed. Perhaps try reducing io dpeth?\n");
+	}
+
+	return ret;
 }
 
 int td_io_commit(struct thread_data *td)
