@@ -625,6 +625,8 @@ void options_init(struct fio_option *options)
 			o->minval = 0;
 			o->maxval = 1;
 		}
+		if (o->type == FIO_OPT_STR_SET && o->def)
+			fprintf(stderr, "Option %s: string set option with default will always be true\n", o->name);
 		if (!o->cb && !o->off1)
 			fprintf(stderr, "Option %s: neither cb nor offset given\n", o->name);
 		if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE)
