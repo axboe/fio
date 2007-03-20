@@ -539,7 +539,13 @@ verify=str	If writing to a file, fio can verify the file contents
 
 stonewall	Wait for preceeding jobs in the job file to exit, before
 		starting this one. Can be used to insert serialization
-		points in the job file.
+		points in the job file. A stone wall also implies starting
+		a new reporting group.
+
+new_group	Start a new reporting group. If this option isn't given,
+		jobs in a file will be part of the same reporting group
+		unless seperated by a stone wall (or if it's a group
+		by itself, with the numjobs option).
 
 numjobs=int	Create the specified number of clones of this job. May be
 		used to setup a larger number of threads/processes doing

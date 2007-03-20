@@ -425,7 +425,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	td->ts.slat_stat[0].min_val = td->ts.slat_stat[1].min_val = ULONG_MAX;
 	td->ts.bw_stat[0].min_val = td->ts.bw_stat[1].min_val = ULONG_MAX;
 
-	if ((td->o.stonewall || td->o.numjobs > 1) && prev_group_jobs) {
+	if ((td->o.stonewall || td->o.numjobs > 1 || td->o.new_group)
+	     && prev_group_jobs) {
 		prev_group_jobs = 0;
 		groupid++;
 	}
@@ -496,11 +497,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 		if (add_job(td_new, jobname, job_add_num))
 			goto err;
-	}
-
-	if (td->o.numjobs > 1) {
-		groupid++;
-		prev_group_jobs = 0;
 	}
 
 	return 0;

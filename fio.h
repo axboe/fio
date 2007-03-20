@@ -368,6 +368,7 @@ struct thread_options {
 	enum fio_memtype mem_type;
 
 	unsigned int stonewall;
+	unsigned int new_group;
 	unsigned int numjobs;
 	os_cpu_mask_t cpumask;
 	unsigned int iolog;

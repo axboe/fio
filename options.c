@@ -753,6 +753,12 @@ static struct fio_option options[] = {
 		.help	= "Insert a hard barrier between this job and previous",
 	},
 	{
+		.name	= "new_group",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(new_group),
+		.help	= "Mark the start of a new group (for reporting)",
+	},
+	{
 		.name	= "thread",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(use_thread),
