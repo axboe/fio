@@ -599,7 +599,7 @@ static int init_io_u(struct thread_data *td)
 		max_units = td->o.iodepth;
 
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
-	td->orig_buffer_size = max_bs * max_units;
+	td->orig_buffer_size = page_mask + (max_bs * max_units);
 
 	if (td->o.mem_type == MEM_SHMHUGE || td->o.mem_type == MEM_MMAPHUGE)
 		td->orig_buffer_size = (td->orig_buffer_size + td->o.hugepage_size - 1) & ~(td->o.hugepage_size - 1);
