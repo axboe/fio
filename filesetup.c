@@ -178,7 +178,7 @@ static int create_files(struct thread_data *td)
 	 * unless specifically asked for overwrite, let normal io extend it
 	 */
 	can_extend = !td->o.overwrite && !(td->io_ops->flags & FIO_NOEXTEND);
-	if (can_extend) {
+	if (can_extend && new_files) {
 		for_each_file(td, f, i) {
 			if (fill_file_size(td, f, &total_file_size, new_files)) {
 				log_info("fio: limited to %d files\n", i);
