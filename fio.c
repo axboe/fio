@@ -588,6 +588,7 @@ static void fill_rand_buf(struct io_u *io_u, int max_bs)
 
 static int init_io_u(struct thread_data *td)
 {
+	unsigned long long buf_size;
 	struct io_u *io_u;
 	unsigned int max_bs;
 	int i, max_units;
@@ -599,7 +600,14 @@ static int init_io_u(struct thread_data *td)
 		max_units = td->o.iodepth;
 
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
-	td->orig_buffer_size = page_mask + (max_bs * max_units);
+	buf_size = (unsigned long long) max_bs * (unsigned long long) max_units;
+	buf_size += page_mask;
+	if (buf_size != (size_t) buf_size) {
+		log_err("fio: IO memory too large. Reduce max_bs or iodepth\n");
+		return 1;
+	}
+
+	td->orig_buffer_size = buf_size;
 
 	if (td->o.mem_type == MEM_SHMHUGE || td->o.mem_type == MEM_MMAPHUGE)
 		td->orig_buffer_size = (td->orig_buffer_size + td->o.hugepage_size - 1) & ~(td->o.hugepage_size - 1);
