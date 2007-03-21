@@ -493,6 +493,8 @@ struct thread_data {
 
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
+	struct timeval rw_end[2];
+	unsigned int rw_end_set[2];
 
 	/*
 	 * read/write mixed workload state

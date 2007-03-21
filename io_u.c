@@ -235,8 +235,13 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 			 */
 			ddir = get_rand_ddir(td);
 			max_bytes = td->this_io_bytes[ddir];
-			if (max_bytes >= (td->io_size * td->o.rwmix[ddir] / 100))
+			if (max_bytes >= (td->io_size * td->o.rwmix[ddir] / 100)) {
+				if (!td->rw_end_set[ddir]) {
+					td->rw_end_set[ddir] = 1;
+					memcpy(&td->rw_end[ddir], &now, sizeof(now));
+				}
 				ddir ^= 1;
+			}
 
 			if (ddir != td->rwmix_ddir)
 				set_rwmix_bytes(td);

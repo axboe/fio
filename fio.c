@@ -699,6 +699,7 @@ static int clear_io_state(struct thread_data *td)
 	td->zone_bytes = 0;
 	td->rate_bytes = 0;
 	td->rate_blocks = 0;
+	td->rw_end_set[0] = td->rw_end_set[1] = 0;
 
 	td->last_was_sync = 0;
 
@@ -723,6 +724,7 @@ static void *thread_main(void *data)
 {
 	unsigned long long runtime[2];
 	struct thread_data *td = data;
+	unsigned long elapsed;
 	int clear_state;
 
 	if (!td->o.use_thread)
@@ -811,10 +813,22 @@ static void *thread_main(void *data)
 
 		clear_state = 1;
 
-		if (td_read(td) && td->io_bytes[DDIR_READ])
-			runtime[DDIR_READ] += utime_since_now(&td->start);
-		if (td_write(td) && td->io_bytes[DDIR_WRITE])
-			runtime[DDIR_WRITE] += utime_since_now(&td->start);
+		if (td_read(td) && td->io_bytes[DDIR_READ]) {
+			if (td->rw_end_set[DDIR_READ])
+				elapsed = utime_since(&td->start, &td->rw_end[DDIR_READ]);
+			else
+				elapsed = utime_since_now(&td->start);
+
+			runtime[DDIR_READ] += elapsed;
+		}
+		if (td_write(td) && td->io_bytes[DDIR_WRITE]) {
+			if (td->rw_end_set[DDIR_WRITE])
+				elapsed = utime_since(&td->start, &td->rw_end[DDIR_WRITE]);
+			else
+				elapsed = utime_since_now(&td->start);
+
+			runtime[DDIR_WRITE] += elapsed;
+		}
 		
 		if (td->error || td->terminate)
 			break;
