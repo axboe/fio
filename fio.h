@@ -411,12 +411,14 @@ struct thread_options {
 	unsigned int cpucycle;
 };
 
+#define FIO_VERROR_SIZE	128
+
 /*
  * This describes a single thread/process executing a fio job.
  */
 struct thread_data {
 	struct thread_options o;
-	char verror[128];
+	char verror[FIO_VERROR_SIZE];
 	pthread_t thread;
 	int thread_number;
 	int groupid;

@@ -384,9 +384,12 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	}
 
 	if (f->fd == -1) {
+		char buf[FIO_VERROR_SIZE];
 		int __e = errno;
 
-		td_verror(td, __e, "open");
+		snprintf(buf, sizeof(buf) - 1, "open(%s)", f->file_name);
+
+		td_verror(td, __e, buf);
 		if (__e == EINVAL && td->o.odirect)
 			log_err("fio: destination does not support O_DIRECT\n");
 		if (__e == EMFILE)
