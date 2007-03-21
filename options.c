@@ -280,6 +280,11 @@ static struct fio_option options[] = {
 			  { .ival = "cpuio",
 			    .help = "CPU cycler burner engine",
 			  },
+#ifdef FIO_HAVE_GUASI
+			  { .ival = "guasi",
+			    .help = "GUASI IO engine",
+			  },
+#endif
 			  { .ival = "external",
 			    .help = "Load external engine (append name)",
 			  },
