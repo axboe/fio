@@ -576,7 +576,7 @@ static struct fio_option options[] = {
 	{
 		.name	= "rwmixread",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(rwmixread),
+		.off1	= td_var_offset(rwmix[DDIR_READ]),
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is reads",
 		.def	= "50",
@@ -584,7 +584,7 @@ static struct fio_option options[] = {
 	{
 		.name	= "rwmixwrite",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(rwmixwrite),
+		.off1	= td_var_offset(rwmix[DDIR_WRITE]),
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is writes",
 		.def	= "50",

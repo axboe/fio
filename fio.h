@@ -381,8 +381,7 @@ struct thread_options {
 	unsigned int iolog;
 	unsigned int read_iolog;
 	unsigned int rwmixcycle;
-	unsigned int rwmixread;
-	unsigned int rwmixwrite;
+	unsigned int rwmix[2];
 	unsigned int nice;
 	unsigned int file_service_type;
 	unsigned int group_reporting;
