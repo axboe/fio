@@ -330,6 +330,14 @@ ioengine=str	Defines how the job issues io to the file. The following
 				will cause that job to do nothing but burn
 				85% of the CPU.
 
+			guasi	The GUASI IO engine is the Generic Userspace
+				Asyncronous Syscall Interface approach
+				to async IO. See
+
+				http://www.xmailserver.org/guasi-lib.html
+
+				for more info on GUASI.
+
 			external Prefix to specify loading an external
 				IO engine object file. Append the engine
 				filename, eg ioengine=external:/tmp/foo.o
