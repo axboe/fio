@@ -1,0 +1,262 @@
+/*
+ * guasi engine
+ *
+ * IO engine using the GUASI library.
+ *
+ * This is currently disabled, add -lguasi to the fio Makefile target
+ * and add a #define FIO_HAVE_GUASI to os-linux.h to enable it. You'll
+ * need the GUASI lib as well:
+ *
+ * http://www.xmailserver.org/guasi-lib.html
+ *
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <assert.h>
+
+#include "../fio.h"
+#include "../os.h"
+
+#ifdef FIO_HAVE_GUASI
+
+#define GFIO_MIN_THREADS 32
+
+#include <guasi.h>
+#include <guasi_syscalls.h>
+
+#ifdef GFIO_DEBUG
+#define GDBG_PRINT(a) printf a
+#else
+#define GDBG_PRINT(a) (void) 0
+#endif
+
+#define STFU_GCC(a) a = a
+
+
+struct guasi_data {
+	guasi_t hctx;
+	int max_reqs;
+	guasi_req_t *reqs;
+	struct io_u **io_us;
+	int reqs_nr;
+};
+
+static int fio_guasi_prep(struct thread_data fio_unused *td, struct io_u *io_u)
+{
+	STFU_GCC(io_u);
+
+	GDBG_PRINT(("fio_guasi_prep(%p)\n", io_u));
+
+	return 0;
+}
+
+static struct io_u *fio_guasi_event(struct thread_data *td, int event)
+{
+	struct guasi_data *ld = td->io_ops->data;
+	struct io_u *io_u;
+	struct guasi_reqinfo rinf;
+
+	GDBG_PRINT(("fio_guasi_event(%d)\n", event));
+	if (guasi_req_info(ld->reqs[event], &rinf) < 0) {
+		fprintf(stderr, "guasi_req_info(%d) FAILED!\n", event);
+		return NULL;
+	}
+	io_u = rinf.asid;
+	GDBG_PRINT(("fio_guasi_event(%d) -> %p\n", event, io_u));
+
+	if (io_u->ddir == DDIR_READ ||
+	    io_u->ddir == DDIR_WRITE) {
+		if (rinf.result != (long) io_u->xfer_buflen) {
+			if (rinf.result < 0)
+				io_u->error = rinf.error;
+			else
+				io_u->resid = io_u->xfer_buflen - rinf.result;
+		} else
+			io_u->error = 0;
+	} else
+		io_u->error = rinf.result;
+
+	return io_u;
+}
+
+static int fio_guasi_getevents(struct thread_data *td, int min, int max,
+			       struct timespec *t)
+{
+	struct guasi_data *ld = td->io_ops->data;
+	int n = 0, r;
+	long timeo = -1;
+
+	GDBG_PRINT(("fio_guasi_getevents(%d, %d)\n", min, max));
+	if (min > ld->max_reqs)
+		min = ld->max_reqs;
+	if (max > ld->max_reqs)
+		max = ld->max_reqs;
+	if (t)
+		timeo = t->tv_sec * 1000L + t->tv_nsec / 1000000L;
+	do {
+		r = guasi_fetch(ld->hctx, ld->reqs + n, max - n, timeo);
+		if (r < 0)
+			break;
+		n += r;
+		if (n >= min)
+			break;
+	} while (1);
+	GDBG_PRINT(("fio_guasi_getevents() -> %d\n", n));
+
+	return n;
+}
+
+static int fio_guasi_queue(struct thread_data *td, struct io_u *io_u)
+{
+	struct guasi_data *ld = td->io_ops->data;
+
+	GDBG_PRINT(("fio_guasi_queue(%p)\n", io_u));
+	if (ld->reqs_nr == (int) td->iodepth)
+		return FIO_Q_BUSY;
+
+	ld->io_us[ld->reqs_nr] = io_u;
+	ld->reqs_nr++;
+	return FIO_Q_QUEUED;
+}
+
+static void fio_guasi_queued(struct thread_data *td, struct io_u **io_us,
+			     unsigned int nr)
+{
+	struct timeval now;
+	struct io_u *io_u = io_us[nr];
+
+	fio_gettime(&now, NULL);
+	memcpy(&io_u->issue_time, &now, sizeof(now));
+	io_u_queued(td, io_u);
+}
+
+static int fio_guasi_commit(struct thread_data *td)
+{
+	struct guasi_data *ld = td->io_ops->data;
+	int i;
+	struct io_u *io_u;
+	struct fio_file *f;
+
+	GDBG_PRINT(("fio_guasi_commit()\n"));
+	for (i = 0; i < ld->reqs_nr; i++) {
+		io_u = ld->io_us[i];
+		f = io_u->file;
+		io_u->greq = NULL;
+		if (io_u->ddir == DDIR_READ)
+			io_u->greq = guasi__pread(ld->hctx, ld, io_u, 0,
+						  f->fd, io_u->xfer_buf, io_u->xfer_buflen,
+						  io_u->offset);
+		else if (io_u->ddir == DDIR_WRITE)
+			io_u->greq = guasi__pwrite(ld->hctx, ld, io_u, 0,
+						   f->fd, io_u->xfer_buf, io_u->xfer_buflen,
+						   io_u->offset);
+		else if (io_u->ddir == DDIR_SYNC)
+			io_u->greq = guasi__fsync(ld->hctx, ld, io_u, 0, f->fd);
+		else {
+			fprintf(stderr, "fio_guasi_commit() FAILED: %d\n", io_u->ddir);
+		}
+		if (io_u->greq != NULL)
+			fio_guasi_queued(td, ld->io_us, i);
+	}
+	ld->reqs_nr = 0;
+	GDBG_PRINT(("fio_guasi_commit() -> %d\n", i));
+
+	return 0;
+}
+
+static int fio_guasi_cancel(struct thread_data *td, struct io_u *io_u)
+{
+	struct guasi_data *ld = td->io_ops->data;
+
+	STFU_GCC(ld);
+	GDBG_PRINT(("fio_guasi_cancel(%p)\n", io_u));
+
+	return guasi_req_cancel(io_u->greq);
+}
+
+static void fio_guasi_cleanup(struct thread_data *td)
+{
+	struct guasi_data *ld = td->io_ops->data;
+
+	if (ld) {
+		guasi_free(ld->hctx);
+		free(ld->reqs);
+		free(ld->io_us);
+		free(ld);
+		td->io_ops->data = NULL;
+	}
+}
+
+static int fio_guasi_init(struct thread_data *td)
+{
+	int maxthr;
+	struct guasi_data *ld = malloc(sizeof(*ld));
+
+	GDBG_PRINT(("fio_guasi_init(): depth=%d\n", td->iodepth));
+	memset(ld, 0, sizeof(*ld));
+	maxthr = td->iodepth > GFIO_MIN_THREADS ? td->iodepth: GFIO_MIN_THREADS;
+	if ((ld->hctx = guasi_create(GFIO_MIN_THREADS, maxthr, 1)) == NULL) {
+		td_verror(td, errno, "guasi_create");
+		free(ld);
+		return 1;
+	}
+	ld->max_reqs = td->iodepth;
+	ld->reqs = malloc(ld->max_reqs * sizeof(guasi_req_t));
+	ld->io_us = malloc(ld->max_reqs * sizeof(struct io_u *));
+	memset(ld->io_us, 0, ld->max_reqs * sizeof(struct io_u *));
+	ld->reqs_nr = 0;
+
+	td->io_ops->data = ld;
+	GDBG_PRINT(("fio_guasi_init(): depth=%d -> %p\n", td->iodepth, ld));
+
+	return 0;
+}
+
+static struct ioengine_ops ioengine = {
+	.name		= "guasi",
+	.version	= FIO_IOOPS_VERSION,
+	.init		= fio_guasi_init,
+	.prep		= fio_guasi_prep,
+	.queue		= fio_guasi_queue,
+	.commit		= fio_guasi_commit,
+	.cancel		= fio_guasi_cancel,
+	.getevents	= fio_guasi_getevents,
+	.event		= fio_guasi_event,
+	.cleanup	= fio_guasi_cleanup,
+	.open_file	= generic_open_file,
+	.close_file	= generic_close_file,
+};
+
+#else /* FIO_HAVE_GUASI */
+
+/*
+ * When we have a proper configure system in place, we simply wont build
+ * and install this io engine. For now install a crippled version that
+ * just complains and fails to load.
+ */
+static int fio_guasi_init(struct thread_data fio_unused *td)
+{
+	fprintf(stderr, "fio: guasi not available\n");
+	return 1;
+}
+
+static struct ioengine_ops ioengine = {
+	.name		= "guasi",
+	.version	= FIO_IOOPS_VERSION,
+	.init		= fio_guasi_init,
+};
+
+#endif
+
+static void fio_init fio_guasi_register(void)
+{
+	register_ioengine(&ioengine);
+}
+
+static void fio_exit fio_guasi_unregister(void)
+{
+	unregister_ioengine(&ioengine);
+}
+

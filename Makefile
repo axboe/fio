@@ -18,6 +18,7 @@ OBJS += engines/sync.o
 OBJS += engines/null.o
 OBJS += engines/net.o
 OBJS += engines/syslet-rw.o
+OBJS += engines/guasi.o
 
 INSTALL = install
 prefix = /usr/local

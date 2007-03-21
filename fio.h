@@ -24,6 +24,10 @@
 #include "syslet.h"
 #endif
 
+#ifdef FIO_HAVE_GUASI
+#include <guasi.h>
+#endif
+
 enum fio_ddir {
 	DDIR_READ = 0,
 	DDIR_WRITE,
@@ -110,6 +114,9 @@ struct io_u {
 #endif
 #ifdef FIO_HAVE_SYSLET
 		struct syslet_req req;
+#endif
+#ifdef FIO_HAVE_GUASI
+		guasi_req_t greq;
 #endif
 	};
 	struct timeval start_time;
