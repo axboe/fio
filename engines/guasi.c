@@ -64,19 +64,21 @@ static struct io_u *fio_guasi_event(struct thread_data *td, int event)
 		return NULL;
 	}
 	io_u = rinf.asid;
+	io_u->error = EINPROGRESS;
 	GDBG_PRINT(("fio_guasi_event(%d) -> %p\n", event, io_u));
-
-	if (io_u->ddir == DDIR_READ ||
-	    io_u->ddir == DDIR_WRITE) {
-		if (rinf.result != (long) io_u->xfer_buflen) {
-			if (rinf.result < 0)
-				io_u->error = rinf.error;
-			else
-				io_u->resid = io_u->xfer_buflen - rinf.result;
-		} else
-			io_u->error = 0;
-	} else
+	if (rinf.status == GUASI_STATUS_COMPLETE) {
 		io_u->error = rinf.result;
+		if (io_u->ddir == DDIR_READ ||
+		    io_u->ddir == DDIR_WRITE) {
+			io_u->error = 0;
+			if (rinf.result != (long) io_u->xfer_buflen) {
+				if (rinf.result >= 0)
+					io_u->resid = io_u->xfer_buflen - rinf.result;
+				else
+					io_u->error = rinf.error;
+			}
+		}
+	}
 
 	return io_u;
 }
@@ -155,7 +157,8 @@ static int fio_guasi_commit(struct thread_data *td)
 		else if (io_u->ddir == DDIR_SYNC)
 			io_u->greq = guasi__fsync(ld->hctx, ld, io_u, 0, f->fd);
 		else {
-			fprintf(stderr, "fio_guasi_commit() FAILED: %d\n", io_u->ddir);
+			fprintf(stderr, "fio_guasi_commit() FAILED: unknow request %d\n",
+				io_u->ddir);
 		}
 		if (io_u->greq != NULL)
 			fio_guasi_queued(td, ld->io_us, i);
