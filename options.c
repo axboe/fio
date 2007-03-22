@@ -36,8 +36,6 @@ static int str_rw_cb(void *data, const char *str)
 	if (nr)
 		td->o.ddir_nr = atoi(nr);
 
-	printf("ddir_nr=%d\n", td->o.ddir_nr);
-
 	return 0;
 }
 
