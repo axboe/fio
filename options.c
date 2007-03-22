@@ -247,6 +247,13 @@ static struct fio_option options[] = {
 		},
 	},
 	{
+		.name	= "fadvise_hint",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(fadvise_hint),
+		.help	= "Use fadvise() to advise the kernel on IO pattern",
+		.def	= "1",
+	},
+	{
 		.name	= "ioengine",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(ioengine),

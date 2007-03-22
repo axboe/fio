@@ -240,6 +240,13 @@ rw=str		Type of io pattern. Accepted values are:
 randrepeat=bool	For random IO workloads, seed the generator in a predictable
 		way so that results are repeatable across repetitions.
 
+fadvise_hint=bool By default, fio will use fadvise() to advise the kernel
+		on what IO patterns it is likely to issue. Sometimes you
+		want to test specific IO patterns without telling the
+		kernel about it, in which case you can disable this option.
+		If set, fio will use POSIX_FADV_SEQUENTIAL for sequential
+		IO and POSIX_FADV_RANDOM for random IO.
+
 size=siint	The total size of file io for this job. This may describe
 		the size of the single file the job uses, or it may be
 		divided between the number of files in the job. If the

@@ -386,6 +386,7 @@ struct thread_options {
 	unsigned int nice;
 	unsigned int file_service_type;
 	unsigned int group_reporting;
+	unsigned int fadvise_hint;
 
 	char *read_iolog_file;
 	char *write_iolog_file;
