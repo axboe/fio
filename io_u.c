@@ -52,6 +52,10 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 	while (blocks < nr_blocks) {
 		unsigned int idx, bit;
 
+		/*
+		 * If we have a mixed random workload, we may
+		 * encounter blocks we already did IO to.
+		 */
 		if (!td->o.ddir_nr && !random_map_free(td, f, block))
 			break;
 
@@ -110,13 +114,12 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 		int loops = 5;
 
 		if (td->o.ddir_nr) {
-			if (!td->ddir_nr)
+			if (!--td->ddir_nr)
 				td->ddir_nr = td->o.ddir_nr;
-			else if (--td->ddir_nr) {
+			else {
 				b = f->last_pos / td->o.min_bs[ddir];
 				goto out;
-			} else
-				td->ddir_nr = td->o.ddir_nr;
+			}
 		}
 
 		do {
