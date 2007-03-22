@@ -25,6 +25,9 @@
 #ifdef FIO_HAVE_GUASI
 
 #define GFIO_MIN_THREADS 32
+#ifndef GFIO_MAX_THREADS
+#define GFIO_MAX_THREADS 280
+#endif
 
 #include <guasi.h>
 #include <guasi_syscalls.h>
@@ -149,9 +152,10 @@ static int fio_guasi_commit(struct thread_data *td)
 	struct io_u *io_u;
 	struct fio_file *f;
 
-	GDBG_PRINT(("fio_guasi_commit()\n"));
+	GDBG_PRINT(("fio_guasi_commit(%d)\n", ld->queued_nr));
 	for (i = 0; i < ld->queued_nr; i++) {
 		io_u = ld->io_us[i];
+		GDBG_PRINT(("fio_guasi_commit(%d) --> %p\n", i, io_u));
 		f = io_u->file;
 		io_u->greq = NULL;
 		if (io_u->ddir == DDIR_READ)
@@ -171,8 +175,8 @@ static int fio_guasi_commit(struct thread_data *td)
 		if (io_u->greq != NULL)
 			fio_guasi_queued(td, ld->io_us, i);
 		else {
-			perror("guasi submit");
-			fprintf(stderr, "fio_guasi_commit() FAILED: submit failed\n");
+			fprintf(stderr, "fio_guasi_commit() FAILED: submit failed (%s)\n",
+				strerror(errno));
 			return -1;
 		}
 	}
@@ -217,6 +221,8 @@ static int fio_guasi_init(struct thread_data *td)
 	GDBG_PRINT(("fio_guasi_init(): depth=%d\n", td->o.iodepth));
 	memset(ld, 0, sizeof(*ld));
 	maxthr = td->o.iodepth > GFIO_MIN_THREADS ? td->o.iodepth: GFIO_MIN_THREADS;
+	if (maxthr > GFIO_MAX_THREADS)
+		maxthr = GFIO_MAX_THREADS;
 	if ((ld->hctx = guasi_create(GFIO_MIN_THREADS, maxthr, 1)) == NULL) {
 		td_verror(td, errno, "guasi_create");
 		free(ld);
