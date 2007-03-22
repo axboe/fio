@@ -3,9 +3,12 @@
  *
  * IO engine using the GUASI library.
  *
- * This is currently disabled, add -lguasi to the fio Makefile target
- * and add a #define FIO_HAVE_GUASI to os-linux.h to enable it. You'll
- * need the GUASI lib as well:
+ * This is currently disabled. To enable it, execute:
+ *
+ * $ export EXTFLAGS="-DFIO_HAVE_GUASI"
+ * $ export EXTLIBS="-lguasi"
+ *
+ * before running make. You'll need the GUASI lib as well:
  *
  * http://www.xmailserver.org/guasi-lib.html
  *
@@ -40,14 +43,15 @@ struct guasi_data {
 	int max_reqs;
 	guasi_req_t *reqs;
 	struct io_u **io_us;
+	int queued_nr;
 	int reqs_nr;
 };
 
 static int fio_guasi_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 {
-	STFU_GCC(io_u);
 
 	GDBG_PRINT(("fio_guasi_prep(%p)\n", io_u));
+	io_u->greq = NULL;
 
 	return 0;
 }
@@ -87,7 +91,7 @@ static int fio_guasi_getevents(struct thread_data *td, int min, int max,
 			       struct timespec *t)
 {
 	struct guasi_data *ld = td->io_ops->data;
-	int n = 0, r;
+	int n, r;
 	long timeo = -1;
 
 	GDBG_PRINT(("fio_guasi_getevents(%d, %d)\n", min, max));
@@ -97,6 +101,9 @@ static int fio_guasi_getevents(struct thread_data *td, int min, int max,
 		max = ld->max_reqs;
 	if (t)
 		timeo = t->tv_sec * 1000L + t->tv_nsec / 1000000L;
+	for (n = 0; n < ld->reqs_nr; n++)
+		guasi_req_free(ld->reqs[n]);
+	n = 0;
 	do {
 		r = guasi_fetch(ld->hctx, ld->reqs + n, max - n, timeo);
 		if (r < 0)
@@ -105,6 +112,7 @@ static int fio_guasi_getevents(struct thread_data *td, int min, int max,
 		if (n >= min)
 			break;
 	} while (1);
+	ld->reqs_nr = n;
 	GDBG_PRINT(("fio_guasi_getevents() -> %d\n", n));
 
 	return n;
@@ -115,11 +123,11 @@ static int fio_guasi_queue(struct thread_data *td, struct io_u *io_u)
 	struct guasi_data *ld = td->io_ops->data;
 
 	GDBG_PRINT(("fio_guasi_queue(%p)\n", io_u));
-	if (ld->reqs_nr == (int) td->iodepth)
+	if (ld->queued_nr == (int) td->o.iodepth)
 		return FIO_Q_BUSY;
 
-	ld->io_us[ld->reqs_nr] = io_u;
-	ld->reqs_nr++;
+	ld->io_us[ld->queued_nr] = io_u;
+	ld->queued_nr++;
 	return FIO_Q_QUEUED;
 }
 
@@ -142,7 +150,7 @@ static int fio_guasi_commit(struct thread_data *td)
 	struct fio_file *f;
 
 	GDBG_PRINT(("fio_guasi_commit()\n"));
-	for (i = 0; i < ld->reqs_nr; i++) {
+	for (i = 0; i < ld->queued_nr; i++) {
 		io_u = ld->io_us[i];
 		f = io_u->file;
 		io_u->greq = NULL;
@@ -162,8 +170,13 @@ static int fio_guasi_commit(struct thread_data *td)
 		}
 		if (io_u->greq != NULL)
 			fio_guasi_queued(td, ld->io_us, i);
+		else {
+			perror("guasi submit");
+			fprintf(stderr, "fio_guasi_commit() FAILED: submit failed\n");
+			return -1;
+		}
 	}
-	ld->reqs_nr = 0;
+	ld->queued_nr = 0;
 	GDBG_PRINT(("fio_guasi_commit() -> %d\n", i));
 
 	return 0;
@@ -174,15 +187,18 @@ static int fio_guasi_cancel(struct thread_data *td, struct io_u *io_u)
 	struct guasi_data *ld = td->io_ops->data;
 
 	STFU_GCC(ld);
-	GDBG_PRINT(("fio_guasi_cancel(%p)\n", io_u));
+	GDBG_PRINT(("fio_guasi_cancel(%p) req=%p\n", io_u, io_u->greq));
+	if (io_u->greq != NULL)
+		guasi_req_cancel(io_u->greq);
 
-	return guasi_req_cancel(io_u->greq);
+	return 0;
 }
 
 static void fio_guasi_cleanup(struct thread_data *td)
 {
 	struct guasi_data *ld = td->io_ops->data;
 
+	GDBG_PRINT(("fio_guasi_cleanup(%p)\n", ld));
 	if (ld) {
 		guasi_free(ld->hctx);
 		free(ld->reqs);
@@ -190,6 +206,7 @@ static void fio_guasi_cleanup(struct thread_data *td)
 		free(ld);
 		td->io_ops->data = NULL;
 	}
+	GDBG_PRINT(("fio_guasi_cleanup(%p) DONE\n", ld));
 }
 
 static int fio_guasi_init(struct thread_data *td)
@@ -197,22 +214,23 @@ static int fio_guasi_init(struct thread_data *td)
 	int maxthr;
 	struct guasi_data *ld = malloc(sizeof(*ld));
 
-	GDBG_PRINT(("fio_guasi_init(): depth=%d\n", td->iodepth));
+	GDBG_PRINT(("fio_guasi_init(): depth=%d\n", td->o.iodepth));
 	memset(ld, 0, sizeof(*ld));
-	maxthr = td->iodepth > GFIO_MIN_THREADS ? td->iodepth: GFIO_MIN_THREADS;
+	maxthr = td->o.iodepth > GFIO_MIN_THREADS ? td->o.iodepth: GFIO_MIN_THREADS;
 	if ((ld->hctx = guasi_create(GFIO_MIN_THREADS, maxthr, 1)) == NULL) {
 		td_verror(td, errno, "guasi_create");
 		free(ld);
 		return 1;
 	}
-	ld->max_reqs = td->iodepth;
+	ld->max_reqs = td->o.iodepth;
 	ld->reqs = malloc(ld->max_reqs * sizeof(guasi_req_t));
 	ld->io_us = malloc(ld->max_reqs * sizeof(struct io_u *));
 	memset(ld->io_us, 0, ld->max_reqs * sizeof(struct io_u *));
+	ld->queued_nr = 0;
 	ld->reqs_nr = 0;
 
 	td->io_ops->data = ld;
-	GDBG_PRINT(("fio_guasi_init(): depth=%d -> %p\n", td->iodepth, ld));
+	GDBG_PRINT(("fio_guasi_init(): depth=%d -> %p\n", td->o.iodepth, ld));
 
 	return 0;
 }
