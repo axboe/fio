@@ -711,12 +711,10 @@ long io_u_queued_complete(struct thread_data *td, int min_events)
 	struct io_completion_data icd;
 	struct timespec *tvp = NULL;
 	int ret;
+	struct timespec ts = { .tv_sec = 0, .tv_nsec = 0, };
 
-	if (!min_events) {
-		struct timespec ts = { .tv_sec = 0, .tv_nsec = 0, };
-
+	if (!min_events)
 		tvp = &ts;
-	}
 
 	ret = td_io_getevents(td, min_events, td->cur_depth, tvp);
 	if (ret < 0) {
