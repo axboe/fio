@@ -1,7 +1,7 @@
 #CC	= /opt/intel/cce/9.1.045/bin/icc
 CC	= gcc -W
 DEBUGFLAGS = -D_FORTIFY_SOURCE=2
-OPTFLAGS= -O2 -g
+OPTFLAGS= -O2 -g $(EXTFLAGS)
 CFLAGS	= -Wwrite-strings -Wall -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(OPTFLAGS) $(DEBUGFLAGS) -rdynamic
 PROGS	= fio
 SCRIPTS = fio_generate_plots
@@ -27,7 +27,7 @@ bindir = $(prefix)/bin
 all: $(PROGS) $(SCRIPTS)
 
 fio: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) -lpthread -lm -ldl -laio -lrt
+	$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) $(EXTLIBS) -lpthread -lm -ldl -laio -lrt
 
 clean:
 	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o core.* core
