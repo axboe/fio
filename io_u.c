@@ -52,7 +52,7 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 	while (blocks < nr_blocks) {
 		unsigned int idx, bit;
 
-		if (!random_map_free(td, f, block))
+		if (!td->o.ddir_nr && !random_map_free(td, f, block))
 			break;
 
 		idx = RAND_MAP_IDX(td, f, block);
@@ -109,6 +109,16 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 		unsigned long long max_blocks = f->file_size / td->o.min_bs[ddir];
 		int loops = 5;
 
+		if (td->o.ddir_nr) {
+			if (!td->ddir_nr)
+				td->ddir_nr = td->o.ddir_nr;
+			else if (--td->ddir_nr) {
+				b = f->last_pos / td->o.min_bs[ddir];
+				goto out;
+			} else
+				td->ddir_nr = td->o.ddir_nr;
+		}
+
 		do {
 			r = os_random_long(&td->random_state);
 			if (!max_blocks)
@@ -130,6 +140,7 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 	} else
 		b = f->last_pos / td->o.min_bs[ddir];
 
+out:
 	io_u->offset = (b * td->o.min_bs[ddir]) + f->file_offset;
 	if (io_u->offset >= f->real_file_size)
 		return 1;

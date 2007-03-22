@@ -228,7 +228,14 @@ rw=str		Type of io pattern. Accepted values are:
 
 		For the mixed io types, the default is to split them 50/50.
 		For certain types of io the result may still be skewed a bit,
-		since the speed may be different.
+		since the speed may be different. It is possible to specify
+		a number of IO's to do before getting a new offset - this
+		is only useful for random IO, where fio would normally
+		generate a new random offset for every IO. If you append
+		eg 8 to randread, you would get a new random offset for
+		every 8 IO's. The result would be a seek for only every 8
+		IO's, instead of for every IO. Use rw=randread:8 to specify
+		that.
 
 randrepeat=bool	For random IO workloads, seed the generator in a predictable
 		way so that results are repeatable across repetitions.

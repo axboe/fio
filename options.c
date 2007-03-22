@@ -27,6 +27,20 @@ static char *get_opt_postfix(const char *str)
 	return strdup(p);
 }
 
+static int str_rw_cb(void *data, const char *str)
+{
+	struct thread_data *td = data;
+	char *nr = get_opt_postfix(str);
+
+	td->o.ddir_nr = 0;
+	if (nr)
+		td->o.ddir_nr = atoi(nr);
+
+	printf("ddir_nr=%d\n", td->o.ddir_nr);
+
+	return 0;
+}
+
 static int str_mem_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
@@ -203,6 +217,7 @@ static struct fio_option options[] = {
 		.name	= "rw",
 		.alias	= "readwrite",
 		.type	= FIO_OPT_STR,
+		.cb	= str_rw_cb,
 		.off1	= td_var_offset(td_ddir),
 		.help	= "IO direction",
 		.def	= "read",

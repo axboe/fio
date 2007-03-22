@@ -325,6 +325,7 @@ struct thread_options {
 	char *opendir;
 	char *ioengine;
 	enum td_ddir td_ddir;
+	unsigned int ddir_nr;
 	unsigned int iodepth;
 	unsigned int iodepth_low;
 	unsigned int iodepth_batch;
@@ -503,6 +504,7 @@ struct thread_data {
 	unsigned long long rwmix_bytes;
 	struct timeval rwmix_switch;
 	enum fio_ddir rwmix_ddir;
+	unsigned int ddir_nr;
 
 	/*
 	 * IO historic logs
