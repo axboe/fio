@@ -72,6 +72,8 @@ int allocate_io_mem(struct thread_data *td)
 			td_verror(td, errno, "shmget");
 			if (geteuid() != 0 && errno == ENOMEM)
 				log_err("fio: you may need to run this job as root\n");
+			if (errno == EINVAL && td->o.mem_type == MEM_SHMHUGE)
+				log_err("fio: check that you have free huge pages and that hugepage-size is correct.\n");
 			
 			return 1;
 		}
