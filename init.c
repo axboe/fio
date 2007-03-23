@@ -115,6 +115,9 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 	td = &threads[thread_number++];
 	*td = *parent;
 
+	dup_files(td, parent);
+	options_mem_dupe(td);
+
 	td->thread_number = thread_number;
 	return td;
 }
@@ -358,7 +361,6 @@ static int init_random_state(struct thread_data *td)
 	return 0;
 }
 
-
 /*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
@@ -369,7 +371,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	const char *ddir_str[] = { NULL, "read", "write", "rw", NULL,
 				   "randread", "randwrite", "randrw" };
 	unsigned int i;
-	struct fio_file *f;
 	const char *engine;
 	char fname[PATH_MAX];
 	int numjobs, file_alloced;
@@ -412,13 +413,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (fixup_options(td))
 		goto err;
 
-	for_each_file(td, f, i) {
-		if (td->o.directory && f->filetype == FIO_TYPE_FILE) {
-			sprintf(fname, "%s/%s", td->o.directory, f->file_name);
-			f->file_name = strdup(fname);
-		}
-	}
-		
 	td->mutex = fio_sem_init(0);
 
 	td->ts.clat_stat[0].min_val = td->ts.clat_stat[1].min_val = ULONG_MAX;
@@ -808,6 +802,7 @@ int parse_options(int argc, char *argv[])
 	}
 
 	free(ini_file);
+	options_mem_free(&def_thread);
 
 	if (!thread_number) {
 		log_err("No jobs defined(s)\n");

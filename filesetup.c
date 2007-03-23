@@ -523,14 +523,14 @@ void close_files(struct thread_data *td)
 	unsigned int i;
 
 	for_each_file(td, f, i) {
-		if (!f->file_name && (f->flags & FIO_FILE_UNLINK) &&
-		    f->filetype == FIO_TYPE_FILE) {
+		if ((f->flags & FIO_FILE_UNLINK) &&
+		    f->filetype == FIO_TYPE_FILE)
 			unlink(f->file_name);
-			free(f->file_name);
-			f->file_name = NULL;
-		}
 
 		td_io_close_file(td, f);
+
+		free(f->file_name);
+		f->file_name = NULL;
 
 		if (f->file_map) {
 			free(f->file_map);
@@ -539,6 +539,7 @@ void close_files(struct thread_data *td)
 	}
 
 	td->o.filename = NULL;
+	free(td->files);
 	td->files = NULL;
 	td->o.nr_files = 0;
 }
@@ -569,14 +570,21 @@ static void get_file_type(struct fio_file *f)
 void add_file(struct thread_data *td, const char *fname)
 {
 	int cur_files = td->files_index;
+	char file_name[PATH_MAX];
 	struct fio_file *f;
+	int len = 0;
 
 	td->files = realloc(td->files, (cur_files + 1) * sizeof(*f));
 
 	f = &td->files[cur_files];
 	memset(f, 0, sizeof(*f));
 	f->fd = -1;
-	f->file_name = strdup(fname);
+
+	if (td->o.directory)
+		len = sprintf(file_name, "%s/", td->o.directory);
+
+	sprintf(file_name + len, "%s", fname);
+	f->file_name = strdup(file_name);
 
 	get_file_type(f);
 
@@ -653,4 +661,23 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 int add_dir_files(struct thread_data *td, const char *path)
 {
 	return recurse_dir(td, path);
+}
+
+void dup_files(struct thread_data *td, struct thread_data *org)
+{
+	struct fio_file *f;
+	unsigned int i;
+	size_t bytes;
+
+	if (!org->files)
+		return;
+
+	bytes = org->files_index * sizeof(*f);
+	td->files = malloc(bytes);
+	memcpy(td->files, org->files, bytes);
+
+	for_each_file(td, f, i) {
+		if (f->file_name)
+			f->file_name = strdup(f->file_name);
+	}
 }

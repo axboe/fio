@@ -864,3 +864,39 @@ int fio_show_option_help(const char *opt)
 {
 	return show_cmd_help(options, opt);
 }
+
+static void __options_mem(struct thread_data *td, int alloc)
+{
+	struct thread_options *o = &td->o;
+	struct fio_option *opt;
+	char **ptr;
+	int i;
+
+	for (i = 0, opt = &options[0]; opt->name; i++, opt = &options[i]) {
+		if (opt->type != FIO_OPT_STR_STORE)
+			continue;
+
+		ptr = (void *) o + opt->off1;
+		if (*ptr) {
+			if (alloc)
+				*ptr = strdup(*ptr);
+			else {
+				free(*ptr);
+				*ptr = NULL;
+			}
+		}
+	}
+}
+
+/*
+ * dupe FIO_OPT_STR_STORE options
+ */
+void options_mem_dupe(struct thread_data *td)
+{
+	__options_mem(td, 1);
+}
+
+void options_mem_free(struct thread_data *td)
+{
+	__options_mem(td, 0);
+}
