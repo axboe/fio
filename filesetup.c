@@ -569,14 +569,21 @@ static void get_file_type(struct fio_file *f)
 void add_file(struct thread_data *td, const char *fname)
 {
 	int cur_files = td->files_index;
+	char file_name[PATH_MAX];
 	struct fio_file *f;
+	int len = 0;
 
 	td->files = realloc(td->files, (cur_files + 1) * sizeof(*f));
 
 	f = &td->files[cur_files];
 	memset(f, 0, sizeof(*f));
 	f->fd = -1;
-	f->file_name = strdup(fname);
+
+	if (td->o.directory)
+		len = sprintf(file_name, "%s/", td->o.directory);
+
+	sprintf(file_name + len, "%s", fname);
+	f->file_name = strdup(file_name);
 
 	get_file_type(f);
 
