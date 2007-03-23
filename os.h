@@ -51,7 +51,9 @@
 #define SHM_HUGETLB			0
 #define FIO_HUGE_PAGE			0
 #else
+#ifndef FIO_HUGE_PAGE
 #define FIO_HUGE_PAGE			4194304
+#endif
 #endif
 
 #if __GNUC__ < 3

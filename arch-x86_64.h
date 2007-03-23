@@ -25,6 +25,8 @@
 #define __NR_async_thread	283
 #endif
 
+#define	FIO_HUGE_PAGE		2097152
+
 #define FIO_HAVE_SYSLET
 
 #define nop	__asm__ __volatile__("rep;nop": : :"memory")
