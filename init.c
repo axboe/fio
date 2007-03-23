@@ -115,6 +115,8 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 	td = &threads[thread_number++];
 	*td = *parent;
 
+	dup_files(td, parent);
+
 	td->thread_number = thread_number;
 	return td;
 }

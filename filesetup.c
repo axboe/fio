@@ -539,6 +539,7 @@ void close_files(struct thread_data *td)
 	}
 
 	td->o.filename = NULL;
+	free(td->files);
 	td->files = NULL;
 	td->o.nr_files = 0;
 }
@@ -660,4 +661,23 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 int add_dir_files(struct thread_data *td, const char *path)
 {
 	return recurse_dir(td, path);
+}
+
+void dup_files(struct thread_data *td, struct thread_data *org)
+{
+	struct fio_file *f;
+	unsigned int i;
+	size_t bytes;
+
+	if (!org->files)
+		return;
+
+	bytes = org->files_index * sizeof(*f);
+	td->files = malloc(bytes);
+	memcpy(td->files, org->files, bytes);
+
+	for_each_file(td, f, i) {
+		if (f->file_name)
+			f->file_name = strdup(f->file_name);
+	}
 }

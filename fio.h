@@ -708,6 +708,7 @@ extern void get_file(struct fio_file *);
 extern void put_file(struct thread_data *, struct fio_file *);
 extern int add_dir_files(struct thread_data *, const char *);
 extern int init_random_map(struct thread_data *);
+extern void dup_files(struct thread_data *, struct thread_data *);
 
 /*
  * ETA/status stuff
