@@ -523,14 +523,14 @@ void close_files(struct thread_data *td)
 	unsigned int i;
 
 	for_each_file(td, f, i) {
-		if (!f->file_name && (f->flags & FIO_FILE_UNLINK) &&
-		    f->filetype == FIO_TYPE_FILE) {
+		if ((f->flags & FIO_FILE_UNLINK) &&
+		    f->filetype == FIO_TYPE_FILE)
 			unlink(f->file_name);
-			free(f->file_name);
-			f->file_name = NULL;
-		}
 
 		td_io_close_file(td, f);
+
+		free(f->file_name);
+		f->file_name = NULL;
 
 		if (f->file_map) {
 			free(f->file_map);
