@@ -691,6 +691,8 @@ extern int fio_cmd_option_parse(struct thread_data *, const char *, char *);
 extern void fio_fill_default_options(struct thread_data *);
 extern int fio_show_option_help(const char *);
 extern void fio_options_dup_and_init(struct option *);
+extern void options_mem_dupe(struct thread_data *);
+extern void options_mem_free(struct thread_data *);
 #define FIO_GETOPT_JOB		0x89988998
 #define FIO_NR_OPTIONS		128
 

@@ -116,6 +116,7 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 	*td = *parent;
 
 	dup_files(td, parent);
+	options_mem_dupe(td);
 
 	td->thread_number = thread_number;
 	return td;
@@ -801,6 +802,7 @@ int parse_options(int argc, char *argv[])
 	}
 
 	free(ini_file);
+	options_mem_free(&def_thread);
 
 	if (!thread_number) {
 		log_err("No jobs defined(s)\n");

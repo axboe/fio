@@ -878,6 +878,7 @@ err:
 	close_files(td);
 	close_ioengine(td);
 	cleanup_io_u(td);
+	options_mem_free(td);
 	td_set_runstate(td, TD_EXITED);
 	return (void *) (unsigned long) td->error;
 err_sem:
