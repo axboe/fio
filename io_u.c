@@ -97,6 +97,35 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 	return 1;
 }
 
+static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
+				int ddir, unsigned long long *b)
+{
+	unsigned long long max_blocks = f->file_size / td->o.min_bs[ddir];
+	unsigned long long r, rb;
+	int loops = 5;
+
+	do {
+		r = os_random_long(&td->random_state);
+		if (!max_blocks)
+			*b = 0;
+		else
+			*b = ((max_blocks - 1) * r / (unsigned long long) (RAND_MAX+1.0));
+		if (td->o.norandommap)
+			break;
+		rb = *b + (f->file_offset / td->o.min_bs[ddir]);
+		loops--;
+	} while (!random_map_free(td, f, rb) && loops);
+
+	/*
+	 * if we failed to retrieve a truly random offset within
+	 * the loops assigned, see if there are free ones left at all
+	 */
+	if (!loops && get_next_free_block(td, f, b))
+		return 1;
+
+	return 0;
+}
+
 /*
  * For random io, generate a random new block and see if it's used. Repeat
  * until we find a free one. For sequential io, just return the end of
@@ -106,44 +135,16 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	const int ddir = io_u->ddir;
-	unsigned long long b, rb;
-	long r;
+	unsigned long long b;
 
-	if (td_random(td)) {
-		unsigned long long max_blocks = f->file_size / td->o.min_bs[ddir];
-		int loops = 5;
+	if (td_random(td) && (td->o.ddir_nr && !--td->ddir_nr)) {
+		td->ddir_nr = td->o.ddir_nr;
 
-		if (td->o.ddir_nr) {
-			if (!--td->ddir_nr)
-				td->ddir_nr = td->o.ddir_nr;
-			else {
-				b = f->last_pos / td->o.min_bs[ddir];
-				goto out;
-			}
-		}
-
-		do {
-			r = os_random_long(&td->random_state);
-			if (!max_blocks)
-				b = 0;
-			else
-				b = ((max_blocks - 1) * r / (unsigned long long) (RAND_MAX+1.0));
-			if (td->o.norandommap)
-				break;
-			rb = b + (f->file_offset / td->o.min_bs[ddir]);
-			loops--;
-		} while (!random_map_free(td, f, rb) && loops);
-
-		/*
-		 * if we failed to retrieve a truly random offset within
-		 * the loops assigned, see if there are free ones left at all
-		 */
-		if (!loops && get_next_free_block(td, f, &b))
+		if (get_next_rand_offset(td, f, ddir, &b))
 			return 1;
 	} else
 		b = f->last_pos / td->o.min_bs[ddir];
 
-out:
 	io_u->offset = (b * td->o.min_bs[ddir]) + f->file_offset;
 	if (io_u->offset >= f->real_file_size)
 		return 1;
