@@ -32,7 +32,7 @@ static int str_rw_cb(void *data, const char *str)
 	struct thread_data *td = data;
 	char *nr = get_opt_postfix(str);
 
-	td->o.ddir_nr = 0;
+	td->o.ddir_nr = 1;
 	if (nr)
 		td->o.ddir_nr = atoi(nr);
 
