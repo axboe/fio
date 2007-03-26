@@ -531,6 +531,11 @@ static struct fio_option options[] = {
 			    .oval = VERIFY_MD5,
 			    .help = "Use md5 checksums for verification",
 			  },
+			  {
+			    .ival = "null",
+			    .oval = VERIFY_NULL,
+			    .help = "Pretend to verify",
+			  },
 		},
 	},
 	{

@@ -78,10 +78,13 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u)
 	return 0;
 }
 
-int verify_io_u(struct io_u *io_u)
+int verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	struct verify_header *hdr = (struct verify_header *) io_u->buf;
 	int ret;
+
+	if (td->o.verify == VERIFY_NULL)
+		return 0;
 
 	if (hdr->fio_magic != FIO_HDR_MAGIC) {
 		log_err("Bad verify header %x\n", hdr->fio_magic);
@@ -134,7 +137,7 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td->o.verify == VERIFY_MD5) {
 		fill_md5(&hdr, p, io_u->buflen - sizeof(hdr));
 		hdr.verify_type = VERIFY_MD5;
-	} else {
+	} else if (td->o.verify == VERIFY_CRC32) {
 		fill_crc32(&hdr, p, io_u->buflen - sizeof(hdr));
 		hdr.verify_type = VERIFY_CRC32;
 	}

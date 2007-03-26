@@ -666,7 +666,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		icd->bytes_done[idx] += bytes;
 
 		if (io_u->end_io) {
-			ret = io_u->end_io(io_u);
+			ret = io_u->end_io(td, io_u);
 			if (ret && !icd->error)
 				icd->error = ret;
 		}

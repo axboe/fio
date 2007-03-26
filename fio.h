@@ -102,6 +102,8 @@ enum {
 	IO_U_F_FLIGHT	= 1 << 1,
 };
 
+struct thread_data;
+
 /*
  * The io unit
  */
@@ -162,7 +164,7 @@ struct io_u {
 	/*
 	 * Callback for io completion
 	 */
-	int (*end_io)(struct io_u *);
+	int (*end_io)(struct thread_data *, struct io_u *);
 };
 
 /*
@@ -180,6 +182,7 @@ enum {
 	VERIFY_NONE = 0,		/* no verification */
 	VERIFY_MD5,			/* md5 sum data blocks */
 	VERIFY_CRC32,			/* crc32 sum data blocks */
+	VERIFY_NULL,			/* pretend to verify */
 };
 
 /*
@@ -744,7 +747,7 @@ enum {
  */
 extern void populate_verify_io_u(struct thread_data *, struct io_u *);
 extern int __must_check get_next_verify(struct thread_data *td, struct io_u *);
-extern int __must_check verify_io_u(struct io_u *);
+extern int __must_check verify_io_u(struct thread_data *, struct io_u *);
 
 /*
  * Memory helpers
