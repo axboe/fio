@@ -26,7 +26,7 @@
 
 #define GFIO_MIN_THREADS 32
 #ifndef GFIO_MAX_THREADS
-#define GFIO_MAX_THREADS 280
+#define GFIO_MAX_THREADS 2000
 #endif
 
 #include <guasi.h>
@@ -108,9 +108,12 @@ static int fio_guasi_getevents(struct thread_data *td, int min, int max,
 		guasi_req_free(ld->reqs[n]);
 	n = 0;
 	do {
-		r = guasi_fetch(ld->hctx, ld->reqs + n, max - n, timeo);
-		if (r < 0)
+		r = guasi_fetch(ld->hctx, ld->reqs + n, min - n,
+				max - n, timeo);
+		if (r < 0) {
+			fprintf(stderr, "guasi_fetch() FAILED! (%d)\n", r);
 			break;
+		}
 		n += r;
 		if (n >= min)
 			break;
@@ -134,15 +137,18 @@ static int fio_guasi_queue(struct thread_data *td, struct io_u *io_u)
 	return FIO_Q_QUEUED;
 }
 
-static void fio_guasi_queued(struct thread_data *td, struct io_u **io_us,
-			     unsigned int nr)
+static void fio_guasi_queued(struct thread_data *td, struct io_u **io_us, int nr)
 {
+	int i;
+	struct io_u *io_u;
 	struct timeval now;
-	struct io_u *io_u = io_us[nr];
 
 	fio_gettime(&now, NULL);
-	memcpy(&io_u->issue_time, &now, sizeof(now));
-	io_u_queued(td, io_u);
+	for (i = 0; i < nr; i++) {
+		io_u = io_us[i];
+		memcpy(&io_u->issue_time, &now, sizeof(now));
+		io_u_queued(td, io_u);
+	}
 }
 
 static int fio_guasi_commit(struct thread_data *td)
@@ -172,14 +178,13 @@ static int fio_guasi_commit(struct thread_data *td)
 			fprintf(stderr, "fio_guasi_commit() FAILED: unknow request %d\n",
 				io_u->ddir);
 		}
-		if (io_u->greq != NULL)
-			fio_guasi_queued(td, ld->io_us, i);
-		else {
+		if (io_u->greq == NULL) {
 			fprintf(stderr, "fio_guasi_commit() FAILED: submit failed (%s)\n",
 				strerror(errno));
 			return -1;
 		}
 	}
+	fio_guasi_queued(td, ld->io_us, i);
 	ld->queued_nr = 0;
 	GDBG_PRINT(("fio_guasi_commit() -> %d\n", i));
 
@@ -223,7 +228,7 @@ static int fio_guasi_init(struct thread_data *td)
 	maxthr = td->o.iodepth > GFIO_MIN_THREADS ? td->o.iodepth: GFIO_MIN_THREADS;
 	if (maxthr > GFIO_MAX_THREADS)
 		maxthr = GFIO_MAX_THREADS;
-	if ((ld->hctx = guasi_create(GFIO_MIN_THREADS, maxthr, 1)) == NULL) {
+	if ((ld->hctx = guasi_create(GFIO_MIN_THREADS, maxthr, 1, 0)) == NULL) {
 		td_verror(td, errno, "guasi_create");
 		free(ld);
 		return 1;
