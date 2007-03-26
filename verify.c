@@ -129,6 +129,9 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	unsigned char *p = (unsigned char *) io_u->buf;
 	struct verify_header hdr;
 
+	if (td->o.verify == VERIFY_NULL)
+		return;
+
 	hdr.fio_magic = FIO_HDR_MAGIC;
 	hdr.len = io_u->buflen;
 	p += sizeof(hdr);
