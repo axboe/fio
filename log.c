@@ -29,11 +29,11 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 void prune_io_piece_log(struct thread_data *td)
 {
 	struct io_piece *ipo;
+	struct rb_node *n;
 
-	while (!list_empty(&td->io_hist_list)) {
-		ipo = list_entry(td->io_hist_list.next, struct io_piece, list);
-
-		list_del(&ipo->list);
+	while ((n = rb_first(&td->io_hist_tree)) != NULL) {
+		ipo = rb_entry(n, struct io_piece, rb_node);
+		rb_erase(n, &td->io_hist_tree);
 		free(ipo);
 	}
 }
@@ -43,36 +43,33 @@ void prune_io_piece_log(struct thread_data *td)
  */
 void log_io_piece(struct thread_data *td, struct io_u *io_u)
 {
-	struct io_piece *ipo = malloc(sizeof(struct io_piece));
-	struct list_head *entry;
+	struct rb_node **p = &td->io_hist_tree.rb_node;
+	struct rb_node *parent = NULL;
+	struct io_piece *ipo, *__ipo;
 
-	INIT_LIST_HEAD(&ipo->list);
+	ipo = malloc(sizeof(struct io_piece));
+	memset(&ipo->rb_node, 0, sizeof(ipo->rb_node));
 	ipo->file = io_u->file;
 	ipo->offset = io_u->offset;
 	ipo->len = io_u->buflen;
 
 	/*
-	 * for random io where the writes extend the file, it will typically
-	 * be laid out with the block scattered as written. it's faster to
-	 * read them in in that order again, so don't sort
+	 * Sort the entry into the verification list
 	 */
-	if (!td_random(td) || !td->o.overwrite) {
-		list_add_tail(&ipo->list, &td->io_hist_list);
-		return;
-	}
+	while (*p) {
+		parent = *p;
 
-	/*
-	 * for random io, sort the list so verify will run faster
-	 */
-	entry = &td->io_hist_list;
-	while ((entry = entry->prev) != &td->io_hist_list) {
-		struct io_piece *__ipo = list_entry(entry, struct io_piece, list);
-
-		if (__ipo->offset < ipo->offset)
+		__ipo = rb_entry(parent, struct io_piece, rb_node);
+		if (ipo->offset < __ipo->offset)
+			p = &(*p)->rb_left;
+		else if (ipo->offset > __ipo->offset)
+			p = &(*p)->rb_right;
+		else
 			break;
 	}
 
-	list_add(&ipo->list, entry);
+	rb_link_node(&ipo->rb_node, parent, p);
+	rb_insert_color(&ipo->rb_node, &td->io_hist_tree);
 }
 
 void write_iolog_close(struct thread_data *td)

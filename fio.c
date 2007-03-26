@@ -735,7 +735,6 @@ static void *thread_main(void *data)
 	INIT_LIST_HEAD(&td->io_u_freelist);
 	INIT_LIST_HEAD(&td->io_u_busylist);
 	INIT_LIST_HEAD(&td->io_u_requeues);
-	INIT_LIST_HEAD(&td->io_hist_list);
 	INIT_LIST_HEAD(&td->io_log_list);
 
 	if (init_io_u(td))

@@ -14,6 +14,7 @@
 #include <getopt.h>
 
 #include "list.h"
+#include "rbtree.h"
 #include "md5.h"
 #include "crc32.h"
 #include "arch.h"
@@ -78,7 +79,10 @@ struct io_log {
  * When logging io actions, this matches a single sent io_u
  */
 struct io_piece {
-	struct list_head list;
+	union {
+		struct rb_node rb_node;
+		struct list_head list;
+	};
 	struct fio_file *file;
 	unsigned long long offset;
 	unsigned long len;
@@ -510,7 +514,7 @@ struct thread_data {
 	/*
 	 * IO historic logs
 	 */
-	struct list_head io_hist_list;
+	struct rb_root io_hist_tree;
 	struct list_head io_log_list;
 
 	/*
