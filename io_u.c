@@ -329,7 +329,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * mark entry before potentially trimming io_u
 	 */
-	if (!td->o.read_iolog && td_random(td) && !td->o.norandommap)
+	if (td_random(td) && !td->o.norandommap)
 		mark_random_map(td, io_u);
 
 	/*
