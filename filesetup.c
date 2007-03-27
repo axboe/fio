@@ -412,16 +412,13 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	if (td->o.invalidate_cache && file_invalidate_cache(td, f))
 		goto err;
 
-	if (!td->o.fadvise_hint)
-		return 0;
+	if (td->o.fadvise_hint) {
+		if (td_random(td))
+			flags = POSIX_FADV_RANDOM;
+		else
+			flags = POSIX_FADV_SEQUENTIAL;
 
-	if (!td_random(td)) {
-		if (fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_SEQUENTIAL) < 0) {
-			td_verror(td, errno, "fadvise");
-			goto err;
-		}
-	} else {
-		if (fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_RANDOM) < 0) {
+		if (fadvise(f->fd, f->file_offset, f->file_size, flags) < 0) {
 			td_verror(td, errno, "fadvise");
 			goto err;
 		}
