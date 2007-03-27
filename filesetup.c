@@ -12,19 +12,31 @@
 
 static int extend_file(struct thread_data *td, struct fio_file *f)
 {
+	int r, new_layout = 0, flags;
 	unsigned long long left;
 	unsigned int bs;
 	char *b;
-	int r;
 
-	if (f->flags & FIO_FILE_EXISTS) {
+	/*
+	 * check if we need to lay the file out complete again. fio
+	 * does that for operations involving reads, or for writes
+	 * where overwrite is set
+	 */
+	if (td_read(td) || (td_write(td) && td->o.overwrite))
+		new_layout = 1;
+
+	if (new_layout && (f->flags & FIO_FILE_EXISTS)) {
 		if (unlink(f->file_name) < 0) {
 			td_verror(td, errno, "unlink");
 			return 1;
 		}
 	}
 
-	f->fd = open(f->file_name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	flags = O_WRONLY | O_CREAT;
+	if (new_layout)
+		flags |= O_TRUNC;
+
+	f->fd = open(f->file_name, flags, 0644);
 	if (f->fd < 0) {
 		td_verror(td, errno, "open");
 		return 1;
@@ -39,6 +51,9 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		td_verror(td, errno, "posix_fallocate");
 		goto err;
 	}
+
+	if (!new_layout)
+		goto done;
 
 	b = malloc(td->o.max_bs[DDIR_WRITE]);
 	memset(b, 0, td->o.max_bs[DDIR_WRITE]);
@@ -70,6 +85,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		fsync(f->fd);
 
 	free(b);
+done:
 	close(f->fd);
 	f->fd = -1;
 	return 0;
