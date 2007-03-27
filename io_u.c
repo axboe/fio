@@ -422,6 +422,8 @@ static struct fio_file *get_next_file_rand(struct thread_data *td, int goodf,
 
 		fno = (unsigned int) ((double) td->o.nr_files * (r / (RAND_MAX + 1.0)));
 		f = &td->files[fno];
+		if (f->flags & FIO_FILE_DONE)
+			continue;
 
 		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf))
 			return f;
@@ -443,6 +445,9 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 		td->next_file++;
 		if (td->next_file >= td->o.nr_files)
 			td->next_file = 0;
+
+		if (f->flags & FIO_FILE_DONE)
+			continue;
 
 		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf))
 			break;
@@ -554,6 +559,7 @@ set_file:
 		 */
 		io_u->file = NULL;
 		td_io_close_file(td, f);
+		f->flags |= FIO_FILE_DONE;
 
 		/*
 		 * probably not the right place to do this, but see
