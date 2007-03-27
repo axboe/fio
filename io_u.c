@@ -310,7 +310,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	   !(td->io_issues[DDIR_WRITE] % td->o.fsync_blocks) &&
 	     td->io_issues[DDIR_WRITE] && should_fsync(td)) {
 		io_u->ddir = DDIR_SYNC;
-		return 0;
+		goto out;
 	}
 
 	io_u->ddir = get_rw_ddir(td);
@@ -335,6 +335,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * If using a write iolog, store this entry.
 	 */
+out:
 	if (td->o.write_iolog_file)
 		write_iolog_put(td, io_u);
 

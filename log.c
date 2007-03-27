@@ -113,7 +113,7 @@ static int init_iolog_read(struct thread_data *td)
 			reads++;
 		else if (rw == DDIR_WRITE)
 			writes++;
-		else {
+		else if (rw != DDIR_SYNC) {
 			log_err("bad ddir: %d\n", rw);
 			continue;
 		}
