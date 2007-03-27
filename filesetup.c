@@ -276,10 +276,9 @@ static void get_file_sizes(struct thread_data *td)
 	unsigned int i;
 
 	for_each_file(td, f, i) {
-		if (td->io_ops->open_file(td, f)) {
-			td->error = 0;
-			memset(td->verror, 0, sizeof(td->verror));
-		} else
+		if (td->io_ops->open_file(td, f))
+			clear_error(td);
+		else
 			td->io_ops->close_file(td, f);
 	}
 }
