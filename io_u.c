@@ -660,7 +660,8 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		add_bw_sample(td, idx, &icd->time);
 		io_u_mark_latency(td, msec);
 
-		if ((td_rw(td) || td_write(td)) && idx == DDIR_WRITE)
+		if ((td_rw(td) || td_write(td)) && idx == DDIR_WRITE &&
+		    td->o.verify != VERIFY_NONE)
 			log_io_piece(td, io_u);
 
 		icd->bytes_done[idx] += bytes;
