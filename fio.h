@@ -515,9 +515,15 @@ struct thread_data {
 	unsigned int ddir_nr;
 
 	/*
-	 * IO historic logs
+	 * IO history logs for verification. We use a tree for sorting,
+	 * if we are overwriting. Otherwise just use a fifo.
 	 */
 	struct rb_root io_hist_tree;
+	struct list_head io_hist_list;
+
+	/*
+	 * For IO replaying
+	 */
 	struct list_head io_log_list;
 
 	/*

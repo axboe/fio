@@ -736,6 +736,7 @@ static void *thread_main(void *data)
 	INIT_LIST_HEAD(&td->io_u_busylist);
 	INIT_LIST_HEAD(&td->io_u_requeues);
 	INIT_LIST_HEAD(&td->io_log_list);
+	INIT_LIST_HEAD(&td->io_hist_list);
 	td->io_hist_tree = RB_ROOT;
 
 	if (init_io_u(td))

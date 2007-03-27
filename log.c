@@ -43,15 +43,32 @@ void prune_io_piece_log(struct thread_data *td)
  */
 void log_io_piece(struct thread_data *td, struct io_u *io_u)
 {
-	struct rb_node **p = &td->io_hist_tree.rb_node;
-	struct rb_node *parent = NULL;
+	struct rb_node **p, *parent;
 	struct io_piece *ipo, *__ipo;
 
 	ipo = malloc(sizeof(struct io_piece));
-	RB_CLEAR_NODE(&ipo->rb_node);
 	ipo->file = io_u->file;
 	ipo->offset = io_u->offset;
 	ipo->len = io_u->buflen;
+
+	/*
+	 * We don't need to sort the entries, if:
+	 *
+	 *	Sequential writes, or
+	 *	Random writes that lay out the file as it goes along
+	 *
+	 * For both these cases, just reading back data in the order we
+	 * wrote it out is the fastest.
+	 */
+	if (!td_random(td) || !td->o.overwrite) {
+		INIT_LIST_HEAD(&ipo->list);
+		list_add_tail(&ipo->list, &td->io_hist_list);
+		return;
+	}
+
+	RB_CLEAR_NODE(&ipo->rb_node);
+	p = &td->io_hist_tree.rb_node;
+	parent = NULL;
 
 	/*
 	 * Sort the entry into the verification list

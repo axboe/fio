@@ -150,8 +150,7 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 
 int get_next_verify(struct thread_data *td, struct io_u *io_u)
 {
-	struct io_piece *ipo;
-	struct rb_node *n;
+	struct io_piece *ipo = NULL;
 
 	/*
 	 * this io_u is from a requeue, we already filled the offsets
@@ -159,12 +158,17 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 	if (io_u->file)
 		return 0;
 
-	n = rb_first(&td->io_hist_tree);
-	if (n) {
+	if (!RB_EMPTY_ROOT(&td->io_hist_tree)) {
+		struct rb_node *n = rb_first(&td->io_hist_tree);
+
 		ipo = rb_entry(n, struct io_piece, rb_node);
-
 		rb_erase(n, &td->io_hist_tree);
+	} else if (!list_empty(&td->io_hist_list)) {
+		ipo = list_entry(td->io_hist_list.next, struct io_piece, list);
+		list_del(&ipo->list);
+	}
 
+	if (ipo) {
 		io_u->offset = ipo->offset;
 		io_u->buflen = ipo->len;
 		io_u->file = ipo->file;
