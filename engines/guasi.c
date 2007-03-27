@@ -206,9 +206,12 @@ static int fio_guasi_cancel(struct thread_data *td, struct io_u *io_u)
 static void fio_guasi_cleanup(struct thread_data *td)
 {
 	struct guasi_data *ld = td->io_ops->data;
+	int n;
 
 	GDBG_PRINT(("fio_guasi_cleanup(%p)\n", ld));
 	if (ld) {
+		for (n = 0; n < ld->reqs_nr; n++)
+			guasi_req_free(ld->reqs[n]);
 		guasi_free(ld->hctx);
 		free(ld->reqs);
 		free(ld->io_us);
