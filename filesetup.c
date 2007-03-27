@@ -263,25 +263,18 @@ int open_files(struct thread_data *td)
 /*
  * open/close all files, so that ->real_file_size gets set
  */
-static int get_file_sizes(struct thread_data *td)
+static void get_file_sizes(struct thread_data *td)
 {
 	struct fio_file *f;
 	unsigned int i;
-	int err = 0;
 
 	for_each_file(td, f, i) {
-		err = td->io_ops->open_file(td, f);
-		if (err) {
+		if (td->io_ops->open_file(td, f)) {
 			td->error = 0;
 			memset(td->verror, 0, sizeof(td->verror));
-			err = 0;
-			continue;
-		}
-
-		td->io_ops->close_file(td, f);
+		} else
+			td->io_ops->close_file(td, f);
 	}
-
-	return err;
 }
 
 /*
@@ -292,7 +285,7 @@ int setup_files(struct thread_data *td)
 	unsigned long long total_size, extend_size;
 	struct fio_file *f;
 	unsigned int i;
-	int err, need_extend;
+	int err = 0, need_extend;
 
 	/*
 	 * if ioengine defines a setup() method, it's responsible for
@@ -302,7 +295,7 @@ int setup_files(struct thread_data *td)
 	if (td->io_ops->setup)
 		err = td->io_ops->setup(td);
 	else
-		err = get_file_sizes(td);
+		get_file_sizes(td);
 
 	if (err)
 		return err;
