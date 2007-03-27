@@ -412,7 +412,7 @@ static void do_io(struct thread_data *td)
 
 	td_set_runstate(td, TD_RUNNING);
 
-	while ((td->this_io_bytes[0] + td->this_io_bytes[1]) < td->io_size) {
+	while ((td->this_io_bytes[0] + td->this_io_bytes[1]) < td->o.size) {
 		struct timeval comp_time;
 		long bytes_done = 0;
 		int min_evts = 0;

@@ -237,8 +237,9 @@ enum fio_file_flags {
 	FIO_FILE_OPEN		= 1 << 0,	/* file is open */
 	FIO_FILE_UNLINK		= 1 << 1,	/* unlink on close */
 	FIO_FILE_CLOSING	= 1 << 2,	/* file being closed */
-	FIO_FILE_EXISTS		= 1 << 3,	/* no need to create */
-	FIO_FILE_NOSORT		= 1 << 4,	/* don't sort verify blocks */
+	FIO_FILE_EXISTS		= 1 << 3,	/* file there */
+	FIO_FILE_EXTEND		= 1 << 4,	/* needs extend */
+	FIO_FILE_NOSORT		= 1 << 5,	/* don't sort verify blocks */
 };
 
 /*
@@ -255,11 +256,20 @@ struct fio_file {
 		unsigned long file_data;
 		int fd;
 	};
+
+	/*
+	 * filename and possible memory mapping
+	 */
 	char *file_name;
 	void *mmap;
-	unsigned long long file_size;
+
+	/*
+	 * size of the file, offset into file, and io size from that offset
+	 */
 	unsigned long long real_file_size;
 	unsigned long long file_offset;
+	unsigned long long io_size;
+
 	unsigned long long last_pos;
 	unsigned long long last_completed_pos;
 
@@ -487,7 +497,6 @@ struct thread_data {
 	unsigned long rate_blocks;
 	struct timeval lastrate;
 
-	unsigned long long io_size;
 	unsigned long long total_io_size;
 
 	unsigned long io_issues[2];

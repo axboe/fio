@@ -61,7 +61,7 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 		 * if we are going to write more, set MSG_MORE
 		 */
 		if (td->this_io_bytes[DDIR_WRITE] + io_u->xfer_buflen <
-		    td->io_size)
+		    td->o.size)
 			flags = MSG_MORE;
 
 		ret = send(f->fd, io_u->xfer_buf, io_u->xfer_buflen, flags);
@@ -224,16 +224,9 @@ static int fio_netio_init(struct thread_data *td)
 {
 	struct netio_data *nd = td->io_ops->data;
 	unsigned short port;
-	struct fio_file *f;
 	char host[64], buf[128];
-	unsigned int i;
 	char *sep;
 	int ret;
-
-	if (!td->o.size) {
-		log_err("fio: need size= set\n");
-		return 1;
-	}
 
 	if (td_rw(td)) {
 		log_err("fio: network connections must be read OR write\n");
@@ -261,18 +254,7 @@ static int fio_netio_init(struct thread_data *td)
 		ret = fio_netio_setup_connect(td, host, port);
 	}
 
-	if (ret)
-		return ret;
-
-	td->io_size = td->o.size;
-	td->total_io_size = td->io_size;
-
-	for_each_file(td, f, i) {
-		f->file_size = td->o.size / td->o.nr_files;
-		f->real_file_size = f->file_size;
-	}
-
-	return 0;
+	return ret;
 }
 
 static void fio_netio_cleanup(struct thread_data *td)
@@ -287,11 +269,21 @@ static void fio_netio_cleanup(struct thread_data *td)
 
 static int fio_netio_setup(struct thread_data *td)
 {
-	struct netio_data *nd = malloc(sizeof(*nd));
+	struct netio_data *nd;
+	struct fio_file *f;
+	unsigned int i;
 
-	memset(nd, 0, sizeof(*nd));
-	nd->listenfd = -1;
-	td->io_ops->data = nd;
+	if (!td->io_ops->data) {
+		nd = malloc(sizeof(*nd));;
+
+		memset(nd, 0, sizeof(*nd));
+		nd->listenfd = -1;
+		td->io_ops->data = nd;
+
+		for_each_file(td, f, i)
+			f->real_file_size = -1ULL;
+	}
+
 	return 0;
 }
 

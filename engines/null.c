@@ -71,18 +71,8 @@ static int fio_null_setup(struct thread_data *td)
 	struct fio_file *f;
 	unsigned int i;
 
-	if (!td->o.size) {
-		log_err("fio: need size= set\n");
-		return 1;
-	}
-
-	td->io_size = td->o.size;
-	td->total_io_size = td->io_size;
-
-	for_each_file(td, f, i) {
-		f->real_file_size = td->total_io_size / td->o.nr_files;
-		f->file_size = f->real_file_size;
-	}
+	for_each_file(td, f, i)
+		f->real_file_size = -1ULL;
 
 	return 0;
 }

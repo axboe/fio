@@ -25,7 +25,7 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 	else if (io_u->ddir == DDIR_WRITE)
 		memcpy(f->mmap + real_off, io_u->xfer_buf, io_u->xfer_buflen);
 	else if (io_u->ddir == DDIR_SYNC) {
-		size_t len = (f->file_size + page_size - 1) & ~page_mask;
+		size_t len = (f->io_size + page_size - 1) & ~page_mask;
 
 		if (msync(f->mmap, len, MS_SYNC)) {
 			io_u->error = errno;
@@ -71,7 +71,7 @@ static int fio_mmapio_open(struct thread_data *td, struct fio_file *f)
 	} else
 		flags = PROT_READ;
 
-	f->mmap = mmap(NULL, f->file_size, flags, MAP_SHARED, f->fd, f->file_offset);
+	f->mmap = mmap(NULL, f->io_size, flags, MAP_SHARED, f->fd, f->file_offset);
 	if (f->mmap == MAP_FAILED) {
 		f->mmap = NULL;
 		td_verror(td, errno, "mmap");
@@ -82,12 +82,12 @@ static int fio_mmapio_open(struct thread_data *td, struct fio_file *f)
 		goto err;
 
 	if (!td_random(td)) {
-		if (madvise(f->mmap, f->file_size, MADV_SEQUENTIAL) < 0) {
+		if (madvise(f->mmap, f->io_size, MADV_SEQUENTIAL) < 0) {
 			td_verror(td, errno, "madvise");
 			goto err;
 		}
 	} else {
-		if (madvise(f->mmap, f->file_size, MADV_RANDOM) < 0) {
+		if (madvise(f->mmap, f->io_size, MADV_RANDOM) < 0) {
 			td_verror(td, errno, "madvise");
 			goto err;
 		}
@@ -104,7 +104,7 @@ static void fio_mmapio_close(struct thread_data fio_unused *td,
 			     struct fio_file *f)
 {
 	if (f->mmap) {
-		munmap(f->mmap, f->file_size);
+		munmap(f->mmap, f->io_size);
 		f->mmap = NULL;
 	}
 	generic_close_file(td, f);

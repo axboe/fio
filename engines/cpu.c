@@ -19,14 +19,8 @@ static int fio_cpuio_setup(struct thread_data fio_unused *td)
 	struct fio_file *f;
 	unsigned int i;
 
-	td->o.size = -1;
-	td->io_size = td->o.size;
-	td->total_io_size = td->io_size;
-
-	for_each_file(td, f, i) {
-		f->real_file_size = -1;
-		f->file_size = -1;
-	}
+	for_each_file(td, f, i)
+		f->real_file_size = -1ULL;
 
 	return 0;
 }

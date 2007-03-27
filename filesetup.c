@@ -10,37 +10,19 @@
 #include "fio.h"
 #include "os.h"
 
-/*
- * Check if the file exists and it's large enough.
- */
-static int file_ok(struct thread_data *td, struct fio_file *f)
-{
-	struct stat st;
-
-	if (f->filetype != FIO_TYPE_FILE ||
-	    (td->io_ops->flags & FIO_DISKLESSIO))
-		return 0;
-
-	if (lstat(f->file_name, &st) == -1)
-		return 1;
-
-	/*
-	 * if it's a special file, size is always ok for now
-	 */
-	if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode))
-		return 0;
-	if (st.st_size < (off_t) f->file_size)
-		return 1;
-
-	return 0;
-}
-
-static int create_file(struct thread_data *td, struct fio_file *f)
+static int extend_file(struct thread_data *td, struct fio_file *f)
 {
 	unsigned long long left;
 	unsigned int bs;
 	char *b;
 	int r;
+
+	if (f->flags & FIO_FILE_EXISTS) {
+		if (unlink(f->file_name) < 0) {
+			td_verror(td, errno, "unlink");
+			return 1;
+		}
+	}
 
 	f->fd = open(f->file_name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (f->fd < 0) {
@@ -48,12 +30,12 @@ static int create_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	if (ftruncate(f->fd, f->file_size) == -1) {
+	if (ftruncate(f->fd, f->real_file_size) == -1) {
 		td_verror(td, errno, "ftruncate");
 		goto err;
 	}
 
-	if (posix_fallocate(f->fd, 0, f->file_size) < 0) {
+	if (posix_fallocate(f->fd, 0, f->real_file_size) < 0) {
 		td_verror(td, errno, "posix_fallocate");
 		goto err;
 	}
@@ -61,7 +43,7 @@ static int create_file(struct thread_data *td, struct fio_file *f)
 	b = malloc(td->o.max_bs[DDIR_WRITE]);
 	memset(b, 0, td->o.max_bs[DDIR_WRITE]);
 
-	left = f->file_size;
+	left = f->real_file_size;
 	while (left && !td->terminate) {
 		bs = td->o.max_bs[DDIR_WRITE];
 		if (bs > left)
@@ -97,190 +79,27 @@ err:
 	return 1;
 }
 
-static unsigned long long set_rand_file_size(struct thread_data *td,
-					     unsigned long long total_size)
+static unsigned long long get_rand_file_size(struct thread_data *td)
 {
-	unsigned long long upper = total_size;
 	unsigned long long ret;
 	long r;
 
-	if (upper > td->o.file_size_high)
-		upper = td->o.file_size_high;
-	else if (upper < td->o.file_size_low)
-		return 0;
-	else if (!upper)
-		return 0;
-
 	r = os_random_long(&td->file_size_state);
-	ret = td->o.file_size_low + (unsigned long long) ((double) upper * (r / (RAND_MAX + 1.0)));
+	ret = td->o.file_size_low + (unsigned long long) ((double) td->o.file_size_high * (r / (RAND_MAX + 1.0)));
 	ret -= (ret % td->o.rw_min_bs);
-	if (ret > upper)
-		ret = upper;
 	return ret;
-}
-
-static int fill_file_size(struct thread_data *td, struct fio_file *f,
-			  unsigned long long *file_size, int new_files)
-{
-	if (!td->o.file_size_low) {
-		f->file_size = *file_size / new_files;
-		f->real_file_size = f->file_size;
-	} else {
-		/*
-		 * If we don't have enough space left for a file
-		 * of the minimum size, bail.
-		 */
-		if (*file_size < td->o.file_size_low)
-			return 1;
-
-		f->file_size = set_rand_file_size(td, *file_size);
-		f->real_file_size = f->file_size;
-		*file_size -= f->file_size;
-	}
-
-	return 0;
-}
-
-static int create_files(struct thread_data *td)
-{
-	struct fio_file *f;
-	int err, need_create, can_extend;
-	unsigned long long total_file_size, local_file_size, create_size;
-	unsigned int i, new_files;
-
-	new_files = 0;
-	total_file_size = td->o.size;
-	for_each_file(td, f, i) {
-		unsigned long long s;
-
-		f->file_offset = td->o.start_offset;
-
-		if (!total_file_size)
-			continue;
-
-		if (f->filetype != FIO_TYPE_FILE) {
-			if (!f->file_size)
-				f->file_size = total_file_size / td->o.nr_files;
-			continue;
-		}
-
-		if (f->flags & FIO_FILE_EXISTS) {
-			if ((f->file_size > td->o.size / td->o.nr_files) ||
-			    !f->file_size)
-				f->file_size = td->o.size / td->o.nr_files;
-
-			s = f->file_size;
-			if (s > total_file_size)
-				s = total_file_size;
-
-			total_file_size -= s;
-		} else
-			new_files++;
-	}
-
-	/*
-	 * unless specifically asked for overwrite, let normal io extend it
-	 */
-	can_extend = !td->o.overwrite && !(td->io_ops->flags & FIO_NOEXTEND);
-	if (can_extend && new_files) {
-		for_each_file(td, f, i) {
-			if (fill_file_size(td, f, &total_file_size, new_files)) {
-				log_info("fio: limited to %d files\n", i);
-				td->o.nr_files = i;
-				break;
-			}
-		}
-
-		return 0;
-	}
-
-	local_file_size = total_file_size;
-	if (!local_file_size)
-		local_file_size = -1;
-
-	total_file_size = 0;
-	need_create = 0;
-	create_size = 0;
-	for_each_file(td, f, i) {
-		int file_there;
-
-		if (f->filetype != FIO_TYPE_FILE)
-			continue;
-		if (f->flags & FIO_FILE_EXISTS) {
-			total_file_size += f->file_size;
-			continue;
-		}
-
-		if (fill_file_size(td, f, &local_file_size, new_files)) {
-			log_info("fio: limited to %d files\n", i);
-			new_files -= (td->o.nr_files - i);
-			td->o.nr_files = i;
-			break;
-		}
-
-		total_file_size += f->file_size;
-		create_size += f->file_size;
-		file_there = !file_ok(td, f);
-
-		if (file_there && td_write(td) && !td->o.overwrite) {
-			unlink(f->file_name);
-			file_there = 0;
-		}
-
-		need_create += !file_there;
-	}
-
-	if (!need_create)
-		return 0;
-
-	if (!td->o.size && !total_file_size) {
-		log_err("Need size for create\n");
-		td_verror(td, EINVAL, "file_size");
-		return 1;
-	}
-
-	temp_stall_ts = 1;
-	log_info("%s: Laying out IO file(s) (%u files / %LuMiB)\n",
-				td->o.name, new_files, create_size >> 20);
-
-	err = 0;
-	for_each_file(td, f, i) {
-		/*
-		 * Only unlink files that we created.
-		 */
-		f->flags &= ~FIO_FILE_UNLINK;
-		if (file_ok(td, f)) {
-			if (td->o.unlink)
-				f->flags |= FIO_FILE_UNLINK;
-
-			f->flags |= FIO_FILE_NOSORT;
-			err = create_file(td, f);
-			if (err)
-				break;
-		}
-	}
-
-	temp_stall_ts = 0;
-	return err;
 }
 
 static int file_size(struct thread_data *td, struct fio_file *f)
 {
 	struct stat st;
 
-	if (td->o.overwrite) {
-		if (fstat(f->fd, &st) == -1) {
-			td_verror(td, errno, "fstat");
-			return 1;
-		}
+	if (fstat(f->fd, &st) == -1) {
+		td_verror(td, errno, "fstat");
+		return 1;
+	}
 
-		f->real_file_size = st.st_size;
-
-		if (!f->file_size || f->file_size > f->real_file_size)
-			f->file_size = f->real_file_size;
-	} else
-		f->real_file_size = f->file_size;
-
+	f->real_file_size = st.st_size;
 	return 0;
 }
 
@@ -296,14 +115,6 @@ static int bdev_size(struct thread_data *td, struct fio_file *f)
 	}
 
 	f->real_file_size = bytes;
-
-	/*
-	 * no extend possibilities, so limit size to device size if too large
-	 */
-	if (!f->file_size || f->file_size > f->real_file_size)
-		f->file_size = f->real_file_size;
-
-	f->file_size -= f->file_offset;
 	return 0;
 }
 
@@ -311,10 +122,9 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 {
 	int ret = 0;
 
-	if (f->filetype == FIO_TYPE_FILE) {
-		if (!(f->flags & FIO_FILE_EXISTS))
-			ret = file_size(td, f);
-	} else if (f->filetype == FIO_TYPE_BD)
+	if (f->filetype == FIO_TYPE_FILE)
+		ret = file_size(td, f);
+	else if (f->filetype == FIO_TYPE_BD)
 		ret = bdev_size(td, f);
 	else
 		f->real_file_size = -1;
@@ -341,9 +151,9 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 	 * FIXME: add blockdev flushing too
 	 */
 	if (f->mmap)
-		ret = madvise(f->mmap, f->file_size, MADV_DONTNEED);
+		ret = madvise(f->mmap, f->io_size, MADV_DONTNEED);
 	else if (f->filetype == FIO_TYPE_FILE)
-		ret = fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_DONTNEED);
+		ret = fadvise(f->fd, f->file_offset, f->io_size, POSIX_FADV_DONTNEED);
 	else if (f->filetype == FIO_TYPE_BD) {
 		ret = blockdev_invalidate_cache(f->fd);
 		if (ret < 0 && errno == EACCES && geteuid()) {
@@ -399,11 +209,6 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 		snprintf(buf, sizeof(buf) - 1, "open(%s)", f->file_name);
 
 		td_verror(td, __e, buf);
-		if (__e == EINVAL && td->o.odirect)
-			log_err("fio: destination does not support O_DIRECT\n");
-		if (__e == EMFILE)
-			log_err("fio: try reducing/setting openfiles (failed at %u of %u)\n", td->nr_open_files, td->o.nr_files);
-		return 1;
 	}
 
 	if (get_file_size(td, f))
@@ -418,7 +223,7 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 		else
 			flags = POSIX_FADV_SEQUENTIAL;
 
-		if (fadvise(f->fd, f->file_offset, f->file_size, flags) < 0) {
+		if (fadvise(f->fd, f->file_offset, f->io_size, flags) < 0) {
 			td_verror(td, errno, "fadvise");
 			goto err;
 		}
@@ -454,49 +259,150 @@ int open_files(struct thread_data *td)
 	return err;
 }
 
-int setup_files(struct thread_data *td)
+/*
+ * open/close all files, so that ->real_file_size gets set
+ */
+static int get_file_sizes(struct thread_data *td)
 {
 	struct fio_file *f;
 	unsigned int i;
-	int err;
+	int err = 0;
+
+	for_each_file(td, f, i) {
+		err = td->io_ops->open_file(td, f);
+		if (err) {
+			td->error = 0;
+			memset(td->verror, 0, sizeof(td->verror));
+			err = 0;
+			continue;
+		}
+
+		td->io_ops->close_file(td, f);
+	}
+
+	return err;
+}
+
+/*
+ * Open the files and setup files sizes, creating files if necessary.
+ */
+int setup_files(struct thread_data *td)
+{
+	unsigned long long total_size, extend_size;
+	struct fio_file *f;
+	unsigned int i;
+	int err, need_extend;
 
 	/*
 	 * if ioengine defines a setup() method, it's responsible for
-	 * setting up everything in the td->files[] area.
+	 * opening the files and setting f->real_file_size to indicate
+	 * the valid range for that file.
 	 */
 	if (td->io_ops->setup)
-		return td->io_ops->setup(td);
+		err = td->io_ops->setup(td);
+	else
+		err = get_file_sizes(td);
 
-	if (create_files(td))
-		return 1;
-
-	err = open_files(td);
 	if (err)
 		return err;
 
 	/*
-	 * Recalculate the total file size now that files are set up.
+	 * check sizes. if the files/devices do not exist and the size
+	 * isn't passed to fio, abort.
 	 */
-	td->o.size = 0;
-	for_each_file(td, f, i)
-		td->o.size += f->file_size;
+	total_size = 0;
+	for_each_file(td, f, i) {
+		if (f->real_file_size == -1ULL)
+			total_size = -1ULL;
+		else
+			total_size += f->real_file_size;
+	}
 
-	td->io_size = td->o.size;
-	if (td->io_size == 0) {
-		log_err("%s: no io blocks\n", td->o.name);
+	/*
+	 * device/file sizes are zero and no size given, punt
+	 */
+	if (!total_size && !td->o.size) {
+		log_err("%s: you need to specify size=\n", td->o.name);
 		td_verror(td, EINVAL, "total_file_size");
 		return 1;
 	}
 
+	/*
+	 * now file sizes are known, so we can set ->io_size. if size= is
+	 * not given, ->io_size is just equal to ->real_file_size. if size
+	 * is given, ->io_size is size / nr_files.
+	 */
+	extend_size = total_size = 0;
+	need_extend = 0;
+	for_each_file(td, f, i) {
+		if (!td->o.file_size_low) {
+			/*
+			 * no file size range given, file size is equal to
+			 * total size divided by number of files. if that is
+			 * zero, set it to the real file size.
+			 */
+			f->io_size = td->o.size / td->o.nr_files;
+			if (!f->io_size)
+				f->io_size = f->real_file_size;
+		} else if (f->real_file_size < td->o.file_size_low ||
+			   f->real_file_size > td->o.file_size_high) {
+			/*
+			 * file size given. if it's fixed, use that. if it's a
+			 * range, generate a random size in-between.
+			 */
+			if (td->o.file_size_low == td->o.file_size_high)
+				f->io_size = td->o.file_size_low;
+			else
+				f->io_size = get_rand_file_size(td);
+		} else
+			f->io_size = f->real_file_size;
+
+		if (f->io_size == -1ULL)
+			total_size = -1ULL;
+		else
+			total_size += f->io_size;
+
+		if (f->filetype == FIO_TYPE_FILE &&
+		    f->io_size > f->real_file_size &&
+		    !(td->io_ops->flags & FIO_DISKLESSIO)) {
+			need_extend++;
+			extend_size += f->io_size;
+			f->flags |= FIO_FILE_EXTEND;
+		}
+	}
+
+	if (!td->o.size)
+		td->o.size = total_size;
+
+	/*
+	 * See if we need to extend some files
+	 */
+	if (need_extend) {
+		temp_stall_ts = 1;
+		log_info("%s: Laying out IO file(s) (%u files / %LuMiB)\n",
+			td->o.name, need_extend, extend_size >> 20);
+
+		for_each_file(td, f, i) {
+			if (!(f->flags & FIO_FILE_EXTEND))
+				continue;
+
+			f->flags &= ~FIO_FILE_EXTEND;
+			f->real_file_size = f->io_size;
+			err = extend_file(td, f);
+			if (err)
+				break;
+		}
+		temp_stall_ts = 0;
+	}
+
+	if (err)
+		return err;
+
 	if (!td->o.zone_size)
-		td->o.zone_size = td->io_size;
+		td->o.zone_size = td->o.size;
 
-	td->total_io_size = td->io_size * td->o.loops;
-
-	for_each_file(td, f, i)
-		td_io_close_file(td, f);
-
-	return err;
+	td->total_io_size = td->o.size * td->o.loops;
+	return 0;
 }
 
 int init_random_map(struct thread_data *td)
@@ -557,19 +463,10 @@ static void get_file_type(struct fio_file *f)
 	f->filetype = FIO_TYPE_FILE;
 
 	if (!lstat(f->file_name, &sb)) {
-		f->flags |= FIO_FILE_EXISTS;
-
 		if (S_ISBLK(sb.st_mode))
 			f->filetype = FIO_TYPE_BD;
 		else if (S_ISCHR(sb.st_mode))
 			f->filetype = FIO_TYPE_CHAR;
-		else {
-			/*
-			 * might as well do this here, and save a stat later on
-			 */
-			f->real_file_size = sb.st_size;
-			f->file_size = f->real_file_size;
-		}
 	}
 }
 

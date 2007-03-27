@@ -263,21 +263,27 @@ int td_io_commit(struct thread_data *td)
 
 int td_io_open_file(struct thread_data *td, struct fio_file *f)
 {
-	if (td->io_ops->open_file(td, f))
-		return 1;
+	if (!td->io_ops->open_file(td, f)) {
+		f->last_free_lookup = 0;
+		f->last_completed_pos = 0;
+		f->last_pos = 0;
+		f->flags |= FIO_FILE_OPEN;
+		f->flags &= ~FIO_FILE_CLOSING;
 
-	f->last_free_lookup = 0;
-	f->last_completed_pos = 0;
-	f->last_pos = 0;
-	f->flags |= FIO_FILE_OPEN;
-	f->flags &= ~FIO_FILE_CLOSING;
+		if (f->file_map)
+			memset(f->file_map, 0, f->num_maps * sizeof(long));
 
-	if (f->file_map)
-		memset(f->file_map, 0, f->num_maps * sizeof(long));
+		td->nr_open_files++;
+		get_file(f);
+		return 0;
+	}
 
-	td->nr_open_files++;
-	get_file(f);
-	return 0;
+	if (td->error == EINVAL && td->o.odirect)
+		log_err("fio: destination does not support O_DIRECT\n");
+	if (td->error == EMFILE)
+		log_err("fio: try reducing/setting openfiles (failed at %u of %u)\n", td->nr_open_files, td->o.nr_files);
+
+	return 1;
 }
 
 void td_io_close_file(struct thread_data *td, struct fio_file *f)

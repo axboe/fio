@@ -100,7 +100,7 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				int ddir, unsigned long long *b)
 {
-	unsigned long long max_blocks = f->file_size / td->o.min_bs[ddir];
+	unsigned long long max_blocks = f->io_size / td->o.min_bs[ddir];
 	unsigned long long r, rb;
 	int loops = 5;
 
@@ -250,7 +250,7 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 			 */
 			ddir = get_rand_ddir(td);
 			max_bytes = td->this_io_bytes[ddir];
-			if (max_bytes >= (td->io_size * td->o.rwmix[ddir] / 100)) {
+			if (max_bytes >= (td->o.size * td->o.rwmix[ddir] / 100)) {
 				if (!td->rw_end_set[ddir]) {
 					td->rw_end_set[ddir] = 1;
 					memcpy(&td->rw_end[ddir], &now, sizeof(now));
