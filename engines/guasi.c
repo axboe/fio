@@ -67,7 +67,7 @@ static struct io_u *fio_guasi_event(struct thread_data *td, int event)
 
 	GDBG_PRINT(("fio_guasi_event(%d)\n", event));
 	if (guasi_req_info(ld->reqs[event], &rinf) < 0) {
-		fprintf(stderr, "guasi_req_info(%d) FAILED!\n", event);
+		log_err("guasi_req_info(%d) FAILED!\n", event);
 		return NULL;
 	}
 	io_u = rinf.asid;
@@ -111,7 +111,7 @@ static int fio_guasi_getevents(struct thread_data *td, int min, int max,
 		r = guasi_fetch(ld->hctx, ld->reqs + n, min - n,
 				max - n, timeo);
 		if (r < 0) {
-			fprintf(stderr, "guasi_fetch() FAILED! (%d)\n", r);
+			log_err("guasi_fetch() FAILED! (%d)\n", r);
 			break;
 		}
 		n += r;
@@ -175,11 +175,11 @@ static int fio_guasi_commit(struct thread_data *td)
 		else if (io_u->ddir == DDIR_SYNC)
 			io_u->greq = guasi__fsync(ld->hctx, ld, io_u, 0, f->fd);
 		else {
-			fprintf(stderr, "fio_guasi_commit() FAILED: unknow request %d\n",
+			log_err("fio_guasi_commit() FAILED: unknow request %d\n",
 				io_u->ddir);
 		}
 		if (io_u->greq == NULL) {
-			fprintf(stderr, "fio_guasi_commit() FAILED: submit failed (%s)\n",
+			log_err("fio_guasi_commit() FAILED: submit failed (%s)\n",
 				strerror(errno));
 			return -1;
 		}
