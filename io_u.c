@@ -142,8 +142,12 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 
 		if (get_next_rand_offset(td, f, ddir, &b))
 			return 1;
-	} else
+	} else {
+		if (f->last_pos >= f->real_file_size)
+			return 1;
+
 		b = f->last_pos / td->o.min_bs[ddir];
+	}
 
 	io_u->offset = (b * td->o.min_bs[ddir]) + f->file_offset;
 	if (io_u->offset >= f->real_file_size)
