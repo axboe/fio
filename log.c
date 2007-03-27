@@ -48,7 +48,7 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	struct io_piece *ipo, *__ipo;
 
 	ipo = malloc(sizeof(struct io_piece));
-	memset(&ipo->rb_node, 0, sizeof(ipo->rb_node));
+	RB_CLEAR_NODE(&ipo->rb_node);
 	ipo->file = io_u->file;
 	ipo->offset = io_u->offset;
 	ipo->len = io_u->buflen;
@@ -60,12 +60,10 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 		parent = *p;
 
 		__ipo = rb_entry(parent, struct io_piece, rb_node);
-		if (ipo->offset < __ipo->offset)
+		if (ipo->offset <= __ipo->offset)
 			p = &(*p)->rb_left;
-		else if (ipo->offset > __ipo->offset)
-			p = &(*p)->rb_right;
 		else
-			break;
+			p = &(*p)->rb_right;
 	}
 
 	rb_link_node(&ipo->rb_node, parent, p);
