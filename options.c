@@ -908,7 +908,9 @@ void options_mem_dupe(struct thread_data *td)
 	__options_mem(td, 1);
 }
 
-void options_mem_free(struct thread_data *td)
+void options_mem_free(struct thread_data fio_unused *td)
 {
+#if 0
 	__options_mem(td, 0);
+#endif
 }
