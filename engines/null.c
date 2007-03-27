@@ -45,8 +45,11 @@ static int fio_null_commit(struct thread_data *td)
 {
 	struct null_data *nd = td->io_ops->data;
 
-	nd->events += nd->queued;
-	nd->queued = 0;
+	if (!nd->events) {
+		nd->events = nd->queued;
+		nd->queued = 0;
+	}
+
 	return 0;
 }
 
@@ -56,6 +59,8 @@ static int fio_null_queue(struct thread_data fio_unused *td, struct io_u *io_u)
 
 	if (td->io_ops->flags & FIO_SYNCIO)
 		return FIO_Q_COMPLETED;
+	if (nd->events)
+		return FIO_Q_BUSY;
 
 	nd->io_us[nd->queued++] = io_u;
 	return FIO_Q_QUEUED;
