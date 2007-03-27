@@ -344,9 +344,13 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 		ret = madvise(f->mmap, f->file_size, MADV_DONTNEED);
 	else if (f->filetype == FIO_TYPE_FILE)
 		ret = fadvise(f->fd, f->file_offset, f->file_size, POSIX_FADV_DONTNEED);
-	else if (f->filetype == FIO_TYPE_BD)
+	else if (f->filetype == FIO_TYPE_BD) {
 		ret = blockdev_invalidate_cache(f->fd);
-	else if (f->filetype == FIO_TYPE_CHAR)
+		if (ret < 0 && errno == EACCES && geteuid()) {
+			log_err("fio: only root may flush block devices. Cache flush bypassed!\n");
+			ret = 0;
+		}
+	} else if (f->filetype == FIO_TYPE_CHAR)
 		ret = 0;
 
 	if (ret < 0) {
