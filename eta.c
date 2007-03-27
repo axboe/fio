@@ -180,7 +180,7 @@ void print_thread_status(void)
 {
 	unsigned long elapsed = mtime_since_genesis() / 1000;
 	int i, nr_running, nr_pending, t_rate, m_rate, *eta_secs, eta_sec;
-	int t_iops, m_iops;
+	int t_iops, m_iops, files_open;
 	struct thread_data *td;
 	char eta_str[128];
 	double perc = 0.0;
@@ -207,6 +207,7 @@ void print_thread_status(void)
 	io_bytes[0] = io_bytes[1] = 0;
 	nr_pending = nr_running = t_rate = m_rate = t_iops = m_iops = 0;
 	bw_avg_time = ULONG_MAX;
+	files_open = 0;
 	for_each_td(td, i) {
 		if (td->o.bw_avg_time < bw_avg_time)
 			bw_avg_time = td->o.bw_avg_time;
@@ -217,6 +218,7 @@ void print_thread_status(void)
 			m_rate += td->o.ratemin;
 			t_iops += td->o.rate_iops;
 			m_iops += td->o.rate_iops_min;
+			files_open += td->nr_open_files;
 		} else if (td->runstate < TD_RUNNING)
 			nr_pending++;
 
@@ -272,7 +274,7 @@ void print_thread_status(void)
 	if (!nr_running && !nr_pending)
 		return;
 
-	printf("Jobs: %d", nr_running);
+	printf("Jobs: %d (f=%d)", nr_running, files_open);
 	if (m_rate || t_rate)
 		printf(", CR=%d/%d KiB/s", t_rate, m_rate);
 	else if (m_iops || t_iops)
