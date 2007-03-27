@@ -214,21 +214,6 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	if (get_file_size(td, f))
 		goto err;
 
-	if (td->o.invalidate_cache && file_invalidate_cache(td, f))
-		goto err;
-
-	if (td->o.fadvise_hint) {
-		if (td_random(td))
-			flags = POSIX_FADV_RANDOM;
-		else
-			flags = POSIX_FADV_SEQUENTIAL;
-
-		if (fadvise(f->fd, f->file_offset, f->io_size, flags) < 0) {
-			td_verror(td, errno, "fadvise");
-			goto err;
-		}
-	}
-
 	return 0;
 err:
 	close(f->fd);

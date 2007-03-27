@@ -263,26 +263,50 @@ int td_io_commit(struct thread_data *td)
 
 int td_io_open_file(struct thread_data *td, struct fio_file *f)
 {
-	if (!td->io_ops->open_file(td, f)) {
-		f->last_free_lookup = 0;
-		f->last_completed_pos = 0;
-		f->last_pos = 0;
-		f->flags |= FIO_FILE_OPEN;
-		f->flags &= ~FIO_FILE_CLOSING;
+	if (td->io_ops->open_file(td, f)) {
+		if (td->error == EINVAL && td->o.odirect)
+			log_err("fio: destination does not support O_DIRECT\n");
+		if (td->error == EMFILE)
+			log_err("fio: try reducing/setting openfiles (failed at %u of %u)\n", td->nr_open_files, td->o.nr_files);
 
-		if (f->file_map)
-			memset(f->file_map, 0, f->num_maps * sizeof(long));
-
-		td->nr_open_files++;
-		get_file(f);
-		return 0;
+		return 1;
 	}
 
-	if (td->error == EINVAL && td->o.odirect)
-		log_err("fio: destination does not support O_DIRECT\n");
-	if (td->error == EMFILE)
-		log_err("fio: try reducing/setting openfiles (failed at %u of %u)\n", td->nr_open_files, td->o.nr_files);
+	f->last_free_lookup = 0;
+	f->last_completed_pos = 0;
+	f->last_pos = 0;
+	f->flags |= FIO_FILE_OPEN;
+	f->flags &= ~FIO_FILE_CLOSING;
 
+	if (td->io_ops->flags & FIO_DISKLESSIO)
+		goto done;
+
+	if (td->o.invalidate_cache && file_invalidate_cache(td, f))
+		goto err;
+
+	if (td->o.fadvise_hint) {
+		int flags;
+
+		if (td_random(td))
+			flags = POSIX_FADV_RANDOM;
+		else
+			flags = POSIX_FADV_SEQUENTIAL;
+
+		if (fadvise(f->fd, f->file_offset, f->io_size, flags) < 0) {
+			td_verror(td, errno, "fadvise");
+			goto err;
+		}
+	}
+
+	if (f->file_map)
+		memset(f->file_map, 0, f->num_maps * sizeof(long));
+
+done:
+	td->nr_open_files++;
+	get_file(f);
+	return 0;
+err:
+	td->io_ops->close_file(td, f);
 	return 1;
 }
 
