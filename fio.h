@@ -865,4 +865,10 @@ extern void close_ioengine(struct thread_data *);
 	}	\
 } while (0)
 
+static inline void clear_error(struct thread_data *td)
+{
+	td->error = 0;
+	td->verror[0] = '\0';
+}
+
 #endif

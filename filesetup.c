@@ -244,8 +244,15 @@ int open_files(struct thread_data *td)
 
 	for_each_file(td, f, i) {
 		err = td_io_open_file(td, f);
-		if (err)
+		if (err) {
+			if (td->error == EMFILE) {
+				log_err("fio: limited open files to: %d\n", td->nr_open_files);
+				td->o.open_files = td->nr_open_files;
+				err = 0;
+				clear_error(td);
+			}
 			break;
+		}
 
 		if (td->o.open_files == td->nr_open_files)
 			break;
