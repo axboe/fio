@@ -17,7 +17,7 @@ unsigned long utime_since(struct timeval *s, struct timeval *e)
 		usec += 1000000;
 	}
 
-	sec *= (double) 1000000;
+	sec *= 1000000UL;
 
 	return sec + usec;
 }
@@ -41,8 +41,8 @@ unsigned long mtime_since(struct timeval *s, struct timeval *e)
 		usec += 1000000;
 	}
 
-	sec *= (double) 1000;
-	usec /= (double) 1000;
+	sec *= 1000UL;
+	usec /= 1000UL;
 
 	return sec + usec;
 }
