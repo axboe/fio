@@ -563,6 +563,14 @@ verify=str	If writing to a file, fio can verify the file contents
 		system to make sure that the written data is also
 		correctly read back.
 
+verifysort=bool	If set, fio will sort written verify blocks when it deems
+		it faster to read them back in a sorted manner. This is
+		often the case when overwriting an existing file, since
+		the blocks are already laid out in the file system. You
+		can ignore this option unless doing huge amounts of really
+		fast IO where the red-black tree sorting CPU time becomes
+		significant.
+		
 stonewall	Wait for preceeding jobs in the job file to exit, before
 		starting this one. Can be used to insert serialization
 		points in the job file. A stone wall also implies starting

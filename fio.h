@@ -238,6 +238,7 @@ enum fio_file_flags {
 	FIO_FILE_UNLINK		= 1 << 1,	/* unlink on close */
 	FIO_FILE_CLOSING	= 1 << 2,	/* file being closed */
 	FIO_FILE_EXISTS		= 1 << 3,	/* no need to create */
+	FIO_FILE_NOSORT		= 1 << 4,	/* don't sort verify blocks */
 };
 
 /*
@@ -356,6 +357,7 @@ struct thread_options {
 	unsigned int end_fsync;
 	unsigned int sync_io;
 	unsigned int verify;
+	unsigned int verifysort;
 	unsigned int use_thread;
 	unsigned int unlink;
 	unsigned int do_disk_util;

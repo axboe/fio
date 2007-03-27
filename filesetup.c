@@ -249,6 +249,7 @@ static int create_files(struct thread_data *td)
 			if (td->o.unlink)
 				f->flags |= FIO_FILE_UNLINK;
 
+			f->flags |= FIO_FILE_NOSORT;
 			err = create_file(td, f);
 			if (err)
 				break;

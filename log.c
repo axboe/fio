@@ -60,7 +60,8 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	 * For both these cases, just reading back data in the order we
 	 * wrote it out is the fastest.
 	 */
-	if (!td_random(td) || !td->o.overwrite) {
+	if (!td_random(td) || !td->o.overwrite ||
+	     (io_u->file->flags & FIO_FILE_NOSORT)) {
 		INIT_LIST_HEAD(&ipo->list);
 		list_add_tail(&ipo->list, &td->io_hist_list);
 		return;
