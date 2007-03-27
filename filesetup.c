@@ -521,7 +521,10 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 
 	D = opendir(dirname);
 	if (!D) {
-		td_verror(td, errno, "opendir");
+		char buf[FIO_VERROR_SIZE];
+
+		snprintf(buf, FIO_VERROR_SIZE - 1, "opendir(%s)", dirname);
+		td_verror(td, errno, buf);
 		return 1;
 	}
 
@@ -546,6 +549,8 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 			td->o.nr_files++;
 			continue;
 		}
+		if (!S_ISDIR(sb.st_mode))
+			continue;
 
 		if ((ret = recurse_dir(td, full_path)) != 0)
 			break;
@@ -557,7 +562,12 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 
 int add_dir_files(struct thread_data *td, const char *path)
 {
-	return recurse_dir(td, path);
+	int ret = recurse_dir(td, path);
+
+	if (!ret)
+		log_info("fio: opendir added %d files\n", td->o.nr_files);
+
+	return ret;
 }
 
 void dup_files(struct thread_data *td, struct thread_data *org)
