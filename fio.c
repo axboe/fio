@@ -342,10 +342,17 @@ static void do_verify(struct thread_data *td)
 					put_io_u(td, io_u);
 					break;
 				}
+
 				io_u->xfer_buflen = io_u->resid;
 				io_u->xfer_buf += bytes;
+				io_u->offset += bytes;
+
+				if (io_u->offset == io_u->file->real_file_size)
+					goto sync_done;
+
 				requeue_io_u(td, &io_u);
 			} else {
+sync_done:
 				ret = io_u_sync_complete(td, io_u);
 				if (ret < 0)
 					break;

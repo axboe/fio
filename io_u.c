@@ -158,7 +158,6 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 
 static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 {
-	struct fio_file *f = io_u->file;
 	const int ddir = io_u->ddir;
 	unsigned int buflen;
 	long r;
