@@ -241,6 +241,7 @@ enum fio_file_flags {
 	FIO_FILE_EXTEND		= 1 << 4,	/* needs extend */
 	FIO_FILE_NOSORT		= 1 << 5,	/* don't sort verify blocks */
 	FIO_FILE_DONE		= 1 << 6,	/* io completed to this file */
+	FIO_SIZE_KNOWN		= 1 << 7,	/* size has been set */
 };
 
 /*

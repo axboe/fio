@@ -138,6 +138,9 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 {
 	int ret = 0;
 
+	if (f->flags & FIO_SIZE_KNOWN)
+		return 0;
+
 	if (f->filetype == FIO_TYPE_FILE)
 		ret = file_size(td, f);
 	else if (f->filetype == FIO_TYPE_BD)
@@ -153,6 +156,7 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
+	f->flags |= FIO_SIZE_KNOWN;
 	return 0;
 }
 
@@ -280,6 +284,9 @@ static void get_file_sizes(struct thread_data *td)
 			clear_error(td);
 		else
 			td->io_ops->close_file(td, f);
+
+		if (f->real_file_size == -1ULL && td->o.size)
+			f->real_file_size = td->o.size / td->o.nr_files;
 	}
 }
 
@@ -321,7 +328,7 @@ int setup_files(struct thread_data *td)
 	/*
 	 * device/file sizes are zero and no size given, punt
 	 */
-	if (!total_size && !td->o.size) {
+	if ((!total_size || total_size == -1ULL) && !td->o.size) {
 		log_err("%s: you need to specify size=\n", td->o.name);
 		td_verror(td, EINVAL, "total_file_size");
 		return 1;
@@ -386,6 +393,7 @@ int setup_files(struct thread_data *td)
 			if (!(f->flags & FIO_FILE_EXTEND))
 				continue;
 
+			assert(f->filetype == FIO_TYPE_FILE);
 			f->flags &= ~FIO_FILE_EXTEND;
 			f->real_file_size = f->io_size;
 			err = extend_file(td, f);
