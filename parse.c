@@ -142,6 +142,8 @@ void strip_blank_front(char **p)
 
 	while (isspace(*s))
 		s++;
+
+	*p = s;
 }
 
 void strip_blank_end(char *p)
