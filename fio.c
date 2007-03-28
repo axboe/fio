@@ -452,8 +452,14 @@ static void do_io(struct thread_data *td)
 
 				io_u->xfer_buflen = io_u->resid;
 				io_u->xfer_buf += bytes;
+				io_u->offset += bytes;
+
+				if (io_u->offset == io_u->file->real_file_size)
+					goto sync_done;
+
 				requeue_io_u(td, &io_u);
 			} else {
+sync_done:
 				fio_gettime(&comp_time, NULL);
 				bytes_done = io_u_sync_complete(td, io_u);
 				if (bytes_done < 0)

@@ -172,19 +172,6 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 			buflen = (buflen + td->o.min_bs[ddir] - 1) & ~(td->o.min_bs[ddir] - 1);
 	}
 
-	while (buflen + io_u->offset > f->real_file_size) {
-		if (buflen == td->o.min_bs[ddir]) {
-			if (!td->o.odirect) {
-				assert(io_u->offset <= f->real_file_size);
-				buflen = f->real_file_size - io_u->offset;
-				return buflen;
-			}
-			return 0;
-		}
-
-		buflen = td->o.min_bs[ddir];
-	}
-
 	return buflen;
 }
 
@@ -582,15 +569,6 @@ set_file:
 	if (td->zone_bytes >= td->o.zone_size) {
 		td->zone_bytes = 0;
 		f->last_pos += td->o.zone_skip;
-	}
-
-	if (io_u->buflen + io_u->offset > f->real_file_size) {
-		if (td->io_ops->flags & FIO_RAWIO) {
-			put_io_u(td, io_u);
-			return NULL;
-		}
-
-		io_u->buflen = f->real_file_size - io_u->offset;
 	}
 
 	if (io_u->ddir != DDIR_SYNC) {
