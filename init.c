@@ -481,6 +481,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 		td_new->o.numjobs = 1;
 		td_new->o.stonewall = 0;
+		td_new->o.new_group = 0;
 
 		if (file_alloced) {
 			td_new->o.filename = NULL;
