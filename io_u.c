@@ -446,8 +446,10 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 		if (td->next_file >= td->o.nr_files)
 			td->next_file = 0;
 
-		if (f->flags & FIO_FILE_DONE)
+		if (f->flags & FIO_FILE_DONE) {
+			f = NULL;
 			continue;
+		}
 
 		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf))
 			break;
