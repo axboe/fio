@@ -2,7 +2,7 @@
 [global]
 ioengine=net
 filename=localhost/8888
-size=4k
+bs=4k
 size=10g
 
 [receiver]
