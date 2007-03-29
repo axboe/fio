@@ -452,9 +452,9 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 {
 	struct fio_option *o;
 	char *pre, *post;
-	char tmp[64];
+	char *tmp;
 
-	strncpy(tmp, opt, sizeof(tmp) - 1);
+	tmp = strdup(opt);
 
 	pre = strchr(tmp, '=');
 	if (pre) {
@@ -470,13 +470,17 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 
 	if (!o) {
 		fprintf(stderr, "Bad option %s\n", tmp);
+		free(tmp);
 		return 1;
 	}
 
-	if (!handle_option(o, post, data))
+	if (!handle_option(o, post, data)) {
+		free(tmp);
 		return 0;
+	}
 
 	fprintf(stderr, "fio: failed parsing %s\n", opt);
+	free(tmp);
 	return 1;
 }
 
