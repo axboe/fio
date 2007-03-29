@@ -9,4 +9,8 @@
 #error Compiler too old, need gcc at least gcc 3.x
 #endif
 
+#ifndef __must_check
+#define __must_check
+#endif
+
 #endif
