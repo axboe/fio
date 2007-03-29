@@ -12,7 +12,7 @@
 
 static int extend_file(struct thread_data *td, struct fio_file *f)
 {
-	int r, new_layout = 0, flags;
+	int r, new_layout = 0, unlink_file = 0, flags;
 	unsigned long long left;
 	unsigned int bs;
 	char *b;
@@ -24,8 +24,10 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	 */
 	if (td_read(td) || (td_write(td) && td->o.overwrite))
 		new_layout = 1;
+	if (td_write(td) && !td->o.overwrite)
+		unlink_file = 1;
 
-	if (new_layout && (f->flags & FIO_FILE_EXISTS)) {
+	if ((unlink_file || new_layout) && (f->flags & FIO_FILE_EXISTS)) {
 		if (unlink(f->file_name) < 0) {
 			td_verror(td, errno, "unlink");
 			return 1;
