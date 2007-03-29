@@ -433,6 +433,8 @@ static void stat_calc_dist(struct thread_stat *ts, double *io_u_dist)
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
 		io_u_dist[i] = (double) ts->io_u_map[i] / (double) ts_total_io_u(ts);
 		io_u_dist[i] *= 100.0;
+		if (io_u_dist[i] < 0.1 && ts->io_u_map[i])
+			io_u_dist[i] = 0.1;
 	}
 }
 
@@ -446,6 +448,8 @@ static void stat_calc_lat(struct thread_stat *ts, double *io_u_lat)
 	for (i = 0; i < FIO_IO_U_LAT_NR; i++) {
 		io_u_lat[i] = (double) ts->io_u_lat[i] / (double) ts_total_io_u(ts);
 		io_u_lat[i] *= 100.0;
+		if (io_u_lat[i] < 0.01 && ts->io_u_lat[i])
+			io_u_lat[i] = 0.01;
 	}
 }
 
@@ -529,8 +533,8 @@ static void show_thread_status(struct thread_stat *ts,
 
 	log_info("  IO depths    : 1=%3.1f%%, 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%, 16=%3.1f%%, 32=%3.1f%%, >=64=%3.1f%%\n", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
 
-	log_info("     lat (msec): 2=%3.1f%%, 4=%3.1f%%, 10=%3.1f%%, 20=%3.1f%%, 50=%3.1f%%, 100=%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
-	log_info("     lat (msec): 250=%3.1f%%, 500=%3.1f%%, 750=%3.1f%%, 1000=%3.1f%%, >=2000=%3.1f%%\n", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
+	log_info("     lat (msec): 2=%3.2f%%, 4=%3.2f%%, 10=%3.2f%%, 20=%3.2f%%, 50=%3.2f%%, 100=%3.2f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
+	log_info("     lat (msec): 250=%3.2f%%, 500=%3.2f%%, 750=%3.2f%%, 1000=%3.2f%%, >=2000=%3.2f%%\n", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
 }
 
 static void show_ddir_status_terse(struct thread_stat *ts,
@@ -595,8 +599,8 @@ static void show_thread_status_terse(struct thread_stat *ts,
 
 	log_info(";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
 
-	log_info(";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
-	log_info(";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
+	log_info(";%3.2f%%;%3.2f%%;%3.2f%%;%3.2f%%;%3.2f%%;%3.2f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
+	log_info(";%3.2f%%;%3.2f%%;%3.2f%%;%3.2f%%;%3.2f%%", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
 
 	if (ts->description)
 		log_info(";%s", ts->description);
