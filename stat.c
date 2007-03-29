@@ -817,8 +817,10 @@ static inline void add_stat_sample(struct io_stat *is, unsigned long data)
 		is->min_val = data;
 
 	delta = val - is->mean;
-	is->mean += delta / (is->samples + 1.0);
-	is->S += delta * (val - is->mean);
+	if (delta) {
+		is->mean += delta / (is->samples + 1.0);
+		is->S += delta * (val - is->mean);
+	}
 
 	is->samples++;
 }
