@@ -547,11 +547,14 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 			break;
 
 		strip_blank_front(&p);
+		strip_blank_end(p);
 
 		if (is_empty_or_comment(p))
 			continue;
-		if (sscanf(p, "[%255s]", name) != 1)
+		if (sscanf(p, "[%255s]", name) != 1) {
+			log_err("fio: option <%s> outside of job section\n", p);
 			continue;
+		}
 
 		global = !strncmp(name, "global", 6);
 
