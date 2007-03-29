@@ -237,6 +237,11 @@ static int fio_syslet_commit(struct thread_data *td)
 	 */
 	done = async_exec(sd->head, &sd->ahu);
 
+	if (done == (void *) -1) {
+		log_err("fio: syslets don't appear to work\n");
+		return -1;
+	}
+
 	sd->head = sd->tail = NULL;
 
 	if (done)
@@ -284,6 +289,19 @@ static void async_head_exit(struct syslet_data *sd)
 	free(sd->ring);
 }
 
+static int check_syslet_support(struct syslet_data *sd)
+{
+	struct syslet_uatom atom;
+	void *ret;
+
+	init_atom(&atom, __NR_getpid, NULL, NULL, NULL, NULL, NULL, 0, NULL);
+	ret = async_exec(sd->head, &sd->ahu);
+	if (ret == (void *) -1)
+		return 1;
+
+	return 0;
+}
+
 static void fio_syslet_cleanup(struct thread_data *td)
 {
 	struct syslet_data *sd = td->io_ops->data;
@@ -300,7 +318,6 @@ static int fio_syslet_init(struct thread_data *td)
 {
 	struct syslet_data *sd;
 
-
 	sd = malloc(sizeof(*sd));
 	memset(sd, 0, sizeof(*sd));
 	sd->events = malloc(sizeof(struct io_u *) * td->o.iodepth);
@@ -310,6 +327,13 @@ static int fio_syslet_init(struct thread_data *td)
 	 * This will handily fail for kernels where syslet isn't available
 	 */
 	if (async_head_init(sd, td->o.iodepth)) {
+		free(sd->events);
+		free(sd);
+		return 1;
+	}
+
+	if (check_syslet_support(sd)) {
+		log_err("fio: syslets do not appear to work\n");
 		free(sd->events);
 		free(sd);
 		return 1;
