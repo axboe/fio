@@ -13,6 +13,7 @@
 #include <string.h>
 #include <getopt.h>
 
+#include "compiler.h"
 #include "list.h"
 #include "rbtree.h"
 #include "md5.h"
