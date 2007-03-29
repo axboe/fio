@@ -523,6 +523,7 @@ void put_file(struct thread_data *td, struct fio_file *f)
 
 	if (td->io_ops->close_file)
 		td->io_ops->close_file(td, f);
+
 	td->nr_open_files--;
 	f->flags &= ~FIO_FILE_OPEN;
 }

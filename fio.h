@@ -449,6 +449,7 @@ struct thread_data {
 	struct fio_file *files;
 	unsigned int files_index;
 	unsigned int nr_open_files;
+	unsigned int nr_done_files;
 	unsigned int nr_normal_files;
 	union {
 		unsigned int next_file;

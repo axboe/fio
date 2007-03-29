@@ -452,7 +452,7 @@ static struct fio_file *get_next_file(struct thread_data *td)
 
 	assert(td->o.nr_files <= td->files_index);
 
-	if (!td->nr_open_files)
+	if (!td->nr_open_files || td->nr_done_files >= td->o.nr_files)
 		return NULL;
 
 	f = td->file_service_file;
@@ -472,6 +472,9 @@ static struct fio_file *get_next_file(struct thread_data *td)
 static struct fio_file *find_next_new_file(struct thread_data *td)
 {
 	struct fio_file *f;
+
+	if (!td->nr_open_files || td->nr_done_files >= td->o.nr_files)
+		return NULL;
 
 	if (td->o.file_service_type == FIO_FSERVICE_RR)
 		f = get_next_file_rr(td, 0, FIO_FILE_OPEN);
@@ -548,6 +551,7 @@ set_file:
 		io_u->file = NULL;
 		td_io_close_file(td, f);
 		f->flags |= FIO_FILE_DONE;
+		td->nr_done_files++;
 
 		/*
 		 * probably not the right place to do this, but see
