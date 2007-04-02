@@ -48,7 +48,7 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 			if (errno == ENODATA || errno == EAGAIN)
 				continue;
 
-			return errno;
+			return -errno;
 		}
 
 		buflen -= ret;
@@ -56,7 +56,7 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 		while (ret) {
 			ret2 = read(sd->pipe[0], p, ret);
 			if (ret2 < 0)
-				return errno;
+				return -errno;
 
 			ret -= ret2;
 			p += ret2;
@@ -90,7 +90,7 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 
 		ret = vmsplice(sd->pipe[1], iov, 1, SPLICE_F_NONBLOCK);
 		if (ret < 0)
-			return errno;
+			return -errno;
 
 		iov[0].iov_len -= ret;
 		iov[0].iov_base += ret;
@@ -98,7 +98,7 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 		while (ret) {
 			ret2 = splice(sd->pipe[0], NULL, f->fd, &off, ret, 0);
 			if (ret2 < 0)
-				return errno;
+				return -errno;
 
 			ret -= ret2;
 		}
