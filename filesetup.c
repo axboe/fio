@@ -276,20 +276,25 @@ int open_files(struct thread_data *td)
 /*
  * open/close all files, so that ->real_file_size gets set
  */
-static void get_file_sizes(struct thread_data *td)
+static int get_file_sizes(struct thread_data *td)
 {
 	struct fio_file *f;
 	unsigned int i;
+	int err = 0;
 
 	for_each_file(td, f, i) {
-		if (td->io_ops->open_file(td, f))
+		if (td->io_ops->open_file(td, f)) {
+			log_err("%s\n", td->verror);
+			err = 1;
 			clear_error(td);
-		else
+		} else
 			td->io_ops->close_file(td, f);
 
 		if (f->real_file_size == -1ULL && td->o.size)
 			f->real_file_size = td->o.size / td->o.nr_files;
 	}
+
+	return err;
 }
 
 /*
@@ -310,7 +315,7 @@ int setup_files(struct thread_data *td)
 	if (td->io_ops->setup)
 		err = td->io_ops->setup(td);
 	else
-		get_file_sizes(td);
+		err = get_file_sizes(td);
 
 	if (err)
 		return err;
