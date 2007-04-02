@@ -65,15 +65,11 @@ static int pollin_events(struct pollfd *pfds, int fds)
 static int fio_sgio_getevents(struct thread_data *td, int min, int max,
 			      struct timespec fio_unused *t)
 {
-	/*
-	 * normally hard coding &td->files[0] is a bug that needs to be fixed,
-	 * but it's ok here as all files should point to the same device.
-	 */
-	struct fio_file *f = &td->files[0];
 	struct sgio_data *sd = td->io_ops->data;
 	int left = max, ret, r = 0;
 	void *buf = sd->sgbuf;
 	unsigned int i, events;
+	struct fio_file *f;
 
 	/*
 	 * Fill in the file descriptors
