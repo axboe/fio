@@ -166,7 +166,7 @@ static int fio_sgio_ioctl_doio(struct thread_data *td,
 
 	ret = ioctl(f->fd, SG_IO, hdr);
 	if (ret < 0)
-		return -errno;
+		return ret;
 
 	return FIO_Q_COMPLETED;
 }
@@ -178,12 +178,12 @@ static int fio_sgio_rw_doio(struct fio_file *f, struct io_u *io_u, int sync)
 
 	ret = write(f->fd, hdr, sizeof(*hdr));
 	if (ret < 0)
-		return errno;
+		return ret;
 
 	if (sync) {
 		ret = read(f->fd, hdr, sizeof(*hdr));
 		if (ret < 0)
-			return -errno;
+			return ret;
 		return FIO_Q_COMPLETED;
 	}
 
