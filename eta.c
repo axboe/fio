@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "fio.h"
-#include "os.h"
 
 static char run_str[MAX_JOBS + 1];
 

@@ -8,7 +8,6 @@
 #include <sys/types.h>
 
 #include "fio.h"
-#include "os.h"
 
 static int extend_file(struct thread_data *td, struct fio_file *f)
 {

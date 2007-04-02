@@ -13,7 +13,6 @@
 #include <asm/unistd.h>
 
 #include "../fio.h"
-#include "../os.h"
 
 #ifdef FIO_HAVE_SYSLET
 

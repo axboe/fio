@@ -13,7 +13,6 @@
 #include <assert.h>
 
 #include "../fio.h"
-#include "../os.h"
 
 /*
  * The core of the module is identical to the ones included with fio,

@@ -12,7 +12,6 @@
 #include <assert.h>
 
 #include "../fio.h"
-#include "../os.h"
 
 static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 {

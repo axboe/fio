@@ -35,7 +35,6 @@
 #include <sys/mman.h>
 
 #include "fio.h"
-#include "os.h"
 
 unsigned long page_mask;
 unsigned long page_size;

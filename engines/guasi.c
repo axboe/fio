@@ -20,7 +20,6 @@
 #include <assert.h>
 
 #include "../fio.h"
-#include "../os.h"
 
 #ifdef FIO_HAVE_GUASI
 

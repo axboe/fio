@@ -6,7 +6,6 @@
 #include <sys/mman.h>
 
 #include "fio.h"
-#include "os.h"
 
 static void *pinned_mem;
 

@@ -6,7 +6,6 @@
 #include <sys/time.h>
 
 #include "fio.h"
-#include "os.h"
 
 #include "hash.h"
 

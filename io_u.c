@@ -6,7 +6,6 @@
 #include <assert.h>
 
 #include "fio.h"
-#include "os.h"
 
 /*
  * Change this define to play with the timeout handling

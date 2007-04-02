@@ -13,7 +13,6 @@
 #include <sys/mman.h>
 
 #include "../fio.h"
-#include "../os.h"
 
 static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 {

@@ -13,13 +13,13 @@
 #include <string.h>
 #include <getopt.h>
 
-#include "compiler.h"
+#include "compiler/compiler.h"
 #include "list.h"
 #include "rbtree.h"
 #include "md5.h"
 #include "crc32.h"
-#include "arch.h"
-#include "os.h"
+#include "arch/arch.h"
+#include "os/os.h"
 #include "mutex.h"
 
 #ifdef FIO_HAVE_SYSLET

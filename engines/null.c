@@ -12,7 +12,6 @@
 #include <assert.h>
 
 #include "../fio.h"
-#include "../os.h"
 
 struct null_data {
 	struct io_u **io_us;

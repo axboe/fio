@@ -15,7 +15,6 @@
 #include <sys/poll.h>
 
 #include "../fio.h"
-#include "../os.h"
 
 struct netio_data {
 	int listenfd;

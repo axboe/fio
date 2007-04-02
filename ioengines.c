@@ -17,7 +17,6 @@
 #include <assert.h>
 
 #include "fio.h"
-#include "os.h"
 
 static LIST_HEAD(engine_list);
 

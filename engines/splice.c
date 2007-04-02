@@ -13,7 +13,6 @@
 #include <sys/poll.h>
 
 #include "../fio.h"
-#include "../os.h"
 
 #ifdef FIO_HAVE_SPLICE
 

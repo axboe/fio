@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "fio.h"
-#include "os.h"
 
 static void fill_random_bytes(struct thread_data *td,
 			      unsigned char *p, unsigned int len)
