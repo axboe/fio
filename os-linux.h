@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <linux/unistd.h>
+#include <linux/raw.h>
+#include <linux/major.h>
 
 #define FIO_HAVE_LIBAIO
 #define FIO_HAVE_POSIXAIO
@@ -19,6 +21,7 @@
 #define FIO_HAVE_IOSCHED_SWITCH
 #define FIO_HAVE_ODIRECT
 #define FIO_HAVE_HUGETLB
+#define FIO_HAVE_RAWBIND
 
 #define OS_MAP_ANON		(MAP_ANONYMOUS)
 
@@ -166,6 +169,35 @@ static inline double os_random_double(os_random_state_t *rs)
 
 	drand48_r(rs, &val);
 	return val;
+}
+
+static inline void fio_lookup_raw(dev_t dev, int *majdev, int *mindev)
+{
+	struct raw_config_request rq;
+	int fd;
+
+	if (major(dev) != RAW_MAJOR)
+		return;
+
+	/*
+	 * we should be able to find /dev/rawctl or /dev/raw/rawctl
+	 */
+	fd = open("/dev/rawctl", O_RDONLY);
+	if (fd < 0) {
+		fd = open("/dev/raw/rawctl", O_RDONLY);
+		if (fd < 0)
+			return;
+	}
+
+	rq.raw_minor = minor(dev);
+	if (ioctl(fd, RAW_GETBIND, &rq) < 0) {
+		close(fd);
+		return;
+	}
+
+	close(fd);
+	*majdev = rq.block_major;
+	*mindev = rq.block_minor;
 }
 
 #endif

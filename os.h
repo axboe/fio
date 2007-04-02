@@ -56,4 +56,8 @@
 #endif
 #endif
 
+#ifndef FIO_HAVE_RAWBIND
+#define fio_lookup_raw(dev, majdev, mindev)
+#endif
+
 #endif

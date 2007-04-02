@@ -11,7 +11,7 @@
 
 static struct itimerval itimer;
 static struct list_head disk_list = LIST_HEAD_INIT(disk_list);
-static dev_t last_dev;
+static int last_majdev, last_mindev;
 
 /*
  * Cheesy number->string conversion, complete with carry rounding error.
@@ -121,7 +121,7 @@ void update_io_ticks(void)
 	}
 }
 
-static int disk_util_exists(dev_t dev)
+static int disk_util_exists(int major, int minor)
 {
 	struct list_head *entry;
 	struct disk_util *du;
@@ -129,14 +129,14 @@ static int disk_util_exists(dev_t dev)
 	list_for_each(entry, &disk_list) {
 		du = list_entry(entry, struct disk_util, list);
 
-		if (du->dev == dev)
+		if (major == du->major && minor == du->minor)
 			return 1;
 	}
 
 	return 0;
 }
 
-static void disk_util_add(dev_t dev, char *path)
+static void disk_util_add(int majdev, int mindev, char *path)
 {
 	struct disk_util *du, *__du;
 	struct list_head *entry;
@@ -146,7 +146,8 @@ static void disk_util_add(dev_t dev, char *path)
 	INIT_LIST_HEAD(&du->list);
 	sprintf(du->path, "%s/stat", path);
 	du->name = strdup(basename(path));
-	du->dev = dev;
+	du->major = majdev;
+	du->minor = mindev;
 
 	list_for_each(entry, &disk_list) {
 		__du = list_entry(entry, struct disk_util, list);
@@ -164,9 +165,9 @@ static void disk_util_add(dev_t dev, char *path)
 	list_add_tail(&du->list, &disk_list);
 }
 
-static int check_dev_match(dev_t dev, char *path)
+static int check_dev_match(int majdev, int mindev, char *path)
 {
-	unsigned int major, minor;
+	int major, minor;
 	char line[256], *p;
 	FILE *f;
 
@@ -187,7 +188,7 @@ static int check_dev_match(dev_t dev, char *path)
 		return 1;
 	}
 
-	if (((major << 8) | minor) == dev) {
+	if (majdev == major && mindev == minor) {
 		fclose(f);
 		return 0;
 	}
@@ -196,7 +197,7 @@ static int check_dev_match(dev_t dev, char *path)
 	return 1;
 }
 
-static int find_block_dir(dev_t dev, char *path)
+static int find_block_dir(int majdev, int mindev, char *path)
 {
 	struct dirent *dir;
 	struct stat st;
@@ -216,7 +217,7 @@ static int find_block_dir(dev_t dev, char *path)
 		sprintf(full_path, "%s/%s", path, dir->d_name);
 
 		if (!strcmp(dir->d_name, "dev")) {
-			if (!check_dev_match(dev, full_path)) {
+			if (!check_dev_match(majdev, mindev, full_path)) {
 				found = 1;
 				break;
 			}
@@ -230,7 +231,7 @@ static int find_block_dir(dev_t dev, char *path)
 		if (!S_ISDIR(st.st_mode) || S_ISLNK(st.st_mode))
 			continue;
 
-		found = find_block_dir(dev, full_path);
+		found = find_block_dir(majdev, mindev, full_path);
 		if (found) {
 			strcpy(path, full_path);
 			break;
@@ -245,14 +246,21 @@ static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 {
 	struct stat st;
 	char foo[PATH_MAX], tmp[PATH_MAX];
-	dev_t dev;
+	int mindev, majdev;
 	char *p;
 
 	if (!stat(f->file_name, &st)) {
-		if (S_ISBLK(st.st_mode))
-			dev = st.st_rdev;
-		else
-			dev = st.st_dev;
+		if (S_ISBLK(st.st_mode)) {
+			majdev = major(st.st_rdev);
+			mindev = minor(st.st_rdev);
+		} else if (S_ISCHR(st.st_mode)) {
+			majdev = major(st.st_rdev);
+			mindev = minor(st.st_rdev);
+			fio_lookup_raw(st.st_rdev, &majdev, &mindev);
+		} else {
+			majdev = major(st.st_dev);
+			mindev = minor(st.st_dev);
+		}
 	} else {
 		/*
 		 * must be a file, open "." in that path
@@ -264,10 +272,11 @@ static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 			return;
 		}
 
-		dev = st.st_dev;
+		majdev = major(st.st_dev);
+		mindev = minor(st.st_dev);
 	}
 
-	if (disk_util_exists(dev))
+	if (disk_util_exists(majdev, mindev))
 		return;
 
 	/*
@@ -276,13 +285,14 @@ static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 	 * cache the last lookup and compare with that before going through
 	 * everything again.
 	 */
-	if (dev == last_dev)
+	if (mindev == last_mindev && majdev == last_majdev)
 		return;
 
-	last_dev = dev;
+	last_mindev = mindev;
+	last_majdev = majdev;
 		
 	sprintf(foo, "/sys/block");
-	if (!find_block_dir(dev, foo))
+	if (!find_block_dir(majdev, mindev, foo))
 		return;
 
 	/*
@@ -305,7 +315,7 @@ static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 	if (td->o.ioscheduler && !td->sysfs_root)
 		td->sysfs_root = strdup(foo);
 
-	disk_util_add(dev, foo);
+	disk_util_add(majdev, mindev, foo);
 }
 
 void init_disk_util(struct thread_data *td)

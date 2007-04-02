@@ -648,7 +648,7 @@ struct disk_util {
 
 	char *name;
 	char path[256];
-	dev_t dev;
+	int major, minor;
 
 	struct disk_util_stat dus;
 	struct disk_util_stat last_dus;
