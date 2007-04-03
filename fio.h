@@ -647,6 +647,7 @@ struct disk_util {
 	struct list_head list;
 
 	char *name;
+	char *sysfs_root;
 	char path[256];
 	int major, minor;
 

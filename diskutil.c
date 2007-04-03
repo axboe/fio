@@ -79,7 +79,7 @@ void update_io_ticks(void)
 	}
 }
 
-static int disk_util_exists(int major, int minor)
+static struct disk_util *disk_util_exists(int major, int minor)
 {
 	struct list_head *entry;
 	struct disk_util *du;
@@ -88,10 +88,10 @@ static int disk_util_exists(int major, int minor)
 		du = list_entry(entry, struct disk_util, list);
 
 		if (major == du->major && minor == du->minor)
-			return 1;
+			return du;
 	}
 
-	return 0;
+	return NULL;
 }
 
 static void disk_util_add(int majdev, int mindev, char *path)
@@ -104,6 +104,7 @@ static void disk_util_add(int majdev, int mindev, char *path)
 	INIT_LIST_HEAD(&du->list);
 	sprintf(du->path, "%s/stat", path);
 	du->name = strdup(basename(path));
+	du->sysfs_root = path;
 	du->major = majdev;
 	du->minor = mindev;
 
@@ -204,6 +205,7 @@ static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 {
 	struct stat st;
 	char foo[PATH_MAX], tmp[PATH_MAX];
+	struct disk_util *du;
 	int mindev, majdev;
 	char *p;
 
@@ -234,8 +236,13 @@ static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 		mindev = minor(st.st_dev);
 	}
 
-	if (disk_util_exists(majdev, mindev))
+	du = disk_util_exists(majdev, mindev);
+	if (du) {
+		if (td->o.ioscheduler && !td->sysfs_root)
+			td->sysfs_root = strdup(du->sysfs_root);
+
 		return;
+	}
 
 	/*
 	 * for an fs without a device, we will repeatedly stat through
