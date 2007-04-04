@@ -23,6 +23,7 @@ static char fio_version_string[] = "fio 1.15.1";
 
 static char **ini_file;
 static int max_jobs = MAX_JOBS;
+static int dump_cmdline;
 
 struct thread_data def_thread;
 struct thread_data *threads = NULL;
@@ -84,6 +85,11 @@ static struct option long_options[FIO_NR_OPTIONS] = {
 		.name		= "cmdhelp",
 		.has_arg	= optional_argument,
 		.val		= 'c',
+	},
+	{
+		.name		= "showcmd",
+		.has_arg	= no_argument,
+		.val		= 's'
 	},
 	{
 		.name		= NULL,
@@ -381,6 +387,14 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (td == &def_thread)
 		return 0;
 
+	/*
+	 * if we are just dumping the output command line, don't add the job
+	 */
+	if (dump_cmdline) {
+		put_job(td);
+		return 0;
+	}
+
 	engine = get_engine_name(td->o.ioengine);
 	td->io_ops = load_ioengine(td, engine);
 	if (!td->io_ops) {
@@ -560,6 +574,12 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 
 		name[strlen(name) - 1] = '\0';
 
+		if (dump_cmdline) {
+			log_info("fio ");
+			if (!global)
+				log_info("--name=%s ", name);
+		}
+
 		td = get_new_job(global, &def_thread);
 		if (!td) {
 			ret = 1;
@@ -594,6 +614,8 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 			 * easier on the user.
 			 */
 			ret |= fio_option_parse(td, p);
+			if (!ret && dump_cmdline)
+				log_info("--%s ", p);
 		}
 
 		if (!ret) {
@@ -604,6 +626,9 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 			put_job(td);
 		}
 	} while (!ret);
+
+	if (dump_cmdline)
+		log_info("\n");
 
 	free(string);
 	free(name);
@@ -696,6 +721,7 @@ static void usage(void)
 	printf("\t--version\tPrint version info and exit\n");
 	printf("\t--help\t\tPrint this page\n");
 	printf("\t--cmdhelp=cmd\tPrint command help, \"all\" for all of them\n");
+	printf("\t--showcmd\tTurn a job file into command line options\n");
 }
 
 static int parse_cmd_line(int argc, char *argv[])
@@ -730,6 +756,9 @@ static int parse_cmd_line(int argc, char *argv[])
 			exit(0);
 		case 'c':
 			exit(fio_show_option_help(optarg));
+		case 's':
+			dump_cmdline = 1;
+			break;
 		case 'v':
 			printf("%s\n", fio_version_string);
 			exit(0);
@@ -812,6 +841,9 @@ int parse_options(int argc, char *argv[])
 	options_mem_free(&def_thread);
 
 	if (!thread_number) {
+		if (dump_cmdline)
+			return 0;
+
 		log_err("No jobs defined(s)\n");
 		return 1;
 	}
