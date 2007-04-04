@@ -148,8 +148,18 @@ void strip_blank_front(char **p)
 
 void strip_blank_end(char *p)
 {
-	char *s = p + strlen(p) - 1;
+	char *s;
 
+	s = strchr(p, ';');
+	if (s)
+		*s = '\0';
+	s = strchr(p, '#');
+	if (s)
+		*s = '\0';
+	if (s)
+		p = s;
+
+	s = p + strlen(p) - 1;
 	while (isspace(*s) || iscntrl(*s))
 		s--;
 
