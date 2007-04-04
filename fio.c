@@ -1209,10 +1209,8 @@ int main(int argc, char *argv[])
 	if (parse_options(argc, argv))
 		return 1;
 
-	if (!thread_number) {
-		log_err("Nothing to do\n");
-		return 1;
-	}
+	if (!thread_number)
+		return 0;
 
 	ps = sysconf(_SC_PAGESIZE);
 	if (ps < 0) {
