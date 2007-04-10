@@ -230,7 +230,7 @@ static int fio_guasi_init(struct thread_data *td)
 	maxthr = td->o.iodepth > GFIO_MIN_THREADS ? td->o.iodepth: GFIO_MIN_THREADS;
 	if (maxthr > GFIO_MAX_THREADS)
 		maxthr = GFIO_MAX_THREADS;
-	if ((ld->hctx = guasi_create(GFIO_MIN_THREADS, maxthr, 1, 0)) == NULL) {
+	if ((ld->hctx = guasi_create(GFIO_MIN_THREADS, maxthr, 1)) == NULL) {
 		td_verror(td, errno, "guasi_create");
 		free(ld);
 		return 1;
