@@ -990,6 +990,7 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		/*
 		 * thread is not dead, continue
 		 */
+		pending++;
 		continue;
 reaped:
 		if (td->o.use_thread) {
@@ -1002,6 +1003,7 @@ reaped:
 		(*nr_running)--;
 		(*m_rate) -= td->o.ratemin;
 		(*t_rate) -= td->o.rate;
+		pending--;
 
 		if (td->error)
 			exit_value++;
