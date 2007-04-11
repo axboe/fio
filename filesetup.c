@@ -283,8 +283,10 @@ static int get_file_sizes(struct thread_data *td)
 
 	for_each_file(td, f, i) {
 		if (td->io_ops->open_file(td, f)) {
-			log_err("%s\n", td->verror);
-			err = 1;
+			if (td->error != ENOENT) {
+				log_err("%s\n", td->verror);
+				err = 1;
+			}
 			clear_error(td);
 		} else
 			td->io_ops->close_file(td, f);
