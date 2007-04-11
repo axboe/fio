@@ -279,8 +279,12 @@ static int fio_netio_setup(struct thread_data *td)
 		nd->listenfd = -1;
 		td->io_ops->data = nd;
 
-		for_each_file(td, f, i)
-			f->real_file_size = -1ULL;
+		for_each_file(td, f, i) {
+			if (td->o.size)
+				f->real_file_size = td->o.size / td->o.nr_files;
+			else
+				f->real_file_size = -1ULL;
+		}
 	}
 
 	return 0;
