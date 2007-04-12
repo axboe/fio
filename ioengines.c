@@ -305,7 +305,8 @@ done:
 	get_file(f);
 	return 0;
 err:
-	td->io_ops->close_file(td, f);
+	if (td->io_ops->close_file)
+		td->io_ops->close_file(td, f);
 	return 1;
 }
 
@@ -318,4 +319,3 @@ void td_io_close_file(struct thread_data *td, struct fio_file *f)
 
 	put_file(td, f);
 }
-
