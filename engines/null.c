@@ -65,21 +65,6 @@ static int fio_null_queue(struct thread_data fio_unused *td, struct io_u *io_u)
 	return FIO_Q_QUEUED;
 }
 
-static int fio_null_setup(struct thread_data *td)
-{
-	struct fio_file *f;
-	unsigned int i;
-
-	for_each_file(td, f, i) {
-		if (td->o.size)
-			f->real_file_size = td->o.size / td->o.nr_files;
-		else
-			f->real_file_size = -1ULL;
-	}
-
-	return 0;
-}
-
 static int fio_null_open(struct thread_data fio_unused *td,
 			 struct fio_file fio_unused *f)
 {
@@ -117,7 +102,6 @@ static int fio_null_init(struct thread_data *td)
 static struct ioengine_ops ioengine = {
 	.name		= "null",
 	.version	= FIO_IOOPS_VERSION,
-	.setup		= fio_null_setup,
 	.queue		= fio_null_queue,
 	.commit		= fio_null_commit,
 	.getevents	= fio_null_getevents,

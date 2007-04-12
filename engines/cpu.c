@@ -13,21 +13,6 @@ static int fio_cpuio_queue(struct thread_data *td, struct io_u fio_unused *io_u)
 	return FIO_Q_COMPLETED;
 }
 
-static int fio_cpuio_setup(struct thread_data fio_unused *td)
-{
-	struct fio_file *f;
-	unsigned int i;
-
-	for_each_file(td, f, i) {
-		if (td->o.size)
-			f->real_file_size = td->o.size / td->o.nr_files;
-		else
-			f->real_file_size = -1ULL;
-	}
-
-	return 0;
-}
-
 static int fio_cpuio_init(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
@@ -62,7 +47,6 @@ static struct ioengine_ops ioengine = {
 	.version	= FIO_IOOPS_VERSION,
 	.queue		= fio_cpuio_queue,
 	.init		= fio_cpuio_init,
-	.setup		= fio_cpuio_setup,
 	.open_file	= fio_cpuio_open,
 	.flags		= FIO_SYNCIO | FIO_DISKLESSIO,
 };

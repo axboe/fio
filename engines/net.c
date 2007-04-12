@@ -269,8 +269,6 @@ static void fio_netio_cleanup(struct thread_data *td)
 static int fio_netio_setup(struct thread_data *td)
 {
 	struct netio_data *nd;
-	struct fio_file *f;
-	unsigned int i;
 
 	if (!td->io_ops->data) {
 		nd = malloc(sizeof(*nd));;
@@ -278,13 +276,6 @@ static int fio_netio_setup(struct thread_data *td)
 		memset(nd, 0, sizeof(*nd));
 		nd->listenfd = -1;
 		td->io_ops->data = nd;
-
-		for_each_file(td, f, i) {
-			if (td->o.size)
-				f->real_file_size = td->o.size / td->o.nr_files;
-			else
-				f->real_file_size = -1ULL;
-		}
 	}
 
 	return 0;

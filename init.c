@@ -427,6 +427,13 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (fixup_options(td))
 		goto err;
 
+	if (td->io_ops->flags & FIO_DISKLESSIO) {
+		struct fio_file *f;
+
+		for_each_file(td, f, i)
+			f->real_file_size = -1ULL;
+	}
+
 	td->mutex = fio_sem_init(0);
 
 	td->ts.clat_stat[0].min_val = td->ts.clat_stat[1].min_val = ULONG_MAX;

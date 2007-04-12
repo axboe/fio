@@ -288,8 +288,10 @@ static int get_file_sizes(struct thread_data *td)
 				err = 1;
 			}
 			clear_error(td);
-		} else
-			td->io_ops->close_file(td, f);
+		} else {
+			if (td->io_ops->close_file)
+				td->io_ops->close_file(td, f);
+		}
 
 		if (f->real_file_size == -1ULL && td->o.size)
 			f->real_file_size = td->o.size / td->o.nr_files;
@@ -498,6 +500,12 @@ void add_file(struct thread_data *td, const char *fname)
 	f = &td->files[cur_files];
 	memset(f, 0, sizeof(*f));
 	f->fd = -1;
+
+	/*
+	 * init function, io engine may not be loaded yet
+	 */
+	if (td->io_ops && (td->io_ops->flags & FIO_DISKLESSIO))
+		f->real_file_size = -1ULL;
 
 	if (td->o.directory)
 		len = sprintf(file_name, "%s/", td->o.directory);
