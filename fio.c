@@ -332,6 +332,7 @@ static void do_verify(struct thread_data *td)
 				ret = -io_u->error;
 			else if (io_u->resid) {
 				int bytes = io_u->xfer_buflen - io_u->resid;
+				struct fio_file *f = io_u->file;
 
 				/*
 				 * zero read, fail
@@ -345,8 +346,9 @@ static void do_verify(struct thread_data *td)
 				io_u->xfer_buflen = io_u->resid;
 				io_u->xfer_buf += bytes;
 				io_u->offset += bytes;
+				f->last_completed_pos = io_u->offset;
 
-				if (io_u->offset == io_u->file->real_file_size)
+				if (io_u->offset == f->real_file_size)
 					goto sync_done;
 
 				requeue_io_u(td, &io_u);
@@ -446,6 +448,7 @@ static void do_io(struct thread_data *td)
 				ret = -io_u->error;
 			else if (io_u->resid) {
 				int bytes = io_u->xfer_buflen - io_u->resid;
+				struct fio_file *f = io_u->file;
 
 				/*
 				 * zero read, fail
@@ -459,8 +462,9 @@ static void do_io(struct thread_data *td)
 				io_u->xfer_buflen = io_u->resid;
 				io_u->xfer_buf += bytes;
 				io_u->offset += bytes;
+				f->last_completed_pos = io_u->offset;
 
-				if (io_u->offset == io_u->file->real_file_size)
+				if (io_u->offset == f->real_file_size)
 					goto sync_done;
 
 				requeue_io_u(td, &io_u);

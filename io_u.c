@@ -588,6 +588,7 @@ set_file:
 	/*
 	 * Set io data pointers.
 	 */
+	io_u->endpos = io_u->offset + io_u->buflen;
 out:
 	io_u->xfer_buf = io_u->buf;
 	io_u->xfer_buflen = io_u->buflen;
@@ -645,7 +646,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		td->zone_bytes += bytes;
 		td->this_io_bytes[idx] += bytes;
 
-		io_u->file->last_completed_pos = io_u->offset + io_u->buflen;
+		io_u->file->last_completed_pos = io_u->endpos;
 
 		msec = mtime_since(&io_u->issue_time, &icd->time);
 
