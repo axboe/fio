@@ -662,7 +662,11 @@ static int switch_ioscheduler(struct thread_data *td)
 
 	f = fopen(tmp, "r+");
 	if (!f) {
-		td_verror(td, errno, "fopen");
+		if (errno == ENOENT) {
+			log_err("fio: os or kernel doesn't support IO scheduler switching\n");
+			return 0;
+		}
+		td_verror(td, errno, "fopen iosched");
 		return 1;
 	}
 
