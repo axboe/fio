@@ -181,7 +181,7 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 			log_err("fio: only root may flush block devices. Cache flush bypassed!\n");
 			ret = 0;
 		}
-	} else if (f->filetype == FIO_TYPE_CHAR)
+	} else if (f->filetype == FIO_TYPE_CHAR || f->filetype == FIO_TYPE_PIPE)
 		ret = 0;
 
 	if (ret < 0) {
@@ -485,6 +485,8 @@ static void get_file_type(struct fio_file *f)
 			f->filetype = FIO_TYPE_BD;
 		else if (S_ISCHR(sb.st_mode))
 			f->filetype = FIO_TYPE_CHAR;
+		else if (S_ISFIFO(sb.st_mode))
+			f->filetype = FIO_TYPE_PIPE;
 	}
 }
 
