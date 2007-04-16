@@ -200,7 +200,16 @@ void generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 
 int generic_open_file(struct thread_data *td, struct fio_file *f)
 {
+	int is_std = 0;
 	int flags = 0;
+
+	if (!strcmp(f->file_name, "-")) {
+		if (td_rw(td)) {
+			log_err("fio: can't read/write to stdin/out\n");
+			return 1;
+		}
+		is_std = 1;
+	}
 
 	if (td->o.odirect)
 		flags |= OS_O_DIRECT;
@@ -213,14 +222,20 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 		if (f->filetype == FIO_TYPE_FILE)
 			flags |= O_CREAT;
 
-		f->fd = open(f->file_name, flags, 0600);
+		if (is_std)
+			f->fd = dup(STDOUT_FILENO);
+		else
+			f->fd = open(f->file_name, flags, 0600);
 	} else {
 		if (f->filetype == FIO_TYPE_CHAR)
 			flags |= O_RDWR;
 		else
 			flags |= O_RDONLY;
 
-		f->fd = open(f->file_name, flags);
+		if (is_std)
+			f->fd = dup(STDIN_FILENO);
+		else
+			f->fd = open(f->file_name, flags);
 	}
 
 	if (f->fd == -1) {
@@ -478,7 +493,10 @@ static void get_file_type(struct fio_file *f)
 {
 	struct stat sb;
 
-	f->filetype = FIO_TYPE_FILE;
+	if (!strcmp(f->file_name, "-"))
+		f->filetype = FIO_TYPE_PIPE;
+	else
+		f->filetype = FIO_TYPE_FILE;
 
 	if (!lstat(f->file_name, &sb)) {
 		if (S_ISBLK(sb.st_mode))
@@ -536,7 +554,8 @@ void put_file(struct thread_data *td, struct fio_file *f)
 	if (--f->references)
 		return;
 
-	if (should_fsync(td) && td->o.fsync_on_close)
+	if (should_fsync(td) && td->o.fsync_on_close &&
+	    (f->filetype == FIO_TYPE_FILE || f->filetype == FIO_TYPE_BD))
 		fsync(f->fd);
 
 	if (td->io_ops->close_file)

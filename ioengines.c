@@ -271,6 +271,13 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
+	if (f->filetype == FIO_TYPE_PIPE) {
+		if (td_random(td)) {
+			log_err("fio: can't seek on pipes (no random io)\n");
+			goto err;
+		}
+	}
+
 	f->last_free_lookup = 0;
 	f->last_completed_pos = 0;
 	f->last_pos = 0;
@@ -283,7 +290,9 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 	if (td->o.invalidate_cache && file_invalidate_cache(td, f))
 		goto err;
 
-	if (td->o.fadvise_hint) {
+	if (td->o.fadvise_hint &&
+	    (f->filetype == FIO_TYPE_BD || f->filetype == FIO_TYPE_FILE)) {
+		
 		int flags;
 
 		if (td_random(td))

@@ -211,7 +211,9 @@ filename=str	Fio normally makes up a filename based on the job name,
 		ioengine is file based, you can specify a number of files
 		by seperating the names with a ':' colon. So if you wanted
 		a job to open /dev/sda and /dev/sdb as the two working files,
-		you would use filename=/dev/sda:/dev/sdb
+		you would use filename=/dev/sda:/dev/sdb. '-' is a reserved
+		name, meaning stdin or stdout. Which of the two depends
+		on the read/write direction set.
 
 opendir=str	Tell fio to recursively add any file it can find in this
 		directory and down the file system tree.
