@@ -413,6 +413,7 @@ struct thread_options {
 	unsigned int group_reporting;
 	unsigned int fadvise_hint;
 	unsigned int zero_buffers;
+	unsigned int time_based;
 
 	char *read_iolog_file;
 	char *write_iolog_file;

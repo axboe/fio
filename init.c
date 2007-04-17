@@ -274,6 +274,11 @@ static int fixup_options(struct thread_data *td)
 		return 1;
 	}
 
+	if (!o->timeout && o->time_based) {
+		log_err("fio: time_based requires a runtime/timeout setting\n");
+		o->time_based = 0;
+	}
+
 	return 0;
 }
 

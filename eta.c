@@ -118,12 +118,18 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 		bytes_total /= (td->o.zone_skip / td->o.zone_size);
 
 	if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING) {
-		double perc;
+		double perc, perc_t;
 
 		bytes_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE];
 		perc = (double) bytes_done / (double) bytes_total;
 		if (perc > 1.0)
 			perc = 1.0;
+
+		if (td->o.time_based) {
+			perc_t = (double) elapsed / (double) td->o.timeout;
+			if (perc_t < perc)
+				perc = perc_t;
+		}
 
 		eta_sec = (unsigned long) (elapsed * (1.0 / perc)) - elapsed;
 

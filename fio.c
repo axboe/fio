@@ -751,6 +751,7 @@ static void *thread_main(void *data)
 	unsigned long long runtime[2];
 	struct thread_data *td = data;
 	unsigned long elapsed;
+	struct timeval t;
 	int clear_state;
 
 	if (!td->o.use_thread)
@@ -824,7 +825,7 @@ static void *thread_main(void *data)
 
 	runtime[0] = runtime[1] = 0;
 	clear_state = 0;
-	while (td->o.loops--) {
+	while (td->o.time_based || td->o.loops--) {
 		fio_gettime(&td->start, NULL);
 		memcpy(&td->ts.stat_sample_time, &td->start, sizeof(td->start));
 
@@ -858,6 +859,10 @@ static void *thread_main(void *data)
 		}
 		
 		if (td->error || td->terminate)
+			break;
+
+		fio_gettime(&t, NULL);
+		if (runtime_exceeded(td, &t))
 			break;
 
 		if (td->o.verify == VERIFY_NONE)

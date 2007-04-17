@@ -478,6 +478,12 @@ static struct fio_option options[] = {
 		.def	= "0",
 	},
 	{
+		.name	= "time_based",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(time_based),
+		.help	= "Keep running until runtime/timeout is met",
+	},
+	{
 		.name	= "mem",
 		.alias	= "iomem",
 		.type	= FIO_OPT_STR,
