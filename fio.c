@@ -35,6 +35,7 @@
 #include <sys/mman.h>
 
 #include "fio.h"
+#include "hash.h"
 
 unsigned long page_mask;
 unsigned long page_size;
@@ -595,11 +596,11 @@ static void cleanup_io_u(struct thread_data *td)
  */
 static void fill_io_buf(struct thread_data *td, struct io_u *io_u, int max_bs)
 {
-	int *ptr = io_u->buf;
+	long *ptr = io_u->buf;
 
 	if (!td->o.zero_buffers) {
 		while ((void *) ptr - io_u->buf < max_bs) {
-			*ptr = rand() * 0x9e370001;
+			*ptr = rand() * GOLDEN_RATIO_PRIME;
 			ptr++;
 		}
 	} else
