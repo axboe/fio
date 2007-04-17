@@ -641,7 +641,7 @@ static int init_io_u(struct thread_data *td)
 		INIT_LIST_HEAD(&io_u->list);
 
 		io_u->buf = p + max_bs * i;
-		if (td_write(td) || td_rw(td))
+		if (td_write(td))
 			fill_rand_buf(io_u, max_bs);
 
 		io_u->index = i;

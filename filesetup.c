@@ -222,7 +222,7 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	if (td->o.sync_io)
 		flags |= O_SYNC;
 
-	if (td_write(td) || td_rw(td)) {
+	if (td_write(td)) {
 		flags |= O_RDWR;
 
 		if (f->filetype == FIO_TYPE_FILE)
