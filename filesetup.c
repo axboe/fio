@@ -554,8 +554,7 @@ void put_file(struct thread_data *td, struct fio_file *f)
 	if (--f->references)
 		return;
 
-	if (should_fsync(td) && td->o.fsync_on_close &&
-	    (f->filetype == FIO_TYPE_FILE || f->filetype == FIO_TYPE_BD))
+	if (should_fsync(td) && td->o.fsync_on_close)
 		fsync(f->fd);
 
 	if (td->io_ops->close_file)
