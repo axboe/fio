@@ -171,13 +171,13 @@ static inline double os_random_double(os_random_state_t *rs)
 	return val;
 }
 
-static inline void fio_lookup_raw(dev_t dev, int *majdev, int *mindev)
+static inline int fio_lookup_raw(dev_t dev, int *majdev, int *mindev)
 {
 	struct raw_config_request rq;
 	int fd;
 
 	if (major(dev) != RAW_MAJOR)
-		return;
+		return 1;
 
 	/*
 	 * we should be able to find /dev/rawctl or /dev/raw/rawctl
@@ -186,18 +186,19 @@ static inline void fio_lookup_raw(dev_t dev, int *majdev, int *mindev)
 	if (fd < 0) {
 		fd = open("/dev/raw/rawctl", O_RDONLY);
 		if (fd < 0)
-			return;
+			return 1;
 	}
 
 	rq.raw_minor = minor(dev);
 	if (ioctl(fd, RAW_GETBIND, &rq) < 0) {
 		close(fd);
-		return;
+		return 1;
 	}
 
 	close(fd);
 	*majdev = rq.block_major;
 	*mindev = rq.block_minor;
+	return 0;
 }
 
 #endif

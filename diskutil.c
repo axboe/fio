@@ -209,15 +209,18 @@ static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 	int mindev, majdev;
 	char *p;
 
-	if (!stat(f->file_name, &st)) {
+	if (!lstat(f->file_name, &st)) {
 		if (S_ISBLK(st.st_mode)) {
 			majdev = major(st.st_rdev);
 			mindev = minor(st.st_rdev);
 		} else if (S_ISCHR(st.st_mode)) {
 			majdev = major(st.st_rdev);
 			mindev = minor(st.st_rdev);
-			fio_lookup_raw(st.st_rdev, &majdev, &mindev);
-		} else {
+			if (fio_lookup_raw(st.st_rdev, &majdev, &mindev))
+				return;
+		} else if (S_ISFIFO(st.st_mode))
+			return;
+		else {
 			majdev = major(st.st_dev);
 			mindev = minor(st.st_dev);
 		}
