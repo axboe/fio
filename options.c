@@ -827,6 +827,12 @@ static struct fio_option options[] = {
 		.help	= "Do reporting on a per-group basis",
 	},
 	{
+		.name	= "zero_buffers",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(zero_buffers),
+		.help	= "Init IO buffers to all zeroes",
+	},
+	{
 		.name = NULL,
 	},
 };
