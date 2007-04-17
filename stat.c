@@ -225,6 +225,7 @@ static void show_thread_status(struct thread_stat *ts,
 	stat_calc_lat(ts, io_u_lat);
 
 	log_info("  IO depths    : 1=%3.1f%%, 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%, 16=%3.1f%%, 32=%3.1f%%, >=64=%3.1f%%\n", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
+	log_info("     issued r/w: total=%lu/%lu, short=%lu/%lu\n", ts->total_io_u[0], ts->total_io_u[1], ts->short_io_u[0], ts->short_io_u[1]);
 
 	log_info("     lat (msec): 2=%3.2f%%, 4=%3.2f%%, 10=%3.2f%%, 20=%3.2f%%, 50=%3.2f%%, 100=%3.2f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
 	log_info("     lat (msec): 250=%3.2f%%, 500=%3.2f%%, 750=%3.2f%%, 1000=%3.2f%%, >=2000=%3.2f%%\n", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
@@ -431,8 +432,10 @@ void show_run_stats(void)
 		for (k = 0; k < FIO_IO_U_LAT_NR; k++)
 			ts->io_u_lat[k] += td->ts.io_u_lat[k];
 
-		for (k = 0; k <= DDIR_WRITE; k++)
+		for (k = 0; k <= DDIR_WRITE; k++) {
 			ts->total_io_u[k] += td->ts.total_io_u[k];
+			ts->short_io_u[k] += td->ts.short_io_u[k];
+		}
 
 		ts->total_run_time += td->ts.total_run_time;
 	}

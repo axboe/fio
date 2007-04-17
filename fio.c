@@ -348,6 +348,8 @@ static void do_verify(struct thread_data *td)
 				io_u->offset += bytes;
 				f->last_completed_pos = io_u->offset;
 
+				td->ts.short_io_u[io_u->ddir]++;
+
 				if (io_u->offset == f->real_file_size)
 					goto sync_done;
 
@@ -463,6 +465,8 @@ static void do_io(struct thread_data *td)
 				io_u->xfer_buf += bytes;
 				io_u->offset += bytes;
 				f->last_completed_pos = io_u->offset;
+
+				td->ts.short_io_u[io_u->ddir]++;
 
 				if (io_u->offset == f->real_file_size)
 					goto sync_done;
