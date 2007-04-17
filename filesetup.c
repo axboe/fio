@@ -209,6 +209,12 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 			return 1;
 		}
 		is_std = 1;
+
+		/*
+		 * move output logging to stderr, if we are writing to stdout
+		 */
+		if (td_write(td))
+			f_out = stderr;
 	}
 
 	if (td->o.odirect)
