@@ -53,72 +53,99 @@ int fio_pin_memory(void)
 	return 0;
 }
 
+static int alloc_mem_shm(struct thread_data *td)
+{
+	int flags = IPC_CREAT | SHM_R | SHM_W;
+
+	if (td->o.mem_type == MEM_SHMHUGE)
+		flags |= SHM_HUGETLB;
+
+	td->shm_id = shmget(IPC_PRIVATE, td->orig_buffer_size, flags);
+	if (td->shm_id < 0) {
+		td_verror(td, errno, "shmget");
+		if (geteuid() != 0 && errno == ENOMEM)
+			log_err("fio: you may need to run this job as root\n");
+		if (errno == EINVAL && td->o.mem_type == MEM_SHMHUGE)
+			log_err("fio: check that you have free huge pages and that hugepage-size is correct.\n");
+		
+		return 1;
+	}
+
+	td->orig_buffer = shmat(td->shm_id, NULL, 0);
+	if (td->orig_buffer == (void *) -1) {
+		td_verror(td, errno, "shmat");
+		td->orig_buffer = NULL;
+		return 1;
+	}
+
+	return 0;
+}
+
+static int alloc_mem_mmap(struct thread_data *td)
+{
+	int flags = MAP_PRIVATE;
+
+	td->mmapfd = 0;
+
+	if (td->mmapfile) {
+		td->mmapfd = open(td->mmapfile, O_RDWR|O_CREAT, 0644);
+
+		if (td->mmapfd < 0) {
+			td_verror(td, errno, "open mmap file");
+			td->orig_buffer = NULL;
+			return 1;
+		}
+		if (ftruncate(td->mmapfd, td->orig_buffer_size) < 0) {
+			td_verror(td, errno, "truncate mmap file");
+			td->orig_buffer = NULL;
+			return 1;
+		}
+	} else
+		flags |= OS_MAP_ANON;
+
+	td->orig_buffer = mmap(NULL, td->orig_buffer_size, PROT_READ | PROT_WRITE, flags, td->mmapfd, 0);
+	if (td->orig_buffer == MAP_FAILED) {
+		td_verror(td, errno, "mmap");
+		td->orig_buffer = NULL;
+		if (td->mmapfd) {
+			close(td->mmapfd);
+			unlink(td->mmapfile);
+		}
+			
+		return 1;
+	}
+
+	return 0;
+}
+
+static int alloc_mem_malloc(struct thread_data *td)
+{
+	td->orig_buffer = malloc(td->orig_buffer_size);
+	if (td->orig_buffer)
+		return 0;
+
+	return 1;
+}
+
 /*
  * Setup the buffer area we need for io.
  */
 int allocate_io_mem(struct thread_data *td)
 {
+	int ret = 0;
+
 	if (td->o.mem_type == MEM_MALLOC)
-		td->orig_buffer = malloc(td->orig_buffer_size);
-	else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE) {
-		int flags = IPC_CREAT | SHM_R | SHM_W;
-
-		if (td->o.mem_type == MEM_SHMHUGE)
-			flags |= SHM_HUGETLB;
-
-		td->shm_id = shmget(IPC_PRIVATE, td->orig_buffer_size, flags);
-		if (td->shm_id < 0) {
-			td_verror(td, errno, "shmget");
-			if (geteuid() != 0 && errno == ENOMEM)
-				log_err("fio: you may need to run this job as root\n");
-			if (errno == EINVAL && td->o.mem_type == MEM_SHMHUGE)
-				log_err("fio: check that you have free huge pages and that hugepage-size is correct.\n");
-			
-			return 1;
-		}
-
-		td->orig_buffer = shmat(td->shm_id, NULL, 0);
-		if (td->orig_buffer == (void *) -1) {
-			td_verror(td, errno, "shmat");
-			td->orig_buffer = NULL;
-			return 1;
-		}
-	} else if (td->o.mem_type == MEM_MMAP ||
-		   td->o.mem_type == MEM_MMAPHUGE) {
-		int flags = MAP_PRIVATE;
-
-		td->mmapfd = 0;
-
-		if (td->mmapfile) {
-			td->mmapfd = open(td->mmapfile, O_RDWR|O_CREAT, 0644);
-
-			if (td->mmapfd < 0) {
-				td_verror(td, errno, "open mmap file");
-				td->orig_buffer = NULL;
-				return 1;
-			}
-			if (ftruncate(td->mmapfd, td->orig_buffer_size) < 0) {
-				td_verror(td, errno, "truncate mmap file");
-				td->orig_buffer = NULL;
-				return 1;
-			}
-		} else
-			flags |= OS_MAP_ANON;
-
-		td->orig_buffer = mmap(NULL, td->orig_buffer_size, PROT_READ | PROT_WRITE, flags, td->mmapfd, 0);
-		if (td->orig_buffer == MAP_FAILED) {
-			td_verror(td, errno, "mmap");
-			td->orig_buffer = NULL;
-			if (td->mmapfd) {
-				close(td->mmapfd);
-				unlink(td->mmapfile);
-			}
-				
-			return 1;
-		}
+		ret = alloc_mem_malloc(td);
+	else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE)
+		ret = alloc_mem_shm(td);
+	else if (td->o.mem_type == MEM_MMAP || td->o.mem_type == MEM_MMAPHUGE)
+		ret = alloc_mem_mmap(td);
+	else {
+		log_err("fio: bad mem type: %d\n", td->o.mem_type);
+		ret = 1;
 	}
 
-	return 0;
+	return ret;
 }
 
 void free_io_mem(struct thread_data *td)
