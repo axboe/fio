@@ -110,11 +110,19 @@ static inline long umem_add(unsigned long *uptr, unsigned long inc)
 #endif /* FIO_HAVE_SYSLET */
 
 enum {
+	IOPRIO_CLASS_NONE,
+	IOPRIO_CLASS_RT,
+	IOPRIO_CLASS_BE,
+	IOPRIO_CLASS_IDLE,
+};
+
+enum {
 	IOPRIO_WHO_PROCESS = 1,
 	IOPRIO_WHO_PGRP,
 	IOPRIO_WHO_USER,
 };
 
+#define IOPRIO_BITS		16
 #define IOPRIO_CLASS_SHIFT	13
 
 #ifndef BLKGETSIZE64

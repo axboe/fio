@@ -64,6 +64,13 @@ static int str_lockmem_cb(void fio_unused *data, unsigned long *val)
 static int str_prioclass_cb(void *data, unsigned int *val)
 {
 	struct thread_data *td = data;
+	unsigned short mask;
+
+	/*
+	 * mask off old class bits, str_prio_cb() may have set a default class
+	 */
+	mask = (1 << IOPRIO_CLASS_SHIFT) - 1;
+	td->ioprio &= mask;
 
 	td->ioprio |= *val << IOPRIO_CLASS_SHIFT;
 	return 0;
@@ -74,6 +81,13 @@ static int str_prio_cb(void *data, unsigned int *val)
 	struct thread_data *td = data;
 
 	td->ioprio |= *val;
+
+	/*
+	 * If no class is set, assume BE
+	 */
+	if ((td->ioprio >> IOPRIO_CLASS_SHIFT) == 0)
+		td->ioprio |= IOPRIO_CLASS_BE << IOPRIO_CLASS_SHIFT;
+
 	return 0;
 }
 #endif
