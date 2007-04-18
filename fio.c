@@ -308,6 +308,7 @@ static void do_verify(struct thread_data *td)
 
 		if (runtime_exceeded(td, &io_u->start_time)) {
 			put_io_u(td, io_u);
+			td->terminate = 1;
 			break;
 		}
 
@@ -438,6 +439,7 @@ static void do_io(struct thread_data *td)
 
 		if (runtime_exceeded(td, &s)) {
 			put_io_u(td, io_u);
+			td->terminate = 1;
 			break;
 		}
 
@@ -751,7 +753,6 @@ static void *thread_main(void *data)
 	unsigned long long runtime[2];
 	struct thread_data *td = data;
 	unsigned long elapsed;
-	struct timeval t;
 	int clear_state;
 
 	if (!td->o.use_thread)
@@ -859,10 +860,6 @@ static void *thread_main(void *data)
 		}
 		
 		if (td->error || td->terminate)
-			break;
-
-		fio_gettime(&t, NULL);
-		if (runtime_exceeded(td, &t))
 			break;
 
 		if (td->o.verify == VERIFY_NONE)
