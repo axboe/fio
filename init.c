@@ -790,7 +790,11 @@ static int parse_cmd_line(int argc, char *argv[])
 				td = NULL;
 			}
 			if (!td) {
-				int global = !strncmp(val, "global", 6);
+				int global = 0;
+
+				if (strncmp(opt, "name", 4) ||
+				    !strncmp(val, "global", 6))
+					global = 1;
 
 				td = get_new_job(global, &def_thread);
 				if (!td)
