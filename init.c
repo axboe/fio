@@ -555,6 +555,7 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 	FILE *f;
 	char *p;
 	int ret = 0, stonewall;
+	int first_sect = 1;
 
 	f = fopen(file, "r");
 	if (!f) {
@@ -587,9 +588,11 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 		name[strlen(name) - 1] = '\0';
 
 		if (dump_cmdline) {
-			log_info("fio ");
+			if (first_sect)
+				log_info("fio ");
 			if (!global)
 				log_info("--name=%s ", name);
+			first_sect = 0;
 		}
 
 		td = get_new_job(global, &def_thread);
