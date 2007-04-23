@@ -14,7 +14,9 @@ Source
 
 fio resides in a git repo, the canonical place is:
 
-git://brick.kernel.dk/data/git/fio.git
+git://git.kernel.dk/data/git/fio.git
+
+The http protocol also works, path is the same.
 
 Snapshots are frequently generated and they include the git meta data as
 well. You can download them here:
