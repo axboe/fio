@@ -17,7 +17,7 @@
 #include "fio.h"
 #include "parse.h"
 
-static char fio_version_string[] = "fio 1.15.2";
+static char fio_version_string[] = "fio 1.16";
 
 #define FIO_RANDSEED		(0xb1899bedUL)
 
