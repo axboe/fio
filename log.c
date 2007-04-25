@@ -140,6 +140,7 @@ static int init_iolog_read(struct thread_data *td)
 		}
 
 		ipo = malloc(sizeof(*ipo));
+		memset(ipo, 0, sizeof(*ipo));
 		INIT_LIST_HEAD(&ipo->list);
 		ipo->offset = offset;
 		ipo->len = bytes;
@@ -170,6 +171,11 @@ static int init_iolog_read(struct thread_data *td)
 static int init_iolog_write(struct thread_data *td)
 {
 	FILE *f;
+
+	if (td->o.nr_files > 1) {
+		log_err("fio: write_iolog only works with 1 file currently\n");
+		return 1;
+	}
 
 	f = fopen(td->o.write_iolog_file, "w+");
 	if (!f) {
