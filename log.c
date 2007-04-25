@@ -19,6 +19,11 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 		io_u->buflen = ipo->len;
 		io_u->ddir = ipo->ddir;
 		io_u->file = ipo->file;
+		/*
+		 * work around, this needs a format change to work for > 1 file
+		 */
+		if (!io_u->file)
+			io_u->file = &td->files[0];
 		free(ipo);
 		return 0;
 	}

@@ -404,7 +404,6 @@ struct thread_options {
 	unsigned int numjobs;
 	os_cpu_mask_t cpumask;
 	unsigned int iolog;
-	unsigned int read_iolog;
 	unsigned int rwmixcycle;
 	unsigned int rwmix[2];
 	unsigned int nice;

@@ -289,7 +289,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * If using an iolog, grab next piece if any available.
 	 */
-	if (td->o.read_iolog)
+	if (td->o.read_iolog_file)
 		return read_iolog_get(td, io_u);
 
 	/*
