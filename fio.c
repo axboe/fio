@@ -645,6 +645,8 @@ static int init_io_u(struct thread_data *td)
 
 	p = ALIGN(td->orig_buffer);
 	for (i = 0; i < max_units; i++) {
+		if (td->terminate)
+			return 1;
 		io_u = malloc(sizeof(*io_u));
 		memset(io_u, 0, sizeof(*io_u));
 		INIT_LIST_HEAD(&io_u->list);
@@ -770,32 +772,6 @@ static void *thread_main(void *data)
 	INIT_LIST_HEAD(&td->io_hist_list);
 	td->io_hist_tree = RB_ROOT;
 
-	if (init_io_u(td))
-		goto err_sem;
-
-	if (fio_setaffinity(td) == -1) {
-		td_verror(td, errno, "cpu_set_affinity");
-		goto err_sem;
-	}
-
-	if (init_iolog(td))
-		goto err_sem;
-
-	if (td->ioprio) {
-		if (ioprio_set(IOPRIO_WHO_PROCESS, 0, td->ioprio) == -1) {
-			td_verror(td, errno, "ioprio_set");
-			goto err_sem;
-		}
-	}
-
-	if (nice(td->o.nice) == -1) {
-		td_verror(td, errno, "nice");
-		goto err_sem;
-	}
-
-	if (td->o.ioscheduler && switch_ioscheduler(td))
-		goto err_sem;
-
 	td_set_runstate(td, TD_INITIALIZED);
 	fio_sem_up(startup_sem);
 	fio_sem_down(td->mutex);
@@ -805,6 +781,32 @@ static void *thread_main(void *data)
 	 * eating a file descriptor
 	 */
 	fio_sem_remove(td->mutex);
+
+	if (init_io_u(td))
+		goto err;
+
+	if (fio_setaffinity(td) == -1) {
+		td_verror(td, errno, "cpu_set_affinity");
+		goto err;
+	}
+
+	if (init_iolog(td))
+		goto err;
+
+	if (td->ioprio) {
+		if (ioprio_set(IOPRIO_WHO_PROCESS, 0, td->ioprio) == -1) {
+			td_verror(td, errno, "ioprio_set");
+			goto err;
+		}
+	}
+
+	if (nice(td->o.nice) == -1) {
+		td_verror(td, errno, "nice");
+		goto err;
+	}
+
+	if (td->o.ioscheduler && switch_ioscheduler(td))
+		goto err;
 
 	if (!td->o.create_serialize && setup_files(td))
 		goto err;
@@ -913,9 +915,6 @@ err:
 	options_mem_free(td);
 	td_set_runstate(td, TD_EXITED);
 	return (void *) (unsigned long) td->error;
-err_sem:
-	fio_sem_up(startup_sem);
-	goto err;
 }
 
 /*
