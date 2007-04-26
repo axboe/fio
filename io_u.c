@@ -265,6 +265,9 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 	assert((io_u->flags & IO_U_F_FREE) == 0);
 	io_u->flags |= IO_U_F_FREE;
 
+	if (io_u->file)
+		put_file(td, io_u->file);
+
 	io_u->file = NULL;
 	list_del(&io_u->list);
 	list_add(&io_u->list, &td->io_u_freelist);
@@ -540,12 +543,14 @@ struct io_u *get_io_u(struct thread_data *td)
 
 set_file:
 		io_u->file = f;
+		get_file(f);
 
 		if (!fill_io_u(td, io_u))
 			break;
 
 		/*
-		 * No more to do for this file, close it
+		 * td_io_close() does a put_file() as well, so no need to
+		 * do that here.
 		 */
 		io_u->file = NULL;
 		td_io_close_file(td, f);
@@ -626,8 +631,6 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 	assert(io_u->flags & IO_U_F_FLIGHT);
 	io_u->flags &= ~IO_U_F_FLIGHT;
-
-	put_file(td, io_u->file);
 
 	if (io_u->ddir == DDIR_SYNC) {
 		td->last_was_sync = 1;

@@ -207,9 +207,6 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	ret = td->io_ops->queue(td, io_u);
 
-	if (ret == FIO_Q_QUEUED || ret == FIO_Q_COMPLETED)
-		get_file(io_u->file);
-
 	if (ret == FIO_Q_QUEUED) {
 		int r;
 
