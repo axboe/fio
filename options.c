@@ -852,6 +852,15 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(zero_buffers),
 		.help	= "Init IO buffers to all zeroes",
 	},
+#ifdef FIO_HAVE_DISK_UTIL
+	{
+		.name	= "disk_util",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(do_disk_util),
+		.help	= "Log disk utilization stats",
+		.def	= "1",
+	},
+#endif
 	{
 		.name = NULL,
 	},

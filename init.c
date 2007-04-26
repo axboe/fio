@@ -669,10 +669,6 @@ static int fill_def_thread(void)
 	def_thread.o.write_bw_log = write_bw_log;
 	def_thread.o.write_lat_log = write_lat_log;
 
-#ifdef FIO_HAVE_DISK_UTIL
-	def_thread.o.do_disk_util = 1;
-#endif
-
 	return 0;
 }
 

@@ -313,6 +313,9 @@ void show_disk_util(void)
 	struct disk_util *du;
 	double util;
 
+	if (list_empty(&disk_list))
+		return;
+
 	log_info("\nDisk stats (read/write):\n");
 
 	list_for_each(entry, &disk_list) {
