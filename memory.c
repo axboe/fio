@@ -145,6 +145,9 @@ int allocate_io_mem(struct thread_data *td)
 		ret = 1;
 	}
 
+	if (ret)
+		td_verror(td, ENOMEM, "iomem allocation");
+
 	return ret;
 }
 
