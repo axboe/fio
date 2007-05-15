@@ -158,7 +158,7 @@ static int init_iolog_read(struct thread_data *td)
 	else if (reads && !writes)
 		td->o.td_ddir = TD_DDIR_READ;
 	else if (!reads && writes)
-		td->o.td_ddir = TD_DDIR_READ;
+		td->o.td_ddir = TD_DDIR_WRITE;
 	else
 		td->o.td_ddir = TD_DDIR_RW;
 
