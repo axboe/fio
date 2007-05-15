@@ -100,6 +100,7 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 
 	rw = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
 	ios[rw]++;
+	td->o.size += t->bytes;
 	store_ipo(td, t->sector, t->bytes, rw, ttime);
 }
 
@@ -119,6 +120,8 @@ int load_blktrace(struct thread_data *td, const char *filename)
 		td_verror(td, errno, "open blktrace file");
 		return 1;
 	}
+
+	td->o.size = 0;
 
 	ios[0] = ios[1] = 0;
 	ttime = 0;

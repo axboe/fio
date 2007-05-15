@@ -618,7 +618,12 @@ write_iolog=str	Write the issued io patterns to the specified file. See
 
 read_iolog=str	Open an iolog with the specified file name and replay the
 		io patterns it contains. This can be used to store a
-		workload and replay it sometime later.
+		workload and replay it sometime later. The iolog given
+		may also be a blktrace binary file, which allows fio
+		to replay a workload captured by blktrace. See blktrace
+		for how to capture such logging data. For blktrace replay,
+		the file needs to be turned into a blkparse binary data
+		file first (blktrace <device> -d file_for_fio.bin).
 
 write_bw_log	If given, write a bandwidth log of the jobs in this job
 		file. Can be used to store data of the bandwidth of the
