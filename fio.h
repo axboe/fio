@@ -88,6 +88,7 @@ struct io_piece {
 	unsigned long long offset;
 	unsigned long len;
 	enum fio_ddir ddir;
+	unsigned long delay;
 };
 
 #ifdef FIO_HAVE_SYSLET
