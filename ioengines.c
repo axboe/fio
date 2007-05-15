@@ -192,6 +192,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	if (td->io_ops->flags & FIO_SYNCIO) {
 		fio_gettime(&io_u->issue_time, NULL);
+		memcpy(&td->last_issue, &io_u->issue_time, sizeof(struct timeval));
 
 		/*
 		 * for a sync engine, set the timeout upfront
@@ -220,6 +221,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	if ((td->io_ops->flags & FIO_SYNCIO) == 0) {
 		fio_gettime(&io_u->issue_time, NULL);
+		memcpy(&td->last_issue, &io_u->issue_time, sizeof(struct timeval));
 
 		/*
 		 * async engine, set the timeout here

@@ -110,9 +110,10 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
  */
 int load_blktrace(struct thread_data *td, const char *filename)
 {
-	unsigned long long ttime;
+	unsigned long long ttime, delay;
 	struct blk_io_trace t;
 	unsigned long ios[2];
+	unsigned int cpu;
 	int fd;
 
 	fd = open(filename, O_RDONLY);
@@ -125,6 +126,7 @@ int load_blktrace(struct thread_data *td, const char *filename)
 
 	ios[0] = ios[1] = 0;
 	ttime = 0;
+	cpu = 0;
 	do {
 		/*
 		 * Once this is working fully, I'll add a layer between
@@ -157,10 +159,16 @@ int load_blktrace(struct thread_data *td, const char *filename)
 			td_verror(td, ret, "blktrace lseek");
 			goto err;
 		}
-		if (!ttime)
+		if (!ttime) {
 			ttime = t.time;
-		handle_trace(td, &t, t.time - ttime, ios);
+			cpu = t.cpu;
+		}
+		delay = 0;
+		if (cpu == t.cpu)
+			delay = t.time - ttime;
+		handle_trace(td, &t, delay, ios);
 		ttime = t.time;
+		cpu = t.cpu;
 	} while (1);
 
 	close(fd);

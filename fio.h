@@ -522,6 +522,7 @@ struct thread_data {
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
 	struct timeval rw_end[2];
+	struct timeval last_issue;
 	unsigned int rw_end_set[2];
 
 	/*

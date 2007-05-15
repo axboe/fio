@@ -8,6 +8,24 @@ void write_iolog_put(struct thread_data *td, struct io_u *io_u)
 	fprintf(td->iolog_f, "%u,%llu,%lu\n", io_u->ddir, io_u->offset, io_u->buflen);
 }
 
+static void iolog_delay(struct thread_data *td, unsigned long delay)
+{
+	unsigned long usec = utime_since_now(&td->last_issue);
+
+	if (delay < usec)
+		return;
+
+	delay -= usec;
+
+	/*
+	 * less than 100 usec delay, just regard it as noise
+	 */
+	if (delay < 100)
+		return;
+
+	usec_sleep(td, delay);
+}
+
 int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
@@ -19,6 +37,10 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 		io_u->buflen = ipo->len;
 		io_u->ddir = ipo->ddir;
 		io_u->file = ipo->file;
+
+		if (ipo->delay)
+			iolog_delay(td, ipo->delay);
+
 		/*
 		 * work around, this needs a format change to work for > 1 file
 		 */
