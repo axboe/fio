@@ -64,7 +64,10 @@ static void store_ipo(struct thread_data *td, unsigned long long offset,
 
 	memset(ipo, 0, sizeof(*ipo));
 	INIT_LIST_HEAD(&ipo->list);
-	ipo->offset = offset;
+	/*
+	 * the 512 is wrong here, it should be the hardware sector size...
+	 */
+	ipo->offset = offset * 512;
 	ipo->len = bytes;
 	ipo->delay = ttime / 1000;
 	if (rw)
@@ -85,6 +88,14 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 	int rw;
 
 	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
+		return;
+	if (t->action & BLK_TC_ACT(BLK_TC_PC))
+		return;
+
+	/*
+	 * should not happen, need to look into that...
+	 */
+	if (!t->bytes)
 		return;
 
 	rw = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
