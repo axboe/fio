@@ -46,8 +46,32 @@ int is_blktrace(const char *filename)
 	return 0;
 }
 
+static void store_ipo(struct thread_data *td, unsigned long long offset,
+		      unsigned int bytes, int rw)
+{
+	struct io_piece *ipo = malloc(sizeof(*ipo));
+
+	memset(ipo, 0, sizeof(*ipo));
+	INIT_LIST_HEAD(&ipo->list);
+	ipo->offset = offset;
+	ipo->len = bytes;
+	if (rw)
+		ipo->ddir = DDIR_WRITE;
+	else
+		ipo->ddir = DDIR_READ;
+
+	list_add_tail(&ipo->list, &td->io_log_list);
+}
+
 static void handle_trace(struct thread_data *td, struct blk_io_trace *t)
 {
+	int rw;
+
+	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
+		return;
+
+	w = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
+	store_ipo(td, t->sector, t->bytes, rw);
 }
 
 int load_blktrace(struct thread_data *td, const char *filename)
