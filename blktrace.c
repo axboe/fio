@@ -70,7 +70,7 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t)
 	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
 		return;
 
-	w = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
+	rw = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
 	store_ipo(td, t->sector, t->bytes, rw);
 }
 
