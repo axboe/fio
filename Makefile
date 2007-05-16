@@ -7,7 +7,7 @@ PROGS	= fio
 SCRIPTS = fio_generate_plots
 OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o md5.o crc32.o \
 	filesetup.o eta.o verify.o memory.o io_u.o parse.o mutex.o options.o \
-	rbtree.o diskutil.o blktrace.o
+	rbtree.o diskutil.o fifo.o blktrace.o
 
 OBJS += engines/cpu.o
 OBJS += engines/libaio.o

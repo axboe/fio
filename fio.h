@@ -15,6 +15,7 @@
 
 #include "compiler/compiler.h"
 #include "list.h"
+#include "fifo.h"
 #include "rbtree.h"
 #include "md5.h"
 #include "crc32.h"
@@ -664,13 +665,6 @@ struct disk_util {
 };
 
 #define DISK_UTIL_MSEC	(250)
-
-#ifndef min
-#define min(a, b)	((a) < (b) ? (a) : (b))
-#endif
-#ifndef max
-#define max(a, b)	((a) > (b) ? (a) : (b))
-#endif
 
 /*
  * Log exports
