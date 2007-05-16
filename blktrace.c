@@ -3,6 +3,8 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <dirent.h>
 
 #include "list.h"
 #include "fio.h"
@@ -95,6 +97,78 @@ int is_blktrace(const char *filename)
 	return 0;
 }
 
+static int lookup_device(char *path, unsigned int maj, unsigned int min)
+{
+	struct dirent *dir;
+	struct stat st;
+	int found = 0;
+	DIR *D;
+
+	D = opendir(path);
+	if (!D)
+		return 0;
+
+	while ((dir = readdir(D)) != NULL) {
+		char full_path[256];
+
+		if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, ".."))
+			continue;
+
+		sprintf(full_path, "%s/%s", path, dir->d_name);
+		if (lstat(full_path, &st) == -1) {
+			perror("lstat");
+			break;
+		}
+
+		if (S_ISDIR(st.st_mode)) {
+			found = lookup_device(full_path, maj, min);
+			if (found) {
+				strcpy(path, full_path);
+				break;
+			}
+		}
+
+		if (!S_ISBLK(st.st_mode))
+			continue;
+
+		if (maj == major(st.st_rdev) && min == minor(st.st_rdev)) {
+			strcpy(path, full_path);
+			found = 1;
+			break;
+		}
+	}
+
+	closedir(D);
+	return found;
+}
+
+static void trace_add_file(struct thread_data *td, __u32 device)
+{
+	static unsigned int last_maj, last_min;
+	unsigned int maj = major(device);
+	unsigned int min = minor(device);
+	struct fio_file *f;
+	char dev[256];
+	unsigned int i;
+
+	if (last_maj == maj && last_min == min)
+		return;
+
+	last_maj = maj;
+	last_min = min;
+
+	/*
+	 * check for this file in our list
+	 */
+	for_each_file(td, f, i)
+		if (f->major == maj && f->minor == min)
+			return;
+
+	strcpy(dev, "/dev");
+	if (lookup_device(dev, maj, min))
+		add_file(td, dev);
+}
+
 /*
  * Store blk_io_trace data in an ipo for later retrieval.
  */
@@ -135,6 +209,8 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 		return;
 	if (t->action & BLK_TC_ACT(BLK_TC_NOTIFY))
 		return;
+
+	trace_add_file(td, t->device);
 
 	rw = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
 

@@ -268,6 +268,7 @@ struct fio_file {
 	 */
 	char *file_name;
 	void *mmap;
+	unsigned int major, minor;
 
 	/*
 	 * size of the file, offset into file, and io size from that offset
