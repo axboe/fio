@@ -393,7 +393,7 @@ struct thread_options {
 	unsigned int thinktime_blocks;
 	unsigned int fsync_blocks;
 	unsigned int start_delay;
-	unsigned long timeout;
+	unsigned long long timeout;
 	unsigned int overwrite;
 	unsigned int bw_avg_time;
 	unsigned int loops;
