@@ -227,6 +227,7 @@ int load_blktrace(struct thread_data *td, const char *filename)
 		cpu = t.cpu;
 	} while (1);
 
+	fifo_free(fifo);
 	close(fd);
 
 	if (!ios[DDIR_READ] && !ios[DDIR_WRITE]) {
@@ -253,5 +254,6 @@ int load_blktrace(struct thread_data *td, const char *filename)
 	return 0;
 err:
 	close(fd);
+	fifo_free(fifo);
 	return 1;
 }

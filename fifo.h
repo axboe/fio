@@ -28,6 +28,7 @@ struct fifo {
 struct fifo *fifo_alloc(unsigned int);
 unsigned int fifo_put(struct fifo *, void *, unsigned int);
 unsigned int fifo_get(struct fifo *, void *, unsigned int);
+void fifo_free(struct fifo *);
 
 static inline unsigned int fifo_len(struct fifo *fifo)
 {
