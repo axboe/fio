@@ -782,6 +782,13 @@ static void *thread_main(void *data)
 	 */
 	fio_sem_remove(td->mutex);
 
+	/*
+	 * May alter parameters that init_io_u() will use, so we need to
+	 * do this first.
+	 */
+	if (init_iolog(td))
+		goto err;
+
 	if (init_io_u(td))
 		goto err;
 
@@ -789,9 +796,6 @@ static void *thread_main(void *data)
 		td_verror(td, errno, "cpu_set_affinity");
 		goto err;
 	}
-
-	if (init_iolog(td))
-		goto err;
 
 	if (td->ioprio) {
 		if (ioprio_set(IOPRIO_WHO_PROCESS, 0, td->ioprio) == -1) {

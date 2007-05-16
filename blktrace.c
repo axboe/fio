@@ -83,7 +83,8 @@ static void store_ipo(struct thread_data *td, unsigned long long offset,
  * due to internal workings of the block layer.
  */
 static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
-			 unsigned long long ttime, unsigned long *ios)
+			 unsigned long long ttime, unsigned long *ios,
+			 unsigned int *bs)
 {
 	int rw;
 
@@ -99,6 +100,10 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 		return;
 
 	rw = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
+
+	if (t->bytes > bs[rw])
+		bs[rw] = t->bytes;
+
 	ios[rw]++;
 	td->o.size += t->bytes;
 	store_ipo(td, t->sector, t->bytes, rw, ttime);
@@ -114,6 +119,7 @@ int load_blktrace(struct thread_data *td, const char *filename)
 	struct blk_io_trace t;
 	unsigned long ios[2];
 	unsigned int cpu;
+	unsigned int rw_bs[2];
 	int fd;
 
 	fd = open(filename, O_RDONLY);
@@ -124,9 +130,10 @@ int load_blktrace(struct thread_data *td, const char *filename)
 
 	td->o.size = 0;
 
-	ios[0] = ios[1] = 0;
-	ttime = 0;
 	cpu = 0;
+	ttime = 0;
+	ios[0] = ios[1] = 0;
+	rw_bs[0] = rw_bs[1] = 0;
 	do {
 		/*
 		 * Once this is working fully, I'll add a layer between
@@ -166,7 +173,7 @@ int load_blktrace(struct thread_data *td, const char *filename)
 		delay = 0;
 		if (cpu == t.cpu)
 			delay = t.time - ttime;
-		handle_trace(td, &t, delay, ios);
+		handle_trace(td, &t, delay, ios, rw_bs);
 		ttime = t.time;
 		cpu = t.cpu;
 	} while (1);
@@ -176,12 +183,17 @@ int load_blktrace(struct thread_data *td, const char *filename)
 	if (!ios[DDIR_READ] && !ios[DDIR_WRITE]) {
 		log_err("fio: found no ios in blktrace data\n");
 		return 1;
-	} else if (ios[DDIR_READ] && !ios[DDIR_READ])
+	} else if (ios[DDIR_READ] && !ios[DDIR_READ]) {
 		td->o.td_ddir = TD_DDIR_READ;
-	else if (!ios[DDIR_READ] && ios[DDIR_WRITE])
+		td->o.max_bs[DDIR_READ] = rw_bs[DDIR_READ];
+	} else if (!ios[DDIR_READ] && ios[DDIR_WRITE]) {
 		td->o.td_ddir = TD_DDIR_WRITE;
-	else
+		td->o.max_bs[DDIR_WRITE] = rw_bs[DDIR_WRITE];
+	} else {
 		td->o.td_ddir = TD_DDIR_RW;
+		td->o.max_bs[DDIR_READ] = rw_bs[DDIR_READ];
+		td->o.max_bs[DDIR_WRITE] = rw_bs[DDIR_WRITE];
+	}
 
 	/*
 	 * We need to do direct/raw ios to the device, to avoid getting
