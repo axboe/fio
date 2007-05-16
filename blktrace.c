@@ -142,11 +142,16 @@ static int lookup_device(char *path, unsigned int maj, unsigned int min)
 	return found;
 }
 
+#define MINORBITS	20
+#define MINORMASK	((1U << MINORBITS) - 1)
+#define MAJOR(dev)	((unsigned int) ((dev) >> MINORBITS))
+#define MINOR(dev)	((unsigned int) ((dev) & MINORMASK))
+
 static void trace_add_file(struct thread_data *td, __u32 device)
 {
 	static unsigned int last_maj, last_min;
-	unsigned int maj = major(device);
-	unsigned int min = minor(device);
+	unsigned int maj = MAJOR(device);
+	unsigned int min = MINOR(device);
 	struct fio_file *f;
 	char dev[256];
 	unsigned int i;
