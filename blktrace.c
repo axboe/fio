@@ -133,11 +133,7 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 		return;
 	if (t->action & BLK_TC_ACT(BLK_TC_PC))
 		return;
-
-	/*
-	 * should not happen, need to look into that...
-	 */
-	if (!t->bytes)
+	if (t->action & BLK_TC_ACT(BLK_TC_NOTIFY))
 		return;
 
 	rw = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
