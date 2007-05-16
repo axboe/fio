@@ -8,7 +8,7 @@
 #include "fio.h"
 #include "blktrace_api.h"
 
-#define TRACE_FIFO_SIZE	(sizeof(struct blk_io_trace) * 1000)
+#define TRACE_FIFO_SIZE	65536
 
 /*
  * fifo refill frontend, to avoid reading data in trace sized bites
@@ -16,28 +16,23 @@
 static int refill_fifo(struct thread_data *td, struct fifo *fifo, int fd)
 {
 	char buf[TRACE_FIFO_SIZE];
-	unsigned int total, left;
-	void *ptr;
+	unsigned int total;
 	int ret;
 
-	total = 0;
-	ptr = buf;
-	while (total < TRACE_FIFO_SIZE) {
-		left = TRACE_FIFO_SIZE - total;
+	total = sizeof(buf);
+	if (total > fifo_room(fifo))
+		total = fifo_room(fifo);
 
-		ret = read(fd, ptr, left);
-		if (ret < 0) {
-			td_verror(td, errno, "read blktrace file");
-			return -1;
-		} else if (!ret)
-			break;
-
-		fifo_put(fifo, ptr, ret);
-		ptr += ret;
-		total += ret;
+	ret = read(fd, buf, total);
+	if (ret < 0) {
+		td_verror(td, errno, "read blktrace file");
+		return -1;
 	}
 
-	return 0;
+	if (ret > 0)
+		ret = fifo_put(fifo, buf, ret);
+
+	return ret;
 }
 
 /*
@@ -46,17 +41,12 @@ static int refill_fifo(struct thread_data *td, struct fifo *fifo, int fd)
 static int trace_fifo_get(struct thread_data *td, struct fifo *fifo, int fd,
 			  void *buf, unsigned int len)
 {
-	int ret;
+	if (fifo_len(fifo) < len) {
+		int ret = refill_fifo(td, fifo, fd);
 
-	if (fifo_len(fifo) >= len)
-		return fifo_get(fifo, buf, len);
-
-	ret = refill_fifo(td, fifo, fd);
-	if (ret < 0)
-		return ret;
-
-	if (fifo_len(fifo) < len)
-		return 0;
+		if (ret < 0)
+			return ret;
+	}
 
 	return fifo_get(fifo, buf, len);
 }
@@ -64,15 +54,13 @@ static int trace_fifo_get(struct thread_data *td, struct fifo *fifo, int fd,
 /*
  * Just discard the pdu by seeking past it.
  */
-static int discard_pdu(int fd, struct blk_io_trace *t)
+static int discard_pdu(struct thread_data *td, struct fifo *fifo, int fd,
+		       struct blk_io_trace *t)
 {
 	if (t->pdu_len == 0)
 		return 0;
 
-	if (lseek(fd, t->pdu_len, SEEK_CUR) < 0)
-		return errno;
-		
-	return 0;
+	return trace_fifo_get(td, fifo, fd, NULL, t->pdu_len);
 }
 
 /*
@@ -203,16 +191,19 @@ int load_blktrace(struct thread_data *td, const char *filename)
 		}
 
 		if ((t.magic & 0xffffff00) != BLK_IO_TRACE_MAGIC) {
-			log_err("fio: bad magic in blktrace data\n");
+			log_err("fio: bad magic in blktrace data: %x\n", t.magic);
 			goto err;
 		}
 		if ((t.magic & 0xff) != BLK_IO_TRACE_VERSION) {
 			log_err("fio: bad blktrace version %d\n", t.magic & 0xff);
 			goto err;
 		}
-		ret = discard_pdu(fd, &t);
-		if (ret) {
+		ret = discard_pdu(td, fifo, fd, &t);
+		if (ret < 0) {
 			td_verror(td, ret, "blktrace lseek");
+			goto err;
+		} else if (t.pdu_len != ret) {
+			log_err("fio: discarded %d of %d\n", ret, t.pdu_len);
 			goto err;
 		}
 		if (!ttime) {
