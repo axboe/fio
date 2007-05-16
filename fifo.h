@@ -35,6 +35,11 @@ static inline unsigned int fifo_len(struct fifo *fifo)
 	return fifo->in - fifo->out;
 }
 
+static inline unsigned int fifo_room(struct fifo *fifo)
+{
+	return fifo->size - fifo->in + fifo->out;
+}
+
 #define min(x,y) ({ \
 	typeof(x) _x = (x);	\
 	typeof(y) _y = (y);	\
