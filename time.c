@@ -8,7 +8,7 @@ static unsigned long ns_granularity;
 
 unsigned long utime_since(struct timeval *s, struct timeval *e)
 {
-	long sec, usec;
+	long sec, usec, ret;
 
 	sec = e->tv_sec - s->tv_sec;
 	usec = e->tv_usec - s->tv_usec;
@@ -18,8 +18,15 @@ unsigned long utime_since(struct timeval *s, struct timeval *e)
 	}
 
 	sec *= 1000000UL;
+	ret = sec + usec;
 
-	return sec + usec;
+	/*
+	 * time warp bug on some kernels?
+	 */
+	if (ret < 0)
+		ret = 0;
+
+	return ret;
 }
 
 unsigned long utime_since_now(struct timeval *s)
@@ -32,7 +39,7 @@ unsigned long utime_since_now(struct timeval *s)
 
 unsigned long mtime_since(struct timeval *s, struct timeval *e)
 {
-	long sec, usec;
+	long sec, usec, ret;
 
 	sec = e->tv_sec - s->tv_sec;
 	usec = e->tv_usec - s->tv_usec;
@@ -43,8 +50,15 @@ unsigned long mtime_since(struct timeval *s, struct timeval *e)
 
 	sec *= 1000UL;
 	usec /= 1000UL;
+	ret = sec + usec;
 
-	return sec + usec;
+	/*
+	 * time warp bug on some kernels?
+	 */
+	if (ret < 0)
+		ret = 0;
+
+	return ret;
 }
 
 unsigned long mtime_since_now(struct timeval *s)
