@@ -109,20 +109,40 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 			*b = 0;
 		else
 			*b = ((max_blocks - 1) * r / (unsigned long long) (RAND_MAX+1.0));
+		/*
+		 * if we are not maintaining a random map, we are done.
+		 */
 		if (td->o.norandommap)
-			break;
+			return 0;
+
+		/*
+		 * calculate map offset and chec if it's free
+		 */
 		rb = *b + (f->file_offset / td->o.min_bs[ddir]);
-		loops--;
-	} while (!random_map_free(td, f, rb) && loops);
+		if (random_map_free(td, f, rb))
+			return 0;
+
+	} while (--loops);
 
 	/*
-	 * if we failed to retrieve a truly random offset within
-	 * the loops assigned, see if there are free ones left at all
+	 * we get here, if we didn't suceed in looking up a block. generate
+	 * a random start offset into the filemap, and find the first free
+	 * block from there.
 	 */
-	if (!loops && get_next_free_block(td, f, b))
-		return 1;
+	loops = 10;
+	do {
+		f->last_free_lookup = (f->num_maps - 1) * (r / (RAND_MAX+1.0));
+		if (!get_next_free_block(td, f, b))
+			return 0;
 
-	return 0;
+		r = os_random_long(&td->random_state);
+	} while (--loops);
+
+	/*
+	 * that didn't work either, try exhaustive search from the start
+	 */
+	f->last_free_lookup = 0;
+	return get_next_free_block(td, f, b);
 }
 
 /*
