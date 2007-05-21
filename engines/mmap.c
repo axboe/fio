@@ -60,6 +60,12 @@ static int fio_mmapio_open(struct thread_data *td, struct fio_file *f)
 	if (ret)
 		return ret;
 
+	/*
+	 * for size checkup, don't mmap anything.
+	 */
+	if (!f->io_size)
+		return 0;
+
 	if (td_rw(td))
 		flags = PROT_READ | PROT_WRITE;
 	else if (td_write(td)) {
