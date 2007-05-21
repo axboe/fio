@@ -31,7 +31,7 @@
 
 #define nop	__asm__ __volatile__("rep;nop": : :"memory")
 
-static inline unsigned long ffz(unsigned long bitmask)
+static inline unsigned long fio_ffz(unsigned long bitmask)
 {
 	__asm__("bsfl %1,%0" :"=r" (bitmask) :"r" (~bitmask));
 	return bitmask;

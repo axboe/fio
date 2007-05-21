@@ -27,7 +27,7 @@
 	ia64_intri_res;							\
 })
 
-static inline unsigned long ffz(unsigned long bitmask)
+static inline unsigned long fio_ffz(unsigned long bitmask)
 {
 	return ia64_popcnt(bitmask & (~bitmask - 1));
 }

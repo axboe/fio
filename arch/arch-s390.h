@@ -12,7 +12,7 @@
 #define __NR_fadvise64		253
 #endif
 
-#define nop	asm volatile ("diag 0,0,68" : : : "memory")
-#define ffz(v)	generic_ffz((v))
+#define nop		asm volatile ("diag 0,0,68" : : : "memory")
+#define fio_ffz(v)	generic_ffz((v))
 
 #endif

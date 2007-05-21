@@ -12,7 +12,7 @@
 #define __NR_fadvise64		413
 #endif
 
-#define nop	do { } while (0)
-#define ffz(v)	generic_ffz((v))
+#define nop		do { } while (0)
+#define fio_ffz(v)	generic_ffz((v))
 
 #endif

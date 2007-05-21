@@ -28,7 +28,7 @@ static inline int __ilog2(unsigned long bitmask)
 	return 31 - lz;
 }
 
-static inline int ffz(unsigned long bitmask)
+static inline int fio_ffz(unsigned long bitmask)
 {
 	if ((bitmask = ~bitmask) == 0)
 		return 32;

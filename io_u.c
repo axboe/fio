@@ -84,7 +84,7 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 	*b = (i * BLOCKS_PER_MAP);
 	while ((*b) * td->o.rw_min_bs < f->real_file_size) {
 		if (f->file_map[i] != -1UL) {
-			*b += ffz(f->file_map[i]);
+			*b += fio_ffz(f->file_map[i]);
 			f->last_free_lookup = i;
 			return 0;
 		}
