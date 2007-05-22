@@ -655,10 +655,7 @@ static int fill_def_thread(void)
 {
 	memset(&def_thread, 0, sizeof(def_thread));
 
-	if (fio_getaffinity(getpid(), &def_thread.o.cpumask) == -1) {
-		perror("sched_getaffinity");
-		return 1;
-	}
+	fio_getaffinity(getpid(), &def_thread.o.cpumask);
 
 	/*
 	 * fill default options

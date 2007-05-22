@@ -792,7 +792,7 @@ static void *thread_main(void *data)
 	if (init_io_u(td))
 		goto err;
 
-	if (fio_setaffinity(td) == -1) {
+	if (td->o.cpumask_set && fio_setaffinity(td) == -1) {
 		td_verror(td, errno, "cpu_set_affinity");
 		goto err;
 	}

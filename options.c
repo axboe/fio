@@ -117,6 +117,7 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 	struct thread_data *td = data;
 
 	fill_cpu_mask(td->o.cpumask, *val);
+	td->o.cpumask_set = 1;
 	return 0;
 }
 

@@ -406,6 +406,7 @@ struct thread_options {
 	unsigned int new_group;
 	unsigned int numjobs;
 	os_cpu_mask_t cpumask;
+	unsigned int cpumask_set;
 	unsigned int iolog;
 	unsigned int rwmixcycle;
 	unsigned int rwmix[2];
