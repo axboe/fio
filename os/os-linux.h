@@ -35,10 +35,21 @@ typedef struct drand48_data os_random_state_t;
 #define fadvise(fd, off, len, advice)	\
 	posix_fadvise((fd), (off_t)(off), (len), (advice))
 
+/*
+ * If you are on an ancient glibc (2.3.2), then define GLIBC_2_3_2 if you want
+ * the affinity helpers to work.
+ */
+#ifndef GLIBC_2_3_2
 #define fio_setaffinity(td)		\
 	sched_setaffinity((td)->pid, sizeof((td)->o.cpumask), &(td)->o.cpumask)
 #define fio_getaffinity(pid, ptr)	\
 	sched_getaffinity((pid), sizeof(cpu_set_t), (ptr))
+#else
+#define fio_setaffinity(td)		\
+	sched_setaffinity((td)->pid, &(td)->o.cpumask)
+#define fio_getaffinity(pid, ptr)	\
+	sched_getaffinity((pid), (ptr))
+#endif
 
 static inline int ioprio_set(int which, int who, int ioprio)
 {
