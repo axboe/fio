@@ -39,7 +39,7 @@ depend:
 cscope:
 	@cscope -b
 
-$(PROGS): | depend
+$(PROGS): depend
 
 install: $(PROGS) $(SCRIPTS)
 	$(INSTALL) -m755 -d $(DESTDIR)$(bindir)
