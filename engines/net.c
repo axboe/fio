@@ -231,6 +231,10 @@ static int fio_netio_init(struct thread_data *td)
 		log_err("fio: network connections must be read OR write\n");
 		return 1;
 	}
+	if (td_random(td)) {
+		log_err("fio: network IO can't be random\n");
+		return 1;
+	}
 
 	strcpy(buf, td->o.filename);
 
