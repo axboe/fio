@@ -60,4 +60,15 @@
 #define fio_lookup_raw(dev, majdev, mindev)	1
 #endif
 
+#ifndef FIO_HAVE_BLKTRACE
+static inline int is_blktrace(const char *fname)
+{
+	return 0;
+}
+static inline int load_blktrace(struct thread_data *td, const char *fname)
+{
+	return 1;
+}
+#endif
+
 #endif

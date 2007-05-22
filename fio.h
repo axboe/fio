@@ -826,8 +826,10 @@ extern void td_io_close_file(struct thread_data *, struct fio_file *);
 /*
  * blktrace support
  */
+#ifdef FIO_HAVE_BLKTRACE
 extern int is_blktrace(const char *);
 extern int load_blktrace(struct thread_data *, const char *);
+#endif
 
 /*
  * If logging output to a file, stderr should go to both stderr and f_err
