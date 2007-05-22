@@ -465,7 +465,8 @@ ratecycle=int	Average bandwidth for 'rate' and 'ratemin' over this number
 
 cpumask=int	Set the CPU affinity of this job. The parameter given is a
 		bitmask of allowed CPU's the job may run on. See man
-		sched_setaffinity(2).
+		sched_setaffinity(2). This may not work on all supported
+		operating systems or kernel versions.
 
 startdelay=int	Start this job the specified number of seconds after fio
 		has started. Only useful if the job file contains several
