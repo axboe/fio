@@ -547,6 +547,7 @@ void add_file(struct thread_data *td, const char *fname)
 
 void get_file(struct fio_file *f)
 {
+	assert(f->flags & FIO_FILE_OPEN);
 	f->references++;
 }
 

@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <assert.h>
 
 #include "fio.h"
 
@@ -171,6 +172,16 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		io_u->offset = ipo->offset;
 		io_u->buflen = ipo->len;
 		io_u->file = ipo->file;
+
+		if ((io_u->file->flags & FIO_FILE_OPEN) == 0) {
+			int r = td_io_open_file(td, io_u->file);
+
+			if (r)
+				return 1;
+		}
+
+		get_file(ipo->file);
+		assert(io_u->file->flags & FIO_FILE_OPEN);
 		io_u->ddir = DDIR_READ;
 		io_u->xfer_buf = io_u->buf;
 		io_u->xfer_buflen = io_u->buflen;

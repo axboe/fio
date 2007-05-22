@@ -593,6 +593,8 @@ set_file:
 		}
 	} while (1);
 
+	assert(io_u->file->flags & FIO_FILE_OPEN);
+
 	if (td->zone_bytes >= td->o.zone_size) {
 		td->zone_bytes = 0;
 		f->last_pos += td->o.zone_skip;
