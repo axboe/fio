@@ -736,11 +736,14 @@ static int clear_io_state(struct thread_data *td)
 
 	td->last_was_sync = 0;
 
+	td->nr_done_files = 0;
+
 	for_each_file(td, f, i)
 		td_io_close_file(td, f);
 
 	ret = 0;
 	for_each_file(td, f, i) {
+		f->flags &= ~FIO_FILE_DONE;
 		ret = td_io_open_file(td, f);
 		if (ret)
 			break;
