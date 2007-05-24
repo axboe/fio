@@ -721,6 +721,24 @@ static int switch_ioscheduler(struct thread_data *td)
 	return 0;
 }
 
+static int keep_running(struct thread_data *td)
+{
+	unsigned long long io_done;
+
+	if (td->o.time_based)
+		return 1;
+	if (td->o.loops) {
+		td->o.loops--;
+		return 1;
+	}
+
+	io_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE];
+	if (io_done < td->o.size)
+		return 1;
+
+	return 0;
+}
+
 static int clear_io_state(struct thread_data *td)
 {
 	struct fio_file *f;
@@ -838,7 +856,7 @@ static void *thread_main(void *data)
 
 	runtime[0] = runtime[1] = 0;
 	clear_state = 0;
-	while (td->o.time_based || td->o.loops--) {
+	while (keep_running(td)) {
 		fio_gettime(&td->start, NULL);
 		memcpy(&td->ts.stat_sample_time, &td->start, sizeof(td->start));
 
