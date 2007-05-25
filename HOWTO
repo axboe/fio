@@ -170,7 +170,7 @@ Some parameters take an option of a given type, such as an integer or
 a string. The following types are used:
 
 str	String. This is a sequence of alpha characters.
-int	Integer. A whole number value, may be negative.
+int	Integer. A whole number value, can be negative.
 siint	SI integer. A whole number value, which may contain a postfix
 	describing the base of the number. Accepted postfixes are k/m/g,
 	meaning kilo, mega, and giga. So if you want to specify 4096,
@@ -249,12 +249,12 @@ fadvise_hint=bool By default, fio will use fadvise() to advise the kernel
 		If set, fio will use POSIX_FADV_SEQUENTIAL for sequential
 		IO and POSIX_FADV_RANDOM for random IO.
 
-size=siint	The total size of file io for this job. This may describe
-		the size of the single file the job uses, or it may be
-		divided between the number of files in the job. If the
-		file already exists, the file size will be adjusted to this
-		size if larger than the current file size. If this parameter
-		is not given and the file exists, the file size will be used.
+size=siint	The total size of file io for this job. Fio will run until
+		this many bytes has been transferred, unless runtime is
+		limited by other options (such as 'runtime', for instance).
+		Unless specific nr_files and filesize options are given,
+		fio will divide this size between the available files
+		specified by the job.
 
 filesize=siint	Individual file sizes. May be a range, in which case fio
 		will select sizes for files at random within the given range
@@ -419,7 +419,9 @@ norandommap	Normally fio will cover every block of the file when doing
 		new random offset without looking at past io history. This
 		means that some blocks may not be read or written, and that
 		some blocks may be read/written more than once. This option
-		is mutually exclusive with verify= for that reason.
+		is mutually exclusive with verify= for that reason, since
+		fio doesn't track potential block rewrites which may alter
+		the calculated checksum for that block.
 
 nice=int	Run the job with the given nice value. See man nice(2).
 
