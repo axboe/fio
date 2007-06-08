@@ -69,7 +69,7 @@ static inline int ioprio_set(int which, int who, int ioprio)
 #define SPLICE_F_GIFT   (0x08)  /* pages passed in are a gift */
 
 static inline int splice(int fdin, loff_t *off_in, int fdout, loff_t *off_out,
-			 size_t len, unsigned long flags)
+			 size_t len, unsigned int flags)
 {
 	return syscall(__NR_sys_splice, fdin, off_in, fdout, off_out, len, flags);
 }
