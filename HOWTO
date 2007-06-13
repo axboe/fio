@@ -466,7 +466,9 @@ ratecycle=int	Average bandwidth for 'rate' and 'ratemin' over this number
 		of milliseconds.
 
 cpumask=int	Set the CPU affinity of this job. The parameter given is a
-		bitmask of allowed CPU's the job may run on. See man
+		bitmask of allowed CPU's the job may run on. So if you want
+		the allowed CPUs to be 1 and 5, you would pass the decimal
+		value of (1 << 1 | 1 << 5), or 34. See man
 		sched_setaffinity(2). This may not work on all supported
 		operating systems or kernel versions.
 
