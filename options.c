@@ -98,17 +98,16 @@ static int str_exitall_cb(void)
 	return 0;
 }
 
-static void fill_cpu_mask(os_cpu_mask_t cpumask, int cpu)
+static void fill_cpu_mask(os_cpu_mask_t *cpumask, int cpu)
 {
 #ifdef FIO_HAVE_CPU_AFFINITY
 	unsigned int i;
 
-	CPU_ZERO(&cpumask);
+	CPU_ZERO(cpumask);
 
-	for (i = 0; i < sizeof(int) * 8; i++) {
+	for (i = 0; i < sizeof(int) * 8; i++)
 		if ((1 << i) & cpu)
-			CPU_SET(i, &cpumask);
-	}
+			CPU_SET(i, cpumask);
 #endif
 }
 
@@ -116,7 +115,7 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 {
 	struct thread_data *td = data;
 
-	fill_cpu_mask(td->o.cpumask, *val);
+	fill_cpu_mask(&td->o.cpumask, *val);
 	td->o.cpumask_set = 1;
 	return 0;
 }
