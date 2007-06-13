@@ -18,14 +18,15 @@
 
 struct spliceio_data {
 	int pipe[2];
+	int vmsplice_to_user;
 };
 
 /*
- * For splice reading, we unfortunately cannot (yet) vmsplice the other way.
- * So just splice the data from the file into the pipe, and use regular
- * read to fill the buffer. Doesn't make a lot of sense, but...
+ * vmsplice didn't use to support splicing to user space, this is the old
+ * variant of getting that job done. Doesn't make a lot of sense, but it
+ * uses splices to move data from the source into a pipe.
  */
-static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
+static int fio_splice_read_old(struct thread_data *td, struct io_u *io_u)
 {
 	struct spliceio_data *sd = td->io_ops->data;
 	struct fio_file *f = io_u->file;
@@ -66,33 +67,82 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 }
 
 /*
+ * We can now vmsplice into userspace, so do the transfer by splicing into
+ * a pipe and vmsplicing that into userspace.
+ */
+static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
+{
+	struct spliceio_data *sd = td->io_ops->data;
+	struct fio_file *f = io_u->file;
+	struct iovec iov;
+	int ret, buflen;
+	off_t offset;
+	void *p;
+
+	offset = io_u->offset;
+	buflen = io_u->xfer_buflen;
+	p = io_u->xfer_buf;
+	while (buflen) {
+		int this_len = buflen;
+
+		if (this_len > SPLICE_DEF_SIZE)
+			this_len = SPLICE_DEF_SIZE;
+
+		ret = splice(f->fd, &offset, sd->pipe[1], NULL, this_len, SPLICE_F_MORE);
+		if (ret < 0) {
+			if (errno == ENODATA || errno == EAGAIN)
+				continue;
+
+			return -errno;
+		}
+
+		buflen -= ret;
+		iov.iov_base = p;
+		iov.iov_len = ret;
+		p += ret;
+
+		while (iov.iov_len) {
+			ret = vmsplice(sd->pipe[0], &iov, 1, SPLICE_F_MOVE);
+			if (ret < 0)
+				return -errno;
+			else if (!ret)
+				return -ENODATA;
+
+			iov.iov_len -= ret;
+			iov.iov_base += ret;
+		}
+	}
+
+	return io_u->xfer_buflen;
+}
+
+
+/*
  * For splice writing, we can vmsplice our data buffer directly into a
  * pipe and then splice that to a file.
  */
 static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 {
 	struct spliceio_data *sd = td->io_ops->data;
-	struct iovec iov[1] = {
-		{
-			.iov_base = io_u->xfer_buf,
-			.iov_len = io_u->xfer_buflen,
-		}
+	struct iovec iov = {
+		.iov_base = io_u->xfer_buf,
+		.iov_len = io_u->xfer_buflen,
 	};
 	struct pollfd pfd = { .fd = sd->pipe[1], .events = POLLOUT, };
 	struct fio_file *f = io_u->file;
 	off_t off = io_u->offset;
 	int ret, ret2;
 
-	while (iov[0].iov_len) {
+	while (iov.iov_len) {
 		if (poll(&pfd, 1, -1) < 0)
 			return errno;
 
-		ret = vmsplice(sd->pipe[1], iov, 1, SPLICE_F_NONBLOCK);
+		ret = vmsplice(sd->pipe[1], &iov, 1, SPLICE_F_NONBLOCK);
 		if (ret < 0)
 			return -errno;
 
-		iov[0].iov_len -= ret;
-		iov[0].iov_base += ret;
+		iov.iov_len -= ret;
+		iov.iov_base += ret;
 
 		while (ret) {
 			ret2 = splice(sd->pipe[0], NULL, f->fd, &off, ret, 0);
@@ -108,11 +158,15 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 
 static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 {
+	struct spliceio_data *sd = td->io_ops->data;
 	int ret;
 
-	if (io_u->ddir == DDIR_READ)
-		ret = fio_splice_read(td, io_u);
-	else if (io_u->ddir == DDIR_WRITE)
+	if (io_u->ddir == DDIR_READ) {
+		if (sd->vmsplice_to_user)
+			ret = fio_splice_read(td, io_u);
+		else
+			ret = fio_splice_read_old(td, io_u);
+	} else if (io_u->ddir == DDIR_WRITE)
 		ret = fio_splice_write(td, io_u);
 	else
 		ret = fsync(io_u->file->fd);
@@ -153,6 +207,11 @@ static int fio_spliceio_init(struct thread_data *td)
 		free(sd);
 		return 1;
 	}
+
+	/*
+	 * need some check for enabling this, for now just leave it disabled
+	 */
+	sd->vmsplice_to_user = 0;
 
 	td->io_ops->data = sd;
 	return 0;
