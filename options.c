@@ -98,27 +98,46 @@ static int str_exitall_cb(void)
 	return 0;
 }
 
-static void fill_cpu_mask(os_cpu_mask_t *cpumask, int cpu)
-{
 #ifdef FIO_HAVE_CPU_AFFINITY
-	unsigned int i;
-
-	CPU_ZERO(cpumask);
-
-	for (i = 0; i < sizeof(int) * 8; i++)
-		if ((1 << i) & cpu)
-			CPU_SET(i, cpumask);
-#endif
-}
-
 static int str_cpumask_cb(void *data, unsigned int *val)
 {
 	struct thread_data *td = data;
+	unsigned int i;
 
-	fill_cpu_mask(&td->o.cpumask, *val);
+	CPU_ZERO(&td->o.cpumask);
+
+	for (i = 0; i < sizeof(int) * 8; i++)
+		if ((1 << i) & *val)
+			CPU_SET(*val, &td->o.cpumask);
+
 	td->o.cpumask_set = 1;
 	return 0;
 }
+
+static int str_cpus_allowed_cb(void *data, const char *input)
+{
+	struct thread_data *td = data;
+	char *cpu, *str, *p;
+
+	CPU_ZERO(&td->o.cpumask);
+
+	p = str = strdup(input);
+
+	strip_blank_front(&str);
+	strip_blank_end(str);
+
+	while ((cpu = strsep(&str, ",")) != NULL) {
+		if (!strlen(cpu))
+			break;
+		CPU_SET(atoi(cpu), &td->o.cpumask);
+	}
+
+	free(p);
+	td->o.cpumask_set = 1;
+	exit(0);
+	return 0;
+}
+#endif
 
 static int str_fst_cb(void *data, const char *str)
 {
@@ -774,6 +793,12 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.cb	= str_cpumask_cb,
 		.help	= "CPU affinity mask",
+	},
+	{
+		.name	= "cpus_allowed",
+		.type	= FIO_OPT_STR,
+		.cb	= str_cpus_allowed_cb,
+		.help	= "Set CPUs allowed",
 	},
 #endif
 	{

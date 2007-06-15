@@ -472,6 +472,10 @@ cpumask=int	Set the CPU affinity of this job. The parameter given is a
 		sched_setaffinity(2). This may not work on all supported
 		operating systems or kernel versions.
 
+cpus_allowed=str Controls the same options as cpumask, but it allows a text
+		setting of the permitted CPUs instead. So to use CPUs 1 and
+		5, you would specify cpus_allowed=1,5.
+
 startdelay=int	Start this job the specified number of seconds after fio
 		has started. Only useful if the job file contains several
 		jobs, and you want to delay starting some jobs to a certain

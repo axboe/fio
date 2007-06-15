@@ -129,6 +129,7 @@ The job file parameters are:
 	ratemin=x	Quit if rate of x KiB/sec can't be met
 	ratecycle=x	ratemin averaged over x msecs
 	cpumask=x	Only allow job to run on CPUs defined by mask.
+	cpus_allowed=x	Like 'cpumask', but allow text setting of CPU affinity.
 	fsync=x		If writing with buffered IO, fsync after every
 			'x' blocks have been written.
 	end_fsync=x	If 'x', run fsync() after end-of-job.
