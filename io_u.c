@@ -649,7 +649,7 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 static void io_completed(struct thread_data *td, struct io_u *io_u,
 			 struct io_completion_data *icd)
 {
-	unsigned long msec;
+	unsigned long usec;
 
 	assert(io_u->flags & IO_U_F_FLIGHT);
 	io_u->flags &= ~IO_U_F_FLIGHT;
@@ -673,11 +673,11 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 		io_u->file->last_completed_pos = io_u->endpos;
 
-		msec = mtime_since(&io_u->issue_time, &icd->time);
+		usec = utime_since(&io_u->issue_time, &icd->time);
 
-		add_clat_sample(td, idx, msec);
+		add_clat_sample(td, idx, usec);
 		add_bw_sample(td, idx, &icd->time);
-		io_u_mark_latency(td, msec);
+		io_u_mark_latency(td, usec / 1000);
 
 		if (td_write(td) && idx == DDIR_WRITE &&
 		    td->o.verify != VERIFY_NONE)
@@ -774,7 +774,7 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 {
 	unsigned long slat_time;
 
-	slat_time = mtime_since(&io_u->start_time, &io_u->issue_time);
+	slat_time = utime_since(&io_u->start_time, &io_u->issue_time);
 	add_slat_sample(td, io_u->ddir, slat_time);
 }
 

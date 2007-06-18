@@ -170,12 +170,30 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	free(bw_p);
 	free(iops_p);
 
-	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
-		log_info("    slat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
+	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev)) {
+		const char *base = "(usec)";
 
-	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
-		log_info("    clat (msec): min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", min, max, mean, dev);
+		if (min > 1000 && max > 1000 && mean > 1000.0 && dev > 1000.0) {
+			min /= 1000;
+			max /= 1000;
+			mean /= 1000.0;
+			dev /= 1000.0;
+			base = "(msec)";
+		}
+		log_info("    slat %s: min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", base, min, max, mean, dev);
+	}
+	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev)) {
+		const char *base = "(usec)";
 
+		if (min > 1000 && max > 1000 && mean > 1000.0 && dev > 1000.0) {
+                        min /= 1000;
+                        max /= 1000;
+                        mean /= 1000.0;
+                        dev /= 1000.0;
+                        base = "(msec)";
+                }
+		log_info("    clat %s: min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", base, min, max, mean, dev);
+	}
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
 
@@ -227,8 +245,9 @@ static void show_thread_status(struct thread_stat *ts,
 	log_info("  IO depths    : 1=%3.1f%%, 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%, 16=%3.1f%%, 32=%3.1f%%, >=64=%3.1f%%\n", io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3], io_u_dist[4], io_u_dist[5], io_u_dist[6]);
 	log_info("     issued r/w: total=%lu/%lu, short=%lu/%lu\n", ts->total_io_u[0], ts->total_io_u[1], ts->short_io_u[0], ts->short_io_u[1]);
 
-	log_info("     lat (msec): 2=%3.2f%%, 4=%3.2f%%, 10=%3.2f%%, 20=%3.2f%%, 50=%3.2f%%, 100=%3.2f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4], io_u_lat[5]);
-	log_info("     lat (msec): 250=%3.2f%%, 500=%3.2f%%, 750=%3.2f%%, 1000=%3.2f%%, >=2000=%3.2f%%\n", io_u_lat[6], io_u_lat[7], io_u_lat[8], io_u_lat[9], io_u_lat[10]);
+	log_info("     lat (msec): 2=%3.2f%%, 4=%3.2f%%, 10=%3.2f%%, 20=%3.2f%%, 50=%3.2f%%\n", io_u_lat[0], io_u_lat[1], io_u_lat[2], io_u_lat[3], io_u_lat[4]);
+	log_info("     lat (msec): 100=%3.2f%%, 250=%3.2f%%, 500=%3.2f%%, 750=%3.2f%%\n", io_u_lat[5], io_u_lat[6], io_u_lat[7], io_u_lat[8]);
+	log_info("     lat (msec): 1000=%3.2f%%, 2000=%3.2f%%, >=2000=%3.2f%%\n", io_u_lat[9], io_u_lat[10], io_u_lat[11]);
 }
 
 static void show_ddir_status_terse(struct thread_stat *ts,
@@ -551,25 +570,25 @@ void add_agg_sample(unsigned long val, enum fio_ddir ddir)
 }
 
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
-		     unsigned long msec)
+		     unsigned long usec)
 {
 	struct thread_stat *ts = &td->ts;
 
-	add_stat_sample(&ts->clat_stat[ddir], msec);
+	add_stat_sample(&ts->clat_stat[ddir], usec);
 
 	if (ts->clat_log)
-		add_log_sample(td, ts->clat_log, msec, ddir);
+		add_log_sample(td, ts->clat_log, usec, ddir);
 }
 
 void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
-		     unsigned long msec)
+		     unsigned long usec)
 {
 	struct thread_stat *ts = &td->ts;
 
-	add_stat_sample(&ts->slat_stat[ddir], msec);
+	add_stat_sample(&ts->slat_stat[ddir], usec);
 
 	if (ts->slat_log)
-		add_log_sample(td, ts->slat_log, msec, ddir);
+		add_log_sample(td, ts->slat_log, usec, ddir);
 }
 
 void add_bw_sample(struct thread_data *td, enum fio_ddir ddir,
