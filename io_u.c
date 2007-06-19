@@ -363,17 +363,22 @@ void io_u_mark_depth(struct thread_data *td, struct io_u *io_u)
 
 	switch (td->cur_depth) {
 	default:
-		index++;
+		index = 6;
+		break;
 	case 32 ... 63:
-		index++;
+		index = 5;
+		break;
 	case 16 ... 31:
-		index++;
+		index = 4;
+		break;
 	case 8 ... 15:
-		index++;
+		index = 3;
+		break;
 	case 4 ... 7:
-		index++;
+		index = 2;
+		break;
 	case 2 ... 3:
-		index++;
+		index = 1;
 	case 1:
 		break;
 	}
