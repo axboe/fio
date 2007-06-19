@@ -146,6 +146,20 @@ static void stat_calc_lat(struct thread_stat *ts, double *io_u_lat)
 	}
 }
 
+static int usec_to_msec(unsigned long *min, unsigned long *max, double *mean,
+			double *dev)
+{
+	if (*min > 1000 && *max > 1000 && *mean > 1000.0 && *dev > 1000.0) {
+		*min /= 1000;
+		*max /= 1000;
+		*mean /= 1000.0;
+		*dev /= 1000.0;
+		return 0;
+	}
+
+	return 1;
+}
+
 static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			     int ddir)
 {
@@ -173,25 +187,17 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev)) {
 		const char *base = "(usec)";
 
-		if (min > 1000 && max > 1000 && mean > 1000.0 && dev > 1000.0) {
-			min /= 1000;
-			max /= 1000;
-			mean /= 1000.0;
-			dev /= 1000.0;
+		if (!usec_to_msec(&min, &max, &mean, &dev))
 			base = "(msec)";
-		}
+
 		log_info("    slat %s: min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", base, min, max, mean, dev);
 	}
 	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev)) {
 		const char *base = "(usec)";
 
-		if (min > 1000 && max > 1000 && mean > 1000.0 && dev > 1000.0) {
-                        min /= 1000;
-                        max /= 1000;
-                        mean /= 1000.0;
-                        dev /= 1000.0;
-                        base = "(msec)";
-                }
+		if (!usec_to_msec(&min, &max, &mean, &dev))
+			base = "(msec)";
+
 		log_info("    clat %s: min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", base, min, max, mean, dev);
 	}
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
