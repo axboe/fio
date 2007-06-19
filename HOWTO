@@ -723,7 +723,10 @@ runt=		The runtime of that thread
 	slat=	Submission latency (avg being the average, stdev being the
 		standard deviation). This is the time it took to submit
 		the io. For sync io, the slat is really the completion
-		latency, since queue/complete is one operation there.
+		latency, since queue/complete is one operation there. This
+		value can be in miliseconds or microseconds, fio will choose
+		the most appropriate base and print that. In the example
+		above, miliseconds is the best scale.
 	clat=	Completion latency. Same names as slat, this denotes the
 		time from submission to completion of the io pieces. For
 		sync io, clat will usually be equal (or very close) to 0,
