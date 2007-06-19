@@ -387,38 +387,98 @@ void io_u_mark_depth(struct thread_data *td, struct io_u *io_u)
 	td->ts.total_io_u[io_u->ddir]++;
 }
 
-static void io_u_mark_latency(struct thread_data *td, unsigned long msec)
+static void io_u_mark_lat_usec(struct thread_data *td, unsigned long usec)
+{
+	int index = 0;
+
+	assert(usec < 1000);
+
+	switch (usec) {
+	case 750 ... 999:
+		index = 9;
+		break;
+	case 500 ... 749:
+		index = 8;
+		break;
+	case 250 ... 499:
+		index = 7;
+		break;
+	case 100 ... 249:
+		index = 6;
+		break;
+	case 50 ... 99:
+		index = 5;
+		break;
+	case 20 ... 49:
+		index = 4;
+		break;
+	case 10 ... 19:
+		index = 3;
+		break;
+	case 4 ... 9:
+		index = 2;
+		break;
+	case 2 ... 3:
+		index = 1;
+	case 0 ... 1:
+		break;
+	}
+
+	assert(index < FIO_IO_U_LAT_U_NR);
+	td->ts.io_u_lat_u[index]++;
+}
+
+static void io_u_mark_lat_msec(struct thread_data *td, unsigned long msec)
 {
 	int index = 0;
 
 	switch (msec) {
 	default:
-		index++;
+		index = 11;
+		break;
 	case 1000 ... 1999:
-		index++;
+		index = 10;
+		break;
 	case 750 ... 999:
-		index++;
+		index = 9;
+		break;
 	case 500 ... 749:
-		index++;
+		index = 8;
+		break;
 	case 250 ... 499:
-		index++;
+		index = 7;
+		break;
 	case 100 ... 249:
-		index++;
+		index = 6;
+		break;
 	case 50 ... 99:
-		index++;
+		index = 5;
+		break;
 	case 20 ... 49:
-		index++;
+		index = 4;
+		break;
 	case 10 ... 19:
-		index++;
+		index = 3;
+		break;
 	case 4 ... 9:
-		index++;
+		index = 2;
+		break;
 	case 2 ... 3:
-		index++;
+		index = 1;
 	case 0 ... 1:
 		break;
 	}
 
-	td->ts.io_u_lat[index]++;
+	assert(index < FIO_IO_U_LAT_M_NR);
+	td->ts.io_u_lat_m[index]++;
+}
+
+static void io_u_mark_latency(struct thread_data *td, unsigned long usec)
+{
+	if (usec < 1000)
+		io_u_mark_lat_usec(td, usec);
+	else
+		io_u_mark_lat_msec(td, usec / 1000);
 }
 
 /*
@@ -682,7 +742,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 		add_clat_sample(td, idx, usec);
 		add_bw_sample(td, idx, &icd->time);
-		io_u_mark_latency(td, usec / 1000);
+		io_u_mark_latency(td, usec);
 
 		if (td_write(td) && idx == DDIR_WRITE &&
 		    td->o.verify != VERIFY_NONE)

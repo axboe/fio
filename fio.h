@@ -295,7 +295,8 @@ struct fio_file {
  * How many depth levels to log
  */
 #define FIO_IO_U_MAP_NR	8
-#define FIO_IO_U_LAT_NR 12
+#define FIO_IO_U_LAT_U_NR 12
+#define FIO_IO_U_LAT_M_NR 10
 
 struct thread_stat {
 	char *name;
@@ -333,7 +334,8 @@ struct thread_stat {
 	 * IO depth and latency stats
 	 */
 	unsigned int io_u_map[FIO_IO_U_MAP_NR];
-	unsigned int io_u_lat[FIO_IO_U_LAT_NR];
+	unsigned int io_u_lat_u[FIO_IO_U_LAT_U_NR];
+	unsigned int io_u_lat_m[FIO_IO_U_LAT_M_NR];
 	unsigned long total_io_u[2];
 	unsigned long short_io_u[2];
 
