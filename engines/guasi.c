@@ -37,9 +37,6 @@
 #define GDBG_PRINT(a) (void) 0
 #endif
 
-#define STFU_GCC(a) a = a
-
-
 struct guasi_data {
 	guasi_t hctx;
 	int max_reqs;
@@ -190,11 +187,9 @@ static int fio_guasi_commit(struct thread_data *td)
 	return 0;
 }
 
-static int fio_guasi_cancel(struct thread_data *td, struct io_u *io_u)
+static int fio_guasi_cancel(struct thread_data fio_unused *td,
+			    struct io_u *io_u)
 {
-	struct guasi_data *ld = td->io_ops->data;
-
-	STFU_GCC(ld);
 	GDBG_PRINT(("fio_guasi_cancel(%p) req=%p\n", io_u, io_u->greq));
 	if (io_u->greq != NULL)
 		guasi_req_cancel(io_u->greq);
