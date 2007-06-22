@@ -63,7 +63,7 @@ static int splice_in(struct thread_data *td, struct io_u *io_u)
 	int bytes = 0;
 
 	while (len) {
-		int ret = splice(nd->pipes[1], NULL, f->fd, NULL, len, 0);
+		int ret = splice(f->fd, NULL, nd->pipes[1], NULL, len, 0);
 
 		if (ret < 0) {
 			if (!bytes)
@@ -74,6 +74,7 @@ static int splice_in(struct thread_data *td, struct io_u *io_u)
 			break;
 
 		bytes += ret;
+		len -= ret;
 	}
 
 	return bytes;
@@ -131,6 +132,7 @@ static int vmsplice_io_u_out(struct thread_data *td, struct io_u *io_u,
 			break;
 
 		iov.iov_len -= ret;
+		bytes += ret;
 		if (iov.iov_len)
 			iov.iov_base += ret;
 	}
