@@ -313,6 +313,9 @@ static struct fio_option options[] = {
 			  { .ival = "splice",
 			    .help = "splice/vmsplice based IO",
 			  },
+			  { .ival = "netsplice",
+			    .help = "splice/vmsplice to/from the network",
+			  },
 #endif
 #ifdef FIO_HAVE_SGIO
 			  { .ival = "sg",

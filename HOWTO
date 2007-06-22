@@ -343,6 +343,9 @@ ioengine=str	Defines how the job issues io to the file. The following
 				or receive, if the latter only the port
 				argument is used.
 
+			netsplice Like net, but uses splice/vmsplice to
+				map data and send/receive.
+
 			cpu	Doesn't transfer any data, but burns CPU
 				cycles according to the cpuload= and
 				cpucycle= options. Setting cpuload=85

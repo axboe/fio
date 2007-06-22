@@ -19,6 +19,8 @@
 struct netio_data {
 	int listenfd;
 	int send_to_net;
+	int use_splice;
+	int pipes[2];
 	char host[64];
 	struct sockaddr_in addr;
 };
@@ -50,23 +52,178 @@ static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 	return 1;
 }
 
+/*
+ * Receive bytes from a socket and fill them into the internal pipe
+ */
+static int splice_in(struct thread_data *td, struct io_u *io_u)
+{
+	struct netio_data *nd = td->io_ops->data;
+	unsigned int len = io_u->xfer_buflen;
+	struct fio_file *f = io_u->file;
+	int bytes = 0;
+
+	while (len) {
+		int ret = splice(nd->pipes[1], NULL, f->fd, NULL, len, 0);
+
+		if (ret < 0) {
+			if (!bytes)
+				bytes = ret;
+
+			break;
+		} else if (!ret)
+			break;
+
+		bytes += ret;
+	}
+
+	return bytes;
+}
+
+/*
+ * Transmit 'len' bytes from the internal pipe
+ */
+static int splice_out(struct thread_data *td, struct io_u *io_u,
+		      unsigned int len)
+{
+	struct netio_data *nd = td->io_ops->data;
+	struct fio_file *f = io_u->file;
+	int bytes = 0;
+
+	while (len) {
+		int ret = splice(nd->pipes[0], NULL, f->fd, NULL, len, 0);
+
+		if (ret < 0) {
+			if (!bytes)
+				bytes = ret;
+			
+			break;
+		} else if (!ret)
+			break;
+
+		bytes += ret;
+		len -= ret;
+	}
+
+	return bytes;
+}
+
+/*
+ * vmsplice() pipe to io_u buffer
+ */
+static int vmsplice_io_u_out(struct thread_data *td, struct io_u *io_u,
+			     unsigned int len)
+{
+	struct netio_data *nd = td->io_ops->data;
+	struct iovec iov = {
+		.iov_base = io_u->xfer_buf,
+		.iov_len = len,
+	};
+	int bytes = 0;
+
+	while (iov.iov_len) {
+		int ret = vmsplice(nd->pipes[0], &iov, 1, 0);
+
+		if (ret < 0) {
+			if (!bytes)
+				bytes = ret;
+			break;
+		} else if (!ret)
+			break;
+
+		iov.iov_len -= ret;
+		if (iov.iov_len)
+			iov.iov_base += ret;
+	}
+
+	return bytes;
+}
+
+/*
+ * vmsplice() io_u to pipe
+ */
+static int vmsplice_io_u_in(struct thread_data *td, struct io_u *io_u)
+{
+	struct netio_data *nd = td->io_ops->data;
+	struct iovec iov = {
+		.iov_base = io_u->xfer_buf,
+		.iov_len = io_u->xfer_buflen,
+	};
+	unsigned int bytes = 0;
+
+	while (iov.iov_len) {
+		int ret = vmsplice(nd->pipes[1], &iov, 1, 0);
+
+		if (ret < 0)
+			return -1;
+		else if (!ret)
+			return bytes;
+
+		iov.iov_len -= ret;
+		bytes += ret;
+		if (iov.iov_len)
+			iov.iov_base += ret;
+	}
+
+	return bytes;
+}
+
+static int fio_netio_splice_in(struct thread_data *td, struct io_u *io_u)
+{
+	int ret;
+
+	ret = splice_in(td, io_u);
+	if (ret <= 0)
+		return ret;
+
+	return vmsplice_io_u_out(td, io_u, ret);
+}
+
+static int fio_netio_splice_out(struct thread_data *td, struct io_u *io_u)
+{
+	int ret;
+
+	ret = vmsplice_io_u_in(td, io_u);
+	if (ret <= 0)
+		return ret;
+
+	return splice_out(td, io_u, ret);
+}
+
+static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
+{
+	int flags = 0;
+
+	/*
+	 * if we are going to write more, set MSG_MORE
+	 */
+	if (td->this_io_bytes[DDIR_WRITE] + io_u->xfer_buflen < td->o.size)
+		flags = MSG_MORE;
+
+	return send(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen, flags);
+}
+
+static int fio_netio_recv(struct io_u *io_u)
+{
+	int flags = MSG_WAITALL;
+
+	return recv(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen, flags);
+}
+
 static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 {
-	struct fio_file *f = io_u->file;
-	int ret, flags = 0;
+	struct netio_data *nd = td->io_ops->data;
+	int ret;
 
 	if (io_u->ddir == DDIR_WRITE) {
-		/*
-		 * if we are going to write more, set MSG_MORE
-		 */
-		if (td->this_io_bytes[DDIR_WRITE] + io_u->xfer_buflen <
-		    td->o.size)
-			flags = MSG_MORE;
-
-		ret = send(f->fd, io_u->xfer_buf, io_u->xfer_buflen, flags);
+		if (nd->use_splice)
+			ret = fio_netio_splice_out(td, io_u);
+		else
+			ret = fio_netio_send(td, io_u);
 	} else if (io_u->ddir == DDIR_READ) {
-		flags = MSG_WAITALL;
-		ret = recv(f->fd, io_u->xfer_buf, io_u->xfer_buflen, flags);
+		if (nd->use_splice)
+			ret = fio_netio_splice_in(td, io_u);
+		else
+			ret = fio_netio_recv(io_u);
 	} else
 		ret = 0;	/* must be a SYNC */
 
@@ -285,7 +442,25 @@ static int fio_netio_setup(struct thread_data *td)
 	return 0;
 }
 
-static struct ioengine_ops ioengine = {
+static int fio_netio_setup_splice(struct thread_data *td)
+{
+	struct netio_data *nd;
+
+	fio_netio_setup(td);
+
+	nd = td->io_ops->data;
+	if (nd) {
+		if (pipe(nd->pipes) < 0)
+			return 1;
+
+		nd->use_splice = 1;
+		return 0;
+	}
+
+	return 1;
+}
+
+static struct ioengine_ops ioengine_rw = {
 	.name		= "net",
 	.version	= FIO_IOOPS_VERSION,
 	.prep		= fio_netio_prep,
@@ -298,12 +473,27 @@ static struct ioengine_ops ioengine = {
 	.flags		= FIO_SYNCIO | FIO_DISKLESSIO,
 };
 
+static struct ioengine_ops ioengine_splice = {
+	.name		= "netsplice",
+	.version	= FIO_IOOPS_VERSION,
+	.prep		= fio_netio_prep,
+	.queue		= fio_netio_queue,
+	.setup		= fio_netio_setup_splice,
+	.init		= fio_netio_init,
+	.cleanup	= fio_netio_cleanup,
+	.open_file	= fio_netio_open_file,
+	.close_file	= generic_close_file,
+	.flags		= FIO_SYNCIO | FIO_DISKLESSIO,
+};
+
 static void fio_init fio_netio_register(void)
 {
-	register_ioengine(&ioengine);
+	register_ioengine(&ioengine_rw);
+	register_ioengine(&ioengine_splice);
 }
 
 static void fio_exit fio_netio_unregister(void)
 {
-	unregister_ioengine(&ioengine);
+	unregister_ioengine(&ioengine_rw);
+	unregister_ioengine(&ioengine_splice);
 }
