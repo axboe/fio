@@ -122,7 +122,7 @@ static int vmsplice_io_u_out(struct thread_data *td, struct io_u *io_u,
 	int bytes = 0;
 
 	while (iov.iov_len) {
-		int ret = vmsplice(nd->pipes[0], &iov, 1, 0);
+		int ret = vmsplice(nd->pipes[0], &iov, 1, SPLICE_F_MOVE);
 
 		if (ret < 0) {
 			if (!bytes)
@@ -153,7 +153,7 @@ static int vmsplice_io_u_in(struct thread_data *td, struct io_u *io_u)
 	unsigned int bytes = 0;
 
 	while (iov.iov_len) {
-		int ret = vmsplice(nd->pipes[1], &iov, 1, 0);
+		int ret = vmsplice(nd->pipes[1], &iov, 1, SPLICE_F_MOVE);
 
 		if (ret < 0)
 			return -1;
