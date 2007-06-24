@@ -52,18 +52,12 @@ static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 	return 1;
 }
 
-/*
- * Receive bytes from a socket and fill them into the internal pipe
- */
-static int splice_in(struct thread_data *td, struct io_u *io_u)
+static int splice_io_u(int fdin, int fdout, unsigned int len)
 {
-	struct netio_data *nd = td->io_ops->data;
-	unsigned int len = io_u->xfer_buflen;
-	struct fio_file *f = io_u->file;
 	int bytes = 0;
 
 	while (len) {
-		int ret = splice(f->fd, NULL, nd->pipes[1], NULL, len, 0);
+		int ret = splice(fdin, NULL, fdout, NULL, len, 0);
 
 		if (ret < 0) {
 			if (!bytes)
@@ -78,6 +72,16 @@ static int splice_in(struct thread_data *td, struct io_u *io_u)
 	}
 
 	return bytes;
+}
+
+/*
+ * Receive bytes from a socket and fill them into the internal pipe
+ */
+static int splice_in(struct thread_data *td, struct io_u *io_u)
+{
+	struct netio_data *nd = td->io_ops->data;
+
+	return splice_io_u(io_u->file->fd, nd->pipes[1], io_u->xfer_buflen);
 }
 
 /*
@@ -87,25 +91,35 @@ static int splice_out(struct thread_data *td, struct io_u *io_u,
 		      unsigned int len)
 {
 	struct netio_data *nd = td->io_ops->data;
-	struct fio_file *f = io_u->file;
+
+	return splice_io_u(nd->pipes[0], io_u->file->fd, len);
+}
+
+static int vmsplice_io_u(struct io_u *io_u, int fd, unsigned int len)
+{
+	struct iovec iov = {
+		.iov_base = io_u->xfer_buf,
+		.iov_len = len,
+	};
 	int bytes = 0;
 
-	while (len) {
-		int ret = splice(nd->pipes[0], NULL, f->fd, NULL, len, 0);
+	while (iov.iov_len) {
+		int ret = vmsplice(fd, &iov, 1, SPLICE_F_MOVE);
 
 		if (ret < 0) {
 			if (!bytes)
 				bytes = ret;
-			
 			break;
 		} else if (!ret)
 			break;
 
+		iov.iov_len -= ret;
+		iov.iov_base += ret;
 		bytes += ret;
-		len -= ret;
 	}
 
 	return bytes;
+
 }
 
 /*
@@ -115,29 +129,8 @@ static int vmsplice_io_u_out(struct thread_data *td, struct io_u *io_u,
 			     unsigned int len)
 {
 	struct netio_data *nd = td->io_ops->data;
-	struct iovec iov = {
-		.iov_base = io_u->xfer_buf,
-		.iov_len = len,
-	};
-	int bytes = 0;
 
-	while (iov.iov_len) {
-		int ret = vmsplice(nd->pipes[0], &iov, 1, SPLICE_F_MOVE);
-
-		if (ret < 0) {
-			if (!bytes)
-				bytes = ret;
-			break;
-		} else if (!ret)
-			break;
-
-		iov.iov_len -= ret;
-		bytes += ret;
-		if (iov.iov_len)
-			iov.iov_base += ret;
-	}
-
-	return bytes;
+	return vmsplice_io_u(io_u, nd->pipes[0], len);
 }
 
 /*
@@ -146,49 +139,38 @@ static int vmsplice_io_u_out(struct thread_data *td, struct io_u *io_u,
 static int vmsplice_io_u_in(struct thread_data *td, struct io_u *io_u)
 {
 	struct netio_data *nd = td->io_ops->data;
-	struct iovec iov = {
-		.iov_base = io_u->xfer_buf,
-		.iov_len = io_u->xfer_buflen,
-	};
-	unsigned int bytes = 0;
 
-	while (iov.iov_len) {
-		int ret = vmsplice(nd->pipes[1], &iov, 1, SPLICE_F_MOVE);
-
-		if (ret < 0)
-			return -1;
-		else if (!ret)
-			return bytes;
-
-		iov.iov_len -= ret;
-		bytes += ret;
-		if (iov.iov_len)
-			iov.iov_base += ret;
-	}
-
-	return bytes;
+	return vmsplice_io_u(io_u, nd->pipes[1], io_u->xfer_buflen);
 }
 
+/*
+ * splice receive - transfer socket data into a pipe using splice, then map
+ * that pipe data into the io_u using vmsplice.
+ */
 static int fio_netio_splice_in(struct thread_data *td, struct io_u *io_u)
 {
 	int ret;
 
 	ret = splice_in(td, io_u);
-	if (ret <= 0)
-		return ret;
+	if (ret > 0)
+		return vmsplice_io_u_out(td, io_u, ret);
 
-	return vmsplice_io_u_out(td, io_u, ret);
+	return ret;
 }
 
+/*
+ * splice transmit - map data from the io_u into a pipe by using vmsplice,
+ * then transfer that pipe to a socket using splice.
+ */
 static int fio_netio_splice_out(struct thread_data *td, struct io_u *io_u)
 {
 	int ret;
 
 	ret = vmsplice_io_u_in(td, io_u);
-	if (ret <= 0)
-		return ret;
+	if (ret > 0)
+		return splice_out(td, io_u, ret);
 
-	return splice_out(td, io_u, ret);
+	return ret;
 }
 
 static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
@@ -305,7 +287,6 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 
 	return 0;
 }
-
 
 static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
 {
