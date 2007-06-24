@@ -424,6 +424,13 @@ static void fio_netio_cleanup(struct thread_data *td)
 	struct netio_data *nd = td->io_ops->data;
 
 	if (nd) {
+		if (nd->listenfd != -1)
+			close(nd->listenfd);
+		if (nd->pipes[0] != -1)
+			close(nd->pipes[0]);
+		if (nd->pipes[1] != -1)
+			close(nd->pipes[1]);
+
 		free(nd);
 		td->io_ops->data = NULL;
 	}
@@ -438,6 +445,7 @@ static int fio_netio_setup(struct thread_data *td)
 
 		memset(nd, 0, sizeof(*nd));
 		nd->listenfd = -1;
+		nd->pipes[0] = nd->pipes[1] = -1;
 		td->io_ops->data = nd;
 	}
 
