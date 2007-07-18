@@ -14,7 +14,7 @@ Source
 
 fio resides in a git repo, the canonical place is:
 
-git://git.kernel.dk/data/git/fio.git
+git://git.kernel.dk/fio.git
 
 The http protocol also works, path is the same.
 
