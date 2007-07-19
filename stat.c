@@ -82,7 +82,7 @@ static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 	if (n > 1.0)
 		*dev = sqrt(is->S / (n - 1.0));
 	else
-		*dev = -1.0;
+		*dev = 0;
 
 	return 1;
 }
