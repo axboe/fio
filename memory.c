@@ -70,6 +70,8 @@ static int alloc_mem_shm(struct thread_data *td)
 				log_err("fio: check that you have free huge pages and that hugepage-size is correct.\n");
 			else if (errno == ENOSYS)
 				log_err("fio: your system does not appear to support huge pages.\n");
+			else if (errno == ENOMEM)
+				log_err("fio: no huge pages available, do you need to alocate some? See HOWTO.\n");
 		}
 		
 		return 1;
