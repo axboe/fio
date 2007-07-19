@@ -126,7 +126,12 @@ static int alloc_mem_mmap(struct thread_data *td)
 
 static int alloc_mem_malloc(struct thread_data *td)
 {
-	td->orig_buffer = malloc(td->orig_buffer_size);
+	unsigned int bsize = td->orig_buffer_size;
+
+	if (td->o.odirect)
+		bsize += page_mask;
+		
+	td->orig_buffer = malloc(bsize);
 	if (td->orig_buffer)
 		return 0;
 
