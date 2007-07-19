@@ -65,7 +65,7 @@ static int alloc_mem_shm(struct thread_data *td)
 		td_verror(td, errno, "shmget");
 		if (geteuid() != 0 && errno == ENOMEM)
 			log_err("fio: you may need to run this job as root\n");
-		if (td->o.mem_type == MEM_SHMHUM) {
+		if (td->o.mem_type == MEM_SHMHUGE) {
 			if (errno == EINVAL)
 				log_err("fio: check that you have free huge pages and that hugepage-size is correct.\n");
 			else if (errno == ENOSYS)
