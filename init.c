@@ -564,8 +564,12 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 	}
 
 	string = malloc(4096);
-	name = malloc(256);
-	memset(name, 0, 256);
+
+	/*
+	 * it's really 256 + small bit, 280 should suffice
+	 */
+	name = malloc(280);
+	memset(name, 0, 280);
 
 	stonewall = stonewall_flag;
 	do {

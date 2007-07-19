@@ -159,8 +159,8 @@ void strip_blank_end(char *p)
 	if (s)
 		p = s;
 
-	s = p + strlen(p) - 1;
-	while (isspace(*s) || iscntrl(*s))
+	s = p + strlen(p);
+	while ((isspace(*s) || iscntrl(*s)) && (s > p))
 		s--;
 
 	*(s + 1) = '\0';
