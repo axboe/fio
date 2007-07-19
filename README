@@ -32,6 +32,9 @@ Dag Wieërs has RPMs for Red Hat related distros, find them here:
 
 http://dag.wieers.com/rpm/packages/fio/
 
+Mandriva has integrated fio into their package repository, so installing
+on that distro should be as easy as typing 'urpmi fio'.
+
 
 Mailing list
 ------------
