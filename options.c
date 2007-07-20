@@ -369,6 +369,7 @@ static struct fio_option options[] = {
 		.name	= "size",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(size),
+		.minval = 1,
 		.help	= "Total size of device or files",
 	},
 	{
@@ -376,6 +377,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(file_size_low),
 		.off2	= td_var_offset(file_size_high),
+		.minval = 1,
 		.help	= "Size of individual files",
 	},
 	{
@@ -384,6 +386,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_VAL_INT,
 		.off1	= td_var_offset(bs[DDIR_READ]),
 		.off2	= td_var_offset(bs[DDIR_WRITE]),
+		.minval = 1,
 		.help	= "Block size unit",
 		.def	= "4k",
 	},
@@ -395,6 +398,7 @@ static struct fio_option options[] = {
 		.off2	= td_var_offset(max_bs[DDIR_READ]),
 		.off3	= td_var_offset(min_bs[DDIR_WRITE]),
 		.off4	= td_var_offset(max_bs[DDIR_WRITE]),
+		.minval = 1,
 		.help	= "Set block size range (in more detail than bs)",
 	},
 	{
