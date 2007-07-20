@@ -515,6 +515,7 @@ struct thread_data {
 	unsigned long io_issues[2];
 	unsigned long long io_blocks[2];
 	unsigned long long io_bytes[2];
+	unsigned long long io_skip_bytes;
 	unsigned long long this_io_bytes[2];
 	unsigned long long zone_bytes;
 	struct fio_sem *mutex;

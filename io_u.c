@@ -328,6 +328,15 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	io_u->ddir = get_rw_ddir(td);
 
 	/*
+	 * See if it's time to switch to a new zone
+	 */
+	if (td->zone_bytes >= td->o.zone_size) {
+		td->zone_bytes = 0;
+		io_u->file->last_pos += td->o.zone_skip;
+		td->io_skip_bytes += td->o.zone_skip;
+	}
+
+	/*
 	 * No log, let the seq/rand engine retrieve the next buflen and
 	 * position.
 	 */
@@ -659,11 +668,6 @@ set_file:
 	} while (1);
 
 	assert(io_u->file->flags & FIO_FILE_OPEN);
-
-	if (td->zone_bytes >= td->o.zone_size) {
-		td->zone_bytes = 0;
-		f->last_pos += td->o.zone_skip;
-	}
 
 	if (io_u->ddir != DDIR_SYNC) {
 		if (!io_u->buflen) {

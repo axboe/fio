@@ -731,7 +731,7 @@ static int keep_running(struct thread_data *td)
 		return 1;
 	}
 
-	io_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE];
+	io_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE] + td->io_skip_bytes;
 	if (io_done < td->o.size)
 		return 1;
 
@@ -753,7 +753,8 @@ static int clear_io_state(struct thread_data *td)
 
 	td->last_was_sync = 0;
 
-	td->nr_done_files = 0;
+	if (td->o.time_based)
+		td->nr_done_files = 0;
 
 	for_each_file(td, f, i)
 		td_io_close_file(td, f);
