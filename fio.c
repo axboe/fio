@@ -638,7 +638,11 @@ static int init_io_u(struct thread_data *td)
 	if (allocate_io_mem(td))
 		return 1;
 
-	p = ALIGN(td->orig_buffer);
+	if (td->o.odirect)
+		p = ALIGN(td->orig_buffer);
+	else
+		p = td->orig_buffer;
+
 	for (i = 0; i < max_units; i++) {
 		if (td->terminate)
 			return 1;
