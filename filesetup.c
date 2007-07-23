@@ -9,6 +9,8 @@
 
 #include "fio.h"
 
+static int root_warn;
+
 static int extend_file(struct thread_data *td, struct fio_file *f)
 {
 	int r, new_layout = 0, unlink_file = 0, flags;
@@ -178,7 +180,10 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 	else if (f->filetype == FIO_TYPE_BD) {
 		ret = blockdev_invalidate_cache(f->fd);
 		if (ret < 0 && errno == EACCES && geteuid()) {
-			log_err("fio: only root may flush block devices. Cache flush bypassed!\n");
+			if (!root_warn) {
+				log_err("fio: only root may flush block devices. Cache flush bypassed!\n");
+				root_warn = 1;
+			}
 			ret = 0;
 		}
 	} else if (f->filetype == FIO_TYPE_CHAR || f->filetype == FIO_TYPE_PIPE)
