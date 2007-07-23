@@ -173,9 +173,10 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 {
 	unsigned long long offset;
 	unsigned int bytes;
-	int rw, reads, writes, fileno = 0, file_action = 0; /* stupid gcc */
+	int reads, writes, fileno = 0, file_action = 0; /* stupid gcc */
 	char *fname, *act;
 	char *str, *p;
+	enum fio_ddir rw;
 
 	free_release_files(td);
 
@@ -246,7 +247,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 		INIT_LIST_HEAD(&ipo->list);
 		ipo->offset = offset;
 		ipo->len = bytes;
-		ipo->ddir = (enum fio_ddir) rw;
+		ipo->ddir = rw;
 		if (bytes > td->o.max_bs[rw])
 			td->o.max_bs[rw] = bytes;
 		if (rw == DDIR_INVAL) {
