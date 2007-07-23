@@ -228,6 +228,8 @@ static void show_lat(double *io_u_lat, int nr, const char **ranges,
 		if (io_u_lat[i] <= 0.0)
 			continue;
 		if (new_line) {
+			if (line)
+				log_info("\n");
 			log_info("     lat (%s): ", msg);
 			new_line = 0;
 			line = 0;
@@ -239,7 +241,6 @@ static void show_lat(double *io_u_lat, int nr, const char **ranges,
 		if (line == 5)
 			new_line = 1;
 	}
-
 }
 
 static void show_lat_u(double *io_u_lat_u)
@@ -262,6 +263,7 @@ static void show_lat_m(double *io_u_lat_m)
 static void show_latencies(double *io_u_lat_u, double *io_u_lat_m)
 {
 	show_lat_u(io_u_lat_u);
+	log_info("\n");
 	show_lat_m(io_u_lat_m);
 	log_info("\n");
 }
