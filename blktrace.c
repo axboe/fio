@@ -75,10 +75,8 @@ int is_blktrace(const char *filename)
 	int fd, ret;
 
 	fd = open(filename, O_RDONLY);
-	if (fd < 0) {
-		perror("open blktrace");
+	if (fd < 0)
 		return 0;
-	}
 
 	ret = read(fd, &t, sizeof(t));
 	close(fd);
