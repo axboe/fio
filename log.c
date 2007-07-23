@@ -61,15 +61,11 @@ restart:
 	if (!list_empty(&td->io_log_list)) {
 		ipo = list_entry(td->io_log_list.next, struct io_piece, list);
 		list_del(&ipo->list);
-		io_u->offset = ipo->offset;
-		io_u->buflen = ipo->len;
-		io_u->ddir = ipo->ddir;
-		io_u->file = ipo->file;
 
 		/*
 		 * invalid ddir, this is a file action
 		 */
-		if (io_u->ddir == DDIR_INVAL) {
+		if (ipo->ddir == DDIR_INVAL) {
 			struct fio_file *f = &td->files[ipo->fileno];
 
 			if (ipo->file_action == FIO_LOG_OPEN_FILE) {
@@ -83,14 +79,15 @@ restart:
 			}
 		}
 
+		io_u->offset = ipo->offset;
+		io_u->buflen = ipo->len;
+		io_u->ddir = ipo->ddir;
+		io_u->file = &td->files[ipo->fileno];
+		get_file(io_u->file);
+
 		if (ipo->delay)
 			iolog_delay(td, ipo->delay);
 
-		/*
-		 * work around, this needs a format change to work for > 1 file
-		 */
-		if (!io_u->file)
-			io_u->file = &td->files[0];
 		free(ipo);
 		return 0;
 	}

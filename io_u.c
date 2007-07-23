@@ -310,12 +310,6 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	/*
-	 * If using an iolog, grab next piece if any available.
-	 */
-	if (td->o.read_iolog_file)
-		return read_iolog_get(td, io_u);
-
-	/*
 	 * see if it's time to sync
 	 */
 	if (td->o.fsync_blocks &&
@@ -578,6 +572,50 @@ static struct fio_file *find_next_new_file(struct thread_data *td)
 	return f;
 }
 
+static int set_io_u_file(struct thread_data *td, struct io_u *io_u)
+{
+	struct fio_file *f;
+
+	do {
+		f = get_next_file(td);
+		if (!f)
+			return 1;
+
+set_file:
+		io_u->file = f;
+		get_file(f);
+
+		if (!fill_io_u(td, io_u))
+			break;
+
+		/*
+		 * td_io_close() does a put_file() as well, so no need to
+		 * do that here.
+		 */
+		io_u->file = NULL;
+		td_io_close_file(td, f);
+		f->flags |= FIO_FILE_DONE;
+		td->nr_done_files++;
+
+		/*
+		 * probably not the right place to do this, but see
+		 * if we need to open a new file
+		 */
+		if (td->nr_open_files < td->o.open_files &&
+		    td->o.open_files != td->o.nr_files) {
+			f = find_next_new_file(td);
+
+			if (!f || td_io_open_file(td, f))
+				return 1;
+
+			goto set_file;
+		}
+	} while (1);
+
+	return 0;
+}
+
+
 struct io_u *__get_io_u(struct thread_data *td)
 {
 	struct io_u *io_u = NULL;
@@ -614,7 +652,6 @@ struct io_u *get_io_u(struct thread_data *td)
 {
 	struct fio_file *f;
 	struct io_u *io_u;
-	int ret;
 
 	io_u = __get_io_u(td);
 	if (!io_u)
@@ -626,52 +663,21 @@ struct io_u *get_io_u(struct thread_data *td)
 	if (io_u->file)
 		goto out;
 
-	do {
-		f = get_next_file(td);
-		if (!f) {
-			put_io_u(td, io_u);
-			return NULL;
-		}
-
-set_file:
-		io_u->file = f;
-		get_file(f);
-
-		if (!fill_io_u(td, io_u))
-			break;
-
-		/*
-		 * td_io_close() does a put_file() as well, so no need to
-		 * do that here.
-		 */
-		io_u->file = NULL;
-		td_io_close_file(td, f);
-		f->flags |= FIO_FILE_DONE;
-		td->nr_done_files++;
-
-		/*
-		 * probably not the right place to do this, but see
-		 * if we need to open a new file
-		 */
-		if (td->nr_open_files < td->o.open_files &&
-		    td->o.open_files != td->o.nr_files) {
-			f = find_next_new_file(td);
-
-			if (!f || (ret = td_io_open_file(td, f))) {
-				put_io_u(td, io_u);
-				return NULL;
-			}
-			goto set_file;
-		}
-	} while (1);
-
-	assert(io_u->file->flags & FIO_FILE_OPEN);
+	/*
+	 * If using an iolog, grab next piece if any available.
+	 */
+	if (td->o.read_iolog_file) {
+		if (read_iolog_get(td, io_u))
+			goto err_put;
+	} else if (set_io_u_file(td, io_u))
+		goto err_put;
+	
+	f = io_u->file;
+	assert(f->flags & FIO_FILE_OPEN);
 
 	if (io_u->ddir != DDIR_SYNC) {
-		if (!io_u->buflen) {
-			put_io_u(td, io_u);
-			return NULL;
-		}
+		if (!io_u->buflen)
+			goto err_put;
 
 		f->last_pos = io_u->offset + io_u->buflen;
 
@@ -687,13 +693,13 @@ out:
 	io_u->xfer_buf = io_u->buf;
 	io_u->xfer_buflen = io_u->buflen;
 
-	if (td_io_prep(td, io_u)) {
-		put_io_u(td, io_u);
-		return NULL;
+	if (!td_io_prep(td, io_u)) {
+		fio_gettime(&io_u->start_time, NULL);
+		return io_u;
 	}
-
-	fio_gettime(&io_u->start_time, NULL);
-	return io_u;
+err_put:
+	put_io_u(td, io_u);
+	return NULL;
 }
 
 void io_u_log_error(struct thread_data *td, struct io_u *io_u)
