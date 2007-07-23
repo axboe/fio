@@ -35,6 +35,7 @@ enum fio_ddir {
 	DDIR_READ = 0,
 	DDIR_WRITE,
 	DDIR_SYNC,
+	DDIR_INVAL = -1,
 };
 
 enum td_ddir {
@@ -85,11 +86,17 @@ struct io_piece {
 		struct rb_node rb_node;
 		struct list_head list;
 	};
-	struct fio_file *file;
+	union {
+		int fileno;
+		struct fio_file *file;
+	};
 	unsigned long long offset;
 	unsigned long len;
 	enum fio_ddir ddir;
-	unsigned long delay;
+	union {
+		unsigned long delay;
+		unsigned int file_action;
+	};
 };
 
 #ifdef FIO_HAVE_SYSLET
@@ -674,8 +681,15 @@ struct disk_util {
 /*
  * Log exports
  */
+enum file_log_act {
+	FIO_LOG_ADD_FILE,
+	FIO_LOG_OPEN_FILE,
+	FIO_LOG_CLOSE_FILE,
+};
+
 extern int __must_check read_iolog_get(struct thread_data *, struct io_u *);
-extern void write_iolog_put(struct thread_data *, struct io_u *);
+extern void log_io_u(struct thread_data *, struct io_u *);
+extern void log_file(struct thread_data *, struct fio_file *, enum file_log_act);
 extern int __must_check init_iolog(struct thread_data *td);
 extern void log_io_piece(struct thread_data *, struct io_u *);
 extern void prune_io_piece_log(struct thread_data *);
@@ -738,12 +752,14 @@ extern int __must_check open_files(struct thread_data *);
 extern int __must_check file_invalidate_cache(struct thread_data *, struct fio_file *);
 extern int __must_check generic_open_file(struct thread_data *, struct fio_file *);
 extern void generic_close_file(struct thread_data *, struct fio_file *);
-extern void add_file(struct thread_data *, const char *);
+extern int add_file(struct thread_data *, const char *);
 extern void get_file(struct fio_file *);
 extern void put_file(struct thread_data *, struct fio_file *);
 extern int add_dir_files(struct thread_data *, const char *);
 extern int init_random_map(struct thread_data *);
 extern void dup_files(struct thread_data *, struct thread_data *);
+extern int get_fileno(struct thread_data *, const char *);
+extern void free_release_files(struct thread_data *);
 
 /*
  * ETA/status stuff

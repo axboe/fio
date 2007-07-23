@@ -357,9 +357,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	 * If using a write iolog, store this entry.
 	 */
 out:
-	if (td->o.write_iolog_file)
-		write_iolog_put(td, io_u);
-
+	log_io_u(td, io_u);
 	return 0;
 }
 

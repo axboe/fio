@@ -309,6 +309,7 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 		memset(f->file_map, 0, f->num_maps * sizeof(long));
 
 done:
+	log_file(td, f, FIO_LOG_OPEN_FILE);
 	td->nr_open_files++;
 	get_file(f);
 	return 0;
@@ -320,6 +321,9 @@ err:
 
 void td_io_close_file(struct thread_data *td, struct fio_file *f)
 {
+	if (!(f->flags & FIO_FILE_CLOSING))
+		log_file(td, f, FIO_LOG_CLOSE_FILE);
+
 	/*
 	 * mark as closing, do real close when last io on it has completed
 	 */

@@ -513,7 +513,7 @@ static void get_file_type(struct fio_file *f)
 	}
 }
 
-void add_file(struct thread_data *td, const char *fname)
+int add_file(struct thread_data *td, const char *fname)
 {
 	int cur_files = td->files_index;
 	char file_name[PATH_MAX];
@@ -543,6 +543,8 @@ void add_file(struct thread_data *td, const char *fname)
 	td->files_index++;
 	if (f->filetype == FIO_TYPE_FILE)
 		td->nr_normal_files++;
+
+	return cur_files;
 }
 
 void get_file(struct fio_file *f)
@@ -644,4 +646,29 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 		if (f->file_name)
 			f->file_name = strdup(f->file_name);
 	}
+}
+
+/*
+ * Returns the index that matches the filename, or -1 if not there
+ */
+int get_fileno(struct thread_data *td, const char *fname)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	for_each_file(td, f, i)
+		if (!strcmp(f->file_name, fname))
+			return i;
+
+	return -1;
+}
+
+/*
+ * For log usage, where we add/open/close files automatically
+ */
+void free_release_files(struct thread_data *td)
+{
+	close_files(td);
+	td->files_index = 0;
+	td->nr_normal_files = 0;
 }

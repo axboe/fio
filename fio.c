@@ -921,8 +921,6 @@ static void *thread_main(void *data)
 		finish_log(td, td->ts.slat_log, "slat");
 	if (td->ts.clat_log)
 		finish_log(td, td->ts.clat_log, "clat");
-	if (td->o.write_iolog_file)
-		write_iolog_close(td);
 	if (td->o.exec_postrun) {
 		if (system(td->o.exec_postrun) < 0)
 			log_err("fio: postrun %s failed\n", td->o.exec_postrun);
@@ -937,6 +935,13 @@ err:
 	close_files(td);
 	close_ioengine(td);
 	cleanup_io_u(td);
+
+	/*
+	 * do this very late, it will log file closing as well
+	 */
+	if (td->o.write_iolog_file)
+		write_iolog_close(td);
+
 	options_mem_free(td);
 	td_set_runstate(td, TD_EXITED);
 	return (void *) (unsigned long) td->error;

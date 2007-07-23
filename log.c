@@ -1,11 +1,38 @@
+/*
+ * Code related to writing an iolog of what a thread is doing, and to
+ * later read that back and replay
+ */
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "list.h"
 #include "fio.h"
 
-void write_iolog_put(struct thread_data *td, struct io_u *io_u)
+static const char iolog_ver2[] = "fio version 2 iolog";
+
+void log_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	fprintf(td->iolog_f, "%u,%llu,%lu\n", io_u->ddir, io_u->offset, io_u->buflen);
+	const char *act[] = { "read", "write", "sync" };
+
+	assert(io_u->ddir < 3);
+
+	if (!td->o.write_iolog_file)
+		return;
+
+	fprintf(td->iolog_f, "%s %s %llu %lu\n", io_u->file->file_name, act[io_u->ddir], io_u->offset, io_u->buflen);
+}
+
+void log_file(struct thread_data *td, struct fio_file *f,
+	      enum file_log_act what)
+{
+	const char *act[] = { "add", "open", "close" };
+
+	assert(what < 3);
+
+	if (!td->o.write_iolog_file)
+		return;
+
+	fprintf(td->iolog_f, "%s %s\n", f->file_name, act[what]);
 }
 
 static void iolog_delay(struct thread_data *td, unsigned long delay)
@@ -30,6 +57,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
 
+restart:
 	if (!list_empty(&td->io_log_list)) {
 		ipo = list_entry(td->io_log_list.next, struct io_piece, list);
 		list_del(&ipo->list);
@@ -37,6 +65,23 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 		io_u->buflen = ipo->len;
 		io_u->ddir = ipo->ddir;
 		io_u->file = ipo->file;
+
+		/*
+		 * invalid ddir, this is a file action
+		 */
+		if (io_u->ddir == DDIR_INVAL) {
+			struct fio_file *f = &td->files[ipo->fileno];
+
+			if (ipo->file_action == FIO_LOG_OPEN_FILE) {
+				assert(!td_io_open_file(td, f));
+				free(ipo);
+				goto restart;
+			} else if (ipo->file_action == FIO_LOG_CLOSE_FILE) {
+				td_io_close_file(td, f);
+				free(ipo);
+				goto restart;
+			}
+		}
 
 		if (ipo->delay)
 			iolog_delay(td, ipo->delay);
@@ -120,24 +165,126 @@ void write_iolog_close(struct thread_data *td)
 	fflush(td->iolog_f);
 	fclose(td->iolog_f);
 	free(td->iolog_buf);
+	td->iolog_f = NULL;
+	td->iolog_buf = NULL;
 }
 
 /*
- * Open a stored log and read in the entries.
+ * Read version 2 iolog data. It is enhanced to include per-file logging,
+ * syncs, etc.
  */
-static int init_iolog_read(struct thread_data *td)
+static int read_iolog2(struct thread_data *td, FILE *f)
+{
+	unsigned long long offset;
+	unsigned int bytes;
+	int rw, reads, writes, fileno = 0, file_action = 0; /* stupid gcc */
+	char *fname, *act;
+	char *str, *p;
+
+	free_release_files(td);
+
+	/*
+	 * Read in the read iolog and store it, reuse the infrastructure
+	 * for doing verifications.
+	 */
+	str = malloc(4096);
+	fname = malloc(256+16);
+	act = malloc(256+16);
+
+	reads = writes = 0;
+	while ((p = fgets(str, 4096, f)) != NULL) {
+		struct io_piece *ipo;
+		int r;
+
+		r = sscanf(p, "%256s %256s %llu %u", fname, act, &offset, &bytes);
+		if (r == 4) {
+			/*
+			 * Check action first
+			 */
+			if (!strcmp(act, "read"))
+				rw = DDIR_READ;
+			else if (!strcmp(act, "write"))
+				rw = DDIR_WRITE;
+			else if (!strcmp(act, "sync"))
+				rw = DDIR_SYNC;
+			else {
+				log_err("fio: bad iolog file action: %s\n",act);
+				continue;
+			}
+		} else if (r == 2) {
+			rw = DDIR_INVAL;
+			if (!strcmp(act, "add")) {
+				td->o.nr_files++;
+				fileno = add_file(td, fname);
+				file_action = FIO_LOG_ADD_FILE;
+				continue;
+			} else if (!strcmp(act, "open")) {
+				fileno = get_fileno(td, fname);
+				file_action = FIO_LOG_OPEN_FILE;
+			} else if (!strcmp(act, "close")) {
+				fileno = get_fileno(td, fname);
+				file_action = FIO_LOG_CLOSE_FILE;
+			} else {
+				log_err("fio: bad iolog file action: %s\n",act);
+				continue;
+			}
+		} else {
+			log_err("bad iolog2: %s", p);
+			continue;
+		}
+			
+		if (rw == DDIR_READ)
+			reads++;
+		else if (rw == DDIR_WRITE)
+			writes++;
+		else if (rw != DDIR_SYNC && rw != DDIR_INVAL) {
+			log_err("bad ddir: %d\n", rw);
+			continue;
+		}
+
+		/*
+		 * Make note of file
+		 */
+		ipo = malloc(sizeof(*ipo));
+		memset(ipo, 0, sizeof(*ipo));
+		INIT_LIST_HEAD(&ipo->list);
+		ipo->offset = offset;
+		ipo->len = bytes;
+		ipo->ddir = (enum fio_ddir) rw;
+		if (bytes > td->o.max_bs[rw])
+			td->o.max_bs[rw] = bytes;
+		if (rw == DDIR_INVAL) {
+			ipo->fileno = fileno;
+			ipo->file_action = file_action;
+		}
+		list_add_tail(&ipo->list, &td->io_log_list);
+	}
+
+	free(str);
+	free(act);
+	free(fname);
+
+	if (!reads && !writes)
+		return 1;
+	else if (reads && !writes)
+		td->o.td_ddir = TD_DDIR_READ;
+	else if (!reads && writes)
+		td->o.td_ddir = TD_DDIR_WRITE;
+	else
+		td->o.td_ddir = TD_DDIR_RW;
+
+	return 0;
+}
+
+/*
+ * Read version 1 iolog data.
+ */
+static int read_iolog(struct thread_data *td, FILE *f)
 {
 	unsigned long long offset;
 	unsigned int bytes;
 	char *str, *p;
-	FILE *f;
 	int rw, reads, writes;
-
-	f = fopen(td->o.read_iolog_file, "r");
-	if (!f) {
-		perror("fopen read iolog");
-		return 1;
-	}
 
 	/*
 	 * Read in the read iolog and store it, reuse the infrastructure
@@ -173,7 +320,6 @@ static int init_iolog_read(struct thread_data *td)
 	}
 
 	free(str);
-	fclose(f);
 
 	if (!reads && !writes)
 		return 1;
@@ -188,16 +334,58 @@ static int init_iolog_read(struct thread_data *td)
 }
 
 /*
+ * open iolog, check version, and call appropriate parser
+ */
+static int init_iolog_read(struct thread_data *td)
+{
+	char buffer[256], *p;
+	FILE *f;
+	int ret;
+
+	f = fopen(td->o.read_iolog_file, "r");
+	if (!f) {
+		perror("fopen read iolog");
+		return 1;
+	}
+
+	p = fgets(buffer, sizeof(buffer), f);
+	if (!p) {
+		td_verror(td, errno, "iolog read");
+		log_err("fio: unable to read iolog\n");
+		return 1;
+	}
+
+	/*
+	 * version 2 of the iolog stores a specific string as the
+	 * first line, check for that
+	 */
+	if (!strncmp(iolog_ver2, buffer, strlen(iolog_ver2)))
+		ret = read_iolog2(td, f);
+	else {
+		/*
+		 * seek back to the beginning
+		 */
+		if (fseek(f, 0, SEEK_SET) < 0) {
+			td_verror(td, errno, "iolog read");
+			log_err("fio: unable to read iolog\n");
+			return 1;
+		}
+
+		ret = read_iolog(td, f);
+	}
+
+	fclose(f);
+	return ret;
+}
+
+/*
  * Setup a log for storing io patterns.
  */
 static int init_iolog_write(struct thread_data *td)
 {
+	struct fio_file *ff;
 	FILE *f;
-
-	if (td->o.nr_files > 1) {
-		log_err("fio: write_iolog only works with 1 file currently\n");
-		return 1;
-	}
+	unsigned int i;
 
 	f = fopen(td->o.write_iolog_file, "w+");
 	if (!f) {
@@ -211,6 +399,21 @@ static int init_iolog_write(struct thread_data *td)
 	td->iolog_f = f;
 	td->iolog_buf = malloc(8192);
 	setvbuf(f, td->iolog_buf, _IOFBF, 8192);
+
+	/*
+	 * write our version line
+	 */
+	if (fprintf(f, "%s\n", iolog_ver2) < 0) {
+		perror("iolog init\n");
+		return 1;
+	}
+
+	/*
+	 * add all known files
+	 */
+	for_each_file(td, ff, i)
+		log_file(td, ff, FIO_LOG_ADD_FILE);
+
 	return 0;
 }
 
