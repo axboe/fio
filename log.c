@@ -281,7 +281,8 @@ static int read_iolog(struct thread_data *td, FILE *f)
 	unsigned long long offset;
 	unsigned int bytes;
 	char *str, *p;
-	int rw, reads, writes;
+	int reads, writes;
+	enum fio_ddir rw;
 
 	/*
 	 * Read in the read iolog and store it, reuse the infrastructure
@@ -310,7 +311,7 @@ static int read_iolog(struct thread_data *td, FILE *f)
 		INIT_LIST_HEAD(&ipo->list);
 		ipo->offset = offset;
 		ipo->len = bytes;
-		ipo->ddir = (enum fio_ddir) rw;
+		ipo->ddir = rw;
 		if (bytes > td->o.max_bs[rw])
 			td->o.max_bs[rw] = bytes;
 		list_add_tail(&ipo->list, &td->io_log_list);
