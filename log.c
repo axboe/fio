@@ -57,8 +57,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
 
-restart:
-	if (!list_empty(&td->io_log_list)) {
+	while (!list_empty(&td->io_log_list)) {
 		ipo = list_entry(td->io_log_list.next, struct io_piece, list);
 		list_del(&ipo->list);
 
@@ -71,11 +70,11 @@ restart:
 			if (ipo->file_action == FIO_LOG_OPEN_FILE) {
 				assert(!td_io_open_file(td, f));
 				free(ipo);
-				goto restart;
+				continue;
 			} else if (ipo->file_action == FIO_LOG_CLOSE_FILE) {
 				td_io_close_file(td, f);
 				free(ipo);
-				goto restart;
+				continue;
 			}
 		}
 
