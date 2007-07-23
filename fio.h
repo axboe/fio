@@ -472,6 +472,7 @@ struct thread_data {
 		os_random_state_t next_file_state;
 	};
 	int error;
+	int done;
 	pid_t pid;
 	char *orig_buffer;
 	size_t orig_buffer_size;

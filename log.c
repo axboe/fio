@@ -91,6 +91,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 		return 0;
 	}
 
+	td->done = 1;
 	return 1;
 }
 

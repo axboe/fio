@@ -724,6 +724,8 @@ static int keep_running(struct thread_data *td)
 {
 	unsigned long long io_done;
 
+	if (td->done)
+		return 0;
 	if (td->o.time_based)
 		return 1;
 	if (td->o.loops) {
