@@ -23,22 +23,34 @@
 #define FIO_HAVE_HUGETLB
 #define FIO_HAVE_RAWBIND
 #define FIO_HAVE_BLKTRACE
+#define FIO_HAVE_SETPSHARED
 
 #define OS_MAP_ANON		(MAP_ANONYMOUS)
 
+#ifndef CLOCK_MONOTONIC
+#define CLOCK_MONOTONIC 1
+#endif
+
+#ifdef FIO_HAVE_CPU_AFFINITY
 typedef cpu_set_t os_cpu_mask_t;
+#else
+typedef int os_cpu_mask_t;
+#endif
 typedef struct drand48_data os_random_state_t;
 
 /*
  * we want fadvise64 really, but it's so tangled... later
  */
+#ifdef FIO_HAVE_FADVISE
 #define fadvise(fd, off, len, advice)	\
 	posix_fadvise((fd), (off_t)(off), (len), (advice))
+#endif
 
 /*
  * If you are on an ancient glibc (2.3.2), then define GLIBC_2_3_2 if you want
  * the affinity helpers to work.
  */
+#ifdef FIO_HAVE_CPU_AFFINITY
 #ifndef GLIBC_2_3_2
 #define fio_setaffinity(td)		\
 	sched_setaffinity((td)->pid, sizeof((td)->o.cpumask), &(td)->o.cpumask)
@@ -49,6 +61,11 @@ typedef struct drand48_data os_random_state_t;
 	sched_setaffinity((td)->pid, &(td)->o.cpumask)
 #define fio_getaffinity(pid, ptr)	\
 	sched_getaffinity((pid), (ptr))
+#endif
+#endif
+
+#ifndef FIO_HAVE_SETPSHARED
+#define pthread_mutexattr_setpshared(attr, pshared) (0)
 #endif
 
 static inline int ioprio_set(int which, int who, int ioprio)

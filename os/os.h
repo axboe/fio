@@ -27,9 +27,11 @@
 #ifndef FIO_HAVE_FADVISE
 #define fadvise(fd, off, len, advice)	(0)
 
+#ifndef POSIX_FADV_DONTNEED
 #define POSIX_FADV_DONTNEED	(0)
 #define POSIX_FADV_SEQUENTIAL	(0)
 #define POSIX_FADV_RANDOM	(0)
+#endif
 #endif /* FIO_HAVE_FADVISE */
 
 #ifndef FIO_HAVE_CPU_AFFINITY
@@ -49,7 +51,9 @@
 
 #ifndef FIO_HAVE_HUGETLB
 #define SHM_HUGETLB			0
+#ifndef FIO_HUGE_PAGE
 #define FIO_HUGE_PAGE			0
+#endif
 #else
 #ifndef FIO_HUGE_PAGE
 #define FIO_HUGE_PAGE			4194304
