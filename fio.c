@@ -911,8 +911,8 @@ static void *thread_main(void *data)
 	}
 
 	update_rusage_stat(td);
-	td->ts.runtime[0] = runtime[0] / 1000;
-	td->ts.runtime[1] = runtime[1] / 1000;
+	td->ts.runtime[0] = (runtime[0] + 999) / 1000;
+	td->ts.runtime[1] = (runtime[1] + 999) / 1000;
 	td->ts.total_run_time = mtime_since_now(&td->epoch);
 	td->ts.io_bytes[0] = td->io_bytes[0];
 	td->ts.io_bytes[1] = td->io_bytes[1];
