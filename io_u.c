@@ -190,6 +190,9 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 			buflen = (buflen + td->o.min_bs[ddir] - 1) & ~(td->o.min_bs[ddir] - 1);
 	}
 
+	if (io_u->offset + buflen > io_u->file->real_file_size)
+		buflen = td->o.min_bs[ddir];
+
 	return buflen;
 }
 
@@ -339,6 +342,9 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 
 	io_u->buflen = get_next_buflen(td, io_u);
 	if (!io_u->buflen)
+		return 1;
+
+	if (io_u->offset + io_u->buflen > io_u->file->real_file_size)
 		return 1;
 
 	/*
