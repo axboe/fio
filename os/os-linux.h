@@ -23,7 +23,6 @@
 #define FIO_HAVE_HUGETLB
 #define FIO_HAVE_RAWBIND
 #define FIO_HAVE_BLKTRACE
-#define FIO_HAVE_SETPSHARED
 
 #define OS_MAP_ANON		(MAP_ANONYMOUS)
 
@@ -62,10 +61,6 @@ typedef struct drand48_data os_random_state_t;
 #define fio_getaffinity(pid, ptr)	\
 	sched_getaffinity((pid), (ptr))
 #endif
-#endif
-
-#ifndef FIO_HAVE_SETPSHARED
-#define pthread_mutexattr_setpshared(attr, pshared) (0)
 #endif
 
 static inline int ioprio_set(int which, int who, int ioprio)
