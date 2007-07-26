@@ -54,12 +54,4 @@ static inline long os_random_long(os_random_state_t *rs)
 	return val;
 }
 
-static inline double os_random_double(os_random_state_t *rs)
-{
-	double val;
-
-	val = (double) rand_r(rs);
-	return val;
-}
-
 #endif

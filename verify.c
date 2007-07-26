@@ -12,10 +12,10 @@ static void fill_random_bytes(struct thread_data *td,
 			      unsigned char *p, unsigned int len)
 {
 	unsigned int todo;
-	double r;
+	int r;
 
 	while (len) {
-		r = os_random_double(&td->verify_state);
+		r = os_random_long(&td->verify_state);
 
 		/*
 		 * lrand48_r seems to be broken and only fill the bottom

@@ -199,14 +199,6 @@ static inline long os_random_long(os_random_state_t *rs)
 	return val;
 }
 
-static inline double os_random_double(os_random_state_t *rs)
-{
-	double val;
-
-	drand48_r(rs, &val);
-	return val;
-}
-
 static inline int fio_lookup_raw(dev_t dev, int *majdev, int *mindev)
 {
 	struct raw_config_request rq;
