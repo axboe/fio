@@ -446,6 +446,13 @@ static void do_io(struct thread_data *td)
 			break;
 		}
 
+		/*
+		 * Add verification end_io handler, if asked to verify
+		 * a previously written file.
+		 */
+		if (td->o.verify != VERIFY_NONE)
+			io_u->end_io = verify_io_u;
+
 		ret = td_io_queue(td, io_u);
 		switch (ret) {
 		case FIO_Q_COMPLETED:
@@ -894,7 +901,8 @@ static void *thread_main(void *data)
 		if (td->error || td->terminate)
 			break;
 
-		if (td->o.verify == VERIFY_NONE)
+		if (td->o.verify == VERIFY_NONE ||
+		    (td->io_ops->flags & FIO_UNIDIR))
 			continue;
 
 		if (clear_io_state(td))

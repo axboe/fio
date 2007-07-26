@@ -474,7 +474,7 @@ static struct ioengine_ops ioengine_splice = {
 	.cleanup	= fio_netio_cleanup,
 	.open_file	= fio_netio_open_file,
 	.close_file	= generic_close_file,
-	.flags		= FIO_SYNCIO | FIO_DISKLESSIO,
+	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR,
 };
 
 static void fio_init fio_netio_register(void)

@@ -222,9 +222,6 @@ static int fixup_options(struct thread_data *td)
 	if (!o->file_size_high)
 		o->file_size_high = o->file_size_low;
 
-	if (td_read(td) && !td_rw(td))
-		o->verify = 0;
-
 	if (o->norandommap && o->verify != VERIFY_NONE) {
 		log_err("fio: norandommap given, verify disabled\n");
 		o->verify = VERIFY_NONE;
