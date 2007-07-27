@@ -378,6 +378,8 @@ int setup_files(struct thread_data *td)
 	extend_size = total_size = 0;
 	need_extend = 0;
 	for_each_file(td, f, i) {
+		f->file_offset = td->o.start_offset;
+
 		if (!td->o.file_size_low) {
 			/*
 			 * no file size range given, file size is equal to
@@ -385,20 +387,27 @@ int setup_files(struct thread_data *td)
 			 * zero, set it to the real file size.
 			 */
 			f->io_size = td->o.size / td->o.nr_files;
-			if (!f->io_size)
-				f->io_size = f->real_file_size;
+			if (!f->io_size) {
+				if (f->file_offset > f->real_file_size)
+					goto err_offset;
+				f->io_size = f->real_file_size - f->file_offset;
+			}
 		} else if (f->real_file_size < td->o.file_size_low ||
 			   f->real_file_size > td->o.file_size_high) {
+			if (f->file_offset > td->o.file_size_low) 
+				goto err_offset;
 			/*
 			 * file size given. if it's fixed, use that. if it's a
 			 * range, generate a random size in-between.
 			 */
 			if (td->o.file_size_low == td->o.file_size_high)
-				f->io_size = td->o.file_size_low;
+				f->io_size = td->o.file_size_low - f->file_offset;
 			else
-				f->io_size = get_rand_file_size(td);
-		} else
-			f->io_size = f->real_file_size;
+				f->io_size = get_rand_file_size(td) - f->file_offset;
+		} else if (f->file_offset > f->real_file_size)
+			goto err_offset;
+		else
+			f->io_size = f->real_file_size - f->file_offset;
 
 		if (f->io_size == -1ULL)
 			total_size = -1ULL;
@@ -406,12 +415,12 @@ int setup_files(struct thread_data *td)
 			total_size += f->io_size;
 
 		if (f->filetype == FIO_TYPE_FILE &&
-		    f->io_size > f->real_file_size &&
+		    (f->io_size + f->file_offset) > f->real_file_size &&
 		    !(td->io_ops->flags & FIO_DISKLESSIO)) {
 			need_extend++;
-			extend_size += f->io_size;
+			extend_size += (f->io_size + f->file_offset);
 			f->flags |= FIO_FILE_EXTEND;
-		}
+		}	
 	}
 
 	if (!td->o.size || td->o.size > total_size)
@@ -431,7 +440,7 @@ int setup_files(struct thread_data *td)
 
 			assert(f->filetype == FIO_TYPE_FILE);
 			f->flags &= ~FIO_FILE_EXTEND;
-			f->real_file_size = f->io_size;
+			f->real_file_size = (f->io_size + f->file_offset);
 			err = extend_file(td, f);
 			if (err)
 				break;
@@ -447,6 +456,9 @@ int setup_files(struct thread_data *td)
 
 	td->total_io_size = td->o.size * td->o.loops;
 	return 0;
+err_offset:
+	log_err("%s: you need to specify valid offset=\n", td->o.name);
+	return 1;
 }
 
 int init_random_map(struct thread_data *td)

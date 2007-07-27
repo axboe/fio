@@ -279,7 +279,7 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 
 	f->last_free_lookup = 0;
 	f->last_completed_pos = 0;
-	f->last_pos = 0;
+	f->last_pos = f->file_offset;
 	f->flags |= FIO_FILE_OPEN;
 	f->flags &= ~FIO_FILE_CLOSING;
 
