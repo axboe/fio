@@ -577,6 +577,9 @@ verify=str	If writing to a file, fio can verify the file contents
 			crc32	Use a crc32 sum of the data area and store
 				it in the header of each block.
 
+			crc16	Use a crc16 sum of the data area and store
+				it in the header of each block.
+
 			null	Only pretend to verify. Useful for testing
 				internals with ioengine=null, not for much
 				else.

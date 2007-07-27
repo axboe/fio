@@ -19,6 +19,7 @@
 #include "rbtree.h"
 #include "md5.h"
 #include "crc32.h"
+#include "crc16.h"
 #include "arch/arch.h"
 #include "os/os.h"
 #include "mutex.h"
@@ -193,6 +194,7 @@ enum {
 	VERIFY_NONE = 0,		/* no verification */
 	VERIFY_MD5,			/* md5 sum data blocks */
 	VERIFY_CRC32,			/* crc32 sum data blocks */
+	VERIFY_CRC16,			/* crc16 sum data blocks */
 	VERIFY_NULL,			/* pretend to verify */
 };
 
@@ -206,6 +208,7 @@ struct verify_header {
 	union {
 		char md5_digest[MD5_HASH_WORDS * 4];
 		unsigned long crc32;
+		unsigned short crc16;
 	};
 };
 

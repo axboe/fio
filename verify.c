@@ -42,9 +42,26 @@ static void hexdump(void *buffer, int len)
 	log_info("\n");
 }
 
+static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u)
+{
+	unsigned char *p = io_u->buf;
+	unsigned short c;
+
+	p += sizeof(*hdr);
+	c = crc16(p, hdr->len - sizeof(*hdr));
+
+	if (c != hdr->crc16) {
+		log_err("crc16: verify failed at %llu/%lu\n", io_u->offset, io_u->buflen);
+		log_err("crc16: wanted %lx, got %x\n", hdr->crc32, c);
+		return 1;
+	}
+
+	return 0;
+}
+
 static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u)
 {
-	unsigned char *p = (unsigned char *) io_u->buf;
+	unsigned char *p = io_u->buf;
 	unsigned long c;
 
 	p += sizeof(*hdr);
@@ -61,7 +78,7 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u)
 
 static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u)
 {
-	unsigned char *p = (unsigned char *) io_u->buf;
+	unsigned char *p = io_u->buf;
 	struct md5_ctx md5_ctx;
 
 	memset(&md5_ctx, 0, sizeof(md5_ctx));
@@ -95,6 +112,8 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		ret = verify_io_u_md5(hdr, io_u);
 	else if (hdr->verify_type == VERIFY_CRC32)
 		ret = verify_io_u_crc32(hdr, io_u);
+	else if (hdr->verify_type == VERIFY_CRC16)
+		ret = verify_io_u_crc16(hdr, io_u);
 	else {
 		log_err("Bad verify type %u\n", hdr->verify_type);
 		ret = 1;
@@ -104,6 +123,11 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		return EIO;
 
 	return 0;
+}
+
+static void fill_crc16(struct verify_header *hdr, void *p, unsigned int len)
+{
+	hdr->crc16 = crc16(p, len);
 }
 
 static void fill_crc32(struct verify_header *hdr, void *p, unsigned int len)
@@ -143,6 +167,9 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	} else if (td->o.verify == VERIFY_CRC32) {
 		fill_crc32(&hdr, p, io_u->buflen - sizeof(hdr));
 		hdr.verify_type = VERIFY_CRC32;
+	} else if (td->o.verify == VERIFY_CRC16) {
+		fill_crc16(&hdr, p, io_u->buflen - sizeof(hdr));
+		hdr.verify_type = VERIFY_CRC16;
 	}
 
 	memcpy(io_u->buf, &hdr, sizeof(hdr));
