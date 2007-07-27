@@ -69,7 +69,7 @@ static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u)
 
 	if (c != hdr->crc16) {
 		log_err("crc16: verify failed at %llu/%lu\n", io_u->offset, io_u->buflen);
-		log_err("crc16: wanted %lx, got %x\n", hdr->crc32, c);
+		log_err("crc16: wanted %x, got %x\n", hdr->crc16, c);
 		return 1;
 	}
 
