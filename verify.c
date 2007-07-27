@@ -76,6 +76,22 @@ static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u)
 	return 0;
 }
 
+static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u)
+{
+	unsigned char *p = io_u->buf + sizeof(*hdr);
+	unsigned long long c;
+
+	c = crc64(p, hdr->len - sizeof(*hdr));
+
+	if (c != hdr->crc64) {
+		log_err("crc64: verify failed at %llu/%lu\n", io_u->offset, io_u->buflen);
+		log_err("crc64: wanted %llx, got %llx\n", hdr->crc64, c);
+		return 1;
+	}
+
+	return 0;
+}
+
 static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u)
 {
 	unsigned char *p = io_u->buf;
@@ -130,6 +146,9 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 	case VERIFY_MD5:
 		ret = verify_io_u_md5(hdr, io_u);
 		break;
+	case VERIFY_CRC64:
+		ret = verify_io_u_crc64(hdr, io_u);
+		break;
 	case VERIFY_CRC32:
 		ret = verify_io_u_crc32(hdr, io_u);
 		break;
@@ -165,6 +184,11 @@ static void fill_crc32(struct verify_header *hdr, void *p, unsigned int len)
 	hdr->crc32 = crc32(p, len);
 }
 
+static void fill_crc64(struct verify_header *hdr, void *p, unsigned int len)
+{
+	hdr->crc64 = crc64(p, len);
+}
+
 static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
 {
 	struct md5_ctx md5_ctx = {
@@ -198,6 +222,9 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	switch (td->o.verify) {
 	case VERIFY_MD5:
 		fill_md5(hdr, p, len);
+		break;
+	case VERIFY_CRC64:
+		fill_crc64(hdr, p, len);
 		break;
 	case VERIFY_CRC32:
 		fill_crc32(hdr, p, len);
