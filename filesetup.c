@@ -104,7 +104,7 @@ static unsigned long long get_rand_file_size(struct thread_data *td)
 	long r;
 
 	r = os_random_long(&td->file_size_state);
-	ret = td->o.file_size_low + (unsigned long long) ((double) td->o.file_size_high * (r / (RAND_MAX + 1.0)));
+	ret = td->o.file_size_low + (unsigned long long) ((double) (td->o.file_size_high - td->o.file_size_low) * (r / (RAND_MAX + 1.0)));
 	ret -= (ret % td->o.rw_min_bs);
 	return ret;
 }
