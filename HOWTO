@@ -574,10 +574,17 @@ verify=str	If writing to a file, fio can verify the file contents
 			md5	Use an md5 sum of the data area and store
 				it in the header of each block.
 
+			crc64	Use an experimental crc64 sum of the data
+				area and store it in the header of each
+				block.
+
 			crc32	Use a crc32 sum of the data area and store
 				it in the header of each block.
 
 			crc16	Use a crc16 sum of the data area and store
+				it in the header of each block.
+
+			crc7	Use a crc7 sum of the data area and store
 				it in the header of each block.
 
 			null	Only pretend to verify. Useful for testing
