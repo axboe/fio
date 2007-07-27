@@ -95,17 +95,18 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u)
 
 static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u)
 {
-	unsigned char *p = io_u->buf;
-	struct md5_ctx md5_ctx;
+	unsigned char *p = io_u->buf + sizeof(*hdr);
+	uint32_t hash[MD5_HASH_WORDS];
+	struct md5_ctx md5_ctx = {
+		.hash = hash,
+	};
 
-	memset(&md5_ctx, 0, sizeof(md5_ctx));
-	p += sizeof(*hdr);
 	md5_update(&md5_ctx, p, hdr->len - sizeof(*hdr));
 
-	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash))) {
+	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(hash))) {
 		log_err("md5: verify failed at %llu/%lu\n", io_u->offset, io_u->buflen);
 		hexdump(hdr->md5_digest, sizeof(hdr->md5_digest));
-		hexdump(md5_ctx.hash, sizeof(md5_ctx.hash));
+		hexdump(md5_ctx.hash, sizeof(hash));
 		return 1;
 	}
 
@@ -166,11 +167,11 @@ static void fill_crc32(struct verify_header *hdr, void *p, unsigned int len)
 
 static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
 {
-	struct md5_ctx md5_ctx;
+	struct md5_ctx md5_ctx = {
+		.hash = (uint32_t *) hdr->md5_digest,
+	};
 
-	memset(&md5_ctx, 0, sizeof(md5_ctx));
 	md5_update(&md5_ctx, p, len);
-	memcpy(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash));
 }
 
 /*

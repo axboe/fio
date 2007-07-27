@@ -17,7 +17,7 @@
 	(w += f(x, y, z) + in, w = (w<<s | w>>(32-s)) + x)
 
 struct md5_ctx {
-	uint32_t hash[MD5_HASH_WORDS];
+	uint32_t *hash;
 	uint32_t block[MD5_BLOCK_WORDS];
 	uint64_t byte_count;
 };
