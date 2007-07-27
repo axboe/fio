@@ -414,7 +414,7 @@ int setup_files(struct thread_data *td)
 		}
 	}
 
-	if (!td->o.size)
+	if (!td->o.size || td->o.size > total_size)
 		td->o.size = total_size;
 
 	/*
