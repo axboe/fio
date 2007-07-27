@@ -174,32 +174,38 @@ static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
  */
 void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	unsigned char *p = (unsigned char *) io_u->buf;
-	struct verify_header hdr;
+	const unsigned int len = io_u->buflen - sizeof(struct verify_header);
+	struct verify_header *hdr;
+	unsigned char *p;
 
 	if (td->o.verify == VERIFY_NULL)
 		return;
 
-	hdr.fio_magic = FIO_HDR_MAGIC;
-	hdr.len = io_u->buflen;
-	p += sizeof(hdr);
-	fill_random_bytes(td, p, io_u->buflen - sizeof(hdr));
+	hdr = (struct verify_header *) io_u->buf;
+	hdr->fio_magic = FIO_HDR_MAGIC;
+	hdr->len = io_u->buflen;
+	hdr->verify_type = td->o.verify;
 
-	if (td->o.verify == VERIFY_MD5) {
-		fill_md5(&hdr, p, io_u->buflen - sizeof(hdr));
-		hdr.verify_type = VERIFY_MD5;
-	} else if (td->o.verify == VERIFY_CRC32) {
-		fill_crc32(&hdr, p, io_u->buflen - sizeof(hdr));
-		hdr.verify_type = VERIFY_CRC32;
-	} else if (td->o.verify == VERIFY_CRC16) {
-		fill_crc16(&hdr, p, io_u->buflen - sizeof(hdr));
-		hdr.verify_type = VERIFY_CRC16;
-	} else if (td->o.verify == VERIFY_CRC7) {
-		fill_crc7(&hdr, p, io_u->buflen - sizeof(hdr));
-		hdr.verify_type = VERIFY_CRC7;
+	p = io_u->buf + sizeof(*hdr);
+	fill_random_bytes(td, p, len);
+
+	switch (td->o.verify) {
+	case VERIFY_MD5:
+		fill_md5(hdr, p, len);
+		break;
+	case VERIFY_CRC32:
+		fill_crc32(hdr, p, len);
+		break;
+	case VERIFY_CRC16:
+		fill_crc16(hdr, p, len);
+		break;
+	case VERIFY_CRC7:
+		fill_crc7(hdr, p, len);
+		break;
+	default:
+		log_err("fio: bad verify type: %d\n", td->o.verify);
+		assert(0);
 	}
-
-	memcpy(io_u->buf, &hdr, sizeof(hdr));
 }
 
 int get_next_verify(struct thread_data *td, struct io_u *io_u)
