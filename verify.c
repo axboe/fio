@@ -125,15 +125,20 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		return EIO;
 	}
 
-	if (hdr->verify_type == VERIFY_MD5)
+	switch (hdr->verify_type) {
+	case VERIFY_MD5:
 		ret = verify_io_u_md5(hdr, io_u);
-	else if (hdr->verify_type == VERIFY_CRC32)
+		break;
+	case VERIFY_CRC32:
 		ret = verify_io_u_crc32(hdr, io_u);
-	else if (hdr->verify_type == VERIFY_CRC16)
+		break;
+	case VERIFY_CRC16:
 		ret = verify_io_u_crc16(hdr, io_u);
-	else if (hdr->verify_type == VERIFY_CRC7)
+		break;
+	case VERIFY_CRC7:
 		ret = verify_io_u_crc7(hdr, io_u);
-	else {
+		break;
+	default:
 		log_err("Bad verify type %u\n", hdr->verify_type);
 		ret = 1;
 	}
