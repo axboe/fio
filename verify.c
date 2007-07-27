@@ -42,6 +42,23 @@ static void hexdump(void *buffer, int len)
 	log_info("\n");
 }
 
+static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u)
+{
+	unsigned char *p = io_u->buf;
+	unsigned char c;
+
+	p += sizeof(*hdr);
+	c = crc7(p, hdr->len - sizeof(*hdr));
+
+	if (c != hdr->crc7) {
+		log_err("crc7: verify failed at %llu/%lu\n", io_u->offset, io_u->buflen);
+		log_err("crc7: wanted %x, got %x\n", hdr->crc7, c);
+		return 1;
+	}
+
+	return 0;
+}
+
 static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u)
 {
 	unsigned char *p = io_u->buf;
@@ -114,6 +131,8 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		ret = verify_io_u_crc32(hdr, io_u);
 	else if (hdr->verify_type == VERIFY_CRC16)
 		ret = verify_io_u_crc16(hdr, io_u);
+	else if (hdr->verify_type == VERIFY_CRC7)
+		ret = verify_io_u_crc7(hdr, io_u);
 	else {
 		log_err("Bad verify type %u\n", hdr->verify_type);
 		ret = 1;
@@ -123,6 +142,11 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		return EIO;
 
 	return 0;
+}
+
+static void fill_crc7(struct verify_header *hdr, void *p, unsigned int len)
+{
+	hdr->crc7 = crc7(p, len);
 }
 
 static void fill_crc16(struct verify_header *hdr, void *p, unsigned int len)
@@ -170,6 +194,9 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	} else if (td->o.verify == VERIFY_CRC16) {
 		fill_crc16(&hdr, p, io_u->buflen - sizeof(hdr));
 		hdr.verify_type = VERIFY_CRC16;
+	} else if (td->o.verify == VERIFY_CRC7) {
+		fill_crc7(&hdr, p, io_u->buflen - sizeof(hdr));
+		hdr.verify_type = VERIFY_CRC7;
 	}
 
 	memcpy(io_u->buf, &hdr, sizeof(hdr));
