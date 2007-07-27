@@ -83,7 +83,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 	struct verify_header *hdr = (struct verify_header *) io_u->buf;
 	int ret;
 
-	if (td->o.verify == VERIFY_NULL)
+	if (td->o.verify == VERIFY_NULL || io_u->ddir != DDIR_READ)
 		return 0;
 
 	if (hdr->fio_magic != FIO_HDR_MAGIC) {
