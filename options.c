@@ -618,8 +618,8 @@ static struct fio_option options[] = {
 		.name   = "header_interval",
 		.type   = FIO_OPT_STR_VAL_INT,
 		.off1   = td_var_offset(header_interval),
+		.minval	= 2 * sizeof(struct verify_header),
 		.help   = "Store buffer header every N bytes",
-		.def    = "0",
 	},
 	{
 		.name	= "header_offset",
