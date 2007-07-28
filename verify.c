@@ -50,10 +50,20 @@ static void hexdump(void *buffer, int len)
 	log_info("\n");
 }
 
+/*
+ * Return data area 'header_num'
+ */
+static inline void *io_u_verify_off(struct verify_header *hdr,
+				    struct io_u *io_u,
+				    unsigned char header_num)
+{
+	return io_u->buf + sizeof(*hdr) + header_num * hdr->len;
+}
+
 static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
                             unsigned char header_num)
 {
-	void *p = io_u->buf + header_num * hdr->len + sizeof(*hdr);
+	void *p = io_u_verify_off(hdr, io_u, header_num);
 	unsigned char c;
 
 	c = crc7(p, hdr->len - sizeof(*hdr));
@@ -72,7 +82,7 @@ static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
 static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u,
                              unsigned int header_num)
 {
-	void *p = io_u->buf + header_num * hdr->len + sizeof(*hdr);
+	void *p = io_u_verify_off(hdr, io_u, header_num);
 	unsigned short c;
 
 	c = crc16(p, hdr->len - sizeof(*hdr));
@@ -91,7 +101,7 @@ static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u,
 static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u,
                              unsigned int header_num)
 {
-	void *p = io_u->buf + header_num * hdr->len + sizeof(*hdr);
+	void *p = io_u_verify_off(hdr, io_u, header_num);
 	unsigned long long c;
 
 	c = crc64(p, hdr->len - sizeof(*hdr));
@@ -110,7 +120,7 @@ static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u,
 static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u,
 		             unsigned int header_num)
 {
-	void *p = io_u->buf + header_num * hdr->len + sizeof(*hdr);
+	void *p = io_u_verify_off(hdr, io_u, header_num);
 	unsigned long c;
 
 	c = crc32(p, hdr->len - sizeof(*hdr));
@@ -129,7 +139,7 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u,
 static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
 		           unsigned int header_num)
 {
-	void *p = io_u->buf + header_num * hdr->len + sizeof(*hdr);
+	void *p = io_u_verify_off(hdr, io_u, header_num);
 	uint32_t hash[MD5_HASH_WORDS];
 	struct md5_ctx md5_ctx = {
 		.hash = hash,
