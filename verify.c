@@ -32,6 +32,14 @@ static void fill_random_bytes(struct thread_data *td,
 	}
 }
 
+void memswp(void* buf1, void* buf2, unsigned int len)
+{
+	struct verify_header swap;
+	memcpy(&swap, buf1, len);
+	memcpy(buf1, buf2, len);
+	memcpy(buf2, &swap, len);
+}
+
 static void hexdump(void *buffer, int len)
 {
 	unsigned char *p = buffer;
@@ -161,6 +169,9 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		hdr_inc = td->o.header_interval;
 
 	for (; p < (unsigned char*) io_u->buf + io_u->buflen; p += hdr_inc) {
+		if (td->o.header_offset)
+			memswp(p, &p[td->o.header_offset], sizeof(*hdr));
+
 		hdr = (struct verify_header*) p;
 
 		if (hdr->fio_magic != FIO_HDR_MAGIC) {
@@ -229,27 +240,28 @@ static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
  */
 void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	const unsigned int len = io_u->buflen - sizeof(struct verify_header);
 	struct verify_header *hdr;
 	unsigned char *p = io_u->buf, *data;
-	unsigned int data_len;
+	unsigned int hdr_inc, data_len;
 
 	if (td->o.verify == VERIFY_NULL)
 		return;
 
-	fill_random_bytes(td, p, len);
+	fill_random_bytes(td, p, io_u->buflen);
 
-	for (;p < (unsigned char*) io_u->buf + io_u->buflen; p += hdr->len) {
+	hdr_inc = io_u->buflen;
+	if (td->o.header_interval)
+		hdr_inc = td->o.header_interval;
+	data_len = hdr_inc - sizeof(*hdr);
+
+	for (;p < (unsigned char*) io_u->buf + io_u->buflen; p += hdr_inc) {
 		hdr = (struct verify_header*) p;
 
 		hdr->fio_magic = FIO_HDR_MAGIC;
 		hdr->verify_type = td->o.verify;
-		hdr->len = io_u->buflen;
-		if (td->o.header_interval)
-			hdr->len = td->o.header_interval;
+		hdr->len = hdr_inc;
 
 		data = p + sizeof(*hdr);
-		data_len = hdr->len - sizeof(*hdr);
 		switch (td->o.verify) {
 		case VERIFY_MD5:
 			fill_md5(hdr, data, data_len);
@@ -270,6 +282,8 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 			log_err("fio: bad verify type: %d\n", td->o.verify);
 			assert(0);
 		}
+		if (td->o.header_offset)
+			memswp(p, &p[td->o.header_offset], sizeof(*hdr));
 	}
 }
 

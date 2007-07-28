@@ -203,6 +203,17 @@ static int str_opendir_cb(void *data, const char fio_unused *str)
 	return add_dir_files(td, td->o.opendir);
 }
 
+static int str_header_offset_cb(void *data, unsigned int *off)
+{
+	struct thread_data *td = data;
+	if (*off && *off < sizeof(struct verify_header)) {
+		log_err("fio: header_offset too small\n");
+		return 1;
+	}
+	td->o.header_offset = *off;
+	return 0;
+}
+
 
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
@@ -609,6 +620,13 @@ static struct fio_option options[] = {
 		.off1   = td_var_offset(header_interval),
 		.help   = "Store buffer header every N bytes",
 		.def    = "0",
+	},
+	{
+		.name	= "header_offset",
+		.type	= FIO_OPT_STR_VAL_INT,
+		.help	= "Offset header location by N bytes",
+		.def	= "0",
+		.cb	= str_header_offset_cb,	
 	},
 	{
 		.name	= "write_iolog",

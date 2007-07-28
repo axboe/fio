@@ -603,6 +603,10 @@ verifysort=bool	If set, fio will sort written verify blocks when it deems
 		fast IO where the red-black tree sorting CPU time becomes
 		significant.
 
+header_offset=siint	Swap the verification header with data somewhere else
+			in the block before writing. Its swapped back before
+			verifying.
+
 header_interval=siint	Write the verification header at a finer granularity
 			than the blocksize. It will be written for chunks the
 			size of header_interval. blocksize should divide this
