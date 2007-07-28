@@ -9,7 +9,7 @@
 #include "fio.h"
 
 static void fill_random_bytes(struct thread_data *td,
-			      unsigned char *p, unsigned int len)
+			      void *p, unsigned int len)
 {
 	unsigned int todo;
 	int r;
@@ -53,10 +53,9 @@ static void hexdump(void *buffer, int len)
 static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
                             unsigned char header_num)
 {
-	unsigned char *p = io_u->buf;
+	void *p = io_u->buf + header_num * hdr->len + sizeof(*hdr);
 	unsigned char c;
 
-	p += header_num * hdr->len + sizeof(*hdr);
 	c = crc7(p, hdr->len - sizeof(*hdr));
 
 	if (c != hdr->crc7) {
@@ -73,10 +72,9 @@ static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
 static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u,
                              unsigned int header_num)
 {
-	unsigned char *p = io_u->buf;
+	void *p = io_u->buf + header_num * hdr->len + sizeof(*hdr);
 	unsigned short c;
 
-	p += header_num * hdr->len + sizeof(*hdr);
 	c = crc16(p, hdr->len - sizeof(*hdr));
 
 	if (c != hdr->crc16) {
@@ -93,10 +91,9 @@ static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u,
 static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u,
                              unsigned int header_num)
 {
-	unsigned char *p = io_u->buf;
+	void *p = io_u->buf + header_num * hdr->len + sizeof(*hdr);
 	unsigned long long c;
 
-	p += header_num * hdr->len + sizeof(*hdr);
 	c = crc64(p, hdr->len - sizeof(*hdr));
 
 	if (c != hdr->crc64) {
@@ -113,10 +110,9 @@ static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u,
 static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u,
 		             unsigned int header_num)
 {
-	unsigned char *p = io_u->buf;
+	void *p = io_u->buf + header_num * hdr->len + sizeof(*hdr);
 	unsigned long c;
 
-	p += header_num * hdr->len + sizeof(*hdr);
 	c = crc32(p, hdr->len - sizeof(*hdr));
 
 	if (c != hdr->crc32) {
@@ -133,13 +129,12 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u,
 static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
 		           unsigned int header_num)
 {
-	unsigned char *p = io_u->buf;
+	void *p = io_u->buf + header_num * hdr->len + sizeof(*hdr);
 	uint32_t hash[MD5_HASH_WORDS];
 	struct md5_ctx md5_ctx = {
 		.hash = hash,
 	};
 
-	p += header_num * hdr->len + sizeof(*hdr);
 	md5_update(&md5_ctx, p, hdr->len - sizeof(*hdr));
 
 	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash))) {
@@ -156,9 +151,9 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
 
 int verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	unsigned char *p = (unsigned char*) io_u->buf;
 	struct verify_header *hdr;
 	unsigned int hdr_inc, hdr_num = 0;
+	void *p;
 	int ret;
 
 	if (td->o.verify == VERIFY_NULL || io_u->ddir != DDIR_READ)
@@ -168,11 +163,11 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td->o.header_interval)
 		hdr_inc = td->o.header_interval;
 
-	for (; p < (unsigned char*) io_u->buf + io_u->buflen; p += hdr_inc) {
+	for (p = io_u->buf; p < io_u->buf + io_u->buflen; p += hdr_inc) {
 		if (td->o.header_offset)
-			memswp(p, &p[td->o.header_offset], sizeof(*hdr));
+			memswp(p, p + td->o.header_offset, sizeof(*hdr));
 
-		hdr = (struct verify_header*) p;
+		hdr = p;
 
 		if (hdr->fio_magic != FIO_HDR_MAGIC) {
 			log_err("Bad verify header %x\n", hdr->fio_magic);
@@ -241,7 +236,7 @@ static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
 void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	struct verify_header *hdr;
-	unsigned char *p = io_u->buf, *data;
+	void *p = io_u->buf, *data;
 	unsigned int hdr_inc, data_len;
 
 	if (td->o.verify == VERIFY_NULL)
@@ -254,8 +249,8 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 		hdr_inc = td->o.header_interval;
 	data_len = hdr_inc - sizeof(*hdr);
 
-	for (;p < (unsigned char*) io_u->buf + io_u->buflen; p += hdr_inc) {
-		hdr = (struct verify_header*) p;
+	for (;p < io_u->buf + io_u->buflen; p += hdr_inc) {
+		hdr = p;
 
 		hdr->fio_magic = FIO_HDR_MAGIC;
 		hdr->verify_type = td->o.verify;
@@ -283,7 +278,7 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 			assert(0);
 		}
 		if (td->o.header_offset)
-			memswp(p, &p[td->o.header_offset], sizeof(*hdr));
+			memswp(p, p + td->o.header_offset, sizeof(*hdr));
 	}
 }
 
