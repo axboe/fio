@@ -604,6 +604,13 @@ static struct fio_option options[] = {
 		.def	= "1",
 	},
 	{
+		.name   = "header_interval",
+		.type   = FIO_OPT_STR_VAL_INT,
+		.off1   = td_var_offset(header_interval),
+		.help   = "Store buffer header every N bytes",
+		.def    = "0",
+	},
+	{
 		.name	= "write_iolog",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(write_iolog_file),

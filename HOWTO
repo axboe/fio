@@ -602,6 +602,11 @@ verifysort=bool	If set, fio will sort written verify blocks when it deems
 		can ignore this option unless doing huge amounts of really
 		fast IO where the red-black tree sorting CPU time becomes
 		significant.
+
+header_interval=siint	Write the verification header at a finer granularity
+			than the blocksize. It will be written for chunks the
+			size of header_interval. blocksize should divide this
+			evenly.
 		
 stonewall	Wait for preceeding jobs in the job file to exit, before
 		starting this one. Can be used to insert serialization

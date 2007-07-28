@@ -42,16 +42,19 @@ static void hexdump(void *buffer, int len)
 	log_info("\n");
 }
 
-static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u)
+static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
+                            unsigned char header_num)
 {
 	unsigned char *p = io_u->buf;
 	unsigned char c;
 
-	p += sizeof(*hdr);
+	p += header_num * hdr->len + sizeof(*hdr);
 	c = crc7(p, hdr->len - sizeof(*hdr));
 
 	if (c != hdr->crc7) {
-		log_err("crc7: verify failed at %llu/%lu\n", io_u->offset, io_u->buflen);
+		log_err("crc7: verify failed at %llu/%u\n",
+		                io_u->offset + header_num * hdr->len,
+				hdr->len);
 		log_err("crc7: wanted %x, got %x\n", hdr->crc7, c);
 		return 1;
 	}
@@ -59,16 +62,19 @@ static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u)
 	return 0;
 }
 
-static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u)
+static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u,
+                             unsigned int header_num)
 {
 	unsigned char *p = io_u->buf;
 	unsigned short c;
 
-	p += sizeof(*hdr);
+	p += header_num * hdr->len + sizeof(*hdr);
 	c = crc16(p, hdr->len - sizeof(*hdr));
 
 	if (c != hdr->crc16) {
-		log_err("crc16: verify failed at %llu/%lu\n", io_u->offset, io_u->buflen);
+		log_err("crc16: verify failed at %llu/%u\n",
+		                io_u->offset + header_num * hdr->len,
+				hdr->len);
 		log_err("crc16: wanted %x, got %x\n", hdr->crc16, c);
 		return 1;
 	}
@@ -76,15 +82,19 @@ static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u)
 	return 0;
 }
 
-static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u)
+static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u,
+                             unsigned int header_num)
 {
-	unsigned char *p = io_u->buf + sizeof(*hdr);
+	unsigned char *p = io_u->buf;
 	unsigned long long c;
 
+	p += header_num * hdr->len + sizeof(*hdr);
 	c = crc64(p, hdr->len - sizeof(*hdr));
 
 	if (c != hdr->crc64) {
-		log_err("crc64: verify failed at %llu/%lu\n", io_u->offset, io_u->buflen);
+		log_err("crc64: verify failed at %llu/%u\n",
+				io_u->offset + header_num * hdr->len,
+				hdr->len);
 		log_err("crc64: wanted %llx, got %llx\n", hdr->crc64, c);
 		return 1;
 	}
@@ -92,16 +102,19 @@ static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u)
 	return 0;
 }
 
-static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u)
+static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u,
+		             unsigned int header_num)
 {
 	unsigned char *p = io_u->buf;
 	unsigned long c;
 
-	p += sizeof(*hdr);
+	p += header_num * hdr->len + sizeof(*hdr);
 	c = crc32(p, hdr->len - sizeof(*hdr));
 
 	if (c != hdr->crc32) {
-		log_err("crc32: verify failed at %llu/%lu\n", io_u->offset, io_u->buflen);
+		log_err("crc32: verify failed at %llu/%u\n",
+		                io_u->offset + header_num * hdr->len,
+				hdr->len);
 		log_err("crc32: wanted %lx, got %lx\n", hdr->crc32, c);
 		return 1;
 	}
@@ -109,18 +122,22 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u)
 	return 0;
 }
 
-static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u)
+static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
+		           unsigned int header_num)
 {
-	unsigned char *p = io_u->buf + sizeof(*hdr);
+	unsigned char *p = io_u->buf;
 	uint32_t hash[MD5_HASH_WORDS];
 	struct md5_ctx md5_ctx = {
 		.hash = hash,
 	};
 
+	p += header_num * hdr->len + sizeof(*hdr);
 	md5_update(&md5_ctx, p, hdr->len - sizeof(*hdr));
 
-	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(hash))) {
-		log_err("md5: verify failed at %llu/%lu\n", io_u->offset, io_u->buflen);
+	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash))) {
+		log_err("md5: verify failed at %llu/%u\n",
+		              io_u->offset + header_num * hdr->len,
+		              hdr->len);
 		hexdump(hdr->md5_digest, sizeof(hdr->md5_digest));
 		hexdump(md5_ctx.hash, sizeof(hash));
 		return 1;
@@ -131,40 +148,48 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u)
 
 int verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	struct verify_header *hdr = (struct verify_header *) io_u->buf;
+	unsigned char *p = (unsigned char*) io_u->buf;
+	struct verify_header *hdr;
+	unsigned int hdr_inc, hdr_num = 0;
 	int ret;
 
 	if (td->o.verify == VERIFY_NULL || io_u->ddir != DDIR_READ)
 		return 0;
 
-	if (hdr->fio_magic != FIO_HDR_MAGIC) {
-		log_err("Bad verify header %x\n", hdr->fio_magic);
-		return EIO;
-	}
+	hdr_inc = io_u->buflen;
+	if (td->o.header_interval)
+		hdr_inc = td->o.header_interval;
 
-	switch (hdr->verify_type) {
-	case VERIFY_MD5:
-		ret = verify_io_u_md5(hdr, io_u);
-		break;
-	case VERIFY_CRC64:
-		ret = verify_io_u_crc64(hdr, io_u);
-		break;
-	case VERIFY_CRC32:
-		ret = verify_io_u_crc32(hdr, io_u);
-		break;
-	case VERIFY_CRC16:
-		ret = verify_io_u_crc16(hdr, io_u);
-		break;
-	case VERIFY_CRC7:
-		ret = verify_io_u_crc7(hdr, io_u);
-		break;
-	default:
-		log_err("Bad verify type %u\n", hdr->verify_type);
-		ret = 1;
-	}
+	for (; p < (unsigned char*) io_u->buf + io_u->buflen; p += hdr_inc) {
+		hdr = (struct verify_header*) p;
 
-	if (ret)
-		return EIO;
+		if (hdr->fio_magic != FIO_HDR_MAGIC) {
+			log_err("Bad verify header %x\n", hdr->fio_magic);
+			return EIO;
+		}
+
+		switch (hdr->verify_type) {
+		case VERIFY_MD5:
+			ret = verify_io_u_md5(hdr, io_u, hdr_num);
+			break;
+		case VERIFY_CRC64:
+			ret = verify_io_u_crc64(hdr, io_u, hdr_num);
+			break;
+		case VERIFY_CRC32:
+			ret = verify_io_u_crc32(hdr, io_u, hdr_num);
+			break;
+		case VERIFY_CRC16:
+			ret = verify_io_u_crc16(hdr, io_u, hdr_num);
+			break;
+		case VERIFY_CRC7:
+			ret = verify_io_u_crc7(hdr, io_u, hdr_num);
+			break;
+		default:
+			log_err("Bad verify type %u\n", hdr->verify_type);
+			ret = 1;
+		}
+		hdr_num++;
+	}
 
 	return 0;
 }
@@ -206,38 +231,45 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	const unsigned int len = io_u->buflen - sizeof(struct verify_header);
 	struct verify_header *hdr;
-	unsigned char *p;
+	unsigned char *p = io_u->buf, *data;
+	unsigned int data_len;
 
 	if (td->o.verify == VERIFY_NULL)
 		return;
 
-	hdr = (struct verify_header *) io_u->buf;
-	hdr->fio_magic = FIO_HDR_MAGIC;
-	hdr->len = io_u->buflen;
-	hdr->verify_type = td->o.verify;
-
-	p = io_u->buf + sizeof(*hdr);
 	fill_random_bytes(td, p, len);
 
-	switch (td->o.verify) {
-	case VERIFY_MD5:
-		fill_md5(hdr, p, len);
-		break;
-	case VERIFY_CRC64:
-		fill_crc64(hdr, p, len);
-		break;
-	case VERIFY_CRC32:
-		fill_crc32(hdr, p, len);
-		break;
-	case VERIFY_CRC16:
-		fill_crc16(hdr, p, len);
-		break;
-	case VERIFY_CRC7:
-		fill_crc7(hdr, p, len);
-		break;
-	default:
-		log_err("fio: bad verify type: %d\n", td->o.verify);
-		assert(0);
+	for (;p < (unsigned char*) io_u->buf + io_u->buflen; p += hdr->len) {
+		hdr = (struct verify_header*) p;
+
+		hdr->fio_magic = FIO_HDR_MAGIC;
+		hdr->verify_type = td->o.verify;
+		hdr->len = io_u->buflen;
+		if (td->o.header_interval)
+			hdr->len = td->o.header_interval;
+
+		data = p + sizeof(*hdr);
+		data_len = hdr->len - sizeof(*hdr);
+		switch (td->o.verify) {
+		case VERIFY_MD5:
+			fill_md5(hdr, data, data_len);
+			break;
+		case VERIFY_CRC64:
+			fill_crc64(hdr, data, data_len);
+			break;
+		case VERIFY_CRC32:
+			fill_crc32(hdr, data, data_len);
+			break;
+		case VERIFY_CRC16:
+			fill_crc16(hdr, data, data_len);
+			break;
+		case VERIFY_CRC7:
+			fill_crc7(hdr, data, data_len);
+			break;
+		default:
+			log_err("fio: bad verify type: %d\n", td->o.verify);
+			assert(0);
+		}
 	}
 }
 
