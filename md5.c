@@ -9,11 +9,10 @@ static void md5_transform(uint32_t *hash, uint32_t const *in)
 {
 	uint32_t a, b, c, d;
 
-	/*
-	 * This used to be set from the hash[0..3] input, but we can
-	 * skip a memory clear if we just start from 0 instead.
-	 */
-	a = b = c = d = 0;
+	a = hash[0];
+	b = hash[1];
+	c = hash[2];
+	d = hash[3];
 
 	MD5STEP(F1, a, b, c, d, in[0] + 0xd76aa478, 7);
 	MD5STEP(F1, d, a, b, c, in[1] + 0xe8c7b756, 12);
@@ -83,10 +82,10 @@ static void md5_transform(uint32_t *hash, uint32_t const *in)
 	MD5STEP(F4, c, d, a, b, in[2] + 0x2ad7d2bb, 15);
 	MD5STEP(F4, b, c, d, a, in[9] + 0xeb86d391, 21);
 
-	hash[0] = a;
-	hash[1] = b;
-	hash[2] = c;
-	hash[3] = d;
+	hash[0] += a;
+	hash[1] += b;
+	hash[2] += c;
+	hash[3] += d;
 }
 
 void md5_update(struct md5_ctx *mctx, const uint8_t *data, unsigned int len)

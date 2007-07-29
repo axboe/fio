@@ -145,6 +145,7 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
 		.hash = hash,
 	};
 
+	memset(md5_ctx.hash, 0, sizeof(hdr->md5_digest));
 	md5_update(&md5_ctx, p, hdr->len - sizeof(*hdr));
 
 	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(hash))) {
@@ -236,6 +237,7 @@ static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
 		.hash = (uint32_t *) hdr->md5_digest,
 	};
 
+	memset(md5_ctx.hash, 0, sizeof(hdr->md5_digest));
 	md5_update(&md5_ctx, p, len);
 }
 
