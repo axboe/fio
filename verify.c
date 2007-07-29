@@ -147,7 +147,7 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
 
 	md5_update(&md5_ctx, p, hdr->len - sizeof(*hdr));
 
-	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(md5_ctx.hash))) {
+	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(hash))) {
 		log_err("md5: verify failed at %llu/%u\n",
 		              io_u->offset + header_num * hdr->len,
 		              hdr->len);
