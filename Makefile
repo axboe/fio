@@ -5,10 +5,17 @@ OPTFLAGS= -O2 -g $(EXTFLAGS)
 CFLAGS	= -Wwrite-strings -Wall -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(OPTFLAGS) $(DEBUGFLAGS) -rdynamic
 PROGS	= fio
 SCRIPTS = fio_generate_plots
-OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o md5.o crc32.o \
-	crc16.o crc7.o crc64.o sha256.o sha512.o filesetup.o eta.o verify.o \
-	memory.o io_u.o parse.o mutex.o options.o rbtree.o diskutil.o fifo.o \
-	blktrace.o
+OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o filesetup.o \
+	eta.o verify.o memory.o io_u.o parse.o mutex.o options.o rbtree.o \
+	diskutil.o fifo.o blktrace.o
+
+OBJS += crc/crc7.o
+OBJS += crc/crc16.o
+OBJS += crc/crc32.o
+OBJS += crc/crc64.o
+OBJS += crc/sha256.o
+OBJS += crc/sha512.o
+OBJS += crc/md5.o
 
 OBJS += engines/cpu.o
 OBJS += engines/libaio.o
@@ -32,10 +39,10 @@ fio: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) $(EXTLIBS) -lpthread -lm -ldl -laio -lrt
 
 clean:
-	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o core.* core
+	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o crc/*.o core.* core
 
 depend:
-	@$(CC) -MM $(ALL_CFLAGS) *.c engines/*.c 1> .depend
+	@$(CC) -MM $(ALL_CFLAGS) *.c engines/*.c crc/*.[ch] 1> .depend
 
 cscope:
 	@cscope -b

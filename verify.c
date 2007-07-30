@@ -8,13 +8,13 @@
 
 #include "fio.h"
 
-#include "md5.h"
-#include "crc64.h"
-#include "crc32.h"
-#include "crc16.h"
-#include "crc7.h"
-#include "sha256.h"
-#include "sha512.h"
+#include "crc/md5.h"
+#include "crc/crc64.h"
+#include "crc/crc32.h"
+#include "crc/crc16.h"
+#include "crc/crc7.h"
+#include "crc/sha256.h"
+#include "crc/sha512.h"
 
 static void fill_random_bytes(struct thread_data *td, void *p, unsigned int len)
 {
