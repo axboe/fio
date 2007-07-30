@@ -201,21 +201,36 @@ enum {
 };
 
 /*
- * A header structure associated with each checksummed data block
+ * A header structure associated with each checksummed data block. It is
+ * followed by a checksum specific header that contains the verification
+ * data.
  */
 struct verify_header {
 	unsigned int fio_magic;
 	unsigned int len;
 	unsigned int verify_type;
-	union {
-		uint32_t md5_digest[16];
-		uint8_t sha512[128];
-		uint8_t sha256[128];
-		unsigned long long crc64;
-		unsigned long crc32;
-		unsigned short crc16;
-		unsigned char crc7;
-	};
+};
+
+struct vhdr_md5 {
+	uint32_t md5_digest[16];
+};
+struct vhdr_sha512 {
+	uint8_t sha512[128];
+};
+struct vhdr_sha256 {
+	uint8_t sha256[128];
+};
+struct vhdr_crc64 {
+	uint64_t crc64;
+};
+struct vhdr_crc32 {
+	uint32_t crc32;
+};
+struct vhdr_crc16 {
+	uint16_t crc16;
+};
+struct vhdr_crc7 {
+	uint8_t crc7;
 };
 
 struct group_run_stats {
