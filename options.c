@@ -653,7 +653,6 @@ static struct fio_option options[] = {
 		.name	= "verify_pattern",
 		.type	= FIO_OPT_INT,
 		.cb	= str_verify_pattern_cb,
-		.maxval	= UINT_MAX,
 		.help	= "Fill pattern for IO buffers",
 	},
 	{
