@@ -8,6 +8,7 @@
 
 #include "fio.h"
 #include "parse.h"
+#include "fls.h"
 
 #define td_var_offset(var)	((size_t) &((struct thread_options *)0)->var)
 
@@ -216,6 +217,24 @@ static int str_verify_offset_cb(void *data, unsigned int *off)
 	return 0;
 }
 
+static int str_verify_pattern_cb(void *data, unsigned int *off)
+{
+	struct thread_data *td = data;
+	unsigned int msb;
+
+	msb = fls(*off);
+	if (msb <= 8)
+		td->o.verify_pattern_bytes = 1;
+	else if (msb <= 16)
+		td->o.verify_pattern_bytes = 2;
+	else if (msb <= 24)
+		td->o.verify_pattern_bytes = 3;
+	else
+		td->o.verify_pattern_bytes = 4;
+
+	td->o.verify_pattern = *off;
+	return 0;
+}
 
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
@@ -629,6 +648,13 @@ static struct fio_option options[] = {
 		.help	= "Offset verify header location by N bytes",
 		.def	= "0",
 		.cb	= str_verify_offset_cb,	
+	},
+	{
+		.name	= "verify_pattern",
+		.type	= FIO_OPT_INT,
+		.cb	= str_verify_pattern_cb,
+		.maxval	= UINT_MAX,
+		.help	= "Fill pattern for IO buffers",
 	},
 	{
 		.name	= "write_iolog",

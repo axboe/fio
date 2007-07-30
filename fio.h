@@ -397,6 +397,8 @@ struct thread_options {
 	unsigned int verifysort;
 	unsigned int verify_interval;
 	unsigned int verify_offset;
+	unsigned int verify_pattern;
+	unsigned int verify_pattern_bytes;
 	unsigned int use_thread;
 	unsigned int unlink;
 	unsigned int do_disk_util;

@@ -8,8 +8,7 @@
 
 #include "fio.h"
 
-static void fill_random_bytes(struct thread_data *td,
-			      void *p, unsigned int len)
+static void fill_random_bytes(struct thread_data *td, void *p, unsigned int len)
 {
 	unsigned int todo;
 	int r;
@@ -32,9 +31,52 @@ static void fill_random_bytes(struct thread_data *td,
 	}
 }
 
-void memswp(void* buf1, void* buf2, unsigned int len)
+static void fill_pattern(struct thread_data *td, void *p, unsigned int len)
+{
+	switch (td->o.verify_pattern_bytes) {
+	case 0:
+		fill_random_bytes(td, p, len);
+		break;
+	case 1:
+		memset(p, td->o.verify_pattern, len);
+		break;
+	case 2:
+	case 3:
+	case 4: {
+		unsigned int pattern = td->o.verify_pattern;
+		unsigned int i = 0;
+		unsigned char c1, c2, c3, c4;
+		unsigned char *b = p;
+
+		c1 = pattern & 0xff;
+		pattern >>= 8;
+		c2 = pattern & 0xff;
+		pattern >>= 8;
+		c3 = pattern & 0xff;
+		pattern >>= 8;
+		c4 = pattern & 0xff;
+
+		while (i < len) {
+			b[i++] = c1;
+			if (i == len)
+				break;
+			b[i++] = c2;
+			if (td->o.verify_pattern_bytes == 2 || i == len)
+				continue;
+			b[i++] = c3;
+			if (td->o.verify_pattern_bytes == 3 || i == len)
+				continue;
+			b[i++] = c4;
+		}
+		break;
+		}
+	}
+}
+
+static void memswp(void* buf1, void* buf2, unsigned int len)
 {
 	struct verify_header swap;
+
 	memcpy(&swap, buf1, len);
 	memcpy(buf1, buf2, len);
 	memcpy(buf2, &swap, len);
@@ -254,7 +296,7 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td->o.verify == VERIFY_NULL)
 		return;
 
-	fill_random_bytes(td, p, io_u->buflen);
+	fill_pattern(td, p, io_u->buflen);
 
 	hdr_inc = io_u->buflen;
 	if (td->o.verify_interval)
