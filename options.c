@@ -203,14 +203,16 @@ static int str_opendir_cb(void *data, const char fio_unused *str)
 	return add_dir_files(td, td->o.opendir);
 }
 
-static int str_header_offset_cb(void *data, unsigned int *off)
+static int str_verify_offset_cb(void *data, unsigned int *off)
 {
 	struct thread_data *td = data;
+
 	if (*off && *off < sizeof(struct verify_header)) {
-		log_err("fio: header_offset too small\n");
+		log_err("fio: verify_offset too small\n");
 		return 1;
 	}
-	td->o.header_offset = *off;
+
+	td->o.verify_offset = *off;
 	return 0;
 }
 
@@ -615,18 +617,18 @@ static struct fio_option options[] = {
 		.def	= "1",
 	},
 	{
-		.name   = "header_interval",
+		.name   = "verify_interval",
 		.type   = FIO_OPT_STR_VAL_INT,
-		.off1   = td_var_offset(header_interval),
+		.off1   = td_var_offset(verify_interval),
 		.minval	= 2 * sizeof(struct verify_header),
-		.help   = "Store buffer header every N bytes",
+		.help   = "Store verify buffer header every N bytes",
 	},
 	{
-		.name	= "header_offset",
+		.name	= "verify_offset",
 		.type	= FIO_OPT_STR_VAL_INT,
-		.help	= "Offset header location by N bytes",
+		.help	= "Offset verify header location by N bytes",
 		.def	= "0",
-		.cb	= str_header_offset_cb,	
+		.cb	= str_verify_offset_cb,	
 	},
 	{
 		.name	= "write_iolog",

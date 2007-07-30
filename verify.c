@@ -171,12 +171,12 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		return 0;
 
 	hdr_inc = io_u->buflen;
-	if (td->o.header_interval)
-		hdr_inc = td->o.header_interval;
+	if (td->o.verify_interval)
+		hdr_inc = td->o.verify_interval;
 
 	for (p = io_u->buf; p < io_u->buf + io_u->buflen; p += hdr_inc) {
-		if (td->o.header_offset)
-			memswp(p, p + td->o.header_offset, sizeof(*hdr));
+		if (td->o.verify_offset)
+			memswp(p, p + td->o.verify_offset, sizeof(*hdr));
 
 		hdr = p;
 
@@ -257,8 +257,8 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	fill_random_bytes(td, p, io_u->buflen);
 
 	hdr_inc = io_u->buflen;
-	if (td->o.header_interval)
-		hdr_inc = td->o.header_interval;
+	if (td->o.verify_interval)
+		hdr_inc = td->o.verify_interval;
 	data_len = hdr_inc - sizeof(*hdr);
 
 	for (;p < io_u->buf + io_u->buflen; p += hdr_inc) {
@@ -289,8 +289,8 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 			log_err("fio: bad verify type: %d\n", td->o.verify);
 			assert(0);
 		}
-		if (td->o.header_offset)
-			memswp(p, p + td->o.header_offset, sizeof(*hdr));
+		if (td->o.verify_offset)
+			memswp(p, p + td->o.verify_offset, sizeof(*hdr));
 	}
 }
 
