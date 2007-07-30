@@ -23,5 +23,6 @@ struct md5_ctx {
 };
 
 extern void md5_update(struct md5_ctx *, const uint8_t *, unsigned int);
+extern void md5_init(struct md5_ctx *);
 
 #endif

@@ -88,6 +88,14 @@ static void md5_transform(uint32_t *hash, uint32_t const *in)
 	hash[3] += d;
 }
 
+void md5_init(struct md5_ctx *mctx)
+{
+	mctx->hash[0] = 0x67452301;
+	mctx->hash[1] = 0xefcdab89;
+	mctx->hash[2] = 0x98badcfe;
+	mctx->hash[3] = 0x10325476;
+}
+
 void md5_update(struct md5_ctx *mctx, const uint8_t *data, unsigned int len)
 {
 	const uint32_t avail = sizeof(mctx->block) - (mctx->byte_count & 0x3f);
