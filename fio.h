@@ -12,16 +12,12 @@
 #include <unistd.h>
 #include <string.h>
 #include <getopt.h>
+#include <inttypes.h>
 
 #include "compiler/compiler.h"
 #include "list.h"
 #include "fifo.h"
 #include "rbtree.h"
-#include "md5.h"
-#include "crc64.h"
-#include "crc32.h"
-#include "crc16.h"
-#include "crc7.h"
 #include "arch/arch.h"
 #include "os/os.h"
 #include "mutex.h"
@@ -199,6 +195,8 @@ enum {
 	VERIFY_CRC32,			/* crc32 sum data blocks */
 	VERIFY_CRC16,			/* crc16 sum data blocks */
 	VERIFY_CRC7,			/* crc7 sum data blocks */
+	VERIFY_SHA256,			/* sha256 sum data blocks */
+	VERIFY_SHA512,			/* sha512 sum data blocks */
 	VERIFY_NULL,			/* pretend to verify */
 };
 
@@ -210,7 +208,9 @@ struct verify_header {
 	unsigned int len;
 	unsigned int verify_type;
 	union {
-		char md5_digest[MD5_HASH_WORDS * 4];
+		uint32_t md5_digest[16];
+		uint8_t sha512[128];
+		uint8_t sha256[128];
 		unsigned long long crc64;
 		unsigned long crc32;
 		unsigned short crc16;

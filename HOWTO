@@ -588,6 +588,10 @@ verify=str	If writing to a file, fio can verify the file contents
 			crc7	Use a crc7 sum of the data area and store
 				it in the header of each block.
 
+			sha512	Use sha512 as the checksum function.
+
+			sha256	Use sha256 as the checksum function.
+
 			null	Only pretend to verify. Useful for testing
 				internals with ioengine=null, not for much
 				else.

@@ -8,6 +8,14 @@
 
 #include "fio.h"
 
+#include "md5.h"
+#include "crc64.h"
+#include "crc32.h"
+#include "crc16.h"
+#include "crc7.h"
+#include "sha256.h"
+#include "sha512.h"
+
 static void fill_random_bytes(struct thread_data *td, void *p, unsigned int len)
 {
 	unsigned int todo;
@@ -100,6 +108,54 @@ static inline void *io_u_verify_off(struct verify_header *hdr,
 				    unsigned char header_num)
 {
 	return io_u->buf + sizeof(*hdr) + header_num * hdr->len;
+}
+
+static int verify_io_u_sha512(struct verify_header *hdr, struct io_u *io_u,
+			      unsigned int header_num)
+{
+	void *p = io_u_verify_off(hdr, io_u, header_num);
+	uint8_t sha512[128];
+	struct sha512_ctx sha512_ctx = {
+		.buf = sha512,
+	};
+
+	sha512_init(&sha512_ctx);
+	sha512_update(&sha512_ctx, p, hdr->len - sizeof(*hdr));
+
+	if (memcmp(hdr->sha512, sha512_ctx.buf, sizeof(sha512))) {
+		log_err("sha512: verify failed at %llu/%u\n",
+		              io_u->offset + header_num * hdr->len,
+		              hdr->len);
+		hexdump(hdr->sha512, sizeof(hdr->sha512));
+		hexdump(sha512_ctx.buf, sizeof(sha512));
+		return 1;
+	}
+
+	return 0;
+}
+
+static int verify_io_u_sha256(struct verify_header *hdr, struct io_u *io_u,
+			      unsigned int header_num)
+{
+	void *p = io_u_verify_off(hdr, io_u, header_num);
+	uint8_t sha256[128];
+	struct sha256_ctx sha256_ctx = {
+		.buf = sha256,
+	};
+
+	sha256_init(&sha256_ctx);
+	sha256_update(&sha256_ctx, p, hdr->len - sizeof(*hdr));
+
+	if (memcmp(hdr->sha256, sha256_ctx.buf, sizeof(sha256))) {
+		log_err("sha256: verify failed at %llu/%u\n",
+		              io_u->offset + header_num * hdr->len,
+		              hdr->len);
+		hexdump(hdr->sha256, sizeof(hdr->sha256));
+		hexdump(sha256_ctx.buf, sizeof(sha256));
+		return 1;
+	}
+
+	return 0;
 }
 
 static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
@@ -243,6 +299,12 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		case VERIFY_CRC7:
 			ret = verify_io_u_crc7(hdr, io_u, hdr_num);
 			break;
+		case VERIFY_SHA256:
+			ret = verify_io_u_sha256(hdr, io_u, hdr_num);
+			break;
+		case VERIFY_SHA512:
+			ret = verify_io_u_sha512(hdr, io_u, hdr_num);
+			break;
 		default:
 			log_err("Bad verify type %u\n", hdr->verify_type);
 			ret = 1;
@@ -251,6 +313,26 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 	}
 
 	return 0;
+}
+
+static void fill_sha512(struct verify_header *hdr, void *p, unsigned int len)
+{
+	struct sha512_ctx sha512_ctx = {
+		.buf = hdr->sha512,
+	};
+
+	sha512_init(&sha512_ctx);
+	sha512_update(&sha512_ctx, p, len);
+}
+
+static void fill_sha256(struct verify_header *hdr, void *p, unsigned int len)
+{
+	struct sha256_ctx sha256_ctx = {
+		.buf = hdr->sha256,
+	};
+
+	sha256_init(&sha256_ctx);
+	sha256_update(&sha256_ctx, p, len);
 }
 
 static void fill_crc7(struct verify_header *hdr, void *p, unsigned int len)
@@ -326,6 +408,12 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 			break;
 		case VERIFY_CRC7:
 			fill_crc7(hdr, data, data_len);
+			break;
+		case VERIFY_SHA256:
+			fill_sha256(hdr, data, data_len);
+			break;
+		case VERIFY_SHA512:
+			fill_sha512(hdr, data, data_len);
 			break;
 		default:
 			log_err("fio: bad verify type: %d\n", td->o.verify);
