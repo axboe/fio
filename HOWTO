@@ -170,7 +170,8 @@ Some parameters take an option of a given type, such as an integer or
 a string. The following types are used:
 
 str	String. This is a sequence of alpha characters.
-int	Integer. A whole number value, can be negative.
+int	Integer. A whole number value, can be negative. If prefixed with
+	0x, the integer is assumed to be of base 16 (hexidecimal).
 siint	SI integer. A whole number value, which may contain a postfix
 	describing the base of the number. Accepted postfixes are k/m/g,
 	meaning kilo, mega, and giga. So if you want to specify 4096,
