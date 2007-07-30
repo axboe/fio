@@ -101,13 +101,27 @@ static void hexdump(void *buffer, int len)
 }
 
 /*
+ * Prepare for seperation of verify_header and checksum header
+ */
+static inline unsigned int __hdr_size(int fio_unused verify_type)
+{
+	return sizeof(struct verify_header);
+
+}
+
+static inline unsigned int hdr_size(struct verify_header *hdr)
+{
+	return sizeof(*hdr);
+}
+
+/*
  * Return data area 'header_num'
  */
 static inline void *io_u_verify_off(struct verify_header *hdr,
 				    struct io_u *io_u,
 				    unsigned char header_num)
 {
-	return io_u->buf + sizeof(*hdr) + header_num * hdr->len;
+	return io_u->buf + header_num * hdr->len + hdr_size(hdr);
 }
 
 static int verify_io_u_sha512(struct verify_header *hdr, struct io_u *io_u,
@@ -120,7 +134,7 @@ static int verify_io_u_sha512(struct verify_header *hdr, struct io_u *io_u,
 	};
 
 	sha512_init(&sha512_ctx);
-	sha512_update(&sha512_ctx, p, hdr->len - sizeof(*hdr));
+	sha512_update(&sha512_ctx, p, hdr->len - hdr_size(hdr));
 
 	if (memcmp(hdr->sha512, sha512_ctx.buf, sizeof(sha512))) {
 		log_err("sha512: verify failed at %llu/%u\n",
@@ -144,7 +158,7 @@ static int verify_io_u_sha256(struct verify_header *hdr, struct io_u *io_u,
 	};
 
 	sha256_init(&sha256_ctx);
-	sha256_update(&sha256_ctx, p, hdr->len - sizeof(*hdr));
+	sha256_update(&sha256_ctx, p, hdr->len - hdr_size(hdr));
 
 	if (memcmp(hdr->sha256, sha256_ctx.buf, sizeof(sha256))) {
 		log_err("sha256: verify failed at %llu/%u\n",
@@ -164,7 +178,7 @@ static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	unsigned char c;
 
-	c = crc7(p, hdr->len - sizeof(*hdr));
+	c = crc7(p, hdr->len - hdr_size(hdr));
 
 	if (c != hdr->crc7) {
 		log_err("crc7: verify failed at %llu/%u\n",
@@ -183,7 +197,7 @@ static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u,
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	unsigned short c;
 
-	c = crc16(p, hdr->len - sizeof(*hdr));
+	c = crc16(p, hdr->len - hdr_size(hdr));
 
 	if (c != hdr->crc16) {
 		log_err("crc16: verify failed at %llu/%u\n",
@@ -202,7 +216,7 @@ static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u,
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	unsigned long long c;
 
-	c = crc64(p, hdr->len - sizeof(*hdr));
+	c = crc64(p, hdr->len - hdr_size(hdr));
 
 	if (c != hdr->crc64) {
 		log_err("crc64: verify failed at %llu/%u\n",
@@ -221,7 +235,7 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u,
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	unsigned long c;
 
-	c = crc32(p, hdr->len - sizeof(*hdr));
+	c = crc32(p, hdr->len - hdr_size(hdr));
 
 	if (c != hdr->crc32) {
 		log_err("crc32: verify failed at %llu/%u\n",
@@ -244,7 +258,7 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
 	};
 
 	md5_init(&md5_ctx);
-	md5_update(&md5_ctx, p, hdr->len - sizeof(*hdr));
+	md5_update(&md5_ctx, p, hdr->len - hdr_size(hdr));
 
 	if (memcmp(hdr->md5_digest, md5_ctx.hash, sizeof(hash))) {
 		log_err("md5: verify failed at %llu/%u\n",
@@ -274,7 +288,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 
 	for (p = io_u->buf; p < io_u->buf + io_u->buflen; p += hdr_inc) {
 		if (td->o.verify_offset)
-			memswp(p, p + td->o.verify_offset, sizeof(*hdr));
+			memswp(p, p + td->o.verify_offset, __hdr_size(hdr->verify_type));
 
 		hdr = p;
 
@@ -383,7 +397,6 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	hdr_inc = io_u->buflen;
 	if (td->o.verify_interval)
 		hdr_inc = td->o.verify_interval;
-	data_len = hdr_inc - sizeof(*hdr);
 
 	for (;p < io_u->buf + io_u->buflen; p += hdr_inc) {
 		hdr = p;
@@ -391,8 +404,9 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 		hdr->fio_magic = FIO_HDR_MAGIC;
 		hdr->verify_type = td->o.verify;
 		hdr->len = hdr_inc;
+		data_len = hdr_inc - hdr_size(hdr);
 
-		data = p + sizeof(*hdr);
+		data = p + hdr_size(hdr);
 		switch (td->o.verify) {
 		case VERIFY_MD5:
 			fill_md5(hdr, data, data_len);
@@ -420,7 +434,7 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 			assert(0);
 		}
 		if (td->o.verify_offset)
-			memswp(p, p + td->o.verify_offset, sizeof(*hdr));
+			memswp(p, p + td->o.verify_offset, hdr_size(hdr));
 	}
 }
 
