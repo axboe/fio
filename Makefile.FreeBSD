@@ -2,9 +2,17 @@ CC	= gcc
 CFLAGS	= -Wall -O2 -g -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 PROGS	= fio
 SCRIPTS = fio_generate_plots
-OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o md5.o crc32.o \
-	filesetup.o eta.o verify.o memory.o io_u.o parse.o mutex.o options.o \
+OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o filesetup.o \
+	eta.o verify.o memory.o io_u.o parse.o mutex.o options.o \
 	rbtree.o
+
+OBJS += crc/crc7.o
+OBJS += crc/crc16.o
+OBJS += crc/crc32.o
+OBJS += crc/crc64.o
+OBJS += crc/sha256.o
+OBJS += crc/sha512.o
+OBJS += crc/md5.o
 
 OBJS += engines/cpu.o
 OBJS += engines/mmap.o
