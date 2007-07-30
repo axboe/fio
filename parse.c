@@ -188,8 +188,13 @@ static int check_int(const char *p, int *val)
 {
 	if (!strlen(p))
 		return 1;
-	if (sscanf(p, "%u", val) == 1)
-		return 0;
+	if (strstr(p, "0x")) {
+		if (sscanf(p, "%x", val) == 1)
+			return 0;
+	} else {
+		if (sscanf(p, "%u", val) == 1)
+			return 0;
+	}
 
 	return 1;
 }
