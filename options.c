@@ -312,13 +312,6 @@ static struct fio_option options[] = {
 		},
 	},
 	{
-		.name	= "fadvise_hint",
-		.type	= FIO_OPT_BOOL,
-		.off1	= td_var_offset(fadvise_hint),
-		.help	= "Use fadvise() to advise the kernel on IO pattern",
-		.def	= "1",
-	},
-	{
 		.name	= "ioengine",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(ioengine),
@@ -415,6 +408,14 @@ static struct fio_option options[] = {
 		.help	= "Size of individual files",
 	},
 	{
+		.name	= "offset",
+		.alias	= "fileoffset",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(start_offset),
+		.help	= "Start IO from this offset",
+		.def	= "0",
+	},
+	{
 		.name	= "bs",
 		.alias	= "blocksize",
 		.type	= FIO_OPT_STR_VAL_INT,
@@ -423,6 +424,7 @@ static struct fio_option options[] = {
 		.minval = 1,
 		.help	= "Block size unit",
 		.def	= "4k",
+		.parent = "rw",
 	},
 	{
 		.name	= "bsrange",
@@ -434,6 +436,7 @@ static struct fio_option options[] = {
 		.off4	= td_var_offset(max_bs[DDIR_WRITE]),
 		.minval = 1,
 		.help	= "Set block size range (in more detail than bs)",
+		.parent = "rw",
 	},
 	{
 		.name	= "bs_unaligned",
@@ -441,13 +444,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(bs_unaligned),
 		.help	= "Don't sector align IO buffer sizes",
-	},
-	{
-		.name	= "offset",
-		.type	= FIO_OPT_STR_VAL,
-		.off1	= td_var_offset(start_offset),
-		.help	= "Start IO from this offset",
-		.def	= "0",
+		.parent = "rw",
 	},
 	{
 		.name	= "randrepeat",
@@ -455,12 +452,14 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(rand_repeatable),
 		.help	= "Use repeatable random IO pattern",
 		.def	= "1",
+		.parent = "rw",
 	},
 	{
 		.name	= "norandommap",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(norandommap),
 		.help	= "Accept potential duplicate random blocks",
+		.parent = "rw",
 	},
 	{
 		.name	= "nrfiles",
@@ -492,6 +491,14 @@ static struct fio_option options[] = {
 			    .help = "Round robin select files",
 			  },
 		},
+		.parent = "nrfiles",
+	},
+	{
+		.name	= "fadvise_hint",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(fadvise_hint),
+		.help	= "Use fadvise() to advise the kernel on IO pattern",
+		.def	= "1",
 	},
 	{
 		.name	= "fsync",
@@ -843,6 +850,7 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(sync_io),
 		.help	= "Use O_SYNC for buffered writes",
 		.def	= "0",
+		.parent = "buffered",
 	},
 	{
 		.name	= "bwavgtime",
@@ -877,6 +885,7 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(cpucycle),
 		.help	= "Length of the CPU burn cycles (usecs)",
 		.def	= "50000",
+		.parent = "cpuload",
 	},
 #ifdef FIO_HAVE_CPU_AFFINITY
 	{
