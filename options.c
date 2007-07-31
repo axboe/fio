@@ -390,12 +390,14 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(iodepth_batch),
 		.help	= "Number of IO to submit in one go",
+		.parent	= "iodepth",
 	},
 	{
 		.name	= "iodepth_low",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(iodepth_low),
 		.help	= "Low water mark for queuing depth",
+		.parent	= "iodepth",
 	},
 	{
 		.name	= "size",
@@ -649,6 +651,7 @@ static struct fio_option options[] = {
 		.off1   = td_var_offset(verify_interval),
 		.minval	= 2 * sizeof(struct verify_header),
 		.help   = "Store verify buffer header every N bytes",
+		.parent	= "verify",
 	},
 	{
 		.name	= "verify_offset",
@@ -656,12 +659,14 @@ static struct fio_option options[] = {
 		.help	= "Offset verify header location by N bytes",
 		.def	= "0",
 		.cb	= str_verify_offset_cb,	
+		.parent	= "verify",
 	},
 	{
 		.name	= "verify_pattern",
 		.type	= FIO_OPT_INT,
 		.cb	= str_verify_pattern_cb,
 		.help	= "Fill pattern for IO buffers",
+		.parent	= "verify",
 	},
 	{
 		.name	= "write_iolog",
@@ -717,13 +722,6 @@ static struct fio_option options[] = {
 		.def	= "0",
 	},
 	{
-		.name	= "rwmixcycle",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(rwmixcycle),
-		.help	= "Cycle period for mixed read/write workloads (msec)",
-		.def	= "500",
-	},
-	{
 		.name	= "rwmixread",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rwmix[DDIR_READ]),
@@ -738,6 +736,14 @@ static struct fio_option options[] = {
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is writes",
 		.def	= "50",
+	},
+	{
+		.name	= "rwmixcycle",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(rwmixcycle),
+		.help	= "Cycle period for mixed read/write workloads (msec)",
+		.def	= "500",
+		.parent	= "rwmixread",
 	},
 	{
 		.name	= "nice",
@@ -779,6 +785,7 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(thinktime_spin),
 		.help	= "Start think time by spinning this amount (usec)",
 		.def	= "0",
+		.parent	= "thinktime",
 	},
 	{
 		.name	= "thinktime_blocks",
@@ -786,6 +793,7 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(thinktime_blocks),
 		.help	= "IO buffer period between 'thinktime'",
 		.def	= "1",
+		.parent	= "thinktime",
 	},
 	{
 		.name	= "rate",
@@ -798,6 +806,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratemin),
 		.help	= "Job must meet this rate or it will be shutdown",
+		.parent	= "rate",
 	},
 	{
 		.name	= "rate_iops",
@@ -810,6 +819,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rate_iops_min),
 		.help	= "Job must meet this rate or it will be shutdown",
+		.parent	= "rate_iops",
 	},
 	{
 		.name	= "ratecycle",
@@ -817,6 +827,7 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(ratecycle),
 		.help	= "Window average for rate limits (msec)",
 		.def	= "1000",
+		.parent = "rate",
 	},
 	{
 		.name	= "invalidate",

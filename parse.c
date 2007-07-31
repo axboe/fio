@@ -561,6 +561,37 @@ static void show_option_help(struct fio_option *o)
 	show_option_values(o);
 }
 
+static struct fio_option *find_child(struct fio_option *options,
+				     struct fio_option *o)
+{
+	struct fio_option *__o;
+
+	for (__o = &options[0]; __o->name; __o++)
+		if (__o->parent && !strcmp(__o->parent, o->name))
+			return __o;
+
+	return NULL;
+}
+
+static void print_option(struct fio_option *options, struct fio_option *o,
+			 int level)
+{
+	char name[256], *p;
+	int i;
+
+	if (!o)
+		return;
+	
+	p = name;
+	for (i = 0; i < level; i++)
+		p += sprintf(p, "%s", "    ");
+
+	sprintf(p, "%s", o->name);
+
+	printf("%-24s: %s\n", name, o->help);
+	print_option(options, find_child(options, o), level + 1);
+}
+
 int show_cmd_help(struct fio_option *options, const char *name)
 {
 	struct fio_option *o, *closest;
@@ -594,9 +625,10 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		if (show_all || match) {
 			found = 1;
 			if (match)
-				printf("%20s: %s\n", o->name, o->help);
+				printf("%24s: %s\n", o->name, o->help);
 			if (show_all) {
-				printf("%-20s: %s\n", o->name, o->help);
+				if (!o->parent)
+					print_option(options, o, 0);
 				continue;
 			}
 		}
