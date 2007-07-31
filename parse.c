@@ -566,19 +566,15 @@ static struct fio_option *find_child(struct fio_option *options,
 {
 	struct fio_option *__o;
 
-	for (__o = &options[0]; __o->name; __o++) {
-		if (__o->parent && !strcmp(__o->parent, o->name)
-		    && !__o->parent_seen) {
-			__o->parent_seen = 1;
+	for (__o = options + 1; __o->name; __o++)
+		if (__o->parent && !strcmp(__o->parent, o->name))
 			return __o;
-		}
-	}
 
 	return NULL;
 }
 
-static void print_option(struct fio_option *options, struct fio_option *o,
-			 struct fio_option *org, int level)
+static void print_option(struct fio_option *o, struct fio_option *org,
+			 int level)
 {
 	char name[256], *p;
 
@@ -594,7 +590,7 @@ static void print_option(struct fio_option *options, struct fio_option *o,
 	sprintf(p, "%s", o->name);
 
 	printf("%-24s: %s\n", name, o->help);
-	print_option(options, find_child(options, org), org, level + 1);
+	print_option(find_child(o, org), org, level + 1);
 }
 
 int show_cmd_help(struct fio_option *options, const char *name)
@@ -633,7 +629,7 @@ int show_cmd_help(struct fio_option *options, const char *name)
 				printf("%24s: %s\n", o->name, o->help);
 			if (show_all) {
 				if (!o->parent)
-					print_option(options, o, NULL, 0);
+					print_option(o, NULL, 0);
 				continue;
 			}
 		}
