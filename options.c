@@ -644,6 +644,7 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(verifysort),
 		.help	= "Sort written verify blocks for read back",
 		.def	= "1",
+		.parent = "verify",
 	},
 	{
 		.name   = "verify_interval",
