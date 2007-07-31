@@ -46,6 +46,7 @@ struct fio_option {
 	const char *def;		/* default setting */
 	const struct value_pair posval[PARSE_MAX_VP];/* possible values */
 	const char *parent;		/* parent option */
+	char parent_seen;
 };
 
 typedef int (str_cb_fn)(void *, char *);
