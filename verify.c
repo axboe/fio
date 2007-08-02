@@ -83,7 +83,9 @@ static void fill_pattern(struct thread_data *td, void *p, unsigned int len)
 
 static void memswp(void* buf1, void* buf2, unsigned int len)
 {
-	struct verify_header swap;
+	char swap[200];
+
+	assert(len <= sizeof(swap));
 
 	memcpy(&swap, buf1, len);
 	memcpy(buf1, buf2, len);
