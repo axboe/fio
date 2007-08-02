@@ -107,7 +107,7 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 	 * if writing, bytes_total will be twice the size. If mixing,
 	 * assume a 50/50 split and thus bytes_total will be 50% larger.
 	 */
-	if (td->o.verify) {
+	if (td->o.do_verify && td->o.verify) {
 		if (td_rw(td))
 			bytes_total = bytes_total * 3 / 2;
 		else

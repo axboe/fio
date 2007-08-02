@@ -417,6 +417,7 @@ struct thread_options {
 	unsigned int end_fsync;
 	unsigned int sync_io;
 	unsigned int verify;
+	unsigned int do_verify;
 	unsigned int verifysort;
 	unsigned int verify_interval;
 	unsigned int verify_offset;

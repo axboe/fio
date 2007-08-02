@@ -569,6 +569,9 @@ loops=int	Run the specified number of iterations of this job. Used
 		to repeat the same workload a given number of times. Defaults
 		to 1.
 
+do_verify=int	Run the verify phase after a write phase. Only makes sense if
+		verify is set. Defaults to 1.
+
 verify=str	If writing to a file, fio can verify the file contents
 		after each iteration of the job. The allowed values are:
 

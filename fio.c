@@ -901,7 +901,8 @@ static void *thread_main(void *data)
 		if (td->error || td->terminate)
 			break;
 
-		if (td->o.verify == VERIFY_NONE ||
+		if (!td->o.do_verify ||
+		    td->o.verify == VERIFY_NONE ||
 		    (td->io_ops->flags & FIO_UNIDIR))
 			continue;
 

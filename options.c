@@ -600,6 +600,13 @@ static struct fio_option options[] = {
 		  },
 	},
 	{
+		.name	= "do_verify",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(do_verify),
+		.help	= "Run verification stage after write",
+		.def	= "1",
+	},
+	{
 		.name	= "verify",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(verify),
