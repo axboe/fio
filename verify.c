@@ -338,10 +338,32 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
 	return 0;
 }
 
+int verify_io_u_pattern(unsigned long pattern, unsigned long pattern_size,
+                        char* buf, unsigned int len, unsigned int mod)
+{
+	unsigned int i;
+	char split_pattern[4];
+
+	for (i = 0; i < 4; i++) {
+		split_pattern[i] = pattern & 0xff;
+		pattern >>= 8;
+	}
+
+	for (i = 0; i < len; i++) {
+		if (buf[i] != split_pattern[mod])
+			return 1;
+		mod++;
+		if (mod == pattern_size)
+			mod = 0;
+	}
+
+	return 0;
+}
+
 int verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	struct verify_header *hdr;
-	unsigned int hdr_inc, hdr_num = 0;
+	unsigned int hdr_size, hdr_inc, hdr_num = 0;
 	void *p;
 	int ret;
 
@@ -353,10 +375,24 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		hdr_inc = td->o.verify_interval;
 
 	for (p = io_u->buf; p < io_u->buf + io_u->buflen; p += hdr_inc) {
+		hdr_size = __hdr_size(td->o.verify);
 		if (td->o.verify_offset)
-			memswp(p, p + td->o.verify_offset, __hdr_size(td->o.verify));
-
+			memswp(p, p + td->o.verify_offset, hdr_size);
 		hdr = p;
+
+		if (td->o.verify_pattern_bytes) {
+			ret = verify_io_u_pattern(td->o.verify_pattern,
+			                          td->o.verify_pattern_bytes,
+			                          p + hdr_size,
+			                          hdr_inc - hdr_size,
+			                          hdr_size % 4);
+			if (ret) {
+				log_err("pattern: verify failed at %llu/%u\n",
+					io_u->offset + hdr_num * hdr->len,
+				        hdr->len);
+				return ret;
+			}
+		}
 
 		if (hdr->fio_magic != FIO_HDR_MAGIC) {
 			log_err("Bad verify header %x\n", hdr->fio_magic);
