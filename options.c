@@ -638,6 +638,10 @@ static struct fio_option options[] = {
 			    .oval = VERIFY_SHA512,
 			    .help = "Use sha512 checksums for verification",
 			  },
+			  { .ival = "meta",
+			    .oval = VERIFY_META,
+			    .help = "Use io information",
+			  },
 			  {
 			    .ival = "null",
 			    .oval = VERIFY_NULL,

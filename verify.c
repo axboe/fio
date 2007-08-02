@@ -133,6 +133,9 @@ static inline unsigned int __hdr_size(int verify_type)
 	case VERIFY_SHA512:
 		len = sizeof(struct vhdr_sha512);
 		break;
+	case VERIFY_META:
+		len = sizeof(struct vhdr_meta);
+		break;
 	default:
 		log_err("fio: unknown verify header!\n");
 		assert(0);
@@ -161,6 +164,21 @@ static inline void *io_u_verify_off(struct verify_header *hdr,
 				    unsigned char header_num)
 {
 	return io_u->buf + header_num * hdr->len + hdr_size(hdr);
+}
+
+static int verify_io_u_meta(struct verify_header *hdr, struct thread_data *td,
+                            struct io_u *io_u, unsigned int header_num)
+{
+	struct vhdr_meta *vh = hdr_priv(hdr);
+
+	if (vh->offset != io_u->offset + header_num * td->o.verify_interval) {
+		log_err("meta: verify failed at %llu/%u\n",
+		              io_u->offset + header_num * hdr->len,
+		              hdr->len);
+		return 1;
+	}
+
+	return 0;
 }
 
 static int verify_io_u_sha512(struct verify_header *hdr, struct io_u *io_u,
@@ -365,6 +383,9 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		case VERIFY_SHA512:
 			ret = verify_io_u_sha512(hdr, io_u, hdr_num);
 			break;
+		case VERIFY_META:
+			ret = verify_io_u_meta(hdr, td, io_u, hdr_num);
+			break;
 		default:
 			log_err("Bad verify type %u\n", hdr->verify_type);
 			ret = 1;
@@ -373,6 +394,21 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 	}
 
 	return 0;
+}
+
+static void fill_meta(struct verify_header *hdr, struct thread_data *td,
+                      struct io_u *io_u, unsigned int header_num)
+{
+	struct vhdr_meta *vh = hdr_priv(hdr);
+
+	vh->thread = td->thread_number;
+
+	vh->time_sec = io_u->start_time.tv_sec;
+	vh->time_usec = io_u->start_time.tv_usec;
+
+	vh->numberio = td->io_issues[DDIR_WRITE];
+
+	vh->offset = io_u->offset + header_num * td->o.verify_interval;
 }
 
 static void fill_sha512(struct verify_header *hdr, void *p, unsigned int len)
@@ -444,7 +480,7 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	struct verify_header *hdr;
 	void *p = io_u->buf, *data;
-	unsigned int hdr_inc, data_len;
+	unsigned int hdr_inc, data_len, header_num = 0;
 
 	if (td->o.verify == VERIFY_NULL)
 		return;
@@ -486,12 +522,16 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 		case VERIFY_SHA512:
 			fill_sha512(hdr, data, data_len);
 			break;
+		case VERIFY_META:
+			fill_meta(hdr, td, io_u, header_num);
+			break;
 		default:
 			log_err("fio: bad verify type: %d\n", td->o.verify);
 			assert(0);
 		}
 		if (td->o.verify_offset)
 			memswp(p, p + td->o.verify_offset, hdr_size(hdr));
+		header_num++;
 	}
 }
 

@@ -197,6 +197,7 @@ enum {
 	VERIFY_CRC7,			/* crc7 sum data blocks */
 	VERIFY_SHA256,			/* sha256 sum data blocks */
 	VERIFY_SHA512,			/* sha512 sum data blocks */
+	VERIFY_META,			/* block_num, timestamp etc. */
 	VERIFY_NULL,			/* pretend to verify */
 };
 
@@ -231,6 +232,13 @@ struct vhdr_crc16 {
 };
 struct vhdr_crc7 {
 	uint8_t crc7;
+};
+struct vhdr_meta {
+	uint64_t offset;
+	unsigned char thread;
+	unsigned short numberio;
+	unsigned long time_sec;
+	unsigned long time_usec;
 };
 
 struct group_run_stats {
