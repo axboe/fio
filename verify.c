@@ -338,6 +338,14 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
 	return 0;
 }
 
+static unsigned int hweight8(unsigned int w)
+{
+	unsigned int res = w - ((w >> 1) & 0x55);
+
+	res = (res & 0x33) + ((res >> 2) & 0x33);
+	return (res + (res >> 4)) & 0x0F;
+}
+
 int verify_io_u_pattern(unsigned long pattern, unsigned long pattern_size,
                         char* buf, unsigned int len, unsigned int mod)
 {
@@ -350,8 +358,15 @@ int verify_io_u_pattern(unsigned long pattern, unsigned long pattern_size,
 	}
 
 	for (i = 0; i < len; i++) {
-		if (buf[i] != split_pattern[mod])
+		if (buf[i] != split_pattern[mod]) {
+			unsigned int bits;
+
+			bits = hweight8(buf[i] ^ split_pattern[mod]);
+			log_err("fio: got pattern %x, wanted %x. Bad bits %d\n",
+				buf[i], split_pattern[mod], bits);
+			log_err("fio: bad pattern block offset %u\n", i);
 			return 1;
+		}
 		mod++;
 		if (mod == pattern_size)
 			mod = 0;
@@ -374,11 +389,16 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td->o.verify_interval)
 		hdr_inc = td->o.verify_interval;
 
-	for (p = io_u->buf; p < io_u->buf + io_u->buflen; p += hdr_inc) {
+	for (p = io_u->buf; p < io_u->buf + io_u->buflen; p += hdr_inc, hdr_num++) {
 		hdr_size = __hdr_size(td->o.verify);
 		if (td->o.verify_offset)
 			memswp(p, p + td->o.verify_offset, hdr_size);
 		hdr = p;
+
+		if (hdr->fio_magic != FIO_HDR_MAGIC) {
+			log_err("Bad verify header %x\n", hdr->fio_magic);
+			return EIO;
+		}
 
 		if (td->o.verify_pattern_bytes) {
 			ret = verify_io_u_pattern(td->o.verify_pattern,
@@ -386,17 +406,11 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			                          p + hdr_size,
 			                          hdr_inc - hdr_size,
 			                          hdr_size % 4);
-			if (ret) {
-				log_err("pattern: verify failed at %llu/%u\n",
+			if (ret)
+				log_err("fio: verify failed at %llu/%u\n",
 					io_u->offset + hdr_num * hdr->len,
-				        hdr->len);
-				return ret;
-			}
-		}
-
-		if (hdr->fio_magic != FIO_HDR_MAGIC) {
-			log_err("Bad verify header %x\n", hdr->fio_magic);
-			return EIO;
+					hdr->len);
+			continue;
 		}
 
 		switch (hdr->verify_type) {
@@ -428,7 +442,6 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			log_err("Bad verify type %u\n", hdr->verify_type);
 			ret = 1;
 		}
-		hdr_num++;
 	}
 
 	return 0;
