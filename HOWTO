@@ -631,6 +631,11 @@ verify_pattern=int	If set, fio will fill the io buffers with this
 		width of the pattern, fio will fill 1/2/3/4 bytes of the
 		buffer at the time. The verify_pattern cannot be larger than
 		a 32-bit quantity.
+
+verify_fatal=int	Normally fio will keep checking the entire contents
+		before quitting on a block verification failure. If this
+		option is set, fio will exit the job on the first observed
+		failure.
 		
 stonewall	Wait for preceeding jobs in the job file to exit, before
 		starting this one. Can be used to insert serialization

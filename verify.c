@@ -389,7 +389,12 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td->o.verify_interval)
 		hdr_inc = td->o.verify_interval;
 
+	ret = 0;
 	for (p = io_u->buf; p < io_u->buf + io_u->buflen; p += hdr_inc, hdr_num++) {
+		if (ret && td->o.verify_fatal) {
+			td->terminate = 1;
+			break;
+		}
 		hdr_size = __hdr_size(td->o.verify);
 		if (td->o.verify_offset)
 			memswp(p, p + td->o.verify_offset, hdr_size);
@@ -444,7 +449,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		}
 	}
 
-	return 0;
+	return ret;
 }
 
 static void fill_meta(struct verify_header *hdr, struct thread_data *td,

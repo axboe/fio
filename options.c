@@ -689,6 +689,14 @@ static struct fio_option options[] = {
 		.parent	= "verify",
 	},
 	{
+		.name	= "verify_fatal",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(verify_fatal),
+		.def	= "0",
+		.help	= "Exit on a single verify failure, don't continue",
+		.parent = "verify",
+	},
+	{
 		.name	= "write_iolog",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(write_iolog_file),
