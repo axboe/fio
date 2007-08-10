@@ -217,12 +217,27 @@ static int str_verify_offset_cb(void *data, unsigned int *off)
 	return 0;
 }
 
-static int str_verify_pattern_cb(void *data, unsigned int *off)
+static int str_verify_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
-	unsigned int msb;
+	unsigned int nr, msb;
+	char *pat;
 
-	msb = fls(*off);
+	if (td->o.verify != VERIFY_PATTERN)
+		return 0;
+
+	pat = get_opt_postfix(mem);
+	if (!pat) {
+		log_err("fio: missing pattern\n");
+		return 1;
+	}
+
+	if (strstr(pat, "0x") || strstr(pat, "0X"))
+		nr = strtol(pat, NULL, 16);
+	else
+		nr = strtol(pat, NULL, 16);
+
+	msb = fls(nr);
 	if (msb <= 8)
 		td->o.verify_pattern_bytes = 1;
 	else if (msb <= 16)
@@ -232,7 +247,7 @@ static int str_verify_pattern_cb(void *data, unsigned int *off)
 	else
 		td->o.verify_pattern_bytes = 4;
 
-	td->o.verify_pattern = *off;
+	td->o.verify_pattern = nr;
 	return 0;
 }
 
@@ -603,6 +618,7 @@ static struct fio_option options[] = {
 		.name	= "verify",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(verify),
+		.cb	= str_verify_cb,
 		.help	= "Verify data written",
 		.def	= "0",
 		.posval = {
@@ -642,6 +658,10 @@ static struct fio_option options[] = {
 			    .oval = VERIFY_META,
 			    .help = "Use io information",
 			  },
+			  { .ival = "pattern",
+			    .oval = VERIFY_PATTERN,
+			    .help = "Verify a specific buffer pattern",
+			  },
 			  {
 			    .ival = "null",
 			    .oval = VERIFY_NULL,
@@ -679,13 +699,6 @@ static struct fio_option options[] = {
 		.help	= "Offset verify header location by N bytes",
 		.def	= "0",
 		.cb	= str_verify_offset_cb,	
-		.parent	= "verify",
-	},
-	{
-		.name	= "verify_pattern",
-		.type	= FIO_OPT_INT,
-		.cb	= str_verify_pattern_cb,
-		.help	= "Fill pattern for IO buffers",
 		.parent	= "verify",
 	},
 	{
