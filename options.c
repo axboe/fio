@@ -651,7 +651,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "do_verify",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(do_verify),
 		.help	= "Run verification stage after write",
 		.def	= "1",
@@ -690,7 +690,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "verify_fatal",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(verify_fatal),
 		.def	= "0",
 		.help	= "Exit on a single verify failure, don't continue",

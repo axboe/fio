@@ -569,7 +569,7 @@ loops=int	Run the specified number of iterations of this job. Used
 		to repeat the same workload a given number of times. Defaults
 		to 1.
 
-do_verify=int	Run the verify phase after a write phase. Only makes sense if
+do_verify=bool	Run the verify phase after a write phase. Only makes sense if
 		verify is set. Defaults to 1.
 
 verify=str	If writing to a file, fio can verify the file contents
@@ -632,7 +632,7 @@ verify_pattern=int	If set, fio will fill the io buffers with this
 		buffer at the time. The verify_pattern cannot be larger than
 		a 32-bit quantity.
 
-verify_fatal=int	Normally fio will keep checking the entire contents
+verify_fatal=bool	Normally fio will keep checking the entire contents
 		before quitting on a block verification failure. If this
 		option is set, fio will exit the job on the first observed
 		failure.
