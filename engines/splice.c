@@ -116,7 +116,6 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 	return io_u->xfer_buflen;
 }
 
-
 /*
  * For splice writing, we can vmsplice our data buffer directly into a
  * pipe and then splice that to a file.
@@ -162,9 +161,17 @@ static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 	int ret;
 
 	if (io_u->ddir == DDIR_READ) {
-		if (sd->vmsplice_to_user)
+		if (sd->vmsplice_to_user) {
 			ret = fio_splice_read(td, io_u);
-		else
+			/*
+			 * This kernel doesn't support vmsplice to user
+			 * space. Reset the vmsplice_to_user flag, so that
+			 * we retry below and don't hit this path again.
+			 */
+			if (ret == -EBADF)
+				sd->vmsplice_to_user = 0;
+		}
+		if (!sd->vmsplice_to_user)
 			ret = fio_splice_read_old(td, io_u);
 	} else if (io_u->ddir == DDIR_WRITE)
 		ret = fio_splice_write(td, io_u);
@@ -209,9 +216,9 @@ static int fio_spliceio_init(struct thread_data *td)
 	}
 
 	/*
-	 * need some check for enabling this, for now just leave it disabled
+	 * Assume this work, we'll reset this if it doesn't
 	 */
-	sd->vmsplice_to_user = 0;
+	sd->vmsplice_to_user = 1;
 
 	td->io_ops->data = sd;
 	return 0;
