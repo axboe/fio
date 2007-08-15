@@ -82,10 +82,10 @@ Job file
 --------
 
 See the HOWTO file for a more detailed description of parameters and what
-they mean. This file contains the terse version.  Only a few options can
-be controlled with command line parameters, generally it's a lot easier to
+they mean. This file contains the terse version. You can describe big and
+complex setups with the command line, but generally it's a lot easier to
 just write a simple job file to describe the workload. The job file format
-is in the ini style format, as it's easy to read and write for the user.
+is in the ini style format, as that is easy to read and write for the user.
 
 The job file parameters are:
 
