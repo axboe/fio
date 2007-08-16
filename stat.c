@@ -197,19 +197,33 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev)) {
 		const char *base = "(usec)";
+		char *minp, *maxp;
 
 		if (!usec_to_msec(&min, &max, &mean, &dev))
 			base = "(msec)";
 
-		log_info("    slat %s: min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", base, min, max, mean, dev);
+		minp = num2str(min, 6, 1, 0);
+		maxp = num2str(max, 6, 1, 0);
+
+		log_info("    slat %s: min=%s, max=%s, avg=%5.02f, stdev=%5.02f\n", base, minp, maxp, mean, dev);
+
+		free(minp);
+		free(maxp);
 	}
 	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev)) {
 		const char *base = "(usec)";
+		char *minp, *maxp;
 
 		if (!usec_to_msec(&min, &max, &mean, &dev))
 			base = "(msec)";
 
-		log_info("    clat %s: min=%5lu, max=%5lu, avg=%5.02f, stdev=%5.02f\n", base, min, max, mean, dev);
+		minp = num2str(min, 6, 1, 0);
+		maxp = num2str(max, 6, 1, 0);
+	
+		log_info("    clat %s: min=%s, max=%s, avg=%5.02f, stdev=%5.02f\n", base, minp, maxp, mean, dev);
+
+		free(minp);
+		free(maxp);
 	}
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
