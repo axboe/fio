@@ -281,6 +281,8 @@ int load_blktrace(struct thread_data *td, const char *filename)
 			log_err("fio: discarded %d of %d\n", ret, t.pdu_len);
 			goto err;
 		}
+		if (t.action & BLK_TC_ACT(BLK_TC_NOTIFY))
+			continue;
 		if (!ttime) {
 			ttime = t.time;
 			cpu = t.cpu;
