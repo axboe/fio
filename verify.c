@@ -81,7 +81,7 @@ static void fill_pattern(struct thread_data *td, void *p, unsigned int len)
 	}
 }
 
-static void memswp(void* buf1, void* buf2, unsigned int len)
+static void memswp(void *buf1, void *buf2, unsigned int len)
 {
 	char swap[200];
 
@@ -348,7 +348,7 @@ static unsigned int hweight8(unsigned int w)
 }
 
 int verify_io_u_pattern(unsigned long pattern, unsigned long pattern_size,
-                        char* buf, unsigned int len, unsigned int mod)
+                        char *buf, unsigned int len, unsigned int mod)
 {
 	unsigned int i;
 	char split_pattern[4];
