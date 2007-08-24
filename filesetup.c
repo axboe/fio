@@ -431,7 +431,7 @@ int setup_files(struct thread_data *td)
 	 */
 	if (need_extend) {
 		temp_stall_ts = 1;
-		log_info("%s: Laying out IO file(s) (%u files / %LuMiB)\n",
+		log_info("%s: Laying out IO file(s) (%u file(s) / %LuMiB)\n",
 			td->o.name, need_extend, extend_size >> 20);
 
 		for_each_file(td, f, i) {
