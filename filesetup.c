@@ -454,7 +454,12 @@ int setup_files(struct thread_data *td)
 	if (!td->o.zone_size)
 		td->o.zone_size = td->o.size;
 
-	td->total_io_size = td->o.size * td->o.loops;
+	/*
+	 * iolog already set the total io size, if we read back
+	 * stored entries.
+	 */
+	if (!td->o.read_iolog_file)
+		td->total_io_size = td->o.size * td->o.loops;
 	return 0;
 err_offset:
 	log_err("%s: you need to specify valid offset=\n", td->o.name);

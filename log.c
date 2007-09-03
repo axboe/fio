@@ -256,6 +256,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 			ipo->file_action = file_action;
 		}
 		list_add_tail(&ipo->list, &td->io_log_list);
+		td->total_io_size += bytes;
 	}
 
 	free(str);
@@ -316,6 +317,7 @@ static int read_iolog(struct thread_data *td, FILE *f)
 		if (bytes > td->o.max_bs[rw])
 			td->o.max_bs[rw] = bytes;
 		list_add_tail(&ipo->list, &td->io_log_list);
+		td->total_io_size += bytes;
 	}
 
 	free(str);
