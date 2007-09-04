@@ -175,6 +175,11 @@ struct io_u {
 	 * Callback for io completion
 	 */
 	int (*end_io)(struct thread_data *, struct io_u *);
+
+	/*
+	 * Called when io_u is about to be freed
+	 */
+	void (*unmap)(struct thread_data *, struct io_u *);
 };
 
 /*

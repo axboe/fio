@@ -770,6 +770,8 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 			if (ret && !icd->error)
 				icd->error = ret;
 		}
+		if (io_u->unmap)
+			io_u->unmap(td, io_u);
 	} else {
 		icd->error = io_u->error;
 		io_u_log_error(td, io_u);
