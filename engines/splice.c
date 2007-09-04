@@ -82,6 +82,7 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 	offset = io_u->offset;
 	buflen = io_u->xfer_buflen;
 	p = io_u->xfer_buf;
+	io_u->xfer_buf = NULL;
 	while (buflen) {
 		int this_len = buflen;
 
@@ -108,11 +109,14 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 			else if (!ret)
 				return -ENODATA;
 
+			if (!io_u->xfer_buf)
+				io_u->xfer_buf = iov.iov_base;
 			iov.iov_len -= ret;
 			iov.iov_base += ret;
 		}
 	}
 
+	io_u->unmap = splice_unmap_io_u;
 	return io_u->xfer_buflen;
 }
 
@@ -153,6 +157,17 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 	}
 
 	return io_u->xfer_buflen;
+}
+
+static void splice_unmap_io_u(struct thread_data *td, struct io_u *io_u)
+{
+	struct spliceio_data *sd = td->io_ops->data;
+	struct iovec iov = {
+		.iov_base = io_u->xfer_buf,
+		.iov_len = io_u->xfer_buflen,
+	};
+
+	vmsplice(sd->pipe[0], &iov, 1, SPLICE_F_UNMAP);
 }
 
 static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
