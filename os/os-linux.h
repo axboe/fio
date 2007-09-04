@@ -98,7 +98,7 @@ static inline int vmsplice(int fd, const struct iovec *iov,
 }
 #endif
 
-#ifdef SPLICE_F_UNMAP
+#ifndef SPLICE_F_UNMAP
 #define SPLICE_F_UNMAP	(0x10)
 #endif
 
