@@ -66,6 +66,17 @@ static int fio_splice_read_old(struct thread_data *td, struct io_u *io_u)
 	return io_u->xfer_buflen;
 }
 
+static void splice_unmap_io_u(struct thread_data *td, struct io_u *io_u)
+{
+	struct spliceio_data *sd = td->io_ops->data;
+	struct iovec iov = {
+		.iov_base = io_u->xfer_buf,
+		.iov_len = io_u->xfer_buflen,
+	};
+
+	vmsplice(sd->pipe[0], &iov, 1, SPLICE_F_UNMAP);
+}
+
 /*
  * We can now vmsplice into userspace, so do the transfer by splicing into
  * a pipe and vmsplicing that into userspace.
@@ -157,17 +168,6 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 	}
 
 	return io_u->xfer_buflen;
-}
-
-static void splice_unmap_io_u(struct thread_data *td, struct io_u *io_u)
-{
-	struct spliceio_data *sd = td->io_ops->data;
-	struct iovec iov = {
-		.iov_base = io_u->xfer_buf,
-		.iov_len = io_u->xfer_buflen,
-	};
-
-	vmsplice(sd->pipe[0], &iov, 1, SPLICE_F_UNMAP);
 }
 
 static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
