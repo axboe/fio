@@ -178,7 +178,7 @@ static int verify_io_u_meta(struct verify_header *hdr, struct thread_data *td,
 		log_err("meta: verify failed at %llu/%u\n",
 		              io_u->offset + header_num * hdr->len,
 		              hdr->len);
-		return 1;
+		return EIO;
 	}
 
 	return 0;
@@ -203,7 +203,7 @@ static int verify_io_u_sha512(struct verify_header *hdr, struct io_u *io_u,
 		              hdr->len);
 		hexdump(vh->sha512, sizeof(vh->sha512));
 		hexdump(sha512_ctx.buf, sizeof(sha512));
-		return 1;
+		return EIO;
 	}
 
 	return 0;
@@ -228,7 +228,7 @@ static int verify_io_u_sha256(struct verify_header *hdr, struct io_u *io_u,
 		              hdr->len);
 		hexdump(vh->sha256, sizeof(vh->sha256));
 		hexdump(sha256_ctx.buf, sizeof(sha256));
-		return 1;
+		return EIO;
 	}
 
 	return 0;
@@ -248,7 +248,7 @@ static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
 		                io_u->offset + header_num * hdr->len,
 				hdr->len);
 		log_err("crc7: wanted %x, got %x\n", vh->crc7, c);
-		return 1;
+		return EIO;
 	}
 
 	return 0;
@@ -268,7 +268,7 @@ static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u,
 		                io_u->offset + header_num * hdr->len,
 				hdr->len);
 		log_err("crc16: wanted %x, got %x\n", vh->crc16, c);
-		return 1;
+		return EIO;
 	}
 
 	return 0;
@@ -288,7 +288,7 @@ static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u,
 				io_u->offset + header_num * hdr->len,
 				hdr->len);
 		log_err("crc64: wanted %llx, got %llx\n", (unsigned long long) vh->crc64, c);
-		return 1;
+		return EIO;
 	}
 
 	return 0;
@@ -308,7 +308,7 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u,
 		                io_u->offset + header_num * hdr->len,
 				hdr->len);
 		log_err("crc32: wanted %x, got %x\n", vh->crc32, c);
-		return 1;
+		return EIO;
 	}
 
 	return 0;
@@ -333,7 +333,7 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
 		              hdr->len);
 		hexdump(vh->md5_digest, sizeof(vh->md5_digest));
 		hexdump(md5_ctx.hash, sizeof(hash));
-		return 1;
+		return EIO;
 	}
 
 	return 0;
@@ -366,7 +366,7 @@ int verify_io_u_pattern(unsigned long pattern, unsigned long pattern_size,
 			log_err("fio: got pattern %x, wanted %x. Bad bits %d\n",
 				buf[i], split_pattern[mod], bits);
 			log_err("fio: bad pattern block offset %u\n", i);
-			return 1;
+			return EIO;
 		}
 		mod++;
 		if (mod == pattern_size)
@@ -444,7 +444,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			break;
 		default:
 			log_err("Bad verify type %u\n", hdr->verify_type);
-			ret = 1;
+			ret = EINVAL;
 		}
 	}
 
