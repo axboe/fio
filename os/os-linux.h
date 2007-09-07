@@ -98,10 +98,6 @@ static inline int vmsplice(int fd, const struct iovec *iov,
 }
 #endif
 
-#ifndef SPLICE_F_UNMAP
-#define SPLICE_F_UNMAP	(0x10)
-#endif
-
 #define SPLICE_DEF_SIZE	(64*1024)
 
 #ifdef FIO_HAVE_SYSLET

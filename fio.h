@@ -175,11 +175,6 @@ struct io_u {
 	 * Callback for io completion
 	 */
 	int (*end_io)(struct thread_data *, struct io_u *);
-
-	/*
-	 * Called when io_u is about to be freed
-	 */
-	void (*unmap)(struct thread_data *, struct io_u *);
 };
 
 /*
@@ -375,6 +370,7 @@ struct thread_stat {
 	unsigned long usr_time;
 	unsigned long sys_time;
 	unsigned long ctx;
+	unsigned long minf, majf;
 
 	/*
 	 * IO depth and latency stats

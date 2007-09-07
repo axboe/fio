@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <sys/poll.h>
+#include <sys/mman.h>
 
 #include "../fio.h"
 
@@ -66,17 +67,6 @@ static int fio_splice_read_old(struct thread_data *td, struct io_u *io_u)
 	return io_u->xfer_buflen;
 }
 
-static void splice_unmap_io_u(struct thread_data *td, struct io_u *io_u)
-{
-	struct spliceio_data *sd = td->io_ops->data;
-	struct iovec iov = {
-		.iov_base = io_u->xfer_buf,
-		.iov_len = io_u->xfer_buflen,
-	};
-
-	vmsplice(sd->pipe[0], &iov, 1, SPLICE_F_UNMAP);
-}
-
 /*
  * We can now vmsplice into userspace, so do the transfer by splicing into
  * a pipe and vmsplicing that into userspace.
@@ -86,26 +76,36 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 	struct spliceio_data *sd = td->io_ops->data;
 	struct fio_file *f = io_u->file;
 	struct iovec iov;
-	int ret, buflen;
+	int ret = 0 , buflen, mmap_len;
 	off_t offset;
-	void *p;
+	void *p, *map;
 
 	offset = io_u->offset;
-	buflen = io_u->xfer_buflen;
-	p = io_u->xfer_buf;
-	io_u->xfer_buf = NULL;
+	mmap_len = buflen = io_u->xfer_buflen;
+
+	map = mmap(io_u->xfer_buf, buflen, PROT_READ, MAP_PRIVATE|OS_MAP_ANON, 0, 0);
+	if (map == MAP_FAILED) {
+		td_verror(td, errno, "mmap io_u");
+		return -1;
+	}
+
+	p = map;
 	while (buflen) {
 		int this_len = buflen;
+		int flags = 0;
 
-		if (this_len > SPLICE_DEF_SIZE)
+		if (this_len > SPLICE_DEF_SIZE) {
 			this_len = SPLICE_DEF_SIZE;
+			flags = SPLICE_F_MORE;
+		}
 
-		ret = splice(f->fd, &offset, sd->pipe[1], NULL, this_len, SPLICE_F_MORE);
+		ret = splice(f->fd, &offset, sd->pipe[1], NULL, this_len,flags);
 		if (ret < 0) {
 			if (errno == ENODATA || errno == EAGAIN)
 				continue;
 
-			return -errno;
+			td_verror(td, errno, "splice-from-fd");
+			break;
 		}
 
 		buflen -= ret;
@@ -115,19 +115,29 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 
 		while (iov.iov_len) {
 			ret = vmsplice(sd->pipe[0], &iov, 1, SPLICE_F_MOVE);
-			if (ret < 0)
-				return -errno;
-			else if (!ret)
-				return -ENODATA;
+			if (ret < 0) {
+				td_verror(td, errno, "vmsplice");
+				break;
+			} else if (!ret) {
+				td_verror(td, ENODATA, "vmsplice");
+				ret = -1;
+				break;
+			}
 
-			if (!io_u->xfer_buf)
-				io_u->xfer_buf = iov.iov_base;
 			iov.iov_len -= ret;
 			iov.iov_base += ret;
 		}
+		if (ret < 0)
+			break;
 	}
 
-	io_u->unmap = splice_unmap_io_u;
+	if (munmap(map, mmap_len) < 0) {
+		td_verror(td, errno, "munnap io_u");
+		return -1;
+	}
+	if (ret < 0)
+		return ret;
+
 	return io_u->xfer_buflen;
 }
 
@@ -234,6 +244,13 @@ static int fio_spliceio_init(struct thread_data *td)
 	 * Assume this work, we'll reset this if it doesn't
 	 */
 	sd->vmsplice_to_user = 1;
+
+	/*
+	 * And if vmsplice_to_user works, we definitely need aligned
+	 * buffers. Just set ->odirect to force that.
+	 */
+	if (td_read(td))
+		td->o.odirect = 1;
 
 	td->io_ops->data = sd;
 	return 0;
