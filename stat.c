@@ -61,6 +61,8 @@ void update_rusage_stat(struct thread_data *td)
 	ts->usr_time += mtime_since(&ts->ru_start.ru_utime, &ts->ru_end.ru_utime);
 	ts->sys_time += mtime_since(&ts->ru_start.ru_stime, &ts->ru_end.ru_stime);
 	ts->ctx += ts->ru_end.ru_nvcsw + ts->ru_end.ru_nivcsw - (ts->ru_start.ru_nvcsw + ts->ru_start.ru_nivcsw);
+	ts->minf += ts->ru_end.ru_minflt - ts->ru_start.ru_minflt;
+	ts->majf += ts->ru_end.ru_majflt - ts->ru_start.ru_majflt;
 	
 	memcpy(&ts->ru_start, &ts->ru_end, sizeof(ts->ru_end));
 }
@@ -318,7 +320,7 @@ static void show_thread_status(struct thread_stat *ts,
 		sys_cpu = 0;
 	}
 
-	log_info("  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu\n", usr_cpu, sys_cpu, ts->ctx);
+	log_info("  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu, majf=%lu, minf=%lu\n", usr_cpu, sys_cpu, ts->ctx, ts->majf, ts->minf);
 
 	stat_calc_dist(ts, io_u_dist);
 	stat_calc_lat_u(ts, io_u_lat_u);
@@ -387,7 +389,7 @@ static void show_thread_status_terse(struct thread_stat *ts,
 		sys_cpu = 0;
 	}
 
-	log_info(";%f%%;%f%%;%lu", usr_cpu, sys_cpu, ts->ctx);
+	log_info(";%f%%;%f%%;%lu;%lu;%lu", usr_cpu, sys_cpu, ts->ctx, ts->majf, ts->minf);
 
 	stat_calc_dist(ts, io_u_dist);
 	stat_calc_lat_u(ts, io_u_lat_u);
@@ -531,6 +533,8 @@ void show_run_stats(void)
 		ts->usr_time += td->ts.usr_time;
 		ts->sys_time += td->ts.sys_time;
 		ts->ctx += td->ts.ctx;
+		ts->majf += td->ts.majf;
+		ts->minf += td->ts.minf;
 
 		for (k = 0; k < FIO_IO_U_MAP_NR; k++)
 			ts->io_u_map[k] += td->ts.io_u_map[k];

@@ -756,7 +756,7 @@ Client1 (g=0): err= 0:
     slat (msec): min=    0, max=  136, avg= 0.03, stdev= 1.92
     clat (msec): min=    0, max=  631, avg=48.50, stdev=86.82
     bw (KiB/s) : min=    0, max= 1196, per=51.00%, avg=664.02, stdev=681.68
-  cpu        : usr=1.49%, sys=0.25%, ctx=7969
+  cpu        : usr=1.49%, sys=0.25%, ctx=7969, majf=0, minf=17
   IO depths    : 1=0.1%, 2=0.3%, 4=0.5%, 8=99.0%, 16=0.0%, 32=0.0%, >32=0.0%
      issued r/w: total=0/32768, short=0/0
      lat (msec): 2=1.6%, 4=0.0%, 10=3.2%, 20=12.8%, 50=38.4%, 100=24.8%,
@@ -787,7 +787,9 @@ runt=		The runtime of that thread
 		only really useful if the threads in this group are on the
 		same disk, since they are then competing for disk access.
 cpu=		CPU usage. User and system time, along with the number
-		of context switches this thread went through.
+		of context switches this thread went through, usage of
+		system and user time, and finally the number of major
+		and minor page faults.
 IO depths=	The distribution of io depths over the job life time. The
 		numbers are divided into powers of 2, so for example the
 		16= entries includes depths up to that value but higher
