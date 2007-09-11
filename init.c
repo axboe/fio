@@ -24,6 +24,7 @@ static char fio_version_string[] = "fio 1.17.1";
 static char **ini_file;
 static int max_jobs = MAX_JOBS;
 static int dump_cmdline;
+static int read_only;
 
 struct thread_data def_thread;
 struct thread_data *threads = NULL;
@@ -89,7 +90,12 @@ static struct option long_options[FIO_NR_OPTIONS] = {
 	{
 		.name		= "showcmd",
 		.has_arg	= no_argument,
-		.val		= 's'
+		.val		= 's',
+	},
+	{
+		.name		= "readonly",
+		.has_arg	= no_argument,
+		.val		= 'r',
 	},
 	{
 		.name		= NULL,
@@ -180,6 +186,11 @@ static int fixup_options(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
 
+	if (read_only && td_write(td)) {
+		log_err("fio: job <%s> has write bit set, but fio is in read-only mode\n", td->o.name);
+		return 1;
+	}
+	
 	if (o->rwmix[DDIR_READ] + o->rwmix[DDIR_WRITE] > 100)
 		o->rwmix[DDIR_WRITE] = 100 - o->rwmix[DDIR_READ];
 
@@ -767,6 +778,9 @@ static int parse_cmd_line(int argc, char *argv[])
 			exit(fio_show_option_help(optarg));
 		case 's':
 			dump_cmdline = 1;
+			break;
+		case 'r':
+			read_only = 1;
 			break;
 		case 'v':
 			printf("%s\n", fio_version_string);

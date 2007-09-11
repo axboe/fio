@@ -71,11 +71,18 @@ $ fio
 	--help		Print this page
 	--cmdhelp=cmd	Print command help, "all" for all of them
 	--showcmd	Turn a job file into command line options
+	--readonly	Turn on safety read-only checks
 
 Any parameters following the options will be assumed to be job files,
 unless they match a job file parameter. You can add as many as you want,
 each job file will be regarded as a separate group and fio will stonewall
 its execution.
+
+The --readonly switch is an extra safety guard to prevent accidentically
+turning on a write setting when that is not desired. Fio will only write
+if rw=write/randwrite/rw/randrw is given, but this extra safety net can
+be used as an extra precaution. It will also enable a write check in the
+io engine core to prevent an accidental write due to a fio bug.
 
 
 Job file
