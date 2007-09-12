@@ -198,6 +198,8 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 	struct netio_data *nd = td->io_ops->data;
 	int ret;
 
+	fio_ro_check(td, io_u);
+
 	if (io_u->ddir == DDIR_WRITE) {
 		if (nd->use_splice)
 			ret = fio_netio_splice_out(td, io_u);

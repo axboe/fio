@@ -86,6 +86,8 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct libaio_data *ld = td->io_ops->data;
 
+	fio_ro_check(td, io_u);
+
 	if (ld->iocbs_nr == (int) td->o.iodepth)
 		return FIO_Q_BUSY;
 

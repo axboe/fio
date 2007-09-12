@@ -56,6 +56,8 @@ static int fio_null_queue(struct thread_data fio_unused *td, struct io_u *io_u)
 {
 	struct null_data *nd = td->io_ops->data;
 
+	fio_ro_check(td, io_u);
+
 	if (td->io_ops->flags & FIO_SYNCIO)
 		return FIO_Q_COMPLETED;
 	if (nd->events)

@@ -35,6 +35,8 @@ static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 	struct fio_file *f = io_u->file;
 	int ret;
 
+	fio_ro_check(td, io_u);
+
 	if (io_u->ddir == DDIR_READ)
 		ret = read(f->fd, io_u->xfer_buf, io_u->xfer_buflen);
 	else if (io_u->ddir == DDIR_WRITE)

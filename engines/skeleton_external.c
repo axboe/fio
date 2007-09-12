@@ -65,6 +65,11 @@ static int fio_skeleton_cancel(struct thread_data *td, struct io_u *io_u)
 static int fio_skeleton_queue(struct thread_data *td, struct io_u *io_u)
 {
 	/*
+	 * Double sanity check to catch errant write on a readonly setup
+	 */
+	fio_ro_check(td, io_u);
+
+	/*
 	 * Could return FIO_Q_QUEUED for a queued request,
 	 * FIO_Q_COMPLETED for a completed request, and FIO_Q_BUSY
 	 * if we could queue no more at this point (you'd have to

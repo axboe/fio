@@ -242,6 +242,8 @@ static int fio_sgio_queue(struct thread_data *td, struct io_u *io_u)
 	struct sg_io_hdr *hdr = &io_u->hdr;
 	int ret;
 
+	fio_ro_check(td, io_u);
+
 	ret = fio_sgio_doio(td, io_u, io_u->ddir == DDIR_SYNC);
 
 	if (ret < 0)

@@ -13,6 +13,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include "compiler/compiler.h"
 #include "list.h"
@@ -669,6 +670,11 @@ extern struct thread_data *threads;
 #define td_write(td)		((td)->o.td_ddir & TD_DDIR_WRITE)
 #define td_rw(td)		(((td)->o.td_ddir & TD_DDIR_RW) == TD_DDIR_RW)
 #define td_random(td)		((td)->o.td_ddir & TD_DDIR_RAND)
+
+static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
+{
+	assert(!(io_u->ddir == DDIR_WRITE && !td_write(td)));
+}
 
 #define BLOCKS_PER_MAP		(8 * sizeof(long))
 #define TO_MAP_BLOCK(td, f, b)	((b) - ((f)->file_offset / (td)->o.rw_min_bs))

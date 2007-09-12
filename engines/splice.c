@@ -185,6 +185,8 @@ static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 	struct spliceio_data *sd = td->io_ops->data;
 	int ret;
 
+	fio_ro_check(td, io_u);
+
 	if (io_u->ddir == DDIR_READ) {
 		if (sd->vmsplice_to_user) {
 			ret = fio_splice_read(td, io_u);

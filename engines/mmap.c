@@ -19,6 +19,8 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 	struct fio_file *f = io_u->file;
 	unsigned long long real_off = io_u->offset - f->file_offset;
 
+	fio_ro_check(td, io_u);
+
 	if (io_u->ddir == DDIR_READ)
 		memcpy(io_u->xfer_buf, f->mmap + real_off, io_u->xfer_buflen);
 	else if (io_u->ddir == DDIR_WRITE)

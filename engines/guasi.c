@@ -124,6 +124,8 @@ static int fio_guasi_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct guasi_data *ld = td->io_ops->data;
 
+	fio_ro_check(td, io_u);
+
 	GDBG_PRINT(("fio_guasi_queue(%p)\n", io_u));
 	if (ld->queued_nr == (int) td->o.iodepth)
 		return FIO_Q_BUSY;

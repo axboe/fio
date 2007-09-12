@@ -148,6 +148,8 @@ static int fio_posixaio_queue(struct thread_data fio_unused *td,
 	struct aiocb *aiocb = &io_u->aiocb;
 	int ret;
 
+	fio_ro_check(td, io_u);
+
 	if (io_u->ddir == DDIR_READ)
 		ret = aio_read(aiocb);
 	else if (io_u->ddir == DDIR_WRITE)

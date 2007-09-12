@@ -253,6 +253,8 @@ static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct syslet_data *sd = td->io_ops->data;
 
+	fio_ro_check(td, io_u);
+
 	if (sd->tail) {
 		sd->tail->next = &io_u->req.atom;
 		sd->tail = &io_u->req.atom;
