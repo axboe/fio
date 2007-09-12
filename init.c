@@ -24,7 +24,6 @@ static char fio_version_string[] = "fio 1.17.1";
 static char **ini_file;
 static int max_jobs = MAX_JOBS;
 static int dump_cmdline;
-static int read_only;
 
 struct thread_data def_thread;
 struct thread_data *threads = NULL;
@@ -36,6 +35,7 @@ FILE *f_out = NULL;
 FILE *f_err = NULL;
 
 int write_bw_log = 0;
+int read_only = 0;
 
 static int def_timeout = 0;
 static int write_lat_log = 0;

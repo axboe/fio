@@ -233,9 +233,14 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 			
 		if (rw == DDIR_READ)
 			reads++;
-		else if (rw == DDIR_WRITE)
+		else if (rw == DDIR_WRITE) {
 			writes++;
-		else if (rw != DDIR_SYNC && rw != DDIR_INVAL) {
+			/*
+			 * Don't add a write for ro mode
+			 */
+			if (read_only)
+				continue;
+		} else if (rw != DDIR_SYNC && rw != DDIR_INVAL) {
 			log_err("bad ddir: %d\n", rw);
 			continue;
 		}
@@ -262,6 +267,11 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 	free(str);
 	free(act);
 	free(fname);
+
+	if (writes && read_only) {
+		log_err("fio: <%s> skips replay of %d writes due to read-only\n", td->o.name, writes);
+		writes = 0;
+	}
 
 	if (!reads && !writes)
 		return 1;
@@ -301,9 +311,14 @@ static int read_iolog(struct thread_data *td, FILE *f)
 		}
 		if (rw == DDIR_READ)
 			reads++;
-		else if (rw == DDIR_WRITE)
+		else if (rw == DDIR_WRITE) {
 			writes++;
-		else if (rw != DDIR_SYNC) {
+			/*
+			 * Don't add a write for ro mode
+			 */
+			if (read_only)
+				continue;
+		} else if (rw != DDIR_SYNC) {
 			log_err("bad ddir: %d\n", rw);
 			continue;
 		}
@@ -321,6 +336,11 @@ static int read_iolog(struct thread_data *td, FILE *f)
 	}
 
 	free(str);
+
+	if (writes && read_only) {
+		log_err("fio: <%s> skips replay of %d writes due to read-only\n", td->o.name, writes);
+		writes = 0;
+	}
 
 	if (!reads && !writes)
 		return 1;

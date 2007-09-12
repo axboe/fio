@@ -233,7 +233,7 @@ int load_blktrace(struct thread_data *td, const char *filename)
 {
 	unsigned long long ttime, delay;
 	struct blk_io_trace t;
-	unsigned long ios[2];
+	unsigned long ios[2], skipped_writes;
 	unsigned int cpu;
 	unsigned int rw_bs[2];
 	struct fifo *fifo;
@@ -253,6 +253,7 @@ int load_blktrace(struct thread_data *td, const char *filename)
 	ttime = 0;
 	ios[0] = ios[1] = 0;
 	rw_bs[0] = rw_bs[1] = 0;
+	skipped_writes = 0;
 	do {
 		int ret = trace_fifo_get(td, fifo, fd, &t, sizeof(t));
 
@@ -290,13 +291,19 @@ int load_blktrace(struct thread_data *td, const char *filename)
 		delay = 0;
 		if (cpu == t.cpu)
 			delay = t.time - ttime;
-		handle_trace(td, &t, delay, ios, rw_bs);
+		if ((t.action & BLK_TC_ACT(BLK_TC_WRITE)) && read_only)
+			skipped_writes++;
+		else
+			handle_trace(td, &t, delay, ios, rw_bs);
 		ttime = t.time;
 		cpu = t.cpu;
 	} while (1);
 
 	fifo_free(fifo);
 	close(fd);
+
+	if (skipped_writes)
+		log_err("fio: <%s> skips replay of %lu writes due to read-only\n", td->o.name, skipped_writes);
 
 	if (!ios[DDIR_READ] && !ios[DDIR_WRITE]) {
 		log_err("fio: found no ios in blktrace data\n");

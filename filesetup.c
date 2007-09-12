@@ -18,6 +18,11 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	unsigned int bs;
 	char *b;
 
+	if (read_only) {
+		log_err("fio: refusing extend of file due to read-only\n");
+		return 0;
+	}
+
 	/*
 	 * check if we need to lay the file out complete again. fio
 	 * does that for operations involving reads, or for writes
@@ -228,6 +233,8 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 		flags |= O_SYNC;
 
 	if (td_write(td)) {
+		assert(!read_only);
+
 		flags |= O_RDWR;
 
 		if (f->filetype == FIO_TYPE_FILE)
@@ -238,7 +245,7 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 		else
 			f->fd = open(f->file_name, flags, 0600);
 	} else {
-		if (f->filetype == FIO_TYPE_CHAR)
+		if (f->filetype == FIO_TYPE_CHAR && !read_only)
 			flags |= O_RDWR;
 		else
 			flags |= O_RDONLY;
