@@ -30,6 +30,7 @@ struct thread_data *threads = NULL;
 
 int exitall_on_terminate = 0;
 int terse_output = 0;
+int eta_print;
 unsigned long long mlock_size = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
@@ -96,6 +97,11 @@ static struct option long_options[FIO_NR_OPTIONS] = {
 		.name		= "readonly",
 		.has_arg	= no_argument,
 		.val		= 'r',
+	},
+	{
+		.name		= "eta",
+		.has_arg	= required_argument,
+		.val		= 'e',
 	},
 	{
 		.name		= NULL,
@@ -742,6 +748,8 @@ static void usage(void)
 	printf("\t--help\t\tPrint this page\n");
 	printf("\t--cmdhelp=cmd\tPrint command help, \"all\" for all of them\n");
 	printf("\t--showcmd\tTurn a job file into command line options\n");
+	printf("\t--eta=when\tWhen ETA estimate should be printed\n");
+	printf("\t          \tMay be \"always\", \"never\" or \"auto\"\n");
 }
 
 static int parse_cmd_line(int argc, char *argv[])
@@ -785,6 +793,12 @@ static int parse_cmd_line(int argc, char *argv[])
 		case 'v':
 			printf("%s\n", fio_version_string);
 			exit(0);
+		case 'e':
+			if (!strcmp("always", optarg))
+				eta_print = FIO_ETA_ALWAYS;
+			else if (!strcmp("never", optarg))
+				eta_print = FIO_ETA_NEVER;
+			break;
 		case FIO_GETOPT_JOB: {
 			const char *opt = long_options[lidx].name;
 			char *val = optarg;

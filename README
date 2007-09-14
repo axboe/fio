@@ -72,6 +72,9 @@ $ fio
 	--cmdhelp=cmd	Print command help, "all" for all of them
 	--showcmd	Turn a job file into command line options
 	--readonly	Turn on safety read-only checks
+	--eta=when	When ETA estimate should be printed
+			May be "always", "never" or "auto"
+
 
 Any parameters following the options will be assumed to be job files,
 unless they match a job file parameter. You can add as many as you want,

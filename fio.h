@@ -630,6 +630,15 @@ enum {
 };
 
 /*
+ * when should interactive ETA output be generated
+ */
+enum {
+	FIO_ETA_AUTO,
+	FIO_ETA_ALWAYS,
+	FIO_ETA_NEVER,
+};
+
+/*
  * 30 second per-io_u timeout, with 5 second intervals to avoid resetting
  * the timer on each queue operation.
  */
@@ -663,6 +672,7 @@ extern int temp_stall_ts;
 extern unsigned long long mlock_size;
 extern unsigned long page_mask, page_size;
 extern int read_only;
+extern int eta_print;
 
 extern struct thread_data *threads;
 

@@ -198,7 +198,10 @@ void print_thread_status(void)
 	static struct timeval rate_prev_time, disp_prev_time;
 	static unsigned int rate[2];
 
-	if (temp_stall_ts || terse_output)
+	if (temp_stall_ts || terse_output || eta_print == FIO_ETA_NEVER)
+		return;
+
+	if (!isatty(STDOUT_FILENO) && (eta_print != FIO_ETA_ALWAYS))
 		return;
 
 	if (!rate_io_bytes[0] && !rate_io_bytes[1])
