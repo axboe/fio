@@ -1,0 +1,749 @@
+.TH fio 1 "September 2007" "User Manual"
+.SH NAME
+fio \- flexible I/O tester
+.SH SYNOPSIS
+.B fio
+[\fIoptions\fR] [\fIjobfile\fR]...
+.SH DESCRIPTION
+.B fio
+is a tool that will spawn a number of threads or processes doing a
+particular type of I/O action as specified by the user.
+The typical use of fio is to write a job file matching the I/O load
+one wants to simulate.
+.SH OPTIONS
+.TP
+.BI \-\-output \fR=\fPfilename
+Write output to \fIfilename\fR.
+.TP
+.BI \-\-timeout \fR=\fPtimeout
+Limit run time to \fItimeout\fR seconds.
+.TP
+.B \-\-latency\-log
+Generate per-job latency logs.
+.TP
+.B \-\-bandwidth\-log
+Generate per-job bandwidth logs.
+.TP
+.B \-\-minimal
+Print statistics in a terse, semicolon\-delimited format.
+.TP
+.BI \-\-showcmd \fR=\fPjobfile
+Convert \fIjobfile\fR to a set of command-line options.
+.TP
+.B \-\-readonly
+Enable read-only safety checks.
+.TP
+.BI \-\-eta \fR=\fPwhen
+Specifies when real-time ETA estimate should be printed.  \fIwhen\fR may
+be one of `always', `never' or `auto'.
+.TP
+.BI \-\-cmdhelp \fR=\fPcommand
+Print help information for \fIcommand\fR.  May be `all' for all commands.
+.TP
+.B \-\-help
+Display usage information and exit.
+.TP
+.B \-\-version
+Display version information and exit.
+.SH "JOB FILE FORMAT"
+Job files are in `ini' format. They consist of one or more
+job definitions, which begin with a job name in square brackets and
+extend to the next job name.  The job name can be any ASCII string
+except `global', which has a special meaning.  Following the job name is
+a sequence of zero or more parameters, one per line, that define the
+behavior of the job.  Any line starting with a `;' or `#' character is
+considered a comment and ignored.  See section EXAMPLES for sample
+job files.
+.SS "Global Section"
+The global section contains default parameters for jobs specified in the
+job file.  A job is only affected by global sections residing above it,
+and there may be any number of global sections.  Specific job definitions
+may override any parameter set in global sections.
+.SH "JOB PARAMETERS"
+.SS Types
+Some parameters may take arguments of a specific type.  The types used are:
+.TP
+.I str
+String: a sequence of alphanumeric characters.
+.TP
+.I int
+Integer: a whole number, possibly negative.  If prefixed with `0x', the value
+is assumed to be base 16 (hexadecimal).
+.TP
+.I siint
+SI integer: a whole number, possibly containing a suffix denoting the base unit
+of the value.  Accepted suffixes are `k', 'M' and 'G', denoting kilo (1024),
+mega (1024*1024) and giga (1024*1024*1024) respectively.
+.TP
+.I bool
+Boolean: a true or false value. `0' denotes false, `1' denotes true.
+.TP
+.I irange
+Integer range: a range of integers specified in the format
+\fIlower\fR:\fIupper\fR or \fIlower\fR-\fIupper\fR. \fIlower\fR and \fIupper\fR
+may contain a suffix as described above.  If an option allows two sets of ranges,
+they are separated with a `,' or `/' character. For example: `8-8k/8M-4G'.
+.SS "Parameter List"
+.TP
+.BI name \fR=\fPstr
+May be used to override the job name.  On the command line, this paramter
+has the special purpose of signalling the start of a new job.
+.TP
+.BI description \fR=\fPstr
+Human-readable description of the job. It is printed when the job is run, but
+otherwise has no special purpose.
+.TP
+.BI directory \fR=\fPstr
+Prefix filenames with this directory.  Used to place files in a location other
+than `./'.
+.TP
+.BI filename \fR=\fPstr
+.B fio
+normally makes up a file name based on the job name, thread number, and file
+number. If you want to share files between threads in a job or several jobs, specify
+a \fIfilename\fR for each of them to override the default. If the I/O engine used is
+`net', \fIfilename\fR is the host and port to connect to in the format
+\fIhost\fR/\fIport\fR. If the I/O engine is file-based, you can specify a number of
+files by separating the names with a `:' character. `-' is a reserved name, meaning
+stdin or stdout, depending on the read/write direction set.
+.TP
+.BI opendir \fR=\fPstr
+Recursively open any files below directory \fIstr\fR.
+.TP
+.BI readwrite \fR=\fPstr "\fR,\fP rw" \fR=\fPstr
+Type of I/O pattern.  Accepted values are:
+.RS
+.RS
+.TP
+.B read
+Sequential reads
+.TP
+.B write
+Sequential writes
+.TP
+.B randread
+Random reads
+.TP
+.B randwrite
+Random writes
+.TP
+.B rw
+Mixed sequential reads and writes
+.TP
+.B randrw 
+Mixed random reads and writes
+.RE
+.P
+For mixed I/O, the default split is 50/50.  For random I/O, the number of I/Os to
+perform before getting a new offset can be specified by appending `:\fIint\fR' to
+the pattern type.  The default is 1.
+.RE
+.TP
+.BI randrepeat \fR=\fPbool
+Seed the random number generator in a predictable way so results are repeatable
+across runs.
+.TP
+.BI fadvise_hint \fR=\fPbool
+Disable use of \fIposix_fadvise\fR\|(2) to advise the kernel what I/O patters are
+likely to be issued. Default: true.
+.TP
+.BI size \fR=\fPsiint
+Total size of I/O for this job.  \fBfio\fR will run until this many bytes have
+been transfered, unless limited by other options (\fBruntime\fR, for instance).
+Unless \fBnr_files\fR and \fBfilesize\fR options are given, this amount will be
+divided between the available files for the job.
+.TP
+.BI filesize \fR=\fPirange
+Individual file sizes. May be a range, in which case \fBfio\fR will select sizes
+for files at random within the given range, limited to \fBsize\fR in total (if that
+is given). If \fBfilesize\fR is not specified, each created file is the same size.
+.TP
+.BI blocksize \fR=\fPsiint "\fR,\fB bs" \fR=\fPsiint
+Block size for I/O units.  Default: 4k.  Values for reads and writes can be
+specified seperately in the format \fIread\fR,\fIwrite\fR, either of
+which may be empty to leave that value at its default.
+.TP
+.BI blocksize_range \fR=\fPirange "\fR,\fB bsrange" \fR=\fPirange
+Specify a range of I/O block sizes.  The issued I/O unit will always be a multiple
+of the minimum size, unless \fBblocksize_unaligned\fR is set.  Applied to both reads
+and writes, but can be specified seperately (see \fBblocksize\fR).
+.TP
+.B blocksize_unaligned\fR,\fP bs_unaligned
+If set, any size in \fBblocksize_range\fR may be used.  This typically won't work
+with direct I/O, as that normally requires sector alignment.
+.TP
+.B zero_buffers
+Initialise buffers with all zeros. Default: fill buffers with random data.
+.TP
+.BI nrfiles \fR=\fPint
+Number of files to use for this job.  Default: 1.
+.TP
+.BI openfiles \fR=\fPint
+Number of files to keep open at the same time.  Default: \fBnrfiles\fR.
+.TP
+.BI file_service_type \fR=\fPstr
+Defines how files to service are selected.  The following types are defined:
+.RS
+.RS
+.TP
+.B random
+Choose a file at random
+.TP
+.B roundrobin
+Round robin over open files (default).
+.RE
+.P
+The number of I/Os to issue before switching a new file can be specified by
+appending `:\fIint\fR' to the service type.
+.RE
+.TP
+.BI ioengine \fR=\fPstr
+Defines how the job issues I/O.  The following types are defined:
+.RS
+.RS
+.TP
+.B sync
+Basic \fIread\fR\|(2) or \fIwrite\fR\|(2) I/O.  \fIfseek\fR\|(2) is used to
+position the I/O location.
+.TP
+.B libaio
+Linux native asynchronous I/O.
+.TP
+.B posixaio
+glibc POSIX asynchronous I/O using \fIaio_read\fR\|(3) and \fIaio_write\fR\|(3).
+.TP
+.B mmap
+File is memory mapped with \fImmap\fR\|(2) and data coped using \fImemcpy\fR\|(3).
+.TP
+.B splice
+\fIsplice\fR\|(2) is used to transfer the data and \fIvmsplice\fR\|(2) to transfer
+data from user-space to the kernel.
+.TP
+.B syslet-rw
+Use the syslet system calls to make regular read/write asynchronous.
+.TP
+.B sg
+SCSI generic sg v3 I/O. May be either synchronous using the SG_IO ioctl, or if
+the target is an sg character device, we use \fIread\fR\|(2) and \fIwrite\fR\|(2)
+for asynchronous I/O.
+.TP
+.B null
+Doesn't transfer any data, just pretends to.  Mainly used to exercise \fBfio\fR
+itself and for debugging and testing purposes.
+.TP
+.B net
+Transfer over the network.  \fBfilename\fR must be set appropriately to
+`\fIhost\fR/\fIport\fR' regardless of data direction.  If receiving, only the
+\fIport\fR argument is used.
+.TP
+.B netsplice
+Like \fBnet\fR, but uses \fIsplice\fR\|(2) and \fIvmsplice\fR\|(2) to map data
+and send/receive.
+.TP
+.B cpu
+Doesn't transfer any data, but burns CPU cycles according to \fBcpuload\fR and
+\fBcpucycles\fR parameters.
+.TP
+.B guasi
+The GUASI I/O engine is the Generic Userspace Asynchronous Syscall Interface
+approach to asycnronous I/O.
+
+See <http://www.xmailserver.org/guasi-lib.html>.
+.TP
+.B external
+Loads an external I/O engine object file.  Append the engine filename as
+`:\fIenginepath\fR'.
+.RE
+.RE
+.TP
+.BI iodepth \fR=\fPint
+Number of I/O units to keep in flight against the file.  Default: 1.
+.TP
+.BI iodepth_batch \fR=\fPint
+Number of I/Os to submit at once.  Default: \fBiodepth\fR.
+.TP
+.BI iodepth_low \fR=\fPint
+Low watermark indicating when to start filling the queue again.  Default:
+\fBiodepth\fR. 
+.TP
+.BI direct \fR=\fPbool
+If true, use non-buffered I/O (usually O_DIRECT).  Default: false.
+.TP
+.BI buffered \fR=\fPbool
+If true, use buffered I/O.  This is the opposite of the \fBdirect\fR parameter.
+Default: true.
+.TP
+.BI offset \fR=\fPsiint
+Offset in the file to start I/O. Data before the offset will not be touched.
+.TP
+.BI fsync \fR=\fPint
+How many I/Os to perform before issuing an \fBfsync\fR\|(2) of dirty data.  If 0, don't
+sync.  Default: 0.
+.TP
+.BI overwrite \fR=\fPbool
+If writing, setup the file first and do overwrites.
+.TP
+.BI end_fsync \fR=\fPbool
+If true, sync file contents when job exits.
+.TP
+.BI fsync_on_close \fR=\fPbool
+If true, sync file contents on close.  This differs from \fBend_fsync\fR in that
+it will happen on every close, not just at the end of the job.
+.TP
+.BI rwmixcycle \fR=\fPint
+How many milliseconds before switching between reads and writes for a mixed
+workload. Default: 500ms.
+.TP
+.BI rwmixread \fR=\fPint
+Percentage of a mixed workload that should be reads. Default: 50.
+.TP
+.BI rwmixwrite \fR=\fPint
+Percentage of a mixed workload that would be writes.  If \fBrwmixread\fR and
+\fBwrmixwrite\fR are given and do not sum to 100%, the latter of the two
+overrides the first.
+.TP
+.B norandommap
+Normally \fBfio\fR will cover every block of the file when doing random I/O. If
+this parameter is given, a new offset will be chosen without looking at past
+I/O history.  This parameter is mutually exclusive with \fBverify\fR.
+.TP
+.BI nice \fR=\fPint
+Run job with given nice value.  See \fInice\fR\|(2).
+.TP
+.BI prio \fR=\fPint
+Set I/O priority value of this job between 0 (highest) and 7 (lowest).  See
+\fIionice\fR\|(1).
+.TP
+.BI prioclass \fR=\fPint
+Set I/O priority class.  See \fIionice\fR\|(1).
+.TP
+.BI thinktime \fR=\fPint
+Stall job for given number of microseconds between issuing I/Os.
+.TP
+.BI thinktime_spin \fR=\fPint
+Pretend to spend CPU time for given number of microseconds, sleeping the rest
+of the time specified by \fBthinktime\fR.  Only valid if \fBthinktime\fR is set.
+.TP
+.BI thinktime_blocks \fR=\fPint
+Number of blocks to issue before waiting \fBthinktime\fR microseconds.
+Default: 1.
+.TP
+.BI rate \fR=\fPint
+Cap bandwidth used by this job to this number of KiB/s.
+.TP
+.BI ratemin \fR=\fPint
+Tell \fBfio\fR to do whatever it can to maintain at least the given bandwidth.
+Failing to meet this requirement will cause the job to exit.
+.TP
+.BI rate_iops \fR=\fPint
+Cap the bandwidth to this number of IOPS.  If \fBblocksize\fR is a range, the
+smallest block size is used as the metric.
+.TP
+.BI rate_iops_min \fR=\fPint
+If this rate of I/O is not met, the job will exit.
+.TP
+.BI ratecycle \fR=\fPint
+Average bandwidth for \fBrate\fR and \fBratemin\fR over this number of
+milliseconds.  Default: 1000ms.
+.TP
+.BI cpumask \fR=\fPint
+Set CPU affinity for this job. \fIint\fR is a bitmask of allowed CPUs the job
+may run on.  See \fBsched_setaffinity\fR\|(2).
+.TP
+.BI cpus_allowed \fR=\fPstr
+Same as \fBcpumask\fR, but allows a comma-delimited list of CPU numbers.
+.TP
+.BI startdelay \fR=\fPint
+Delay start of job for the specified number of seconds.
+.TP
+.BI runtime \fR=\fPint
+Terminate processing after the specified number of seconds.
+.TP
+.B time_based
+If given, run for the specified \fBruntime\fR duration even if the files are
+completely read or written. The same workload will be repeated as many times
+as \fBruntime\fR allows.
+.TP
+.BI invalidate \fR=\fPbool
+Invalidate buffer-cache for the file prior to starting I/O.  Default: true.
+.TP
+.BI sync \fR=\fPbool
+Use synchronous I/O for buffered writes.  For the majority of I/O engines,
+this means using O_SYNC.
+.TP
+.BI iomem \fR=\fPstr "\fR,\fP mem" \fR=\fPstr
+Allocation method for I/O unit buffer.  Allowed values are:
+.RS
+.RS
+.TP
+.B malloc
+Allocate memory with \fImalloc\fR\|(3).
+.TP
+.B shm
+Use shared memory buffers allocated through \fIshmget\fR\|(2).
+.TP
+.B shmhuge
+Same as \fBshm\fR, but use huge pages as backing.
+.TP
+.B mmap
+Use \fImmap\fR\|(2) for allocation.  Uses anonymous memory unless a filename
+is given after the option in the format `:\fIfile\fR'.
+.TP
+.B mmaphuge
+Same as \fBmmap\fR, but use huge files as backing.
+.RE
+.P
+The amount of memory allocated is the maximum allowed \fBblocksize\fR for the
+job multiplied by \fBiodepth\fR.  For \fBshmhuge\fR or \fBmmaphuge\fR to work,
+the system must have free huge pages allocated.  \fBmmaphuge\fR also needs to
+have hugetlbfs mounted, and \fIfile\fR must point there.
+.RE
+.TP
+.BI hugepage-size \fR=\fPsiint
+Defines the size of a huge page.  Must be at least equal to the system setting.
+Should be a multiple of 1MiB. Default: 4MiB.
+.TP
+.B exitall
+Terminate all jobs when one finishes.  Default: wait for each job to finish.
+.TP
+.BI bwavgtime \fR=\fPint
+Average bandwidth calculations over the given time in milliseconds.  Default:
+500ms.
+.TP
+.BI create_serialize \fR=\fPbool
+If true, serialize file creation for the jobs.
+.TP
+.BI create_fsync \fR=\fPbool
+\fIfsync\fR\|(2) data file after creation.  Default: true.
+.TP
+.BI unlink \fR=\fPbool
+Unlink job files when done.  Default: false.
+.TP
+.BI loops \fR=\fPint
+Specifies the number of iterations (runs of the same workload) of this job.
+Default: 1.
+.TP
+.BI do_verify \fR=\fPbool
+Run the verify phase after a write phase.  Only valid if \fBverify\fR is set.
+Default: true.
+.TP
+.BI verify \fR=\fPstr
+Method of verifying file contents after each iteration of the job.  Allowed
+values are:
+.RS
+.RS
+.TP
+.B md5 crc16 crc32 crc64 crc7 sha256 sha512
+Store appropriate checksum in the header of each block.
+.TP
+.B meta
+Write extra information about each I/O (timestamp, block number, etc.). The
+block number is verified.
+.TP
+.B pattern
+Fill I/O buffers with a specific pattern that is used to verify.  The pattern is
+specified by appending `:\fIint\fR' to the parameter. \fIint\fR cannot be larger
+than 32-bits. 
+.TP
+.B null
+Pretend to verify.  Used for testing internals.
+.RE
+.RE
+.TP
+.BI verify_sort \fR=\fPbool
+If true, written verify blocks are sorted if \fBfio\fR deems it to be faster to
+read them back in a sorted manner.  Default: true.
+.TP
+.BI verify_offset \fR=\fPsiint
+Swap the verification header with data somewhere else in the block before
+writing.  It it swapped back before verifying.
+.TP
+.BI verify_interval \fR=\fPsiint
+Write the verification header for this number of bytes, which should divide
+\fBblocksize\fR.  Default: \fBblocksize\fR.
+.TP
+.BI verify_fatal \fR=\fPbool
+If true, exit the job on the first observed verification failure.  Default:
+false.
+.TP
+.B stonewall
+Wait for precedding jobs in the job file to exit before starting this one.
+\fBstonewall\fR implies \fBnew_group\fR.
+.TP
+.B new_group
+Start a new reporting group.  If not given, all jobs in a file will be part
+of the same reporting group, unless separated by a stonewall.
+.TP
+.BI numjobs \fR=\fPint
+Number of clones (processes/threads performing the same workload) of this job.  
+Default: 1.
+.TP
+.B group_reporting
+If set, display per-group reports instead of per-job when \fBnumjobs\fR is
+specified.
+.TP
+.B thread
+Use threads created with \fBpthread_create\fR\|(3) instead of processes created
+with \fBfork\fR\|(2).
+.TP
+.BI zonesize \fR=\fPsiint
+Divide file into zones of the specified size in bytes.  See \fBzoneskip\fR.
+.TP
+.BI zoneskip \fR=\fPsiint
+Skip the specified number of bytes when \fBzonesize\fR bytes of data has been
+read.
+.TP
+.BI write_iolog \fR=\fPstr
+Write the issued I/O patterns to the specified file.
+.TP
+.BI read_iolog \fR=\fPstr
+Replay the I/O patterns contained in the specified file generated by
+\fBwrite_iolog\fR, or may be a \fBblktrace\fR binary file.
+.TP
+.B write_bw_log
+If given, write bandwidth logs of the jobs in this file.
+.TP
+.B write_lat_log
+Same as \fBwrite_bw_log\fR, but writes I/O completion latencies.
+.TP
+.BI lockmem \fR=\fPsiint
+Pin the specified amount of memory with \fBmlock\fR\|(2).  Can be used to
+simulate a smaller amount of memory.
+.TP
+.BI exec_prerun \fR=\fPstr
+Before running the job, execute the specified command with \fBsystem\fR\|(3).
+.TP
+.BI exec_postrun \fR=\fPstr
+Same as \fBexec_prerun\fR, but the command is executed after the job completes.
+.TP
+.BI ioscheduler \fR=\fPstr
+Attempt to switch the device hosting the file to the specified I/O scheduler.
+.TP
+.BI cpuload \fR=\fPint
+If the job is a CPU cycle-eater, attempt to use the specified percentage of
+CPU cycles.
+.TP
+.BI cpuchunks \fR=\fPint
+If the job is a CPU cycle-eater, split the load into cycles of the
+given time in milliseconds.
+.TP
+.BI disk_util \fR=\fPbool
+Generate disk utilization statistics if the platform supports it.  Default: true.
+.SH OUTPUT
+While running, \fBfio\fR will display the status of the created jobs.  For example:
+.RS
+Threads: 1: [_r] [24.8% done] [ 13509/  8334 kb/s] [eta 00h:01m:31s]
+.RE
+.P
+The characters in the first set of brackets denote the current status of each threads.
+The possible values are:
+.RS
+.RS
+.TP
+.B P
+Setup but not started.
+.TP
+.B C
+Thread created.
+.TP
+.B I
+Initialized, waiting.
+.TP
+.B R
+Running, doing sequential reads.
+.TP
+.B r
+Running, doing random reads.
+.TP
+.B W
+Running, doing sequential writes.
+.TP
+.B w
+Running, doing random writes.
+.TP
+.B M
+Running, doing mixed sequential reads/writes.
+.TP
+.B m
+Running, doing mixed random reads/writes.
+.TP
+.B F
+Running, currently waiting for \fBfsync\fR\|(2).
+.TP
+.B V
+Running, verifying written data.
+.TP
+.B E
+Exited, not reaped by main thread.
+.TP
+.B \-
+Exited, thread reaped.
+.RE
+.RE
+.P
+The second set of brackets shows the estimated completion percentage of
+the current group.  The third set shows the read and write I/O rate,
+respectively. Finally, the estimated run time of the job is displayed.
+.P
+When \fBfio\fR completes (or is interrupted by Ctrl-C), it will show data
+for each thread, each group of threads, and each disk, in that order.
+.P
+Per-thread statistics first show the threads client number, group-id, and
+error code.  The remaining figures are as follows:
+.RS
+.RS
+.TP
+.B io
+Number of megabytes of I/O performed.
+.TP
+.B bw
+Average data rate (bandwidth).
+.TP
+.B runt
+Threads run time.
+.TP
+.B slat
+Submission latency minimum, maximum, average and standard deviation. This is
+the time it took to submit the I/O.
+.TP
+.B clat
+Completion latency minimum, maximum, average and standard deviation.  This
+is the time between submission and completion.
+.TP
+.B bw
+Bandwidth minimum, maximum, percentage of aggregate bandwidth received, average
+and standard deviation.
+.TP
+.B cpu
+CPU usage statistics. Includes user and system time, number of context switches
+this thread went through and number of major and minor page faults.
+.TP
+.B IO depths
+Distribution of I/O depths.  Each depth includes everything less than (or equal)
+to it, but greater than the previous depth.
+.TP
+.B IO issued
+Number of read/write requests issued, and number of short read/write requests.
+.TP
+.B IO latencies
+Distribution of I/O completion latencies.  The numbers follow the same pattern
+as \fBIO depths\fR.
+.RE
+.RE
+.P
+The group statistics show:
+.RS
+.RS
+.TP
+.B io
+Number of megabytes I/O performed.
+.TP
+.B aggrb
+Aggregate bandwidth of threads in the group.
+.TP
+.B minb
+Minimum average bandwidth a thread saw.
+.TP
+.B maxb
+Maximum average bandwidth a thread saw.
+.TP
+.B mint
+Smallest runtime of threads in the group.
+.TP
+.B maxt
+Longest runtime of threads in the group.
+.RE
+.RE
+.P
+Finally, disk statistics are printed with reads first:
+.RS
+.RS
+.TP
+.B ios
+Number of I/Os performed by all groups.
+.TP
+.B merge
+Number of merges in the I/O scheduler.
+.TP
+.B ticks
+Number of ticks we kept the disk busy.
+.TP
+.B io_queue
+Total time spent in the disk queue.
+.TP
+.B util
+Disk utilization.
+.RE
+.RE
+.SH TERSE OUTPUT
+If the \fB\-\-minimal\fR option is given, the results will be printed in a
+semicolon-delimited format suitable for scripted use.  The fields are:
+.P
+.RS
+.B jobname, groupid, error
+.P
+Read status:
+.RS
+.B KiB I/O, bandwidth \fR(KiB/s)\fP, runtime \fR(ms)\fP
+.P
+Submission latency:
+.RS
+.B min, max, mean, standard deviation
+.RE
+Completion latency:
+.RS
+.B min, max, mean, standard deviation
+.RE
+Bandwidth:
+.RS
+.B min, max, aggregate percentage of total, mean, standard deviation
+.RE
+.RE
+.P
+Write status:
+.RS
+.B KiB I/O, bandwidth \fR(KiB/s)\fP, runtime \fR(ms)\fP
+.P
+Submission latency:
+.RS
+.B min, max, mean, standard deviation
+.RE
+Completion latency:
+.RS
+.B min, max, mean, standard deviation
+.RE
+Bandwidth:
+.RS
+.B min, max, aggregate percentage of total, mean, standard deviation
+.RE
+.RE
+.P
+CPU usage;
+.RS
+.B user, system, context switches
+.RE
+.P
+IO depth distribution:
+.RS
+.B <=1, 2, 4, 8, 16, 32, >=64
+.RE
+.P
+IO latency distribution (ms):
+.RS
+.B <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000, >=2000
+.RE
+.P
+.B text description
+.RE
+.SH AUTHORS
+.B fio
+was written by Jens Axboe <jens.axboe@oracle.com>.
+This man page was
+written by Aaron Carroll <aaronc@cse.unsw.edu.au> based
+on documentation by Jens Axboe.
+.SH "REPORTING BUGS"
+Report bugs to the \fBfio\fR mailing list <fio-devel@kernel.dk>.  See \fBREADME\fR.
+.SH "SEE ALSO"
+Further documentation is available in \fBfio\fR's \fBHOWTO\fR and \fBREADME\fR.
+Sample jobfiles are available in \fBfio\fR's \fBexamples/\fR directory.
+
