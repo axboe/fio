@@ -46,7 +46,7 @@ static void fio_syslet_complete_atom(struct thread_data *td,
 	 * including) this atom
 	 */
 	last = atom;
-	io_u = atom->private;
+	io_u = (struct io_u *)atom->private;
 	atom = io_u->req.head;
 
 	/*
@@ -55,8 +55,8 @@ static void fio_syslet_complete_atom(struct thread_data *td,
 	do {
 		long ret;
 
-		io_u = atom->private;
-		ret = *atom->ret_ptr;
+		io_u = (struct io_u *)atom->private;
+		ret = *(long *)atom->ret_ptr;
 		if (ret >= 0)
 			io_u->resid = io_u->xfer_buflen - ret;
 		else if (ret < 0)
@@ -68,7 +68,7 @@ static void fio_syslet_complete_atom(struct thread_data *td,
 		if (atom == last)
 			break;
 
-		atom = atom->next;
+		atom = (struct syslet_uatom *)atom->next;
 	} while (1);
 
 	assert(!last->next);
@@ -138,14 +138,15 @@ static void init_atom(struct syslet_uatom *atom, int nr, void *arg0,
 {
 	atom->flags = flags;
 	atom->nr = nr;
-	atom->ret_ptr = ret_ptr;
-	atom->next = NULL;
-	atom->arg_ptr[0] = arg0;
-	atom->arg_ptr[1] = arg1;
-	atom->arg_ptr[2] = arg2;
-	atom->arg_ptr[3] = arg3;
-	atom->arg_ptr[4] = atom->arg_ptr[5] = NULL;
-	atom->private = priv;
+	atom->ret_ptr = (uint64_t)ret_ptr;
+	atom->next = 0;
+	atom->arg_ptr[0] = (uint64_t)arg0;
+	atom->arg_ptr[1] = (uint64_t)arg1;
+	atom->arg_ptr[2] = (uint64_t)arg2;
+	atom->arg_ptr[3] = (uint64_t)arg3;
+	atom->arg_ptr[4] = 0;
+	atom->arg_ptr[5] = 0;
+	atom->private = (uint64_t)priv;
 }
 
 /*
@@ -207,11 +208,11 @@ static void fio_syslet_queued(struct thread_data *td, struct syslet_data *sd)
 
 	atom = sd->head;
 	while (atom) {
-		struct io_u *io_u = atom->private;
+		struct io_u *io_u = (struct io_u *)atom->private;
 
 		memcpy(&io_u->issue_time, &now, sizeof(now));
 		io_u_queued(td, io_u);
-		atom = atom->next;
+		atom = (struct syslet_uatom *)atom->next;
 	}
 }
 
@@ -256,10 +257,10 @@ static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 	fio_ro_check(td, io_u);
 
 	if (sd->tail) {
-		sd->tail->next = &io_u->req.atom;
+		sd->tail->next = (uint64_t)&io_u->req.atom;
 		sd->tail = &io_u->req.atom;
 	} else
-		sd->head = sd->tail = &io_u->req.atom;
+		sd->head = sd->tail = (struct syslet_uatom *)&io_u->req.atom;
 
 	io_u->req.head = sd->head;
 	return FIO_Q_QUEUED;
@@ -276,11 +277,11 @@ static int async_head_init(struct syslet_data *sd, unsigned int depth)
 	memset(sd->ring, 0, ring_size);
 
 	sd->ahu.user_ring_idx = 0;
-	sd->ahu.completion_ring = sd->ring;
+	sd->ahu.completion_ring_ptr = (uint64_t)sd->ring;
 	sd->ahu.ring_size_bytes = ring_size;
 	sd->ahu.head_stack = thread_stack_alloc();
-	sd->ahu.head_eip = (unsigned long) cachemiss_thread_start;
-	sd->ahu.new_thread_eip = (unsigned long) cachemiss_thread_start;
+	sd->ahu.head_ip = (uint64_t)cachemiss_thread_start;
+	sd->ahu.new_thread_ip = (uint64_t)cachemiss_thread_start;
 	sd->ahu.new_thread_stack = thread_stack_alloc();
 
 	return 0;

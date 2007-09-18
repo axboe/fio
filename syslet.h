@@ -37,16 +37,16 @@
  *   jump a full syslet_uatom number of bytes.) ]
  */
 struct syslet_uatom {
-	unsigned long				flags;
-	unsigned long				nr;
-	long __user				*ret_ptr;
-	struct syslet_uatom	__user		*next;
-	unsigned long		__user		*arg_ptr[6];
+	uint32_t		flags;
+	uint32_t		nr;
+	uint64_t		ret_ptr;
+	uint64_t		next;
+	uint64_t		arg_ptr[6];
 	/*
 	 * User-space can put anything in here, kernel will not
 	 * touch it:
 	 */
-	void __user				*private;
+	uint64_t		private;
 };
 
 /*
@@ -111,11 +111,11 @@ struct async_head_user {
 	/*
 	 * Current completion ring index - managed by the kernel:
 	 */
-	unsigned long				kernel_ring_idx;
+	uint64_t		kernel_ring_idx;
 	/*
 	 * User-side ring index:
 	 */
-	unsigned long				user_ring_idx;
+	uint64_t		user_ring_idx;
 
 	/*
 	 * Ring of pointers to completed async syslets (i.e. syslets that
@@ -127,20 +127,20 @@ struct async_head_user {
 	 * Note: the final atom that generated the exit condition is
 	 * queued here. Normally this would be the last atom of a syslet.
 	 */
-	struct syslet_uatom __user		**completion_ring;
+	uint64_t		completion_ring_ptr;
 
 	/*
 	 * Ring size in bytes:
 	 */
-	unsigned long				ring_size_bytes;
+	uint64_t		ring_size_bytes;
 
 	/*
 	 * The head task can become a cachemiss thread later on
 	 * too, if it blocks - so it needs its separate thread
 	 * stack and start address too:
 	 */
-	unsigned long				head_stack;
-	unsigned long				head_eip;
+	uint64_t		head_stack;
+	uint64_t		head_ip;
 
 	/*
 	 * Newly started async kernel threads will take their
@@ -148,8 +148,8 @@ struct async_head_user {
 	 * code has to check for new_thread_stack going to NULL
 	 * and has to refill it with a new stack if that happens.
 	 */
-	unsigned long				new_thread_stack;
-	unsigned long				new_thread_eip;
+	uint64_t		new_thread_stack;
+	uint64_t		new_thread_ip;
 };
 
 #endif
