@@ -297,7 +297,7 @@ static int check_syslet_support(struct syslet_data *sd)
 	void *ret;
 
 	init_atom(&atom, __NR_getpid, NULL, NULL, NULL, NULL, NULL, 0, NULL);
-	ret = async_exec(sd->head, &sd->ahu);
+	ret = async_exec(&atom, &sd->ahu);
 	if (ret == (void *) -1)
 		return 1;
 
