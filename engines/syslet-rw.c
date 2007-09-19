@@ -281,6 +281,7 @@ static int async_head_init(struct syslet_data *sd, unsigned int depth)
 	sd->ahu.head_stack = thread_stack_alloc();
 	sd->ahu.head_eip = (unsigned long) cachemiss_thread_start;
 	sd->ahu.new_thread_eip = (unsigned long) cachemiss_thread_start;
+	sd->ahu.new_thread_stack = thread_stack_alloc();
 
 	return 0;
 }
