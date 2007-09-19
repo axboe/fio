@@ -19,10 +19,10 @@
 #endif
 
 #ifndef __NR_async_exec
-#define __NR_async_exec		280
-#define __NR_async_wait		281
-#define __NR_umem_add		282
-#define __NR_async_thread	283
+#define __NR_async_exec		286
+#define __NR_async_wait		287
+#define __NR_umem_add		288
+#define __NR_async_thread	289
 #endif
 
 #define	FIO_HUGE_PAGE		2097152
