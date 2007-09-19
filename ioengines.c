@@ -245,7 +245,7 @@ int td_io_init(struct thread_data *td)
 	if (td->io_ops->init) {
 		ret = td->io_ops->init(td);
 		if (ret && td->o.iodepth > 1)
-			log_err("fio: io engine init failed. Perhaps try reducing io dpeth?\n");
+			log_err("fio: io engine init failed. Perhaps try reducing io depth?\n");
 	}
 
 	return ret;
