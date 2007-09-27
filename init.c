@@ -571,7 +571,11 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 	int ret = 0, stonewall;
 	int first_sect = 1;
 
-	f = fopen(file, "r");
+	if (!strcmp(file, "-"))
+		f = stdin;
+	else
+		f = fopen(file, "r");
+
 	if (!f) {
 		perror("fopen job file");
 		return 1;
@@ -665,7 +669,8 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 
 	free(string);
 	free(name);
-	fclose(f);
+	if (f != stdin)
+		fclose(f);
 	return ret;
 }
 
