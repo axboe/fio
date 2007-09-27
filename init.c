@@ -565,11 +565,11 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 	unsigned int global;
 	struct thread_data *td;
 	char *string, *name;
-	fpos_t off;
 	FILE *f;
 	char *p;
 	int ret = 0, stonewall;
 	int first_sect = 1;
+	int skip_fgets = 0;
 
 	if (!strcmp(file, "-"))
 		f = stdin;
@@ -591,10 +591,17 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 
 	stonewall = stonewall_flag;
 	do {
-		p = fgets(string, 4095, f);
-		if (!p)
-			break;
+		/*
+		 * if skip_fgets is set, we already have loaded a line we
+		 * haven't handled.
+		 */
+		if (!skip_fgets) {
+			p = fgets(string, 4095, f);
+			if (!p)
+				break;
+		}
 
+		skip_fgets = 0;
 		strip_blank_front(&p);
 		strip_blank_end(p);
 
@@ -631,19 +638,22 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 			stonewall = 0;
 		}
 
-		fgetpos(f, &off);
 		while ((p = fgets(string, 4096, f)) != NULL) {
 			if (is_empty_or_comment(p))
 				continue;
 
 			strip_blank_front(&p);
 
-			if (p[0] == '[')
+			/*
+			 * new section, break out and make sure we don't
+			 * fgets() a new line at the top.
+			 */
+			if (p[0] == '[') {
+				skip_fgets = 1;
 				break;
+			}
 
 			strip_blank_end(p);
-
-			fgetpos(f, &off);
 
 			/*
 			 * Don't break here, continue parsing options so we
@@ -655,10 +665,9 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 				log_info("--%s ", p);
 		}
 
-		if (!ret) {
-			fsetpos(f, &off);
+		if (!ret)
 			ret = add_job(td, name, 0);
-		} else {
+		else {
 			log_err("fio: job %s dropped\n", name);
 			put_job(td);
 		}
