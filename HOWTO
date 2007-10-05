@@ -347,7 +347,7 @@ ioengine=str	Defines how the job issues io to the file. The following
 			netsplice Like net, but uses splice/vmsplice to
 				map data and send/receive.
 
-			cpu	Doesn't transfer any data, but burns CPU
+			cpuio	Doesn't transfer any data, but burns CPU
 				cycles according to the cpuload= and
 				cpucycle= options. Setting cpuload=85
 				will cause that job to do nothing but burn
