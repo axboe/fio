@@ -231,6 +231,8 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 		flags |= OS_O_DIRECT;
 	if (td->o.sync_io)
 		flags |= O_SYNC;
+	if (f->filetype != FIO_TYPE_FILE)
+		flags |= O_NOATIME;
 
 	if (td_write(td)) {
 		assert(!read_only);
