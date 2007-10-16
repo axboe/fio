@@ -20,6 +20,7 @@
 struct spliceio_data {
 	int pipe[2];
 	int vmsplice_to_user;
+	int vmsplice_to_user_map;
 };
 
 /*
@@ -76,20 +77,28 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 	struct spliceio_data *sd = td->io_ops->data;
 	struct fio_file *f = io_u->file;
 	struct iovec iov;
-	int ret = 0 , buflen, mmap_len;
+	int ret , buflen, mmap_len;
 	off_t offset;
 	void *p, *map;
 
+restart:
+	ret = 0;
 	offset = io_u->offset;
 	mmap_len = buflen = io_u->xfer_buflen;
 
-	map = mmap(io_u->xfer_buf, buflen, PROT_READ, MAP_PRIVATE|OS_MAP_ANON, 0, 0);
-	if (map == MAP_FAILED) {
-		td_verror(td, errno, "mmap io_u");
-		return -1;
+	if (sd->vmsplice_to_user_map) {
+		map = mmap(io_u->xfer_buf, buflen, PROT_READ, MAP_PRIVATE|OS_MAP_ANON, 0, 0);
+		if (map == MAP_FAILED) {
+			td_verror(td, errno, "mmap io_u");
+			return -1;
+		}
+
+		p = map;
+	} else {
+		map = NULL;
+		p = io_u->xfer_buf;
 	}
 
-	p = map;
 	while (buflen) {
 		int this_len = buflen;
 		int flags = 0;
@@ -116,6 +125,11 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 		while (iov.iov_len) {
 			ret = vmsplice(sd->pipe[0], &iov, 1, SPLICE_F_MOVE);
 			if (ret < 0) {
+				if (errno == EFAULT && sd->vmsplice_to_user_map) {
+					sd->vmsplice_to_user_map = 0;
+					munmap(map, mmap_len);
+					goto restart;
+				}
 				td_verror(td, errno, "vmsplice");
 				break;
 			} else if (!ret) {
@@ -131,7 +145,7 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 			break;
 	}
 
-	if (munmap(map, mmap_len) < 0) {
+	if (sd->vmsplice_to_user_map && munmap(map, mmap_len) < 0) {
 		td_verror(td, errno, "munnap io_u");
 		return -1;
 	}
@@ -246,6 +260,12 @@ static int fio_spliceio_init(struct thread_data *td)
 	 * Assume this work, we'll reset this if it doesn't
 	 */
 	sd->vmsplice_to_user = 1;
+
+	/*
+	 * Works with "real" vmsplice to user, eg mapping pages directly.
+	 * Reset if we fail.
+	 */
+	sd->vmsplice_to_user_map = 1;
 
 	/*
 	 * And if vmsplice_to_user works, we definitely need aligned
