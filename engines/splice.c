@@ -130,6 +130,10 @@ restart:
 					munmap(map, mmap_len);
 					goto restart;
 				}
+				if (errno == EBADF) {
+					ret = -EBADF;
+					break;
+				}
 				td_verror(td, errno, "vmsplice");
 				break;
 			} else if (!ret) {
