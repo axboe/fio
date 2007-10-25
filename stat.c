@@ -293,7 +293,8 @@ static void show_thread_status(struct thread_stat *ts,
 	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	double io_u_lat_m[FIO_IO_U_LAT_M_NR];
 
-	if (!(ts->io_bytes[0] + ts->io_bytes[1]))
+	if (!(ts->io_bytes[0] + ts->io_bytes[1]) &&
+	    !(ts->total_io_u[0] + ts->total_io_u[1]))
 		return;
 
 	if (!ts->error)

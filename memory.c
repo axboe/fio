@@ -145,6 +145,9 @@ int allocate_io_mem(struct thread_data *td)
 {
 	int ret = 0;
 
+	if (td->io_ops->flags & FIO_NOIO)
+		return 0;
+
 	if (td->o.mem_type == MEM_MALLOC)
 		ret = alloc_mem_malloc(td);
 	else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE)

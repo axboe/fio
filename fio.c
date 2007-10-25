@@ -657,10 +657,12 @@ static int init_io_u(struct thread_data *td)
 		memset(io_u, 0, sizeof(*io_u));
 		INIT_LIST_HEAD(&io_u->list);
 
-		io_u->buf = p + max_bs * i;
+		if (!(td->io_ops->flags & FIO_NOIO)) {
+			io_u->buf = p + max_bs * i;
 
-		if (td_write(td))
-			fill_io_buf(td, io_u, max_bs);
+			if (td_write(td))
+				fill_io_buf(td, io_u, max_bs);
+		}
 
 		io_u->index = i;
 		io_u->flags = IO_U_F_FREE;

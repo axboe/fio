@@ -313,6 +313,9 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 
 static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 {
+	if (td->io_ops->flags & FIO_NOIO)
+		goto out;
+
 	/*
 	 * see if it's time to sync
 	 */
