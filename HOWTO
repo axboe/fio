@@ -314,6 +314,8 @@ ioengine=str	Defines how the job issues io to the file. The following
 			sync	Basic read(2) or write(2) io. lseek(2) is
 				used to position the io location.
 
+			psync 	Basic pread(2) or pwrite(2) io.
+
 			libaio	Linux native asynchronous io.
 
 			posixaio glibc posix asynchronous io.
