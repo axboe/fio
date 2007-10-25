@@ -48,7 +48,7 @@ static struct ioengine_ops ioengine = {
 	.queue		= fio_cpuio_queue,
 	.init		= fio_cpuio_init,
 	.open_file	= fio_cpuio_open,
-	.flags		= FIO_SYNCIO | FIO_DISKLESSIO,
+	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_NOIO,
 };
 
 static void fio_init fio_cpuio_register(void)

@@ -373,7 +373,8 @@ int setup_files(struct thread_data *td)
 	/*
 	 * device/file sizes are zero and no size given, punt
 	 */
-	if ((!total_size || total_size == -1ULL) && !td->o.size) {
+	if ((!total_size || total_size == -1ULL) && !td->o.size &&
+	    !(td->io_ops->flags & FIO_NOIO)) {
 		log_err("%s: you need to specify size=\n", td->o.name);
 		td_verror(td, EINVAL, "total_file_size");
 		return 1;

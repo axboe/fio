@@ -746,6 +746,7 @@ static int setup_thread_area(void)
 		return 1;
 	}
 
+	memset(threads, 0, max_jobs * sizeof(struct thread_data));
 	atexit(free_shm);
 	return 0;
 }

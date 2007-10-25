@@ -987,12 +987,12 @@ static int fork_main(int shmid, int offset)
 static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 {
 	struct thread_data *td;
-	int i, cputhreads, pending, status, ret;
+	int i, cputhreads, realthreads, pending, status, ret;
 
 	/*
 	 * reap exited threads (TD_EXITED -> TD_REAPED)
 	 */
-	pending = cputhreads = 0;
+	realthreads = pending = cputhreads = 0;
 	for_each_td(td, i) {
 		int flags = 0;
 
@@ -1002,6 +1002,8 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		 */
 		if (td->io_ops && !strcmp(td->io_ops->name, "cpuio"))
 			cputhreads++;
+		else
+			realthreads++;
 
 		if (!td->pid || td->runstate == TD_REAPED)
 			continue;
@@ -1068,7 +1070,7 @@ reaped:
 			exit_value++;
 	}
 
-	if (*nr_running == cputhreads && !pending)
+	if (*nr_running == cputhreads && !pending && realthreads)
 		terminate_threads(TERMINATE_ALL);
 }
 

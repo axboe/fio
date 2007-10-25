@@ -278,6 +278,7 @@ enum fio_ioengine_flags {
 	FIO_NOEXTEND	= 1 << 3,	/* engine can't extend file */
 	FIO_NODISKUTIL  = 1 << 4,       /* diskutil can't handle filename */
 	FIO_UNIDIR	= 1 << 5,	/* engine is uni-directional */
+	FIO_NOIO	= 1 << 6,	/* thread does only pseudo IO */
 };
 
 enum fio_file_flags {
