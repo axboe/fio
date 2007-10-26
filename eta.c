@@ -192,11 +192,13 @@ void print_thread_status(void)
 	unsigned long long io_bytes[2];
 	unsigned long rate_time, disp_time, bw_avg_time;
 	struct timeval now;
+	int linelen;
 
 	static unsigned long long rate_io_bytes[2];
 	static unsigned long long disp_io_bytes[2];
 	static struct timeval rate_prev_time, disp_prev_time;
 	static unsigned int rate[2];
+	static int linelen_last;
 
 	if (temp_stall_ts || terse_output || eta_print == FIO_ETA_NEVER)
 		return;
@@ -289,7 +291,11 @@ void print_thread_status(void)
 		printf(", CR=%d/%d IOPS", t_iops, m_iops);
 	if (eta_sec != INT_MAX && nr_running) {
 		perc *= 100.0;
-		printf(": [%s] [%3.1f%% done] [%6u/%6u kb/s] [eta %s]", run_str, perc, rate[0], rate[1], eta_str);
+		linelen = printf(": [%s] [%3.1f%% done] [%6u/%6u kb/s] [eta %s]",
+				 run_str, perc, rate[0], rate[1], eta_str);
+		if (linelen >= 0 && linelen < linelen_last)
+			printf("%*s", linelen_last-linelen, "");
+		linelen_last = linelen;
 	}
 	printf("\r");
 	fflush(stdout);
