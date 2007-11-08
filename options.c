@@ -74,6 +74,7 @@ static int str_prioclass_cb(void *data, unsigned int *val)
 	td->ioprio &= mask;
 
 	td->ioprio |= *val << IOPRIO_CLASS_SHIFT;
+	td->ioprio_set = 1;
 	return 0;
 }
 
@@ -89,6 +90,7 @@ static int str_prio_cb(void *data, unsigned int *val)
 	if ((td->ioprio >> IOPRIO_CLASS_SHIFT) == 0)
 		td->ioprio |= IOPRIO_CLASS_BE << IOPRIO_CLASS_SHIFT;
 
+	td->ioprio_set = 1;
 	return 0;
 }
 #endif

@@ -522,6 +522,7 @@ struct thread_data {
 	volatile int terminate;
 	volatile int runstate;
 	unsigned int ioprio;
+	unsigned int ioprio_set;
 	unsigned int last_was_sync;
 
 	char *mmapfile;

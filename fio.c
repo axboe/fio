@@ -829,7 +829,7 @@ static void *thread_main(void *data)
 		goto err;
 	}
 
-	if (td->ioprio) {
+	if (td->ioprio_set) {
 		if (ioprio_set(IOPRIO_WHO_PROCESS, 0, td->ioprio) == -1) {
 			td_verror(td, errno, "ioprio_set");
 			goto err;
