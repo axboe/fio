@@ -53,7 +53,9 @@ except `global', which has a special meaning.  Following the job name is
 a sequence of zero or more parameters, one per line, that define the
 behavior of the job.  Any line starting with a `;' or `#' character is
 considered a comment and ignored.
-job files.
+.P
+If \fIjobfile\fR is specified as `-', the job file will be read from
+standard input.
 .SS "Global Section"
 The global section contains default parameters for jobs specified in the
 job file.  A job is only affected by global sections residing above it,
@@ -87,7 +89,7 @@ sets of ranges, they are separated with a `,' or `/' character. For example:
 .SS "Parameter List"
 .TP
 .BI name \fR=\fPstr
-May be used to override the job name.  On the command line, this paramter
+May be used to override the job name.  On the command line, this parameter
 has the special purpose of signalling the start of a new job.
 .TP
 .BI description \fR=\fPstr
