@@ -763,6 +763,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		io_u_mark_latency(td, usec);
 
 		if (td_write(td) && idx == DDIR_WRITE &&
+		    td->o.do_verify &&
 		    td->o.verify != VERIFY_NONE)
 			log_io_piece(td, io_u);
 
