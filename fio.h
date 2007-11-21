@@ -777,8 +777,8 @@ extern void add_agg_sample(unsigned long, enum fio_ddir);
 /*
  * Time functions
  */
-extern unsigned long utime_since(struct timeval *, struct timeval *);
-extern unsigned long utime_since_now(struct timeval *);
+extern unsigned long long utime_since(struct timeval *, struct timeval *);
+extern unsigned long long utime_since_now(struct timeval *);
 extern unsigned long mtime_since(struct timeval *, struct timeval *);
 extern unsigned long mtime_since_now(struct timeval *);
 extern unsigned long time_since_now(struct timeval *);

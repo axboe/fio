@@ -787,9 +787,8 @@ static int clear_io_state(struct thread_data *td)
  */
 static void *thread_main(void *data)
 {
-	unsigned long long runtime[2];
+	unsigned long long runtime[2], elapsed;
 	struct thread_data *td = data;
-	unsigned long elapsed;
 	int clear_state;
 
 	if (!td->o.use_thread)

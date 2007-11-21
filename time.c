@@ -6,10 +6,11 @@
 static struct timeval genesis;
 static unsigned long ns_granularity;
 
-unsigned long utime_since(struct timeval *s, struct timeval *e)
+unsigned long long utime_since(struct timeval *s, struct timeval *e)
 {
-	long sec, usec, ret;
-
+	long sec, usec;
+	unsigned long long ret;
+	
 	sec = e->tv_sec - s->tv_sec;
 	usec = e->tv_usec - s->tv_usec;
 	if (sec > 0 && usec < 0) {
@@ -17,19 +18,18 @@ unsigned long utime_since(struct timeval *s, struct timeval *e)
 		usec += 1000000;
 	}
 
-	sec *= 1000000UL;
-	ret = sec + usec;
-
 	/*
 	 * time warp bug on some kernels?
 	 */
-	if (ret < 0)
-		ret = 0;
-
+	if (sec < 0 || (sec == 0 && usec < 0))
+		return 0;
+	
+	ret = sec * 1000000ULL + usec;
+	
 	return ret;
 }
 
-unsigned long utime_since_now(struct timeval *s)
+unsigned long long utime_since_now(struct timeval *s)
 {
 	struct timeval t;
 
