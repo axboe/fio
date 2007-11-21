@@ -861,7 +861,7 @@ Split up, the format is as follows:
 		Submission latency: min, max, mean, deviation
 		Completion latency: min, max, mean, deviation
 		Bw: min, max, aggregate percentage of total, mean, deviation
-	CPU usage: user, system, context switches
+	CPU usage: user, system, context switches, major faults, minor faults
 	IO depths: <=1, 2, 4, 8, 16, 32, >=64
 	IO latencies: <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000, >=2000
 	Text description
