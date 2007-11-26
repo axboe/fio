@@ -234,6 +234,7 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	if (f->filetype != FIO_TYPE_FILE)
 		flags |= O_NOATIME;
 
+open_again:
 	if (td_write(td)) {
 		assert(!read_only);
 
@@ -261,6 +262,11 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	if (f->fd == -1) {
 		char buf[FIO_VERROR_SIZE];
 		int __e = errno;
+
+		if (errno == EPERM && (flags & O_NOATIME)) {
+			flags &= ~O_NOATIME;
+			goto open_again;
+		}
 
 		snprintf(buf, sizeof(buf) - 1, "open(%s)", f->file_name);
 
