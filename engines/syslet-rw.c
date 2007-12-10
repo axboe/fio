@@ -10,9 +10,12 @@
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
+#include <malloc.h>
 #include <asm/unistd.h>
 
 #include "../fio.h"
+#include "../indirect.h"
+#include "../syslet.h"
 
 #ifdef FIO_HAVE_SYSLET
 
@@ -24,78 +27,67 @@
 #define __NR_fio_pwrite	__NR_pwrite
 #endif
 
-#define ATOM_TO_IOU(p)	((struct io_u *) (unsigned long) (p))
-
 struct syslet_data {
 	struct io_u **events;
 	unsigned int nr_events;
 	
-	struct async_head_user ahu;
-	struct syslet_uatom **ring;
-
-	struct syslet_uatom *head, *tail;
+	struct syslet_ring *ring;
+	void *stack;
 };
 
-static void fio_syslet_complete_atom(struct thread_data *td,
-				     struct syslet_uatom *atom)
+static void fio_syslet_complete(struct thread_data *td, struct io_u *io_u)
 {
 	struct syslet_data *sd = td->io_ops->data;
-	struct syslet_uatom *last;
-	struct io_u *io_u;
 
-	/*
-	 * complete from the beginning of the sequence up to (and
-	 * including) this atom
-	 */
-	last = atom;
-	io_u = ATOM_TO_IOU(atom);
-	atom = io_u->req.head;
-
-	/*
-	 * now complete in right order
-	 */
-	do {
-		long ret;
-
-		io_u = ATOM_TO_IOU(atom);
-		ret = *(long *) (unsigned long) atom->ret_ptr;
-		if (ret >= 0)
-			io_u->resid = io_u->xfer_buflen - ret;
-		else if (ret < 0)
-			io_u->error = ret;
-
-		assert(sd->nr_events < td->o.iodepth);
-		sd->events[sd->nr_events++] = io_u;
-
-		if (atom == last)
-			break;
-
-		atom = (struct syslet_uatom *) (unsigned long) atom->next;
-	} while (1);
-
-	assert(!last->next);
+	assert(sd->nr_events < td->o.iodepth);
+	sd->events[sd->nr_events++] = io_u;
 }
 
-/*
- * Inspect the ring to see if we have completed events
- */
-static void fio_syslet_complete(struct thread_data *td)
+static void syslet_complete_nr(struct thread_data *td, unsigned int nr)
 {
 	struct syslet_data *sd = td->io_ops->data;
+	unsigned int i;
 
+	for (i = 0; i < nr; i++) {
+		unsigned int idx = (i + sd->ring->user_tail) % td->o.iodepth;
+		struct syslet_completion *comp = &sd->ring->comp[idx];
+		struct io_u *io_u = (struct io_u *) (long) comp->caller_data;
+
+		io_u->resid = io_u->xfer_buflen - comp->status;
+		fio_syslet_complete(td, io_u);
+	}
+}
+
+
+static void fio_syslet_wait_for_events(struct thread_data *td)
+{
+	struct syslet_data *sd = td->io_ops->data;
+	struct syslet_ring *ring = sd->ring;
+	unsigned int events;
+
+	events = 0;
 	do {
-		struct syslet_uatom *atom;
+		unsigned int kh = ring->kernel_head;
+		int ret;
 
-		atom = sd->ring[sd->ahu.user_ring_idx];
-		if (!atom)
-			break;
+		/*
+		 * first reap events that are already completed
+		 */
+		if (ring->user_tail != kh) {
+			unsigned int nr = kh - ring->user_tail;
 
-		sd->ring[sd->ahu.user_ring_idx] = NULL;
-		if (++sd->ahu.user_ring_idx == td->o.iodepth)
-			sd->ahu.user_ring_idx = 0;
+			syslet_complete_nr(td, nr);
+			events += nr;
+			ring->user_tail = kh;
+			continue;
+		}
 
-		fio_syslet_complete_atom(td, atom);
-	} while (1);
+		/*
+		 * block waiting for at least one event
+		 */
+		ret = syscall(__NR_syslet_ring_wait, ring, ring->user_tail);
+		assert(!ret);
+	} while (!events);
 }
 
 static int fio_syslet_getevents(struct thread_data *td, int min,
@@ -106,20 +98,13 @@ static int fio_syslet_getevents(struct thread_data *td, int min,
 	long ret;
 
 	do {
-		fio_syslet_complete(td);
-
 		/*
 		 * do we have enough immediate completions?
 		 */
 		if (sd->nr_events >= (unsigned int) min)
 			break;
 
-		/*
-		 * OK, we need to wait for some events...
-		 */
-		ret = async_wait(1, sd->ahu.user_ring_idx, &sd->ahu);
-		if (ret < 0)
-			return -errno;
+		fio_syslet_wait_for_events(td);
 	} while (1);
 
 	ret = sd->nr_events;
@@ -134,35 +119,16 @@ static struct io_u *fio_syslet_event(struct thread_data *td, int event)
 	return sd->events[event];
 }
 
-static void init_atom(struct syslet_uatom *atom, int nr, void *arg0,
-		      void *arg1, void *arg2, void *arg3, void *ret_ptr,
-		      unsigned long flags, void *priv)
+static void fio_syslet_prep_sync(struct fio_file *f,
+				 struct indirect_registers *regs)
 {
-	atom->flags = flags;
-	atom->nr = nr;
-	atom->ret_ptr = (uint64_t) (unsigned long) ret_ptr;
-	atom->next = 0;
-	atom->arg_ptr[0] = (uint64_t) (unsigned long) arg0;
-	atom->arg_ptr[1] = (uint64_t) (unsigned long) arg1;
-	atom->arg_ptr[2] = (uint64_t) (unsigned long) arg2;
-	atom->arg_ptr[3] = (uint64_t) (unsigned long) arg3;
-	atom->arg_ptr[4] = 0;
-	atom->arg_ptr[5] = 0;
-	atom->private = (uint64_t) (unsigned long) priv;
+	FILL_IN(*regs, __NR_fsync, (long) f->fd);
 }
 
-/*
- * Use seek atom for sync
- */
-static void fio_syslet_prep_sync(struct io_u *io_u, struct fio_file *f)
+static void fio_syslet_prep_rw(struct io_u *io_u, struct fio_file *f,
+			       struct indirect_registers *regs)
 {
-	init_atom(&io_u->req.atom, __NR_fsync, &f->fd, NULL, NULL, NULL,
-		  &io_u->req.ret, 0, io_u);
-}
-
-static void fio_syslet_prep_rw(struct io_u *io_u, struct fio_file *f)
-{
-	int nr;
+	long nr;
 
 	/*
 	 * prepare rw
@@ -172,139 +138,74 @@ static void fio_syslet_prep_rw(struct io_u *io_u, struct fio_file *f)
 	else
 		nr = __NR_fio_pwrite;
 
-	init_atom(&io_u->req.atom, nr, &f->fd, &io_u->xfer_buf,
-		  &io_u->xfer_buflen, &io_u->offset, &io_u->req.ret, 0, io_u);
+	FILL_IN(*regs, nr, (long) f->fd, (long) io_u->xfer_buf,
+		(long) io_u->xfer_buflen, (long) io_u->offset);
 }
 
-static int fio_syslet_prep(struct thread_data fio_unused *td, struct io_u *io_u)
+static void fio_syslet_prep(struct io_u *io_u, struct indirect_registers *regs)
 {
 	struct fio_file *f = io_u->file;
 
 	if (io_u->ddir == DDIR_SYNC)
-		fio_syslet_prep_sync(io_u, f);
+		fio_syslet_prep_sync(f, regs);
 	else
-		fio_syslet_prep_rw(io_u, f);
-
-	return 0;
+		fio_syslet_prep_rw(io_u, f, regs);
 }
 
-static void cachemiss_thread_start(void)
+static void ret_func(void)
 {
-	while (1)
-		async_thread(NULL, NULL);
-}
-
-#define THREAD_STACK_SIZE (16384)
-
-static unsigned long thread_stack_alloc()
-{
-	return (unsigned long) malloc(THREAD_STACK_SIZE) + THREAD_STACK_SIZE;
-}
-
-static void fio_syslet_queued(struct thread_data *td, struct syslet_data *sd)
-{
-	struct syslet_uatom *atom;
-	struct timeval now;
-
-	fio_gettime(&now, NULL);
-
-	atom = sd->head;
-	while (atom) {
-		struct io_u *io_u = ATOM_TO_IOU(atom);
-
-		memcpy(&io_u->issue_time, &now, sizeof(now));
-		io_u_queued(td, io_u);
-		atom = (struct syslet_uatom *) (unsigned long) atom->next;
-	}
-}
-
-static int fio_syslet_commit(struct thread_data *td)
-{
-	struct syslet_data *sd = td->io_ops->data;
-	struct syslet_uatom *done;
-
-	if (!sd->head)
-		return 0;
-
-	assert(!sd->tail->next);
-
-	if (!sd->ahu.new_thread_stack)
-		sd->ahu.new_thread_stack = thread_stack_alloc();
-
-	fio_syslet_queued(td, sd);
-
-	/*
-	 * On sync completion, the atom is returned. So on NULL return
-	 * it's queued asynchronously.
-	 */
-	done = async_exec(sd->head, &sd->ahu);
-
-	if (done == (void *) -1) {
-		log_err("fio: syslets don't appear to work\n");
-		return -1;
-	}
-
-	sd->head = sd->tail = NULL;
-
-	if (done)
-		fio_syslet_complete_atom(td, done);
-
-	return 0;
+	syscall(__NR_exit);
 }
 
 static int fio_syslet_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct syslet_data *sd = td->io_ops->data;
+	union indirect_params params;
+	struct indirect_registers regs;
+	int ret;
 
 	fio_ro_check(td, io_u);
 
-	if (sd->tail) {
-		sd->tail->next = (uint64_t) (unsigned long) &io_u->req.atom;
-		sd->tail = &io_u->req.atom;
-	} else
-		sd->head = sd->tail = (struct syslet_uatom *)&io_u->req.atom;
+	memset(&params, 0, sizeof(params));
+	fill_syslet_args(&params.syslet, sd->ring, (long)io_u, ret_func, sd->stack);
 
-	io_u->req.head = sd->head;
-	return FIO_Q_QUEUED;
-}
+	fio_syslet_prep(io_u, &regs);
 
-static int async_head_init(struct syslet_data *sd, unsigned int depth)
-{
-	unsigned long ring_size;
+	ret = syscall(__NR_indirect, &regs, &params, sizeof(params), 0);
+	if (ret == (int) io_u->xfer_buflen) {
+		/*
+		 * completed sync, account. this also catches fsync().
+		 */
+		return FIO_Q_COMPLETED;
+	} else if (ret < 0) {
+		/*
+		 * queued for async execution
+		 */
+		if (errno == ESYSLETPENDING)
+			return FIO_Q_QUEUED;
+	}
 
-	memset(&sd->ahu, 0, sizeof(struct async_head_user));
-
-	ring_size = sizeof(struct syslet_uatom *) * depth;
-	sd->ring = malloc(ring_size);
-	memset(sd->ring, 0, ring_size);
-
-	sd->ahu.user_ring_idx = 0;
-	sd->ahu.completion_ring_ptr = (uint64_t) (unsigned long) sd->ring;
-	sd->ahu.ring_size_bytes = ring_size;
-	sd->ahu.head_stack = thread_stack_alloc();
-	sd->ahu.head_ip = (uint64_t) (unsigned long) cachemiss_thread_start;
-	sd->ahu.new_thread_ip = (uint64_t) (unsigned long) cachemiss_thread_start;
-	sd->ahu.new_thread_stack = thread_stack_alloc();
-
-	return 0;
-}
-
-static void async_head_exit(struct syslet_data *sd)
-{
-	free(sd->ring);
+	io_u->error = errno;
+	td_verror(td, io_u->error, "xfer");
+	return FIO_Q_COMPLETED;
 }
 
 static int check_syslet_support(struct syslet_data *sd)
 {
-	struct syslet_uatom atom;
-	void *ret;
+	union indirect_params params;
+	struct indirect_registers regs;
+	pid_t pid, my_pid = getpid();
 
-	init_atom(&atom, __NR_getpid, NULL, NULL, NULL, NULL, NULL, 0, NULL);
-	ret = async_exec(&atom, &sd->ahu);
-	if (ret == (void *) -1)
-		return 1;
+	memset(&params, 0, sizeof(params));
+	fill_syslet_args(&params.syslet, sd->ring, 0, ret_func, sd->stack);
 
-	return 0;
+	FILL_IN(regs, __NR_getpid);
+
+	pid = syscall(__NR_indirect, &regs, &params, sizeof(params), 0);
+	if (pid == my_pid)
+		return 0;
+
+	return 1;
 }
 
 static void fio_syslet_cleanup(struct thread_data *td)
@@ -312,8 +213,9 @@ static void fio_syslet_cleanup(struct thread_data *td)
 	struct syslet_data *sd = td->io_ops->data;
 
 	if (sd) {
-		async_head_exit(sd);
 		free(sd->events);
+		free(sd->ring);
+		free(sd->stack);
 		free(sd);
 		td->io_ops->data = NULL;
 	}
@@ -322,24 +224,29 @@ static void fio_syslet_cleanup(struct thread_data *td)
 static int fio_syslet_init(struct thread_data *td)
 {
 	struct syslet_data *sd;
+	void *ring, *stack;
 
 	sd = malloc(sizeof(*sd));
 	memset(sd, 0, sizeof(*sd));
+
 	sd->events = malloc(sizeof(struct io_u *) * td->o.iodepth);
 	memset(sd->events, 0, sizeof(struct io_u *) * td->o.iodepth);
-
-	/*
-	 * This will handily fail for kernels where syslet isn't available
-	 */
-	if (async_head_init(sd, td->o.iodepth)) {
-		free(sd->events);
-		free(sd);
+	if (posix_memalign(&ring, sizeof(uint64_t), sizeof(struct syslet_ring)))
 		return 1;
-	}
+	if (posix_memalign(&stack, page_size, page_size))
+		return 1;
+
+	sd->ring = ring;
+	sd->stack = stack;
+
+	memset(sd->ring, 0, sizeof(*sd->ring));
+	sd->ring->elements = td->o.iodepth;
 
 	if (check_syslet_support(sd)) {
 		log_err("fio: syslets do not appear to work\n");
 		free(sd->events);
+		free(sd->ring);
+		free(sd->stack);
 		free(sd);
 		return 1;
 	}
@@ -352,9 +259,7 @@ static struct ioengine_ops ioengine = {
 	.name		= "syslet-rw",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_syslet_init,
-	.prep		= fio_syslet_prep,
 	.queue		= fio_syslet_queue,
-	.commit		= fio_syslet_commit,
 	.getevents	= fio_syslet_getevents,
 	.event		= fio_syslet_event,
 	.cleanup	= fio_syslet_cleanup,

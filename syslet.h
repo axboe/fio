@@ -1,155 +1,50 @@
-#ifndef _LINUX_SYSLET_H
-#define _LINUX_SYSLET_H
-/*
- * The syslet subsystem - asynchronous syscall execution support.
- *
- * Started by Ingo Molnar:
- *
- *  Copyright (C) 2007 Red Hat, Inc., Ingo Molnar <mingo@redhat.com>
- *
- * User-space API/ABI definitions:
- */
+#ifndef _SYSLET_H_
+#define _SYSLET_H_
 
-#ifndef __user
-# define __user
+#include "kcompat.h"
+
+struct syslet_frame {
+	u64 ip;
+	u64 sp;
+};
+
+struct syslet_args {
+	u64 ring_ptr;
+	u64 caller_data;
+	struct syslet_frame frame;
+};
+
+struct syslet_completion {
+	u64 status;
+	u64 caller_data;
+};
+
+struct syslet_ring {
+	u32 kernel_head;
+	u32 user_tail;
+	u32 elements;
+	u32 wait_group;
+	struct syslet_completion comp[0];
+};
+
+#ifdef __x86_64__
+#define __NR_syslet_ring_wait	287
+#elif defined __i386__
+#define __NR_syslet_ring_wait	326
 #endif
 
-/*
- * This is the 'Syslet Atom' - the basic unit of execution
- * within the syslet framework. A syslet always represents
- * a single system-call plus its arguments, plus has conditions
- * attached to it that allows the construction of larger
- * programs from these atoms. User-space variables can be used
- * (for example a loop index) via the special sys_umem*() syscalls.
- *
- * Arguments are implemented via pointers to arguments. This not
- * only increases the flexibility of syslet atoms (multiple syslets
- * can share the same variable for example), but is also an
- * optimization: copy_uatom() will only fetch syscall parameters
- * up until the point it meets the first NULL pointer. 50% of all
- * syscalls have 2 or less parameters (and 90% of all syscalls have
- * 4 or less parameters).
- *
- * [ Note: since the argument array is at the end of the atom, and the
- *   kernel will not touch any argument beyond the final NULL one, atoms
- *   might be packed more tightly. (the only special case exception to
- *   this rule would be SKIP_TO_NEXT_ON_STOP atoms, where the kernel will
- *   jump a full syslet_uatom number of bytes.) ]
- */
-struct syslet_uatom {
-	uint32_t		flags;
-	uint32_t		nr;
-	uint64_t		ret_ptr;
-	uint64_t		next;
-	uint64_t		arg_ptr[6];
-	/*
-	 * User-space can put anything in here, kernel will not
-	 * touch it:
-	 */
-	uint64_t		private;
-};
+#define ESYSLETPENDING   132
 
-/*
- * Flags to modify/control syslet atom behavior:
- */
+typedef void (*syslet_return_func_t)(void);
 
-/*
- * Immediately queue this syslet asynchronously - do not even
- * attempt to execute it synchronously in the user context:
- */
-#define SYSLET_ASYNC				0x00000001
-
-/*
- * Never queue this syslet asynchronously - even if synchronous
- * execution causes a context-switching:
- */
-#define SYSLET_SYNC				0x00000002
-
-/*
- * Do not queue the syslet in the completion ring when done.
- *
- * ( the default is that the final atom of a syslet is queued
- *   in the completion ring. )
- *
- * Some syscalls generate implicit completion events of their
- * own.
- */
-#define SYSLET_NO_COMPLETE			0x00000004
-
-/*
- * Execution control: conditions upon the return code
- * of the just executed syslet atom. 'Stop' means syslet
- * execution is stopped and the atom is put into the
- * completion ring:
- */
-#define SYSLET_STOP_ON_NONZERO			0x00000008
-#define SYSLET_STOP_ON_ZERO			0x00000010
-#define SYSLET_STOP_ON_NEGATIVE			0x00000020
-#define SYSLET_STOP_ON_NON_POSITIVE		0x00000040
-
-#define SYSLET_STOP_MASK				\
-	(	SYSLET_STOP_ON_NONZERO		|	\
-		SYSLET_STOP_ON_ZERO		|	\
-		SYSLET_STOP_ON_NEGATIVE		|	\
-		SYSLET_STOP_ON_NON_POSITIVE		)
-
-/*
- * Special modifier to 'stop' handling: instead of stopping the
- * execution of the syslet, the linearly next syslet is executed.
- * (Normal execution flows along atom->next, and execution stops
- *  if atom->next is NULL or a stop condition becomes true.)
- *
- * This is what allows true branches of execution within syslets.
- */
-#define SYSLET_SKIP_TO_NEXT_ON_STOP		0x00000080
-
-/*
- * This is the (per-user-context) descriptor of the async completion
- * ring. This gets passed in to sys_async_exec():
- */
-struct async_head_user {
-	/*
-	 * Current completion ring index - managed by the kernel:
-	 */
-	uint64_t		kernel_ring_idx;
-	/*
-	 * User-side ring index:
-	 */
-	uint64_t		user_ring_idx;
-
-	/*
-	 * Ring of pointers to completed async syslets (i.e. syslets that
-	 * generated a cachemiss and went async, returning -EASYNCSYSLET
-	 * to the user context by sys_async_exec()) are queued here.
-	 * Syslets that were executed synchronously (cached) are not
-	 * queued here.
-	 *
-	 * Note: the final atom that generated the exit condition is
-	 * queued here. Normally this would be the last atom of a syslet.
-	 */
-	uint64_t		completion_ring_ptr;
-
-	/*
-	 * Ring size in bytes:
-	 */
-	uint64_t		ring_size_bytes;
-
-	/*
-	 * The head task can become a cachemiss thread later on
-	 * too, if it blocks - so it needs its separate thread
-	 * stack and start address too:
-	 */
-	uint64_t		head_stack;
-	uint64_t		head_ip;
-
-	/*
-	 * Newly started async kernel threads will take their
-	 * user stack and user start address from here. User-space
-	 * code has to check for new_thread_stack going to NULL
-	 * and has to refill it with a new stack if that happens.
-	 */
-	uint64_t		new_thread_stack;
-	uint64_t		new_thread_ip;
-};
+void fill_syslet_args(struct syslet_args *args, struct syslet_ring *ring,
+		      uint64_t caller_data, syslet_return_func_t func,
+		      void *stack)
+{
+	args->ring_ptr = (u64)(unsigned long)ring;
+	args->caller_data = caller_data;
+	args->frame.ip = (u64)(unsigned long)func;
+	args->frame.sp = (u64)(unsigned long)stack;
+}
 
 #endif

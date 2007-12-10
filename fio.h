@@ -23,10 +23,6 @@
 #include "os/os.h"
 #include "mutex.h"
 
-#ifdef FIO_HAVE_SYSLET
-#include "syslet.h"
-#endif
-
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
 #endif
@@ -99,14 +95,6 @@ struct io_piece {
 	};
 };
 
-#ifdef FIO_HAVE_SYSLET
-struct syslet_req {
-	struct syslet_uatom atom;	/* the atom to submit */
-	struct syslet_uatom *head;	/* head of the sequence */
-	long ret;			/* syscall return value */
-};
-#endif
-
 enum {
 	IO_U_F_FREE	= 1 << 0,
 	IO_U_F_FLIGHT	= 1 << 1,
@@ -127,9 +115,6 @@ struct io_u {
 #endif
 #ifdef FIO_HAVE_SGIO
 		struct sg_io_hdr hdr;
-#endif
-#ifdef FIO_HAVE_SYSLET
-		struct syslet_req req;
 #endif
 #ifdef FIO_HAVE_GUASI
 		guasi_req_t greq;
