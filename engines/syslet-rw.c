@@ -224,7 +224,7 @@ static void fio_syslet_cleanup(struct thread_data *td)
 static int fio_syslet_init(struct thread_data *td)
 {
 	struct syslet_data *sd;
-	void *ring, *stack;
+	void *ring = NULL, *stack = NULL;
 
 	sd = malloc(sizeof(*sd));
 	memset(sd, 0, sizeof(*sd));
@@ -232,9 +232,9 @@ static int fio_syslet_init(struct thread_data *td)
 	sd->events = malloc(sizeof(struct io_u *) * td->o.iodepth);
 	memset(sd->events, 0, sizeof(struct io_u *) * td->o.iodepth);
 	if (posix_memalign(&ring, sizeof(uint64_t), sizeof(struct syslet_ring)))
-		return 1;
+		goto err_mem;
 	if (posix_memalign(&stack, page_size, page_size))
-		return 1;
+		goto err_mem;
 
 	sd->ring = ring;
 	sd->stack = stack;
@@ -242,17 +242,20 @@ static int fio_syslet_init(struct thread_data *td)
 	memset(sd->ring, 0, sizeof(*sd->ring));
 	sd->ring->elements = td->o.iodepth;
 
-	if (check_syslet_support(sd)) {
-		log_err("fio: syslets do not appear to work\n");
-		free(sd->events);
-		free(sd->ring);
-		free(sd->stack);
-		free(sd);
-		return 1;
+	if (!check_syslet_support(sd)) {
+		td->io_ops->data = sd;
+		return 0;
 	}
 
-	td->io_ops->data = sd;
-	return 0;
+	log_err("fio: syslets do not appear to work\n");
+err_mem:
+	free(sd->events);
+	if (ring)
+		free(ring);
+	if (stack)
+		free(stack);
+	free(sd);
+	return 1;
 }
 
 static struct ioengine_ops ioengine = {
