@@ -18,7 +18,8 @@
 #define __NR_sys_vmsplice	1302
 #endif
 
-#define nop	asm volatile ("hint @pause" ::: "memory");
+#define nop		asm volatile ("hint @pause" ::: "memory");
+#define read_barrier()	asm volatile ("mf" ::: "memory")
 
 #define ia64_popcnt(x)							\
 ({									\

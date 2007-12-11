@@ -32,6 +32,7 @@ struct syslet_data {
 	unsigned int nr_events;
 	
 	struct syslet_ring *ring;
+	unsigned int ring_mask;
 	void *stack;
 };
 
@@ -46,10 +47,13 @@ static void fio_syslet_add_event(struct thread_data *td, struct io_u *io_u)
 static void fio_syslet_add_events(struct thread_data *td, unsigned int nr)
 {
 	struct syslet_data *sd = td->io_ops->data;
-	unsigned int i;
+	unsigned int i, uidx;
+
+	uidx = sd->ring->user_tail;
+	read_barrier();
 
 	for (i = 0; i < nr; i++) {
-		unsigned int idx = (i + sd->ring->user_tail) % td->o.iodepth;
+		unsigned int idx = (i + uidx) & sd->ring_mask;
 		struct syslet_completion *comp = &sd->ring->comp[idx];
 		struct io_u *io_u = (struct io_u *) (long) comp->caller_data;
 		long ret;
@@ -262,6 +266,7 @@ static int fio_syslet_init(struct thread_data *td)
 		goto err_mem;
 
 	sd->ring = ring;
+	sd->ring_mask = ring_nr - 1;
 	sd->stack = stack;
 
 	memset(sd->ring, 0, ring_size);
