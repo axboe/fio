@@ -37,8 +37,8 @@ static struct io_u *fio_skeleton_event(struct thread_data *td, int event)
  * which may then be retrieved by calling the ->event() hook with the event
  * numbers. Required.
  */
-static int fio_skeleton_getevents(struct thread_data *td, int min, int max,
-				  struct timespec *t)
+static int fio_skeleton_getevents(struct thread_data *td, unsigned int min,
+				  unsigned int max, struct timespec *t)
 {
 	return 0;
 }

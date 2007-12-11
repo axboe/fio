@@ -883,7 +883,7 @@ extern int __must_check td_io_init(struct thread_data *);
 extern int __must_check td_io_prep(struct thread_data *, struct io_u *);
 extern int __must_check td_io_queue(struct thread_data *, struct io_u *);
 extern int __must_check td_io_sync(struct thread_data *, struct fio_file *);
-extern int __must_check td_io_getevents(struct thread_data *, int, int, struct timespec *);
+extern int __must_check td_io_getevents(struct thread_data *, unsigned int, unsigned int, struct timespec *);
 extern int __must_check td_io_commit(struct thread_data *);
 extern int __must_check td_io_open_file(struct thread_data *, struct fio_file *);
 extern void td_io_close_file(struct thread_data *, struct fio_file *);
@@ -920,7 +920,7 @@ struct ioengine_ops {
 	int (*prep)(struct thread_data *, struct io_u *);
 	int (*queue)(struct thread_data *, struct io_u *);
 	int (*commit)(struct thread_data *);
-	int (*getevents)(struct thread_data *, int, int, struct timespec *);
+	int (*getevents)(struct thread_data *, unsigned int, unsigned int, struct timespec *);
 	struct io_u *(*event)(struct thread_data *, int);
 	int (*cancel)(struct thread_data *, struct io_u *);
 	void (*cleanup)(struct thread_data *);

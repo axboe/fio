@@ -99,8 +99,8 @@ static void fio_syslet_wait_for_events(struct thread_data *td)
 	} while (1);
 }
 
-static int fio_syslet_getevents(struct thread_data *td, int min,
-				int fio_unused max,
+static int fio_syslet_getevents(struct thread_data *td, unsigned int min,
+				unsigned int fio_unused max,
 				struct timespec fio_unused *t)
 {
 	struct syslet_data *sd = td->io_ops->data;

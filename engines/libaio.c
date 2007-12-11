@@ -60,8 +60,8 @@ static struct io_u *fio_libaio_event(struct thread_data *td, int event)
 	return io_u;
 }
 
-static int fio_libaio_getevents(struct thread_data *td, int min, int max,
-				struct timespec *t)
+static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
+				unsigned int max, struct timespec *t)
 {
 	struct libaio_data *ld = td->io_ops->data;
 	long r;

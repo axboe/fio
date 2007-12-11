@@ -76,8 +76,8 @@ static int fio_posixaio_prep(struct thread_data fio_unused *td,
 	return 0;
 }
 
-static int fio_posixaio_getevents(struct thread_data *td, int min, int max,
-				  struct timespec *t)
+static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
+				  unsigned int max, struct timespec *t)
 {
 	struct posixaio_data *pd = td->io_ops->data;
 	struct list_head *entry;
