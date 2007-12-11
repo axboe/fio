@@ -35,7 +35,7 @@ struct syslet_data {
 	void *stack;
 };
 
-static void fio_syslet_complete(struct thread_data *td, struct io_u *io_u)
+static void fio_syslet_add_event(struct thread_data *td, struct io_u *io_u)
 {
 	struct syslet_data *sd = td->io_ops->data;
 
@@ -43,7 +43,7 @@ static void fio_syslet_complete(struct thread_data *td, struct io_u *io_u)
 	sd->events[sd->nr_events++] = io_u;
 }
 
-static void syslet_complete_nr(struct thread_data *td, unsigned int nr)
+static void fio_syslet_add_events(struct thread_data *td, unsigned int nr)
 {
 	struct syslet_data *sd = td->io_ops->data;
 	unsigned int i;
@@ -52,12 +52,20 @@ static void syslet_complete_nr(struct thread_data *td, unsigned int nr)
 		unsigned int idx = (i + sd->ring->user_tail) % td->o.iodepth;
 		struct syslet_completion *comp = &sd->ring->comp[idx];
 		struct io_u *io_u = (struct io_u *) (long) comp->caller_data;
+		long ret;
 
-		io_u->resid = io_u->xfer_buflen - comp->status;
-		fio_syslet_complete(td, io_u);
+		ret = comp->status;
+		if (ret <= 0) {
+			io_u->resid = io_u->xfer_buflen;
+			io_u->error = -ret;
+		} else {
+			io_u->resid = io_u->xfer_buflen - ret;
+			io_u->error = 0;
+		}
+
+		fio_syslet_add_event(td, io_u);
 	}
 }
-
 
 static void fio_syslet_wait_for_events(struct thread_data *td)
 {
@@ -76,7 +84,7 @@ static void fio_syslet_wait_for_events(struct thread_data *td)
 		if (ring->user_tail != kh) {
 			unsigned int nr = kh - ring->user_tail;
 
-			syslet_complete_nr(td, nr);
+			fio_syslet_add_events(td, nr);
 			events += nr;
 			ring->user_tail = kh;
 			continue;
