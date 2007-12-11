@@ -930,7 +930,7 @@ struct ioengine_ops {
 	void *dlhandle;
 };
 
-#define FIO_IOOPS_VERSION	7
+#define FIO_IOOPS_VERSION	8
 
 extern struct ioengine_ops *load_ioengine(struct thread_data *, const char *);
 extern void register_ioengine(struct ioengine_ops *);
