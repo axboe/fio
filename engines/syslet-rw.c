@@ -225,13 +225,30 @@ static int fio_syslet_init(struct thread_data *td)
 {
 	struct syslet_data *sd;
 	void *ring = NULL, *stack = NULL;
+	unsigned int ring_size, ring_nr;
 
 	sd = malloc(sizeof(*sd));
 	memset(sd, 0, sizeof(*sd));
 
 	sd->events = malloc(sizeof(struct io_u *) * td->o.iodepth);
 	memset(sd->events, 0, sizeof(struct io_u *) * td->o.iodepth);
-	if (posix_memalign(&ring, sizeof(uint64_t), sizeof(struct syslet_ring)))
+
+	/*
+	 * The ring needs to be a power-of-2, so round it up if we have to
+	 */
+	ring_nr = td->o.iodepth;
+	if (ring_nr & (ring_nr - 1)) {
+		int bits = 1;
+
+		while (ring_nr >>= 1)
+			bits++;
+
+		ring_nr = 1 << bits;
+	}
+
+	ring_size = sizeof(struct syslet_ring) +
+			ring_nr * sizeof(struct syslet_completion);
+	if (posix_memalign(&ring, sizeof(uint64_t), ring_size))
 		goto err_mem;
 	if (posix_memalign(&stack, page_size, page_size))
 		goto err_mem;
@@ -239,8 +256,8 @@ static int fio_syslet_init(struct thread_data *td)
 	sd->ring = ring;
 	sd->stack = stack;
 
-	memset(sd->ring, 0, sizeof(*sd->ring));
-	sd->ring->elements = td->o.iodepth;
+	memset(sd->ring, 0, ring_size);
+	sd->ring->elements = ring_nr;
 
 	if (!check_syslet_support(sd)) {
 		td->io_ops->data = sd;
