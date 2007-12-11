@@ -220,7 +220,6 @@ static void fio_syslet_cleanup(struct thread_data *td)
 	if (sd) {
 		free(sd->events);
 		free(sd->ring);
-		free(sd->stack);
 		free(sd);
 		td->io_ops->data = NULL;
 	}
