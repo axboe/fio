@@ -75,9 +75,7 @@ static void fio_syslet_wait_for_events(struct thread_data *td)
 {
 	struct syslet_data *sd = td->io_ops->data;
 	struct syslet_ring *ring = sd->ring;
-	unsigned int events;
 
-	events = 0;
 	do {
 		unsigned int kh = ring->kernel_head;
 		int ret;
@@ -89,9 +87,8 @@ static void fio_syslet_wait_for_events(struct thread_data *td)
 			unsigned int nr = kh - ring->user_tail;
 
 			fio_syslet_add_events(td, nr);
-			events += nr;
 			ring->user_tail = kh;
-			continue;
+			break;
 		}
 
 		/*
@@ -99,7 +96,7 @@ static void fio_syslet_wait_for_events(struct thread_data *td)
 		 */
 		ret = syscall(__NR_syslet_ring_wait, ring, ring->user_tail);
 		assert(!ret);
-	} while (!events);
+	} while (1);
 }
 
 static int fio_syslet_getevents(struct thread_data *td, int min,
@@ -109,15 +106,11 @@ static int fio_syslet_getevents(struct thread_data *td, int min,
 	struct syslet_data *sd = td->io_ops->data;
 	long ret;
 
-	do {
-		/*
-		 * do we have enough immediate completions?
-		 */
-		if (sd->nr_events >= (unsigned int) min)
-			break;
-
+	/*
+	 * While we have less events than requested, block waiting for them
+	 */
+	while (sd->nr_events < (unsigned int) min)
 		fio_syslet_wait_for_events(td);
-	} while (1);
 
 	ret = sd->nr_events;
 	sd->nr_events = 0;
