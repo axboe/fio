@@ -108,8 +108,10 @@ static int fio_syslet_getevents(struct thread_data *td, unsigned int min,
 
 	/*
 	 * While we have less events than requested, block waiting for them
+	 * (if we have to, there may already be more completed events ready
+	 * for us - see fio_syslet_wait_for_events()
 	 */
-	while (sd->nr_events < (unsigned int) min)
+	while (sd->nr_events < min)
 		fio_syslet_wait_for_events(td);
 
 	ret = sd->nr_events;

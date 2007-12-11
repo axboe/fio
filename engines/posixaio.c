@@ -82,7 +82,8 @@ static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 	struct posixaio_data *pd = td->io_ops->data;
 	struct list_head *entry;
 	struct timespec start;
-	int r, have_timeout = 0;
+	int have_timeout = 0;
+	unsigned int r;
 
 	if (t && !fill_timespec(&start))
 		have_timeout = 1;
