@@ -396,6 +396,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(iodepth),
 		.help	= "Amount of IO buffers to keep in flight",
+		.minval = 1,
 		.def	= "1",
 	},
 	{
