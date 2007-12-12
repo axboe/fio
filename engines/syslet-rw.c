@@ -16,6 +16,7 @@
 #include "../fio.h"
 #include "../indirect.h"
 #include "../syslet.h"
+#include "../fls.h"
 
 #ifdef FIO_HAVE_SYSLET
 
@@ -243,14 +244,8 @@ static int fio_syslet_init(struct thread_data *td)
 	 * The ring needs to be a power-of-2, so round it up if we have to
 	 */
 	ring_nr = td->o.iodepth;
-	if (ring_nr & (ring_nr - 1)) {
-		int bits = 1;
-
-		while (ring_nr >>= 1)
-			bits++;
-
-		ring_nr = 1 << bits;
-	}
+	if (ring_nr & (ring_nr - 1))
+		ring_nr = 1 << fls(ring_nr);
 
 	ring_size = sizeof(struct syslet_ring) +
 			ring_nr * sizeof(struct syslet_completion);
