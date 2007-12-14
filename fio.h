@@ -373,6 +373,11 @@ struct thread_stat {
 	unsigned long total_run_time;
 };
 
+struct bssplit {
+	unsigned int bs;
+	unsigned char perc;
+};
+
 struct thread_options {
 	int pad;
 	char *description;
@@ -395,6 +400,8 @@ struct thread_options {
 	unsigned int bs[2];
 	unsigned int min_bs[2];
 	unsigned int max_bs[2];
+	struct bssplit *bssplit;
+	unsigned int bssplit_nr;
 
 	unsigned int nr_files;
 	unsigned int open_files;

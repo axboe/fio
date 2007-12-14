@@ -281,6 +281,30 @@ bsrange=irange	Instead of giving a single block size, specify a range
 		writes, however a second range can be given after a comma.
 		See bs=.
 
+bssplit=str	Sometimes you want even finer grained control of the
+		block sizes issued, not just an even split between them.
+		This option allows you to weight various block sizes,
+		so that you are able to define a specific amount of
+		block sizes issued. The format for this option is:
+
+			bssplit=blocksize/percentage:blocksize/percentage
+
+		for as many block sizes as needed. So if you want to define
+		a workload that has 50% 64k blocks, 10% 4k blocks, and
+		40% 32k blocks, you would write:
+
+			bssplit=4k/10:64k/50:32k/40
+
+		Ordering does not matter. If the percentage is left blank,
+		fio will fill in the remaining values evenly. So a bssplit
+		option like this one:
+
+			bssplit=4k/50:1k/:32k/
+
+		would have 50% 4k ios, and 25% 1k and 32k ios. The percentages
+		always add up to 100, if bssplit is given a range that adds
+		up to more, it will error out.
+
 blocksize_unaligned
 bs_unaligned	If this option is given, any byte size value within bsrange
 		may be used as a block range. This typically wont work with

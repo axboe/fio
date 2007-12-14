@@ -106,7 +106,7 @@ static unsigned long get_mult_bytes(char c)
 /*
  * convert string into decimal value, noting any size suffix
  */
-static int str_to_decimal(const char *str, long long *val, int kilo)
+int str_to_decimal(const char *str, long long *val, int kilo)
 {
 	int len;
 

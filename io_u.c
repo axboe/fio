@@ -186,7 +186,21 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 		buflen = td->o.min_bs[ddir];
 	else {
 		r = os_random_long(&td->bsrange_state);
-		buflen = (unsigned int) (1 + (double) (td->o.max_bs[ddir] - 1) * r / (RAND_MAX + 1.0));
+		if (!td->o.bssplit_nr)
+			buflen = (unsigned int) (1 + (double) (td->o.max_bs[ddir] - 1) * r / (RAND_MAX + 1.0));
+		else {
+			long perc = 0;
+			unsigned int i;
+
+			for (i = 0; i < td->o.bssplit_nr; i++) {
+				struct bssplit *bsp = &td->o.bssplit[i];
+
+				buflen = bsp->bs;
+				perc += bsp->perc;
+				if (r <= ((LONG_MAX / 100L) * perc))
+					break;
+			}
+		}
 		if (!td->o.bs_unaligned)
 			buflen = (buflen + td->o.min_bs[ddir] - 1) & ~(td->o.min_bs[ddir] - 1);
 	}

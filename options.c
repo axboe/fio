@@ -28,6 +28,120 @@ static char *get_opt_postfix(const char *str)
 	return strdup(p);
 }
 
+static int bs_cmp(const void *p1, const void *p2)
+{
+	const struct bssplit *bsp1 = p1;
+	const struct bssplit *bsp2 = p2;
+
+	return bsp1->perc < bsp2->perc;
+}
+
+static int str_bssplit_cb(void *data, const char *input)
+{
+	struct thread_data *td = data;
+	char *fname, *str, *p;
+	unsigned int i, perc, perc_missing;
+	unsigned int max_bs, min_bs;
+	long long val;
+
+	p = str = strdup(input);
+
+	strip_blank_front(&str);
+	strip_blank_end(str);
+
+	td->o.bssplit_nr = 4;
+	td->o.bssplit = malloc(4 * sizeof(struct bssplit));
+
+	i = 0;
+	max_bs = 0;
+	min_bs = -1;
+	while ((fname = strsep(&str, ":")) != NULL) {
+		char *perc_str;
+
+		if (!strlen(fname))
+			break;
+
+		/*
+		 * grow struct buffer, if needed
+		 */
+		if (i == td->o.bssplit_nr) {
+			td->o.bssplit_nr <<= 1;
+			td->o.bssplit = realloc(td->o.bssplit, td->o.bssplit_nr * sizeof(struct bssplit));
+		}
+
+		perc_str = strstr(fname, "/");
+		if (perc_str) {
+			*perc_str = '\0';
+			perc_str++;
+			perc = atoi(perc_str);
+			if (perc > 100)
+				perc = 100;
+			else if (!perc)
+				perc = -1;
+		} else
+			perc = -1;
+
+		if (str_to_decimal(fname, &val, 1)) {
+			log_err("fio: bssplit conversion failed\n");
+			free(td->o.bssplit);
+			return 1;
+		}
+
+		if (val > max_bs)
+			max_bs = val;
+		if (val < min_bs)
+			min_bs = val;
+
+		td->o.bssplit[i].bs = val;
+		td->o.bssplit[i].perc = perc;
+		i++;
+	}
+
+	td->o.bssplit_nr = i;
+
+	/*
+	 * Now check if the percentages add up, and how much is missing
+	 */
+	perc = perc_missing = 0;
+	for (i = 0; i < td->o.bssplit_nr; i++) {
+		struct bssplit *bsp = &td->o.bssplit[i];
+
+		if (bsp->perc == (unsigned char) -1)
+			perc_missing++;
+		else
+			perc += bsp->perc;
+	}
+
+	if (perc > 100) {
+		log_err("fio: bssplit percentages add to more than 100%%\n");
+		free(td->o.bssplit);
+		return 1;
+	}
+	/*
+	 * If values didn't have a percentage set, divide the remains between
+	 * them.
+	 */
+	if (perc_missing) {
+		for (i = 0; i < td->o.bssplit_nr; i++) {
+			struct bssplit *bsp = &td->o.bssplit[i];
+
+			if (bsp->perc == (unsigned char) -1)
+				bsp->perc = (100 - perc) / perc_missing;
+		}
+	}
+
+	td->o.min_bs[DDIR_READ] = td->o.min_bs[DDIR_WRITE] = min_bs;
+	td->o.max_bs[DDIR_READ] = td->o.max_bs[DDIR_WRITE] = max_bs;
+
+	/*
+	 * now sort based on percentages, for ease of lookup
+	 */
+	qsort(td->o.bssplit, td->o.bssplit_nr, sizeof(struct bssplit), bs_cmp);
+
+	free(p);
+	return 0;
+}
+
 static int str_rw_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
@@ -458,6 +572,13 @@ static struct fio_option options[] = {
 		.minval = 1,
 		.help	= "Set block size range (in more detail than bs)",
 		.parent = "rw",
+	},
+	{
+		.name	= "bssplit",
+		.type	= FIO_OPT_STR,
+		.cb	= str_bssplit_cb,
+		.help	= "Set a specific mix of block sizes",
+		.parent	= "rw",
 	},
 	{
 		.name	= "bs_unaligned",
