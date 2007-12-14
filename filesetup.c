@@ -403,7 +403,7 @@ int setup_files(struct thread_data *td)
 			 * zero, set it to the real file size.
 			 */
 			f->io_size = td->o.size / td->o.nr_files;
-			if (!f->io_size) {
+			if (!f->io_size || f->io_size > f->real_file_size) {
 				if (f->file_offset > f->real_file_size)
 					goto err_offset;
 				f->io_size = f->real_file_size - f->file_offset;
@@ -484,7 +484,7 @@ err_offset:
 
 int init_random_map(struct thread_data *td)
 {
-	int num_maps, blocks;
+	unsigned long long blocks, num_maps;
 	struct fio_file *f;
 	unsigned int i;
 
@@ -492,8 +492,8 @@ int init_random_map(struct thread_data *td)
 		return 0;
 
 	for_each_file(td, f, i) {
-		blocks = (f->real_file_size + td->o.rw_min_bs - 1) / td->o.rw_min_bs;
-		num_maps = (blocks + BLOCKS_PER_MAP-1)/ BLOCKS_PER_MAP;
+		blocks = (f->real_file_size + td->o.rw_min_bs - 1) / (unsigned long long) td->o.rw_min_bs;
+		num_maps = (blocks + BLOCKS_PER_MAP-1)/ (unsigned long long) BLOCKS_PER_MAP;
 		f->file_map = malloc(num_maps * sizeof(long));
 		if (!f->file_map) {
 			log_err("fio: failed allocating random map. If running a large number of jobs, try the 'norandommap' option\n");
