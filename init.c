@@ -751,9 +751,10 @@ static int setup_thread_area(void)
 	return 0;
 }
 
-static void usage(void)
+static void usage(const char *name)
 {
 	printf("%s\n", fio_version_string);
+	printf("%s [options] [job options] <job file(s)>\n", name);
 	printf("\t--output\tWrite output to file\n");
 	printf("\t--timeout\tRuntime in seconds\n");
 	printf("\t--latency-log\tGenerate per-job latency logs\n");
@@ -795,7 +796,7 @@ static int parse_cmd_line(int argc, char *argv[])
 			terse_output = 1;
 			break;
 		case 'h':
-			usage();
+			usage(argv[0]);
 			exit(0);
 		case 'c':
 			exit(fio_show_option_help(optarg));
@@ -901,6 +902,7 @@ int parse_options(int argc, char *argv[])
 			return 0;
 
 		log_err("No jobs defined(s)\n");
+		usage(argv[0]);
 		return 1;
 	}
 
