@@ -403,7 +403,8 @@ int setup_files(struct thread_data *td)
 			 * zero, set it to the real file size.
 			 */
 			f->io_size = td->o.size / td->o.nr_files;
-			if (!f->io_size || f->io_size > f->real_file_size) {
+			if ((!f->io_size || f->io_size > f->real_file_size) &&
+			     f->real_file_size) {
 				if (f->file_offset > f->real_file_size)
 					goto err_offset;
 				f->io_size = f->real_file_size - f->file_offset;
