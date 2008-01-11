@@ -50,13 +50,13 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
+	if (!new_layout)
+		goto done;
+
 	if (ftruncate(f->fd, f->real_file_size) == -1) {
 		td_verror(td, errno, "ftruncate");
 		goto err;
 	}
-
-	if (!new_layout)
-		goto done;
 
 	if (posix_fallocate(f->fd, 0, f->real_file_size) < 0) {
 		td_verror(td, errno, "posix_fallocate");
