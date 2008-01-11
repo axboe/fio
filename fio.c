@@ -568,6 +568,10 @@ sync_done:
 		}
 	}
 
+	if (td->o.fill_device && td->error == ENOSPC) {
+		td->error = 0;
+		td->terminate = 1;
+	}
 	if (!td->error) {
 		struct fio_file *f;
 

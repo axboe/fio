@@ -393,6 +393,7 @@ struct thread_options {
 	unsigned int iodepth_batch;
 
 	unsigned long long size;
+	unsigned int fill_device;
 	unsigned long long file_size_low;
 	unsigned long long file_size_high;
 	unsigned long long start_offset;

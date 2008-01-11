@@ -293,6 +293,9 @@ static int fixup_options(struct thread_data *td)
 		o->time_based = 0;
 	}
 
+	if (o->fill_device && !o->size)
+		o->size = ULONG_LONG_MAX;
+
 	return 0;
 }
 

@@ -262,6 +262,10 @@ filesize=siint	Individual file sizes. May be a range, in which case fio
 		and limited to 'size' in total (if that is given). If not
 		given, each created file is the same size.
 
+fill_device=bool Sets size to something really large and waits for ENOSPC (no
+		space left on device) as the terminating condition. Only makes
+                sense with sequential write.
+
 blocksize=siint
 bs=siint	The block size used for the io units. Defaults to 4k. Values
 		can be given for both read and writes. If a single siint is

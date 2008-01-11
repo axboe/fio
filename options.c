@@ -535,6 +535,13 @@ static struct fio_option options[] = {
 		.help	= "Total size of device or files",
 	},
 	{
+		.name	= "fill_device",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(fill_device),
+		.help	= "Write until an ENOSPC error occurs",
+		.def	= "0",
+	},
+	{
 		.name	= "filesize",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(file_size_low),
