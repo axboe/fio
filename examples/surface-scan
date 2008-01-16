@@ -2,7 +2,7 @@
 ; then verifies written data
 [global]
 thread=1
-bs=4k
+bs=64k
 direct=1
 ioengine=sync
 verify=meta
