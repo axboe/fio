@@ -112,7 +112,6 @@ static inline unsigned int __hdr_size(int verify_type)
 	switch (verify_type) {
 	case VERIFY_NONE:
 	case VERIFY_NULL:
-	case VERIFY_PATTERN:
 		len = 0;
 		break;
 	case VERIFY_MD5:
@@ -406,6 +405,19 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			return EIO;
 		}
 
+		if (td->o.verify_pattern_bytes) {
+			ret = verify_io_u_pattern(td->o.verify_pattern,
+			                          td->o.verify_pattern_bytes,
+			                          p + hdr_size,
+			                          hdr_inc - hdr_size,
+			                          hdr_size % 4);
+			if (ret)
+				log_err("fio: verify failed at %llu/%u\n",
+					io_u->offset + hdr_num * hdr->len,
+					hdr->len);
+			continue;
+		}
+
 		switch (hdr->verify_type) {
 		case VERIFY_MD5:
 			ret = verify_io_u_md5(hdr, io_u, hdr_num);
@@ -430,17 +442,6 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			break;
 		case VERIFY_META:
 			ret = verify_io_u_meta(hdr, td, io_u, hdr_num);
-			break;
-		case VERIFY_PATTERN:
-			ret = verify_io_u_pattern(td->o.verify_pattern,
-			                          td->o.verify_pattern_bytes,
-			                          p + hdr_size,
-			                          hdr_inc - hdr_size,
-			                          hdr_size % 4);
-			if (ret)
-				log_err("fio: verify failed at %llu/%u\n",
-					io_u->offset + hdr_num * hdr->len,
-					hdr->len);
 			break;
 		default:
 			log_err("Bad verify type %u\n", hdr->verify_type);
@@ -579,8 +580,6 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 			break;
 		case VERIFY_META:
 			fill_meta(hdr, td, io_u, header_num);
-			break;
-		case VERIFY_PATTERN:
 			break;
 		default:
 			log_err("fio: bad verify type: %d\n", td->o.verify);

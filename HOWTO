@@ -629,15 +629,6 @@ verify=str	If writing to a file, fio can verify the file contents
 				(timestamp, block number etc.). The block
 				number is verified.
 
-			pattern	Fill the IO buffers with a specific pattern,
-				that we can use to verify. Depending on the
-				width of the pattern, fio will fill 1/2/3/4
-				bytes of the buffer at the time. The pattern
-				cannot be larger than a 32-bit quantity. The
-				given pattern is given as a postfix to this
-				option, ala: verify=pattern:0x5a. It accepts
-				both hex and dec values.
-
 			null	Only pretend to verify. Useful for testing
 				internals with ioengine=null, not for much
 				else.
@@ -662,6 +653,14 @@ verify_interval=siint	Write the verification header at a finer granularity
 			than the blocksize. It will be written for chunks the
 			size of header_interval. blocksize should divide this
 			evenly.
+
+verify_pattern=int	If set, fio will fill the io buffers with this
+		pattern. Fio defaults to filling with totally random
+		bytes, but sometimes it's interesting to fill with a known
+		pattern for io verification purposes. Depending on the
+		width of the pattern, fio will fill 1/2/3/4 bytes of the
+		buffer at the time. The verify_pattern cannot be larger than
+		a 32-bit quantity.
 
 verify_fatal=bool	Normally fio will keep checking the entire contents
 		before quitting on a block verification failure. If this
