@@ -133,36 +133,26 @@ static int fio_libaio_commit(struct thread_data *td)
 	struct libaio_data *ld = td->io_ops->data;
 	struct iocb **iocbs;
 	struct io_u **io_us;
-	int ret, iocbs_nr;
+	int ret;
 
 	if (!ld->iocbs_nr)
 		return 0;
 
-	iocbs_nr = ld->iocbs_nr;
 	io_us = ld->io_us;
 	iocbs = ld->iocbs;
 	do {
-		ret = io_submit(ld->aio_ctx, iocbs_nr, iocbs);
-		if (ret == iocbs_nr) {
+		ret = io_submit(ld->aio_ctx, ld->iocbs_nr, iocbs);
+		if (ret > 0) {
 			fio_libaio_queued(td, io_us, ret);
-			ret = 0;
-			break;
-		} else if (ret > 0) {
-			fio_libaio_queued(td, io_us, ret);
+			ld->iocbs_nr -= ret;
 			io_us += ret;
 			iocbs += ret;
-			iocbs_nr -= ret;
-			continue;
-		} else if (ret == -EAGAIN || !ret)
-			usleep(100);
-		else if (ret == -EINTR)
+			ret = 0;
+		} else if (!ret || ret == -EAGAIN || ret == -EINTR)
 			continue;
 		else
 			break;
-	} while (1);
-
-	if (!ret)
-		ld->iocbs_nr = 0;
+	} while (ld->iocbs_nr);
 
 	return ret;
 }
