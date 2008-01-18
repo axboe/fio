@@ -504,6 +504,8 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(iodepth_batch),
 		.help	= "Number of IO to submit in one go",
 		.parent	= "iodepth",
+		.minval	= 1,
+		.def	= "1",
 	},
 	{
 		.name	= "iodepth_low",
