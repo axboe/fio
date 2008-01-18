@@ -402,8 +402,9 @@ iodepth=int	This defines how many io units to keep in flight against
 		concurrency.
 
 iodepth_batch=int This defines how many pieces of IO to submit at once.
-		It defaults to the same as iodepth, but can be set lower
-		if one so desires.
+		It defaults to 1 which means that we submit each IO
+		as soon as it is available, but can be raised to submit
+		bigger batches of IO at the time.
 
 iodepth_low=int	The low water mark indicating when to start filling
 		the queue again. Defaults to the same as iodepth, meaning
