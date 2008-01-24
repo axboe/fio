@@ -403,13 +403,8 @@ int setup_files(struct thread_data *td)
 			 * zero, set it to the real file size.
 			 */
 			f->io_size = td->o.size / td->o.nr_files;
-			if ((!f->io_size || f->io_size > f->real_file_size) &&
-			     f->real_file_size) {
-				if (f->file_offset > f->real_file_size)
-					goto err_offset;
-				if (f->file_offset)
-					f->io_size = f->real_file_size - f->file_offset;
-			}
+			if (!f->io_size)
+				f->io_size = f->real_file_size;
 		} else if (f->real_file_size < td->o.file_size_low ||
 			   f->real_file_size > td->o.file_size_high) {
 			if (f->file_offset > td->o.file_size_low) 
@@ -422,9 +417,7 @@ int setup_files(struct thread_data *td)
 				f->io_size = td->o.file_size_low - f->file_offset;
 			else
 				f->io_size = get_rand_file_size(td) - f->file_offset;
-		} else if (f->file_offset > f->real_file_size)
-			goto err_offset;
-		else
+		} else
 			f->io_size = f->real_file_size - f->file_offset;
 
 		if (f->io_size == -1ULL)
