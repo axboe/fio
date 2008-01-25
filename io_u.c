@@ -118,7 +118,7 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		/*
 		 * calculate map offset and chec if it's free
 		 */
-		rb = *b + (f->file_offset / td->o.min_bs[ddir]);
+		rb = *b;
 		if (random_map_free(td, f, rb))
 			return 0;
 
