@@ -375,6 +375,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	 * If using a write iolog, store this entry.
 	 */
 out:
+	td->zone_bytes += io_u->buflen;
 	log_io_u(td, io_u);
 	return 0;
 }
@@ -765,7 +766,6 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 		td->io_blocks[idx]++;
 		td->io_bytes[idx] += bytes;
-		td->zone_bytes += bytes;
 		td->this_io_bytes[idx] += bytes;
 
 		io_u->file->last_completed_pos = io_u->endpos;
