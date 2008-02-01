@@ -571,12 +571,6 @@ sync_done:
 		}
 	}
 
-	/*
-	 * stop job if we failed doing any IO
-	 */
-	if ((td->this_io_bytes[0] + td->this_io_bytes[1]) == 0)
-		td->done = 1;
-
 	if (td->o.fill_device && td->error == ENOSPC) {
 		td->error = 0;
 		td->terminate = 1;
@@ -599,6 +593,12 @@ sync_done:
 		}
 	} else
 		cleanup_pending_aio(td);
+
+	/*
+	 * stop job if we failed doing any IO
+	 */
+	if ((td->this_io_bytes[0] + td->this_io_bytes[1]) == 0)
+		td->done = 1;
 }
 
 static void cleanup_io_u(struct thread_data *td)
@@ -777,7 +777,10 @@ static int clear_io_state(struct thread_data *td)
 
 	td->last_was_sync = 0;
 
-	if (td->o.time_based)
+	/*
+	 * reset file done count if we are to start over
+	 */
+	if (td->o.time_based || td->o.loops)
 		td->nr_done_files = 0;
 
 	for_each_file(td, f, i)

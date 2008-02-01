@@ -72,6 +72,18 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 		io_u->buflen = blocks * min_bs;
 }
 
+static inline unsigned long long last_block(struct thread_data *td,
+					    struct fio_file *f)
+{
+	unsigned long long max_blocks;
+
+	max_blocks = f->io_size / td->o.rw_min_bs;
+	if (!max_blocks)
+		return 0;
+
+	return max_blocks - 1;
+}
+
 /*
  * Return the next free block in the map.
  */
@@ -85,6 +97,8 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 	while ((*b) * td->o.rw_min_bs < f->real_file_size) {
 		if (f->file_map[i] != -1UL) {
 			*b += fio_ffz(f->file_map[i]);
+			if (*b > last_block(td, f))
+				break;
 			f->last_free_lookup = i;
 			return 0;
 		}
@@ -93,22 +107,20 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 		i++;
 	}
 
+	dprint(FD_IO, "failed finding a free block\n");
 	return 1;
 }
 
 static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
-				int ddir, unsigned long long *b)
+				unsigned long long *b)
 {
-	unsigned long long max_blocks = f->io_size / td->o.min_bs[ddir];
 	unsigned long long r, rb;
 	int loops = 5;
 
 	do {
 		r = os_random_long(&td->random_state);
-		if (!max_blocks)
-			*b = 0;
-		else
-			*b = ((max_blocks - 1) * r / (unsigned long long) (RAND_MAX+1.0));
+		*b = last_block(td, f);
+
 		/*
 		 * if we are not maintaining a random map, we are done.
 		 */
@@ -153,25 +165,27 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
-	const int ddir = io_u->ddir;
 	unsigned long long b;
 
 	if (td_random(td) && (td->o.ddir_nr && !--td->ddir_nr)) {
 		td->ddir_nr = td->o.ddir_nr;
 
-		if (get_next_rand_offset(td, f, ddir, &b))
+		if (get_next_rand_offset(td, f, &b))
 			return 1;
 	} else {
 		if (f->last_pos >= f->real_file_size) {
-			if (!td_random(td) || get_next_rand_offset(td, f, ddir, &b))
+			if (!td_random(td) || get_next_rand_offset(td, f, &b))
 				return 1;
 		} else
-			b = (f->last_pos - f->file_offset) / td->o.min_bs[ddir];
+			b = (f->last_pos - f->file_offset) / td->o.rw_min_bs;
 	}
 
-	io_u->offset = (b * td->o.min_bs[ddir]) + f->file_offset;
-	if (io_u->offset >= f->real_file_size)
+	io_u->offset = (b * td->o.rw_min_bs) + f->file_offset;
+	if (io_u->offset >= f->real_file_size) {
+		dprint(FD_IO, "get_next_offset: offset %llu >= size %llu\n",
+					io_u->offset, f->real_file_size);
 		return 1;
+	}
 
 	return 0;
 }
@@ -355,15 +369,21 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	 * No log, let the seq/rand engine retrieve the next buflen and
 	 * position.
 	 */
-	if (get_next_offset(td, io_u))
+	if (get_next_offset(td, io_u)) {
+		dprint(FD_IO, "io_u %p, failed getting offset\n", io_u);
 		return 1;
+	}
 
 	io_u->buflen = get_next_buflen(td, io_u);
-	if (!io_u->buflen)
+	if (!io_u->buflen) {
+		dprint(FD_IO, "io_u %p, failed getting buflen\n", io_u);
 		return 1;
+	}
 
-	if (io_u->offset + io_u->buflen > io_u->file->real_file_size)
+	if (io_u->offset + io_u->buflen > io_u->file->real_file_size) {
+		dprint(FD_IO, "io_u %p, offset too large\n", io_u);
 		return 1;
+	}
 
 	/*
 	 * mark entry before potentially trimming io_u
@@ -375,6 +395,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	 * If using a write iolog, store this entry.
 	 */
 out:
+	dprint_io_u(io_u, "fill_io_u");
 	td->zone_bytes += io_u->buflen;
 	log_io_u(td, io_u);
 	return 0;
@@ -524,8 +545,10 @@ static struct fio_file *get_next_file_rand(struct thread_data *td, int goodf,
 		if (f->flags & FIO_FILE_DONE)
 			continue;
 
-		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf))
+		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf)) {
+			dprint(FD_FILE, "get_next_file_rand: %p\n", f);
 			return f;
+		}
 	} while (1);
 }
 
@@ -556,6 +579,7 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 		f = NULL;
 	} while (td->next_file != old_next_file);
 
+	dprint(FD_FILE, "get_next_file_rr: %p\n", f);
 	return f;
 }
 
@@ -565,12 +589,14 @@ static struct fio_file *get_next_file(struct thread_data *td)
 
 	assert(td->o.nr_files <= td->files_index);
 
-	if (!td->nr_open_files || td->nr_done_files >= td->o.nr_files)
+	if (!td->nr_open_files || td->nr_done_files >= td->o.nr_files) {
+		dprint(FD_FILE, "get_next_file: nr_open=%d, nr_done=%d, nr_files=%d\n", td->nr_open_files, td->nr_done_files, td->o.nr_files);
 		return NULL;
+	}
 
 	f = td->file_service_file;
 	if (f && (f->flags & FIO_FILE_OPEN) && td->file_service_left--)
-		return f;
+		goto out;
 
 	if (td->o.file_service_type == FIO_FSERVICE_RR)
 		f = get_next_file_rr(td, FIO_FILE_OPEN, FIO_FILE_CLOSING);
@@ -579,6 +605,8 @@ static struct fio_file *get_next_file(struct thread_data *td)
 
 	td->file_service_file = f;
 	td->file_service_left = td->file_service_nr - 1;
+out:
+	dprint(FD_FILE, "get_next_file: %p\n", f);
 	return f;
 }
 
@@ -679,8 +707,10 @@ struct io_u *get_io_u(struct thread_data *td)
 	struct io_u *io_u;
 
 	io_u = __get_io_u(td);
-	if (!io_u)
+	if (!io_u) {
+		dprint(FD_IO, "__get_io_u failed\n");
 		return NULL;
+	}
 
 	/*
 	 * from a requeue, io_u already setup
@@ -694,15 +724,19 @@ struct io_u *get_io_u(struct thread_data *td)
 	if (td->o.read_iolog_file) {
 		if (read_iolog_get(td, io_u))
 			goto err_put;
-	} else if (set_io_u_file(td, io_u))
+	} else if (set_io_u_file(td, io_u)) {
+		dprint(FD_IO, "io_u %p, setting file failed\n", io_u);
 		goto err_put;
+	}
 	
 	f = io_u->file;
 	assert(f->flags & FIO_FILE_OPEN);
 
 	if (io_u->ddir != DDIR_SYNC) {
-		if (!io_u->buflen)
+		if (!io_u->buflen) {
+			dprint(FD_IO, "get_io_u: zero buflen on %p\n", io_u);
 			goto err_put;
+		}
 
 		f->last_pos = io_u->offset + io_u->buflen;
 
@@ -723,6 +757,7 @@ out:
 		return io_u;
 	}
 err_put:
+	dprint(FD_IO, "get_io_u failed\n");
 	put_io_u(td, io_u);
 	return NULL;
 }
@@ -748,6 +783,8 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 			 struct io_completion_data *icd)
 {
 	unsigned long usec;
+
+	dprint_io_u(io_u, "io complete");
 
 	assert(io_u->flags & IO_U_F_FLIGHT);
 	io_u->flags &= ~IO_U_F_FLIGHT;

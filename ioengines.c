@@ -163,24 +163,17 @@ void close_ioengine(struct thread_data *td)
 	td->io_ops = NULL;
 }
 
-static void dprint_io_u(struct io_u *io_u, const char *p)
-{
-	struct fio_file *f = io_u->file;
-
-	dprint(FD_IO, "%s: off=%llu/len=%lu/ddir=%d", p, io_u->offset,
-					io_u->buflen, io_u->ddir);
-	if (f)
-		dprint(FD_IO, "/%s", f->file_name);
-	dprint(FD_IO, "\n");
-}
-
 int td_io_prep(struct thread_data *td, struct io_u *io_u)
 {
 	dprint_io_u(io_u, "prep");
 	fio_ro_check(td, io_u);
 
-	if (td->io_ops->prep)
-		return td->io_ops->prep(td, io_u);
+	if (td->io_ops->prep) {
+		int ret = td->io_ops->prep(td, io_u);
+
+		dprint(FD_IO, "->prep(%p)=%d\n", io_u, ret);
+		return ret;
+	}
 
 	return 0;
 }

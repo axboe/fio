@@ -984,7 +984,18 @@ extern unsigned long fio_debug;
 	do {					\
 		if (((type) & fio_debug) == 0)	\
 			break;			\
-		printf(str, ##args);		\
+		log_info(str, ##args);		\
 	} while (0)
+
+static inline void dprint_io_u(struct io_u *io_u, const char *p)
+{
+	struct fio_file *f = io_u->file;
+
+	dprint(FD_IO, "%s: io_u %p: off=%llu/len=%lu/ddir=%d", p, io_u,
+					io_u->offset, io_u->buflen, io_u->ddir);
+	if (f)
+		dprint(FD_IO, "/%s", f->file_name);
+	dprint(FD_IO, "\n");
+}
 
 #endif
