@@ -779,6 +779,7 @@ static void usage(const char *name)
 	printf("\t          \tMay be \"always\", \"never\" or \"auto\"\n");
 }
 
+#ifdef FIO_INC_DEBUG
 struct debug_level debug_levels[] = {
 	{ .name = "process",	.shift = FD_PROCESS, },
 	{ .name = "file",	.shift = FD_FILE, },
@@ -828,6 +829,12 @@ static void set_debug(const char *string)
 			log_err("fio: debug mask %s not found\n", opt);
 	}
 }
+#else
+static void set_debug(const char *string)
+{
+	log_err("fio: debug tracing not included in build\n");
+}
+#endif
 
 static int parse_cmd_line(int argc, char *argv[])
 {
