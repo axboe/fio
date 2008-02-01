@@ -60,6 +60,8 @@ struct io_log *agg_io_log[2];
 
 static inline void td_set_runstate(struct thread_data *td, int runstate)
 {
+	dprint(FD_PROCESS, "%d: runstate %d -> %d\n", td->pid, td->runstate,
+							runstate);
 	td->runstate = runstate;
 }
 
@@ -70,6 +72,7 @@ static void terminate_threads(int group_id)
 
 	for_each_td(td, i) {
 		if (group_id == TERMINATE_ALL || groupid == td->groupid) {
+			dprint(FD_PROCESS, "setting terminate on %d\n",td->pid);
 			/*
 			 * if the thread is running, just let it exit
 			 */
@@ -806,6 +809,8 @@ static void *thread_main(void *data)
 
 	td->pid = getpid();
 
+	dprint(FD_PROCESS, "jobs pid=%d started\n", td->pid);
+
 	INIT_LIST_HEAD(&td->io_u_freelist);
 	INIT_LIST_HEAD(&td->io_u_busylist);
 	INIT_LIST_HEAD(&td->io_u_requeues);
@@ -1068,8 +1073,11 @@ reaped:
 		if (td->o.use_thread) {
 			long ret;
 
-			if (pthread_join(td->thread, (void *) &ret))
+			dprint(FD_PROCESS, "joining tread %d\n", td->pid);
+			if (pthread_join(td->thread, (void *) &ret)) {
+				dprint(FD_PROCESS, "join failed %ld\n", ret);
 				perror("pthread_join");
+			}
 		}
 
 		(*nr_running)--;
@@ -1184,12 +1192,14 @@ static void run_threads(void)
 			nr_started++;
 
 			if (td->o.use_thread) {
+				dprint(FD_PROCESS, "will pthread_create\n");
 				if (pthread_create(&td->thread, NULL, thread_main, td)) {
 					perror("thread_create");
 					nr_started--;
 					break;
 				}
 			} else {
+				dprint(FD_PROCESS, "will fork\n");
 				if (!fork()) {
 					int ret = fork_main(shm_id, i);
 

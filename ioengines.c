@@ -56,12 +56,14 @@ static int check_engine_ops(struct ioengine_ops *ops)
 
 void unregister_ioengine(struct ioengine_ops *ops)
 {
+	dprint(FD_IO, "ioengine %s unregistered\n", ops->name);
 	list_del(&ops->list);
 	INIT_LIST_HEAD(&ops->list);
 }
 
 void register_ioengine(struct ioengine_ops *ops)
 {
+	dprint(FD_IO, "ioengine %s registered\n", ops->name);
 	INIT_LIST_HEAD(&ops->list);
 	list_add_tail(&ops->list, &engine_list);
 }
@@ -85,6 +87,8 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 {
 	struct ioengine_ops *ops;
 	void *dlhandle;
+
+	dprint(FD_IO, "dload engine %s\n", engine_lib);
 
 	dlerror();
 	dlhandle = dlopen(engine_lib, RTLD_LAZY);
@@ -112,6 +116,8 @@ struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
 {
 	struct ioengine_ops *ops, *ret;
 	char engine[16];
+
+	dprint(FD_IO, "load ioengine %s\n", name);
 
 	strncpy(engine, name, sizeof(engine) - 1);
 
@@ -145,6 +151,8 @@ struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
 
 void close_ioengine(struct thread_data *td)
 {
+	dprint(FD_IO, "close ioengine %s\n", td->io_ops->name);
+
 	if (td->io_ops->cleanup)
 		td->io_ops->cleanup(td);
 
@@ -155,8 +163,20 @@ void close_ioengine(struct thread_data *td)
 	td->io_ops = NULL;
 }
 
+static void dprint_io_u(struct io_u *io_u, const char *p)
+{
+	struct fio_file *f = io_u->file;
+
+	dprint(FD_IO, "%s: off=%llu/len=%lu/ddir=%d", p, io_u->offset,
+					io_u->buflen, io_u->ddir);
+	if (f)
+		dprint(FD_IO, "/%s", f->file_name);
+	dprint(FD_IO, "\n");
+}
+
 int td_io_prep(struct thread_data *td, struct io_u *io_u)
 {
+	dprint_io_u(io_u, "prep");
 	fio_ro_check(td, io_u);
 
 	if (td->io_ops->prep)
@@ -168,22 +188,27 @@ int td_io_prep(struct thread_data *td, struct io_u *io_u)
 int td_io_getevents(struct thread_data *td, unsigned int min, unsigned int max,
 		    struct timespec *t)
 {
+	int r = 0;
+
 	if (min > 0 && td->io_ops->commit) {
-		int r = td->io_ops->commit(td);
-
+		r = td->io_ops->commit(td);
 		if (r < 0)
-			return r;
+			goto out;
 	}
-	if (td->io_ops->getevents)
-		return td->io_ops->getevents(td, min, max, t);
 
-	return 0;
+	r = 0;
+	if (td->io_ops->getevents)
+		r = td->io_ops->getevents(td, min, max, t);
+out:
+	dprint(FD_IO, "getevents: %d\n", r);
+	return r;
 }
 
 int td_io_queue(struct thread_data *td, struct io_u *io_u)
 {
 	int ret;
 
+	dprint_io_u(io_u, "queue");
 	fio_ro_check(td, io_u);
 
 	assert((io_u->flags & IO_U_F_FLIGHT) == 0);
@@ -253,6 +278,8 @@ int td_io_init(struct thread_data *td)
 
 int td_io_commit(struct thread_data *td)
 {
+	dprint(FD_IO, "calling ->commit(), depth %d\n", td->cur_depth);
+
 	if (!td->cur_depth)
 		return 0;
 

@@ -62,6 +62,7 @@ Command line
 ------------
 
 $ fio
+        --debug         Enable some debugging options (see below)
         --output        Write output to file
         --runtime       Runtime in seconds
         --latency-log   Generate per-job latency logs
@@ -86,6 +87,18 @@ turning on a write setting when that is not desired. Fio will only write
 if rw=write/randwrite/rw/randrw is given, but this extra safety net can
 be used as an extra precaution. It will also enable a write check in the
 io engine core to prevent an accidental write due to a fio bug.
+
+The debug switch allows adding options that trigger certain logging
+options in fio. Currently the options are:
+
+	process		Dump info related to processes
+	file		Dump info related to file actions
+	io		Dump info related to IO queuing
+	mem		Dump info related to memory allocations
+
+You can specify as many as you want, eg --debug=file,mem will enable
+file and memory debugging. Specifying --debug=help or --debug=? will
+dump the current modifier list.
 
 
 Job file

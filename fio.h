@@ -972,4 +972,19 @@ static inline void clear_error(struct thread_data *td)
 	td->verror[0] = '\0';
 }
 
+enum {
+	FD_PROCESS	= 1 << 0,
+	FD_FILE		= 1 << 1,
+	FD_IO		= 1 << 2,
+	FD_MEM		= 1 << 3,
+};
+
+extern unsigned long fio_debug;
+#define dprint(type, str, args...)		\
+	do {					\
+		if (((type) & fio_debug) == 0)	\
+			break;			\
+		printf(str, ##args);		\
+	} while (0)
+
 #endif

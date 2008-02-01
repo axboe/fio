@@ -12,6 +12,7 @@ static void *pinned_mem;
 void fio_unpin_memory(void)
 {
 	if (pinned_mem) {
+		dprint(FD_MEM, "unpinning %llu bytes\n", mlock_size);
 		if (munlock(pinned_mem, mlock_size) < 0)
 			perror("munlock");
 		munmap(pinned_mem, mlock_size);
@@ -25,6 +26,8 @@ int fio_pin_memory(void)
 
 	if (!mlock_size)
 		return 0;
+
+	dprint(FD_MEM, "pinning %llu bytes\n", mlock_size);
 
 	/*
 	 * Don't allow mlock of more than real_mem-128MB
@@ -61,6 +64,7 @@ static int alloc_mem_shm(struct thread_data *td)
 		flags |= SHM_HUGETLB;
 
 	td->shm_id = shmget(IPC_PRIVATE, td->orig_buffer_size, flags);
+	dprint(FD_MEM, "shmget %zu, %d\n", td->orig_buffer_size, td->shm_id);
 	if (td->shm_id < 0) {
 		td_verror(td, errno, "shmget");
 		if (geteuid() != 0 && errno == ENOMEM)
@@ -78,6 +82,7 @@ static int alloc_mem_shm(struct thread_data *td)
 	}
 
 	td->orig_buffer = shmat(td->shm_id, NULL, 0);
+	dprint(FD_MEM, "shmat %d, %p\n", td->shm_id, td->orig_buffer);
 	if (td->orig_buffer == (void *) -1) {
 		td_verror(td, errno, "shmat");
 		td->orig_buffer = NULL;
@@ -110,6 +115,8 @@ static int alloc_mem_mmap(struct thread_data *td)
 		flags |= OS_MAP_ANON;
 
 	td->orig_buffer = mmap(NULL, td->orig_buffer_size, PROT_READ | PROT_WRITE, flags, td->mmapfd, 0);
+	dprint(FD_MEM, "mmap %zu/%d %p\n", td->orig_buffer_size, td->mmapfd,
+							td->orig_buffer);
 	if (td->orig_buffer == MAP_FAILED) {
 		td_verror(td, errno, "mmap");
 		td->orig_buffer = NULL;
@@ -132,6 +139,7 @@ static int alloc_mem_malloc(struct thread_data *td)
 		bsize += page_mask;
 		
 	td->orig_buffer = malloc(bsize);
+	dprint(FD_MEM, "malloc %u %p\n", bsize, td->orig_buffer);
 	if (td->orig_buffer)
 		return 0;
 
@@ -167,15 +175,19 @@ int allocate_io_mem(struct thread_data *td)
 
 void free_io_mem(struct thread_data *td)
 {
-	if (td->o.mem_type == MEM_MALLOC)
+	if (td->o.mem_type == MEM_MALLOC) {
+		dprint(FD_MEM, "free mem %p\n", td->orig_buffer);
 		free(td->orig_buffer);
-	else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE) {
+	} else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE) {
 		struct shmid_ds sbuf;
 
+		dprint(FD_MEM, "shmdt/ctl %d %p\n", td->shm_id,td->orig_buffer);
 		shmdt(td->orig_buffer);
 		shmctl(td->shm_id, IPC_RMID, &sbuf);
 	} else if (td->o.mem_type == MEM_MMAP ||
 		   td->o.mem_type == MEM_MMAPHUGE) {
+		dprint(FD_MEM, "munmap %zu %p\n", td->orig_buffer_size,
+							td->orig_buffer);
 		munmap(td->orig_buffer, td->orig_buffer_size);
 		if (td->mmapfile) {
 			close(td->mmapfd);

@@ -43,6 +43,8 @@ static int write_lat_log = 0;
 
 static int prev_group_jobs;
 
+unsigned long fio_debug = 0;
+
 /*
  * Command line options. These will contain the above, plus a few
  * extra that only pertain to fio itself and not jobs.
@@ -102,6 +104,11 @@ static struct option long_options[FIO_NR_OPTIONS] = {
 		.name		= "eta",
 		.has_arg	= required_argument,
 		.val		= 'e',
+	},
+	{
+		.name		= "debug",
+		.has_arg	= required_argument,
+		.val		= 'd',
 	},
 	{
 		.name		= NULL,
@@ -758,6 +765,7 @@ static void usage(const char *name)
 {
 	printf("%s\n", fio_version_string);
 	printf("%s [options] [job options] <job file(s)>\n", name);
+	printf("\t--debug=options\tEnable debug logging\n");
 	printf("\t--output\tWrite output to file\n");
 	printf("\t--timeout\tRuntime in seconds\n");
 	printf("\t--latency-log\tGenerate per-job latency logs\n");
@@ -769,6 +777,56 @@ static void usage(const char *name)
 	printf("\t--showcmd\tTurn a job file into command line options\n");
 	printf("\t--eta=when\tWhen ETA estimate should be printed\n");
 	printf("\t          \tMay be \"always\", \"never\" or \"auto\"\n");
+}
+
+struct debug_level {
+	const char *name;
+	unsigned long mask;
+};
+
+struct debug_level debug_levels[] = {
+	{ .name = "process", .mask = FD_PROCESS, },
+	{ .name = "file", .mask = FD_PROCESS, },
+	{ .name = "io", .mask = FD_IO, },
+	{ .name = "mem", .mask = FD_MEM, },
+	{ },
+};
+
+static void set_debug(const char *string)
+{
+	struct debug_level *dl;
+	char *p = (char *) string;
+	char *opt;
+	int i;
+
+	if (!strcmp(string, "?") || !strcmp(string, "help")) {
+		int i;
+
+		log_info("fio: dumping debug options:");
+		for (i = 0; debug_levels[i].name; i++) {
+			dl = &debug_levels[i];
+			log_info("%s,", dl->name);
+		}
+		log_info("\n");
+		return;
+	}
+
+	while ((opt = strsep(&p, ",")) != NULL) {
+		int found = 0;
+
+		for (i = 0; debug_levels[i].name; i++) {
+			dl = &debug_levels[i];
+			if (!strncmp(opt, dl->name, strlen(opt))) {
+				log_info("fio: set debug option %s\n", opt);
+				found = 1;
+				fio_debug |= dl->mask;
+				break;
+			}
+		}
+
+		if (!found)
+			log_err("fio: debug mask %s not found\n", opt);
+	}
 }
 
 static int parse_cmd_line(int argc, char *argv[])
@@ -817,6 +875,9 @@ static int parse_cmd_line(int argc, char *argv[])
 				eta_print = FIO_ETA_ALWAYS;
 			else if (!strcmp("never", optarg))
 				eta_print = FIO_ETA_NEVER;
+			break;
+		case 'd':
+			set_debug(optarg);
 			break;
 		case FIO_GETOPT_JOB: {
 			const char *opt = long_options[lidx].name;

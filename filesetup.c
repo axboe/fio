@@ -44,6 +44,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	if (new_layout)
 		flags |= O_TRUNC;
 
+	dprint(FD_FILE, "open file %s, flags %x\n", f->file_name, flags);
 	f->fd = open(f->file_name, flags, 0644);
 	if (f->fd < 0) {
 		td_verror(td, errno, "open");
@@ -53,11 +54,15 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	if (!new_layout)
 		goto done;
 
+	dprint(FD_FILE, "truncate file %s, size %llu\n", f->file_name,
+							f->real_file_size);
 	if (ftruncate(f->fd, f->real_file_size) == -1) {
 		td_verror(td, errno, "ftruncate");
 		goto err;
 	}
 
+	dprint(FD_FILE, "fallocate file %s, size %llu\n", f->file_name,
+							f->real_file_size);
 	if (posix_fallocate(f->fd, 0, f->real_file_size) < 0) {
 		td_verror(td, errno, "posix_fallocate");
 		goto err;
@@ -172,6 +177,8 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 {
 	int ret = 0;
 
+	dprint(FD_IO, "invalidate cache (%d)\n", td->o.odirect);
+
 	if (td->o.odirect)
 		return 0;
 
@@ -204,6 +211,7 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 
 void generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 {
+	dprint(FD_FILE, "fd close %s\n", f->file_name);
 	close(f->fd);
 	f->fd = -1;
 }
@@ -212,6 +220,8 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 {
 	int is_std = 0;
 	int flags = 0;
+
+	dprint(FD_FILE, "fd open %s\n", f->file_name);
 
 	if (!strcmp(f->file_name, "-")) {
 		if (td_rw(td)) {
@@ -288,6 +298,8 @@ int open_files(struct thread_data *td)
 	unsigned int i;
 	int err = 0;
 
+	dprint(FD_FILE, "open files\n");
+
 	for_each_file(td, f, i) {
 		err = td_io_open_file(td, f);
 		if (err) {
@@ -350,6 +362,8 @@ int setup_files(struct thread_data *td)
 	struct fio_file *f;
 	unsigned int i;
 	int err = 0, need_extend;
+
+	dprint(FD_FILE, "setup files\n");
 
 	/*
 	 * if ioengine defines a setup() method, it's responsible for
@@ -506,6 +520,8 @@ void close_files(struct thread_data *td)
 	struct fio_file *f;
 	unsigned int i;
 
+	dprint(FD_FILE, "close files\n");
+
 	for_each_file(td, f, i) {
 		if (td->o.unlink && f->filetype == FIO_TYPE_FILE)
 			unlink(f->file_name);
@@ -553,6 +569,8 @@ int add_file(struct thread_data *td, const char *fname)
 	struct fio_file *f;
 	int len = 0;
 
+	dprint(FD_FILE, "add file %s\n", fname);
+
 	td->files = realloc(td->files, (cur_files + 1) * sizeof(*f));
 
 	f = &td->files[cur_files];
@@ -582,12 +600,15 @@ int add_file(struct thread_data *td, const char *fname)
 
 void get_file(struct fio_file *f)
 {
+	dprint(FD_FILE, "get file %s/%d\n", f->file_name, f->references);
 	assert(f->flags & FIO_FILE_OPEN);
 	f->references++;
 }
 
 void put_file(struct thread_data *td, struct fio_file *f)
 {
+	dprint(FD_FILE, "get put %s/%d\n", f->file_name, f->references);
+
 	if (!(f->flags & FIO_FILE_OPEN))
 		return;
 
