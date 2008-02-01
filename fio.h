@@ -982,6 +982,7 @@ enum {
 	FD_DEBUG_MAX,
 };
 
+#ifdef FIO_INC_DEBUG
 struct debug_level {
 	const char *name;
 	unsigned long shift;
@@ -989,6 +990,7 @@ struct debug_level {
 extern struct debug_level debug_levels[];
 
 extern unsigned long fio_debug;
+
 #define dprint(type, str, args...)				\
 	do {							\
 		assert(type < FD_DEBUG_MAX);			\
@@ -1011,5 +1013,9 @@ static inline void dprint_io_u(struct io_u *io_u, const char *p)
 		log_info("\n");
 	}
 }
+#else
+#define dprint(type, str, args...)
+#define dprint_io_u(io_u, p)
+#endif
 
 #endif
