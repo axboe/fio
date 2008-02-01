@@ -973,18 +973,29 @@ static inline void clear_error(struct thread_data *td)
 }
 
 enum {
-	FD_PROCESS	= 1 << 0,
-	FD_FILE		= 1 << 1,
-	FD_IO		= 1 << 2,
-	FD_MEM		= 1 << 3,
+	FD_PROCESS	= 0,
+	FD_FILE,
+	FD_IO,
+	FD_MEM,
+	FD_BLKTRACE,
+	FD_VERIFY,
+	FD_DEBUG_MAX,
 };
 
+struct debug_level {
+	const char *name;
+	unsigned long shift;
+};
+extern struct debug_level debug_levels[];
+
 extern unsigned long fio_debug;
-#define dprint(type, str, args...)		\
-	do {					\
-		if (((type) & fio_debug) == 0)	\
-			break;			\
-		log_info(str, ##args);		\
+#define dprint(type, str, args...)				\
+	do {							\
+		assert(type < FD_DEBUG_MAX);			\
+		if ((((1 << type)) & fio_debug) == 0)		\
+			break;					\
+		log_info("%-8s ", debug_levels[(type)].name);	\
+		log_info(str, ##args);				\
 	} while (0)
 
 static inline void dprint_io_u(struct io_u *io_u, const char *p)

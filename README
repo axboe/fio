@@ -95,10 +95,13 @@ options in fio. Currently the options are:
 	file		Dump info related to file actions
 	io		Dump info related to IO queuing
 	mem		Dump info related to memory allocations
+	blktrace	Dump info related to blktrace setup
+	verify		Dump info related to IO verification
+	all		Enable all debug options
+	? or help	Show available debug options.
 
 You can specify as many as you want, eg --debug=file,mem will enable
-file and memory debugging. Specifying --debug=help or --debug=? will
-dump the current modifier list.
+file and memory debugging.
 
 
 Job file

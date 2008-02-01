@@ -779,16 +779,13 @@ static void usage(const char *name)
 	printf("\t          \tMay be \"always\", \"never\" or \"auto\"\n");
 }
 
-struct debug_level {
-	const char *name;
-	unsigned long mask;
-};
-
 struct debug_level debug_levels[] = {
-	{ .name = "process", .mask = FD_PROCESS, },
-	{ .name = "file", .mask = FD_FILE, },
-	{ .name = "io", .mask = FD_IO, },
-	{ .name = "mem", .mask = FD_MEM, },
+	{ .name = "process",	.shift = FD_PROCESS, },
+	{ .name = "file",	.shift = FD_FILE, },
+	{ .name = "io",		.shift = FD_IO, },
+	{ .name = "mem",	.shift = FD_MEM, },
+	{ .name = "blktrace",	.shift = FD_BLKTRACE },
+	{ .name = "verify",	.shift = FD_VERIFY },
 	{ },
 };
 
@@ -807,7 +804,10 @@ static void set_debug(const char *string)
 			dl = &debug_levels[i];
 			log_info("%s,", dl->name);
 		}
-		log_info("\n");
+		log_info("all\n");
+		return;
+	} else if (!strcmp(string, "all")) {
+		fio_debug = ~0UL;
 		return;
 	}
 
@@ -819,7 +819,7 @@ static void set_debug(const char *string)
 			if (!strncmp(opt, dl->name, strlen(opt))) {
 				log_info("fio: set debug option %s\n", opt);
 				found = 1;
-				fio_debug |= dl->mask;
+				fio_debug |= (1UL << dl->shift);
 				break;
 			}
 		}
@@ -932,7 +932,6 @@ static int parse_cmd_line(int argc, char *argv[])
 
 	return ini_idx;
 }
-
 
 int parse_options(int argc, char *argv[])
 {

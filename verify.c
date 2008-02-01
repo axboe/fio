@@ -43,9 +43,11 @@ static void fill_pattern(struct thread_data *td, void *p, unsigned int len)
 {
 	switch (td->o.verify_pattern_bytes) {
 	case 0:
+		dprint(FD_VERIFY, "fill random bytes len=%u\n", len);
 		fill_random_bytes(td, p, len);
 		break;
 	case 1:
+		dprint(FD_VERIFY, "fill verify pattern b=0 len=%u\n", len);
 		memset(p, td->o.verify_pattern, len);
 		break;
 	case 2:
@@ -55,6 +57,9 @@ static void fill_pattern(struct thread_data *td, void *p, unsigned int len)
 		unsigned int i = 0;
 		unsigned char c1, c2, c3, c4;
 		unsigned char *b = p;
+
+		dprint(FD_VERIFY, "fill verify pattern b=%d len=%u\n",
+					td->o.verify_pattern_bytes, len);
 
 		c1 = pattern & 0xff;
 		pattern >>= 8;
@@ -173,6 +178,8 @@ static int verify_io_u_meta(struct verify_header *hdr, struct thread_data *td,
 {
 	struct vhdr_meta *vh = hdr_priv(hdr);
 
+	dprint(FD_VERIFY, "meta verify io_u %p, len %u\n", io_u, hdr->len);
+
 	if (vh->offset != io_u->offset + header_num * td->o.verify_interval) {
 		log_err("meta: verify failed at %llu/%u\n",
 		              io_u->offset + header_num * hdr->len,
@@ -192,6 +199,8 @@ static int verify_io_u_sha512(struct verify_header *hdr, struct io_u *io_u,
 	struct sha512_ctx sha512_ctx = {
 		.buf = sha512,
 	};
+
+	dprint(FD_VERIFY, "sha512 verify io_u %p, len %u\n", io_u, hdr->len);
 
 	sha512_init(&sha512_ctx);
 	sha512_update(&sha512_ctx, p, hdr->len - hdr_size(hdr));
@@ -218,6 +227,8 @@ static int verify_io_u_sha256(struct verify_header *hdr, struct io_u *io_u,
 		.buf = sha256,
 	};
 
+	dprint(FD_VERIFY, "sha256 verify io_u %p, len %u\n", io_u, hdr->len);
+
 	sha256_init(&sha256_ctx);
 	sha256_update(&sha256_ctx, p, hdr->len - hdr_size(hdr));
 
@@ -240,6 +251,8 @@ static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
 	struct vhdr_crc7 *vh = hdr_priv(hdr);
 	unsigned char c;
 
+	dprint(FD_VERIFY, "crc7 verify io_u %p, len %u\n", io_u, hdr->len);
+
 	c = crc7(p, hdr->len - hdr_size(hdr));
 
 	if (c != vh->crc7) {
@@ -259,6 +272,8 @@ static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u,
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	struct vhdr_crc16 *vh = hdr_priv(hdr);
 	unsigned short c;
+
+	dprint(FD_VERIFY, "crc16 verify io_u %p, len %u\n", io_u, hdr->len);
 
 	c = crc16(p, hdr->len - hdr_size(hdr));
 
@@ -280,6 +295,8 @@ static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u,
 	struct vhdr_crc64 *vh = hdr_priv(hdr);
 	unsigned long long c;
 
+	dprint(FD_VERIFY, "crc64 verify io_u %p, len %u\n", io_u, hdr->len);
+
 	c = crc64(p, hdr->len - hdr_size(hdr));
 
 	if (c != vh->crc64) {
@@ -299,6 +316,8 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u,
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	struct vhdr_crc32 *vh = hdr_priv(hdr);
 	uint32_t c;
+
+	dprint(FD_VERIFY, "crc32 verify io_u %p, len %u\n", io_u, hdr->len);
 
 	c = crc32(p, hdr->len - hdr_size(hdr));
 
@@ -322,6 +341,8 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
 	struct md5_ctx md5_ctx = {
 		.hash = hash,
 	};
+
+	dprint(FD_VERIFY, "md5 verify io_u %p, len %u\n", io_u, hdr->len);
 
 	md5_init(&md5_ctx);
 	md5_update(&md5_ctx, p, hdr->len - hdr_size(hdr));
@@ -406,6 +427,8 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		}
 
 		if (td->o.verify_pattern_bytes) {
+			dprint(FD_VERIFY, "pattern verify io_u %p, len %u\n",
+								io_u, hdr->len);
 			ret = verify_io_u_pattern(td->o.verify_pattern,
 			                          td->o.verify_pattern_bytes,
 			                          p + hdr_size,
@@ -558,27 +581,43 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 		data = p + hdr_size(hdr);
 		switch (td->o.verify) {
 		case VERIFY_MD5:
+			dprint(FD_VERIFY, "fill md5 io_u %p, len %u\n",
+							io_u, hdr->len);
 			fill_md5(hdr, data, data_len);
 			break;
 		case VERIFY_CRC64:
+			dprint(FD_VERIFY, "fill crc64 io_u %p, len %u\n",
+							io_u, hdr->len);
 			fill_crc64(hdr, data, data_len);
 			break;
 		case VERIFY_CRC32:
+			dprint(FD_VERIFY, "fill crc32 io_u %p, len %u\n",
+							io_u, hdr->len);
 			fill_crc32(hdr, data, data_len);
 			break;
 		case VERIFY_CRC16:
+			dprint(FD_VERIFY, "fill crc16 io_u %p, len %u\n",
+							io_u, hdr->len);
 			fill_crc16(hdr, data, data_len);
 			break;
 		case VERIFY_CRC7:
+			dprint(FD_VERIFY, "fill crc7 io_u %p, len %u\n",
+							io_u, hdr->len);
 			fill_crc7(hdr, data, data_len);
 			break;
 		case VERIFY_SHA256:
+			dprint(FD_VERIFY, "fill sha256 io_u %p, len %u\n",
+							io_u, hdr->len);
 			fill_sha256(hdr, data, data_len);
 			break;
 		case VERIFY_SHA512:
+			dprint(FD_VERIFY, "fill sha512 io_u %p, len %u\n",
+							io_u, hdr->len);
 			fill_sha512(hdr, data, data_len);
 			break;
 		case VERIFY_META:
+			dprint(FD_VERIFY, "fill meta io_u %p, len %u\n",
+							io_u, hdr->len);
 			fill_meta(hdr, td, io_u, header_num);
 			break;
 		default:
@@ -619,8 +658,11 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		if ((io_u->file->flags & FIO_FILE_OPEN) == 0) {
 			int r = td_io_open_file(td, io_u->file);
 
-			if (r)
+			if (r) {
+				dprint(FD_VERIFY, "failed file %s open\n",
+						io_u->file->file_name);
 				return 1;
+			}
 		}
 
 		get_file(ipo->file);
@@ -629,8 +671,10 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		io_u->xfer_buf = io_u->buf;
 		io_u->xfer_buflen = io_u->buflen;
 		free(ipo);
+		dprint(FD_VERIFY, "get_next_verify: ret io_u %p\n", io_u);
 		return 0;
 	}
 
+	dprint(FD_VERIFY, "get_next_verify: empty\n");
 	return 1;
 }

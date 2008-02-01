@@ -34,6 +34,7 @@ static int refill_fifo(struct thread_data *td, struct fifo *fifo, int fd)
 	if (ret > 0)
 		ret = fifo_put(fifo, buf, ret);
 
+	dprint(FD_BLKTRACE, "refill: filled %d bytes\n", ret);
 	return ret;
 }
 
@@ -62,6 +63,7 @@ static int discard_pdu(struct thread_data *td, struct fifo *fifo, int fd,
 	if (t->pdu_len == 0)
 		return 0;
 
+	dprint(FD_BLKTRACE, "discard pdu len %u\n", t->pdu_len);
 	return trace_fifo_get(td, fifo, fd, NULL, t->pdu_len);
 }
 
@@ -130,6 +132,7 @@ static int lookup_device(char *path, unsigned int maj, unsigned int min)
 			continue;
 
 		if (maj == major(st.st_rdev) && min == minor(st.st_rdev)) {
+			dprint(FD_BLKTRACE, "device lookup: %d/%d\n", maj,min);
 			strcpy(path, full_path);
 			found = 1;
 			break;
@@ -168,8 +171,10 @@ static void trace_add_file(struct thread_data *td, __u32 device)
 			return;
 
 	strcpy(dev, "/dev");
-	if (lookup_device(dev, maj, min))
+	if (lookup_device(dev, maj, min)) {
+		dprint(FD_BLKTRACE, "add devices %s\n", dev);
 		add_file(td, dev);
+	}
 }
 
 /*
@@ -193,6 +198,9 @@ static void store_ipo(struct thread_data *td, unsigned long long offset,
 	else
 		ipo->ddir = DDIR_READ;
 
+	dprint(FD_BLKTRACE, "store ddir=%d, off=%llu, len=%lu, delay=%lu\n",
+							ipo->ddir, ipo->offset,
+							ipo->len, ipo->delay);
 	list_add_tail(&ipo->list, &td->io_log_list);
 }
 

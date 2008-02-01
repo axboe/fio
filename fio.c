@@ -60,8 +60,8 @@ struct io_log *agg_io_log[2];
 
 static inline void td_set_runstate(struct thread_data *td, int runstate)
 {
-	dprint(FD_PROCESS, "%d: runstate %d -> %d\n", td->pid, td->runstate,
-							runstate);
+	dprint(FD_PROCESS, "pid=%d: runstate %d -> %d\n", td->pid, td->runstate,
+								runstate);
 	td->runstate = runstate;
 }
 
