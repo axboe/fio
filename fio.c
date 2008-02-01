@@ -568,6 +568,12 @@ sync_done:
 		}
 	}
 
+	/*
+	 * stop job if we failed doing any IO
+	 */
+	if ((td->this_io_bytes[0] + td->this_io_bytes[1]) == 0)
+		td->done = 1;
+
 	if (td->o.fill_device && td->error == ENOSPC) {
 		td->error = 0;
 		td->terminate = 1;
