@@ -733,7 +733,7 @@ struct io_u *get_io_u(struct thread_data *td)
 	assert(f->flags & FIO_FILE_OPEN);
 
 	if (io_u->ddir != DDIR_SYNC) {
-		if (!io_u->buflen) {
+		if (!io_u->buflen && !(td->io_ops->flags & FIO_NOIO)) {
 			dprint(FD_IO, "get_io_u: zero buflen on %p\n", io_u);
 			goto err_put;
 		}
