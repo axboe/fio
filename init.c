@@ -786,7 +786,7 @@ struct debug_level {
 
 struct debug_level debug_levels[] = {
 	{ .name = "process", .mask = FD_PROCESS, },
-	{ .name = "file", .mask = FD_PROCESS, },
+	{ .name = "file", .mask = FD_FILE, },
 	{ .name = "io", .mask = FD_IO, },
 	{ .name = "mem", .mask = FD_MEM, },
 	{ },
