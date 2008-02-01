@@ -1004,9 +1004,12 @@ static inline void dprint_io_u(struct io_u *io_u, const char *p)
 
 	dprint(FD_IO, "%s: io_u %p: off=%llu/len=%lu/ddir=%d", p, io_u,
 					io_u->offset, io_u->buflen, io_u->ddir);
-	if (f)
-		dprint(FD_IO, "/%s", f->file_name);
-	dprint(FD_IO, "\n");
+	if (fio_debug & (1 << FD_IO)) {
+		if (f)
+			log_info("/%s", f->file_name);
+
+		log_info("\n");
+	}
 }
 
 #endif

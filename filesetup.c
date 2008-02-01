@@ -600,14 +600,14 @@ int add_file(struct thread_data *td, const char *fname)
 
 void get_file(struct fio_file *f)
 {
-	dprint(FD_FILE, "get file %s/%d\n", f->file_name, f->references);
+	dprint(FD_FILE, "get file %s, ref=%d\n", f->file_name, f->references);
 	assert(f->flags & FIO_FILE_OPEN);
 	f->references++;
 }
 
 void put_file(struct thread_data *td, struct fio_file *f)
 {
-	dprint(FD_FILE, "get put %s/%d\n", f->file_name, f->references);
+	dprint(FD_FILE, "put file %s, ref=%d\n", f->file_name, f->references);
 
 	if (!(f->flags & FIO_FILE_OPEN))
 		return;
