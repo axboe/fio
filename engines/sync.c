@@ -13,8 +13,6 @@
 
 #include "../fio.h"
 
-#define is_psync(td)    ((td)->io_ops->data == (void *) 1)
-
 static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
@@ -32,26 +30,8 @@ static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
+static int fio_io_end(struct thread_data *td, struct io_u *io_u, int ret)
 {
-	struct fio_file *f = io_u->file;
-	int ret;
-
-	fio_ro_check(td, io_u);
-
-	if (io_u->ddir == DDIR_READ) {
-		if (is_psync(td))
-			ret = pread(f->fd, io_u->xfer_buf, io_u->xfer_buflen,io_u->offset);
-		else
-			ret = read(f->fd, io_u->xfer_buf, io_u->xfer_buflen);
-	} else if (io_u->ddir == DDIR_WRITE) {
-		if (is_psync(td))
-			ret = pwrite(f->fd, io_u->xfer_buf, io_u->xfer_buflen,io_u->offset);
-		else
-			ret = write(f->fd, io_u->xfer_buf, io_u->xfer_buflen);
-	} else
-		ret = fsync(f->fd);
-
 	if (ret != (int) io_u->xfer_buflen) {
 		if (ret >= 0) {
 			io_u->resid = io_u->xfer_buflen - ret;
@@ -67,10 +47,38 @@ static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 	return FIO_Q_COMPLETED;
 }
 
-static int fio_psyncio_init(struct thread_data *td)
+static int fio_psyncio_queue(struct thread_data *td, struct io_u *io_u)
 {
-	td->io_ops->data = (void *) 1;
-	return 0;
+	struct fio_file *f = io_u->file;
+	int ret;
+
+	fio_ro_check(td, io_u);
+
+	if (io_u->ddir == DDIR_READ)
+		ret = pread(f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
+	else if (io_u->ddir == DDIR_WRITE)
+		ret = pwrite(f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
+	else
+		ret = fsync(f->fd);
+
+	return fio_io_end(td, io_u, ret);
+}
+
+static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
+{
+	struct fio_file *f = io_u->file;
+	int ret;
+
+	fio_ro_check(td, io_u);
+
+	if (io_u->ddir == DDIR_READ)
+		ret = read(f->fd, io_u->xfer_buf, io_u->xfer_buflen);
+	else if (io_u->ddir == DDIR_WRITE)
+		ret = write(f->fd, io_u->xfer_buf, io_u->xfer_buflen);
+	else
+		ret = fsync(f->fd);
+
+	return fio_io_end(td, io_u, ret);
 }
 
 static struct ioengine_ops ioengine_rw = {
@@ -86,8 +94,7 @@ static struct ioengine_ops ioengine_rw = {
 static struct ioengine_ops ioengine_prw = {
 	.name		= "psync",
 	.version	= FIO_IOOPS_VERSION,
-	.queue		= fio_syncio_queue,
-	.init           = fio_psyncio_init,
+	.queue		= fio_psyncio_queue,
 	.open_file	= generic_open_file,
 	.close_file	= generic_close_file,
 	.flags		= FIO_SYNCIO,
