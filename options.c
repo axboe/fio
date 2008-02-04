@@ -440,6 +440,9 @@ static struct fio_option options[] = {
 			  { .ival = "psync",
 			    .help = "Use pread/pwrite",
 			  },
+			  { .ival = "vsync",
+			     .help = "Use readv/writev",
+			  },
 #ifdef FIO_HAVE_LIBAIO
 			  { .ival = "libaio",
 			    .help = "Linux native asynchronous IO",

@@ -344,6 +344,8 @@ ioengine=str	Defines how the job issues io to the file. The following
 
 			psync 	Basic pread(2) or pwrite(2) io.
 
+			vsync	Basic readv(2) or writev(3) IO.
+
 			libaio	Linux native asynchronous io.
 
 			posixaio glibc posix asynchronous io.

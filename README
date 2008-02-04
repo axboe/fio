@@ -136,14 +136,16 @@ The job file parameters are:
 	size=x		Set file size to x bytes (x string can include k/m/g)
 	ioengine=x	'x' may be: aio/libaio/linuxaio for Linux aio,
 			posixaio for POSIX aio, sync for regular read/write io,
-			psync for regular pread/pwrite io, mmap for mmap'ed io,
-			syslet-rw for syslet driven read/write, splice for using
-			splice/vmsplice, sgio for direct SG_IO io, net for
-			network io, or cpuio for a cycler burner load. sgio only
-			works on Linux on SCSI (or SCSI-like devices, such as
-			usb-storage or sata/libata driven) devices. Fio also has
-			a null io engine, which is mainly used for testing fio
-			itself.
+			psync for regular pread/pwrite io, vsync for regular
+			readv/writev (with queuing emulation) mmap for mmap'ed
+			io, syslet-rw for syslet driven read/write, splice for
+			using splice/vmsplice, sgio for direct SG_IO io, net
+			for network io, or cpuio for a cycler burner load. sgio
+			only works on Linux on SCSI (or SCSI-like devices, such
+			as usb-storage or sata/libata driven) devices. Fio also
+			has a null io engine, which is mainly used for testing
+			fio itself.
+
 	iodepth=x	For async io, allow 'x' ios in flight
 	overwrite=x	If 'x', layout a write file first.
 	nrfiles=x	Spread io load over 'x' number of files per job,
