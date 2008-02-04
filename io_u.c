@@ -331,6 +331,9 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 	struct io_u *__io_u = *io_u;
 
 	__io_u->flags |= IO_U_F_FREE;
+	if ((__io_u->flags & IO_U_F_FLIGHT) && (__io_u->ddir != DDIR_SYNC))
+		td->io_issues[__io_u->ddir]--;
+		
 	__io_u->flags &= ~IO_U_F_FLIGHT;
 
 	list_del(&__io_u->list);
