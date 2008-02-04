@@ -213,13 +213,6 @@ static int fixup_options(struct thread_data *td)
 		o->write_iolog_file = NULL;
 	}
 
-	if (td->io_ops->flags & FIO_SYNCIO)
-		o->iodepth = 1;
-	else {
-		if (!o->iodepth)
-			o->iodepth = o->open_files;
-	}
-
 	/*
 	 * only really works for sequential io for now, and with 1 file
 	 */
