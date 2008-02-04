@@ -883,6 +883,8 @@ long io_u_queued_complete(struct thread_data *td, int min_events)
 	int ret;
 	struct timespec ts = { .tv_sec = 0, .tv_nsec = 0, };
 
+	dprint(FD_IO, "io_u_queued_completed: min=%d\n", min_events);
+
 	if (!min_events)
 		tvp = &ts;
 
