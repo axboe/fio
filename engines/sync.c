@@ -157,6 +157,11 @@ static int fio_vsyncio_queue(struct thread_data *td, struct io_u *io_u)
 		 */
 		if (sd->queued)
 			return FIO_Q_BUSY;
+		if (io_u->ddir == DDIR_SYNC) {
+			int ret = fsync(io_u->file->fd);
+
+			return fio_io_end(td, io_u, ret);
+		}
 
 		sd->queued = 0;
 		sd->queued_bytes = 0;
