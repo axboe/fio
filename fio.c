@@ -639,11 +639,7 @@ static int init_io_u(struct thread_data *td)
 	int i, max_units;
 	char *p;
 
-	if (td->io_ops->flags & FIO_SYNCIO)
-		max_units = 1;
-	else
-		max_units = td->o.iodepth;
-
+	max_units = td->o.iodepth;
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
 	td->orig_buffer_size = (unsigned long long) max_bs * (unsigned long long) max_units;
 
