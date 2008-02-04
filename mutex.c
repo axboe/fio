@@ -19,6 +19,7 @@ struct fio_sem *fio_sem_init(int value)
 	char sem_name[] = "/tmp/.fio_sem.XXXXXX";
 	struct fio_sem *sem = NULL;
 	pthread_mutexattr_t attr;
+	pthread_condattr_t cond;
 	int fd;
 
 	fd = mkstemp(sem_name);
@@ -53,6 +54,11 @@ struct fio_sem *fio_sem_init(int value)
 		perror("pthread_mutexattr_setpshared");
 		goto err;
 	}
+
+	pthread_condattr_init(&cond);
+	pthread_condattr_setpshared(&cond, PTHREAD_PROCESS_SHARED);
+	pthread_cond_init(&sem->cond, &cond);
+
 	if (pthread_mutex_init(&sem->lock, &attr)) {
 		perror("pthread_mutex_init");
 		goto err;
