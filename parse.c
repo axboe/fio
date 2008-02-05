@@ -350,7 +350,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 				val_store(ilp, ul1, o->off1, data);
 				val_store(ilp, ul2, o->off2, data);
 			}
-			if (!more && o->off3 && o->off4) {
+			if (o->off3 && o->off4) {
 				val_store(ilp, ul1, o->off3, data);
 				val_store(ilp, ul2, o->off4, data);
 			}
