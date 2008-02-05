@@ -40,6 +40,13 @@ be one of `always', `never' or `auto'.
 .BI \-\-cmdhelp \fR=\fPcommand
 Print help information for \fIcommand\fR.  May be `all' for all commands.
 .TP
+.BI \-\-debug \fR=\fPtype
+Enable verbose tracing of various fio actions. May be `all' for all types
+or individual types seperated by a comma (eg --debug=io,file). `help' will
+list all available tracing options.
+.TP
+Print help information for \fIcommand\fR.  May be `all' for all commands.
+.TP
 .B \-\-help
 Display usage information and exit.
 .TP
@@ -163,15 +170,26 @@ for files at random within the given range, limited to \fBsize\fR in total (if
 that is given). If \fBfilesize\fR is not specified, each created file is the
 same size.
 .TP
-.BI blocksize \fR=\fPsiint "\fR,\fB bs" \fR=\fPsiint
+.BI blocksize \fR=\fPsiint[,siint] "\fR,\fB bs" \fR=\fPsiint[,siint]
 Block size for I/O units.  Default: 4k.  Values for reads and writes can be
 specified seperately in the format \fIread\fR,\fIwrite\fR, either of
 which may be empty to leave that value at its default.
 .TP
-.BI blocksize_range \fR=\fPirange "\fR,\fB bsrange" \fR=\fPirange
+.BI blocksize_range \fR=\fPirange[,irange] "\fR,\fB bsrange" \fR=\fPirange[,irange]
 Specify a range of I/O block sizes.  The issued I/O unit will always be a
 multiple of the minimum size, unless \fBblocksize_unaligned\fR is set.  Applies
-to both reads and writes, but can be specified seperately (see \fBblocksize\fR).
+to both reads and writes if only one range is given, but can be specified
+seperately with a comma seperating the values. Example: bsrange=1k-4k,2k-8k.
+Also (see \fBblocksize\fR).
+.TP
+.BI bssplit \fR=\fPstr
+This option allows even finer grained control of the block sizes issued,
+not just even splits between them. With this option, you can weight various
+block sizes for exact control of the issued IO for a job that has mixed
+block sizes. The format of the option is bssplit=blocksize/percentage,
+optionally adding as many definitions as needed seperated by a colon.
+Example: bssplit=4k/10:64k/50:32k/40 would issue 50% 64k blocks, 10% 4k
+blocks and 40% 32k blocks.
 .TP
 .B blocksize_unaligned\fR,\fP bs_unaligned
 If set, any size in \fBblocksize_range\fR may be used.  This typically won't
@@ -213,6 +231,10 @@ position the I/O location.
 .TP
 .B psync
 Basic \fIpread\fR\|(2) or \fIpwrite\fR\|(2) I/O.
+.TP
+.B vsync
+Basic \fIreadv\fR\|(2) or \fIwritev\fR\|(2) I/O. Will emulate queuing by
+coalescing adjacents IOs into a single submission.
 .TP
 .B libaio
 Linux native asynchronous I/O.
