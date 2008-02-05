@@ -73,11 +73,12 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 }
 
 static inline unsigned long long last_block(struct thread_data *td,
-					    struct fio_file *f)
+					    struct fio_file *f,
+					    enum fio_ddir ddir)
 {
 	unsigned long long max_blocks;
 
-	max_blocks = f->io_size / td->o.rw_min_bs;
+	max_blocks = f->io_size / td->o.min_bs[ddir];
 	if (!max_blocks)
 		return 0;
 
@@ -88,7 +89,7 @@ static inline unsigned long long last_block(struct thread_data *td,
  * Return the next free block in the map.
  */
 static int get_next_free_block(struct thread_data *td, struct fio_file *f,
-			       unsigned long long *b)
+			       enum fio_ddir ddir, unsigned long long *b)
 {
 	int i;
 
@@ -97,7 +98,7 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 	while ((*b) * td->o.rw_min_bs < f->real_file_size) {
 		if (f->file_map[i] != -1UL) {
 			*b += fio_ffz(f->file_map[i]);
-			if (*b > last_block(td, f))
+			if (*b > last_block(td, f, ddir))
 				break;
 			f->last_free_lookup = i;
 			return 0;
@@ -112,14 +113,14 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 }
 
 static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
-				unsigned long long *b)
+				enum fio_ddir ddir, unsigned long long *b)
 {
 	unsigned long long r, rb;
 	int loops = 5;
 
 	do {
 		r = os_random_long(&td->random_state);
-		*b = last_block(td, f);
+		*b = last_block(td, f, ddir);
 
 		/*
 		 * if we are not maintaining a random map, we are done.
@@ -144,7 +145,7 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	loops = 10;
 	do {
 		f->last_free_lookup = (f->num_maps - 1) * (r / (RAND_MAX+1.0));
-		if (!get_next_free_block(td, f, b))
+		if (!get_next_free_block(td, f, ddir, b))
 			return 0;
 
 		r = os_random_long(&td->random_state);
@@ -154,7 +155,7 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	 * that didn't work either, try exhaustive search from the start
 	 */
 	f->last_free_lookup = 0;
-	return get_next_free_block(td, f, b);
+	return get_next_free_block(td, f, ddir, b);
 }
 
 /*
@@ -166,21 +167,23 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	unsigned long long b;
+	enum fio_ddir ddir = io_u->ddir;
 
 	if (td_random(td) && (td->o.ddir_nr && !--td->ddir_nr)) {
 		td->ddir_nr = td->o.ddir_nr;
 
-		if (get_next_rand_offset(td, f, &b))
+		if (get_next_rand_offset(td, f, ddir, &b))
 			return 1;
 	} else {
 		if (f->last_pos >= f->real_file_size) {
-			if (!td_random(td) || get_next_rand_offset(td, f, &b))
+			if (!td_random(td) ||
+			     get_next_rand_offset(td, f, ddir, &b))
 				return 1;
 		} else
-			b = (f->last_pos - f->file_offset) / td->o.rw_min_bs;
+			b = (f->last_pos - f->file_offset) / td->o.min_bs[ddir];
 	}
 
-	io_u->offset = (b * td->o.rw_min_bs) + f->file_offset;
+	io_u->offset = (b * td->o.min_bs[ddir]) + f->file_offset;
 	if (io_u->offset >= f->real_file_size) {
 		dprint(FD_IO, "get_next_offset: offset %llu >= size %llu\n",
 					io_u->offset, f->real_file_size);
@@ -219,8 +222,11 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 			buflen = (buflen + td->o.min_bs[ddir] - 1) & ~(td->o.min_bs[ddir] - 1);
 	}
 
-	if (io_u->offset + buflen > io_u->file->real_file_size)
+	if (io_u->offset + buflen > io_u->file->real_file_size) {
+		dprint(FD_IO, "lower buflen %u -> %u (ddir=%d)\n", buflen,
+						td->o.min_bs[ddir], ddir);
 		buflen = td->o.min_bs[ddir];
+	}
 
 	return buflen;
 }
@@ -385,6 +391,8 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 
 	if (io_u->offset + io_u->buflen > io_u->file->real_file_size) {
 		dprint(FD_IO, "io_u %p, offset too large\n", io_u);
+		dprint(FD_IO, "  off=%llu/%lu > %llu\n", io_u->offset,
+				io_u->buflen, io_u->file->real_file_size);
 		return 1;
 	}
 
