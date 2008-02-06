@@ -251,7 +251,6 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 
 	free(p);
 	td->o.cpumask_set = 1;
-	exit(0);
 	return 0;
 }
 #endif
