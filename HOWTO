@@ -383,7 +383,10 @@ ioengine=str	Defines how the job issues io to the file. The following
 				cycles according to the cpuload= and
 				cpucycle= options. Setting cpuload=85
 				will cause that job to do nothing but burn
-				85% of the CPU.
+				85% of the CPU. In case of SMP machines,
+				use numjobs=<no_of_cpu> to get desired CPU
+				usage, as the cpuload only loads a single
+				CPU at the desired rate.
 
 			guasi	The GUASI IO engine is the Generic Userspace
 				Asyncronous Syscall Interface approach
