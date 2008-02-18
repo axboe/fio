@@ -264,6 +264,7 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 		pfd.events = POLLIN;
 
 		ret = poll(&pfd, 1, -1);
+		printf("got ret %d\n", ret);
 		if (ret < 0) {
 			if (errno == EINTR)
 				continue;
@@ -463,7 +464,8 @@ static struct ioengine_ops ioengine_rw = {
 	.cleanup	= fio_netio_cleanup,
 	.open_file	= fio_netio_open_file,
 	.close_file	= generic_close_file,
-	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR,
+	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR |
+			  FIO_SIGQUIT,
 };
 
 static struct ioengine_ops ioengine_splice = {
@@ -476,7 +478,8 @@ static struct ioengine_ops ioengine_splice = {
 	.cleanup	= fio_netio_cleanup,
 	.open_file	= fio_netio_open_file,
 	.close_file	= generic_close_file,
-	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR,
+	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR |
+			  FIO_SIGQUIT,
 };
 
 static void fio_init fio_netio_register(void)
