@@ -34,6 +34,7 @@ int eta_print;
 unsigned long long mlock_size = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
+char *job_section = NULL;
 
 int write_bw_log = 0;
 int read_only = 0;
@@ -109,6 +110,11 @@ static struct option long_options[FIO_NR_OPTIONS] = {
 		.name		= "debug",
 		.has_arg	= required_argument,
 		.val		= 'd',
+	},
+	{
+		.name		= "section",
+		.has_arg	= required_argument,
+		.val		= 'x',
 	},
 	{
 		.name		= NULL,
@@ -548,6 +554,16 @@ err:
 	return -1;
 }
 
+static int skip_this_section(const char *name)
+{
+	if (!job_section)
+		return 0;
+	if (!strncmp(name, "global", 6))
+		return 0;
+
+	return strncmp(job_section, name, strlen(job_section));
+}
+
 static int is_empty_or_comment(char *line)
 {
 	unsigned int i;
@@ -577,6 +593,7 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 	int ret = 0, stonewall;
 	int first_sect = 1;
 	int skip_fgets = 0;
+	int inside_skip = 0;
 
 	if (!strcmp(file, "-"))
 		f = stdin;
@@ -615,9 +632,17 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 		if (is_empty_or_comment(p))
 			continue;
 		if (sscanf(p, "[%255s]", name) != 1) {
+			if (inside_skip)
+				continue;
 			log_err("fio: option <%s> outside of [] job section\n", p);
 			break;
 		}
+
+		if (skip_this_section(name)) {
+			inside_skip = 1;
+			continue;
+		} else
+			inside_skip = 0;
 
 		global = !strncmp(name, "global", 6);
 
@@ -775,6 +800,7 @@ static void usage(const char *name)
 	printf("\t--eta=when\tWhen ETA estimate should be printed\n");
 	printf("\t          \tMay be \"always\", \"never\" or \"auto\"\n");
 	printf("\t--readonly\tTurn on safety read-only checks, preventing writes\n");
+	printf("\t--section=name\tOnly run specified section in job file\n");
 }
 
 #ifdef FIO_INC_DEBUG
@@ -884,6 +910,16 @@ static int parse_cmd_line(int argc, char *argv[])
 		case 'd':
 			set_debug(optarg);
 			break;
+		case 'x':
+			if (!strcmp(optarg, "global")) {
+				log_err("fio: can't use global as only section\n");
+				bad_options++;
+				break;
+			}
+			if (job_section)
+				free(job_section);
+			job_section = strdup(optarg);
+			break;
 		case FIO_GETOPT_JOB: {
 			const char *opt = long_options[lidx].name;
 			char *val = optarg;
@@ -897,11 +933,14 @@ static int parse_cmd_line(int argc, char *argv[])
 				td = NULL;
 			}
 			if (!td) {
+				int is_section = !strncmp(opt, "name", 4);
 				int global = 0;
 
-				if (strncmp(opt, "name", 4) ||
-				    !strncmp(val, "global", 6))
+				if (!is_section || !strncmp(val, "global", 6))
 					global = 1;
+
+				if (is_section && skip_this_section(val))
+					continue;
 
 				td = get_new_job(global, &def_thread);
 				if (!td)

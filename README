@@ -75,6 +75,7 @@ $ fio
 	--readonly	Turn on safety read-only checks, preventing writes
 	--eta=when	When ETA estimate should be printed
 			May be "always", "never" or "auto"
+	--section=name	Only run specified section in job file
 
 
 Any parameters following the options will be assumed to be job files,
@@ -102,6 +103,13 @@ options in fio. Currently the options are:
 
 You can specify as many as you want, eg --debug=file,mem will enable
 file and memory debugging.
+
+The section switch is meant to make it easier to ship a bigger job file
+instead of several smaller ones. Say you define a job file with light,
+moderate, and heavy parts. Then you can ask fio to run the given part
+only by giving it a --section=heavy command line option. The section
+option only applies to job sections, the reserved 'global' section is
+always parsed and taken into account.
 
 
 Job file
