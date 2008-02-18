@@ -837,7 +837,7 @@ static void set_debug(const char *string)
 static int parse_cmd_line(int argc, char *argv[])
 {
 	struct thread_data *td = NULL;
-	int c, ini_idx = 0, lidx, ret, dont_add_job = 0;
+	int c, ini_idx = 0, lidx, ret, dont_add_job = 0, bad_options = 0;
 
 	while ((c = getopt_long_only(argc, argv, "", long_options, &lidx)) != -1) {
 		switch (c) {
@@ -914,9 +914,13 @@ static int parse_cmd_line(int argc, char *argv[])
 			break;
 		}
 		default:
+			bad_options++;
 			break;
 		}
 	}
+
+	if (bad_options)
+		exit(1);
 
 	if (td) {
 		if (dont_add_job)
