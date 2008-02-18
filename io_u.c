@@ -44,7 +44,7 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 	unsigned int blocks;
 	unsigned int nr_blocks;
 
-	block = io_u->offset / (unsigned long long) min_bs;
+	block = (io_u->offset - f->file_offset) / (unsigned long long) min_bs;
 	blocks = 0;
 	nr_blocks = (io_u->buflen + min_bs - 1) / min_bs;
 
