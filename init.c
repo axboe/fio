@@ -863,7 +863,7 @@ static void set_debug(const char *string)
 static int parse_cmd_line(int argc, char *argv[])
 {
 	struct thread_data *td = NULL;
-	int c, ini_idx = 0, lidx, ret, dont_add_job = 0, bad_options = 0;
+	int c, ini_idx = 0, lidx, ret = 0, bad_options = 0;
 
 	while ((c = getopt_long_only(argc, argv, "", long_options, &lidx)) != -1) {
 		switch (c) {
@@ -948,8 +948,6 @@ static int parse_cmd_line(int argc, char *argv[])
 			}
 
 			ret = fio_cmd_option_parse(td, opt, val);
-			if (ret)
-				dont_add_job = 1;
 			break;
 		}
 		default:
@@ -962,13 +960,10 @@ static int parse_cmd_line(int argc, char *argv[])
 		exit(1);
 
 	if (td) {
-		if (dont_add_job)
-			put_job(td);
-		else {
+		if (!ret)
 			ret = add_job(td, td->o.name ?: "fio", 0);
-			if (ret)
-				put_job(td);
-		}
+		if (ret)
+			put_job(td);
 	}
 
 	while (optind < argc) {
