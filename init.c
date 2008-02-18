@@ -774,6 +774,7 @@ static void usage(const char *name)
 	printf("\t--showcmd\tTurn a job file into command line options\n");
 	printf("\t--eta=when\tWhen ETA estimate should be printed\n");
 	printf("\t          \tMay be \"always\", \"never\" or \"auto\"\n");
+	printf("\t--readonly\tTurn on safety read-only checks, preventing writes\n");
 }
 
 #ifdef FIO_INC_DEBUG

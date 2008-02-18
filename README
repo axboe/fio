@@ -64,7 +64,7 @@ Command line
 $ fio
         --debug         Enable some debugging options (see below)
         --output        Write output to file
-        --runtime       Runtime in seconds
+        --timeout       Runtime in seconds
         --latency-log   Generate per-job latency logs
         --bandwidth-log Generate per-job bandwidth logs
         --minimal       Minimal (terse) output
@@ -72,7 +72,7 @@ $ fio
 	--help		Print this page
 	--cmdhelp=cmd	Print command help, "all" for all of them
 	--showcmd	Turn a job file into command line options
-	--readonly	Turn on safety read-only checks
+	--readonly	Turn on safety read-only checks, preventing writes
 	--eta=when	When ETA estimate should be printed
 			May be "always", "never" or "auto"
 
