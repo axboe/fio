@@ -815,7 +815,7 @@ struct debug_level debug_levels[] = {
 	{ },
 };
 
-static void set_debug(const char *string)
+static int set_debug(const char *string)
 {
 	struct debug_level *dl;
 	char *p = (char *) string;
@@ -831,10 +831,10 @@ static void set_debug(const char *string)
 			log_info("%s,", dl->name);
 		}
 		log_info("all\n");
-		return;
+		return 1;
 	} else if (!strcmp(string, "all")) {
 		fio_debug = ~0UL;
-		return;
+		return 0;
 	}
 
 	while ((opt = strsep(&p, ",")) != NULL) {
@@ -853,18 +853,20 @@ static void set_debug(const char *string)
 		if (!found)
 			log_err("fio: debug mask %s not found\n", opt);
 	}
+	return 0;
 }
 #else
 static void set_debug(const char *string)
 {
 	log_err("fio: debug tracing not included in build\n");
+	return 1;
 }
 #endif
 
 static int parse_cmd_line(int argc, char *argv[])
 {
 	struct thread_data *td = NULL;
-	int c, ini_idx = 0, lidx, ret = 0, bad_options = 0;
+	int c, ini_idx = 0, lidx, ret = 0, do_exit = 0, exit_val = 0;
 
 	while ((c = getopt_long_only(argc, argv, "", long_options, &lidx)) != -1) {
 		switch (c) {
@@ -909,12 +911,14 @@ static int parse_cmd_line(int argc, char *argv[])
 				eta_print = FIO_ETA_NEVER;
 			break;
 		case 'd':
-			set_debug(optarg);
+			if (set_debug(optarg))
+				do_exit++;
 			break;
 		case 'x':
 			if (!strcmp(optarg, "global")) {
 				log_err("fio: can't use global as only section\n");
-				bad_options++;
+				do_exit++;
+				exit_val = 1;
 				break;
 			}
 			if (job_section)
@@ -952,13 +956,14 @@ static int parse_cmd_line(int argc, char *argv[])
 			break;
 		}
 		default:
-			bad_options++;
+			do_exit++;
+			exit_val = 1;
 			break;
 		}
 	}
 
-	if (bad_options)
-		exit(1);
+	if (do_exit)
+		exit(exit_val);
 
 	if (td) {
 		if (!ret)
