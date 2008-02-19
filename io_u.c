@@ -25,10 +25,12 @@ struct io_completion_data {
  * to yet. Used to make sure we cover the entire range in a fair fashion.
  */
 static int random_map_free(struct thread_data *td, struct fio_file *f,
-			   unsigned long long block)
+			   const unsigned long long block)
 {
 	unsigned int idx = RAND_MAP_IDX(td, f, block);
 	unsigned int bit = RAND_MAP_BIT(td, f, block);
+
+	dprint(FD_RANDOM, "free: b=%llu, idx=%u, bit=%u\n", block, idx, bit);
 
 	return (f->file_map[idx] & (1UL << bit)) == 0;
 }
@@ -78,7 +80,7 @@ static inline unsigned long long last_block(struct thread_data *td,
 {
 	unsigned long long max_blocks;
 
-	max_blocks = f->io_size / td->o.min_bs[ddir];
+	max_blocks = f->io_size / (unsigned long long) td->o.min_bs[ddir];
 	if (!max_blocks)
 		return 0;
 
@@ -91,11 +93,12 @@ static inline unsigned long long last_block(struct thread_data *td,
 static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 			       enum fio_ddir ddir, unsigned long long *b)
 {
+	unsigned long long min_bs = td->o.rw_min_bs;
 	int i;
 
 	i = f->last_free_lookup;
 	*b = (i * BLOCKS_PER_MAP);
-	while ((*b) * td->o.rw_min_bs < f->real_file_size) {
+	while ((*b) * min_bs < f->real_file_size) {
 		if (f->file_map[i] != -1UL) {
 			*b += fio_ffz(f->file_map[i]);
 			if (*b > last_block(td, f, ddir))
@@ -115,12 +118,13 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				enum fio_ddir ddir, unsigned long long *b)
 {
-	unsigned long long r, rb;
+	unsigned long long r;
 	int loops = 5;
 
 	do {
 		r = os_random_long(&td->random_state);
-		*b = last_block(td, f, ddir);
+		dprint(FD_RANDOM, "off rand %llu\n", r);
+		*b = (last_block(td, f, ddir) - 1) * (r / ((unsigned long long) RAND_MAX + 1.0));
 
 		/*
 		 * if we are not maintaining a random map, we are done.
@@ -129,12 +133,13 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 			return 0;
 
 		/*
-		 * calculate map offset and chec if it's free
+		 * calculate map offset and check if it's free
 		 */
-		rb = *b;
-		if (random_map_free(td, f, rb))
+		if (random_map_free(td, f, *b))
 			return 0;
 
+		dprint(FD_RANDOM, "get_next_rand_offset: offset %llu busy\n",
+									*b);
 	} while (--loops);
 
 	/*
