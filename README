@@ -99,6 +99,7 @@ options in fio. Currently the options are:
 	blktrace	Dump info related to blktrace setup
 	verify		Dump info related to IO verification
 	all		Enable all debug options
+	random		Dump info related to random offset generation
 	? or help	Show available debug options.
 
 You can specify as many as you want, eg --debug=file,mem will enable
