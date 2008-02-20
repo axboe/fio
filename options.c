@@ -1118,7 +1118,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "hugepage-size",
-		.type	= FIO_OPT_STR_VAL,
+		.type	= FIO_OPT_STR_VAL_INT,
 		.off1	= td_var_offset(hugepage_size),
 		.help	= "When using hugepages, specify size of each page",
 		.def	= __stringify(FIO_HUGE_PAGE),
