@@ -1024,7 +1024,11 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		else
 			realthreads++;
 
-		if (!td->pid || td->runstate == TD_REAPED)
+		if (!td->pid) {
+			pending++;
+			continue;
+		}
+		if (td->runstate == TD_REAPED)
 			continue;
 		if (td->o.use_thread) {
 			if (td->runstate == TD_EXITED) {
