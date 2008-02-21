@@ -108,6 +108,12 @@ void prune_io_piece_log(struct thread_data *td)
 		rb_erase(n, &td->io_hist_tree);
 		free(ipo);
 	}
+
+	while (!list_empty(&td->io_hist_list)) {
+		ipo = list_entry(td->io_hist_list.next, struct io_piece, list);
+		list_del(&ipo->list);
+		free(ipo);
+	}
 }
 
 /*
