@@ -269,10 +269,9 @@ enum fio_ioengine_flags {
 enum fio_file_flags {
 	FIO_FILE_OPEN		= 1 << 0,	/* file is open */
 	FIO_FILE_CLOSING	= 1 << 1,	/* file being closed */
-	FIO_FILE_EXISTS		= 1 << 2,	/* file there */
-	FIO_FILE_EXTEND		= 1 << 3,	/* needs extend */
-	FIO_FILE_DONE		= 1 << 4,	/* io completed to this file */
-	FIO_SIZE_KNOWN		= 1 << 5,	/* size has been set */
+	FIO_FILE_EXTEND		= 1 << 2,	/* needs extend */
+	FIO_FILE_DONE		= 1 << 3,	/* io completed to this file */
+	FIO_SIZE_KNOWN		= 1 << 4,	/* size has been set */
 };
 
 /*

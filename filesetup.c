@@ -33,7 +33,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	if (td_write(td) && !td->o.overwrite)
 		unlink_file = 1;
 
-	if ((unlink_file || new_layout) && (f->flags & FIO_FILE_EXISTS)) {
+	if (unlink_file || new_layout) {
 		if (unlink(f->file_name) < 0) {
 			td_verror(td, errno, "unlink");
 			return 1;
