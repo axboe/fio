@@ -10,6 +10,8 @@
 #include <linux/raw.h>
 #include <linux/major.h>
 
+#include "indirect.h"
+
 #define FIO_HAVE_LIBAIO
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_FADVISE

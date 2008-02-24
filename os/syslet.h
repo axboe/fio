@@ -37,9 +37,9 @@ struct syslet_ring {
 
 typedef void (*syslet_return_func_t)(void);
 
-void fill_syslet_args(struct syslet_args *args, struct syslet_ring *ring,
-		      uint64_t caller_data, syslet_return_func_t func,
-		      void *stack)
+static inline void fill_syslet_args(struct syslet_args *args,
+		      struct syslet_ring *ring, uint64_t caller_data,
+		      syslet_return_func_t func, void *stack)
 {
 	args->ring_ptr = (u64)(unsigned long)ring;
 	args->caller_data = caller_data;
