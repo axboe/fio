@@ -37,6 +37,9 @@ Enable read-only safety checks.
 Specifies when real-time ETA estimate should be printed.  \fIwhen\fR may
 be one of `always', `never' or `auto'.
 .TP
+.BI \-\-section \fR=\fPsec
+Only run section \fIsec\fR from job file.
+.TP
 .BI \-\-cmdhelp \fR=\fPcommand
 Print help information for \fIcommand\fR.  May be `all' for all commands.
 .TP
@@ -44,8 +47,6 @@ Print help information for \fIcommand\fR.  May be `all' for all commands.
 Enable verbose tracing of various fio actions. May be `all' for all types
 or individual types seperated by a comma (eg --debug=io,file). `help' will
 list all available tracing options.
-.TP
-Print help information for \fIcommand\fR.  May be `all' for all commands.
 .TP
 .B \-\-help
 Display usage information and exit.
