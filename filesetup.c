@@ -34,7 +34,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		unlink_file = 1;
 
 	if (unlink_file || new_layout) {
-		if (unlink(f->file_name) < 0) {
+		if ((unlink(f->file_name) < 0) && (errno != ENOENT)) {
 			td_verror(td, errno, "unlink");
 			return 1;
 		}
