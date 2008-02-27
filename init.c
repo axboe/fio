@@ -812,6 +812,7 @@ struct debug_level debug_levels[] = {
 	{ .name = "blktrace",	.shift = FD_BLKTRACE },
 	{ .name = "verify",	.shift = FD_VERIFY },
 	{ .name = "random",	.shift = FD_RANDOM },
+	{ .name = "parse",	.shift = FD_PARSE },
 	{ },
 };
 

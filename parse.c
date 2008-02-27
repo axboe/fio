@@ -10,6 +10,7 @@
 #include <limits.h>
 
 #include "parse.h"
+#include "debug.h"
 
 static int vp_cmp(const void *p1, const void *p2)
 {
@@ -229,6 +230,9 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	char **cp;
 	int ret = 0, is_time = 0;
 
+	dprint(FD_PARSE, "__handle_option=%s, type=%d, ptr=%s\n", o->name,
+							o->type, ptr);
+
 	if (!ptr && o->type != FIO_OPT_STR_SET) {
 		fprintf(stderr, "Option %s requires an argument\n", o->name);
 		return 1;
@@ -413,6 +417,8 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 {
 	const char *ptr2 = NULL;
 	int r1, r2;
+
+	dprint(FD_PARSE, "handle_option=%s, ptr=%s\n", o->name, ptr);
 
 	/*
 	 * See if we have a second set of parameters, hidden after a comma.
@@ -661,6 +667,8 @@ void fill_default_options(void *data, struct fio_option *options)
 {
 	struct fio_option *o;
 
+	dprint(FD_PARSE, "filling default options\n");
+
 	for (o = &options[0]; o->name; o++)
 		if (o->def)
 			handle_option(o, o->def, data);
@@ -673,6 +681,8 @@ void fill_default_options(void *data, struct fio_option *options)
 void options_init(struct fio_option *options)
 {
 	struct fio_option *o;
+
+	dprint(FD_PARSE, "init options\n");
 
 	for (o = &options[0]; o->name; o++) {
 		if (o->type == FIO_OPT_BOOL) {

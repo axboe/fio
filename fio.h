@@ -22,6 +22,8 @@
 #include "arch/arch.h"
 #include "os/os.h"
 #include "mutex.h"
+#include "log.h"
+#include "debug.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
@@ -659,8 +661,6 @@ extern int nr_process, nr_thread;
 extern int shm_id;
 extern int groupid;
 extern int terse_output;
-extern FILE *f_out;
-extern FILE *f_err;
 extern int temp_stall_ts;
 extern unsigned long long mlock_size;
 extern unsigned long page_mask, page_size;
@@ -903,20 +903,6 @@ extern int is_blktrace(const char *);
 extern int load_blktrace(struct thread_data *, const char *);
 #endif
 
-/*
- * If logging output to a file, stderr should go to both stderr and f_err
- */
-#define log_err(args...)	do {		\
-	fprintf(f_err, ##args);			\
-	if (f_err != stderr)			\
-		fprintf(stderr, ##args);	\
-	} while (0)
-
-#define log_info(args...)	fprintf(f_out, ##args)
-
-FILE *get_f_out(void);
-FILE *get_f_err(void);
-
 struct ioengine_ops {
 	struct list_head list;
 	char name[16];
@@ -972,35 +958,7 @@ static inline void clear_error(struct thread_data *td)
 	td->verror[0] = '\0';
 }
 
-enum {
-	FD_PROCESS	= 0,
-	FD_FILE,
-	FD_IO,
-	FD_MEM,
-	FD_BLKTRACE,
-	FD_VERIFY,
-	FD_RANDOM,
-	FD_DEBUG_MAX,
-};
-
 #ifdef FIO_INC_DEBUG
-struct debug_level {
-	const char *name;
-	unsigned long shift;
-};
-extern struct debug_level debug_levels[];
-
-extern unsigned long fio_debug;
-
-#define dprint(type, str, args...)				\
-	do {							\
-		assert(type < FD_DEBUG_MAX);			\
-		if ((((1 << type)) & fio_debug) == 0)		\
-			break;					\
-		log_info("%-8s ", debug_levels[(type)].name);	\
-		log_info(str, ##args);				\
-	} while (0)
-
 static inline void dprint_io_u(struct io_u *io_u, const char *p)
 {
 	struct fio_file *f = io_u->file;
@@ -1015,7 +973,6 @@ static inline void dprint_io_u(struct io_u *io_u, const char *p)
 	}
 }
 #else
-#define dprint(type, str, args...)
 #define dprint_io_u(io_u, p)
 #endif
 

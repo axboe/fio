@@ -100,6 +100,7 @@ options in fio. Currently the options are:
 	verify		Dump info related to IO verification
 	all		Enable all debug options
 	random		Dump info related to random offset generation
+	parse		Dump info related to option matching and parsing
 	? or help	Show available debug options.
 
 You can specify as many as you want, eg --debug=file,mem will enable
