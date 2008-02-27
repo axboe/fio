@@ -563,7 +563,7 @@ struct thread_data {
 	unsigned long long io_skip_bytes;
 	unsigned long long this_io_bytes[2];
 	unsigned long long zone_bytes;
-	struct fio_sem *mutex;
+	struct fio_mutex *mutex;
 
 	/*
 	 * State for random io, a bitmap of blocks done vs not done

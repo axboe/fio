@@ -8,43 +8,43 @@
 
 #include "mutex.h"
 
-void fio_sem_remove(struct fio_sem *sem)
+void fio_mutex_remove(struct fio_mutex *mutex)
 {
-	close(sem->sem_fd);
-	munmap(sem, sizeof(*sem));
+	close(mutex->mutex_fd);
+	munmap(mutex, sizeof(*mutex));
 }
 
-struct fio_sem *fio_sem_init(int value)
+struct fio_mutex *fio_mutex_init(int value)
 {
-	char sem_name[] = "/tmp/.fio_sem.XXXXXX";
-	struct fio_sem *sem = NULL;
+	char mutex_name[] = "/tmp/.fio_mutex.XXXXXX";
+	struct fio_mutex *mutex = NULL;
 	pthread_mutexattr_t attr;
 	pthread_condattr_t cond;
 	int fd;
 
-	fd = mkstemp(sem_name);
+	fd = mkstemp(mutex_name);
 	if (fd < 0) {
-		perror("open sem");
+		perror("open mutex");
 		return NULL;
 	}
 
-	if (ftruncate(fd, sizeof(struct fio_sem)) < 0) {
-		perror("ftruncate sem");
+	if (ftruncate(fd, sizeof(struct fio_mutex)) < 0) {
+		perror("ftruncate mutex");
 		goto err;
 	}
 
-	sem = mmap(NULL, sizeof(struct fio_sem), PROT_READ | PROT_WRITE,
+	mutex = mmap(NULL, sizeof(struct fio_mutex), PROT_READ | PROT_WRITE,
 			MAP_SHARED, fd, 0);
-	if (sem == MAP_FAILED) {
-		perror("mmap sem");
+	if (mutex == MAP_FAILED) {
+		perror("mmap mutex");
 		close(fd);
-		sem = NULL;
+		mutex = NULL;
 		goto err;
 	}
 
-	unlink(sem_name);
-	sem->sem_fd = fd;
-	sem->value = value;
+	unlink(mutex_name);
+	mutex->mutex_fd = fd;
+	mutex->value = value;
 
 	if (pthread_mutexattr_init(&attr)) {
 		perror("pthread_mutexattr_init");
@@ -57,36 +57,36 @@ struct fio_sem *fio_sem_init(int value)
 
 	pthread_condattr_init(&cond);
 	pthread_condattr_setpshared(&cond, PTHREAD_PROCESS_SHARED);
-	pthread_cond_init(&sem->cond, &cond);
+	pthread_cond_init(&mutex->cond, &cond);
 
-	if (pthread_mutex_init(&sem->lock, &attr)) {
+	if (pthread_mutex_init(&mutex->lock, &attr)) {
 		perror("pthread_mutex_init");
 		goto err;
 	}
 
-	return sem;
+	return mutex;
 err:
-	if (sem)
-		fio_sem_remove(sem);
+	if (mutex)
+		fio_mutex_remove(mutex);
 
-	unlink(sem_name);
+	unlink(mutex_name);
 	return NULL;
 }
 
-void fio_sem_down(struct fio_sem *sem)
+void fio_mutex_down(struct fio_mutex *mutex)
 {
-	pthread_mutex_lock(&sem->lock);
-	while (sem->value == 0)
-		pthread_cond_wait(&sem->cond, &sem->lock);
-	sem->value--;
-	pthread_mutex_unlock(&sem->lock);
+	pthread_mutex_lock(&mutex->lock);
+	while (mutex->value == 0)
+		pthread_cond_wait(&mutex->cond, &mutex->lock);
+	mutex->value--;
+	pthread_mutex_unlock(&mutex->lock);
 }
 
-void fio_sem_up(struct fio_sem *sem)
+void fio_mutex_up(struct fio_mutex *mutex)
 {
-	pthread_mutex_lock(&sem->lock);
-	if (!sem->value)
-		pthread_cond_signal(&sem->cond);
-	sem->value++;
-	pthread_mutex_unlock(&sem->lock);
+	pthread_mutex_lock(&mutex->lock);
+	if (!mutex->value)
+		pthread_cond_signal(&mutex->cond);
+	mutex->value++;
+	pthread_mutex_unlock(&mutex->lock);
 }

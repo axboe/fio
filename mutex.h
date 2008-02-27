@@ -3,17 +3,17 @@
 
 #include <pthread.h>
 
-struct fio_sem {
+struct fio_mutex {
 	pthread_mutex_t lock;
 	pthread_cond_t cond;
 	unsigned int value;
 
-	int sem_fd;
+	int mutex_fd;
 };
 
-extern struct fio_sem *fio_sem_init(int);
-extern void fio_sem_remove(struct fio_sem *);
-extern inline void fio_sem_down(struct fio_sem *);
-extern inline void fio_sem_up(struct fio_sem *sem);
+extern struct fio_mutex *fio_mutex_init(int);
+extern void fio_mutex_remove(struct fio_mutex *);
+extern inline void fio_mutex_down(struct fio_mutex *);
+extern inline void fio_mutex_up(struct fio_mutex *);
 
 #endif

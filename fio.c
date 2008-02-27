@@ -49,7 +49,7 @@ int nr_thread = 0;
 int shm_id = 0;
 int temp_stall_ts;
 
-static struct fio_sem *startup_sem;
+static struct fio_mutex *startup_mutex;
 static volatile int fio_abort;
 static int exit_value;
 
@@ -822,14 +822,14 @@ static void *thread_main(void *data)
 	td->io_hist_tree = RB_ROOT;
 
 	td_set_runstate(td, TD_INITIALIZED);
-	fio_sem_up(startup_sem);
-	fio_sem_down(td->mutex);
+	fio_mutex_up(startup_mutex);
+	fio_mutex_down(td->mutex);
 
 	/*
-	 * the ->mutex semaphore is now no longer used, close it to avoid
+	 * the ->mutex mutex is now no longer used, close it to avoid
 	 * eating a file descriptor
 	 */
-	fio_sem_remove(td->mutex);
+	fio_mutex_remove(td->mutex);
 
 	/*
 	 * May alter parameters that init_io_u() will use, so we need to
@@ -1213,7 +1213,7 @@ static void run_threads(void)
 					exit(ret);
 				}
 			}
-			fio_sem_down(startup_sem);
+			fio_mutex_down(startup_mutex);
 		}
 
 		/*
@@ -1268,7 +1268,7 @@ static void run_threads(void)
 			m_rate += td->o.ratemin;
 			t_rate += td->o.rate;
 			todo--;
-			fio_sem_up(td->mutex);
+			fio_mutex_up(td->mutex);
 		}
 
 		reap_threads(&nr_running, &t_rate, &m_rate);
@@ -1317,7 +1317,7 @@ int main(int argc, char *argv[])
 		setup_log(&agg_io_log[DDIR_WRITE]);
 	}
 
-	startup_sem = fio_sem_init(0);
+	startup_mutex = fio_mutex_init(0);
 
 	set_genesis_time();
 
@@ -1333,6 +1333,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	fio_sem_remove(startup_sem);
+	fio_mutex_remove(startup_mutex);
 	return exit_value;
 }
