@@ -29,15 +29,25 @@ OBJS += engines/net.o
 OBJS += engines/syslet-rw.o
 OBJS += engines/guasi.o
 
+ifneq ($(findstring $(MAKEFLAGS),s),s)
+ifndef V
+	QUIET_CC	= @echo '   ' CC $@;
+	QUIET_AR	= @echo '   ' AR $@;
+	QUIET_LINK	= @echo '   ' LINK $@;
+endif
+endif
+
 INSTALL = install
 prefix = /usr/local
 bindir = $(prefix)/bin
 mandir = $(prefix)/man
 
-all: $(PROGS) $(SCRIPTS)
-
+%.o: %.c
+	$(QUIET_CC)$(CC) -o $*.o -c $(CFLAGS) $<
 fio: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) $(EXTLIBS) -lpthread -lm -ldl -laio -lrt
+	$(QUIET_CC)$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) $(EXTLIBS) -lpthread -lm -ldl -laio -lrt
+
+all: $(PROGS) $(SCRIPTS)
 
 clean:
 	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o crc/*.o core.* core
