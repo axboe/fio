@@ -328,8 +328,12 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 	assert((io_u->flags & IO_U_F_FREE) == 0);
 	io_u->flags |= IO_U_F_FREE;
 
-	if (io_u->file)
-		put_file(td, io_u->file);
+	if (io_u->file) {
+		int ret = put_file(td, io_u->file);
+
+		if (ret)
+			td_verror(td, ret, "file close");
+	}
 
 	io_u->file = NULL;
 	list_del(&io_u->list);

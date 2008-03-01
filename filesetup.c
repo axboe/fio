@@ -209,11 +209,16 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 	return ret;
 }
 
-void generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
+int generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 {
+	int ret = 0;
+
 	dprint(FD_FILE, "fd close %s\n", f->file_name);
-	close(f->fd);
+	if (close(f->fd) < 0)
+		ret = errno;
+
 	f->fd = -1;
+	return ret;
 }
 
 int generic_open_file(struct thread_data *td, struct fio_file *f)
@@ -614,25 +619,28 @@ void get_file(struct fio_file *f)
 	f->references++;
 }
 
-void put_file(struct thread_data *td, struct fio_file *f)
+int put_file(struct thread_data *td, struct fio_file *f)
 {
+	int ret = 0;
+
 	dprint(FD_FILE, "put file %s, ref=%d\n", f->file_name, f->references);
 
 	if (!(f->flags & FIO_FILE_OPEN))
-		return;
+		return 0;
 
 	assert(f->references);
 	if (--f->references)
-		return;
+		return 0;
 
 	if (should_fsync(td) && td->o.fsync_on_close)
 		fsync(f->fd);
 
 	if (td->io_ops->close_file)
-		td->io_ops->close_file(td, f);
+		ret = td->io_ops->close_file(td, f);
 
 	td->nr_open_files--;
 	f->flags &= ~FIO_FILE_OPEN;
+	return ret;
 }
 
 static int recurse_dir(struct thread_data *td, const char *dirname)

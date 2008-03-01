@@ -805,10 +805,10 @@ extern int __must_check setup_files(struct thread_data *);
 extern int __must_check open_files(struct thread_data *);
 extern int __must_check file_invalidate_cache(struct thread_data *, struct fio_file *);
 extern int __must_check generic_open_file(struct thread_data *, struct fio_file *);
-extern void generic_close_file(struct thread_data *, struct fio_file *);
+extern int __must_check generic_close_file(struct thread_data *, struct fio_file *);
 extern int add_file(struct thread_data *, const char *);
 extern void get_file(struct fio_file *);
-extern void put_file(struct thread_data *, struct fio_file *);
+extern int __must_check put_file(struct thread_data *, struct fio_file *);
 extern int add_dir_files(struct thread_data *, const char *);
 extern int init_random_map(struct thread_data *);
 extern void dup_files(struct thread_data *, struct thread_data *);
@@ -894,7 +894,7 @@ extern int __must_check td_io_sync(struct thread_data *, struct fio_file *);
 extern int __must_check td_io_getevents(struct thread_data *, unsigned int, unsigned int, struct timespec *);
 extern int __must_check td_io_commit(struct thread_data *);
 extern int __must_check td_io_open_file(struct thread_data *, struct fio_file *);
-extern void td_io_close_file(struct thread_data *, struct fio_file *);
+extern int td_io_close_file(struct thread_data *, struct fio_file *);
 
 /*
  * blktrace support
@@ -919,12 +919,12 @@ struct ioengine_ops {
 	int (*cancel)(struct thread_data *, struct io_u *);
 	void (*cleanup)(struct thread_data *);
 	int (*open_file)(struct thread_data *, struct fio_file *);
-	void (*close_file)(struct thread_data *, struct fio_file *);
+	int (*close_file)(struct thread_data *, struct fio_file *);
 	void *data;
 	void *dlhandle;
 };
 
-#define FIO_IOOPS_VERSION	8
+#define FIO_IOOPS_VERSION	9
 
 extern struct ioengine_ops *load_ioengine(struct thread_data *, const char *);
 extern void register_ioengine(struct ioengine_ops *);

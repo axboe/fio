@@ -344,7 +344,7 @@ err:
 	return 1;
 }
 
-void td_io_close_file(struct thread_data *td, struct fio_file *f)
+int td_io_close_file(struct thread_data *td, struct fio_file *f)
 {
 	if (!(f->flags & FIO_FILE_CLOSING))
 		log_file(td, f, FIO_LOG_CLOSE_FILE);
@@ -354,5 +354,5 @@ void td_io_close_file(struct thread_data *td, struct fio_file *f)
 	 */
 	f->flags |= FIO_FILE_CLOSING;
 
-	put_file(td, f);
+	return put_file(td, f);
 }

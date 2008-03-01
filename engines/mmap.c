@@ -107,14 +107,23 @@ err:
 	return 1;
 }
 
-static void fio_mmapio_close(struct thread_data fio_unused *td,
-			     struct fio_file *f)
+static int fio_mmapio_close(struct thread_data fio_unused *td,
+			    struct fio_file *f)
 {
+	int ret = 0, ret2;
+
 	if (f->mmap) {
-		munmap(f->mmap, f->io_size);
+		if (munmap(f->mmap, f->io_size) < 0)
+			ret = errno;
+
 		f->mmap = NULL;
 	}
-	generic_close_file(td, f);
+
+	ret2 = generic_close_file(td, f);
+	if (!ret && ret2)
+		ret = ret2;
+
+	return ret;
 }
 
 static struct ioengine_ops ioengine = {

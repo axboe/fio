@@ -388,7 +388,7 @@ static int fio_sgio_open(struct thread_data *td, struct fio_file *f)
 		return ret;
 
 	if (sd && !sd->type_checked && fio_sgio_type_check(td, f)) {
-		generic_close_file(td, f);
+		ret = generic_close_file(td, f);
 		return 1;
 	}
 
