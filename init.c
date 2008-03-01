@@ -17,6 +17,7 @@
 #include "fio.h"
 #include "parse.h"
 #include "smalloc.h"
+#include "filehash.h"
 
 static char fio_version_string[] = "fio 1.19";
 
@@ -750,16 +751,21 @@ static void free_shm(void)
 /*
  * The thread area is shared between the main process and the job
  * threads/processes. So setup a shared memory segment that will hold
- * all the job info.
+ * all the job info. We use the end of the region for keeping track of
+ * open files across jobs, for file sharing.
  */
 static int setup_thread_area(void)
 {
+	void *hash;
+
 	/*
 	 * 1024 is too much on some machines, scale max_jobs if
 	 * we get a failure that looks like too large a shm segment
 	 */
 	do {
 		size_t size = max_jobs * sizeof(struct thread_data);
+
+		size += file_hash_size;
 
 		shm_id = shmget(0, size, IPC_CREAT | 0600);
 		if (shm_id != -1)
@@ -782,6 +788,8 @@ static int setup_thread_area(void)
 	}
 
 	memset(threads, 0, max_jobs * sizeof(struct thread_data));
+	hash = (void *) threads + max_jobs * sizeof(struct thread_data);
+	file_hash_init(hash);
 	atexit(free_shm);
 	return 0;
 }
