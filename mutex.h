@@ -13,7 +13,7 @@ struct fio_mutex {
 
 extern struct fio_mutex *fio_mutex_init(int);
 extern void fio_mutex_remove(struct fio_mutex *);
-extern inline void fio_mutex_down(struct fio_mutex *);
-extern inline void fio_mutex_up(struct fio_mutex *);
+extern void fio_mutex_down(struct fio_mutex *);
+extern void fio_mutex_up(struct fio_mutex *);
 
 #endif
