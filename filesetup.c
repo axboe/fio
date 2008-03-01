@@ -719,13 +719,20 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 	if (!org->files)
 		return;
 
-	bytes = org->files_index * sizeof(*f);
+	bytes = org->files_index * sizeof(f);
 	td->files = malloc(bytes);
 	memcpy(td->files, org->files, bytes);
 
 	for_each_file(td, f, i) {
+		struct fio_file *__f;
+
+		__f = malloc(sizeof(*__f));
+		memset(f, 0, sizeof(*__f));
+
 		if (f->file_name)
-			f->file_name = strdup(f->file_name);
+			__f->file_name = strdup(f->file_name);
+
+		td->files[i] = __f;
 	}
 }
 
