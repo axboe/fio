@@ -549,6 +549,7 @@ void close_and_free_files(struct thread_data *td)
 			sfree(f->file_map);
 			f->file_map = NULL;
 		}
+		sfree(f);
 	}
 
 	td->o.filename = NULL;
