@@ -306,7 +306,6 @@ struct fio_file {
 	unsigned long long io_size;
 
 	unsigned long long last_pos;
-	unsigned long long last_completed_pos;
 
 	/*
 	 * block map for random io

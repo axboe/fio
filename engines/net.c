@@ -28,7 +28,6 @@ struct netio_data {
 static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct netio_data *nd = td->io_ops->data;
-	struct fio_file *f = io_u->file;
 
 	/*
 	 * Make sure we don't see spurious reads to a receiver, and vice versa
@@ -39,17 +38,7 @@ static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 		return 1;
 	}
 		
-	if (io_u->ddir == DDIR_SYNC)
-		return 0;
-	if (io_u->offset == f->last_completed_pos)
-		return 0;
-
-	/*
-	 * If offset is different from last end position, it's a seek.
-	 * As network io is purely sequential, we don't allow seeks.
-	 */
-	td_verror(td, EINVAL, "cannot seek");
-	return 1;
+	return 0;
 }
 
 static int splice_io_u(int fdin, int fdout, unsigned int len)

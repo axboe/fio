@@ -30,8 +30,6 @@ static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 
 	if (io_u->ddir == DDIR_SYNC)
 		return 0;
-	if (io_u->offset == f->last_completed_pos)
-		return 0;
 
 	if (lseek(f->fd, io_u->offset, SEEK_SET) == -1) {
 		td_verror(td, errno, "lseek");

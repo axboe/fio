@@ -824,8 +824,6 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		td->io_bytes[idx] += bytes;
 		td->this_io_bytes[idx] += bytes;
 
-		io_u->file->last_completed_pos = io_u->endpos;
-
 		usec = utime_since(&io_u->issue_time, &icd->time);
 
 		add_clat_sample(td, idx, usec);
