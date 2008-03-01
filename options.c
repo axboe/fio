@@ -385,6 +385,22 @@ static struct fio_option options[] = {
 		.help	= "File(s) to use for the workload",
 	},
 	{
+		.name	= "lockfile",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(lockfile),
+		.help	= "Lock file when doing IO to it",
+		.parent	= "filename",
+		.def	= "0",
+	},
+	{
+		.name	= "lockfile_batch",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(lockfile_batch),
+		.help	= "Number of IOs to allow per file lock",
+		.parent	= "lockfile",
+		.def	= "1",
+	},
+	{
 		.name	= "opendir",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(opendir),

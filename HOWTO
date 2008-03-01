@@ -219,6 +219,14 @@ filename=str	Fio normally makes up a filename based on the job name,
 opendir=str	Tell fio to recursively add any file it can find in this
 		directory and down the file system tree.
 
+lockfile=bool	If set, fio will lock a file internally before doing IO to it.
+		This makes it safe to share file descriptors across fio
+		jobs that run at the same time.
+
+lockfile_batch=int	Acquiring a semaphore can be quite expensive, so
+		allow a process to complete this number of IOs before releasing
+		the semaphore again. Defaults to 1.
+
 readwrite=str
 rw=str		Type of io pattern. Accepted values are:
 

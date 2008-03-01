@@ -228,8 +228,10 @@ int generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 
 int generic_open_file(struct thread_data *td, struct fio_file *f)
 {
+	struct fio_file *__f;
 	int is_std = 0;
 	int flags = 0;
+	int from_hash = 0;
 
 	dprint(FD_FILE, "fd open %s\n", f->file_name);
 
@@ -265,8 +267,16 @@ open_again:
 
 		if (is_std)
 			f->fd = dup(STDOUT_FILENO);
-		else
-			f->fd = open(f->file_name, flags, 0600);
+		else {
+			__f = lookup_file_hash(f->file_name);
+			if (__f) {
+				f->sem = __f->sem;
+				f->fd = dup(__f->fd);
+				f->references++;
+				from_hash = 1;
+			} else
+				f->fd = open(f->file_name, flags, 0600);
+		}
 	} else {
 		if (f->filetype == FIO_TYPE_CHAR && !read_only)
 			flags |= O_RDWR;
@@ -275,8 +285,16 @@ open_again:
 
 		if (is_std)
 			f->fd = dup(STDIN_FILENO);
-		else
-			f->fd = open(f->file_name, flags);
+		else {
+			__f = lookup_file_hash(f->file_name);
+			if (__f) {
+				f->sem = __f->sem;
+				f->fd = dup(__f->fd);
+				f->references++;
+				from_hash = 1;
+			} else
+				f->fd = open(f->file_name, flags);
+		}
 	}
 
 	if (f->fd == -1) {
@@ -296,7 +314,17 @@ open_again:
 	if (get_file_size(td, f))
 		goto err;
 
-	add_file_hash(f);
+	if (!from_hash && f->fd != -1) {
+		if (add_file_hash(f)) {
+			int ret;
+
+			/*
+			 * OK to ignore, we haven't done anything with it
+			 */
+			ret = generic_close_file(td, f);
+			goto open_again;
+		}
+	}
 
 	return 0;
 err:
@@ -613,6 +641,9 @@ int add_file(struct thread_data *td, const char *fname)
 
 	get_file_type(f);
 
+	if (td->o.lockfile)
+		f->sem = fio_sem_init(1);
+
 	td->files_index++;
 	if (f->filetype == FIO_TYPE_FILE)
 		td->nr_normal_files++;
@@ -653,10 +684,29 @@ int put_file(struct thread_data *td, struct fio_file *f)
 
 void lock_file(struct thread_data *td, struct fio_file *f)
 {
+	if (f && f->sem) {
+		if (f->sem_owner == td && f->sem_batch--)
+			return;
+
+		fio_sem_down(f->sem);
+		f->sem_owner = td;
+		f->sem_batch = td->o.lockfile_batch;
+	}
 }
 
 void unlock_file(struct fio_file *f)
 {
+	if (f && f->sem) {
+		int sem_val;
+
+		if (f->sem_batch)
+			return;
+
+		sem_getvalue(&f->sem->sem, &sem_val);
+		if (!sem_val)
+			f->sem_owner = NULL;
+		fio_sem_up(f->sem);
+	}
 }
 
 static int recurse_dir(struct thread_data *td, const char *dirname)

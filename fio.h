@@ -22,6 +22,7 @@
 #include "arch/arch.h"
 #include "os/os.h"
 #include "mutex.h"
+#include "sem.h"
 #include "log.h"
 #include "debug.h"
 
@@ -310,6 +311,13 @@ struct fio_file {
 	unsigned long long last_pos;
 
 	/*
+	 * if io is protected by a semaphore, this is set
+	 */
+	struct fio_sem *sem;
+	void *sem_owner;
+	unsigned int sem_batch;
+
+	/*
 	 * block map for random io
 	 */
 	unsigned long *file_map;
@@ -407,6 +415,8 @@ struct thread_options {
 
 	unsigned int nr_files;
 	unsigned int open_files;
+	unsigned int lockfile;
+	unsigned int lockfile_batch;
 
 	unsigned int odirect;
 	unsigned int invalidate_cache;

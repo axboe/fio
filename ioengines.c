@@ -359,5 +359,10 @@ int td_io_close_file(struct thread_data *td, struct fio_file *f)
 	 */
 	f->flags |= FIO_FILE_CLOSING;
 
+	if (f->sem_owner == td && f->sem_batch) {
+		f->sem_batch = 0;
+		unlock_file(f);
+	}
+
 	return put_file(td, f);
 }
