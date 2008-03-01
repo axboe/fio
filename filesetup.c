@@ -8,6 +8,7 @@
 #include <sys/types.h>
 
 #include "fio.h"
+#include "smalloc.h"
 
 static int root_warn;
 
@@ -508,13 +509,12 @@ int init_random_map(struct thread_data *td)
 	for_each_file(td, f, i) {
 		blocks = (f->real_file_size + td->o.rw_min_bs - 1) / (unsigned long long) td->o.rw_min_bs;
 		num_maps = (blocks + BLOCKS_PER_MAP-1)/ (unsigned long long) BLOCKS_PER_MAP;
-		f->file_map = malloc(num_maps * sizeof(long));
+		f->file_map = smalloc(num_maps * sizeof(long));
 		if (!f->file_map) {
 			log_err("fio: failed allocating random map. If running a large number of jobs, try the 'norandommap' option\n");
 			return 1;
 		}
 		f->num_maps = num_maps;
-		memset(f->file_map, 0, num_maps * sizeof(long));
 	}
 
 	return 0;
@@ -542,11 +542,11 @@ void close_and_free_files(struct thread_data *td)
 
 		td_io_close_file(td, f);
 
-		free(f->file_name);
+		sfree(f->file_name);
 		f->file_name = NULL;
 
 		if (f->file_map) {
-			free(f->file_map);
+			sfree(f->file_map);
 			f->file_map = NULL;
 		}
 	}
@@ -585,8 +585,7 @@ int add_file(struct thread_data *td, const char *fname)
 
 	dprint(FD_FILE, "add file %s\n", fname);
 
-	f = malloc(sizeof(*f));
-	memset(f, 0, sizeof(*f));
+	f = smalloc(sizeof(*f));
 	f->fd = -1;
 
 	td->files = realloc(td->files, (cur_files + 1) * sizeof(f));
@@ -603,7 +602,7 @@ int add_file(struct thread_data *td, const char *fname)
 		len = sprintf(file_name, "%s/", td->o.directory);
 
 	sprintf(file_name + len, "%s", fname);
-	f->file_name = strdup(file_name);
+	f->file_name = smalloc_strdup(file_name);
 
 	get_file_type(f);
 
@@ -726,11 +725,10 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 	for_each_file(td, f, i) {
 		struct fio_file *__f;
 
-		__f = malloc(sizeof(*__f));
-		memset(f, 0, sizeof(*__f));
+		__f = smalloc(sizeof(*__f));
 
 		if (f->file_name)
-			__f->file_name = strdup(f->file_name);
+			__f->file_name = smalloc_strdup(f->file_name);
 
 		td->files[i] = __f;
 	}
