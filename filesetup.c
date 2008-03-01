@@ -497,7 +497,7 @@ int init_random_map(struct thread_data *td)
 	struct fio_file *f;
 	unsigned int i;
 
-	if (td->o.norandommap)
+	if (td->o.norandommap || !td_random(td))
 		return 0;
 
 	for_each_file(td, f, i) {
