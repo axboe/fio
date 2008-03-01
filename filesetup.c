@@ -9,6 +9,7 @@
 
 #include "fio.h"
 #include "smalloc.h"
+#include "filehash.h"
 
 static int root_warn;
 
@@ -215,6 +216,9 @@ int generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 	int ret = 0;
 
 	dprint(FD_FILE, "fd close %s\n", f->file_name);
+
+	remove_file_hash(f);
+
 	if (close(f->fd) < 0)
 		ret = errno;
 
@@ -291,6 +295,8 @@ open_again:
 
 	if (get_file_size(td, f))
 		goto err;
+
+	add_file_hash(f);
 
 	return 0;
 err:
