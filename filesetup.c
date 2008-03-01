@@ -585,11 +585,13 @@ int add_file(struct thread_data *td, const char *fname)
 
 	dprint(FD_FILE, "add file %s\n", fname);
 
-	td->files = realloc(td->files, (cur_files + 1) * sizeof(*f));
-
-	f = &td->files[cur_files];
+	f = malloc(sizeof(*f));
 	memset(f, 0, sizeof(*f));
 	f->fd = -1;
+
+	td->files = realloc(td->files, (cur_files + 1) * sizeof(f));
+
+	td->files[cur_files] = f;
 
 	/*
 	 * init function, io engine may not be loaded yet

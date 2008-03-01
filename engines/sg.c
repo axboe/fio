@@ -277,7 +277,7 @@ static int fio_sgio_get_bs(struct thread_data *td, unsigned int *bs)
 	int ret;
 
 	io_u = __get_io_u(td);
-	io_u->file = &td->files[0];
+	io_u->file = td->files[0];
 	assert(io_u);
 
 	hdr = &io_u->hdr;

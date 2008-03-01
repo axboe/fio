@@ -65,7 +65,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 		 * invalid ddir, this is a file action
 		 */
 		if (ipo->ddir == DDIR_INVAL) {
-			struct fio_file *f = &td->files[ipo->fileno];
+			struct fio_file *f = td->files[ipo->fileno];
 
 			if (ipo->file_action == FIO_LOG_OPEN_FILE) {
 				assert(!td_io_open_file(td, f));
@@ -81,7 +81,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 		io_u->offset = ipo->offset;
 		io_u->buflen = ipo->len;
 		io_u->ddir = ipo->ddir;
-		io_u->file = &td->files[ipo->fileno];
+		io_u->file = td->files[ipo->fileno];
 		get_file(io_u->file);
 
 		dprint(FD_IO, "iolog: get %llu/%lu/%s\n", io_u->offset,
