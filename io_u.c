@@ -764,10 +764,9 @@ struct io_u *get_io_u(struct thread_data *td)
 	 * Set io data pointers.
 	 */
 	io_u->endpos = io_u->offset + io_u->buflen;
-out:
 	io_u->xfer_buf = io_u->buf;
 	io_u->xfer_buflen = io_u->buflen;
-
+out:
 	if (!td_io_prep(td, io_u)) {
 		fio_gettime(&io_u->start_time, NULL);
 		return io_u;
