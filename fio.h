@@ -274,6 +274,7 @@ enum fio_file_flags {
 	FIO_FILE_EXTEND		= 1 << 2,	/* needs extend */
 	FIO_FILE_DONE		= 1 << 3,	/* io completed to this file */
 	FIO_SIZE_KNOWN		= 1 << 4,	/* size has been set */
+	FIO_FILE_HASHED		= 1 << 5,	/* file is on hash */
 };
 
 /*
@@ -281,6 +282,7 @@ enum fio_file_flags {
  * this structure holds state information for a single file.
  */
 struct fio_file {
+	struct list_head hash_list;
 	enum fio_filetype filetype;
 
 	/*
