@@ -82,8 +82,12 @@ static void terminate_threads(int group_id)
 			 */
 			if (td->runstate < TD_RUNNING)
 				kill(td->pid, SIGQUIT);
-			else if (td->io_ops->flags & FIO_SIGQUIT)
-				kill(td->pid, SIGQUIT);
+			else {
+				struct ioengine_ops *ops = td->io_ops;
+
+				if (ops && (ops->flags & FIO_SIGQUIT))
+					kill(td->pid, SIGQUIT);
+			}
 		}
 	}
 }
