@@ -16,6 +16,7 @@
 
 #include "fio.h"
 #include "parse.h"
+#include "smalloc.h"
 
 static char fio_version_string[] = "fio 1.19";
 
@@ -742,6 +743,8 @@ static void free_shm(void)
 		threads = NULL;
 		shmctl(shm_id, IPC_RMID, &sbuf);
 	}
+
+	scleanup();
 }
 
 /*

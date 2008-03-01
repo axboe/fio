@@ -36,6 +36,7 @@
 
 #include "fio.h"
 #include "hash.h"
+#include "smalloc.h"
 
 unsigned long page_mask;
 unsigned long page_size;
@@ -1301,6 +1302,8 @@ static void run_threads(void)
 int main(int argc, char *argv[])
 {
 	long ps;
+
+	sinit();
 
 	/*
 	 * We need locale for number printing, if it isn't set then just
