@@ -168,10 +168,14 @@ int td_io_prep(struct thread_data *td, struct io_u *io_u)
 	dprint_io_u(io_u, "prep");
 	fio_ro_check(td, io_u);
 
+	lock_file(td, io_u->file);
+
 	if (td->io_ops->prep) {
 		int ret = td->io_ops->prep(td, io_u);
 
 		dprint(FD_IO, "->prep(%p)=%d\n", io_u, ret);
+		if (ret)
+			unlock_file(io_u->file);
 		return ret;
 	}
 
@@ -227,6 +231,8 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 		td->io_issues[io_u->ddir]++;
 
 	ret = td->io_ops->queue(td, io_u);
+
+	unlock_file(io_u->file);
 
 	if (ret != FIO_Q_BUSY)
 		io_u_mark_depth(td, io_u);

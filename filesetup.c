@@ -645,6 +645,14 @@ int put_file(struct thread_data *td, struct fio_file *f)
 	return ret;
 }
 
+void lock_file(struct thread_data *td, struct fio_file *f)
+{
+}
+
+void unlock_file(struct fio_file *f)
+{
+}
+
 static int recurse_dir(struct thread_data *td, const char *dirname)
 {
 	struct dirent *dir;
