@@ -1153,7 +1153,18 @@ static void run_threads(void)
 				log_err("fio: pid=%d, err=%d/%s\n", td->pid, td->error, td->verror);
 			td_set_runstate(td, TD_REAPED);
 			todo--;
-		}
+		} else {
+			struct fio_file *f;
+			unsigned int i;
+
+			/*
+			 * for sharing to work, each job must always open
+			 * its own files. so close them, if we opened them
+			 * for creation
+			 */
+			for_each_file(td, f, i)
+				td_io_close_file(td, f);
+ 		}
 
 		init_disk_util(td);
 	}
