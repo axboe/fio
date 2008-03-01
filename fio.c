@@ -787,8 +787,7 @@ static int clear_io_state(struct thread_data *td)
 	if (td->o.time_based || td->o.loops)
 		td->nr_done_files = 0;
 
-	for_each_file(td, f, i)
-		td_io_close_file(td, f);
+	close_files(td);
 
 	ret = 0;
 	for_each_file(td, f, i) {
@@ -966,7 +965,7 @@ static void *thread_main(void *data)
 err:
 	if (td->error)
 		printf("fio: pid=%d, err=%d/%s\n", td->pid, td->error, td->verror);
-	close_files(td);
+	close_and_free_files(td);
 	close_ioengine(td);
 	cleanup_io_u(td);
 

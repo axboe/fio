@@ -800,6 +800,7 @@ extern void options_mem_free(struct thread_data *);
  * File setup/shutdown
  */
 extern void close_files(struct thread_data *);
+extern void close_and_free_files(struct thread_data *);
 extern int __must_check setup_files(struct thread_data *);
 extern int __must_check open_files(struct thread_data *);
 extern int __must_check file_invalidate_cache(struct thread_data *, struct fio_file *);
