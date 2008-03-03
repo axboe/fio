@@ -57,16 +57,28 @@ static inline void pool_unlock(struct pool *pool)
 		fio_mutex_up(pool->lock);
 }
 
-static inline void global_lock(void)
+static inline void global_read_lock(void)
 {
 	if (lock)
-		fio_mutex_down(lock);
+		fio_mutex_down_read(lock);
 }
 
-static inline void global_unlock(void)
+static inline void global_read_unlock(void)
 {
 	if (lock)
-		fio_mutex_up(lock);
+		fio_mutex_up_read(lock);
+}
+
+static inline void global_write_lock(void)
+{
+	if (lock)
+		fio_mutex_down_write(lock);
+}
+
+static inline void global_write_unlock(void)
+{
+	if (lock)
+		fio_mutex_up_write(lock);
 }
 
 #define hdr_free(hdr)		((hdr)->size & 0x80000000)
@@ -240,7 +252,9 @@ static int add_pool(struct pool *pool)
 	pool->room = hdr->size = pool->size - sizeof(*hdr);
 	pool->largest_block = pool->room;
 	hdr_mark_free(hdr);
+	global_write_lock();
 	nr_pools++;
+	global_write_unlock();
 	return 0;
 out_unlink:
 	if (pool->map)
@@ -314,7 +328,7 @@ void sfree(void *ptr)
 	struct pool *pool = NULL;
 	unsigned int i;
 
-	global_lock();
+	global_read_lock();
 
 	for (i = 0; i < nr_pools; i++) {
 		if (ptr_valid(&mp[i], ptr)) {
@@ -323,7 +337,7 @@ void sfree(void *ptr)
 		}
 	}
 
-	global_unlock();
+	global_read_unlock();
 
 	assert(pool);
 	sfree_pool(pool, ptr);
@@ -418,7 +432,7 @@ void *smalloc(unsigned int size)
 {
 	unsigned int i;
 
-	global_lock();
+	global_read_lock();
 	i = last_pool;
 
 	do {
@@ -427,7 +441,7 @@ void *smalloc(unsigned int size)
 
 			if (ptr) {
 				last_pool = i;
-				global_unlock();
+				global_read_unlock();
 				return ptr;
 			}
 		}
@@ -440,12 +454,15 @@ void *smalloc(unsigned int size)
 			break;
 		else {
 			i = nr_pools;
+			global_read_unlock();
 			if (add_pool(&mp[nr_pools]))
-				break;
+				goto out;
+			global_read_lock();
 		}
 	} while (1);
 
-	global_unlock();
+	global_read_unlock();
+out:
 	return NULL;
 }
 
