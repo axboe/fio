@@ -1,11 +1,4 @@
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <sys/mman.h>
-#include <assert.h>
 
 #include "sem.h"
 #include "smalloc.h"
