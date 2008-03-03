@@ -253,7 +253,6 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 		pfd.events = POLLIN;
 
 		ret = poll(&pfd, 1, -1);
-		printf("got ret %d\n", ret);
 		if (ret < 0) {
 			if (errno == EINTR)
 				continue;
