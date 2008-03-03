@@ -41,10 +41,6 @@ prefix = /usr/local
 bindir = $(prefix)/bin
 mandir = $(prefix)/man
 
-ifneq ($(wildcard .depend),)
-include .depend
-endif
-
 %.o: %.c
 	$(QUIET_CC)$(CC) -o $*.o -c $(CFLAGS) $<
 fio: $(OBJS)
@@ -53,7 +49,9 @@ fio: $(OBJS)
 depend:
 	$(QUIET_DEP)$(CC) -MM $(ALL_CFLAGS) *.c engines/*.c crc/*.[ch] 1> .depend
 
-all: $(PROGS) $(SCRIPTS) depend
+$(PROGS): depend
+
+all: depend $(PROGS) $(SCRIPTS)
 
 clean:
 	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o crc/*.o core.* core
@@ -67,3 +65,6 @@ install: $(PROGS) $(SCRIPTS)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 fio.1 $(DESTDIR)$(mandir)/man1
 
+ifneq ($(wildcard .depend),)
+include .depend
+endif
