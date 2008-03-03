@@ -13,21 +13,6 @@ unsigned int file_hash_size = HASH_BUCKETS * sizeof(struct list_head);
 static struct list_head *file_hash;
 static struct fio_mutex *hash_lock;
 
-static void dump_hash(void)
-{
-	struct list_head *n;
-	unsigned int i;
-
-	for (i = 0; i < HASH_BUCKETS; i++) {
-		list_for_each(n, &file_hash[i]) {
-			struct fio_file *f;
-
-			f = list_entry(n, struct fio_file, hash_list);
-			printf("%d: %s\n", i, f->file_name);
-		}
-	}
-}
-
 static unsigned short hash(const char *name)
 {
 	return crc16((const unsigned char *) name, strlen(name)) & HASH_MASK;
@@ -60,7 +45,6 @@ static struct fio_file *__lookup_file_hash(const char *name)
 		}
 	}
 
-	dump_hash();
 	return NULL;
 }
 
