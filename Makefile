@@ -32,8 +32,7 @@ OBJS += engines/guasi.o
 ifneq ($(findstring $(MAKEFLAGS),s),s)
 ifndef V
 	QUIET_CC	= @echo '   ' CC $@;
-	QUIET_AR	= @echo '   ' AR $@;
-	QUIET_LINK	= @echo '   ' LINK $@;
+	QUIET_DEP	= @echo '   ' DEP $@;
 endif
 endif
 
@@ -42,23 +41,25 @@ prefix = /usr/local
 bindir = $(prefix)/bin
 mandir = $(prefix)/man
 
+ifneq ($(wildcard .depend),)
+include .depend
+endif
+
 %.o: %.c
 	$(QUIET_CC)$(CC) -o $*.o -c $(CFLAGS) $<
 fio: $(OBJS)
 	$(QUIET_CC)$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) $(EXTLIBS) -lpthread -lm -ldl -laio -lrt
 
-all: $(PROGS) $(SCRIPTS)
+depend:
+	$(QUIET_DEP)$(CC) -MM $(ALL_CFLAGS) *.c engines/*.c crc/*.[ch] 1> .depend
+
+all: $(PROGS) $(SCRIPTS) depend
 
 clean:
 	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o crc/*.o core.* core
 
-depend:
-	@$(CC) -MM $(ALL_CFLAGS) *.c engines/*.c crc/*.[ch] 1> .depend
-
 cscope:
 	@cscope -b
-
-$(PROGS): depend
 
 install: $(PROGS) $(SCRIPTS)
 	$(INSTALL) -m755 -d $(DESTDIR)$(bindir)
@@ -66,6 +67,3 @@ install: $(PROGS) $(SCRIPTS)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 fio.1 $(DESTDIR)$(mandir)/man1
 
-ifneq ($(wildcard .depend),)
-include .depend
-endif
