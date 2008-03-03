@@ -271,7 +271,7 @@ void sinit(void)
 	int ret = add_pool(&mp[0]);
 
 #ifdef MP_SAFE
-	lock = fio_mutex_init(1);
+	lock = fio_mutex_rw_init();
 #endif
 	assert(!ret);
 }

@@ -20,4 +20,9 @@ extern void fio_mutex_up(struct fio_mutex *);
 extern void fio_mutex_up_read(struct fio_mutex *);
 extern void fio_mutex_up_write(struct fio_mutex *);
 
+static inline struct fio_mutex *fio_mutex_rw_init(void)
+{
+	return fio_mutex_init(0);
+}
+
 #endif
