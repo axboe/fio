@@ -90,3 +90,39 @@ void fio_mutex_up(struct fio_mutex *mutex)
 	mutex->value++;
 	pthread_mutex_unlock(&mutex->lock);
 }
+
+void fio_mutex_down_write(struct fio_mutex *mutex)
+{
+	pthread_mutex_lock(&mutex->lock);
+	while (mutex->value != 0)
+		pthread_cond_wait(&mutex->cond, &mutex->lock);
+	mutex->value--;
+	pthread_mutex_unlock(&mutex->lock);
+}
+
+void fio_mutex_down_read(struct fio_mutex *mutex)
+{
+	pthread_mutex_lock(&mutex->lock);
+	while (mutex->value < 0)
+		pthread_cond_wait(&mutex->cond, &mutex->lock);
+	mutex->value++;
+	pthread_mutex_unlock(&mutex->lock);
+}
+
+void fio_mutex_up_read(struct fio_mutex *mutex)
+{
+	pthread_mutex_lock(&mutex->lock);
+	mutex->value--;
+	if (mutex->value >= 0)
+		pthread_cond_signal(&mutex->cond);
+	pthread_mutex_unlock(&mutex->lock);
+}
+
+void fio_mutex_up_write(struct fio_mutex *mutex)
+{
+	pthread_mutex_lock(&mutex->lock);
+	mutex->value++;
+	if (mutex->value >= 0)
+		pthread_cond_signal(&mutex->cond);
+	pthread_mutex_unlock(&mutex->lock);
+}

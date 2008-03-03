@@ -6,7 +6,7 @@
 struct fio_mutex {
 	pthread_mutex_t lock;
 	pthread_cond_t cond;
-	unsigned int value;
+	int value;
 
 	int mutex_fd;
 };
@@ -14,6 +14,10 @@ struct fio_mutex {
 extern struct fio_mutex *fio_mutex_init(int);
 extern void fio_mutex_remove(struct fio_mutex *);
 extern void fio_mutex_down(struct fio_mutex *);
+extern void fio_mutex_down_read(struct fio_mutex *);
+extern void fio_mutex_down_write(struct fio_mutex *);
 extern void fio_mutex_up(struct fio_mutex *);
+extern void fio_mutex_up_read(struct fio_mutex *);
+extern void fio_mutex_up_write(struct fio_mutex *);
 
 #endif
