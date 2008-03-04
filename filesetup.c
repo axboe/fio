@@ -226,9 +226,33 @@ int generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 	return ret;
 }
 
-int generic_open_file(struct thread_data *td, struct fio_file *f)
+static int file_lookup_open(struct fio_file *f, int flags)
 {
 	struct fio_file *__f;
+	int from_hash;
+
+	__f = lookup_file_hash(f->file_name);
+	if (__f) {
+		/*
+		 * racy, need the __f->lock locked
+		 */
+		f->lock = __f->lock;
+		f->lock_owner = __f->lock_owner;
+		f->lock_batch = __f->lock_batch;
+		f->lock_ddir = __f->lock_ddir;
+		f->fd = dup(__f->fd);
+		f->references++;
+		from_hash = 1;
+	} else {
+		f->fd = open(f->file_name, flags, 0600);
+		from_hash = 0;
+	}
+
+	return from_hash;
+}
+
+int generic_open_file(struct thread_data *td, struct fio_file *f)
+{
 	int is_std = 0;
 	int flags = 0;
 	int from_hash = 0;
@@ -267,16 +291,8 @@ open_again:
 
 		if (is_std)
 			f->fd = dup(STDOUT_FILENO);
-		else {
-			__f = lookup_file_hash(f->file_name);
-			if (__f) {
-				f->sem = __f->sem;
-				f->fd = dup(__f->fd);
-				f->references++;
-				from_hash = 1;
-			} else
-				f->fd = open(f->file_name, flags, 0600);
-		}
+		else
+			from_hash = file_lookup_open(f, flags);
 	} else {
 		if (f->filetype == FIO_TYPE_CHAR && !read_only)
 			flags |= O_RDWR;
@@ -285,16 +301,8 @@ open_again:
 
 		if (is_std)
 			f->fd = dup(STDIN_FILENO);
-		else {
-			__f = lookup_file_hash(f->file_name);
-			if (__f) {
-				f->sem = __f->sem;
-				f->fd = dup(__f->fd);
-				f->references++;
-				from_hash = 1;
-			} else
-				f->fd = open(f->file_name, flags);
-		}
+		else
+			from_hash = file_lookup_open(f, flags);
 	}
 
 	if (f->fd == -1) {
@@ -641,8 +649,19 @@ int add_file(struct thread_data *td, const char *fname)
 
 	get_file_type(f);
 
-	if (td->o.lockfile)
-		f->sem = fio_sem_init(1);
+	switch (td->o.file_lock_mode) {
+	case FILE_LOCK_NONE:
+		break;
+	case FILE_LOCK_READWRITE:
+		f->lock = fio_mutex_rw_init();
+		break;
+	case FILE_LOCK_EXCLUSIVE:
+		f->lock = fio_mutex_init(1);
+		break;
+	default:
+		log_err("fio: unknown lock mode: %d\n", td->o.file_lock_mode);
+		assert(0);
+	}
 
 	td->files_index++;
 	if (f->filetype == FIO_TYPE_FILE)
@@ -682,31 +701,62 @@ int put_file(struct thread_data *td, struct fio_file *f)
 	return ret;
 }
 
-void lock_file(struct thread_data *td, struct fio_file *f)
+void lock_file(struct thread_data *td, struct fio_file *f, enum fio_ddir ddir)
 {
-	if (f && f->sem) {
-		if (f->sem_owner == td && f->sem_batch--)
-			return;
+	if (!f->lock || td->o.file_lock_mode == FILE_LOCK_NONE)
+		return;
 
-		fio_sem_down(f->sem);
-		f->sem_owner = td;
-		f->sem_batch = td->o.lockfile_batch;
+	if (f->lock_owner == td && f->lock_batch--)
+		return;
+
+	if (td->o.file_lock_mode == FILE_LOCK_READWRITE) {
+		if (ddir == DDIR_READ)
+			fio_mutex_down_read(f->lock);
+		else
+			fio_mutex_down_write(f->lock);
+	} else if (td->o.file_lock_mode == FILE_LOCK_EXCLUSIVE)
+		fio_mutex_down(f->lock);
+
+	f->lock_owner = td;
+	f->lock_batch = td->o.lockfile_batch;
+	f->lock_ddir = ddir;
+}
+
+void unlock_file(struct thread_data *td, struct fio_file *f)
+{
+	if (!f->lock || td->o.file_lock_mode == FILE_LOCK_NONE)
+		return;
+	if (f->lock_batch)
+		return;
+
+	if (td->o.file_lock_mode == FILE_LOCK_READWRITE) {
+		const int is_read = f->lock_ddir == DDIR_READ;
+		int val = fio_mutex_getval(f->lock);
+
+		if ((is_read && val == 1) || (!is_read && val == -1))
+			f->lock_owner = NULL;
+
+		if (is_read)
+			fio_mutex_up_read(f->lock);
+		else
+			fio_mutex_up_write(f->lock);
+	} else if (td->o.file_lock_mode == FILE_LOCK_EXCLUSIVE) {
+		int val = fio_mutex_getval(f->lock);
+
+		if (val == 0)
+			f->lock_owner = NULL;
+
+		fio_mutex_up(f->lock);
 	}
 }
 
-void unlock_file(struct fio_file *f)
+void unlock_file_all(struct thread_data *td, struct fio_file *f)
 {
-	if (f && f->sem) {
-		int sem_val;
+	if (f->lock_owner != td)
+		return;
 
-		if (f->sem_batch)
-			return;
-
-		sem_getvalue(&f->sem->sem, &sem_val);
-		if (!sem_val)
-			f->sem_owner = NULL;
-		fio_sem_up(f->sem);
-	}
+	f->lock_batch = 0;
+	unlock_file(td, f);
 }
 
 static int recurse_dir(struct thread_data *td, const char *dirname)

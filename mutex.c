@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 
 #include "mutex.h"
+#include "arch/arch.h"
 
 void fio_mutex_remove(struct fio_mutex *mutex)
 {
@@ -76,8 +77,13 @@ err:
 void fio_mutex_down(struct fio_mutex *mutex)
 {
 	pthread_mutex_lock(&mutex->lock);
-	while (mutex->value == 0)
+
+	while (!mutex->value) {
+		mutex->waiters++;
 		pthread_cond_wait(&mutex->cond, &mutex->lock);
+		mutex->waiters--;
+	}
+
 	mutex->value--;
 	pthread_mutex_unlock(&mutex->lock);
 }
@@ -85,7 +91,8 @@ void fio_mutex_down(struct fio_mutex *mutex)
 void fio_mutex_up(struct fio_mutex *mutex)
 {
 	pthread_mutex_lock(&mutex->lock);
-	if (!mutex->value)
+	read_barrier();
+	if (!mutex->value && mutex->waiters)
 		pthread_cond_signal(&mutex->cond);
 	mutex->value++;
 	pthread_mutex_unlock(&mutex->lock);
@@ -94,8 +101,13 @@ void fio_mutex_up(struct fio_mutex *mutex)
 void fio_mutex_down_write(struct fio_mutex *mutex)
 {
 	pthread_mutex_lock(&mutex->lock);
-	while (mutex->value != 0)
+
+	while (mutex->value != 0) {
+		mutex->waiters++;
 		pthread_cond_wait(&mutex->cond, &mutex->lock);
+		mutex->waiters--;
+	}
+
 	mutex->value--;
 	pthread_mutex_unlock(&mutex->lock);
 }
@@ -103,8 +115,13 @@ void fio_mutex_down_write(struct fio_mutex *mutex)
 void fio_mutex_down_read(struct fio_mutex *mutex)
 {
 	pthread_mutex_lock(&mutex->lock);
-	while (mutex->value < 0)
+
+	while (mutex->value < 0) {
+		mutex->waiters++;
 		pthread_cond_wait(&mutex->cond, &mutex->lock);
+		mutex->waiters--;
+	}
+
 	mutex->value++;
 	pthread_mutex_unlock(&mutex->lock);
 }
@@ -113,7 +130,8 @@ void fio_mutex_up_read(struct fio_mutex *mutex)
 {
 	pthread_mutex_lock(&mutex->lock);
 	mutex->value--;
-	if (mutex->value >= 0)
+	read_barrier();
+	if (mutex->value >= 0 && mutex->waiters)
 		pthread_cond_signal(&mutex->cond);
 	pthread_mutex_unlock(&mutex->lock);
 }
@@ -122,7 +140,8 @@ void fio_mutex_up_write(struct fio_mutex *mutex)
 {
 	pthread_mutex_lock(&mutex->lock);
 	mutex->value++;
-	if (mutex->value >= 0)
+	read_barrier();
+	if (mutex->value >= 0 && mutex->waiters)
 		pthread_cond_signal(&mutex->cond);
 	pthread_mutex_unlock(&mutex->lock);
 }

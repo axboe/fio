@@ -665,7 +665,6 @@ set_file:
 		 * td_io_close() does a put_file() as well, so no need to
 		 * do that here.
 		 */
-		unlock_file(io_u->file);
 		io_u->file = NULL;
 		td_io_close_file(td, f);
 		f->flags |= FIO_FILE_DONE;

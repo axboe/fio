@@ -7,6 +7,7 @@ struct fio_mutex {
 	pthread_mutex_t lock;
 	pthread_cond_t cond;
 	int value;
+	int waiters;
 
 	int mutex_fd;
 };
@@ -23,6 +24,11 @@ extern void fio_mutex_up_write(struct fio_mutex *);
 static inline struct fio_mutex *fio_mutex_rw_init(void)
 {
 	return fio_mutex_init(0);
+}
+
+static inline int fio_mutex_getval(struct fio_mutex *mutex)
+{
+	return mutex->value;
 }
 
 #endif

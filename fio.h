@@ -22,7 +22,6 @@
 #include "arch/arch.h"
 #include "os/os.h"
 #include "mutex.h"
-#include "sem.h"
 #include "log.h"
 #include "debug.h"
 
@@ -45,6 +44,12 @@ enum td_ddir {
 	TD_DDIR_RANDREAD	= TD_DDIR_READ | TD_DDIR_RAND,
 	TD_DDIR_RANDWRITE	= TD_DDIR_WRITE | TD_DDIR_RAND,
 	TD_DDIR_RANDRW		= TD_DDIR_RW | TD_DDIR_RAND,
+};
+
+enum file_lock_mode {
+	FILE_LOCK_NONE,
+	FILE_LOCK_EXCLUSIVE,
+	FILE_LOCK_READWRITE,
 };
 
 /*
@@ -313,9 +318,10 @@ struct fio_file {
 	/*
 	 * if io is protected by a semaphore, this is set
 	 */
-	struct fio_sem *sem;
-	void *sem_owner;
-	unsigned int sem_batch;
+	struct fio_mutex *lock;
+	void *lock_owner;
+	unsigned int lock_batch;
+	enum fio_ddir lock_ddir;
 
 	/*
 	 * block map for random io
@@ -415,7 +421,7 @@ struct thread_options {
 
 	unsigned int nr_files;
 	unsigned int open_files;
-	unsigned int lockfile;
+	enum file_lock_mode file_lock_mode;
 	unsigned int lockfile_batch;
 
 	unsigned int odirect;
@@ -820,8 +826,9 @@ extern int __must_check generic_close_file(struct thread_data *, struct fio_file
 extern int add_file(struct thread_data *, const char *);
 extern void get_file(struct fio_file *);
 extern int __must_check put_file(struct thread_data *, struct fio_file *);
-extern void lock_file(struct thread_data *, struct fio_file *);
-extern void unlock_file(struct fio_file *);
+extern void lock_file(struct thread_data *, struct fio_file *, enum fio_ddir);
+extern void unlock_file(struct thread_data *, struct fio_file *);
+extern void unlock_file_all(struct thread_data *, struct fio_file *);
 extern int add_dir_files(struct thread_data *, const char *);
 extern int init_random_map(struct thread_data *);
 extern void dup_files(struct thread_data *, struct thread_data *);

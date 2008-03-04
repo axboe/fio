@@ -168,14 +168,14 @@ int td_io_prep(struct thread_data *td, struct io_u *io_u)
 	dprint_io_u(io_u, "prep");
 	fio_ro_check(td, io_u);
 
-	lock_file(td, io_u->file);
+	lock_file(td, io_u->file, io_u->ddir);
 
 	if (td->io_ops->prep) {
 		int ret = td->io_ops->prep(td, io_u);
 
 		dprint(FD_IO, "->prep(%p)=%d\n", io_u, ret);
 		if (ret)
-			unlock_file(io_u->file);
+			unlock_file(td, io_u->file);
 		return ret;
 	}
 
@@ -232,7 +232,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	ret = td->io_ops->queue(td, io_u);
 
-	unlock_file(io_u->file);
+	unlock_file(td, io_u->file);
 
 	if (ret != FIO_Q_BUSY)
 		io_u_mark_depth(td, io_u);
@@ -359,10 +359,7 @@ int td_io_close_file(struct thread_data *td, struct fio_file *f)
 	 */
 	f->flags |= FIO_FILE_CLOSING;
 
-	if (f->sem_owner == td && f->sem_batch) {
-		f->sem_batch = 0;
-		unlock_file(f);
-	}
+	unlock_file_all(td, f);
 
 	return put_file(td, f);
 }

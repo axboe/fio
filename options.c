@@ -351,6 +351,18 @@ static int str_verify_pattern_cb(void *data, unsigned int *off)
 	return 0;
 }
 
+static int str_lockfile_cb(void *data, const char *str)
+{
+	struct thread_data *td = data;
+	char *nr = get_opt_postfix(str);
+
+	td->o.lockfile_batch = 1;
+	if (nr)
+		td->o.lockfile_batch = atoi(nr);
+
+	return 0;
+}
+
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
 
@@ -386,19 +398,27 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "lockfile",
-		.type	= FIO_OPT_BOOL,
-		.off1	= td_var_offset(lockfile),
+		.type	= FIO_OPT_STR,
+		.cb	= str_lockfile_cb,
+		.off1	= td_var_offset(file_lock_mode),
 		.help	= "Lock file when doing IO to it",
 		.parent	= "filename",
-		.def	= "0",
-	},
-	{
-		.name	= "lockfile_batch",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(lockfile_batch),
-		.help	= "Number of IOs to allow per file lock",
-		.parent	= "lockfile",
-		.def	= "1",
+		.def	= "none",
+		.posval = {
+			  { .ival = "none",
+			    .oval = FILE_LOCK_NONE,
+			    .help = "No file locking",
+			  },
+			  { .ival = "exclusive",
+			    .oval = FILE_LOCK_EXCLUSIVE,
+			    .help = "Exclusive file lock",
+			  },
+			  {
+			    .ival = "readwrite",
+			    .oval = FILE_LOCK_READWRITE,
+			    .help = "Read vs write lock",
+			  },
+		},
 	},
 	{
 		.name	= "opendir",
