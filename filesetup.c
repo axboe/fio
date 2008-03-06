@@ -233,6 +233,7 @@ static int file_lookup_open(struct fio_file *f, int flags)
 
 	__f = lookup_file_hash(f->file_name);
 	if (__f) {
+		dprint(FD_FILE, "found file in hash %s\n", f->file_name);
 		/*
 		 * racy, need the __f->lock locked
 		 */
@@ -244,6 +245,7 @@ static int file_lookup_open(struct fio_file *f, int flags)
 		f->references++;
 		from_hash = 1;
 	} else {
+		dprint(FD_FILE, "file not found in hash %s\n", f->file_name);
 		f->fd = open(f->file_name, flags, 0600);
 		from_hash = 0;
 	}
@@ -383,6 +385,8 @@ static int get_file_sizes(struct thread_data *td)
 	int err = 0;
 
 	for_each_file(td, f, i) {
+		dprint(FD_FILE, "get file size for %p/%d/%p\n", f, i, f->file_name);
+
 		if (td->io_ops->open_file(td, f)) {
 			if (td->error != ENOENT) {
 				log_err("%s\n", td->verror);
@@ -596,6 +600,7 @@ void close_and_free_files(struct thread_data *td)
 
 	td->o.filename = NULL;
 	free(td->files);
+	td->files_index = 0;
 	td->files = NULL;
 	td->o.nr_files = 0;
 }
@@ -631,8 +636,9 @@ int add_file(struct thread_data *td, const char *fname)
 	f = smalloc(sizeof(*f));
 	f->fd = -1;
 
-	td->files = realloc(td->files, (cur_files + 1) * sizeof(f));
+	dprint(FD_FILE, "resize file array to %d files\n", cur_files + 1);
 
+	td->files = realloc(td->files, (cur_files + 1) * sizeof(f));
 	td->files[cur_files] = f;
 
 	/*
@@ -666,6 +672,8 @@ int add_file(struct thread_data *td, const char *fname)
 	td->files_index++;
 	if (f->filetype == FIO_TYPE_FILE)
 		td->nr_normal_files++;
+
+	dprint(FD_FILE, "file %p \"%s\" added at %d\n", f, f->file_name, cur_files);
 
 	return cur_files;
 }
@@ -820,16 +828,15 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 {
 	struct fio_file *f;
 	unsigned int i;
-	size_t bytes;
+
+	dprint(FD_FILE, "dup files: %d\n", org->files_index);
 
 	if (!org->files)
 		return;
 
-	bytes = org->files_index * sizeof(f);
-	td->files = malloc(bytes);
-	memcpy(td->files, org->files, bytes);
+	td->files = malloc(org->files_index * sizeof(f));
 
-	for_each_file(td, f, i) {
+	for_each_file(org, f, i) {
 		struct fio_file *__f;
 
 		__f = smalloc(sizeof(*__f));
