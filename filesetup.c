@@ -320,7 +320,10 @@ open_again:
 			goto open_again;
 		}
 
-		snprintf(buf, sizeof(buf) - 1, "open(%s)", f->file_name);
+		if (from_hash)
+			snprintf(buf, sizeof(buf) - 1, "dup(%s)", f->file_name);
+		else
+			snprintf(buf, sizeof(buf) - 1, "open(%s)",f->file_name);
 
 		td_verror(td, __e, buf);
 	}
