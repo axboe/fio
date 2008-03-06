@@ -245,15 +245,13 @@ static int file_lookup_open(struct fio_file *f, int flags)
 		f->lock_owner = __f->lock_owner;
 		f->lock_batch = __f->lock_batch;
 		f->lock_ddir = __f->lock_ddir;
-		f->fd = dup(__f->fd);
-		f->references++;
 		from_hash = 1;
 	} else {
 		dprint(FD_FILE, "file not found in hash %s\n", f->file_name);
-		f->fd = open(f->file_name, flags, 0600);
 		from_hash = 0;
 	}
 
+	f->fd = open(f->file_name, flags, 0600);
 	return from_hash;
 }
 
@@ -320,10 +318,7 @@ open_again:
 			goto open_again;
 		}
 
-		if (from_hash)
-			snprintf(buf, sizeof(buf) - 1, "dup(%s)", f->file_name);
-		else
-			snprintf(buf, sizeof(buf) - 1, "open(%s)",f->file_name);
+		snprintf(buf, sizeof(buf) - 1, "open(%s)", f->file_name);
 
 		td_verror(td, __e, buf);
 	}
