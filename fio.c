@@ -61,6 +61,9 @@ struct io_log *agg_io_log[2];
 
 static inline void td_set_runstate(struct thread_data *td, int runstate)
 {
+	if (td->runstate == runstate)
+		return;
+
 	dprint(FD_PROCESS, "pid=%d: runstate %d -> %d\n", td->pid, td->runstate,
 								runstate);
 	td->runstate = runstate;
@@ -461,8 +464,11 @@ static void do_io(struct thread_data *td)
 		 * Add verification end_io handler, if asked to verify
 		 * a previously written file.
 		 */
-		if (td->o.verify != VERIFY_NONE)
+		if (td->o.verify != VERIFY_NONE) {
 			io_u->end_io = verify_io_u;
+			td_set_runstate(td, TD_VERIFYING);
+		} else
+			td_set_runstate(td, TD_RUNNING);
 
 		ret = td_io_queue(td, io_u);
 		switch (ret) {
