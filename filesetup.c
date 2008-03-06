@@ -96,8 +96,12 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 
 	if (td->terminate)
 		unlink(f->file_name);
-	else if (td->o.create_fsync)
-		fsync(f->fd);
+	else if (td->o.create_fsync) {
+		if (fsync(f->fd) < 0) {
+			td_verror(td, errno, "fsync");
+			goto err;
+		}
+	}
 
 	free(b);
 done:
@@ -687,7 +691,7 @@ void get_file(struct fio_file *f)
 
 int put_file(struct thread_data *td, struct fio_file *f)
 {
-	int ret = 0;
+	int f_ret = 0, ret = 0;
 
 	dprint(FD_FILE, "put file %s, ref=%d\n", f->file_name, f->references);
 
@@ -699,10 +703,13 @@ int put_file(struct thread_data *td, struct fio_file *f)
 		return 0;
 
 	if (should_fsync(td) && td->o.fsync_on_close)
-		fsync(f->fd);
+		f_ret = fsync(f->fd);
 
 	if (td->io_ops->close_file)
 		ret = td->io_ops->close_file(td, f);
+
+	if (!ret)
+		ret = !f_ret;
 
 	td->nr_open_files--;
 	f->flags &= ~FIO_FILE_OPEN;
