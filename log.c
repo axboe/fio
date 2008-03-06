@@ -19,7 +19,9 @@ void log_io_u(struct thread_data *td, struct io_u *io_u)
 	if (!td->o.write_iolog_file)
 		return;
 
-	fprintf(td->iolog_f, "%s %s %llu %lu\n", io_u->file->file_name, act[io_u->ddir], io_u->offset, io_u->buflen);
+	fprintf(td->iolog_f, "%s %s %llu %lu\n", io_u->file->file_name,
+						act[io_u->ddir], io_u->offset,
+						io_u->buflen);
 }
 
 void log_file(struct thread_data *td, struct fio_file *f,
@@ -202,7 +204,8 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 		struct io_piece *ipo;
 		int r;
 
-		r = sscanf(p, "%256s %256s %llu %u", fname, act, &offset, &bytes);
+		r = sscanf(p, "%256s %256s %llu %u", fname, act, &offset,
+									&bytes);
 		if (r == 4) {
 			/*
 			 * Check action first
@@ -214,7 +217,8 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 			else if (!strcmp(act, "sync"))
 				rw = DDIR_SYNC;
 			else {
-				log_err("fio: bad iolog file action: %s\n",act);
+				log_err("fio: bad iolog file action: %s\n",
+									act);
 				continue;
 			}
 		} else if (r == 2) {
@@ -231,14 +235,15 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 				fileno = get_fileno(td, fname);
 				file_action = FIO_LOG_CLOSE_FILE;
 			} else {
-				log_err("fio: bad iolog file action: %s\n",act);
+				log_err("fio: bad iolog file action: %s\n",
+									act);
 				continue;
 			}
 		} else {
 			log_err("bad iolog2: %s", p);
 			continue;
 		}
-			
+
 		if (rw == DDIR_READ)
 			reads++;
 		else if (rw == DDIR_WRITE) {
@@ -277,7 +282,8 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 	free(fname);
 
 	if (writes && read_only) {
-		log_err("fio: <%s> skips replay of %d writes due to read-only\n", td->o.name, writes);
+		log_err("fio: <%s> skips replay of %d writes due to"
+			" read-only\n", td->o.name, writes);
 		writes = 0;
 	}
 
@@ -346,7 +352,8 @@ static int read_iolog(struct thread_data *td, FILE *f)
 	free(str);
 
 	if (writes && read_only) {
-		log_err("fio: <%s> skips replay of %d writes due to read-only\n", td->o.name, writes);
+		log_err("fio: <%s> skips replay of %d writes due to"
+			" read-only\n", td->o.name, writes);
 		writes = 0;
 	}
 
@@ -489,8 +496,10 @@ void __finish_log(struct io_log *log, const char *name)
 		return;
 	}
 
-	for (i = 0; i < log->nr_samples; i++)
-		fprintf(f, "%lu, %lu, %u\n", log->log[i].time, log->log[i].val, log->log[i].ddir);
+	for (i = 0; i < log->nr_samples; i++) {
+		fprintf(f, "%lu, %lu, %u\n", log->log[i].time, log->log[i].val,
+						log->log[i].ddir);
+	}
 
 	fclose(f);
 	free(log->log);

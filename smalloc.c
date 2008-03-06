@@ -364,7 +364,7 @@ restart:
 	do {
 		if (combine(pool, prv, hdr))
 			hdr = prv;
-			
+
 		if (hdr_free(hdr) && hdr_size(hdr) >= size)
 			break;
 

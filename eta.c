@@ -17,47 +17,47 @@ static void check_str_update(struct thread_data *td)
 	char c = run_str[td->thread_number - 1];
 
 	switch (td->runstate) {
-		case TD_REAPED:
-			c = '_';
-			break;
-		case TD_EXITED:
-			c = 'E';
-			break;
-		case TD_RUNNING:
-			if (td_rw(td)) {
-				if (td_random(td))
-					c = 'm';
-				else
-					c = 'M';
-			} else if (td_read(td)) {
-				if (td_random(td))
-					c = 'r';
-				else
-					c = 'R';
-			} else {
-				if (td_random(td))
-					c = 'w';
-				else
-					c = 'W';
-			}
-			break;
-		case TD_VERIFYING:
-			c = 'V';
-			break;
-		case TD_FSYNCING:
-			c = 'F';
-			break;
-		case TD_CREATED:
-			c = 'C';
-			break;
-		case TD_INITIALIZED:
-			c = 'I';
-			break;
-		case TD_NOT_CREATED:
-			c = 'P';
-			break;
-		default:
-			log_err("state %d\n", td->runstate);
+	case TD_REAPED:
+		c = '_';
+		break;
+	case TD_EXITED:
+		c = 'E';
+		break;
+	case TD_RUNNING:
+		if (td_rw(td)) {
+			if (td_random(td))
+				c = 'm';
+			else
+				c = 'M';
+		} else if (td_read(td)) {
+			if (td_random(td))
+				c = 'r';
+			else
+				c = 'R';
+		} else {
+			if (td_random(td))
+				c = 'w';
+			else
+				c = 'W';
+		}
+		break;
+	case TD_VERIFYING:
+		c = 'V';
+		break;
+	case TD_FSYNCING:
+		c = 'F';
+		break;
+	case TD_CREATED:
+		c = 'C';
+		break;
+	case TD_INITIALIZED:
+		c = 'I';
+		break;
+	case TD_NOT_CREATED:
+		c = 'P';
+		break;
+	default:
+		log_err("state %d\n", td->runstate);
 	}
 
 	run_str[td->thread_number - 1] = c;
@@ -176,7 +176,7 @@ static void calc_rate(unsigned long mtime, unsigned long long *io_bytes,
 	prev_io_bytes[0] = io_bytes[0];
 	prev_io_bytes[1] = io_bytes[1];
 }
-	
+
 /*
  * Print status of the jobs we know about. This includes rate estimates,
  * ETA, thread state, etc.
@@ -192,7 +192,6 @@ void print_thread_status(void)
 	unsigned long long io_bytes[2];
 	unsigned long rate_time, disp_time, bw_avg_time;
 	struct timeval now;
-	int linelen;
 
 	static unsigned long long rate_io_bytes[2];
 	static unsigned long long disp_io_bytes[2];
@@ -267,7 +266,7 @@ void print_thread_status(void)
 	fio_gettime(&now, NULL);
 	rate_time = mtime_since(&rate_prev_time, &now);
 
-	if (write_bw_log && rate_time> bw_avg_time) {
+	if (write_bw_log && rate_time > bw_avg_time) {
 		calc_rate(rate_time, io_bytes, rate_io_bytes, rate);
 		memcpy(&rate_prev_time, &now, sizeof(now));
 		add_agg_sample(rate[DDIR_READ], DDIR_READ);
@@ -290,12 +289,14 @@ void print_thread_status(void)
 	else if (m_iops || t_iops)
 		printf(", CR=%d/%d IOPS", t_iops, m_iops);
 	if (eta_sec != INT_MAX && nr_running) {
+		int ll;
+
 		perc *= 100.0;
-		linelen = printf(": [%s] [%3.1f%% done] [%6u/%6u kb/s] [eta %s]",
+		ll = printf(": [%s] [%3.1f%% done] [%6u/%6u kb/s] [eta %s]",
 				 run_str, perc, rate[0], rate[1], eta_str);
-		if (linelen >= 0 && linelen < linelen_last)
-			printf("%*s", linelen_last-linelen, "");
-		linelen_last = linelen;
+		if (ll >= 0 && ll < linelen_last)
+			printf("%*s", linelen_last - ll, "");
+		linelen_last = ll;
 	}
 	printf("\r");
 	fflush(stdout);

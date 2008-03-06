@@ -41,8 +41,8 @@ char *job_section = NULL;
 int write_bw_log = 0;
 int read_only = 0;
 
-static int def_timeout = 0;
-static int write_lat_log = 0;
+static int def_timeout;
+static int write_lat_log;
 
 static int prev_group_jobs;
 
@@ -52,7 +52,7 @@ unsigned long fio_debug = 0;
  * Command line options. These will contain the above, plus a few
  * extra that only pertain to fio itself and not jobs.
  */
-static struct option long_options[FIO_NR_OPTIONS] = {
+static struct option l_opts[FIO_NR_OPTIONS] = {
 	{
 		.name		= "output",
 		.has_arg	= required_argument,
@@ -208,10 +208,11 @@ static int fixup_options(struct thread_data *td)
 	struct thread_options *o = &td->o;
 
 	if (read_only && td_write(td)) {
-		log_err("fio: job <%s> has write bit set, but fio is in read-only mode\n", td->o.name);
+		log_err("fio: job <%s> has write bit set, but fio is in"
+			" read-only mode\n", td->o.name);
 		return 1;
 	}
-	
+
 	if (o->rwmix[DDIR_READ] + o->rwmix[DDIR_WRITE] > 100)
 		o->rwmix[DDIR_WRITE] = 100 - o->rwmix[DDIR_READ];
 
@@ -234,11 +235,11 @@ static int fixup_options(struct thread_data *td)
 		o->overwrite = 1;
 
 	if (!o->min_bs[DDIR_READ])
-		o->min_bs[DDIR_READ]= o->bs[DDIR_READ];
+		o->min_bs[DDIR_READ] = o->bs[DDIR_READ];
 	if (!o->max_bs[DDIR_READ])
 		o->max_bs[DDIR_READ] = o->bs[DDIR_READ];
 	if (!o->min_bs[DDIR_WRITE])
-		o->min_bs[DDIR_WRITE]= o->bs[DDIR_WRITE];
+		o->min_bs[DDIR_WRITE] = o->bs[DDIR_WRITE];
 	if (!o->max_bs[DDIR_WRITE])
 		o->max_bs[DDIR_WRITE] = o->bs[DDIR_WRITE];
 
@@ -303,7 +304,7 @@ static int fixup_options(struct thread_data *td)
 
 	if (o->fill_device && !o->size)
 		o->size = ULONG_LONG_MAX;
-	
+
 	if (td_rw(td) && td->o.verify != VERIFY_NONE)
 		log_info("fio: mixed read/write workload with verify. May not "
 		 "work as expected, unless you pre-populated the file\n");
@@ -452,7 +453,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 			add_file(td, jobname);
 		else {
 			for (i = 0; i < td->o.nr_files; i++) {
-				sprintf(fname, "%s.%d.%d", jobname, td->thread_number, i);
+				sprintf(fname, "%s.%d.%d", jobname,
+							td->thread_number, i);
 				add_file(td, fname);
 			}
 		}
@@ -502,9 +504,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	if (!terse_output) {
 		if (!job_add_num) {
-			if (!strcmp(td->io_ops->name, "cpuio"))
-				log_info("%s: ioengine=cpu, cpuload=%u, cpucycle=%u\n", td->o.name, td->o.cpuload, td->o.cpucycle);
-			else {
+			if (!strcmp(td->io_ops->name, "cpuio")) {
+				log_info("%s: ioengine=cpu, cpuload=%u,"
+					 " cpucycle=%u\n", td->o.name,
+							td->o.cpuload,
+							td->o.cpucycle);
+			} else {
 				char *c1, *c2, *c3, *c4;
 
 				c1 = to_kmg(td->o.min_bs[DDIR_READ]);
@@ -512,7 +517,13 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 				c3 = to_kmg(td->o.min_bs[DDIR_WRITE]);
 				c4 = to_kmg(td->o.max_bs[DDIR_WRITE]);
 
-				log_info("%s: (g=%d): rw=%s, bs=%s-%s/%s-%s, ioengine=%s, iodepth=%u\n", td->o.name, td->groupid, ddir_str[td->o.td_ddir], c1, c2, c3, c4, td->io_ops->name, td->o.iodepth);
+				log_info("%s: (g=%d): rw=%s, bs=%s-%s/%s-%s,"
+					 " ioengine=%s, iodepth=%u\n",
+						td->o.name, td->groupid,
+						ddir_str[td->o.td_ddir],
+						c1, c2, c3, c4,
+						td->io_ops->name,
+						td->o.iodepth);
 
 				free(c1);
 				free(c2);
@@ -636,7 +647,8 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 		if (sscanf(p, "[%255s]", name) != 1) {
 			if (inside_skip)
 				continue;
-			log_err("fio: option <%s> outside of [] job section\n", p);
+			log_err("fio: option <%s> outside of [] job section\n",
+									p);
 			break;
 		}
 
@@ -806,11 +818,13 @@ static void usage(const char *name)
 	printf("\t--minimal\tMinimal (terse) output\n");
 	printf("\t--version\tPrint version info and exit\n");
 	printf("\t--help\t\tPrint this page\n");
-	printf("\t--cmdhelp=cmd\tPrint command help, \"all\" for all of them\n");
+	printf("\t--cmdhelp=cmd\tPrint command help, \"all\" for all of"
+		" them\n");
 	printf("\t--showcmd\tTurn a job file into command line options\n");
 	printf("\t--eta=when\tWhen ETA estimate should be printed\n");
 	printf("\t          \tMay be \"always\", \"never\" or \"auto\"\n");
-	printf("\t--readonly\tTurn on safety read-only checks, preventing writes\n");
+	printf("\t--readonly\tTurn on safety read-only checks, preventing"
+		" writes\n");
 	printf("\t--section=name\tOnly run specified section in job file\n");
 }
 
@@ -880,7 +894,7 @@ static int parse_cmd_line(int argc, char *argv[])
 	struct thread_data *td = NULL;
 	int c, ini_idx = 0, lidx, ret = 0, do_exit = 0, exit_val = 0;
 
-	while ((c = getopt_long_only(argc, argv, "", long_options, &lidx)) != -1) {
+	while ((c = getopt_long_only(argc, argv, "", l_opts, &lidx)) != -1) {
 		switch (c) {
 		case 't':
 			def_timeout = atoi(optarg);
@@ -928,7 +942,8 @@ static int parse_cmd_line(int argc, char *argv[])
 			break;
 		case 'x':
 			if (!strcmp(optarg, "global")) {
-				log_err("fio: can't use global as only section\n");
+				log_err("fio: can't use global as only "
+					"section\n");
 				do_exit++;
 				exit_val = 1;
 				break;
@@ -938,7 +953,7 @@ static int parse_cmd_line(int argc, char *argv[])
 			job_section = strdup(optarg);
 			break;
 		case FIO_GETOPT_JOB: {
-			const char *opt = long_options[lidx].name;
+			const char *opt = l_opts[lidx].name;
 			char *val = optarg;
 
 			if (!strncmp(opt, "name", 4) && td) {
@@ -1001,7 +1016,7 @@ int parse_options(int argc, char *argv[])
 	f_out = stdout;
 	f_err = stderr;
 
-	fio_options_dup_and_init(long_options);
+	fio_options_dup_and_init(l_opts);
 
 	if (setup_thread_area())
 		return 1;

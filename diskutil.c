@@ -20,6 +20,7 @@ static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 	char line[256];
 	FILE *f;
 	char *p;
+	int ret;
 
 	f = fopen(du->path, "r");
 	if (!f)
@@ -31,7 +32,13 @@ static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 		return 1;
 	}
 
-	if (sscanf(p, "%u %u %llu %u %u %u %llu %u %u %u %u\n", &dus->ios[0], &dus->merges[0], &dus->sectors[0], &dus->ticks[0], &dus->ios[1], &dus->merges[1], &dus->sectors[1], &dus->ticks[1], &in_flight, &dus->io_ticks, &dus->time_in_queue) != 11) {
+	ret = scanf(p, "%u %u %llu %u %u %u %llu %u %u %u %u\n", &dus->ios[0],
+					&dus->merges[0], &dus->sectors[0],
+					&dus->ticks[0], &dus->ios[1],
+					&dus->merges[1], &dus->sectors[1],
+					&dus->ticks[1], &in_flight,
+					&dus->io_ticks, &dus->time_in_queue);
+	if (ret != 11) {
 		fclose(f);
 		return 1;
 	}
@@ -258,7 +265,7 @@ static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 
 	last_mindev = mindev;
 	last_majdev = majdev;
-		
+
 	sprintf(foo, "/sys/block");
 	if (!find_block_dir(majdev, mindev, foo))
 		return;
@@ -326,7 +333,12 @@ void show_disk_util(void)
 		if (util > 100.0)
 			util = 100.0;
 
-		log_info("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, in_queue=%u, util=%3.2f%%\n", du->name, dus->ios[0], dus->ios[1], dus->merges[0], dus->merges[1], dus->ticks[0], dus->ticks[1], dus->time_in_queue, util);
+		log_info("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, "
+			 "in_queue=%u, util=%3.2f%%\n", du->name,
+						dus->ios[0], dus->ios[1],
+						dus->merges[0], dus->merges[1],
+						dus->ticks[0], dus->ticks[1],
+						dus->time_in_queue, util);
 	}
 
 	/*

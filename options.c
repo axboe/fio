@@ -66,7 +66,9 @@ static int str_bssplit_cb(void *data, const char *input)
 		 */
 		if (i == td->o.bssplit_nr) {
 			td->o.bssplit_nr <<= 1;
-			td->o.bssplit = realloc(td->o.bssplit, td->o.bssplit_nr * sizeof(struct bssplit));
+			td->o.bssplit = realloc(td->o.bssplit,
+						td->o.bssplit_nr
+						  * sizeof(struct bssplit));
 		}
 
 		perc_str = strstr(fname, "/");
@@ -852,7 +854,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_VAL_INT,
 		.help	= "Offset verify header location by N bytes",
 		.def	= "0",
-		.cb	= str_verify_offset_cb,	
+		.cb	= str_verify_offset_cb,
 		.parent	= "verify",
 	},
 	{
@@ -1050,7 +1052,8 @@ static struct fio_option options[] = {
 		.name	= "bwavgtime",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(bw_avg_time),
-		.help	= "Time window over which to calculate bandwidth (msec)",
+		.help	= "Time window over which to calculate bandwidth"
+			  " (msec)",
 		.def	= "500",
 	},
 	{

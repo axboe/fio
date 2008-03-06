@@ -36,11 +36,13 @@ int fio_pin_memory(void)
 	if (phys_mem) {
 		if ((mlock_size + 128 * 1024 * 1024) > phys_mem) {
 			mlock_size = phys_mem - 128 * 1024 * 1024;
-			log_info("fio: limiting mlocked memory to %lluMiB\n", mlock_size >> 20);
+			log_info("fio: limiting mlocked memory to %lluMiB\n",
+							mlock_size >> 20);
 		}
 	}
 
-	pinned_mem = mmap(NULL, mlock_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | OS_MAP_ANON, 0, 0);
+	pinned_mem = mmap(NULL, mlock_size, PROT_READ | PROT_WRITE,
+				MAP_PRIVATE | OS_MAP_ANON, 0, 0);
 	if (pinned_mem == MAP_FAILED) {
 		perror("malloc locked mem");
 		pinned_mem = NULL;
@@ -70,14 +72,19 @@ static int alloc_mem_shm(struct thread_data *td)
 		if (geteuid() != 0 && errno == ENOMEM)
 			log_err("fio: you may need to run this job as root\n");
 		if (td->o.mem_type == MEM_SHMHUGE) {
-			if (errno == EINVAL)
-				log_err("fio: check that you have free huge pages and that hugepage-size is correct.\n");
-			else if (errno == ENOSYS)
-				log_err("fio: your system does not appear to support huge pages.\n");
-			else if (errno == ENOMEM)
-				log_err("fio: no huge pages available, do you need to alocate some? See HOWTO.\n");
+			if (errno == EINVAL) {
+				log_err("fio: check that you have free huge"
+					" pages and that hugepage-size is"
+					" correct.\n");
+			} else if (errno == ENOSYS) {
+				log_err("fio: your system does not appear to"
+					" support huge pages.\n");
+			} else if (errno == ENOMEM) {
+				log_err("fio: no huge pages available, do you"
+					" need to alocate some? See HOWTO.\n");
+			}
 		}
-		
+
 		return 1;
 	}
 
@@ -114,7 +121,8 @@ static int alloc_mem_mmap(struct thread_data *td)
 	} else
 		flags |= OS_MAP_ANON;
 
-	td->orig_buffer = mmap(NULL, td->orig_buffer_size, PROT_READ | PROT_WRITE, flags, td->mmapfd, 0);
+	td->orig_buffer = mmap(NULL, td->orig_buffer_size,
+				PROT_READ | PROT_WRITE, flags, td->mmapfd, 0);
 	dprint(FD_MEM, "mmap %zu/%d %p\n", td->orig_buffer_size, td->mmapfd,
 							td->orig_buffer);
 	if (td->orig_buffer == MAP_FAILED) {
@@ -124,7 +132,7 @@ static int alloc_mem_mmap(struct thread_data *td)
 			close(td->mmapfd);
 			unlink(td->mmapfile);
 		}
-			
+
 		return 1;
 	}
 
@@ -137,7 +145,7 @@ static int alloc_mem_malloc(struct thread_data *td)
 
 	if (td->o.odirect)
 		bsize += page_mask;
-		
+
 	td->orig_buffer = malloc(bsize);
 	dprint(FD_MEM, "malloc %u %p\n", bsize, td->orig_buffer);
 	if (td->orig_buffer)
@@ -181,7 +189,8 @@ void free_io_mem(struct thread_data *td)
 	} else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE) {
 		struct shmid_ds sbuf;
 
-		dprint(FD_MEM, "shmdt/ctl %d %p\n", td->shm_id,td->orig_buffer);
+		dprint(FD_MEM, "shmdt/ctl %d %p\n", td->shm_id,
+							td->orig_buffer);
 		shmdt(td->orig_buffer);
 		shmctl(td->shm_id, IPC_RMID, &sbuf);
 	} else if (td->o.mem_type == MEM_MMAP ||

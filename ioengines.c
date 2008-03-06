@@ -23,7 +23,8 @@ static LIST_HEAD(engine_list);
 static int check_engine_ops(struct ioengine_ops *ops)
 {
 	if (ops->version != FIO_IOOPS_VERSION) {
-		log_err("bad ioops version %d (want %d)\n", ops->version, FIO_IOOPS_VERSION);
+		log_err("bad ioops version %d (want %d)\n", ops->version,
+							FIO_IOOPS_VERSION);
 		return 1;
 	}
 
@@ -37,7 +38,7 @@ static int check_engine_ops(struct ioengine_ops *ops)
 	 */
 	if (ops->flags & FIO_SYNCIO)
 		return 0;
-	
+
 	if (!ops->event) {
 		log_err("%s: no event handler\n", ops->name);
 		return 1;
@@ -50,7 +51,7 @@ static int check_engine_ops(struct ioengine_ops *ops)
 		log_err("%s: no queue handler\n", ops->name);
 		return 1;
 	}
-		
+
 	return 0;
 }
 
@@ -218,12 +219,14 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	if (td->io_ops->flags & FIO_SYNCIO) {
 		fio_gettime(&io_u->issue_time, NULL);
-		memcpy(&td->last_issue, &io_u->issue_time, sizeof(struct timeval));
+		memcpy(&td->last_issue, &io_u->issue_time,
+					sizeof(struct timeval));
 
 		/*
 		 * for a sync engine, set the timeout upfront
 		 */
-		if (mtime_since(&td->timeout_end, &io_u->issue_time) < IO_U_TIMEOUT)
+		if (mtime_since(&td->timeout_end, &io_u->issue_time)
+		    < IO_U_TIMEOUT)
 			io_u_set_timeout(td);
 	}
 
@@ -250,14 +253,17 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	if ((td->io_ops->flags & FIO_SYNCIO) == 0) {
 		fio_gettime(&io_u->issue_time, NULL);
-		memcpy(&td->last_issue, &io_u->issue_time, sizeof(struct timeval));
+		memcpy(&td->last_issue, &io_u->issue_time,
+				sizeof(struct timeval));
 
 		/*
 		 * async engine, set the timeout here
 		 */
 		if (ret == FIO_Q_QUEUED &&
-		    mtime_since(&td->timeout_end, &io_u->issue_time) < IO_U_TIMEOUT)
+		    (mtime_since(&td->timeout_end, &io_u->issue_time)
+			< IO_U_TIMEOUT)) {
 			io_u_set_timeout(td);
+		}
 	}
 
 	return ret;
@@ -269,8 +275,10 @@ int td_io_init(struct thread_data *td)
 
 	if (td->io_ops->init) {
 		ret = td->io_ops->init(td);
-		if (ret && td->o.iodepth > 1)
-			log_err("fio: io engine init failed. Perhaps try reducing io depth?\n");
+		if (ret && td->o.iodepth > 1) {
+			log_err("fio: io engine init failed. Perhaps try"
+				" reducing io depth?\n");
+		}
 	}
 
 	return ret;
@@ -295,8 +303,11 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 	if (td->io_ops->open_file(td, f)) {
 		if (td->error == EINVAL && td->o.odirect)
 			log_err("fio: destination does not support O_DIRECT\n");
-		if (td->error == EMFILE)
-			log_err("fio: try reducing/setting openfiles (failed at %u of %u)\n", td->nr_open_files, td->o.nr_files);
+		if (td->error == EMFILE) {
+			log_err("fio: try reducing/setting openfiles (failed"
+				" at %u of %u)\n", td->nr_open_files,
+							td->o.nr_files);
+		}
 
 		return 1;
 	}
@@ -321,7 +332,6 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 
 	if (td->o.fadvise_hint &&
 	    (f->filetype == FIO_TYPE_BD || f->filetype == FIO_TYPE_FILE)) {
-		
 		int flags;
 
 		if (td_random(td))

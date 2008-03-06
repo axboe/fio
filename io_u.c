@@ -124,7 +124,8 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	do {
 		r = os_random_long(&td->random_state);
 		dprint(FD_RANDOM, "off rand %llu\n", r);
-		*b = (last_block(td, f, ddir) - 1) * (r / ((unsigned long long) RAND_MAX + 1.0));
+		*b = (last_block(td, f, ddir) - 1)
+			* (r / ((unsigned long long) RAND_MAX + 1.0));
 
 		/*
 		 * if we are not maintaining a random map, we are done.
@@ -208,9 +209,11 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 		buflen = td->o.min_bs[ddir];
 	else {
 		r = os_random_long(&td->bsrange_state);
-		if (!td->o.bssplit_nr)
-			buflen = (unsigned int) (1 + (double) (td->o.max_bs[ddir] - 1) * r / (RAND_MAX + 1.0));
-		else {
+		if (!td->o.bssplit_nr) {
+			buflen = (unsigned int)
+					(1 + (double) (td->o.max_bs[ddir] - 1)
+					* r / (RAND_MAX + 1.0));
+		} else {
 			long perc = 0;
 			unsigned int i;
 
@@ -223,8 +226,10 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 					break;
 			}
 		}
-		if (!td->o.bs_unaligned)
-			buflen = (buflen + td->o.min_bs[ddir] - 1) & ~(td->o.min_bs[ddir] - 1);
+		if (!td->o.bs_unaligned) {
+			buflen = (buflen + td->o.min_bs[ddir] - 1)
+					& ~(td->o.min_bs[ddir] - 1);
+		}
 	}
 
 	if (io_u->offset + buflen > io_u->file->real_file_size) {
@@ -249,7 +254,8 @@ static void set_rwmix_bytes(struct thread_data *td)
 	rbytes = td->io_bytes[td->rwmix_ddir] - td->rwmix_bytes;
 	diff = td->o.rwmix[td->rwmix_ddir ^ 1];
 
-	td->rwmix_bytes = td->io_bytes[td->rwmix_ddir] + (rbytes * ((100 - diff)) / diff);
+	td->rwmix_bytes = td->io_bytes[td->rwmix_ddir]
+				+ (rbytes * ((100 - diff)) / diff);
 }
 
 static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
@@ -278,7 +284,7 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 		unsigned int cycle;
 
 		fio_gettime(&now, NULL);
-	 	elapsed = mtime_since_now(&td->rwmix_switch);
+		elapsed = mtime_since_now(&td->rwmix_switch);
 
 		/*
 		 * if this is the first cycle, make it shorter
@@ -293,7 +299,7 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 		if (elapsed >= cycle ||
 		    td->io_bytes[td->rwmix_ddir] >= td->rwmix_bytes) {
 			unsigned long long max_bytes;
-			enum fio_ddir ddir;			
+			enum fio_ddir ddir;
 
 			/*
 			 * Put a top limit on how many bytes we do for
@@ -302,10 +308,12 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 			 */
 			ddir = get_rand_ddir(td);
 			max_bytes = td->this_io_bytes[ddir];
-			if (max_bytes >= (td->o.size * td->o.rwmix[ddir] / 100)) {
+			if (max_bytes >=
+			    (td->o.size * td->o.rwmix[ddir] / 100)) {
 				if (!td->rw_end_set[ddir]) {
 					td->rw_end_set[ddir] = 1;
-					memcpy(&td->rw_end[ddir], &now, sizeof(now));
+					memcpy(&td->rw_end[ddir], &now,
+						sizeof(now));
 				}
 				ddir ^= 1;
 			}
@@ -348,7 +356,7 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 	__io_u->flags |= IO_U_F_FREE;
 	if ((__io_u->flags & IO_U_F_FLIGHT) && (__io_u->ddir != DDIR_SYNC))
 		td->io_issues[__io_u->ddir]--;
-		
+
 	__io_u->flags &= ~IO_U_F_FLIGHT;
 
 	list_del(&__io_u->list);
@@ -560,7 +568,8 @@ static struct fio_file *get_next_file_rand(struct thread_data *td, int goodf,
 	do {
 		long r = os_random_long(&td->next_file_state);
 
-		fno = (unsigned int) ((double) td->o.nr_files * (r / (RAND_MAX + 1.0)));
+		fno = (unsigned int) ((double) td->o.nr_files
+			* (r / (RAND_MAX + 1.0)));
 		f = td->files[fno];
 		if (f->flags & FIO_FILE_DONE)
 			continue;
@@ -610,7 +619,10 @@ static struct fio_file *get_next_file(struct thread_data *td)
 	assert(td->o.nr_files <= td->files_index);
 
 	if (!td->nr_open_files || td->nr_done_files >= td->o.nr_files) {
-		dprint(FD_FILE, "get_next_file: nr_open=%d, nr_done=%d, nr_files=%d\n", td->nr_open_files, td->nr_done_files, td->o.nr_files);
+		dprint(FD_FILE, "get_next_file: nr_open=%d, nr_done=%d,"
+				" nr_files=%d\n", td->nr_open_files,
+						  td->nr_done_files,
+						  td->o.nr_files);
 		return NULL;
 	}
 
@@ -748,7 +760,7 @@ struct io_u *get_io_u(struct thread_data *td)
 		dprint(FD_IO, "io_u %p, setting file failed\n", io_u);
 		goto err_put;
 	}
-	
+
 	f = io_u->file;
 	assert(f->flags & FIO_FILE_OPEN);
 
@@ -792,7 +804,8 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 
 	log_err(": %s\n", strerror(io_u->error));
 
-	log_err("     %s offset=%llu, buflen=%lu\n", msg[io_u->ddir], io_u->offset, io_u->xfer_buflen);
+	log_err("     %s offset=%llu, buflen=%lu\n", msg[io_u->ddir],
+					io_u->offset, io_u->xfer_buflen);
 
 	if (!td->error)
 		td_verror(td, io_u->error, "io_u error");
@@ -951,7 +964,10 @@ static void io_u_dump(struct io_u *io_u)
 	unsigned long t_issue = mtime_since_now(&io_u->issue_time);
 
 	log_err("io_u=%p, t_start=%lu, t_issue=%lu\n", io_u, t_start, t_issue);
-	log_err("  buf=%p/%p, len=%lu/%lu, offset=%llu\n", io_u->buf, io_u->xfer_buf, io_u->buflen, io_u->xfer_buflen, io_u->offset);
+	log_err("  buf=%p/%p, len=%lu/%lu, offset=%llu\n", io_u->buf,
+						io_u->xfer_buf, io_u->buflen,
+						io_u->xfer_buflen,
+						io_u->offset);
 	log_err("  ddir=%d, fname=%s\n", io_u->ddir, io_u->file->file_name);
 }
 #else

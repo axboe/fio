@@ -132,7 +132,7 @@ static int lookup_device(char *path, unsigned int maj, unsigned int min)
 			continue;
 
 		if (maj == major(st.st_rdev) && min == minor(st.st_rdev)) {
-			dprint(FD_BLKTRACE, "device lookup: %d/%d\n", maj,min);
+			dprint(FD_BLKTRACE, "device lookup: %d/%d\n", maj, min);
 			strcpy(path, full_path);
 			found = 1;
 			break;
@@ -275,11 +275,13 @@ int load_blktrace(struct thread_data *td, const char *filename)
 		}
 
 		if ((t.magic & 0xffffff00) != BLK_IO_TRACE_MAGIC) {
-			log_err("fio: bad magic in blktrace data: %x\n", t.magic);
+			log_err("fio: bad magic in blktrace data: %x\n",
+								t.magic);
 			goto err;
 		}
 		if ((t.magic & 0xff) != BLK_IO_TRACE_VERSION) {
-			log_err("fio: bad blktrace version %d\n", t.magic & 0xff);
+			log_err("fio: bad blktrace version %d\n",
+								t.magic & 0xff);
 			goto err;
 		}
 		ret = discard_pdu(td, fifo, fd, &t);
@@ -311,7 +313,8 @@ int load_blktrace(struct thread_data *td, const char *filename)
 	close(fd);
 
 	if (skipped_writes)
-		log_err("fio: <%s> skips replay of %lu writes due to read-only\n", td->o.name, skipped_writes);
+		log_err("fio: %s skips replay of %lu writes due to read-only\n",
+						td->o.name, skipped_writes);
 
 	if (!ios[DDIR_READ] && !ios[DDIR_WRITE]) {
 		log_err("fio: found no ios in blktrace data\n");

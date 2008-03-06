@@ -69,23 +69,23 @@ unsigned int fifo_put(struct fifo *fifo, void *buffer, unsigned int len)
 	return len;
 }
 
-unsigned int fifo_get(struct fifo *fifo, void *buffer, unsigned int len)
+unsigned int fifo_get(struct fifo *fifo, void *buf, unsigned int len)
 {
 	len = min(len, fifo->in - fifo->out);
 
-	if (buffer) {
+	if (buf) {
 		unsigned int l;
 
 		/*
 		 * first get the data from fifo->out until the end of the buffer
 		 */
 		l = min(len, fifo->size - (fifo->out & (fifo->size - 1)));
-		memcpy(buffer, fifo->buffer + (fifo->out & (fifo->size - 1)),l);
+		memcpy(buf, fifo->buffer + (fifo->out & (fifo->size - 1)), l);
 
 		/*
 		 * then get the rest (if any) from the beginning of the buffer
 		 */
-		memcpy(buffer + l, fifo->buffer, len - l);
+		memcpy(buf + l, fifo->buffer, len - l);
 	}
 
 	fifo->out += len;

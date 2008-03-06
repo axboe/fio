@@ -70,37 +70,37 @@ static void show_option_values(struct fio_option *o)
 static unsigned long get_mult_time(char c)
 {
 	switch (c) {
-		case 'm':
-		case 'M':
-			return 60;
-		case 'h':
-		case 'H':
-			return 60 * 60;
-		case 'd':
-		case 'D':
-			return 24 * 60 * 60;
-		default:
-			return 1;
+	case 'm':
+	case 'M':
+		return 60;
+	case 'h':
+	case 'H':
+		return 60 * 60;
+	case 'd':
+	case 'D':
+		return 24 * 60 * 60;
+	default:
+		return 1;
 	}
 }
 
 static unsigned long get_mult_bytes(char c)
 {
 	switch (c) {
-		case 'k':
-		case 'K':
-			return 1024;
-		case 'm':
-		case 'M':
-			return 1024 * 1024;
-		case 'g':
-		case 'G':
-			return 1024 * 1024 * 1024;
-		case 'e':
-		case 'E':
-			return 1024 * 1024 * 1024 * 1024UL;
-		default:
-			return 1;
+	case 'k':
+	case 'K':
+		return 1024;
+	case 'm':
+	case 'M':
+		return 1024 * 1024;
+	case 'g':
+	case 'G':
+		return 1024 * 1024 * 1024;
+	case 'e':
+	case 'E':
+		return 1024 * 1024 * 1024 * 1024UL;
+	default:
+		return 1;
 	}
 }
 
@@ -282,11 +282,13 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			break;
 
 		if (o->maxval && ull > o->maxval) {
-			fprintf(stderr, "max value out of range: %lld (%d max)\n", ull, o->maxval);
+			fprintf(stderr, "max value out of range: %lld"
+					" (%d max)\n", ull, o->maxval);
 			return 1;
 		}
 		if (o->minval && ull < o->minval) {
-			fprintf(stderr, "min value out of range: %lld (%d min)\n", ull, o->minval);
+			fprintf(stderr, "min value out of range: %lld"
+					" (%d min)\n", ull, o->minval);
 			return 1;
 		}
 
@@ -341,7 +343,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		p1 = tmp;
 
 		ret = 1;
-		if (!check_range_bytes(p1, &ul1) && !check_range_bytes(p2, &ul2)) {
+		if (!check_range_bytes(p1, &ul1) &&
+		    !check_range_bytes(p2, &ul2)) {
 			ret = 0;
 			if (ul1 > ul2) {
 				unsigned long foo = ul1;
@@ -371,11 +374,13 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			break;
 
 		if (o->maxval && il > (int) o->maxval) {
-			fprintf(stderr, "max value out of range: %d (%d max)\n", il, o->maxval);
+			fprintf(stderr, "max value out of range: %d (%d max)\n",
+								il, o->maxval);
 			return 1;
 		}
 		if (o->minval && il < o->minval) {
-			fprintf(stderr, "min value out of range: %d (%d min)\n", il, o->minval);
+			fprintf(stderr, "min value out of range: %d (%d min)\n",
+								il, o->minval);
 			return 1;
 		}
 
@@ -589,7 +594,7 @@ static void __print_option(struct fio_option *o, struct fio_option *org,
 		return;
 	if (!org)
 		org = o;
-	
+
 	p = name;
 	depth = level;
 	while (depth--)
@@ -714,13 +719,20 @@ void options_init(struct fio_option *options)
 			o->minval = 0;
 			o->maxval = 1;
 		}
-		if (o->type == FIO_OPT_STR_SET && o->def)
-			fprintf(stderr, "Option %s: string set option with default will always be true\n", o->name);
-		if (!o->cb && !o->off1)
-			fprintf(stderr, "Option %s: neither cb nor offset given\n", o->name);
+		if (o->type == FIO_OPT_STR_SET && o->def) {
+			fprintf(stderr, "Option %s: string set option with"
+					" default will always be true\n",
+						o->name);
+		}
+		if (!o->cb && !o->off1) {
+			fprintf(stderr, "Option %s: neither cb nor offset"
+					" given\n", o->name);
+		}
 		if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE)
 			continue;
-		if (o->cb && (o->off1 || o->off2 || o->off3 || o->off4))
-			fprintf(stderr, "Option %s: both cb and offset given\n", o->name);
+		if (o->cb && (o->off1 || o->off2 || o->off3 || o->off4)) {
+			fprintf(stderr, "Option %s: both cb and offset given\n",
+								 o->name);
+		}
 	}
 }

@@ -167,14 +167,13 @@ static void *hdr_priv(struct verify_header *hdr)
  * Return data area 'header_num'
  */
 static inline void *io_u_verify_off(struct verify_header *hdr,
-				    struct io_u *io_u,
-				    unsigned char header_num)
+				    struct io_u *io_u, unsigned char header_num)
 {
 	return io_u->buf + header_num * hdr->len + hdr_size(hdr);
 }
 
 static int verify_io_u_meta(struct verify_header *hdr, struct thread_data *td,
-                            struct io_u *io_u, unsigned int header_num)
+			    struct io_u *io_u, unsigned int header_num)
 {
 	struct vhdr_meta *vh = hdr_priv(hdr);
 
@@ -182,8 +181,7 @@ static int verify_io_u_meta(struct verify_header *hdr, struct thread_data *td,
 
 	if (vh->offset != io_u->offset + header_num * td->o.verify_interval) {
 		log_err("meta: verify failed at %llu/%u\n",
-		              io_u->offset + header_num * hdr->len,
-		              hdr->len);
+				io_u->offset + header_num * hdr->len, hdr->len);
 		return EIO;
 	}
 
@@ -207,8 +205,7 @@ static int verify_io_u_sha512(struct verify_header *hdr, struct io_u *io_u,
 
 	if (memcmp(vh->sha512, sha512_ctx.buf, sizeof(sha512))) {
 		log_err("sha512: verify failed at %llu/%u\n",
-		              io_u->offset + header_num * hdr->len,
-		              hdr->len);
+				io_u->offset + header_num * hdr->len, hdr->len);
 		hexdump(vh->sha512, sizeof(vh->sha512));
 		hexdump(sha512_ctx.buf, sizeof(sha512));
 		return EIO;
@@ -234,8 +231,7 @@ static int verify_io_u_sha256(struct verify_header *hdr, struct io_u *io_u,
 
 	if (memcmp(vh->sha256, sha256_ctx.buf, sizeof(sha256))) {
 		log_err("sha256: verify failed at %llu/%u\n",
-		              io_u->offset + header_num * hdr->len,
-		              hdr->len);
+				io_u->offset + header_num * hdr->len, hdr->len);
 		hexdump(vh->sha256, sizeof(vh->sha256));
 		hexdump(sha256_ctx.buf, sizeof(sha256));
 		return EIO;
@@ -245,7 +241,7 @@ static int verify_io_u_sha256(struct verify_header *hdr, struct io_u *io_u,
 }
 
 static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
-                            unsigned char header_num)
+			    unsigned char header_num)
 {
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	struct vhdr_crc7 *vh = hdr_priv(hdr);
@@ -257,8 +253,7 @@ static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
 
 	if (c != vh->crc7) {
 		log_err("crc7: verify failed at %llu/%u\n",
-		                io_u->offset + header_num * hdr->len,
-				hdr->len);
+				io_u->offset + header_num * hdr->len, hdr->len);
 		log_err("crc7: wanted %x, got %x\n", vh->crc7, c);
 		return EIO;
 	}
@@ -267,7 +262,7 @@ static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
 }
 
 static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u,
-                             unsigned int header_num)
+			     unsigned int header_num)
 {
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	struct vhdr_crc16 *vh = hdr_priv(hdr);
@@ -279,8 +274,7 @@ static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u,
 
 	if (c != vh->crc16) {
 		log_err("crc16: verify failed at %llu/%u\n",
-		                io_u->offset + header_num * hdr->len,
-				hdr->len);
+				io_u->offset + header_num * hdr->len, hdr->len);
 		log_err("crc16: wanted %x, got %x\n", vh->crc16, c);
 		return EIO;
 	}
@@ -289,7 +283,7 @@ static int verify_io_u_crc16(struct verify_header *hdr, struct io_u *io_u,
 }
 
 static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u,
-                             unsigned int header_num)
+			     unsigned int header_num)
 {
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	struct vhdr_crc64 *vh = hdr_priv(hdr);
@@ -303,7 +297,8 @@ static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u,
 		log_err("crc64: verify failed at %llu/%u\n",
 				io_u->offset + header_num * hdr->len,
 				hdr->len);
-		log_err("crc64: wanted %llx, got %llx\n", (unsigned long long) vh->crc64, c);
+		log_err("crc64: wanted %llx, got %llx\n",
+					(unsigned long long) vh->crc64, c);
 		return EIO;
 	}
 
@@ -311,7 +306,7 @@ static int verify_io_u_crc64(struct verify_header *hdr, struct io_u *io_u,
 }
 
 static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u,
-		             unsigned int header_num)
+			     unsigned int header_num)
 {
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	struct vhdr_crc32 *vh = hdr_priv(hdr);
@@ -323,8 +318,7 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u,
 
 	if (c != vh->crc32) {
 		log_err("crc32: verify failed at %llu/%u\n",
-		                io_u->offset + header_num * hdr->len,
-				hdr->len);
+				io_u->offset + header_num * hdr->len, hdr->len);
 		log_err("crc32: wanted %x, got %x\n", vh->crc32, c);
 		return EIO;
 	}
@@ -333,7 +327,7 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u,
 }
 
 static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
-		           unsigned int header_num)
+			   unsigned int header_num)
 {
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	struct vhdr_md5 *vh = hdr_priv(hdr);
@@ -349,8 +343,7 @@ static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
 
 	if (memcmp(vh->md5_digest, md5_ctx.hash, sizeof(hash))) {
 		log_err("md5: verify failed at %llu/%u\n",
-		              io_u->offset + header_num * hdr->len,
-		              hdr->len);
+				io_u->offset + header_num * hdr->len, hdr->len);
 		hexdump(vh->md5_digest, sizeof(vh->md5_digest));
 		hexdump(md5_ctx.hash, sizeof(hash));
 		return EIO;
@@ -368,7 +361,7 @@ static unsigned int hweight8(unsigned int w)
 }
 
 int verify_io_u_pattern(unsigned long pattern, unsigned long pattern_size,
-                        char *buf, unsigned int len, unsigned int mod)
+			char *buf, unsigned int len, unsigned int mod)
 {
 	unsigned int i;
 	char split_pattern[4];
@@ -411,7 +404,8 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		hdr_inc = td->o.verify_interval;
 
 	ret = 0;
-	for (p = io_u->buf; p < io_u->buf + io_u->buflen; p += hdr_inc, hdr_num++) {
+	for (p = io_u->buf; p < io_u->buf + io_u->buflen;
+	     p += hdr_inc, hdr_num++) {
 		if (ret && td->o.verify_fatal) {
 			td->terminate = 1;
 			break;
@@ -430,10 +424,10 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			dprint(FD_VERIFY, "pattern verify io_u %p, len %u\n",
 								io_u, hdr->len);
 			ret = verify_io_u_pattern(td->o.verify_pattern,
-			                          td->o.verify_pattern_bytes,
-			                          p + hdr_size,
-			                          hdr_inc - hdr_size,
-			                          hdr_size % 4);
+						  td->o.verify_pattern_bytes,
+						  p + hdr_size,
+						  hdr_inc - hdr_size,
+						  hdr_size % 4);
 			if (ret)
 				log_err("fio: verify failed at %llu/%u\n",
 					io_u->offset + hdr_num * hdr->len,
@@ -476,7 +470,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 }
 
 static void fill_meta(struct verify_header *hdr, struct thread_data *td,
-                      struct io_u *io_u, unsigned int header_num)
+		      struct io_u *io_u, unsigned int header_num)
 {
 	struct vhdr_meta *vh = hdr_priv(hdr);
 
@@ -570,7 +564,7 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td->o.verify_interval)
 		hdr_inc = td->o.verify_interval;
 
-	for (;p < io_u->buf + io_u->buflen; p += hdr_inc) {
+	for (; p < io_u->buf + io_u->buflen; p += hdr_inc) {
 		hdr = p;
 
 		hdr->fio_magic = FIO_HDR_MAGIC;

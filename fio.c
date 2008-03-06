@@ -76,8 +76,8 @@ static void terminate_threads(int group_id)
 
 	for_each_td(td, i) {
 		if (group_id == TERMINATE_ALL || groupid == td->groupid) {
-			dprint(FD_PROCESS, "setting terminate on %d\n",td->pid);
-
+			dprint(FD_PROCESS, "setting terminate on %d\n",
+								td->pid);
 			td->terminate = 1;
 			td->o.start_delay = 0;
 
@@ -99,16 +99,16 @@ static void terminate_threads(int group_id)
 static void sig_handler(int sig)
 {
 	switch (sig) {
-		case SIGALRM:
-			update_io_ticks();
-			disk_util_timer_arm();
-			print_thread_status();
-			break;
-		default:
-			printf("\nfio: terminating on signal %d\n", sig);
-			fflush(stdout);
-			terminate_threads(TERMINATE_ALL);
-			break;
+	case SIGALRM:
+		update_io_ticks();
+		disk_util_timer_arm();
+		print_thread_status();
+		break;
+	default:
+		printf("\nfio: terminating on signal %d\n", sig);
+		fflush(stdout);
+		terminate_threads(TERMINATE_ALL);
+		break;
 	}
 }
 
@@ -156,12 +156,16 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 			 * check bandwidth specified rate
 			 */
 			if (bytes < td->rate_bytes) {
-				log_err("%s: min rate %u not met\n", td->o.name, td->o.ratemin);
+				log_err("%s: min rate %u not met\n", td->o.name,
+								td->o.ratemin);
 				return 1;
 			} else {
 				rate = (bytes - td->rate_bytes) / spent;
-				if (rate < td->o.ratemin || bytes < td->rate_bytes) {
-					log_err("%s: min rate %u not met, got %luKiB/sec\n", td->o.name, td->o.ratemin, rate);
+				if (rate < td->o.ratemin ||
+				    bytes < td->rate_bytes) {
+					log_err("%s: min rate %u not met, got"
+						" %luKiB/sec\n", td->o.name,
+							td->o.ratemin, rate);
 					return 1;
 				}
 			}
@@ -170,12 +174,17 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 			 * checks iops specified rate
 			 */
 			if (iops < td->o.rate_iops) {
-				log_err("%s: min iops rate %u not met\n", td->o.name, td->o.rate_iops);
+				log_err("%s: min iops rate %u not met\n",
+						td->o.name, td->o.rate_iops);
 				return 1;
 			} else {
 				rate = (iops - td->rate_blocks) / spent;
-				if (rate < td->o.rate_iops_min || iops < td->rate_blocks) {
-					log_err("%s: min iops rate %u not met, got %lu\n", td->o.name, td->o.rate_iops_min, rate);
+				if (rate < td->o.rate_iops_min ||
+				    iops < td->rate_blocks) {
+					log_err("%s: min iops rate %u not met,"
+						" got %lu\n", td->o.name,
+							td->o.rate_iops_min,
+							rate);
 				}
 			}
 		}
@@ -539,7 +548,8 @@ sync_done:
 				min_evts = 1;
 
 				if (td->cur_depth > td->o.iodepth_low)
-					min_evts = td->cur_depth - td->o.iodepth_low;
+					min_evts = td->cur_depth
+							- td->o.iodepth_low;
 			}
 
 			fio_gettime(&comp_time, NULL);
@@ -654,10 +664,15 @@ static int init_io_u(struct thread_data *td)
 
 	max_units = td->o.iodepth;
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
-	td->orig_buffer_size = (unsigned long long) max_bs * (unsigned long long) max_units;
+	td->orig_buffer_size = (unsigned long long) max_bs
+					* (unsigned long long) max_units;
 
-	if (td->o.mem_type == MEM_SHMHUGE || td->o.mem_type == MEM_MMAPHUGE)
-		td->orig_buffer_size = (td->orig_buffer_size + td->o.hugepage_size - 1) & ~(td->o.hugepage_size - 1);
+	if (td->o.mem_type == MEM_SHMHUGE || td->o.mem_type == MEM_MMAPHUGE) {
+		unsigned long bs;
+
+		bs = td->orig_buffer_size + td->o.hugepage_size - 1;
+		td->orig_buffer_size = bs & ~(td->o.hugepage_size - 1);
+	}
 
 	if (td->orig_buffer_size != (size_t) td->orig_buffer_size) {
 		log_err("fio: IO memory too large. Reduce max_bs or iodepth\n");
@@ -710,7 +725,8 @@ static int switch_ioscheduler(struct thread_data *td)
 	f = fopen(tmp, "r+");
 	if (!f) {
 		if (errno == ENOENT) {
-			log_err("fio: os or kernel doesn't support IO scheduler switching\n");
+			log_err("fio: os or kernel doesn't support IO scheduler"
+				" switching\n");
 			return 0;
 		}
 		td_verror(td, errno, "fopen iosched");
@@ -764,7 +780,8 @@ static int keep_running(struct thread_data *td)
 		return 1;
 	}
 
-	io_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE] + td->io_skip_bytes;
+	io_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE]
+			+ td->io_skip_bytes;
 	if (io_done < td->o.size)
 		return 1;
 
@@ -897,7 +914,8 @@ static void *thread_main(void *data)
 		memcpy(&td->ts.stat_sample_time, &td->start, sizeof(td->start));
 
 		if (td->o.ratemin)
-			memcpy(&td->lastrate, &td->ts.stat_sample_time, sizeof(td->lastrate));
+			memcpy(&td->lastrate, &td->ts.stat_sample_time,
+							sizeof(td->lastrate));
 
 		if (clear_state && clear_io_state(td))
 			break;
@@ -910,7 +928,8 @@ static void *thread_main(void *data)
 
 		if (td_read(td) && td->io_bytes[DDIR_READ]) {
 			if (td->rw_end_set[DDIR_READ])
-				elapsed = utime_since(&td->start, &td->rw_end[DDIR_READ]);
+				elapsed = utime_since(&td->start,
+						      &td->rw_end[DDIR_READ]);
 			else
 				elapsed = utime_since_now(&td->start);
 
@@ -918,13 +937,14 @@ static void *thread_main(void *data)
 		}
 		if (td_write(td) && td->io_bytes[DDIR_WRITE]) {
 			if (td->rw_end_set[DDIR_WRITE])
-				elapsed = utime_since(&td->start, &td->rw_end[DDIR_WRITE]);
+				elapsed = utime_since(&td->start,
+						      &td->rw_end[DDIR_WRITE]);
 			else
 				elapsed = utime_since_now(&td->start);
 
 			runtime[DDIR_WRITE] += elapsed;
 		}
-		
+
 		if (td->error || td->terminate)
 			break;
 
@@ -969,7 +989,8 @@ static void *thread_main(void *data)
 
 err:
 	if (td->error)
-		printf("fio: pid=%d, err=%d/%s\n", td->pid, td->error, td->verror);
+		printf("fio: pid=%d, err=%d/%s\n", td->pid, td->error,
+							td->verror);
 	close_and_free_files(td);
 	close_ioengine(td);
 	cleanup_io_u(td);
@@ -1056,7 +1077,8 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		ret = waitpid(td->pid, &status, flags);
 		if (ret < 0) {
 			if (errno == ECHILD) {
-				log_err("fio: pid=%d disappeared %d\n", td->pid, td->runstate);
+				log_err("fio: pid=%d disappeared %d\n", td->pid,
+								td->runstate);
 				td_set_runstate(td, TD_REAPED);
 				goto reaped;
 			}
@@ -1066,7 +1088,8 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 				int sig = WTERMSIG(status);
 
 				if (sig != SIGQUIT)
-					log_err("fio: pid=%d, got signal=%d\n", td->pid, sig);
+					log_err("fio: pid=%d, got signal=%d\n",
+								td->pid, sig);
 				td_set_runstate(td, TD_REAPED);
 				goto reaped;
 			}
@@ -1123,11 +1146,13 @@ static void run_threads(void)
 	if (!terse_output) {
 		printf("Starting ");
 		if (nr_thread)
-			printf("%d thread%s", nr_thread, nr_thread > 1 ? "s" : "");
+			printf("%d thread%s", nr_thread,
+						nr_thread > 1 ? "s" : "");
 		if (nr_process) {
 			if (nr_thread)
 				printf(" and ");
-			printf("%d process%s", nr_process, nr_process > 1 ? "es" : "");
+			printf("%d process%s", nr_process,
+						nr_process > 1 ? "es" : "");
 		}
 		printf("\n");
 		fflush(stdout);
@@ -1157,7 +1182,8 @@ static void run_threads(void)
 		if (setup_files(td)) {
 			exit_value++;
 			if (td->error)
-				log_err("fio: pid=%d, err=%d/%s\n", td->pid, td->error, td->verror);
+				log_err("fio: pid=%d, err=%d/%s\n", td->pid,
+							td->error, td->verror);
 			td_set_runstate(td, TD_REAPED);
 			todo--;
 		} else {
@@ -1171,7 +1197,7 @@ static void run_threads(void)
 			 */
 			for_each_file(td, f, i)
 				td_io_close_file(td, f);
- 		}
+		}
 
 		init_disk_util(td);
 	}
@@ -1219,7 +1245,8 @@ static void run_threads(void)
 
 			if (td->o.use_thread) {
 				dprint(FD_PROCESS, "will pthread_create\n");
-				if (pthread_create(&td->thread, NULL, thread_main, td)) {
+				if (pthread_create(&td->thread, NULL,
+						   thread_main, td)) {
 					perror("thread_create");
 					nr_started--;
 					break;
@@ -1349,8 +1376,9 @@ int main(int argc, char *argv[])
 	if (!fio_abort) {
 		show_run_stats();
 		if (write_bw_log) {
-			__finish_log(agg_io_log[DDIR_READ],"agg-read_bw.log");
-			__finish_log(agg_io_log[DDIR_WRITE],"agg-write_bw.log");
+			__finish_log(agg_io_log[DDIR_READ], "agg-read_bw.log");
+			__finish_log(agg_io_log[DDIR_WRITE],
+					"agg-write_bw.log");
 		}
 	}
 

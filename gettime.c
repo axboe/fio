@@ -9,7 +9,7 @@
 
 #include "hash.h"
 
-static int clock_gettime_works = 0;
+static int clock_gettime_works;
 
 #ifdef FIO_DEBUG_TIME
 
@@ -80,7 +80,8 @@ static void fio_exit fio_dump_gtod(void)
 		list_for_each(entry, &hash[i]) {
 			log = list_entry(entry, struct gtod_log, list);
 
-			printf("function %p, calls %lu\n", log->caller, log->calls);
+			printf("function %p, calls %lu\n", log->caller,
+								log->calls);
 			total_calls += log->calls;
 		}
 	}
