@@ -148,6 +148,18 @@ static int lookup_device(char *path, unsigned int maj, unsigned int min)
 #define FMAJOR(dev)	((unsigned int) ((dev) >> FMINORBITS))
 #define FMINOR(dev)	((unsigned int) ((dev) & FMINORMASK))
 
+static void trace_add_open_event(struct thread_data *td, int fileno)
+{
+	struct io_piece *ipo;
+
+	ipo = calloc(1, sizeof(*ipo));
+
+	ipo->ddir = DDIR_INVAL;
+	ipo->fileno = fileno;
+	ipo->file_action = FIO_LOG_OPEN_FILE;
+	list_add_tail(&ipo->list, &td->io_log_list);
+}
+
 static void trace_add_file(struct thread_data *td, __u32 device)
 {
 	static unsigned int last_maj, last_min;
@@ -172,8 +184,11 @@ static void trace_add_file(struct thread_data *td, __u32 device)
 
 	strcpy(dev, "/dev");
 	if (lookup_device(dev, maj, min)) {
+		int fileno;
+
 		dprint(FD_BLKTRACE, "add devices %s\n", dev);
-		add_file(td, dev);
+		fileno = add_file(td, dev);
+		trace_add_open_event(td, fileno);
 	}
 }
 
@@ -201,25 +216,29 @@ static void store_ipo(struct thread_data *td, unsigned long long offset,
 	dprint(FD_BLKTRACE, "store ddir=%d, off=%llu, len=%lu, delay=%lu\n",
 							ipo->ddir, ipo->offset,
 							ipo->len, ipo->delay);
-	list_add_tail(&ipo->list, &td->io_log_list);
+	queue_io_piece(td, ipo);
 }
 
-/*
- * We only care for queue traces, most of the others are side effects
- * due to internal workings of the block layer.
- */
-static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
-			 unsigned long long ttime, unsigned long *ios,
-			 unsigned int *bs)
+static void handle_trace_notify(struct thread_data *td, struct blk_io_trace *t)
+{
+	switch (t->action) {
+	case BLK_TN_PROCESS:
+		printf("got process notify: %x, %d\n", t->action, t->pid);
+		break;
+	case BLK_TN_TIMESTAMP:
+		printf("got timestamp notify: %x, %d\n", t->action, t->pid);
+		break;
+	default:
+		dprint(FD_BLKTRACE, "unknown trace act %x\n", t->action);
+		break;
+	}
+}
+
+static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
+			    unsigned long long ttime, unsigned long *ios,
+			    unsigned int *bs)
 {
 	int rw;
-
-	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
-		return;
-	if (t->action & BLK_TC_ACT(BLK_TC_PC))
-		return;
-	if (t->action & BLK_TC_ACT(BLK_TC_NOTIFY))
-		return;
 
 	trace_add_file(td, t->device);
 
@@ -231,6 +250,25 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 	ios[rw]++;
 	td->o.size += t->bytes;
 	store_ipo(td, t->sector, t->bytes, rw, ttime);
+}
+
+/*
+ * We only care for queue traces, most of the others are side effects
+ * due to internal workings of the block layer.
+ */
+static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
+			 unsigned long long ttime, unsigned long *ios,
+			 unsigned int *bs)
+{
+	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
+		return;
+	if (t->action & BLK_TC_ACT(BLK_TC_PC))
+		return;
+
+	if (t->action & BLK_TC_ACT(BLK_TC_NOTIFY))
+		handle_trace_notify(td, t);
+	else
+		handle_trace_fs(td, t, ttime, ios, bs);
 }
 
 /*
@@ -292,21 +330,24 @@ int load_blktrace(struct thread_data *td, const char *filename)
 			log_err("fio: discarded %d of %d\n", ret, t.pdu_len);
 			goto err;
 		}
-		if (t.action & BLK_TC_ACT(BLK_TC_NOTIFY))
-			continue;
-		if (!ttime) {
+		if ((t.action & BLK_TC_ACT(BLK_TC_NOTIFY)) == 0) {
+			if (!ttime) {
+				ttime = t.time;
+				cpu = t.cpu;
+			}
+
+			delay = 0;
+			if (cpu == t.cpu)
+				delay = t.time - ttime;
+			if ((t.action & BLK_TC_ACT(BLK_TC_WRITE)) && read_only)
+				skipped_writes++;
+			else
+				handle_trace(td, &t, delay, ios, rw_bs);
+
 			ttime = t.time;
 			cpu = t.cpu;
-		}
-		delay = 0;
-		if (cpu == t.cpu)
-			delay = t.time - ttime;
-		if ((t.action & BLK_TC_ACT(BLK_TC_WRITE)) && read_only)
-			skipped_writes++;
-		else
+		} else
 			handle_trace(td, &t, delay, ios, rw_bs);
-		ttime = t.time;
-		cpu = t.cpu;
 	} while (1);
 
 	fifo_free(fifo);

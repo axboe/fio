@@ -762,6 +762,7 @@ extern void log_io_u(struct thread_data *, struct io_u *);
 extern void log_file(struct thread_data *, struct fio_file *, enum file_log_act);
 extern int __must_check init_iolog(struct thread_data *td);
 extern void log_io_piece(struct thread_data *, struct io_u *);
+extern void queue_io_piece(struct thread_data *, struct io_piece *);
 extern void prune_io_piece_log(struct thread_data *);
 extern void write_iolog_close(struct thread_data *);
 
@@ -961,9 +962,10 @@ extern void close_ioengine(struct thread_data *);
 #define for_each_td(td, i)	\
 	for ((i) = 0, (td) = &threads[0]; (i) < (int) thread_number; (i)++, (td)++)
 #define for_each_file(td, f, i)	\
-	for ((i) = 0, (f) = (td)->files[0];				\
-	     (i) < (td)->o.nr_files && ((f) = (td)->files[i]) != NULL;	\
-	     (i)++)
+	if ((td)->files_index)						\
+		for ((i) = 0, (f) = (td)->files[0];			\
+	    	 (i) < (td)->o.nr_files && ((f) = (td)->files[i]) != NULL; \
+		 (i)++)
 
 #define fio_assert(td, cond)	do {	\
 	if (!(cond)) {			\

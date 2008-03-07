@@ -425,6 +425,9 @@ int setup_files(struct thread_data *td)
 
 	dprint(FD_FILE, "setup files\n");
 
+	if (td->o.read_iolog_file)
+		return 0;
+
 	/*
 	 * if ioengine defines a setup() method, it's responsible for
 	 * opening the files and setting f->real_file_size to indicate

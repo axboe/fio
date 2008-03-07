@@ -10,6 +10,12 @@
 
 static const char iolog_ver2[] = "fio version 2 iolog";
 
+void queue_io_piece(struct thread_data *td, struct io_piece *ipo)
+{
+	list_add_tail(&ipo->list, &td->io_log_list);
+	td->total_io_size += ipo->len;
+}
+
 void log_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	const char *act[] = { "read", "write", "sync" };
@@ -279,8 +285,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 			ipo->fileno = fileno;
 			ipo->file_action = file_action;
 		}
-		list_add_tail(&ipo->list, &td->io_log_list);
-		td->total_io_size += bytes;
+		queue_io_piece(td, ipo);
 	}
 
 	free(str);
@@ -310,69 +315,8 @@ static int read_iolog2(struct thread_data *td, FILE *f)
  */
 static int read_iolog(struct thread_data *td, FILE *f)
 {
-	unsigned long long offset;
-	unsigned int bytes;
-	char *str, *p;
-	int reads, writes;
-	int rw;
-
-	/*
-	 * Read in the read iolog and store it, reuse the infrastructure
-	 * for doing verifications.
-	 */
-	str = malloc(4096);
-	reads = writes = 0;
-	while ((p = fgets(str, 4096, f)) != NULL) {
-		struct io_piece *ipo;
-
-		if (sscanf(p, "%d,%llu,%u", &rw, &offset, &bytes) != 3) {
-			log_err("bad iolog: %s\n", p);
-			continue;
-		}
-		if (rw == DDIR_READ)
-			reads++;
-		else if (rw == DDIR_WRITE) {
-			/*
-			 * Don't add a write for ro mode
-			 */
-			if (read_only)
-				continue;
-			writes++;
-		} else if (rw != DDIR_SYNC) {
-			log_err("bad ddir: %d\n", rw);
-			continue;
-		}
-
-		ipo = malloc(sizeof(*ipo));
-		memset(ipo, 0, sizeof(*ipo));
-		INIT_LIST_HEAD(&ipo->list);
-		ipo->offset = offset;
-		ipo->len = bytes;
-		ipo->ddir = (enum fio_ddir) rw;
-		if (bytes > td->o.max_bs[rw])
-			td->o.max_bs[rw] = bytes;
-		list_add_tail(&ipo->list, &td->io_log_list);
-		td->total_io_size += bytes;
-	}
-
-	free(str);
-
-	if (writes && read_only) {
-		log_err("fio: <%s> skips replay of %d writes due to"
-			" read-only\n", td->o.name, writes);
-		writes = 0;
-	}
-
-	if (!reads && !writes)
-		return 1;
-	else if (reads && !writes)
-		td->o.td_ddir = TD_DDIR_READ;
-	else if (!reads && writes)
-		td->o.td_ddir = TD_DDIR_WRITE;
-	else
-		td->o.td_ddir = TD_DDIR_RW;
-
-	return 0;
+	log_err("fio: iolog version 1 is no longer supported\n");
+	return 1;
 }
 
 /*

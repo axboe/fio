@@ -446,7 +446,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		td->io_ops->flags |= FIO_RAWIO;
 
 	file_alloced = 0;
-	if (!td->o.filename && !td->files_index) {
+	if (!td->o.filename && !td->files_index && !td->o.read_iolog_file) {
 		file_alloced = 1;
 
 		if (td->o.nr_files == 1 && exists_and_not_file(jobname))
