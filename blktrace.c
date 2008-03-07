@@ -204,16 +204,22 @@ static void store_ipo(struct thread_data *td, unsigned long long offset,
 	list_add_tail(&ipo->list, &td->io_log_list);
 }
 
-static void handle_trace_notify(struct thread_data *td, struct blk_io_trace *t)
-{
-	printf("got notify: %x, %d\n", t->action, t->pid);
-}
-
-static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
-			    unsigned long long ttime, unsigned long *ios,
-			    unsigned int *bs)
+/*
+ * We only care for queue traces, most of the others are side effects
+ * due to internal workings of the block layer.
+ */
+static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
+			 unsigned long long ttime, unsigned long *ios,
+			 unsigned int *bs)
 {
 	int rw;
+
+	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
+		return;
+	if (t->action & BLK_TC_ACT(BLK_TC_PC))
+		return;
+	if (t->action & BLK_TC_ACT(BLK_TC_NOTIFY))
+		return;
 
 	trace_add_file(td, t->device);
 
@@ -225,25 +231,6 @@ static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 	ios[rw]++;
 	td->o.size += t->bytes;
 	store_ipo(td, t->sector, t->bytes, rw, ttime);
-}
-
-/*
- * We only care for queue traces, most of the others are side effects
- * due to internal workings of the block layer.
- */
-static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
-			 unsigned long long ttime, unsigned long *ios,
-			 unsigned int *bs)
-{
-	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
-		return;
-	if (t->action & BLK_TC_ACT(BLK_TC_PC))
-		return;
-
-	if (t->action & BLK_TC_ACT(BLK_TC_NOTIFY))
-		handle_trace_notify(td, t);
-	else
-		handle_trace_fs(td, t, ttime, ios, bs);
 }
 
 /*
