@@ -346,8 +346,10 @@ int load_blktrace(struct thread_data *td, const char *filename)
 
 			ttime = t.time;
 			cpu = t.cpu;
-		} else
+		} else {
+			delay = 0;
 			handle_trace(td, &t, delay, ios, rw_bs);
+		}
 	} while (1);
 
 	fifo_free(fifo);
