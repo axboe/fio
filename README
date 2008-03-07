@@ -101,6 +101,7 @@ options in fio. Currently the options are:
 	all		Enable all debug options
 	random		Dump info related to random offset generation
 	parse		Dump info related to option matching and parsing
+	diskutil	Dump info related to disk utilization updates
 	? or help	Show available debug options.
 
 You can specify as many as you want, eg --debug=file,mem will enable

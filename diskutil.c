@@ -22,6 +22,8 @@ static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 	char *p;
 	int ret;
 
+	dprint(FD_DISKUTIL, "open stat file: %s\n", du->path);
+
 	f = fopen(du->path, "r");
 	if (!f)
 		return 1;
@@ -32,19 +34,17 @@ static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 		return 1;
 	}
 
-	ret = scanf(p, "%u %u %llu %u %u %u %llu %u %u %u %u\n", &dus->ios[0],
+	dprint(FD_DISKUTIL, "%s: %s", du->path, p);
+
+	ret = sscanf(p, "%u %u %llu %u %u %u %llu %u %u %u %u\n", &dus->ios[0],
 					&dus->merges[0], &dus->sectors[0],
 					&dus->ticks[0], &dus->ios[1],
 					&dus->merges[1], &dus->sectors[1],
 					&dus->ticks[1], &in_flight,
 					&dus->io_ticks, &dus->time_in_queue);
-	if (ret != 11) {
-		fclose(f);
-		return 1;
-	}
-
 	fclose(f);
-	return 0;
+	dprint(FD_DISKUTIL, "%s: stat read ok? %d\n", du->path, ret == 1);
+	return ret != 11;
 }
 
 static void update_io_tick_disk(struct disk_util *du)
@@ -80,6 +80,8 @@ void update_io_ticks(void)
 	struct list_head *entry;
 	struct disk_util *du;
 
+	dprint(FD_DISKUTIL, "update io ticks\n");
+
 	list_for_each(entry, &disk_list) {
 		du = list_entry(entry, struct disk_util, list);
 		update_io_tick_disk(du);
@@ -106,6 +108,8 @@ static void disk_util_add(int majdev, int mindev, char *path)
 	struct disk_util *du, *__du;
 	struct list_head *entry;
 
+	dprint(FD_DISKUTIL, "add maj/min %d/%d: %s\n", majdev, mindev, path);
+
 	du = malloc(sizeof(*du));
 	memset(du, 0, sizeof(*du));
 	INIT_LIST_HEAD(&du->list);
@@ -118,12 +122,16 @@ static void disk_util_add(int majdev, int mindev, char *path)
 	list_for_each(entry, &disk_list) {
 		__du = list_entry(entry, struct disk_util, list);
 
+		dprint(FD_DISKUTIL, "found %s in list\n", __du->name);
+
 		if (!strcmp(du->name, __du->name)) {
 			free(du->name);
 			free(du);
 			return;
 		}
 	}
+
+	dprint(FD_DISKUTIL, "add %s to list\n", du->name);
 
 	fio_gettime(&du->time, NULL);
 	get_io_ticks(du, &du->last_dus);
@@ -245,6 +253,9 @@ static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 		majdev = major(st.st_dev);
 		mindev = minor(st.st_dev);
 	}
+
+	dprint(FD_DISKUTIL, "%s belongs to maj/min %d/%d\n", f->file_name,
+							majdev, mindev);
 
 	du = disk_util_exists(majdev, mindev);
 	if (du) {

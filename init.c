@@ -838,6 +838,7 @@ struct debug_level debug_levels[] = {
 	{ .name = "verify",	.shift = FD_VERIFY },
 	{ .name = "random",	.shift = FD_RANDOM },
 	{ .name = "parse",	.shift = FD_PARSE },
+	{ .name = "diskutil",	.shift = FD_DISKUTIL },
 	{ },
 };
 

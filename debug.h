@@ -13,6 +13,7 @@ enum {
 	FD_VERIFY,
 	FD_RANDOM,
 	FD_PARSE,
+	FD_DISKUTIL,
 	FD_DEBUG_MAX,
 };
 
