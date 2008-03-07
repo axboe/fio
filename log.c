@@ -70,9 +70,15 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 			struct fio_file *f = td->files[ipo->fileno];
 
 			if (ipo->file_action == FIO_LOG_OPEN_FILE) {
-				assert(!td_io_open_file(td, f));
-				free(ipo);
-				continue;
+				int ret;
+
+				ret = td_io_open_file(td, f);
+				if (!ret) {
+					free(ipo);
+					continue;
+				}
+				td_verror(td, ret, "iolog open file");
+				return 1;
 			} else if (ipo->file_action == FIO_LOG_CLOSE_FILE) {
 				td_io_close_file(td, f);
 				free(ipo);
@@ -247,12 +253,12 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 		if (rw == DDIR_READ)
 			reads++;
 		else if (rw == DDIR_WRITE) {
-			writes++;
 			/*
 			 * Don't add a write for ro mode
 			 */
 			if (read_only)
 				continue;
+			writes++;
 		} else if (rw != DDIR_SYNC && rw != DDIR_INVAL) {
 			log_err("bad ddir: %d\n", rw);
 			continue;
@@ -326,12 +332,12 @@ static int read_iolog(struct thread_data *td, FILE *f)
 		if (rw == DDIR_READ)
 			reads++;
 		else if (rw == DDIR_WRITE) {
-			writes++;
 			/*
 			 * Don't add a write for ro mode
 			 */
 			if (read_only)
 				continue;
+			writes++;
 		} else if (rw != DDIR_SYNC) {
 			log_err("bad ddir: %d\n", rw);
 			continue;
