@@ -291,9 +291,8 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 
 open_again:
 	if (td_write(td)) {
-		assert(!read_only);
-
-		flags |= O_RDWR;
+		if (!read_only)
+			flags |= O_RDWR;
 
 		if (f->filetype == FIO_TYPE_FILE)
 			flags |= O_CREAT;
