@@ -1108,16 +1108,6 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		pending++;
 		continue;
 reaped:
-		if (td->o.use_thread) {
-			long ret;
-
-			dprint(FD_PROCESS, "joining tread %d\n", td->pid);
-			if (pthread_join(td->thread, (void *) &ret)) {
-				dprint(FD_PROCESS, "join failed %ld\n", ret);
-				perror("pthread_join");
-			}
-		}
-
 		(*nr_running)--;
 		(*m_rate) -= td->o.ratemin;
 		(*t_rate) -= td->o.rate;
@@ -1247,10 +1237,12 @@ static void run_threads(void)
 				dprint(FD_PROCESS, "will pthread_create\n");
 				if (pthread_create(&td->thread, NULL,
 						   thread_main, td)) {
-					perror("thread_create");
+					perror("pthread_create");
 					nr_started--;
 					break;
 				}
+				if (pthread_detach(td->thread) < 0)
+					perror("pthread_detach");
 			} else {
 				dprint(FD_PROCESS, "will fork\n");
 				if (!fork()) {
