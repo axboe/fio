@@ -61,35 +61,59 @@ static void iolog_delay(struct thread_data *td, unsigned long delay)
 	usec_sleep(td, delay);
 }
 
+static int ipo_special(struct thread_data *td, struct io_piece *ipo)
+{
+	struct fio_file *f;
+	int ret;
+
+	/*
+	 * Not a special ipo
+	 */
+	if (ipo->ddir != DDIR_INVAL)
+		return 0;
+
+	f = td->files[ipo->fileno];
+
+	switch (ipo->file_action) {
+	case FIO_LOG_OPEN_FILE:
+		ret = td_io_open_file(td, f);
+		if (!ret) {
+			free(ipo);
+			break;
+		}
+		td_verror(td, ret, "iolog open file");
+		return -1;
+	case FIO_LOG_CLOSE_FILE:
+		td_io_close_file(td, f);
+		break;
+	case FIO_LOG_UNLINK_FILE:
+		unlink(f->file_name);
+		break;
+	default:
+		log_err("fio: bad file action %d\n", ipo->file_action);
+		break;
+	}
+
+	return 1;
+}
+
 int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
 
 	while (!list_empty(&td->io_log_list)) {
+		int ret;
+
 		ipo = list_entry(td->io_log_list.next, struct io_piece, list);
 		list_del(&ipo->list);
 
-		/*
-		 * invalid ddir, this is a file action
-		 */
-		if (ipo->ddir == DDIR_INVAL) {
-			struct fio_file *f = td->files[ipo->fileno];
-
-			if (ipo->file_action == FIO_LOG_OPEN_FILE) {
-				int ret;
-
-				ret = td_io_open_file(td, f);
-				if (!ret) {
-					free(ipo);
-					continue;
-				}
-				td_verror(td, ret, "iolog open file");
-				return 1;
-			} else if (ipo->file_action == FIO_LOG_CLOSE_FILE) {
-				td_io_close_file(td, f);
-				free(ipo);
-				continue;
-			}
+		ret = ipo_special(td, ipo);
+		if (ret < 0) {
+			free(ipo);
+			break;
+		} else if (ret > 0) {
+			free(ipo);
+			continue;
 		}
 
 		io_u->offset = ipo->offset;

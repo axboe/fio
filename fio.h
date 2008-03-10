@@ -755,6 +755,7 @@ enum file_log_act {
 	FIO_LOG_ADD_FILE,
 	FIO_LOG_OPEN_FILE,
 	FIO_LOG_CLOSE_FILE,
+	FIO_LOG_UNLINK_FILE,
 };
 
 extern int __must_check read_iolog_get(struct thread_data *, struct io_u *);
