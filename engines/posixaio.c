@@ -76,19 +76,24 @@ static int fio_posixaio_prep(struct thread_data fio_unused *td,
 	return 0;
 }
 
+#define SUSPEND_ENTRIES	8
+
 static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 				  unsigned int max, struct timespec *t)
 {
 	struct posixaio_data *pd = td->io_ops->data;
+	struct aiocb *suspend_list[SUSPEND_ENTRIES];
 	struct list_head *entry;
 	struct timespec start;
 	int have_timeout = 0;
+	int suspend_entries = 0;
 	unsigned int r;
 
 	if (t && !fill_timespec(&start))
 		have_timeout = 1;
 
 	r = 0;
+	suspend_list[0] = NULL;
 restart:
 	list_for_each(entry, &td->io_u_busylist) {
 		struct io_u *io_u = list_entry(entry, struct io_u, list);
@@ -98,8 +103,13 @@ restart:
 			continue;
 
 		err = aio_error(&io_u->aiocb);
-		if (err == EINPROGRESS)
+		if (err == EINPROGRESS) {
+			if (suspend_entries < SUSPEND_ENTRIES) {
+				suspend_list[suspend_entries] = &io_u->aiocb;
+				suspend_entries++;
+			}
 			continue;
+		}
 
 		io_u->seen = 1;
 		pd->aio_events[r++] = io_u;
@@ -129,10 +139,10 @@ restart:
 	}
 
 	/*
-	 * hrmpf, we need to wait for more. we should use aio_suspend, for
-	 * now just sleep a little and recheck status of busy-and-not-seen
+	 * must have some in-flight, wait for at least one
 	 */
-	usleep(1000);
+	aio_suspend((const struct aiocb * const *)suspend_list,
+							suspend_entries, t);
 	goto restart;
 }
 
