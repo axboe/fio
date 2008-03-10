@@ -93,7 +93,7 @@ static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 		have_timeout = 1;
 
 	r = 0;
-	suspend_list[0] = NULL;
+	memset(suspend_list, 0, sizeof(*suspend_list));
 restart:
 	list_for_each(entry, &td->io_u_busylist) {
 		struct io_u *io_u = list_entry(entry, struct io_u, list);
