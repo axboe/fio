@@ -16,7 +16,7 @@
 #undef ENABLE_RESIZE		/* define to enable pool resizing */
 #define MP_SAFE			/* define to made allocator thread safe */
 
-#define INITIAL_SIZE	65536	/* new pool size */
+#define INITIAL_SIZE	1048576	/* new pool size */
 #define MAX_POOLS	32	/* maximum number of pools to setup */
 
 #ifdef ENABLE_RESIZE
