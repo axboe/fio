@@ -5,6 +5,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <assert.h>
+#include <libgen.h>
 
 #include "fio.h"
 #include "parse.h"
@@ -269,6 +270,30 @@ static int str_fst_cb(void *data, const char *str)
 	return 0;
 }
 
+static int check_dir(struct thread_data *td, char *fname)
+{
+	char file[PATH_MAX], *dir;
+	struct stat sb;
+
+	strcpy(file, fname);
+	dir = dirname(file);
+
+	if (lstat(dir, &sb) < 0) {
+		int ret = errno;
+
+		log_err("fio: %s is not a directory\n", dir);
+		td_verror(td, ret, "lstat");
+		return 1;
+	}
+
+	if (!S_ISDIR(sb.st_mode)) {
+		log_err("fio: %s is not a directory\n", dir);
+		return 1;
+	}
+
+	return 0;
+}
+
 static int str_filename_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
@@ -285,6 +310,10 @@ static int str_filename_cb(void *data, const char *input)
 	while ((fname = strsep(&str, ":")) != NULL) {
 		if (!strlen(fname))
 			break;
+		if (check_dir(td, fname)) {
+			free(p);
+			return 1;
+		}
 		add_file(td, fname);
 		td->o.nr_files++;
 	}
@@ -299,8 +328,10 @@ static int str_directory_cb(void *data, const char fio_unused *str)
 	struct stat sb;
 
 	if (lstat(td->o.directory, &sb) < 0) {
+		int ret = errno;
+
 		log_err("fio: %s is not a directory\n", td->o.directory);
-		td_verror(td, errno, "lstat");
+		td_verror(td, ret, "lstat");
 		return 1;
 	}
 	if (!S_ISDIR(sb.st_mode)) {
