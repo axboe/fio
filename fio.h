@@ -446,6 +446,7 @@ struct thread_options {
 	unsigned int write_lat_log;
 	unsigned int write_bw_log;
 	unsigned int norandommap;
+	unsigned int softrandommap;
 	unsigned int bs_unaligned;
 	unsigned int fsync_on_close;
 

@@ -7,4 +7,6 @@ extern char *smalloc_strdup(const char *);
 extern void sinit(void);
 extern void scleanup(void);
 
+extern unsigned int smalloc_pool_size;
+
 #endif

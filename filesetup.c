@@ -579,6 +579,13 @@ int init_random_map(struct thread_data *td)
 			f->num_maps = num_maps;
 			continue;
 		}
+		if (!td->o.softrandommap) {
+			log_err("fio: failed allocating random map. If running"
+				" a large number of jobs, try the 'norandommap'"
+				" option or set 'softrandommap'. Or give"
+				" a larger --alloc-size to fio.\n");
+			return 1;
+		}
 
 		log_info("fio: file %s failed allocating random map. Running "
 			 "job without.\n", f->file_name);

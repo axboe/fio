@@ -669,6 +669,14 @@ static struct fio_option options[] = {
 		.parent = "rw",
 	},
 	{
+		.name	= "softrandommap",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(softrandommap),
+		.help	= "Allow randommap to fail and continue witout",
+		.parent	= "norandommap",
+		.def	= "0",
+	},
+	{
 		.name	= "nrfiles",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(nr_files),

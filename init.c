@@ -119,6 +119,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'x',
 	},
 	{
+		.name		= "alloc-size",
+		.has_arg	= required_argument,
+		.val		= 'a',
+	},
+	{
 		.name		= NULL,
 	},
 };
@@ -826,6 +831,8 @@ static void usage(const char *name)
 	printf("\t--readonly\tTurn on safety read-only checks, preventing"
 		" writes\n");
 	printf("\t--section=name\tOnly run specified section in job file\n");
+	printf("\t--alloc-size=kb\tSet smalloc pool to this size in kb"
+		" (def 1024)\n");
 }
 
 #ifdef FIO_INC_DEBUG
@@ -897,6 +904,9 @@ static int parse_cmd_line(int argc, char *argv[])
 
 	while ((c = getopt_long_only(argc, argv, "", l_opts, &lidx)) != -1) {
 		switch (c) {
+		case 'a':
+			smalloc_pool_size = atoi(optarg);
+			break;
 		case 't':
 			def_timeout = atoi(optarg);
 			break;
