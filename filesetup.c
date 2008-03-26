@@ -575,13 +575,14 @@ int init_random_map(struct thread_data *td)
 		num_maps = (blocks + BLOCKS_PER_MAP - 1) /
 				(unsigned long long) BLOCKS_PER_MAP;
 		f->file_map = smalloc(num_maps * sizeof(long));
-		if (!f->file_map) {
-			log_err("fio: failed allocating random map. If running"
-				" a large number of jobs, try the 'norandommap'"
-				" option\n");
-			return 1;
+		if (f->file_map) {
+			f->num_maps = num_maps;
+			continue;
 		}
-		f->num_maps = num_maps;
+
+		log_info("fio: file %s failed allocating random map. Running "
+			 "job without.\n", f->file_name);
+		f->num_maps = 0;
 	}
 
 	return 0;
