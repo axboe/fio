@@ -30,7 +30,8 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	 * does that for operations involving reads, or for writes
 	 * where overwrite is set
 	 */
-	if (td_read(td) || (td_write(td) && td->o.overwrite))
+	if (td_read(td) || (td_write(td) && td->o.overwrite) ||
+	    (td_write(td) && td->io_ops->flags & FIO_NOEXTEND))
 		new_layout = 1;
 	if (td_write(td) && !td->o.overwrite)
 		unlink_file = 1;
@@ -94,9 +95,10 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		}
 	}
 
-	if (td->terminate)
+	if (td->terminate) {
+		dprint(FD_FILE, "terminate unlink %s\n", f->file_name);
 		unlink(f->file_name);
-	else if (td->o.create_fsync) {
+	} else if (td->o.create_fsync) {
 		if (fsync(f->fd) < 0) {
 			td_verror(td, errno, "fsync");
 			goto err;
@@ -114,6 +116,7 @@ err:
 	return 1;
 }
 
+		dprint(FD_FILE, "layout unlink %s\n", f->file_name);
 static unsigned long long get_rand_file_size(struct thread_data *td)
 {
 	unsigned long long ret, size_d;
@@ -601,8 +604,10 @@ void close_and_free_files(struct thread_data *td)
 	dprint(FD_FILE, "close files\n");
 
 	for_each_file(td, f, i) {
-		if (td->o.unlink && f->filetype == FIO_TYPE_FILE)
+		if (td->o.unlink && f->filetype == FIO_TYPE_FILE) {
+			dprint(FD_FILE, "free unlink %s\n", f->file_name);
 			unlink(f->file_name);
+		}
 
 		td_io_close_file(td, f);
 
