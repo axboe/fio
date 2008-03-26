@@ -37,6 +37,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		unlink_file = 1;
 
 	if (unlink_file || new_layout) {
+		dprint(FD_FILE, "layout unlink %s\n", f->file_name);
 		if ((unlink(f->file_name) < 0) && (errno != ENOENT)) {
 			td_verror(td, errno, "unlink");
 			return 1;
@@ -116,7 +117,6 @@ err:
 	return 1;
 }
 
-		dprint(FD_FILE, "layout unlink %s\n", f->file_name);
 static unsigned long long get_rand_file_size(struct thread_data *td)
 {
 	unsigned long long ret, size_d;
