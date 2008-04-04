@@ -20,11 +20,12 @@ for i in *bw.log; do
 	if [ ! -r $i ]; then
 		continue
 	fi
+	PT=$(echo $i | sed s/_bw.log//g)
 	if [ "$PLOT_LINE"x != "x" ]; then
 		PLOT_LINE=$PLOT_LINE", "
 	fi
 
-	PLOT_LINE=$PLOT_LINE"'$i' with lines"
+	PLOT_LINE=$PLOT_LINE"'$i' title '$PT' with lines"
 done
 
 if [ "$PLOT_LINE"x != "x" ]; then
@@ -37,11 +38,12 @@ for i in *slat.log; do
 	if [ ! -r $i ]; then
 		continue
 	fi
+	PT=$(echo $i | sed s/_slat.log//g)
 	if [ "$PLOT_LINE"x != "x" ]; then
 		PLOT_LINE=$PLOT_LINE", "
 	fi
 
-	PLOT_LINE=$PLOT_LINE"'$i' with lines"
+	PLOT_LINE=$PLOT_LINE"'$i' title '$PT' with lines"
 done
 
 if [ "$PLOT_LINE"x != "x" ]; then
@@ -54,11 +56,12 @@ for i in *clat.log; do
 	if [ ! -r $i ]; then
 		continue
 	fi
+	PT=$(echo $i | sed s/_clat.log//g)
 	if [ "$PLOT_LINE"x != "x" ]; then
 		PLOT_LINE=$PLOT_LINE", "
 	fi
 
-	PLOT_LINE=$PLOT_LINE"'$i' with lines"
+	PLOT_LINE=$PLOT_LINE"'$i' title '$PT' with lines"
 done
 
 if [ "$PLOT_LINE"x != "x" ]; then

@@ -484,6 +484,6 @@ void finish_log(struct thread_data *td, struct io_log *log, const char *name)
 {
 	char file_name[256];
 
-	snprintf(file_name, 200, "client%d_%s.log", td->thread_number, name);
+	snprintf(file_name, 200, "%s_%s.log", td->o.name, name);
 	__finish_log(log, file_name);
 }
