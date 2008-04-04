@@ -74,10 +74,12 @@ static void terminate_threads(int group_id)
 	struct thread_data *td;
 	int i;
 
+	dprint(FD_PROCESS, "terminate group_id=%d\n", group_id);
+
 	for_each_td(td, i) {
 		if (group_id == TERMINATE_ALL || groupid == td->groupid) {
-			dprint(FD_PROCESS, "setting terminate on %d\n",
-								td->pid);
+			dprint(FD_PROCESS, "setting terminate on %s/%d\n",
+							td->o.name, td->pid);
 			td->terminate = 1;
 			td->o.start_delay = 0;
 
@@ -1111,7 +1113,8 @@ reaped:
 		(*nr_running)--;
 		(*m_rate) -= td->o.ratemin;
 		(*t_rate) -= td->o.rate;
-		pending--;
+		if (!td->pid)
+			pending--;
 
 		if (td->error)
 			exit_value++;
@@ -1222,8 +1225,11 @@ static void run_threads(void)
 					continue;
 			}
 
-			if (td->o.stonewall && (nr_started || nr_running))
+			if (td->o.stonewall && (nr_started || nr_running)) {
+				dprint(FD_PROCESS, "%s: stonewall wait\n",
+							td->o.name);
 				break;
+			}
 
 			/*
 			 * Set state to created. Thread will transition

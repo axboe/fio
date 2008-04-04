@@ -16,11 +16,13 @@
 #undef ENABLE_RESIZE		/* define to enable pool resizing */
 #define MP_SAFE			/* define to made allocator thread safe */
 
-#define INITIAL_SIZE	65536	/* new pool size */
+#define INITIAL_SIZE	1048576	/* new pool size */
 #define MAX_POOLS	32	/* maximum number of pools to setup */
 
+unsigned int smalloc_pool_size = INITIAL_SIZE;
+
 #ifdef ENABLE_RESIZE
-#define MAX_SIZE	8 * INITIAL_SIZE
+#define MAX_SIZE	8 * smalloc_pool_size
 static unsigned int resize_error;
 #endif
 
@@ -229,7 +231,7 @@ static int add_pool(struct pool *pool)
 	if (fd < 0)
 		goto out_close;
 
-	pool->size = INITIAL_SIZE;
+	pool->size = smalloc_pool_size;
 	if (ftruncate(fd, pool->size) < 0)
 		goto out_unlink;
 

@@ -446,6 +446,7 @@ struct thread_options {
 	unsigned int write_lat_log;
 	unsigned int write_bw_log;
 	unsigned int norandommap;
+	unsigned int softrandommap;
 	unsigned int bs_unaligned;
 	unsigned int fsync_on_close;
 
@@ -691,6 +692,7 @@ extern struct thread_data *threads;
 #define td_write(td)		((td)->o.td_ddir & TD_DDIR_WRITE)
 #define td_rw(td)		(((td)->o.td_ddir & TD_DDIR_RW) == TD_DDIR_RW)
 #define td_random(td)		((td)->o.td_ddir & TD_DDIR_RAND)
+#define file_randommap(td, f)	(!(td)->o.norandommap && (f)->file_map)
 
 static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
 {

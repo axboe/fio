@@ -130,7 +130,7 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		/*
 		 * if we are not maintaining a random map, we are done.
 		 */
-		if (td->o.norandommap)
+		if (!file_randommap(td, f))
 			return 0;
 
 		/*
@@ -416,7 +416,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * mark entry before potentially trimming io_u
 	 */
-	if (td_random(td) && !td->o.norandommap)
+	if (td_random(td) && file_randommap(td, io_u->file))
 		mark_random_map(td, io_u);
 
 	/*

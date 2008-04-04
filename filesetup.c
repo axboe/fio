@@ -33,12 +33,14 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	 * does that for operations involving reads, or for writes
 	 * where overwrite is set
 	 */
-	if (td_read(td) || (td_write(td) && td->o.overwrite))
+	if (td_read(td) || (td_write(td) && td->o.overwrite) ||
+	    (td_write(td) && td->io_ops->flags & FIO_NOEXTEND))
 		new_layout = 1;
 	if (td_write(td) && !td->o.overwrite)
 		unlink_file = 1;
 
 	if (unlink_file || new_layout) {
+		dprint(FD_FILE, "layout unlink %s\n", f->file_name);
 		if ((unlink(f->file_name) < 0) && (errno != ENOENT)) {
 			td_verror(td, errno, "unlink");
 			return 1;
@@ -97,9 +99,10 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		}
 	}
 
-	if (td->terminate)
+	if (td->terminate) {
+		dprint(FD_FILE, "terminate unlink %s\n", f->file_name);
 		unlink(f->file_name);
-	else if (td->o.create_fsync) {
+	} else if (td->o.create_fsync) {
 		if (fsync(f->fd) < 0) {
 			td_verror(td, errno, "fsync");
 			goto err;
@@ -597,13 +600,21 @@ int init_random_map(struct thread_data *td)
 		num_maps = (blocks + BLOCKS_PER_MAP - 1) /
 				(unsigned long long) BLOCKS_PER_MAP;
 		f->file_map = smalloc(num_maps * sizeof(long));
-		if (!f->file_map) {
+		if (f->file_map) {
+			f->num_maps = num_maps;
+			continue;
+		}
+		if (!td->o.softrandommap) {
 			log_err("fio: failed allocating random map. If running"
 				" a large number of jobs, try the 'norandommap'"
-				" option\n");
+				" option or set 'softrandommap'. Or give"
+				" a larger --alloc-size to fio.\n");
 			return 1;
 		}
-		f->num_maps = num_maps;
+
+		log_info("fio: file %s failed allocating random map. Running "
+			 "job without.\n", f->file_name);
+		f->num_maps = 0;
 	}
 
 	return 0;
@@ -626,8 +637,10 @@ void close_and_free_files(struct thread_data *td)
 	dprint(FD_FILE, "close files\n");
 
 	for_each_file(td, f, i) {
-		if (td->o.unlink && f->filetype == FIO_TYPE_FILE)
+		if (td->o.unlink && f->filetype == FIO_TYPE_FILE) {
+			dprint(FD_FILE, "free unlink %s\n", f->file_name);
 			unlink(f->file_name);
+		}
 
 		td_io_close_file(td, f);
 

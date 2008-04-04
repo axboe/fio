@@ -482,6 +482,12 @@ norandommap	Normally fio will cover every block of the file when doing
 		fio doesn't track potential block rewrites which may alter
 		the calculated checksum for that block.
 
+softrandommap	See norandommap. If fio runs with the random block map enabled
+		and it fails to allocate the map, if this option is set it
+		will continue without a random block map. As coverage will
+		not be as complete as with random maps, this option is
+		disabled by default.
+
 nice=int	Run the job with the given nice value. See man nice(2).
 
 prio=int	Set the io priority value of this job. Linux limits us to
