@@ -13,6 +13,9 @@
 
 static int root_warn;
 
+/*
+ * Leaves f->fd open on success, caller must close
+ */
 static int extend_file(struct thread_data *td, struct fio_file *f)
 {
 	int r, new_layout = 0, unlink_file = 0, flags;
@@ -105,8 +108,6 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 
 	free(b);
 done:
-	close(f->fd);
-	f->fd = -1;
 	return 0;
 err:
 	close(f->fd);
@@ -182,23 +183,27 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
-int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
+static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
+				   unsigned long long off,
+				   unsigned long long len)
 {
 	int ret = 0;
 
-	dprint(FD_IO, "invalidate cache (%d)\n", td->o.odirect);
+	if (len == -1ULL)
+		len = f->io_size;
+	if (off == -1ULL)
+		off = f->file_offset;
 
-	if (td->o.odirect)
-		return 0;
+	dprint(FD_IO, "invalidate cache %s: %llu/%llu\n", f->file_name, off,
+								len);
 
 	/*
 	 * FIXME: add blockdev flushing too
 	 */
 	if (f->mmap)
-		ret = madvise(f->mmap, f->io_size, MADV_DONTNEED);
+		ret = madvise(f->mmap, len, MADV_DONTNEED);
 	else if (f->filetype == FIO_TYPE_FILE) {
-		ret = fadvise(f->fd, f->file_offset, f->io_size,
-						POSIX_FADV_DONTNEED);
+		ret = fadvise(f->fd, off, len, POSIX_FADV_DONTNEED);
 	} else if (f->filetype == FIO_TYPE_BD) {
 		ret = blockdev_invalidate_cache(f->fd);
 		if (ret < 0 && errno == EACCES && geteuid()) {
@@ -215,9 +220,18 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 	if (ret < 0) {
 		td_verror(td, errno, "invalidate_cache");
 		return 1;
+	} else if (ret > 0) {
+		td_verror(td, ret, "invalidate_cache");
+		return 1;
 	}
 
 	return ret;
+
+}
+
+int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
+{
+	return __file_invalidate_cache(td, f, -1, -1);
 }
 
 int generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
@@ -526,13 +540,24 @@ int setup_files(struct thread_data *td)
 			td->o.name, need_extend, extend_size >> 20);
 
 		for_each_file(td, f, i) {
+			unsigned long long old_len, extend_len;
+
 			if (!(f->flags & FIO_FILE_EXTEND))
 				continue;
 
 			assert(f->filetype == FIO_TYPE_FILE);
 			f->flags &= ~FIO_FILE_EXTEND;
+			old_len = f->real_file_size;
+			extend_len = f->io_size + f->file_offset - old_len;
 			f->real_file_size = (f->io_size + f->file_offset);
 			err = extend_file(td, f);
+			if (err)
+				break;
+			
+			err = __file_invalidate_cache(td, f, old_len,
+								extend_len);
+			close(f->fd);
+			f->fd = -1;
 			if (err)
 				break;
 		}
