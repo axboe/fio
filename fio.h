@@ -684,6 +684,7 @@ extern unsigned long long mlock_size;
 extern unsigned long page_mask, page_size;
 extern int read_only;
 extern int eta_print;
+extern unsigned long done_secs;
 extern char *job_section;
 
 extern struct thread_data *threads;

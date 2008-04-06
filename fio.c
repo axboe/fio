@@ -49,6 +49,7 @@ int nr_process = 0;
 int nr_thread = 0;
 int shm_id = 0;
 int temp_stall_ts;
+unsigned long done_secs = 0;
 
 static struct fio_mutex *startup_mutex;
 static volatile int fio_abort;
@@ -1118,6 +1119,8 @@ reaped:
 
 		if (td->error)
 			exit_value++;
+
+		done_secs += mtime_since_now(&td->epoch) / 1000;
 	}
 
 	if (*nr_running == cputhreads && !pending && realthreads)

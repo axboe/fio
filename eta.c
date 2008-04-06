@@ -133,8 +133,9 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 
 		eta_sec = (unsigned long) (elapsed * (1.0 / perc)) - elapsed;
 
-		if (td->o.timeout && eta_sec > (td->o.timeout - elapsed))
-			eta_sec = td->o.timeout - elapsed;
+		if (td->o.timeout &&
+		    eta_sec > (td->o.timeout + done_secs - elapsed))
+			eta_sec = td->o.timeout + done_secs - elapsed;
 	} else if (td->runstate == TD_NOT_CREATED || td->runstate == TD_CREATED
 			|| td->runstate == TD_INITIALIZED) {
 		int t_eta = 0, r_eta = 0;
@@ -144,10 +145,10 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 		 * if given, otherwise assume it'll run at the specified rate.
 		 */
 		if (td->o.timeout)
-			t_eta = td->o.timeout + td->o.start_delay - elapsed;
+			t_eta = td->o.timeout + td->o.start_delay;
 		if (td->o.rate) {
 			r_eta = (bytes_total / 1024) / td->o.rate;
-			r_eta += td->o.start_delay - elapsed;
+			r_eta += td->o.start_delay;
 		}
 
 		if (r_eta && t_eta)
@@ -184,13 +185,13 @@ static void calc_rate(unsigned long mtime, unsigned long long *io_bytes,
 void print_thread_status(void)
 {
 	unsigned long elapsed = mtime_since_genesis() / 1000;
-	int i, nr_running, nr_pending, t_rate, m_rate, *eta_secs, eta_sec;
+	int i, nr_running, nr_pending, t_rate, m_rate;
 	int t_iops, m_iops, files_open;
 	struct thread_data *td;
 	char eta_str[128];
 	double perc = 0.0;
 	unsigned long long io_bytes[2];
-	unsigned long rate_time, disp_time, bw_avg_time;
+	unsigned long rate_time, disp_time, bw_avg_time, *eta_secs, eta_sec;
 	struct timeval now;
 
 	static unsigned long long rate_io_bytes[2];
@@ -210,8 +211,8 @@ void print_thread_status(void)
 	if (!disp_io_bytes[0] && !disp_io_bytes[1])
 		fill_start_time(&disp_prev_time);
 
-	eta_secs = malloc(thread_number * sizeof(int));
-	memset(eta_secs, 0, thread_number * sizeof(int));
+	eta_secs = malloc(thread_number * sizeof(unsigned long));
+	memset(eta_secs, 0, thread_number * sizeof(unsigned long));
 
 	io_bytes[0] = io_bytes[1] = 0;
 	nr_pending = nr_running = t_rate = m_rate = t_iops = m_iops = 0;
@@ -247,13 +248,8 @@ void print_thread_status(void)
 		eta_sec = 0;
 
 	for_each_td(td, i) {
-		if (exitall_on_terminate) {
-			if (eta_secs[i] < eta_sec)
-				eta_sec = eta_secs[i];
-		} else {
-			if (eta_secs[i] > eta_sec)
-				eta_sec = eta_secs[i];
-		}
+		if (eta_secs[i] != INT_MAX)
+			eta_sec += eta_secs[i];
 	}
 
 	free(eta_secs);
