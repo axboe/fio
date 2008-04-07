@@ -410,6 +410,9 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		}
 		break;
 	}
+	case FIO_OPT_DEPRECATED:
+		fprintf(stdout, "Option %s is deprecated\n", o->name);
+		break;
 	default:
 		fprintf(stderr, "Bad option type %u\n", o->type);
 		ret = 1;
@@ -644,6 +647,9 @@ int show_cmd_help(struct fio_option *options, const char *name)
 	for (o = &options[0]; o->name; o++) {
 		int match = 0;
 
+		if (o->type == FIO_OPT_DEPRECATED)
+			continue;
+
 		if (name) {
 			if (!strcmp(name, o->name) ||
 			    (o->alias && !strcmp(name, o->alias)))
@@ -715,6 +721,8 @@ void options_init(struct fio_option *options)
 	dprint(FD_PARSE, "init options\n");
 
 	for (o = &options[0]; o->name; o++) {
+		if (o->type == FIO_OPT_DEPRECATED)
+			continue;
 		if (o->type == FIO_OPT_BOOL) {
 			o->minval = 0;
 			o->maxval = 1;

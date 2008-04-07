@@ -988,11 +988,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "rwmixcycle",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(rwmixcycle),
-		.help	= "Cycle period for mixed read/write workloads (msec)",
-		.def	= "500",
-		.parent	= "rwmixread",
+		.type	= FIO_OPT_DEPRECATED,
 	},
 	{
 		.name	= "nice",
