@@ -243,7 +243,7 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 
 static void set_rwmix_bytes(struct thread_data *td)
 {
-	unsigned long long rbytes;
+	unsigned long issues;
 	unsigned int diff;
 
 	/*
@@ -251,11 +251,11 @@ static void set_rwmix_bytes(struct thread_data *td)
 	 * buffered writes may issue a lot quicker than they complete,
 	 * whereas reads do not.
 	 */
-	rbytes = td->io_bytes[td->rwmix_ddir] - td->rwmix_bytes;
+	issues = td->io_issues[td->rwmix_ddir] - td->rwmix_issues;
 	diff = td->o.rwmix[td->rwmix_ddir ^ 1];
 
-	td->rwmix_bytes = td->io_bytes[td->rwmix_ddir]
-				+ (rbytes * ((100 - diff)) / diff);
+	td->rwmix_issues = td->io_issues[td->rwmix_ddir]
+				+ (issues * ((100 - diff)) / diff);
 }
 
 static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
@@ -279,25 +279,10 @@ static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
 static enum fio_ddir get_rw_ddir(struct thread_data *td)
 {
 	if (td_rw(td)) {
-		struct timeval now;
-		unsigned long elapsed;
-		unsigned int cycle;
-
-		fio_gettime(&now, NULL);
-		elapsed = mtime_since_now(&td->rwmix_switch);
-
-		/*
-		 * if this is the first cycle, make it shorter
-		 */
-		cycle = td->o.rwmixcycle;
-		if (!td->rwmix_bytes)
-			cycle /= 10;
-
 		/*
 		 * Check if it's time to seed a new data direction.
 		 */
-		if (elapsed >= cycle ||
-		    td->io_bytes[td->rwmix_ddir] >= td->rwmix_bytes) {
+		if (td->io_issues[td->rwmix_ddir] >= td->rwmix_issues) {
 			unsigned long long max_bytes;
 			enum fio_ddir ddir;
 
@@ -310,11 +295,9 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 			max_bytes = td->this_io_bytes[ddir];
 			if (max_bytes >=
 			    (td->o.size * td->o.rwmix[ddir] / 100)) {
-				if (!td->rw_end_set[ddir]) {
+				if (!td->rw_end_set[ddir])
 					td->rw_end_set[ddir] = 1;
-					memcpy(&td->rw_end[ddir], &now,
-						sizeof(now));
-				}
+
 				ddir ^= 1;
 			}
 
@@ -322,7 +305,6 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 				set_rwmix_bytes(td);
 
 			td->rwmix_ddir = ddir;
-			memcpy(&td->rwmix_switch, &now, sizeof(now));
 		}
 		return td->rwmix_ddir;
 	} else if (td_read(td))
