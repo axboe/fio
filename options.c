@@ -274,8 +274,14 @@ static int check_dir(struct thread_data *td, char *fname)
 {
 	char file[PATH_MAX], *dir;
 	struct stat sb;
+	int elen = 0;
 
-	strcpy(file, fname);
+	if (td->o.directory) {
+		strcpy(file, td->o.directory);
+		elen = strlen(file);
+	}
+
+	sprintf(file + elen, "/%s", fname);
 	dir = dirname(file);
 
 	if (lstat(dir, &sb) < 0) {
