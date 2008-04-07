@@ -462,10 +462,6 @@ fsync_on_close=bool	If true, fio will fsync() a dirty file on close.
 		This differs from end_fsync in that it will happen on every
 		file close, not just at the end of the job.
 
-rwmixcycle=int	Value in milliseconds describing how often to switch between
-		reads and writes for a mixed workload. The default is
-		500 msecs.
-
 rwmixread=int	How large a percentage of the mix should be reads.
 
 rwmixwrite=int	How large a percentage of the mix should be writes. If both
