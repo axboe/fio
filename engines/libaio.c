@@ -194,6 +194,7 @@ static int fio_libaio_init(struct thread_data *td)
 	err = io_queue_init(td->o.iodepth, &ld->aio_ctx);
 	if (err) {
 		td_verror(td, -err, "io_queue_init");
+		log_err("fio: check /proc/sys/fs/aio-max-nr\n");
 		free(ld);
 		return 1;
 	}
