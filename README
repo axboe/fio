@@ -57,6 +57,19 @@ $ make -f Makefile.Freebsd && make -f Makefile.FreeBSD install
 Likewise with OpenSolaris, use the Makefile.solaris to compile there.
 This might change in the future if I opt for an autoconf type setup.
 
+If your compile fails with an error like this:
+
+    CC gettime.o
+In file included from fio.h:23,
+                 from gettime.c:8:
+os/os.h:15:20: error: libaio.h: No such file or directory
+In file included from gettime.c:8:
+fio.h:119: error: field 'iocb' has incomplete type
+make: *** [gettime.o] Error 1
+
+Check that you have the libaio development package installed. On RPM
+based distros, it's typically called libaio-devel.
+
 
 Command line
 ------------
