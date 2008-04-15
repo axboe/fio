@@ -454,7 +454,11 @@ fsync=int	If writing to a file, issue a sync of the dirty data
 		not sync the file. The exception is the sg io engine, which
 		synchronizes the disk cache anyway.
 
-overwrite=bool	If writing to a file, setup the file first and do overwrites.
+overwrite=bool	If true, writes to a file will always overwrite existing
+		data. If the file doesn't already exist, it will be
+		created before the write phase begins. If the file exists
+		and is large enough for the specified write phase, nothing
+		will be done.
 
 end_fsync=bool	If true, fsync file contents when the job exits.
 
