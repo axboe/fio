@@ -231,6 +231,7 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 	if (fd < 0)
 		goto out_close;
 
+	alloc_size += sizeof(*hdr);
 	if (alloc_size > smalloc_pool_size)
 		pool->size = alloc_size;
 	else
