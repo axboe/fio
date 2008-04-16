@@ -220,7 +220,7 @@ fail:
 #endif
 }
 
-static int add_pool(struct pool *pool)
+static int add_pool(struct pool *pool, unsigned int alloc_size)
 {
 	struct mem_hdr *hdr;
 	void *ptr;
@@ -231,7 +231,11 @@ static int add_pool(struct pool *pool)
 	if (fd < 0)
 		goto out_close;
 
-	pool->size = smalloc_pool_size;
+	if (alloc_size > smalloc_pool_size)
+		pool->size = alloc_size;
+	else
+		pool->size = smalloc_pool_size;
+
 	if (ftruncate(fd, pool->size) < 0)
 		goto out_unlink;
 
@@ -275,7 +279,7 @@ void sinit(void)
 #ifdef MP_SAFE
 	lock = fio_mutex_rw_init();
 #endif
-	ret = add_pool(&mp[0]);
+	ret = add_pool(&mp[0], INITIAL_SIZE);
 	assert(!ret);
 }
 
@@ -458,7 +462,7 @@ void *smalloc(unsigned int size)
 		else {
 			i = nr_pools;
 			global_read_unlock();
-			if (add_pool(&mp[nr_pools]))
+			if (add_pool(&mp[nr_pools], size))
 				goto out;
 			global_read_lock();
 		}
