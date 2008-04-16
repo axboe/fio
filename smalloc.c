@@ -336,6 +336,9 @@ void sfree(void *ptr)
 	struct pool *pool = NULL;
 	unsigned int i;
 
+	if (!ptr)
+		return;
+
 	global_read_lock();
 
 	for (i = 0; i < nr_pools; i++) {
@@ -357,14 +360,14 @@ static void *smalloc_pool(struct pool *pool, unsigned int size)
 	int did_restart = 0;
 	void *ret;
 
-	/*
-	 * slight chance of race with sfree() here, but acceptable
-	 */
-	if (!size || size > pool->room + sizeof(*hdr) ||
-	    ((size > pool->largest_block) && pool->largest_block))
+	if (!size)
 		return NULL;
 
 	pool_lock(pool);
+	if (size > pool->room + sizeof(*hdr))
+		goto fail;
+	if ((size > pool->largest_block) && pool->largest_block)
+		goto fail;
 restart:
 	hdr = pool->last;
 	prv = NULL;
