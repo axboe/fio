@@ -13,18 +13,12 @@
 
 #include "mutex.h"
 
-#undef ENABLE_RESIZE		/* define to enable pool resizing */
 #define MP_SAFE			/* define to made allocator thread safe */
 
 #define INITIAL_SIZE	1048576	/* new pool size */
 #define MAX_POOLS	32	/* maximum number of pools to setup */
 
 unsigned int smalloc_pool_size = INITIAL_SIZE;
-
-#ifdef ENABLE_RESIZE
-#define MAX_SIZE	8 * smalloc_pool_size
-static unsigned int resize_error;
-#endif
 
 struct pool {
 	struct fio_mutex *lock;			/* protects this pool */
@@ -173,51 +167,6 @@ static int compact_pool(struct pool *pool)
 
 	pool->free_since_compact = 0;
 	return !!compacted;
-}
-
-static int resize_pool(struct pool *pool)
-{
-#ifdef ENABLE_RESIZE
-	unsigned int new_size = pool->size << 1;
-	struct mem_hdr *hdr, *last_hdr;
-	void *ptr;
-
-	if (new_size >= MAX_SIZE || resize_error)
-		return 1;
-
-	if (ftruncate(pool->fd, new_size) < 0)
-		goto fail;
-
-	ptr = mremap(pool->map, pool->size, new_size, 0);
-	if (ptr == MAP_FAILED)
-		goto fail;
-
-	pool->map = ptr;
-	hdr = pool;
-	do {
-		last_hdr = hdr;
-	} while ((hdr = hdr_nxt(hdr)) != NULL);
-
-	if (hdr_free(last_hdr)) {
-		last_hdr->size = hdr_size(last_hdr) + new_size - pool_size;
-		hdr_mark_free(last_hdr);
-	} else {
-		struct mem_hdr *nxt;
-
-		nxt = (void *) last_hdr + hdr_size(last_hdr) + sizeof(*hdr);
-		nxt->size = new_size - pool_size - sizeof(*hdr);
-		hdr_mark_free(nxt);
-	}
-
-	pool_room += new_size - pool_size;
-	pool_size = new_size;
-	return 0;
-fail:
-	perror("resize");
-	resize_error = 1;
-#else
-	return 1;
-#endif
 }
 
 static int add_pool(struct pool *pool, unsigned int alloc_size)
@@ -421,16 +370,8 @@ fail:
 	 * if we fail to allocate, first compact the entries that we missed.
 	 * if that also fails, increase the size of the pool
 	 */
-	++did_restart;
-	if (did_restart <= 1) {
+	if (++did_restart <= 1) {
 		if (!compact_pool(pool)) {
-			pool->last = pool->map;
-			goto restart;
-		}
-	}
-	++did_restart;
-	if (did_restart <= 2) {
-		if (!resize_pool(pool)) {
 			pool->last = pool->map;
 			goto restart;
 		}
