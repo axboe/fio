@@ -24,11 +24,10 @@ struct io_completion_data {
  * The ->file_map[] contains a map of blocks we have or have not done io
  * to yet. Used to make sure we cover the entire range in a fair fashion.
  */
-static int random_map_free(struct thread_data *td, struct fio_file *f,
-			   const unsigned long long block)
+static int random_map_free(struct fio_file *f, const unsigned long long block)
 {
-	unsigned int idx = RAND_MAP_IDX(td, f, block);
-	unsigned int bit = RAND_MAP_BIT(td, f, block);
+	unsigned int idx = RAND_MAP_IDX(f, block);
+	unsigned int bit = RAND_MAP_BIT(f, block);
 
 	dprint(FD_RANDOM, "free: b=%llu, idx=%u, bit=%u\n", block, idx, bit);
 
@@ -57,11 +56,11 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 		 * If we have a mixed random workload, we may
 		 * encounter blocks we already did IO to.
 		 */
-		if ((td->o.ddir_nr == 1) && !random_map_free(td, f, block))
+		if ((td->o.ddir_nr == 1) && !random_map_free(f, block))
 			break;
 
-		idx = RAND_MAP_IDX(td, f, block);
-		bit = RAND_MAP_BIT(td, f, block);
+		idx = RAND_MAP_IDX(f, block);
+		bit = RAND_MAP_BIT(f, block);
 
 		fio_assert(td, idx < f->num_maps);
 
@@ -136,7 +135,7 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		/*
 		 * calculate map offset and check if it's free
 		 */
-		if (random_map_free(td, f, *b))
+		if (random_map_free(f, *b))
 			return 0;
 
 		dprint(FD_RANDOM, "get_next_rand_offset: offset %llu busy\n",

@@ -335,15 +335,6 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 }
 
 /*
- * Read version 1 iolog data.
- */
-static int read_iolog(struct thread_data *td, FILE *f)
-{
-	log_err("fio: iolog version 1 is no longer supported\n");
-	return 1;
-}
-
-/*
  * open iolog, check version, and call appropriate parser
  */
 static int init_iolog_read(struct thread_data *td)
@@ -372,16 +363,8 @@ static int init_iolog_read(struct thread_data *td)
 	if (!strncmp(iolog_ver2, buffer, strlen(iolog_ver2)))
 		ret = read_iolog2(td, f);
 	else {
-		/*
-		 * seek back to the beginning
-		 */
-		if (fseek(f, 0, SEEK_SET) < 0) {
-			td_verror(td, errno, "iolog read");
-			log_err("fio: unable to read iolog\n");
-			return 1;
-		}
-
-		ret = read_iolog(td, f);
+		log_err("fio: iolog version 1 is no longer supported\n");
+		ret = 1;
 	}
 
 	fclose(f);

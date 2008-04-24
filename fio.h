@@ -700,9 +700,9 @@ static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
 }
 
 #define BLOCKS_PER_MAP		(8 * sizeof(long))
-#define TO_MAP_BLOCK(td, f, b)	(b)
-#define RAND_MAP_IDX(td, f, b)	(TO_MAP_BLOCK(td, f, b) / BLOCKS_PER_MAP)
-#define RAND_MAP_BIT(td, f, b)	(TO_MAP_BLOCK(td, f, b) & (BLOCKS_PER_MAP - 1))
+#define TO_MAP_BLOCK(f, b)	(b)
+#define RAND_MAP_IDX(f, b)	(TO_MAP_BLOCK(f, b) / BLOCKS_PER_MAP)
+#define RAND_MAP_BIT(f, b)	(TO_MAP_BLOCK(f, b) & (BLOCKS_PER_MAP - 1))
 
 #define MAX_JOBS	(1024)
 
