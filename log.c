@@ -465,8 +465,9 @@ void __finish_log(struct io_log *log, const char *name)
 
 void finish_log(struct thread_data *td, struct io_log *log, const char *name)
 {
-	char file_name[256];
+	char file_name[256], *p;
 
 	snprintf(file_name, 200, "%s_%s.log", td->o.name, name);
-	__finish_log(log, file_name);
+	p = basename(file_name);
+	__finish_log(log, p);
 }
