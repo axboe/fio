@@ -906,7 +906,7 @@ extern void io_u_queued(struct thread_data *, struct io_u *);
 extern void io_u_log_error(struct thread_data *, struct io_u *);
 extern void io_u_init_timeout(void);
 extern void io_u_set_timeout(struct thread_data *);
-extern void io_u_mark_depth(struct thread_data *, struct io_u *);
+extern void io_u_mark_depth(struct thread_data *, struct io_u *, unsigned int);
 
 /*
  * io engine entry points

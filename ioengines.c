@@ -238,7 +238,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	unlock_file(td, io_u->file);
 
 	if (ret != FIO_Q_BUSY)
-		io_u_mark_depth(td, io_u);
+		io_u_mark_depth(td, io_u, 1);
 
 	if (ret == FIO_Q_QUEUED) {
 		int r;

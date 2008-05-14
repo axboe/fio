@@ -410,7 +410,8 @@ out:
 	return 0;
 }
 
-void io_u_mark_depth(struct thread_data *td, struct io_u *io_u)
+void io_u_mark_depth(struct thread_data *td, struct io_u *io_u,
+		     unsigned int nr)
 {
 	int index = 0;
 
@@ -439,8 +440,8 @@ void io_u_mark_depth(struct thread_data *td, struct io_u *io_u)
 		break;
 	}
 
-	td->ts.io_u_map[index]++;
-	td->ts.total_io_u[io_u->ddir]++;
+	td->ts.io_u_map[index] += nr;
+	td->ts.total_io_u[io_u->ddir] += nr;
 }
 
 static void io_u_mark_lat_usec(struct thread_data *td, unsigned long usec)
