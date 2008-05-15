@@ -188,7 +188,14 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 			b = (f->last_pos - f->file_offset) / td->o.min_bs[ddir];
 	}
 
-	io_u->offset = (b * td->o.min_bs[ddir]) + f->file_offset;
+	io_u->offset = b * td->o.min_bs[ddir];
+	if (io_u->offset >= f->io_size) {
+		dprint(FD_IO, "get_next_offset: offset %llu >= io_size %llu\n",
+					io_u->offset, f->io_size);
+		return 1;
+	}
+
+	io_u->offset += f->file_offset;
 	if (io_u->offset >= f->real_file_size) {
 		dprint(FD_IO, "get_next_offset: offset %llu >= size %llu\n",
 					io_u->offset, f->real_file_size);
@@ -649,6 +656,16 @@ set_file:
 
 		if (!fill_io_u(td, io_u))
 			break;
+
+		/*
+		 * optimization to prevent close/open of the same file. This
+		 * way we preserve queueing etc.
+		 */
+		if (td->o.nr_files == 1 && td->o.time_based) {
+			put_file(td, f);
+			fio_file_reset(f);
+			goto set_file;
+		}
 
 		/*
 		 * td_io_close() does a put_file() as well, so no need to

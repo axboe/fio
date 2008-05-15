@@ -980,6 +980,12 @@ extern void close_ioengine(struct thread_data *);
 	}	\
 } while (0)
 
+static inline void fio_file_reset(struct fio_file *f)
+{
+	f->last_free_lookup = 0;
+	f->last_pos = f->file_offset;
+}
+
 static inline void clear_error(struct thread_data *td)
 {
 	td->error = 0;
