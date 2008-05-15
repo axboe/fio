@@ -40,6 +40,13 @@ void log_file(struct thread_data *td, struct fio_file *f,
 	if (!td->o.write_iolog_file)
 		return;
 
+
+	/*
+	 * this happens on the pre-open/close done before the job starts
+	 */
+	if (!td->iolog_f)
+		return;
+
 	fprintf(td->iolog_f, "%s %s\n", f->file_name, act[what]);
 }
 
