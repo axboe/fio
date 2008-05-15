@@ -559,10 +559,10 @@ struct thread_data {
 	 * Current IO depth and list of free and busy io_u's.
 	 */
 	unsigned int cur_depth;
+	unsigned int io_u_queued;
 	struct list_head io_u_freelist;
 	struct list_head io_u_busylist;
 	struct list_head io_u_requeues;
-	unsigned int io_u_queued;
 
 	/*
 	 * Rate state
@@ -906,7 +906,7 @@ extern void io_u_queued(struct thread_data *, struct io_u *);
 extern void io_u_log_error(struct thread_data *, struct io_u *);
 extern void io_u_init_timeout(void);
 extern void io_u_set_timeout(struct thread_data *);
-extern void io_u_mark_depth(struct thread_data *, struct io_u *, unsigned int);
+extern void io_u_mark_depth(struct thread_data *, unsigned int);
 
 /*
  * io engine entry points

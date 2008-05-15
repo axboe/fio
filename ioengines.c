@@ -237,14 +237,20 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	unlock_file(td, io_u->file);
 
-	if (ret != FIO_Q_BUSY)
-		io_u_mark_depth(td, io_u, 1);
-
-	if (ret == FIO_Q_QUEUED) {
+	if (ret == FIO_Q_COMPLETED) {
+		if (io_u->ddir != DDIR_SYNC) {
+			io_u_mark_depth(td, 1);
+			td->ts.total_io_u[io_u->ddir]++;
+		}
+	} else if (ret == FIO_Q_QUEUED) {
 		int r;
 
-		td->io_u_queued++;
-		if (td->io_u_queued > td->o.iodepth_batch) {
+		if (io_u->ddir != DDIR_SYNC) {
+			td->io_u_queued++;
+			td->ts.total_io_u[io_u->ddir]++;
+		}
+
+		if (td->io_u_queued >= td->o.iodepth_batch) {
 			r = td_io_commit(td);
 			if (r < 0)
 				return r;
@@ -288,10 +294,12 @@ int td_io_commit(struct thread_data *td)
 {
 	dprint(FD_IO, "calling ->commit(), depth %d\n", td->cur_depth);
 
-	if (!td->cur_depth)
+	if (!td->cur_depth || !td->io_u_queued)
 		return 0;
 
+	io_u_mark_depth(td, td->io_u_queued);
 	td->io_u_queued = 0;
+
 	if (td->io_ops->commit)
 		return td->io_ops->commit(td);
 
