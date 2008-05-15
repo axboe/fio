@@ -83,7 +83,7 @@ static inline unsigned long long last_block(struct thread_data *td,
 	if (!max_blocks)
 		return 0;
 
-	return max_blocks - 1;
+	return max_blocks;
 }
 
 /*
