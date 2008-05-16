@@ -319,17 +319,21 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 		return DDIR_WRITE;
 }
 
+static void put_file_log(struct thread_data *td, struct fio_file *f)
+{
+	int ret = put_file(td, f);
+
+	if (ret)
+		td_verror(td, ret, "file close");
+}
+
 void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	assert((io_u->flags & IO_U_F_FREE) == 0);
 	io_u->flags |= IO_U_F_FREE;
 
-	if (io_u->file) {
-		int ret = put_file(td, io_u->file);
-
-		if (ret)
-			td_verror(td, ret, "file close");
-	}
+	if (io_u->file)
+		put_file_log(td, io_u->file);
 
 	io_u->file = NULL;
 	list_del(&io_u->list);
@@ -662,7 +666,7 @@ set_file:
 		 * way we preserve queueing etc.
 		 */
 		if (td->o.nr_files == 1 && td->o.time_based) {
-			put_file(td, f);
+			put_file_log(td, f);
 			fio_file_reset(f);
 			goto set_file;
 		}
