@@ -6,6 +6,7 @@
 #include <assert.h>
 
 #include "fio.h"
+#include "hash.h"
 
 /*
  * Change this define to play with the timeout handling
@@ -780,6 +781,9 @@ struct io_u *get_io_u(struct thread_data *td)
 	io_u->endpos = io_u->offset + io_u->buflen;
 	io_u->xfer_buf = io_u->buf;
 	io_u->xfer_buflen = io_u->buflen;
+
+	if (td->o.refill_buffers && io_u->ddir == DDIR_WRITE)
+		io_u_fill_buffer(td, io_u, io_u->xfer_buflen);
 out:
 	if (!td_io_prep(td, io_u)) {
 		fio_gettime(&io_u->start_time, NULL);
@@ -941,6 +945,23 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 
 	slat_time = utime_since(&io_u->start_time, &io_u->issue_time);
 	add_slat_sample(td, io_u->ddir, slat_time);
+}
+
+/*
+ * "randomly" fill the buffer contents
+ */
+void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
+		      unsigned int max_bs)
+{
+	long *ptr = io_u->buf;
+
+	if (!td->o.zero_buffers) {
+		while ((void *) ptr - io_u->buf < max_bs) {
+			*ptr = rand() * GOLDEN_RATIO_PRIME;
+			ptr++;
+		}
+	} else
+		memset(ptr, 0, max_bs);
 }
 
 #ifdef FIO_USE_TIMEOUT

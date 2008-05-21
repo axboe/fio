@@ -478,6 +478,7 @@ struct thread_options {
 	unsigned int group_reporting;
 	unsigned int fadvise_hint;
 	unsigned int zero_buffers;
+	unsigned int refill_buffers;
 	unsigned int time_based;
 
 	char *read_iolog_file;
@@ -907,6 +908,7 @@ extern void io_u_log_error(struct thread_data *, struct io_u *);
 extern void io_u_init_timeout(void);
 extern void io_u_set_timeout(struct thread_data *);
 extern void io_u_mark_depth(struct thread_data *, unsigned int);
+extern void io_u_fill_buffer(struct thread_data *td, struct io_u *, unsigned int);
 
 /*
  * io engine entry points

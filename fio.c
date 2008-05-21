@@ -642,22 +642,6 @@ static void cleanup_io_u(struct thread_data *td)
 	free_io_mem(td);
 }
 
-/*
- * "randomly" fill the buffer contents
- */
-static void fill_io_buf(struct thread_data *td, struct io_u *io_u, int max_bs)
-{
-	long *ptr = io_u->buf;
-
-	if (!td->o.zero_buffers) {
-		while ((void *) ptr - io_u->buf < max_bs) {
-			*ptr = rand() * GOLDEN_RATIO_PRIME;
-			ptr++;
-		}
-	} else
-		memset(ptr, 0, max_bs);
-}
-
 static int init_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
@@ -700,8 +684,8 @@ static int init_io_u(struct thread_data *td)
 		if (!(td->io_ops->flags & FIO_NOIO)) {
 			io_u->buf = p + max_bs * i;
 
-			if (td_write(td))
-				fill_io_buf(td, io_u, max_bs);
+			if (td_write(td) && !td->o.refill_buffers)
+				io_u_fill_buffer(td, io_u, max_bs);
 		}
 
 		io_u->index = i;

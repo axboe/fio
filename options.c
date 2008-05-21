@@ -1215,6 +1215,12 @@ static struct fio_option options[] = {
 		.off1	= td_var_offset(zero_buffers),
 		.help	= "Init IO buffers to all zeroes",
 	},
+	{
+		.name	= "refill_buffers",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(refill_buffers),
+		.help	= "Refill IO buffers on every IO submit",
+	},
 #ifdef FIO_HAVE_DISK_UTIL
 	{
 		.name	= "disk_util",

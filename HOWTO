@@ -336,6 +336,11 @@ bs_unaligned	If this option is given, any byte size value within bsrange
 zero_buffers	If this option is given, fio will init the IO buffers to
 		all zeroes. The default is to fill them with random data.
 
+refill_buffers	If this option is given, fio will refill the IO buffers
+		on every submit. The default is to only fill it at init
+		time and reuse that data. Only makes sense if zero_buffers
+		isn't specified, naturally.
+
 nrfiles=int	Number of files to use for this job. Defaults to 1.
 
 openfiles=int	Number of files to keep open at the same time. Defaults to
