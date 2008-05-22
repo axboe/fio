@@ -339,7 +339,8 @@ zero_buffers	If this option is given, fio will init the IO buffers to
 refill_buffers	If this option is given, fio will refill the IO buffers
 		on every submit. The default is to only fill it at init
 		time and reuse that data. Only makes sense if zero_buffers
-		isn't specified, naturally.
+		isn't specified, naturally. If data verification is enabled,
+		refill_buffers is also automatically enabled.
 
 nrfiles=int	Number of files to use for this job. Defaults to 1.
 
