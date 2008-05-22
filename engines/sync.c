@@ -230,6 +230,7 @@ static int fio_vsyncio_commit(struct thread_data *td)
 	if (!sd->queued)
 		return 0;
 
+	io_u_mark_submit(td, sd->queued);
 	f = sd->last_file;
 
 	if (lseek(f->fd, sd->io_us[0]->offset, SEEK_SET) == -1) {

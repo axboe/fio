@@ -378,10 +378,14 @@ struct thread_stat {
 	 * IO depth and latency stats
 	 */
 	unsigned int io_u_map[FIO_IO_U_MAP_NR];
+	unsigned int io_u_submit[FIO_IO_U_MAP_NR];
+	unsigned int io_u_complete[FIO_IO_U_MAP_NR];
 	unsigned int io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	unsigned int io_u_lat_m[FIO_IO_U_LAT_M_NR];
 	unsigned long total_io_u[2];
 	unsigned long short_io_u[2];
+	unsigned long total_submit;
+	unsigned long total_complete;
 
 	unsigned long long io_bytes[2];
 	unsigned long runtime[2];
@@ -909,6 +913,8 @@ extern void io_u_init_timeout(void);
 extern void io_u_set_timeout(struct thread_data *);
 extern void io_u_mark_depth(struct thread_data *, unsigned int);
 extern void io_u_fill_buffer(struct thread_data *td, struct io_u *, unsigned int);
+void io_u_mark_complete(struct thread_data *, unsigned int);
+void io_u_mark_submit(struct thread_data *, unsigned int);
 
 /*
  * io engine entry points

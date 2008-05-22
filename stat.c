@@ -124,7 +124,8 @@ static void show_group_stats(struct group_run_stats *rs, int id)
 #define ts_total_io_u(ts)	\
 	((ts)->total_io_u[0] + (ts)->total_io_u[1])
 
-static void stat_calc_dist(struct thread_stat *ts, double *io_u_dist)
+static void stat_calc_dist(unsigned int *map, unsigned long total,
+			   double *io_u_dist)
 {
 	int i;
 
@@ -132,27 +133,33 @@ static void stat_calc_dist(struct thread_stat *ts, double *io_u_dist)
 	 * Do depth distribution calculations
 	 */
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
-		io_u_dist[i] = (double) ts->io_u_map[i]
-					/ (double) ts_total_io_u(ts);
-		io_u_dist[i] *= 100.0;
-		if (io_u_dist[i] < 0.1 && ts->io_u_map[i])
-			io_u_dist[i] = 0.1;
+		if (total) {
+			io_u_dist[i] = (double) map[i] / (double) total;
+			io_u_dist[i] *= 100.0;
+			if (io_u_dist[i] < 0.1 && map[i])
+				io_u_dist[i] = 0.1;
+		} else
+			io_u_dist[i] = 0.0;
 	}
 }
 
 static void stat_calc_lat(struct thread_stat *ts, double *dst,
 			  unsigned int *src, int nr)
 {
+	unsigned long total = ts_total_io_u(ts);
 	int i;
 
 	/*
 	 * Do latency distribution calculations
 	 */
 	for (i = 0; i < nr; i++) {
-		dst[i] = (double) src[i] / (double) ts_total_io_u(ts);
-		dst[i] *= 100.0;
-		if (dst[i] < 0.01 && src[i])
-			dst[i] = 0.01;
+		if (total) {
+			dst[i] = (double) src[i] / (double) total;
+			dst[i] *= 100.0;
+			if (dst[i] < 0.01 && src[i])
+				dst[i] = 0.01;
+		} else
+			dst[i] = 0.0;
 	}
 }
 
@@ -342,19 +349,30 @@ static void show_thread_status(struct thread_stat *ts,
 	log_info("  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu, majf=%lu,"
 		 " minf=%lu\n", usr_cpu, sys_cpu, ts->ctx, ts->majf, ts->minf);
 
-	stat_calc_dist(ts, io_u_dist);
-	stat_calc_lat_u(ts, io_u_lat_u);
-	stat_calc_lat_m(ts, io_u_lat_m);
-
+	stat_calc_dist(ts->io_u_map, ts_total_io_u(ts), io_u_dist);
 	log_info("  IO depths    : 1=%3.1f%%, 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%,"
 		 " 16=%3.1f%%, 32=%3.1f%%, >=64=%3.1f%%\n", io_u_dist[0],
+					io_u_dist[1], io_u_dist[2],
+					io_u_dist[3], io_u_dist[4],
+					io_u_dist[5], io_u_dist[6]);
+
+	stat_calc_dist(ts->io_u_submit, ts->total_submit, io_u_dist);
+	log_info("     submit    : 0=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%, 16=%3.1f%%,"
+		 " 32=%3.1f%%, 64=%3.1f%%, >=64=%3.1f%%\n", io_u_dist[0],
+					io_u_dist[1], io_u_dist[2],
+					io_u_dist[3], io_u_dist[4],
+					io_u_dist[5], io_u_dist[6]);
+	stat_calc_dist(ts->io_u_complete, ts->total_complete, io_u_dist);
+	log_info("     complete  : 0=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%, 16=%3.1f%%,"
+		 " 32=%3.1f%%, 64=%3.1f%%, >=64=%3.1f%%\n", io_u_dist[0],
 					io_u_dist[1], io_u_dist[2],
 					io_u_dist[3], io_u_dist[4],
 					io_u_dist[5], io_u_dist[6]);
 	log_info("     issued r/w: total=%lu/%lu, short=%lu/%lu\n",
 					ts->total_io_u[0], ts->total_io_u[1],
 					ts->short_io_u[0], ts->short_io_u[1]);
-
+	stat_calc_lat_u(ts, io_u_lat_u);
+	stat_calc_lat_m(ts, io_u_lat_m);
 	show_latencies(io_u_lat_u, io_u_lat_m);
 }
 
@@ -419,7 +437,7 @@ static void show_thread_status_terse(struct thread_stat *ts,
 	log_info(";%f%%;%f%%;%lu;%lu;%lu", usr_cpu, sys_cpu, ts->ctx, ts->majf,
 								ts->minf);
 
-	stat_calc_dist(ts, io_u_dist);
+	stat_calc_dist(ts->io_u_map, ts_total_io_u(ts), io_u_dist);
 	stat_calc_lat_u(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 
@@ -569,6 +587,10 @@ void show_run_stats(void)
 
 		for (k = 0; k < FIO_IO_U_MAP_NR; k++)
 			ts->io_u_map[k] += td->ts.io_u_map[k];
+		for (k = 0; k < FIO_IO_U_MAP_NR; k++)
+			ts->io_u_submit[k] += td->ts.io_u_submit[k];
+		for (k = 0; k < FIO_IO_U_MAP_NR; k++)
+			ts->io_u_complete[k] += td->ts.io_u_complete[k];
 		for (k = 0; k < FIO_IO_U_LAT_U_NR; k++)
 			ts->io_u_lat_u[k] += td->ts.io_u_lat_u[k];
 		for (k = 0; k < FIO_IO_U_LAT_M_NR; k++)
@@ -581,6 +603,8 @@ void show_run_stats(void)
 		}
 
 		ts->total_run_time += td->ts.total_run_time;
+		ts->total_submit += td->ts.total_submit;
+		ts->total_complete += td->ts.total_complete;
 	}
 
 	for (i = 0; i < nr_ts; i++) {

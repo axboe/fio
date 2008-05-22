@@ -198,6 +198,8 @@ int td_io_getevents(struct thread_data *td, unsigned int min, unsigned int max,
 	if (td->io_ops->getevents)
 		r = td->io_ops->getevents(td, min, max, t);
 out:
+	if (r >= 0)
+		io_u_mark_complete(td, r);
 	dprint(FD_IO, "getevents: %d\n", r);
 	return r;
 }
@@ -236,6 +238,11 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	ret = td->io_ops->queue(td, io_u);
 
 	unlock_file(td, io_u->file);
+
+	if (!td->io_ops->commit) {
+		io_u_mark_submit(td, 1);
+		io_u_mark_complete(td, 1);
+	}
 
 	if (ret == FIO_Q_COMPLETED) {
 		if (io_u->ddir != DDIR_SYNC) {

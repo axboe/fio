@@ -824,6 +824,8 @@ Client1 (g=0): err= 0:
     bw (KiB/s) : min=    0, max= 1196, per=51.00%, avg=664.02, stdev=681.68
   cpu        : usr=1.49%, sys=0.25%, ctx=7969, majf=0, minf=17
   IO depths    : 1=0.1%, 2=0.3%, 4=0.5%, 8=99.0%, 16=0.0%, 32=0.0%, >32=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
      issued r/w: total=0/32768, short=0/0
      lat (msec): 2=1.6%, 4=0.0%, 10=3.2%, 20=12.8%, 50=38.4%, 100=24.8%,
      lat (msec): 250=15.2%, 500=0.0%, 750=0.0%, 1000=0.0%, >=2048=0.0%
@@ -861,6 +863,11 @@ IO depths=	The distribution of io depths over the job life time. The
 		16= entries includes depths up to that value but higher
 		than the previous entry. In other words, it covers the
 		range from 16 to 31.
+IO submit=	How many pieces of IO were submitting in a single submit
+		call. Each entry denotes that amount and below, until
+		the previous entry - eg, 8=100% mean that we submitted
+		anywhere in between 5-8 ios per submit call.
+IO complete=	Like the above submit number, but for completions instead.
 IO issued=	The number of read/write requests issued, and how many
 		of them were short.
 IO latencies=	The distribution of IO completion latencies. This is the

@@ -412,10 +412,10 @@ sync_done:
 		 */
 		min_events = 0;
 		if (queue_full(td) || ret == FIO_Q_BUSY) {
-			min_events = 1;
-
-			if (td->cur_depth > td->o.iodepth_low)
+			if (td->cur_depth >= td->o.iodepth_low)
 				min_events = td->cur_depth - td->o.iodepth_low;
+			if (!min_events)
+				min_events = 1;
 		}
 
 		/*
@@ -545,16 +545,12 @@ sync_done:
 		/*
 		 * See if we need to complete some commands
 		 */
-		if (ret == FIO_Q_QUEUED || ret == FIO_Q_BUSY) {
+		if (queue_full(td) || ret == FIO_Q_BUSY) {
 			min_evts = 0;
-			if (queue_full(td) || ret == FIO_Q_BUSY) {
+			if (td->cur_depth >= td->o.iodepth_low)
+				min_evts = td->cur_depth - td->o.iodepth_low;
+			if (!min_evts)
 				min_evts = 1;
-
-				if (td->cur_depth > td->o.iodepth_low)
-					min_evts = td->cur_depth
-							- td->o.iodepth_low;
-			}
-
 			fio_gettime(&comp_time, NULL);
 			bytes_done = io_u_queued_complete(td, min_evts);
 			if (bytes_done < 0)

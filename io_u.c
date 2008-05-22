@@ -422,6 +422,47 @@ out:
 	return 0;
 }
 
+static void __io_u_mark_map(unsigned int *map, unsigned int nr)
+{
+	int index = 0;
+
+	switch (nr) {
+	default:
+		index = 6;
+		break;
+	case 33 ... 64:
+		index = 5;
+		break;
+	case 17 ... 32:
+		index = 4;
+		break;
+	case 9 ... 16:
+		index = 3;
+		break;
+	case 5 ... 8:
+		index = 2;
+		break;
+	case 1 ... 4:
+		index = 1;
+	case 0:
+		break;
+	}
+
+	map[index]++;
+}
+
+void io_u_mark_submit(struct thread_data *td, unsigned int nr)
+{
+	__io_u_mark_map(td->ts.io_u_submit, nr);
+	td->ts.total_submit++;
+}
+
+void io_u_mark_complete(struct thread_data *td, unsigned int nr)
+{
+	__io_u_mark_map(td->ts.io_u_complete, nr);
+	td->ts.total_complete++;
+}
+
 void io_u_mark_depth(struct thread_data *td, unsigned int nr)
 {
 	int index = 0;

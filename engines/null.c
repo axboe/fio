@@ -46,6 +46,7 @@ static int fio_null_commit(struct thread_data *td)
 	struct null_data *nd = td->io_ops->data;
 
 	if (!nd->events) {
+		io_u_mark_submit(td, nd->queued);
 		nd->events = nd->queued;
 		nd->queued = 0;
 	}

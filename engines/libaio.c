@@ -144,13 +144,16 @@ static int fio_libaio_commit(struct thread_data *td)
 		ret = io_submit(ld->aio_ctx, ld->iocbs_nr, iocbs);
 		if (ret > 0) {
 			fio_libaio_queued(td, io_us, ret);
+			io_u_mark_submit(td, ret);
 			ld->iocbs_nr -= ret;
 			io_us += ret;
 			iocbs += ret;
 			ret = 0;
-		} else if (!ret || ret == -EAGAIN || ret == -EINTR)
+		} else if (!ret || ret == -EAGAIN || ret == -EINTR) {
+			if (!ret)
+				io_u_mark_submit(td, ret);
 			continue;
-		else
+		} else
 			break;
 	} while (ld->iocbs_nr);
 
