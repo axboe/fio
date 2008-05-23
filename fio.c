@@ -1233,12 +1233,15 @@ static void run_threads(void)
 				if (pthread_detach(td->thread) < 0)
 					perror("pthread_detach");
 			} else {
+				pid_t pid;
 				dprint(FD_PROCESS, "will fork\n");
-				if (!fork()) {
+				pid = fork();
+				if (!pid) {
 					int ret = fork_main(shm_id, i);
 
-					exit(ret);
-				}
+					_exit(ret);
+				} else if (i == fio_debug_jobno)
+					*fio_debug_jobp = pid;
 			}
 			fio_mutex_down(startup_mutex);
 		}

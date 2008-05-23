@@ -47,6 +47,8 @@ static int write_lat_log;
 static int prev_group_jobs;
 
 unsigned long fio_debug = 0;
+unsigned int fio_debug_jobno = -1;
+unsigned int *fio_debug_jobp = NULL;
 
 /*
  * Command line options. These will contain the above, plus a few
@@ -760,8 +762,12 @@ static void free_shm(void)
 	struct shmid_ds sbuf;
 
 	if (threads) {
-		shmdt((void *) threads);
+		void *tp = threads;
+
 		threads = NULL;
+		file_hash_exit();
+		fio_debug_jobp = NULL;
+		shmdt(tp);
 		shmctl(shm_id, IPC_RMID, &sbuf);
 	}
 
@@ -786,6 +792,7 @@ static int setup_thread_area(void)
 		size_t size = max_jobs * sizeof(struct thread_data);
 
 		size += file_hash_size;
+		size += sizeof(unsigned int);
 
 		shm_id = shmget(0, size, IPC_CREAT | 0600);
 		if (shm_id != -1)
@@ -809,6 +816,8 @@ static int setup_thread_area(void)
 
 	memset(threads, 0, max_jobs * sizeof(struct thread_data));
 	hash = (void *) threads + max_jobs * sizeof(struct thread_data);
+	fio_debug_jobp = (void *) hash + file_hash_size;
+	*fio_debug_jobp = -1;
 	file_hash_init(hash);
 	atexit(free_shm);
 	return 0;
@@ -849,6 +858,7 @@ struct debug_level debug_levels[] = {
 	{ .name = "random",	.shift = FD_RANDOM },
 	{ .name = "parse",	.shift = FD_PARSE },
 	{ .name = "diskutil",	.shift = FD_DISKUTIL },
+	{ .name = "job",	.shift = FD_JOB },
 	{ },
 };
 
@@ -869,22 +879,38 @@ static int set_debug(const char *string)
 		}
 		log_info("all\n");
 		return 1;
-	} else if (!strcmp(string, "all")) {
-		fio_debug = ~0UL;
-		return 0;
 	}
 
 	while ((opt = strsep(&p, ",")) != NULL) {
 		int found = 0;
 
+		if (!strncmp(opt, "all", 3)) {
+			log_info("fio: set all debug options\n");
+			fio_debug = ~0UL;
+			continue;
+		}
+
 		for (i = 0; debug_levels[i].name; i++) {
 			dl = &debug_levels[i];
-			if (!strncmp(opt, dl->name, strlen(opt))) {
+			found = !strncmp(opt, dl->name, strlen(dl->name));
+			if (!found)
+				continue;
+
+			if (dl->shift == FD_JOB) {
+				opt = strchr(opt, ':');
+				if (!opt) {
+					log_err("fio: missing job number\n");
+					break;
+				}
+				opt++;
+				fio_debug_jobno = atoi(opt);
+				log_info("fio: set debug jobno %d\n",
+							fio_debug_jobno);
+			} else {
 				log_info("fio: set debug option %s\n", opt);
-				found = 1;
 				fio_debug |= (1UL << dl->shift);
-				break;
 			}
+			break;
 		}
 
 		if (!found)

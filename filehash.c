@@ -79,6 +79,23 @@ struct fio_file *add_file_hash(struct fio_file *f)
 	return alias;
 }
 
+void file_hash_exit(void)
+{
+	unsigned int i, has_entries = 0;
+
+	fio_mutex_down(hash_lock);
+	for (i = 0; i < HASH_BUCKETS; i++)
+		has_entries += !list_empty(&file_hash[i]);
+	fio_mutex_up(hash_lock);
+
+	if (has_entries)
+		log_err("fio: file hash not empty on exit\n");
+
+	file_hash = NULL;
+	fio_mutex_remove(hash_lock);
+	hash_lock = NULL;
+}
+
 void file_hash_init(void *ptr)
 {
 	unsigned int i;
