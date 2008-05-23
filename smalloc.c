@@ -15,8 +15,8 @@
 
 #define MP_SAFE			/* define to made allocator thread safe */
 
-#define INITIAL_SIZE	1048576	/* new pool size */
-#define MAX_POOLS	32	/* maximum number of pools to setup */
+#define INITIAL_SIZE	32*1048576	/* new pool size */
+#define MAX_POOLS	4		/* maximum number of pools to setup */
 
 unsigned int smalloc_pool_size = INITIAL_SIZE;
 
@@ -383,6 +383,8 @@ fail:
 void *smalloc(unsigned int size)
 {
 	unsigned int i;
+
+	printf("size=%u\n", size);
 
 	global_read_lock();
 	i = last_pool;
