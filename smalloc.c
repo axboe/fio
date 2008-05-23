@@ -384,8 +384,6 @@ void *smalloc(unsigned int size)
 {
 	unsigned int i;
 
-	printf("size=%u\n", size);
-
 	global_read_lock();
 	i = last_pool;
 
