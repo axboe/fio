@@ -79,8 +79,16 @@ static inline unsigned long long last_block(struct thread_data *td,
 					    enum fio_ddir ddir)
 {
 	unsigned long long max_blocks;
+	unsigned long long max_size;
 
-	max_blocks = f->io_size / (unsigned long long) td->o.min_bs[ddir];
+	/*
+	 * Hmm, should we make sure that ->io_size <= ->real_file_size?
+	 */
+	max_size = f->io_size;
+	if (max_size > f->real_file_size)
+		max_size = f->real_file_size;
+
+	max_blocks = max_size / (unsigned long long) td->o.min_bs[ddir];
 	if (!max_blocks)
 		return 0;
 
