@@ -217,7 +217,7 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 {
 	const int ddir = io_u->ddir;
-	unsigned int buflen;
+	unsigned int buflen = buflen; /* silence dumb gcc warning */
 	long r;
 
 	if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
