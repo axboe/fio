@@ -273,17 +273,24 @@ static int str_fst_cb(void *data, const char *str)
 static int check_dir(struct thread_data *td, char *fname)
 {
 	char file[PATH_MAX], *dir;
-	struct stat sb;
 	int elen = 0;
 
 	if (td->o.directory) {
 		strcpy(file, td->o.directory);
+		strcat(file, "/");
 		elen = strlen(file);
 	}
 
-	sprintf(file + elen, "/%s", fname);
+	sprintf(file + elen, "%s", fname);
 	dir = dirname(file);
 
+#if 0
+	{
+	struct stat sb;
+	/*
+	 * We can't do this on FIO_DISKLESSIO engines. The engine isn't loaded
+	 * yet, so we can't do this check right here...
+	 */
 	if (lstat(dir, &sb) < 0) {
 		int ret = errno;
 
@@ -296,6 +303,8 @@ static int check_dir(struct thread_data *td, char *fname)
 		log_err("fio: %s is not a directory\n", dir);
 		return 1;
 	}
+	}
+#endif
 
 	return 0;
 }
