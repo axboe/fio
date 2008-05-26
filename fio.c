@@ -101,6 +101,9 @@ static void terminate_threads(int group_id)
 
 static void sig_handler(int sig)
 {
+	if (!threads)
+		return;
+
 	switch (sig) {
 	case SIGALRM:
 		update_io_ticks();
