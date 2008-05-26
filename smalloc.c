@@ -14,9 +14,14 @@
 #include "mutex.h"
 
 #define MP_SAFE			/* define to made allocator thread safe */
+#define SMALLOC_REDZONE		/* define to detect memory corruption */
 
-#define INITIAL_SIZE	32*1048576	/* new pool size */
+#define INITIAL_SIZE	32768	/* new pool size */
 #define MAX_POOLS	4		/* maximum number of pools to setup */
+
+#define SMALLOC_PRE_RED		0xdeadbeefU
+#define SMALLOC_POST_RED	0x5aa55aa5U
+#define SMALLOC_REDZONE_SZ	(2 * sizeof(unsigned int))
 
 unsigned int smalloc_pool_size = INITIAL_SIZE;
 
@@ -181,6 +186,10 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 		goto out_close;
 
 	alloc_size += sizeof(*hdr);
+#ifdef SMALLOC_REDZONE
+	alloc_size += SMALLOC_REDZONE_SZ;
+#endif
+	
 	if (alloc_size > smalloc_pool_size)
 		pool->size = alloc_size;
 	else
@@ -254,6 +263,29 @@ void scleanup(void)
 		fio_mutex_remove(lock);
 }
 
+static void sfree_check_redzone(struct mem_hdr *hdr, void *ptr)
+{
+#ifdef SMALLOC_REDZONE
+	unsigned int *prered, *postred;
+
+	prered = (unsigned int *) ptr;
+	postred = (unsigned int *) (ptr + hdr_size(hdr) - sizeof(unsigned int));
+
+	if (*prered != SMALLOC_PRE_RED) {
+		fprintf(stderr, "smalloc pre redzone destroyed!\n");
+		fprintf(stderr, "  ptr=%p, prered=%x, expected %x\n",
+				ptr, *prered, SMALLOC_PRE_RED);
+		assert(0);
+	}
+	if (*postred != SMALLOC_POST_RED) {
+		fprintf(stderr, "smalloc post redzone destroyed!\n");
+		fprintf(stderr, "  ptr=%p, postred=%x, expected %x\n",
+				ptr, *postred, SMALLOC_POST_RED);
+		assert(0);
+	}
+#endif
+}
+
 static void sfree_pool(struct pool *pool, void *ptr)
 {
 	struct mem_hdr *hdr, *nxt;
@@ -261,10 +293,15 @@ static void sfree_pool(struct pool *pool, void *ptr)
 	if (!ptr)
 		return;
 
+#ifdef SMALLOC_REDZONE
+	ptr -= sizeof(unsigned int);
+#endif
+
 	assert(ptr_valid(pool, ptr));
 
 	pool_lock(pool);
 	hdr = ptr - sizeof(*hdr);
+	sfree_check_redzone(hdr, ptr);
 	assert(!hdr_free(hdr));
 	hdr_mark_free(hdr);
 	pool->room -= hdr_size(hdr);
@@ -303,7 +340,7 @@ void sfree(void *ptr)
 	sfree_pool(pool, ptr);
 }
 
-static void *smalloc_pool(struct pool *pool, unsigned int size)
+static void *__smalloc_pool(struct pool *pool, unsigned int size)
 {
 	struct mem_hdr *hdr, *prv;
 	int did_restart = 0;
@@ -378,6 +415,28 @@ fail:
 	}
 	pool_unlock(pool);
 	return NULL;
+}
+
+static void *smalloc_pool(struct pool *pool, unsigned int size)
+{
+#ifdef SMALLOC_REDZONE
+	unsigned int *prered, *postred;
+	void *ptr;
+
+	ptr = __smalloc_pool(pool, size + 2 * sizeof(unsigned int));
+	if (!ptr)
+		return NULL;
+
+	prered = ptr;
+	*prered = SMALLOC_PRE_RED;
+	ptr += sizeof(unsigned int);
+	postred = ptr + size;
+	*postred = SMALLOC_POST_RED;
+
+	return ptr;
+#else
+	return __smalloc_pool(pool, size);
+#endif
 }
 
 void *smalloc(unsigned int size)
