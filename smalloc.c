@@ -300,19 +300,17 @@ void scleanup(void)
 		fio_mutex_remove(lock);
 }
 
+#ifdef SMALLOC_REDZONE
 static void fill_redzone(struct block_hdr *hdr)
 {
-#ifdef SMALLOC_REDZONE
 	unsigned int *postred = (void *) hdr + hdr->size - sizeof(unsigned int);
 
 	hdr->prered = SMALLOC_PRE_RED;
 	*postred = SMALLOC_POST_RED;
-#endif
 }
 
 static void sfree_check_redzone(struct block_hdr *hdr)
 {
-#ifdef SMALLOC_REDZONE
 	unsigned int *postred = (void *) hdr + hdr->size - sizeof(unsigned int);
 
 	if (hdr->prered != SMALLOC_PRE_RED) {
@@ -327,8 +325,16 @@ static void sfree_check_redzone(struct block_hdr *hdr)
 				hdr, *postred, SMALLOC_POST_RED);
 		assert(0);
 	}
-#endif
 }
+#else
+static void fill_redzone(struct block_hdr *hdr)
+{
+}
+
+static void sfree_check_redzone(struct block_hdr *hdr)
+{
+}
+#endif
 
 static void sfree_pool(struct pool *pool, void *ptr)
 {
@@ -438,26 +444,24 @@ fail:
 
 static void *smalloc_pool(struct pool *pool, unsigned int size)
 {
-	struct block_hdr *hdr;
-	unsigned int alloc_size;
+	unsigned int alloc_size = size + sizeof(struct block_hdr);
 	void *ptr;
 
-	alloc_size = size + sizeof(*hdr);
 #ifdef SMALLOC_REDZONE
 	alloc_size += sizeof(unsigned int);
 #endif
 
 	ptr = __smalloc_pool(pool, alloc_size);
-	if (!ptr)
-		return NULL;
+	if (ptr) {
+		struct block_hdr *hdr = ptr;
 
-	hdr = ptr;
-	hdr->size = alloc_size;
-	ptr += sizeof(*hdr);
+		hdr->size = alloc_size;
+		fill_redzone(hdr);
 
-	fill_redzone(hdr);
+		ptr += sizeof(*hdr);
+		memset(ptr, 0, size);
+	}
 
-	memset(ptr, 0, size);
 	return ptr;
 }
 
