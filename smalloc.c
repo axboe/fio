@@ -95,6 +95,11 @@ static inline int ptr_valid(struct pool *pool, void *ptr)
 	return (ptr >= pool->map) && (ptr < pool->map + pool_size);
 }
 
+static inline unsigned int size_to_blocks(unsigned int size)
+{
+	return (size + SMALLOC_BPB - 1) / SMALLOC_BPB;
+}
+
 static int blocks_iter(unsigned int *map, unsigned int idx,
 		       unsigned int nr_blocks,
 		       int (*func)(unsigned int *map, unsigned int mask))
@@ -365,11 +370,6 @@ void sfree(void *ptr)
 
 	assert(pool);
 	sfree_pool(pool, ptr);
-}
-
-static inline unsigned int size_to_blocks(unsigned int size)
-{
-	return (size + SMALLOC_BPB - 1) / SMALLOC_BPB;
 }
 
 static void *__smalloc_pool(struct pool *pool, unsigned int size)
