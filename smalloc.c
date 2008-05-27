@@ -13,7 +13,7 @@
 
 #include "mutex.h"
 
-#undef MP_SAFE			/* define to make thread safe */
+#define MP_SAFE			/* define to make thread safe */
 #define SMALLOC_REDZONE		/* define to detect memory corruption */
 
 #define SMALLOC_BPB	32	/* block size, bytes-per-bit in bitmap */
