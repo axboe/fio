@@ -13,38 +13,44 @@
 
 #include "mutex.h"
 
-#define MP_SAFE			/* define to made allocator thread safe */
+#undef MP_SAFE			/* define to make thread safe */
 #define SMALLOC_REDZONE		/* define to detect memory corruption */
 
-#define INITIAL_SIZE	32768	/* new pool size */
+#define SMALLOC_BPB	32	/* block size, bytes-per-bit in bitmap */
+#define SMALLOC_BPI	(sizeof(unsigned int) * 8)
+#define SMALLOC_BPL	(SMALLOC_BPB * SMALLOC_BPI)
+
+#define INITIAL_SIZE	1024*1024	/* new pool size */
 #define MAX_POOLS	4		/* maximum number of pools to setup */
 
 #define SMALLOC_PRE_RED		0xdeadbeefU
 #define SMALLOC_POST_RED	0x5aa55aa5U
-#define SMALLOC_REDZONE_SZ	(2 * sizeof(unsigned int))
 
 unsigned int smalloc_pool_size = INITIAL_SIZE;
 
 struct pool {
 	struct fio_mutex *lock;			/* protects this pool */
 	void *map;				/* map of blocks */
-	void *last;				/* next free block hint */
-	unsigned int size;			/* size of pool */
-	unsigned int room;			/* size left in pool */
-	unsigned int largest_block;		/* largest block free */
-	unsigned int free_since_compact;	/* sfree() since compact() */
+	unsigned int *bitmap;			/* blocks free/busy map */
+	unsigned int free_blocks;		/* free blocks */
+	unsigned int nr_blocks;			/* total blocks */
+	unsigned int next_non_full;
 	int fd;					/* memory backing fd */
 	char file[PATH_MAX];			/* filename for fd */
+	unsigned int mmap_size;
+};
+
+struct block_hdr {
+	unsigned int size;
+#ifdef SMALLOC_REDZONE
+	unsigned int prered;
+#endif
 };
 
 static struct pool mp[MAX_POOLS];
 static unsigned int nr_pools;
 static unsigned int last_pool;
 static struct fio_mutex *lock;
-
-struct mem_hdr {
-	unsigned int size;
-};
 
 static inline void pool_lock(struct pool *pool)
 {
@@ -82,128 +88,151 @@ static inline void global_write_unlock(void)
 		fio_mutex_up_write(lock);
 }
 
-#define hdr_free(hdr)		((hdr)->size & 0x80000000)
-#define hdr_size(hdr)		((hdr)->size & ~0x80000000)
-#define hdr_mark_free(hdr)	((hdr)->size |= 0x80000000)
-
 static inline int ptr_valid(struct pool *pool, void *ptr)
 {
-	return (ptr >= pool->map) && (ptr < pool->map + pool->size);
+	unsigned int pool_size = pool->nr_blocks * SMALLOC_BPL;
+
+	return (ptr >= pool->map) && (ptr < pool->map + pool_size);
 }
 
-static inline int __hdr_valid(struct pool *pool, struct mem_hdr *hdr,
-			      unsigned int size)
+static int blocks_iter(unsigned int *map, unsigned int idx,
+		       unsigned int nr_blocks,
+		       int (*func)(unsigned int *map, unsigned int mask))
 {
-	return ptr_valid(pool, hdr) && ptr_valid(pool, (void *) hdr + size - 1);
-}
+	while (nr_blocks) {
+		unsigned int this_blocks, mask;
 
-static inline int hdr_valid(struct pool *pool, struct mem_hdr *hdr)
-{
-	return __hdr_valid(pool, hdr, hdr_size(hdr));
-}
-
-static inline int region_free(struct mem_hdr *hdr)
-{
-	return hdr_free(hdr) || (!hdr_free(hdr) && !hdr_size(hdr));
-}
-
-static inline struct mem_hdr *__hdr_nxt(struct pool *pool, struct mem_hdr *hdr,
-					unsigned int size)
-{
-	struct mem_hdr *nxt = (void *) hdr + size + sizeof(*hdr);
-
-	if (__hdr_valid(pool, nxt, size))
-		return nxt;
-
-	return NULL;
-}
-
-static inline struct mem_hdr *hdr_nxt(struct pool *pool, struct mem_hdr *hdr)
-{
-	return __hdr_nxt(pool, hdr, hdr_size(hdr));
-}
-
-static void merge(struct pool *pool, struct mem_hdr *hdr, struct mem_hdr *nxt)
-{
-	unsigned int hfree = hdr_free(hdr);
-	unsigned int nfree = hdr_free(nxt);
-
-	hdr->size = hdr_size(hdr) + hdr_size(nxt) + sizeof(*nxt);
-	nxt->size = 0;
-
-	if (hfree)
-		hdr_mark_free(hdr);
-	if (nfree)
-		hdr_mark_free(nxt);
-
-	if (pool->last == nxt)
-		pool->last = hdr;
-}
-
-static int combine(struct pool *pool, struct mem_hdr *prv, struct mem_hdr *hdr)
-{
-	if (prv && hdr_free(prv) && hdr_free(hdr)) {
-		merge(pool, prv, hdr);
-		return 1;
-	}
-
-	return 0;
-}
-
-static int compact_pool(struct pool *pool)
-{
-	struct mem_hdr *hdr = pool->map, *nxt;
-	unsigned int compacted = 0;
-
-	if (pool->free_since_compact < 50)
-		return 1;
-
-	while (hdr) {
-		nxt = hdr_nxt(pool, hdr);
-		if (!nxt)
-			break;
-		if (hdr_free(nxt) && hdr_free(hdr)) {
-			merge(pool, hdr, nxt);
-			compacted++;
-			continue;
+		this_blocks = nr_blocks;
+		if (this_blocks + idx > SMALLOC_BPI) {
+			this_blocks = SMALLOC_BPI - idx;
+			idx = SMALLOC_BPI - this_blocks;
 		}
-		hdr = hdr_nxt(pool, hdr);
+
+		if (this_blocks == SMALLOC_BPI)
+			mask = -1U;
+		else
+			mask = ((1U << this_blocks) - 1) << idx;
+
+		if (!func(map, mask))
+			return 0;
+
+		nr_blocks -= this_blocks;
+		idx = 0;
+		map++;
 	}
 
-	pool->free_since_compact = 0;
-	return !!compacted;
+	return 1;
+
+}
+
+static int mask_cmp(unsigned int *map, unsigned int mask)
+{
+	return !(*map & mask);
+}
+
+static int mask_clear(unsigned int *map, unsigned int mask)
+{
+	*map &= ~mask;
+	return 1;
+}
+
+static int mask_set(unsigned int *map, unsigned int mask)
+{
+	*map |= mask;
+	return 1;
+}
+
+static int blocks_free(unsigned int *map, unsigned int idx,
+		       unsigned int nr_blocks)
+{
+	return blocks_iter(map, idx, nr_blocks, mask_cmp);
+}
+
+static void set_blocks(unsigned int *map, unsigned int idx,
+		       unsigned int nr_blocks)
+{
+	blocks_iter(map, idx, nr_blocks, mask_set);
+}
+
+static void clear_blocks(unsigned int *map, unsigned int idx,
+			 unsigned int nr_blocks)
+{
+	blocks_iter(map, idx, nr_blocks, mask_clear);
+}
+
+static inline int __ffs(int word)
+{
+	int r = 0;
+
+	if (!(word & 0xffff)) {
+		word >>= 16;
+		r += 16;
+	}
+	if (!(word & 0xff)) {
+		word >>= 8;
+		r += 8;
+	}
+	if (!(word & 0xf)) {
+		word >>= 4;
+		r += 4;
+	}
+	if (!(word & 3)) {
+		word >>= 2;
+		r += 2;
+	}
+	if (!(word & 1)) {
+		word >>= 1;
+		r += 1;
+	}
+
+	return r;
+}
+
+static int find_next_zero(int word, int start)
+{
+	assert(word != -1U);
+	word >>= (start + 1);
+	return __ffs(~word) + start + 1;
 }
 
 static int add_pool(struct pool *pool, unsigned int alloc_size)
 {
-	struct mem_hdr *hdr;
 	void *ptr;
-	int fd;
+	int fd, bitmap_blocks;
+
+	printf("add pool %u\n", alloc_size);
 
 	strcpy(pool->file, "/tmp/.fio_smalloc.XXXXXX");
 	fd = mkstemp(pool->file);
 	if (fd < 0)
 		goto out_close;
 
-	alloc_size += sizeof(*hdr);
 #ifdef SMALLOC_REDZONE
-	alloc_size += SMALLOC_REDZONE_SZ;
+	alloc_size += sizeof(unsigned int);
 #endif
-	
-	if (alloc_size > smalloc_pool_size)
-		pool->size = alloc_size;
-	else
-		pool->size = smalloc_pool_size;
+	alloc_size += sizeof(struct block_hdr);
+	if (alloc_size < INITIAL_SIZE)
+		alloc_size = INITIAL_SIZE;
 
-	if (ftruncate(fd, pool->size) < 0)
+	/* round up to nearest full number of blocks */
+	alloc_size = (alloc_size + SMALLOC_BPL - 1) & ~(SMALLOC_BPL - 1);
+	bitmap_blocks = alloc_size / SMALLOC_BPL;
+	alloc_size += bitmap_blocks * sizeof(unsigned int);
+	pool->mmap_size = alloc_size;
+	
+	pool->nr_blocks = bitmap_blocks;
+	pool->free_blocks = bitmap_blocks * SMALLOC_BPB;
+
+	if (ftruncate(fd, alloc_size) < 0)
 		goto out_unlink;
 
-	ptr = mmap(NULL, pool->size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+	ptr = mmap(NULL, alloc_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 	if (ptr == MAP_FAILED)
 		goto out_unlink;
 
-	memset(ptr, 0, pool->size);
-	pool->map = pool->last = ptr;
+	memset(ptr, 0, alloc_size);
+	pool->map = ptr;
+	pool->bitmap = (void *) ptr + (pool->nr_blocks * SMALLOC_BPL);
 
 #ifdef MP_SAFE
 	pool->lock = fio_mutex_init(1);
@@ -213,17 +242,14 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 
 	pool->fd = fd;
 
-	hdr = pool->map;
-	pool->room = hdr->size = pool->size - sizeof(*hdr);
-	pool->largest_block = pool->room;
-	hdr_mark_free(hdr);
 	global_write_lock();
 	nr_pools++;
 	global_write_unlock();
 	return 0;
 out_unlink:
+	fprintf(stderr, "smalloc: failed adding pool\n");
 	if (pool->map)
-		munmap(pool->map, pool->size);
+		munmap(pool->map, pool->mmap_size);
 	unlink(pool->file);
 out_close:
 	if (fd >= 0)
@@ -246,7 +272,7 @@ static void cleanup_pool(struct pool *pool)
 {
 	unlink(pool->file);
 	close(pool->fd);
-	munmap(pool->map, pool->size);
+	munmap(pool->map, pool->mmap_size);
 
 	if (pool->lock)
 		fio_mutex_remove(pool->lock);
@@ -263,24 +289,31 @@ void scleanup(void)
 		fio_mutex_remove(lock);
 }
 
-static void sfree_check_redzone(struct mem_hdr *hdr, void *ptr)
+static void fill_redzone(struct block_hdr *hdr)
 {
 #ifdef SMALLOC_REDZONE
-	unsigned int *prered, *postred;
+	unsigned int *postred = (void *) hdr + hdr->size - sizeof(unsigned int);
 
-	prered = (unsigned int *) ptr;
-	postred = (unsigned int *) (ptr + hdr_size(hdr) - sizeof(unsigned int));
+	hdr->prered = SMALLOC_PRE_RED;
+	*postred = SMALLOC_POST_RED;
+#endif
+}
 
-	if (*prered != SMALLOC_PRE_RED) {
+static void sfree_check_redzone(struct block_hdr *hdr)
+{
+#ifdef SMALLOC_REDZONE
+	unsigned int *postred = (void *) hdr + hdr->size - sizeof(unsigned int);
+
+	if (hdr->prered != SMALLOC_PRE_RED) {
 		fprintf(stderr, "smalloc pre redzone destroyed!\n");
 		fprintf(stderr, "  ptr=%p, prered=%x, expected %x\n",
-				ptr, *prered, SMALLOC_PRE_RED);
+				hdr, hdr->prered, SMALLOC_PRE_RED);
 		assert(0);
 	}
 	if (*postred != SMALLOC_POST_RED) {
 		fprintf(stderr, "smalloc post redzone destroyed!\n");
 		fprintf(stderr, "  ptr=%p, postred=%x, expected %x\n",
-				ptr, *postred, SMALLOC_POST_RED);
+				hdr, *postred, SMALLOC_POST_RED);
 		assert(0);
 	}
 #endif
@@ -288,32 +321,30 @@ static void sfree_check_redzone(struct mem_hdr *hdr, void *ptr)
 
 static void sfree_pool(struct pool *pool, void *ptr)
 {
-	struct mem_hdr *hdr, *nxt;
+	struct block_hdr *hdr;
+	unsigned int nr_blocks, i, idx;
+	unsigned long offset;
 
 	if (!ptr)
 		return;
 
-#ifdef SMALLOC_REDZONE
-	ptr -= sizeof(unsigned int);
-#endif
+	ptr -= sizeof(*hdr);
+	hdr = ptr;
 
 	assert(ptr_valid(pool, ptr));
 
+	nr_blocks = (hdr->size + SMALLOC_BPB - 1) / SMALLOC_BPB;
+	sfree_check_redzone(hdr);
+
+	offset = ptr - pool->map;
+	i = offset / SMALLOC_BPL;
+	idx = (offset % SMALLOC_BPL) / SMALLOC_BPB;
+
 	pool_lock(pool);
-	hdr = ptr - sizeof(*hdr);
-	sfree_check_redzone(hdr, ptr);
-	assert(!hdr_free(hdr));
-	hdr_mark_free(hdr);
-	pool->room -= hdr_size(hdr);
-
-	nxt = hdr_nxt(pool, hdr);
-	if (nxt && hdr_free(nxt))
-		merge(pool, hdr, nxt);
-
-	if (hdr_size(hdr) > pool->largest_block)
-		pool->largest_block = hdr_size(hdr);
-
-	pool->free_since_compact++;
+	clear_blocks(&pool->bitmap[i], idx, nr_blocks);
+	if (i < pool->next_non_full)
+		pool->next_non_full = i;
+	pool->free_blocks += nr_blocks;
 	pool_unlock(pool);
 }
 
@@ -342,101 +373,84 @@ void sfree(void *ptr)
 
 static void *__smalloc_pool(struct pool *pool, unsigned int size)
 {
-	struct mem_hdr *hdr, *prv;
-	int did_restart = 0;
-	void *ret;
+	unsigned int nr_blocks;
+	unsigned int i;
+	unsigned int offset;
+	unsigned int last_idx;
+	void *ret = NULL;
 
-	if (!size)
-		return NULL;
+	nr_blocks = (size + SMALLOC_BPB - 1) / SMALLOC_BPB;
 
 	pool_lock(pool);
-	if (size > pool->room + sizeof(*hdr))
-		goto fail;
-	if ((size > pool->largest_block) && pool->largest_block)
-		goto fail;
-restart:
-	hdr = pool->last;
-	prv = NULL;
-	do {
-		if (combine(pool, prv, hdr))
-			hdr = prv;
-
-		if (hdr_free(hdr) && hdr_size(hdr) >= size)
-			break;
-
-		prv = hdr;
-	} while ((hdr = hdr_nxt(pool, hdr)) != NULL);
-
-	if (!hdr)
+	if (nr_blocks > pool->free_blocks)
 		goto fail;
 
-	/*
-	 * more room, adjust next header if any
-	 */
-	if (hdr_size(hdr) - size >= 2 * sizeof(*hdr)) {
-		struct mem_hdr *nxt = __hdr_nxt(pool, hdr, size);
+	i = pool->next_non_full;
+	last_idx = 0;
+	offset = -1U;
+	while (i < pool->nr_blocks) {
+		unsigned int idx;
 
-		if (nxt) {
-			nxt->size = hdr_size(hdr) - size - sizeof(*hdr);
-			if (hdr_size(hdr) == pool->largest_block)
-				pool->largest_block = hdr_size(nxt);
-			hdr_mark_free(nxt);
-		} else
-			size = hdr_size(hdr);
-	} else
-		size = hdr_size(hdr);
-
-	if (size == hdr_size(hdr) && size == pool->largest_block)
-		pool->largest_block = 0;
-
-	/*
-	 * also clears free bit
-	 */
-	hdr->size = size;
-	pool->last = hdr_nxt(pool, hdr);
-	if (!pool->last)
-		pool->last = pool->map;
-	pool->room -= size;
-	pool_unlock(pool);
-
-	ret = (void *) hdr + sizeof(*hdr);
-	memset(ret, 0, size);
-	return ret;
-fail:
-	/*
-	 * if we fail to allocate, first compact the entries that we missed.
-	 * if that also fails, increase the size of the pool
-	 */
-	if (++did_restart <= 1) {
-		if (!compact_pool(pool)) {
-			pool->last = pool->map;
-			goto restart;
+		if (pool->bitmap[i] == -1U) {
+			i++;
+			pool->next_non_full = i;
+			last_idx = 0;
+			continue;
 		}
+
+		idx = find_next_zero(pool->bitmap[i], last_idx);
+		if (!blocks_free(&pool->bitmap[i], idx, nr_blocks)) {
+			idx += nr_blocks;
+			if (idx < SMALLOC_BPI)
+				last_idx = idx;
+			else {
+				last_idx = 0;
+				while (idx >= SMALLOC_BPI) {
+					i++;
+					idx -= SMALLOC_BPI;
+				}
+			}
+			continue;
+		}
+		set_blocks(&pool->bitmap[i], idx, nr_blocks);
+		offset = i * SMALLOC_BPL + idx * SMALLOC_BPB;
+		break;
 	}
+
+	if (i < pool->nr_blocks) {
+		pool->free_blocks -= nr_blocks;
+		ret = pool->map + offset;
+	}
+fail:
 	pool_unlock(pool);
-	return NULL;
+	return ret;
 }
 
 static void *smalloc_pool(struct pool *pool, unsigned int size)
 {
-#ifdef SMALLOC_REDZONE
-	unsigned int *prered, *postred;
+	struct block_hdr *hdr;
+	unsigned int alloc_size;
 	void *ptr;
 
-	ptr = __smalloc_pool(pool, size + 2 * sizeof(unsigned int));
-	if (!ptr)
-		return NULL;
-
-	prered = ptr;
-	*prered = SMALLOC_PRE_RED;
-	ptr += sizeof(unsigned int);
-	postred = ptr + size;
-	*postred = SMALLOC_POST_RED;
-
-	return ptr;
-#else
-	return __smalloc_pool(pool, size);
+	alloc_size = size + sizeof(*hdr);
+#ifdef SMALLOC_REDZONE
+	alloc_size += sizeof(unsigned int);
 #endif
+
+	ptr = __smalloc_pool(pool, alloc_size);
+	if (!ptr) {
+		printf("failed allocating %u\n", alloc_size);
+		return NULL;
+	}
+
+	hdr = ptr;
+	hdr->size = alloc_size;
+	ptr += sizeof(*hdr);
+
+	fill_redzone(hdr);
+
+	memset(ptr, 0, size);
+	return ptr;
 }
 
 void *smalloc(unsigned int size)
@@ -461,7 +475,7 @@ void *smalloc(unsigned int size)
 			continue;
 		}
 
-		if (nr_pools + 1 >= MAX_POOLS)
+		if (nr_pools + 1 > MAX_POOLS)
 			break;
 		else {
 			i = nr_pools;
