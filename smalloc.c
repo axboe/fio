@@ -90,7 +90,7 @@ static inline void global_write_unlock(void)
 
 static inline int ptr_valid(struct pool *pool, void *ptr)
 {
-	unsigned int pool_size = (pool->nr_blocks + 1) * SMALLOC_BPL;
+	unsigned int pool_size = pool->nr_blocks * SMALLOC_BPL;
 
 	return (ptr >= pool->map) && (ptr < pool->map + pool_size);
 }
@@ -100,12 +100,19 @@ static inline unsigned int size_to_blocks(unsigned int size)
 	return (size + SMALLOC_BPB - 1) / SMALLOC_BPB;
 }
 
-static int blocks_iter(unsigned int *map, unsigned int idx,
-		       unsigned int nr_blocks,
+static int blocks_iter(struct pool *pool, unsigned int pool_idx,
+		       unsigned int idx, unsigned int nr_blocks,
 		       int (*func)(unsigned int *map, unsigned int mask))
 {
+
 	while (nr_blocks) {
 		unsigned int this_blocks, mask;
+		unsigned int *map;
+
+		if (pool_idx >= pool->nr_blocks)
+			return 0;
+
+		map = &pool->bitmap[pool_idx];
 
 		this_blocks = nr_blocks;
 		if (this_blocks + idx > SMALLOC_BPI) {
@@ -123,7 +130,7 @@ static int blocks_iter(unsigned int *map, unsigned int idx,
 
 		nr_blocks -= this_blocks;
 		idx = 0;
-		map++;
+		pool_idx++;
 	}
 
 	return 1;
@@ -136,32 +143,34 @@ static int mask_cmp(unsigned int *map, unsigned int mask)
 
 static int mask_clear(unsigned int *map, unsigned int mask)
 {
+	assert((*map & mask) == mask);
 	*map &= ~mask;
 	return 1;
 }
 
 static int mask_set(unsigned int *map, unsigned int mask)
 {
+	assert(!(*map & mask));
 	*map |= mask;
 	return 1;
 }
 
-static int blocks_free(unsigned int *map, unsigned int idx,
-		       unsigned int nr_blocks)
+static int blocks_free(struct pool *pool, unsigned int pool_idx,
+		       unsigned int idx, unsigned int nr_blocks)
 {
-	return blocks_iter(map, idx, nr_blocks, mask_cmp);
+	return blocks_iter(pool, pool_idx, idx, nr_blocks, mask_cmp);
 }
 
-static void set_blocks(unsigned int *map, unsigned int idx,
-		       unsigned int nr_blocks)
+static void set_blocks(struct pool *pool, unsigned int pool_idx,
+		       unsigned int idx, unsigned int nr_blocks)
 {
-	blocks_iter(map, idx, nr_blocks, mask_set);
+	blocks_iter(pool, pool_idx, idx, nr_blocks, mask_set);
 }
 
-static void clear_blocks(unsigned int *map, unsigned int idx,
-			 unsigned int nr_blocks)
+static void clear_blocks(struct pool *pool, unsigned int pool_idx,
+			 unsigned int idx, unsigned int nr_blocks)
 {
-	blocks_iter(map, idx, nr_blocks, mask_clear);
+	blocks_iter(pool, pool_idx, idx, nr_blocks, mask_clear);
 }
 
 static inline int __ffs(int word)
@@ -342,7 +351,7 @@ static void sfree_pool(struct pool *pool, void *ptr)
 	idx = (offset % SMALLOC_BPL) / SMALLOC_BPB;
 
 	pool_lock(pool);
-	clear_blocks(&pool->bitmap[i], idx, size_to_blocks(hdr->size));
+	clear_blocks(pool, i, idx, size_to_blocks(hdr->size));
 	if (i < pool->next_non_full)
 		pool->next_non_full = i;
 	pool->free_blocks += size_to_blocks(hdr->size);
@@ -400,7 +409,7 @@ static void *__smalloc_pool(struct pool *pool, unsigned int size)
 		}
 
 		idx = find_next_zero(pool->bitmap[i], last_idx);
-		if (!blocks_free(&pool->bitmap[i], idx, nr_blocks)) {
+		if (!blocks_free(pool, i, idx, nr_blocks)) {
 			idx += nr_blocks;
 			if (idx < SMALLOC_BPI)
 				last_idx = idx;
@@ -413,7 +422,7 @@ static void *__smalloc_pool(struct pool *pool, unsigned int size)
 			}
 			continue;
 		}
-		set_blocks(&pool->bitmap[i], idx, nr_blocks);
+		set_blocks(pool, i, idx, nr_blocks);
 		offset = i * SMALLOC_BPL + idx * SMALLOC_BPB;
 		break;
 	}
