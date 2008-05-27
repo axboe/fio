@@ -439,10 +439,8 @@ static void *smalloc_pool(struct pool *pool, unsigned int size)
 #endif
 
 	ptr = __smalloc_pool(pool, alloc_size);
-	if (!ptr) {
-		printf("failed allocating %u\n", alloc_size);
+	if (!ptr)
 		return NULL;
-	}
 
 	hdr = ptr;
 	hdr->size = alloc_size;
