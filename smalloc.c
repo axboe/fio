@@ -122,7 +122,6 @@ static int blocks_iter(unsigned int *map, unsigned int idx,
 	}
 
 	return 1;
-
 }
 
 static int mask_cmp(unsigned int *map, unsigned int mask)
@@ -199,8 +198,6 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 {
 	void *ptr;
 	int fd, bitmap_blocks;
-
-	printf("add pool %u\n", alloc_size);
 
 	strcpy(pool->file, "/tmp/.fio_smalloc.XXXXXX");
 	fd = mkstemp(pool->file);
@@ -322,7 +319,7 @@ static void sfree_check_redzone(struct block_hdr *hdr)
 static void sfree_pool(struct pool *pool, void *ptr)
 {
 	struct block_hdr *hdr;
-	unsigned int nr_blocks, i, idx;
+	unsigned int i, idx;
 	unsigned long offset;
 
 	if (!ptr)
@@ -333,7 +330,6 @@ static void sfree_pool(struct pool *pool, void *ptr)
 
 	assert(ptr_valid(pool, ptr));
 
-	nr_blocks = (hdr->size + SMALLOC_BPB - 1) / SMALLOC_BPB;
 	sfree_check_redzone(hdr);
 
 	offset = ptr - pool->map;
@@ -341,10 +337,10 @@ static void sfree_pool(struct pool *pool, void *ptr)
 	idx = (offset % SMALLOC_BPL) / SMALLOC_BPB;
 
 	pool_lock(pool);
-	clear_blocks(&pool->bitmap[i], idx, nr_blocks);
+	clear_blocks(&pool->bitmap[i], idx, size_to_blocks(hdr->size));
 	if (i < pool->next_non_full)
 		pool->next_non_full = i;
-	pool->free_blocks += nr_blocks;
+	pool->free_blocks += size_to_blocks(hdr->size);
 	pool_unlock(pool);
 }
 
@@ -371,6 +367,11 @@ void sfree(void *ptr)
 	sfree_pool(pool, ptr);
 }
 
+static inline unsigned int size_to_blocks(unsigned int size)
+{
+	return (size + SMALLOC_BPB - 1) / SMALLOC_BPB;
+}
+
 static void *__smalloc_pool(struct pool *pool, unsigned int size)
 {
 	unsigned int nr_blocks;
@@ -379,9 +380,9 @@ static void *__smalloc_pool(struct pool *pool, unsigned int size)
 	unsigned int last_idx;
 	void *ret = NULL;
 
-	nr_blocks = (size + SMALLOC_BPB - 1) / SMALLOC_BPB;
-
 	pool_lock(pool);
+
+	nr_blocks = size_to_blocks(size);
 	if (nr_blocks > pool->free_blocks)
 		goto fail;
 
