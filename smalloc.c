@@ -90,7 +90,7 @@ static inline void global_write_unlock(void)
 
 static inline int ptr_valid(struct pool *pool, void *ptr)
 {
-	unsigned int pool_size = pool->nr_blocks * SMALLOC_BPL;
+	unsigned int pool_size = (pool->nr_blocks + 1) * SMALLOC_BPL;
 
 	return (ptr >= pool->map) && (ptr < pool->map + pool_size);
 }
