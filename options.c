@@ -178,6 +178,24 @@ static int str_lockmem_cb(void fio_unused *data, unsigned long *val)
 	return 0;
 }
 
+static int str_rwmix_read_cb(void *data, unsigned int *val)
+{
+	struct thread_data *td = data;
+
+	td->o.rwmix[DDIR_READ] = *val;
+	td->o.rwmix[DDIR_WRITE] = 100 - *val;
+	return 0;
+}
+
+static int str_rwmix_write_cb(void *data, unsigned int *val)
+{
+	struct thread_data *td = data;
+
+	td->o.rwmix[DDIR_WRITE] = *val;
+	td->o.rwmix[DDIR_READ] = 100 - *val;
+	return 0;
+}
+
 #ifdef FIO_HAVE_IOPRIO
 static int str_prioclass_cb(void *data, unsigned int *val)
 {
@@ -982,7 +1000,7 @@ static struct fio_option options[] = {
 	{
 		.name	= "rwmixread",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(rwmix[DDIR_READ]),
+		.cb	= str_rwmix_read_cb,
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is reads",
 		.def	= "50",
@@ -990,7 +1008,7 @@ static struct fio_option options[] = {
 	{
 		.name	= "rwmixwrite",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(rwmix[DDIR_WRITE]),
+		.cb	= str_rwmix_write_cb,
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is writes",
 		.def	= "50",
