@@ -258,7 +258,6 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 
 static void set_rwmix_bytes(struct thread_data *td)
 {
-	unsigned long issues;
 	unsigned int diff;
 
 	/*
@@ -266,11 +265,8 @@ static void set_rwmix_bytes(struct thread_data *td)
 	 * buffered writes may issue a lot quicker than they complete,
 	 * whereas reads do not.
 	 */
-	issues = td->io_issues[td->rwmix_ddir] - td->rwmix_issues;
 	diff = td->o.rwmix[td->rwmix_ddir ^ 1];
-
-	td->rwmix_issues = td->io_issues[td->rwmix_ddir]
-				+ (issues * ((100 - diff)) / diff);
+	td->rwmix_issues = (td->io_issues[td->rwmix_ddir] * diff) / 100;
 }
 
 static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
@@ -280,7 +276,7 @@ static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
 
 	r = os_random_long(&td->rwmix_state);
 	v = 1 + (int) (100.0 * (r / (RAND_MAX + 1.0)));
-	if (v < td->o.rwmix[DDIR_READ])
+	if (v <= td->o.rwmix[DDIR_READ])
 		return DDIR_READ;
 
 	return DDIR_WRITE;
