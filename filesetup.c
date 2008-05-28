@@ -234,6 +234,9 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 
 int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 {
+	if (!(f->flags & FIO_FILE_OPEN))
+		return 0;
+
 	return __file_invalidate_cache(td, f, -1, -1);
 }
 
@@ -762,7 +765,7 @@ int put_file(struct thread_data *td, struct fio_file *f)
 		ret = td->io_ops->close_file(td, f);
 
 	if (!ret)
-		ret = !f_ret;
+		ret = f_ret;
 
 	td->nr_open_files--;
 	f->flags &= ~FIO_FILE_OPEN;
