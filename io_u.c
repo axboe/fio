@@ -818,6 +818,8 @@ struct io_u *get_io_u(struct thread_data *td)
 
 		if (td->o.verify != VERIFY_NONE)
 			populate_verify_io_u(td, io_u);
+		else if (td->o.refill_buffers && io_u->ddir == DDIR_WRITE)
+			io_u_fill_buffer(td, io_u, io_u->xfer_buflen);
 	}
 
 	/*
@@ -827,8 +829,6 @@ struct io_u *get_io_u(struct thread_data *td)
 	io_u->xfer_buf = io_u->buf;
 	io_u->xfer_buflen = io_u->buflen;
 
-	if (td->o.refill_buffers && io_u->ddir == DDIR_WRITE)
-		io_u_fill_buffer(td, io_u, io_u->xfer_buflen);
 out:
 	if (!td_io_prep(td, io_u)) {
 		fio_gettime(&io_u->start_time, NULL);
