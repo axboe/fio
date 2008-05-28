@@ -220,9 +220,6 @@ static int fixup_options(struct thread_data *td)
 		return 1;
 	}
 
-	if (o->rwmix[DDIR_READ] + o->rwmix[DDIR_WRITE] > 100)
-		o->rwmix[DDIR_WRITE] = 100 - o->rwmix[DDIR_READ];
-
 	if (o->write_iolog_file && o->read_iolog_file) {
 		log_err("fio: read iolog overrides write_iolog\n");
 		free(o->write_iolog_file);
