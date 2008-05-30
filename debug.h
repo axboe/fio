@@ -18,6 +18,8 @@ enum {
 	FD_DEBUG_MAX,
 };
 
+extern unsigned int fio_debug_jobno, *fio_debug_jobp;
+
 #ifdef FIO_INC_DEBUG
 struct debug_level {
 	const char *name;
@@ -27,7 +29,6 @@ struct debug_level {
 extern struct debug_level debug_levels[];
 
 extern unsigned long fio_debug;
-extern unsigned int fio_debug_jobno, *fio_debug_jobp;
 
 #define dprint(type, str, args...)				\
 	do {							\

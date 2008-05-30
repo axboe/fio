@@ -916,7 +916,7 @@ static int set_debug(const char *string)
 	return 0;
 }
 #else
-static void set_debug(const char *string)
+static int set_debug(const char *string)
 {
 	log_err("fio: debug tracing not included in build\n");
 	return 1;
