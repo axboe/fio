@@ -353,7 +353,7 @@ static int fio_netio_setup_listen(struct thread_data *td, short port)
 static int fio_netio_init(struct thread_data *td)
 {
 	struct netio_data *nd = td->io_ops->data;
-	unsigned short port;
+	unsigned int port;
 	char host[64], buf[128];
 	char *sep;
 	int ret;
@@ -370,15 +370,18 @@ static int fio_netio_init(struct thread_data *td)
 	strcpy(buf, td->o.filename);
 
 	sep = strchr(buf, '/');
-	if (!sep) {
-		log_err("fio: bad network host/port <<%s>>\n", td->o.filename);
-		return 1;
-	}
+	if (!sep)
+		goto bad_host;
 
 	*sep = '\0';
 	sep++;
 	strcpy(host, buf);
-	port = atoi(sep);
+	if (!strlen(host))
+		goto bad_host;
+
+	port = strtol(sep, NULL, 10);
+	if (!port || port > 65535)
+		goto bad_host;
 
 	if (td_read(td)) {
 		nd->send_to_net = 0;
@@ -389,6 +392,9 @@ static int fio_netio_init(struct thread_data *td)
 	}
 
 	return ret;
+bad_host:
+	log_err("fio: bad network host/port: %s\n", td->o.filename);
+	return 1;
 }
 
 static void fio_netio_cleanup(struct thread_data *td)
