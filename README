@@ -171,8 +171,8 @@ The job file parameters are:
 			psync for regular pread/pwrite io, vsync for regular
 			readv/writev (with queuing emulation) mmap for mmap'ed
 			io, syslet-rw for syslet driven read/write, splice for
-			using splice/vmsplice, sgio for direct SG_IO io, net
-			for network io, or cpuio for a cycler burner load. sgio
+			using splice/vmsplice, sg for direct SG_IO io, net
+			for network io, or cpuio for a cycler burner load. sg
 			only works on Linux on SCSI (or SCSI-like devices, such
 			as usb-storage or sata/libata driven) devices. Fio also
 			has a null io engine, which is mainly used for testing

@@ -364,7 +364,7 @@ static int fio_sgio_type_check(struct thread_data *td, struct fio_file *f)
 		if (ret)
 			return 1;
 	} else {
-		log_err("ioengine sgio only works on block devices\n");
+		log_err("ioengine sg only works on block devices\n");
 		return 1;
 	}
 
@@ -418,12 +418,12 @@ static struct ioengine_ops ioengine = {
  */
 static int fio_sgio_init(struct thread_data fio_unused *td)
 {
-	fprintf(stderr, "fio: sgio not available\n");
+	fprintf(stderr, "fio: ioengine sg not available\n");
 	return 1;
 }
 
 static struct ioengine_ops ioengine = {
-	.name		= "sgio",
+	.name		= "sg",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_sgio_init,
 };
