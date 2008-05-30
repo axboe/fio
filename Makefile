@@ -1,4 +1,3 @@
-#CC	= /opt/intel/cce/9.1.045/bin/icc
 CC	= gcc
 DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
 OPTFLAGS= -O2 -g $(EXTFLAGS)
