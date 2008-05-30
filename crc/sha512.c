@@ -14,27 +14,8 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include "../lib/bswap.h"
 #include "sha512.h"
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-static int __be64_to_cpu(uint64_t val)
-{
-	uint64_t c1, c2, c3, c4, c5, c6, c7, c8;
-
-	c1 = (val >> 56) & 0xff;
-	c2 = (val >> 48) & 0xff;
-	c3 = (val >> 40) & 0xff;
-	c4 = (val >> 32) & 0xff;
-	c5 = (val >> 24) & 0xff;
-	c6 = (val >> 16) & 0xff;
-	c7 = (val >> 8) & 0xff;
-	c8 = val & 0xff;
-
-	return c1 | c2 << 8 | c3 << 16 | c4 << 24 | c5 << 32 | c6 << 40 | c7 << 48 | c8 << 56;
-}
-#else
-#define __be64_to_cpu(x)	(x)
-#endif
 
 #define SHA384_DIGEST_SIZE 48
 #define SHA512_DIGEST_SIZE 64

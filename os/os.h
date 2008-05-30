@@ -25,7 +25,7 @@
 #endif
 
 #ifndef FIO_HAVE_STRSEP
-#include "../lib/lib.h"
+#include "../lib/strsep.h"
 #endif
 
 #ifndef FIO_HAVE_FADVISE

@@ -19,23 +19,8 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include "../lib/bswap.h"
 #include "sha256.h"
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-static int __be32_to_cpu(uint32_t val)
-{
-	uint32_t c1, c2, c3, c4;
-
-	c1 = (val >> 24) & 0xff;
-	c2 = (val >> 16) & 0xff;
-	c3 = (val >> 8) & 0xff;
-	c4 = val & 0xff;
-
-	return c1 | c2 << 8 | c3 << 16 | c4 << 24;
-}
-#else
-#define __be32_to_cpu(x)	(x)
-#endif
 
 #define SHA256_DIGEST_SIZE	32
 #define SHA256_HMAC_BLOCK_SIZE	64
