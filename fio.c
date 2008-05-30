@@ -54,6 +54,7 @@ unsigned long done_secs = 0;
 static struct fio_mutex *startup_mutex;
 static volatile int fio_abort;
 static int exit_value;
+static struct itimerval itimer;
 
 struct io_log *agg_io_log[2];
 
@@ -99,16 +100,34 @@ static void terminate_threads(int group_id)
 	}
 }
 
+static void status_timer_arm(void)
+{
+	itimer.it_value.tv_sec = 0;
+	itimer.it_value.tv_usec = DISK_UTIL_MSEC * 1000;
+	setitimer(ITIMER_REAL, &itimer, NULL);
+}
+
+/*
+ * We need to rearm on BSD/solaris. Switch this to sigaction in the future...
+ */
+static void set_sig_handlers(void (*sighandler)(int))
+{
+	signal(SIGINT, sighandler);
+	signal(SIGALRM, sighandler);
+}
+
 static void sig_handler(int sig)
 {
+	set_sig_handlers(sig_handler);
+
 	if (!threads)
 		return;
 
 	switch (sig) {
 	case SIGALRM:
 		update_io_ticks();
-		disk_util_timer_arm();
 		print_thread_status();
+		status_timer_arm();
 		break;
 	default:
 		printf("\nfio: terminating on signal %d\n", sig);
@@ -1137,8 +1156,7 @@ static void run_threads(void)
 		fflush(stdout);
 	}
 
-	signal(SIGINT, sig_handler);
-	signal(SIGALRM, sig_handler);
+	set_sig_handlers(sig_handler);
 
 	todo = thread_number;
 	nr_running = 0;
@@ -1356,7 +1374,7 @@ int main(int argc, char *argv[])
 
 	set_genesis_time();
 
-	disk_util_timer_arm();
+	status_timer_arm();
 
 	run_threads();
 

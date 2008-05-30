@@ -784,7 +784,6 @@ extern void show_run_stats(void);
 extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
 extern void update_io_ticks(void);
-extern void disk_util_timer_arm(void);
 extern void setup_log(struct io_log **);
 extern void finish_log(struct thread_data *, struct io_log *, const char *);
 extern void __finish_log(struct io_log *, const char *);
@@ -855,12 +854,10 @@ extern void print_status_init(int);
  */
 #ifdef FIO_HAVE_DISK_UTIL
 extern void show_disk_util(void);
-extern void disk_util_timer_arm(void);
 extern void init_disk_util(struct thread_data *);
 extern void update_io_ticks(void);
 #else
 #define show_disk_util()
-#define disk_util_timer_arm()
 #define init_disk_util(td)
 #define update_io_ticks()
 #endif

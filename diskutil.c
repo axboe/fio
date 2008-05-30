@@ -10,7 +10,6 @@
 #include "fio.h"
 
 static int last_majdev, last_mindev;
-static struct itimerval itimer;
 
 static struct list_head disk_list = LIST_HEAD_INIT(disk_list);
 
@@ -315,13 +314,6 @@ void init_disk_util(struct thread_data *td)
 
 	for_each_file(td, f, i)
 		__init_disk_util(td, f);
-}
-
-void disk_util_timer_arm(void)
-{
-	itimer.it_value.tv_sec = 0;
-	itimer.it_value.tv_usec = DISK_UTIL_MSEC * 1000;
-	setitimer(ITIMER_REAL, &itimer, NULL);
 }
 
 void show_disk_util(void)
