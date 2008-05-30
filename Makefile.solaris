@@ -21,8 +21,6 @@ OBJS += engines/sync.o
 OBJS += engines/null.o
 OBJS += engines/net.o
 
-OBJS += lib/strsep.o
-
 INSTALL = install
 prefix = /usr/local
 bindir = $(prefix)/bin
