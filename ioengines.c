@@ -362,7 +362,7 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 	}
 
 	if (f->file_map)
-		memset(f->file_map, 0, f->num_maps * sizeof(long));
+		memset(f->file_map, 0, f->num_maps * sizeof(int));
 
 done:
 	log_file(td, f, FIO_LOG_OPEN_FILE);

@@ -326,7 +326,7 @@ struct fio_file {
 	/*
 	 * block map for random io
 	 */
-	unsigned long *file_map;
+	unsigned int *file_map;
 	unsigned int num_maps;
 	unsigned int last_free_lookup;
 
@@ -704,7 +704,7 @@ static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
 	assert(!(io_u->ddir == DDIR_WRITE && !td_write(td)));
 }
 
-#define BLOCKS_PER_MAP		(8 * sizeof(long))
+#define BLOCKS_PER_MAP		(8 * sizeof(int))
 #define TO_MAP_BLOCK(f, b)	(b)
 #define RAND_MAP_IDX(f, b)	(TO_MAP_BLOCK(f, b) / BLOCKS_PER_MAP)
 #define RAND_MAP_BIT(f, b)	(TO_MAP_BLOCK(f, b) & (BLOCKS_PER_MAP - 1))

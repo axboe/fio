@@ -33,7 +33,7 @@ static int random_map_free(struct fio_file *f, const unsigned long long block)
 
 	dprint(FD_RANDOM, "free: b=%llu, idx=%u, bit=%u\n", block, idx, bit);
 
-	return (f->file_map[idx] & (1UL << bit)) == 0;
+	return (f->file_map[idx] & (1 << bit)) == 0;
 }
 
 /*
@@ -66,7 +66,7 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 
 		fio_assert(td, idx < f->num_maps);
 
-		f->file_map[idx] |= (1UL << bit);
+		f->file_map[idx] |= (1 << bit);
 		block++;
 		blocks++;
 	}
@@ -108,7 +108,7 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 	i = f->last_free_lookup;
 	*b = (i * BLOCKS_PER_MAP);
 	while ((*b) * min_bs < f->real_file_size) {
-		if (f->file_map[i] != -1UL) {
+		if (f->file_map[i] != (unsigned int) -1) {
 			*b += ffz(f->file_map[i]);
 			if (*b > last_block(td, f, ddir))
 				break;
