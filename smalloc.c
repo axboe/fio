@@ -12,6 +12,7 @@
 #include <limits.h>
 
 #include "mutex.h"
+#include "lib/ffz.h"
 
 #define MP_SAFE			/* define to make thread safe */
 #define SMALLOC_REDZONE		/* define to detect memory corruption */
@@ -171,34 +172,6 @@ static void clear_blocks(struct pool *pool, unsigned int pool_idx,
 			 unsigned int idx, unsigned int nr_blocks)
 {
 	blocks_iter(pool, pool_idx, idx, nr_blocks, mask_clear);
-}
-
-static inline int __ffs(int word)
-{
-	int r = 0;
-
-	if (!(word & 0xffff)) {
-		word >>= 16;
-		r += 16;
-	}
-	if (!(word & 0xff)) {
-		word >>= 8;
-		r += 8;
-	}
-	if (!(word & 0xf)) {
-		word >>= 4;
-		r += 4;
-	}
-	if (!(word & 3)) {
-		word >>= 2;
-		r += 2;
-	}
-	if (!(word & 1)) {
-		word >>= 1;
-		r += 1;
-	}
-
-	return r;
 }
 
 static int find_next_zero(int word, int start)

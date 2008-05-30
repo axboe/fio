@@ -107,34 +107,40 @@ static void status_timer_arm(void)
 	setitimer(ITIMER_REAL, &itimer, NULL);
 }
 
-/*
- * We need to rearm on BSD/solaris. Switch this to sigaction in the future...
- */
-static void set_sig_handlers(void (*sighandler)(int))
+static void sig_alrm(int sig)
 {
-	signal(SIGINT, sighandler);
-	signal(SIGALRM, sighandler);
-}
-
-static void sig_handler(int sig)
-{
-	set_sig_handlers(sig_handler);
-
-	if (!threads)
-		return;
-
-	switch (sig) {
-	case SIGALRM:
+	if (threads) {
 		update_io_ticks();
 		print_thread_status();
 		status_timer_arm();
-		break;
-	default:
+	}
+}
+
+static void sig_int(int sig)
+{
+	if (threads) {
 		printf("\nfio: terminating on signal %d\n", sig);
 		fflush(stdout);
 		terminate_threads(TERMINATE_ALL);
-		break;
 	}
+}
+
+/*
+ * We need to rearm on BSD/solaris. Switch this to sigaction in the future...
+ */
+static void set_sig_handlers(void)
+{
+	struct sigaction act;
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_alrm;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGALRM, &act, NULL);
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_int;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGINT, &act, NULL);
 }
 
 /*
@@ -1156,7 +1162,7 @@ static void run_threads(void)
 		fflush(stdout);
 	}
 
-	set_sig_handlers(sig_handler);
+	set_sig_handlers();
 
 	todo = thread_number;
 	nr_running = 0;

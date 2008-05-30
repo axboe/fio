@@ -13,7 +13,6 @@
 #endif
 
 #define nop		do { } while (0)
-#define fio_ffz(v)	generic_ffz((v))
 #define read_barrier()	__asm__ __volatile__("mb": : :"memory")
 
 #endif

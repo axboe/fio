@@ -8,18 +8,9 @@ enum {
 	arch_ia64,
 	arch_s390,
 	arch_alpha,
+	arch_sparc,
+	arch_sparc64,
 };
-
-static inline unsigned long generic_ffz(unsigned long word)
-{
-	unsigned int i;
-
-	for (i = 0; i < sizeof(word) * 8; i++)
-		if ((word & (1UL << i)) == 0)
-			return i;
-
-	return -1;
-}
 
 #if defined(__i386__)
 #include "arch-x86.h"
@@ -33,6 +24,10 @@ static inline unsigned long generic_ffz(unsigned long word)
 #include "arch-alpha.h"
 #elif defined(__s390x__) || defined(__s390__)
 #include "arch-s390.h"
+#elif defined(__sparc__)
+#include "arch-sparc.h"
+#elif defined(__sparc64__)
+#include "arch-sparc64.h"
 #else
 #error "Unsupported arch"
 #endif

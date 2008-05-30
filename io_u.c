@@ -7,6 +7,7 @@
 
 #include "fio.h"
 #include "hash.h"
+#include "lib/ffz.h"
 
 /*
  * Change this define to play with the timeout handling
@@ -108,7 +109,7 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 	*b = (i * BLOCKS_PER_MAP);
 	while ((*b) * min_bs < f->real_file_size) {
 		if (f->file_map[i] != -1UL) {
-			*b += fio_ffz(f->file_map[i]);
+			*b += ffz(f->file_map[i]);
 			if (*b > last_block(td, f, ddir))
 				break;
 			f->last_free_lookup = i;

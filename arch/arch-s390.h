@@ -13,7 +13,6 @@
 #endif
 
 #define nop		asm volatile ("diag 0,0,68" : : : "memory")
-#define fio_ffz(v)	generic_ffz((v))
 #define read_barrier()	asm volatile("bcr 15,0" : : : "memory")
 
 #endif
