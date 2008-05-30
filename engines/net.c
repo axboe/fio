@@ -165,13 +165,13 @@ static int fio_netio_splice_out(struct thread_data *td, struct io_u *io_u)
 #else
 static int fio_netio_splice_in(struct thread_data *td, struct io_u *io_u)
 {
-	errno = -EOPNOTSUPP;
+	errno = EOPNOTSUPP;
 	return -1;
 }
 
 static int fio_netio_splice_out(struct thread_data *td, struct io_u *io_u)
 {
-	errno = -EOPNOTSUPP;
+	errno = EOPNOTSUPP;
 	return -1;
 }
 #endif
