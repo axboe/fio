@@ -177,7 +177,6 @@ static void fio_libaio_cleanup(struct thread_data *td)
 		free(ld->iocbs);
 		free(ld->io_us);
 		free(ld);
-		td->io_ops->data = NULL;
 	}
 }
 

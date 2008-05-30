@@ -213,7 +213,6 @@ static void fio_guasi_cleanup(struct thread_data *td)
 		free(ld->reqs);
 		free(ld->io_us);
 		free(ld);
-		td->io_ops->data = NULL;
 	}
 	GDBG_PRINT(("fio_guasi_cleanup(%p) DONE\n", ld));
 }

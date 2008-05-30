@@ -426,7 +426,6 @@ static void fio_netio_cleanup(struct thread_data *td)
 			close(nd->pipes[1]);
 
 		free(nd);
-		td->io_ops->data = NULL;
 	}
 }
 

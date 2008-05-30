@@ -246,7 +246,6 @@ static void fio_spliceio_cleanup(struct thread_data *td)
 		close(sd->pipe[0]);
 		close(sd->pipe[1]);
 		free(sd);
-		td->io_ops->data = NULL;
 	}
 }
 

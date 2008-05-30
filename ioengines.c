@@ -154,8 +154,10 @@ void close_ioengine(struct thread_data *td)
 {
 	dprint(FD_IO, "close ioengine %s\n", td->io_ops->name);
 
-	if (td->io_ops->cleanup)
+	if (td->io_ops->cleanup) {
 		td->io_ops->cleanup(td);
+		td->io_ops->data = NULL;
+	}
 
 	if (td->io_ops->dlhandle)
 		dlclose(td->io_ops->dlhandle);

@@ -311,8 +311,6 @@ static void fio_sgio_cleanup(struct thread_data *td)
 		free(sd->pfds);
 		free(sd->sgbuf);
 		free(sd);
-
-		td->io_ops->data = NULL;
 	}
 }
 

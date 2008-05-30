@@ -184,7 +184,6 @@ static void fio_posixaio_cleanup(struct thread_data *td)
 	if (pd) {
 		free(pd->aio_events);
 		free(pd);
-		td->io_ops->data = NULL;
 	}
 }
 

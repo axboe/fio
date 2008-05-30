@@ -83,7 +83,6 @@ static void fio_null_cleanup(struct thread_data *td)
 		if (nd->io_us)
 			free(nd->io_us);
 		free(nd);
-		td->io_ops->data = NULL;
 	}
 }
 
