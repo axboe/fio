@@ -18,6 +18,7 @@ struct syncio_data {
 	struct iovec *iovecs;
 	struct io_u **io_us;
 	unsigned int queued;
+	unsigned int events;
 	unsigned long queued_bytes;
 
 	unsigned long long last_offset;
@@ -99,8 +100,8 @@ static int fio_vsyncio_getevents(struct thread_data *td, unsigned int min,
 	int ret;
 
 	if (min) {
-		ret = sd->queued;
-		sd->queued = 0;
+		ret = sd->events;
+		sd->events = 0;
 	} else
 		ret = 0;
 
@@ -247,6 +248,8 @@ static int fio_vsyncio_commit(struct thread_data *td)
 		ret = writev(f->fd, sd->iovecs, sd->queued);
 
 	dprint(FD_IO, "vsyncio_commit: %d\n", (int) ret);
+	sd->events = sd->queued;
+	sd->queued = 0;
 	return fio_vsyncio_end(td, ret);
 }
 
