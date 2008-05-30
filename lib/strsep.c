@@ -2,25 +2,28 @@
 
 char *strsep(char **stringp, const char *delim)
 {
-        char *s;
-        const char *spanp;
-        int c, sc;
-        char *tok;
+	char *s, *tok;
+	const char *spanp;
+	int c, sc;
 
-        if ((s = *stringp) == NULL)
-                return (NULL);
-        for (tok = s;;) {
-                c = *s++;
-                spanp = delim;
-                do {
-                        if ((sc = *spanp++) == c) {
-                                if (c == 0)
-                                        s = NULL;
-                                else
-                                        s[-1] = 0;
-                                *stringp = s;
-                                return (tok);
-                        }
-                } while (sc != 0);
-        }
+	s = *stringp;
+	if (!s)
+		return NULL;
+
+	tok = s;
+	do {
+		c = *s++;
+		spanp = delim;
+		do {
+			sc = *spanp++;
+			if (sc == c) {
+				if (c == 0)
+					s = NULL;
+				else
+					s[-1] = 0;
+				*stringp = s;
+				return tok;
+			}
+		} while (sc != 0);
+	} while (1);
 }
