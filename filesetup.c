@@ -307,7 +307,7 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	if (td->o.sync_io)
 		flags |= O_SYNC;
 	if (f->filetype != FIO_TYPE_FILE)
-		flags |= O_NOATIME;
+		flags |= FIO_O_NOATIME;
 
 open_again:
 	if (td_write(td)) {
@@ -337,8 +337,8 @@ open_again:
 		char buf[FIO_VERROR_SIZE];
 		int __e = errno;
 
-		if (errno == EPERM && (flags & O_NOATIME)) {
-			flags &= ~O_NOATIME;
+		if (errno == EPERM && (flags & FIO_O_NOATIME)) {
+			flags &= ~FIO_O_NOATIME;
 			goto open_again;
 		}
 

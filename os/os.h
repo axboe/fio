@@ -24,6 +24,10 @@
 #include <scsi/sg.h>
 #endif
 
+#ifndef FIO_HAVE_STRSEP
+#include "../lib/lib.h"
+#endif
+
 #ifndef FIO_HAVE_FADVISE
 #define fadvise(fd, off, len, advice)	(0)
 
@@ -36,7 +40,7 @@
 
 #ifndef FIO_HAVE_CPU_AFFINITY
 #define fio_setaffinity(td)		(0)
-#define fio_getaffinity(pid, mask)	(0)
+#define fio_getaffinity(pid, mask)	do { } while(0)
 #endif
 
 #ifndef FIO_HAVE_IOPRIO
@@ -60,6 +64,10 @@
 #endif
 #endif
 
+#ifndef FIO_O_NOATIME
+#define FIO_O_NOATIME			0
+#endif
+
 #ifndef FIO_HAVE_RAWBIND
 #define fio_lookup_raw(dev, majdev, mindev)	1
 #endif
@@ -69,6 +77,7 @@ static inline int is_blktrace(const char *fname)
 {
 	return 0;
 }
+struct thread_data;
 static inline int load_blktrace(struct thread_data *td, const char *fname)
 {
 	return 1;

@@ -6,6 +6,9 @@
 #include <getopt.h>
 #include <assert.h>
 #include <libgen.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "fio.h"
 #include "parse.h"
@@ -1275,7 +1278,7 @@ void fio_options_dup_and_init(struct option *long_options)
 
 	o = &options[0];
 	while (o->name) {
-		long_options[i].name = o->name;
+		long_options[i].name = (char *) o->name;
 		long_options[i].val = FIO_GETOPT_JOB;
 		if (o->type == FIO_OPT_STR_SET)
 			long_options[i].has_arg = no_argument;

@@ -307,7 +307,7 @@ static int fixup_options(struct thread_data *td)
 	}
 
 	if (o->fill_device && !o->size)
-		o->size = ULONG_LONG_MAX;
+		o->size = -1ULL;
 
 	if (td_rw(td) && td->o.verify != VERIFY_NONE)
 		log_info("fio: mixed read/write workload with verify. May not "

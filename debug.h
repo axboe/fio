@@ -39,7 +39,7 @@ extern unsigned int fio_debug_jobno, *fio_debug_jobp;
 		    && pid != *fio_debug_jobp)			\
 			break;					\
 		log_info("%-8s ", debug_levels[(type)].name);	\
-		log_info("%-5u ", pid);				\
+		log_info("%-5u ", (int) pid);			\
 		log_info(str, ##args);				\
 	} while (0)
 

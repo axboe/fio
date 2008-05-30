@@ -65,8 +65,8 @@ static inline void td_set_runstate(struct thread_data *td, int runstate)
 	if (td->runstate == runstate)
 		return;
 
-	dprint(FD_PROCESS, "pid=%d: runstate %d -> %d\n", td->pid, td->runstate,
-								runstate);
+	dprint(FD_PROCESS, "pid=%d: runstate %d -> %d\n", (int) td->pid,
+						td->runstate, runstate);
 	td->runstate = runstate;
 }
 
@@ -80,7 +80,7 @@ static void terminate_threads(int group_id)
 	for_each_td(td, i) {
 		if (group_id == TERMINATE_ALL || groupid == td->groupid) {
 			dprint(FD_PROCESS, "setting terminate on %s/%d\n",
-							td->o.name, td->pid);
+						td->o.name, (int) td->pid);
 			td->terminate = 1;
 			td->o.start_delay = 0;
 
@@ -823,7 +823,7 @@ static void *thread_main(void *data)
 
 	td->pid = getpid();
 
-	dprint(FD_PROCESS, "jobs pid=%d started\n", td->pid);
+	dprint(FD_PROCESS, "jobs pid=%d started\n", (int) td->pid);
 
 	INIT_LIST_HEAD(&td->io_u_freelist);
 	INIT_LIST_HEAD(&td->io_u_busylist);
@@ -975,7 +975,7 @@ static void *thread_main(void *data)
 
 err:
 	if (td->error)
-		printf("fio: pid=%d, err=%d/%s\n", td->pid, td->error,
+		printf("fio: pid=%d, err=%d/%s\n", (int) td->pid, td->error,
 							td->verror);
 	close_and_free_files(td);
 	close_ioengine(td);
@@ -1063,8 +1063,8 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		ret = waitpid(td->pid, &status, flags);
 		if (ret < 0) {
 			if (errno == ECHILD) {
-				log_err("fio: pid=%d disappeared %d\n", td->pid,
-								td->runstate);
+				log_err("fio: pid=%d disappeared %d\n",
+						(int) td->pid, td->runstate);
 				td_set_runstate(td, TD_REAPED);
 				goto reaped;
 			}
@@ -1075,7 +1075,7 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 
 				if (sig != SIGQUIT)
 					log_err("fio: pid=%d, got signal=%d\n",
-								td->pid, sig);
+							(int) td->pid, sig);
 				td_set_runstate(td, TD_REAPED);
 				goto reaped;
 			}
@@ -1161,8 +1161,8 @@ static void run_threads(void)
 		if (setup_files(td)) {
 			exit_value++;
 			if (td->error)
-				log_err("fio: pid=%d, err=%d/%s\n", td->pid,
-							td->error, td->verror);
+				log_err("fio: pid=%d, err=%d/%s\n",
+					(int) td->pid, td->error, td->verror);
 			td_set_runstate(td, TD_REAPED);
 			todo--;
 		} else {

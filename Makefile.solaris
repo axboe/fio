@@ -1,5 +1,5 @@
 CC	= gcc
-CFLAGS	= -Wall -O2 -g -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+CFLAGS	= -Wall -O2 -g -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DFIO_INC_DEBUG
 PROGS	= fio
 SCRIPTS = fio_generate_plots
 OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o filesetup.o \
@@ -21,23 +21,25 @@ OBJS += engines/sync.o
 OBJS += engines/null.o
 OBJS += engines/net.o
 
-all: depend $(PROGS) $(SCRIPTS)
-
-fio: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) -lc -lpthread -lm -laio -lrt -ldl
-
-clean:
-	-rm -f *.o .depend cscope.out $(PROGS)
-
-depend:
-	@$(CC) -MM $(ALL_CFLAGS) *.c engines/*.c 1> .depend
-
-cscope:
-	@cscope -b
+OBJS += lib/strsep.o
 
 INSTALL = install
 prefix = /usr/local
 bindir = $(prefix)/bin
+mandir = $(prefix)/man
+
+%.o: %.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+fio: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS) $(EXTLIBS) -lpthread -lm -ldl -laio -lrt -lnsl -lsocket
+
+all: $(PROGS) $(SCRIPTS)
+
+clean:
+	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o crc/*.o lib/*.o core.* core
+
+cscope:
+	@cscope -b
 
 install: $(PROGS) $(SCRIPTS)
 	$(INSTALL) -m755 -d $(DESTDIR)$(bindir)

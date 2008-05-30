@@ -12,7 +12,7 @@
 void fio_mutex_remove(struct fio_mutex *mutex)
 {
 	close(mutex->mutex_fd);
-	munmap(mutex, sizeof(*mutex));
+	munmap((void *) mutex, sizeof(*mutex));
 }
 
 struct fio_mutex *fio_mutex_init(int value)
@@ -34,8 +34,8 @@ struct fio_mutex *fio_mutex_init(int value)
 		goto err;
 	}
 
-	mutex = mmap(NULL, sizeof(struct fio_mutex), PROT_READ | PROT_WRITE,
-			MAP_SHARED, fd, 0);
+	mutex = (void *) mmap(NULL, sizeof(struct fio_mutex),
+				PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (mutex == MAP_FAILED) {
 		perror("mmap mutex");
 		close(fd);

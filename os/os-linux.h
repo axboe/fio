@@ -25,6 +25,7 @@
 #define FIO_HAVE_HUGETLB
 #define FIO_HAVE_RAWBIND
 #define FIO_HAVE_BLKTRACE
+#define FIO_HAVE_STRSEP
 
 #define OS_MAP_ANON		(MAP_ANONYMOUS)
 
@@ -226,5 +227,7 @@ static inline int fio_lookup_raw(dev_t dev, int *majdev, int *mindev)
 	*mindev = rq.block_minor;
 	return 0;
 }
+
+#define FIO_O_NOATIME	O_NOATIME
 
 #endif

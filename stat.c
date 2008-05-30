@@ -320,11 +320,11 @@ static void show_thread_status(struct thread_stat *ts,
 	if (!ts->error) {
 		log_info("%s: (groupid=%d, jobs=%d): err=%2d: pid=%d\n",
 					ts->name, ts->groupid, ts->members,
-					ts->error, ts->pid);
+					ts->error, (int) ts->pid);
 	} else {
 		log_info("%s: (groupid=%d, jobs=%d): err=%2d (%s): pid=%d\n",
 					ts->name, ts->groupid, ts->members,
-					ts->error, ts->verror, ts->pid);
+					ts->error, ts->verror, (int) ts->pid);
 	}
 
 	if (ts->description)

@@ -1,6 +1,9 @@
 /*
  * Memory helpers
  */
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <sys/shm.h>
 #include <sys/mman.h>

@@ -112,7 +112,7 @@ static void hexdump(void *buffer, int len)
  */
 static inline unsigned int __hdr_size(int verify_type)
 {
-	unsigned int len;
+	unsigned int len = len;
 
 	switch (verify_type) {
 	case VERIFY_NONE:

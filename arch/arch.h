@@ -37,6 +37,4 @@ static inline unsigned long generic_ffz(unsigned long word)
 #error "Unsupported arch"
 #endif
 
-#define BITS_PER_LONG	(__WORDSIZE)
-
 #endif

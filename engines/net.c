@@ -41,6 +41,7 @@ static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
+#ifdef FIO_HAVE_SPLICE
 static int splice_io_u(int fdin, int fdout, unsigned int len)
 {
 	int bytes = 0;
@@ -161,6 +162,19 @@ static int fio_netio_splice_out(struct thread_data *td, struct io_u *io_u)
 
 	return ret;
 }
+#else
+static int fio_netio_splice_in(struct thread_data *td, struct io_u *io_u)
+{
+	errno = -EOPNOTSUPP;
+	return -1;
+}
+
+static int fio_netio_splice_out(struct thread_data *td, struct io_u *io_u)
+{
+	errno = -EOPNOTSUPP;
+	return -1;
+}
+#endif
 
 static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 {
@@ -169,8 +183,10 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * if we are going to write more, set MSG_MORE
 	 */
+#ifdef MSG_MORE
 	if (td->this_io_bytes[DDIR_WRITE] + io_u->xfer_buflen < td->o.size)
 		flags = MSG_MORE;
+#endif
 
 	return send(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen, flags);
 }
@@ -430,6 +446,7 @@ static int fio_netio_setup(struct thread_data *td)
 	return 0;
 }
 
+#ifdef FIO_HAVE_SPLICE
 static int fio_netio_setup_splice(struct thread_data *td)
 {
 	struct netio_data *nd;
@@ -448,6 +465,21 @@ static int fio_netio_setup_splice(struct thread_data *td)
 	return 1;
 }
 
+static struct ioengine_ops ioengine_splice = {
+	.name		= "netsplice",
+	.version	= FIO_IOOPS_VERSION,
+	.prep		= fio_netio_prep,
+	.queue		= fio_netio_queue,
+	.setup		= fio_netio_setup_splice,
+	.init		= fio_netio_init,
+	.cleanup	= fio_netio_cleanup,
+	.open_file	= fio_netio_open_file,
+	.close_file	= generic_close_file,
+	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR |
+			  FIO_SIGQUIT,
+};
+#endif
+
 static struct ioengine_ops ioengine_rw = {
 	.name		= "net",
 	.version	= FIO_IOOPS_VERSION,
@@ -462,28 +494,18 @@ static struct ioengine_ops ioengine_rw = {
 			  FIO_SIGQUIT,
 };
 
-static struct ioengine_ops ioengine_splice = {
-	.name		= "netsplice",
-	.version	= FIO_IOOPS_VERSION,
-	.prep		= fio_netio_prep,
-	.queue		= fio_netio_queue,
-	.setup		= fio_netio_setup_splice,
-	.init		= fio_netio_init,
-	.cleanup	= fio_netio_cleanup,
-	.open_file	= fio_netio_open_file,
-	.close_file	= generic_close_file,
-	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR |
-			  FIO_SIGQUIT,
-};
-
 static void fio_init fio_netio_register(void)
 {
 	register_ioengine(&ioengine_rw);
+#ifdef FIO_HAVE_SPLICE
 	register_ioengine(&ioengine_splice);
+#endif
 }
 
 static void fio_exit fio_netio_unregister(void)
 {
 	unregister_ioengine(&ioengine_rw);
+#ifdef FIO_HAVE_SPLICE
 	unregister_ioengine(&ioengine_splice);
+#endif
 }
