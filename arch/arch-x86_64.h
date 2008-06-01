@@ -32,4 +32,11 @@
 #define nop		__asm__ __volatile__("rep;nop": : :"memory")
 #define read_barrier()	asm volatile("lfence":::"memory")
 
+static inline unsigned long arch_ffz(unsigned long bitmask)
+{
+	__asm__("bsfq %1,%0" :"=r" (bitmask) :"r" (~bitmask));
+	return bitmask;
+}
+#define ARCH_HAVE_FFZ
+
 #endif

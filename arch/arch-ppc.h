@@ -28,4 +28,20 @@
 	__asm__ __volatile__ ("sync" : : : "memory")
 #endif
 
+static inline int __ilog2(unsigned long bitmask)
+{
+	int lz;
+
+	asm ("cntlzw %0,%1" : "=r" (lz) : "r" (bitmask));
+	return 31 - lz;
+}
+
+static inline int arch_ffz(unsigned long bitmask)
+{
+	if ((bitmask = ~bitmask) == 0)
+		return 32;
+	return  __ilog2(bitmask & -bitmask);
+}
+#define ARCH_HAVE_FFZ
+
 #endif

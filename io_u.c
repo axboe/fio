@@ -7,7 +7,6 @@
 
 #include "fio.h"
 #include "hash.h"
-#include "lib/ffz.h"
 
 /*
  * Change this define to play with the timeout handling

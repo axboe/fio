@@ -32,4 +32,10 @@ enum {
 #error "Unsupported arch"
 #endif
 
+#ifdef ARCH_HAVE_FFZ
+#define ffz(bitmask)	arch_ffz(bitmask)
+#else
+#include "../lib/ffz.h"
+#endif
+
 #endif
