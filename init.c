@@ -19,7 +19,7 @@
 #include "smalloc.h"
 #include "filehash.h"
 
-static char fio_version_string[] = "fio 1.21-rc4";
+static char fio_version_string[] = "fio 1.21-rc5";
 
 #define FIO_RANDSEED		(0xb1899bedUL)
 
