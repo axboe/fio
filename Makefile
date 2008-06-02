@@ -53,7 +53,7 @@ $(PROGS): depend
 all: depend $(PROGS) $(SCRIPTS)
 
 clean:
-	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o crc/*.o core.* core
+	-rm -f .depend cscope.out $(OBJS) $(PROGS) core.* core
 
 cscope:
 	@cscope -b

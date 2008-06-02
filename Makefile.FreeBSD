@@ -60,7 +60,7 @@ engines/null.o: engines/null.c
 	$(CC) -o $*.o -c $(CFLAGS) $<
 
 clean:
-	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o crc/*.o lib/*.o core.* core
+	-rm -f .depend cscope.out $(OBJS) $(PROGS) core.* core
 
 depend:
 	@$(CC) -MM $(ALL_CFLAGS) *.c engines/*.c crc/*.c 1> .depend
