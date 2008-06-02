@@ -164,6 +164,7 @@ struct io_u {
 	union {
 		unsigned int index;
 		unsigned int seen;
+		void *engine_data;
 	};
 
 	unsigned int flags;

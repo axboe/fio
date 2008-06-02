@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 #include <errno.h>
 
 #include "../fio.h"
@@ -15,6 +16,7 @@
 
 struct solarisaio_data {
 	struct io_u **aio_events;
+	unsigned int aio_pending;
 	unsigned int nr;
 	unsigned int max_depth;
 };
@@ -28,8 +30,52 @@ static int fio_solarisaio_cancel(struct thread_data fio_unused *td,
 static int fio_solarisaio_prep(struct thread_data fio_unused *td,
 			    struct io_u *io_u)
 {
+	struct solarisaio_data *sd = td->io_ops->data;
+
 	io_u->resultp.aio_return = AIO_INPROGRESS;
+	io_u->engine_data = sd;
 	return 0;
+}
+
+static void wait_for_event(struct timeval *tv)
+{
+	struct solarisaio_data *sd;
+	struct io_u *io_u;
+	aio_result_t *res;
+
+	res = aiowait(tv);
+	if (res == (aio_result_t *) -1) {
+		int err = errno;
+
+		if (err != EINVAL) {
+			log_err("fio: solarisaio got %d in aiowait\n", err);
+			exit(err);
+		}
+		return;
+	} else if (!res)
+		return;
+
+	io_u = container_of(res, struct io_u, resultp);
+	sd = io_u->engine_data;
+
+	if (io_u->resultp.aio_return >= 0) {
+		io_u->resid = io_u->xfer_buflen - io_u->resultp.aio_return;
+		io_u->error = 0;
+	} else
+		io_u->error = io_u->resultp.aio_return;
+
+	/*
+	 * For SIGIO, we need a write barrier between the two, so that
+	 * the ->aio_pending store is seen after the ->aio_events store
+	 */
+	sd->aio_events[sd->aio_pending] = io_u;
+	sd->aio_pending++;
+	sd->nr--;
+}
+
+static void fio_solarisaio_sigio(int sig)
+{
+	wait_for_event(NULL);
 }
 
 static int fio_solarisaio_getevents(struct thread_data *td, unsigned int min,
@@ -37,45 +83,25 @@ static int fio_solarisaio_getevents(struct thread_data *td, unsigned int min,
 {
 	struct solarisaio_data *sd = td->io_ops->data;
 	struct timeval tv;
-	unsigned int r;
+	int ret;
 
-	r = 0;
-	do {
-		struct io_u *io_u;
-		aio_result_t *p;
+	if (!min || !t) {
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
+	} else {
+		tv.tv_sec = t->tv_sec;
+		tv.tv_usec = t->tv_nsec / 1000;
+	}
 
-		if (!min || !t) {
-			tv.tv_sec = 0;
-			tv.tv_usec = 0;
-		} else {
-			tv.tv_sec = t->tv_sec;
-			tv.tv_usec = t->tv_nsec / 1000;
-		}
+	while (sd->aio_pending < min)
+		wait_for_event(&tv);
 
-		p = aiowait(&tv);
-		if (p == (aio_result_t *) -1) {
-			int err = errno;
-
-			if (err == EINVAL)
-				break;
-			td_verror(td, err, "aiowait");
-			break;
-		} else if (p != NULL) {
-			io_u = container_of(p, struct io_u, resultp);
-
-			sd->aio_events[r++] = io_u;
-			sd->nr--;
-
-			if (io_u->resultp.aio_return >= 0) {
-				io_u->resid = io_u->xfer_buflen
-						- io_u->resultp.aio_return;
-				io_u->error = 0;
-			} else
-				io_u->error = io_u->resultp.aio_return;
-		}
-	} while (r < min);
-
-	return r;
+	/*
+	 * Needs locking here for SIGIO
+	 */
+	ret = sd->aio_pending;
+	sd->aio_pending = 0;
+	return ret;
 }
 
 static struct io_u *fio_solarisaio_event(struct thread_data *td, int event)
@@ -134,6 +160,22 @@ static void fio_solarisaio_cleanup(struct thread_data *td)
 	}
 }
 
+/*
+ * Set USE_SIGNAL_COMPLETIONS to use SIGIO as completion events. Needs
+ * locking around ->aio_pending and ->aio_events, see comment
+ */
+static void fio_solarisaio_init_sigio(void)
+{
+#ifdef USE_SIGNAL_COMPLETIONS
+	struct sigaction act;
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = fio_solarisaio_sigio;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGIO, &act, NULL);
+#endif
+}
+
 static int fio_solarisaio_init(struct thread_data *td)
 {
 	struct solarisaio_data *sd = malloc(sizeof(*sd));
@@ -150,6 +192,8 @@ static int fio_solarisaio_init(struct thread_data *td)
 	sd->aio_events = malloc(max_depth * sizeof(struct io_u *));
 	memset(sd->aio_events, 0, max_depth * sizeof(struct io_u *));
 	sd->max_depth = max_depth;
+
+	fio_solarisaio_init_sigio();
 
 	td->io_ops->data = sd;
 	return 0;
