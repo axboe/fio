@@ -78,6 +78,7 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 		f->file_map[idx] |= mask;
 		nr_blocks -= this_blocks;
 		blocks += this_blocks;
+		block += this_blocks;
 	}
 
 	if ((blocks * min_bs) < io_u->buflen)
