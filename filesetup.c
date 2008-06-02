@@ -72,7 +72,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 							f->real_file_size);
 	r = posix_fallocate(f->fd, 0, f->real_file_size);
 	if (r < 0)
-		td_verror(td, -r, "posix_fallocate");
+		log_err("fio: posix_fallocate fails: %s\n", strerror(-r));
 
 	b = malloc(td->o.max_bs[DDIR_WRITE]);
 	memset(b, 0, td->o.max_bs[DDIR_WRITE]);
