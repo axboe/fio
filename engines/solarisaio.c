@@ -53,7 +53,14 @@ static int fio_solarisaio_getevents(struct thread_data *td, unsigned int min,
 		}
 
 		p = aiowait(&tv);
-		if (p) {
+		if (p == (aio_result_t *) -1) {
+			int err = errno;
+
+			if (err == EINVAL)
+				break;
+			td_verror(td, err, "aiowait");
+			break;
+		} else if (p != NULL) {
 			io_u = container_of(p, struct io_u, resultp);
 
 			sd->aio_events[r++] = io_u;
