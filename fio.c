@@ -125,9 +125,6 @@ static void sig_int(int sig)
 	}
 }
 
-/*
- * We need to rearm on BSD/solaris. Switch this to sigaction in the future...
- */
 static void set_sig_handlers(void)
 {
 	struct sigaction act;
