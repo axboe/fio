@@ -16,6 +16,7 @@
 
 struct posixaio_data {
 	struct io_u **aio_events;
+	unsigned int queued;
 };
 
 static int fill_timespec(struct timespec *ts)
@@ -112,6 +113,7 @@ restart:
 		}
 
 		io_u->seen = 1;
+		pd->queued--;
 		pd->aio_events[r++] = io_u;
 
 		if (err == ECANCELED)
@@ -156,6 +158,7 @@ static struct io_u *fio_posixaio_event(struct thread_data *td, int event)
 static int fio_posixaio_queue(struct thread_data fio_unused *td,
 			      struct io_u *io_u)
 {
+	struct posixaio_data *pd = td->io_ops->data;
 	struct aiocb *aiocb = &io_u->aiocb;
 	int ret;
 
@@ -165,15 +168,27 @@ static int fio_posixaio_queue(struct thread_data fio_unused *td,
 		ret = aio_read(aiocb);
 	else if (io_u->ddir == DDIR_WRITE)
 		ret = aio_write(aiocb);
-	else
+	else {
+#ifdef FIO_HAVE_POSIXAIO_FSYNC
 		ret = aio_fsync(O_SYNC, aiocb);
+#else
+		if (pd->queued)
+			return FIO_Q_BUSY;
 
+		if (fsync(io_u->file->fd) < 0)
+			io_u->error = errno;
+
+		return FIO_Q_COMPLETED;
+#endif
+	}
+		
 	if (ret) {
 		io_u->error = errno;
 		td_verror(td, io_u->error, "xfer");
 		return FIO_Q_COMPLETED;
 	}
 
+	pd->queued++;
 	return FIO_Q_QUEUED;
 }
 
