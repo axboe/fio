@@ -37,6 +37,6 @@ static inline unsigned int arch_ffz(unsigned int bitmask)
 	__asm__("bsfl %1,%0" :"=r" (bitmask) :"r" (~bitmask));
 	return bitmask;
 }
-//#define ARCH_HAVE_FFZ
+#define ARCH_HAVE_FFZ
 
 #endif
