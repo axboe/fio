@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <assert.h>
+#include <fcntl.h>
 
 #include "../fio.h"
 
