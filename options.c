@@ -406,7 +406,7 @@ static int str_verify_pattern_cb(void *data, unsigned int *off)
 	struct thread_data *td = data;
 	unsigned int msb;
 
-	msb = fls(*off);
+	msb = __fls(*off);
 	if (msb <= 8)
 		td->o.verify_pattern_bytes = 1;
 	else if (msb <= 16)
