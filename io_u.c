@@ -57,8 +57,11 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 		 * If we have a mixed random workload, we may
 		 * encounter blocks we already did IO to.
 		 */
-		if ((td->o.ddir_nr == 1) && !random_map_free(f, block))
+		if ((td->o.ddir_nr == 1) && !random_map_free(f, block)) {
+			if (!blocks)
+				blocks = 1;
 			break;
+		}
 
 		idx = RAND_MAP_IDX(f, block);
 		bit = RAND_MAP_BIT(f, block);
