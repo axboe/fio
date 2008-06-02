@@ -9,6 +9,7 @@
 #undef FIO_HAVE_DISK_UTIL
 #undef FIO_HAVE_SGIO
 #undef FIO_HAVE_ODIRECT
+#define FIO_HAVE_FALLOCATE
 
 #define OS_MAP_ANON		(MAP_ANON)
 

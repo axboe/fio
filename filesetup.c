@@ -68,11 +68,13 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		goto err;
 	}
 
+#ifdef FIO_HAVE_FALLOCATE
 	dprint(FD_FILE, "fallocate file %s, size %llu\n", f->file_name,
 							f->real_file_size);
 	r = posix_fallocate(f->fd, 0, f->real_file_size);
 	if (r < 0)
 		log_err("fio: posix_fallocate fails: %s\n", strerror(-r));
+#endif
 
 	b = malloc(td->o.max_bs[DDIR_WRITE]);
 	memset(b, 0, td->o.max_bs[DDIR_WRITE]);
