@@ -12,7 +12,7 @@
 #include <limits.h>
 
 #include "mutex.h"
-#include "lib/ffz.h"
+#include "arch/arch.h"
 
 #define MP_SAFE			/* define to make thread safe */
 #define SMALLOC_REDZONE		/* define to detect memory corruption */
@@ -178,7 +178,7 @@ static int find_next_zero(int word, int start)
 {
 	assert(word != -1U);
 	word >>= (start + 1);
-	return __ffs(~word) + start + 1;
+	return ffz(word) + start + 1;
 }
 
 static int add_pool(struct pool *pool, unsigned int alloc_size)
