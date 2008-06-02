@@ -395,7 +395,7 @@ static void do_verify(struct thread_data *td)
 				 * zero read, fail
 				 */
 				if (!bytes) {
-					td_verror(td, ENODATA, "full resid");
+					td_verror(td, EIO, "full resid");
 					put_io_u(td, io_u);
 					break;
 				}
@@ -523,7 +523,7 @@ static void do_io(struct thread_data *td)
 				 * zero read, fail
 				 */
 				if (!bytes) {
-					td_verror(td, ENODATA, "full resid");
+					td_verror(td, EIO, "full resid");
 					put_io_u(td, io_u);
 					break;
 				}
@@ -600,7 +600,7 @@ sync_done:
 		if (check_min_rate(td, &comp_time)) {
 			if (exitall_on_terminate)
 				terminate_threads(td->groupid);
-			td_verror(td, ENODATA, "check_min_rate");
+			td_verror(td, EIO, "check_min_rate");
 			break;
 		}
 
