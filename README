@@ -50,12 +50,13 @@ Building
 --------
 
 Just type 'make' and 'make install'. If on FreeBSD, for now you have to
-specify the FreeBSD Makefile with -f, eg:
+specify the FreeBSD Makefile with -f and use gmake (not make), eg:
 
-$ make -f Makefile.Freebsd && make -f Makefile.FreeBSD install
+$ gmake -f Makefile.Freebsd && gmake -f Makefile.FreeBSD install
 
 Likewise with OpenSolaris, use the Makefile.solaris to compile there.
-This might change in the future if I opt for an autoconf type setup.
+The OpenSolaris make should work fine. This might change in the
+future if I opt for an autoconf type setup.
 
 If your compile fails with an error like this:
 

@@ -1,10 +1,12 @@
 CC	= gcc
-CFLAGS	= -Wall -O2 -g -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DFIO_INC_DEBUG
+DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
+OPTFLAGS= -O2 -g $(EXTFLAGS)
+CFLAGS	= -Wwrite-strings -Wall -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(OPTFLAGS) $(DEBUGFLAGS) -rdynamic
 PROGS	= fio
 SCRIPTS = fio_generate_plots
 OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o filesetup.o \
 	eta.o verify.o memory.o io_u.o parse.o mutex.o options.o \
-	rbtree.o fifo.o smalloc.o filehash.o
+	rbtree.o smalloc.o filehash.o
 
 OBJS += crc/crc7.o
 OBJS += crc/crc16.o
@@ -21,49 +23,38 @@ OBJS += engines/sync.o
 OBJS += engines/null.o
 OBJS += engines/net.o
 
+SOURCE = eta.c filehash.c filesetup.c fio.c gettime.c init.c ioengines.c \
+	 io_u.c log.c memory.c mutex.c options.c parse.c rbtree.c smalloc.c \
+	 stat.c parse.c crc/*.c engines/cpu.c engines/mmap.c \
+	 engines/posixaio.c engines/sync.c engines/null.c engines/net.c \
+	 *.h */*.h
+
+ifneq ($(findstring $(MAKEFLAGS),s),s)
+ifndef V
+	QUIET_CC	= @echo '   ' CC $@;
+	QUIET_DEP	= @echo '   ' DEP $@;
+endif
+endif
+
 INSTALL = install
 prefix = /usr/local
 bindir = $(prefix)/bin
 mandir = $(prefix)/man
 
+%.o: %.c
+	$(QUIET_CC)$(CC) -o $*.o -c $(CFLAGS) $<
 fio: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) -lpthread -lm
+	$(QUIET_CC)$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) $(EXTLIBS) -lpthread -lm
+
+depend:
+	$(QUIET_DEP)$(CC) -MM $(ALL_CFLAGS) $(SOURCE) 1> .depend
+
+$(PROGS): depend
 
 all: depend $(PROGS) $(SCRIPTS)
 
-crc/crc7.o: crc/crc7.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-crc/crc16.o: crc/crc16.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-crc/crc32.o: crc/crc32.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-crc/crc64.o: crc/crc64.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-crc/sha256.o: crc/sha256.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-crc/sha512.o: crc/sha512.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-crc/md5.o: crc/md5.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-
-engines/cpu.o: engines/cpu.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-engines/mmap.o: engines/mmap.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-engines/posixaio.o: engines/posixaio.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-engines/sync.o: engines/sync.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-engines/net.o: engines/net.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-engines/null.o: engines/null.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
-
 clean:
 	-rm -f .depend cscope.out $(OBJS) $(PROGS) core.* core
-
-depend:
-	@$(CC) -MM $(ALL_CFLAGS) *.c engines/*.c crc/*.c 1> .depend
 
 cscope:
 	@cscope -b
@@ -71,3 +62,9 @@ cscope:
 install: $(PROGS) $(SCRIPTS)
 	$(INSTALL) -m755 -d $(DESTDIR)$(bindir)
 	$(INSTALL) $(PROGS) $(SCRIPTS) $(DESTDIR)$(bindir)
+	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
+	$(INSTALL) -m 644 fio.1 $(DESTDIR)$(mandir)/man1
+
+ifneq ($(wildcard .depend),)
+include .depend
+endif
