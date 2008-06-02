@@ -557,6 +557,11 @@ static struct fio_option options[] = {
 			    .help = "POSIX asynchronous IO",
 			  },
 #endif
+#ifdef FIO_HAVE_SOLARISAIO
+			  { .ival = "solarisaio",
+			    .help = "Solaris native asynchronous IO",
+			  },
+#endif
 			  { .ival = "mmap",
 			    .help = "Memory mapped IO",
 			  },

@@ -20,6 +20,7 @@ OBJS += engines/posixaio.o
 OBJS += engines/sync.o
 OBJS += engines/null.o
 OBJS += engines/net.o
+OBJS += engines/solarisaio.o
 
 INSTALL = install
 prefix = /usr/local

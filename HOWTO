@@ -375,6 +375,8 @@ ioengine=str	Defines how the job issues io to the file. The following
 
 			posixaio glibc posix asynchronous io.
 
+			solarisaio Solaris native asynchronous io.
+
 			mmap	File is memory mapped and data copied
 				to/from using memcpy(3).
 

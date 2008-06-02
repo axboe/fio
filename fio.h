@@ -29,6 +29,10 @@
 #include <guasi.h>
 #endif
 
+#ifdef FIO_HAVE_SOLARISAIO
+#include <sys/asynch.h>
+#endif
+
 enum fio_ddir {
 	DDIR_READ = 0,
 	DDIR_WRITE,
@@ -126,6 +130,9 @@ struct io_u {
 #endif
 #ifdef FIO_HAVE_GUASI
 		guasi_req_t greq;
+#endif
+#ifdef FIO_HAVE_SOLARISAIO
+		aio_result_t resultp;
 #endif
 	};
 	struct timeval start_time;
