@@ -167,7 +167,8 @@ The job file parameters are:
 			across runs, if 'x' is 1.
 	size=x		Set file size to x bytes (x string can include k/m/g)
 	ioengine=x	'x' may be: aio/libaio/linuxaio for Linux aio,
-			posixaio for POSIX aio, sync for regular read/write io,
+			posixaio for POSIX aio, solarisaio for Solaris
+			native async IO, sync for regular read/write io,
 			psync for regular pread/pwrite io, vsync for regular
 			readv/writev (with queuing emulation) mmap for mmap'ed
 			io, syslet-rw for syslet driven read/write, splice for
