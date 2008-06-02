@@ -242,7 +242,7 @@ static int fio_syslet_init(struct thread_data *td)
 	 */
 	ring_nr = td->o.iodepth;
 	if (ring_nr & (ring_nr - 1))
-		ring_nr = 1 << fls(ring_nr);
+		ring_nr = 1 << __fls(ring_nr);
 
 	ring_size = sizeof(struct syslet_ring) +
 			ring_nr * sizeof(struct syslet_completion);
