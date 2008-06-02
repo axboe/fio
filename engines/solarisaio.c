@@ -16,6 +16,7 @@
 struct solarisaio_data {
 	struct io_u **aio_events;
 	unsigned int nr;
+	unsigned int max_depth;
 };
 
 static int fio_solarisaio_cancel(struct thread_data fio_unused *td,
@@ -96,7 +97,7 @@ static int fio_solarisaio_queue(struct thread_data fio_unused *td,
 		return FIO_Q_COMPLETED;
 	}
 
-	if (sd->nr == td->o.iodepth)
+	if (sd->nr == sd->max_depth)
 		return FIO_Q_BUSY;
 
 	off = io_u->offset;
@@ -129,10 +130,19 @@ static void fio_solarisaio_cleanup(struct thread_data *td)
 static int fio_solarisaio_init(struct thread_data *td)
 {
 	struct solarisaio_data *sd = malloc(sizeof(*sd));
+	unsigned int max_depth;
+
+	max_depth = td->o.iodepth;
+	if (max_depth > MAXASYNCHIO) {
+		max_depth = MAXASYNCHIO;
+		log_info("fio: lower depth to %d due to OS constraints\n",
+							max_depth);
+	}
 
 	memset(sd, 0, sizeof(*sd));
-	sd->aio_events = malloc(td->o.iodepth * sizeof(struct io_u *));
-	memset(sd->aio_events, 0, td->o.iodepth * sizeof(struct io_u *));
+	sd->aio_events = malloc(max_depth * sizeof(struct io_u *));
+	memset(sd->aio_events, 0, max_depth * sizeof(struct io_u *));
+	sd->max_depth = max_depth;
 
 	td->io_ops->data = sd;
 	return 0;
