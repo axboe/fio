@@ -43,14 +43,14 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 	unsigned int min_bs = td->o.rw_min_bs;
 	struct fio_file *f = io_u->file;
 	unsigned long long block;
-	unsigned int blocks;
-	unsigned int nr_blocks;
+	unsigned int blocks, nr_blocks;
 
 	block = (io_u->offset - f->file_offset) / (unsigned long long) min_bs;
-	blocks = 0;
 	nr_blocks = (io_u->buflen + min_bs - 1) / min_bs;
+	blocks = 0;
 
-	while (blocks < nr_blocks) {
+	while (nr_blocks) {
+		unsigned int this_blocks, mask;
 		unsigned int idx, bit;
 
 		/*
@@ -65,18 +65,27 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 
 		fio_assert(td, idx < f->num_maps);
 
-		f->file_map[idx] |= (1 << bit);
-		block++;
-		blocks++;
+		this_blocks = nr_blocks;
+		if (this_blocks + bit > BLOCKS_PER_MAP)
+			this_blocks = BLOCKS_PER_MAP - bit;
+
+		if (this_blocks == BLOCKS_PER_MAP)
+			mask = -1U;
+		else
+			mask = ((1U << this_blocks) - 1) << bit;
+
+		fio_assert(td, !(f->file_map[idx] & mask));
+		f->file_map[idx] |= mask;
+		nr_blocks -= this_blocks;
+		blocks += this_blocks;
 	}
 
 	if ((blocks * min_bs) < io_u->buflen)
 		io_u->buflen = blocks * min_bs;
 }
 
-static inline unsigned long long last_block(struct thread_data *td,
-					    struct fio_file *f,
-					    enum fio_ddir ddir)
+static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
+				     enum fio_ddir ddir)
 {
 	unsigned long long max_blocks;
 	unsigned long long max_size;
