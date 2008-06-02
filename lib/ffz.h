@@ -3,7 +3,7 @@
 
 static inline int __ffs(int word)
 {
-	int r = 1;
+	int r = 0;
 
 	if (!(word & 0xffff)) {
 		word >>= 16;
@@ -31,7 +31,7 @@ static inline int __ffs(int word)
 
 static inline int ffz(unsigned int bitmask)
 {
-	return ffs(~bitmask) - 1;
+	return __ffs(~bitmask);
 }
 
 #endif
