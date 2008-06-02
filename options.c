@@ -12,7 +12,7 @@
 
 #include "fio.h"
 #include "parse.h"
-#include "fls.h"
+#include "lib/fls.h"
 
 #define td_var_offset(var)	((size_t) &((struct thread_options *)0)->var)
 

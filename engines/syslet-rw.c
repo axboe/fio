@@ -14,7 +14,7 @@
 #include <asm/unistd.h>
 
 #include "../fio.h"
-#include "../fls.h"
+#include "../lib/fls.h"
 
 #ifdef FIO_HAVE_SYSLET
 
