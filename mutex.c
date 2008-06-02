@@ -47,11 +47,11 @@ struct fio_mutex *fio_mutex_init(int value)
 	mutex->mutex_fd = fd;
 	mutex->value = value;
 
-	if (pthread_mutexattr_init(&attr)) {
+	if (pthread_mutexattr_init(&attr) < 0) {
 		perror("pthread_mutexattr_init");
 		goto err;
 	}
-	if (pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED)) {
+	if (pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) < 0) {
 		perror("pthread_mutexattr_setpshared");
 		goto err;
 	}
@@ -60,7 +60,7 @@ struct fio_mutex *fio_mutex_init(int value)
 	pthread_condattr_setpshared(&cond, PTHREAD_PROCESS_SHARED);
 	pthread_cond_init(&mutex->cond, &cond);
 
-	if (pthread_mutex_init(&mutex->lock, &attr)) {
+	if (pthread_mutex_init(&mutex->lock, &attr) < 0) {
 		perror("pthread_mutex_init");
 		goto err;
 	}
