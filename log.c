@@ -6,14 +6,14 @@
 #include <stdlib.h>
 #include <libgen.h>
 #include <assert.h>
-#include "list.h"
+#include "flist.h"
 #include "fio.h"
 
 static const char iolog_ver2[] = "fio version 2 iolog";
 
 void queue_io_piece(struct thread_data *td, struct io_piece *ipo)
 {
-	list_add_tail(&ipo->list, &td->io_log_list);
+	flist_add_tail(&ipo->list, &td->io_log_list);
 	td->total_io_size += ipo->len;
 }
 
@@ -109,11 +109,11 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
 
-	while (!list_empty(&td->io_log_list)) {
+	while (!flist_empty(&td->io_log_list)) {
 		int ret;
 
-		ipo = list_entry(td->io_log_list.next, struct io_piece, list);
-		list_del(&ipo->list);
+		ipo = flist_entry(td->io_log_list.next, struct io_piece, list);
+		flist_del(&ipo->list);
 
 		ret = ipo_special(td, ipo);
 		if (ret < 0) {
@@ -155,9 +155,9 @@ void prune_io_piece_log(struct thread_data *td)
 		free(ipo);
 	}
 
-	while (!list_empty(&td->io_hist_list)) {
-		ipo = list_entry(td->io_hist_list.next, struct io_piece, list);
-		list_del(&ipo->list);
+	while (!flist_empty(&td->io_hist_list)) {
+		ipo = flist_entry(td->io_hist_list.next, struct io_piece, list);
+		flist_del(&ipo->list);
 		free(ipo);
 	}
 }
@@ -185,8 +185,8 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	 * wrote it out is the fastest.
 	 */
 	if (!td_random(td) || !td->o.overwrite) {
-		INIT_LIST_HEAD(&ipo->list);
-		list_add_tail(&ipo->list, &td->io_hist_list);
+		INIT_FLIST_HEAD(&ipo->list);
+		flist_add_tail(&ipo->list, &td->io_hist_list);
 		return;
 	}
 
@@ -307,7 +307,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 		 */
 		ipo = malloc(sizeof(*ipo));
 		memset(ipo, 0, sizeof(*ipo));
-		INIT_LIST_HEAD(&ipo->list);
+		INIT_FLIST_HEAD(&ipo->list);
 		ipo->offset = offset;
 		ipo->len = bytes;
 		ipo->ddir = rw;

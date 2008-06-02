@@ -18,7 +18,7 @@
 
 #include "fio.h"
 
-static LIST_HEAD(engine_list);
+static FLIST_HEAD(engine_list);
 
 static int check_engine_ops(struct ioengine_ops *ops)
 {
@@ -58,24 +58,24 @@ static int check_engine_ops(struct ioengine_ops *ops)
 void unregister_ioengine(struct ioengine_ops *ops)
 {
 	dprint(FD_IO, "ioengine %s unregistered\n", ops->name);
-	list_del(&ops->list);
-	INIT_LIST_HEAD(&ops->list);
+	flist_del(&ops->list);
+	INIT_FLIST_HEAD(&ops->list);
 }
 
 void register_ioengine(struct ioengine_ops *ops)
 {
 	dprint(FD_IO, "ioengine %s registered\n", ops->name);
-	INIT_LIST_HEAD(&ops->list);
-	list_add_tail(&ops->list, &engine_list);
+	INIT_FLIST_HEAD(&ops->list);
+	flist_add_tail(&ops->list, &engine_list);
 }
 
 static struct ioengine_ops *find_ioengine(const char *name)
 {
 	struct ioengine_ops *ops;
-	struct list_head *entry;
+	struct flist_head *entry;
 
-	list_for_each(entry, &engine_list) {
-		ops = list_entry(entry, struct ioengine_ops, list);
+	flist_for_each(entry, &engine_list) {
+		ops = flist_entry(entry, struct ioengine_ops, list);
 		if (!strcmp(name, ops->name))
 			return ops;
 	}

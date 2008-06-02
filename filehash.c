@@ -2,15 +2,15 @@
 #include <assert.h>
 
 #include "fio.h"
-#include "list.h"
+#include "flist.h"
 #include "crc/crc16.h"
 
 #define HASH_BUCKETS	512
 #define HASH_MASK	(HASH_BUCKETS - 1)
 
-unsigned int file_hash_size = HASH_BUCKETS * sizeof(struct list_head);
+unsigned int file_hash_size = HASH_BUCKETS * sizeof(struct flist_head);
 
-static struct list_head *file_hash;
+static struct flist_head *file_hash;
 static struct fio_mutex *hash_lock;
 
 static unsigned short hash(const char *name)
@@ -23,8 +23,8 @@ void remove_file_hash(struct fio_file *f)
 	fio_mutex_down(hash_lock);
 
 	if (f->flags & FIO_FILE_HASHED) {
-		assert(!list_empty(&f->hash_list));
-		list_del_init(&f->hash_list);
+		assert(!flist_empty(&f->hash_list));
+		flist_del_init(&f->hash_list);
 		f->flags &= ~FIO_FILE_HASHED;
 	}
 
@@ -33,11 +33,11 @@ void remove_file_hash(struct fio_file *f)
 
 static struct fio_file *__lookup_file_hash(const char *name)
 {
-	struct list_head *bucket = &file_hash[hash(name)];
-	struct list_head *n;
+	struct flist_head *bucket = &file_hash[hash(name)];
+	struct flist_head *n;
 
-	list_for_each(n, bucket) {
-		struct fio_file *f = list_entry(n, struct fio_file, hash_list);
+	flist_for_each(n, bucket) {
+		struct fio_file *f = flist_entry(n, struct fio_file, hash_list);
 
 		if (!strcmp(f->file_name, name)) {
 			assert(f->fd != -1);
@@ -65,14 +65,14 @@ struct fio_file *add_file_hash(struct fio_file *f)
 	if (f->flags & FIO_FILE_HASHED)
 		return NULL;
 
-	INIT_LIST_HEAD(&f->hash_list);
+	INIT_FLIST_HEAD(&f->hash_list);
 
 	fio_mutex_down(hash_lock);
 
 	alias = __lookup_file_hash(f->file_name);
 	if (!alias) {
 		f->flags |= FIO_FILE_HASHED;
-		list_add_tail(&f->hash_list, &file_hash[hash(f->file_name)]);
+		flist_add_tail(&f->hash_list, &file_hash[hash(f->file_name)]);
 	}
 
 	fio_mutex_up(hash_lock);
@@ -85,7 +85,7 @@ void file_hash_exit(void)
 
 	fio_mutex_down(hash_lock);
 	for (i = 0; i < HASH_BUCKETS; i++)
-		has_entries += !list_empty(&file_hash[i]);
+		has_entries += !flist_empty(&file_hash[i]);
 	fio_mutex_up(hash_lock);
 
 	if (has_entries)
@@ -102,7 +102,7 @@ void file_hash_init(void *ptr)
 
 	file_hash = ptr;
 	for (i = 0; i < HASH_BUCKETS; i++)
-		INIT_LIST_HEAD(&file_hash[i]);
+		INIT_FLIST_HEAD(&file_hash[i]);
 
 	hash_lock = fio_mutex_init(1);
 }

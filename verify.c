@@ -639,9 +639,9 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 
 		ipo = rb_entry(n, struct io_piece, rb_node);
 		rb_erase(n, &td->io_hist_tree);
-	} else if (!list_empty(&td->io_hist_list)) {
-		ipo = list_entry(td->io_hist_list.next, struct io_piece, list);
-		list_del(&ipo->list);
+	} else if (!flist_empty(&td->io_hist_list)) {
+		ipo = flist_entry(td->io_hist_list.next, struct io_piece, list);
+		flist_del(&ipo->list);
 	}
 
 	if (ipo) {

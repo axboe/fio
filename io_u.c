@@ -354,8 +354,8 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 		put_file_log(td, io_u->file);
 
 	io_u->file = NULL;
-	list_del(&io_u->list);
-	list_add(&io_u->list, &td->io_u_freelist);
+	flist_del(&io_u->list);
+	flist_add(&io_u->list, &td->io_u_freelist);
 	td->cur_depth--;
 }
 
@@ -371,8 +371,8 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 
 	__io_u->flags &= ~IO_U_F_FLIGHT;
 
-	list_del(&__io_u->list);
-	list_add_tail(&__io_u->list, &td->io_u_requeues);
+	flist_del(&__io_u->list);
+	flist_add_tail(&__io_u->list, &td->io_u_requeues);
 	td->cur_depth--;
 	*io_u = NULL;
 }
@@ -764,10 +764,10 @@ struct io_u *__get_io_u(struct thread_data *td)
 {
 	struct io_u *io_u = NULL;
 
-	if (!list_empty(&td->io_u_requeues))
-		io_u = list_entry(td->io_u_requeues.next, struct io_u, list);
+	if (!flist_empty(&td->io_u_requeues))
+		io_u = flist_entry(td->io_u_requeues.next, struct io_u, list);
 	else if (!queue_full(td)) {
-		io_u = list_entry(td->io_u_freelist.next, struct io_u, list);
+		io_u = flist_entry(td->io_u_freelist.next, struct io_u, list);
 
 		io_u->buflen = 0;
 		io_u->resid = 0;
@@ -780,8 +780,8 @@ struct io_u *__get_io_u(struct thread_data *td)
 		io_u->flags &= ~IO_U_F_FREE;
 
 		io_u->error = 0;
-		list_del(&io_u->list);
-		list_add(&io_u->list, &td->io_u_busylist);
+		flist_del(&io_u->list);
+		flist_add(&io_u->list, &td->io_u_busylist);
 		td->cur_depth++;
 	}
 
@@ -1060,7 +1060,7 @@ static void io_u_timeout_handler(int fio_unused sig)
 {
 	struct thread_data *td, *__td;
 	pid_t pid = getpid();
-	struct list_head *entry;
+	struct flist_head *entry;
 	struct io_u *io_u;
 	int i;
 
@@ -1089,8 +1089,8 @@ static void io_u_timeout_handler(int fio_unused sig)
 
 	log_err("fio: io_u timeout: job=%s, pid=%d\n", td->o.name, td->pid);
 
-	list_for_each(entry, &td->io_u_busylist) {
-		io_u = list_entry(entry, struct io_u, list);
+	flist_for_each(entry, &td->io_u_busylist) {
+		io_u = flist_entry(entry, struct io_u, list);
 
 		io_u_dump(io_u);
 	}

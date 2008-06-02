@@ -11,7 +11,7 @@
 
 static int last_majdev, last_mindev;
 
-static struct list_head disk_list = LIST_HEAD_INIT(disk_list);
+static struct flist_head disk_list = FLIST_HEAD_INIT(disk_list);
 
 static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 {
@@ -76,24 +76,24 @@ static void update_io_tick_disk(struct disk_util *du)
 
 void update_io_ticks(void)
 {
-	struct list_head *entry;
+	struct flist_head *entry;
 	struct disk_util *du;
 
 	dprint(FD_DISKUTIL, "update io ticks\n");
 
-	list_for_each(entry, &disk_list) {
-		du = list_entry(entry, struct disk_util, list);
+	flist_for_each(entry, &disk_list) {
+		du = flist_entry(entry, struct disk_util, list);
 		update_io_tick_disk(du);
 	}
 }
 
 static struct disk_util *disk_util_exists(int major, int minor)
 {
-	struct list_head *entry;
+	struct flist_head *entry;
 	struct disk_util *du;
 
-	list_for_each(entry, &disk_list) {
-		du = list_entry(entry, struct disk_util, list);
+	flist_for_each(entry, &disk_list) {
+		du = flist_entry(entry, struct disk_util, list);
 
 		if (major == du->major && minor == du->minor)
 			return du;
@@ -105,21 +105,21 @@ static struct disk_util *disk_util_exists(int major, int minor)
 static void disk_util_add(int majdev, int mindev, char *path)
 {
 	struct disk_util *du, *__du;
-	struct list_head *entry;
+	struct flist_head *entry;
 
 	dprint(FD_DISKUTIL, "add maj/min %d/%d: %s\n", majdev, mindev, path);
 
 	du = malloc(sizeof(*du));
 	memset(du, 0, sizeof(*du));
-	INIT_LIST_HEAD(&du->list);
+	INIT_FLIST_HEAD(&du->list);
 	sprintf(du->path, "%s/stat", path);
 	du->name = strdup(basename(path));
 	du->sysfs_root = path;
 	du->major = majdev;
 	du->minor = mindev;
 
-	list_for_each(entry, &disk_list) {
-		__du = list_entry(entry, struct disk_util, list);
+	flist_for_each(entry, &disk_list) {
+		__du = flist_entry(entry, struct disk_util, list);
 
 		dprint(FD_DISKUTIL, "found %s in list\n", __du->name);
 
@@ -135,7 +135,7 @@ static void disk_util_add(int majdev, int mindev, char *path)
 	fio_gettime(&du->time, NULL);
 	get_io_ticks(du, &du->last_dus);
 
-	list_add_tail(&du->list, &disk_list);
+	flist_add_tail(&du->list, &disk_list);
 }
 
 static int check_dev_match(int majdev, int mindev, char *path)
@@ -319,17 +319,17 @@ void init_disk_util(struct thread_data *td)
 void show_disk_util(void)
 {
 	struct disk_util_stat *dus;
-	struct list_head *entry, *next;
+	struct flist_head *entry, *next;
 	struct disk_util *du;
 	double util;
 
-	if (list_empty(&disk_list))
+	if (flist_empty(&disk_list))
 		return;
 
 	log_info("\nDisk stats (read/write):\n");
 
-	list_for_each(entry, &disk_list) {
-		du = list_entry(entry, struct disk_util, list);
+	flist_for_each(entry, &disk_list) {
+		du = flist_entry(entry, struct disk_util, list);
 		dus = &du->dus;
 
 		util = (double) 100 * du->dus.io_ticks / (double) du->msec;
@@ -347,9 +347,9 @@ void show_disk_util(void)
 	/*
 	 * now free the list
 	 */
-	list_for_each_safe(entry, next, &disk_list) {
-		list_del(entry);
-		du = list_entry(entry, struct disk_util, list);
+	flist_for_each_safe(entry, next, &disk_list) {
+		flist_del(entry);
+		du = flist_entry(entry, struct disk_util, list);
 		free(du->name);
 		free(du);
 	}

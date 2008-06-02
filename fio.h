@@ -16,7 +16,7 @@
 #include <assert.h>
 
 #include "compiler/compiler.h"
-#include "list.h"
+#include "flist.h"
 #include "fifo.h"
 #include "rbtree.h"
 #include "arch/arch.h"
@@ -92,7 +92,7 @@ struct io_log {
 struct io_piece {
 	union {
 		struct rb_node rb_node;
-		struct list_head list;
+		struct flist_head list;
 	};
 	union {
 		int fileno;
@@ -170,7 +170,7 @@ struct io_u {
 
 	struct fio_file *file;
 
-	struct list_head list;
+	struct flist_head list;
 
 	/*
 	 * Callback for io completion
@@ -295,7 +295,7 @@ enum fio_file_flags {
  * this structure holds state information for a single file.
  */
 struct fio_file {
-	struct list_head hash_list;
+	struct flist_head hash_list;
 	enum fio_filetype filetype;
 
 	/*
@@ -572,9 +572,9 @@ struct thread_data {
 	 */
 	unsigned int cur_depth;
 	unsigned int io_u_queued;
-	struct list_head io_u_freelist;
-	struct list_head io_u_busylist;
-	struct list_head io_u_requeues;
+	struct flist_head io_u_freelist;
+	struct flist_head io_u_busylist;
+	struct flist_head io_u_requeues;
 
 	/*
 	 * Rate state
@@ -619,12 +619,12 @@ struct thread_data {
 	 * if we are overwriting. Otherwise just use a fifo.
 	 */
 	struct rb_root io_hist_tree;
-	struct list_head io_hist_list;
+	struct flist_head io_hist_list;
 
 	/*
 	 * For IO replaying
 	 */
-	struct list_head io_log_list;
+	struct flist_head io_log_list;
 
 	/*
 	 * timeout handling
@@ -746,7 +746,7 @@ struct disk_util_stat {
  * Per-device disk util management
  */
 struct disk_util {
-	struct list_head list;
+	struct flist_head list;
 
 	char *name;
 	char *sysfs_root;
@@ -904,7 +904,7 @@ extern void free_io_mem(struct thread_data *);
 /*
  * io unit handling
  */
-#define queue_full(td)	list_empty(&(td)->io_u_freelist)
+#define queue_full(td)	flist_empty(&(td)->io_u_freelist)
 extern struct io_u *__get_io_u(struct thread_data *);
 extern struct io_u *get_io_u(struct thread_data *);
 extern void put_io_u(struct thread_data *, struct io_u *);
@@ -941,7 +941,7 @@ extern int load_blktrace(struct thread_data *, const char *);
 #endif
 
 struct ioengine_ops {
-	struct list_head list;
+	struct flist_head list;
 	char name[16];
 	int version;
 	int flags;

@@ -243,7 +243,7 @@ static inline int runtime_exceeded(struct thread_data *td, struct timeval *t)
  */
 static void cleanup_pending_aio(struct thread_data *td)
 {
-	struct list_head *entry, *n;
+	struct flist_head *entry, *n;
 	struct io_u *io_u;
 	int r;
 
@@ -258,8 +258,8 @@ static void cleanup_pending_aio(struct thread_data *td)
 	 * now cancel remaining active events
 	 */
 	if (td->io_ops->cancel) {
-		list_for_each_safe(entry, n, &td->io_u_busylist) {
-			io_u = list_entry(entry, struct io_u, list);
+		flist_for_each_safe(entry, n, &td->io_u_busylist) {
+			io_u = flist_entry(entry, struct io_u, list);
 
 			/*
 			 * if the io_u isn't in flight, then that generally
@@ -653,13 +653,13 @@ sync_done:
 
 static void cleanup_io_u(struct thread_data *td)
 {
-	struct list_head *entry, *n;
+	struct flist_head *entry, *n;
 	struct io_u *io_u;
 
-	list_for_each_safe(entry, n, &td->io_u_freelist) {
-		io_u = list_entry(entry, struct io_u, list);
+	flist_for_each_safe(entry, n, &td->io_u_freelist) {
+		io_u = flist_entry(entry, struct io_u, list);
 
-		list_del(&io_u->list);
+		flist_del(&io_u->list);
 		free(io_u);
 	}
 
@@ -703,7 +703,7 @@ static int init_io_u(struct thread_data *td)
 			return 1;
 		io_u = malloc(sizeof(*io_u));
 		memset(io_u, 0, sizeof(*io_u));
-		INIT_LIST_HEAD(&io_u->list);
+		INIT_FLIST_HEAD(&io_u->list);
 
 		if (!(td->io_ops->flags & FIO_NOIO)) {
 			io_u->buf = p + max_bs * i;
@@ -714,7 +714,7 @@ static int init_io_u(struct thread_data *td)
 
 		io_u->index = i;
 		io_u->flags = IO_U_F_FREE;
-		list_add(&io_u->list, &td->io_u_freelist);
+		flist_add(&io_u->list, &td->io_u_freelist);
 	}
 
 	io_u_init_timeout();
@@ -850,11 +850,11 @@ static void *thread_main(void *data)
 
 	dprint(FD_PROCESS, "jobs pid=%d started\n", (int) td->pid);
 
-	INIT_LIST_HEAD(&td->io_u_freelist);
-	INIT_LIST_HEAD(&td->io_u_busylist);
-	INIT_LIST_HEAD(&td->io_u_requeues);
-	INIT_LIST_HEAD(&td->io_log_list);
-	INIT_LIST_HEAD(&td->io_hist_list);
+	INIT_FLIST_HEAD(&td->io_u_freelist);
+	INIT_FLIST_HEAD(&td->io_u_busylist);
+	INIT_FLIST_HEAD(&td->io_u_requeues);
+	INIT_FLIST_HEAD(&td->io_log_list);
+	INIT_FLIST_HEAD(&td->io_hist_list);
 	td->io_hist_tree = RB_ROOT;
 
 	td_set_runstate(td, TD_INITIALIZED);

@@ -16,11 +16,11 @@ static int clock_gettime_works;
 #define HASH_BITS	8
 #define HASH_SIZE	(1 << HASH_BITS)
 
-static struct list_head hash[HASH_SIZE];
+static struct flist_head hash[HASH_SIZE];
 static int gtod_inited;
 
 struct gtod_log {
-	struct list_head list;
+	struct flist_head list;
 	void *caller;
 	unsigned long calls;
 };
@@ -28,10 +28,11 @@ struct gtod_log {
 static struct gtod_log *find_hash(void *caller)
 {
 	unsigned long h = hash_ptr(caller, HASH_BITS);
-	struct list_head *entry;
+	struct flist_head *entry;
 
-	list_for_each(entry, &hash[h]) {
-		struct gtod_log *log = list_entry(entry, struct gtod_log, list);
+	flist_for_each(entry, &hash[h]) {
+		struct gtod_log *log = flist_entry(entry, struct gtod_log,
+									list);
 
 		if (log->caller == caller)
 			return log;
@@ -48,12 +49,12 @@ static struct gtod_log *find_log(void *caller)
 		unsigned long h;
 
 		log = malloc(sizeof(*log));
-		INIT_LIST_HEAD(&log->list);
+		INIT_FLIST_HEAD(&log->list);
 		log->caller = caller;
 		log->calls = 0;
 
 		h = hash_ptr(caller, HASH_BITS);
-		list_add_tail(&log->list, &hash[h]);
+		flist_add_tail(&log->list, &hash[h]);
 	}
 
 	return log;
@@ -74,11 +75,11 @@ static void fio_exit fio_dump_gtod(void)
 	int i;
 
 	for (i = 0; i < HASH_SIZE; i++) {
-		struct list_head *entry;
+		struct flist_head *entry;
 		struct gtod_log *log;
 
-		list_for_each(entry, &hash[i]) {
-			log = list_entry(entry, struct gtod_log, list);
+		flist_for_each(entry, &hash[i]) {
+			log = flist_entry(entry, struct gtod_log, list);
 
 			printf("function %p, calls %lu\n", log->caller,
 								log->calls);
@@ -94,7 +95,7 @@ static void fio_init gtod_init(void)
 	int i;
 
 	for (i = 0; i < HASH_SIZE; i++)
-		INIT_LIST_HEAD(&hash[i]);
+		INIT_FLIST_HEAD(&hash[i]);
 
 	gtod_inited = 1;
 }
