@@ -26,12 +26,38 @@ prefix = /usr/local
 bindir = $(prefix)/bin
 mandir = $(prefix)/man
 
-%.o: %.c
-	$(CC) -o $*.o -c $(CFLAGS) $<
 fio: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) -lpthread -lm -ldl -lrt
+	$(CC) $(CFLAGS) -o $@ $(OBJS) -lpthread -lm
 
 all: depend $(PROGS) $(SCRIPTS)
+
+crc/crc7.o: crc/crc7.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+crc/crc16.o: crc/crc16.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+crc/crc32.o: crc/crc32.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+crc/crc64.o: crc/crc64.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+crc/sha256.o: crc/sha256.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+crc/sha512.o: crc/sha512.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+crc/md5.o: crc/md5.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+
+engines/cpu.o: engines/cpu.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+engines/mmap.o: engines/mmap.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+engines/posixaio.o: engines/posixaio.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+engines/sync.o: engines/sync.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+engines/net.o: engines/net.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
+engines/null.o: engines/null.c
+	$(CC) -o $*.o -c $(CFLAGS) $<
 
 clean:
 	-rm -f *.o .depend cscope.out $(PROGS) engines/*.o crc/*.o lib/*.o core.* core
