@@ -319,8 +319,10 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 			max_bytes = td->this_io_bytes[ddir];
 			if (max_bytes >=
 			    (td->o.size * td->o.rwmix[ddir] / 100)) {
-				if (!td->rw_end_set[ddir])
+				if (!td->rw_end_set[ddir]) {
 					td->rw_end_set[ddir] = 1;
+					fio_gettime(&td->rw_end[ddir], NULL);
+				}
 
 				ddir ^= 1;
 			}
