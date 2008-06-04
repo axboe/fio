@@ -74,11 +74,6 @@ static void wait_for_event(struct timeval *tv)
 	sd->nr--;
 }
 
-static void fio_solarisaio_sigio(int sig)
-{
-	wait_for_event(NULL);
-}
-
 static int fio_solarisaio_getevents(struct thread_data *td, unsigned int min,
 				    unsigned int max, struct timespec *t)
 {
@@ -164,17 +159,22 @@ static void fio_solarisaio_cleanup(struct thread_data *td)
 /*
  * Set USE_SIGNAL_COMPLETIONS to use SIGIO as completion events.
  */
+#ifdef USE_SIGNAL_COMPLETIONS
+static void fio_solarisaio_sigio(int sig)
+{
+	wait_for_event(NULL);
+}
+
 static void fio_solarisaio_init_sigio(void)
 {
-#ifdef USE_SIGNAL_COMPLETIONS
 	struct sigaction act;
 
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = fio_solarisaio_sigio;
 	act.sa_flags = SA_RESTART;
 	sigaction(SIGIO, &act, NULL);
-#endif
 }
+#endif
 
 static int fio_solarisaio_init(struct thread_data *td)
 {
@@ -193,7 +193,9 @@ static int fio_solarisaio_init(struct thread_data *td)
 	memset(sd->aio_events, 0, max_depth * sizeof(struct io_u *));
 	sd->max_depth = max_depth;
 
+#ifdef USE_SIGNAL_COMPLETIONS
 	fio_solarisaio_init_sigio();
+#endif
 
 	td->io_ops->data = sd;
 	return 0;
