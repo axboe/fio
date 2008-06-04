@@ -20,6 +20,7 @@
 
 #define nop		asm volatile ("hint @pause" ::: "memory");
 #define read_barrier()	asm volatile ("mf" ::: "memory")
+#define writebarrier()	asm volatile ("mf" ::: "memory")
 
 #define ia64_popcnt(x)							\
 ({									\

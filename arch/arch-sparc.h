@@ -21,5 +21,6 @@
 #define nop	do { } while (0)
 
 #define read_barrier()	__asm__ __volatile__ ("" : : : "memory")
+#define write_barrier()	__asm__ __volatile__ ("" : : : "memory")
 
 #endif

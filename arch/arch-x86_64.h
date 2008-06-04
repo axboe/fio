@@ -30,7 +30,8 @@
 #define FIO_HAVE_SYSLET
 
 #define nop		__asm__ __volatile__("rep;nop": : :"memory")
-#define read_barrier()	asm volatile("lfence":::"memory")
+#define read_barrier()	__asm__ __volatile__("lfence":::"memory")
+#define write_barrier()	__asm__ __volatile__("sfence":::"memory")
 
 static inline unsigned int arch_ffz(unsigned int bitmask)
 {

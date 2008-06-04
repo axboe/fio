@@ -69,6 +69,7 @@ static void wait_for_event(struct timeval *tv)
 	 * the ->aio_pending store is seen after the ->aio_events store
 	 */
 	sd->aio_events[sd->aio_pending] = io_u;
+	write_barrier();
 	sd->aio_pending++;
 	sd->nr--;
 }
@@ -97,10 +98,10 @@ static int fio_solarisaio_getevents(struct thread_data *td, unsigned int min,
 		wait_for_event(&tv);
 
 	/*
-	 * Needs locking here for SIGIO
+	 * should be OK without locking, as int operations should be atomic
 	 */
 	ret = sd->aio_pending;
-	sd->aio_pending = 0;
+	sd->aio_pending -= ret;
 	return ret;
 }
 
@@ -161,8 +162,7 @@ static void fio_solarisaio_cleanup(struct thread_data *td)
 }
 
 /*
- * Set USE_SIGNAL_COMPLETIONS to use SIGIO as completion events. Needs
- * locking around ->aio_pending and ->aio_events, see comment
+ * Set USE_SIGNAL_COMPLETIONS to use SIGIO as completion events.
  */
 static void fio_solarisaio_init_sigio(void)
 {

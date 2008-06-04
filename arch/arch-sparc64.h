@@ -27,7 +27,7 @@
 					: : : "memory"); \
 	} while (0)
 
-#define read_barrier()	\
-	membar_safe("#LoadLoad")
+#define read_barrier()		membar_safe("#LoadLoad")
+#define write_barrier()		membar_safe("#StoreStore")
 
 #endif

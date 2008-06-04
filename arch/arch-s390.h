@@ -14,5 +14,6 @@
 
 #define nop		asm volatile ("diag 0,0,68" : : : "memory")
 #define read_barrier()	asm volatile("bcr 15,0" : : : "memory")
+#define write_barrier()	asm volatile("bcr 15,0" : : : "memory")
 
 #endif

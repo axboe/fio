@@ -21,12 +21,12 @@
 #define nop	do { } while (0)
 
 #ifdef __powerpc64__
-#define read_barrier()	\
-	__asm__ __volatile__ ("lwsync" : : : "memory")
+#define read_barrier()	__asm__ __volatile__ ("lwsync" : : : "memory")
 #else
-#define read_barrier()	\
-	__asm__ __volatile__ ("sync" : : : "memory")
+#define read_barrier()	__asm__ __volatile__ ("sync" : : : "memory")
 #endif
+
+#define write_barrier()	__asm__ __volatile__ ("sync" : : : "memory")
 
 static inline int __ilog2(unsigned long bitmask)
 {
