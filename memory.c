@@ -45,7 +45,7 @@ int fio_pin_memory(void)
 	}
 
 	pinned_mem = mmap(NULL, mlock_size, PROT_READ | PROT_WRITE,
-				MAP_PRIVATE | OS_MAP_ANON, 0, 0);
+				MAP_PRIVATE | OS_MAP_ANON, -1, 0);
 	if (pinned_mem == MAP_FAILED) {
 		perror("malloc locked mem");
 		pinned_mem = NULL;
@@ -106,7 +106,7 @@ static int alloc_mem_mmap(struct thread_data *td)
 {
 	int flags = MAP_PRIVATE;
 
-	td->mmapfd = 0;
+	td->mmapfd = 1;
 
 	if (td->mmapfile) {
 		td->mmapfd = open(td->mmapfile, O_RDWR|O_CREAT, 0644);
