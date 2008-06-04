@@ -68,6 +68,10 @@
 #define FIO_O_NOATIME			0
 #endif
 
+#ifndef OS_RAND_MAX
+#define OS_RAND_MAX			RAND_MAX
+#endif
+
 #ifndef FIO_HAVE_RAWBIND
 #define fio_lookup_raw(dev, majdev, mindev)	1
 #endif

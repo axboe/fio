@@ -9,7 +9,8 @@
 #define FIO_HAVE_FALLOCATE
 #define FIO_HAVE_POSIXAIO_FSYNC
 
-#define OS_MAP_ANON		(MAP_ANON)
+#define OS_MAP_ANON		MAP_ANON
+#define OS_RAND_MAX		2147483648UL
 
 struct solaris_rand_seed {
 	unsigned short r[3];

@@ -6,7 +6,7 @@
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_ODIRECT
 
-#define OS_MAP_ANON		(MAP_ANON)
+#define OS_MAP_ANON		MAP_ANON
 
 typedef unsigned long os_cpu_mask_t;
 typedef unsigned int os_random_state_t;

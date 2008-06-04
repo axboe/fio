@@ -121,12 +121,12 @@ err:
 
 static unsigned long long get_rand_file_size(struct thread_data *td)
 {
-	unsigned long long ret, size_d;
+	unsigned long long ret, sized;
 	long r;
 
 	r = os_random_long(&td->file_size_state);
-	size_d = td->o.file_size_high - td->o.file_size_low;
-	ret = (unsigned long long) ((double) size_d * (r / (RAND_MAX + 1.0)));
+	sized = td->o.file_size_high - td->o.file_size_low;
+	ret = (unsigned long long) ((double) sized * (r / (OS_RAND_MAX + 1.0)));
 	ret += td->o.file_size_low;
 	ret -= (ret % td->o.rw_min_bs);
 	return ret;
