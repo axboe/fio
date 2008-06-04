@@ -329,16 +329,19 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
+	fio_file_reset(f);
+	f->flags |= FIO_FILE_OPEN;
+	f->flags &= ~FIO_FILE_CLOSING;
+
+	td->nr_open_files++;
+	get_file(f);
+
 	if (f->filetype == FIO_TYPE_PIPE) {
 		if (td_random(td)) {
 			log_err("fio: can't seek on pipes (no random io)\n");
 			goto err;
 		}
 	}
-
-	fio_file_reset(f);
-	f->flags |= FIO_FILE_OPEN;
-	f->flags &= ~FIO_FILE_CLOSING;
 
 	if (td->io_ops->flags & FIO_DISKLESSIO)
 		goto done;
@@ -366,8 +369,6 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 
 done:
 	log_file(td, f, FIO_LOG_OPEN_FILE);
-	td->nr_open_files++;
-	get_file(f);
 	return 0;
 err:
 	if (td->io_ops->close_file)
