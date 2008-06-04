@@ -11,8 +11,12 @@
 
 #define OS_MAP_ANON		(MAP_ANON)
 
+struct solaris_rand_seed {
+	unsigned short r[3];
+};
+
 typedef unsigned long os_cpu_mask_t;
-typedef unsigned int os_random_state_t;
+typedef struct solaris_rand_seed os_random_state_t;
 
 /*
  * FIXME
@@ -29,29 +33,22 @@ static inline int blockdev_invalidate_cache(int fd)
 
 static inline unsigned long long os_phys_mem(void)
 {
-#if 0
-	int mib[2] = { CTL_HW, HW_PHYSMEM };
-	unsigned long long mem;
-	size_t len = sizeof(mem);
-
-	sysctl(mib, 2, &mem, &len, NULL, 0);
-	return mem;
-#else
 	return 0;
-#endif
 }
 
 static inline void os_random_seed(unsigned long seed, os_random_state_t *rs)
 {
-	srand(seed);
+	rs->r[0] = seed & 0xffff;
+	seed >>= 16;
+	rs->r[1] = seed & 0xffff;
+	seed >>= 16;
+	rs->r[2] = seed & 0xffff;
+	seed48(rs->r);
 }
 
 static inline long os_random_long(os_random_state_t *rs)
 {
-	long val;
-
-	val = rand_r(rs);
-	return val;
+	return nrand48(rs->r);
 }
 
 #define FIO_OS_DIRECTIO
