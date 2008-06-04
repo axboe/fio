@@ -1,6 +1,9 @@
 #ifndef FIO_OS_SOLARIS_H
 #define FIO_OS_SOLARIS_H
 
+#include <sys/types.h>
+#include <sys/fcntl.h>
+
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_SOLARISAIO
 #define FIO_HAVE_FALLOCATE
@@ -49,6 +52,16 @@ static inline long os_random_long(os_random_state_t *rs)
 
 	val = rand_r(rs);
 	return val;
+}
+
+#define FIO_OS_DIRECTIO
+extern int directio(int, int);
+static inline int fio_set_odirect(int fd)
+{
+	if (directio(fd, DIRECTIO_ON) < 0)
+		return errno;
+
+	return 0;
 }
 
 #endif

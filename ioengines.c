@@ -367,6 +367,21 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 	if (f->file_map)
 		memset(f->file_map, 0, f->num_maps * sizeof(int));
 
+#ifdef FIO_OS_DIRECTIO
+	/*
+	 * Some OS's have a distinct call to mark the file non-buffered,
+	 * instead of using O_DIRECT (Solaris)
+	 */
+	if (td->o.odirect) {
+		int ret = fio_set_odirect(f->fd);
+
+		if (ret) {
+			td_verror(td, ret, "fio_set_odirect");
+			goto err;
+		}
+	}
+#endif
+
 done:
 	log_file(td, f, FIO_LOG_OPEN_FILE);
 	return 0;
