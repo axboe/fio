@@ -3,12 +3,7 @@
 
 #include <sys/sysctl.h>
 
-#undef FIO_HAVE_LIBAIO
 #define FIO_HAVE_POSIXAIO
-#undef FIO_HAVE_FADVISE
-#undef FIO_HAVE_CPU_AFFINITY
-#undef FIO_HAVE_DISK_UTIL
-#undef FIO_HAVE_SGIO
 #define FIO_HAVE_ODIRECT
 
 #define OS_MAP_ANON		(MAP_ANON)
