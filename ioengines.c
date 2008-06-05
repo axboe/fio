@@ -195,9 +195,13 @@ int td_io_getevents(struct thread_data *td, unsigned int min, unsigned int max,
 		if (r < 0)
 			goto out;
 	}
+	if (max > td->cur_depth)
+		max = td->cur_depth;
+	if (min > max)
+		max = min;
 
 	r = 0;
-	if (td->io_ops->getevents)
+	if (max && td->io_ops->getevents)
 		r = td->io_ops->getevents(td, min, max, t);
 out:
 	if (r >= 0)

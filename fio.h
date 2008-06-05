@@ -418,6 +418,7 @@ struct thread_options {
 	unsigned int iodepth;
 	unsigned int iodepth_low;
 	unsigned int iodepth_batch;
+	unsigned int iodepth_batch_complete;
 
 	unsigned long long size;
 	unsigned int fill_device;

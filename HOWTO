@@ -433,10 +433,20 @@ iodepth=int	This defines how many io units to keep in flight against
 		job, can be overridden with a larger value for higher
 		concurrency.
 
+iodepth_batch_submit=int
 iodepth_batch=int This defines how many pieces of IO to submit at once.
 		It defaults to 1 which means that we submit each IO
 		as soon as it is available, but can be raised to submit
 		bigger batches of IO at the time.
+
+iodepth_batch_complete=int This defines how many pieces of IO to retrieve
+		at once. It defaults to 1 which means that we'll ask
+		for a minimum of 1 IO in the retrieval process from
+		the kernel. The IO retrieval will go on until we
+		hit the limit set by iodepth_low. If this variable is
+		set to 0, then fio will always check for completed
+		events before queuing more IO. This helps reduce
+		IO latency, at the cost of more retrieval system calls.
 
 iodepth_low=int	The low water mark indicating when to start filling
 		the queue again. Defaults to the same as iodepth, meaning

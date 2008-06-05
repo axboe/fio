@@ -612,11 +612,21 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "iodepth_batch",
+		.alias	= "iodepth_batch_submit",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(iodepth_batch),
 		.help	= "Number of IO to submit in one go",
 		.parent	= "iodepth",
 		.minval	= 1,
+		.def	= "1",
+	},
+	{
+		.name	= "iodepth_batch_complete",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(iodepth_batch_complete),
+		.help	= "Number of IO to retrieve in one go",
+		.parent	= "iodepth",
+		.minval	= 0,
 		.def	= "1",
 	},
 	{

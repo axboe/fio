@@ -355,7 +355,7 @@ static void do_verify(struct thread_data *td)
 
 	io_u = NULL;
 	while (!td->terminate) {
-		int ret2;
+		int ret2, full;
 
 		io_u = __get_io_u(td);
 		if (!io_u)
@@ -435,19 +435,25 @@ sync_done:
 		 * if we can queue more, do so. but check if there are
 		 * completed io_u's first.
 		 */
-		min_events = 0;
-		if (queue_full(td) || ret == FIO_Q_BUSY) {
-			if (td->cur_depth >= td->o.iodepth_low)
-				min_events = td->cur_depth - td->o.iodepth_low;
-			if (!min_events)
+		full = queue_full(td) || ret == FIO_Q_BUSY;
+		if (full || !td->o.iodepth_batch_complete) {
+			min_events = td->o.iodepth_batch_complete;
+			if (full && !min_events)
 				min_events = 1;
-		}
 
-		/*
-		 * Reap required number of io units, if any, and do the
-		 * verification on them through the callback handler
-		 */
-		if (io_u_queued_complete(td, min_events) < 0)
+			do {
+				/*
+				 * Reap required number of io units, if any,
+				 * and do the verification on them through
+				 * the callback handler
+				 */
+				if (io_u_queued_complete(td, min_events) < 0) {
+					ret = -1;
+					break;
+				}
+			} while (full && (td->cur_depth > td->o.iodepth_low));
+		}
+		if (ret < 0)
 			break;
 	}
 
@@ -480,7 +486,7 @@ static void do_io(struct thread_data *td)
 		long bytes_done = 0;
 		int min_evts = 0;
 		struct io_u *io_u;
-		int ret2;
+		int ret2, full;
 
 		if (td->terminate)
 			break;
@@ -570,18 +576,25 @@ sync_done:
 		/*
 		 * See if we need to complete some commands
 		 */
-		if (queue_full(td) || ret == FIO_Q_BUSY) {
-			min_evts = 0;
-			if (td->cur_depth >= td->o.iodepth_low)
-				min_evts = td->cur_depth - td->o.iodepth_low;
-			if (!min_evts)
+		full = queue_full(td) || ret == FIO_Q_BUSY;
+		if (full || !td->o.iodepth_batch_complete) {
+			min_evts = td->o.iodepth_batch_complete;
+			if (full && !min_evts)
 				min_evts = 1;
+
 			fio_gettime(&comp_time, NULL);
-			bytes_done = io_u_queued_complete(td, min_evts);
-			if (bytes_done < 0)
-				break;
+
+			do {
+				ret = io_u_queued_complete(td, min_evts);
+				if (ret <= 0)
+					break;
+
+				bytes_done += ret;
+			} while (full && (td->cur_depth > td->o.iodepth_low));
 		}
 
+		if (ret < 0)
+			break;
 		if (!bytes_done)
 			continue;
 

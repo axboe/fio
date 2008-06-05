@@ -971,19 +971,19 @@ long io_u_sync_complete(struct thread_data *td, struct io_u *io_u)
 /*
  * Called to complete min_events number of io for the async engines.
  */
-long io_u_queued_complete(struct thread_data *td, int min_events)
+long io_u_queued_complete(struct thread_data *td, int min_evts)
 {
 	struct io_completion_data icd;
 	struct timespec *tvp = NULL;
 	int ret;
 	struct timespec ts = { .tv_sec = 0, .tv_nsec = 0, };
 
-	dprint(FD_IO, "io_u_queued_completed: min=%d\n", min_events);
+	dprint(FD_IO, "io_u_queued_completed: min=%d\n", min_evts);
 
-	if (!min_events)
+	if (!min_evts)
 		tvp = &ts;
 
-	ret = td_io_getevents(td, min_events, td->cur_depth, tvp);
+	ret = td_io_getevents(td, min_evts, td->o.iodepth_batch_complete, tvp);
 	if (ret < 0) {
 		td_verror(td, -ret, "td_io_getevents");
 		return ret;
