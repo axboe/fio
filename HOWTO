@@ -171,18 +171,18 @@ a string. The following types are used:
 
 str	String. This is a sequence of alpha characters.
 int	Integer. A whole number value, can be negative. If prefixed with
-	0x, the integer is assumed to be of base 16 (hexidecimal).
+	0x, the integer is assumed to be of base 16 (hexadecimal).
 siint	SI integer. A whole number value, which may contain a postfix
 	describing the base of the number. Accepted postfixes are k/m/g,
 	meaning kilo, mega, and giga. So if you want to specify 4096,
 	you could either write out '4096' or just give 4k. The postfixes
 	signify base 2 values, so 1024 is 1k and 1024k is 1m and so on.
 	If the option accepts an upper and lower range, use a colon ':'
-	or minus '-' to seperate such values. See irange.
+	or minus '-' to separate such values. See irange.
 bool	Boolean. Usually parsed as an integer, however only defined for
 	true and false (1 and 0).
 irange	Integer range with postfix. Allows value range to be given, such
-	as 1024-4096. A colon may also be used as the seperator, eg
+	as 1024-4096. A colon may also be used as the separator, eg
 	1k:4k. If the option allows two sets of ranges, they can be
 	specified with a ',' or '/' delimiter: 1k-4k/8k-32k. Also see
 	siint.
@@ -210,7 +210,7 @@ filename=str	Fio normally makes up a filename based on the job name,
 		the ioengine used is 'net', the filename is the host and
 		port to connect to in the format of =host/port. If the
 		ioengine is file based, you can specify a number of files
-		by seperating the names with a ':' colon. So if you wanted
+		by separating the names with a ':' colon. So if you wanted
 		a job to open /dev/sda and /dev/sdb as the two working files,
 		you would use filename=/dev/sda:/dev/sdb. '-' is a reserved
 		name, meaning stdin or stdout. Which of the two depends
@@ -235,7 +235,7 @@ lockfile=str	Fio defaults to not doing any locking files before it does
 
 		The option may be post-fixed with a lock batch number. If
 		set, then each thread/process may do that amount of IOs to
-		the file before giving up the lock. Since lock acqusition is
+		the file before giving up the lock. Since lock acquisition is
 		expensive, batching the lock/unlocks will speed up IO.
 
 readwrite=str
@@ -570,7 +570,7 @@ runtime=int	Tell fio to terminate processing after the specified number
 		cap the total runtime to a given time.
 
 time_based	If set, fio will run for the duration of the runtime
-		specified even if the file(s) are completey read or
+		specified even if the file(s) are completely read or
 		written. It will simply loop over the same workload
 		as many times as the runtime allows.
 
@@ -641,8 +641,8 @@ create_fsync=bool	fsync the data file after creation. This is the
 			default.
 
 unlink=bool	Unlink the job files when done. Not the default, as repeated
-		runs of that job would then waste time recreating the fileset
-		again and again.
+		runs of that job would then waste time recreating the file
+		set again and again.
 
 loops=int	Run the specified number of iterations of this job. Used
 		to repeat the same workload a given number of times. Defaults
@@ -723,7 +723,7 @@ stonewall	Wait for preceeding jobs in the job file to exit, before
 
 new_group	Start a new reporting group. If this option isn't given,
 		jobs in a file will be part of the same reporting group
-		unless seperated by a stone wall (or if it's a group
+		unless separated by a stone wall (or if it's a group
 		by itself, with the numjobs option).
 
 numjobs=int	Create the specified number of clones of this job. May be
@@ -853,9 +853,9 @@ runt=		The runtime of that thread
 		standard deviation). This is the time it took to submit
 		the io. For sync io, the slat is really the completion
 		latency, since queue/complete is one operation there. This
-		value can be in miliseconds or microseconds, fio will choose
+		value can be in milliseconds or microseconds, fio will choose
 		the most appropriate base and print that. In the example
-		above, miliseconds is the best scale.
+		above, milliseconds is the best scale.
 	clat=	Completion latency. Same names as slat, this denotes the
 		time from submission to completion of the io pieces. For
 		sync io, clat will usually be equal (or very close) to 0,
