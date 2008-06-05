@@ -723,7 +723,7 @@ static struct fio_option options[] = {
 		.name	= "softrandommap",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(softrandommap),
-		.help	= "Allow randommap to fail and continue witout",
+		.help	= "Set norandommap if randommap allocation fails",
 		.parent	= "norandommap",
 		.def	= "0",
 	},
@@ -1271,7 +1271,7 @@ static struct fio_option options[] = {
 		.name	= "disk_util",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(do_disk_util),
-		.help	= "Log disk utilization stats",
+		.help	= "Log disk utilization statistics",
 		.def	= "1",
 	},
 #endif
