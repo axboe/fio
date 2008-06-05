@@ -285,11 +285,17 @@ void print_thread_status(void)
 	else if (m_iops || t_iops)
 		printf(", CR=%d/%d IOPS", t_iops, m_iops);
 	if (eta_sec != INT_MAX && nr_running) {
+		char perc_str[32];
 		int ll;
 
+		if (!eta_sec)
+			strcpy(perc_str, "--- done");
+		else
+			sprintf(perc_str, "%3.1f%% done", perc);
+
 		perc *= 100.0;
-		ll = printf(": [%s] [%3.1f%% done] [%6u/%6u kb/s] [eta %s]",
-				 run_str, perc, rate[0], rate[1], eta_str);
+		ll = printf(": [%s] [%s] [%6u/%6u kb/s] [eta %s]",
+				 run_str, perc_str, rate[0], rate[1], eta_str);
 		if (ll >= 0 && ll < linelen_last)
 			printf("%*s", linelen_last - ll, "");
 		linelen_last = ll;
