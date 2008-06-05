@@ -71,8 +71,6 @@ static void eta_to_str(char *str, int eta_sec)
 	unsigned int d, h, m, s;
 	int disp_hour = 0;
 
-	d = h = m = s = 0;
-
 	s = eta_sec % 60;
 	eta_sec /= 60;
 	m = eta_sec % 60;
@@ -199,6 +197,7 @@ void print_thread_status(void)
 	static struct timeval rate_prev_time, disp_prev_time;
 	static unsigned int rate[2];
 	static int linelen_last;
+	static int eta_good;
 
 	if (temp_stall_ts || terse_output || eta_print == FIO_ETA_NEVER)
 		return;
@@ -288,12 +287,14 @@ void print_thread_status(void)
 		char perc_str[32];
 		int ll;
 
-		if (!eta_sec)
-			strcpy(perc_str, "--- done");
-		else
+		if (!eta_sec && !eta_good)
+			strcpy(perc_str, "-.-% done");
+		else {
+			eta_good = 1;
+			perc *= 100.0;
 			sprintf(perc_str, "%3.1f%% done", perc);
+		}
 
-		perc *= 100.0;
 		ll = printf(": [%s] [%s] [%6u/%6u kb/s] [eta %s]",
 				 run_str, perc_str, rate[0], rate[1], eta_str);
 		if (ll >= 0 && ll < linelen_last)
