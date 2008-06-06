@@ -170,7 +170,7 @@ static int check_dev_match(int majdev, int mindev, char *path)
 	return 1;
 }
 
-static int find_block_dir(int majdev, int mindev, char *path)
+static int find_block_dir(int majdev, int mindev, char *path, int link_ok)
 {
 	struct dirent *dir;
 	struct stat st;
@@ -196,15 +196,22 @@ static int find_block_dir(int majdev, int mindev, char *path)
 			}
 		}
 
-		if (lstat(full_path, &st) == -1) {
-			perror("stat");
-			break;
+		if (link_ok) {
+			if (stat(full_path, &st) == -1) {
+				perror("stat");
+				break;
+			}
+		} else {
+			if (lstat(full_path, &st) == -1) {
+				perror("stat");
+				break;
+			}
 		}
 
 		if (!S_ISDIR(st.st_mode) || S_ISLNK(st.st_mode))
 			continue;
 
-		found = find_block_dir(majdev, mindev, full_path);
+		found = find_block_dir(majdev, mindev, full_path, 0);
 		if (found) {
 			strcpy(path, full_path);
 			break;
@@ -277,7 +284,7 @@ static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 	last_majdev = majdev;
 
 	sprintf(foo, "/sys/block");
-	if (!find_block_dir(majdev, mindev, foo))
+	if (!find_block_dir(majdev, mindev, foo, 1))
 		return;
 
 	/*
