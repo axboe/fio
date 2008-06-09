@@ -232,8 +232,12 @@ static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 			io_u->error = errno;
 	}
 
-	if (io_u->error)
+	if (io_u->error) {
 		td_verror(td, io_u->error, "xfer");
+		if (io_u->error == EINVAL)
+			log_err("fio: looks like splice doesn't work on this"
+					" file system\n");
+	}
 
 	return FIO_Q_COMPLETED;
 }
