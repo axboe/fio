@@ -614,6 +614,8 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 	int first_sect = 1;
 	int skip_fgets = 0;
 	int inside_skip = 0;
+	char **opts;
+	int i, alloc_opts, num_opts;
 
 	if (!strcmp(file, "-"))
 		f = stdin;
@@ -632,6 +634,9 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 	 */
 	name = malloc(280);
 	memset(name, 0, 280);
+
+	alloc_opts = 8;
+	opts = malloc(sizeof(char *) * alloc_opts);
 
 	stonewall = stonewall_flag;
 	do {
@@ -691,6 +696,9 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 			stonewall = 0;
 		}
 
+		num_opts = 0;
+		memset(opts, 0, alloc_opts * sizeof(char *));
+
 		while ((p = fgets(string, 4096, f)) != NULL) {
 			if (is_empty_or_comment(p))
 				continue;
@@ -708,26 +716,38 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 
 			strip_blank_end(p);
 
-			/*
-			 * Don't break here, continue parsing options so we
-			 * dump all the bad ones. Makes trial/error fixups
-			 * easier on the user.
-			 */
-			ret |= fio_option_parse(td, p);
-			if (!ret && dump_cmdline)
-				log_info("--%s ", p);
+			if (num_opts == alloc_opts) {
+				alloc_opts <<= 1;
+				opts = realloc(opts,
+						alloc_opts * sizeof(char *));
+			}
+
+			opts[num_opts] = strdup(p);
+			num_opts++;
 		}
 
-		if (!ret)
+		ret = fio_options_parse(td, opts, num_opts);
+		if (!ret) {
+			if (dump_cmdline)
+				for (i = 0; i < num_opts; i++)
+					log_info("--%s ", opts[i]);
+
 			ret = add_job(td, name, 0);
-		else {
+		} else {
 			log_err("fio: job %s dropped\n", name);
 			put_job(td);
 		}
+
+		for (i = 0; i < num_opts; i++)
+			free(opts[i]);
+		num_opts = 0;
 	} while (!ret);
 
 	if (dump_cmdline)
 		log_info("\n");
+
+	for (i = 0; i < num_opts; i++)
+		free(opts[i]);
 
 	free(string);
 	free(name);

@@ -42,6 +42,7 @@ struct fio_option {
 	unsigned int maxval;		/* max and min value */
 	int minval;
 	int neg;			/* negate value stored */
+	int prio;
 	void *cb;			/* callback */
 	const char *help;		/* help text for option */
 	const char *def;		/* default setting */
@@ -52,6 +53,7 @@ struct fio_option {
 typedef int (str_cb_fn)(void *, char *);
 
 extern int parse_option(const char *, struct fio_option *, void *);
+extern void sort_options(char **, struct fio_option *, int);
 extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, void *);
 extern int show_cmd_help(struct fio_option *, const char *);
 extern void fill_default_options(void *, struct fio_option *);

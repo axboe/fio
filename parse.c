@@ -12,6 +12,8 @@
 #include "parse.h"
 #include "debug.h"
 
+static struct fio_option *fio_options;
+
 static int vp_cmp(const void *p1, const void *p2)
 {
 	const struct value_pair *vp1 = p1;
@@ -459,6 +461,56 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 	return r1 && r2;
 }
 
+static struct fio_option *get_option(const char *opt,
+				     struct fio_option *options, char **post)
+{
+	struct fio_option *o;
+	char *ret;
+
+	ret = strchr(opt, '=');
+	if (ret) {
+		*post = ret;
+		*ret = '\0';
+		ret = (char *) opt;
+		(*post)++;
+		o = find_option(options, ret);
+	} else {
+		o = find_option(options, opt);
+		*post = NULL;
+	}
+
+	return o;
+}
+
+static int opt_cmp(const void *p1, const void *p2)
+{
+	struct fio_option *o1, *o2;
+	char *s1, *s2, *foo;
+	int ret;
+
+	s1 = strdup(*((char **) p1));
+	s2 = strdup(*((char **) p2));
+
+	o1 = get_option(s1, fio_options, &foo);
+	o2 = get_option(s2, fio_options, &foo);
+
+	if ((!o1 && o2) || (o1 && !o2))
+		ret = 0;
+	else
+		ret = o2->prio - o1->prio;
+
+	free(s1);
+	free(s2);
+	return ret;
+}
+
+void sort_options(char **opts, struct fio_option *options, int num_opts)
+{
+	fio_options = options;
+	qsort(opts, num_opts, sizeof(char *), opt_cmp);
+	fio_options = NULL;
+}
+
 int parse_cmd_option(const char *opt, const char *val,
 		     struct fio_option *options, void *data)
 {
@@ -480,23 +532,11 @@ int parse_cmd_option(const char *opt, const char *val,
 int parse_option(const char *opt, struct fio_option *options, void *data)
 {
 	struct fio_option *o;
-	char *pre, *post;
-	char *tmp;
+	char *post, *tmp;
 
 	tmp = strdup(opt);
 
-	pre = strchr(tmp, '=');
-	if (pre) {
-		post = pre;
-		*pre = '\0';
-		pre = tmp;
-		post++;
-		o = find_option(options, pre);
-	} else {
-		o = find_option(options, tmp);
-		post = NULL;
-	}
-
+	o = get_option(tmp, options, &post);
 	if (!o) {
 		fprintf(stderr, "Bad option %s\n", tmp);
 		free(tmp);

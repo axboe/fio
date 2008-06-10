@@ -463,6 +463,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(filename),
 		.cb	= str_filename_cb,
+		.prio	= 1, /* must come before "directory" */
 		.help	= "File(s) to use for the workload",
 	},
 	{
@@ -1306,9 +1307,16 @@ void fio_options_dup_and_init(struct option *long_options)
 	}
 }
 
-int fio_option_parse(struct thread_data *td, const char *opt)
+int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 {
-	return parse_option(opt, options, td);
+	int i, ret;
+
+	sort_options(opts, options, num_opts);
+
+	for (ret = 0, i = 0; i < num_opts; i++)
+		ret |= parse_option(opts[i], options, td);
+
+	return ret;
 }
 
 int fio_cmd_option_parse(struct thread_data *td, const char *opt, char *val)
