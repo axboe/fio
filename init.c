@@ -751,6 +751,7 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 
 	free(string);
 	free(name);
+	free(opts);
 	if (f != stdin)
 		fclose(f);
 	return ret;
