@@ -637,6 +637,7 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 
 	alloc_opts = 8;
 	opts = malloc(sizeof(char *) * alloc_opts);
+	num_opts = 0;
 
 	stonewall = stonewall_flag;
 	do {
