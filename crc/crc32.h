@@ -18,6 +18,6 @@
 #ifndef CRC32_H
 #define CRC32_H
 
-extern unsigned long crc32(const void * const, unsigned long);
+extern uint32_t crc32(const void * const, unsigned long);
 
 #endif

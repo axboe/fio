@@ -15,9 +15,10 @@
    along with this program; if not, write to the Free Software Foundation,
    Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
+#include <inttypes.h>
 #include "crc32.h"
 
-static const unsigned long crctab[256] = {
+static const uint32_t crctab[256] = {
   0x0,
   0x04C11DB7, 0x09823B6E, 0x0D4326D9, 0x130476DC, 0x17C56B6B,
   0x1A864DB2, 0x1E475005, 0x2608EDB8, 0x22C9F00F, 0x2F8AD6D6,
@@ -72,10 +73,10 @@ static const unsigned long crctab[256] = {
   0xA2F33668, 0xBCB4666D, 0xB8757BDA, 0xB5365D03, 0xB1F740B4
 };
 
-unsigned long crc32(const void *buffer, unsigned long length)
+uint32_t crc32(const void *buffer, unsigned long length)
 {
 	const unsigned char *cp = (const unsigned char *) buffer;
-	unsigned long crc = 0;
+	uint32_t crc = 0;
 
 	while (length--)
 		crc = (crc << 8) ^ crctab[((crc >> 24) ^ *(cp++)) & 0xFF];
