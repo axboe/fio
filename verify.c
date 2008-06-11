@@ -11,6 +11,7 @@
 #include "crc/md5.h"
 #include "crc/crc64.h"
 #include "crc/crc32.h"
+#include "crc/crc32c.h"
 #include "crc/crc16.h"
 #include "crc/crc7.h"
 #include "crc/sha256.h"
@@ -125,6 +126,7 @@ static inline unsigned int __hdr_size(int verify_type)
 	case VERIFY_CRC64:
 		len = sizeof(struct vhdr_crc64);
 		break;
+	case VERIFY_CRC32C:
 	case VERIFY_CRC32:
 		len = sizeof(struct vhdr_crc32);
 		break;
@@ -326,6 +328,27 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct io_u *io_u,
 	return 0;
 }
 
+static int verify_io_u_crc32c(struct verify_header *hdr, struct io_u *io_u,
+			      unsigned int header_num)
+{
+	void *p = io_u_verify_off(hdr, io_u, header_num);
+	struct vhdr_crc32 *vh = hdr_priv(hdr);
+	uint32_t c;
+
+	dprint(FD_VERIFY, "crc32c verify io_u %p, len %u\n", io_u, hdr->len);
+
+	c = crc32c(p, hdr->len - hdr_size(hdr));
+
+	if (c != vh->crc32) {
+		log_err("crc32c: verify failed at %llu/%u\n",
+				io_u->offset + header_num * hdr->len, hdr->len);
+		log_err("crc32c: wanted %x, got %x\n", vh->crc32, c);
+		return EIO;
+	}
+
+	return 0;
+}
+
 static int verify_io_u_md5(struct verify_header *hdr, struct io_u *io_u,
 			   unsigned int header_num)
 {
@@ -442,6 +465,9 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		case VERIFY_CRC64:
 			ret = verify_io_u_crc64(hdr, io_u, hdr_num);
 			break;
+		case VERIFY_CRC32C:
+			ret = verify_io_u_crc32c(hdr, io_u, hdr_num);
+			break;
 		case VERIFY_CRC32:
 			ret = verify_io_u_crc32(hdr, io_u, hdr_num);
 			break;
@@ -527,6 +553,13 @@ static void fill_crc32(struct verify_header *hdr, void *p, unsigned int len)
 	vh->crc32 = crc32(p, len);
 }
 
+static void fill_crc32c(struct verify_header *hdr, void *p, unsigned int len)
+{
+	struct vhdr_crc32 *vh = hdr_priv(hdr);
+
+	vh->crc32 = crc32c(p, len);
+}
+
 static void fill_crc64(struct verify_header *hdr, void *p, unsigned int len)
 {
 	struct vhdr_crc64 *vh = hdr_priv(hdr);
@@ -583,6 +616,11 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 			dprint(FD_VERIFY, "fill crc64 io_u %p, len %u\n",
 							io_u, hdr->len);
 			fill_crc64(hdr, data, data_len);
+			break;
+		case VERIFY_CRC32C:
+			dprint(FD_VERIFY, "fill crc32c io_u %p, len %u\n",
+							io_u, hdr->len);
+			fill_crc32c(hdr, data, data_len);
 			break;
 		case VERIFY_CRC32:
 			dprint(FD_VERIFY, "fill crc32 io_u %p, len %u\n",

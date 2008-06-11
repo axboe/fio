@@ -195,6 +195,7 @@ enum {
 	VERIFY_MD5,			/* md5 sum data blocks */
 	VERIFY_CRC64,			/* crc64 sum data blocks */
 	VERIFY_CRC32,			/* crc32 sum data blocks */
+	VERIFY_CRC32C,			/* crc32c sum data blocks */
 	VERIFY_CRC16,			/* crc16 sum data blocks */
 	VERIFY_CRC7,			/* crc7 sum data blocks */
 	VERIFY_SHA256,			/* sha256 sum data blocks */

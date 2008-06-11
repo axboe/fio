@@ -218,6 +218,7 @@ The job file parameters are:
 	verify=x	If 'x' == md5, use md5 for verifies. If 'x' == crc32,
 			use crc32 for verifies. md5 is 'safer', but crc32 is
 			a lot faster. Only makes sense for writing to a file.
+			For other types of checksumming, see HOWTO.
 	stonewall	Wait for preceeding jobs to end before running.
 	numjobs=x	Create 'x' similar entries for this job
 	thread		Use pthreads instead of forked jobs
