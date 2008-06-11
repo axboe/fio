@@ -77,7 +77,6 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 		else
 			mask = ((1U << this_blocks) - 1) << bit;
 
-		fio_assert(td, !(f->file_map[idx] & mask));
 		f->file_map[idx] |= mask;
 		nr_blocks -= this_blocks;
 		blocks += this_blocks;
@@ -228,20 +227,30 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
+static inline int is_power_of_2(unsigned int val)
+{
+	return (val != 0 && ((val & (val - 1)) == 0));
+}
+
 static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 {
 	const int ddir = io_u->ddir;
 	unsigned int buflen = buflen; /* silence dumb gcc warning */
+	unsigned int minbs, maxbs;
 	long r;
 
-	if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
-		buflen = td->o.min_bs[ddir];
+	minbs = td->o.min_bs[ddir];
+	maxbs = td->o.max_bs[ddir];
+
+	if (minbs == maxbs)
+		buflen = minbs;
 	else {
 		r = os_random_long(&td->bsrange_state);
 		if (!td->o.bssplit_nr) {
-			buflen = (unsigned int)
-					(1 + (double) (td->o.max_bs[ddir] - 1)
-					* r / (OS_RAND_MAX + 1.0));
+			buflen = 1 + (unsigned int) ((double) maxbs *
+					(r / (OS_RAND_MAX + 1.0)));
+			if (buflen < minbs)
+				buflen = minbs;
 		} else {
 			long perc = 0;
 			unsigned int i;
@@ -251,20 +260,18 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 
 				buflen = bsp->bs;
 				perc += bsp->perc;
-				if (r <= ((LONG_MAX / 100L) * perc))
+				if (r <= ((OS_RAND_MAX / 100L) * perc))
 					break;
 			}
 		}
-		if (!td->o.bs_unaligned) {
-			buflen = (buflen + td->o.min_bs[ddir] - 1)
-					& ~(td->o.min_bs[ddir] - 1);
-		}
+		if (!td->o.bs_unaligned && is_power_of_2(minbs))
+			buflen = (buflen + minbs - 1) & ~(minbs - 1);
 	}
 
 	if (io_u->offset + buflen > io_u->file->real_file_size) {
 		dprint(FD_IO, "lower buflen %u -> %u (ddir=%d)\n", buflen,
-						td->o.min_bs[ddir], ddir);
-		buflen = td->o.min_bs[ddir];
+						minbs, ddir);
+		buflen = minbs;
 	}
 
 	return buflen;
