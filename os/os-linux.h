@@ -230,6 +230,10 @@ static inline int fio_lookup_raw(dev_t dev, int *majdev, int *mindev)
 	return 0;
 }
 
+#ifdef O_NOATIME
 #define FIO_O_NOATIME	O_NOATIME
+#else
+#define FIO_O_NOATIME	0
+#endif
 
 #endif
