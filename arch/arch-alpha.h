@@ -51,6 +51,4 @@ static inline void spin_unlock(spinlock_t *lock)
 	lock->lock = 0;
 }
 
-#define __SPIN_LOCK_UNLOCKED	{ 0 }
-
 #endif
