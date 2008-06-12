@@ -38,4 +38,9 @@ enum {
 #include "../lib/ffz.h"
 #endif
 
+static inline void spin_lock_init(spinlock_t *lock)
+{
+	lock->lock = 0;
+}
+
 #endif

@@ -44,4 +44,38 @@ static inline int arch_ffz(unsigned long bitmask)
 }
 #define ARCH_HAVE_FFZ
 
+typedef struct {
+	volatile unsigned int lock;
+} spinlock_t;
+
+static inline void spin_trylock(spinlock_t *lock)
+{
+	unsigned long tmp;
+
+	__asm__ __volatile__(
+		"1:     lwarx           %0,0,%2\n\
+		cmpwi           0,%0,0\n\
+		bne-            2f\n\
+		stwcx.          1,0,%2\n\
+		bne-            1b\n\
+		isync\n\
+		2:"     : "=&r" (tmp)
+		: (&lock->lock)
+		: "cr0", "memory");
+
+	return tmp;
+}
+
+static inline void spin_lock(spinlock_t *lock)
+{
+	while (spin_trylock(lock))
+		;
+}
+
+static inline void spin_unlock(spinlock_t *lock)
+{
+	read_barrier();
+	lock->lock = 0;
+}
+
 #endif

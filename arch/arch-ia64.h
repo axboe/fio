@@ -35,4 +35,38 @@ static inline unsigned long arch_ffz(unsigned long bitmask)
 }
 #define ARCH_HAVE_FFZ
 
+typedef struct {
+	volatile unsigned int lock;
+} spinlock_t;
+
+#define IA64_SPINLOCK_CLOBBERS "ar.ccv", "ar.pfs", "p14", "p15", "r27", "r28", "r29", "r30", "b6", "memory"
+
+static inline void spin_lock(spinlock_t *lock)
+{
+	register volatile unsigned int *ptr asm ("r31") = &lock->lock;
+	unsigned long flags = 0;
+
+	__asm__ __volatile__("{\n\t"
+			"  mov ar.ccv = r0\n\t"
+			"  mov r28 = ip\n\t"
+			"  mov r30 = 1;;\n\t"
+			"}\n\t"
+			"cmpxchg4.acq r30 = [%1], r30, ar.ccv\n\t"
+			"movl r29 = ia64_spinlock_contention_pre3_4;;\n\t"
+			"cmp4.ne p14, p0 = r30, r0\n\t"
+			"mov b6 = r29;;\n\t"
+			"mov r27=%2\n\t"
+			"(p14) br.cond.spnt.many b6"
+			: "=r"(ptr) : "r"(ptr), "r" (flags)
+			: IA64_SPINLOCK_CLOBBERS);
+}
+
+static inline void spin_unlock(spinlock_t *lock)
+{
+	read_barrier();
+	__asm__ __volatile__("st4.rel.nta [%0] = r0\n\t" :: "r" (lock));
+}
+
+#define __SPIN_LOCK_UNLOCKED	{ 0 }
+
 #endif
