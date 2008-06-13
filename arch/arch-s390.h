@@ -22,39 +22,4 @@
 #define read_barrier()	asm volatile("bcr 15,0" : : : "memory")
 #define write_barrier()	asm volatile("bcr 15,0" : : : "memory")
 
-typedef struct {
-	volatile unsigned int lock;
-} spinlock_t;
-
-static inline int
-_raw_compare_and_swap(volatile unsigned int *lock,
-		      unsigned int old, unsigned int new)
-{
-	__asm__ __volatile__(
-		"       cs      %0,%3,0(%4)"
-		: "=d" (old), "=m" (*lock)
-		: "0" (old), "d" (new), "a" (lock), "m" (*lock)
-		: "cc", "memory" );
-
-	return old;
-}
-
-static inline void spin_lock(spinlock_t *lock)
-{
-	if (!_raw_compare_and_swap(&lock->lock, 0, 0x80000000))
-		return;
-
-	while (1) {
-		if (lock->lock)
-			continue;
-		if (!_raw_compare_and_swap(&lock->lock, 0, 0x80000000))
-			break;
-	}
-}
-
-static inline void spin_unlock(spinlock_t *lock)
-{
-	 _raw_compare_and_swap(&lock->lock, 0x80000000, 0);
-}
-
 #endif
