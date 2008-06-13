@@ -13,4 +13,6 @@
 #define __must_check
 #endif
 
+#define uninitialized_var(x) x = x
+
 #endif

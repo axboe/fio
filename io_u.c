@@ -235,7 +235,7 @@ static inline int is_power_of_2(unsigned int val)
 static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 {
 	const int ddir = io_u->ddir;
-	unsigned int buflen = buflen; /* silence dumb gcc warning */
+	unsigned int uninitialized_var(buflen);
 	unsigned int minbs, maxbs;
 	long r;
 

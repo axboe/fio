@@ -201,7 +201,7 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct spliceio_data *sd = td->io_ops->data;
-	int ret;
+	int uninitialized_var(ret);
 
 	fio_ro_check(td, io_u);
 
