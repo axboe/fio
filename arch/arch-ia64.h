@@ -67,4 +67,6 @@ static inline void spin_unlock(spinlock_t *lock)
 	__asm__ __volatile__("st4.rel.nta [%0] = r0\n\t" :: "r" (lock));
 }
 
+#define __SPIN_LOCK_UNLOCKED	{ 0 }
+
 #endif

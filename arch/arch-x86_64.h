@@ -69,4 +69,6 @@ static inline void spin_unlock(spinlock_t *lock)
 			: "memory", "cc");
 }
 
+#define __SPIN_LOCK_UNLOCKED	{ 0 }
+
 #endif
