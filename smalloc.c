@@ -11,9 +11,10 @@
 #include <sys/types.h>
 #include <limits.h>
 
+#include "mutex.h"
 #include "arch/arch.h"
-#include "spinlock.h"
 
+#define MP_SAFE			/* define to make thread safe */
 #define SMALLOC_REDZONE		/* define to detect memory corruption */
 
 #define SMALLOC_BPB	32	/* block size, bytes-per-bit in bitmap */
@@ -29,7 +30,7 @@
 unsigned int smalloc_pool_size = INITIAL_SIZE;
 
 struct pool {
-	struct fio_spinlock *lock;
+	struct fio_mutex *lock;			/* protects this pool */
 	void *map;				/* map of blocks */
 	unsigned int *bitmap;			/* blocks free/busy map */
 	unsigned int free_blocks;		/* free blocks */
@@ -50,36 +51,42 @@ struct block_hdr {
 static struct pool mp[MAX_POOLS];
 static unsigned int nr_pools;
 static unsigned int last_pool;
-static struct fio_spinlock *slock;
+static struct fio_mutex *lock;
 
 static inline void pool_lock(struct pool *pool)
 {
-	fio_spin_lock(pool->lock);
+	if (pool->lock)
+		fio_mutex_down(pool->lock);
 }
 
 static inline void pool_unlock(struct pool *pool)
 {
-	fio_spin_unlock(pool->lock);
+	if (pool->lock)
+		fio_mutex_up(pool->lock);
 }
 
 static inline void global_read_lock(void)
 {
-	fio_spin_lock(slock);
+	if (lock)
+		fio_mutex_down_read(lock);
 }
 
 static inline void global_read_unlock(void)
 {
-	fio_spin_unlock(slock);
+	if (lock)
+		fio_mutex_up_read(lock);
 }
 
 static inline void global_write_lock(void)
 {
-	fio_spin_lock(slock);
+	if (lock)
+		fio_mutex_down_write(lock);
 }
 
 static inline void global_write_unlock(void)
 {
-	fio_spin_unlock(slock);
+	if (lock)
+		fio_mutex_up_write(lock);
 }
 
 static inline int ptr_valid(struct pool *pool, void *ptr)
@@ -211,9 +218,11 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 	pool->map = ptr;
 	pool->bitmap = (void *) ptr + (pool->nr_blocks * SMALLOC_BPL);
 
-	pool->lock = fio_spinlock_init();
+#ifdef MP_SAFE
+	pool->lock = fio_mutex_init(1);
 	if (!pool->lock)
 		goto out_unlink;
+#endif
 
 	pool->fd = fd;
 
@@ -236,8 +245,9 @@ void sinit(void)
 {
 	int ret;
 
-	slock = fio_spinlock_init();
-	assert(slock);
+#ifdef MP_SAFE
+	lock = fio_mutex_rw_init();
+#endif
 	ret = add_pool(&mp[0], INITIAL_SIZE);
 	assert(!ret);
 }
@@ -247,7 +257,9 @@ static void cleanup_pool(struct pool *pool)
 	unlink(pool->file);
 	close(pool->fd);
 	munmap(pool->map, pool->mmap_size);
-	fio_spinlock_remove(pool->lock);
+
+	if (pool->lock)
+		fio_mutex_remove(pool->lock);
 }
 
 void scleanup(void)
@@ -257,7 +269,8 @@ void scleanup(void)
 	for (i = 0; i < nr_pools; i++)
 		cleanup_pool(&mp[i]);
 
-	fio_spinlock_remove(slock);
+	if (lock)
+		fio_mutex_remove(lock);
 }
 
 #ifdef SMALLOC_REDZONE
