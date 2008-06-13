@@ -66,7 +66,7 @@ static void check_str_update(struct thread_data *td)
 /*
  * Convert seconds to a printable string.
  */
-static void eta_to_str(char *str, int eta_sec)
+static void eta_to_str(char *str, unsigned long eta_sec)
 {
 	unsigned int d, h, m, s;
 	int disp_hour = 0;
