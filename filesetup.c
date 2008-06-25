@@ -906,8 +906,10 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 
 		__f = smalloc(sizeof(*__f));
 
-		if (f->file_name)
+		if (f->file_name) {
 			__f->file_name = smalloc_strdup(f->file_name);
+			__f->filetype = f->filetype;
+		}
 
 		td->files[i] = __f;
 	}
