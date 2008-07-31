@@ -694,6 +694,11 @@ int add_file(struct thread_data *td, const char *fname)
 	dprint(FD_FILE, "add file %s\n", fname);
 
 	f = smalloc(sizeof(*f));
+	if (!f) {
+		log_err("fio: smalloc OOM\n");
+		assert(0);
+	}
+		
 	f->fd = -1;
 
 	dprint(FD_FILE, "resize file array to %d files\n", cur_files + 1);
@@ -712,7 +717,11 @@ int add_file(struct thread_data *td, const char *fname)
 
 	sprintf(file_name + len, "%s", fname);
 	f->file_name = smalloc_strdup(file_name);
-
+	if (!f->file_name) {
+		log_err("fio: smalloc OOM\n");
+		assert(0);
+	}
+	
 	get_file_type(f);
 
 	switch (td->o.file_lock_mode) {
@@ -905,9 +914,18 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 		struct fio_file *__f;
 
 		__f = smalloc(sizeof(*__f));
-
+		if (!__f) {
+			log_err("fio: smalloc OOM\n");
+			assert(0);
+		}
+	
 		if (f->file_name) {
 			__f->file_name = smalloc_strdup(f->file_name);
+			if (!__f->file_name) {
+				log_err("fio: smalloc OOM\n");
+				assert(0);
+			}
+	
 			__f->filetype = f->filetype;
 		}
 
