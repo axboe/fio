@@ -22,7 +22,7 @@
 #define SMALLOC_BPL	(SMALLOC_BPB * SMALLOC_BPI)
 
 #define INITIAL_SIZE	1024*1024	/* new pool size */
-#define MAX_POOLS	4		/* maximum number of pools to setup */
+#define MAX_POOLS	128		/* maximum number of pools to setup */
 
 #define SMALLOC_PRE_RED		0xdeadbeefU
 #define SMALLOC_POST_RED	0x5aa55aa5U
