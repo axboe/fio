@@ -128,6 +128,7 @@ static inline unsigned int __hdr_size(int verify_type)
 		break;
 	case VERIFY_CRC32C:
 	case VERIFY_CRC32:
+	case VERIFY_CRC32C_INTEL:
 		len = sizeof(struct vhdr_crc32);
 		break;
 	case VERIFY_CRC16:
@@ -337,7 +338,10 @@ static int verify_io_u_crc32c(struct verify_header *hdr, struct io_u *io_u,
 
 	dprint(FD_VERIFY, "crc32c verify io_u %p, len %u\n", io_u, hdr->len);
 
-	c = crc32c(p, hdr->len - hdr_size(hdr));
+	if (hdr->verify_type == VERIFY_CRC32C_INTEL)
+		c = crc32c_intel(p, hdr->len - hdr_size(hdr));
+	else
+		c = crc32c(p, hdr->len - hdr_size(hdr));
 
 	if (c != vh->crc32) {
 		log_err("crc32c: verify failed at %llu/%u\n",
@@ -466,6 +470,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			ret = verify_io_u_crc64(hdr, io_u, hdr_num);
 			break;
 		case VERIFY_CRC32C:
+		case VERIFY_CRC32C_INTEL:
 			ret = verify_io_u_crc32c(hdr, io_u, hdr_num);
 			break;
 		case VERIFY_CRC32:
@@ -557,7 +562,10 @@ static void fill_crc32c(struct verify_header *hdr, void *p, unsigned int len)
 {
 	struct vhdr_crc32 *vh = hdr_priv(hdr);
 
-	vh->crc32 = crc32c(p, len);
+	if (hdr->verify_type == VERIFY_CRC32C_INTEL)
+		vh->crc32 = crc32c_intel(p, len);
+	else
+		vh->crc32 = crc32c(p, len);
 }
 
 static void fill_crc64(struct verify_header *hdr, void *p, unsigned int len)
@@ -618,6 +626,7 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 			fill_crc64(hdr, data, data_len);
 			break;
 		case VERIFY_CRC32C:
+		case VERIFY_CRC32C_INTEL:
 			dprint(FD_VERIFY, "fill crc32c io_u %p, len %u\n",
 							io_u, hdr->len);
 			fill_crc32c(hdr, data, data_len);

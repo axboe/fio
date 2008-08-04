@@ -19,5 +19,6 @@
 #define CRC32C_H
 
 extern uint32_t crc32c(unsigned char const *, unsigned long);
+extern uint32_t crc32c_intel(unsigned char const *, unsigned long);
 
 #endif

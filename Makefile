@@ -12,6 +12,7 @@ OBJS += crc/crc7.o
 OBJS += crc/crc16.o
 OBJS += crc/crc32.o
 OBJS += crc/crc32c.o
+OBJS += crc/crc32c-intel.o
 OBJS += crc/crc64.o
 OBJS += crc/sha256.o
 OBJS += crc/sha512.o

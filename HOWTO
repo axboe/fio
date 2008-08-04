@@ -664,6 +664,9 @@ verify=str	If writing to a file, fio can verify the file contents
 			crc32c	Use a crc32c sum of the data area and store
 				it in the header of each block.
 
+			crc32c-intel Use hardware assisted crc32c calcuation
+				provided on SSE4.2 enabled processors.
+
 			crc32	Use a crc32 sum of the data area and store
 				it in the header of each block.
 
