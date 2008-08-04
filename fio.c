@@ -125,6 +125,17 @@ static void sig_int(int sig)
 	}
 }
 
+static void sig_ill(int sig)
+{
+	if (!threads)
+		return;
+
+	log_err("fio: illegal instruction. your cpu does not support "
+		"the sse4.2 instruction for crc32c\n");
+	terminate_threads(TERMINATE_ALL);
+	exit(4);
+}
+
 static void set_sig_handlers(void)
 {
 	struct sigaction act;
@@ -138,6 +149,11 @@ static void set_sig_handlers(void)
 	act.sa_handler = sig_int;
 	act.sa_flags = SA_RESTART;
 	sigaction(SIGINT, &act, NULL);
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_ill;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGILL, &act, NULL);
 }
 
 /*
