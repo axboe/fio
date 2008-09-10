@@ -473,6 +473,7 @@ struct thread_options {
 	unsigned int fsync_blocks;
 	unsigned int start_delay;
 	unsigned long long timeout;
+	unsigned long long ramp_time;
 	unsigned int overwrite;
 	unsigned int bw_avg_time;
 	unsigned int loops;
@@ -609,6 +610,7 @@ struct thread_data {
 	struct timeval rw_end[2];
 	struct timeval last_issue;
 	unsigned int rw_end_set[2];
+	unsigned int ramp_time_over;
 
 	/*
 	 * read/write mixed workload state
@@ -817,6 +819,7 @@ extern void rate_throttle(struct thread_data *, unsigned long, unsigned int);
 extern void fill_start_time(struct timeval *);
 extern void fio_gettime(struct timeval *, void *);
 extern void set_genesis_time(void);
+extern int ramp_time_over(struct thread_data *);
 
 /*
  * Init/option functions

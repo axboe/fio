@@ -574,6 +574,11 @@ time_based	If set, fio will run for the duration of the runtime
 		written. It will simply loop over the same workload
 		as many times as the runtime allows.
 
+ramp_time	If set, fio will run the specified workload for this amount
+		of time before logging any performance numbers. Useful for
+		letting performance settle before logging results, thus
+		minimizing the runtime required for stable results.
+
 invalidate=bool	Invalidate the buffer/page cache parts for this file prior
 		to starting io. Defaults to true.
 

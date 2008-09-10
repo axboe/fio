@@ -832,6 +832,12 @@ static struct fio_option options[] = {
 		.help	= "Keep running until runtime/timeout is met",
 	},
 	{
+		.name	= "ramp_time",
+		.type	= FIO_OPT_STR_VAL_TIME,
+		.off1	= td_var_offset(ramp_time),
+		.help	= "Ramp up time before measuring performance",
+	},
+	{
 		.name	= "mem",
 		.alias	= "iomem",
 		.type	= FIO_OPT_STR,

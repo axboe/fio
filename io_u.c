@@ -903,24 +903,29 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	if (!io_u->error) {
 		unsigned int bytes = io_u->buflen - io_u->resid;
 		const enum fio_ddir idx = io_u->ddir;
-		int ret;
+		int ret, ramp_done;
 
-		td->io_blocks[idx]++;
-		td->io_bytes[idx] += bytes;
-		td->this_io_bytes[idx] += bytes;
+		ramp_done = ramp_time_over(td);
 
-		usec = utime_since(&io_u->issue_time, &icd->time);
+		if (ramp_done) {
+			td->io_blocks[idx]++;
+			td->io_bytes[idx] += bytes;
+			td->this_io_bytes[idx] += bytes;
 
-		add_clat_sample(td, idx, usec);
-		add_bw_sample(td, idx, &icd->time);
-		io_u_mark_latency(td, usec);
+			usec = utime_since(&io_u->issue_time, &icd->time);
+
+			add_clat_sample(td, idx, usec);
+			add_bw_sample(td, idx, &icd->time);
+			io_u_mark_latency(td, usec);
+		}
 
 		if (td_write(td) && idx == DDIR_WRITE &&
 		    td->o.do_verify &&
 		    td->o.verify != VERIFY_NONE)
 			log_io_piece(td, io_u);
 
-		icd->bytes_done[idx] += bytes;
+		if (ramp_done)
+			icd->bytes_done[idx] += bytes;
 
 		if (io_u->end_io) {
 			ret = io_u->end_io(td, io_u);

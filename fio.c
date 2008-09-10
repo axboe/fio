@@ -619,15 +619,17 @@ sync_done:
 		 * of completions except the very first one which may look
 		 * a little bursty
 		 */
-		usec = utime_since(&s, &comp_time);
+		if (ramp_time_over(td)) {
+			usec = utime_since(&s, &comp_time);
 
-		rate_throttle(td, usec, bytes_done);
+			rate_throttle(td, usec, bytes_done);
 
-		if (check_min_rate(td, &comp_time)) {
-			if (exitall_on_terminate)
-				terminate_threads(td->groupid);
-			td_verror(td, EIO, "check_min_rate");
-			break;
+			if (check_min_rate(td, &comp_time)) {
+				if (exitall_on_terminate)
+					terminate_threads(td->groupid);
+				td_verror(td, EIO, "check_min_rate");
+				break;
+			}
 		}
 
 		if (td->o.thinktime) {
