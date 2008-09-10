@@ -41,33 +41,34 @@ struct flist_head {
  * This is only for internal list manipulation where we know
  * the prev/next entries already!
  */
-static inline void __flist_add(struct flist_head *new,
+static inline void __flist_add(struct flist_head *new_entry,
 			       struct flist_head *prev,
 			       struct flist_head *next)
 {
-	next->prev = new;
-	new->next = next;
-	new->prev = prev;
-	prev->next = new;
+	next->prev = new_entry;
+	new_entry->next = next;
+	new_entry->prev = prev;
+	prev->next = new_entry;
 }
 
 /**
  * flist_add - add a new entry
- * @new: new entry to be added
+ * @new_entry: new entry to be added
  * @head: list head to add it after
  *
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
  */
-static inline void flist_add(struct flist_head *new, struct flist_head *head)
+static inline void flist_add(struct flist_head *new_entry,
+                             struct flist_head *head)
 {
-	__flist_add(new, head, head->next);
+	__flist_add(new_entry, head, head->next);
 }
 
-static inline void flist_add_tail(struct flist_head *new,
+static inline void flist_add_tail(struct flist_head *new_entry,
 				  struct flist_head *head)
 {
-	__flist_add(new, head->prev, head);
+	__flist_add(new_entry, head->prev, head);
 }
 
 /*

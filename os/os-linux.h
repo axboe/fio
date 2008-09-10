@@ -116,7 +116,7 @@ struct async_head_user;
 static inline struct syslet_uatom *
 async_exec(struct syslet_uatom *atom, struct async_head_user *ahu)
 {
-	return (void *) syscall(__NR_async_exec, atom, ahu);
+	return (struct syslet_uatom *) syscall(__NR_async_exec, atom, ahu);
 }
 
 static inline long
