@@ -226,9 +226,7 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 
 	pool->fd = fd;
 
-	global_write_lock();
 	nr_pools++;
-	global_write_unlock();
 	return 0;
 out_unlink:
 	fprintf(stderr, "smalloc: failed adding pool\n");
@@ -442,7 +440,7 @@ void *smalloc(unsigned int size)
 {
 	unsigned int i;
 
-	global_read_lock();
+	global_write_lock();
 	i = last_pool;
 
 	do {
@@ -451,7 +449,7 @@ void *smalloc(unsigned int size)
 
 			if (ptr) {
 				last_pool = i;
-				global_read_unlock();
+				global_write_unlock();
 				return ptr;
 			}
 		}
@@ -464,15 +462,13 @@ void *smalloc(unsigned int size)
 			break;
 		else {
 			i = nr_pools;
-			global_read_unlock();
 			if (add_pool(&mp[nr_pools], size))
 				goto out;
-			global_read_lock();
 		}
 	} while (1);
 
-	global_read_unlock();
 out:
+	global_write_unlock();
 	return NULL;
 }
 
