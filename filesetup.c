@@ -649,6 +649,7 @@ void close_and_free_files(struct thread_data *td)
 		}
 
 		td_io_close_file(td, f);
+		remove_file_hash(f);
 
 		sfree(f->file_name);
 		f->file_name = NULL;
