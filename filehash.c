@@ -39,6 +39,9 @@ static struct fio_file *__lookup_file_hash(const char *name)
 	flist_for_each(n, bucket) {
 		struct fio_file *f = flist_entry(n, struct fio_file, hash_list);
 
+		if (!f->file_name)
+			continue;
+
 		if (!strcmp(f->file_name, name)) {
 			assert(f->fd != -1);
 			return f;
