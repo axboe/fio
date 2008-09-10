@@ -115,6 +115,9 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 	if (td->o.zone_size && td->o.zone_skip)
 		bytes_total /= (td->o.zone_skip / td->o.zone_size);
 
+	if (td->o.fill_device && td->o.size  == -1ULL)
+		return 0;
+
 	if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING) {
 		double perc, perc_t;
 
@@ -247,8 +250,13 @@ void print_thread_status(void)
 		eta_sec = 0;
 
 	for_each_td(td, i) {
-		if (eta_secs[i] != INT_MAX)
-			eta_sec += eta_secs[i];
+		if (exitall_on_terminate) {
+			if (eta_secs[i] < eta_sec)
+				eta_sec = eta_secs[i];
+		} else {
+			if (eta_secs[i] > eta_sec)
+				eta_sec = eta_secs[i];
+		}
 	}
 
 	free(eta_secs);
