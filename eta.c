@@ -23,6 +23,9 @@ static void check_str_update(struct thread_data *td)
 	case TD_EXITED:
 		c = 'E';
 		break;
+	case TD_RAMP:
+		c = '/';
+		break;
 	case TD_RUNNING:
 		if (td_rw(td)) {
 			if (td_random(td))
@@ -94,10 +97,13 @@ static void eta_to_str(char *str, unsigned long eta_sec)
 /*
  * Best effort calculation of the estimated pending runtime of a job.
  */
-static int thread_eta(struct thread_data *td, unsigned long elapsed)
+static int thread_eta(struct thread_data *td)
 {
 	unsigned long long bytes_total, bytes_done;
 	unsigned long eta_sec = 0;
+	unsigned long elapsed;
+
+	elapsed = (mtime_since_now(&td->epoch) + 999) / 1000;
 
 	bytes_total = td->total_io_size;
 
@@ -138,15 +144,26 @@ static int thread_eta(struct thread_data *td, unsigned long elapsed)
 		    eta_sec > (td->o.timeout + done_secs - elapsed))
 			eta_sec = td->o.timeout + done_secs - elapsed;
 	} else if (td->runstate == TD_NOT_CREATED || td->runstate == TD_CREATED
-			|| td->runstate == TD_INITIALIZED) {
+			|| td->runstate == TD_INITIALIZED
+			|| td->runstate == TD_RAMP) {
 		int t_eta = 0, r_eta = 0;
 
 		/*
 		 * We can only guess - assume it'll run the full timeout
 		 * if given, otherwise assume it'll run at the specified rate.
 		 */
-		if (td->o.timeout)
+		if (td->o.timeout) {
 			t_eta = td->o.timeout + td->o.start_delay;
+
+			if (in_ramp_time(td)) {
+				unsigned long ramp_left;
+
+				ramp_left = mtime_since_now(&td->start);
+				ramp_left = (ramp_left + 999) / 1000;
+				if (ramp_left <= t_eta)
+					t_eta -= ramp_left;
+			}
+		}
 		if (td->o.rate) {
 			r_eta = (bytes_total / 1024) / td->o.rate;
 			r_eta += td->o.start_delay;
@@ -185,8 +202,8 @@ static void calc_rate(unsigned long mtime, unsigned long long *io_bytes,
  */
 void print_thread_status(void)
 {
-	unsigned long elapsed = mtime_since_genesis() / 1000;
-	int i, nr_running, nr_pending, t_rate, m_rate;
+	unsigned long elapsed = (mtime_since_genesis() + 999) / 1000;
+	int i, nr_ramp, nr_running, nr_pending, t_rate, m_rate;
 	int t_iops, m_iops, files_open;
 	struct thread_data *td;
 	char eta_str[128];
@@ -218,6 +235,7 @@ void print_thread_status(void)
 
 	io_bytes[0] = io_bytes[1] = 0;
 	nr_pending = nr_running = t_rate = m_rate = t_iops = m_iops = 0;
+	nr_ramp = 0;
 	bw_avg_time = ULONG_MAX;
 	files_open = 0;
 	for_each_td(td, i) {
@@ -231,17 +249,23 @@ void print_thread_status(void)
 			t_iops += td->o.rate_iops;
 			m_iops += td->o.rate_iops_min;
 			files_open += td->nr_open_files;
+		} else if (td->runstate == TD_RAMP) {
+			nr_running++;
+			nr_ramp++;
 		} else if (td->runstate < TD_RUNNING)
 			nr_pending++;
 
 		if (elapsed >= 3)
-			eta_secs[i] = thread_eta(td, elapsed);
+			eta_secs[i] = thread_eta(td);
 		else
 			eta_secs[i] = INT_MAX;
 
 		check_str_update(td);
-		io_bytes[0] += td->io_bytes[0];
-		io_bytes[1] += td->io_bytes[1];
+
+		if (td->runstate > TD_RAMP) {
+			io_bytes[0] += td->io_bytes[0];
+			io_bytes[1] += td->io_bytes[1];
+		}
 	}
 
 	if (exitall_on_terminate)
@@ -269,7 +293,7 @@ void print_thread_status(void)
 	fio_gettime(&now, NULL);
 	rate_time = mtime_since(&rate_prev_time, &now);
 
-	if (write_bw_log && rate_time > bw_avg_time) {
+	if (write_bw_log && rate_time > bw_avg_time && !in_ramp_time(td)) {
 		calc_rate(rate_time, io_bytes, rate_io_bytes, rate);
 		memcpy(&rate_prev_time, &now, sizeof(now));
 		add_agg_sample(rate[DDIR_READ], DDIR_READ);
@@ -295,7 +319,7 @@ void print_thread_status(void)
 		char perc_str[32];
 		int ll;
 
-		if (!eta_sec && !eta_good)
+		if ((!eta_sec && !eta_good) || nr_ramp == nr_running)
 			strcpy(perc_str, "-.-% done");
 		else {
 			eta_good = 1;

@@ -820,6 +820,7 @@ extern void fill_start_time(struct timeval *);
 extern void fio_gettime(struct timeval *, void *);
 extern void set_genesis_time(void);
 extern int ramp_time_over(struct thread_data *);
+extern int in_ramp_time(struct thread_data *);
 
 /*
  * Init/option functions
@@ -886,12 +887,15 @@ enum {
 	TD_NOT_CREATED = 0,
 	TD_CREATED,
 	TD_INITIALIZED,
+	TD_RAMP,
 	TD_RUNNING,
 	TD_VERIFYING,
 	TD_FSYNCING,
 	TD_EXITED,
 	TD_REAPED,
 };
+
+extern void td_set_runstate(struct thread_data *, int);
 
 /*
  * Verify helpers
@@ -926,6 +930,11 @@ extern void io_u_mark_depth(struct thread_data *, unsigned int);
 extern void io_u_fill_buffer(struct thread_data *td, struct io_u *, unsigned int);
 void io_u_mark_complete(struct thread_data *, unsigned int);
 void io_u_mark_submit(struct thread_data *, unsigned int);
+
+/*
+ * Reset stats after ramp time completes
+ */
+extern void reset_all_stats(struct thread_data *);
 
 /*
  * io engine entry points

@@ -164,6 +164,11 @@ unsigned long mtime_since_genesis(void)
 	return mtime_since_now(&genesis);
 }
 
+int in_ramp_time(struct thread_data *td)
+{
+	return td->o.ramp_time && !td->ramp_time_over;
+}
+
 int ramp_time_over(struct thread_data *td)
 {
 	struct timeval tv;
@@ -174,7 +179,8 @@ int ramp_time_over(struct thread_data *td)
 	fio_gettime(&tv, NULL);
 	if (mtime_since(&td->epoch, &tv) >= td->o.ramp_time * 1000) {
 		td->ramp_time_over = 1;
-		memcpy(&td->start, &tv, sizeof(tv));
+		reset_all_stats(td);
+		td_set_runstate(td, TD_RAMP);
 		return 1;
 	}
 

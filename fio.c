@@ -61,7 +61,7 @@ struct io_log *agg_io_log[2];
 #define TERMINATE_ALL		(-1)
 #define JOB_START_TIMEOUT	(5 * 1000)
 
-static inline void td_set_runstate(struct thread_data *td, int runstate)
+void td_set_runstate(struct thread_data *td, int runstate)
 {
 	if (td->runstate == runstate)
 		return;
@@ -495,7 +495,10 @@ static void do_io(struct thread_data *td)
 	unsigned int i;
 	int ret = 0;
 
-	td_set_runstate(td, TD_RUNNING);
+	if (in_ramp_time(td))
+		td_set_runstate(td, TD_RAMP);
+	else
+		td_set_runstate(td, TD_RUNNING);
 
 	while ((td->this_io_bytes[0] + td->this_io_bytes[1]) < td->o.size) {
 		struct timeval comp_time;
@@ -526,7 +529,9 @@ static void do_io(struct thread_data *td)
 		if (td->o.verify != VERIFY_NONE && io_u->ddir == DDIR_READ) {
 			io_u->end_io = verify_io_u;
 			td_set_runstate(td, TD_VERIFYING);
-		} else
+		} else if (in_ramp_time(td))
+			td_set_runstate(td, TD_RAMP);
+		else
 			td_set_runstate(td, TD_RUNNING);
 
 		ret = td_io_queue(td, io_u);
@@ -619,7 +624,7 @@ sync_done:
 		 * of completions except the very first one which may look
 		 * a little bursty
 		 */
-		if (ramp_time_over(td)) {
+		if (!in_ramp_time(td)) {
 			usec = utime_since(&s, &comp_time);
 
 			rate_throttle(td, usec, bytes_done);
@@ -827,12 +832,8 @@ static int keep_running(struct thread_data *td)
 	return 0;
 }
 
-static int clear_io_state(struct thread_data *td)
+static void reset_io_counters(struct thread_data *td)
 {
-	struct fio_file *f;
-	unsigned int i;
-	int ret;
-
 	td->ts.stat_io_bytes[0] = td->ts.stat_io_bytes[1] = 0;
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
 	td->zone_bytes = 0;
@@ -847,6 +848,34 @@ static int clear_io_state(struct thread_data *td)
 	 */
 	if (td->o.time_based || td->o.loops)
 		td->nr_done_files = 0;
+}
+
+void reset_all_stats(struct thread_data *td)
+{
+	struct timeval tv;
+	int i;
+
+	reset_io_counters(td);
+
+	for (i = 0; i < 2; i++) {
+		td->io_bytes[i] = 0;
+		td->io_blocks[i] = 0;
+		td->io_issues[i] = 0;
+		td->ts.total_io_u[i] = 0;
+	}
+	
+	fio_gettime(&tv, NULL);
+	memcpy(&td->epoch, &tv, sizeof(tv));
+	memcpy(&td->start, &tv, sizeof(tv));
+}
+
+static int clear_io_state(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+	int ret;
+
+	reset_io_counters(td);
 
 	close_files(td);
 
@@ -1347,7 +1376,10 @@ static void run_threads(void)
 			if (td->runstate != TD_INITIALIZED)
 				continue;
 
-			td_set_runstate(td, TD_RUNNING);
+			if (in_ramp_time(td))
+				td_set_runstate(td, TD_RAMP);
+			else
+				td_set_runstate(td, TD_RUNNING);
 			nr_running++;
 			nr_started--;
 			m_rate += td->o.ratemin;

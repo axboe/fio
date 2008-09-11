@@ -903,15 +903,13 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	if (!io_u->error) {
 		unsigned int bytes = io_u->buflen - io_u->resid;
 		const enum fio_ddir idx = io_u->ddir;
-		int ret, ramp_done;
+		int ret;
 
-		ramp_done = ramp_time_over(td);
+		td->io_blocks[idx]++;
+		td->io_bytes[idx] += bytes;
+		td->this_io_bytes[idx] += bytes;
 
-		if (ramp_done) {
-			td->io_blocks[idx]++;
-			td->io_bytes[idx] += bytes;
-			td->this_io_bytes[idx] += bytes;
-
+		if (ramp_time_over(td)) {
 			usec = utime_since(&io_u->issue_time, &icd->time);
 
 			add_clat_sample(td, idx, usec);
@@ -924,8 +922,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		    td->o.verify != VERIFY_NONE)
 			log_io_piece(td, io_u);
 
-		if (ramp_done)
-			icd->bytes_done[idx] += bytes;
+		icd->bytes_done[idx] += bytes;
 
 		if (io_u->end_io) {
 			ret = io_u->end_io(td, io_u);
