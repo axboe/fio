@@ -172,6 +172,9 @@ a string. The following types are used:
 str	String. This is a sequence of alpha characters.
 int	Integer. A whole number value, can be negative. If prefixed with
 	0x, the integer is assumed to be of base 16 (hexadecimal).
+time	Integer with possible time postfix. In seconds unless otherwise
+	specified, use eg 10m for 10 minutes. Accepts s/m/h for seconds,
+	minutes, and hours.
 siint	SI integer. A whole number value, which may contain a postfix
 	describing the base of the number. Accepted postfixes are k/m/g,
 	meaning kilo, mega, and giga. So if you want to specify 4096,
@@ -559,12 +562,12 @@ cpus_allowed=str Controls the same options as cpumask, but it allows a text
 		setting of the permitted CPUs instead. So to use CPUs 1 and
 		5, you would specify cpus_allowed=1,5.
 
-startdelay=int	Start this job the specified number of seconds after fio
+startdelay=time	Start this job the specified number of seconds after fio
 		has started. Only useful if the job file contains several
 		jobs, and you want to delay starting some jobs to a certain
 		time.
 
-runtime=int	Tell fio to terminate processing after the specified number
+runtime=time	Tell fio to terminate processing after the specified number
 		of seconds. It can be quite hard to determine for how long
 		a specified job will run, so this parameter is handy to
 		cap the total runtime to a given time.
@@ -574,7 +577,7 @@ time_based	If set, fio will run for the duration of the runtime
 		written. It will simply loop over the same workload
 		as many times as the runtime allows.
 
-ramp_time	If set, fio will run the specified workload for this amount
+ramp_time=time	If set, fio will run the specified workload for this amount
 		of time before logging any performance numbers. Useful for
 		letting performance settle before logging results, thus
 		minimizing the runtime required for stable results.
