@@ -1,4 +1,5 @@
 #include <inttypes.h>
+#include "crc32c.h"
 
 /*
  * Based on a posting to lkml by Austin Zhang <austin.zhang@intel.com>
@@ -10,6 +11,8 @@
  * Intel(R) 64 and IA-32 Architectures Software Developer's Manual
  * Volume 2A: Instruction Set Reference, A-M
  */
+
+#ifdef ARCH_HAVE_SSE
 
 #if BITS_PER_LONG == 64
 #define REX_PRE "0x48, "
@@ -64,3 +67,6 @@ uint32_t crc32c_intel(unsigned char const *data, unsigned long length)
 
 	return crc;
 }
+
+#endif /* ARCH_HAVE_SSE */
+

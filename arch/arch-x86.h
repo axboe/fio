@@ -39,5 +39,6 @@ static inline unsigned long arch_ffz(unsigned long bitmask)
 	return bitmask;
 }
 #define ARCH_HAVE_FFZ
+#define ARCH_HAVE_SSE
 
 #endif

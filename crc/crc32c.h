@@ -18,7 +18,14 @@
 #ifndef CRC32C_H
 #define CRC32C_H
 
+#include "../arch/arch.h"
+
 extern uint32_t crc32c(unsigned char const *, unsigned long);
+
+#ifdef ARCH_HAVE_SSE
 extern uint32_t crc32c_intel(unsigned char const *, unsigned long);
+#else
+#define crc32c_intel crc32c
+#endif
 
 #endif
