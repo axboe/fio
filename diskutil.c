@@ -102,7 +102,129 @@ static struct disk_util *disk_util_exists(int major, int minor)
 	return NULL;
 }
 
-static void disk_util_add(int majdev, int mindev, char *path)
+static int get_device_numbers(char *file_name, int *maj, int *min)
+{
+	struct stat st;
+	int majdev, mindev;
+	char tempname[PATH_MAX], *p;
+
+	if (!lstat(file_name, &st)) {
+		if (S_ISBLK(st.st_mode)) {
+			majdev = major(st.st_rdev);
+			mindev = minor(st.st_rdev);
+		} else if (S_ISCHR(st.st_mode)) {
+			majdev = major(st.st_rdev);
+			mindev = minor(st.st_rdev);
+			if (fio_lookup_raw(st.st_rdev, &majdev, &mindev))
+				return -1;
+		} else if (S_ISFIFO(st.st_mode))
+			return -1;
+		else {
+			majdev = major(st.st_dev);
+			mindev = minor(st.st_dev);
+		}
+	} else {
+		/*
+		 * must be a file, open "." in that path
+		 */
+		strncpy(tempname, file_name, PATH_MAX - 1);
+		p = dirname(tempname);
+		if (stat(p, &st)) {
+			perror("disk util stat");
+			return -1;
+		}
+
+		majdev = major(st.st_dev);
+		mindev = minor(st.st_dev);
+	}
+
+	*min = mindev;
+	*maj = majdev;
+
+	return 0;
+}
+
+static int read_block_dev_entry(char *path, int *maj, int *min)
+{
+	char line[256], *p;
+	FILE *f;
+
+	f = fopen(path, "r");
+	if (!f) {
+		perror("open path");
+		return 1;
+	}
+
+	p = fgets(line, sizeof(line), f);
+	fclose(f);
+
+	if (!p)
+		return 1;
+
+	if (sscanf(p, "%u:%u", maj, min) != 2)
+		return 1;
+
+	return 0;
+}
+
+
+static void __init_per_file_disk_util(struct thread_data *td, int majdev,
+		int mindev, char * path);
+
+static void find_add_disk_slaves(struct thread_data *td, char *path,
+		struct disk_util *masterdu)
+{
+	DIR *dirhandle = NULL;
+	struct dirent *dirent = NULL;
+	char slavesdir[PATH_MAX], temppath[PATH_MAX], slavepath[PATH_MAX];
+	struct disk_util *slavedu = NULL;
+	int majdev, mindev;
+	ssize_t linklen;
+
+	sprintf(slavesdir, "%s/%s",path, "slaves");
+	dirhandle = opendir(slavesdir);
+	if (!dirhandle)
+		return;
+
+	while ((dirent = readdir(dirhandle)) != NULL) {
+		if (!strcmp(dirent->d_name, ".") || !strcmp(dirent->d_name, ".."))
+			continue;
+
+		sprintf(temppath, "%s/%s", slavesdir, dirent->d_name);
+		/* Can we always assume that the slaves device entries
+		 * are links to the real directories for the slave
+		 * devices?
+		 */
+		if ((linklen = readlink(temppath, slavepath, PATH_MAX-1)) < 0) {
+			perror("readlink() for slave device.");
+			return;
+		}
+		slavepath[linklen]='\0';
+
+		sprintf(temppath, "%s/%s/dev", slavesdir, slavepath);
+		if (read_block_dev_entry(temppath, &majdev, &mindev)) {
+			perror("Error getting slave device numbers.");
+			return;
+		}
+
+		sprintf(temppath, "%s/%s", slavesdir, slavepath);
+		__init_per_file_disk_util(td, majdev, mindev, temppath);
+		slavedu = disk_util_exists(majdev, mindev);
+
+		/* Should probably use an assert here. slavedu should
+		 * always be present at this point. */
+		if (slavedu)
+			flist_add_tail(&slavedu->slavelist, &masterdu->slaves);
+	}
+
+	closedir(dirhandle);
+	return;
+}
+
+
+
+static void disk_util_add(struct thread_data * td, int majdev, int mindev,
+		char *path)
 {
 	struct disk_util *du, *__du;
 	struct flist_head *entry;
@@ -117,6 +239,8 @@ static void disk_util_add(int majdev, int mindev, char *path)
 	du->sysfs_root = path;
 	du->major = majdev;
 	du->minor = mindev;
+	INIT_FLIST_HEAD(&du->slavelist);
+	INIT_FLIST_HEAD(&du->slaves);
 
 	flist_for_each(entry, &disk_list) {
 		__du = flist_entry(entry, struct disk_util, list);
@@ -136,37 +260,21 @@ static void disk_util_add(int majdev, int mindev, char *path)
 	get_io_ticks(du, &du->last_dus);
 
 	flist_add_tail(&du->list, &disk_list);
+	find_add_disk_slaves(td, path, du);
 }
+
 
 static int check_dev_match(int majdev, int mindev, char *path)
 {
 	int major, minor;
-	char line[256], *p;
-	FILE *f;
 
-	f = fopen(path, "r");
-	if (!f) {
-		perror("open path");
+	if (read_block_dev_entry(path, &major, &minor))
 		return 1;
-	}
-
-	p = fgets(line, sizeof(line), f);
-	if (!p) {
-		fclose(f);
-		return 1;
-	}
-
-	if (sscanf(p, "%u:%u", &major, &minor) != 2) {
-		fclose(f);
-		return 1;
-	}
 
 	if (majdev == major && mindev == minor) {
-		fclose(f);
 		return 0;
 	}
 
-	fclose(f);
 	return 1;
 }
 
@@ -222,46 +330,51 @@ static int find_block_dir(int majdev, int mindev, char *path, int link_ok)
 	return found;
 }
 
-static void __init_disk_util(struct thread_data *td, struct fio_file *f)
+
+static void __init_per_file_disk_util(struct thread_data *td, int majdev,
+		int mindev, char * path)
 {
 	struct stat st;
-	char foo[PATH_MAX], tmp[PATH_MAX];
-	struct disk_util *du;
-	int mindev, majdev;
+	char tmp[PATH_MAX];
 	char *p;
 
-	if (!lstat(f->file_name, &st)) {
-		if (S_ISBLK(st.st_mode)) {
-			majdev = major(st.st_rdev);
-			mindev = minor(st.st_rdev);
-		} else if (S_ISCHR(st.st_mode)) {
-			majdev = major(st.st_rdev);
-			mindev = minor(st.st_rdev);
-			if (fio_lookup_raw(st.st_rdev, &majdev, &mindev))
-				return;
-		} else if (S_ISFIFO(st.st_mode))
-			return;
-		else {
-			majdev = major(st.st_dev);
-			mindev = minor(st.st_dev);
-		}
-	} else {
-		/*
-		 * must be a file, open "." in that path
-		 */
-		strncpy(foo, f->file_name, PATH_MAX - 1);
-		p = dirname(foo);
-		if (stat(p, &st)) {
-			perror("disk util stat");
+	/*
+	 * If there's a ../queue/ directory there, we are inside a partition.
+	 * Check if that is the case and jump back. For loop/md/dm etc we
+	 * are already in the right spot.
+	 */
+	sprintf(tmp, "%s/../queue", path);
+	if (!stat(tmp, &st)) {
+		p = dirname(path);
+		sprintf(tmp, "%s/queue", p);
+		if (stat(tmp, &st)) {
+			log_err("unknown sysfs layout\n");
 			return;
 		}
-
-		majdev = major(st.st_dev);
-		mindev = minor(st.st_dev);
+		strncpy(tmp, p, PATH_MAX - 1);
+		sprintf(path, "%s", tmp);
 	}
 
-	dprint(FD_DISKUTIL, "%s belongs to maj/min %d/%d\n", f->file_name,
-							majdev, mindev);
+	if (td->o.ioscheduler && !td->sysfs_root)
+		td->sysfs_root = strdup(path);
+
+	disk_util_add(td, majdev, mindev, path);
+}
+
+
+
+static void init_per_file_disk_util(struct thread_data *td, char * filename)
+{
+
+	char foo[PATH_MAX];
+	struct disk_util *du;
+	int mindev, majdev;
+
+	if(get_device_numbers(filename, &majdev, &mindev))
+		return;
+
+	dprint(FD_DISKUTIL, "%s belongs to maj/min %d/%d\n", filename, majdev,
+			mindev);
 
 	du = disk_util_exists(majdev, mindev);
 	if (du) {
@@ -287,27 +400,13 @@ static void __init_disk_util(struct thread_data *td, struct fio_file *f)
 	if (!find_block_dir(majdev, mindev, foo, 1))
 		return;
 
-	/*
-	 * If there's a ../queue/ directory there, we are inside a partition.
-	 * Check if that is the case and jump back. For loop/md/dm etc we
-	 * are already in the right spot.
-	 */
-	sprintf(tmp, "%s/../queue", foo);
-	if (!stat(tmp, &st)) {
-		p = dirname(foo);
-		sprintf(tmp, "%s/queue", p);
-		if (stat(tmp, &st)) {
-			log_err("unknown sysfs layout\n");
-			return;
-		}
-		strncpy(tmp, p, PATH_MAX - 1);
-		sprintf(foo, "%s", tmp);
-	}
+	__init_per_file_disk_util(td, majdev, mindev, foo);
 
-	if (td->o.ioscheduler && !td->sysfs_root)
-		td->sysfs_root = strdup(foo);
+}
 
-	disk_util_add(majdev, mindev, foo);
+static void __init_disk_util(struct thread_data *td, struct fio_file *f)
+{
+	return init_per_file_disk_util(td, f->file_name);
 }
 
 void init_disk_util(struct thread_data *td)
@@ -342,6 +441,17 @@ void show_disk_util(void)
 		util = (double) 100 * du->dus.io_ticks / (double) du->msec;
 		if (util > 100.0)
 			util = 100.0;
+
+		/* If this node is the slave of a master device, as
+		 * happens in case of software RAIDs, inward-indent
+		 * this stats line to reflect a master-slave
+		 * relationship. Because the master device gets added
+		 * before the slave devices, we can safely assume that
+		 * the master's stats line has been displayed in a
+		 * previous iteration of this loop.
+		 */
+		if(!flist_empty(&du->slavelist))
+			log_info("  ");
 
 		log_info("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, "
 			 "in_queue=%u, util=%3.2f%%\n", du->name,

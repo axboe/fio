@@ -753,6 +753,10 @@ struct disk_util_stat {
  */
 struct disk_util {
 	struct flist_head list;
+	/* If this disk is a slave, hook it into the master's
+	 * list using this head.
+	 */
+	struct flist_head slavelist;
 
 	char *name;
 	char *sysfs_root;
@@ -761,6 +765,15 @@ struct disk_util {
 
 	struct disk_util_stat dus;
 	struct disk_util_stat last_dus;
+
+	/* For software raids, this entry maintains pointers to the
+	 * entries for the slave devices. The disk_util entries for
+	 * the slaves devices should primarily be maintained through
+	 * the disk_list list, i.e. for memory allocation and
+	 * de-allocation, etc. Whereas this list should be used only
+	 * for aggregating a software RAID's disk util figures.
+	 */
+	struct flist_head slaves;
 
 	unsigned long msec;
 	struct timeval time;
