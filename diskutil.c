@@ -430,11 +430,11 @@ static void aggregate_slaves_stats(struct disk_util *masterdu)
 	double util, max_util = 0;
 	int slavecount = 0;
 
-	unsigned merges[2];
-	unsigned ticks[2];
-	unsigned time_in_queue;
-	unsigned long long sectors[2];
-	unsigned ios[2];
+	unsigned merges[2] = { 0, };
+	unsigned ticks[2] = { 0, };
+	unsigned time_in_queue = { 0, };
+	unsigned long long sectors[2] = { 0, };
+	unsigned ios[2] = { 0, };
 
 	flist_for_each(entry, &masterdu->slaves) {
 		slavedu = flist_entry(entry, struct disk_util, slavelist);
