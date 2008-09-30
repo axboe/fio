@@ -422,6 +422,57 @@ void init_disk_util(struct thread_data *td)
 		__init_disk_util(td, f);
 }
 
+static void aggregate_slaves_stats(struct disk_util *masterdu)
+{
+	struct disk_util_stat *dus;
+	struct flist_head *entry;
+	struct disk_util *slavedu;
+	double util, max_util = 0;
+	int slavecount = 0;
+
+	unsigned merges[2];
+	unsigned ticks[2];
+	unsigned time_in_queue;
+	unsigned long long sectors[2];
+	unsigned ios[2];
+
+	flist_for_each(entry, &masterdu->slaves) {
+		slavedu = flist_entry(entry, struct disk_util, slavelist);
+		dus = &slavedu->dus;
+		ios[0] += dus->ios[0];
+		ios[1] += dus->ios[1];
+		merges[0] += dus->merges[0];
+		merges[1] += dus->merges[1];
+		sectors[0] += dus->sectors[0];
+		sectors[1] += dus->sectors[1];
+		ticks[0] += dus->ticks[0];
+		ticks[1] += dus->ticks[1];
+		time_in_queue += dus->time_in_queue;
+		++slavecount;
+
+		util = (double) (100 * dus->io_ticks / (double) slavedu->msec);
+		/* System utilization is the utilization of the
+		 * component with the highest utilization.
+		 */
+		if (util > max_util)
+			max_util = util;
+
+	}
+
+	if (max_util > 100.0)
+		max_util = 100.0;
+
+	log_info(", aggrios=%u/%u, aggrmerge=%u/%u, aggrticks=%u/%u,"
+			" aggrin_queue=%u, aggrutil=%3.2f%%",
+			ios[0]/slavecount, ios[1]/slavecount,
+			merges[0]/slavecount, merges[1]/slavecount,
+			ticks[0]/slavecount, ticks[1]/slavecount,
+			time_in_queue/slavecount, max_util);
+
+}
+
+
+
 void show_disk_util(void)
 {
 	struct disk_util_stat *dus;
@@ -454,11 +505,19 @@ void show_disk_util(void)
 			log_info("  ");
 
 		log_info("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, "
-			 "in_queue=%u, util=%3.2f%%\n", du->name,
+			 "in_queue=%u, util=%3.2f%%", du->name,
 						dus->ios[0], dus->ios[1],
 						dus->merges[0], dus->merges[1],
 						dus->ticks[0], dus->ticks[1],
 						dus->time_in_queue, util);
+
+		/* If the device has slaves, aggregate the stats for
+		 * those slave devices also.
+		 */
+		if(!flist_empty(&du->slaves))
+			aggregate_slaves_stats(du);
+
+		log_info("\n");
 	}
 
 	/*
