@@ -40,10 +40,18 @@ Mailing list
 ------------
 
 There's a mailing list associated with fio. It's meant for general
-discussion, bug reporting, questions - basically anything that has to
-do with fio. An automated mail detailing recent commits is automatically
-sent to the list at most daily. The list address is fio-devel@kernel.dk,
-subscribe by sending an empty email to fio-devel+subscribe@kernel.dk.
+discussion, bug reporting, questions, and development - basically anything
+that has to do with fio. An automated mail detailing recent commits is
+automatically sent to the list at most daily. The list address is
+fio@vger.kernel.org, subscribe by sending an email to
+majordomo@vger.kernel.org with
+
+subscribe fio
+
+in the body of the email. There is no archive for the new list yet,
+archives for the old list can be found here:
+
+http://maillist.kernel.dk/fio-devel/
 
 
 Building
