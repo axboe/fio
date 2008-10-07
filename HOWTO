@@ -111,7 +111,7 @@ several global sections if so desired. A job is only affected by a global
 section residing above it. If the first character in a line is a ';' or a
 '#', the entire line is discarded as a comment.
 
-So lets look at a really simple job file that define to threads, each
+So let's look at a really simple job file that defines two processes, each
 randomly reading from a 128MiB file.
 
 ; -- start job file --
@@ -133,7 +133,7 @@ line, this job would look as follows:
 $ fio --name=global --rw=randread --size=128m --name=job1 --name=job2
 
 
-Lets look at an example that have a number of processes writing randomly
+Let's look at an example that has a number of processes writing randomly
 to files.
 
 ; -- start job file --
@@ -157,6 +157,33 @@ have given the parameters on the command line. For this case, you would
 specify:
 
 $ fio --name=random-writers --ioengine=libaio --iodepth=4 --rw=randwrite --bs=32k --direct=0 --size=64m --numjobs=4
+
+fio also supports environment variable expansion in job files. Any
+substring of the form "${VARNAME}" as part of an option value (in other
+words, on the right of the `='), will be expanded to the value of the
+environment variable called VARNAME.  If no such environment variable
+is defined, or VARNAME is the empty string, the empty string will be
+substituted.
+
+As an example, let's look at a sample fio invocation and job file:
+
+$ SIZE=64m NUMJOBS=4 fio jobfile.fio
+
+; -- start job file --
+[random-writers]
+rw=randwrite
+size=${SIZE}
+numjobs=${NUMJOBS}
+; -- end job file --
+
+This will expand to the following equivalent job file at runtime:
+
+; -- start job file --
+[random-writers]
+rw=randwrite
+size=64m
+numjobs=4
+; -- end job file --
 
 fio ships with a few example job files, you can also look there for
 inspiration.
