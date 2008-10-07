@@ -878,7 +878,7 @@ struct debug_level debug_levels[] = {
 	{ .name = "parse",	.shift = FD_PARSE },
 	{ .name = "diskutil",	.shift = FD_DISKUTIL },
 	{ .name = "job",	.shift = FD_JOB },
-	{ },
+	{ .name = NULL, },
 };
 
 static int set_debug(const char *string)

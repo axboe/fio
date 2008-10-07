@@ -107,7 +107,7 @@ static void status_timer_arm(void)
 	setitimer(ITIMER_REAL, &itimer, NULL);
 }
 
-static void sig_alrm(int sig)
+static void sig_alrm(int fio_unused sig)
 {
 	if (threads) {
 		update_io_ticks();
@@ -125,7 +125,7 @@ static void sig_int(int sig)
 	}
 }
 
-static void sig_ill(int sig)
+static void sig_ill(int fio_unused sig)
 {
 	if (!threads)
 		return;
