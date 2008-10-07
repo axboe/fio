@@ -8,6 +8,7 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <stdlib.h>
 
 #include "parse.h"
 #include "debug.h"
@@ -529,12 +530,61 @@ int parse_cmd_option(const char *opt, const char *val,
 	return 1;
 }
 
+/*
+ * Return a copy of the input string with substrings of the form ${VARNAME}
+ * substituted with the value of the environment variable VARNAME.  The
+ * substitution always occurs, even if VARNAME is empty or the corresponding
+ * environment variable undefined.
+ */
+static char *option_dup_subs(const char *opt)
+{
+	char out[OPT_LEN_MAX+1];
+	char in[OPT_LEN_MAX+1];
+	char *outptr = out;
+	char *inptr = in;
+	char *ch1, *ch2, *env;
+	ssize_t nchr = OPT_LEN_MAX;
+	size_t envlen;
+
+	in[OPT_LEN_MAX] = '\0';
+	strncpy(in, opt, OPT_LEN_MAX);
+
+	while (*inptr && nchr > 0) {
+		if (inptr[0] == '$' && inptr[1] == '{') {
+			ch2 = strchr(inptr, '}');
+			if (ch2 && inptr+1 < ch2) {
+				ch1 = inptr+2;
+				inptr = ch2+1;
+				*ch2 = '\0';
+
+				env = getenv(ch1);
+				if (env) {
+					envlen = strlen(env);
+					if (envlen <= nchr) {
+						memcpy(outptr, env, envlen);
+						outptr += envlen;
+						nchr -= envlen;
+					}
+				}
+
+				continue;
+			}
+		}
+
+		*outptr++ = *inptr++;
+		--nchr;
+	}
+
+	*outptr = '\0';
+	return strdup(out);
+}
+
 int parse_option(const char *opt, struct fio_option *options, void *data)
 {
 	struct fio_option *o;
 	char *post, *tmp;
 
-	tmp = strdup(opt);
+	tmp = option_dup_subs(opt);
 
 	o = get_option(tmp, options, &post);
 	if (!o) {
