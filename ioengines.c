@@ -227,7 +227,12 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	if (td->io_ops->flags & FIO_SYNCIO) {
 		fio_gettime(&io_u->issue_time, NULL);
-		memcpy(&td->last_issue, &io_u->issue_time,
+
+		/*
+		 * only used for iolog
+		 */
+		if (td->o.read_iolog_file)
+			memcpy(&td->last_issue, &io_u->issue_time,
 					sizeof(struct timeval));
 
 		/*
@@ -272,8 +277,13 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	if ((td->io_ops->flags & FIO_SYNCIO) == 0) {
 		fio_gettime(&io_u->issue_time, NULL);
-		memcpy(&td->last_issue, &io_u->issue_time,
-				sizeof(struct timeval));
+
+		/*
+		 * only used for iolog
+		 */
+		if (td->o.read_iolog_file)
+			memcpy(&td->last_issue, &io_u->issue_time,
+					sizeof(struct timeval));
 
 		/*
 		 * async engine, set the timeout here
