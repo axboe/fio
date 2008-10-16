@@ -234,13 +234,6 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 		if (td->o.read_iolog_file)
 			memcpy(&td->last_issue, &io_u->issue_time,
 					sizeof(struct timeval));
-
-		/*
-		 * for a sync engine, set the timeout upfront
-		 */
-		if (mtime_since(&td->timeout_end, &io_u->issue_time)
-		    < IO_U_TIMEOUT)
-			io_u_set_timeout(td);
 	}
 
 	if (io_u->ddir != DDIR_SYNC)
@@ -284,15 +277,6 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 		if (td->o.read_iolog_file)
 			memcpy(&td->last_issue, &io_u->issue_time,
 					sizeof(struct timeval));
-
-		/*
-		 * async engine, set the timeout here
-		 */
-		if (ret == FIO_Q_QUEUED &&
-		    (mtime_since(&td->timeout_end, &io_u->issue_time)
-			< IO_U_TIMEOUT)) {
-			io_u_set_timeout(td);
-		}
 	}
 
 	return ret;

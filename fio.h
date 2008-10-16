@@ -633,12 +633,6 @@ struct thread_data {
 	struct flist_head io_log_list;
 
 	/*
-	 * timeout handling
-	 */
-	struct timeval timeout_end;
-	struct itimerval timer;
-
-	/*
 	 * for fileservice, how often to switch to a new file
 	 */
 	unsigned int file_service_nr;
@@ -667,13 +661,6 @@ enum {
 	FIO_ETA_ALWAYS,
 	FIO_ETA_NEVER,
 };
-
-/*
- * 30 second per-io_u timeout, with 5 second intervals to avoid resetting
- * the timer on each queue operation.
- */
-#define IO_U_TIMEOUT_INC	5
-#define IO_U_TIMEOUT		30
 
 #define __td_verror(td, err, msg, func)					\
 	do {								\
@@ -937,8 +924,6 @@ extern long __must_check io_u_sync_complete(struct thread_data *, struct io_u *)
 extern long __must_check io_u_queued_complete(struct thread_data *, int);
 extern void io_u_queued(struct thread_data *, struct io_u *);
 extern void io_u_log_error(struct thread_data *, struct io_u *);
-extern void io_u_init_timeout(void);
-extern void io_u_set_timeout(struct thread_data *);
 extern void io_u_mark_depth(struct thread_data *, unsigned int);
 extern void io_u_fill_buffer(struct thread_data *td, struct io_u *, unsigned int);
 void io_u_mark_complete(struct thread_data *, unsigned int);

@@ -750,8 +750,6 @@ static int init_io_u(struct thread_data *td)
 		flist_add(&io_u->list, &td->io_u_freelist);
 	}
 
-	io_u_init_timeout();
-
 	return 0;
 }
 
@@ -972,7 +970,6 @@ static void *thread_main(void *data)
 	}
 
 	fio_gettime(&td->epoch, NULL);
-	memcpy(&td->timeout_end, &td->epoch, sizeof(td->epoch));
 	getrusage(RUSAGE_SELF, &td->ts.ru_start);
 
 	runtime[0] = runtime[1] = 0;

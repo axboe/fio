@@ -8,11 +8,6 @@
 #include "fio.h"
 #include "hash.h"
 
-/*
- * Change this define to play with the timeout handling
- */
-#undef FIO_USE_TIMEOUT
-
 struct io_completion_data {
 	int nr;				/* input */
 
@@ -1034,87 +1029,4 @@ void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
 		}
 	} else
 		memset(ptr, 0, max_bs);
-}
-
-#ifdef FIO_USE_TIMEOUT
-void io_u_set_timeout(struct thread_data *td)
-{
-	assert(td->cur_depth);
-
-	td->timer.it_interval.tv_sec = 0;
-	td->timer.it_interval.tv_usec = 0;
-	td->timer.it_value.tv_sec = IO_U_TIMEOUT + IO_U_TIMEOUT_INC;
-	td->timer.it_value.tv_usec = 0;
-	setitimer(ITIMER_REAL, &td->timer, NULL);
-	fio_gettime(&td->timeout_end, NULL);
-}
-
-static void io_u_dump(struct io_u *io_u)
-{
-	unsigned long t_start = mtime_since_now(&io_u->start_time);
-	unsigned long t_issue = mtime_since_now(&io_u->issue_time);
-
-	log_err("io_u=%p, t_start=%lu, t_issue=%lu\n", io_u, t_start, t_issue);
-	log_err("  buf=%p/%p, len=%lu/%lu, offset=%llu\n", io_u->buf,
-						io_u->xfer_buf, io_u->buflen,
-						io_u->xfer_buflen,
-						io_u->offset);
-	log_err("  ddir=%d, fname=%s\n", io_u->ddir, io_u->file->file_name);
-}
-#else
-void io_u_set_timeout(struct thread_data fio_unused *td)
-{
-}
-#endif
-
-#ifdef FIO_USE_TIMEOUT
-static void io_u_timeout_handler(int fio_unused sig)
-{
-	struct thread_data *td, *__td;
-	pid_t pid = getpid();
-	struct flist_head *entry;
-	struct io_u *io_u;
-	int i;
-
-	log_err("fio: io_u timeout\n");
-
-	/*
-	 * TLS would be nice...
-	 */
-	td = NULL;
-	for_each_td(__td, i) {
-		if (__td->pid == pid) {
-			td = __td;
-			break;
-		}
-	}
-
-	if (!td) {
-		log_err("fio: io_u timeout, can't find job\n");
-		exit(1);
-	}
-
-	if (!td->cur_depth) {
-		log_err("fio: timeout without pending work?\n");
-		return;
-	}
-
-	log_err("fio: io_u timeout: job=%s, pid=%d\n", td->o.name, td->pid);
-
-	flist_for_each(entry, &td->io_u_busylist) {
-		io_u = flist_entry(entry, struct io_u, list);
-
-		io_u_dump(io_u);
-	}
-
-	td_verror(td, ETIMEDOUT, "io_u timeout");
-	exit(1);
-}
-#endif
-
-void io_u_init_timeout(void)
-{
-#ifdef FIO_USE_TIMEOUT
-	signal(SIGALRM, io_u_timeout_handler);
-#endif
 }
