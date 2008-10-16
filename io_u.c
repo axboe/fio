@@ -905,11 +905,16 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		td->this_io_bytes[idx] += bytes;
 
 		if (ramp_time_over(td)) {
-			usec = utime_since(&io_u->issue_time, &icd->time);
+			if (!td->o.disable_clat || !td->o.disable_bw)
+				usec = utime_since(&io_u->issue_time,
+							&icd->time);
 
-			add_clat_sample(td, idx, usec);
-			add_bw_sample(td, idx, &icd->time);
-			io_u_mark_latency(td, usec);
+			if (!td->o.disable_clat) {
+				add_clat_sample(td, idx, usec);
+				io_u_mark_latency(td, usec);
+			}
+			if (!td->o.disable_bw)
+				add_bw_sample(td, idx, &icd->time);
 		}
 
 		if (td_write(td) && idx == DDIR_WRITE &&
@@ -930,9 +935,11 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	}
 }
 
-static void init_icd(struct io_completion_data *icd, int nr)
+static void init_icd(struct thread_data *td, struct io_completion_data *icd,
+		     int nr)
 {
-	fio_gettime(&icd->time, NULL);
+	if (!td->o.disable_clat || !td->o.disable_bw)
+		fio_gettime(&icd->time, NULL);
 
 	icd->nr = nr;
 
@@ -961,7 +968,7 @@ long io_u_sync_complete(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_completion_data icd;
 
-	init_icd(&icd, 1);
+	init_icd(td, &icd, 1);
 	io_completed(td, io_u, &icd);
 	put_io_u(td, io_u);
 
@@ -994,7 +1001,7 @@ long io_u_queued_complete(struct thread_data *td, int min_evts)
 	} else if (!ret)
 		return ret;
 
-	init_icd(&icd, ret);
+	init_icd(td, &icd, ret);
 	ios_completed(td, &icd);
 	if (!icd.error)
 		return icd.bytes_done[0] + icd.bytes_done[1];
@@ -1008,10 +1015,12 @@ long io_u_queued_complete(struct thread_data *td, int min_evts)
  */
 void io_u_queued(struct thread_data *td, struct io_u *io_u)
 {
-	unsigned long slat_time;
+	if (!td->o.disable_slat) {
+		unsigned long slat_time;
 
-	slat_time = utime_since(&io_u->start_time, &io_u->issue_time);
-	add_slat_sample(td, io_u->ddir, slat_time);
+		slat_time = utime_since(&io_u->start_time, &io_u->issue_time);
+		add_slat_sample(td, io_u->ddir, slat_time);
+	}
 }
 
 /*

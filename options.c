@@ -1291,6 +1291,27 @@ static struct fio_option options[] = {
 	},
 #endif
 	{
+		.name	= "disable_clat",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(disable_clat),
+		.help	= "Disable completion latency numbers",
+		.def	= "0",
+	},
+	{
+		.name	= "disable_slat",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(disable_slat),
+		.help	= "Disable submissionn latency numbers",
+		.def	= "0",
+	},
+	{
+		.name	= "disable_bw_measurement",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(disable_bw),
+		.help	= "Disable bandwidth logging",
+		.def	= "0",
+	},
+	{
 		.name = NULL,
 	},
 };

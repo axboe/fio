@@ -496,6 +496,9 @@ struct thread_options {
 	unsigned int zero_buffers;
 	unsigned int refill_buffers;
 	unsigned int time_based;
+	unsigned int disable_clat;
+	unsigned int disable_slat;
+	unsigned int disable_bw;
 
 	char *read_iolog_file;
 	char *write_iolog_file;

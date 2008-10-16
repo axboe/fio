@@ -835,6 +835,19 @@ cpuchunks=int	If the job is a CPU cycle eater, split the load into
 disk_util=bool	Generate disk utilization statistics, if the platform
 		supports it. Defaults to on.
 
+disable_clat=bool Disable measurements of completion latency numbers. Useful
+		only for cutting back the number of calls to gettimeofday,
+		as that does impact performance at really high IOPS rates.
+		Note that to really get rid of a large amount of these
+		calls, this option must be used with disable_slat and
+		disable_bw as well.
+
+disable_slat=bool Disable measurements of submission latency numbers. See
+		disable_clat.
+
+disable_bw=bool	Disable measurements of throughput/bandwidth numbers. See
+		disable_clat.
+
 
 6.0 Interpreting the output
 ---------------------------
