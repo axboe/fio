@@ -1040,4 +1040,13 @@ static inline void dprint_io_u(struct io_u *io_u, const char *p)
 #define dprint_io_u(io_u, p)
 #endif
 
+static inline int fio_fill_issue_time(struct thread_data *td)
+{
+	if (td->o.read_iolog_file ||
+	    !td->o.disable_clat || !td->o.disable_slat || !td->o.disable_bw)
+		return 1;
+
+	return 0;
+}
+
 #endif

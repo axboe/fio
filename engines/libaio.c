@@ -118,6 +118,9 @@ static void fio_libaio_queued(struct thread_data *td, struct io_u **io_us,
 	struct timeval now;
 	unsigned int i;
 
+	if (!fio_fill_issue_time(td))
+		return;
+
 	fio_gettime(&now, NULL);
 
 	for (i = 0; i < nr; i++) {

@@ -210,15 +210,6 @@ out:
 	return r;
 }
 
-static inline int get_issue_time(struct thread_data *td)
-{
-	if (td->o.read_iolog_file ||
-	    !td->o.disable_clat || !td->o.disable_slat || !td->o.disable_bw)
-		return 1;
-
-	return 0;
-}
-
 int td_io_queue(struct thread_data *td, struct io_u *io_u)
 {
 	int ret;
@@ -235,7 +226,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	io_u->resid = 0;
 
 	if (td->io_ops->flags & FIO_SYNCIO) {
-		if (get_issue_time(td))
+		if (fio_fill_issue_time(td))
 			fio_gettime(&io_u->issue_time, NULL);
 
 		/*
@@ -279,7 +270,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if ((td->io_ops->flags & FIO_SYNCIO) == 0) {
-		if (get_issue_time(td))
+		if (fio_fill_issue_time(td))
 			fio_gettime(&io_u->issue_time, NULL);
 
 		/*

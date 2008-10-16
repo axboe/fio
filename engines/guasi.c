@@ -141,6 +141,9 @@ static void fio_guasi_queued(struct thread_data *td, struct io_u **io_us, int nr
 	struct io_u *io_u;
 	struct timeval now;
 
+	if (!fio_fill_issue_time(td))
+		return;
+
 	io_u_mark_submit(td, nr);
 	fio_gettime(&now, NULL);
 	for (i = 0; i < nr; i++) {
