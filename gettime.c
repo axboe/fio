@@ -10,6 +10,8 @@
 #include "hash.h"
 
 static int clock_gettime_works;
+static struct timeval last_tv;
+static int last_tv_valid;
 
 #ifdef FIO_DEBUG_TIME
 
@@ -128,4 +130,18 @@ gtod:
 		tp->tv_sec = ts.tv_sec;
 		tp->tv_usec = ts.tv_nsec / 1000;
 	}
+
+	/*
+	 * If Linux is using the tsc clock on non-synced processors,
+	 * sometimes time can appear to drift backwards. Fix that up.
+	 */
+	if (last_tv_valid) {
+		if (tp->tv_sec < last_tv.tv_sec)
+			tp->tv_sec = last_tv.tv_sec;
+		else if (last_tv.tv_sec == tp->tv_sec &&
+			 tp->tv_usec < last_tv.tv_usec)
+			tp->tv_usec = last_tv.tv_usec;
+	}
+	last_tv_valid = 1;
+	memcpy(&last_tv, tp, sizeof(*tp));
 }
