@@ -154,8 +154,10 @@ static int str_rw_cb(void *data, const char *str)
 	char *nr = get_opt_postfix(str);
 
 	td->o.ddir_nr = 1;
-	if (nr)
+	if (nr) {
 		td->o.ddir_nr = atoi(nr);
+		free(nr);
+	}
 
 	return 0;
 }
@@ -285,8 +287,10 @@ static int str_fst_cb(void *data, const char *str)
 	char *nr = get_opt_postfix(str);
 
 	td->file_service_nr = 1;
-	if (nr)
+	if (nr) {
 		td->file_service_nr = atoi(nr);
+		free(nr);
+	}
 
 	return 0;
 }
@@ -426,8 +430,10 @@ static int str_lockfile_cb(void *data, const char *str)
 	char *nr = get_opt_postfix(str);
 
 	td->o.lockfile_batch = 1;
-	if (nr)
+	if (nr) {
 		td->o.lockfile_batch = atoi(nr);
+		free(nr);
+	}
 
 	return 0;
 }
