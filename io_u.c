@@ -851,7 +851,8 @@ struct io_u *get_io_u(struct thread_data *td)
 
 out:
 	if (!td_io_prep(td, io_u)) {
-		fio_gettime(&io_u->start_time, NULL);
+		if (!td->o.disable_slat)
+			fio_gettime(&io_u->start_time, NULL);
 		return io_u;
 	}
 err_put:

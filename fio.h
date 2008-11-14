@@ -499,6 +499,7 @@ struct thread_options {
 	unsigned int disable_clat;
 	unsigned int disable_slat;
 	unsigned int disable_bw;
+	unsigned int gtod_reduce;
 
 	char *read_iolog_file;
 	char *write_iolog_file;
@@ -612,6 +613,9 @@ struct thread_data {
 	struct timeval epoch;	/* time job was started */
 	struct timeval rw_end[2];
 	struct timeval last_issue;
+	struct timeval tv_cache;
+	unsigned int tv_cache_nr;
+	unsigned int tv_cache_mask;
 	unsigned int rw_end_set[2];
 	unsigned int ramp_time_over;
 

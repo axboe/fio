@@ -156,6 +156,17 @@ static void set_sig_handlers(void)
 	sigaction(SIGILL, &act, NULL);
 }
 
+static inline int should_check_rate(struct thread_data *td)
+{
+	/*
+	 * No minimum rate set, always ok
+	 */
+	if (!td->o.ratemin && !td->o.rate_iops_min)
+		return 0;
+
+	return 1;
+}
+
 /*
  * Check if we are above the minimum rate given.
  */
@@ -165,12 +176,6 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 	unsigned long iops = 0;
 	unsigned long spent;
 	unsigned long rate;
-
-	/*
-	 * No minimum rate set, always ok
-	 */
-	if (!td->o.ratemin && !td->o.rate_iops_min)
-		return 0;
 
 	/*
 	 * allow a 2 second settle period in the beginning
@@ -340,6 +345,12 @@ requeue:
 	return 0;
 }
 
+static inline void update_tv_cache(struct thread_data *td)
+{
+	if ((++td->tv_cache_nr & td->tv_cache_mask) == td->tv_cache_mask)
+		fio_gettime(&td->tv_cache, NULL);
+}
+
 /*
  * The main verify engine. Runs over the writes we previously submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
@@ -377,7 +388,9 @@ static void do_verify(struct thread_data *td)
 		if (!io_u)
 			break;
 
-		if (runtime_exceeded(td, &io_u->start_time)) {
+		update_tv_cache(td);
+
+		if (runtime_exceeded(td, &td->tv_cache)) {
 			put_io_u(td, io_u);
 			td->terminate = 1;
 			break;
@@ -490,7 +503,6 @@ sync_done:
  */
 static void do_io(struct thread_data *td)
 {
-	struct timeval s;
 	unsigned long usec;
 	unsigned int i;
 	int ret = 0;
@@ -514,9 +526,9 @@ static void do_io(struct thread_data *td)
 		if (!io_u)
 			break;
 
-		memcpy(&s, &io_u->start_time, sizeof(s));
+		update_tv_cache(td);
 
-		if (runtime_exceeded(td, &s)) {
+		if (runtime_exceeded(td, &td->tv_cache)) {
 			put_io_u(td, io_u);
 			td->terminate = 1;
 			break;
@@ -564,7 +576,9 @@ static void do_io(struct thread_data *td)
 				requeue_io_u(td, &io_u);
 			} else {
 sync_done:
-				fio_gettime(&comp_time, NULL);
+				if (should_check_rate(td))
+					fio_gettime(&comp_time, NULL);
+
 				bytes_done = io_u_sync_complete(td, io_u);
 				if (bytes_done < 0)
 					ret = bytes_done;
@@ -603,7 +617,8 @@ sync_done:
 			if (full && !min_evts)
 				min_evts = 1;
 
-			fio_gettime(&comp_time, NULL);
+			if (should_check_rate(td))
+				fio_gettime(&comp_time, NULL);
 
 			do {
 				ret = io_u_queued_complete(td, min_evts);
@@ -624,8 +639,8 @@ sync_done:
 		 * of completions except the very first one which may look
 		 * a little bursty
 		 */
-		if (!in_ramp_time(td)) {
-			usec = utime_since(&s, &comp_time);
+		if (!in_ramp_time(td) && should_check_rate(td)) {
+			usec = utime_since(&td->tv_cache, &comp_time);
 
 			rate_throttle(td, usec, bytes_done);
 
@@ -977,6 +992,7 @@ static void *thread_main(void *data)
 	while (keep_running(td)) {
 		fio_gettime(&td->start, NULL);
 		memcpy(&td->ts.stat_sample_time, &td->start, sizeof(td->start));
+		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
 
 		if (td->o.ratemin)
 			memcpy(&td->lastrate, &td->ts.stat_sample_time,

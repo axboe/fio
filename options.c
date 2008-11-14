@@ -432,6 +432,20 @@ static int str_lockfile_cb(void *data, const char *str)
 	return 0;
 }
 
+static int str_gtod_reduce_cb(void *data, int *il)
+{
+	struct thread_data *td = data;
+	int val = *il;
+
+	td->o.disable_clat = !!val;
+	td->o.disable_slat = !!val;
+	td->o.disable_bw = !!val;
+	if (val)
+		td->tv_cache_mask = 63;
+
+	return 0;
+}
+
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
 
@@ -1291,10 +1305,18 @@ static struct fio_option options[] = {
 	},
 #endif
 	{
+		.name	= "gtod_reduce",
+		.type	= FIO_OPT_BOOL,
+		.help	= "Greatly reduce number of gettimeofday() calls",
+		.cb	= str_gtod_reduce_cb,
+		.def	= "0",
+	},
+	{
 		.name	= "disable_clat",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(disable_clat),
 		.help	= "Disable completion latency numbers",
+		.parent	= "gtod_reduce",
 		.def	= "0",
 	},
 	{
@@ -1302,6 +1324,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(disable_slat),
 		.help	= "Disable submissionn latency numbers",
+		.parent	= "gtod_reduce",
 		.def	= "0",
 	},
 	{
@@ -1309,6 +1332,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(disable_bw),
 		.help	= "Disable bandwidth logging",
+		.parent	= "gtod_reduce",
 		.def	= "0",
 	},
 	{
