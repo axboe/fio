@@ -116,6 +116,13 @@ static void sig_alrm(int fio_unused sig)
 	}
 }
 
+/*
+ * Happens on thread runs with ctrl-c, ignore our own SIGQUIT
+ */
+static void sig_quit(int sig)
+{
+}
+
 static void sig_int(int sig)
 {
 	if (threads) {
@@ -154,6 +161,11 @@ static void set_sig_handlers(void)
 	act.sa_handler = sig_ill;
 	act.sa_flags = SA_RESTART;
 	sigaction(SIGILL, &act, NULL);
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_quit;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGQUIT, &act, NULL);
 }
 
 static inline int should_check_rate(struct thread_data *td)
