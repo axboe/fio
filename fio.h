@@ -503,6 +503,8 @@ struct thread_options {
 
 	char *read_iolog_file;
 	char *write_iolog_file;
+	char *bw_log_file;
+	char *lat_log_file;
 
 	/*
 	 * Pre-run and post-run shell
@@ -806,6 +808,7 @@ extern void update_rusage_stat(struct thread_data *);
 extern void update_io_ticks(void);
 extern void setup_log(struct io_log **);
 extern void finish_log(struct thread_data *, struct io_log *, const char *);
+extern void finish_log_named(struct thread_data *, struct io_log *, const char *, const char *);
 extern void __finish_log(struct io_log *, const char *);
 extern struct io_log *agg_io_log[2];
 extern int write_bw_log;

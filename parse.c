@@ -236,7 +236,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	dprint(FD_PARSE, "__handle_option=%s, type=%d, ptr=%s\n", o->name,
 							o->type, ptr);
 
-	if (!ptr && o->type != FIO_OPT_STR_SET) {
+	if (!ptr && o->type != FIO_OPT_STR_SET && o->type != FIO_OPT_STR) {
 		fprintf(stderr, "Option %s requires an argument\n", o->name);
 		return 1;
 	}

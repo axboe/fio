@@ -804,14 +804,23 @@ read_iolog=str	Open an iolog with the specified file name and replay the
 		the file needs to be turned into a blkparse binary data
 		file first (blktrace <device> -d file_for_fio.bin).
 
-write_bw_log	If given, write a bandwidth log of the jobs in this job
+write_bw_log=str If given, write a bandwidth log of the jobs in this job
 		file. Can be used to store data of the bandwidth of the
 		jobs in their lifetime. The included fio_generate_plots
 		script uses gnuplot to turn these text files into nice
-		graphs.
+		graphs. See write_log_log for behaviour of given
+		filename. For this option, the postfix is _bw.log.
 
-write_lat_log	Same as write_bw_log, except that this option stores io
-		completion latencies instead.
+write_lat_log=str Same as write_bw_log, except that this option stores io
+		completion latencies instead. If no filename is given
+		with this option, the default filename of "jobname_type.log"
+		is used. Even if the filename is given, fio will still
+		append the type of log. So if one specifies
+
+		write_lat_log=foo
+
+		The actual log names will be foo_clat.log and foo_slat.log.
+		This helps fio_generate_plot fine the logs automatically.
 
 lockmem=siint	Pin down the specified amount of memory with mlock(2). Can
 		potentially be used instead of removing memory or booting

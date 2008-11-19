@@ -471,11 +471,17 @@ void __finish_log(struct io_log *log, const char *name)
 	free(log);
 }
 
-void finish_log(struct thread_data *td, struct io_log *log, const char *name)
+void finish_log_named(struct thread_data *td, struct io_log *log,
+		       const char *prefix, const char *postfix)
 {
 	char file_name[256], *p;
 
-	snprintf(file_name, 200, "%s_%s.log", td->o.name, name);
+	snprintf(file_name, 200, "%s_%s.log", prefix, postfix);
 	p = basename(file_name);
 	__finish_log(log, p);
+}
+
+void finish_log(struct thread_data *td, struct io_log *log, const char *name)
+{
+	finish_log_named(td, log, td->o.name, name);
 }

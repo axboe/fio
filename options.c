@@ -438,6 +438,28 @@ static int str_lockfile_cb(void *data, const char *str)
 	return 0;
 }
 
+static int str_write_bw_log_cb(void *data, const char *str)
+{
+	struct thread_data *td = data;
+
+	if (str)
+		td->o.bw_log_file = strdup(str);
+
+	td->o.write_bw_log = 1;
+	return 0;
+}
+
+static int str_write_lat_log_cb(void *data, const char *str)
+{
+	struct thread_data *td = data;
+
+	if (str)
+		td->o.lat_log_file = strdup(str);
+
+	td->o.write_lat_log = 1;
+	return 0;
+}
+
 static int str_gtod_reduce_cb(void *data, int *il)
 {
 	struct thread_data *td = data;
@@ -1266,14 +1288,16 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "write_bw_log",
-		.type	= FIO_OPT_STR_SET,
+		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(write_bw_log),
+		.cb	= str_write_bw_log_cb,
 		.help	= "Write log of bandwidth during run",
 	},
 	{
 		.name	= "write_lat_log",
-		.type	= FIO_OPT_STR_SET,
+		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(write_lat_log),
+		.cb	= str_write_lat_log_cb,
 		.help	= "Write log of latency during run",
 	},
 	{

@@ -1066,12 +1066,24 @@ static void *thread_main(void *data)
 	td->ts.io_bytes[0] = td->io_bytes[0];
 	td->ts.io_bytes[1] = td->io_bytes[1];
 
-	if (td->ts.bw_log)
-		finish_log(td, td->ts.bw_log, "bw");
-	if (td->ts.slat_log)
-		finish_log(td, td->ts.slat_log, "slat");
-	if (td->ts.clat_log)
-		finish_log(td, td->ts.clat_log, "clat");
+	if (td->ts.bw_log) {
+		if (td->o.bw_log_file)
+			finish_log_named(td, td->ts.bw_log, td->o.bw_log_file, "bw");
+		else
+			finish_log(td, td->ts.bw_log, "bw");
+	}
+	if (td->ts.slat_log) {
+		if (td->o.lat_log_file)
+			finish_log_named(td, td->ts.slat_log, td->o.lat_log_file, "clat");
+		else
+			finish_log(td, td->ts.slat_log, "slat");
+	}
+	if (td->ts.clat_log) {
+		if (td->o.lat_log_file)
+			finish_log_named(td, td->ts.clat_log, td->o.lat_log_file, "clat");
+		else
+			finish_log(td, td->ts.clat_log, "clat");
+	}
 	if (td->o.exec_postrun) {
 		if (system(td->o.exec_postrun) < 0)
 			log_err("fio: postrun %s failed\n", td->o.exec_postrun);
