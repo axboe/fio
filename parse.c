@@ -487,22 +487,23 @@ static int opt_cmp(const void *p1, const void *p2)
 {
 	struct fio_option *o1, *o2;
 	char *s1, *s2, *foo;
-	int ret;
+	int prio1, prio2;
 
 	s1 = strdup(*((char **) p1));
 	s2 = strdup(*((char **) p2));
 
 	o1 = get_option(s1, fio_options, &foo);
 	o2 = get_option(s2, fio_options, &foo);
-
-	if ((!o1 && o2) || (o1 && !o2))
-		ret = 0;
-	else
-		ret = o2->prio - o1->prio;
+	
+	prio1 = prio2 = 0;
+	if (o1)
+		prio1 = o1->prio;
+	if (o2)
+		prio2 = o2->prio;
 
 	free(s1);
 	free(s2);
-	return ret;
+	return prio2 - prio1;
 }
 
 void sort_options(char **opts, struct fio_option *options, int num_opts)
