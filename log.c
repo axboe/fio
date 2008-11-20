@@ -388,7 +388,7 @@ static int init_iolog_write(struct thread_data *td)
 	FILE *f;
 	unsigned int i;
 
-	f = fopen(td->o.write_iolog_file, "w+");
+	f = fopen(td->o.write_iolog_file, "a");
 	if (!f) {
 		perror("fopen write iolog");
 		return 1;
@@ -455,7 +455,7 @@ void __finish_log(struct io_log *log, const char *name)
 	unsigned int i;
 	FILE *f;
 
-	f = fopen(name, "w");
+	f = fopen(name, "a");
 	if (!f) {
 		perror("fopen log");
 		return;
