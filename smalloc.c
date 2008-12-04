@@ -224,7 +224,13 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 		goto out_unlink;
 #endif
 
+	/*
+	 * Unlink pool file now. It wont get deleted until the fd is closed,
+	 * which happens both for cleanup or unexpected quit. This way we
+	 * don't leave temp files around in case of a crash.
+	 */
 	pool->fd = fd;
+	unlink(pool->file);
 
 	nr_pools++;
 	return 0;
@@ -252,7 +258,10 @@ void sinit(void)
 
 static void cleanup_pool(struct pool *pool)
 {
-	unlink(pool->file);
+	/*
+	 * This will also remove the temporary file we used as a backing
+	 * store, it was already unlinked
+	 */
 	close(pool->fd);
 	munmap(pool->map, pool->mmap_size);
 
