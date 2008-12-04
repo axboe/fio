@@ -37,7 +37,6 @@ struct pool {
 	unsigned int nr_blocks;			/* total blocks */
 	unsigned int next_non_full;
 	int fd;					/* memory backing fd */
-	char file[PATH_MAX];			/* filename for fd */
 	unsigned int mmap_size;
 };
 
@@ -183,11 +182,11 @@ static int find_next_zero(int word, int start)
 
 static int add_pool(struct pool *pool, unsigned int alloc_size)
 {
-	void *ptr;
 	int fd, bitmap_blocks;
+	char file[] = "/tmp/.fio_smalloc.XXXXXX";
+	void *ptr;
 
-	strcpy(pool->file, "/tmp/.fio_smalloc.XXXXXX");
-	fd = mkstemp(pool->file);
+	fd = mkstemp(file);
 	if (fd < 0)
 		goto out_close;
 
@@ -229,8 +228,8 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 	 * which happens both for cleanup or unexpected quit. This way we
 	 * don't leave temp files around in case of a crash.
 	 */
+	unlink(file);
 	pool->fd = fd;
-	unlink(pool->file);
 
 	nr_pools++;
 	return 0;
@@ -238,10 +237,9 @@ out_unlink:
 	fprintf(stderr, "smalloc: failed adding pool\n");
 	if (pool->map)
 		munmap(pool->map, pool->mmap_size);
-	unlink(pool->file);
+	unlink(file);
 out_close:
-	if (fd >= 0)
-		close(fd);
+	close(fd);
 	return 1;
 }
 
