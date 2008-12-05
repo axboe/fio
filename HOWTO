@@ -583,7 +583,10 @@ cpumask=int	Set the CPU affinity of this job. The parameter given is a
 		the allowed CPUs to be 1 and 5, you would pass the decimal
 		value of (1 << 1 | 1 << 5), or 34. See man
 		sched_setaffinity(2). This may not work on all supported
-		operating systems or kernel versions.
+		operating systems or kernel versions. This option doesn't
+		work well for a higher CPU count than what you can store in
+		an integer mask, so it can only control cpus 1-32. For
+		boxes with larger CPU counts, use cpus_allowed.
 
 cpus_allowed=str Controls the same options as cpumask, but it allows a text
 		setting of the permitted CPUs instead. So to use CPUs 1 and
