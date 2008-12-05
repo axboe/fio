@@ -882,7 +882,11 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 static void io_completed(struct thread_data *td, struct io_u *io_u,
 			 struct io_completion_data *icd)
 {
-	unsigned long usec;
+	/*
+	 * Older gcc's are too dumb to realize that usec is always used
+	 * initialized, silence that warning.
+	 */
+	unsigned long uninitialized_var(usec);
 
 	dprint_io_u(io_u, "io complete");
 
