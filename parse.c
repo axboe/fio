@@ -474,6 +474,7 @@ static struct fio_option *get_option(const char *opt,
 		*ret = '\0';
 		ret = (char *) opt;
 		(*post)++;
+		strip_blank_end(ret);
 		o = find_option(options, ret);
 	} else {
 		o = find_option(options, opt);
@@ -520,7 +521,7 @@ int parse_cmd_option(const char *opt, const char *val,
 
 	o = find_option(options, opt);
 	if (!o) {
-		fprintf(stderr, "Bad option %s\n", opt);
+		fprintf(stderr, "Bad option <%s>\n", opt);
 		return 1;
 	}
 
@@ -589,7 +590,7 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 
 	o = get_option(tmp, options, &post);
 	if (!o) {
-		fprintf(stderr, "Bad option %s\n", tmp);
+		fprintf(stderr, "Bad option <%s>\n", tmp);
 		free(tmp);
 		return 1;
 	}
