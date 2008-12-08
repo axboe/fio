@@ -500,6 +500,8 @@ struct thread_options {
 	unsigned int disable_slat;
 	unsigned int disable_bw;
 	unsigned int gtod_reduce;
+	unsigned int gtod_cpu;
+	unsigned int gtod_offload;
 
 	char *read_iolog_file;
 	char *write_iolog_file;
@@ -699,6 +701,8 @@ extern int read_only;
 extern int eta_print;
 extern unsigned long done_secs;
 extern char *job_section;
+extern int fio_gtod_offload;
+extern int fio_gtod_cpu;
 
 extern struct thread_data *threads;
 
@@ -828,6 +832,8 @@ extern void usec_sleep(struct thread_data *, unsigned long);
 extern void rate_throttle(struct thread_data *, unsigned long, unsigned int);
 extern void fill_start_time(struct timeval *);
 extern void fio_gettime(struct timeval *, void *);
+extern void fio_gtod_init(void);
+extern void fio_gtod_update(void);
 extern void set_genesis_time(void);
 extern int ramp_time_over(struct thread_data *);
 extern int in_ramp_time(struct thread_data *);

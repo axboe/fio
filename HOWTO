@@ -869,6 +869,18 @@ gtod_reduce=bool Enable all of the gettimeofday() reducing options
 		we only do about 0.4% of the gtod() calls we would have
 		done if all time keeping was enabled.
 
+gtod_cpu=int	Sometimes it's cheaper to dedicate a single thread of
+		execution to just getting the current time. Fio (and
+		databases, for instance) are very intensive on gettimeofday()
+		calls. With this option, you can set one CPU aside for
+		doing nothing but logging current time to a shared memory
+		location. Then the other threads/processes that run IO
+		workloads need only copy that segment, instead of entering
+		the kernel with a gettimeofday() call. The CPU set aside
+		for doing these time calls will be excluded from other
+		uses. Fio will manually clear it from the CPU mask of other
+		jobs.
+
 
 6.0 Interpreting the output
 ---------------------------

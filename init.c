@@ -27,7 +27,7 @@ static char **ini_file;
 static int max_jobs = MAX_JOBS;
 static int dump_cmdline;
 
-struct thread_data def_thread;
+static struct thread_data def_thread;
 struct thread_data *threads = NULL;
 
 int exitall_on_terminate = 0;
@@ -213,6 +213,14 @@ static int setup_rate(struct thread_data *td)
 static int fixup_options(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
+
+#ifndef FIO_HAVE_CPU_AFFINITY
+	if (td->o.gtod_cpu) {
+		log_err("fio: platform must support CPU affinity for"
+			"gettimeofday() offloading\n");
+		return 1;
+	}
+#endif
 
 	if (read_only && td_write(td)) {
 		log_err("fio: job <%s> has write bit set, but fio is in"
@@ -1102,6 +1110,12 @@ int parse_options(int argc, char *argv[])
 		log_err("No jobs defined(s)\n");
 		usage(argv[0]);
 		return 1;
+	}
+
+	if (def_thread.o.gtod_offload) {
+		fio_gtod_init();
+		fio_gtod_offload = 1;
+		fio_gtod_cpu = def_thread.o.gtod_cpu;
 	}
 
 	return 0;

@@ -55,6 +55,7 @@ static struct fio_mutex *startup_mutex;
 static volatile int fio_abort;
 static int exit_value;
 static struct itimerval itimer;
+static pthread_t gtod_thread;
 
 struct io_log *agg_io_log[2];
 
@@ -964,6 +965,18 @@ static void *thread_main(void *data)
 		goto err;
 	}
 
+	if (td->o.gtod_cpu) {
+		if (fio_getaffinity(td->pid, &td->o.cpumask) == -1) {
+			td_verror(td, errno, "cpu_get_affinity");
+			goto err;
+		}
+		fio_cpu_clear(&td->o.cpumask, td->o.gtod_cpu);
+		if (fio_setaffinity(td) == -1) {
+			td_verror(td, errno, "cpu_set_affinity");
+			goto err;
+		}
+	}
+
 	if (td->ioprio_set) {
 		if (ioprio_set(IOPRIO_WHO_PROCESS, 0, td->ioprio) == -1) {
 			td_verror(td, errno, "ioprio_set");
@@ -1229,6 +1242,39 @@ reaped:
 		terminate_threads(TERMINATE_ALL);
 }
 
+static void *gtod_thread_main(void *data)
+{
+	fio_mutex_up(startup_mutex);
+
+	/*
+	 * As long as we have jobs around, update the clock. It would be nice
+	 * to have some way of NOT hammering that CPU with gettimeofday(),
+	 * but I'm not sure what to use outside of a simple CPU nop to relax
+	 * it - we don't want to lose precision.
+	 */
+	while (threads) {
+		fio_gtod_update();
+		nop;
+	}
+
+	return NULL;
+}
+
+static int fio_start_gtod_thread(void)
+{
+	if (pthread_create(&gtod_thread, NULL, gtod_thread_main, NULL)) {
+		perror("Can't create gtod thread");
+		return 1;
+	}
+	if (pthread_detach(gtod_thread) < 0) {
+		perror("Can't detatch gtod thread");
+		return 1;
+	}
+
+	fio_mutex_down(startup_mutex);
+	return 0;
+}
+
 /*
  * Main function for kicking off and reaping jobs, as needed.
  */
@@ -1239,6 +1285,9 @@ static void run_threads(void)
 	int i, todo, nr_running, m_rate, t_rate, nr_started;
 
 	if (fio_pin_memory())
+		return;
+
+	if (fio_gtod_offload && fio_start_gtod_thread())
 		return;
 
 	if (!terse_output) {

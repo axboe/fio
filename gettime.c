@@ -6,12 +6,17 @@
 #include <sys/time.h>
 
 #include "fio.h"
+#include "smalloc.h"
 
 #include "hash.h"
 
 static int clock_gettime_works;
 static struct timeval last_tv;
 static int last_tv_valid;
+
+static struct timeval *fio_tv;
+int fio_gtod_offload = 0;
+int fio_gtod_cpu = -1;
 
 #ifdef FIO_DEBUG_TIME
 
@@ -116,7 +121,10 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 
 	gtod_log_caller(caller);
 #endif
-	if (!clock_gettime_works) {
+	if (fio_tv) {
+		memcpy(tp, fio_tv, sizeof(*tp));
+		return;
+	} else if (!clock_gettime_works) {
 gtod:
 		gettimeofday(tp, NULL);
 	} else {
@@ -144,4 +152,15 @@ gtod:
 	}
 	last_tv_valid = 1;
 	memcpy(&last_tv, tp, sizeof(*tp));
+}
+
+void fio_gtod_init(void)
+{
+	fio_tv = smalloc(sizeof(struct timeval));
+	assert(fio_tv);
+}
+
+void fio_gtod_update(void)
+{
+	gettimeofday(fio_tv, NULL);
 }

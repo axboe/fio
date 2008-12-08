@@ -497,6 +497,16 @@ static int str_gtod_reduce_cb(void *data, int *il)
 	return 0;
 }
 
+static int str_gtod_cpu_cb(void *data, int *il)
+{
+	struct thread_data *td = data;
+	int val = *il;
+
+	td->o.gtod_cpu = val;
+	td->o.gtod_offload = 1;
+	return 0;
+}
+
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
 
@@ -1387,6 +1397,12 @@ static struct fio_option options[] = {
 		.help	= "Disable bandwidth logging",
 		.parent	= "gtod_reduce",
 		.def	= "0",
+	},
+	{
+		.name	= "gtod_cpu",
+		.type	= FIO_OPT_INT,
+		.cb	= str_gtod_cpu_cb,
+		.help	= "Setup dedicated gettimeofday() thread on this CPU",
 	},
 	{
 		.name = NULL,

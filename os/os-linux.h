@@ -54,7 +54,6 @@ typedef struct drand48_data os_random_state_t;
  * If you are on an ancient glibc (2.3.2), then define GLIBC_2_3_2 if you want
  * the affinity helpers to work.
  */
-#ifdef FIO_HAVE_CPU_AFFINITY
 #ifndef GLIBC_2_3_2
 #define fio_setaffinity(td)		\
 	sched_setaffinity((td)->pid, sizeof((td)->o.cpumask), &(td)->o.cpumask)
@@ -66,7 +65,8 @@ typedef struct drand48_data os_random_state_t;
 #define fio_getaffinity(pid, ptr)	\
 	sched_getaffinity((pid), (ptr))
 #endif
-#endif
+
+#define fio_cpu_clear(mask, cpu)	CPU_CLR((cpu), (mask))
 
 static inline int ioprio_set(int which, int who, int ioprio)
 {
