@@ -264,6 +264,7 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
 	char *cpu, *str, *p;
+	int ret = 0;
 
 	CPU_ZERO(&td->o.cpumask);
 
@@ -292,15 +293,25 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 		if (icpu2 == -1)
 			icpu2 = icpu;
 		while (icpu <= icpu2) {
+			if (icpu >= CPU_SETSIZE) {
+				log_err("fio: your OS only supports up to"
+					" %d CPUs\n", (int) CPU_SETSIZE);
+				ret = 1;
+				break;
+			}
+				
 			dprint(FD_PARSE, "set cpu allowed %d\n", icpu);
 			CPU_SET(atoi(cpu), &td->o.cpumask);
 			icpu++;
 		}
+		if (ret)
+			break;
 	}
 
 	free(p);
-	td->o.cpumask_set = 1;
-	return 0;
+	if (!ret)
+		td->o.cpumask_set = 1;
+	return ret;
 }
 #endif
 
