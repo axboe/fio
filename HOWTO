@@ -590,7 +590,9 @@ cpumask=int	Set the CPU affinity of this job. The parameter given is a
 
 cpus_allowed=str Controls the same options as cpumask, but it allows a text
 		setting of the permitted CPUs instead. So to use CPUs 1 and
-		5, you would specify cpus_allowed=1,5.
+		5, you would specify cpus_allowed=1,5. This options also
+		allows a range of CPUs. Say you wanted a binding to CPUs
+		1, 5, and 8-15, you would set cpus_allowed=1,5,8-15.
 
 startdelay=time	Start this job the specified number of seconds after fio
 		has started. Only useful if the job file contains several

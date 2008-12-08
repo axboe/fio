@@ -249,9 +249,12 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 
 	CPU_ZERO(&td->o.cpumask);
 
-	for (i = 0; i < sizeof(int) * 8; i++)
-		if ((1 << i) & *val)
+	for (i = 0; i < sizeof(int) * 8; i++) {
+		if ((1 << i) & *val) {
+			dprint(FD_PARSE, "set cpu allowed %d\n", i);
 			CPU_SET(*val, &td->o.cpumask);
+		}
+	}
 
 	td->o.cpumask_set = 1;
 	return 0;
@@ -270,9 +273,29 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 	strip_blank_end(str);
 
 	while ((cpu = strsep(&str, ",")) != NULL) {
+		char *str2, *cpu2;
+		int icpu, icpu2;
+
 		if (!strlen(cpu))
 			break;
-		CPU_SET(atoi(cpu), &td->o.cpumask);
+
+		str2 = cpu;
+		icpu2 = -1;
+		while ((cpu2 = strsep(&str2, "-")) != NULL) {
+			if (!strlen(cpu2))
+				break;
+
+			icpu2 = atoi(cpu2);
+		}
+
+		icpu = atoi(cpu);
+		if (icpu2 == -1)
+			icpu2 = icpu;
+		while (icpu <= icpu2) {
+			dprint(FD_PARSE, "set cpu allowed %d\n", icpu);
+			CPU_SET(atoi(cpu), &td->o.cpumask);
+			icpu++;
+		}
 	}
 
 	free(p);
