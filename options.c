@@ -246,13 +246,20 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 {
 	struct thread_data *td = data;
 	unsigned int i;
+	long max_cpu;
 
 	CPU_ZERO(&td->o.cpumask);
+	max_cpu = sysconf(_SC_NPROCESSORS_ONLN);
 
 	for (i = 0; i < sizeof(int) * 8; i++) {
 		if ((1 << i) & *val) {
+			if (i > max_cpu) {
+				log_err("fio: CPU %d too large (max=%ld)\n", i,
+								max_cpu);
+				return 1;
+			}
 			dprint(FD_PARSE, "set cpu allowed %d\n", i);
-			CPU_SET(*val, &td->o.cpumask);
+			CPU_SET(i, &td->o.cpumask);
 		}
 	}
 
@@ -264,6 +271,7 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
 	char *cpu, *str, *p;
+	long max_cpu;
 	int ret = 0;
 
 	CPU_ZERO(&td->o.cpumask);
@@ -272,6 +280,8 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 
 	strip_blank_front(&str);
 	strip_blank_end(str);
+
+	max_cpu = sysconf(_SC_NPROCESSORS_ONLN);
 
 	while ((cpu = strsep(&str, ",")) != NULL) {
 		char *str2, *cpu2;
@@ -299,7 +309,13 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 				ret = 1;
 				break;
 			}
-				
+			if (icpu > max_cpu) {
+				log_err("fio: CPU %d too large (max=%ld)\n",
+							icpu, max_cpu);
+				ret = 1;
+				break;
+			}
+	
 			dprint(FD_PARSE, "set cpu allowed %d\n", icpu);
 			CPU_SET(atoi(cpu), &td->o.cpumask);
 			icpu++;
