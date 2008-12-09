@@ -965,6 +965,10 @@ static void *thread_main(void *data)
 		goto err;
 	}
 
+	/*
+	 * If we have a gettimeofday() thread, make sure we exclude that
+	 * thread from this job
+	 */
 	if (td->o.gtod_cpu) {
 		if (fio_getaffinity(td->pid, &td->o.cpumask) == -1) {
 			td_verror(td, errno, "cpu_get_affinity");
@@ -1080,21 +1084,24 @@ static void *thread_main(void *data)
 	td->ts.io_bytes[1] = td->io_bytes[1];
 
 	if (td->ts.bw_log) {
-		if (td->o.bw_log_file)
-			finish_log_named(td, td->ts.bw_log, td->o.bw_log_file, "bw");
-		else
+		if (td->o.bw_log_file) {
+			finish_log_named(td, td->ts.bw_log,
+						td->o.bw_log_file, "bw");
+		} else
 			finish_log(td, td->ts.bw_log, "bw");
 	}
 	if (td->ts.slat_log) {
-		if (td->o.lat_log_file)
-			finish_log_named(td, td->ts.slat_log, td->o.lat_log_file, "clat");
-		else
+		if (td->o.lat_log_file) {
+			finish_log_named(td, td->ts.slat_log,
+						td->o.lat_log_file, "clat");
+		} else
 			finish_log(td, td->ts.slat_log, "slat");
 	}
 	if (td->ts.clat_log) {
-		if (td->o.lat_log_file)
-			finish_log_named(td, td->ts.clat_log, td->o.lat_log_file, "clat");
-		else
+		if (td->o.lat_log_file) {
+			finish_log_named(td, td->ts.clat_log,
+						td->o.lat_log_file, "clat");
+		} else
 			finish_log(td, td->ts.clat_log, "clat");
 	}
 	if (td->o.exec_postrun) {
