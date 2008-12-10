@@ -78,7 +78,7 @@ unsigned long time_since_now(struct timeval *s)
 /*
  * busy looping version for the last few usec
  */
-void __usec_sleep(unsigned int usec)
+void usec_spin(unsigned int usec)
 {
 	struct timeval start;
 
@@ -96,7 +96,7 @@ void usec_sleep(struct thread_data *td, unsigned long usec)
 		unsigned long ts = usec;
 
 		if (usec < ns_granularity) {
-			__usec_sleep(usec);
+			usec_spin(usec);
 			break;
 		}
 

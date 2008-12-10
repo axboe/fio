@@ -673,7 +673,7 @@ sync_done:
 				int left;
 
 				if (td->o.thinktime_spin)
-					__usec_sleep(td->o.thinktime_spin);
+					usec_spin(td->o.thinktime_spin);
 
 				left = td->o.thinktime - td->o.thinktime_spin;
 				if (left)

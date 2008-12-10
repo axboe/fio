@@ -827,7 +827,7 @@ extern unsigned long mtime_since(struct timeval *, struct timeval *);
 extern unsigned long mtime_since_now(struct timeval *);
 extern unsigned long time_since_now(struct timeval *);
 extern unsigned long mtime_since_genesis(void);
-extern void __usec_sleep(unsigned int);
+extern void usec_spin(unsigned int);
 extern void usec_sleep(struct thread_data *, unsigned long);
 extern void rate_throttle(struct thread_data *, unsigned long, unsigned int);
 extern void fill_start_time(struct timeval *);
