@@ -69,8 +69,7 @@ static inline int fio_set_odirect(int fd)
  */
 #define fio_setaffinity(td)		\
 	pset_bind((td)->o.cpumask, P_PID, (td)->pid)
-#define fio_getaffinity(pid, ptr)	\
-	sched_getaffinity((pid), sizeof(cpu_set_t), (ptr))
+#define fio_getaffinity(pid, ptr)	0
 
 #define fio_cpu_clear(mask, cpu)	pset_assign(*(mask), (cpu), PS_NONE)
 #define fio_cpu_set(mask, cpu)		pset_assign(*(mask), (cpu), PS_MYID)
