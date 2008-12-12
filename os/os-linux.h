@@ -35,11 +35,8 @@
 #define CLOCK_MONOTONIC 1
 #endif
 
-#ifdef FIO_HAVE_CPU_AFFINITY
 typedef cpu_set_t os_cpu_mask_t;
-#else
-typedef int os_cpu_mask_t;
-#endif
+
 typedef struct drand48_data os_random_state_t;
 
 /*
@@ -69,6 +66,7 @@ typedef struct drand48_data os_random_state_t;
 #define fio_cpu_clear(mask, cpu)	CPU_CLR((cpu), (mask))
 #define fio_cpu_set(mask, cpu)		CPU_SET((cpu), (mask))
 #define fio_cpuset_init(td)		CPU_ZERO(&(td)->o.cpumask)
+#define fio_cpuset_exit(td)		do { } while (0)
 
 #define FIO_MAX_CPUS			CPU_SETSIZE
 

@@ -970,10 +970,6 @@ static void *thread_main(void *data)
 	 * thread from this job
 	 */
 	if (td->o.gtod_cpu) {
-		if (fio_getaffinity(td->pid, &td->o.cpumask) == -1) {
-			td_verror(td, errno, "cpu_get_affinity");
-			goto err;
-		}
 		fio_cpu_clear(&td->o.cpumask, td->o.gtod_cpu);
 		if (fio_setaffinity(td) == -1) {
 			td_verror(td, errno, "cpu_set_affinity");
@@ -1119,6 +1115,9 @@ err:
 	close_and_free_files(td);
 	close_ioengine(td);
 	cleanup_io_u(td);
+
+	if (td->o.cpumask_set)
+		fio_cpuset_exit(td);
 
 	/*
 	 * do this very late, it will log file closing as well
