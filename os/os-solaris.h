@@ -74,8 +74,30 @@ static inline int fio_set_odirect(int fd)
 
 #define fio_cpu_clear(mask, cpu)	pset_assign(*(mask), (cpu), PS_NONE)
 #define fio_cpu_set(mask, cpu)		pset_assign(*(mask), (cpu), PS_MYID)
-#define fio_cpuset_init(td)		pset_create(&(td)->o.cpumask)
-#define fio_cpuset_exit(td)		pset_destroy((td)->o.cpumask)
+
+static inline int fio_cpuset_init(os_cpu_mask_t *mask)
+{
+	int ret;
+
+	if (pset_create(mask) < 0) {
+		ret = errno;
+		return -1;
+	}
+
+	return 0;
+}
+
+static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
+{
+	int ret;
+
+	if (pset_destroy(*mask) < 0) {
+		ret = errno;
+		return -1;
+	}
+
+	return 0;
+}
 
 /*
  * Should be enough, not aware of what (if any) restrictions Solaris has

@@ -247,8 +247,15 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 	struct thread_data *td = data;
 	unsigned int i;
 	long max_cpu;
+	int ret;
 
-	fio_cpuset_init(td);
+	ret = fio_cpuset_init(&td->o.cpumask);
+	if (ret < 0) {
+		log_err("fio: cpuset_init failed\n");
+		td_verror(td, ret, "fio_cpuset_init");
+		return 1;
+	}
+
 	max_cpu = sysconf(_SC_NPROCESSORS_ONLN);
 
 	for (i = 0; i < sizeof(int) * 8; i++) {
@@ -274,7 +281,12 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 	long max_cpu;
 	int ret = 0;
 
-	fio_cpuset_init(td);
+	ret = fio_cpuset_init(&td->o.cpumask);
+	if (ret < 0) {
+		log_err("fio: cpuset_init failed\n");
+		td_verror(td, ret, "fio_cpuset_init");
+		return 1;
+	}
 
 	p = str = strdup(input);
 

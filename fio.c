@@ -1116,8 +1116,11 @@ err:
 	close_ioengine(td);
 	cleanup_io_u(td);
 
-	if (td->o.cpumask_set)
-		fio_cpuset_exit(td);
+	if (td->o.cpumask_set) {
+		int ret = fio_cpuset_exit(&td->o.cpumask);
+
+		td_verror(td, ret, "fio_cpuset_exit");
+	}
 
 	/*
 	 * do this very late, it will log file closing as well
