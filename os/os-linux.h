@@ -67,6 +67,10 @@ typedef struct drand48_data os_random_state_t;
 #endif
 
 #define fio_cpu_clear(mask, cpu)	CPU_CLR((cpu), (mask))
+#define fio_cpu_set(mask, cpu)		CPU_SET((cpu), (mask))
+#define fio_cpuset_init(td)		CPU_ZERO(&(td)->o.cpumask)
+
+#define FIO_MAX_CPUS			CPU_SETSIZE
 
 static inline int ioprio_set(int which, int who, int ioprio)
 {

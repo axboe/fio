@@ -248,7 +248,7 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 	unsigned int i;
 	long max_cpu;
 
-	CPU_ZERO(&td->o.cpumask);
+	fio_cpuset_init(td);
 	max_cpu = sysconf(_SC_NPROCESSORS_ONLN);
 
 	for (i = 0; i < sizeof(int) * 8; i++) {
@@ -259,7 +259,7 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 				return 1;
 			}
 			dprint(FD_PARSE, "set cpu allowed %d\n", i);
-			CPU_SET(i, &td->o.cpumask);
+			fio_cpu_set(&td->o.cpumask, i);
 		}
 	}
 
@@ -274,7 +274,7 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 	long max_cpu;
 	int ret = 0;
 
-	CPU_ZERO(&td->o.cpumask);
+	fio_cpuset_init(td);
 
 	p = str = strdup(input);
 
@@ -303,9 +303,9 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 		if (icpu2 == -1)
 			icpu2 = icpu;
 		while (icpu <= icpu2) {
-			if (icpu >= CPU_SETSIZE) {
+			if (icpu >= FIO_MAX_CPUS) {
 				log_err("fio: your OS only supports up to"
-					" %d CPUs\n", (int) CPU_SETSIZE);
+					" %d CPUs\n", (int) FIO_MAX_CPUS);
 				ret = 1;
 				break;
 			}
@@ -317,7 +317,7 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 			}
 	
 			dprint(FD_PARSE, "set cpu allowed %d\n", icpu);
-			CPU_SET(atoi(cpu), &td->o.cpumask);
+			fio_cpu_set(&td->o.cpumask, icpu);
 			icpu++;
 		}
 		if (ret)
