@@ -3,11 +3,13 @@
 
 #include <sys/types.h>
 #include <sys/fcntl.h>
+#include <sys/pset.h>
 
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_SOLARISAIO
 #define FIO_HAVE_FALLOCATE
 #define FIO_HAVE_POSIXAIO_FSYNC
+#define FIO_HAVE_CPU_AFFINITY
 
 #define OS_MAP_ANON		MAP_ANON
 #define OS_RAND_MAX		2147483648UL
@@ -16,7 +18,7 @@ struct solaris_rand_seed {
 	unsigned short r[3];
 };
 
-typedef unsigned long os_cpu_mask_t;
+typedef psetid_t os_cpu_mask_t;
 typedef struct solaris_rand_seed os_random_state_t;
 
 /*
@@ -61,5 +63,23 @@ static inline int fio_set_odirect(int fd)
 
 	return 0;
 }
+
+/*
+ * pset binding hooks for fio
+ */
+#define fio_setaffinity(td)		\
+	pset_bind((td)->o.cpumask, P_PID, (td)->pid)
+#define fio_getaffinity(pid, ptr)	\
+	sched_getaffinity((pid), sizeof(cpu_set_t), (ptr))
+
+#define fio_cpu_clear(mask, cpu)	pset_assign(*(mask), (cpu), PS_NONE)
+#define fio_cpu_set(mask, cpu)		pset_assign(*(mask), (cpu), PS_MYID)
+#define fio_cpuset_init(td)		pset_create(&(td)->o.cpumask)
+#define fio_cpuset_exit(td)		pset_destroy((td)->o.cpumask)
+
+/*
+ * Should be enough, not aware of what (if any) restrictions Solaris has
+ */
+#define FIO_MAX_CPUS			16384
 
 #endif
