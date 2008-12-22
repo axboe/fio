@@ -68,11 +68,11 @@ static inline int fio_set_odirect(int fd)
  * pset binding hooks for fio
  */
 #define fio_setaffinity(td)		\
-	pset_bind((td)->o.cpumask, P_PID, (td)->pid)
-#define fio_getaffinity(pid, ptr)	0
+	pset_bind((td)->o.cpumask, P_PID, (td)->pid, NULL)
+#define fio_getaffinity(pid, ptr)	({ 0; })
 
-#define fio_cpu_clear(mask, cpu)	pset_assign(*(mask), (cpu), PS_NONE)
-#define fio_cpu_set(mask, cpu)		pset_assign(*(mask), (cpu), PS_MYID)
+#define fio_cpu_clear(mask, cpu)	pset_assign(PS_NONE, (cpu), NULL)
+#define fio_cpu_set(mask, cpu)		pset_assign(*(mask), (cpu), NULL)
 
 static inline int fio_cpuset_init(os_cpu_mask_t *mask)
 {
