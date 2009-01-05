@@ -1274,12 +1274,17 @@ static void *gtod_thread_main(void *data)
 
 static int fio_start_gtod_thread(void)
 {
-	if (pthread_create(&gtod_thread, NULL, gtod_thread_main, NULL)) {
-		perror("Can't create gtod thread");
+	int ret;
+
+	ret = pthread_create(&gtod_thread, NULL, gtod_thread_main, NULL);
+	if (ret) {
+		log_err("Can't create gtod thread: %s\n", strerror(ret));
 		return 1;
 	}
-	if (pthread_detach(gtod_thread) < 0) {
-		perror("Can't detatch gtod thread");
+
+	ret = pthread_detach(gtod_thread);
+	if (ret) {
+		log_err("Can't detatch gtod thread: %s\n", strerror(ret));
 		return 1;
 	}
 
@@ -1407,15 +1412,21 @@ static void run_threads(void)
 			nr_started++;
 
 			if (td->o.use_thread) {
+				int ret;
+
 				dprint(FD_PROCESS, "will pthread_create\n");
-				if (pthread_create(&td->thread, NULL,
-						   thread_main, td)) {
-					perror("pthread_create");
+				ret = pthread_create(&td->thread, NULL,
+							thread_main, td);
+				if (ret) {
+					log_err("pthread_create: %s\n",
+							strerror(ret));
 					nr_started--;
 					break;
 				}
-				if (pthread_detach(td->thread) < 0)
-					perror("pthread_detach");
+				ret = pthread_detach(td->thread);
+				if (ret)
+					log_err("pthread_detach: %s",
+							strerror(ret));
 			} else {
 				pid_t pid;
 				dprint(FD_PROCESS, "will fork\n");
