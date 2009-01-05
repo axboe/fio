@@ -941,8 +941,11 @@ static void *thread_main(void *data)
 	td->io_hist_tree = RB_ROOT;
 
 	td_set_runstate(td, TD_INITIALIZED);
+	dprint(FD_MUTEX, "up startup_mutex\n");
 	fio_mutex_up(startup_mutex);
+	dprint(FD_MUTEX, "wait on td->mutex\n");
 	fio_mutex_down(td->mutex);
+	dprint(FD_MUTEX, "done waiting on td->mutex\n");
 
 	/*
 	 * the ->mutex mutex is now no longer used, close it to avoid
@@ -1280,7 +1283,9 @@ static int fio_start_gtod_thread(void)
 		return 1;
 	}
 
+	dprint(FD_MUTEX, "wait on startup_mutex\n");
 	fio_mutex_down(startup_mutex);
+	dprint(FD_MUTEX, "done waiting on startup_mutex\n");
 	return 0;
 }
 
@@ -1422,7 +1427,9 @@ static void run_threads(void)
 				} else if (i == fio_debug_jobno)
 					*fio_debug_jobp = pid;
 			}
+			dprint(FD_MUTEX, "wait on startup_mutex\n");
 			fio_mutex_down(startup_mutex);
+			dprint(FD_MUTEX, "done waiting on startup_mutex\n");
 		}
 
 		/*

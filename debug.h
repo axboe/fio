@@ -15,6 +15,7 @@ enum {
 	FD_PARSE,
 	FD_DISKUTIL,
 	FD_JOB,
+	FD_MUTEX,
 	FD_DEBUG_MAX,
 };
 
