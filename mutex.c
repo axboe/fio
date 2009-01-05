@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <sys/mman.h>
 
+#include "log.h"
 #include "mutex.h"
 #include "arch/arch.h"
 
@@ -21,7 +22,7 @@ struct fio_mutex *fio_mutex_init(int value)
 	struct fio_mutex *mutex = NULL;
 	pthread_mutexattr_t attr;
 	pthread_condattr_t cond;
-	int fd;
+	int fd, ret;
 
 	fd = mkstemp(mutex_name);
 	if (fd < 0) {
@@ -47,12 +48,14 @@ struct fio_mutex *fio_mutex_init(int value)
 	mutex->mutex_fd = fd;
 	mutex->value = value;
 
-	if (pthread_mutexattr_init(&attr) < 0) {
-		perror("pthread_mutexattr_init");
+	ret = pthread_mutexattr_init(&attr);
+	if (ret) {
+		log_err("pthread_mutexattr_init: %s\n", strerror(ret));
 		goto err;
 	}
-	if (pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED) < 0) {
-		perror("pthread_mutexattr_setpshared");
+	ret = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	if (ret) {
+		log_err("pthread_mutexattr_setpshared: %s\n", strerror(ret));
 		goto err;
 	}
 
@@ -60,8 +63,9 @@ struct fio_mutex *fio_mutex_init(int value)
 	pthread_condattr_setpshared(&cond, PTHREAD_PROCESS_SHARED);
 	pthread_cond_init(&mutex->cond, &cond);
 
-	if (pthread_mutex_init(&mutex->lock, &attr) < 0) {
-		perror("pthread_mutex_init");
+	ret = pthread_mutex_init(&mutex->lock, &attr);
+	if (ret) {
+		log_err("pthread_mutex_init: %s\n", strerror(ret));
 		goto err;
 	}
 
