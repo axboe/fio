@@ -6,6 +6,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <linux/unistd.h>
 #include <linux/raw.h>
 #include <linux/major.h>

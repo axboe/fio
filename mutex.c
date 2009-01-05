@@ -9,6 +9,7 @@
 #include "log.h"
 #include "mutex.h"
 #include "arch/arch.h"
+#include "os/os.h"
 
 void fio_mutex_remove(struct fio_mutex *mutex)
 {
