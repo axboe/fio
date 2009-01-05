@@ -214,6 +214,15 @@ static int fixup_options(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
 
+#ifndef FIO_HAVE_PSHARED_MUTEX
+	if (!td->o.use_thread) {
+		log_info("fio: this platform does not support process shared"
+			 " mutexes, forcing use of threads. Use the 'thread'"
+			 " option to get rid of this warning.\n");
+		td->o.use_thread = 1;
+	}
+#endif
+
 #ifndef FIO_HAVE_CPU_AFFINITY
 	if (td->o.gtod_cpu) {
 		log_err("fio: platform must support CPU affinity for"

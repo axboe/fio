@@ -22,7 +22,7 @@ struct fio_mutex *fio_mutex_init(int value)
 	struct fio_mutex *mutex = NULL;
 	pthread_mutexattr_t attr;
 	pthread_condattr_t cond;
-	int fd, ret;
+	int fd, ret, mflag;
 
 	fd = mkstemp(mutex_name);
 	if (fd < 0) {
@@ -48,19 +48,28 @@ struct fio_mutex *fio_mutex_init(int value)
 	mutex->mutex_fd = fd;
 	mutex->value = value;
 
+	/*
+	 * Not all platforms support process shared mutexes (FreeBSD)
+	 */
+#ifdef FIO_HAVE_PSHARED_MUTEX
+	mflag = PTHREAD_PROCESS_SHARED;
+#else
+	mflag = PTHREAD_PROCESS_PRIVATE;
+#endif
+
 	ret = pthread_mutexattr_init(&attr);
 	if (ret) {
 		log_err("pthread_mutexattr_init: %s\n", strerror(ret));
 		goto err;
 	}
-	ret = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	ret = pthread_mutexattr_setpshared(&attr, mflag);
 	if (ret) {
 		log_err("pthread_mutexattr_setpshared: %s\n", strerror(ret));
 		goto err;
 	}
 
 	pthread_condattr_init(&cond);
-	pthread_condattr_setpshared(&cond, PTHREAD_PROCESS_SHARED);
+	pthread_condattr_setpshared(&cond, mflag);
 	pthread_cond_init(&mutex->cond, &cond);
 
 	ret = pthread_mutex_init(&mutex->lock, &attr);
