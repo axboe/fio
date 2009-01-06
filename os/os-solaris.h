@@ -1,6 +1,7 @@
 #ifndef FIO_OS_SOLARIS_H
 #define FIO_OS_SOLARIS_H
 
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/fcntl.h>
 #include <sys/pset.h>

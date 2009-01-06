@@ -1,6 +1,7 @@
 #ifndef FIO_OS_FREEBSD_H
 #define FIO_OS_FREEBSD_H
 
+#include <errno.h>
 #include <sys/sysctl.h>
 
 #define FIO_HAVE_POSIXAIO
