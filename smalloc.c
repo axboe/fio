@@ -14,7 +14,6 @@
 #include "mutex.h"
 #include "arch/arch.h"
 
-#define MP_SAFE			/* define to make thread safe */
 #define SMALLOC_REDZONE		/* define to detect memory corruption */
 
 #define SMALLOC_BPB	32	/* block size, bytes-per-bit in bitmap */
@@ -54,38 +53,32 @@ static struct fio_mutex *lock;
 
 static inline void pool_lock(struct pool *pool)
 {
-	if (pool->lock)
-		fio_mutex_down(pool->lock);
+	fio_mutex_down(pool->lock);
 }
 
 static inline void pool_unlock(struct pool *pool)
 {
-	if (pool->lock)
-		fio_mutex_up(pool->lock);
+	fio_mutex_up(pool->lock);
 }
 
 static inline void global_read_lock(void)
 {
-	if (lock)
-		fio_mutex_down_read(lock);
+	fio_mutex_down_read(lock);
 }
 
 static inline void global_read_unlock(void)
 {
-	if (lock)
-		fio_mutex_up_read(lock);
+	fio_mutex_up_read(lock);
 }
 
 static inline void global_write_lock(void)
 {
-	if (lock)
-		fio_mutex_down_write(lock);
+	fio_mutex_down_write(lock);
 }
 
 static inline void global_write_unlock(void)
 {
-	if (lock)
-		fio_mutex_up_write(lock);
+	fio_mutex_up_write(lock);
 }
 
 static inline int ptr_valid(struct pool *pool, void *ptr)
@@ -217,11 +210,9 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 	pool->map = ptr;
 	pool->bitmap = (void *) ptr + (pool->nr_blocks * SMALLOC_BPL);
 
-#ifdef MP_SAFE
 	pool->lock = fio_mutex_init(1);
 	if (!pool->lock)
 		goto out_unlink;
-#endif
 
 	/*
 	 * Unlink pool file now. It wont get deleted until the fd is closed,
@@ -247,9 +238,7 @@ void sinit(void)
 {
 	int ret;
 
-#ifdef MP_SAFE
 	lock = fio_mutex_rw_init();
-#endif
 	ret = add_pool(&mp[0], INITIAL_SIZE);
 	assert(!ret);
 }
