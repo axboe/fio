@@ -237,14 +237,15 @@ filename=str	Fio normally makes up a filename based on the job name,
 		thread number, and file number. If you want to share
 		files between threads in a job or several jobs, specify
 		a filename for each of them to override the default. If
-		the ioengine used is 'net', the filename is the host and
-		port to connect to in the format of =host/port. If the
-		ioengine is file based, you can specify a number of files
-		by separating the names with a ':' colon. So if you wanted
-		a job to open /dev/sda and /dev/sdb as the two working files,
-		you would use filename=/dev/sda:/dev/sdb. '-' is a reserved
-		name, meaning stdin or stdout. Which of the two depends
-		on the read/write direction set.
+		the ioengine used is 'net', the filename is the host, port,
+		and protocol to use in the format of =host/port/protocol.
+		See ioengine=net for more. If the ioengine is file based, you
+		can specify a number of files by separating the names with a
+		':' colon. So if you wanted a job to open /dev/sda and /dev/sdb
+		as the two working files, you would use
+		filename=/dev/sda:/dev/sdb. '-' is a reserved name, meaning
+		stdin or stdout. Which of the two depends on the read/write
+		direction set.
 
 opendir=str	Tell fio to recursively add any file it can find in this
 		directory and down the file system tree.
@@ -429,9 +430,12 @@ ioengine=str	Defines how the job issues io to the file. The following
 
 			net	Transfer over the network to given host:port.
 				'filename' must be set appropriately to
-				filename=host/port regardless of send
+				filename=host/port/protocol regardless of send
 				or receive, if the latter only the port
-				argument is used.
+				argument is used. 'host' may be an IP address
+				or hostname, port is the port number to be used,
+				and protocol may be 'udp' or 'tcp'. If no
+				protocol is given, TCP is used.
 
 			netsplice Like net, but uses splice/vmsplice to
 				map data and send/receive.

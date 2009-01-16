@@ -22,6 +22,7 @@ struct netio_data {
 	int listenfd;
 	int send_to_net;
 	int use_splice;
+	int net_protocol;
 	int pipes[2];
 	char host[64];
 	struct sockaddr_in addr;
@@ -180,6 +181,7 @@ static int fio_netio_splice_out(struct thread_data *td, struct io_u *io_u)
 
 static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 {
+	struct netio_data *nd = td->io_ops->data;
 	int flags = 0;
 
 	/*
@@ -190,14 +192,29 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 		flags = MSG_MORE;
 #endif
 
-	return send(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen, flags);
+	if (nd->net_protocol == IPPROTO_UDP) {
+		return sendto(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen,
+				0, &nd->addr, sizeof(nd->addr));
+	} else {
+		return send(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen,
+				flags);
+	}
 }
 
-static int fio_netio_recv(struct io_u *io_u)
+static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 {
+	struct netio_data *nd = td->io_ops->data;
 	int flags = MSG_WAITALL;
 
-	return recv(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen, flags);
+	if (nd->net_protocol == IPPROTO_UDP) {
+		socklen_t len = sizeof(nd->addr);
+
+		return recvfrom(io_u->file->fd, io_u->xfer_buf,
+				io_u->xfer_buflen, 0, &nd->addr, &len);
+	} else {
+		return recv(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen,
+				flags);
+	}
 }
 
 static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
@@ -208,15 +225,15 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 	fio_ro_check(td, io_u);
 
 	if (io_u->ddir == DDIR_WRITE) {
-		if (nd->use_splice)
-			ret = fio_netio_splice_out(td, io_u);
-		else
+		if (!nd->use_splice || nd->net_protocol == IPPROTO_UDP)
 			ret = fio_netio_send(td, io_u);
-	} else if (io_u->ddir == DDIR_READ) {
-		if (nd->use_splice)
-			ret = fio_netio_splice_in(td, io_u);
 		else
-			ret = fio_netio_recv(io_u);
+			ret = fio_netio_splice_out(td, io_u);
+	} else if (io_u->ddir == DDIR_READ) {
+		if (!nd->use_splice || nd->net_protocol == IPPROTO_UDP)
+			ret = fio_netio_recv(td, io_u);
+		else
+			ret = fio_netio_splice_in(td, io_u);
 	} else
 		ret = 0;	/* must be a SYNC */
 
@@ -225,8 +242,14 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 			io_u->resid = io_u->xfer_buflen - ret;
 			io_u->error = 0;
 			return FIO_Q_COMPLETED;
-		} else
-			io_u->error = errno;
+		} else {
+			int err = errno;
+
+			if (io_u->ddir == DDIR_WRITE && err == EMSGSIZE)
+				return FIO_Q_BUSY;
+
+			io_u->error = err;
+		}
 	}
 
 	if (io_u->error)
@@ -238,12 +261,21 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
+	int type;
 
-	f->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (nd->net_protocol == IPPROTO_TCP)
+		type = SOCK_STREAM;
+	else
+		type = SOCK_DGRAM;
+
+	f->fd = socket(AF_INET, type, nd->net_protocol);
 	if (f->fd < 0) {
 		td_verror(td, errno, "socket");
 		return 1;
 	}
+
+	if (nd->net_protocol == IPPROTO_UDP)
+		return 0;
 
 	if (connect(f->fd, (struct sockaddr *) &nd->addr, sizeof(nd->addr)) < 0) {
 		td_verror(td, errno, "connect");
@@ -259,6 +291,11 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 	socklen_t socklen = sizeof(nd->addr);
 	struct pollfd pfd;
 	int ret;
+
+	if (nd->net_protocol == IPPROTO_UDP) {
+		f->fd = nd->listenfd;
+		return 0;
+	}
 
 	log_info("fio: waiting for connection\n");
 
@@ -331,9 +368,14 @@ static int fio_netio_setup_connect(struct thread_data *td, const char *host,
 static int fio_netio_setup_listen(struct thread_data *td, short port)
 {
 	struct netio_data *nd = td->io_ops->data;
-	int fd, opt;
+	int fd, opt, type;
 
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (nd->net_protocol == IPPROTO_TCP)
+		type = SOCK_STREAM;
+	else
+		type = SOCK_DGRAM;
+
+	fd = socket(AF_INET, type, nd->net_protocol);
 	if (fd < 0) {
 		td_verror(td, errno, "socket");
 		return 1;
@@ -359,7 +401,7 @@ static int fio_netio_setup_listen(struct thread_data *td, short port)
 		td_verror(td, errno, "bind");
 		return 1;
 	}
-	if (listen(fd, 1) < 0) {
+	if (nd->net_protocol == IPPROTO_TCP && listen(fd, 1) < 0) {
 		td_verror(td, errno, "listen");
 		return 1;
 	}
@@ -373,7 +415,7 @@ static int fio_netio_init(struct thread_data *td)
 	struct netio_data *nd = td->io_ops->data;
 	unsigned int port;
 	char host[64], buf[128];
-	char *sep;
+	char *sep, *portp, *modep;
 	int ret;
 
 	if (td_rw(td)) {
@@ -397,9 +439,27 @@ static int fio_netio_init(struct thread_data *td)
 	if (!strlen(host))
 		goto bad_host;
 
-	port = strtol(sep, NULL, 10);
+	modep = NULL;
+	portp = sep;
+	sep = strchr(portp, '/');
+	if (sep) {
+		*sep = '\0';
+		modep = sep + 1;
+	}
+		
+	port = strtol(portp, NULL, 10);
 	if (!port || port > 65535)
 		goto bad_host;
+
+	if (modep) {
+		if (!strncmp("tcp", modep, strlen(modep)))
+			nd->net_protocol = IPPROTO_TCP;
+		else if (!strncmp("udp", modep, strlen(modep)))
+			nd->net_protocol = IPPROTO_UDP;
+		else
+			goto bad_host;
+	} else
+		nd->net_protocol = IPPROTO_TCP;
 
 	if (td_read(td)) {
 		nd->send_to_net = 0;
@@ -411,7 +471,7 @@ static int fio_netio_init(struct thread_data *td)
 
 	return ret;
 bad_host:
-	log_err("fio: bad network host/port: %s\n", td->o.filename);
+	log_err("fio: bad network host/port/protocol: %s\n", td->o.filename);
 	return 1;
 }
 
