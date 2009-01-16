@@ -452,9 +452,11 @@ static int fio_netio_init(struct thread_data *td)
 		goto bad_host;
 
 	if (modep) {
-		if (!strncmp("tcp", modep, strlen(modep)))
+		if (!strncmp("tcp", modep, strlen(modep)) ||
+		    !strncmp("TCP", modep, strlen(modep)))
 			nd->net_protocol = IPPROTO_TCP;
-		else if (!strncmp("udp", modep, strlen(modep)))
+		else if (!strncmp("udp", modep, strlen(modep)) ||
+			 !strncmp("UDP", modep, strlen(modep)))
 			nd->net_protocol = IPPROTO_UDP;
 		else
 			goto bad_host;
