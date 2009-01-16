@@ -186,13 +186,7 @@ static void fio_libaio_cleanup(struct thread_data *td)
 static int fio_libaio_init(struct thread_data *td)
 {
 	struct libaio_data *ld = malloc(sizeof(*ld));
-	static int warn_print;
 	int err;
-
-	if (td->o.iodepth > 1 && !td->o.odirect && !warn_print) {
-		log_info("fio: libaio engine is only async for non-buffered IO\n");
-		warn_print = 1;
-	}
 
 	memset(ld, 0, sizeof(*ld));
 

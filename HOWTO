@@ -402,7 +402,9 @@ ioengine=str	Defines how the job issues io to the file. The following
 
 			vsync	Basic readv(2) or writev(2) IO.
 
-			libaio	Linux native asynchronous io.
+			libaio	Linux native asynchronous io. Note that Linux
+				may only support queued behaviour with
+				non-buffered IO (set direct=1 or buffered=0).
 
 			posixaio glibc posix asynchronous io.
 
