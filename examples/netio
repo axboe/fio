@@ -1,6 +1,7 @@
 # Example network job, just defines two clients that send/recv data
 [global]
 ioengine=net
+#the below defaults to a tcp connection, add /udp at the end for udp
 filename=localhost/8888
 bs=4k
 size=10g
