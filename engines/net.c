@@ -43,7 +43,7 @@ static int poll_wait(struct thread_data *td, int fd, short events)
 		ret = poll(&pfd, 1, -1);
 		if (ret < 0) {
 			if (errno == EINTR)
-				continue;
+				break;
 
 			td_verror(td, errno, "poll");
 			return -1;
@@ -54,8 +54,6 @@ static int poll_wait(struct thread_data *td, int fd, short events)
 	}
 
 	if (pfd.revents & events)
-		return 1;
-	else if (td->terminate)
 		return 1;
 
 	return -1;
