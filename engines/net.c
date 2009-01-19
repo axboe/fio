@@ -28,6 +28,16 @@ struct netio_data {
 	struct sockaddr_in addr;
 };
 
+struct udp_close_msg {
+	uint32_t magic;
+	uint32_t cmd;
+};
+
+enum {
+	FIO_LINK_CLOSE = 0x89,
+	FIO_LINK_CLOSE_MAGIC = 0x6c696e6b,
+};
+
 /*
  * Return -1 for error and 'nr events' for a positive number
  * of events
@@ -213,47 +223,85 @@ static int fio_netio_splice_out(struct thread_data *td, struct io_u *io_u)
 static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 {
 	struct netio_data *nd = td->io_ops->data;
-	int ret, flags = 0;
+	int ret, flags = MSG_DONTWAIT;
 
-	ret = poll_wait(td, io_u->file->fd, POLLOUT);
-	if (ret <= 0)
-		return ret;
-
-	/*
-	 * if we are going to write more, set MSG_MORE
-	 */
+	do {
+		if (nd->net_protocol == IPPROTO_UDP) {
+			ret = sendto(io_u->file->fd, io_u->xfer_buf,
+					io_u->xfer_buflen, flags, &nd->addr,
+					sizeof(nd->addr));
+		} else {
+			/*
+			 * if we are going to write more, set MSG_MORE
+			 */
 #ifdef MSG_MORE
-	if (td->this_io_bytes[DDIR_WRITE] + io_u->xfer_buflen < td->o.size)
-		flags = MSG_MORE;
+			if (td->this_io_bytes[DDIR_WRITE] + io_u->xfer_buflen <
+			    td->o.size)
+				flags |= MSG_MORE;
 #endif
+			ret = send(io_u->file->fd, io_u->xfer_buf,
+					io_u->xfer_buflen, flags);
+		}
+		if (ret > 0)
+			break;
 
-	if (nd->net_protocol == IPPROTO_UDP) {
-		return sendto(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen,
-				0, &nd->addr, sizeof(nd->addr));
-	} else {
-		return send(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen,
-				flags);
-	}
+		ret = poll_wait(td, io_u->file->fd, POLLOUT);
+		if (ret <= 0)
+			break;
+
+		flags &= ~MSG_DONTWAIT;
+	} while (1);
+
+	return ret;
+}
+
+static int is_udp_close(struct io_u *io_u, int len)
+{
+	struct udp_close_msg *msg;
+
+	if (len != sizeof(struct udp_close_msg))
+		return 0;
+
+	msg = io_u->xfer_buf;
+	if (ntohl(msg->magic) != FIO_LINK_CLOSE_MAGIC)
+		return 0;
+	if (ntohl(msg->cmd) != FIO_LINK_CLOSE)
+		return 0;
+
+	return 1;
 }
 
 static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 {
 	struct netio_data *nd = td->io_ops->data;
-	int ret, flags = MSG_WAITALL;
+	int ret, flags = MSG_DONTWAIT;
 
-	ret = poll_wait(td, io_u->file->fd, POLLIN);
-	if (ret <= 0)
-		return ret;
+	do {
+		if (nd->net_protocol == IPPROTO_UDP) {
+			socklen_t len = sizeof(nd->addr);
 
-	if (nd->net_protocol == IPPROTO_UDP) {
-		socklen_t len = sizeof(nd->addr);
+			ret = recvfrom(io_u->file->fd, io_u->xfer_buf,
+					io_u->xfer_buflen, flags, &nd->addr,
+					&len);
+			if (is_udp_close(io_u, ret)) {
+				td->done = 1;
+				return 0;
+			}
+		} else {
+			ret = recv(io_u->file->fd, io_u->xfer_buf,
+					io_u->xfer_buflen, flags);
+		}
+		if (ret > 0)
+			break;
 
-		return recvfrom(io_u->file->fd, io_u->xfer_buf,
-				io_u->xfer_buflen, 0, &nd->addr, &len);
-	} else {
-		return recv(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen,
-				flags);
-	}
+		ret = poll_wait(td, io_u->file->fd, POLLIN);
+		if (ret <= 0)
+			break;
+		flags &= ~MSG_DONTWAIT;
+		flags |= MSG_WAITALL;
+	} while (1);
+
+	return ret;
 }
 
 static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
@@ -354,6 +402,35 @@ static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
 		return fio_netio_accept(td, f);
 	else
 		return fio_netio_connect(td, f);
+}
+
+static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
+{
+	struct netio_data *nd = td->io_ops->data;
+	struct udp_close_msg msg;
+	int ret;
+
+	msg.magic = htonl(FIO_LINK_CLOSE_MAGIC);
+	msg.cmd = htonl(FIO_LINK_CLOSE);
+
+	ret = sendto(f->fd, &msg, sizeof(msg), MSG_WAITALL, &nd->addr,
+			sizeof(nd->addr));
+	if (ret < 0)
+		td_verror(td, errno, "sendto udp link close");
+}
+
+static int fio_netio_close_file(struct thread_data *td, struct fio_file *f)
+{
+	struct netio_data *nd = td->io_ops->data;
+
+	/*
+	 * If this is an UDP connection, notify the receiver that we are
+	 * closing down the link
+	 */
+	if (nd->net_protocol == IPPROTO_UDP)
+		fio_netio_udp_close(td, f);
+
+	return generic_close_file(td, f);
 }
 
 static int fio_netio_setup_connect(struct thread_data *td, const char *host,
@@ -566,7 +643,7 @@ static struct ioengine_ops ioengine_rw = {
 	.init		= fio_netio_init,
 	.cleanup	= fio_netio_cleanup,
 	.open_file	= fio_netio_open_file,
-	.close_file	= generic_close_file,
+	.close_file	= fio_netio_close_file,
 	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR |
 			  FIO_SIGQUIT,
 };
