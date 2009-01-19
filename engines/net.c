@@ -231,7 +231,7 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 
 	if (nd->net_protocol == IPPROTO_UDP) {
 		return sendto(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen,
-				flags, &nd->addr, sizeof(nd->addr));
+				0, &nd->addr, sizeof(nd->addr));
 	} else {
 		return send(io_u->file->fd, io_u->xfer_buf, io_u->xfer_buflen,
 				flags);
