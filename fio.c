@@ -171,13 +171,15 @@ static void set_sig_handlers(void)
 
 static inline int should_check_rate(struct thread_data *td)
 {
-	/*
-	 * No minimum rate set, always ok
-	 */
-	if (!td->o.ratemin && !td->o.rate_iops_min)
-		return 0;
+	struct thread_options *o = &td->o;
 
-	return 1;
+	/*
+	 * If some rate setting was given, we need to check it
+	 */
+	if (o->rate || o->ratemin || o->rate_iops || o->rate_iops_min)
+		return 1;
+
+	return 0;
 }
 
 /*
