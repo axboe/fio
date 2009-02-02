@@ -156,6 +156,11 @@ static int bdev_size(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
+	if (!bytes) {
+		log_err("%s: zero sized block device?\n", f->file_name);
+		return 1;
+	}
+
 	f->real_file_size = bytes;
 	return 0;
 }
