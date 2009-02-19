@@ -183,28 +183,40 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	 *
 	 * For both these cases, just reading back data in the order we
 	 * wrote it out is the fastest.
+	 *
+	 * One exception is if we don't have a random map AND we are doing
+	 * verifies, in that case we need to check for duplicate blocks and
+	 * drop the old one, which we rely on the rb insert/lookup for
+	 * handling.
 	 */
-	if (!td_random(td) || !td->o.overwrite) {
+	if ((!td_random(td) || !td->o.overwrite) &&
+	      (file_randommap(td, ipo->file) || td->o.verify == VERIFY_NONE)) {
 		INIT_FLIST_HEAD(&ipo->list);
 		flist_add_tail(&ipo->list, &td->io_hist_list);
 		return;
 	}
 
 	RB_CLEAR_NODE(&ipo->rb_node);
-	p = &td->io_hist_tree.rb_node;
-	parent = NULL;
 
 	/*
 	 * Sort the entry into the verification list
 	 */
+restart:
+	p = &td->io_hist_tree.rb_node;
+	parent = NULL;
 	while (*p) {
 		parent = *p;
 
 		__ipo = rb_entry(parent, struct io_piece, rb_node);
-		if (ipo->offset <= __ipo->offset)
+		if (ipo->offset < __ipo->offset)
 			p = &(*p)->rb_left;
-		else
+		else if (ipo->offset > __ipo->offset)
 			p = &(*p)->rb_right;
+		else {
+			assert(ipo->len == __ipo->len);
+			rb_erase(parent, &td->io_hist_tree);
+			goto restart;
+		}
 	}
 
 	rb_link_node(&ipo->rb_node, parent, p);

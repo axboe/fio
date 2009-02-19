@@ -206,6 +206,13 @@ static int setup_rate(struct thread_data *td)
 	return 0;
 }
 
+static int fixed_block_size(struct thread_options *o)
+{
+	return o->min_bs[DDIR_READ] == o->max_bs[DDIR_READ] &&
+		o->min_bs[DDIR_WRITE] == o->max_bs[DDIR_WRITE] &&
+		o->min_bs[DDIR_READ] == o->min_bs[DDIR_WRITE];
+}
+
 /*
  * Lazy way of fixing up options that depend on each other. We could also
  * define option callback handlers, but this is easier.
@@ -269,8 +276,10 @@ static int fixup_options(struct thread_data *td)
 	if (!o->file_size_high)
 		o->file_size_high = o->file_size_low;
 
-	if (o->norandommap && o->verify != VERIFY_NONE) {
-		log_err("fio: norandommap given, verify disabled\n");
+	if (o->norandommap && o->verify != VERIFY_NONE
+	    && !fixed_block_size(o))  {
+		log_err("fio: norandommap given for variable block sizes, "
+			"verify disabled\n");
 		o->verify = VERIFY_NONE;
 	}
 	if (o->bs_unaligned && (o->odirect || td->io_ops->flags & FIO_RAWIO))

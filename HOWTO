@@ -532,9 +532,9 @@ norandommap	Normally fio will cover every block of the file when doing
 		new random offset without looking at past io history. This
 		means that some blocks may not be read or written, and that
 		some blocks may be read/written more than once. This option
-		is mutually exclusive with verify= for that reason, since
-		fio doesn't track potential block rewrites which may alter
-		the calculated checksum for that block.
+		is mutually exclusive with verify= if and only if multiple
+		blocksizes (via bsrange=) are used, since fio only tracks
+		complete rewrites of blocks.
 
 softrandommap	See norandommap. If fio runs with the random block map enabled
 		and it fails to allocate the map, if this option is set it
