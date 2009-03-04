@@ -793,8 +793,7 @@ set_file:
 		if (td->nr_open_files < td->o.open_files &&
 		    td->o.open_files != td->o.nr_files) {
 			f = find_next_new_file(td);
-
-			if (!f || td_io_open_file(td, f))
+			if (!f)
 				return 1;
 
 			goto set_file;
