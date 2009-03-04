@@ -387,6 +387,10 @@ file_service_type=str  Defines how fio decides which file from a job to
 			roundrobin  Round robin over open files. This
 				is the default.
 
+			sequential  Finish one file before moving on to
+				the next. Multiple files can still be
+				open depending on 'openfiles'.
+
 		The string can have a number appended, indicating how
 		often to switch to a new file. So if option random:4 is
 		given, fio will switch to a new random file after 4 ios

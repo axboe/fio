@@ -681,10 +681,15 @@ static struct fio_file *get_next_file(struct thread_data *td)
 	}
 
 	f = td->file_service_file;
-	if (f && (f->flags & FIO_FILE_OPEN) && td->file_service_left--)
-		goto out;
+	if (f && (f->flags & FIO_FILE_OPEN)) {
+		if (td->o.file_service_type == FIO_FSERVICE_SEQ)
+			goto out;
+		if (td->file_service_left--)
+			goto out;
+	}
 
-	if (td->o.file_service_type == FIO_FSERVICE_RR)
+	if (td->o.file_service_type == FIO_FSERVICE_RR ||
+	    td->o.file_service_type == FIO_FSERVICE_SEQ)
 		f = get_next_file_rr(td, FIO_FILE_OPEN, FIO_FILE_CLOSING);
 	else
 		f = get_next_file_rand(td, FIO_FILE_OPEN, FIO_FILE_CLOSING);

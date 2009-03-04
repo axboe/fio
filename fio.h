@@ -657,11 +657,13 @@ struct thread_data {
 };
 
 /*
- * roundrobin available files, or choose one at random.
+ * roundrobin available files, or choose one at random, or do each one
+ * serially.
  */
 enum {
 	FIO_FSERVICE_RANDOM	= 1,
 	FIO_FSERVICE_RR		= 2,
+	FIO_FSERVICE_SEQ	= 3,
 };
 
 /*
