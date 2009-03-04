@@ -714,10 +714,15 @@ int add_file(struct thread_data *td, const char *fname)
 		
 	f->fd = -1;
 
-	dprint(FD_FILE, "resize file array to %d files\n", cur_files + 1);
+	if (td->files_size <= td->files_index) {
+		int new_size = td->o.nr_files;
 
-	td->files = realloc(td->files, (cur_files + 1) * sizeof(f));
-	td->files[cur_files] = f;
+		dprint(FD_FILE, "resize file array to %d files\n", new_size);
+
+		td->files = realloc(td->files, new_size * sizeof(f));
+		td->files[cur_files] = f;
+		td->files_size = new_size;
+	}
 
 	/*
 	 * init function, io engine may not be loaded yet
