@@ -543,6 +543,7 @@ struct thread_data {
 	int groupid;
 	struct thread_stat ts;
 	struct fio_file **files;
+	unsigned int files_size;
 	unsigned int files_index;
 	unsigned int nr_open_files;
 	unsigned int nr_done_files;
