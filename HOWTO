@@ -693,6 +693,9 @@ create_serialize=bool	If true, serialize the file creating for the jobs.
 create_fsync=bool	fsync the data file after creation. This is the
 			default.
 
+create_on_open=bool	Don't pre-setup the files for IO, just create open()
+			when it's time to do IO to that file.
+
 unlink=bool	Unlink the job files when done. Not the default, as repeated
 		runs of that job would then waste time recreating the file
 		set again and again.

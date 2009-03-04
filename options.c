@@ -1290,6 +1290,13 @@ static struct fio_option options[] = {
 		.def	= "1",
 	},
 	{
+		.name	= "create_on_open",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(create_on_open),
+		.help	= "Create files when they are opened for IO",
+		.def	= "0",
+	},
+	{
 		.name	= "cpuload",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(cpuload),

@@ -443,6 +443,7 @@ struct thread_options {
 	unsigned int invalidate_cache;
 	unsigned int create_serialize;
 	unsigned int create_fsync;
+	unsigned int create_on_open;
 	unsigned int end_fsync;
 	unsigned int sync_io;
 	unsigned int verify;

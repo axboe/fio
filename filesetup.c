@@ -314,6 +314,8 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 		flags |= O_SYNC;
 	if (f->filetype != FIO_TYPE_FILE)
 		flags |= FIO_O_NOATIME;
+	if (td->o.create_on_open)
+		flags |= O_CREAT;
 
 open_again:
 	if (td_write(td)) {
@@ -534,8 +536,11 @@ int setup_files(struct thread_data *td)
 		if (f->filetype == FIO_TYPE_FILE &&
 		    (f->io_size + f->file_offset) > f->real_file_size &&
 		    !(td->io_ops->flags & FIO_DISKLESSIO)) {
-			need_extend++;
-			extend_size += (f->io_size + f->file_offset);
+			if (!td->o.create_on_open) {
+				need_extend++;
+				extend_size += (f->io_size + f->file_offset);
+			} else
+				f->real_file_size = f->io_size + f->file_offset;
 			f->flags |= FIO_FILE_EXTEND;
 		}
 	}
