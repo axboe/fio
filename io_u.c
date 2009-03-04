@@ -628,6 +628,7 @@ static struct fio_file *get_next_file_rand(struct thread_data *td, int goodf,
 
 	do {
 		long r = os_random_long(&td->next_file_state);
+		int opened = 0;
 
 		fno = (unsigned int) ((double) td->o.nr_files
 			* (r / (OS_RAND_MAX + 1.0)));
@@ -635,10 +636,21 @@ static struct fio_file *get_next_file_rand(struct thread_data *td, int goodf,
 		if (f->flags & FIO_FILE_DONE)
 			continue;
 
+		if (!(f->flags & FIO_FILE_OPEN)) {
+			int err;
+
+			err = td_io_open_file(td, f);
+			if (err)
+				continue;
+			opened = 1;
+		}
+
 		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf)) {
 			dprint(FD_FILE, "get_next_file_rand: %p\n", f);
 			return f;
 		}
+		if (opened)
+			td_io_close_file(td, f);
 	} while (1);
 }
 
@@ -652,19 +664,34 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 	struct fio_file *f;
 
 	do {
+		int opened = 0;
+
 		f = td->files[td->next_file];
 
 		td->next_file++;
 		if (td->next_file >= td->o.nr_files)
 			td->next_file = 0;
 
+		dprint(FD_FILE, "trying file %s %x\n", f->file_name, f->flags);
 		if (f->flags & FIO_FILE_DONE) {
 			f = NULL;
 			continue;
 		}
 
+		if (!(f->flags & FIO_FILE_OPEN)) {
+			int err;
+
+			err = td_io_open_file(td, f);
+			if (err)
+				continue;
+			opened = 1;
+		}
+
 		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf))
 			break;
+
+		if (opened)
+			td_io_close_file(td, f);
 
 		f = NULL;
 	} while (td->next_file != old_next_file);
@@ -753,11 +780,11 @@ set_file:
 		 * td_io_close() does a put_file() as well, so no need to
 		 * do that here.
 		 */
-		dprint(FD_FILE, "%s: is done\n", f->file_name);
 		io_u->file = NULL;
 		td_io_close_file(td, f);
 		f->flags |= FIO_FILE_DONE;
 		td->nr_done_files++;
+		dprint(FD_FILE, "%s: is done (%d of %d)\n", f->file_name, td->nr_done_files, td->o.nr_files);
 
 		/*
 		 * probably not the right place to do this, but see
