@@ -682,11 +682,15 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 			int err;
 
 			err = td_io_open_file(td, f);
-			if (err)
+			if (err) {
+				dprint(FD_FILE, "error %d on open of %s\n",
+					err, f->file_name);
 				continue;
+			}
 			opened = 1;
 		}
 
+		dprint(FD_FILE, "goodf=%x, badf=%x, ff=%x\n", goodf, badf, f->flags);
 		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf))
 			break;
 
@@ -706,7 +710,7 @@ static struct fio_file *get_next_file(struct thread_data *td)
 
 	assert(td->o.nr_files <= td->files_index);
 
-	if (!td->nr_open_files || td->nr_done_files >= td->o.nr_files) {
+	if (td->nr_done_files >= td->o.nr_files) {
 		dprint(FD_FILE, "get_next_file: nr_open=%d, nr_done=%d,"
 				" nr_files=%d\n", td->nr_open_files,
 						  td->nr_done_files,
@@ -732,21 +736,6 @@ static struct fio_file *get_next_file(struct thread_data *td)
 	td->file_service_left = td->file_service_nr - 1;
 out:
 	dprint(FD_FILE, "get_next_file: %p [%s]\n", f, f->file_name);
-	return f;
-}
-
-static struct fio_file *find_next_new_file(struct thread_data *td)
-{
-	struct fio_file *f;
-
-	if (!td->nr_open_files || td->nr_done_files >= td->o.nr_files)
-		return NULL;
-
-	if (td->o.file_service_type == FIO_FSERVICE_RR)
-		f = get_next_file_rr(td, 0, FIO_FILE_OPEN);
-	else
-		f = get_next_file_rand(td, 0, FIO_FILE_OPEN);
-
 	return f;
 }
 
@@ -776,28 +765,12 @@ set_file:
 			goto set_file;
 		}
 
-		/*
-		 * td_io_close() does a put_file() as well, so no need to
-		 * do that here.
-		 */
-		io_u->file = NULL;
+		put_file_log(td, f);
 		td_io_close_file(td, f);
+		io_u->file = NULL;
 		f->flags |= FIO_FILE_DONE;
 		td->nr_done_files++;
 		dprint(FD_FILE, "%s: is done (%d of %d)\n", f->file_name, td->nr_done_files, td->o.nr_files);
-
-		/*
-		 * probably not the right place to do this, but see
-		 * if we need to open a new file
-		 */
-		if (td->nr_open_files < td->o.open_files &&
-		    td->o.open_files != td->o.nr_files) {
-			f = find_next_new_file(td);
-			if (!f)
-				return 1;
-
-			goto set_file;
-		}
 	} while (1);
 
 	return 0;
