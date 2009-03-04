@@ -194,13 +194,20 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 	if (td_random(td) && (td->o.ddir_nr && !--td->ddir_nr)) {
 		td->ddir_nr = td->o.ddir_nr;
 
-		if (get_next_rand_offset(td, f, ddir, &b))
+		if (get_next_rand_offset(td, f, ddir, &b)) {
+			dprint(FD_IO, "%s: getting rand offset failed\n",
+				f->file_name);
 			return 1;
+		}
 	} else {
 		if (f->last_pos >= f->real_file_size) {
 			if (!td_random(td) ||
-			     get_next_rand_offset(td, f, ddir, &b))
+			     get_next_rand_offset(td, f, ddir, &b)) {
+				dprint(FD_IO, "%s: pos %llu > size %llu\n",
+						f->file_name, f->last_pos,
+						f->real_file_size);
 				return 1;
+			}
 		} else
 			b = (f->last_pos - f->file_offset) / td->o.min_bs[ddir];
 	}
@@ -681,7 +688,7 @@ static struct fio_file *get_next_file(struct thread_data *td)
 	}
 
 	f = td->file_service_file;
-	if (f && (f->flags & FIO_FILE_OPEN)) {
+	if (f && (f->flags & FIO_FILE_OPEN) && !(f->flags & FIO_FILE_CLOSING)) {
 		if (td->o.file_service_type == FIO_FSERVICE_SEQ)
 			goto out;
 		if (td->file_service_left--)
@@ -697,7 +704,7 @@ static struct fio_file *get_next_file(struct thread_data *td)
 	td->file_service_file = f;
 	td->file_service_left = td->file_service_nr - 1;
 out:
-	dprint(FD_FILE, "get_next_file: %p\n", f);
+	dprint(FD_FILE, "get_next_file: %p [%s]\n", f, f->file_name);
 	return f;
 }
 
@@ -746,6 +753,7 @@ set_file:
 		 * td_io_close() does a put_file() as well, so no need to
 		 * do that here.
 		 */
+		dprint(FD_FILE, "%s: is done\n", f->file_name);
 		io_u->file = NULL;
 		td_io_close_file(td, f);
 		f->flags |= FIO_FILE_DONE;
