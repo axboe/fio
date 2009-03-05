@@ -608,7 +608,7 @@ static int skip_this_section(const char *name)
 	if (!strncmp(name, "global", 6))
 		return 0;
 
-	return strncmp(job_section, name, strlen(job_section));
+	return strcmp(job_section, name);
 }
 
 static int is_empty_or_comment(char *line)
