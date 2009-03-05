@@ -404,6 +404,7 @@ static struct ioengine_ops ioengine = {
 	.cleanup	= fio_sgio_cleanup,
 	.open_file	= fio_sgio_open,
 	.close_file	= generic_close_file,
+	.get_file_size	= generic_get_file_size,
 	.flags		= FIO_SYNCIO | FIO_RAWIO,
 };
 
