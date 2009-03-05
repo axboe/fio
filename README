@@ -141,9 +141,11 @@ always parsed and taken into account.
 
 Fio has an internal allocator for shared memory called smalloc. It
 allocates shared structures from this pool. The pool defaults to 1024k
-in size, and can grow to 32 pools. If running large jobs with randommap
+in size, and can grow to 128 pools. If running large jobs with randommap
 enabled it can run out of memory, in which case the --alloc-size switch
-is handy for starting with a larger pool size.
+is handy for starting with a larger pool size. The backing store is
+files in /tmp. Fio cleans up after itself, while it is running you
+may see .fio_smalloc.* files in /tmp.
 
 
 Job file
