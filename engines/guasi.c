@@ -261,6 +261,7 @@ static struct ioengine_ops ioengine = {
 	.cleanup	= fio_guasi_cleanup,
 	.open_file	= generic_open_file,
 	.close_file	= generic_close_file,
+	.get_file_size	= generic_get_file_size,
 };
 
 #else /* FIO_HAVE_GUASI */

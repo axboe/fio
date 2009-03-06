@@ -136,7 +136,7 @@ static int file_size(struct thread_data *td, struct fio_file *f)
 {
 	struct stat st;
 
-	if (fstat(f->fd, &st) == -1) {
+	if (stat(f->file_name, &st) == -1) {
 		td_verror(td, errno, "fstat");
 		return 1;
 	}
@@ -150,19 +150,28 @@ static int bdev_size(struct thread_data *td, struct fio_file *f)
 	unsigned long long bytes;
 	int r;
 
+	if (td->io_ops->open_file(td, f)) {
+		log_err("fio: failed opening blockdev %s for size check\n",
+			f->file_name);
+		return 1;
+	}
+
 	r = blockdev_size(f->fd, &bytes);
 	if (r) {
 		td_verror(td, r, "blockdev_size");
-		return 1;
+		goto err;
 	}
 
 	if (!bytes) {
 		log_err("%s: zero sized block device?\n", f->file_name);
-		return 1;
+		goto err;
 	}
 
 	f->real_file_size = bytes;
 	return 0;
+err:
+	td->io_ops->close_file(td, f);
+	return 1;
 }
 
 static int get_file_size(struct thread_data *td, struct fio_file *f)
@@ -355,9 +364,6 @@ open_again:
 		td_verror(td, __e, buf);
 	}
 
-	if (get_file_size(td, f))
-		goto err;
-
 	if (!from_hash && f->fd != -1) {
 		if (add_file_hash(f)) {
 			int ret;
@@ -371,43 +377,11 @@ open_again:
 	}
 
 	return 0;
-err:
-	close(f->fd);
-	return 1;
 }
 
-int open_files(struct thread_data *td)
+int generic_get_file_size(struct thread_data *td, struct fio_file *f)
 {
-	struct fio_file *f;
-	unsigned int i;
-	int err = 0;
-
-	dprint(FD_FILE, "open files\n");
-
-	for_each_file(td, f, i) {
-		err = td_io_open_file(td, f);
-		if (err) {
-			if (td->error == EMFILE) {
-				log_err("fio: limited open files to: %d\n",
-							td->nr_open_files);
-				td->o.open_files = td->nr_open_files;
-				err = 0;
-				clear_error(td);
-			}
-			break;
-		}
-
-		if (td->o.open_files == td->nr_open_files)
-			break;
-	}
-
-	if (!err)
-		return 0;
-
-	for_each_file(td, f, i)
-		td_io_close_file(td, f);
-
-	return err;
+	return get_file_size(td, f);
 }
 
 /*
@@ -423,15 +397,12 @@ static int get_file_sizes(struct thread_data *td)
 		dprint(FD_FILE, "get file size for %p/%d/%p\n", f, i,
 								f->file_name);
 
-		if (td->io_ops->open_file(td, f)) {
+		if (td->io_ops->get_file_size(td, f)) {
 			if (td->error != ENOENT) {
 				log_err("%s\n", td->verror);
 				err = 1;
 			}
 			clear_error(td);
-		} else {
-			if (td->io_ops->close_file)
-				td->io_ops->close_file(td, f);
 		}
 
 		if (f->real_file_size == -1ULL && td->o.size)

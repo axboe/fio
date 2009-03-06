@@ -283,6 +283,7 @@ static struct ioengine_ops ioengine_rw = {
 	.queue		= fio_syncio_queue,
 	.open_file	= generic_open_file,
 	.close_file	= generic_close_file,
+	.get_file_size	= generic_get_file_size,
 	.flags		= FIO_SYNCIO,
 };
 
@@ -292,6 +293,7 @@ static struct ioengine_ops ioengine_prw = {
 	.queue		= fio_psyncio_queue,
 	.open_file	= generic_open_file,
 	.close_file	= generic_close_file,
+	.get_file_size	= generic_get_file_size,
 	.flags		= FIO_SYNCIO,
 };
 
@@ -306,6 +308,7 @@ static struct ioengine_ops ioengine_vrw = {
 	.getevents	= fio_vsyncio_getevents,
 	.open_file	= generic_open_file,
 	.close_file	= generic_close_file,
+	.get_file_size	= generic_get_file_size,
 	.flags		= FIO_SYNCIO,
 };
 

@@ -897,25 +897,16 @@ void reset_all_stats(struct thread_data *td)
 	memcpy(&td->start, &tv, sizeof(tv));
 }
 
-static int clear_io_state(struct thread_data *td)
+static void clear_io_state(struct thread_data *td)
 {
 	struct fio_file *f;
 	unsigned int i;
-	int ret;
 
 	reset_io_counters(td);
 
 	close_files(td);
-
-	ret = 0;
-	for_each_file(td, f, i) {
+	for_each_file(td, f, i)
 		f->flags &= ~FIO_FILE_DONE;
-		ret = td_io_open_file(td, f);
-		if (ret)
-			break;
-	}
-
-	return ret;
 }
 
 /*
@@ -1003,9 +994,6 @@ static void *thread_main(void *data)
 	if (td_io_init(td))
 		goto err;
 
-	if (open_files(td))
-		goto err;
-
 	if (init_random_map(td))
 		goto err;
 
@@ -1028,8 +1016,8 @@ static void *thread_main(void *data)
 			memcpy(&td->lastrate, &td->ts.stat_sample_time,
 							sizeof(td->lastrate));
 
-		if (clear_state && clear_io_state(td))
-			break;
+		if (clear_state)
+			clear_io_state(td);
 
 		prune_io_piece_log(td);
 
@@ -1064,8 +1052,7 @@ static void *thread_main(void *data)
 		    (td->io_ops->flags & FIO_UNIDIR))
 			continue;
 
-		if (clear_io_state(td))
-			break;
+		clear_io_state(td);
 
 		fio_gettime(&td->start, NULL);
 

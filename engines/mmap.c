@@ -131,6 +131,7 @@ static struct ioengine_ops ioengine = {
 	.queue		= fio_mmapio_queue,
 	.open_file	= fio_mmapio_open,
 	.close_file	= fio_mmapio_close,
+	.get_file_size	= generic_get_file_size,
 	.flags		= FIO_SYNCIO | FIO_NOEXTEND,
 };
 
