@@ -152,7 +152,7 @@ void strip_blank_front(char **p)
 
 void strip_blank_end(char *p)
 {
-	char *s;
+	char *start = p, *s;
 
 	s = strchr(p, ';');
 	if (s)
@@ -164,7 +164,7 @@ void strip_blank_end(char *p)
 		p = s;
 
 	s = p + strlen(p);
-	while ((isspace(*s) || iscntrl(*s)) && (s > p))
+	while ((isspace(*s) || iscntrl(*s)) && (s > start))
 		s--;
 
 	*(s + 1) = '\0';
