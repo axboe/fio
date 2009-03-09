@@ -208,7 +208,9 @@ siint	SI integer. A whole number value, which may contain a postfix
 	you could either write out '4096' or just give 4k. The postfixes
 	signify base 2 values, so 1024 is 1k and 1024k is 1m and so on.
 	If the option accepts an upper and lower range, use a colon ':'
-	or minus '-' to separate such values. See irange.
+	or minus '-' to separate such values. May also include a prefix
+	to indicate numbers base. If 0x is used, the number is assumed to
+	be hexadecimal. See irange.
 bool	Boolean. Usually parsed as an integer, however only defined for
 	true and false (1 and 0).
 irange	Integer range with postfix. Allows value range to be given, such
