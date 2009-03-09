@@ -112,13 +112,18 @@ static unsigned long get_mult_bytes(char c)
  */
 int str_to_decimal(const char *str, long long *val, int kilo)
 {
-	int len;
+	int len, base;
 
 	len = strlen(str);
 	if (!len)
 		return 1;
 
-	*val = strtoll(str, NULL, 10);
+	if (strstr(str, "0x") || strstr(str, "0X"))
+		base = 16;
+	else
+		base = 10;
+
+	*val = strtoll(str, NULL, base);
 	if (*val == LONG_MAX && errno == ERANGE)
 		return 1;
 
