@@ -77,13 +77,10 @@ Some parameters may take arguments of a specific type.  The types used are:
 String: a sequence of alphanumeric characters.
 .TP
 .I int
-Integer: a whole number, possibly negative.  If prefixed with `0x', the value
-is assumed to be base 16 (hexadecimal).
-.TP
-.I siint
 SI integer: a whole number, possibly containing a suffix denoting the base unit
 of the value.  Accepted suffixes are `k', 'M' and 'G', denoting kilo (1024),
-mega (1024*1024) and giga (1024*1024*1024) respectively.
+mega (1024*1024) and giga (1024*1024*1024) respectively. If prefixed with '0x',
+the value is assumed to be base 16 (hexadecimal).
 .TP
 .I bool
 Boolean: a true or false value. `0' denotes false, `1' denotes true.
@@ -159,7 +156,7 @@ across runs.  Default: true.
 Disable use of \fIposix_fadvise\fR\|(2) to advise the kernel what I/O patterns
 are likely to be issued. Default: true.
 .TP
-.BI size \fR=\fPsiint
+.BI size \fR=\fPint
 Total size of I/O for this job.  \fBfio\fR will run until this many bytes have
 been transfered, unless limited by other options (\fBruntime\fR, for instance).
 Unless \fBnr_files\fR and \fBfilesize\fR options are given, this amount will be
@@ -171,7 +168,7 @@ for files at random within the given range, limited to \fBsize\fR in total (if
 that is given). If \fBfilesize\fR is not specified, each created file is the
 same size.
 .TP
-.BI blocksize \fR=\fPsiint[,siint] "\fR,\fB bs" \fR=\fPsiint[,siint]
+.BI blocksize \fR=\fPint[,int] "\fR,\fB bs" \fR=\fPint[,int]
 Block size for I/O units.  Default: 4k.  Values for reads and writes can be
 specified seperately in the format \fIread\fR,\fIwrite\fR, either of
 which may be empty to leave that value at its default.
@@ -305,7 +302,7 @@ If true, use non-buffered I/O (usually O_DIRECT).  Default: false.
 If true, use buffered I/O.  This is the opposite of the \fBdirect\fR parameter.
 Default: true.
 .TP
-.BI offset \fR=\fPsiint
+.BI offset \fR=\fPint
 Offset in the file to start I/O. Data before the offset will not be touched.
 .TP
 .BI fsync \fR=\fPint
@@ -431,7 +428,7 @@ the system must have free huge pages allocated.  \fBmmaphuge\fR also needs to
 have hugetlbfs mounted, and \fIfile\fR must point there.
 .RE
 .TP
-.BI hugepage\-size \fR=\fPsiint
+.BI hugepage\-size \fR=\fPint
 Defines the size of a huge page.  Must be at least equal to the system setting.
 Should be a multiple of 1MiB. Default: 4MiB.
 .TP
@@ -486,11 +483,11 @@ Pretend to verify.  Used for testing internals.
 If true, written verify blocks are sorted if \fBfio\fR deems it to be faster to
 read them back in a sorted manner.  Default: true.
 .TP
-.BI verify_offset \fR=\fPsiint
+.BI verify_offset \fR=\fPint
 Swap the verification header with data somewhere else in the block before
 writing.  It is swapped back before verifying.
 .TP
-.BI verify_interval \fR=\fPsiint
+.BI verify_interval \fR=\fPint
 Write the verification header for this number of bytes, which should divide
 \fBblocksize\fR.  Default: \fBblocksize\fR.
 .TP
@@ -518,10 +515,10 @@ specified.
 Use threads created with \fBpthread_create\fR\|(3) instead of processes created
 with \fBfork\fR\|(2).
 .TP
-.BI zonesize \fR=\fPsiint
+.BI zonesize \fR=\fPint
 Divide file into zones of the specified size in bytes.  See \fBzoneskip\fR.
 .TP
-.BI zoneskip \fR=\fPsiint
+.BI zoneskip \fR=\fPint
 Skip the specified number of bytes when \fBzonesize\fR bytes of data have been
 read.
 .TP
@@ -538,7 +535,7 @@ If given, write bandwidth logs of the jobs in this file.
 .B write_lat_log
 Same as \fBwrite_bw_log\fR, but writes I/O completion latencies.
 .TP
-.BI lockmem \fR=\fPsiint
+.BI lockmem \fR=\fPint
 Pin the specified amount of memory with \fBmlock\fR\|(2).  Can be used to
 simulate a smaller amount of memory.
 .TP

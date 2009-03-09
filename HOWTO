@@ -197,12 +197,10 @@ Some parameters take an option of a given type, such as an integer or
 a string. The following types are used:
 
 str	String. This is a sequence of alpha characters.
-int	Integer. A whole number value, can be negative. If prefixed with
-	0x, the integer is assumed to be of base 16 (hexadecimal).
 time	Integer with possible time postfix. In seconds unless otherwise
 	specified, use eg 10m for 10 minutes. Accepts s/m/h for seconds,
 	minutes, and hours.
-siint	SI integer. A whole number value, which may contain a postfix
+int	SI integer. A whole number value, which may contain a postfix
 	describing the base of the number. Accepted postfixes are k/m/g,
 	meaning kilo, mega, and giga. So if you want to specify 4096,
 	you could either write out '4096' or just give 4k. The postfixes
@@ -217,7 +215,7 @@ irange	Integer range with postfix. Allows value range to be given, such
 	as 1024-4096. A colon may also be used as the separator, eg
 	1k:4k. If the option allows two sets of ranges, they can be
 	specified with a ',' or '/' delimiter: 1k-4k/8k-32k. Also see
-	siint.
+	int.
 
 With the above in mind, here follows the complete list of fio job
 parameters.
@@ -302,14 +300,14 @@ fadvise_hint=bool By default, fio will use fadvise() to advise the kernel
 		If set, fio will use POSIX_FADV_SEQUENTIAL for sequential
 		IO and POSIX_FADV_RANDOM for random IO.
 
-size=siint	The total size of file io for this job. Fio will run until
+size=int	The total size of file io for this job. Fio will run until
 		this many bytes has been transferred, unless runtime is
 		limited by other options (such as 'runtime', for instance).
 		Unless specific nr_files and filesize options are given,
 		fio will divide this size between the available files
 		specified by the job.
 
-filesize=siint	Individual file sizes. May be a range, in which case fio
+filesize=int	Individual file sizes. May be a range, in which case fio
 		will select sizes for files at random within the given range
 		and limited to 'size' in total (if that is given). If not
 		given, each created file is the same size.
@@ -318,10 +316,10 @@ fill_device=bool Sets size to something really large and waits for ENOSPC (no
 		space left on device) as the terminating condition. Only makes
                 sense with sequential write.
 
-blocksize=siint
-bs=siint	The block size used for the io units. Defaults to 4k. Values
-		can be given for both read and writes. If a single siint is
-		given, it will apply to both. If a second siint is specified
+blocksize=int
+bs=int		The block size used for the io units. Defaults to 4k. Values
+		can be given for both read and writes. If a single int is
+		given, it will apply to both. If a second int is specified
 		after a comma, it will apply to writes only. In other words,
 		the format is either bs=read_and_write or bs=read,write.
 		bs=4k,8k will thus use 4k blocks for reads, and 8k blocks
@@ -503,7 +501,7 @@ direct=bool	If value is true, use non-buffered io. This is usually
 buffered=bool	If value is true, use buffered io. This is the opposite
 		of the 'direct' option. Defaults to true.
 
-offset=siint	Start io at the given offset in the file. The data before
+offset=int	Start io at the given offset in the file. The data before
 		the given offset will not be touched. This effectively
 		caps the file size at real_size - offset.
 
@@ -673,7 +671,7 @@ mem=str		Fio can use various types of memory as the io unit buffer.
 		location should point there. So if it's mounted in /huge,
 		you would use mem=mmaphuge:/huge/somefile.
 
-hugepage-size=siint
+hugepage-size=int
 		Defines the size of a huge page. Must at least be equal
 		to the system setting, see /proc/meminfo. Defaults to 4MiB.
 		Should probably always be a multiple of megabytes, so using
@@ -758,11 +756,11 @@ verifysort=bool	If set, fio will sort written verify blocks when it deems
 		fast IO where the red-black tree sorting CPU time becomes
 		significant.
 
-verify_offset=siint	Swap the verification header with data somewhere else
+verify_offset=int	Swap the verification header with data somewhere else
 			in the block before writing. Its swapped back before
 			verifying.
 
-verify_interval=siint	Write the verification header at a finer granularity
+verify_interval=int	Write the verification header at a finer granularity
 			than the blocksize. It will be written for chunks the
 			size of header_interval. blocksize should divide this
 			evenly.
@@ -806,9 +804,9 @@ thread		fio defaults to forking jobs, however if this option is
 		given, fio will use pthread_create(3) to create threads
 		instead.
 
-zonesize=siint	Divide a file into zones of the specified size. See zoneskip.
+zonesize=int	Divide a file into zones of the specified size. See zoneskip.
 
-zoneskip=siint	Skip the specified number of bytes when zonesize data has
+zoneskip=int	Skip the specified number of bytes when zonesize data has
 		been read. The two zone options can be used to only do
 		io on zones of a file.
 
@@ -842,7 +840,7 @@ write_lat_log=str Same as write_bw_log, except that this option stores io
 		The actual log names will be foo_clat.log and foo_slat.log.
 		This helps fio_generate_plot fine the logs automatically.
 
-lockmem=siint	Pin down the specified amount of memory with mlock(2). Can
+lockmem=int	Pin down the specified amount of memory with mlock(2). Can
 		potentially be used instead of removing memory or booting
 		with less memory to simulate a smaller amount of memory.
 

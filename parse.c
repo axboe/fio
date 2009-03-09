@@ -277,6 +277,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	}
 	case FIO_OPT_STR_VAL_TIME:
 		is_time = 1;
+	case FIO_OPT_INT:
 	case FIO_OPT_STR_VAL:
 	case FIO_OPT_STR_VAL_INT: {
 		fio_opt_str_val_fn *fn = o->cb;
@@ -373,7 +374,6 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 		break;
 	}
-	case FIO_OPT_INT:
 	case FIO_OPT_BOOL: {
 		fio_opt_int_fn *fn = o->cb;
 
