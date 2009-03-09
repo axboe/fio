@@ -212,6 +212,8 @@ Choose a file at random
 .TP
 .B roundrobin
 Round robin over open files (default).
+.B sequential
+Do each file in the set sequentially.
 .RE
 .P
 The number of I/Os to issue before switching a new file can be specified by
@@ -444,6 +446,9 @@ If true, serialize file creation for the jobs.  Default: true.
 .TP
 .BI create_fsync \fR=\fPbool
 \fIfsync\fR\|(2) data file after creation.  Default: true.
+.TP
+.BI create_on_open \fR=\fPbool
+If true, the files are not created until they are opened for IO by the job.
 .TP
 .BI unlink \fR=\fPbool
 Unlink job files when done.  Default: false.
