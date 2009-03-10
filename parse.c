@@ -304,7 +304,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (fn)
 			ret = fn(data, &ull);
 		else {
-			if (o->type == FIO_OPT_STR_VAL_INT) {
+			if (o->type == FIO_OPT_STR_VAL_INT ||
+			    o->type == FIO_OPT_INT) {
 				if (first)
 					val_store(ilp, ull, o->off1, data);
 				if (!more && o->off2)
