@@ -429,6 +429,7 @@ struct thread_options {
 	unsigned long long start_offset;
 
 	unsigned int bs[2];
+	unsigned int ba[2];
 	unsigned int min_bs[2];
 	unsigned int max_bs[2];
 	struct bssplit *bssplit;

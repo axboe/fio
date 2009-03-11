@@ -793,6 +793,16 @@ static struct fio_option options[] = {
 		.parent = "rw",
 	},
 	{
+		.name	= "ba",
+		.alias	= "blockalign",
+		.type	= FIO_OPT_STR_VAL_INT,
+		.off1	= td_var_offset(ba[DDIR_READ]),
+		.off2	= td_var_offset(ba[DDIR_WRITE]),
+		.minval	= 1,
+		.help	= "IO block offset alignment",
+		.parent	= "rw",
+	},
+	{
 		.name	= "bsrange",
 		.alias	= "blocksize_range",
 		.type	= FIO_OPT_RANGE,

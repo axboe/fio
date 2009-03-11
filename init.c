@@ -273,6 +273,21 @@ static int fixup_options(struct thread_data *td)
 
 	o->rw_min_bs = min(o->min_bs[DDIR_READ], o->min_bs[DDIR_WRITE]);
 
+	/*
+	 * For random IO, allow blockalign offset other than min_bs.
+	 */
+	if (!o->ba[DDIR_READ] || !td_random(td))
+		o->ba[DDIR_READ] = o->min_bs[DDIR_READ];
+	if (!o->ba[DDIR_WRITE] || !td_random(td))
+		o->ba[DDIR_WRITE] = o->min_bs[DDIR_WRITE];
+
+	if ((o->ba[DDIR_READ] != o->min_bs[DDIR_READ] ||
+	    o->ba[DDIR_WRITE] != o->min_bs[DDIR_WRITE]) &&
+	    !td->o.norandommap) {
+		log_err("fio: Any use of blockalign= turns off randommap\n");
+		td->o.norandommap = 1;
+	}
+
 	if (!o->file_size_high)
 		o->file_size_high = o->file_size_low;
 

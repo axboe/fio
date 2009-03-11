@@ -95,7 +95,7 @@ static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
 	if (max_size > f->real_file_size)
 		max_size = f->real_file_size;
 
-	max_blocks = max_size / (unsigned long long) td->o.min_bs[ddir];
+	max_blocks = max_size / (unsigned long long) td->o.ba[ddir];
 	if (!max_blocks)
 		return 0;
 
@@ -212,7 +212,7 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 			b = (f->last_pos - f->file_offset) / td->o.min_bs[ddir];
 	}
 
-	io_u->offset = b * td->o.min_bs[ddir];
+	io_u->offset = b * td->o.ba[ddir];
 	if (io_u->offset >= f->io_size) {
 		dprint(FD_IO, "get_next_offset: offset %llu >= io_size %llu\n",
 					io_u->offset, f->io_size);

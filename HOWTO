@@ -327,6 +327,14 @@ bs=int		The block size used for the io units. Defaults to 4k. Values
 		can do so by passing an empty read size - bs=,8k will set
 		8k for writes and leave the read default value.
 
+blockalign=int
+ba=int		At what boundary to align random IO offsets. Defaults to
+		the same as 'blocksize' the minimum blocksize given.
+		Minimum alignment is typically 512b for using direct IO,
+		though it usually depends on the hardware block size. This
+		option is mutually exclusive with using a random map for
+		files, so it will turn off that option.
+
 blocksize_range=irange
 bsrange=irange	Instead of giving a single block size, specify a range
 		and fio will mix the issued io block sizes. The issued
