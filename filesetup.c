@@ -397,7 +397,7 @@ static int get_file_sizes(struct thread_data *td)
 		dprint(FD_FILE, "get file size for %p/%d/%p\n", f, i,
 								f->file_name);
 
-		if (td->io_ops->get_file_size(td, f)) {
+		if (td_io_get_file_size(td, f)) {
 			if (td->error != ENOENT) {
 				log_err("%s\n", td->verror);
 				err = 1;
