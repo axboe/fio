@@ -64,11 +64,11 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 				unsigned int max, struct timespec *t)
 {
 	struct libaio_data *ld = td->io_ops->data;
-	long r;
+	int r;
 
 	do {
 		r = io_getevents(ld->aio_ctx, min, max, ld->aio_events, t);
-		if (r >= min)
+		if (r >= (int) min)
 			break;
 		else if (r == -EAGAIN) {
 			usleep(100);

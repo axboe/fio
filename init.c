@@ -19,7 +19,7 @@
 #include "smalloc.h"
 #include "filehash.h"
 
-static char fio_version_string[] = "fio 1.24";
+static char fio_version_string[] = "fio 1.25";
 
 #define FIO_RANDSEED		(0xb1899bedUL)
 
@@ -408,13 +408,32 @@ static int exists_and_not_file(const char *filename)
 	return 1;
 }
 
+void td_fill_rand_seeds(struct thread_data *td)
+{
+	os_random_seed(td->rand_seeds[0], &td->bsrange_state);
+	os_random_seed(td->rand_seeds[1], &td->verify_state);
+	os_random_seed(td->rand_seeds[2], &td->rwmix_state);
+
+	if (td->o.file_service_type == FIO_FSERVICE_RANDOM)
+		os_random_seed(td->rand_seeds[3], &td->next_file_state);
+
+	os_random_seed(td->rand_seeds[5], &td->file_size_state);
+
+	if (!td_random(td))
+		return;
+
+	if (td->o.rand_repeatable)
+		td->rand_seeds[4] = FIO_RANDSEED * td->thread_number;
+
+	os_random_seed(td->rand_seeds[4], &td->random_state);
+}
+
 /*
  * Initialize the various random states we need (random io, block size ranges,
  * read/write mix, etc).
  */
 static int init_random_state(struct thread_data *td)
 {
-	unsigned long seeds[6];
 	int fd;
 
 	fd = open("/dev/urandom", O_RDONLY);
@@ -423,30 +442,15 @@ static int init_random_state(struct thread_data *td)
 		return 1;
 	}
 
-	if (read(fd, seeds, sizeof(seeds)) < (int) sizeof(seeds)) {
+	if (read(fd, td->rand_seeds, sizeof(td->rand_seeds)) <
+	    (int) sizeof(td->rand_seeds)) {
 		td_verror(td, EIO, "read");
 		close(fd);
 		return 1;
 	}
 
 	close(fd);
-
-	os_random_seed(seeds[0], &td->bsrange_state);
-	os_random_seed(seeds[1], &td->verify_state);
-	os_random_seed(seeds[2], &td->rwmix_state);
-
-	if (td->o.file_service_type == FIO_FSERVICE_RANDOM)
-		os_random_seed(seeds[3], &td->next_file_state);
-
-	os_random_seed(seeds[5], &td->file_size_state);
-
-	if (!td_random(td))
-		return 0;
-
-	if (td->o.rand_repeatable)
-		seeds[4] = FIO_RANDSEED * td->thread_number;
-
-	os_random_seed(seeds[4], &td->random_state);
+	td_fill_rand_seeds(td);
 	return 0;
 }
 
