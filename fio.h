@@ -1033,6 +1033,8 @@ static inline void fio_file_reset(struct fio_file *f)
 {
 	f->last_free_lookup = 0;
 	f->last_pos = f->file_offset;
+	if (f->file_map)
+		memset(f->file_map, 0, f->num_maps * sizeof(int));
 }
 
 static inline void clear_error(struct thread_data *td)
