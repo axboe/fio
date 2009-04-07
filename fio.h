@@ -572,6 +572,8 @@ struct thread_data {
 
 	char *sysfs_root;
 
+	unsigned long rand_seeds[6];
+
 	os_random_state_t bsrange_state;
 	os_random_state_t verify_state;
 
@@ -854,6 +856,7 @@ extern int fio_show_option_help(const char *);
 extern void fio_options_dup_and_init(struct option *);
 extern void options_mem_dupe(struct thread_data *);
 extern void options_mem_free(struct thread_data *);
+extern void td_fill_rand_seeds(struct thread_data *);
 #define FIO_GETOPT_JOB		0x89988998
 #define FIO_NR_OPTIONS		128
 

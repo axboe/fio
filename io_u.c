@@ -748,22 +748,11 @@ static int set_io_u_file(struct thread_data *td, struct io_u *io_u)
 		if (!f)
 			return 1;
 
-set_file:
 		io_u->file = f;
 		get_file(f);
 
 		if (!fill_io_u(td, io_u))
 			break;
-
-		/*
-		 * optimization to prevent close/open of the same file. This
-		 * way we preserve queueing etc.
-		 */
-		if (td->o.nr_files == 1 && td->o.time_based) {
-			put_file_log(td, f);
-			fio_file_reset(f);
-			goto set_file;
-		}
 
 		put_file_log(td, f);
 		td_io_close_file(td, f);
