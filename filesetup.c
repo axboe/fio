@@ -686,7 +686,7 @@ int add_file(struct thread_data *td, const char *fname)
 	f->fd = -1;
 
 	if (td->files_size <= td->files_index) {
-		int new_size = td->o.nr_files;
+		int new_size = td->o.nr_files + 1;
 
 		dprint(FD_FILE, "resize file array to %d files\n", new_size);
 
