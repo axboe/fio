@@ -81,7 +81,6 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 	off_t offset;
 	void *p, *map;
 
-restart:
 	ret = 0;
 	offset = io_u->offset;
 	mmap_len = buflen = io_u->xfer_buflen;
@@ -120,15 +119,18 @@ restart:
 		buflen -= ret;
 		iov.iov_base = p;
 		iov.iov_len = ret;
-		p += ret;
 
 		while (iov.iov_len) {
 			ret = vmsplice(sd->pipe[0], &iov, 1, SPLICE_F_MOVE);
 			if (ret < 0) {
-				if (errno == EFAULT && sd->vmsplice_to_user_map) {
+				if (errno == EFAULT &&
+				    sd->vmsplice_to_user_map) {
 					sd->vmsplice_to_user_map = 0;
 					munmap(map, mmap_len);
-					goto restart;
+					map = NULL;
+					p = io_u->xfer_buf;
+					iov.iov_base = p;
+					continue;
 				}
 				if (errno == EBADF) {
 					ret = -EBADF;
@@ -144,6 +146,7 @@ restart:
 
 			iov.iov_len -= ret;
 			iov.iov_base += ret;
+			p += ret;
 		}
 		if (ret < 0)
 			break;
