@@ -367,6 +367,15 @@ bssplit=str	Sometimes you want even finer grained control of the
 		always add up to 100, if bssplit is given a range that adds
 		up to more, it will error out.
 
+		bssplit also supports giving separate splits to reads and
+		writes. The format is identical to what bs= accepts. You
+		have to separate the read and write parts with a comma. So
+		if you want a workload that has 50% 2k reads and 50% 4k reads,
+		while having 90% 4k writes and 10% 8k writes, you would
+		specify:
+
+		bssplit=2k/50:4k/50,4k/90,8k/10
+
 blocksize_unaligned
 bs_unaligned	If this option is given, any byte size value within bsrange
 		may be used as a block range. This typically wont work with

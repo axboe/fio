@@ -432,8 +432,8 @@ struct thread_options {
 	unsigned int ba[2];
 	unsigned int min_bs[2];
 	unsigned int max_bs[2];
-	struct bssplit *bssplit;
-	unsigned int bssplit_nr;
+	struct bssplit *bssplit[2];
+	unsigned int bssplit_nr[2];
 
 	unsigned int nr_files;
 	unsigned int open_files;

@@ -40,21 +40,16 @@ static int bs_cmp(const void *p1, const void *p2)
 	return bsp1->perc < bsp2->perc;
 }
 
-static int str_bssplit_cb(void *data, const char *input)
+static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 {
-	struct thread_data *td = data;
-	char *fname, *str, *p;
+	struct bssplit *bssplit;
 	unsigned int i, perc, perc_missing;
 	unsigned int max_bs, min_bs;
 	long long val;
+	char *fname;
 
-	p = str = strdup(input);
-
-	strip_blank_front(&str);
-	strip_blank_end(str);
-
-	td->o.bssplit_nr = 4;
-	td->o.bssplit = malloc(4 * sizeof(struct bssplit));
+	td->o.bssplit_nr[ddir] = 4;
+	bssplit = malloc(4 * sizeof(struct bssplit));
 
 	i = 0;
 	max_bs = 0;
@@ -68,10 +63,9 @@ static int str_bssplit_cb(void *data, const char *input)
 		/*
 		 * grow struct buffer, if needed
 		 */
-		if (i == td->o.bssplit_nr) {
-			td->o.bssplit_nr <<= 1;
-			td->o.bssplit = realloc(td->o.bssplit,
-						td->o.bssplit_nr
+		if (i == td->o.bssplit_nr[ddir]) {
+			td->o.bssplit_nr[ddir] <<= 1;
+			bssplit = realloc(bssplit, td->o.bssplit_nr[ddir]
 						  * sizeof(struct bssplit));
 		}
 
@@ -98,19 +92,19 @@ static int str_bssplit_cb(void *data, const char *input)
 		if (val < min_bs)
 			min_bs = val;
 
-		td->o.bssplit[i].bs = val;
-		td->o.bssplit[i].perc = perc;
+		bssplit[i].bs = val;
+		bssplit[i].perc = perc;
 		i++;
 	}
 
-	td->o.bssplit_nr = i;
+	td->o.bssplit_nr[ddir] = i;
 
 	/*
 	 * Now check if the percentages add up, and how much is missing
 	 */
 	perc = perc_missing = 0;
-	for (i = 0; i < td->o.bssplit_nr; i++) {
-		struct bssplit *bsp = &td->o.bssplit[i];
+	for (i = 0; i < td->o.bssplit_nr[ddir]; i++) {
+		struct bssplit *bsp = &bssplit[i];
 
 		if (bsp->perc == (unsigned char) -1)
 			perc_missing++;
@@ -120,7 +114,7 @@ static int str_bssplit_cb(void *data, const char *input)
 
 	if (perc > 100) {
 		log_err("fio: bssplit percentages add to more than 100%%\n");
-		free(td->o.bssplit);
+		free(bssplit);
 		return 1;
 	}
 	/*
@@ -128,24 +122,58 @@ static int str_bssplit_cb(void *data, const char *input)
 	 * them.
 	 */
 	if (perc_missing) {
-		for (i = 0; i < td->o.bssplit_nr; i++) {
-			struct bssplit *bsp = &td->o.bssplit[i];
+		for (i = 0; i < td->o.bssplit_nr[ddir]; i++) {
+			struct bssplit *bsp = &bssplit[i];
 
 			if (bsp->perc == (unsigned char) -1)
 				bsp->perc = (100 - perc) / perc_missing;
 		}
 	}
 
-	td->o.min_bs[DDIR_READ] = td->o.min_bs[DDIR_WRITE] = min_bs;
-	td->o.max_bs[DDIR_READ] = td->o.max_bs[DDIR_WRITE] = max_bs;
+	td->o.min_bs[ddir] = min_bs;
+	td->o.max_bs[ddir] = max_bs;
 
 	/*
 	 * now sort based on percentages, for ease of lookup
 	 */
-	qsort(td->o.bssplit, td->o.bssplit_nr, sizeof(struct bssplit), bs_cmp);
+	qsort(bssplit, td->o.bssplit_nr[ddir], sizeof(struct bssplit), bs_cmp);
+	td->o.bssplit[ddir] = bssplit;
+	return 0;
+
+}
+
+static int str_bssplit_cb(void *data, const char *input)
+{
+	struct thread_data *td = data;
+	char *str, *p, *odir;
+	int ret = 0;
+
+	p = str = strdup(input);
+
+	strip_blank_front(&str);
+	strip_blank_end(str);
+
+	odir = strchr(str, ',');
+	if (odir) {
+		ret = bssplit_ddir(td, DDIR_WRITE, odir + 1);
+		if (!ret) {
+			*odir = '\0';
+			ret = bssplit_ddir(td, DDIR_READ, str);
+		}
+	} else {
+		char *op;
+
+		op = strdup(str);
+
+		ret = bssplit_ddir(td, DDIR_READ, str);
+		if (!ret)
+			ret = bssplit_ddir(td, DDIR_WRITE, op);
+
+		free(op);
+	}
 
 	free(p);
-	return 0;
+	return ret;
 }
 
 static int str_rw_cb(void *data, const char *str)
