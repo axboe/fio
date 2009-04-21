@@ -406,6 +406,8 @@ static int init_iolog_write(struct thread_data *td)
 		return 1;
 	}
 
+	printf("log opened\n");
+
 	/*
 	 * That's it for writing, setup a log buffer and we're done.
 	  */
@@ -433,9 +435,6 @@ static int init_iolog_write(struct thread_data *td)
 int init_iolog(struct thread_data *td)
 {
 	int ret = 0;
-
-	if (td->io_ops->flags & FIO_DISKLESSIO)
-		return 0;
 
 	if (td->o.read_iolog_file) {
 		/*
