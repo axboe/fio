@@ -10,6 +10,7 @@ enum {
 	arch_alpha,
 	arch_sparc,
 	arch_sparc64,
+	arch_arm,
 };
 
 #if defined(__i386__)
@@ -28,6 +29,8 @@ enum {
 #include "arch-sparc.h"
 #elif defined(__sparc64__)
 #include "arch-sparc64.h"
+#elif defined(__arm__)
+#include "arch-arm.h"
 #else
 #error "Unsupported arch"
 #endif
