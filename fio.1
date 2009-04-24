@@ -187,7 +187,10 @@ block sizes for exact control of the issued IO for a job that has mixed
 block sizes. The format of the option is bssplit=blocksize/percentage,
 optionally adding as many definitions as needed seperated by a colon.
 Example: bssplit=4k/10:64k/50:32k/40 would issue 50% 64k blocks, 10% 4k
-blocks and 40% 32k blocks.
+blocks and 40% 32k blocks. \fBbssplit\fR also supports giving separate
+splits to reads and writes. The format is identical to what the
+\fBbs\fR option accepts, the read and write parts are separated with a
+comma.
 .TP
 .B blocksize_unaligned\fR,\fP bs_unaligned
 If set, any size in \fBblocksize_range\fR may be used.  This typically won't
