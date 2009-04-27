@@ -605,7 +605,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(filename),
 		.cb	= str_filename_cb,
-		.prio	= 1, /* must come before "directory" */
+		.prio	= -1, /* must come after "directory" */
 		.help	= "File(s) to use for the workload",
 	},
 	{
