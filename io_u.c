@@ -838,7 +838,7 @@ struct io_u *get_io_u(struct thread_data *td)
 
 		f->last_pos = io_u->offset + io_u->buflen;
 
-		if (td->o.verify != VERIFY_NONE)
+		if (td->o.verify != VERIFY_NONE && io_u->ddir == DDIR_WRITE)
 			populate_verify_io_u(td, io_u);
 		else if (td->o.refill_buffers && io_u->ddir == DDIR_WRITE)
 			io_u_fill_buffer(td, io_u, io_u->xfer_buflen);
