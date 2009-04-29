@@ -733,7 +733,7 @@ static int init_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
 	unsigned int max_bs;
-	int i, max_units;
+	int cl_align, i, max_units;
 	char *p;
 
 	max_units = td->o.iodepth;
@@ -761,10 +761,20 @@ static int init_io_u(struct thread_data *td)
 	else
 		p = td->orig_buffer;
 
+	cl_align = os_cache_line_size();
+
 	for (i = 0; i < max_units; i++) {
+		void *ptr;
+
 		if (td->terminate)
 			return 1;
-		io_u = malloc(sizeof(*io_u));
+
+		if (posix_memalign(&ptr, cl_align, sizeof(*io_u))) {
+			log_err("fio: posix_memalign=%s\n", strerror(errno));
+			break;
+		}
+
+		io_u = ptr;
 		memset(io_u, 0, sizeof(*io_u));
 		INIT_FLIST_HEAD(&io_u->list);
 

@@ -30,6 +30,7 @@
 #define FIO_HAVE_FALLOCATE
 #define FIO_HAVE_POSIXAIO_FSYNC
 #define FIO_HAVE_PSHARED_MUTEX
+#define FIO_HAVE_CL_SIZE
 
 #define OS_MAP_ANON		MAP_ANONYMOUS
 
@@ -248,5 +249,24 @@ static inline int fio_lookup_raw(dev_t dev, int *majdev, int *mindev)
 #else
 #define FIO_O_NOATIME	0
 #endif
+
+#define CACHE_LINE_FILE	\
+	"/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
+
+static inline int arch_cache_line_size(void)
+{
+	char size[32];
+	int fd, ret;
+
+	fd = open(CACHE_LINE_FILE, O_RDONLY);
+	if (fd < 0)
+		return -1;
+
+	ret = read(fd, size, sizeof(size));
+	if (ret <= 0)
+		return -1;
+
+	return atoi(size);
+}
 
 #endif

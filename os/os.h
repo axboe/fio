@@ -90,4 +90,20 @@ static inline int load_blktrace(struct thread_data *td, const char *fname)
 }
 #endif
 
+#define FIO_DEF_CL_SIZE		128
+
+static inline int os_cache_line_size(void)
+{
+#ifdef FIO_HAVE_CL_SIZE
+	int ret = arch_cache_line_size();
+
+	if (ret <= 0)
+		return FIO_DEF_CL_SIZE;
+
+	return ret;
+#else
+	return FIO_DEF_CL_SIZE;
+#endif
+}
+
 #endif
