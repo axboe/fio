@@ -1086,7 +1086,7 @@ static void *thread_main(void *data)
 	if (td->ts.slat_log) {
 		if (td->o.lat_log_file) {
 			finish_log_named(td, td->ts.slat_log,
-						td->o.lat_log_file, "clat");
+						td->o.lat_log_file, "slat");
 		} else
 			finish_log(td, td->ts.slat_log, "slat");
 	}
