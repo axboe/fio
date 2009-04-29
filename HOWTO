@@ -935,7 +935,7 @@ I		Thread initialized, waiting.
 	M	Running, doing mixed sequential reads/writes.
 	m	Running, doing mixed random reads/writes.
 	F	Running, currently waiting for fsync()
-V		Running, doing verification of written data.
+	V	Running, doing verification of written data.
 E		Thread exited, not reaped by main thread yet.
 _		Thread reaped.
 
