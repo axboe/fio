@@ -227,9 +227,11 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 
 	do {
 		if (nd->net_protocol == IPPROTO_UDP) {
+			struct sockaddr *to = (struct sockaddr *) &nd->addr;
+
 			ret = sendto(io_u->file->fd, io_u->xfer_buf,
-					io_u->xfer_buflen, flags, &nd->addr,
-					sizeof(nd->addr));
+					io_u->xfer_buflen, flags, to,
+					sizeof(*to));
 		} else {
 			/*
 			 * if we are going to write more, set MSG_MORE
@@ -279,10 +281,10 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 	do {
 		if (nd->net_protocol == IPPROTO_UDP) {
 			socklen_t len = sizeof(nd->addr);
+			struct sockaddr *from = (struct sockaddr *) &nd->addr;
 
 			ret = recvfrom(io_u->file->fd, io_u->xfer_buf,
-					io_u->xfer_buflen, flags, &nd->addr,
-					&len);
+					io_u->xfer_buflen, flags, from, &len);
 			if (is_udp_close(io_u, ret)) {
 				td->done = 1;
 				return 0;
@@ -408,12 +410,13 @@ static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct udp_close_msg msg;
+	struct sockaddr *to = (struct sockaddr *) &nd->addr;
 	int ret;
 
 	msg.magic = htonl(FIO_LINK_CLOSE_MAGIC);
 	msg.cmd = htonl(FIO_LINK_CLOSE);
 
-	ret = sendto(f->fd, &msg, sizeof(msg), MSG_WAITALL, &nd->addr,
+	ret = sendto(f->fd, &msg, sizeof(msg), MSG_WAITALL, to,
 			sizeof(nd->addr));
 	if (ret < 0)
 		td_verror(td, errno, "sendto udp link close");
