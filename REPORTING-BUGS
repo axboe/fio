@@ -2,7 +2,7 @@ Reporting a bug
 ---------------
 
 If you notice anything that seems like a fio bug, please do send email
-to the list (fio-devel@kernel.dk, see README) about it. You'll need
+to the list (fio@vger.kernel.org, see README) about it. You'll need
 to report at least:
 
 1) A description of what you think the bug is

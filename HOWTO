@@ -874,7 +874,7 @@ cpuload=int	If the job is a CPU cycle eater, attempt to use the specified
 		percentage of CPU cycles.
 
 cpuchunks=int	If the job is a CPU cycle eater, split the load into
-		cycles of the given time. In milliseconds.
+		cycles of the given time. In microseconds.
 
 disk_util=bool	Generate disk utilization statistics, if the platform
 		supports it. Defaults to on.
