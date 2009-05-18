@@ -75,6 +75,7 @@ struct io_sample {
 	unsigned long time;
 	unsigned long val;
 	enum fio_ddir ddir;
+	unsigned int bs;
 };
 
 /*
@@ -810,9 +811,12 @@ extern void write_iolog_close(struct thread_data *);
 /*
  * Logging
  */
-extern void add_clat_sample(struct thread_data *, enum fio_ddir, unsigned long);
-extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long);
-extern void add_bw_sample(struct thread_data *, enum fio_ddir, struct timeval *);
+extern void add_clat_sample(struct thread_data *, enum fio_ddir, unsigned long,
+				unsigned int);
+extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long,
+				unsigned int);
+extern void add_bw_sample(struct thread_data *, enum fio_ddir, unsigned int,
+				struct timeval *);
 extern void show_run_stats(void);
 extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
@@ -823,7 +827,7 @@ extern void finish_log_named(struct thread_data *, struct io_log *, const char *
 extern void __finish_log(struct io_log *, const char *);
 extern struct io_log *agg_io_log[2];
 extern int write_bw_log;
-extern void add_agg_sample(unsigned long, enum fio_ddir);
+extern void add_agg_sample(unsigned long, enum fio_ddir, unsigned int);
 
 /*
  * Time functions

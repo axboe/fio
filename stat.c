@@ -700,8 +700,11 @@ static inline void add_stat_sample(struct io_stat *is, unsigned long data)
 }
 
 static void __add_log_sample(struct io_log *iolog, unsigned long val,
-			     enum fio_ddir ddir, unsigned long time)
+			     enum fio_ddir ddir, unsigned int bs,
+			     unsigned long time)
 {
+	const int nr_samples = iolog->nr_samples;
+
 	if (iolog->nr_samples == iolog->max_samples) {
 		int new_size = sizeof(struct io_sample) * iolog->max_samples*2;
 
@@ -709,48 +712,50 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 		iolog->max_samples <<= 1;
 	}
 
-	iolog->log[iolog->nr_samples].val = val;
-	iolog->log[iolog->nr_samples].time = time;
-	iolog->log[iolog->nr_samples].ddir = ddir;
+	iolog->log[nr_samples].val = val;
+	iolog->log[nr_samples].time = time;
+	iolog->log[nr_samples].ddir = ddir;
+	iolog->log[nr_samples].bs = bs;
 	iolog->nr_samples++;
 }
 
 static void add_log_sample(struct thread_data *td, struct io_log *iolog,
-			   unsigned long val, enum fio_ddir ddir)
+			   unsigned long val, enum fio_ddir ddir,
+			   unsigned int bs)
 {
-	__add_log_sample(iolog, val, ddir, mtime_since_now(&td->epoch));
+	__add_log_sample(iolog, val, ddir, bs, mtime_since_now(&td->epoch));
 }
 
-void add_agg_sample(unsigned long val, enum fio_ddir ddir)
+void add_agg_sample(unsigned long val, enum fio_ddir ddir, unsigned int bs)
 {
 	struct io_log *iolog = agg_io_log[ddir];
 
-	__add_log_sample(iolog, val, ddir, mtime_since_genesis());
+	__add_log_sample(iolog, val, ddir, bs, mtime_since_genesis());
 }
 
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
-		     unsigned long usec)
+		     unsigned long usec, unsigned int bs)
 {
 	struct thread_stat *ts = &td->ts;
 
 	add_stat_sample(&ts->clat_stat[ddir], usec);
 
 	if (ts->clat_log)
-		add_log_sample(td, ts->clat_log, usec, ddir);
+		add_log_sample(td, ts->clat_log, usec, ddir, bs);
 }
 
 void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
-		     unsigned long usec)
+		     unsigned long usec, unsigned int bs)
 {
 	struct thread_stat *ts = &td->ts;
 
 	add_stat_sample(&ts->slat_stat[ddir], usec);
 
 	if (ts->slat_log)
-		add_log_sample(td, ts->slat_log, usec, ddir);
+		add_log_sample(td, ts->slat_log, usec, ddir, bs);
 }
 
-void add_bw_sample(struct thread_data *td, enum fio_ddir ddir,
+void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 		   struct timeval *t)
 {
 	struct thread_stat *ts = &td->ts;
@@ -764,7 +769,7 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir,
 	add_stat_sample(&ts->bw_stat[ddir], rate);
 
 	if (ts->bw_log)
-		add_log_sample(td, ts->bw_log, rate, ddir);
+		add_log_sample(td, ts->bw_log, rate, ddir, bs);
 
 	fio_gettime(&ts->stat_sample_time[ddir], NULL);
 	ts->stat_io_bytes[ddir] = td->this_io_bytes[ddir];

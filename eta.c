@@ -296,8 +296,8 @@ void print_thread_status(void)
 	if (write_bw_log && rate_time > bw_avg_time && !in_ramp_time(td)) {
 		calc_rate(rate_time, io_bytes, rate_io_bytes, rate);
 		memcpy(&rate_prev_time, &now, sizeof(now));
-		add_agg_sample(rate[DDIR_READ], DDIR_READ);
-		add_agg_sample(rate[DDIR_WRITE], DDIR_WRITE);
+		add_agg_sample(rate[DDIR_READ], DDIR_READ, 0);
+		add_agg_sample(rate[DDIR_WRITE], DDIR_WRITE, 0);
 	}
 
 	disp_time = mtime_since(&disp_prev_time, &now);

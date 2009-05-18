@@ -917,11 +917,11 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 							&icd->time);
 
 			if (!td->o.disable_clat) {
-				add_clat_sample(td, idx, usec);
+				add_clat_sample(td, idx, usec, bytes);
 				io_u_mark_latency(td, usec);
 			}
 			if (!td->o.disable_bw)
-				add_bw_sample(td, idx, &icd->time);
+				add_bw_sample(td, idx, bytes, &icd->time);
 		}
 
 		if (td_write(td) && idx == DDIR_WRITE &&
@@ -1026,7 +1026,7 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 		unsigned long slat_time;
 
 		slat_time = utime_since(&io_u->start_time, &io_u->issue_time);
-		add_slat_sample(td, io_u->ddir, slat_time);
+		add_slat_sample(td, io_u->ddir, io_u->xfer_buflen, slat_time);
 	}
 }
 

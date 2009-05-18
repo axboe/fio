@@ -471,8 +471,10 @@ void __finish_log(struct io_log *log, const char *name)
 	}
 
 	for (i = 0; i < log->nr_samples; i++) {
-		fprintf(f, "%lu, %lu, %u\n", log->log[i].time, log->log[i].val,
-						log->log[i].ddir);
+		fprintf(f, "%lu, %lu, %u, %u\n", log->log[i].time,
+						log->log[i].val,
+						log->log[i].ddir,
+						log->log[i].bs);
 	}
 
 	fclose(f);
