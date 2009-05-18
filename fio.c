@@ -52,6 +52,7 @@ int temp_stall_ts;
 unsigned long done_secs = 0;
 
 static struct fio_mutex *startup_mutex;
+static struct fio_mutex *writeout_mutex;
 static volatile int fio_abort;
 static int exit_value;
 static struct itimerval itimer;
@@ -1086,6 +1087,7 @@ static void *thread_main(void *data)
 	td->ts.io_bytes[0] = td->io_bytes[0];
 	td->ts.io_bytes[1] = td->io_bytes[1];
 
+	fio_mutex_down(writeout_mutex);
 	if (td->ts.bw_log) {
 		if (td->o.bw_log_file) {
 			finish_log_named(td, td->ts.bw_log,
@@ -1107,6 +1109,7 @@ static void *thread_main(void *data)
 		} else
 			finish_log(td, td->ts.clat_log, "clat");
 	}
+	fio_mutex_up(writeout_mutex);
 	if (td->o.exec_postrun) {
 		if (system(td->o.exec_postrun) < 0)
 			log_err("fio: postrun %s failed\n", td->o.exec_postrun);
@@ -1554,6 +1557,7 @@ int main(int argc, char *argv[])
 	}
 
 	startup_mutex = fio_mutex_init(0);
+	writeout_mutex = fio_mutex_init(1);
 
 	set_genesis_time();
 
@@ -1571,5 +1575,6 @@ int main(int argc, char *argv[])
 	}
 
 	fio_mutex_remove(startup_mutex);
+	fio_mutex_remove(writeout_mutex);
 	return exit_value;
 }
