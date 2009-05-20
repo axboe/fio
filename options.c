@@ -1334,6 +1334,13 @@ static struct fio_option options[] = {
 		.help	= "Create files when they are opened for IO",
 		.def	= "0",
 	},
+ 	{
+		.name	= "pre_read",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(pre_read),
+		.help	= "Preread files before starting official testing",
+		.def	= "0",
+	},
 	{
 		.name	= "cpuload",
 		.type	= FIO_OPT_INT,

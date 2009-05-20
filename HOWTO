@@ -713,6 +713,9 @@ create_fsync=bool	fsync the data file after creation. This is the
 create_on_open=bool	Don't pre-setup the files for IO, just create open()
 			when it's time to do IO to that file.
 
+pre_read=bool	If this is given, files will be pre-read into memory before
+		starting the given IO operation.
+
 unlink=bool	Unlink the job files when done. Not the default, as repeated
 		runs of that job would then waste time recreating the file
 		set again and again.

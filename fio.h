@@ -447,6 +447,7 @@ struct thread_options {
 	unsigned int create_fsync;
 	unsigned int create_on_open;
 	unsigned int end_fsync;
+	unsigned int pre_read;
 	unsigned int sync_io;
 	unsigned int verify;
 	unsigned int do_verify;
@@ -874,6 +875,7 @@ extern int __must_check file_invalidate_cache(struct thread_data *, struct fio_f
 extern int __must_check generic_open_file(struct thread_data *, struct fio_file *);
 extern int __must_check generic_close_file(struct thread_data *, struct fio_file *);
 extern int __must_check generic_get_file_size(struct thread_data *, struct fio_file *);
+extern int __must_check pre_read_files(struct thread_data *);
 extern int add_file(struct thread_data *, const char *);
 extern void get_file(struct fio_file *);
 extern int __must_check put_file(struct thread_data *, struct fio_file *);

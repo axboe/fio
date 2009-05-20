@@ -119,6 +119,39 @@ err:
 	return 1;
 }
 
+static int pre_read_file(struct thread_data *td, struct fio_file *f)
+{
+	int r;
+	unsigned long long left;
+	unsigned int bs;
+	char *b;
+
+	bs = td->o.max_bs[DDIR_READ];
+	b = malloc(bs);
+	memset(b, 0, bs);
+
+	lseek(f->fd, f->file_offset, SEEK_SET);
+	left = f->io_size;
+
+	while (left && !td->terminate) {
+		if (bs > left)
+			bs = left;
+
+		r = read(f->fd, b, bs);
+
+		if (r == (int) bs) {
+			left -= bs;
+			continue;
+		} else {
+			td_verror(td, EIO, "pre_read");
+			break;
+		}
+	}
+
+	free(b);
+	return 0;
+}
+
 static unsigned long long get_rand_file_size(struct thread_data *td)
 {
 	unsigned long long ret, sized;
@@ -569,6 +602,20 @@ int setup_files(struct thread_data *td)
 	return 0;
 err_offset:
 	log_err("%s: you need to specify valid offset=\n", td->o.name);
+	return 1;
+}
+
+int pre_read_files(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	dprint(FD_FILE, "pre_read files\n");
+
+	for_each_file(td, f, i) {
+		pre_read_file(td, f);
+	}
+
 	return 1;
 }
 

@@ -1018,6 +1018,11 @@ static void *thread_main(void *data)
 			goto err;
 	}
 
+	if (td->o.pre_read) {
+		if (pre_read_files(td) < 0)
+			goto err;
+	}
+
 	fio_gettime(&td->epoch, NULL);
 	getrusage(RUSAGE_SELF, &td->ts.ru_start);
 
