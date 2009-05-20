@@ -154,7 +154,6 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 			left -= bs;
 			continue;
 		} else {
-			printf("r=%d\n", r);
 			td_verror(td, EIO, "pre_read");
 			break;
 		}
