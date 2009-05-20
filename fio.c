@@ -925,6 +925,22 @@ static void clear_io_state(struct thread_data *td)
 		f->flags &= ~FIO_FILE_DONE;
 }
 
+static int exec_string(const char *string)
+{
+	int ret, newlen = strlen(string) + 1 + 8;
+	char *str;
+
+	str = malloc(newlen);
+	sprintf(str, "sh -c %s", string);
+
+	ret = system(str);
+	if (ret == -1)
+		log_err("fio: exec of cmd <%s> failed\n", str);
+
+	free(str);
+	return ret;
+}
+
 /*
  * Entry point for the thread based jobs. The process based jobs end up
  * here as well, after a little setup.
@@ -1014,7 +1030,7 @@ static void *thread_main(void *data)
 		goto err;
 
 	if (td->o.exec_prerun) {
-		if (system(td->o.exec_prerun) < 0)
+		if (exec_string(td->o.exec_prerun))
 			goto err;
 	}
 
@@ -1115,10 +1131,8 @@ static void *thread_main(void *data)
 			finish_log(td, td->ts.clat_log, "clat");
 	}
 	fio_mutex_up(writeout_mutex);
-	if (td->o.exec_postrun) {
-		if (system(td->o.exec_postrun) < 0)
-			log_err("fio: postrun %s failed\n", td->o.exec_postrun);
-	}
+	if (td->o.exec_postrun)
+		exec_string(td->o.exec_postrun);
 
 	if (exitall_on_terminate)
 		terminate_threads(td->groupid);
