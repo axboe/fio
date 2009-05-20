@@ -197,8 +197,8 @@ If set, any size in \fBblocksize_range\fR may be used.  This typically won't
 work with direct I/O, as that normally requires sector alignment.
 .TP
 .BI blockalign \fR=\fPint[,int] "\fR,\fB ba" \fR=\fPint[,int]
-At what boundary to align random IO offsets. Defaults to the same as
-'blocksize' the minimum blocksize given.  Minimum alignment is typically 512b
+At what boundary to align random IO offsets. Defaults to the same as 'blocksize'
+the minimum blocksize given.  Minimum alignment is typically 512b
 for using direct IO, though it usually depends on the hardware block size.
 This option is mutually exclusive with using a random map for files, so it
 will turn off that option.
