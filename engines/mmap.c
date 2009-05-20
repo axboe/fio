@@ -79,8 +79,12 @@ static int fio_mmapio_open(struct thread_data *td, struct fio_file *f)
 
 	f->mmap = mmap(NULL, f->io_size, flags, MAP_SHARED, f->fd, f->file_offset);
 	if (f->mmap == MAP_FAILED) {
+		int err = errno;
+
 		f->mmap = NULL;
-		td_verror(td, errno, "mmap");
+		td_verror(td, err, "mmap");
+		if (err == EINVAL && f->io_size > 2*1024*1024*1024UL)
+			log_err("fio: mmap size likely too large\n");
 		goto err;
 	}
 
