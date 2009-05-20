@@ -686,6 +686,7 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 			if (err) {
 				dprint(FD_FILE, "error %d on open of %s\n",
 					err, f->file_name);
+				f = NULL;
 				continue;
 			}
 			opened = 1;
