@@ -121,10 +121,21 @@ err:
 
 static int pre_read_file(struct thread_data *td, struct fio_file *f)
 {
-	int r;
+	int r, did_open = 0, old_runstate;
 	unsigned long long left;
 	unsigned int bs;
 	char *b;
+
+	if (!(f->flags & FIO_FILE_OPEN)) {
+		if (td->io_ops->open_file(td, f)) {
+			log_err("fio: cannot pre-read, failed to open file\n");
+			return 1;
+		}
+		did_open = 1;
+	}
+
+	old_runstate = td->runstate;
+	td_set_runstate(td, TD_PRE_READING);
 
 	bs = td->o.max_bs[DDIR_READ];
 	b = malloc(bs);
@@ -143,11 +154,16 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 			left -= bs;
 			continue;
 		} else {
+			printf("r=%d\n", r);
 			td_verror(td, EIO, "pre_read");
 			break;
 		}
 	}
 
+	td_set_runstate(td, old_runstate);
+
+	if (did_open)
+		td->io_ops->close_file(td, f);
 	free(b);
 	return 0;
 }

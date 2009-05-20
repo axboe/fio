@@ -44,6 +44,9 @@ static void check_str_update(struct thread_data *td)
 				c = 'W';
 		}
 		break;
+	case TD_PRE_READING:
+		c = 'p';
+		break;
 	case TD_VERIFYING:
 		c = 'V';
 		break;
@@ -145,7 +148,8 @@ static int thread_eta(struct thread_data *td)
 			eta_sec = td->o.timeout + done_secs - elapsed;
 	} else if (td->runstate == TD_NOT_CREATED || td->runstate == TD_CREATED
 			|| td->runstate == TD_INITIALIZED
-			|| td->runstate == TD_RAMP) {
+			|| td->runstate == TD_RAMP
+			|| td->runstate == TD_PRE_READING) {
 		int t_eta = 0, r_eta = 0;
 
 		/*
@@ -242,7 +246,8 @@ void print_thread_status(void)
 		if (td->o.bw_avg_time < bw_avg_time)
 			bw_avg_time = td->o.bw_avg_time;
 		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING
-		    || td->runstate == TD_FSYNCING) {
+		    || td->runstate == TD_FSYNCING
+		    || td->runstate == TD_PRE_READING) {
 			nr_running++;
 			t_rate += td->o.rate;
 			m_rate += td->o.ratemin;
