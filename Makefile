@@ -65,6 +65,7 @@ install: $(PROGS) $(SCRIPTS)
 	$(INSTALL) $(PROGS) $(SCRIPTS) $(DESTDIR)$(bindir)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 fio.1 $(DESTDIR)$(mandir)/man1
+	$(INSTALL) -m 644 fio_generate_plots.1 $(DESTDIR)$(mandir)/man1
 
 ifneq ($(wildcard .depend),)
 include .depend
