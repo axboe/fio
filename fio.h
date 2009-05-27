@@ -145,7 +145,6 @@ struct io_u {
 	void *buf;
 	unsigned long buflen;
 	unsigned long long offset;
-	unsigned long long endpos;
 
 	/*
 	 * IO engine state, may be different from above when we get

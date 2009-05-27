@@ -848,7 +848,6 @@ struct io_u *get_io_u(struct thread_data *td)
 	/*
 	 * Set io data pointers.
 	 */
-	io_u->endpos = io_u->offset + io_u->buflen;
 	io_u->xfer_buf = io_u->buf;
 	io_u->xfer_buflen = io_u->buflen;
 
