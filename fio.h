@@ -343,6 +343,8 @@ struct fio_file {
 
 	int references;
 	enum fio_file_flags flags;
+
+	struct disk_util *du;
 };
 
 /*
@@ -786,7 +788,28 @@ struct disk_util {
 
 	unsigned long msec;
 	struct timeval time;
+
+	struct fio_mutex *lock;
+	unsigned long users;
 };
+
+static inline void disk_util_inc(struct disk_util *du)
+{
+	if (du) {
+		fio_mutex_down(du->lock);
+		du->users++;
+		fio_mutex_up(du->lock);
+	}
+}
+
+static inline void disk_util_dec(struct disk_util *du)
+{
+	if (du) {
+		fio_mutex_down(du->lock);
+		du->users--;
+		fio_mutex_up(du->lock);
+	}
+}
 
 #define DISK_UTIL_MSEC	(250)
 

@@ -332,6 +332,7 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 	fio_file_reset(f);
 	f->flags |= FIO_FILE_OPEN;
 	f->flags &= ~FIO_FILE_CLOSING;
+	disk_util_inc(f->du);
 
 	td->nr_open_files++;
 	get_file(f);
@@ -386,6 +387,7 @@ done:
 	log_file(td, f, FIO_LOG_OPEN_FILE);
 	return 0;
 err:
+	disk_util_dec(f->du);
 	if (td->io_ops->close_file)
 		td->io_ops->close_file(td, f);
 	return 1;
@@ -401,6 +403,7 @@ int td_io_close_file(struct thread_data *td, struct fio_file *f)
 	 */
 	f->flags |= FIO_FILE_CLOSING;
 
+	disk_util_dec(f->du);
 	unlock_file_all(td, f);
 
 	return put_file(td, f);

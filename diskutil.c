@@ -8,10 +8,22 @@
 #include <math.h>
 
 #include "fio.h"
+#include "smalloc.h"
 
 static int last_majdev, last_mindev;
+static struct disk_util *last_du;
 
 static struct flist_head disk_list = FLIST_HEAD_INIT(disk_list);
+
+static void disk_util_free(struct disk_util *du)
+{
+	if (du == last_du)
+		last_du = NULL;
+
+	fio_mutex_remove(du->lock);
+	sfree(du->name);
+	sfree(du);
+}
 
 static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 {
@@ -52,6 +64,8 @@ static void update_io_tick_disk(struct disk_util *du)
 	struct timeval t;
 
 	if (get_io_ticks(du, &__dus))
+		return;
+	if (!du->users)
 		return;
 
 	dus = &du->dus;
@@ -167,9 +181,8 @@ static int read_block_dev_entry(char *path, int *maj, int *min)
 	return 0;
 }
 
-
-static void __init_per_file_disk_util(struct thread_data *td, int majdev,
-		int mindev, char * path);
+static struct disk_util *__init_per_file_disk_util(struct thread_data *td,
+		int majdev, int mindev, char * path);
 
 static void find_add_disk_slaves(struct thread_data *td, char *path,
 		struct disk_util *masterdu)
@@ -221,26 +234,26 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 	return;
 }
 
-
-
-static void disk_util_add(struct thread_data * td, int majdev, int mindev,
-		char *path)
+static struct disk_util *disk_util_add(struct thread_data * td, int majdev,
+				       int mindev, char *path)
 {
 	struct disk_util *du, *__du;
 	struct flist_head *entry;
 
 	dprint(FD_DISKUTIL, "add maj/min %d/%d: %s\n", majdev, mindev, path);
 
-	du = malloc(sizeof(*du));
+	du = smalloc(sizeof(*du));
 	memset(du, 0, sizeof(*du));
 	INIT_FLIST_HEAD(&du->list);
 	sprintf(du->path, "%s/stat", path);
-	du->name = strdup(basename(path));
+	du->name = smalloc_strdup(basename(path));
 	du->sysfs_root = path;
 	du->major = majdev;
 	du->minor = mindev;
 	INIT_FLIST_HEAD(&du->slavelist);
 	INIT_FLIST_HEAD(&du->slaves);
+	du->lock = fio_mutex_init(1);
+	du->users = 0;
 
 	flist_for_each(entry, &disk_list) {
 		__du = flist_entry(entry, struct disk_util, list);
@@ -248,9 +261,8 @@ static void disk_util_add(struct thread_data * td, int majdev, int mindev,
 		dprint(FD_DISKUTIL, "found %s in list\n", __du->name);
 
 		if (!strcmp(du->name, __du->name)) {
-			free(du->name);
-			free(du);
-			return;
+			disk_util_free(du);
+			return __du;
 		}
 	}
 
@@ -261,6 +273,7 @@ static void disk_util_add(struct thread_data * td, int majdev, int mindev,
 
 	flist_add_tail(&du->list, &disk_list);
 	find_add_disk_slaves(td, path, du);
+	return du;
 }
 
 
@@ -271,9 +284,8 @@ static int check_dev_match(int majdev, int mindev, char *path)
 	if (read_block_dev_entry(path, &major, &minor))
 		return 1;
 
-	if (majdev == major && mindev == minor) {
+	if (majdev == major && mindev == minor)
 		return 0;
-	}
 
 	return 1;
 }
@@ -330,9 +342,9 @@ static int find_block_dir(int majdev, int mindev, char *path, int link_ok)
 	return found;
 }
 
-
-static void __init_per_file_disk_util(struct thread_data *td, int majdev,
-		int mindev, char * path)
+static struct disk_util *__init_per_file_disk_util(struct thread_data *td,
+						   int majdev, int mindev,
+						   char *path)
 {
 	struct stat st;
 	char tmp[PATH_MAX];
@@ -349,7 +361,7 @@ static void __init_per_file_disk_util(struct thread_data *td, int majdev,
 		sprintf(tmp, "%s/queue", p);
 		if (stat(tmp, &st)) {
 			log_err("unknown sysfs layout\n");
-			return;
+			return NULL;
 		}
 		strncpy(tmp, p, PATH_MAX - 1);
 		sprintf(path, "%s", tmp);
@@ -358,20 +370,19 @@ static void __init_per_file_disk_util(struct thread_data *td, int majdev,
 	if (td->o.ioscheduler && !td->sysfs_root)
 		td->sysfs_root = strdup(path);
 
-	disk_util_add(td, majdev, mindev, path);
+	return disk_util_add(td, majdev, mindev, path);
 }
 
-
-
-static void init_per_file_disk_util(struct thread_data *td, char * filename)
+static struct disk_util *init_per_file_disk_util(struct thread_data *td,
+						 char *filename)
 {
 
 	char foo[PATH_MAX];
 	struct disk_util *du;
 	int mindev, majdev;
 
-	if(get_device_numbers(filename, &majdev, &mindev))
-		return;
+	if (get_device_numbers(filename, &majdev, &mindev))
+		return NULL;
 
 	dprint(FD_DISKUTIL, "%s belongs to maj/min %d/%d\n", filename, majdev,
 			mindev);
@@ -381,7 +392,7 @@ static void init_per_file_disk_util(struct thread_data *td, char * filename)
 		if (td->o.ioscheduler && !td->sysfs_root)
 			td->sysfs_root = strdup(du->sysfs_root);
 
-		return;
+		return du;
 	}
 
 	/*
@@ -391,20 +402,20 @@ static void init_per_file_disk_util(struct thread_data *td, char * filename)
 	 * everything again.
 	 */
 	if (mindev == last_mindev && majdev == last_majdev)
-		return;
+		return last_du;
 
 	last_mindev = mindev;
 	last_majdev = majdev;
 
 	sprintf(foo, "/sys/block");
 	if (!find_block_dir(majdev, mindev, foo, 1))
-		return;
+		return NULL;
 
-	__init_per_file_disk_util(td, majdev, mindev, foo);
-
+	return __init_per_file_disk_util(td, majdev, mindev, foo);
 }
 
-static void __init_disk_util(struct thread_data *td, struct fio_file *f)
+static struct disk_util *__init_disk_util(struct thread_data *td,
+					  struct fio_file *f)
 {
 	return init_per_file_disk_util(td, f->file_name);
 }
@@ -419,7 +430,7 @@ void init_disk_util(struct thread_data *td)
 		return;
 
 	for_each_file(td, f, i)
-		__init_disk_util(td, f);
+		f->du = __init_disk_util(td, f);
 }
 
 static void aggregate_slaves_stats(struct disk_util *masterdu)
@@ -470,8 +481,6 @@ static void aggregate_slaves_stats(struct disk_util *masterdu)
 			time_in_queue/slavecount, max_util);
 
 }
-
-
 
 void show_disk_util(void)
 {
@@ -526,7 +535,6 @@ void show_disk_util(void)
 	flist_for_each_safe(entry, next, &disk_list) {
 		flist_del(entry);
 		du = flist_entry(entry, struct disk_util, list);
-		free(du->name);
-		free(du);
+		disk_util_free(du);
 	}
 }
