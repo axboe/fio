@@ -61,20 +61,28 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	if (!new_layout)
 		goto done;
 
-	dprint(FD_FILE, "truncate file %s, size %llu\n", f->file_name,
+	/*
+	 * The size will be -1ULL when fill_device is used, so don't truncate
+	 * or fallocate this file, just write it
+	 */
+	if (!td->o.fill_device) {
+		dprint(FD_FILE, "truncate file %s, size %llu\n", f->file_name,
 							f->real_file_size);
-	if (ftruncate(f->fd, f->real_file_size) == -1) {
-		td_verror(td, errno, "ftruncate");
-		goto err;
-	}
+		if (ftruncate(f->fd, f->real_file_size) == -1) {
+			td_verror(td, errno, "ftruncate");
+			goto err;
+		}
 
 #ifdef FIO_HAVE_FALLOCATE
-	dprint(FD_FILE, "fallocate file %s, size %llu\n", f->file_name,
+		dprint(FD_FILE, "fallocate file %s, size %llu\n", f->file_name,
 							f->real_file_size);
-	r = posix_fallocate(f->fd, 0, f->real_file_size);
-	if (r < 0)
-		log_err("fio: posix_fallocate fails: %s\n", strerror(-r));
+		r = posix_fallocate(f->fd, 0, f->real_file_size);
+		if (r < 0) {
+			log_err("fio: posix_fallocate fails: %s\n",
+					strerror(-r));
+		}
 #endif
+	}
 
 	b = malloc(td->o.max_bs[DDIR_WRITE]);
 	memset(b, 0, td->o.max_bs[DDIR_WRITE]);
@@ -87,13 +95,22 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 
 		r = write(f->fd, b, bs);
 
-		if (r == (int) bs) {
-			left -= bs;
+		if (r > 0) {
+			left -= r;
 			continue;
 		} else {
-			if (r < 0)
+			if (r < 0) {
+				int __e = errno;
+
+				if (__e == ENOSPC) {
+					if (td->o.fill_device)
+						break;
+					log_info("fio: ENOSPC on laying out "
+						 "file, stopping\n");
+					break;
+				}
 				td_verror(td, errno, "write");
-			else
+			} else
 				td_verror(td, EIO, "write");
 
 			break;
@@ -108,6 +125,13 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 			td_verror(td, errno, "fsync");
 			goto err;
 		}
+	}
+	if (td->o.fill_device) {
+		f->flags &= ~FIO_SIZE_KNOWN;
+		if (td_io_get_file_size(td, f))
+			goto err;
+		if (f->io_size > f->real_file_size)
+			f->io_size = f->real_file_size;
 	}
 
 	free(b);
@@ -255,11 +279,8 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 {
 	int ret = 0;
 
-	if (len == -1ULL) {
+	if (len == -1ULL)
 		len = f->io_size;
-		if (len == -1ULL && td->o.fill_device)
-			return 0;
-	}
 	if (off == -1ULL)
 		off = f->file_offset;
 
@@ -303,7 +324,7 @@ int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 	if (!(f->flags & FIO_FILE_OPEN))
 		return 0;
 
-	return __file_invalidate_cache(td, f, -1, -1);
+	return __file_invalidate_cache(td, f, -1ULL, -1ULL);
 }
 
 int generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
@@ -581,20 +602,22 @@ int setup_files(struct thread_data *td)
 					extend_size >> 20);
 
 		for_each_file(td, f, i) {
-			unsigned long long old_len, extend_len;
+			unsigned long long old_len = -1ULL, extend_len = -1ULL;
 
 			if (!(f->flags & FIO_FILE_EXTEND))
 				continue;
 
 			assert(f->filetype == FIO_TYPE_FILE);
 			f->flags &= ~FIO_FILE_EXTEND;
-			old_len = f->real_file_size;
-			extend_len = f->io_size + f->file_offset - old_len;
+			if (!td->o.fill_device) {
+				old_len = f->real_file_size;
+				extend_len = f->io_size + f->file_offset - old_len;
+			}
 			f->real_file_size = (f->io_size + f->file_offset);
 			err = extend_file(td, f);
 			if (err)
 				break;
-			
+
 			err = __file_invalidate_cache(td, f, old_len,
 								extend_len);
 			close(f->fd);
