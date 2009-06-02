@@ -255,8 +255,11 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 {
 	int ret = 0;
 
-	if (len == -1ULL)
+	if (len == -1ULL) {
 		len = f->io_size;
+		if (len == -1ULL && td->o.fill_device)
+			return 0;
+	}
 	if (off == -1ULL)
 		off = f->file_offset;
 
