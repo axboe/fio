@@ -46,9 +46,6 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 		goto err;
 	}
 
-	if (file_invalidate_cache(td, f))
-		goto err;
-
 	if (!td_random(td)) {
 		if (madvise(f->mmap_ptr, length, MADV_SEQUENTIAL) < 0) {
 			td_verror(td, errno, "madvise");
