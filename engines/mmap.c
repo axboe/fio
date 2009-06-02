@@ -43,8 +43,6 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 
 		f->mmap_ptr = NULL;
 		td_verror(td, err, "mmap");
-		if (err == EINVAL && f->io_size > 2*1024*1024*1024UL)
-			log_err("fio: mmap size likely too large\n");
 		goto err;
 	}
 
