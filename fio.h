@@ -135,6 +135,7 @@ struct io_u {
 #ifdef FIO_HAVE_SOLARISAIO
 		aio_result_t resultp;
 #endif
+		void *mmap_data;
 	};
 	struct timeval start_time;
 	struct timeval issue_time;
@@ -313,8 +314,11 @@ struct fio_file {
 	 * filename and possible memory mapping
 	 */
 	char *file_name;
-	void *mmap;
 	unsigned int major, minor;
+
+	void *mmap_ptr;
+	size_t mmap_sz;
+	off_t mmap_off;
 
 	/*
 	 * size of the file, offset into file, and io size from that offset

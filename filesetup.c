@@ -269,8 +269,8 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 	/*
 	 * FIXME: add blockdev flushing too
 	 */
-	if (f->mmap)
-		ret = madvise(f->mmap, len, MADV_DONTNEED);
+	if (f->mmap_ptr)
+		ret = madvise(f->mmap_ptr, f->mmap_sz, MADV_DONTNEED);
 	else if (f->filetype == FIO_TYPE_FILE) {
 		ret = fadvise(f->fd, off, len, POSIX_FADV_DONTNEED);
 	} else if (f->filetype == FIO_TYPE_BD) {
