@@ -357,6 +357,9 @@ static int fixup_options(struct thread_data *td)
 	if (td->o.verify != VERIFY_NONE)
 		td->o.refill_buffers = 1;
 
+	if (td->o.pre_read)
+		td->o.invalidate_cache = 0;
+
 	return 0;
 }
 
