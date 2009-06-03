@@ -553,39 +553,6 @@ extern int load_blktrace(struct thread_data *, const char *);
 	}	\
 } while (0)
 
-static inline void fio_file_reset(struct fio_file *f)
-{
-	f->last_free_lookup = 0;
-	f->last_pos = f->file_offset;
-	if (f->file_map)
-		memset(f->file_map, 0, f->num_maps * sizeof(int));
-}
-
-static inline void clear_error(struct thread_data *td)
-{
-	td->error = 0;
-	td->verror[0] = '\0';
-}
-
-#ifdef FIO_INC_DEBUG
-static inline void dprint_io_u(struct io_u *io_u, const char *p)
-{
-	struct fio_file *f = io_u->file;
-
-	dprint(FD_IO, "%s: io_u %p: off=%llu/len=%lu/ddir=%d", p, io_u,
-					(unsigned long long) io_u->offset,
-					io_u->buflen, io_u->ddir);
-	if (fio_debug & (1 << FD_IO)) {
-		if (f)
-			log_info("/%s", f->file_name);
-
-		log_info("\n");
-	}
-}
-#else
-#define dprint_io_u(io_u, p)
-#endif
-
 static inline int fio_fill_issue_time(struct thread_data *td)
 {
 	if (td->o.read_iolog_file ||

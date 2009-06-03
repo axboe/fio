@@ -13,6 +13,12 @@
 
 static int root_warn;
 
+static inline void clear_error(struct thread_data *td)
+{
+	td->error = 0;
+	td->verror[0] = '\0';
+}
+
 /*
  * Leaves f->fd open on success, caller must close
  */
