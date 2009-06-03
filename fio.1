@@ -473,6 +473,11 @@ If true, serialize file creation for the jobs.  Default: true.
 .BI create_on_open \fR=\fPbool
 If true, the files are not created until they are opened for IO by the job.
 .TP
+.BI pre_read \fR=\fPbool
+If this is given, files will be pre-read into memory before starting the given
+IO operation. This will also clear the \fR \fBinvalidate\fR flag, since it is
+pointless to pre-read and then drop the cache.
+.TP
 .BI unlink \fR=\fPbool
 Unlink job files when done.  Default: false.
 .TP
