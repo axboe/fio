@@ -338,6 +338,7 @@ void print_thread_status(void)
 	if (eta_sec != INT_MAX && nr_running) {
 		char perc_str[32];
 		char *iops_str[2];
+		char *rate_str[2];
 		int l;
 
 		if ((!eta_sec && !eta_good) || nr_ramp == nr_running)
@@ -348,15 +349,21 @@ void print_thread_status(void)
 			sprintf(perc_str, "%3.1f%% done", perc);
 		}
 
+		rate_str[0] = num2str(rate[0], 5, 10, 1);
+		rate_str[1] = num2str(rate[1], 5, 10, 1);
+
 		iops_str[0] = num2str(iops[0], 4, 1, 0);
 		iops_str[1] = num2str(iops[1], 4, 1, 0);
 
-		l = printf(": [%s] [%s] [%6u/%6u kb/s] [%s/%s iops] [eta %s]",
-				 run_str, perc_str, rate[0], rate[1], 
+		l = printf(": [%s] [%s] [%s/%s /s] [%s/%s iops] [eta %s]",
+				 run_str, perc_str, rate_str[0], rate_str[1], 
 				 iops_str[0], iops_str[1], eta_str);
 		if (l >= 0 && l < linelen_last)
 			printf("%*s", linelen_last - l, "");
 		linelen_last = l;
+
+		free(rate_str[0]);
+		free(rate_str[1]);
 		free(iops_str[0]);
 		free(iops_str[1]);
 	}
