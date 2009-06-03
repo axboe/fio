@@ -7,6 +7,7 @@
 #include <assert.h>
 
 #include "fio.h"
+#include "verify.h"
 
 #include "crc/md5.h"
 #include "crc/crc64.h"

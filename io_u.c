@@ -7,6 +7,7 @@
 
 #include "fio.h"
 #include "hash.h"
+#include "verify.h"
 
 struct io_completion_data {
 	int nr;				/* input */

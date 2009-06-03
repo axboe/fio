@@ -8,6 +8,7 @@
 #include <assert.h>
 #include "flist.h"
 #include "fio.h"
+#include "verify.h"
 
 static const char iolog_ver2[] = "fio version 2 iolog";
 

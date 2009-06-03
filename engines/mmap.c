@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 
 #include "../fio.h"
+#include "../verify.h"
 
 /*
  * Limits us to 2GB of mapped files in total

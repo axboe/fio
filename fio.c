@@ -37,6 +37,7 @@
 #include "fio.h"
 #include "hash.h"
 #include "smalloc.h"
+#include "verify.h"
 
 unsigned long page_mask;
 unsigned long page_size;

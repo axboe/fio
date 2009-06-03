@@ -18,6 +18,7 @@
 #include "parse.h"
 #include "smalloc.h"
 #include "filehash.h"
+#include "verify.h"
 
 static char fio_version_string[] = "fio 1.26.4";
 

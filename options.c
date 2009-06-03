@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 
 #include "fio.h"
+#include "verify.h"
 #include "parse.h"
 #include "lib/fls.h"
 
