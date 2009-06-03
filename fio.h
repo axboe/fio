@@ -560,4 +560,47 @@ static inline int fio_fill_issue_time(struct thread_data *td)
 	return 0;
 }
 
+/*
+ * Cheesy number->string conversion, complete with carry rounding error.
+ */
+static inline char *num2str(unsigned long num, int maxlen, int base, int pow2)
+{
+	char postfix[] = { ' ', 'K', 'M', 'G', 'P', 'E' };
+	unsigned int thousand;
+	char *buf;
+	int i;
+
+	if (pow2)
+		thousand = 1024;
+	else
+		thousand = 1000;
+
+	buf = malloc(128);
+
+	for (i = 0; base > 1; i++)
+		base /= thousand;
+
+	do {
+		int len, carry = 0;
+
+		len = sprintf(buf, "%'lu", num);
+		if (len <= maxlen) {
+			if (i >= 1) {
+				buf[len] = postfix[i];
+				buf[len + 1] = '\0';
+			}
+			return buf;
+		}
+
+		if ((num % thousand) >= (thousand / 2))
+			carry = 1;
+
+		num /= thousand;
+		num += carry;
+		i++;
+	} while (i <= 5);
+
+	return buf;
+}
+
 #endif

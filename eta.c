@@ -200,6 +200,15 @@ static void calc_rate(unsigned long mtime, unsigned long long *io_bytes,
 	prev_io_bytes[1] = io_bytes[1];
 }
 
+static void calc_iops(unsigned long mtime, unsigned long long *io_iops,
+		      unsigned long long *prev_io_iops, unsigned int *iops)
+{
+	iops[0] = ((io_iops[0] - prev_io_iops[0]) * 1000) / mtime;
+	iops[1] = ((io_iops[1] - prev_io_iops[1]) * 1000) / mtime;
+	prev_io_iops[0] = io_iops[0];
+	prev_io_iops[1] = io_iops[1];
+}
+
 /*
  * Print status of the jobs we know about. This includes rate estimates,
  * ETA, thread state, etc.
@@ -212,14 +221,15 @@ void print_thread_status(void)
 	struct thread_data *td;
 	char eta_str[128];
 	double perc = 0.0;
-	unsigned long long io_bytes[2];
+	unsigned long long io_bytes[2], io_iops[2];
 	unsigned long rate_time, disp_time, bw_avg_time, *eta_secs, eta_sec;
 	struct timeval now;
 
 	static unsigned long long rate_io_bytes[2];
 	static unsigned long long disp_io_bytes[2];
+	static unsigned long long disp_io_iops[2];
 	static struct timeval rate_prev_time, disp_prev_time;
-	static unsigned int rate[2];
+	static unsigned int rate[2], iops[2];
 	static int linelen_last;
 	static int eta_good;
 
@@ -238,6 +248,7 @@ void print_thread_status(void)
 	memset(eta_secs, 0, thread_number * sizeof(unsigned long));
 
 	io_bytes[0] = io_bytes[1] = 0;
+	io_iops[0] = io_iops[1] = 0;
 	nr_pending = nr_running = t_rate = m_rate = t_iops = m_iops = 0;
 	nr_ramp = 0;
 	bw_avg_time = ULONG_MAX;
@@ -270,6 +281,8 @@ void print_thread_status(void)
 		if (td->runstate > TD_RAMP) {
 			io_bytes[0] += td->io_bytes[0];
 			io_bytes[1] += td->io_bytes[1];
+			io_iops[0] += td->io_blocks[0];
+			io_iops[1] += td->io_blocks[1];
 		}
 	}
 
@@ -310,6 +323,8 @@ void print_thread_status(void)
 		return;
 
 	calc_rate(disp_time, io_bytes, disp_io_bytes, rate);
+	calc_iops(disp_time, io_iops, disp_io_iops, iops);
+
 	memcpy(&disp_prev_time, &now, sizeof(now));
 
 	if (!nr_running && !nr_pending)
@@ -322,7 +337,8 @@ void print_thread_status(void)
 		printf(", CR=%d/%d IOPS", t_iops, m_iops);
 	if (eta_sec != INT_MAX && nr_running) {
 		char perc_str[32];
-		int ll;
+		char *iops_str[2];
+		int l;
 
 		if ((!eta_sec && !eta_good) || nr_ramp == nr_running)
 			strcpy(perc_str, "-.-% done");
@@ -332,11 +348,17 @@ void print_thread_status(void)
 			sprintf(perc_str, "%3.1f%% done", perc);
 		}
 
-		ll = printf(": [%s] [%s] [%6u/%6u kb/s] [eta %s]",
-				 run_str, perc_str, rate[0], rate[1], eta_str);
-		if (ll >= 0 && ll < linelen_last)
-			printf("%*s", linelen_last - ll, "");
-		linelen_last = ll;
+		iops_str[0] = num2str(iops[0], 4, 1, 0);
+		iops_str[1] = num2str(iops[1], 4, 1, 0);
+
+		l = printf(": [%s] [%s] [%6u/%6u kb/s] [%s/%s iops] [eta %s]",
+				 run_str, perc_str, rate[0], rate[1], 
+				 iops_str[0], iops_str[1], eta_str);
+		if (l >= 0 && l < linelen_last)
+			printf("%*s", linelen_last - l, "");
+		linelen_last = l;
+		free(iops_str[0]);
+		free(iops_str[1]);
 	}
 	printf("\r");
 	fflush(stdout);
