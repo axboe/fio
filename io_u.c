@@ -319,7 +319,6 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 		 * Check if it's time to seed a new data direction.
 		 */
 		if (td->io_issues[td->rwmix_ddir] >= td->rwmix_issues) {
-			unsigned long long max_bytes;
 			enum fio_ddir ddir;
 
 			/*
@@ -328,16 +327,6 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 			 * ranges too much
 			 */
 			ddir = get_rand_ddir(td);
-			max_bytes = td->this_io_bytes[ddir];
-			if (max_bytes >=
-			    (td->o.size * td->o.rwmix[ddir] / 100)) {
-				if (!td->rw_end_set[ddir]) {
-					td->rw_end_set[ddir] = 1;
-					fio_gettime(&td->rw_end[ddir], NULL);
-				}
-
-				ddir ^= 1;
-			}
 
 			if (ddir != td->rwmix_ddir)
 				set_rwmix_bytes(td);

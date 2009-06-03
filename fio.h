@@ -332,12 +332,10 @@ struct thread_data {
 
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
-	struct timeval rw_end[2];
 	struct timeval last_issue;
 	struct timeval tv_cache;
 	unsigned int tv_cache_nr;
 	unsigned int tv_cache_mask;
-	unsigned int rw_end_set[2];
 	unsigned int ramp_time_over;
 
 	/*
