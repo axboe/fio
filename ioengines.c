@@ -17,6 +17,7 @@
 #include <assert.h>
 
 #include "fio.h"
+#include "diskutil.h"
 
 static FLIST_HEAD(engine_list);
 

@@ -8,6 +8,7 @@
 #include <math.h>
 
 #include "fio.h"
+#include "diskutil.h"
 
 /*
  * Cheesy number->string conversion, complete with carry rounding error.

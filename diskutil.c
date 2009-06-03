@@ -9,6 +9,7 @@
 
 #include "fio.h"
 #include "smalloc.h"
+#include "diskutil.h"
 
 static int last_majdev, last_mindev;
 static struct disk_util *last_du;
