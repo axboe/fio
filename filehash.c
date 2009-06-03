@@ -22,10 +22,10 @@ void remove_file_hash(struct fio_file *f)
 {
 	fio_mutex_down(hash_lock);
 
-	if (f->flags & FIO_FILE_HASHED) {
+	if (fio_file_hashed(f)) {
 		assert(!flist_empty(&f->hash_list));
 		flist_del_init(&f->hash_list);
-		f->flags &= ~FIO_FILE_HASHED;
+		fio_file_clear_hashed(f);
 	}
 
 	fio_mutex_up(hash_lock);
@@ -65,7 +65,7 @@ struct fio_file *add_file_hash(struct fio_file *f)
 {
 	struct fio_file *alias;
 
-	if (f->flags & FIO_FILE_HASHED)
+	if (fio_file_hashed(f))
 		return NULL;
 
 	INIT_FLIST_HEAD(&f->hash_list);
@@ -74,7 +74,7 @@ struct fio_file *add_file_hash(struct fio_file *f)
 
 	alias = __lookup_file_hash(f->file_name);
 	if (!alias) {
-		f->flags |= FIO_FILE_HASHED;
+		fio_file_set_hashed(f);
 		flist_add_tail(&f->hash_list, &file_hash[hash(f->file_name)]);
 	}
 

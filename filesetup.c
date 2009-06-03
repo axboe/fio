@@ -127,7 +127,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		}
 	}
 	if (td->o.fill_device) {
-		f->flags &= ~FIO_SIZE_KNOWN;
+		fio_file_clear_size_known(f);
 		if (td_io_get_file_size(td, f))
 			goto err;
 		if (f->io_size > f->real_file_size)
@@ -150,7 +150,7 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 	unsigned int bs;
 	char *b;
 
-	if (!(f->flags & FIO_FILE_OPEN)) {
+	if (!fio_file_open(f)) {
 		if (td->io_ops->open_file(td, f)) {
 			log_err("fio: cannot pre-read, failed to open file\n");
 			return 1;
@@ -250,7 +250,7 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 {
 	int ret = 0;
 
-	if (f->flags & FIO_SIZE_KNOWN)
+	if (fio_file_size_known(f))
 		return 0;
 
 	if (f->filetype == FIO_TYPE_FILE)
@@ -269,7 +269,7 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	f->flags |= FIO_SIZE_KNOWN;
+	fio_file_set_size_known(f);
 	return 0;
 }
 
@@ -321,7 +321,7 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 
 int file_invalidate_cache(struct thread_data *td, struct fio_file *f)
 {
-	if (!(f->flags & FIO_FILE_OPEN))
+	if (!fio_file_open(f))
 		return 0;
 
 	return __file_invalidate_cache(td, f, -1ULL, -1ULL);
@@ -584,7 +584,7 @@ int setup_files(struct thread_data *td)
 				extend_size += (f->io_size + f->file_offset);
 			} else
 				f->real_file_size = f->io_size + f->file_offset;
-			f->flags |= FIO_FILE_EXTEND;
+			fio_file_set_extend(f);
 		}
 	}
 
@@ -604,11 +604,11 @@ int setup_files(struct thread_data *td)
 		for_each_file(td, f, i) {
 			unsigned long long old_len = -1ULL, extend_len = -1ULL;
 
-			if (!(f->flags & FIO_FILE_EXTEND))
+			if (!fio_file_extend(f))
 				continue;
 
 			assert(f->filetype == FIO_TYPE_FILE);
-			f->flags &= ~FIO_FILE_EXTEND;
+			fio_file_clear_extend(f);
 			if (!td->o.fill_device) {
 				old_len = f->real_file_size;
 				extend_len = f->io_size + f->file_offset - old_len;
@@ -828,7 +828,7 @@ int add_file(struct thread_data *td, const char *fname)
 void get_file(struct fio_file *f)
 {
 	dprint(FD_FILE, "get file %s, ref=%d\n", f->file_name, f->references);
-	assert(f->flags & FIO_FILE_OPEN);
+	assert(fio_file_open(f));
 	f->references++;
 }
 
@@ -838,7 +838,7 @@ int put_file(struct thread_data *td, struct fio_file *f)
 
 	dprint(FD_FILE, "put file %s, ref=%d\n", f->file_name, f->references);
 
-	if (!(f->flags & FIO_FILE_OPEN))
+	if (!fio_file_open(f))
 		return 0;
 
 	assert(f->references);
@@ -855,7 +855,7 @@ int put_file(struct thread_data *td, struct fio_file *f)
 		ret = f_ret;
 
 	td->nr_open_files--;
-	f->flags &= ~FIO_FILE_OPEN;
+	fio_file_clear_open(f);
 	return ret;
 }
 

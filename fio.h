@@ -24,6 +24,8 @@
 #include "mutex.h"
 #include "log.h"
 #include "debug.h"
+#include "file.h"
+#include "io_ddir.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
@@ -32,29 +34,6 @@
 #ifdef FIO_HAVE_SOLARISAIO
 #include <sys/asynch.h>
 #endif
-
-enum fio_ddir {
-	DDIR_READ = 0,
-	DDIR_WRITE,
-	DDIR_SYNC,
-	DDIR_INVAL = -1,
-};
-
-enum td_ddir {
-	TD_DDIR_READ		= 1 << 0,
-	TD_DDIR_WRITE		= 1 << 1,
-	TD_DDIR_RAND		= 1 << 2,
-	TD_DDIR_RW		= TD_DDIR_READ | TD_DDIR_WRITE,
-	TD_DDIR_RANDREAD	= TD_DDIR_READ | TD_DDIR_RAND,
-	TD_DDIR_RANDWRITE	= TD_DDIR_WRITE | TD_DDIR_RAND,
-	TD_DDIR_RANDRW		= TD_DDIR_RW | TD_DDIR_RAND,
-};
-
-enum file_lock_mode {
-	FILE_LOCK_NONE,
-	FILE_LOCK_EXCLUSIVE,
-	FILE_LOCK_READWRITE,
-};
 
 /*
  * Use for maintaining statistics
@@ -264,16 +243,6 @@ enum fio_memtype {
 	MEM_MMAPHUGE,	/* memory mapped huge file */
 };
 
-/*
- * The type of object we are working on
- */
-enum fio_filetype {
-	FIO_TYPE_FILE = 1,		/* plain file */
-	FIO_TYPE_BD,			/* block device */
-	FIO_TYPE_CHAR,			/* character device */
-	FIO_TYPE_PIPE,			/* pipe */
-};
-
 enum fio_ioengine_flags {
 	FIO_SYNCIO	= 1 << 0,	/* io engine has synchronous ->queue */
 	FIO_RAWIO	= 1 << 1,	/* some sort of direct/raw io */
@@ -283,71 +252,6 @@ enum fio_ioengine_flags {
 	FIO_UNIDIR	= 1 << 5,	/* engine is uni-directional */
 	FIO_NOIO	= 1 << 6,	/* thread does only pseudo IO */
 	FIO_SIGQUIT	= 1 << 7,	/* needs SIGQUIT to exit */
-};
-
-enum fio_file_flags {
-	FIO_FILE_OPEN		= 1 << 0,	/* file is open */
-	FIO_FILE_CLOSING	= 1 << 1,	/* file being closed */
-	FIO_FILE_EXTEND		= 1 << 2,	/* needs extend */
-	FIO_FILE_DONE		= 1 << 3,	/* io completed to this file */
-	FIO_SIZE_KNOWN		= 1 << 4,	/* size has been set */
-	FIO_FILE_HASHED		= 1 << 5,	/* file is on hash */
-};
-
-/*
- * Each thread_data structure has a number of files associated with it,
- * this structure holds state information for a single file.
- */
-struct fio_file {
-	struct flist_head hash_list;
-	enum fio_filetype filetype;
-
-	/*
-	 * A file may not be a file descriptor, let the io engine decide
-	 */
-	union {
-		unsigned long file_data;
-		int fd;
-	};
-
-	/*
-	 * filename and possible memory mapping
-	 */
-	char *file_name;
-	unsigned int major, minor;
-
-	void *mmap_ptr;
-	size_t mmap_sz;
-	off_t mmap_off;
-
-	/*
-	 * size of the file, offset into file, and io size from that offset
-	 */
-	unsigned long long real_file_size;
-	unsigned long long file_offset;
-	unsigned long long io_size;
-
-	unsigned long long last_pos;
-
-	/*
-	 * if io is protected by a semaphore, this is set
-	 */
-	struct fio_mutex *lock;
-	void *lock_owner;
-	unsigned int lock_batch;
-	enum fio_ddir lock_ddir;
-
-	/*
-	 * block map for random io
-	 */
-	unsigned int *file_map;
-	unsigned int num_maps;
-	unsigned int last_free_lookup;
-
-	int references;
-	enum fio_file_flags flags;
-
-	struct disk_util *du;
 };
 
 /*

@@ -696,7 +696,7 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		io_u->buflen = ipo->len;
 		io_u->file = ipo->file;
 
-		if ((io_u->file->flags & FIO_FILE_OPEN) == 0) {
+		if (!fio_file_open(io_u->file)) {
 			int r = td_io_open_file(td, io_u->file);
 
 			if (r) {
@@ -707,7 +707,7 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		}
 
 		get_file(ipo->file);
-		assert(io_u->file->flags & FIO_FILE_OPEN);
+		assert(fio_file_open(io_u->file));
 		io_u->ddir = DDIR_READ;
 		io_u->xfer_buf = io_u->buf;
 		io_u->xfer_buflen = io_u->buflen;

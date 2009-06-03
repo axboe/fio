@@ -383,7 +383,7 @@ static void do_verify(struct thread_data *td)
 	 * read from disk.
 	 */
 	for_each_file(td, f, i) {
-		if (!(f->flags & FIO_FILE_OPEN))
+		if (!fio_file_open(f))
 			continue;
 		if (fio_io_sync(td, f))
 			break;
@@ -700,7 +700,7 @@ sync_done:
 			td_set_runstate(td, TD_FSYNCING);
 
 			for_each_file(td, f, i) {
-				if (!(f->flags & FIO_FILE_OPEN))
+				if (!fio_file_open(f))
 					continue;
 				fio_io_sync(td, f);
 			}
@@ -922,7 +922,7 @@ static void clear_io_state(struct thread_data *td)
 
 	close_files(td);
 	for_each_file(td, f, i)
-		f->flags &= ~FIO_FILE_DONE;
+		fio_file_clear_done(f);
 }
 
 static int exec_string(const char *string)

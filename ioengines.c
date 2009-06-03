@@ -220,7 +220,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	assert((io_u->flags & IO_U_F_FLIGHT) == 0);
 	io_u->flags |= IO_U_F_FLIGHT;
 
-	assert(io_u->file->flags & FIO_FILE_OPEN);
+	assert(fio_file_open(io_u->file));
 
 	io_u->error = 0;
 	io_u->resid = 0;
@@ -330,8 +330,8 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 	}
 
 	fio_file_reset(f);
-	f->flags |= FIO_FILE_OPEN;
-	f->flags &= ~FIO_FILE_CLOSING;
+	fio_file_set_open(f);
+	fio_file_clear_closing(f);
 	disk_util_inc(f->du);
 
 	td->nr_open_files++;
@@ -395,13 +395,13 @@ err:
 
 int td_io_close_file(struct thread_data *td, struct fio_file *f)
 {
-	if (!(f->flags & FIO_FILE_CLOSING))
+	if (!fio_file_closing(f))
 		log_file(td, f, FIO_LOG_CLOSE_FILE);
 
 	/*
 	 * mark as closing, do real close when last io on it has completed
 	 */
-	f->flags |= FIO_FILE_CLOSING;
+	fio_file_set_closing(f);
 
 	disk_util_dec(f->du);
 	unlock_file_all(td, f);

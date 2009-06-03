@@ -621,8 +621,8 @@ static void io_u_mark_latency(struct thread_data *td, unsigned long usec)
 /*
  * Get next file to service by choosing one at random
  */
-static struct fio_file *get_next_file_rand(struct thread_data *td, int goodf,
-					   int badf)
+static struct fio_file *get_next_file_rand(struct thread_data *td, enum fio_file_flags goodf,
+					   enum fio_file_flags badf)
 {
 	struct fio_file *f;
 	int fno;
@@ -634,10 +634,10 @@ static struct fio_file *get_next_file_rand(struct thread_data *td, int goodf,
 		fno = (unsigned int) ((double) td->o.nr_files
 			* (r / (OS_RAND_MAX + 1.0)));
 		f = td->files[fno];
-		if (f->flags & FIO_FILE_DONE)
+		if (fio_file_done(f))
 			continue;
 
-		if (!(f->flags & FIO_FILE_OPEN)) {
+		if (!fio_file_open(f)) {
 			int err;
 
 			err = td_io_open_file(td, f);
@@ -674,12 +674,12 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 			td->next_file = 0;
 
 		dprint(FD_FILE, "trying file %s %x\n", f->file_name, f->flags);
-		if (f->flags & FIO_FILE_DONE) {
+		if (fio_file_done(f)) {
 			f = NULL;
 			continue;
 		}
 
-		if (!(f->flags & FIO_FILE_OPEN)) {
+		if (!fio_file_open(f)) {
 			int err;
 
 			err = td_io_open_file(td, f);
@@ -721,7 +721,7 @@ static struct fio_file *get_next_file(struct thread_data *td)
 	}
 
 	f = td->file_service_file;
-	if (f && (f->flags & FIO_FILE_OPEN) && !(f->flags & FIO_FILE_CLOSING)) {
+	if (f && fio_file_open(f) && !fio_file_closing(f)) {
 		if (td->o.file_service_type == FIO_FSERVICE_SEQ)
 			goto out;
 		if (td->file_service_left--)
@@ -730,9 +730,9 @@ static struct fio_file *get_next_file(struct thread_data *td)
 
 	if (td->o.file_service_type == FIO_FSERVICE_RR ||
 	    td->o.file_service_type == FIO_FSERVICE_SEQ)
-		f = get_next_file_rr(td, FIO_FILE_OPEN, FIO_FILE_CLOSING);
+		f = get_next_file_rr(td, FIO_FILE_open, FIO_FILE_closing);
 	else
-		f = get_next_file_rand(td, FIO_FILE_OPEN, FIO_FILE_CLOSING);
+		f = get_next_file_rand(td, FIO_FILE_open, FIO_FILE_closing);
 
 	td->file_service_file = f;
 	td->file_service_left = td->file_service_nr - 1;
@@ -759,7 +759,7 @@ static int set_io_u_file(struct thread_data *td, struct io_u *io_u)
 		put_file_log(td, f);
 		td_io_close_file(td, f);
 		io_u->file = NULL;
-		f->flags |= FIO_FILE_DONE;
+		fio_file_set_done(f);
 		td->nr_done_files++;
 		dprint(FD_FILE, "%s: is done (%d of %d)\n", f->file_name, td->nr_done_files, td->o.nr_files);
 	} while (1);
@@ -829,7 +829,7 @@ struct io_u *get_io_u(struct thread_data *td)
 	}
 
 	f = io_u->file;
-	assert(f->flags & FIO_FILE_OPEN);
+	assert(fio_file_open(f));
 
 	if (io_u->ddir != DDIR_SYNC) {
 		if (!io_u->buflen && !(td->io_ops->flags & FIO_NOIO)) {
