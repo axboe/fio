@@ -29,6 +29,16 @@ enum file_lock_mode {
 };
 
 /*
+ * roundrobin available files, or choose one at random, or do each one
+ * serially.
+ */
+enum {
+	FIO_FSERVICE_RANDOM	= 1,
+	FIO_FSERVICE_RR		= 2,
+	FIO_FSERVICE_SEQ	= 3,
+};
+
+/*
  * Each thread_data structure has a number of files associated with it,
  * this structure holds state information for a single file.
  */
