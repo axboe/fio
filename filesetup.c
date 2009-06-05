@@ -132,7 +132,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 			goto err;
 		}
 	}
-	if (td->o.fill_device) {
+	if (td->o.fill_device && !td_write(td)) {
 		fio_file_clear_size_known(f);
 		if (td_io_get_file_size(td, f))
 			goto err;
@@ -289,6 +289,9 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 		len = f->io_size;
 	if (off == -1ULL)
 		off = f->file_offset;
+
+	if (len == -1ULL || off == -1ULL)
+		return 0;
 
 	dprint(FD_IO, "invalidate cache %s: %llu/%llu\n", f->file_name, off,
 								len);
