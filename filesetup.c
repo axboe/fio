@@ -436,7 +436,7 @@ open_again:
 		char buf[FIO_VERROR_SIZE];
 		int __e = errno;
 
-		if (errno == EPERM && (flags & FIO_O_NOATIME)) {
+		if (__e == EPERM && (flags & FIO_O_NOATIME)) {
 			flags &= ~FIO_O_NOATIME;
 			goto open_again;
 		}
