@@ -430,12 +430,16 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	return ret;
 }
 
-static int handle_option(struct fio_option *o, const char *ptr, void *data)
+static int handle_option(struct fio_option *o, const char *__ptr, void *data)
 {
-	const char *ptr2 = NULL;
+	char *ptr, *ptr2 = NULL;
 	int r1, r2;
 
-	dprint(FD_PARSE, "handle_option=%s, ptr=%s\n", o->name, ptr);
+	dprint(FD_PARSE, "handle_option=%s, ptr=%s\n", o->name, __ptr);
+
+	ptr = NULL;
+	if (__ptr)
+		ptr = strdup(__ptr);
 
 	/*
 	 * See if we have a second set of parameters, hidden after a comma.
@@ -446,6 +450,8 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 	    (o->type != FIO_OPT_STR_STORE) &&
 	    (o->type != FIO_OPT_STR)) {
 		ptr2 = strchr(ptr, ',');
+		if (ptr2 && *(ptr2 + 1) == '\0')
+			*ptr2 = '\0';
 		if (!ptr2)
 			ptr2 = strchr(ptr, ':');
 		if (!ptr2)
@@ -459,12 +465,17 @@ static int handle_option(struct fio_option *o, const char *ptr, void *data)
 	 */
 	r1 = __handle_option(o, ptr, data, 1, !!ptr2);
 
-	if (!ptr2)
+	if (!ptr2) {
+		if (ptr)
+			free(ptr);
 		return r1;
+	}
 
 	ptr2++;
 	r2 = __handle_option(o, ptr2, data, 0, 0);
 
+	if (ptr)
+		free(ptr);
 	return r1 && r2;
 }
 
