@@ -168,8 +168,8 @@ static int thread_eta(struct thread_data *td)
 					t_eta -= ramp_left;
 			}
 		}
-		if (td->o.rate) {
-			r_eta = (bytes_total / 1024) / td->o.rate;
+		if (td->o.rate[0] || td->o.rate[1]) {
+			r_eta = (bytes_total / 1024) / (td->o.rate[0] + td->o.rate[1]);
 			r_eta += td->o.start_delay;
 		}
 
@@ -260,10 +260,10 @@ void print_thread_status(void)
 		    || td->runstate == TD_FSYNCING
 		    || td->runstate == TD_PRE_READING) {
 			nr_running++;
-			t_rate += td->o.rate;
-			m_rate += td->o.ratemin;
-			t_iops += td->o.rate_iops;
-			m_iops += td->o.rate_iops_min;
+			t_rate += td->o.rate[0] + td->o.rate[1];
+			m_rate += td->o.ratemin[0] + td->o.ratemin[1];
+			t_iops += td->o.rate_iops[0] + td->o.rate_iops[1];
+			m_iops += td->o.rate_iops_min[0] + td->o.rate_iops_min[1];
 			files_open += td->nr_open_files;
 		} else if (td->runstate == TD_RAMP) {
 			nr_running++;
@@ -331,9 +331,15 @@ void print_thread_status(void)
 		return;
 
 	printf("Jobs: %d (f=%d)", nr_running, files_open);
-	if (m_rate || t_rate)
-		printf(", CR=%d/%d KiB/s", t_rate, m_rate);
-	else if (m_iops || t_iops)
+	if (m_rate || t_rate) {
+		char *tr, *mr;
+
+		mr = num2str(m_rate, 4, 0, 1);
+		tr = num2str(t_rate, 4, 0, 1);
+		printf(", CR=%s/%s KiB/s", tr, mr);
+		free(tr);
+		free(mr);
+	} else if (m_iops || t_iops)
 		printf(", CR=%d/%d IOPS", t_iops, m_iops);
 	if (eta_sec != INT_MAX && nr_running) {
 		char perc_str[32];

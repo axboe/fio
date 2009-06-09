@@ -172,28 +172,19 @@ static void set_sig_handlers(void)
 	sigaction(SIGQUIT, &act, NULL);
 }
 
-static inline int should_check_rate(struct thread_data *td)
-{
-	struct thread_options *o = &td->o;
-
-	/*
-	 * If some rate setting was given, we need to check it
-	 */
-	if (o->rate || o->ratemin || o->rate_iops || o->rate_iops_min)
-		return 1;
-
-	return 0;
-}
-
 /*
  * Check if we are above the minimum rate given.
  */
-static int check_min_rate(struct thread_data *td, struct timeval *now)
+static int __check_min_rate(struct thread_data *td, struct timeval *now,
+			    enum td_ddir ddir)
 {
 	unsigned long long bytes = 0;
 	unsigned long iops = 0;
 	unsigned long spent;
 	unsigned long rate;
+	unsigned int ratemin = 0;
+	unsigned int rate_iops = 0;
+	unsigned int rate_iops_min = 0;
 
 	/*
 	 * allow a 2 second settle period in the beginning
@@ -201,38 +192,35 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 	if (mtime_since(&td->start, now) < 2000)
 		return 0;
 
-	if (td_read(td)) {
-		iops += td->io_blocks[DDIR_READ];
-		bytes += td->this_io_bytes[DDIR_READ];
-	}
-	if (td_write(td)) {
-		iops += td->io_blocks[DDIR_WRITE];
-		bytes += td->this_io_bytes[DDIR_WRITE];
-	}
+	iops += td->io_blocks[ddir];
+	bytes += td->this_io_bytes[ddir];
+	ratemin += td->o.ratemin[ddir];
+	rate_iops += td->o.rate_iops[ddir];
+	rate_iops_min += td->o.rate_iops_min[ddir];
 
 	/*
 	 * if rate blocks is set, sample is running
 	 */
-	if (td->rate_bytes || td->rate_blocks) {
-		spent = mtime_since(&td->lastrate, now);
+	if (td->rate_bytes[ddir] || td->rate_blocks[ddir]) {
+		spent = mtime_since(&td->lastrate[ddir], now);
 		if (spent < td->o.ratecycle)
 			return 0;
 
-		if (td->o.rate) {
+		if (td->o.rate[ddir]) {
 			/*
 			 * check bandwidth specified rate
 			 */
-			if (bytes < td->rate_bytes) {
+			if (bytes < td->rate_bytes[ddir]) {
 				log_err("%s: min rate %u not met\n", td->o.name,
-								td->o.ratemin);
+								ratemin);
 				return 1;
 			} else {
-				rate = (bytes - td->rate_bytes) / spent;
-				if (rate < td->o.ratemin ||
-				    bytes < td->rate_bytes) {
+				rate = ((bytes - td->rate_bytes[ddir]) * 1000) / spent;
+				if (rate < ratemin ||
+				    bytes < td->rate_bytes[ddir]) {
 					log_err("%s: min rate %u not met, got"
 						" %luKiB/sec\n", td->o.name,
-							td->o.ratemin, rate);
+							ratemin, rate);
 					return 1;
 				}
 			}
@@ -240,27 +228,39 @@ static int check_min_rate(struct thread_data *td, struct timeval *now)
 			/*
 			 * checks iops specified rate
 			 */
-			if (iops < td->o.rate_iops) {
+			if (iops < rate_iops) {
 				log_err("%s: min iops rate %u not met\n",
-						td->o.name, td->o.rate_iops);
+						td->o.name, rate_iops);
 				return 1;
 			} else {
-				rate = (iops - td->rate_blocks) / spent;
-				if (rate < td->o.rate_iops_min ||
-				    iops < td->rate_blocks) {
+				rate = ((iops - td->rate_blocks[ddir]) * 1000) / spent;
+				if (rate < rate_iops_min ||
+				    iops < td->rate_blocks[ddir]) {
 					log_err("%s: min iops rate %u not met,"
 						" got %lu\n", td->o.name,
-							td->o.rate_iops_min,
-							rate);
+							rate_iops_min, rate);
 				}
 			}
 		}
 	}
 
-	td->rate_bytes = bytes;
-	td->rate_blocks = iops;
-	memcpy(&td->lastrate, now, sizeof(*now));
+	td->rate_bytes[ddir] = bytes;
+	td->rate_blocks[ddir] = iops;
+	memcpy(&td->lastrate[ddir], now, sizeof(*now));
 	return 0;
+}
+
+static int check_min_rate(struct thread_data *td, struct timeval *now,
+			  unsigned long *bytes_done)
+{
+	int ret = 0;
+
+	if (bytes_done[0])
+		ret |= __check_min_rate(td, now, 0);
+	if (bytes_done[1])
+		ret |= __check_min_rate(td, now, 1);
+
+	return ret;
 }
 
 static inline int runtime_exceeded(struct thread_data *td, struct timeval *t)
@@ -286,7 +286,7 @@ static void cleanup_pending_aio(struct thread_data *td)
 	/*
 	 * get immediately available events, if any
 	 */
-	r = io_u_queued_complete(td, 0);
+	r = io_u_queued_complete(td, 0, NULL);
 	if (r < 0)
 		return;
 
@@ -314,7 +314,7 @@ static void cleanup_pending_aio(struct thread_data *td)
 	}
 
 	if (td->cur_depth)
-		r = io_u_queued_complete(td, td->cur_depth);
+		r = io_u_queued_complete(td, td->cur_depth, NULL);
 }
 
 /*
@@ -344,7 +344,7 @@ requeue:
 		put_io_u(td, io_u);
 		return 1;
 	} else if (ret == FIO_Q_QUEUED) {
-		if (io_u_queued_complete(td, 1) < 0)
+		if (io_u_queued_complete(td, 1, NULL) < 0)
 			return 1;
 	} else if (ret == FIO_Q_COMPLETED) {
 		if (io_u->error) {
@@ -352,7 +352,7 @@ requeue:
 			return 1;
 		}
 
-		if (io_u_sync_complete(td, io_u) < 0)
+		if (io_u_sync_complete(td, io_u, NULL) < 0)
 			return 1;
 	} else if (ret == FIO_Q_BUSY) {
 		if (td_io_commit(td))
@@ -456,7 +456,7 @@ static void do_verify(struct thread_data *td)
 				requeue_io_u(td, &io_u);
 			} else {
 sync_done:
-				ret = io_u_sync_complete(td, io_u);
+				ret = io_u_sync_complete(td, io_u, NULL);
 				if (ret < 0)
 					break;
 			}
@@ -494,7 +494,7 @@ sync_done:
 				 * and do the verification on them through
 				 * the callback handler
 				 */
-				if (io_u_queued_complete(td, min_events) < 0) {
+				if (io_u_queued_complete(td, min_events, NULL) < 0) {
 					ret = -1;
 					break;
 				}
@@ -508,7 +508,7 @@ sync_done:
 		min_events = td->cur_depth;
 
 		if (min_events)
-			ret = io_u_queued_complete(td, min_events);
+			ret = io_u_queued_complete(td, min_events, NULL);
 	} else
 		cleanup_pending_aio(td);
 
@@ -521,7 +521,6 @@ sync_done:
  */
 static void do_io(struct thread_data *td)
 {
-	unsigned long usec;
 	unsigned int i;
 	int ret = 0;
 
@@ -532,7 +531,7 @@ static void do_io(struct thread_data *td)
 
 	while ((td->this_io_bytes[0] + td->this_io_bytes[1]) < td->o.size) {
 		struct timeval comp_time;
-		long bytes_done = 0;
+		unsigned long bytes_done[2] = { 0, 0 };
 		int min_evts = 0;
 		struct io_u *io_u;
 		int ret2, full;
@@ -594,12 +593,13 @@ static void do_io(struct thread_data *td)
 				requeue_io_u(td, &io_u);
 			} else {
 sync_done:
-				if (should_check_rate(td))
+				if (__should_check_rate(td, 0) ||
+				    __should_check_rate(td, 1))
 					fio_gettime(&comp_time, NULL);
 
-				bytes_done = io_u_sync_complete(td, io_u);
-				if (bytes_done < 0)
-					ret = bytes_done;
+				ret = io_u_sync_complete(td, io_u, bytes_done);
+				if (ret < 0)
+					break;
 			}
 			break;
 		case FIO_Q_QUEUED:
@@ -635,34 +635,25 @@ sync_done:
 			if (full && !min_evts)
 				min_evts = 1;
 
-			if (should_check_rate(td))
+			if (__should_check_rate(td, 0) ||
+			    __should_check_rate(td, 1))
 				fio_gettime(&comp_time, NULL);
 
 			do {
-				ret = io_u_queued_complete(td, min_evts);
-				if (ret <= 0)
+				ret = io_u_queued_complete(td, min_evts, bytes_done);
+				if (ret < 0)
 					break;
 
-				bytes_done += ret;
 			} while (full && (td->cur_depth > td->o.iodepth_low));
 		}
 
 		if (ret < 0)
 			break;
-		if (!bytes_done)
+		if (!(bytes_done[0] + bytes_done[1]))
 			continue;
 
-		/*
-		 * the rate is batched for now, it should work for batches
-		 * of completions except the very first one which may look
-		 * a little bursty
-		 */
-		if (!in_ramp_time(td) && should_check_rate(td)) {
-			usec = utime_since(&td->tv_cache, &comp_time);
-
-			rate_throttle(td, usec, bytes_done);
-
-			if (check_min_rate(td, &comp_time)) {
+		if (!in_ramp_time(td) && should_check_rate(td, bytes_done)) {
+			if (check_min_rate(td, &comp_time, bytes_done)) {
 				if (exitall_on_terminate)
 					terminate_threads(td->groupid);
 				td_verror(td, EIO, "check_min_rate");
@@ -696,7 +687,7 @@ sync_done:
 
 		i = td->cur_depth;
 		if (i)
-			ret = io_u_queued_complete(td, i);
+			ret = io_u_queued_complete(td, i, NULL);
 
 		if (should_fsync(td) && td->o.end_fsync) {
 			td_set_runstate(td, TD_FSYNCING);
@@ -878,8 +869,8 @@ static void reset_io_counters(struct thread_data *td)
 	td->ts.stat_io_bytes[0] = td->ts.stat_io_bytes[1] = 0;
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
 	td->zone_bytes = 0;
-	td->rate_bytes = 0;
-	td->rate_blocks = 0;
+	td->rate_bytes[0] = td->rate_bytes[1] = 0;
+	td->rate_blocks[0] = td->rate_blocks[1] = 0;
 
 	td->last_was_sync = 0;
 
@@ -1256,8 +1247,8 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 		continue;
 reaped:
 		(*nr_running)--;
-		(*m_rate) -= td->o.ratemin;
-		(*t_rate) -= td->o.rate;
+		(*m_rate) -= (td->o.ratemin[0] + td->o.ratemin[1]);
+		(*t_rate) -= (td->o.rate[0] + td->o.rate[1]);
 		if (!td->pid)
 			pending--;
 
@@ -1512,8 +1503,8 @@ static void run_threads(void)
 				td_set_runstate(td, TD_RUNNING);
 			nr_running++;
 			nr_started--;
-			m_rate += td->o.ratemin;
-			t_rate += td->o.rate;
+			m_rate += td->o.ratemin[0] + td->o.ratemin[1];
+			t_rate += td->o.rate[0] + td->o.rate[1];
 			todo--;
 			fio_mutex_up(td->mutex);
 		}

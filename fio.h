@@ -228,11 +228,11 @@ struct thread_options {
 	char *exec_prerun;
 	char *exec_postrun;
 
-	unsigned int rate;
-	unsigned int ratemin;
+	unsigned int rate[2];
+	unsigned int ratemin[2];
 	unsigned int ratecycle;
-	unsigned int rate_iops;
-	unsigned int rate_iops_min;
+	unsigned int rate_iops[2];
+	unsigned int rate_iops_min[2];
 
 	char *ioscheduler;
 
@@ -309,11 +309,11 @@ struct thread_data {
 	/*
 	 * Rate state
 	 */
-	unsigned long rate_usec_cycle;
-	long rate_pending_usleep;
-	unsigned long rate_bytes;
-	unsigned long rate_blocks;
-	struct timeval lastrate;
+	unsigned long rate_usec_cycle[2];
+	long rate_pending_usleep[2];
+	unsigned long rate_bytes[2];
+	unsigned long rate_blocks[2];
+	struct timeval lastrate[2];
 
 	unsigned long long total_io_size;
 
@@ -454,7 +454,7 @@ extern unsigned long time_since_now(struct timeval *);
 extern unsigned long mtime_since_genesis(void);
 extern void usec_spin(unsigned int);
 extern void usec_sleep(struct thread_data *, unsigned long);
-extern void rate_throttle(struct thread_data *, unsigned long, unsigned int);
+extern long rate_throttle(struct thread_data *, unsigned long, unsigned long, enum fio_ddir);
 extern void fill_start_time(struct timeval *);
 extern void fio_gettime(struct timeval *, void *);
 extern void fio_gtod_init(void);
@@ -601,6 +601,34 @@ static inline char *num2str(unsigned long num, int maxlen, int base, int pow2)
 	} while (i <= 5);
 
 	return buf;
+}
+
+static inline int __should_check_rate(struct thread_data *td,
+				      enum fio_ddir ddir)
+{
+	struct thread_options *o = &td->o;
+
+	/*
+	 * If some rate setting was given, we need to check it
+	 */
+	if (o->rate[ddir] || o->ratemin[ddir] || o->rate_iops[ddir] ||
+	    o->rate_iops_min[ddir])
+		return 1;
+
+	return 0;
+}
+
+static inline int should_check_rate(struct thread_data *td,
+				    unsigned long *bytes_done)
+{
+	int ret = 0;
+
+	if (bytes_done[0])
+		ret |= __should_check_rate(td, 0);
+	if (bytes_done[1])
+		ret |= __should_check_rate(td, 1);
+
+	return ret;
 }
 
 #endif

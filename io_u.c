@@ -307,6 +307,53 @@ static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
 	return DDIR_WRITE;
 }
 
+static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
+{
+	enum fio_ddir odir = ddir ^ 1;
+	struct timeval t;
+	long usec;
+
+	if (td->rate_pending_usleep[ddir] <= 0)
+		return ddir;
+
+	/*
+	 * We have too much pending sleep in this direction. See if we
+	 * should switch.
+	 */
+	if (td_rw(td)) {
+		/*
+		 * Other direction does not have too much pending, switch
+		 */
+		if (td->rate_pending_usleep[odir] < 100000)
+			return odir;
+
+		/*
+		 * Both directions have pending sleep. Sleep the minimum time
+		 * and deduct from both.
+		 */
+		if (td->rate_pending_usleep[ddir] <=
+			td->rate_pending_usleep[odir]) {
+			usec = td->rate_pending_usleep[ddir];
+		} else {
+			usec = td->rate_pending_usleep[odir];
+			ddir = odir;
+		}
+	} else
+		usec = td->rate_pending_usleep[ddir];
+
+	fio_gettime(&t, NULL);
+	usec_sleep(td, usec);
+	usec = utime_since_now(&t);
+
+	td->rate_pending_usleep[ddir] -= usec;
+
+	odir = ddir ^ 1;
+	if (td_rw(td) && __should_check_rate(td, odir))
+		td->rate_pending_usleep[odir] -= usec;
+	
+	return ddir;
+}
+
 /*
  * Return the data direction for the next io_u. If the job is a
  * mixed read/write workload, check the rwmix cycle and switch if
@@ -314,13 +361,13 @@ static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
  */
 static enum fio_ddir get_rw_ddir(struct thread_data *td)
 {
+	enum fio_ddir ddir;
+
 	if (td_rw(td)) {
 		/*
 		 * Check if it's time to seed a new data direction.
 		 */
 		if (td->io_issues[td->rwmix_ddir] >= td->rwmix_issues) {
-			enum fio_ddir ddir;
-
 			/*
 			 * Put a top limit on how many bytes we do for
 			 * one data direction, to avoid overflowing the
@@ -333,11 +380,14 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 
 			td->rwmix_ddir = ddir;
 		}
-		return td->rwmix_ddir;
+		ddir = td->rwmix_ddir;
 	} else if (td_read(td))
-		return DDIR_READ;
+		ddir = DDIR_READ;
 	else
-		return DDIR_WRITE;
+		ddir = DDIR_WRITE;
+
+	td->rwmix_ddir = rate_ddir(td, ddir);
+	return td->rwmix_ddir;
 }
 
 static void put_file_log(struct thread_data *td, struct fio_file *f)
@@ -902,7 +952,8 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		td->this_io_bytes[idx] += bytes;
 
 		if (ramp_time_over(td)) {
-			if (!td->o.disable_clat || !td->o.disable_bw)
+			if (!td->o.disable_clat || !td->o.disable_bw ||
+			    __should_check_rate(td, idx))
 				usec = utime_since(&io_u->issue_time,
 							&icd->time);
 
@@ -912,6 +963,10 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 			}
 			if (!td->o.disable_bw)
 				add_bw_sample(td, idx, bytes, &icd->time);
+			if (__should_check_rate(td, idx))
+				td->rate_pending_usleep[idx] += (long) td->rate_usec_cycle[idx] - usec;
+			if (__should_check_rate(td, idx ^ 1))
+				td->rate_pending_usleep[idx ^ 1] -= usec;
 		}
 
 		if (td_write(td) && idx == DDIR_WRITE &&
@@ -961,7 +1016,8 @@ static void ios_completed(struct thread_data *td,
 /*
  * Complete a single io_u for the sync engines.
  */
-long io_u_sync_complete(struct thread_data *td, struct io_u *io_u)
+int io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
+		       unsigned long *bytes)
 {
 	struct io_completion_data icd;
 
@@ -969,17 +1025,24 @@ long io_u_sync_complete(struct thread_data *td, struct io_u *io_u)
 	io_completed(td, io_u, &icd);
 	put_io_u(td, io_u);
 
-	if (!icd.error)
-		return icd.bytes_done[0] + icd.bytes_done[1];
+	if (icd.error) {
+		td_verror(td, icd.error, "io_u_sync_complete");
+		return -1;
+	}
 
-	td_verror(td, icd.error, "io_u_sync_complete");
-	return -1;
+	if (bytes) {
+		bytes[0] += icd.bytes_done[0];
+		bytes[1] += icd.bytes_done[1];
+	}
+
+	return 0;
 }
 
 /*
  * Called to complete min_events number of io for the async engines.
  */
-long io_u_queued_complete(struct thread_data *td, int min_evts)
+int io_u_queued_complete(struct thread_data *td, int min_evts,
+			 unsigned long *bytes)
 {
 	struct io_completion_data icd;
 	struct timespec *tvp = NULL;
@@ -1000,11 +1063,17 @@ long io_u_queued_complete(struct thread_data *td, int min_evts)
 
 	init_icd(td, &icd, ret);
 	ios_completed(td, &icd);
-	if (!icd.error)
-		return icd.bytes_done[0] + icd.bytes_done[1];
+	if (icd.error) {
+		td_verror(td, icd.error, "io_u_queued_complete");
+		return -1;
+	}
 
-	td_verror(td, icd.error, "io_u_queued_complete");
-	return -1;
+	if (bytes) {
+		bytes[0] += icd.bytes_done[0];
+		bytes[1] += icd.bytes_done[1];
+	}
+
+	return 0;
 }
 
 /*

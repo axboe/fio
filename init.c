@@ -175,36 +175,38 @@ static void put_job(struct thread_data *td)
 	thread_number--;
 }
 
-static int setup_rate(struct thread_data *td)
+static int __setup_rate(struct thread_data *td, enum fio_ddir ddir)
 {
-	unsigned long nr_reads_per_msec;
+	unsigned int bs = td->o.min_bs[ddir];
 	unsigned long long rate;
-	unsigned int bs;
+	unsigned long ios_per_msec;
 
-	if (!td->o.rate && !td->o.rate_iops)
-		return 0;
-
-	if (td_rw(td))
-		bs = td->o.rw_min_bs;
-	else if (td_read(td))
-		bs = td->o.min_bs[DDIR_READ];
-	else
-		bs = td->o.min_bs[DDIR_WRITE];
-
-	if (td->o.rate) {
-		rate = td->o.rate;
-		nr_reads_per_msec = (rate * 1024 * 1000LL) / bs;
+	if (td->o.rate[ddir]) {
+		rate = td->o.rate[ddir];
+		ios_per_msec = (rate * 1000LL) / bs;
 	} else
-		nr_reads_per_msec = td->o.rate_iops * 1000UL;
+		ios_per_msec = td->o.rate_iops[ddir] * 1000UL;
 
-	if (!nr_reads_per_msec) {
+	if (!ios_per_msec) {
 		log_err("rate lower than supported\n");
 		return -1;
 	}
 
-	td->rate_usec_cycle = 1000000000ULL / nr_reads_per_msec;
-	td->rate_pending_usleep = 0;
+	td->rate_usec_cycle[ddir] = 1000000000ULL / ios_per_msec;
+	td->rate_pending_usleep[ddir] = 0;
 	return 0;
+}
+
+static int setup_rate(struct thread_data *td)
+{
+	int ret = 0;
+
+	if (td->o.rate[DDIR_READ] || td->o.rate_iops[DDIR_READ])
+		ret = __setup_rate(td, DDIR_READ);
+	if (td->o.rate[DDIR_WRITE] || td->o.rate_iops[DDIR_WRITE])
+		ret |= __setup_rate(td, DDIR_WRITE);
+
+	return ret;
 }
 
 static int fixed_block_size(struct thread_options *o)
@@ -334,11 +336,15 @@ static int fixup_options(struct thread_data *td)
 	if (o->open_files > o->nr_files || !o->open_files)
 		o->open_files = o->nr_files;
 
-	if ((o->rate && o->rate_iops) || (o->ratemin && o->rate_iops_min)) {
+	if (((o->rate[0] + o->rate[1]) && (o->rate_iops[0] + o->rate_iops[1]))||
+	    ((o->ratemin[0] + o->ratemin[1]) && (o->rate_iops_min[0] +
+		o->rate_iops_min[1]))) {
 		log_err("fio: rate and rate_iops are mutually exclusive\n");
 		return 1;
 	}
-	if ((o->rate < o->ratemin) || (o->rate_iops < o->rate_iops_min)) {
+	if ((o->rate[0] < o->ratemin[0]) || (o->rate[1] < o->ratemin[1]) ||
+	    (o->rate_iops[0] < o->rate_iops_min[0]) ||
+	    (o->rate_iops[1] < o->rate_iops_min[1])) {
 		log_err("fio: minimum rate exceeds rate\n");
 		return 1;
 	}
