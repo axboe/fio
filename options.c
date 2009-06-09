@@ -813,7 +813,7 @@ static struct fio_option options[] = {
 	{
 		.name	= "bs",
 		.alias	= "blocksize",
-		.type	= FIO_OPT_STR_VAL_INT,
+		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(bs[DDIR_READ]),
 		.off2	= td_var_offset(bs[DDIR_WRITE]),
 		.minval = 1,
@@ -824,7 +824,7 @@ static struct fio_option options[] = {
 	{
 		.name	= "ba",
 		.alias	= "blockalign",
-		.type	= FIO_OPT_STR_VAL_INT,
+		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ba[DDIR_READ]),
 		.off2	= td_var_offset(ba[DDIR_WRITE]),
 		.minval	= 1,
@@ -1105,7 +1105,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name   = "verify_interval",
-		.type   = FIO_OPT_STR_VAL_INT,
+		.type   = FIO_OPT_INT,
 		.off1   = td_var_offset(verify_interval),
 		.minval	= 2 * sizeof(struct verify_header),
 		.help   = "Store verify buffer header every N bytes",
@@ -1113,7 +1113,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "verify_offset",
-		.type	= FIO_OPT_STR_VAL_INT,
+		.type	= FIO_OPT_INT,
 		.help	= "Offset verify header location by N bytes",
 		.def	= "0",
 		.cb	= str_verify_offset_cb,
@@ -1259,14 +1259,14 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "rate",
-		.type	= FIO_OPT_STR_VAL_INT,
+		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rate[0]),
 		.off2	= td_var_offset(rate[1]),
 		.help	= "Set bandwidth rate",
 	},
 	{
 		.name	= "ratemin",
-		.type	= FIO_OPT_STR_VAL_INT,
+		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratemin[0]),
 		.off2	= td_var_offset(ratemin[1]),
 		.help	= "Job must meet this rate or it will be shutdown",
@@ -1274,14 +1274,14 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "rate_iops",
-		.type	= FIO_OPT_STR_VAL_INT,
+		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rate_iops[0]),
 		.off2	= td_var_offset(rate_iops[1]),
 		.help	= "Limit IO used to this number of IO operations/sec",
 	},
 	{
 		.name	= "rate_iops_min",
-		.type	= FIO_OPT_STR_VAL_INT,
+		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rate_iops_min[0]),
 		.off2	= td_var_offset(rate_iops_min[1]),
 		.help	= "Job must meet this rate or it will be shutdown",
@@ -1435,7 +1435,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "hugepage-size",
-		.type	= FIO_OPT_STR_VAL_INT,
+		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(hugepage_size),
 		.help	= "When using hugepages, specify size of each page",
 		.def	= __stringify(FIO_HUGE_PAGE),
