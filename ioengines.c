@@ -318,6 +318,9 @@ int td_io_commit(struct thread_data *td)
 
 int td_io_open_file(struct thread_data *td, struct fio_file *f)
 {
+	assert(!fio_file_open(f));
+	assert(f->fd == -1);
+
 	if (td->io_ops->open_file(td, f)) {
 		if (td->error == EINVAL && td->o.odirect)
 			log_err("fio: destination does not support O_DIRECT\n");
@@ -327,6 +330,8 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 							td->o.nr_files);
 		}
 
+		assert(f->fd == -1);
+		assert(!fio_file_open(f));
 		return 1;
 	}
 
@@ -366,9 +371,6 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 		}
 	}
 
-	if (f->file_map)
-		memset(f->file_map, 0, f->num_maps * sizeof(int));
-
 #ifdef FIO_OS_DIRECTIO
 	/*
 	 * Some OS's have a distinct call to mark the file non-buffered,
@@ -396,6 +398,8 @@ err:
 
 int td_io_close_file(struct thread_data *td, struct fio_file *f)
 {
+	assert(f->references);
+
 	if (!fio_file_closing(f))
 		log_file(td, f, FIO_LOG_CLOSE_FILE);
 

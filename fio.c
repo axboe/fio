@@ -1368,8 +1368,12 @@ static void run_threads(void)
 			 * its own files. so close them, if we opened them
 			 * for creation
 			 */
-			for_each_file(td, f, i)
-				td_io_close_file(td, f);
+			for_each_file(td, f, i) {
+				if (fio_file_open(f))
+					td_io_close_file(td, f);
+				else
+					assert(f->fd == -1);
+			}
 		}
 
 		init_disk_util(td);

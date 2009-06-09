@@ -246,6 +246,7 @@ static int bdev_size(struct thread_data *td, struct fio_file *f)
 	}
 
 	f->real_file_size = bytes;
+	td->io_ops->close_file(td, f);
 	return 0;
 err:
 	td->io_ops->close_file(td, f);
@@ -726,7 +727,9 @@ void close_and_free_files(struct thread_data *td)
 			unlink(f->file_name);
 		}
 
-		td_io_close_file(td, f);
+		if (fio_file_open(f))
+			td_io_close_file(td, f);
+
 		remove_file_hash(f);
 
 		sfree(f->file_name);
@@ -847,8 +850,10 @@ int put_file(struct thread_data *td, struct fio_file *f)
 
 	dprint(FD_FILE, "put file %s, ref=%d\n", f->file_name, f->references);
 
-	if (!fio_file_open(f))
+	if (!fio_file_open(f)) {
+		assert(f->fd == -1);
 		return 0;
+	}
 
 	assert(f->references);
 	if (--f->references)
@@ -865,6 +870,7 @@ int put_file(struct thread_data *td, struct fio_file *f)
 
 	td->nr_open_files--;
 	fio_file_clear_open(f);
+	assert(f->fd == -1);
 	return ret;
 }
 
@@ -1004,6 +1010,7 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 			log_err("fio: smalloc OOM\n");
 			assert(0);
 		}
+		__f->fd = -1;
 	
 		if (f->file_name) {
 			__f->file_name = smalloc_strdup(f->file_name);
