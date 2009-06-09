@@ -18,4 +18,10 @@ enum td_ddir {
 	TD_DDIR_RANDRW		= TD_DDIR_RW | TD_DDIR_RAND,
 };
 
+#define td_read(td)		((td)->o.td_ddir & TD_DDIR_READ)
+#define td_write(td)		((td)->o.td_ddir & TD_DDIR_WRITE)
+#define td_rw(td)		(((td)->o.td_ddir & TD_DDIR_RW) == TD_DDIR_RW)
+#define td_random(td)		((td)->o.td_ddir & TD_DDIR_RAND)
+#define file_randommap(td, f)	(!(td)->o.norandommap && (f)->file_map)
+
 #endif
