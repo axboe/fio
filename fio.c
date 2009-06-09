@@ -1041,7 +1041,7 @@ static void *thread_main(void *data)
 		memcpy(&td->ts.stat_sample_time, &td->start, sizeof(td->start));
 		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
 
-		if (td->o.ratemin)
+		if (td->o.ratemin[0] || td->o.ratemin[1])
 			memcpy(&td->lastrate, &td->ts.stat_sample_time,
 							sizeof(td->lastrate));
 
