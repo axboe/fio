@@ -661,7 +661,8 @@ static void io_u_mark_latency(struct thread_data *td, unsigned long usec)
 /*
  * Get next file to service by choosing one at random
  */
-static struct fio_file *get_next_file_rand(struct thread_data *td, enum fio_file_flags goodf,
+static struct fio_file *get_next_file_rand(struct thread_data *td,
+					   enum fio_file_flags goodf,
 					   enum fio_file_flags badf)
 {
 	struct fio_file *f;
