@@ -263,10 +263,13 @@ static inline int arch_cache_line_size(void)
 		return -1;
 
 	ret = read(fd, size, sizeof(size));
+
+	close(fd);
+
 	if (ret <= 0)
 		return -1;
-
-	return atoi(size);
+	else
+		return atoi(size);
 }
 
 #endif
