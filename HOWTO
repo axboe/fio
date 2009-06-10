@@ -546,7 +546,9 @@ rwmixread=int	How large a percentage of the mix should be reads.
 rwmixwrite=int	How large a percentage of the mix should be writes. If both
 		rwmixread and rwmixwrite is given and the values do not add
 		up to 100%, the latter of the two will be used to override
-		the first.
+		the first. This may interfere with a given rate setting,
+		if fio is asked to limit reads or writes to a certain rate.
+		If that is the case, then the distribution may be skewed.
 
 norandommap	Normally fio will cover every block of the file when doing
 		random IO. If this option is given, fio will just get a

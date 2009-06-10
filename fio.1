@@ -346,8 +346,10 @@ Percentage of a mixed workload that should be reads. Default: 50.
 .TP
 .BI rwmixwrite \fR=\fPint
 Percentage of a mixed workload that should be writes.  If \fBrwmixread\fR and
-\fBwrmixwrite\fR are given and do not sum to 100%, the latter of the two
-overrides the first.  Default: 50.
+\fBrwmixwrite\fR are given and do not sum to 100%, the latter of the two
+overrides the first. This may interfere with a given rate setting, if fio is
+asked to limit reads or writes to a certain rate. If that is the case, then
+the distribution may be skewed. Default: 50.
 .TP
 .B norandommap
 Normally \fBfio\fR will cover every block of the file when doing random I/O. If
@@ -376,18 +378,27 @@ Number of blocks to issue before waiting \fBthinktime\fR microseconds.
 Default: 1.
 .TP
 .BI rate \fR=\fPint
-Cap bandwidth used by this job to this number of KiB/s.
+Cap bandwidth used by this job. The number is in bytes/sec, the normal postfix
+rules apply. You can use \fBrate\fR=500k to limit reads and writes to 500k each,
+or you can specify read and writes separately. Using \fBrate\fR=1m,500k would
+limit reads to 1MB/sec and writes to 500KB/sec. Capping only reads or writes
+can be done with \fBrate\fR=,500k or \fBrate\fR=500k,. The former will only
+limit writes (to 500KB/sec), the latter will only limit reads.
 .TP
 .BI ratemin \fR=\fPint
 Tell \fBfio\fR to do whatever it can to maintain at least the given bandwidth.
-Failing to meet this requirement will cause the job to exit.
+Failing to meet this requirement will cause the job to exit. The same format
+as \fBrate\fR is used for read vs write separation.
 .TP
 .BI rate_iops \fR=\fPint
-Cap the bandwidth to this number of IOPS.  If \fBblocksize\fR is a range, the
-smallest block size is used as the metric.
+Cap the bandwidth to this number of IOPS. Basically the same as rate, just
+specified independently of bandwidth. The same format as \fBrate\fR is used for
+read vs write seperation. If \fBblocksize\fR is a range, the smallest block
+size is used as the metric.
 .TP
 .BI rate_iops_min \fR=\fPint
-If this rate of I/O is not met, the job will exit.
+If this rate of I/O is not met, the job will exit. The same format as \fBrate\fR
+is used for read vs write seperation.
 .TP
 .BI ratecycle \fR=\fPint
 Average bandwidth for \fBrate\fR and \fBratemin\fR over this number of
@@ -415,8 +426,8 @@ as \fBruntime\fR allows.
 If set, fio will run the specified workload for this amount of time before
 logging any performance numbers. Useful for letting performance settle before
 logging results, thus minimizing the runtime required for stable results. Note
-that the ramp_time is considered lead in time for a job, thus it will increase
-the total runtime if a special timeout or runtime is specified.
+that the \fBramp_time\fR is considered lead in time for a job, thus it will
+increase the total runtime if a special timeout or runtime is specified.
 .TP
 .BI invalidate \fR=\fPbool
 Invalidate buffer-cache for the file prior to starting I/O.  Default: true.
