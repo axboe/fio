@@ -314,7 +314,8 @@ filesize=int	Individual file sizes. May be a range, in which case fio
 
 fill_device=bool Sets size to something really large and waits for ENOSPC (no
 		space left on device) as the terminating condition. Only makes
-                sense with sequential write.
+                sense with sequential write. For a read workload, the mount
+		point will be filled first then IO started on the result.
 
 blocksize=int
 bs=int		The block size used for the io units. Defaults to 4k. Values

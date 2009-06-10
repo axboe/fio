@@ -116,6 +116,30 @@ a number of files by separating the names with a `:' character. `\-' is a
 reserved name, meaning stdin or stdout, depending on the read/write direction
 set.
 .TP
+.BI lockfile \fR=\fPstr
+Fio defaults to not locking any files before it does IO to them. If a file or
+file descriptor is shared, fio can serialize IO to that file to make the end
+result consistent. This is usual for emulating real workloads that share files.
+The lock modes are:
+.RS
+.RS
+.TP
+.B none
+No locking. This is the default.
+.TP
+.B exclusive
+Only one thread or process may do IO at the time, excluding all others.
+.TP
+.B readwrite
+Read-write locking on the file. Many readers may access the file at the same
+time, but writes get exclusive access.
+.RE
+.P
+The option may be post-fixed with a lock batch number. If set, then each
+thread/process may do that amount of IOs to the file before giving up the lock.
+Since lock acquisition is expensive, batching the lock/unlocks will speed up IO.
+.RE
+.P
 .BI opendir \fR=\fPstr
 Recursively open any files below directory \fIstr\fR.
 .TP
@@ -161,6 +185,12 @@ Total size of I/O for this job.  \fBfio\fR will run until this many bytes have
 been transfered, unless limited by other options (\fBruntime\fR, for instance).
 Unless \fBnr_files\fR and \fBfilesize\fR options are given, this amount will be
 divided between the available files for the job.
+.TP
+.BI fill_device \fR=\fPbool
+Sets size to something really large and waits for ENOSPC (no space left on
+device) as the terminating condition. Only makes sense with sequential write.
+For a read workload, the mount point will be filled first then IO started on
+the result.
 .TP
 .BI filesize \fR=\fPirange
 Individual file sizes. May be a range, in which case \fBfio\fR will select sizes
@@ -309,6 +339,14 @@ Number of I/O units to keep in flight against the file.  Default: 1.
 .BI iodepth_batch \fR=\fPint
 Number of I/Os to submit at once.  Default: \fBiodepth\fR.
 .TP
+.BI iodepth_batch_complete \fR=\fPint
+This defines how many pieces of IO to retrieve at once. It defaults to 1 which
+ means that we'll ask for a minimum of 1 IO in the retrieval process from the
+kernel. The IO retrieval will go on until we hit the limit set by
+\fBiodepth_low\fR. If this variable is set to 0, then fio will always check for
+completed events before queuing more IO. This helps reduce IO latency, at the
+cost of more retrieval system calls.
+.TP
 .BI iodepth_low \fR=\fPint
 Low watermark indicating when to start filling the queue again.  Default:
 \fBiodepth\fR. 
@@ -355,6 +393,12 @@ the distribution may be skewed. Default: 50.
 Normally \fBfio\fR will cover every block of the file when doing random I/O. If
 this parameter is given, a new offset will be chosen without looking at past
 I/O history.  This parameter is mutually exclusive with \fBverify\fR.
+.TP
+.B softrandommap
+See \fBnorandommap\fR. If fio runs with the random block map enabled and it
+fails to allocate the map, if this option is set it will continue without a
+random block map. As coverage will not be as complete as with random maps, this
+option is disabled by default.
 .TP
 .BI nice \fR=\fPint
 Run job with given nice value.  See \fInice\fR\|(2).
