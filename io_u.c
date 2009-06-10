@@ -1086,7 +1086,7 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 		unsigned long slat_time;
 
 		slat_time = utime_since(&io_u->start_time, &io_u->issue_time);
-		add_slat_sample(td, io_u->ddir, io_u->xfer_buflen, slat_time);
+		add_slat_sample(td, io_u->ddir, slat_time, io_u->xfer_buflen);
 	}
 }
 
