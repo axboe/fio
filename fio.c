@@ -186,6 +186,9 @@ static int __check_min_rate(struct thread_data *td, struct timeval *now,
 	unsigned int rate_iops = 0;
 	unsigned int rate_iops_min = 0;
 
+	if (!td->o.ratemin[ddir] && !td->o.rate_iops_min[ddir])
+		return 0;
+
 	/*
 	 * allow a 2 second settle period in the beginning
 	 */
