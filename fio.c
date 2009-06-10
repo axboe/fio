@@ -1374,8 +1374,6 @@ static void run_threads(void)
 			for_each_file(td, f, i) {
 				if (fio_file_open(f))
 					td_io_close_file(td, f);
-				else
-					assert(f->fd == -1);
 			}
 		}
 

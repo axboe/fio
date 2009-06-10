@@ -710,8 +710,10 @@ void close_files(struct thread_data *td)
 	struct fio_file *f;
 	unsigned int i;
 
-	for_each_file(td, f, i)
-		td_io_close_file(td, f);
+	for_each_file(td, f, i) {
+		if (fio_file_open(f))
+			td_io_close_file(td, f);
+	}
 }
 
 void close_and_free_files(struct thread_data *td)
