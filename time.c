@@ -122,30 +122,6 @@ void usec_sleep(struct thread_data *td, unsigned long usec)
 	} while (!td->terminate);
 }
 
-long rate_throttle(struct thread_data *td, unsigned long time_spent,
-		   unsigned long bytes, enum fio_ddir ddir)
-{
-	unsigned int bs = td->o.min_bs[ddir];
-	unsigned long usec_cycle;
-
-	if (!td->o.rate[ddir] && !td->o.rate_iops[ddir])
-		return 0;
-
-	usec_cycle = td->rate_usec_cycle[ddir] * (bytes / bs);
-
-	if (time_spent < usec_cycle) {
-		unsigned long s = usec_cycle - time_spent;
-
-		td->rate_pending_usleep[ddir] += s;
-	} else {
-		long overtime = time_spent - usec_cycle;
-
-		td->rate_pending_usleep[ddir] -= overtime;
-	}
-
-	return td->rate_pending_usleep[ddir];
-}
-
 unsigned long mtime_since_genesis(void)
 {
 	return mtime_since_now(&genesis);

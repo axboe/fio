@@ -448,7 +448,6 @@ extern unsigned long time_since_now(struct timeval *);
 extern unsigned long mtime_since_genesis(void);
 extern void usec_spin(unsigned int);
 extern void usec_sleep(struct thread_data *, unsigned long);
-extern long rate_throttle(struct thread_data *, unsigned long, unsigned long, enum fio_ddir);
 extern void fill_start_time(struct timeval *);
 extern void fio_gettime(struct timeval *, void *);
 extern void fio_gtod_init(void);
