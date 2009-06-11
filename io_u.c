@@ -953,21 +953,27 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		td->this_io_bytes[idx] += bytes;
 
 		if (ramp_time_over(td)) {
-			if (!td->o.disable_clat || !td->o.disable_bw ||
-			    __should_check_rate(td, idx))
-				usec = utime_since(&io_u->issue_time,
+			unsigned long uninitialized_var(lusec);
+			unsigned long uninitialized_var(rusec);
+
+			if (!td->o.disable_clat || !td->o.disable_bw)
+				lusec = utime_since(&io_u->issue_time,
+							&icd->time);
+			if (__should_check_rate(td, idx) ||
+			    __should_check_rate(td, idx ^ 1))
+				rusec = utime_since(&io_u->start_time,
 							&icd->time);
 
 			if (!td->o.disable_clat) {
 				add_clat_sample(td, idx, usec, bytes);
-				io_u_mark_latency(td, usec);
+				io_u_mark_latency(td, lusec);
 			}
 			if (!td->o.disable_bw)
 				add_bw_sample(td, idx, bytes, &icd->time);
 			if (__should_check_rate(td, idx))
-				td->rate_pending_usleep[idx] += (long) td->rate_usec_cycle[idx] - usec;
+				td->rate_pending_usleep[idx] += (long) td->rate_usec_cycle[idx] - rusec;
 			if (__should_check_rate(td, idx ^ 1))
-				td->rate_pending_usleep[idx ^ 1] -= usec;
+				td->rate_pending_usleep[idx ^ 1] -= lusec;
 		}
 
 		if (td_write(td) && idx == DDIR_WRITE &&
