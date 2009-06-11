@@ -398,8 +398,6 @@ err:
 
 int td_io_close_file(struct thread_data *td, struct fio_file *f)
 {
-	assert(f->references);
-
 	if (!fio_file_closing(f))
 		log_file(td, f, FIO_LOG_CLOSE_FILE);
 
