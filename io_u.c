@@ -970,10 +970,12 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 			}
 			if (!td->o.disable_bw)
 				add_bw_sample(td, idx, bytes, &icd->time);
-			if (__should_check_rate(td, idx))
-				td->rate_pending_usleep[idx] += (long) td->rate_usec_cycle[idx] - rusec;
+			if (__should_check_rate(td, idx)) {
+				td->rate_pending_usleep[idx] +=
+					(long) td->rate_usec_cycle[idx] - rusec;
+			}
 			if (__should_check_rate(td, idx ^ 1))
-				td->rate_pending_usleep[idx ^ 1] -= lusec;
+				td->rate_pending_usleep[idx ^ 1] -= rusec;
 		}
 
 		if (td_write(td) && idx == DDIR_WRITE &&
