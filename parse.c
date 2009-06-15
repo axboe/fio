@@ -664,7 +664,6 @@ static void show_option_help(struct fio_option *o)
 	const char *typehelp[] = {
 		"string (opt=bla)",
 		"string with possible k/m/g postfix (opt=4k)",
-		"string with range and postfix (opt=1k-4k)",
 		"string with time postfix (opt=10s)",
 		"string (opt=bla)",
 		"string with dual range (opt=1k-4k,4k-8k)",
