@@ -336,8 +336,10 @@ static void show_thread_status(struct thread_stat *ts,
 	stat_calc_lat_m(ts, io_u_lat_m);
 	show_latencies(io_u_lat_u, io_u_lat_m);
 	if (ts->continue_on_error) {
-		log_info("     errors: total=%lu, first_error=%d\n",
-					ts->total_err_count, ts->first_error);
+		log_info("     errors    : total=%lu, first_error=%d/<%s>\n",
+					ts->total_err_count,
+					ts->first_error,
+					strerror(ts->first_error));
 	}
 }
 

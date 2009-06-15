@@ -379,8 +379,8 @@ static int break_on_this_error(struct thread_data *td, int *retptr)
 	if (ret < 0 || td->error) {
 		int err;
 
-		if (!td->o.continue_on_error);
-			return 0;
+		if (!td->o.continue_on_error)
+			return 1;
 
 		if (ret < 0)
 			err = -ret;

@@ -446,7 +446,7 @@ static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
 
 #define MAX_JOBS	(1024)
 
-#define td_non_fatal_error(e)	((e) == -EIO || (e) == EILSEQ)
+#define td_non_fatal_error(e)	((e) == EIO || (e) == EILSEQ)
 
 static inline void update_error_count(struct thread_data *td, int err)
 {
