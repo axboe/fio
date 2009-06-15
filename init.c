@@ -920,6 +920,7 @@ static void usage(const char *name)
 	printf("\t--section=name\tOnly run specified section in job file\n");
 	printf("\t--alloc-size=kb\tSet smalloc pool to this size in kb"
 		" (def 1024)\n");
+	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>\n");
 }
 
 #ifdef FIO_INC_DEBUG
@@ -1156,7 +1157,7 @@ int parse_options(int argc, char *argv[])
 		if (dump_cmdline)
 			return 0;
 
-		log_err("No jobs defined(s)\n");
+		log_err("No jobs defined(s)\n\n");
 		usage(argv[0]);
 		return 1;
 	}
