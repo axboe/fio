@@ -680,6 +680,14 @@ threads/processes that run IO workloads need only copy that segment, instead of
 entering the kernel with a gettimeofday() call. The CPU set aside for doing
 these time calls will be excluded from other uses. Fio will manually clear it
 from the CPU mask of other jobs.
+.TP
+.BI continue_on_error \fR=\fPbool
+Normally fio will exit the job on the first observed failure. If this option is
+set, fio will continue the job when there is a 'non-fatal error'
+(\fBEIO\fR or \fBEILSEQ\fR) until the runtime is exceeded or the I/O size
+specified is completed. If this option is used, there are two more stats that
+are appended, the total error count and the first error. The error field given
+in the stats is the first error that was hit during the run.
 .SH OUTPUT
 While running, \fBfio\fR will display the status of the created jobs.  For
 example:

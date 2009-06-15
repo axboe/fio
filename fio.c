@@ -372,6 +372,43 @@ static inline void update_tv_cache(struct thread_data *td)
 		fio_gettime(&td->tv_cache, NULL);
 }
 
+static int break_on_this_error(struct thread_data *td, int *retptr)
+{
+	int ret = *retptr;
+
+	if (ret < 0 || td->error) {
+		int err;
+
+		if (!td->o.continue_on_error);
+			return 0;
+
+		if (ret < 0)
+			err = -ret;
+		else
+			err = td->error;
+
+		update_error_count(td, err);
+
+		if (td_non_fatal_error(err)) {
+		        /*
+		         * Continue with the I/Os in case of
+			 * a non fatal error.
+			 */
+			td_clear_error(td);
+			*retptr = 0;
+			return 0;
+		} else {
+			/*
+			 * Stop the I/O in case of a fatal
+			 * error.
+			 */
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 /*
  * The main verify engine. Runs over the writes we previously submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
@@ -432,9 +469,10 @@ static void do_verify(struct thread_data *td)
 		ret = td_io_queue(td, io_u);
 		switch (ret) {
 		case FIO_Q_COMPLETED:
-			if (io_u->error)
+			if (io_u->error) {
 				ret = -io_u->error;
-			else if (io_u->resid) {
+				clear_io_u(td, io_u);
+			} else if (io_u->resid) {
 				int bytes = io_u->xfer_buflen - io_u->resid;
 				struct fio_file *f = io_u->file;
 
@@ -478,7 +516,7 @@ sync_done:
 			break;
 		}
 
-		if (ret < 0 || td->error)
+		if (break_on_this_error(td, &ret))
 			break;
 
 		/*
@@ -569,9 +607,10 @@ static void do_io(struct thread_data *td)
 		ret = td_io_queue(td, io_u);
 		switch (ret) {
 		case FIO_Q_COMPLETED:
-			if (io_u->error)
+			if (io_u->error) {
 				ret = -io_u->error;
-			else if (io_u->resid) {
+				clear_io_u(td, io_u);
+			} else if (io_u->resid) {
 				int bytes = io_u->xfer_buflen - io_u->resid;
 				struct fio_file *f = io_u->file;
 
@@ -626,7 +665,7 @@ sync_done:
 			break;
 		}
 
-		if (ret < 0 || td->error)
+		if (break_on_this_error(td, &ret))
 			break;
 
 		/*

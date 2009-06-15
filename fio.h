@@ -111,6 +111,13 @@ struct thread_stat {
 	unsigned long long io_bytes[2];
 	unsigned long runtime[2];
 	unsigned long total_run_time;
+
+	/*
+	 * IO Error related stats
+	 */
+	unsigned continue_on_error;
+	unsigned long total_err_count;
+	int first_error;
 };
 
 struct bssplit {
@@ -241,6 +248,11 @@ struct thread_options {
 	 */
 	unsigned int cpuload;
 	unsigned int cpucycle;
+
+	/*
+	 * I/O Error handling
+	 */
+	unsigned int continue_on_error;
 };
 
 #define FIO_VERROR_SIZE	128
@@ -369,6 +381,12 @@ struct thread_data {
 	 * For generating file sizes
 	 */
 	os_random_state_t file_size_state;
+
+	/*
+	 * Error counts
+	 */
+	unsigned int total_err_count;
+	int first_error;
 };
 
 /*
@@ -386,10 +404,13 @@ enum {
 			break;						\
 		int e = (err);						\
 		(td)->error = e;					\
-		snprintf(td->verror, sizeof(td->verror) - 1, "file:%s:%d, func=%s, error=%s", __FILE__, __LINE__, (func), (msg));	\
+		if (!(td)->first_error)					\
+			snprintf(td->verror, sizeof(td->verror) - 1, "file:%s:%d, func=%s, error=%s", __FILE__, __LINE__, (func), (msg));		\
 	} while (0)
 
 
+#define td_clear_error(td)		\
+	(td)->error = 0;
 #define td_verror(td, err, func)	\
 	__td_verror((td), (err), strerror((err)), (func))
 #define td_vmsg(td, err, msg, func)	\
@@ -424,6 +445,15 @@ static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
 #define RAND_MAP_BIT(f, b)	(TO_MAP_BLOCK(f, b) & (BLOCKS_PER_MAP - 1))
 
 #define MAX_JOBS	(1024)
+
+#define td_non_fatal_error(e)	((e) == -EIO || (e) == EILSEQ)
+
+static inline void update_error_count(struct thread_data *td, int err)
+{
+	td->total_err_count++;
+	if (td->total_err_count == 1)
+		td->first_error = err;
+}
 
 static inline int should_fsync(struct thread_data *td)
 {

@@ -1505,6 +1505,13 @@ static struct fio_option options[] = {
 		.help	= "Setup dedicated gettimeofday() thread on this CPU",
 	},
 	{
+		.name	= "continue_on_error",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(continue_on_error),
+		.help	= "Continue on non-fatal errors during I/O",
+		.def	= "0",
+	},
+	{
 		.name = NULL,
 	},
 };

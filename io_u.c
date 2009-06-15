@@ -412,6 +412,12 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 	td->cur_depth--;
 }
 
+void clear_io_u(struct thread_data *td, struct io_u *io_u)
+{
+	io_u->flags &= ~IO_U_F_FLIGHT;
+	put_io_u(td, io_u);
+}
+
 void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 {
 	struct io_u *__io_u = *io_u;
@@ -993,6 +999,17 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	} else {
 		icd->error = io_u->error;
 		io_u_log_error(td, io_u);
+	}
+	if (td->o.continue_on_error && icd->error &&
+	    td_non_fatal_error(icd->error)) {
+		/*
+		 * If there is a non_fatal error, then add to the error count
+		 * and clear all the errors.
+		 */
+		update_error_count(td, icd->error);
+		td_clear_error(td);
+		icd->error = 0;
+		io_u->error = 0;
 	}
 }
 

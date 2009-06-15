@@ -335,6 +335,10 @@ static void show_thread_status(struct thread_stat *ts,
 	stat_calc_lat_u(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 	show_latencies(io_u_lat_u, io_u_lat_m);
+	if (ts->continue_on_error) {
+		log_info("     errors: total=%lu, first_error=%d\n",
+					ts->total_err_count, ts->first_error);
+	}
 }
 
 static void show_ddir_status_terse(struct thread_stat *ts,
@@ -410,6 +414,8 @@ static void show_thread_status_terse(struct thread_stat *ts,
 		log_info(";%3.2f%%", io_u_lat_u[i]);
 	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++)
 		log_info(";%3.2f%%", io_u_lat_m[i]);
+	if (ts->continue_on_error)
+		log_info(";%lu;%d", ts->total_err_count, ts->first_error);
 	log_info("\n");
 
 	if (ts->description)
@@ -523,9 +529,18 @@ void show_run_stats(void)
 			ts->pid = td->pid;
 		}
 
-		if (td->error && !ts->error) {
-			ts->error = td->error;
-			ts->verror = td->verror;
+		ts->continue_on_error = td->o.continue_on_error;
+		ts->total_err_count += td->total_err_count;
+		ts->first_error = td->first_error;
+		if (!ts->error) {
+			if (!td->error && td->o.continue_on_error &&
+			    td->first_error) {
+				ts->error = td->first_error;
+				ts->verror = td->verror;
+			} else  if (td->error) {
+				ts->error = td->error;
+				ts->verror = td->verror;
+			}
 		}
 
 		for (l = 0; l <= DDIR_WRITE; l++) {
