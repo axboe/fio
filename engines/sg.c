@@ -240,11 +240,14 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 static int fio_sgio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct sg_io_hdr *hdr = &io_u->hdr;
-	int ret;
+	int ret, do_sync = 0;
 
 	fio_ro_check(td, io_u);
 
-	ret = fio_sgio_doio(td, io_u, ddir_sync(io_u->ddir));
+	if (td->o.sync_io || td->o.odirect || ddir_sync(io_u->ddir))
+		do_sync = 1;
+
+	ret = fio_sgio_doio(td, io_u, do_sync);
 
 	if (ret < 0)
 		io_u->error = errno;
