@@ -174,7 +174,7 @@ static int fio_guasi_commit(struct thread_data *td)
 			io_u->greq = guasi__pwrite(ld->hctx, ld, io_u, 0,
 						   f->fd, io_u->xfer_buf, io_u->xfer_buflen,
 						   io_u->offset);
-		else if (io_u->ddir == DDIR_SYNC)
+		else if (ddir_sync(io_u->ddir))
 			io_u->greq = guasi__fsync(ld->hctx, ld, io_u, 0, f->fd);
 		else {
 			log_err("fio_guasi_commit() FAILED: unknow request %d\n",

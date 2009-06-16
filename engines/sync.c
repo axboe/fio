@@ -30,7 +30,7 @@ static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 
-	if (io_u->ddir == DDIR_SYNC)
+	if (ddir_sync(io_u->ddir))
 		return 0;
 
 	if (lseek(f->fd, io_u->offset, SEEK_SET) == -1) {
@@ -120,7 +120,7 @@ static int fio_vsyncio_append(struct thread_data *td, struct io_u *io_u)
 {
 	struct syncio_data *sd = td->io_ops->data;
 
-	if (io_u->ddir == DDIR_SYNC)
+	if (ddir_sync(io_u->ddir))
 		return 0;
 
 	if (io_u->offset == sd->last_offset && io_u->file == sd->last_file &&
@@ -161,8 +161,12 @@ static int fio_vsyncio_queue(struct thread_data *td, struct io_u *io_u)
 			int ret = fsync(io_u->file->fd);
 
 			return fio_io_end(td, io_u, ret);
-		}
+		} else if (io_u->ddir == DDIR_DATASYNC) {
+			int ret = fdatasync(io_u->file->fd);
 
+			return fio_io_end(td, io_u, ret);
+		}
+	
 		sd->queued = 0;
 		sd->queued_bytes = 0;
 		fio_vsyncio_set_iov(sd, io_u, 0);

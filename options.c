@@ -932,6 +932,13 @@ static struct fio_option options[] = {
 		.def	= "0",
 	},
 	{
+		.name	= "fdatasync",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(fdatasync_blocks),
+		.help	= "Issue fdatasync for writes every given number of blocks",
+		.def	= "0",
+	},
+	{
 		.name	= "direct",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(odirect),

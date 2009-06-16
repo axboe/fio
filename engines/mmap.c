@@ -113,7 +113,7 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 		memcpy(io_u->xfer_buf, io_u->mmap_data, io_u->xfer_buflen);
 	else if (io_u->ddir == DDIR_WRITE)
 		memcpy(io_u->mmap_data, io_u->xfer_buf, io_u->xfer_buflen);
-	else if (io_u->ddir == DDIR_SYNC) {
+	else if (ddir_sync(io_u->ddir)) {
 		if (msync(f->mmap_ptr, f->mmap_sz, MS_SYNC)) {
 			io_u->error = errno;
 			td_verror(td, io_u->error, "msync");
@@ -123,7 +123,7 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * not really direct, but should drop the pages from the cache
 	 */
-	if (td->o.odirect && io_u->ddir != DDIR_SYNC) {
+	if (td->o.odirect && !ddir_sync(io_u->ddir)) {
 		if (msync(io_u->mmap_data, io_u->xfer_buflen, MS_SYNC) < 0) {
 			io_u->error = errno;
 			td_verror(td, io_u->error, "msync");

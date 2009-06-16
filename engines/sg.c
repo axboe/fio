@@ -244,7 +244,7 @@ static int fio_sgio_queue(struct thread_data *td, struct io_u *io_u)
 
 	fio_ro_check(td, io_u);
 
-	ret = fio_sgio_doio(td, io_u, io_u->ddir == DDIR_SYNC);
+	ret = fio_sgio_doio(td, io_u, ddir_sync(io_u->ddir));
 
 	if (ret < 0)
 		io_u->error = errno;

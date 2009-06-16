@@ -5,6 +5,7 @@ enum fio_ddir {
 	DDIR_READ = 0,
 	DDIR_WRITE,
 	DDIR_SYNC,
+	DDIR_DATASYNC,
 	DDIR_INVAL = -1,
 };
 
@@ -23,5 +24,10 @@ enum td_ddir {
 #define td_rw(td)		(((td)->o.td_ddir & TD_DDIR_RW) == TD_DDIR_RW)
 #define td_random(td)		((td)->o.td_ddir & TD_DDIR_RAND)
 #define file_randommap(td, f)	(!(td)->o.norandommap && (f)->file_map)
+
+static inline int ddir_sync(enum fio_ddir ddir)
+{
+	return ddir == DDIR_SYNC || ddir == DDIR_DATASYNC;
+}
 
 #endif

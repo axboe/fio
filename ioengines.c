@@ -238,7 +238,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 					sizeof(struct timeval));
 	}
 
-	if (io_u->ddir != DDIR_SYNC)
+	if (!ddir_sync(io_u->ddir))
 		td->io_issues[io_u->ddir]++;
 
 	ret = td->io_ops->queue(td, io_u);
@@ -251,14 +251,14 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (ret == FIO_Q_COMPLETED) {
-		if (io_u->ddir != DDIR_SYNC) {
+		if (!ddir_sync(io_u->ddir)) {
 			io_u_mark_depth(td, 1);
 			td->ts.total_io_u[io_u->ddir]++;
 		}
 	} else if (ret == FIO_Q_QUEUED) {
 		int r;
 
-		if (io_u->ddir != DDIR_SYNC) {
+		if (!ddir_sync(io_u->ddir)) {
 			td->io_u_queued++;
 			td->ts.total_io_u[io_u->ddir]++;
 		}

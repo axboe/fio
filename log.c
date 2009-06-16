@@ -20,7 +20,7 @@ void queue_io_piece(struct thread_data *td, struct io_piece *ipo)
 
 void log_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	const char *act[] = { "read", "write", "sync" };
+	const char *act[] = { "read", "write", "sync", "datasync" };
 
 	assert(io_u->ddir < 3);
 
@@ -273,6 +273,8 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 				rw = DDIR_WRITE;
 			else if (!strcmp(act, "sync"))
 				rw = DDIR_SYNC;
+			else if (!strcmp(act, "datasync"))
+				rw = DDIR_DATASYNC;
 			else {
 				log_err("fio: bad iolog file action: %s\n",
 									act);
@@ -310,7 +312,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 			if (read_only)
 				continue;
 			writes++;
-		} else if (rw != DDIR_SYNC && rw != DDIR_INVAL) {
+		} else if (!ddir_sync(rw)) {
 			log_err("bad ddir: %d\n", rw);
 			continue;
 		}

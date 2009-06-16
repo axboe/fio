@@ -131,6 +131,12 @@ static void fio_syslet_prep_sync(struct fio_file *f,
 	FILL_IN(*regs, __NR_fsync, (long) f->fd);
 }
 
+static void fio_syslet_prep_datasync(struct fio_file *f,
+				     struct indirect_registers *regs)
+{
+	FILL_IN(*regs, __NR_fdatasync, (long) f->fd);
+}
+
 static void fio_syslet_prep_rw(struct io_u *io_u, struct fio_file *f,
 			       struct indirect_registers *regs)
 {
@@ -154,6 +160,8 @@ static void fio_syslet_prep(struct io_u *io_u, struct indirect_registers *regs)
 
 	if (io_u->ddir == DDIR_SYNC)
 		fio_syslet_prep_sync(f, regs);
+	else if (io_u->ddir == DDIR_DATASYNC)
+		fio_syslet_prep_datasync(f, regs);
 	else
 		fio_syslet_prep_rw(io_u, f, regs);
 }

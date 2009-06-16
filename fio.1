@@ -365,6 +365,10 @@ Offset in the file to start I/O. Data before the offset will not be touched.
 How many I/Os to perform before issuing an \fBfsync\fR\|(2) of dirty data.  If
 0, don't sync.  Default: 0.
 .TP
+.BI fdatasync \fR=\fPint
+Like \fBfsync\fR, but uses \fBfdatasync\fR\|(2) instead to only sync the
+data parts of the file. Default: 0.
+.TP
 .BI overwrite \fR=\fPbool
 If writing, setup the file first and do overwrites.  Default: false.
 .TP

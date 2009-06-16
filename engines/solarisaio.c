@@ -126,6 +126,15 @@ static int fio_solarisaio_queue(struct thread_data fio_unused *td,
 		return FIO_Q_COMPLETED;
 	}
 
+	if (io_u->ddir == DDIR_DATASYNC) {
+		if (sd->nr)
+			return FIO_Q_BUSY;
+		if (fdatasync(f->fd) < 0)
+			io_u->error = errno;
+
+		return FIO_Q_COMPLETED;
+	}
+
 	if (sd->nr == sd->max_depth)
 		return FIO_Q_BUSY;
 

@@ -363,6 +363,22 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 {
 	enum fio_ddir ddir;
 
+	/*
+	 * see if it's time to fsync
+	 */
+	if (td->o.fsync_blocks &&
+	   !(td->io_issues[DDIR_WRITE] % td->o.fsync_blocks) &&
+	     td->io_issues[DDIR_WRITE] && should_fsync(td))
+		return DDIR_SYNC;
+
+	/*
+	 * see if it's time to fdatasync
+	 */
+	if (td->o.fdatasync_blocks &&
+	   !(td->io_issues[DDIR_WRITE] % td->o.fdatasync_blocks) &&
+	     td->io_issues[DDIR_WRITE] && should_fsync(td))
+		return DDIR_DATASYNC;
+
 	if (td_rw(td)) {
 		/*
 		 * Check if it's time to seed a new data direction.
@@ -425,7 +441,7 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 	dprint(FD_IO, "requeue %p\n", __io_u);
 
 	__io_u->flags |= IO_U_F_FREE;
-	if ((__io_u->flags & IO_U_F_FLIGHT) && (__io_u->ddir != DDIR_SYNC))
+	if ((__io_u->flags & IO_U_F_FLIGHT) && !ddir_sync(__io_u->ddir))
 		td->io_issues[__io_u->ddir]--;
 
 	__io_u->flags &= ~IO_U_F_FLIGHT;
@@ -441,17 +457,13 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td->io_ops->flags & FIO_NOIO)
 		goto out;
 
-	/*
-	 * see if it's time to sync
-	 */
-	if (td->o.fsync_blocks &&
-	   !(td->io_issues[DDIR_WRITE] % td->o.fsync_blocks) &&
-	     td->io_issues[DDIR_WRITE] && should_fsync(td)) {
-		io_u->ddir = DDIR_SYNC;
-		goto out;
-	}
-
 	io_u->ddir = get_rw_ddir(td);
+
+	/*
+	 * fsync() or fdatasync(), we are done
+	 */
+	if (ddir_sync(io_u->ddir))
+		goto out;
 
 	/*
 	 * See if it's time to switch to a new zone
@@ -878,7 +890,7 @@ struct io_u *get_io_u(struct thread_data *td)
 	f = io_u->file;
 	assert(fio_file_open(f));
 
-	if (io_u->ddir != DDIR_SYNC) {
+	if (!ddir_sync(io_u->ddir)) {
 		if (!io_u->buflen && !(td->io_ops->flags & FIO_NOIO)) {
 			dprint(FD_IO, "get_io_u: zero buflen on %p\n", io_u);
 			goto err_put;
@@ -942,7 +954,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	assert(io_u->flags & IO_U_F_FLIGHT);
 	io_u->flags &= ~IO_U_F_FLIGHT;
 
-	if (io_u->ddir == DDIR_SYNC) {
+	if (ddir_sync(io_u->ddir)) {
 		td->last_was_sync = 1;
 		return;
 	}
