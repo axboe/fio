@@ -442,17 +442,16 @@ static void do_verify(struct thread_data *td)
 	while (!td->terminate) {
 		int ret2, full;
 
-		io_u = __get_io_u(td);
-		if (!io_u)
-			break;
-
 		update_tv_cache(td);
 
 		if (runtime_exceeded(td, &td->tv_cache)) {
-			put_io_u(td, io_u);
 			td->terminate = 1;
 			break;
 		}
+
+		io_u = __get_io_u(td);
+		if (!io_u)
+			break;
 
 		if (get_next_verify(td, io_u)) {
 			put_io_u(td, io_u);
@@ -580,17 +579,16 @@ static void do_io(struct thread_data *td)
 		if (td->terminate)
 			break;
 
-		io_u = get_io_u(td);
-		if (!io_u)
-			break;
-
 		update_tv_cache(td);
 
 		if (runtime_exceeded(td, &td->tv_cache)) {
-			put_io_u(td, io_u);
 			td->terminate = 1;
 			break;
 		}
+
+		io_u = get_io_u(td);
+		if (!io_u)
+			break;
 
 		/*
 		 * Add verification end_io handler, if asked to verify
