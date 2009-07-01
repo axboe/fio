@@ -231,11 +231,6 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-static inline int is_power_of_2(unsigned int val)
-{
-	return (val != 0 && ((val & (val - 1)) == 0));
-}
-
 static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 {
 	const int ddir = io_u->ddir;

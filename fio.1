@@ -512,6 +512,15 @@ the system must have free huge pages allocated.  \fBmmaphuge\fR also needs to
 have hugetlbfs mounted, and \fIfile\fR must point there.
 .RE
 .TP
+.BI iomem_align \fR=\fPint
+This indiciates the memory alignment of the IO memory buffers. Note that the
+given alignment is applied to the first IO unit buffer, if using \fBiodepth\fR
+the alignment of the following buffers are given by the \fBbs\fR used. In
+other words, if using a \fBbs\fR that is a multiple of the page sized in the
+system, all buffers will be aligned to this value. If using a \fBbs\fR that
+is not page aligned, the alignment of subsequent IO memory buffers is the
+sum of the \fBiomem_align\fR and \fBbs\fR used.
+.TP
 .BI hugepage\-size \fR=\fPint
 Defines the size of a huge page.  Must be at least equal to the system setting.
 Should be a multiple of 1MiB. Default: 4MiB.

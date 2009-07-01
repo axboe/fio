@@ -1037,6 +1037,16 @@ static struct fio_option options[] = {
 		  },
 	},
 	{
+		.name	= "iomem_align",
+		.alias	= "mem_align",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(mem_align),
+		.minval	= 0,
+		.help	= "IO memory buffer offset alignment",
+		.def	= "0",
+		.parent	= "iomem",
+	},
+	{
 		.name	= "verify",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(verify),

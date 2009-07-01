@@ -704,6 +704,15 @@ mem=str		Fio can use various types of memory as the io unit buffer.
 		location should point there. So if it's mounted in /huge,
 		you would use mem=mmaphuge:/huge/somefile.
 
+iomem_align=int	This indiciates the memory alignment of the IO memory buffers.
+		Note that the given alignment is applied to the first IO unit
+		buffer, if using iodepth the alignment of the following buffers
+		are given by the bs used. In other words, if using a bs that is
+		a multiple of the page sized in the system, all buffers will
+		be aligned to this value. If using a bs that is not page
+		aligned, the alignment of subsequent IO memory buffers is the
+		sum of the iomem_align and bs used.
+
 hugepage-size=int
 		Defines the size of a huge page. Must at least be equal
 		to the system setting, see /proc/meminfo. Defaults to 4MiB.

@@ -188,8 +188,12 @@ int allocate_io_mem(struct thread_data *td)
 		return 0;
 
 	total_mem = td->orig_buffer_size;
-	if (td->o.odirect)
+
+	if (td->o.odirect || td->o.mem_align) {
 		total_mem += page_mask;
+		if (td->o.mem_align && td->o.mem_align > page_size)
+			total_mem += td->o.mem_align - page_size;
+	}
 
 	if (td->o.mem_type == MEM_MALLOC)
 		ret = alloc_mem_malloc(td, total_mem);

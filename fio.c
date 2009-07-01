@@ -42,7 +42,8 @@
 
 unsigned long page_mask;
 unsigned long page_size;
-#define ALIGN(buf)	\
+
+#define PAGE_ALIGN(buf)	\
 	(char *) (((unsigned long) (buf) + page_mask) & ~page_mask)
 
 int groupid = 0;
@@ -790,8 +791,8 @@ static int init_io_u(struct thread_data *td)
 	if (allocate_io_mem(td))
 		return 1;
 
-	if (td->o.odirect)
-		p = ALIGN(td->orig_buffer);
+	if (td->o.mem_align)
+		p = PAGE_ALIGN(td->orig_buffer) + td->o.mem_align;
 	else
 		p = td->orig_buffer;
 
@@ -811,9 +812,11 @@ static int init_io_u(struct thread_data *td)
 		io_u = ptr;
 		memset(io_u, 0, sizeof(*io_u));
 		INIT_FLIST_HEAD(&io_u->list);
+		dprint(FD_MEM, "io_u alloc %p, index %u\n", io_u, i);
 
 		if (!(td->io_ops->flags & FIO_NOIO)) {
 			io_u->buf = p + max_bs * i;
+			dprint(FD_MEM, "io_u %p, mem %p\n", io_u, io_u->buf);
 
 			if (td_write(td) && !td->o.refill_buffers)
 				io_u_fill_buffer(td, io_u, max_bs);

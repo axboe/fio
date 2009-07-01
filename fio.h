@@ -202,6 +202,7 @@ struct thread_options {
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
 	enum fio_memtype mem_type;
+	unsigned int mem_align;
 
 	unsigned int stonewall;
 	unsigned int new_group;
@@ -653,6 +654,11 @@ static inline int should_check_rate(struct thread_data *td,
 		ret |= __should_check_rate(td, 1);
 
 	return ret;
+}
+
+static inline int is_power_of_2(unsigned int val)
+{
+	return (val != 0 && ((val & (val - 1)) == 0));
 }
 
 #endif
