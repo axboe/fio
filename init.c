@@ -241,11 +241,13 @@ static int fixup_options(struct thread_data *td)
 	}
 #endif
 
+#if 0
 	if (read_only && td_write(td)) {
 		log_err("fio: job <%s> has write bit set, but fio is in"
 			" read-only mode\n", td->o.name);
 		return 1;
 	}
+#endif
 
 	if (o->write_iolog_file && o->read_iolog_file) {
 		log_err("fio: read iolog overrides write_iolog\n");
