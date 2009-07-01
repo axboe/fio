@@ -741,7 +741,10 @@ create_on_open=bool	Don't pre-setup the files for IO, just create open()
 pre_read=bool	If this is given, files will be pre-read into memory before
 		starting the given IO operation. This will also clear
 		the 'invalidate' flag, since it is pointless to pre-read
-		and then drop the cache.
+		and then drop the cache. This will only work for IO engines
+		that are seekable, since they allow you to read the same data
+		multiple times. Thus it will not work on eg network or splice
+		IO.
 
 unlink=bool	Unlink the job files when done. Not the default, as repeated
 		runs of that job would then waste time recreating the file

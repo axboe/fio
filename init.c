@@ -350,8 +350,12 @@ static int fixup_options(struct thread_data *td)
 	if (td->o.verify != VERIFY_NONE)
 		td->o.refill_buffers = 1;
 
-	if (td->o.pre_read)
+	if (td->o.pre_read) {
 		td->o.invalidate_cache = 0;
+		if (td->io_ops->flags & FIO_PIPEIO)
+			log_info("fio: cannot pre-read files with an IO engine"
+				 " that isn't seekable. Pre-read disabled.\n");
+	}
 
 	if (td->o.mem_align) {
 		if (td->o.odirect && !is_power_of_2(td->o.mem_align)) {

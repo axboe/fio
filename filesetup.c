@@ -156,6 +156,9 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 	unsigned int bs;
 	char *b;
 
+	if (td->io_ops->flags & FIO_PIPEIO)
+		return 0;
+
 	if (!fio_file_open(f)) {
 		if (td->io_ops->open_file(td, f)) {
 			log_err("fio: cannot pre-read, failed to open file\n");

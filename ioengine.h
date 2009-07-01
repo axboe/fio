@@ -112,6 +112,7 @@ enum fio_ioengine_flags {
 	FIO_UNIDIR	= 1 << 5,	/* engine is uni-directional */
 	FIO_NOIO	= 1 << 6,	/* thread does only pseudo IO */
 	FIO_SIGQUIT	= 1 << 7,	/* needs SIGQUIT to exit */
+	FIO_PIPEIO	= 1 << 8,	/* input/output no seekable */
 };
 
 /*
