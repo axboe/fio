@@ -588,6 +588,21 @@ static int rw_verify(struct fio_option *o, void *data)
 	return 0;
 }
 
+static int gtod_cpu_rw_verify(struct fio_option *o, void *data)
+{
+	struct thread_data *td = data;
+
+#ifndef FIO_HAVE_CPU_AFFINITY
+	if (td->o.gtod_cpu) {
+		log_err("fio: platform must support CPU affinity for"
+			"gettimeofday() offloading\n");
+		return 1;
+	}
+#endif
+
+	return 0;
+}
+
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
 
@@ -1534,6 +1549,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.cb	= str_gtod_cpu_cb,
 		.help	= "Setup dedicated gettimeofday() thread on this CPU",
+		.verify	= gtod_cpu_verify,
 	},
 	{
 		.name	= "continue_on_error",
