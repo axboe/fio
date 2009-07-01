@@ -46,7 +46,10 @@ static void show_option_range(struct fio_option *o)
 	if (!o->minval && !o->maxval)
 		return;
 
-	printf("%20s: min=%d, max=%d\n", "range", o->minval, o->maxval);
+	printf("%20s: min=%d", "range", o->minval);
+	if (o->maxval)
+		printf(", max=%d", o->maxval);
+	printf("\n");
 }
 
 static void show_option_values(struct fio_option *o)
