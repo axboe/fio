@@ -61,15 +61,15 @@ int fio_pin_memory(void)
 	return 0;
 }
 
-static int alloc_mem_shm(struct thread_data *td)
+static int alloc_mem_shm(struct thread_data *td, unsigned int total_mem)
 {
 	int flags = IPC_CREAT | SHM_R | SHM_W;
 
 	if (td->o.mem_type == MEM_SHMHUGE)
 		flags |= SHM_HUGETLB;
 
-	td->shm_id = shmget(IPC_PRIVATE, td->orig_buffer_size, flags);
-	dprint(FD_MEM, "shmget %zu, %d\n", td->orig_buffer_size, td->shm_id);
+	td->shm_id = shmget(IPC_PRIVATE, total_mem, flags);
+	dprint(FD_MEM, "shmget %u, %d\n", total_mem, td->shm_id);
 	if (td->shm_id < 0) {
 		td_verror(td, errno, "shmget");
 		if (geteuid() != 0 && errno == ENOMEM)
@@ -102,7 +102,16 @@ static int alloc_mem_shm(struct thread_data *td)
 	return 0;
 }
 
-static int alloc_mem_mmap(struct thread_data *td)
+static void free_mem_shm(struct thread_data *td)
+{
+	struct shmid_ds sbuf;
+
+	dprint(FD_MEM, "shmdt/ctl %d %p\n", td->shm_id, td->orig_buffer);
+	shmdt(td->orig_buffer);
+	shmctl(td->shm_id, IPC_RMID, &sbuf);
+}
+
+static int alloc_mem_mmap(struct thread_data *td, unsigned int total_mem)
 {
 	int flags = MAP_PRIVATE;
 
@@ -116,7 +125,7 @@ static int alloc_mem_mmap(struct thread_data *td)
 			td->orig_buffer = NULL;
 			return 1;
 		}
-		if (ftruncate(td->mmapfd, td->orig_buffer_size) < 0) {
+		if (ftruncate(td->mmapfd, total_mem) < 0) {
 			td_verror(td, errno, "truncate mmap file");
 			td->orig_buffer = NULL;
 			return 1;
@@ -124,10 +133,10 @@ static int alloc_mem_mmap(struct thread_data *td)
 	} else
 		flags |= OS_MAP_ANON;
 
-	td->orig_buffer = mmap(NULL, td->orig_buffer_size,
-				PROT_READ | PROT_WRITE, flags, td->mmapfd, 0);
-	dprint(FD_MEM, "mmap %zu/%d %p\n", td->orig_buffer_size, td->mmapfd,
-							td->orig_buffer);
+	td->orig_buffer = mmap(NULL, total_mem, PROT_READ | PROT_WRITE, flags,
+				td->mmapfd, 0);
+	dprint(FD_MEM, "mmap %u/%d %p\n", total_mem, td->mmapfd,
+						td->orig_buffer);
 	if (td->orig_buffer == MAP_FAILED) {
 		td_verror(td, errno, "mmap");
 		td->orig_buffer = NULL;
@@ -142,19 +151,29 @@ static int alloc_mem_mmap(struct thread_data *td)
 	return 0;
 }
 
-static int alloc_mem_malloc(struct thread_data *td)
+static void free_mem_mmap(struct thread_data *td, unsigned int total_mem)
 {
-	unsigned int bsize = td->orig_buffer_size;
+	dprint(FD_MEM, "munmap %u %p\n", total_mem, td->orig_buffer);
+	munmap(td->orig_buffer, td->orig_buffer_size);
+	if (td->mmapfile) {
+		close(td->mmapfd);
+		unlink(td->mmapfile);
+		free(td->mmapfile);
+	}
+}
 
-	if (td->o.odirect)
-		bsize += page_mask;
+static int alloc_mem_malloc(struct thread_data *td, unsigned int total_mem)
+{
+	td->orig_buffer = malloc(total_mem);
+	dprint(FD_MEM, "malloc %u %p\n", total_mem, td->orig_buffer);
 
-	td->orig_buffer = malloc(bsize);
-	dprint(FD_MEM, "malloc %u %p\n", bsize, td->orig_buffer);
-	if (td->orig_buffer)
-		return 0;
+	return td->orig_buffer == NULL;
+}
 
-	return 1;
+static void free_mem_malloc(struct thread_data *td)
+{
+	dprint(FD_MEM, "free malloc mem %p\n", td->orig_buffer);
+	free(td->orig_buffer);
 }
 
 /*
@@ -162,17 +181,22 @@ static int alloc_mem_malloc(struct thread_data *td)
  */
 int allocate_io_mem(struct thread_data *td)
 {
+	unsigned int total_mem;
 	int ret = 0;
 
 	if (td->io_ops->flags & FIO_NOIO)
 		return 0;
 
+	total_mem = td->orig_buffer_size;
+	if (td->o.odirect)
+		total_mem += page_mask;
+
 	if (td->o.mem_type == MEM_MALLOC)
-		ret = alloc_mem_malloc(td);
+		ret = alloc_mem_malloc(td, total_mem);
 	else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE)
-		ret = alloc_mem_shm(td);
+		ret = alloc_mem_shm(td, total_mem);
 	else if (td->o.mem_type == MEM_MMAP || td->o.mem_type == MEM_MMAPHUGE)
-		ret = alloc_mem_mmap(td);
+		ret = alloc_mem_mmap(td, total_mem);
 	else {
 		log_err("fio: bad mem type: %d\n", td->o.mem_type);
 		ret = 1;
@@ -186,28 +210,21 @@ int allocate_io_mem(struct thread_data *td)
 
 void free_io_mem(struct thread_data *td)
 {
-	if (td->o.mem_type == MEM_MALLOC) {
-		dprint(FD_MEM, "free mem %p\n", td->orig_buffer);
-		free(td->orig_buffer);
-	} else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE) {
-		struct shmid_ds sbuf;
+	unsigned int total_mem;
 
-		dprint(FD_MEM, "shmdt/ctl %d %p\n", td->shm_id,
-							td->orig_buffer);
-		shmdt(td->orig_buffer);
-		shmctl(td->shm_id, IPC_RMID, &sbuf);
-	} else if (td->o.mem_type == MEM_MMAP ||
-		   td->o.mem_type == MEM_MMAPHUGE) {
-		dprint(FD_MEM, "munmap %zu %p\n", td->orig_buffer_size,
-							td->orig_buffer);
-		munmap(td->orig_buffer, td->orig_buffer_size);
-		if (td->mmapfile) {
-			close(td->mmapfd);
-			unlink(td->mmapfile);
-			free(td->mmapfile);
-		}
-	} else
+	total_mem = td->orig_buffer_size;
+	if (td->o.odirect)
+		total_mem += page_mask;
+
+	if (td->o.mem_type == MEM_MALLOC)
+		free_mem_malloc(td);
+	else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE)
+		free_mem_shm(td);
+	else if (td->o.mem_type == MEM_MMAP || td->o.mem_type == MEM_MMAPHUGE)
+		free_mem_mmap(td, total_mem);
+	else
 		log_err("Bad memory type %u\n", td->o.mem_type);
 
 	td->orig_buffer = NULL;
+	td->orig_buffer_size = 0;
 }
