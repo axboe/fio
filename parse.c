@@ -428,6 +428,12 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		ret = 1;
 	}
 
+	if (ret)
+		return ret;
+
+	if (o->verify)
+		ret = o->verify(o, data);
+
 	return ret;
 }
 
