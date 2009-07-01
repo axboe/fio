@@ -588,11 +588,11 @@ static int rw_verify(struct fio_option *o, void *data)
 	return 0;
 }
 
-static int gtod_cpu_rw_verify(struct fio_option *o, void *data)
+static int gtod_cpu_verify(struct fio_option *o, void *data)
 {
+#ifndef FIO_HAVE_CPU_AFFINITY
 	struct thread_data *td = data;
 
-#ifndef FIO_HAVE_CPU_AFFINITY
 	if (td->o.gtod_cpu) {
 		log_err("fio: platform must support CPU affinity for"
 			"gettimeofday() offloading\n");
