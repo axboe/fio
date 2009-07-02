@@ -15,6 +15,7 @@ struct fio_mutex {
 extern struct fio_mutex *fio_mutex_init(int);
 extern void fio_mutex_remove(struct fio_mutex *);
 extern void fio_mutex_down(struct fio_mutex *);
+extern int fio_mutex_down_timeout(struct fio_mutex *, unsigned int);
 extern void fio_mutex_down_read(struct fio_mutex *);
 extern void fio_mutex_down_write(struct fio_mutex *);
 extern void fio_mutex_up(struct fio_mutex *);

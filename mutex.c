@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <time.h>
 #include <pthread.h>
 #include <sys/mman.h>
 
@@ -86,6 +87,30 @@ err:
 
 	unlink(mutex_name);
 	return NULL;
+}
+
+int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
+{
+	struct timespec t;
+	int ret = 0;
+
+	clock_gettime(CLOCK_REALTIME, &t);
+	t.tv_sec += seconds;
+
+	pthread_mutex_lock(&mutex->lock);
+
+	while (!mutex->value && !ret) {
+		mutex->waiters++;
+		ret = pthread_cond_timedwait(&mutex->cond, &mutex->lock, &t);
+		mutex->waiters--;
+	}
+
+	if (!ret) {
+		mutex->value--;
+		pthread_mutex_unlock(&mutex->lock);
+	}
+
+	return ret;
 }
 
 void fio_mutex_down(struct fio_mutex *mutex)

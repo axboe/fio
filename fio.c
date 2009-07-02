@@ -1500,7 +1500,13 @@ static void run_threads(void)
 					*fio_debug_jobp = pid;
 			}
 			dprint(FD_MUTEX, "wait on startup_mutex\n");
-			fio_mutex_down(startup_mutex);
+			if (fio_mutex_down_timeout(startup_mutex, 10)) {
+				log_err("fio: job startup hung? exiting.\n");
+				terminate_threads(TERMINATE_ALL);
+				fio_abort = 1;
+				nr_started--;
+				break;
+			}
 			dprint(FD_MUTEX, "done waiting on startup_mutex\n");
 		}
 
