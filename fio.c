@@ -388,21 +388,29 @@ static int break_on_this_error(struct thread_data *td, int *retptr)
 		else
 			err = td->error;
 
-		update_error_count(td, err);
-
 		if (td_non_fatal_error(err)) {
 		        /*
 		         * Continue with the I/Os in case of
 			 * a non fatal error.
 			 */
+			update_error_count(td, err);
 			td_clear_error(td);
 			*retptr = 0;
 			return 0;
+		} else if (td->o.fill_device && err == ENOSPC) {
+			/*
+			 * We expect to hit this error if
+			 * fill_device option is set.
+			 */
+			td_clear_error(td);
+			td->terminate = 1;
+			return 1;
 		} else {
 			/*
 			 * Stop the I/O in case of a fatal
 			 * error.
 			 */
+			update_error_count(td, err);
 			return 1;
 		}
 	}
