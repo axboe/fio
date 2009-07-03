@@ -357,14 +357,6 @@ static int fixup_options(struct thread_data *td)
 				 " that isn't seekable. Pre-read disabled.\n");
 	}
 
-	if (td->o.mem_align) {
-		if (td->o.odirect && !is_power_of_2(td->o.mem_align)) {
-			log_err("fio: given IO mem alignment conflicts with"
-					" direct=1. Resetting.\n");
-			td->o.mem_align = page_mask;
-		}
-	}
-			
 	return 0;
 }
 
