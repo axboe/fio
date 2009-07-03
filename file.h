@@ -20,6 +20,7 @@ enum fio_file_flags {
 	FIO_FILE_done		= 1 << 3,	/* io completed to this file */
 	FIO_FILE_size_known	= 1 << 4,	/* size has been set */
 	FIO_FILE_hashed		= 1 << 5,	/* file is on hash */
+	FIO_FILE_partial_mmap	= 1 << 6,	/* can't do full mmap */
 };
 
 enum file_lock_mode {
@@ -114,6 +115,7 @@ FILE_FLAG_FNS(extend);
 FILE_FLAG_FNS(done);
 FILE_FLAG_FNS(size_known);
 FILE_FLAG_FNS(hashed);
+FILE_FLAG_FNS(partial_mmap);
 #undef FILE_FLAG_FNS
 
 /*

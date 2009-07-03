@@ -26,7 +26,6 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 			 size_t length, off_t off)
 {
 	int flags = 0;
-	int ret = 0;
 
 	if (td_rw(td))
 		flags = PROT_READ | PROT_WRITE;
@@ -40,10 +39,8 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 
 	f->mmap_ptr = mmap(NULL, length, flags, MAP_SHARED, f->fd, off);
 	if (f->mmap_ptr == MAP_FAILED) {
-		int err = errno;
-
 		f->mmap_ptr = NULL;
-		td_verror(td, err, "mmap");
+		td_verror(td, errno, "mmap");
 		goto err;
 	}
 
@@ -60,29 +57,27 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 	}
 
 err:
-	return ret;
+	if (td->error && f->mmap_ptr)
+		munmap(f->mmap_ptr, length);
+		
+	return td->error;
 }
 
-static int fio_mmapio_prep(struct thread_data *td, struct io_u *io_u)
+/*
+ * Just mmap an appropriate portion, we cannot mmap the full extent
+ */
+static int fio_mmapio_prep_limited(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
-	int ret = 0;
 
 	if (io_u->buflen > mmap_map_size) {
 		log_err("fio: bs too big for mmap engine\n");
-		ret = EIO;
-		goto err;
+		return EIO;
 	}
 
-	if (io_u->offset >= f->mmap_off &&
-	    io_u->offset + io_u->buflen < f->mmap_off + f->mmap_sz)
-		goto done;
-
 	if (f->mmap_ptr) {
-		if (munmap(f->mmap_ptr, f->mmap_sz) < 0) {
-			ret = errno;
-			goto err;
-		}
+		if (munmap(f->mmap_ptr, f->mmap_sz) < 0)
+			return errno;
 		f->mmap_ptr = NULL;
 	}
 
@@ -92,13 +87,56 @@ static int fio_mmapio_prep(struct thread_data *td, struct io_u *io_u)
 
 	f->mmap_off = io_u->offset;
 
+	return fio_mmap_file(td, f, f->mmap_sz, f->mmap_off);
+}
+
+/*
+ * Attempt to mmap the entire file
+ */
+static int fio_mmapio_prep_full(struct thread_data *td, struct io_u *io_u)
+{
+	struct fio_file *f = io_u->file;
+	int ret;
+
+	if (fio_file_partial_mmap(f))
+		return EINVAL;
+
+	if (f->mmap_ptr) {
+		if (munmap(f->mmap_ptr, f->mmap_sz) < 0)
+			return errno;
+		f->mmap_ptr = NULL;
+	}
+
+	f->mmap_sz = f->io_size;
+	f->mmap_off = 0;
+
 	ret = fio_mmap_file(td, f, f->mmap_sz, f->mmap_off);
-done:
-	if (!ret)
-		io_u->mmap_data = f->mmap_ptr + io_u->offset - f->mmap_off -
-					f->file_offset;
-err:
+	if (ret)
+		fio_file_set_partial_mmap(f);
+
 	return ret;
+}
+
+static int fio_mmapio_prep(struct thread_data *td, struct io_u *io_u)
+{
+	struct fio_file *f = io_u->file;
+	int ret;
+
+	if (io_u->offset >= f->mmap_off &&
+	    io_u->offset + io_u->buflen < f->mmap_off + f->mmap_sz)
+		goto done;
+
+	if (fio_mmapio_prep_full(td, io_u)) {
+		td_clear_error(td);
+		ret = fio_mmapio_prep_limited(td, io_u);
+		if (ret)
+			return ret;
+	}
+
+done:
+	io_u->mmap_data = f->mmap_ptr + io_u->offset - f->mmap_off -
+				f->file_offset;
+	return 0;
 }
 
 static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
