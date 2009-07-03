@@ -245,6 +245,18 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	unlock_file(td, io_u->file);
 
+	/*
+	 * Add warning for O_DIRECT so that users have an easier time
+	 * spotting potentially bad alignment. If this triggers for the first
+	 * IO, then it's likely an alignment problem or because the host fs
+	 * does not support O_DIRECT
+	 */
+	if (io_u->error == EINVAL && td->io_issues[io_u->ddir] == 1 &&
+	    td->o.odirect) {
+		log_info("fio: first direct IO errored. File system may not "
+			 "support direct IO, or iomem_align= is bad.\n");
+	}
+
 	if (!td->io_ops->commit) {
 		io_u_mark_submit(td, 1);
 		io_u_mark_complete(td, 1);
