@@ -799,7 +799,7 @@ static int init_io_u(struct thread_data *td)
 	if (allocate_io_mem(td))
 		return 1;
 
-	if (td->o.mem_align)
+	if (td->o.odirect || td->o.mem_align)
 		p = PAGE_ALIGN(td->orig_buffer) + td->o.mem_align;
 	else
 		p = td->orig_buffer;
