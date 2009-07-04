@@ -75,12 +75,6 @@ static int fio_mmapio_prep_limited(struct thread_data *td, struct io_u *io_u)
 		return EIO;
 	}
 
-	if (f->mmap_ptr) {
-		if (munmap(f->mmap_ptr, f->mmap_sz) < 0)
-			return errno;
-		f->mmap_ptr = NULL;
-	}
-
 	f->mmap_sz = mmap_map_size;
 	if (f->mmap_sz  > f->io_size)
 		f->mmap_sz = f->io_size;
@@ -101,12 +95,6 @@ static int fio_mmapio_prep_full(struct thread_data *td, struct io_u *io_u)
 	if (fio_file_partial_mmap(f))
 		return EINVAL;
 
-	if (f->mmap_ptr) {
-		if (munmap(f->mmap_ptr, f->mmap_sz) < 0)
-			return errno;
-		f->mmap_ptr = NULL;
-	}
-
 	f->mmap_sz = f->io_size;
 	f->mmap_off = 0;
 
@@ -122,9 +110,21 @@ static int fio_mmapio_prep(struct thread_data *td, struct io_u *io_u)
 	struct fio_file *f = io_u->file;
 	int ret;
 
+	/*
+	 * It fits within existing mapping, use it
+	 */
 	if (io_u->offset >= f->mmap_off &&
 	    io_u->offset + io_u->buflen < f->mmap_off + f->mmap_sz)
 		goto done;
+
+	/*
+	 * unmap any existing mapping
+	 */
+	if (f->mmap_ptr) {
+		if (munmap(f->mmap_ptr, f->mmap_sz) < 0)
+			return errno;
+		f->mmap_ptr = NULL;
+	}
 
 	if (fio_mmapio_prep_full(td, io_u)) {
 		td_clear_error(td);
