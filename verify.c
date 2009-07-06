@@ -836,6 +836,7 @@ int verify_async_init(struct thread_data *td)
 	}
 
 	if (i != td->o.verify_async) {
+		log_err("fio: only %d verify threads started, exiting\n", i);
 		td->verify_thread_exit = 1;
 		write_barrier();
 		pthread_cond_broadcast(&td->verify_cond);
