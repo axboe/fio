@@ -117,6 +117,36 @@ static inline int flist_empty(const struct flist_head *head)
 	return head->next == head;
 }
 
+static inline void __flist_splice(const struct flist_head *list,
+				  struct flist_head *prev,
+				  struct flist_head *next)
+{
+	struct flist_head *first = list->next;
+	struct flist_head *last = list->prev;
+
+	first->prev = prev;
+	prev->next = first;
+
+	last->next = next;
+	next->prev = last;
+}
+
+static inline void flist_splice(const struct flist_head *list,
+				struct flist_head *head)
+{
+	if (!flist_empty(list))
+		__flist_splice(list, head, head->next);
+}
+
+static inline void flist_splice_init(struct flist_head *list,
+				    struct flist_head *head)
+{
+	if (!flist_empty(list)) {
+		__flist_splice(list, head, head->next);
+		INIT_FLIST_HEAD(list);
+	}
+}
+
 /**
  * flist_entry - get the struct for this entry
  * @ptr:	the &struct flist_head pointer.

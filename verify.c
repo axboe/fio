@@ -756,6 +756,8 @@ static void *verify_async_thread(void *data)
 	}
 
 	do {
+		FLIST_HEAD(list);
+
 		read_barrier();
 		if (td->verify_thread_exit)
 			break;
@@ -771,17 +773,19 @@ static void *verify_async_thread(void *data)
 			}
 		}
 
-		if (flist_empty(&td->verify_list)) {
-			pthread_mutex_unlock(&td->io_u_lock);
-			continue;
-		}
-
-		io_u = flist_entry(td->verify_list.next, struct io_u, list);
-		flist_del_init(&io_u->list);
+		flist_splice_init(&td->verify_list, &list);
 		pthread_mutex_unlock(&td->io_u_lock);
 
-		ret = verify_io_u(td, io_u);
-		put_io_u(td, io_u);
+		if (flist_empty(&list))
+			continue;
+
+		while (!flist_empty(&list)) {
+			io_u = flist_entry(list.next, struct io_u, list);
+			flist_del_init(&io_u->list);
+
+			ret |= verify_io_u(td, io_u);
+			put_io_u(td, io_u);
+		}
 	} while (!ret);
 
 done:
