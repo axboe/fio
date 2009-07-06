@@ -783,10 +783,23 @@ static void *verify_async_thread(void *data)
 			io_u = flist_entry(list.next, struct io_u, list);
 			flist_del_init(&io_u->list);
 
-			ret |= verify_io_u(td, io_u);
+			ret = verify_io_u(td, io_u);
 			put_io_u(td, io_u);
+			if (!ret)
+				continue;
+			if (td->o.continue_on_error &&
+			    td_non_fatal_error(ret)) {
+				update_error_count(td, ret);
+				td_clear_error(td);
+				ret = 0;
+			}
 		}
 	} while (!ret);
+
+	if (ret) {
+		td_verror(td, ret, "async_verify");
+		td->terminate = 1;
+	}
 
 done:
 	pthread_mutex_lock(&td->io_u_lock);
