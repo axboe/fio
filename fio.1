@@ -602,7 +602,9 @@ false.
 Fio will normally verify IO inline from the submitting thread. This option
 takes an integer describing how many async offload threads to create for IO
 verification instead, causing fio to offload the duty of verifying IO contents
-to one or more separate threads.
+to one or more separate threads.  If using this offload option, even sync IO
+engines can benefit from using an \fBiodepth\fR setting higher than 1, as it
+allows them to have IO in flight while verifies are running.
 .TP
 .BI verify_async_cpus \fR=\fPstr
 Tell fio to set the given CPU affinity on the async IO verification threads.
