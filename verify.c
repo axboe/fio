@@ -766,7 +766,8 @@ static void *verify_async_thread(void *data)
 
 		while (flist_empty(&td->verify_list) &&
 		       !td->verify_thread_exit) {
-			ret = pthread_cond_wait(&td->verify_cond, &td->io_u_lock);
+			ret = pthread_cond_wait(&td->verify_cond,
+							&td->io_u_lock);
 			if (ret) {
 				pthread_mutex_unlock(&td->io_u_lock);
 				break;
