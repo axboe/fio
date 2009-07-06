@@ -827,6 +827,16 @@ verify_fatal=bool	Normally fio will keep checking the entire contents
 		before quitting on a block verification failure. If this
 		option is set, fio will exit the job on the first observed
 		failure.
+
+verify_async=int	Fio will normally verify IO inline from the submitting
+		thread. This option takes an integer describing how many
+		async offload threads to create for IO verification instead,
+		causing fio to offload the duty of verifying IO contents
+		to one or more separate threads.
+
+verify_async_cpus=str	Tell fio to set the given CPU affinity on the
+		async IO verification threads. See cpus_allowed for the
+		format used.
 		
 stonewall	Wait for preceeding jobs in the job file to exit, before
 		starting this one. Can be used to insert serialization

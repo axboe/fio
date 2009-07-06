@@ -303,14 +303,14 @@ static int str_cpumask_cb(void *data, unsigned int *val)
 	return 0;
 }
 
-static int str_cpus_allowed_cb(void *data, const char *input)
+static int set_cpus_allowed(struct thread_data *td, os_cpu_mask_t *mask,
+			    const char *input)
 {
-	struct thread_data *td = data;
 	char *cpu, *str, *p;
 	long max_cpu;
 	int ret = 0;
 
-	ret = fio_cpuset_init(&td->o.cpumask);
+	ret = fio_cpuset_init(mask);
 	if (ret < 0) {
 		log_err("fio: cpuset_init failed\n");
 		td_verror(td, ret, "fio_cpuset_init");
@@ -358,7 +358,7 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 			}
 	
 			dprint(FD_PARSE, "set cpu allowed %d\n", icpu);
-			fio_cpu_set(&td->o.cpumask, icpu);
+			fio_cpu_set(mask, icpu);
 			icpu++;
 		}
 		if (ret)
@@ -368,6 +368,30 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 	free(p);
 	if (!ret)
 		td->o.cpumask_set = 1;
+	return ret;
+}
+
+static int str_cpus_allowed_cb(void *data, const char *input)
+{
+	struct thread_data *td = data;
+	int ret;
+
+	ret = set_cpus_allowed(td, &td->o.cpumask, input);
+	if (!ret)
+		td->o.cpumask_set = 1;
+
+	return ret;
+}
+
+static int str_verify_cpus_allowed_cb(void *data, const char *input)
+{
+	struct thread_data *td = data;
+	int ret;
+
+	ret = set_cpus_allowed(td, &td->o.verify_cpumask, input);
+	if (!ret)
+		td->o.verify_cpumask_set = 1;
+
 	return ret;
 }
 #endif
@@ -1180,6 +1204,23 @@ static struct fio_option options[] = {
 		.help	= "Exit on a single verify failure, don't continue",
 		.parent = "verify",
 	},
+	{
+		.name	= "verify_async",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(verify_async),
+		.def	= "0",
+		.help	= "Number of async verifier threads to use",
+		.parent	= "verify",
+	},
+#ifdef FIO_HAVE_CPU_AFFINITY
+	{
+		.name	= "verify_async_cpus",
+		.type	= FIO_OPT_STR,
+		.cb	= str_verify_cpus_allowed_cb,
+		.help	= "Set CPUs allowed for async verify threads",
+		.parent	= "verify_async",
+	},
+#endif
 	{
 		.name	= "write_iolog",
 		.type	= FIO_OPT_STR_STORE,

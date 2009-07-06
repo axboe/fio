@@ -6,6 +6,7 @@
 enum {
 	IO_U_F_FREE	= 1 << 0,
 	IO_U_F_FLIGHT	= 1 << 1,
+	IO_U_F_FREE_DEF	= 1 << 2,
 };
 
 /*

@@ -472,7 +472,10 @@ static void do_verify(struct thread_data *td)
 			break;
 		}
 
-		io_u->end_io = verify_io_u;
+		if (td->o.verify_async)
+			io_u->end_io = verify_io_u_async;
+		else
+			io_u->end_io = verify_io_u;
 
 		ret = td_io_queue(td, io_u);
 		switch (ret) {
@@ -604,7 +607,10 @@ static void do_io(struct thread_data *td)
 		 * a previously written file.
 		 */
 		if (td->o.verify != VERIFY_NONE && io_u->ddir == DDIR_READ) {
-			io_u->end_io = verify_io_u;
+			if (td->o.verify_async)
+				io_u->end_io = verify_io_u_async;
+			else
+				io_u->end_io = verify_io_u;
 			td_set_runstate(td, TD_VERIFYING);
 		} else if (in_ramp_time(td))
 			td_set_runstate(td, TD_RAMP);
@@ -992,6 +998,7 @@ static void *thread_main(void *data)
 {
 	unsigned long long runtime[2], elapsed;
 	struct thread_data *td = data;
+	pthread_condattr_t attr;
 	int clear_state;
 
 	if (!td->o.use_thread)
@@ -1006,7 +1013,13 @@ static void *thread_main(void *data)
 	INIT_FLIST_HEAD(&td->io_u_requeues);
 	INIT_FLIST_HEAD(&td->io_log_list);
 	INIT_FLIST_HEAD(&td->io_hist_list);
+	INIT_FLIST_HEAD(&td->verify_list);
+	pthread_mutex_init(&td->io_u_lock, NULL);
 	td->io_hist_tree = RB_ROOT;
+
+	pthread_condattr_init(&attr);
+	pthread_cond_init(&td->verify_cond, &attr);
+	pthread_cond_init(&td->free_cond, &attr);
 
 	td_set_runstate(td, TD_INITIALIZED);
 	dprint(FD_MUTEX, "up startup_mutex\n");
@@ -1031,7 +1044,10 @@ static void *thread_main(void *data)
 	if (init_io_u(td))
 		goto err;
 
-	if (td->o.cpumask_set && fio_setaffinity(td) == -1) {
+	if (td->o.verify_async && verify_async_init(td))
+		goto err;
+
+	if (td->o.cpumask_set && fio_setaffinity(td->pid, td->o.cpumask) == -1) {
 		td_verror(td, errno, "cpu_set_affinity");
 		goto err;
 	}
@@ -1042,7 +1058,7 @@ static void *thread_main(void *data)
 	 */
 	if (td->o.gtod_cpu) {
 		fio_cpu_clear(&td->o.cpumask, td->o.gtod_cpu);
-		if (fio_setaffinity(td) == -1) {
+		if (fio_setaffinity(td->pid, td->o.cpumask) == -1) {
 			td_verror(td, errno, "cpu_set_affinity");
 			goto err;
 		}
@@ -1183,6 +1199,9 @@ err:
 
 		td_verror(td, ret, "fio_cpuset_exit");
 	}
+
+	if (td->o.verify_async)
+		verify_async_exit(td);
 
 	/*
 	 * do this very late, it will log file closing as well

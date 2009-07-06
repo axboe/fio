@@ -39,7 +39,7 @@
 #endif /* FIO_HAVE_FADVISE */
 
 #ifndef FIO_HAVE_CPU_AFFINITY
-#define fio_setaffinity(td)		(0)
+#define fio_setaffinity(pid, mask)	(0)
 #define fio_getaffinity(pid, mask)	do { } while (0)
 #define fio_cpu_clear(mask, cpu)	do { } while (0)
 #define fio_cpuset_exit(mask)		(-1)

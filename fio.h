@@ -174,6 +174,7 @@ struct thread_options {
 	unsigned int verify_pattern;
 	unsigned int verify_pattern_bytes;
 	unsigned int verify_fatal;
+	unsigned int verify_async;
 	unsigned int use_thread;
 	unsigned int unlink;
 	unsigned int do_disk_util;
@@ -209,6 +210,8 @@ struct thread_options {
 	unsigned int numjobs;
 	os_cpu_mask_t cpumask;
 	unsigned int cpumask_set;
+	os_cpu_mask_t verify_cpumask;
+	unsigned int verify_cpumask_set;
 	unsigned int iolog;
 	unsigned int rwmixcycle;
 	unsigned int rwmix[2];
@@ -319,6 +322,17 @@ struct thread_data {
 	struct flist_head io_u_freelist;
 	struct flist_head io_u_busylist;
 	struct flist_head io_u_requeues;
+	pthread_mutex_t io_u_lock;
+	pthread_cond_t free_cond;
+
+	/*
+	 * async verify offload
+	 */
+	struct flist_head verify_list;
+	pthread_t *verify_threads;
+	unsigned int nr_verify_threads;
+	pthread_cond_t verify_cond;
+	int verify_thread_exit;
 
 	/*
 	 * Rate state
@@ -659,6 +673,28 @@ static inline int should_check_rate(struct thread_data *td,
 static inline int is_power_of_2(unsigned int val)
 {
 	return (val != 0 && ((val & (val - 1)) == 0));
+}
+
+/*
+ * We currently only need to do locking if we have verifier threads
+ * accessing our internal structures too
+ */
+static inline void td_io_u_lock(struct thread_data *td)
+{
+	if (td->o.verify_async)
+		pthread_mutex_lock(&td->io_u_lock);
+}
+
+static inline void td_io_u_unlock(struct thread_data *td)
+{
+	if (td->o.verify_async)
+		pthread_mutex_unlock(&td->io_u_lock);
+}
+
+static inline void td_io_u_free_notify(struct thread_data *td)
+{
+	if (td->o.verify_async)
+		pthread_cond_signal(&td->free_cond);
 }
 
 #endif

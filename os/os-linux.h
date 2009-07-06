@@ -55,13 +55,13 @@ typedef struct drand48_data os_random_state_t;
  * the affinity helpers to work.
  */
 #ifndef GLIBC_2_3_2
-#define fio_setaffinity(td)		\
-	sched_setaffinity((td)->pid, sizeof((td)->o.cpumask), &(td)->o.cpumask)
+#define fio_setaffinity(pid, cpumask)		\
+	sched_setaffinity((pid), sizeof(cpumask), &(cpumask))
 #define fio_getaffinity(pid, ptr)	\
 	sched_getaffinity((pid), sizeof(cpu_set_t), (ptr))
 #else
-#define fio_setaffinity(td)		\
-	sched_setaffinity((td)->pid, &(td)->o.cpumask)
+#define fio_setaffinity(pid, cpumask)	\
+	sched_setaffinity((pid), &(cpumask))
 #define fio_getaffinity(pid, ptr)	\
 	sched_getaffinity((pid), (ptr))
 #endif

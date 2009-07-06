@@ -133,6 +133,7 @@ extern int __must_check pre_read_files(struct thread_data *);
 extern int add_file(struct thread_data *, const char *);
 extern void get_file(struct fio_file *);
 extern int __must_check put_file(struct thread_data *, struct fio_file *);
+extern void put_file_log(struct thread_data *, struct fio_file *);
 extern void lock_file(struct thread_data *, struct fio_file *, enum fio_ddir);
 extern void unlock_file(struct thread_data *, struct fio_file *);
 extern void unlock_file_all(struct thread_data *, struct fio_file *);

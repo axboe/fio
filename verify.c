@@ -5,9 +5,11 @@
 #include <fcntl.h>
 #include <string.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "fio.h"
 #include "verify.h"
+#include "smalloc.h"
 
 #include "crc/md5.h"
 #include "crc/crc64.h"
@@ -417,6 +419,26 @@ int verify_io_u_pattern(unsigned long pattern, unsigned long pattern_size,
 	return 0;
 }
 
+/*
+ * Push IO verification to a separate thread
+ */
+int verify_io_u_async(struct thread_data *td, struct io_u *io_u)
+{
+	if (io_u->file)
+		put_file_log(td, io_u->file);
+
+	io_u->file = NULL;
+
+	pthread_mutex_lock(&td->io_u_lock);
+	flist_del(&io_u->list);
+	flist_add_tail(&io_u->list, &td->verify_list);
+	pthread_mutex_unlock(&td->io_u_lock);
+
+	pthread_cond_signal(&td->verify_cond);
+	io_u->flags |= IO_U_F_FREE_DEF;
+	return 0;
+}
+
 int verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	struct verify_header *hdr;
@@ -719,4 +741,104 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 
 	dprint(FD_VERIFY, "get_next_verify: empty\n");
 	return 1;
+}
+
+static void *verify_async_thread(void *data)
+{
+	struct thread_data *td = data;
+	struct io_u *io_u;
+	int ret = 0;
+
+	if (td->o.verify_cpumask_set &&
+	    fio_setaffinity(td->pid, td->o.verify_cpumask)) {
+		log_err("fio: failed setting verify thread affinity\n");
+		goto done;
+	}
+
+	do {
+		read_barrier();
+		if (td->verify_thread_exit)
+			break;
+
+		pthread_mutex_lock(&td->io_u_lock);
+
+		while (flist_empty(&td->verify_list) &&
+		       !td->verify_thread_exit) {
+			ret = pthread_cond_wait(&td->verify_cond, &td->io_u_lock);
+			if (ret) {
+				pthread_mutex_unlock(&td->io_u_lock);
+				break;
+			}
+		}
+
+		if (flist_empty(&td->verify_list)) {
+			pthread_mutex_unlock(&td->io_u_lock);
+			continue;
+		}
+
+		io_u = flist_entry(td->verify_list.next, struct io_u, list);
+		flist_del_init(&io_u->list);
+		pthread_mutex_unlock(&td->io_u_lock);
+
+		ret = verify_io_u(td, io_u);
+		put_io_u(td, io_u);
+	} while (!ret);
+
+done:
+	pthread_mutex_lock(&td->io_u_lock);
+	td->nr_verify_threads--;
+	pthread_mutex_unlock(&td->io_u_lock);
+
+	pthread_cond_signal(&td->free_cond);
+	return NULL;
+}
+
+int verify_async_init(struct thread_data *td)
+{
+	int i, ret;
+
+	td->verify_thread_exit = 0;
+
+	td->verify_threads = malloc(sizeof(pthread_t) * td->o.verify_async);
+	for (i = 0; i < td->o.verify_async; i++) {
+		ret = pthread_create(&td->verify_threads[i], NULL,
+					verify_async_thread, td);
+		if (ret) {
+			log_err("fio: async verify creation failed: %s\n",
+					strerror(ret));
+			break;
+		}
+		ret = pthread_detach(td->verify_threads[i]);
+		if (ret) {
+			log_err("fio: async verify thread detach failed: %s\n",
+					strerror(ret));
+			break;
+		}
+		td->nr_verify_threads++;
+	}
+
+	if (i != td->o.verify_async) {
+		td->verify_thread_exit = 1;
+		write_barrier();
+		pthread_cond_broadcast(&td->verify_cond);
+		return 1;
+	}
+
+	return 0;
+}
+
+void verify_async_exit(struct thread_data *td)
+{
+	td->verify_thread_exit = 1;
+	write_barrier();
+	pthread_cond_broadcast(&td->verify_cond);
+
+	pthread_mutex_lock(&td->io_u_lock);
+
+	while (td->nr_verify_threads)
+		pthread_cond_wait(&td->free_cond, &td->io_u_lock);
+
+	pthread_mutex_unlock(&td->io_u_lock);
+	free(td->verify_threads);
+	td->verify_threads = NULL;
 }
