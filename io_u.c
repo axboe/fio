@@ -999,7 +999,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 							&icd->time);
 
 			if (!td->o.disable_clat) {
-				add_clat_sample(td, idx, usec, bytes);
+				add_clat_sample(td, idx, lusec, bytes);
 				io_u_mark_latency(td, lusec);
 			}
 			if (!td->o.disable_bw)

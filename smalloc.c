@@ -27,6 +27,7 @@
 #define SMALLOC_POST_RED	0x5aa55aa5U
 
 unsigned int smalloc_pool_size = INITIAL_SIZE;
+const int int_mask = sizeof(int) - 1;
 
 struct pool {
 	struct fio_mutex *lock;			/* protects this pool */
@@ -268,9 +269,19 @@ void scleanup(void)
 }
 
 #ifdef SMALLOC_REDZONE
+static void *postred_ptr(struct block_hdr *hdr)
+{
+	unsigned long ptr;
+
+	ptr = (unsigned long) hdr + hdr->size - sizeof(unsigned int);
+	ptr = (ptr + int_mask) & ~int_mask;
+
+	return (void *) ptr;
+}
+
 static void fill_redzone(struct block_hdr *hdr)
 {
-	unsigned int *postred = (void *) hdr + hdr->size - sizeof(unsigned int);
+	unsigned int *postred = postred_ptr(hdr);
 
 	hdr->prered = SMALLOC_PRE_RED;
 	*postred = SMALLOC_POST_RED;
@@ -278,7 +289,7 @@ static void fill_redzone(struct block_hdr *hdr)
 
 static void sfree_check_redzone(struct block_hdr *hdr)
 {
-	unsigned int *postred = (void *) hdr + hdr->size - sizeof(unsigned int);
+	unsigned int *postred = postred_ptr(hdr);
 
 	if (hdr->prered != SMALLOC_PRE_RED) {
 		fprintf(stderr, "smalloc pre redzone destroyed!\n");
@@ -414,8 +425,13 @@ static void *smalloc_pool(struct pool *pool, unsigned int size)
 	unsigned int alloc_size = size + sizeof(struct block_hdr);
 	void *ptr;
 
+	/*
+	 * Round to int alignment, so that the postred pointer will
+	 * be naturally aligned as well.
+	 */
 #ifdef SMALLOC_REDZONE
 	alloc_size += sizeof(unsigned int);
+	alloc_size = (alloc_size + int_mask) & ~int_mask;
 #endif
 
 	ptr = __smalloc_pool(pool, alloc_size);
