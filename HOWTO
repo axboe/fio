@@ -197,21 +197,21 @@ Some parameters take an option of a given type, such as an integer or
 a string. The following types are used:
 
 str	String. This is a sequence of alpha characters.
-time	Integer with possible time postfix. In seconds unless otherwise
+time	Integer with possible time suffix. In seconds unless otherwise
 	specified, use eg 10m for 10 minutes. Accepts s/m/h for seconds,
 	minutes, and hours.
-int	SI integer. A whole number value, which may contain a postfix
-	describing the base of the number. Accepted postfixes are k/m/g,
-	meaning kilo, mega, and giga. So if you want to specify 4096,
-	you could either write out '4096' or just give 4k. The postfixes
-	signify base 2 values, so 1024 is 1k and 1024k is 1m and so on.
-	If the option accepts an upper and lower range, use a colon ':'
-	or minus '-' to separate such values. May also include a prefix
-	to indicate numbers base. If 0x is used, the number is assumed to
-	be hexadecimal. See irange.
+int	SI integer. A whole number value, which may contain a suffix
+	describing the base of the number. Accepted suffixes are k/m/g/t/p,
+	meaning kilo, mega, giga, tera, and peta. The suffix is not case
+	sensitive. So if you want to specify 4096, you could either write
+	out '4096' or just give 4k. The suffixes signify base 2 values, so
+	1024 is 1k and 1024k is 1m and so on. If the option accepts an upper
+	and lower range, use a colon ':' or minus '-' to separate such values.
+	May also include a prefix to indicate numbers base. If 0x is used,
+	the number is assumed to be hexadecimal. See irange.
 bool	Boolean. Usually parsed as an integer, however only defined for
 	true and false (1 and 0).
-irange	Integer range with postfix. Allows value range to be given, such
+irange	Integer range with suffix. Allows value range to be given, such
 	as 1024-4096. A colon may also be used as the separator, eg
 	1k:4k. If the option allows two sets of ranges, they can be
 	specified with a ',' or '/' delimiter: 1k-4k/8k-32k. Also see
@@ -600,7 +600,7 @@ thinktime_blocks
 		after every block.
 
 rate=int	Cap the bandwidth used by this job. The number is in bytes/sec,
-		the normal postfix rules apply. You can use rate=500k to limit
+		the normal suffix rules apply. You can use rate=500k to limit
 		reads and writes to 500k each, or you can specify read and
 		writes separately. Using rate=1m,500k would limit reads to
 		1MB/sec and writes to 500KB/sec. Capping only reads or

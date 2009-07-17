@@ -78,9 +78,10 @@ String: a sequence of alphanumeric characters.
 .TP
 .I int
 SI integer: a whole number, possibly containing a suffix denoting the base unit
-of the value.  Accepted suffixes are `k', 'M' and 'G', denoting kilo (1024),
-mega (1024*1024) and giga (1024*1024*1024) respectively. If prefixed with '0x',
-the value is assumed to be base 16 (hexadecimal).
+of the value.  Accepted suffixes are `k', 'M', 'G', 'T', and 'P', denoting
+kilo (1024), mega (1024^2), giga (1024^3), tera (1024^4), and peta (1024^5)
+respectively. The suffix is not case sensitive. If prefixed with '0x', the
+value is assumed to be base 16 (hexadecimal).
 .TP
 .I bool
 Boolean: a true or false value. `0' denotes false, `1' denotes true.

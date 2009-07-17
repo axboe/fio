@@ -112,7 +112,7 @@ static unsigned long get_mult_time(char c)
 	}
 }
 
-static unsigned long get_mult_bytes(char c)
+static unsigned long long get_mult_bytes(char c)
 {
 	switch (c) {
 	case 'k':
@@ -124,9 +124,12 @@ static unsigned long get_mult_bytes(char c)
 	case 'g':
 	case 'G':
 		return 1024 * 1024 * 1024;
-	case 'e':
-	case 'E':
+	case 't':
+	case 'T':
 		return 1024 * 1024 * 1024 * 1024UL;
+	case 'p':
+	case 'P':
+		return 1024 * 1024 * 1024 * 1024ULL * 1024ULL;
 	default:
 		return 1;
 	}
