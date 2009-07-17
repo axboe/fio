@@ -41,15 +41,15 @@ static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
 	qsort(vpmap, entries, sizeof(struct value_pair), vp_cmp);
 }
 
-static void show_option_range(struct fio_option *o)
+static void show_option_range(struct fio_option *o, FILE *out)
 {
 	if (!o->minval && !o->maxval)
 		return;
 
-	printf("%20s: min=%d", "range", o->minval);
+	fprintf(out, "%20s: min=%d", "range", o->minval);
 	if (o->maxval)
-		printf(", max=%d", o->maxval);
-	printf("\n");
+		fprintf(out, ", max=%d", o->maxval);
+	fprintf(out, "\n");
 }
 
 static void show_option_values(struct fio_option *o)
@@ -71,6 +71,28 @@ static void show_option_values(struct fio_option *o)
 
 	if (i)
 		printf("\n");
+}
+
+static void show_option_help(struct fio_option *o, FILE *out)
+{
+	const char *typehelp[] = {
+		"string (opt=bla)",
+		"string with possible k/m/g postfix (opt=4k)",
+		"string with time postfix (opt=10s)",
+		"string (opt=bla)",
+		"string with dual range (opt=1k-4k,4k-8k)",
+		"integer value (opt=100)",
+		"boolean value (opt=1)",
+		"no argument (opt)",
+	};
+
+	if (o->alias)
+		fprintf(out, "%20s: %s\n", "alias", o->alias);
+
+	fprintf(out, "%20s: %s\n", "type", typehelp[o->type]);
+	fprintf(out, "%20s: %s\n", "default", o->def ? o->def : "no default");
+	show_option_range(o, stdout);
+	show_option_values(o);
 }
 
 static unsigned long get_mult_time(char c)
@@ -431,8 +453,14 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	if (ret)
 		return ret;
 
-	if (o->verify)
+	if (o->verify) {
 		ret = o->verify(o, data);
+		if (ret) {
+			fprintf(stderr,"Correct format for offending option\n");
+			fprintf(stderr, "%20s: %s\n", o->name, o->help);
+			show_option_help(o, stderr);
+		}
+	}
 
 	return ret;
 }
@@ -668,28 +696,6 @@ static int string_distance(const char *s1, const char *s2)
 	return i;
 }
 
-static void show_option_help(struct fio_option *o)
-{
-	const char *typehelp[] = {
-		"string (opt=bla)",
-		"string with possible k/m/g postfix (opt=4k)",
-		"string with time postfix (opt=10s)",
-		"string (opt=bla)",
-		"string with dual range (opt=1k-4k,4k-8k)",
-		"integer value (opt=100)",
-		"boolean value (opt=1)",
-		"no argument (opt)",
-	};
-
-	if (o->alias)
-		printf("%20s: %s\n", "alias", o->alias);
-
-	printf("%20s: %s\n", "type", typehelp[o->type]);
-	printf("%20s: %s\n", "default", o->def ? o->def : "no default");
-	show_option_range(o);
-	show_option_values(o);
-}
-
 static struct fio_option *find_child(struct fio_option *options,
 				     struct fio_option *o)
 {
@@ -794,7 +800,7 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		if (!match)
 			continue;
 
-		show_option_help(o);
+		show_option_help(o, stdout);
 	}
 
 	if (found)
@@ -804,7 +810,7 @@ int show_cmd_help(struct fio_option *options, const char *name)
 	if (closest) {
 		printf(" - showing closest match\n");
 		printf("%20s: %s\n", closest->name, closest->help);
-		show_option_help(closest);
+		show_option_help(closest, stdout);
 	} else
 		printf("\n");
 
