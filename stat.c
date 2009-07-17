@@ -67,7 +67,7 @@ static void show_group_stats(struct group_run_stats *rs, int id)
 		p3 = num2str(rs->min_bw[i], 6, 1024, 1);
 		p4 = num2str(rs->max_bw[i], 6, 1024, 1);
 
-		log_info("%s: io=%siB, aggrb=%siB/s, minb=%siB/s, maxb=%siB/s,"
+		log_info("%s: io=%sB, aggrb=%sB/s, minb=%sB/s, maxb=%sB/s,"
 			 " mint=%llumsec, maxt=%llumsec\n", ddir_str[i], p1, p2,
 						p3, p4, rs->min_run[i],
 						rs->max_run[i]);
@@ -166,7 +166,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	iops = (1000 * ts->total_io_u[ddir]) / runt;
 	iops_p = num2str(iops, 6, 1, 0);
 
-	log_info("  %s: io=%siB, bw=%siB/s, iops=%s, runt=%6lumsec\n",
+	log_info("  %s: io=%sB, bw=%sB/s, iops=%s, runt=%6lumsec\n",
 					ddir_str[ddir], io_p, bw_p, iops_p,
 					ts->runtime[ddir]);
 
@@ -210,7 +210,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		double p_of_agg;
 
 		p_of_agg = mean * 100 / (double) rs->agg[ddir];
-		log_info("    bw (KiB/s) : min=%5lu, max=%5lu, per=%3.2f%%,"
+		log_info("    bw (KB/s) : min=%5lu, max=%5lu, per=%3.2f%%,"
 			 " avg=%5.02f, stdev=%5.02f\n", min, max, p_of_agg,
 							mean, dev);
 	}

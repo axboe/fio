@@ -202,8 +202,8 @@ The job file parameters are:
 			also include k/m postfix.
 	direct=x	1 for direct IO, 0 for buffered IO
 	thinktime=x	"Think" x usec after each io
-	rate=x		Throttle rate to x KiB/sec
-	ratemin=x	Quit if rate of x KiB/sec can't be met
+	rate=x		Throttle rate to x KB/sec
+	ratemin=x	Quit if rate of x KB/sec can't be met
 	ratecycle=x	ratemin averaged over x msecs
 	cpumask=x	Only allow job to run on CPUs defined by mask.
 	cpus_allowed=x	Like 'cpumask', but allow text setting of CPU affinity.

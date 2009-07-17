@@ -39,7 +39,7 @@ int fio_pin_memory(void)
 	if (phys_mem) {
 		if ((mlock_size + 128 * 1024 * 1024) > phys_mem) {
 			mlock_size = phys_mem - 128 * 1024 * 1024;
-			log_info("fio: limiting mlocked memory to %lluMiB\n",
+			log_info("fio: limiting mlocked memory to %lluMB\n",
 							mlock_size >> 20);
 		}
 	}

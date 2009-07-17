@@ -336,7 +336,7 @@ void print_thread_status(void)
 
 		mr = num2str(m_rate, 4, 0, 1);
 		tr = num2str(t_rate, 4, 0, 1);
-		printf(", CR=%s/%s KiB/s", tr, mr);
+		printf(", CR=%s/%s KB/s", tr, mr);
 		free(tr);
 		free(mr);
 	} else if (m_iops || t_iops)
