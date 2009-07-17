@@ -627,6 +627,19 @@ static int gtod_cpu_verify(struct fio_option *o, void *data)
 	return 0;
 }
 
+static int kb_base_verify(struct fio_option *o, void *data)
+{
+	struct thread_data *td = data;
+
+	if (td->o.kb_base != 1024 && td->o.kb_base != 1000) {
+		log_err("fio: kb_base set to nonsensical value: %u\n",
+				td->o.kb_base);
+		return 1;
+	}
+
+	return 0;
+}
+
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
 
@@ -660,6 +673,14 @@ static struct fio_option options[] = {
 		.cb	= str_filename_cb,
 		.prio	= -1, /* must come after "directory" */
 		.help	= "File(s) to use for the workload",
+	},
+	{
+		.name	= "kb_base",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(kb_base),
+		.help	= "How many bytes per KB for reporting (1000 or 1024)",
+		.verify	= kb_base_verify,
+		.def	= "1024",
 	},
 	{
 		.name	= "lockfile",

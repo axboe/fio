@@ -42,6 +42,7 @@ struct group_run_stats {
 	unsigned long long max_bw[2], min_bw[2];
 	unsigned long long io_kb[2];
 	unsigned long long agg[2];
+	unsigned int kb_base;
 };
 
 /*
@@ -118,6 +119,8 @@ struct thread_stat {
 	unsigned continue_on_error;
 	unsigned long total_err_count;
 	int first_error;
+
+	unsigned int kb_base;
 };
 
 struct bssplit {
@@ -134,6 +137,7 @@ struct thread_options {
 	char *opendir;
 	char *ioengine;
 	enum td_ddir td_ddir;
+	unsigned int kb_base;
 	unsigned int ddir_nr;
 	unsigned int iodepth;
 	unsigned int iodepth_low;

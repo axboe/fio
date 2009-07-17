@@ -59,13 +59,15 @@ static void show_group_stats(struct group_run_stats *rs, int id)
 	log_info("\nRun status group %d (all jobs):\n", id);
 
 	for (i = 0; i <= DDIR_WRITE; i++) {
+		const int i2p = is_power_of_2(rs->kb_base);
+
 		if (!rs->max_run[i])
 			continue;
 
-		p1 = num2str(rs->io_kb[i], 6, 1024, 1);
-		p2 = num2str(rs->agg[i], 6, 1024, 1);
-		p3 = num2str(rs->min_bw[i], 6, 1024, 1);
-		p4 = num2str(rs->max_bw[i], 6, 1024, 1);
+		p1 = num2str(rs->io_kb[i], 6, rs->kb_base, i2p);
+		p2 = num2str(rs->agg[i], 6, rs->kb_base, i2p);
+		p3 = num2str(rs->min_bw[i], 6, rs->kb_base, i2p);
+		p4 = num2str(rs->max_bw[i], 6, rs->kb_base, i2p);
 
 		log_info("%s: io=%sB, aggrb=%sB/s, minb=%sB/s, maxb=%sB/s,"
 			 " mint=%llumsec, maxt=%llumsec\n", ddir_str[i], p1, p2,
@@ -153,15 +155,17 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	unsigned long long bw, iops;
 	double mean, dev;
 	char *io_p, *bw_p, *iops_p;
+	int i2p;
 
 	if (!ts->runtime[ddir])
 		return;
 
+	i2p = is_power_of_2(rs->kb_base);
 	runt = ts->runtime[ddir];
 
 	bw = (1000 * ts->io_bytes[ddir]) / runt;
-	io_p = num2str(ts->io_bytes[ddir] >> 10, 6, 1024, 1);
-	bw_p = num2str(bw >> 10, 6, 1024, 1);
+	io_p = num2str(ts->io_bytes[ddir], 6, 1, i2p);
+	bw_p = num2str(bw, 6, 1, i2p);
 
 	iops = (1000 * ts->total_io_u[ddir]) / runt;
 	iops_p = num2str(iops, 6, 1, 0);
@@ -457,6 +461,7 @@ void show_run_stats(void)
 	struct thread_data *td;
 	struct thread_stat *threadstats, *ts;
 	int i, j, k, l, nr_ts, last_ts, idx;
+	int kb_base_warned = 0;
 
 	runstats = malloc(sizeof(struct group_run_stats) * (groupid + 1));
 
@@ -529,6 +534,12 @@ void show_run_stats(void)
 			 * first pid in group, not very useful...
 			 */
 			ts->pid = td->pid;
+
+			ts->kb_base = td->o.kb_base;
+		} else if (ts->kb_base != td->o.kb_base && !kb_base_warned) {
+			log_info("fio: kb_base differs for jobs in group, using"
+				 " %u as the base\n", ts->kb_base);
+			kb_base_warned = 1;
 		}
 
 		ts->continue_on_error = td->o.continue_on_error;
@@ -590,6 +601,7 @@ void show_run_stats(void)
 
 		ts = &threadstats[i];
 		rs = &runstats[ts->groupid];
+		rs->kb_base = ts->kb_base;
 
 		for (j = 0; j <= DDIR_WRITE; j++) {
 			if (!ts->runtime[j])
@@ -603,7 +615,7 @@ void show_run_stats(void)
 			if (ts->runtime[j]) {
 				unsigned long runt;
 
-				runt = ts->runtime[j] * 1024 / 1000;
+				runt = ts->runtime[j];
 				bw = ts->io_bytes[j] / runt;
 			}
 			if (bw < rs->min_bw[j])
@@ -611,7 +623,7 @@ void show_run_stats(void)
 			if (bw > rs->max_bw[j])
 				rs->max_bw[j] = bw;
 
-			rs->io_kb[j] += ts->io_bytes[j] >> 10;
+			rs->io_kb[j] += ts->io_bytes[j] / rs->kb_base;
 		}
 	}
 
@@ -619,13 +631,13 @@ void show_run_stats(void)
 		unsigned long max_run[2];
 
 		rs = &runstats[i];
-		max_run[0] = rs->max_run[0] * 1024 / 1000;
-		max_run[1] = rs->max_run[1] * 1024 / 1000;
+		max_run[0] = rs->max_run[0];
+		max_run[1] = rs->max_run[1];
 
 		if (rs->max_run[0])
-			rs->agg[0] = (rs->io_kb[0]*1024) / max_run[0];
+			rs->agg[0] = (rs->io_kb[0] * 1000) / max_run[0];
 		if (rs->max_run[1])
-			rs->agg[1] = (rs->io_kb[1]*1024) / max_run[1];
+			rs->agg[1] = (rs->io_kb[1] * 1000) / max_run[1];
 	}
 
 	/*

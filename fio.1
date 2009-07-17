@@ -172,6 +172,11 @@ to perform before getting a new offset can be specified by appending
 `:\fIint\fR' to the pattern type.  The default is 1.
 .RE
 .TP
+.BI kb_base \fR=\fPint
+The base unit for a kilobyte. The defacto base is 2^10, 1024.  Storage
+manufacturers like to use 10^3 or 1000 as a base ten unit instead, for obvious
+reasons. Allow values are 1024 or 1000, with 1024 being the default.
+.TP
 .BI randrepeat \fR=\fPbool
 Seed the random number generator in a predictable way so results are repeatable
 across runs.  Default: true.
