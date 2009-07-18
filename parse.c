@@ -14,7 +14,7 @@
 #include "debug.h"
 
 static struct fio_option *fio_options;
-extern unsigned int fio_kb_base;
+extern unsigned int fio_get_kb_base(void *);
 
 static int vp_cmp(const void *p1, const void *p2)
 {
@@ -113,8 +113,9 @@ static unsigned long get_mult_time(char c)
 	}
 }
 
-static unsigned long long get_mult_bytes(char c)
+static unsigned long long get_mult_bytes(char c, void *data)
 {
+	unsigned int kb_base = fio_get_kb_base(data);
 	unsigned long long ret = 1;
 
 	switch (c) {
@@ -122,19 +123,19 @@ static unsigned long long get_mult_bytes(char c)
 		break;
 	case 'p':
 	case 'P':
-		ret *= (unsigned long long) fio_kb_base;
+		ret *= (unsigned long long) kb_base;
 	case 't':
 	case 'T':
-		ret *= (unsigned long long) fio_kb_base;
+		ret *= (unsigned long long) kb_base;
 	case 'g':
 	case 'G':
-		ret *= (unsigned long long) fio_kb_base;
+		ret *= (unsigned long long) kb_base;
 	case 'm':
 	case 'M':
-		ret *= (unsigned long long) fio_kb_base;
+		ret *= (unsigned long long) kb_base;
 	case 'k':
 	case 'K':
-		ret *= (unsigned long long) fio_kb_base;
+		ret *= (unsigned long long) kb_base;
 		break;
 	}
 
@@ -144,7 +145,7 @@ static unsigned long long get_mult_bytes(char c)
 /*
  * convert string into decimal value, noting any size suffix
  */
-int str_to_decimal(const char *str, long long *val, int kilo)
+int str_to_decimal(const char *str, long long *val, int kilo, void *data)
 {
 	int len, base;
 
@@ -162,21 +163,21 @@ int str_to_decimal(const char *str, long long *val, int kilo)
 		return 1;
 
 	if (kilo)
-		*val *= get_mult_bytes(str[len - 1]);
+		*val *= get_mult_bytes(str[len - 1], data);
 	else
 		*val *= get_mult_time(str[len - 1]);
 
 	return 0;
 }
 
-static int check_str_bytes(const char *p, long long *val)
+static int check_str_bytes(const char *p, long long *val, void *data)
 {
-	return str_to_decimal(p, val, 1);
+	return str_to_decimal(p, val, 1, data);
 }
 
 static int check_str_time(const char *p, long long *val)
 {
-	return str_to_decimal(p, val, 0);
+	return str_to_decimal(p, val, 0, NULL);
 }
 
 void strip_blank_front(char **p)
@@ -209,7 +210,7 @@ void strip_blank_end(char *p)
 	*(s + 1) = '\0';
 }
 
-static int check_range_bytes(const char *str, long *val)
+static int check_range_bytes(const char *str, long *val, void *data)
 {
 	char suffix;
 
@@ -217,7 +218,7 @@ static int check_range_bytes(const char *str, long *val)
 		return 1;
 
 	if (sscanf(str, "%lu%c", val, &suffix) == 2) {
-		*val *= get_mult_bytes(suffix);
+		*val *= get_mult_bytes(suffix, data);
 		return 0;
 	}
 
@@ -318,7 +319,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (is_time)
 			ret = check_str_time(ptr, &ull);
 		else
-			ret = check_str_bytes(ptr, &ull);
+			ret = check_str_bytes(ptr, &ull, data);
 
 		if (ret)
 			break;
@@ -385,8 +386,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		p1 = tmp;
 
 		ret = 1;
-		if (!check_range_bytes(p1, &ul1) &&
-		    !check_range_bytes(p2, &ul2)) {
+		if (!check_range_bytes(p1, &ul1, data) &&
+		    !check_range_bytes(p2, &ul2, data)) {
 			ret = 0;
 			if (ul1 > ul2) {
 				unsigned long foo = ul1;

@@ -232,6 +232,7 @@ void print_thread_status(void)
 	static unsigned int rate[2], iops[2];
 	static int linelen_last;
 	static int eta_good;
+	int i2p = 0;
 
 	if (temp_stall_ts || terse_output || eta_print == FIO_ETA_NEVER)
 		return;
@@ -292,6 +293,8 @@ void print_thread_status(void)
 		eta_sec = 0;
 
 	for_each_td(td, i) {
+		if (!i2p && is_power_of_2(td->o.kb_base))
+			i2p = 1;
 		if (exitall_on_terminate) {
 			if (eta_secs[i] < eta_sec)
 				eta_sec = eta_secs[i];
@@ -334,8 +337,8 @@ void print_thread_status(void)
 	if (m_rate || t_rate) {
 		char *tr, *mr;
 
-		mr = num2str(m_rate, 4, 0, 1);
-		tr = num2str(t_rate, 4, 0, 1);
+		mr = num2str(m_rate, 4, 0, i2p);
+		tr = num2str(t_rate, 4, 0, i2p);
 		printf(", CR=%s/%s KB/s", tr, mr);
 		free(tr);
 		free(mr);
@@ -355,8 +358,8 @@ void print_thread_status(void)
 			sprintf(perc_str, "%3.1f%% done", perc);
 		}
 
-		rate_str[0] = num2str(rate[0], 5, 10, 1);
-		rate_str[1] = num2str(rate[1], 5, 10, 1);
+		rate_str[0] = num2str(rate[0], 5, 10, i2p);
+		rate_str[1] = num2str(rate[1], 5, 10, i2p);
 
 		iops_str[0] = num2str(iops[0], 4, 1, 0);
 		iops_str[1] = num2str(iops[1], 4, 1, 0);

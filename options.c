@@ -15,8 +15,6 @@
 #include "parse.h"
 #include "lib/fls.h"
 
-unsigned int fio_kb_base = 1024;
-
 #define td_var_offset(var)	((size_t) &((struct thread_options *)0)->var)
 
 /*
@@ -84,7 +82,7 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 		} else
 			perc = -1;
 
-		if (str_to_decimal(fname, &val, 1)) {
+		if (str_to_decimal(fname, &val, 1, &td)) {
 			log_err("fio: bssplit conversion failed\n");
 			free(td->o.bssplit);
 			return 1;
@@ -639,7 +637,6 @@ static int kb_base_verify(struct fio_option *o, void *data)
 		return 1;
 	}
 
-	fio_kb_base = td->o.kb_base;
 	return 0;
 }
 
@@ -1718,4 +1715,17 @@ void options_mem_free(struct thread_data fio_unused *td)
 #if 0
 	__options_mem(td, 0);
 #endif
+}
+
+unsigned int fio_get_kb_base(void *data)
+{
+	struct thread_data *td = data;
+	unsigned int kb_base = 0;
+
+	if (td)
+		kb_base = td->o.kb_base;
+	if (!kb_base)
+		kb_base = 1024;
+
+	return kb_base;
 }
