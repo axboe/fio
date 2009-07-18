@@ -14,6 +14,7 @@
 #include "debug.h"
 
 static struct fio_option *fio_options;
+extern unsigned int fio_kb_base;
 
 static int vp_cmp(const void *p1, const void *p2)
 {
@@ -114,25 +115,30 @@ static unsigned long get_mult_time(char c)
 
 static unsigned long long get_mult_bytes(char c)
 {
+	unsigned long long ret = 1;
+
 	switch (c) {
-	case 'k':
-	case 'K':
-		return 1024;
-	case 'm':
-	case 'M':
-		return 1024 * 1024;
-	case 'g':
-	case 'G':
-		return 1024 * 1024 * 1024;
-	case 't':
-	case 'T':
-		return 1024 * 1024 * 1024 * 1024UL;
+	default:
+		break;
 	case 'p':
 	case 'P':
-		return 1024 * 1024 * 1024 * 1024ULL * 1024ULL;
-	default:
-		return 1;
+		ret *= (unsigned long long) fio_kb_base;
+	case 't':
+	case 'T':
+		ret *= (unsigned long long) fio_kb_base;
+	case 'g':
+	case 'G':
+		ret *= (unsigned long long) fio_kb_base;
+	case 'm':
+	case 'M':
+		ret *= (unsigned long long) fio_kb_base;
+	case 'k':
+	case 'K':
+		ret *= (unsigned long long) fio_kb_base;
+		break;
 	}
+
+	return ret;
 }
 
 /*

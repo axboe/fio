@@ -15,6 +15,8 @@
 #include "parse.h"
 #include "lib/fls.h"
 
+unsigned int fio_kb_base = 1024;
+
 #define td_var_offset(var)	((size_t) &((struct thread_options *)0)->var)
 
 /*
@@ -637,6 +639,7 @@ static int kb_base_verify(struct fio_option *o, void *data)
 		return 1;
 	}
 
+	fio_kb_base = td->o.kb_base;
 	return 0;
 }
 
@@ -678,9 +681,10 @@ static struct fio_option options[] = {
 		.name	= "kb_base",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(kb_base),
-		.help	= "How many bytes per KB for reporting (1000 or 1024)",
 		.verify	= kb_base_verify,
+		.prio	= 1,
 		.def	= "1024",
+		.help	= "How many bytes per KB for reporting (1000 or 1024)",
 	},
 	{
 		.name	= "lockfile",
