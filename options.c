@@ -82,7 +82,7 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 		} else
 			perc = -1;
 
-		if (str_to_decimal(fname, &val, 1)) {
+		if (str_to_decimal(fname, &val, 1, &td)) {
 			log_err("fio: bssplit conversion failed\n");
 			free(td->o.bssplit);
 			return 1;
@@ -627,6 +627,19 @@ static int gtod_cpu_verify(struct fio_option *o, void *data)
 	return 0;
 }
 
+static int kb_base_verify(struct fio_option *o, void *data)
+{
+	struct thread_data *td = data;
+
+	if (td->o.kb_base != 1024 && td->o.kb_base != 1000) {
+		log_err("fio: kb_base set to nonsensical value: %u\n",
+				td->o.kb_base);
+		return 1;
+	}
+
+	return 0;
+}
+
 #define __stringify_1(x)	#x
 #define __stringify(x)		__stringify_1(x)
 
@@ -660,6 +673,15 @@ static struct fio_option options[] = {
 		.cb	= str_filename_cb,
 		.prio	= -1, /* must come after "directory" */
 		.help	= "File(s) to use for the workload",
+	},
+	{
+		.name	= "kb_base",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(kb_base),
+		.verify	= kb_base_verify,
+		.prio	= 1,
+		.def	= "1024",
+		.help	= "How many bytes per KB for reporting (1000 or 1024)",
 	},
 	{
 		.name	= "lockfile",
@@ -1693,4 +1715,17 @@ void options_mem_free(struct thread_data fio_unused *td)
 #if 0
 	__options_mem(td, 0);
 #endif
+}
+
+unsigned int fio_get_kb_base(void *data)
+{
+	struct thread_data *td = data;
+	unsigned int kb_base = 0;
+
+	if (td)
+		kb_base = td->o.kb_base;
+	if (!kb_base)
+		kb_base = 1024;
+
+	return kb_base;
 }

@@ -62,7 +62,7 @@ extern void options_init(struct fio_option *);
 
 extern void strip_blank_front(char **);
 extern void strip_blank_end(char *);
-extern int str_to_decimal(const char *, long long *, int);
+extern int str_to_decimal(const char *, long long *, int, void *);
 
 /*
  * Handlers for the options

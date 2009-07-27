@@ -14,6 +14,7 @@
 #include "debug.h"
 
 static struct fio_option *fio_options;
+extern unsigned int fio_get_kb_base(void *);
 
 static int vp_cmp(const void *p1, const void *p2)
 {
@@ -41,15 +42,15 @@ static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
 	qsort(vpmap, entries, sizeof(struct value_pair), vp_cmp);
 }
 
-static void show_option_range(struct fio_option *o)
+static void show_option_range(struct fio_option *o, FILE *out)
 {
 	if (!o->minval && !o->maxval)
 		return;
 
-	printf("%20s: min=%d", "range", o->minval);
+	fprintf(out, "%20s: min=%d", "range", o->minval);
 	if (o->maxval)
-		printf(", max=%d", o->maxval);
-	printf("\n");
+		fprintf(out, ", max=%d", o->maxval);
+	fprintf(out, "\n");
 }
 
 static void show_option_values(struct fio_option *o)
@@ -73,6 +74,28 @@ static void show_option_values(struct fio_option *o)
 		printf("\n");
 }
 
+static void show_option_help(struct fio_option *o, FILE *out)
+{
+	const char *typehelp[] = {
+		"string (opt=bla)",
+		"string with possible k/m/g postfix (opt=4k)",
+		"string with time postfix (opt=10s)",
+		"string (opt=bla)",
+		"string with dual range (opt=1k-4k,4k-8k)",
+		"integer value (opt=100)",
+		"boolean value (opt=1)",
+		"no argument (opt)",
+	};
+
+	if (o->alias)
+		fprintf(out, "%20s: %s\n", "alias", o->alias);
+
+	fprintf(out, "%20s: %s\n", "type", typehelp[o->type]);
+	fprintf(out, "%20s: %s\n", "default", o->def ? o->def : "no default");
+	show_option_range(o, stdout);
+	show_option_values(o);
+}
+
 static unsigned long get_mult_time(char c)
 {
 	switch (c) {
@@ -90,30 +113,39 @@ static unsigned long get_mult_time(char c)
 	}
 }
 
-static unsigned long get_mult_bytes(char c)
+static unsigned long long get_mult_bytes(char c, void *data)
 {
+	unsigned int kb_base = fio_get_kb_base(data);
+	unsigned long long ret = 1;
+
 	switch (c) {
-	case 'k':
-	case 'K':
-		return 1024;
-	case 'm':
-	case 'M':
-		return 1024 * 1024;
+	default:
+		break;
+	case 'p':
+	case 'P':
+		ret *= (unsigned long long) kb_base;
+	case 't':
+	case 'T':
+		ret *= (unsigned long long) kb_base;
 	case 'g':
 	case 'G':
-		return 1024 * 1024 * 1024;
-	case 'e':
-	case 'E':
-		return 1024 * 1024 * 1024 * 1024UL;
-	default:
-		return 1;
+		ret *= (unsigned long long) kb_base;
+	case 'm':
+	case 'M':
+		ret *= (unsigned long long) kb_base;
+	case 'k':
+	case 'K':
+		ret *= (unsigned long long) kb_base;
+		break;
 	}
+
+	return ret;
 }
 
 /*
  * convert string into decimal value, noting any size suffix
  */
-int str_to_decimal(const char *str, long long *val, int kilo)
+int str_to_decimal(const char *str, long long *val, int kilo, void *data)
 {
 	int len, base;
 
@@ -131,21 +163,21 @@ int str_to_decimal(const char *str, long long *val, int kilo)
 		return 1;
 
 	if (kilo)
-		*val *= get_mult_bytes(str[len - 1]);
+		*val *= get_mult_bytes(str[len - 1], data);
 	else
 		*val *= get_mult_time(str[len - 1]);
 
 	return 0;
 }
 
-static int check_str_bytes(const char *p, long long *val)
+static int check_str_bytes(const char *p, long long *val, void *data)
 {
-	return str_to_decimal(p, val, 1);
+	return str_to_decimal(p, val, 1, data);
 }
 
 static int check_str_time(const char *p, long long *val)
 {
-	return str_to_decimal(p, val, 0);
+	return str_to_decimal(p, val, 0, NULL);
 }
 
 void strip_blank_front(char **p)
@@ -178,7 +210,7 @@ void strip_blank_end(char *p)
 	*(s + 1) = '\0';
 }
 
-static int check_range_bytes(const char *str, long *val)
+static int check_range_bytes(const char *str, long *val, void *data)
 {
 	char suffix;
 
@@ -186,7 +218,7 @@ static int check_range_bytes(const char *str, long *val)
 		return 1;
 
 	if (sscanf(str, "%lu%c", val, &suffix) == 2) {
-		*val *= get_mult_bytes(suffix);
+		*val *= get_mult_bytes(suffix, data);
 		return 0;
 	}
 
@@ -287,7 +319,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (is_time)
 			ret = check_str_time(ptr, &ull);
 		else
-			ret = check_str_bytes(ptr, &ull);
+			ret = check_str_bytes(ptr, &ull, data);
 
 		if (ret)
 			break;
@@ -354,8 +386,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		p1 = tmp;
 
 		ret = 1;
-		if (!check_range_bytes(p1, &ul1) &&
-		    !check_range_bytes(p2, &ul2)) {
+		if (!check_range_bytes(p1, &ul1, data) &&
+		    !check_range_bytes(p2, &ul2, data)) {
 			ret = 0;
 			if (ul1 > ul2) {
 				unsigned long foo = ul1;
@@ -431,8 +463,14 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	if (ret)
 		return ret;
 
-	if (o->verify)
+	if (o->verify) {
 		ret = o->verify(o, data);
+		if (ret) {
+			fprintf(stderr,"Correct format for offending option\n");
+			fprintf(stderr, "%20s: %s\n", o->name, o->help);
+			show_option_help(o, stderr);
+		}
+	}
 
 	return ret;
 }
@@ -668,28 +706,6 @@ static int string_distance(const char *s1, const char *s2)
 	return i;
 }
 
-static void show_option_help(struct fio_option *o)
-{
-	const char *typehelp[] = {
-		"string (opt=bla)",
-		"string with possible k/m/g postfix (opt=4k)",
-		"string with time postfix (opt=10s)",
-		"string (opt=bla)",
-		"string with dual range (opt=1k-4k,4k-8k)",
-		"integer value (opt=100)",
-		"boolean value (opt=1)",
-		"no argument (opt)",
-	};
-
-	if (o->alias)
-		printf("%20s: %s\n", "alias", o->alias);
-
-	printf("%20s: %s\n", "type", typehelp[o->type]);
-	printf("%20s: %s\n", "default", o->def ? o->def : "no default");
-	show_option_range(o);
-	show_option_values(o);
-}
-
 static struct fio_option *find_child(struct fio_option *options,
 				     struct fio_option *o)
 {
@@ -794,7 +810,7 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		if (!match)
 			continue;
 
-		show_option_help(o);
+		show_option_help(o, stdout);
 	}
 
 	if (found)
@@ -804,7 +820,7 @@ int show_cmd_help(struct fio_option *options, const char *name)
 	if (closest) {
 		printf(" - showing closest match\n");
 		printf("%20s: %s\n", closest->name, closest->help);
-		show_option_help(closest);
+		show_option_help(closest, stdout);
 	} else
 		printf("\n");
 

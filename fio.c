@@ -223,7 +223,7 @@ static int __check_min_rate(struct thread_data *td, struct timeval *now,
 				if (rate < ratemin ||
 				    bytes < td->rate_bytes[ddir]) {
 					log_err("%s: min rate %u not met, got"
-						" %luKiB/sec\n", td->o.name,
+						" %luKB/sec\n", td->o.name,
 							ratemin, rate);
 					return 1;
 				}

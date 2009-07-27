@@ -112,7 +112,7 @@ section residing above it. If the first character in a line is a ';' or a
 '#', the entire line is discarded as a comment.
 
 So let's look at a really simple job file that defines two processes, each
-randomly reading from a 128MiB file.
+randomly reading from a 128MB file.
 
 ; -- start job file --
 [global]
@@ -150,9 +150,9 @@ numjobs=4
 
 Here we have no global section, as we only have one job defined anyway.
 We want to use async io here, with a depth of 4 for each file. We also
-increased the buffer size used to 32KiB and define numjobs to 4 to
+increased the buffer size used to 32KB and define numjobs to 4 to
 fork 4 identical jobs. The result is 4 processes each randomly writing
-to their own 64MiB file. Instead of using the above job file, you could
+to their own 64MB file. Instead of using the above job file, you could
 have given the parameters on the command line. For this case, you would
 specify:
 
@@ -197,21 +197,21 @@ Some parameters take an option of a given type, such as an integer or
 a string. The following types are used:
 
 str	String. This is a sequence of alpha characters.
-time	Integer with possible time postfix. In seconds unless otherwise
+time	Integer with possible time suffix. In seconds unless otherwise
 	specified, use eg 10m for 10 minutes. Accepts s/m/h for seconds,
 	minutes, and hours.
-int	SI integer. A whole number value, which may contain a postfix
-	describing the base of the number. Accepted postfixes are k/m/g,
-	meaning kilo, mega, and giga. So if you want to specify 4096,
-	you could either write out '4096' or just give 4k. The postfixes
-	signify base 2 values, so 1024 is 1k and 1024k is 1m and so on.
-	If the option accepts an upper and lower range, use a colon ':'
-	or minus '-' to separate such values. May also include a prefix
-	to indicate numbers base. If 0x is used, the number is assumed to
-	be hexadecimal. See irange.
+int	SI integer. A whole number value, which may contain a suffix
+	describing the base of the number. Accepted suffixes are k/m/g/t/p,
+	meaning kilo, mega, giga, tera, and peta. The suffix is not case
+	sensitive. So if you want to specify 4096, you could either write
+	out '4096' or just give 4k. The suffixes signify base 2 values, so
+	1024 is 1k and 1024k is 1m and so on. If the option accepts an upper
+	and lower range, use a colon ':' or minus '-' to separate such values.
+	May also include a prefix to indicate numbers base. If 0x is used,
+	the number is assumed to be hexadecimal. See irange.
 bool	Boolean. Usually parsed as an integer, however only defined for
 	true and false (1 and 0).
-irange	Integer range with postfix. Allows value range to be given, such
+irange	Integer range with suffix. Allows value range to be given, such
 	as 1024-4096. A colon may also be used as the separator, eg
 	1k:4k. If the option allows two sets of ranges, they can be
 	specified with a ',' or '/' delimiter: 1k-4k/8k-32k. Also see
@@ -289,6 +289,11 @@ rw=str		Type of io pattern. Accepted values are:
 		every 8 IO's. The result would be a seek for only every 8
 		IO's, instead of for every IO. Use rw=randread:8 to specify
 		that.
+
+kb_base=int	The base unit for a kilobyte. The defacto base is 2^10, 1024.
+		Storage manufacturers like to use 10^3 or 1000 as a base
+		ten unit instead, for obvious reasons. Allow values are
+		1024 or 1000, with 1024 being the default.
 
 randrepeat=bool	For random IO workloads, seed the generator in a predictable
 		way so that results are repeatable across repetitions.
@@ -595,7 +600,7 @@ thinktime_blocks
 		after every block.
 
 rate=int	Cap the bandwidth used by this job. The number is in bytes/sec,
-		the normal postfix rules apply. You can use rate=500k to limit
+		the normal suffix rules apply. You can use rate=500k to limit
 		reads and writes to 500k each, or you can specify read and
 		writes separately. Using rate=1m,500k would limit reads to
 		1MB/sec and writes to 500KB/sec. Capping only reads or
@@ -691,7 +696,7 @@ mem=str		Fio can use various types of memory as the io unit buffer.
 		that for shmhuge and mmaphuge to work, the system must have
 		free huge pages allocated. This can normally be checked
 		and set by reading/writing /proc/sys/vm/nr_hugepages on a
-		Linux system. Fio assumes a huge page is 4MiB in size. So
+		Linux system. Fio assumes a huge page is 4MB in size. So
 		to calculate the number of huge pages you need for a given
 		job file, add up the io depth of all jobs (normally one unless
 		iodepth= is used) and multiply by the maximum bs set. Then
@@ -715,7 +720,7 @@ iomem_align=int	This indiciates the memory alignment of the IO memory buffers.
 
 hugepage-size=int
 		Defines the size of a huge page. Must at least be equal
-		to the system setting, see /proc/meminfo. Defaults to 4MiB.
+		to the system setting, see /proc/meminfo. Defaults to 4MB.
 		Should probably always be a multiple of megabytes, so using
 		hugepage-size=Xm is the preferred way to set this to avoid
 		setting a non-pow-2 bad value.
@@ -1005,10 +1010,10 @@ each thread, group of threads, and disks in that order. For each data
 direction, the output looks like:
 
 Client1 (g=0): err= 0:
-  write: io=    32MiB, bw=   666KiB/s, runt= 50320msec
+  write: io=    32MB, bw=   666KB/s, runt= 50320msec
     slat (msec): min=    0, max=  136, avg= 0.03, stdev= 1.92
     clat (msec): min=    0, max=  631, avg=48.50, stdev=86.82
-    bw (KiB/s) : min=    0, max= 1196, per=51.00%, avg=664.02, stdev=681.68
+    bw (KB/s) : min=    0, max= 1196, per=51.00%, avg=664.02, stdev=681.68
   cpu        : usr=1.49%, sys=0.25%, ctx=7969, majf=0, minf=17
   IO depths    : 1=0.1%, 2=0.3%, 4=0.5%, 8=99.0%, 16=0.0%, 32=0.0%, >32=0.0%
      submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
@@ -1068,8 +1073,8 @@ After each client has been listed, the group statistics are printed. They
 will look like this:
 
 Run status group 0 (all jobs):
-   READ: io=64MiB, aggrb=22178, minb=11355, maxb=11814, mint=2840msec, maxt=2955msec
-  WRITE: io=64MiB, aggrb=1302, minb=666, maxb=669, mint=50093msec, maxt=50320msec
+   READ: io=64MB, aggrb=22178, minb=11355, maxb=11814, mint=2840msec, maxt=2955msec
+  WRITE: io=64MB, aggrb=1302, minb=666, maxb=669, mint=50093msec, maxt=50320msec
 
 For each data direction, it prints:
 
@@ -1112,12 +1117,12 @@ Split up, the format is as follows:
 
 	jobname, groupid, error
 	READ status:
-		KiB IO, bandwidth (KiB/sec), runtime (msec)
+		KB IO, bandwidth (KB/sec), runtime (msec)
 		Submission latency: min, max, mean, deviation
 		Completion latency: min, max, mean, deviation
 		Bw: min, max, aggregate percentage of total, mean, deviation
 	WRITE status:
-		KiB IO, bandwidth (KiB/sec), runtime (msec)
+		KB IO, bandwidth (KB/sec), runtime (msec)
 		Submission latency: min, max, mean, deviation
 		Completion latency: min, max, mean, deviation
 		Bw: min, max, aggregate percentage of total, mean, deviation
