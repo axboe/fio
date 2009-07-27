@@ -478,6 +478,12 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 						  p + hdr_size,
 						  hdr_inc - hdr_size,
 						  hdr_size % 4);
+			/*
+			 * Also verify the meta data, if applicable
+			 */
+			if (hdr->verify_type == VERIFY_META)
+				ret |= verify_io_u_meta(hdr, td, io_u, hdr_num);
+
 			if (ret)
 				log_err("fio: verify failed at %llu/%u\n",
 					io_u->offset + hdr_num * hdr->len,
