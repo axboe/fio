@@ -1105,7 +1105,10 @@ static void *thread_main(void *data)
 	clear_state = 0;
 	while (keep_running(td)) {
 		fio_gettime(&td->start, NULL);
-		memcpy(&td->ts.stat_sample_time, &td->start, sizeof(td->start));
+		memcpy(&td->ts.stat_sample_time[0], &td->start,
+				sizeof(td->start));
+		memcpy(&td->ts.stat_sample_time[1], &td->start,
+				sizeof(td->start));
 		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
 
 		if (td->o.ratemin[0] || td->o.ratemin[1])
