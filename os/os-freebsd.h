@@ -51,4 +51,8 @@ static inline long os_random_long(os_random_state_t *rs)
 	return val;
 }
 
+#ifdef MADV_FREE
+#define FIO_MADV_FREE	MADV_FREE
+#endif
+
 #endif

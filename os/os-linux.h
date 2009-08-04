@@ -250,6 +250,10 @@ static inline int fio_lookup_raw(dev_t dev, int *majdev, int *mindev)
 #define FIO_O_NOATIME	0
 #endif
 
+#ifdef MADV_REMOVE
+#define FIO_MADV_FREE	MADV_REMOVE
+#endif
+
 #define CACHE_LINE_FILE	\
 	"/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
 

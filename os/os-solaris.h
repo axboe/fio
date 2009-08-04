@@ -108,4 +108,8 @@ static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
  */
 #define FIO_MAX_CPUS			16384
 
+#ifdef MADV_FREE
+#define FIO_MADV_FREE	MADV_FREE
+#endif
+
 #endif
