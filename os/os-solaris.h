@@ -28,7 +28,13 @@ typedef struct solaris_rand_seed os_random_state_t;
  */
 static inline int blockdev_size(int fd, unsigned long long *bytes)
 {
-	return EINVAL;
+	off_t end = lseek(fd, 0, SEEK_END);
+
+	if (end < 0)
+		return errno;
+
+	*bytes = end;
+	return 0;
 }
 
 static inline int blockdev_invalidate_cache(int fd)
