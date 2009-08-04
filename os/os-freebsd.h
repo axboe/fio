@@ -12,9 +12,6 @@
 typedef unsigned long os_cpu_mask_t;
 typedef unsigned int os_random_state_t;
 
-/*
- * FIXME
- */
 static inline int blockdev_size(int fd, unsigned long long *bytes)
 {
 	off_t end = lseek(fd, 0, SEEK_END);

@@ -23,9 +23,6 @@ struct solaris_rand_seed {
 typedef psetid_t os_cpu_mask_t;
 typedef struct solaris_rand_seed os_random_state_t;
 
-/*
- * FIXME
- */
 static inline int blockdev_size(int fd, unsigned long long *bytes)
 {
 	off_t end = lseek(fd, 0, SEEK_END);
