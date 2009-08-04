@@ -243,8 +243,11 @@ filename=str	Fio normally makes up a filename based on the job name,
 		can specify a number of files by separating the names with a
 		':' colon. So if you wanted a job to open /dev/sda and /dev/sdb
 		as the two working files, you would use
-		filename=/dev/sda:/dev/sdb. '-' is a reserved name, meaning
-		stdin or stdout. Which of the two depends on the read/write
+		filename=/dev/sda:/dev/sdb. If the wanted filename does need to
+		include a colon, then escape that with a '\' character. For
+		instance, if the filename is "/dev/dsk/foo@3,0:c", then you would
+		use filename="/dev/dsk/foo@3,0\:c". '-' is a reserved name,
+		meaning stdin or stdout. Which of the two depends on the read/write
 		direction set.
 
 opendir=str	Tell fio to recursively add any file it can find in this

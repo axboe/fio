@@ -449,6 +449,52 @@ static int check_dir(struct thread_data *td, char *fname)
 	return 0;
 }
 
+/*
+ * Return next file in the string. Files are separated with ':'. If the ':'
+ * is escaped with a '\', then that ':' is part of the filename and does not
+ * indicate a new file.
+ */
+static char *get_next_file_name(char **ptr)
+{
+	char *str = *ptr;
+	char *p, *start;
+
+	if (!str || !strlen(str))
+		return NULL;
+
+	start = str;
+	do {
+		/*
+		 * No colon, we are done
+		 */
+		p = strchr(str, ':');
+		if (!p) {
+			*ptr = NULL;
+			break;
+		}
+
+		/*
+		 * We got a colon, but it's the first character. Skip and
+		 * continue
+		 */
+		if (p == start) {
+			str = ++start;
+			continue;
+		}
+
+		if (*(p - 1) != '\\') {
+			*p = '\0';
+			*ptr = p + 1;
+			break;
+		}
+
+		memmove(p - 1, p, strlen(p) + 1);
+		str = p;
+	} while (1);
+
+	return start;
+}
+
 static int str_filename_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
@@ -462,7 +508,7 @@ static int str_filename_cb(void *data, const char *input)
 	if (!td->files_index)
 		td->o.nr_files = 0;
 
-	while ((fname = strsep(&str, ":")) != NULL) {
+	while ((fname = get_next_file_name(&str)) != NULL) {
 		if (!strlen(fname))
 			break;
 		if (check_dir(td, fname)) {
