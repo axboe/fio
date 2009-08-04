@@ -62,7 +62,7 @@ static void wait_for_event(struct timeval *tv)
 		io_u->resid = io_u->xfer_buflen - io_u->resultp.aio_return;
 		io_u->error = 0;
 	} else
-		io_u->error = io_u->resultp.aio_return;
+		io_u->error = io_u->resultp.aio_errno;
 
 	/*
 	 * For SIGIO, we need a write barrier between the two, so that
