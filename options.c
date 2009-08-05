@@ -1698,14 +1698,102 @@ void fio_options_dup_and_init(struct option *long_options)
 	}
 }
 
+struct fio_keyword {
+	const char *word;
+	const char *desc;
+	char *replace;
+};
+
+static struct fio_keyword fio_keywords[] = {
+	{
+		.word	= "$pagesize",
+		.desc	= "Page size in the system",
+	},
+	{
+		.word	= "$mb_memory",
+		.desc	= "Megabytes of memory online",
+	},
+	{
+		.word	= "$ncpus",
+		.desc	= "Number of CPUs online in the system",
+	},
+	{
+		.word	= NULL,
+	},
+};
+
+void fio_keywords_init(void)
+{
+	unsigned long mb_memory;
+	char buf[128];
+	long l;
+
+	sprintf(buf, "%lu", page_size);
+	fio_keywords[0].replace = strdup(buf);
+
+	l = sysconf(_SC_PHYS_PAGES);
+	mb_memory = l * (page_size / 1024UL);
+	sprintf(buf, "%lu", mb_memory);
+	fio_keywords[1].replace = strdup(buf);
+
+	l = sysconf(_SC_NPROCESSORS_ONLN);
+	sprintf(buf, "%lu", l);
+	fio_keywords[2].replace = strdup(buf);
+}
+
+/*
+ * Look for reserved variable names and replace them with real values
+ */
+static char *fio_keyword_replace(char *opt)
+{
+	char *s;
+	int i;
+
+	for (i = 0; fio_keywords[i].word != NULL; i++) {
+		struct fio_keyword *kw = &fio_keywords[i];
+
+		while ((s = strstr(opt, kw->word)) != NULL) {
+			char *new = malloc(strlen(opt) + 1);
+			char *o_org = opt;
+			int olen = s - opt;
+			int len;
+
+			/*
+			 * Copy part of the string before the keyword and
+			 * sprintf() the replacement after it.
+			 */
+			memcpy(new, opt, olen);
+			len = sprintf(new + olen, "%s", kw->replace);
+
+			/*
+			 * If there's more in the original string, copy that
+			 * in too
+			 */
+			opt += strlen(kw->word) + olen;
+			if (strlen(opt))
+				memcpy(new + olen + len, opt, opt - o_org - 1);
+
+			/*
+			 * replace opt and free the old opt
+			 */
+			opt = new;
+			free(o_org);
+		}
+	}
+
+	return opt;
+}
+
 int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 {
 	int i, ret;
 
 	sort_options(opts, options, num_opts);
 
-	for (ret = 0, i = 0; i < num_opts; i++)
+	for (ret = 0, i = 0; i < num_opts; i++) {
+		opts[i] = fio_keyword_replace(opts[i]);
 		ret |= parse_option(opts[i], options, td);
+	}
 
 	return ret;
 }

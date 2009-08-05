@@ -158,6 +158,9 @@ specify:
 
 $ fio --name=random-writers --ioengine=libaio --iodepth=4 --rw=randwrite --bs=32k --direct=0 --size=64m --numjobs=4
 
+4.1 Environment variables
+-------------------------
+
 fio also supports environment variable expansion in job files. Any
 substring of the form "${VARNAME}" as part of an option value (in other
 words, on the right of the `='), will be expanded to the value of the
@@ -187,6 +190,20 @@ numjobs=4
 
 fio ships with a few example job files, you can also look there for
 inspiration.
+
+4.2 Reserved keywords
+---------------------
+
+Additionally, fio has a set of reserved keywords that will be replaced
+internally with the appropriate value. Those keywords are:
+
+$pagesize	The architecture page size of the running system
+$mb_memory	Megabytes of total memory in the system
+$ncpus		Number of online available CPUs
+
+These can be used on the command line or in the job file, and will be
+automatically substituted with the current system values when the job
+is run.
 
 
 5.0 Detailed list of parameters
