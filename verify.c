@@ -19,6 +19,7 @@
 #include "crc/crc7.h"
 #include "crc/sha256.h"
 #include "crc/sha512.h"
+#include "crc/sha1.h"
 
 static void fill_random_bytes(struct thread_data *td, void *p, unsigned int len)
 {
@@ -149,6 +150,9 @@ static inline unsigned int __hdr_size(int verify_type)
 	case VERIFY_META:
 		len = sizeof(struct vhdr_meta);
 		break;
+	case VERIFY_SHA1:
+		len = sizeof(struct vhdr_sha1);
+		break;
 	default:
 		log_err("fio: unknown verify header!\n");
 		assert(0);
@@ -240,6 +244,32 @@ static int verify_io_u_sha256(struct verify_header *hdr, struct io_u *io_u,
 				io_u->offset + header_num * hdr->len, hdr->len);
 		hexdump(vh->sha256, sizeof(vh->sha256));
 		hexdump(sha256_ctx.buf, sizeof(sha256));
+		return EILSEQ;
+	}
+
+	return 0;
+}
+
+static int verify_io_u_sha1(struct verify_header *hdr, struct io_u *io_u,
+			    unsigned int header_num)
+{
+	void *p = io_u_verify_off(hdr, io_u, header_num);
+	struct vhdr_sha1 *vh = hdr_priv(hdr);
+	uint32_t sha1[5];
+	struct sha1_ctx sha1_ctx = {
+		.H = sha1,
+	};
+
+	dprint(FD_VERIFY, "sha1 verify io_u %p, len %u\n", io_u, hdr->len);
+
+	sha1_init(&sha1_ctx);
+	sha1_update(&sha1_ctx, p, hdr->len - hdr_size(hdr));
+
+	if (memcmp(vh->sha1, sha1_ctx.H, sizeof(sha1))) {
+		log_err("sha1: verify failed at %llu/%u\n",
+				io_u->offset + header_num * hdr->len, hdr->len);
+		hexdump(vh->sha1, sizeof(vh->sha1));
+		hexdump(sha1_ctx.H, sizeof(sha1));
 		return EILSEQ;
 	}
 
@@ -520,6 +550,9 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		case VERIFY_META:
 			ret = verify_io_u_meta(hdr, td, io_u, hdr_num);
 			break;
+		case VERIFY_SHA1:
+			ret = verify_io_u_sha1(hdr, io_u, hdr_num);
+			break;
 		default:
 			log_err("Bad verify type %u\n", hdr->verify_type);
 			ret = EINVAL;
@@ -564,6 +597,17 @@ static void fill_sha256(struct verify_header *hdr, void *p, unsigned int len)
 
 	sha256_init(&sha256_ctx);
 	sha256_update(&sha256_ctx, p, len);
+}
+
+static void fill_sha1(struct verify_header *hdr, void *p, unsigned int len)
+{
+	struct vhdr_sha1 *vh = hdr_priv(hdr);
+	struct sha1_ctx sha1_ctx = {
+		.H = vh->sha1,
+	};
+
+	sha1_init(&sha1_ctx);
+	sha1_update(&sha1_ctx, p, len);
 }
 
 static void fill_crc7(struct verify_header *hdr, void *p, unsigned int len)
@@ -689,6 +733,11 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 			dprint(FD_VERIFY, "fill meta io_u %p, len %u\n",
 							io_u, hdr->len);
 			fill_meta(hdr, td, io_u, header_num);
+			break;
+		case VERIFY_SHA1:
+			dprint(FD_VERIFY, "fill sha1 io_u %p, len %u\n",
+							io_u, hdr->len);
+			fill_sha1(hdr, data, data_len);
 			break;
 		default:
 			log_err("fio: bad verify type: %d\n", td->o.verify);

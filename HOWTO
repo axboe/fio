@@ -794,6 +794,8 @@ verify=str	If writing to a file, fio can verify the file contents
 
 			sha256	Use sha256 as the checksum function.
 
+			sha1	Use optimized sha1 as the checksum function.
+
 			meta	Write extra information about each io
 				(timestamp, block number etc.). The block
 				number is verified.

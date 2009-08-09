@@ -15,6 +15,7 @@ enum {
 	VERIFY_SHA256,			/* sha256 sum data blocks */
 	VERIFY_SHA512,			/* sha512 sum data blocks */
 	VERIFY_META,			/* block_num, timestamp etc. */
+	VERIFY_SHA1,			/* sha1 sum data blocks */
 	VERIFY_NULL,			/* pretend to verify */
 };
 
@@ -37,6 +38,9 @@ struct vhdr_sha512 {
 };
 struct vhdr_sha256 {
 	uint8_t sha256[128];
+};
+struct vhdr_sha1 {
+	uint32_t sha1[5];
 };
 struct vhdr_crc64 {
 	uint64_t crc64;
