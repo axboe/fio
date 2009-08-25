@@ -529,8 +529,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	td->ts.bw_stat[0].min_val = td->ts.bw_stat[1].min_val = ULONG_MAX;
 	td->ddir_nr = td->o.ddir_nr;
 
-	if ((td->o.stonewall || td->o.numjobs > 1 || td->o.new_group)
-	     && prev_group_jobs) {
+	if ((td->o.stonewall || td->o.new_group) && prev_group_jobs) {
 		prev_group_jobs = 0;
 		groupid++;
 	}
