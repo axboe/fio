@@ -31,6 +31,8 @@ enum {
 #include "arch-sparc64.h"
 #elif defined(__arm__)
 #include "arch-arm.h"
+#elif defined(__mips__) || defined(__mips64__)
+#include "arch-mips.h"
 #else
 #error "Unsupported arch"
 #endif
