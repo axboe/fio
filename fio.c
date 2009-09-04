@@ -606,7 +606,8 @@ static void do_io(struct thread_data *td)
 		 * Add verification end_io handler, if asked to verify
 		 * a previously written file.
 		 */
-		if (td->o.verify != VERIFY_NONE && io_u->ddir == DDIR_READ) {
+		if (td->o.verify != VERIFY_NONE && io_u->ddir == DDIR_READ &&
+		    !td_rw(td)) {
 			if (td->o.verify_async)
 				io_u->end_io = verify_io_u_async;
 			else
