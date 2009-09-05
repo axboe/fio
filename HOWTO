@@ -823,7 +823,11 @@ verify=str	If writing to a file, fio can verify the file contents
 
 		This option can be used for repeated burn-in tests of a
 		system to make sure that the written data is also
-		correctly read back.
+		correctly read back. If the data direction given is
+		a read or random read, fio will assume that it should
+		verify a previously written file. If the data direction
+		includes any form of write, the verify will be of the
+		newly written data.
 
 verifysort=bool	If set, fio will sort written verify blocks when it deems
 		it faster to read them back in a sorted manner. This is

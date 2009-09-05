@@ -571,7 +571,7 @@ values are:
 .RS
 .RS
 .TP
-.B md5 crc16 crc32 crc64 crc7 sha256 sha512
+.B md5 crc16 crc32 crc32c crc32c-intel crc64 crc7 sha256 sha512 sha1
 Store appropriate checksum in the header of each block.
 .TP
 .B meta
@@ -586,6 +586,12 @@ than 32-bits.
 .B null
 Pretend to verify.  Used for testing internals.
 .RE
+
+This option can be used for repeated burn-in tests of a system to make sure
+that the written data is also correctly read back. If the data direction given
+is a read or random read, fio will assume that it should verify a previously
+written file. If the data direction includes any form of write, the verify will
+be of the newly written data.
 .RE
 .TP
 .BI verify_sort \fR=\fPbool
