@@ -169,7 +169,8 @@ static int thread_eta(struct thread_data *td)
 			}
 		}
 		if (td->o.rate[0] || td->o.rate[1]) {
-			r_eta = (bytes_total / 1024) / (td->o.rate[0] + td->o.rate[1]);
+			r_eta = (bytes_total / 1024) /
+					(td->o.rate[0] + td->o.rate[1]);
 			r_eta += td->o.start_delay;
 		}
 
@@ -264,7 +265,8 @@ void print_thread_status(void)
 			t_rate += td->o.rate[0] + td->o.rate[1];
 			m_rate += td->o.ratemin[0] + td->o.ratemin[1];
 			t_iops += td->o.rate_iops[0] + td->o.rate_iops[1];
-			m_iops += td->o.rate_iops_min[0] + td->o.rate_iops_min[1];
+			m_iops += td->o.rate_iops_min[0] +
+					td->o.rate_iops_min[1];
 			files_open += td->nr_open_files;
 		} else if (td->runstate == TD_RAMP) {
 			nr_running++;
@@ -365,7 +367,7 @@ void print_thread_status(void)
 		iops_str[1] = num2str(iops[1], 4, 1, 0);
 
 		l = printf(": [%s] [%s] [%s/%s /s] [%s/%s iops] [eta %s]",
-				 run_str, perc_str, rate_str[0], rate_str[1], 
+				 run_str, perc_str, rate_str[0], rate_str[1],
 				 iops_str[0], iops_str[1], eta_str);
 		if (l >= 0 && l < linelen_last)
 			printf("%*s", linelen_last - l, "");

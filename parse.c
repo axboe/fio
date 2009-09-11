@@ -557,7 +557,7 @@ static int opt_cmp(const void *p1, const void *p2)
 
 	o1 = get_option(s1, fio_options, &foo);
 	o2 = get_option(s2, fio_options, &foo);
-	
+
 	prio1 = prio2 = 0;
 	if (o1)
 		prio1 = o1->prio;

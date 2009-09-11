@@ -219,7 +219,7 @@ static void store_ipo(struct thread_data *td, unsigned long long offset,
 	queue_io_piece(td, ipo);
 }
 
-static void handle_trace_notify( struct blk_io_trace *t)
+static void handle_trace_notify(struct blk_io_trace *t)
 {
 	switch (t->action) {
 	case BLK_TN_PROCESS:

@@ -196,7 +196,7 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 	bitmap_blocks = alloc_size / SMALLOC_BPL;
 	alloc_size += bitmap_blocks * sizeof(unsigned int);
 	pool->mmap_size = alloc_size;
-	
+
 	pool->nr_blocks = bitmap_blocks;
 	pool->free_blocks = bitmap_blocks * SMALLOC_BPB;
 

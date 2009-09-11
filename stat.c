@@ -752,7 +752,8 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 	if (spent < td->o.bw_avg_time)
 		return;
 
-	rate = (td->this_io_bytes[ddir] - ts->stat_io_bytes[ddir]) * 1000 / spent / 1024;
+	rate = (td->this_io_bytes[ddir] - ts->stat_io_bytes[ddir]) *
+			1000 / spent / 1024;
 	add_stat_sample(&ts->bw_stat[ddir], rate);
 
 	if (ts->bw_log)

@@ -356,7 +356,7 @@ static int set_cpus_allowed(struct thread_data *td, os_cpu_mask_t *mask,
 				ret = 1;
 				break;
 			}
-	
+
 			dprint(FD_PARSE, "set cpu allowed %d\n", icpu);
 			fio_cpu_set(mask, icpu);
 			icpu++;
@@ -1498,7 +1498,7 @@ static struct fio_option options[] = {
 		.help	= "Create files when they are opened for IO",
 		.def	= "0",
 	},
- 	{
+	{
 		.name	= "pre_read",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(pre_read),

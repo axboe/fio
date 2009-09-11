@@ -627,7 +627,8 @@ int setup_files(struct thread_data *td)
 			fio_file_clear_extend(f);
 			if (!td->o.fill_device) {
 				old_len = f->real_file_size;
-				extend_len = f->io_size + f->file_offset - old_len;
+				extend_len = f->io_size + f->file_offset -
+						old_len;
 			}
 			f->real_file_size = (f->io_size + f->file_offset);
 			err = extend_file(td, f);
@@ -790,7 +791,7 @@ int add_file(struct thread_data *td, const char *fname)
 		log_err("fio: smalloc OOM\n");
 		assert(0);
 	}
-		
+
 	f->fd = -1;
 
 	if (td->files_size <= td->files_index) {
@@ -818,7 +819,7 @@ int add_file(struct thread_data *td, const char *fname)
 		log_err("fio: smalloc OOM\n");
 		assert(0);
 	}
-	
+
 	get_file_type(f);
 
 	switch (td->o.file_lock_mode) {
@@ -1019,14 +1020,14 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 			assert(0);
 		}
 		__f->fd = -1;
-	
+
 		if (f->file_name) {
 			__f->file_name = smalloc_strdup(f->file_name);
 			if (!__f->file_name) {
 				log_err("fio: smalloc OOM\n");
 				assert(0);
 			}
-	
+
 			__f->filetype = f->filetype;
 		}
 

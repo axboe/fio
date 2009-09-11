@@ -345,7 +345,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	odir = ddir ^ 1;
 	if (td_rw(td) && __should_check_rate(td, odir))
 		td->rate_pending_usleep[odir] -= usec;
-	
+
 	return ddir;
 }
 
@@ -754,7 +754,8 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 			opened = 1;
 		}
 
-		dprint(FD_FILE, "goodf=%x, badf=%x, ff=%x\n", goodf, badf, f->flags);
+		dprint(FD_FILE, "goodf=%x, badf=%x, ff=%x\n", goodf, badf,
+								f->flags);
 		if ((!goodf || (f->flags & goodf)) && !(f->flags & badf))
 			break;
 
@@ -823,7 +824,8 @@ static int set_io_u_file(struct thread_data *td, struct io_u *io_u)
 		io_u->file = NULL;
 		fio_file_set_done(f);
 		td->nr_done_files++;
-		dprint(FD_FILE, "%s: is done (%d of %d)\n", f->file_name, td->nr_done_files, td->o.nr_files);
+		dprint(FD_FILE, "%s: is done (%d of %d)\n", f->file_name,
+					td->nr_done_files, td->o.nr_files);
 	} while (1);
 
 	return 0;
