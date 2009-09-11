@@ -221,6 +221,13 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 			return;
 		}
 
+		/*
+		 * See if this maj,min already exists
+		 */
+		slavedu = disk_util_exists(majdev, mindev);
+		if (slavedu)
+			continue;
+
 		sprintf(temppath, "%s/%s", slavesdir, slavepath);
 		__init_per_file_disk_util(td, majdev, mindev, temppath);
 		slavedu = disk_util_exists(majdev, mindev);
