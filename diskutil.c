@@ -16,6 +16,9 @@ static struct disk_util *last_du;
 
 static struct flist_head disk_list = FLIST_HEAD_INIT(disk_list);
 
+static struct disk_util *__init_per_file_disk_util(struct thread_data *td,
+		int majdev, int mindev, char *path);
+
 static void disk_util_free(struct disk_util *du)
 {
 	if (du == last_du)
@@ -182,11 +185,8 @@ static int read_block_dev_entry(char *path, int *maj, int *min)
 	return 0;
 }
 
-static struct disk_util *__init_per_file_disk_util(struct thread_data *td,
-		int majdev, int mindev, char * path);
-
 static void find_add_disk_slaves(struct thread_data *td, char *path,
-		struct disk_util *masterdu)
+				 struct disk_util *masterdu)
 {
 	DIR *dirhandle = NULL;
 	struct dirent *dirent = NULL;
@@ -195,13 +195,14 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 	int majdev, mindev;
 	ssize_t linklen;
 
-	sprintf(slavesdir, "%s/%s",path, "slaves");
+	sprintf(slavesdir, "%s/%s", path, "slaves");
 	dirhandle = opendir(slavesdir);
 	if (!dirhandle)
 		return;
 
 	while ((dirent = readdir(dirhandle)) != NULL) {
-		if (!strcmp(dirent->d_name, ".") || !strcmp(dirent->d_name, ".."))
+		if (!strcmp(dirent->d_name, ".") ||
+		    !strcmp(dirent->d_name, ".."))
 			continue;
 
 		sprintf(temppath, "%s/%s", slavesdir, dirent->d_name);
@@ -209,11 +210,12 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 		 * are links to the real directories for the slave
 		 * devices?
 		 */
-		if ((linklen = readlink(temppath, slavepath, PATH_MAX-1)) < 0) {
+		linklen = readlink(temppath, slavepath, PATH_MAX - 0);
+		if (linklen  < 0) {
 			perror("readlink() for slave device.");
 			return;
 		}
-		slavepath[linklen]='\0';
+		slavepath[linklen] = '\0';
 
 		sprintf(temppath, "%s/%s/dev", slavesdir, slavepath);
 		if (read_block_dev_entry(temppath, &majdev, &mindev)) {
@@ -239,7 +241,6 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 	}
 
 	closedir(dirhandle);
-	return;
 }
 
 static struct disk_util *disk_util_add(struct thread_data * td, int majdev,
@@ -283,7 +284,6 @@ static struct disk_util *disk_util_add(struct thread_data * td, int majdev,
 	find_add_disk_slaves(td, path, du);
 	return du;
 }
-
 
 static int check_dev_match(int majdev, int mindev, char *path)
 {
@@ -518,7 +518,7 @@ void show_disk_util(void)
 		 * the master's stats line has been displayed in a
 		 * previous iteration of this loop.
 		 */
-		if(!flist_empty(&du->slavelist))
+		if (!flist_empty(&du->slavelist))
 			log_info("  ");
 
 		log_info("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, "
@@ -531,7 +531,7 @@ void show_disk_util(void)
 		/* If the device has slaves, aggregate the stats for
 		 * those slave devices also.
 		 */
-		if(!flist_empty(&du->slaves))
+		if (!flist_empty(&du->slaves))
 			aggregate_slaves_stats(du);
 
 		log_info("\n");
