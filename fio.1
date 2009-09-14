@@ -515,7 +515,11 @@ Same as \fBmmap\fR, but use huge files as backing.
 The amount of memory allocated is the maximum allowed \fBblocksize\fR for the
 job multiplied by \fBiodepth\fR.  For \fBshmhuge\fR or \fBmmaphuge\fR to work,
 the system must have free huge pages allocated.  \fBmmaphuge\fR also needs to
-have hugetlbfs mounted, and \fIfile\fR must point there.
+have hugetlbfs mounted, and \fIfile\fR must point there. At least on Linux,
+huge pages must be manually allocated. See \fB/proc/sys/vm/nr_hugehages\fR
+and the documentation for that. Normally you just need to echo an appropriate
+number, eg echoing 8 will ensure that the OS has 8 huge pages ready for
+use.
 .RE
 .TP
 .BI iomem_align \fR=\fPint
