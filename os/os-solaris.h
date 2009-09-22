@@ -12,6 +12,7 @@
 #define FIO_HAVE_POSIXAIO_FSYNC
 #define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_PSHARED_MUTEX
+#define FIO_USE_GENERIC_BDEV_SIZE
 
 #define OS_MAP_ANON		MAP_ANON
 #define OS_RAND_MAX		2147483648UL
@@ -22,17 +23,6 @@ struct solaris_rand_seed {
 
 typedef psetid_t os_cpu_mask_t;
 typedef struct solaris_rand_seed os_random_state_t;
-
-static inline int blockdev_size(int fd, unsigned long long *bytes)
-{
-	off_t end = lseek(fd, 0, SEEK_END);
-
-	if (end < 0)
-		return errno;
-
-	*bytes = end;
-	return 0;
-}
 
 static inline int blockdev_invalidate_cache(int fd)
 {

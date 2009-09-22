@@ -106,4 +106,17 @@ static inline int os_cache_line_size(void)
 #endif
 }
 
+#ifdef FIO_USE_GENERIC_BDEV_SIZE
+static inline int blockdev_size(int fd, unsigned long long *bytes)
+{
+	off_t end = lseek(fd, 0, SEEK_END);
+
+	if (end < 0)
+		return errno;
+
+	*bytes = end;
+	return 0;
+}
+#endif
+
 #endif

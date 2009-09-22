@@ -6,22 +6,12 @@
 
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_ODIRECT
+#define FIO_USE_GENERIC_BDEV_SIZE
 
 #define OS_MAP_ANON		MAP_ANON
 
 typedef unsigned long os_cpu_mask_t;
 typedef unsigned int os_random_state_t;
-
-static inline int blockdev_size(int fd, unsigned long long *bytes)
-{
-	off_t end = lseek(fd, 0, SEEK_END);
-
-	if (end < 0)
-		return errno;
-
-	*bytes = end;
-	return 0;
-}
 
 static inline int blockdev_invalidate_cache(int fd)
 {
