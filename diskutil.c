@@ -236,8 +236,10 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 
 		/* Should probably use an assert here. slavedu should
 		 * always be present at this point. */
-		if (slavedu)
+		if (slavedu) {
+			slavedu->users++;
 			flist_add_tail(&slavedu->slavelist, &masterdu->slaves);
+		}
 	}
 
 	closedir(dirhandle);
@@ -543,6 +545,7 @@ void show_disk_util(void)
 	flist_for_each_safe(entry, next, &disk_list) {
 		flist_del(entry);
 		du = flist_entry(entry, struct disk_util, list);
+		du->users--;
 		disk_util_free(du);
 	}
 }
