@@ -47,22 +47,31 @@ struct disk_util {
 	unsigned long users;
 };
 
-static inline void disk_util_inc(struct disk_util *du)
+static inline void disk_util_mod(struct disk_util *du, int val)
 {
 	if (du) {
+		struct flist_head *n;
+
 		fio_mutex_down(du->lock);
-		du->users++;
+		du->users += val;
+
+		flist_for_each(n, &du->slavelist) {
+			struct disk_util *slave;
+
+			slave = flist_entry(n, struct disk_util, slavelist);
+			slave->users += val;
+		}
 		fio_mutex_up(du->lock);
 	}
+}
+static inline void disk_util_inc(struct disk_util *du)
+{
+	disk_util_mod(du, 1);
 }
 
 static inline void disk_util_dec(struct disk_util *du)
 {
-	if (du) {
-		fio_mutex_down(du->lock);
-		du->users--;
-		fio_mutex_up(du->lock);
-	}
+	disk_util_mod(du, -1);
 }
 
 #define DISK_UTIL_MSEC	(250)
