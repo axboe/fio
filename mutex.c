@@ -94,7 +94,7 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 	struct timespec t;
 	int ret = 0;
 
-	clock_gettime(CLOCK_REALTIME, &t);
+	clock_gettime(CLOCK_MONOTONIC, &t);
 	t.tv_sec += seconds;
 
 	pthread_mutex_lock(&mutex->lock);
