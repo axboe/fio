@@ -72,6 +72,7 @@ struct fio_mutex *fio_mutex_init(int value)
 
 	pthread_condattr_init(&cond);
 	pthread_condattr_setpshared(&cond, mflag);
+	pthread_condattr_setclock(&cond, CLOCK_MONOTONIC);
 	pthread_cond_init(&mutex->cond, &cond);
 
 	ret = pthread_mutex_init(&mutex->lock, &attr);
