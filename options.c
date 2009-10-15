@@ -82,7 +82,7 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 		} else
 			perc = -1;
 
-		if (str_to_decimal(fname, &val, 1, &td)) {
+		if (str_to_decimal(fname, &val, 1, td)) {
 			log_err("fio: bssplit conversion failed\n");
 			free(td->o.bssplit);
 			return 1;
