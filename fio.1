@@ -583,9 +583,10 @@ Write extra information about each I/O (timestamp, block number, etc.). The
 block number is verified.
 .TP
 .B pattern
-Fill I/O buffers with a specific pattern that is used to verify.  The pattern is
-specified by appending `:\fIint\fR' to the parameter. \fIint\fR cannot be larger
-than 32-bits. 
+Fill I/O buffers with a specific pattern that is used to verify. If the pattern
+is < 4bytes, it can either be a decimal or a hexadecimal number. If the pattern
+is > 4bytes, currently, it can only be a hexadecimal pattern starting with
+either "0x" or "0X".
 .TP
 .B null
 Pretend to verify.  Used for testing internals.

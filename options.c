@@ -33,6 +33,26 @@ static char *get_opt_postfix(const char *str)
 	return strdup(p);
 }
 
+static int converthexchartoint(char a)
+{
+	int base;
+
+	switch(a) {
+	case '0'...'9':
+		base = '0';
+		break;
+	case 'A'...'F':
+		base = 'A' - 10;
+		break;
+	case 'a'...'f':
+		base = 'a' - 10;
+		break;
+	default:
+		base = 0;
+	}
+	return (a - base);
+}
+
 static int bs_cmp(const void *p1, const void *p2)
 {
 	const struct bssplit *bsp1 = p1;
@@ -566,22 +586,45 @@ static int str_verify_offset_cb(void *data, unsigned int *off)
 	return 0;
 }
 
-static int str_verify_pattern_cb(void *data, unsigned int *off)
+static int str_verify_pattern_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
-	unsigned int msb;
+	long off;
+	int i = 0, j = 0, len, k, base = 10;
+	char* loc1, * loc2;
 
-	msb = __fls(*off);
-	if (msb <= 8)
-		td->o.verify_pattern_bytes = 1;
-	else if (msb <= 16)
-		td->o.verify_pattern_bytes = 2;
-	else if (msb <= 24)
-		td->o.verify_pattern_bytes = 3;
-	else
-		td->o.verify_pattern_bytes = 4;
-
-	td->o.verify_pattern = *off;
+	loc1 = strstr(input, "0x");
+	loc2 = strstr(input, "0X");
+	if (loc1 || loc2)
+		base = 16;
+	off = strtol(input, NULL, base);
+	if (off != LONG_MAX || errno != ERANGE) {
+		while (off) {
+			td->o.verify_pattern[i] = off & 0xff;
+			off >>= 8;
+			i++;
+		}
+	} else {
+		len = strlen(input);
+		k = len - 1;
+		if (base == 16) {
+			if (loc1)
+				j = loc1 - input + 2;
+			else
+				j = loc2 - input + 2;
+		} else
+			return 1;
+		if (len - j < MAX_PATTERN_SIZE * 2) {
+			while (k >= j) {
+				off = converthexchartoint(input[k--]);
+				if (k >= j)
+					off += (converthexchartoint(input[k--])
+						* 16);
+				td->o.verify_pattern[i++] = (char) off;
+			}
+		}
+	}
+	td->o.verify_pattern_bytes = i;
 	return 0;
 }
 
@@ -1263,7 +1306,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "verify_pattern",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_STR,
 		.cb	= str_verify_pattern_cb,
 		.help	= "Fill pattern for IO buffers",
 		.parent	= "verify",

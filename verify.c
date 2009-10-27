@@ -53,38 +53,21 @@ static void fill_pattern(struct thread_data *td, void *p, unsigned int len)
 		break;
 	case 1:
 		dprint(FD_VERIFY, "fill verify pattern b=0 len=%u\n", len);
-		memset(p, td->o.verify_pattern, len);
+		memset(p, td->o.verify_pattern[0], len);
 		break;
-	case 2:
-	case 3:
-	case 4: {
-		unsigned int pattern = td->o.verify_pattern;
-		unsigned int i = 0;
-		unsigned char c1, c2, c3, c4;
+	default: {
+		unsigned int i = 0, size = 0;
 		unsigned char *b = p;
 
 		dprint(FD_VERIFY, "fill verify pattern b=%d len=%u\n",
 					td->o.verify_pattern_bytes, len);
 
-		c1 = pattern & 0xff;
-		pattern >>= 8;
-		c2 = pattern & 0xff;
-		pattern >>= 8;
-		c3 = pattern & 0xff;
-		pattern >>= 8;
-		c4 = pattern & 0xff;
-
 		while (i < len) {
-			b[i++] = c1;
-			if (i == len)
-				break;
-			b[i++] = c2;
-			if (td->o.verify_pattern_bytes == 2 || i == len)
-				continue;
-			b[i++] = c3;
-			if (td->o.verify_pattern_bytes == 3 || i == len)
-				continue;
-			b[i++] = c4;
+			size = td->o.verify_pattern_bytes;
+			if (size > (len - i))
+				size = len - i;
+			memcpy(b+i, td->o.verify_pattern, size);
+			i += size;
 		}
 		break;
 		}
@@ -420,24 +403,18 @@ static unsigned int hweight8(unsigned int w)
 	return (res + (res >> 4)) & 0x0F;
 }
 
-int verify_io_u_pattern(unsigned long pattern, unsigned long pattern_size,
+int verify_io_u_pattern(char *pattern, unsigned long pattern_size,
 			char *buf, unsigned int len, unsigned int mod)
 {
 	unsigned int i;
-	char split_pattern[4];
-
-	for (i = 0; i < 4; i++) {
-		split_pattern[i] = pattern & 0xff;
-		pattern >>= 8;
-	}
 
 	for (i = 0; i < len; i++) {
-		if (buf[i] != split_pattern[mod]) {
+		if (buf[i] != pattern[mod]) {
 			unsigned int bits;
 
-			bits = hweight8(buf[i] ^ split_pattern[mod]);
+			bits = hweight8(buf[i] ^ pattern[mod]);
 			log_err("fio: got pattern %x, wanted %x. Bad bits %d\n",
-				buf[i], split_pattern[mod], bits);
+				buf[i], pattern[mod], bits);
 			log_err("fio: bad pattern block offset %u\n", i);
 			return EILSEQ;
 		}
@@ -504,10 +481,10 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			dprint(FD_VERIFY, "pattern verify io_u %p, len %u\n",
 								io_u, hdr->len);
 			ret = verify_io_u_pattern(td->o.verify_pattern,
-						  td->o.verify_pattern_bytes,
-						  p + hdr_size,
-						  hdr_inc - hdr_size,
-						  hdr_size % 4);
+				  td->o.verify_pattern_bytes,
+				  p + hdr_size,
+				  hdr_inc - hdr_size,
+				  hdr_size % td->o.verify_pattern_bytes);
 			/*
 			 * Also verify the meta data, if applicable
 			 */

@@ -846,13 +846,14 @@ verify_interval=int	Write the verification header at a finer granularity
 			size of header_interval. blocksize should divide this
 			evenly.
 
-verify_pattern=int	If set, fio will fill the io buffers with this
+verify_pattern=str	If set, fio will fill the io buffers with this
 		pattern. Fio defaults to filling with totally random
 		bytes, but sometimes it's interesting to fill with a known
 		pattern for io verification purposes. Depending on the
 		width of the pattern, fio will fill 1/2/3/4 bytes of the
-		buffer at the time. The verify_pattern cannot be larger than
-		a 32-bit quantity.
+		buffer at the time(it can be either a decimal or a hex number).
+		The verify_pattern if larger than a 32-bit quantity has to
+		be a hex number that starts with either "0x" or "0X".
 
 verify_fatal=bool	Normally fio will keep checking the entire contents
 		before quitting on a block verification failure. If this

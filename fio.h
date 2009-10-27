@@ -63,6 +63,8 @@ enum fio_memtype {
 #define FIO_IO_U_LAT_U_NR 10
 #define FIO_IO_U_LAT_M_NR 12
 
+#define MAX_PATTERN_SIZE 512
+
 struct thread_stat {
 	char *name;
 	char *verror;
@@ -175,7 +177,7 @@ struct thread_options {
 	unsigned int verifysort;
 	unsigned int verify_interval;
 	unsigned int verify_offset;
-	unsigned int verify_pattern;
+	char verify_pattern[MAX_PATTERN_SIZE];
 	unsigned int verify_pattern_bytes;
 	unsigned int verify_fatal;
 	unsigned int verify_async;
