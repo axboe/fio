@@ -4,9 +4,10 @@
 #define FIO_IOOPS_VERSION	10
 
 enum {
-	IO_U_F_FREE	= 1 << 0,
-	IO_U_F_FLIGHT	= 1 << 1,
-	IO_U_F_FREE_DEF	= 1 << 2,
+	IO_U_F_FREE		= 1 << 0,
+	IO_U_F_FLIGHT		= 1 << 1,
+	IO_U_F_FREE_DEF		= 1 << 2,
+	IO_U_F_IN_CUR_DEPTH	= 1 << 3,
 };
 
 /*

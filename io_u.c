@@ -421,9 +421,10 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 		put_file_log(td, io_u->file);
 
 	io_u->file = NULL;
+	if (io_u->flags & IO_U_F_IN_CUR_DEPTH)
+		td->cur_depth--;
 	flist_del_init(&io_u->list);
 	flist_add(&io_u->list, &td->io_u_freelist);
-	td->cur_depth--;
 	td_io_u_unlock(td);
 	td_io_u_free_notify(td);
 }
@@ -447,10 +448,10 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 		td->io_issues[__io_u->ddir]--;
 
 	__io_u->flags &= ~IO_U_F_FLIGHT;
-
+	if (__io_u->flags & IO_U_F_IN_CUR_DEPTH)
+		td->cur_depth--;
 	flist_del(&__io_u->list);
 	flist_add_tail(&__io_u->list, &td->io_u_requeues);
-	td->cur_depth--;
 	td_io_u_unlock(td);
 	*io_u = NULL;
 }
@@ -867,6 +868,7 @@ again:
 		flist_del(&io_u->list);
 		flist_add(&io_u->list, &td->io_u_busylist);
 		td->cur_depth++;
+		io_u->flags |= IO_U_F_IN_CUR_DEPTH;
 	}
 
 	td_io_u_unlock(td);

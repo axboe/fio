@@ -437,6 +437,11 @@ int verify_io_u_async(struct thread_data *td, struct io_u *io_u)
 	io_u->file = NULL;
 
 	pthread_mutex_lock(&td->io_u_lock);
+	
+	if (io_u->flags & IO_U_F_IN_CUR_DEPTH) {
+		td->cur_depth--;
+		io_u->flags &= ~IO_U_F_IN_CUR_DEPTH;
+	}
 	flist_del(&io_u->list);
 	flist_add_tail(&io_u->list, &td->verify_list);
 	pthread_mutex_unlock(&td->io_u_lock);
