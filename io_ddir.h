@@ -6,6 +6,7 @@ enum fio_ddir {
 	DDIR_WRITE,
 	DDIR_SYNC,
 	DDIR_DATASYNC,
+	DDIR_WAIT,
 	DDIR_INVAL = -1,
 };
 

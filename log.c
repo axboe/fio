@@ -86,10 +86,8 @@ static int ipo_special(struct thread_data *td, struct io_piece *ipo)
 	switch (ipo->file_action) {
 	case FIO_LOG_OPEN_FILE:
 		ret = td_io_open_file(td, f);
-		if (!ret) {
-			free(ipo);
+		if (!ret)
 			break;
-		}
 		td_verror(td, ret, "iolog open file");
 		return -1;
 	case FIO_LOG_CLOSE_FILE:
@@ -109,7 +107,8 @@ static int ipo_special(struct thread_data *td, struct io_piece *ipo)
 int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
-
+	unsigned long elapsed;
+	
 	while (!flist_empty(&td->io_log_list)) {
 		int ret;
 
@@ -125,20 +124,27 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 			continue;
 		}
 
-		io_u->offset = ipo->offset;
-		io_u->buflen = ipo->len;
 		io_u->ddir = ipo->ddir;
-		io_u->file = td->files[ipo->fileno];
-		get_file(io_u->file);
+		if (ipo->ddir != DDIR_WAIT) {
+			io_u->offset = ipo->offset;
+			io_u->buflen = ipo->len;
+			io_u->file = td->files[ipo->fileno];
+			get_file(io_u->file);
 
-		dprint(FD_IO, "iolog: get %llu/%lu/%s\n", io_u->offset,
-					io_u->buflen, io_u->file->file_name);
-
-		if (ipo->delay)
-			iolog_delay(td, ipo->delay);
+			dprint(FD_IO, "iolog: get %llu/%lu/%s\n", io_u->offset,
+						io_u->buflen, io_u->file->file_name);
+			if (ipo->delay) iolog_delay(td, ipo->delay);
+		} else {
+			elapsed = mtime_since_genesis();
+			if (ipo->delay > elapsed)
+				usec_sleep(td, (ipo->delay - elapsed) * 1000);
+				
+		}
 
 		free(ipo);
-		return 0;
+		
+		if (ipo->ddir != DDIR_WAIT)
+			return 0;
 	}
 
 	td->done = 1;
@@ -241,7 +247,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 {
 	unsigned long long offset;
 	unsigned int bytes;
-	int reads, writes, fileno = 0, file_action = 0; /* stupid gcc */
+	int reads, writes, waits, fileno = 0, file_action = 0; /* stupid gcc */
 	char *fname, *act;
 	char *str, *p;
 	enum fio_ddir rw;
@@ -256,7 +262,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 	fname = malloc(256+16);
 	act = malloc(256+16);
 
-	reads = writes = 0;
+	reads = writes = waits = 0;
 	while ((p = fgets(str, 4096, f)) != NULL) {
 		struct io_piece *ipo;
 		int r;
@@ -267,7 +273,9 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 			/*
 			 * Check action first
 			 */
-			if (!strcmp(act, "read"))
+			if (!strcmp(act, "wait"))
+				rw = DDIR_WAIT;
+			else if (!strcmp(act, "read"))
 				rw = DDIR_READ;
 			else if (!strcmp(act, "write"))
 				rw = DDIR_WRITE;
@@ -312,6 +320,9 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 			if (read_only)
 				continue;
 			writes++;
+		} else if (rw == DDIR_WAIT) {
+			waits++;
+		} else if (rw == DDIR_INVAL) {
 		} else if (!ddir_sync(rw)) {
 			log_err("bad ddir: %d\n", rw);
 			continue;
@@ -323,15 +334,18 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 		ipo = malloc(sizeof(*ipo));
 		memset(ipo, 0, sizeof(*ipo));
 		INIT_FLIST_HEAD(&ipo->list);
-		ipo->offset = offset;
-		ipo->len = bytes;
 		ipo->ddir = rw;
-		if (bytes > td->o.max_bs[rw])
-			td->o.max_bs[rw] = bytes;
-		if (rw == DDIR_INVAL) {
+		if (rw == DDIR_WAIT) {
+			ipo->delay = offset;
+		} else {
+			ipo->offset = offset;
+			ipo->len = bytes;
+			if (bytes > td->o.max_bs[rw])
+				td->o.max_bs[rw] = bytes;
 			ipo->fileno = fileno;
 			ipo->file_action = file_action;
 		}
+			
 		queue_io_piece(td, ipo);
 	}
 
@@ -345,7 +359,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 		writes = 0;
 	}
 
-	if (!reads && !writes)
+	if (!reads && !writes && !waits)
 		return 1;
 	else if (reads && !writes)
 		td->o.td_ddir = TD_DDIR_READ;

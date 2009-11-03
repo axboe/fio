@@ -581,7 +581,8 @@ static void do_io(struct thread_data *td)
 	else
 		td_set_runstate(td, TD_RUNNING);
 
-	while ((td->this_io_bytes[0] + td->this_io_bytes[1]) < td->o.size) {
+	while ( (td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
+	        ((td->this_io_bytes[0] + td->this_io_bytes[1]) < td->o.size) ) {
 		struct timeval comp_time;
 		unsigned long bytes_done[2] = { 0, 0 };
 		int min_evts = 0;
