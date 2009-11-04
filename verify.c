@@ -444,10 +444,10 @@ int verify_io_u_async(struct thread_data *td, struct io_u *io_u)
 	}
 	flist_del(&io_u->list);
 	flist_add_tail(&io_u->list, &td->verify_list);
+	io_u->flags |= IO_U_F_FREE_DEF;
 	pthread_mutex_unlock(&td->io_u_lock);
 
 	pthread_cond_signal(&td->verify_cond);
-	io_u->flags |= IO_U_F_FREE_DEF;
 	return 0;
 }
 

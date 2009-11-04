@@ -413,7 +413,6 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	td_io_u_lock(td);
 
-	assert((io_u->flags & IO_U_F_FREE) == 0);
 	io_u->flags |= IO_U_F_FREE;
 	io_u->flags &= ~IO_U_F_FREE_DEF;
 
@@ -861,8 +860,7 @@ again:
 
 	if (io_u) {
 		assert(io_u->flags & IO_U_F_FREE);
-		io_u->flags &= ~IO_U_F_FREE;
-		io_u->flags &= ~IO_U_F_FREE_DEF;
+		io_u->flags &= ~(IO_U_F_FREE | IO_U_F_FREE_DEF);
 
 		io_u->error = 0;
 		flist_del(&io_u->list);
@@ -971,8 +969,10 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 	dprint_io_u(io_u, "io complete");
 
+	td_io_u_lock(td);
 	assert(io_u->flags & IO_U_F_FLIGHT);
 	io_u->flags &= ~IO_U_F_FLIGHT;
+	td_io_u_unlock(td);
 
 	if (ddir_sync(io_u->ddir)) {
 		td->last_was_sync = 1;
