@@ -1195,6 +1195,10 @@ err:
 	if (td->error)
 		printf("fio: pid=%d, err=%d/%s\n", (int) td->pid, td->error,
 							td->verror);
+
+	if (td->o.verify_async)
+		verify_async_exit(td);
+
 	close_and_free_files(td);
 	close_ioengine(td);
 	cleanup_io_u(td);
@@ -1204,9 +1208,6 @@ err:
 
 		td_verror(td, ret, "fio_cpuset_exit");
 	}
-
-	if (td->o.verify_async)
-		verify_async_exit(td);
 
 	/*
 	 * do this very late, it will log file closing as well
