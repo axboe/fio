@@ -1,6 +1,8 @@
 #ifndef ARCH_H
 #define ARCH_H
 
+#define BITS_PER_LONG	__WORDSIZE
+
 enum {
 	arch_x86_64,
 	arch_i386,

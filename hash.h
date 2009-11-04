@@ -1,5 +1,8 @@
 #ifndef _LINUX_HASH_H
 #define _LINUX_HASH_H
+
+#include "arch/arch.h"
+
 /* Fast hashing routine for a long.
    (C) 2002 William Lee Irwin III, IBM */
 
@@ -13,12 +16,6 @@
  * them can use shifts and additions instead of multiplications for
  * machines where multiplications are slow.
  */
-
-#ifdef __WORDSIZE
-#define BITS_PER_LONG	__WORDSIZE
-#else
-#define BITS_PER_LONG	32
-#endif
 
 #if BITS_PER_LONG == 32
 /* 2^31 + 2^29 - 2^25 + 2^22 - 2^19 - 2^16 + 1 */
