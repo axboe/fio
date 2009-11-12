@@ -478,7 +478,9 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		hdr = p;
 
 		if (hdr->fio_magic != FIO_HDR_MAGIC) {
-			log_err("Bad verify header %x\n", hdr->fio_magic);
+			log_err("Bad verify header %x at %llu\n",
+					hdr->fio_magic,
+					io_u->offset + hdr_num * hdr->len);
 			return EILSEQ;
 		}
 
