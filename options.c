@@ -1880,13 +1880,15 @@ static char *fio_keyword_replace(char *opt)
 			 */
 			opt = new;
 			free(o_org);
+
+			/*
+			 * Check for potential math and invoke bc, if possible
+			 */
+			opt = bc_calc(opt);
 		}
 	}
 
-	/*
-	 * Check for potential math and invoke bc, if possible
-	 */
-	return bc_calc(opt);
+	return opt;
 }
 
 int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
