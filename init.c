@@ -127,8 +127,33 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'a',
 	},
 	{
+		.name		= "profile",
+		.has_arg	= required_argument,
+		.val		= 'p',
+	},
+	{
 		.name		= NULL,
 	},
+};
+
+static const char *tiobench_opts[] = {
+	"buffered=0", "size=256*$mb_memory", "bs=4k", "timeout=600",
+	"numjobs=4", "group_reporting", "thread", "overwrite=1",
+	"filename=.fio.tio.1:.fio.tio.2:.fio.tio.3:.fio.tio.4",
+	"name=seqwrite", "rw=write", "end_fsync=1",
+	"name=randwrite", "stonewall", "rw=randwrite", "end_fsync=1",
+	"name=seqread", "stonewall", "rw=read",
+	"name=randread", "stonewall", "rw=randread", NULL,
+};
+
+static const char **fio_prof_strings[PROFILE_END] = {
+	NULL,
+	tiobench_opts,
+};
+
+static const char *profiles[PROFILE_END] = {
+	"none",
+	"tiobench",
 };
 
 FILE *get_f_out()
@@ -992,6 +1017,57 @@ static int set_debug(const char *string)
 }
 #endif
 
+static int load_profile(const char *profile)
+{
+	struct thread_data *td, *td_parent;
+	const char **o;
+	int i, in_global = 1;
+	char jobname[32];
+
+	dprint(FD_PARSE, "loading profile %s\n", profile);
+
+	for (i = 0; i < PROFILE_END; i++) {
+		if (!strcmp(profile, profiles[i]))
+			break;
+	}
+
+	if (i == PROFILE_END) {
+		log_err("fio: unknown profile %s\n", profile);
+		return 1;
+	}
+
+	o = fio_prof_strings[i];
+	if (!o)
+		return 0;
+
+	i = 0;
+	td_parent = td = NULL;
+	while (o[i]) {
+		if (!strncmp(o[i], "name", 4)) {
+			in_global = 0;
+			if (td)
+				add_job(td, jobname, 0);
+			td = NULL;
+			sprintf(jobname, "%s", o[i] + 5);
+		}
+		if (in_global && !td_parent)
+			td_parent = get_new_job(1, &def_thread);
+		else if (!in_global && !td) {
+			if (!td_parent)
+				td_parent = &def_thread;
+			td = get_new_job(0, td_parent);
+		}
+		if (in_global)
+			fio_options_parse(td_parent, (char **) &o[i], 1);
+		else
+			fio_options_parse(td, (char **) &o[i], 1);
+		i++;
+	}
+	if (td)
+		add_job(td, jobname, 0);
+	return 0;
+}
+
 static int parse_cmd_line(int argc, char *argv[])
 {
 	struct thread_data *td = NULL;
@@ -1057,6 +1133,10 @@ static int parse_cmd_line(int argc, char *argv[])
 			if (job_section)
 				free(job_section);
 			job_section = strdup(optarg);
+			break;
+		case 'p':
+			if (load_profile(optarg))
+				do_exit++;
 			break;
 		case FIO_GETOPT_JOB: {
 			const char *opt = l_opts[lidx].name;

@@ -28,6 +28,7 @@
 #include "io_ddir.h"
 #include "ioengine.h"
 #include "iolog.h"
+#include "profiles.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
@@ -264,6 +265,11 @@ struct thread_options {
 	 * I/O Error handling
 	 */
 	unsigned int continue_on_error;
+
+	/*
+	 * Benchmark profile type
+	 */
+	unsigned int profile;
 };
 
 #define FIO_VERROR_SIZE	128

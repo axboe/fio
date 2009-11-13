@@ -1715,6 +1715,18 @@ static struct fio_option options[] = {
 		.def	= "0",
 	},
 	{
+		.name	= "profile",
+		.type	= FIO_OPT_STR,
+		.off1	= td_var_offset(profile),
+		.posval = {
+			  { .ival = "tiobench",
+			    .oval = PROFILE_TIOBENCH,
+			    .help = "Perform tiobench like test",
+			  },
+		},
+		.help	= "Select a specific builtin performance test",
+	},
+	{
 		.name = NULL,
 	},
 };
@@ -1811,6 +1823,7 @@ static char *bc_calc(char *str)
 		return str;
 
 	tmp++;
+	memset(opt, 0, sizeof(opt));
 	strncpy(opt, str, tmp - str);
 
 	buf = malloc(128);
@@ -1879,7 +1892,7 @@ static char *fio_keyword_replace(char *opt)
 			 * replace opt and free the old opt
 			 */
 			opt = new;
-			free(o_org);
+			//free(o_org);
 
 			/*
 			 * Check for potential math and invoke bc, if possible
