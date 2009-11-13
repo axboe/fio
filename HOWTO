@@ -203,7 +203,13 @@ $ncpus		Number of online available CPUs
 
 These can be used on the command line or in the job file, and will be
 automatically substituted with the current system values when the job
-is run.
+is run. Simple math is also supported on these keywords, so you can
+perform actions like:
+
+size=8*$mb_memory
+
+and get that properly expanded to 8 times the size of memory in the
+machine.
 
 
 5.0 Detailed list of parameters

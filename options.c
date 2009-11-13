@@ -1788,6 +1788,61 @@ void fio_keywords_init(void)
 	fio_keywords[2].replace = strdup(buf);
 }
 
+#define BC_APP		"bc"
+
+static char *bc_calc(char *str)
+{
+	char *buf, *tmp, opt[80];
+	FILE *f;
+	int ret;
+
+	/*
+	 * No math, just return string
+	 */
+	if (!strchr(str, '+') && !strchr(str, '-') && !strchr(str, '*') &&
+	    !strchr(str, '/'))
+		return str;
+
+	/*
+	 * Split option from value, we only need to calculate the value
+	 */
+	tmp = strchr(str, '=');
+	if (!tmp)
+		return str;
+
+	tmp++;
+	strncpy(opt, str, tmp - str);
+
+	buf = malloc(128);
+
+	sprintf(buf, "which %s > /dev/null", BC_APP);
+	if (system(buf)) {
+		log_err("fio: bc is needed for performing math\n");
+		free(buf);
+		return NULL;
+	}
+
+	sprintf(buf, "echo %s | %s", tmp, BC_APP);
+	f = popen(buf, "r");
+	if (!f) {
+		free(buf);
+		return NULL;
+	}
+
+	ret = fread(buf, 1, 128, f);
+	if (ret <= 0) {
+		free(buf);
+		return NULL;
+	}
+
+	buf[ret - 1] = '\0';
+	strcat(opt, buf);
+	strcpy(buf, opt);
+	pclose(f);
+	free(str);
+	return buf;
+}
+
 /*
  * Look for reserved variable names and replace them with real values
  */
@@ -1828,7 +1883,10 @@ static char *fio_keyword_replace(char *opt)
 		}
 	}
 
-	return opt;
+	/*
+	 * Check for potential math and invoke bc, if possible
+	 */
+	return bc_calc(opt);
 }
 
 int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
