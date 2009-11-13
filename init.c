@@ -137,7 +137,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 };
 
 static const char *tiobench_opts[] = {
-	"buffered=0", "size=256*$mb_memory", "bs=4k", "timeout=600",
+	"buffered=0", "size=4*1024*$mb_memory", "bs=4k", "timeout=600",
 	"numjobs=4", "group_reporting", "thread", "overwrite=1",
 	"filename=.fio.tio.1:.fio.tio.2:.fio.tio.3:.fio.tio.4",
 	"name=seqwrite", "rw=write", "end_fsync=1",
