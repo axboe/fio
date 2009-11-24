@@ -29,6 +29,7 @@
 #include "ioengine.h"
 #include "iolog.h"
 #include "profiles.h"
+#include "helpers.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
