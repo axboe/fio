@@ -1,5 +1,6 @@
 #include <malloc.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "compiler/compiler.h"
 
