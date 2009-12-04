@@ -70,35 +70,31 @@ static char *get_cgroup_root(struct thread_data *td)
 	return str;
 }
 
-static int cgroup_write_pid(struct thread_data *td, const char *root)
+static int write_int_to_file(struct thread_data *td, const char *path,
+			     const char *filename, unsigned int val,
+			     const char *onerr)
 {
 	char tmp[256];
 	FILE *f;
 	
-	sprintf(tmp, "%s/tasks", root);
+	sprintf(tmp, "%s/%s", path, filename);
 	f = fopen(tmp, "w");
 	if (!f) {
-		td_verror(td, errno, "cgroup open tasks");
+		td_verror(td, errno, onerr);
 		return 1;
 	}
 
-	fprintf(f, "%d", td->pid);
+	fprintf(f, "%u", val);
 	fclose(f);
 	return 0;
+
 }
 
-/*
- * Add pid to given class
- */
-static int cgroup_add_pid(struct thread_data *td)
+static int cgroup_write_pid(struct thread_data *td, const char *root)
 {
-	char *root;
-	int ret;
+	unsigned int val = td->pid;
 
-	root = get_cgroup_root(td);
-	ret = cgroup_write_pid(td, root);
-	free(root);
-	return ret;
+	return write_int_to_file(td, root, "tasks", val, "cgroup write pid");
 }
 
 /*
@@ -111,8 +107,7 @@ static int cgroup_del_pid(struct thread_data *td)
 
 int cgroup_setup(struct thread_data *td, struct flist_head *clist)
 {
-	char *root, tmp[256];
-	FILE *f;
+	char *root;
 
 	if (cgroup_check_fs(td)) {
 		log_err("fio: blkio cgroup mount point %s not valid\n",
@@ -135,23 +130,17 @@ int cgroup_setup(struct thread_data *td, struct flist_head *clist)
 		add_cgroup(root, clist);
 
 	if (td->o.cgroup_weight) {
-		sprintf(tmp, "%s/blkio.weight", root);
-		f = fopen(tmp, "w");
-		if (!f) {
-			td_verror(td, errno, "cgroup open weight");
+		if (write_int_to_file(td, root, "blkio.weight",
+					td->o.cgroup_weight,
+					"cgroup open weight"))
 			goto err;
-		}
-
-		fprintf(f, "%d", td->o.cgroup_weight);
-		fclose(f);
 	}
 
-	free(root);
+	if (!cgroup_write_pid(td, root)) {
+		free(root);
+		return 0;
+	}
 
-	if (cgroup_add_pid(td))
-		return 1;
-
-	return 0;
 err:
 	free(root);
 	return 1;
