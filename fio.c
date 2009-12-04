@@ -39,6 +39,7 @@
 #include "smalloc.h"
 #include "verify.h"
 #include "diskutil.h"
+#include "cgroup.h"
 
 unsigned long page_mask;
 unsigned long page_size;
@@ -1075,6 +1076,9 @@ static void *thread_main(void *data)
 		}
 	}
 
+	if (td->o.cgroup_weight && cgroup_setup(td))
+		goto err;
+
 	if (nice(td->o.nice) == -1) {
 		td_verror(td, errno, "nice");
 		goto err;
@@ -1204,6 +1208,7 @@ err:
 	close_and_free_files(td);
 	close_ioengine(td);
 	cleanup_io_u(td);
+	cgroup_shutdown(td);
 
 	if (td->o.cpumask_set) {
 		int ret = fio_cpuset_exit(&td->o.cpumask);

@@ -271,6 +271,14 @@ struct thread_options {
 	 * Benchmark profile type
 	 */
 	unsigned int profile;
+
+	/*
+	 * blkio cgroup support
+	 */
+	char *cgroup_root;
+	char *cgroup;
+	unsigned int cgroup_weight;
+	unsigned int cgroup_was_created;
 };
 
 #define FIO_VERROR_SIZE	128

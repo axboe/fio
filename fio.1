@@ -725,13 +725,22 @@ entering the kernel with a gettimeofday() call. The CPU set aside for doing
 these time calls will be excluded from other uses. Fio will manually clear it
 from the CPU mask of other jobs.
 .TP
-.BI continue_on_error \fR=\fPbool
-Normally fio will exit the job on the first observed failure. If this option is
-set, fio will continue the job when there is a 'non-fatal error'
-(\fBEIO\fR or \fBEILSEQ\fR) until the runtime is exceeded or the I/O size
-specified is completed. If this option is used, there are two more stats that
-are appended, the total error count and the first error. The error field given
-in the stats is the first error that was hit during the run.
+.BI cgroup_root \fR=\fPstr
+Root of the mounted blkio cgroup file systems. This is a Linux
+specific IO controller. If your system doesn't have it mounted,
+you can do so with:
+
+# mount -t cgroup -o blkio none /cgroup
+
+The cgroup_root defaults to /cgroup, if mounted elsewhere please specify this
+option.
+.TP
+.BI cgroup \fR=\fPstr
+Add job to this control group. If it doesn't exist, it will be created.
+.TP
+.BI cgroup_weight \fR=\fPint
+Set the weight of the cgroup to this value. See the documentation that comes
+with the kernel, allowed values are in the range of 100..1000.
 .SH OUTPUT
 While running, \fBfio\fR will display the status of the created jobs.  For
 example:

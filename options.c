@@ -1727,6 +1727,28 @@ static struct fio_option options[] = {
 		.help	= "Select a specific builtin performance test",
 	},
 	{
+		.name	= "cgroup_root",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(cgroup_root),
+		.help	= "Root of mounted blkio cgroup",
+		.def	= "/cgroup",
+	},
+	{
+		.name	= "cgroup",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(cgroup),
+		.help	= "Add job to cgroup of this name",
+	},
+	{
+		.name	= "cgroup_weight",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(cgroup_weight),
+		.help	= "Use given weight for cgroup",
+		.minval = 100,
+		.maxval	= 1000,
+		.def	= "0",
+	},
+	{
 		.name = NULL,
 	},
 };
