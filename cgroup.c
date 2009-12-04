@@ -82,15 +82,11 @@ static char *get_cgroup_root(struct thread_data *td)
 	return str;
 }
 
-/*
- * Add pid to given class
- */
-static int cgroup_add_pid(struct thread_data *td)
+static int cgroup_write_pid(struct thread_data *td, const char *root)
 {
-	char *root, tmp[256];
+	char tmp[256];
 	FILE *f;
-
-	root = get_cgroup_root(td);
+	
 	sprintf(tmp, "%s/tasks", root);
 	f = fopen(tmp, "w");
 	if (!f) {
@@ -100,8 +96,22 @@ static int cgroup_add_pid(struct thread_data *td)
 
 	fprintf(f, "%d", td->pid);
 	fclose(f);
-	free(root);
 	return 0;
+
+}
+
+/*
+ * Add pid to given class
+ */
+static int cgroup_add_pid(struct thread_data *td)
+{
+	char *root;
+	int ret;
+
+	root = get_cgroup_root(td);
+	ret = cgroup_write_pid(td, root);
+	free(root);
+	return ret;
 }
 
 /*
@@ -109,21 +119,8 @@ static int cgroup_add_pid(struct thread_data *td)
  */
 static int cgroup_del_pid(struct thread_data *td)
 {
-	char tmp[256];
-	FILE *f;
-
-	sprintf(tmp, "%s/tasks", td->o.cgroup_root);
-	f = fopen(tmp, "w");
-	if (!f) {
-		td_verror(td, errno, "cgroup open tasks");
-		return 1;
-	}
-
-	fprintf(f, "%d", td->pid);
-	fclose(f);
-	return 0;
+	return cgroup_write_pid(td, td->o.cgroup_root);
 }
-
 
 int cgroup_setup(struct thread_data *td)
 {
@@ -145,7 +142,7 @@ int cgroup_setup(struct thread_data *td)
 
 		if (__e != EEXIST) {
 			td_verror(td, __e, "cgroup mkdir");
-			return 1;
+			goto err;
 		}
 	} else
 		add_cgroup(root);
@@ -155,7 +152,7 @@ int cgroup_setup(struct thread_data *td)
 		f = fopen(tmp, "w");
 		if (!f) {
 			td_verror(td, errno, "cgroup open weight");
-			return 1;
+			goto err;
 		}
 
 		fprintf(f, "%d", td->o.cgroup_weight);
@@ -168,6 +165,9 @@ int cgroup_setup(struct thread_data *td)
 		return 1;
 
 	return 0;
+err:
+	free(root);
+	return 1;
 }
 
 void cgroup_shutdown(struct thread_data *td)
