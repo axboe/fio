@@ -1746,7 +1746,6 @@ static struct fio_option options[] = {
 		.help	= "Use given weight for cgroup",
 		.minval = 100,
 		.maxval	= 1000,
-		.def	= "0",
 	},
 	{
 		.name = NULL,

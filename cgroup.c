@@ -6,6 +6,18 @@
 #include "fio.h"
 #include "cgroup.h"
 
+/*
+ * Check if the given root appears valid
+ */
+static int cgroup_check_fs(struct thread_data *td)
+{
+	struct stat sb;
+	char tmp[256];
+
+	sprintf(tmp, "%s/tasks", td->o.cgroup_root);
+	return stat(tmp, &sb);
+}
+
 static char *get_cgroup_root(struct thread_data *td)
 {
 	char *str = malloc(64);
@@ -67,6 +79,12 @@ int cgroup_setup(struct thread_data *td)
 	char *root, tmp[256];
 	FILE *f;
 
+	if (cgroup_check_fs(td)) {
+		log_err("fio: blkio cgroup mount point %s not valid\n",
+							td->o.cgroup_root);
+		return 1;
+	}
+
 	/*
 	 * Create container, if it doesn't exist
 	 */
@@ -100,6 +118,8 @@ int cgroup_setup(struct thread_data *td)
 
 void cgroup_shutdown(struct thread_data *td)
 {
+	if (cgroup_check_fs(td))
+		return;
 	if (!td->o.cgroup_weight)
 		return;
 
