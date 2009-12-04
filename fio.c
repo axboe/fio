@@ -1668,6 +1668,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	cgroup_kill();
+
 	fio_mutex_remove(startup_mutex);
 	fio_mutex_remove(writeout_mutex);
 	return exit_value;

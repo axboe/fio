@@ -4,7 +4,59 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "fio.h"
+#include "flist.h"
 #include "cgroup.h"
+#include "smalloc.h"
+
+static struct flist_head *cgroup_list;
+static struct fio_mutex *lock;
+
+struct cgroup_member {
+	struct flist_head list;
+	char *root;
+};
+
+static void add_cgroup(const char *name)
+{
+	struct cgroup_member *cm;
+
+	cm = smalloc(sizeof(*cm));
+	INIT_FLIST_HEAD(&cm->list);
+	cm->root = smalloc_strdup(name);
+
+	fio_mutex_down(lock);
+
+	if (!cgroup_list) {
+		cgroup_list = smalloc(sizeof(struct flist_head));
+		INIT_FLIST_HEAD(cgroup_list);
+	}
+
+	flist_add_tail(&cm->list, cgroup_list);
+	fio_mutex_up(lock);
+}
+
+void cgroup_kill(void)
+{
+	struct flist_head *n, *tmp;
+	struct cgroup_member *cm;
+
+	fio_mutex_down(lock);
+	if (!cgroup_list)
+		goto out;
+
+	flist_for_each_safe(n, tmp, cgroup_list) {
+		cm = flist_entry(n, struct cgroup_member, list);
+		rmdir(cm->root);
+		flist_del(&cm->list);
+		sfree(cm->root);
+		sfree(cm);
+	}
+
+	sfree(cgroup_list);
+	cgroup_list = NULL;
+out:
+	fio_mutex_up(lock);
+}
 
 /*
  * Check if the given root appears valid
@@ -40,7 +92,6 @@ static int cgroup_add_pid(struct thread_data *td)
 
 	root = get_cgroup_root(td);
 	sprintf(tmp, "%s/tasks", root);
-
 	f = fopen(tmp, "w");
 	if (!f) {
 		td_verror(td, errno, "cgroup open tasks");
@@ -97,17 +148,20 @@ int cgroup_setup(struct thread_data *td)
 			return 1;
 		}
 	} else
-		td->o.cgroup_was_created = 1;
+		add_cgroup(root);
 
-	sprintf(tmp, "%s/blkio.weight", root);
-	f = fopen(tmp, "w");
-	if (!f) {
-		td_verror(td, errno, "cgroup open weight");
-		return 1;
+	if (td->o.cgroup_weight) {
+		sprintf(tmp, "%s/blkio.weight", root);
+		f = fopen(tmp, "w");
+		if (!f) {
+			td_verror(td, errno, "cgroup open weight");
+			return 1;
+		}
+
+		fprintf(f, "%d", td->o.cgroup_weight);
+		fclose(f);
 	}
 
-	fprintf(f, "%d", td->o.cgroup_weight);
-	fclose(f);
 	free(root);
 
 	if (cgroup_add_pid(td))
@@ -120,16 +174,19 @@ void cgroup_shutdown(struct thread_data *td)
 {
 	if (cgroup_check_fs(td))
 		return;
-	if (!td->o.cgroup_weight)
+	if (!td->o.cgroup_weight && td->o.cgroup)
 		return;
 
 	cgroup_del_pid(td);
+}
 
-	if (td->o.cgroup_was_created) {
-		char *root;
 
-		root = get_cgroup_root(td);
-		rmdir(root);
-		free(root);
-	}
+static void fio_init cgroup_init(void)
+{
+	lock = fio_mutex_init(1);
+}
+
+static void fio_exit cgroup_exit(void)
+{
+	fio_mutex_remove(lock);
 }

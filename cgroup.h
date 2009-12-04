@@ -6,6 +6,8 @@
 int cgroup_setup(struct thread_data *td);
 void cgroup_shutdown(struct thread_data *td);
 
+void cgroup_kill(void);
+
 #else
 
 static inline int cgroup_setup(struct thread_data *td)
@@ -15,6 +17,10 @@ static inline int cgroup_setup(struct thread_data *td)
 }
 
 static inline void cgroup_shutdown(struct thread_data *td)
+{
+}
+
+void cgroup_kill(void)
 {
 }
 
