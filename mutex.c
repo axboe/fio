@@ -72,7 +72,6 @@ struct fio_mutex *fio_mutex_init(int value)
 
 	pthread_condattr_init(&cond);
 	pthread_condattr_setpshared(&cond, mflag);
-	pthread_condattr_setclock(&cond, CLOCK_MONOTONIC);
 	pthread_cond_init(&mutex->cond, &cond);
 
 	ret = pthread_mutex_init(&mutex->lock, &attr);
@@ -95,7 +94,7 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 	struct timespec t;
 	int ret = 0;
 
-	clock_gettime(CLOCK_MONOTONIC, &t);
+	clock_gettime(CLOCK_REALTIME, &t);
 	t.tv_sec += seconds;
 
 	pthread_mutex_lock(&mutex->lock);
