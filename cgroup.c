@@ -8,7 +8,6 @@
 #include "cgroup.h"
 #include "smalloc.h"
 
-static struct flist_head *cgroup_list;
 static struct fio_mutex *lock;
 
 struct cgroup_member {
@@ -16,7 +15,7 @@ struct cgroup_member {
 	char *root;
 };
 
-static void add_cgroup(const char *name)
+static void add_cgroup(const char *name, struct flist_head *clist)
 {
 	struct cgroup_member *cm;
 
@@ -25,26 +24,18 @@ static void add_cgroup(const char *name)
 	cm->root = smalloc_strdup(name);
 
 	fio_mutex_down(lock);
-
-	if (!cgroup_list) {
-		cgroup_list = smalloc(sizeof(struct flist_head));
-		INIT_FLIST_HEAD(cgroup_list);
-	}
-
-	flist_add_tail(&cm->list, cgroup_list);
+	flist_add_tail(&cm->list, clist);
 	fio_mutex_up(lock);
 }
 
-void cgroup_kill(void)
+void cgroup_kill(struct flist_head *clist)
 {
 	struct flist_head *n, *tmp;
 	struct cgroup_member *cm;
 
 	fio_mutex_down(lock);
-	if (!cgroup_list)
-		goto out;
 
-	flist_for_each_safe(n, tmp, cgroup_list) {
+	flist_for_each_safe(n, tmp, clist) {
 		cm = flist_entry(n, struct cgroup_member, list);
 		rmdir(cm->root);
 		flist_del(&cm->list);
@@ -52,9 +43,6 @@ void cgroup_kill(void)
 		sfree(cm);
 	}
 
-	sfree(cgroup_list);
-	cgroup_list = NULL;
-out:
 	fio_mutex_up(lock);
 }
 
@@ -97,7 +85,6 @@ static int cgroup_write_pid(struct thread_data *td, const char *root)
 	fprintf(f, "%d", td->pid);
 	fclose(f);
 	return 0;
-
 }
 
 /*
@@ -122,7 +109,7 @@ static int cgroup_del_pid(struct thread_data *td)
 	return cgroup_write_pid(td, td->o.cgroup_root);
 }
 
-int cgroup_setup(struct thread_data *td)
+int cgroup_setup(struct thread_data *td, struct flist_head *clist)
 {
 	char *root, tmp[256];
 	FILE *f;
@@ -145,7 +132,7 @@ int cgroup_setup(struct thread_data *td)
 			goto err;
 		}
 	} else
-		add_cgroup(root);
+		add_cgroup(root, clist);
 
 	if (td->o.cgroup_weight) {
 		sprintf(tmp, "%s/blkio.weight", root);
@@ -179,7 +166,6 @@ void cgroup_shutdown(struct thread_data *td)
 
 	cgroup_del_pid(td);
 }
-
 
 static void fio_init cgroup_init(void)
 {

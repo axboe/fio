@@ -61,6 +61,7 @@ static volatile int fio_abort;
 static int exit_value;
 static struct itimerval itimer;
 static pthread_t gtod_thread;
+static struct flist_head *cgroup_list;
 
 struct io_log *agg_io_log[2];
 
@@ -1076,7 +1077,7 @@ static void *thread_main(void *data)
 		}
 	}
 
-	if (td->o.cgroup_weight && cgroup_setup(td))
+	if (td->o.cgroup_weight && cgroup_setup(td, cgroup_list))
 		goto err;
 
 	if (nice(td->o.nice) == -1) {
@@ -1657,6 +1658,9 @@ int main(int argc, char *argv[])
 
 	status_timer_arm();
 
+	cgroup_list = smalloc(sizeof(*cgroup_list));
+	INIT_FLIST_HEAD(cgroup_list);
+
 	run_threads();
 
 	if (!fio_abort) {
@@ -1668,7 +1672,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	cgroup_kill();
+	cgroup_kill(cgroup_list);
+	sfree(cgroup_list);
 
 	fio_mutex_remove(startup_mutex);
 	fio_mutex_remove(writeout_mutex);
