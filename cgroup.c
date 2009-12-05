@@ -150,7 +150,7 @@ void cgroup_shutdown(struct thread_data *td)
 {
 	if (cgroup_check_fs(td))
 		return;
-	if (!td->o.cgroup_weight && td->o.cgroup)
+	if (!td->o.cgroup_weight && !td->o.cgroup)
 		return;
 
 	cgroup_del_pid(td);
