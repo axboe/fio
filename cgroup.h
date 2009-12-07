@@ -21,7 +21,7 @@ static inline void cgroup_shutdown(struct thread_data *td, char **mnt)
 {
 }
 
-void cgroup_kill(struct flist_head *list);
+void cgroup_kill(struct flist_head *list)
 {
 }
 
