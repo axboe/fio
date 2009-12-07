@@ -62,6 +62,7 @@ static int exit_value;
 static struct itimerval itimer;
 static pthread_t gtod_thread;
 static struct flist_head *cgroup_list;
+static char *cgroup_mnt;
 
 struct io_log *agg_io_log[2];
 
@@ -1077,7 +1078,7 @@ static void *thread_main(void *data)
 		}
 	}
 
-	if (td->o.cgroup_weight && cgroup_setup(td, cgroup_list))
+	if (td->o.cgroup_weight && cgroup_setup(td, cgroup_list, &cgroup_mnt))
 		goto err;
 
 	if (nice(td->o.nice) == -1) {
@@ -1209,7 +1210,7 @@ err:
 	close_and_free_files(td);
 	close_ioengine(td);
 	cleanup_io_u(td);
-	cgroup_shutdown(td);
+	cgroup_shutdown(td, &cgroup_mnt);
 
 	if (td->o.cpumask_set) {
 		int ret = fio_cpuset_exit(&td->o.cpumask);
@@ -1674,6 +1675,8 @@ int main(int argc, char *argv[])
 
 	cgroup_kill(cgroup_list);
 	sfree(cgroup_list);
+	if (cgroup_mnt)
+		sfree(cgroup_mnt);
 
 	fio_mutex_remove(startup_mutex);
 	fio_mutex_remove(writeout_mutex);

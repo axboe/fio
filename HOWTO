@@ -1004,17 +1004,12 @@ continue_on_error=bool	Normally fio will exit the job on the first observed
 		given in the stats is the first error that was hit during the
 		run.
 
-cgroup_root=str	Root of the mounted blkio cgroup file systems. This is a Linux
-		specific IO controller. If your system doesn't have it mounted,
-		you can do so with:
+cgroup=str	Add job to this control group. If it doesn't exist, it will
+		be created. The system must have a mounted cgroup blkio
+		mount point for this to work. If your system doesn't have it
+		mounted, you can do so with:
 
 		# mount -t cgroup -o blkio none /cgroup
-
-		The cgroup_root defaults to /cgroup, if mounted elsewhere
-		please specify this option.
-
-cgroup=str	Add job to this control group. If it doesn't exist, it will
-		be created.
 
 cgroup_weight=int	Set the weight of the cgroup to this value. See
 		the documentation that comes with the kernel, allowed values

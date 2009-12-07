@@ -3,20 +3,21 @@
 
 #ifdef FIO_HAVE_CGROUPS
 
-int cgroup_setup(struct thread_data *td, struct flist_head *list);
-void cgroup_shutdown(struct thread_data *td);
+int cgroup_setup(struct thread_data *, struct flist_head *, char **);
+void cgroup_shutdown(struct thread_data *, char **);
 
 void cgroup_kill(struct flist_head *list);
 
 #else
 
-static inline int cgroup_setup(struct thread_data *td, struct flist_head *list);
+static inline int cgroup_setup(struct thread_data *td, struct flist_head *list,
+			       char **mnt)
 {
 	td_verror(td, EINVAL, "cgroup_setup");
 	return 1;
 }
 
-static inline void cgroup_shutdown(struct thread_data *td)
+static inline void cgroup_shutdown(struct thread_data *td, char **mnt)
 {
 }
 

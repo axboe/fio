@@ -3,6 +3,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <mntent.h>
 #include "fio.h"
 #include "flist.h"
 #include "cgroup.h"
@@ -14,6 +15,33 @@ struct cgroup_member {
 	struct flist_head list;
 	char *root;
 };
+
+static char *find_cgroup_mnt(struct thread_data *td)
+{
+	char *mntpoint = NULL;
+	struct mntent *mnt;
+	FILE *f;
+
+	f = setmntent("/proc/mounts", "r");
+	if (!f) {
+		td_verror(td, errno, "setmntent /proc/mounts");
+		return NULL;
+	}
+
+	while ((mnt = getmntent(f)) != NULL) {
+		if (!strcmp(mnt->mnt_type, "cgroup") &&
+		    strstr(mnt->mnt_opts, "blkio"))
+			break;
+	}
+
+	if (mnt)
+		mntpoint = smalloc_strdup(mnt->mnt_dir);
+	else
+		log_err("fio: cgroup blkio does not appear to be mounted\n");
+
+	endmntent(f);
+	return mntpoint;
+}
 
 static void add_cgroup(const char *name, struct flist_head *clist)
 {
@@ -46,26 +74,14 @@ void cgroup_kill(struct flist_head *clist)
 	fio_mutex_up(lock);
 }
 
-/*
- * Check if the given root appears valid
- */
-static int cgroup_check_fs(struct thread_data *td)
-{
-	struct stat sb;
-	char tmp[256];
-
-	sprintf(tmp, "%s/tasks", td->o.cgroup_root);
-	return stat(tmp, &sb);
-}
-
-static char *get_cgroup_root(struct thread_data *td)
+static char *get_cgroup_root(struct thread_data *td, char *mnt)
 {
 	char *str = malloc(64);
 
 	if (td->o.cgroup)
-		sprintf(str, "%s/%s", td->o.cgroup_root, td->o.cgroup);
+		sprintf(str, "%s/%s", mnt, td->o.cgroup);
 	else
-		sprintf(str, "%s/%s", td->o.cgroup_root, td->o.name);
+		sprintf(str, "%s/%s", mnt, td->o.name);
 
 	return str;
 }
@@ -100,30 +116,31 @@ static int cgroup_write_pid(struct thread_data *td, const char *root)
 /*
  * Move pid to root class
  */
-static int cgroup_del_pid(struct thread_data *td)
+static int cgroup_del_pid(struct thread_data *td, char *mnt)
 {
-	return cgroup_write_pid(td, td->o.cgroup_root);
+	return cgroup_write_pid(td, mnt);
 }
 
-int cgroup_setup(struct thread_data *td, struct flist_head *clist)
+int cgroup_setup(struct thread_data *td, struct flist_head *clist, char **mnt)
 {
 	char *root;
 
-	if (cgroup_check_fs(td)) {
-		log_err("fio: blkio cgroup mount point %s not valid\n",
-							td->o.cgroup_root);
-		return 1;
+	if (!*mnt) {
+		*mnt = find_cgroup_mnt(td);
+		if (!*mnt)
+			return 1;
 	}
 
 	/*
 	 * Create container, if it doesn't exist
 	 */
-	root = get_cgroup_root(td);
+	root = get_cgroup_root(td, *mnt);
 	if (mkdir(root, 0755) < 0) {
 		int __e = errno;
 
 		if (__e != EEXIST) {
 			td_verror(td, __e, "cgroup mkdir");
+			log_err("fio: path %s\n", root);
 			goto err;
 		}
 	} else
@@ -146,14 +163,14 @@ err:
 	return 1;
 }
 
-void cgroup_shutdown(struct thread_data *td)
+void cgroup_shutdown(struct thread_data *td, char **mnt)
 {
-	if (cgroup_check_fs(td))
+	if (*mnt == NULL)
 		return;
 	if (!td->o.cgroup_weight && !td->o.cgroup)
 		return;
 
-	cgroup_del_pid(td);
+	cgroup_del_pid(td, *mnt);
 }
 
 static void fio_init cgroup_init(void)

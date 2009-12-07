@@ -725,18 +725,12 @@ entering the kernel with a gettimeofday() call. The CPU set aside for doing
 these time calls will be excluded from other uses. Fio will manually clear it
 from the CPU mask of other jobs.
 .TP
-.BI cgroup_root \fR=\fPstr
-Root of the mounted blkio cgroup file systems. This is a Linux
-specific IO controller. If your system doesn't have it mounted,
-you can do so with:
-
-# mount -t cgroup -o blkio none /cgroup
-
-The cgroup_root defaults to /cgroup, if mounted elsewhere please specify this
-option.
-.TP
 .BI cgroup \fR=\fPstr
 Add job to this control group. If it doesn't exist, it will be created.
+The system must have a mounted cgroup blkio mount point for this to work. If
+your system doesn't have it mounted, you can do so with:
+
+# mount -t cgroup -o blkio none /cgroup
 .TP
 .BI cgroup_weight \fR=\fPint
 Set the weight of the cgroup to this value. See the documentation that comes

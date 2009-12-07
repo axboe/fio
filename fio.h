@@ -275,7 +275,6 @@ struct thread_options {
 	/*
 	 * blkio cgroup support
 	 */
-	char *cgroup_root;
 	char *cgroup;
 	unsigned int cgroup_weight;
 };
