@@ -1015,6 +1015,11 @@ cgroup_weight=int	Set the weight of the cgroup to this value. See
 		the documentation that comes with the kernel, allowed values
 		are in the range of 100..1000.
 
+uid=int		Instead of running as the invoking user, set the user ID to
+		this value before the thread/process does any work.
+
+gid=int		Set group ID, see uid.
+
 6.0 Interpreting the output
 ---------------------------
 

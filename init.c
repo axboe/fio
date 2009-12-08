@@ -181,6 +181,8 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 	td = &threads[thread_number++];
 	*td = *parent;
 
+	td->o.uid = td->o.gid = -1U;
+
 	dup_files(td, parent);
 	options_mem_dupe(td);
 

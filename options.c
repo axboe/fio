@@ -1741,6 +1741,18 @@ static struct fio_option options[] = {
 		.maxval	= 1000,
 	},
 	{
+		.name	= "uid",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(uid),
+		.help	= "Run job with this user ID",
+	},
+	{
+		.name	= "gid",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(gid),
+		.help	= "Run job with this group ID",
+	},
+	{
 		.name = NULL,
 	},
 };

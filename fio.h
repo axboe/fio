@@ -277,6 +277,9 @@ struct thread_options {
 	 */
 	char *cgroup;
 	unsigned int cgroup_weight;
+
+	unsigned int uid;
+	unsigned int gid;
 };
 
 #define FIO_VERROR_SIZE	128

@@ -1041,6 +1041,15 @@ static void *thread_main(void *data)
 	 */
 	fio_mutex_remove(td->mutex);
 
+	if (td->o.uid != -1U && setuid(td->o.uid)) {
+		td_verror(td, errno, "setuid");
+		goto err;
+	}
+	if (td->o.gid != -1U && setgid(td->o.gid)) {
+		td_verror(td, errno, "setgid");
+		goto err;
+	}
+
 	/*
 	 * May alter parameters that init_io_u() will use, so we need to
 	 * do this first.
