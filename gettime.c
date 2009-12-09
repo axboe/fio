@@ -10,7 +10,7 @@
 
 #include "hash.h"
 
-static int clock_gettime_works;
+static int clock_gettime_works = 0;
 static struct timeval last_tv;
 static int last_tv_valid;
 

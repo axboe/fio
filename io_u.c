@@ -984,6 +984,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	if (!io_u->error) {
 		unsigned int bytes = io_u->buflen - io_u->resid;
 		const enum fio_ddir idx = io_u->ddir;
+		const enum fio_ddir odx = io_u->ddir ^ 1;
 		int ret;
 
 		td->io_blocks[idx]++;
@@ -992,14 +993,9 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 		if (ramp_time_over(td)) {
 			unsigned long uninitialized_var(lusec);
-			unsigned long uninitialized_var(rusec);
 
 			if (!td->o.disable_clat || !td->o.disable_bw)
 				lusec = utime_since(&io_u->issue_time,
-							&icd->time);
-			if (__should_check_rate(td, idx) ||
-			    __should_check_rate(td, idx ^ 1))
-				rusec = utime_since(&io_u->start_time,
 							&icd->time);
 
 			if (!td->o.disable_clat) {
@@ -1009,11 +1005,16 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 			if (!td->o.disable_bw)
 				add_bw_sample(td, idx, bytes, &icd->time);
 			if (__should_check_rate(td, idx)) {
-				td->rate_pending_usleep[idx] +=
-					(long) td->rate_usec_cycle[idx] - rusec;
+				td->rate_pending_usleep[idx] =
+					((td->this_io_bytes[idx] *
+					  td->rate_nsec_cycle[idx]) / 1000 -
+					 utime_since_now(&td->start));
 			}
 			if (__should_check_rate(td, idx ^ 1))
-				td->rate_pending_usleep[idx ^ 1] -= rusec;
+				td->rate_pending_usleep[odx] =
+					((td->this_io_bytes[odx] *
+					  td->rate_nsec_cycle[odx]) / 1000 -
+					 utime_since_now(&td->start));
 		}
 
 		if (td_write(td) && idx == DDIR_WRITE &&

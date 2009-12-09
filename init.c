@@ -205,21 +205,19 @@ static void put_job(struct thread_data *td)
 static int __setup_rate(struct thread_data *td, enum fio_ddir ddir)
 {
 	unsigned int bs = td->o.min_bs[ddir];
-	unsigned long long rate;
-	unsigned long ios_per_msec;
+	unsigned long long bytes_per_sec;
 
-	if (td->o.rate[ddir]) {
-		rate = td->o.rate[ddir];
-		ios_per_msec = (rate * 1000LL) / bs;
-	} else
-		ios_per_msec = td->o.rate_iops[ddir] * 1000UL;
+	if (td->o.rate[ddir])
+		bytes_per_sec = td->o.rate[ddir];
+	else
+		bytes_per_sec = td->o.rate_iops[ddir] * bs;
 
-	if (!ios_per_msec) {
+	if (!bytes_per_sec) {
 		log_err("rate lower than supported\n");
 		return -1;
 	}
 
-	td->rate_usec_cycle[ddir] = 1000000000ULL / ios_per_msec;
+	td->rate_nsec_cycle[ddir] = 1000000000ULL / bytes_per_sec;
 	td->rate_pending_usleep[ddir] = 0;
 	return 0;
 }
