@@ -7,6 +7,8 @@
 #include "os-freebsd.h"
 #elif defined(__sun__)
 #include "os-solaris.h"
+#elif defined(__APPLE__)
+#include "os-mac.h"
 #else
 #error "unsupported os"
 #endif

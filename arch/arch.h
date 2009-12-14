@@ -23,7 +23,7 @@ enum {
 #include "arch-x86.h"
 #elif defined(__x86_64__)
 #include "arch-x86_64.h"
-#elif defined(__powerpc__) || defined(__powerpc64__)
+#elif defined(__powerpc__) || defined(__powerpc64__) || defined(__ppc__)
 #include "arch-ppc.h"
 #elif defined(__ia64__)
 #include "arch-ia64.h"
