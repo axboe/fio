@@ -14,11 +14,11 @@
 
 #define FIO_HAVE_POSIXAIO
 #define FIO_USE_GENERIC_BDEV_SIZE
+#define FIO_USE_GENERIC_RAND
 
 #define OS_MAP_ANON		MAP_ANON
 
 typedef unsigned long os_cpu_mask_t;
-typedef unsigned int os_random_state_t;
 typedef unsigned int clockid_t;
 
 static inline int blockdev_invalidate_cache(int fd)
@@ -35,18 +35,4 @@ static inline unsigned long long os_phys_mem(void)
 	sysctl(mib, 2, &mem, &len, NULL, 0);
 	return mem;
 }
-
-static inline void os_random_seed(unsigned long seed, os_random_state_t *rs)
-{
-	srand(seed);
-}
-
-static inline long os_random_long(os_random_state_t *rs)
-{
-	long val;
-
-	val = rand_r(rs);
-	return val;
-}
-
 #endif
