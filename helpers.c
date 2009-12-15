@@ -32,8 +32,8 @@ int __weak clock_gettime(clockid_t clk_id, struct timespec *ts)
 
 	ret = gettimeofday(&tv, NULL);
 
-	ts->ts_sec = tv.tv_sec;
-	ts->ts_nsec = tv.tv_usec * 1000;
+	ts->tv_sec = tv.tv_sec;
+	ts->tv_nsec = tv.tv_usec * 1000;
 
 	return ret;
 }

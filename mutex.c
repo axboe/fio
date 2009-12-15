@@ -11,6 +11,7 @@
 #include "mutex.h"
 #include "arch/arch.h"
 #include "os/os.h"
+#include "helpers.h"
 
 void fio_mutex_remove(struct fio_mutex *mutex)
 {

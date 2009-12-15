@@ -1,6 +1,8 @@
 #ifndef FIO_HELPERS_H
 #define FIO_HELPERS_H
 
+#include "compiler/compiler.h"
+
 struct in_addr;
 
 extern int __weak posix_memalign(void **ptr, size_t align, size_t size);

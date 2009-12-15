@@ -1809,16 +1809,15 @@ static struct fio_keyword fio_keywords[] = {
 
 void fio_keywords_init(void)
 {
-	unsigned long mb_memory;
+	unsigned long long mb_memory;
 	char buf[128];
 	long l;
 
 	sprintf(buf, "%lu", page_size);
 	fio_keywords[0].replace = strdup(buf);
 
-	l = sysconf(_SC_PHYS_PAGES);
-	mb_memory = l * (page_size / 1024UL);
-	sprintf(buf, "%lu", mb_memory);
+	mb_memory = os_phys_mem() / page_size;
+	sprintf(buf, "%llu", mb_memory);
 	fio_keywords[1].replace = strdup(buf);
 
 	l = sysconf(_SC_NPROCESSORS_ONLN);
