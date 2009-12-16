@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 
 #include "compiler/compiler.h"
+#include "os/os.h"
 
 int __weak posix_fallocate(int fd, off_t offset, off_t len)
 {
