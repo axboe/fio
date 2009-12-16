@@ -2,6 +2,7 @@
 #define FIO_OS_SOLARIS_H
 
 #include <errno.h>
+#include <malloc.h>
 #include <sys/types.h>
 #include <sys/fcntl.h>
 #include <sys/pset.h>
@@ -101,5 +102,18 @@ static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
 #ifdef MADV_FREE
 #define FIO_MADV_FREE	MADV_FREE
 #endif
+
+/*
+ * Some Solaris versions don't have posix_memalign(), provide a private
+ * weak alternative
+ */
+static inline int __weak posix_memalign(void **ptr, size_t align, size_t size)
+{
+	*ptr = memalign(align, size);
+	if (*ptr)
+		return 0;
+
+	return ENOMEM;
+}
 
 #endif
