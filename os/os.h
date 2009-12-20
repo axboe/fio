@@ -1,6 +1,9 @@
 #ifndef FIO_OS_H
 #define FIO_OS_H
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #if defined(__linux__)
 #include "os-linux.h"
 #elif defined(__FreeBSD__)
