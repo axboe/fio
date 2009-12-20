@@ -162,9 +162,15 @@ static int fio_vsyncio_queue(struct thread_data *td, struct io_u *io_u)
 
 			return fio_io_end(td, io_u, ret);
 		} else if (io_u->ddir == DDIR_DATASYNC) {
-			int ret = fdatasync(io_u->file->fd);
-
+			int ret;
+#ifdef FIO_HAVE_FDATASYNC
+			ret = fdatasync(io_u->file->fd);
+#else
+			ret = io_u->xfer_buflen;
+			io_u->error = EINVAL;
+#endif
 			return fio_io_end(td, io_u, ret);
+			
 		}
 	
 		sd->queued = 0;
