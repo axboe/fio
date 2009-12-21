@@ -17,6 +17,8 @@ enum {
 	arch_sparc,
 	arch_sparc64,
 	arch_arm,
+
+	arch_generic,
 };
 
 #if defined(__i386__)
@@ -40,7 +42,8 @@ enum {
 #elif defined(__mips__) || defined(__mips64__)
 #include "arch-mips.h"
 #else
-#error "Unsupported arch"
+#warning "Unknown architecture, attempting to use generic model."
+#include "arch-generic.h"
 #endif
 
 #ifdef ARCH_HAVE_FFZ
