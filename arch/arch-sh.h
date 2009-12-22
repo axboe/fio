@@ -3,7 +3,7 @@
 #ifndef ARCH_SH_H
 #define ARCH_SH_H
 
-#define SH	(arch_sh)
+#define ARCH	(arch_sh)
 
 #ifndef __NR_ioprio_set
 #define __NR_ioprio_set	288
