@@ -21,7 +21,14 @@
 #endif
 
 #define nop             __asm__ __volatile__ ("nop": : :"memory")
-#define read_barrier()  __asm__ __volatile__ (" " : : : "memory")
-#define write_barrier() __asm__ __volatile__ (" " : : : "memory")
+
+#if defined(__SH4A__)
+#define	mb()		__asm__ __volatile__ ("synco": : :"memory")
+#else
+#define mb()		__asm__ __volatile__ (" " : : : "memory")
+#endif
+
+#define read_barrier()	mb()
+#define write_barrier()	mb()
 
 #endif
