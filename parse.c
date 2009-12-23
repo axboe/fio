@@ -162,9 +162,19 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data)
 	if (*val == LONG_MAX && errno == ERANGE)
 		return 1;
 
-	if (kilo)
-		*val *= get_mult_bytes(str[len - 1], data);
-	else
+	if (kilo) {
+		const char *p;
+		/*
+		 * if the last char is 'b' or 'B', the user likely used
+		 * "1gb" instead of just "1g". If the second to last is also
+		 * a letter, adjust.
+		 */
+		p = str + len - 1;
+		if ((*p == 'b' || *p == 'B') && isalpha(*(p - 1)))
+			--p;
+
+		*val *= get_mult_bytes(*p, data);
+	} else
 		*val *= get_mult_time(str[len - 1]);
 
 	return 0;
