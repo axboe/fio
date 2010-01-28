@@ -182,6 +182,11 @@ reasons. Allow values are 1024 or 1000, with 1024 being the default.
 Seed the random number generator in a predictable way so results are repeatable
 across runs.  Default: true.
 .TP
+.BI fallocate \fR=\fPbool
+By default, fio will use fallocate() to advise the system of the size of the
+file we are going to write. This can be turned off with fallocate=0. May not
+be available on all supported platforms.
+.TP
 .BI fadvise_hint \fR=\fPbool
 Disable use of \fIposix_fadvise\fR\|(2) to advise the kernel what I/O patterns
 are likely to be issued. Default: true.

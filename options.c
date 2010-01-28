@@ -1081,6 +1081,15 @@ static struct fio_option options[] = {
 		},
 		.parent = "nrfiles",
 	},
+#ifdef FIO_HAVE_FALLOCATE
+	{
+		.name	= "fallocate",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(fallocate),
+		.help	= "Use fallocate() when laying out files",
+		.def	= "1",
+	},
+#endif
 	{
 		.name	= "fadvise_hint",
 		.type	= FIO_OPT_BOOL,

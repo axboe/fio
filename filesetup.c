@@ -64,6 +64,19 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
+#ifdef FIO_HAVE_FALLOCATE
+	if (td->o.fallocate && !td->o.fill_device) {
+		dprint(FD_FILE, "fallocate file %s size %llu\n", f->file_name,
+							f->real_file_size);
+
+		r = posix_fallocate(f->fd, 0, f->real_file_size);
+		if (r < 0) {
+			log_err("fio: posix_fallocate fails: %s\n",
+					strerror(-r));
+		}
+	}
+#endif
+	
 	if (!new_layout)
 		goto done;
 
@@ -78,16 +91,6 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 			td_verror(td, errno, "ftruncate");
 			goto err;
 		}
-
-#ifdef FIO_HAVE_FALLOCATE
-		dprint(FD_FILE, "fallocate file %s, size %llu\n", f->file_name,
-							f->real_file_size);
-		r = posix_fallocate(f->fd, 0, f->real_file_size);
-		if (r < 0) {
-			log_err("fio: posix_fallocate fails: %s\n",
-					strerror(-r));
-		}
-#endif
 	}
 
 	b = malloc(td->o.max_bs[DDIR_WRITE]);

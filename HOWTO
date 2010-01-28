@@ -324,6 +324,11 @@ kb_base=int	The base unit for a kilobyte. The defacto base is 2^10, 1024.
 randrepeat=bool	For random IO workloads, seed the generator in a predictable
 		way so that results are repeatable across repetitions.
 
+fallocate=bool	By default, fio will use fallocate() to advise the system
+		of the size of the file we are going to write. This can be
+		turned off with fallocate=0. May not be available on all
+		supported platforms.
+
 fadvise_hint=bool By default, fio will use fadvise() to advise the kernel
 		on what IO patterns it is likely to issue. Sometimes you
 		want to test specific IO patterns without telling the
