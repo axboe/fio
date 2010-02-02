@@ -75,6 +75,11 @@ struct fio_file {
 	unsigned long long last_pos;
 
 	/*
+	 * For use by the io engine
+	 */
+	unsigned long long file_pos;
+
+	/*
 	 * if io is protected by a semaphore, this is set
 	 */
 	struct fio_mutex *lock;
@@ -147,6 +152,7 @@ static inline void fio_file_reset(struct fio_file *f)
 {
 	f->last_free_lookup = 0;
 	f->last_pos = f->file_offset;
+	f->file_pos = -1ULL;
 	if (f->file_map)
 		memset(f->file_map, 0, f->num_maps * sizeof(int));
 }
