@@ -33,6 +33,9 @@ static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 	if (ddir_sync(io_u->ddir))
 		return 0;
 
+	if (f->file_pos != -1ULL && f->file_pos == io_u->offset)
+		return 0;
+
 	if (lseek(f->fd, io_u->offset, SEEK_SET) == -1) {
 		td_verror(td, errno, "lseek");
 		return 1;
@@ -43,6 +46,9 @@ static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 
 static int fio_io_end(struct thread_data *td, struct io_u *io_u, int ret)
 {
+	if (io_u->file && ret >= 0)
+		io_u->file->file_pos = io_u->offset + ret;
+
 	if (ret != (int) io_u->xfer_buflen) {
 		if (ret >= 0) {
 			io_u->resid = io_u->xfer_buflen - ret;
