@@ -770,7 +770,7 @@ static void get_file_type(struct fio_file *f)
 	else
 		f->filetype = FIO_TYPE_FILE;
 
-	if (!lstat(f->file_name, &sb)) {
+	if (!stat(f->file_name, &sb)) {
 		if (S_ISBLK(sb.st_mode))
 			f->filetype = FIO_TYPE_BD;
 		else if (S_ISCHR(sb.st_mode))
