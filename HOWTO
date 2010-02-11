@@ -568,6 +568,8 @@ fsync=int	If writing to a file, issue a sync of the dirty data
 
 fsyncdata=int	Like fsync= but uses fdatasync() to only sync data and not
 		metadata blocks.
+		In FreeBSD there is no fdatasync(), this falls back to
+		using fsync()
 
 overwrite=bool	If true, writes to a file will always overwrite existing
 		data. If the file doesn't already exist, it will be

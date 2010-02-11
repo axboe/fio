@@ -382,6 +382,17 @@ static int fixup_options(struct thread_data *td)
 				 " that isn't seekable. Pre-read disabled.\n");
 	}
 
+#ifndef FIO_HAVE_FDATASYNC
+	if (td->o.fdatasync_blocks) {
+		log_info("fio: this platform does not support fdatasync()"
+			 " falling back to using fsync().  Use the 'fsync'"
+			 " option instead of 'fdatasync' to get rid of"
+			 " this warning\n");
+		td->o.fsync_blocks = td->o.fdatasync_blocks;
+		td->o.fdatasync_blocks = 0;
+	}
+#endif
+
 	return 0;
 }
 
