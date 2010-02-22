@@ -18,6 +18,7 @@ enum {
 	arch_sparc64,
 	arch_arm,
 	arch_sh,
+	arch_hppa,
 
 	arch_generic,
 };
@@ -44,6 +45,8 @@ enum {
 #include "arch-mips.h"
 #elif defined(__sh__)
 #include "arch-sh.h"
+#elif defined(__hppa__)
+#include "arch-hppa.h"
 #else
 #warning "Unknown architecture, attempting to use generic model."
 #include "arch-generic.h"
