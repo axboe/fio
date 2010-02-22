@@ -20,7 +20,7 @@
 #include "filehash.h"
 #include "verify.h"
 
-static char fio_version_string[] = "fio 1.36";
+static char fio_version_string[] = "fio 1.37";
 
 #define FIO_RANDSEED		(0xb1899bedUL)
 
