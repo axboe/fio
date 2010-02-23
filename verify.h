@@ -37,7 +37,7 @@ struct vhdr_sha512 {
 	uint8_t sha512[128];
 };
 struct vhdr_sha256 {
-	uint8_t sha256[128];
+	uint8_t sha256[64];
 };
 struct vhdr_sha1 {
 	uint32_t sha1[5];

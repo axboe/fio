@@ -212,7 +212,7 @@ static int verify_io_u_sha256(struct verify_header *hdr, struct io_u *io_u,
 {
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	struct vhdr_sha256 *vh = hdr_priv(hdr);
-	uint8_t sha256[128];
+	uint8_t sha256[64];
 	struct sha256_ctx sha256_ctx = {
 		.buf = sha256,
 	};
