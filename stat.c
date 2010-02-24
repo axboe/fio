@@ -644,7 +644,7 @@ void show_run_stats(void)
 	 * don't overwrite last signal output
 	 */
 	if (!terse_output)
-		printf("\n");
+		log_info("\n");
 
 	for (i = 0; i < nr_ts; i++) {
 		ts = &threadstats[i];

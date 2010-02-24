@@ -134,7 +134,7 @@ static void sig_quit(int sig)
 static void sig_int(int sig)
 {
 	if (threads) {
-		printf("\nfio: terminating on signal %d\n", sig);
+		log_info("\nfio: terminating on signal %d\n", sig);
 		fflush(stdout);
 		terminate_threads(TERMINATE_ALL);
 	}
@@ -1210,7 +1210,7 @@ static void *thread_main(void *data)
 
 err:
 	if (td->error)
-		printf("fio: pid=%d, err=%d/%s\n", (int) td->pid, td->error,
+		log_info("fio: pid=%d, err=%d/%s\n", (int) td->pid, td->error,
 							td->verror);
 
 	if (td->o.verify_async)
@@ -1412,17 +1412,17 @@ static void run_threads(void)
 		return;
 
 	if (!terse_output) {
-		printf("Starting ");
+		log_info("Starting ");
 		if (nr_thread)
-			printf("%d thread%s", nr_thread,
+			log_info("%d thread%s", nr_thread,
 						nr_thread > 1 ? "s" : "");
 		if (nr_process) {
 			if (nr_thread)
 				printf(" and ");
-			printf("%d process%s", nr_process,
+			log_info("%d process%s", nr_process,
 						nr_process > 1 ? "es" : "");
 		}
-		printf("\n");
+		log_info("\n");
 		fflush(stdout);
 	}
 
