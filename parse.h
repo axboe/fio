@@ -25,7 +25,7 @@ struct value_pair {
 	const char *help;		/* help text for sub option */
 };
 
-#define OPT_LEN_MAX 	1024
+#define OPT_LEN_MAX 	4096
 #define PARSE_MAX_VP	16
 
 /*
