@@ -1035,7 +1035,7 @@ static int load_profile(const char *profile)
 	int i, in_global = 1;
 	char jobname[32];
 
-	dprint(FD_PARSE, "loading profile %s\n", profile);
+	dprint(FD_PARSE, "loading profile '%s'\n", profile);
 
 	for (i = 0; i < PROFILE_END; i++) {
 		if (!strcmp(profile, profiles[i]))
@@ -1043,7 +1043,7 @@ static int load_profile(const char *profile)
 	}
 
 	if (i == PROFILE_END) {
-		log_err("fio: unknown profile %s\n", profile);
+		log_err("fio: unknown profile '%s'\n", profile);
 		return 1;
 	}
 
