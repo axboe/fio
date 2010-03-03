@@ -620,6 +620,11 @@ static char *option_dup_subs(const char *opt)
 	ssize_t nchr = OPT_LEN_MAX;
 	size_t envlen;
 
+	if (strlen(in) + 1 > OPT_LEN_MAX) {
+		fprintf(stderr, "OPT_LEN_MAX (%d) is too small\n", OPT_LEN_MAX);
+		return NULL;
+	}
+
 	in[OPT_LEN_MAX] = '\0';
 	strncpy(in, opt, OPT_LEN_MAX);
 
@@ -659,6 +664,8 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 	char *post, *tmp;
 
 	tmp = option_dup_subs(opt);
+	if (!tmp)
+		return 1;
 
 	o = get_option(tmp, options, &post);
 	if (!o) {
