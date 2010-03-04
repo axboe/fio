@@ -3,16 +3,25 @@
 
 #include "flist.h"
 
-#define FIO_PROFILE_VERSION	1
-
 struct profile_ops {
 	struct flist_head list;
 	char name[32];
-	int version;
 	int flags;
 
-	const char **def_ops;
+	/*
+	 * Profile specific options
+	 */
 	struct fio_option *options;
+
+	/*
+	 * Called after parsing options, to prepare 'cmdline'
+	 */
+	void (*prep_cmd)(void);
+
+	/*
+	 * The complete command line
+	 */
+	const char **cmdline;
 };
 
 void register_profile(struct profile_ops *);

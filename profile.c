@@ -22,7 +22,8 @@ int load_profile(const char *profile)
 	}
 
 	if (ops) {
-		add_job_opts(ops->def_ops);
+		ops->prep_cmd();
+		add_job_opts(ops->cmdline);
 		return 0;
 	}
 
