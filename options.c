@@ -1726,14 +1726,8 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "profile",
-		.type	= FIO_OPT_STR,
+		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(profile),
-		.posval = {
-			  { .ival = "tiobench",
-			    .oval = PROFILE_TIOBENCH,
-			    .help = "Perform tiobench like test",
-			  },
-		},
 		.help	= "Select a specific builtin performance test",
 	},
 	{

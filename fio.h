@@ -28,7 +28,6 @@
 #include "io_ddir.h"
 #include "ioengine.h"
 #include "iolog.h"
-#include "profiles.h"
 #include "helpers.h"
 
 #ifdef FIO_HAVE_GUASI
@@ -271,7 +270,7 @@ struct thread_options {
 	/*
 	 * Benchmark profile type
 	 */
-	unsigned int profile;
+	char *profile;
 
 	/*
 	 * blkio cgroup support
@@ -538,6 +537,7 @@ extern void fio_options_dup_and_init(struct option *);
 extern void options_mem_dupe(struct thread_data *);
 extern void options_mem_free(struct thread_data *);
 extern void td_fill_rand_seeds(struct thread_data *);
+extern void add_job_opts(const char **);
 #define FIO_GETOPT_JOB		0x89988998
 #define FIO_NR_OPTIONS		128
 
