@@ -59,7 +59,7 @@ typedef int (str_cb_fn)(void *, char *);
 extern int parse_option(const char *, struct fio_option *, struct flist_head *, void *);
 extern void sort_options(char **, struct fio_option *, int);
 extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, struct flist_head *, void *);
-extern int show_cmd_help(struct fio_option *, const char *);
+extern int show_cmd_help(struct fio_option *, struct flist_head *, const char *);
 extern void fill_default_options(void *, struct fio_option *);
 extern void option_init(struct fio_option *);
 extern void options_init(struct fio_option *);

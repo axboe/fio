@@ -1959,7 +1959,7 @@ void fio_fill_default_options(struct thread_data *td)
 
 int fio_show_option_help(const char *opt)
 {
-	return show_cmd_help(options, opt);
+	return show_cmd_help(options, &ext_opt_list, opt);
 }
 
 static void __options_mem(struct thread_data *td, int alloc)
@@ -2018,4 +2018,18 @@ void register_ext_option(struct ext_option *eopt)
 	dprint(FD_PARSE, "register option '%s'\n", eopt->o.name);
 	option_init(&eopt->o);
 	flist_add_tail(&eopt->list, &ext_opt_list);
+}
+
+void prune_profile_options(const char *prof_name)
+{
+	struct ext_option *eo;
+	struct flist_head *n, *tmp;
+
+	flist_for_each_safe(n, tmp, &ext_opt_list) {
+		eo = flist_entry(n, struct ext_option, list);
+		if (strcmp(eo->prof_name, prof_name))
+			continue;
+		flist_del(&eo->list);
+		free(eo);
+	}
 }

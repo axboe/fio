@@ -12,6 +12,7 @@ struct profile_ops {
 	int flags;
 
 	const char **def_ops;
+	struct fio_option *options;
 };
 
 void register_profile(struct profile_ops *);

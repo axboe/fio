@@ -852,8 +852,11 @@ static void print_option(struct fio_option *o)
 	} while (printed);
 }
 
-int show_cmd_help(struct fio_option *options, const char *name)
+int show_cmd_help(struct fio_option *options, struct flist_head *ext_opts,
+		  const char *name)
 {
+	struct flist_head *n;
+	struct ext_option *eo;
 	struct fio_option *o, *closest;
 	unsigned int best_dist;
 	int found = 0;
@@ -905,6 +908,18 @@ int show_cmd_help(struct fio_option *options, const char *name)
 	if (found)
 		return 0;
 
+	flist_for_each(n, ext_opts) {
+		eo = flist_entry(n, struct ext_option, list);
+		o = &eo->o;
+		if (!strcmp(name, o->name) ||
+		    (o->alias && !strcmp(name, o->alias))) {
+			printf("%20s: %s\n", o->name, o->help);
+			show_option_help(o, stdout);
+			printf("%20s: External, valid for '%s'\n", "Restriction", eo->prof_name);
+			return 0;
+		}
+	}
+
 	printf("No such command: %s", name);
 	if (closest) {
 		printf(" - showing closest match\n");
@@ -942,13 +957,14 @@ void option_init(struct fio_option *o)
 		fprintf(stderr, "Option %s: string set option with"
 				" default will always be true\n", o->name);
 	}
-	if (!o->cb && !o->off1) {
+	if (!o->cb && (!o->off1 && !o->roff1)) {
 		fprintf(stderr, "Option %s: neither cb nor offset given\n",
 							o->name);
 	}
 	if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE)
 		return;
-	if (o->cb && (o->off1 || o->off2 || o->off3 || o->off4)) {
+	if (o->cb && ((o->off1 || o->off2 || o->off3 || o->off4) ||
+		      (o->roff1 || o->roff2 || o->roff3 || o->roff4))) {
 		fprintf(stderr, "Option %s: both cb and offset given\n",
 							 o->name);
 	}
