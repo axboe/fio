@@ -1761,9 +1761,21 @@ static struct fio_option options[] = {
 	},
 };
 
+static void add_to_lopt(struct option *lopt, struct fio_option *o)
+{
+	lopt->name = (char *) o->name;
+	lopt->val = FIO_GETOPT_JOB;
+	if (o->type == FIO_OPT_STR_SET)
+		lopt->has_arg = no_argument;
+	else
+		lopt->has_arg = required_argument;
+}
+
 void fio_options_dup_and_init(struct option *long_options)
 {
 	struct fio_option *o;
+	struct ext_option *eo;
+	struct flist_head *n;
 	unsigned int i;
 
 	options_init(options);
@@ -1774,15 +1786,17 @@ void fio_options_dup_and_init(struct option *long_options)
 
 	o = &options[0];
 	while (o->name) {
-		long_options[i].name = (char *) o->name;
-		long_options[i].val = FIO_GETOPT_JOB;
-		if (o->type == FIO_OPT_STR_SET)
-			long_options[i].has_arg = no_argument;
-		else
-			long_options[i].has_arg = required_argument;
+		add_to_lopt(&long_options[i], o);
 
 		i++;
 		o++;
+		assert(i < FIO_NR_OPTIONS);
+	}
+
+	flist_for_each(n, &ext_opt_list) {
+		eo = flist_entry(n, struct ext_option, list);
+		add_to_lopt(&long_options[i], &eo->o);
+		i++;
 		assert(i < FIO_NR_OPTIONS);
 	}
 }

@@ -539,7 +539,7 @@ extern void options_mem_free(struct thread_data *);
 extern void td_fill_rand_seeds(struct thread_data *);
 extern void add_job_opts(const char **);
 #define FIO_GETOPT_JOB		0x89988998
-#define FIO_NR_OPTIONS		128
+#define FIO_NR_OPTIONS		512
 
 /*
  * ETA/status stuff
