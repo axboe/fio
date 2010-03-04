@@ -14,8 +14,9 @@
 #include "verify.h"
 #include "parse.h"
 #include "lib/fls.h"
+#include "options.h"
 
-#define td_var_offset(var)	((size_t) &((struct thread_options *)0)->var)
+static FLIST_HEAD(ext_opt_list);
 
 /*
  * Check if mmap/mmaphuge has a :/foo/bar/file at the end. If so, return that.
@@ -1946,7 +1947,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 
 	for (ret = 0, i = 0; i < num_opts; i++) {
 		opts[i] = fio_keyword_replace(opts[i]);
-		ret |= parse_option(opts[i], options, td);
+		ret |= parse_option(opts[i], options, &ext_opt_list, td);
 	}
 
 	return ret;
@@ -1954,7 +1955,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 
 int fio_cmd_option_parse(struct thread_data *td, const char *opt, char *val)
 {
-	return parse_cmd_option(opt, val, options, td);
+	return parse_cmd_option(opt, val, options, &ext_opt_list, td);
 }
 
 void fio_fill_default_options(struct thread_data *td)
@@ -2016,4 +2017,11 @@ unsigned int fio_get_kb_base(void *data)
 		kb_base = 1024;
 
 	return kb_base;
+}
+
+void register_ext_option(struct ext_option *eopt)
+{
+	dprint(FD_PARSE, "register option '%s'\n", eopt->o.name);
+	option_init(&eopt->o);
+	flist_add_tail(&eopt->list, &ext_opt_list);
 }

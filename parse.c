@@ -12,6 +12,7 @@
 
 #include "parse.h"
 #include "debug.h"
+#include "options.h"
 
 static struct fio_option *fio_options;
 extern unsigned int fio_get_kb_base(void *);
@@ -253,16 +254,35 @@ static int check_int(const char *p, int *val)
 	return 1;
 }
 
-static struct fio_option *find_option(struct fio_option *options,
-				      const char *opt)
+static inline int o_match(struct fio_option *o, const char *opt)
 {
+	if (!strcmp(o->name, opt))
+		return 1;
+	else if (o->alias && !strcmp(o->alias, opt))
+		return 1;
+
+	return 0;
+}
+
+static struct fio_option *find_option(struct fio_option *options,
+				      struct flist_head *eops, const char *opt)
+{
+	struct flist_head *n;
 	struct fio_option *o;
 
-	for (o = &options[0]; o->name; o++) {
-		if (!strcmp(o->name, opt))
+	for (o = &options[0]; o->name; o++)
+		if (o_match(o, opt))
 			return o;
-		else if (o->alias && !strcmp(o->alias, opt))
-			return o;
+
+	if (!eops)
+		return NULL;
+
+	flist_for_each(n, eops) {
+		struct ext_option *eopt;
+
+		eopt = flist_entry(n, struct ext_option, list);
+		if (o_match(&eopt->o, opt))
+			return &eopt->o;
 	}
 
 	return NULL;
@@ -535,7 +555,8 @@ static int handle_option(struct fio_option *o, const char *__ptr, void *data)
 }
 
 static struct fio_option *get_option(const char *opt,
-				     struct fio_option *options, char **post)
+				     struct fio_option *options,
+				     struct flist_head *eops, char **post)
 {
 	struct fio_option *o;
 	char *ret;
@@ -547,9 +568,9 @@ static struct fio_option *get_option(const char *opt,
 		ret = (char *) opt;
 		(*post)++;
 		strip_blank_end(ret);
-		o = find_option(options, ret);
+		o = find_option(options, eops, ret);
 	} else {
-		o = find_option(options, opt);
+		o = find_option(options, eops, opt);
 		*post = NULL;
 	}
 
@@ -565,8 +586,8 @@ static int opt_cmp(const void *p1, const void *p2)
 	s1 = strdup(*((char **) p1));
 	s2 = strdup(*((char **) p2));
 
-	o1 = get_option(s1, fio_options, &foo);
-	o2 = get_option(s2, fio_options, &foo);
+	o1 = get_option(s1, fio_options, NULL, &foo);
+	o2 = get_option(s2, fio_options, NULL, &foo);
 
 	prio1 = prio2 = 0;
 	if (o1)
@@ -587,11 +608,12 @@ void sort_options(char **opts, struct fio_option *options, int num_opts)
 }
 
 int parse_cmd_option(const char *opt, const char *val,
-		     struct fio_option *options, void *data)
+		     struct fio_option *options, struct flist_head *eops,
+		     void *data)
 {
 	struct fio_option *o;
 
-	o = find_option(options, opt);
+	o = find_option(options, eops, opt);
 	if (!o) {
 		fprintf(stderr, "Bad option <%s>\n", opt);
 		return 1;
@@ -658,7 +680,8 @@ static char *option_dup_subs(const char *opt)
 	return strdup(out);
 }
 
-int parse_option(const char *opt, struct fio_option *options, void *data)
+int parse_option(const char *opt, struct fio_option *options,
+		 struct flist_head *ext_opt_list, void *data)
 {
 	struct fio_option *o;
 	char *post, *tmp;
@@ -667,7 +690,7 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 	if (!tmp)
 		return 1;
 
-	o = get_option(tmp, options, &post);
+	o = get_option(tmp, options, ext_opt_list, &post);
 	if (!o) {
 		fprintf(stderr, "Bad option <%s>\n", tmp);
 		free(tmp);
@@ -858,6 +881,30 @@ void fill_default_options(void *data, struct fio_option *options)
 			handle_option(o, o->def, data);
 }
 
+void option_init(struct fio_option *o)
+{
+	if (o->type == FIO_OPT_DEPRECATED)
+		return;
+	if (o->type == FIO_OPT_BOOL) {
+		o->minval = 0;
+		o->maxval = 1;
+	}
+	if (o->type == FIO_OPT_STR_SET && o->def) {
+		fprintf(stderr, "Option %s: string set option with"
+				" default will always be true\n", o->name);
+	}
+	if (!o->cb && !o->off1) {
+		fprintf(stderr, "Option %s: neither cb nor offset given\n",
+							o->name);
+	}
+	if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE)
+		return;
+	if (o->cb && (o->off1 || o->off2 || o->off3 || o->off4)) {
+		fprintf(stderr, "Option %s: both cb and offset given\n",
+							 o->name);
+	}
+}
+
 /*
  * Sanitize the options structure. For now it just sets min/max for bool
  * values and whether both callback and offsets are given.
@@ -868,27 +915,6 @@ void options_init(struct fio_option *options)
 
 	dprint(FD_PARSE, "init options\n");
 
-	for (o = &options[0]; o->name; o++) {
-		if (o->type == FIO_OPT_DEPRECATED)
-			continue;
-		if (o->type == FIO_OPT_BOOL) {
-			o->minval = 0;
-			o->maxval = 1;
-		}
-		if (o->type == FIO_OPT_STR_SET && o->def) {
-			fprintf(stderr, "Option %s: string set option with"
-					" default will always be true\n",
-						o->name);
-		}
-		if (!o->cb && !o->off1) {
-			fprintf(stderr, "Option %s: neither cb nor offset"
-					" given\n", o->name);
-		}
-		if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE)
-			continue;
-		if (o->cb && (o->off1 || o->off2 || o->off3 || o->off4)) {
-			fprintf(stderr, "Option %s: both cb and offset given\n",
-								 o->name);
-		}
-	}
+	for (o = &options[0]; o->name; o++)
+		option_init(o);
 }
