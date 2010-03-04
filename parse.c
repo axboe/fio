@@ -327,9 +327,13 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			ret = 1;
 			if (!strncmp(vp->ival, ptr, strlen(vp->ival))) {
 				ret = 0;
-				if (!o->off1)
-					break;
-				val_store(ilp, vp->oval, o->off1, data);
+				if (o->roff1)
+					*(unsigned int *) o->roff1 = vp->oval;
+				else {
+					if (!o->off1)
+						break;
+					val_store(ilp, vp->oval, o->off1, data);
+				}
 				break;
 			}
 		}
@@ -369,15 +373,31 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			ret = fn(data, &ull);
 		else {
 			if (o->type == FIO_OPT_INT) {
-				if (first)
-					val_store(ilp, ull, o->off1, data);
-				if (!more && o->off2)
-					val_store(ilp, ull, o->off2, data);
+				if (first) {
+					if (o->roff1)
+						*(unsigned long long *) o->roff1 = ull;
+					else
+						val_store(ilp, ull, o->off1, data);
+				}
+				if (!more) {
+					if (o->roff2)
+						*(unsigned long long *) o->roff2 = ull;
+					else if (o->off2)
+						val_store(ilp, ull, o->off2, data);
+				}
 			} else {
-				if (first)
-					val_store(ullp, ull, o->off1, data);
-				if (!more && o->off2)
-					val_store(ullp, ull, o->off2, data);
+				if (first) {
+					if (o->roff1)
+						*(unsigned long long *) o->roff1 = ull;
+					else
+						val_store(ullp, ull, o->off1, data);
+				}
+				if (!more) {
+					if (o->roff2)
+						*(unsigned long long *) o->roff2 =  ull;
+					else if (o->off2)
+						val_store(ullp, ull, o->off2, data);
+				}
 			}
 		}
 		break;
@@ -385,7 +405,11 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	case FIO_OPT_STR_STORE: {
 		fio_opt_str_fn *fn = o->cb;
 
-		cp = td_var(data, o->off1);
+		if (o->roff1)
+			cp = (char **) o->roff1;
+		else
+			cp = td_var(data, o->off1);
+
 		*cp = strdup(ptr);
 		if (fn) {
 			ret = fn(data, ptr);
@@ -427,10 +451,19 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			}
 
 			if (first) {
-				val_store(ilp, ul1, o->off1, data);
-				val_store(ilp, ul2, o->off2, data);
+				if (o->roff1)
+					*(unsigned long *) o->roff1 = ul1;
+				else
+					val_store(ilp, ul1, o->off1, data);
+				if (o->roff2)
+					*(unsigned long *) o->roff2 = ul2;
+				else
+					val_store(ilp, ul2, o->off2, data);
 			}
-			if (o->off3 && o->off4) {
+			if (o->roff3 && o->roff4) {
+				*(unsigned long *) o->roff3 = ul1;
+				*(unsigned long *) o->roff4 = ul2;
+			} else if (o->off3 && o->off4) {
 				val_store(ilp, ul1, o->off3, data);
 				val_store(ilp, ul2, o->off4, data);
 			}
@@ -462,10 +495,18 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (fn)
 			ret = fn(data, &il);
 		else {
-			if (first)
-				val_store(ilp, il, o->off1, data);
-			if (!more && o->off2)
-				val_store(ilp, il, o->off2, data);
+			if (first) {
+				if (o->roff1)
+					*(unsigned int *)o->roff1 = il;
+				else
+					val_store(ilp, il, o->off1, data);
+			}
+			if (!more) {
+				if (o->roff2)
+					*(unsigned int *) o->roff2 = il;
+				else if (o->off2)
+					val_store(ilp, il, o->off2, data);
+			}
 		}
 		break;
 	}
@@ -475,10 +516,18 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (fn)
 			ret = fn(data);
 		else {
-			if (first)
-				val_store(ilp, 1, o->off1, data);
-			if (!more && o->off2)
-				val_store(ilp, 1, o->off2, data);
+			if (first) {
+				if (o->roff1)
+					*(unsigned int *) o->roff1 = 1;
+				else
+					val_store(ilp, 1, o->off1, data);
+			}
+			if (!more) {
+				if (o->roff2)
+					*(unsigned int *) o->roff2 = 1;
+				else if (o->off2)
+					val_store(ilp, 1, o->off2, data);
+			}
 		}
 		break;
 	}
