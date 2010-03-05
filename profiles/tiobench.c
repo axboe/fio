@@ -85,6 +85,7 @@ static void tb_prep_cmdline(void)
 
 static struct profile_ops tiobench_profile = {
 	.name		= "tiobench",
+	.desc		= "Emulate behaviour of the tiotest/tiobench benchmark",
 	.options	= options,
 	.prep_cmd	= tb_prep_cmdline,
 	.cmdline	= tb_opts,

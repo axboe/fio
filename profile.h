@@ -6,6 +6,7 @@
 struct profile_ops {
 	struct flist_head list;
 	char name[32];
+	char desc[64];
 	int flags;
 
 	/*
