@@ -78,6 +78,7 @@ static void show_option_values(struct fio_option *o)
 static void show_option_help(struct fio_option *o, FILE *out)
 {
 	const char *typehelp[] = {
+		"invalid",
 		"string (opt=bla)",
 		"string with possible k/m/g postfix (opt=4k)",
 		"string with time postfix (opt=10s)",
@@ -86,6 +87,7 @@ static void show_option_help(struct fio_option *o, FILE *out)
 		"integer value (opt=100)",
 		"boolean value (opt=1)",
 		"no argument (opt)",
+		"deprecated",
 	};
 
 	if (o->alias)
@@ -93,6 +95,8 @@ static void show_option_help(struct fio_option *o, FILE *out)
 
 	fprintf(out, "%20s: %s\n", "type", typehelp[o->type]);
 	fprintf(out, "%20s: %s\n", "default", o->def ? o->def : "no default");
+	if (o->prof_name)
+		fprintf(out, "%20s: only for profile '%s'\n", "valid", o->prof_name);
 	show_option_range(o, stdout);
 	show_option_values(o);
 }
@@ -265,25 +269,13 @@ static inline int o_match(struct fio_option *o, const char *opt)
 }
 
 static struct fio_option *find_option(struct fio_option *options,
-				      struct flist_head *eops, const char *opt)
+				      const char *opt)
 {
-	struct flist_head *n;
 	struct fio_option *o;
 
 	for (o = &options[0]; o->name; o++)
 		if (o_match(o, opt))
 			return o;
-
-	if (!eops)
-		return NULL;
-
-	flist_for_each(n, eops) {
-		struct ext_option *eopt;
-
-		eopt = flist_entry(n, struct ext_option, list);
-		if (o_match(&eopt->o, opt))
-			return &eopt->o;
-	}
 
 	return NULL;
 }
@@ -604,8 +596,7 @@ static int handle_option(struct fio_option *o, const char *__ptr, void *data)
 }
 
 static struct fio_option *get_option(const char *opt,
-				     struct fio_option *options,
-				     struct flist_head *eops, char **post)
+				     struct fio_option *options, char **post)
 {
 	struct fio_option *o;
 	char *ret;
@@ -617,9 +608,9 @@ static struct fio_option *get_option(const char *opt,
 		ret = (char *) opt;
 		(*post)++;
 		strip_blank_end(ret);
-		o = find_option(options, eops, ret);
+		o = find_option(options, ret);
 	} else {
-		o = find_option(options, eops, opt);
+		o = find_option(options, opt);
 		*post = NULL;
 	}
 
@@ -635,8 +626,8 @@ static int opt_cmp(const void *p1, const void *p2)
 	s1 = strdup(*((char **) p1));
 	s2 = strdup(*((char **) p2));
 
-	o1 = get_option(s1, fio_options, NULL, &foo);
-	o2 = get_option(s2, fio_options, NULL, &foo);
+	o1 = get_option(s1, fio_options, &foo);
+	o2 = get_option(s2, fio_options, &foo);
 
 	prio1 = prio2 = 0;
 	if (o1)
@@ -657,12 +648,11 @@ void sort_options(char **opts, struct fio_option *options, int num_opts)
 }
 
 int parse_cmd_option(const char *opt, const char *val,
-		     struct fio_option *options, struct flist_head *eops,
-		     void *data)
+		     struct fio_option *options, void *data)
 {
 	struct fio_option *o;
 
-	o = find_option(options, eops, opt);
+	o = find_option(options, opt);
 	if (!o) {
 		fprintf(stderr, "Bad option <%s>\n", opt);
 		return 1;
@@ -729,8 +719,7 @@ static char *option_dup_subs(const char *opt)
 	return strdup(out);
 }
 
-int parse_option(const char *opt, struct fio_option *options,
-		 struct flist_head *ext_opt_list, void *data)
+int parse_option(const char *opt, struct fio_option *options, void *data)
 {
 	struct fio_option *o;
 	char *post, *tmp;
@@ -739,7 +728,7 @@ int parse_option(const char *opt, struct fio_option *options,
 	if (!tmp)
 		return 1;
 
-	o = get_option(tmp, options, ext_opt_list, &post);
+	o = get_option(tmp, options, &post);
 	if (!o) {
 		fprintf(stderr, "Bad option <%s>\n", tmp);
 		free(tmp);
@@ -852,11 +841,8 @@ static void print_option(struct fio_option *o)
 	} while (printed);
 }
 
-int show_cmd_help(struct fio_option *options, struct flist_head *ext_opts,
-		  const char *name)
+int show_cmd_help(struct fio_option *options, const char *name)
 {
-	struct flist_head *n;
-	struct ext_option *eo;
 	struct fio_option *o, *closest;
 	unsigned int best_dist;
 	int found = 0;
@@ -871,6 +857,8 @@ int show_cmd_help(struct fio_option *options, struct flist_head *ext_opts,
 		int match = 0;
 
 		if (o->type == FIO_OPT_DEPRECATED)
+			continue;
+		if (!exec_profile && o->prof_name)
 			continue;
 
 		if (name) {
@@ -891,7 +879,7 @@ int show_cmd_help(struct fio_option *options, struct flist_head *ext_opts,
 		if (show_all || match) {
 			found = 1;
 			if (match)
-				printf("%24s: %s\n", o->name, o->help);
+				printf("%20s: %s\n", o->name, o->help);
 			if (show_all) {
 				if (!o->parent)
 					print_option(o);
@@ -907,18 +895,6 @@ int show_cmd_help(struct fio_option *options, struct flist_head *ext_opts,
 
 	if (found)
 		return 0;
-
-	flist_for_each(n, ext_opts) {
-		eo = flist_entry(n, struct ext_option, list);
-		o = &eo->o;
-		if (!strcmp(name, o->name) ||
-		    (o->alias && !strcmp(name, o->alias))) {
-			printf("%20s: %s\n", o->name, o->help);
-			show_option_help(o, stdout);
-			printf("%20s: External, valid for '%s'\n", "Restriction", eo->prof_name);
-			return 0;
-		}
-	}
 
 	printf("No such command: %s", name);
 	if (closest) {

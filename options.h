@@ -1,18 +1,15 @@
 #ifndef FIO_OPTION_H
 #define FIO_OPTION_H
 
+#define FIO_MAX_OPTS		512
+
 #include "parse.h"
 #include "flist.h"
 
 #define td_var_offset(var)	((size_t) &((struct thread_options *)0)->var)
 
-struct ext_option {
-	struct flist_head list;
-	const char *prof_name;
-	struct fio_option o;
-};
-
-void register_ext_option(struct ext_option *);
-void prune_profile_options(const char *);
+int add_option(struct fio_option *);
+void invalidate_profile_options(const char *);
+extern char *exec_profile;
 
 #endif

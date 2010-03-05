@@ -7,7 +7,8 @@
  * Option types
  */
 enum fio_opt_type {
-	FIO_OPT_STR = 0,
+	FIO_OPT_INVALID = 0,
+	FIO_OPT_STR,
 	FIO_OPT_STR_VAL,
 	FIO_OPT_STR_VAL_TIME,
 	FIO_OPT_STR_STORE,
@@ -52,14 +53,15 @@ struct fio_option {
 	const struct value_pair posval[PARSE_MAX_VP];/* possible values */
 	const char *parent;		/* parent option */
 	int (*verify)(struct fio_option *, void *);
+	const char *prof_name;		/* only valid for specific profile */
 };
 
 typedef int (str_cb_fn)(void *, char *);
 
-extern int parse_option(const char *, struct fio_option *, struct flist_head *, void *);
+extern int parse_option(const char *, struct fio_option *, void *);
 extern void sort_options(char **, struct fio_option *, int);
-extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, struct flist_head *, void *);
-extern int show_cmd_help(struct fio_option *, struct flist_head *, const char *);
+extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, void *);
+extern int show_cmd_help(struct fio_option *, const char *);
 extern void fill_default_options(void *, struct fio_option *);
 extern void option_init(struct fio_option *);
 extern void options_init(struct fio_option *);

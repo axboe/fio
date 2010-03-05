@@ -92,7 +92,8 @@ static struct profile_ops tiobench_profile = {
 
 static void fio_init tiobench_register(void)
 {
-	register_profile(&tiobench_profile);
+	if (register_profile(&tiobench_profile))
+		log_err("fio: failed to register profile 'tiobench'\n");
 }
 
 static void fio_exit tiobench_unregister(void)

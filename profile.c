@@ -31,34 +31,40 @@ int load_profile(const char *profile)
 	return 1;
 }
 
-static void add_profile_options(struct profile_ops *ops)
+static int add_profile_options(struct profile_ops *ops)
 {
-	struct fio_option *fo;
-	struct ext_option *eo;
+	struct fio_option *o;
 	
 	if (!ops->options)
-		return;
+		return 0;
 
-	fo = ops->options;
-	while (fo->name) {
-		eo = malloc(sizeof(*eo));
-		eo->prof_name = ops->name;
-		memcpy(&eo->o, fo, sizeof(*fo));
-		register_ext_option(eo);
-		fo++;
+	o = ops->options;
+	while (o->name) {
+		o->prof_name = ops->name;
+		if (add_option(o))
+			return 1;
+		o++;
 	}
+
+	return 0;
 }
 
-void register_profile(struct profile_ops *ops)
+int register_profile(struct profile_ops *ops)
 {
+	int ret;
+
 	dprint(FD_PROFILE, "register profile '%s'\n", ops->name);
 	flist_add_tail(&ops->list, &profile_list);
-	add_profile_options(ops);
+	ret = add_profile_options(ops);
+	if (ret)
+		invalidate_profile_options(ops->name);
+
+	return ret;
 }
 
 void unregister_profile(struct profile_ops *ops)
 {
 	dprint(FD_PROFILE, "unregister profile '%s'\n", ops->name);
 	flist_del(&ops->list);
-	prune_profile_options(ops->name);
+	invalidate_profile_options(ops->name);
 }

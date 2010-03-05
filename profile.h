@@ -24,7 +24,7 @@ struct profile_ops {
 	const char **cmdline;
 };
 
-void register_profile(struct profile_ops *);
+int register_profile(struct profile_ops *);
 void unregister_profile(struct profile_ops *);
 int load_profile(const char *);
 

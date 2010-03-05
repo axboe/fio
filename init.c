@@ -39,6 +39,7 @@ unsigned long long mlock_size = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
 char *job_section = NULL;
+char *exec_profile = NULL;
 
 int write_bw_log = 0;
 int read_only = 0;
@@ -1114,8 +1115,7 @@ static int parse_cmd_line(int argc, char *argv[])
 			job_section = strdup(optarg);
 			break;
 		case 'p':
-			if (load_profile(optarg))
-				do_exit++;
+			exec_profile = strdup(optarg);
 			break;
 		case FIO_GETOPT_JOB: {
 			const char *opt = l_opts[lidx].name;
@@ -1203,6 +1203,8 @@ int parse_options(int argc, char *argv[])
 
 	if (!thread_number) {
 		if (dump_cmdline)
+			return 0;
+		if (exec_profile)
 			return 0;
 
 		log_err("No jobs defined(s)\n\n");

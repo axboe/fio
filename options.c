@@ -16,8 +16,6 @@
 #include "lib/fls.h"
 #include "options.h"
 
-static FLIST_HEAD(ext_opt_list);
-
 /*
  * Check if mmap/mmaphuge has a :/foo/bar/file at the end. If so, return that.
  */
@@ -736,7 +734,7 @@ static int kb_base_verify(struct fio_option *o, void *data)
 /*
  * Map of job/command line options
  */
-static struct fio_option options[] = {
+static struct fio_option options[FIO_MAX_OPTS] = {
 	{
 		.name	= "description",
 		.type	= FIO_OPT_STR_STORE,
@@ -1774,8 +1772,6 @@ static void add_to_lopt(struct option *lopt, struct fio_option *o)
 void fio_options_dup_and_init(struct option *long_options)
 {
 	struct fio_option *o;
-	struct ext_option *eo;
-	struct flist_head *n;
 	unsigned int i;
 
 	options_init(options);
@@ -1790,13 +1786,6 @@ void fio_options_dup_and_init(struct option *long_options)
 
 		i++;
 		o++;
-		assert(i < FIO_NR_OPTIONS);
-	}
-
-	flist_for_each(n, &ext_opt_list) {
-		eo = flist_entry(n, struct ext_option, list);
-		add_to_lopt(&long_options[i], &eo->o);
-		i++;
 		assert(i < FIO_NR_OPTIONS);
 	}
 }
@@ -1955,7 +1944,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 
 	for (ret = 0, i = 0; i < num_opts; i++) {
 		opts[i] = fio_keyword_replace(opts[i]);
-		ret |= parse_option(opts[i], options, &ext_opt_list, td);
+		ret |= parse_option(opts[i], options, td);
 	}
 
 	return ret;
@@ -1963,7 +1952,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 
 int fio_cmd_option_parse(struct thread_data *td, const char *opt, char *val)
 {
-	return parse_cmd_option(opt, val, options, &ext_opt_list, td);
+	return parse_cmd_option(opt, val, options, td);
 }
 
 void fio_fill_default_options(struct thread_data *td)
@@ -1973,7 +1962,7 @@ void fio_fill_default_options(struct thread_data *td)
 
 int fio_show_option_help(const char *opt)
 {
-	return show_cmd_help(options, &ext_opt_list, opt);
+	return show_cmd_help(options, opt);
 }
 
 static void __options_mem(struct thread_data *td, int alloc)
@@ -2027,23 +2016,31 @@ unsigned int fio_get_kb_base(void *data)
 	return kb_base;
 }
 
-void register_ext_option(struct ext_option *eopt)
+int add_option(struct fio_option *o)
 {
-	dprint(FD_PARSE, "register option '%s'\n", eopt->o.name);
-	option_init(&eopt->o);
-	flist_add_tail(&eopt->list, &ext_opt_list);
+	struct fio_option *__o;
+	int opt_index = 0;
+
+	__o = options;
+	while (__o->name) {
+		opt_index++;
+		__o++;
+	}
+
+	memcpy(&options[opt_index], o, sizeof(*o));
+	return 0;
 }
 
-void prune_profile_options(const char *prof_name)
+void invalidate_profile_options(const char *prof_name)
 {
-	struct ext_option *eo;
-	struct flist_head *n, *tmp;
+	struct fio_option *o;
 
-	flist_for_each_safe(n, tmp, &ext_opt_list) {
-		eo = flist_entry(n, struct ext_option, list);
-		if (strcmp(eo->prof_name, prof_name))
-			continue;
-		flist_del(&eo->list);
-		free(eo);
+	o = options;
+	while (o->name) {
+		if (o->prof_name && !strcmp(o->prof_name, prof_name)) {
+			o->type = FIO_OPT_INVALID;
+			o->prof_name = NULL;
+		}
+		o++;
 	}
 }

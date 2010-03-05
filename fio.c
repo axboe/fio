@@ -40,6 +40,7 @@
 #include "verify.h"
 #include "diskutil.h"
 #include "cgroup.h"
+#include "profile.h"
 
 unsigned long page_mask;
 unsigned long page_size;
@@ -1651,6 +1652,9 @@ int main(int argc, char *argv[])
 	fio_keywords_init();
 
 	if (parse_options(argc, argv))
+		return 1;
+
+	if (exec_profile && load_profile(exec_profile))
 		return 1;
 
 	if (!thread_number)

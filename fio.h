@@ -29,6 +29,7 @@
 #include "ioengine.h"
 #include "iolog.h"
 #include "helpers.h"
+#include "options.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
@@ -539,7 +540,7 @@ extern void options_mem_free(struct thread_data *);
 extern void td_fill_rand_seeds(struct thread_data *);
 extern void add_job_opts(const char **);
 #define FIO_GETOPT_JOB		0x89988998
-#define FIO_NR_OPTIONS		512
+#define FIO_NR_OPTIONS		(FIO_MAX_OPTS + 128)
 
 /*
  * ETA/status stuff
