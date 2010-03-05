@@ -257,28 +257,6 @@ static int check_int(const char *p, int *val)
 	return 1;
 }
 
-static inline int o_match(struct fio_option *o, const char *opt)
-{
-	if (!strcmp(o->name, opt))
-		return 1;
-	else if (o->alias && !strcmp(o->alias, opt))
-		return 1;
-
-	return 0;
-}
-
-static struct fio_option *find_option(struct fio_option *options,
-				      const char *opt)
-{
-	struct fio_option *o;
-
-	for (o = &options[0]; o->name; o++)
-		if (o_match(o, opt))
-			return o;
-
-	return NULL;
-}
-
 #define val_store(ptr, val, off, data)			\
 	do {						\
 		ptr = td_var((data), (off));		\

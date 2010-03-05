@@ -2044,3 +2044,42 @@ void invalidate_profile_options(const char *prof_name)
 		o++;
 	}
 }
+
+void add_opt_posval(const char *optname, const char *ival, const char *help)
+{
+	struct fio_option *o;
+	unsigned int i;
+
+	o = find_option(options, optname);
+	if (!o)
+		return;
+
+	for (i = 0; i < PARSE_MAX_VP; i++) {
+		if (o->posval[i].ival)
+			continue;
+
+		o->posval[i].ival = ival;
+		o->posval[i].help = help;
+		break;
+	}
+}
+
+void del_opt_posval(const char *optname, const char *ival)
+{
+	struct fio_option *o;
+	unsigned int i;
+
+	o = find_option(options, optname);
+	if (!o)
+		return;
+
+	for (i = 0; i < PARSE_MAX_VP; i++) {
+		if (!o->posval[i].ival)
+			continue;
+		if (strcmp(o->posval[i].ival, ival))
+			continue;
+
+		o->posval[i].ival = NULL;
+		o->posval[i].help = NULL;
+	}
+}

@@ -54,11 +54,15 @@ int register_profile(struct profile_ops *ops)
 	int ret;
 
 	dprint(FD_PROFILE, "register profile '%s'\n", ops->name);
-	flist_add_tail(&ops->list, &profile_list);
-	ret = add_profile_options(ops);
-	if (ret)
-		invalidate_profile_options(ops->name);
 
+	ret = add_profile_options(ops);
+	if (!ret) {
+		flist_add_tail(&ops->list, &profile_list);
+		add_opt_posval("profile", ops->name, ops->desc);
+		return 0;
+	}
+
+	invalidate_profile_options(ops->name);
 	return ret;
 }
 
@@ -67,4 +71,5 @@ void unregister_profile(struct profile_ops *ops)
 	dprint(FD_PROFILE, "unregister profile '%s'\n", ops->name);
 	flist_del(&ops->list);
 	invalidate_profile_options(ops->name);
+	del_opt_posval("profile", ops->name);
 }
