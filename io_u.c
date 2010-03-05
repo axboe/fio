@@ -187,7 +187,7 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
  * until we find a free one. For sequential io, just return the end of
  * the last io issued.
  */
-static int get_next_offset(struct thread_data *td, struct io_u *io_u)
+static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	unsigned long long b;
@@ -231,7 +231,15 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
+static int get_next_offset(struct thread_data *td, struct io_u *io_u)
+{
+	if (td->fill_io_u_off)
+		return td->fill_io_u_off(td, io_u);
+
+	return __get_next_offset(td, io_u);
+}
+
+static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 {
 	const int ddir = io_u->ddir;
 	unsigned int uninitialized_var(buflen);
@@ -274,6 +282,14 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 	}
 
 	return buflen;
+}
+
+static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
+{
+	if (td->fill_io_u_size)
+		return td->fill_io_u_size(td, io_u);
+
+	return __get_next_buflen(td, io_u);
 }
 
 static void set_rwmix_bytes(struct thread_data *td)

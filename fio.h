@@ -426,6 +426,12 @@ struct thread_data {
 	 */
 	unsigned int total_err_count;
 	int first_error;
+
+	/*
+	 * Can be overloaded by profiles
+	 */
+	int (*fill_io_u_off)(struct thread_data *, struct io_u *);
+	int (*fill_io_u_size)(struct thread_data *, struct io_u *);
 };
 
 /*

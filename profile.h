@@ -23,10 +23,18 @@ struct profile_ops {
 	 * The complete command line
 	 */
 	const char **cmdline;
+
+	/*
+	 * Functions for overriding internal fio io_u functions
+	 */
+	int (*fill_io_u_off)(struct thread_data *, struct io_u *);
+	int (*fill_io_u_size)(struct thread_data *, struct io_u *);
 };
 
 int register_profile(struct profile_ops *);
 void unregister_profile(struct profile_ops *);
 int load_profile(const char *);
+struct profile_ops *find_profile(const char *);
+void profile_add_hooks(struct thread_data *);
 
 #endif

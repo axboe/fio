@@ -6,12 +6,10 @@
 
 static FLIST_HEAD(profile_list);
 
-int load_profile(const char *profile)
+struct profile_ops *find_profile(const char *profile)
 {
-	struct profile_ops *ops;
+	struct profile_ops *ops = NULL;
 	struct flist_head *n;
-
-	dprint(FD_PROFILE, "loading profile '%s'\n", profile);
 
 	flist_for_each(n, &profile_list) {
 		ops = flist_entry(n, struct profile_ops, list);
@@ -21,6 +19,16 @@ int load_profile(const char *profile)
 		ops = NULL;
 	}
 
+	return ops;
+}
+
+int load_profile(const char *profile)
+{
+	struct profile_ops *ops;
+
+	dprint(FD_PROFILE, "loading profile '%s'\n", profile);
+
+	ops = find_profile(profile);
 	if (ops) {
 		ops->prep_cmd();
 		add_job_opts(ops->cmdline);
@@ -72,4 +80,19 @@ void unregister_profile(struct profile_ops *ops)
 	flist_del(&ops->list);
 	invalidate_profile_options(ops->name);
 	del_opt_posval("profile", ops->name);
+}
+
+void profile_add_hooks(struct thread_data *td)
+{
+	struct profile_ops *ops;
+
+	if (!exec_profile)
+		return;
+
+	ops = find_profile(exec_profile);
+	if (!ops)
+		return;
+
+	td->fill_io_u_off = ops->fill_io_u_off;
+	td->fill_io_u_size = ops->fill_io_u_size;
 }
