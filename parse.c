@@ -56,20 +56,19 @@ static void show_option_range(struct fio_option *o, FILE *out)
 
 static void show_option_values(struct fio_option *o)
 {
-	int i = 0;
+	int i;
 
-	do {
+	for (i = 0; i < PARSE_MAX_VP; i++) {
 		const struct value_pair *vp = &o->posval[i];
 
 		if (!vp->ival)
-			break;
+			continue;
 
 		printf("%20s: %-10s", i == 0 ? "valid values" : "", vp->ival);
 		if (vp->help)
 			printf(" %s", vp->help);
 		printf("\n");
-		i++;
-	} while (i < PARSE_MAX_VP);
+	}
 
 	if (i)
 		printf("\n");
@@ -315,7 +314,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		for (i = 0; i < PARSE_MAX_VP; i++) {
 			vp = &posval[i];
 			if (!vp->ival || vp->ival[0] == '\0')
-				break;
+				continue;
 			ret = 1;
 			if (!strncmp(vp->ival, ptr, strlen(vp->ival))) {
 				ret = 0;
