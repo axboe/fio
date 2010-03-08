@@ -93,6 +93,6 @@ void profile_add_hooks(struct thread_data *td)
 	if (!ops)
 		return;
 
-	td->fill_io_u_off = ops->fill_io_u_off;
-	td->fill_io_u_size = ops->fill_io_u_size;
+	if (ops->io_ops)
+		td->prof_io_ops = *ops->io_ops;
 }

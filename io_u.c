@@ -233,8 +233,10 @@ static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
 
 static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 {
-	if (td->fill_io_u_off)
-		return td->fill_io_u_off(td, io_u);
+	struct prof_io_ops *ops = &td->prof_io_ops;
+
+	if (ops->fill_io_u_off)
+		return ops->fill_io_u_off(td, io_u);
 
 	return __get_next_offset(td, io_u);
 }
@@ -286,8 +288,10 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 
 static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 {
-	if (td->fill_io_u_size)
-		return td->fill_io_u_size(td, io_u);
+	struct prof_io_ops *ops = &td->prof_io_ops;
+
+	if (ops->fill_io_u_size)
+		return ops->fill_io_u_size(td, io_u);
 
 	return __get_next_buflen(td, io_u);
 }
@@ -785,7 +789,7 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 	return f;
 }
 
-static struct fio_file *get_next_file(struct thread_data *td)
+static struct fio_file *__get_next_file(struct thread_data *td)
 {
 	struct fio_file *f;
 
@@ -818,6 +822,16 @@ static struct fio_file *get_next_file(struct thread_data *td)
 out:
 	dprint(FD_FILE, "get_next_file: %p [%s]\n", f, f->file_name);
 	return f;
+}
+
+static struct fio_file *get_next_file(struct thread_data *td)
+{
+	struct prof_io_ops *ops = &td->prof_io_ops;
+
+	if (ops->get_next_file)
+		return ops->get_next_file(td);
+
+	return __get_next_file(td);
 }
 
 static int set_io_u_file(struct thread_data *td, struct io_u *io_u)

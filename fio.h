@@ -30,6 +30,7 @@
 #include "iolog.h"
 #include "helpers.h"
 #include "options.h"
+#include "profile.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
@@ -430,8 +431,7 @@ struct thread_data {
 	/*
 	 * Can be overloaded by profiles
 	 */
-	int (*fill_io_u_off)(struct thread_data *, struct io_u *);
-	int (*fill_io_u_size)(struct thread_data *, struct io_u *);
+	struct prof_io_ops prof_io_ops;
 };
 
 /*
