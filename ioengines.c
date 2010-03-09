@@ -432,7 +432,7 @@ int td_io_get_file_size(struct thread_data *td, struct fio_file *f)
 	return td->io_ops->get_file_size(td, f);
 }
 
-int do_sync_file_range(struct thread_data *td, struct fio_file *f)
+static int do_sync_file_range(struct thread_data *td, struct fio_file *f)
 {
 	off64_t offset, nbytes;
 
@@ -443,4 +443,27 @@ int do_sync_file_range(struct thread_data *td, struct fio_file *f)
 		return 0;
 
 	return sync_file_range(f->fd, offset, nbytes, td->o.sync_file_range);
+}
+
+int do_io_u_sync(struct thread_data *td, struct io_u *io_u)
+{
+	int ret;
+
+	if (io_u->ddir == DDIR_SYNC) {
+		ret = fsync(io_u->file->fd);
+	} else if (io_u->ddir == DDIR_DATASYNC) {
+#ifdef FIO_HAVE_FDATASYNC
+		ret = fdatasync(io_u->file->fd);
+#else
+		ret = io_u->xfer_buflen;
+		io_u->error = EINVAL;
+#endif
+	} else if (io_u->ddir == DDIR_SYNC_FILE_RANGE)
+		ret = do_sync_file_range(td, io_u->file);
+	else {
+		ret = io_u->xfer_buflen;
+		io_u->error = EINVAL;
+	}
+
+	return ret;
 }

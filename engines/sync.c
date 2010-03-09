@@ -64,29 +64,6 @@ static int fio_io_end(struct thread_data *td, struct io_u *io_u, int ret)
 	return FIO_Q_COMPLETED;
 }
 
-static int fio_syncio_sync(struct thread_data *td, struct io_u *io_u)
-{
-	int ret;
-
-	if (io_u->ddir == DDIR_SYNC) {
-		ret = fsync(io_u->file->fd);
-	} else if (io_u->ddir == DDIR_DATASYNC) {
-#ifdef FIO_HAVE_FDATASYNC
-		ret = fdatasync(io_u->file->fd);
-#else
-		ret = io_u->xfer_buflen;
-		io_u->error = EINVAL;
-#endif
-	} else if (io_u->ddir == DDIR_SYNC_FILE_RANGE)
-		ret = do_sync_file_range(td, io_u->file);
-	else {
-		ret = io_u->xfer_buflen;
-		io_u->error = EINVAL;
-	}
-
-	return fio_io_end(td, io_u, ret);
-}
-
 static int fio_psyncio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
@@ -99,7 +76,7 @@ static int fio_psyncio_queue(struct thread_data *td, struct io_u *io_u)
 	else if (io_u->ddir == DDIR_WRITE)
 		ret = pwrite(f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 	else
-		return fio_syncio_sync(td, io_u);
+		ret = do_io_u_sync(td, io_u);
 
 	return fio_io_end(td, io_u, ret);
 }
@@ -116,7 +93,7 @@ static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 	else if (io_u->ddir == DDIR_WRITE)
 		ret = write(f->fd, io_u->xfer_buf, io_u->xfer_buflen);
 	else
-		return fio_syncio_sync(td, io_u);
+		ret = do_io_u_sync(td, io_u);
 
 	return fio_io_end(td, io_u, ret);
 }
@@ -186,8 +163,11 @@ static int fio_vsyncio_queue(struct thread_data *td, struct io_u *io_u)
 		 */
 		if (sd->queued)
 			return FIO_Q_BUSY;
-		if (ddir_sync(io_u->ddir))
-			return fio_syncio_sync(td, io_u);
+		if (ddir_sync(io_u->ddir)) {
+			int ret = do_io_u_sync(td, io_u);
+
+			return fio_io_end(td, io_u, ret);
+		}
 
 		sd->queued = 0;
 		sd->queued_bytes = 0;

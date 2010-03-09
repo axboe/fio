@@ -153,7 +153,7 @@ extern void io_u_fill_buffer(struct thread_data *td, struct io_u *, unsigned int
 void io_u_mark_complete(struct thread_data *, unsigned int);
 void io_u_mark_submit(struct thread_data *, unsigned int);
 
-int do_sync_file_range(struct thread_data *, struct fio_file *);
+int do_io_u_sync(struct thread_data *, struct io_u *);
 
 #ifdef FIO_INC_DEBUG
 static inline void dprint_io_u(struct io_u *io_u, const char *p)
