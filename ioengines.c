@@ -431,3 +431,16 @@ int td_io_get_file_size(struct thread_data *td, struct fio_file *f)
 
 	return td->io_ops->get_file_size(td, f);
 }
+
+int do_sync_file_range(struct thread_data *td, struct fio_file *f)
+{
+	off64_t offset, nbytes;
+
+	offset = f->first_write;
+	nbytes = f->last_write - f->first_write;
+
+	if (nbytes)
+		return sync_file_range(f->fd, offset, nbytes, 0);
+
+	return 0;
+}

@@ -20,9 +20,10 @@ void queue_io_piece(struct thread_data *td, struct io_piece *ipo)
 
 void log_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	const char *act[] = { "read", "write", "sync", "datasync" };
+	const char *act[] = { "read", "write", "sync", "datasync",
+				"sync_file_range" };
 
-	assert(io_u->ddir < 3);
+	assert(io_u->ddir <= 4);
 
 	if (!td->o.write_iolog_file)
 		return;

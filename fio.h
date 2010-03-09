@@ -282,6 +282,8 @@ struct thread_options {
 
 	unsigned int uid;
 	unsigned int gid;
+
+	unsigned int sync_file_range;
 };
 
 #define FIO_VERROR_SIZE	128
@@ -416,6 +418,8 @@ struct thread_data {
 	unsigned int file_service_nr;
 	unsigned int file_service_left;
 	struct fio_file *file_service_file;
+
+	unsigned int sync_file_range_nr;
 
 	/*
 	 * For generating file sizes

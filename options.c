@@ -429,6 +429,20 @@ static int str_fst_cb(void *data, const char *str)
 	return 0;
 }
 
+static int str_sfr_cb(void *data, const char *str)
+{
+	struct thread_data *td = data;
+	char *nr = get_opt_postfix(str);
+
+	td->sync_file_range_nr = 1;
+	if (nr) {
+		td->sync_file_range_nr = atoi(nr);
+		free(nr);
+	}
+
+	return 0;
+}
+
 static int check_dir(struct thread_data *td, char *fname)
 {
 	char file[PATH_MAX], *dir;
@@ -1110,6 +1124,30 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Issue fdatasync for writes every given number of blocks",
 		.def	= "0",
 	},
+#ifdef FIO_HAVE_SYNC_FILE_RANGE
+	{
+		.name	= "sync_file_range",
+		.posval	= {
+			  { .ival = "wait_before",
+			    .oval = SYNC_FILE_RANGE_WAIT_BEFORE,
+			    .help = "SYNC_FILE_RANGE_WAIT_BEFORE",
+			  },
+			  { .ival = "write",
+			    .oval = SYNC_FILE_RANGE_WRITE,
+			    .help = "SYNC_FILE_RANGE_WRITE",
+			  },
+			  {
+			    .ival = "wait_after",
+			    .oval = SYNC_FILE_RANGE_WAIT_AFTER,
+			    .help = "SYNC_FILE_RANGE_WAIT_AFTER",
+			  },
+		},
+		.type	= FIO_OPT_STR,
+		.cb	= str_sfr_cb,
+		.off1	= td_var_offset(sync_file_range),
+		.help	= "Use sync_file_range()",
+	},
+#endif
 	{
 		.name	= "direct",
 		.type	= FIO_OPT_BOOL,

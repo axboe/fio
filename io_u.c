@@ -394,6 +394,14 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 	     td->io_issues[DDIR_WRITE] && should_fsync(td))
 		return DDIR_DATASYNC;
 
+	/*
+	 * see if it's time to sync_file_range
+	 */
+	if (td->sync_file_range_nr &&
+	   !(td->io_issues[DDIR_WRITE] % td->sync_file_range_nr) &&
+	     td->io_issues[DDIR_WRITE] && should_fsync(td))
+		return DDIR_SYNC_FILE_RANGE;
+
 	if (td_rw(td)) {
 		/*
 		 * Check if it's time to seed a new data direction.
@@ -996,6 +1004,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	 * initialized, silence that warning.
 	 */
 	unsigned long uninitialized_var(usec);
+	struct fio_file *f;
 
 	dprint_io_u(io_u, "io complete");
 
@@ -1006,6 +1015,11 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 	if (ddir_sync(io_u->ddir)) {
 		td->last_was_sync = 1;
+		f = io_u->file;
+		if (f) {
+			f->first_write = -1ULL;
+			f->last_write = -1ULL;
+		}
 		return;
 	}
 
@@ -1020,6 +1034,18 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		td->io_blocks[idx]++;
 		td->io_bytes[idx] += bytes;
 		td->this_io_bytes[idx] += bytes;
+
+		if (idx == DDIR_WRITE) {
+			f = io_u->file;
+			if (f) {
+				if (f->first_write == -1ULL ||
+				    io_u->offset < f->first_write)
+					f->first_write = io_u->offset;
+				if (f->last_write == -1ULL ||
+				    ((io_u->offset + bytes) > f->last_write))
+					f->last_write = io_u->offset + bytes;
+			}
+		}
 
 		if (ramp_time_over(td)) {
 			unsigned long uninitialized_var(lusec);

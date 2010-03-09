@@ -74,6 +74,9 @@ struct fio_file {
 
 	unsigned long long last_pos;
 
+	unsigned long long first_write;
+	unsigned long long last_write;
+
 	/*
 	 * For use by the io engine
 	 */
