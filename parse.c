@@ -257,10 +257,13 @@ static int check_int(const char *p, int *val)
 	return 1;
 }
 
-#define val_store(ptr, val, off, data)			\
+#define val_store(ptr, val, off, or, data)		\
 	do {						\
 		ptr = td_var((data), (off));		\
-		*ptr = (val);				\
+		if ((or))				\
+			*ptr |= (val);			\
+		else					\
+			*ptr = (val);			\
 	} while (0)
 
 static int __handle_option(struct fio_option *o, const char *ptr, void *data,
@@ -281,7 +284,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	}
 
 	switch (o->type) {
-	case FIO_OPT_STR: {
+	case FIO_OPT_STR:
+	case FIO_OPT_STR_MULTI: {
 		fio_opt_str_fn *fn = o->cb;
 		const struct value_pair *vp;
 		struct value_pair posval[PARSE_MAX_VP];
@@ -289,21 +293,24 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 		posval_sort(o, posval);
 
+		ret = 1;
 		for (i = 0; i < PARSE_MAX_VP; i++) {
 			vp = &posval[i];
 			if (!vp->ival || vp->ival[0] == '\0')
 				continue;
-			ret = 1;
 			if (!strncmp(vp->ival, ptr, strlen(vp->ival))) {
 				ret = 0;
-				if (o->roff1)
-					*(unsigned int *) o->roff1 = vp->oval;
-				else {
+				if (o->roff1) {
+					if (vp->or)
+						*(unsigned int *) o->roff1 |= vp->oval;
+					else
+						*(unsigned int *) o->roff1 = vp->oval;
+				} else {
 					if (!o->off1)
-						break;
-					val_store(ilp, vp->oval, o->off1, data);
+						continue;
+					val_store(ilp, vp->oval, o->off1, vp->or, data);
 				}
-				break;
+				continue;
 			}
 		}
 
@@ -346,26 +353,26 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 					if (o->roff1)
 						*(unsigned long long *) o->roff1 = ull;
 					else
-						val_store(ilp, ull, o->off1, data);
+						val_store(ilp, ull, o->off1, 0, data);
 				}
 				if (!more) {
 					if (o->roff2)
 						*(unsigned long long *) o->roff2 = ull;
 					else if (o->off2)
-						val_store(ilp, ull, o->off2, data);
+						val_store(ilp, ull, o->off2, 0, data);
 				}
 			} else {
 				if (first) {
 					if (o->roff1)
 						*(unsigned long long *) o->roff1 = ull;
 					else
-						val_store(ullp, ull, o->off1, data);
+						val_store(ullp, ull, o->off1, 0, data);
 				}
 				if (!more) {
 					if (o->roff2)
 						*(unsigned long long *) o->roff2 =  ull;
 					else if (o->off2)
-						val_store(ullp, ull, o->off2, data);
+						val_store(ullp, ull, o->off2, 0, data);
 				}
 			}
 		}
@@ -423,18 +430,18 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 				if (o->roff1)
 					*(unsigned long *) o->roff1 = ul1;
 				else
-					val_store(ilp, ul1, o->off1, data);
+					val_store(ilp, ul1, o->off1, 0, data);
 				if (o->roff2)
 					*(unsigned long *) o->roff2 = ul2;
 				else
-					val_store(ilp, ul2, o->off2, data);
+					val_store(ilp, ul2, o->off2, 0, data);
 			}
 			if (o->roff3 && o->roff4) {
 				*(unsigned long *) o->roff3 = ul1;
 				*(unsigned long *) o->roff4 = ul2;
 			} else if (o->off3 && o->off4) {
-				val_store(ilp, ul1, o->off3, data);
-				val_store(ilp, ul2, o->off4, data);
+				val_store(ilp, ul1, o->off3, 0, data);
+				val_store(ilp, ul2, o->off4, 0, data);
 			}
 		}
 
@@ -468,13 +475,13 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 				if (o->roff1)
 					*(unsigned int *)o->roff1 = il;
 				else
-					val_store(ilp, il, o->off1, data);
+					val_store(ilp, il, o->off1, 0, data);
 			}
 			if (!more) {
 				if (o->roff2)
 					*(unsigned int *) o->roff2 = il;
 				else if (o->off2)
-					val_store(ilp, il, o->off2, data);
+					val_store(ilp, il, o->off2, 0, data);
 			}
 		}
 		break;
@@ -489,13 +496,13 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 				if (o->roff1)
 					*(unsigned int *) o->roff1 = 1;
 				else
-					val_store(ilp, 1, o->off1, data);
+					val_store(ilp, 1, o->off1, 0, data);
 			}
 			if (!more) {
 				if (o->roff2)
 					*(unsigned int *) o->roff2 = 1;
 				else if (o->off2)
-					val_store(ilp, 1, o->off2, data);
+					val_store(ilp, 1, o->off2, 0, data);
 			}
 		}
 		break;
@@ -914,7 +921,8 @@ void option_init(struct fio_option *o)
 		fprintf(stderr, "Option %s: neither cb nor offset given\n",
 							o->name);
 	}
-	if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE)
+	if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE ||
+	    o->type == FIO_OPT_STR_MULTI)
 		return;
 	if (o->cb && ((o->off1 || o->off2 || o->off3 || o->off4) ||
 		      (o->roff1 || o->roff2 || o->roff3 || o->roff4))) {

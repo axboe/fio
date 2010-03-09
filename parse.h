@@ -9,6 +9,7 @@
 enum fio_opt_type {
 	FIO_OPT_INVALID = 0,
 	FIO_OPT_STR,
+	FIO_OPT_STR_MULTI,
 	FIO_OPT_STR_VAL,
 	FIO_OPT_STR_VAL_TIME,
 	FIO_OPT_STR_STORE,
@@ -26,6 +27,7 @@ struct value_pair {
 	const char *ival;		/* string option */
 	unsigned int oval;		/* output value */
 	const char *help;		/* help text for sub option */
+	int or;				/* OR value */
 };
 
 #define OPT_LEN_MAX 	4096
