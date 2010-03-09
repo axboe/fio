@@ -175,9 +175,7 @@ static int fio_posixaio_queue(struct thread_data fio_unused *td,
 		if (pd->queued)
 			return FIO_Q_BUSY;
 
-		if (fsync(io_u->file->fd) < 0)
-			io_u->error = errno;
-
+		do_io_u_sync(td, io_u);
 		return FIO_Q_COMPLETED;
 #endif
 	}

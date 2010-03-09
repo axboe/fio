@@ -97,19 +97,11 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 	 * support aio fsync yet. So return busy for the case where we
 	 * have pending io, to let fio complete those first.
 	 */
-	if (io_u->ddir == DDIR_SYNC) {
+	if (ddir_sync(io_u->ddir)) {
 		if (ld->iocbs_nr)
 			return FIO_Q_BUSY;
-		if (fsync(io_u->file->fd) < 0)
-			io_u->error = errno;
 
-		return FIO_Q_COMPLETED;
-	} else if (io_u->ddir == DDIR_DATASYNC) {
-		if (ld->iocbs_nr)
-			return FIO_Q_BUSY;
-		if (fdatasync(io_u->file->fd) < 0)
-			io_u->error = errno;
-
+		do_io_u_sync(td, io_u);
 		return FIO_Q_COMPLETED;
 	}
 

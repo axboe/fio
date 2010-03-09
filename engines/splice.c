@@ -224,7 +224,7 @@ static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 	} else if (io_u->ddir == DDIR_WRITE)
 		ret = fio_splice_write(td, io_u);
 	else
-		ret = fsync(io_u->file->fd);
+		ret = do_io_u_sync(td, io_u);
 
 	if (ret != (int) io_u->xfer_buflen) {
 		if (ret >= 0) {
