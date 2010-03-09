@@ -465,5 +465,8 @@ int do_io_u_sync(struct thread_data *td, struct io_u *io_u)
 		io_u->error = EINVAL;
 	}
 
+	if (ret < 0)
+		io_u->error = errno;
+
 	return ret;
 }
