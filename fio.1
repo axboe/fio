@@ -380,6 +380,27 @@ How many I/Os to perform before issuing an \fBfsync\fR\|(2) of dirty data.  If
 Like \fBfsync\fR, but uses \fBfdatasync\fR\|(2) instead to only sync the
 data parts of the file. Default: 0.
 .TP
+.BI sync_file_range \fR=\fPstr:int
+Use sync_file_range() for every \fRval\fP number of write operations. Fio will
+track range of writes that have happened since the last sync_file_range() call.
+\fRstr\fP can currently be one or more of:
+.RS
+.TP
+.B wait_before
+SYNC_FILE_RANGE_WAIT_BEFORE
+.TP
+.B write
+SYNC_FILE_RANGE_WRITE
+.TP
+.B wait_after
+SYNC_FILE_RANGE_WRITE
+.TP
+.RE
+.P
+So if you do sync_file_range=wait_before,write:8, fio would use
+\fBSYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE\fP for every 8 writes.
+Also see the sync_file_range(2) man page.  This option is Linux specific.
+.TP
 .BI overwrite \fR=\fPbool
 If writing, setup the file first and do overwrites.  Default: false.
 .TP

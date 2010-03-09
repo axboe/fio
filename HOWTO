@@ -566,10 +566,24 @@ fsync=int	If writing to a file, issue a sync of the dirty data
 		not sync the file. The exception is the sg io engine, which
 		synchronizes the disk cache anyway.
 
-fsyncdata=int	Like fsync= but uses fdatasync() to only sync data and not
+fdatasync=int	Like fsync= but uses fdatasync() to only sync data and not
 		metadata blocks.
 		In FreeBSD there is no fdatasync(), this falls back to
 		using fsync()
+
+sync_file_range=str:val	Use sync_file_range() for every 'val' number of
+		write operations. Fio will track range of writes that
+		have happened since the last sync_file_range() call. 'str'
+		can currently be one or more of:
+
+		wait_before	SYNC_FILE_RANGE_WAIT_BEFORE
+		write		SYNC_FILE_RANGE_WRITE
+		wait_after	SYNC_FILE_RANGE_WAIT_AFTER
+
+		So if you do sync_file_range=wait_before,write:8, fio would
+		use SYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE for
+		every 8 writes. Also see the sync_file_range(2) man page.
+		This option is Linux specific.
 
 overwrite=bool	If true, writes to a file will always overwrite existing
 		data. If the file doesn't already exist, it will be
