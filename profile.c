@@ -96,3 +96,21 @@ void profile_add_hooks(struct thread_data *td)
 	if (ops->io_ops)
 		td->prof_io_ops = *ops->io_ops;
 }
+
+int profile_td_init(struct thread_data *td)
+{
+	struct prof_io_ops *ops = &td->prof_io_ops;
+
+	if (ops->td_init)
+		return ops->td_init(td);
+
+	return 0;
+}
+
+void profile_td_exit(struct thread_data *td)
+{
+	struct prof_io_ops *ops = &td->prof_io_ops;
+
+	if (ops->td_exit)
+		ops->td_exit(td);
+}

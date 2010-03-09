@@ -432,6 +432,7 @@ struct thread_data {
 	 * Can be overloaded by profiles
 	 */
 	struct prof_io_ops prof_io_ops;
+	void *prof_data;
 };
 
 /*

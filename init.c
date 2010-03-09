@@ -178,6 +178,8 @@ static void put_job(struct thread_data *td)
 {
 	if (td == &def_thread)
 		return;
+	
+	profile_td_exit(td);
 
 	if (td->error)
 		log_info("fio: %s\n", td->verror);
@@ -501,6 +503,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		put_job(td);
 		return 0;
 	}
+
+	if (profile_td_init(td))
+		return 1;
 
 	engine = get_engine_name(td->o.ioengine);
 	td->io_ops = load_ioengine(td, engine);
