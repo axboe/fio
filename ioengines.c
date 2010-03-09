@@ -439,8 +439,8 @@ int do_sync_file_range(struct thread_data *td, struct fio_file *f)
 	offset = f->first_write;
 	nbytes = f->last_write - f->first_write;
 
-	if (nbytes)
-		return sync_file_range(f->fd, offset, nbytes, 0);
+	if (!nbytes)
+		return 0;
 
-	return 0;
+	return sync_file_range(f->fd, offset, nbytes, td->o.sync_file_range);
 }
