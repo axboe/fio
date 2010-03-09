@@ -825,8 +825,6 @@ int show_cmd_help(struct fio_option *options, const char *name)
 	int found = 0;
 	int show_all = 0;
 
-	printf("exec_profile=%s\n", exec_profile);
-
 	if (!name || !strcmp(name, "all"))
 		show_all = 1;
 
