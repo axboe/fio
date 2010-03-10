@@ -289,7 +289,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		fio_opt_str_fn *fn = o->cb;
 		const struct value_pair *vp;
 		struct value_pair posval[PARSE_MAX_VP];
-		int i;
+		int i, all_skipped = 1;
 
 		posval_sort(o, posval);
 
@@ -298,6 +298,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			vp = &posval[i];
 			if (!vp->ival || vp->ival[0] == '\0')
 				continue;
+			all_skipped = 0;
 			if (!strncmp(vp->ival, ptr, strlen(vp->ival))) {
 				ret = 0;
 				if (o->roff1) {
@@ -314,7 +315,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			}
 		}
 
-		if (ret)
+		if (ret && !all_skipped)
 			show_option_values(o);
 		else if (fn)
 			ret = fn(data, ptr);
