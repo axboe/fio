@@ -532,51 +532,59 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 static int handle_option(struct fio_option *o, const char *__ptr, void *data)
 {
-	char *ptr, *ptr2 = NULL;
-	int r1, r2;
+	char *o_ptr, *ptr, *ptr2;
+	int ret, done;
 
 	dprint(FD_PARSE, "handle_option=%s, ptr=%s\n", o->name, __ptr);
 
-	ptr = NULL;
+	o_ptr = ptr = NULL;
 	if (__ptr)
-		ptr = strdup(__ptr);
+		o_ptr = ptr = strdup(__ptr);
 
 	/*
-	 * See if we have a second set of parameters, hidden after a comma.
-	 * Do this before parsing the first round, to check if we should
+	 * See if we have another set of parameters, hidden after a comma.
+	 * Do this before parsing this round, to check if we should
 	 * copy set 1 options to set 2.
 	 */
-	if (ptr &&
-	    (o->type != FIO_OPT_STR_STORE) &&
-	    (o->type != FIO_OPT_STR)) {
-		ptr2 = strchr(ptr, ',');
-		if (ptr2 && *(ptr2 + 1) == '\0')
-			*ptr2 = '\0';
+	done = 0;
+	ret = 1;
+	do {
+		int __ret;
+
+		ptr2 = NULL;
+		if (ptr &&
+		    (o->type != FIO_OPT_STR_STORE) &&
+		    (o->type != FIO_OPT_STR)) {
+			ptr2 = strchr(ptr, ',');
+			if (ptr2 && *(ptr2 + 1) == '\0')
+				*ptr2 = '\0';
+			if (o->type != FIO_OPT_STR_MULTI) {
+				if (!ptr2)
+					ptr2 = strchr(ptr, ':');
+				if (!ptr2)
+					ptr2 = strchr(ptr, '-');
+			}
+		}
+
+		/*
+		 * Don't return early if parsing the first option fails - if
+		 * we are doing multiple arguments, we can allow the first one
+		 * being empty.
+		 */
+		__ret = __handle_option(o, ptr, data, !done, !!ptr2);
+		if (ret)
+			ret = __ret;
+
 		if (!ptr2)
-			ptr2 = strchr(ptr, ':');
-		if (!ptr2)
-			ptr2 = strchr(ptr, '-');
-	}
+			break;
 
-	/*
-	 * Don't return early if parsing the first option fails - if
-	 * we are doing multiple arguments, we can allow the first one
-	 * being empty.
-	 */
-	r1 = __handle_option(o, ptr, data, 1, !!ptr2);
+		ptr = ptr2 + 1;
+		done++;
+	} while (1);
 
-	if (!ptr2) {
-		if (ptr)
-			free(ptr);
-		return r1;
-	}
-
-	ptr2++;
-	r2 = __handle_option(o, ptr2, data, 0, 0);
-
-	if (ptr)
-		free(ptr);
-	return r1 && r2;
+	if (o_ptr)
+		free(o_ptr);
+	return ret;
 }
 
 static struct fio_option *get_option(const char *opt,
