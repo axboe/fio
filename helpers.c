@@ -29,3 +29,9 @@ int __weak clock_gettime(clockid_t clk_id, struct timespec *ts)
 
 	return ret;
 }
+
+int __weak sync_file_range(int fd, off64_t offset, off64_t nbytes,
+			   unsigned int flags)
+{
+	return 0;
+}
