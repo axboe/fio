@@ -3,14 +3,17 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
+#include <unistd.h>
 
 #include "compiler/compiler.h"
 #include "os/os.h"
 
+#ifndef __NR_fallocate
 int __weak posix_fallocate(int fd, off_t offset, off_t len)
 {
 	return 0;
 }
+#endif
 
 int __weak inet_aton(const char *cp, struct in_addr *inp)
 {
@@ -30,8 +33,11 @@ int __weak clock_gettime(clockid_t clk_id, struct timespec *ts)
 	return ret;
 }
 
+#ifndef __NR_sync_file_range
 int __weak sync_file_range(int fd, off64_t offset, off64_t nbytes,
 			   unsigned int flags)
 {
-	return 0;
+	errno = ENOSYS;
+	return -1;
 }
+#endif
