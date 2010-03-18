@@ -433,6 +433,8 @@ static void do_verify(struct thread_data *td)
 	int ret, min_events;
 	unsigned int i;
 
+	dprint(FD_VERIFY, "starting loop\n");
+
 	/*
 	 * sync io first and invalidate cache, to make sure we really
 	 * read from disk.
@@ -570,6 +572,8 @@ sync_done:
 		cleanup_pending_aio(td);
 
 	td_set_runstate(td, TD_RUNNING);
+
+	dprint(FD_VERIFY, "exiting loop\n");
 }
 
 /*
