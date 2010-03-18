@@ -236,11 +236,11 @@ static int fixup_options(struct thread_data *td)
 	struct thread_options *o = &td->o;
 
 #ifndef FIO_HAVE_PSHARED_MUTEX
-	if (!td->o.use_thread) {
+	if (!o->use_thread) {
 		log_info("fio: this platform does not support process shared"
 			 " mutexes, forcing use of threads. Use the 'thread'"
 			 " option to get rid of this warning.\n");
-		td->o.use_thread = 1;
+		o->use_thread = 1;
 	}
 #endif
 
@@ -283,9 +283,9 @@ static int fixup_options(struct thread_data *td)
 
 	if ((o->ba[DDIR_READ] != o->min_bs[DDIR_READ] ||
 	    o->ba[DDIR_WRITE] != o->min_bs[DDIR_WRITE]) &&
-	    !td->o.norandommap) {
+	    !o->norandommap) {
 		log_err("fio: Any use of blockalign= turns off randommap\n");
-		td->o.norandommap = 1;
+		o->norandommap = 1;
 	}
 
 	if (!o->file_size_high)
@@ -354,32 +354,32 @@ static int fixup_options(struct thread_data *td)
 	if (o->fill_device && !o->size)
 		o->size = -1ULL;
 
-	if (td_rw(td) && td->o.verify != VERIFY_NONE)
+	if (td_rw(td) && o->verify != VERIFY_NONE)
 		log_info("fio: mixed read/write workload with verify. May not "
 		 "work as expected, unless you pre-populated the file\n");
 
-	if (td->o.verify != VERIFY_NONE) {
-		td->o.refill_buffers = 1;
+	if (o->verify != VERIFY_NONE) {
+		o->refill_buffers = 1;
 		if (o->max_bs[DDIR_WRITE] != o->min_bs[DDIR_WRITE] &&
 		    !o->verify_interval)
 			o->verify_interval = o->min_bs[DDIR_WRITE];
 	}
 
-	if (td->o.pre_read) {
-		td->o.invalidate_cache = 0;
+	if (o->pre_read) {
+		o->invalidate_cache = 0;
 		if (td->io_ops->flags & FIO_PIPEIO)
 			log_info("fio: cannot pre-read files with an IO engine"
 				 " that isn't seekable. Pre-read disabled.\n");
 	}
 
 #ifndef FIO_HAVE_FDATASYNC
-	if (td->o.fdatasync_blocks) {
+	if (o->fdatasync_blocks) {
 		log_info("fio: this platform does not support fdatasync()"
 			 " falling back to using fsync().  Use the 'fsync'"
 			 " option instead of 'fdatasync' to get rid of"
 			 " this warning\n");
-		td->o.fsync_blocks = td->o.fdatasync_blocks;
-		td->o.fdatasync_blocks = 0;
+		o->fsync_blocks = o->fdatasync_blocks;
+		o->fdatasync_blocks = 0;
 	}
 #endif
 
