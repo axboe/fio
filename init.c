@@ -358,8 +358,12 @@ static int fixup_options(struct thread_data *td)
 		log_info("fio: mixed read/write workload with verify. May not "
 		 "work as expected, unless you pre-populated the file\n");
 
-	if (td->o.verify != VERIFY_NONE)
+	if (td->o.verify != VERIFY_NONE) {
 		td->o.refill_buffers = 1;
+		if (o->max_bs[DDIR_WRITE] != o->min_bs[DDIR_WRITE] &&
+		    !o->verify_interval)
+			o->verify_interval = o->min_bs[DDIR_WRITE];
+	}
 
 	if (td->o.pre_read) {
 		td->o.invalidate_cache = 0;
