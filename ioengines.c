@@ -207,6 +207,9 @@ int td_io_getevents(struct thread_data *td, unsigned int min, unsigned int max,
 out:
 	if (r >= 0)
 		io_u_mark_complete(td, r);
+	else
+		td_verror(td, -r, "get_events");
+
 	dprint(FD_IO, "getevents: %d\n", r);
 	return r;
 }
@@ -314,6 +317,8 @@ int td_io_init(struct thread_data *td)
 
 int td_io_commit(struct thread_data *td)
 {
+	int ret;
+
 	dprint(FD_IO, "calling ->commit(), depth %d\n", td->cur_depth);
 
 	if (!td->cur_depth || !td->io_u_queued)
@@ -322,8 +327,11 @@ int td_io_commit(struct thread_data *td)
 	io_u_mark_depth(td, td->io_u_queued);
 	td->io_u_queued = 0;
 
-	if (td->io_ops->commit)
-		return td->io_ops->commit(td);
+	if (td->io_ops->commit) {
+		ret = td->io_ops->commit(td);
+		if (ret)
+			td_verror(td, -ret, "io commit");
+	}
 
 	return 0;
 }
