@@ -22,6 +22,6 @@ void __dprint(int type, const char *str, ...)
 	log_info("%-5u ", (int) pid);
 
 	va_start(args, str);
-	vfprintf(f_out, str, args);
+	log_valist(str, args);
 	va_end(args);
 }
