@@ -34,15 +34,16 @@ extern unsigned long fio_debug;
 
 #define dprint(type, str, args...)				\
 	do {							\
-		pid_t pid = getpid();				\
+		pid_t __pid;					\
 		assert(type < FD_DEBUG_MAX);			\
 		if ((((1 << type)) & fio_debug) == 0)		\
 			break;					\
+		__pid = getpid();				\
 		if (fio_debug_jobp && *fio_debug_jobp != -1U	\
-		    && pid != *fio_debug_jobp)			\
+		    && __pid != *fio_debug_jobp)		\
 			break;					\
 		log_info("%-8s ", debug_levels[(type)].name);	\
-		log_info("%-5u ", (int) pid);			\
+		log_info("%-5u ", (int) __pid);			\
 		log_info(str, ##args);				\
 	} while (0)
 
