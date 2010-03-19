@@ -20,6 +20,7 @@
 
 typedef unsigned long os_cpu_mask_t;
 typedef unsigned int clockid_t;
+typedef off_t off64_t;
 
 static inline int blockdev_invalidate_cache(int fd)
 {
