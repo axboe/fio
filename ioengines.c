@@ -208,7 +208,7 @@ out:
 	if (r >= 0)
 		io_u_mark_complete(td, r);
 	else
-		td_verror(td, -r, "get_events");
+		td_verror(td, r, "get_events");
 
 	dprint(FD_IO, "getevents: %d\n", r);
 	return r;
