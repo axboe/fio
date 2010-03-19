@@ -1,6 +1,8 @@
 #ifndef FIO_LOG_H
 #define FIO_LOG_H
 
+#include <stdio.h>
+
 extern FILE *f_out;
 extern FILE *f_err;
 
