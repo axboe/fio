@@ -888,14 +888,6 @@ again:
 		io_u->end_io = NULL;
 	}
 
-	/*
-	 * We ran out, wait for async verify threads to finish and return one
-	 */
-	if (!io_u && td->o.verify_async) {
-		pthread_cond_wait(&td->free_cond, &td->io_u_lock);
-		goto again;
-	}
-
 	if (io_u) {
 		assert(io_u->flags & IO_U_F_FREE);
 		io_u->flags &= ~(IO_U_F_FREE | IO_U_F_FREE_DEF);
@@ -905,6 +897,13 @@ again:
 		flist_add(&io_u->list, &td->io_u_busylist);
 		td->cur_depth++;
 		io_u->flags |= IO_U_F_IN_CUR_DEPTH;
+	} else if (td->o.verify_async) {
+		/*
+		 * We ran out, wait for async verify threads to finish and
+		 * return one
+		 */
+		pthread_cond_wait(&td->free_cond, &td->io_u_lock);
+		goto again;
 	}
 
 	td_io_u_unlock(td);
