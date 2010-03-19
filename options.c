@@ -429,6 +429,7 @@ static int str_fst_cb(void *data, const char *str)
 	return 0;
 }
 
+#ifdef FIO_HAVE_SYNC_FILE_RANGE
 static int str_sfr_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
@@ -442,6 +443,7 @@ static int str_sfr_cb(void *data, const char *str)
 
 	return 0;
 }
+#endif
 
 static int check_dir(struct thread_data *td, char *fname)
 {
