@@ -22,6 +22,10 @@
 #define nop             __asm__ __volatile__("mov\tr0,r0\t@ nop\n\t")
 #define read_barrier()	__asm__ __volatile__ ("" : : : "memory")
 #define write_barrier()	__asm__ __volatile__ ("" : : : "memory")
+#elif defined(__ARM_ARCH_7A__)
+#define	nop		__asm__ __volatile__ ("nop")
+#define read_barrier()	__sync_synchronize()
+#define write_barrier()	__sync_synchronize()
 #endif
 
 #endif
