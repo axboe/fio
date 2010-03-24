@@ -1231,7 +1231,6 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= fio_clock_source_cb,
 		.off1	= td_var_offset(clocksource),
 		.help	= "What type of timing source to use",
-		.def	= "gettimeofday",
 		.posval	= {
 			  { .ival = "gettimeofday",
 			    .oval = CS_GTOD,
