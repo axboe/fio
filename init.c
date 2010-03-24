@@ -992,6 +992,7 @@ struct debug_level debug_levels[] = {
 	{ .name = "job",	.shift = FD_JOB },
 	{ .name = "mutex",	.shift = FD_MUTEX },
 	{ .name	= "profile",	.shift = FD_PROFILE },
+	{ .name = "time",	.shift = FD_TIME },
 	{ .name = NULL, },
 };
 

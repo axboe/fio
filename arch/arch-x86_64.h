@@ -38,7 +38,17 @@ static inline unsigned int arch_ffz(unsigned int bitmask)
 	__asm__("bsfl %1,%0" :"=r" (bitmask) :"r" (~bitmask));
 	return bitmask;
 }
+
+static inline unsigned long long get_cpu_clock(void)
+{
+	unsigned int lo, hi;
+
+	__asm__ __volatile__("rdtsc" : "=a" (lo), "=d" (hi));
+	return ((unsigned long long) hi << 32ULL) | lo;
+}
+
 #define ARCH_HAVE_FFZ
 #define ARCH_HAVE_SSE
+#define ARCH_HAVE_CPU_CLOCK
 
 #endif

@@ -3,6 +3,7 @@
  */
 
 #include <unistd.h>
+#include <math.h>
 #include <sys/time.h>
 
 #include "fio.h"
@@ -10,13 +11,16 @@
 
 #include "hash.h"
 
-static int clock_gettime_works = 0;
+static unsigned long cycles_per_usec;
 static struct timeval last_tv;
+static unsigned long last_cycles;
 static int last_tv_valid;
 
 static struct timeval *fio_tv;
 int fio_gtod_offload = 0;
 int fio_gtod_cpu = -1;
+
+enum fio_cs fio_clock_source = CS_GTOD;
 
 #ifdef FIO_DEBUG_TIME
 
@@ -124,19 +128,44 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 	if (fio_tv) {
 		memcpy(tp, fio_tv, sizeof(*tp));
 		return;
-	} else if (!clock_gettime_works) {
-gtod:
+	}
+
+	switch (fio_clock_source) {
+	case CS_GTOD:
 		gettimeofday(tp, NULL);
-	} else {
+		break;
+	case CS_CGETTIME: {
 		struct timespec ts;
 
 		if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
-			clock_gettime_works = 0;
-			goto gtod;
+			log_err("fio: clock_gettime fails\n");
+			assert(0);
 		}
 
 		tp->tv_sec = ts.tv_sec;
 		tp->tv_usec = ts.tv_nsec / 1000;
+		break;
+		}
+#ifdef ARCH_HAVE_CPU_CLOCK
+	case CS_CPUCLOCK: {
+		unsigned long long usecs, t;
+
+		t = get_cpu_clock();
+		if (t < last_cycles) {
+			dprint(FD_TIME, "CPU clock going back in time\n");
+			t = last_cycles;
+		}
+
+		usecs = t / cycles_per_usec;
+		tp->tv_sec = usecs / 1000000;
+		tp->tv_usec = usecs % 1000000;
+		last_cycles = t;
+		break;
+		}
+#endif
+	default:
+		log_err("fio: invalid clock source %d\n", fio_clock_source);
+		break;
 	}
 
 	/*
@@ -152,6 +181,71 @@ gtod:
 	}
 	last_tv_valid = 1;
 	memcpy(&last_tv, tp, sizeof(*tp));
+}
+
+static unsigned long get_cycles_per_usec(void)
+{
+	struct timeval s, e;
+	unsigned long long c_s, c_e;
+
+	gettimeofday(&s, NULL);
+	c_s = get_cpu_clock();
+	do {
+		unsigned long long elapsed;
+
+		gettimeofday(&e, NULL);
+		elapsed = utime_since(&s, &e);
+		if (elapsed >= 10) {
+			c_e = get_cpu_clock();
+			break;
+		}
+	} while (1);
+
+	return c_e - c_s;
+}
+
+void fio_clock_init(void)
+{
+	double delta, mean, S;
+	unsigned long avg, cycles[10];
+	int i, samples;
+
+	last_tv_valid = 0;
+
+	cycles[0] = get_cycles_per_usec();
+	S = delta = mean = 0.0;
+	for (i = 0; i < 10; i++) {
+		cycles[i] = get_cycles_per_usec();
+		delta = cycles[i] - mean;
+		if (delta) {
+			mean += delta / (i + 1.0);
+			S += delta * (cycles[i] - mean);
+		}
+	}
+
+	S = sqrt(S / (10 - 1.0));
+
+	samples = avg = 0;
+	for (i = 0; i < 10; i++) {
+		double this = cycles[i];
+
+		if ((max(this, mean) - min(this, mean)) > S)
+			continue;
+		samples++;
+		avg += this;
+	}
+
+	S /= 10.0;
+	mean /= 10.0;
+
+	for (i = 0; i < 10; i++)
+		dprint(FD_TIME, "cycles[%d]=%lu\n", i, cycles[i] / 10);
+
+	avg /= (samples * 10);
+	dprint(FD_TIME, "avg: %lu\n", avg);
+	dprint(FD_TIME, "mean=%f, S=%f\n", mean, S);
+
+	cycles_per_usec = avg;
 }
 
 void fio_gtod_init(void)

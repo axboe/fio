@@ -31,6 +31,7 @@
 #include "helpers.h"
 #include "options.h"
 #include "profile.h"
+#include "time.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
@@ -238,6 +239,7 @@ struct thread_options {
 	unsigned int gtod_reduce;
 	unsigned int gtod_cpu;
 	unsigned int gtod_offload;
+	enum fio_cs clocksource;
 
 	char *read_iolog_file;
 	char *write_iolog_file;
@@ -481,6 +483,7 @@ extern unsigned long done_secs;
 extern char *job_section;
 extern int fio_gtod_offload;
 extern int fio_gtod_cpu;
+extern enum fio_cs fio_clock_source;
 
 extern struct thread_data *threads;
 
@@ -516,25 +519,6 @@ static inline int should_fsync(struct thread_data *td)
 
 	return 0;
 }
-
-/*
- * Time functions
- */
-extern unsigned long long utime_since(struct timeval *, struct timeval *);
-extern unsigned long long utime_since_now(struct timeval *);
-extern unsigned long mtime_since(struct timeval *, struct timeval *);
-extern unsigned long mtime_since_now(struct timeval *);
-extern unsigned long time_since_now(struct timeval *);
-extern unsigned long mtime_since_genesis(void);
-extern void usec_spin(unsigned int);
-extern void usec_sleep(struct thread_data *, unsigned long);
-extern void fill_start_time(struct timeval *);
-extern void fio_gettime(struct timeval *, void *);
-extern void fio_gtod_init(void);
-extern void fio_gtod_update(void);
-extern void set_genesis_time(void);
-extern int ramp_time_over(struct thread_data *);
-extern int in_ramp_time(struct thread_data *);
 
 /*
  * Init/option functions

@@ -225,6 +225,15 @@ static int str_mem_cb(void *data, const char *mem)
 	return 0;
 }
 
+static int fio_clock_source_cb(void *data, const char *str)
+{
+	struct thread_data *td = data;
+
+	fio_clock_source = td->o.clocksource;
+	fio_time_init();
+	return 0;
+}
+
 static int str_lockmem_cb(void fio_unused *data, unsigned long *val)
 {
 	mlock_size = *val;
@@ -1215,6 +1224,30 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= td_var_offset(ramp_time),
 		.help	= "Ramp up time before measuring performance",
+	},
+	{
+		.name	= "clocksource",
+		.type	= FIO_OPT_STR,
+		.cb	= fio_clock_source_cb,
+		.off1	= td_var_offset(clocksource),
+		.help	= "What type of timing source to use",
+		.def	= "gettimeofday",
+		.posval	= {
+			  { .ival = "gettimeofday",
+			    .oval = CS_GTOD,
+			    .help = "Use gettimeofday(2) for timing",
+			  },
+			  { .ival = "clock_gettime",
+			    .oval = CS_CGETTIME,
+			    .help = "Use clock_gettime(2) for timing",
+			  },
+#ifdef ARCH_HAVE_CPU_CLOCK
+			  { .ival = "cpu",
+			    .oval = CS_CPUCLOCK,
+			    .help = "Use CPU private clock",
+			  },
+#endif
+		},
 	},
 	{
 		.name	= "mem",

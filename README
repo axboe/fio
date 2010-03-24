@@ -127,6 +127,8 @@ options in fio. Currently the options are:
 	diskutil	Dump info related to disk utilization updates
 	job:x		Dump info only related to job number x
 	mutex		Dump info only related to mutex up/down ops
+	profile		Dump info related to profile extensions
+	time		Dump info related to internal time keeping
 	? or help	Show available debug options.
 
 You can specify as many as you want, eg --debug=file,mem will enable
