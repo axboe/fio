@@ -1076,7 +1076,7 @@ static int parse_cmd_line(int argc, char *argv[])
 		case 'l':
 			write_lat_log = 1;
 			break;
-		case 'w':
+		case 'b':
 			write_bw_log = 1;
 			break;
 		case 'o':
