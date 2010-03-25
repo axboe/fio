@@ -1218,7 +1218,12 @@ void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
 
 	if (!td->o.zero_buffers) {
 		while ((void *) ptr - io_u->buf < max_bs) {
-			*ptr = __rand(&__fio_rand_state);
+			unsigned int r = __rand(&__fio_rand_state);
+
+			if (sizeof(r) != sizeof(*ptr))
+				r *= GOLDEN_RATIO_PRIME;
+
+			*ptr = r;
 			ptr++;
 		}
 	} else
