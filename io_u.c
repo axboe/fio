@@ -8,6 +8,7 @@
 #include "fio.h"
 #include "hash.h"
 #include "verify.h"
+#include "lib/rand.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -1217,7 +1218,7 @@ void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
 
 	if (!td->o.zero_buffers) {
 		while ((void *) ptr - io_u->buf < max_bs) {
-			*ptr = rand() * GOLDEN_RATIO_PRIME;
+			*ptr = __rand(&__fio_rand_state);
 			ptr++;
 		}
 	} else

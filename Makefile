@@ -9,6 +9,8 @@ OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o filesetup.o \
 	rbtree.o diskutil.o fifo.o blktrace.o smalloc.o filehash.o helpers.o \
 	cgroup.o profile.o debug.o
 
+OBJS += lib/rand.o
+
 OBJS += crc/crc7.o
 OBJS += crc/crc16.o
 OBJS += crc/crc32.o
