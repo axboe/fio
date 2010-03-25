@@ -1217,14 +1217,16 @@ void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
 	long *ptr = io_u->buf;
 
 	if (!td->o.zero_buffers) {
+		unsigned long r = __rand(&__fio_rand_state);
+
+		if (sizeof(int) != sizeof(*ptr))
+			r *= (unsigned long) __rand(&__fio_rand_state);
+
 		while ((void *) ptr - io_u->buf < max_bs) {
-			unsigned int r = __rand(&__fio_rand_state);
-
-			if (sizeof(r) != sizeof(*ptr))
-				r *= GOLDEN_RATIO_PRIME;
-
 			*ptr = r;
 			ptr++;
+			r *= GOLDEN_RATIO_PRIME;
+			r >>= 3;
 		}
 	} else
 		memset(ptr, 0, max_bs);
