@@ -41,6 +41,7 @@
 #include "diskutil.h"
 #include "cgroup.h"
 #include "profile.h"
+#include "lib/rand.h"
 
 unsigned long page_mask;
 unsigned long page_size;
@@ -1636,6 +1637,7 @@ int main(int argc, char *argv[])
 	long ps;
 
 	sinit();
+	init_rand(&__fio_rand_state);
 
 	/*
 	 * We need locale for number printing, if it isn't set then just
