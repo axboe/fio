@@ -881,9 +881,6 @@ static int fill_def_thread(void)
 	fio_fill_default_options(&def_thread);
 
 	def_thread.o.timeout = def_timeout;
-	def_thread.o.write_bw_log = write_bw_log;
-	def_thread.o.write_lat_log = write_lat_log;
-
 	return 0;
 }
 
@@ -1076,7 +1073,7 @@ static int parse_cmd_line(int argc, char *argv[])
 		case 'l':
 			write_lat_log = 1;
 			break;
-		case 'w':
+		case 'b':
 			write_bw_log = 1;
 			break;
 		case 'o':
