@@ -14,6 +14,7 @@ static struct fio_mutex *lock;
 struct cgroup_member {
 	struct flist_head list;
 	char *root;
+	unsigned int cgroup_nodelete;
 };
 
 static char *find_cgroup_mnt(struct thread_data *td)
@@ -43,14 +44,16 @@ static char *find_cgroup_mnt(struct thread_data *td)
 	return mntpoint;
 }
 
-static void add_cgroup(const char *name, struct flist_head *clist)
+static void add_cgroup(struct thread_data *td, const char *name,
+			struct flist_head *clist)
 {
 	struct cgroup_member *cm;
 
 	cm = smalloc(sizeof(*cm));
 	INIT_FLIST_HEAD(&cm->list);
 	cm->root = smalloc_strdup(name);
-
+	if (td->o.cgroup_nodelete)
+		cm->cgroup_nodelete = 1;
 	fio_mutex_down(lock);
 	flist_add_tail(&cm->list, clist);
 	fio_mutex_up(lock);
@@ -65,7 +68,8 @@ void cgroup_kill(struct flist_head *clist)
 
 	flist_for_each_safe(n, tmp, clist) {
 		cm = flist_entry(n, struct cgroup_member, list);
-		rmdir(cm->root);
+		if (!cm->cgroup_nodelete)
+			rmdir(cm->root);
 		flist_del(&cm->list);
 		sfree(cm->root);
 		sfree(cm);
@@ -144,7 +148,7 @@ int cgroup_setup(struct thread_data *td, struct flist_head *clist, char **mnt)
 			goto err;
 		}
 	} else
-		add_cgroup(root, clist);
+		add_cgroup(td, root, clist);
 
 	if (td->o.cgroup_weight) {
 		if (write_int_to_file(td, root, "blkio.weight",

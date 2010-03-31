@@ -281,6 +281,7 @@ struct thread_options {
 	 */
 	char *cgroup;
 	unsigned int cgroup_weight;
+	unsigned int cgroup_nodelete;
 
 	unsigned int uid;
 	unsigned int gid;

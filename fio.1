@@ -762,6 +762,12 @@ your system doesn't have it mounted, you can do so with:
 Set the weight of the cgroup to this value. See the documentation that comes
 with the kernel, allowed values are in the range of 100..1000.
 .TP
+.BI cgroup_nodelete \fR=\fPbool
+Normally fio will delete the cgroups it has created after the job completion.
+To override this behavior and to leave cgroups around after the job completion,
+set cgroup_nodelete=1. This can be useful if one wants to inspect various
+cgroup files after job completion. Default: false
+.TP
 .BI uid \fR=\fPint
 Instead of running as the invoking user, set the user ID to this value before
 the thread/process does any work.

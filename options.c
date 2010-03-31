@@ -1818,6 +1818,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.maxval	= 1000,
 	},
 	{
+		.name	= "cgroup_nodelete",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(cgroup_nodelete),
+		.help	= "Do not delete cgroups after job completion",
+		.def	= "0",
+	},
+	{
 		.name	= "uid",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(uid),
