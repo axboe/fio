@@ -746,11 +746,8 @@ void close_and_free_files(struct thread_data *td)
 
 		sfree(f->file_name);
 		f->file_name = NULL;
-
-		if (f->file_map) {
-			sfree(f->file_map);
-			f->file_map = NULL;
-		}
+		sfree(f->file_map);
+		f->file_map = NULL;
 		sfree(f);
 	}
 

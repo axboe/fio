@@ -1694,8 +1694,7 @@ int main(int argc, char *argv[])
 
 	cgroup_kill(cgroup_list);
 	sfree(cgroup_list);
-	if (cgroup_mnt)
-		sfree(cgroup_mnt);
+	sfree(cgroup_mnt);
 
 	fio_mutex_remove(startup_mutex);
 	fio_mutex_remove(writeout_mutex);
