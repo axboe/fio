@@ -837,7 +837,7 @@ static void print_option(struct fio_option *o)
 int show_cmd_help(struct fio_option *options, const char *name)
 {
 	struct fio_option *o, *closest;
-	unsigned int best_dist;
+	unsigned int best_dist = -1U;
 	int found = 0;
 	int show_all = 0;
 
@@ -890,7 +890,12 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		return 0;
 
 	printf("No such command: %s", name);
-	if (closest) {
+
+	/*
+	 * Only print an appropriately close option, one where the edit
+	 * distance isn't too big. Otherwise we get crazy matches.
+	 */
+	if (closest && best_dist < 3) {
 		printf(" - showing closest match\n");
 		printf("%20s: %s\n", closest->name, closest->help);
 		show_option_help(closest, stdout);
