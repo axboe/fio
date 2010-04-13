@@ -211,14 +211,14 @@ same size.
 .TP
 .BI blocksize \fR=\fPint[,int] "\fR,\fB bs" \fR=\fPint[,int]
 Block size for I/O units.  Default: 4k.  Values for reads and writes can be
-specified seperately in the format \fIread\fR,\fIwrite\fR, either of
+specified separately in the format \fIread\fR,\fIwrite\fR, either of
 which may be empty to leave that value at its default.
 .TP
 .BI blocksize_range \fR=\fPirange[,irange] "\fR,\fB bsrange" \fR=\fPirange[,irange]
 Specify a range of I/O block sizes.  The issued I/O unit will always be a
 multiple of the minimum size, unless \fBblocksize_unaligned\fR is set.  Applies
 to both reads and writes if only one range is given, but can be specified
-seperately with a comma seperating the values. Example: bsrange=1k-4k,2k-8k.
+separately with a comma seperating the values. Example: bsrange=1k-4k,2k-8k.
 Also (see \fBblocksize\fR).
 .TP
 .BI bssplit \fR=\fPstr
