@@ -1841,9 +1841,10 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 	},
 };
 
-static void add_to_lopt(struct option *lopt, struct fio_option *o)
+static void add_to_lopt(struct option *lopt, struct fio_option *o,
+			const char *name)
 {
-	lopt->name = (char *) o->name;
+	lopt->name = (char *) name;
 	lopt->val = FIO_GETOPT_JOB;
 	if (o->type == FIO_OPT_STR_SET)
 		lopt->has_arg = no_argument;
@@ -1864,7 +1865,11 @@ void fio_options_dup_and_init(struct option *long_options)
 
 	o = &options[0];
 	while (o->name) {
-		add_to_lopt(&long_options[i], o);
+		add_to_lopt(&long_options[i], o, o->name);
+		if (o->alias) {
+			i++;
+			add_to_lopt(&long_options[i], o, o->alias);
+		}
 
 		i++;
 		o++;
