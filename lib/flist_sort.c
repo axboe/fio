@@ -125,8 +125,10 @@ void flist_sort(void *priv, struct flist_head *head,
 			cur = merge(priv, cmp, part[lev], cur);
 			part[lev] = NULL;
 		}
-		if (lev > max_lev)
+		if (lev > max_lev) {
 			assert(lev < ARRAY_SIZE(part) - 1);
+			max_lev = lev;
+		}
 		part[lev] = cur;
 	}
 
