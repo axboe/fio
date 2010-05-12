@@ -8,6 +8,8 @@
 #include "os-linux.h"
 #elif defined(__FreeBSD__)
 #include "os-freebsd.h"
+#elif defined(__NetBSD__)
+#include "os-netbsd.h"
 #elif defined(__sun__)
 #include "os-solaris.h"
 #elif defined(__APPLE__)
@@ -48,6 +50,7 @@
 #define fio_getaffinity(pid, mask)	do { } while (0)
 #define fio_cpu_clear(mask, cpu)	do { } while (0)
 #define fio_cpuset_exit(mask)		(-1)
+typedef unsigned long os_cpu_mask_t;
 #endif
 
 #ifndef FIO_HAVE_IOPRIO

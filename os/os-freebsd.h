@@ -11,8 +11,6 @@
 
 #define OS_MAP_ANON		MAP_ANON
 
-typedef unsigned long os_cpu_mask_t;
-
 static inline int blockdev_invalidate_cache(int fd)
 {
 	return EINVAL;
