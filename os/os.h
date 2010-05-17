@@ -147,4 +147,11 @@ static inline long os_random_long(os_random_state_t *rs)
 }
 #endif
 
+#ifndef FIO_HAVE_FS_STAT
+static inline unsigned long long get_fs_size(const char *path)
+{
+	return 0;
+}
+#endif
+
 #endif

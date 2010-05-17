@@ -373,6 +373,7 @@ struct thread_data {
 	struct timeval lastrate[2];
 
 	unsigned long long total_io_size;
+	unsigned long long fill_device_size;
 
 	unsigned long io_issues[2];
 	unsigned long long io_blocks[2];

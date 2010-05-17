@@ -4,6 +4,7 @@
 #include <sys/ioctl.h>
 #include <sys/uio.h>
 #include <sys/syscall.h>
+#include <sys/vfs.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -35,6 +36,7 @@
 #define FIO_HAVE_CGROUPS
 #define FIO_HAVE_FDATASYNC
 #define FIO_HAVE_SYNC_FILE_RANGE
+#define FIO_HAVE_FS_STAT
 
 #define OS_MAP_ANON		MAP_ANONYMOUS
 
@@ -278,6 +280,19 @@ static inline int arch_cache_line_size(void)
 		return -1;
 	else
 		return atoi(size);
+}
+
+static inline unsigned long long get_fs_size(const char *path)
+{
+	unsigned long long ret;
+	struct statfs s;
+
+	if (statfs(path, &s) < 0)
+		return -1ULL;
+
+	ret = s.f_bsize;
+	ret *= (unsigned long long) s.f_bfree;
+	return ret;
 }
 
 #endif

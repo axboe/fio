@@ -503,6 +503,75 @@ static int get_file_sizes(struct thread_data *td)
 	return err;
 }
 
+struct fio_mount {
+	struct flist_head list;
+	const char *base;
+	char __base[256];
+	unsigned int key;
+};
+
+/*
+ * Get free number of bytes for each file on each unique mount.
+ */
+static unsigned long long get_fs_free_counts(struct thread_data *td)
+{
+	struct flist_head *n, *tmp;
+	unsigned long long ret;
+	struct fio_mount *fm;
+	FLIST_HEAD(list);
+	struct fio_file *f;
+	unsigned int i;
+
+	for_each_file(td, f, i) {
+		struct stat sb;
+		char buf[256];
+
+		strcpy(buf, f->file_name);
+
+		if (stat(buf, &sb) < 0) {
+			if (errno != ENOENT)
+				break;
+			strcpy(buf, ".");
+			if (stat(buf, &sb) < 0)
+				break;
+		}
+
+		fm = NULL;
+		flist_for_each(n, &list) {
+			fm = flist_entry(n, struct fio_mount, list);
+			if (fm->key == sb.st_dev)
+				break;
+
+			fm = NULL;
+		}
+
+		if (fm)
+			continue;
+
+		fm = malloc(sizeof(*fm));
+		strcpy(fm->__base, buf);
+		fm->base = basename(fm->__base);
+		fm->key = sb.st_dev;
+		flist_add(&fm->list, &list);
+	}
+
+	ret = 0;
+	flist_for_each_safe(n, tmp, &list) {
+		unsigned long long sz;
+
+		fm = flist_entry(n, struct fio_mount, list);
+		flist_del(&fm->list);
+
+		sz = get_fs_size(fm->base);
+		if (sz && sz != -1ULL)
+			ret += sz;
+
+		free(fm);
+	}
+
+	return ret;
+}
+
 /*
  * Open the files and setup files sizes, creating files if necessary.
  */
@@ -542,6 +611,9 @@ int setup_files(struct thread_data *td)
 		else
 			total_size += f->real_file_size;
 	}
+
+	if (td->o.fill_device)
+		td->fill_device_size = get_fs_free_counts(td);
 
 	/*
 	 * device/file sizes are zero and no size given, punt

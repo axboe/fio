@@ -110,6 +110,13 @@ static int thread_eta(struct thread_data *td)
 
 	bytes_total = td->total_io_size;
 
+	if (td->o.fill_device && td->o.size  == -1ULL) {
+		if (!td->fill_device_size || td->fill_device_size == -1ULL)
+			return 0;
+
+		bytes_total = td->fill_device_size;
+	}
+
 	/*
 	 * if writing, bytes_total will be twice the size. If mixing,
 	 * assume a 50/50 split and thus bytes_total will be 50% larger.
@@ -123,9 +130,6 @@ static int thread_eta(struct thread_data *td)
 
 	if (td->o.zone_size && td->o.zone_skip)
 		bytes_total /= (td->o.zone_skip / td->o.zone_size);
-
-	if (td->o.fill_device && td->o.size  == -1ULL)
-		return 0;
 
 	if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING) {
 		double perc, perc_t;
