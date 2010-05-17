@@ -942,7 +942,7 @@ read_iolog=str	Open an iolog with the specified file name and replay the
 		to replay a workload captured by blktrace. See blktrace
 		for how to capture such logging data. For blktrace replay,
 		the file needs to be turned into a blkparse binary data
-		file first (blktrace <device> -d file_for_fio.bin).
+		file first (blkparse <device> -o /dev/null -d file_for_fio.bin).
 
 write_bw_log=str If given, write a bandwidth log of the jobs in this job
 		file. Can be used to store data of the bandwidth of the
