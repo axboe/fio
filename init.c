@@ -21,7 +21,7 @@
 #include "verify.h"
 #include "profile.h"
 
-static char fio_version_string[] = "fio 1.38";
+static char fio_version_string[] = "fio 1.39-rc1";
 
 #define FIO_RANDSEED		(0xb1899bedUL)
 
