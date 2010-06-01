@@ -21,7 +21,7 @@
 #include "verify.h"
 #include "profile.h"
 
-static char fio_version_string[] = "fio 1.38";
+static char fio_version_string[] = "fio 1.39-rc1";
 
 #define FIO_RANDSEED		(0xb1899bedUL)
 
@@ -776,6 +776,8 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 			break;
 		}
 
+		name[strlen(name) - 1] = '\0';
+
 		if (skip_this_section(name)) {
 			inside_skip = 1;
 			continue;
@@ -783,8 +785,6 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 			inside_skip = 0;
 
 		global = !strncmp(name, "global", 6);
-
-		name[strlen(name) - 1] = '\0';
 
 		if (dump_cmdline) {
 			if (first_sect)
