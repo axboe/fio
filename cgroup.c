@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mntent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "fio.h"
 #include "flist.h"
 #include "cgroup.h"
