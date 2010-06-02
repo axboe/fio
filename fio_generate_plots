@@ -1,8 +1,8 @@
-#!/bin/bash
+#! /bin/sh
 
 # Use gnuplot to generate plots from fio run with -l and/or -w
 
-if [ "$1"x == "x" ]; then
+if [ "$1"x = "x" ]; then
 	echo Need title as arg
 	exit 1
 fi
