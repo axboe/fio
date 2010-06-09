@@ -972,7 +972,8 @@ static void usage(const char *name)
 	printf("\t--section=name\tOnly run specified section in job file\n");
 	printf("\t--alloc-size=kb\tSet smalloc pool to this size in kb"
 		" (def 1024)\n");
-	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>\n");
+	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
+	printf("\n                   Jens Axboe <jaxboe@fusionio.com>\n");
 }
 
 #ifdef FIO_INC_DEBUG
