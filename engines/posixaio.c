@@ -56,7 +56,7 @@ static int fio_posixaio_cancel(struct thread_data fio_unused *td,
 	struct fio_file *f = io_u->file;
 	int r = aio_cancel(f->fd, &io_u->aiocb);
 
-	if (r == 1 || r == AIO_CANCELED)
+	if (r == AIO_ALLDONE || r == AIO_CANCELED)
 		return 0;
 
 	return 1;
