@@ -935,6 +935,8 @@ struct io_u *get_io_u(struct thread_data *td)
 		} else if (!(td->io_hist_len % td->o.verify_backlog) &&
 			 td->last_ddir != DDIR_READ) {
 			td->verify_batch = td->o.verify_batch;
+			if (!td->verify_batch)
+				td->verify_batch = td->o.verify_backlog;
 			get_verify = 1;
 		}
 
