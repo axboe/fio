@@ -926,6 +926,22 @@ struct io_u *get_io_u(struct thread_data *td)
 		return NULL;
 	}
 
+	if (td->o.verify_backlog && td->io_hist_len) {
+		int get_verify = 0;
+
+		if (td->verify_batch) {
+			td->verify_batch--;
+			get_verify = 1;
+		} else if (!(td->io_hist_len % td->o.verify_backlog) &&
+			 td->last_ddir != DDIR_READ) {
+			td->verify_batch = td->o.verify_batch;
+			get_verify = 1;
+		}
+
+		if (get_verify && !get_next_verify(td, io_u))
+			goto out;
+	}
+
 	/*
 	 * from a requeue, io_u already setup
 	 */
@@ -1024,6 +1040,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	}
 
 	td->last_was_sync = 0;
+	td->last_ddir = io_u->ddir;
 
 	if (!io_u->error) {
 		unsigned int bytes = io_u->buflen - io_u->resid;

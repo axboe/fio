@@ -748,8 +748,10 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 
 		ipo = rb_entry(n, struct io_piece, rb_node);
 		rb_erase(n, &td->io_hist_tree);
+		td->io_hist_len--;
 	} else if (!flist_empty(&td->io_hist_list)) {
 		ipo = flist_entry(td->io_hist_list.next, struct io_piece, list);
+		td->io_hist_len--;
 		flist_del(&ipo->list);
 	}
 

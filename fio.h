@@ -185,6 +185,8 @@ struct thread_options {
 	unsigned int verify_pattern_bytes;
 	unsigned int verify_fatal;
 	unsigned int verify_async;
+	unsigned long long verify_backlog;
+	unsigned int verify_batch;
 	unsigned int use_thread;
 	unsigned int unlink;
 	unsigned int do_disk_util;
@@ -321,6 +323,7 @@ struct thread_data {
 	unsigned int ioprio;
 	unsigned int ioprio_set;
 	unsigned int last_was_sync;
+	enum fio_ddir last_ddir;
 
 	char *mmapfile;
 	int mmapfd;
@@ -334,6 +337,8 @@ struct thread_data {
 
 	os_random_state_t bsrange_state;
 	os_random_state_t verify_state;
+
+	unsigned int verify_batch;
 
 	int shm_id;
 
@@ -410,6 +415,7 @@ struct thread_data {
 	 */
 	struct rb_root io_hist_tree;
 	struct flist_head io_hist_list;
+	unsigned long io_hist_len;
 
 	/*
 	 * For IO replaying

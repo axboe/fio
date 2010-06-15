@@ -160,12 +160,14 @@ void prune_io_piece_log(struct thread_data *td)
 	while ((n = rb_first(&td->io_hist_tree)) != NULL) {
 		ipo = rb_entry(n, struct io_piece, rb_node);
 		rb_erase(n, &td->io_hist_tree);
+		td->io_hist_len--;
 		free(ipo);
 	}
 
 	while (!flist_empty(&td->io_hist_list)) {
 		ipo = flist_entry(td->io_hist_list.next, struct io_piece, list);
 		flist_del(&ipo->list);
+		td->io_hist_len--;
 		free(ipo);
 	}
 }
@@ -201,6 +203,7 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	      (file_randommap(td, ipo->file) || td->o.verify == VERIFY_NONE)) {
 		INIT_FLIST_HEAD(&ipo->list);
 		flist_add_tail(&ipo->list, &td->io_hist_list);
+		td->io_hist_len++;
 		return;
 	}
 
@@ -222,6 +225,7 @@ restart:
 			p = &(*p)->rb_right;
 		else {
 			assert(ipo->len == __ipo->len);
+			td->io_hist_len--;
 			rb_erase(parent, &td->io_hist_tree);
 			goto restart;
 		}
@@ -229,6 +233,7 @@ restart:
 
 	rb_link_node(&ipo->rb_node, parent, p);
 	rb_insert_color(&ipo->rb_node, &td->io_hist_tree);
+	td->io_hist_len++;
 }
 
 void write_iolog_close(struct thread_data *td)

@@ -1410,6 +1410,20 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Number of async verifier threads to use",
 		.parent	= "verify",
 	},
+	{
+		.name	= "verify_backlog",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(verify_backlog),
+		.help	= "Verify after this number of blocks are written",
+		.parent	= "verify",
+	},
+	{
+		.name	= "verify_backlog_batch",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(verify_batch),
+		.help	= "Verify this number of IO blocks",
+		.parent	= "verify_backlog",
+	},
 #ifdef FIO_HAVE_CPU_AFFINITY
 	{
 		.name	= "verify_async_cpus",
