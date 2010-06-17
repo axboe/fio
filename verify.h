@@ -31,7 +31,7 @@ struct verify_header {
 };
 
 struct vhdr_md5 {
-	uint32_t md5_digest[16];
+	uint32_t md5_digest[4];
 };
 struct vhdr_sha512 {
 	uint8_t sha512[128];
