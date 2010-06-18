@@ -360,11 +360,9 @@ static int fixup_options(struct thread_data *td)
 
 	if (o->verify != VERIFY_NONE) {
 		o->refill_buffers = 1;
-		if (o->verify == VERIFY_META) {
-			if (o->max_bs[DDIR_WRITE] != o->min_bs[DDIR_WRITE] &&
-			    !o->verify_interval)
-				o->verify_interval = o->min_bs[DDIR_WRITE];
-		}
+		if (o->max_bs[DDIR_WRITE] != o->min_bs[DDIR_WRITE] &&
+		    !o->verify_interval)
+			o->verify_interval = o->min_bs[DDIR_WRITE];
 	}
 
 	if (o->pre_read) {
