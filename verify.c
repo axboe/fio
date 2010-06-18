@@ -513,9 +513,10 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		hdr = p;
 
 		if (hdr->fio_magic != FIO_HDR_MAGIC) {
-			log_err("Bad verify header %x at %llu\n",
-					hdr->fio_magic,
-					io_u->offset + hdr_num * hdr->len);
+			log_err("verify: bad magic header %x, wanted %x at file %s offset %llu, length %u\n",
+				hdr->fio_magic, FIO_HDR_MAGIC,
+				io_u->file->file_name,
+				io_u->offset + hdr_num * hdr->len, hdr->len);
 			return EILSEQ;
 		}
 
@@ -527,16 +528,19 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 				  p + hdr_size,
 				  hdr_inc - hdr_size,
 				  hdr_size % td->o.verify_pattern_bytes);
+
+			if (ret) {
+				log_err("pattern: verify failed at file %s offset %llu, length %u\n",
+					io_u->file->file_name,
+					io_u->offset + hdr_num * hdr->len,
+					hdr->len);
+			}
+
 			/*
 			 * Also verify the meta data, if applicable
 			 */
 			if (hdr->verify_type == VERIFY_META)
 				ret |= verify_io_u_meta(hdr, td, &vc);
-
-			if (ret)
-				log_err("fio: verify failed at %llu/%u\n",
-					io_u->offset + hdr_num * hdr->len,
-					hdr->len);
 			continue;
 		}
 
