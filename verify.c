@@ -160,7 +160,7 @@ static void *hdr_priv(struct verify_header *hdr)
  * Return data area 'header_num'
  */
 static inline void *io_u_verify_off(struct verify_header *hdr,
-				    struct io_u *io_u, unsigned char header_num)
+				    struct io_u *io_u, unsigned int header_num)
 {
 	return io_u->buf + header_num * hdr->len + hdr_size(hdr);
 }
@@ -260,7 +260,7 @@ static int verify_io_u_sha1(struct verify_header *hdr, struct io_u *io_u,
 }
 
 static int verify_io_u_crc7(struct verify_header *hdr, struct io_u *io_u,
-			    unsigned char header_num)
+			    unsigned int header_num)
 {
 	void *p = io_u_verify_off(hdr, io_u, header_num);
 	struct vhdr_crc7 *vh = hdr_priv(hdr);
