@@ -299,7 +299,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			if (!vp->ival || vp->ival[0] == '\0')
 				continue;
 			all_skipped = 0;
-			if (!strncmp(vp->ival, ptr, strlen(vp->ival))) {
+			if (!strncmp(vp->ival, ptr, strlen(ptr))) {
 				ret = 0;
 				if (o->roff1) {
 					if (vp->or)
