@@ -91,8 +91,8 @@ static void hexdump(void *buffer, int len)
 	int i;
 
 	for (i = 0; i < len; i++)
-		log_info("%02x", p[i]);
-	log_info("\n");
+		log_err("%02x", p[i]);
+	log_err("\n");
 }
 
 /*
@@ -170,10 +170,28 @@ struct vcont {
 	/*
 	 * Output, only valid in case of error
 	 */
-	unsigned char *good_crc;
-	unsigned char *bad_crc;
+	const char *name;
+	void *good_crc;
+	void *bad_crc;
 	unsigned int crc_len;
 };
+
+static void log_verify_failure(struct verify_header *hdr, struct vcont *vc)
+{
+	unsigned long long offset;
+
+	offset = vc->io_u->offset;
+	offset += vc->hdr_num * hdr->len;
+	log_err("%.8s: verify failed at file offset %llu, length %u\n",
+			vc->name, offset, hdr->len);
+
+	if (vc->good_crc && vc->bad_crc) {
+		log_err("       Expected CRC: ");
+		hexdump(vc->good_crc, vc->crc_len);
+		log_err("       Received CRC: ");
+		hexdump(vc->bad_crc, vc->crc_len);
+	}
+}
 
 /*
  * Return data area 'header_num'
@@ -191,13 +209,12 @@ static int verify_io_u_meta(struct verify_header *hdr, struct thread_data *td,
 
 	dprint(FD_VERIFY, "meta verify io_u %p, len %u\n", io_u, hdr->len);
 
-	if (vh->offset != io_u->offset + vc->hdr_num * td->o.verify_interval) {
-		log_err("meta: verify failed at %llu/%u\n",
-			io_u->offset + vc->hdr_num * hdr->len, hdr->len);
-		return EILSEQ;
-	}
+	if (vh->offset == io_u->offset + vc->hdr_num * td->o.verify_interval)
+		return 0;
 
-	return 0;
+	vc->name = "meta";
+	log_verify_failure(hdr, vc);
+	return EILSEQ;
 }
 
 static int verify_io_u_sha512(struct verify_header *hdr, struct vcont *vc)
@@ -214,15 +231,15 @@ static int verify_io_u_sha512(struct verify_header *hdr, struct vcont *vc)
 	sha512_init(&sha512_ctx);
 	sha512_update(&sha512_ctx, p, hdr->len - hdr_size(hdr));
 
-	if (memcmp(vh->sha512, sha512_ctx.buf, sizeof(sha512))) {
-		log_err("sha512: verify failed at %llu/%u\n",
-			vc->io_u->offset + vc->hdr_num * hdr->len, hdr->len);
-		hexdump(vh->sha512, sizeof(vh->sha512));
-		hexdump(sha512_ctx.buf, sizeof(sha512));
-		return EILSEQ;
-	}
+	if (!memcmp(vh->sha512, sha512_ctx.buf, sizeof(sha512)))
+		return 0;
 
-	return 0;
+	vc->name = "sha512";
+	vc->good_crc = vh->sha512;
+	vc->bad_crc = sha512_ctx.buf;
+	vc->crc_len = sizeof(vh->sha512);
+	log_verify_failure(hdr, vc);
+	return EILSEQ;
 }
 
 static int verify_io_u_sha256(struct verify_header *hdr, struct vcont *vc)
@@ -239,15 +256,15 @@ static int verify_io_u_sha256(struct verify_header *hdr, struct vcont *vc)
 	sha256_init(&sha256_ctx);
 	sha256_update(&sha256_ctx, p, hdr->len - hdr_size(hdr));
 
-	if (memcmp(vh->sha256, sha256_ctx.buf, sizeof(sha256))) {
-		log_err("sha256: verify failed at %llu/%u\n",
-			vc->io_u->offset + vc->hdr_num * hdr->len, hdr->len);
-		hexdump(vh->sha256, sizeof(vh->sha256));
-		hexdump(sha256_ctx.buf, sizeof(sha256));
-		return EILSEQ;
-	}
+	if (!memcmp(vh->sha256, sha256_ctx.buf, sizeof(sha256)))
+		return 0;
 
-	return 0;
+	vc->name = "sha256";
+	vc->good_crc = vh->sha256;
+	vc->bad_crc = sha256_ctx.buf;
+	vc->crc_len = sizeof(vh->sha256);
+	log_verify_failure(hdr, vc);
+	return EILSEQ;
 }
 
 static int verify_io_u_sha1(struct verify_header *hdr, struct vcont *vc)
@@ -264,15 +281,15 @@ static int verify_io_u_sha1(struct verify_header *hdr, struct vcont *vc)
 	sha1_init(&sha1_ctx);
 	sha1_update(&sha1_ctx, p, hdr->len - hdr_size(hdr));
 
-	if (memcmp(vh->sha1, sha1_ctx.H, sizeof(sha1))) {
-		log_err("sha1: verify failed at %llu/%u\n",
-			vc->io_u->offset + vc->hdr_num * hdr->len, hdr->len);
-		hexdump(vh->sha1, sizeof(vh->sha1));
-		hexdump(sha1_ctx.H, sizeof(sha1));
-		return EILSEQ;
-	}
+	if (!memcmp(vh->sha1, sha1_ctx.H, sizeof(sha1)))
+		return 0;
 
-	return 0;
+	vc->name = "sha1";
+	vc->good_crc = vh->sha1;
+	vc->bad_crc = sha1_ctx.H;
+	vc->crc_len = sizeof(vh->sha1);
+	log_verify_failure(hdr, vc);
+	return EILSEQ;
 }
 
 static int verify_io_u_crc7(struct verify_header *hdr, struct vcont *vc)
@@ -285,14 +302,15 @@ static int verify_io_u_crc7(struct verify_header *hdr, struct vcont *vc)
 
 	c = crc7(p, hdr->len - hdr_size(hdr));
 
-	if (c != vh->crc7) {
-		log_err("crc7: verify failed at %llu/%u\n",
-			vc->io_u->offset + vc->hdr_num * hdr->len, hdr->len);
-		log_err("crc7: wanted %x, got %x\n", vh->crc7, c);
-		return EILSEQ;
-	}
+	if (c == vh->crc7)
+		return 0;
 
-	return 0;
+	vc->name = "crc7";
+	vc->good_crc = &vh->crc7;
+	vc->bad_crc = &c;
+	vc->crc_len = 1;
+	log_verify_failure(hdr, vc);
+	return EILSEQ;
 }
 
 static int verify_io_u_crc16(struct verify_header *hdr, struct vcont *vc)
@@ -305,14 +323,15 @@ static int verify_io_u_crc16(struct verify_header *hdr, struct vcont *vc)
 
 	c = crc16(p, hdr->len - hdr_size(hdr));
 
-	if (c != vh->crc16) {
-		log_err("crc16: verify failed at %llu/%u\n",
-			vc->io_u->offset + vc->hdr_num * hdr->len, hdr->len);
-		log_err("crc16: wanted %x, got %x\n", vh->crc16, c);
-		return EILSEQ;
-	}
+	if (c == vh->crc16)
+		return 0;
 
-	return 0;
+	vc->name = "crc16";
+	vc->good_crc = &vh->crc16;
+	vc->bad_crc = &c;
+	vc->crc_len = 2;
+	log_verify_failure(hdr, vc);
+	return EILSEQ;
 }
 
 static int verify_io_u_crc64(struct verify_header *hdr, struct vcont *vc)
@@ -325,16 +344,15 @@ static int verify_io_u_crc64(struct verify_header *hdr, struct vcont *vc)
 
 	c = crc64(p, hdr->len - hdr_size(hdr));
 
-	if (c != vh->crc64) {
-		log_err("crc64: verify failed at %llu/%u\n",
-				vc->io_u->offset + vc->hdr_num * hdr->len,
-				hdr->len);
-		log_err("crc64: wanted %llx, got %llx\n",
-					(unsigned long long) vh->crc64, c);
-		return EILSEQ;
-	}
+	if (c == vh->crc64)
+		return 0;
 
-	return 0;
+	vc->name = "crc64";
+	vc->good_crc = &vh->crc64;
+	vc->bad_crc = &c;
+	vc->crc_len = 8;
+	log_verify_failure(hdr, vc);
+	return EILSEQ;
 }
 
 static int verify_io_u_crc32(struct verify_header *hdr, struct vcont *vc)
@@ -347,14 +365,15 @@ static int verify_io_u_crc32(struct verify_header *hdr, struct vcont *vc)
 
 	c = crc32(p, hdr->len - hdr_size(hdr));
 
-	if (c != vh->crc32) {
-		log_err("crc32: verify failed at %llu/%u\n",
-			vc->io_u->offset + vc->hdr_num * hdr->len, hdr->len);
-		log_err("crc32: wanted %x, got %x\n", vh->crc32, c);
-		return EILSEQ;
-	}
+	if (c == vh->crc32)
+		return 0;
 
-	return 0;
+	vc->name = "crc32";
+	vc->good_crc = &vh->crc32;
+	vc->bad_crc = &c;
+	vc->crc_len = 4;
+	log_verify_failure(hdr, vc);
+	return EILSEQ;
 }
 
 static int verify_io_u_crc32c(struct verify_header *hdr, struct vcont *vc)
@@ -370,14 +389,15 @@ static int verify_io_u_crc32c(struct verify_header *hdr, struct vcont *vc)
 	else
 		c = crc32c(p, hdr->len - hdr_size(hdr));
 
-	if (c != vh->crc32) {
-		log_err("crc32c: verify failed at %llu/%u\n",
-			vc->io_u->offset + vc->hdr_num * hdr->len, hdr->len);
-		log_err("crc32c: wanted %x, got %x\n", vh->crc32, c);
-		return EILSEQ;
-	}
+	if (c == vh->crc32)
+		return 0;
 
-	return 0;
+	vc->name = "crc32c";
+	vc->good_crc = &vh->crc32;
+	vc->bad_crc = &c;
+	vc->crc_len = 4;
+	log_verify_failure(hdr, vc);
+	return EILSEQ;
 }
 
 static int verify_io_u_md5(struct verify_header *hdr, struct vcont *vc)
@@ -394,15 +414,15 @@ static int verify_io_u_md5(struct verify_header *hdr, struct vcont *vc)
 	md5_init(&md5_ctx);
 	md5_update(&md5_ctx, p, hdr->len - hdr_size(hdr));
 
-	if (memcmp(vh->md5_digest, md5_ctx.hash, sizeof(hash))) {
-		log_err("md5: verify failed at %llu/%u\n",
-			vc->io_u->offset + vc->hdr_num * hdr->len, hdr->len);
-		hexdump(vh->md5_digest, sizeof(vh->md5_digest));
-		hexdump(md5_ctx.hash, sizeof(hash));
-		return EILSEQ;
-	}
+	if (!memcmp(vh->md5_digest, md5_ctx.hash, sizeof(hash)))
+		return 0;
 
-	return 0;
+	vc->name = "md5";
+	vc->good_crc = vh->md5_digest;
+	vc->bad_crc = md5_ctx.hash;
+	vc->crc_len = sizeof(hash);
+	log_verify_failure(hdr, vc);
+	return EILSEQ;
 }
 
 static unsigned int hweight8(unsigned int w)
@@ -478,7 +498,10 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 	ret = 0;
 	for (p = io_u->buf; p < io_u->buf + io_u->buflen;
 	     p += hdr_inc, hdr_num++) {
-		struct vcont vc;
+		struct vcont vc = {
+			.io_u		= io_u,
+			.hdr_num	= hdr_num,
+		};
 
 		if (ret && td->o.verify_fatal) {
 			td->terminate = 1;
@@ -488,9 +511,6 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		if (td->o.verify_offset)
 			memswp(p, p + td->o.verify_offset, hdr_size);
 		hdr = p;
-
-		vc.io_u = io_u;
-		vc.hdr_num = hdr_num;
 
 		if (hdr->fio_magic != FIO_HDR_MAGIC) {
 			log_err("Bad verify header %x at %llu\n",
