@@ -182,8 +182,8 @@ static void log_verify_failure(struct verify_header *hdr, struct vcont *vc)
 
 	offset = vc->io_u->offset;
 	offset += vc->hdr_num * hdr->len;
-	log_err("%.8s: verify failed at file offset %llu, length %u\n",
-			vc->name, offset, hdr->len);
+	log_err("%.8s: verify failed at file %s offset %llu, length %u\n",
+			vc->name, vc->io_u->file->file_name, offset, hdr->len);
 
 	if (vc->good_crc && vc->bad_crc) {
 		log_err("       Expected CRC: ");
