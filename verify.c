@@ -503,10 +503,9 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			.hdr_num	= hdr_num,
 		};
 
-		if (ret && td->o.verify_fatal) {
-			td->terminate = 1;
+		if (ret && td->o.verify_fatal)
 			break;
-		}
+
 		hdr_size = __hdr_size(td->o.verify);
 		if (td->o.verify_offset)
 			memswp(p, p + td->o.verify_offset, hdr_size);
@@ -581,6 +580,9 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			ret = EINVAL;
 		}
 	}
+
+	if (ret && td->o.verify_fatal)
+		td->terminate = 1;
 
 	return ret;
 }
@@ -879,7 +881,8 @@ static void *verify_async_thread(void *data)
 
 	if (ret) {
 		td_verror(td, ret, "async_verify");
-		td->terminate = 1;
+		if (td->o.verify_fatal)
+			td->terminate = 1;
 	}
 
 done:
