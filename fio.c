@@ -147,7 +147,7 @@ static void sig_ill(int fio_unused sig)
 	if (!threads)
 		return;
 
-	log_err("fio: system does not support the sse4.2 instruction for crc32c-intel.\nUse crc32c instead.");
+	log_err("fio: system does not support the sse4.2 instruction for crc32c-intel.\nUse crc32c instead.\n");
 	terminate_threads(TERMINATE_ALL);
 }
 
