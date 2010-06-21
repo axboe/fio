@@ -899,6 +899,22 @@ verify_async=int	Fio will normally verify IO inline from the submitting
 verify_async_cpus=str	Tell fio to set the given CPU affinity on the
 		async IO verification threads. See cpus_allowed for the
 		format used.
+
+verify_backlog=int	Fio will normally verify the written contents of a
+		job that utilizes verify once that job has completed. In
+		other words, everything is written then everything is read
+		back and verified. You may want to verify continually
+		instead for a variety of reasons. Fio stores the meta data
+		associated with an IO block in memory, so for large
+		verify workloads, quite a bit of memory would be used up
+		holding this meta data. If this option is enabled, fio
+		will verify the previously written blocks before continuing
+		to write new ones.
+
+verify_backlog_batch=int	Control how many blocks fio will verify
+		if verify_backlog is set. If not set, will default to
+		the value of verify_backlog (meaning the entire queue
+		is read back and verified).
 		
 stonewall	Wait for preceeding jobs in the job file to exit, before
 		starting this one. Can be used to insert serialization
