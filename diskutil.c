@@ -24,6 +24,14 @@ static void disk_util_free(struct disk_util *du)
 	if (du == last_du)
 		last_du = NULL;
 
+	while (!flist_empty(&du->slaves)) {
+		struct disk_util *slave;
+
+		slave = flist_entry(du->slaves.next, struct disk_util, slavelist);
+		flist_del(&slave->slavelist);
+		slave->users--;
+	}
+	
 	fio_mutex_remove(du->lock);
 	sfree(du->name);
 	sfree(du);
@@ -236,8 +244,10 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 
 		/* Should probably use an assert here. slavedu should
 		 * always be present at this point. */
-		if (slavedu)
+		if (slavedu) {
+			slavedu->users++;
 			flist_add_tail(&slavedu->slavelist, &masterdu->slaves);
+		}
 	}
 
 	closedir(dirhandle);
