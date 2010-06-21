@@ -219,7 +219,11 @@ restart:
 		parent = *p;
 
 		__ipo = rb_entry(parent, struct io_piece, rb_node);
-		if (ipo->offset < __ipo->offset)
+		if (ipo->file < __ipo->file)
+			p = &(*p)->rb_left;
+		else if (ipo->file > __ipo->file)
+			p = &(*p)->rb_right;
+		else if (ipo->offset < __ipo->offset)
 			p = &(*p)->rb_left;
 		else if (ipo->offset > __ipo->offset)
 			p = &(*p)->rb_right;
