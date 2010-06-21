@@ -142,15 +142,6 @@ static void sig_int(int sig)
 	}
 }
 
-static void sig_ill(int fio_unused sig)
-{
-	if (!threads)
-		return;
-
-	log_err("fio: system does not support the sse4.2 instruction for crc32c-intel.\nUse crc32c instead.\n");
-	terminate_threads(TERMINATE_ALL);
-}
-
 static void set_sig_handlers(void)
 {
 	struct sigaction act;
@@ -164,11 +155,6 @@ static void set_sig_handlers(void)
 	act.sa_handler = sig_int;
 	act.sa_flags = SA_RESTART;
 	sigaction(SIGINT, &act, NULL);
-
-	memset(&act, 0, sizeof(act));
-	act.sa_handler = sig_ill;
-	act.sa_flags = SA_RESETHAND;
-	sigaction(SIGILL, &act, NULL);
 
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = sig_quit;

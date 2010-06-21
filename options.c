@@ -16,6 +16,8 @@
 #include "lib/fls.h"
 #include "options.h"
 
+#include "crc/crc32c.h"
+
 /*
  * Check if mmap/mmaphuge has a :/foo/bar/file at the end. If so, return that.
  */
@@ -220,6 +222,21 @@ static int str_mem_cb(void *data, const char *mem)
 			log_err("fio: mmaphuge:/path/to/file\n");
 			return 1;
 		}
+	}
+
+	return 0;
+}
+
+static int str_verify_cb(void *data, const char *mem)
+{
+	struct thread_data *td = data;
+
+	if (td->o.verify != VERIFY_CRC32C_INTEL)
+		return 0;
+
+	if (!crc32c_intel_works()) {
+		log_info("fio: System does not support hw accelerated crc32c. Falling back to sw crc32c.\n");
+		td->o.verify = VERIFY_CRC32C;
 	}
 
 	return 0;
@@ -1298,6 +1315,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(verify),
 		.help	= "Verify data written",
+		.cb	= str_verify_cb,
 		.def	= "0",
 		.posval = {
 			  { .ival = "0",

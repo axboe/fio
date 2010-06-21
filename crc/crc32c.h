@@ -24,8 +24,13 @@ extern uint32_t crc32c(unsigned char const *, unsigned long);
 
 #ifdef ARCH_HAVE_SSE
 extern uint32_t crc32c_intel(unsigned char const *, unsigned long);
+extern int crc32c_intel_works(void);
 #else
 #define crc32c_intel crc32c
+static inline int crc32c_intel_works(void)
+{
+	return 0;
+}
 #endif
 
 #endif

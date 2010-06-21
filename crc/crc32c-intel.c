@@ -1,4 +1,10 @@
 #include <inttypes.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "crc32c.h"
 
 /*
@@ -68,5 +74,37 @@ uint32_t crc32c_intel(unsigned char const *data, unsigned long length)
 	return crc;
 }
 
-#endif /* ARCH_HAVE_SSE */
+static void sig_ill(int sig)
+{
+}
 
+static void crc32c_test(void)
+{
+	unsigned char buf[4] = { 1, 2, 3, 4 };
+	struct sigaction act;
+
+	/*
+	 * Check if hw accelerated crc32c is available
+	 */
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_ill;
+	act.sa_flags = SA_RESETHAND;
+	sigaction(SIGILL, &act, NULL);
+
+	(void) crc32c_intel(buf, sizeof(buf));
+}
+
+int crc32c_intel_works(void)
+{
+	if (!fork()) {
+		crc32c_test();
+		exit(0);
+	} else {
+		int status;
+
+		wait(&status);
+		return !WIFSIGNALED(status);
+	}
+}
+
+#endif /* ARCH_HAVE_SSE */
