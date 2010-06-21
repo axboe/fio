@@ -67,9 +67,9 @@ static void update_io_tick_disk(struct disk_util *du)
 	struct disk_util_stat __dus, *dus, *ldus;
 	struct timeval t;
 
-	if (get_io_ticks(du, &__dus))
-		return;
 	if (!du->users)
+		return;
+	if (get_io_ticks(du, &__dus))
 		return;
 
 	dus = &du->dus;
