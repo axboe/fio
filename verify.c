@@ -10,6 +10,7 @@
 #include "fio.h"
 #include "verify.h"
 #include "smalloc.h"
+#include "lib/rand.h"
 
 #include "crc/md5.h"
 #include "crc/crc64.h"
@@ -21,35 +22,12 @@
 #include "crc/sha512.h"
 #include "crc/sha1.h"
 
-static void fill_random_bytes(struct thread_data *td, void *p, unsigned int len)
-{
-	unsigned int todo;
-	int r;
-
-	while (len) {
-		r = os_random_long(&td->verify_state);
-
-		/*
-		 * lrand48_r seems to be broken and only fill the bottom
-		 * 32-bits, even on 64-bit archs with 64-bit longs
-		 */
-		todo = sizeof(r);
-		if (todo > len)
-			todo = len;
-
-		memcpy(p, &r, todo);
-
-		len -= todo;
-		p += todo;
-	}
-}
-
 static void fill_pattern(struct thread_data *td, void *p, unsigned int len)
 {
 	switch (td->o.verify_pattern_bytes) {
 	case 0:
 		dprint(FD_VERIFY, "fill random bytes len=%u\n", len);
-		fill_random_bytes(td, p, len);
+		fill_random_buf(p, len);
 		break;
 	case 1:
 		dprint(FD_VERIFY, "fill verify pattern b=0 len=%u\n", len);

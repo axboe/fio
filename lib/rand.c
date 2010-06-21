@@ -34,6 +34,7 @@
 */
 
 #include "rand.h"
+#include "../hash.h"
 
 struct frand_state __fio_rand_state;
 
@@ -56,4 +57,20 @@ void init_rand(struct frand_state *state)
 	__rand(state);
 	__rand(state);
 	__rand(state);
+}
+
+void fill_random_buf(void *buf, unsigned int len)
+{
+	unsigned long r = __rand(&__fio_rand_state);
+	long *ptr = buf;
+
+	if (sizeof(int) != sizeof(*ptr))
+		r *= (unsigned long) __rand(&__fio_rand_state);
+
+	while ((void *) ptr - buf < len) {
+		*ptr = r;
+		ptr++;
+		r *= GOLDEN_RATIO_PRIME;
+		r >>= 3;
+	}
 }

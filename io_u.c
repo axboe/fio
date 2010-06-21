@@ -1240,20 +1240,8 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
 		      unsigned int max_bs)
 {
-	long *ptr = io_u->buf;
-
-	if (!td->o.zero_buffers) {
-		unsigned long r = __rand(&__fio_rand_state);
-
-		if (sizeof(int) != sizeof(*ptr))
-			r *= (unsigned long) __rand(&__fio_rand_state);
-
-		while ((void *) ptr - io_u->buf < max_bs) {
-			*ptr = r;
-			ptr++;
-			r *= GOLDEN_RATIO_PRIME;
-			r >>= 3;
-		}
-	} else
-		memset(ptr, 0, max_bs);
+	if (!td->o.zero_buffers)
+		fill_random_buf(io_u->buf, max_bs);
+	else
+		memset(io_u->buf, 0, max_bs);
 }

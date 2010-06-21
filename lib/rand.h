@@ -19,5 +19,6 @@ static inline unsigned int __rand(struct frand_state *state)
 }
 
 extern void init_rand(struct frand_state *);
+extern void fill_random_buf(void *buf, unsigned int len);
 
 #endif
