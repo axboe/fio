@@ -147,10 +147,8 @@ static void sig_ill(int fio_unused sig)
 	if (!threads)
 		return;
 
-	log_err("fio: illegal instruction. your cpu does not support "
-		"the sse4.2 instruction for crc32c\n");
+	log_err("fio: system does not support the sse4.2 instruction for crc32c-intel.\nUse crc32c instead.");
 	terminate_threads(TERMINATE_ALL);
-	exit(4);
 }
 
 static void set_sig_handlers(void)
@@ -169,7 +167,7 @@ static void set_sig_handlers(void)
 
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = sig_ill;
-	act.sa_flags = SA_RESTART;
+	act.sa_flags = SA_RESETHAND;
 	sigaction(SIGILL, &act, NULL);
 
 	memset(&act, 0, sizeof(act));
