@@ -823,7 +823,9 @@ verify=str	If writing to a file, fio can verify the file contents
 				it in the header of each block.
 
 			crc32c-intel Use hardware assisted crc32c calcuation
-				provided on SSE4.2 enabled processors.
+				provided on SSE4.2 enabled processors. Falls
+				back to regular software crc32c, if not
+				supported by the system.
 
 			crc32	Use a crc32 sum of the data area and store
 				it in the header of each block.

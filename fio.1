@@ -602,7 +602,9 @@ values are:
 .RS
 .TP
 .B md5 crc16 crc32 crc32c crc32c-intel crc64 crc7 sha256 sha512 sha1
-Store appropriate checksum in the header of each block.
+Store appropriate checksum in the header of each block. crc32c-intel is
+hardware accelerated SSE4.2 driven, falls back to regular crc32c if
+not supported by the system.
 .TP
 .B meta
 Write extra information about each I/O (timestamp, block number, etc.). The
