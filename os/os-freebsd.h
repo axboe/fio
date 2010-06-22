@@ -11,6 +11,8 @@
 
 #define OS_MAP_ANON		MAP_ANON
 
+typedef off_t off64_t;
+
 static inline int blockdev_invalidate_cache(int fd)
 {
 	return EINVAL;
