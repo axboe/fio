@@ -124,9 +124,6 @@ restart:
 			io_u->resid = io_u->xfer_buflen - retval;
 		} else
 			io_u->error = err;
-
-		if (r >= max)
-			break;
 	}
 
 	if (r >= min)
