@@ -117,33 +117,70 @@ static unsigned long get_mult_time(char c)
 	}
 }
 
-static unsigned long long get_mult_bytes(char c, void *data)
+static unsigned long long __get_mult_bytes(const char *p, void *data)
 {
 	unsigned int kb_base = fio_get_kb_base(data);
 	unsigned long long ret = 1;
+	unsigned int i, pow = 0, mult = kb_base;
+	char *c;
 
-	switch (c) {
-	default:
-		break;
-	case 'p':
-	case 'P':
-		ret *= (unsigned long long) kb_base;
-	case 't':
-	case 'T':
-		ret *= (unsigned long long) kb_base;
-	case 'g':
-	case 'G':
-		ret *= (unsigned long long) kb_base;
-	case 'm':
-	case 'M':
-		ret *= (unsigned long long) kb_base;
-	case 'k':
-	case 'K':
-		ret *= (unsigned long long) kb_base;
-		break;
-	}
+	if (!p)
+		return 1;
 
+	c = strdup(p);
+
+	for (i = 0; i < strlen(c); i++)
+		c[i] = tolower(c[i]);
+
+	if (!strcmp("pib", c)) {
+		pow = 5;
+		mult = 1000;
+	} else if (!strcmp("tib", c)) {
+		pow = 4;
+		mult = 1000;
+	} else if (!strcmp("gib", c)) {
+		pow = 3;
+		mult = 1000;
+	} else if (!strcmp("mib", c)) {
+		pow = 2;
+		mult = 1000;
+	} else if (!strcmp("kib", c)) {
+		pow = 1;
+		mult = 1000;
+	} else if (!strcmp("p", c) || !strcmp("pb", c))
+		pow = 5;
+	else if (!strcmp("t", c) || !strcmp("tb", c))
+		pow = 4;
+	else if (!strcmp("g", c) || !strcmp("gb", c))
+		pow = 3;
+	else if (!strcmp("m", c) || !strcmp("mb", c))
+		pow = 2;
+	else if (!strcmp("k", c) || !strcmp("kb", c))
+		pow = 1;
+
+	while (pow--)
+		ret *= (unsigned long long) mult;
+
+	free(c);
 	return ret;
+}
+
+static unsigned long long get_mult_bytes(const char *str, int len, void *data)
+{
+	const char *p;
+
+	/*
+	 * if the last char is 'b' or 'B', the user likely used
+	 * "1gb" instead of just "1g". If the second to last is also
+	 * a letter, adjust.
+	 */
+	p = str + len - 1;
+	while (isalpha(*(p - 1)))
+		p--;
+	if (!isalpha(*p))
+		p = NULL;
+
+	return __get_mult_bytes(p, data);
 }
 
 /*
@@ -166,19 +203,9 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data)
 	if (*val == LONG_MAX && errno == ERANGE)
 		return 1;
 
-	if (kilo) {
-		const char *p;
-		/*
-		 * if the last char is 'b' or 'B', the user likely used
-		 * "1gb" instead of just "1g". If the second to last is also
-		 * a letter, adjust.
-		 */
-		p = str + len - 1;
-		if ((*p == 'b' || *p == 'B') && isalpha(*(p - 1)))
-			--p;
-
-		*val *= get_mult_bytes(*p, data);
-	} else
+	if (kilo)
+		*val *= get_mult_bytes(str, len, data);
+	else
 		*val *= get_mult_time(str[len - 1]);
 
 	return 0;
@@ -226,18 +253,12 @@ void strip_blank_end(char *p)
 
 static int check_range_bytes(const char *str, long *val, void *data)
 {
-	char suffix;
+	long long __val;
 
-	if (!strlen(str))
-		return 1;
-
-	if (sscanf(str, "%lu%c", val, &suffix) == 2) {
-		*val *= get_mult_bytes(suffix, data);
+	if (!str_to_decimal(str, &__val, 1, data)) {
+		*val = __val;
 		return 0;
 	}
-
-	if (sscanf(str, "%lu", val) == 1)
-		return 0;
 
 	return 1;
 }

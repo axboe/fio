@@ -226,12 +226,17 @@ time	Integer with possible time suffix. In seconds unless otherwise
 int	SI integer. A whole number value, which may contain a suffix
 	describing the base of the number. Accepted suffixes are k/m/g/t/p,
 	meaning kilo, mega, giga, tera, and peta. The suffix is not case
-	sensitive. So if you want to specify 4096, you could either write
+	sensitive, and you may also include trailing 'b' (eg 'kb' is the same
+	as 'k'). So if you want to specify 4096, you could either write
 	out '4096' or just give 4k. The suffixes signify base 2 values, so
-	1024 is 1k and 1024k is 1m and so on. If the option accepts an upper
-	and lower range, use a colon ':' or minus '-' to separate such values.
-	May also include a prefix to indicate numbers base. If 0x is used,
-	the number is assumed to be hexadecimal. See irange.
+	1024 is 1k and 1024k is 1m and so on, unless the suffix is explicitly
+	set to a base 10 value using 'kib', 'mib', 'gib', etc. If that is the
+	case, then 1000 is used as the multiplier. This can be handy for
+	disks, since manufacturers generally use base 10 values when listing
+	the capacity of a drive. If the option accepts an upper and lower
+	range, use a colon ':' or minus '-' to separate such values.  May also
+	include a prefix to indicate numbers base. If 0x is used, the number
+	is assumed to be hexadecimal.  See irange.
 bool	Boolean. Usually parsed as an integer, however only defined for
 	true and false (1 and 0).
 irange	Integer range with suffix. Allows value range to be given, such

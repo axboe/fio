@@ -81,7 +81,11 @@ SI integer: a whole number, possibly containing a suffix denoting the base unit
 of the value.  Accepted suffixes are `k', 'M', 'G', 'T', and 'P', denoting
 kilo (1024), mega (1024^2), giga (1024^3), tera (1024^4), and peta (1024^5)
 respectively. The suffix is not case sensitive. If prefixed with '0x', the
-value is assumed to be base 16 (hexadecimal).
+value is assumed to be base 16 (hexadecimal). A suffix may include a trailing
+'b', for instance 'kb' is identical to 'k'. You can specify a base 10 value
+by using 'KiB', 'MiB', 'GiB', etc. This is useful for disk drives where
+values are often given in base 10 values. Specifying '30GiB' will get you
+30*1000^3 bytes.
 .TP
 .I bool
 Boolean: a true or false value. `0' denotes false, `1' denotes true.
