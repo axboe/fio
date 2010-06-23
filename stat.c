@@ -635,9 +635,9 @@ void show_run_stats(void)
 		max_run[1] = rs->max_run[1];
 
 		if (rs->max_run[0])
-			rs->agg[0] = (rs->io_kb[0] * 1000) / max_run[0];
+			rs->agg[0] = (rs->io_kb[0] * rs->kb_base) / max_run[0];
 		if (rs->max_run[1])
-			rs->agg[1] = (rs->io_kb[1] * 1000) / max_run[1];
+			rs->agg[1] = (rs->io_kb[1] * rs->kb_base) / max_run[1];
 	}
 
 	/*
