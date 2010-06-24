@@ -210,6 +210,22 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		free(minp);
 		free(maxp);
 	}
+	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev)) {
+		const char *base = "(usec)";
+		char *minp, *maxp;
+
+		if (!usec_to_msec(&min, &max, &mean, &dev))
+			base = "(msec)";
+
+		minp = num2str(min, 6, 1, 0);
+		maxp = num2str(max, 6, 1, 0);
+
+		log_info("     lat %s: min=%s, max=%s, avg=%5.02f,"
+			 " stdev=%5.02f\n", base, minp, maxp, mean, dev);
+
+		free(minp);
+		free(maxp);
+	}
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
 
@@ -371,6 +387,11 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	else
 		log_info(";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
 
+	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
+		log_info(";%lu;%lu;%f;%f", min, max, mean, dev);
+	else
+		log_info(";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
+
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
 
@@ -498,6 +519,7 @@ void show_run_stats(void)
 
 		memset(ts, 0, sizeof(*ts));
 		for (j = 0; j <= DDIR_WRITE; j++) {
+			ts->lat_stat[j].min_val = -1UL;
 			ts->clat_stat[j].min_val = -1UL;
 			ts->slat_stat[j].min_val = -1UL;
 			ts->bw_stat[j].min_val = -1UL;
@@ -559,6 +581,7 @@ void show_run_stats(void)
 		for (l = 0; l <= DDIR_WRITE; l++) {
 			sum_stat(&ts->clat_stat[l], &td->ts.clat_stat[l], idx);
 			sum_stat(&ts->slat_stat[l], &td->ts.slat_stat[l], idx);
+			sum_stat(&ts->lat_stat[l], &td->ts.lat_stat[l], idx);
 			sum_stat(&ts->bw_stat[l], &td->ts.bw_stat[l], idx);
 
 			ts->stat_io_bytes[l] += td->ts.stat_io_bytes[l];
@@ -740,6 +763,17 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	if (ts->slat_log)
 		add_log_sample(td, ts->slat_log, usec, ddir, bs);
+}
+
+void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
+		    unsigned long usec, unsigned int bs)
+{
+	struct thread_stat *ts = &td->ts;
+
+	add_stat_sample(&ts->lat_stat[ddir], usec);
+
+	if (ts->lat_log)
+		add_log_sample(td, ts->lat_log, usec, ddir, bs);
 }
 
 void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,

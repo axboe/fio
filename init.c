@@ -555,6 +555,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	td->ts.clat_stat[0].min_val = td->ts.clat_stat[1].min_val = ULONG_MAX;
 	td->ts.slat_stat[0].min_val = td->ts.slat_stat[1].min_val = ULONG_MAX;
+	td->ts.lat_stat[0].min_val = td->ts.lat_stat[1].min_val = ULONG_MAX;
 	td->ts.bw_stat[0].min_val = td->ts.bw_stat[1].min_val = ULONG_MAX;
 	td->ddir_nr = td->o.ddir_nr;
 
@@ -573,6 +574,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		goto err;
 
 	if (td->o.write_lat_log) {
+		setup_log(&td->ts.lat_log);
 		setup_log(&td->ts.slat_log);
 		setup_log(&td->ts.clat_log);
 	}

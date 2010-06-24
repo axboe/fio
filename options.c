@@ -710,6 +710,7 @@ static int str_gtod_reduce_cb(void *data, int *il)
 	struct thread_data *td = data;
 	int val = *il;
 
+	td->o.disable_lat = !!val;
 	td->o.disable_clat = !!val;
 	td->o.disable_slat = !!val;
 	td->o.disable_bw = !!val;
@@ -1789,6 +1790,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_BOOL,
 		.help	= "Greatly reduce number of gettimeofday() calls",
 		.cb	= str_gtod_reduce_cb,
+		.def	= "0",
+	},
+	{
+		.name	= "disable_lat",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(disable_lat),
+		.help	= "Disable latency numbers",
+		.parent	= "gtod_reduce",
 		.def	= "0",
 	},
 	{

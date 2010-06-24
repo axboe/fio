@@ -976,15 +976,16 @@ write_bw_log=str If given, write a bandwidth log of the jobs in this job
 		filename. For this option, the postfix is _bw.log.
 
 write_lat_log=str Same as write_bw_log, except that this option stores io
-		completion latencies instead. If no filename is given
-		with this option, the default filename of "jobname_type.log"
-		is used. Even if the filename is given, fio will still
-		append the type of log. So if one specifies
+		submission, completion, and total latencies instead. If no
+		filename is given with this option, the default filename of
+		"jobname_type.log" is used. Even if the filename is given,
+		fio will still append the type of log. So if one specifies
 
 		write_lat_log=foo
 
-		The actual log names will be foo_clat.log and foo_slat.log.
-		This helps fio_generate_plot fine the logs automatically.
+		The actual log names will be foo_slat.log, foo_slat.log,
+		and foo_lat.log. This helps fio_generate_plot fine the logs
+		automatically.
 
 lockmem=int	Pin down the specified amount of memory with mlock(2). Can
 		potentially be used instead of removing memory or booting
@@ -1008,18 +1009,21 @@ cpuchunks=int	If the job is a CPU cycle eater, split the load into
 disk_util=bool	Generate disk utilization statistics, if the platform
 		supports it. Defaults to on.
 
-disable_clat=bool Disable measurements of completion latency numbers. Useful
+disable_lat=bool Disable measurements of total latency numbers. Useful
 		only for cutting back the number of calls to gettimeofday,
 		as that does impact performance at really high IOPS rates.
 		Note that to really get rid of a large amount of these
 		calls, this option must be used with disable_slat and
 		disable_bw as well.
 
+disable_clat=bool Disable measurements of completion latency numbers. See
+		disable_lat.
+
 disable_slat=bool Disable measurements of submission latency numbers. See
-		disable_clat.
+		disable_slat.
 
 disable_bw=bool	Disable measurements of throughput/bandwidth numbers. See
-		disable_clat.
+		disable_lat.
 
 gtod_reduce=bool Enable all of the gettimeofday() reducing options
 		(disable_clat, disable_slat, disable_bw) plus reduce

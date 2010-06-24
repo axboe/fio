@@ -1177,6 +1177,13 @@ static void *thread_main(void *data)
 		} else
 			finish_log(td, td->ts.bw_log, "bw");
 	}
+	if (td->ts.lat_log) {
+		if (td->o.lat_log_file) {
+			finish_log_named(td, td->ts.lat_log,
+						td->o.lat_log_file, "lat");
+		} else
+			finish_log(td, td->ts.lat_log, "lat");
+	}
 	if (td->ts.slat_log) {
 		if (td->o.lat_log_file) {
 			finish_log_named(td, td->ts.slat_log,

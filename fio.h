@@ -80,6 +80,7 @@ struct thread_stat {
 
 	struct io_log *slat_log;
 	struct io_log *clat_log;
+	struct io_log *lat_log;
 	struct io_log *bw_log;
 
 	/*
@@ -87,6 +88,7 @@ struct thread_stat {
 	 */
 	struct io_stat clat_stat[2];		/* completion latency */
 	struct io_stat slat_stat[2];		/* submission latency */
+	struct io_stat lat_stat[2];		/* total latency */
 	struct io_stat bw_stat[2];		/* bandwidth stats */
 
 	unsigned long long stat_io_bytes[2];
@@ -235,6 +237,7 @@ struct thread_options {
 	unsigned int zero_buffers;
 	unsigned int refill_buffers;
 	unsigned int time_based;
+	unsigned int disable_lat;
 	unsigned int disable_clat;
 	unsigned int disable_slat;
 	unsigned int disable_bw;

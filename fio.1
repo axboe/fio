@@ -722,17 +722,20 @@ Same as \fBwrite_bw_log\fR, but writes I/O completion latencies.  If no
 filename is given with this option, the default filename of "jobname_type.log"
 is used. Even if the filename is given, fio will still append the type of log.
 .TP
-.B disable_clat \fR=\fPbool
-Disable measurements of completion latency numbers. Useful only for cutting
+.B disable_lat \fR=\fPbool
+Disable measurements of total latency numbers. Useful only for cutting
 back the number of calls to gettimeofday, as that does impact performance at
 really high IOPS rates.  Note that to really get rid of a large amount of these
 calls, this option must be used with disable_slat and disable_bw as well.
 .TP
+.B disable_clat \fR=\fPbool
+Disable measurements of submission latency numbers. See \fBdisable_lat\fR.
+.TP
 .B disable_slat \fR=\fPbool
-Disable measurements of submission latency numbers. See \fBdisable_clat\fR.
+Disable measurements of submission latency numbers. See \fBdisable_lat\fR.
 .TP
 .B disable_bw_measurement \fR=\fPbool
-Disable measurements of throughput/bandwidth numbers. See \fBdisable_clat\fR.
+Disable measurements of throughput/bandwidth numbers. See \fBdisable_lat\fR.
 .TP
 .BI lockmem \fR=\fPint
 Pin the specified amount of memory with \fBmlock\fR\|(2).  Can be used to

@@ -68,3 +68,21 @@ if [ "$PLOT_LINE"x != "x" ]; then
 	echo Making clat logs $PLOT_LINE
 	echo "set title 'Completion latency - $TITLE'; set xlabel 'time (msec)'; set ylabel 'latency (msec)'; set terminal png; set output '$TITLE-clat.png'; plot " $PLOT_LINE | $GNUPLOT -
 fi
+
+PLOT_LINE=""
+for i in *_lat.log; do
+	if [ ! -r $i ]; then
+		continue
+	fi
+	PT=$(echo $i | sed s/_lat.log//g)
+	if [ "$PLOT_LINE"x != "x" ]; then
+		PLOT_LINE=$PLOT_LINE", "
+	fi
+
+	PLOT_LINE=$PLOT_LINE"'$i' title '$PT' with lines"
+done
+
+if [ "$PLOT_LINE"x != "x" ]; then
+	echo Making lat logs $PLOT_LINE
+	echo "set title 'Latency - $TITLE'; set xlabel 'time (msec)'; set ylabel 'latency (msec)'; set terminal png; set output '$TITLE-lat.png'; plot " $PLOT_LINE | $GNUPLOT -
+fi

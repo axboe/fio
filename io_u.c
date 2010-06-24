@@ -1079,7 +1079,13 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 			if (!td->o.disable_clat || !td->o.disable_bw)
 				lusec = utime_since(&io_u->issue_time,
 							&icd->time);
+			if (!td->o.disable_lat) {
+				unsigned long tusec;
 
+				tusec = utime_since(&io_u->start_time,
+							&icd->time);
+				add_lat_sample(td, idx, tusec, bytes);
+			}
 			if (!td->o.disable_clat) {
 				add_clat_sample(td, idx, lusec, bytes);
 				io_u_mark_latency(td, lusec);
