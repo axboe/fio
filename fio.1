@@ -612,13 +612,7 @@ not supported by the system.
 .TP
 .B meta
 Write extra information about each I/O (timestamp, block number, etc.). The
-block number is verified.
-.TP
-.B pattern
-Fill I/O buffers with a specific pattern that is used to verify. If the pattern
-is < 4bytes, it can either be a decimal or a hexadecimal number. If the pattern
-is > 4bytes, currently, it can only be a hexadecimal pattern starting with
-either "0x" or "0X".
+block number is verified. See \fBverify_pattern\fR as well.
 .TP
 .B null
 Pretend to verify.  Used for testing internals.
@@ -642,6 +636,15 @@ writing.  It is swapped back before verifying.
 .BI verify_interval \fR=\fPint
 Write the verification header for this number of bytes, which should divide
 \fBblocksize\fR.  Default: \fBblocksize\fR.
+.TP
+.BI verify_pattern \fR=\fPstr
+If set, fio will fill the io buffers with this pattern. Fio defaults to filling
+with totally random bytes, but sometimes it's interesting to fill with a known
+pattern for io verification purposes. Depending on the width of the pattern,
+fio will fill 1/2/3/4 bytes of the buffer at the time(it can be either a
+decimal or a hex number). The verify_pattern if larger than a 32-bit quantity
+has to be a hex number that starts with either "0x" or "0X". Use with
+\fBverify\fP=meta.
 .TP
 .BI verify_fatal \fR=\fPbool
 If true, exit the job on the first observed verification failure.  Default:

@@ -849,7 +849,7 @@ verify=str	If writing to a file, fio can verify the file contents
 
 			meta	Write extra information about each io
 				(timestamp, block number etc.). The block
-				number is verified.
+				number is verified. See also verify_pattern.
 
 			null	Only pretend to verify. Useful for testing
 				internals with ioengine=null, not for much
@@ -887,7 +887,8 @@ verify_pattern=str	If set, fio will fill the io buffers with this
 		width of the pattern, fio will fill 1/2/3/4 bytes of the
 		buffer at the time(it can be either a decimal or a hex number).
 		The verify_pattern if larger than a 32-bit quantity has to
-		be a hex number that starts with either "0x" or "0X".
+		be a hex number that starts with either "0x" or "0X". Use
+		with verify=meta.
 
 verify_fatal=bool	Normally fio will keep checking the entire contents
 		before quitting on a block verification failure. If this
