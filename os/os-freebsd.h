@@ -8,6 +8,7 @@
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_ODIRECT
 #define FIO_USE_GENERIC_RAND
+#define FIO_HAVE_CHARDEV_SIZE
 
 #define OS_MAP_ANON		MAP_ANON
 
@@ -24,6 +25,11 @@ static inline int blockdev_size(int fd, unsigned long long *bytes)
 
 	*bytes = 0;
 	return errno;
+}
+
+static inline int chardev_size(int fd, unsigned long long *bytes)
+{
+	return blockdev_size(fd, bytes);
 }
 
 static inline int blockdev_invalidate_cache(int fd)

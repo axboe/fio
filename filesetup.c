@@ -260,6 +260,41 @@ err:
 	return 1;
 }
 
+static int char_size(struct thread_data *td, struct fio_file *f)
+{
+#ifdef FIO_HAVE_CHARDEV_SIZE
+	unsigned long long bytes;
+	int r;
+
+	if (td->io_ops->open_file(td, f)) {
+		log_err("fio: failed opening blockdev %s for size check\n",
+			f->file_name);
+		return 1;
+	}
+
+	r = chardev_size(f->fd, &bytes);
+	if (r) {
+		td_verror(td, r, "chardev_size");
+		goto err;
+	}
+
+	if (!bytes) {
+		log_err("%s: zero sized char device?\n", f->file_name);
+		goto err;
+	}
+
+	f->real_file_size = bytes;
+	td->io_ops->close_file(td, f);
+	return 0;
+err:
+	td->io_ops->close_file(td, f);
+	return 1;
+#else
+	f->real_file_size = -1ULL;
+	return 0;
+#endif
+}
+
 static int get_file_size(struct thread_data *td, struct fio_file *f)
 {
 	int ret = 0;
@@ -271,6 +306,8 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 		ret = file_size(td, f);
 	else if (f->filetype == FIO_TYPE_BD)
 		ret = bdev_size(td, f);
+	else if (f->filetype == FIO_TYPE_CHAR)
+		ret = char_size(td, f);
 	else
 		f->real_file_size = -1;
 
@@ -527,8 +564,9 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 		struct stat sb;
 		char buf[256];
 
-		if (f->filetype == FIO_TYPE_BD) {
-			ret += f->real_file_size;
+		if (f->filetype == FIO_TYPE_BD || f->filetype == FIO_TYPE_CHAR) {
+			if (f->real_file_size != -1ULL)
+				ret += f->real_file_size;
 			continue;
 		} else if (f->filetype != FIO_TYPE_FILE)
 			continue;
