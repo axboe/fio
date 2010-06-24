@@ -22,6 +22,7 @@ static inline int blockdev_size(int fd, unsigned long long *bytes)
 		return 0;
 	}
 
+	*bytes = 0;
 	return errno;
 }
 
