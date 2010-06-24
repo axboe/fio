@@ -517,7 +517,7 @@ struct fio_mount {
 static unsigned long long get_fs_free_counts(struct thread_data *td)
 {
 	struct flist_head *n, *tmp;
-	unsigned long long ret;
+	unsigned long long ret = 0;
 	struct fio_mount *fm;
 	FLIST_HEAD(list);
 	struct fio_file *f;
@@ -526,6 +526,12 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 	for_each_file(td, f, i) {
 		struct stat sb;
 		char buf[256];
+
+		if (f->filetype == FIO_TYPE_BD) {
+			ret += f->real_file_size;
+			continue;
+		} else if (f->filetype != FIO_TYPE_FILE)
+			continue;
 
 		strcpy(buf, f->file_name);
 
@@ -556,7 +562,6 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 		flist_add(&fm->list, &list);
 	}
 
-	ret = 0;
 	flist_for_each_safe(n, tmp, &list) {
 		unsigned long long sz;
 
