@@ -3,15 +3,27 @@
 
 #include <errno.h>
 #include <sys/sysctl.h>
+#include <sys/disk.h>
 
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_ODIRECT
-#define FIO_USE_GENERIC_BDEV_SIZE
 #define FIO_USE_GENERIC_RAND
 
 #define OS_MAP_ANON		MAP_ANON
 
 typedef off_t off64_t;
+
+static inline int blockdev_size(int fd, unsigned long long *bytes)
+{
+	off_t size;
+
+	if (!ioctl(fd, DIOCGMEDIASIZE, &size)) {
+		*bytes = size;
+		return 0;
+	}
+
+	return errno;
+}
 
 static inline int blockdev_invalidate_cache(int fd)
 {
