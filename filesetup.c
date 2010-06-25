@@ -71,9 +71,9 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 							f->real_file_size);
 
 		r = posix_fallocate(f->fd, 0, f->real_file_size);
-		if (r < 0) {
+		if (r > 0) {
 			log_err("fio: posix_fallocate fails: %s\n",
-					strerror(-r));
+					strerror(r));
 		}
 	}
 #endif
