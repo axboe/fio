@@ -199,7 +199,9 @@ are likely to be issued. Default: true.
 Total size of I/O for this job.  \fBfio\fR will run until this many bytes have
 been transfered, unless limited by other options (\fBruntime\fR, for instance).
 Unless \fBnr_files\fR and \fBfilesize\fR options are given, this amount will be
-divided between the available files for the job.
+divided between the available files for the job. If not set, fio will use the
+full size of the given files or devices. If the the files do not exist, size
+must be given.
 .TP
 .BI fill_device \fR=\fPbool
 Sets size to something really large and waits for ENOSPC (no space left on
