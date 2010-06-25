@@ -346,7 +346,9 @@ size=int	The total size of file io for this job. Fio will run until
 		limited by other options (such as 'runtime', for instance).
 		Unless specific nrfiles and filesize options are given,
 		fio will divide this size between the available files
-		specified by the job.
+		specified by the job. If not set, fio will use the full
+		size of the given files or devices. If the the files
+		do not exist, size must be given.
 
 filesize=int	Individual file sizes. May be a range, in which case fio
 		will select sizes for files at random within the given range
