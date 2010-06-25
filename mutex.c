@@ -33,6 +33,14 @@ struct fio_mutex *fio_mutex_init(int value)
 		return NULL;
 	}
 
+#ifdef FIO_HAVE_FALLOCATE
+	ret = posix_fallocate(fd, 0, sizeof(struct fio_mutex));
+	if (ret > 0) {
+		fprintf(stderr, "posix_fallocate mutex failed: %s\n", strerror(ret));
+		goto err;
+	}
+#endif
+
 	if (ftruncate(fd, sizeof(struct fio_mutex)) < 0) {
 		perror("ftruncate mutex");
 		goto err;
