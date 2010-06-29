@@ -74,37 +74,30 @@ uint32_t crc32c_intel(unsigned char const *data, unsigned long length)
 	return crc;
 }
 
-static void sig_ill(int sig)
+static void do_cpuid(unsigned int *eax, unsigned int *ebx, unsigned int *ecx,
+		     unsigned int *edx)
 {
-}
+	int id = *eax;
 
-static void crc32c_test(void)
-{
-	unsigned char buf[4] = { 1, 2, 3, 4 };
-	struct sigaction act;
-
-	/*
-	 * Check if hw accelerated crc32c is available
-	 */
-	memset(&act, 0, sizeof(act));
-	act.sa_handler = sig_ill;
-	act.sa_flags = SA_RESETHAND;
-	sigaction(SIGILL, &act, NULL);
-
-	(void) crc32c_intel(buf, sizeof(buf));
+	asm("movl %4, %%eax;"
+	    "cpuid;"
+	    "movl %%eax, %0;"
+	    "movl %%ebx, %1;"
+	    "movl %%ecx, %2;"
+	    "movl %%edx, %3;"
+		: "=r" (*eax), "=r" (*ebx), "=r" (*ecx), "=r" (*edx)
+		: "r" (id)
+		: "eax", "ebx", "ecx", "edx");
 }
 
 int crc32c_intel_works(void)
 {
-	if (!fork()) {
-		crc32c_test();
-		exit(0);
-	} else {
-		int status;
+	unsigned int eax, ebx, ecx, edx;
 
-		wait(&status);
-		return !WIFSIGNALED(status);
-	}
+	eax = 1;
+
+	do_cpuid(&eax, &ebx, &ecx, &edx);
+	return (ecx & (1 << 20)) != 0;
 }
 
 #endif /* ARCH_HAVE_SSE */
