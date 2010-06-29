@@ -1218,7 +1218,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "startdelay",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= td_var_offset(start_delay),
 		.help	= "Only start job when this period has passed",
 		.def	= "0",
