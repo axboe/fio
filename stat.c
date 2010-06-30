@@ -401,6 +401,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 		log_info(";%lu;%lu;%f%%;%f;%f", 0UL, 0UL, 0.0, 0.0, 0.0);
 }
 
+#define FIO_TERSE_VERSION	"2"
 
 static void show_thread_status_terse(struct thread_stat *ts,
 				     struct group_run_stats *rs)
@@ -411,7 +412,8 @@ static void show_thread_status_terse(struct thread_stat *ts,
 	double usr_cpu, sys_cpu;
 	int i;
 
-	log_info("%s;%d;%d", ts->name, ts->groupid, ts->error);
+	log_info("%s;%s;%d;%d", FIO_TERSE_VERSION, ts->name, ts->groupid,
+				ts->error);
 
 	show_ddir_status_terse(ts, rs, 0);
 	show_ddir_status_terse(ts, rs, 1);

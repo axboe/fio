@@ -951,10 +951,13 @@ Disk utilization.
 .PD
 .SH TERSE OUTPUT
 If the \fB\-\-minimal\fR option is given, the results will be printed in a
-semicolon-delimited format suitable for scripted use.  The fields are:
+semicolon-delimited format suitable for scripted use.  Note that the first
+number in the line is the version number. If the output has to be changed
+for some reason, this number will be incremented by 1 to signify that
+change.  The fields are:
 .P
 .RS
-.B jobname, groupid, error
+.B version, jobname, groupid, error
 .P
 Read status:
 .RS
@@ -965,6 +968,10 @@ Submission latency:
 .B min, max, mean, standard deviation
 .RE
 Completion latency:
+.RS
+.B min, max, mean, standard deviation
+.RE
+Total latency:
 .RS
 .B min, max, mean, standard deviation
 .RE
@@ -983,6 +990,10 @@ Submission latency:
 .B min, max, mean, standard deviation
 .RE
 Completion latency:
+.RS
+.B min, max, mean, standard deviation
+.RE
+Total latency:
 .RS
 .B min, max, mean, standard deviation
 .RE
