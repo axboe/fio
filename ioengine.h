@@ -43,6 +43,13 @@ struct io_u {
 	unsigned long long offset;
 
 	/*
+	 * Parameters related to pre-filled buffers and
+	 * their size to handle variable block sizes.
+	 */
+	int buf_filled;
+	unsigned long buf_filled_len;
+
+	/*
 	 * IO engine state, may be different from above when we get
 	 * partial transfers / residual data counts
 	 */

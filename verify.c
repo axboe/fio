@@ -22,7 +22,7 @@
 #include "crc/sha512.h"
 #include "crc/sha1.h"
 
-static void fill_pattern(struct thread_data *td, void *p, unsigned int len)
+void fill_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u *io_u)
 {
 	switch (td->o.verify_pattern_bytes) {
 	case 0:
@@ -30,13 +30,24 @@ static void fill_pattern(struct thread_data *td, void *p, unsigned int len)
 		fill_random_buf(p, len);
 		break;
 	case 1:
+		if (io_u->buf_filled && io_u->buf_filled_len >= len) {
+			dprint(FD_VERIFY, "using already filled verify pattern b=0 len=%u\n", len);
+			return;
+		}
 		dprint(FD_VERIFY, "fill verify pattern b=0 len=%u\n", len);
 		memset(p, td->o.verify_pattern[0], len);
+		io_u->buf_filled = 1;
+		io_u->buf_filled_len = len;
 		break;
 	default: {
 		unsigned int i = 0, size = 0;
 		unsigned char *b = p;
 
+		if (io_u->buf_filled && io_u->buf_filled_len >= len) {
+			dprint(FD_VERIFY, "using already filled verify pattern b=%d len=%u\n",
+					td->o.verify_pattern_bytes, len);
+			return;
+		}
 		dprint(FD_VERIFY, "fill verify pattern b=%d len=%u\n",
 					td->o.verify_pattern_bytes, len);
 
@@ -47,6 +58,8 @@ static void fill_pattern(struct thread_data *td, void *p, unsigned int len)
 			memcpy(b+i, td->o.verify_pattern, size);
 			i += size;
 		}
+		io_u->buf_filled = 1;
+		io_u->buf_filled_len = len;
 		break;
 		}
 	}
@@ -675,7 +688,7 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td->o.verify == VERIFY_NULL)
 		return;
 
-	fill_pattern(td, p, io_u->buflen);
+	fill_pattern(td, p, io_u->buflen, io_u);
 
 	hdr_inc = io_u->buflen;
 	if (td->o.verify_interval)

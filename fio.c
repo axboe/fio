@@ -831,6 +831,13 @@ static int init_io_u(struct thread_data *td)
 
 			if (td_write(td) && !td->o.refill_buffers)
 				io_u_fill_buffer(td, io_u, max_bs);
+			else if (td_write(td) && td->o.verify_pattern_bytes) {
+				/*
+				 * Fill the buffer with the pattern if we are
+				 * going to be doing writes.
+				 */
+				fill_pattern(td, io_u->buf, max_bs, io_u);
+			}
 		}
 
 		io_u->index = i;
