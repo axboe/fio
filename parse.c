@@ -278,6 +278,17 @@ static int check_int(const char *p, int *val)
 	return 1;
 }
 
+static int opt_len(const char *str)
+{
+	char *postfix;
+
+	postfix = strchr(str, ':');
+	if (!postfix)
+		return strlen(str);
+
+	return (int)(postfix - str);
+}
+
 #define val_store(ptr, val, off, or, data)		\
 	do {						\
 		ptr = td_var((data), (off));		\
@@ -320,7 +331,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			if (!vp->ival || vp->ival[0] == '\0')
 				continue;
 			all_skipped = 0;
-			if (!strncmp(vp->ival, ptr, strlen(ptr))) {
+			if (!strncmp(vp->ival, ptr, opt_len(ptr))) {
 				ret = 0;
 				if (o->roff1) {
 					if (vp->or)
