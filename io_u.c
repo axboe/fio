@@ -988,7 +988,7 @@ struct io_u *get_io_u(struct thread_data *td)
 			 * Reset the buf_filled parameters so next time if the
 			 * buffer is used for writes it is refilled.
 			 */
-			io_u->buf_filled = 0;
+			io_u->flags &= ~IO_U_F_FILLED;
 			io_u->buf_filled_len = 0;
 		}
 	}

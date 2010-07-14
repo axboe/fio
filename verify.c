@@ -30,20 +30,22 @@ void fill_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u
 		fill_random_buf(p, len);
 		break;
 	case 1:
-		if (io_u->buf_filled && io_u->buf_filled_len >= len) {
+		if ((io_u->flags & IO_U_F_FILLED) &&
+		     io_u->buf_filled_len >= len) {
 			dprint(FD_VERIFY, "using already filled verify pattern b=0 len=%u\n", len);
 			return;
 		}
 		dprint(FD_VERIFY, "fill verify pattern b=0 len=%u\n", len);
 		memset(p, td->o.verify_pattern[0], len);
-		io_u->buf_filled = 1;
+		io_u->flags |= IO_U_F_FILLED;
 		io_u->buf_filled_len = len;
 		break;
 	default: {
 		unsigned int i = 0, size = 0;
 		unsigned char *b = p;
 
-		if (io_u->buf_filled && io_u->buf_filled_len >= len) {
+		if ((io_u->flags & IO_U_F_FILLED) &&
+		     io_u->buf_filled_len >= len) {
 			dprint(FD_VERIFY, "using already filled verify pattern b=%d len=%u\n",
 					td->o.verify_pattern_bytes, len);
 			return;
@@ -58,7 +60,7 @@ void fill_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u
 			memcpy(b+i, td->o.verify_pattern, size);
 			i += size;
 		}
-		io_u->buf_filled = 1;
+		io_u->flags |= IO_U_F_FILLED;
 		io_u->buf_filled_len = len;
 		break;
 		}

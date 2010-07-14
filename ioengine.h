@@ -8,6 +8,7 @@ enum {
 	IO_U_F_FLIGHT		= 1 << 1,
 	IO_U_F_FREE_DEF		= 1 << 2,
 	IO_U_F_IN_CUR_DEPTH	= 1 << 3,
+	IO_U_F_FILLED		= 1 << 4,
 };
 
 /*
@@ -43,18 +44,17 @@ struct io_u {
 	unsigned long long offset;
 
 	/*
-	 * Parameters related to pre-filled buffers and
-	 * their size to handle variable block sizes.
-	 */
-	int buf_filled;
-	unsigned long buf_filled_len;
-
-	/*
 	 * IO engine state, may be different from above when we get
 	 * partial transfers / residual data counts
 	 */
 	void *xfer_buf;
 	unsigned long xfer_buflen;
+
+	/*
+	 * Parameter related to pre-filled buffers and
+	 * their size to handle variable block sizes.
+	 */
+	unsigned long buf_filled_len;
 
 	unsigned int resid;
 	unsigned int error;
