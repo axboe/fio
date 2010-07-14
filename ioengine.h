@@ -8,7 +8,6 @@ enum {
 	IO_U_F_FLIGHT		= 1 << 1,
 	IO_U_F_FREE_DEF		= 1 << 2,
 	IO_U_F_IN_CUR_DEPTH	= 1 << 3,
-	IO_U_F_FILLED		= 1 << 4,
 };
 
 /*
