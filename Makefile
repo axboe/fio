@@ -65,7 +65,7 @@ clean:
 	-rm -f .depend cscope.out $(OBJS) $(PROGS) core.* core
 
 cscope:
-	@cscope -b
+	@cscope -b -R
 
 install: $(PROGS) $(SCRIPTS)
 	$(INSTALL) -m755 -d $(DESTDIR)$(bindir)
