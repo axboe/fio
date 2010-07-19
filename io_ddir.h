@@ -8,6 +8,7 @@ enum fio_ddir {
 	DDIR_DATASYNC,
 	DDIR_SYNC_FILE_RANGE,
 	DDIR_WAIT,
+	DDIR_TRIM,
 	DDIR_INVAL = -1,
 };
 

@@ -36,6 +36,7 @@
 #define FIO_HAVE_CGROUPS
 #define FIO_HAVE_FDATASYNC
 #define FIO_HAVE_FS_STAT
+#define FIO_HAVE_TRIM
 
 #ifdef SYNC_FILE_RANGE_WAIT_BEFORE
 #define FIO_HAVE_SYNC_FILE_RANGE
@@ -185,6 +186,10 @@ enum {
 #define BLKFLSBUF	_IO(0x12,97)
 #endif
 
+#ifndef BLKDISCARD
+#define BLKDISCARD	_IO(0x12,119)
+#endif
+
 static inline int blockdev_invalidate_cache(int fd)
 {
 	return ioctl(fd, BLKFLSBUF);
@@ -296,6 +301,20 @@ static inline unsigned long long get_fs_size(const char *path)
 	ret = s.f_bsize;
 	ret *= (unsigned long long) s.f_bfree;
 	return ret;
+}
+
+static inline int os_trim(int fd, unsigned long long start,
+			  unsigned long long len)
+{
+	uint64_t range[2];
+
+	range[0] = start;
+	range[1] = len;
+
+	if (!ioctl(fd, BLKDISCARD, range))
+		return 0;
+
+	return errno;
 }
 
 #endif

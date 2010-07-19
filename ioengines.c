@@ -478,3 +478,21 @@ int do_io_u_sync(struct thread_data *td, struct io_u *io_u)
 
 	return ret;
 }
+
+int do_io_u_trim(struct thread_data *td, struct io_u *io_u)
+{
+#ifndef FIO_HAVE_TRIM
+	io_u->error = EINVAL;
+	return io_u->xfer_buflen;
+#else
+	struct fio_file *f = io_u->file;
+	int ret;
+
+	ret = os_trim(f->fd, io_u->offset + f->file_offset, io_u->xfer_buflen);
+	if (!ret)
+		return 0;
+
+	io_u->error = errno;
+	return io_u->xfer_buflen;
+#endif
+}

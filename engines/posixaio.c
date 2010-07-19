@@ -165,7 +165,13 @@ static int fio_posixaio_queue(struct thread_data fio_unused *td,
 		ret = aio_read(aiocb);
 	else if (io_u->ddir == DDIR_WRITE)
 		ret = aio_write(aiocb);
-	else {
+	else if (io_u->ddir == DDIR_TRIM) {
+		if (pd->queued)
+			return FIO_Q_BUSY;
+
+		do_io_u_trim(td, io_u);
+		return FIO_Q_COMPLETED;
+	} else {
 #ifdef FIO_HAVE_POSIXAIO_FSYNC
 		ret = aio_fsync(O_SYNC, aiocb);
 #else

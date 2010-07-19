@@ -105,6 +105,14 @@ static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 		return FIO_Q_COMPLETED;
 	}
 
+	if (io_u->ddir == DDIR_TRIM) {
+		if (ld->iocbs_nr)
+			return FIO_Q_BUSY;
+
+		do_io_u_trim(td, io_u);
+		return FIO_Q_COMPLETED;
+	}
+
 	ld->iocbs[ld->iocbs_nr] = &io_u->iocb;
 	ld->io_us[ld->iocbs_nr] = io_u;
 	ld->iocbs_nr++;

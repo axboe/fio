@@ -1,7 +1,7 @@
 #ifndef FIO_IOENGINE_H
 #define FIO_IOENGINE_H
 
-#define FIO_IOOPS_VERSION	11
+#define FIO_IOOPS_VERSION	12
 
 enum {
 	IO_U_F_FREE		= 1 << 0,
@@ -160,6 +160,7 @@ void io_u_mark_complete(struct thread_data *, unsigned int);
 void io_u_mark_submit(struct thread_data *, unsigned int);
 
 int do_io_u_sync(struct thread_data *, struct io_u *);
+int do_io_u_trim(struct thread_data *, struct io_u *);
 
 #ifdef FIO_INC_DEBUG
 static inline void dprint_io_u(struct io_u *io_u, const char *p)
