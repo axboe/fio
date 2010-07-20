@@ -557,7 +557,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	td->ts.slat_stat[0].min_val = td->ts.slat_stat[1].min_val = ULONG_MAX;
 	td->ts.lat_stat[0].min_val = td->ts.lat_stat[1].min_val = ULONG_MAX;
 	td->ts.bw_stat[0].min_val = td->ts.bw_stat[1].min_val = ULONG_MAX;
-	td->ddir_nr = td->o.ddir_nr;
+	td->ddir_seq_nr = td->o.ddir_seq_nr;
 
 	if ((td->o.stonewall || td->o.new_group) && prev_group_jobs) {
 		prev_group_jobs = 0;

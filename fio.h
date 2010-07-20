@@ -146,7 +146,7 @@ struct thread_options {
 	char *ioengine;
 	enum td_ddir td_ddir;
 	unsigned int kb_base;
-	unsigned int ddir_nr;
+	unsigned int ddir_seq_nr;
 	unsigned int iodepth;
 	unsigned int iodepth_low;
 	unsigned int iodepth_batch;
@@ -410,7 +410,7 @@ struct thread_data {
 	os_random_state_t rwmix_state;
 	unsigned long rwmix_issues;
 	enum fio_ddir rwmix_ddir;
-	unsigned int ddir_nr;
+	unsigned int ddir_seq_nr;
 
 	/*
 	 * IO history logs for verification. We use a tree for sorting,

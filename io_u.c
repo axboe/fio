@@ -54,7 +54,7 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 		 * If we have a mixed random workload, we may
 		 * encounter blocks we already did IO to.
 		 */
-		if ((td->o.ddir_nr == 1) && !random_map_free(f, block))
+		if ((td->o.ddir_seq_nr == 1) && !random_map_free(f, block))
 			break;
 
 		idx = RAND_MAP_IDX(f, block);
@@ -201,8 +201,8 @@ static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
 	unsigned long long b;
 	enum fio_ddir ddir = io_u->ddir;
 
-	if (td_random(td) && (td->o.ddir_nr && !--td->ddir_nr)) {
-		td->ddir_nr = td->o.ddir_nr;
+	if (td_random(td) && (td->o.ddir_seq_nr && !--td->ddir_seq_nr)) {
+		td->ddir_seq_nr = td->o.ddir_seq_nr;
 
 		if (get_next_rand_offset(td, f, ddir, &b)) {
 			dprint(FD_IO, "%s: getting rand offset failed\n",
