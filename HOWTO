@@ -313,13 +313,30 @@ rw=str		Type of io pattern. Accepted values are:
 		For the mixed io types, the default is to split them 50/50.
 		For certain types of io the result may still be skewed a bit,
 		since the speed may be different. It is possible to specify
-		a number of IO's to do before getting a new offset - this
-		is only useful for random IO, where fio would normally
-		generate a new random offset for every IO. If you append
-		eg 8 to randread, you would get a new random offset for
+		a number of IO's to do before getting a new offset, this is
+		one by appending a ':<nr>' to the end of the string given.
+		For a random read, it would look like 'rw=randread:8' for
+		passing in an offset modifier with a value of 8. See the
+		'rw_sequencer' option.
+
+rw_sequencer=str If an offset modifier is given by appending a number to
+		the rw=<str> line, then this option controls how that
+		number modifies the IO offset being generated. Accepted
+		values are:
+
+			sequential	Generate sequential offset
+			identical	Generate the same offset
+
+		'sequential' is only useful for random IO, where fio would
+		normally generate a new random offset for every IO. If you
+		append eg 8 to randread, you would get a new random offset for
 		every 8 IO's. The result would be a seek for only every 8
 		IO's, instead of for every IO. Use rw=randread:8 to specify
-		that.
+		that. As sequential IO is already sequential, setting
+		'sequential' for that would not result in any differences.
+		'identical' behaves in a similar fashion, except it sends
+		the same offset 8 number of times before generating a new
+		offset.
 
 kb_base=int	The base unit for a kilobyte. The defacto base is 2^10, 1024.
 		Storage manufacturers like to use 10^3 or 1000 as a base

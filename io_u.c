@@ -41,10 +41,12 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 	struct fio_file *f = io_u->file;
 	unsigned long long block;
 	unsigned int blocks, nr_blocks;
+	int busy_check;
 
 	block = (io_u->offset - f->file_offset) / (unsigned long long) min_bs;
 	nr_blocks = (io_u->buflen + min_bs - 1) / min_bs;
 	blocks = 0;
+	busy_check = !(io_u->flags & IO_U_F_BUSY_OK);
 
 	while (nr_blocks) {
 		unsigned int this_blocks, mask;
@@ -54,6 +56,10 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 		 * If we have a mixed random workload, we may
 		 * encounter blocks we already did IO to.
 		 */
+		if (!busy_check) {
+			blocks = nr_blocks;
+			break;
+		}
 		if ((td->o.ddir_seq_nr == 1) && !random_map_free(f, block))
 			break;
 
@@ -190,6 +196,62 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	return get_next_free_block(td, f, ddir, b);
 }
 
+static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
+			       enum fio_ddir ddir, unsigned long long *b)
+{
+	if (get_next_rand_offset(td, f, ddir, b)) {
+		dprint(FD_IO, "%s: rand offset failed, last=%llu, size=%llu\n",
+				f->file_name, f->last_pos, f->real_file_size);
+		return 1;
+	}
+
+	return 0;
+}
+
+static int get_next_seq_block(struct thread_data *td, struct fio_file *f,
+			      enum fio_ddir ddir, unsigned long long *b)
+{
+	if (f->last_pos < f->real_file_size) {
+		*b = (f->last_pos - f->file_offset) / td->o.min_bs[ddir];
+		return 0;
+	}
+
+	return 1;
+}
+
+static int get_next_block(struct thread_data *td, struct io_u *io_u,
+			  enum fio_ddir ddir, int rw_seq, unsigned long long *b)
+{
+	struct fio_file *f = io_u->file;
+	int ret;
+
+	if (rw_seq) {
+		if (td_random(td))
+			ret = get_next_rand_block(td, f, ddir, b);
+		else
+			ret = get_next_seq_block(td, f, ddir, b);
+	} else {
+		io_u->flags |= IO_U_F_BUSY_OK;
+
+		if (td->o.rw_seq == RW_SEQ_SEQ) {
+			ret = get_next_seq_block(td, f, ddir, b);
+			if (ret)
+				ret = get_next_rand_block(td, f, ddir, b);
+		} else if (td->o.rw_seq == RW_SEQ_IDENT) {
+			if (f->last_start != -1ULL)
+				*b = (f->last_start - f->file_offset) / td->o.min_bs[ddir];
+			else
+				*b = 0;
+			ret = 0;
+		} else {
+			log_err("fio: unknown rw_seq=%d\n", td->o.rw_seq);
+			ret = 1;
+		}
+	}
+	
+	return ret;
+}
+
 /*
  * For random io, generate a random new block and see if it's used. Repeat
  * until we find a free one. For sequential io, just return the end of
@@ -200,26 +262,16 @@ static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
 	struct fio_file *f = io_u->file;
 	unsigned long long b;
 	enum fio_ddir ddir = io_u->ddir;
+	int rw_seq_hit = 0;
 
-	if (td_random(td) && (td->o.ddir_seq_nr && !--td->ddir_seq_nr)) {
+	if (td->o.ddir_seq_nr && !--td->ddir_seq_nr) {
+		rw_seq_hit = 1;
 		td->ddir_seq_nr = td->o.ddir_seq_nr;
+	}
 
-		if (get_next_rand_offset(td, f, ddir, &b)) {
-			dprint(FD_IO, "%s: getting rand offset failed\n",
-				f->file_name);
-			return 1;
-		}
-	} else {
-		if (f->last_pos >= f->real_file_size) {
-			if (!td_random(td) ||
-			     get_next_rand_offset(td, f, ddir, &b)) {
-				dprint(FD_IO, "%s: pos %llu > size %llu\n",
-						f->file_name, f->last_pos,
-						f->real_file_size);
-				return 1;
-			}
-		} else
-			b = (f->last_pos - f->file_offset) / td->o.min_bs[ddir];
+	if (get_next_block(td, io_u, ddir, rw_seq_hit, &b)) {
+		printf("fail\n");
+		return 1;
 	}
 
 	io_u->offset = b * td->o.ba[ddir];
@@ -977,6 +1029,7 @@ struct io_u *get_io_u(struct thread_data *td)
 			goto err_put;
 		}
 
+		f->last_start = io_u->offset;
 		f->last_pos = io_u->offset + io_u->buflen;
 
 		if (td->o.verify != VERIFY_NONE && io_u->ddir == DDIR_WRITE)
@@ -1042,7 +1095,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 	td_io_u_lock(td);
 	assert(io_u->flags & IO_U_F_FLIGHT);
-	io_u->flags &= ~IO_U_F_FLIGHT;
+	io_u->flags &= ~(IO_U_F_FLIGHT | IO_U_F_BUSY_OK);
 	td_io_u_unlock(td);
 
 	if (ddir_sync(io_u->ddir)) {

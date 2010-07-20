@@ -882,6 +882,24 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		},
 	},
 	{
+		.name	= "rw_sequencer",
+		.type	= FIO_OPT_STR,
+		.off1	= td_var_offset(rw_seq),
+		.help	= "IO offset generator modifier",
+		.def	= "sequential",
+		.posval = {
+			  { .ival = "sequential",
+			    .oval = RW_SEQ_SEQ,
+			    .help = "Generate sequential offsets",
+			  },
+			  { .ival = "identical",
+			    .oval = RW_SEQ_IDENT,
+			    .help = "Generate identical offsets",
+			  },
+		},
+	},
+
+	{
 		.name	= "ioengine",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(ioengine),

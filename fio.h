@@ -61,6 +61,14 @@ enum fio_memtype {
 };
 
 /*
+ * offset generator types
+ */
+enum {
+	RW_SEQ_SEQ	= 0,
+	RW_SEQ_IDENT,
+};
+
+/*
  * How many depth levels to log
  */
 #define FIO_IO_U_MAP_NR	8
@@ -145,6 +153,7 @@ struct thread_options {
 	char *opendir;
 	char *ioengine;
 	enum td_ddir td_ddir;
+	unsigned int rw_seq;
 	unsigned int kb_base;
 	unsigned int ddir_seq_nr;
 	unsigned int iodepth;

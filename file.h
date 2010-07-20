@@ -73,6 +73,7 @@ struct fio_file {
 	unsigned long long io_size;
 
 	unsigned long long last_pos;
+	unsigned long long last_start;
 
 	unsigned long long first_write;
 	unsigned long long last_write;
@@ -155,6 +156,7 @@ static inline void fio_file_reset(struct fio_file *f)
 {
 	f->last_free_lookup = 0;
 	f->last_pos = f->file_offset;
+	f->last_start = -1ULL;
 	f->file_pos = -1ULL;
 	if (f->file_map)
 		memset(f->file_map, 0, f->num_maps * sizeof(int));

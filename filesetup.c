@@ -909,6 +909,7 @@ int add_file(struct thread_data *td, const char *fname)
 	}
 
 	f->fd = -1;
+	fio_file_reset(f);
 
 	if (td->files_size <= td->files_index) {
 		int new_size = td->o.nr_files + 1;
@@ -1136,6 +1137,7 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 			assert(0);
 		}
 		__f->fd = -1;
+		fio_file_reset(__f);
 
 		if (f->file_name) {
 			__f->file_name = smalloc_strdup(f->file_name);
