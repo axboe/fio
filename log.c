@@ -231,6 +231,7 @@ restart:
 			assert(ipo->len == __ipo->len);
 			td->io_hist_len--;
 			rb_erase(parent, &td->io_hist_tree);
+			free(__ipo);
 			goto restart;
 		}
 	}
