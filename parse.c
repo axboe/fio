@@ -169,6 +169,9 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data)
 {
 	const char *p;
 
+	if (len < 2)
+		return __get_mult_bytes(str, data);
+
 	/*
 	 * if the last char is 'b' or 'B', the user likely used
 	 * "1gb" instead of just "1g". If the second to last is also
