@@ -886,12 +886,16 @@ done:
 int verify_async_init(struct thread_data *td)
 {
 	int i, ret;
+	pthread_attr_t attr;
+
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
 
 	td->verify_thread_exit = 0;
 
 	td->verify_threads = malloc(sizeof(pthread_t) * td->o.verify_async);
 	for (i = 0; i < td->o.verify_async; i++) {
-		ret = pthread_create(&td->verify_threads[i], NULL,
+		ret = pthread_create(&td->verify_threads[i], &attr,
 					verify_async_thread, td);
 		if (ret) {
 			log_err("fio: async verify creation failed: %s\n",
@@ -906,6 +910,8 @@ int verify_async_init(struct thread_data *td)
 		}
 		td->nr_verify_threads++;
 	}
+
+	pthread_attr_destroy(&attr);
 
 	if (i != td->o.verify_async) {
 		log_err("fio: only %d verify threads started, exiting\n", i);

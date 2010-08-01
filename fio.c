@@ -1380,9 +1380,13 @@ static void *gtod_thread_main(void *data)
 
 static int fio_start_gtod_thread(void)
 {
+	pthread_attr_t attr;
 	int ret;
 
-	ret = pthread_create(&gtod_thread, NULL, gtod_thread_main, NULL);
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
+	ret = pthread_create(&gtod_thread, &attr, gtod_thread_main, NULL);
+	pthread_attr_destroy(&attr);
 	if (ret) {
 		log_err("Can't create gtod thread: %s\n", strerror(ret));
 		return 1;
