@@ -10,7 +10,7 @@
 #include "fio.h"
 #include "blktrace_api.h"
 
-#define TRACE_FIFO_SIZE	65536
+#define TRACE_FIFO_SIZE	8192
 
 /*
  * fifo refill frontend, to avoid reading data in trace sized bites
