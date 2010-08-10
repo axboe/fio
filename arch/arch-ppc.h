@@ -42,6 +42,23 @@ static inline int arch_ffz(unsigned long bitmask)
 		return 32;
 	return  __ilog2(bitmask & -bitmask);
 }
+
+static inline unsigned long long get_cpu_clock(void)
+{
+    unsigned int tbl, tbu0, tbu1;
+    unsigned long long ret;
+
+    do {
+        __asm__ __volatile__ ("mftbu %0" : "=r"(tbu0));
+        __asm__ __volatile__ ("mftb %0"  : "=r"(tbl) );
+        __asm__ __volatile__ ("mftbu %0" : "=r"(tbu1));
+     } while (tbu0 != tbu1);
+
+    ret = (((unsigned long long)tbu0) << 32) | tbl;
+    return ret;
+}
+
 #define ARCH_HAVE_FFZ
+#define ARCH_HAVE_CPU_CLOCK
 
 #endif
