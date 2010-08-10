@@ -65,6 +65,10 @@ specify the FreeBSD Makefile with -f and use gmake (not make), eg:
 
 $ gmake -f Makefile.Freebsd && gmake -f Makefile.FreeBSD install
 
+Same goes for AIX:
+
+$ gmake -f Makefile.aix && gmake -f Makefile.aix install
+
 Likewise with OpenSolaris, use the Makefile.solaris to compile there.
 The OpenSolaris make should work fine. This might change in the
 future if I opt for an autoconf type setup.
@@ -270,7 +274,7 @@ The job file parameters are:
 Platforms
 ---------
 
-Fio works on (at least) Linux, Solaris, and FreeBSD. Some features and/or
+Fio works on (at least) Linux, Solaris, AIX and FreeBSD. Some features and/or
 options may only be available on some of the platforms, typically because
 those features only apply to that platform (like the solarisaio engine, or
 the splice engine on Linux).
@@ -291,6 +295,23 @@ your mileage may vary. Sending me patches for other platforms is greatly
 appreciated. There's a lot of value in having the same test/benchmark tool
 available on all platforms.
 
+Note that POSIX aio is not enabled by default on AIX. If you get messages like:
+
+    Symbol resolution failed for /usr/lib/libc.a(posix_aio.o) because:
+        Symbol _posix_kaio_rdwr (number 2) is not exported from dependent module /unix.
+
+you need to enable POSIX aio. Run the following commands as root:
+
+    # lsdev -C -l posix_aio0
+        posix_aio0 Defined  Posix Asynchronous I/O
+    # cfgmgr -l posix_aio0
+    # lsdev -C -l posix_aio0
+        posix_aio0 Available  Posix Asynchronous I/O
+
+POSIX aio should work now. To make the change permanent:
+
+    # chdev -l posix_aio0 -P -a autoconfig='available'
+        posix_aio0 changed
 
 
 Author

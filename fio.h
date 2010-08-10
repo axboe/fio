@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-#include <getopt.h>
 #include <inttypes.h>
 #include <assert.h>
 
@@ -32,6 +31,7 @@
 #include "options.h"
 #include "profile.h"
 #include "time.h"
+#include "lib/getopt.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>

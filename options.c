@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <string.h>
-#include <getopt.h>
 #include <assert.h>
 #include <libgen.h>
 #include <fcntl.h>

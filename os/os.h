@@ -14,6 +14,8 @@
 #include "os-solaris.h"
 #elif defined(__APPLE__)
 #include "os-mac.h"
+#elif defined(_AIX)
+#include "os-aix.h"
 #else
 #error "unsupported os"
 #endif

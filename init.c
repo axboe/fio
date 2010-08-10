@@ -8,7 +8,6 @@
 #include <ctype.h>
 #include <string.h>
 #include <errno.h>
-#include <getopt.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/types.h>
@@ -20,6 +19,8 @@
 #include "filehash.h"
 #include "verify.h"
 #include "profile.h"
+
+#include "lib/getopt.h"
 
 static char fio_version_string[] = "fio 1.42";
 
