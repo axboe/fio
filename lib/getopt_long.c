@@ -6,12 +6,15 @@
  * - Option reordering is not supported
  * - -W foo is not supported
  * - First optstring character "-" not supported.
+ *
+ * This file was imported from the klibc library from hpa
  */
 
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
-#include <getopt.h>
+
+#include "getopt.h"
 
 char *optarg;
 int optind, opterr, optopt;
