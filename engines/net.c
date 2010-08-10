@@ -223,7 +223,10 @@ static int fio_netio_splice_out(struct thread_data *td, struct io_u *io_u)
 static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 {
 	struct netio_data *nd = td->io_ops->data;
-	int ret, flags = MSG_DONTWAIT;
+	int ret, flags = 0;
+#ifdef MSG_DONTWAIT
+	flags = MSG_DONTWAIT;
+#endif
 
 	do {
 		if (nd->net_protocol == IPPROTO_UDP) {
@@ -251,7 +254,9 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 		if (ret <= 0)
 			break;
 
+#ifdef MSG_DONTWAIT
 		flags &= ~MSG_DONTWAIT;
+#endif
 	} while (1);
 
 	return ret;
@@ -276,7 +281,10 @@ static int is_udp_close(struct io_u *io_u, int len)
 static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 {
 	struct netio_data *nd = td->io_ops->data;
-	int ret, flags = MSG_DONTWAIT;
+	int ret, flags = 0;
+#ifdef MSG_DONTWAIT
+	flags = MSG_DONTWAIT;
+#endif
 
 	do {
 		if (nd->net_protocol == IPPROTO_UDP) {
@@ -299,7 +307,9 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 		ret = poll_wait(td, io_u->file->fd, POLLIN);
 		if (ret <= 0)
 			break;
+#ifdef MSG_DONTWAIT
 		flags &= ~MSG_DONTWAIT;
+#endif
 		flags |= MSG_WAITALL;
 	} while (1);
 
