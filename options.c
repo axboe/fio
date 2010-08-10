@@ -251,13 +251,13 @@ static int fio_clock_source_cb(void *data, const char *str)
 	return 0;
 }
 
-static int str_lockmem_cb(void fio_unused *data, unsigned long *val)
+static int str_lockmem_cb(void fio_unused *data, unsigned long long *val)
 {
 	mlock_size = *val;
 	return 0;
 }
 
-static int str_rwmix_read_cb(void *data, unsigned int *val)
+static int str_rwmix_read_cb(void *data, unsigned long long *val)
 {
 	struct thread_data *td = data;
 
@@ -266,7 +266,7 @@ static int str_rwmix_read_cb(void *data, unsigned int *val)
 	return 0;
 }
 
-static int str_rwmix_write_cb(void *data, unsigned int *val)
+static int str_rwmix_write_cb(void *data, unsigned long long *val)
 {
 	struct thread_data *td = data;
 
@@ -276,7 +276,7 @@ static int str_rwmix_write_cb(void *data, unsigned int *val)
 }
 
 #ifdef FIO_HAVE_IOPRIO
-static int str_prioclass_cb(void *data, unsigned int *val)
+static int str_prioclass_cb(void *data, unsigned long long *val)
 {
 	struct thread_data *td = data;
 	unsigned short mask;
@@ -292,7 +292,7 @@ static int str_prioclass_cb(void *data, unsigned int *val)
 	return 0;
 }
 
-static int str_prio_cb(void *data, unsigned int *val)
+static int str_prio_cb(void *data, unsigned long long *val)
 {
 	struct thread_data *td = data;
 
@@ -316,7 +316,7 @@ static int str_exitall_cb(void)
 }
 
 #ifdef FIO_HAVE_CPU_AFFINITY
-static int str_cpumask_cb(void *data, unsigned int *val)
+static int str_cpumask_cb(void *data, unsigned long long *val)
 {
 	struct thread_data *td = data;
 	unsigned int i;
@@ -614,7 +614,7 @@ static int str_opendir_cb(void *data, const char fio_unused *str)
 	return add_dir_files(td, td->o.opendir);
 }
 
-static int str_verify_offset_cb(void *data, unsigned int *off)
+static int str_verify_offset_cb(void *data, unsigned long long *off)
 {
 	struct thread_data *td = data;
 
@@ -720,7 +720,7 @@ static int str_gtod_reduce_cb(void *data, int *il)
 	return 0;
 }
 
-static int str_gtod_cpu_cb(void *data, int *il)
+static int str_gtod_cpu_cb(void *data, long long *il)
 {
 	struct thread_data *td = data;
 	int val = *il;
