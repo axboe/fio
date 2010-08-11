@@ -7,7 +7,6 @@
 #include <sys/ioctl.h>
 
 #define FIO_HAVE_POSIXAIO
-#define FIO_HAVE_FALLOCATE
 #define FIO_HAVE_ODIRECT
 #define FIO_USE_GENERIC_RAND
 
