@@ -37,6 +37,10 @@
 #include "../lib/strsep.h"
 #endif
 
+#ifdef MSG_DONTWAIT
+#define OS_MSG_DONTWAIT	MSG_DONTWAIT
+#endif
+
 #ifndef FIO_HAVE_FADVISE
 #define fadvise(fd, off, len, advice)	(0)
 

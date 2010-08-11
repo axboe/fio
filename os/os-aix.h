@@ -13,6 +13,7 @@
 #define FIO_HAVE_PSHARED_MUTEX
 
 #define OS_MAP_ANON		MAP_ANON
+#define OS_MSG_DONTWAIT		0
 
 static inline int blockdev_invalidate_cache(int fd)
 {
