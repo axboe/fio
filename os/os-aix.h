@@ -10,6 +10,13 @@
 #define FIO_HAVE_ODIRECT
 #define FIO_USE_GENERIC_RAND
 
+/*
+ * This is broken on AIX if _LARGE_FILES is defined...
+ */
+#if 0
+#define FIO_HAVE_FALLOCATE
+#endif
+
 #define FIO_HAVE_PSHARED_MUTEX
 
 #define OS_MAP_ANON		MAP_ANON
