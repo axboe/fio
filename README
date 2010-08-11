@@ -274,10 +274,10 @@ The job file parameters are:
 Platforms
 ---------
 
-Fio works on (at least) Linux, Solaris, AIX and FreeBSD. Some features and/or
-options may only be available on some of the platforms, typically because
-those features only apply to that platform (like the solarisaio engine, or
-the splice engine on Linux).
+Fio works on (at least) Linux, Solaris, AIX, OSX, NetBSD, and FreeBSD. Some
+features and/or options may only be available on some of the platforms,
+typically because those features only apply to that platform (like the
+solarisaio engine, or the splice engine on Linux).
 
 Some features are not available on FreeBSD/Solaris even if they could be
 implemented, I'd be happy to take patches for that. An example of that is
