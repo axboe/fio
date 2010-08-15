@@ -11,9 +11,11 @@
 
 #include "hash.h"
 
+#ifdef ARCH_HAVE_CPU_CLOCK
 static unsigned long cycles_per_usec;
-static struct timeval last_tv;
 static unsigned long last_cycles;
+#endif
+static struct timeval last_tv;
 static int last_tv_valid;
 
 static struct timeval *fio_tv;
@@ -183,6 +185,7 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 	memcpy(&last_tv, tp, sizeof(*tp));
 }
 
+#ifdef ARCH_HAVE_CPU_CLOCK
 static unsigned long get_cycles_per_usec(void)
 {
 	struct timeval s, e;
@@ -204,13 +207,11 @@ static unsigned long get_cycles_per_usec(void)
 	return c_e - c_s;
 }
 
-void fio_clock_init(void)
+static void calibrate_cpu_clock(void)
 {
 	double delta, mean, S;
 	unsigned long avg, cycles[10];
 	int i, samples;
-
-	last_tv_valid = 0;
 
 	cycles[0] = get_cycles_per_usec();
 	S = delta = mean = 0.0;
@@ -246,6 +247,18 @@ void fio_clock_init(void)
 	dprint(FD_TIME, "mean=%f, S=%f\n", mean, S);
 
 	cycles_per_usec = avg;
+
+}
+#else
+static void calibrate_cpu_clock(void)
+{
+}
+#endif
+
+void fio_clock_init(void)
+{
+	last_tv_valid = 0;
+	calibrate_cpu_clock();
 }
 
 void fio_gtod_init(void)

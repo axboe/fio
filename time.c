@@ -5,7 +5,6 @@
 
 static struct timeval genesis;
 static unsigned long ns_granularity;
-unsigned long long genesis_cycles;
 
 unsigned long long utime_since(struct timeval *s, struct timeval *e)
 {
@@ -180,7 +179,6 @@ void fio_init fio_time_init(void)
 void set_genesis_time(void)
 {
 	fio_gettime(&genesis, NULL);
-	genesis_cycles = get_cpu_clock();
 }
 
 void fill_start_time(struct timeval *t)
