@@ -254,6 +254,7 @@ struct thread_options {
 	unsigned int gtod_cpu;
 	unsigned int gtod_offload;
 	enum fio_cs clocksource;
+	unsigned int no_stall;
 
 	char *read_iolog_file;
 	char *write_iolog_file;

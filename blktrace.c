@@ -341,8 +341,16 @@ int load_blktrace(struct thread_data *td, const char *filename)
 				delay = t.time - ttime;
 			if ((t.action & BLK_TC_ACT(BLK_TC_WRITE)) && read_only)
 				skipped_writes++;
-			else
+			else {
+				/*
+				 * set delay to zero if no_stall enabled for
+				 * fast replay
+				 */
+				if (td->o.no_stall)
+					delay = 0;
+
 				handle_trace(td, &t, delay, ios, rw_bs);
+			}
 
 			ttime = t.time;
 			cpu = t.cpu;

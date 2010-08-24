@@ -986,6 +986,13 @@ read_iolog=str	Open an iolog with the specified file name and replay the
 		for how to capture such logging data. For blktrace replay,
 		the file needs to be turned into a blkparse binary data
 		file first (blkparse <device> -o /dev/null -d file_for_fio.bin).
+		
+replay_no_stall=int When replaying I/O with read_iolog the default behavior
+		is to attempt to respect the time stamps within the log and replay
+        them with the appropriate delay between IOPS.  By setting this variable
+        fio will not respect the timestamps and attempt to replay them as fast
+        as possible while still respecting ordering.  The result is the same
+        I/O pattern to a given device, but different timings.
 
 write_bw_log=str If given, write a bandwidth log of the jobs in this job
 		file. Can be used to store data of the bandwidth of the

@@ -1482,6 +1482,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Playback IO pattern from file",
 	},
 	{
+		.name	= "replay_no_stall",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(no_stall),
+		.def	= "0",
+		.help	= "Playback IO pattern file as fast as possible without stalls",
+	},
+	{
 		.name	= "exec_prerun",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(exec_prerun),
