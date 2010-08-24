@@ -963,6 +963,19 @@ int add_file(struct thread_data *td, const char *fname)
 	return cur_files;
 }
 
+int add_file_exclusive(struct thread_data *td, const char *fname)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	for_each_file(td, f, i) {
+		if (!strcmp(f->file_name, fname))
+			return i;
+	}
+
+	return add_file(td, fname);
+}
+
 void get_file(struct fio_file *f)
 {
 	dprint(FD_FILE, "get file %s, ref=%d\n", f->file_name, f->references);

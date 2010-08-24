@@ -131,7 +131,6 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 			io_u->buflen = ipo->len;
 			io_u->file = td->files[ipo->fileno];
 			get_file(io_u->file);
-
 			dprint(FD_IO, "iolog: get %llu/%lu/%s\n", io_u->offset,
 						io_u->buflen, io_u->file->file_name);
 			if (ipo->delay) iolog_delay(td, ipo->delay);

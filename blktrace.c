@@ -187,7 +187,7 @@ static void trace_add_file(struct thread_data *td, __u32 device)
 		int fileno;
 
 		dprint(FD_BLKTRACE, "add devices %s\n", dev);
-		fileno = add_file(td, dev);
+		fileno = add_file_exclusive(td, dev);
 		trace_add_open_event(td, fileno);
 	}
 }
