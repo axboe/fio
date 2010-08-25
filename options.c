@@ -1486,6 +1486,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(no_stall),
 		.def	= "0",
+		.parent	= "read_iolog",
 		.help	= "Playback IO pattern file as fast as possible without stalls",
 	},
 	{
