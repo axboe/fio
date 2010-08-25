@@ -144,7 +144,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 
 		free(ipo);
 		
-		if (ipo->ddir != DDIR_WAIT)
+		if (io_u->ddir != DDIR_WAIT)
 			return 0;
 	}
 
