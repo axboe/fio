@@ -1065,7 +1065,10 @@ err_put:
 
 void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 {
-	const char *msg[] = { "read", "write", "sync" };
+	const char *msg[] = { "read", "write", "sync", "datasync",
+				"sync_file_range", "wait", "trim" };
+
+
 
 	log_err("fio: io_u error");
 
