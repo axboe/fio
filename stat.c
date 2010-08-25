@@ -157,6 +157,8 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	char *io_p, *bw_p, *iops_p;
 	int i2p;
 
+	assert(ddir_rw(ddir));
+
 	if (!ts->runtime[ddir])
 		return;
 
@@ -369,6 +371,8 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	unsigned long min, max;
 	unsigned long long bw;
 	double mean, dev;
+
+	assert(ddir_rw(ddir));
 
 	bw = 0;
 	if (ts->runtime[ddir])
@@ -735,13 +739,20 @@ static void add_log_sample(struct thread_data *td, struct io_log *iolog,
 			   unsigned long val, enum fio_ddir ddir,
 			   unsigned int bs)
 {
+	if (!ddir_rw(ddir))
+		return;
+
 	__add_log_sample(iolog, val, ddir, bs, mtime_since_now(&td->epoch));
 }
 
 void add_agg_sample(unsigned long val, enum fio_ddir ddir, unsigned int bs)
 {
-	struct io_log *iolog = agg_io_log[ddir];
+	struct io_log *iolog;
 
+	if (!ddir_rw(ddir))
+		return;
+
+	iolog = agg_io_log[ddir];
 	__add_log_sample(iolog, val, ddir, bs, mtime_since_genesis());
 }
 
@@ -749,6 +760,9 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long usec, unsigned int bs)
 {
 	struct thread_stat *ts = &td->ts;
+
+	if (!ddir_rw(ddir))
+		return;
 
 	add_stat_sample(&ts->clat_stat[ddir], usec);
 
@@ -761,6 +775,9 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 {
 	struct thread_stat *ts = &td->ts;
 
+	if (!ddir_rw(ddir))
+		return;
+
 	add_stat_sample(&ts->slat_stat[ddir], usec);
 
 	if (ts->slat_log)
@@ -772,6 +789,9 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 {
 	struct thread_stat *ts = &td->ts;
 
+	if (!ddir_rw(ddir))
+		return;
+
 	add_stat_sample(&ts->lat_stat[ddir], usec);
 
 	if (ts->lat_log)
@@ -782,9 +802,12 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 		   struct timeval *t)
 {
 	struct thread_stat *ts = &td->ts;
-	unsigned long spent = mtime_since(&ts->stat_sample_time[ddir], t);
-	unsigned long rate;
+	unsigned long spent, rate;
 
+	if (!ddir_rw(ddir))
+		return;
+
+	spent = mtime_since(&ts->stat_sample_time[ddir], t);
 	if (spent < td->o.bw_avg_time)
 		return;
 

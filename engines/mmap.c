@@ -154,12 +154,18 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 			io_u->error = errno;
 			td_verror(td, io_u->error, "msync");
 		}
+	} else if (io_u->ddir == DDIR_TRIM) {
+		int ret = do_io_u_trim(td, io_u);
+
+		if (!ret)
+			td_verror(td, io_u->error, "trim");
 	}
+
 
 	/*
 	 * not really direct, but should drop the pages from the cache
 	 */
-	if (td->o.odirect && !ddir_sync(io_u->ddir)) {
+	if (td->o.odirect && ddir_rw(io_u->ddir)) {
 		if (msync(io_u->mmap_data, io_u->xfer_buflen, MS_SYNC) < 0) {
 			io_u->error = errno;
 			td_verror(td, io_u->error, "msync");

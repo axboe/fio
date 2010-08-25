@@ -34,4 +34,9 @@ static inline int ddir_sync(enum fio_ddir ddir)
 	       ddir == DDIR_SYNC_FILE_RANGE;
 }
 
+static inline int ddir_rw(enum fio_ddir ddir)
+{
+	return ddir == DDIR_READ || ddir == DDIR_WRITE;
+}
+
 #endif

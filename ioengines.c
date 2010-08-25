@@ -241,7 +241,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 					sizeof(struct timeval));
 	}
 
-	if (!ddir_sync(io_u->ddir))
+	if (ddir_rw(io_u->ddir))
 		td->io_issues[io_u->ddir]++;
 
 	ret = td->io_ops->queue(td, io_u);
@@ -254,7 +254,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	 * IO, then it's likely an alignment problem or because the host fs
 	 * does not support O_DIRECT
 	 */
-	if (io_u->error == EINVAL && td->io_issues[io_u->ddir] == 1 &&
+	if (io_u->error == EINVAL && td->io_issues[io_u->ddir & 1] == 1 &&
 	    td->o.odirect) {
 		log_info("fio: first direct IO errored. File system may not "
 			 "support direct IO, or iomem_align= is bad.\n");
@@ -266,14 +266,14 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (ret == FIO_Q_COMPLETED) {
-		if (!ddir_sync(io_u->ddir)) {
+		if (ddir_rw(io_u->ddir)) {
 			io_u_mark_depth(td, 1);
 			td->ts.total_io_u[io_u->ddir]++;
 		}
 	} else if (ret == FIO_Q_QUEUED) {
 		int r;
 
-		if (!ddir_sync(io_u->ddir)) {
+		if (ddir_rw(io_u->ddir)) {
 			td->io_u_queued++;
 			td->ts.total_io_u[io_u->ddir]++;
 		}
@@ -483,16 +483,16 @@ int do_io_u_trim(struct thread_data *td, struct io_u *io_u)
 {
 #ifndef FIO_HAVE_TRIM
 	io_u->error = EINVAL;
-	return io_u->xfer_buflen;
+	return 0;
 #else
 	struct fio_file *f = io_u->file;
 	int ret;
 
 	ret = os_trim(f->fd, io_u->offset + f->file_offset, io_u->xfer_buflen);
 	if (!ret)
-		return 0;
+		return io_u->xfer_buflen;;
 
-	io_u->error = errno;
-	return io_u->xfer_buflen;
+	io_u->error = ret;
+	return 0;
 #endif
 }

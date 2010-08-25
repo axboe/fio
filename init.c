@@ -194,6 +194,8 @@ static int __setup_rate(struct thread_data *td, enum fio_ddir ddir)
 	unsigned int bs = td->o.min_bs[ddir];
 	unsigned long long bytes_per_sec;
 
+	assert(ddir_rw(ddir));
+
 	if (td->o.rate[ddir])
 		bytes_per_sec = td->o.rate[ddir];
 	else

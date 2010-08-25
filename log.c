@@ -294,6 +294,8 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 				rw = DDIR_SYNC;
 			else if (!strcmp(act, "datasync"))
 				rw = DDIR_DATASYNC;
+			else if (!strcmp(act, "trim"))
+				rw = DDIR_TRIM;
 			else {
 				log_err("fio: bad iolog file action: %s\n",
 									act);

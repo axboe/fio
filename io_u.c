@@ -103,6 +103,8 @@ static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
 	unsigned long long max_blocks;
 	unsigned long long max_size;
 
+	assert(ddir_rw(ddir));
+
 	/*
 	 * Hmm, should we make sure that ->io_size <= ->real_file_size?
 	 */
@@ -211,6 +213,8 @@ static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 static int get_next_seq_block(struct thread_data *td, struct fio_file *f,
 			      enum fio_ddir ddir, unsigned long long *b)
 {
+	assert(ddir_rw(ddir));
+
 	if (f->last_pos < f->real_file_size) {
 		*b = (f->last_pos - f->file_offset) / td->o.min_bs[ddir];
 		return 0;
@@ -224,6 +228,8 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 {
 	struct fio_file *f = io_u->file;
 	int ret;
+
+	assert(ddir_rw(ddir));
 
 	if (rw_seq) {
 		if (td_random(td))
@@ -263,6 +269,8 @@ static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
 	unsigned long long b;
 	enum fio_ddir ddir = io_u->ddir;
 	int rw_seq_hit = 0;
+
+	assert(ddir_rw(ddir));
 
 	if (td->o.ddir_seq_nr && !--td->ddir_seq_nr) {
 		rw_seq_hit = 1;
@@ -307,6 +315,8 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 	unsigned int uninitialized_var(buflen);
 	unsigned int minbs, maxbs;
 	long r;
+
+	assert(ddir_rw(ddir));
 
 	minbs = td->o.min_bs[ddir];
 	maxbs = td->o.max_bs[ddir];
@@ -387,6 +397,8 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	enum fio_ddir odir = ddir ^ 1;
 	struct timeval t;
 	long usec;
+
+	assert(ddir_rw(ddir));
 
 	if (td->rate_pending_usleep[ddir] <= 0)
 		return ddir;
@@ -531,7 +543,7 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 	td_io_u_lock(td);
 
 	__io_u->flags |= IO_U_F_FREE;
-	if ((__io_u->flags & IO_U_F_FLIGHT) && !ddir_sync(__io_u->ddir))
+	if ((__io_u->flags & IO_U_F_FLIGHT) && ddir_rw(__io_u->ddir))
 		td->io_issues[__io_u->ddir]--;
 
 	__io_u->flags &= ~IO_U_F_FLIGHT;
@@ -551,9 +563,9 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	io_u->ddir = get_rw_ddir(td);
 
 	/*
-	 * fsync() or fdatasync(), we are done
+	 * fsync() or fdatasync() or trim etc, we are done
 	 */
-	if (ddir_sync(io_u->ddir))
+	if (!ddir_rw(io_u->ddir))
 		goto out;
 
 	/*
@@ -1023,7 +1035,7 @@ struct io_u *get_io_u(struct thread_data *td)
 	f = io_u->file;
 	assert(fio_file_open(f));
 
-	if (!ddir_sync(io_u->ddir)) {
+	if (ddir_rw(io_u->ddir)) {
 		if (!io_u->buflen && !(td->io_ops->flags & FIO_NOIO)) {
 			dprint(FD_IO, "get_io_u: zero buflen on %p\n", io_u);
 			goto err_put;
@@ -1114,7 +1126,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	td->last_was_sync = 0;
 	td->last_ddir = io_u->ddir;
 
-	if (!io_u->error) {
+	if (!io_u->error && ddir_rw(io_u->ddir)) {
 		unsigned int bytes = io_u->buflen - io_u->resid;
 		const enum fio_ddir idx = io_u->ddir;
 		const enum fio_ddir odx = io_u->ddir ^ 1;
@@ -1180,7 +1192,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 			if (ret && !icd->error)
 				icd->error = ret;
 		}
-	} else {
+	} else if (io_u->error) {
 		icd->error = io_u->error;
 		io_u_log_error(td, io_u);
 	}

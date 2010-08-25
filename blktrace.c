@@ -228,10 +228,39 @@ static void handle_trace_notify(struct blk_io_trace *t)
 	case BLK_TN_TIMESTAMP:
 		printf("got timestamp notify: %x, %d\n", t->action, t->pid);
 		break;
+	case BLK_TN_MESSAGE:
+		break;
 	default:
 		dprint(FD_BLKTRACE, "unknown trace act %x\n", t->action);
 		break;
 	}
+}
+
+static void handle_trace_discard(struct thread_data *td, struct blk_io_trace *t,
+				 unsigned long long ttime, unsigned long *ios)
+{
+	struct io_piece *ipo = malloc(sizeof(*ipo));
+
+	trace_add_file(td, t->device);
+
+	ios[DDIR_WRITE]++;
+	td->o.size += t->bytes;
+
+	memset(ipo, 0, sizeof(*ipo));
+	INIT_FLIST_HEAD(&ipo->list);
+
+	/*
+	 * the 512 is wrong here, it should be the hardware sector size...
+	 */
+	ipo->offset = t->sector * 512;
+	ipo->len = t->bytes;
+	ipo->delay = ttime / 1000;
+	ipo->ddir = DDIR_TRIM;
+
+	dprint(FD_BLKTRACE, "store discard, off=%llu, len=%lu, delay=%lu\n",
+							ipo->offset, ipo->len,
+							ipo->delay);
+	queue_io_piece(td, ipo);
 }
 
 static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
@@ -267,6 +296,8 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 
 	if (t->action & BLK_TC_ACT(BLK_TC_NOTIFY))
 		handle_trace_notify(t);
+	else if (t->action & BLK_TC_ACT(BLK_TC_DISCARD))
+		handle_trace_discard(td, t, ttime, ios);
 	else
 		handle_trace_fs(td, t, ttime, ios, bs);
 }

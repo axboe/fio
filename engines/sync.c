@@ -30,7 +30,7 @@ static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 
-	if (ddir_sync(io_u->ddir))
+	if (!ddir_rw(io_u->ddir))
 		return 0;
 
 	if (f->file_pos != -1ULL && f->file_pos == io_u->offset)
@@ -46,7 +46,7 @@ static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 
 static int fio_io_end(struct thread_data *td, struct io_u *io_u, int ret)
 {
-	if (io_u->file && ret >= 0)
+	if (io_u->file && ret >= 0 && ddir_rw(io_u->ddir))
 		io_u->file->file_pos = io_u->offset + ret;
 
 	if (ret != (int) io_u->xfer_buflen) {

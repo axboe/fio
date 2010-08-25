@@ -176,6 +176,8 @@ static int __check_min_rate(struct thread_data *td, struct timeval *now,
 	unsigned int rate_iops = 0;
 	unsigned int rate_iops_min = 0;
 
+	assert(ddir_rw(ddir));
+
 	if (!td->o.ratemin[ddir] && !td->o.rate_iops_min[ddir])
 		return 0;
 
@@ -491,7 +493,8 @@ static void do_verify(struct thread_data *td)
 				io_u->xfer_buf += bytes;
 				io_u->offset += bytes;
 
-				td->ts.short_io_u[io_u->ddir]++;
+				if (ddir_rw(io_u->ddir))
+					td->ts.short_io_u[io_u->ddir]++;
 
 				if (io_u->offset == f->real_file_size)
 					goto sync_done;
@@ -636,7 +639,8 @@ static void do_io(struct thread_data *td)
 				io_u->xfer_buf += bytes;
 				io_u->offset += bytes;
 
-				td->ts.short_io_u[io_u->ddir]++;
+				if (ddir_rw(io_u->ddir))
+					td->ts.short_io_u[io_u->ddir]++;
 
 				if (io_u->offset == f->real_file_size)
 					goto sync_done;
