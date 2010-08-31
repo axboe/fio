@@ -746,6 +746,12 @@ attempts to respect timing information between I/Os.  Enabling
 \fBreplay_no_stall\fR causes I/Os to be replayed as fast as possible while
 still respecting ordering.
 .TP
+.BI replay_redirect \fR=\fPstr
+While replaying I/O patterns using \fBread_iolog\fR the default behavior
+is to replay the IOPS onto the major/minor device that each IOP was recorded
+from.  Setting \fBreplay_redirect\fR causes all IOPS to be replayed onto the
+single specified device regardless of the device it was recorded from.
+.TP
 .B write_bw_log \fR=\fPstr
 If given, write a bandwidth log of the jobs in this job file. Can be used to
 store data of the bandwidth of the jobs in their lifetime. The included

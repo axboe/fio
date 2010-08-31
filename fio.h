@@ -260,6 +260,7 @@ struct thread_options {
 	char *write_iolog_file;
 	char *bw_log_file;
 	char *lat_log_file;
+	char *replay_redirect;
 
 	/*
 	 * Pre-run and post-run shell

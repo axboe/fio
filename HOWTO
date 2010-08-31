@@ -994,6 +994,23 @@ replay_no_stall=int When replaying I/O with read_iolog the default behavior
         as possible while still respecting ordering.  The result is the same
         I/O pattern to a given device, but different timings.
 
+replay_redirect=str While replaying I/O patterns using read_iolog the
+		default behavior is to replay the IOPS onto the major/minor
+		device that each IOP was recorded from.  This is sometimes
+		undesireable because on a different machine those major/minor
+		numbers can map to a different device.  Changing hardware on
+		the same system can also result in a different major/minor
+		mapping.  Replay_redirect causes all IOPS to be replayed onto
+		the single specified device regardless of the device it was
+		recorded from. i.e. replay_redirect=/dev/sdc would cause all
+		IO in the blktrace to be replayed onto /dev/sdc.  This means
+		multiple devices will be replayed onto a single, if the trace
+		contains multiple devices.  If you want multiple devices to be
+		replayed concurrently to multiple redirected devices you must
+		blkparse your trace into separate traces and replay them with
+		independent fio invocations.  Unfortuantely this also breaks
+		the strict time ordering between multiple device accesses.
+
 write_bw_log=str If given, write a bandwidth log of the jobs in this job
 		file. Can be used to store data of the bandwidth of the
 		jobs in their lifetime. The included fio_generate_plots

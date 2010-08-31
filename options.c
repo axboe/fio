@@ -1490,6 +1490,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Playback IO pattern file as fast as possible without stalls",
 	},
 	{
+		.name	= "replay_redirect",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(replay_redirect),
+		.parent	= "read_iolog",
+		.help	= "Replay all I/O onto this device, regardless of trace device",
+	},
+	{
 		.name	= "exec_prerun",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(exec_prerun),

@@ -97,7 +97,8 @@ int is_blktrace(const char *filename)
 	return 0;
 }
 
-static int lookup_device(char *path, unsigned int maj, unsigned int min)
+static int lookup_device(struct thread_data *td, char *path, unsigned int maj,
+			 unsigned int min)
 {
 	struct dirent *dir;
 	struct stat st;
@@ -121,7 +122,7 @@ static int lookup_device(char *path, unsigned int maj, unsigned int min)
 		}
 
 		if (S_ISDIR(st.st_mode)) {
-			found = lookup_device(full_path, maj, min);
+			found = lookup_device(td, full_path, maj, min);
 			if (found) {
 				strcpy(path, full_path);
 				break;
@@ -130,6 +131,20 @@ static int lookup_device(char *path, unsigned int maj, unsigned int min)
 
 		if (!S_ISBLK(st.st_mode))
 			continue;
+
+		/*
+		 * If replay_redirect is set then always return this device
+		 * upon lookup which overrides the device lookup based on
+		 * major minor in the actual blktrace
+		 */
+		if (td->o.replay_redirect) {
+			dprint(FD_BLKTRACE, "device lookup: %d/%d\n overridden"
+					" with: %s", maj, min,
+					td->o.replay_redirect);
+			strcpy(path, td->o.replay_redirect);
+			found = 1;
+			break;
+		}
 
 		if (maj == major(st.st_rdev) && min == minor(st.st_rdev)) {
 			dprint(FD_BLKTRACE, "device lookup: %d/%d\n", maj, min);
@@ -183,7 +198,7 @@ static void trace_add_file(struct thread_data *td, __u32 device)
 			return;
 
 	strcpy(dev, "/dev");
-	if (lookup_device(dev, maj, min)) {
+	if (lookup_device(td, dev, maj, min)) {
 		int fileno;
 
 		dprint(FD_BLKTRACE, "add devices %s\n", dev);
