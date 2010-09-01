@@ -440,6 +440,16 @@ static int str_verify_cpus_allowed_cb(void *data, const char *input)
 }
 #endif
 
+#ifdef FIO_HAVE_TRIM
+static int str_verify_trim_cb(void *data, unsigned long long *val)
+{
+	struct thread_data *td = data;
+
+	td->o.trim_percentage = *val;
+	return 0;
+}
+#endif
+
 static int str_fst_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
@@ -1458,7 +1468,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(verify_batch),
 		.help	= "Verify this number of IO blocks",
-		.parent	= "verify_backlog",
+		.parent	= "verify",
 	},
 #ifdef FIO_HAVE_CPU_AFFINITY
 	{
@@ -1467,6 +1477,39 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= str_verify_cpus_allowed_cb,
 		.help	= "Set CPUs allowed for async verify threads",
 		.parent	= "verify_async",
+	},
+#endif
+#ifdef FIO_HAVE_TRIM
+	{
+		.name	= "trim_percentage",
+		.type	= FIO_OPT_INT,
+		.cb	= str_verify_trim_cb,
+		.maxval = 100,
+		.help	= "Number of verify blocks to discard/trim",
+		.parent	= "verify",
+		.def	= "0",
+	},
+	{
+		.name	= "trim_verify_zero",
+		.type	= FIO_OPT_INT,
+		.help	= "Verify that trim/discarded blocks are returned as zeroes",
+		.off1	= td_var_offset(trim_zero),
+		.parent	= "trim_percentage",
+		.def	= "1",
+	},
+	{
+		.name	= "trim_backlog",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(trim_backlog),
+		.help	= "Trim after this number of blocks are written",
+		.parent	= "trim_percentage",
+	},
+	{
+		.name	= "trim_backlog_batch",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(trim_batch),
+		.help	= "Trim this number of IO blocks",
+		.parent	= "trim_percentage",
 	},
 #endif
 	{

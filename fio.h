@@ -120,8 +120,8 @@ struct thread_stat {
 	unsigned int io_u_complete[FIO_IO_U_MAP_NR];
 	unsigned int io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	unsigned int io_u_lat_m[FIO_IO_U_LAT_M_NR];
-	unsigned long total_io_u[2];
-	unsigned long short_io_u[2];
+	unsigned long total_io_u[3];
+	unsigned long short_io_u[3];
 	unsigned long total_submit;
 	unsigned long total_complete;
 
@@ -255,6 +255,10 @@ struct thread_options {
 	unsigned int gtod_offload;
 	enum fio_cs clocksource;
 	unsigned int no_stall;
+	unsigned int trim_percentage;
+	unsigned int trim_batch;
+	unsigned int trim_zero;
+	unsigned long long trim_backlog;
 
 	char *read_iolog_file;
 	char *write_iolog_file;
@@ -347,12 +351,14 @@ struct thread_data {
 
 	char *sysfs_root;
 
-	unsigned long rand_seeds[6];
+	unsigned long rand_seeds[7];
 
 	os_random_state_t bsrange_state;
 	os_random_state_t verify_state;
+	os_random_state_t trim_state;
 
 	unsigned int verify_batch;
+	unsigned int trim_batch;
 
 	int shm_id;
 
@@ -435,6 +441,12 @@ struct thread_data {
 	 * For IO replaying
 	 */
 	struct flist_head io_log_list;
+
+	/*
+	 * For tracking/handling discards
+	 */
+	struct flist_head trim_list;
+	unsigned long trim_entries;
 
 	/*
 	 * for fileservice, how often to switch to a new file

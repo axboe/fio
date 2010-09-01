@@ -269,7 +269,8 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 		if (ddir_rw(io_u->ddir)) {
 			io_u_mark_depth(td, 1);
 			td->ts.total_io_u[io_u->ddir]++;
-		}
+		} else if (io_u->ddir == DDIR_TRIM)
+			td->ts.total_io_u[2]++;
 	} else if (ret == FIO_Q_QUEUED) {
 		int r;
 

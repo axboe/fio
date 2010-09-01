@@ -10,6 +10,7 @@
 #include "fio.h"
 #include "verify.h"
 #include "smalloc.h"
+#include "trim.h"
 #include "lib/rand.h"
 
 #include "crc/md5.h"
@@ -470,6 +471,38 @@ int verify_io_u_async(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
+static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
+{
+	static char zero_buf[1024];
+	unsigned int this_len, len;
+	int ret = 0;
+	void *p;
+
+	if (!td->o.trim_zero)
+		return 0;
+
+	len = io_u->buflen;
+	p = io_u->buf;
+	do {
+		this_len = sizeof(zero_buf);
+		if (this_len > len)
+			this_len = len;
+		if (memcmp(p, zero_buf, this_len)) {
+			ret = EILSEQ;
+			break;
+		}
+		len -= this_len;
+		p += this_len;
+	} while (len);
+
+	if (!ret)
+		return 0;
+
+	log_err("trims: verify failed at file %s offset %llu, length %lu\n",
+			io_u->file->file_name, io_u->offset, io_u->buflen);
+	return ret;
+}
+
 int verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	struct verify_header *hdr;
@@ -479,6 +512,10 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 
 	if (td->o.verify == VERIFY_NULL || io_u->ddir != DDIR_READ)
 		return 0;
+	if (io_u->flags & IO_U_F_TRIMMED) {
+		ret = verify_trimmed_io_u(td, io_u);
+		goto done;
+	}
 
 	hdr_inc = io_u->buflen;
 	if (td->o.verify_interval)
@@ -570,6 +607,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		}
 	}
 
+done:
 	if (ret && td->o.verify_fatal)
 		td->terminate = 1;
 
@@ -778,17 +816,20 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 
 		ipo = rb_entry(n, struct io_piece, rb_node);
 		rb_erase(n, &td->io_hist_tree);
-		td->io_hist_len--;
 	} else if (!flist_empty(&td->io_hist_list)) {
 		ipo = flist_entry(td->io_hist_list.next, struct io_piece, list);
-		td->io_hist_len--;
 		flist_del(&ipo->list);
 	}
 
 	if (ipo) {
+		td->io_hist_len--;
+
 		io_u->offset = ipo->offset;
 		io_u->buflen = ipo->len;
 		io_u->file = ipo->file;
+
+		if (ipo->flags & IP_F_TRIMMED)
+			io_u->flags |= IO_U_F_TRIMMED;
 
 		if (!fio_file_open(io_u->file)) {
 			int r = td_io_open_file(td, io_u->file);
@@ -805,6 +846,8 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		io_u->ddir = DDIR_READ;
 		io_u->xfer_buf = io_u->buf;
 		io_u->xfer_buflen = io_u->buflen;
+
+		remove_trim_entry(td, ipo);
 		free(ipo);
 		dprint(FD_VERIFY, "get_next_verify: ret io_u %p\n", io_u);
 		return 0;

@@ -8,6 +8,7 @@
 #include "fio.h"
 #include "hash.h"
 #include "verify.h"
+#include "trim.h"
 #include "lib/rand.h"
 
 struct io_completion_data {
@@ -982,21 +983,31 @@ again:
 	return io_u;
 }
 
-/*
- * Return an io_u to be processed. Gets a buflen and offset, sets direction,
- * etc. The returned io_u is fully ready to be prepped and submitted.
- */
-struct io_u *get_io_u(struct thread_data *td)
+static int check_get_trim(struct thread_data *td, struct io_u *io_u)
 {
-	struct fio_file *f;
-	struct io_u *io_u;
+	if (td->o.trim_backlog && td->trim_entries) {
+		int get_trim = 0;
 
-	io_u = __get_io_u(td);
-	if (!io_u) {
-		dprint(FD_IO, "__get_io_u failed\n");
-		return NULL;
+		if (td->trim_batch) {
+			td->trim_batch--;
+			get_trim = 1;
+		} else if (!(td->io_hist_len % td->o.trim_backlog) &&
+			 td->last_ddir != DDIR_READ) {
+			td->trim_batch = td->o.trim_batch;
+			if (!td->trim_batch)
+				td->trim_batch = td->o.trim_backlog;
+			get_trim = 1;
+		}
+
+		if (get_trim && !get_next_trim(td, io_u))
+			return 1;
 	}
 
+	return 0;
+}
+
+static int check_get_verify(struct thread_data *td, struct io_u *io_u)
+{
 	if (td->o.verify_backlog && td->io_hist_len) {
 		int get_verify = 0;
 
@@ -1012,8 +1023,31 @@ struct io_u *get_io_u(struct thread_data *td)
 		}
 
 		if (get_verify && !get_next_verify(td, io_u))
-			goto out;
+			return 1;
 	}
+
+	return 0;
+}
+
+/*
+ * Return an io_u to be processed. Gets a buflen and offset, sets direction,
+ * etc. The returned io_u is fully ready to be prepped and submitted.
+ */
+struct io_u *get_io_u(struct thread_data *td)
+{
+	struct fio_file *f;
+	struct io_u *io_u;
+
+	io_u = __get_io_u(td);
+	if (!io_u) {
+		dprint(FD_IO, "__get_io_u failed\n");
+		return NULL;
+	}
+
+	if (check_get_verify(td, io_u))
+		goto out;
+	if (check_get_trim(td, io_u))
+		goto out;
 
 	/*
 	 * from a requeue, io_u already setup
@@ -1064,6 +1098,7 @@ struct io_u *get_io_u(struct thread_data *td)
 	io_u->xfer_buflen = io_u->buflen;
 
 out:
+	assert(io_u->file);
 	if (!td_io_prep(td, io_u)) {
 		if (!td->o.disable_slat)
 			fio_gettime(&io_u->start_time, NULL);

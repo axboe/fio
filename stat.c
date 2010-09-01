@@ -351,9 +351,11 @@ static void show_thread_status(struct thread_stat *ts,
 					io_u_dist[1], io_u_dist[2],
 					io_u_dist[3], io_u_dist[4],
 					io_u_dist[5], io_u_dist[6]);
-	log_info("     issued r/w: total=%lu/%lu, short=%lu/%lu\n",
+	log_info("     issued r/w/d: total=%lu/%lu/%lu, short=%lu/%lu/%lu\n",
 					ts->total_io_u[0], ts->total_io_u[1],
-					ts->short_io_u[0], ts->short_io_u[1]);
+					ts->total_io_u[2],
+					ts->short_io_u[0], ts->short_io_u[1],
+					ts->short_io_u[2]);
 	stat_calc_lat_u(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 	show_latencies(io_u_lat_u, io_u_lat_m);
@@ -615,7 +617,7 @@ void show_run_stats(void)
 			ts->io_u_lat_m[k] += td->ts.io_u_lat_m[k];
 
 
-		for (k = 0; k <= DDIR_WRITE; k++) {
+		for (k = 0; k <= 2; k++) {
 			ts->total_io_u[k] += td->ts.total_io_u[k];
 			ts->short_io_u[k] += td->ts.short_io_u[k];
 		}

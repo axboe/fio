@@ -32,6 +32,12 @@ struct io_log {
 	struct io_sample *log;
 };
 
+enum {
+	IP_F_ONRB	= 1,
+	IP_F_ONLIST	= 2,
+	IP_F_TRIMMED	= 4,
+};
+
 /*
  * When logging io actions, this matches a single sent io_u
  */
@@ -40,12 +46,14 @@ struct io_piece {
 		struct rb_node rb_node;
 		struct flist_head list;
 	};
+	struct flist_head trim_list;
 	union {
 		int fileno;
 		struct fio_file *file;
 	};
 	unsigned long long offset;
 	unsigned long len;
+	unsigned long flags;
 	enum fio_ddir ddir;
 	union {
 		unsigned long delay;
@@ -94,5 +102,11 @@ extern void __finish_log(struct io_log *, const char *);
 extern struct io_log *agg_io_log[2];
 extern int write_bw_log;
 extern void add_agg_sample(unsigned long, enum fio_ddir, unsigned int);
+
+static inline void init_ipo(struct io_piece *ipo)
+{
+	memset(ipo, 0, sizeof(*ipo));
+	INIT_FLIST_HEAD(&ipo->trim_list);
+}
 
 #endif

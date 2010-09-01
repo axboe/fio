@@ -447,6 +447,7 @@ void td_fill_rand_seeds(struct thread_data *td)
 		os_random_seed(td->rand_seeds[3], &td->next_file_state);
 
 	os_random_seed(td->rand_seeds[5], &td->file_size_state);
+	os_random_seed(td->rand_seeds[6], &td->trim_state);
 
 	if (!td_random(td))
 		return;

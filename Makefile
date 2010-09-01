@@ -7,7 +7,7 @@ SCRIPTS = fio_generate_plots
 OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o filesetup.o \
 	eta.o verify.o memory.o io_u.o parse.o mutex.o options.o \
 	rbtree.o diskutil.o fifo.o blktrace.o smalloc.o filehash.o helpers.o \
-	cgroup.o profile.o debug.o
+	cgroup.o profile.o debug.o trim.o
 
 OBJS += lib/rand.o
 OBJS += lib/flist_sort.o
@@ -62,7 +62,7 @@ $(PROGS): depend
 all: depend $(PROGS) $(SCRIPTS)
 
 clean:
-	-rm -f .depend cscope.out $(OBJS) $(PROGS) core.* core
+	-rm -f .depend $(OBJS) $(PROGS) core.* core
 
 cscope:
 	@cscope -b -R

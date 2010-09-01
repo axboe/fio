@@ -168,6 +168,7 @@ static void trace_add_open_event(struct thread_data *td, int fileno)
 	struct io_piece *ipo;
 
 	ipo = calloc(1, sizeof(*ipo));
+	init_ipo(ipo);
 
 	ipo->ddir = DDIR_INVAL;
 	ipo->fileno = fileno;
@@ -215,8 +216,8 @@ static void store_ipo(struct thread_data *td, unsigned long long offset,
 {
 	struct io_piece *ipo = malloc(sizeof(*ipo));
 
-	memset(ipo, 0, sizeof(*ipo));
-	INIT_FLIST_HEAD(&ipo->list);
+	init_ipo(ipo);
+
 	/*
 	 * the 512 is wrong here, it should be the hardware sector size...
 	 */
@@ -256,6 +257,7 @@ static void handle_trace_discard(struct thread_data *td, struct blk_io_trace *t,
 {
 	struct io_piece *ipo = malloc(sizeof(*ipo));
 
+	init_ipo(ipo);
 	trace_add_file(td, t->device);
 
 	ios[DDIR_WRITE]++;
