@@ -31,7 +31,6 @@ static inline int io_u_should_trim(struct thread_data *td, struct io_u *io_u)
 static inline void remove_trim_entry(struct thread_data *td, struct io_piece *ipo)
 {
 }
-#error foo
 #endif
 
 #endif
