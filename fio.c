@@ -736,7 +736,8 @@ sync_done:
 		}
 	}
 
-	assert(!td->trim_entries);
+	if (td->trim_entries)
+		printf("trim entries %ld\n", td->trim_entries);
 
 	if (td->o.fill_device && td->error == ENOSPC) {
 		td->error = 0;
