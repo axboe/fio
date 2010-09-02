@@ -964,6 +964,7 @@ again:
 	if (io_u) {
 		assert(io_u->flags & IO_U_F_FREE);
 		io_u->flags &= ~(IO_U_F_FREE | IO_U_F_FREE_DEF);
+		io_u->flags &= ~IO_U_F_TRIMMED;
 
 		io_u->error = 0;
 		flist_del(&io_u->list);

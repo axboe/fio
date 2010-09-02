@@ -498,8 +498,10 @@ static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
 	if (!ret)
 		return 0;
 
-	log_err("trims: verify failed at file %s offset %llu, length %lu\n",
-			io_u->file->file_name, io_u->offset, io_u->buflen);
+	log_err("trim: verify failed at file %s offset %llu, length %lu"
+		", block offset %lu\n",
+			io_u->file->file_name, io_u->offset, io_u->buflen,
+			(p - io_u->buf));
 	return ret;
 }
 
@@ -816,9 +818,13 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 
 		ipo = rb_entry(n, struct io_piece, rb_node);
 		rb_erase(n, &td->io_hist_tree);
+		assert(ipo->flags & IP_F_ONRB);
+		ipo->flags &= ~IP_F_ONRB;
 	} else if (!flist_empty(&td->io_hist_list)) {
 		ipo = flist_entry(td->io_hist_list.next, struct io_piece, list);
 		flist_del(&ipo->list);
+		assert(ipo->flags & IP_F_ONLIST);
+		ipo->flags &= ~IP_F_ONLIST;
 	}
 
 	if (ipo) {

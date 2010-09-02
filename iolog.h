@@ -53,7 +53,7 @@ struct io_piece {
 	};
 	unsigned long long offset;
 	unsigned long len;
-	unsigned long flags;
+	unsigned int flags;
 	enum fio_ddir ddir;
 	union {
 		unsigned long delay;

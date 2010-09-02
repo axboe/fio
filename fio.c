@@ -38,6 +38,7 @@
 #include "hash.h"
 #include "smalloc.h"
 #include "verify.h"
+#include "trim.h"
 #include "diskutil.h"
 #include "cgroup.h"
 #include "profile.h"
@@ -579,6 +580,7 @@ static void do_io(struct thread_data *td)
 		td_set_runstate(td, TD_RUNNING);
 
 	while ( (td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
+		(!flist_empty(&td->trim_list)) ||
 	        ((td->this_io_bytes[0] + td->this_io_bytes[1]) < td->o.size) ) {
 		struct timeval comp_time;
 		unsigned long bytes_done[2] = { 0, 0 };
@@ -733,6 +735,8 @@ sync_done:
 			}
 		}
 	}
+
+	assert(!td->trim_entries);
 
 	if (td->o.fill_device && td->error == ENOSPC) {
 		td->error = 0;

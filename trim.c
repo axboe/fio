@@ -21,12 +21,15 @@ int get_next_trim(struct thread_data *td, struct io_u *io_u)
 	if (io_u->file)
 		return 0;
 	if (flist_empty(&td->trim_list))
-		return 0;
+		return 1;
 
 	assert(td->trim_entries);
 	ipo = flist_entry(td->trim_list.next, struct io_piece, trim_list);
 	remove_trim_entry(td, ipo);
-	ipo->flags |= IP_F_TRIMMED;
+
+	io_u->offset = ipo->offset;
+	io_u->buflen = ipo->len;
+	io_u->file = ipo->file;
 
 	/*
 	 * If not verifying that trimmed ranges return zeroed data,
@@ -40,11 +43,9 @@ int get_next_trim(struct thread_data *td, struct io_u *io_u)
 			rb_erase(&ipo->rb_node, &td->io_hist_tree);
 		}
 		td->io_hist_len--;
-	}
-
-	io_u->offset = ipo->offset;
-	io_u->buflen = ipo->len;
-	io_u->file = ipo->file;
+		free(ipo);
+	} else
+		ipo->flags |= IP_F_TRIMMED;
 
 	if (!fio_file_open(io_u->file)) {
 		int r = td_io_open_file(td, io_u->file);
@@ -56,13 +57,12 @@ int get_next_trim(struct thread_data *td, struct io_u *io_u)
 		}
 	}
 
-	get_file(ipo->file);
+	get_file(io_u->file);
 	assert(fio_file_open(io_u->file));
 	io_u->ddir = DDIR_TRIM;
 	io_u->xfer_buf = NULL;
 	io_u->xfer_buflen = io_u->buflen;
 
-	free(ipo);
 	dprint(FD_VERIFY, "get_next_trim: ret io_u %p\n", io_u);
 	return 0;
 }
