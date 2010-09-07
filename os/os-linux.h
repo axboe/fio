@@ -14,6 +14,7 @@
 #include <linux/major.h>
 
 #include "indirect.h"
+#include "binject.h"
 
 #define FIO_HAVE_LIBAIO
 #define FIO_HAVE_POSIXAIO
@@ -37,6 +38,7 @@
 #define FIO_HAVE_FDATASYNC
 #define FIO_HAVE_FS_STAT
 #define FIO_HAVE_TRIM
+#define FIO_HAVE_BINJECT
 
 #ifdef SYNC_FILE_RANGE_WAIT_BEFORE
 #define FIO_HAVE_SYNC_FILE_RANGE

@@ -34,6 +34,7 @@ OBJS += engines/null.o
 OBJS += engines/net.o
 OBJS += engines/syslet-rw.o
 OBJS += engines/guasi.o
+OBJS += engines/binject.o
 
 OBJS += profiles/tiobench.o
 
