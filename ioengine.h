@@ -32,6 +32,9 @@ struct io_u {
 #ifdef FIO_HAVE_SOLARISAIO
 		aio_result_t resultp;
 #endif
+#ifdef FIO_HAVE_BINJECT
+		struct b_user_cmd buc;
+#endif
 		void *mmap_data;
 	};
 	struct timeval start_time;

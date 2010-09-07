@@ -974,6 +974,11 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .help = "GUASI IO engine",
 			  },
 #endif
+#ifdef FIO_HAVE_BINJECT
+			  { .ival = "binject",
+			    .help = "binject direct inject block engine",
+			  },
+#endif
 			  { .ival = "external",
 			    .help = "Load external engine (append name)",
 			  },
