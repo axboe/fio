@@ -175,7 +175,7 @@ static int fio_binject_prep(struct thread_data *td, struct io_u *io_u)
 		buc->type = B_TYPE_READ;
 	} else if (io_u->ddir == DDIR_WRITE) {
 		binject_buc_init(bd, io_u);
-		buc->type = B_TYPE_WRITEZERO;
+		buc->type = B_TYPE_WRITE;
 	} else if (io_u->ddir == DDIR_TRIM) {
 		binject_buc_init(bd, io_u);
 		buc->type = B_TYPE_DISCARD;
