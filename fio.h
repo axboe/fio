@@ -661,7 +661,7 @@ static inline char *num2str(unsigned long num, int maxlen, int base, int pow2)
 	char postfix[] = { ' ', 'K', 'M', 'G', 'P', 'E' };
 	unsigned int thousand;
 	char *buf;
-	int i;
+	int i, mod = 0;
 
 	if (pow2)
 		thousand = 1024;
@@ -679,6 +679,19 @@ static inline char *num2str(unsigned long num, int maxlen, int base, int pow2)
 		len = sprintf(buf, "%'lu", num);
 		if (len <= maxlen) {
 			if (i >= 1) {
+				char dec[4];
+				int j = 0;
+
+				sprintf(dec, "%u", mod);
+				if (maxlen - len >= 2) {
+					buf[len++] = '.';
+					while (maxlen - len) {
+						buf[len++] = dec[j++];
+						if (j == sizeof(dec) - 1)
+							break;
+					}
+				}
+
 				buf[len] = postfix[i];
 				buf[len + 1] = '\0';
 			}
@@ -688,6 +701,7 @@ static inline char *num2str(unsigned long num, int maxlen, int base, int pow2)
 		if ((num % thousand) >= (thousand / 2))
 			carry = 1;
 
+		mod = num % thousand;
 		num /= thousand;
 		num += carry;
 		i++;
