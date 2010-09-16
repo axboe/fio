@@ -10,8 +10,8 @@ char *num2str(unsigned long num, int maxlen, int base, int pow2)
 	char postfix[] = { ' ', 'K', 'M', 'G', 'P', 'E' };
 	unsigned int thousand[] = { 1000, 1024 };
 	unsigned int modulo, decimals;
-	int post_index;
-	char tmp[32], fmt[8];
+	int post_index, carry = 0;
+	char tmp[32];
 	char *buf;
 
 	buf = malloc(128);
@@ -27,6 +27,7 @@ char *num2str(unsigned long num, int maxlen, int base, int pow2)
 
 		modulo = num % thousand[!!pow2];
 		num /= thousand[!!pow2];
+		carry = modulo >= thousand[!!pow2] / 2;
 		post_index++;
 	}
 
@@ -38,11 +39,20 @@ done:
 
 	sprintf(tmp, "%lu", num);
 	decimals = maxlen - strlen(tmp);
-	if (decimals <= 1)
+	if (decimals <= 1) {
+		if (carry)
+			num++;
 		goto done;
+	}
 
-	sprintf(fmt, "%%.%uu", decimals - 1);
-	sprintf(tmp, fmt, modulo);
-	sprintf(buf, "%lu.%s%c", num, tmp, postfix[post_index]);
+	do {
+		sprintf(tmp, "%u", modulo);
+		if (strlen(tmp) <= decimals - 1)
+			break;
+
+		modulo = (modulo + 9) / 10;
+	} while (1);
+
+	sprintf(buf, "%lu.%u%c", num, modulo, postfix[post_index]);
 	return buf;
 }
