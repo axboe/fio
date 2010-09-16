@@ -11,6 +11,7 @@ OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o filesetup.o \
 
 OBJS += lib/rand.o
 OBJS += lib/flist_sort.o
+OBJS += lib/num2str.o
 
 OBJS += crc/crc7.o
 OBJS += crc/crc16.o
