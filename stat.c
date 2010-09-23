@@ -418,12 +418,15 @@ static void show_thread_status_terse(struct thread_stat *ts,
 	double usr_cpu, sys_cpu;
 	int i;
 
+	/* General Info */
 	log_info("%s;%s;%d;%d", FIO_TERSE_VERSION, ts->name, ts->groupid,
 				ts->error);
-
+	/* Log Read Status */
 	show_ddir_status_terse(ts, rs, 0);
+	/* Log Write Status */
 	show_ddir_status_terse(ts, rs, 1);
 
+	/* CPU Usage */
 	if (ts->total_run_time) {
 		double runt = (double) ts->total_run_time;
 
@@ -437,22 +440,28 @@ static void show_thread_status_terse(struct thread_stat *ts,
 	log_info(";%f%%;%f%%;%lu;%lu;%lu", usr_cpu, sys_cpu, ts->ctx, ts->majf,
 								ts->minf);
 
+	/* Calc % distribution of IO depths, usecond, msecond latency */
 	stat_calc_dist(ts->io_u_map, ts_total_io_u(ts), io_u_dist);
 	stat_calc_lat_u(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 
+	/* Only show fixed 7 I/O depth levels*/
 	log_info(";%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%;%3.1f%%",
 			io_u_dist[0], io_u_dist[1], io_u_dist[2], io_u_dist[3],
 			io_u_dist[4], io_u_dist[5], io_u_dist[6]);
 
+	/* Microsecond latency */
 	for (i = 0; i < FIO_IO_U_LAT_U_NR; i++)
 		log_info(";%3.2f%%", io_u_lat_u[i]);
+	/* Millisecond latency */
 	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++)
 		log_info(";%3.2f%%", io_u_lat_m[i]);
+	/* Additional output if continue_on_error set - default off*/
 	if (ts->continue_on_error)
 		log_info(";%lu;%d", ts->total_err_count, ts->first_error);
 	log_info("\n");
 
+	/* Additional output if description is set */
 	if (ts->description)
 		log_info(";%s", ts->description);
 

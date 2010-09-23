@@ -1256,8 +1256,10 @@ For scripted usage where you typically want to generate tables or graphs
 of the results, fio can output the results in a semicolon separated format.
 The format is one long line of values, such as:
 
-2; client1;0;0;1906777;1090804;1790;0;0;0.000000;0.000000;0;0;0.000000;0.000000;929380;1152890;25.510151%;1078276.333333;128948.113404;0;0;0;0;0;0.000000;0.000000;0;0;0.000000;0.000000;0;0;0.000000%;0.000000;0.000000;100.000000%;0.000000%;324;100.0%;0.0%;0.0%;0.0%;0.0%;0.0%;0.0%;100.0%;0.0%;0.0%;0.0%;0.0%;0.0%
-;0.0%;0.0%;0.0%;0.0%;0.0%
+2;card0;0;0;7139336;121836;60004;1;10109;27.932460;116.933948;220;126861;3495.446807;1085.368601;226;126864;3523.635629;1089.012448;24063;99944;50.275485%;59818.274627;5540.657370;7155060;122104;60004;1;8338;29.086342;117.839068;388;128077;5032.488518;1234.785715;391;128085;5061.839412;1236.909129;23436;100928;50.287926%;59964.832030;5644.844189;14.595833%;19.394167%;123706;0;7313;0.1%;0.1%;0.1%;0.1%;0.1%;0.1%;100.0%;0.00%;0.00%;0.00%;0.00%;0.00%;0.00%;0.01%;0.02%;0.05%;0.16%;6.04%;40.40%;52.68%;0.64%;0.01%;0.00%;0.01%;0.00%;0.00%;0.00%;0.00%;0.00%
+A description of this job goes here.
+
+The job description (if provided) follows on a second line.
 
 To enable terse output, use the --minimal command line option. The first
 value is the version of the terse output format. If the output has to
@@ -1281,6 +1283,8 @@ Split up, the format is as follows:
 		Bw: min, max, aggregate percentage of total, mean, deviation
 	CPU usage: user, system, context switches, major faults, minor faults
 	IO depths: <=1, 2, 4, 8, 16, 32, >=64
-	IO latencies: <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000, >=2000
-	Text description
-
+	IO latencies microseconds: <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000
+	IO latencies milliseconds: <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000, 2000, >=2000
+	Additional Info (dependant on continue_on_error, default off): total # errors, first error code 
+	
+	Additional Info (dependant on description being set): Text description

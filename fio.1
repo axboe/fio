@@ -991,7 +991,8 @@ Disk utilization.
 .PD
 .SH TERSE OUTPUT
 If the \fB\-\-minimal\fR option is given, the results will be printed in a
-semicolon-delimited format suitable for scripted use.  Note that the first
+semicolon-delimited format suitable for scripted use - a job description
+(if provided) follows on a new line.  Note that the first
 number in the line is the version number. If the output has to be changed
 for some reason, this number will be incremented by 1 to signify that
 change.  The fields are:
@@ -1053,12 +1054,24 @@ IO depth distribution:
 .B <=1, 2, 4, 8, 16, 32, >=64
 .RE
 .P
-IO latency distribution (ms):
+IO latency distribution:
 .RS
-.B <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000, >=2000
+Microseconds:
+.RS
+.B <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000
+.RE
+Milliseconds:
+.RS
+.B <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000, 2000, >=2000
+.RE
 .RE
 .P
-.B text description
+Error Info (dependant on continue_on_error, default off):
+.RS
+.B total # errors, first error code 
+.RE
+.P
+.B text description (if provided in config - appears on newline)
 .RE
 .SH AUTHORS
 .B fio
