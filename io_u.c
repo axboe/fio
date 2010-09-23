@@ -246,7 +246,8 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 				ret = get_next_rand_block(td, f, ddir, b);
 		} else if (td->o.rw_seq == RW_SEQ_IDENT) {
 			if (f->last_start != -1ULL)
-				*b = (f->last_start - f->file_offset) / td->o.min_bs[ddir];
+				*b = (f->last_start - f->file_offset)
+					/ td->o.min_bs[ddir];
 			else
 				*b = 0;
 			ret = 0;
@@ -278,10 +279,8 @@ static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
 		td->ddir_seq_nr = td->o.ddir_seq_nr;
 	}
 
-	if (get_next_block(td, io_u, ddir, rw_seq_hit, &b)) {
-		printf("fail\n");
+	if (get_next_block(td, io_u, ddir, rw_seq_hit, &b))
 		return 1;
-	}
 
 	io_u->offset = b * td->o.ba[ddir];
 	if (io_u->offset >= f->io_size) {
