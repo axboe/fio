@@ -71,7 +71,7 @@ enum {
 /*
  * How many depth levels to log
  */
-#define FIO_IO_U_MAP_NR	8
+#define FIO_IO_U_MAP_NR	7
 #define FIO_IO_U_LAT_U_NR 10
 #define FIO_IO_U_LAT_M_NR 12
 
