@@ -489,7 +489,7 @@ int do_io_u_trim(struct thread_data *td, struct io_u *io_u)
 	struct fio_file *f = io_u->file;
 	int ret;
 
-	ret = os_trim(f->fd, io_u->offset + f->file_offset, io_u->xfer_buflen);
+	ret = os_trim(f->fd, io_u->offset, io_u->xfer_buflen);
 	if (!ret)
 		return io_u->xfer_buflen;;
 
