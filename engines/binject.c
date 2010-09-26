@@ -22,7 +22,6 @@ struct binject_data {
 	struct io_u **events;
 	struct pollfd *pfds;
 	int *fd_flags;
-	unsigned int bs;
 };
 
 static void binject_buc_init(struct binject_data *bd, struct io_u *io_u)
@@ -161,11 +160,10 @@ static int fio_binject_doio(struct thread_data *td, struct io_u *io_u)
 static int fio_binject_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct binject_data *bd = td->io_ops->data;
+	unsigned int bs = io_u->file->file_data;
 	struct b_user_cmd *buc = &io_u->buc;
 
-	bd->bs = 512;
-
-	if (io_u->xfer_buflen & (bd->bs - 1)) {
+	if (io_u->xfer_buflen & (bs - 1)) {
 		log_err("read/write not sector aligned\n");
 		return EINVAL;
 	}
@@ -210,6 +208,28 @@ static struct io_u *fio_binject_event(struct thread_data *td, int event)
 	struct binject_data *bd = td->io_ops->data;
 
 	return bd->events[event];
+}
+
+static int fio_binject_open_file(struct thread_data *td, struct fio_file *f)
+{
+	unsigned int bs;
+	int ret;
+
+	ret = generic_open_file(td, f);
+	if (ret)
+		return 1;
+
+	if (f->filetype != FIO_TYPE_BD) {
+		log_err("fio: binject only works with block devices\n");
+		return 1;
+	}
+	if (ioctl(f->fd, BLKSSZGET, &bs) < 0) {
+		td_verror(td, errno, "BLKSSZGET");
+		return 1;
+	}
+
+	f->file_data = bs;
+	return 0;
 }
 
 static void fio_binject_cleanup(struct thread_data *td)
@@ -257,7 +277,7 @@ static struct ioengine_ops ioengine = {
 	.getevents	= fio_binject_getevents,
 	.event		= fio_binject_event,
 	.cleanup	= fio_binject_cleanup,
-	.open_file	= generic_open_file,
+	.open_file	= fio_binject_open_file,
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
 	.flags		= FIO_RAWIO,
