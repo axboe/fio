@@ -292,7 +292,7 @@ static struct ioengine_ops ioengine = {
  */
 static int fio_binject_init(struct thread_data fio_unused *td)
 {
-	fprintf(stderr, "fio: ioengine binject not available\n");
+	log_err("fio: ioengine binject not available\n");
 	return 1;
 }
 

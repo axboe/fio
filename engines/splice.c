@@ -311,7 +311,7 @@ static struct ioengine_ops ioengine = {
  */
 static int fio_spliceio_init(struct thread_data fio_unused *td)
 {
-	fprintf(stderr, "fio: splice not available\n");
+	log_err("fio: splice not available\n");
 	return 1;
 }
 

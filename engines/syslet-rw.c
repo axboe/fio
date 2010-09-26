@@ -304,7 +304,7 @@ static struct ioengine_ops ioengine = {
  */
 static int fio_syslet_init(struct thread_data fio_unused *td)
 {
-	fprintf(stderr, "fio: syslet not available\n");
+	log_err("fio: syslet not available\n");
 	return 1;
 }
 

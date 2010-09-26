@@ -273,7 +273,7 @@ static struct ioengine_ops ioengine = {
  */
 static int fio_guasi_init(struct thread_data fio_unused *td)
 {
-	fprintf(stderr, "fio: guasi not available\n");
+	log_err("fio: guasi not available\n");
 	return 1;
 }
 

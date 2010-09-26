@@ -416,7 +416,7 @@ static struct ioengine_ops ioengine = {
  */
 static int fio_sgio_init(struct thread_data fio_unused *td)
 {
-	fprintf(stderr, "fio: ioengine sg not available\n");
+	log_err("fio: ioengine sg not available\n");
 	return 1;
 }
 

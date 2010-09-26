@@ -234,7 +234,7 @@ static struct ioengine_ops ioengine = {
  */
 static int fio_solarisaio_init(struct thread_data fio_unused *td)
 {
-	fprintf(stderr, "fio: solarisaio not available\n");
+	log_err("fio: solarisaio not available\n");
 	return 1;
 }
 

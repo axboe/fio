@@ -240,7 +240,7 @@ static struct ioengine_ops ioengine = {
  */
 static int fio_libaio_init(struct thread_data fio_unused *td)
 {
-	fprintf(stderr, "fio: libaio not available\n");
+	log_err("fio: libaio not available\n");
 	return 1;
 }
 
