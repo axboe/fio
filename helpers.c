@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "compiler/compiler.h"
+#include "arch/arch.h"
 #include "os/os.h"
 
 #ifndef __NR_fallocate
