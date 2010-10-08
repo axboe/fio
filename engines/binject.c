@@ -57,6 +57,37 @@ static int pollin_events(struct pollfd *pfds, int fds)
 	return 0;
 }
 
+static unsigned int binject_read_commands(struct thread_data *td, void *p,
+					  int left, int *err)
+{
+	struct binject_file *bf;
+	struct fio_file *f;
+	int i, ret, events;
+
+one_more:
+	events = 0;
+	for_each_file(td, f, i) {
+		bf = f->file_data;
+		ret = read(bf->fd, p, left * sizeof(struct b_user_cmd));
+		if (ret < 0) {
+			if (errno == EAGAIN)
+				continue;
+			*err = -errno;
+			td_verror(td, errno, "read");
+			break;
+		} else if (ret) {
+			p += ret;
+			events += ret / sizeof(struct b_user_cmd);
+		}
+	}
+
+	if (*err || events)
+		return events;
+
+	usleep(1000);
+	goto one_more;
+}
+
 static int fio_binject_getevents(struct thread_data *td, unsigned int min,
 			      unsigned int max, struct timespec fio_unused *t)
 {
@@ -71,7 +102,7 @@ static int fio_binject_getevents(struct thread_data *td, unsigned int min,
 	 * Fill in the file descriptors
 	 */
 	for_each_file(td, f, i) {
-		bf = (struct binject_file *) f->file_data;
+		bf = f->file_data;
 
 		/*
 		 * don't block for min events == 0
@@ -85,12 +116,7 @@ static int fio_binject_getevents(struct thread_data *td, unsigned int min,
 	}
 
 	while (left) {
-		void *p;
-
-		do {
-			if (!min)
-				break;
-
+		while (!min) {
 			ret = poll(bd->pfds, td->o.nr_files, -1);
 			if (ret < 0) {
 				if (!r)
@@ -102,36 +128,15 @@ static int fio_binject_getevents(struct thread_data *td, unsigned int min,
 
 			if (pollin_events(bd->pfds, td->o.nr_files))
 				break;
-		} while (1);
-
-		if (r < 0)
-			break;
-
-re_read:
-		p = buf;
-		events = 0;
-		for_each_file(td, f, i) {
-			bf = (struct binject_file *) f->file_data;
-
-			ret = read(bf->fd, p, left * sizeof(struct b_user_cmd));
-			if (ret < 0) {
-				if (errno == EAGAIN)
-					continue;
-				r = -errno;
-				td_verror(td, errno, "read");
-				break;
-			} else if (ret) {
-				p += ret;
-				events += ret / sizeof(struct b_user_cmd);
-			}
 		}
 
 		if (r < 0)
 			break;
-		if (!events) {
-			usleep(1000);
-			goto re_read;
-		}
+
+		events = binject_read_commands(td, buf, left, &r);
+
+		if (r < 0)
+			break;
 
 		left -= events;
 		r += events;
@@ -146,7 +151,7 @@ re_read:
 
 	if (!min) {
 		for_each_file(td, f, i) {
-			bf = (struct binject_file *) f->file_data;
+			bf = f->file_data;
 			fcntl(bf->fd, F_SETFL, bd->fd_flags[i]);
 		}
 	}
@@ -160,8 +165,7 @@ re_read:
 static int fio_binject_doio(struct thread_data *td, struct io_u *io_u)
 {
 	struct b_user_cmd *buc = &io_u->buc;
-	struct fio_file *f = io_u->file;
-	struct binject_file *bf = (struct binject_file *) f->file_data;
+	struct binject_file *bf = io_u->file->file_data;
 	int ret;
 
 	ret = write(bf->fd, buc, sizeof(*buc));
@@ -175,7 +179,7 @@ static int fio_binject_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct binject_data *bd = td->io_ops->data;
 	struct b_user_cmd *buc = &io_u->buc;
-	struct binject_file *bf = (struct binject_file *) io_u->file->file_data;
+	struct binject_file *bf = io_u->file->file_data;
 
 	if (io_u->xfer_buflen & (bf->bs - 1)) {
 		log_err("read/write not sector aligned\n");
@@ -310,12 +314,12 @@ err_unmap:
 
 static int fio_binject_close_file(struct thread_data *td, struct fio_file *f)
 {
-	struct binject_file *bf = (struct binject_file *) f->file_data;
+	struct binject_file *bf = f->file_data;
 
 	if (bf) {
 		binject_unmap_dev(td, bf);
 		free(bf);
-		f->file_data = 0;
+		f->file_data = NULL;
 		return generic_close_file(td, f);
 	}
 
@@ -344,7 +348,7 @@ static int fio_binject_open_file(struct thread_data *td, struct fio_file *f)
 	bf = malloc(sizeof(*bf));
 	bf->bs = bs;
 	bf->minor = bf->fd = -1;
-	f->file_data = (unsigned long) bf;
+	f->file_data = bf;
 
 	if (binject_map_dev(td, bf, f->fd)) {
 err_close:
