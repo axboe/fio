@@ -244,6 +244,7 @@ static int bdev_size(struct thread_data *td, struct fio_file *f)
 	r = blockdev_size(f->fd, &bytes);
 	if (r) {
 		td_verror(td, r, "blockdev_size");
+		printf("fd is %d\n", f->fd);
 		goto err;
 	}
 

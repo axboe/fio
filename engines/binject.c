@@ -24,6 +24,12 @@ struct binject_data {
 	int *fd_flags;
 };
 
+struct binject_file {
+	unsigned int bs;
+	int minor;
+	int fd;
+};
+
 static void binject_buc_init(struct binject_data *bd, struct io_u *io_u)
 {
 	struct b_user_cmd *buc = &io_u->buc;
@@ -59,19 +65,22 @@ static int fio_binject_getevents(struct thread_data *td, unsigned int min,
 	void *buf = bd->cmds;
 	unsigned int i, events;
 	struct fio_file *f;
+	struct binject_file *bf;
 
 	/*
 	 * Fill in the file descriptors
 	 */
 	for_each_file(td, f, i) {
+		bf = (struct binject_file *) f->file_data;
+
 		/*
 		 * don't block for min events == 0
 		 */
 		if (!min) {
-			bd->fd_flags[i] = fcntl(f->fd, F_GETFL);
-			fcntl(f->fd, F_SETFL, bd->fd_flags[i] | O_NONBLOCK);
+			bd->fd_flags[i] = fcntl(bf->fd, F_GETFL);
+			fcntl(bf->fd, F_SETFL, bd->fd_flags[i] | O_NONBLOCK);
 		}
-		bd->pfds[i].fd = f->fd;
+		bd->pfds[i].fd = bf->fd;
 		bd->pfds[i].events = POLLIN;
 	}
 
@@ -102,7 +111,9 @@ re_read:
 		p = buf;
 		events = 0;
 		for_each_file(td, f, i) {
-			ret = read(f->fd, p, left * sizeof(struct b_user_cmd));
+			bf = (struct binject_file *) f->file_data;
+
+			ret = read(bf->fd, p, left * sizeof(struct b_user_cmd));
 			if (ret < 0) {
 				if (errno == EAGAIN)
 					continue;
@@ -134,8 +145,10 @@ re_read:
 	}
 
 	if (!min) {
-		for_each_file(td, f, i)
-			fcntl(f->fd, F_SETFL, bd->fd_flags[i]);
+		for_each_file(td, f, i) {
+			bf = (struct binject_file *) f->file_data;
+			fcntl(bf->fd, F_SETFL, bd->fd_flags[i]);
+		}
 	}
 
 	if (r > 0)
@@ -148,9 +161,10 @@ static int fio_binject_doio(struct thread_data *td, struct io_u *io_u)
 {
 	struct b_user_cmd *buc = &io_u->buc;
 	struct fio_file *f = io_u->file;
+	struct binject_file *bf = (struct binject_file *) f->file_data;
 	int ret;
 
-	ret = write(f->fd, buc, sizeof(*buc));
+	ret = write(bf->fd, buc, sizeof(*buc));
 	if (ret < 0)
 		return ret;
 
@@ -160,10 +174,10 @@ static int fio_binject_doio(struct thread_data *td, struct io_u *io_u)
 static int fio_binject_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct binject_data *bd = td->io_ops->data;
-	unsigned int bs = io_u->file->file_data;
 	struct b_user_cmd *buc = &io_u->buc;
+	struct binject_file *bf = (struct binject_file *) io_u->file->file_data;
 
-	if (io_u->xfer_buflen & (bs - 1)) {
+	if (io_u->xfer_buflen & (bf->bs - 1)) {
 		log_err("read/write not sector aligned\n");
 		return EINVAL;
 	}
@@ -210,8 +224,107 @@ static struct io_u *fio_binject_event(struct thread_data *td, int event)
 	return bd->events[event];
 }
 
+static void binject_unmap_dev(struct thread_data *td, struct binject_file *bf)
+{
+	struct b_ioctl_cmd bic;
+	int fdb;
+
+	if (bf->fd >= 0) {
+		close(bf->fd);
+		bf->fd = -1;
+	}
+
+	fdb = open("/dev/binject-ctl", O_RDWR);
+	if (fdb < 0) {
+		td_verror(td, errno, "open binject-ctl");
+		return;
+	}
+
+	bic.minor = bf->minor;
+
+	if (ioctl(fdb, 1, &bic) < 0) {
+		td_verror(td, errno, "binject dev unmap");
+		close(fdb);
+		return;
+	}
+
+	close(fdb);
+}
+
+static int binject_map_dev(struct thread_data *td, struct binject_file *bf,
+			   int fd)
+{
+	struct b_ioctl_cmd bic;
+	char name[80];
+	struct stat sb;
+	int fdb, dev_there, loops;
+
+	fdb = open("/dev/binject-ctl", O_RDWR);
+	if (fdb < 0) {
+		td_verror(td, errno, "binject ctl open");
+		return 1;
+	}
+
+	bic.fd = fd;
+
+	if (ioctl(fdb, 0, &bic) < 0) {
+		td_verror(td, errno, "binject dev map");
+		close(fdb);
+		return 1;
+	}
+
+	bf->minor = bic.minor;
+
+	sprintf(name, "/dev/binject%u", bf->minor);
+
+	/*
+	 * Wait for udev to create the node...
+	 */
+	dev_there = loops = 0;
+	do {
+		if (!stat(name, &sb)) {
+			dev_there = 1;
+			break;
+		}
+
+		usleep(10000);
+	} while (++loops < 100);
+
+	close(fdb);
+
+	if (!dev_there) {
+		log_err("fio: timed out waiting for binject dev\n");
+		goto err_unmap;
+	}
+
+	bf->fd = open(name, O_RDWR);
+	if (bf->fd < 0) {
+		td_verror(td, errno, "binject dev open");
+err_unmap:
+		binject_unmap_dev(td, bf);
+		return 1;
+	}
+
+	return 0;
+}
+
+static int fio_binject_close_file(struct thread_data *td, struct fio_file *f)
+{
+	struct binject_file *bf = (struct binject_file *) f->file_data;
+
+	if (bf) {
+		binject_unmap_dev(td, bf);
+		free(bf);
+		f->file_data = 0;
+		return generic_close_file(td, f);
+	}
+
+	return 0;
+}
+
 static int fio_binject_open_file(struct thread_data *td, struct fio_file *f)
 {
+	struct binject_file *bf;
 	unsigned int bs;
 	int ret;
 
@@ -221,14 +334,24 @@ static int fio_binject_open_file(struct thread_data *td, struct fio_file *f)
 
 	if (f->filetype != FIO_TYPE_BD) {
 		log_err("fio: binject only works with block devices\n");
-		return 1;
+		goto err_close;
 	}
 	if (ioctl(f->fd, BLKSSZGET, &bs) < 0) {
 		td_verror(td, errno, "BLKSSZGET");
+		goto err_close;
+	}
+
+	bf = malloc(sizeof(*bf));
+	bf->bs = bs;
+	bf->minor = bf->fd = -1;
+	f->file_data = (unsigned long) bf;
+
+	if (binject_map_dev(td, bf, f->fd)) {
+err_close:
+		ret = generic_close_file(td, f);
 		return 1;
 	}
 
-	f->file_data = bs;
 	return 0;
 }
 
@@ -278,7 +401,7 @@ static struct ioengine_ops ioengine = {
 	.event		= fio_binject_event,
 	.cleanup	= fio_binject_cleanup,
 	.open_file	= fio_binject_open_file,
-	.close_file	= generic_close_file,
+	.close_file	= fio_binject_close_file,
 	.get_file_size	= generic_get_file_size,
 	.flags		= FIO_RAWIO,
 };

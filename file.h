@@ -50,10 +50,8 @@ struct fio_file {
 	/*
 	 * A file may not be a file descriptor, let the io engine decide
 	 */
-	union {
-		unsigned long file_data;
-		int fd;
-	};
+	unsigned long file_data;
+	int fd;
 
 	/*
 	 * filename and possible memory mapping
