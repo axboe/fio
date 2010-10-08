@@ -47,10 +47,7 @@ struct fio_file {
 	struct flist_head hash_list;
 	enum fio_filetype filetype;
 
-	/*
-	 * A file may not be a file descriptor, let the io engine decide
-	 */
-	unsigned long file_data;
+	void *file_data;
 	int fd;
 
 	/*
