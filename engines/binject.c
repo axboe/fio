@@ -191,7 +191,10 @@ static int fio_binject_prep(struct thread_data *td, struct io_u *io_u)
 		buc->type = B_TYPE_READ;
 	} else if (io_u->ddir == DDIR_WRITE) {
 		binject_buc_init(bd, io_u);
-		buc->type = B_TYPE_WRITE;
+		if (io_u->flags & IO_U_F_BARRIER)
+			buc->type = B_TYPE_WRITEBARRIER;
+		else
+			buc->type = B_TYPE_WRITE;
 	} else if (io_u->ddir == DDIR_TRIM) {
 		binject_buc_init(bd, io_u);
 		buc->type = B_TYPE_DISCARD;
@@ -407,7 +410,7 @@ static struct ioengine_ops ioengine = {
 	.open_file	= fio_binject_open_file,
 	.close_file	= fio_binject_close_file,
 	.get_file_size	= generic_get_file_size,
-	.flags		= FIO_RAWIO,
+	.flags		= FIO_RAWIO | FIO_BARRIER,
 };
 
 #else /* FIO_HAVE_BINJECT */

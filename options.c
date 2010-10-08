@@ -1185,6 +1185,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Issue fdatasync for writes every given number of blocks",
 		.def	= "0",
 	},
+	{
+		.name	= "write_barrier",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(barrier_blocks),
+		.help	= "Make every Nth write a barrier write",
+		.def	= "0",
+	},
 #ifdef FIO_HAVE_SYNC_FILE_RANGE
 	{
 		.name	= "sync_file_range",

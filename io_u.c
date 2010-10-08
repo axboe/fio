@@ -501,6 +501,17 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 	return td->rwmix_ddir;
 }
 
+static void set_rw_ddir(struct thread_data *td, struct io_u *io_u)
+{
+	io_u->ddir = get_rw_ddir(td);
+
+	if (io_u->ddir == DDIR_WRITE && (td->io_ops->flags & FIO_BARRIER) &&
+	    td->o.barrier_blocks &&
+	   !(td->io_issues[DDIR_WRITE] % td->o.barrier_blocks) &&
+	     td->io_issues[DDIR_WRITE])
+		io_u->flags |= IO_U_F_BARRIER;
+}
+
 void put_file_log(struct thread_data *td, struct fio_file *f)
 {
 	int ret = put_file(td, f);
@@ -560,7 +571,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td->io_ops->flags & FIO_NOIO)
 		goto out;
 
-	io_u->ddir = get_rw_ddir(td);
+	set_rw_ddir(td, io_u);
 
 	/*
 	 * fsync() or fdatasync() or trim etc, we are done
@@ -963,7 +974,7 @@ again:
 	if (io_u) {
 		assert(io_u->flags & IO_U_F_FREE);
 		io_u->flags &= ~(IO_U_F_FREE | IO_U_F_FREE_DEF);
-		io_u->flags &= ~IO_U_F_TRIMMED;
+		io_u->flags &= ~(IO_U_F_TRIMMED | IO_U_F_BARRIER);
 
 		io_u->error = 0;
 		flist_del(&io_u->list);

@@ -10,6 +10,7 @@ enum {
 	IO_U_F_IN_CUR_DEPTH	= 1 << 3,
 	IO_U_F_BUSY_OK		= 1 << 4,
 	IO_U_F_TRIMMED		= 1 << 5,
+	IO_U_F_BARRIER		= 1 << 6,
 };
 
 /*
@@ -126,6 +127,7 @@ enum fio_ioengine_flags {
 	FIO_NOIO	= 1 << 6,	/* thread does only pseudo IO */
 	FIO_SIGQUIT	= 1 << 7,	/* needs SIGQUIT to exit */
 	FIO_PIPEIO	= 1 << 8,	/* input/output no seekable */
+	FIO_BARRIER	= 1 << 9,	/* engine supports barriers */
 };
 
 /*
