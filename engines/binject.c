@@ -233,6 +233,17 @@ static struct io_u *fio_binject_event(struct thread_data *td, int event)
 	return bd->events[event];
 }
 
+static int binject_open_ctl(struct thread_data *td)
+{
+	int fd;
+
+	fd = open("/dev/binject-ctl", O_RDWR);
+	if (fd < 0)
+		td_verror(td, errno, "open binject-ctl");
+
+	return fd;
+}
+
 static void binject_unmap_dev(struct thread_data *td, struct binject_file *bf)
 {
 	struct b_ioctl_cmd bic;
@@ -243,19 +254,14 @@ static void binject_unmap_dev(struct thread_data *td, struct binject_file *bf)
 		bf->fd = -1;
 	}
 
-	fdb = open("/dev/binject-ctl", O_RDWR);
-	if (fdb < 0) {
-		td_verror(td, errno, "open binject-ctl");
+	fdb = binject_open_ctl(td);
+	if (fdb < 0)
 		return;
-	}
 
 	bic.minor = bf->minor;
 
-	if (ioctl(fdb, 1, &bic) < 0) {
+	if (ioctl(fdb, 1, &bic) < 0)
 		td_verror(td, errno, "binject dev unmap");
-		close(fdb);
-		return;
-	}
 
 	close(fdb);
 }
@@ -268,11 +274,9 @@ static int binject_map_dev(struct thread_data *td, struct binject_file *bf,
 	struct stat sb;
 	int fdb, dev_there, loops;
 
-	fdb = open("/dev/binject-ctl", O_RDWR);
-	if (fdb < 0) {
-		td_verror(td, errno, "binject ctl open");
+	fdb = binject_open_ctl(td);
+	if (fdb < 0)
 		return 1;
-	}
 
 	bic.fd = fd;
 
