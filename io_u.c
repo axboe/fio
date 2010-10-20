@@ -126,8 +126,12 @@ static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
 static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 			       enum fio_ddir ddir, unsigned long long *b)
 {
-	unsigned long long min_bs = td->o.rw_min_bs;
+	unsigned long long min_bs = td->o.rw_min_bs, lastb;
 	int i;
+
+	lastb = last_block(td, f, ddir);
+	if (!lastb)
+		return 1;
 
 	i = f->last_free_lookup;
 	*b = (i * BLOCKS_PER_MAP);
@@ -135,7 +139,7 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 		(*b) * min_bs < f->io_size) {
 		if (f->file_map[i] != (unsigned int) -1) {
 			*b += ffz(f->file_map[i]);
-			if (*b > last_block(td, f, ddir))
+			if (*b > lastb)
 				break;
 			f->last_free_lookup = i;
 			return 0;
@@ -152,14 +156,17 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				enum fio_ddir ddir, unsigned long long *b)
 {
-	unsigned long long r;
+	unsigned long long r, lastb;
 	int loops = 5;
+
+	lastb = last_block(td, f, ddir);
+	if (!lastb)
+		return 1;
 
 	do {
 		r = os_random_long(&td->random_state);
 		dprint(FD_RANDOM, "off rand %llu\n", r);
-		*b = (last_block(td, f, ddir) - 1)
-			* (r / ((unsigned long long) OS_RAND_MAX + 1.0));
+		*b = (lastb - 1) * (r / ((unsigned long long) OS_RAND_MAX + 1.0));
 
 		/*
 		 * if we are not maintaining a random map, we are done.
