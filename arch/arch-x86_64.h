@@ -48,7 +48,7 @@ static inline unsigned long long get_cpu_clock(void)
 }
 
 #define ARCH_HAVE_FFZ
-#define ARCH_HAVE_SSE
+#define ARCH_HAVE_SSE4_2
 #define ARCH_HAVE_CPU_CLOCK
 
 #endif

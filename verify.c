@@ -501,7 +501,7 @@ static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
 	log_err("trim: verify failed at file %s offset %llu, length %lu"
 		", block offset %lu\n",
 			io_u->file->file_name, io_u->offset, io_u->buflen,
-			(p - io_u->buf));
+			(unsigned long) (p - io_u->buf));
 	return ret;
 }
 

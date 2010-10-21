@@ -146,7 +146,7 @@ static int fio_binject_getevents(struct thread_data *td, unsigned int min,
 		for (i = 0; i < events; i++) {
 			struct b_user_cmd *buc = (struct b_user_cmd *) buf + i;
 
-			bd->events[ev_index] = (struct io_u *) buc->usr_ptr;
+			bd->events[ev_index] = (struct io_u *) (unsigned long) buc->usr_ptr;
 			ev_index++;
 		}
 	}
