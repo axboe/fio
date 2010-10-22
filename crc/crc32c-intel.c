@@ -18,7 +18,7 @@
  * Volume 2A: Instruction Set Reference, A-M
  */
 
-#ifdef ARCH_HAVE_SSE
+#ifdef ARCH_HAVE_SSE4_2
 
 #if BITS_PER_LONG == 64
 #define REX_PRE "0x48, "
