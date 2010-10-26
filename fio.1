@@ -698,13 +698,16 @@ once that job has completed. In other words, everything is written then
 everything is read back and verified. You may want to verify continually
 instead for a variety of reasons. Fio stores the meta data associated with an
 IO block in memory, so for large verify workloads, quite a bit of memory would
-be used up holding this meta data. If this option is enabled, fio will verify
-the previously written blocks before continuing to write new ones.
+be used up holding this meta data. If this option is enabled, fio will write
+only N blocks before verifying these blocks.
 .TP
 .BI verify_backlog_batch \fR=\fPint
 Control how many blocks fio will verify if verify_backlog is set. If not set,
 will default to the value of \fBverify_backlog\fR (meaning the entire queue is
-read back and verified).
+read back and verified).  If \fBverify_backlog_batch\fR is less than 
+\fBverify_backlog\fR then not all blocks will be verified,  if 
+\fBverify_backlog_batch\fR is larger than \fBverify_backlog\fR,  some blocks
+will be verified more than once.
 .TP
 .B stonewall
 Wait for preceeding jobs in the job file to exit before starting this one.
