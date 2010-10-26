@@ -935,13 +935,18 @@ verify_backlog=int	Fio will normally verify the written contents of a
 		associated with an IO block in memory, so for large
 		verify workloads, quite a bit of memory would be used up
 		holding this meta data. If this option is enabled, fio
+		will write only N blocks before verifying these blocks.
+
 		will verify the previously written blocks before continuing
 		to write new ones.
 
 verify_backlog_batch=int	Control how many blocks fio will verify
 		if verify_backlog is set. If not set, will default to
 		the value of verify_backlog (meaning the entire queue
-		is read back and verified).
+		is read back and verified).  If verify_backlog_batch is
+		less than verify_backlog then not all blocks will be verified,
+		if verify_backlog_batch is larger than verify_backlog, some
+		blocks will be verified more than once.
 		
 stonewall	Wait for preceeding jobs in the job file to exit, before
 		starting this one. Can be used to insert serialization
