@@ -25,6 +25,10 @@ struct b_ioctl_cmd {
 	int minor;
 };
 
+#define BINJECT_IOCTL_CHR	'J'
+#define B_IOCTL_ADD		_IOWR(BINJECT_IOCTL_CHR, 1, struct b_ioctl_cmd)
+#define B_IOCTL_DEL		_IOWR(BINJECT_IOCTL_CHR, 2, struct b_ioctl_cmd)
+
 enum {
 	B_TYPE_READ		= 0,
 	B_TYPE_WRITE,

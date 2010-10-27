@@ -260,7 +260,7 @@ static void binject_unmap_dev(struct thread_data *td, struct binject_file *bf)
 
 	bic.minor = bf->minor;
 
-	if (ioctl(fdb, 1, &bic) < 0)
+	if (ioctl(fdb, B_IOCTL_DEL, &bic) < 0)
 		td_verror(td, errno, "binject dev unmap");
 
 	close(fdb);
@@ -280,7 +280,7 @@ static int binject_map_dev(struct thread_data *td, struct binject_file *bf,
 
 	bic.fd = fd;
 
-	if (ioctl(fdb, 0, &bic) < 0) {
+	if (ioctl(fdb, B_IOCTL_ADD, &bic) < 0) {
 		td_verror(td, errno, "binject dev map");
 		close(fdb);
 		return 1;
