@@ -193,7 +193,8 @@ int allocate_io_mem(struct thread_data *td)
 
 	total_mem = td->orig_buffer_size;
 
-	if (td->o.odirect || td->o.mem_align) {
+	if (td->o.odirect || td->o.mem_align ||
+	    (td->io_ops->flags & FIO_MEMALIGN)) {
 		total_mem += page_mask;
 		if (td->o.mem_align && td->o.mem_align > page_size)
 			total_mem += td->o.mem_align - page_size;

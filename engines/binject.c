@@ -416,7 +416,7 @@ static struct ioengine_ops ioengine = {
 	.open_file	= fio_binject_open_file,
 	.close_file	= fio_binject_close_file,
 	.get_file_size	= generic_get_file_size,
-	.flags		= FIO_RAWIO | FIO_BARRIER,
+	.flags		= FIO_RAWIO | FIO_BARRIER | FIO_MEMALIGN,
 };
 
 #else /* FIO_HAVE_BINJECT */

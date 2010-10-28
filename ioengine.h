@@ -128,6 +128,7 @@ enum fio_ioengine_flags {
 	FIO_SIGQUIT	= 1 << 7,	/* needs SIGQUIT to exit */
 	FIO_PIPEIO	= 1 << 8,	/* input/output no seekable */
 	FIO_BARRIER	= 1 << 9,	/* engine supports barriers */
+	FIO_MEMALIGN	= 1 << 10,	/* engine wants aligned memory */
 };
 
 /*
