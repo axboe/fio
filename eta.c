@@ -328,7 +328,11 @@ void print_thread_status(void)
 	}
 
 	disp_time = mtime_since(&disp_prev_time, &now);
-	if (disp_time < 1000)
+
+	/*
+	 * Allow a little slack, the target is to print it every 1000 msecs
+	 */
+	if (disp_time < 900)
 		return;
 
 	calc_rate(disp_time, io_bytes, disp_io_bytes, rate);

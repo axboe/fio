@@ -28,6 +28,7 @@
 #include <time.h>
 #include <locale.h>
 #include <assert.h>
+#include <time.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
@@ -62,7 +63,7 @@ static struct fio_mutex *startup_mutex;
 static struct fio_mutex *writeout_mutex;
 static volatile int fio_abort;
 static int exit_value;
-static struct itimerval itimer;
+static timer_t ival_timer;
 static pthread_t gtod_thread;
 static struct flist_head *cgroup_list;
 static char *cgroup_mnt;
@@ -113,17 +114,21 @@ static void terminate_threads(int group_id)
 
 static void status_timer_arm(void)
 {
-	itimer.it_value.tv_sec = 0;
-	itimer.it_value.tv_usec = DISK_UTIL_MSEC * 1000;
-	setitimer(ITIMER_REAL, &itimer, NULL);
+	struct itimerspec value;
+
+	value.it_value.tv_sec = 0;
+	value.it_value.tv_nsec = DISK_UTIL_MSEC * 1000000;
+	value.it_interval.tv_sec = 0;
+	value.it_interval.tv_nsec = DISK_UTIL_MSEC * 1000000;
+
+	timer_settime(ival_timer, 0, &value, NULL);
 }
 
-static void sig_alrm(int fio_unused sig)
+static void ival_fn(union sigval sig)
 {
 	if (threads) {
 		update_io_ticks();
 		print_thread_status();
-		status_timer_arm();
 	}
 }
 
@@ -143,14 +148,26 @@ static void sig_int(int sig)
 	}
 }
 
+static void posix_timer_teardown(void)
+{
+	timer_delete(ival_timer);
+}
+
+static void posix_timer_setup(void)
+{
+	struct sigevent evt;
+
+	memset(&evt, 0, sizeof(evt));
+	evt.sigev_notify = SIGEV_THREAD;
+	evt.sigev_notify_function = ival_fn;
+
+	if (timer_create(CLOCK_MONOTONIC, &evt, &ival_timer) < 0)
+		perror("timer_create");
+}
+
 static void set_sig_handlers(void)
 {
 	struct sigaction act;
-
-	memset(&act, 0, sizeof(act));
-	act.sa_handler = sig_alrm;
-	act.sa_flags = SA_RESTART;
-	sigaction(SIGALRM, &act, NULL);
 
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = sig_int;
@@ -1689,6 +1706,7 @@ int main(int argc, char *argv[])
 
 	set_genesis_time();
 
+	posix_timer_setup();
 	status_timer_arm();
 
 	cgroup_list = smalloc(sizeof(*cgroup_list));
@@ -1709,6 +1727,7 @@ int main(int argc, char *argv[])
 	sfree(cgroup_list);
 	sfree(cgroup_mnt);
 
+	posix_timer_teardown();
 	fio_mutex_remove(startup_mutex);
 	fio_mutex_remove(writeout_mutex);
 	return exit_value;
