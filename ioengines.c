@@ -402,6 +402,7 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 
 		if (ret) {
 			td_verror(td, ret, "fio_set_odirect");
+			log_err("fio: the file system does not seem to support direct IO\n");
 			goto err;
 		}
 	}
