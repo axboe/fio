@@ -1121,6 +1121,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "nrfiles",
+		.alias	= "nr_files",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(nr_files),
 		.help	= "Split job workload between this number of files",
