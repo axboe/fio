@@ -379,7 +379,9 @@ Loads an external I/O engine object file.  Append the engine filename as
 .RE
 .TP
 .BI iodepth \fR=\fPint
-Number of I/O units to keep in flight against the file.  Default: 1.
+Number of I/O units to keep in flight against the file. Note that increasing
+iodepth beyond 1 will not affect synchronous ioengines (except for small
+degress when verify_async is in use).  Default: 1.
 .TP
 .BI iodepth_batch \fR=\fPint
 Number of I/Os to submit at once.  Default: \fBiodepth\fR.
