@@ -381,7 +381,11 @@ Loads an external I/O engine object file.  Append the engine filename as
 .BI iodepth \fR=\fPint
 Number of I/O units to keep in flight against the file. Note that increasing
 iodepth beyond 1 will not affect synchronous ioengines (except for small
-degress when verify_async is in use).  Default: 1.
+degress when verify_async is in use). Even async engines my impose OS
+restrictions causing the desired depth not to be achieved.  This may happen on
+Linux when using libaio and not setting \fBdirect\fR=1, since buffered IO is
+not async on that OS. Keep an eye on the IO depth distribution in the
+fio output to verify that the achieved depth is as expected. Default: 1.
 .TP
 .BI iodepth_batch \fR=\fPint
 Number of I/Os to submit at once.  Default: \fBiodepth\fR.
