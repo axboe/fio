@@ -172,7 +172,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	iops = (1000 * ts->total_io_u[ddir]) / runt;
 	iops_p = num2str(iops, 6, 1, 0);
 
-	log_info("  %s: io=%sB, bw=%sB/s, iops=%s, runt=%6lumsec\n",
+	log_info("  %s: io=%sB, bw=%sB/s, iops=%s, runt=%6llumsec\n",
 					ddir_str[ddir], io_p, bw_p, iops_p,
 					ts->runtime[ddir]);
 
@@ -380,7 +380,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	if (ts->runtime[ddir])
 		bw = ts->io_bytes[ddir] / ts->runtime[ddir];
 
-	log_info(";%llu;%llu;%lu", ts->io_bytes[ddir] >> 10, bw,
+	log_info(";%llu;%llu;%llu", ts->io_bytes[ddir] >> 10, bw,
 							ts->runtime[ddir]);
 
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))

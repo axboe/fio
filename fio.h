@@ -126,7 +126,7 @@ struct thread_stat {
 	unsigned long total_complete;
 
 	unsigned long long io_bytes[2];
-	unsigned long runtime[2];
+	unsigned long long runtime[2];
 	unsigned long total_run_time;
 
 	/*

@@ -161,12 +161,13 @@ static int thread_eta(struct thread_data *td)
 		 * if given, otherwise assume it'll run at the specified rate.
 		 */
 		if (td->o.timeout) {
-			t_eta = td->o.timeout + td->o.start_delay;
+			t_eta = td->o.timeout + td->o.start_delay +
+					td->o.ramp_time;
 
 			if (in_ramp_time(td)) {
 				unsigned long ramp_left;
 
-				ramp_left = mtime_since_now(&td->start);
+				ramp_left = mtime_since_now(&td->epoch);
 				ramp_left = (ramp_left + 999) / 1000;
 				if (ramp_left <= t_eta)
 					t_eta -= ramp_left;

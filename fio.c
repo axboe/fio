@@ -989,6 +989,8 @@ void reset_all_stats(struct thread_data *td)
 	}
 	
 	fio_gettime(&tv, NULL);
+	td->ts.runtime[0] = 0;
+	td->ts.runtime[1] = 0;
 	memcpy(&td->epoch, &tv, sizeof(tv));
 	memcpy(&td->start, &tv, sizeof(tv));
 }
@@ -1027,7 +1029,7 @@ static int exec_string(const char *string)
  */
 static void *thread_main(void *data)
 {
-	unsigned long long runtime[2], elapsed;
+	unsigned long long elapsed;
 	struct thread_data *td = data;
 	pthread_condattr_t attr;
 	int clear_state;
@@ -1145,7 +1147,6 @@ static void *thread_main(void *data)
 	fio_gettime(&td->epoch, NULL);
 	getrusage(RUSAGE_SELF, &td->ts.ru_start);
 
-	runtime[0] = runtime[1] = 0;
 	clear_state = 0;
 	while (keep_running(td)) {
 		fio_gettime(&td->start, NULL);
@@ -1170,11 +1171,11 @@ static void *thread_main(void *data)
 
 		if (td_read(td) && td->io_bytes[DDIR_READ]) {
 			elapsed = utime_since_now(&td->start);
-			runtime[DDIR_READ] += elapsed;
+			td->ts.runtime[DDIR_READ] += elapsed;
 		}
 		if (td_write(td) && td->io_bytes[DDIR_WRITE]) {
 			elapsed = utime_since_now(&td->start);
-			runtime[DDIR_WRITE] += elapsed;
+			td->ts.runtime[DDIR_WRITE] += elapsed;
 		}
 
 		if (td->error || td->terminate)
@@ -1191,15 +1192,15 @@ static void *thread_main(void *data)
 
 		do_verify(td);
 
-		runtime[DDIR_READ] += utime_since_now(&td->start);
+		td->ts.runtime[DDIR_READ] += utime_since_now(&td->start);
 
 		if (td->error || td->terminate)
 			break;
 	}
 
 	update_rusage_stat(td);
-	td->ts.runtime[0] = (runtime[0] + 999) / 1000;
-	td->ts.runtime[1] = (runtime[1] + 999) / 1000;
+	td->ts.runtime[0] = (td->ts.runtime[0] + 999) / 1000;
+	td->ts.runtime[1] = (td->ts.runtime[1] + 999) / 1000;
 	td->ts.total_run_time = mtime_since_now(&td->epoch);
 	td->ts.io_bytes[0] = td->io_bytes[0];
 	td->ts.io_bytes[1] = td->io_bytes[1];
