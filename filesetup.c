@@ -316,7 +316,7 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 		return ret;
 
 	if (f->file_offset > f->real_file_size) {
-		log_err("%s: offset extends end (%Lu > %Lu)\n", td->o.name,
+		log_err("%s: offset extends end (%llu > %llu)\n", td->o.name,
 					f->file_offset, f->real_file_size);
 		return 1;
 	}
@@ -734,7 +734,7 @@ int setup_files(struct thread_data *td)
 		temp_stall_ts = 1;
 		if (!terse_output)
 			log_info("%s: Laying out IO file(s) (%u file(s) /"
-				 " %LuMB)\n", td->o.name, need_extend,
+				 " %lluMB)\n", td->o.name, need_extend,
 					extend_size >> 20);
 
 		for_each_file(td, f, i) {
