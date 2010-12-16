@@ -33,9 +33,7 @@ OBJS += engines/net.o
 SOURCE = eta.c filehash.c filesetup.c fio.c gettime.c init.c ioengines.c \
 	 io_u.c log.c memory.c mutex.c options.c parse.c rbtree.c smalloc.c \
 	 stat.c parse.c crc/*.c engines/cpu.c engines/mmap.c \
-	 engines/posixaio.c engines/sync.c engines/null.c engines/net.c \
-	 *.h arch/*.h compiler/*.h crc/*.h lib/*.h \
-	 os/indirect.h os/kcompat.h os/os-freebsd.h os/os.h os/syslet.h
+	 engines/posixaio.c engines/sync.c engines/null.c engines/net.c
 
 ifneq ($(findstring $(MAKEFLAGS),s),s)
 ifndef V
