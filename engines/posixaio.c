@@ -152,7 +152,7 @@ static struct io_u *fio_posixaio_event(struct thread_data *td, int event)
 	return pd->aio_events[event];
 }
 
-static int fio_posixaio_queue(struct thread_data fio_unused *td,
+static int fio_posixaio_queue(struct thread_data *td,
 			      struct io_u *io_u)
 {
 	struct posixaio_data *pd = td->io_ops->data;

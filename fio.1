@@ -331,7 +331,13 @@ coalescing adjacents IOs into a single submission.
 Linux native asynchronous I/O.
 .TP
 .B posixaio
-glibc POSIX asynchronous I/O using \fIaio_read\fR\|(3) and \fIaio_write\fR\|(3).
+POSIX asynchronous I/O using \fIaio_read\fR\|(3) and \fIaio_write\fR\|(3).
+.TP
+.B solarisaio
+Solaris native asynchronous I/O.
+.TP
+.B windowsaio
+Windows native asynchronous I/O.
 .TP
 .B mmap
 File is memory mapped with \fImmap\fR\|(2) and data copied using

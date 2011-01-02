@@ -2,6 +2,7 @@
 #define FIO_OS_H
 
 #include <sys/types.h>
+#include <pthread.h>
 #include <unistd.h>
 
 #if defined(__linux__)
@@ -16,6 +17,8 @@
 #include "os-mac.h"
 #elif defined(_AIX)
 #include "os-aix.h"
+#elif defined(__CYGWIN__)
+#include "os-windows.h"
 #else
 #error "unsupported os"
 #endif

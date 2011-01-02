@@ -49,6 +49,10 @@ struct fio_file {
 
 	void *file_data;
 	int fd;
+#ifdef __CYGWIN__
+	HANDLE hFile;
+	HANDLE ioCP;
+#endif
 
 	/*
 	 * filename and possible memory mapping

@@ -922,7 +922,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .help = "Use pread/pwrite",
 			  },
 			  { .ival = "vsync",
-			     .help = "Use readv/writev",
+			    .help = "Use readv/writev",
 			  },
 #ifdef FIO_HAVE_LIBAIO
 			  { .ival = "libaio",
@@ -939,9 +939,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .help = "Solaris native asynchronous IO",
 			  },
 #endif
+#ifdef FIO_HAVE_WINDOWSAIO
+			  { .ival = "windowsaio",
+			  	.help = "Windows native asynchronous IO"
+		  	  },
 			  { .ival = "mmap",
-			    .help = "Memory mapped IO",
+			    .help = "Memory mapped IO"
 			  },
+#endif
 #ifdef FIO_HAVE_SPLICE
 			  { .ival = "splice",
 			    .help = "splice/vmsplice based IO",
@@ -967,7 +972,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			  },
 #endif
 			  { .ival = "cpuio",
-			    .help = "CPU cycler burner engine",
+			    .help = "CPU cycle burner engine",
 			  },
 #ifdef FIO_HAVE_GUASI
 			  { .ival = "guasi",
@@ -988,7 +993,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.name	= "iodepth",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(iodepth),
-		.help	= "Amount of IO buffers to keep in flight",
+		.help	= "Number of IO buffers to keep in flight",
 		.minval = 1,
 		.def	= "1",
 	},
@@ -1690,7 +1695,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rate_iops_min[0]),
 		.off2	= td_var_offset(rate_iops_min[1]),
-		.help	= "Job must meet this rate or it will be shutdown",
+		.help	= "Job must meet this rate or it will be shut down",
 		.parent	= "rate_iops",
 	},
 	{
@@ -1735,7 +1740,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.name	= "create_fsync",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(create_fsync),
-		.help	= "Fsync file after creation",
+		.help	= "fsync file after creation",
 		.def	= "1",
 	},
 	{
@@ -1749,7 +1754,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.name	= "pre_read",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(pre_read),
-		.help	= "Preread files before starting official testing",
+		.help	= "Pre-read files before starting official testing",
 		.def	= "0",
 	},
 	{
@@ -1900,7 +1905,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.name	= "disable_slat",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(disable_slat),
-		.help	= "Disable submissionn latency numbers",
+		.help	= "Disable submission latency numbers",
 		.parent	= "gtod_reduce",
 		.def	= "0",
 	},
@@ -1916,14 +1921,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.name	= "gtod_cpu",
 		.type	= FIO_OPT_INT,
 		.cb	= str_gtod_cpu_cb,
-		.help	= "Setup dedicated gettimeofday() thread on this CPU",
+		.help	= "Set up dedicated gettimeofday() thread on this CPU",
 		.verify	= gtod_cpu_verify,
 	},
 	{
 		.name	= "continue_on_error",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(continue_on_error),
-		.help	= "Continue on non-fatal errors during I/O",
+		.help	= "Continue on non-fatal errors during IO",
 		.def	= "0",
 	},
 	{

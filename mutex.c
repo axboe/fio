@@ -93,6 +93,9 @@ struct fio_mutex *fio_mutex_init(int value)
 		goto err;
 	}
 
+	pthread_condattr_destroy(&cond);
+	pthread_mutexattr_destroy(&attr);
+
 	return mutex;
 err:
 	if (mutex)

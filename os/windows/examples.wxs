@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Fragment>
+        <DirectoryRef Id="examples">
+                <Component Id="cmp7F8EDEF63912D15194187B7E8854E969" Guid="{E2A86D00-FAEE-4EE4-8B9A-89BD8A33A493}">
+                    <File Id="fil1BE329E8BC0EE95012893D075AB7A894" KeyPath="yes" Source="..\..\examples\1mbs_clients" />
+                </Component>
+                <Component Id="cmpE73C8988602A39632F18AD9A3947C009" Guid="{15B9E880-FB2E-44F3-B324-3467930F509F}">
+                    <File Id="filE25142310F5E8F32B14BD462CBE3041D" KeyPath="yes" Source="..\..\examples\aio-read" />
+                </Component>
+                <Component Id="cmpDDAD530C38A0386ED9B1BD1E4FB4A5CD" Guid="{60F03D01-1F0D-4A13-B465-3518CF5216C8}">
+                    <File Id="filCF2F54039FEAB371F69F396841FB86A3" KeyPath="yes" Source="..\..\examples\disk-zone-profile" />
+                </Component>
+                <Component Id="cmp7D972E777EF2EE565F9A69EFF1DB8E71" Guid="{F85848C3-AA21-4337-BE31-275829F22704}">
+                    <File Id="filDD9F8CE7FD40C7FE25625FC1456E3B33" KeyPath="yes" Source="..\..\examples\fsx" />
+                </Component>
+                <Component Id="cmpBD2C7B8BEEDE8980A526893B02D81051" Guid="{1C64EC58-C371-4854-99FD-4074568DA4D1}">
+                    <File Id="fil4810561841BA6D074CFE8883BFF1535D" KeyPath="yes" Source="..\..\examples\iometer-file-access-server" />
+                </Component>
+                <Component Id="cmpD3A1A0BB97B87A644649B56FCD9E2F07" Guid="{C98E0511-82F1-49CC-A34A-31352681221F}">
+                    <File Id="filDFB42364CFDAB4F04E8E0070F2244DF2" KeyPath="yes" Source="..\..\examples\netio" />
+                </Component>
+                <Component Id="cmp41D99634552892975F20B5E8B9F067A2" Guid="{9D8FF246-4876-4FE4-8ADC-33131B05E9B3}">
+                    <File Id="filE03F0E45B2A4808700EAC30FB4EE0868" KeyPath="yes" Source="..\..\examples\ssd-test" />
+                </Component>
+                <Component Id="cmpF5FD8F66ED697C9E6B5F956C8BEC2DD8" Guid="{B5995E51-69C0-4E76-A911-F9F77F757217}">
+                    <File Id="fil3C01ACD79BB65D78D3DDF655FD5258BF" KeyPath="yes" Source="..\..\examples\surface-scan" />
+                </Component>
+                <Component Id="cmpB3E6043A24B59DECD8D2CDA51B13F914" Guid="{F7FCF692-231B-4CFC-AAF7-1B1E3CB38964}">
+                    <File Id="fil405E83E16BBAA1D3B6EFEF9811BF5EFD" KeyPath="yes" Source="..\..\examples\tiobench-example" />
+                </Component>
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <ComponentGroup Id="examples">
+            <ComponentRef Id="cmp7F8EDEF63912D15194187B7E8854E969" />
+            <ComponentRef Id="cmpE73C8988602A39632F18AD9A3947C009" />
+            <ComponentRef Id="cmpDDAD530C38A0386ED9B1BD1E4FB4A5CD" />
+            <ComponentRef Id="cmp7D972E777EF2EE565F9A69EFF1DB8E71" />
+            <ComponentRef Id="cmpBD2C7B8BEEDE8980A526893B02D81051" />
+            <ComponentRef Id="cmpD3A1A0BB97B87A644649B56FCD9E2F07" />
+            <ComponentRef Id="cmp41D99634552892975F20B5E8B9F067A2" />
+            <ComponentRef Id="cmpF5FD8F66ED697C9E6B5F956C8BEC2DD8" />
+            <ComponentRef Id="cmpB3E6043A24B59DECD8D2CDA51B13F914" />
+        </ComponentGroup>
+    </Fragment>
+</Wix>

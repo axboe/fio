@@ -90,7 +90,7 @@ static void hexdump(void *buffer, int len)
  */
 static inline unsigned int __hdr_size(int verify_type)
 {
-	unsigned int len = len;
+	unsigned int len = 0;
 
 	switch (verify_type) {
 	case VERIFY_NONE:

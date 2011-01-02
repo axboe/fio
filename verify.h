@@ -1,6 +1,8 @@
 #ifndef FIO_VERIFY_H
 #define FIO_VERIFY_H
 
+#include <stdint.h>
+
 #define FIO_HDR_MAGIC	0xf00baaef
 
 enum {

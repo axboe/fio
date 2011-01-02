@@ -45,12 +45,12 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 	}
 
 	if (!td_random(td)) {
-		if (madvise(f->mmap_ptr, length, MADV_SEQUENTIAL) < 0) {
+		if (posix_madvise(f->mmap_ptr, length, POSIX_MADV_SEQUENTIAL) < 0) {
 			td_verror(td, errno, "madvise");
 			goto err;
 		}
 	} else {
-		if (madvise(f->mmap_ptr, length, MADV_RANDOM) < 0) {
+		if (posix_madvise(f->mmap_ptr, length, POSIX_MADV_RANDOM) < 0) {
 			td_verror(td, errno, "madvise");
 			goto err;
 		}
@@ -170,7 +170,7 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 			io_u->error = errno;
 			td_verror(td, io_u->error, "msync");
 		}
-		if (madvise(io_u->mmap_data, io_u->xfer_buflen,  MADV_DONTNEED) < 0) {
+		if (posix_madvise(io_u->mmap_data, io_u->xfer_buflen, POSIX_MADV_DONTNEED) < 0) {
 			io_u->error = errno;
 			td_verror(td, io_u->error, "madvise");
 		}

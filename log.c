@@ -434,7 +434,7 @@ static int init_iolog_read(struct thread_data *td)
 }
 
 /*
- * Setup a log for storing io patterns.
+ * Set up a log for storing io patterns.
  */
 static int init_iolog_write(struct thread_data *td)
 {

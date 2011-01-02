@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <sys/time.h>
+#include <time.h>
 
 #include "fio.h"
 #include "smalloc.h"
@@ -230,7 +231,7 @@ static void calibrate_cpu_clock(void)
 	for (i = 0; i < 10; i++) {
 		double this = cycles[i];
 
-		if ((max(this, mean) - min(this, mean)) > S)
+		if ((fmax(this, mean) - fmin(this, mean)) > S)
 			continue;
 		samples++;
 		avg += this;

@@ -1224,7 +1224,7 @@ int parse_options(int argc, char *argv[])
 		if (exec_profile)
 			return 0;
 
-		log_err("No jobs defined(s)\n\n");
+		log_err("No jobs(s) defined\n\n");
 		usage(argv[0]);
 		return 1;
 	}

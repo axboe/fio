@@ -125,7 +125,7 @@ enum fio_ioengine_flags {
 	FIO_NODISKUTIL  = 1 << 4,       /* diskutil can't handle filename */
 	FIO_UNIDIR	= 1 << 5,	/* engine is uni-directional */
 	FIO_NOIO	= 1 << 6,	/* thread does only pseudo IO */
-	FIO_SIGQUIT	= 1 << 7,	/* needs SIGQUIT to exit */
+	FIO_SIGTERM	= 1 << 7,	/* needs SIGTERM to exit */
 	FIO_PIPEIO	= 1 << 8,	/* input/output no seekable */
 	FIO_BARRIER	= 1 << 9,	/* engine supports barriers */
 	FIO_MEMALIGN	= 1 << 10,	/* engine wants aligned memory */
