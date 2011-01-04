@@ -9,6 +9,7 @@
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_ODIRECT
 #define FIO_USE_GENERIC_RAND
+#define FIO_HAVE_CLOCK_MONOTONIC
 
 /*
  * This is broken on AIX if _LARGE_FILES is defined...
@@ -22,16 +23,16 @@
 #define OS_MAP_ANON		MAP_ANON
 #define OS_MSG_DONTWAIT		0
 
-static inline int blockdev_invalidate_cache(int fd)
+static inline int blockdev_invalidate_cache(struct fio_file fio_unused *f)
 {
 	return EINVAL;
 }
 
-static inline int blockdev_size(int fd, unsigned long long *bytes)
+static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
 	struct devinfo info;
 
-	if (!ioctl(fd, IOCINFO, &info)) {
+	if (!ioctl(f->fd, IOCINFO, &info)) {
         	*bytes = (unsigned long long)info.un.scdk.numblks *
 				info.un.scdk.blksize;
 		return 0;

@@ -431,7 +431,9 @@ static int exists_and_not_file(const char *filename)
 	if (lstat(filename, &sb) == -1)
 		return 0;
 
-	if (S_ISREG(sb.st_mode))
+	/* \\.\ is the device namespace in Windows, where every file
+	 * is a device node */
+	if (S_ISREG(sb.st_mode) && strncmp(filename, "\\\\.\\", 4) != 0)
 		return 0;
 
 	return 1;

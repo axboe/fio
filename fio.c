@@ -161,13 +161,8 @@ static void posix_timer_setup(void)
 	evt.sigev_notify = SIGEV_THREAD;
 	evt.sigev_notify_function = ival_fn;
 
-#ifndef __CYGWIN__
-	if (timer_create(CLOCK_MONOTONIC, &evt, &ival_timer) < 0)
+	if (timer_create(FIO_TIMER_CLOCK, &evt, &ival_timer) < 0)
 		perror("timer_create");
-#else /* Windows (and thus Cygwin) doesn't have a monotonic clock */
-	if (timer_create(CLOCK_REALTIME, &evt, &ival_timer) < 0)
-		perror("timer_create");
-#endif
 
 }
 

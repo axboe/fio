@@ -12,10 +12,10 @@
 
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_FADVISE
-#define	fadvise	posix_fadvise	/* XXX NetBSD doesn't have fadvise */
 #define FIO_HAVE_ODIRECT
 #define FIO_HAVE_STRSEP
 #define FIO_HAVE_FDATASYNC
+#define FIO_HAVE_CLOCK_MONOTONIC
 #define FIO_USE_GENERIC_BDEV_SIZE
 #define FIO_USE_GENERIC_RAND
 
@@ -25,7 +25,7 @@
 
 typedef off_t off64_t;
 
-static inline int blockdev_invalidate_cache(int fd)
+static inline int blockdev_invalidate_cache(struct fio_file fio_unused *f)
 {
 	return EINVAL;
 }

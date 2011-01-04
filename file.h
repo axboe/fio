@@ -1,7 +1,9 @@
 #ifndef FIO_FILE_H
 #define FIO_FILE_H
 
+#include "compiler/compiler.h"
 #include "io_ddir.h"
+#include "flist.h"
 
 /*
  * The type of object we are working on

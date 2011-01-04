@@ -4,7 +4,11 @@
 
 #include <sys/types.h>
 #include <errno.h>
+#include <windows.h>
 
+#include "../smalloc.h"
+#include "../file.h"
+#include "../log.h"
 
 #define FIO_HAVE_ODIRECT
 #define FIO_USE_GENERIC_RAND
@@ -15,28 +19,11 @@
 #define FIO_HAVE_FDATASYNC
 #define FIO_HAVE_WINDOWSAIO
 
-/* TODO add support for FIO_HAVE_CPU_AFFINITY */
-
 #define OS_MAP_ANON		MAP_ANON
 
+#define OS_CLOCK CLOCK_REALTIME
+
 typedef off_t off64_t;
-
-
-#define FIO_NOTUNIX
-
-#include <windows.h>
-#include <io.h>
-
-typedef void* HANDLE;
-
-BOOL WINAPI GetFileSizeEx(
-   HANDLE hFile,
-   PLARGE_INTEGER lpFileSize
-);
-
-long _get_osfhandle(
-   int fd
-);
 
 typedef struct {
   LARGE_INTEGER Length;
@@ -44,42 +31,50 @@ typedef struct {
 
 #define IOCTL_DISK_GET_LENGTH_INFO 0x7405C
 
-
-static inline int blockdev_size(int fd, unsigned long long *bytes)
+static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
 	int rc = 0;
-	HANDLE hFile = (HANDLE)_get_osfhandle(fd);
-	if (hFile != INVALID_HANDLE_VALUE)
-	{
-		GET_LENGTH_INFORMATION info;
-		DWORD outBytes;
-		LARGE_INTEGER size;
-		size.QuadPart = 0;
-		if (DeviceIoControl(hFile, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &info, sizeof(info), &outBytes, NULL))
-			*bytes = info.Length.QuadPart;
-		else
-			rc = EIO;
+	HANDLE hFile;
+
+	if (f->hFile == NULL) {
+		hFile = CreateFile(f->file_name, (GENERIC_READ | GENERIC_WRITE),
+			(FILE_SHARE_READ | FILE_SHARE_WRITE), NULL, OPEN_EXISTING, 0, NULL);
+	} else {
+		hFile = f->hFile;
 	}
 
-	return 0;
-}
-
-static inline int chardev_size(int fd, unsigned long long *bytes)
-{
-	return blockdev_size(fd, bytes);
-}
-
-static inline int blockdev_invalidate_cache(int fd)
-{
-	int rc = 0;
-	HANDLE hFile = (HANDLE)_get_osfhandle(fd);
-
-	if (hFile != INVALID_HANDLE_VALUE)
-		FlushFileBuffers(hFile);
+	GET_LENGTH_INFORMATION info;
+	DWORD outBytes;
+	LARGE_INTEGER size;
+	size.QuadPart = 0;
+	if (DeviceIoControl(hFile, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &info, sizeof(info), &outBytes, NULL))
+		*bytes = info.Length.QuadPart;
 	else
 		rc = EIO;
+	}
+
+	/* If we were passed a POSIX fd,
+	 * close the HANDLE we created via CreateFile */
+	if (hFile != INVALID_HANDLE_VALUE && f->hFile == NULL)
+		CloseHandle(hFile);
 
 	return rc;
+}
+
+static inline int chardev_size(struct fio_file *f, unsigned long long *bytes)
+{
+	return blockdev_size(f, bytes);
+}
+
+{
+
+static inline int blockdev_invalidate_cache(struct fio_file *f)
+{
+	BOOL bSuccess = FlushFileBuffers(f->hFile);
+	if (!bSuccess)
+		log_info("blockdev_invalidate_cache - FlushFileBuffers failed\n");
+
+	return 0;
 }
 
 static inline unsigned long long os_phys_mem(void)

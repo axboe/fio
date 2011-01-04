@@ -15,6 +15,7 @@
 #define FIO_HAVE_PSHARED_MUTEX
 #define FIO_USE_GENERIC_BDEV_SIZE
 #define FIO_HAVE_FDATASYNC
+#define FIO_HAVE_CLOCK_MONOTONIC
 
 #define OS_MAP_ANON		MAP_ANON
 #define OS_RAND_MAX		2147483648UL
@@ -26,7 +27,7 @@ struct solaris_rand_seed {
 typedef psetid_t os_cpu_mask_t;
 typedef struct solaris_rand_seed os_random_state_t;
 
-static inline int blockdev_invalidate_cache(int fd)
+static inline int blockdev_invalidate_cache(struct fio_file fio_unused *f)
 {
 	return EINVAL;
 }
