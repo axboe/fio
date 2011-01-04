@@ -1,6 +1,7 @@
 #ifndef FIO_FILE_H
 #define FIO_FILE_H
 
+#include <string.h>
 #include "compiler/compiler.h"
 #include "io_ddir.h"
 #include "flist.h"

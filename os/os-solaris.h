@@ -7,6 +7,8 @@
 #include <sys/fcntl.h>
 #include <sys/pset.h>
 
+#include "../file.h"
+
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_SOLARISAIO
 #define FIO_HAVE_FALLOCATE

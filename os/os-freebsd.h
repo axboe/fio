@@ -5,6 +5,8 @@
 #include <sys/sysctl.h>
 #include <sys/disk.h>
 
+#include "../file.h"
+
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_ODIRECT
 #define FIO_HAVE_IOPRIO

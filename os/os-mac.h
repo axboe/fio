@@ -4,6 +4,8 @@
 #include <errno.h>
 #include <sys/sysctl.h>
 
+#include "../file.h"
+
 #ifndef CLOCK_MONOTONIC
 #define CLOCK_MONOTONIC 1
 #endif

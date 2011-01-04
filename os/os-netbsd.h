@@ -10,6 +10,8 @@
 #undef rb_left
 #undef rb_right
 
+#include "../file.h"
+
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_FADVISE
 #define FIO_HAVE_ODIRECT

@@ -15,6 +15,7 @@
 
 #include "indirect.h"
 #include "binject.h"
+#include "../file.h"
 
 #define FIO_HAVE_LIBAIO
 #define FIO_HAVE_POSIXAIO
@@ -193,7 +194,7 @@ enum {
 #define BLKDISCARD	_IO(0x12,119)
 #endif
 
-static inline int blockdev_invalidate_cache(struct fio_file *fd)
+static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
 	return ioctl(f->fd, BLKFLSBUF);
 }
