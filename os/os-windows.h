@@ -1,7 +1,6 @@
 #ifndef FIO_OS_WINDOWS_H
 #define FIO_OS_WINDOWS_H
 
-
 #include <sys/types.h>
 #include <errno.h>
 #include <windows.h>
@@ -51,7 +50,6 @@ static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 		*bytes = info.Length.QuadPart;
 	else
 		rc = EIO;
-	}
 
 	/* If we were passed a POSIX fd,
 	 * close the HANDLE we created via CreateFile */
@@ -66,14 +64,10 @@ static inline int chardev_size(struct fio_file *f, unsigned long long *bytes)
 	return blockdev_size(f, bytes);
 }
 
-{
-
 static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
-	BOOL bSuccess = FlushFileBuffers(f->hFile);
-	if (!bSuccess)
-		log_info("blockdev_invalidate_cache - FlushFileBuffers failed\n");
-
+	/* There's no way to invalidate the cache in Windows
+	 * so just pretend to succeed */
 	return 0;
 }
 
@@ -94,6 +88,5 @@ static inline void os_get_tmpdir(char *path, int len)
 #ifdef MADV_FREE
 #define FIO_MADV_FREE	MADV_FREE
 #endif
-
 
 #endif /* FIO_OS_WINDOWS_H */

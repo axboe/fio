@@ -3,7 +3,6 @@
  * Copyright (C) 2010 Bruce Cran <bruce@cran.org.uk>
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -17,6 +16,8 @@ BOOL windowsaio_debug = FALSE;
 
 struct windowsaio_data {
 	struct io_u **aio_events;
+	HANDLE *busyIoHandles;
+	unsigned int busyIo;
 	unsigned int ioFinished;
 	BOOL running;
 	BOOL stopped;
@@ -36,7 +37,6 @@ struct thread_ctx {
 static void PrintError(LPCSTR lpszFunction);
 static int fio_windowsaio_cancel(struct thread_data *td,
 			       struct io_u *io_u);
-static DWORD GetEndCount(DWORD startCount, struct timespec *t);
 static BOOL TimedOut(DWORD startCount, DWORD endCount);
 static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 				    unsigned int max, struct timespec *t);
@@ -84,24 +84,10 @@ static int fio_windowsaio_cancel(struct thread_data *td,
 	return rc;
 }
 
-static DWORD GetEndCount(DWORD startCount, struct timespec *t)
-{
-	DWORD endCount = startCount;
-
-	if (t == NULL)
-		return 0;
-
-	endCount += (t->tv_sec * 1000) + (t->tv_nsec / 1000000);
-	return endCount;
-}
-
 static BOOL TimedOut(DWORD startCount, DWORD endCount)
 {
 	BOOL expired = FALSE;
 	DWORD currentTime;
-
-	if (startCount == 0 || endCount == 0)
-		return FALSE;
 
 	currentTime = GetTickCount();
 
@@ -109,9 +95,6 @@ static BOOL TimedOut(DWORD startCount, DWORD endCount)
 		expired = TRUE;
 	else if (currentTime < startCount && currentTime > endCount)
 		expired = TRUE;
-
-	if (windowsaio_debug)
-		printf("windowsaio: timedout = %d\n", expired);
 
 	return expired;
 }
@@ -126,16 +109,16 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 	DWORD startCount = 0, endCount = 0;
 	BOOL timedout = FALSE;
 	unsigned int r = 0;
-
-	if (windowsaio_debug)
-		printf("getevents (min %d, max %d)\n", min, max);
+	unsigned int waitInMs = 100;
 
 	if (t != NULL) {
+		waitInMs = (t->tv_sec * 1000) + (t->tv_nsec / 1000000);
 		startCount = GetTickCount();
-		endCount = GetEndCount(startCount, t);
+		endCount = startCount + (t->tv_sec * 1000) + (t->tv_nsec / 1000000);
 	}
 
 	while (dequeued < min && !timedout) {
+		WaitForMultipleObjects(wd->busyIo, wd->busyIoHandles, FALSE, waitInMs);
 
 		flist_for_each(entry, &td->io_u_busylist) {
 			io_u = flist_entry(entry, struct io_u, list);
@@ -149,22 +132,15 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 			wd->aio_events[r] = io_u;
 			r++;
 
-			if (windowsaio_debug)
-				printf("dequeued %d\n", dequeued);
+			wd->busyIo--;
 
 			if (dequeued == max)
 				break;
 		}
 
-		if (TimedOut(startCount, endCount))
+		if (t != NULL && TimedOut(startCount, endCount))
 			timedout = TRUE;
-
-		if (dequeued < min && !timedout)
-			Sleep(250);
 	}
-
-	if (windowsaio_debug)
-		printf("leave getevents (%d)\n", dequeued);
 
 	return dequeued;
 }
@@ -185,11 +161,10 @@ static int fio_windowsaio_queue(struct thread_data *td,
 
 	fio_ro_check(td, io_u);
 
-	if (windowsaio_debug)
-		printf("enqueue enter\n");
-
 	fov = malloc(sizeof(FIO_OVERLAPPED));
 	ZeroMemory(fov, sizeof(FIO_OVERLAPPED));
+
+	struct windowsaio_data *wd = td->io_ops->data;
 
 	io_u->seen = 0;
 
@@ -224,6 +199,7 @@ static int fio_windowsaio_queue(struct thread_data *td,
 		io_u->error = 0;
 		rc = FIO_Q_COMPLETED;
 	} else if (!bSuccess && GetLastError() == ERROR_IO_PENDING) {
+		wd->busyIoHandles[wd->busyIo++] = fov->o.hEvent;
 		rc = FIO_Q_QUEUED;
 	} else {
 		PrintError(__func__);
@@ -232,9 +208,6 @@ static int fio_windowsaio_queue(struct thread_data *td,
 		rc = FIO_Q_COMPLETED;
 	}
 
-	if (windowsaio_debug)
-		printf("enqueue - leave (offset %llu)\n", io_u->offset);
-
 	return rc;
 }
 
@@ -242,25 +215,22 @@ static void fio_windowsaio_cleanup(struct thread_data *td)
 {
 	struct windowsaio_data *wd;
 
-	if (windowsaio_debug)
-		printf("windowsaio: cleanup - enter\n");
-
 	wd = td->io_ops->data;
 	wd->running = FALSE;
 
 	while (wd->stopped == FALSE)
-		Sleep(5);
+		Sleep(20);
 
 	if (wd != NULL) {
 		CloseHandle(wd->hThread);
+
 		free(wd->aio_events);
-		wd->aio_events = NULL;
+		free(wd->busyIoHandles);
 		free(wd);
+
 		td->io_ops->data = NULL;
 	}
 
-	if (windowsaio_debug)
-		printf("windowsaio: cleanup - leave\n");
 }
 
 static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
@@ -280,14 +250,8 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 	wd = ctx->wd;
 	bSuccess = TRUE;
 
-	if (windowsaio_debug)
-		printf("windowsaio: IoCompletionRoutine - enter\n");
-
 	while (ctx->wd->running) {
-		bSuccess = GetQueuedCompletionStatus(ctx->ioCP, &bytes, &ulKey, &ovl, 500);
-
-		if (windowsaio_debug)
-			printf("GetQueuedCompletionStatus returned %d\n", bSuccess);
+		bSuccess = GetQueuedCompletionStatus(ctx->ioCP, &bytes, &ulKey, &ovl, 100);
 
 		if (!bSuccess) {
 			if (GetLastError() == WAIT_TIMEOUT) {
@@ -300,13 +264,6 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 
 		fov = CONTAINING_RECORD(ovl, FIO_OVERLAPPED, o);
 		io_u = fov->io_u;
-
-		if (windowsaio_debug) {
-			if (io_u->seen == 1)
-				printf("IoCompletionRoutine - got already completed IO\n");
-			else
-				printf("IoCompletionRoutine - completed %d IO\n", ctx->wd->ioFinished);
-		}
 
 		if (io_u->seen == 1)
 			continue;
@@ -330,9 +287,6 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 	if (!bSuccess)
 		PrintError(__func__);
 
-	if (windowsaio_debug)
-		printf("windowsaio: IoCompletionRoutine - leave\n");
-
 	ctx->wd->stopped = TRUE;
 	free(ctx);
 	return 0;
@@ -340,20 +294,36 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 
 static int fio_windowsaio_init(struct thread_data *td)
 {
-	int rc = 0;
 	struct windowsaio_data *wd;
 
-	if (windowsaio_debug)
-		printf("windowsaio: init\n");
-
 	wd = malloc(sizeof(struct windowsaio_data));
+	if (wd == NULL)
+		return 1;
 
-	ZeroMemory(wd, sizeof(*wd));
 	wd->aio_events = malloc((td->o.iodepth + 1) * sizeof(struct io_u *));
+	if (wd->aio_events == NULL) {
+		free(wd);
+		return 1;
+	}
+
+	wd->busyIoHandles = malloc((td->o.iodepth + 1) * sizeof(struct io_u *));
+	if (wd->busyIoHandles == NULL) {
+		free(wd->aio_events);
+		free(wd);
+		return 1;
+	}
+
 	ZeroMemory(wd->aio_events, (td->o.iodepth + 1) * sizeof(struct io_u *));
+	ZeroMemory(wd->busyIoHandles, (td->o.iodepth + 1) * sizeof(struct io_u *));
+
+	wd->busyIo = 0;
+	wd->ioFinished = 0;
+	wd->running = FALSE;
+	wd->stopped = FALSE;
+	wd->hThread = FALSE;
 
 	td->io_ops->data = wd;
-	return rc;
+	return 0;
 }
 
 static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
@@ -366,9 +336,6 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 	DWORD access;
 
 	dprint(FD_FILE, "fd open %s\n", f->file_name);
-
-	if (windowsaio_debug)
-		printf("windowsaio: open file %s - enter\n", f->file_name);
 
 	if (f->filetype == FIO_TYPE_PIPE) {
 		log_err("fio: windowsaio doesn't support pipes\n");
@@ -439,18 +406,12 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 		}
 	}
 
-	if (windowsaio_debug)
-		printf("windowsaio: open file - leave (%d)\n", rc);
-
 	return rc;
 }
 
 static int fio_windowsaio_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 {
 	BOOL bSuccess;
-
-	if (windowsaio_debug)
-		printf("windowsaio: close file\n");
 
 	if (f->hFile != INVALID_HANDLE_VALUE) {
 		bSuccess = CloseHandle(f->hFile);
