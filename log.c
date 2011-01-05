@@ -415,6 +415,7 @@ static int init_iolog_read(struct thread_data *td)
 	if (!p) {
 		td_verror(td, errno, "iolog read");
 		log_err("fio: unable to read iolog\n");
+		fclose(f);
 		return 1;
 	}
 
