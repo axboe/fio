@@ -9,7 +9,6 @@
 
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_ODIRECT
-#define FIO_HAVE_IOPRIO
 #define FIO_HAVE_STRSEP
 #define FIO_USE_GENERIC_RAND
 #define FIO_HAVE_CHARDEV_SIZE
@@ -34,7 +33,7 @@ static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 
 static inline int chardev_size(struct fio_file *f, unsigned long long *bytes)
 {
-	return blockdev_size(f->fd, bytes);
+	return blockdev_size(f, bytes);
 }
 
 static inline int blockdev_invalidate_cache(struct fio_file *f)

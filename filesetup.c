@@ -78,7 +78,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		}
 	}
 #endif
-	
+
 	if (!new_layout)
 		goto done;
 
@@ -233,7 +233,7 @@ static int file_size(struct thread_data *td, struct fio_file *f)
 
 static int bdev_size(struct thread_data *td, struct fio_file *f)
 {
-	unsigned long long bytes;
+	unsigned long long bytes = 0;
 	int r;
 
 	if (td->io_ops->open_file(td, f)) {
@@ -265,7 +265,7 @@ err:
 static int char_size(struct thread_data *td, struct fio_file *f)
 {
 #ifdef FIO_HAVE_CHARDEV_SIZE
-	unsigned long long bytes;
+	unsigned long long bytes = 0;
 	int r;
 
 	if (td->io_ops->open_file(td, f)) {

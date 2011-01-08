@@ -25,7 +25,7 @@
 #define OS_MAP_ANON		MAP_ANON
 #define OS_MSG_DONTWAIT		0
 
-static inline int blockdev_invalidate_cache(struct fio_file fio_unused *f)
+static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
 	return EINVAL;
 }

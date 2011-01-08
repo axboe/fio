@@ -17,7 +17,6 @@
 #define FIO_HAVE_ODIRECT
 #define FIO_HAVE_STRSEP
 #define FIO_HAVE_FDATASYNC
-#define FIO_HAVE_CLOCK_MONOTONIC
 #define FIO_USE_GENERIC_BDEV_SIZE
 #define FIO_USE_GENERIC_RAND
 
@@ -25,9 +24,13 @@
 
 #define OS_MAP_ANON		MAP_ANON
 
+#ifndef PTHREAD_STACK_MIN
+#define PTHREAD_STACK_MIN 4096
+#endif
+
 typedef off_t off64_t;
 
-static inline int blockdev_invalidate_cache(struct fio_file fio_unused *f)
+static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
 	return EINVAL;
 }
