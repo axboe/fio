@@ -2,7 +2,9 @@
 #define FIO_OS_H
 
 #include <sys/types.h>
+#include <pthread.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #if defined(__linux__)
 #include "os-linux.h"
@@ -16,6 +18,8 @@
 #include "os-mac.h"
 #elif defined(_AIX)
 #include "os-aix.h"
+#elif defined(__CYGWIN__)
+#include "os-windows.h"
 #else
 #error "unsupported os"
 #endif
@@ -42,7 +46,7 @@
 #endif
 
 #ifndef FIO_HAVE_FADVISE
-#define fadvise(fd, off, len, advice)	(0)
+#define posix_fadvise(fd, off, len, advice)	(0)
 
 #ifndef POSIX_FADV_DONTNEED
 #define POSIX_FADV_DONTNEED	(0)
@@ -88,6 +92,12 @@ typedef unsigned long os_cpu_mask_t;
 #define OS_RAND_MAX			RAND_MAX
 #endif
 
+#ifdef FIO_HAVE_CLOCK_MONOTONIC
+#define FIO_TIMER_CLOCK CLOCK_MONOTONIC
+#else
+#define FIO_TIMER_CLOCK CLOCK_REALTIME
+#endif
+
 #ifndef FIO_HAVE_RAWBIND
 #define fio_lookup_raw(dev, majdev, mindev)	1
 #endif
@@ -121,13 +131,13 @@ static inline int os_cache_line_size(void)
 }
 
 #ifdef FIO_USE_GENERIC_BDEV_SIZE
-static inline int blockdev_size(int fd, unsigned long long *bytes)
+static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
 	off_t end;
 
 	*bytes = 0;
 
-	end = lseek(fd, 0, SEEK_END);
+	end = lseek(f->fd, 0, SEEK_END);
 	if (end < 0)
 		return errno;
 

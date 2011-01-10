@@ -1,7 +1,10 @@
 #ifndef FIO_FILE_H
 #define FIO_FILE_H
 
+#include <string.h>
+#include "compiler/compiler.h"
 #include "io_ddir.h"
+#include "flist.h"
 
 /*
  * The type of object we are working on
@@ -49,6 +52,10 @@ struct fio_file {
 
 	void *file_data;
 	int fd;
+#ifdef __CYGWIN__
+	HANDLE hFile;
+	HANDLE ioCP;
+#endif
 
 	/*
 	 * filename and possible memory mapping

@@ -431,7 +431,9 @@ static int exists_and_not_file(const char *filename)
 	if (lstat(filename, &sb) == -1)
 		return 0;
 
-	if (S_ISREG(sb.st_mode))
+	/* \\.\ is the device namespace in Windows, where every file
+	 * is a device node */
+	if (S_ISREG(sb.st_mode) && strncmp(filename, "\\\\.\\", 4) != 0)
 		return 0;
 
 	return 1;
@@ -1224,7 +1226,7 @@ int parse_options(int argc, char *argv[])
 		if (exec_profile)
 			return 0;
 
-		log_err("No jobs defined(s)\n\n");
+		log_err("No jobs(s) defined\n\n");
 		usage(argv[0]);
 		return 1;
 	}

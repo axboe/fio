@@ -11,6 +11,7 @@
 #include "fio.h"
 #include "smalloc.h"
 #include "filehash.h"
+#include "os/os.h"
 
 static int root_warn;
 
@@ -241,7 +242,7 @@ static int bdev_size(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	r = blockdev_size(f->fd, &bytes);
+	r = blockdev_size(f, &bytes);
 	if (r) {
 		td_verror(td, r, "blockdev_size");
 		printf("fd is %d\n", f->fd);
@@ -273,7 +274,7 @@ static int char_size(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	r = chardev_size(f->fd, &bytes);
+	r = chardev_size(f, &bytes);
 	if (r) {
 		td_verror(td, r, "chardev_size");
 		goto err;
@@ -346,14 +347,14 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 	 * FIXME: add blockdev flushing too
 	 */
 	if (f->mmap_ptr) {
-		ret = madvise(f->mmap_ptr, f->mmap_sz, MADV_DONTNEED);
+		ret = posix_madvise(f->mmap_ptr, f->mmap_sz, POSIX_MADV_DONTNEED);
 #ifdef FIO_MADV_FREE
-		(void) madvise(f->mmap_ptr, f->mmap_sz, FIO_MADV_FREE);
+		(void) posix_madvise(f->mmap_ptr, f->mmap_sz, FIO_MADV_FREE);
 #endif
 	} else if (f->filetype == FIO_TYPE_FILE) {
-		ret = fadvise(f->fd, off, len, POSIX_FADV_DONTNEED);
+		ret = posix_fadvise(f->fd, off, len, POSIX_FADV_DONTNEED);
 	} else if (f->filetype == FIO_TYPE_BD) {
-		ret = blockdev_invalidate_cache(f->fd);
+		ret = blockdev_invalidate_cache(f);
 		if (ret < 0 && errno == EACCES && geteuid()) {
 			if (!root_warn) {
 				log_err("fio: only root may flush block "
@@ -885,7 +886,9 @@ static void get_file_type(struct fio_file *f)
 		f->filetype = FIO_TYPE_FILE;
 
 	if (!stat(f->file_name, &sb)) {
-		if (S_ISBLK(sb.st_mode))
+		/* \\.\ is the device namespace in Windows, where every file is
+		 * a block device */
+		if (S_ISBLK(sb.st_mode) || strncmp(f->file_name, "\\\\.\\", 4) == 0)
 			f->filetype = FIO_TYPE_BD;
 		else if (S_ISCHR(sb.st_mode))
 			f->filetype = FIO_TYPE_CHAR;

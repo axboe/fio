@@ -15,6 +15,7 @@
 
 #include "indirect.h"
 #include "binject.h"
+#include "../file.h"
 
 #define FIO_HAVE_LIBAIO
 #define FIO_HAVE_POSIXAIO
@@ -39,6 +40,7 @@
 #define FIO_HAVE_FS_STAT
 #define FIO_HAVE_TRIM
 #define FIO_HAVE_BINJECT
+#define FIO_HAVE_CLOCK_MONOTONIC
 
 #ifdef SYNC_FILE_RANGE_WAIT_BEFORE
 #define FIO_HAVE_SYNC_FILE_RANGE
@@ -192,14 +194,14 @@ enum {
 #define BLKDISCARD	_IO(0x12,119)
 #endif
 
-static inline int blockdev_invalidate_cache(int fd)
+static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
-	return ioctl(fd, BLKFLSBUF);
+	return ioctl(f->fd, BLKFLSBUF);
 }
 
-static inline int blockdev_size(int fd, unsigned long long *bytes)
+static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
-	if (!ioctl(fd, BLKGETSIZE64, bytes))
+	if (!ioctl(f->fd, BLKGETSIZE64, bytes))
 		return 0;
 
 	return errno;

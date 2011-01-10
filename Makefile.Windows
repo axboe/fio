@@ -1,0 +1,79 @@
+CC	= gcc-3
+DEBUGFLAGS = -DFIO_INC_DEBUG
+OPTFLAGS=  -O2 -g $(EXTFLAGS)
+CFLAGS	=  -Wwrite-strings -Wall -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(OPTFLAGS) $(DEBUGFLAGS) 
+PROGS	= fio
+SCRIPTS = fio_generate_plots
+OBJS = gettime.o fio.o ioengines.o init.o stat.o log.o time.o filesetup.o \
+	eta.o verify.o memory.o io_u.o parse.o mutex.o options.o \
+	rbtree.o smalloc.o filehash.o helpers.o profile.o debug.o
+
+OBJS += lib/rand.o
+OBJS += lib/flist_sort.o
+OBJS += lib/num2str.o
+
+OBJS += crc/crc7.o
+OBJS += crc/crc16.o
+OBJS += crc/crc32.o
+OBJS += crc/crc32c.o
+OBJS += crc/crc32c-intel.o
+OBJS += crc/crc64.o
+OBJS += crc/sha1.o
+OBJS += crc/sha256.o
+OBJS += crc/sha512.o
+OBJS += crc/md5.o
+
+OBJS += engines/cpu.o
+OBJS += engines/mmap.o
+OBJS += engines/posixaio.o
+OBJS += engines/sync.o
+OBJS += engines/null.o
+OBJS += engines/net.o
+OBJS += engines/windowsaio.o
+
+SOURCE = eta.c filehash.c filesetup.c fio.c gettime.c init.c ioengines.c \
+	 io_u.c log.c memory.c mutex.c options.c parse.c rbtree.c smalloc.c \
+	 stat.c parse.c crc/*.c engines/cpu.c engines/mmap.c \
+	 engines/posixaio.c engines/sync.c engines/null.c engines/net.c engines/windowsaio.c
+
+ifneq ($(findstring $(MAKEFLAGS),s),s)
+ifndef V
+	QUIET_CC	= @echo '   ' CC $@;
+	QUIET_DEP	= @echo '   ' DEP $@;
+endif
+endif
+
+INSTALL = install
+prefix = /usr/local
+bindir = $(prefix)/bin
+mandir = $(prefix)/man
+
+%.o: %.c
+	$(QUIET_CC)$(CC) -o $*.o -c $(CFLAGS) $<
+fio: $(OBJS)
+	$(QUIET_CC)windres os/windows/version.rc -O coff -o version.o
+	$(QUIET_CC)$(CC) $(CFLAGS) -o $@ $(filter %.o,$^) $(EXTLIBS) -lpthread -lm -lrt version.o
+
+depend:
+	$(QUIET_DEP)$(CC) -MM $(ALL_CFLAGS) $(SOURCE) 1> .depend
+
+$(PROGS): depend
+
+all: depend $(PROGS) $(SCRIPTS)
+
+clean:
+	-rm -f .depend cscope.out $(OBJS) $(PROGS) version.o core.* core
+
+cscope:
+	@cscope -b
+
+install: $(PROGS) $(SCRIPTS)
+	$(INSTALL) -m755 -d $(DESTDIR)$(bindir)
+	$(INSTALL) $(PROGS) $(SCRIPTS) $(DESTDIR)$(bindir)
+	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
+	$(INSTALL) -m 644 fio.1 $(DESTDIR)$(mandir)/man1
+	$(INSTALL) -m 644 fio_generate_plots.1 $(DESTDIR)$(mandir)/man1
+
+ifneq ($(wildcard .depend),)
+include .depend
+endif

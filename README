@@ -54,6 +54,10 @@ Packages for Solaris are available from OpenCSW. Install their pkgutil
 tool (http://www.opencsw.org/get-it/pkgutil/) and then install fio via
 'pkgutil -i fio'.
 
+Windows:
+Bruce Cran <bruce@cran.org.uk> has fio packages for Windows at
+http://www.bluestop.org/fio .
+
 
 Mailing list
 ------------
@@ -79,10 +83,10 @@ http://maillist.kernel.dk/fio-devel/
 Building
 --------
 
-Just type 'make' and 'make install'. If on FreeBSD, for now you have to
-specify the FreeBSD Makefile with -f and use gmake (not make), eg:
+Just type 'make' and 'make install'. If on BSD, for now you have to
+specify the BSD Makefile with -f and use gmake (not make), eg:
 
-$ gmake -f Makefile.Freebsd && gmake -f Makefile.FreeBSD install
+$ gmake -f Makefile.FreeBSD && gmake -f Makefile.FreeBSD install
 
 Same goes for AIX:
 
@@ -132,7 +136,7 @@ unless they match a job file parameter. You can add as many as you want,
 each job file will be regarded as a separate group and fio will stonewall
 its execution.
 
-The --readonly switch is an extra safety guard to prevent accidentically
+The --readonly switch is an extra safety guard to prevent accidentally
 turning on a write setting when that is not desired. Fio will only write
 if rw=write/randwrite/rw/randrw is given, but this extra safety net can
 be used as an extra precaution. It will also enable a write check in the
@@ -208,7 +212,8 @@ The job file parameters are:
 	size=x		Set file size to x bytes (x string can include k/m/g)
 	ioengine=x	'x' may be: aio/libaio/linuxaio for Linux aio,
 			posixaio for POSIX aio, solarisaio for Solaris
-			native async IO, sync for regular read/write io,
+			native async IO, windowsaio for Windows native async IO,
+			sync for regular read/write io,
 			psync for regular pread/pwrite io, vsync for regular
 			readv/writev (with queuing emulation) mmap for mmap'ed
 			io, syslet-rw for syslet driven read/write, splice for
@@ -293,8 +298,8 @@ The job file parameters are:
 Platforms
 ---------
 
-Fio works on (at least) Linux, Solaris, AIX, OSX, NetBSD, and FreeBSD. Some
-features and/or options may only be available on some of the platforms,
+Fio works on (at least) Linux, Solaris, AIX, OSX, NetBSD, Windows and FreeBSD.
+Some features and/or options may only be available on some of the platforms,
 typically because those features only apply to that platform (like the
 solarisaio engine, or the splice engine on Linux).
 

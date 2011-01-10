@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <assert.h>
 
 #include "fio.h"
@@ -386,7 +387,7 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 		else
 			flags = POSIX_FADV_SEQUENTIAL;
 
-		if (fadvise(f->fd, f->file_offset, f->io_size, flags) < 0) {
+		if (posix_fadvise(f->fd, f->file_offset, f->io_size, flags) < 0) {
 			td_verror(td, errno, "fadvise");
 			goto err;
 		}

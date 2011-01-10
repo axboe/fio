@@ -14,6 +14,8 @@
 #include <inttypes.h>
 #include <assert.h>
 
+struct thread_data;
+
 #include "compiler/compiler.h"
 #include "flist.h"
 #include "fifo.h"

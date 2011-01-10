@@ -150,7 +150,7 @@ int ramp_time_over(struct thread_data *td)
 	return 0;
 }
 
-void fio_init fio_time_init(void)
+void fio_time_init(void)
 {
 	int i;
 

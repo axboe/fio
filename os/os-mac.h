@@ -4,6 +4,8 @@
 #include <errno.h>
 #include <sys/sysctl.h>
 
+#include "../file.h"
+
 #ifndef CLOCK_MONOTONIC
 #define CLOCK_MONOTONIC 1
 #endif
@@ -13,6 +15,7 @@
 #endif
 
 #define FIO_HAVE_POSIXAIO
+#define FIO_HAVE_CLOCK_MONOTONIC
 #define FIO_USE_GENERIC_BDEV_SIZE
 #define FIO_USE_GENERIC_RAND
 
@@ -21,7 +24,7 @@
 typedef unsigned int clockid_t;
 typedef off_t off64_t;
 
-static inline int blockdev_invalidate_cache(int fd)
+static inline int blockdev_invalidate_cache(struct fio_file fio_unused *f)
 {
 	return EINVAL;
 }

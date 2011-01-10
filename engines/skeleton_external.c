@@ -59,7 +59,7 @@ static int fio_skeleton_cancel(struct thread_data *td, struct io_u *io_u)
  *
  * The io engine must transfer in the direction noted by io_u->ddir
  * to the buffer pointed to by io_u->xfer_buf for as many bytes as
- * io_u->xfer_buflen. Residual data count may be set in io_u->residual
+ * io_u->xfer_buflen. Residual data count may be set in io_u->resid
  * for a short read/write.
  */
 static int fio_skeleton_queue(struct thread_data *td, struct io_u *io_u)

@@ -101,12 +101,12 @@ static void terminate_threads(int group_id)
 			 * if the thread is running, just let it exit
 			 */
 			if (td->runstate < TD_RUNNING)
-				kill(td->pid, SIGQUIT);
+				kill(td->pid, SIGTERM);
 			else {
 				struct ioengine_ops *ops = td->io_ops;
 
-				if (ops && (ops->flags & FIO_SIGQUIT))
-					kill(td->pid, SIGQUIT);
+				if (ops && (ops->flags & FIO_SIGTERM))
+					kill(td->pid, SIGTERM);
 			}
 		}
 	}
@@ -161,8 +161,9 @@ static void posix_timer_setup(void)
 	evt.sigev_notify = SIGEV_THREAD;
 	evt.sigev_notify_function = ival_fn;
 
-	if (timer_create(CLOCK_MONOTONIC, &evt, &ival_timer) < 0)
+	if (timer_create(FIO_TIMER_CLOCK, &evt, &ival_timer) < 0)
 		perror("timer_create");
+
 }
 
 static void set_sig_handlers(void)
@@ -177,7 +178,7 @@ static void set_sig_handlers(void)
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = sig_quit;
 	act.sa_flags = SA_RESTART;
-	sigaction(SIGQUIT, &act, NULL);
+	sigaction(SIGTERM, &act, NULL);
 }
 
 /*
@@ -1352,7 +1353,7 @@ static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
 			if (WIFSIGNALED(status)) {
 				int sig = WTERMSIG(status);
 
-				if (sig != SIGQUIT)
+				if (sig != SIGTERM)
 					log_err("fio: pid=%d, got signal=%d\n",
 							(int) td->pid, sig);
 				td_set_runstate(td, TD_REAPED);
@@ -1703,7 +1704,11 @@ int main(int argc, char *argv[])
 	}
 
 	startup_mutex = fio_mutex_init(0);
+	if (startup_mutex == NULL)
+		return 1;
 	writeout_mutex = fio_mutex_init(1);
+	if (writeout_mutex == NULL)
+		return 1;
 
 	set_genesis_time();
 

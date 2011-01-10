@@ -1,0 +1,24 @@
+#include "version.h"
+1 VERSIONINFO
+FILEVERSION     FIO_VERSION_MAJOR,FIO_VERSION_MINOR,FIO_VERSION_BUILD,0
+PRODUCTVERSION  FIO_VERSION_MAJOR,FIO_VERSION_MINOR,FIO_VERSION_BUILD,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "CompanyName", ""
+      VALUE "FileDescription", "Flexible IO Tester"
+      VALUE "FileVersion", FIO_VERSION_STRING
+      VALUE "InternalName", "fio"
+      VALUE "LegalCopyright", "Copyright (C) 2010"
+      VALUE "OriginalFilename", "fio.exe"
+      VALUE "ProductName", "FIO"
+      VALUE "ProductVersion", FIO_VERSION_STRING
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1252
+  END
+END

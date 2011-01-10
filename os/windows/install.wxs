@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+  <?define VersionMajor = 1?>
+  <?define VersionMinor = 44?>
+  <?define VersionBuild = 3?>
+  
+	<Product Id="*"
+             Codepage="1252" Language="1033"
+             Manufacturer="fio" Name="FIO"
+             UpgradeCode="{2338a332-5511-43cf-b9bd-5c60496ccfcc}" Version="$(var.VersionMajor).$(var.VersionMinor).$(var.VersionBuild)">
+		<Package 
+		 Comments="Contact: Your local administrator"
+                 Description="Flexible IO Tester"
+                 InstallerVersion="200" Keywords="Installer,MSI,Database"
+                 Languages="1033" Manufacturer="fio" Platform="x86"
+                 InstallScope="perMachine" InstallPrivileges="elevated" Compressed="yes"/>
+
+		<Media Id="1" Cabinet="Product.cab" EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder" SourceName="program files">
+        <Directory Id="INSTALLDIR">
+          <Directory Id="cygwin" Name="fio">
+            <Directory Id="bin" Name="bin">
+              <Component Id="fio.exe" Location="either">
+                <File Id="fio.exe" Name="fio.exe" KeyPath="yes" Source="..\..\fio.exe"/>
+                <Shortcut Id="FIO_SC" Name="FIO" Description="Opens an FIO shell" Directory="ApplicationProgramsFolder" Target="[cygwin]\Cygwin.bat"/>
+              </Component>
+            </Directory>
+            <Directory Id="usr" Name="usr">
+              <Directory Id="share" Name="share">
+                <Directory Id="doc" Name="doc">
+                  <Directory Id="fio" Name="fio">
+                    <Directory Id="examples" Name="examples"/>
+                    <Component Id="README">
+                      <File Id="README" Name="README.txt" KeyPath="yes" Source="..\..\README"/>
+                      <Shortcut Id="README_SC" Name="Readme" Description="Documentation" Directory="ApplicationProgramsFolder" Target="[#README]"/>
+                    </Component>
+                    <Component Id="REPORTING_BUGS">
+                      <File Id="REPORTING_BUGS" Name="REPORTING-BUGS.txt" KeyPath="yes" Source="..\..\REPORTING-BUGS"/>
+                      <Shortcut Id="REPORTING_BUGS_SC" Name="Reporting bugs" Description="How to report bugs in FIO" Directory="ApplicationProgramsFolder" Target="[#REPORTING_BUGS]"/>
+                    </Component>
+                    <Component Id="HOWTO">
+                      <File Id="HOWTO" Name="HOWTO.txt" KeyPath="yes" Source="..\..\HOWTO"/>
+                      <Shortcut Id="HOWTO_SC" Name="How to use FIO" Description="FIO Tutorial - how to setup FIO" Directory="ApplicationProgramsFolder" Target="[#HOWTO]"/>
+                    </Component>
+                    <Component Id="COPYING">
+                      <File Id="COPYING" Name="COPYING.txt" KeyPath="yes" Source="..\..\COPYING"/>
+                      <Shortcut Id="COPYING_SC" Name="License" Description="FIO license" Directory="ApplicationProgramsFolder" Target="[#COPYING]"/>
+                    </Component>
+                  </Directory>
+                </Directory>
+              </Directory>
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="FIO">
+          <Component Id="ShortcutDir" Guid="475862c2-ae75-4325-96c8-335edb490214">
+            <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall"/>
+            <!-- <RegistryValue Root="HKLM" Key="Software\FIO\FIO" Name="shortcuts" Type="string" Value="" KeyPath="yes"/> -->
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id="AlwaysInstall" Absent="disallow" ConfigurableDirectory="INSTALLDIR" Display="hidden" Level="1" Title="Always Install">
+			<ComponentRef Id="fio.exe" />
+      <ComponentGroupRef Id="examples"/>
+      <ComponentGroupRef Id="cygwin"/>
+
+      <ComponentRef Id="HOWTO"/>
+      <ComponentRef Id="README"/>
+      <ComponentRef Id="REPORTING_BUGS"/>
+      <ComponentRef Id="COPYING"/>
+
+      <ComponentRef Id="ShortcutDir"/>
+		</Feature>
+
+		<!-- <Property Id="ARPPRODUCTICON" Value="ARPPRODUCTICON" /> -->
+		
+		<Property Id="ARPURLINFOABOUT" Value="http://git.kernel.dk/?p=fio.git" />
+		<Property Id='ARPCONTACT'>fio@vger.kernel.org</Property>
+		<Property Id='ARPHELPLINK'>http://www.spinics.net/lists/fio/</Property>
+		<Property Id='ARPURLUPDATEINFO'>http://git.kernel.dk/?p=fio.git</Property>
+
+		<WixVariable Id="WixUILicenseRtf" Value="eula.rtf" />
+
+		<UIRef Id="WixUI_Minimal"/>
+
+    <Condition Message="Per-User installations are not supported">
+      Installed OR
+      ALLUSERS=1
+    </Condition>
+
+    <MajorUpgrade AllowDowngrades="no" DowngradeErrorMessage="A newer version of the application is already installed."/>
+	</Product>
+</Wix>
