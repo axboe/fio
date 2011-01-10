@@ -992,7 +992,8 @@ zoneskip=int	Skip the specified number of bytes when zonesize data has
 		io on zones of a file.
 
 write_iolog=str	Write the issued io patterns to the specified file. See
-		read_iolog.
+		read_iolog.  Specify a separate file for each job, otherwise
+		the iologs will be interspersed and the file may be corrupt.
 
 read_iolog=str	Open an iolog with the specified file name and replay the
 		io patterns it contains. This can be used to store a

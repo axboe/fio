@@ -279,7 +279,9 @@ The job file parameters are:
 			and length entries being in bytes.
 	write_iolog=x	Write an iolog to file 'x' in the same format as iolog.
 			The iolog options are exclusive, if both given the
-			read iolog will be performed.
+			read iolog will be performed.  Specify a separate file
+			for each job, otherwise the iologs will be interspersed
+			and the file may be corrupt.
 	write_bw_log	Write a bandwidth log.
 	write_lat_log	Write a latency log.
 	lockmem=x	Lock down x amount of memory on the machine, to
