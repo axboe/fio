@@ -1,7 +1,7 @@
 CC	= gcc
 DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
 CPPFLAGS= -D_GNU_SOURCE $(DEBUGFLAGS)
-OPTFLAGS= -O2 -fno-omit-frame-pointer -g
+OPTFLAGS= -O2 -fno-omit-frame-pointer -g $(EXTFLAGS)
 CFLAGS	= -std=gnu99 -Wwrite-strings -Wall $(OPTFLAGS) -rdynamic
 LIBS	= -lpthread -lm -lrt
 PROGS	= fio
