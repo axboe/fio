@@ -36,8 +36,8 @@ static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 	HANDLE hFile;
 
 	if (f->hFile == NULL) {
-		hFile = CreateFile(f->file_name, (GENERIC_READ | GENERIC_WRITE),
-			(FILE_SHARE_READ | FILE_SHARE_WRITE), NULL, OPEN_EXISTING, 0, NULL);
+		hFile = CreateFile(f->file_name, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+				NULL, OPEN_EXISTING, 0, NULL);
 	} else {
 		hFile = f->hFile;
 	}

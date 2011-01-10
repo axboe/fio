@@ -16,7 +16,11 @@
 #define uninitialized_var(x) x = x
 
 #ifndef __weak
+#ifndef __CYGWIN__
 #define __weak	__attribute__((weak))
+#else
+#define __weak
+#endif
 #endif
 
 #endif

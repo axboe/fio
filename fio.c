@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <limits.h>
 #include <signal.h>
 #include <time.h>
 #include <locale.h>
@@ -988,7 +989,7 @@ void reset_all_stats(struct thread_data *td)
 		td->io_issues[i] = 0;
 		td->ts.total_io_u[i] = 0;
 	}
-	
+
 	fio_gettime(&tv, NULL);
 	td->ts.runtime[0] = 0;
 	td->ts.runtime[1] = 0;

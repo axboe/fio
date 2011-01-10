@@ -351,7 +351,8 @@ randrepeat=bool	For random IO workloads, seed the generator in a predictable
 fallocate=bool	By default, fio will use fallocate() to advise the system
 		of the size of the file we are going to write. This can be
 		turned off with fallocate=0. May not be available on all
-		supported platforms.
+		supported platforms.  If using ZFS on Solaris this must be
+		set to 0 because ZFS doesn't support it.
 
 fadvise_hint=bool By default, fio will use fadvise() to advise the kernel
 		on what IO patterns it is likely to issue. Sometimes you
@@ -555,7 +556,7 @@ iodepth=int	This defines how many io units to keep in flight against
 		job, can be overridden with a larger value for higher
 		concurrency. Note that increasing iodepth beyond 1 will not
 		affect synchronous ioengines (except for small degress when
-		verify_async is in use). Even async engines my impose OS
+		verify_async is in use). Even async engines may impose OS
 		restrictions causing the desired depth not to be achieved.
 		This may happen on Linux when using libaio and not setting
 		direct=1, since buffered IO is not async on that OS. Keep an
@@ -585,7 +586,7 @@ iodepth_low=int	The low water mark indicating when to start filling
 		the depth drain down to 4 before starting to fill it again.
 
 direct=bool	If value is true, use non-buffered io. This is usually
-		O_DIRECT.
+		O_DIRECT. Note that ZFS on Solaris doesn't support direct io.
 
 buffered=bool	If value is true, use buffered io. This is the opposite
 		of the 'direct' option. Defaults to true.

@@ -203,15 +203,7 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 	pool->free_blocks = bitmap_blocks * SMALLOC_BPB;
 
 #ifdef FIO_HAVE_FALLOCATE
-	{
-		int ret;
-
-		ret = posix_fallocate(fd, 0, alloc_size);
-		if (ret > 0) {
-			fprintf(stderr, "posix_fallocate pool file failed: %s\n", strerror(ret));
-			goto out_unlink;
-		}
-	}
+	posix_fallocate(fd, 0, alloc_size);
 #endif
 
 	if (ftruncate(fd, alloc_size) < 0)

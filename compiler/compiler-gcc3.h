@@ -7,8 +7,4 @@
 #endif
 #endif
 
-#ifdef __CYGWIN__
-#define __weak
-#endif
-
 #endif
