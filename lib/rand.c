@@ -59,18 +59,25 @@ void init_rand(struct frand_state *state)
 	__rand(state);
 }
 
-void fill_random_buf(void *buf, unsigned int len)
+void __fill_random_buf(void *buf, unsigned int len, unsigned long seed)
 {
-	unsigned long r = __rand(&__fio_rand_state);
 	long *ptr = buf;
 
-	if (sizeof(int) != sizeof(*ptr))
+	while ((void *) ptr - buf < len) {
+		*ptr = seed;
+		ptr++;
+		seed *= GOLDEN_RATIO_PRIME;
+		seed >>= 3;
+	}
+}
+
+unsigned long fill_random_buf(void *buf, unsigned int len)
+{
+	unsigned long r = __rand(&__fio_rand_state);
+
+	if (sizeof(int) != sizeof(long *))
 		r *= (unsigned long) __rand(&__fio_rand_state);
 
-	while ((void *) ptr - buf < len) {
-		*ptr = r;
-		ptr++;
-		r *= GOLDEN_RATIO_PRIME;
-		r >>= 3;
-	}
+	__fill_random_buf(buf, len, r);
+	return r;
 }

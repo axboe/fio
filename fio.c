@@ -865,7 +865,7 @@ static int init_io_u(struct thread_data *td)
 				 * Fill the buffer with the pattern if we are
 				 * going to be doing writes.
 				 */
-				fill_pattern(td, io_u->buf, max_bs, io_u);
+				fill_pattern(td, io_u->buf, max_bs, io_u, 0, 0);
 			}
 		}
 

@@ -23,12 +23,19 @@
 #include "crc/sha512.h"
 #include "crc/sha1.h"
 
-void fill_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u *io_u)
+static void populate_hdr(struct thread_data *td, struct io_u *io_u,
+			 struct verify_header *hdr, unsigned int header_num,
+			 unsigned int header_len);
+
+void fill_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u *io_u, unsigned long seed, int use_seed)
 {
 	switch (td->o.verify_pattern_bytes) {
 	case 0:
 		dprint(FD_VERIFY, "fill random bytes len=%u\n", len);
-		fill_random_buf(p, len);
+		if (use_seed)
+			__fill_random_buf(p, len, seed);
+		else
+			io_u->rand_seed = fill_random_buf(p, len);
 		break;
 	case 1:
 		if (io_u->buf_filled_len >= len) {
@@ -156,6 +163,7 @@ struct vcont {
 	 */
 	struct io_u *io_u;
 	unsigned int hdr_num;
+	struct thread_data *td;
 
 	/*
 	 * Output, only valid in case of error
@@ -165,6 +173,70 @@ struct vcont {
 	void *bad_crc;
 	unsigned int crc_len;
 };
+
+static void dump_buf(char *buf, unsigned int len, const char *name,
+		     unsigned long long offset)
+{
+	char fname[80];
+	int ret, fd;
+
+	sprintf(fname, "%llu.%s", offset, name);
+
+	fd = open(fname, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+	if (fd < 0) {
+		perror("open verify buf file");
+		return;
+	}
+
+	while (len) {
+		ret = write(fd, buf, len);
+		if (!ret)
+			break;
+		else if (ret < 0) {
+			perror("write verify buf file");
+			break;
+		}
+		len -= ret;
+		buf += ret;
+	}
+
+	close(fd);
+	log_err("       %s data dumped as %s\n", name, fname);
+}
+
+static void dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
+{
+	struct thread_data *td = vc->td;
+	struct io_u *io_u = vc->io_u;
+	unsigned long hdr_offset;
+	unsigned int hdr_inc, header_num;
+	struct io_u dummy;
+	void *buf, *p;
+
+	hdr_offset = vc->hdr_num * hdr->len;
+
+	dump_buf(io_u->buf + hdr_offset, hdr->len, "received",
+			io_u->offset + hdr_offset);
+
+	buf = p = malloc(io_u->buflen);
+	dummy = *io_u;
+	fill_pattern(td, p, io_u->buflen, &dummy, hdr->rand_seed, 1);
+
+	hdr_inc = io_u->buflen;
+	if (td->o.verify_interval)
+		hdr_inc = td->o.verify_interval;
+
+	header_num = 0;
+	for (; p < buf + io_u->buflen; p += hdr_inc) {
+		hdr = p;
+		populate_hdr(td, io_u, hdr, header_num, hdr_inc);
+		header_num++;
+	}
+
+	dump_buf(buf + hdr_offset, hdr->len, "expected",
+			io_u->offset + hdr_offset);
+	free(buf);
+}
 
 static void log_verify_failure(struct verify_header *hdr, struct vcont *vc)
 {
@@ -181,6 +253,8 @@ static void log_verify_failure(struct verify_header *hdr, struct vcont *vc)
 		log_err("       Received CRC: ");
 		hexdump(vc->bad_crc, vc->crc_len);
 	}
+
+	dump_verify_buffers(hdr, vc);
 }
 
 /*
@@ -529,6 +603,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		struct vcont vc = {
 			.io_u		= io_u,
 			.hdr_num	= hdr_num,
+			.td		= td,
 		};
 
 		if (ret && td->o.verify_fatal)
@@ -713,6 +788,82 @@ static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
 	md5_update(&md5_ctx, p, len);
 }
 
+static void populate_hdr(struct thread_data *td, struct io_u *io_u,
+			 struct verify_header *hdr, unsigned int header_num,
+			 unsigned int header_len)
+{
+	unsigned int data_len;
+	void *data, *p;
+
+	p = (void *) hdr;
+
+	hdr->fio_magic = FIO_HDR_MAGIC;
+	hdr->len = header_len;
+	hdr->verify_type = td->o.verify;
+	hdr->rand_seed = io_u->rand_seed;
+	data_len = header_len - hdr_size(hdr);
+
+	data = p + hdr_size(hdr);
+	switch (td->o.verify) {
+	case VERIFY_MD5:
+		dprint(FD_VERIFY, "fill md5 io_u %p, len %u\n",
+						io_u, hdr->len);
+		fill_md5(hdr, data, data_len);
+		break;
+	case VERIFY_CRC64:
+		dprint(FD_VERIFY, "fill crc64 io_u %p, len %u\n",
+						io_u, hdr->len);
+		fill_crc64(hdr, data, data_len);
+		break;
+	case VERIFY_CRC32C:
+	case VERIFY_CRC32C_INTEL:
+		dprint(FD_VERIFY, "fill crc32c io_u %p, len %u\n",
+						io_u, hdr->len);
+		fill_crc32c(hdr, data, data_len);
+		break;
+	case VERIFY_CRC32:
+		dprint(FD_VERIFY, "fill crc32 io_u %p, len %u\n",
+						io_u, hdr->len);
+		fill_crc32(hdr, data, data_len);
+		break;
+	case VERIFY_CRC16:
+		dprint(FD_VERIFY, "fill crc16 io_u %p, len %u\n",
+						io_u, hdr->len);
+		fill_crc16(hdr, data, data_len);
+		break;
+	case VERIFY_CRC7:
+		dprint(FD_VERIFY, "fill crc7 io_u %p, len %u\n",
+						io_u, hdr->len);
+		fill_crc7(hdr, data, data_len);
+		break;
+	case VERIFY_SHA256:
+		dprint(FD_VERIFY, "fill sha256 io_u %p, len %u\n",
+						io_u, hdr->len);
+		fill_sha256(hdr, data, data_len);
+		break;
+	case VERIFY_SHA512:
+		dprint(FD_VERIFY, "fill sha512 io_u %p, len %u\n",
+						io_u, hdr->len);
+		fill_sha512(hdr, data, data_len);
+		break;
+	case VERIFY_META:
+		dprint(FD_VERIFY, "fill meta io_u %p, len %u\n",
+						io_u, hdr->len);
+		fill_meta(hdr, td, io_u, header_num);
+		break;
+	case VERIFY_SHA1:
+		dprint(FD_VERIFY, "fill sha1 io_u %p, len %u\n",
+						io_u, hdr->len);
+		fill_sha1(hdr, data, data_len);
+		break;
+	default:
+		log_err("fio: bad verify type: %d\n", td->o.verify);
+		assert(0);
+	}
+	if (td->o.verify_offset)
+		memswp(p, p + td->o.verify_offset, hdr_size(hdr));
+}
+
 /*
  * fill body of io_u->buf with random data and add a header with the
  * crc32 or md5 sum of that data.
@@ -720,13 +871,13 @@ static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
 void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	struct verify_header *hdr;
-	void *p = io_u->buf, *data;
-	unsigned int hdr_inc, data_len, header_num = 0;
+	unsigned int hdr_inc, header_num = 0;
+	void *p = io_u->buf;
 
 	if (td->o.verify == VERIFY_NULL)
 		return;
 
-	fill_pattern(td, p, io_u->buflen, io_u);
+	fill_pattern(td, p, io_u->buflen, io_u, 0, 0);
 
 	hdr_inc = io_u->buflen;
 	if (td->o.verify_interval)
@@ -734,71 +885,7 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 
 	for (; p < io_u->buf + io_u->buflen; p += hdr_inc) {
 		hdr = p;
-
-		hdr->fio_magic = FIO_HDR_MAGIC;
-		hdr->verify_type = td->o.verify;
-		hdr->len = hdr_inc;
-		data_len = hdr_inc - hdr_size(hdr);
-
-		data = p + hdr_size(hdr);
-		switch (td->o.verify) {
-		case VERIFY_MD5:
-			dprint(FD_VERIFY, "fill md5 io_u %p, len %u\n",
-							io_u, hdr->len);
-			fill_md5(hdr, data, data_len);
-			break;
-		case VERIFY_CRC64:
-			dprint(FD_VERIFY, "fill crc64 io_u %p, len %u\n",
-							io_u, hdr->len);
-			fill_crc64(hdr, data, data_len);
-			break;
-		case VERIFY_CRC32C:
-		case VERIFY_CRC32C_INTEL:
-			dprint(FD_VERIFY, "fill crc32c io_u %p, len %u\n",
-							io_u, hdr->len);
-			fill_crc32c(hdr, data, data_len);
-			break;
-		case VERIFY_CRC32:
-			dprint(FD_VERIFY, "fill crc32 io_u %p, len %u\n",
-							io_u, hdr->len);
-			fill_crc32(hdr, data, data_len);
-			break;
-		case VERIFY_CRC16:
-			dprint(FD_VERIFY, "fill crc16 io_u %p, len %u\n",
-							io_u, hdr->len);
-			fill_crc16(hdr, data, data_len);
-			break;
-		case VERIFY_CRC7:
-			dprint(FD_VERIFY, "fill crc7 io_u %p, len %u\n",
-							io_u, hdr->len);
-			fill_crc7(hdr, data, data_len);
-			break;
-		case VERIFY_SHA256:
-			dprint(FD_VERIFY, "fill sha256 io_u %p, len %u\n",
-							io_u, hdr->len);
-			fill_sha256(hdr, data, data_len);
-			break;
-		case VERIFY_SHA512:
-			dprint(FD_VERIFY, "fill sha512 io_u %p, len %u\n",
-							io_u, hdr->len);
-			fill_sha512(hdr, data, data_len);
-			break;
-		case VERIFY_META:
-			dprint(FD_VERIFY, "fill meta io_u %p, len %u\n",
-							io_u, hdr->len);
-			fill_meta(hdr, td, io_u, header_num);
-			break;
-		case VERIFY_SHA1:
-			dprint(FD_VERIFY, "fill sha1 io_u %p, len %u\n",
-							io_u, hdr->len);
-			fill_sha1(hdr, data, data_len);
-			break;
-		default:
-			log_err("fio: bad verify type: %d\n", td->o.verify);
-			assert(0);
-		}
-		if (td->o.verify_offset)
-			memswp(p, p + td->o.verify_offset, hdr_size(hdr));
+		populate_hdr(td, io_u, hdr, header_num, hdr_inc);
 		header_num++;
 	}
 }

@@ -49,6 +49,11 @@ struct io_u {
 	unsigned long long offset;
 
 	/*
+	 * Initial seed for generating the buffer contents
+	 */
+	unsigned long rand_seed;
+
+	/*
 	 * IO engine state, may be different from above when we get
 	 * partial transfers / residual data counts
 	 */
