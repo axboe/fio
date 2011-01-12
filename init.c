@@ -22,7 +22,7 @@
 
 #include "lib/getopt.h"
 
-static char fio_version_string[] = "fio 1.50-rc1";
+static char fio_version_string[] = "fio 1.50-rc2";
 
 #define FIO_RANDSEED		(0xb1899bedUL)
 
