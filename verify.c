@@ -254,6 +254,7 @@ static void dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
 	buf = malloc(io_u->buflen);
 	dummy = *io_u;
 	dummy.buf = buf;
+	dummy.rand_seed = hdr->rand_seed;
 
 	fill_pattern_headers(td, &dummy, hdr->rand_seed, 1);
 
