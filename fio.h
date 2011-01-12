@@ -197,6 +197,7 @@ struct thread_options {
 	char verify_pattern[MAX_PATTERN_SIZE];
 	unsigned int verify_pattern_bytes;
 	unsigned int verify_fatal;
+	unsigned int verify_dump;
 	unsigned int verify_async;
 	unsigned long long verify_backlog;
 	unsigned int verify_batch;
