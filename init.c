@@ -1107,7 +1107,7 @@ static int parse_cmd_line(int argc, char *argv[])
 			read_only = 1;
 			break;
 		case 'v':
-			printf("%s\n", fio_version_string);
+			/* already being printed, just quit */
 			exit(0);
 		case 'e':
 			if (!strcmp("always", optarg))
