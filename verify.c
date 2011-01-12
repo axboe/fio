@@ -71,6 +71,27 @@ void fill_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u
 	}
 }
 
+static void fill_pattern_headers(struct thread_data *td, struct io_u *io_u,
+				 unsigned long seed, int use_seed)
+{
+	unsigned int hdr_inc, header_num;
+	struct verify_header *hdr;
+	void *p = io_u->buf;
+
+	fill_pattern(td, p, io_u->buflen, io_u, seed, use_seed);
+
+	hdr_inc = io_u->buflen;
+	if (td->o.verify_interval)
+		hdr_inc = td->o.verify_interval;
+
+	header_num = 0;
+	for (; p < io_u->buf + io_u->buflen; p += hdr_inc) {
+		hdr = p;
+		populate_hdr(td, io_u, hdr, header_num, hdr_inc);
+		header_num++;
+	}
+}
+
 static void memswp(void *buf1, void *buf2, unsigned int len)
 {
 	char swap[200];
@@ -174,13 +195,16 @@ struct vcont {
 	unsigned int crc_len;
 };
 
-static void dump_buf(char *buf, unsigned int len, const char *name,
-		     unsigned long long offset)
+static void dump_buf(char *buf, unsigned int len, unsigned long long offset,
+		     const char *type, struct fio_file *f)
 {
-	char fname[80];
+	char fname[256];
 	int ret, fd;
 
-	sprintf(fname, "%llu.%s", offset, name);
+	strcpy(fname, f->file_name);
+	basename(fname);
+
+	sprintf(fname + strlen(fname), ".%llu.%s", offset, type);
 
 	fd = open(fname, O_CREAT | O_TRUNC | O_WRONLY, 0644);
 	if (fd < 0) {
@@ -201,40 +225,40 @@ static void dump_buf(char *buf, unsigned int len, const char *name,
 	}
 
 	close(fd);
-	log_err("       %s data dumped as %s\n", name, fname);
+	log_err("       %s data dumped as %s\n", type, fname);
 }
 
+/*
+ * Dump the contents of the read block and re-generate the correct data
+ * and dump that too.
+ */
 static void dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
 {
 	struct thread_data *td = vc->td;
 	struct io_u *io_u = vc->io_u;
 	unsigned long hdr_offset;
-	unsigned int hdr_inc, header_num;
 	struct io_u dummy;
-	void *buf, *p;
+	void *buf;
 
+	/*
+	 * Dump the contents we just read off disk
+	 */
 	hdr_offset = vc->hdr_num * hdr->len;
 
-	dump_buf(io_u->buf + hdr_offset, hdr->len, "received",
-			io_u->offset + hdr_offset);
+	dump_buf(io_u->buf + hdr_offset, hdr->len, io_u->offset + hdr_offset,
+			"received", vc->io_u->file);
 
-	buf = p = malloc(io_u->buflen);
+	/*
+	 * Allocate a new buf and re-generate the original data
+	 */
+	buf = malloc(io_u->buflen);
 	dummy = *io_u;
-	fill_pattern(td, p, io_u->buflen, &dummy, hdr->rand_seed, 1);
+	dummy.buf = buf;
 
-	hdr_inc = io_u->buflen;
-	if (td->o.verify_interval)
-		hdr_inc = td->o.verify_interval;
+	fill_pattern_headers(td, &dummy, hdr->rand_seed, 1);
 
-	header_num = 0;
-	for (; p < buf + io_u->buflen; p += hdr_inc) {
-		hdr = p;
-		populate_hdr(td, io_u, hdr, header_num, hdr_inc);
-		header_num++;
-	}
-
-	dump_buf(buf + hdr_offset, hdr->len, "expected",
-			io_u->offset + hdr_offset);
+	dump_buf(buf + hdr_offset, hdr->len, io_u->offset + hdr_offset,
+			"expected", vc->io_u->file);
 	free(buf);
 }
 
@@ -866,28 +890,14 @@ static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 
 /*
  * fill body of io_u->buf with random data and add a header with the
- * crc32 or md5 sum of that data.
+ * checksum of choice
  */
 void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	struct verify_header *hdr;
-	unsigned int hdr_inc, header_num = 0;
-	void *p = io_u->buf;
-
 	if (td->o.verify == VERIFY_NULL)
 		return;
 
-	fill_pattern(td, p, io_u->buflen, io_u, 0, 0);
-
-	hdr_inc = io_u->buflen;
-	if (td->o.verify_interval)
-		hdr_inc = td->o.verify_interval;
-
-	for (; p < io_u->buf + io_u->buflen; p += hdr_inc) {
-		hdr = p;
-		populate_hdr(td, io_u, hdr, header_num, hdr_inc);
-		header_num++;
-	}
+	fill_pattern_headers(td, io_u, 0, 0);
 }
 
 int get_next_verify(struct thread_data *td, struct io_u *io_u)
