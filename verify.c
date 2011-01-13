@@ -198,11 +198,11 @@ struct vcont {
 static void dump_buf(char *buf, unsigned int len, unsigned long long offset,
 		     const char *type, struct fio_file *f)
 {
-	char fname[256];
+	char *ptr, fname[256];
 	int ret, fd;
 
-	strcpy(fname, f->file_name);
-	basename(fname);
+	ptr = strdup(f->file_name);
+	strcpy(fname, basename(ptr));
 
 	sprintf(fname + strlen(fname), ".%llu.%s", offset, type);
 
@@ -226,6 +226,7 @@ static void dump_buf(char *buf, unsigned int len, unsigned long long offset,
 
 	close(fd);
 	log_err("       %s data dumped as %s\n", type, fname);
+	free(ptr);
 }
 
 /*
