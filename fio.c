@@ -146,13 +146,9 @@ static void *disk_thread_main(void *data)
 
 static int create_disk_util_thread(void)
 {
-	pthread_attr_t attr;
 	int ret;
 
-	pthread_attr_init(&attr);
-	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
-	ret = pthread_create(&disk_util_thread, &attr, disk_thread_main, NULL);
-	pthread_attr_destroy(&attr);
+	ret = pthread_create(&disk_util_thread, NULL, disk_thread_main, NULL);
 	if (ret) {
 		log_err("Can't create disk util thread: %s\n", strerror(ret));
 		return 1;
