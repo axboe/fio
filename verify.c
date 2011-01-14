@@ -39,23 +39,38 @@ void fill_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u
 			io_u->rand_seed = fill_random_buf(p, len);
 		break;
 	case 1:
+		/*
+		 * See below write barrier comment
+		 */
+#if 0
+		read_barrier();
 		if (io_u->buf_filled_len >= len) {
 			dprint(FD_VERIFY, "using already filled verify pattern b=0 len=%u\n", len);
 			return;
 		}
+#endif
 		dprint(FD_VERIFY, "fill verify pattern b=0 len=%u\n", len);
 		memset(p, td->o.verify_pattern[0], len);
+		/*
+		 * We need to ensure that the pattern stores are seen before
+		 * the fill length store, or we could observe headers that
+		 * aren't valid to the extent notified by the fill length
+		 */
+		write_barrier();
 		io_u->buf_filled_len = len;
 		break;
 	default: {
 		unsigned int i = 0, size = 0;
 		unsigned char *b = p;
 
+#if 0
+		read_barrier();
 		if (io_u->buf_filled_len >= len) {
 			dprint(FD_VERIFY, "using already filled verify pattern b=%d len=%u\n",
 					td->o.verify_pattern_bytes, len);
 			return;
 		}
+#endif
 		dprint(FD_VERIFY, "fill verify pattern b=%d len=%u\n",
 					td->o.verify_pattern_bytes, len);
 
@@ -66,6 +81,7 @@ void fill_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u
 			memcpy(b+i, td->o.verify_pattern, size);
 			i += size;
 		}
+		write_barrier();
 		io_u->buf_filled_len = len;
 		break;
 		}
