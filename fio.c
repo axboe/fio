@@ -135,6 +135,8 @@ static void *disk_thread_main(void *data)
 
 	while (threads) {
 		usleep(DISK_UTIL_MSEC * 1000);
+		if (!threads)
+			break;
 		update_io_ticks();
 		print_thread_status();
 	}
