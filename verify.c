@@ -553,14 +553,14 @@ int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 {
 	struct thread_data *td = vc->td;
 	struct io_u *io_u = vc->io_u;
-	char *pattern = td->o.verify_pattern;
-	unsigned long pattern_size = td->o.verify_pattern_bytes;
+	char *buf, *pattern;
 	unsigned int hdr_size = __hdr_size(td->o.verify);
-	char *buf = (void *) hdr + hdr_size;
-	unsigned int hdr_inc = get_hdr_inc(td, io_u);
-	unsigned int len = hdr_inc - hdr_size;
-	unsigned int mod = hdr_size % pattern_size;
-	unsigned int i;
+	unsigned int len, mod, i;
+
+	pattern = td->o.verify_pattern;
+	buf = (void *) hdr + hdr_size;
+	len = get_hdr_inc(td, io_u) - hdr_size;
+	mod = hdr_size % td->o.verify_pattern_bytes;
 
 	for (i = 0; i < len; i++) {
 		if (buf[i] != pattern[mod]) {
@@ -574,7 +574,7 @@ int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 			return EILSEQ;
 		}
 		mod++;
-		if (mod == pattern_size)
+		if (mod == td->o.verify_pattern_bytes)
 			mod = 0;
 	}
 
