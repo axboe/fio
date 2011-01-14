@@ -18,6 +18,7 @@ enum {
 	VERIFY_SHA512,			/* sha512 sum data blocks */
 	VERIFY_META,			/* block_num, timestamp etc. */
 	VERIFY_SHA1,			/* sha1 sum data blocks */
+	VERIFY_PATTERN,			/* verify specific patterns */
 	VERIFY_NULL,			/* pretend to verify */
 };
 

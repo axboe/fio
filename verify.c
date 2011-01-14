@@ -179,6 +179,9 @@ static inline unsigned int __hdr_size(int verify_type)
 	case VERIFY_SHA1:
 		len = sizeof(struct vhdr_sha1);
 		break;
+	case VERIFY_PATTERN:
+		len = 0;
+		break;
 	default:
 		log_err("fio: unknown verify header!\n");
 		assert(0);
@@ -317,20 +320,67 @@ static inline void *io_u_verify_off(struct verify_header *hdr, struct vcont *vc)
 	return vc->io_u->buf + vc->hdr_num * hdr->len + hdr_size(hdr);
 }
 
-static int verify_io_u_meta(struct verify_header *hdr, struct thread_data *td,
-			    struct vcont *vc)
+static unsigned int hweight8(unsigned int w)
 {
+	unsigned int res = w - ((w >> 1) & 0x55);
+
+	res = (res & 0x33) + ((res >> 2) & 0x33);
+	return (res + (res >> 4)) & 0x0F;
+}
+
+static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
+{
+	struct thread_data *td = vc->td;
+	struct io_u *io_u = vc->io_u;
+	char *buf, *pattern;
+	unsigned int hdr_size = __hdr_size(td->o.verify);
+	unsigned int len, mod, i;
+
+	pattern = td->o.verify_pattern;
+	buf = (void *) hdr + hdr_size;
+	len = get_hdr_inc(td, io_u) - hdr_size;
+	mod = hdr_size % td->o.verify_pattern_bytes;
+
+	for (i = 0; i < len; i++) {
+		if (buf[i] != pattern[mod]) {
+			unsigned int bits;
+
+			bits = hweight8(buf[i] ^ pattern[mod]);
+			log_err("fio: got pattern %x, wanted %x. Bad bits %d\n",
+				buf[i], pattern[mod], bits);
+			log_err("fio: bad pattern block offset %u\n", i);
+			dump_verify_buffers(hdr, vc);
+			return EILSEQ;
+		}
+		mod++;
+		if (mod == td->o.verify_pattern_bytes)
+			mod = 0;
+	}
+
+	return 0;
+}
+
+static int verify_io_u_meta(struct verify_header *hdr, struct vcont *vc)
+{
+	struct thread_data *td = vc->td;
 	struct vhdr_meta *vh = hdr_priv(hdr);
 	struct io_u *io_u = vc->io_u;
+	int ret = EILSEQ;
 
 	dprint(FD_VERIFY, "meta verify io_u %p, len %u\n", io_u, hdr->len);
 
 	if (vh->offset == io_u->offset + vc->hdr_num * td->o.verify_interval)
+		ret = 0;
+
+	if (td->o.verify_pattern_bytes)
+		ret |= verify_io_u_pattern(hdr, vc);
+
+	if (!ret)
 		return 0;
 
 	vc->name = "meta";
 	log_verify_failure(hdr, vc);
-	return EILSEQ;
+	return ret;
 }
 
 static int verify_io_u_sha512(struct verify_header *hdr, struct vcont *vc)
@@ -541,46 +591,6 @@ static int verify_io_u_md5(struct verify_header *hdr, struct vcont *vc)
 	return EILSEQ;
 }
 
-static unsigned int hweight8(unsigned int w)
-{
-	unsigned int res = w - ((w >> 1) & 0x55);
-
-	res = (res & 0x33) + ((res >> 2) & 0x33);
-	return (res + (res >> 4)) & 0x0F;
-}
-
-int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
-{
-	struct thread_data *td = vc->td;
-	struct io_u *io_u = vc->io_u;
-	char *buf, *pattern;
-	unsigned int hdr_size = __hdr_size(td->o.verify);
-	unsigned int len, mod, i;
-
-	pattern = td->o.verify_pattern;
-	buf = (void *) hdr + hdr_size;
-	len = get_hdr_inc(td, io_u) - hdr_size;
-	mod = hdr_size % td->o.verify_pattern_bytes;
-
-	for (i = 0; i < len; i++) {
-		if (buf[i] != pattern[mod]) {
-			unsigned int bits;
-
-			bits = hweight8(buf[i] ^ pattern[mod]);
-			log_err("fio: got pattern %x, wanted %x. Bad bits %d\n",
-				buf[i], pattern[mod], bits);
-			log_err("fio: bad pattern block offset %u\n", i);
-			dump_verify_buffers(hdr, vc);
-			return EILSEQ;
-		}
-		mod++;
-		if (mod == td->o.verify_pattern_bytes)
-			mod = 0;
-	}
-
-	return 0;
-}
-
 /*
  * Push IO verification to a separate thread
  */
@@ -681,25 +691,6 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			return EILSEQ;
 		}
 
-		if (td->o.verify_pattern_bytes) {
-			dprint(FD_VERIFY, "pattern verify io_u %p, len %u\n",
-								io_u, hdr->len);
-			ret = verify_io_u_pattern(hdr, &vc);
-			if (ret) {
-				log_err("pattern: verify failed at file %s offset %llu, length %u\n",
-					io_u->file->file_name,
-					io_u->offset + hdr_num * hdr->len,
-					hdr->len);
-			}
-
-			/*
-			 * Also verify the meta data, if applicable
-			 */
-			if (hdr->verify_type == VERIFY_META)
-				ret |= verify_io_u_meta(hdr, td, &vc);
-			continue;
-		}
-
 		switch (hdr->verify_type) {
 		case VERIFY_MD5:
 			ret = verify_io_u_md5(hdr, &vc);
@@ -727,10 +718,13 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			ret = verify_io_u_sha512(hdr, &vc);
 			break;
 		case VERIFY_META:
-			ret = verify_io_u_meta(hdr, td, &vc);
+			ret = verify_io_u_meta(hdr, &vc);
 			break;
 		case VERIFY_SHA1:
 			ret = verify_io_u_sha1(hdr, &vc);
+			break;
+		case VERIFY_PATTERN:
+			ret = verify_io_u_pattern(hdr, &vc);
 			break;
 		default:
 			log_err("Bad verify type %u\n", hdr->verify_type);
@@ -909,6 +903,9 @@ static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 		dprint(FD_VERIFY, "fill sha1 io_u %p, len %u\n",
 						io_u, hdr->len);
 		fill_sha1(hdr, data, data_len);
+		break;
+	case VERIFY_PATTERN:
+		/* nothing to do here */
 		break;
 	default:
 		log_err("fio: bad verify type: %d\n", td->o.verify);

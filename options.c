@@ -675,6 +675,11 @@ static int str_verify_pattern_cb(void *data, const char *input)
 		}
 	}
 	td->o.verify_pattern_bytes = i;
+	/*
+	 * VERIFY_META could already be set
+	 */
+	if (td->o.verify == VERIFY_NONE)
+		td->o.verify = VERIFY_PATTERN;
 	return 0;
 }
 
