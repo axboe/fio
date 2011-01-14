@@ -72,6 +72,17 @@ void fill_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u
 	}
 }
 
+static unsigned int get_hdr_inc(struct thread_data *td, struct io_u *io_u)
+{
+	unsigned int hdr_inc;
+
+	hdr_inc = io_u->buflen;
+	if (td->o.verify_interval)
+		hdr_inc = td->o.verify_interval;
+
+	return hdr_inc;
+}
+
 static void fill_pattern_headers(struct thread_data *td, struct io_u *io_u,
 				 unsigned long seed, int use_seed)
 {
@@ -81,10 +92,7 @@ static void fill_pattern_headers(struct thread_data *td, struct io_u *io_u,
 
 	fill_pattern(td, p, io_u->buflen, io_u, seed, use_seed);
 
-	hdr_inc = io_u->buflen;
-	if (td->o.verify_interval)
-		hdr_inc = td->o.verify_interval;
-
+	hdr_inc = get_hdr_inc(td, io_u);
 	header_num = 0;
 	for (; p < io_u->buf + io_u->buflen; p += hdr_inc) {
 		hdr = p;
@@ -257,6 +265,7 @@ static void dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
 	dummy = *io_u;
 	dummy.buf = buf;
 	dummy.rand_seed = hdr->rand_seed;
+	dummy.buf_filled_len = 0;
 
 	fill_pattern_headers(td, &dummy, hdr->rand_seed, 1);
 
@@ -524,9 +533,17 @@ static unsigned int hweight8(unsigned int w)
 	return (res + (res >> 4)) & 0x0F;
 }
 
-int verify_io_u_pattern(char *pattern, unsigned long pattern_size,
-			char *buf, unsigned int len, unsigned int mod)
+int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 {
+	struct thread_data *td = vc->td;
+	struct io_u *io_u = vc->io_u;
+	char *pattern = td->o.verify_pattern;
+	unsigned long pattern_size = td->o.verify_pattern_bytes;
+	unsigned int hdr_size = __hdr_size(td->o.verify);
+	char *buf = (void *) hdr + hdr_size;
+	unsigned int hdr_inc = get_hdr_inc(td, io_u);
+	unsigned int len = hdr_inc - hdr_size;
+	unsigned int mod = hdr_size % pattern_size;
 	unsigned int i;
 
 	for (i = 0; i < len; i++) {
@@ -537,6 +554,7 @@ int verify_io_u_pattern(char *pattern, unsigned long pattern_size,
 			log_err("fio: got pattern %x, wanted %x. Bad bits %d\n",
 				buf[i], pattern[mod], bits);
 			log_err("fio: bad pattern block offset %u\n", i);
+			dump_verify_buffers(hdr, vc);
 			return EILSEQ;
 		}
 		mod++;
@@ -620,9 +638,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		goto done;
 	}
 
-	hdr_inc = io_u->buflen;
-	if (td->o.verify_interval)
-		hdr_inc = td->o.verify_interval;
+	hdr_inc = get_hdr_inc(td, io_u);
 
 	ret = 0;
 	for (p = io_u->buf; p < io_u->buf + io_u->buflen;
@@ -652,12 +668,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		if (td->o.verify_pattern_bytes) {
 			dprint(FD_VERIFY, "pattern verify io_u %p, len %u\n",
 								io_u, hdr->len);
-			ret = verify_io_u_pattern(td->o.verify_pattern,
-				  td->o.verify_pattern_bytes,
-				  p + hdr_size,
-				  hdr_inc - hdr_size,
-				  hdr_size % td->o.verify_pattern_bytes);
-
+			ret = verify_io_u_pattern(hdr, &vc);
 			if (ret) {
 				log_err("pattern: verify failed at file %s offset %llu, length %u\n",
 					io_u->file->file_name,
