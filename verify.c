@@ -6,6 +6,7 @@
 #include <string.h>
 #include <assert.h>
 #include <pthread.h>
+#include <libgen.h>
 
 #include "fio.h"
 #include "verify.h"
