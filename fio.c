@@ -64,8 +64,8 @@ static struct fio_mutex *startup_mutex;
 static struct fio_mutex *writeout_mutex;
 static volatile int fio_abort;
 static int exit_value;
-static timer_t ival_timer;
 static pthread_t gtod_thread;
+static pthread_t disk_util_thread;
 static struct flist_head *cgroup_list;
 static char *cgroup_mnt;
 
@@ -113,26 +113,6 @@ static void terminate_threads(int group_id)
 	}
 }
 
-static void status_timer_arm(void)
-{
-	struct itimerspec value;
-
-	value.it_value.tv_sec = 0;
-	value.it_value.tv_nsec = DISK_UTIL_MSEC * 1000000;
-	value.it_interval.tv_sec = 0;
-	value.it_interval.tv_nsec = DISK_UTIL_MSEC * 1000000;
-
-	timer_settime(ival_timer, 0, &value, NULL);
-}
-
-static void ival_fn(union sigval sig)
-{
-	if (threads) {
-		update_io_ticks();
-		print_thread_status();
-	}
-}
-
 /*
  * Happens on thread runs with ctrl-c, ignore our own SIGQUIT
  */
@@ -149,22 +129,43 @@ static void sig_int(int sig)
 	}
 }
 
-static void posix_timer_teardown(void)
+static void *disk_thread_main(void *data)
 {
-	timer_delete(ival_timer);
+	fio_mutex_up(startup_mutex);
+
+	while (threads) {
+		usleep(DISK_UTIL_MSEC * 1000);
+		update_io_ticks();
+		print_thread_status();
+	}
+
+	return NULL;
 }
 
-static void posix_timer_setup(void)
+static int create_disk_util_thread(void)
 {
-	struct sigevent evt;
+	pthread_attr_t attr;
+	int ret;
 
-	memset(&evt, 0, sizeof(evt));
-	evt.sigev_notify = SIGEV_THREAD;
-	evt.sigev_notify_function = ival_fn;
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
+	ret = pthread_create(&disk_util_thread, &attr, disk_thread_main, NULL);
+	pthread_attr_destroy(&attr);
+	if (ret) {
+		log_err("Can't create disk util thread: %s\n", strerror(ret));
+		return 1;
+	}
 
-	if (timer_create(FIO_TIMER_CLOCK, &evt, &ival_timer) < 0)
-		perror("timer_create");
+	ret = pthread_detach(disk_util_thread);
+	if (ret) {
+		log_err("Can't detatch disk util thread: %s\n", strerror(ret));
+		return 1;
+	}
 
+	dprint(FD_MUTEX, "wait on startup_mutex\n");
+	fio_mutex_down(startup_mutex);
+	dprint(FD_MUTEX, "done waiting on startup_mutex\n");
+	return 0;
 }
 
 static void set_sig_handlers(void)
@@ -1716,9 +1717,7 @@ int main(int argc, char *argv[])
 		return 1;
 
 	set_genesis_time();
-
-	posix_timer_setup();
-	status_timer_arm();
+	create_disk_util_thread();
 
 	cgroup_list = smalloc(sizeof(*cgroup_list));
 	INIT_FLIST_HEAD(cgroup_list);
@@ -1738,7 +1737,6 @@ int main(int argc, char *argv[])
 	sfree(cgroup_list);
 	sfree(cgroup_mnt);
 
-	posix_timer_teardown();
 	fio_mutex_remove(startup_mutex);
 	fio_mutex_remove(writeout_mutex);
 	return exit_value;
