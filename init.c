@@ -158,8 +158,11 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 
 	if (global)
 		return &def_thread;
-	if (thread_number >= max_jobs)
+	if (thread_number >= max_jobs) {
+		log_err("error: maximum number of jobs (%d) reached.\n",
+				max_jobs);
 		return NULL;
+	}
 
 	td = &threads[thread_number++];
 	*td = *parent;
