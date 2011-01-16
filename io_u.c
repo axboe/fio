@@ -1374,6 +1374,8 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
 		      unsigned int max_bs)
 {
+	io_u->buf_filled_len = 0;
+
 	if (!td->o.zero_buffers)
 		fill_random_buf(io_u->buf, max_bs);
 	else
