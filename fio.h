@@ -522,6 +522,7 @@ extern char *job_section;
 extern int fio_gtod_offload;
 extern int fio_gtod_cpu;
 extern enum fio_cs fio_clock_source;
+extern int warnings_fatal;
 
 extern struct thread_data *threads;
 

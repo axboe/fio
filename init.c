@@ -41,6 +41,7 @@ FILE *f_out = NULL;
 FILE *f_err = NULL;
 char *job_section = NULL;
 char *exec_profile = NULL;
+int warnings_fatal = 0;
 
 int write_bw_log = 0;
 int read_only = 0;
@@ -133,6 +134,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= "profile",
 		.has_arg	= required_argument,
 		.val		= 'p',
+	},
+	{
+		.name		= "warnings-fatal",
+		.has_arg	= no_argument,
+		.val		= 'w',
 	},
 	{
 		.name		= NULL,
@@ -240,6 +246,7 @@ static int fixed_block_size(struct thread_options *o)
 static int fixup_options(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
+	int ret;
 
 #ifndef FIO_HAVE_PSHARED_MUTEX
 	if (!o->use_thread) {
@@ -247,6 +254,7 @@ static int fixup_options(struct thread_data *td)
 			 " mutexes, forcing use of threads. Use the 'thread'"
 			 " option to get rid of this warning.\n");
 		o->use_thread = 1;
+		ret = warnings_fatal;
 	}
 #endif
 
@@ -254,6 +262,7 @@ static int fixup_options(struct thread_data *td)
 		log_err("fio: read iolog overrides write_iolog\n");
 		free(o->write_iolog_file);
 		o->write_iolog_file = NULL;
+		ret = warnings_fatal;
 	}
 
 	/*
@@ -292,6 +301,7 @@ static int fixup_options(struct thread_data *td)
 	    !o->norandommap) {
 		log_err("fio: Any use of blockalign= turns off randommap\n");
 		o->norandommap = 1;
+		ret = warnings_fatal;
 	}
 
 	if (!o->file_size_high)
@@ -302,6 +312,7 @@ static int fixup_options(struct thread_data *td)
 		log_err("fio: norandommap given for variable block sizes, "
 			"verify disabled\n");
 		o->verify = VERIFY_NONE;
+		ret = warnings_fatal;
 	}
 	if (o->bs_unaligned && (o->odirect || td->io_ops->flags & FIO_RAWIO))
 		log_err("fio: bs_unaligned may not work with raw io\n");
@@ -343,28 +354,38 @@ static int fixup_options(struct thread_data *td)
 	    ((o->ratemin[0] + o->ratemin[1]) && (o->rate_iops_min[0] +
 		o->rate_iops_min[1]))) {
 		log_err("fio: rate and rate_iops are mutually exclusive\n");
-		return 1;
+		ret = 1;
 	}
 	if ((o->rate[0] < o->ratemin[0]) || (o->rate[1] < o->ratemin[1]) ||
 	    (o->rate_iops[0] < o->rate_iops_min[0]) ||
 	    (o->rate_iops[1] < o->rate_iops_min[1])) {
 		log_err("fio: minimum rate exceeds rate\n");
-		return 1;
+		ret = 1;
 	}
 
 	if (!o->timeout && o->time_based) {
 		log_err("fio: time_based requires a runtime/timeout setting\n");
 		o->time_based = 0;
+		ret = warnings_fatal;
 	}
 
 	if (o->fill_device && !o->size)
 		o->size = -1ULL;
 
-	if (td_rw(td) && o->verify != VERIFY_NONE)
-		log_info("fio: mixed read/write workload with verify. May not "
-		 "work as expected, unless you pre-populated the file\n");
-
 	if (o->verify != VERIFY_NONE) {
+		if (td_rw(td)) {
+			log_info("fio: mixed read/write workload with verify. "
+				"May not work as expected, unless you "
+				"pre-populated the file\n");
+			ret = warnings_fatal;
+		}
+		if (td_write(td) && o->numjobs) {
+			log_info("Multiple writers may overwrite blocks that "
+				"belong to other jobs. This can cause "
+				"verification failures.\n");
+			ret = warnings_fatal;
+		}
+
 		o->refill_buffers = 1;
 		if (o->max_bs[DDIR_WRITE] != o->min_bs[DDIR_WRITE] &&
 		    !o->verify_interval)
@@ -373,9 +394,11 @@ static int fixup_options(struct thread_data *td)
 
 	if (o->pre_read) {
 		o->invalidate_cache = 0;
-		if (td->io_ops->flags & FIO_PIPEIO)
+		if (td->io_ops->flags & FIO_PIPEIO) {
 			log_info("fio: cannot pre-read files with an IO engine"
 				 " that isn't seekable. Pre-read disabled.\n");
+			ret = warnings_fatal;
+		}
 	}
 
 #ifndef FIO_HAVE_FDATASYNC
@@ -386,10 +409,11 @@ static int fixup_options(struct thread_data *td)
 			 " this warning\n");
 		o->fsync_blocks = o->fdatasync_blocks;
 		o->fdatasync_blocks = 0;
+		ret = warnings_fatal;
 	}
 #endif
 
-	return 0;
+	return ret;
 }
 
 /*
@@ -982,6 +1006,7 @@ static void usage(const char *name)
 	printf("\t--section=name\tOnly run specified section in job file\n");
 	printf("\t--alloc-size=kb\tSet smalloc pool to this size in kb"
 		" (def 1024)\n");
+	printf("\t--warnings-fatal Fio parser warnings are fatal\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
 	printf("\n                   Jens Axboe <jaxboe@fusionio.com>\n");
 }
@@ -1167,6 +1192,9 @@ static int parse_cmd_line(int argc, char *argv[])
 			ret = fio_cmd_option_parse(td, opt, val);
 			break;
 		}
+		case 'w':
+			warnings_fatal = 1;
+			break;
 		default:
 			do_exit++;
 			exit_val = 1;

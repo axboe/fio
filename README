@@ -129,6 +129,7 @@ $ fio
 			May be "always", "never" or "auto"
 	--section=name	Only run specified section in job file
 	--alloc-size=kb	Set smalloc pool to this size in kb (def 1024)
+	--warnings-fatal Fio parser warnings are fatal
 
 
 Any parameters following the options will be assumed to be job files,
