@@ -55,6 +55,8 @@ unsigned long fio_debug = 0;
 unsigned int fio_debug_jobno = -1;
 unsigned int *fio_debug_jobp = NULL;
 
+static char cmd_optstr[256];
+
 /*
  * Command line options. These will contain the above, plus a few
  * extra that only pertain to fio itself and not jobs.
@@ -1093,12 +1095,32 @@ static int set_debug(const char *string)
 }
 #endif
 
+static void fio_options_fill_optstring(void)
+{
+	char *ostr = cmd_optstr;
+	int i, c;
+
+	c = i = 0;
+	while (l_opts[i].name) {
+		ostr[c++] = l_opts[i].val;
+		if (l_opts[i].has_arg == required_argument)
+			ostr[c++] = ':';
+		else if (l_opts[i].has_arg == optional_argument) {
+			ostr[c++] = ':';
+			ostr[c++] = ':';
+		}
+		i++;
+	}
+	ostr[c] = '\0';
+}
+
 static int parse_cmd_line(int argc, char *argv[])
 {
 	struct thread_data *td = NULL;
 	int c, ini_idx = 0, lidx, ret = 0, do_exit = 0, exit_val = 0;
+	char *ostr = cmd_optstr;
 
-	while ((c = getopt_long_only(argc, argv, "", l_opts, &lidx)) != -1) {
+	while ((c = getopt_long_only(argc, argv, ostr, l_opts, &lidx)) != -1) {
 		switch (c) {
 		case 'a':
 			smalloc_pool_size = atoi(optarg);
@@ -1231,6 +1253,7 @@ int parse_options(int argc, char *argv[])
 
 	log_info("%s\n", fio_version_string);
 
+	fio_options_fill_optstring();
 	fio_options_dup_and_init(l_opts);
 
 	if (setup_thread_area())
