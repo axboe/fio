@@ -22,6 +22,8 @@
 
 #define OS_CLOCK CLOCK_REALTIME
 
+#define FIO_PREFERRED_ENGINE	"windowsaio"
+
 typedef off_t off64_t;
 
 typedef struct {

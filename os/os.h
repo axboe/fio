@@ -102,6 +102,10 @@ typedef unsigned long os_cpu_mask_t;
 #define fio_lookup_raw(dev, majdev, mindev)	1
 #endif
 
+#ifndef FIO_PREFERRED_ENGINE
+#define FIO_PREFERRED_ENGINE	"sync"
+#endif
+
 #ifndef FIO_HAVE_BLKTRACE
 static inline int is_blktrace(const char *fname)
 {
