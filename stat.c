@@ -728,7 +728,7 @@ static inline void add_stat_sample(struct io_stat *is, unsigned long data)
 
 static void __add_log_sample(struct io_log *iolog, unsigned long val,
 			     enum fio_ddir ddir, unsigned int bs,
-			     unsigned long time)
+			     unsigned long t)
 {
 	const int nr_samples = iolog->nr_samples;
 
@@ -740,7 +740,7 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 	}
 
 	iolog->log[nr_samples].val = val;
-	iolog->log[nr_samples].time = time;
+	iolog->log[nr_samples].time = t;
 	iolog->log[nr_samples].ddir = ddir;
 	iolog->log[nr_samples].bs = bs;
 	iolog->nr_samples++;

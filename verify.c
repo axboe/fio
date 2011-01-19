@@ -333,13 +333,13 @@ static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 	struct thread_data *td = vc->td;
 	struct io_u *io_u = vc->io_u;
 	char *buf, *pattern;
-	unsigned int hdr_size = __hdr_size(td->o.verify);
+	unsigned int header_size = __hdr_size(td->o.verify);
 	unsigned int len, mod, i;
 
 	pattern = td->o.verify_pattern;
-	buf = (void *) hdr + hdr_size;
-	len = get_hdr_inc(td, io_u) - hdr_size;
-	mod = hdr_size % td->o.verify_pattern_bytes;
+	buf = (void *) hdr + header_size;
+	len = get_hdr_inc(td, io_u) - header_size;
+	mod = header_size % td->o.verify_pattern_bytes;
 
 	for (i = 0; i < len; i++) {
 		if (buf[i] != pattern[mod]) {
@@ -653,7 +653,7 @@ static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
 int verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	struct verify_header *hdr;
-	unsigned int hdr_size, hdr_inc, hdr_num = 0;
+	unsigned int header_size, hdr_inc, hdr_num = 0;
 	void *p;
 	int ret;
 
@@ -678,9 +678,9 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		if (ret && td->o.verify_fatal)
 			break;
 
-		hdr_size = __hdr_size(td->o.verify);
+		header_size = __hdr_size(td->o.verify);
 		if (td->o.verify_offset)
-			memswp(p, p + td->o.verify_offset, hdr_size);
+			memswp(p, p + td->o.verify_offset, header_size);
 		hdr = p;
 
 		if (hdr->fio_magic != FIO_HDR_MAGIC) {

@@ -141,11 +141,11 @@ static int fio_vsyncio_append(struct thread_data *td, struct io_u *io_u)
 }
 
 static void fio_vsyncio_set_iov(struct syncio_data *sd, struct io_u *io_u,
-				int index)
+				int idx)
 {
-	sd->io_us[index] = io_u;
-	sd->iovecs[index].iov_base = io_u->xfer_buf;
-	sd->iovecs[index].iov_len = io_u->xfer_buflen;
+	sd->io_us[idx] = io_u;
+	sd->iovecs[idx].iov_base = io_u->xfer_buf;
+	sd->iovecs[idx].iov_len = io_u->xfer_buflen;
 	sd->last_offset = io_u->offset + io_u->xfer_buflen;
 	sd->last_file = io_u->file;
 	sd->last_ddir = io_u->ddir;

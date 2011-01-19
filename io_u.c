@@ -635,31 +635,31 @@ out:
 
 static void __io_u_mark_map(unsigned int *map, unsigned int nr)
 {
-	int index = 0;
+	int idx = 0;
 
 	switch (nr) {
 	default:
-		index = 6;
+		idx = 6;
 		break;
 	case 33 ... 64:
-		index = 5;
+		idx = 5;
 		break;
 	case 17 ... 32:
-		index = 4;
+		idx = 4;
 		break;
 	case 9 ... 16:
-		index = 3;
+		idx = 3;
 		break;
 	case 5 ... 8:
-		index = 2;
+		idx = 2;
 		break;
 	case 1 ... 4:
-		index = 1;
+		idx = 1;
 	case 0:
 		break;
 	}
 
-	map[index]++;
+	map[idx]++;
 }
 
 void io_u_mark_submit(struct thread_data *td, unsigned int nr)
@@ -676,117 +676,117 @@ void io_u_mark_complete(struct thread_data *td, unsigned int nr)
 
 void io_u_mark_depth(struct thread_data *td, unsigned int nr)
 {
-	int index = 0;
+	int idx = 0;
 
 	switch (td->cur_depth) {
 	default:
-		index = 6;
+		idx = 6;
 		break;
 	case 32 ... 63:
-		index = 5;
+		idx = 5;
 		break;
 	case 16 ... 31:
-		index = 4;
+		idx = 4;
 		break;
 	case 8 ... 15:
-		index = 3;
+		idx = 3;
 		break;
 	case 4 ... 7:
-		index = 2;
+		idx = 2;
 		break;
 	case 2 ... 3:
-		index = 1;
+		idx = 1;
 	case 1:
 		break;
 	}
 
-	td->ts.io_u_map[index] += nr;
+	td->ts.io_u_map[idx] += nr;
 }
 
 static void io_u_mark_lat_usec(struct thread_data *td, unsigned long usec)
 {
-	int index = 0;
+	int idx = 0;
 
 	assert(usec < 1000);
 
 	switch (usec) {
 	case 750 ... 999:
-		index = 9;
+		idx = 9;
 		break;
 	case 500 ... 749:
-		index = 8;
+		idx = 8;
 		break;
 	case 250 ... 499:
-		index = 7;
+		idx = 7;
 		break;
 	case 100 ... 249:
-		index = 6;
+		idx = 6;
 		break;
 	case 50 ... 99:
-		index = 5;
+		idx = 5;
 		break;
 	case 20 ... 49:
-		index = 4;
+		idx = 4;
 		break;
 	case 10 ... 19:
-		index = 3;
+		idx = 3;
 		break;
 	case 4 ... 9:
-		index = 2;
+		idx = 2;
 		break;
 	case 2 ... 3:
-		index = 1;
+		idx = 1;
 	case 0 ... 1:
 		break;
 	}
 
-	assert(index < FIO_IO_U_LAT_U_NR);
-	td->ts.io_u_lat_u[index]++;
+	assert(idx < FIO_IO_U_LAT_U_NR);
+	td->ts.io_u_lat_u[idx]++;
 }
 
 static void io_u_mark_lat_msec(struct thread_data *td, unsigned long msec)
 {
-	int index = 0;
+	int idx = 0;
 
 	switch (msec) {
 	default:
-		index = 11;
+		idx = 11;
 		break;
 	case 1000 ... 1999:
-		index = 10;
+		idx = 10;
 		break;
 	case 750 ... 999:
-		index = 9;
+		idx = 9;
 		break;
 	case 500 ... 749:
-		index = 8;
+		idx = 8;
 		break;
 	case 250 ... 499:
-		index = 7;
+		idx = 7;
 		break;
 	case 100 ... 249:
-		index = 6;
+		idx = 6;
 		break;
 	case 50 ... 99:
-		index = 5;
+		idx = 5;
 		break;
 	case 20 ... 49:
-		index = 4;
+		idx = 4;
 		break;
 	case 10 ... 19:
-		index = 3;
+		idx = 3;
 		break;
 	case 4 ... 9:
-		index = 2;
+		idx = 2;
 		break;
 	case 2 ... 3:
-		index = 1;
+		idx = 1;
 	case 0 ... 1:
 		break;
 	}
 
-	assert(index < FIO_IO_U_LAT_M_NR);
-	td->ts.io_u_lat_m[index]++;
+	assert(idx < FIO_IO_U_LAT_M_NR);
+	td->ts.io_u_lat_m[idx]++;
 }
 
 static void io_u_mark_latency(struct thread_data *td, unsigned long usec)

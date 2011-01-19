@@ -1039,8 +1039,6 @@ static int set_debug(const char *string)
 	int i;
 
 	if (!strcmp(string, "?") || !strcmp(string, "help")) {
-		int i;
-
 		log_info("fio: dumping debug options:");
 		for (i = 0; debug_levels[i].name; i++) {
 			dl = &debug_levels[i];

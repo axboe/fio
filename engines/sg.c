@@ -166,7 +166,7 @@ static int fio_sgio_ioctl_doio(struct thread_data *td,
 	return FIO_Q_COMPLETED;
 }
 
-static int fio_sgio_rw_doio(struct fio_file *f, struct io_u *io_u, int sync)
+static int fio_sgio_rw_doio(struct fio_file *f, struct io_u *io_u, int do_sync)
 {
 	struct sg_io_hdr *hdr = &io_u->hdr;
 	int ret;
@@ -175,7 +175,7 @@ static int fio_sgio_rw_doio(struct fio_file *f, struct io_u *io_u, int sync)
 	if (ret < 0)
 		return ret;
 
-	if (sync) {
+	if (do_sync) {
 		ret = read(f->fd, hdr, sizeof(*hdr));
 		if (ret < 0)
 			return ret;
@@ -185,14 +185,14 @@ static int fio_sgio_rw_doio(struct fio_file *f, struct io_u *io_u, int sync)
 	return FIO_Q_QUEUED;
 }
 
-static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int sync)
+static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int do_sync)
 {
 	struct fio_file *f = io_u->file;
 
 	if (f->filetype == FIO_TYPE_BD)
 		return fio_sgio_ioctl_doio(td, f, io_u);
 
-	return fio_sgio_rw_doio(f, io_u, sync);
+	return fio_sgio_rw_doio(f, io_u, do_sync);
 }
 
 static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)

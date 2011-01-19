@@ -243,10 +243,10 @@ void sha256_init(struct sha256_ctx *sctx)
 void sha256_update(struct sha256_ctx *sctx, const uint8_t *data,
 		   unsigned int len)
 {
-	unsigned int i, index, part_len;
+	unsigned int i, idx, part_len;
 
 	/* Compute number of bytes mod 128 */
-	index = (unsigned int)((sctx->count[0] >> 3) & 0x3f);
+	idx = (unsigned int)((sctx->count[0] >> 3) & 0x3f);
 
 	/* Update number of bits */
 	if ((sctx->count[0] += (len << 3)) < (len << 3)) {
@@ -254,20 +254,20 @@ void sha256_update(struct sha256_ctx *sctx, const uint8_t *data,
 		sctx->count[1] += (len >> 29);
 	}
 
-	part_len = 64 - index;
+	part_len = 64 - idx;
 
 	/* Transform as many times as possible. */
 	if (len >= part_len) {
-		memcpy(&sctx->buf[index], data, part_len);
+		memcpy(&sctx->buf[idx], data, part_len);
 		sha256_transform(sctx->state, sctx->buf);
 
 		for (i = part_len; i + 63 < len; i += 64)
 			sha256_transform(sctx->state, &data[i]);
-		index = 0;
+		idx = 0;
 	} else {
 		i = 0;
 	}
 	
 	/* Buffer remaining input */
-	memcpy(&sctx->buf[index], &data[i], len-i);
+	memcpy(&sctx->buf[idx], &data[i], len-i);
 }

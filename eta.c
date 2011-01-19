@@ -391,7 +391,7 @@ void print_thread_status(void)
 	fflush(stdout);
 }
 
-void print_status_init(int thread_number)
+void print_status_init(int thr_number)
 {
-	run_str[thread_number] = 'P';
+	run_str[thr_number] = 'P';
 }

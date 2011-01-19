@@ -497,7 +497,6 @@ static void do_verify(struct thread_data *td)
 				clear_io_u(td, io_u);
 			} else if (io_u->resid) {
 				int bytes = io_u->xfer_buflen - io_u->resid;
-				struct fio_file *f = io_u->file;
 
 				/*
 				 * zero read, fail
@@ -515,6 +514,7 @@ static void do_verify(struct thread_data *td)
 				if (ddir_rw(io_u->ddir))
 					td->ts.short_io_u[io_u->ddir]++;
 
+				f = io_u->file;
 				if (io_u->offset == f->real_file_size)
 					goto sync_done;
 
@@ -1497,14 +1497,14 @@ static void run_threads(void)
 			todo--;
 		} else {
 			struct fio_file *f;
-			unsigned int i;
+			unsigned int j;
 
 			/*
 			 * for sharing to work, each job must always open
 			 * its own files. so close them, if we opened them
 			 * for creation
 			 */
-			for_each_file(td, f, i) {
+			for_each_file(td, f, j) {
 				if (fio_file_open(f))
 					td_io_close_file(td, f);
 			}
