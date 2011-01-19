@@ -110,6 +110,26 @@ Check that you have the libaio development package installed. On RPM
 based distros, it's typically called libaio-devel.
 
 
+Windows
+-------
+
+On Windows Cygwin (http://www.cygwin.com) is required with at least
+devel/gcc4 and devel/make installed in order to build fio, and
+admin/cygrunsrv to run it. You can also install devel/git to fetch/update
+the source files. To create an MSI installer package, install WiX 3.6 from
+http://wix.sourceforge.net/releases/ and run dobuild.cmd from the
+os/windows directory.
+
+Before running fio you'll need to have a copy of cygserver running. Run 
+"/usr/bin/cygserver-config" from an elevated Cygwin shell (i.e. launch the
+Cygwin shell under the Administrator account) to configure it. Once
+configured, run "net start cygserver" to start it, or type
+"/usr/sbin/cygserver &" in the Cygwin shell to start a local copy. 
+
+If fio exits with the message "Bad system call" it normally means that
+Cygserver isn't running.
+
+
 Command line
 ------------
 
