@@ -248,7 +248,7 @@ static int fixed_block_size(struct thread_options *o)
 static int fixup_options(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
-	int ret;
+	int ret = 0;
 
 #ifndef FIO_HAVE_PSHARED_MUTEX
 	if (!o->use_thread) {
