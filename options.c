@@ -946,12 +946,12 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 #endif
 #ifdef FIO_HAVE_WINDOWSAIO
 			  { .ival = "windowsaio",
-			  	.help = "Windows native asynchronous IO"
+			    .help = "Windows native asynchronous IO"
 		  	  },
+#endif
 			  { .ival = "mmap",
 			    .help = "Memory mapped IO"
 			  },
-#endif
 #ifdef FIO_HAVE_SPLICE
 			  { .ival = "splice",
 			    .help = "splice/vmsplice based IO",
