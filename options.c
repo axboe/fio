@@ -1037,6 +1037,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "fill_device",
+		.alias	= "fill_fs",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(fill_device),
 		.help	= "Write until an ENOSPC error occurs",

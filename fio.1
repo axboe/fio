@@ -231,7 +231,7 @@ divided between the available files for the job. If not set, fio will use the
 full size of the given files or devices. If the the files do not exist, size
 must be given.
 .TP
-.BI fill_device \fR=\fPbool
+.BI fill_device \fR=\fPbool "\fR,\fB fill_fs" \fR=\fPbool
 Sets size to something really large and waits for ENOSPC (no space left on
 device) as the terminating condition. Only makes sense with sequential write.
 For a read workload, the mount point will be filled first then IO started on
