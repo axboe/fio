@@ -312,6 +312,8 @@ int td_io_init(struct thread_data *td)
 			log_err("fio: io engine init failed. Perhaps try"
 				" reducing io depth?\n");
 		}
+		if (!td->error)
+			td->error = ret;
 	}
 
 	return ret;
