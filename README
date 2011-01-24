@@ -83,18 +83,11 @@ http://maillist.kernel.dk/fio-devel/
 Building
 --------
 
-Just type 'make' and 'make install'. If on BSD, for now you have to
-specify the BSD Makefile with -f and use gmake (not make), eg:
+Just type 'make' and 'make install'.
 
-$ gmake -f Makefile.FreeBSD && gmake -f Makefile.FreeBSD install
-
-Same goes for AIX:
-
-$ gmake -f Makefile.aix && gmake -f Makefile.aix install
-
-Likewise with OpenSolaris, use the Makefile.solaris to compile there.
-The OpenSolaris make should work fine. This might change in the
-future if I opt for an autoconf type setup.
+Note that GNU make is required. On BSD it's available from devel/gmake;
+on Solaris it's in the SUNWgmake package. On platforms where GNU make
+isn't the default, type 'gmake' instead of 'make'.
 
 If your compile fails with an error like this:
 
