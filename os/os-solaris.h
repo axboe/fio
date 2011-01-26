@@ -6,17 +6,19 @@
 #include <sys/types.h>
 #include <sys/fcntl.h>
 #include <sys/pset.h>
+#include <sys/mman.h>
+#include <sys/dkio.h>
 
 #include "../file.h"
 
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_SOLARISAIO
-#define FIO_HAVE_FALLOCATE
 #define FIO_HAVE_POSIXAIO_FSYNC
 #define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_PSHARED_MUTEX
-#define FIO_USE_GENERIC_BDEV_SIZE
 #define FIO_HAVE_FDATASYNC
+#define FIO_HAVE_CHARDEV_SIZE
+#define FIO_USE_GENERIC_BDEV_SIZE
 
 #define OS_MAP_ANON		MAP_ANON
 #define OS_RAND_MAX		2147483648UL
@@ -25,12 +27,30 @@ struct solaris_rand_seed {
 	unsigned short r[3];
 };
 
+#define posix_madvise	madvise
+#define POSIX_MADV_DONTNEED	MADV_DONTNEED
+#define POSIX_MADV_SEQUENTIAL	MADV_SEQUENTIAL
+#define POSIX_MADV_RANDOM	MADV_RANDOM
+
 typedef psetid_t os_cpu_mask_t;
 typedef struct solaris_rand_seed os_random_state_t;
 
+static inline int chardev_size(struct fio_file *f, unsigned long long *bytes)
+{
+	struct dk_minfo info;
+
+	*bytes = 0;
+
+	if (ioctl(f->fd, DKIOCGMEDIAINFO, &info) < 0)
+		return errno;
+
+	*bytes = info.dki_lbsize * info.dki_capacity;
+	return 0;
+}
+
 static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
-	return EINVAL;
+	return 0;
 }
 
 static inline unsigned long long os_phys_mem(void)
