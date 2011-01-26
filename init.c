@@ -22,7 +22,7 @@
 
 #include "lib/getopt.h"
 
-static char fio_version_string[] = "fio 1.50-rc4";
+static char fio_version_string[] = "fio 1.50";
 
 #define FIO_RANDSEED		(0xb1899bedUL)
 
@@ -1155,7 +1155,7 @@ static int parse_cmd_line(int argc, char *argv[])
 			read_only = 1;
 			break;
 		case 'v':
-			/* already being printed, just quit */
+			log_info("%s\n", fio_version_string);
 			exit(0);
 		case 'e':
 			if (!strcmp("always", optarg))
@@ -1249,8 +1249,6 @@ int parse_options(int argc, char *argv[])
 	f_out = stdout;
 	f_err = stderr;
 
-	log_info("%s\n", fio_version_string);
-
 	fio_options_fill_optstring();
 	fio_options_dup_and_init(l_opts);
 
@@ -1289,5 +1287,6 @@ int parse_options(int argc, char *argv[])
 		fio_gtod_cpu = def_thread.o.gtod_cpu;
 	}
 
+	log_info("%s\n", fio_version_string);
 	return 0;
 }
