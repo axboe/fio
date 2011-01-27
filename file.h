@@ -96,9 +96,10 @@ struct fio_file {
 	/*
 	 * block map for random io
 	 */
-	unsigned int *file_map;
+	unsigned long *file_map;
 	unsigned int num_maps;
 	unsigned int last_free_lookup;
+	unsigned int failed_rands;
 
 	int references;
 	enum fio_file_flags flags;
@@ -158,11 +159,12 @@ extern void free_release_files(struct thread_data *);
 static inline void fio_file_reset(struct fio_file *f)
 {
 	f->last_free_lookup = 0;
+	f->failed_rands = 0;
 	f->last_pos = f->file_offset;
 	f->last_start = -1ULL;
 	f->file_pos = -1ULL;
 	if (f->file_map)
-		memset(f->file_map, 0, f->num_maps * sizeof(int));
+		memset(f->file_map, 0, f->num_maps * sizeof(unsigned long));
 }
 
 #endif

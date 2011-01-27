@@ -30,7 +30,7 @@ static int random_map_free(struct fio_file *f, const unsigned long long block)
 
 	dprint(FD_RANDOM, "free: b=%llu, idx=%u, bit=%u\n", block, idx, bit);
 
-	return (f->file_map[idx] & (1 << bit)) == 0;
+	return (f->file_map[idx] & (1UL << bit)) == 0;
 }
 
 /*
@@ -50,8 +50,8 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 	busy_check = !(io_u->flags & IO_U_F_BUSY_OK);
 
 	while (nr_blocks) {
-		unsigned int this_blocks, mask;
 		unsigned int idx, bit;
+		unsigned long mask, this_blocks;
 
 		/*
 		 * If we have a mixed random workload, we may
@@ -75,9 +75,9 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 
 		do {
 			if (this_blocks == BLOCKS_PER_MAP)
-				mask = -1U;
+				mask = -1UL;
 			else
-				mask = ((1U << this_blocks) - 1) << bit;
+				mask = ((1UL << this_blocks) - 1) << bit;
 	
 			if (!(f->file_map[idx] & mask))
 				break;
@@ -126,7 +126,7 @@ static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
 static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 			       enum fio_ddir ddir, unsigned long long *b)
 {
-	unsigned long long min_bs = td->o.rw_min_bs, lastb;
+	unsigned long long block, min_bs = td->o.rw_min_bs, lastb;
 	int i;
 
 	lastb = last_block(td, f, ddir);
@@ -134,18 +134,19 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 		return 1;
 
 	i = f->last_free_lookup;
-	*b = (i * BLOCKS_PER_MAP);
-	while ((*b) * min_bs < f->real_file_size &&
-		(*b) * min_bs < f->io_size) {
-		if (f->file_map[i] != (unsigned int) -1) {
-			*b += ffz(f->file_map[i]);
-			if (*b > lastb)
+	block = i * BLOCKS_PER_MAP;
+	while (block * min_bs < f->real_file_size &&
+		block * min_bs < f->io_size) {
+		if (f->file_map[i] != -1UL) {
+			block += ffz(f->file_map[i]);
+			if (block > lastb)
 				break;
 			f->last_free_lookup = i;
+			*b = block;
 			return 0;
 		}
 
-		*b += BLOCKS_PER_MAP;
+		block += BLOCKS_PER_MAP;
 		i++;
 	}
 
@@ -163,6 +164,9 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	if (!lastb)
 		return 1;
 
+	if (f->failed_rands >= 200)
+		goto ffz;
+
 	do {
 		r = os_random_long(&td->random_state);
 		dprint(FD_RANDOM, "off rand %llu\n", r);
@@ -172,17 +176,20 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		 * if we are not maintaining a random map, we are done.
 		 */
 		if (!file_randommap(td, f))
-			return 0;
+			goto ret_good;
 
 		/*
 		 * calculate map offset and check if it's free
 		 */
 		if (random_map_free(f, *b))
-			return 0;
+			goto ret_good;
 
 		dprint(FD_RANDOM, "get_next_rand_offset: offset %llu busy\n",
 									*b);
 	} while (--loops);
+
+	if (!f->failed_rands++)
+		f->last_free_lookup = 0;
 
 	/*
 	 * we get here, if we didn't suceed in looking up a block. generate
@@ -194,7 +201,7 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		f->last_free_lookup = (f->num_maps - 1) *
 					(r / (OS_RAND_MAX + 1.0));
 		if (!get_next_free_block(td, f, ddir, b))
-			return 0;
+			goto ret;
 
 		r = os_random_long(&td->random_state);
 	} while (--loops);
@@ -203,7 +210,15 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	 * that didn't work either, try exhaustive search from the start
 	 */
 	f->last_free_lookup = 0;
+ffz:
+	if (!get_next_free_block(td, f, ddir, b))
+		return 0;
+	f->last_free_lookup = 0;
 	return get_next_free_block(td, f, ddir, b);
+ret_good:
+	f->failed_rands = 0;
+ret:
+	return 0;
 }
 
 static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
