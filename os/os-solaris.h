@@ -27,10 +27,12 @@ struct solaris_rand_seed {
 	unsigned short r[3];
 };
 
+#ifndef POSIX_MADV_SEQUENTIAL
 #define posix_madvise	madvise
-#define POSIX_MADV_DONTNEED	MADV_DONTNEED
 #define POSIX_MADV_SEQUENTIAL	MADV_SEQUENTIAL
+#define POSIX_MADV_DONTNEED	MADV_DONTNEED
 #define POSIX_MADV_RANDOM	MADV_RANDOM
+#endif
 
 typedef psetid_t os_cpu_mask_t;
 typedef struct solaris_rand_seed os_random_state_t;
