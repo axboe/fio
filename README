@@ -137,10 +137,12 @@ $ fio
 	--help			Print this page
 	--cmdhelp=cmd	Print command help, "all" for all of them
 	--showcmd		Turn a job file into command line options
-	--readonly		Turn on safety read-only checks, preventing writes
+	--readonly		Turn on safety read-only checks, preventing
+					writes
 	--eta=when		When ETA estimate should be printed
 					May be "always", "never" or "auto"
-	--section=name	Only run specified section in job file
+	--section=name	Only run specified section in job file. Multiple
+				sections can be specified.
 	--alloc-size=kb	Set smalloc pool to this size in kb (def 1024)
 	--warnings-fatal Fio parser warnings are fatal
 

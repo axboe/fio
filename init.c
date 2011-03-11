@@ -39,7 +39,8 @@ int eta_print;
 unsigned long long mlock_size = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
-char *job_section = NULL;
+char **job_sections = NULL;
+int nr_job_sections = 0;
 char *exec_profile = NULL;
 int warnings_fatal = 0;
 
@@ -724,12 +725,18 @@ void add_job_opts(const char **o)
 
 static int skip_this_section(const char *name)
 {
-	if (!job_section)
+	int i;
+
+	if (!nr_job_sections)
 		return 0;
 	if (!strncmp(name, "global", 6))
 		return 0;
 
-	return strcmp(job_section, name);
+	for (i = 0; i < nr_job_sections; i++)
+		if (!strcmp(job_sections[i], name))
+			return 0;
+
+	return 1;
 }
 
 static int is_empty_or_comment(char *line)
@@ -1167,7 +1174,9 @@ static int parse_cmd_line(int argc, char *argv[])
 			if (set_debug(optarg))
 				do_exit++;
 			break;
-		case 'x':
+		case 'x': {
+			size_t new_size;
+
 			if (!strcmp(optarg, "global")) {
 				log_err("fio: can't use global as only "
 					"section\n");
@@ -1175,10 +1184,12 @@ static int parse_cmd_line(int argc, char *argv[])
 				exit_val = 1;
 				break;
 			}
-			if (job_section)
-				free(job_section);
-			job_section = strdup(optarg);
+			new_size = (nr_job_sections + 1) * sizeof(char *);
+			job_sections = realloc(job_sections, new_size);
+			job_sections[nr_job_sections] = strdup(optarg);
+			nr_job_sections++;
 			break;
+			}
 		case 'p':
 			exec_profile = strdup(optarg);
 			break;
