@@ -70,9 +70,9 @@ mandir = $(prefix)/man
 
 .c.o:
 	$(QUIET_CC)$(CC) -o $@ -c $(CFLAGS) $(CPPFLAGS) $<
-	
+
 fio: $(OBJS)
-	$(QUIET_CC)$(CC) $(CFLAGS) -o $@ $(LIBS) $(OBJS)
+	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
 
 depend:
 	$(QUIET_DEP)$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SOURCE) 1> .depend
