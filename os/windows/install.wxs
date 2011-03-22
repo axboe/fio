@@ -2,7 +2,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
 <?define VersionMajor = 1?>
-<?define VersionMinor = 50?>
+<?define VersionMinor = 51?>
 <?define VersionBuild = 0?>
 
 	<Product Id="*"
