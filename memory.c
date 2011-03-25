@@ -115,7 +115,7 @@ static void free_mem_shm(struct thread_data *td)
 	shmctl(td->shm_id, IPC_RMID, &sbuf);
 }
 
-static int alloc_mem_mmap(struct thread_data *td, unsigned int total_mem)
+static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 {
 	int flags = MAP_PRIVATE;
 
@@ -155,7 +155,7 @@ static int alloc_mem_mmap(struct thread_data *td, unsigned int total_mem)
 	return 0;
 }
 
-static void free_mem_mmap(struct thread_data *td, unsigned int total_mem)
+static void free_mem_mmap(struct thread_data *td, size_t total_mem)
 {
 	dprint(FD_MEM, "munmap %u %p\n", total_mem, td->orig_buffer);
 	munmap(td->orig_buffer, td->orig_buffer_size);
@@ -166,7 +166,7 @@ static void free_mem_mmap(struct thread_data *td, unsigned int total_mem)
 	}
 }
 
-static int alloc_mem_malloc(struct thread_data *td, unsigned int total_mem)
+static int alloc_mem_malloc(struct thread_data *td, size_t total_mem)
 {
 	td->orig_buffer = malloc(total_mem);
 	dprint(FD_MEM, "malloc %u %p\n", total_mem, td->orig_buffer);
@@ -185,7 +185,7 @@ static void free_mem_malloc(struct thread_data *td)
  */
 int allocate_io_mem(struct thread_data *td)
 {
-	unsigned int total_mem;
+	size_t total_mem;
 	int ret = 0;
 
 	if (td->io_ops->flags & FIO_NOIO)
@@ -199,6 +199,8 @@ int allocate_io_mem(struct thread_data *td)
 		if (td->o.mem_align && td->o.mem_align > page_size)
 			total_mem += td->o.mem_align - page_size;
 	}
+
+	dprint(FD_MEM, "Alloc %lu for buffers\n", (size_t) total_mem);
 
 	if (td->o.mem_type == MEM_MALLOC)
 		ret = alloc_mem_malloc(td, total_mem);
