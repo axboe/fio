@@ -309,7 +309,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	long long ull, *ullp;
 	long ul1, ul2;
 	char **cp;
-	int ret = 0, is_time = 0;
+	int ret = 0;
 
 	dprint(FD_PARSE, "__handle_option=%s, type=%d, ptr=%s\n", o->name,
 							o->type, ptr);
@@ -357,17 +357,14 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			ret = fn(data, ptr);
 		break;
 	}
-	case FIO_OPT_STR_VAL_TIME:
-		is_time = 1;
+	case FIO_OPT_STR_VAL_TIME: {
+		fio_opt_str_val_fn *fn;
+
+		ret = check_str_time(ptr, &ull);
 	case FIO_OPT_INT:
-	case FIO_OPT_STR_VAL: {
-		fio_opt_str_val_fn *fn = o->cb;
+	case FIO_OPT_STR_VAL:
 
-		if (is_time)
-			ret = check_str_time(ptr, &ull);
-		else
-			ret = check_str_bytes(ptr, &ull, data);
-
+		ret = check_str_bytes(ptr, &ull, data);
 		if (ret)
 			break;
 
@@ -382,6 +379,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			return 1;
 		}
 
+		fn = o->cb;
 		if (fn)
 			ret = fn(data, &ull);
 		else {
