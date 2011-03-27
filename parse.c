@@ -168,19 +168,20 @@ static unsigned long long __get_mult_bytes(const char *p, void *data)
 
 static unsigned long long get_mult_bytes(const char *str, int len, void *data)
 {
-	const char *p;
+	const char *p = str;
 
 	if (len < 2)
 		return __get_mult_bytes(str, data);
 
-	/*
-	 * if the last char is 'b' or 'B', the user likely used
-	 * "1gb" instead of just "1g". If the second to last is also
-	 * a letter, adjust.
-	 */
-	p = str + len - 1;
-	while (isalpha(*(p - 1)))
-		p--;
+        /*
+         * Go forward until we hit a non-digit
+         */
+	while ((p - str) <= len) {
+		if (!isdigit(*p))
+			break;
+		p++;
+	}
+
 	if (!isalpha(*p))
 		p = NULL;
 
