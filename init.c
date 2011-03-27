@@ -376,12 +376,6 @@ static int fixup_options(struct thread_data *td)
 		o->size = -1ULL;
 
 	if (o->verify != VERIFY_NONE) {
-		if (td_rw(td)) {
-			log_info("fio: mixed read/write workload with verify. "
-				"May not work as expected, unless you "
-				"pre-populated the file\n");
-			ret = warnings_fatal;
-		}
 		if (td_write(td) && o->do_verify && o->numjobs > 1) {
 			log_info("Multiple writers may overwrite blocks that "
 				"belong to other jobs. This can cause "
