@@ -210,7 +210,10 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		if (!get_next_free_block(td, f, ddir, b))
 			goto ret;
 
-		r = os_random_long(&td->random_state);
+		if (td->o.use_os_rand)
+			r = os_random_long(&td->random_state);
+		else
+			r = __rand(&td->__random_state);
 	} while (--loops);
 
 	/*
