@@ -336,6 +336,7 @@ struct thread_data {
 	union {
 		unsigned int next_file;
 		os_random_state_t next_file_state;
+		struct frand_state __next_file_state;
 	};
 	int error;
 	int done;
@@ -359,9 +360,18 @@ struct thread_data {
 
 	unsigned long rand_seeds[7];
 
-	os_random_state_t bsrange_state;
-	os_random_state_t verify_state;
-	os_random_state_t trim_state;
+	union {
+		os_random_state_t bsrange_state;
+		struct frand_state __bsrange_state;
+	};
+	union {
+		os_random_state_t verify_state;
+		struct frand_state __verify_state;
+	};
+	union {
+		os_random_state_t trim_state;
+		struct frand_state __trim_state;
+	};
 
 	unsigned int verify_batch;
 	unsigned int trim_batch;
@@ -417,8 +427,10 @@ struct thread_data {
 	/*
 	 * State for random io, a bitmap of blocks done vs not done
 	 */
-	os_random_state_t random_state;
-	struct frand_state __random_state;
+	union {
+		os_random_state_t random_state;
+		struct frand_state __random_state;
+	};
 
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
@@ -431,7 +443,10 @@ struct thread_data {
 	/*
 	 * read/write mixed workload state
 	 */
-	os_random_state_t rwmix_state;
+	union {
+		os_random_state_t rwmix_state;
+		struct frand_state __rwmix_state;
+	};
 	unsigned long rwmix_issues;
 	enum fio_ddir rwmix_ddir;
 	unsigned int ddir_seq_nr;
@@ -467,7 +482,10 @@ struct thread_data {
 	/*
 	 * For generating file sizes
 	 */
-	os_random_state_t file_size_state;
+	union {
+		os_random_state_t file_size_state;
+		struct frand_state __file_size_state;
+	};
 
 	/*
 	 * Error counts

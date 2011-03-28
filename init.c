@@ -463,7 +463,7 @@ static int exists_and_not_file(const char *filename)
 	return 1;
 }
 
-void td_fill_rand_seeds(struct thread_data *td)
+static void td_fill_rand_seeds_os(struct thread_data *td)
 {
 	os_random_seed(td->rand_seeds[0], &td->bsrange_state);
 	os_random_seed(td->rand_seeds[1], &td->verify_state);
@@ -482,7 +482,35 @@ void td_fill_rand_seeds(struct thread_data *td)
 		td->rand_seeds[4] = FIO_RANDSEED * td->thread_number;
 
 	os_random_seed(td->rand_seeds[4], &td->random_state);
+}
+
+static void td_fill_rand_seeds_internal(struct thread_data *td)
+{
+	init_rand_seed(&td->__bsrange_state, td->rand_seeds[0]);
+	init_rand_seed(&td->__verify_state, td->rand_seeds[1]);
+	init_rand_seed(&td->__rwmix_state, td->rand_seeds[2]);
+
+	if (td->o.file_service_type == FIO_FSERVICE_RANDOM)
+		init_rand_seed(&td->__next_file_state, td->rand_seeds[3]);
+
+	init_rand_seed(&td->__file_size_state, td->rand_seeds[5]);
+	init_rand_seed(&td->__trim_state, td->rand_seeds[6]);
+
+	if (!td_random(td))
+		return;
+
+	if (td->o.rand_repeatable)
+		td->rand_seeds[4] = FIO_RANDSEED * td->thread_number;
+
 	init_rand_seed(&td->__random_state, td->rand_seeds[4]);
+}
+
+void td_fill_rand_seeds(struct thread_data *td)
+{
+	if (td->o.use_os_rand)
+		td_fill_rand_seeds_os(td);
+	else
+		td_fill_rand_seeds_internal(td);
 }
 
 /*

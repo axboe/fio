@@ -210,9 +210,16 @@ static unsigned long long get_rand_file_size(struct thread_data *td)
 	unsigned long long ret, sized;
 	long r;
 
-	r = os_random_long(&td->file_size_state);
-	sized = td->o.file_size_high - td->o.file_size_low;
-	ret = (unsigned long long) ((double) sized * (r / (OS_RAND_MAX + 1.0)));
+	if (td->o.use_os_rand) {
+		r = os_random_long(&td->file_size_state);
+		sized = td->o.file_size_high - td->o.file_size_low;
+		ret = (unsigned long long) ((double) sized * (r / (OS_RAND_MAX + 1.0)));
+	} else {
+		r = __rand(&td->__file_size_state);
+		sized = td->o.file_size_high - td->o.file_size_low;
+		ret = (unsigned long long) ((double) sized * (r / (FRAND_MAX + 1.0)));
+	}
+
 	ret += td->o.file_size_low;
 	ret -= (ret % td->o.rw_min_bs);
 	return ret;

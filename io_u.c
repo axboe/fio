@@ -346,20 +346,29 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 	const int ddir = io_u->ddir;
 	unsigned int uninitialized_var(buflen);
 	unsigned int minbs, maxbs;
-	long r;
+	long r, rand_max;
 
 	assert(ddir_rw(ddir));
 
 	minbs = td->o.min_bs[ddir];
 	maxbs = td->o.max_bs[ddir];
 
+	if (td->o.use_os_rand)
+		rand_max = OS_RAND_MAX;
+	else
+		rand_max = FRAND_MAX;
+
 	if (minbs == maxbs)
 		buflen = minbs;
 	else {
-		r = os_random_long(&td->bsrange_state);
+		if (td->o.use_os_rand)
+			r = os_random_long(&td->bsrange_state);
+		else
+			r = __rand(&td->__bsrange_state);
+
 		if (!td->o.bssplit_nr[ddir]) {
 			buflen = 1 + (unsigned int) ((double) maxbs *
-					(r / (OS_RAND_MAX + 1.0)));
+					(r / (rand_max + 1.0)));
 			if (buflen < minbs)
 				buflen = minbs;
 		} else {
@@ -371,7 +380,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 
 				buflen = bsp->bs;
 				perc += bsp->perc;
-				if (r <= ((OS_RAND_MAX / 100L) * perc))
+				if (r <= ((rand_max / 100L) * perc))
 					break;
 			}
 		}
@@ -416,8 +425,14 @@ static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
 	unsigned int v;
 	long r;
 
-	r = os_random_long(&td->rwmix_state);
-	v = 1 + (int) (100.0 * (r / (OS_RAND_MAX + 1.0)));
+	if (td->o.use_os_rand) {
+		r = os_random_long(&td->rwmix_state);
+		v = 1 + (int) (100.0 * (r / (OS_RAND_MAX + 1.0)));
+	} else {
+		r = __rand(&td->__rwmix_state);
+		v = 1 + (int) (100.0 * (r / (FRAND_MAX + 1.0)));
+	}
+
 	if (v <= td->o.rwmix[DDIR_READ])
 		return DDIR_READ;
 
@@ -833,11 +848,19 @@ static struct fio_file *get_next_file_rand(struct thread_data *td,
 	int fno;
 
 	do {
-		long r = os_random_long(&td->next_file_state);
 		int opened = 0;
+		long r;
 
-		fno = (unsigned int) ((double) td->o.nr_files
-			* (r / (OS_RAND_MAX + 1.0)));
+		if (td->o.use_os_rand) {
+			r = os_random_long(&td->next_file_state);
+			fno = (unsigned int) ((double) td->o.nr_files
+				* (r / (OS_RAND_MAX + 1.0)));
+		} else {
+			r = __rand(&td->__next_file_state);
+			fno = (unsigned int) ((double) td->o.nr_files
+				* (r / (FRAND_MAX + 1.0)));
+		}
+
 		f = td->files[fno];
 		if (fio_file_done(f))
 			continue;
