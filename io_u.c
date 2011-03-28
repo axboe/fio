@@ -168,9 +168,16 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		goto ffz;
 
 	do {
-		r = os_random_long(&td->random_state);
+		if (td->o.use_os_rand) {
+			r = os_random_long(&td->random_state);
+			*b = (lastb - 1) * (r / ((unsigned long long) OS_RAND_MAX + 1.0));
+		} else {
+			r = __rand(&td->__random_state);
+			*b = (lastb - 1) * (r / ((unsigned long long) FRAND_MAX + 1.0));
+		}
+
 		dprint(FD_RANDOM, "off rand %llu\n", r);
-		*b = (lastb - 1) * (r / ((unsigned long long) OS_RAND_MAX + 1.0));
+
 
 		/*
 		 * if we are not maintaining a random map, we are done.

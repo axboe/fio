@@ -482,6 +482,7 @@ void td_fill_rand_seeds(struct thread_data *td)
 		td->rand_seeds[4] = FIO_RANDSEED * td->thread_number;
 
 	os_random_seed(td->rand_seeds[4], &td->random_state);
+	init_rand_seed(&td->__random_state, td->rand_seeds[4]);
 }
 
 /*

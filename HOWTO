@@ -348,6 +348,12 @@ kb_base=int	The base unit for a kilobyte. The defacto base is 2^10, 1024.
 randrepeat=bool	For random IO workloads, seed the generator in a predictable
 		way so that results are repeatable across repetitions.
 
+use_os_rand=bool Fio can either use the random generator supplied by the OS
+		to generator random offsets, or it can use it's own internal
+		generator (based on Tausworthe). Default is to use the
+		internal generator, which is often of better quality and
+		faster.
+
 fallocate=bool	By default, fio will use fallocate() to advise the system
 		of the size of the file we are going to write. This can be
 		turned off with fallocate=0. May not be available on all

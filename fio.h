@@ -34,6 +34,7 @@ struct thread_data;
 #include "profile.h"
 #include "time.h"
 #include "lib/getopt.h"
+#include "lib/rand.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
@@ -206,6 +207,7 @@ struct thread_options {
 	unsigned int do_disk_util;
 	unsigned int override_sync;
 	unsigned int rand_repeatable;
+	unsigned int use_os_rand;
 	unsigned int write_lat_log;
 	unsigned int write_bw_log;
 	unsigned int norandommap;
@@ -416,6 +418,7 @@ struct thread_data {
 	 * State for random io, a bitmap of blocks done vs not done
 	 */
 	os_random_state_t random_state;
+	struct frand_state __random_state;
 
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */

@@ -1116,6 +1116,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.parent = "rw",
 	},
 	{
+		.name	= "use_os_rand",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(use_os_rand),
+		.help	= "Set to use OS random generator",
+		.def	= "0",
+		.parent = "rw",
+	},
+	{
 		.name	= "norandommap",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(norandommap),

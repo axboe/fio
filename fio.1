@@ -214,6 +214,12 @@ reasons. Allow values are 1024 or 1000, with 1024 being the default.
 Seed the random number generator in a predictable way so results are repeatable
 across runs.  Default: true.
 .TP
+.BI use_os_rand \fR=\fPbool
+Fio can either use the random generator supplied by the OS to generator random
+offsets, or it can use it's own internal generator (based on Tausworthe).
+Default is to use the internal generator, which is often of better quality and
+faster. Default: false.
+.TP
 .BI fallocate \fR=\fPbool
 By default, fio will use fallocate() to advise the system of the size of the
 file we are going to write. This can be turned off with fallocate=0. May not

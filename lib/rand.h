@@ -1,6 +1,8 @@
 #ifndef FIO_RAND_H
 #define FIO_RAND_H
 
+#define FRAND_MAX	(-1U)
+
 struct frand_state {
 	unsigned int s1, s2, s3;
 };
@@ -19,6 +21,7 @@ static inline unsigned int __rand(struct frand_state *state)
 }
 
 extern void init_rand(struct frand_state *);
+extern void init_rand_seed(struct frand_state *, unsigned int seed);
 extern void __fill_random_buf(void *buf, unsigned int len, unsigned long seed);
 extern unsigned long fill_random_buf(void *buf, unsigned int len);
 
