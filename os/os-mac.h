@@ -2,6 +2,7 @@
 #define FIO_OS_APPLE_H
 
 #include <errno.h>
+#include <fcntl.h>
 #include <sys/disk.h>
 #include <sys/sysctl.h>
 #include <sys/time.h>
@@ -104,6 +105,14 @@ static inline int timer_settime(timer_t timerid, int flags,
 
 static inline int timer_delete(timer_t timer)
 {
+	return 0;
+}
+
+#define FIO_OS_DIRECTIO
+static inline int fio_set_odirect(int fd)
+{
+	if (fcntl(fd, F_NOCACHE, 1) == -1)
+		return errno;
 	return 0;
 }
 
