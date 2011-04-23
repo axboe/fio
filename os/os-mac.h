@@ -2,6 +2,7 @@
 #define FIO_OS_APPLE_H
 
 #include <errno.h>
+#include <sys/disk.h>
 #include <sys/sysctl.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -19,7 +20,6 @@
 
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_CLOCK_MONOTONIC
-#define FIO_USE_GENERIC_BDEV_SIZE
 #define FIO_USE_GENERIC_RAND
 
 #define OS_MAP_ANON		MAP_ANON
@@ -105,6 +105,17 @@ static inline int timer_settime(timer_t timerid, int flags,
 static inline int timer_delete(timer_t timer)
 {
 	return 0;
+}
+
+static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
+{
+    uint64_t temp = 1;
+    if (ioctl(f->fd, DKIOCGETBLOCKCOUNT, bytes) == -1)
+		return errno;
+    if (ioctl(f->fd, DKIOCGETBLOCKSIZE, &temp) == -1)
+		return errno;
+    (*bytes) *= temp;
+    return 0;
 }
 
 static inline int blockdev_invalidate_cache(struct fio_file *f)
