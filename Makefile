@@ -25,7 +25,7 @@ ifeq ($(UNAME), Linux)
   CFLAGS += -rdynamic
 endif
 ifeq ($(UNAME), SunOS)
-  SOURCE += fifo.c lib/strsep.c helpers.c solaris.c engines/posixaio.c \
+  SOURCE += fifo.c lib/strsep.c helpers.c engines/posixaio.c \
 		engines/solarisaio.c
   LIBS	 += -lpthread -ldl -laio -lrt -lnsl -lsocket
   CPPFLAGS += -D__EXTENSIONS__
