@@ -45,6 +45,7 @@
 #include "cgroup.h"
 #include "profile.h"
 #include "lib/rand.h"
+#include "memalign.h"
 
 unsigned long page_mask;
 unsigned long page_size;
@@ -796,7 +797,7 @@ static void cleanup_io_u(struct thread_data *td)
 		io_u = flist_entry(entry, struct io_u, list);
 
 		flist_del(&io_u->list);
-		free(io_u);
+		fio_memfree(io_u, sizeof(*io_u));
 	}
 
 	free_io_mem(td);
@@ -843,8 +844,9 @@ static int init_io_u(struct thread_data *td)
 		if (td->terminate)
 			return 1;
 
-		if (posix_memalign(&ptr, cl_align, sizeof(*io_u))) {
-			log_err("fio: posix_memalign=%s\n", strerror(errno));
+		ptr = fio_memalign(cl_align, sizeof(*io_u));
+		if (!ptr) {
+			log_err("fio: unable to allocate aligned memory\n");
 			break;
 		}
 
