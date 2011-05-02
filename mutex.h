@@ -8,8 +8,6 @@ struct fio_mutex {
 	pthread_cond_t cond;
 	int value;
 	int waiters;
-
-	int mutex_fd;
 };
 
 extern struct fio_mutex *fio_mutex_init(int);

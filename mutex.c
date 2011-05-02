@@ -15,44 +15,25 @@
 
 void fio_mutex_remove(struct fio_mutex *mutex)
 {
-	close(mutex->mutex_fd);
 	munmap((void *) mutex, sizeof(*mutex));
 }
 
 struct fio_mutex *fio_mutex_init(int value)
 {
-	char mutex_name[] = "/tmp/.fio_mutex.XXXXXX";
 	struct fio_mutex *mutex = NULL;
 	pthread_mutexattr_t attr;
 	pthread_condattr_t cond;
-	int fd, ret, mflag;
-
-	fd = mkstemp(mutex_name);
-	if (fd < 0) {
-		perror("open mutex");
-		return NULL;
-	}
-
-#ifdef FIO_HAVE_FALLOCATE
-	posix_fallocate(fd, 0, sizeof(struct fio_mutex));
-#endif
-
-	if (ftruncate(fd, sizeof(struct fio_mutex)) < 0) {
-		perror("ftruncate mutex");
-		goto err;
-	}
+	int ret, mflag;
 
 	mutex = (void *) mmap(NULL, sizeof(struct fio_mutex),
-				PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+				PROT_READ | PROT_WRITE,
+				OS_MAP_ANON | MAP_SHARED, -1, 0);
 	if (mutex == MAP_FAILED) {
 		perror("mmap mutex");
-		close(fd);
 		mutex = NULL;
 		goto err;
 	}
 
-	unlink(mutex_name);
-	mutex->mutex_fd = fd;
 	mutex->value = value;
 
 	/*
@@ -97,7 +78,6 @@ err:
 	if (mutex)
 		fio_mutex_remove(mutex);
 
-	unlink(mutex_name);
 	return NULL;
 }
 
