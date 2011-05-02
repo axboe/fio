@@ -666,7 +666,7 @@ extern int load_blktrace(struct thread_data *, const char *);
 	if (!(cond)) {			\
 		int *__foo = NULL;	\
 		fprintf(stderr, "file:%s:%d, assert %s failed\n", __FILE__, __LINE__, #cond);	\
-		(td)->runstate = TD_EXITED;	\
+		td_set_runstate((td), TD_EXITED);	\
 		(td)->error = EFAULT;		\
 		*__foo = 0;			\
 	}	\
