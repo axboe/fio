@@ -24,11 +24,14 @@
                     <Component Id="cmp229D68D422FB0EB697971491C1475142" Guid="{027945EC-DA28-41C8-9AFF-7AE1BD0F7078}">
                         <File Id="fil7FD65A67872AB00D44EE1419EED402F3" KeyPath="yes" Source="fio\bin\cygintl-8.dll" />
                     </Component>
-                    <Component Id="cmpFCBAB68E4A226C62E32EF283AA1ABC5A" Guid="{2FE224F7-DF14-4D19-8154-77BF6A81B895}">
-                        <File Id="filF29BC713B2D6CF3C73FAC7EBD9E7DA59" KeyPath="yes" Source="fio\bin\cygncurses++-9.dll" />
+                    <Component Id="cygncursespp_10" Guid="{02ecd011-d86c-4400-97b3-65dbcddbb5d9}">
+                        <File Id="cygncursespp_10" KeyPath="yes" Source="fio\bin\cygncurses++-10.dll" />
                     </Component>
-                    <Component Id="cmp30425E1537382CBE87A8582C3712DA6D" Guid="{43895BDD-58DD-4EA9-96A2-A17EADD13C65}">
-                        <File Id="fil346312AAE49BBD0EDE977120B93991EE" KeyPath="yes" Source="fio\bin\cygncurses-9.dll" />
+                    <Component Id="cygncurses_10" Guid="{2ce11a26-c1d8-46d3-86ef-8545685a44b2}">
+                        <File Id="cygncurses_10" KeyPath="yes" Source="fio\bin\cygncurses-10.dll" />
+                    </Component>
+                    <Component Id="cygncursesw_10" Guid="44fe569a-375f-4103-93e9-0dc4195efb89">
+                        <File Id="cygncursesw_10" KeyPath="yes" Source="fio\bin\cygncursesw-10.dll" />
                     </Component>
                     <Component Id="cmp9B2CF01422C767668980462815CBD1FC" Guid="{55DD475C-5E0B-4C46-93BF-6D9E44B44CDC}">
                         <File Id="filC2E6ED6705CC982EC3E7FE8F1089AD7A" KeyPath="yes" Source="fio\bin\cygreadline7.dll" />
@@ -6408,6 +6411,7 @@
     </Fragment>
     <Fragment>
         <ComponentGroup Id="cygwin">
+            <ComponentRef Id="cygncursesw_10" />
             <ComponentRef Id="cmpB647D75194B1BE4C7C89501B755FB631" />
             <ComponentRef Id="cmp0632DB51E5BC3C2DABB6D68937C68C14" />
             <ComponentRef Id="cmpB4B196A767932EB43E26C3FDB12F34A5" />
@@ -6415,8 +6419,8 @@
             <ComponentRef Id="cmp426BE94F315430D90C59934ECCE4A484" />
             <ComponentRef Id="cmpB233C0A559F9EB1AFE292982562F1ECC" />
             <ComponentRef Id="cmp229D68D422FB0EB697971491C1475142" />
-            <ComponentRef Id="cmpFCBAB68E4A226C62E32EF283AA1ABC5A" />
-            <ComponentRef Id="cmp30425E1537382CBE87A8582C3712DA6D" />
+            <ComponentRef Id="cygncursespp_10" />
+            <ComponentRef Id="cygncurses_10" />
             <ComponentRef Id="cmp9B2CF01422C767668980462815CBD1FC" />
             <ComponentRef Id="cmpF04F051EF4B7C676F1989889D664CEBF" />
             <ComponentRef Id="cmp6B8D3319D753D33FA084D14C712FFE56" />
