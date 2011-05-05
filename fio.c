@@ -126,6 +126,7 @@ static void sig_int(int sig)
 	if (threads) {
 		log_info("\nfio: terminating on signal %d\n", sig);
 		fflush(stdout);
+		exit_value = 128;
 		terminate_threads(TERMINATE_ALL);
 	}
 }
