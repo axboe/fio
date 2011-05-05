@@ -191,7 +191,7 @@ static void put_job(struct thread_data *td)
 {
 	if (td == &def_thread)
 		return;
-	
+
 	profile_td_exit(td);
 
 	if (td->error)
@@ -835,7 +835,7 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 
 		if (is_empty_or_comment(p))
 			continue;
-		if (sscanf(p, "[%255s]", name) != 1) {
+		if (sscanf(p, "[%255[^\n]]", name) != 1) {
 			if (inside_skip)
 				continue;
 			log_err("fio: option <%s> outside of [] job section\n",
