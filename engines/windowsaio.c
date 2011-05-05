@@ -277,6 +277,10 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 		fov = CONTAINING_RECORD(ovl, FIO_OVERLAPPED, o);
 		io_u = fov->io_u;
 
+        /* We sometimes get an IO request that hasn't completed yet. Ignore it. */
+        if (ovl->Internal == STATUS_PENDING)
+            continue;
+
 		if (ovl->Internal == ERROR_SUCCESS) {
 			io_u->resid = io_u->xfer_buflen - ovl->InternalHigh;
 			io_u->error = 0;
