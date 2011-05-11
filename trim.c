@@ -70,7 +70,7 @@ int get_next_trim(struct thread_data *td, struct io_u *io_u)
 int io_u_should_trim(struct thread_data *td, struct io_u *io_u)
 {
 	unsigned long long val;
-	long r;
+	unsigned long r;
 
 	if (!td->o.trim_percentage)
 		return 0;

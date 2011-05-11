@@ -208,7 +208,7 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 static unsigned long long get_rand_file_size(struct thread_data *td)
 {
 	unsigned long long ret, sized;
-	long r;
+	unsigned long r;
 
 	if (td->o.use_os_rand) {
 		r = os_random_long(&td->file_size_state);

@@ -346,7 +346,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 	const int ddir = io_u->ddir;
 	unsigned int uninitialized_var(buflen);
 	unsigned int minbs, maxbs;
-	long r, rand_max;
+	unsigned long r, rand_max;
 
 	assert(ddir_rw(ddir));
 
@@ -423,7 +423,7 @@ static void set_rwmix_bytes(struct thread_data *td)
 static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
 {
 	unsigned int v;
-	long r;
+	unsigned long r;
 
 	if (td->o.use_os_rand) {
 		r = os_random_long(&td->rwmix_state);
@@ -849,7 +849,7 @@ static struct fio_file *get_next_file_rand(struct thread_data *td,
 
 	do {
 		int opened = 0;
-		long r;
+		unsigned long r;
 
 		if (td->o.use_os_rand) {
 			r = os_random_long(&td->next_file_state);
