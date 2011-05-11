@@ -64,82 +64,82 @@ static char cmd_optstr[256];
  */
 static struct option l_opts[FIO_NR_OPTIONS] = {
 	{
-		.name		= (const char *) "output",
+		.name		= "output",
 		.has_arg	= required_argument,
 		.val		= 'o',
 	},
 	{
-		.name		= (const char *) "timeout",
+		.name		= "timeout",
 		.has_arg	= required_argument,
 		.val		= 't',
 	},
 	{
-		.name		= (const char *) "latency-log",
+		.name		= "latency-log",
 		.has_arg	= required_argument,
 		.val		= 'l',
 	},
 	{
-		.name		= (const char *) "bandwidth-log",
+		.name		= "bandwidth-log",
 		.has_arg	= required_argument,
 		.val		= 'b',
 	},
 	{
-		.name		= (const char *) "minimal",
+		.name		= "minimal",
 		.has_arg	= optional_argument,
 		.val		= 'm',
 	},
 	{
-		.name		= (const char *) "version",
+		.name		= "version",
 		.has_arg	= no_argument,
 		.val		= 'v',
 	},
 	{
-		.name		= (const char *) "help",
+		.name		= "help",
 		.has_arg	= no_argument,
 		.val		= 'h',
 	},
 	{
-		.name		= (const char *) "cmdhelp",
+		.name		= "cmdhelp",
 		.has_arg	= optional_argument,
 		.val		= 'c',
 	},
 	{
-		.name		= (const char *) "showcmd",
+		.name		= "showcmd",
 		.has_arg	= no_argument,
 		.val		= 's',
 	},
 	{
-		.name		= (const char *) "readonly",
+		.name		= "readonly",
 		.has_arg	= no_argument,
 		.val		= 'r',
 	},
 	{
-		.name		= (const char *) "eta",
+		.name		= "eta",
 		.has_arg	= required_argument,
 		.val		= 'e',
 	},
 	{
-		.name		= (const char *) "debug",
+		.name		= "debug",
 		.has_arg	= required_argument,
 		.val		= 'd',
 	},
 	{
-		.name		= (const char *) "section",
+		.name		= "section",
 		.has_arg	= required_argument,
 		.val		= 'x',
 	},
 	{
-		.name		= (const char *) "alloc-size",
+		.name		= "alloc-size",
 		.has_arg	= required_argument,
 		.val		= 'a',
 	},
 	{
-		.name		= (const char *) "profile",
+		.name		= "profile",
 		.has_arg	= required_argument,
 		.val		= 'p',
 	},
 	{
-		.name		= (const char *) "warnings-fatal",
+		.name		= "warnings-fatal",
 		.has_arg	= no_argument,
 		.val		= 'w',
 	},
