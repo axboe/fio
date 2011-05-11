@@ -114,13 +114,6 @@ static void terminate_threads(int group_id)
 	}
 }
 
-/*
- * Happens on thread runs with ctrl-c, ignore our own SIGQUIT
- */
-static void sig_quit(int sig)
-{
-}
-
 static void sig_int(int sig)
 {
 	if (threads) {
@@ -178,7 +171,7 @@ static void set_sig_handlers(void)
 	sigaction(SIGINT, &act, NULL);
 
 	memset(&act, 0, sizeof(act));
-	act.sa_handler = sig_quit;
+	act.sa_handler = sig_int;
 	act.sa_flags = SA_RESTART;
 	sigaction(SIGTERM, &act, NULL);
 }
