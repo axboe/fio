@@ -64,82 +64,82 @@ static char cmd_optstr[256];
  */
 static struct option l_opts[FIO_NR_OPTIONS] = {
 	{
-		.name		= "output",
+		.name		= (char *) "output",
 		.has_arg	= required_argument,
 		.val		= 'o',
 	},
 	{
-		.name		= "timeout",
+		.name		= (char *) "timeout",
 		.has_arg	= required_argument,
 		.val		= 't',
 	},
 	{
-		.name		= "latency-log",
+		.name		= (char *) "latency-log",
 		.has_arg	= required_argument,
 		.val		= 'l',
 	},
 	{
-		.name		= "bandwidth-log",
+		.name		= (char *) "bandwidth-log",
 		.has_arg	= required_argument,
 		.val		= 'b',
 	},
 	{
-		.name		= "minimal",
+		.name		= (char *) "minimal",
 		.has_arg	= optional_argument,
 		.val		= 'm',
 	},
 	{
-		.name		= "version",
+		.name		= (char *) "version",
 		.has_arg	= no_argument,
 		.val		= 'v',
 	},
 	{
-		.name		= "help",
+		.name		= (char *) "help",
 		.has_arg	= no_argument,
 		.val		= 'h',
 	},
 	{
-		.name		= "cmdhelp",
+		.name		= (char *) "cmdhelp",
 		.has_arg	= optional_argument,
 		.val		= 'c',
 	},
 	{
-		.name		= "showcmd",
+		.name		= (char *) "showcmd",
 		.has_arg	= no_argument,
 		.val		= 's',
 	},
 	{
-		.name		= "readonly",
+		.name		= (char *) "readonly",
 		.has_arg	= no_argument,
 		.val		= 'r',
 	},
 	{
-		.name		= "eta",
+		.name		= (char *) "eta",
 		.has_arg	= required_argument,
 		.val		= 'e',
 	},
 	{
-		.name		= "debug",
+		.name		= (char *) "debug",
 		.has_arg	= required_argument,
 		.val		= 'd',
 	},
 	{
-		.name		= "section",
+		.name		= (char *) "section",
 		.has_arg	= required_argument,
 		.val		= 'x',
 	},
 	{
-		.name		= "alloc-size",
+		.name		= (char *) "alloc-size",
 		.has_arg	= required_argument,
 		.val		= 'a',
 	},
 	{
-		.name		= "profile",
+		.name		= (char *) "profile",
 		.has_arg	= required_argument,
 		.val		= 'p',
 	},
 	{
-		.name		= "warnings-fatal",
+		.name		= (char *) "warnings-fatal",
 		.has_arg	= no_argument,
 		.val		= 'w',
 	},
