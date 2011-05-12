@@ -568,7 +568,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	}
 
 	if (profile_td_init(td))
-		return 1;
+		goto err;
 
 	engine = get_engine_name(td->o.ioengine);
 	td->io_ops = load_ioengine(td, engine);
@@ -1222,10 +1222,8 @@ static int parse_cmd_line(int argc, char *argv[])
 
 			if (!strncmp(opt, "name", 4) && td) {
 				ret = add_job(td, td->o.name ?: "fio", 0);
-				if (ret) {
-					put_job(td);
+				if (ret)
 					return 0;
-				}
 				td = NULL;
 			}
 			if (!td) {
@@ -1262,8 +1260,6 @@ static int parse_cmd_line(int argc, char *argv[])
 	if (td) {
 		if (!ret)
 			ret = add_job(td, td->o.name ?: "fio", 0);
-		if (ret)
-			put_job(td);
 	}
 
 	while (optind < argc) {
