@@ -284,7 +284,7 @@ static int fio_spliceio_init(struct thread_data *td)
 	 * buffers. Just set ->odirect to force that.
 	 */
 	if (td_read(td))
-		td->o.odirect = 1;
+		td->o.mem_align = 1;
 
 	td->io_ops->data = sd;
 	return 0;
