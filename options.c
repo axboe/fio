@@ -482,6 +482,7 @@ static int str_sfr_cb(void *data, const char *str)
 
 static int check_dir(struct thread_data *td, char *fname)
 {
+#if 0
 	char file[PATH_MAX], *dir;
 	int elen = 0;
 
@@ -494,7 +495,6 @@ static int check_dir(struct thread_data *td, char *fname)
 	sprintf(file + elen, "%s", fname);
 	dir = dirname(file);
 
-#if 0
 	{
 	struct stat sb;
 	/*

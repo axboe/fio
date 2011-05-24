@@ -504,7 +504,7 @@ open_again:
 
 	if (!from_hash && f->fd != -1) {
 		if (add_file_hash(f)) {
-			int ret;
+			int fio_unused ret;
 
 			/*
 			 * OK to ignore, we haven't done anything with it
