@@ -341,6 +341,14 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 	return __get_next_offset(td, io_u);
 }
 
+static inline int io_u_fits(struct thread_data *td, struct io_u *io_u,
+			    unsigned int buflen)
+{
+	struct fio_file *f = io_u->file;
+
+	return io_u->offset + buflen <= f->io_size + td->o.start_offset;
+}
+
 static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 {
 	const int ddir = io_u->ddir;
@@ -353,14 +361,15 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 	minbs = td->o.min_bs[ddir];
 	maxbs = td->o.max_bs[ddir];
 
+	if (minbs == maxbs)
+		return minbs;
+
 	if (td->o.use_os_rand)
 		rand_max = OS_RAND_MAX;
 	else
 		rand_max = FRAND_MAX;
 
-	if (minbs == maxbs)
-		buflen = minbs;
-	else {
+	do {
 		if (td->o.use_os_rand)
 			r = os_random_long(&td->bsrange_state);
 		else
@@ -380,19 +389,16 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 
 				buflen = bsp->bs;
 				perc += bsp->perc;
-				if (r <= ((rand_max / 100L) * perc))
+				if ((r <= ((rand_max / 100L) * perc)) &&
+				    io_u_fits(td, io_u, buflen))
 					break;
 			}
 		}
+
 		if (!td->o.bs_unaligned && is_power_of_2(minbs))
 			buflen = (buflen + minbs - 1) & ~(minbs - 1);
-	}
 
-	if (io_u->offset + buflen > io_u->file->real_file_size) {
-		dprint(FD_IO, "lower buflen %u -> %u (ddir=%d)\n", buflen,
-						minbs, ddir);
-		buflen = minbs;
-	}
+	} while (!io_u_fits(td, io_u, buflen));
 
 	return buflen;
 }
