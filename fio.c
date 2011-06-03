@@ -180,7 +180,7 @@ static void set_sig_handlers(void)
  * Check if we are above the minimum rate given.
  */
 static int __check_min_rate(struct thread_data *td, struct timeval *now,
-			    enum td_ddir ddir)
+			    enum fio_ddir ddir)
 {
 	unsigned long long bytes = 0;
 	unsigned long iops = 0;
