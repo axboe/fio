@@ -760,8 +760,11 @@ sync_done:
 		struct fio_file *f;
 
 		i = td->cur_depth;
-		if (i)
+		if (i) {
 			ret = io_u_queued_complete(td, i, NULL);
+			if (td->o.fill_device && td->error == ENOSPC)
+				td->error = 0;
+		}
 
 		if (should_fsync(td) && td->o.end_fsync) {
 			td_set_runstate(td, TD_FSYNCING);
