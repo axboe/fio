@@ -1178,12 +1178,37 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 #ifdef FIO_HAVE_FALLOCATE
 	{
 		.name	= "fallocate",
-		.type	= FIO_OPT_BOOL,
-		.off1	= td_var_offset(fallocate),
-		.help	= "Use fallocate() when laying out files",
-		.def	= "1",
-	},
+		.type	= FIO_OPT_STR,
+		.off1	= td_var_offset(fallocate_mode),
+		.help	= "Whether pre-allocation is performed when laying out files",
+		.def	= "posix",
+		.posval	= {
+			  { .ival = "none",
+			    .oval = FIO_FALLOCATE_NONE,
+			    .help = "Do not pre-allocate space",
+			  },
+			  { .ival = "posix",
+			    .oval = FIO_FALLOCATE_POSIX,
+			    .help = "Use posix_fallocate()",
+			  },
+#ifdef FIO_HAVE_LINUX_FALLOCATE
+			  { .ival = "keep",
+			    .oval = FIO_FALLOCATE_KEEP_SIZE,
+			    .help = "Use fallocate(..., FALLOC_FL_KEEP_SIZE, ...)",
+			  },
 #endif
+			  /* Compatibility with former boolean values */
+			  { .ival = "0",
+			    .oval = FIO_FALLOCATE_NONE,
+			    .help = "Alias for 'none'",
+			  },
+			  { .ival = "1",
+			    .oval = FIO_FALLOCATE_POSIX,
+			    .help = "Alias for 'posix'",
+			  },
+		},
+	},
+#endif	/* FIO_HAVE_FALLOCATE */
 	{
 		.name	= "fadvise_hint",
 		.type	= FIO_OPT_BOOL,

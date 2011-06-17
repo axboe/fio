@@ -13,6 +13,10 @@
 #include "filehash.h"
 #include "os/os.h"
 
+#ifdef FIO_HAVE_LINUX_FALLOCATE
+#include <linux/falloc.h>
+#endif
+
 static int root_warn;
 
 static inline void clear_error(struct thread_data *td)
@@ -67,17 +71,41 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	}
 
 #ifdef FIO_HAVE_FALLOCATE
-	if (td->o.fallocate && !td->o.fill_device) {
-		dprint(FD_FILE, "fallocate file %s size %llu\n", f->file_name,
-							f->real_file_size);
+	if (!td->o.fill_device) {
+		switch (td->o.fallocate_mode) {
+		case FIO_FALLOCATE_NONE:
+			break;
+		case FIO_FALLOCATE_POSIX:
+			dprint(FD_FILE, "posix_fallocate file %s size %llu\n",
+				 f->file_name, f->real_file_size);
 
-		r = posix_fallocate(f->fd, 0, f->real_file_size);
-		if (r > 0) {
-			log_err("fio: posix_fallocate fails: %s\n",
-					strerror(r));
+			r = posix_fallocate(f->fd, 0, f->real_file_size);
+			if (r > 0) {
+				log_err("fio: posix_fallocate fails: %s\n",
+						strerror(r));
+			}
+			break;
+#ifdef FIO_HAVE_LINUX_FALLOCATE
+		case FIO_FALLOCATE_KEEP_SIZE:
+			dprint(FD_FILE,
+				"fallocate(FALLOC_FL_KEEP_SIZE) "
+				"file %s size %llu\n",
+				f->file_name, f->real_file_size);
+
+			r = fallocate(f->fd, FALLOC_FL_KEEP_SIZE, 0,
+					f->real_file_size);
+			if (r != 0) {
+				td_verror(td, errno, "fallocate");
+			}
+			break;
+#endif /* FIO_HAVE_LINUX_FALLOCATE */
+		default:
+			log_err("fio: unknown fallocate mode: %d\n",
+				td->o.fallocate_mode);
+			assert(0);
 		}
 	}
-#endif
+#endif /* FIO_HAVE_FALLOCATE */
 
 	if (!new_layout)
 		goto done;

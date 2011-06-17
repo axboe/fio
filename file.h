@@ -43,6 +43,16 @@ enum {
 };
 
 /*
+ * No pre-allocation when laying down files, or call posix_fallocate(), or
+ * call fallocate() with FALLOC_FL_KEEP_SIZE set.
+ */
+enum fio_fallocate_mode {
+	FIO_FALLOCATE_NONE	= 1,
+	FIO_FALLOCATE_POSIX	= 2,
+	FIO_FALLOCATE_KEEP_SIZE	= 3,
+};
+
+/*
  * Each thread_data structure has a number of files associated with it,
  * this structure holds state information for a single file.
  */

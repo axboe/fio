@@ -354,11 +354,19 @@ use_os_rand=bool Fio can either use the random generator supplied by the OS
 		internal generator, which is often of better quality and
 		faster.
 
-fallocate=bool	By default, fio will use fallocate() to advise the system
-		of the size of the file we are going to write. This can be
-		turned off with fallocate=0. May not be available on all
-		supported platforms.  If using ZFS on Solaris this must be
-		set to 0 because ZFS doesn't support it.
+fallocate=str	Whether pre-allocation is performed when laying down files.
+		Accepted values are:
+
+			none		Do not pre-allocate space
+			posix		Pre-allocate via posix_fallocate()
+			keep		Pre-allocate via fallocate() with
+					FALLOC_FL_KEEP_SIZE set
+			0		Backward-compatible alias for 'none'
+			1		Backward-compatible alias for 'posix'
+
+		May not be available on all supported platforms. 'keep' is only
+		available on Linux.If using ZFS on Solaris this must be set to
+		'none' because ZFS doesn't support it. Default: 'posix'.
 
 fadvise_hint=bool By default, fio will use fadvise() to advise the kernel
 		on what IO patterns it is likely to issue. Sometimes you

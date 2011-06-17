@@ -248,7 +248,7 @@ struct thread_options {
 	unsigned int file_service_type;
 	unsigned int group_reporting;
 	unsigned int fadvise_hint;
-	unsigned int fallocate;
+	enum fio_fallocate_mode fallocate_mode;
 	unsigned int zero_buffers;
 	unsigned int refill_buffers;
 	unsigned int time_based;
