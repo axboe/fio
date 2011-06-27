@@ -45,7 +45,7 @@ Print help information for \fIcommand\fR.  May be `all' for all commands.
 .TP
 .BI \-\-debug \fR=\fPtype
 Enable verbose tracing of various fio actions. May be `all' for all types
-or individual types seperated by a comma (eg \-\-debug=io,file). `help' will
+or individual types separated by a comma (eg \-\-debug=io,file). `help' will
 list all available tracing options.
 .TP
 .B \-\-help
@@ -81,8 +81,8 @@ SI integer: a whole number, possibly containing a suffix denoting the base unit
 of the value.  Accepted suffixes are `k', 'M', 'G', 'T', and 'P', denoting
 kilo (1024), mega (1024^2), giga (1024^3), tera (1024^4), and peta (1024^5)
 respectively. The suffix is not case sensitive. If prefixed with '0x', the
-value is assumed to be base 16 (hexadecimal). A suffix may include a trailing
-'b', for instance 'kb' is identical to 'k'. You can specify a base 10 value
+value is assumed to be base 16 (hexadecimal). A suffix may include a trailing 'b',
+for instance 'kb' is identical to 'k'. You can specify a base 10 value
 by using 'KiB', 'MiB', 'GiB', etc. This is useful for disk drives where
 values are often given in base 10 values. Specifying '30GiB' will get you
 30*1000^3 bytes.
@@ -290,7 +290,7 @@ This option allows even finer grained control of the block sizes issued,
 not just even splits between them. With this option, you can weight various
 block sizes for exact control of the issued IO for a job that has mixed
 block sizes. The format of the option is bssplit=blocksize/percentage,
-optionally adding as many definitions as needed seperated by a colon.
+optionally adding as many definitions as needed separated by a colon.
 Example: bssplit=4k/10:64k/50:32k/40 would issue 50% 64k blocks, 10% 4k
 blocks and 40% 32k blocks. \fBbssplit\fR also supports giving separate
 splits to reads and writes. The format is identical to what the
@@ -757,7 +757,7 @@ read back and verified).  If \fBverify_backlog_batch\fR is less than
 will be verified more than once.
 .TP
 .B stonewall
-Wait for preceeding jobs in the job file to exit before starting this one.
+Wait for preceding jobs in the job file to exit before starting this one.
 \fBstonewall\fR implies \fBnew_group\fR.
 .TP
 .B new_group
@@ -876,7 +876,7 @@ Add job to this control group. If it doesn't exist, it will be created.
 The system must have a mounted cgroup blkio mount point for this to work. If
 your system doesn't have it mounted, you can do so with:
 
-# mount -t cgroup -o blkio none /cgroup
+# mount \-t cgroup \-o blkio none /cgroup
 .TP
 .BI cgroup_weight \fR=\fPint
 Set the weight of the cgroup to this value. See the documentation that comes
@@ -1118,7 +1118,7 @@ Milliseconds:
 .RE
 .RE
 .P
-Error Info (dependant on continue_on_error, default off):
+Error Info (dependent on continue_on_error, default off):
 .RS
 .B total # errors, first error code 
 .RE
