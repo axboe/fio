@@ -102,7 +102,7 @@ static void terminate_threads(int group_id)
 			/*
 			 * if the thread is running, just let it exit
 			 */
-			if (td->runstate < TD_RUNNING)
+			if (td->runstate < TD_RAMP)
 				kill(td->pid, SIGTERM);
 			else {
 				struct ioengine_ops *ops = td->io_ops;
