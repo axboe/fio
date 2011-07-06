@@ -1515,7 +1515,7 @@ static void run_threads(void)
 	set_genesis_time();
 
 	while (todo) {
-		struct thread_data *map[MAX_JOBS];
+		struct thread_data *map[REAL_MAX_JOBS];
 		struct timeval this_start;
 		int this_jobs = 0, left;
 

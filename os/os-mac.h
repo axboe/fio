@@ -25,6 +25,12 @@
 
 #define OS_MAP_ANON		MAP_ANON
 
+/*
+ * OSX has a pitifully small shared memory segment by default,
+ * so default to a lower number of max jobs supported
+ */
+#define FIO_MAX_JOBS		128
+
 typedef off_t off64_t;
 
 /* OS X as of 10.6 doesn't have the timer_* functions. 

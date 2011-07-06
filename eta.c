@@ -7,7 +7,7 @@
 
 #include "fio.h"
 
-static char run_str[MAX_JOBS + 1];
+static char run_str[REAL_MAX_JOBS + 1];
 
 /*
  * Sets the status of the 'td' in the printed status map.
