@@ -978,11 +978,6 @@ static void reset_io_counters(struct thread_data *td)
 	 */
 	if (td->o.time_based || td->o.loops)
 		td->nr_done_files = 0;
-
-	/*
-	 * Set the same seed to get repeatable runs
-	 */
-	td_fill_rand_seeds(td);
 }
 
 void reset_all_stats(struct thread_data *td)
@@ -1016,6 +1011,11 @@ static void clear_io_state(struct thread_data *td)
 	close_files(td);
 	for_each_file(td, f, i)
 		fio_file_clear_done(f);
+
+	/*
+	 * Set the same seed to get repeatable runs
+	 */
+	td_fill_rand_seeds(td);
 }
 
 static int exec_string(const char *string)
