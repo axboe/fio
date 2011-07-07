@@ -372,10 +372,15 @@ requeue:
 	return 0;
 }
 
+static inline void __update_tv_cache(struct thread_data *td)
+{
+	fio_gettime(&td->tv_cache, NULL);
+}
+
 static inline void update_tv_cache(struct thread_data *td)
 {
 	if ((++td->tv_cache_nr & td->tv_cache_mask) == td->tv_cache_mask)
-		fio_gettime(&td->tv_cache, NULL);
+		__update_tv_cache(td);
 }
 
 static int break_on_this_error(struct thread_data *td, int *retptr)
@@ -461,8 +466,11 @@ static void do_verify(struct thread_data *td)
 		update_tv_cache(td);
 
 		if (runtime_exceeded(td, &td->tv_cache)) {
-			td->terminate = 1;
-			break;
+			__update_tv_cache(td);
+			if (runtime_exceeded(td, &td->tv_cache)) {
+				td->terminate = 1;
+				break;
+			}
 		}
 
 		io_u = __get_io_u(td);
@@ -607,8 +615,11 @@ static void do_io(struct thread_data *td)
 		update_tv_cache(td);
 
 		if (runtime_exceeded(td, &td->tv_cache)) {
-			td->terminate = 1;
-			break;
+			__update_tv_cache(td);
+			if (runtime_exceeded(td, &td->tv_cache)) {
+				td->terminate = 1;
+				break;
+			}
 		}
 
 		io_u = get_io_u(td);
