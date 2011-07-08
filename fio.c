@@ -1093,6 +1093,22 @@ static void *thread_main(void *data)
 	}
 
 	/*
+	 * If we have a gettimeofday() thread, make sure we exclude that
+	 * thread from this job
+	 */
+	if (td->o.gtod_cpu)
+		fio_cpu_clear(&td->o.cpumask, td->o.gtod_cpu);
+
+	/*
+	 * Set affinity first, in case it has an impact on the memory
+	 * allocations.
+	 */
+	if (td->o.cpumask_set && fio_setaffinity(td->pid, td->o.cpumask) == -1) {
+		td_verror(td, errno, "cpu_set_affinity");
+		goto err;
+	}
+
+	/*
 	 * May alter parameters that init_io_u() will use, so we need to
 	 * do this first.
 	 */
@@ -1104,23 +1120,6 @@ static void *thread_main(void *data)
 
 	if (td->o.verify_async && verify_async_init(td))
 		goto err;
-
-	if (td->o.cpumask_set && fio_setaffinity(td->pid, td->o.cpumask) == -1) {
-		td_verror(td, errno, "cpu_set_affinity");
-		goto err;
-	}
-
-	/*
-	 * If we have a gettimeofday() thread, make sure we exclude that
-	 * thread from this job
-	 */
-	if (td->o.gtod_cpu) {
-		fio_cpu_clear(&td->o.cpumask, td->o.gtod_cpu);
-		if (fio_setaffinity(td->pid, td->o.cpumask) == -1) {
-			td_verror(td, errno, "cpu_set_affinity");
-			goto err;
-		}
-	}
 
 	if (td->ioprio_set) {
 		if (ioprio_set(IOPRIO_WHO_PROCESS, 0, td->ioprio) == -1) {
