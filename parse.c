@@ -177,12 +177,12 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data)
          * Go forward until we hit a non-digit
          */
 	while ((p - str) <= len) {
-		if (!isdigit(*p))
+		if (!isdigit((int) *p))
 			break;
 		p++;
 	}
 
-	if (!isalpha(*p))
+	if (!isalpha((int) *p))
 		p = NULL;
 
 	return __get_mult_bytes(p, data);
@@ -230,7 +230,7 @@ void strip_blank_front(char **p)
 {
 	char *s = *p;
 
-	while (isspace(*s))
+	while (isspace((int) *s))
 		s++;
 
 	*p = s;
@@ -250,7 +250,7 @@ void strip_blank_end(char *p)
 		p = s;
 
 	s = p + strlen(p);
-	while ((isspace(*s) || iscntrl(*s)) && (s > start))
+	while ((isspace((int) *s) || iscntrl((int) *s)) && (s > start))
 		s--;
 
 	*(s + 1) = '\0';

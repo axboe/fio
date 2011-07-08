@@ -776,7 +776,7 @@ static int is_empty_or_comment(char *line)
 			return 1;
 		if (line[i] == '#')
 			return 1;
-		if (!isspace(line[i]) && !iscntrl(line[i]))
+		if (!isspace((int) line[i]) && !iscntrl((int) line[i]))
 			return 0;
 	}
 
