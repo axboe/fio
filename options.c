@@ -329,7 +329,7 @@ static int str_cpumask_cb(void *data, unsigned long long *val)
 		return 1;
 	}
 
-	max_cpu = sysconf(_SC_NPROCESSORS_ONLN);
+	max_cpu = cpus_online();
 
 	for (i = 0; i < sizeof(int) * 8; i++) {
 		if ((1 << i) & *val) {
@@ -366,7 +366,7 @@ static int set_cpus_allowed(struct thread_data *td, os_cpu_mask_t *mask,
 	strip_blank_front(&str);
 	strip_blank_end(str);
 
-	max_cpu = sysconf(_SC_NPROCESSORS_ONLN);
+	max_cpu = cpus_online();
 
 	while ((cpu = strsep(&str, ",")) != NULL) {
 		char *str2, *cpu2;
@@ -2095,7 +2095,7 @@ void fio_keywords_init(void)
 	sprintf(buf, "%llu", mb_memory);
 	fio_keywords[1].replace = strdup(buf);
 
-	l = sysconf(_SC_NPROCESSORS_ONLN);
+	l = cpus_online();
 	sprintf(buf, "%lu", l);
 	fio_keywords[2].replace = strdup(buf);
 }

@@ -18,6 +18,8 @@
 #include "os-mac.h"
 #elif defined(_AIX)
 #include "os-aix.h"
+#elif defined(__hpux)
+#include "os-hpux.h"
 #elif defined(__CYGWIN__)
 #include "os-windows.h"
 #else
@@ -175,6 +177,13 @@ static inline long os_random_long(os_random_state_t *rs)
 static inline unsigned long long get_fs_size(const char *path)
 {
 	return 0;
+}
+#endif
+
+#ifndef FIO_HAVE_CPU_ONLINE_SYSCONF
+static inline unsigned int cpus_online(void)
+{
+	return sysconf(_SC_NPROCESSORS_ONLN);
 }
 #endif
 
