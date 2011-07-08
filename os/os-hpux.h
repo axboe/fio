@@ -8,6 +8,7 @@
 #include <sys/fadvise.h>
 #include <sys/mman.h>
 #include <sys/mpctl.h>
+#include <sys/scsi.h>
 
 #include "../file.h"
 
@@ -33,19 +34,15 @@ static inline int blockdev_invalidate_cache(struct fio_file *f)
 
 static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
-#if 0
-	struct devinfo info;
+	struct capacity cap;
 
-	if (!ioctl(f->fd, IOCINFO, &info)) {
-        	*bytes = (unsigned long long)info.un.scdk.numblks *
-				info.un.scdk.blksize;
+	if (!ioctl(f->fd, SIOC_CAPACITY, &cap) == -1) {
+		*bytes = cap.lba * cap.blksz;
 		return 0;
 	}
 
+	*bytes = 0;
 	return errno;
-#else
-	return 0;
-#endif
 }
 
 static inline unsigned long long os_phys_mem(void)
