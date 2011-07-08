@@ -186,7 +186,9 @@ static int fio_posixaio_queue(struct thread_data *td,
 	if (ret) {
 		/*
 		 * At least OSX has a very low limit on the number of pending
-		 * IOs, so if it will return EAGAIN.
+		 * IOs, so if it returns EAGAIN, we are out of resources
+		 * to queue more. Just return FIO_Q_BUSY to naturally
+		 * drop off at this depth.
 		 */
 		if (errno == EAGAIN)
 			return FIO_Q_BUSY;
