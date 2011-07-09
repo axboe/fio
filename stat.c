@@ -169,7 +169,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	io_p = num2str(ts->io_bytes[ddir], 6, 1, i2p);
 	bw_p = num2str(bw, 6, 1, i2p);
 
-	iops = (1000 * ts->total_io_u[ddir]) / runt;
+	iops = (1000 * (uint64_t)ts->total_io_u[ddir]) / runt;
 	iops_p = num2str(iops, 6, 1, 0);
 
 	log_info("  %s: io=%sB, bw=%sB/s, iops=%s, runt=%6llumsec\n",
