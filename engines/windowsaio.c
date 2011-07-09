@@ -28,7 +28,6 @@ struct windowsaio_data {
 	HANDLE iocomplete_event;
 	CANCELIOEX pCancelIoEx;
 	BOOL iothread_running;
-	BOOL use_iocp;
 };
 
 struct thread_ctx {
@@ -36,7 +35,6 @@ struct thread_ctx {
 	struct windowsaio_data *wd;
 };
 
-static void PrintError(LPCSTR lpszFunction);
 static int fio_windowsaio_cancel(struct thread_data *td,
 			       struct io_u *io_u);
 static BOOL timeout_expired(DWORD start_count, DWORD end_count);
@@ -56,27 +54,6 @@ int sync_file_range(int fd, off64_t offset, off64_t nbytes,
 {
 	errno = ENOSYS;
 	return -1;
-}
-
-static void PrintError(LPCSTR lpszFunction)
-{
-	// Retrieve the system error message for the last-error code
-
-	LPSTR lpMsgBuf;
-	DWORD dw = GetLastError();
-
-	FormatMessage(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER |
-		FORMAT_MESSAGE_FROM_SYSTEM |
-		FORMAT_MESSAGE_IGNORE_INSERTS,
-		NULL,
-		dw,
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPTSTR)&lpMsgBuf,
-		0, NULL );
-
-	log_err("%s - %s", lpszFunction, lpMsgBuf);
-	LocalFree(lpMsgBuf);
 }
 
 static int fio_windowsaio_init(struct thread_data *td)
@@ -125,7 +102,6 @@ static int fio_windowsaio_init(struct thread_data *td)
 	}
 
 	if (rc) {
-		PrintError(__func__);
 		if (wd != NULL) {
 			if (wd->ovls != NULL)
 				free(wd->ovls);
@@ -140,7 +116,7 @@ static int fio_windowsaio_init(struct thread_data *td)
 	wd->pCancelIoEx = GetProcAddress(hKernel32Dll, "CancelIoEx");
 
 	td->io_ops->data = wd;
-	return 0;
+	return rc;
 }
 
 static void fio_windowsaio_cleanup(struct thread_data *td)
@@ -174,7 +150,7 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 {
 	int rc = 0;
 	HANDLE hFile;
-	DWORD flags = FILE_FLAG_POSIX_SEMANTICS;
+	DWORD flags = FILE_FLAG_POSIX_SEMANTICS | FILE_FLAG_OVERLAPPED;
 	DWORD sharemode = FILE_SHARE_READ | FILE_SHARE_WRITE;
 	DWORD openmode = OPEN_ALWAYS;
 	DWORD access;
@@ -191,14 +167,10 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-    if (!td->o.odirect && !td->o.sync_io && td->io_ops->data != NULL)
-	    flags |= FILE_FLAG_OVERLAPPED;
-
 	if (td->o.odirect)
 		flags |= FILE_FLAG_NO_BUFFERING;
 	if (td->o.sync_io)
 		flags |= FILE_FLAG_WRITE_THROUGH;
-
 
 	if (td->o.td_ddir == TD_DDIR_READ  ||
 		td->o.td_ddir == TD_DDIR_WRITE)
@@ -219,24 +191,17 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 	f->hFile = CreateFile(f->file_name, access, sharemode,
 		NULL, openmode, flags, NULL);
 
-	if (f->hFile == INVALID_HANDLE_VALUE) {
-		PrintError(__func__);
+	if (f->hFile == INVALID_HANDLE_VALUE)
 		rc = 1;
-	}
 
 	/* Only set up the competion port and thread if we're not just
 	 * querying the device size */
-    if (!rc && td->io_ops->data != NULL && !td->o.odirect && !td->o.sync_io) {
+    if (!rc && td->io_ops->data != NULL) {
 		struct thread_ctx *ctx;
         struct windowsaio_data *wd;
 		hFile = CreateIoCompletionPort(f->hFile, NULL, 0, 0);
 
         wd = td->io_ops->data;
-
-        if (!td->o.odirect && !td->o.sync_io)
-            wd->use_iocp = 1;
-        else
-            wd->use_iocp = 0;
 
 		wd->iothread_running = TRUE;
 
@@ -248,10 +213,8 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 			wd->iothread = CreateThread(NULL, 0, IoCompletionRoutine, ctx, 0, NULL);
 		}
 
-		if (rc || wd->iothread == NULL) {
-			PrintError(__func__);
+		if (rc || wd->iothread == NULL)
 			rc = 1;
-		}
 	}
 
 	return rc;
@@ -259,15 +222,17 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 
 static int fio_windowsaio_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 {
+	int rc = 0;
+	
 	dprint(FD_FILE, "fd close %s\n", f->file_name);
 
 	if (f->hFile != INVALID_HANDLE_VALUE) {
 		if (!CloseHandle(f->hFile))
-			PrintError(__func__);
+			rc = 1;
 	}
 
 	f->hFile = INVALID_HANDLE_VALUE;
-	return 0;
+	return rc;
 }
 
 static BOOL timeout_expired(DWORD start_count, DWORD end_count)
@@ -353,26 +318,24 @@ static int fio_windowsaio_queue(struct thread_data *td,
 
 	wd = td->io_ops->data;
 
-	if (wd->use_iocp) {
-	    for (index = 0; index < td->o.iodepth; index++) {
-	        if (wd->ovls[index].io_free) {
-                wd->ovls[index].io_free = FALSE;
-	            ResetEvent(wd->ovls[index].o.hEvent);
-	            break;
-	        }
+    for (index = 0; index < td->o.iodepth; index++) {
+        if (wd->ovls[index].io_free) {
+            wd->ovls[index].io_free = FALSE;
+            ResetEvent(wd->ovls[index].o.hEvent);
+            break;
         }
+    }
 
-        assert(index < td->o.iodepth);
+    assert(index < td->o.iodepth);
 
-        lpOvl = &wd->ovls[index].o;
-	    wd->ovls[index].io_u = io_u;
-    	lpOvl->Internal = STATUS_PENDING;
-    	lpOvl->InternalHigh = 0;
-    	lpOvl->Offset = io_u->offset & 0xFFFFFFFF;
-    	lpOvl->OffsetHigh = io_u->offset >> 32;
-    	lpOvl->Pointer = NULL;
-        io_u->engine_data = &wd->ovls[index];
-	}
+    lpOvl = &wd->ovls[index].o;
+    wd->ovls[index].io_u = io_u;
+	lpOvl->Internal = STATUS_PENDING;
+	lpOvl->InternalHigh = 0;
+	lpOvl->Offset = io_u->offset & 0xFFFFFFFF;
+	lpOvl->OffsetHigh = io_u->offset >> 32;
+	lpOvl->Pointer = NULL;
+    io_u->engine_data = &wd->ovls[index];
 
 	switch (io_u->ddir) {
     case DDIR_WRITE:
@@ -400,13 +363,9 @@ static int fio_windowsaio_queue(struct thread_data *td,
 		assert(0);
 	}
 
-    if (wd->use_iocp && (success || GetLastError() == ERROR_IO_PENDING)) {
+    if (success || GetLastError() == ERROR_IO_PENDING) {
 		rc = FIO_Q_QUEUED;
-	} else if (success && !wd->use_iocp) {
-		io_u->resid = io_u->xfer_buflen - iobytes;
-		io_u->error = 0;
 	} else {
-		PrintError(__func__);
 		io_u->error = GetLastError();
 		io_u->resid = io_u->xfer_buflen;
 	}
