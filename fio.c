@@ -1294,6 +1294,7 @@ static int fork_main(int shmid, int offset)
 	struct thread_data *td;
 	void *data, *ret;
 
+#ifndef __hpux
 	data = shmat(shmid, NULL, 0);
 	if (data == (void *) -1) {
 		int __err = errno;
@@ -1301,6 +1302,12 @@ static int fork_main(int shmid, int offset)
 		perror("shmat");
 		return __err;
 	}
+#else
+	/*
+	 * HP-UX inherits shm mappings?
+	 */
+	data = threads;
+#endif
 
 	td = data + offset * sizeof(struct thread_data);
 	ret = thread_main(td);
