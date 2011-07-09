@@ -72,6 +72,7 @@ static int fio_posixaio_prep(struct thread_data fio_unused *td,
 	aiocb->aio_buf = io_u->xfer_buf;
 	aiocb->aio_nbytes = io_u->xfer_buflen;
 	aiocb->aio_offset = io_u->offset;
+	aiocb->aio_sigevent.sigev_notify = SIGEV_NONE;
 
 	io_u->seen = 0;
 	return 0;
