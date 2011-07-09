@@ -13,49 +13,50 @@ SOURCE = gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
 		rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
 		lib/num2str.c $(wildcard crc/*.c) engines/cpu.c \
-		engines/mmap.c engines/sync.c engines/null.c memalign.c
+		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
+		memalign.c
 
 ifeq ($(UNAME), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c helpers.c cgroup.c trim.c \
 		engines/libaio.c engines/posixaio.c engines/sg.c \
 		engines/splice.c engines/syslet-rw.c engines/guasi.c \
-		engines/binject.c profiles/tiobench.c engines/net.c
+		engines/binject.c profiles/tiobench.c
   LIBS += -lpthread -ldl -lrt -laio
   CFLAGS += -rdynamic
 endif
 ifeq ($(UNAME), SunOS)
   SOURCE += fifo.c lib/strsep.c helpers.c engines/posixaio.c \
-		engines/solarisaio.c engines/net.c
+		engines/solarisaio.c
   LIBS	 += -lpthread -ldl -laio -lrt -lnsl -lsocket
   CPPFLAGS += -D__EXTENSIONS__
 endif
 ifeq ($(UNAME), FreeBSD)
-  SOURCE += helpers.c engines/posixaio.c engines/net.c
+  SOURCE += helpers.c engines/posixaio.c
   LIBS	 += -lpthread -lrt
   CFLAGS += -rdynamic
 endif
 ifeq ($(UNAME), NetBSD)
-  SOURCE += helpers.c engines/posixaio.c engines/net.c
+  SOURCE += helpers.c engines/posixaio.c
   LIBS	 += -lpthread -lrt
   CFLAGS += -rdynamic
 endif
 ifeq ($(UNAME), AIX)
-  SOURCE += fifo.c helpers.c lib/getopt_long.c engines/posixaio.c engines/net.c
+  SOURCE += fifo.c helpers.c lib/getopt_long.c engines/posixaio.c
   LIBS	 += -lpthread -ldl -lrt
   CFLAGS += -rdynamic
   CPPFLAGS += -D_LARGE_FILES -D__ppc__
 endif
 ifeq ($(UNAME), HP-UX)
-  SOURCE += fifo.c helpers.c lib/getopt_long.c lib/strsep.c
+  SOURCE += fifo.c helpers.c lib/getopt_long.c lib/strsep.c engines/posixaio.c
   LIBS   += -lpthread -dl -lrt
-  CPPFLAGS += -D_LARGE_FILES
+  CFLAGS += -D_LARGEFILE64_SOURCE
 endif
 ifeq ($(UNAME), Darwin)
-  SOURCE += helpers.c engines/posixaio.c engines/net.c
+  SOURCE += helpers.c engines/posixaio.c
   LIBS	 += -lpthread -ldl
 endif
 ifneq (,$(findstring CYGWIN,$(UNAME)))
-  SOURCE += engines/windowsaio.c engines/net.c
+  SOURCE += engines/windowsaio.c
   LIBS	 += -lpthread -lrt
 endif
 

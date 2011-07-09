@@ -9,6 +9,8 @@
 #include <sys/mman.h>
 #include <sys/mpctl.h>
 #include <sys/scsi.h>
+#include <time.h>
+#include <aio.h>
 
 #include "../file.h"
 
@@ -26,6 +28,14 @@
 #define POSIX_MADV_SEQUENTIAL	MADV_SEQUENTIAL
 #define POSIX_MADV_RANDOM	MADV_RANDOM
 #define posix_madvise(ptr, sz, hint)	madvise((ptr), (sz), (hint))
+
+#ifndef CLOCK_MONOTONIC
+#define CLOCK_MONOTONIC		CLOCK_REALTIME
+#endif
+
+#ifndef MSG_WAITALL
+#define MSG_WAITALL	0x40
+#endif
 
 static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
