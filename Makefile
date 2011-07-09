@@ -48,7 +48,7 @@ ifeq ($(UNAME), AIX)
 endif
 ifeq ($(UNAME), HP-UX)
   SOURCE += fifo.c helpers.c lib/getopt_long.c lib/strsep.c engines/posixaio.c
-  LIBS   += -lpthread -dl -lrt
+  LIBS   += -lpthread -ldl -lrt
   CFLAGS += -D_LARGEFILE64_SOURCE
 endif
 ifeq ($(UNAME), Darwin)
