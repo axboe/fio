@@ -10,18 +10,18 @@
 #include "os/os.h"
 
 #ifndef __NR_fallocate
-int __weak posix_fallocate(int fd, off_t offset, off_t len)
+int _weak posix_fallocate(int fd, off_t offset, off_t len)
 {
 	return 0;
 }
 #endif
 
-int __weak inet_aton(const char *cp, struct in_addr *inp)
+int _weak inet_aton(const char *cp, struct in_addr *inp)
 {
 	return 0;
 }
 
-int __weak clock_gettime(clockid_t clk_id, struct timespec *ts)
+int _weak clock_gettime(clockid_t clk_id, struct timespec *ts)
 {
 	struct timeval tv;
 	int ret;
@@ -35,7 +35,7 @@ int __weak clock_gettime(clockid_t clk_id, struct timespec *ts)
 }
 
 #ifndef __NR_sync_file_range
-int __weak sync_file_range(int fd, off64_t offset, off64_t nbytes,
+int _weak sync_file_range(int fd, off64_t offset, off64_t nbytes,
 			   unsigned int flags)
 {
 	errno = ENOSYS;
