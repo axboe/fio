@@ -9,6 +9,8 @@
 #include <sys/mman.h>
 #include <sys/mpctl.h>
 #include <sys/scsi.h>
+#include <sys/param.h>
+#include <sys/pstat.h>
 #include <time.h>
 #include <aio.h>
 
@@ -57,16 +59,17 @@ static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 
 static inline unsigned long long os_phys_mem(void)
 {
-#if 0
-	long mem = sysconf(_SC_AIX_REALMEM);
+	unsigned long long ret;
+	struct pst_static pst;
+	union pstun pu;
 
-	if (mem == -1)
+	pu.pst_static = &pst;
+	if (pstat(PSTAT_STATIC, pu, sizeof(pst), 0, 0) == -1)
 		return 0;
 
-	return (unsigned long long) mem * 1024;
-#else
-	return 0;
-#endif
+	ret = pst.physical_memory;
+	ret *= pst.page_size;
+	return ret;
 }
 
 #define FIO_HAVE_CPU_ONLINE_SYSCONF
