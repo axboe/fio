@@ -8,7 +8,7 @@
 #include <sys/fadvise.h>
 #include <sys/mman.h>
 #include <sys/mpctl.h>
-#include <sys/scsi.h>
+#include <sys/diskio.h>
 #include <sys/param.h>
 #include <sys/pstat.h>
 #include <time.h>
@@ -22,6 +22,7 @@
 #define FIO_HAVE_CLOCK_MONOTONIC
 #define FIO_HAVE_PSHARED_MUTEX
 #define FIO_HAVE_FADVISE
+#define FIO_HAVE_CHARDEV_SIZE
 
 #define OS_MAP_ANON		MAP_ANONYMOUS
 #define OS_MSG_DONTWAIT		0
@@ -46,15 +47,23 @@ static inline int blockdev_invalidate_cache(struct fio_file *f)
 
 static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
-	struct capacity cap;
+	disk_describe_type_ext_t dext;
 
-	if (!ioctl(f->fd, SIOC_CAPACITY, &cap) == -1) {
-		*bytes = cap.lba * cap.blksz;
+	if (!ioctl(f->fd, DIOC_DESCRIBE_EXT, &dext)) {
+		unsigned long long lba;
+
+		lba = ((uint64_t) dext.maxsva_high << 32) | dext.maxsva_low;
+		*bytes = lba * dext.lgblksz;
 		return 0;
 	}
 
 	*bytes = 0;
 	return errno;
+}
+
+static inline int chardev_size(struct fio_file *f, unsigned long long *bytes)
+{
+	return blockdev_size(f, bytes);
 }
 
 static inline unsigned long long os_phys_mem(void)
