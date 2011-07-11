@@ -2091,7 +2091,7 @@ void fio_keywords_init(void)
 	sprintf(buf, "%lu", page_size);
 	fio_keywords[0].replace = strdup(buf);
 
-	mb_memory = os_phys_mem() / page_size;
+	mb_memory = os_phys_mem() / (1024 * 1024);
 	sprintf(buf, "%llu", mb_memory);
 	fio_keywords[1].replace = strdup(buf);
 
