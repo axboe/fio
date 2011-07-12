@@ -32,7 +32,6 @@
 #define FIO_HAVE_BLKTRACE
 #define FIO_HAVE_STRSEP
 #define FIO_HAVE_FALLOCATE
-#define FIO_HAVE_LINUX_FALLOCATE
 #define FIO_HAVE_POSIXAIO_FSYNC
 #define FIO_HAVE_PSHARED_MUTEX
 #define FIO_HAVE_CL_SIZE
@@ -42,6 +41,14 @@
 #define FIO_HAVE_TRIM
 #define FIO_HAVE_BINJECT
 #define FIO_HAVE_CLOCK_MONOTONIC
+
+/*
+ * Can only enable this for newer glibcs, or the header and defines are
+ * missing
+ */
+#if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 6
+#define FIO_HAVE_LINUX_FALLOCATE
+#endif
 
 #ifdef SYNC_FILE_RANGE_WAIT_BEFORE
 #define FIO_HAVE_SYNC_FILE_RANGE

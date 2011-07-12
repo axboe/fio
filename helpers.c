@@ -9,6 +9,12 @@
 #include "arch/arch.h"
 #include "os/os.h"
 
+int _weak fallocate(int fd, int mode, off_t offset, off_t len)
+{
+	errno = ENOSYS;
+	return -1;
+}
+
 #ifndef __NR_fallocate
 int _weak posix_fallocate(int fd, off_t offset, off_t len)
 {

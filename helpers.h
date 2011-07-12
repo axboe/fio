@@ -7,6 +7,7 @@
 
 struct in_addr;
 
+extern int _weak fallocate(int fd, int mode, off_t offset, off_t len);
 extern int _weak posix_memalign(void **ptr, size_t align, size_t size);
 extern int _weak posix_fallocate(int fd, off_t offset, off_t len);
 extern int _weak inet_aton(const char *cp, struct in_addr *inp);
