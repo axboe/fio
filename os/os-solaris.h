@@ -119,6 +119,11 @@ static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
 	return 0;
 }
 
+static inline int gettid(void)
+{
+	return pthread_self();
+}
+
 /*
  * Should be enough, not aware of what (if any) restrictions Solaris has
  */

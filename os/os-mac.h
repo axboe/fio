@@ -22,6 +22,7 @@
 #define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_CLOCK_MONOTONIC
 #define FIO_USE_GENERIC_RAND
+#define FIO_HAVE_GETTID
 
 #define OS_MAP_ANON		MAP_ANON
 
@@ -146,5 +147,10 @@ static inline unsigned long long os_phys_mem(void)
 
 	sysctl(mib, 2, &mem, &len, NULL, 0);
 	return mem;
+}
+
+static inline int gettid(void)
+{
+	return mach_thread_self();
 }
 #endif
