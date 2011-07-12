@@ -1045,10 +1045,11 @@ static void *thread_main(void *data)
 	pthread_condattr_t attr;
 	int clear_state;
 
-	if (!td->o.use_thread)
+	if (!td->o.use_thread) {
 		setsid();
-
-	td->pid = getpid();
+		td->pid = getpid();
+	} else
+		td->pid = gettid();
 
 	dprint(FD_PROCESS, "jobs pid=%d started\n", (int) td->pid);
 

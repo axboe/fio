@@ -187,4 +187,11 @@ static inline unsigned int cpus_online(void)
 }
 #endif
 
+#ifndef FIO_HAVE_GETTID
+static inline int gettid(void)
+{
+	return getpid();
+}
+#endif
+
 #endif
