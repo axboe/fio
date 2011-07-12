@@ -19,6 +19,7 @@
 #define FIO_HAVE_FDATASYNC
 #define FIO_USE_GENERIC_BDEV_SIZE
 #define FIO_USE_GENERIC_RAND
+#define FIO_HAVE_GETTID
 
 #undef	FIO_HAVE_CPU_AFFINITY	/* XXX notyet */
 
@@ -43,6 +44,14 @@ static inline unsigned long long os_phys_mem(void)
 
 	sysctl(mib, 2, &mem, &len, NULL, 0);
 	return mem;
+}
+
+static inline int gettid(void)
+{
+	long lwpid;
+
+	thr_self(&lwpid);
+	return (int) lwpid;
 }
 
 #ifdef MADV_FREE
