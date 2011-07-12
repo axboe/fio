@@ -89,4 +89,9 @@ typedef int (fio_opt_str_set_fn)(void *);
 #define max(a, b)	((a) > (b) ? (a) : (b))
 #endif
 
+static inline int parse_is_percent(unsigned long long val)
+{
+	return val <= -1ULL && val >= (-1ULL - 100ULL);
+}
+
 #endif

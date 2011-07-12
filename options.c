@@ -744,6 +744,20 @@ static int str_gtod_cpu_cb(void *data, long long *il)
 	return 0;
 }
 
+static int str_size_cb(void *data, unsigned long long *__val)
+{
+	struct thread_data *td = data;
+	unsigned long long v = *__val;
+
+	if (parse_is_percent(v)) {
+		td->o.size = 0;
+		td->o.size_percent = -1ULL - v;
+	} else
+		td->o.size = v;
+
+	return 0;
+}
+
 static int rw_verify(struct fio_option *o, void *data)
 {
 	struct thread_data *td = data;
@@ -1031,8 +1045,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 	{
 		.name	= "size",
 		.type	= FIO_OPT_STR_VAL,
-		.off1	= td_var_offset(size),
-		.minval = 1,
+		.cb	= str_size_cb,
 		.help	= "Total size of device or files",
 	},
 	{

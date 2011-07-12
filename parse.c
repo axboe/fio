@@ -118,7 +118,8 @@ static unsigned long get_mult_time(char c)
 	}
 }
 
-static unsigned long long __get_mult_bytes(const char *p, void *data)
+static unsigned long long __get_mult_bytes(const char *p, void *data,
+					   int *percent)
 {
 	unsigned int kb_base = fio_get_kb_base(data);
 	unsigned long long ret = 1;
@@ -158,6 +159,10 @@ static unsigned long long __get_mult_bytes(const char *p, void *data)
 		pow = 2;
 	else if (!strcmp("k", c) || !strcmp("kb", c))
 		pow = 1;
+	else if (!strcmp("%", c)) {
+		*percent = 1;
+		return ret;
+	}
 
 	while (pow--)
 		ret *= (unsigned long long) mult;
@@ -166,12 +171,13 @@ static unsigned long long __get_mult_bytes(const char *p, void *data)
 	return ret;
 }
 
-static unsigned long long get_mult_bytes(const char *str, int len, void *data)
+static unsigned long long get_mult_bytes(const char *str, int len, void *data,
+					 int *percent)
 {
 	const char *p = str;
 
 	if (len < 2)
-		return __get_mult_bytes(str, data);
+		return __get_mult_bytes(str, data, percent);
 
         /*
          * Go forward until we hit a non-digit
@@ -182,10 +188,10 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data)
 		p++;
 	}
 
-	if (!isalpha((int) *p))
+	if (!isalpha((int) *p) && (*p != '%'))
 		p = NULL;
 
-	return __get_mult_bytes(p, data);
+	return __get_mult_bytes(p, data, percent);
 }
 
 /*
@@ -208,9 +214,16 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data)
 	if (*val == LONG_MAX && errno == ERANGE)
 		return 1;
 
-	if (kilo)
-		*val *= get_mult_bytes(str, len, data);
-	else
+	if (kilo) {
+		unsigned long long mult;
+		int perc = 0;
+
+		mult = get_mult_bytes(str, len, data, &perc);
+		if (perc)
+			*val = -1ULL - *val;
+		else
+			*val *= mult;
+	} else
 		*val *= get_mult_time(str[len - 1]);
 
 	return 0;
