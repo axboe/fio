@@ -43,8 +43,8 @@ endif
 ifeq ($(UNAME), AIX)
   SOURCE += fifo.c helpers.c lib/getopt_long.c engines/posixaio.c
   LIBS	 += -lpthread -ldl -lrt
-  CFLAGS += -rdynamic
   CPPFLAGS += -D_LARGE_FILES -D__ppc__
+  LDFLAGS += -L/opt/freeware/lib -Wl,-blibpath:/opt/freeware/lib:/usr/lib:/lib -Wl,-bmaxdata:0x80000000
 endif
 ifeq ($(UNAME), HP-UX)
   SOURCE += fifo.c helpers.c lib/getopt_long.c lib/strsep.c engines/posixaio.c
@@ -80,7 +80,7 @@ all: .depend $(PROGS) $(SCRIPTS)
 	$(QUIET_CC)$(CC) -o $@ -c $(CFLAGS) $(CPPFLAGS) $<
 
 fio: $(OBJS)
-	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
+	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
 
 .depend: $(SOURCE)
 	$(QUIET_DEP)$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SOURCE) 1> .depend
