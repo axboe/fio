@@ -1,9 +1,8 @@
-#ifndef _AIX
-#ifndef __hpux
+#if !(defined(_AIX) || defined(__hpux))
 
 #include <getopt.h>
 
-#else /* _AIX */
+#else /* _AIX || __hpux */
 
 #ifndef _GETOPT_H
 #define _GETOPT_H
@@ -24,5 +23,4 @@ enum {
 int getopt_long_only(int, char *const *, const char *, const struct option *, int *);
 
 #endif /* _GETOPT_H */
-#endif /* __hpux */
-#endif /* _AIX */
+#endif /* _AIX || __hpux */
