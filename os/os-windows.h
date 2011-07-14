@@ -4,19 +4,20 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <windows.h>
+#include <psapi.h>
 
 #include "../smalloc.h"
 #include "../file.h"
 #include "../log.h"
 
 #define FIO_HAVE_ODIRECT
-#define FIO_USE_GENERIC_RAND
+#define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_CHARDEV_SIZE
-#define FIO_USE_GENERIC_RAND
-
 #define FIO_HAVE_FALLOCATE
 #define FIO_HAVE_FDATASYNC
 #define FIO_HAVE_WINDOWSAIO
+
+#define FIO_USE_GENERIC_RAND
 
 #define OS_MAP_ANON		MAP_ANON
 
@@ -31,6 +32,8 @@ typedef struct {
 } GET_LENGTH_INFORMATION;
 
 #define IOCTL_DISK_GET_LENGTH_INFO 0x7405C
+
+pid_t cygwin_winpid_to_pid(int winpid);
 
 static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
@@ -86,6 +89,86 @@ static inline void os_get_tmpdir(char *path, int len)
 {
 	GetTempPath(len, path);
 }
+
+typedef DWORD_PTR os_cpu_mask_t;
+
+static inline int pid_to_winpid(int pid)
+{
+	int winpid = 0;
+	DWORD outbytes = 0;
+	DWORD *ids = NULL;
+	size_t allocsize;
+	
+	allocsize = sizeof(DWORD) * 1024;
+	
+	do {
+		if (allocsize == outbytes)
+			allocsize *= 2;
+
+		ids = realloc(ids, allocsize);
+		EnumProcesses(ids, allocsize, &outbytes);
+	} while (allocsize == outbytes);
+	
+	for (int i = 0; i < (outbytes/sizeof(DWORD)); i++) {
+		if (cygwin_winpid_to_pid(ids[i]) == pid) {
+			winpid = ids[i];
+			break;
+		}
+	}
+	
+	free(ids);
+	return winpid;
+}
+
+static inline int fio_setaffinity(int pid, os_cpu_mask_t cpumask)
+{
+	int winpid = pid_to_winpid(pid);
+	HANDLE h = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_SET_INFORMATION, TRUE, winpid);
+	if (h == NULL)
+		return -1;
+	
+	BOOL bSuccess = SetProcessAffinityMask(h, cpumask);
+	CloseHandle(h);
+	return (bSuccess)? 0 : -1;
+}
+
+static inline void fio_getaffinity(int pid, os_cpu_mask_t *mask)
+{
+	os_cpu_mask_t systemMask;
+	int winpid = pid_to_winpid(pid);
+	HANDLE h = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, winpid);
+	if (h == NULL)
+	{
+		printf("OpenProcess failed!\n");
+		return;
+  }
+  
+	GetProcessAffinityMask(h, mask, &systemMask);
+	CloseHandle(h);
+}
+
+static inline void fio_cpu_clear(os_cpu_mask_t *mask, int cpu)
+{
+	*mask ^= 1 << (cpu-1);
+}
+
+static inline void fio_cpu_set(os_cpu_mask_t *mask, int cpu)
+{
+	*mask |= 1 << (cpu-1);
+}
+
+static inline int fio_cpuset_init(os_cpu_mask_t *mask)
+{
+	*mask = 0;
+	return 0;
+}
+
+static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
+{
+	return 0;
+}
+
+#define FIO_MAX_CPUS			MAXIMUM_PROCESSORS
 
 #ifdef MADV_FREE
 #define FIO_MADV_FREE	MADV_FREE

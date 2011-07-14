@@ -57,7 +57,8 @@ ifeq ($(UNAME), Darwin)
 endif
 ifneq (,$(findstring CYGWIN,$(UNAME)))
   SOURCE += engines/windowsaio.c
-  LIBS	 += -lpthread -lrt
+  LIBS	 += -lpthread -lrt -lpsapi
+  CFLAGS += -DPSAPI_VERSION=1
 endif
 
 OBJS = $(SOURCE:.c=.o)
