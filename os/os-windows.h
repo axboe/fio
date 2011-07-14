@@ -16,6 +16,7 @@
 #define FIO_HAVE_FALLOCATE
 #define FIO_HAVE_FDATASYNC
 #define FIO_HAVE_WINDOWSAIO
+#define FIO_HAVE_GETTID
 
 #define FIO_USE_GENERIC_RAND
 
@@ -92,6 +93,11 @@ static inline void os_get_tmpdir(char *path, int len)
 
 typedef DWORD_PTR os_cpu_mask_t;
 
+static inline int gettid(void)
+{
+	return GetCurrentThreadId();
+}
+
 static inline int pid_to_winpid(int pid)
 {
 	int winpid = 0;
@@ -120,31 +126,57 @@ static inline int pid_to_winpid(int pid)
 	return winpid;
 }
 
+HANDLE WINAPI OpenThread(
+    DWORD dwDesiredAccess,
+    BOOL bInheritHandle,
+    DWORD dwThreadId);
+    
+DWORD WINAPI GetProcessIdOfThread(HANDLE Thread);
+
 static inline int fio_setaffinity(int pid, os_cpu_mask_t cpumask)
 {
-	int winpid = pid_to_winpid(pid);
-	HANDLE h = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_SET_INFORMATION, TRUE, winpid);
-	if (h == NULL)
-		return -1;
+	HANDLE h;
+	BOOL bSuccess;
+	int winpid;
 	
-	BOOL bSuccess = SetProcessAffinityMask(h, cpumask);
+	h = OpenThread(THREAD_QUERY_INFORMATION | THREAD_SET_INFORMATION, TRUE, pid);
+	if (h != NULL) {
+		bSuccess = SetThreadAffinityMask(h, cpumask);
+	} else {
+		// then we might have a process id instead of a thread id
+		winpid = pid_to_winpid(pid);
+		h = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_SET_INFORMATION, TRUE, winpid);
+		if (h == NULL)
+			return -1;
+
+		bSuccess = SetProcessAffinityMask(h, cpumask);
+	}
+
 	CloseHandle(h);
+
 	return (bSuccess)? 0 : -1;
 }
 
 static inline void fio_getaffinity(int pid, os_cpu_mask_t *mask)
 {
 	os_cpu_mask_t systemMask;
-	int winpid = pid_to_winpid(pid);
-	HANDLE h = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, winpid);
-	if (h == NULL)
-	{
-		printf("OpenProcess failed!\n");
-		return;
-  }
-  
-	GetProcessAffinityMask(h, mask, &systemMask);
-	CloseHandle(h);
+	int winpid;
+	
+	HANDLE h = OpenThread(THREAD_QUERY_INFORMATION, TRUE, pid);
+	if (h != NULL)
+		winpid = GetProcessIdOfThread(h);
+	else
+		winpid = pid_to_winpid(pid);
+	
+	h = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, winpid);
+
+	if (h != NULL) {
+		GetProcessAffinityMask(h, mask, &systemMask);
+		CloseHandle(h);
+	} else {
+		fprintf(stderr, "fio_getaffinity failed: failed to get handle for pid %d\n", pid);
+	}
+	
 }
 
 static inline void fio_cpu_clear(os_cpu_mask_t *mask, int cpu)
