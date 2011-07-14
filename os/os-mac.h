@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <signal.h>
+#include <mach/mach_init.h>
 
 #include "../file.h"
 
