@@ -550,9 +550,10 @@ sync_done:
 
 		/*
 		 * if we can queue more, do so. but check if there are
-		 * completed io_u's first.
+		 * completed io_u's first. Note that we can get BUSY even
+		 * without IO queued, if the system is resource starved.
 		 */
-		full = queue_full(td) || ret == FIO_Q_BUSY;
+		full = queue_full(td) || (ret == FIO_Q_BUSY && td->cur_depth);
 		if (full || !td->o.iodepth_batch_complete) {
 			min_events = min(td->o.iodepth_batch_complete,
 					 td->cur_depth);
@@ -710,9 +711,11 @@ sync_done:
 			break;
 
 		/*
-		 * See if we need to complete some commands
+		 * See if we need to complete some commands. Note that we
+		 * can get BUSY even without IO queued, if the system is
+		 * resource starved.
 		 */
-		full = queue_full(td) || ret == FIO_Q_BUSY;
+		full = queue_full(td) || (ret == FIO_Q_BUSY && td->cur_depth);
 		if (full || !td->o.iodepth_batch_complete) {
 			min_evts = min(td->o.iodepth_batch_complete,
 					td->cur_depth);
