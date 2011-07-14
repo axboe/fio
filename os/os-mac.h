@@ -24,6 +24,7 @@
 #define FIO_HAVE_CLOCK_MONOTONIC
 #define FIO_USE_GENERIC_RAND
 #define FIO_HAVE_GETTID
+#define FIO_HAVE_CHARDEV_SIZE
 
 #define OS_MAP_ANON		MAP_ANON
 
@@ -133,6 +134,19 @@ static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 		return errno;
     (*bytes) *= temp;
     return 0;
+}
+
+static inline int chardev_size(struct fio_file *f, unsigned long long *bytes)
+{
+	/*
+	 * Could be a raw block device, this is better than just assuming
+	 * we can't get the size at all.
+	 */
+	if (!blockdev_size(f, bytes))
+		return 0;
+
+	*bytes = -1ULL;
+	return 0;
 }
 
 static inline int blockdev_invalidate_cache(struct fio_file *f)
