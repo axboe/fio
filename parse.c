@@ -498,10 +498,17 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 		break;
 	}
-	case FIO_OPT_BOOL: {
+	case FIO_OPT_BOOL:
+	case FIO_OPT_STR_SET: {
 		fio_opt_int_fn *fn = o->cb;
 
-		ret = check_int(ptr, &il);
+		if (ptr)
+			ret = check_int(ptr, &il);
+		else if (o->type == FIO_OPT_BOOL)
+			ret = 1;
+		else
+			il = 1;
+
 		if (ret)
 			break;
 
@@ -533,27 +540,6 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 					*(unsigned int *) o->roff2 = il;
 				else if (o->off2)
 					val_store(ilp, il, o->off2, 0, data);
-			}
-		}
-		break;
-	}
-	case FIO_OPT_STR_SET: {
-		fio_opt_str_set_fn *fn = o->cb;
-
-		if (fn)
-			ret = fn(data);
-		else {
-			if (first) {
-				if (o->roff1)
-					*(unsigned int *) o->roff1 = 1;
-				else
-					val_store(ilp, 1, o->off1, 0, data);
-			}
-			if (!more) {
-				if (o->roff2)
-					*(unsigned int *) o->roff2 = 1;
-				else if (o->off2)
-					val_store(ilp, 1, o->off2, 0, data);
 			}
 		}
 		break;
