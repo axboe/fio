@@ -8,7 +8,7 @@ Table of contents
 5. Detailed list of parameters
 6. Normal output
 7. Terse output
-
+8. Trace file format
 
 1.0 Overview and history
 ------------------------
@@ -1334,3 +1334,64 @@ Split up, the format is as follows:
 	Additional Info (dependant on continue_on_error, default off): total # errors, first error code 
 	
 	Additional Info (dependant on description being set): Text description
+
+
+8.0 Trace file format
+---------------------
+There are two trace file format that you can encounter. The older (v1) format 
+is unsupported since version 1.20-rc3 (March 2008). It will still be described
+below in case that you get an old trace and want to understand it.
+
+In any case the trace is a simple text file with a single action per line.
+
+
+8.1 Trace file format v1
+------------------------
+Each line represents a single io action in the following format:
+
+rw, offset, length
+
+where rw=0/1 for read/write, and the offset and length entries being in bytes.
+
+This format is not supported in Fio versions => 1.20-rc3.
+
+
+8.2 Trace file format v2
+------------------------
+The second version of the trace file format was added in Fio version 1.17.
+It allows to access more then one file per trace and has a bigger set of
+possible file actions.
+
+The first line of the trace file has to be:
+
+fio version 2 iolog
+
+Following this can be lines in two different formats, which are described below.
+
+The file management format:
+
+filename action
+
+The filename is given as an absolute path. The action can be one of these:
+
+add          Add the given filename to the trace
+open         Open the file with the given filename. The filename has to have 
+             been added with the add action before.
+close        Close the file with the given filename. The file has to have been
+             opened before.
+
+
+The file io action format:
+
+filename action offset length
+
+The filename is given as an absolute path, and has to have been added and opened
+before it can be used with this format. The offset and length are given in 
+bytes. The action can be one of these:
+
+wait       Wait for 'offset' microseconds. Everything below 100 is discarded.
+read       Read 'length' bytes beginning from 'offset'
+write      Write 'length' bytes beginning from 'offset'
+sync       fsync() the file
+datasync   fdatasync() the file
+trim       trim the given file from the given 'offset' for 'length' bytes

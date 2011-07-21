@@ -289,11 +289,8 @@ The job file parameters are:
 			can be used to gauge hard drive speed over the entire
 			platter, without reading everything. Both x/y can
 			include k/m/g suffix.
-	iolog=x		Open and read io pattern from file 'x'. The file must
-			contain one io action per line in the following format:
-			rw, offset, length
-			where with rw=0/1 for read/write, and the offset
-			and length entries being in bytes.
+	read_iolog=x	Open and read io pattern from file 'x'. The file format
+                        is described in the HOWTO.
 	write_iolog=x	Write an iolog to file 'x' in the same format as iolog.
 			The iolog options are exclusive, if both given the
 			read iolog will be performed.  Specify a separate file
