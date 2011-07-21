@@ -1203,7 +1203,7 @@ each thread, group of threads, and disks in that order. For each data
 direction, the output looks like:
 
 Client1 (g=0): err= 0:
-  write: io=    32MB, bw=   666KB/s, runt= 50320msec
+  write: io=    32MB, bw=   666KB/s, iops=89 , runt= 50320msec
     slat (msec): min=    0, max=  136, avg= 0.03, stdev= 1.92
     clat (msec): min=    0, max=  631, avg=48.50, stdev=86.82
     bw (KB/s) : min=    0, max= 1196, per=51.00%, avg=664.02, stdev=681.68
@@ -1221,6 +1221,7 @@ they denote:
 
 io=		Number of megabytes io performed
 bw=		Average bandwidth rate
+iops=           Average IOs performed per second
 runt=		The runtime of that thread
 	slat=	Submission latency (avg being the average, stdev being the
 		standard deviation). This is the time it took to submit
