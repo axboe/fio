@@ -47,7 +47,6 @@ int warnings_fatal = 0;
 int write_bw_log = 0;
 int read_only = 0;
 
-static int def_timeout;
 static int write_lat_log;
 
 static int prev_group_jobs;
@@ -951,8 +950,6 @@ static int fill_def_thread(void)
 	 * fill default options
 	 */
 	fio_fill_default_options(&def_thread);
-
-	def_thread.o.timeout = def_timeout;
 	return 0;
 }
 
@@ -1160,7 +1157,7 @@ static int parse_cmd_line(int argc, char *argv[])
 			smalloc_pool_size = atoi(optarg);
 			break;
 		case 't':
-			def_timeout = atoi(optarg);
+			def_thread.o.timeout = atoi(optarg);
 			break;
 		case 'l':
 			write_lat_log = 1;
