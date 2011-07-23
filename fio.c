@@ -557,7 +557,7 @@ sync_done:
 		if (full || !td->o.iodepth_batch_complete) {
 			min_events = min(td->o.iodepth_batch_complete,
 					 td->cur_depth);
-			if (full && !min_events)
+			if (full && !min_events && td->o.iodepth_batch_complete != 0)
 				min_events = 1;
 
 			do {
@@ -719,7 +719,7 @@ sync_done:
 		if (full || !td->o.iodepth_batch_complete) {
 			min_evts = min(td->o.iodepth_batch_complete,
 					td->cur_depth);
-			if (full && !min_evts)
+			if (full && !min_evts && td->o.iodepth_batch_complete != 0)
 				min_evts = 1;
 
 			if (__should_check_rate(td, 0) ||
