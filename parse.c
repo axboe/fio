@@ -453,6 +453,11 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 		strncpy(tmp, ptr, sizeof(tmp) - 1);
 
+		/* Handle bsrange with separate read,write values: */
+		p1 = strchr(tmp, ',');
+		if (p1)
+			*p1 = '\0';
+
 		p1 = strchr(tmp, '-');
 		if (!p1) {
 			p1 = strchr(tmp, ':');
