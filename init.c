@@ -1021,6 +1021,7 @@ static int setup_thread_area(void)
 
 static void usage(const char *name)
 {
+	printf("%s\n", fio_version_string);
 	printf("%s [options] [job options] <job file(s)>\n", name);
 	printf("\t--debug=options\tEnable debug logging\n");
 	printf("\t--output\tWrite output to file\n");
