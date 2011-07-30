@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <sys/sysctl.h>
 #include <sys/disk.h>
+#include <sys/thr.h>
 
 #include "../file.h"
 
