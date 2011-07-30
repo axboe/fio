@@ -474,21 +474,28 @@ static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
 
 	dst->min_val = min(dst->min_val, src->min_val);
 	dst->max_val = max(dst->max_val, src->max_val);
-	dst->samples += src->samples;
 
 	/*
-	 * Needs a new method for calculating stddev, we cannot just
-	 * average them we do below for nr > 1
+	 * Compute new mean and S after the merge
+	 * <http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+	 *  #Parallel_algorithm>
 	 */
 	if (nr == 1) {
 		mean = src->mean;
 		S = src->S;
 	} else {
-		mean = ((src->mean * (double) (nr - 1))
-				+ dst->mean) / ((double) nr);
-		S = ((src->S * (double) (nr - 1)) + dst->S) / ((double) nr);
+		double delta = src->mean - dst->mean;
+
+		mean = ((src->mean * src->samples) +
+			(dst->mean * dst->samples)) /
+			(dst->samples + src->samples);
+
+		S =  src->S + dst->S + pow(delta, 2.0) *
+			(dst->samples * src->samples) /
+			(dst->samples + src->samples);
 	}
 
+	dst->samples += src->samples;
 	dst->mean = mean;
 	dst->S = S;
 }
