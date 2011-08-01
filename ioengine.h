@@ -36,6 +36,9 @@ struct io_u {
 #ifdef FIO_HAVE_BINJECT
 		struct b_user_cmd buc;
 #endif
+#ifdef FIO_HAVE_RDMA
+		struct ibv_mr *mr;
+#endif
 		void *mmap_data;
 	};
 	struct timeval start_time;

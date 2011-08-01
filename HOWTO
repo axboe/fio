@@ -568,6 +568,11 @@ ioengine=str	Defines how the job issues io to the file. The following
 
 				for more info on GUASI.
 
+			rdma    The RDMA I/O engine  supports  both  RDMA
+				memory semantic(RDMA_WRITE/RDMA_READ) and
+				channel semantic(Send/Recv) in InfiniBand, RoCE
+				and iWarp environment.
+
 			external Prefix to specify loading an external
 				IO engine object file. Append the engine
 				filename, eg ioengine=external:/tmp/foo.o

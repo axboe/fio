@@ -4,7 +4,7 @@ CPPFLAGS= -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	$(DEBUGFLAGS)
 OPTFLAGS= -O2 -fno-omit-frame-pointer -g $(EXTFLAGS)
 CFLAGS	= -std=gnu99 -Wwrite-strings -Wall $(OPTFLAGS)
-LIBS	= -lm
+LIBS    = -lm $(EXTLIBS)
 PROGS	= fio
 SCRIPTS = fio_generate_plots
 UNAME  := $(shell uname)
@@ -20,7 +20,7 @@ ifeq ($(UNAME), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c helpers.c cgroup.c trim.c \
 		engines/libaio.c engines/posixaio.c engines/sg.c \
 		engines/splice.c engines/syslet-rw.c engines/guasi.c \
-		engines/binject.c profiles/tiobench.c
+		engines/binject.c engines/rdma.c profiles/tiobench.c
   LIBS += -lpthread -ldl -lrt -laio
   CFLAGS += -rdynamic
 endif

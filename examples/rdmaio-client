@@ -1,0 +1,11 @@
+# Example rdma client job
+[global]
+ioengine=rdma
+filename=[ip_addr]/[port]/[RDMA_WRITE/RDMA_READ/SEND]
+bs=1m
+size=100g
+
+[sender]
+rw=write
+iodepth=1
+iodepth_batch_complete=1

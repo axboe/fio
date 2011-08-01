@@ -1,0 +1,10 @@
+# Example rdma server job
+[global]
+ioengine=rdma
+filename=[ip_addr]/[port]
+bs=1m
+size=100g
+
+[receiver]
+rw=read
+iodepth=16

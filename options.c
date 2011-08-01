@@ -1003,6 +1003,11 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .help = "binject direct inject block engine",
 			  },
 #endif
+#ifdef FIO_HAVE_RDMA
+			  { .ival = "rdma",
+			    .help = "RDMA IO engine",
+			  },
+#endif
 			  { .ival = "external",
 			    .help = "Load external engine (append name)",
 			  },
