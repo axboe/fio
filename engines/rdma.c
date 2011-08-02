@@ -114,7 +114,7 @@ static int client_recv(struct thread_data *td, struct ibv_wc *wc)
 	struct rdmaio_data *rd = td->io_ops->data;
 
 	if (wc->byte_len != sizeof(rd->recv_buf)) {
-		fprintf(stderr, "Received bogus data, size %d\n", wc->byte_len);
+		log_err("Received bogus data, size %d\n", wc->byte_len);
 		return 1;
 	}
 
@@ -602,8 +602,8 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 			index = rand() % rd->rmt_nr;
 			r_io_u_d->sq_wr.opcode = IBV_WR_RDMA_WRITE;
 			r_io_u_d->sq_wr.wr.rdma.rkey = rd->rmt_us[index].rkey;
-			r_io_u_d->sq_wr.wr.rdma.remote_addr =
-			    rd->rmt_us[index].buf;
+			r_io_u_d->sq_wr.wr.rdma.remote_addr = \
+				rd->rmt_us[index].buf;
 			r_io_u_d->sq_wr.sg_list->length = io_us[i]->buflen;
 			break;
 		case FIO_RDMA_MEM_READ:
@@ -612,8 +612,8 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 			index = rand() % rd->rmt_nr;
 			r_io_u_d->sq_wr.opcode = IBV_WR_RDMA_READ;
 			r_io_u_d->sq_wr.wr.rdma.rkey = rd->rmt_us[index].rkey;
-			r_io_u_d->sq_wr.wr.rdma.remote_addr =
-			    rd->rmt_us[index].buf;
+			r_io_u_d->sq_wr.wr.rdma.remote_addr = \
+				rd->rmt_us[index].buf;
 			r_io_u_d->sq_wr.sg_list->length = io_us[i]->buflen;
 			break;
 		case FIO_RDMA_CHA_SEND:
@@ -1087,9 +1087,9 @@ static int fio_rdmaio_init(struct thread_data *td)
 	if ((rd->rdma_protocol == FIO_RDMA_MEM_WRITE) ||
 	    (rd->rdma_protocol == FIO_RDMA_MEM_READ)) {
 		rd->rmt_us =
-		    malloc(FIO_RDMA_MAX_IO_DPETH * sizeof(struct remote_u));
+			malloc(FIO_RDMA_MAX_IO_DPETH * sizeof(struct remote_u));
 		memset(rd->rmt_us, 0,
-		       FIO_RDMA_MAX_IO_DPETH * sizeof(struct remote_u));
+			FIO_RDMA_MAX_IO_DPETH * sizeof(struct remote_u));
 		rd->rmt_nr = 0;
 	}
 
@@ -1184,19 +1184,19 @@ static int fio_rdmaio_setup(struct thread_data *td)
 }
 
 static struct ioengine_ops ioengine_rw = {
-	.name = "rdma",
-	.version = FIO_IOOPS_VERSION,
-	.setup = fio_rdmaio_setup,
-	.init = fio_rdmaio_init,
-	.prep = fio_rdmaio_prep,
-	.queue = fio_rdmaio_queue,
-	.commit = fio_rdmaio_commit,
-	.getevents = fio_rdmaio_getevents,
-	.event = fio_rdmaio_event,
-	.cleanup = fio_rdmaio_cleanup,
-	.open_file = fio_rdmaio_open_file,
-	.close_file = fio_rdmaio_close_file,
-	.flags = FIO_DISKLESSIO | FIO_UNIDIR | FIO_PIPEIO,
+	.name		= "rdma",
+	.version	= FIO_IOOPS_VERSION,
+	.setup		= fio_rdmaio_setup,
+	.init		= fio_rdmaio_init,
+	.prep		= fio_rdmaio_prep,
+	.queue		= fio_rdmaio_queue,
+	.commit		= fio_rdmaio_commit,
+	.getevents	= fio_rdmaio_getevents,
+	.event		= fio_rdmaio_event,
+	.cleanup	= fio_rdmaio_cleanup,
+	.open_file	= fio_rdmaio_open_file,
+	.close_file	= fio_rdmaio_close_file,
+	.flags		= FIO_DISKLESSIO | FIO_UNIDIR | FIO_PIPEIO,
 };
 
 #else /* FIO_HAVE_RDMA */
@@ -1231,13 +1231,13 @@ static int fio_rdmaio_init(struct thread_data fio_unused * td)
 }
 
 static struct ioengine_ops ioengine_rw = {
-	.name = "rdma",
-	.version = FIO_IOOPS_VERSION,
-	.init = fio_rdmaio_init,
-	.queue = fio_rdmaio_queue,
-	.open_file = fio_rdmaio_open_file,
-	.close_file = fio_rdmaio_close_file,
-	.flags = FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR | FIO_PIPEIO,
+	.name		= "rdma",
+	.version	= FIO_IOOPS_VERSION,
+	.init		= fio_rdmaio_init,
+	.queue		= fio_rdmaio_queue,
+	.open_file	= fio_rdmaio_open_file,
+	.close_file	= fio_rdmaio_close_file,
+	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR | FIO_PIPEIO,
 };
 
 #endif
