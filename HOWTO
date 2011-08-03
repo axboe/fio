@@ -992,7 +992,8 @@ verify_backlog_batch=int	Control how many blocks fio will verify
 		if verify_backlog_batch is larger than verify_backlog, some
 		blocks will be verified more than once.
 		
-stonewall	Wait for preceeding jobs in the job file to exit, before
+stonewall
+wait_for_previous Wait for preceeding jobs in the job file to exit, before
 		starting this one. Can be used to insert serialization
 		points in the job file. A stone wall also implies starting
 		a new reporting group.

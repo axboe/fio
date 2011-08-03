@@ -630,7 +630,7 @@ number, eg echoing 8 will ensure that the OS has 8 huge pages ready for
 use.
 .RE
 .TP
-.BI iomem_align \fR=\fPint
+.BI iomem_align \fR=\fPint "\fR,\fP mem_align" \fR=\fPint
 This indiciates the memory alignment of the IO memory buffers. Note that the
 given alignment is applied to the first IO unit buffer, if using \fBiodepth\fR
 the alignment of the following buffers are given by the \fBbs\fR used. In
@@ -762,7 +762,7 @@ read back and verified).  If \fBverify_backlog_batch\fR is less than
 \fBverify_backlog_batch\fR is larger than \fBverify_backlog\fR,  some blocks
 will be verified more than once.
 .TP
-.B stonewall
+.B stonewall "\fR,\fP wait_for_previous"
 Wait for preceding jobs in the job file to exit before starting this one.
 \fBstonewall\fR implies \fBnew_group\fR.
 .TP

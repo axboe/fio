@@ -1879,6 +1879,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "stonewall",
+		.alias	= "wait_for_previous",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(stonewall),
 		.help	= "Insert a hard barrier between this job and previous",
