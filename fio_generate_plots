@@ -3,7 +3,7 @@
 # Use gnuplot to generate plots from fio run with -l and/or -w
 
 if [ "$1"x = "x" ]; then
-	echo Need title as arg
+	echo "Usage: fio_generate_plots title [xres yres]"
 	exit 1
 fi
 
@@ -14,6 +14,15 @@ if [ ! -x $GNUPLOT ]; then
 fi
 
 TITLE=$1
+
+# set resolution
+if [ "$2"x != "x" -a "$3"x != "x" ]; then
+	XRES="$2"
+	YRES="$3"
+else
+	XRES=1024
+	YRES=768
+fi
 
 PLOT_LINE=""
 for i in *bw.log; do
@@ -30,7 +39,7 @@ done
 
 if [ "$PLOT_LINE"x != "x" ]; then
 	echo Making bw logs
-	echo "set title 'Bandwidth - $TITLE'; set xlabel 'time (msec)'; set ylabel 'KB/sec'; set terminal png; set output '$TITLE-bw.png'; plot " $PLOT_LINE | $GNUPLOT -
+	echo "set title 'Bandwidth - $TITLE'; set xlabel 'time (msec)'; set ylabel 'KB/sec'; set terminal png size $XRES,$YRES; set output '$TITLE-bw.png'; plot " $PLOT_LINE | $GNUPLOT -
 fi
 
 PLOT_LINE=""
@@ -48,7 +57,7 @@ done
 
 if [ "$PLOT_LINE"x != "x" ]; then
 	echo Making slat logs $PLOT_LINE
-	echo "set title 'Submission latency - $TITLE'; set xlabel 'time (msec)'; set ylabel 'latency (msec)'; set terminal png; set output '$TITLE-slat.png'; plot " $PLOT_LINE | $GNUPLOT -
+	echo "set title 'Submission latency - $TITLE'; set xlabel 'time (msec)'; set ylabel 'latency (msec)'; set terminal png size $XRES,$YRES; set output '$TITLE-slat.png'; plot " $PLOT_LINE | $GNUPLOT -
 fi
 
 PLOT_LINE=""
@@ -66,7 +75,7 @@ done
 
 if [ "$PLOT_LINE"x != "x" ]; then
 	echo Making clat logs $PLOT_LINE
-	echo "set title 'Completion latency - $TITLE'; set xlabel 'time (msec)'; set ylabel 'latency (msec)'; set terminal png; set output '$TITLE-clat.png'; plot " $PLOT_LINE | $GNUPLOT -
+	echo "set title 'Completion latency - $TITLE'; set xlabel 'time (msec)'; set ylabel 'latency (msec)'; set terminal png size $XRES,$YRES; set output '$TITLE-clat.png'; plot " $PLOT_LINE | $GNUPLOT -
 fi
 
 PLOT_LINE=""
@@ -84,5 +93,5 @@ done
 
 if [ "$PLOT_LINE"x != "x" ]; then
 	echo Making lat logs $PLOT_LINE
-	echo "set title 'Latency - $TITLE'; set xlabel 'time (msec)'; set ylabel 'latency (msec)'; set terminal png; set output '$TITLE-lat.png'; plot " $PLOT_LINE | $GNUPLOT -
+	echo "set title 'Latency - $TITLE'; set xlabel 'time (msec)'; set ylabel 'latency (msec)'; set terminal png size $XRES,$YRES; set output '$TITLE-lat.png'; plot " $PLOT_LINE | $GNUPLOT -
 fi
