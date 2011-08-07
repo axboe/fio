@@ -1,16 +1,17 @@
 /*
- * rdma engine
+ * RDMA I/O engine
  *
- * RDMA IO engine using OFED library.
- * Support both RDMA memory semantic and channel semantic
- *   in InfiniBand, RoCE and iWarp environment.
+ * RDMA I/O engine based on the IB verbs and RDMA/CM user space libraries.
+ * Supports both RDMA memory semantics and channel semantics
+ *   for the InfiniBand, RoCE and iWARP protocols.
  *
- * This is currently disabled. To enable it, execute:
+ * This I/O engine is disabled by default. To enable it, execute:
  *
  * $ export EXTFLAGS="-DFIO_HAVE_RDMA"
  * $ export EXTLIBS="-libverbs -lrdmacm"
  *
- * before running make. You'll need the OFED as well:
+ * before running make. You will need the Linux RDMA software as well, either
+ * from your Linux distributor or directly from openfabrics.org:
  *
  * http://www.openfabrics.org/downloads/OFED/
  *
