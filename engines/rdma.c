@@ -205,7 +205,7 @@ static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
 				}
 			}
 			if (i == rd->io_u_flight_nr)
-				log_err("fio: recv wr %ld not found\n",
+				log_err("fio: recv wr %" PRId64 " not found\n",
 					wc.wr_id);
 			else {
 				/* put the last one into middle of the list */
@@ -234,7 +234,7 @@ static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
 				}
 			}
 			if (i == rd->io_u_flight_nr)
-				log_err("fio: send wr %ld not found\n",
+				log_err("fio: send wr %" PRId64 " not found\n",
 					wc.wr_id);
 			else {
 				/* put the last one into middle of the list */
@@ -587,8 +587,10 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 {
 	struct rdmaio_data *rd = td->io_ops->data;
 	struct ibv_send_wr *bad_wr;
+#if 0
 	enum ibv_wc_opcode comp_opcode;
 	comp_opcode = IBV_WC_RDMA_WRITE;
+#endif
 	int i, index;
 	struct rdma_io_u_data *r_io_u_d;
 
@@ -1018,8 +1020,9 @@ static int fio_rdmaio_init(struct thread_data *td)
 	/* soft limit */
 	if ((rl.rlim_cur != RLIM_INFINITY)
 	    && (rl.rlim_cur < td->orig_buffer_size)) {
-		log_err("fio: soft RLIMIT_MEMLOCK is: %ld\n", rl.rlim_cur);
-		log_err("fio: total block size is:    %ld\n",
+		log_err("fio: soft RLIMIT_MEMLOCK is: %" PRId64 "\n",
+			rl.rlim_cur);
+		log_err("fio: total block size is:    %zd\n",
 			td->orig_buffer_size);
 		/* try to set larger RLIMIT_MEMLOCK */
 		rl.rlim_cur = rl.rlim_max;
