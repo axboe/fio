@@ -678,10 +678,10 @@ norandommap	Normally fio will cover every block of the file when doing
 		blocksizes (via bsrange=) are used, since fio only tracks
 		complete rewrites of blocks.
 
-softrandommap	See norandommap. If fio runs with the random block map enabled
-		and it fails to allocate the map, if this option is set it
-		will continue without a random block map. As coverage will
-		not be as complete as with random maps, this option is
+softrandommap=bool See norandommap. If fio runs with the random block map
+		enabled and it fails to allocate the map, if this option is
+		set it will continue without a random block map. As coverage
+		will not be as complete as with random maps, this option is
 		disabled by default.
 
 nice=int	Run the job with the given nice value. See man nice(2).
