@@ -1,16 +1,17 @@
 /*
- * rdma engine
+ * RDMA I/O engine
  *
- * RDMA IO engine using OFED library.
- * Support both RDMA memory semantic and channel semantic
- *   in InfiniBand, RoCE and iWarp environment.
+ * RDMA I/O engine based on the IB verbs and RDMA/CM user space libraries.
+ * Supports both RDMA memory semantics and channel semantics
+ *   for the InfiniBand, RoCE and iWARP protocols.
  *
- * This is currently disabled. To enable it, execute:
+ * This I/O engine is disabled by default. To enable it, execute:
  *
  * $ export EXTFLAGS="-DFIO_HAVE_RDMA"
  * $ export EXTLIBS="-libverbs -lrdmacm"
  *
- * before running make. You'll need the OFED as well:
+ * before running make. You will need the Linux RDMA software as well, either
+ * from your Linux distributor or directly from openfabrics.org:
  *
  * http://www.openfabrics.org/downloads/OFED/
  *
@@ -40,7 +41,7 @@
 #include <rdma/rdma_cma.h>
 #include <infiniband/arch.h>
 
-#define FIO_RDMA_MAX_IO_DPETH    128
+#define FIO_RDMA_MAX_IO_DEPTH    128
 
 enum rdma_io_mode {
 	FIO_RDMA_UNKNOWN = 0,
@@ -61,7 +62,7 @@ struct rdma_info_blk {
 	uint32_t nr;		/* client: io depth
 				   server: number of records for memory semantic
 				 */
-	struct remote_u rmt_us[FIO_RDMA_MAX_IO_DPETH];
+	struct remote_u rmt_us[FIO_RDMA_MAX_IO_DEPTH];
 };
 
 struct rdma_io_u_data {
@@ -145,7 +146,7 @@ static int server_recv(struct thread_data *td, struct ibv_wc *wc)
 {
 	struct rdmaio_data *rd = td->io_ops->data;
 
-	if (wc->wr_id == FIO_RDMA_MAX_IO_DPETH) {
+	if (wc->wr_id == FIO_RDMA_MAX_IO_DEPTH) {
 		rd->rdma_protocol = ntohl(rd->recv_buf.mode);
 
 		/* CHANNEL semantic, do nothing */
@@ -183,7 +184,7 @@ static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
 			else
 				server_recv(td, &wc);
 
-			if (wc.wr_id == FIO_RDMA_MAX_IO_DPETH)
+			if (wc.wr_id == FIO_RDMA_MAX_IO_DEPTH)
 				break;
 
 			for (i = 0; i < rd->io_u_flight_nr; i++) {
@@ -204,7 +205,7 @@ static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
 				}
 			}
 			if (i == rd->io_u_flight_nr)
-				log_err("fio: recv wr %ld not found\n",
+				log_err("fio: recv wr %" PRId64 " not found\n",
 					wc.wr_id);
 			else {
 				/* put the last one into middle of the list */
@@ -218,7 +219,7 @@ static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
 		case IBV_WC_SEND:
 		case IBV_WC_RDMA_WRITE:
 		case IBV_WC_RDMA_READ:
-			if (wc.wr_id == FIO_RDMA_MAX_IO_DPETH)
+			if (wc.wr_id == FIO_RDMA_MAX_IO_DEPTH)
 				break;
 
 			for (i = 0; i < rd->io_u_flight_nr; i++) {
@@ -233,7 +234,7 @@ static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
 				}
 			}
 			if (i == rd->io_u_flight_nr)
-				log_err("fio: send wr %ld not found\n",
+				log_err("fio: send wr %" PRId64 " not found\n",
 					wc.wr_id);
 			else {
 				/* put the last one into middle of the list */
@@ -405,7 +406,7 @@ static int fio_rdmaio_setup_control_msg_buffers(struct thread_data *td)
 	rd->recv_sgl.lkey = rd->recv_mr->lkey;
 	rd->rq_wr.sg_list = &rd->recv_sgl;
 	rd->rq_wr.num_sge = 1;
-	rd->rq_wr.wr_id = FIO_RDMA_MAX_IO_DPETH;
+	rd->rq_wr.wr_id = FIO_RDMA_MAX_IO_DEPTH;
 
 	/* send wq */
 	rd->send_sgl.addr = (uint64_t) (unsigned long)&rd->send_buf;
@@ -416,7 +417,7 @@ static int fio_rdmaio_setup_control_msg_buffers(struct thread_data *td)
 	rd->sq_wr.send_flags = IBV_SEND_SIGNALED;
 	rd->sq_wr.sg_list = &rd->send_sgl;
 	rd->sq_wr.num_sge = 1;
-	rd->sq_wr.wr_id = FIO_RDMA_MAX_IO_DPETH;
+	rd->sq_wr.wr_id = FIO_RDMA_MAX_IO_DEPTH;
 
 	return 0;
 }
@@ -586,8 +587,10 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 {
 	struct rdmaio_data *rd = td->io_ops->data;
 	struct ibv_send_wr *bad_wr;
+#if 0
 	enum ibv_wc_opcode comp_opcode;
 	comp_opcode = IBV_WC_RDMA_WRITE;
+#endif
 	int i, index;
 	struct rdma_io_u_data *r_io_u_d;
 
@@ -1017,8 +1020,9 @@ static int fio_rdmaio_init(struct thread_data *td)
 	/* soft limit */
 	if ((rl.rlim_cur != RLIM_INFINITY)
 	    && (rl.rlim_cur < td->orig_buffer_size)) {
-		log_err("fio: soft RLIMIT_MEMLOCK is: %ld\n", rl.rlim_cur);
-		log_err("fio: total block size is:    %ld\n",
+		log_err("fio: soft RLIMIT_MEMLOCK is: %" PRId64 "\n",
+			rl.rlim_cur);
+		log_err("fio: total block size is:    %zd\n",
 			td->orig_buffer_size);
 		/* try to set larger RLIMIT_MEMLOCK */
 		rl.rlim_cur = rl.rlim_max;
@@ -1087,9 +1091,9 @@ static int fio_rdmaio_init(struct thread_data *td)
 	if ((rd->rdma_protocol == FIO_RDMA_MEM_WRITE) ||
 	    (rd->rdma_protocol == FIO_RDMA_MEM_READ)) {
 		rd->rmt_us =
-			malloc(FIO_RDMA_MAX_IO_DPETH * sizeof(struct remote_u));
+			malloc(FIO_RDMA_MAX_IO_DEPTH * sizeof(struct remote_u));
 		memset(rd->rmt_us, 0,
-			FIO_RDMA_MAX_IO_DPETH * sizeof(struct remote_u));
+			FIO_RDMA_MAX_IO_DEPTH * sizeof(struct remote_u));
 		rd->rmt_nr = 0;
 	}
 
