@@ -512,7 +512,7 @@ Normally \fBfio\fR will cover every block of the file when doing random I/O. If
 this parameter is given, a new offset will be chosen without looking at past
 I/O history.  This parameter is mutually exclusive with \fBverify\fR.
 .TP
-.B softrandommap
+.B softrandommap \fR=\fPbool
 See \fBnorandommap\fR. If fio runs with the random block map enabled and it
 fails to allocate the map, if this option is set it will continue without a
 random block map. As coverage will not be as complete as with random maps, this
