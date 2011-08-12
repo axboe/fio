@@ -244,6 +244,7 @@ irange	Integer range with suffix. Allows value range to be given, such
 	1k:4k. If the option allows two sets of ranges, they can be
 	specified with a ',' or '/' delimiter: 1k-4k/8k-32k. Also see
 	int.
+float_list	A list of floating numbers, separated by a ':' character.
 
 With the above in mind, here follows the complete list of fio job
 parameters.
@@ -1119,6 +1120,18 @@ disable_slat=bool Disable measurements of submission latency numbers. See
 
 disable_bw=bool	Disable measurements of throughput/bandwidth numbers. See
 		disable_lat.
+
+clat_percentiles=bool Enable the reporting of percentiles of
+		 completion latencies.
+
+percentile_list=float_list Overwrite the default list of percentiles
+		for completion latencies. Each number is a floating
+		number in the range (0,100], and the maximum length of
+		the list is 20. Use ':' to separate the numbers, and
+		list the numbers in ascending order. For example,
+		--percentile_list=99.5:99.9 will cause fio to report
+		the values of completion latency below which 99.5% and
+		99.9% of the observed latencies fell, respectively.
 
 gtod_reduce=bool Enable all of the gettimeofday() reducing options
 		(disable_clat, disable_slat, disable_bw) plus reduce

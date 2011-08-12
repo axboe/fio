@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "parse.h"
 #include "debug.h"
@@ -45,13 +46,23 @@ static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
 
 static void show_option_range(struct fio_option *o, FILE *out)
 {
-	if (!o->minval && !o->maxval)
-		return;
+	if (o->type == FIO_OPT_FLOAT_LIST){
+		if (isnan(o->minfp) && isnan(o->maxfp))
+			return;
 
-	fprintf(out, "%20s: min=%d", "range", o->minval);
-	if (o->maxval)
-		fprintf(out, ", max=%d", o->maxval);
-	fprintf(out, "\n");
+		fprintf(out, "%20s: min=%f", "range", o->minfp);
+		if (!isnan(o->maxfp))
+			fprintf(out, ", max=%f", o->maxfp);
+		fprintf(out, "\n");
+	} else {
+		if (!o->minval && !o->maxval)
+			return;
+
+		fprintf(out, "%20s: min=%d", "range", o->minval);
+		if (o->maxval)
+			fprintf(out, ", max=%d", o->maxval);
+		fprintf(out, "\n");
+	}
 }
 
 static void show_option_values(struct fio_option *o)
@@ -86,6 +97,7 @@ static void show_option_help(struct fio_option *o, FILE *out)
 		"string with dual range (opt=1k-4k,4k-8k)",
 		"integer value (opt=100)",
 		"boolean value (opt=1)",
+		"list of floating point values separated by ':' (opt=5.9:7.8)",
 		"no argument (opt)",
 		"deprecated",
 	};
@@ -192,6 +204,14 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
 		p = NULL;
 
 	return __get_mult_bytes(p, data, percent);
+}
+
+/*
+ * Convert string into a floating number. Return 1 for success and 0 otherwise.
+ */
+int str_to_float(const char *str, double *val)
+{
+	return (1 == sscanf(str, "%lf", val));
 }
 
 /*
@@ -317,11 +337,13 @@ static int opt_len(const char *str)
 	} while (0)
 
 static int __handle_option(struct fio_option *o, const char *ptr, void *data,
-			   int first, int more)
+			   int first, int more, int curr)
 {
 	int il, *ilp;
+	double* flp;
 	long long ull, *ullp;
 	long ul1, ul2;
+	double uf;
 	char **cp;
 	int ret = 0, is_time = 0;
 
@@ -427,6 +449,39 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 				}
 			}
 		}
+		break;
+	}
+	case FIO_OPT_FLOAT_LIST: {
+
+		if (first) {
+			ul2 = 1;
+			ilp = td_var(data, o->off2);
+			*ilp = ul2;
+		}
+		if (curr >= o->maxlen) {
+			fprintf(stderr, "the list exceeding max length %d\n",
+					o->maxlen);
+			return 1;
+		}
+		if(!str_to_float(ptr, &uf)){
+			fprintf(stderr, "not a floating point value: %s\n",
+					ptr);
+			return 1;
+		}
+		if (!isnan(o->maxfp) && uf > o->maxfp) {
+			fprintf(stderr, "value out of range: %f"
+				" (range max: %f)\n", uf, o->maxfp);
+			return 1;
+		}
+		if (!isnan(o->minfp) && uf < o->minfp) {
+			fprintf(stderr, "value out of range: %f"
+				" (range min: %f)\n", uf, o->minfp);
+			return 1;
+		}
+
+		flp = td_var(data, o->off1);
+		flp[curr] = uf;
+
 		break;
 	}
 	case FIO_OPT_STR_STORE: {
@@ -596,7 +651,8 @@ static int handle_option(struct fio_option *o, const char *__ptr, void *data)
 		ptr2 = NULL;
 		if (ptr &&
 		    (o->type != FIO_OPT_STR_STORE) &&
-		    (o->type != FIO_OPT_STR)) {
+		    (o->type != FIO_OPT_STR) &&
+		    (o->type != FIO_OPT_FLOAT_LIST)) {
 			ptr2 = strchr(ptr, ',');
 			if (ptr2 && *(ptr2 + 1) == '\0')
 				*ptr2 = '\0';
@@ -606,6 +662,8 @@ static int handle_option(struct fio_option *o, const char *__ptr, void *data)
 				if (!ptr2)
 					ptr2 = strchr(ptr, '-');
 			}
+		} else if (ptr && o->type == FIO_OPT_FLOAT_LIST) {
+			ptr2 = strchr(ptr, ':');
 		}
 
 		/*
@@ -613,7 +671,7 @@ static int handle_option(struct fio_option *o, const char *__ptr, void *data)
 		 * we are doing multiple arguments, we can allow the first one
 		 * being empty.
 		 */
-		__ret = __handle_option(o, ptr, data, !done, !!ptr2);
+		__ret = __handle_option(o, ptr, data, !done, !!ptr2, done);
 		if (ret)
 			ret = __ret;
 
@@ -967,6 +1025,10 @@ void option_init(struct fio_option *o)
 	if (o->type == FIO_OPT_BOOL) {
 		o->minval = 0;
 		o->maxval = 1;
+	}
+	if (o->type == FIO_OPT_FLOAT_LIST) {
+		o->minfp = NAN;
+		o->maxfp = NAN;
 	}
 	if (o->type == FIO_OPT_STR_SET && o->def) {
 		fprintf(stderr, "Option %s: string set option with"

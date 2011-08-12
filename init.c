@@ -616,6 +616,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	td->mutex = fio_mutex_init(0);
 
+	td->ts.clat_percentiles = td->o.clat_percentiles;
+	if (td->o.overwrite_plist)
+		td->ts.percentile_list = td->o.percentile_list;
+	else
+		td->ts.percentile_list = NULL;
+
 	td->ts.clat_stat[0].min_val = td->ts.clat_stat[1].min_val = ULONG_MAX;
 	td->ts.slat_stat[0].min_val = td->ts.slat_stat[1].min_val = ULONG_MAX;
 	td->ts.lat_stat[0].min_val = td->ts.lat_stat[1].min_val = ULONG_MAX;

@@ -96,6 +96,10 @@ Integer range: a range of integers specified in the format
 \fIupper\fR may contain a suffix as described above.  If an option allows two
 sets of ranges, they are separated with a `,' or `/' character. For example:
 `8\-8k/8M\-4G'.
+.TP
+.I float_list
+List of floating numbers: A list of floating numbers, separated by
+a ':' charcater.
 .SS "Parameter List"
 .TP
 .BI name \fR=\fPstr
@@ -900,6 +904,17 @@ the thread/process does any work.
 .TP
 .BI gid \fR=\fPint
 Set group ID, see \fBuid\fR.
+.TP
+.BI clat_percentiles \fR=\fPbool
+Enable the reporting of percentiles of completion latencies.
+.TP
+.BI percentile_list \fR=\fPfloat_list
+Overwrite the default list of percentiles for completion
+latencies. Each number is a floating number in the range (0,100], and
+the maximum length of the list is 20. Use ':' to separate the
+numbers. For example, --percentile_list=99.5:99.9 will cause fio to
+report the values of completion latency below which 99.5% and 99.9% of
+the observed latencies fell, respectively.
 .SH OUTPUT
 While running, \fBfio\fR will display the status of the created jobs.  For
 example:

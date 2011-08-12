@@ -1935,6 +1935,24 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(refill_buffers),
 		.help	= "Refill IO buffers on every IO submit",
 	},
+	{
+		.name	= "clat_percentiles",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(clat_percentiles),
+		.help	= "Enable the reporting of completion latency percentiles",
+		.def	= "0",
+	},
+	{
+		.name	= "percentile_list",
+		.type	= FIO_OPT_FLOAT_LIST,
+		.off1	= td_var_offset(percentile_list),
+		.off2   = td_var_offset(overwrite_plist),
+		.help	= "Specify a custom list of percentiles to report",
+		.maxlen	= FIO_IO_U_LIST_MAX_LEN,
+		.minfp	= 0.0,
+		.maxfp	= 100.0,
+	},
+
 #ifdef FIO_HAVE_DISK_UTIL
 	{
 		.name	= "disk_util",

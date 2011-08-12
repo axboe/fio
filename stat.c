@@ -28,6 +28,134 @@ void update_rusage_stat(struct thread_data *td)
 	memcpy(&ts->ru_start, &ts->ru_end, sizeof(ts->ru_end));
 }
 
+/*
+ * Given a latency, return the index of the corresponding bucket in
+ * the structure tracking percentiles.
+ *
+ * (1) find the group (and error bits) that the value (latency)
+ * belongs to by looking at its MSB. (2) find the bucket number in the
+ * group by looking at the index bits.
+ *
+ */
+static unsigned int plat_val_to_idx(unsigned int val)
+{
+	unsigned int msb, error_bits, base, offset, idx;
+
+	/* Find MSB starting from bit 0 */
+	if (val == 0)
+		msb = 0;
+	else
+		msb = (sizeof(val)*8) - __builtin_clz(val) - 1;
+
+	/* MSB <= (FIO_IO_U_PLAT_BITS-1), cannot be rounded off. Use
+	 * all bits of the sample as index */
+	if (msb <= FIO_IO_U_PLAT_BITS)
+		return val;
+
+	/* Compute the number of error bits to discard*/
+	error_bits = msb - FIO_IO_U_PLAT_BITS;
+
+	/* Compute the number of buckets before the group */
+	base = (error_bits + 1) << FIO_IO_U_PLAT_BITS;
+
+	/* Discard the error bits and apply the mask to find the
+         * index for the buckets in the group */
+	offset = (FIO_IO_U_PLAT_VAL - 1) & (val >> error_bits);
+
+	/* Make sure the index does not exceed (array size - 1) */
+	idx = (base + offset) < (FIO_IO_U_PLAT_NR - 1)?
+		(base + offset) : (FIO_IO_U_PLAT_NR - 1);
+
+	return idx;
+}
+
+/*
+ * Convert the given index of the bucket array to the value
+ * represented by the bucket
+ */
+static unsigned int plat_idx_to_val(unsigned int idx)
+{
+	unsigned int error_bits, k, base;
+
+	assert(idx < FIO_IO_U_PLAT_NR);
+
+	/* MSB <= (FIO_IO_U_PLAT_BITS-1), cannot be rounded off. Use
+	 * all bits of the sample as index */
+	if (idx < (FIO_IO_U_PLAT_VAL << 1) )
+		return idx;
+
+	/* Find the group and compute the minimum value of that group */
+	error_bits = (idx >> FIO_IO_U_PLAT_BITS) -1;
+	base = 1 << (error_bits + FIO_IO_U_PLAT_BITS);
+
+	/* Find its bucket number of the group */
+	k = idx % FIO_IO_U_PLAT_VAL;
+
+	/* Return the mean of the range of the bucket */
+	return base + ((k + 0.5) * (1 << error_bits));
+}
+
+static int double_cmp(const void *a, const void *b)
+{
+	const double fa = *(const double *)a;
+	const double fb = *(const double *)b;
+	int cmp = 0;
+
+	if (fa > fb)
+		cmp = 1;
+	else if (fa < fb)
+		cmp = -1;
+
+	return cmp;
+}
+
+/*
+ * Find and display the p-th percentile of clat
+ */
+static void show_clat_percentiles(unsigned int* io_u_plat, unsigned long nr,
+				 double* user_list)
+{
+	unsigned long sum = 0;
+	unsigned int len, i, j = 0;
+	static const double def_list[FIO_IO_U_LIST_MAX_LEN] = {
+			1.0, 5.0, 10.0, 20.0, 30.0,
+			40.0, 50.0, 60.0, 70.0, 80.0,
+			90.0, 95.0, 99.0, 99.5, 99.9};
+
+	const double* plist = user_list? user_list: def_list;
+	for (len = 0; len <FIO_IO_U_LIST_MAX_LEN && plist[len] != 0; len++) {}
+
+	/* Sort the user-specified list. Note that this does not work
+	   for NaN values */
+	if (user_list && len > 1)
+		qsort((void*)user_list, len, sizeof(user_list[0]), double_cmp);
+
+	int is_last = 0;
+	log_info("    clat percentiles (usec) :");
+
+	for (i = 0; i <FIO_IO_U_PLAT_NR && !is_last; i++) {
+		sum += io_u_plat[i];
+		while (sum >= (plist[j]/100 * nr)) {
+			assert(plist[j] <= 100.0);
+
+			if (j!=0 && (j%4) == 0)	/* for formatting */
+				log_info("                             ");
+
+			/* end of the list */
+			is_last = (j == len - 1);
+
+			log_info(" %2.2fth=%u%c", plist[j], plat_idx_to_val(i),
+				 (is_last? '\n' : ','));
+
+			if (is_last) break;
+
+			if (j%4 == 3)	/* for formatting */
+				log_info("\n");
+			j++;
+		}
+	}
+}
+
 static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 		    double *mean, double *dev)
 {
@@ -227,6 +355,11 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 
 		free(minp);
 		free(maxp);
+	}
+	if (ts->clat_percentiles) {
+		show_clat_percentiles(ts->io_u_plat[ddir],
+					ts->clat_stat[ddir].samples,
+					ts->percentile_list);
 	}
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
@@ -565,6 +698,12 @@ void show_run_stats(void)
 
 		ts = &threadstats[j];
 
+		ts->clat_percentiles = td->o.clat_percentiles;
+		if (td->o.overwrite_plist)
+			ts->percentile_list = td->o.percentile_list;
+		else
+			ts->percentile_list = NULL;
+
 		idx++;
 		ts->members++;
 
@@ -636,6 +775,10 @@ void show_run_stats(void)
 		for (k = 0; k <= 2; k++) {
 			ts->total_io_u[k] += td->ts.total_io_u[k];
 			ts->short_io_u[k] += td->ts.short_io_u[k];
+
+			int m;
+			for (m = 0; m < FIO_IO_U_PLAT_NR; m++)
+				ts->io_u_plat[k][m] += td->ts.io_u_plat[k][m];
 		}
 
 		ts->total_run_time += td->ts.total_run_time;
@@ -774,6 +917,15 @@ void add_agg_sample(unsigned long val, enum fio_ddir ddir, unsigned int bs)
 	__add_log_sample(iolog, val, ddir, bs, mtime_since_genesis());
 }
 
+static void add_clat_percentile_sample(struct thread_stat *ts,
+				unsigned long usec, enum fio_ddir ddir)
+{
+	unsigned int idx = plat_val_to_idx(usec);
+	assert(idx < FIO_IO_U_PLAT_NR);
+
+	ts->io_u_plat[ddir][idx]++;
+}
+
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long usec, unsigned int bs)
 {
@@ -786,6 +938,9 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	if (ts->clat_log)
 		add_log_sample(td, ts->clat_log, usec, ddir, bs);
+
+	if (ts->clat_percentiles)
+		add_clat_percentile_sample(ts, usec, ddir);
 }
 
 void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
