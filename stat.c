@@ -773,10 +773,11 @@ void show_run_stats(void)
 
 
 		for (k = 0; k <= 2; k++) {
+			int m;
+
 			ts->total_io_u[k] += td->ts.total_io_u[k];
 			ts->short_io_u[k] += td->ts.short_io_u[k];
 
-			int m;
 			for (m = 0; m < FIO_IO_U_PLAT_NR; m++)
 				ts->io_u_plat[k][m] += td->ts.io_u_plat[k][m];
 		}
