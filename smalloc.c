@@ -171,8 +171,8 @@ static void clear_blocks(struct pool *pool, unsigned int pool_idx,
 static int find_next_zero(int word, int start)
 {
 	assert(word != -1U);
-	word >>= (start + 1);
-	return ffz(word) + start + 1;
+	word >>= start;
+	return ffz(word) + start;
 }
 
 static int add_pool(struct pool *pool, unsigned int alloc_size)
