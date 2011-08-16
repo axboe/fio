@@ -47,8 +47,10 @@ static unsigned int plat_val_to_idx(unsigned int val)
 	else
 		msb = (sizeof(val)*8) - __builtin_clz(val) - 1;
 
-	/* MSB <= (FIO_IO_U_PLAT_BITS-1), cannot be rounded off. Use
-	 * all bits of the sample as index */
+	/*
+	 * MSB <= (FIO_IO_U_PLAT_BITS-1), cannot be rounded off. Use
+	 * all bits of the sample as index
+	 */
 	if (msb <= FIO_IO_U_PLAT_BITS)
 		return val;
 
@@ -58,8 +60,10 @@ static unsigned int plat_val_to_idx(unsigned int val)
 	/* Compute the number of buckets before the group */
 	base = (error_bits + 1) << FIO_IO_U_PLAT_BITS;
 
-	/* Discard the error bits and apply the mask to find the
-         * index for the buckets in the group */
+	/*
+	 * Discard the error bits and apply the mask to find the
+         * index for the buckets in the group
+	 */
 	offset = (FIO_IO_U_PLAT_VAL - 1) & (val >> error_bits);
 
 	/* Make sure the index does not exceed (array size - 1) */
@@ -117,28 +121,36 @@ static void show_clat_percentiles(unsigned int* io_u_plat, unsigned long nr,
 {
 	unsigned long sum = 0;
 	unsigned int len, i, j = 0;
+	const double *plist;
+	int is_last = 0;
 	static const double def_list[FIO_IO_U_LIST_MAX_LEN] = {
 			1.0, 5.0, 10.0, 20.0, 30.0,
 			40.0, 50.0, 60.0, 70.0, 80.0,
 			90.0, 95.0, 99.0, 99.5, 99.9};
 
-	const double* plist = user_list? user_list: def_list;
-	for (len = 0; len <FIO_IO_U_LIST_MAX_LEN && plist[len] != 0; len++) {}
+	plist = user_list;
+	if (!plist)
+		plist = def_list;
 
-	/* Sort the user-specified list. Note that this does not work
-	   for NaN values */
+	for (len = 0; len <FIO_IO_U_LIST_MAX_LEN && plist[len] != 0; len++)
+		;
+
+	/*
+	 * Sort the user-specified list. Note that this does not work
+	 * for NaN values
+	 */
 	if (user_list && len > 1)
 		qsort((void*)user_list, len, sizeof(user_list[0]), double_cmp);
 
-	int is_last = 0;
 	log_info("    clat percentiles (usec) :");
 
-	for (i = 0; i <FIO_IO_U_PLAT_NR && !is_last; i++) {
+	for (i = 0; i < FIO_IO_U_PLAT_NR && !is_last; i++) {
 		sum += io_u_plat[i];
-		while (sum >= (plist[j]/100 * nr)) {
+		while (sum >= (plist[j] / 100 * nr)) {
 			assert(plist[j] <= 100.0);
 
-			if (j!=0 && (j%4) == 0)	/* for formatting */
+			/* for formatting */
+			if (j != 0 && (j % 4) == 0)
 				log_info("                             ");
 
 			/* end of the list */
@@ -147,9 +159,10 @@ static void show_clat_percentiles(unsigned int* io_u_plat, unsigned long nr,
 			log_info(" %2.2fth=%u%c", plist[j], plat_idx_to_val(i),
 				 (is_last? '\n' : ','));
 
-			if (is_last) break;
+			if (is_last)
+				break;
 
-			if (j%4 == 3)	/* for formatting */
+			if (j % 4 == 3)	/* for formatting */
 				log_info("\n");
 			j++;
 		}
