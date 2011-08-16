@@ -80,6 +80,9 @@ all: .depend $(PROGS) $(SCRIPTS)
 .c.o: .depend
 	$(QUIET_CC)$(CC) -o $@ -c $(CFLAGS) $(CPPFLAGS) $<
 
+t/stest: t/stest.o smalloc.o mutex.o
+	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ t/stest.o smalloc.o mutex.o $(LIBS) $(LDFLAGS)
+
 fio: $(OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
 
