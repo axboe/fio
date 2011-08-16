@@ -217,7 +217,7 @@ struct thread_stat {
 	unsigned int io_u_complete[FIO_IO_U_MAP_NR];
 	unsigned int io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	unsigned int io_u_lat_m[FIO_IO_U_LAT_M_NR];
-	unsigned int io_u_plat[3][FIO_IO_U_PLAT_NR];
+	unsigned int io_u_plat[2][FIO_IO_U_PLAT_NR];
 	unsigned long total_io_u[3];
 	unsigned long short_io_u[3];
 	unsigned long total_submit;
