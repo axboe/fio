@@ -63,6 +63,10 @@ endif
 
 OBJS = $(SOURCE:.c=.o)
 
+T_OBJS = t/stest.o
+T_OBJS += mutex.o smalloc.o
+T_PROGS = t/stest
+
 ifneq ($(findstring $(MAKEFLAGS),s),s)
 ifndef V
 	QUIET_CC	= @echo '   ' CC $@;
@@ -80,8 +84,8 @@ all: .depend $(PROGS) $(SCRIPTS)
 .c.o: .depend
 	$(QUIET_CC)$(CC) -o $@ -c $(CFLAGS) $(CPPFLAGS) $<
 
-t/stest: t/stest.o smalloc.o mutex.o
-	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ t/stest.o smalloc.o mutex.o $(LIBS) $(LDFLAGS)
+t/stest: $(T_OBJS)
+	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_OBJS) $(LIBS) $(LDFLAGS)
 
 fio: $(OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
@@ -92,7 +96,7 @@ fio: $(OBJS)
 $(PROGS): .depend
 
 clean:
-	-rm -f .depend $(OBJS) $(PROGS) core.* core
+	-rm -f .depend $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core
 
 cscope:
 	@cscope -b -R
