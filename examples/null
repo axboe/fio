@@ -1,0 +1,10 @@
+[global]
+bs=4k
+gtod_reduce=1
+
+[null]
+ioengine=null
+size=100g
+rw=randread
+norandommap
+time_based=0
