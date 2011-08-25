@@ -203,11 +203,26 @@ static int str_rw_cb(void *data, const char *str)
 	char *nr = get_opt_postfix(str);
 
 	td->o.ddir_seq_nr = 1;
-	if (nr) {
+	td->o.ddir_seq_add = 0;
+
+	if (!nr)
+		return 0;
+
+	if (td_random(td))
 		td->o.ddir_seq_nr = atoi(nr);
-		free(nr);
+	else {
+		long long val;
+
+		if (str_to_decimal(nr, &val, 1, td)) {
+			log_err("fio: rw postfix parsing failed\n");
+			free(nr);
+			return 1;
+		}
+
+		td->o.ddir_seq_add = val;
 	}
 
+	free(nr);
 	return 0;
 }
 

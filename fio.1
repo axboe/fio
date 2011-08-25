@@ -181,7 +181,10 @@ may still be skewed a bit, since the speed may be different. It is possible to
 specify a number of IO's to do before getting a new offset, this is one by
 appending a `:\fI<nr>\fR to the end of the string given. For a random read, it
 would look like \fBrw=randread:8\fR for passing in an offset modifier with a
-value of 8. See the \fBrw_sequencer\fR option.
+value of 8. If the postfix is used with a sequential IO pattern, then the value
+specified will be added to the generated offset for each IO. For instance,
+using \fBrw=write:4k\fR will skip 4k for every write. It turns sequential IO
+into sequential IO with holes. See the \fBrw_sequencer\fR option.
 .RE
 .TP
 .BI rw_sequencer \fR=\fPstr

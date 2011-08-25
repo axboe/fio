@@ -319,8 +319,12 @@ rw=str		Type of io pattern. Accepted values are:
 		a number of IO's to do before getting a new offset, this is
 		one by appending a ':<nr>' to the end of the string given.
 		For a random read, it would look like 'rw=randread:8' for
-		passing in an offset modifier with a value of 8. See the
-		'rw_sequencer' option.
+		passing in an offset modifier with a value of 8. If the
+		postfix is used with a sequential IO pattern, then the value
+		specified will be added to the generated offset for each IO.
+		For instance, using rw=write:4k will skip 4k for every
+		write. It turns sequential IO into sequential IO with holes.
+		See the 'rw_sequencer' option.
 
 rw_sequencer=str If an offset modifier is given by appending a number to
 		the rw=<str> line, then this option controls how that
