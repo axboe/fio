@@ -70,6 +70,8 @@ static pthread_t disk_util_thread;
 static struct flist_head *cgroup_list;
 static char *cgroup_mnt;
 
+unsigned long arch_flags = 0;
+
 struct io_log *agg_io_log[2];
 
 #define TERMINATE_ALL		(-1)
@@ -1690,9 +1692,11 @@ static void run_threads(void)
 	fio_unpin_memory();
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char *argv[], char *envp[])
 {
 	long ps;
+
+	arch_init(envp);
 
 	sinit();
 	init_rand(&__fio_rand_state);
