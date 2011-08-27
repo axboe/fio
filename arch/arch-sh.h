@@ -33,6 +33,11 @@
 #define read_barrier()	mb()
 #define write_barrier()	mb()
 
+#include <stdio.h>
+#include <elf.h>
+
+extern unsigned long arch_flags;
+
 #define CPU_HAS_LLSC	0x0040
 
 static inline int arch_init(char *envp[])

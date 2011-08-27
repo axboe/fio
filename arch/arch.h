@@ -23,6 +23,13 @@ enum {
 	arch_generic,
 };
 
+enum {
+	ARCH_FLAG_1	= 1 << 0,
+	ARCH_FLAG_2	= 1 << 1,
+	ARCH_FLAG_3	= 1 << 2,
+	ARCH_FLAG_4	= 1 << 3,
+};
+
 #if defined(__i386__)
 #include "arch-x86.h"
 #elif defined(__x86_64__)
@@ -64,12 +71,5 @@ static inline int arch_init(char *envp[])
 	return 0;
 }
 #endif
-
-enum {
-	ARCH_FLAG_1	= 1 << 0,
-	ARCH_FLAG_2	= 1 << 1,
-	ARCH_FLAG_3	= 1 << 2,
-	ARCH_FLAG_4	= 1 << 3,
-};
 
 #endif
