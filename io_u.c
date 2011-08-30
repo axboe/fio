@@ -486,6 +486,16 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	} else
 		usec = td->rate_pending_usleep[ddir];
 
+	/*
+	 * We are going to sleep, ensure that we flush anything pending as
+	 * not to skew our latency numbers
+	 */
+	if (td->cur_depth) {
+		int fio_unused ret;
+
+		ret = io_u_queued_complete(td, td->cur_depth, NULL);
+	}
+
 	fio_gettime(&t, NULL);
 	usec_sleep(td, usec);
 	usec = utime_since_now(&t);
