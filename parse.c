@@ -489,8 +489,10 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 		posval_sort(o, posval);
 
-		if (!o->posval[0].ival)
+		if (!o->posval[0].ival) {
+			vp = NULL;
 			goto match;
+		}
 
 		ret = 1;
 		for (i = 0; i < PARSE_MAX_VP; i++) {
@@ -514,7 +516,7 @@ match:
 				if (rest) {
 					*rest = '\0';
 					ptr = rest + 1;
-				} else
+				} else if (vp && vp->cb)
 					ptr = NULL;
 				break;
 			}
