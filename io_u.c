@@ -249,8 +249,12 @@ static int get_next_seq_block(struct thread_data *td, struct fio_file *f,
 	assert(ddir_rw(ddir));
 
 	if (f->last_pos < f->real_file_size) {
-		unsigned long long pos = f->last_pos - f->file_offset;
+		unsigned long long pos;
 
+		if (f->last_pos == f->file_offset && td->o.ddir_seq_add < 0)
+			f->last_pos = f->real_file_size;
+
+		pos = f->last_pos - f->file_offset;
 		if (pos)
 			pos += td->o.ddir_seq_add;
 

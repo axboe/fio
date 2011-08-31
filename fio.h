@@ -254,7 +254,7 @@ struct thread_options {
 	unsigned int rw_seq;
 	unsigned int kb_base;
 	unsigned int ddir_seq_nr;
-	unsigned long ddir_seq_add;
+	long ddir_seq_add;
 	unsigned int iodepth;
 	unsigned int iodepth_low;
 	unsigned int iodepth_batch;
