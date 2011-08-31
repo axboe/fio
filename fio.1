@@ -367,7 +367,13 @@ Basic \fIreadv\fR\|(2) or \fIwritev\fR\|(2) I/O. Will emulate queuing by
 coalescing adjacents IOs into a single submission.
 .TP
 .B libaio
-Linux native asynchronous I/O.
+Linux native asynchronous I/O.  This engine also has a sub-option,
+\fBuserspace_reap\fR. To set it, use \fBioengine=libaio:userspace_reap\fR.
+Normally, with the libaio engine in use, fio will use the
+\fIio_getevents\fR\|(3) system call to reap newly returned events. With this
+flag turned on, the AIO ring will be read directly from user-space to reap
+events. The reaping mode is only enabled when polling for a minimum of \fB0\fR
+events (eg when \fBiodepth_batch_complete=0\fR).
 .TP
 .B posixaio
 POSIX asynchronous I/O using \fIaio_read\fR\|(3) and \fIaio_write\fR\|(3).

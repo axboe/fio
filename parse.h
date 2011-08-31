@@ -29,6 +29,7 @@ struct value_pair {
 	unsigned int oval;		/* output value */
 	const char *help;		/* help text for sub option */
 	int or;				/* OR value */
+	void *cb;			/* sub-option callback */
 };
 
 #define OPT_LEN_MAX 	4096

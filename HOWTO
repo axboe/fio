@@ -517,6 +517,16 @@ ioengine=str	Defines how the job issues io to the file. The following
 			libaio	Linux native asynchronous io. Note that Linux
 				may only support queued behaviour with
 				non-buffered IO (set direct=1 or buffered=0).
+				This engine also has a sub-option,
+				userspace_reap. To set it, use
+				ioengine=libaio:userspace_reap. Normally, with
+				the libaio engine in use, fio will use the
+				io_getevents system call to reap newly returned
+				events. With this flag turned on, the AIO ring
+				will be read directly from user-space to reap
+				events. The reaping mode is only enabled when
+				polling for a minimum of 0 events (eg when
+				iodepth_batch_complete=0).
 
 			posixaio glibc posix asynchronous io.
 
@@ -1186,13 +1196,6 @@ uid=int		Instead of running as the invoking user, set the user ID to
 		this value before the thread/process does any work.
 
 gid=int		Set group ID, see uid.
-
-userspace_libaio_reap=bool  Normally, with the libaio engine in use, fio
-		will use the io_getevents system call to reap newly returned
-		events. With this flag turned on, the AIO ring will be read
-		directly from user-space to reap events. The reaping mode is
-		only enabled when polling for a minimum of 0 events (eg when
-		iodepth_batch_complete=0).
 
 6.0 Interpreting the output
 ---------------------------

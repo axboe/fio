@@ -346,6 +346,9 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	double uf;
 	char **cp;
 	int ret = 0, is_time = 0;
+	const struct value_pair *vp;
+	struct value_pair posval[PARSE_MAX_VP];
+	int i, all_skipped = 1;
 
 	dprint(FD_PARSE, "__handle_option=%s, type=%d, ptr=%s\n", o->name,
 							o->type, ptr);
@@ -359,9 +362,6 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	case FIO_OPT_STR:
 	case FIO_OPT_STR_MULTI: {
 		fio_opt_str_fn *fn = o->cb;
-		const struct value_pair *vp;
-		struct value_pair posval[PARSE_MAX_VP];
-		int i, all_skipped = 1;
 
 		posval_sort(o, posval);
 
@@ -487,19 +487,40 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	case FIO_OPT_STR_STORE: {
 		fio_opt_str_fn *fn = o->cb;
 
-		if (o->roff1)
-			cp = (char **) o->roff1;
-		else
-			cp = td_var(data, o->off1);
+		posval_sort(o, posval);
 
-		*cp = strdup(ptr);
-		if (fn) {
-			ret = fn(data, ptr);
-			if (ret) {
-				free(*cp);
-				*cp = NULL;
+		ret = 1;
+		for (i = 0; i < PARSE_MAX_VP; i++) {
+			vp = &posval[i];
+			if (!vp->ival || vp->ival[0] == '\0')
+				continue;
+			all_skipped = 0;
+			if (!strncmp(vp->ival, ptr, opt_len(ptr))) {
+				char *rest;
+
+				ret = 0;
+				if (vp->cb)
+					fn = vp->cb;
+				if (o->roff1)
+					cp = (char **) o->roff1;
+				else
+					cp = td_var(data, o->off1);
+				*cp = strdup(ptr);
+				rest = strstr(*cp, ":");
+				if (rest) {
+					*rest = '\0';
+					ptr = rest + 1;
+				} else
+					ptr = NULL;
+				break;
 			}
 		}
+
+		if (ret && !all_skipped)
+			show_option_values(o);
+		else if (fn && ptr)
+			ret = fn(data, ptr);
+
 		break;
 	}
 	case FIO_OPT_RANGE: {

@@ -63,7 +63,7 @@ struct aio_ring {
 	unsigned nr;		 /** number of io_events */
 	unsigned head;
 	unsigned tail;
- 
+
 	unsigned magic;
 	unsigned compat_features;
 	unsigned incompat_features;
@@ -75,11 +75,11 @@ struct aio_ring {
 #define AIO_RING_MAGIC	0xa10a10a1
 
 static int user_io_getevents(io_context_t aio_ctx, unsigned int max,
-			struct io_event *events)
+			     struct io_event *events)
 {
 	long i = 0;
 	unsigned head;
-	struct aio_ring *ring = (struct aio_ring*)aio_ctx;
+	struct aio_ring *ring = (struct aio_ring*) aio_ctx;
 
 	while (i < max) {
 		head = ring->head;
@@ -91,7 +91,7 @@ static int user_io_getevents(io_context_t aio_ctx, unsigned int max,
 			/* There is another completion to reap */
 			events[i] = ring->events[head];
 			read_barrier();
-    			ring->head = (head + 1) % ring->nr;
+			ring->head = (head + 1) % ring->nr;
 			i++;
 		}
 	}

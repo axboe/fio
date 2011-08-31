@@ -226,6 +226,21 @@ static int str_rw_cb(void *data, const char *str)
 	return 0;
 }
 
+#ifdef FIO_HAVE_LIBAIO
+static int str_libaio_cb(void *data, const char *str)
+{
+	struct thread_data *td = data;
+
+	if (!strcmp(str, "userspace_reap")) {
+		td->o.userspace_libaio_reap = 1;
+		return 0;
+	}
+
+	log_err("fio: bad libaio sub-option: %s\n", str);
+	return 1;
+}
+#endif
+
 static int str_mem_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
@@ -961,6 +976,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 #ifdef FIO_HAVE_LIBAIO
 			  { .ival = "libaio",
 			    .help = "Linux native asynchronous IO",
+			    .cb   = str_libaio_cb,
 			  },
 #endif
 #ifdef FIO_HAVE_POSIXAIO
@@ -2069,15 +2085,6 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(gid),
 		.help	= "Run job with this group ID",
 	},
-#ifdef FIO_HAVE_LIBAIO
-	{
-		.name	= "userspace_libaio_reap",
-		.type	= FIO_OPT_BOOL,
-		.off1	= td_var_offset(userspace_libaio_reap),
-		.help	= "When using the libaio engine with iodepth_batch_complete=0, enable userspace reaping",
-		.def	= "0",
-	},
-#endif
 	{
 		.name = NULL,
 	},
