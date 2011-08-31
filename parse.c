@@ -26,10 +26,13 @@ static int vp_cmp(const void *p1, const void *p2)
 	return strlen(vp2->ival) - strlen(vp1->ival);
 }
 
-static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
+static int posval_sort(struct fio_option *o, struct value_pair *vpmap)
 {
 	const struct value_pair *vp;
 	int entries;
+
+	if (!o->posval[0].ival)
+		return 0;
 
 	memset(vpmap, 0, PARSE_MAX_VP * sizeof(struct value_pair));
 
@@ -42,6 +45,7 @@ static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
 	}
 
 	qsort(vpmap, entries, sizeof(struct value_pair), vp_cmp);
+	return 1;
 }
 
 static void show_option_range(struct fio_option *o, FILE *out)
@@ -487,7 +491,18 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	case FIO_OPT_STR_STORE: {
 		fio_opt_str_fn *fn = o->cb;
 
-		posval_sort(o, posval);
+		if (!posval_sort(o, posval)) {
+			if (o->roff1)
+				cp = (char **) o->roff1;
+			else
+				cp = td_var(data, o->off1);
+			*cp = strdup(ptr);
+
+			if (fn)
+				ret = fn(data, ptr);
+
+			return ret;
+		}
 
 		ret = 1;
 		for (i = 0; i < PARSE_MAX_VP; i++) {
