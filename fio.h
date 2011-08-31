@@ -413,6 +413,8 @@ struct thread_options {
 	unsigned int gid;
 
 	unsigned int sync_file_range;
+
+	unsigned int userspace_libaio_reap;
 };
 
 #define FIO_VERROR_SIZE	128

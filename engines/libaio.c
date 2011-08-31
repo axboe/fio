@@ -58,6 +58,47 @@ static struct io_u *fio_libaio_event(struct thread_data *td, int event)
 	return io_u;
 }
 
+struct aio_ring {
+	unsigned id;		 /** kernel internal index number */
+	unsigned nr;		 /** number of io_events */
+	unsigned head;
+	unsigned tail;
+ 
+	unsigned magic;
+	unsigned compat_features;
+	unsigned incompat_features;
+	unsigned header_length;	/** size of aio_ring */
+
+	struct io_event events[0];
+};
+
+#define AIO_RING_MAGIC	0xa10a10a1
+
+static int user_io_getevents(io_context_t aio_ctx, unsigned int max,
+			struct io_event *events)
+{
+	long i = 0;
+	unsigned head;
+	struct aio_ring *ring = (struct aio_ring*)aio_ctx;
+
+	while (i < max) {
+		head = ring->head;
+
+		if (head == ring->tail) {
+			/* There are no more completions */
+			break;
+		} else {
+			/* There is another completion to reap */
+			events[i] = ring->events[head];
+			read_barrier();
+    			ring->head = (head + 1) % ring->nr;
+			i++;
+		}
+	}
+
+	return i;
+}
+
 static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 				unsigned int max, struct timespec *t)
 {
@@ -66,7 +107,16 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 	int r, events = 0;
 
 	do {
-		r = io_getevents(ld->aio_ctx, actual_min, max, ld->aio_events + events, t);
+		if (td->o.userspace_libaio_reap == 1
+		    && actual_min == 0
+		    && ((struct aio_ring *)(ld->aio_ctx))->magic
+				== AIO_RING_MAGIC) {
+			r = user_io_getevents(ld->aio_ctx, max,
+				ld->aio_events + events);
+		} else {
+			r = io_getevents(ld->aio_ctx, actual_min,
+				max, ld->aio_events + events, t);
+		}
 		if (r >= 0)
 			events += r;
 		else if (r == -EAGAIN)

@@ -2069,6 +2069,15 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(gid),
 		.help	= "Run job with this group ID",
 	},
+#ifdef FIO_HAVE_LIBAIO
+	{
+		.name	= "userspace_libaio_reap",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(userspace_libaio_reap),
+		.help	= "When using the libaio engine with iodepth_batch_complete=0, enable userspace reaping",
+		.def	= "0",
+	},
+#endif
 	{
 		.name = NULL,
 	},
