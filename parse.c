@@ -196,10 +196,10 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
 		return __get_mult_bytes(str, data, percent);
 
         /*
-         * Go forward until we hit a non-digit
+         * Go forward until we hit a non-digit, or +/- sign
          */
 	while ((p - str) <= len) {
-		if (!isdigit((int) *p))
+		if (!isdigit((int) *p) && (*p != '+') && (*p != '-'))
 			break;
 		p++;
 	}
@@ -491,18 +491,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	case FIO_OPT_STR_STORE: {
 		fio_opt_str_fn *fn = o->cb;
 
-		if (!posval_sort(o, posval)) {
-			if (o->roff1)
-				cp = (char **) o->roff1;
-			else
-				cp = td_var(data, o->off1);
-			*cp = strdup(ptr);
-
-			if (fn)
-				ret = fn(data, ptr);
-
-			return ret;
-		}
+		if (!posval_sort(o, posval))
+			goto match;
 
 		ret = 1;
 		for (i = 0; i < PARSE_MAX_VP; i++) {
@@ -516,6 +506,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 				ret = 0;
 				if (vp->cb)
 					fn = vp->cb;
+match:
 				if (o->roff1)
 					cp = (char **) o->roff1;
 				else
