@@ -36,7 +36,7 @@ void fill_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u
 		if (use_seed)
 			__fill_random_buf(p, len, seed);
 		else
-			io_u->rand_seed = fill_random_buf(p, len);
+			io_u->rand_seed = fill_random_buf(&td->buf_state, p, len);
 		break;
 	case 1:
 		/*

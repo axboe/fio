@@ -874,9 +874,9 @@ static int init_io_u(struct thread_data *td)
 			io_u->buf = p + max_bs * i;
 			dprint(FD_MEM, "io_u %p, mem %p\n", io_u, io_u->buf);
 
-			if (td_write(td) && !td->o.refill_buffers)
+			if (td_write(td))
 				io_u_fill_buffer(td, io_u, max_bs);
-			else if (td_write(td) && td->o.verify_pattern_bytes) {
+			if (td_write(td) && td->o.verify_pattern_bytes) {
 				/*
 				 * Fill the buffer with the pattern if we are
 				 * going to be doing writes.
@@ -1699,7 +1699,6 @@ int main(int argc, char *argv[], char *envp[])
 	arch_init(envp);
 
 	sinit();
-	init_rand(&__fio_rand_state);
 
 	/*
 	 * We need locale for number printing, if it isn't set then just

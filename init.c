@@ -515,6 +515,8 @@ void td_fill_rand_seeds(struct thread_data *td)
 		td_fill_rand_seeds_os(td);
 	else
 		td_fill_rand_seeds_internal(td);
+
+	init_rand_seed(&td->buf_state, td->rand_seeds[7]);
 }
 
 /*

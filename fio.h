@@ -460,7 +460,7 @@ struct thread_data {
 
 	char *sysfs_root;
 
-	unsigned long rand_seeds[7];
+	unsigned long rand_seeds[8];
 
 	union {
 		os_random_state_t bsrange_state;
@@ -474,6 +474,8 @@ struct thread_data {
 		os_random_state_t trim_state;
 		struct frand_state __trim_state;
 	};
+
+	struct frand_state buf_state;
 
 	unsigned int verify_batch;
 	unsigned int trim_batch;

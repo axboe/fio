@@ -36,8 +36,6 @@
 #include "rand.h"
 #include "../hash.h"
 
-struct frand_state __fio_rand_state;
-
 static inline int __seed(unsigned int x, unsigned int m)
 {
 	return (x < m) ? x + m : x;
@@ -79,12 +77,13 @@ void __fill_random_buf(void *buf, unsigned int len, unsigned long seed)
 	}
 }
 
-unsigned long fill_random_buf(void *buf, unsigned int len)
+unsigned long fill_random_buf(struct frand_state *fs, void *buf,
+			      unsigned int len)
 {
-	unsigned long r = __rand(&__fio_rand_state);
+	unsigned long r = __rand(fs);
 
 	if (sizeof(int) != sizeof(long *))
-		r *= (unsigned long) __rand(&__fio_rand_state);
+		r *= (unsigned long) __rand(fs);
 
 	__fill_random_buf(buf, len, r);
 	return r;

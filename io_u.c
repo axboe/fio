@@ -1450,7 +1450,7 @@ void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
 	io_u->buf_filled_len = 0;
 
 	if (!td->o.zero_buffers)
-		fill_random_buf(io_u->buf, max_bs);
+		fill_random_buf(&td->buf_state, io_u->buf, max_bs);
 	else
 		memset(io_u->buf, 0, max_bs);
 }
