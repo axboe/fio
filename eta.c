@@ -28,10 +28,21 @@ static void check_str_update(struct thread_data *td)
 		break;
 	case TD_RUNNING:
 		if (td_rw(td)) {
-			if (td_random(td))
-				c = 'm';
-			else
-				c = 'M';
+			if (td_random(td)) {
+				if (td->o.rwmix[DDIR_READ] == 100)
+					c = 'r';
+				else if (td->o.rwmix[DDIR_WRITE] == 100)
+					c = 'w';
+				else
+					c = 'm';
+			} else {
+				if (td->o.rwmix[DDIR_READ] == 100)
+					c = 'R';
+				else if (td->o.rwmix[DDIR_WRITE] == 100)
+					c = 'W';
+				else
+					c = 'M';
+			}
 		} else if (td_read(td)) {
 			if (td_random(td))
 				c = 'r';
