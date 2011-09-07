@@ -184,7 +184,7 @@ static unsigned long long __get_mult_bytes(const char *p, void *data,
 }
 
 static unsigned long long get_mult_bytes(const char *str, int len, void *data,
-					 int *percent)
+					 int *percent, int is_range)
 {
 	const char *p = str;
 
@@ -195,7 +195,9 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
          * Go forward until we hit a non-digit, or +/- sign
          */
 	while ((p - str) <= len) {
-		if (!isdigit((int) *p) && (*p != '+') && (*p != '-'))
+		if (!isdigit((int) *p) && (*p != '+'))
+			break;
+		if (!is_range && (*p != '-'))
 			break;
 		p++;
 	}
@@ -217,7 +219,7 @@ int str_to_float(const char *str, double *val)
 /*
  * convert string into decimal value, noting any size suffix
  */
-int str_to_decimal(const char *str, long long *val, int kilo, void *data)
+int str_to_decimal(const char *str, long long *val, int kilo, int is_range, void *data)
 {
 	int len, base;
 
@@ -238,7 +240,7 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data)
 		unsigned long long mult;
 		int perc = 0;
 
-		mult = get_mult_bytes(str, len, data, &perc);
+		mult = get_mult_bytes(str, len, data, &perc, is_range);
 		if (perc)
 			*val = -1ULL - *val;
 		else
@@ -249,14 +251,14 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data)
 	return 0;
 }
 
-static int check_str_bytes(const char *p, long long *val, void *data)
+static int check_str_bytes(const char *p, long long *val, int is_range, void *data)
 {
-	return str_to_decimal(p, val, 1, data);
+	return str_to_decimal(p, val, 1, is_range, data);
 }
 
 static int check_str_time(const char *p, long long *val)
 {
-	return str_to_decimal(p, val, 0, NULL);
+	return str_to_decimal(p, val, 0, 0, NULL);
 }
 
 void strip_blank_front(char **p)
@@ -293,7 +295,7 @@ static int check_range_bytes(const char *str, long *val, void *data)
 {
 	long long __val;
 
-	if (!str_to_decimal(str, &__val, 1, data)) {
+	if (!str_to_decimal(str, &__val, 1, 1, data)) {
 		*val = __val;
 		return 0;
 	}
@@ -402,7 +404,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (is_time)
 			ret = check_str_time(ptr, &ull);
 		else
-			ret = check_str_bytes(ptr, &ull, data);
+			ret = check_str_bytes(ptr, &ull, 0, data);
 
 		if (ret)
 			break;

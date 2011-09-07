@@ -102,7 +102,7 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 		} else
 			perc = -1;
 
-		if (str_to_decimal(fname, &val, 1, td)) {
+		if (str_to_decimal(fname, &val, 1, 1, td)) {
 			log_err("fio: bssplit conversion failed\n");
 			free(td->o.bssplit);
 			return 1;
@@ -213,7 +213,7 @@ static int str_rw_cb(void *data, const char *str)
 	else {
 		long long val;
 
-		if (str_to_decimal(nr, &val, 1, td)) {
+		if (str_to_decimal(nr, &val, 1, 0, td)) {
 			log_err("fio: rw postfix parsing failed\n");
 			free(nr);
 			return 1;
