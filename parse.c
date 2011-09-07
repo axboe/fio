@@ -187,6 +187,7 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
 					 int *percent)
 {
 	const char *p = str;
+	int digit_seen = 0;
 
 	if (len < 2)
 		return __get_mult_bytes(str, data, percent);
@@ -195,8 +196,10 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
          * Go forward until we hit a non-digit, or +/- sign
          */
 	while ((p - str) <= len) {
-		if (!isdigit((int) *p) && (*p != '+') && (*p != '-'))
+		if (!isdigit((int) *p) &&
+		    (((*p != '+') && (*p != '-')) || digit_seen))
 			break;
+		digit_seen |= isdigit(*p);
 		p++;
 	}
 
