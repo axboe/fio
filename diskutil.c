@@ -253,7 +253,7 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 	closedir(dirhandle);
 }
 
-static struct disk_util *disk_util_add(struct thread_data * td, int majdev,
+static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 				       int mindev, char *path)
 {
 	struct disk_util *du, *__du;
