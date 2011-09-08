@@ -1502,10 +1502,8 @@ static void run_threads(void)
 	for_each_td(td, i) {
 		print_status_init(td->thread_number - 1);
 
-		if (!td->o.create_serialize) {
-			init_disk_util(td);
+		if (!td->o.create_serialize)
 			continue;
-		}
 
 		/*
 		 * do file setup here so it happens sequentially,
@@ -1533,8 +1531,6 @@ static void run_threads(void)
 					td_io_close_file(td, f);
 			}
 		}
-
-		init_disk_util(td);
 	}
 
 	set_genesis_time();
@@ -1572,6 +1568,8 @@ static void run_threads(void)
 							td->o.name);
 				break;
 			}
+
+			init_disk_util(td);
 
 			/*
 			 * Set state to created. Thread will transition
