@@ -43,6 +43,7 @@ char **job_sections = NULL;
 int nr_job_sections = 0;
 char *exec_profile = NULL;
 int warnings_fatal = 0;
+int terse_version = 2;
 
 int write_bw_log = 0;
 int read_only = 0;
@@ -146,6 +147,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "max-jobs",
 		.has_arg	= required_argument,
 		.val		= 'j',
+	},
+	{
+		.name		= (char *) "terse-version",
+		.has_arg	= required_argument,
+		.val		= 'V',
 	},
 	{
 		.name		= NULL,
@@ -1038,6 +1044,7 @@ static void usage(const char *name)
 	printf("\t--bandwidth-log\tGenerate per-job bandwidth logs\n");
 	printf("\t--minimal\tMinimal (terse) output\n");
 	printf("\t--version\tPrint version info and exit\n");
+	printf("\t--terse-version=x Terse version output format\n");
 	printf("\t--help\t\tPrint this page\n");
 	printf("\t--cmdhelp=cmd\tPrint command help, \"all\" for all of"
 		" them\n");
@@ -1199,6 +1206,14 @@ static int parse_cmd_line(int argc, char *argv[])
 		case 'v':
 			log_info("%s\n", fio_version_string);
 			exit(0);
+		case 'V':
+			terse_version = atoi(optarg);
+			if (terse_version != 2) {
+				log_err("fio: bad terse version format\n");
+				exit_val = 1;
+				do_exit++;
+			}
+			break;
 		case 'e':
 			if (!strcmp("always", optarg))
 				eta_print = FIO_ETA_ALWAYS;
