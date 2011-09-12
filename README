@@ -134,6 +134,7 @@ $ fio
 	--bandwidth-log	Generate per-job bandwidth logs
 	--minimal		Minimal (terse) output
 	--version		Print version info and exit
+	--terse-version=type	Terse version output format
 	--help			Print this page
 	--cmdhelp=cmd	Print command help, "all" for all of them
 	--showcmd		Turn a job file into command line options
