@@ -1349,13 +1349,13 @@ Split up, the format is as follows:
 
 	version, jobname, groupid, error
 	READ status:
-		KB IO, bandwidth (KB/sec), runtime (msec)
+		Total IO (KB), bandwidth (KB/sec), runtime (msec)
 		Submission latency: min, max, mean, deviation
 		Completion latency: min, max, mean, deviation
 		Total latency: min, max, mean, deviation
 		Bw: min, max, aggregate percentage of total, mean, deviation
 	WRITE status:
-		KB IO, bandwidth (KB/sec), runtime (msec)
+		Total IO (KB), bandwidth (KB/sec), runtime (msec)
 		Submission latency: min, max, mean, deviation
 		Completion latency: min, max, mean, deviation
 		Total latency: min, max, mean, deviation
