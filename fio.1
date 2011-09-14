@@ -826,31 +826,31 @@ is to replay the IOPS onto the major/minor device that each IOP was recorded
 from.  Setting \fBreplay_redirect\fR causes all IOPS to be replayed onto the
 single specified device regardless of the device it was recorded from.
 .TP
-.B write_bw_log \fR=\fPstr
+.BI write_bw_log \fR=\fPstr
 If given, write a bandwidth log of the jobs in this job file. Can be used to
 store data of the bandwidth of the jobs in their lifetime. The included
 fio_generate_plots script uses gnuplot to turn these text files into nice
 graphs. See \fBwrite_log_log\fR for behaviour of given filename. For this
 option, the postfix is _bw.log.
 .TP
-.B write_lat_log \fR=\fPstr
+.BI write_lat_log \fR=\fPstr
 Same as \fBwrite_bw_log\fR, but writes I/O completion latencies.  If no
 filename is given with this option, the default filename of "jobname_type.log"
 is used. Even if the filename is given, fio will still append the type of log.
 .TP
-.B disable_lat \fR=\fPbool
+.BI disable_lat \fR=\fPbool
 Disable measurements of total latency numbers. Useful only for cutting
 back the number of calls to gettimeofday, as that does impact performance at
 really high IOPS rates.  Note that to really get rid of a large amount of these
 calls, this option must be used with disable_slat and disable_bw as well.
 .TP
-.B disable_clat \fR=\fPbool
+.BI disable_clat \fR=\fPbool
 Disable measurements of completion latency numbers. See \fBdisable_lat\fR.
 .TP
-.B disable_slat \fR=\fPbool
+.BI disable_slat \fR=\fPbool
 Disable measurements of submission latency numbers. See \fBdisable_lat\fR.
 .TP
-.B disable_bw_measurement \fR=\fPbool
+.BI disable_bw_measurement \fR=\fPbool
 Disable measurements of throughput/bandwidth numbers. See \fBdisable_lat\fR.
 .TP
 .BI lockmem \fR=\fPint
