@@ -1122,15 +1122,35 @@ static int check_get_verify(struct thread_data *td, struct io_u *io_u)
 
 /*
  * Fill offset and start time into the buffer content, to prevent too
- * easy compressible data for simple de-dupe attempts.
+ * easy compressible data for simple de-dupe attempts. Do this for every
+ * 512b block in the range, since that should be the smallest block size
+ * we can expect from a device.
  */
 static void small_content_scramble(struct io_u *io_u)
 {
-	void *end;
+	unsigned int i, nr_blocks = io_u->buflen / 512;
+	unsigned int offset;
+	void *p, *end;
 
-	*((unsigned long long *) io_u->xfer_buf) = io_u->offset;
-	end = io_u->xfer_buf + io_u->xfer_buflen - sizeof(io_u->start_time);
-	memcpy(end, &io_u->start_time, sizeof(io_u->start_time));
+	if (!nr_blocks)
+		return;
+
+	p = io_u->xfer_buf;
+	for (i = 0; i < nr_blocks; i++) {
+		/*
+		 * Fill the byte offset into a "random" start offset of
+		 * the buffer, given by the product of the usec time
+		 * and the actual offset.
+		 */
+		offset = (io_u->start_time.tv_usec * io_u->offset) & 511;
+		if (offset >= 512 - sizeof(unsigned long long))
+			offset -= sizeof(unsigned long long);
+		*((unsigned long long *) p + offset) = io_u->offset;
+
+		end = p + 512 - sizeof(io_u->start_time);
+		memcpy(end, &io_u->start_time, sizeof(io_u->start_time));
+		p += 512;
+	}
 }
 
 /*
