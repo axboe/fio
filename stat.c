@@ -618,6 +618,9 @@ static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
 {
 	double mean, S;
 
+	if (src->samples == 0)
+		return;
+
 	dst->min_val = min(dst->min_val, src->min_val);
 	dst->max_val = max(dst->max_val, src->max_val);
 
