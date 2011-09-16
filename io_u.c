@@ -1121,6 +1121,19 @@ static int check_get_verify(struct thread_data *td, struct io_u *io_u)
 }
 
 /*
+ * Fill offset and start time into the buffer content, to prevent too
+ * easy compressible data for simple de-dupe attempts.
+ */
+static void small_content_scramble(struct io_u *io_u)
+{
+	void *end;
+
+	*((unsigned long long *) io_u->xfer_buf) = io_u->offset;
+	end = io_u->xfer_buf + io_u->xfer_buflen - sizeof(io_u->start_time);
+	memcpy(end, &io_u->start_time, sizeof(io_u->start_time));
+}
+
+/*
  * Return an io_u to be processed. Gets a buflen and offset, sets direction,
  * etc. The returned io_u is fully ready to be prepped and submitted.
  */
@@ -1128,6 +1141,7 @@ struct io_u *get_io_u(struct thread_data *td)
 {
 	struct fio_file *f;
 	struct io_u *io_u;
+	int do_scramble = 0;
 
 	io_u = __get_io_u(td);
 	if (!io_u) {
@@ -1173,6 +1187,8 @@ struct io_u *get_io_u(struct thread_data *td)
 			populate_verify_io_u(td, io_u);
 		else if (td->o.refill_buffers && io_u->ddir == DDIR_WRITE)
 			io_u_fill_buffer(td, io_u, io_u->xfer_buflen);
+		else if (io_u->ddir == DDIR_WRITE)
+			do_scramble = 1;
 		else if (io_u->ddir == DDIR_READ) {
 			/*
 			 * Reset the buf_filled parameters so next time if the
@@ -1193,6 +1209,8 @@ out:
 	if (!td_io_prep(td, io_u)) {
 		if (!td->o.disable_slat)
 			fio_gettime(&io_u->start_time, NULL);
+		if (do_scramble)
+			small_content_scramble(io_u);
 		return io_u;
 	}
 err_put:
