@@ -1967,6 +1967,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Refill IO buffers on every IO submit",
 	},
 	{
+		.name	= "scramble_buffers",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(scramble_buffers),
+		.help	= "Slightly scramble buffers on every IO submit",
+		.def	= "1",
+	},
+	{
 		.name	= "clat_percentiles",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(clat_percentiles),

@@ -1203,13 +1203,14 @@ struct io_u *get_io_u(struct thread_data *td)
 		f->last_start = io_u->offset;
 		f->last_pos = io_u->offset + io_u->buflen;
 
-		if (td->o.verify != VERIFY_NONE && io_u->ddir == DDIR_WRITE)
-			populate_verify_io_u(td, io_u);
-		else if (td->o.refill_buffers && io_u->ddir == DDIR_WRITE)
-			io_u_fill_buffer(td, io_u, io_u->xfer_buflen);
-		else if (io_u->ddir == DDIR_WRITE)
-			do_scramble = 1;
-		else if (io_u->ddir == DDIR_READ) {
+		if (io_u->ddir == DDIR_WRITE) {
+			if (td->o.verify != VERIFY_NONE)
+				populate_verify_io_u(td, io_u);
+			else if (td->o.refill_buffers)
+				io_u_fill_buffer(td, io_u, io_u->xfer_buflen);
+			else if (td->o.scramble_buffers)
+				do_scramble = 1;
+		} else if (io_u->ddir == DDIR_READ) {
 			/*
 			 * Reset the buf_filled parameters so next time if the
 			 * buffer is used for writes it is refilled.

@@ -329,6 +329,13 @@ default is to only fill it at init time and reuse that data. Only makes sense
 if zero_buffers isn't specified, naturally. If data verification is enabled,
 refill_buffers is also automatically enabled.
 .TP
+.BI scramble_buffers \fR=\fPbool
+If \fBrefill_buffers\fR is too costly and the target is using data
+deduplication, then setting this option will slightly modify the IO buffer
+contents to defeat normal de-dupe attempts. This is not enough to defeat
+more clever block compression attempts, but it will stop naive dedupe
+of blocks. Default: true.
+.TP
 .BI nrfiles \fR=\fPint
 Number of files to use for this job.  Default: 1.
 .TP

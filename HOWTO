@@ -481,6 +481,13 @@ refill_buffers	If this option is given, fio will refill the IO buffers
 		isn't specified, naturally. If data verification is enabled,
 		refill_buffers is also automatically enabled.
 
+scramble_buffers=bool	If refill_buffers is too costly and the target is
+		using data deduplication, then setting this option will
+		slightly modify the IO buffer contents to defeat normal
+		de-dupe attempts. This is not enough to defeat more clever
+		block compression attempts, but it will stop naive dedupe of
+		blocks. Default: true.
+
 nrfiles=int	Number of files to use for this job. Defaults to 1.
 
 openfiles=int	Number of files to keep open at the same time. Defaults to
