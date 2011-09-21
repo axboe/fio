@@ -65,7 +65,7 @@ static int fio_posixaio_cancel(struct thread_data fio_unused *td,
 static int fio_posixaio_prep(struct thread_data fio_unused *td,
 			     struct io_u *io_u)
 {
-	struct aiocb *aiocb = &io_u->aiocb;
+	os_aiocb_t *aiocb = &io_u->aiocb;
 	struct fio_file *f = io_u->file;
 
 	aiocb->aio_fildes = f->fd;
@@ -84,7 +84,7 @@ static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 				  unsigned int max, struct timespec *t)
 {
 	struct posixaio_data *pd = td->io_ops->data;
-	struct aiocb *suspend_list[SUSPEND_ENTRIES];
+	os_aiocb_t *suspend_list[SUSPEND_ENTRIES];
 	struct flist_head *entry;
 	struct timespec start;
 	int have_timeout = 0;
@@ -141,7 +141,7 @@ restart:
 	/*
 	 * must have some in-flight, wait for at least one
 	 */
-	aio_suspend((const struct aiocb * const *)suspend_list,
+	aio_suspend((const os_aiocb_t * const *)suspend_list,
 							suspend_entries, t);
 	goto restart;
 }
@@ -157,7 +157,7 @@ static int fio_posixaio_queue(struct thread_data *td,
 			      struct io_u *io_u)
 {
 	struct posixaio_data *pd = td->io_ops->data;
-	struct aiocb *aiocb = &io_u->aiocb;
+	os_aiocb_t *aiocb = &io_u->aiocb;
 	int ret;
 
 	fio_ro_check(td, io_u);

@@ -22,7 +22,7 @@ struct io_u {
 		struct iocb iocb;
 #endif
 #ifdef FIO_HAVE_POSIXAIO
-		struct aiocb aiocb;
+		os_aiocb_t aiocb;
 #endif
 #ifdef FIO_HAVE_SGIO
 		struct sg_io_hdr hdr;

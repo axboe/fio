@@ -43,6 +43,9 @@
 #define MSG_WAITALL	0x40
 #endif
 
+#define FIO_OS_HAVE_AIOCB_TYPEDEF
+typedef struct aiocb64 os_aiocb_t;
+
 static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
 	return EINVAL;

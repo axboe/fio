@@ -32,6 +32,9 @@
 
 #ifdef FIO_HAVE_POSIXAIO
 #include <aio.h>
+#ifndef FIO_OS_HAVE_AIOCB_TYPEDEF
+typedef struct aiocb os_aiocb_t;
+#endif
 #endif
 
 #ifdef FIO_HAVE_SGIO
