@@ -199,7 +199,7 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
 		if (!isdigit((int) *p) &&
 		    (((*p != '+') && (*p != '-')) || digit_seen))
 			break;
-		digit_seen |= isdigit(*p);
+		digit_seen |= isdigit((int) *p);
 		p++;
 	}
 
