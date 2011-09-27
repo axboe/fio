@@ -1137,7 +1137,7 @@ static void small_content_scramble(struct io_u *io_u)
 		return;
 
 	p = io_u->xfer_buf;
-	boffset= io_u->offset;
+	boffset = io_u->offset;
 
 	for (i = 0; i < nr_blocks; i++) {
 		/*
@@ -1146,9 +1146,10 @@ static void small_content_scramble(struct io_u *io_u)
 		 * and the actual offset.
 		 */
 		offset = (io_u->start_time.tv_usec ^ boffset) & 511;
+		offset &= ~(sizeof(unsigned long long) - 1);
 		if (offset >= 512 - sizeof(unsigned long long))
 			offset -= sizeof(unsigned long long);
-		*((unsigned long long *) p + offset) = boffset;
+		memcpy(p + offset, &boffset, sizeof(boffset));
 
 		end = p + 512 - sizeof(io_u->start_time);
 		memcpy(end, &io_u->start_time, sizeof(io_u->start_time));
