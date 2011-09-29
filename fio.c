@@ -1690,40 +1690,15 @@ static void run_threads(void)
 	fio_unpin_memory();
 }
 
-int main(int argc, char *argv[], char *envp[])
+int exec_run(void)
 {
-	long ps;
-
-	arch_init(envp);
-
-	sinit();
-
-	/*
-	 * We need locale for number printing, if it isn't set then just
-	 * go with the US format.
-	 */
-	if (!getenv("LC_NUMERIC"))
-		setlocale(LC_NUMERIC, "en_US");
-
-	ps = sysconf(_SC_PAGESIZE);
-	if (ps < 0) {
-		log_err("Failed to get page size\n");
-		return 1;
-	}
-
-	page_size = ps;
-	page_mask = ps - 1;
-
-	fio_keywords_init();
-
-	if (parse_options(argc, argv))
-		return 1;
-
 	if (exec_profile && load_profile(exec_profile))
 		return 1;
 
 	if (!thread_number)
 		return 0;
+
+	printf("%d threads\n", thread_number);
 
 	if (write_bw_log) {
 		setup_log(&agg_io_log[DDIR_READ]);
@@ -1761,4 +1736,45 @@ int main(int argc, char *argv[], char *envp[])
 	fio_mutex_remove(startup_mutex);
 	fio_mutex_remove(writeout_mutex);
 	return exit_value;
+}
+
+void reset_fio_state(void)
+{
+	groupid = 0;
+	thread_number = 0;
+	nr_process = 0;
+	nr_thread = 0;
+	done_secs = 0;
+}
+
+int main(int argc, char *argv[], char *envp[])
+{
+	long ps;
+
+	arch_init(envp);
+
+	sinit();
+
+	/*
+	 * We need locale for number printing, if it isn't set then just
+	 * go with the US format.
+	 */
+	if (!getenv("LC_NUMERIC"))
+		setlocale(LC_NUMERIC, "en_US");
+
+	ps = sysconf(_SC_PAGESIZE);
+	if (ps < 0) {
+		log_err("Failed to get page size\n");
+		return 1;
+	}
+
+	page_size = ps;
+	page_mask = ps - 1;
+
+	fio_keywords_init();
+
+	if (parse_options(argc, argv))
+		return 1;
+
+	return exec_run();
 }

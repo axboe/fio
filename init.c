@@ -19,6 +19,7 @@
 #include "filehash.h"
 #include "verify.h"
 #include "profile.h"
+#include "server.h"
 
 #include "lib/getopt.h"
 
@@ -44,6 +45,7 @@ int nr_job_sections = 0;
 char *exec_profile = NULL;
 int warnings_fatal = 0;
 int terse_version = 2;
+int is_backend = 0;
 
 int write_bw_log = 0;
 int read_only = 0;
@@ -152,6 +154,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "terse-version",
 		.has_arg	= required_argument,
 		.val		= 'V',
+	},
+	{
+		.name		= (char *) "server",
+		.has_arg	= no_argument,
+		.val		= 'S',
 	},
 	{
 		.name		= NULL,
@@ -799,7 +806,7 @@ static int is_empty_or_comment(char *line)
 /*
  * This is our [ini] type file parser.
  */
-static int parse_jobs_ini(char *file, int stonewall_flag)
+int parse_jobs_ini(char *file, int is_buf, int stonewall_flag)
 {
 	unsigned int global;
 	struct thread_data *td;
@@ -813,14 +820,18 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 	char **opts;
 	int i, alloc_opts, num_opts;
 
-	if (!strcmp(file, "-"))
-		f = stdin;
-	else
-		f = fopen(file, "r");
+	if (is_buf)
+		f = NULL;
+	else {
+		if (!strcmp(file, "-"))
+			f = stdin;
+		else
+			f = fopen(file, "r");
 
-	if (!f) {
-		perror("fopen job file");
-		return 1;
+		if (!f) {
+			perror("fopen job file");
+			return 1;
+		}
 	}
 
 	string = malloc(4096);
@@ -842,7 +853,10 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 		 * haven't handled.
 		 */
 		if (!skip_fgets) {
-			p = fgets(string, 4095, f);
+			if (is_buf)
+				p = strsep(&file, "\n");
+			else
+				p = fgets(string, 4095, f);
 			if (!p)
 				break;
 		}
@@ -896,7 +910,14 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 		num_opts = 0;
 		memset(opts, 0, alloc_opts * sizeof(char *));
 
-		while ((p = fgets(string, 4096, f)) != NULL) {
+		while (1) {
+			if (is_buf)
+				p = strsep(&file, "\n");
+			else
+				p = fgets(string, 4096, f);
+			if (!p)
+				break;
+
 			if (is_empty_or_comment(p))
 				continue;
 
@@ -949,7 +970,7 @@ static int parse_jobs_ini(char *file, int stonewall_flag)
 	free(string);
 	free(name);
 	free(opts);
-	if (f != stdin)
+	if (!is_buf && f != stdin)
 		fclose(f);
 	return ret;
 }
@@ -1282,6 +1303,9 @@ static int parse_cmd_line(int argc, char *argv[])
 				exit_val = 1;
 			}
 			break;
+		case 'S':
+			is_backend = 1;
+			break;
 		default:
 			do_exit++;
 			exit_val = 1;
@@ -1291,6 +1315,9 @@ static int parse_cmd_line(int argc, char *argv[])
 
 	if (do_exit)
 		exit(exit_val);
+
+	if (is_backend)
+		fio_server();
 
 	if (td) {
 		if (!ret)
@@ -1327,7 +1354,7 @@ int parse_options(int argc, char *argv[])
 	for (i = 0; i < job_files; i++) {
 		if (fill_def_thread())
 			return 1;
-		if (parse_jobs_ini(ini_file[i], i))
+		if (parse_jobs_ini(ini_file[i], 0, i))
 			return 1;
 		free(ini_file[i]);
 	}
