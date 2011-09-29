@@ -16,7 +16,10 @@ fio resides in a git repo, the canonical place is:
 
 git://git.kernel.dk/fio.git
 
-The http protocol also works, path is the same.
+If you are inside a corporate firewall, git:// may not always work for
+you. In that case you can use the http protocol, path is the same:
+
+http://git.kernel.dk/fio.git
 
 Snapshots are frequently generated and they include the git meta data as
 well. You can download them here:
