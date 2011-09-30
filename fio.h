@@ -650,6 +650,7 @@ extern int fio_gtod_cpu;
 extern enum fio_cs fio_clock_source;
 extern int warnings_fatal;
 extern int terse_version;
+extern int is_backend;
 
 extern struct thread_data *threads;
 

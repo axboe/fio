@@ -25,23 +25,26 @@ static int accept_loop(int listen_sk)
 {
 	struct sockaddr addr;
 	unsigned int len = sizeof(addr);
-	int sk;
+	int sk, do_exit = 0;
 
 again:
 	sk = accept(listen_sk, &addr, &len);
-	printf("got a hit\n");
 	if (sk < 0) {
 		log_err("fio: accept failed\n");
 		return -1;
 	}
 
 	/* read forever */
-	for (;;) {
+	while (!do_exit) {
 		char buf[131072];
 		int ret;
 
 		ret = recv(sk, buf, 4096, 0);
 		if (ret > 0) {
+			if (!strncmp("FIO_QUIT", buf, 8)) {
+				do_exit = 1;
+				break;
+			}
 			parse_jobs_ini(buf, 1, 0);
 			exec_run();
 			reset_fio_state();
@@ -54,8 +57,11 @@ again:
 	}
 
 	close(sk);
-	printf("closed\n");
-	goto again;
+
+	if (!do_exit)
+		goto again;
+
+	return 0;
 }
 
 int fio_server(void)

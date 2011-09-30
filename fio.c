@@ -137,7 +137,9 @@ static void *disk_thread_main(void *data)
 		if (!threads)
 			break;
 		update_io_ticks();
-		print_thread_status();
+
+		if (!is_backend)
+			print_thread_status();
 	}
 
 	return NULL;
@@ -1697,8 +1699,6 @@ int exec_run(void)
 
 	if (!thread_number)
 		return 0;
-
-	printf("%d threads\n", thread_number);
 
 	if (write_bw_log) {
 		setup_log(&agg_io_log[DDIR_READ]);

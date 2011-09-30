@@ -1317,7 +1317,7 @@ static int parse_cmd_line(int argc, char *argv[])
 		exit(exit_val);
 
 	if (is_backend)
-		fio_server();
+		return fio_server();
 
 	if (td) {
 		if (!ret)
@@ -1366,6 +1366,8 @@ int parse_options(int argc, char *argv[])
 		if (dump_cmdline)
 			return 0;
 		if (exec_profile)
+			return 0;
+		if (is_backend)
 			return 0;
 
 		log_err("No jobs(s) defined\n\n");
