@@ -126,6 +126,8 @@ int fio_handle_clients(void)
 
 	while (!exit_backend) {
 		cmd = fio_net_cmd_read(fio_client_fd);
+		if (!cmd)
+			continue;
 
 		if (cmd->opcode == FIO_NET_CMD_ACK) {
 			free(cmd);

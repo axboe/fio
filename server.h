@@ -2,6 +2,7 @@
 #define FIO_SERVER_H
 
 #include <inttypes.h>
+#include <string.h>
 #include <endian.h>
 
 /*
@@ -34,7 +35,8 @@ enum {
 };
 
 extern int fio_server(void);
-extern void fio_server_text_output(const char *, unsigned int len);
+extern int fio_server_text_output(const char *, unsigned int len);
+extern int fio_server_log(const char *format, ...);
 
 extern int fio_client_connect(const char *);
 extern int fio_client_send_ini(const char *);

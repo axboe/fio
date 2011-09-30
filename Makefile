@@ -14,7 +14,7 @@ SOURCE = gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
 		lib/num2str.c $(wildcard crc/*.c) engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
-		memalign.c server.c client.c
+		memalign.c server.c client.c infolog.c
 
 ifeq ($(UNAME), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c helpers.c cgroup.c trim.c \

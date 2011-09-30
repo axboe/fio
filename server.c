@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <limits.h>
 #include <errno.h>
@@ -367,11 +368,12 @@ int fio_server(void)
 	return ret;
 }
 
-void fio_server_text_output(const char *buf, unsigned int len)
+int fio_server_text_output(const char *buf, unsigned int len)
 {
 	struct fio_net_cmd *cmd;
+	int size = sizeof(*cmd) + len;
 
-	cmd = malloc(sizeof(*cmd) + len);
+	cmd = malloc(size);
 	fio_init_net_cmd(cmd);
 	cmd->opcode	= cpu_to_le16(FIO_NET_CMD_TEXT);
 	cmd->pdu_len	= cpu_to_le32(len);
@@ -379,6 +381,19 @@ void fio_server_text_output(const char *buf, unsigned int len)
 
 	fio_net_cmd_crc(cmd);
 
-	fio_send_data(server_fd, cmd, sizeof(*cmd) + len);
+	fio_send_data(server_fd, cmd, size);
 	free(cmd);
+	return size;
+}
+
+int fio_server_log(const char *format, ...)
+{
+	char buffer[1024];
+	va_list args;
+
+	va_start(args, format);
+	sprintf(buffer, format, args);
+	va_end(args);
+
+	return fio_server_text_output(buffer, strlen(buffer));
 }

@@ -177,16 +177,6 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 	},
 };
 
-FILE *get_f_out()
-{
-	return f_out;
-}
-
-FILE *get_f_err()
-{
-	return f_err;
-}
-
 /*
  * Return a free job structure.
  */
