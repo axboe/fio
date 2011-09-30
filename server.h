@@ -1,7 +1,71 @@
 #ifndef FIO_SERVER_H
 #define FIO_SERVER_H
 
+#include <inttypes.h>
+#include <endian.h>
+
+/*
+ * On-wire encoding is little endian
+ */
+struct fio_net_cmd {
+	uint16_t version;	/* protocol version */
+	uint16_t opcode;	/* command opcode */
+	uint32_t flags;		/* modifier flags */
+	uint64_t serial;	/* serial number */
+	uint32_t pad;
+	uint32_t pdu_len;	/* length of post-cmd layload */
+	uint32_t cmd_crc32;	/* cmd checksum */
+	uint32_t pdu_crc32;	/* payload checksum */
+	uint8_t payload[0];	/* payload */
+};
+
+enum {
+	FIO_SERVER_VER		= 1,
+	FIO_SERVER_VER1		= 1,
+
+	FIO_SERVER_MAX_PDU	= 4096,
+
+	FIO_NET_CMD_QUIT	= 1,
+	FIO_NET_CMD_JOB		= 2,
+	FIO_NET_CMD_JOB_END	= 3,
+	FIO_NET_CMD_ACK		= 4,
+	FIO_NET_CMD_NAK		= 5,
+};
+
 extern int fio_server(void);
+
+extern int fio_client_connect(const char *);
+extern int fio_client_send_ini(const char *);
+
+extern int fio_recv_data(int sk, void *p, unsigned int len);
+extern int fio_send_data(int sk, const void *p, unsigned int len);
+extern void fio_net_cmd_crc(struct fio_net_cmd *);
+
 extern int exit_backend;
+extern int fio_net_port;
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define le16_to_cpu(x)		(x)
+#define le32_to_cpu(x)		(x)
+#define le64_to_cpu(x)		(x)
+#define cpu_to_le16(x)		(x)
+#define cpu_to_le32(x)		(x)
+#define cpu_to_le64(x)		(x)
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define le16_to_cpu(x)		__bswap_16(x)
+#define le32_to_cpu(x)		__bswap_32(x)
+#define le64_to_cpu(x)		__bswap_64(x)
+#define cpu_to_le16(x)		__bswap_16(x)
+#define cpu_to_le32(x)		__bswap_32(x)
+#define cpu_to_le64(x)		__bswap_64(x)
+#else
+#error "Endianness not detected"
+#endif
+
+static inline void fio_init_net_cmd(struct fio_net_cmd *cmd)
+{
+	memset(cmd, 0, sizeof(*cmd));
+	cmd->version = cpu_to_le16(FIO_SERVER_VER1);
+}
 
 #endif

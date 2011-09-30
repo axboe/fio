@@ -46,6 +46,8 @@ char *exec_profile = NULL;
 int warnings_fatal = 0;
 int terse_version = 2;
 int is_backend = 0;
+int is_client = 0;
+char *client;
 
 int write_bw_log = 0;
 int read_only = 0;
@@ -159,6 +161,16 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "server",
 		.has_arg	= no_argument,
 		.val		= 'S',
+	},
+	{
+		.name		= (char *) "net-port",
+		.has_arg	= required_argument,
+		.val		= 'P',
+	},
+	{
+		.name		= (char *) "client",
+		.has_arg	= required_argument,
+		.val		= 'C',
 	},
 	{
 		.name		= NULL,
@@ -1079,6 +1091,9 @@ static void usage(const char *name)
 		" (def 1024)\n");
 	printf("\t--warnings-fatal Fio parser warnings are fatal\n");
 	printf("\t--max-jobs\tMaximum number of threads/processes to support\n");
+	printf("\t--server\tStart a backend fio server\n");
+	printf("\t--client=hostname Talk to remove backend fio server at hostname\n");
+	printf("\t--net-port=port\tUse specified port for client/server connection\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
 	printf("\n                   Jens Axboe <jaxboe@fusionio.com>\n");
 }
@@ -1304,7 +1319,26 @@ static int parse_cmd_line(int argc, char *argv[])
 			}
 			break;
 		case 'S':
+			if (is_client) {
+				log_err("fio: can't be both client and server\n");
+				do_exit++;
+				exit_val = 1;
+				break;
+			}
 			is_backend = 1;
+			break;
+		case 'P':
+			fio_net_port = atoi(optarg);
+			break;
+		case 'C':
+			if (is_backend) {
+				log_err("fio: can't be both client and server\n");
+				do_exit++;
+				exit_val = 1;
+				break;
+			}
+			is_client = 1;
+			client = strdup(optarg);
 			break;
 		default:
 			do_exit++;
@@ -1315,6 +1349,12 @@ static int parse_cmd_line(int argc, char *argv[])
 
 	if (do_exit)
 		exit(exit_val);
+
+	if (is_client && fio_client_connect(client)) {
+		do_exit++;
+		exit_val = 1;
+		return 1;
+	}
 
 	if (is_backend)
 		return fio_server();
@@ -1354,8 +1394,13 @@ int parse_options(int argc, char *argv[])
 	for (i = 0; i < job_files; i++) {
 		if (fill_def_thread())
 			return 1;
-		if (parse_jobs_ini(ini_file[i], 0, i))
-			return 1;
+		if (is_client) {
+			if (fio_client_send_ini(ini_file[i]))
+				return 1;
+		} else {
+			if (parse_jobs_ini(ini_file[i], 0, i))
+				return 1;
+		}
 		free(ini_file[i]);
 	}
 
