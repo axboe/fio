@@ -55,7 +55,7 @@ again:
 
 	sk = accept(listen_sk, &addr, &len);
 	if (sk < 0) {
-		log_err("fio: accept failed\n");
+		log_err("fio: accept: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -98,18 +98,18 @@ int fio_server(void)
 
 	sk = socket(AF_INET, SOCK_STREAM, 0);
 	if (sk < 0) {
-		log_err("fio: socket\n");
+		log_err("fio: socket: %s\n", strerror(errno));
 		return -1;
 	}
 
 	opt = 1;
 	if (setsockopt(sk, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-		log_err("fio: setsockopt\n");
+		log_err("fio: setsockopt: %s\n", strerror(errno));
 		return -1;
 	}
 #ifdef SO_REUSEPORT
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
-		td_verror(td, errno, "setsockopt");
+		log_err("fio: setsockopt: %s\n", strerror(errno));
 		return 1;
 	}
 #endif
@@ -119,19 +119,18 @@ int fio_server(void)
 	saddr_in.sin_port = htons(net_port);
 
 	if (bind(sk, (struct sockaddr *) &saddr_in, sizeof(saddr_in)) < 0) {
-		perror("bind");
-		log_err("fio: bind\n");
+		log_err("fio: bind: %s\n", strerror(errno));
 		return -1;
 	}
 
 	if (listen(sk, 1) < 0) {
-		log_err("fio: listen\n");
+		log_err("fio: listen: %s\n", strerror(errno));
 		return -1;
 	}
 
 	len = sizeof(addr);
 	if (getsockname(sk, &addr, &len) < 0) {
-		log_err("fio: getsockname");
+		log_err("fio: getsockname: %s\n", strerror(errno));
 		return -1;
 	}
 
