@@ -94,7 +94,7 @@ int fio_server(void)
 	struct sockaddr_in saddr_in;
 	struct sockaddr addr;
 	unsigned int len;
-	int sk, opt;
+	int sk, opt, ret;
 
 	sk = socket(AF_INET, SOCK_STREAM, 0);
 	if (sk < 0) {
@@ -135,5 +135,7 @@ int fio_server(void)
 		return -1;
 	}
 
-	return accept_loop(sk);
+	ret = accept_loop(sk);
+	close(sk);
+	return ret;
 }
