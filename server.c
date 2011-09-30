@@ -21,13 +21,38 @@
 
 static int net_port = 8765;
 
+int exit_backend = 0;
+
 static int accept_loop(int listen_sk)
 {
 	struct sockaddr addr;
 	unsigned int len = sizeof(addr);
-	int sk, do_exit = 0;
+	struct pollfd pfd;
+	int ret, sk, flags;
 
+	flags = fcntl(listen_sk, F_GETFL);
+	flags |= O_NONBLOCK;
+	fcntl(listen_sk, F_SETFL, flags);
 again:
+	pfd.fd = listen_sk;
+	pfd.events = POLLIN;
+	do {
+		ret = poll(&pfd, 1, 100);
+		if (ret < 0) {
+			if (errno == EINTR)
+				break;
+			perror("poll");
+			goto out;
+		} else if (!ret)
+			continue;
+
+		if (pfd.revents & POLLIN)
+			break;
+	} while (!exit_backend);
+
+	if (exit_backend)
+		goto out;
+
 	sk = accept(listen_sk, &addr, &len);
 	if (sk < 0) {
 		log_err("fio: accept failed\n");
@@ -35,14 +60,13 @@ again:
 	}
 
 	/* read forever */
-	while (!do_exit) {
+	while (!exit_backend) {
 		char buf[131072];
-		int ret;
 
 		ret = recv(sk, buf, 4096, 0);
 		if (ret > 0) {
 			if (!strncmp("FIO_QUIT", buf, 8)) {
-				do_exit = 1;
+				exit_backend = 1;
 				break;
 			}
 			parse_jobs_ini(buf, 1, 0);
@@ -58,9 +82,10 @@ again:
 
 	close(sk);
 
-	if (!do_exit)
+	if (!exit_backend)
 		goto again;
 
+out:
 	return 0;
 }
 

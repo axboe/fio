@@ -46,6 +46,7 @@
 #include "profile.h"
 #include "lib/rand.h"
 #include "memalign.h"
+#include "server.h"
 
 unsigned long page_mask;
 unsigned long page_size;
@@ -122,6 +123,7 @@ static void sig_int(int sig)
 {
 	if (threads) {
 		log_info("\nfio: terminating on signal %d\n", sig);
+		exit_backend = 1;
 		fflush(stdout);
 		exit_value = 128;
 		terminate_threads(TERMINATE_ALL);
