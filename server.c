@@ -24,6 +24,8 @@ static char *job_buf;
 static unsigned int job_cur_len;
 static unsigned int job_max_len;
 
+static int server_fd;
+
 int fio_send_data(int sk, const void *p, unsigned int len)
 {
 	do {
@@ -106,7 +108,7 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 	return 0;
 }
 
-static struct fio_net_cmd *read_command(int sk)
+struct fio_net_cmd *fio_net_cmd_read(int sk)
 {
 	struct fio_net_cmd cmd, *ret = NULL;
 	uint32_t crc;
@@ -242,7 +244,7 @@ static int handle_connection(int sk)
 
 	/* read forever */
 	while (!exit_backend) {
-		cmd = read_command(sk);
+		cmd = fio_net_cmd_read(sk);
 		if (!cmd) {
 			ret = 1;
 			break;
@@ -301,8 +303,11 @@ again:
 		return -1;
 	}
 
+	server_fd = sk;
+
 	exitval = handle_connection(sk);
 
+	server_fd = -1;
 	close(sk);
 
 	if (!exit_backend)
@@ -360,4 +365,20 @@ int fio_server(void)
 	ret = accept_loop(sk);
 	close(sk);
 	return ret;
+}
+
+void fio_server_text_output(const char *buf, unsigned int len)
+{
+	struct fio_net_cmd *cmd;
+
+	cmd = malloc(sizeof(*cmd) + len);
+	fio_init_net_cmd(cmd);
+	cmd->opcode	= cpu_to_le16(FIO_NET_CMD_TEXT);
+	cmd->pdu_len	= cpu_to_le32(len);
+	memcpy(&cmd->payload, buf, len);
+
+	fio_net_cmd_crc(cmd);
+
+	fio_send_data(server_fd, cmd, sizeof(*cmd) + len);
+	free(cmd);
 }

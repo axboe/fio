@@ -1412,7 +1412,7 @@ int parse_options(int argc, char *argv[])
 			return 0;
 		if (exec_profile)
 			return 0;
-		if (is_backend)
+		if (is_backend || is_client)
 			return 0;
 
 		log_err("No jobs(s) defined\n\n");

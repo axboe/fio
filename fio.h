@@ -35,6 +35,7 @@ struct thread_data;
 #include "time.h"
 #include "lib/getopt.h"
 #include "lib/rand.h"
+#include "server.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
@@ -651,6 +652,7 @@ extern enum fio_cs fio_clock_source;
 extern int warnings_fatal;
 extern int terse_version;
 extern int is_backend;
+extern int is_client;
 
 extern struct thread_data *threads;
 

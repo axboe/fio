@@ -30,16 +30,20 @@ enum {
 	FIO_NET_CMD_JOB_END	= 3,
 	FIO_NET_CMD_ACK		= 4,
 	FIO_NET_CMD_NAK		= 5,
+	FIO_NET_CMD_TEXT	= 6,
 };
 
 extern int fio_server(void);
+extern void fio_server_text_output(const char *, unsigned int len);
 
 extern int fio_client_connect(const char *);
 extern int fio_client_send_ini(const char *);
+extern int fio_handle_clients(void);
 
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);
 extern void fio_net_cmd_crc(struct fio_net_cmd *);
+extern struct fio_net_cmd *fio_net_cmd_read(int sk);
 
 extern int exit_backend;
 extern int fio_net_port;

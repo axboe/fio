@@ -70,9 +70,6 @@ static int send_file_buf(char *buf, off_t size)
 
 	fio_net_cmd_crc(cmd);
 
-	printf("cmd crc %x, pdu crc %x\n", cmd->cmd_crc32, cmd->pdu_crc32);
-	printf("job %x\n", cmd->opcode);
-
 	ret = fio_send_data(fio_client_fd, cmd, sizeof(*cmd) + size);
 	free(cmd);
 	return ret;
@@ -121,4 +118,28 @@ int fio_client_send_ini(const char *filename)
 	ret = send_file_buf(buf, sb.st_size);
 	free(buf);
 	return ret;
+}
+
+int fio_handle_clients(void)
+{
+	struct fio_net_cmd *cmd;
+
+	while (!exit_backend) {
+		cmd = fio_net_cmd_read(fio_client_fd);
+
+		if (cmd->opcode == FIO_NET_CMD_ACK) {
+			free(cmd);
+			continue;
+		}
+		if (cmd->opcode != FIO_NET_CMD_TEXT) {
+			printf("non text: %d\n", cmd->opcode);
+			free(cmd);
+			continue;
+		}
+		printf("%s", cmd->payload);
+		fflush(stdout);
+		free(cmd);
+	}
+
+	return 0;
 }

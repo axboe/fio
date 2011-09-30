@@ -139,9 +139,7 @@ static void *disk_thread_main(void *data)
 		if (!threads)
 			break;
 		update_io_ticks();
-
-		if (!is_backend)
-			print_thread_status();
+		print_thread_status();
 	}
 
 	return NULL;
@@ -1696,6 +1694,8 @@ static void run_threads(void)
 
 int exec_run(void)
 {
+	if (is_client)
+		return fio_handle_clients();
 	if (exec_profile && load_profile(exec_profile))
 		return 1;
 

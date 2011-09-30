@@ -249,6 +249,7 @@ void print_thread_status(void)
 	static unsigned int rate[2], iops[2];
 	static int linelen_last;
 	static int eta_good;
+	char output[512], *p = output;
 	int i2p = 0;
 
 	if (temp_stall_ts || terse_output || eta_print == FIO_ETA_NEVER)
@@ -355,17 +356,17 @@ void print_thread_status(void)
 	if (!nr_running && !nr_pending)
 		return;
 
-	printf("Jobs: %d (f=%d)", nr_running, files_open);
+	p += sprintf(p, "Jobs: %d (f=%d)", nr_running, files_open);
 	if (m_rate || t_rate) {
 		char *tr, *mr;
 
 		mr = num2str(m_rate, 4, 0, i2p);
 		tr = num2str(t_rate, 4, 0, i2p);
-		printf(", CR=%s/%s KB/s", tr, mr);
+		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
 		free(tr);
 		free(mr);
 	} else if (m_iops || t_iops)
-		printf(", CR=%d/%d IOPS", t_iops, m_iops);
+		p += sprintf(p, ", CR=%d/%d IOPS", t_iops, m_iops);
 	if (eta_sec != INT_MAX && nr_running) {
 		char perc_str[32];
 		char *iops_str[2];
@@ -386,11 +387,12 @@ void print_thread_status(void)
 		iops_str[0] = num2str(iops[0], 4, 1, 0);
 		iops_str[1] = num2str(iops[1], 4, 1, 0);
 
-		l = printf(": [%s] [%s] [%s/%s /s] [%s/%s iops] [eta %s]",
+		l = sprintf(p, ": [%s] [%s] [%s/%s /s] [%s/%s iops] [eta %s]",
 				 run_str, perc_str, rate_str[0], rate_str[1],
 				 iops_str[0], iops_str[1], eta_str);
+		p += l;
 		if (l >= 0 && l < linelen_last)
-			printf("%*s", linelen_last - l, "");
+			p += sprintf(p, "%*s", linelen_last - l, "");
 		linelen_last = l;
 
 		free(rate_str[0]);
@@ -398,8 +400,13 @@ void print_thread_status(void)
 		free(iops_str[0]);
 		free(iops_str[1]);
 	}
-	printf("\r");
-	fflush(stdout);
+	p += sprintf(p, "\r");
+
+	if (!is_backend) {
+		printf("%s", output);
+		fflush(stdout);
+	} else
+		fio_server_text_output(output, p - output);
 }
 
 void print_status_init(int thr_number)
