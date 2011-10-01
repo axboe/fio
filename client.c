@@ -133,7 +133,7 @@ int fio_handle_clients(void)
 			free(cmd);
 			continue;
 		}
-		printf("%s", cmd->payload);
+		fwrite(cmd->payload, cmd->pdu_len, 1, stdout);
 		fflush(stdout);
 		free(cmd);
 	}
