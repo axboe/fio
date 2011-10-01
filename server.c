@@ -15,7 +15,7 @@
 
 #include "fio.h"
 #include "server.h"
-#include "crc/crc32.h"
+#include "crc/crc16.h"
 
 int fio_net_port = 8765;
 
@@ -75,15 +75,15 @@ int fio_recv_data(int sk, void *p, unsigned int len)
 
 static int verify_convert_cmd(struct fio_net_cmd *cmd)
 {
-	uint32_t crc;
+	uint16_t crc;
 
-	cmd->cmd_crc32 = le32_to_cpu(cmd->cmd_crc32);
-	cmd->pdu_crc32 = le32_to_cpu(cmd->pdu_crc32);
+	cmd->cmd_crc16 = le16_to_cpu(cmd->cmd_crc16);
+	cmd->pdu_crc16 = le16_to_cpu(cmd->pdu_crc16);
 
-	crc = crc32(cmd, sizeof(*cmd) - 2 * sizeof(uint32_t));
-	if (crc != cmd->cmd_crc32) {
+	crc = crc16(cmd, FIO_NET_CMD_CRC_SZ);
+	if (crc != cmd->cmd_crc16) {
 		log_err("fio: server bad crc on command (got %x, wanted %x)\n",
-				cmd->cmd_crc32, crc);
+				cmd->cmd_crc16, crc);
 		return 1;
 	}
 
@@ -112,7 +112,7 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 struct fio_net_cmd *fio_net_cmd_read(int sk)
 {
 	struct fio_net_cmd cmd, *ret = NULL;
-	uint32_t crc;
+	uint16_t crc;
 
 	if (fio_recv_data(sk, &cmd, sizeof(cmd)))
 		return NULL;
@@ -135,10 +135,10 @@ struct fio_net_cmd *fio_net_cmd_read(int sk)
 	}
 
 	/* Verify payload crc */
-	crc = crc32(ret->payload, ret->pdu_len);
-	if (crc != ret->pdu_crc32) {
+	crc = crc16(ret->payload, ret->pdu_len);
+	if (crc != ret->pdu_crc16) {
 		log_err("fio: server bad crc on payload (got %x, wanted %x)\n",
-				ret->pdu_crc32, crc);
+				ret->pdu_crc16, crc);
 		free(ret);
 		return NULL;
 	}
@@ -150,12 +150,11 @@ void fio_net_cmd_crc(struct fio_net_cmd *cmd)
 {
 	uint32_t pdu_len;
 
-	cmd->cmd_crc32 = cpu_to_le32(crc32(cmd,
-					sizeof(*cmd) - 2 * sizeof(uint32_t)));
+	cmd->cmd_crc16 = cpu_to_le16(crc16(cmd, FIO_NET_CMD_CRC_SZ));
 
 	pdu_len = le32_to_cpu(cmd->pdu_len);
 	if (pdu_len)
-		cmd->pdu_crc32 = cpu_to_le32(crc32(cmd->payload, pdu_len));
+		cmd->pdu_crc16 = cpu_to_le16(crc16(cmd->payload, pdu_len));
 }
 
 static int send_simple_command(int sk, uint16_t opcode, uint64_t serial)
@@ -176,7 +175,11 @@ static int send_simple_command(int sk, uint16_t opcode, uint64_t serial)
  */
 static int ack_command(int sk, struct fio_net_cmd *cmd)
 {
+#if 0
 	return send_simple_command(sk, FIO_NET_CMD_ACK, cmd->serial);
+#else
+	return 0;
+#endif
 }
 
 #if 0
@@ -285,7 +288,7 @@ again:
 		if (ret < 0) {
 			if (errno == EINTR)
 				break;
-			perror("poll");
+			log_err("fio: poll: %s\n", strerror(errno));
 			goto out;
 		} else if (!ret)
 			continue;

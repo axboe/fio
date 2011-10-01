@@ -13,10 +13,9 @@ struct fio_net_cmd {
 	uint16_t opcode;	/* command opcode */
 	uint32_t flags;		/* modifier flags */
 	uint64_t serial;	/* serial number */
-	uint32_t pad;
 	uint32_t pdu_len;	/* length of post-cmd layload */
-	uint32_t cmd_crc32;	/* cmd checksum */
-	uint32_t pdu_crc32;	/* payload checksum */
+	uint16_t cmd_crc16;	/* cmd checksum */
+	uint16_t pdu_crc16;	/* payload checksum */
 	uint8_t payload[0];	/* payload */
 };
 
@@ -32,6 +31,10 @@ enum {
 	FIO_NET_CMD_ACK		= 4,
 	FIO_NET_CMD_NAK		= 5,
 	FIO_NET_CMD_TEXT	= 6,
+
+	/* crc does not include the crc fields */
+	FIO_NET_CMD_CRC_SZ	= sizeof(struct fio_net_cmd) -
+					2 * sizeof(uint16_t),
 };
 
 extern int fio_server(void);
