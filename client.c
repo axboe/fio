@@ -61,7 +61,6 @@ static struct fio_client *find_client_by_name(const char *name)
 
 static void remove_client(struct fio_client *client)
 {
-	printf("remove client %s\n", client->hostname);
 	flist_del(&client->list);
 	nr_clients--;
 	free(client->hostname);
@@ -231,19 +230,22 @@ int fio_handle_clients(void)
 	struct fio_client *client;
 	struct flist_head *entry;
 	struct pollfd *pfds;
-	int i = 0, ret = 0;
+	int i, ret = 0;
 
 	pfds = malloc(nr_clients * sizeof(struct pollfd));
 
-	flist_for_each(entry, &client_list) {
-		client = flist_entry(entry, struct fio_client, list);
-
-		pfds[i].fd = client->fd;
-		pfds[i].events = POLLIN;
-		i++;
-	}
-
 	while (!exit_backend && nr_clients) {
+		i = 0;
+		flist_for_each(entry, &client_list) {
+			client = flist_entry(entry, struct fio_client, list);
+
+			pfds[i].fd = client->fd;
+			pfds[i].events = POLLIN;
+			i++;
+		}
+
+		assert(i == nr_clients);
+
 		ret = poll(pfds, nr_clients, 100);
 		if (ret < 0) {
 			if (errno == EINTR)
