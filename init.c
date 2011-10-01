@@ -1385,7 +1385,7 @@ int parse_options(int argc, char *argv[])
 		if (fill_def_thread())
 			return 1;
 		if (is_client) {
-			if (fio_client_send_ini(ini_file[i]))
+			if (fio_client_send_ini(client, ini_file[i]))
 				return 1;
 		} else {
 			if (parse_jobs_ini(ini_file[i], 0, i))
