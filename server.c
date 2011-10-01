@@ -385,10 +385,11 @@ int fio_server_log(const char *format, ...)
 {
 	char buffer[1024];
 	va_list args;
+	size_t len;
 
 	va_start(args, format);
-	snprintf(buffer, sizeof(buffer), format, args);
+	len = vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
 
-	return fio_server_text_output(buffer, strlen(buffer));
+	return fio_server_text_output(buffer, len);
 }

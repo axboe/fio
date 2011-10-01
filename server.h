@@ -74,7 +74,7 @@ static inline void fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
 	memset(cmd, 0, sizeof(*cmd));
 
 	cmd->version	= cpu_to_le16(FIO_SERVER_VER1);
-	cmd->opcode	= cpu_to_le16(FIO_NET_CMD_TEXT);
+	cmd->opcode	= cpu_to_le16(opcode);
 
 	if (pdu) {
 		cmd->pdu_len	= cpu_to_le32(pdu_len);
