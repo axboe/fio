@@ -61,6 +61,7 @@ static struct fio_client *find_client_by_name(const char *name)
 
 static void remove_client(struct fio_client *client)
 {
+	dprint(FD_NET, "removed client <%s>\n", client->hostname);
 	flist_del(&client->list);
 	nr_clients--;
 	free(client->hostname);
@@ -71,6 +72,7 @@ void fio_client_add(const char *hostname)
 {
 	struct fio_client *client;
 
+	dprint(FD_NET, "added client <%s>\n", hostname);
 	client = malloc(sizeof(*client));
 	memset(client, 0, sizeof(*client));
 	client->hostname = strdup(hostname);
@@ -82,6 +84,8 @@ void fio_client_add(const char *hostname)
 static int fio_client_connect(struct fio_client *client)
 {
 	int fd;
+
+	dprint(FD_NET, "connect to host %s\n", client->hostname);
 
 	memset(&client->addr, 0, sizeof(client->addr));
 	client->addr.sin_family = AF_INET;
@@ -149,6 +153,8 @@ static int fio_client_send_ini(struct fio_client *client, const char *filename)
 	off_t len;
 	int fd, ret;
 
+	dprint(FD_NET, "send ini %s to %s\n", filename, client->hostname);
+
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
 		log_err("fio: job file open: %s\n", strerror(errno));
@@ -203,6 +209,9 @@ static int handle_client(struct fio_client *client)
 	struct fio_net_cmd *cmd;
 
 	while ((cmd = fio_net_cmd_read(client->fd)) != NULL) {
+		dprint(FD_NET, "%s: got cmd op %d\n", client->hostname,
+							cmd->opcode);
+
 		if (cmd->opcode == FIO_NET_CMD_ACK) {
 			free(cmd);
 			continue;

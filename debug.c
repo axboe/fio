@@ -16,8 +16,8 @@ void __dprint(int type, const char *str, ...)
 	    && pid != *fio_debug_jobp)
 		return;
 
-	log_info("%-8s ", debug_levels[type].name);
-	log_info("%-5u ", (int) pid);
+	log_local("%-8s ", debug_levels[type].name);
+	log_local("%-5u ", (int) pid);
 
 	va_start(args, str);
 	log_valist(str, args);

@@ -25,7 +25,7 @@ static char *job_buf;
 static unsigned int job_cur_len;
 static unsigned int job_max_len;
 
-static int server_fd;
+static int server_fd = -1;
 
 int fio_send_data(int sk, const void *p, unsigned int len)
 {
@@ -222,6 +222,7 @@ static int nak_command(int sk, struct fio_net_cmd *cmd)
 
 static int send_quit_command(void)
 {
+	dprint(FD_NET, "server: sending quit\n");
 	return send_simple_command(server_fd, FIO_NET_CMD_QUIT, 0);
 }
 
@@ -257,6 +258,8 @@ static int handle_cur_job(struct fio_net_cmd *cmd)
 static int handle_command(struct fio_net_cmd *cmd)
 {
 	int ret;
+
+	dprint(FD_NET, "server: got opcode %d\n", cmd->opcode);
 
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
@@ -343,6 +346,8 @@ again:
 		return -1;
 	}
 
+	dprint(FD_NET, "server got a connection\n");
+
 	server_fd = sk;
 
 	exitval = handle_connection(sk);
@@ -363,6 +368,8 @@ int fio_server(void)
 	struct sockaddr addr;
 	unsigned int len;
 	int sk, opt, ret;
+
+	dprint(FD_NET, "starting server\n");
 
 	sk = socket(AF_INET, SOCK_STREAM, 0);
 	if (sk < 0) {

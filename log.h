@@ -8,6 +8,7 @@ extern FILE *f_err;
 
 extern int log_err(const char *format, ...);
 extern int log_info(const char *format, ...);
+extern int log_local(const char *format, ...);
 
 #define log_valist(str, args)	vfprintf(f_out, (str), (args))
 
