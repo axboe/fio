@@ -162,7 +162,7 @@ static int send_simple_command(int sk, uint16_t opcode, uint64_t serial)
 	struct fio_net_cmd cmd = {
 		.version	= cpu_to_le16(FIO_SERVER_VER1),
 		.opcode		= cpu_to_le16(opcode),
-		.serial		= cpu_to_le16(serial),
+		.serial		= cpu_to_le64(serial),
 	};
 
 	fio_net_cmd_crc(&cmd);
