@@ -106,13 +106,11 @@ static int fio_client_connect(struct fio_client *client)
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
 		log_err("fio: socket: %s\n", strerror(errno));
-		free(client);
 		return 1;
 	}
 
 	if (connect(fd, (struct sockaddr *) &client->addr, sizeof(client->addr)) < 0) {
 		log_err("fio: connect: %s\n", strerror(errno));
-		free(client);
 		return 1;
 	}
 
@@ -278,6 +276,5 @@ int fio_handle_clients(void)
 	}
 
 	free(pfds);
-
 	return 0;
 }

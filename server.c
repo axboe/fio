@@ -302,6 +302,7 @@ static int handle_connection(int sk)
 			break;
 
 		free(cmd);
+		cmd = NULL;
 	}
 
 	if (cmd)
