@@ -1385,11 +1385,12 @@ int parse_options(int argc, char *argv[])
 		if (nr_clients) {
 			if (fio_clients_send_ini(ini_file[i]))
 				return 1;
-		} else {
+			free(ini_file[i]);
+		} else if (!is_backend) {
 			if (parse_jobs_ini(ini_file[i], 0, i))
 				return 1;
+			free(ini_file[i]);
 		}
-		free(ini_file[i]);
 	}
 
 	free(ini_file);

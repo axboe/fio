@@ -409,7 +409,10 @@ int fio_server(void)
 
 int fio_server_text_output(const char *buf, unsigned int len)
 {
-	return fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, buf, len);
+	if (server_fd != -1)
+		return fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, buf, len);
+
+	return 0;
 }
 
 int fio_server_log(const char *format, ...)
