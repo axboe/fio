@@ -57,17 +57,7 @@ int fio_client_connect(const char *host)
 
 static int send_file_buf(char *buf, off_t size)
 {
-	struct fio_net_cmd *cmd;
-	int ret;
-
-	cmd = malloc(sizeof(*cmd) + size);
-
-	fio_init_net_cmd(cmd, FIO_NET_CMD_JOB_END, buf, size);
-	fio_net_cmd_crc(cmd);
-
-	ret = fio_send_data(fio_client_fd, cmd, sizeof(*cmd) + size);
-	free(cmd);
-	return ret;
+	return fio_net_send_cmd(fio_client_fd, FIO_NET_CMD_JOB, buf, size);
 }
 
 /*

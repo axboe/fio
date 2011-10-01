@@ -23,14 +23,15 @@ enum {
 	FIO_SERVER_VER		= 1,
 	FIO_SERVER_VER1		= 1,
 
-	FIO_SERVER_MAX_PDU	= 4096,
+	FIO_SERVER_MAX_PDU	= 64,
 
 	FIO_NET_CMD_QUIT	= 1,
 	FIO_NET_CMD_JOB		= 2,
-	FIO_NET_CMD_JOB_END	= 3,
-	FIO_NET_CMD_ACK		= 4,
-	FIO_NET_CMD_NAK		= 5,
-	FIO_NET_CMD_TEXT	= 6,
+	FIO_NET_CMD_ACK		= 3,
+	FIO_NET_CMD_NAK		= 4,
+	FIO_NET_CMD_TEXT	= 5,
+
+	FIO_NET_CMD_F_MORE	= 1,
 
 	/* crc does not include the crc fields */
 	FIO_NET_CMD_CRC_SZ	= sizeof(struct fio_net_cmd) -
@@ -40,6 +41,7 @@ enum {
 extern int fio_server(void);
 extern int fio_server_text_output(const char *, unsigned int len);
 extern int fio_server_log(const char *format, ...);
+extern int fio_net_send_cmd(int, uint16_t, const char *, off_t);
 
 extern int fio_client_connect(const char *);
 extern int fio_client_send_ini(const char *);

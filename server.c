@@ -29,6 +29,8 @@ static int server_fd;
 
 int fio_send_data(int sk, const void *p, unsigned int len)
 {
+	assert(len <= sizeof(struct fio_net_cmd) + FIO_SERVER_MAX_PDU);
+
 	do {
 		int ret = send(sk, p, len, 0);
 
@@ -157,6 +159,35 @@ void fio_net_cmd_crc(struct fio_net_cmd *cmd)
 		cmd->pdu_crc16 = cpu_to_le16(crc16(cmd->payload, pdu_len));
 }
 
+int fio_net_send_cmd(int fd, uint16_t opcode, const char *buf, off_t size)
+{
+	struct fio_net_cmd *cmd;
+	size_t this_len;
+	int ret;
+
+	do {
+		this_len = size;
+		if (this_len > FIO_SERVER_MAX_PDU)
+			this_len = FIO_SERVER_MAX_PDU;
+
+		cmd = malloc(sizeof(*cmd) + this_len);
+
+		fio_init_net_cmd(cmd, opcode, buf, this_len);
+
+		if (this_len < size)
+			cmd->flags |= FIO_NET_CMD_F_MORE;
+
+		fio_net_cmd_crc(cmd);
+
+		ret = fio_send_data(fd, cmd, sizeof(*cmd) + this_len);
+		free(cmd);
+		size -= this_len;
+		buf += this_len;
+	} while (!ret && size);
+
+	return ret;
+}
+
 static int send_simple_command(int sk, uint16_t opcode, uint64_t serial)
 {
 	struct fio_net_cmd cmd = {
@@ -194,7 +225,7 @@ static int send_quit_command(void)
 	return send_simple_command(server_fd, FIO_NET_CMD_QUIT, 0);
 }
 
-static int handle_cur_job(struct fio_net_cmd *cmd, int done)
+static int handle_cur_job(struct fio_net_cmd *cmd)
 {
 	unsigned int left = job_max_len - job_cur_len;
 	int ret = 0;
@@ -207,16 +238,19 @@ static int handle_cur_job(struct fio_net_cmd *cmd, int done)
 	memcpy(job_buf + job_cur_len, cmd->payload, cmd->pdu_len);
 	job_cur_len += cmd->pdu_len;
 
-	if (done) {
-		parse_jobs_ini(job_buf, 1, 0);
-		ret = exec_run();
-		send_quit_command();
-		reset_fio_state();
-		free(job_buf);
-		job_buf = NULL;
-		job_cur_len = job_max_len = 0;
-	}
+	/*
+	 * More data coming for this job
+	 */
+	if (cmd->flags & FIO_NET_CMD_F_MORE)
+		return 0;
 
+	parse_jobs_ini(job_buf, 1, 0);
+	ret = exec_run();
+	send_quit_command();
+	reset_fio_state();
+	free(job_buf);
+	job_buf = NULL;
+	job_cur_len = job_max_len = 0;
 	return ret;
 }
 
@@ -233,10 +267,7 @@ static int handle_command(struct fio_net_cmd *cmd)
 	case FIO_NET_CMD_NAK:
 		return 1;
 	case FIO_NET_CMD_JOB:
-		ret = handle_cur_job(cmd, 0);
-		break;
-	case FIO_NET_CMD_JOB_END:
-		ret = handle_cur_job(cmd, 1);
+		ret = handle_cur_job(cmd);
 		break;
 	default:
 		log_err("fio: unknown opcode: %d\n", cmd->opcode);
@@ -378,16 +409,7 @@ int fio_server(void)
 
 int fio_server_text_output(const char *buf, unsigned int len)
 {
-	struct fio_net_cmd *cmd;
-	int size = sizeof(*cmd) + len;
-
-	cmd = malloc(size);
-	fio_init_net_cmd(cmd, FIO_NET_CMD_TEXT, buf, len);
-	fio_net_cmd_crc(cmd);
-
-	fio_send_data(server_fd, cmd, size);
-	free(cmd);
-	return size;
+	return fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, buf, len);
 }
 
 int fio_server_log(const char *format, ...)
