@@ -33,6 +33,10 @@ int log_err(const char *format, ...)
 
 	if (is_backend)
 		return fio_server_text_output(buffer, len);
-	else
+	else {
+		if (f_err != stderr)
+			fwrite(buffer, len, 1, stderr);
+
 		return fwrite(buffer, len, 1, f_err);
+	}
 }
