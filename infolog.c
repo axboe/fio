@@ -12,7 +12,7 @@ int log_info(const char *format, ...)
 	size_t len;
 
 	va_start(args, format);
-	len = vsprintf(buffer, format, args);
+	len = vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
 
 	if (is_backend)
@@ -28,7 +28,7 @@ int log_err(const char *format, ...)
 	size_t len;
 
 	va_start(args, format);
-	len = vsprintf(buffer, format, args);
+	len = vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
 
 	if (is_backend)

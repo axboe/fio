@@ -143,7 +143,6 @@ struct fio_net_cmd *fio_net_cmd_read(int sk)
 		return NULL;
 	}
 
-
 	return ret;
 }
 
@@ -392,7 +391,7 @@ int fio_server_log(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	sprintf(buffer, format, args);
+	snprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
 
 	return fio_server_text_output(buffer, strlen(buffer));
