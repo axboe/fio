@@ -68,10 +68,18 @@ extern int fio_net_port;
 #error "Endianness not detected"
 #endif
 
-static inline void fio_init_net_cmd(struct fio_net_cmd *cmd)
+static inline void fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
+				    const void *pdu, uint32_t pdu_len)
 {
 	memset(cmd, 0, sizeof(*cmd));
-	cmd->version = cpu_to_le16(FIO_SERVER_VER1);
+
+	cmd->version	= cpu_to_le16(FIO_SERVER_VER1);
+	cmd->opcode	= cpu_to_le16(FIO_NET_CMD_TEXT);
+
+	if (pdu) {
+		cmd->pdu_len	= cpu_to_le32(pdu_len);
+		memcpy(&cmd->payload, pdu, pdu_len);
+	}
 }
 
 #endif
