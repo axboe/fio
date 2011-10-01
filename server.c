@@ -189,6 +189,11 @@ static int nak_command(int sk, struct fio_net_cmd *cmd)
 }
 #endif
 
+static int send_quit_command(void)
+{
+	return send_simple_command(server_fd, FIO_NET_CMD_QUIT, 0);
+}
+
 static int handle_cur_job(struct fio_net_cmd *cmd, int done)
 {
 	unsigned int left = job_max_len - job_cur_len;
@@ -205,6 +210,7 @@ static int handle_cur_job(struct fio_net_cmd *cmd, int done)
 	if (done) {
 		parse_jobs_ini(job_buf, 1, 0);
 		ret = exec_run();
+		send_quit_command();
 		reset_fio_state();
 		free(job_buf);
 		job_buf = NULL;

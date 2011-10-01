@@ -128,6 +128,10 @@ int fio_handle_clients(void)
 			free(cmd);
 			continue;
 		}
+		if (cmd->opcode == FIO_NET_CMD_QUIT) {
+			free(cmd);
+			break;
+		}
 		if (cmd->opcode != FIO_NET_CMD_TEXT) {
 			printf("non text: %d\n", cmd->opcode);
 			free(cmd);
