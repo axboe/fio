@@ -46,8 +46,7 @@ char *exec_profile = NULL;
 int warnings_fatal = 0;
 int terse_version = 2;
 int is_backend = 0;
-int is_client = 0;
-char *client;
+int nr_clients = 0;
 
 int write_bw_log = 0;
 int read_only = 0;
@@ -1309,7 +1308,7 @@ static int parse_cmd_line(int argc, char *argv[])
 			}
 			break;
 		case 'S':
-			if (is_client) {
+			if (nr_clients) {
 				log_err("fio: can't be both client and server\n");
 				do_exit++;
 				exit_val = 1;
@@ -1327,8 +1326,7 @@ static int parse_cmd_line(int argc, char *argv[])
 				exit_val = 1;
 				break;
 			}
-			is_client = 1;
-			client = strdup(optarg);
+			fio_client_add(optarg);
 			break;
 		default:
 			do_exit++;
@@ -1340,7 +1338,7 @@ static int parse_cmd_line(int argc, char *argv[])
 	if (do_exit)
 		exit(exit_val);
 
-	if (is_client && fio_client_connect(client)) {
+	if (nr_clients && fio_clients_connect()) {
 		do_exit++;
 		exit_val = 1;
 		return 1;
@@ -1384,8 +1382,8 @@ int parse_options(int argc, char *argv[])
 	for (i = 0; i < job_files; i++) {
 		if (fill_def_thread())
 			return 1;
-		if (is_client) {
-			if (fio_client_send_ini(client, ini_file[i]))
+		if (nr_clients) {
+			if (fio_clients_send_ini(ini_file[i]))
 				return 1;
 		} else {
 			if (parse_jobs_ini(ini_file[i], 0, i))
@@ -1402,7 +1400,7 @@ int parse_options(int argc, char *argv[])
 			return 0;
 		if (exec_profile)
 			return 0;
-		if (is_backend || is_client)
+		if (is_backend || nr_clients)
 			return 0;
 
 		log_err("No jobs(s) defined\n\n");

@@ -1694,7 +1694,7 @@ static void run_threads(void)
 
 int exec_run(void)
 {
-	if (is_client)
+	if (nr_clients)
 		return fio_handle_clients();
 	if (exec_profile && load_profile(exec_profile))
 		return 1;

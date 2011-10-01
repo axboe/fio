@@ -26,7 +26,6 @@ struct fio_client {
 };
 
 static FLIST_HEAD(client_list);
-static unsigned int nr_clients;
 
 static struct fio_client *find_client_by_fd(int fd)
 {
@@ -43,6 +42,7 @@ static struct fio_client *find_client_by_fd(int fd)
 	return NULL;
 }
 
+#if 0
 static struct fio_client *find_client_by_name(const char *name)
 {
 	struct fio_client *client;
@@ -57,6 +57,7 @@ static struct fio_client *find_client_by_name(const char *name)
 
 	return NULL;
 }
+#endif
 
 static void remove_client(struct fio_client *client)
 {
@@ -67,21 +68,30 @@ static void remove_client(struct fio_client *client)
 	free(client);
 }
 
-int fio_client_connect(const char *host)
+void fio_client_add(const char *hostname)
 {
 	struct fio_client *client;
-	int fd;
 
 	client = malloc(sizeof(*client));
+	memset(client, 0, sizeof(*client));
+	client->hostname = strdup(hostname);
+	client->fd = -1;
+	flist_add(&client->list, &client_list);
+	nr_clients++;
+}
+
+static int fio_client_connect(struct fio_client *client)
+{
+	int fd;
 
 	memset(&client->addr, 0, sizeof(client->addr));
 	client->addr.sin_family = AF_INET;
 	client->addr.sin_port = htons(fio_net_port);
 
-	if (inet_aton(host, &client->addr.sin_addr) != 1) {
+	if (inet_aton(client->hostname, &client->addr.sin_addr) != 1) {
 		struct hostent *hent;
 
-		hent = gethostbyname(host);
+		hent = gethostbyname(client->hostname);
 		if (!hent) {
 			log_err("fio: gethostbyname: %s\n", strerror(errno));
 			return 1;
@@ -103,11 +113,25 @@ int fio_client_connect(const char *host)
 		return 1;
 	}
 
-	client->hostname = strdup(host);
-	flist_add(&client->list, &client_list);
-	nr_clients++;
 	client->fd = fd;
 	return 0;
+}
+
+int fio_clients_connect(void)
+{
+	struct fio_client *client;
+	struct flist_head *entry, *tmp;
+	int ret;
+
+	flist_for_each_safe(entry, tmp, &client_list) {
+		client = flist_entry(entry, struct fio_client, list);
+
+		ret = fio_client_connect(client);
+		if (ret)
+			remove_client(client);
+	}
+
+	return !nr_clients;
 }
 
 static int send_file_buf(struct fio_client *client, char *buf, off_t size)
@@ -119,19 +143,12 @@ static int send_file_buf(struct fio_client *client, char *buf, off_t size)
  * Send file contents to server backend. We could use sendfile(), but to remain
  * more portable lets just read/write the darn thing.
  */
-int fio_client_send_ini(const char *hostname, const char *filename)
+static int fio_client_send_ini(struct fio_client *client, const char *filename)
 {
-	struct fio_client *client;
 	struct stat sb;
 	char *p, *buf;
 	off_t len;
 	int fd, ret;
-
-	client = find_client_by_name(hostname);
-	if (!client) {
-		log_err("fio: can't find client for host %s\n", hostname);
-		return 1;
-	}
 
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
@@ -165,6 +182,21 @@ int fio_client_send_ini(const char *hostname, const char *filename)
 	ret = send_file_buf(client, buf, sb.st_size);
 	free(buf);
 	return ret;
+}
+
+int fio_clients_send_ini(const char *filename)
+{
+	struct fio_client *client;
+	struct flist_head *entry, *tmp;
+
+	flist_for_each_safe(entry, tmp, &client_list) {
+		client = flist_entry(entry, struct fio_client, list);
+
+		if (fio_client_send_ini(client, filename))
+			remove_client(client);
+	}
+
+	return !nr_clients;
 }
 
 static int handle_client(struct fio_client *client)

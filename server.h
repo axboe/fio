@@ -43,9 +43,10 @@ extern int fio_server_text_output(const char *, unsigned int len);
 extern int fio_server_log(const char *format, ...);
 extern int fio_net_send_cmd(int, uint16_t, const char *, off_t);
 
-extern int fio_client_connect(const char *);
-extern int fio_client_send_ini(const char *, const char *);
+extern int fio_clients_connect(void);
+extern int fio_clients_send_ini(const char *);
 extern int fio_handle_clients(void);
+extern void fio_client_add(const char *);
 
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);
