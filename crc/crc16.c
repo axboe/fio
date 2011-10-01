@@ -43,11 +43,12 @@ unsigned short const crc16_table[256] = {
 	0x8201, 0x42C0, 0x4380, 0x8341, 0x4100, 0x81C1, 0x8081, 0x4040
 };
 
-unsigned short crc16(unsigned char const *buffer, unsigned int len)
+unsigned short crc16(const void *buffer, unsigned int len)
 {
+	const unsigned char *cp = (const unsigned char *) buffer;
 	unsigned short crc = 0;
 
 	while (len--)
-		crc = crc16_byte(crc, *buffer++);
+		crc = crc16_byte(crc, *cp++);
 	return crc;
 }
