@@ -46,11 +46,11 @@ struct thread_data;
 #endif
 
 struct group_run_stats {
-	unsigned long long max_run[2], min_run[2];
-	unsigned long long max_bw[2], min_bw[2];
-	unsigned long long io_kb[2];
-	unsigned long long agg[2];
-	unsigned int kb_base;
+	uint64_t max_run[2], min_run[2];
+	uint64_t max_bw[2], min_bw[2];
+	uint64_t io_kb[2];
+	uint64_t agg[2];
+	uint32_t kb_base;
 };
 
 /*
