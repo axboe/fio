@@ -211,7 +211,7 @@ struct thread_stat {
 	 * IO depth and latency stats
 	 */
 	unsigned int clat_percentiles;
-	double* percentile_list;
+	double *percentile_list;
 
 	unsigned int io_u_map[FIO_IO_U_MAP_NR];
 	unsigned int io_u_submit[FIO_IO_U_MAP_NR];
