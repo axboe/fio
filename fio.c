@@ -1230,33 +1230,33 @@ static void *thread_main(void *data)
 	td->ts.io_bytes[1] = td->io_bytes[1];
 
 	fio_mutex_down(writeout_mutex);
-	if (td->ts.bw_log) {
+	if (td->bw_log) {
 		if (td->o.bw_log_file) {
-			finish_log_named(td, td->ts.bw_log,
+			finish_log_named(td, td->bw_log,
 						td->o.bw_log_file, "bw");
 		} else
-			finish_log(td, td->ts.bw_log, "bw");
+			finish_log(td, td->bw_log, "bw");
 	}
-	if (td->ts.lat_log) {
+	if (td->lat_log) {
 		if (td->o.lat_log_file) {
-			finish_log_named(td, td->ts.lat_log,
+			finish_log_named(td, td->lat_log,
 						td->o.lat_log_file, "lat");
 		} else
-			finish_log(td, td->ts.lat_log, "lat");
+			finish_log(td, td->lat_log, "lat");
 	}
-	if (td->ts.slat_log) {
+	if (td->slat_log) {
 		if (td->o.lat_log_file) {
-			finish_log_named(td, td->ts.slat_log,
+			finish_log_named(td, td->slat_log,
 						td->o.lat_log_file, "slat");
 		} else
-			finish_log(td, td->ts.slat_log, "slat");
+			finish_log(td, td->slat_log, "slat");
 	}
-	if (td->ts.clat_log) {
+	if (td->clat_log) {
 		if (td->o.lat_log_file) {
-			finish_log_named(td, td->ts.clat_log,
+			finish_log_named(td, td->clat_log,
 						td->o.lat_log_file, "clat");
 		} else
-			finish_log(td, td->ts.clat_log, "clat");
+			finish_log(td, td->clat_log, "clat");
 	}
 	fio_mutex_up(writeout_mutex);
 	if (td->o.exec_postrun)

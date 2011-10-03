@@ -175,16 +175,11 @@ enum {
 struct thread_stat {
 	char *name;
 	char *verror;
-	int error;
-	int groupid;
-	pid_t pid;
+	int32_t error;
+	int32_t groupid;
+	uint32_t pid;
 	char *description;
-	int members;
-
-	struct io_log *slat_log;
-	struct io_log *clat_log;
-	struct io_log *lat_log;
-	struct io_log *bw_log;
+	uint32_t members;
 
 	/*
 	 * bandwidth and latency stats
@@ -194,7 +189,7 @@ struct thread_stat {
 	struct io_stat lat_stat[2];		/* total latency */
 	struct io_stat bw_stat[2];		/* bandwidth stats */
 
-	unsigned long long stat_io_bytes[2];
+	uint64_t stat_io_bytes[2];
 	struct timeval stat_sample_time[2];
 
 	/*
@@ -202,40 +197,40 @@ struct thread_stat {
 	 */
 	struct rusage ru_start;
 	struct rusage ru_end;
-	unsigned long usr_time;
-	unsigned long sys_time;
-	unsigned long ctx;
-	unsigned long minf, majf;
+	uint64_t usr_time;
+	uint64_t sys_time;
+	uint64_t ctx;
+	uint64_t minf, majf;
 
 	/*
 	 * IO depth and latency stats
 	 */
-	unsigned int clat_percentiles;
+	uint64_t clat_percentiles;
 	double *percentile_list;
 
-	unsigned int io_u_map[FIO_IO_U_MAP_NR];
-	unsigned int io_u_submit[FIO_IO_U_MAP_NR];
-	unsigned int io_u_complete[FIO_IO_U_MAP_NR];
-	unsigned int io_u_lat_u[FIO_IO_U_LAT_U_NR];
-	unsigned int io_u_lat_m[FIO_IO_U_LAT_M_NR];
-	unsigned int io_u_plat[2][FIO_IO_U_PLAT_NR];
-	unsigned long total_io_u[3];
-	unsigned long short_io_u[3];
-	unsigned long total_submit;
-	unsigned long total_complete;
+	uint32_t io_u_map[FIO_IO_U_MAP_NR];
+	uint32_t io_u_submit[FIO_IO_U_MAP_NR];
+	uint32_t io_u_complete[FIO_IO_U_MAP_NR];
+	uint32_t io_u_lat_u[FIO_IO_U_LAT_U_NR];
+	uint32_t io_u_lat_m[FIO_IO_U_LAT_M_NR];
+	uint32_t io_u_plat[2][FIO_IO_U_PLAT_NR];
+	uint64_t total_io_u[3];
+	uint64_t short_io_u[3];
+	uint64_t total_submit;
+	uint64_t total_complete;
 
-	unsigned long long io_bytes[2];
-	unsigned long long runtime[2];
-	unsigned long total_run_time;
+	uint64_t io_bytes[2];
+	uint64_t runtime[2];
+	uint64_t total_run_time;
 
 	/*
 	 * IO Error related stats
 	 */
-	unsigned continue_on_error;
-	unsigned long total_err_count;
-	int first_error;
+	uint16_t continue_on_error;
+	uint64_t total_err_count;
+	int32_t first_error;
 
-	unsigned int kb_base;
+	uint32_t kb_base;
 };
 
 struct bssplit {
@@ -431,6 +426,12 @@ struct thread_data {
 	int thread_number;
 	int groupid;
 	struct thread_stat ts;
+
+	struct io_log *slat_log;
+	struct io_log *clat_log;
+	struct io_log *lat_log;
+	struct io_log *bw_log;
+
 	struct fio_file **files;
 	unsigned int files_size;
 	unsigned int files_index;

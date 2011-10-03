@@ -664,12 +664,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		goto err;
 
 	if (td->o.write_lat_log) {
-		setup_log(&td->ts.lat_log);
-		setup_log(&td->ts.slat_log);
-		setup_log(&td->ts.clat_log);
+		setup_log(&td->lat_log);
+		setup_log(&td->slat_log);
+		setup_log(&td->clat_log);
 	}
 	if (td->o.write_bw_log)
-		setup_log(&td->ts.bw_log);
+		setup_log(&td->bw_log);
 
 	if (!td->o.name)
 		td->o.name = strdup(jobname);

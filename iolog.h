@@ -5,9 +5,9 @@
  * Use for maintaining statistics
  */
 struct io_stat {
-	unsigned long max_val;
-	unsigned long min_val;
-	unsigned long samples;
+	uint64_t max_val;
+	uint64_t min_val;
+	uint64_t samples;
 
 	double mean;
 	double S;

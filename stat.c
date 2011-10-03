@@ -954,8 +954,8 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	add_stat_sample(&ts->clat_stat[ddir], usec);
 
-	if (ts->clat_log)
-		add_log_sample(td, ts->clat_log, usec, ddir, bs);
+	if (td->clat_log)
+		add_log_sample(td, td->clat_log, usec, ddir, bs);
 
 	if (ts->clat_percentiles)
 		add_clat_percentile_sample(ts, usec, ddir);
@@ -971,8 +971,8 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	add_stat_sample(&ts->slat_stat[ddir], usec);
 
-	if (ts->slat_log)
-		add_log_sample(td, ts->slat_log, usec, ddir, bs);
+	if (td->slat_log)
+		add_log_sample(td, td->slat_log, usec, ddir, bs);
 }
 
 void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
@@ -985,8 +985,8 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	add_stat_sample(&ts->lat_stat[ddir], usec);
 
-	if (ts->lat_log)
-		add_log_sample(td, ts->lat_log, usec, ddir, bs);
+	if (td->lat_log)
+		add_log_sample(td, td->lat_log, usec, ddir, bs);
 }
 
 void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
@@ -1006,8 +1006,8 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 			1000 / spent / 1024;
 	add_stat_sample(&ts->bw_stat[ddir], rate);
 
-	if (ts->bw_log)
-		add_log_sample(td, ts->bw_log, rate, ddir, bs);
+	if (td->bw_log)
+		add_log_sample(td, td->bw_log, rate, ddir, bs);
 
 	fio_gettime(&ts->stat_sample_time[ddir], NULL);
 	ts->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
