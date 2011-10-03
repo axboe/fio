@@ -168,6 +168,19 @@ struct thread_stat {
 	uint32_t kb_base;
 };
 
+struct jobs_eta {
+	uint32_t nr_running;
+	uint32_t nr_ramp;
+	uint32_t nr_pending;
+	uint32_t files_open;
+	uint32_t m_rate, t_rate;
+	uint32_t m_iops, t_iops;
+	uint32_t rate[2];
+	uint32_t iops[2];
+	uint64_t elapsed_sec;
+	uint64_t eta_sec;
+};
+
 extern void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs);
 extern void show_group_stats(struct group_run_stats *rs);
 
