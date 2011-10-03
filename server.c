@@ -480,6 +480,8 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	struct cmd_ts_pdu p;
 	int i, j;
 
+	memset(&p, 0, sizeof(p));
+
 	strcpy(p.ts.name, ts->name);
 	strcpy(p.ts.verror, ts->verror);
 	strcpy(p.ts.description, ts->description);
