@@ -115,8 +115,8 @@ struct group_run_stats {
 struct thread_stat {
 	char name[FIO_JOBNAME_SIZE];
 	char verror[FIO_VERROR_SIZE];
-	int32_t error;
-	int32_t groupid;
+	uint32_t error;
+	uint32_t groupid;
 	uint32_t pid;
 	char description[FIO_JOBNAME_SIZE];
 	uint32_t members;
@@ -163,7 +163,7 @@ struct thread_stat {
 	 */
 	uint16_t continue_on_error;
 	uint64_t total_err_count;
-	int32_t first_error;
+	uint32_t first_error;
 
 	uint32_t kb_base;
 };

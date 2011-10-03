@@ -180,11 +180,11 @@ void fio_net_cmd_crc(struct fio_net_cmd *cmd)
 {
 	uint32_t pdu_len;
 
-	cmd->cmd_crc16 = cpu_to_le16(crc16(cmd, FIO_NET_CMD_CRC_SZ));
+	cmd->cmd_crc16 = __cpu_to_le16(crc16(cmd, FIO_NET_CMD_CRC_SZ));
 
 	pdu_len = le32_to_cpu(cmd->pdu_len);
 	if (pdu_len)
-		cmd->pdu_crc16 = cpu_to_le16(crc16(cmd->payload, pdu_len));
+		cmd->pdu_crc16 = __cpu_to_le16(crc16(cmd->payload, pdu_len));
 }
 
 int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size)
@@ -203,7 +203,7 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size)
 		fio_init_net_cmd(cmd, opcode, buf, this_len);
 
 		if (this_len < size)
-			cmd->flags = cpu_to_le32(FIO_NET_CMD_F_MORE);
+			cmd->flags = __cpu_to_le32(FIO_NET_CMD_F_MORE);
 
 		fio_net_cmd_crc(cmd);
 
@@ -219,7 +219,7 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size)
 static int send_simple_command(int sk, uint16_t opcode, uint64_t serial)
 {
 	struct fio_net_cmd cmd = {
-		.version	= cpu_to_le16(FIO_SERVER_VER1),
+		.version	= __cpu_to_le16(FIO_SERVER_VER1),
 		.opcode		= cpu_to_le16(opcode),
 		.serial		= cpu_to_le64(serial),
 	};
@@ -442,8 +442,8 @@ static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
 	dst->min_val	= cpu_to_le64(src->min_val);
 	dst->samples	= cpu_to_le64(src->samples);
 	/* FIXME */
-	dst->mean	= cpu_to_le64(src->mean);
-	dst->S		= cpu_to_le64(src->S);
+	dst->mean	= __cpu_to_le64(src->mean);
+	dst->S		= __cpu_to_le64(src->S);
 }
 
 static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
@@ -476,9 +476,9 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	strcpy(p.ts.verror, ts->verror);
 	strcpy(p.ts.description, ts->description);
 
-	p.ts.error		= cpu_to_le32(ts->error);
+	p.ts.error	= cpu_to_le32(ts->error);
 	p.ts.groupid	= cpu_to_le32(ts->groupid);
-	p.ts.pid		= cpu_to_le32(ts->pid);
+	p.ts.pid	= cpu_to_le32(ts->pid);
 	p.ts.members	= cpu_to_le32(ts->members);
 
 	for (i = 0; i < 2; i++) {
@@ -527,8 +527,8 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.total_run_time	= cpu_to_le64(ts->total_run_time);
 	p.ts.continue_on_error	= cpu_to_le16(ts->continue_on_error);
 	p.ts.total_err_count	= cpu_to_le64(ts->total_err_count);
-	p.ts.first_error	= cpu_to_le64(ts->first_error);
-	p.ts.kb_base		= cpu_to_le64(ts->kb_base);
+	p.ts.first_error	= cpu_to_le32(ts->first_error);
+	p.ts.kb_base		= cpu_to_le32(ts->kb_base);
 
 	convert_gs(&p.rs, rs);
 

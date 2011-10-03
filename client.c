@@ -208,8 +208,8 @@ static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
 	dst->min_val	= le64_to_cpu(src->min_val);
 	dst->samples	= le64_to_cpu(src->samples);
 	/* FIXME */
-	dst->mean	= le64_to_cpu(src->mean);
-	dst->S		= le64_to_cpu(src->S);
+	dst->mean	= __le64_to_cpu(src->mean);
+	dst->S		= __le64_to_cpu(src->S);
 }
 
 static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
@@ -267,8 +267,8 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->total_run_time	= le64_to_cpu(src->total_run_time);
 	dst->continue_on_error	= le16_to_cpu(src->continue_on_error);
 	dst->total_err_count	= le64_to_cpu(src->total_err_count);
-	dst->first_error	= le64_to_cpu(src->first_error);
-	dst->kb_base		= le64_to_cpu(src->kb_base);
+	dst->first_error	= le32_to_cpu(src->first_error);
+	dst->kb_base		= le32_to_cpu(src->kb_base);
 }
 
 static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)

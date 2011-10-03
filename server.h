@@ -76,29 +76,54 @@ extern int exit_backend;
 extern int fio_net_port;
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-#define le16_to_cpu(x)		(x)
-#define le32_to_cpu(x)		(x)
-#define le64_to_cpu(x)		(x)
-#define cpu_to_le16(x)		(x)
-#define cpu_to_le32(x)		(x)
-#define cpu_to_le64(x)		(x)
+#define __le16_to_cpu(x)		(x)
+#define __le32_to_cpu(x)		(x)
+#define __le64_to_cpu(x)		(x)
+#define __cpu_to_le16(x)		(x)
+#define __cpu_to_le32(x)		(x)
+#define __cpu_to_le64(x)		(x)
 #elif __BYTE_ORDER == __BIG_ENDIAN
-#define le16_to_cpu(x)		__bswap_16(x)
-#define le32_to_cpu(x)		__bswap_32(x)
-#define le64_to_cpu(x)		__bswap_64(x)
-#define cpu_to_le16(x)		__bswap_16(x)
-#define cpu_to_le32(x)		__bswap_32(x)
-#define cpu_to_le64(x)		__bswap_64(x)
+#define __le16_to_cpu(x)		__bswap_16(x)
+#define __le32_to_cpu(x)		__bswap_32(x)
+#define __le64_to_cpu(x)		__bswap_64(x)
+#define __cpu_to_le16(x)		__bswap_16(x)
+#define __cpu_to_le32(x)		__bswap_32(x)
+#define __cpu_to_le64(x)		__bswap_64(x)
 #else
 #error "Endianness not detected"
 #endif
+
+#define le16_to_cpu(val) ({			\
+	uint16_t *__val = &(val);		\
+	__le16_to_cpu(*__val);			\
+})
+#define le32_to_cpu(val) ({			\
+	uint32_t *__val = &(val);		\
+	__le32_to_cpu(*__val);			\
+})
+#define le64_to_cpu(val) ({			\
+	uint64_t *__val = &(val);		\
+	__le64_to_cpu(*__val);			\
+})
+#define cpu_to_le16(val) ({			\
+	uint16_t *__val = &(val);		\
+	__cpu_to_le16(*__val);			\
+})
+#define cpu_to_le32(val) ({			\
+	uint32_t *__val = &(val);		\
+	__cpu_to_le32(*__val);			\
+})
+#define cpu_to_le64(val) ({			\
+	uint64_t *__val = &(val);		\
+	__cpu_to_le64(*__val);			\
+})
 
 static inline void fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
 				    const void *pdu, uint32_t pdu_len)
 {
 	memset(cmd, 0, sizeof(*cmd));
 
-	cmd->version	= cpu_to_le16(FIO_SERVER_VER1);
+	cmd->version	= __cpu_to_le16(FIO_SERVER_VER1);
 	cmd->opcode	= cpu_to_le16(opcode);
 
 	if (pdu) {
