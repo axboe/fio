@@ -26,12 +26,13 @@ enum {
 	FIO_SERVER_MAX_PDU	= 64,
 
 	FIO_NET_CMD_QUIT	= 1,
-	FIO_NET_CMD_JOB		= 2,
-	FIO_NET_CMD_ACK		= 3,
-	FIO_NET_CMD_NAK		= 4,
-	FIO_NET_CMD_TEXT	= 5,
+	FIO_NET_CMD_EXIT	= 2,
+	FIO_NET_CMD_JOB		= 3,
+	FIO_NET_CMD_ACK		= 4,
+	FIO_NET_CMD_NAK		= 5,
+	FIO_NET_CMD_TEXT	= 6,
 
-	FIO_NET_CMD_F_MORE	= 1,
+	FIO_NET_CMD_F_MORE	= 1UL << 0,
 
 	/* crc does not include the crc fields */
 	FIO_NET_CMD_CRC_SZ	= sizeof(struct fio_net_cmd) -

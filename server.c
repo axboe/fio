@@ -176,7 +176,7 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const char *buf, off_t size)
 		fio_init_net_cmd(cmd, opcode, buf, this_len);
 
 		if (this_len < size)
-			cmd->flags |= FIO_NET_CMD_F_MORE;
+			cmd->flags = cpu_to_le32(FIO_NET_CMD_F_MORE);
 
 		fio_net_cmd_crc(cmd);
 
@@ -264,6 +264,8 @@ static int handle_command(struct fio_net_cmd *cmd)
 
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
+		return 1;
+	case FIO_NET_CMD_EXIT:
 		exit_backend = 1;
 		return 1;
 	case FIO_NET_CMD_ACK:
