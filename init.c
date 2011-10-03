@@ -1021,6 +1021,9 @@ static int setup_thread_area(void)
 {
 	void *hash;
 
+	if (threads)
+		return 0;
+
 	/*
 	 * 1024 is too much on some machines, scale max_jobs if
 	 * we get a failure that looks like too large a shm segment
@@ -1279,6 +1282,12 @@ static int parse_cmd_line(int argc, char *argv[])
 			const char *opt = l_opts[lidx].name;
 			char *val = optarg;
 
+			if (setup_thread_area()) {
+				do_exit++;
+				exit_val = 1;
+				break;
+			}
+
 			if (!strncmp(opt, "name", 4) && td) {
 				ret = add_job(td, td->o.name ?: "fio", 0);
 				if (ret)
@@ -1343,6 +1352,8 @@ static int parse_cmd_line(int argc, char *argv[])
 			exit_val = 1;
 			break;
 		}
+		if (do_exit)
+			break;
 	}
 
 	if (do_exit)
@@ -1382,12 +1393,16 @@ int parse_options(int argc, char *argv[])
 	fio_options_fill_optstring();
 	fio_options_dup_and_init(l_opts);
 
-	if (setup_thread_area())
-		return 1;
 	if (fill_def_thread())
 		return 1;
 
 	job_files = parse_cmd_line(argc, argv);
+
+	/*
+	 * Don't setup shared memory for the frontend
+	 */
+	if (!nr_clients && setup_thread_area())
+		return 1;
 
 	for (i = 0; i < job_files; i++) {
 		if (fill_def_thread())
