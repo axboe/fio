@@ -128,6 +128,8 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 		do {
 			ret = poll(&pfd, 1, 100);
 			if (ret < 0) {
+				if (errno == EINTR)
+					break;
 				log_err("fio: poll: %s\n", strerror(errno));
 				break;
 			} else if (!ret)
