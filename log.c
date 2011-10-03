@@ -2,8 +2,23 @@
 #include <fcntl.h>
 #include <string.h>
 #include <stdarg.h>
+#include <syslog.h>
 
 #include "fio.h"
+
+int log_valist(const char *str, va_list args)
+{
+	if (log_syslog) {
+		vsyslog(LOG_INFO, str, args);
+		return 0;
+	} else {
+		char buffer[1024];
+		size_t len;
+
+		len = vsnprintf(buffer, sizeof(buffer), str, args);
+		return fwrite(buffer, len, 1, f_out);
+	}
+}
 
 int log_local(const char *format, ...)
 {
@@ -12,10 +27,16 @@ int log_local(const char *format, ...)
 	size_t len;
 
 	va_start(args, format);
-	len = vsnprintf(buffer, sizeof(buffer), format, args);
-	va_end(args);
 
-	return fwrite(buffer, len, 1, f_out);
+	if (log_syslog) {
+		vsyslog(LOG_INFO, format, args);
+		va_end(args);
+		return 0;
+	} else {
+		len = vsnprintf(buffer, sizeof(buffer), format, args);
+		va_end(args);
+		return fwrite(buffer, len, 1, f_out);
+	}
 }
 
 int log_info(const char *format, ...)

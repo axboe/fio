@@ -653,6 +653,7 @@ extern int warnings_fatal;
 extern int terse_version;
 extern int is_backend;
 extern int nr_clients;
+extern int log_syslog;
 
 extern struct thread_data *threads;
 

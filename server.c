@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <syslog.h>
 
 #include "fio.h"
 #include "server.h"
@@ -363,7 +364,7 @@ out:
 	return exitval;
 }
 
-int fio_server(void)
+static int fio_server(void)
 {
 	struct sockaddr_in saddr_in;
 	struct sockaddr addr;
@@ -434,4 +435,29 @@ int fio_server_log(const char *format, ...)
 	va_end(args);
 
 	return fio_server_text_output(buffer, len);
+}
+
+int fio_start_server(int daemonize)
+{
+	pid_t pid;
+
+	if (!daemonize)
+		return fio_server();
+
+	openlog("fio", LOG_NDELAY|LOG_NOWAIT|LOG_PID, LOG_USER);
+	pid = fork();
+	if (pid < 0) {
+		syslog(LOG_ERR, "failed server fork");
+		return 1;
+	} else if (pid)
+		exit(0);
+
+	setsid();
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+	f_out = NULL;
+	f_err = NULL;
+	log_syslog = 1;
+	return fio_server();
 }

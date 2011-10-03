@@ -47,6 +47,7 @@ int warnings_fatal = 0;
 int terse_version = 2;
 int is_backend = 0;
 int nr_clients = 0;
+int log_syslog = 0;
 
 int write_bw_log = 0;
 int read_only = 0;
@@ -160,6 +161,10 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "server",
 		.has_arg	= no_argument,
 		.val		= 'S',
+	},
+	{	.name		= (char *) "daemonize",
+		.has_arg	= no_argument,
+		.val		= 'D',
 	},
 	{
 		.name		= (char *) "net-port",
@@ -1192,6 +1197,7 @@ static int parse_cmd_line(int argc, char *argv[])
 	struct thread_data *td = NULL;
 	int c, ini_idx = 0, lidx, ret = 0, do_exit = 0, exit_val = 0;
 	char *ostr = cmd_optstr;
+	int daemonize_server = 0;
 
 	while ((c = getopt_long_only(argc, argv, ostr, l_opts, &lidx)) != -1) {
 		switch (c) {
@@ -1317,6 +1323,9 @@ static int parse_cmd_line(int argc, char *argv[])
 			}
 			is_backend = 1;
 			break;
+		case 'D':
+			daemonize_server = 1;
+			break;
 		case 'P':
 			fio_net_port = atoi(optarg);
 			break;
@@ -1346,7 +1355,7 @@ static int parse_cmd_line(int argc, char *argv[])
 	}
 
 	if (is_backend)
-		return fio_server();
+		return fio_start_server(daemonize_server);
 
 	if (td) {
 		if (!ret)

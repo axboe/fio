@@ -38,7 +38,7 @@ enum {
 					2 * sizeof(uint16_t),
 };
 
-extern int fio_server(void);
+extern int fio_start_server(int);
 extern int fio_server_text_output(const char *, unsigned int len);
 extern int fio_server_log(const char *format, ...);
 extern int fio_net_send_cmd(int, uint16_t, const char *, off_t);
