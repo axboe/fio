@@ -309,6 +309,7 @@ static void handle_gs(struct fio_net_cmd *cmd)
 static int handle_client(struct fio_client *client)
 {
 	struct fio_net_cmd *cmd;
+	int done = 0;
 
 	while ((cmd = fio_net_recv_cmd(client->fd)) != NULL) {
 		dprint(FD_NET, "%s: got cmd op %d\n", client->hostname,
@@ -321,6 +322,7 @@ static int handle_client(struct fio_client *client)
 		case FIO_NET_CMD_QUIT:
 			remove_client(client);
 			free(cmd);
+			done = 1;
 			break;
 		case FIO_NET_CMD_TEXT:
 			fwrite(cmd->payload, cmd->pdu_len, 1, stdout);
@@ -340,6 +342,9 @@ static int handle_client(struct fio_client *client)
 			free(cmd);
 			break;
 		}
+
+		if (done)
+			break;
 	}
 
 	return 0;
