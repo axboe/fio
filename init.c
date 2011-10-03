@@ -181,6 +181,74 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 	},
 };
 
+static void free_shm(void)
+{
+	struct shmid_ds sbuf;
+
+	if (threads) {
+		void *tp = threads;
+
+		threads = NULL;
+		file_hash_exit();
+		fio_debug_jobp = NULL;
+		shmdt(tp);
+		shmctl(shm_id, IPC_RMID, &sbuf);
+	}
+
+	scleanup();
+}
+
+/*
+ * The thread area is shared between the main process and the job
+ * threads/processes. So setup a shared memory segment that will hold
+ * all the job info. We use the end of the region for keeping track of
+ * open files across jobs, for file sharing.
+ */
+static int setup_thread_area(void)
+{
+	void *hash;
+
+	if (threads)
+		return 0;
+
+	/*
+	 * 1024 is too much on some machines, scale max_jobs if
+	 * we get a failure that looks like too large a shm segment
+	 */
+	do {
+		size_t size = max_jobs * sizeof(struct thread_data);
+
+		size += file_hash_size;
+		size += sizeof(unsigned int);
+
+		shm_id = shmget(0, size, IPC_CREAT | 0600);
+		if (shm_id != -1)
+			break;
+		if (errno != EINVAL) {
+			perror("shmget");
+			break;
+		}
+
+		max_jobs >>= 1;
+	} while (max_jobs);
+
+	if (shm_id == -1)
+		return 1;
+
+	threads = shmat(shm_id, NULL, 0);
+	if (threads == (void *) -1) {
+		perror("shmat");
+		return 1;
+	}
+
+	memset(threads, 0, max_jobs * sizeof(struct thread_data));
+	hash = (void *) threads + max_jobs * sizeof(struct thread_data);
+	fio_debug_jobp = (void *) hash + file_hash_size;
+	*fio_debug_jobp = -1;
+	file_hash_init(hash);
+	return 0;
+}
+
 /*
  * Return a free job structure.
  */
@@ -190,6 +258,10 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 
 	if (global)
 		return &def_thread;
+	if (setup_thread_area()) {
+		log_err("error: failed to setup shm segment\n");
+		return NULL;
+	}
 	if (thread_number >= max_jobs) {
 		log_err("error: maximum number of jobs (%d) reached.\n",
 				max_jobs);
@@ -994,75 +1066,6 @@ static int fill_def_thread(void)
 	return 0;
 }
 
-static void free_shm(void)
-{
-	struct shmid_ds sbuf;
-
-	if (threads) {
-		void *tp = threads;
-
-		threads = NULL;
-		file_hash_exit();
-		fio_debug_jobp = NULL;
-		shmdt(tp);
-		shmctl(shm_id, IPC_RMID, &sbuf);
-	}
-
-	scleanup();
-}
-
-/*
- * The thread area is shared between the main process and the job
- * threads/processes. So setup a shared memory segment that will hold
- * all the job info. We use the end of the region for keeping track of
- * open files across jobs, for file sharing.
- */
-static int setup_thread_area(void)
-{
-	void *hash;
-
-	if (threads)
-		return 0;
-
-	/*
-	 * 1024 is too much on some machines, scale max_jobs if
-	 * we get a failure that looks like too large a shm segment
-	 */
-	do {
-		size_t size = max_jobs * sizeof(struct thread_data);
-
-		size += file_hash_size;
-		size += sizeof(unsigned int);
-
-		shm_id = shmget(0, size, IPC_CREAT | 0600);
-		if (shm_id != -1)
-			break;
-		if (errno != EINVAL) {
-			perror("shmget");
-			break;
-		}
-
-		max_jobs >>= 1;
-	} while (max_jobs);
-
-	if (shm_id == -1)
-		return 1;
-
-	threads = shmat(shm_id, NULL, 0);
-	if (threads == (void *) -1) {
-		perror("shmat");
-		return 1;
-	}
-
-	memset(threads, 0, max_jobs * sizeof(struct thread_data));
-	hash = (void *) threads + max_jobs * sizeof(struct thread_data);
-	fio_debug_jobp = (void *) hash + file_hash_size;
-	*fio_debug_jobp = -1;
-	file_hash_init(hash);
-	atexit(free_shm);
-	return 0;
-}
-
 static void usage(const char *name)
 {
 	printf("%s\n", fio_version_string);
@@ -1282,12 +1285,6 @@ static int parse_cmd_line(int argc, char *argv[])
 			const char *opt = l_opts[lidx].name;
 			char *val = optarg;
 
-			if (setup_thread_area()) {
-				do_exit++;
-				exit_val = 1;
-				break;
-			}
-
 			if (!strncmp(opt, "name", 4) && td) {
 				ret = add_job(td, td->o.name ?: "fio", 0);
 				if (ret)
@@ -1393,16 +1390,12 @@ int parse_options(int argc, char *argv[])
 	fio_options_fill_optstring();
 	fio_options_dup_and_init(l_opts);
 
+	atexit(free_shm);
+
 	if (fill_def_thread())
 		return 1;
 
 	job_files = parse_cmd_line(argc, argv);
-
-	/*
-	 * Don't setup shared memory for the frontend
-	 */
-	if (!nr_clients && setup_thread_area())
-		return 1;
 
 	for (i = 0; i < job_files; i++) {
 		if (fill_def_thread())
