@@ -575,6 +575,8 @@ enum {
 };
 
 extern void td_set_runstate(struct thread_data *, int);
+#define TERMINATE_ALL		(-1)
+extern void fio_terminate_threads(int);
 
 /*
  * Memory helpers

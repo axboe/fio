@@ -118,11 +118,45 @@ static int fio_client_connect(struct fio_client *client)
 	return 0;
 }
 
+void fio_clients_terminate(void)
+{
+	struct flist_head *entry;
+	struct fio_client *client;
+
+	flist_for_each(entry, &client_list) {
+		client = flist_entry(entry, struct fio_client, list);
+
+		fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_QUIT, 0);
+	}
+}
+
+static void sig_int(int sig)
+{
+	fio_clients_terminate();
+}
+
+static void client_signal_handler(void)
+{
+	struct sigaction act;
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_int;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGINT, &act, NULL);
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_int;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGTERM, &act, NULL);
+}
+
 int fio_clients_connect(void)
 {
 	struct fio_client *client;
 	struct flist_head *entry, *tmp;
 	int ret;
+
+	client_signal_handler();
 
 	flist_for_each_safe(entry, tmp, &client_list) {
 		client = flist_entry(entry, struct fio_client, list);

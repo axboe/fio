@@ -75,7 +75,6 @@ unsigned long arch_flags = 0;
 
 struct io_log *agg_io_log[2];
 
-#define TERMINATE_ALL		(-1)
 #define JOB_START_TIMEOUT	(5 * 1000)
 
 void td_set_runstate(struct thread_data *td, int runstate)
@@ -88,7 +87,7 @@ void td_set_runstate(struct thread_data *td, int runstate)
 	td->runstate = runstate;
 }
 
-static void terminate_threads(int group_id)
+void fio_terminate_threads(int group_id)
 {
 	struct thread_data *td;
 	int i;
@@ -126,7 +125,7 @@ static void sig_int(int sig)
 		exit_backend = 1;
 		fflush(stdout);
 		exit_value = 128;
-		terminate_threads(TERMINATE_ALL);
+		fio_terminate_threads(TERMINATE_ALL);
 	}
 }
 
@@ -184,6 +183,13 @@ static void set_sig_handlers(void)
 	act.sa_handler = sig_int;
 	act.sa_flags = SA_RESTART;
 	sigaction(SIGTERM, &act, NULL);
+
+	if (is_backend) {
+		memset(&act, 0, sizeof(act));
+		act.sa_handler = sig_int;
+		act.sa_flags = SA_RESTART;
+		sigaction(SIGPIPE, &act, NULL);
+	}
 }
 
 /*
@@ -750,7 +756,7 @@ sync_done:
 		if (!in_ramp_time(td) && should_check_rate(td, bytes_done)) {
 			if (check_min_rate(td, &comp_time, bytes_done)) {
 				if (exitall_on_terminate)
-					terminate_threads(td->groupid);
+					fio_terminate_threads(td->groupid);
 				td_verror(td, EIO, "check_min_rate");
 				break;
 			}
@@ -1265,7 +1271,7 @@ static void *thread_main(void *data)
 		exec_string(td->o.exec_postrun);
 
 	if (exitall_on_terminate)
-		terminate_threads(td->groupid);
+		fio_terminate_threads(td->groupid);
 
 err:
 	if (td->error)
@@ -1419,7 +1425,7 @@ reaped:
 	}
 
 	if (*nr_running == cputhreads && !pending && realthreads)
-		terminate_threads(TERMINATE_ALL);
+		fio_terminate_threads(TERMINATE_ALL);
 }
 
 static void *gtod_thread_main(void *data)
@@ -1481,6 +1487,8 @@ static void run_threads(void)
 	if (fio_gtod_offload && fio_start_gtod_thread())
 		return;
 
+	set_sig_handlers();
+
 	if (!terse_output) {
 		log_info("Starting ");
 		if (nr_thread)
@@ -1495,8 +1503,6 @@ static void run_threads(void)
 		log_info("\n");
 		fflush(stdout);
 	}
-
-	set_sig_handlers();
 
 	todo = thread_number;
 	nr_running = 0;
@@ -1613,7 +1619,7 @@ static void run_threads(void)
 			dprint(FD_MUTEX, "wait on startup_mutex\n");
 			if (fio_mutex_down_timeout(startup_mutex, 10)) {
 				log_err("fio: job startup hung? exiting.\n");
-				terminate_threads(TERMINATE_ALL);
+				fio_terminate_threads(TERMINATE_ALL);
 				fio_abort = 1;
 				nr_started--;
 				break;
@@ -1687,6 +1693,10 @@ static void run_threads(void)
 
 	while (nr_running) {
 		reap_threads(&nr_running, &t_rate, &m_rate);
+
+		if (is_backend)
+			fio_server_idle_loop();
+
 		usleep(10000);
 	}
 

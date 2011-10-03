@@ -120,6 +120,30 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 	void *pdu = NULL;
 
 	do {
+		struct pollfd pfd;
+
+		pfd.fd = sk;
+		pfd.events = POLLIN;
+		ret = 0;
+		do {
+			ret = poll(&pfd, 1, 100);
+			if (ret < 0) {
+				log_err("fio: poll: %s\n", strerror(errno));
+				break;
+			} else if (!ret)
+				continue;
+
+			if (pfd.revents & POLLIN)
+				break;
+			if (pfd.revents & (POLLERR|POLLHUP)) {
+				ret = 1;
+				break;
+			}
+		} while (ret >= 0);
+
+		if (ret < 0)
+			break;
+
 		ret = fio_recv_data(sk, &cmd, sizeof(cmd));
 		if (ret)
 			break;
@@ -168,9 +192,7 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 	if (ret) {
 		free(cmdret);
 		cmdret = NULL;
-	}
-
-	if (cmdret)
+	} else if (cmdret)
 		cmdret->flags &= ~FIO_NET_CMD_F_MORE;
 
 	return cmdret;
@@ -216,7 +238,7 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size)
 	return ret;
 }
 
-static int send_simple_command(int sk, uint16_t opcode, uint64_t serial)
+int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t serial)
 {
 	struct fio_net_cmd cmd = {
 		.version	= __cpu_to_le16(FIO_SERVER_VER1),
@@ -229,29 +251,10 @@ static int send_simple_command(int sk, uint16_t opcode, uint64_t serial)
 	return fio_send_data(sk, &cmd, sizeof(cmd));
 }
 
-/*
- * Send an ack for this command
- */
-static int ack_command(int sk, struct fio_net_cmd *cmd)
-{
-#if 0
-	return send_simple_command(sk, FIO_NET_CMD_ACK, cmd->serial);
-#else
-	return 0;
-#endif
-}
-
-#if 0
-static int nak_command(int sk, struct fio_net_cmd *cmd)
-{
-	return send_simple_command(sk, FIO_NET_CMD_NAK, cmd->serial);
-}
-#endif
-
 static int send_quit_command(void)
 {
 	dprint(FD_NET, "server: sending quit\n");
-	return send_simple_command(server_fd, FIO_NET_CMD_QUIT, 0);
+	return fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_QUIT, 0);
 }
 
 static int handle_cur_job(struct fio_net_cmd *cmd)
@@ -274,6 +277,7 @@ static int handle_command(struct fio_net_cmd *cmd)
 
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
+		fio_terminate_threads(TERMINATE_ALL);
 		return 1;
 	case FIO_NET_CMD_EXIT:
 		exit_backend = 1;
@@ -306,10 +310,6 @@ static int handle_connection(int sk)
 			break;
 		}
 
-		ret = ack_command(sk, cmd);
-		if (ret)
-			break;
-
 		ret = handle_command(cmd);
 		if (ret)
 			break;
@@ -322,6 +322,12 @@ static int handle_connection(int sk)
 		free(cmd);
 
 	return ret;
+}
+
+void fio_server_idle_loop(void)
+{
+	if (server_fd != -1)
+		handle_connection(server_fd);
 }
 
 static int accept_loop(int listen_sk)
@@ -364,7 +370,11 @@ again:
 
 	server_fd = sk;
 
+	printf("handle\n");
+
 	exitval = handle_connection(sk);
+
+	printf("out, exit %d\n", exitval);
 
 	server_fd = -1;
 	close(sk);

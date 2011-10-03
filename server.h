@@ -57,12 +57,14 @@ extern int fio_start_server(int);
 extern int fio_server_text_output(const char *, unsigned int len);
 extern int fio_server_log(const char *format, ...);
 extern int fio_net_send_cmd(int, uint16_t, const void *, off_t);
+extern int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t serial);
 
 struct thread_stat;
 struct group_run_stats;
 extern void fio_server_send_ts(struct thread_stat *, struct group_run_stats *);
 extern void fio_server_send_gs(struct group_run_stats *);
 extern void fio_server_send_status(void);
+extern void fio_server_idle_loop(void);
 
 extern int fio_clients_connect(void);
 extern int fio_clients_send_ini(const char *);
