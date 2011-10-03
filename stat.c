@@ -727,8 +727,9 @@ void show_run_stats(void)
 			/*
 			 * These are per-group shared already
 			 */
-			ts->name = td->o.name;
-			ts->description = td->o.description;
+			strncpy(ts->name, td->o.name, FIO_JOBNAME_SIZE);
+			strncpy(ts->description, td->o.description,
+					FIO_JOBNAME_SIZE);
 			ts->groupid = td->groupid;
 
 			/*
@@ -750,10 +751,10 @@ void show_run_stats(void)
 			if (!td->error && td->o.continue_on_error &&
 			    td->first_error) {
 				ts->error = td->first_error;
-				ts->verror = td->verror;
+				strcpy(ts->verror, td->verror);
 			} else  if (td->error) {
 				ts->error = td->error;
-				ts->verror = td->verror;
+				strcpy(ts->verror, td->verror);
 			}
 		}
 

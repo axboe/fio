@@ -170,15 +170,17 @@ enum {
 #define FIO_IO_U_LIST_MAX_LEN 20 /* The size of the default and user-specified
 					list of percentiles */
 
-#define MAX_PATTERN_SIZE 512
+#define MAX_PATTERN_SIZE	512
+#define FIO_JOBNAME_SIZE	128
+#define FIO_VERROR_SIZE		128
 
 struct thread_stat {
-	char *name;
-	char *verror;
+	char name[FIO_JOBNAME_SIZE];
+	char verror[FIO_VERROR_SIZE];
 	int32_t error;
 	int32_t groupid;
 	uint32_t pid;
-	char *description;
+	char description[FIO_JOBNAME_SIZE];
 	uint32_t members;
 
 	/*
@@ -408,8 +410,6 @@ struct thread_options {
 
 	unsigned int userspace_libaio_reap;
 };
-
-#define FIO_VERROR_SIZE	128
 
 /*
  * This describes a single thread/process executing a fio job.
