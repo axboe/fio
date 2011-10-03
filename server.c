@@ -523,10 +523,10 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	for (i = 0; i < 3; i++) {
 		p.ts.total_io_u[i]	= cpu_to_le64(ts->total_io_u[i]);
-		p.ts.short_io_u[i]	= cpu_to_le64(ts->total_io_u[i]);
+		p.ts.short_io_u[i]	= cpu_to_le64(ts->short_io_u[i]);
 	}
 
-	p.ts.total_submit		= cpu_to_le64(ts->total_submit);
+	p.ts.total_submit	= cpu_to_le64(ts->total_submit);
 	p.ts.total_complete	= cpu_to_le64(ts->total_complete);
 
 	for (i = 0; i < 2; i++) {

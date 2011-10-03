@@ -287,7 +287,7 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 
 	for (i = 0; i < 3; i++) {
 		dst->total_io_u[i]	= le64_to_cpu(src->total_io_u[i]);
-		dst->short_io_u[i]	= le64_to_cpu(src->total_io_u[i]);
+		dst->short_io_u[i]	= le64_to_cpu(src->short_io_u[i]);
 	}
 
 	dst->total_submit	= le64_to_cpu(src->total_submit);
