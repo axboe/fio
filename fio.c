@@ -1169,7 +1169,7 @@ static void *thread_main(void *data)
 	}
 
 	fio_gettime(&td->epoch, NULL);
-	getrusage(RUSAGE_SELF, &td->ts.ru_start);
+	getrusage(RUSAGE_SELF, &td->ru_start);
 
 	clear_state = 0;
 	while (keep_running(td)) {

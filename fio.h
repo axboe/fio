@@ -192,8 +192,6 @@ struct thread_stat {
 	/*
 	 * fio system usage accounting
 	 */
-	struct rusage ru_start;
-	struct rusage ru_end;
 	uint64_t usr_time;
 	uint64_t sys_time;
 	uint64_t ctx;
@@ -431,6 +429,9 @@ struct thread_data {
 
 	uint64_t stat_io_bytes[2];
 	struct timeval stat_sample_time[2];
+
+	struct rusage ru_start;
+	struct rusage ru_end;
 
 	struct fio_file **files;
 	unsigned int files_size;

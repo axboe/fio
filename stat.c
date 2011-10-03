@@ -14,18 +14,18 @@ void update_rusage_stat(struct thread_data *td)
 {
 	struct thread_stat *ts = &td->ts;
 
-	getrusage(RUSAGE_SELF, &ts->ru_end);
+	getrusage(RUSAGE_SELF, &td->ru_end);
 
-	ts->usr_time += mtime_since(&ts->ru_start.ru_utime,
-					&ts->ru_end.ru_utime);
-	ts->sys_time += mtime_since(&ts->ru_start.ru_stime,
-					&ts->ru_end.ru_stime);
-	ts->ctx += ts->ru_end.ru_nvcsw + ts->ru_end.ru_nivcsw
-			- (ts->ru_start.ru_nvcsw + ts->ru_start.ru_nivcsw);
-	ts->minf += ts->ru_end.ru_minflt - ts->ru_start.ru_minflt;
-	ts->majf += ts->ru_end.ru_majflt - ts->ru_start.ru_majflt;
+	ts->usr_time += mtime_since(&td->ru_start.ru_utime,
+					&td->ru_end.ru_utime);
+	ts->sys_time += mtime_since(&td->ru_start.ru_stime,
+					&td->ru_end.ru_stime);
+	ts->ctx += td->ru_end.ru_nvcsw + td->ru_end.ru_nivcsw
+			- (td->ru_start.ru_nvcsw + td->ru_start.ru_nivcsw);
+	ts->minf += td->ru_end.ru_minflt - td->ru_start.ru_minflt;
+	ts->majf += td->ru_end.ru_majflt - td->ru_start.ru_majflt;
 
-	memcpy(&ts->ru_start, &ts->ru_end, sizeof(ts->ru_end));
+	memcpy(&td->ru_start, &td->ru_end, sizeof(td->ru_end));
 }
 
 /*
