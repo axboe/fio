@@ -135,7 +135,6 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 			cmd_size += cmd.pdu_len;
 
 		cmdret = realloc(cmdret, cmd_size);
-		pdu = (void *) cmdret->payload;
 
 		if (first)
 			memcpy(cmdret, &cmd, sizeof(cmd));
@@ -161,7 +160,8 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 		}
 
 		pdu_offset += cmd.pdu_len;
-		cmdret->pdu_len += cmd.pdu_len;
+		if (!first)
+			cmdret->pdu_len += cmd.pdu_len;
 		first = 0;
 	} while (cmd.flags & FIO_NET_CMD_F_MORE);
 
