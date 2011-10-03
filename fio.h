@@ -189,9 +189,6 @@ struct thread_stat {
 	struct io_stat lat_stat[2];		/* total latency */
 	struct io_stat bw_stat[2];		/* bandwidth stats */
 
-	uint64_t stat_io_bytes[2];
-	struct timeval stat_sample_time[2];
-
 	/*
 	 * fio system usage accounting
 	 */
@@ -431,6 +428,9 @@ struct thread_data {
 	struct io_log *clat_log;
 	struct io_log *lat_log;
 	struct io_log *bw_log;
+
+	uint64_t stat_io_bytes[2];
+	struct timeval stat_sample_time[2];
 
 	struct fio_file **files;
 	unsigned int files_size;

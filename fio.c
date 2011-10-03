@@ -974,7 +974,7 @@ static int keep_running(struct thread_data *td)
 
 static void reset_io_counters(struct thread_data *td)
 {
-	td->ts.stat_io_bytes[0] = td->ts.stat_io_bytes[1] = 0;
+	td->stat_io_bytes[0] = td->stat_io_bytes[1] = 0;
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
 	td->zone_bytes = 0;
 	td->rate_bytes[0] = td->rate_bytes[1] = 0;
@@ -1174,14 +1174,12 @@ static void *thread_main(void *data)
 	clear_state = 0;
 	while (keep_running(td)) {
 		fio_gettime(&td->start, NULL);
-		memcpy(&td->ts.stat_sample_time[0], &td->start,
-				sizeof(td->start));
-		memcpy(&td->ts.stat_sample_time[1], &td->start,
-				sizeof(td->start));
+		memcpy(&td->stat_sample_time[0], &td->start, sizeof(td->start));
+		memcpy(&td->stat_sample_time[1], &td->start, sizeof(td->start));
 		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
 
 		if (td->o.ratemin[0] || td->o.ratemin[1])
-			memcpy(&td->lastrate, &td->ts.stat_sample_time,
+			memcpy(&td->lastrate, &td->stat_sample_time,
 							sizeof(td->lastrate));
 
 		if (clear_state)

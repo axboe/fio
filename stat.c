@@ -763,7 +763,6 @@ void show_run_stats(void)
 			sum_stat(&ts->lat_stat[l], &td->ts.lat_stat[l], idx);
 			sum_stat(&ts->bw_stat[l], &td->ts.bw_stat[l], idx);
 
-			ts->stat_io_bytes[l] += td->ts.stat_io_bytes[l];
 			ts->io_bytes[l] += td->ts.io_bytes[l];
 
 			if (ts->runtime[l] < td->ts.runtime[l])
@@ -998,17 +997,17 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 	if (!ddir_rw(ddir))
 		return;
 
-	spent = mtime_since(&ts->stat_sample_time[ddir], t);
+	spent = mtime_since(&td->stat_sample_time[ddir], t);
 	if (spent < td->o.bw_avg_time)
 		return;
 
-	rate = (td->this_io_bytes[ddir] - ts->stat_io_bytes[ddir]) *
+	rate = (td->this_io_bytes[ddir] - td->stat_io_bytes[ddir]) *
 			1000 / spent / 1024;
 	add_stat_sample(&ts->bw_stat[ddir], rate);
 
 	if (td->bw_log)
 		add_log_sample(td, td->bw_log, rate, ddir, bs);
 
-	fio_gettime(&ts->stat_sample_time[ddir], NULL);
-	ts->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
+	fio_gettime(&td->stat_sample_time[ddir], NULL);
+	td->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
 }
