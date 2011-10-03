@@ -5,6 +5,8 @@
 #include <string.h>
 #include <endian.h>
 
+#include "stat.h"
+
 /*
  * On-wire encoding is little endian
  */
@@ -14,6 +16,10 @@ struct fio_net_cmd {
 	uint32_t flags;		/* modifier flags */
 	uint64_t serial;	/* serial number */
 	uint32_t pdu_len;	/* length of post-cmd layload */
+	/*
+	 * These must be immediately before the payload, anything before
+	 * these fields are checksummed.
+	 */
 	uint16_t cmd_crc16;	/* cmd checksum */
 	uint16_t pdu_crc16;	/* payload checksum */
 	uint8_t payload[0];	/* payload */
@@ -31,6 +37,8 @@ enum {
 	FIO_NET_CMD_ACK		= 4,
 	FIO_NET_CMD_NAK		= 5,
 	FIO_NET_CMD_TEXT	= 6,
+	FIO_NET_CMD_TS		= 7,
+	FIO_NET_CMD_GS		= 8,
 
 	FIO_NET_CMD_F_MORE	= 1UL << 0,
 
@@ -39,10 +47,20 @@ enum {
 					2 * sizeof(uint16_t),
 };
 
+struct cmd_ts_pdu {
+	struct thread_stat ts;
+	struct group_run_stats rs;
+};
+
 extern int fio_start_server(int);
 extern int fio_server_text_output(const char *, unsigned int len);
 extern int fio_server_log(const char *format, ...);
-extern int fio_net_send_cmd(int, uint16_t, const char *, off_t);
+extern int fio_net_send_cmd(int, uint16_t, const void *, off_t);
+
+struct thread_stat;
+struct group_run_stats;
+extern void fio_server_send_ts(struct thread_stat *, struct group_run_stats *);
+extern void fio_server_send_gs(struct group_run_stats *);
 
 extern int fio_clients_connect(void);
 extern int fio_clients_send_ini(const char *);
@@ -52,7 +70,7 @@ extern void fio_client_add(const char *);
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);
 extern void fio_net_cmd_crc(struct fio_net_cmd *);
-extern struct fio_net_cmd *fio_net_cmd_read(int sk);
+extern struct fio_net_cmd *fio_net_recv_cmd(int sk);
 
 extern int exit_backend;
 extern int fio_net_port;

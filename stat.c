@@ -191,13 +191,13 @@ static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 	return 1;
 }
 
-static void show_group_stats(struct group_run_stats *rs, int id)
+void show_group_stats(struct group_run_stats *rs)
 {
 	char *p1, *p2, *p3, *p4;
 	const char *ddir_str[] = { "   READ", "  WRITE" };
 	int i;
 
-	log_info("\nRun status group %d (all jobs):\n", id);
+	log_info("\nRun status group %d (all jobs):\n", rs->groupid);
 
 	for (i = 0; i <= DDIR_WRITE; i++) {
 		const int i2p = is_power_of_2(rs->kb_base);
@@ -433,8 +433,7 @@ static void show_latencies(double *io_u_lat_u, double *io_u_lat_m)
 	log_info("\n");
 }
 
-static void show_thread_status(struct thread_stat *ts,
-			       struct group_run_stats *rs)
+void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 {
 	double usr_cpu, sys_cpu;
 	unsigned long runtime;
@@ -728,8 +727,12 @@ void show_run_stats(void)
 			 * These are per-group shared already
 			 */
 			strncpy(ts->name, td->o.name, FIO_JOBNAME_SIZE);
-			strncpy(ts->description, td->o.description,
-					FIO_JOBNAME_SIZE);
+			if (td->o.description)
+				strncpy(ts->description, td->o.description,
+						FIO_JOBNAME_SIZE);
+			else
+				memset(ts->description, 0, FIO_JOBNAME_SIZE);
+
 			ts->groupid = td->groupid;
 
 			/*
@@ -858,15 +861,24 @@ void show_run_stats(void)
 		ts = &threadstats[i];
 		rs = &runstats[ts->groupid];
 
-		if (terse_output)
+		if (is_backend)
+			fio_server_send_ts(ts, rs);
+		else if (terse_output)
 			show_thread_status_terse(ts, rs);
 		else
 			show_thread_status(ts, rs);
 	}
 
 	if (!terse_output) {
-		for (i = 0; i < groupid + 1; i++)
-			show_group_stats(&runstats[i], i);
+		for (i = 0; i < groupid + 1; i++) {
+			rs = &runstats[i];
+
+			rs->groupid = i;
+			if (is_backend)
+				fio_server_send_gs(rs);
+			else
+				show_group_stats(rs);
+		}
 
 		show_disk_util();
 	}

@@ -202,31 +202,144 @@ int fio_clients_send_ini(const char *filename)
 	return !nr_clients;
 }
 
+static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
+{
+	dst->max_val	= le64_to_cpu(src->max_val);
+	dst->min_val	= le64_to_cpu(src->min_val);
+	dst->samples	= le64_to_cpu(src->samples);
+	/* FIXME */
+	dst->mean	= le64_to_cpu(src->mean);
+	dst->S		= le64_to_cpu(src->S);
+}
+
+static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
+{
+	int i, j;
+
+	dst->error	= le32_to_cpu(src->error);
+	dst->groupid	= le32_to_cpu(src->groupid);
+	dst->pid	= le32_to_cpu(src->pid);
+	dst->members	= le32_to_cpu(src->members);
+
+	for (i = 0; i < 2; i++) {
+		convert_io_stat(&dst->clat_stat[i], &src->clat_stat[i]);
+		convert_io_stat(&dst->slat_stat[i], &src->slat_stat[i]);
+		convert_io_stat(&dst->lat_stat[i], &src->lat_stat[i]);
+		convert_io_stat(&dst->bw_stat[i], &src->bw_stat[i]);
+	}
+
+	dst->usr_time		= le64_to_cpu(src->usr_time);
+	dst->sys_time		= le64_to_cpu(src->sys_time);
+	dst->ctx		= le64_to_cpu(src->ctx);
+	dst->minf		= le64_to_cpu(src->minf);
+	dst->majf		= le64_to_cpu(src->majf);
+	dst->clat_percentiles	= le64_to_cpu(src->clat_percentiles);
+	dst->percentile_list	= NULL;
+
+	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
+		dst->io_u_map[i]	= le32_to_cpu(src->io_u_map[i]);
+		dst->io_u_submit[i]	= le32_to_cpu(src->io_u_submit[i]);
+		dst->io_u_complete[i]	= le32_to_cpu(src->io_u_complete[i]);
+	}
+
+	for (i = 0; i < FIO_IO_U_LAT_U_NR; i++) {
+		dst->io_u_lat_u[i]	= le32_to_cpu(src->io_u_lat_u[i]);
+		dst->io_u_lat_m[i]	= le32_to_cpu(src->io_u_lat_m[i]);
+	}
+
+	for (i = 0; i < 2; i++)
+		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
+			dst->io_u_plat[i][j] = le32_to_cpu(src->io_u_plat[i][j]);
+
+	for (i = 0; i < 3; i++) {
+		dst->total_io_u[i]	= le64_to_cpu(src->total_io_u[i]);
+		dst->short_io_u[i]	= le64_to_cpu(src->total_io_u[i]);
+	}
+
+	dst->total_submit	= le64_to_cpu(src->total_submit);
+	dst->total_complete	= le64_to_cpu(src->total_complete);
+
+	for (i = 0; i < 2; i++) {
+		dst->io_bytes[i]	= le64_to_cpu(src->io_bytes[i]);
+		dst->runtime[i]		= le64_to_cpu(src->runtime[i]);
+	}
+
+	dst->total_run_time	= le64_to_cpu(src->total_run_time);
+	dst->continue_on_error	= le16_to_cpu(src->continue_on_error);
+	dst->total_err_count	= le64_to_cpu(src->total_err_count);
+	dst->first_error	= le64_to_cpu(src->first_error);
+	dst->kb_base		= le64_to_cpu(src->kb_base);
+}
+
+static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
+{
+	int i;
+
+	for (i = 0; i < 2; i++) {
+		dst->max_run[i]		= le64_to_cpu(src->max_run[i]);
+		dst->min_run[i]		= le64_to_cpu(src->min_run[i]);
+		dst->max_bw[i]		= le64_to_cpu(src->max_bw[i]);
+		dst->min_bw[i]		= le64_to_cpu(src->min_bw[i]);
+		dst->io_kb[i]		= le64_to_cpu(src->io_kb[i]);
+		dst->agg[i]		= le64_to_cpu(src->agg[i]);
+	}
+
+	dst->kb_base	= le32_to_cpu(src->kb_base);
+	dst->groupid	= le32_to_cpu(src->groupid);
+}
+
+static void handle_ts(struct fio_net_cmd *cmd)
+{
+	struct cmd_ts_pdu *p = (struct cmd_ts_pdu *) cmd->payload;
+
+	convert_ts(&p->ts, &p->ts);
+	convert_gs(&p->rs, &p->rs);
+
+	show_thread_status(&p->ts, &p->rs);
+}
+
+static void handle_gs(struct fio_net_cmd *cmd)
+{
+	struct group_run_stats *gs = (struct group_run_stats *) cmd->payload;
+
+	convert_gs(gs, gs);
+	show_group_stats(gs);
+}
+
 static int handle_client(struct fio_client *client)
 {
 	struct fio_net_cmd *cmd;
 
-	while ((cmd = fio_net_cmd_read(client->fd)) != NULL) {
+	while ((cmd = fio_net_recv_cmd(client->fd)) != NULL) {
 		dprint(FD_NET, "%s: got cmd op %d\n", client->hostname,
 							cmd->opcode);
 
-		if (cmd->opcode == FIO_NET_CMD_ACK) {
+		switch (cmd->opcode) {
+		case FIO_NET_CMD_ACK:
 			free(cmd);
-			continue;
-		}
-		if (cmd->opcode == FIO_NET_CMD_QUIT) {
+			break;
+		case FIO_NET_CMD_QUIT:
 			remove_client(client);
 			free(cmd);
 			break;
-		}
-		if (cmd->opcode != FIO_NET_CMD_TEXT) {
-			printf("non text: %d\n", cmd->opcode);
+		case FIO_NET_CMD_TEXT:
+			fwrite(cmd->payload, cmd->pdu_len, 1, stdout);
+			fflush(stdout);
 			free(cmd);
-			continue;
+			break;
+		case FIO_NET_CMD_TS:
+			handle_ts(cmd);
+			free(cmd);
+			break;
+		case FIO_NET_CMD_GS:
+			handle_gs(cmd);
+			free(cmd);
+			break;
+		default:
+			log_err("fio: unknown client op: %d\n", cmd->opcode);
+			free(cmd);
+			break;
 		}
-		fwrite(cmd->payload, cmd->pdu_len, 1, stdout);
-		fflush(stdout);
-		free(cmd);
 	}
 
 	return 0;

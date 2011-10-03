@@ -22,10 +22,6 @@ int fio_net_port = 8765;
 
 int exit_backend = 0;
 
-static char *job_buf;
-static unsigned int job_cur_len;
-static unsigned int job_max_len;
-
 static int server_fd = -1;
 
 int fio_send_data(int sk, const void *p, unsigned int len)
@@ -112,41 +108,72 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 	return 0;
 }
 
-struct fio_net_cmd *fio_net_cmd_read(int sk)
+/*
+ * Read (and defragment, if necessary) incoming commands
+ */
+struct fio_net_cmd *fio_net_recv_cmd(int sk)
 {
-	struct fio_net_cmd cmd, *ret = NULL;
+	struct fio_net_cmd cmd, *cmdret = NULL;
+	size_t cmd_size = 0, pdu_offset = 0;
 	uint16_t crc;
+	int ret, first = 1;
+	void *pdu = NULL;
 
-	if (fio_recv_data(sk, &cmd, sizeof(cmd)))
-		return NULL;
+	do {
+		ret = fio_recv_data(sk, &cmd, sizeof(cmd));
+		if (ret)
+			break;
 
-	/* We have a command, verify it and swap if need be */
-	if (verify_convert_cmd(&cmd))
-		return NULL;
+		/* We have a command, verify it and swap if need be */
+		ret = verify_convert_cmd(&cmd);
+		if (ret)
+			break;
 
-	/* Command checks out, alloc real command and fill in */
-	ret = malloc(sizeof(cmd) + cmd.pdu_len);
-	memcpy(ret, &cmd, sizeof(cmd));
+		if (first)
+			cmd_size = sizeof(cmd) + cmd.pdu_len;
+		else
+			cmd_size += cmd.pdu_len;
 
-	if (!ret->pdu_len)
-		return ret;
+		cmdret = realloc(cmdret, cmd_size);
+		pdu = (void *) cmdret->payload;
 
-	/* There's payload, get it */
-	if (fio_recv_data(sk, (void *) ret + sizeof(*ret), ret->pdu_len)) {
-		free(ret);
-		return NULL;
+		if (first)
+			memcpy(cmdret, &cmd, sizeof(cmd));
+		else
+			assert(cmdret->opcode == cmd.opcode);
+
+		if (!cmd.pdu_len)
+			break;
+
+		/* There's payload, get it */
+		pdu = (void *) cmdret->payload + pdu_offset;
+		ret = fio_recv_data(sk, pdu, cmd.pdu_len);
+		if (ret)
+			break;
+
+		/* Verify payload crc */
+		crc = crc16(pdu, cmd.pdu_len);
+		if (crc != cmd.pdu_crc16) {
+			log_err("fio: server bad crc on payload ");
+			log_err("(got %x, wanted %x)\n", cmd.pdu_crc16, crc);
+			ret = 1;
+			break;
+		}
+
+		pdu_offset += cmd.pdu_len;
+		cmdret->pdu_len += cmd.pdu_len;
+		first = 0;
+	} while (cmd.flags & FIO_NET_CMD_F_MORE);
+
+	if (ret) {
+		free(cmdret);
+		cmdret = NULL;
 	}
 
-	/* Verify payload crc */
-	crc = crc16(ret->payload, ret->pdu_len);
-	if (crc != ret->pdu_crc16) {
-		log_err("fio: server bad crc on payload (got %x, wanted %x)\n",
-				ret->pdu_crc16, crc);
-		free(ret);
-		return NULL;
-	}
+	if (cmdret)
+		cmdret->flags &= ~FIO_NET_CMD_F_MORE;
 
-	return ret;
+	return cmdret;
 }
 
 void fio_net_cmd_crc(struct fio_net_cmd *cmd)
@@ -160,7 +187,7 @@ void fio_net_cmd_crc(struct fio_net_cmd *cmd)
 		cmd->pdu_crc16 = cpu_to_le16(crc16(cmd->payload, pdu_len));
 }
 
-int fio_net_send_cmd(int fd, uint16_t opcode, const char *buf, off_t size)
+int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size)
 {
 	struct fio_net_cmd *cmd;
 	size_t this_len;
@@ -229,30 +256,13 @@ static int send_quit_command(void)
 
 static int handle_cur_job(struct fio_net_cmd *cmd)
 {
-	unsigned int left = job_max_len - job_cur_len;
-	int ret = 0;
+	void *buf = cmd->payload;
+	int ret;
 
-	if (left < cmd->pdu_len) {
-		job_buf = realloc(job_buf, job_max_len + 2 * cmd->pdu_len);
-		job_max_len += 2 * cmd->pdu_len;
-	}
-
-	memcpy(job_buf + job_cur_len, cmd->payload, cmd->pdu_len);
-	job_cur_len += cmd->pdu_len;
-
-	/*
-	 * More data coming for this job
-	 */
-	if (cmd->flags & FIO_NET_CMD_F_MORE)
-		return 0;
-
-	parse_jobs_ini(job_buf, 1, 0);
+	parse_jobs_ini(buf, 1, 0);
 	ret = exec_run();
 	send_quit_command();
 	reset_fio_state();
-	free(job_buf);
-	job_buf = NULL;
-	job_cur_len = job_max_len = 0;
 	return ret;
 }
 
@@ -290,7 +300,7 @@ static int handle_connection(int sk)
 
 	/* read forever */
 	while (!exit_backend) {
-		cmd = fio_net_cmd_read(sk);
+		cmd = fio_net_recv_cmd(sk);
 		if (!cmd) {
 			ret = 1;
 			break;
@@ -424,6 +434,113 @@ int fio_server_text_output(const char *buf, unsigned int len)
 		return fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, buf, len);
 
 	return 0;
+}
+
+static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
+{
+	dst->max_val	= cpu_to_le64(src->max_val);
+	dst->min_val	= cpu_to_le64(src->min_val);
+	dst->samples	= cpu_to_le64(src->samples);
+	/* FIXME */
+	dst->mean	= cpu_to_le64(src->mean);
+	dst->S		= cpu_to_le64(src->S);
+}
+
+static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
+{
+	int i;
+
+	for (i = 0; i < 2; i++) {
+		dst->max_run[i]		= cpu_to_le64(src->max_run[i]);
+		dst->min_run[i]		= cpu_to_le64(src->min_run[i]);
+		dst->max_bw[i]		= cpu_to_le64(src->max_bw[i]);
+		dst->min_bw[i]		= cpu_to_le64(src->min_bw[i]);
+		dst->io_kb[i]		= cpu_to_le64(src->io_kb[i]);
+		dst->agg[i]		= cpu_to_le64(src->agg[i]);
+	}
+
+	dst->kb_base	= cpu_to_le32(src->kb_base);
+	dst->groupid	= cpu_to_le32(src->groupid);
+}
+
+/*
+ * Send a CMD_TS, which packs struct thread_stat and group_run_stats
+ * into a single payload.
+ */
+void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
+{
+	struct cmd_ts_pdu p;
+	int i, j;
+
+	strcpy(p.ts.name, ts->name);
+	strcpy(p.ts.verror, ts->verror);
+	strcpy(p.ts.description, ts->description);
+
+	p.ts.error		= cpu_to_le32(ts->error);
+	p.ts.groupid	= cpu_to_le32(ts->groupid);
+	p.ts.pid		= cpu_to_le32(ts->pid);
+	p.ts.members	= cpu_to_le32(ts->members);
+
+	for (i = 0; i < 2; i++) {
+		convert_io_stat(&p.ts.clat_stat[i], &ts->clat_stat[i]);
+		convert_io_stat(&p.ts.slat_stat[i], &ts->slat_stat[i]);
+		convert_io_stat(&p.ts.lat_stat[i], &ts->lat_stat[i]);
+		convert_io_stat(&p.ts.bw_stat[i], &ts->bw_stat[i]);
+	}
+
+	p.ts.usr_time		= cpu_to_le64(ts->usr_time);
+	p.ts.sys_time		= cpu_to_le64(ts->sys_time);
+	p.ts.ctx		= cpu_to_le64(ts->ctx);
+	p.ts.minf		= cpu_to_le64(ts->minf);
+	p.ts.majf		= cpu_to_le64(ts->majf);
+	p.ts.clat_percentiles	= cpu_to_le64(ts->clat_percentiles);
+	p.ts.percentile_list	= NULL;
+
+	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
+		p.ts.io_u_map[i]	= cpu_to_le32(ts->io_u_map[i]);
+		p.ts.io_u_submit[i]	= cpu_to_le32(ts->io_u_submit[i]);
+		p.ts.io_u_complete[i]	= cpu_to_le32(ts->io_u_complete[i]);
+	}
+
+	for (i = 0; i < FIO_IO_U_LAT_U_NR; i++) {
+		p.ts.io_u_lat_u[i]	= cpu_to_le32(ts->io_u_lat_u[i]);
+		p.ts.io_u_lat_m[i]	= cpu_to_le32(ts->io_u_lat_m[i]);
+	}
+
+	for (i = 0; i < 2; i++)
+		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
+			p.ts.io_u_plat[i][j] = cpu_to_le32(ts->io_u_plat[i][j]);
+
+	for (i = 0; i < 3; i++) {
+		p.ts.total_io_u[i]	= cpu_to_le64(ts->total_io_u[i]);
+		p.ts.short_io_u[i]	= cpu_to_le64(ts->total_io_u[i]);
+	}
+
+	p.ts.total_submit		= cpu_to_le64(ts->total_submit);
+	p.ts.total_complete	= cpu_to_le64(ts->total_complete);
+
+	for (i = 0; i < 2; i++) {
+		p.ts.io_bytes[i]	= cpu_to_le64(ts->io_bytes[i]);
+		p.ts.runtime[i]		= cpu_to_le64(ts->runtime[i]);
+	}
+
+	p.ts.total_run_time	= cpu_to_le64(ts->total_run_time);
+	p.ts.continue_on_error	= cpu_to_le16(ts->continue_on_error);
+	p.ts.total_err_count	= cpu_to_le64(ts->total_err_count);
+	p.ts.first_error	= cpu_to_le64(ts->first_error);
+	p.ts.kb_base		= cpu_to_le64(ts->kb_base);
+
+	convert_gs(&p.rs, rs);
+
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_TS, &p, sizeof(p));
+}
+
+void fio_server_send_gs(struct group_run_stats *rs)
+{
+	struct group_run_stats gs;
+
+	convert_gs(&gs, rs);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_GS, &gs, sizeof(gs));
 }
 
 int fio_server_log(const char *format, ...)
