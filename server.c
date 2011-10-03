@@ -545,30 +545,40 @@ void fio_server_send_gs(struct group_run_stats *rs)
 
 void fio_server_send_status(void)
 {
-	struct jobs_eta je;
+	struct jobs_eta *je;
+	size_t size;
+	void *buf;
 	int i;
 
-	if (!calc_thread_status(&je))
+	size = sizeof(*je) + thread_number * sizeof(char);
+	buf = malloc(size);
+	memset(buf, 0, size);
+	je = buf;
+
+	if (!calc_thread_status(je)) {
+		free(je);
 		return;
-
-	je.nr_running		= cpu_to_le32(je.nr_running);
-	je.nr_ramp		= cpu_to_le32(je.nr_ramp);
-	je.nr_pending		= cpu_to_le32(je.nr_pending);
-	je.files_open		= cpu_to_le32(je.files_open);
-	je.m_rate		= cpu_to_le32(je.m_rate);
-	je.t_rate		= cpu_to_le32(je.t_rate);
-	je.m_iops		= cpu_to_le32(je.m_iops);
-	je.t_iops		= cpu_to_le32(je.t_iops);
-
-	for (i = 0; i < 2; i++) {
-		je.rate[i]	= cpu_to_le32(je.rate[i]);
-		je.iops[i]	= cpu_to_le32(je.iops[i]);
 	}
 
-	je.elapsed_sec		= cpu_to_le32(je.nr_running);
-	je.eta_sec		= cpu_to_le64(je.eta_sec);
+	je->nr_running		= cpu_to_le32(je->nr_running);
+	je->nr_ramp		= cpu_to_le32(je->nr_ramp);
+	je->nr_pending		= cpu_to_le32(je->nr_pending);
+	je->files_open		= cpu_to_le32(je->files_open);
+	je->m_rate		= cpu_to_le32(je->m_rate);
+	je->t_rate		= cpu_to_le32(je->t_rate);
+	je->m_iops		= cpu_to_le32(je->m_iops);
+	je->t_iops		= cpu_to_le32(je->t_iops);
 
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_ETA, &je, sizeof(je));
+	for (i = 0; i < 2; i++) {
+		je->rate[i]	= cpu_to_le32(je->rate[i]);
+		je->iops[i]	= cpu_to_le32(je->iops[i]);
+	}
+
+	je->elapsed_sec		= cpu_to_le32(je->nr_running);
+	je->eta_sec		= cpu_to_le64(je->eta_sec);
+
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_ETA, buf, size);
+	free(je);
 }
 
 int fio_server_log(const char *format, ...)

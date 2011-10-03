@@ -343,6 +343,9 @@ int calc_thread_status(struct jobs_eta *je)
 	if (!je->nr_running && !je->nr_pending)
 		return 0;
 
+	je->nr_threads = thread_number;
+	memcpy(je->run_str, run_str, thread_number * sizeof(char));
+
 	return 1;
 }
 
@@ -392,8 +395,8 @@ void display_thread_status(struct jobs_eta *je)
 		iops_str[1] = num2str(je->iops[1], 4, 1, 0);
 
 		l = sprintf(p, ": [%s] [%s] [%s/%s /s] [%s/%s iops] [eta %s]",
-				 run_str, perc_str, rate_str[0], rate_str[1],
-				 iops_str[0], iops_str[1], eta_str);
+				je->run_str, perc_str, rate_str[0],
+				rate_str[1], iops_str[0], iops_str[1], eta_str);
 		p += l;
 		if (l >= 0 && l < linelen_last)
 			p += sprintf(p, "%*s", linelen_last - l, "");
@@ -412,14 +415,16 @@ void display_thread_status(struct jobs_eta *je)
 
 void print_thread_status(void)
 {
-	struct jobs_eta je;
+	struct jobs_eta *je;
 
-	memset(&je, 0, sizeof(je));
+	je = malloc(sizeof(*je) + thread_number * sizeof(char));
 
-	if (!calc_thread_status(&je))
-		return;
+	memset(je, 0, sizeof(*je) + thread_number * sizeof(char));
 
-	display_thread_status(&je);
+	if (calc_thread_status(je))
+		display_thread_status(je);
+
+	free(je);
 }
 
 void print_status_init(int thr_number)

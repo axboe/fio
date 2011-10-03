@@ -179,6 +179,12 @@ struct jobs_eta {
 	uint32_t iops[2];
 	uint64_t elapsed_sec;
 	uint64_t eta_sec;
+
+	/*
+	 * Network 'copy' of run_str[]
+	 */
+	uint32_t nr_threads;
+	uint8_t run_str[0];
 };
 
 extern void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs);
