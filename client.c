@@ -306,6 +306,31 @@ static void handle_gs(struct fio_net_cmd *cmd)
 	show_group_stats(gs);
 }
 
+static void handle_eta(struct fio_net_cmd *cmd)
+{
+	struct jobs_eta *je = (struct jobs_eta *) cmd->payload;
+	int i;
+
+	je->nr_running		= le32_to_cpu(je->nr_running);
+	je->nr_ramp		= le32_to_cpu(je->nr_ramp);
+	je->nr_pending		= le32_to_cpu(je->nr_pending);
+	je->files_open		= le32_to_cpu(je->files_open);
+	je->m_rate		= le32_to_cpu(je->m_rate);
+	je->t_rate		= le32_to_cpu(je->t_rate);
+	je->m_iops		= le32_to_cpu(je->m_iops);
+	je->t_iops		= le32_to_cpu(je->t_iops);
+
+	for (i = 0; i < 2; i++) {
+		je->rate[i]	= le32_to_cpu(je->rate[i]);
+		je->iops[i]	= le32_to_cpu(je->iops[i]);
+	}
+
+	je->elapsed_sec		= le32_to_cpu(je->nr_running);
+	je->eta_sec		= le64_to_cpu(je->eta_sec);
+
+	display_thread_status(je);
+}
+
 static int handle_client(struct fio_client *client)
 {
 	struct fio_net_cmd *cmd;
@@ -335,6 +360,10 @@ static int handle_client(struct fio_client *client)
 			break;
 		case FIO_NET_CMD_GS:
 			handle_gs(cmd);
+			free(cmd);
+			break;
+		case FIO_NET_CMD_ETA:
+			handle_eta(cmd);
 			free(cmd);
 			break;
 		default:

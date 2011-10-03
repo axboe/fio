@@ -346,9 +346,8 @@ int calc_thread_status(struct jobs_eta *je)
 	return 1;
 }
 
-void print_thread_status(void)
+void display_thread_status(struct jobs_eta *je)
 {
-	struct jobs_eta je;
 	static int linelen_last;
 	static int eta_good;
 	char output[512], *p = output;
@@ -356,34 +355,29 @@ void print_thread_status(void)
 	double perc = 0.0;
 	int i2p = 0;
 
-	memset(&je, 0, sizeof(je));
-
-	if (!calc_thread_status(&je))
-		return;
-
-	if (je.eta_sec != INT_MAX && je.elapsed_sec) {
-		perc = (double) je.elapsed_sec / (double) (je.elapsed_sec + je.eta_sec);
-		eta_to_str(eta_str, je.eta_sec);
+	if (je->eta_sec != INT_MAX && je->elapsed_sec) {
+		perc = (double) je->elapsed_sec / (double) (je->elapsed_sec + je->eta_sec);
+		eta_to_str(eta_str, je->eta_sec);
 	}
 
-	p += sprintf(p, "Jobs: %d (f=%d)", je.nr_running, je.files_open);
-	if (je.m_rate || je.t_rate) {
+	p += sprintf(p, "Jobs: %d (f=%d)", je->nr_running, je->files_open);
+	if (je->m_rate || je->t_rate) {
 		char *tr, *mr;
 
-		mr = num2str(je.m_rate, 4, 0, i2p);
-		tr = num2str(je.t_rate, 4, 0, i2p);
+		mr = num2str(je->m_rate, 4, 0, i2p);
+		tr = num2str(je->t_rate, 4, 0, i2p);
 		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
 		free(tr);
 		free(mr);
-	} else if (je.m_iops || je.t_iops)
-		p += sprintf(p, ", CR=%d/%d IOPS", je.t_iops, je.m_iops);
-	if (je.eta_sec != INT_MAX && je.nr_running) {
+	} else if (je->m_iops || je->t_iops)
+		p += sprintf(p, ", CR=%d/%d IOPS", je->t_iops, je->m_iops);
+	if (je->eta_sec != INT_MAX && je->nr_running) {
 		char perc_str[32];
 		char *iops_str[2];
 		char *rate_str[2];
 		int l;
 
-		if ((!je.eta_sec && !eta_good) || je.nr_ramp == je.nr_running)
+		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running)
 			strcpy(perc_str, "-.-% done");
 		else {
 			eta_good = 1;
@@ -391,11 +385,11 @@ void print_thread_status(void)
 			sprintf(perc_str, "%3.1f%% done", perc);
 		}
 
-		rate_str[0] = num2str(je.rate[0], 5, 10, i2p);
-		rate_str[1] = num2str(je.rate[1], 5, 10, i2p);
+		rate_str[0] = num2str(je->rate[0], 5, 10, i2p);
+		rate_str[1] = num2str(je->rate[1], 5, 10, i2p);
 
-		iops_str[0] = num2str(je.iops[0], 4, 1, 0);
-		iops_str[1] = num2str(je.iops[1], 4, 1, 0);
+		iops_str[0] = num2str(je->iops[0], 4, 1, 0);
+		iops_str[1] = num2str(je->iops[1], 4, 1, 0);
 
 		l = sprintf(p, ": [%s] [%s] [%s/%s /s] [%s/%s iops] [eta %s]",
 				 run_str, perc_str, rate_str[0], rate_str[1],
@@ -412,13 +406,21 @@ void print_thread_status(void)
 	}
 	p += sprintf(p, "\r");
 
-	if (!is_backend) {
-		printf("%s", output);
-		fflush(stdout);
-	} else
-		fio_server_text_output(output, p - output);
+	printf("%s", output);
+	fflush(stdout);
 }
 
+void print_thread_status(void)
+{
+	struct jobs_eta je;
+
+	memset(&je, 0, sizeof(je));
+
+	if (!calc_thread_status(&je))
+		return;
+
+	display_thread_status(&je);
+}
 
 void print_status_init(int thr_number)
 {

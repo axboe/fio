@@ -139,7 +139,11 @@ static void *disk_thread_main(void *data)
 		if (!threads)
 			break;
 		update_io_ticks();
-		print_thread_status();
+
+		if (is_backend)
+			fio_server_send_status();
+		else
+			print_thread_status();
 	}
 
 	return NULL;

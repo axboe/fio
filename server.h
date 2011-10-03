@@ -39,6 +39,7 @@ enum {
 	FIO_NET_CMD_TEXT	= 6,
 	FIO_NET_CMD_TS		= 7,
 	FIO_NET_CMD_GS		= 8,
+	FIO_NET_CMD_ETA		= 9,
 
 	FIO_NET_CMD_F_MORE	= 1UL << 0,
 
@@ -61,6 +62,7 @@ struct thread_stat;
 struct group_run_stats;
 extern void fio_server_send_ts(struct thread_stat *, struct group_run_stats *);
 extern void fio_server_send_gs(struct group_run_stats *);
+extern void fio_server_send_status(void);
 
 extern int fio_clients_connect(void);
 extern int fio_clients_send_ini(const char *);
