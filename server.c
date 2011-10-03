@@ -372,11 +372,7 @@ again:
 
 	server_fd = sk;
 
-	printf("handle\n");
-
 	exitval = handle_connection(sk);
-
-	printf("out, exit %d\n", exitval);
 
 	server_fd = -1;
 	close(sk);
