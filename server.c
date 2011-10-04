@@ -299,8 +299,12 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 
 	pdu->argc = le16_to_cpu(pdu->argc);
 
-	for (i = 0; i < pdu->argc; i++)
+	dprint(FD_NET, "server: %d command line args\n", pdu->argc);
+
+	for (i = 0; i < pdu->argc; i++) {
 		argv[i] = (char *) pdu->argv[i];
+		dprint(FD_NET, "server: %d: %s\n", i, argv[i]);
+	}
 
 	if (parse_cmd_line(pdu->argc, argv))
 		return -1;

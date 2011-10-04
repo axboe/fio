@@ -75,7 +75,7 @@ static struct fio_client *find_client_by_name(const char *name)
 
 static void remove_client(struct fio_client *client)
 {
-	dprint(FD_NET, "removed client <%s>\n", client->hostname);
+	dprint(FD_NET, "client: removed <%s>\n", client->hostname);
 	flist_del(&client->list);
 	nr_clients--;
 
@@ -89,9 +89,12 @@ static void remove_client(struct fio_client *client)
 static void __fio_client_add_cmd_option(struct fio_client *client,
 					const char *opt)
 {
-	client->argc++;
+	int index;
+
+	index = client->argc++;
 	client->argv = realloc(client->argv, sizeof(char *) * client->argc);
-	client->argv[client->argc - 1] = strdup(opt);
+	client->argv[index] = strdup(opt);
+	dprint(FD_NET, "client: add cmd %d: %s\n", index, opt);
 }
 
 void fio_client_add_cmd_option(const char *hostname, const char *opt)
@@ -114,7 +117,7 @@ void fio_client_add(const char *hostname)
 {
 	struct fio_client *client;
 
-	dprint(FD_NET, "added client <%s>\n", hostname);
+	dprint(FD_NET, "client: added  <%s>\n", hostname);
 	client = malloc(sizeof(*client));
 	memset(client, 0, sizeof(*client));
 
@@ -131,7 +134,7 @@ static int fio_client_connect(struct fio_client *client)
 {
 	int fd;
 
-	dprint(FD_NET, "connect to host %s\n", client->hostname);
+	dprint(FD_NET, "client: connect to host %s\n", client->hostname);
 
 	memset(&client->addr, 0, sizeof(client->addr));
 	client->addr.sin_family = AF_INET;
@@ -214,7 +217,7 @@ static int send_client_cmd_line(struct fio_client *client)
 	struct cmd_line_pdu *pdu;
 	int i, ret;
 
-	dprint(FD_NET, "client: send cmdline\n");
+	dprint(FD_NET, "client: send cmdline %d\n", client->argc);
 
 	pdu = malloc(sizeof(*pdu));
 	for (i = 0; i < client->argc; i++)
