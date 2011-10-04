@@ -12,6 +12,7 @@
 #include <linux/unistd.h>
 #include <linux/raw.h>
 #include <linux/major.h>
+#include <endian.h>
 
 #include "indirect.h"
 #include "binject.h"
@@ -284,6 +285,14 @@ static inline int fio_lookup_raw(dev_t dev, int *majdev, int *mindev)
 
 #ifdef MADV_REMOVE
 #define FIO_MADV_FREE	MADV_REMOVE
+#endif
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define FIO_LITTLE_ENDIAN
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define FIO_BIG_ENDIAN
+#else
+#error "Unknown endianness"
 #endif
 
 #define CACHE_LINE_FILE	\

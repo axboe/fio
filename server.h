@@ -3,9 +3,9 @@
 
 #include <inttypes.h>
 #include <string.h>
-#include <endian.h>
 
 #include "stat.h"
+#include "os/os.h"
 
 /*
  * On-wire encoding is little endian
@@ -96,22 +96,20 @@ extern struct fio_net_cmd *fio_net_recv_cmd(int sk, int block);
 extern int exit_backend;
 extern int fio_net_port;
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
+#ifdef FIO_LITTLE_ENDIAN
 #define __le16_to_cpu(x)		(x)
 #define __le32_to_cpu(x)		(x)
 #define __le64_to_cpu(x)		(x)
 #define __cpu_to_le16(x)		(x)
 #define __cpu_to_le32(x)		(x)
 #define __cpu_to_le64(x)		(x)
-#elif __BYTE_ORDER == __BIG_ENDIAN
+#else
 #define __le16_to_cpu(x)		__bswap_16(x)
 #define __le32_to_cpu(x)		__bswap_32(x)
 #define __le64_to_cpu(x)		__bswap_64(x)
 #define __cpu_to_le16(x)		__bswap_16(x)
 #define __cpu_to_le32(x)		__bswap_32(x)
 #define __cpu_to_le64(x)		__bswap_64(x)
-#else
-#error "Endianness not detected"
 #endif
 
 #define le16_to_cpu(val) ({			\
