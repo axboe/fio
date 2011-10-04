@@ -23,7 +23,14 @@
 
 #include "lib/getopt.h"
 
-static char fio_version_string[] = "fio 1.58";
+#if FIO_PATCH > 0
+static char fio_version_string[] =	__fio_stringify(FIO_MAJOR) "."	\
+					__fio_stringify(FIO_MINOR) "."	\
+					__fio_stringify(FIO_PATCH);
+#else
+static char fio_version_string[] =	__fio_stringify(FIO_MAJOR) "."	\
+					__fio_stringify(FIO_MINOR);
+#endif
 
 #define FIO_RANDSEED		(0xb1899bedUL)
 
@@ -1198,28 +1205,35 @@ static void fio_options_fill_optstring(void)
 	ostr[c] = '\0';
 }
 
-static int parse_cmd_line(int argc, char *argv[])
+int parse_cmd_line(int argc, char *argv[])
 {
 	struct thread_data *td = NULL;
 	int c, ini_idx = 0, lidx, ret = 0, do_exit = 0, exit_val = 0;
 	char *ostr = cmd_optstr;
 	int daemonize_server = 0;
+	char *cur_client = NULL;
+	int backend = 0;
 
 	while ((c = getopt_long_only(argc, argv, ostr, l_opts, &lidx)) != -1) {
 		switch (c) {
 		case 'a':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			smalloc_pool_size = atoi(optarg);
 			break;
 		case 't':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			def_thread.o.timeout = atoi(optarg);
 			break;
 		case 'l':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			write_lat_log = 1;
 			break;
 		case 'b':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			write_bw_log = 1;
 			break;
 		case 'o':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			f_out = fopen(optarg, "w+");
 			if (!f_out) {
 				perror("fopen output");
@@ -1228,6 +1242,7 @@ static int parse_cmd_line(int argc, char *argv[])
 			f_err = f_out;
 			break;
 		case 'm':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			terse_output = 1;
 			break;
 		case 'h':
@@ -1236,15 +1251,18 @@ static int parse_cmd_line(int argc, char *argv[])
 		case 'c':
 			exit(fio_show_option_help(optarg));
 		case 's':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			dump_cmdline = 1;
 			break;
 		case 'r':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			read_only = 1;
 			break;
 		case 'v':
 			log_info("%s\n", fio_version_string);
 			exit(0);
 		case 'V':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			terse_version = atoi(optarg);
 			if (terse_version != 2) {
 				log_err("fio: bad terse version format\n");
@@ -1253,17 +1271,21 @@ static int parse_cmd_line(int argc, char *argv[])
 			}
 			break;
 		case 'e':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			if (!strcmp("always", optarg))
 				eta_print = FIO_ETA_ALWAYS;
 			else if (!strcmp("never", optarg))
 				eta_print = FIO_ETA_NEVER;
 			break;
 		case 'd':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			if (set_debug(optarg))
 				do_exit++;
 			break;
 		case 'x': {
 			size_t new_size;
+
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 
 			if (!strcmp(optarg, "global")) {
 				log_err("fio: can't use global as only "
@@ -1279,11 +1301,14 @@ static int parse_cmd_line(int argc, char *argv[])
 			break;
 			}
 		case 'p':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			exec_profile = strdup(optarg);
 			break;
 		case FIO_GETOPT_JOB: {
 			const char *opt = l_opts[lidx].name;
 			char *val = optarg;
+
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 
 			if (!strncmp(opt, "name", 4) && td) {
 				ret = add_job(td, td->o.name ?: "fio", 0);
@@ -1310,9 +1335,11 @@ static int parse_cmd_line(int argc, char *argv[])
 			break;
 		}
 		case 'w':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			warnings_fatal = 1;
 			break;
 		case 'j':
+			fio_client_add_cmd_option(cur_client, argv[optind]);
 			max_jobs = atoi(optarg);
 			if (!max_jobs || max_jobs > REAL_MAX_JOBS) {
 				log_err("fio: invalid max jobs: %d\n", max_jobs);
@@ -1328,6 +1355,7 @@ static int parse_cmd_line(int argc, char *argv[])
 				break;
 			}
 			is_backend = 1;
+			backend = 1;
 			break;
 		case 'D':
 			daemonize_server = 1;
@@ -1343,6 +1371,7 @@ static int parse_cmd_line(int argc, char *argv[])
 				break;
 			}
 			fio_client_add(optarg);
+			cur_client = optarg;
 			break;
 		default:
 			do_exit++;
@@ -1362,7 +1391,7 @@ static int parse_cmd_line(int argc, char *argv[])
 		return -1;
 	}
 
-	if (is_backend)
+	if (is_backend && backend)
 		return fio_start_server(daemonize_server);
 
 	if (td) {

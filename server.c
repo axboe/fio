@@ -280,7 +280,33 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 	char *buf = (char *) cmd->payload;
 	int ret;
 
-	parse_jobs_ini(buf, 1, 0);
+	if (parse_jobs_ini(buf, 1, 0))
+		return -1;
+
+	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0);
+
+	ret = exec_run();
+	send_quit_command();
+	reset_fio_state();
+	return ret;
+}
+
+static int handle_jobline_cmd(struct fio_net_cmd *cmd)
+{
+	struct cmd_line_pdu *pdu = (struct cmd_line_pdu *) cmd->payload;
+	char *argv[FIO_NET_CMD_JOBLINE_ARGV];
+	int ret, i;
+
+	pdu->argc = le16_to_cpu(pdu->argc);
+
+	for (i = 0; i < pdu->argc; i++)
+		argv[i] = (char *) pdu->argv[i];
+
+	if (parse_cmd_line(pdu->argc, argv))
+		return -1;
+
+	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0);
+
 	ret = exec_run();
 	send_quit_command();
 	reset_fio_state();
@@ -293,9 +319,9 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 
 	memset(&probe, 0, sizeof(probe));
 	gethostname((char *) probe.hostname, sizeof(probe.hostname));
-	probe.fio_major = 1;
-	probe.fio_minor = 58;
-	probe.fio_patch = 0;
+	probe.fio_major = FIO_MAJOR;
+	probe.fio_minor = FIO_MINOR;
+	probe.fio_patch = FIO_PATCH;
 
 	return fio_net_send_cmd(server_fd, FIO_NET_CMD_PROBE, &probe, sizeof(probe));
 }
@@ -315,6 +341,9 @@ static int handle_command(struct fio_net_cmd *cmd)
 		return -1;
 	case FIO_NET_CMD_JOB:
 		ret = handle_job_cmd(cmd);
+		break;
+	case FIO_NET_CMD_JOBLINE:
+		ret = handle_jobline_cmd(cmd);
 		break;
 	case FIO_NET_CMD_PROBE:
 		ret = handle_probe_cmd(cmd);
@@ -410,58 +439,6 @@ again:
 
 out:
 	return exitval;
-}
-
-static int fio_server(void)
-{
-	struct sockaddr_in saddr_in;
-	struct sockaddr addr;
-	unsigned int len;
-	int sk, opt, ret;
-
-	dprint(FD_NET, "starting server\n");
-
-	sk = socket(AF_INET, SOCK_STREAM, 0);
-	if (sk < 0) {
-		log_err("fio: socket: %s\n", strerror(errno));
-		return -1;
-	}
-
-	opt = 1;
-	if (setsockopt(sk, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-		log_err("fio: setsockopt: %s\n", strerror(errno));
-		return -1;
-	}
-#ifdef SO_REUSEPORT
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
-		log_err("fio: setsockopt: %s\n", strerror(errno));
-		return -1;
-	}
-#endif
-
-	saddr_in.sin_family = AF_INET;
-	saddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
-	saddr_in.sin_port = htons(fio_net_port);
-
-	if (bind(sk, (struct sockaddr *) &saddr_in, sizeof(saddr_in)) < 0) {
-		log_err("fio: bind: %s\n", strerror(errno));
-		return -1;
-	}
-
-	if (listen(sk, 1) < 0) {
-		log_err("fio: listen: %s\n", strerror(errno));
-		return -1;
-	}
-
-	len = sizeof(addr);
-	if (getsockname(sk, &addr, &len) < 0) {
-		log_err("fio: getsockname: %s\n", strerror(errno));
-		return -1;
-	}
-
-	ret = accept_loop(sk);
-	close(sk);
-	return ret;
 }
 
 int fio_server_text_output(const char *buf, unsigned int len)
@@ -630,6 +607,58 @@ int fio_server_log(const char *format, ...)
 	va_end(args);
 
 	return fio_server_text_output(buffer, len);
+}
+
+static int fio_server(void)
+{
+	struct sockaddr_in saddr_in;
+	struct sockaddr addr;
+	unsigned int len;
+	int sk, opt, ret;
+
+	dprint(FD_NET, "starting server\n");
+
+	sk = socket(AF_INET, SOCK_STREAM, 0);
+	if (sk < 0) {
+		log_err("fio: socket: %s\n", strerror(errno));
+		return -1;
+	}
+
+	opt = 1;
+	if (setsockopt(sk, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+		log_err("fio: setsockopt: %s\n", strerror(errno));
+		return -1;
+	}
+#ifdef SO_REUSEPORT
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+		log_err("fio: setsockopt: %s\n", strerror(errno));
+		return -1;
+	}
+#endif
+
+	saddr_in.sin_family = AF_INET;
+	saddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
+	saddr_in.sin_port = htons(fio_net_port);
+
+	if (bind(sk, (struct sockaddr *) &saddr_in, sizeof(saddr_in)) < 0) {
+		log_err("fio: bind: %s\n", strerror(errno));
+		return -1;
+	}
+
+	if (listen(sk, 1) < 0) {
+		log_err("fio: listen: %s\n", strerror(errno));
+		return -1;
+	}
+
+	len = sizeof(addr);
+	if (getsockname(sk, &addr, &len) < 0) {
+		log_err("fio: getsockname: %s\n", strerror(errno));
+		return -1;
+	}
+
+	ret = accept_loop(sk);
+	close(sk);
+	return ret;
 }
 
 int fio_start_server(int daemonize)

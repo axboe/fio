@@ -829,9 +829,6 @@ static int kb_base_verify(struct fio_option *o, void *data)
 	return 0;
 }
 
-#define __stringify_1(x)	#x
-#define __stringify(x)		__stringify_1(x)
-
 /*
  * Map of job/command line options
  */
@@ -1946,7 +1943,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(hugepage_size),
 		.help	= "When using hugepages, specify size of each page",
-		.def	= __stringify(FIO_HUGE_PAGE),
+		.def	= __fio_stringify(FIO_HUGE_PAGE),
 	},
 	{
 		.name	= "group_reporting",

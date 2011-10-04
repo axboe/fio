@@ -16,6 +16,10 @@
 
 struct thread_data;
 
+#define FIO_MAJOR	1
+#define FIO_MINOR	58
+#define FIO_PATCH	0
+
 #include "compiler/compiler.h"
 #include "flist.h"
 #include "fifo.h"
@@ -470,6 +474,9 @@ enum {
 #define td_vmsg(td, err, msg, func)	\
 	__td_verror((td), (err), (msg), (func))
 
+#define __fio_stringify_1(x)	#x
+#define __fio_stringify(x)	__fio_stringify_1(x)
+
 extern int exitall_on_terminate;
 extern int thread_number;
 extern int nr_process, nr_thread;
@@ -532,6 +539,7 @@ static inline int should_fsync(struct thread_data *td)
  */
 extern int __must_check parse_options(int, char **);
 extern int parse_jobs_ini(char *, int, int);
+extern int parse_cmd_line(int, char **);
 extern int exec_run(void);
 extern void reset_fio_state(void);
 extern int fio_options_parse(struct thread_data *, char **, int);

@@ -23,6 +23,17 @@ struct fio_client {
 	struct sockaddr_in addr;
 	char *hostname;
 	int fd;
+
+	int state;
+
+	uint16_t argc;
+	char **argv;
+};
+
+enum {
+	Client_connected	= 1,
+	Client_started		= 2,
+	Client_stopped		= 3,
 };
 
 static FLIST_HEAD(client_list);
@@ -44,7 +55,6 @@ static struct fio_client *find_client_by_fd(int fd)
 	return NULL;
 }
 
-#if 0
 static struct fio_client *find_client_by_name(const char *name)
 {
 	struct fio_client *client;
@@ -59,15 +69,42 @@ static struct fio_client *find_client_by_name(const char *name)
 
 	return NULL;
 }
-#endif
 
 static void remove_client(struct fio_client *client)
 {
 	dprint(FD_NET, "removed client <%s>\n", client->hostname);
 	flist_del(&client->list);
 	nr_clients--;
+
 	free(client->hostname);
+	if (client->argv)
+		free(client->argv);
+
 	free(client);
+}
+
+static void __fio_client_add_cmd_option(struct fio_client *client,
+					const char *opt)
+{
+	client->argc++;
+	client->argv = realloc(client->argv, sizeof(char *) * client->argc);
+	client->argv[client->argc - 1] = strdup(opt);
+}
+
+void fio_client_add_cmd_option(const char *hostname, const char *opt)
+{
+	struct fio_client *client;
+
+	if (!hostname || !opt)
+		return;
+
+	client = find_client_by_name(hostname);
+	if (!client) {
+		log_err("fio: unknown client %s\n", hostname);
+		return;
+	}
+
+	__fio_client_add_cmd_option(client, opt);
 }
 
 void fio_client_add(const char *hostname)
@@ -77,8 +114,12 @@ void fio_client_add(const char *hostname)
 	dprint(FD_NET, "added client <%s>\n", hostname);
 	client = malloc(sizeof(*client));
 	memset(client, 0, sizeof(*client));
+
 	client->hostname = strdup(hostname);
 	client->fd = -1;
+
+	__fio_client_add_cmd_option(client, "fio");
+
 	flist_add(&client->list, &client_list);
 	nr_clients++;
 }
@@ -118,6 +159,7 @@ static int fio_client_connect(struct fio_client *client)
 	}
 
 	client->fd = fd;
+	client->state = Client_connected;
 	return 0;
 }
 
@@ -159,6 +201,21 @@ static void probe_client(struct fio_client *client)
 	handle_client(client, 1);
 }
 
+static int send_client_cmd_line(struct fio_client *client)
+{
+	struct cmd_line_pdu *pdu;
+	int i, ret;
+
+	pdu = malloc(sizeof(*pdu));
+	for (i = 0; i < client->argc; i++)
+		strcpy((char *) pdu->argv[i], client->argv[i]);
+
+	pdu->argc = cpu_to_le16(client->argc);
+	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOBLINE, pdu, sizeof(*pdu));
+	free(pdu);
+	return ret;
+}
+
 int fio_clients_connect(void)
 {
 	struct fio_client *client;
@@ -177,14 +234,12 @@ int fio_clients_connect(void)
 		}
 
 		probe_client(client);
+
+		if (client->argc > 1)
+			send_client_cmd_line(client);
 	}
 
 	return !nr_clients;
-}
-
-static int send_file_buf(struct fio_client *client, char *buf, off_t size)
-{
-	return fio_net_send_cmd(client->fd, FIO_NET_CMD_JOB, buf, size);
 }
 
 /*
@@ -234,7 +289,7 @@ static int fio_client_send_ini(struct fio_client *client, const char *filename)
 		return 1;
 	}
 
-	ret = send_file_buf(client, buf, sb.st_size);
+	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOB, buf, sb.st_size);
 	free(buf);
 	return ret;
 }
@@ -426,6 +481,14 @@ static int handle_client(struct fio_client *client, int one)
 			break;
 		case FIO_NET_CMD_PROBE:
 			handle_probe(cmd);
+			free(cmd);
+			break;
+		case FIO_NET_CMD_START:
+			client->state = Client_started;
+			free(cmd);
+			break;
+		case FIO_NET_CMD_STOP:
+			client->state = Client_stopped;
 			free(cmd);
 			break;
 		default:

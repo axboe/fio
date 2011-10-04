@@ -34,17 +34,22 @@ enum {
 	FIO_NET_CMD_QUIT	= 1,
 	FIO_NET_CMD_EXIT	= 2,
 	FIO_NET_CMD_JOB		= 3,
-	FIO_NET_CMD_TEXT	= 4,
-	FIO_NET_CMD_TS		= 5,
-	FIO_NET_CMD_GS		= 6,
-	FIO_NET_CMD_ETA		= 7,
-	FIO_NET_CMD_PROBE	= 8,
+	FIO_NET_CMD_JOBLINE	= 4,
+	FIO_NET_CMD_TEXT	= 5,
+	FIO_NET_CMD_TS		= 6,
+	FIO_NET_CMD_GS		= 7,
+	FIO_NET_CMD_ETA		= 8,
+	FIO_NET_CMD_PROBE	= 9,
+	FIO_NET_CMD_START	= 10,
+	FIO_NET_CMD_STOP	= 11,
 
 	FIO_NET_CMD_F_MORE	= 1UL << 0,
 
 	/* crc does not include the crc fields */
 	FIO_NET_CMD_CRC_SZ	= sizeof(struct fio_net_cmd) -
 					2 * sizeof(uint16_t),
+
+	FIO_NET_CMD_JOBLINE_ARGV	= 128,
 };
 
 struct cmd_ts_pdu {
@@ -57,6 +62,11 @@ struct cmd_probe_pdu {
 	uint8_t fio_major;
 	uint8_t fio_minor;
 	uint8_t fio_patch;
+};
+
+struct cmd_line_pdu {
+	uint16_t argc;
+	uint8_t argv[FIO_NET_CMD_JOBLINE_ARGV][64];
 };
 
 extern int fio_start_server(int);
@@ -76,6 +86,7 @@ extern int fio_clients_connect(void);
 extern int fio_clients_send_ini(const char *);
 extern int fio_handle_clients(void);
 extern void fio_client_add(const char *);
+extern void fio_client_add_cmd_option(const char *, const char *);
 
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);
