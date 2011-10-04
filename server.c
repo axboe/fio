@@ -396,6 +396,8 @@ static int accept_loop(int listen_sk)
 	struct pollfd pfd;
 	int ret, sk, flags, exitval = 0;
 
+	dprint(FD_NET, "server enter accept loop\n");
+
 	flags = fcntl(listen_sk, F_GETFL);
 	flags |= O_NONBLOCK;
 	fcntl(listen_sk, F_SETFL, flags);
@@ -485,6 +487,8 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	struct cmd_ts_pdu p;
 	int i, j;
 
+	dprint(FD_NET, "server sending end stats\n");
+
 	memset(&p, 0, sizeof(p));
 
 	strcpy(p.ts.name, ts->name);
@@ -554,6 +558,8 @@ void fio_server_send_gs(struct group_run_stats *rs)
 {
 	struct group_run_stats gs;
 
+	dprint(FD_NET, "server sending group run stats\n");
+
 	convert_gs(&gs, rs);
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_GS, &gs, sizeof(gs));
 }
@@ -574,6 +580,8 @@ void fio_server_send_status(void)
 		free(je);
 		return;
 	}
+
+	dprint(FD_NET, "server sending status\n");
 
 	je->nr_running		= cpu_to_le32(je->nr_running);
 	je->nr_ramp		= cpu_to_le32(je->nr_ramp);
@@ -601,6 +609,8 @@ int fio_server_log(const char *format, ...)
 	char buffer[1024];
 	va_list args;
 	size_t len;
+
+	dprint(FD_NET, "server log\n");
 
 	va_start(args, format);
 	len = vsnprintf(buffer, sizeof(buffer), format, args);
@@ -681,7 +691,6 @@ static void server_signal_handler(void)
 	act.sa_flags = SA_RESTART;
 	sigaction(SIGTERM, &act, NULL);
 }
-
 
 int fio_start_server(int daemonize)
 {

@@ -171,6 +171,8 @@ void fio_clients_terminate(void)
 	struct flist_head *entry;
 	struct fio_client *client;
 
+	dprint(FD_NET, "client: terminate clients\n");
+
 	flist_for_each(entry, &client_list) {
 		client = flist_entry(entry, struct fio_client, list);
 
@@ -180,6 +182,7 @@ void fio_clients_terminate(void)
 
 static void sig_int(int sig)
 {
+	dprint(FD_NET, "client: got sign %d\n", sig);
 	fio_clients_terminate();
 }
 
@@ -200,6 +203,8 @@ static void client_signal_handler(void)
 
 static void probe_client(struct fio_client *client)
 {
+	dprint(FD_NET, "client: send probe\n");
+
 	fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_PROBE, 0);
 	handle_client(client, 1);
 }
@@ -208,6 +213,8 @@ static int send_client_cmd_line(struct fio_client *client)
 {
 	struct cmd_line_pdu *pdu;
 	int i, ret;
+
+	dprint(FD_NET, "client: send cmdline\n");
 
 	pdu = malloc(sizeof(*pdu));
 	for (i = 0; i < client->argc; i++)
@@ -224,6 +231,8 @@ int fio_clients_connect(void)
 	struct fio_client *client;
 	struct flist_head *entry, *tmp;
 	int ret;
+
+	dprint(FD_NET, "client: connect all\n");
 
 	client_signal_handler();
 
@@ -453,6 +462,8 @@ static int handle_client(struct fio_client *client, int one)
 {
 	struct fio_net_cmd *cmd;
 	int done = 0;
+
+	dprint(FD_NET, "client: handle %s\n", client->hostname);
 
 	while ((cmd = fio_net_recv_cmd(client->fd, 1)) != NULL) {
 		dprint(FD_NET, "%s: got cmd op %d\n", client->hostname,
