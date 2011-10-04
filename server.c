@@ -335,6 +335,7 @@ static int handle_command(struct fio_net_cmd *cmd)
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
 		fio_terminate_threads(TERMINATE_ALL);
+		send_quit_command();
 		return -1;
 	case FIO_NET_CMD_EXIT:
 		exit_backend = 1;
