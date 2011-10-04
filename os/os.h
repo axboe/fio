@@ -115,6 +115,10 @@ typedef unsigned long os_cpu_mask_t;
 #define FIO_MAX_JOBS		2048
 #endif
 
+#ifndef FIO_OS_HAVE_SOCKLEN_T
+typedef socklen_t fio_socklen_t;
+#endif
+
 #ifdef FIO_USE_GENERIC_SWAP
 static inline uint16_t fio_swap16(uint16_t val)
 {

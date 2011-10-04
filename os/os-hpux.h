@@ -55,6 +55,9 @@
 #define FIO_OS_HAVE_AIOCB_TYPEDEF
 typedef struct aiocb64 os_aiocb_t;
 
+#define FIO_OS_HAVE_SOCKLEN_T
+typedef int fio_socklen_t;
+
 static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
 	return EINVAL;

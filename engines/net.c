@@ -280,11 +280,7 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 
 	do {
 		if (nd->net_protocol == IPPROTO_UDP) {
-#ifdef __hpux
-			int len = sizeof(nd->addr);
-#else
-			socklen_t len = sizeof(nd->addr);
-#endif
+			fio_socklen_t len = sizeof(nd->addr);
 			struct sockaddr *from = (struct sockaddr *) &nd->addr;
 
 			ret = recvfrom(io_u->file->fd, io_u->xfer_buf,
@@ -381,11 +377,7 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
-#ifdef __hpux
-	int socklen = sizeof(nd->addr);
-#else
-	socklen_t socklen = sizeof(nd->addr);
-#endif
+	fio_socklen_t socklen = sizeof(nd->addr);
 
 	if (nd->net_protocol == IPPROTO_UDP) {
 		f->fd = nd->listenfd;

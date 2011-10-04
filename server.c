@@ -400,7 +400,7 @@ void fio_server_idle_loop(void)
 static int accept_loop(int listen_sk)
 {
 	struct sockaddr_in addr;
-	socklen_t len = sizeof(addr);
+	fio_socklen_t len = sizeof(addr);
 	struct pollfd pfd;
 	int ret, sk, flags, exitval = 0;
 
@@ -631,7 +631,7 @@ static int fio_server(void)
 {
 	struct sockaddr_in saddr_in;
 	struct sockaddr addr;
-	socklen_t len;
+	fio_socklen_t len;
 	int sk, opt, ret;
 
 	dprint(FD_NET, "starting server\n");
