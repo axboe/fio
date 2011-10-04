@@ -115,20 +115,20 @@ typedef unsigned long os_cpu_mask_t;
 #define FIO_MAX_JOBS		2048
 #endif
 
-#if 0
+#ifdef FIO_USE_GENERIC_SWAP
 static inline uint16_t fio_swap16(uint16_t val)
 {
 	return (val << 8) | (val >> 8);
 }
 
-static inline uint32_t bswap_32(uint32_t val)
+static inline uint32_t fio_swap32(uint32_t val)
 {
 	val = ((val & 0xff00ff00UL) >> 8) | ((val & 0x00ff00ffUL) << 8);
 
 	return (val >> 16) | (val << 16);
 }
 
-static inline uint64_t bswap_64(uint64_t val)
+static inline uint64_t fio_swap64(uint64_t val)
 {
 	val = ((val & 0xff00ff00ff00ff00ULL) >> 8) |
 	      ((val & 0x00ff00ff00ff00ffULL) << 8);

@@ -50,6 +50,8 @@
 #define FIO_BIG_ENDIAN
 #endif
 
+#define FIO_USE_GENERIC_SWAP
+
 #define FIO_OS_HAVE_AIOCB_TYPEDEF
 typedef struct aiocb64 os_aiocb_t;
 
