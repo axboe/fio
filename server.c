@@ -399,7 +399,7 @@ void fio_server_idle_loop(void)
 
 static int accept_loop(int listen_sk)
 {
-	struct sockaddr addr;
+	struct sockaddr_in addr;
 	unsigned int len = sizeof(addr);
 	struct pollfd pfd;
 	int ret, sk, flags, exitval = 0;
@@ -435,7 +435,7 @@ again:
 		return -1;
 	}
 
-	dprint(FD_NET, "server got a connection\n");
+	dprint(FD_NET, "server: connect from %s\n", inet_ntoa(addr.sin_addr));
 
 	server_fd = sk;
 
