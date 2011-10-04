@@ -116,7 +116,7 @@ typedef unsigned long os_cpu_mask_t;
 #endif
 
 #if 0
-static inline uint16 fio_swap16(uint16_t val)
+static inline uint16_t fio_swap16(uint16_t val)
 {
 	return (val << 8) | (val >> 8);
 }
@@ -128,7 +128,7 @@ static inline uint32_t bswap_32(uint32_t val)
 	return (val >> 16) | (val << 16);
 }
 
-static inline uint64_t bswap_64(uint64_t x)
+static inline uint64_t bswap_64(uint64_t val)
 {
 	val = ((val & 0xff00ff00ff00ff00ULL) >> 8) |
 	      ((val & 0x00ff00ff00ff00ffULL) << 8);
