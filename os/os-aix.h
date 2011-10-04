@@ -25,6 +25,10 @@
 #define OS_MAP_ANON		MAP_ANON
 #define OS_MSG_DONTWAIT		0
 
+#warning "Assuming big endian on AIX, fix me up"
+#define FIO_BIG_ENDIAN
+#define FIO_USE_GENERIC_SWAP
+
 static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
 	return EINVAL;
