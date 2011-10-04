@@ -1,3 +1,2 @@
 - Passing of float/doubles
-- Endianness coverage
 - Add -L listen option, to not bind to all devices
