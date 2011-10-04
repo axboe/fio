@@ -116,8 +116,8 @@ static int double_cmp(const void *a, const void *b)
 /*
  * Find and display the p-th percentile of clat
  */
-static void show_clat_percentiles(unsigned int* io_u_plat, unsigned long nr,
-				 double* user_list)
+static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
+				 double *user_list)
 {
 	unsigned long sum = 0;
 	unsigned int len, i, j = 0;
