@@ -1217,23 +1217,23 @@ int parse_cmd_line(int argc, char *argv[])
 	while ((c = getopt_long_only(argc, argv, ostr, l_opts, &lidx)) != -1) {
 		switch (c) {
 		case 'a':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			smalloc_pool_size = atoi(optarg);
 			break;
 		case 't':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			def_thread.o.timeout = atoi(optarg);
 			break;
 		case 'l':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			write_lat_log = 1;
 			break;
 		case 'b':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			write_bw_log = 1;
 			break;
 		case 'o':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			f_out = fopen(optarg, "w+");
 			if (!f_out) {
 				perror("fopen output");
@@ -1242,7 +1242,7 @@ int parse_cmd_line(int argc, char *argv[])
 			f_err = f_out;
 			break;
 		case 'm':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			terse_output = 1;
 			break;
 		case 'h':
@@ -1251,18 +1251,18 @@ int parse_cmd_line(int argc, char *argv[])
 		case 'c':
 			exit(fio_show_option_help(optarg));
 		case 's':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			dump_cmdline = 1;
 			break;
 		case 'r':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			read_only = 1;
 			break;
 		case 'v':
 			log_info("%s\n", fio_version_string);
 			exit(0);
 		case 'V':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			terse_version = atoi(optarg);
 			if (terse_version != 2) {
 				log_err("fio: bad terse version format\n");
@@ -1271,21 +1271,21 @@ int parse_cmd_line(int argc, char *argv[])
 			}
 			break;
 		case 'e':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			if (!strcmp("always", optarg))
 				eta_print = FIO_ETA_ALWAYS;
 			else if (!strcmp("never", optarg))
 				eta_print = FIO_ETA_NEVER;
 			break;
 		case 'd':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			if (set_debug(optarg))
 				do_exit++;
 			break;
 		case 'x': {
 			size_t new_size;
 
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 
 			if (!strcmp(optarg, "global")) {
 				log_err("fio: can't use global as only "
@@ -1301,14 +1301,14 @@ int parse_cmd_line(int argc, char *argv[])
 			break;
 			}
 		case 'p':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			exec_profile = strdup(optarg);
 			break;
 		case FIO_GETOPT_JOB: {
 			const char *opt = l_opts[lidx].name;
 			char *val = optarg;
 
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 
 			if (!strncmp(opt, "name", 4) && td) {
 				ret = add_job(td, td->o.name ?: "fio", 0);
@@ -1335,11 +1335,11 @@ int parse_cmd_line(int argc, char *argv[])
 			break;
 		}
 		case 'w':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			warnings_fatal = 1;
 			break;
 		case 'j':
-			fio_client_add_cmd_option(cur_client, argv[optind]);
+			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			max_jobs = atoi(optarg);
 			if (!max_jobs || max_jobs > REAL_MAX_JOBS) {
 				log_err("fio: invalid max jobs: %d\n", max_jobs);
