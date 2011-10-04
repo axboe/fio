@@ -269,7 +269,7 @@ int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t serial)
 	return fio_send_data(sk, &cmd, sizeof(cmd));
 }
 
-static int send_quit_command(void)
+static int fio_server_send_quit_cmd(void)
 {
 	dprint(FD_NET, "server: sending quit\n");
 	return fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_QUIT, 0);
@@ -286,7 +286,7 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0);
 
 	ret = exec_run();
-	send_quit_command();
+	fio_server_send_quit_cmd();
 	reset_fio_state();
 	return ret;
 }
@@ -308,7 +308,7 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0);
 
 	ret = exec_run();
-	send_quit_command();
+	fio_server_send_quit_cmd();
 	reset_fio_state();
 	return ret;
 }
@@ -335,7 +335,6 @@ static int handle_command(struct fio_net_cmd *cmd)
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
 		fio_terminate_threads(TERMINATE_ALL);
-		send_quit_command();
 		return -1;
 	case FIO_NET_CMD_EXIT:
 		exit_backend = 1;
@@ -662,9 +661,33 @@ static int fio_server(void)
 	return ret;
 }
 
+static void sig_int(int sig)
+{
+	fio_terminate_threads(TERMINATE_ALL);
+	exit_backend = 1;
+}
+
+static void server_signal_handler(void)
+{
+	struct sigaction act;
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_int;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGINT, &act, NULL);
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_int;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGTERM, &act, NULL);
+}
+
+
 int fio_start_server(int daemonize)
 {
 	pid_t pid;
+
+	server_signal_handler();
 
 	if (!daemonize)
 		return fio_server();
