@@ -13,6 +13,7 @@
 #include <sys/pstat.h>
 #include <time.h>
 #include <aio.h>
+#include <arm.h>
 
 #include "../file.h"
 
@@ -41,6 +42,12 @@
 
 #ifndef MSG_WAITALL
 #define MSG_WAITALL	0x40
+#endif
+
+#ifdef LITTLE_ENDIAN
+#define FIO_LITTLE_ENDIAN
+#else
+#define FIO_BIG_ENDIAN
 #endif
 
 #define FIO_OS_HAVE_AIOCB_TYPEDEF
