@@ -44,24 +44,25 @@ static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
 	qsort(vpmap, entries, sizeof(struct value_pair), vp_cmp);
 }
 
-static void show_option_range(struct fio_option *o, FILE *out)
+static void show_option_range(struct fio_option *o,
+				int (*logger)(const char *format, ...))
 {
 	if (o->type == FIO_OPT_FLOAT_LIST){
 		if (isnan(o->minfp) && isnan(o->maxfp))
 			return;
 
-		fprintf(out, "%20s: min=%f", "range", o->minfp);
+		logger("%20s: min=%f", "range", o->minfp);
 		if (!isnan(o->maxfp))
-			fprintf(out, ", max=%f", o->maxfp);
-		fprintf(out, "\n");
+			logger(", max=%f", o->maxfp);
+		logger("\n");
 	} else {
 		if (!o->minval && !o->maxval)
 			return;
 
-		fprintf(out, "%20s: min=%d", "range", o->minval);
+		logger("%20s: min=%d", "range", o->minval);
 		if (o->maxval)
-			fprintf(out, ", max=%d", o->maxval);
-		fprintf(out, "\n");
+			logger(", max=%d", o->maxval);
+		logger("\n");
 	}
 }
 
@@ -75,17 +76,17 @@ static void show_option_values(struct fio_option *o)
 		if (!vp->ival)
 			continue;
 
-		printf("%20s: %-10s", i == 0 ? "valid values" : "", vp->ival);
+		log_info("%20s: %-10s", i == 0 ? "valid values" : "", vp->ival);
 		if (vp->help)
-			printf(" %s", vp->help);
-		printf("\n");
+			log_info(" %s", vp->help);
+		log_info("\n");
 	}
 
 	if (i)
-		printf("\n");
+		log_info("\n");
 }
 
-static void show_option_help(struct fio_option *o, FILE *out)
+static void show_option_help(struct fio_option *o, int is_err)
 {
 	const char *typehelp[] = {
 		"invalid",
@@ -101,15 +102,21 @@ static void show_option_help(struct fio_option *o, FILE *out)
 		"no argument (opt)",
 		"deprecated",
 	};
+	int (*logger)(const char *format, ...);
+
+	if (is_err)
+		logger = log_err;
+	else
+		logger = log_info;
 
 	if (o->alias)
-		fprintf(out, "%20s: %s\n", "alias", o->alias);
+		logger("%20s: %s\n", "alias", o->alias);
 
-	fprintf(out, "%20s: %s\n", "type", typehelp[o->type]);
-	fprintf(out, "%20s: %s\n", "default", o->def ? o->def : "no default");
+	logger("%20s: %s\n", "type", typehelp[o->type]);
+	logger("%20s: %s\n", "default", o->def ? o->def : "no default");
 	if (o->prof_name)
-		fprintf(out, "%20s: only for profile '%s'\n", "valid", o->prof_name);
-	show_option_range(o, stdout);
+		logger("%20s: only for profile '%s'\n", "valid", o->prof_name);
+	show_option_range(o, logger);
 	show_option_values(o);
 }
 
@@ -635,10 +642,10 @@ match:
 		break;
 	}
 	case FIO_OPT_DEPRECATED:
-		fprintf(stdout, "Option %s is deprecated\n", o->name);
+		log_info("Option %s is deprecated\n", o->name);
 		break;
 	default:
-		fprintf(stderr, "Bad option type %u\n", o->type);
+		log_err("Bad option type %u\n", o->type);
 		ret = 1;
 	}
 
@@ -650,7 +657,7 @@ match:
 		if (ret) {
 			fprintf(stderr,"Correct format for offending option\n");
 			fprintf(stderr, "%20s: %s\n", o->name, o->help);
-			show_option_help(o, stderr);
+			show_option_help(o, 1);
 		}
 	}
 
@@ -776,14 +783,14 @@ int parse_cmd_option(const char *opt, const char *val,
 
 	o = find_option(options, opt);
 	if (!o) {
-		fprintf(stderr, "Bad option <%s>\n", opt);
+		log_err("Bad option <%s>\n", opt);
 		return 1;
 	}
 
 	if (!handle_option(o, val, data))
 		return 0;
 
-	fprintf(stderr, "fio: failed parsing %s=%s\n", opt, val);
+	log_err("fio: failed parsing %s=%s\n", opt, val);
 	return 1;
 }
 
@@ -852,7 +859,7 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 
 	o = get_option(tmp, options, &post);
 	if (!o) {
-		fprintf(stderr, "Bad option <%s>\n", tmp);
+		log_err("Bad option <%s>\n", tmp);
 		free(tmp);
 		return 1;
 	}
@@ -862,7 +869,7 @@ int parse_option(const char *opt, struct fio_option *options, void *data)
 		return 0;
 	}
 
-	fprintf(stderr, "fio: failed parsing %s\n", opt);
+	log_err("fio: failed parsing %s\n", opt);
 	free(tmp);
 	return 1;
 }
@@ -1012,7 +1019,7 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		if (!match)
 			continue;
 
-		show_option_help(o, stdout);
+		show_option_help(o, 0);
 	}
 
 	if (found)
@@ -1027,7 +1034,7 @@ int show_cmd_help(struct fio_option *options, const char *name)
 	if (closest && best_dist < 3) {
 		printf(" - showing closest match\n");
 		printf("%20s: %s\n", closest->name, closest->help);
-		show_option_help(closest, stdout);
+		show_option_help(closest, 0);
 	} else
 		printf("\n");
 
@@ -1061,20 +1068,17 @@ void option_init(struct fio_option *o)
 		o->maxfp = NAN;
 	}
 	if (o->type == FIO_OPT_STR_SET && o->def) {
-		fprintf(stderr, "Option %s: string set option with"
+		log_err("Option %s: string set option with"
 				" default will always be true\n", o->name);
 	}
-	if (!o->cb && (!o->off1 && !o->roff1)) {
-		fprintf(stderr, "Option %s: neither cb nor offset given\n",
-							o->name);
-	}
+	if (!o->cb && (!o->off1 && !o->roff1))
+		log_err("Option %s: neither cb nor offset given\n", o->name);
 	if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE ||
 	    o->type == FIO_OPT_STR_MULTI)
 		return;
 	if (o->cb && ((o->off1 || o->off2 || o->off3 || o->off4) ||
 		      (o->roff1 || o->roff2 || o->roff3 || o->roff4))) {
-		fprintf(stderr, "Option %s: both cb and offset given\n",
-							 o->name);
+		log_err("Option %s: both cb and offset given\n", o->name);
 	}
 }
 
