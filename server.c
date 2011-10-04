@@ -456,7 +456,7 @@ int fio_server_text_output(const char *buf, unsigned int len)
 	if (server_fd != -1)
 		return fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, buf, len);
 
-	return 0;
+	return fwrite(buf, len, 1, f_err);
 }
 
 static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
