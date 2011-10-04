@@ -27,6 +27,8 @@ struct fio_client {
 
 static FLIST_HEAD(client_list);
 
+static int handle_client(struct fio_client *client, int one);
+
 static struct fio_client *find_client_by_fd(int fd)
 {
 	struct fio_client *client;
@@ -151,6 +153,12 @@ static void client_signal_handler(void)
 	sigaction(SIGTERM, &act, NULL);
 }
 
+static void probe_client(struct fio_client *client)
+{
+	fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_PROBE, 0);
+	handle_client(client, 1);
+}
+
 int fio_clients_connect(void)
 {
 	struct fio_client *client;
@@ -163,8 +171,12 @@ int fio_clients_connect(void)
 		client = flist_entry(entry, struct fio_client, list);
 
 		ret = fio_client_connect(client);
-		if (ret)
+		if (ret) {
 			remove_client(client);
+			continue;
+		}
+
+		probe_client(client);
 	}
 
 	return !nr_clients;
@@ -216,6 +228,11 @@ static int fio_client_send_ini(struct fio_client *client, const char *filename)
 		else if (errno == EAGAIN || errno == EINTR)
 			continue;
 	} while (1);
+
+	if (len) {
+		log_err("fio: failed reading job file %s\n", filename);
+		return 1;
+	}
 
 	ret = send_file_buf(client, buf, sb.st_size);
 	free(buf);
@@ -370,11 +387,11 @@ static void handle_probe(struct fio_net_cmd *cmd)
 {
 	struct cmd_probe_pdu *probe = (struct cmd_probe_pdu *) cmd->payload;
 
-	log_info("Probe: %s: %u.%u.%u\n", probe->hostname, probe->fio_major,
-					probe->fio_minor, probe->fio_patch);
+	log_info("Probe: hostname=%s, fio ver %u.%u.%u\n", probe->hostname,
+			probe->fio_major, probe->fio_minor, probe->fio_patch);
 }
 
-static int handle_client(struct fio_client *client)
+static int handle_client(struct fio_client *client, int one)
 {
 	struct fio_net_cmd *cmd;
 	int done = 0;
@@ -390,8 +407,9 @@ static int handle_client(struct fio_client *client)
 			done = 1;
 			break;
 		case FIO_NET_CMD_TEXT:
-			fwrite(cmd->payload, cmd->pdu_len, 1, stdout);
-			fflush(stdout);
+			fprintf(f_out, "Client <%s>: ", client->hostname);
+			fwrite(cmd->payload, cmd->pdu_len, 1, f_out);
+			fflush(f_out);
 			free(cmd);
 			break;
 		case FIO_NET_CMD_TS:
@@ -416,7 +434,7 @@ static int handle_client(struct fio_client *client)
 			break;
 		}
 
-		if (done)
+		if (done || one)
 			break;
 	}
 
@@ -462,7 +480,7 @@ int fio_handle_clients(void)
 				log_err("fio: unknown client\n");
 				continue;
 			}
-			handle_client(client);
+			handle_client(client, 0);
 		}
 	}
 

@@ -160,9 +160,11 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk, int block)
 		if (ret)
 			break;
 
-		if (first)
-			cmd_size = sizeof(cmd) + cmd.pdu_len;
-		else
+		if (first) {
+			/* if this is text, add room for \0 at the end */
+			cmd_size = sizeof(cmd) + cmd.pdu_len + 1;
+			assert(!cmdret);
+		} else
 			cmd_size += cmd.pdu_len;
 
 		cmdret = realloc(cmdret, cmd_size);
@@ -199,8 +201,17 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk, int block)
 	if (ret) {
 		free(cmdret);
 		cmdret = NULL;
-	} else if (cmdret)
+	} else if (cmdret) {
+		/* zero-terminate text input */
+		if (cmdret->pdu_len && (cmdret->opcode == FIO_NET_CMD_TEXT ||
+		    cmdret->opcode == FIO_NET_CMD_JOB)) {
+			char *buf = (char *) cmdret->payload;
+
+			buf[cmdret->pdu_len ] = '\0';
+		}
+		/* frag flag is internal */
 		cmdret->flags &= ~FIO_NET_CMD_F_MORE;
+	}
 
 	return cmdret;
 }
@@ -264,9 +275,9 @@ static int send_quit_command(void)
 	return fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_QUIT, 0);
 }
 
-static int handle_cur_job(struct fio_net_cmd *cmd)
+static int handle_job_cmd(struct fio_net_cmd *cmd)
 {
-	void *buf = cmd->payload;
+	char *buf = (char *) cmd->payload;
 	int ret;
 
 	parse_jobs_ini(buf, 1, 0);
@@ -303,7 +314,7 @@ static int handle_command(struct fio_net_cmd *cmd)
 		exit_backend = 1;
 		return -1;
 	case FIO_NET_CMD_JOB:
-		ret = handle_cur_job(cmd);
+		ret = handle_job_cmd(cmd);
 		break;
 	case FIO_NET_CMD_PROBE:
 		ret = handle_probe_cmd(cmd);
