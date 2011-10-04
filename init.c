@@ -1359,7 +1359,7 @@ static int parse_cmd_line(int argc, char *argv[])
 	if (nr_clients && fio_clients_connect()) {
 		do_exit++;
 		exit_val = 1;
-		return 1;
+		return -1;
 	}
 
 	if (is_backend)
@@ -1397,17 +1397,19 @@ int parse_options(int argc, char *argv[])
 
 	job_files = parse_cmd_line(argc, argv);
 
-	for (i = 0; i < job_files; i++) {
-		if (fill_def_thread())
-			return 1;
-		if (nr_clients) {
-			if (fio_clients_send_ini(ini_file[i]))
+	if (job_files > 0) {
+		for (i = 0; i < job_files; i++) {
+			if (fill_def_thread())
 				return 1;
-			free(ini_file[i]);
-		} else if (!is_backend) {
-			if (parse_jobs_ini(ini_file[i], 0, i))
-				return 1;
-			free(ini_file[i]);
+			if (nr_clients) {
+				if (fio_clients_send_ini(ini_file[i]))
+					return 1;
+				free(ini_file[i]);
+			} else if (!is_backend) {
+				if (parse_jobs_ini(ini_file[i], 0, i))
+					return 1;
+				free(ini_file[i]);
+			}
 		}
 	}
 
@@ -1422,8 +1424,10 @@ int parse_options(int argc, char *argv[])
 		if (is_backend || nr_clients)
 			return 0;
 
-		log_err("No jobs(s) defined\n\n");
-		usage(argv[0]);
+		if (job_files > 0) {
+			log_err("No jobs(s) defined\n\n");
+			usage(argv[0]);
+		}
 		return 1;
 	}
 
