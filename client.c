@@ -379,7 +379,7 @@ static int handle_client(struct fio_client *client)
 	struct fio_net_cmd *cmd;
 	int done = 0;
 
-	while ((cmd = fio_net_recv_cmd(client->fd)) != NULL) {
+	while ((cmd = fio_net_recv_cmd(client->fd, 1)) != NULL) {
 		dprint(FD_NET, "%s: got cmd op %d\n", client->hostname,
 							cmd->opcode);
 

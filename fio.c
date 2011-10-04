@@ -1696,8 +1696,8 @@ static void run_threads(void)
 
 		if (is_backend)
 			fio_server_idle_loop();
-
-		usleep(10000);
+		else
+			usleep(10000);
 	}
 
 	update_io_ticks();
