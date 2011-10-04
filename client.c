@@ -366,6 +366,14 @@ static void handle_eta(struct fio_net_cmd *cmd)
 	display_thread_status(je);
 }
 
+static void handle_probe(struct fio_net_cmd *cmd)
+{
+	struct cmd_probe_pdu *probe = (struct cmd_probe_pdu *) cmd->payload;
+
+	log_info("Probe: %s: %u.%u.%u\n", probe->hostname, probe->fio_major,
+					probe->fio_minor, probe->fio_patch);
+}
+
 static int handle_client(struct fio_client *client)
 {
 	struct fio_net_cmd *cmd;
@@ -396,6 +404,10 @@ static int handle_client(struct fio_client *client)
 			break;
 		case FIO_NET_CMD_ETA:
 			handle_eta(cmd);
+			free(cmd);
+			break;
+		case FIO_NET_CMD_PROBE:
+			handle_probe(cmd);
 			free(cmd);
 			break;
 		default:
