@@ -2,6 +2,7 @@
 #define FIO_LOG_H
 
 #include <stdio.h>
+#include <stdarg.h>
 
 extern FILE *f_out;
 extern FILE *f_err;
