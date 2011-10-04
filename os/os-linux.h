@@ -295,6 +295,10 @@ static inline int fio_lookup_raw(dev_t dev, int *majdev, int *mindev)
 #error "Unknown endianness"
 #endif
 
+#define fio_swap16(x)	__bswap_16(x)
+#define fio_swap32(x)	__bswap_32(x)
+#define fio_swap64(x)	__bswap_64(x)
+
 #define CACHE_LINE_FILE	\
 	"/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
 

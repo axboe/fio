@@ -104,12 +104,12 @@ extern int fio_net_port;
 #define __cpu_to_le32(x)		(x)
 #define __cpu_to_le64(x)		(x)
 #else
-#define __le16_to_cpu(x)		__bswap_16(x)
-#define __le32_to_cpu(x)		__bswap_32(x)
-#define __le64_to_cpu(x)		__bswap_64(x)
-#define __cpu_to_le16(x)		__bswap_16(x)
-#define __cpu_to_le32(x)		__bswap_32(x)
-#define __cpu_to_le64(x)		__bswap_64(x)
+#define __le16_to_cpu(x)		fio_swap16(x)
+#define __le32_to_cpu(x)		fio_swap_2(x)
+#define __le64_to_cpu(x)		fio_swap64(x)
+#define __cpu_to_le16(x)		fio_swap16(x)
+#define __cpu_to_le32(x)		fio_swap32(x)
+#define __cpu_to_le64(x)		fio_swap64(x)
 #endif
 
 #define le16_to_cpu(val) ({			\
