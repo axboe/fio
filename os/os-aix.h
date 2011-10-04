@@ -25,9 +25,16 @@
 #define OS_MAP_ANON		MAP_ANON
 #define OS_MSG_DONTWAIT		0
 
-#warning "Assuming big endian on AIX, fix me up"
+#if BYTE_ORDER == BIG_ENDIAN
 #define FIO_BIG_ENDIAN
+#else
+#define FIO_LITTLE_ENDIAN
+#endif
+
 #define FIO_USE_GENERIC_SWAP
+
+#define FIO_OS_HAVE_SOCKLEN_T
+#define fio_socklen_t socklen_t
 
 static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
