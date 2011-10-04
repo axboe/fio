@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <windows.h>
 #include <psapi.h>
+#include <stdlib.h>
 
 #include "../smalloc.h"
 #include "../file.h"
@@ -25,6 +26,11 @@
 #define OS_CLOCK CLOCK_REALTIME
 
 #define FIO_PREFERRED_ENGINE	"windowsaio"
+
+#define FIO_LITTLE_ENDIAN
+#define fio_swap16(x)	_byteswap_ushort(x)
+#define fio_swap32(x)	_byteswap_ulong(x)
+#define fio_swap64(x)	_byteswap_uint64(x)
 
 typedef off_t off64_t;
 
