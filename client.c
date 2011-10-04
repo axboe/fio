@@ -458,8 +458,9 @@ static void handle_probe(struct fio_net_cmd *cmd)
 {
 	struct cmd_probe_pdu *probe = (struct cmd_probe_pdu *) cmd->payload;
 
-	log_info("Probe: hostname=%s, fio ver %u.%u.%u\n", probe->hostname,
-			probe->fio_major, probe->fio_minor, probe->fio_patch);
+	log_info("Probe: hostname=%s, be=%u, fio ver %u.%u.%u\n",
+		probe->hostname, probe->bigendian, probe->fio_major,
+		probe->fio_minor, probe->fio_patch);
 }
 
 static int handle_client(struct fio_client *client, int one)

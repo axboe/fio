@@ -59,6 +59,7 @@ struct cmd_ts_pdu {
 
 struct cmd_probe_pdu {
 	uint8_t hostname[64];
+	uint8_t bigendian;
 	uint8_t fio_major;
 	uint8_t fio_minor;
 	uint8_t fio_patch;

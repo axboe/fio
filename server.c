@@ -324,6 +324,9 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 
 	memset(&probe, 0, sizeof(probe));
 	gethostname((char *) probe.hostname, sizeof(probe.hostname));
+#ifdef FIO_BIG_ENDIAN
+	probe.bigendian = 1;
+#endif
 	probe.fio_major = FIO_MAJOR;
 	probe.fio_minor = FIO_MINOR;
 	probe.fio_patch = FIO_PATCH;
@@ -645,7 +648,7 @@ static int fio_server(void)
 		return -1;
 	}
 #ifdef SO_REUSEPORT
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(sk, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
 		log_err("fio: setsockopt: %s\n", strerror(errno));
 		return -1;
 	}
