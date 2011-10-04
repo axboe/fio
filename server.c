@@ -429,7 +429,7 @@ again:
 	if (exit_backend)
 		goto out;
 
-	sk = accept(listen_sk, &addr, &len);
+	sk = accept(listen_sk, (struct sockaddr *) &addr, &len);
 	if (sk < 0) {
 		log_err("fio: accept: %s\n", strerror(errno));
 		return -1;
