@@ -31,9 +31,11 @@ struct fio_client {
 };
 
 enum {
+	Client_created		= 0,
 	Client_connected	= 1,
 	Client_started		= 2,
 	Client_stopped		= 3,
+	Client_exited		= 4,
 };
 
 static FLIST_HEAD(client_list);
@@ -525,14 +527,16 @@ int fio_handle_clients(void)
 
 		assert(i == nr_clients);
 
-		ret = poll(pfds, nr_clients, 100);
-		if (ret < 0) {
-			if (errno == EINTR)
+		do {
+			ret = poll(pfds, nr_clients, 100);
+			if (ret < 0) {
+				if (errno == EINTR)
+					continue;
+				log_err("fio: poll clients: %s\n", strerror(errno));
+				break;
+			} else if (!ret)
 				continue;
-			log_err("fio: poll clients: %s\n", strerror(errno));
-			break;
-		} else if (!ret)
-			continue;
+		} while (ret <= 0);
 
 		for (i = 0; i < nr_clients; i++) {
 			if (!(pfds[i].revents & POLLIN))
