@@ -376,9 +376,6 @@ static int handle_client(struct fio_client *client)
 							cmd->opcode);
 
 		switch (cmd->opcode) {
-		case FIO_NET_CMD_ACK:
-			free(cmd);
-			break;
 		case FIO_NET_CMD_QUIT:
 			remove_client(client);
 			free(cmd);

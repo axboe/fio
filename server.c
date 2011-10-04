@@ -271,6 +271,19 @@ static int handle_cur_job(struct fio_net_cmd *cmd)
 	return ret;
 }
 
+static int handle_probe_cmd(struct fio_net_cmd *cmd)
+{
+	struct cmd_probe_pdu probe;
+
+	memset(&probe, 0, sizeof(probe));
+	gethostname((char *) probe.hostname, sizeof(probe.hostname));
+	probe.fio_major = 1;
+	probe.fio_minor = 58;
+	probe.fio_patch = 0;
+
+	return fio_net_send_cmd(server_fd, FIO_NET_CMD_PROBE, &probe, sizeof(probe));
+}
+
 static int handle_command(struct fio_net_cmd *cmd)
 {
 	int ret;
@@ -280,16 +293,15 @@ static int handle_command(struct fio_net_cmd *cmd)
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
 		fio_terminate_threads(TERMINATE_ALL);
-		return 1;
+		return -1;
 	case FIO_NET_CMD_EXIT:
 		exit_backend = 1;
-		return 1;
-	case FIO_NET_CMD_ACK:
-		return 0;
-	case FIO_NET_CMD_NAK:
-		return 1;
+		return -1;
 	case FIO_NET_CMD_JOB:
 		ret = handle_cur_job(cmd);
+		break;
+	case FIO_NET_CMD_PROBE:
+		ret = handle_probe_cmd(cmd);
 		break;
 	default:
 		log_err("fio: unknown opcode: %d\n", cmd->opcode);
@@ -308,7 +320,7 @@ static int handle_connection(int sk)
 	while (!exit_backend) {
 		cmd = fio_net_recv_cmd(sk);
 		if (!cmd) {
-			ret = 1;
+			ret = -1;
 			break;
 		}
 
@@ -407,7 +419,7 @@ static int fio_server(void)
 #ifdef SO_REUSEPORT
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
 		log_err("fio: setsockopt: %s\n", strerror(errno));
-		return 1;
+		return -1;
 	}
 #endif
 
@@ -615,7 +627,7 @@ int fio_start_server(int daemonize)
 	pid = fork();
 	if (pid < 0) {
 		syslog(LOG_ERR, "failed server fork");
-		return 1;
+		return -1;
 	} else if (pid)
 		exit(0);
 

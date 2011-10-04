@@ -34,12 +34,11 @@ enum {
 	FIO_NET_CMD_QUIT	= 1,
 	FIO_NET_CMD_EXIT	= 2,
 	FIO_NET_CMD_JOB		= 3,
-	FIO_NET_CMD_ACK		= 4,
-	FIO_NET_CMD_NAK		= 5,
-	FIO_NET_CMD_TEXT	= 6,
-	FIO_NET_CMD_TS		= 7,
-	FIO_NET_CMD_GS		= 8,
-	FIO_NET_CMD_ETA		= 9,
+	FIO_NET_CMD_TEXT	= 4,
+	FIO_NET_CMD_TS		= 5,
+	FIO_NET_CMD_GS		= 6,
+	FIO_NET_CMD_ETA		= 7,
+	FIO_NET_CMD_PROBE	= 8,
 
 	FIO_NET_CMD_F_MORE	= 1UL << 0,
 
@@ -51,6 +50,13 @@ enum {
 struct cmd_ts_pdu {
 	struct thread_stat ts;
 	struct group_run_stats rs;
+};
+
+struct cmd_probe_pdu {
+	uint8_t hostname[64];
+	uint8_t fio_major;
+	uint8_t fio_minor;
+	uint8_t fio_patch;
 };
 
 extern int fio_start_server(int);
