@@ -358,8 +358,11 @@ static int handle_connection(int sk, int block)
 					break;
 				log_err("fio: poll: %s\n", strerror(errno));
 				break;
-			} else if (!ret)
+			} else if (!ret) {
+				if (!block)
+					return 0;
 				continue;
+			}
 
 			if (pfd.revents & POLLIN)
 				break;
@@ -367,7 +370,7 @@ static int handle_connection(int sk, int block)
 				ret = 1;
 				break;
 			}
-		} while (1);
+		} while (!exit_backend);
 
 		if (ret < 0)
 			break;
