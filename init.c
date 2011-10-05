@@ -29,6 +29,7 @@ static char fio_version_string[] = "fio 1.58";
 static char **ini_file;
 static int max_jobs = FIO_MAX_JOBS;
 static int dump_cmdline;
+static int def_timeout;
 
 static struct thread_data def_thread;
 struct thread_data *threads = NULL;
@@ -959,6 +960,7 @@ static int fill_def_thread(void)
 	memset(&def_thread, 0, sizeof(def_thread));
 
 	fio_getaffinity(getpid(), &def_thread.o.cpumask);
+	def_thread.o.timeout = def_timeout;
 
 	/*
 	 * fill default options
@@ -1173,7 +1175,7 @@ static int parse_cmd_line(int argc, char *argv[])
 			smalloc_pool_size = atoi(optarg);
 			break;
 		case 't':
-			def_thread.o.timeout = atoi(optarg);
+			def_timeout = atoi(optarg);
 			break;
 		case 'l':
 			write_lat_log = 1;
