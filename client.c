@@ -42,7 +42,7 @@ enum {
 
 static FLIST_HEAD(client_list);
 
-static int handle_client(struct fio_client *client, int one);
+static int handle_client(struct fio_client *client, int one, int block);
 
 static struct fio_client *find_client_by_fd(int fd)
 {
@@ -217,7 +217,7 @@ static void probe_client(struct fio_client *client)
 	dprint(FD_NET, "client: send probe\n");
 
 	fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_PROBE, 0);
-	handle_client(client, 1);
+	handle_client(client, 1, 1);
 }
 
 static int send_client_cmd_line(struct fio_client *client)
@@ -479,14 +479,14 @@ static void handle_probe(struct fio_net_cmd *cmd)
 		probe->fio_minor, probe->fio_patch);
 }
 
-static int handle_client(struct fio_client *client, int one)
+static int handle_client(struct fio_client *client, int one, int block)
 {
 	struct fio_net_cmd *cmd;
 	int done = 0, did_cmd = 0;
 
 	dprint(FD_NET, "client: handle %s\n", client->hostname);
 
-	while ((cmd = fio_net_recv_cmd(client->fd, 1)) != NULL) {
+	while ((cmd = fio_net_recv_cmd(client->fd, block)) != NULL) {
 		did_cmd++;
 
 		dprint(FD_NET, "client: got cmd op %d from %s\n",
@@ -588,7 +588,7 @@ int fio_handle_clients(void)
 				log_err("fio: unknown client\n");
 				continue;
 			}
-			if (!handle_client(client, 0)) {
+			if (!handle_client(client, 0, 0)) {
 				log_info("client: host=%s disconnected\n",
 						client->hostname);
 				remove_client(client);
