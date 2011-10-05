@@ -63,9 +63,16 @@ endif
 
 OBJS = $(SOURCE:.c=.o)
 
-T_OBJS = t/stest.o
-T_OBJS += mutex.o smalloc.o t/log.o
-T_PROGS = t/stest
+T_SMALLOC_OBJS = t/stest.o
+T_SMALLOC_OBJS += mutex.o smalloc.o t/log.o
+T_SMALLOC_PROGS = t/stest
+
+T_IEEE_OBJS = t/ieee754.o
+T_IEEE_OBJS += ieee754.o
+T_IEEE_PROGS = t/ieee754
+
+T_OBJS = $(T_SMALLOC_OBJS)
+T_OBJS += $(T_IEEE_OBJS)
 
 ifneq ($(findstring $(MAKEFLAGS),s),s)
 ifndef V
@@ -84,8 +91,11 @@ all: .depend $(PROGS) $(SCRIPTS)
 .c.o: .depend
 	$(QUIET_CC)$(CC) -o $@ -c $(CFLAGS) $(CPPFLAGS) $<
 
-t/stest: $(T_OBJS)
-	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_OBJS) $(LIBS) $(LDFLAGS)
+t/stest: $(T_SMALLOC_OBJS)
+	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_SMALLOC_OBJS) $(LIBS) $(LDFLAGS)
+
+t/ieee754: $(T_IEEE_OBJS)
+	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_IEEE_OBJS) $(LIBS) $(LDFLAGS)
 
 fio: $(OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
