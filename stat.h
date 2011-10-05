@@ -128,6 +128,7 @@ struct thread_stat {
 	struct io_stat slat_stat[2];		/* submission latency */
 	struct io_stat lat_stat[2];		/* total latency */
 	struct io_stat bw_stat[2];		/* bandwidth stats */
+	struct io_stat iops_stat[2];		/* IOPS stats */
 
 	/*
 	 * fio system usage accounting

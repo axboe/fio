@@ -749,6 +749,17 @@ static int str_write_lat_log_cb(void *data, const char *str)
 	return 0;
 }
 
+static int str_write_iops_log_cb(void *data, const char *str)
+{
+	struct thread_data *td = data;
+
+	if (str)
+		td->o.iops_log_file = strdup(str);
+
+	td->o.write_iops_log = 1;
+	return 0;
+}
+
 static int str_gtod_reduce_cb(void *data, int *il)
 {
 	struct thread_data *td = data;
@@ -1821,6 +1832,15 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Time window over which to calculate bandwidth"
 			  " (msec)",
 		.def	= "500",
+		.parent	= "write_bw_log",
+	},
+	{
+		.name	= "iopsavgtime",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(iops_avg_time),
+		.help	= "Time window over which to calculate IOPS (msec)",
+		.def	= "500",
+		.parent	= "write_iops_log",
 	},
 	{
 		.name	= "create_serialize",
@@ -1937,6 +1957,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(write_lat_log),
 		.cb	= str_write_lat_log_cb,
 		.help	= "Write log of latency during run",
+	},
+	{
+		.name	= "write_iops_log",
+		.type	= FIO_OPT_STR,
+		.off1	= td_var_offset(write_iops_log),
+		.cb	= str_write_iops_log_cb,
+		.help	= "Write log of IOPS during run",
 	},
 	{
 		.name	= "hugepage-size",

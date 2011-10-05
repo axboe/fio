@@ -13,6 +13,7 @@
 
 struct io_completion_data {
 	int nr;				/* input */
+	int account;			/* input */
 
 	int error;			/* output */
 	unsigned long bytes_done[2];	/* output */
@@ -1266,6 +1267,36 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 		td_verror(td, io_u->error, "io_u error");
 }
 
+static void account_io_completion(struct thread_data *td, struct io_u *io_u,
+				  struct io_completion_data *icd,
+				  const enum fio_ddir idx, unsigned int bytes)
+{
+	unsigned long uninitialized_var(lusec);
+
+	if (!icd->account)
+		return;
+
+	if (!td->o.disable_clat || !td->o.disable_bw)
+		lusec = utime_since(&io_u->issue_time, &icd->time);
+
+	if (!td->o.disable_lat) {
+		unsigned long tusec;
+
+		tusec = utime_since(&io_u->start_time, &icd->time);
+		add_lat_sample(td, idx, tusec, bytes);
+	}
+
+	if (!td->o.disable_clat) {
+		add_clat_sample(td, idx, lusec, bytes);
+		io_u_mark_latency(td, lusec);
+	}
+
+	if (!td->o.disable_bw)
+		add_bw_sample(td, idx, bytes, &icd->time);
+
+	add_iops_sample(td, idx, &icd->time);
+}
+
 static void io_completed(struct thread_data *td, struct io_u *io_u,
 			 struct io_completion_data *icd)
 {
@@ -1303,6 +1334,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		int ret;
 
 		td->io_blocks[idx]++;
+		td->this_io_blocks[idx]++;
 		td->io_bytes[idx] += bytes;
 		td->this_io_bytes[idx] += bytes;
 
@@ -1318,25 +1350,9 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 			}
 		}
 
-		if (ramp_time_over(td)) {
-			unsigned long uninitialized_var(lusec);
+		if (ramp_time_over(td) && td->runstate == TD_RUNNING) {
+			account_io_completion(td, io_u, icd, idx, bytes);
 
-			if (!td->o.disable_clat || !td->o.disable_bw)
-				lusec = utime_since(&io_u->issue_time,
-							&icd->time);
-			if (!td->o.disable_lat) {
-				unsigned long tusec;
-
-				tusec = utime_since(&io_u->start_time,
-							&icd->time);
-				add_lat_sample(td, idx, tusec, bytes);
-			}
-			if (!td->o.disable_clat) {
-				add_clat_sample(td, idx, lusec, bytes);
-				io_u_mark_latency(td, lusec);
-			}
-			if (!td->o.disable_bw)
-				add_bw_sample(td, idx, bytes, &icd->time);
 			if (__should_check_rate(td, idx)) {
 				td->rate_pending_usleep[idx] =
 					((td->this_io_bytes[idx] *
@@ -1386,6 +1402,7 @@ static void init_icd(struct thread_data *td, struct io_completion_data *icd,
 		fio_gettime(&icd->time, NULL);
 
 	icd->nr = nr;
+	icd->account = 1;
 
 	icd->error = 0;
 	icd->bytes_done[0] = icd->bytes_done[1] = 0;
@@ -1404,6 +1421,8 @@ static void ios_completed(struct thread_data *td,
 
 		if (!(io_u->flags & IO_U_F_FREE_DEF))
 			put_io_u(td, io_u);
+
+		icd->account = 0;
 	}
 }
 

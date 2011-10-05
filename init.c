@@ -768,6 +768,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	}
 	if (td->o.write_bw_log)
 		setup_log(&td->bw_log);
+	if (td->o.write_iops_log)
+		setup_log(&td->iops_log);
 
 	if (!td->o.name)
 		td->o.name = strdup(jobname);

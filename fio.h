@@ -139,6 +139,7 @@ struct thread_options {
 	unsigned int use_os_rand;
 	unsigned int write_lat_log;
 	unsigned int write_bw_log;
+	unsigned int write_iops_log;
 	unsigned int norandommap;
 	unsigned int softrandommap;
 	unsigned int bs_unaligned;
@@ -157,6 +158,7 @@ struct thread_options {
 	unsigned long long ramp_time;
 	unsigned int overwrite;
 	unsigned int bw_avg_time;
+	unsigned int iops_avg_time;
 	unsigned int loops;
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
@@ -203,6 +205,7 @@ struct thread_options {
 	char *write_iolog_file;
 	char *bw_log_file;
 	char *lat_log_file;
+	char *iops_log_file;
 	char *replay_redirect;
 
 	/*
@@ -265,9 +268,13 @@ struct thread_data {
 	struct io_log *clat_log;
 	struct io_log *lat_log;
 	struct io_log *bw_log;
+	struct io_log *iops_log;
 
 	uint64_t stat_io_bytes[2];
-	struct timeval stat_sample_time[2];
+	struct timeval bw_sample_time;
+
+	uint64_t stat_io_blocks[2];
+	struct timeval iops_sample_time;
 
 	struct rusage ru_start;
 	struct rusage ru_end;
@@ -365,6 +372,7 @@ struct thread_data {
 
 	unsigned long io_issues[2];
 	unsigned long long io_blocks[2];
+	unsigned long long this_io_blocks[2];
 	unsigned long long io_bytes[2];
 	unsigned long long io_skip_bytes;
 	unsigned long long this_io_bytes[2];

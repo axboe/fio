@@ -43,6 +43,24 @@ if [ "$PLOT_LINE"x != "x" ]; then
 fi
 
 PLOT_LINE=""
+for i in *iops.log; do
+	if [ ! -r $i ]; then
+		continue
+	fi
+	PT=$(echo $i | sed s/_iops.log//g)
+	if [ "$PLOT_LINE"x != "x" ]; then
+		PLOT_LINE=$PLOT_LINE", "
+	fi
+
+	PLOT_LINE=$PLOT_LINE"'$i' title '$PT' with lines"
+done
+
+if [ "$PLOT_LINE"x != "x" ]; then
+	echo Making bw logs
+	echo "set title 'IOPS - $TITLE'; set xlabel 'time (msec)'; set ylabel 'IOPS'; set terminal png size $XRES,$YRES; set output '$TITLE-IOPS.png'; plot " $PLOT_LINE | $GNUPLOT -
+fi
+
+PLOT_LINE=""
 for i in *slat.log; do
 	if [ ! -r $i ]; then
 		continue

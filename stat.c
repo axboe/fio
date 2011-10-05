@@ -372,7 +372,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		double p_of_agg;
 
 		p_of_agg = mean * 100 / (double) rs->agg[ddir];
-		log_info("    bw (KB/s) : min=%5lu, max=%5lu, per=%3.2f%%,"
+		log_info("     bw (KB/s) : min=%5lu, max=%5lu, per=%3.2f%%,"
 			 " avg=%5.02f, stdev=%5.02f\n", min, max, p_of_agg,
 							mean, dev);
 	}
@@ -1004,7 +1004,7 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 	if (!ddir_rw(ddir))
 		return;
 
-	spent = mtime_since(&td->stat_sample_time[ddir], t);
+	spent = mtime_since(&td->bw_sample_time, t);
 	if (spent < td->o.bw_avg_time)
 		return;
 
@@ -1015,6 +1015,32 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 	if (td->bw_log)
 		add_log_sample(td, td->bw_log, rate, ddir, bs);
 
-	fio_gettime(&td->stat_sample_time[ddir], NULL);
+	fio_gettime(&td->bw_sample_time, NULL);
 	td->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
+}
+
+void add_iops_sample(struct thread_data *td, enum fio_ddir ddir,
+		     struct timeval *t)
+{
+	struct thread_stat *ts = &td->ts;
+	unsigned long spent, iops;
+
+	if (!ddir_rw(ddir))
+		return;
+
+	spent = mtime_since(&td->iops_sample_time, t);
+	if (spent < td->o.iops_avg_time)
+		return;
+
+	iops = ((td->this_io_blocks[ddir] - td->stat_io_blocks[ddir]) * 1000) / spent;
+
+	add_stat_sample(&ts->iops_stat[ddir], iops);
+
+	if (td->iops_log) {
+		assert(iops);
+		add_log_sample(td, td->iops_log, iops, ddir, 0);
+	}
+
+	fio_gettime(&td->iops_sample_time, NULL);
+	td->stat_io_blocks[ddir] = td->this_io_blocks[ddir];
 }

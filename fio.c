@@ -217,7 +217,7 @@ static int __check_min_rate(struct thread_data *td, struct timeval *now,
 	if (mtime_since(&td->start, now) < 2000)
 		return 0;
 
-	iops += td->io_blocks[ddir];
+	iops += td->this_io_blocks[ddir];
 	bytes += td->this_io_bytes[ddir];
 	ratemin += td->o.ratemin[ddir];
 	rate_iops += td->o.rate_iops[ddir];
@@ -986,6 +986,8 @@ static void reset_io_counters(struct thread_data *td)
 {
 	td->stat_io_bytes[0] = td->stat_io_bytes[1] = 0;
 	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
+	td->stat_io_blocks[0] = td->stat_io_blocks[1] = 0;
+	td->this_io_blocks[0] = td->this_io_blocks[1] = 0;
 	td->zone_bytes = 0;
 	td->rate_bytes[0] = td->rate_bytes[1] = 0;
 	td->rate_blocks[0] = td->rate_blocks[1] = 0;
@@ -1184,12 +1186,12 @@ static void *thread_main(void *data)
 	clear_state = 0;
 	while (keep_running(td)) {
 		fio_gettime(&td->start, NULL);
-		memcpy(&td->stat_sample_time[0], &td->start, sizeof(td->start));
-		memcpy(&td->stat_sample_time[1], &td->start, sizeof(td->start));
+		memcpy(&td->bw_sample_time, &td->start, sizeof(td->start));
+		memcpy(&td->iops_sample_time, &td->start, sizeof(td->start));
 		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
 
 		if (td->o.ratemin[0] || td->o.ratemin[1])
-			memcpy(&td->lastrate, &td->stat_sample_time,
+			memcpy(&td->lastrate, &td->bw_sample_time,
 							sizeof(td->lastrate));
 
 		if (clear_state)
@@ -1266,6 +1268,14 @@ static void *thread_main(void *data)
 		} else
 			finish_log(td, td->clat_log, "clat");
 	}
+	if (td->iops_log) {
+		if (td->o.iops_log_file) {
+			finish_log_named(td, td->iops_log,
+						td->o.iops_log_file, "iops");
+		} else
+			finish_log(td, td->iops_log, "iops");
+	}
+
 	fio_mutex_up(writeout_mutex);
 	if (td->o.exec_postrun)
 		exec_string(td->o.exec_postrun);

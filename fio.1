@@ -673,6 +673,10 @@ Terminate all jobs when one finishes.  Default: wait for each job to finish.
 Average bandwidth calculations over the given time in milliseconds.  Default:
 500ms.
 .TP
+.BI iopsavgtime \fR=\fPint
+Average IOPS calculations over the given time in milliseconds.  Default:
+500ms.
+.TP
 .BI create_serialize \fR=\fPbool
 If true, serialize file creation for the jobs.  Default: true.
 .TP
@@ -844,6 +848,11 @@ option, the postfix is _bw.log.
 Same as \fBwrite_bw_log\fR, but writes I/O completion latencies.  If no
 filename is given with this option, the default filename of "jobname_type.log"
 is used. Even if the filename is given, fio will still append the type of log.
+.TP
+.BI write_iops_log \fR=\fPstr
+Same as \fBwrite_bw_log\fR, but writes IOPS. If no filename is given with this
+option, the default filename of "jobname_type.log" is used. Even if the
+filename is given, fio will still append the type of log.
 .TP
 .BI disable_lat \fR=\fPbool
 Disable measurements of total latency numbers. Useful only for cutting

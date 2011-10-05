@@ -864,6 +864,9 @@ exitall		When one job finishes, terminate the rest. The default is
 bwavgtime=int	Average the calculated bandwidth over the given time. Value
 		is specified in milliseconds.
 
+iopsavgtime=int	Average the calculated IOPS over the given time. Value
+		is specified in milliseconds.
+
 create_serialize=bool	If true, serialize the file creating for the jobs.
 			This may be handy to avoid interleaving of data
 			files, which may greatly depend on the filesystem
@@ -1103,6 +1106,9 @@ write_lat_log=str Same as write_bw_log, except that this option stores io
 		The actual log names will be foo_slat.log, foo_slat.log,
 		and foo_lat.log. This helps fio_generate_plot fine the logs
 		automatically.
+
+write_bw_log=str If given, write an IOPS log of the jobs in this job
+		file. See write_bw_log.
 
 lockmem=int	Pin down the specified amount of memory with mlock(2). Can
 		potentially be used instead of removing memory or booting
