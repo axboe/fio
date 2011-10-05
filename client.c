@@ -42,7 +42,7 @@ enum {
 
 static FLIST_HEAD(client_list);
 
-static int handle_client(struct fio_client *client, int one, int block);
+static int handle_client(struct fio_client *client);
 
 static struct fio_client *find_client_by_fd(int fd)
 {
@@ -154,6 +154,8 @@ static int fio_client_connect(struct fio_client *client)
 		hent = gethostbyname(client->hostname);
 		if (!hent) {
 			log_err("fio: gethostbyname: %s\n", strerror(errno));
+			log_err("fio: failed looking up hostname %s\n",
+					client->hostname);
 			return 1;
 		}
 
@@ -217,7 +219,7 @@ static void probe_client(struct fio_client *client)
 	dprint(FD_NET, "client: send probe\n");
 
 	fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_PROBE, 0);
-	handle_client(client, 1, 1);
+	handle_client(client);
 }
 
 static int send_client_cmd_line(struct fio_client *client)
@@ -280,7 +282,7 @@ static int fio_client_send_ini(struct fio_client *client, const char *filename)
 
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
-		log_err("fio: job file open: %s\n", strerror(errno));
+		log_err("fio: job file <%s> open: %s\n", filename, strerror(errno));
 		return 1;
 	}
 
@@ -479,72 +481,67 @@ static void handle_probe(struct fio_net_cmd *cmd)
 		probe->fio_minor, probe->fio_patch);
 }
 
-static int handle_client(struct fio_client *client, int one, int block)
+static int handle_client(struct fio_client *client)
 {
 	struct fio_net_cmd *cmd;
-	int done = 0, did_cmd = 0;
 
 	dprint(FD_NET, "client: handle %s\n", client->hostname);
 
-	while ((cmd = fio_net_recv_cmd(client->fd, block)) != NULL) {
-		did_cmd++;
+	cmd = fio_net_recv_cmd(client->fd);
+	if (!cmd)
+		return 0;
 
-		dprint(FD_NET, "client: got cmd op %d from %s\n",
+	dprint(FD_NET, "client: got cmd op %d from %s\n",
 					cmd->opcode, client->hostname);
 
-		switch (cmd->opcode) {
-		case FIO_NET_CMD_QUIT:
-			remove_client(client);
-			free(cmd);
-			done = 1;
-			break;
-		case FIO_NET_CMD_TEXT: {
-			const char *buf = (const char *) cmd->payload;
-			int fio_unused ret;
+	switch (cmd->opcode) {
+	case FIO_NET_CMD_QUIT:
+		remove_client(client);
+		free(cmd);
+		break;
+	case FIO_NET_CMD_TEXT: {
+		const char *buf = (const char *) cmd->payload;
+		int fio_unused ret;
 
-			if (!client->skip_newline)
-				fprintf(f_out, "<%s> ", client->hostname);
-			ret = fwrite(buf, cmd->pdu_len, 1, f_out);
-			fflush(f_out);
-			client->skip_newline = strchr(buf, '\n') == NULL;
-			free(cmd);
-			break;
-			}
-		case FIO_NET_CMD_TS:
-			handle_ts(cmd);
-			free(cmd);
-			break;
-		case FIO_NET_CMD_GS:
-			handle_gs(cmd);
-			free(cmd);
-			break;
-		case FIO_NET_CMD_ETA:
-			handle_eta(cmd);
-			free(cmd);
-			break;
-		case FIO_NET_CMD_PROBE:
-			handle_probe(cmd);
-			free(cmd);
-			break;
-		case FIO_NET_CMD_START:
-			client->state = Client_started;
-			free(cmd);
-			break;
-		case FIO_NET_CMD_STOP:
-			client->state = Client_stopped;
-			free(cmd);
-			break;
-		default:
-			log_err("fio: unknown client op: %d\n", cmd->opcode);
-			free(cmd);
-			break;
+		if (!client->skip_newline)
+			fprintf(f_out, "<%s> ", client->hostname);
+		ret = fwrite(buf, cmd->pdu_len, 1, f_out);
+		fflush(f_out);
+		client->skip_newline = strchr(buf, '\n') == NULL;
+		free(cmd);
+		break;
 		}
-
-		if (done || one)
-			break;
+	case FIO_NET_CMD_TS:
+		handle_ts(cmd);
+		free(cmd);
+		break;
+	case FIO_NET_CMD_GS:
+		handle_gs(cmd);
+		free(cmd);
+		break;
+	case FIO_NET_CMD_ETA:
+		handle_eta(cmd);
+		free(cmd);
+		break;
+	case FIO_NET_CMD_PROBE:
+		handle_probe(cmd);
+		free(cmd);
+		break;
+	case FIO_NET_CMD_START:
+		client->state = Client_started;
+		free(cmd);
+		break;
+	case FIO_NET_CMD_STOP:
+		client->state = Client_stopped;
+		free(cmd);
+		break;
+	default:
+		log_err("fio: unknown client op: %d\n", cmd->opcode);
+		free(cmd);
+		break;
 	}
 
-	return did_cmd;
+	return 1;
 }
 
 int fio_handle_clients(void)
@@ -588,7 +585,7 @@ int fio_handle_clients(void)
 				log_err("fio: unknown client\n");
 				continue;
 			}
-			if (!handle_client(client, 0, 0)) {
+			if (!handle_client(client)) {
 				log_info("client: host=%s disconnected\n",
 						client->hostname);
 				remove_client(client);

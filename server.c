@@ -113,7 +113,7 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 /*
  * Read (and defragment, if necessary) incoming commands
  */
-struct fio_net_cmd *fio_net_recv_cmd(int sk, int block)
+struct fio_net_cmd *fio_net_recv_cmd(int sk)
 {
 	struct fio_net_cmd cmd, *cmdret = NULL;
 	size_t cmd_size = 0, pdu_offset = 0;
@@ -122,37 +122,6 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk, int block)
 	void *pdu = NULL;
 
 	do {
-		struct pollfd pfd;
-
-		pfd.fd = sk;
-		pfd.events = POLLIN;
-		ret = 0;
-		do {
-			int timeo = block ? 100 : 10;
-
-			ret = poll(&pfd, 1, timeo);
-			if (ret < 0) {
-				if (errno == EINTR)
-					break;
-				log_err("fio: poll: %s\n", strerror(errno));
-				break;
-			} else if (!ret) {
-				if (!block)
-					return NULL;
-				continue;
-			}
-
-			if (pfd.revents & POLLIN)
-				break;
-			if (pfd.revents & (POLLERR|POLLHUP)) {
-				ret = 1;
-				break;
-			}
-		} while (ret >= 0 && block);
-
-		if (ret < 0)
-			break;
-
 		ret = fio_recv_data(sk, &cmd, sizeof(cmd));
 		if (ret)
 			break;
@@ -376,7 +345,34 @@ static int handle_connection(int sk, int block)
 
 	/* read forever */
 	while (!exit_backend) {
-		cmd = fio_net_recv_cmd(sk, block);
+		struct pollfd pfd = {
+			.fd	= sk,
+			.events	= POLLIN,
+		};
+
+		ret = 0;
+		do {
+			ret = poll(&pfd, 1, 100);
+			if (ret < 0) {
+				if (errno == EINTR)
+					break;
+				log_err("fio: poll: %s\n", strerror(errno));
+				break;
+			} else if (!ret)
+				continue;
+
+			if (pfd.revents & POLLIN)
+				break;
+			if (pfd.revents & (POLLERR|POLLHUP)) {
+				ret = 1;
+				break;
+			}
+		} while (1);
+
+		if (ret < 0)
+			break;
+
+		cmd = fio_net_recv_cmd(sk);
 		if (!cmd) {
 			ret = -1;
 			break;

@@ -92,7 +92,7 @@ extern int fio_client_add_cmd_option(const char *, const char *);
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);
 extern void fio_net_cmd_crc(struct fio_net_cmd *);
-extern struct fio_net_cmd *fio_net_recv_cmd(int sk, int block);
+extern struct fio_net_cmd *fio_net_recv_cmd(int sk);
 
 extern int exit_backend;
 extern int fio_net_port;
