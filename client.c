@@ -491,10 +491,11 @@ static int handle_client(struct fio_client *client, int one)
 			break;
 		case FIO_NET_CMD_TEXT: {
 			const char *buf = (const char *) cmd->payload;
+			int fio_unused ret;
 
 			if (!client->skip_newline)
 				fprintf(f_out, "Client <%s>: ", client->hostname);
-			fwrite(buf, cmd->pdu_len, 1, f_out);
+			ret = fwrite(buf, cmd->pdu_len, 1, f_out);
 			fflush(f_out);
 			client->skip_newline = strchr(buf, '\n') == NULL;
 			free(cmd);
