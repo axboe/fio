@@ -494,7 +494,7 @@ static int handle_client(struct fio_client *client, int one)
 			int fio_unused ret;
 
 			if (!client->skip_newline)
-				fprintf(f_out, "Client <%s>: ", client->hostname);
+				fprintf(f_out, "<%s> ", client->hostname);
 			ret = fwrite(buf, cmd->pdu_len, 1, f_out);
 			fflush(f_out);
 			client->skip_newline = strchr(buf, '\n') == NULL;
