@@ -1761,9 +1761,45 @@ void reset_fio_state(void)
 	done_secs = 0;
 }
 
+static int endian_check(void)
+{
+	union {
+		uint8_t c[8];
+		uint64_t v;
+	} u;
+	int le = 0, be = 0;
+
+	u.v = 0x12;
+	if (u.c[7] == 0x12)
+		be = 1;
+	else if (u.c[0] == 0x12)
+		le = 1;
+
+#if defined(FIO_LITTLE_ENDIAN)
+	if (be)
+		return 1;
+#elif defined(FIO_BIG_ENDIAN)
+	if (le)
+		return 1;
+#else
+	return 1;
+#endif
+
+	if (!le && !be)
+		return 1;
+
+	return 0;
+}
+
 int main(int argc, char *argv[], char *envp[])
 {
 	long ps;
+
+	if (endian_check()) {
+		log_err("fio: endianness settings appear wrong.\n");
+		log_err("fio: please report this to fio@vger.kernel.org\n");
+		return 1;
+	}
 
 	arch_init(envp);
 
