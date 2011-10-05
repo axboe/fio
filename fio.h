@@ -197,7 +197,7 @@ struct thread_options {
 	unsigned long long trim_backlog;
 	unsigned int clat_percentiles;
 	unsigned int overwrite_plist;
-	double percentile_list[FIO_IO_U_LIST_MAX_LEN];
+	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	char *read_iolog_file;
 	char *write_iolog_file;
@@ -498,6 +498,7 @@ extern int terse_version;
 extern int is_backend;
 extern int nr_clients;
 extern int log_syslog;
+extern const fio_fp64_t def_percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 extern struct thread_data *threads;
 

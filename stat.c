@@ -9,6 +9,7 @@
 
 #include "fio.h"
 #include "diskutil.h"
+#include "ieee754.h"
 
 void update_rusage_stat(struct thread_data *td)
 {
@@ -101,13 +102,13 @@ static unsigned int plat_idx_to_val(unsigned int idx)
 
 static int double_cmp(const void *a, const void *b)
 {
-	const double fa = *(const double *)a;
-	const double fb = *(const double *)b;
+	const fio_fp64_t fa = *(const fio_fp64_t *) a;
+	const fio_fp64_t fb = *(const fio_fp64_t *) b;
 	int cmp = 0;
 
-	if (fa > fb)
+	if (fa.u.f > fb.u.f)
 		cmp = 1;
-	else if (fa < fb)
+	else if (fa.u.f < fb.u.f)
 		cmp = -1;
 
 	return cmp;
@@ -117,37 +118,30 @@ static int double_cmp(const void *a, const void *b)
  * Find and display the p-th percentile of clat
  */
 static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
-				 double *user_list)
+				  fio_fp64_t *plist)
 {
 	unsigned long sum = 0;
 	unsigned int len, i, j = 0;
-	const double *plist;
 	int is_last = 0;
-	static const double def_list[FIO_IO_U_LIST_MAX_LEN] = {
-			1.0, 5.0, 10.0, 20.0, 30.0,
-			40.0, 50.0, 60.0, 70.0, 80.0,
-			90.0, 95.0, 99.0, 99.5, 99.9};
 
-	plist = user_list;
-	if (!plist)
-		plist = def_list;
-
-	for (len = 0; len <FIO_IO_U_LIST_MAX_LEN && plist[len] != 0; len++)
-		;
+	len = 0;
+	while (len < FIO_IO_U_LIST_MAX_LEN && plist[len].u.f != 0.0)
+		len++;
 
 	/*
-	 * Sort the user-specified list. Note that this does not work
-	 * for NaN values
+	 * Sort the percentile list. Note that it may already be sorted if
+	 * we are using the default values, but since it's a short list this
+	 * isn't a worry. Also note that this does not work for NaN values.
 	 */
-	if (user_list && len > 1)
-		qsort((void*)user_list, len, sizeof(user_list[0]), double_cmp);
+	if (len > 1)
+		qsort((void*)plist, len, sizeof(plist[0]), double_cmp);
 
 	log_info("    clat percentiles (usec) :");
 
 	for (i = 0; i < FIO_IO_U_PLAT_NR && !is_last; i++) {
 		sum += io_u_plat[i];
-		while (sum >= (plist[j] / 100 * nr)) {
-			assert(plist[j] <= 100.0);
+		while (sum >= (plist[j].u.f / 100.0 * nr)) {
+			assert(plist[j].u.f <= 100.0);
 
 			/* for formatting */
 			if (j != 0 && (j % 4) == 0)
@@ -181,10 +175,10 @@ static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 	*max = is->max_val;
 
 	n = (double) is->samples;
-	*mean = is->mean;
+	*mean = is->mean.u.f;
 
 	if (n > 1.0)
-		*dev = sqrt(is->S / (n - 1.0));
+		*dev = sqrt(is->S.u.f / (n - 1.0));
 	else
 		*dev = 0;
 
@@ -629,23 +623,23 @@ static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
 	 *  #Parallel_algorithm>
 	 */
 	if (nr == 1) {
-		mean = src->mean;
-		S = src->S;
+		mean = src->mean.u.f;
+		S = src->S.u.f;
 	} else {
-		double delta = src->mean - dst->mean;
+		double delta = src->mean.u.f - dst->mean.u.f;
 
-		mean = ((src->mean * src->samples) +
-			(dst->mean * dst->samples)) /
+		mean = ((src->mean.u.f * src->samples) +
+			(dst->mean.u.f * dst->samples)) /
 			(dst->samples + src->samples);
 
-		S =  src->S + dst->S + pow(delta, 2.0) *
+		S =  src->S.u.f + dst->S.u.f + pow(delta, 2.0) *
 			(dst->samples * src->samples) /
 			(dst->samples + src->samples);
 	}
 
 	dst->samples += src->samples;
-	dst->mean = mean;
-	dst->S = S;
+	dst->mean.u.f = mean;
+	dst->S.u.f = S;
 }
 
 void show_run_stats(void)
@@ -715,9 +709,9 @@ void show_run_stats(void)
 
 		ts->clat_percentiles = td->o.clat_percentiles;
 		if (td->o.overwrite_plist)
-			ts->percentile_list = td->o.percentile_list;
+			memcpy(ts->percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
 		else
-			ts->percentile_list = NULL;
+			memcpy(ts->percentile_list, def_percentile_list, sizeof(def_percentile_list));
 
 		idx++;
 		ts->members++;
@@ -897,10 +891,10 @@ static inline void add_stat_sample(struct io_stat *is, unsigned long data)
 	if (data < is->min_val)
 		is->min_val = data;
 
-	delta = val - is->mean;
+	delta = val - is->mean.u.f;
 	if (delta) {
-		is->mean += delta / (is->samples + 1.0);
-		is->S += delta * (val - is->mean);
+		is->mean.u.f += delta / (is->samples + 1.0);
+		is->S.u.f += delta * (val - is->mean.u.f);
 	}
 
 	is->samples++;

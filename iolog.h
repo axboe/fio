@@ -1,6 +1,8 @@
 #ifndef FIO_IOLOG_H
 #define FIO_IOLOG_H
 
+#include "ieee754.h"
+
 /*
  * Use for maintaining statistics
  */
@@ -9,8 +11,8 @@ struct io_stat {
 	uint64_t min_val;
 	uint64_t samples;
 
-	double mean;
-	double S;
+	fio_fp64_t mean;
+	fio_fp64_t S;
 };
 
 /*

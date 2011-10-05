@@ -141,7 +141,7 @@ struct thread_stat {
 	 * IO depth and latency stats
 	 */
 	uint64_t clat_percentiles;
-	double *percentile_list;
+	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	uint32_t io_u_map[FIO_IO_U_MAP_NR];
 	uint32_t io_u_submit[FIO_IO_U_MAP_NR];

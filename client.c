@@ -330,9 +330,12 @@ static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
 	dst->max_val	= le64_to_cpu(src->max_val);
 	dst->min_val	= le64_to_cpu(src->min_val);
 	dst->samples	= le64_to_cpu(src->samples);
-	/* FIXME */
-	dst->mean	= __le64_to_cpu(src->mean);
-	dst->S		= __le64_to_cpu(src->S);
+
+	/*
+	 * Floats arrive as IEEE 754 encoded uint64_t, convert back to double
+	 */
+	dst->mean.u.f	= fio_uint64_to_double(le64_to_cpu(dst->mean.u.i));
+	dst->S.u.f	= fio_uint64_to_double(le64_to_cpu(dst->S.u.i));
 }
 
 static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
@@ -357,7 +360,13 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->minf		= le64_to_cpu(src->minf);
 	dst->majf		= le64_to_cpu(src->majf);
 	dst->clat_percentiles	= le64_to_cpu(src->clat_percentiles);
-	dst->percentile_list	= NULL;
+
+	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++) {
+		fio_fp64_t *fps = &src->percentile_list[i];
+		fio_fp64_t *fpd = &dst->percentile_list[i];
+
+		fpd->u.f = fio_uint64_to_double(le64_to_cpu(fps->u.i));
+	}
 
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
 		dst->io_u_map[i]	= le32_to_cpu(src->io_u_map[i]);

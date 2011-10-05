@@ -69,6 +69,24 @@ unsigned int *fio_debug_jobp = NULL;
 
 static char cmd_optstr[256];
 
+const fio_fp64_t def_percentile_list[FIO_IO_U_LIST_MAX_LEN] = {
+	{ .u.f	=  1.0 },
+	{ .u.f	=  5.0 },
+	{ .u.f	= 10.0 },
+	{ .u.f	= 20.0 },
+	{ .u.f	= 30.0 },
+	{ .u.f	= 40.0 },
+	{ .u.f	= 50.0 },
+	{ .u.f	= 60.0 },
+	{ .u.f	= 70.0 },
+	{ .u.f	= 80.0 },
+	{ .u.f	= 90.0 },
+	{ .u.f	= 95.0 },
+	{ .u.f	= 99.0 },
+	{ .u.f	= 99.5 },
+	{ .u.f	= 99.9 },
+};
+
 /*
  * Command line options. These will contain the above, plus a few
  * extra that only pertain to fio itself and not jobs.
@@ -718,9 +736,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	td->ts.clat_percentiles = td->o.clat_percentiles;
 	if (td->o.overwrite_plist)
-		td->ts.percentile_list = td->o.percentile_list;
+		memcpy(td->ts.percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
 	else
-		td->ts.percentile_list = NULL;
+		memcpy(td->ts.percentile_list, def_percentile_list, sizeof(def_percentile_list));
 
 	td->ts.clat_stat[0].min_val = td->ts.clat_stat[1].min_val = ULONG_MAX;
 	td->ts.slat_stat[0].min_val = td->ts.slat_stat[1].min_val = ULONG_MAX;

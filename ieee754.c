@@ -6,6 +6,7 @@
  * Below code was granted to the public domain.
  */
 #include <inttypes.h>
+#include "ieee754.h"
 
 uint64_t pack754(long double f, unsigned bits, unsigned expbits)
 {

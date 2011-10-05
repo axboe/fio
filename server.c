@@ -18,6 +18,7 @@
 #include "fio.h"
 #include "server.h"
 #include "crc/crc16.h"
+#include "ieee754.h"
 
 int fio_net_port = 8765;
 
@@ -464,9 +465,12 @@ static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
 	dst->max_val	= cpu_to_le64(src->max_val);
 	dst->min_val	= cpu_to_le64(src->min_val);
 	dst->samples	= cpu_to_le64(src->samples);
-	/* FIXME */
-	dst->mean	= __cpu_to_le64(src->mean);
-	dst->S		= __cpu_to_le64(src->S);
+
+	/*
+	 * Encode to IEEE 754 for network transfer
+	 */
+	dst->mean.u.i	= __cpu_to_le64(fio_double_to_uint64(src->mean.u.f));
+	dst->S.u.i	= __cpu_to_le64(fio_double_to_uint64(src->S.u.f));
 }
 
 static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
@@ -521,7 +525,12 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.minf		= cpu_to_le64(ts->minf);
 	p.ts.majf		= cpu_to_le64(ts->majf);
 	p.ts.clat_percentiles	= cpu_to_le64(ts->clat_percentiles);
-	p.ts.percentile_list	= NULL;
+
+	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++) {
+		fio_fp64_t *fp = &p.ts.percentile_list[i];
+
+		fp->u.i = __cpu_to_le64(fio_double_to_uint64(fp->u.f));
+	}
 
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
 		p.ts.io_u_map[i]	= cpu_to_le32(ts->io_u_map[i]);
