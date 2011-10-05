@@ -88,6 +88,8 @@ const fio_fp64_t def_percentile_list[FIO_IO_U_LIST_MAX_LEN] = {
 	{ .u.f	= 99.9 },
 };
 
+#define FIO_CLIENT_FLAG		(1 << 16)
+
 /*
  * Command line options. These will contain the above, plus a few
  * extra that only pertain to fio itself and not jobs.
@@ -96,92 +98,92 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 	{
 		.name		= (char *) "output",
 		.has_arg	= required_argument,
-		.val		= 'o',
+		.val		= 'o' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "timeout",
 		.has_arg	= required_argument,
-		.val		= 't',
+		.val		= 't' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "latency-log",
 		.has_arg	= required_argument,
-		.val		= 'l',
+		.val		= 'l' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "bandwidth-log",
 		.has_arg	= required_argument,
-		.val		= 'b',
+		.val		= 'b' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "minimal",
 		.has_arg	= optional_argument,
-		.val		= 'm',
+		.val		= 'm' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "version",
 		.has_arg	= no_argument,
-		.val		= 'v',
+		.val		= 'v' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "help",
 		.has_arg	= no_argument,
-		.val		= 'h',
+		.val		= 'h' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "cmdhelp",
 		.has_arg	= optional_argument,
-		.val		= 'c',
+		.val		= 'c' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "showcmd",
 		.has_arg	= no_argument,
-		.val		= 's',
+		.val		= 's' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "readonly",
 		.has_arg	= no_argument,
-		.val		= 'r',
+		.val		= 'r' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "eta",
 		.has_arg	= required_argument,
-		.val		= 'e',
+		.val		= 'e' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "debug",
 		.has_arg	= required_argument,
-		.val		= 'd',
+		.val		= 'd' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "section",
 		.has_arg	= required_argument,
-		.val		= 'x',
+		.val		= 'x' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "alloc-size",
 		.has_arg	= required_argument,
-		.val		= 'a',
+		.val		= 'a' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "profile",
 		.has_arg	= required_argument,
-		.val		= 'p',
+		.val		= 'p' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "warnings-fatal",
 		.has_arg	= no_argument,
-		.val		= 'w',
+		.val		= 'w' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "max-jobs",
 		.has_arg	= required_argument,
-		.val		= 'j',
+		.val		= 'j' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "terse-version",
 		.has_arg	= required_argument,
-		.val		= 'V',
+		.val		= 'V' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "server",
@@ -1227,6 +1229,11 @@ static void fio_options_fill_optstring(void)
 	ostr[c] = '\0';
 }
 
+int parse_cmd_client(char *client, char *opt)
+{
+	return fio_client_add_cmd_option(client, opt);
+}
+
 int parse_cmd_line(int argc, char *argv[])
 {
 	struct thread_data *td = NULL;
@@ -1237,25 +1244,30 @@ int parse_cmd_line(int argc, char *argv[])
 	int backend = 0;
 
 	while ((c = getopt_long_only(argc, argv, ostr, l_opts, &lidx)) != -1) {
+
+		if (c & FIO_CLIENT_FLAG) {
+			if (parse_cmd_client(cur_client, argv[optind - 1])) {
+				exit_val = 1;
+				do_exit++;
+				break;
+			}
+			c &= ~FIO_CLIENT_FLAG;
+		}
+
 		switch (c) {
 		case 'a':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			smalloc_pool_size = atoi(optarg);
 			break;
 		case 't':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			def_timeout = atoi(optarg);
 			break;
 		case 'l':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			write_lat_log = 1;
 			break;
 		case 'b':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			write_bw_log = 1;
 			break;
 		case 'o':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			f_out = fopen(optarg, "w+");
 			if (!f_out) {
 				perror("fopen output");
@@ -1264,7 +1276,6 @@ int parse_cmd_line(int argc, char *argv[])
 			f_err = f_out;
 			break;
 		case 'm':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			terse_output = 1;
 			break;
 		case 'h':
@@ -1273,18 +1284,15 @@ int parse_cmd_line(int argc, char *argv[])
 		case 'c':
 			exit(fio_show_option_help(optarg));
 		case 's':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			dump_cmdline = 1;
 			break;
 		case 'r':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			read_only = 1;
 			break;
 		case 'v':
 			log_info("%s\n", fio_version_string);
 			exit(0);
 		case 'V':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			terse_version = atoi(optarg);
 			if (terse_version != 2) {
 				log_err("fio: bad terse version format\n");
@@ -1293,21 +1301,17 @@ int parse_cmd_line(int argc, char *argv[])
 			}
 			break;
 		case 'e':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			if (!strcmp("always", optarg))
 				eta_print = FIO_ETA_ALWAYS;
 			else if (!strcmp("never", optarg))
 				eta_print = FIO_ETA_NEVER;
 			break;
 		case 'd':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			if (set_debug(optarg))
 				do_exit++;
 			break;
 		case 'x': {
 			size_t new_size;
-
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 
 			if (!strcmp(optarg, "global")) {
 				log_err("fio: can't use global as only "
@@ -1323,14 +1327,11 @@ int parse_cmd_line(int argc, char *argv[])
 			break;
 			}
 		case 'p':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			exec_profile = strdup(optarg);
 			break;
 		case FIO_GETOPT_JOB: {
 			const char *opt = l_opts[lidx].name;
 			char *val = optarg;
-
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 
 			if (!strncmp(opt, "name", 4) && td) {
 				ret = add_job(td, td->o.name ?: "fio", 0);
@@ -1357,11 +1358,9 @@ int parse_cmd_line(int argc, char *argv[])
 			break;
 		}
 		case 'w':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			warnings_fatal = 1;
 			break;
 		case 'j':
-			fio_client_add_cmd_option(cur_client, argv[optind-1]);
 			max_jobs = atoi(optarg);
 			if (!max_jobs || max_jobs > REAL_MAX_JOBS) {
 				log_err("fio: invalid max jobs: %d\n", max_jobs);

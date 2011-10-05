@@ -87,31 +87,38 @@ static void remove_client(struct fio_client *client)
 	free(client);
 }
 
-static void __fio_client_add_cmd_option(struct fio_client *client,
-					const char *opt)
+static int __fio_client_add_cmd_option(struct fio_client *client,
+				       const char *opt)
 {
 	int index;
+
+	if (client->argc == FIO_NET_CMD_JOBLINE_ARGV) {
+		log_err("fio: max cmd line number reached.\n");
+		log_err("fio: cmd line <%s> has been ignored.\n", opt);
+		return 1;
+	}
 
 	index = client->argc++;
 	client->argv = realloc(client->argv, sizeof(char *) * client->argc);
 	client->argv[index] = strdup(opt);
 	dprint(FD_NET, "client: add cmd %d: %s\n", index, opt);
+	return 0;
 }
 
-void fio_client_add_cmd_option(const char *hostname, const char *opt)
+int fio_client_add_cmd_option(const char *hostname, const char *opt)
 {
 	struct fio_client *client;
 
 	if (!hostname || !opt)
-		return;
+		return 0;
 
 	client = find_client_by_name(hostname);
 	if (!client) {
 		log_err("fio: unknown client %s\n", hostname);
-		return;
+		return 1;
 	}
 
-	__fio_client_add_cmd_option(client, opt);
+	return __fio_client_add_cmd_option(client, opt);
 }
 
 void fio_client_add(const char *hostname)
