@@ -64,7 +64,7 @@ endif
 OBJS = $(SOURCE:.c=.o)
 
 T_OBJS = t/stest.o
-T_OBJS += mutex.o smalloc.o
+T_OBJS += mutex.o smalloc.o t/log.o
 T_PROGS = t/stest
 
 ifneq ($(findstring $(MAKEFLAGS),s),s)
