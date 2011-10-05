@@ -1473,10 +1473,8 @@ int parse_options(int argc, char *argv[])
 		if (is_backend || nr_clients)
 			return 0;
 
-		if (job_files > 0) {
-			log_err("No jobs(s) defined\n\n");
-			usage(argv[0]);
-		}
+		log_err("No jobs(s) defined\n\n");
+		usage(argv[0]);
 		return 1;
 	}
 
