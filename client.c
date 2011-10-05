@@ -588,7 +588,11 @@ int fio_handle_clients(void)
 				log_err("fio: unknown client\n");
 				continue;
 			}
-			handle_client(client, 0);
+			if (!handle_client(client, 0)) {
+				log_info("client: host=%s disconnected\n",
+						client->hostname);
+				remove_client(client);
+			}
 		}
 	}
 
