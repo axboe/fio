@@ -364,7 +364,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 							o->type, ptr);
 
 	if (!ptr && o->type != FIO_OPT_STR_SET && o->type != FIO_OPT_STR) {
-		fprintf(stderr, "Option %s requires an argument\n", o->name);
+		log_err("Option %s requires an argument\n", o->name);
 		return 1;
 	}
 
@@ -418,12 +418,12 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			break;
 
 		if (o->maxval && ull > o->maxval) {
-			fprintf(stderr, "max value out of range: %lld"
+			log_err("max value out of range: %lld"
 					" (%d max)\n", ull, o->maxval);
 			return 1;
 		}
 		if (o->minval && ull < o->minval) {
-			fprintf(stderr, "min value out of range: %lld"
+			log_err("min value out of range: %lld"
 					" (%d min)\n", ull, o->minval);
 			return 1;
 		}
@@ -469,22 +469,21 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			*ilp = ul2;
 		}
 		if (curr >= o->maxlen) {
-			fprintf(stderr, "the list exceeding max length %d\n",
+			log_err("the list exceeding max length %d\n",
 					o->maxlen);
 			return 1;
 		}
 		if(!str_to_float(ptr, &uf)){
-			fprintf(stderr, "not a floating point value: %s\n",
-					ptr);
+			log_err("not a floating point value: %s\n", ptr);
 			return 1;
 		}
 		if (!isnan(o->maxfp) && uf > o->maxfp) {
-			fprintf(stderr, "value out of range: %f"
+			log_err("value out of range: %f"
 				" (range max: %f)\n", uf, o->maxfp);
 			return 1;
 		}
 		if (!isnan(o->minfp) && uf < o->minfp) {
-			fprintf(stderr, "value out of range: %f"
+			log_err("value out of range: %f"
 				" (range min: %f)\n", uf, o->minfp);
 			return 1;
 		}
@@ -610,12 +609,12 @@ match:
 			break;
 
 		if (o->maxval && il > (int) o->maxval) {
-			fprintf(stderr, "max value out of range: %d (%d max)\n",
+			log_err("max value out of range: %d (%d max)\n",
 								il, o->maxval);
 			return 1;
 		}
 		if (o->minval && il < o->minval) {
-			fprintf(stderr, "min value out of range: %d (%d min)\n",
+			log_err("min value out of range: %d (%d min)\n",
 								il, o->minval);
 			return 1;
 		}
@@ -655,8 +654,8 @@ match:
 	if (o->verify) {
 		ret = o->verify(o, data);
 		if (ret) {
-			fprintf(stderr,"Correct format for offending option\n");
-			fprintf(stderr, "%20s: %s\n", o->name, o->help);
+			log_err("Correct format for offending option\n");
+			log_err("%20s: %s\n", o->name, o->help);
 			show_option_help(o, 1);
 		}
 	}
@@ -811,7 +810,7 @@ static char *option_dup_subs(const char *opt)
 	size_t envlen;
 
 	if (strlen(opt) + 1 > OPT_LEN_MAX) {
-		fprintf(stderr, "OPT_LEN_MAX (%d) is too small\n", OPT_LEN_MAX);
+		log_err("OPT_LEN_MAX (%d) is too small\n", OPT_LEN_MAX);
 		return NULL;
 	}
 
@@ -943,7 +942,7 @@ static void __print_option(struct fio_option *o, struct fio_option *org,
 
 	sprintf(p, "%s", o->name);
 
-	printf("%-24s: %s\n", name, o->help);
+	log_info("%-24s: %s\n", name, o->help);
 }
 
 static void print_option(struct fio_option *o)
@@ -1008,7 +1007,7 @@ int show_cmd_help(struct fio_option *options, const char *name)
 		if (show_all || match) {
 			found = 1;
 			if (match)
-				printf("%20s: %s\n", o->name, o->help);
+				log_info("%20s: %s\n", o->name, o->help);
 			if (show_all) {
 				if (!o->parent)
 					print_option(o);
@@ -1025,18 +1024,18 @@ int show_cmd_help(struct fio_option *options, const char *name)
 	if (found)
 		return 0;
 
-	printf("No such command: %s", name);
+	log_err("No such command: %s", name);
 
 	/*
 	 * Only print an appropriately close option, one where the edit
 	 * distance isn't too big. Otherwise we get crazy matches.
 	 */
 	if (closest && best_dist < 3) {
-		printf(" - showing closest match\n");
-		printf("%20s: %s\n", closest->name, closest->help);
+		log_info(" - showing closest match\n");
+		log_info("%20s: %s\n", closest->name, closest->help);
 		show_option_help(closest, 0);
 	} else
-		printf("\n");
+		log_info("\n");
 
 	return 1;
 }
