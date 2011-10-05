@@ -482,13 +482,15 @@ static void handle_probe(struct fio_net_cmd *cmd)
 static int handle_client(struct fio_client *client, int one)
 {
 	struct fio_net_cmd *cmd;
-	int done = 0;
+	int done = 0, did_cmd = 0;
 
 	dprint(FD_NET, "client: handle %s\n", client->hostname);
 
 	while ((cmd = fio_net_recv_cmd(client->fd, 1)) != NULL) {
-		dprint(FD_NET, "%s: got cmd op %d\n", client->hostname,
-							cmd->opcode);
+		did_cmd++;
+
+		dprint(FD_NET, "client: got cmd op %d from %s\n",
+					cmd->opcode, client->hostname);
 
 		switch (cmd->opcode) {
 		case FIO_NET_CMD_QUIT:
@@ -542,7 +544,7 @@ static int handle_client(struct fio_client *client, int one)
 			break;
 	}
 
-	return 0;
+	return did_cmd;
 }
 
 int fio_handle_clients(void)

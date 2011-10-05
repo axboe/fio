@@ -1229,6 +1229,23 @@ static void fio_options_fill_optstring(void)
 	ostr[c] = '\0';
 }
 
+static int client_flag_set(char c)
+{
+	int i;
+
+	i = 0;
+	while (l_opts[i].name) {
+		int val = l_opts[i].val;
+
+		if (c == (val & 0xff))
+			return (val & FIO_CLIENT_FLAG);
+
+		i++;
+	}
+
+	return 0;
+}
+
 int parse_cmd_client(char *client, char *opt)
 {
 	return fio_client_add_cmd_option(client, opt);
@@ -1243,9 +1260,14 @@ int parse_cmd_line(int argc, char *argv[])
 	char *cur_client = NULL;
 	int backend = 0;
 
-	while ((c = getopt_long_only(argc, argv, ostr, l_opts, &lidx)) != -1) {
+	/*
+	 * Reset optind handling, since we may call this multiple times
+	 * for the backend.
+	 */
+	optind = 1;
 
-		if (c & FIO_CLIENT_FLAG) {
+	while ((c = getopt_long_only(argc, argv, ostr, l_opts, &lidx)) != -1) {
+		if ((c & FIO_CLIENT_FLAG) || client_flag_set(c)) {
 			if (parse_cmd_client(cur_client, argv[optind - 1])) {
 				exit_val = 1;
 				do_exit++;
@@ -1279,10 +1301,15 @@ int parse_cmd_line(int argc, char *argv[])
 			terse_output = 1;
 			break;
 		case 'h':
-			usage(argv[0]);
-			exit(0);
+			if (!cur_client)
+				usage(argv[0]);
+			do_exit++;
+			break;
 		case 'c':
-			exit(fio_show_option_help(optarg));
+			if (!cur_client)
+				fio_show_option_help(optarg);
+			do_exit++;
+			break;
 		case 's':
 			dump_cmdline = 1;
 			break;
@@ -1290,8 +1317,10 @@ int parse_cmd_line(int argc, char *argv[])
 			read_only = 1;
 			break;
 		case 'v':
-			log_info("%s\n", fio_version_string);
-			exit(0);
+			if (!cur_client)
+				log_info("%s\n", fio_version_string);
+			do_exit++;
+			break;
 		case 'V':
 			terse_version = atoi(optarg);
 			if (terse_version != 2) {
@@ -1403,8 +1432,10 @@ int parse_cmd_line(int argc, char *argv[])
 			break;
 	}
 
-	if (do_exit)
-		exit(exit_val);
+	if (do_exit) {
+		if (exit_val && !(is_backend || nr_clients))
+			exit(exit_val);
+	}
 
 	if (nr_clients && fio_clients_connect()) {
 		do_exit++;
