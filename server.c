@@ -282,8 +282,10 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 	char *buf = (char *) cmd->payload;
 	int ret;
 
-	if (parse_jobs_ini(buf, 1, 0))
+	if (parse_jobs_ini(buf, 1, 0)) {
+		fio_server_send_quit_cmd();
 		return -1;
+	}
 
 	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0);
 
@@ -308,8 +310,10 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 		dprint(FD_NET, "server: %d: %s\n", i, argv[i]);
 	}
 
-	if (parse_cmd_line(pdu->argc, argv))
+	if (parse_cmd_line(pdu->argc, argv)) {
+		fio_server_send_quit_cmd();
 		return -1;
+	}
 
 	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0);
 
