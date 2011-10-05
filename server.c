@@ -95,7 +95,7 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 	cmd->pdu_len	= le32_to_cpu(cmd->pdu_len);
 
 	switch (cmd->version) {
-	case FIO_SERVER_VER1:
+	case FIO_SERVER_VER2:
 		break;
 	default:
 		log_err("fio: bad server cmd version %d\n", cmd->version);
@@ -229,12 +229,9 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size)
 
 int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t serial)
 {
-	struct fio_net_cmd cmd = {
-		.version	= __cpu_to_le16(FIO_SERVER_VER1),
-		.opcode		= cpu_to_le16(opcode),
-		.serial		= cpu_to_le64(serial),
-	};
+	struct fio_net_cmd cmd;
 
+	fio_init_net_cmd(&cmd, opcode, NULL, 0);
 	fio_net_cmd_crc(&cmd);
 
 	return fio_send_data(sk, &cmd, sizeof(cmd));
