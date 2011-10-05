@@ -17,7 +17,7 @@
 struct thread_data;
 
 #define FIO_MAJOR	1
-#define FIO_MINOR	58
+#define FIO_MINOR	99
 #define FIO_PATCH	0
 
 #include "compiler/compiler.h"
