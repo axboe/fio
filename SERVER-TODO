@@ -1,1 +1,2 @@
-- Add -L listen option, to not bind to all devices
+- Better error handling (test it)
+
