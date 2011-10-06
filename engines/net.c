@@ -389,6 +389,7 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 
 		if (connect(f->fd, (struct sockaddr *) &nd->addr, len) < 0) {
 			td_verror(td, errno, "connect");
+			close(f->fd);
 			return 1;
 		}
 	} else {
@@ -399,6 +400,7 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 
 		if (connect(f->fd, (struct sockaddr *) addr, len) < 0) {
 			td_verror(td, errno, "connect");
+			close(f->fd);
 			return 1;
 		}
 	}
@@ -543,6 +545,7 @@ static int fio_netio_setup_listen_unix(struct thread_data *td, const char *path)
 
 	if (bind(fd, (struct sockaddr *) addr, len) < 0) {
 		log_err("fio: bind: %s\n", strerror(errno));
+		close(fd);
 		return -1;
 	}
 

@@ -654,11 +654,13 @@ static int fio_init_server_ip(void)
 	opt = 1;
 	if (setsockopt(sk, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
 		log_err("fio: setsockopt: %s\n", strerror(errno));
+		close(sk);
 		return -1;
 	}
 #ifdef SO_REUSEPORT
 	if (setsockopt(sk, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
 		log_err("fio: setsockopt: %s\n", strerror(errno));
+		close(sk);
 		return -1;
 	}
 #endif
@@ -668,6 +670,7 @@ static int fio_init_server_ip(void)
 
 	if (bind(sk, (struct sockaddr *) &saddr_in, sizeof(saddr_in)) < 0) {
 		log_err("fio: bind: %s\n", strerror(errno));
+		close(sk);
 		return -1;
 	}
 
@@ -698,6 +701,7 @@ static int fio_init_server_sock(void)
 
 	if (bind(sk, (struct sockaddr *) &addr, len) < 0) {
 		log_err("fio: bind: %s\n", strerror(errno));
+		close(sk);
 		return -1;
 	}
 

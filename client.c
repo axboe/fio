@@ -233,6 +233,7 @@ static int fio_client_connect_ip(struct fio_client *client)
 	if (connect(fd, (struct sockaddr *) &client->addr, sizeof(client->addr)) < 0) {
 		log_err("fio: connect: %s\n", strerror(errno));
 		log_err("fio: failed to connect to %s\n", client->hostname);
+		close(fd);
 		return -1;
 	}
 
@@ -258,6 +259,7 @@ static int fio_client_connect_sock(struct fio_client *client)
 	len = sizeof(addr->sun_family) + strlen(addr->sun_path) + 1;
 	if (connect(fd, (struct sockaddr *) addr, len) < 0) {
 		log_err("fio: connect; %s\n", strerror(errno));
+		close(fd);
 		return -1;
 	}
 
@@ -395,6 +397,7 @@ static int fio_client_send_ini(struct fio_client *client, const char *filename)
 
 	if (fstat(fd, &sb) < 0) {
 		log_err("fio: job file stat: %s\n", strerror(errno));
+		close(fd);
 		return 1;
 	}
 
@@ -418,11 +421,13 @@ static int fio_client_send_ini(struct fio_client *client, const char *filename)
 
 	if (len) {
 		log_err("fio: failed reading job file %s\n", filename);
+		close(fd);
 		return 1;
 	}
 
 	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOB, buf, sb.st_size);
 	free(buf);
+	close(fd);
 	return ret;
 }
 
