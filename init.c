@@ -1304,14 +1304,16 @@ int parse_cmd_line(int argc, char *argv[])
 			terse_output = 1;
 			break;
 		case 'h':
-			if (!cur_client)
+			if (!cur_client) {
 				usage(argv[0]);
-			do_exit++;
+				do_exit++;
+			}
 			break;
 		case 'c':
-			if (!cur_client)
+			if (!cur_client) {
 				fio_show_option_help(optarg);
-			do_exit++;
+				do_exit++;
+			}
 			break;
 		case 's':
 			dump_cmdline = 1;
@@ -1320,9 +1322,10 @@ int parse_cmd_line(int argc, char *argv[])
 			read_only = 1;
 			break;
 		case 'v':
-			if (!cur_client)
+			if (!cur_client) {
 				log_info("fio %s\n", fio_version_string);
-			do_exit++;
+				do_exit++;
+			}
 			break;
 		case 'V':
 			terse_version = atoi(optarg);
@@ -1454,7 +1457,7 @@ int parse_cmd_line(int argc, char *argv[])
 			ret = add_job(td, td->o.name ?: "fio", 0);
 	}
 
-	while (optind < argc) {
+	while (!ret && optind < argc) {
 		ini_idx++;
 		ini_file = realloc(ini_file, ini_idx * sizeof(char *));
 		ini_file[ini_idx - 1] = strdup(argv[optind]);
