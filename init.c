@@ -69,6 +69,7 @@ unsigned int fio_debug_jobno = -1;
 unsigned int *fio_debug_jobp = NULL;
 
 static char cmd_optstr[256];
+static int did_arg;
 
 const fio_fp64_t def_percentile_list[FIO_IO_U_LIST_MAX_LEN] = {
 	{ .u.f	=  1.0 },
@@ -1099,7 +1100,7 @@ static int fill_def_thread(void)
 
 static void usage(const char *name)
 {
-	printf("%s\n", fio_version_string);
+	printf("fio %s\n", fio_version_string);
 	printf("%s [options] [job options] <job file(s)>\n", name);
 	printf("\t--debug=options\tEnable debug logging\n");
 	printf("\t--output\tWrite output to file\n");
@@ -1267,6 +1268,8 @@ int parse_cmd_line(int argc, char *argv[])
 	optind = 1;
 
 	while ((c = getopt_long_only(argc, argv, ostr, l_opts, &lidx)) != -1) {
+		did_arg = 1;
+
 		if ((c & FIO_CLIENT_FLAG) || client_flag_set(c)) {
 			if (parse_cmd_client(cur_client, argv[optind - 1])) {
 				exit_val = 1;
@@ -1318,7 +1321,7 @@ int parse_cmd_line(int argc, char *argv[])
 			break;
 		case 'v':
 			if (!cur_client)
-				log_info("%s\n", fio_version_string);
+				log_info("fio %s\n", fio_version_string);
 			do_exit++;
 			break;
 		case 'V':
@@ -1504,10 +1507,17 @@ int parse_options(int argc, char *argv[])
 			return 0;
 		if (is_backend || nr_clients)
 			return 0;
+		if (did_arg)
+			return 0;
 
 		log_err("No jobs(s) defined\n\n");
-		usage(argv[0]);
-		return 1;
+
+		if (!did_arg) {
+			usage(argv[0]);
+			return 1;
+		}
+
+		return 0;
 	}
 
 	if (def_thread.o.gtod_offload) {
@@ -1516,6 +1526,6 @@ int parse_options(int argc, char *argv[])
 		fio_gtod_cpu = def_thread.o.gtod_cpu;
 	}
 
-	log_info("%s\n", fio_version_string);
+	log_info("fio %s\n", fio_version_string);
 	return 0;
 }
