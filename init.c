@@ -188,7 +188,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 	},
 	{
 		.name		= (char *) "server",
-		.has_arg	= no_argument,
+		.has_arg	= optional_argument,
 		.val		= 'S',
 	},
 	{	.name		= (char *) "daemonize",
@@ -1410,6 +1410,8 @@ int parse_cmd_line(int argc, char *argv[])
 				exit_val = 1;
 				break;
 			}
+			if (optarg)
+				fio_server_add_arg(optarg);
 			is_backend = 1;
 			backend = 1;
 			break;

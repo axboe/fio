@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -24,11 +25,13 @@ struct fio_client {
 	struct flist_head fd_hash_list;
 	struct flist_head name_hash_list;
 	struct sockaddr_in addr;
+	struct sockaddr_un addr_un;
 	char *hostname;
 	int fd;
 
 	int state;
 	int skip_newline;
+	int is_sock;
 
 	uint16_t argc;
 	char **argv;
@@ -184,7 +187,12 @@ void fio_client_add(const char *hostname)
 	INIT_FLIST_HEAD(&client->fd_hash_list);
 	INIT_FLIST_HEAD(&client->name_hash_list);
 
-	client->hostname = strdup(hostname);
+	if (!strncmp(hostname, "sock:", 5)) {
+		client->hostname = strdup(hostname + 5);
+		client->is_sock = 1;
+	} else
+		client->hostname = strdup(hostname);
+
 	client->fd = -1;
 
 	fio_client_add_name_hash(client);
@@ -195,13 +203,10 @@ void fio_client_add(const char *hostname)
 	nr_clients++;
 }
 
-static int fio_client_connect(struct fio_client *client)
+static int fio_client_connect_ip(struct fio_client *client)
 {
 	int fd;
 
-	dprint(FD_NET, "client: connect to host %s\n", client->hostname);
-
-	memset(&client->addr, 0, sizeof(client->addr));
 	client->addr.sin_family = AF_INET;
 	client->addr.sin_port = htons(fio_net_port);
 
@@ -213,7 +218,7 @@ static int fio_client_connect(struct fio_client *client)
 			log_err("fio: gethostbyname: %s\n", strerror(errno));
 			log_err("fio: failed looking up hostname %s\n",
 					client->hostname);
-			return 1;
+			return -1;
 		}
 
 		memcpy(&client->addr.sin_addr, hent->h_addr, 4);
@@ -222,14 +227,58 @@ static int fio_client_connect(struct fio_client *client)
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
 		log_err("fio: socket: %s\n", strerror(errno));
-		return 1;
+		return -1;
 	}
 
 	if (connect(fd, (struct sockaddr *) &client->addr, sizeof(client->addr)) < 0) {
 		log_err("fio: connect: %s\n", strerror(errno));
 		log_err("fio: failed to connect to %s\n", client->hostname);
-		return 1;
+		return -1;
 	}
+
+	return fd;
+}
+
+static int fio_client_connect_sock(struct fio_client *client)
+{
+	struct sockaddr_un *addr = &client->addr_un;
+	fio_socklen_t len;
+	int fd;
+
+	memset(addr, 0, sizeof(*addr));
+	addr->sun_family = AF_UNIX;
+	strcpy(addr->sun_path, client->hostname);
+
+	fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (fd < 0) {
+		log_err("fio: socket: %s\n", strerror(errno));
+		return -1;
+	}
+
+	len = sizeof(addr->sun_family) + strlen(addr->sun_path) + 1;
+	if (connect(fd, (struct sockaddr *) addr, len) < 0) {
+		log_err("fio: connect; %s\n", strerror(errno));
+		return -1;
+	}
+
+	return fd;
+}
+
+static int fio_client_connect(struct fio_client *client)
+{
+	int fd;
+
+	dprint(FD_NET, "client: connect to host %s\n", client->hostname);
+
+	memset(&client->addr, 0, sizeof(client->addr));
+
+	if (client->is_sock)
+		fd = fio_client_connect_sock(client);
+	else
+		fd = fio_client_connect_ip(client);
+
+	if (fd < 0)
+		return 1;
 
 	client->fd = fd;
 	fio_client_add_fd_hash(client);

@@ -9,6 +9,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -25,6 +27,9 @@ int fio_net_port = 8765;
 int exit_backend = 0;
 
 static int server_fd = -1;
+static char *fio_server_arg;
+static char *bind_sock;
+static struct sockaddr_in saddr_in;
 
 int fio_send_data(int sk, const void *p, unsigned int len)
 {
@@ -636,14 +641,9 @@ int fio_server_log(const char *format, ...)
 	return fio_server_text_output(buffer, len);
 }
 
-static int fio_server(void)
+static int fio_init_server_ip(void)
 {
-	struct sockaddr_in saddr_in;
-	struct sockaddr addr;
-	fio_socklen_t len;
-	int sk, opt, ret;
-
-	dprint(FD_NET, "starting server\n");
+	int sk, opt;
 
 	sk = socket(AF_INET, SOCK_STREAM, 0);
 	if (sk < 0) {
@@ -664,7 +664,6 @@ static int fio_server(void)
 #endif
 
 	saddr_in.sin_family = AF_INET;
-	saddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
 	saddr_in.sin_port = htons(fio_net_port);
 
 	if (bind(sk, (struct sockaddr *) &saddr_in, sizeof(saddr_in)) < 0) {
@@ -672,19 +671,122 @@ static int fio_server(void)
 		return -1;
 	}
 
+	return sk;
+}
+
+static int fio_init_server_sock(void)
+{
+	struct sockaddr_un addr;
+	fio_socklen_t len;
+	mode_t mode;
+	int sk;
+
+	sk = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sk < 0) {
+		log_err("fio: socket: %s\n", strerror(errno));
+		return -1;
+	}
+
+	mode = umask(000);
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	strcpy(addr.sun_path, bind_sock);
+	unlink(bind_sock);
+
+	len = sizeof(addr.sun_family) + strlen(bind_sock) + 1;
+
+	if (bind(sk, (struct sockaddr *) &addr, len) < 0) {
+		log_err("fio: bind: %s\n", strerror(errno));
+		return -1;
+	}
+
+	umask(mode);
+	return sk;
+}
+
+static int fio_init_server_connection(void)
+{
+	int sk;
+
+	dprint(FD_NET, "starting server\n");
+
+	if (!bind_sock)
+		sk = fio_init_server_ip();
+	else
+		sk = fio_init_server_sock();
+
+	if (sk < 0)
+		return sk;
+
 	if (listen(sk, 1) < 0) {
 		log_err("fio: listen: %s\n", strerror(errno));
 		return -1;
 	}
 
-	len = sizeof(addr);
-	if (getsockname(sk, &addr, &len) < 0) {
-		log_err("fio: getsockname: %s\n", strerror(errno));
-		return -1;
+	return sk;
+}
+
+/*
+ * Server arg should be one of:
+ *
+ * sock:/path/to/socket
+ *   ip:1.2.3.4
+ *      1.2.3.4
+ *
+ * Where sock uses unix domain sockets, and ip binds the server to
+ * a specific interface. If no arguments are given to the server, it
+ * uses IP and binds to 0.0.0.0.
+ *
+ */
+static int fio_handle_server_arg(void)
+{
+	saddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	if (!fio_server_arg)
+		return 0;
+	if (!strncmp(fio_server_arg, "sock:", 5)) {
+		bind_sock = fio_server_arg += 5;
+		return 0;
+	} else {
+		char *host = fio_server_arg;
+
+		if (!strncmp(host, "ip:", 3))
+			host += 3;
+
+		if (inet_aton(host, &saddr_in.sin_addr) != 1) {
+			struct hostent *hent;
+
+			hent = gethostbyname(host);
+			if (hent)
+				memcpy(&saddr_in.sin_addr, hent->h_addr, 4);
+		}
+		return 0;
 	}
+}
+
+static int fio_server(void)
+{
+	int sk, ret;
+
+	dprint(FD_NET, "starting server\n");
+
+	if (fio_handle_server_arg())
+		return -1;
+
+	sk = fio_init_server_connection();
+	if (sk < 0)
+		return -1;
 
 	ret = accept_loop(sk);
+
 	close(sk);
+
+	if (fio_server_arg) {
+		free(fio_server_arg);
+		fio_server_arg = NULL;
+	}
+
 	return ret;
 }
 
@@ -734,4 +836,9 @@ int fio_start_server(int daemonize)
 	f_err = NULL;
 	log_syslog = 1;
 	return fio_server();
+}
+
+void fio_server_add_arg(const char *arg)
+{
+	fio_server_arg = strdup(arg);
 }

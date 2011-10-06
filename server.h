@@ -76,6 +76,7 @@ extern int fio_server_text_output(const char *, unsigned int len);
 extern int fio_server_log(const char *format, ...);
 extern int fio_net_send_cmd(int, uint16_t, const void *, off_t);
 extern int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t serial);
+extern void fio_server_add_arg(const char *);
 
 struct thread_stat;
 struct group_run_stats;
