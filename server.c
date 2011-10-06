@@ -750,7 +750,7 @@ static int fio_handle_server_arg(void)
 	if (!fio_server_arg)
 		return 0;
 	if (!strncmp(fio_server_arg, "sock:", 5)) {
-		bind_sock = fio_server_arg += 5;
+		bind_sock = fio_server_arg + 5;
 		return 0;
 	} else {
 		char *host = fio_server_arg;
