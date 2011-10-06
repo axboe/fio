@@ -267,7 +267,7 @@ filename=str	Fio normally makes up a filename based on the job name,
 		files between threads in a job or several jobs, specify
 		a filename for each of them to override the default. If
 		the ioengine used is 'net', the filename is the host, port,
-		and protocol to use in the format of =host/port/protocol.
+		and protocol to use in the format of =host,port,protocol.
 		See ioengine=net for more. If the ioengine is file based, you
 		can specify a number of files by separating the names with a
 		':' colon. So if you wanted a job to open /dev/sda and /dev/sdb

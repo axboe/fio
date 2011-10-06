@@ -14,7 +14,9 @@
 #include <netdb.h>
 #include <sys/poll.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 
 #include "../fio.h"
 
@@ -22,10 +24,11 @@ struct netio_data {
 	int listenfd;
 	int send_to_net;
 	int use_splice;
-	int net_protocol;
+	int type;
 	int pipes[2];
 	char host[64];
 	struct sockaddr_in addr;
+	struct sockaddr_un addr_un;
 };
 
 struct udp_close_msg {
@@ -36,6 +39,10 @@ struct udp_close_msg {
 enum {
 	FIO_LINK_CLOSE = 0x89,
 	FIO_LINK_CLOSE_MAGIC = 0x6c696e6b,
+
+	FIO_TYPE_TCP	= 1,
+	FIO_TYPE_UDP	= 2,
+	FIO_TYPE_UNIX	= 3,
 };
 
 /*
@@ -226,7 +233,7 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 	int ret, flags = OS_MSG_DONTWAIT;
 
 	do {
-		if (nd->net_protocol == IPPROTO_UDP) {
+		if (nd->type == FIO_TYPE_UDP) {
 			struct sockaddr *to = (struct sockaddr *) &nd->addr;
 
 			ret = sendto(io_u->file->fd, io_u->xfer_buf,
@@ -279,7 +286,7 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 	int ret, flags = OS_MSG_DONTWAIT;
 
 	do {
-		if (nd->net_protocol == IPPROTO_UDP) {
+		if (nd->type == FIO_TYPE_UDP) {
 			fio_socklen_t len = sizeof(nd->addr);
 			struct sockaddr *from = (struct sockaddr *) &nd->addr;
 
@@ -314,12 +321,14 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 	fio_ro_check(td, io_u);
 
 	if (io_u->ddir == DDIR_WRITE) {
-		if (!nd->use_splice || nd->net_protocol == IPPROTO_UDP)
+		if (!nd->use_splice || nd->type == FIO_TYPE_UDP ||
+		    nd->type == FIO_TYPE_UNIX) 
 			ret = fio_netio_send(td, io_u);
 		else
 			ret = fio_netio_splice_out(td, io_u);
 	} else if (io_u->ddir == DDIR_READ) {
-		if (!nd->use_splice || nd->net_protocol == IPPROTO_UDP)
+		if (!nd->use_splice || nd->type == FIO_TYPE_UDP ||
+		    nd->type == FIO_TYPE_UDP)
 			ret = fio_netio_recv(td, io_u);
 		else
 			ret = fio_netio_splice_in(td, io_u);
@@ -350,25 +359,48 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
-	int type;
+	int type, domain;
 
-	if (nd->net_protocol == IPPROTO_TCP)
+	if (nd->type == FIO_TYPE_TCP) {
+		domain = AF_INET;
 		type = SOCK_STREAM;
-	else
+	} else if (nd->type == FIO_TYPE_UDP) {
+		domain = AF_INET;
 		type = SOCK_DGRAM;
+	} else if (nd->type == FIO_TYPE_UNIX) {
+		domain = AF_UNIX;
+		type = SOCK_STREAM;
+	} else {
+		log_err("fio: bad network type %d\n", nd->type);
+		f->fd = -1;
+		return 1;
+	}
 
-	f->fd = socket(AF_INET, type, nd->net_protocol);
+	f->fd = socket(domain, type, 0);
 	if (f->fd < 0) {
 		td_verror(td, errno, "socket");
 		return 1;
 	}
 
-	if (nd->net_protocol == IPPROTO_UDP)
+	if (nd->type == FIO_TYPE_UDP)
 		return 0;
+	else if (nd->type == FIO_TYPE_TCP) {
+		fio_socklen_t len = sizeof(nd->addr);
 
-	if (connect(f->fd, (struct sockaddr *) &nd->addr, sizeof(nd->addr)) < 0) {
-		td_verror(td, errno, "connect");
-		return 1;
+		if (connect(f->fd, (struct sockaddr *) &nd->addr, len) < 0) {
+			td_verror(td, errno, "connect");
+			return 1;
+		}
+	} else {
+		struct sockaddr_un *addr = &nd->addr_un;
+		fio_socklen_t len;
+
+		len = sizeof(addr->sun_family) + strlen(addr->sun_path) + 1;
+
+		if (connect(f->fd, (struct sockaddr *) addr, len) < 0) {
+			td_verror(td, errno, "connect");
+			return 1;
+		}
 	}
 
 	return 0;
@@ -379,7 +411,7 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 	struct netio_data *nd = td->io_ops->data;
 	fio_socklen_t socklen = sizeof(nd->addr);
 
-	if (nd->net_protocol == IPPROTO_UDP) {
+	if (nd->type == FIO_TYPE_UDP) {
 		f->fd = nd->listenfd;
 		return 0;
 	}
@@ -400,10 +432,16 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 
 static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
 {
+	int ret;
+
 	if (td_read(td))
-		return fio_netio_accept(td, f);
+		ret = fio_netio_accept(td, f);
 	else
-		return fio_netio_connect(td, f);
+		ret = fio_netio_connect(td, f);
+
+	if (ret)
+		f->fd = -1;
+	return ret;
 }
 
 static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
@@ -430,14 +468,14 @@ static int fio_netio_close_file(struct thread_data *td, struct fio_file *f)
 	 * If this is an UDP connection, notify the receiver that we are
 	 * closing down the link
 	 */
-	if (nd->net_protocol == IPPROTO_UDP)
+	if (nd->type == FIO_TYPE_UDP)
 		fio_netio_udp_close(td, f);
 
 	return generic_close_file(td, f);
 }
 
-static int fio_netio_setup_connect(struct thread_data *td, const char *host,
-				   unsigned short port)
+static int fio_netio_setup_connect_inet(struct thread_data *td,
+					const char *host, unsigned short port)
 {
 	struct netio_data *nd = td->io_ops->data;
 
@@ -459,17 +497,71 @@ static int fio_netio_setup_connect(struct thread_data *td, const char *host,
 	return 0;
 }
 
-static int fio_netio_setup_listen(struct thread_data *td, short port)
+static int fio_netio_setup_connect_unix(struct thread_data *td,
+					const char *path)
+{
+	struct netio_data *nd = td->io_ops->data;
+	struct sockaddr_un *soun = &nd->addr_un;
+
+	soun->sun_family = AF_UNIX;
+	strcpy(soun->sun_path, path);
+	return 0;
+}
+
+static int fio_netio_setup_connect(struct thread_data *td, const char *host,
+				   unsigned short port)
+{
+	struct netio_data *nd = td->io_ops->data;
+
+	if (nd->type == FIO_TYPE_UDP || nd->type == FIO_TYPE_TCP)
+		return fio_netio_setup_connect_inet(td, host, port);
+	else
+		return fio_netio_setup_connect_unix(td, host);
+}
+
+static int fio_netio_setup_listen_unix(struct thread_data *td, const char *path)
+{
+	struct netio_data *nd = td->io_ops->data;
+	struct sockaddr_un *addr = &nd->addr_un;
+	mode_t mode;
+	int len, fd;
+
+	fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (fd < 0) {
+		log_err("fio: socket: %s\n", strerror(errno));
+		return -1;
+	}
+
+	mode = umask(000);
+
+	memset(addr, 0, sizeof(*addr));
+	addr->sun_family = AF_UNIX;
+	strcpy(addr->sun_path, path);
+	unlink(path);
+
+	len = sizeof(addr->sun_family) + strlen(path) + 1;
+
+	if (bind(fd, (struct sockaddr *) addr, len) < 0) {
+		log_err("fio: bind: %s\n", strerror(errno));
+		return -1;
+	}
+
+	umask(mode);
+	nd->listenfd = fd;
+	return 0;
+}
+
+static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 {
 	struct netio_data *nd = td->io_ops->data;
 	int fd, opt, type;
 
-	if (nd->net_protocol == IPPROTO_TCP)
+	if (nd->type == FIO_TYPE_TCP)
 		type = SOCK_STREAM;
 	else
 		type = SOCK_DGRAM;
 
-	fd = socket(AF_INET, type, nd->net_protocol);
+	fd = socket(AF_INET, type, 0);
 	if (fd < 0) {
 		td_verror(td, errno, "socket");
 		return 1;
@@ -495,12 +587,33 @@ static int fio_netio_setup_listen(struct thread_data *td, short port)
 		td_verror(td, errno, "bind");
 		return 1;
 	}
-	if (nd->net_protocol == IPPROTO_TCP && listen(fd, 1) < 0) {
+
+	nd->listenfd = fd;
+	return 0;
+}
+
+static int fio_netio_setup_listen(struct thread_data *td, const char *path,
+				  short port)
+{
+	struct netio_data *nd = td->io_ops->data;
+	int ret;
+
+	if (nd->type == FIO_TYPE_UDP || nd->type == FIO_TYPE_TCP)
+		ret = fio_netio_setup_listen_inet(td, port);
+	else
+		ret = fio_netio_setup_listen_unix(td, path);
+
+	if (ret)
+		return ret;
+	if (nd->type == FIO_TYPE_UDP)
+		return 0;
+
+	if (listen(nd->listenfd, 10) < 0) {
 		td_verror(td, errno, "listen");
+		nd->listenfd = -1;
 		return 1;
 	}
 
-	nd->listenfd = fd;
 	return 0;
 }
 
@@ -523,7 +636,7 @@ static int fio_netio_init(struct thread_data *td)
 
 	strcpy(buf, td->o.filename);
 
-	sep = strchr(buf, '/');
+	sep = strchr(buf, ',');
 	if (!sep)
 		goto bad_host;
 
@@ -535,31 +648,34 @@ static int fio_netio_init(struct thread_data *td)
 
 	modep = NULL;
 	portp = sep;
-	sep = strchr(portp, '/');
+	sep = strchr(portp, ',');
 	if (sep) {
 		*sep = '\0';
 		modep = sep + 1;
 	}
-		
-	port = strtol(portp, NULL, 10);
-	if (!port || port > 65535)
+
+	if (!strncmp("tcp", modep, strlen(modep)) ||
+	    !strncmp("TCP", modep, strlen(modep)))
+		nd->type = FIO_TYPE_TCP;
+	else if (!strncmp("udp", modep, strlen(modep)) ||
+		 !strncmp("UDP", modep, strlen(modep)))
+		nd->type = FIO_TYPE_UDP;
+	else if (!strncmp("unix", modep, strlen(modep)) ||
+		 !strncmp("UNIX", modep, strlen(modep)))
+		nd->type = FIO_TYPE_UNIX;
+	else
 		goto bad_host;
 
-	if (modep) {
-		if (!strncmp("tcp", modep, strlen(modep)) ||
-		    !strncmp("TCP", modep, strlen(modep)))
-			nd->net_protocol = IPPROTO_TCP;
-		else if (!strncmp("udp", modep, strlen(modep)) ||
-			 !strncmp("UDP", modep, strlen(modep)))
-			nd->net_protocol = IPPROTO_UDP;
-		else
+	if (nd->type != FIO_TYPE_UNIX) {
+		port = strtol(portp, NULL, 10);
+		if (!port || port > 65535)
 			goto bad_host;
 	} else
-		nd->net_protocol = IPPROTO_TCP;
+		port = 0;
 
 	if (td_read(td)) {
 		nd->send_to_net = 0;
-		ret = fio_netio_setup_listen(td, port);
+		ret = fio_netio_setup_listen(td, host, port);
 	} else {
 		nd->send_to_net = 1;
 		ret = fio_netio_setup_connect(td, host, port);

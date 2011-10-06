@@ -416,8 +416,9 @@ itself and for debugging and testing purposes.
 .TP
 .B net
 Transfer over the network.  \fBfilename\fR must be set appropriately to
-`\fIhost\fR/\fIport\fR' regardless of data direction.  If receiving, only the
-\fIport\fR argument is used.
+`\fIhost\fR,\fIport\fR,\fItype\fR' regardless of data direction. \fItype\fR
+is one of \fBtcp\fR, \fBudp\fR, or \fBunix\fR. For UNIX domain sockets,
+the \fIhost\fR parameter is a file system path.
 .TP
 .B netsplice
 Like \fBnet\fR, but uses \fIsplice\fR\|(2) and \fIvmsplice\fR\|(2) to map data

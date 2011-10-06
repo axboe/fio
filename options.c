@@ -595,6 +595,14 @@ static char *get_next_file_name(char **ptr)
 	return start;
 }
 
+static int str_hostname_cb(void *data, const char *input)
+{
+	struct thread_data *td = data;
+
+	td->o.filename = strdup(input);
+	return 0;
+}
+
 static int str_filename_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
@@ -870,6 +878,12 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= str_filename_cb,
 		.prio	= -1, /* must come after "directory" */
 		.help	= "File(s) to use for the workload",
+	},
+	{
+		.name	= "hostname",
+		.type	= FIO_OPT_STR_STORE,
+		.cb	= str_hostname_cb,
+		.help	= "Hostname for net IO engine",
 	},
 	{
 		.name	= "kb_base",

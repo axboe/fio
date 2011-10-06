@@ -1,8 +1,12 @@
 # Example network job, just defines two clients that send/recv data
 [global]
 ioengine=net
-#the below defaults to a tcp connection, add /udp at the end for udp
-filename=localhost/8888
+#this would use UDP over localhost, port 8888
+#filename=localhost,8888,udp
+#this would use a local domain socket /tmp/fio.sock
+#filename=/tmp/fio.sock,,unix
+#TCP, port 8888, localhost
+filename=localhost,8888,tcp
 bs=4k
 size=10g
 #set the below option to enable end-to-end data integrity tests
@@ -12,4 +16,5 @@ size=10g
 rw=read
 
 [sender]
+startdelay=1
 rw=write
