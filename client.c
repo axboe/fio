@@ -541,7 +541,7 @@ static void handle_probe(struct fio_net_cmd *cmd)
 	if (!arch)
 		os = "unknown";
 
-	log_info("hostname=%s, be=%u, os=%s, arch=%s, fio ver %u.%u.%u\n",
+	log_info("hostname=%s, be=%u, os=%s, arch=%s, fio=%u.%u.%u\n",
 		probe->hostname, probe->bigendian, os, arch, probe->fio_major,
 		probe->fio_minor, probe->fio_patch);
 }
