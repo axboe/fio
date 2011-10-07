@@ -1252,7 +1252,7 @@ int parse_cmd_line(int argc, char *argv[])
 	int c, ini_idx = 0, lidx, ret = 0, do_exit = 0, exit_val = 0;
 	char *ostr = cmd_optstr;
 	int daemonize_server = 0;
-	void *cur_client;
+	void *cur_client = NULL;
 	int backend = 0;
 
 	/*
