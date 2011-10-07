@@ -802,7 +802,6 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 
 			hent = gethostbyname(host);
 			if (!hent) {
-				printf("FAIL\n");
 				free(*ptr);
 				*ptr = NULL;
 				return 1;
@@ -832,13 +831,12 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
  */
 static int fio_handle_server_arg(void)
 {
-	int is_sock, ret;
+	int is_sock, ret = 0;
 
 	saddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
-	saddr_in.sin_port = htons(fio_net_port);
 
 	if (!fio_server_arg)
-		return 0;
+		goto out;
 
 	ret = fio_server_parse_string(fio_server_arg, &bind_sock, &is_sock,
 					&fio_net_port, &saddr_in.sin_addr);
@@ -848,6 +846,8 @@ static int fio_handle_server_arg(void)
 		bind_sock = NULL;
 	}
 
+out:
+	saddr_in.sin_port = htons(fio_net_port);
 	return ret;
 }
 

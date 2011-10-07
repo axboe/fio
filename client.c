@@ -176,7 +176,8 @@ static int fio_client_connect_ip(struct fio_client *client)
 
 	if (connect(fd, (struct sockaddr *) &client->addr, sizeof(client->addr)) < 0) {
 		log_err("fio: connect: %s\n", strerror(errno));
-		log_err("fio: failed to connect to %s\n", client->hostname);
+		log_err("fio: failed to connect to %s:%u\n", client->hostname,
+								client->port);
 		close(fd);
 		return -1;
 	}
