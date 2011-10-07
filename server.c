@@ -827,7 +827,7 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
  */
 static int fio_handle_server_arg(void)
 {
-	int unused;
+	int is_sock, ret;
 
 	saddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
 	saddr_in.sin_port = htons(fio_net_port);
@@ -835,8 +835,15 @@ static int fio_handle_server_arg(void)
 	if (!fio_server_arg)
 		return 0;
 
-	return fio_server_parse_string(fio_server_arg, &bind_sock, &unused,
+	ret = fio_server_parse_string(fio_server_arg, &bind_sock, &is_sock,
 					&fio_net_port, &saddr_in.sin_addr);
+
+	if (!is_sock && bind_sock) {
+		free(bind_sock);
+		bind_sock = NULL;
+	}
+
+	return ret;
 }
 
 static int fio_server(void)
