@@ -150,8 +150,6 @@ int fio_client_add(const char *hostname, void **cookie)
 					&client->addr.sin_addr))
 		return -1;
 
-	printf("%s %d %d\n", client->hostname, client->is_sock, client->port);
-
 	client->fd = -1;
 
 	__fio_client_add_cmd_option(client, "fio");
