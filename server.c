@@ -22,6 +22,8 @@
 #include "crc/crc16.h"
 #include "ieee754.h"
 
+#include "fio_version.h"
+
 int fio_net_port = 8765;
 
 int exit_backend = 0;

@@ -23,6 +23,8 @@
 
 #include "lib/getopt.h"
 
+#include "fio_version.h"
+
 #if FIO_PATCH > 0
 static char fio_version_string[] =	__fio_stringify(FIO_MAJOR) "."	\
 					__fio_stringify(FIO_MINOR) "."	\

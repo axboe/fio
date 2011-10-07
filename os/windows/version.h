@@ -1,4 +1,6 @@
-#define FIO_VERSION_MAJOR 1
-#define FIO_VERSION_MINOR 99
-#define FIO_VERSION_BUILD 1
+#include "../../fio_version.h"
+
+#define FIO_VERSION_MAJOR FIO_MAJOR
+#define FIO_VERSION_MINOR FIO_MINOR
+#define FIO_VERSION_BUILD FIO_PATCH
 #define FIO_VERSION_STRING "1.99.1"
