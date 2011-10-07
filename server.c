@@ -748,7 +748,7 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 {
 	*ptr = NULL;
 	*is_sock = 0;
-	*port = 0;
+	*port = fio_net_port;
 
 	if (!strncmp(str, "sock:", 5)) {
 		*ptr = strdup(str + 5);
@@ -831,6 +831,7 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
  */
 static int fio_handle_server_arg(void)
 {
+	int port = fio_net_port;
 	int is_sock, ret = 0;
 
 	saddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -839,7 +840,7 @@ static int fio_handle_server_arg(void)
 		goto out;
 
 	ret = fio_server_parse_string(fio_server_arg, &bind_sock, &is_sock,
-					&fio_net_port, &saddr_in.sin_addr);
+					&port, &saddr_in.sin_addr);
 
 	if (!is_sock && bind_sock) {
 		free(bind_sock);
@@ -847,7 +848,8 @@ static int fio_handle_server_arg(void)
 	}
 
 out:
-	saddr_in.sin_port = htons(fio_net_port);
+	fio_net_port = port;
+	saddr_in.sin_port = htons(port);
 	return ret;
 }
 
