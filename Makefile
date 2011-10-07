@@ -22,7 +22,7 @@ ifeq ($(UNAME), Linux)
 		engines/splice.c engines/syslet-rw.c engines/guasi.c \
 		engines/binject.c engines/rdma.c profiles/tiobench.c
   LIBS += -lpthread -ldl -lrt -laio
-  CFLAGS += -rdynamic
+  LDFLAGS += -rdynamic
 endif
 ifeq ($(UNAME), SunOS)
   SOURCE += fifo.c lib/strsep.c helpers.c engines/posixaio.c \
@@ -33,12 +33,12 @@ endif
 ifeq ($(UNAME), FreeBSD)
   SOURCE += helpers.c engines/posixaio.c
   LIBS	 += -lpthread -lrt
-  CFLAGS += -rdynamic
+  LDFLAGS += -rdynamic
 endif
 ifeq ($(UNAME), NetBSD)
   SOURCE += helpers.c engines/posixaio.c
   LIBS	 += -lpthread -lrt
-  CFLAGS += -rdynamic
+  LDFLAGS += -rdynamic
 endif
 ifeq ($(UNAME), AIX)
   SOURCE += fifo.c helpers.c lib/getopt_long.c engines/posixaio.c
