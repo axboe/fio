@@ -1697,8 +1697,12 @@ static void run_threads(void)
 
 		reap_threads(&nr_running, &t_rate, &m_rate);
 
-		if (todo)
-			usleep(100000);
+		if (todo) {
+			if (is_backend)
+				fio_server_idle_loop();
+			else
+				usleep(100000);
+		}
 	}
 
 	while (nr_running) {
