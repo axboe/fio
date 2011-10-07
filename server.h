@@ -26,11 +26,10 @@ struct fio_net_cmd {
 };
 
 enum {
-	FIO_SERVER_VER		= 2,
-	FIO_SERVER_VER1		= 1,
-	FIO_SERVER_VER2		= 2,
+	FIO_SERVER_VER		= 3,
+	FIO_SERVER_VER3		= 3,
 
-	FIO_SERVER_MAX_PDU	= 64,
+	FIO_SERVER_MAX_PDU	= 1024,
 
 	FIO_NET_CMD_QUIT	= 1,
 	FIO_NET_CMD_EXIT	= 2,
@@ -105,7 +104,7 @@ static inline void fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
 {
 	memset(cmd, 0, sizeof(*cmd));
 
-	cmd->version	= __cpu_to_le16(FIO_SERVER_VER2);
+	cmd->version	= __cpu_to_le16(FIO_SERVER_VER3);
 	cmd->opcode	= cpu_to_le16(opcode);
 
 	if (pdu) {

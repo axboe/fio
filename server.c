@@ -102,7 +102,7 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 	cmd->pdu_len	= le32_to_cpu(cmd->pdu_len);
 
 	switch (cmd->version) {
-	case FIO_SERVER_VER2:
+	case FIO_SERVER_VER3:
 		break;
 	default:
 		log_err("fio: bad server cmd version %d\n", cmd->version);
