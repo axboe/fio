@@ -1,6 +1,8 @@
 #ifndef FIO_OS_APPLE_H
 #define FIO_OS_APPLE_H
 
+#define	FIO_OS	os_mac
+
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/disk.h>

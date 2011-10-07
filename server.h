@@ -63,6 +63,8 @@ struct cmd_probe_pdu {
 	uint8_t fio_major;
 	uint8_t fio_minor;
 	uint8_t fio_patch;
+	uint8_t os;
+	uint8_t arch;
 };
 
 struct cmd_line_pdu {

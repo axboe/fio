@@ -8,7 +8,7 @@
 #endif
 
 enum {
-	arch_x86_64,
+	arch_x86_64 = 1,
 	arch_i386,
 	arch_ppc,
 	arch_ia64,
@@ -21,6 +21,8 @@ enum {
 	arch_hppa,
 
 	arch_generic,
+
+	arch_nr,
 };
 
 enum {

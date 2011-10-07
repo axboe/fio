@@ -1,6 +1,8 @@
 #ifndef FIO_OS_FREEBSD_H
 #define FIO_OS_FREEBSD_H
 
+#define	FIO_OS	os_freebsd
+
 #include <errno.h>
 #include <sys/sysctl.h>
 #include <sys/disk.h>

@@ -1,6 +1,8 @@
 #ifndef FIO_OS_AIX_H
 #define FIO_OS_AIX_H
 
+#define	FIO_OS	os_aix
+
 #include <errno.h>
 #include <unistd.h>
 #include <sys/devinfo.h>

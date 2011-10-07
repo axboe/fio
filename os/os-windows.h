@@ -1,6 +1,8 @@
 #ifndef FIO_OS_WINDOWS_H
 #define FIO_OS_WINDOWS_H
 
+#define FIO_OS	os_windows
+
 #include <sys/types.h>
 #include <errno.h>
 #include <windows.h>

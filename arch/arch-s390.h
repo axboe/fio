@@ -1,7 +1,7 @@
 #ifndef ARCH_S390_H
 #define ARCH_S390_H
 
-#define ARCH	(arch_s390)
+#define FIO_ARCH	(arch_s390)
 
 #ifndef __NR_ioprio_set
 #define __NR_ioprio_set		282

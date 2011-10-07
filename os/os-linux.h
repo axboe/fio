@@ -1,6 +1,8 @@
 #ifndef FIO_OS_LINUX_H
 #define FIO_OS_LINUX_H
 
+#define	FIO_OS	os_linux
+
 #include <sys/ioctl.h>
 #include <sys/uio.h>
 #include <sys/syscall.h>

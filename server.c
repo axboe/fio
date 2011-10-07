@@ -309,6 +309,9 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 	probe.fio_minor = FIO_MINOR;
 	probe.fio_patch = FIO_PATCH;
 
+	probe.os	= FIO_OS;
+	probe.arch	= FIO_ARCH;
+
 	return fio_net_send_cmd(server_fd, FIO_NET_CMD_PROBE, &probe, sizeof(probe));
 }
 

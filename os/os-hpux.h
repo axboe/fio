@@ -1,6 +1,8 @@
 #ifndef FIO_OS_HPUX_H
 #define FIO_OS_HPUX_H
 
+#define	FIO_OS	os_hpux
+
 #include <errno.h>
 #include <unistd.h>
 #include <sys/ioctl.h>

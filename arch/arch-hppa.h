@@ -1,7 +1,7 @@
 #ifndef ARCH_HPPA_H
 #define ARCH_HPPA_H
 
-#define ARCH	(arch_hppa)
+#define FIO_ARCH	(arch_hppa)
 
 #ifndef __NR_ioprio_set
 #define __NR_ioprio_set		267

@@ -1,7 +1,7 @@
 #ifndef ARCH_IA64_H
 #define ARCH_IA64_H
 
-#define ARCH	(arch_ia64)
+#define FIO_ARCH	(arch_ia64)
 
 #ifndef __NR_ioprio_set
 #define __NR_ioprio_set		1274

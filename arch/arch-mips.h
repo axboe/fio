@@ -1,7 +1,7 @@
 #ifndef ARCH_MIPS64_H
 #define ARCH_MIPS64_H
 
-#define ARCH	(arch_mips)
+#define FIO_ARCH	(arch_mips)
 
 #ifndef __NR_ioprio_set
 #define __NR_ioprio_set		314

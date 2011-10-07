@@ -1,6 +1,8 @@
 #ifndef FIO_OS_SOLARIS_H
 #define FIO_OS_SOLARIS_H
 
+#define	FIO_OS	os_solaris
+
 #include <errno.h>
 #include <malloc.h>
 #include <sys/types.h>

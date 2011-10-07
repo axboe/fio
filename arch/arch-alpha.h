@@ -1,7 +1,7 @@
 #ifndef ARCH_ALPHA_H
 #define ARCH_ALPHA_H
 
-#define ARCH	(arch_alpha)
+#define FIO_ARCH	(arch_alpha)
 
 #ifndef __NR_ioprio_set
 #define __NR_ioprio_set		442

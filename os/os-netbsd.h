@@ -1,6 +1,8 @@
 #ifndef FIO_OS_NETBSD_H
 #define FIO_OS_NETBSD_H
 
+#define	FIO_OS	os_netbsd
+
 #include <errno.h>
 #include <sys/param.h>
 #include <sys/thr.h>

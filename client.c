@@ -532,9 +532,18 @@ static void handle_eta(struct fio_net_cmd *cmd)
 static void handle_probe(struct fio_net_cmd *cmd)
 {
 	struct cmd_probe_pdu *probe = (struct cmd_probe_pdu *) cmd->payload;
+	const char *os, *arch;
 
-	log_info("Probe: hostname=%s, be=%u, fio ver %u.%u.%u\n",
-		probe->hostname, probe->bigendian, probe->fio_major,
+	os = fio_get_os_string(probe->os);
+	if (!os)
+		os = "unknown";
+
+	arch = fio_get_arch_string(probe->arch);
+	if (!arch)
+		os = "unknown";
+
+	log_info("hostname=%s, be=%u, os=%s, arch=%s, fio ver %u.%u.%u\n",
+		probe->hostname, probe->bigendian, os, arch, probe->fio_major,
 		probe->fio_minor, probe->fio_patch);
 }
 

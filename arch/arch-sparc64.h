@@ -1,7 +1,7 @@
 #ifndef ARCH_SPARC64_H
 #define ARCH_SPARC64_H
 
-#define ARCH	(arch_sparc64)
+#define FIO_ARCH	(arch_sparc64)
 
 #ifndef __NR_ioprio_set
 #define __NR_ioprio_set		196

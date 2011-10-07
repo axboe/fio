@@ -1,7 +1,7 @@
 #ifndef ARCH_PPC_H
 #define ARCH_PPH_H
 
-#define ARCH	(arch_ppc)
+#define FIO_ARCH	(arch_ppc)
 
 #ifndef __NR_ioprio_set
 #define __NR_ioprio_set		273

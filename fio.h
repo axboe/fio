@@ -701,4 +701,7 @@ static inline void td_io_u_free_notify(struct thread_data *td)
 		pthread_cond_signal(&td->free_cond);
 }
 
+extern const char *fio_get_arch_string(int);
+extern const char *fio_get_os_string(int);
+
 #endif

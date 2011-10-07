@@ -6,6 +6,19 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+enum {
+	os_linux = 1,
+	os_aix,
+	os_freebsd,
+	os_hpux,
+	os_mac,
+	os_netbsd,
+	os_solaris,
+	os_windows,
+
+	os_nr,
+};
+
 #if defined(__linux__)
 #include "os-linux.h"
 #elif defined(__FreeBSD__)

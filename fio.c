@@ -77,6 +77,50 @@ struct io_log *agg_io_log[2];
 
 #define JOB_START_TIMEOUT	(5 * 1000)
 
+static const char *fio_os_strings[os_nr] = {
+	"Invalid",
+	"Linux",
+	"AIX",
+	"FreeBSD",
+	"HP-UX",
+	"OSX",
+	"NetBSD",
+	"Solaris",
+	"Windows"
+};
+
+static const char *fio_arch_strings[arch_nr] = {
+	"Invalid",
+	"x86-64",
+	"x86",
+	"ppc",
+	"ia64",
+	"s390",
+	"alpha",
+	"sparc",
+	"sparc64",
+	"arm",
+	"sh",
+	"hppa",
+	"generic"
+};
+
+const char *fio_get_os_string(int nr)
+{
+	if (nr < os_nr)
+		return fio_os_strings[nr];
+
+	return NULL;
+}
+
+const char *fio_get_arch_string(int nr)
+{
+	if (nr < arch_nr)
+		return fio_arch_strings[nr];
+
+	return NULL;
+}
+
 void td_set_runstate(struct thread_data *td, int runstate)
 {
 	if (td->runstate == runstate)
