@@ -29,6 +29,8 @@ struct fio_client {
 	int port;
 	int fd;
 
+	char *name;
+
 	int state;
 	int skip_newline;
 	int is_sock;
@@ -102,6 +104,8 @@ static void remove_client(struct fio_client *client)
 	free(client->hostname);
 	if (client->argv)
 		free(client->argv);
+	if (client->name)
+		free(client->name);
 
 	free(client);
 	nr_clients--;
@@ -528,7 +532,7 @@ static void handle_eta(struct fio_net_cmd *cmd)
 	display_thread_status(je);
 }
 
-static void handle_probe(struct fio_net_cmd *cmd)
+static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_probe_pdu *probe = (struct cmd_probe_pdu *) cmd->payload;
 	const char *os, *arch;
@@ -544,6 +548,9 @@ static void handle_probe(struct fio_net_cmd *cmd)
 	log_info("hostname=%s, be=%u, os=%s, arch=%s, fio=%u.%u.%u\n",
 		probe->hostname, probe->bigendian, os, arch, probe->fio_major,
 		probe->fio_minor, probe->fio_patch);
+
+	if (!client->name)
+		client->name = strdup((char *) probe->hostname);
 }
 
 static int handle_client(struct fio_client *client)
@@ -566,10 +573,13 @@ static int handle_client(struct fio_client *client)
 		break;
 	case FIO_NET_CMD_TEXT: {
 		const char *buf = (const char *) cmd->payload;
+		const char *name;
 		int fio_unused ret;
 
+		name = client->name ? client->name : client->hostname;
+
 		if (!client->skip_newline)
-			fprintf(f_out, "<%s> ", client->hostname);
+			fprintf(f_out, "<%s> ", name);
 		ret = fwrite(buf, cmd->pdu_len, 1, f_out);
 		fflush(f_out);
 		client->skip_newline = strchr(buf, '\n') == NULL;
@@ -589,7 +599,7 @@ static int handle_client(struct fio_client *client)
 		free(cmd);
 		break;
 	case FIO_NET_CMD_PROBE:
-		handle_probe(cmd);
+		handle_probe(client, cmd);
 		free(cmd);
 		break;
 	case FIO_NET_CMD_START:
