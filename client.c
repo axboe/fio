@@ -217,8 +217,6 @@ static int fio_client_connect(struct fio_client *client)
 
 	dprint(FD_NET, "client: connect to host %s\n", client->hostname);
 
-	memset(&client->addr, 0, sizeof(client->addr));
-
 	if (client->is_sock)
 		fd = fio_client_connect_sock(client);
 	else
