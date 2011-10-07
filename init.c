@@ -196,11 +196,6 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'D',
 	},
 	{
-		.name		= (char *) "net-port",
-		.has_arg	= required_argument,
-		.val		= 'P',
-	},
-	{
 		.name		= (char *) "client",
 		.has_arg	= required_argument,
 		.val		= 'C',
@@ -1123,9 +1118,8 @@ static void usage(const char *name)
 		" (def 1024)\n");
 	printf("\t--warnings-fatal Fio parser warnings are fatal\n");
 	printf("\t--max-jobs\tMaximum number of threads/processes to support\n");
-	printf("\t--server\tStart a backend fio server\n");
+	printf("\t--server=args\tStart a backend fio server\n");
 	printf("\t--client=hostname Talk to remove backend fio server at hostname\n");
-	printf("\t--net-port=port\tUse specified port for client/server connection\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
 	printf("\n                   Jens Axboe <jaxboe@fusionio.com>\n");
 }
@@ -1247,7 +1241,7 @@ static int client_flag_set(char c)
 	return 0;
 }
 
-int parse_cmd_client(char *client, char *opt)
+int parse_cmd_client(void *client, char *opt)
 {
 	return fio_client_add_cmd_option(client, opt);
 }
@@ -1258,7 +1252,7 @@ int parse_cmd_line(int argc, char *argv[])
 	int c, ini_idx = 0, lidx, ret = 0, do_exit = 0, exit_val = 0;
 	char *ostr = cmd_optstr;
 	int daemonize_server = 0;
-	char *cur_client = NULL;
+	void *cur_client;
 	int backend = 0;
 
 	/*
@@ -1411,15 +1405,12 @@ int parse_cmd_line(int argc, char *argv[])
 				break;
 			}
 			if (optarg)
-				fio_server_add_arg(optarg);
+				fio_server_set_arg(optarg);
 			is_backend = 1;
 			backend = 1;
 			break;
 		case 'D':
 			daemonize_server = 1;
-			break;
-		case 'P':
-			fio_net_port = atoi(optarg);
 			break;
 		case 'C':
 			if (is_backend) {
@@ -1428,8 +1419,12 @@ int parse_cmd_line(int argc, char *argv[])
 				exit_val = 1;
 				break;
 			}
-			fio_client_add(optarg);
-			cur_client = optarg;
+			if (fio_client_add(optarg, &cur_client)) {
+				log_err("fio: failed adding client %s\n", optarg);
+				do_exit++;
+				exit_val = 1;
+				break;
+			}
 			break;
 		default:
 			do_exit++;

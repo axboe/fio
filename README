@@ -133,23 +133,25 @@ $ fio
 	--debug			Enable some debugging options (see below)
 	--output		Write output to file
 	--timeout		Runtime in seconds
-	--latency-log	Generate per-job latency logs
-	--bandwidth-log	Generate per-job bandwidth logs
+	--latency-log		Generate per-job latency logs
+	--bandwidth-log		Generate per-job bandwidth logs
 	--minimal		Minimal (terse) output
 	--version		Print version info and exit
 	--terse-version=type	Terse version output format
 	--help			Print this page
-	--cmdhelp=cmd	Print command help, "all" for all of them
+	--cmdhelp=cmd		Print command help, "all" for all of them
 	--showcmd		Turn a job file into command line options
 	--readonly		Turn on safety read-only checks, preventing
-					writes
+				writes
 	--eta=when		When ETA estimate should be printed
-					May be "always", "never" or "auto"
-	--section=name	Only run specified section in job file. Multiple
-				sections can be specified.
+				May be "always", "never" or "auto"
+	--section=name		Only run specified section in job file.
+				Multiple sections can be specified.
 	--alloc-size=kb	Set smalloc pool to this size in kb (def 1024)
 	--warnings-fatal Fio parser warnings are fatal
 	--max-jobs		Maximum number of threads/processes to support
+	--server=args		Start backend server. See Client/Server section.
+	--client=host		Connect to specified backend.
 
 
 Any parameters following the options will be assumed to be job files,
@@ -313,6 +315,59 @@ The job file parameters are:
 			to burn.
 	cpuchunks=x	Split burn cycles into pieces of x usecs.
 
+
+
+Client/server
+------------
+
+Normally you would run fio as a stand-alone application on the machine
+where the IO workload should be generated. However, it is also possible to
+run the frontend and backend of fio separately. This makes it possible to
+have a fio server running on the machine(s) where the IO workload should
+be running, while controlling it from another machine.
+
+To start the server, you would do:
+
+fio --server=args
+
+on that machine, where args defines what fio listens to. The arguments
+are of the form 'type:hostname or IP:port'. 'type' is either 'ip' for
+TCP/IP, or 'sock' for a local unix domain socket. 'hostname' is either
+a hostname or IP address, and 'port' is the port to listen to (only valid
+for TCP/IP, not a local socket). Some examples:
+
+1) fio --server
+
+   Start a fio server, listening on all interfaces on the default port (8765).
+
+2) fio --server=ip:hostname:4444
+
+   Start a fio server, listening on IP belonging to hostname and on port 4444.
+
+3) fio --server=:4444
+
+   Start a fio server, listening on all interfaces on port 4444.
+
+4) fio --server=1.2.3.4
+
+   Start a fio server, listening on IP 1.2.3.4 on the default port.
+
+5) fio --server=sock:/tmp/fio.sock
+
+   Start a fio server, listening on the local socket /tmp/fio.sock.
+
+When a server is running, you can connect to it from a client. The client
+is run with:
+
+fio --local-args --client=server --remote-args <job file(s)>
+
+where --local-args are arguments that are local to the client where it is
+running, 'server' is the connect string, and --remote-args and <job file(s)>
+are sent to the server. The 'server' string follows the same format as it
+does on the server side, to allow IP/hostname/socket and port strings.
+You can connect to multiple clients as well, to do that you could run:
+
+fio --client=server2 --client=server2 <job file(s)>
 
 
 Platforms

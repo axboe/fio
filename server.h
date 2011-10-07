@@ -76,7 +76,8 @@ extern int fio_server_text_output(const char *, unsigned int len);
 extern int fio_server_log(const char *format, ...);
 extern int fio_net_send_cmd(int, uint16_t, const void *, off_t);
 extern int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t serial);
-extern void fio_server_add_arg(const char *);
+extern void fio_server_set_arg(const char *);
+extern int fio_server_parse_string(const char *, char **, int *, int *, struct in_addr *);
 
 struct thread_stat;
 struct group_run_stats;
@@ -88,8 +89,8 @@ extern void fio_server_idle_loop(void);
 extern int fio_clients_connect(void);
 extern int fio_clients_send_ini(const char *);
 extern int fio_handle_clients(void);
-extern void fio_client_add(const char *);
-extern int fio_client_add_cmd_option(const char *, const char *);
+extern int fio_client_add(const char *, void **);
+extern int fio_client_add_cmd_option(void *, const char *);
 
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);

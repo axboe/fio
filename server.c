@@ -666,7 +666,6 @@ static int fio_init_server_ip(void)
 #endif
 
 	saddr_in.sin_family = AF_INET;
-	saddr_in.sin_port = htons(fio_net_port);
 
 	if (bind(sk, (struct sockaddr *) &saddr_in, sizeof(saddr_in)) < 0) {
 		log_err("fio: bind: %s\n", strerror(errno));
@@ -711,6 +710,7 @@ static int fio_init_server_sock(void)
 
 static int fio_init_server_connection(void)
 {
+	char bind_str[128];
 	int sk;
 
 	dprint(FD_NET, "starting server\n");
@@ -723,12 +723,94 @@ static int fio_init_server_connection(void)
 	if (sk < 0)
 		return sk;
 
+	if (!bind_sock)
+		sprintf(bind_str, "%s:%u", inet_ntoa(saddr_in.sin_addr), fio_net_port);
+	else
+		strcpy(bind_str, bind_sock);
+
+	log_info("fio: server listening on %s\n", bind_str);
+
 	if (listen(sk, 1) < 0) {
 		log_err("fio: listen: %s\n", strerror(errno));
 		return -1;
 	}
 
 	return sk;
+}
+
+int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
+			    int *port, struct in_addr *inp)
+{
+	*ptr = NULL;
+	*is_sock = 0;
+	*port = 0;
+
+	if (!strncmp(str, "sock:", 5)) {
+		*ptr = strdup(str + 5);
+		*is_sock = 1;
+	} else {
+		const char *host = str;
+		char *portp;
+		int lport = 0;
+
+		/*
+		 * Is it ip:<ip or host>:port
+		 */
+		if (!strncmp(host, "ip:", 3))
+			host += 3;
+		else if (host[0] == ':') {
+			/* String is :port */
+			host++;
+			lport = atoi(host);
+			if (!lport || lport > 65535) {
+				log_err("fio: bad server port %u\n", port);
+				return 1;
+			}
+			/* no hostname given, we are done */
+			*port = lport;
+			return 0;
+		}
+
+		/*
+		 * If no port seen yet, check if there's a last ':' at the end
+		 */
+		if (!lport) {
+			portp = strchr(host, ':');
+			if (portp) {
+				*portp = '\0';
+				portp++;
+				lport = atoi(portp);
+				if (!lport || lport > 65535) {
+					log_err("fio: bad server port %u\n", port);
+					return 1;
+				}
+			}
+		}
+
+		if (lport)
+			*port = lport;
+
+		*ptr = strdup(host);
+
+		if (inet_aton(host, inp) != 1) {
+			struct hostent *hent;
+
+			hent = gethostbyname(host);
+			if (!hent) {
+				printf("FAIL\n");
+				free(*ptr);
+				*ptr = NULL;
+				return 1;
+			}
+
+			memcpy(inp, hent->h_addr, 4);
+		}
+	}
+
+	if (*port == 0)
+		*port = fio_net_port;
+
+	return 0;
 }
 
 /*
@@ -745,28 +827,16 @@ static int fio_init_server_connection(void)
  */
 static int fio_handle_server_arg(void)
 {
+	int unused;
+
 	saddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
+	saddr_in.sin_port = htons(fio_net_port);
 
 	if (!fio_server_arg)
 		return 0;
-	if (!strncmp(fio_server_arg, "sock:", 5)) {
-		bind_sock = fio_server_arg + 5;
-		return 0;
-	} else {
-		char *host = fio_server_arg;
 
-		if (!strncmp(host, "ip:", 3))
-			host += 3;
-
-		if (inet_aton(host, &saddr_in.sin_addr) != 1) {
-			struct hostent *hent;
-
-			hent = gethostbyname(host);
-			if (hent)
-				memcpy(&saddr_in.sin_addr, hent->h_addr, 4);
-		}
-		return 0;
-	}
+	return fio_server_parse_string(fio_server_arg, &bind_sock, &unused,
+					&fio_net_port, &saddr_in.sin_addr);
 }
 
 static int fio_server(void)
@@ -790,6 +860,8 @@ static int fio_server(void)
 		free(fio_server_arg);
 		fio_server_arg = NULL;
 	}
+	if (bind_sock)
+		free(bind_sock);
 
 	return ret;
 }
@@ -842,7 +914,7 @@ int fio_start_server(int daemonize)
 	return fio_server();
 }
 
-void fio_server_add_arg(const char *arg)
+void fio_server_set_arg(const char *arg)
 {
 	fio_server_arg = strdup(arg);
 }

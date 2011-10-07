@@ -22,11 +22,11 @@
 
 struct fio_client {
 	struct flist_head list;
-	struct flist_head fd_hash_list;
-	struct flist_head name_hash_list;
+	struct flist_head hash_list;
 	struct sockaddr_in addr;
 	struct sockaddr_un addr_un;
 	char *hostname;
+	int port;
 	int fd;
 
 	int state;
@@ -50,47 +50,30 @@ static FLIST_HEAD(client_list);
 #define FIO_CLIENT_HASH_BITS	7
 #define FIO_CLIENT_HASH_SZ	(1 << FIO_CLIENT_HASH_BITS)
 #define FIO_CLIENT_HASH_MASK	(FIO_CLIENT_HASH_SZ - 1)
-static struct flist_head client_fd_hash[FIO_CLIENT_HASH_SZ];
-static struct flist_head client_name_hash[FIO_CLIENT_HASH_SZ];
+static struct flist_head client_hash[FIO_CLIENT_HASH_SZ];
 
 static int handle_client(struct fio_client *client);
 
-static void fio_client_add_fd_hash(struct fio_client *client)
+static void fio_client_add_hash(struct fio_client *client)
 {
 	int bucket = hash_long(client->fd, FIO_CLIENT_HASH_BITS);
 
 	bucket &= FIO_CLIENT_HASH_MASK;
-	flist_add(&client->fd_hash_list, &client_fd_hash[bucket]);
+	flist_add(&client->hash_list, &client_hash[bucket]);
 }
 
-static void fio_client_remove_fd_hash(struct fio_client *client)
+static void fio_client_remove_hash(struct fio_client *client)
 {
-	if (!flist_empty(&client->fd_hash_list))
-		flist_del_init(&client->fd_hash_list);
-}
-
-static void fio_client_add_name_hash(struct fio_client *client)
-{
-	int bucket = jhash(client->hostname, strlen(client->hostname), 0);
-
-	bucket &= FIO_CLIENT_HASH_MASK;
-	flist_add(&client->name_hash_list, &client_name_hash[bucket]);
-}
-
-static void fio_client_remove_name_hash(struct fio_client *client)
-{
-	if (!flist_empty(&client->name_hash_list))
-		flist_del_init(&client->name_hash_list);
+	if (!flist_empty(&client->hash_list))
+		flist_del_init(&client->hash_list);
 }
 
 static void fio_init fio_client_hash_init(void)
 {
 	int i;
 
-	for (i = 0; i < FIO_CLIENT_HASH_SZ; i++) {
-		INIT_FLIST_HEAD(&client_fd_hash[i]);
-		INIT_FLIST_HEAD(&client_name_hash[i]);
-	}
+	for (i = 0; i < FIO_CLIENT_HASH_SZ; i++)
+		INIT_FLIST_HEAD(&client_hash[i]);
 }
 
 static struct fio_client *find_client_by_fd(int fd)
@@ -99,26 +82,10 @@ static struct fio_client *find_client_by_fd(int fd)
 	struct fio_client *client;
 	struct flist_head *entry;
 
-	flist_for_each(entry, &client_fd_hash[bucket]) {
-		client = flist_entry(entry, struct fio_client, fd_hash_list);
+	flist_for_each(entry, &client_hash[bucket]) {
+		client = flist_entry(entry, struct fio_client, hash_list);
 
 		if (client->fd == fd)
-			return client;
-	}
-
-	return NULL;
-}
-
-static struct fio_client *find_client_by_name(const char *name)
-{
-	int bucket = jhash(name, strlen(name), 0) & FIO_CLIENT_HASH_BITS;
-	struct fio_client *client;
-	struct flist_head *entry;
-
-	flist_for_each(entry, &client_name_hash[bucket]) {
-		client = flist_entry(entry, struct fio_client, name_hash_list);
-
-		if (!strcmp(name, client->hostname))
 			return client;
 	}
 
@@ -130,8 +97,7 @@ static void remove_client(struct fio_client *client)
 	dprint(FD_NET, "client: removed <%s>\n", client->hostname);
 	flist_del(&client->list);
 
-	fio_client_remove_fd_hash(client);
-	fio_client_remove_name_hash(client);
+	fio_client_remove_hash(client);
 
 	free(client->hostname);
 	if (client->argv)
@@ -159,48 +125,42 @@ static int __fio_client_add_cmd_option(struct fio_client *client,
 	return 0;
 }
 
-int fio_client_add_cmd_option(const char *hostname, const char *opt)
+int fio_client_add_cmd_option(void *cookie, const char *opt)
 {
-	struct fio_client *client;
+	struct fio_client *client = cookie;
 
-	if (!hostname || !opt)
+	if (!client || !opt)
 		return 0;
-
-	client = find_client_by_name(hostname);
-	if (!client) {
-		log_err("fio: unknown client %s\n", hostname);
-		return 1;
-	}
 
 	return __fio_client_add_cmd_option(client, opt);
 }
 
-void fio_client_add(const char *hostname)
+int fio_client_add(const char *hostname, void **cookie)
 {
 	struct fio_client *client;
 
-	dprint(FD_NET, "client: added  <%s>\n", hostname);
 	client = malloc(sizeof(*client));
 	memset(client, 0, sizeof(*client));
 
 	INIT_FLIST_HEAD(&client->list);
-	INIT_FLIST_HEAD(&client->fd_hash_list);
-	INIT_FLIST_HEAD(&client->name_hash_list);
+	INIT_FLIST_HEAD(&client->hash_list);
 
-	if (!strncmp(hostname, "sock:", 5)) {
-		client->hostname = strdup(hostname + 5);
-		client->is_sock = 1;
-	} else
-		client->hostname = strdup(hostname);
+	if (fio_server_parse_string(hostname, &client->hostname,
+					&client->is_sock, &client->port,
+					&client->addr.sin_addr))
+		return -1;
+
+	printf("%s %d %d\n", client->hostname, client->is_sock, client->port);
 
 	client->fd = -1;
-
-	fio_client_add_name_hash(client);
 
 	__fio_client_add_cmd_option(client, "fio");
 
 	flist_add(&client->list, &client_list);
 	nr_clients++;
+	dprint(FD_NET, "client: added <%s>\n", client->hostname);
+	*cookie = client;
+	return 0;
 }
 
 static int fio_client_connect_ip(struct fio_client *client)
@@ -208,21 +168,7 @@ static int fio_client_connect_ip(struct fio_client *client)
 	int fd;
 
 	client->addr.sin_family = AF_INET;
-	client->addr.sin_port = htons(fio_net_port);
-
-	if (inet_aton(client->hostname, &client->addr.sin_addr) != 1) {
-		struct hostent *hent;
-
-		hent = gethostbyname(client->hostname);
-		if (!hent) {
-			log_err("fio: gethostbyname: %s\n", strerror(errno));
-			log_err("fio: failed looking up hostname %s\n",
-					client->hostname);
-			return -1;
-		}
-
-		memcpy(&client->addr.sin_addr, hent->h_addr, 4);
-	}
+	client->addr.sin_port = htons(client->port);
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
@@ -283,7 +229,7 @@ static int fio_client_connect(struct fio_client *client)
 		return 1;
 
 	client->fd = fd;
-	fio_client_add_fd_hash(client);
+	fio_client_add_hash(client);
 	client->state = Client_connected;
 	return 0;
 }
@@ -304,7 +250,7 @@ void fio_clients_terminate(void)
 
 static void sig_int(int sig)
 {
-	dprint(FD_NET, "client: got sign %d\n", sig);
+	dprint(FD_NET, "client: got signal %d\n", sig);
 	fio_clients_terminate();
 }
 
