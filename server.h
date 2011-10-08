@@ -26,8 +26,7 @@ struct fio_net_cmd {
 };
 
 enum {
-	FIO_SERVER_VER		= 3,
-	FIO_SERVER_VER3		= 3,
+	FIO_SERVER_VER		= 4,
 
 	FIO_SERVER_MAX_PDU	= 1024,
 
@@ -48,8 +47,6 @@ enum {
 	/* crc does not include the crc fields */
 	FIO_NET_CMD_CRC_SZ	= sizeof(struct fio_net_cmd) -
 					2 * sizeof(uint16_t),
-
-	FIO_NET_CMD_JOBLINE_ARGV	= 128,
 };
 
 struct cmd_ts_pdu {
@@ -67,9 +64,14 @@ struct cmd_probe_pdu {
 	uint8_t arch;
 };
 
+struct cmd_single_line_pdu {
+	uint16_t len;
+	uint8_t text[0];
+};
+
 struct cmd_line_pdu {
-	uint16_t argc;
-	uint8_t argv[FIO_NET_CMD_JOBLINE_ARGV][64];
+	uint16_t lines;
+	struct cmd_single_line_pdu options[0];
 };
 
 extern int fio_start_server(int);
@@ -91,7 +93,7 @@ extern int fio_clients_connect(void);
 extern int fio_clients_send_ini(const char *);
 extern int fio_handle_clients(void);
 extern int fio_client_add(const char *, void **);
-extern int fio_client_add_cmd_option(void *, const char *);
+extern void fio_client_add_cmd_option(void *, const char *);
 
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);
@@ -106,7 +108,7 @@ static inline void fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
 {
 	memset(cmd, 0, sizeof(*cmd));
 
-	cmd->version	= __cpu_to_le16(FIO_SERVER_VER3);
+	cmd->version	= __cpu_to_le16(FIO_SERVER_VER);
 	cmd->opcode	= cpu_to_le16(opcode);
 
 	if (pdu) {

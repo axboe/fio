@@ -102,7 +102,7 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 	cmd->pdu_len	= le32_to_cpu(cmd->pdu_len);
 
 	switch (cmd->version) {
-	case FIO_SERVER_VER3:
+	case FIO_SERVER_VER:
 		break;
 	default:
 		log_err("fio: bad server cmd version %d\n", cmd->version);
@@ -270,23 +270,35 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 
 static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 {
-	struct cmd_line_pdu *pdu = (struct cmd_line_pdu *) cmd->payload;
-	char *argv[FIO_NET_CMD_JOBLINE_ARGV];
+	void *pdu = cmd->payload;
+	struct cmd_single_line_pdu *cslp;
+	struct cmd_line_pdu *clp;
+	unsigned long offset;
+	char **argv;
 	int ret, i;
 
-	pdu->argc = le16_to_cpu(pdu->argc);
+	clp = pdu;
+	clp->lines = le16_to_cpu(clp->lines);
+	argv = malloc(clp->lines * sizeof(char *));
+	offset = sizeof(*clp);
 
-	dprint(FD_NET, "server: %d command line args\n", pdu->argc);
+	dprint(FD_NET, "server: %d command line args\n", clp->lines);
 
-	for (i = 0; i < pdu->argc; i++) {
-		argv[i] = (char *) pdu->argv[i];
+	for (i = 0; i < clp->lines; i++) {
+		cslp = pdu + offset;
+		argv[i] = (char *) cslp->text;
+
+		offset += sizeof(*cslp) + le16_to_cpu(cslp->len);
 		dprint(FD_NET, "server: %d: %s\n", i, argv[i]);
 	}
 
-	if (parse_cmd_line(pdu->argc, argv)) {
+	if (parse_cmd_line(clp->lines, argv)) {
 		fio_server_send_quit_cmd();
+		free(argv);
 		return -1;
 	}
+
+	free(argv);
 
 	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0);
 

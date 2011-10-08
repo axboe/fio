@@ -111,32 +111,25 @@ static void remove_client(struct fio_client *client)
 	nr_clients--;
 }
 
-static int __fio_client_add_cmd_option(struct fio_client *client,
-				       const char *opt)
+static void __fio_client_add_cmd_option(struct fio_client *client,
+					const char *opt)
 {
 	int index;
-
-	if (client->argc == FIO_NET_CMD_JOBLINE_ARGV) {
-		log_err("fio: max cmd line number reached.\n");
-		log_err("fio: cmd line <%s> has been ignored.\n", opt);
-		return 1;
-	}
 
 	index = client->argc++;
 	client->argv = realloc(client->argv, sizeof(char *) * client->argc);
 	client->argv[index] = strdup(opt);
 	dprint(FD_NET, "client: add cmd %d: %s\n", index, opt);
-	return 0;
 }
 
-int fio_client_add_cmd_option(void *cookie, const char *opt)
+void fio_client_add_cmd_option(void *cookie, const char *opt)
 {
 	struct fio_client *client = cookie;
 
 	if (!client || !opt)
-		return 0;
+		return;
 
-	return __fio_client_add_cmd_option(client, opt);
+	__fio_client_add_cmd_option(client, opt);
 }
 
 int fio_client_add(const char *hostname, void **cookie)
@@ -280,17 +273,41 @@ static void probe_client(struct fio_client *client)
 
 static int send_client_cmd_line(struct fio_client *client)
 {
-	struct cmd_line_pdu *pdu;
+	struct cmd_single_line_pdu *cslp;
+	struct cmd_line_pdu *clp;
+	unsigned long offset;
+	void *pdu;
+	size_t mem;
 	int i, ret;
 
 	dprint(FD_NET, "client: send cmdline %d\n", client->argc);
 
-	pdu = malloc(sizeof(*pdu));
-	for (i = 0; i < client->argc; i++)
-		strcpy((char *) pdu->argv[i], client->argv[i]);
+	/*
+	 * Find out how much mem we need
+	 */
+	for (i = 0, mem = 0; i < client->argc; i++)
+		mem += strlen(client->argv[i]) + 1;
 
-	pdu->argc = cpu_to_le16(client->argc);
-	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOBLINE, pdu, sizeof(*pdu));
+	/*
+	 * We need one cmd_line_pdu, and argc number of cmd_single_line_pdu
+	 */
+	mem += sizeof(*clp) + (client->argc * sizeof(*cslp));
+
+	pdu = malloc(mem);
+	clp = pdu;
+	offset = sizeof(*clp);
+
+	for (i = 0; i < client->argc; i++) {
+		uint16_t arg_len = strlen(client->argv[i]) + 1;
+
+		cslp = pdu + offset;
+		strcpy((char *) cslp->text, client->argv[i]);
+		cslp->len = cpu_to_le16(arg_len);
+		offset += sizeof(*cslp) + arg_len;
+	}
+
+	clp->lines = cpu_to_le16(client->argc);
+	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOBLINE, pdu, mem);
 	free(pdu);
 	return ret;
 }

@@ -1243,9 +1243,9 @@ static int client_flag_set(char c)
 	return 0;
 }
 
-int parse_cmd_client(void *client, char *opt)
+void parse_cmd_client(void *client, char *opt)
 {
-	return fio_client_add_cmd_option(client, opt);
+	fio_client_add_cmd_option(client, opt);
 }
 
 int parse_cmd_line(int argc, char *argv[])
@@ -1267,11 +1267,7 @@ int parse_cmd_line(int argc, char *argv[])
 		did_arg = 1;
 
 		if ((c & FIO_CLIENT_FLAG) || client_flag_set(c)) {
-			if (parse_cmd_client(cur_client, argv[optind - 1])) {
-				exit_val = 1;
-				do_exit++;
-				break;
-			}
+			parse_cmd_client(cur_client, argv[optind - 1]);
 			c &= ~FIO_CLIENT_FLAG;
 		}
 
