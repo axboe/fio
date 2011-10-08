@@ -21,6 +21,9 @@
 #define FIO_HAVE_WINDOWSAIO
 #define FIO_HAVE_GETTID
 
+#define FIO_OS_HAVE_SOCKLEN_T
+typedef int fio_socklen_t;
+
 #define FIO_USE_GENERIC_RAND
 
 #define OS_MAP_ANON		MAP_ANON
