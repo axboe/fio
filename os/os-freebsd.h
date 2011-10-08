@@ -8,6 +8,7 @@
 #include <sys/disk.h>
 #include <sys/thr.h>
 #include <sys/endian.h>
+#include <sys/socket.h>
 
 #include "../file.h"
 
