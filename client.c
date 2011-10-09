@@ -39,6 +39,9 @@ struct fio_client {
 	char **argv;
 };
 
+static struct jobs_eta client_etas;
+static int received_etas;
+
 enum {
 	Client_created		= 0,
 	Client_connected	= 1,
@@ -524,9 +527,8 @@ static void handle_gs(struct fio_net_cmd *cmd)
 	show_group_stats(gs);
 }
 
-static void handle_eta(struct fio_net_cmd *cmd)
+static void convert_jobs_eta(struct jobs_eta *je)
 {
-	struct jobs_eta *je = (struct jobs_eta *) cmd->payload;
 	int i;
 
 	je->nr_running		= le32_to_cpu(je->nr_running);
@@ -545,8 +547,49 @@ static void handle_eta(struct fio_net_cmd *cmd)
 
 	je->elapsed_sec		= le64_to_cpu(je->elapsed_sec);
 	je->eta_sec		= le64_to_cpu(je->eta_sec);
+}
 
-	display_thread_status(je);
+static void sum_jobs_eta(struct jobs_eta *je)
+{
+	struct jobs_eta *dst = &client_etas;
+	int i;
+
+	dst->nr_running		+= je->nr_running;
+	dst->nr_ramp		+= je->nr_ramp;
+	dst->nr_pending		+= je->nr_pending;
+	dst->files_open		+= je->files_open;
+	dst->m_rate		+= je->m_rate;
+	dst->t_rate		+= je->t_rate;
+	dst->m_iops		+= je->m_iops;
+	dst->t_iops		+= je->t_iops;
+
+	for (i = 0; i < 2; i++) {
+		dst->rate[i]	+= je->rate[i];
+		dst->iops[i]	+= je->iops[i];
+	}
+
+	dst->elapsed_sec	+= je->elapsed_sec;
+
+	if (je->eta_sec > dst->eta_sec)
+		dst->eta_sec = je->eta_sec;
+}
+
+static void handle_eta(struct fio_net_cmd *cmd)
+{
+	struct jobs_eta *je = (struct jobs_eta *) cmd->payload;
+
+	convert_jobs_eta(je);
+
+	if (nr_clients > 1) {
+		sum_jobs_eta(je);
+		received_etas++;
+		if (received_etas == nr_clients) {
+			received_etas = 0;
+			display_thread_status(&client_etas);
+			memset(&client_etas, 0, sizeof(client_etas));
+		}
+	} else
+		display_thread_status(je);
 }
 
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
