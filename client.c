@@ -543,7 +543,7 @@ static void handle_eta(struct fio_net_cmd *cmd)
 		je->iops[i]	= le32_to_cpu(je->iops[i]);
 	}
 
-	je->elapsed_sec		= le32_to_cpu(je->nr_running);
+	je->elapsed_sec		= le64_to_cpu(je->elapsed_sec);
 	je->eta_sec		= le64_to_cpu(je->eta_sec);
 
 	display_thread_status(je);
