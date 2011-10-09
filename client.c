@@ -32,15 +32,16 @@ struct fio_client {
 	char *name;
 
 	int state;
+
 	int skip_newline;
 	int is_sock;
+	int waiting_eta;
 
 	uint16_t argc;
 	char **argv;
 };
 
-static struct jobs_eta client_etas;
-static int received_etas;
+static struct timeval eta_tv;
 
 enum {
 	Client_created		= 0,
@@ -48,6 +49,11 @@ enum {
 	Client_started		= 2,
 	Client_stopped		= 3,
 	Client_exited		= 4,
+};
+
+struct client_eta {
+	struct jobs_eta eta;
+	unsigned int pending;
 };
 
 static FLIST_HEAD(client_list);
@@ -103,6 +109,8 @@ static void remove_client(struct fio_client *client)
 	flist_del(&client->list);
 
 	fio_client_remove_hash(client);
+
+	/* FIXME: check ->waiting_eta and handle it */
 
 	free(client->hostname);
 	if (client->argv)
@@ -310,7 +318,7 @@ static int send_client_cmd_line(struct fio_client *client)
 	}
 
 	clp->lines = cpu_to_le16(client->argc);
-	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOBLINE, pdu, mem);
+	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOBLINE, pdu, mem, 0);
 	free(pdu);
 	return ret;
 }
@@ -393,7 +401,7 @@ static int fio_client_send_ini(struct fio_client *client, const char *filename)
 		return 1;
 	}
 
-	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOB, buf, sb.st_size);
+	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOB, buf, sb.st_size, 0);
 	free(buf);
 	close(fd);
 	return ret;
@@ -549,9 +557,8 @@ static void convert_jobs_eta(struct jobs_eta *je)
 	je->eta_sec		= le64_to_cpu(je->eta_sec);
 }
 
-static void sum_jobs_eta(struct jobs_eta *je)
+static void sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 {
-	struct jobs_eta *dst = &client_etas;
 	int i;
 
 	dst->nr_running		+= je->nr_running;
@@ -577,19 +584,17 @@ static void sum_jobs_eta(struct jobs_eta *je)
 static void handle_eta(struct fio_net_cmd *cmd)
 {
 	struct jobs_eta *je = (struct jobs_eta *) cmd->payload;
+	struct client_eta *eta = (struct client_eta *) cmd->tag;
+
+	dprint(FD_NET, "client: got eta tag %p, %d\n", eta, eta->pending);
 
 	convert_jobs_eta(je);
+	sum_jobs_eta(&eta->eta, je);
 
-	if (nr_clients > 1) {
-		sum_jobs_eta(je);
-		received_etas++;
-		if (received_etas == nr_clients) {
-			received_etas = 0;
-			display_thread_status(&client_etas);
-			memset(&client_etas, 0, sizeof(client_etas));
-		}
-	} else
-		display_thread_status(je);
+	if (!--eta->pending) {
+		display_thread_status(&eta->eta);
+		free(eta);
+	}
 }
 
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -679,12 +684,43 @@ static int handle_client(struct fio_client *client)
 	return 1;
 }
 
+static void request_client_etas(void)
+{
+	struct fio_client *client;
+	struct flist_head *entry;
+	struct client_eta *eta;
+
+	dprint(FD_NET, "client: request eta (%d)\n", nr_clients);
+
+	/*
+	 * We need to do something more clever about checking status
+	 * of command being send, client haven't sent previous ETA
+	 * already, etc.
+	 */
+
+	eta = malloc(sizeof(*eta));
+	memset(&eta->eta, 0, sizeof(eta->eta));
+	eta->pending = nr_clients;
+
+	flist_for_each(entry, &client_list) {
+		client = flist_entry(entry, struct fio_client, list);
+
+		client->waiting_eta = 1;
+		fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_SEND_ETA,
+						(uint64_t) eta);
+	}
+
+	dprint(FD_NET, "client: requested eta tag %p\n", eta);
+}
+
 int fio_handle_clients(void)
 {
 	struct fio_client *client;
 	struct flist_head *entry;
 	struct pollfd *pfds;
 	int i, ret = 0;
+
+	gettimeofday(&eta_tv, NULL);
 
 	pfds = malloc(nr_clients * sizeof(struct pollfd));
 
@@ -701,6 +737,14 @@ int fio_handle_clients(void)
 		assert(i == nr_clients);
 
 		do {
+			struct timeval tv;
+
+			gettimeofday(&tv, NULL);
+			if (mtime_since(&eta_tv, &tv) >= 900) {
+				request_client_etas();
+				memcpy(&eta_tv, &tv, sizeof(tv));
+			}
+
 			ret = poll(pfds, nr_clients, 100);
 			if (ret < 0) {
 				if (errno == EINTR)

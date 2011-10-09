@@ -230,7 +230,7 @@ static void calc_iops(unsigned long mtime, unsigned long long *io_iops,
  * Print status of the jobs we know about. This includes rate estimates,
  * ETA, thread state, etc.
  */
-int calc_thread_status(struct jobs_eta *je)
+int calc_thread_status(struct jobs_eta *je, int force)
 {
 	struct thread_data *td;
 	int i;
@@ -245,11 +245,13 @@ int calc_thread_status(struct jobs_eta *je)
 	static struct timeval rate_prev_time, disp_prev_time;
 	int i2p = 0;
 
-	if (temp_stall_ts || terse_output || eta_print == FIO_ETA_NEVER)
-		return 0;
+	if (!force) {
+		if (temp_stall_ts || terse_output || eta_print == FIO_ETA_NEVER)
+			return 0;
 
-	if (!isatty(STDOUT_FILENO) && (eta_print != FIO_ETA_ALWAYS))
-		return 0;
+		if (!isatty(STDOUT_FILENO) && (eta_print != FIO_ETA_ALWAYS))
+			return 0;
+	}
 
 	if (!rate_io_bytes[0] && !rate_io_bytes[1])
 		fill_start_time(&rate_prev_time);
@@ -332,7 +334,7 @@ int calc_thread_status(struct jobs_eta *je)
 	/*
 	 * Allow a little slack, the target is to print it every 1000 msecs
 	 */
-	if (disp_time < 900)
+	if (!force && disp_time < 900)
 		return 0;
 
 	calc_rate(disp_time, io_bytes, disp_io_bytes, je->rate);
@@ -340,7 +342,7 @@ int calc_thread_status(struct jobs_eta *je)
 
 	memcpy(&disp_prev_time, &now, sizeof(now));
 
-	if (!je->nr_running && !je->nr_pending)
+	if (!force && !je->nr_running && !je->nr_pending)
 		return 0;
 
 	je->nr_threads = thread_number;
@@ -421,7 +423,7 @@ void print_thread_status(void)
 
 	memset(je, 0, sizeof(*je) + thread_number * sizeof(char));
 
-	if (calc_thread_status(je))
+	if (calc_thread_status(je, 0))
 		display_thread_status(je);
 
 	free(je);

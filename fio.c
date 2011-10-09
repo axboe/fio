@@ -183,9 +183,7 @@ static void *disk_thread_main(void *data)
 			break;
 		update_io_ticks();
 
-		if (is_backend)
-			fio_server_send_status();
-		else
+		if (!is_backend)
 			print_thread_status();
 	}
 

@@ -98,7 +98,7 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 	cmd->version	= le16_to_cpu(cmd->version);
 	cmd->opcode	= le16_to_cpu(cmd->opcode);
 	cmd->flags	= le32_to_cpu(cmd->flags);
-	cmd->serial	= le64_to_cpu(cmd->serial);
+	cmd->tag	= le64_to_cpu(cmd->tag);
 	cmd->pdu_len	= le32_to_cpu(cmd->pdu_len);
 
 	switch (cmd->version) {
@@ -205,7 +205,8 @@ void fio_net_cmd_crc(struct fio_net_cmd *cmd)
 		cmd->pdu_crc16 = __cpu_to_le16(crc16(cmd->payload, pdu_len));
 }
 
-int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size)
+int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size,
+		     uint64_t tag)
 {
 	struct fio_net_cmd *cmd;
 	size_t this_len;
@@ -218,7 +219,7 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size)
 
 		cmd = malloc(sizeof(*cmd) + this_len);
 
-		fio_init_net_cmd(cmd, opcode, buf, this_len);
+		fio_init_net_cmd(cmd, opcode, buf, this_len, tag);
 
 		if (this_len < size)
 			cmd->flags = __cpu_to_le32(FIO_NET_CMD_F_MORE);
@@ -234,11 +235,11 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size)
 	return ret;
 }
 
-int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t serial)
+int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t tag)
 {
 	struct fio_net_cmd cmd;
 
-	fio_init_net_cmd(&cmd, opcode, NULL, 0);
+	fio_init_net_cmd(&cmd, opcode, NULL, 0, tag);
 	fio_net_cmd_crc(&cmd);
 
 	return fio_send_data(sk, &cmd, sizeof(cmd));
@@ -324,7 +325,48 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 	probe.os	= FIO_OS;
 	probe.arch	= FIO_ARCH;
 
-	return fio_net_send_cmd(server_fd, FIO_NET_CMD_PROBE, &probe, sizeof(probe));
+	return fio_net_send_cmd(server_fd, FIO_NET_CMD_PROBE, &probe, sizeof(probe), 0);
+}
+
+static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
+{
+	struct jobs_eta *je;
+	size_t size;
+	void *buf;
+	int i;
+
+	size = sizeof(*je) + thread_number * sizeof(char);
+	buf = malloc(size);
+	memset(buf, 0, size);
+	je = buf;
+
+	if (!calc_thread_status(je, 1)) {
+		free(je);
+		return 0;
+	}
+
+	dprint(FD_NET, "server sending status\n");
+
+	je->nr_running		= cpu_to_le32(je->nr_running);
+	je->nr_ramp		= cpu_to_le32(je->nr_ramp);
+	je->nr_pending		= cpu_to_le32(je->nr_pending);
+	je->files_open		= cpu_to_le32(je->files_open);
+	je->m_rate		= cpu_to_le32(je->m_rate);
+	je->t_rate		= cpu_to_le32(je->t_rate);
+	je->m_iops		= cpu_to_le32(je->m_iops);
+	je->t_iops		= cpu_to_le32(je->t_iops);
+
+	for (i = 0; i < 2; i++) {
+		je->rate[i]	= cpu_to_le32(je->rate[i]);
+		je->iops[i]	= cpu_to_le32(je->iops[i]);
+	}
+
+	je->elapsed_sec		= cpu_to_le32(je->nr_running);
+	je->eta_sec		= cpu_to_le64(je->eta_sec);
+
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_ETA, buf, size, cmd->tag);
+	free(je);
+	return 0;
 }
 
 static int handle_command(struct fio_net_cmd *cmd)
@@ -348,6 +390,9 @@ static int handle_command(struct fio_net_cmd *cmd)
 		break;
 	case FIO_NET_CMD_PROBE:
 		ret = handle_probe_cmd(cmd);
+		break;
+	case FIO_NET_CMD_SEND_ETA:
+		ret = handle_send_eta_cmd(cmd);
 		break;
 	default:
 		log_err("fio: unknown opcode: %d\n", cmd->opcode);
@@ -477,7 +522,7 @@ out:
 int fio_server_text_output(const char *buf, unsigned int len)
 {
 	if (server_fd != -1)
-		return fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, buf, len);
+		return fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, buf, len, 0);
 
 	return fwrite(buf, len, 1, f_err);
 }
@@ -590,7 +635,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	convert_gs(&p.rs, rs);
 
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_TS, &p, sizeof(p));
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_TS, &p, sizeof(p), 0);
 }
 
 void fio_server_send_gs(struct group_run_stats *rs)
@@ -600,47 +645,7 @@ void fio_server_send_gs(struct group_run_stats *rs)
 	dprint(FD_NET, "server sending group run stats\n");
 
 	convert_gs(&gs, rs);
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_GS, &gs, sizeof(gs));
-}
-
-void fio_server_send_status(void)
-{
-	struct jobs_eta *je;
-	size_t size;
-	void *buf;
-	int i;
-
-	size = sizeof(*je) + thread_number * sizeof(char);
-	buf = malloc(size);
-	memset(buf, 0, size);
-	je = buf;
-
-	if (!calc_thread_status(je)) {
-		free(je);
-		return;
-	}
-
-	dprint(FD_NET, "server sending status\n");
-
-	je->nr_running		= cpu_to_le32(je->nr_running);
-	je->nr_ramp		= cpu_to_le32(je->nr_ramp);
-	je->nr_pending		= cpu_to_le32(je->nr_pending);
-	je->files_open		= cpu_to_le32(je->files_open);
-	je->m_rate		= cpu_to_le32(je->m_rate);
-	je->t_rate		= cpu_to_le32(je->t_rate);
-	je->m_iops		= cpu_to_le32(je->m_iops);
-	je->t_iops		= cpu_to_le32(je->t_iops);
-
-	for (i = 0; i < 2; i++) {
-		je->rate[i]	= cpu_to_le32(je->rate[i]);
-		je->iops[i]	= cpu_to_le32(je->iops[i]);
-	}
-
-	je->elapsed_sec		= cpu_to_le32(je->nr_running);
-	je->eta_sec		= cpu_to_le64(je->eta_sec);
-
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_ETA, buf, size);
-	free(je);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_GS, &gs, sizeof(gs), 0);
 }
 
 int fio_server_log(const char *format, ...)
