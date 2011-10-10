@@ -208,8 +208,8 @@ void fio_net_cmd_crc(struct fio_net_cmd *cmd)
 int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size,
 		     uint64_t tag)
 {
-	struct fio_net_cmd *cmd;
-	size_t this_len;
+	struct fio_net_cmd *cmd = NULL;
+	size_t this_len, cur_len = 0;
 	int ret;
 
 	do {
@@ -217,7 +217,13 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size,
 		if (this_len > FIO_SERVER_MAX_PDU)
 			this_len = FIO_SERVER_MAX_PDU;
 
-		cmd = malloc(sizeof(*cmd) + this_len);
+		if (!cmd || cur_len < sizeof(*cmd) + this_len) {
+			if (cmd)
+				free(cmd);
+
+			cur_len = sizeof(*cmd) + this_len;
+			cmd = malloc(cur_len);
+		}
 
 		fio_init_net_cmd(cmd, opcode, buf, this_len, tag);
 
@@ -227,10 +233,12 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size,
 		fio_net_cmd_crc(cmd);
 
 		ret = fio_send_data(fd, cmd, sizeof(*cmd) + this_len);
-		free(cmd);
 		size -= this_len;
 		buf += this_len;
 	} while (!ret && size);
+
+	if (cmd)
+		free(cmd);
 
 	return ret;
 }
@@ -332,13 +340,11 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 {
 	struct jobs_eta *je;
 	size_t size;
-	void *buf;
 	int i;
 
 	size = sizeof(*je) + thread_number * sizeof(char);
-	buf = malloc(size);
-	memset(buf, 0, size);
-	je = buf;
+	je = malloc(size);
+	memset(je, 0, size);
 
 	if (!calc_thread_status(je, 1)) {
 		free(je);
@@ -364,7 +370,7 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 	je->elapsed_sec		= cpu_to_le32(je->nr_running);
 	je->eta_sec		= cpu_to_le64(je->eta_sec);
 
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_ETA, buf, size, cmd->tag);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_ETA, je, size, cmd->tag);
 	free(je);
 	return 0;
 }
@@ -373,7 +379,7 @@ static int handle_command(struct fio_net_cmd *cmd)
 {
 	int ret;
 
-	dprint(FD_NET, "server: got opcode %d\n", cmd->opcode);
+	dprint(FD_NET, "server: got opcode %d, pdu=%u\n", cmd->opcode, cmd->pdu_len);
 
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:

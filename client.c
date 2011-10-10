@@ -295,17 +295,22 @@ static int send_client_cmd_line(struct fio_client *client)
 	struct cmd_single_line_pdu *cslp;
 	struct cmd_line_pdu *clp;
 	unsigned long offset;
+	unsigned int *lens;
 	void *pdu;
 	size_t mem;
 	int i, ret;
 
 	dprint(FD_NET, "client: send cmdline %d\n", client->argc);
 
+	lens = malloc(client->argc * sizeof(unsigned int));
+
 	/*
 	 * Find out how much mem we need
 	 */
-	for (i = 0, mem = 0; i < client->argc; i++)
-		mem += strlen(client->argv[i]) + 1;
+	for (i = 0, mem = 0; i < client->argc; i++) {
+		lens[i] = strlen(client->argv[i]) + 1;
+		mem += lens[i];
+	}
 
 	/*
 	 * We need one cmd_line_pdu, and argc number of cmd_single_line_pdu
@@ -317,7 +322,7 @@ static int send_client_cmd_line(struct fio_client *client)
 	offset = sizeof(*clp);
 
 	for (i = 0; i < client->argc; i++) {
-		uint16_t arg_len = strlen(client->argv[i]) + 1;
+		uint16_t arg_len = lens[i];
 
 		cslp = pdu + offset;
 		strcpy((char *) cslp->text, client->argv[i]);
@@ -325,6 +330,7 @@ static int send_client_cmd_line(struct fio_client *client)
 		offset += sizeof(*cslp) + arg_len;
 	}
 
+	free(lens);
 	clp->lines = cpu_to_le16(client->argc);
 	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOBLINE, pdu, mem, 0);
 	free(pdu);
