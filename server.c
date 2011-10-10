@@ -525,12 +525,12 @@ out:
 	return exitval;
 }
 
-int fio_server_text_output(const char *buf, unsigned int len)
+int fio_server_text_output(const char *buf, size_t len)
 {
 	if (server_fd != -1)
 		return fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, buf, len, 0);
 
-	return fwrite(buf, len, 1, f_err);
+	return log_local_buf(buf, len);
 }
 
 static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
@@ -924,17 +924,46 @@ static void server_signal_handler(void)
 	sigaction(SIGTERM, &act, NULL);
 }
 
-static void write_pid(pid_t pid, const char *pidfile)
+static int check_existing_pidfile(const char *pidfile)
+{
+	struct stat sb;
+	char buf[16];
+	pid_t pid;
+	FILE *f;
+
+	if (stat(pidfile, &sb))
+		return 0;
+
+	f = fopen(pidfile, "r");
+	if (!f)
+		return 0;
+
+	if (fread(buf, sb.st_size, 1, f) < 0) {
+		fclose(f);
+		return 1;
+	}
+	fclose(f);
+
+	pid = atoi(buf);
+	if (kill(pid, SIGCONT) < 0)
+		return 0;
+
+	return 1;
+}
+
+static int write_pid(pid_t pid, const char *pidfile)
 {
 	FILE *fpid;
 
 	fpid = fopen(pidfile, "w");
 	if (!fpid) {
 		log_err("fio: failed opening pid file %s\n", pidfile);
-		return;
+		return 1;
 	}
 
 	fprintf(fpid, "%u\n", (unsigned int) pid);
+	fclose(fpid);
+	return 0;
 }
 
 /*
@@ -950,24 +979,31 @@ int fio_start_server(char *pidfile)
 	if (!pidfile)
 		return fio_server();
 
-	openlog("fio", LOG_NDELAY|LOG_NOWAIT|LOG_PID, LOG_USER);
+	if (check_existing_pidfile(pidfile)) {
+		log_err("fio: pidfile %s exists and server appears alive\n",
+								pidfile);
+		return -1;
+	}
+
 	pid = fork();
 	if (pid < 0) {
-		syslog(LOG_ERR, "failed server fork");
+		log_err("fio: failed server fork: %s", strerror(errno));
 		free(pidfile);
 		return -1;
 	} else if (pid) {
-		write_pid(pid, pidfile);
-		exit(0);
+		int ret = write_pid(pid, pidfile);
+
+		exit(ret);
 	}
 
 	setsid();
+	openlog("fio", LOG_NDELAY|LOG_NOWAIT|LOG_PID, LOG_USER);
+	log_syslog = 1;
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
 	close(STDERR_FILENO);
 	f_out = NULL;
 	f_err = NULL;
-	log_syslog = 1;
 
 	ret = fio_server();
 

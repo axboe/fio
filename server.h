@@ -76,7 +76,7 @@ struct cmd_line_pdu {
 };
 
 extern int fio_start_server(char *);
-extern int fio_server_text_output(const char *, unsigned int len);
+extern int fio_server_text_output(const char *, size_t);
 extern int fio_server_log(const char *format, ...);
 extern int fio_net_send_cmd(int, uint16_t, const void *, off_t, uint64_t);
 extern int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t tag);
