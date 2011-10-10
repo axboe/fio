@@ -20,6 +20,11 @@
 #include "flist.h"
 #include "hash.h"
 
+struct client_eta {
+	struct jobs_eta eta;
+	unsigned int pending;
+};
+
 struct fio_client {
 	struct flist_head list;
 	struct flist_head hash_list;
@@ -35,7 +40,9 @@ struct fio_client {
 
 	int skip_newline;
 	int is_sock;
-	int waiting_eta;
+
+	struct flist_head eta_list;
+	struct client_eta *eta_in_flight;
 
 	uint16_t argc;
 	char **argv;
@@ -51,12 +58,8 @@ enum {
 	Client_exited		= 4,
 };
 
-struct client_eta {
-	struct jobs_eta eta;
-	unsigned int pending;
-};
-
 static FLIST_HEAD(client_list);
+static FLIST_HEAD(eta_list);
 
 #define FIO_CLIENT_HASH_BITS	7
 #define FIO_CLIENT_HASH_SZ	(1 << FIO_CLIENT_HASH_BITS)
@@ -64,6 +67,7 @@ static FLIST_HEAD(client_list);
 static struct flist_head client_hash[FIO_CLIENT_HASH_SZ];
 
 static int handle_client(struct fio_client *client);
+static void dec_jobs_eta(struct client_eta *eta);
 
 static void fio_client_add_hash(struct fio_client *client)
 {
@@ -110,7 +114,10 @@ static void remove_client(struct fio_client *client)
 
 	fio_client_remove_hash(client);
 
-	/* FIXME: check ->waiting_eta and handle it */
+	if (!flist_empty(&client->eta_list)) {
+		flist_del_init(&client->eta_list);
+		dec_jobs_eta(client->eta_in_flight);
+	}
 
 	free(client->hostname);
 	if (client->argv)
@@ -152,6 +159,7 @@ int fio_client_add(const char *hostname, void **cookie)
 
 	INIT_FLIST_HEAD(&client->list);
 	INIT_FLIST_HEAD(&client->hash_list);
+	INIT_FLIST_HEAD(&client->eta_list);
 
 	if (fio_server_parse_string(hostname, &client->hostname,
 					&client->is_sock, &client->port,
@@ -581,20 +589,26 @@ static void sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 		dst->eta_sec = je->eta_sec;
 }
 
-static void handle_eta(struct fio_net_cmd *cmd)
+static void dec_jobs_eta(struct client_eta *eta)
+{
+	if (!--eta->pending) {
+		display_thread_status(&eta->eta);
+		free(eta);
+	}
+}
+
+static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct jobs_eta *je = (struct jobs_eta *) cmd->payload;
 	struct client_eta *eta = (struct client_eta *) cmd->tag;
 
 	dprint(FD_NET, "client: got eta tag %p, %d\n", eta, eta->pending);
 
+	flist_del_init(&client->eta_list);
+
 	convert_jobs_eta(je);
 	sum_jobs_eta(&eta->eta, je);
-
-	if (!--eta->pending) {
-		display_thread_status(&eta->eta);
-		free(eta);
-	}
+	dec_jobs_eta(eta);
 }
 
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -660,7 +674,7 @@ static int handle_client(struct fio_client *client)
 		free(cmd);
 		break;
 	case FIO_NET_CMD_ETA:
-		handle_eta(cmd);
+		handle_eta(client, cmd);
 		free(cmd);
 		break;
 	case FIO_NET_CMD_PROBE:
@@ -689,14 +703,9 @@ static void request_client_etas(void)
 	struct fio_client *client;
 	struct flist_head *entry;
 	struct client_eta *eta;
+	int skipped = 0;
 
 	dprint(FD_NET, "client: request eta (%d)\n", nr_clients);
-
-	/*
-	 * We need to do something more clever about checking status
-	 * of command being send, client haven't sent previous ETA
-	 * already, etc.
-	 */
 
 	eta = malloc(sizeof(*eta));
 	memset(&eta->eta, 0, sizeof(eta->eta));
@@ -705,10 +714,18 @@ static void request_client_etas(void)
 	flist_for_each(entry, &client_list) {
 		client = flist_entry(entry, struct fio_client, list);
 
-		client->waiting_eta = 1;
+		if (!flist_empty(&client->eta_list)) {
+			skipped++;
+			continue;
+		}
+
+		flist_add_tail(&client->eta_list, &eta_list);
 		fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_SEND_ETA,
 						(uint64_t) eta);
 	}
+
+	while (skipped--)
+		dec_jobs_eta(eta);
 
 	dprint(FD_NET, "client: requested eta tag %p\n", eta);
 }
