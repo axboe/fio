@@ -1121,7 +1121,7 @@ static void usage(const char *name)
 	printf("\t--warnings-fatal Fio parser warnings are fatal\n");
 	printf("\t--max-jobs\tMaximum number of threads/processes to support\n");
 	printf("\t--server=args\tStart a backend fio server\n");
-	printf("\t--client=hostname Talk to remove backend fio server at hostname\n");
+	printf("\t--client=hostname Talk to remote backend fio server at hostname\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
 	printf("\n                   Jens Axboe <jaxboe@fusionio.com>\n");
 }
