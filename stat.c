@@ -642,12 +642,61 @@ static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
 	dst->S.u.f = S;
 }
 
+void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src, int nr)
+{
+	int l, k;
+
+	for (l = 0; l <= DDIR_WRITE; l++) {
+		sum_stat(&dst->clat_stat[l], &src->clat_stat[l], nr);
+		sum_stat(&dst->slat_stat[l], &src->slat_stat[l], nr);
+		sum_stat(&dst->lat_stat[l], &src->lat_stat[l], nr);
+		sum_stat(&dst->bw_stat[l], &src->bw_stat[l], nr);
+
+		dst->io_bytes[l] += src->io_bytes[l];
+
+		if (dst->runtime[l] < src->runtime[l])
+			dst->runtime[l] = src->runtime[l];
+	}
+
+	dst->usr_time += src->usr_time;
+	dst->sys_time += src->sys_time;
+	dst->ctx += src->ctx;
+	dst->majf += src->majf;
+	dst->minf += src->minf;
+
+	for (k = 0; k < FIO_IO_U_MAP_NR; k++)
+		dst->io_u_map[k] += src->io_u_map[k];
+	for (k = 0; k < FIO_IO_U_MAP_NR; k++)
+		dst->io_u_submit[k] += src->io_u_submit[k];
+	for (k = 0; k < FIO_IO_U_MAP_NR; k++)
+		dst->io_u_complete[k] += src->io_u_complete[k];
+	for (k = 0; k < FIO_IO_U_LAT_U_NR; k++)
+		dst->io_u_lat_u[k] += src->io_u_lat_u[k];
+	for (k = 0; k < FIO_IO_U_LAT_M_NR; k++)
+		dst->io_u_lat_m[k] += src->io_u_lat_m[k];
+
+	for (k = 0; k <= 2; k++) {
+		dst->total_io_u[k] += src->total_io_u[k];
+		dst->short_io_u[k] += src->short_io_u[k];
+	}
+
+	for (k = 0; k <= DDIR_WRITE; k++) {
+		int m;
+		for (m = 0; m < FIO_IO_U_PLAT_NR; m++)
+			dst->io_u_plat[k][m] += src->io_u_plat[k][m];
+	}
+
+	dst->total_run_time += src->total_run_time;
+	dst->total_submit += src->total_submit;
+	dst->total_complete += src->total_complete;
+}
+
 void show_run_stats(void)
 {
 	struct group_run_stats *runstats, *rs;
 	struct thread_data *td;
 	struct thread_stat *threadstats, *ts;
-	int i, j, k, l, nr_ts, last_ts, idx;
+	int i, j, nr_ts, last_ts, idx;
 	int kb_base_warned = 0;
 
 	runstats = malloc(sizeof(struct group_run_stats) * (groupid + 1));
@@ -755,50 +804,7 @@ void show_run_stats(void)
 			}
 		}
 
-		for (l = 0; l <= DDIR_WRITE; l++) {
-			sum_stat(&ts->clat_stat[l], &td->ts.clat_stat[l], idx);
-			sum_stat(&ts->slat_stat[l], &td->ts.slat_stat[l], idx);
-			sum_stat(&ts->lat_stat[l], &td->ts.lat_stat[l], idx);
-			sum_stat(&ts->bw_stat[l], &td->ts.bw_stat[l], idx);
-
-			ts->io_bytes[l] += td->ts.io_bytes[l];
-
-			if (ts->runtime[l] < td->ts.runtime[l])
-				ts->runtime[l] = td->ts.runtime[l];
-		}
-
-		ts->usr_time += td->ts.usr_time;
-		ts->sys_time += td->ts.sys_time;
-		ts->ctx += td->ts.ctx;
-		ts->majf += td->ts.majf;
-		ts->minf += td->ts.minf;
-
-		for (k = 0; k < FIO_IO_U_MAP_NR; k++)
-			ts->io_u_map[k] += td->ts.io_u_map[k];
-		for (k = 0; k < FIO_IO_U_MAP_NR; k++)
-			ts->io_u_submit[k] += td->ts.io_u_submit[k];
-		for (k = 0; k < FIO_IO_U_MAP_NR; k++)
-			ts->io_u_complete[k] += td->ts.io_u_complete[k];
-		for (k = 0; k < FIO_IO_U_LAT_U_NR; k++)
-			ts->io_u_lat_u[k] += td->ts.io_u_lat_u[k];
-		for (k = 0; k < FIO_IO_U_LAT_M_NR; k++)
-			ts->io_u_lat_m[k] += td->ts.io_u_lat_m[k];
-
-
-		for (k = 0; k <= 2; k++) {
-			ts->total_io_u[k] += td->ts.total_io_u[k];
-			ts->short_io_u[k] += td->ts.short_io_u[k];
-		}
-
-		for (k = 0; k <= DDIR_WRITE; k++) {
-			int m;
-			for (m = 0; m < FIO_IO_U_PLAT_NR; m++)
-				ts->io_u_plat[k][m] += td->ts.io_u_plat[k][m];
-		}
-
-		ts->total_run_time += td->ts.total_run_time;
-		ts->total_submit += td->ts.total_submit;
-		ts->total_complete += td->ts.total_complete;
+		sum_thread_stats(ts, &td->ts, idx);
 	}
 
 	for (i = 0; i < nr_ts; i++) {
