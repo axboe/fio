@@ -610,6 +610,9 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	dprint(FD_NET, "client: got eta tag %p, %d\n", eta, eta->pending);
 
+	assert(client->eta_in_flight == eta);
+
+	client->eta_in_flight = NULL;
 	flist_del_init(&client->eta_list);
 
 	convert_jobs_eta(je);
@@ -725,7 +728,9 @@ static void request_client_etas(void)
 			continue;
 		}
 
+		assert(!client->eta_in_flight);
 		flist_add_tail(&client->eta_list, &eta_list);
+		client->eta_in_flight = eta;
 		fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_SEND_ETA,
 						(uint64_t) eta);
 	}
