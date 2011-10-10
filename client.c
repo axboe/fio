@@ -28,6 +28,7 @@ struct client_eta {
 struct fio_client {
 	struct flist_head list;
 	struct flist_head hash_list;
+	struct flist_head arg_list;
 	struct sockaddr_in addr;
 	struct sockaddr_un addr_un;
 	char *hostname;
@@ -60,6 +61,8 @@ enum {
 
 static FLIST_HEAD(client_list);
 static FLIST_HEAD(eta_list);
+
+static FLIST_HEAD(arg_list);
 
 #define FIO_CLIENT_HASH_BITS	7
 #define FIO_CLIENT_HASH_SZ	(1 << FIO_CLIENT_HASH_BITS)
@@ -143,22 +146,47 @@ static void __fio_client_add_cmd_option(struct fio_client *client,
 void fio_client_add_cmd_option(void *cookie, const char *opt)
 {
 	struct fio_client *client = cookie;
+	struct flist_head *entry;
 
 	if (!client || !opt)
 		return;
 
 	__fio_client_add_cmd_option(client, opt);
+
+	/*
+	 * Duplicate arguments to shared client group
+	 */
+	flist_for_each(entry, &arg_list) {
+		client = flist_entry(entry, struct fio_client, arg_list);
+
+		__fio_client_add_cmd_option(client, opt);
+	}
 }
 
 int fio_client_add(const char *hostname, void **cookie)
 {
+	struct fio_client *existing = *cookie;
 	struct fio_client *client;
+
+	if (existing) {
+		/*
+		 * We always add our "exec" name as the option, hence 1
+		 * means empty.
+		 */
+		if (existing->argc == 1)
+			flist_add_tail(&existing->arg_list, &arg_list);
+		else {
+			while (!flist_empty(&arg_list))
+				flist_del_init(arg_list.next);
+		}
+	}
 
 	client = malloc(sizeof(*client));
 	memset(client, 0, sizeof(*client));
 
 	INIT_FLIST_HEAD(&client->list);
 	INIT_FLIST_HEAD(&client->hash_list);
+	INIT_FLIST_HEAD(&client->arg_list);
 	INIT_FLIST_HEAD(&client->eta_list);
 
 	if (fio_server_parse_string(hostname, &client->hostname,
