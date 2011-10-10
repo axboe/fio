@@ -938,7 +938,7 @@ static int check_existing_pidfile(const char *pidfile)
 	if (!f)
 		return 0;
 
-	if (fread(buf, sb.st_size, 1, f) < 0) {
+	if (fread(buf, sb.st_size, 1, f) <= 0) {
 		fclose(f);
 		return 1;
 	}
