@@ -194,7 +194,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'S',
 	},
 	{	.name		= (char *) "daemonize",
-		.has_arg	= no_argument,
+		.has_arg	= required_argument,
 		.val		= 'D',
 	},
 	{
@@ -1121,6 +1121,7 @@ static void usage(const char *name)
 	printf("\t--warnings-fatal Fio parser warnings are fatal\n");
 	printf("\t--max-jobs\tMaximum number of threads/processes to support\n");
 	printf("\t--server=args\tStart a backend fio server\n");
+	printf("\t--daemonize=pidfile Background fio server, write pid to file\n");
 	printf("\t--client=hostname Talk to remote backend fio server at hostname\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
 	printf("\n                   Jens Axboe <jaxboe@fusionio.com>\n");
@@ -1253,7 +1254,7 @@ int parse_cmd_line(int argc, char *argv[])
 	struct thread_data *td = NULL;
 	int c, ini_idx = 0, lidx, ret = 0, do_exit = 0, exit_val = 0;
 	char *ostr = cmd_optstr;
-	int daemonize_server = 0;
+	void *pid_file = NULL;
 	void *cur_client = NULL;
 	int backend = 0;
 
@@ -1408,7 +1409,7 @@ int parse_cmd_line(int argc, char *argv[])
 			backend = 1;
 			break;
 		case 'D':
-			daemonize_server = 1;
+			pid_file = strdup(optarg);
 			break;
 		case 'C':
 			if (is_backend) {
@@ -1445,7 +1446,7 @@ int parse_cmd_line(int argc, char *argv[])
 	}
 
 	if (is_backend && backend)
-		return fio_start_server(daemonize_server);
+		return fio_start_server(pid_file);
 
 	if (td) {
 		if (!ret)

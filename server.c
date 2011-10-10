@@ -924,22 +924,42 @@ static void server_signal_handler(void)
 	sigaction(SIGTERM, &act, NULL);
 }
 
-int fio_start_server(int daemonize)
+static void write_pid(pid_t pid, const char *pidfile)
+{
+	FILE *fpid;
+
+	fpid = fopen(pidfile, "w");
+	if (!fpid) {
+		log_err("fio: failed opening pid file %s\n", pidfile);
+		return;
+	}
+
+	fprintf(fpid, "%u\n", (unsigned int) pid);
+}
+
+/*
+ * If pidfile is specified, background us.
+ */
+int fio_start_server(char *pidfile)
 {
 	pid_t pid;
+	int ret;
 
 	server_signal_handler();
 
-	if (!daemonize)
+	if (!pidfile)
 		return fio_server();
 
 	openlog("fio", LOG_NDELAY|LOG_NOWAIT|LOG_PID, LOG_USER);
 	pid = fork();
 	if (pid < 0) {
 		syslog(LOG_ERR, "failed server fork");
+		free(pidfile);
 		return -1;
-	} else if (pid)
+	} else if (pid) {
+		write_pid(pid, pidfile);
 		exit(0);
+	}
 
 	setsid();
 	close(STDIN_FILENO);
@@ -948,7 +968,13 @@ int fio_start_server(int daemonize)
 	f_out = NULL;
 	f_err = NULL;
 	log_syslog = 1;
-	return fio_server();
+
+	ret = fio_server();
+
+	closelog();
+	unlink(pidfile);
+	free(pidfile);
+	return ret;
 }
 
 void fio_server_set_arg(const char *arg)
