@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "stat.h"
 #include "os/os.h"
@@ -25,6 +26,13 @@ struct fio_net_cmd {
 	uint8_t payload[0];	/* payload */
 };
 
+struct fio_net_int_cmd {
+	struct fio_net_cmd cmd;
+	struct flist_head list;
+	struct timeval tv;
+	uint64_t saved_tag;
+};
+
 enum {
 	FIO_SERVER_VER		= 5,
 
@@ -42,12 +50,15 @@ enum {
 	FIO_NET_CMD_PROBE	= 10,
 	FIO_NET_CMD_START	= 11,
 	FIO_NET_CMD_STOP	= 12,
+	FIO_NET_CMD_NR		= 13,
 
 	FIO_NET_CMD_F_MORE	= 1UL << 0,
 
 	/* crc does not include the crc fields */
 	FIO_NET_CMD_CRC_SZ	= sizeof(struct fio_net_cmd) -
 					2 * sizeof(uint16_t),
+
+	FIO_NET_CLIENT_TIMEOUT	= 5000,
 };
 
 struct cmd_ts_pdu {
@@ -79,9 +90,10 @@ extern int fio_start_server(char *);
 extern int fio_server_text_output(const char *, size_t);
 extern int fio_server_log(const char *format, ...);
 extern int fio_net_send_cmd(int, uint16_t, const void *, off_t, uint64_t);
-extern int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t tag);
+extern int fio_net_send_simple_cmd(int, uint16_t, uint64_t, struct flist_head *);
 extern void fio_server_set_arg(const char *);
 extern int fio_server_parse_string(const char *, char **, int *, int *, struct in_addr *);
+extern const char *fio_server_op(unsigned int);
 
 struct thread_stat;
 struct group_run_stats;

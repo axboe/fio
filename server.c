@@ -33,6 +33,33 @@ static char *fio_server_arg;
 static char *bind_sock;
 static struct sockaddr_in saddr_in;
 
+static const char *fio_server_ops[FIO_NET_CMD_NR] = {
+	"",
+	"QUIT",
+	"EXIT",
+	"JOB",
+	"JOBLINE",
+	"TEXT",
+	"TS",
+	"GS",
+	"SEND_ETA",
+	"ETA",
+	"PROBE",
+	"START",
+	"STOP"
+};
+
+const char *fio_server_op(unsigned int op)
+{
+	static char buf[32];
+
+	if (op < FIO_NET_CMD_NR)
+		return fio_server_ops[op];
+
+	sprintf(buf, "UNKNOWN/%d", op);
+	return buf;
+}
+
 int fio_send_data(int sk, const void *p, unsigned int len)
 {
 	assert(len <= sizeof(struct fio_net_cmd) + FIO_SERVER_MAX_PDU);
@@ -243,7 +270,7 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size,
 	return ret;
 }
 
-int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t tag)
+static int fio_net_send_simple_stack_cmd(int sk, uint16_t opcode, uint64_t tag)
 {
 	struct fio_net_cmd cmd;
 
@@ -253,10 +280,42 @@ int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t tag)
 	return fio_send_data(sk, &cmd, sizeof(cmd));
 }
 
+/*
+ * If 'list' is non-NULL, then allocate and store the sent command for
+ * later verification.
+ */
+int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t tag,
+			    struct flist_head *list)
+{
+	struct fio_net_int_cmd *cmd;
+	int ret;
+
+	if (!list)
+		return fio_net_send_simple_stack_cmd(sk, opcode, tag);
+
+	cmd = malloc(sizeof(*cmd));
+
+	fio_init_net_cmd(&cmd->cmd, opcode, NULL, 0, (uint64_t) cmd);
+	fio_net_cmd_crc(&cmd->cmd);
+
+	INIT_FLIST_HEAD(&cmd->list);
+	gettimeofday(&cmd->tv, NULL);
+	cmd->saved_tag = tag;
+
+	ret = fio_send_data(sk, &cmd->cmd, sizeof(cmd->cmd));
+	if (ret) {
+		free(cmd);
+		return ret;
+	}
+
+	flist_add_tail(&cmd->list, list);
+	return 0;
+}
+
 static int fio_server_send_quit_cmd(void)
 {
 	dprint(FD_NET, "server: sending quit\n");
-	return fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_QUIT, 0);
+	return fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_QUIT, 0, NULL);
 }
 
 static int handle_job_cmd(struct fio_net_cmd *cmd)
@@ -269,7 +328,7 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 		return -1;
 	}
 
-	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0);
+	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0, NULL);
 
 	ret = exec_run();
 	fio_server_send_quit_cmd();
@@ -309,7 +368,7 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 
 	free(argv);
 
-	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0);
+	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0, NULL);
 
 	ret = exec_run();
 	fio_server_send_quit_cmd();
@@ -320,6 +379,8 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 static int handle_probe_cmd(struct fio_net_cmd *cmd)
 {
 	struct cmd_probe_pdu probe;
+
+	dprint(FD_NET, "server: sending probe reply\n");
 
 	memset(&probe, 0, sizeof(probe));
 	gethostname((char *) probe.hostname, sizeof(probe.hostname));
@@ -333,7 +394,7 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 	probe.os	= FIO_OS;
 	probe.arch	= FIO_ARCH;
 
-	return fio_net_send_cmd(server_fd, FIO_NET_CMD_PROBE, &probe, sizeof(probe), 0);
+	return fio_net_send_cmd(server_fd, FIO_NET_CMD_PROBE, &probe, sizeof(probe), cmd->tag);
 }
 
 static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
@@ -379,7 +440,8 @@ static int handle_command(struct fio_net_cmd *cmd)
 {
 	int ret;
 
-	dprint(FD_NET, "server: got opcode %d, pdu=%u\n", cmd->opcode, cmd->pdu_len);
+	dprint(FD_NET, "server: got op [%s], pdu=%u, tag=%lx\n",
+			fio_server_op(cmd->opcode), cmd->pdu_len, cmd->tag);
 
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
@@ -401,7 +463,7 @@ static int handle_command(struct fio_net_cmd *cmd)
 		ret = handle_send_eta_cmd(cmd);
 		break;
 	default:
-		log_err("fio: unknown opcode: %d\n", cmd->opcode);
+		log_err("fio: unknown opcode: %s\n",fio_server_op(cmd->opcode));
 		ret = 1;
 	}
 
@@ -758,7 +820,7 @@ static int fio_init_server_connection(void)
 
 	log_info("fio: server listening on %s\n", bind_str);
 
-	if (listen(sk, 1) < 0) {
+	if (listen(sk, 0) < 0) {
 		log_err("fio: listen: %s\n", strerror(errno));
 		return -1;
 	}

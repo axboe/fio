@@ -45,6 +45,8 @@ struct fio_client {
 	struct flist_head eta_list;
 	struct client_eta *eta_in_flight;
 
+	struct flist_head cmd_list;
+
 	uint16_t argc;
 	char **argv;
 };
@@ -188,6 +190,7 @@ int fio_client_add(const char *hostname, void **cookie)
 	INIT_FLIST_HEAD(&client->hash_list);
 	INIT_FLIST_HEAD(&client->arg_list);
 	INIT_FLIST_HEAD(&client->eta_list);
+	INIT_FLIST_HEAD(&client->cmd_list);
 
 	if (fio_server_parse_string(hostname, &client->hostname,
 					&client->is_sock, &client->port,
@@ -266,6 +269,8 @@ static int fio_client_connect(struct fio_client *client)
 	else
 		fd = fio_client_connect_ip(client);
 
+	dprint(FD_NET, "client: %s connected %d\n", client->hostname, fd);
+
 	if (fd < 0)
 		return 1;
 
@@ -285,7 +290,7 @@ void fio_clients_terminate(void)
 	flist_for_each(entry, &client_list) {
 		client = flist_entry(entry, struct fio_client, list);
 
-		fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_QUIT, 0);
+		fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_QUIT, 0, NULL);
 	}
 }
 
@@ -314,8 +319,7 @@ static void probe_client(struct fio_client *client)
 {
 	dprint(FD_NET, "client: send probe\n");
 
-	fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_PROBE, 0);
-	handle_client(client);
+	fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_PROBE, 0, &client->cmd_list);
 }
 
 static int send_client_cmd_line(struct fio_client *client)
@@ -631,6 +635,30 @@ static void dec_jobs_eta(struct client_eta *eta)
 	}
 }
 
+static void remove_reply_cmd(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct fio_net_int_cmd *icmd = NULL;
+	struct flist_head *entry;
+
+	flist_for_each(entry, &client->cmd_list) {
+		icmd = flist_entry(entry, struct fio_net_int_cmd, list);
+
+		if (cmd->tag == (uint64_t) icmd)
+			break;
+
+		icmd = NULL;
+	}
+
+	if (!icmd) {
+		log_err("fio: client: unable to find matching tag\n");
+		return;
+	}
+
+	flist_del(&icmd->list);
+	cmd->tag = icmd->saved_tag;
+	free(icmd);
+}
+
 static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct jobs_eta *je = (struct jobs_eta *) cmd->payload;
@@ -679,8 +707,8 @@ static int handle_client(struct fio_client *client)
 	if (!cmd)
 		return 0;
 
-	dprint(FD_NET, "client: got cmd op %d from %s\n",
-					cmd->opcode, client->hostname);
+	dprint(FD_NET, "client: got cmd op %s from %s\n",
+				fio_server_op(cmd->opcode), client->hostname);
 
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
@@ -711,10 +739,12 @@ static int handle_client(struct fio_client *client)
 		free(cmd);
 		break;
 	case FIO_NET_CMD_ETA:
+		remove_reply_cmd(client, cmd);
 		handle_eta(client, cmd);
 		free(cmd);
 		break;
 	case FIO_NET_CMD_PROBE:
+		remove_reply_cmd(client, cmd);
 		handle_probe(client, cmd);
 		free(cmd);
 		break;
@@ -727,7 +757,7 @@ static int handle_client(struct fio_client *client)
 		free(cmd);
 		break;
 	default:
-		log_err("fio: unknown client op: %d\n", cmd->opcode);
+		log_err("fio: unknown client op: %s\n", fio_server_op(cmd->opcode));
 		free(cmd);
 		break;
 	}
@@ -760,13 +790,62 @@ static void request_client_etas(void)
 		flist_add_tail(&client->eta_list, &eta_list);
 		client->eta_in_flight = eta;
 		fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_SEND_ETA,
-						(uint64_t) eta);
+					(uint64_t) eta, &client->cmd_list);
 	}
 
 	while (skipped--)
 		dec_jobs_eta(eta);
 
 	dprint(FD_NET, "client: requested eta tag %p\n", eta);
+}
+
+static int client_check_cmd_timeout(struct fio_client *client,
+				    struct timeval *now)
+{
+	struct fio_net_int_cmd *cmd;
+	struct flist_head *entry, *tmp;
+	int ret = 0;
+
+	flist_for_each_safe(entry, tmp, &client->cmd_list) {
+		cmd = flist_entry(entry, struct fio_net_int_cmd, list);
+
+		if (mtime_since(&cmd->tv, now) < FIO_NET_CLIENT_TIMEOUT)
+			continue;
+
+		log_err("fio: client %s, timeout on cmd %s\n", client->hostname,
+						fio_server_op(cmd->cmd.opcode));
+		flist_del(&cmd->list);
+		free(cmd);
+		ret = 1;
+	}
+
+	return flist_empty(&client->cmd_list) && ret;
+}
+
+static int fio_client_timed_out(void)
+{
+	struct fio_client *client;
+	struct flist_head *entry, *tmp;
+	struct timeval tv;
+	int ret = 0;
+
+	gettimeofday(&tv, NULL);
+
+	flist_for_each_safe(entry, tmp, &client_list) {
+		client = flist_entry(entry, struct fio_client, list);
+
+		if (flist_empty(&client->cmd_list))
+			continue;
+
+		if (!client_check_cmd_timeout(client, &tv))
+			continue;
+
+		log_err("fio: client %s timed out\n", client->hostname);
+		remove_client(client);
+		ret = 1;
+	}
+
+	return ret;
 }
 
 int fio_handle_clients(void)
@@ -799,6 +878,9 @@ int fio_handle_clients(void)
 			if (mtime_since(&eta_tv, &tv) >= 900) {
 				request_client_etas();
 				memcpy(&eta_tv, &tv, sizeof(tv));
+
+				if (fio_client_timed_out())
+					break;
 			}
 
 			ret = poll(pfds, nr_clients, 100);
