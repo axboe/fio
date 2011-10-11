@@ -1008,7 +1008,7 @@ static int check_existing_pidfile(const char *pidfile)
 
 	pid = atoi(buf);
 	if (kill(pid, SIGCONT) < 0)
-		return 0;
+		return errno != ESRCH;
 
 	return 1;
 }
