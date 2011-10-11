@@ -663,7 +663,7 @@ static void remove_reply_cmd(struct fio_client *client, struct fio_net_cmd *cmd)
 	flist_for_each(entry, &client->cmd_list) {
 		icmd = flist_entry(entry, struct fio_net_int_cmd, list);
 
-		if (cmd->tag == (uint64_t) icmd)
+		if (cmd->tag == (uintptr_t) icmd)
 			break;
 
 		icmd = NULL;
@@ -682,7 +682,7 @@ static void remove_reply_cmd(struct fio_client *client, struct fio_net_cmd *cmd)
 static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct jobs_eta *je = (struct jobs_eta *) cmd->payload;
-	struct client_eta *eta = (struct client_eta *) cmd->tag;
+	struct client_eta *eta = (struct client_eta *) (uintptr_t) cmd->tag;
 
 	dprint(FD_NET, "client: got eta tag %p, %d\n", eta, eta->pending);
 
@@ -810,7 +810,7 @@ static void request_client_etas(void)
 		flist_add_tail(&client->eta_list, &eta_list);
 		client->eta_in_flight = eta;
 		fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_SEND_ETA,
-					(uint64_t) eta, &client->cmd_list);
+					(uintptr_t) eta, &client->cmd_list);
 	}
 
 	while (skipped--)

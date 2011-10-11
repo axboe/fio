@@ -299,7 +299,7 @@ int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t tag,
 
 	cmd = malloc(sizeof(*cmd));
 
-	fio_init_net_cmd(&cmd->cmd, opcode, NULL, 0, (uint64_t) cmd);
+	fio_init_net_cmd(&cmd->cmd, opcode, NULL, 0, (uintptr_t) cmd);
 	fio_net_cmd_crc(&cmd->cmd);
 
 	INIT_FLIST_HEAD(&cmd->list);
