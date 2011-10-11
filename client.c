@@ -137,6 +137,7 @@ static void remove_client(struct fio_client *client)
 
 	free(client);
 	nr_clients--;
+	sum_stat_clients--;
 }
 
 static void __fio_client_add_cmd_option(struct fio_client *client,
