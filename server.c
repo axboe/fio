@@ -398,6 +398,8 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 	probe.os	= FIO_OS;
 	probe.arch	= FIO_ARCH;
 
+	probe.bpp	= sizeof(void *);
+
 	return fio_net_send_cmd(server_fd, FIO_NET_CMD_PROBE, &probe, sizeof(probe), cmd->tag);
 }
 
