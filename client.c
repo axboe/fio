@@ -699,7 +699,8 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_probe_pdu *probe = (struct cmd_probe_pdu *) cmd->payload;
-	const char *os, *arch, *bit;
+	const char *os, *arch;
+	char bit[16];
 
 	os = fio_get_os_string(probe->os);
 	if (!os)
@@ -709,14 +710,7 @@ static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
 	if (!arch)
 		os = "unknown";
 
-	if (probe->bpp == 2)
-		bit = "16-bit";
-	else if (probe->bpp == 4)
-		bit = "32-bit";
-	else if (probe->bpp == 8)
-		bit = "64-bit";
-	else
-		bit = "unknown";
+	sprintf(bit, "%d-bit", probe->bpp * 8);
 
 	log_info("hostname=%s, be=%u, %s, os=%s, arch=%s, fio=%u.%u.%u\n",
 		probe->hostname, probe->bigendian, bit, os, arch,
