@@ -77,6 +77,8 @@ int fio_send_data(int sk, const void *p, unsigned int len)
 			break;
 		else if (errno == EAGAIN || errno == EINTR)
 			continue;
+		else
+			break;
 	} while (!exit_backend);
 
 	if (!len)
@@ -100,6 +102,8 @@ int fio_recv_data(int sk, void *p, unsigned int len)
 			break;
 		else if (errno == EAGAIN || errno == EINTR)
 			continue;
+		else
+			break;
 	} while (!exit_backend);
 
 	if (!len)
@@ -965,25 +969,14 @@ static int fio_server(void)
 	return ret;
 }
 
-static void sig_int(int sig)
+void fio_server_got_signal(int signal)
 {
-	fio_terminate_threads(TERMINATE_ALL);
-	exit_backend = 1;
-}
-
-static void server_signal_handler(void)
-{
-	struct sigaction act;
-
-	memset(&act, 0, sizeof(act));
-	act.sa_handler = sig_int;
-	act.sa_flags = SA_RESTART;
-	sigaction(SIGINT, &act, NULL);
-
-	memset(&act, 0, sizeof(act));
-	act.sa_handler = sig_int;
-	act.sa_flags = SA_RESTART;
-	sigaction(SIGTERM, &act, NULL);
+	if (signal == SIGPIPE)
+		server_fd = -1;
+	else {
+		log_info("\nfio: terminating on signal %d\n", signal);
+		exit_backend = 1;
+	}
 }
 
 static int check_existing_pidfile(const char *pidfile)
@@ -1035,8 +1028,6 @@ int fio_start_server(char *pidfile)
 {
 	pid_t pid;
 	int ret;
-
-	server_signal_handler();
 
 	if (!pidfile)
 		return fio_server();

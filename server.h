@@ -94,6 +94,7 @@ extern int fio_net_send_simple_cmd(int, uint16_t, uint64_t, struct flist_head *)
 extern void fio_server_set_arg(const char *);
 extern int fio_server_parse_string(const char *, char **, int *, int *, struct in_addr *);
 extern const char *fio_server_op(unsigned int);
+extern void fio_server_got_signal(int);
 
 struct thread_stat;
 struct group_run_stats;

@@ -165,10 +165,14 @@ void fio_terminate_threads(int group_id)
 static void sig_int(int sig)
 {
 	if (threads) {
-		log_info("\nfio: terminating on signal %d\n", sig);
-		exit_backend = 1;
-		fflush(stdout);
-		exit_value = 128;
+		if (is_backend)
+			fio_server_got_signal(sig);
+		else {
+			log_info("\nfio: terminating on signal %d\n", sig);
+			fflush(stdout);
+			exit_value = 128;
+		}
+
 		fio_terminate_threads(TERMINATE_ALL);
 	}
 }
