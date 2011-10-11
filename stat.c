@@ -642,6 +642,26 @@ static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
 	dst->S.u.f = S;
 }
 
+void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src)
+{
+	int i;
+
+	for (i = 0; i < 2; i++) {
+		if (dst->max_run[i] < src->max_run[i])
+			dst->max_run[i] = src->max_run[i];
+		if (dst->min_run[i] && dst->min_run[i] > src->min_run[i])
+			dst->min_run[i] = src->min_run[i];
+		if (dst->max_bw[i] < src->max_bw[i])
+			dst->max_bw[i] = src->max_bw[i];
+		if (dst->min_bw[i] && dst->min_bw[i] > src->min_bw[i])
+			dst->min_bw[i] = src->min_bw[i];
+
+		dst->io_kb[i] += src->io_kb[i];
+		dst->agg[i] += src->agg[i];
+	}
+
+}
+
 void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src, int nr)
 {
 	int l, k;
@@ -691,6 +711,28 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src, int nr)
 	dst->total_complete += src->total_complete;
 }
 
+void init_group_run_stat(struct group_run_stats *gs)
+{
+	memset(gs, 0, sizeof(*gs));
+	gs->min_bw[0] = gs->min_run[0] = ~0UL;
+	gs->min_bw[1] = gs->min_run[1] = ~0UL;
+}
+
+void init_thread_stat(struct thread_stat *ts)
+{
+	int j;
+
+	memset(ts, 0, sizeof(*ts));
+
+	for (j = 0; j <= DDIR_WRITE; j++) {
+		ts->lat_stat[j].min_val = -1UL;
+		ts->clat_stat[j].min_val = -1UL;
+		ts->slat_stat[j].min_val = -1UL;
+		ts->bw_stat[j].min_val = -1UL;
+	}
+	ts->groupid = -1;
+}
+
 void show_run_stats(void)
 {
 	struct group_run_stats *runstats, *rs;
@@ -701,13 +743,8 @@ void show_run_stats(void)
 
 	runstats = malloc(sizeof(struct group_run_stats) * (groupid + 1));
 
-	for (i = 0; i < groupid + 1; i++) {
-		rs = &runstats[i];
-
-		memset(rs, 0, sizeof(*rs));
-		rs->min_bw[0] = rs->min_run[0] = ~0UL;
-		rs->min_bw[1] = rs->min_run[1] = ~0UL;
-	}
+	for (i = 0; i < groupid + 1; i++)
+		init_group_run_stat(&runstats[i]);
 
 	/*
 	 * find out how many threads stats we need. if group reporting isn't
@@ -729,18 +766,8 @@ void show_run_stats(void)
 
 	threadstats = malloc(nr_ts * sizeof(struct thread_stat));
 
-	for (i = 0; i < nr_ts; i++) {
-		ts = &threadstats[i];
-
-		memset(ts, 0, sizeof(*ts));
-		for (j = 0; j <= DDIR_WRITE; j++) {
-			ts->lat_stat[j].min_val = -1UL;
-			ts->clat_stat[j].min_val = -1UL;
-			ts->slat_stat[j].min_val = -1UL;
-			ts->bw_stat[j].min_val = -1UL;
-		}
-		ts->groupid = -1;
-	}
+	for (i = 0; i < nr_ts; i++)
+		init_thread_stat(&threadstats[i]);
 
 	j = 0;
 	last_ts = -1;

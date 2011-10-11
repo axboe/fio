@@ -66,6 +66,11 @@ static FLIST_HEAD(eta_list);
 
 static FLIST_HEAD(arg_list);
 
+static struct thread_stat client_ts;
+static struct group_run_stats client_gs;
+static int sum_stat_clients;
+static int sum_stat_nr;
+
 #define FIO_CLIENT_HASH_BITS	7
 #define FIO_CLIENT_HASH_SZ	(1 << FIO_CLIENT_HASH_BITS)
 #define FIO_CLIENT_HASH_MASK	(FIO_CLIENT_HASH_SZ - 1)
@@ -571,6 +576,20 @@ static void handle_ts(struct fio_net_cmd *cmd)
 	convert_gs(&p->rs, &p->rs);
 
 	show_thread_status(&p->ts, &p->rs);
+
+	if (sum_stat_clients == 1)
+		return;
+
+	sum_thread_stats(&client_ts, &p->ts, sum_stat_nr);
+	sum_group_stats(&client_gs, &p->rs);
+
+	client_ts.members++;
+	client_ts.groupid = p->ts.groupid;
+
+	if (++sum_stat_nr == sum_stat_clients) {
+		strcpy(client_ts.name, "All clients");
+		show_thread_status(&client_ts, &client_gs);
+	}
 }
 
 static void handle_gs(struct fio_net_cmd *cmd)
@@ -858,6 +877,10 @@ int fio_handle_clients(void)
 	gettimeofday(&eta_tv, NULL);
 
 	pfds = malloc(nr_clients * sizeof(struct pollfd));
+
+	sum_stat_clients = nr_clients;
+	init_thread_stat(&client_ts);
+	init_group_run_stat(&client_gs);
 
 	while (!exit_backend && nr_clients) {
 		i = 0;
