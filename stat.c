@@ -150,8 +150,8 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 			/* end of the list */
 			is_last = (j == len - 1);
 
-			log_info(" %2.2fth=%u%c", plist[j], plat_idx_to_val(i),
-				 (is_last? '\n' : ','));
+			log_info(" %2.2fth=%u%c", plist[j].u.f,
+				plat_idx_to_val(i), (is_last? '\n' : ','));
 
 			if (is_last)
 				break;
