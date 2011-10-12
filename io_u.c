@@ -158,7 +158,7 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				enum fio_ddir ddir, unsigned long long *b)
 {
-	unsigned long long r, lastb;
+	unsigned long long rmax, r, lastb;
 	int loops = 5;
 
 	lastb = last_block(td, f, ddir);
@@ -168,14 +168,14 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	if (f->failed_rands >= 200)
 		goto ffz;
 
+	rmax = td->o.use_os_rand ? OS_RAND_MAX : FRAND_MAX;
 	do {
-		if (td->o.use_os_rand) {
+		if (td->o.use_os_rand)
 			r = os_random_long(&td->random_state);
-			*b = (lastb - 1) * (r / ((unsigned long long) OS_RAND_MAX + 1.0));
-		} else {
+		else
 			r = __rand(&td->__random_state);
-			*b = (lastb - 1) * (r / ((unsigned long long) FRAND_MAX + 1.0));
-		}
+
+		*b = (lastb - 1) * (r / ((unsigned long long) rmax + 1.0));
 
 		dprint(FD_RANDOM, "off rand %llu\n", r);
 
@@ -207,7 +207,7 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	loops = 10;
 	do {
 		f->last_free_lookup = (f->num_maps - 1) *
-					(r / (OS_RAND_MAX + 1.0));
+					(r / ((unsigned long long) rmax + 1.0));
 		if (!get_next_free_block(td, f, ddir, b))
 			goto ret;
 
