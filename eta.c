@@ -418,10 +418,14 @@ void display_thread_status(struct jobs_eta *je)
 void print_thread_status(void)
 {
 	struct jobs_eta *je;
+	size_t size;
 
-	je = malloc(sizeof(*je) + thread_number * sizeof(char));
+	if (!thread_number)
+		return;
 
-	memset(je, 0, sizeof(*je) + thread_number * sizeof(char));
+	size = sizeof(*je) + thread_number * sizeof(char) + 1;
+	je = malloc(size);
+	memset(je, 0, size);
 
 	if (calc_thread_status(je, 0))
 		display_thread_status(je);
