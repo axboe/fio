@@ -671,9 +671,10 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.clat_percentiles	= cpu_to_le64(ts->clat_percentiles);
 
 	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++) {
-		fio_fp64_t *fp = &p.ts.percentile_list[i];
+		fio_fp64_t *src = &ts->percentile_list[i];
+		fio_fp64_t *dst = &p.ts.percentile_list[i];
 
-		fp->u.i = __cpu_to_le64(fio_double_to_uint64(fp->u.f));
+		dst->u.i = __cpu_to_le64(fio_double_to_uint64(src->u.f));
 	}
 
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
