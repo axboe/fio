@@ -136,22 +136,29 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 	if (len > 1)
 		qsort((void*)plist, len, sizeof(plist[0]), double_cmp);
 
-	log_info("    clat percentiles (usec) :");
+	log_info("    clat percentiles (usec):\n     |");
 
 	for (i = 0; i < FIO_IO_U_PLAT_NR && !is_last; i++) {
 		sum += io_u_plat[i];
 		while (sum >= (plist[j].u.f / 100.0 * nr)) {
+			char fbuf[8];
+
 			assert(plist[j].u.f <= 100.0);
 
 			/* for formatting */
 			if (j != 0 && (j % 4) == 0)
-				log_info("                             ");
+				log_info("     |");
 
 			/* end of the list */
 			is_last = (j == len - 1);
 
-			log_info(" %2.2fth=%u%c", plist[j].u.f,
-				plat_idx_to_val(i), (is_last? '\n' : ','));
+			if (plist[j].u.f < 10.0)
+				sprintf(fbuf, " %2.2f", plist[j].u.f);
+			else
+				sprintf(fbuf, "%2.2f", plist[j].u.f);
+
+			log_info(" %sth=[%5u]%c", fbuf, plat_idx_to_val(i),
+					(is_last? '\n' : ','));
 
 			if (is_last)
 				break;
