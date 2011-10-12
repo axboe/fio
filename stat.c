@@ -128,6 +128,9 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 	while (len < FIO_IO_U_LIST_MAX_LEN && plist[len].u.f != 0.0)
 		len++;
 
+	if (!len)
+		return;
+
 	/*
 	 * Sort the percentile list. Note that it may already be sorted if
 	 * we are using the default values, but since it's a short list this
@@ -158,14 +161,15 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 				sprintf(fbuf, "%2.2f", plist[j].u.f);
 
 			log_info(" %sth=[%5u]%c", fbuf, plat_idx_to_val(i),
-					(is_last? '\n' : ','));
+					is_last ? '\n' : ',');
 
 			if (is_last)
 				break;
 
 			if (j % 4 == 3)	/* for formatting */
 				log_info("\n");
-			j++;
+			if (++j == FIO_IO_U_LIST_MAX_LEN)
+				break;
 		}
 	}
 }
