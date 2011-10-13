@@ -202,7 +202,7 @@ void show_group_stats(struct group_run_stats *rs)
 	const char *ddir_str[] = { "   READ", "  WRITE" };
 	int i;
 
-	log_info("\nRun status group %d (all jobs):\n", rs->groupid);
+	log_info("Run status group %d (all jobs):\n", rs->groupid);
 
 	for (i = 0; i <= DDIR_WRITE; i++) {
 		const int i2p = is_power_of_2(rs->kb_base);
