@@ -770,6 +770,8 @@ void fio_server_send_du(void)
 
 	dprint(FD_NET, "server: sending disk_util %d\n", !flist_empty(&disk_list));
 
+	memset(&pdu, 0, sizeof(pdu));
+
 	flist_for_each(entry, &disk_list) {
 		du = flist_entry(entry, struct disk_util, list);
 
