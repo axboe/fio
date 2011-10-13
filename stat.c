@@ -691,6 +691,10 @@ static void show_thread_status_terse(struct thread_stat *ts,
 	/* Millisecond latency */
 	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++)
 		log_info(";%3.2f%%", io_u_lat_m[i]);
+
+	/* disk util stats, if any */
+	show_disk_util(1);
+
 	/* Additional output if continue_on_error set - default off*/
 	if (ts->continue_on_error)
 		log_info(";%lu;%d", ts->total_err_count, ts->first_error);
@@ -1006,7 +1010,7 @@ void show_run_stats(void)
 		if (is_backend)
 			fio_server_send_du();
 		else
-			show_disk_util();
+			show_disk_util(0);
 
 		free_disk_util();
 	}

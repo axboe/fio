@@ -1379,6 +1379,11 @@ Split up, the format is as follows:
 	IO depths: <=1, 2, 4, 8, 16, 32, >=64
 	IO latencies microseconds: <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000
 	IO latencies milliseconds: <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000, 2000, >=2000
+	Disk utilization: Disk name, Read ios, write ios,
+			  Read merges, write merges,
+			  Read ticks, write ticks,
+			  Read in-queue time, write in-queue time,
+			  Disk utilization percentage
 	Additional Info (dependant on continue_on_error, default off): total # errors, first error code 
 	
 	Additional Info (dependant on description being set): Text description
@@ -1389,6 +1394,9 @@ for the terse output fio writes all of them. Each field will look like this:
 	1.00%=6112
 
 which is the Xth percentile, and the usec latency associated with it.
+
+For disk utilization, all disks used by fio are shown. So for each disk
+there will be a disk utilization section.
 
 
 8.0 Trace file format

@@ -453,21 +453,33 @@ void init_disk_util(struct thread_data *td)
 		f->du = __init_disk_util(td, f);
 }
 
-static void show_agg_stats(struct disk_util_agg *agg)
+static void show_agg_stats(struct disk_util_agg *agg, int terse)
 {
 	if (!agg->slavecount)
 		return;
 
-	log_info(", aggrios=%u/%u, aggrmerge=%u/%u, aggrticks=%u/%u,"
-			" aggrin_queue=%u, aggrutil=%3.2f%%",
-			agg->ios[0] / agg->slavecount,
-			agg->ios[1] / agg->slavecount,
-			agg->merges[0] / agg->slavecount,
-			agg->merges[1] / agg->slavecount,
-			agg->ticks[0] / agg->slavecount,
-			agg->ticks[1] / agg->slavecount,
-			agg->time_in_queue / agg->slavecount,
-			agg->max_util.u.f);
+	if (!terse) {
+		log_info(", aggrios=%u/%u, aggrmerge=%u/%u, aggrticks=%u/%u,"
+				" aggrin_queue=%u, aggrutil=%3.2f%%",
+				agg->ios[0] / agg->slavecount,
+				agg->ios[1] / agg->slavecount,
+				agg->merges[0] / agg->slavecount,
+				agg->merges[1] / agg->slavecount,
+				agg->ticks[0] / agg->slavecount,
+				agg->ticks[1] / agg->slavecount,
+				agg->time_in_queue / agg->slavecount,
+				agg->max_util.u.f);
+	} else {
+		log_info("slaves;%u;%u;%u;%u;%u;%u;%u;%3.2f%%",
+				agg->ios[0] / agg->slavecount,
+				agg->ios[1] / agg->slavecount,
+				agg->merges[0] / agg->slavecount,
+				agg->merges[1] / agg->slavecount,
+				agg->ticks[0] / agg->slavecount,
+				agg->ticks[1] / agg->slavecount,
+				agg->time_in_queue / agg->slavecount,
+				agg->max_util.u.f);
+	}
 }
 
 static void aggregate_slaves_stats(struct disk_util *masterdu)
@@ -518,7 +530,8 @@ void free_disk_util(void)
 	last_majdev = last_mindev = -1;
 }
 
-void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg)
+void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
+		     int terse)
 {
 	double util;
 
@@ -529,24 +542,33 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg)
 	if (agg->slavecount)
 		log_info("  ");
 
-	log_info("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, "
-		 "in_queue=%u, util=%3.2f%%", dus->name,
+	if (!terse) {
+		log_info("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, "
+			 "in_queue=%u, util=%3.2f%%", dus->name,
 					dus->ios[0], dus->ios[1],
 					dus->merges[0], dus->merges[1],
 					dus->ticks[0], dus->ticks[1],
 					dus->time_in_queue, util);
+	} else {
+		log_info(";%s;%u;%u;%u;%u;%lu;%lu;%u;%u;%u;%u;%3.2f%%",
+					dus->name, dus->ios[0], dus->ios[1],
+					dus->merges[0], dus->merges[1],
+					dus->ticks[0], dus->ticks[1],
+					dus->time_in_queue, util);
+	}
 
 	/*
 	 * If the device has slaves, aggregate the stats for
 	 * those slave devices also.
 	 */
 	if (agg->slavecount)
-		show_agg_stats(agg);
+		show_agg_stats(agg, terse);
 
-	log_info("\n");
+	if (!terse)
+		log_info("\n");
 }
 
-void show_disk_util(void)
+void show_disk_util(int terse)
 {
 	struct flist_head *entry;
 	struct disk_util *du;
@@ -554,12 +576,13 @@ void show_disk_util(void)
 	if (flist_empty(&disk_list))
 		return;
 
-	log_info("\nDisk stats (read/write):\n");
+	if (!terse)
+		log_info("\nDisk stats (read/write):\n");
 
 	flist_for_each(entry, &disk_list) {
 		du = flist_entry(entry, struct disk_util, list);
 
 		aggregate_slaves_stats(du);
-		print_disk_util(&du->dus, &du->agg);
+		print_disk_util(&du->dus, &du->agg, terse);
 	}
 }
