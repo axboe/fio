@@ -121,8 +121,9 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 				  fio_fp64_t *plist)
 {
 	unsigned long sum = 0;
-	unsigned int len, i, j = 0;
-	int is_last = 0;
+	unsigned int len, i, j = 0, minv = -1U, maxv = 0;
+	unsigned int *ovals = NULL, oval_len = 0;
+	int is_last = 0, scale_down;
 
 	len = 0;
 	while (len < FIO_IO_U_LIST_MAX_LEN && plist[len].u.f != 0.0)
@@ -139,39 +140,69 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 	if (len > 1)
 		qsort((void*)plist, len, sizeof(plist[0]), double_cmp);
 
-	log_info("    clat percentiles (usec):\n     |");
-
-	for (i = 0; i < FIO_IO_U_PLAT_NR && !is_last; i++) {
+	/*
+	 * Calculate bucket values, note down max and min values
+	 */
+	for (i = 0; i < FIO_IO_U_PLAT_NR; i++) {
 		sum += io_u_plat[i];
 		while (sum >= (plist[j].u.f / 100.0 * nr)) {
-			char fbuf[8];
-
 			assert(plist[j].u.f <= 100.0);
 
-			/* for formatting */
-			if (j != 0 && (j % 4) == 0)
-				log_info("     |");
+			if (j == oval_len) {
+				oval_len += 100;
+				ovals = realloc(ovals, oval_len * sizeof(unsigned int));
+			}
 
-			/* end of the list */
-			is_last = (j == len - 1);
-
-			if (plist[j].u.f < 10.0)
-				sprintf(fbuf, " %2.2f", plist[j].u.f);
-			else
-				sprintf(fbuf, "%2.2f", plist[j].u.f);
-
-			log_info(" %sth=[%5u]%c", fbuf, plat_idx_to_val(i),
-					is_last ? '\n' : ',');
-
-			if (is_last)
-				break;
-
-			if (j % 4 == 3)	/* for formatting */
-				log_info("\n");
-			if (++j == FIO_IO_U_LIST_MAX_LEN)
-				break;
+			ovals[j] = plat_idx_to_val(i);
+			if (ovals[j] < minv)
+				minv = ovals[j];
+			if (ovals[j] > maxv)
+				maxv = ovals[j];
+			j++;
 		}
 	}
+
+	/*
+	 * We default to usecs, but if the value range is such that we
+	 * should scale down to msecs, do that.
+	 */
+	if (minv > 2000 && maxv > 99999) {
+		scale_down = 1;
+		log_info("    clat percentiles (msec):\n     |");
+	} else {
+		scale_down = 0;
+		log_info("    clat percentiles (usec):\n     |");
+	}
+
+	for (j = 0; j < len; j++) {
+		char fbuf[8];
+
+		/* for formatting */
+		if (j != 0 && (j % 4) == 0)
+			log_info("     |");
+
+		/* end of the list */
+		is_last = (j == len - 1);
+
+		if (plist[j].u.f < 10.0)
+			sprintf(fbuf, " %2.2f", plist[j].u.f);
+		else
+			sprintf(fbuf, "%2.2f", plist[j].u.f);
+
+		if (scale_down)
+			ovals[j] = (ovals[j] + 999) / 1000;
+
+		log_info(" %sth=[%5u]%c", fbuf, ovals[j], is_last ? '\n' : ',');
+
+		if (is_last)
+			break;
+
+		if (j % 4 == 3)	/* for formatting */
+			log_info("\n");
+	}
+
+	if (ovals)
+		free(ovals);
 }
 
 static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
