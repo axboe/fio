@@ -558,16 +558,20 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 				   struct group_run_stats *rs, int ddir)
 {
 	unsigned long min, max;
-	unsigned long long bw;
+	unsigned long long bw, iops;
 	double mean, dev;
 
 	assert(ddir_rw(ddir));
 
-	bw = 0;
-	if (ts->runtime[ddir])
-		bw = ts->io_bytes[ddir] / ts->runtime[ddir];
+	iops = bw = 0;
+	if (ts->runtime[ddir]) {
+		uint64_t runt = ts->runtime[ddir];
 
-	log_info(";%llu;%llu;%llu", ts->io_bytes[ddir] >> 10, bw,
+		bw = ts->io_bytes[ddir] / runt;
+		iops = (1000 * (uint64_t) ts->total_io_u[ddir]) / runt;
+	}
+
+	log_info(";%llu;%llu;%llu;%llu", ts->io_bytes[ddir] >> 10, bw, iops,
 							ts->runtime[ddir]);
 
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
@@ -594,7 +598,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 		log_info(";%lu;%lu;%f%%;%f;%f", 0UL, 0UL, 0.0, 0.0, 0.0);
 }
 
-#define FIO_TERSE_VERSION	"2"
+#define FIO_TERSE_VERSION	"3"
 
 static void show_thread_status_terse(struct thread_stat *ts,
 				     struct group_run_stats *rs)
