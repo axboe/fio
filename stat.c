@@ -520,7 +520,7 @@ void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 					ts->error, ts->verror, (int) ts->pid);
 	}
 
-	if (ts->description)
+	if (strlen(ts->description))
 		log_info("  Description  : [%s]\n", ts->description);
 
 	if (ts->io_bytes[DDIR_READ])
