@@ -1525,6 +1525,8 @@ int parse_options(int argc, char *argv[])
 		fio_gtod_cpu = def_thread.o.gtod_cpu;
 	}
 
-	log_info("fio %s\n", fio_version_string);
+	if (!terse_output)
+		log_info("fio %s\n", fio_version_string);
+
 	return 0;
 }
