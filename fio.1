@@ -12,6 +12,11 @@ The typical use of fio is to write a job file matching the I/O load
 one wants to simulate.
 .SH OPTIONS
 .TP
+.BI \-\-debug \fR=\fPtype
+Enable verbose tracing of various fio actions. May be `all' for all types
+or individual types separated by a comma (eg \-\-debug=io,file). `help' will
+list all available tracing options.
+.TP
 .BI \-\-output \fR=\fPfilename
 Write output to \fIfilename\fR.
 .TP
@@ -27,6 +32,18 @@ Generate per-job bandwidth logs.
 .B \-\-minimal
 Print statistics in a terse, semicolon-delimited format.
 .TP
+.B \-\-version
+Display version information and exit.
+.TP
+.B \-\-terse\-version \fR=\fPversion
+Set terse version output format.
+.TP
+.B \-\-help
+Display usage information and exit.
+.TP
+.BI \-\-cmdhelp \fR=\fPcommand
+Print help information for \fIcommand\fR.  May be `all' for all commands.
+.TP
 .BI \-\-showcmd \fR=\fPjobfile
 Convert \fIjobfile\fR to a set of command-line options.
 .TP
@@ -37,25 +54,29 @@ Enable read-only safety checks.
 Specifies when real-time ETA estimate should be printed.  \fIwhen\fR may
 be one of `always', `never' or `auto'.
 .TP
+.BI \-\-readonly
+Turn on safety read-only checks, preventing any attempted write.
+.TP
 .BI \-\-section \fR=\fPsec
-Only run section \fIsec\fR from job file.
+Only run section \fIsec\fR from job file. Multiple of these options can be given, adding more sections to run.
 .TP
-.BI \-\-cmdhelp \fR=\fPcommand
-Print help information for \fIcommand\fR.  May be `all' for all commands.
+.BI \-\-alloc\-size \fR=\fPkb
+Set the internal smalloc pool size to \fIkb\fP kilobytes.
 .TP
-.BI \-\-debug \fR=\fPtype
-Enable verbose tracing of various fio actions. May be `all' for all types
-or individual types separated by a comma (eg \-\-debug=io,file). `help' will
-list all available tracing options.
+.BI \-\-warnings\-fatal
+All fio parser warnings are fatal, causing fio to exit with an error.
 .TP
-.B \-\-help
-Display usage information and exit.
+.BI \-\-max\-jobs \fR=\fPnr
+Set the maximum allowed number of jobs (threads/processes) to suport.
 .TP
-.B \-\-version
-Display version information and exit.
+.BI \-\-server \fR=\fPargs
+Start a backend server, with \fIargs\fP specifying what to listen to. See client/server section.
 .TP
-.B \-\-terse\-version\fR=\fPtype
-Terse version output format
+.BI \-\-daemonize \fR=\fPpidfile
+Background a fio server, writing the pid to the given pid file.
+.TP
+.BI \-\-client \fR=\fPhost
+Instead of running the jobs locally, send and run them on the given host.
 .SH "JOB FILE FORMAT"
 Job files are in `ini' format. They consist of one or more
 job definitions, which begin with a job name in square brackets and
@@ -1188,7 +1209,57 @@ Error Info (dependent on continue_on_error, default off):
 .P
 .B text description (if provided in config - appears on newline)
 .RE
+.SH CLIENT / SERVER
+Normally you would run fio as a stand-alone application on the machine
+where the IO workload should be generated. However, it is also possible to
+run the frontend and backend of fio separately. This makes it possible to
+have a fio server running on the machine(s) where the IO workload should
+be running, while controlling it from another machine.
+
+To start the server, you would do:
+
+\fBfio \-\-server=args\fR
+
+on that machine, where args defines what fio listens to. The arguments
+are of the form 'type:hostname or IP:port'. 'type' is either 'ip' for
+TCP/IP, or 'sock' for a local unix domain socket. 'hostname' is either
+a hostname or IP address, and 'port' is the port to listen to (only valid
+for TCP/IP, not a local socket). Some examples:
+
+1) fio --server
+
+   Start a fio server, listening on all interfaces on the default port (8765).
+
+2) fio --server=ip:hostname:4444
+
+   Start a fio server, listening on IP belonging to hostname and on port 4444.
+
+3) fio --server=:4444
+
+   Start a fio server, listening on all interfaces on port 4444.
+
+4) fio --server=1.2.3.4
+
+   Start a fio server, listening on IP 1.2.3.4 on the default port.
+
+5) fio --server=sock:/tmp/fio.sock
+
+   Start a fio server, listening on the local socket /tmp/fio.sock.
+
+When a server is running, you can connect to it from a client. The client
+is run with:
+
+fio --local-args --client=server --remote-args <job file(s)>
+
+where --local-args are arguments that are local to the client where it is
+running, 'server' is the connect string, and --remote-args and <job file(s)>
+are sent to the server. The 'server' string follows the same format as it
+does on the server side, to allow IP/hostname/socket and port strings.
+You can connect to multiple clients as well, to do that you could run:
+
+fio --client=server2 --client=server2 <job file(s)>
 .SH AUTHORS
+
 .B fio
 was written by Jens Axboe <jens.axboe@oracle.com>,
 now Jens Axboe <jaxboe@fusionio.com>.
