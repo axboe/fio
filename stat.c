@@ -114,23 +114,27 @@ static int double_cmp(const void *a, const void *b)
 	return cmp;
 }
 
-/*
- * Find and display the p-th percentile of clat
- */
-static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
-				  fio_fp64_t *plist)
+static unsigned int calc_clat_percentiles(unsigned int *io_u_plat,
+					  unsigned long nr, fio_fp64_t *plist,
+					  unsigned int **output,
+					  unsigned int *maxv,
+					  unsigned int *minv)
 {
 	unsigned long sum = 0;
-	unsigned int len, i, j = 0, minv = -1U, maxv = 0;
-	unsigned int *ovals = NULL, oval_len = 0;
-	int is_last, scale_down;
+	unsigned int len, i, j = 0;
+	unsigned int oval_len = 0;
+	unsigned int *ovals = NULL;
+	int is_last;
+
+	*minv = -1U;
+	*maxv = 0;
 
 	len = 0;
 	while (len < FIO_IO_U_LIST_MAX_LEN && plist[len].u.f != 0.0)
 		len++;
 
 	if (!len)
-		return;
+		return 0;
 
 	/*
 	 * Sort the percentile list. Note that it may already be sorted if
@@ -155,10 +159,10 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 			}
 
 			ovals[j] = plat_idx_to_val(i);
-			if (ovals[j] < minv)
-				minv = ovals[j];
-			if (ovals[j] > maxv)
-				maxv = ovals[j];
+			if (ovals[j] < *minv)
+				*minv = ovals[j];
+			if (ovals[j] > *maxv)
+				*maxv = ovals[j];
 
 			is_last = (j == len - 1);
 			if (is_last)
@@ -167,6 +171,24 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 			j++;
 		}
 	}
+
+	*output = ovals;
+	return len;
+}
+
+/*
+ * Find and display the p-th percentile of clat
+ */
+static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
+				  fio_fp64_t *plist)
+{
+	unsigned int len, j = 0, minv, maxv;
+	unsigned int *ovals;
+	int is_last, scale_down;
+
+	len = calc_clat_percentiles(io_u_plat, nr, plist, &ovals, &maxv, &minv);
+	if (!len)
+		goto out;
 
 	/*
 	 * We default to usecs, but if the value range is such that we
@@ -207,6 +229,7 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 			log_info("\n");
 	}
 
+out:
 	if (ovals)
 		free(ovals);
 }
@@ -559,7 +582,10 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 {
 	unsigned long min, max;
 	unsigned long long bw, iops;
+	unsigned int *ovals = NULL;
 	double mean, dev;
+	unsigned int len, minv, maxv;
+	int i;
 
 	assert(ddir_rw(ddir));
 
@@ -588,6 +614,24 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 		log_info(";%lu;%lu;%f;%f", min, max, mean, dev);
 	else
 		log_info(";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
+
+	if (ts->clat_percentiles) {
+		len = calc_clat_percentiles(ts->io_u_plat[ddir],
+					ts->clat_stat[ddir].samples,
+					ts->percentile_list, &ovals, &maxv,
+					&minv);
+	} else
+		len = 0;
+
+	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++) {
+		if (i >= len) {
+			log_info(";0%%=0");
+			continue;
+		}
+		log_info(";%2.2f%%=%u", ts->percentile_list[i].u.f, ovals[i]);
+	}
+	if (ovals)
+		free(ovals);
 
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;

@@ -1365,12 +1365,14 @@ Split up, the format is as follows:
 		Total IO (KB), bandwidth (KB/sec), IOPS, runtime (msec)
 		Submission latency: min, max, mean, deviation
 		Completion latency: min, max, mean, deviation
+		Completion latency percentiles: 20 fields (see below)
 		Total latency: min, max, mean, deviation
 		Bw: min, max, aggregate percentage of total, mean, deviation
 	WRITE status:
 		Total IO (KB), bandwidth (KB/sec), IOPS, runtime (msec)
 		Submission latency: min, max, mean, deviation
 		Completion latency: min, max, mean, deviation
+		Completion latency percentiles: 20 fields (see below)
 		Total latency: min, max, mean, deviation
 		Bw: min, max, aggregate percentage of total, mean, deviation
 	CPU usage: user, system, context switches, major faults, minor faults
@@ -1380,6 +1382,13 @@ Split up, the format is as follows:
 	Additional Info (dependant on continue_on_error, default off): total # errors, first error code 
 	
 	Additional Info (dependant on description being set): Text description
+
+Completion latency percentiles can be a grouping of up to 20 sets, so
+for the terse output fio writes all of them. Each field will look like this:
+
+	1.00%=6112
+
+which is the Xth percentile, and the usec latency associated with it.
 
 
 8.0 Trace file format
