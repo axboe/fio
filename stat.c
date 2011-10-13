@@ -123,7 +123,7 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 	unsigned long sum = 0;
 	unsigned int len, i, j = 0, minv = -1U, maxv = 0;
 	unsigned int *ovals = NULL, oval_len = 0;
-	int is_last = 0, scale_down;
+	int is_last, scale_down;
 
 	len = 0;
 	while (len < FIO_IO_U_LIST_MAX_LEN && plist[len].u.f != 0.0)
@@ -143,7 +143,8 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 	/*
 	 * Calculate bucket values, note down max and min values
 	 */
-	for (i = 0; i < FIO_IO_U_PLAT_NR; i++) {
+	is_last = 0;
+	for (i = 0; i < FIO_IO_U_PLAT_NR && !is_last; i++) {
 		sum += io_u_plat[i];
 		while (sum >= (plist[j].u.f / 100.0 * nr)) {
 			assert(plist[j].u.f <= 100.0);
@@ -158,6 +159,11 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 				minv = ovals[j];
 			if (ovals[j] > maxv)
 				maxv = ovals[j];
+
+			is_last = (j == len - 1);
+			if (is_last)
+				break;
+
 			j++;
 		}
 	}
