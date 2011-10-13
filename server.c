@@ -46,7 +46,8 @@ static const char *fio_server_ops[FIO_NET_CMD_NR] = {
 	"ETA",
 	"PROBE",
 	"START",
-	"STOP"
+	"STOP",
+	"DISK_UTIL",
 };
 
 const char *fio_server_op(unsigned int op)
@@ -724,6 +725,59 @@ void fio_server_send_gs(struct group_run_stats *rs)
 
 	convert_gs(&gs, rs);
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_GS, &gs, sizeof(gs), 0);
+}
+
+static void convert_agg(struct disk_util_agg *dst, struct disk_util_agg *src)
+{
+	int i;
+
+	for (i = 0; i < 2; i++) {
+		dst->ios[i]	= cpu_to_le32(src->ios[i]);
+		dst->merges[i]	= cpu_to_le32(src->merges[i]);
+		dst->sectors[i]	= cpu_to_le64(src->sectors[i]);
+		dst->ticks[i]	= cpu_to_le32(src->ticks[i]);
+	}
+
+	dst->io_ticks		= cpu_to_le32(src->io_ticks);
+	dst->time_in_queue	= cpu_to_le32(src->time_in_queue);
+	dst->slavecount		= cpu_to_le32(src->slavecount);
+	dst->max_util.u.i	= __cpu_to_le64(fio_double_to_uint64(src->max_util.u.f));
+}
+
+static void convert_dus(struct disk_util_stat *dst, struct disk_util_stat *src)
+{
+	int i;
+
+	strcpy((char *) dst->name, (char *) src->name);
+
+	for (i = 0; i < 2; i++) {
+		dst->ios[i]	= cpu_to_le32(src->ios[i]);
+		dst->merges[i]	= cpu_to_le32(src->merges[i]);
+		dst->sectors[i]	= cpu_to_le64(src->sectors[i]);
+		dst->ticks[i]	= cpu_to_le32(src->ticks[i]);
+	}
+
+	dst->io_ticks		= cpu_to_le32(src->io_ticks);
+	dst->time_in_queue	= cpu_to_le32(src->time_in_queue);
+	dst->msec		= cpu_to_le64(src->msec);
+}
+
+void fio_server_send_du(void)
+{
+	struct disk_util *du;
+	struct flist_head *entry;
+	struct cmd_du_pdu pdu;
+
+	dprint(FD_NET, "server: sending disk_util %d\n", !flist_empty(&disk_list));
+
+	flist_for_each(entry, &disk_list) {
+		du = flist_entry(entry, struct disk_util, list);
+
+		convert_dus(&pdu.dus, &du->dus);
+		convert_agg(&pdu.agg, &du->agg);
+
+		fio_net_send_cmd(server_fd, FIO_NET_CMD_DU, &pdu, sizeof(pdu), 0);
+	}
 }
 
 int fio_server_log(const char *format, ...)

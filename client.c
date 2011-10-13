@@ -41,6 +41,7 @@ struct fio_client {
 
 	int skip_newline;
 	int is_sock;
+	int disk_stats_shown;
 
 	struct flist_head eta_list;
 	struct client_eta *eta_in_flight;
@@ -601,6 +602,54 @@ static void handle_gs(struct fio_net_cmd *cmd)
 	show_group_stats(gs);
 }
 
+static void convert_agg(struct disk_util_agg *agg)
+{
+	int i;
+
+	for (i = 0; i < 2; i++) {
+		agg->ios[i]	= le32_to_cpu(agg->ios[i]);
+		agg->merges[i]	= le32_to_cpu(agg->merges[i]);
+		agg->sectors[i]	= le64_to_cpu(agg->sectors[i]);
+		agg->ticks[i]	= le32_to_cpu(agg->ticks[i]);
+	}
+
+	agg->io_ticks		= le32_to_cpu(agg->io_ticks);
+	agg->time_in_queue	= le32_to_cpu(agg->time_in_queue);
+	agg->slavecount		= le32_to_cpu(agg->slavecount);
+	agg->max_util.u.f	= __le64_to_cpu(fio_uint64_to_double(agg->max_util.u.i));
+}
+
+static void convert_dus(struct disk_util_stat *dus)
+{
+	int i;
+
+	for (i = 0; i < 2; i++) {
+		dus->ios[i]	= le32_to_cpu(dus->ios[i]);
+		dus->merges[i]	= le32_to_cpu(dus->merges[i]);
+		dus->sectors[i]	= le64_to_cpu(dus->sectors[i]);
+		dus->ticks[i]	= le32_to_cpu(dus->ticks[i]);
+	}
+
+	dus->io_ticks		= le32_to_cpu(dus->io_ticks);
+	dus->time_in_queue	= le32_to_cpu(dus->time_in_queue);
+	dus->msec		= le64_to_cpu(dus->msec);
+}
+
+static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct cmd_du_pdu *du = (struct cmd_du_pdu *) cmd->payload;
+
+	convert_dus(&du->dus);
+	convert_agg(&du->agg);
+
+	if (!client->disk_stats_shown) {
+		client->disk_stats_shown = 1;
+		log_info("\nDisk stats (read/write):\n");
+	}
+
+	print_disk_util(&du->dus, &du->agg);
+}
+
 static void convert_jobs_eta(struct jobs_eta *je)
 {
 	int i;
@@ -753,6 +802,10 @@ static int handle_client(struct fio_client *client)
 		free(cmd);
 		break;
 		}
+	case FIO_NET_CMD_DU:
+		handle_du(client, cmd);
+		free(cmd);
+		break;
 	case FIO_NET_CMD_TS:
 		handle_ts(cmd);
 		free(cmd);

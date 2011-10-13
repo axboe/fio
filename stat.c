@@ -949,7 +949,12 @@ void show_run_stats(void)
 				show_group_stats(rs);
 		}
 
-		show_disk_util();
+		if (is_backend)
+			fio_server_send_du();
+		else
+			show_disk_util();
+
+		free_disk_util();
 	}
 
 	free(runstats);

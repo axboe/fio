@@ -7,6 +7,7 @@
 
 #include "stat.h"
 #include "os/os.h"
+#include "diskutil.h"
 
 /*
  * On-wire encoding is little endian
@@ -50,7 +51,8 @@ enum {
 	FIO_NET_CMD_PROBE	= 10,
 	FIO_NET_CMD_START	= 11,
 	FIO_NET_CMD_STOP	= 12,
-	FIO_NET_CMD_NR		= 13,
+	FIO_NET_CMD_DU		= 13,
+	FIO_NET_CMD_NR		= 14,
 
 	FIO_NET_CMD_F_MORE	= 1UL << 0,
 
@@ -64,6 +66,11 @@ enum {
 struct cmd_ts_pdu {
 	struct thread_stat ts;
 	struct group_run_stats rs;
+};
+
+struct cmd_du_pdu {
+	struct disk_util_stat dus;
+	struct disk_util_agg agg;
 };
 
 struct cmd_probe_pdu {
@@ -101,6 +108,7 @@ struct thread_stat;
 struct group_run_stats;
 extern void fio_server_send_ts(struct thread_stat *, struct group_run_stats *);
 extern void fio_server_send_gs(struct group_run_stats *);
+extern void fio_server_send_du(void);
 extern void fio_server_idle_loop(void);
 
 extern int fio_clients_connect(void);

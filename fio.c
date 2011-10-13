@@ -62,6 +62,13 @@ int shm_id = 0;
 int temp_stall_ts;
 unsigned long done_secs = 0;
 
+/*
+ * Just expose an empty list, if the OS does not support disk util stats
+ */
+#ifndef FIO_HAVE_DISK_UTIL
+FLIST_HEAD(disk_list);
+#endif
+
 static struct fio_mutex *startup_mutex;
 static struct fio_mutex *writeout_mutex;
 static volatile int fio_abort;
