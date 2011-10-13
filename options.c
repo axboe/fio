@@ -2016,7 +2016,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(clat_percentiles),
 		.help	= "Enable the reporting of completion latency percentiles",
-		.def	= "0",
+		.def	= "1",
 	},
 	{
 		.name	= "percentile_list",
