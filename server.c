@@ -20,7 +20,7 @@
 #include "fio.h"
 #include "server.h"
 #include "crc/crc16.h"
-#include "ieee754.h"
+#include "lib/ieee754.h"
 
 #include "fio_version.h"
 

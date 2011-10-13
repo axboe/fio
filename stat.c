@@ -9,7 +9,7 @@
 
 #include "fio.h"
 #include "diskutil.h"
-#include "ieee754.h"
+#include "lib/ieee754.h"
 
 void update_rusage_stat(struct thread_data *td)
 {
