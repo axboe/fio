@@ -701,10 +701,8 @@ static void show_thread_status_terse(struct thread_stat *ts,
 	log_info("\n");
 
 	/* Additional output if description is set */
-	if (ts->description)
+	if (strlen(ts->description))
 		log_info(";%s", ts->description);
-
-	log_info("\n");
 }
 
 static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
