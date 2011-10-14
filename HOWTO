@@ -1360,7 +1360,7 @@ signify that change.
 
 Split up, the format is as follows:
 
-	version, jobname, groupid, error
+	terse version, fio version, jobname, groupid, error
 	READ status:
 		Total IO (KB), bandwidth (KB/sec), IOPS, runtime (msec)
 		Submission latency: min, max, mean, deviation

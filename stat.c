@@ -654,8 +654,8 @@ static void show_thread_status_terse(struct thread_stat *ts,
 	int i;
 
 	/* General Info */
-	log_info("%s;%s;%d;%d", FIO_TERSE_VERSION, ts->name, ts->groupid,
-				ts->error);
+	log_info("%s;%s;%s;%d;%d", FIO_TERSE_VERSION, fio_version_string,
+					ts->name, ts->groupid, ts->error);
 	/* Log Read Status */
 	show_ddir_status_terse(ts, rs, 0);
 	/* Log Write Status */

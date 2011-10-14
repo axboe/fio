@@ -26,11 +26,11 @@
 #include "fio_version.h"
 
 #if FIO_PATCH > 0
-static char fio_version_string[] =	__fio_stringify(FIO_MAJOR) "."	\
+const char fio_version_string[] =	__fio_stringify(FIO_MAJOR) "."	\
 					__fio_stringify(FIO_MINOR) "."	\
 					__fio_stringify(FIO_PATCH);
 #else
-static char fio_version_string[] =	__fio_stringify(FIO_MAJOR) "."	\
+const char fio_version_string[] =	__fio_stringify(FIO_MAJOR) "."	\
 					__fio_stringify(FIO_MINOR);
 #endif
 
