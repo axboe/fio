@@ -1361,7 +1361,6 @@ err:
 	if (td->o.write_iolog_file)
 		write_iolog_close(td);
 
-	options_mem_free(td);
 	td_set_runstate(td, TD_EXITED);
 	return (void *) (unsigned long) td->error;
 }
@@ -1773,11 +1772,17 @@ static void run_threads(void)
 
 int exec_run(void)
 {
+	struct thread_data *td;
+	int i;
+
 	if (nr_clients)
 		return fio_handle_clients();
-	if (exec_profile && load_profile(exec_profile))
-		return 1;
-
+	if (exec_profile) {
+		if (load_profile(exec_profile))
+			return 1;
+		free(exec_profile);
+		exec_profile = NULL;
+	}
 	if (!thread_number)
 		return 0;
 
@@ -1809,6 +1814,9 @@ int exec_run(void)
 					"agg-write_bw.log");
 		}
 	}
+
+	for_each_td(td, i)
+		fio_options_free(td);
 
 	cgroup_kill(cgroup_list);
 	sfree(cgroup_list);

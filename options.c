@@ -2347,7 +2347,10 @@ int fio_show_option_help(const char *opt)
 	return show_cmd_help(options, opt);
 }
 
-static void __options_mem(struct thread_data *td, int alloc)
+/*
+ * dupe FIO_OPT_STR_STORE options
+ */
+void options_mem_dupe(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
 	struct fio_option *opt;
@@ -2359,30 +2362,11 @@ static void __options_mem(struct thread_data *td, int alloc)
 			continue;
 
 		ptr = (void *) o + opt->off1;
-		if (*ptr) {
-			if (alloc)
-				*ptr = strdup(*ptr);
-			else {
-				free(*ptr);
-				*ptr = NULL;
-			}
-		}
+		if (!*ptr)
+			ptr = td_var(o, opt->off1);
+		if (*ptr)
+			*ptr = strdup(*ptr);
 	}
-}
-
-/*
- * dupe FIO_OPT_STR_STORE options
- */
-void options_mem_dupe(struct thread_data *td)
-{
-	__options_mem(td, 1);
-}
-
-void options_mem_free(struct thread_data fio_unused *td)
-{
-#if 0
-	__options_mem(td, 0);
-#endif
 }
 
 unsigned int fio_get_kb_base(void *data)
@@ -2464,4 +2448,9 @@ void del_opt_posval(const char *optname, const char *ival)
 		o->posval[i].ival = NULL;
 		o->posval[i].help = NULL;
 	}
+}
+
+void fio_options_free(struct thread_data *td)
+{
+	options_free(options, td);
 }

@@ -72,6 +72,7 @@ extern int show_cmd_help(struct fio_option *, const char *);
 extern void fill_default_options(void *, struct fio_option *);
 extern void option_init(struct fio_option *);
 extern void options_init(struct fio_option *);
+extern void options_free(struct fio_option *, void *);
 
 extern void strip_blank_front(char **);
 extern void strip_blank_end(char *);

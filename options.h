@@ -15,6 +15,8 @@ extern char *exec_profile;
 
 void add_opt_posval(const char *, const char *, const char *);
 void del_opt_posval(const char *, const char *);
+struct thread_data;
+void fio_options_free(struct thread_data *);
 
 static inline int o_match(struct fio_option *o, const char *opt)
 {

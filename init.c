@@ -318,6 +318,8 @@ static void put_job(struct thread_data *td)
 	if (td->error)
 		log_info("fio: %s\n", td->verror);
 
+	fio_options_free(td);
+
 	memset(&threads[td->thread_number - 1], 0, sizeof(*td));
 	thread_number--;
 }
@@ -1070,6 +1072,12 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag)
 	if (dump_cmdline)
 		log_info("\n");
 
+	i = 0;
+	while (i < nr_job_sections) {
+		free(job_sections[i]);
+		i++;
+	}
+
 	for (i = 0; i < num_opts; i++)
 		free(opts[i]);
 
@@ -1497,7 +1505,7 @@ int parse_options(int argc, char *argv[])
 	}
 
 	free(ini_file);
-	options_mem_free(&def_thread);
+	fio_options_free(&def_thread);
 
 	if (!thread_number) {
 		if (dump_cmdline)
