@@ -262,7 +262,7 @@ void show_group_stats(struct group_run_stats *rs)
 	const char *ddir_str[] = { "   READ", "  WRITE" };
 	int i;
 
-	log_info("Run status group %d (all jobs):\n", rs->groupid);
+	log_info("\nRun status group %d (all jobs):\n", rs->groupid);
 
 	for (i = 0; i <= DDIR_WRITE; i++) {
 		const int i2p = is_power_of_2(rs->kb_base);
@@ -455,24 +455,25 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			bw_str = "MB";
 		}
 
-		log_info("     bw (%s/s) : min=%5lu, max=%5lu, per=%3.2f%%,"
+		log_info("    bw (%s/s)  : min=%5lu, max=%5lu, per=%3.2f%%,"
 			 " avg=%5.02f, stdev=%5.02f\n", bw_str, min, max,
 							p_of_agg, mean, dev);
 	}
 }
 
-static void show_lat(double *io_u_lat, int nr, const char **ranges,
-		     const char *msg)
+static int show_lat(double *io_u_lat, int nr, const char **ranges,
+		    const char *msg)
 {
-	int new_line = 1, i, line = 0;
+	int new_line = 1, i, line = 0, shown = 0;
 
 	for (i = 0; i < nr; i++) {
 		if (io_u_lat[i] <= 0.0)
 			continue;
+		shown = 1;
 		if (new_line) {
 			if (line)
 				log_info("\n");
-			log_info("     lat (%s): ", msg);
+			log_info("    lat (%s) : ", msg);
 			new_line = 0;
 			line = 0;
 		}
@@ -483,6 +484,11 @@ static void show_lat(double *io_u_lat, int nr, const char **ranges,
 		if (line == 5)
 			new_line = 1;
 	}
+
+	if (shown)
+		log_info("\n");
+
+	return shown;
 }
 
 static void show_lat_u(double *io_u_lat_u)
@@ -505,9 +511,7 @@ static void show_lat_m(double *io_u_lat_m)
 static void show_latencies(double *io_u_lat_u, double *io_u_lat_m)
 {
 	show_lat_u(io_u_lat_u);
-	log_info("\n");
 	show_lat_m(io_u_lat_m);
-	log_info("\n");
 }
 
 void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
@@ -539,6 +543,10 @@ void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 		show_ddir_status(rs, ts, DDIR_READ);
 	if (ts->io_bytes[DDIR_WRITE])
 		show_ddir_status(rs, ts, DDIR_WRITE);
+
+	stat_calc_lat_u(ts, io_u_lat_u);
+	stat_calc_lat_m(ts, io_u_lat_m);
+	show_latencies(io_u_lat_u, io_u_lat_m);
 
 	runtime = ts->total_run_time;
 	if (runtime) {
@@ -573,14 +581,12 @@ void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 					io_u_dist[1], io_u_dist[2],
 					io_u_dist[3], io_u_dist[4],
 					io_u_dist[5], io_u_dist[6]);
-	log_info("     issued r/w/d: total=%lu/%lu/%lu, short=%lu/%lu/%lu\n",
+	log_info("     issued    : total=r=%lu/w=%lu/d=%lu,"
+				 " short=r=%lu/w=%lu/d=%lu\n",
 					ts->total_io_u[0], ts->total_io_u[1],
 					ts->total_io_u[2],
 					ts->short_io_u[0], ts->short_io_u[1],
 					ts->short_io_u[2]);
-	stat_calc_lat_u(ts, io_u_lat_u);
-	stat_calc_lat_m(ts, io_u_lat_m);
-	show_latencies(io_u_lat_u, io_u_lat_m);
 	if (ts->continue_on_error) {
 		log_info("     errors    : total=%lu, first_error=%d/<%s>\n",
 					ts->total_err_count,
