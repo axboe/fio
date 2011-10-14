@@ -441,11 +441,23 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	}
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg;
+		const char *bw_str = "KB";
 
 		p_of_agg = mean * 100 / (double) rs->agg[ddir];
-		log_info("     bw (KB/s) : min=%5lu, max=%5lu, per=%3.2f%%,"
-			 " avg=%5.02f, stdev=%5.02f\n", min, max, p_of_agg,
-							mean, dev);
+		if (p_of_agg > 100.0)
+			p_of_agg = 100.0;
+
+		if (mean > 999999.9) {
+			min /= 1000.0;
+			max /= 1000.0;
+			mean /= 1000.0;
+			dev /= 1000.0;
+			bw_str = "MB";
+		}
+
+		log_info("     bw (%s/s) : min=%5lu, max=%5lu, per=%3.2f%%,"
+			 " avg=%5.02f, stdev=%5.02f\n", bw_str, min, max,
+							p_of_agg, mean, dev);
 	}
 }
 
