@@ -183,8 +183,12 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 
 		if (first)
 			memcpy(cmdret, &cmd, sizeof(cmd));
-		else
-			assert(cmdret->opcode == cmd.opcode);
+		else if (cmdret->opcode != cmd.opcode) {
+			log_err("fio: fragment opcode mismatch (%d != %d)\n",
+					cmdret->opcode, cmd.opcode);
+			ret = 1;
+			break;
+		}
 
 		if (!cmd.pdu_len)
 			break;
