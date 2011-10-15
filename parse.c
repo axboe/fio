@@ -273,6 +273,8 @@ void strip_blank_front(char **p)
 {
 	char *s = *p;
 
+	if (!strlen(s))
+		return;
 	while (isspace((int) *s))
 		s++;
 
@@ -282,6 +284,9 @@ void strip_blank_front(char **p)
 void strip_blank_end(char *p)
 {
 	char *start = p, *s;
+
+	if (!strlen(p))
+		return;
 
 	s = strchr(p, ';');
 	if (s)
