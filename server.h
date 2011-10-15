@@ -35,7 +35,7 @@ struct fio_net_int_cmd {
 };
 
 enum {
-	FIO_SERVER_VER		= 5,
+	FIO_SERVER_VER		= 6,
 
 	FIO_SERVER_MAX_PDU	= 1024,
 
@@ -52,7 +52,8 @@ enum {
 	FIO_NET_CMD_START	= 11,
 	FIO_NET_CMD_STOP	= 12,
 	FIO_NET_CMD_DU		= 13,
-	FIO_NET_CMD_NR		= 14,
+	FIO_NET_CMD_RUN		= 14,
+	FIO_NET_CMD_NR		= 15,
 
 	FIO_NET_CMD_F_MORE	= 1UL << 0,
 

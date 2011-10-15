@@ -58,8 +58,9 @@ enum {
 	Client_created		= 0,
 	Client_connected	= 1,
 	Client_started		= 2,
-	Client_stopped		= 3,
-	Client_exited		= 4,
+	Client_running		= 3,
+	Client_stopped		= 4,
+	Client_exited		= 5,
 };
 
 static FLIST_HEAD(client_list);
@@ -824,6 +825,10 @@ static int handle_client(struct fio_client *client)
 		handle_probe(client, cmd);
 		free(cmd);
 		break;
+	case FIO_NET_CMD_RUN:
+		client->state = Client_running;
+		free(cmd);
+		break;
 	case FIO_NET_CMD_START:
 		client->state = Client_started;
 		free(cmd);
@@ -861,6 +866,8 @@ static void request_client_etas(void)
 			skipped++;
 			continue;
 		}
+		if (client->state != Client_running)
+			continue;
 
 		assert(!client->eta_in_flight);
 		flist_add_tail(&client->eta_list, &eta_list);

@@ -32,6 +32,7 @@ static int server_fd = -1;
 static char *fio_server_arg;
 static char *bind_sock;
 static struct sockaddr_in saddr_in;
+static int first_cmd_check;
 
 static const char *fio_server_ops[FIO_NET_CMD_NR] = {
 	"",
@@ -48,6 +49,7 @@ static const char *fio_server_ops[FIO_NET_CMD_NR] = {
 	"START",
 	"STOP",
 	"DISK_UTIL",
+	"RUN",
 };
 
 const char *fio_server_op(unsigned int op)
@@ -539,6 +541,8 @@ static int handle_connection(int sk, int block)
 
 void fio_server_idle_loop(void)
 {
+	if (!first_cmd_check)
+		fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_RUN, 0, NULL);
 	if (server_fd != -1)
 		handle_connection(server_fd, 0);
 }
