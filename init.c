@@ -964,7 +964,7 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag)
 			if (is_buf)
 				p = strsep(&file, "\n");
 			else
-				p = fgets(string, 4095, f);
+				p = fgets(string, 4096, f);
 			if (!p)
 				break;
 		}
