@@ -482,8 +482,8 @@ enum {
 #define __fio_stringify(x)	__fio_stringify_1(x)
 
 extern int exitall_on_terminate;
-extern int thread_number;
-extern int nr_process, nr_thread;
+extern unsigned int thread_number;
+extern unsigned int nr_process, nr_thread;
 extern int shm_id;
 extern int groupid;
 extern int terse_output;

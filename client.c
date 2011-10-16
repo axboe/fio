@@ -42,6 +42,8 @@ struct fio_client {
 	int skip_newline;
 	int is_sock;
 	int disk_stats_shown;
+	unsigned int jobs;
+	int error;
 
 	struct flist_head eta_list;
 	struct client_eta *eta_in_flight;
@@ -770,6 +772,22 @@ static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
 		client->name = strdup((char *) probe->hostname);
 }
 
+static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct cmd_start_pdu *pdu = (struct cmd_start_pdu *) cmd->payload;
+
+	client->state = Client_started;
+	client->jobs = le32_to_cpu(pdu->jobs);
+}
+
+static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct cmd_end_pdu *pdu = (struct cmd_end_pdu *) cmd->payload;
+
+	client->state = Client_stopped;
+	client->error = le32_to_cpu(pdu->error);
+}
+
 static int handle_client(struct fio_client *client)
 {
 	struct fio_net_cmd *cmd;
@@ -830,11 +848,11 @@ static int handle_client(struct fio_client *client)
 		free(cmd);
 		break;
 	case FIO_NET_CMD_START:
-		client->state = Client_started;
+		handle_start(client, cmd);
 		free(cmd);
 		break;
 	case FIO_NET_CMD_STOP:
-		client->state = Client_stopped;
+		handle_stop(client, cmd);
 		free(cmd);
 		break;
 	default:

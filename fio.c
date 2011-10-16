@@ -55,9 +55,9 @@ unsigned long page_size;
 	(char *) (((unsigned long) (buf) + page_mask) & ~page_mask)
 
 int groupid = 0;
-int thread_number = 0;
-int nr_process = 0;
-int nr_thread = 0;
+unsigned int thread_number = 0;
+unsigned int nr_process = 0;
+unsigned int nr_thread = 0;
 int shm_id = 0;
 int temp_stall_ts;
 unsigned long done_secs = 0;
@@ -1398,10 +1398,12 @@ static int fork_main(int shmid, int offset)
 /*
  * Run over the job map and reap the threads that have exited, if any.
  */
-static void reap_threads(int *nr_running, int *t_rate, int *m_rate)
+static void reap_threads(unsigned int *nr_running, unsigned int *t_rate,
+			 unsigned int *m_rate)
 {
 	struct thread_data *td;
-	int i, cputhreads, realthreads, pending, status, ret;
+	unsigned int cputhreads, realthreads, pending;
+	int i, status, ret;
 
 	/*
 	 * reap exited threads (TD_EXITED -> TD_REAPED)
@@ -1541,7 +1543,7 @@ static void run_threads(void)
 {
 	struct thread_data *td;
 	unsigned long spent;
-	int i, todo, nr_running, m_rate, t_rate, nr_started;
+	unsigned int i, todo, nr_running, m_rate, t_rate, nr_started;
 
 	if (fio_pin_memory())
 		return;

@@ -332,6 +332,8 @@ static int fio_server_send_quit_cmd(void)
 static int handle_job_cmd(struct fio_net_cmd *cmd)
 {
 	char *buf = (char *) cmd->payload;
+	struct cmd_start_pdu spdu;
+	struct cmd_end_pdu epdu;
 	int ret;
 
 	if (parse_jobs_ini(buf, 1, 0)) {
@@ -339,9 +341,14 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 		return -1;
 	}
 
-	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0, NULL);
+	spdu.jobs = cpu_to_le32(thread_number);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), 0);
 
 	ret = exec_run();
+
+	epdu.error = ret;
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_STOP, &epdu, sizeof(epdu), 0);
+
 	fio_server_send_quit_cmd();
 	reset_fio_state();
 	return ret;

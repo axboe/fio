@@ -95,6 +95,14 @@ struct cmd_line_pdu {
 	struct cmd_single_line_pdu options[0];
 };
 
+struct cmd_start_pdu {
+	uint32_t jobs;
+};
+
+struct cmd_end_pdu {
+	uint32_t error;
+};
+
 extern int fio_start_server(char *);
 extern int fio_server_text_output(const char *, size_t);
 extern int fio_server_log(const char *format, ...);
