@@ -1012,24 +1012,22 @@ void show_run_stats(void)
 			show_thread_status(ts, rs);
 	}
 
-	if (!terse_output) {
-		for (i = 0; i < groupid + 1; i++) {
-			rs = &runstats[i];
+	for (i = 0; i < groupid + 1; i++) {
+		rs = &runstats[i];
 
-			rs->groupid = i;
-			if (is_backend)
-				fio_server_send_gs(rs);
-			else
-				show_group_stats(rs);
-		}
-
+		rs->groupid = i;
 		if (is_backend)
-			fio_server_send_du();
-		else
-			show_disk_util(0);
-
-		free_disk_util();
+			fio_server_send_gs(rs);
+		else if (!terse_output)
+			show_group_stats(rs);
 	}
+
+	if (is_backend)
+		fio_server_send_du();
+	else if (!terse_output)
+		show_disk_util(0);
+
+	free_disk_util();
 
 	free(runstats);
 	free(threadstats);
