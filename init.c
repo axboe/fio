@@ -54,7 +54,7 @@ char **job_sections = NULL;
 int nr_job_sections = 0;
 char *exec_profile = NULL;
 int warnings_fatal = 0;
-int terse_version = 2;
+int terse_version = 3;
 int is_backend = 0;
 int nr_clients = 0;
 int log_syslog = 0;
@@ -1330,7 +1330,7 @@ int parse_cmd_line(int argc, char *argv[])
 			break;
 		case 'V':
 			terse_version = atoi(optarg);
-			if (terse_version != 3) {
+			if (!(terse_version == 2 || terse_version == 3)) {
 				log_err("fio: bad terse version format\n");
 				exit_val = 1;
 				do_exit++;
