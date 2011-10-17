@@ -786,6 +786,9 @@ static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	client->state = Client_stopped;
 	client->error = le32_to_cpu(pdu->error);
+
+	if (client->error)
+		log_info("client <%s>: exited with error %d\n", client->hostname, client->error);
 }
 
 static int handle_client(struct fio_client *client)
@@ -954,7 +957,7 @@ int fio_handle_clients(void)
 	struct fio_client *client;
 	struct flist_head *entry;
 	struct pollfd *pfds;
-	int i, ret = 0;
+	int i, ret = 0, retval = 0;
 
 	gettimeofday(&eta_tv, NULL);
 
@@ -1011,10 +1014,13 @@ int fio_handle_clients(void)
 				log_info("client: host=%s disconnected\n",
 						client->hostname);
 				remove_client(client);
+				retval = 1;
 			}
+			if (client->error)
+				retval = 1;
 		}
 	}
 
 	free(pfds);
-	return 0;
+	return retval;
 }
