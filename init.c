@@ -1107,32 +1107,34 @@ static void usage(const char *name)
 {
 	printf("fio %s\n", fio_version_string);
 	printf("%s [options] [job options] <job file(s)>\n", name);
-	printf("\t--debug=options\tEnable debug logging\n");
-	printf("\t--output\tWrite output to file\n");
-	printf("\t--timeout\tRuntime in seconds\n");
-	printf("\t--latency-log\tGenerate per-job latency logs\n");
-	printf("\t--bandwidth-log\tGenerate per-job bandwidth logs\n");
-	printf("\t--minimal\tMinimal (terse) output\n");
-	printf("\t--version\tPrint version info and exit\n");
-	printf("\t--terse-version=x Terse version output format\n");
-	printf("\t--help\t\tPrint this page\n");
-	printf("\t--cmdhelp=cmd\tPrint command help, \"all\" for all of"
+	printf("  --debug=options\tEnable debug logging. May be one/more of:\n"
+		"\t\t\tprocess,file,io,mem,blktrace,verify,random,parse,\n"
+		"\t\t\tdiskutil,job,mutex,profile,time,net\n");
+	printf("  --output\t\tWrite output to file\n");
+	printf("  --timeout\t\tRuntime in seconds\n");
+	printf("  --latency-log\t\tGenerate per-job latency logs\n");
+	printf("  --bandwidth-log\tGenerate per-job bandwidth logs\n");
+	printf("  --minimal\t\tMinimal (terse) output\n");
+	printf("  --version\t\tPrint version info and exit\n");
+	printf("  --terse-version=x\tTerse version output format to 'x'\n");
+	printf("  --help\t\tPrint this page\n");
+	printf("  --cmdhelp=cmd\t\tPrint command help, \"all\" for all of"
 		" them\n");
-	printf("\t--showcmd\tTurn a job file into command line options\n");
-	printf("\t--eta=when\tWhen ETA estimate should be printed\n");
-	printf("\t          \tMay be \"always\", \"never\" or \"auto\"\n");
-	printf("\t--readonly\tTurn on safety read-only checks, preventing"
+	printf("  --showcmd\t\tTurn a job file into command line options\n");
+	printf("  --eta=when\t\tWhen ETA estimate should be printed\n");
+	printf("            \t\tMay be \"always\", \"never\" or \"auto\"\n");
+	printf("  --readonly\t\tTurn on safety read-only checks, preventing"
 		" writes\n");
-	printf("\t--section=name\tOnly run specified section in job file\n");
-	printf("\t--alloc-size=kb\tSet smalloc pool to this size in kb"
+	printf("  --section=name\tOnly run specified section in job file\n");
+	printf("  --alloc-size=kb\tSet smalloc pool to this size in kb"
 		" (def 1024)\n");
-	printf("\t--warnings-fatal Fio parser warnings are fatal\n");
-	printf("\t--max-jobs\tMaximum number of threads/processes to support\n");
-	printf("\t--server=args\tStart a backend fio server\n");
-	printf("\t--daemonize=pidfile Background fio server, write pid to file\n");
-	printf("\t--client=hostname Talk to remote backend fio server at hostname\n");
+	printf("  --warnings-fatal\tFio parser warnings are fatal\n");
+	printf("  --max-jobs=nr\t\tMaximum number of threads/processes to support\n");
+	printf("  --server=args\t\tStart a backend fio server\n");
+	printf("  --daemonize=pidfile\tBackground fio server, write pid to file\n");
+	printf("  --client=hostname\tTalk to remote backend fio server at hostname\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
-	printf("\n                   Jens Axboe <jaxboe@fusionio.com>\n");
+	printf("\n                 Jens Axboe <jaxboe@fusionio.com>\n");
 }
 
 #ifdef FIO_INC_DEBUG
