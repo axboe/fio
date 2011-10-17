@@ -1015,8 +1015,7 @@ int fio_handle_clients(void)
 						client->hostname);
 				remove_client(client);
 				retval = 1;
-			}
-			if (client->error)
+			} else if (client->error)
 				retval = 1;
 		}
 	}
