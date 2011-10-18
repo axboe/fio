@@ -126,7 +126,16 @@ int getopt_long_only(int argc, char *const *argv, const char *optstring,
 			} else {
 				/* Argument-taking option with non-attached
 				   argument */
-				if (argv[optind + 1]) {
+				if (osptr[2] == ':') {
+					if (argv[optind + 1]) {
+						optarg = (char *)argv[optind+1];
+						optind += 2;
+					} else {
+						optarg = NULL;
+						optind++;
+					}
+					return opt;
+				} else if (argv[optind + 1]) {
 					optarg = (char *)argv[optind+1];
 					optind += 2;
 				} else {
