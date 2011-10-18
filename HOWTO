@@ -1382,8 +1382,7 @@ Split up, the format is as follows:
 	Disk utilization: Disk name, Read ios, write ios,
 			  Read merges, write merges,
 			  Read ticks, write ticks,
-			  Read in-queue time, write in-queue time,
-			  Disk utilization percentage
+			  Time spent in queue, disk utilization percentage
 	Additional Info (dependant on continue_on_error, default off): total # errors, first error code 
 	
 	Additional Info (dependant on description being set): Text description

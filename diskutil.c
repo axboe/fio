@@ -550,7 +550,7 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 					dus->ticks[0], dus->ticks[1],
 					dus->time_in_queue, util);
 	} else {
-		log_info(";%s;%u;%u;%u;%u;%lu;%lu;%u;%u;%u;%u;%3.2f%%",
+		log_info(";%s;%u;%u;%u;%u;%u;%u;%u;%3.2f%%",
 					dus->name, dus->ios[0], dus->ios[1],
 					dus->merges[0], dus->merges[1],
 					dus->ticks[0], dus->ticks[1],
