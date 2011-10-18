@@ -1560,7 +1560,7 @@ static void run_threads(void)
 						nr_thread > 1 ? "s" : "");
 		if (nr_process) {
 			if (nr_thread)
-				printf(" and ");
+				log_info(" and ");
 			log_info("%d process%s", nr_process,
 						nr_process > 1 ? "es" : "");
 		}
