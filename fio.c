@@ -833,7 +833,7 @@ sync_done:
 	}
 
 	if (td->trim_entries)
-		printf("trim entries %ld\n", td->trim_entries);
+		log_err("fio: %d trim entries leaked?\n", td->trim_entries);
 
 	if (td->o.fill_device && td->error == ENOSPC) {
 		td->error = 0;
