@@ -628,11 +628,6 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	else
 		log_info(";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
 
-	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
-		log_info(";%lu;%lu;%f;%f", min, max, mean, dev);
-	else
-		log_info(";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
-
 	if (ts->clat_percentiles) {
 		len = calc_clat_percentiles(ts->io_u_plat[ddir],
 					ts->clat_stat[ddir].samples,
@@ -648,6 +643,12 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 		}
 		log_info(";%2.2f%%=%u", ts->percentile_list[i].u.f, ovals[i]);
 	}
+
+	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
+		log_info(";%lu;%lu;%f;%f", min, max, mean, dev);
+	else
+		log_info(";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
+
 	if (ovals)
 		free(ovals);
 
