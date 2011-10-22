@@ -936,7 +936,7 @@ static int init_io_u(struct thread_data *td)
 		dprint(FD_MEM, "io_u alloc %p, index %u\n", io_u, i);
 
 		if (!(td->io_ops->flags & FIO_NOIO)) {
-			io_u->buf = p + max_bs * i;
+			io_u->buf = p;
 			dprint(FD_MEM, "io_u %p, mem %p\n", io_u, io_u->buf);
 
 			if (td_write(td))
@@ -953,6 +953,7 @@ static int init_io_u(struct thread_data *td)
 		io_u->index = i;
 		io_u->flags = IO_U_F_FREE;
 		flist_add(&io_u->list, &td->io_u_freelist);
+		p += max_bs;
 	}
 
 	return 0;
