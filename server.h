@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <sys/time.h>
+#include <netinet/in.h>
 
 #include "stat.h"
 #include "os/os.h"
@@ -109,7 +110,7 @@ extern int fio_server_log(const char *format, ...);
 extern int fio_net_send_cmd(int, uint16_t, const void *, off_t, uint64_t);
 extern int fio_net_send_simple_cmd(int, uint16_t, uint64_t, struct flist_head *);
 extern void fio_server_set_arg(const char *);
-extern int fio_server_parse_string(const char *, char **, int *, int *, struct in_addr *);
+extern int fio_server_parse_string(const char *, char **, int *, int *, struct in_addr *, struct in6_addr *, int *);
 extern const char *fio_server_op(unsigned int);
 extern void fio_server_got_signal(int);
 

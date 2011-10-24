@@ -32,7 +32,9 @@ static int server_fd = -1;
 static char *fio_server_arg;
 static char *bind_sock;
 static struct sockaddr_in saddr_in;
+static struct sockaddr_in6 saddr_in6;
 static int first_cmd_check;
+static int use_ipv6;
 
 static const char *fio_server_ops[FIO_NET_CMD_NR] = {
 	"",
@@ -814,9 +816,15 @@ int fio_server_log(const char *format, ...)
 
 static int fio_init_server_ip(void)
 {
+	struct sockaddr *addr;
+	fio_socklen_t socklen;
 	int sk, opt;
 
-	sk = socket(AF_INET, SOCK_STREAM, 0);
+	if (use_ipv6)
+		sk = socket(AF_INET6, SOCK_STREAM, 0);
+	else
+		sk = socket(AF_INET, SOCK_STREAM, 0);
+
 	if (sk < 0) {
 		log_err("fio: socket: %s\n", strerror(errno));
 		return -1;
@@ -836,9 +844,17 @@ static int fio_init_server_ip(void)
 	}
 #endif
 
-	saddr_in.sin_family = AF_INET;
+	if (use_ipv6) {
+		addr = (struct sockaddr *) &saddr_in6;
+		socklen = sizeof(saddr_in6);
+		saddr_in6.sin6_family = AF_INET6;
+	} else {
+		addr = (struct sockaddr *) &saddr_in;
+		socklen = sizeof(saddr_in);
+		saddr_in.sin_family = AF_INET;
+	}
 
-	if (bind(sk, (struct sockaddr *) &saddr_in, sizeof(saddr_in)) < 0) {
+	if (bind(sk, addr, socklen) < 0) {
 		log_err("fio: bind: %s\n", strerror(errno));
 		close(sk);
 		return -1;
@@ -894,9 +910,27 @@ static int fio_init_server_connection(void)
 	if (sk < 0)
 		return sk;
 
-	if (!bind_sock)
-		sprintf(bind_str, "%s:%u", inet_ntoa(saddr_in.sin_addr), fio_net_port);
-	else
+	if (!bind_sock) {
+		char *p, port[16];
+		const void *src;
+		int af;
+
+		if (use_ipv6) {
+			af = AF_INET6;
+			src = &saddr_in6.sin6_addr;
+		} else {
+			af = AF_INET;
+			src = &saddr_in.sin_addr;
+		}
+
+		p = (char *) inet_ntop(af, src, bind_str, sizeof(bind_str));
+
+		sprintf(port, ",%u", fio_net_port);
+		if (p)
+			strcat(p, port);
+		else
+			strcpy(bind_str, port);
+	} else
 		strcpy(bind_str, bind_sock);
 
 	log_info("fio: server listening on %s\n", bind_str);
@@ -910,11 +944,13 @@ static int fio_init_server_connection(void)
 }
 
 int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
-			    int *port, struct in_addr *inp)
+			    int *port, struct in_addr *inp,
+			    struct in6_addr *inp6, int *ipv6)
 {
 	*ptr = NULL;
 	*is_sock = 0;
 	*port = fio_net_port;
+	*ipv6 = 0;
 
 	if (!strncmp(str, "sock:", 5)) {
 		*ptr = strdup(str + 5);
@@ -922,14 +958,19 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 	} else {
 		const char *host = str;
 		char *portp;
-		int lport = 0;
+		int ret, lport = 0;
 
 		/*
 		 * Is it ip:<ip or host>:port
 		 */
 		if (!strncmp(host, "ip:", 3))
 			host += 3;
-		else if (host[0] == ':') {
+		else if (!strncmp(host, "ip4:", 4))
+			host += 4;
+		else if (!strncmp(host, "ip6:", 4)) {
+			host += 4;
+			*ipv6 = 1;
+		} else if (host[0] == ':') {
 			/* String is :port */
 			host++;
 			lport = atoi(host);
@@ -946,7 +987,7 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 		 * If no port seen yet, check if there's a last ':' at the end
 		 */
 		if (!lport) {
-			portp = strchr(host, ':');
+			portp = strchr(host, ',');
 			if (portp) {
 				*portp = '\0';
 				portp++;
@@ -961,22 +1002,46 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 		if (lport)
 			*port = lport;
 
+		if (!strlen(host))
+			goto done;
+
 		*ptr = strdup(host);
 
-		if (inet_aton(host, inp) != 1) {
+		if (*ipv6)
+			ret = inet_pton(AF_INET6, host, inp6);
+		else
+			ret = inet_pton(AF_INET, host, inp);
+
+		if (ret != 1) {
 			struct hostent *hent;
 
 			hent = gethostbyname(host);
 			if (!hent) {
+				log_err("fio: failed to resolve <%s>\n", host);
+err:
 				free(*ptr);
 				*ptr = NULL;
 				return 1;
 			}
 
-			memcpy(inp, hent->h_addr, 4);
+			if (*ipv6) {
+				if (hent->h_addrtype != AF_INET6) {
+					log_info("fio: falling back to IPv4\n");
+					*ipv6 = 0;
+				} else
+					memcpy(inp6, hent->h_addr_list[0], 16);
+			}
+			if (!*ipv6) {
+				if (hent->h_addrtype != AF_INET) {
+					log_err("fio: lookup type mismatch\n");
+					goto err;
+				}
+				memcpy(inp, hent->h_addr_list[0], 4);
+			}
 		}
 	}
 
+done:
 	if (*port == 0)
 		*port = fio_net_port;
 
@@ -1006,7 +1071,8 @@ static int fio_handle_server_arg(void)
 		goto out;
 
 	ret = fio_server_parse_string(fio_server_arg, &bind_sock, &is_sock,
-					&port, &saddr_in.sin_addr);
+					&port, &saddr_in.sin_addr,
+					&saddr_in6.sin6_addr, &use_ipv6);
 
 	if (!is_sock && bind_sock) {
 		free(bind_sock);
@@ -1016,6 +1082,7 @@ static int fio_handle_server_arg(void)
 out:
 	fio_net_port = port;
 	saddr_in.sin_port = htons(port);
+	saddr_in6.sin6_port = htons(port);
 	return ret;
 }
 

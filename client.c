@@ -29,8 +29,11 @@ struct fio_client {
 	struct flist_head list;
 	struct flist_head hash_list;
 	struct flist_head arg_list;
-	struct sockaddr_in addr;
-	struct sockaddr_un addr_un;
+	union {
+		struct sockaddr_in addr;
+		struct sockaddr_in6 addr6;
+		struct sockaddr_un addr_un;
+	};
 	char *hostname;
 	int port;
 	int fd;
@@ -44,6 +47,7 @@ struct fio_client {
 	int disk_stats_shown;
 	unsigned int jobs;
 	int error;
+	int ipv6;
 
 	struct flist_head eta_list;
 	struct client_eta *eta_in_flight;
@@ -204,7 +208,9 @@ int fio_client_add(const char *hostname, void **cookie)
 
 	if (fio_server_parse_string(hostname, &client->hostname,
 					&client->is_sock, &client->port,
-					&client->addr.sin_addr))
+					&client->addr.sin_addr,
+					&client->addr6.sin6_addr,
+					&client->ipv6))
 		return -1;
 
 	client->fd = -1;
@@ -220,18 +226,31 @@ int fio_client_add(const char *hostname, void **cookie)
 
 static int fio_client_connect_ip(struct fio_client *client)
 {
-	int fd;
+	struct sockaddr *addr;
+	fio_socklen_t socklen;
+	int fd, domain;
 
-	client->addr.sin_family = AF_INET;
-	client->addr.sin_port = htons(client->port);
+	if (client->ipv6) {
+		client->addr6.sin6_family = AF_INET6;
+		client->addr6.sin6_port = htons(client->port);
+		domain = AF_INET6;
+		addr = (struct sockaddr *) &client->addr6;
+		socklen = sizeof(client->addr6);
+	} else {
+		client->addr.sin_family = AF_INET;
+		client->addr.sin_port = htons(client->port);
+		domain = AF_INET;
+		addr = (struct sockaddr *) &client->addr;
+		socklen = sizeof(client->addr);
+	}
 
-	fd = socket(AF_INET, SOCK_STREAM, 0);
+	fd = socket(domain, SOCK_STREAM, 0);
 	if (fd < 0) {
 		log_err("fio: socket: %s\n", strerror(errno));
 		return -1;
 	}
 
-	if (connect(fd, (struct sockaddr *) &client->addr, sizeof(client->addr)) < 0) {
+	if (connect(fd, addr, socklen) < 0) {
 		log_err("fio: connect: %s\n", strerror(errno));
 		log_err("fio: failed to connect to %s:%u\n", client->hostname,
 								client->port);

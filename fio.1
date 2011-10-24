@@ -1221,28 +1221,32 @@ To start the server, you would do:
 \fBfio \-\-server=args\fR
 
 on that machine, where args defines what fio listens to. The arguments
-are of the form 'type:hostname or IP:port'. 'type' is either 'ip' for
-TCP/IP, or 'sock' for a local unix domain socket. 'hostname' is either
-a hostname or IP address, and 'port' is the port to listen to (only valid
-for TCP/IP, not a local socket). Some examples:
+are of the form 'type:hostname or IP:port'. 'type' is either 'ip' (or ip4)
+for TCP/IP v4, 'ip6' for TCP/IP v6, or 'sock' for a local unix domain socket.
+'hostname' is either a hostname or IP address, and 'port' is the port to
+listen to (only valid for TCP/IP, not a local socket). Some examples:
 
 1) fio --server
 
    Start a fio server, listening on all interfaces on the default port (8765).
 
-2) fio --server=ip:hostname:4444
+2) fio --server=ip:hostname,4444
 
    Start a fio server, listening on IP belonging to hostname and on port 4444.
 
-3) fio --server=:4444
+3) fio --server=ip6:::1,4444
+
+   Start a fio server, listening on IPv6 localhost ::1 and on port 4444.
+
+4) fio --server=,4444
 
    Start a fio server, listening on all interfaces on port 4444.
 
-4) fio --server=1.2.3.4
+5) fio --server=1.2.3.4
 
    Start a fio server, listening on IP 1.2.3.4 on the default port.
 
-5) fio --server=sock:/tmp/fio.sock
+6) fio --server=sock:/tmp/fio.sock
 
    Start a fio server, listening on the local socket /tmp/fio.sock.
 
