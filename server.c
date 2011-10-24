@@ -943,6 +943,18 @@ static int fio_init_server_connection(void)
 	return sk;
 }
 
+/*
+ * Parse a host/ip/port string. Reads from 'str'.
+ *
+ * Outputs:
+ *
+ * For IPv4:
+ *	*ptr is the host, *port is the port, inp is the destination.
+ * For IPv6:
+ *	*ptr is the host, *port is the port, inp6 is the dest, and *ipv6 is 1.
+ * For local domain sockets:
+ *	*ptr is the filename, *is_sock is 1.
+ */
 int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 			    int *port, struct in_addr *inp,
 			    struct in6_addr *inp6, int *ipv6)
