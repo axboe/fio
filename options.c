@@ -1558,7 +1558,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.name	= "verify_dump",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(verify_dump),
-		.def	= "1",
+		.def	= "0",
 		.help	= "Dump contents of good and bad blocks on failure",
 		.parent = "verify",
 	},
