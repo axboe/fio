@@ -959,6 +959,10 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 			    int *port, struct in_addr *inp,
 			    struct in6_addr *inp6, int *ipv6)
 {
+	const char *host = str;
+	char *portp;
+	int ret, lport = 0;
+
 	*ptr = NULL;
 	*is_sock = 0;
 	*port = fio_net_port;
@@ -967,93 +971,91 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 	if (!strncmp(str, "sock:", 5)) {
 		*ptr = strdup(str + 5);
 		*is_sock = 1;
-	} else {
-		const char *host = str;
-		char *portp;
-		int ret, lport = 0;
 
-		/*
-		 * Is it ip:<ip or host>:port
-		 */
-		if (!strncmp(host, "ip:", 3))
-			host += 3;
-		else if (!strncmp(host, "ip4:", 4))
-			host += 4;
-		else if (!strncmp(host, "ip6:", 4)) {
-			host += 4;
-			*ipv6 = 1;
-		} else if (host[0] == ':') {
-			/* String is :port */
-			host++;
-			lport = atoi(host);
+		return 0;
+	}
+
+	/*
+	 * Is it ip:<ip or host>:port
+	 */
+	if (!strncmp(host, "ip:", 3))
+		host += 3;
+	else if (!strncmp(host, "ip4:", 4))
+		host += 4;
+	else if (!strncmp(host, "ip6:", 4)) {
+		host += 4;
+		*ipv6 = 1;
+	} else if (host[0] == ':') {
+		/* String is :port */
+		host++;
+		lport = atoi(host);
+		if (!lport || lport > 65535) {
+			log_err("fio: bad server port %u\n", port);
+			return 1;
+		}
+		/* no hostname given, we are done */
+		*port = lport;
+		return 0;
+	}
+
+	/*
+	 * If no port seen yet, check if there's a last ':' at the end
+	 */
+	if (!lport) {
+		portp = strchr(host, ',');
+		if (portp) {
+			*portp = '\0';
+			portp++;
+			lport = atoi(portp);
 			if (!lport || lport > 65535) {
 				log_err("fio: bad server port %u\n", port);
 				return 1;
 			}
-			/* no hostname given, we are done */
-			*port = lport;
-			return 0;
+		}
+	}
+
+	if (lport)
+		*port = lport;
+
+	if (!strlen(host))
+		return 0;
+
+	*ptr = strdup(host);
+
+	if (*ipv6)
+		ret = inet_pton(AF_INET6, host, inp6);
+	else
+		ret = inet_pton(AF_INET, host, inp);
+
+	if (ret != 1) {
+		struct hostent *hent;
+
+		hent = gethostbyname(host);
+		if (!hent) {
+			log_err("fio: failed to resolve <%s>\n", host);
+			free(*ptr);
+			*ptr = NULL;
+			return 1;
 		}
 
-		/*
-		 * If no port seen yet, check if there's a last ':' at the end
-		 */
-		if (!lport) {
-			portp = strchr(host, ',');
-			if (portp) {
-				*portp = '\0';
-				portp++;
-				lport = atoi(portp);
-				if (!lport || lport > 65535) {
-					log_err("fio: bad server port %u\n", port);
-					return 1;
-				}
-			}
+		if (*ipv6) {
+			if (hent->h_addrtype != AF_INET6) {
+				log_info("fio: falling back to IPv4\n");
+				*ipv6 = 0;
+			} else
+				memcpy(inp6, hent->h_addr_list[0], 16);
 		}
-
-		if (lport)
-			*port = lport;
-
-		if (!strlen(host))
-			goto done;
-
-		*ptr = strdup(host);
-
-		if (*ipv6)
-			ret = inet_pton(AF_INET6, host, inp6);
-		else
-			ret = inet_pton(AF_INET, host, inp);
-
-		if (ret != 1) {
-			struct hostent *hent;
-
-			hent = gethostbyname(host);
-			if (!hent) {
-				log_err("fio: failed to resolve <%s>\n", host);
-err:
+		if (!*ipv6) {
+			if (hent->h_addrtype != AF_INET) {
+				log_err("fio: lookup type mismatch\n");
 				free(*ptr);
 				*ptr = NULL;
 				return 1;
 			}
-
-			if (*ipv6) {
-				if (hent->h_addrtype != AF_INET6) {
-					log_info("fio: falling back to IPv4\n");
-					*ipv6 = 0;
-				} else
-					memcpy(inp6, hent->h_addr_list[0], 16);
-			}
-			if (!*ipv6) {
-				if (hent->h_addrtype != AF_INET) {
-					log_err("fio: lookup type mismatch\n");
-					goto err;
-				}
-				memcpy(inp, hent->h_addr_list[0], 4);
-			}
+			memcpy(inp, hent->h_addr_list[0], 4);
 		}
 	}
 
-done:
 	if (*port == 0)
 		*port = fio_net_port;
 
