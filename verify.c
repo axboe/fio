@@ -269,6 +269,9 @@ static void dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
 	struct io_u dummy;
 	void *buf;
 
+	if (!td->o.verify_dump)
+		return;
+
 	/*
 	 * Dump the contents we just read off disk
 	 */
