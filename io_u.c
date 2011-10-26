@@ -597,13 +597,12 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	td_io_u_lock(td);
 
-	io_u->flags |= IO_U_F_FREE;
-	io_u->flags &= ~IO_U_F_FREE_DEF;
-
-	if (io_u->file)
+	if (io_u->file && !(io_u->flags & IO_U_F_FREE_DEF))
 		put_file_log(td, io_u->file);
-
 	io_u->file = NULL;
+	io_u->flags &= ~IO_U_F_FREE_DEF;
+	io_u->flags |= IO_U_F_FREE;
+
 	if (io_u->flags & IO_U_F_IN_CUR_DEPTH)
 		td->cur_depth--;
 	flist_del_init(&io_u->list);
