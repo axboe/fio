@@ -602,10 +602,8 @@ int verify_io_u_async(struct thread_data *td, struct io_u *io_u)
 	if (io_u->file)
 		put_file_log(td, io_u->file);
 
-	io_u->file = NULL;
-
 	pthread_mutex_lock(&td->io_u_lock);
-	
+
 	if (io_u->flags & IO_U_F_IN_CUR_DEPTH) {
 		td->cur_depth--;
 		io_u->flags &= ~IO_U_F_IN_CUR_DEPTH;
