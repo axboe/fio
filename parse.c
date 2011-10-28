@@ -199,9 +199,9 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
 	if (len < 2)
 		return __get_mult_bytes(str, data, percent);
 
-        /*
-         * Go forward until we hit a non-digit, or +/- sign
-         */
+	/*
+	 * Go forward until we hit a non-digit, or +/- sign
+	 */
 	while ((p - str) <= len) {
 		if (!isdigit((int) *p) &&
 		    (((*p != '+') && (*p != '-')) || digit_seen))
@@ -798,83 +798,28 @@ int parse_cmd_option(const char *opt, const char *val,
 	return 1;
 }
 
-/*
- * Return a copy of the input string with substrings of the form ${VARNAME}
- * substituted with the value of the environment variable VARNAME.  The
- * substitution always occurs, even if VARNAME is empty or the corresponding
- * environment variable undefined.
- */
-static char *option_dup_subs(const char *opt)
-{
-	char out[OPT_LEN_MAX+1];
-	char in[OPT_LEN_MAX+1];
-	char *outptr = out;
-	char *inptr = in;
-	char *ch1, *ch2, *env;
-	ssize_t nchr = OPT_LEN_MAX;
-	size_t envlen;
-
-	if (strlen(opt) + 1 > OPT_LEN_MAX) {
-		log_err("OPT_LEN_MAX (%d) is too small\n", OPT_LEN_MAX);
-		return NULL;
-	}
-
-	in[OPT_LEN_MAX] = '\0';
-	strncpy(in, opt, OPT_LEN_MAX);
-
-	while (*inptr && nchr > 0) {
-		if (inptr[0] == '$' && inptr[1] == '{') {
-			ch2 = strchr(inptr, '}');
-			if (ch2 && inptr+1 < ch2) {
-				ch1 = inptr+2;
-				inptr = ch2+1;
-				*ch2 = '\0';
-
-				env = getenv(ch1);
-				if (env) {
-					envlen = strlen(env);
-					if (envlen <= nchr) {
-						memcpy(outptr, env, envlen);
-						outptr += envlen;
-						nchr -= envlen;
-					}
-				}
-
-				continue;
-			}
-		}
-
-		*outptr++ = *inptr++;
-		--nchr;
-	}
-
-	*outptr = '\0';
-	return strdup(out);
-}
-
-int parse_option(const char *opt, struct fio_option *options, void *data)
+int parse_option(const char *opt, const char *input,
+		 struct fio_option *options, void *data)
 {
 	struct fio_option *o;
-	char *post, *tmp;
+	char *post;
 
-	tmp = option_dup_subs(opt);
-	if (!tmp)
+	if (!opt) {
+		log_err("fio: failed parsing %s\n", input);
 		return 1;
+	}
 
-	o = get_option(tmp, options, &post);
+	o = get_option(opt, options, &post);
 	if (!o) {
-		log_err("Bad option <%s>\n", tmp);
-		free(tmp);
+		log_err("Bad option <%s>\n", input);
 		return 1;
 	}
 
 	if (!handle_option(o, post, data)) {
-		free(tmp);
 		return 0;
 	}
 
-	log_err("fio: failed parsing %s\n", opt);
-	free(tmp);
+	log_err("fio: failed parsing %s\n", input);
 	return 1;
 }
 

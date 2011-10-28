@@ -2218,15 +2218,15 @@ void fio_keywords_init(void)
 
 static char *bc_calc(char *str)
 {
-	char *buf, *tmp, opt[80];
+	char buf[128], *tmp;
 	FILE *f;
 	int ret;
 
 	/*
 	 * No math, just return string
 	 */
-	if (!strchr(str, '+') && !strchr(str, '-') && !strchr(str, '*') &&
-	    !strchr(str, '/'))
+	if ((!strchr(str, '+') && !strchr(str, '-') && !strchr(str, '*') &&
+	     !strchr(str, '/')) || strchr(str, '\''))
 		return str;
 
 	/*
@@ -2237,37 +2237,89 @@ static char *bc_calc(char *str)
 		return str;
 
 	tmp++;
-	memset(opt, 0, sizeof(opt));
-	strncpy(opt, str, tmp - str);
 
-	buf = malloc(128);
+	/*
+	 * Prevent buffer overflows; such a case isn't reasonable anyway
+	 */
+	if (strlen(str) >= 128 || strlen(tmp) > 100)
+		return str;
 
 	sprintf(buf, "which %s > /dev/null", BC_APP);
 	if (system(buf)) {
 		log_err("fio: bc is needed for performing math\n");
-		free(buf);
 		return NULL;
 	}
 
-	sprintf(buf, "echo %s | %s", tmp, BC_APP);
+	sprintf(buf, "echo '%s' | %s", tmp, BC_APP);
 	f = popen(buf, "r");
 	if (!f) {
-		free(buf);
 		return NULL;
 	}
 
-	ret = fread(buf, 1, 128, f);
+	ret = fread(&buf[tmp - str], 1, 128 - (tmp - str), f);
 	if (ret <= 0) {
-		free(buf);
 		return NULL;
 	}
 
-	buf[ret - 1] = '\0';
-	strcat(opt, buf);
-	strcpy(buf, opt);
 	pclose(f);
+	buf[(tmp - str) + ret - 1] = '\0';
+	memcpy(buf, str, tmp - str);
 	free(str);
-	return buf;
+	return strdup(buf);
+}
+
+/*
+ * Return a copy of the input string with substrings of the form ${VARNAME}
+ * substituted with the value of the environment variable VARNAME.  The
+ * substitution always occurs, even if VARNAME is empty or the corresponding
+ * environment variable undefined.
+ */
+static char *option_dup_subs(const char *opt)
+{
+	char out[OPT_LEN_MAX+1];
+	char in[OPT_LEN_MAX+1];
+	char *outptr = out;
+	char *inptr = in;
+	char *ch1, *ch2, *env;
+	ssize_t nchr = OPT_LEN_MAX;
+	size_t envlen;
+
+	if (strlen(opt) + 1 > OPT_LEN_MAX) {
+		log_err("OPT_LEN_MAX (%d) is too small\n", OPT_LEN_MAX);
+		return NULL;
+	}
+
+	in[OPT_LEN_MAX] = '\0';
+	strncpy(in, opt, OPT_LEN_MAX);
+
+	while (*inptr && nchr > 0) {
+		if (inptr[0] == '$' && inptr[1] == '{') {
+			ch2 = strchr(inptr, '}');
+			if (ch2 && inptr+1 < ch2) {
+				ch1 = inptr+2;
+				inptr = ch2+1;
+				*ch2 = '\0';
+
+				env = getenv(ch1);
+				if (env) {
+					envlen = strlen(env);
+					if (envlen <= nchr) {
+						memcpy(outptr, env, envlen);
+						outptr += envlen;
+						nchr -= envlen;
+					}
+				}
+
+				continue;
+			}
+		}
+
+		*outptr++ = *inptr++;
+		--nchr;
+	}
+
+	*outptr = '\0';
+	return strdup(out);
 }
 
 /*
@@ -2277,6 +2329,7 @@ static char *fio_keyword_replace(char *opt)
 {
 	char *s;
 	int i;
+	int docalc = 0;
 
 	for (i = 0; fio_keywords[i].word != NULL; i++) {
 		struct fio_keyword *kw = &fio_keywords[i];
@@ -2306,29 +2359,51 @@ static char *fio_keyword_replace(char *opt)
 			 * replace opt and free the old opt
 			 */
 			opt = new;
-			//free(o_org);
+			free(o_org);
 
-			/*
-			 * Check for potential math and invoke bc, if possible
-			 */
-			opt = bc_calc(opt);
+			docalc = 1;
 		}
 	}
 
+	/*
+	 * Check for potential math and invoke bc, if possible
+	 */
+	if (docalc)
+		opt = bc_calc(opt);
+
 	return opt;
+}
+
+static char **dup_and_sub_options(char **opts, int num_opts)
+{
+	int i;
+	char **opts_copy = malloc(num_opts * sizeof(*opts));
+	for (i = 0; i < num_opts; i++) {
+		opts_copy[i] = option_dup_subs(opts[i]);
+		if (!opts_copy[i])
+			continue;
+		opts_copy[i] = fio_keyword_replace(opts_copy[i]);
+	}
+	return opts_copy;
 }
 
 int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 {
 	int i, ret;
+	char **opts_copy;
 
 	sort_options(opts, options, num_opts);
+	opts_copy = dup_and_sub_options(opts, num_opts);
 
 	for (ret = 0, i = 0; i < num_opts; i++) {
-		opts[i] = fio_keyword_replace(opts[i]);
-		ret |= parse_option(opts[i], options, td);
+		ret |= parse_option(opts_copy[i], opts[i], options, td);
+
+		if (opts_copy[i])
+			free(opts_copy[i]);
+		opts_copy[i] = NULL;
 	}
 
+	free(opts_copy);
 	return ret;
 }
 
