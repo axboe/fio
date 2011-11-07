@@ -638,7 +638,7 @@ static void convert_agg(struct disk_util_agg *agg)
 	agg->io_ticks		= le32_to_cpu(agg->io_ticks);
 	agg->time_in_queue	= le32_to_cpu(agg->time_in_queue);
 	agg->slavecount		= le32_to_cpu(agg->slavecount);
-	agg->max_util.u.f	= __le64_to_cpu(fio_uint64_to_double(agg->max_util.u.i));
+	agg->max_util.u.f	= fio_uint64_to_double(__le64_to_cpu(agg->max_util.u.i));
 }
 
 static void convert_dus(struct disk_util_stat *dus)
