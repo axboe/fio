@@ -1116,7 +1116,7 @@ static void usage(const char *name)
 	printf("  --bandwidth-log\tGenerate per-job bandwidth logs\n");
 	printf("  --minimal\t\tMinimal (terse) output\n");
 	printf("  --version\t\tPrint version info and exit\n");
-	printf("  --terse-version=x\tTerse version output format to 'x'\n");
+	printf("  --terse-version=x\tSet terse version output format to 'x'\n");
 	printf("  --help\t\tPrint this page\n");
 	printf("  --cmdhelp=cmd\t\tPrint command help, \"all\" for all of"
 		" them\n");
