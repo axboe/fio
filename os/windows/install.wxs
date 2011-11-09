@@ -3,7 +3,7 @@
 
 <?define VersionMajor = 1?>
 <?define VersionMinor = 99?>
-<?define VersionBuild = 10?>
+<?define VersionBuild = 11?>
 
 	<Product Id="*"
 	  Codepage="1252" Language="1033"
