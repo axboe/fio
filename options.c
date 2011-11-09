@@ -2484,8 +2484,10 @@ void options_mem_dupe(void *data, struct fio_option *options)
 void fio_options_mem_dupe(struct thread_data *td)
 {
 	options_mem_dupe(&td->o, options);
-	if (td->eo) {
+
+	if (td->eo && td->io_ops) {
 		void *oldeo = td->eo;
+
 		td->eo = malloc(td->io_ops->option_struct_size);
 		memcpy(td->eo, oldeo, td->io_ops->option_struct_size);
 		options_mem_dupe(td->eo, td->io_ops->options);
