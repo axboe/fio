@@ -1296,6 +1296,16 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 	add_iops_sample(td, idx, &icd->time);
 }
 
+static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
+{
+	unsigned long long secs, remainder, bps, bytes;
+	bytes = td->this_io_bytes[ddir];
+	bps = td->rate_bps[ddir];
+	secs = bytes / bps;
+	remainder = bytes % bps;
+	return remainder * 1000000 / bps + secs * 1000000;
+}
+
 static void io_completed(struct thread_data *td, struct io_u *io_u,
 			 struct io_completion_data *icd)
 {
@@ -1354,14 +1364,12 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 			if (__should_check_rate(td, idx)) {
 				td->rate_pending_usleep[idx] =
-					((td->this_io_bytes[idx] *
-					  td->rate_nsec_cycle[idx]) / 1000 -
+					(usec_for_io(td, idx) -
 					 utime_since_now(&td->start));
 			}
-			if (__should_check_rate(td, idx ^ 1))
+			if (__should_check_rate(td, odx))
 				td->rate_pending_usleep[odx] =
-					((td->this_io_bytes[odx] *
-					  td->rate_nsec_cycle[odx]) / 1000 -
+					(usec_for_io(td, odx) -
 					 utime_since_now(&td->start));
 		}
 

@@ -357,7 +357,7 @@ struct thread_data {
 	/*
 	 * Rate state
 	 */
-	unsigned long rate_nsec_cycle[2];
+	unsigned long long rate_bps[2];
 	long rate_pending_usleep[2];
 	unsigned long rate_bytes[2];
 	unsigned long rate_blocks[2];
