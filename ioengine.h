@@ -1,7 +1,7 @@
 #ifndef FIO_IOENGINE_H
 #define FIO_IOENGINE_H
 
-#define FIO_IOOPS_VERSION	12
+#define FIO_IOOPS_VERSION	13
 
 enum {
 	IO_U_F_FREE		= 1 << 0,
@@ -121,6 +121,8 @@ struct ioengine_ops {
 	int (*open_file)(struct thread_data *, struct fio_file *);
 	int (*close_file)(struct thread_data *, struct fio_file *);
 	int (*get_file_size)(struct thread_data *, struct fio_file *);
+	int option_struct_size;
+	struct fio_option *options;
 	void *data;
 	void *dlhandle;
 };
@@ -155,7 +157,10 @@ extern int __must_check td_io_get_file_size(struct thread_data *, struct fio_fil
 extern struct ioengine_ops *load_ioengine(struct thread_data *, const char *);
 extern void register_ioengine(struct ioengine_ops *);
 extern void unregister_ioengine(struct ioengine_ops *);
+extern void free_ioengine(struct thread_data *);
 extern void close_ioengine(struct thread_data *);
+
+extern int fio_show_ioengine_help(const char *engine);
 
 /*
  * io unit handling

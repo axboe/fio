@@ -503,7 +503,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 		posval_sort(o, posval);
 
-		if (!o->posval[0].ival) {
+		if ((o->roff1 || o->off1) && !o->posval[0].ival) {
 			vp = NULL;
 			goto match;
 		}
@@ -728,7 +728,7 @@ static int handle_option(struct fio_option *o, const char *__ptr, void *data)
 	return ret;
 }
 
-static struct fio_option *get_option(const char *opt,
+static struct fio_option *get_option(char *opt,
 				     struct fio_option *options, char **post)
 {
 	struct fio_option *o;
@@ -738,7 +738,7 @@ static struct fio_option *get_option(const char *opt,
 	if (ret) {
 		*post = ret;
 		*ret = '\0';
-		ret = (char *) opt;
+		ret = opt;
 		(*post)++;
 		strip_blank_end(ret);
 		o = find_option(options, ret);
@@ -752,24 +752,27 @@ static struct fio_option *get_option(const char *opt,
 
 static int opt_cmp(const void *p1, const void *p2)
 {
-	struct fio_option *o1, *o2;
-	char *s1, *s2, *foo;
+	struct fio_option *o;
+	char *s, *foo;
 	int prio1, prio2;
 
-	s1 = strdup(*((char **) p1));
-	s2 = strdup(*((char **) p2));
-
-	o1 = get_option(s1, fio_options, &foo);
-	o2 = get_option(s2, fio_options, &foo);
-
 	prio1 = prio2 = 0;
-	if (o1)
-		prio1 = o1->prio;
-	if (o2)
-		prio2 = o2->prio;
 
-	free(s1);
-	free(s2);
+	if (*(char **)p1) {
+		s = strdup(*((char **) p1));
+		o = get_option(s, fio_options, &foo);
+		if (o)
+			prio1 = o->prio;
+		free(s);
+	}
+	if (*(char **)p2) {
+		s = strdup(*((char **) p2));
+		o = get_option(s, fio_options, &foo);
+		if (o)
+			prio2 = o->prio;
+		free(s);
+	}
+
 	return prio2 - prio1;
 }
 
@@ -798,24 +801,29 @@ int parse_cmd_option(const char *opt, const char *val,
 	return 1;
 }
 
-int parse_option(const char *opt, const char *input,
-		 struct fio_option *options, void *data)
+int parse_option(char *opt, const char *input,
+		 struct fio_option *options, struct fio_option **o, void *data)
 {
-	struct fio_option *o;
 	char *post;
 
 	if (!opt) {
 		log_err("fio: failed parsing %s\n", input);
+		*o = NULL;
 		return 1;
 	}
 
-	o = get_option(opt, options, &post);
-	if (!o) {
-		log_err("Bad option <%s>\n", input);
+	*o = get_option(opt, options, &post);
+	if (!*o) {
+		if (post) {
+			int len = strlen(opt);
+			if (opt + len + 1 != post)
+				memmove(opt + len + 1, post, strlen(post));
+			opt[len] = '=';
+		}
 		return 1;
 	}
 
-	if (!handle_option(o, post, data)) {
+	if (!handle_option(*o, post, data)) {
 		return 0;
 	}
 
@@ -1053,7 +1061,7 @@ void options_free(struct fio_option *options, void *data)
 	dprint(FD_PARSE, "free options\n");
 
 	for (o = &options[0]; o->name; o++) {
-		if (o->type != FIO_OPT_STR_STORE)
+		if (o->type != FIO_OPT_STR_STORE || !o->off1)
 			continue;
 
 		ptr = td_var(data, o->off1);

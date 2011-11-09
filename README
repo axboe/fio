@@ -140,6 +140,8 @@ $ fio
 	--terse-version=type	Terse version output format (default 3, or 2).
 	--help			Print this page
 	--cmdhelp=cmd		Print command help, "all" for all of them
+	--enghelp=engine	Print ioengine help, or list available ioengines
+	--enghelp=engine,cmd	Print help for an ioengine cmd
 	--showcmd		Turn a job file into command line options
 	--readonly		Turn on safety read-only checks, preventing
 				writes

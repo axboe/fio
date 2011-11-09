@@ -44,6 +44,9 @@ Display usage information and exit.
 .BI \-\-cmdhelp \fR=\fPcommand
 Print help information for \fIcommand\fR.  May be `all' for all commands.
 .TP
+.BI \-\-enghelp \fR=\fPioengine[,command]
+List all commands defined by \fIioengine\fR, or print help for \fIcommand\fR defined by \fIioengine\fR.
+.TP
 .BI \-\-showcmd \fR=\fPjobfile
 Convert \fIjobfile\fR to a set of command-line options.
 .TP
@@ -142,9 +145,8 @@ than `./'.
 .B fio
 normally makes up a file name based on the job name, thread number, and file
 number. If you want to share files between threads in a job or several jobs,
-specify a \fIfilename\fR for each of them to override the default. If the I/O
-engine used is `net', \fIfilename\fR is the host and port to connect to in the
-format \fIhost\fR/\fIport\fR. If the I/O engine is file-based, you can specify
+specify a \fIfilename\fR for each of them to override the default.
+If the I/O engine is file-based, you can specify
 a number of files by separating the names with a `:' character. `\-' is a
 reserved name, meaning stdin or stdout, depending on the read/write direction
 set.
@@ -398,13 +400,7 @@ Basic \fIreadv\fR\|(2) or \fIwritev\fR\|(2) I/O. Will emulate queuing by
 coalescing adjacents IOs into a single submission.
 .TP
 .B libaio
-Linux native asynchronous I/O.  This engine also has a sub-option,
-\fBuserspace_reap\fR. To set it, use \fBioengine=libaio:userspace_reap\fR.
-Normally, with the libaio engine in use, fio will use the
-\fIio_getevents\fR\|(3) system call to reap newly returned events. With this
-flag turned on, the AIO ring will be read directly from user-space to reap
-events. The reaping mode is only enabled when polling for a minimum of \fB0\fR
-events (eg when \fBiodepth_batch_complete=0\fR).
+Linux native asynchronous I/O. This ioengine defines engine specific options.
 .TP
 .B posixaio
 POSIX asynchronous I/O using \fIaio_read\fR\|(3) and \fIaio_write\fR\|(3).
@@ -436,14 +432,14 @@ Doesn't transfer any data, just pretends to.  Mainly used to exercise \fBfio\fR
 itself and for debugging and testing purposes.
 .TP
 .B net
-Transfer over the network.  \fBfilename\fR must be set appropriately to
-`\fIhost\fR,\fIport\fR,\fItype\fR' regardless of data direction. \fItype\fR
-is one of \fBtcp\fR, \fBudp\fR, or \fBunix\fR. For UNIX domain sockets,
-the \fIhost\fR parameter is a file system path.
+Transfer over the network.  The protocol to be used can be defined with the
+\fBprotocol\fR parameter.  Depending on the protocol, \fBfilename\fR,
+\fBhostname\fR, \fBport\fR, or \fBlisten\fR must be specified.
+This ioengine defines engine specific options.
 .TP
 .B netsplice
 Like \fBnet\fR, but uses \fIsplice\fR\|(2) and \fIvmsplice\fR\|(2) to map data
-and send/receive.
+and send/receive. This ioengine defines engine specific options.
 .TP
 .B cpuio
 Doesn't transfer any data, but burns CPU cycles according to \fBcpuload\fR and
@@ -965,6 +961,52 @@ the maximum length of the list is 20. Use ':' to separate the
 numbers. For example, \-\-percentile_list=99.5:99.9 will cause fio to
 report the values of completion latency below which 99.5% and 99.9% of
 the observed latencies fell, respectively.
+.SS "Ioengine Parameters List"
+Some parameters are only valid when a specific ioengine is in use. These are
+used identically to normal parameters, with the caveat that when used on the
+command line, the must come after the ioengine that defines them is selected.
+.TP
+.BI (libaio)userspace_reap
+Normally, with the libaio engine in use, fio will use
+the io_getevents system call to reap newly returned events.
+With this flag turned on, the AIO ring will be read directly
+from user-space to reap events. The reaping mode is only
+enabled when polling for a minimum of 0 events (eg when
+iodepth_batch_complete=0).
+.TP
+.BI (net,netsplice)hostname \fR=\fPstr
+The host name or IP address to use for TCP or UDP based IO.
+If the job is a TCP listener or UDP reader, the hostname is not
+used and must be omitted.
+.TP
+.BI (net,netsplice)port \fR=\fPint
+The TCP or UDP port to bind to or connect to.
+.TP
+.BI (net,netsplice)protocol \fR=\fPstr "\fR,\fP proto" \fR=\fPstr
+The network protocol to use. Accepted values are:
+.RS
+.RS
+.TP
+.B tcp
+Transmission control protocol
+.TP
+.B udp
+Unreliable datagram protocol
+.TP
+.B unix
+UNIX domain socket
+.RE
+.P
+When the protocol is TCP or UDP, the port must also be given,
+as well as the hostname if the job is a TCP listener or UDP
+reader. For unix sockets, the normal filename option should be
+used and the port is invalid.
+.RE
+.TP
+.BI (net,netsplice)listen
+For TCP network connections, tell fio to listen for incoming
+connections rather than initiating an outgoing connection. The
+hostname must be omitted if this option is used.
 .SH OUTPUT
 While running, \fBfio\fR will display the status of the created jobs.  For
 example:

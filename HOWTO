@@ -524,16 +524,7 @@ ioengine=str	Defines how the job issues io to the file. The following
 			libaio	Linux native asynchronous io. Note that Linux
 				may only support queued behaviour with
 				non-buffered IO (set direct=1 or buffered=0).
-				This engine also has a sub-option,
-				userspace_reap. To set it, use
-				ioengine=libaio:userspace_reap. Normally, with
-				the libaio engine in use, fio will use the
-				io_getevents system call to reap newly returned
-				events. With this flag turned on, the AIO ring
-				will be read directly from user-space to reap
-				events. The reaping mode is only enabled when
-				polling for a minimum of 0 events (eg when
-				iodepth_batch_complete=0).
+				This engine defines engine specific options.
 
 			posixaio glibc posix asynchronous io.
 
@@ -562,16 +553,16 @@ ioengine=str	Defines how the job issues io to the file. The following
 				itself and for debugging/testing purposes.
 
 			net	Transfer over the network to given host:port.
-				'filename' must be set appropriately to
-				filename=host/port/protocol regardless of send
-				or receive, if the latter only the port
-				argument is used. 'host' may be an IP address
-				or hostname, port is the port number to be used,
-				and protocol may be 'udp' or 'tcp'. If no
-				protocol is given, TCP is used.
+				Depending on the protocol used, the hostname,
+				port, listen and filename options are used to
+				specify what sort of connection to make, while
+				the protocol option determines which protocol
+				will be used.
+				This engine defines engine specific options.
 
 			netsplice Like net, but uses splice/vmsplice to
 				map data and send/receive.
+				This engine defines engine specific options.
 
 			cpuio	Doesn't transfer any data, but burns CPU
 				cycles according to the cpuload= and
@@ -1209,6 +1200,45 @@ uid=int		Instead of running as the invoking user, set the user ID to
 		this value before the thread/process does any work.
 
 gid=int		Set group ID, see uid.
+
+In addition, there are some parameters which are only valid when a specific
+ioengine is in use. These are used identically to normal parameters, with the
+caveat that when used on the command line, they must come after the ioengine
+that defines them is selected.
+
+[libaio] userspace_reap Normally, with the libaio engine in use, fio will use
+		the io_getevents system call to reap newly returned events.
+		With this flag turned on, the AIO ring will be read directly
+		from user-space to reap events. The reaping mode is only
+		enabled when polling for a minimum of 0 events (eg when
+		iodepth_batch_complete=0).
+
+[netsplice] hostname=str
+[net] hostname=str The host name or IP address to use for TCP or UDP based IO.
+		If the job is a TCP listener or UDP reader, the hostname is not
+		used and must be omitted.
+
+[netsplice] port=int
+[net] port=int	The TCP or UDP port to bind to or connect to.
+
+[netsplice] protocol=str
+[netsplice] proto=str
+[net] protocol=str
+[net] proto=str	The network protocol to use. Accepted values are:
+
+			tcp	Transmission control protocol
+			udp	Unreliable datagram protocol
+			unix	UNIX domain socket
+
+		When the protocol is TCP or UDP, the port must also be given,
+		as well as the hostname if the job is a TCP listener or UDP
+		reader. For unix sockets, the normal filename option should be
+		used and the port is invalid.
+
+[net] listen	For TCP network connections, tell fio to listen for incoming
+		connections rather than initiating an outgoing connection. The
+		hostname must be omitted if this option is used.
+
 
 6.0 Interpreting the output
 ---------------------------

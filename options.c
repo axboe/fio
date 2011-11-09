@@ -226,21 +226,6 @@ static int str_rw_cb(void *data, const char *str)
 	return 0;
 }
 
-#ifdef FIO_HAVE_LIBAIO
-static int str_libaio_cb(void *data, const char *str)
-{
-	struct thread_data *td = data;
-
-	if (!strcmp(str, "userspace_reap")) {
-		td->o.userspace_libaio_reap = 1;
-		return 0;
-	}
-
-	log_err("fio: bad libaio sub-option: %s\n", str);
-	return 1;
-}
-#endif
-
 static int str_mem_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
@@ -595,14 +580,6 @@ static char *get_next_file_name(char **ptr)
 	return start;
 }
 
-static int str_hostname_cb(void *data, const char *input)
-{
-	struct thread_data *td = data;
-
-	td->o.filename = strdup(input);
-	return 0;
-}
-
 static int str_filename_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
@@ -881,12 +858,6 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "File(s) to use for the workload",
 	},
 	{
-		.name	= "hostname",
-		.type	= FIO_OPT_STR_STORE,
-		.cb	= str_hostname_cb,
-		.help	= "Hostname for net IO engine",
-	},
-	{
 		.name	= "kb_base",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(kb_base),
@@ -999,7 +970,6 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 #ifdef FIO_HAVE_LIBAIO
 			  { .ival = "libaio",
 			    .help = "Linux native asynchronous IO",
-			    .cb   = str_libaio_cb,
 			  },
 #endif
 #ifdef FIO_HAVE_POSIXAIO
@@ -1015,7 +985,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 #ifdef FIO_HAVE_WINDOWSAIO
 			  { .ival = "windowsaio",
 			    .help = "Windows native asynchronous IO"
-		  	  },
+			  },
 #endif
 			  { .ival = "mmap",
 			    .help = "Memory mapped IO"
@@ -2137,19 +2107,60 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 };
 
 static void add_to_lopt(struct option *lopt, struct fio_option *o,
-			const char *name)
+			const char *name, int val)
 {
 	lopt->name = (char *) name;
-	lopt->val = FIO_GETOPT_JOB;
+	lopt->val = val;
 	if (o->type == FIO_OPT_STR_SET)
 		lopt->has_arg = no_argument;
 	else
 		lopt->has_arg = required_argument;
 }
 
+static void options_to_lopts(struct fio_option *opts,
+			      struct option *long_options,
+			      int i, int option_type)
+{
+	struct fio_option *o = &opts[0];
+	while (o->name) {
+		add_to_lopt(&long_options[i], o, o->name, option_type);
+		if (o->alias) {
+			i++;
+			add_to_lopt(&long_options[i], o, o->alias, option_type);
+		}
+
+		i++;
+		o++;
+		assert(i < FIO_NR_OPTIONS);
+	}
+}
+
+void fio_options_set_ioengine_opts(struct option *long_options,
+				   struct thread_data *td)
+{
+	unsigned int i;
+
+	i = 0;
+	while (long_options[i].name) {
+		if (long_options[i].val == FIO_GETOPT_IOENGINE) {
+			memset(&long_options[i], 0, sizeof(*long_options));
+			break;
+		}
+		i++;
+	}
+
+	/*
+	 * Just clear out the prior ioengine options.
+	 */
+	if (!td || !td->eo)
+		return;
+
+	options_to_lopts(td->io_ops->options, long_options, i,
+			 FIO_GETOPT_IOENGINE);
+}
+
 void fio_options_dup_and_init(struct option *long_options)
 {
-	struct fio_option *o;
 	unsigned int i;
 
 	options_init(options);
@@ -2158,18 +2169,7 @@ void fio_options_dup_and_init(struct option *long_options)
 	while (long_options[i].name)
 		i++;
 
-	o = &options[0];
-	while (o->name) {
-		add_to_lopt(&long_options[i], o, o->name);
-		if (o->alias) {
-			i++;
-			add_to_lopt(&long_options[i], o, o->alias);
-		}
-
-		i++;
-		o++;
-		assert(i < FIO_NR_OPTIONS);
-	}
+	options_to_lopts(options, long_options, i, FIO_GETOPT_JOB);
 }
 
 struct fio_keyword {
@@ -2389,18 +2389,53 @@ static char **dup_and_sub_options(char **opts, int num_opts)
 
 int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 {
-	int i, ret;
+	int i, ret, unknown;
 	char **opts_copy;
 
 	sort_options(opts, options, num_opts);
 	opts_copy = dup_and_sub_options(opts, num_opts);
 
-	for (ret = 0, i = 0; i < num_opts; i++) {
-		ret |= parse_option(opts_copy[i], opts[i], options, td);
+	for (ret = 0, i = 0, unknown = 0; i < num_opts; i++) {
+		struct fio_option *o;
+		int newret = parse_option(opts_copy[i], opts[i], options, &o,
+					  td);
 
-		if (opts_copy[i])
+		if (opts_copy[i]) {
+			if (newret && !o) {
+				unknown++;
+				continue;
+			}
 			free(opts_copy[i]);
-		opts_copy[i] = NULL;
+			opts_copy[i] = NULL;
+		}
+
+		ret |= newret;
+	}
+
+	if (unknown) {
+		ret |= ioengine_load(td);
+		if (td->eo) {
+			sort_options(opts_copy, td->io_ops->options, num_opts);
+			opts = opts_copy;
+		}
+		for (i = 0; i < num_opts; i++) {
+			struct fio_option *o = NULL;
+			int newret = 1;
+			if (!opts_copy[i])
+				continue;
+
+			if (td->eo)
+				newret = parse_option(opts_copy[i], opts[i],
+						      td->io_ops->options, &o,
+						      td->eo);
+
+			ret |= newret;
+			if (!o)
+				log_err("Bad option <%s>\n", opts[i]);
+
+			free(opts_copy[i]);
+			opts_copy[i] = NULL;
+		}
 	}
 
 	free(opts_copy);
@@ -2410,6 +2445,12 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 int fio_cmd_option_parse(struct thread_data *td, const char *opt, char *val)
 {
 	return parse_cmd_option(opt, val, options, td);
+}
+
+int fio_cmd_ioengine_option_parse(struct thread_data *td, const char *opt,
+				char *val)
+{
+	return parse_cmd_option(opt, val, td->io_ops->options, td);
 }
 
 void fio_fill_default_options(struct thread_data *td)
@@ -2422,25 +2463,32 @@ int fio_show_option_help(const char *opt)
 	return show_cmd_help(options, opt);
 }
 
+void options_mem_dupe(void *data, struct fio_option *options)
+{
+	struct fio_option *o;
+	char **ptr;
+
+	for (o = &options[0]; o->name; o++) {
+		if (o->type != FIO_OPT_STR_STORE)
+			continue;
+
+		ptr = td_var(data, o->off1);
+		if (*ptr)
+			*ptr = strdup(*ptr);
+	}
+}
+
 /*
  * dupe FIO_OPT_STR_STORE options
  */
-void options_mem_dupe(struct thread_data *td)
+void fio_options_mem_dupe(struct thread_data *td)
 {
-	struct thread_options *o = &td->o;
-	struct fio_option *opt;
-	char **ptr;
-	int i;
-
-	for (i = 0, opt = &options[0]; opt->name; i++, opt = &options[i]) {
-		if (opt->type != FIO_OPT_STR_STORE)
-			continue;
-
-		ptr = (void *) o + opt->off1;
-		if (!*ptr)
-			ptr = td_var(o, opt->off1);
-		if (*ptr)
-			*ptr = strdup(*ptr);
+	options_mem_dupe(&td->o, options);
+	if (td->eo) {
+		void *oldeo = td->eo;
+		td->eo = malloc(td->io_ops->option_struct_size);
+		memcpy(td->eo, oldeo, td->io_ops->option_struct_size);
+		options_mem_dupe(td->eo, td->io_ops->options);
 	}
 }
 
@@ -2528,4 +2576,9 @@ void del_opt_posval(const char *optname, const char *ival)
 void fio_options_free(struct thread_data *td)
 {
 	options_free(options, td);
+	if (td->eo && td->io_ops && td->io_ops->options) {
+		options_free(td->io_ops->options, td->eo);
+		free(td->eo);
+		td->eo = NULL;
+	}
 }

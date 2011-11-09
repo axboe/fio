@@ -152,6 +152,26 @@ struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
 	return ret;
 }
 
+/*
+ * For cleaning up an ioengine which never made it to init().
+ */
+void free_ioengine(struct thread_data *td)
+{
+	dprint(FD_IO, "free ioengine %s\n", td->io_ops->name);
+
+	if (td->eo && td->io_ops->options) {
+		options_free(td->io_ops->options, td->eo);
+		free(td->eo);
+		td->eo = NULL;
+	}
+
+	if (td->io_ops->dlhandle)
+		dlclose(td->io_ops->dlhandle);
+
+	free(td->io_ops);
+	td->io_ops = NULL;
+}
+
 void close_ioengine(struct thread_data *td)
 {
 	dprint(FD_IO, "close ioengine %s\n", td->io_ops->name);
@@ -161,11 +181,7 @@ void close_ioengine(struct thread_data *td)
 		td->io_ops->data = NULL;
 	}
 
-	if (td->io_ops->dlhandle)
-		dlclose(td->io_ops->dlhandle);
-
-	free(td->io_ops);
-	td->io_ops = NULL;
+	free_ioengine(td);
 }
 
 int td_io_prep(struct thread_data *td, struct io_u *io_u)
@@ -500,4 +516,44 @@ int do_io_u_trim(struct thread_data *td, struct io_u *io_u)
 	io_u->error = ret;
 	return 0;
 #endif
+}
+
+int fio_show_ioengine_help(const char *engine)
+{
+	struct flist_head *entry;
+	struct thread_data td;
+	char *sep;
+	int ret = 1;
+
+	if (!engine || !*engine) {
+		log_info("Available IO engines:\n");
+		flist_for_each(entry, &engine_list) {
+			td.io_ops = flist_entry(entry, struct ioengine_ops,
+						list);
+			log_info("\t%s\n", td.io_ops->name);
+		}
+		return 0;
+	}
+	sep = strchr(engine, ',');
+	if (sep) {
+		*sep = 0;
+		sep++;
+	}
+
+	memset(&td, 0, sizeof(td));
+
+	td.io_ops = load_ioengine(&td, engine);
+	if (!td.io_ops) {
+		log_info("IO engine %s not found\n", engine);
+		return 1;
+	}
+
+	if (td.io_ops->options)
+		ret = show_cmd_help(td.io_ops->options, sep);
+	else
+		log_info("IO engine %s has no options\n", td.io_ops->name);
+
+	free_ioengine(&td);
+
+	return ret;
 }

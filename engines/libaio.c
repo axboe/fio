@@ -24,6 +24,23 @@ struct libaio_data {
 	int iocbs_nr;
 };
 
+struct libaio_options {
+	struct thread_data *td;
+	unsigned int userspace_reap;
+};
+
+static struct fio_option options[] = {
+	{
+		.name	= "userspace_reap",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct libaio_options, userspace_reap),
+		.help	= "Use alternative user-space reap implementation",
+	},
+	{
+		.name	= NULL,
+	},
+};
+
 static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
@@ -103,11 +120,12 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 				unsigned int max, struct timespec *t)
 {
 	struct libaio_data *ld = td->io_ops->data;
+	struct libaio_options *o = td->eo;
 	unsigned actual_min = td->o.iodepth_batch_complete == 0 ? 0 : min;
 	int r, events = 0;
 
 	do {
-		if (td->o.userspace_libaio_reap == 1
+		if (o->userspace_reap == 1
 		    && actual_min == 0
 		    && ((struct aio_ring *)(ld->aio_ctx))->magic
 				== AIO_RING_MAGIC) {
@@ -262,19 +280,21 @@ static int fio_libaio_init(struct thread_data *td)
 }
 
 static struct ioengine_ops ioengine = {
-	.name		= "libaio",
-	.version	= FIO_IOOPS_VERSION,
-	.init		= fio_libaio_init,
-	.prep		= fio_libaio_prep,
-	.queue		= fio_libaio_queue,
-	.commit		= fio_libaio_commit,
-	.cancel		= fio_libaio_cancel,
-	.getevents	= fio_libaio_getevents,
-	.event		= fio_libaio_event,
-	.cleanup	= fio_libaio_cleanup,
-	.open_file	= generic_open_file,
-	.close_file	= generic_close_file,
-	.get_file_size	= generic_get_file_size,
+	.name			= "libaio",
+	.version		= FIO_IOOPS_VERSION,
+	.init			= fio_libaio_init,
+	.prep			= fio_libaio_prep,
+	.queue			= fio_libaio_queue,
+	.commit			= fio_libaio_commit,
+	.cancel			= fio_libaio_cancel,
+	.getevents		= fio_libaio_getevents,
+	.event			= fio_libaio_event,
+	.cleanup		= fio_libaio_cleanup,
+	.open_file		= generic_open_file,
+	.close_file		= generic_close_file,
+	.get_file_size		= generic_get_file_size,
+	.options		= options,
+	.option_struct_size	= sizeof(struct libaio_options),
 };
 
 #else /* FIO_HAVE_LIBAIO */

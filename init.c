@@ -139,6 +139,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'c' | FIO_CLIENT_FLAG,
 	},
 	{
+		.name		   = (char *) "enghelp",
+		.has_arg	= optional_argument,
+		.val		    = 'i' | FIO_CLIENT_FLAG,
+	},
+	{
 		.name		= (char *) "showcmd",
 		.has_arg	= no_argument,
 		.val		= 's' | FIO_CLIENT_FLAG,
@@ -278,7 +283,8 @@ static int setup_thread_area(void)
 /*
  * Return a free job structure.
  */
-static struct thread_data *get_new_job(int global, struct thread_data *parent)
+static struct thread_data *get_new_job(int global, struct thread_data *parent,
+				       int preserve_eo)
 {
 	struct thread_data *td;
 
@@ -297,10 +303,14 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent)
 	td = &threads[thread_number++];
 	*td = *parent;
 
+	td->io_ops = NULL;
+	if (!preserve_eo)
+		td->eo = NULL;
+
 	td->o.uid = td->o.gid = -1U;
 
 	dup_files(td, parent);
-	options_mem_dupe(td);
+	fio_options_mem_dupe(td);
 
 	profile_add_hooks(td);
 
@@ -319,6 +329,8 @@ static void put_job(struct thread_data *td)
 		log_info("fio: %s\n", td->verror);
 
 	fio_options_free(td);
+	if (td->io_ops)
+		free_ioengine(td);
 
 	memset(&threads[td->thread_number - 1], 0, sizeof(*td));
 	thread_number--;
@@ -663,6 +675,62 @@ static int init_random_state(struct thread_data *td)
 }
 
 /*
+ * Initializes the ioengine configured for a job, if it has not been done so
+ * already.
+ */
+int ioengine_load(struct thread_data *td)
+{
+	const char *engine;
+
+	/*
+	 * Engine has already been loaded.
+	 */
+	if (td->io_ops)
+		return 0;
+
+	engine = get_engine_name(td->o.ioengine);
+	td->io_ops = load_ioengine(td, engine);
+	if (!td->io_ops) {
+		log_err("fio: failed to load engine %s\n", engine);
+		return 1;
+	}
+
+	if (td->io_ops->option_struct_size && td->io_ops->options) {
+		/*
+		 * In cases where td->eo is set, clone it for a child thread.
+		 * This requires that the parent thread has the same ioengine,
+		 * but that requirement must be enforced by the code which
+		 * cloned the thread.
+		 */
+		void *origeo = td->eo;
+		/*
+		 * Otherwise use the default thread options.
+		 */
+		if (!origeo && td != &def_thread && def_thread.eo &&
+		    def_thread.io_ops->options == td->io_ops->options)
+			origeo = def_thread.eo;
+
+		options_init(td->io_ops->options);
+		td->eo = malloc(td->io_ops->option_struct_size);
+		/*
+		 * Use the default thread as an option template if this uses the
+		 * same options structure and there are non-default options
+		 * used.
+		 */
+		if (origeo) {
+			memcpy(td->eo, origeo, td->io_ops->option_struct_size);
+			options_mem_dupe(td->eo, td->io_ops->options);
+		} else {
+			memset(td->eo, 0, td->io_ops->option_struct_size);
+			fill_default_options(td->eo, td->io_ops->options);
+		}
+		*(struct thread_data **)td->eo = td;
+	}
+
+	return 0;
+}
+
+/*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
  * members of td.
@@ -672,7 +740,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	const char *ddir_str[] = { NULL, "read", "write", "rw", NULL,
 				   "randread", "randwrite", "randrw" };
 	unsigned int i;
-	const char *engine;
 	char fname[PATH_MAX];
 	int numjobs, file_alloced;
 
@@ -693,12 +760,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (profile_td_init(td))
 		goto err;
 
-	engine = get_engine_name(td->o.ioengine);
-	td->io_ops = load_ioengine(td, engine);
-	if (!td->io_ops) {
-		log_err("fio: failed to load engine %s\n", engine);
+	if (ioengine_load(td))
 		goto err;
-	}
 
 	if (td->o.use_thread)
 		nr_thread++;
@@ -725,6 +788,13 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	if (fixup_options(td))
 		goto err;
+
+	/*
+	 * IO engines only need this for option callbacks, and the address may
+	 * change in subprocesses.
+	 */
+	if (td->eo)
+		*(struct thread_data **)td->eo = NULL;
 
 	if (td->io_ops->flags & FIO_DISKLESSIO) {
 		struct fio_file *f;
@@ -812,7 +882,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	 */
 	numjobs = td->o.numjobs;
 	while (--numjobs) {
-		struct thread_data *td_new = get_new_job(0, td);
+		struct thread_data *td_new = get_new_job(0, td, 1);
 
 		if (!td_new)
 			goto err;
@@ -860,11 +930,11 @@ void add_job_opts(const char **o)
 			sprintf(jobname, "%s", o[i] + 5);
 		}
 		if (in_global && !td_parent)
-			td_parent = get_new_job(1, &def_thread);
+			td_parent = get_new_job(1, &def_thread, 0);
 		else if (!in_global && !td) {
 			if (!td_parent)
 				td_parent = &def_thread;
-			td = get_new_job(0, td_parent);
+			td = get_new_job(0, td_parent, 0);
 		}
 		if (in_global)
 			fio_options_parse(td_parent, (char **) &o[i], 1);
@@ -999,7 +1069,7 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag)
 			first_sect = 0;
 		}
 
-		td = get_new_job(global, &def_thread);
+		td = get_new_job(global, &def_thread, 0);
 		if (!td) {
 			ret = 1;
 			break;
@@ -1118,6 +1188,10 @@ static void usage(const char *name)
 	printf("  --help\t\tPrint this page\n");
 	printf("  --cmdhelp=cmd\t\tPrint command help, \"all\" for all of"
 		" them\n");
+	printf("  --enghelp=engine\tPrint ioengine help, or list"
+		" available ioengines\n");
+	printf("  --enghelp=engine,cmd\tPrint help for an ioengine"
+		" cmd\n");
 	printf("  --showcmd\t\tTurn a job file into command line options\n");
 	printf("  --eta=when\t\tWhen ETA estimate should be printed\n");
 	printf("            \t\tMay be \"always\", \"never\" or \"auto\"\n");
@@ -1316,6 +1390,12 @@ int parse_cmd_line(int argc, char *argv[])
 				do_exit++;
 			}
 			break;
+		case 'i':
+			if (!cur_client) {
+				fio_show_ioengine_help(optarg);
+				do_exit++;
+			}
+			break;
 		case 's':
 			dump_cmdline = 1;
 			break;
@@ -1385,12 +1465,28 @@ int parse_cmd_line(int argc, char *argv[])
 				if (is_section && skip_this_section(val))
 					continue;
 
-				td = get_new_job(global, &def_thread);
-				if (!td)
+				td = get_new_job(global, &def_thread, 1);
+				if (!td || ioengine_load(td))
 					return 0;
+				fio_options_set_ioengine_opts(l_opts, td);
 			}
 
 			ret = fio_cmd_option_parse(td, opt, val);
+
+			if (!ret && !strcmp(opt, "ioengine")) {
+				free_ioengine(td);
+				if (ioengine_load(td))
+					return 0;
+				fio_options_set_ioengine_opts(l_opts, td);
+			}
+			break;
+		}
+		case FIO_GETOPT_IOENGINE: {
+			const char *opt = l_opts[lidx].name;
+			char *val = optarg;
+			opt = l_opts[lidx].name;
+			val = optarg;
+			ret = fio_cmd_ioengine_option_parse(td, opt, val);
 			break;
 		}
 		case 'w':
