@@ -501,45 +501,54 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	case FIO_OPT_STR_STORE: {
 		fio_opt_str_fn *fn = o->cb;
 
-		posval_sort(o, posval);
+		if (o->roff1 || o->off1) {
+			if (o->roff1)
+				cp = (char **) o->roff1;
+			else if (o->off1)
+				cp = td_var(data, o->off1);
 
-		if ((o->roff1 || o->off1) && !o->posval[0].ival) {
-			vp = NULL;
-			goto match;
+			*cp = strdup(ptr);
+		} else {
+			cp = NULL;
 		}
 
-		ret = 1;
-		for (i = 0; i < PARSE_MAX_VP; i++) {
-			vp = &posval[i];
-			if (!vp->ival || vp->ival[0] == '\0')
-				continue;
-			all_skipped = 0;
-			if (!strncmp(vp->ival, ptr, opt_len(ptr))) {
-				char *rest;
+		if (fn)
+			ret = fn(data, ptr);
+		else if (o->posval[0].ival) {
+			posval_sort(o, posval);
 
-				ret = 0;
-				if (vp->cb)
-					fn = vp->cb;
-match:
-				if (o->roff1)
-					cp = (char **) o->roff1;
-				else
-					cp = td_var(data, o->off1);
-				*cp = strdup(ptr);
-				rest = strstr(*cp, ":");
-				if (rest) {
-					*rest = '\0';
-					ptr = rest + 1;
-				} else if (vp && vp->cb)
-					ptr = NULL;
-				break;
+			ret = 1;
+			for (i = 0; i < PARSE_MAX_VP; i++) {
+				vp = &posval[i];
+				if (!vp->ival || vp->ival[0] == '\0')
+					continue;
+				all_skipped = 0;
+				if (!strncmp(vp->ival, ptr, opt_len(ptr))) {
+					char *rest;
+
+					ret = 0;
+					if (vp->cb)
+						fn = vp->cb;
+					rest = strstr(*cp ?: ptr, ":");
+					if (rest) {
+						if (*cp)
+							*rest = '\0';
+						ptr = rest + 1;
+					} else
+						ptr = NULL;
+					break;
+				}
 			}
 		}
 
-		if (ret && !all_skipped)
-			show_option_values(o);
-		else if (fn && ptr)
-			ret = fn(data, ptr);
+		if (!all_skipped) {
+			if (ret && !*cp)
+				show_option_values(o);
+			else if (ret && *cp)
+				ret = 0;
+			else if (fn && ptr)
+				ret = fn(data, ptr);
+		}
 
 		break;
 	}
