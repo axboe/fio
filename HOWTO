@@ -1170,7 +1170,7 @@ gtod_cpu=int	Sometimes it's cheaper to dedicate a single thread of
 		uses. Fio will manually clear it from the CPU mask of other
 		jobs.
 
-continue_on_error=bool	Normally fio will exit the job on the first observed
+continue_on_error=str	Normally fio will exit the job on the first observed
 		failure. If this option is set, fio will continue the job when
 		there is a 'non-fatal error' (EIO or EILSEQ) until the runtime
 		is exceeded or the I/O size specified is completed. If this
@@ -1178,6 +1178,24 @@ continue_on_error=bool	Normally fio will exit the job on the first observed
 		the total error count and the first error. The error field
 		given in the stats is the first error that was hit during the
 		run.
+
+		The allowed values are:
+
+			none	Exit on any IO or verify errors.
+
+			read	Continue on read errors, exit on all others.
+
+			write	Continue on write errors, exit on all others.
+
+			io	Continue on any IO error, exit on all others.
+
+			verify	Continue on verify errors, exit on all others.
+
+			all	Continue on all errors.
+
+			0		Backward-compatible alias for 'none'.
+
+			1		Backward-compatible alias for 'all'.
 
 cgroup=str	Add job to this control group. If it doesn't exist, it will
 		be created. The system must have a mounted cgroup blkio

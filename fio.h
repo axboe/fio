@@ -65,6 +65,17 @@ enum {
 	RW_SEQ_IDENT,
 };
 
+/*
+ * What type of errors to continue on when continue_on_error is used
+ */
+enum error_type {
+        ERROR_TYPE_NONE = 0,
+        ERROR_TYPE_READ = 1 << 0,
+        ERROR_TYPE_WRITE = 1 << 1,
+        ERROR_TYPE_VERIFY = 1 << 2,
+        ERROR_TYPE_ANY = 0xffff,
+};
+
 struct bssplit {
 	unsigned int bs;
 	unsigned char perc;
@@ -227,7 +238,7 @@ struct thread_options {
 	/*
 	 * I/O Error handling
 	 */
-	unsigned int continue_on_error;
+	enum error_type continue_on_error;
 
 	/*
 	 * Benchmark profile type
@@ -519,6 +530,15 @@ static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
 #define REAL_MAX_JOBS		2048
 
 #define td_non_fatal_error(e)	((e) == EIO || (e) == EILSEQ)
+
+static inline enum error_type td_error_type(enum fio_ddir ddir, int err)
+{
+	if (err == EILSEQ)
+		return ERROR_TYPE_VERIFY;
+	if (ddir == DDIR_READ)
+		return ERROR_TYPE_READ;
+	return ERROR_TYPE_WRITE;
+}
 
 static inline void update_error_count(struct thread_data *td, int err)
 {

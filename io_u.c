@@ -1389,8 +1389,8 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		icd->error = io_u->error;
 		io_u_log_error(td, io_u);
 	}
-	if (td->o.continue_on_error && icd->error &&
-	    td_non_fatal_error(icd->error)) {
+	if (icd->error && td_non_fatal_error(icd->error) &&
+           (td->o.continue_on_error & td_error_type(io_u->ddir, icd->error))) {
 		/*
 		 * If there is a non_fatal error, then add to the error count
 		 * and clear all the errors.

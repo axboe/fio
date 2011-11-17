@@ -452,20 +452,21 @@ static inline void update_tv_cache(struct thread_data *td)
 		__update_tv_cache(td);
 }
 
-static int break_on_this_error(struct thread_data *td, int *retptr)
+static int break_on_this_error(struct thread_data *td, enum fio_ddir ddir,
+			       int *retptr)
 {
 	int ret = *retptr;
 
 	if (ret < 0 || td->error) {
 		int err;
 
-		if (!td->o.continue_on_error)
-			return 1;
-
 		if (ret < 0)
 			err = -ret;
 		else
 			err = td->error;
+
+		if (!(td->o.continue_on_error & td_error_type(ddir, err)))
+			return 1;
 
 		if (td_non_fatal_error(err)) {
 		        /*
@@ -612,7 +613,7 @@ sync_done:
 			break;
 		}
 
-		if (break_on_this_error(td, &ret))
+		if (break_on_this_error(td, io_u->ddir, &ret))
 			break;
 
 		/*
@@ -678,6 +679,7 @@ static void do_io(struct thread_data *td)
 		int min_evts = 0;
 		struct io_u *io_u;
 		int ret2, full;
+		enum fio_ddir ddir;
 
 		if (td->terminate)
 			break;
@@ -695,6 +697,8 @@ static void do_io(struct thread_data *td)
 		io_u = get_io_u(td);
 		if (!io_u)
 			break;
+
+		ddir = io_u->ddir;
 
 		/*
 		 * Add verification end_io handler, if asked to verify
@@ -774,7 +778,7 @@ sync_done:
 			break;
 		}
 
-		if (break_on_this_error(td, &ret))
+		if (break_on_this_error(td, ddir, &ret))
 			break;
 
 		/*
