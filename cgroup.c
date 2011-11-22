@@ -22,7 +22,8 @@ struct cgroup_member {
 static char *find_cgroup_mnt(struct thread_data *td)
 {
 	char *mntpoint = NULL;
-	struct mntent *mnt;
+	struct mntent *mnt, dummy;
+	char buf[256] = {0};
 	FILE *f;
 
 	f = setmntent("/proc/mounts", "r");
@@ -31,7 +32,7 @@ static char *find_cgroup_mnt(struct thread_data *td)
 		return NULL;
 	}
 
-	while ((mnt = getmntent(f)) != NULL) {
+	while ((mnt = getmntent_r(f, &dummy, buf, sizeof(buf))) != NULL) {
 		if (!strcmp(mnt->mnt_type, "cgroup") &&
 		    strstr(mnt->mnt_opts, "blkio"))
 			break;
