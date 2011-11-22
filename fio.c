@@ -1248,9 +1248,12 @@ static void *thread_main(void *data)
 		memcpy(&td->iops_sample_time, &td->start, sizeof(td->start));
 		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
 
-		if (td->o.ratemin[0] || td->o.ratemin[1])
-			memcpy(&td->lastrate, &td->bw_sample_time,
-							sizeof(td->lastrate));
+		if (td->o.ratemin[0] || td->o.ratemin[1]) {
+		        memcpy(&td->lastrate[0], &td->bw_sample_time,
+						sizeof(td->bw_sample_time));
+		        memcpy(&td->lastrate[1], &td->bw_sample_time,
+						sizeof(td->bw_sample_time));
+		}
 
 		if (clear_state)
 			clear_io_state(td);
