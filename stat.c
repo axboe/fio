@@ -1145,11 +1145,17 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 	iolog->nr_samples++;
 }
 
+static inline void reset_io_stat(struct io_stat *ios)
+{
+	ios->max_val = ios->min_val = ios->samples = 0;
+	ios->mean.u.f = ios->S.u.f = 0;
+}
+
 static void add_log_sample(struct thread_data *td, struct io_log *iolog,
 			   unsigned long val, enum fio_ddir ddir,
 			   unsigned int bs)
 {
-	unsigned long elapsed, this_window, mr, mw;
+	unsigned long elapsed, this_window;
 
 	if (!ddir_rw(ddir))
 		return;
@@ -1170,20 +1176,34 @@ static void add_log_sample(struct thread_data *td, struct io_log *iolog,
 	 */
 	add_stat_sample(&iolog->avg_window[ddir], val);
 
+	/*
+	 * If period hasn't passed, adding the above sample is all we
+	 * need to do.
+	 */
 	this_window = elapsed - iolog->avg_last;
 	if (this_window < iolog->avg_msec)
 		return;
 
-	mr = iolog->avg_window[DDIR_READ].mean.u.f;
-	mw = iolog->avg_window[DDIR_WRITE].mean.u.f;
+	/*
+	 * Note an entry in the log. Use the mean from the logged samples,
+	 * making sure to properly round up. Only write a log entry if we
+	 * had actual samples done.
+	 */
+	if (iolog->avg_window[DDIR_READ].samples) {
+		unsigned long mr;
 
-	if (mr)
+		mr = iolog->avg_window[DDIR_READ].mean.u.f + 0.50;
 		__add_log_sample(iolog, mr, DDIR_READ, 0, elapsed);
-	if (mw)
-		__add_log_sample(iolog, mw, DDIR_WRITE, 0, elapsed);
+	}
+	if (iolog->avg_window[DDIR_WRITE].samples) {
+		unsigned long mw;
 
-	memset(&iolog->avg_window[DDIR_READ], 0, sizeof(struct io_stat));
-	memset(&iolog->avg_window[DDIR_WRITE], 0, sizeof(struct io_stat));
+		mw = iolog->avg_window[DDIR_WRITE].mean.u.f + 0.50;
+		__add_log_sample(iolog, mw, DDIR_WRITE, 0, elapsed);
+	}
+
+	reset_io_stat(&iolog->avg_window[DDIR_READ]);
+	reset_io_stat(&iolog->avg_window[DDIR_WRITE]);
 	iolog->avg_last = elapsed;
 }
 
