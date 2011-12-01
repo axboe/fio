@@ -1101,6 +1101,18 @@ write_lat_log=str Same as write_bw_log, except that this option stores io
 write_bw_log=str If given, write an IOPS log of the jobs in this job
 		file. See write_bw_log.
 
+write_iops_log=str Same as write_bw_log, but writes IOPS. If no filename is
+		given with this option, the default filename of
+		"jobname_type.log" is used. Even if the filename is given,
+		fio will still append the type of log.
+
+log_avg_msec=int By default, fio will log an entry in the iops, latency,
+		or bw log for every IO that completes. When writing to the
+		disk log, that can quickly grow to a very large size. Setting
+		this option makes fio average the each log entry over the
+		specified period of time, reducing the resolution of the log.
+		Defaults to 0.
+
 lockmem=int	Pin down the specified amount of memory with mlock(2). Can
 		potentially be used instead of removing memory or booting
 		with less memory to simulate a smaller amount of memory.

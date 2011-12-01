@@ -1797,8 +1797,8 @@ int exec_run(void)
 		return 0;
 
 	if (write_bw_log) {
-		setup_log(&agg_io_log[DDIR_READ]);
-		setup_log(&agg_io_log[DDIR_WRITE]);
+		setup_log(&agg_io_log[DDIR_READ], 0);
+		setup_log(&agg_io_log[DDIR_WRITE], 0);
 	}
 
 	startup_mutex = fio_mutex_init(0);

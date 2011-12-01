@@ -147,6 +147,7 @@ struct thread_options {
 	unsigned int write_lat_log;
 	unsigned int write_bw_log;
 	unsigned int write_iops_log;
+	unsigned int log_avg_msec;
 	unsigned int norandommap;
 	unsigned int softrandommap;
 	unsigned int bs_unaligned;

@@ -1128,6 +1128,9 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 {
 	const int nr_samples = iolog->nr_samples;
 
+	if (!iolog->nr_samples)
+		iolog->avg_last = t;
+
 	if (iolog->nr_samples == iolog->max_samples) {
 		int new_size = sizeof(struct io_sample) * iolog->max_samples*2;
 
@@ -1146,10 +1149,42 @@ static void add_log_sample(struct thread_data *td, struct io_log *iolog,
 			   unsigned long val, enum fio_ddir ddir,
 			   unsigned int bs)
 {
+	unsigned long elapsed, this_window, mr, mw;
+
 	if (!ddir_rw(ddir))
 		return;
 
-	__add_log_sample(iolog, val, ddir, bs, mtime_since_now(&td->epoch));
+	elapsed = mtime_since_now(&td->epoch);
+
+	/*
+	 * If no time averaging, just add the log sample.
+	 */
+	if (!iolog->avg_msec) {
+		__add_log_sample(iolog, val, ddir, bs, elapsed);
+		return;
+	}
+
+	/*
+	 * Add the sample. If the time period has passed, then
+	 * add that entry to the log and clear.
+	 */
+	add_stat_sample(&iolog->avg_window[ddir], val);
+
+	this_window = elapsed - iolog->avg_last;
+	if (this_window < iolog->avg_msec)
+		return;
+
+	mr = iolog->avg_window[DDIR_READ].mean.u.f;
+	mw = iolog->avg_window[DDIR_WRITE].mean.u.f;
+
+	if (mr)
+		__add_log_sample(iolog, mr, DDIR_READ, 0, elapsed);
+	if (mw)
+		__add_log_sample(iolog, mw, DDIR_WRITE, 0, elapsed);
+
+	memset(&iolog->avg_window[DDIR_READ], 0, sizeof(struct io_stat));
+	memset(&iolog->avg_window[DDIR_WRITE], 0, sizeof(struct io_stat));
+	iolog->avg_last = elapsed;
 }
 
 void add_agg_sample(unsigned long val, enum fio_ddir ddir, unsigned int bs)

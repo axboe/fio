@@ -29,9 +29,20 @@ struct io_sample {
  * Dynamically growing data sample log
  */
 struct io_log {
+	/*
+	 * Entries already logged
+	 */
 	unsigned long nr_samples;
 	unsigned long max_samples;
 	struct io_sample *log;
+
+	/*
+	 * Windowed average, for logging single entries average over some
+	 * period of time.
+	 */
+	struct io_stat avg_window[2];
+	unsigned long avg_msec;
+	unsigned long avg_last;
 };
 
 enum {
@@ -97,7 +108,7 @@ extern void add_iops_sample(struct thread_data *, enum fio_ddir, struct timeval 
 extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
 extern void update_io_ticks(void);
-extern void setup_log(struct io_log **);
+extern void setup_log(struct io_log **, unsigned long);
 extern void finish_log(struct thread_data *, struct io_log *, const char *);
 extern void finish_log_named(struct thread_data *, struct io_log *, const char *, const char *);
 extern void __finish_log(struct io_log *, const char *);

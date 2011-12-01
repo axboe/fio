@@ -1951,6 +1951,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Write log of IOPS during run",
 	},
 	{
+		.name	= "log_avg_msec",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(log_avg_msec),
+		.help	= "Average bw/iops/lat logs over this period of time",
+		.def	= "0",
+	},
+	{
 		.name	= "hugepage-size",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(hugepage_size),

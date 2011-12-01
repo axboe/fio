@@ -492,13 +492,15 @@ int init_iolog(struct thread_data *td)
 	return ret;
 }
 
-void setup_log(struct io_log **log)
+void setup_log(struct io_log **log, unsigned long avg_msec)
 {
 	struct io_log *l = malloc(sizeof(*l));
 
+	memset(l, 0, sizeof(*l));
 	l->nr_samples = 0;
 	l->max_samples = 1024;
 	l->log = malloc(l->max_samples * sizeof(struct io_sample));
+	l->avg_msec = avg_msec;
 	*log = l;
 }
 

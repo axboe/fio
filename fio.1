@@ -872,6 +872,13 @@ Same as \fBwrite_bw_log\fR, but writes IOPS. If no filename is given with this
 option, the default filename of "jobname_type.log" is used. Even if the
 filename is given, fio will still append the type of log.
 .TP
+.BI log_avg_msec \fR=\fPint
+By default, fio will log an entry in the iops, latency, or bw log for every
+IO that completes. When writing to the disk log, that can quickly grow to a
+very large size. Setting this option makes fio average the each log entry
+over the specified period of time, reducing the resolution of the log.
+Defaults to 0.
+.TP
 .BI disable_lat \fR=\fPbool
 Disable measurements of total latency numbers. Useful only for cutting
 back the number of calls to gettimeofday, as that does impact performance at
