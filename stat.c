@@ -1313,10 +1313,8 @@ void add_iops_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	add_stat_sample(&ts->iops_stat[ddir], iops);
 
-	if (td->iops_log) {
-		assert(iops);
+	if (td->iops_log)
 		add_log_sample(td, td->iops_log, iops, ddir, 0);
-	}
 
 	fio_gettime(&td->iops_sample_time, NULL);
 	td->stat_io_blocks[ddir] = td->this_io_blocks[ddir];
