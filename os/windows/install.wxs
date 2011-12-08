@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
-<?define VersionMajor = 1?>
-<?define VersionMinor = 99?>
-<?define VersionBuild = 13?>
+<?define VersionMajor = 2?>
+<?define VersionMinor = 0?>
+<?define VersionBuild = 0?>
 
 	<Product Id="*"
 	  Codepage="1252" Language="1033"
