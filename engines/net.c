@@ -702,13 +702,17 @@ static int fio_netio_init(struct thread_data *td)
 
 	if (o->proto != FIO_TYPE_TCP) {
 		if (o->listen) {
-			  log_err("fio: listen only valid for TCP proto IO\n");
-			  return 1;
+			log_err("fio: listen only valid for TCP proto IO\n");
+			return 1;
 		}
 		if (td_rw(td)) {
-			  log_err("fio: datagram network connections must be"
+			log_err("fio: datagram network connections must be"
 				   " read OR write\n");
-			  return 1;
+			return 1;
+		}
+		if (o->proto == FIO_TYPE_UNIX && !td->o.filename) {
+			log_err("fio: UNIX sockets need host/filename\n");
+			return 1;
 		}
 		o->listen = td_read(td);
 	}
