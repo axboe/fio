@@ -496,8 +496,9 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
 {
 	int ret;
+	struct netio_options *o = td->eo;
 
-	if (td_read(td))
+	if (o->listen)
 		ret = fio_netio_accept(td, f);
 	else
 		ret = fio_netio_connect(td, f);

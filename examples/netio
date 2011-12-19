@@ -2,7 +2,6 @@
 [global]
 ioengine=net
 #Use hostname=/tmp.fio.sock for local unix domain sockets
-hostname=localhost
 port=8888
 #Use =udp for UDP, =unix for local unix domain socket
 protocol=tcp
@@ -12,8 +11,10 @@ size=10g
 #verify=md5
 
 [receiver]
+listen
 rw=read
 
 [sender]
+hostname=localhost
 startdelay=1
 rw=write
