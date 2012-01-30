@@ -343,6 +343,8 @@ static int check_min_rate(struct thread_data *td, struct timeval *now,
 
 static inline int runtime_exceeded(struct thread_data *td, struct timeval *t)
 {
+	if (in_ramp_time(td))
+		return 0;
 	if (!td->o.timeout)
 		return 0;
 	if (mtime_since(&td->epoch, t) >= td->o.timeout * 1000)
