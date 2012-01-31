@@ -168,6 +168,7 @@ struct thread_options {
 	unsigned int bw_avg_time;
 	unsigned int iops_avg_time;
 	unsigned int loops;
+	unsigned long long zone_range;
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
 	enum fio_memtype mem_type;

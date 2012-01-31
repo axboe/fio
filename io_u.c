@@ -114,6 +114,9 @@ static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
 	if (max_size > f->real_file_size)
 		max_size = f->real_file_size;
 
+	if (td->o.zone_range)
+		max_size = td->o.zone_range;
+
 	max_blocks = max_size / (unsigned long long) td->o.ba[ddir];
 	if (!max_blocks)
 		return 0;
@@ -656,7 +659,8 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	 */
 	if (td->zone_bytes >= td->o.zone_size) {
 		td->zone_bytes = 0;
-		io_u->file->last_pos += td->o.zone_skip;
+		io_u->file->file_offset += td->o.zone_range + td->o.zone_skip;
+		io_u->file->last_pos = io_u->file->file_offset;
 		td->io_skip_bytes += td->o.zone_skip;
 	}
 

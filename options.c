@@ -1670,6 +1670,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.name	= "zonesize",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(zone_size),
+		.help	= "Amount of data to read per zone",
+		.def	= "0",
+	},
+	{
+		.name	= "zonerange",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(zone_range),
 		.help	= "Give size of an IO zone",
 		.def	= "0",
 	},

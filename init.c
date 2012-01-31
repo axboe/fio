@@ -402,10 +402,17 @@ static int fixup_options(struct thread_data *td)
 	}
 
 	/*
-	 * only really works for sequential io for now, and with 1 file
+	 * only really works with 1 file
 	 */
-	if (o->zone_size && td_random(td) && o->open_files == 1)
+	if (o->zone_size && o->open_files == 1)
 		o->zone_size = 0;
+
+	/*
+	 * If zone_range isn't specified, backward compatibility dictates it
+	 * should be made equal to zone_size.
+	 */
+	if (o->zone_size && !o->zone_range)
+		o->zone_range = o->zone_size;
 
 	/*
 	 * Reads can do overwrites, we always need to pre-create the file
