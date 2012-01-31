@@ -347,10 +347,23 @@ struct thread_data {
 	struct ioengine_ops *io_ops;
 
 	/*
-	 * Current IO depth and list of free and busy io_u's.
+	 * Queue depth of io_u's that fio MIGHT do
 	 */
 	unsigned int cur_depth;
+
+	/*
+	 * io_u's about to be committed
+	 */
 	unsigned int io_u_queued;
+
+	/*
+	 * io_u's submitted but not completed yet
+	 */
+	unsigned int io_u_in_flight;
+
+	/*
+	 * List of free and busy io_u's
+	 */
 	struct flist_head io_u_freelist;
 	struct flist_head io_u_busylist;
 	struct flist_head io_u_requeues;

@@ -222,9 +222,14 @@ int td_io_getevents(struct thread_data *td, unsigned int min, unsigned int max,
 	if (max && td->io_ops->getevents)
 		r = td->io_ops->getevents(td, min, max, t);
 out:
-	if (r >= 0)
+	if (r >= 0) {
+		/*
+ 		 * Reflect that our submitted requests were retrieved with
+		 * whatever OS async calls are in the underlying engine.
+		 */
+		td->io_u_in_flight -= r;
 		io_u_mark_complete(td, r);
-	else
+	} else
 		td_verror(td, r, "get_events");
 
 	dprint(FD_IO, "getevents: %d\n", r);
@@ -344,14 +349,19 @@ int td_io_commit(struct thread_data *td)
 	if (!td->cur_depth || !td->io_u_queued)
 		return 0;
 
-	io_u_mark_depth(td, td->io_u_queued);
-	td->io_u_queued = 0;
+	io_u_mark_depth(td, td->io_u_queued);	
 
 	if (td->io_ops->commit) {
 		ret = td->io_ops->commit(td);
 		if (ret)
 			td_verror(td, -ret, "io commit");
 	}
+	
+	/*
+	 * Reflect that events were submitted as async IO requests.
+	 */
+	td->io_u_in_flight += td->io_u_queued;
+	td->io_u_queued = 0;
 
 	return 0;
 }

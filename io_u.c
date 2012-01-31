@@ -496,12 +496,17 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 
 	/*
 	 * We are going to sleep, ensure that we flush anything pending as
-	 * not to skew our latency numbers
+	 * not to skew our latency numbers.
+	 *
+	 * Changed to only monitor 'in flight' requests here instead of the
+	 * td->cur_depth, b/c td->cur_depth does not accurately represent
+	 * io's that have been actually submitted to an async engine,
+	 * and cur_depth is meaningless for sync engines.
 	 */
-	if (td->cur_depth) {
+	if (td->io_u_in_flight) {
 		int fio_unused ret;
 
-		ret = io_u_queued_complete(td, td->cur_depth, NULL);
+		ret = io_u_queued_complete(td, td->io_u_in_flight, NULL);
 	}
 
 	fio_gettime(&t, NULL);
