@@ -223,7 +223,7 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 static int fio_windowsaio_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 {
 	int rc = 0;
-	
+
 	dprint(FD_FILE, "fd close %s\n", f->file_name);
 
 	if (f->hFile != INVALID_HANDLE_VALUE) {
@@ -307,7 +307,7 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 static int fio_windowsaio_queue(struct thread_data *td,
 			      struct io_u *io_u)
 {
-    LPOVERLAPPED lpOvl = NULL;
+	LPOVERLAPPED lpOvl = NULL;
 	struct windowsaio_data *wd;
 	DWORD iobytes;
 	BOOL success;
@@ -318,24 +318,23 @@ static int fio_windowsaio_queue(struct thread_data *td,
 
 	wd = td->io_ops->data;
 
-    for (index = 0; index < td->o.iodepth; index++) {
-        if (wd->ovls[index].io_free) {
-            wd->ovls[index].io_free = FALSE;
-            ResetEvent(wd->ovls[index].o.hEvent);
-            break;
-        }
-    }
+	for (index = 0; index < td->o.iodepth; index++) {
+		if (wd->ovls[index].io_free) {
+			wd->ovls[index].io_free = FALSE;
+			ResetEvent(wd->ovls[index].o.hEvent);
+			break;
+		}
+	}
 
-    assert(index < td->o.iodepth);
+	assert(index < td->o.iodepth);
 
-    lpOvl = &wd->ovls[index].o;
-    wd->ovls[index].io_u = io_u;
+	lpOvl = &wd->ovls[index].o;
+	wd->ovls[index].io_u = io_u;
 	lpOvl->Internal = STATUS_PENDING;
 	lpOvl->InternalHigh = 0;
 	lpOvl->Offset = io_u->offset & 0xFFFFFFFF;
 	lpOvl->OffsetHigh = io_u->offset >> 32;
-	lpOvl->Pointer = NULL;
-    io_u->engine_data = &wd->ovls[index];
+	io_u->engine_data = &wd->ovls[index];
 
 	switch (io_u->ddir) {
     case DDIR_WRITE:
