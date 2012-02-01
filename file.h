@@ -107,9 +107,9 @@ struct fio_file {
 	 * block map for random io
 	 */
 	unsigned long *file_map;
-	unsigned int num_maps;
-	unsigned int last_free_lookup;
-	unsigned int failed_rands;
+	unsigned long num_maps;
+	unsigned long last_free_lookup;
+	unsigned failed_rands;
 
 	int references;
 	enum fio_file_flags flags;
