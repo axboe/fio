@@ -18,7 +18,7 @@ struct fio_overlapped {
 	OVERLAPPED o;
 	struct io_u *io_u;
 	BOOL io_complete;
-    BOOL io_free;
+	BOOL io_free;
 };
 
 struct windowsaio_data {
@@ -127,15 +127,14 @@ static void fio_windowsaio_cleanup(struct thread_data *td)
 	wd = td->io_ops->data;
 
 	if (wd != NULL) {
-	    wd->iothread_running = FALSE;
-    	WaitForSingleObject(wd->iothread, INFINITE);
+		wd->iothread_running = FALSE;
+		WaitForSingleObject(wd->iothread, INFINITE);
 
 		CloseHandle(wd->iothread);
 		CloseHandle(wd->iocomplete_event);
 
-		for (i = 0; i < td->o.iodepth; i++) {
+		for (i = 0; i < td->o.iodepth; i++)
 			CloseHandle(wd->ovls[i].o.hEvent);
-		}
 
 		free(wd->aio_events);
 		free(wd->ovls);
@@ -196,13 +195,13 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 
 	/* Only set up the competion port and thread if we're not just
 	 * querying the device size */
-    if (!rc && td->io_ops->data != NULL) {
+	if (!rc && td->io_ops->data != NULL) {
 		struct thread_ctx *ctx;
-        struct windowsaio_data *wd;
+		struct windowsaio_data *wd;
+
 		hFile = CreateIoCompletionPort(f->hFile, NULL, 0, 0);
 
-        wd = td->io_ops->data;
-
+		wd = td->io_ops->data;
 		wd->iothread_running = TRUE;
 
 		if (!rc) {
@@ -281,7 +280,7 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 			fov = (struct fio_overlapped*)io_u->engine_data;
 
 			if (fov->io_complete) {
-                fov->io_complete = FALSE;
+				fov->io_complete = FALSE;
 				fov->io_free  = TRUE;
 				wd->aio_events[dequeued] = io_u;
 				dequeued++;
@@ -291,7 +290,7 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 				break;
 		}
 
-        if (dequeued < min) {
+		if (dequeued < min) {
 			status = WaitForSingleObject(wd->iocomplete_event, mswait);
 			if (status != WAIT_OBJECT_0 && dequeued > 0)
 			    break;
@@ -304,8 +303,7 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 	return dequeued;
 }
 
-static int fio_windowsaio_queue(struct thread_data *td,
-			      struct io_u *io_u)
+static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	LPOVERLAPPED lpOvl = NULL;
 	struct windowsaio_data *wd;
@@ -337,7 +335,7 @@ static int fio_windowsaio_queue(struct thread_data *td,
 	io_u->engine_data = &wd->ovls[index];
 
 	switch (io_u->ddir) {
-    case DDIR_WRITE:
+	case DDIR_WRITE:
 		success = WriteFile(io_u->file->hFile, io_u->xfer_buf, io_u->xfer_buflen, &iobytes, lpOvl);
 		break;
 	case DDIR_READ:
@@ -362,9 +360,9 @@ static int fio_windowsaio_queue(struct thread_data *td,
 		assert(0);
 	}
 
-    if (success || GetLastError() == ERROR_IO_PENDING) {
+	if (success || GetLastError() == ERROR_IO_PENDING)
 		rc = FIO_Q_QUEUED;
-	} else {
+	else {
 		io_u->error = GetLastError();
 		io_u->resid = io_u->xfer_buflen;
 	}
@@ -401,7 +399,7 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 			io_u->error = ovl->Internal;
 		}
 
-        fov->io_complete = TRUE;
+		fov->io_complete = TRUE;
 		SetEvent(wd->iocomplete_event);
 	} while (ctx->wd->iothread_running);
 
@@ -420,6 +418,7 @@ static int fio_windowsaio_cancel(struct thread_data *td,
 	/* If we're running on Vista or newer, we can cancel individual IO requests */
 	if (wd->pCancelIoEx != NULL) {
 		struct fio_overlapped *ovl = io_u->engine_data;
+
 		if (!wd->pCancelIoEx(io_u->file->hFile, &ovl->o))
 			rc = 1;
 	} else
