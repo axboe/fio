@@ -143,13 +143,17 @@ static inline int fio_set_odirect(int fd)
 
 static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
-    uint64_t temp = 1;
-    if (ioctl(f->fd, DKIOCGETBLOCKCOUNT, bytes) == -1)
+	uint32_t block_size;
+	uint64_t block_count;
+
+	if (ioctl(f->fd, DKIOCGETBLOCKCOUNT, &block_count) == -1)
 		return errno;
-    if (ioctl(f->fd, DKIOCGETBLOCKSIZE, &temp) == -1)
+	if (ioctl(f->fd, DKIOCGETBLOCKSIZE, &block_size) == -1)
 		return errno;
-    (*bytes) *= temp;
-    return 0;
+
+	*bytes = block_size;
+	*bytes *= block_count;
+	return 0;
 }
 
 static inline int chardev_size(struct fio_file *f, unsigned long long *bytes)
