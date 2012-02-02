@@ -849,11 +849,15 @@ int init_random_map(struct thread_data *td)
 				(unsigned long long) td->o.rw_min_bs;
 		num_maps = (blocks + BLOCKS_PER_MAP - 1) /
 				(unsigned long long) BLOCKS_PER_MAP;
-		f->file_map = smalloc(num_maps * sizeof(unsigned long));
-		if (f->file_map) {
-			f->num_maps = num_maps;
-			continue;
-		}
+		if (num_maps == (unsigned long) num_maps) {
+			f->file_map = smalloc(num_maps * sizeof(unsigned long));
+			if (f->file_map) {
+				f->num_maps = num_maps;
+				continue;
+			}
+		} else
+			f->file_map = NULL;
+
 		if (!td->o.softrandommap) {
 			log_err("fio: failed allocating random map. If running"
 				" a large number of jobs, try the 'norandommap'"
