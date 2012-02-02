@@ -689,12 +689,24 @@ static int str_verify_pattern_cb(void *data, const char *input)
 			}
 		}
 	}
+
+	/*
+	 * Fill the pattern all the way to the end. This greatly reduces
+	 * the number of memcpy's we have to do when verifying the IO.
+	 */
+	while (i > 1 && i * 2 <= MAX_PATTERN_SIZE) {
+		memcpy(&td->o.verify_pattern[i], &td->o.verify_pattern[0], i);
+		i *= 2;
+	}
+
 	td->o.verify_pattern_bytes = i;
+
 	/*
 	 * VERIFY_META could already be set
 	 */
 	if (td->o.verify == VERIFY_NONE)
 		td->o.verify = VERIFY_PATTERN;
+
 	return 0;
 }
 
