@@ -1147,6 +1147,7 @@ static void small_content_scramble(struct io_u *io_u)
 
 	p = io_u->xfer_buf;
 	boffset = io_u->offset;
+	io_u->buf_filled_len = 0;
 
 	for (i = 0; i < nr_blocks; i++) {
 		/*
