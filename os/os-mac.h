@@ -69,17 +69,6 @@ struct itimerspec {
 static struct sigevent fio_timers[MAX_TIMERS];
 static unsigned int num_timers = 0;
 
-static inline int timer_create(clockid_t clockid, struct sigevent *restrict evp,
-				 timer_t *restrict timerid)
-{
-	int current_timer = num_timers;
-	fio_timers[current_timer] = *evp;
-	num_timers++;
-	
-	*timerid = current_timer;
-	return 0;
-}
-
 static void sig_alrm(int signum)
 {
 	union sigval sv;
@@ -96,7 +85,8 @@ static void sig_alrm(int signum)
 }
 
 static inline int timer_settime(timer_t timerid, int flags,
-								const struct itimerspec *value, struct itimerspec *ovalue)
+				const struct itimerspec *value,
+				struct itimerspec *ovalue)
 {
 	struct sigaction sa;
 	struct itimerval tv;
