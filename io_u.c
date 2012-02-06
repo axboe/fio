@@ -377,6 +377,12 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 	if (minbs == maxbs)
 		return minbs;
 
+	/*
+	 * If we can't satisfy the min block size from here, then fail
+	 */
+	if (!io_u_fits(td, io_u, minbs))
+		return 0;
+
 	if (td->o.use_os_rand)
 		rand_max = OS_RAND_MAX;
 	else
