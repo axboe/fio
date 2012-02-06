@@ -533,9 +533,10 @@ void free_disk_util(void)
 void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 		     int terse)
 {
-	double util;
+	double util = 0;
 
-	util = (double) 100 * dus->io_ticks / (double) dus->msec;
+	if (dus->msec)
+		util = (double) 100 * dus->io_ticks / (double) dus->msec;
 	if (util > 100.0)
 		util = 100.0;
 
