@@ -322,14 +322,27 @@ static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 	struct io_u *io_u = vc->io_u;
 	char *buf, *pattern;
 	unsigned int header_size = __hdr_size(td->o.verify);
-	unsigned int len, mod, i;
+	unsigned int len, mod, i, size, pattern_size;
 
 	pattern = td->o.verify_pattern;
+	pattern_size = td->o.verify_pattern_bytes;
+	if (pattern_size <= 1)
+		pattern_size = MAX_PATTERN_SIZE;
 	buf = (void *) hdr + header_size;
 	len = get_hdr_inc(td, io_u) - header_size;
-	mod = header_size % td->o.verify_pattern_bytes;
+	mod = header_size % pattern_size;
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < len; i += size) {
+		size = pattern_size - mod;
+		if (size > (len - i))
+			size = len - i;
+		if (memcmp(buf + i, pattern + mod, size))
+			// Let the slow compare find the first mismatch byte.
+			break;
+		mod = 0;
+	}
+
+	for (; i < len; i++) {
 		if (buf[i] != pattern[mod]) {
 			unsigned int bits;
 

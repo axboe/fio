@@ -698,6 +698,14 @@ static int str_verify_pattern_cb(void *data, const char *input)
 		memcpy(&td->o.verify_pattern[i], &td->o.verify_pattern[0], i);
 		i *= 2;
 	}
+	if (i == 1) {
+		/*
+		 * The code in verify_io_u_pattern assumes a single byte pattern
+		 * fills the whole verify pattern buffer.
+		 */
+		memset(td->o.verify_pattern, td->o.verify_pattern[0],
+		       MAX_PATTERN_SIZE);
+	}
 
 	td->o.verify_pattern_bytes = i;
 
