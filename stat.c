@@ -443,7 +443,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		double p_of_agg = 100.0;
 		const char *bw_str = "KB";
 
-		if (rs->agg[dir]) {
+		if (rs->agg[ddir]) {
 			p_of_agg = mean * 100 / (double) rs->agg[ddir];
 			if (p_of_agg > 100.0)
 				p_of_agg = 100.0;
