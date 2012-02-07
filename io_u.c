@@ -1375,7 +1375,8 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 			}
 		}
 
-		if (ramp_time_over(td) && td->runstate == TD_RUNNING) {
+		if (ramp_time_over(td) && (td->runstate == TD_RUNNING ||
+					   td->runstate == TD_VERIFYING)) {
 			account_io_completion(td, io_u, icd, idx, bytes);
 
 			if (__should_check_rate(td, idx)) {
