@@ -440,12 +440,14 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 					ts->percentile_list);
 	}
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
-		double p_of_agg;
+		double p_of_agg = 100.0;
 		const char *bw_str = "KB";
 
-		p_of_agg = mean * 100 / (double) rs->agg[ddir];
-		if (p_of_agg > 100.0)
-			p_of_agg = 100.0;
+		if (rs->agg[dir]) {
+			p_of_agg = mean * 100 / (double) rs->agg[ddir];
+			if (p_of_agg > 100.0)
+				p_of_agg = 100.0;
+		}
 
 		if (mean > 999999.9) {
 			min /= 1000.0;
@@ -653,9 +655,14 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 		free(ovals);
 
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
-		double p_of_agg;
+		double p_of_agg = 100.0;
 
-		p_of_agg = mean * 100 / (double) rs->agg[ddir];
+		if (rs->agg[ddir]) {
+			p_of_agg = mean * 100 / (double) rs->agg[ddir];
+			if (p_of_agg > 100.0)
+				p_of_agg = 100.0;
+		}
+
 		log_info(";%lu;%lu;%f%%;%f;%f", min, max, p_of_agg, mean, dev);
 	} else
 		log_info(";%lu;%lu;%f%%;%f;%f", 0UL, 0UL, 0.0, 0.0, 0.0);
