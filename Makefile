@@ -84,7 +84,12 @@ endif
 INSTALL = install
 prefix = /usr/local
 bindir = $(prefix)/bin
+
+ifeq ($(UNAME), Darwin)
+mandir = /usr/share/man
+else
 mandir = $(prefix)/man
+endif
 
 all: .depend $(PROGS) $(SCRIPTS)
 
