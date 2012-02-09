@@ -28,5 +28,6 @@ extern int ramp_time_over(struct thread_data *);
 extern int in_ramp_time(struct thread_data *);
 extern unsigned long long genesis_cycles;
 extern void fio_time_init(void);
+extern int fio_start_gtod_thread(void);
 
 #endif

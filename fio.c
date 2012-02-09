@@ -73,7 +73,6 @@ static struct fio_mutex *startup_mutex;
 static struct fio_mutex *writeout_mutex;
 static volatile int fio_abort;
 static int exit_value;
-static pthread_t gtod_thread;
 static pthread_t disk_util_thread;
 static struct flist_head *cgroup_list;
 static char *cgroup_mnt;
@@ -1500,50 +1499,6 @@ reaped:
 
 	if (*nr_running == cputhreads && !pending && realthreads)
 		fio_terminate_threads(TERMINATE_ALL);
-}
-
-static void *gtod_thread_main(void *data)
-{
-	fio_mutex_up(startup_mutex);
-
-	/*
-	 * As long as we have jobs around, update the clock. It would be nice
-	 * to have some way of NOT hammering that CPU with gettimeofday(),
-	 * but I'm not sure what to use outside of a simple CPU nop to relax
-	 * it - we don't want to lose precision.
-	 */
-	while (threads) {
-		fio_gtod_update();
-		nop;
-	}
-
-	return NULL;
-}
-
-static int fio_start_gtod_thread(void)
-{
-	pthread_attr_t attr;
-	int ret;
-
-	pthread_attr_init(&attr);
-	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
-	ret = pthread_create(&gtod_thread, &attr, gtod_thread_main, NULL);
-	pthread_attr_destroy(&attr);
-	if (ret) {
-		log_err("Can't create gtod thread: %s\n", strerror(ret));
-		return 1;
-	}
-
-	ret = pthread_detach(gtod_thread);
-	if (ret) {
-		log_err("Can't detatch gtod thread: %s\n", strerror(ret));
-		return 1;
-	}
-
-	dprint(FD_MUTEX, "wait on startup_mutex\n");
-	fio_mutex_down(startup_mutex);
-	dprint(FD_MUTEX, "done waiting on startup_mutex\n");
-	return 0;
 }
 
 /*
