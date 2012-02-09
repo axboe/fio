@@ -28,8 +28,8 @@
 #define SCALE_F 4
 #endif
 
-uint32_t crc32c_intel_le_hw_byte(uint32_t crc, unsigned char const *data,
-				 unsigned long length)
+static uint32_t crc32c_intel_le_hw_byte(uint32_t crc, unsigned char const *data,
+					unsigned long length)
 {
 	while (length--) {
 		__asm__ __volatile__(

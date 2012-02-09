@@ -220,7 +220,7 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
 /*
  * Convert string into a floating number. Return 1 for success and 0 otherwise.
  */
-int str_to_float(const char *str, double *val)
+static int str_to_float(const char *str, double *val)
 {
 	return (1 == sscanf(str, "%lf", val));
 }

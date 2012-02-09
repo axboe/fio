@@ -31,7 +31,7 @@ struct fifo *fifo_alloc(unsigned int size)
 
 	fifo = malloc(sizeof(struct fifo));
 	if (!fifo)
-		return 0;
+		return NULL;
 
 	fifo->buffer = malloc(size);
 	fifo->size = size;
