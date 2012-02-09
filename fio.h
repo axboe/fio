@@ -580,8 +580,9 @@ static inline int should_fsync(struct thread_data *td)
 extern int __must_check parse_options(int, char **);
 extern int parse_jobs_ini(char *, int, int);
 extern int parse_cmd_line(int, char **);
-extern int exec_run(void);
+extern int fio_backend(void);
 extern void reset_fio_state(void);
+extern void clear_io_state(struct thread_data *);
 extern int fio_options_parse(struct thread_data *, char **, int);
 extern void fio_keywords_init(void);
 extern int fio_cmd_option_parse(struct thread_data *, const char *, char *);

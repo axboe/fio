@@ -346,7 +346,7 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 	spdu.jobs = cpu_to_le32(thread_number);
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), 0);
 
-	ret = exec_run();
+	ret = fio_backend();
 
 	epdu.error = ret;
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_STOP, &epdu, sizeof(epdu), 0);
@@ -390,7 +390,7 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 
 	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0, NULL);
 
-	ret = exec_run();
+	ret = fio_backend();
 	fio_server_send_quit_cmd();
 	reset_fio_state();
 	return ret;
