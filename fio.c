@@ -51,23 +51,6 @@
 unsigned long page_mask;
 unsigned long page_size;
 
-int groupid = 0;
-unsigned int thread_number = 0;
-unsigned int nr_process = 0;
-unsigned int nr_thread = 0;
-int shm_id = 0;
-int temp_stall_ts;
-unsigned long done_secs = 0;
-
-/*
- * Just expose an empty list, if the OS does not support disk util stats
- */
-#ifndef FIO_HAVE_DISK_UTIL
-FLIST_HEAD(disk_list);
-#endif
-
-unsigned long arch_flags = 0;
-
 static int endian_check(void)
 {
 	union {

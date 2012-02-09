@@ -58,6 +58,14 @@ static volatile int fio_abort;
 
 struct io_log *agg_io_log[2];
 
+int groupid = 0;
+unsigned int thread_number = 0;
+unsigned int nr_process = 0;
+unsigned int nr_thread = 0;
+int shm_id = 0;
+int temp_stall_ts;
+unsigned long done_secs = 0;
+
 #define PAGE_ALIGN(buf)	\
 	(char *) (((unsigned long) (buf) + page_mask) & ~page_mask)
 
@@ -285,6 +293,7 @@ requeue:
 
 	return 0;
 }
+
 static inline void __update_tv_cache(struct thread_data *td)
 {
 	fio_gettime(&td->tv_cache, NULL);
@@ -353,8 +362,6 @@ static int break_on_this_error(struct thread_data *td, enum fio_ddir ddir,
 
 	return 0;
 }
-
-
 
 /*
  * The main verify engine. Runs over the writes we previously submitted,
@@ -1302,8 +1309,6 @@ reaped:
 		fio_terminate_threads(TERMINATE_ALL);
 }
 
-
-
 /*
  * Main function for kicking off and reaping jobs, as needed.
  */
@@ -1579,7 +1584,6 @@ static int create_disk_util_thread(void)
 	return 0;
 }
 
-
 int fio_backend(void)
 {
 	struct thread_data *td;
@@ -1634,5 +1638,3 @@ int fio_backend(void)
 	fio_mutex_remove(writeout_mutex);
 	return exit_value;
 }
-
-
