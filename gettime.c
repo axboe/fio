@@ -273,7 +273,7 @@ void fio_gtod_init(void)
 	assert(fio_tv);
 }
 
-void fio_gtod_update(void)
+static void fio_gtod_update(void)
 {
 	gettimeofday(fio_tv, NULL);
 }

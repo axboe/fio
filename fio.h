@@ -33,6 +33,7 @@ struct thread_data;
 #include "options.h"
 #include "profile.h"
 #include "time.h"
+#include "gettime.h"
 #include "lib/getopt.h"
 #include "lib/rand.h"
 #include "server.h"
