@@ -111,24 +111,16 @@ static inline int fio_set_odirect(int fd)
 
 static inline int fio_cpuset_init(os_cpu_mask_t *mask)
 {
-	int ret;
-
-	if (pset_create(mask) < 0) {
-		ret = errno;
+	if (pset_create(mask) < 0)
 		return -1;
-	}
 
 	return 0;
 }
 
 static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
 {
-	int ret;
-
-	if (pset_destroy(*mask) < 0) {
-		ret = errno;
+	if (pset_destroy(*mask) < 0)
 		return -1;
-	}
 
 	return 0;
 }

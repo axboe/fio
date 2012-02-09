@@ -180,6 +180,7 @@ static unsigned long long __get_mult_bytes(const char *p, void *data,
 		pow = 1;
 	else if (!strcmp("%", c)) {
 		*percent = 1;
+		free(c);
 		return ret;
 	}
 

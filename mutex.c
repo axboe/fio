@@ -23,7 +23,7 @@ struct fio_mutex *fio_mutex_init(int value)
 	struct fio_mutex *mutex = NULL;
 	pthread_mutexattr_t attr;
 	pthread_condattr_t cond;
-	int ret, mflag;
+	int ret;
 
 	mutex = (void *) mmap(NULL, sizeof(struct fio_mutex),
 				PROT_READ | PROT_WRITE,
@@ -36,22 +36,17 @@ struct fio_mutex *fio_mutex_init(int value)
 
 	mutex->value = value;
 
-	/*
-	 * Not all platforms support process shared mutexes (FreeBSD)
-	 */
-#ifdef FIO_HAVE_PSHARED_MUTEX
-	mflag = PTHREAD_PROCESS_SHARED;
-#else
-	mflag = PTHREAD_PROCESS_PRIVATE;
-#endif
-
 	ret = pthread_mutexattr_init(&attr);
 	if (ret) {
 		log_err("pthread_mutexattr_init: %s\n", strerror(ret));
 		goto err;
 	}
+
+	/*
+	 * Not all platforms support process shared mutexes (FreeBSD)
+	 */
 #ifdef FIO_HAVE_PSHARED_MUTEX
-	ret = pthread_mutexattr_setpshared(&attr, mflag);
+	ret = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
 	if (ret) {
 		log_err("pthread_mutexattr_setpshared: %s\n", strerror(ret));
 		goto err;
@@ -60,7 +55,7 @@ struct fio_mutex *fio_mutex_init(int value)
 
 	pthread_condattr_init(&cond);
 #ifdef FIO_HAVE_PSHARED_MUTEX
-	pthread_condattr_setpshared(&cond, mflag);
+	pthread_condattr_setpshared(&cond, PTHREAD_PROCESS_SHARED);
 #endif
 	pthread_cond_init(&mutex->cond, &cond);
 
