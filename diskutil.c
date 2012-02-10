@@ -470,7 +470,7 @@ static void show_agg_stats(struct disk_util_agg *agg, int terse)
 				agg->time_in_queue / agg->slavecount,
 				agg->max_util.u.f);
 	} else {
-		log_info("slaves;%u;%u;%u;%u;%u;%u;%u;%3.2f%%",
+		log_info(";slaves;%u;%u;%u;%u;%u;%u;%u;%3.2f%%",
 				agg->ios[0] / agg->slavecount,
 				agg->ios[1] / agg->slavecount,
 				agg->merges[0] / agg->slavecount,
