@@ -540,10 +540,10 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 	if (util > 100.0)
 		util = 100.0;
 
-	if (agg->slavecount)
-		log_info("  ");
-
 	if (!terse) {
+		if (agg->slavecount)
+			log_info("  ");
+
 		log_info("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, "
 			 "in_queue=%u, util=%3.2f%%", dus->name,
 					dus->ios[0], dus->ios[1],
@@ -562,8 +562,7 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 	 * If the device has slaves, aggregate the stats for
 	 * those slave devices also.
 	 */
-	if (agg->slavecount)
-		show_agg_stats(agg, terse);
+	show_agg_stats(agg, terse);
 
 	if (!terse)
 		log_info("\n");
