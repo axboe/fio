@@ -176,6 +176,12 @@ void prune_io_piece_log(struct thread_data *td)
 	}
 }
 
+static void dump_ipo(struct io_piece *ipo, const char *msg)
+{
+	printf("%s\n", msg);
+	printf("\toffset %llu, len %lu, fl %x, ddir %d\n", ipo->offset, ipo->len, ipo->flags, ipo->ddir);
+}
+
 /*
  * log a successful write, so we can unwind the log for verify
  */
@@ -239,7 +245,12 @@ restart:
 		else if (ipo->offset > __ipo->offset)
 			p = &(*p)->rb_right;
 		else {
-			assert(ipo->len == __ipo->len);
+			if (ipo->len != __ipo->len) {
+				log_err("fio: unexpected ipo overlap!\n");
+				log_err("fio: please report this issue.\n");
+				dump_ipo(ipo, "ipo");
+				dump_ipo(__ipo, "__ipo");
+			}
 			td->io_hist_len--;
 			rb_erase(parent, &td->io_hist_tree);
 			remove_trim_entry(td, __ipo);
