@@ -668,7 +668,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * See if it's time to switch to a new zone
 	 */
-	if (td->zone_bytes >= td->o.zone_size) {
+	if (td->zone_bytes >= td->o.zone_size && td->o.zone_skip) {
 		td->zone_bytes = 0;
 		io_u->file->file_offset += td->o.zone_range + td->o.zone_skip;
 		io_u->file->last_pos = io_u->file->file_offset;
