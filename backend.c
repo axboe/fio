@@ -1493,7 +1493,8 @@ static void run_threads(void)
 		}
 
 		if (left) {
-			log_err("fio: %d jobs failed to start\n", left);
+			log_err("fio: %d job%s failed to start\n", left,
+					left > 1 ? "s" : "");
 			for (i = 0; i < this_jobs; i++) {
 				td = map[i];
 				if (!td)
