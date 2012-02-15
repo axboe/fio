@@ -42,7 +42,6 @@
 #include "verify.h"
 #include "trim.h"
 #include "diskutil.h"
-#include "cgroup.h"
 #include "profile.h"
 #include "lib/rand.h"
 #include "memalign.h"
