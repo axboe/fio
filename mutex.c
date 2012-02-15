@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <time.h>
+#include <errno.h>
 #include <pthread.h>
 #include <sys/mman.h>
 
@@ -12,6 +13,8 @@
 #include "arch/arch.h"
 #include "os/os.h"
 #include "helpers.h"
+#include "time.h"
+#include "gettime.h"
 
 void fio_mutex_remove(struct fio_mutex *mutex)
 {
@@ -82,10 +85,18 @@ err:
 	return NULL;
 }
 
+static int mutex_timed_out(struct timeval *t, unsigned int seconds)
+{
+	return mtime_since_now(t) >= seconds * 1000;
+}
+
 int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 {
+	struct timeval tv_s;
 	struct timespec t;
 	int ret = 0;
+
+	fio_gettime(&tv_s, NULL);
 
 #ifdef FIO_HAVE_CLOCK_MONOTONIC
 	clock_gettime(CLOCK_MONOTONIC, &t);
@@ -98,7 +109,17 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 
 	while (!mutex->value && !ret) {
 		mutex->waiters++;
+
+		/*
+		 * Some platforms (FreeBSD 9?) seems to return timed out
+		 * way too early, double check.
+		 */
 		ret = pthread_cond_timedwait(&mutex->cond, &mutex->lock, &t);
+		if (ret == ETIMEDOUT && !mutex_timed_out(&tv_s, seconds)) {
+			pthread_mutex_lock(&mutex->lock);
+			ret = 0;
+		}
+
 		mutex->waiters--;
 	}
 
