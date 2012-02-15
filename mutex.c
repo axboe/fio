@@ -15,6 +15,7 @@
 
 void fio_mutex_remove(struct fio_mutex *mutex)
 {
+	pthread_cond_destroy(&mutex->cond);
 	munmap((void *) mutex, sizeof(*mutex));
 }
 
@@ -57,12 +58,12 @@ struct fio_mutex *fio_mutex_init(int value)
 #ifdef FIO_HAVE_PSHARED_MUTEX
 	pthread_condattr_setpshared(&cond, PTHREAD_PROCESS_SHARED);
 #endif
-	pthread_cond_init(&mutex->cond, &cond);
 #ifdef FIO_HAVE_CLOCK_MONOTONIC
 	pthread_condattr_setclock(&cond, CLOCK_MONOTONIC);
 #else
 	pthread_condattr_setclock(&cond, CLOCK_REALTIME);
 #endif
+	pthread_cond_init(&mutex->cond, &cond);
 
 	ret = pthread_mutex_init(&mutex->lock, &attr);
 	if (ret) {
