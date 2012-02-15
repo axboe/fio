@@ -23,6 +23,8 @@
  */
 
 #include <string.h>
+#include <sys/types.h>
+#include <signal.h>
 #include "fio.h"
 
 /*

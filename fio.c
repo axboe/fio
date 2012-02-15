@@ -22,19 +22,8 @@
  *
  */
 #include <unistd.h>
-#include <fcntl.h>
-#include <string.h>
-#include <limits.h>
-#include <signal.h>
-#include <time.h>
 #include <locale.h>
-#include <assert.h>
 #include <time.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/mman.h>
 
 #include "fio.h"
 #include "hash.h"
