@@ -14,6 +14,7 @@
 #define FIO_HAVE_ODIRECT
 #define FIO_USE_GENERIC_RAND
 #define FIO_HAVE_CLOCK_MONOTONIC
+#define FIO_HAVE_PTHREAD_CONDATTR_SETCLOCK
 
 /*
  * This is broken on AIX if _LARGE_FILES is defined...
