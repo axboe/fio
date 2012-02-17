@@ -64,7 +64,7 @@ struct fio_mutex *fio_mutex_init(int value)
 #ifdef FIO_HAVE_PSHARED_MUTEX
 	pthread_condattr_setpshared(&cond, PTHREAD_PROCESS_SHARED);
 #endif
-#ifdef FIO_HAVE_CLOCK_MONOTONIC
+#ifdef FIO_HAVE_PTHREAD_CONDATTR_SETCLOCK
 	pthread_condattr_setclock(&cond, fio_clk_id);
 #endif
 	pthread_cond_init(&mutex->cond, &cond);
