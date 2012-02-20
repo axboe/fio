@@ -221,6 +221,7 @@ static void free_shm(void)
 
 		threads = NULL;
 		file_hash_exit();
+		flow_exit();
 		fio_debug_jobp = NULL;
 		shmdt(tp);
 		shmctl(shm_id, IPC_RMID, &sbuf);
@@ -277,6 +278,9 @@ static int setup_thread_area(void)
 	fio_debug_jobp = (void *) hash + file_hash_size;
 	*fio_debug_jobp = -1;
 	file_hash_init(hash);
+
+	flow_init();
+
 	return 0;
 }
 
@@ -324,6 +328,7 @@ static void put_job(struct thread_data *td)
 		return;
 
 	profile_td_exit(td);
+	flow_exit_job(td);
 
 	if (td->error)
 		log_info("fio: %s\n", td->verror);
@@ -795,6 +800,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	if (fixup_options(td))
 		goto err;
+
+	flow_init_job(td);
 
 	/*
 	 * IO engines only need this for option callbacks, and the address may

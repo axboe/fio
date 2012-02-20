@@ -958,6 +958,27 @@ the thread/process does any work.
 .BI gid \fR=\fPint
 Set group ID, see \fBuid\fR.
 .TP
+.BI flow_id \fR=\fPint
+The ID of the flow. If not specified, it defaults to being a global flow. See
+\fBflow\fR.
+.TP
+.BI flow \fR=\fPint
+Weight in token-based flow control. If this value is used, then there is a
+\fBflow counter\fR which is used to regulate the proportion of activity between
+two or more jobs. fio attempts to keep this flow counter near zero. The
+\fBflow\fR parameter stands for how much should be added or subtracted to the
+flow counter on each iteration of the main I/O loop. That is, if one job has
+\fBflow=8\fR and another job has \fBflow=-1\fR, then there will be a roughly
+1:8 ratio in how much one runs vs the other.
+.TP
+.BI flow_watermark \fR=\fPint
+The maximum value that the absolute value of the flow counter is allowed to
+reach before the job must wait for a lower value of the counter.
+.TP
+.BI flow_sleep \fR=\fPint
+The period of time, in microseconds, to wait after the flow watermark has been
+exceeded before retrying operations
+.TP
 .BI clat_percentiles \fR=\fPbool
 Enable the reporting of percentiles of completion latencies.
 .TP

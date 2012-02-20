@@ -2170,6 +2170,40 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Run job with this group ID",
 	},
 	{
+		.name	= "flow_id",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(flow_id),
+		.help	= "The flow index ID to use",
+		.def	= "0",
+	},
+	{
+		.name	= "flow",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(flow),
+		.help	= "Weight for flow control of this job",
+		.parent	= "flow_id",
+		.def	= "0",
+	},
+	{
+		.name	= "flow_watermark",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(flow_watermark),
+		.help	= "High watermark for flow control. This option"
+			" should be set to the same value for all threads"
+			" with non-zero flow.",
+		.parent	= "flow_id",
+		.def	= "1024",
+	},
+	{
+		.name	= "flow_sleep",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(flow_sleep),
+		.help	= "How many microseconds to sleep after being held"
+			" back by the flow control mechanism",
+		.parent	= "flow_id",
+		.def	= "0",
+	},
+	{
 		.name = NULL,
 	},
 };

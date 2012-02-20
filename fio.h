@@ -38,6 +38,7 @@ struct thread_data;
 #include "lib/rand.h"
 #include "server.h"
 #include "stat.h"
+#include "flow.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
@@ -258,6 +259,11 @@ struct thread_options {
 	unsigned int uid;
 	unsigned int gid;
 
+	int flow_id;
+	int flow;
+	int flow_watermark;
+	unsigned int flow_sleep;
+
 	unsigned int sync_file_range;
 };
 
@@ -469,6 +475,8 @@ struct thread_data {
 	 */
 	unsigned int total_err_count;
 	int first_error;
+
+	struct fio_flow *flow;
 
 	/*
 	 * Can be overloaded by profiles

@@ -409,6 +409,9 @@ static void do_verify(struct thread_data *td)
 			}
 		}
 
+		if (flow_threshold_exceeded(td))
+			continue;
+
 		io_u = __get_io_u(td);
 		if (!io_u)
 			break;
@@ -559,6 +562,9 @@ static void do_io(struct thread_data *td)
 				break;
 			}
 		}
+
+		if (flow_threshold_exceeded(td))
+			continue;
 
 		io_u = get_io_u(td);
 		if (!io_u)

@@ -1231,6 +1231,25 @@ uid=int		Instead of running as the invoking user, set the user ID to
 
 gid=int		Set group ID, see uid.
 
+flow_id=int	The ID of the flow. If not specified, it defaults to being a
+		global flow. See flow.
+
+flow=int	Weight in token-based flow control. If this value is used, then
+		there is a 'flow counter' which is used to regulate the
+		proportion of activity between two or more jobs. fio attempts
+		to keep this flow counter near zero. The 'flow' parameter
+		stands for how much should be added or subtracted to the flow
+		counter on each iteration of the main I/O loop. That is, if
+		one job has flow=8 and another job has flow=-1, then there
+		will be a roughly 1:8 ratio in how much one runs vs the other.
+
+flow_watermark=int	The maximum value that the absolute value of the flow
+		counter is allowed to reach before the job must wait for a
+		lower value of the counter.
+
+flow_sleep=int	The period of time, in microseconds, to wait after the flow
+		watermark has been exceeded before retrying operations
+
 In addition, there are some parameters which are only valid when a specific
 ioengine is in use. These are used identically to normal parameters, with the
 caveat that when used on the command line, they must come after the ioengine
