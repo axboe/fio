@@ -1019,7 +1019,8 @@ static void *thread_main(void *data)
 	if (td->o.cgroup_weight && cgroup_setup(td, cgroup_list, &cgroup_mnt))
 		goto err;
 
-	if (nice(td->o.nice) == -1) {
+	errno = 0;
+	if (nice(td->o.nice) == -1 && errno != 0) {
 		td_verror(td, errno, "nice");
 		goto err;
 	}
