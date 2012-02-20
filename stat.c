@@ -1291,16 +1291,27 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 	spent = mtime_since(&td->bw_sample_time, t);
 	if (spent < td->o.bw_avg_time)
 		return;
+	
+	/* 
+	 * Compute both read and write rates for the interval.
+	 */
+	for (ddir = DDIR_READ; ddir <= DDIR_WRITE; ddir++) {
+		uint64_t delta;
 
-	rate = (td->this_io_bytes[ddir] - td->stat_io_bytes[ddir]) *
-			1000 / spent / 1024;
-	add_stat_sample(&ts->bw_stat[ddir], rate);
+		delta = td->this_io_bytes[ddir] - td->stat_io_bytes[ddir];
+		if (!delta)
+			continue; /* No entries for interval */
 
-	if (td->bw_log)
-		add_log_sample(td, td->bw_log, rate, ddir, bs);
+		rate = delta * 1000 / spent / 1024;
+		add_stat_sample(&ts->bw_stat[ddir], rate);
+
+		if (td->bw_log)
+			add_log_sample(td, td->bw_log, rate, ddir, bs);
+
+		td->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
+	}
 
 	fio_gettime(&td->bw_sample_time, NULL);
-	td->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
 }
 
 void add_iops_sample(struct thread_data *td, enum fio_ddir ddir,
