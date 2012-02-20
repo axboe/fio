@@ -1,6 +1,6 @@
 /*
  * Native Windows async IO engine
- * Copyright (C) 2011 Bruce Cran <bruce@cran.org.uk>
+ * Copyright (C) 2012 Bruce Cran <bruce@cran.org.uk>
  */
 
 #include <stdio.h>
@@ -113,9 +113,9 @@ static int fio_windowsaio_init(struct thread_data *td)
 	}
 
 	hKernel32Dll = GetModuleHandle("kernel32.dll");
-	wd->pCancelIoEx = GetProcAddress(hKernel32Dll, "CancelIoEx");
-
+	wd->pCancelIoEx = (CANCELIOEX)GetProcAddress(hKernel32Dll, "CancelIoEx");
 	td->io_ops->data = wd;
+
 	return rc;
 }
 
@@ -133,8 +133,9 @@ static void fio_windowsaio_cleanup(struct thread_data *td)
 		CloseHandle(wd->iothread);
 		CloseHandle(wd->iocomplete_event);
 
-		for (i = 0; i < td->o.iodepth; i++)
+		for (i = 0; i < td->o.iodepth; i++) {
 			CloseHandle(wd->ovls[i].o.hEvent);
+		}
 
 		free(wd->aio_events);
 		free(wd->ovls);
@@ -171,6 +172,10 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 	if (td->o.sync_io)
 		flags |= FILE_FLAG_WRITE_THROUGH;
 
+	/*
+	 * Inform Windows whether we're going to be doing sequential or
+	 * random io so it can tune the Cache Manager
+	 */
 	if (td->o.td_ddir == TD_DDIR_READ  ||
 		td->o.td_ddir == TD_DDIR_WRITE)
 		flags |= FILE_FLAG_SEQUENTIAL_SCAN;
@@ -182,7 +187,7 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 	else
 		access = (GENERIC_READ | GENERIC_WRITE);
 
-	if (td->o.create_on_open > 0)
+	if (td->o.create_on_open)
 		openmode = OPEN_ALWAYS;
 	else
 		openmode = OPEN_EXISTING;
@@ -193,7 +198,7 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 	if (f->hFile == INVALID_HANDLE_VALUE)
 		rc = 1;
 
-	/* Only set up the competion port and thread if we're not just
+	/* Only set up the completion port and thread if we're not just
 	 * querying the device size */
 	if (!rc && td->io_ops->data != NULL) {
 		struct thread_ctx *ctx;
@@ -308,7 +313,7 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 	LPOVERLAPPED lpOvl = NULL;
 	struct windowsaio_data *wd;
 	DWORD iobytes;
-	BOOL success;
+	BOOL success = FALSE;
 	int index;
 	int rc = FIO_Q_COMPLETED;
 
@@ -358,6 +363,7 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 		break;
 	default:
 		assert(0);
+		break;
 	}
 
 	if (success || GetLastError() == ERROR_IO_PENDING)

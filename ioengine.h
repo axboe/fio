@@ -132,7 +132,7 @@ enum fio_ioengine_flags {
 	FIO_RAWIO	= 1 << 1,	/* some sort of direct/raw io */
 	FIO_DISKLESSIO	= 1 << 2,	/* no disk involved */
 	FIO_NOEXTEND	= 1 << 3,	/* engine can't extend file */
-	FIO_NODISKUTIL  = 1 << 4,       /* diskutil can't handle filename */
+	FIO_NODISKUTIL  = 1 << 4,	/* diskutil can't handle filename */
 	FIO_UNIDIR	= 1 << 5,	/* engine is uni-directional */
 	FIO_NOIO	= 1 << 6,	/* thread does only pseudo IO */
 	FIO_SIGTERM	= 1 << 7,	/* needs SIGTERM to exit */

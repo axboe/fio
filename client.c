@@ -404,6 +404,11 @@ int fio_clients_connect(void)
 	struct flist_head *entry, *tmp;
 	int ret;
 
+#ifdef WIN32
+	WSADATA wsd;
+	WSAStartup(MAKEWORD(2,2), &wsd);
+#endif
+
 	dprint(FD_NET, "client: connect all\n");
 
 	client_signal_handler();

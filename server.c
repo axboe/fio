@@ -1187,6 +1187,11 @@ int fio_start_server(char *pidfile)
 	pid_t pid;
 	int ret;
 
+#if defined(WIN32)
+    WSADATA wsd;
+    WSAStartup(MAKEWORD(2,2), &wsd);
+#endif
+
 	if (!pidfile)
 		return fio_server();
 

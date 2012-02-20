@@ -555,6 +555,19 @@ static int fixup_options(struct thread_data *td)
 	}
 #endif
 
+#ifdef WIN32
+	/*
+	 * Windows doesn't support O_DIRECT or O_SYNC with the _open interface,
+	 * so fail if we're passed those flags
+	 */
+	if ((td->io_ops->flags & FIO_SYNCIO) && (td->o.odirect || td->o.sync_io)) {
+		log_err("fio: Windows does not support direct or non-buffered io with"
+				" the synchronous ioengines. Use the 'windowsaio' ioengine"
+				" with 'direct=1' and 'iodepth=1' instead.\n");
+		ret = 1;
+	}
+#endif
+
 	return ret;
 }
 
@@ -660,31 +673,6 @@ void td_fill_rand_seeds(struct thread_data *td)
 	init_rand_seed(&td->buf_state, td->rand_seeds[7]);
 }
 
-/*
- * Initialize the various random states we need (random io, block size ranges,
- * read/write mix, etc).
- */
-static int init_random_state(struct thread_data *td)
-{
-	int fd;
-
-	fd = open("/dev/urandom", O_RDONLY);
-	if (fd == -1) {
-		td_verror(td, errno, "open");
-		return 1;
-	}
-
-	if (read(fd, td->rand_seeds, sizeof(td->rand_seeds)) <
-	    (int) sizeof(td->rand_seeds)) {
-		td_verror(td, EIO, "read");
-		close(fd);
-		return 1;
-	}
-
-	close(fd);
-	td_fill_rand_seeds(td);
-	return 0;
-}
 
 /*
  * Initializes the ioengine configured for a job, if it has not been done so
@@ -839,8 +827,10 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	td->groupid = groupid;
 	prev_group_jobs++;
 
-	if (init_random_state(td))
+	if (init_random_state(td, td->rand_seeds, sizeof(td->rand_seeds))) {
+		td_verror(td, errno, "init_random_state");
 		goto err;
+	}
 
 	if (setup_rate(td))
 		goto err;

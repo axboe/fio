@@ -9,7 +9,7 @@ PROGS	= fio
 SCRIPTS = fio_generate_plots
 UNAME  := $(shell uname)
 
-SOURCE = gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
+SOURCE := gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
 		rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
 		lib/num2str.c lib/ieee754.c $(wildcard crc/*.c) engines/cpu.c \
@@ -56,9 +56,11 @@ ifeq ($(UNAME), Darwin)
   LIBS	 += -lpthread -ldl
 endif
 ifneq (,$(findstring CYGWIN,$(UNAME)))
-  SOURCE += engines/windowsaio.c
-  LIBS	 += -lpthread -lrt -lpsapi
-  CFLAGS += -DPSAPI_VERSION=1
+  SOURCE := $(filter-out engines/mmap.c,$(SOURCE))
+  SOURCE += engines/windowsaio.c os/windows/posix.c
+  LIBS	 += -lpthread -lpsapi -lws2_32
+  CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format
+  CC	  = x86_64-w64-mingw32-gcc
 endif
 
 OBJS = $(SOURCE:.c=.o)

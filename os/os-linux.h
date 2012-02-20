@@ -44,6 +44,7 @@
 #define FIO_HAVE_BINJECT
 #define FIO_HAVE_CLOCK_MONOTONIC
 #define FIO_HAVE_GETTID
+#define FIO_USE_GENERIC_INIT_RANDOM_STATE
 
 /*
  * Can only enable this for newer glibcs, or the header and defines are

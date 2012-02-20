@@ -31,7 +31,7 @@ static void disk_util_free(struct disk_util *du)
 		flist_del(&slave->slavelist);
 		slave->users--;
 	}
-	
+
 	fio_mutex_remove(du->lock);
 	sfree(du);
 }

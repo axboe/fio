@@ -62,7 +62,7 @@ struct fio_file {
 
 	void *file_data;
 	int fd;
-#ifdef __CYGWIN__
+#ifdef WIN32
 	HANDLE hFile;
 	HANDLE ioCP;
 #endif

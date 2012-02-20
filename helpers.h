@@ -3,6 +3,7 @@
 
 #include "compiler/compiler.h"
 
+#include <sys/types.h>
 #include <time.h>
 
 struct in_addr;

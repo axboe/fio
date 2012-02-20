@@ -59,7 +59,7 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 err:
 	if (td->error && f->mmap_ptr)
 		munmap(f->mmap_ptr, length);
-		
+
 	return td->error;
 }
 
@@ -200,7 +200,7 @@ static int fio_mmapio_init(struct thread_data *td)
 			break;
 		shift++;
 	} while (1);
-		
+
 	mmap_map_mask = 1UL << shift;
 	return 0;
 }

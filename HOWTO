@@ -627,6 +627,7 @@ iodepth_low=int	The low water mark indicating when to start filling
 
 direct=bool	If value is true, use non-buffered io. This is usually
 		O_DIRECT. Note that ZFS on Solaris doesn't support direct io.
+		On Windows the synchronous ioengines don't support direct io.
 
 buffered=bool	If value is true, use buffered io. This is the opposite
 		of the 'direct' option. Defaults to true.
@@ -644,7 +645,7 @@ fsync=int	If writing to a file, issue a sync of the dirty data
 
 fdatasync=int	Like fsync= but uses fdatasync() to only sync data and not
 		metadata blocks.
-		In FreeBSD there is no fdatasync(), this falls back to
+		In FreeBSD and Windows there is no fdatasync(), this falls back to
 		using fsync()
 
 sync_file_range=str:val	Use sync_file_range() for every 'val' number of

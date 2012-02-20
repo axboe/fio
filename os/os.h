@@ -3,6 +3,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -34,7 +35,7 @@ enum {
 #include "os-aix.h"
 #elif defined(__hpux)
 #include "os-hpux.h"
-#elif defined(__CYGWIN__)
+#elif defined(WIN32)
 #include "os-windows.h"
 #else
 #error "unsupported os"
@@ -264,6 +265,32 @@ static inline long os_random_long(os_random_state_t *rs)
 
 	val = rand_r(rs);
 	return val;
+}
+#endif
+
+#ifdef FIO_USE_GENERIC_INIT_RANDOM_STATE
+extern void td_fill_rand_seeds(struct thread_data *td);
+/*
+ * Initialize the various random states we need (random io, block size ranges,
+ * read/write mix, etc).
+ */
+static inline int init_random_state(struct thread_data *td, unsigned long *rand_seeds, int size)
+{
+	int fd;
+
+	fd = open("/dev/urandom", O_RDONLY);
+	if (fd == -1) {
+		return 1;
+	}
+
+	if (read(fd, rand_seeds, size) < size) {
+		close(fd);
+		return 1;
+	}
+
+	close(fd);
+	td_fill_rand_seeds(td);
+	return 0;
 }
 #endif
 
