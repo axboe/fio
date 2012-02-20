@@ -34,7 +34,6 @@
 #define FIO_HAVE_RAWBIND
 #define FIO_HAVE_BLKTRACE
 #define FIO_HAVE_STRSEP
-#define FIO_HAVE_FALLOCATE
 #define FIO_HAVE_POSIXAIO_FSYNC
 #define FIO_HAVE_PSHARED_MUTEX
 #define FIO_HAVE_CL_SIZE
@@ -50,7 +49,7 @@
  * Can only enable this for newer glibcs, or the header and defines are
  * missing
  */
-#if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 6
+#if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 8
 #define FIO_HAVE_LINUX_FALLOCATE
 #endif
 
