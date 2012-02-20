@@ -30,6 +30,7 @@
 #include <locale.h>
 #include <assert.h>
 #include <time.h>
+#include <inttypes.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
@@ -67,7 +68,7 @@ int temp_stall_ts;
 unsigned long done_secs = 0;
 
 #define PAGE_ALIGN(buf)	\
-	(char *) (((unsigned long) (buf) + page_mask) & ~page_mask)
+	(char *) (((uintptr_t) (buf) + page_mask) & ~page_mask)
 
 #define JOB_START_TIMEOUT	(5 * 1000)
 
@@ -1179,7 +1180,7 @@ err:
 		write_iolog_close(td);
 
 	td_set_runstate(td, TD_EXITED);
-	return (void *) (unsigned long) td->error;
+	return (void *) (uintptr_t) td->error;
 }
 
 
@@ -1210,7 +1211,7 @@ static int fork_main(int shmid, int offset)
 	td = data + offset * sizeof(struct thread_data);
 	ret = thread_main(td);
 	shmdt(data);
-	return (int) (unsigned long) ret;
+	return (int) (uintptr_t) ret;
 }
 
 /*

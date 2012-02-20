@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #include "memalign.h"
 
@@ -8,7 +9,7 @@ struct align_footer {
 };
 
 #define PTR_ALIGN(ptr, mask)	\
-	(char *) (((unsigned long) ((ptr) + (mask)) & ~(mask)))
+	(char *) (((uintptr_t) ((ptr) + (mask)) & ~(mask)))
 
 void *fio_memalign(size_t alignment, size_t size)
 {
@@ -21,7 +22,7 @@ void *fio_memalign(size_t alignment, size_t size)
 	if (ptr) {
 		ret = PTR_ALIGN(ptr, alignment);
 		f = ret + size;
-		f->offset = (unsigned long) ret - (unsigned long) ptr;
+		f->offset = (uintptr_t) ret - (uintptr_t) ptr;
 	}
 
 	return ret;

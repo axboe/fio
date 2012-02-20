@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <limits.h>
 #include <fcntl.h>
@@ -253,9 +254,9 @@ void scleanup(void)
 #ifdef SMALLOC_REDZONE
 static void *postred_ptr(struct block_hdr *hdr)
 {
-	unsigned long ptr;
+	uintptr_t ptr;
 
-	ptr = (unsigned long) hdr + hdr->size - sizeof(unsigned int);
+	ptr = (uintptr_t) hdr + hdr->size - sizeof(unsigned int);
 	ptr = (ptr + int_mask) & ~int_mask;
 
 	return (void *) ptr;
