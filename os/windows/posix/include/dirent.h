@@ -3,8 +3,8 @@
 
 struct dirent
 {
-	ino_t  d_ino;     //  File serial number. 
-	char   d_name[];   // Name of entry. 
+	ino_t  d_ino;     /*  File serial number */
+	char   d_name[];  /* Name of entry */
 };
 
 typedef int DIR;

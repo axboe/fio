@@ -98,7 +98,7 @@ int gettimeofday(struct timeval *restrict tp, void *restrict tzp)
 	unsigned long long unix_time, windows_time;
 	const time_t MILLISECONDS_BETWEEN_1601_AND_1970 = 11644473600000;
 
-	// Ignore the timezone parameter
+	/* Ignore the timezone parameter */
 	(void)tzp;
 
 	/*
@@ -191,12 +191,16 @@ int kill(pid_t pid, int sig)
 	return (-1);
 }
 
-// This is assumed to be used only by the network code,
-// and so doesn't try and handle any of the other cases
+/*
+ * This is assumed to be used only by the network code,
+ * and so doesn't try and handle any of the other cases
+ */
 int fcntl(int fildes, int cmd, ...)
 {
-	// non-blocking mode doesn't work the same as in BSD sockets,
-	// so ignore it.
+	/*
+	 * non-blocking mode doesn't work the same as in BSD sockets,
+	 * so ignore it.
+	 */
 #if 0
 	va_list ap;
 	int val, opt, status;
@@ -440,7 +444,7 @@ int posix_madvise(void *addr, size_t len, int advice)
 	return ENOSYS;
 }
 
-// Windows doesn't support advice for memory pages. Just ignore it.
+/* Windows doesn't support advice for memory pages. Just ignore it. */
 int msync(void *addr, size_t len, int flags)
 {
 	log_err("%s is not implemented\n", __func__);
