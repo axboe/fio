@@ -129,6 +129,10 @@ typedef unsigned long os_cpu_mask_t;
 #define FIO_OS_PATH_SEPARATOR	"/"
 #endif
 
+#ifndef FIO_PREFERRED_CLOCK_SOURCE
+#define FIO_PREFERRED_CLOCK_SOURCE	CS_CGETTIME
+#endif
+
 #ifndef FIO_MAX_JOBS
 #define FIO_MAX_JOBS		2048
 #endif

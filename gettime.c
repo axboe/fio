@@ -24,7 +24,7 @@ int fio_gtod_offload = 0;
 int fio_gtod_cpu = -1;
 static pthread_t gtod_thread;
 
-enum fio_cs fio_clock_source = CS_GTOD;
+enum fio_cs fio_clock_source = FIO_PREFERRED_CLOCK_SOURCE;
 
 #ifdef FIO_DEBUG_TIME
 
