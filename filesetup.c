@@ -1138,7 +1138,7 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 		if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, ".."))
 			continue;
 
-		sprintf(full_path, "%s/%s", dirname, dir->d_name);
+		sprintf(full_path, "%s%s%s", dirname, FIO_OS_PATH_SEPARATOR, dir->d_name);
 
 		if (lstat(full_path, &sb) == -1) {
 			if (errno != ENOENT) {

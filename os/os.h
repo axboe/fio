@@ -125,6 +125,10 @@ typedef unsigned long os_cpu_mask_t;
 #define FIO_PREFERRED_ENGINE	"sync"
 #endif
 
+#ifndef FIO_OS_PATH_SEPARATOR
+#define FIO_OS_PATH_SEPARATOR	"/"
+#endif
+
 #ifndef FIO_MAX_JOBS
 #define FIO_MAX_JOBS		2048
 #endif
