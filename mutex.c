@@ -17,8 +17,6 @@
 #include "time.h"
 #include "gettime.h"
 
-static clockid_t fio_clk_id = CLOCK_REALTIME;
-
 void fio_mutex_remove(struct fio_mutex *mutex)
 {
 	pthread_cond_destroy(&mutex->cond);
@@ -64,9 +62,6 @@ struct fio_mutex *fio_mutex_init(int value)
 #ifdef FIO_HAVE_PSHARED_MUTEX
 	pthread_condattr_setpshared(&cond, PTHREAD_PROCESS_SHARED);
 #endif
-#ifdef FIO_HAVE_PTHREAD_CONDATTR_SETCLOCK
-	pthread_condattr_setclock(&cond, fio_clk_id);
-#endif
 	pthread_cond_init(&mutex->cond, &cond);
 
 	ret = pthread_mutex_init(&mutex->lock, &attr);
@@ -97,10 +92,9 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 	struct timespec t;
 	int ret = 0;
 
-	fio_gettime(&tv_s, NULL);
-
-	clock_gettime(fio_clk_id, &t);
-	t.tv_sec += seconds;
+	gettimeofday(&tv_s, NULL);
+	t.tv_sec = tv_s.tv_sec + seconds;
+	t.tv_nsec = tv_s.tv_usec * 1000;
 
 	pthread_mutex_lock(&mutex->lock);
 
@@ -198,20 +192,4 @@ void fio_mutex_up_write(struct fio_mutex *mutex)
 	if (mutex->value >= 0 && mutex->waiters)
 		pthread_cond_signal(&mutex->cond);
 	pthread_mutex_unlock(&mutex->lock);
-}
-
-static void fio_init fio_mutex_global_init(void)
-{
-#ifdef FIO_HAVE_PTHREAD_CONDATTR_SETCLOCK
-#ifdef FIO_HAVE_CLOCK_MONOTONIC
-	pthread_condattr_t cond;
-
-	pthread_condattr_init(&cond);
-
-	if (!pthread_condattr_setclock(&cond, CLOCK_MONOTONIC))
-		fio_clk_id = CLOCK_MONOTONIC;
-
-	pthread_condattr_destroy(&cond);
-#endif
-#endif
 }
