@@ -551,10 +551,7 @@ static int verify_io_u_crc32c(struct verify_header *hdr, struct vcont *vc)
 
 	dprint(FD_VERIFY, "crc32c verify io_u %p, len %u\n", vc->io_u, hdr->len);
 
-	if (hdr->verify_type == VERIFY_CRC32C_INTEL)
-		c = crc32c_intel(p, hdr->len - hdr_size(hdr));
-	else
-		c = crc32c(p, hdr->len - hdr_size(hdr));
+	c = crc32c(p, hdr->len - hdr_size(hdr));
 
 	if (c == vh->crc32)
 		return 0;
@@ -833,10 +830,7 @@ static void fill_crc32c(struct verify_header *hdr, void *p, unsigned int len)
 {
 	struct vhdr_crc32 *vh = hdr_priv(hdr);
 
-	if (hdr->verify_type == VERIFY_CRC32C_INTEL)
-		vh->crc32 = crc32c_intel(p, len);
-	else
-		vh->crc32 = crc32c(p, len);
+	vh->crc32 = crc32c(p, len);
 }
 
 static void fill_crc64(struct verify_header *hdr, void *p, unsigned int len)

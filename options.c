@@ -245,12 +245,9 @@ static int str_verify_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
 
-	if (td->o.verify != VERIFY_CRC32C_INTEL)
-		return 0;
-
-	if (!crc32c_intel_works()) {
-		log_info("fio: System does not support hw accelerated crc32c. Falling back to sw crc32c.\n");
-		td->o.verify = VERIFY_CRC32C;
+	if (td->o.verify == VERIFY_CRC32C_INTEL ||
+	    td->o.verify == VERIFY_CRC32C) {
+		crc32c_intel_probe();
 	}
 
 	return 0;
@@ -1482,12 +1479,12 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .help = "Use crc32 checksums for verification",
 			  },
 			  { .ival = "crc32c-intel",
-			    .oval = VERIFY_CRC32C_INTEL,
-			    .help = "Use hw crc32c checksums for verification",
+			    .oval = VERIFY_CRC32C,
+			    .help = "Use crc32c checksums for verification (hw assisted, if available)",
 			  },
 			  { .ival = "crc32c",
 			    .oval = VERIFY_CRC32C,
-			    .help = "Use crc32c checksums for verification",
+			    .help = "Use crc32c checksums for verification (hw assisted, if available)",
 			  },
 			  { .ival = "crc16",
 			    .oval = VERIFY_CRC16,
