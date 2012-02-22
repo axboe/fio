@@ -926,10 +926,13 @@ static void get_file_type(struct fio_file *f)
 	else
 		f->filetype = FIO_TYPE_FILE;
 
+	/* \\.\ is the device namespace in Windows, where every file is
+	 * a block device */
+	if (strncmp(f->file_name, "\\\\.\\", 4) == 0)
+		f->filetype = FIO_TYPE_BD;
+
 	if (!stat(f->file_name, &sb)) {
-		/* \\.\ is the device namespace in Windows, where every file is
-		 * a block device */
-		if (S_ISBLK(sb.st_mode) || strncmp(f->file_name, "\\\\.\\", 4) == 0)
+		if (S_ISBLK(sb.st_mode))
 			f->filetype = FIO_TYPE_BD;
 		else if (S_ISCHR(sb.st_mode))
 			f->filetype = FIO_TYPE_CHAR;
