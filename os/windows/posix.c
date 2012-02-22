@@ -124,8 +124,17 @@ void syslog(int priority, const char *message, ... /* argument */)
 int sigaction(int sig, const struct sigaction *act,
 		struct sigaction *oact)
 {
-	errno = ENOSYS;
-	return (-1);
+	int rc = 0;
+	void (*prev_handler)(int);
+
+	prev_handler = signal(sig, act->sa_handler);
+	if (oact != NULL)
+		oact->sa_handler = prev_handler;
+
+	if (prev_handler == SIG_ERR)
+		rc = -1;
+
+	return rc;
 }
 
 int lstat(const char * path, struct stat * buf)
