@@ -649,6 +649,19 @@ static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
 	return ret;
 }
 
+static int verify_hdr_crc(struct verify_header *hdr)
+{
+	void *p = hdr;
+	uint32_t crc;
+
+	crc = crc32(p, sizeof(*hdr) - sizeof(hdr->crc32));
+	if (crc == hdr->crc32)
+		return 1;
+
+	log_err("fio: verify header crc %x, calculated %x\n", hdr->crc32, crc);
+	return 0;
+}
+
 int verify_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	struct verify_header *hdr;
@@ -682,9 +695,18 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			memswp(p, p + td->o.verify_offset, header_size);
 		hdr = p;
 
-		if (hdr->fio_magic != FIO_HDR_MAGIC) {
+		if (hdr->fio_magic == FIO_HDR_MAGIC2) {
+			if (!verify_hdr_crc(hdr)) {
+				log_err("fio: bad crc on verify header.\n");
+				return EILSEQ;
+			}
+		} else if (hdr->fio_magic == FIO_HDR_MAGIC) {
+			log_err("fio: v1 headers no longer supported.\n");
+			log_err("fio: re-run the write workload.\n");
+			return EILSEQ;
+		} else {
 			log_err("verify: bad magic header %x, wanted %x at file %s offset %llu, length %u\n",
-				hdr->fio_magic, FIO_HDR_MAGIC,
+				hdr->fio_magic, FIO_HDR_MAGIC2,
 				io_u->file->file_name,
 				io_u->offset + hdr_num * hdr->len, hdr->len);
 			return EILSEQ;
@@ -844,10 +866,14 @@ static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 
 	p = (void *) hdr;
 
-	hdr->fio_magic = FIO_HDR_MAGIC;
+	hdr->fio_magic = FIO_HDR_MAGIC2;
 	hdr->len = header_len;
 	hdr->verify_type = td->o.verify;
+	hdr->pad1 = 0;
 	hdr->rand_seed = io_u->rand_seed;
+	hdr->pad2 = 0;
+	hdr->crc32 = crc32(p, sizeof(*hdr) - sizeof(hdr->crc32));
+
 	data_len = header_len - hdr_size(hdr);
 
 	data = p + hdr_size(hdr);
