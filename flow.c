@@ -36,7 +36,7 @@ int flow_threshold_exceeded(struct thread_data *td)
 
 static struct fio_flow *flow_get(unsigned int id)
 {
-	struct fio_flow *flow;
+	struct fio_flow *flow = NULL;
 	struct flist_head *n;
 
 	fio_mutex_down(flow_lock);
