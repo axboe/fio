@@ -337,7 +337,7 @@ static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 		if (size > (len - i))
 			size = len - i;
 		if (memcmp(buf + i, pattern + mod, size))
-			// Let the slow compare find the first mismatch byte.
+			/* Let the slow compare find the first mismatch byte. */
 			break;
 		mod = 0;
 	}
