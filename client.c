@@ -48,6 +48,7 @@ struct fio_client {
 	unsigned int jobs;
 	int error;
 	int ipv6;
+	int sent_job;
 
 	struct flist_head eta_list;
 	struct client_eta *eta_in_flight;
@@ -481,6 +482,7 @@ static int fio_client_send_ini(struct fio_client *client, const char *filename)
 		return 1;
 	}
 
+	client->sent_job = 1;
 	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOB, buf, sb.st_size, 0);
 	free(buf);
 	close(fd);
@@ -497,6 +499,8 @@ int fio_clients_send_ini(const char *filename)
 
 		if (fio_client_send_ini(client, filename))
 			remove_client(client);
+
+		client->sent_job = 1;
 	}
 
 	return !nr_clients;
@@ -978,8 +982,6 @@ static int fio_client_timed_out(void)
 
 int fio_handle_clients(void)
 {
-	struct fio_client *client;
-	struct flist_head *entry;
 	struct pollfd *pfds;
 	int i, ret = 0, retval = 0;
 
@@ -992,14 +994,26 @@ int fio_handle_clients(void)
 	init_group_run_stat(&client_gs);
 
 	while (!exit_backend && nr_clients) {
+		struct flist_head *entry, *tmp;
+		struct fio_client *client;
+
 		i = 0;
-		flist_for_each(entry, &client_list) {
+		flist_for_each_safe(entry, tmp, &client_list) {
 			client = flist_entry(entry, struct fio_client, list);
+
+			if (!client->sent_job &&
+			    flist_empty(&client->cmd_list)) {
+				remove_client(client);
+				continue;
+			}
 
 			pfds[i].fd = client->fd;
 			pfds[i].events = POLLIN;
 			i++;
 		}
+
+		if (!nr_clients)
+			break;
 
 		assert(i == nr_clients);
 
