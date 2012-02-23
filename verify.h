@@ -3,8 +3,7 @@
 
 #include <stdint.h>
 
-#define FIO_HDR_MAGIC	0xf00baaef
-#define FIO_HDR_MAGIC2	0xf00dbeef
+#define FIO_HDR_MAGIC	0xacca
 
 enum {
 	VERIFY_NONE = 0,		/* no verification */
@@ -29,12 +28,10 @@ enum {
  * data.
  */
 struct verify_header {
-	uint32_t fio_magic;
+	uint16_t magic;
+	uint16_t verify_type;
 	uint32_t len;
-	uint32_t verify_type;
-	uint32_t pad1;
 	uint64_t rand_seed;
-	uint32_t pad2;
 	uint32_t crc32;
 };
 
