@@ -646,10 +646,13 @@ static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
 	return ret;
 }
 
-static int verify_hdr_crc(struct verify_header *hdr)
+static int verify_header(struct verify_header *hdr)
 {
 	void *p = hdr;
 	uint32_t crc;
+
+	if (hdr->magic != FIO_HDR_MAGIC)
+		return 0;
 
 	crc = crc32c(p, sizeof(*hdr) - sizeof(hdr->crc32));
 	if (crc == hdr->crc32)
@@ -692,8 +695,9 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			memswp(p, p + td->o.verify_offset, header_size);
 		hdr = p;
 
-		if (hdr->magic != FIO_HDR_MAGIC || !verify_hdr_crc(hdr)) {
-			log_err("verify: bad magic header %x, wanted %x at file %s offset %llu, length %u\n",
+		if (!verify_header(hdr)) {
+			log_err("verify: bad magic header %x, wanted %x at "
+				"file %s offset %llu, length %u\n",
 				hdr->magic, FIO_HDR_MAGIC,
 				io_u->file->file_name,
 				io_u->offset + hdr_num * hdr->len, hdr->len);
