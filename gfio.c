@@ -22,6 +22,7 @@
  */
 #include <locale.h>
 
+#include <glib.h>
 #include <gtk/gtk.h>
 
 #include "fio_initialization.h"
@@ -49,10 +50,12 @@ static struct button_spec {
 
 struct gui {
 	GtkWidget *window;
+	GtkWidget *vbox;
+	GtkWidget *thread_status_label;
 	GtkWidget *buttonbox;
 	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
 	pthread_t t;
-};
+} ui;
 
 static void gfio_text_op(struct fio_client *client,
                 FILE *f, __u16 pdu_len, const char *buf)
@@ -81,7 +84,6 @@ static void gfio_group_stats_op(struct fio_net_cmd *cmd)
 
 static void gfio_eta_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
-	printf("gfio_eta_op called\n");
 	fio_client_ops.eta(client, cmd);
 }
 
@@ -91,6 +93,18 @@ static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	fio_client_ops.probe(client, cmd);
 }
 
+static void gfio_update_thread_status(char *status_message)
+{
+	static char message[100];
+	const char *m = message;
+
+	strncpy(message, status_message, sizeof(message) - 1);
+	gtk_label_set_text(GTK_LABEL(ui.thread_status_label), m);
+	gdk_threads_enter();
+	gtk_widget_queue_draw(ui.window);
+	gdk_threads_leave();
+}
+
 struct client_ops gfio_client_ops = {
 	gfio_text_op,
 	gfio_disk_util_op,
@@ -98,6 +112,7 @@ struct client_ops gfio_client_ops = {
 	gfio_group_stats_op,
 	gfio_eta_op,
 	gfio_probe_op,
+	gfio_update_thread_status,
 };
 
 static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
@@ -146,7 +161,7 @@ static void add_buttons(struct gui *ui,
 	int i;
 
 	ui->buttonbox = gtk_hbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER (ui->window), ui->buttonbox);
+	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->buttonbox);
 	for (i = 0; i < nbuttons; i++)
 		add_button(ui, i, ui->buttonbox, &buttonlist[i]);
 }
@@ -162,14 +177,17 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	g_signal_connect(ui->window, "delete-event", G_CALLBACK (quit_clicked), NULL);
 	g_signal_connect(ui->window, "destroy", G_CALLBACK (quit_clicked), NULL);
 
+	ui->vbox = gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER (ui->window), ui->vbox);
+	ui->thread_status_label = gtk_label_new("No jobs currently running.");
+	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->thread_status_label);
+
 	add_buttons(ui, buttonspeclist, ARRAYSIZE(buttonspeclist));
 	gtk_widget_show_all(ui->window);
 }
 
 int main(int argc, char *argv[], char *envp[])
 {
-	struct gui ui;
-
 	if (initialize_fio(envp))
 		return 1;
 
@@ -177,6 +195,7 @@ int main(int argc, char *argv[], char *envp[])
 		return 1;
 
 	init_ui(&argc, &argv, &ui);
+
 	gtk_main();
 	return 0;
 }
