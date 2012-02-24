@@ -22,14 +22,63 @@
  */
 #include <gtk/gtk.h>
 
+#define ARRAYSIZE(x) (sizeof((x)) / (sizeof((x)[0])))
+
+typedef void (*clickfunction)(GtkWidget *widget, gpointer data);
+
+static void quit_clicked(GtkWidget *widget, gpointer data);
+static void start_job_clicked(GtkWidget *widget, gpointer data);
+
+static struct button_spec {
+	const char *buttontext;
+	clickfunction f;
+	const char *tooltiptext;
+} buttonspeclist[] = {
+#define START_JOB_BUTTON 0
+	{ "Start Job",
+		start_job_clicked,
+		"Send current fio job to fio server to be executed" },
+#define QUIT_BUTTON 1
+	{ "Quit", quit_clicked, "Quit gfio" },
+};
+
 struct gui {
 	GtkWidget *window;
+	GtkWidget *buttonbox;
+	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
 };
 
 static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
                 __attribute__((unused)) gpointer data)
 {
         gtk_main_quit();
+}
+
+static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
+                __attribute__((unused)) gpointer data)
+{
+	printf("Start job button was clicked.\n");
+}
+
+static void add_button(struct gui *ui, int i, GtkWidget *buttonbox,
+			struct button_spec *buttonspec)
+{
+	ui->button[i] = gtk_button_new_with_label(buttonspec->buttontext);
+	g_signal_connect(ui->button[i], "clicked", G_CALLBACK (buttonspec->f), ui);
+	gtk_box_pack_start(GTK_BOX (ui->buttonbox), ui->button[i], TRUE, TRUE, 0);
+	gtk_widget_set_tooltip_text(ui->button[i], buttonspeclist[i].tooltiptext);
+}
+
+static void add_buttons(struct gui *ui,
+				struct button_spec *buttonlist,
+				int nbuttons)
+{
+	int i;
+
+	ui->buttonbox = gtk_hbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER (ui->window), ui->buttonbox);
+	for (i = 0; i < nbuttons; i++)
+		add_button(ui, i, ui->buttonbox, &buttonlist[i]);
 }
 
 static void init_ui(int *argc, char **argv[], struct gui *ui)
@@ -43,6 +92,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	g_signal_connect(ui->window, "delete-event", G_CALLBACK (quit_clicked), NULL);
 	g_signal_connect(ui->window, "destroy", G_CALLBACK (quit_clicked), NULL);
 
+	add_buttons(ui, buttonspeclist, ARRAYSIZE(buttonspeclist));
 	gtk_widget_show_all(ui->window);
 }
 
