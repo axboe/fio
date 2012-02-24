@@ -54,6 +54,12 @@ struct gui {
 	GtkWidget *thread_status_pb;
 	GtkWidget *buttonbox;
 	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
+	GtkWidget *hostname_hbox;
+	GtkWidget *hostname_label;
+	GtkWidget *hostname_entry;
+	GtkWidget *port_label;
+	GtkWidget *port_entry;
+	GtkWidget *hostname_combo_box; /* ipv4, ipv6 or socket */
 	pthread_t t;
 } ui;
 
@@ -171,6 +177,9 @@ static void add_buttons(struct gui *ui,
 
 static void init_ui(int *argc, char **argv[], struct gui *ui)
 {
+	GList *hostname_type_list = NULL;
+	char portnum[20];
+
 	/* Magical g*thread incantation, you just need this thread stuff.
 	 * Without it, the update that happens in gfio_update_thread_status
 	 * doesn't really happen in a timely fashion, you need expose events
@@ -190,6 +199,36 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 
 	ui->vbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER (ui->window), ui->vbox);
+
+	/*
+	 * Set up hostname label + entry, port label + entry,
+	 */
+	ui->hostname_hbox = gtk_hbox_new(FALSE, 0);
+	ui->hostname_label = gtk_label_new("Host:");
+	ui->hostname_entry = gtk_entry_new();
+	gtk_entry_set_text(GTK_ENTRY(ui->hostname_entry), "localhost");
+	ui->port_label = gtk_label_new("Port:");
+	ui->port_entry = gtk_entry_new();
+	snprintf(portnum, sizeof(portnum) - 1, "%d", FIO_NET_PORT);
+	gtk_entry_set_text(GTK_ENTRY(ui->port_entry), (gchar *) portnum);
+
+	/*
+	 * Set up combo box for address type
+	 */
+	ui->hostname_combo_box = gtk_combo_new();
+	gtk_entry_set_text(GTK_ENTRY (GTK_COMBO(ui->hostname_combo_box)->entry), "IPv4");
+	hostname_type_list = g_list_append(hostname_type_list, (gpointer) "IPv4"); 
+	hostname_type_list = g_list_append(hostname_type_list, (gpointer) "local socket"); 
+	hostname_type_list = g_list_append(hostname_type_list, (gpointer) "IPv6"); 
+	gtk_combo_set_popdown_strings (GTK_COMBO (ui->hostname_combo_box), hostname_type_list);
+	g_list_free(hostname_type_list);
+
+	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->hostname_label);
+	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->hostname_entry);
+	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->port_label);
+	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->port_entry);
+	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->hostname_combo_box);
+	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->hostname_hbox);
 
 	/*
 	 * Set up thread status progress bar
