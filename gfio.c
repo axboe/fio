@@ -60,6 +60,9 @@ struct gui {
 	GtkWidget *port_label;
 	GtkWidget *port_entry;
 	GtkWidget *hostname_combo_box; /* ipv4, ipv6 or socket */
+	GtkWidget *jobfile_hbox;
+	GtkWidget *jobfile_label;
+	GtkWidget *jobfile_entry;
 	pthread_t t;
 } ui;
 
@@ -229,6 +232,16 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->port_entry);
 	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->hostname_combo_box);
 	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->hostname_hbox);
+
+	/*
+	 * Set up jobfile text entry (temporary until gui really works)
+	 */
+	ui->jobfile_hbox = gtk_hbox_new(FALSE, 0);
+	ui->jobfile_label = gtk_label_new("Job file:");
+	ui->jobfile_entry = gtk_entry_new();
+	gtk_container_add(GTK_CONTAINER (ui->jobfile_hbox), ui->jobfile_label);
+	gtk_container_add(GTK_CONTAINER (ui->jobfile_hbox), ui->jobfile_entry);
+	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->jobfile_hbox);
 
 	/*
 	 * Set up thread status progress bar
