@@ -36,42 +36,12 @@
 #include "memalign.h"
 #include "client.h"
 #include "server.h"
-#include "endian_check.h"
-
-unsigned long page_mask;
-unsigned long page_size;
+#include "fio_initialization.h"
 
 int main(int argc, char *argv[], char *envp[])
 {
-	long ps;
-
-	if (endian_check()) {
-		log_err("fio: endianness settings appear wrong.\n");
-		log_err("fio: please report this to fio@vger.kernel.org\n");
+	if (initialize_fio(envp))
 		return 1;
-	}
-
-	arch_init(envp);
-
-	sinit();
-
-	/*
-	 * We need locale for number printing, if it isn't set then just
-	 * go with the US format.
-	 */
-	if (!getenv("LC_NUMERIC"))
-		setlocale(LC_NUMERIC, "en_US");
-
-	ps = sysconf(_SC_PAGESIZE);
-	if (ps < 0) {
-		log_err("Failed to get page size\n");
-		return 1;
-	}
-
-	page_size = ps;
-	page_mask = ps - 1;
-
-	fio_keywords_init();
 
 	if (parse_options(argc, argv))
 		return 1;
