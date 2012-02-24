@@ -168,6 +168,14 @@ static void add_buttons(struct gui *ui,
 
 static void init_ui(int *argc, char **argv[], struct gui *ui)
 {
+	/* Magical g*thread incantation, you just need this thread stuff.
+	 * Without it, the label update that happens in gfio_update_thread_status
+	 * doesn't really happen in a timely fashion, you need expose events
+	 */
+	if (!g_thread_supported ())
+		g_thread_init(NULL);
+	gdk_threads_init();
+
 	gtk_init(argc, argv);
 	
 	ui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -196,6 +204,8 @@ int main(int argc, char *argv[], char *envp[])
 
 	init_ui(&argc, &argv, &ui);
 
+	gdk_threads_enter();
 	gtk_main();
+	gdk_threads_leave();
 	return 0;
 }

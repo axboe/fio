@@ -10,7 +10,7 @@ SCRIPTS = fio_generate_plots
 UNAME  := $(shell uname)
 
 GTKCFLAGS = `pkg-config gtk+-2.0 --cflags`
-GTKLDFLAGS = `pkg-config gtk+-2.0 --libs`
+GTKLDFLAGS = `pkg-config gtk+-2.0 gthread-2.0 --libs`
 
 SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
