@@ -266,7 +266,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	ui->topalign = gtk_alignment_new(0, 0, 1, 0);
 	ui->topvbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(ui->topalign), ui->topvbox);
-	gtk_container_add(GTK_CONTAINER(ui->vbox), ui->topalign);
+	gtk_box_pack_start(GTK_BOX(ui->vbox), ui->topalign, FALSE, FALSE, 0);
 
 	/*
 	 * Set up hostname label + entry, port label + entry,
@@ -330,7 +330,8 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(ui->scrolled_window),
 					GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_container_add(GTK_CONTAINER(ui->scrolled_window), ui->textview);
-	gtk_container_add(GTK_CONTAINER(ui->vbox), ui->scrolled_window);
+	gtk_box_pack_start(GTK_BOX(ui->vbox), ui->scrolled_window,
+			TRUE, TRUE, 0);
 
 	/*
 	 * Set up alignments for widgets at the bottom of ui, 
@@ -339,7 +340,8 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	ui->bottomalign = gtk_alignment_new(0, 1, 1, 0);
 	ui->buttonbox = gtk_hbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(ui->bottomalign), ui->buttonbox);
-	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->bottomalign);
+	gtk_box_pack_start(GTK_BOX(ui->vbox), ui->bottomalign,
+					FALSE, FALSE, 0);
 
 	add_buttons(ui, buttonspeclist, ARRAYSIZE(buttonspeclist));
 	gtk_widget_show_all(ui->window);
