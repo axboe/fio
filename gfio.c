@@ -66,14 +66,25 @@ struct gui {
 	GtkWidget *jobfile_hbox;
 	GtkWidget *jobfile_label;
 	GtkWidget *jobfile_entry;
+	GtkWidget *scrolled_window;
+	GtkWidget *textview;
+	GtkTextBuffer *text;
 	pthread_t t;
 } ui;
 
 static void gfio_text_op(struct fio_client *client,
                 FILE *f, __u16 pdu_len, const char *buf)
 {
-	printf("gfio_text_op called\n");
-	fio_client_ops.text_op(client, f, pdu_len, buf);
+	GtkTextBuffer *buffer;
+	GtkTextIter end;
+
+	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(ui.textview));
+	gdk_threads_enter();
+	gtk_text_buffer_get_end_iter(buffer, &end);
+	gtk_text_buffer_insert(buffer, &end, buf, -1);
+	gdk_threads_leave();
+	gtk_text_view_scroll_to_iter(GTK_TEXT_VIEW(ui.textview),
+					&end, 0.0, FALSE, 0.0,0.0);
 }
 
 static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -296,6 +307,20 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_progress_bar_set_text(
 		GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
 	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->thread_status_pb);
+
+	/*
+	 * Add a text box for text op messages 
+	 */
+	ui->textview = gtk_text_view_new();
+	ui->text = gtk_text_view_get_buffer(GTK_TEXT_VIEW(ui->textview));
+	gtk_text_buffer_set_text(ui->text, "", -1);
+	gtk_text_view_set_editable(GTK_TEXT_VIEW(ui->textview), FALSE);
+	gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(ui->textview), FALSE);
+	ui->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(ui->scrolled_window),
+					GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(ui->scrolled_window), ui->textview);
+	gtk_container_add(GTK_CONTAINER(ui->vbox), ui->scrolled_window);
 
 	add_buttons(ui, buttonspeclist, ARRAYSIZE(buttonspeclist));
 	gtk_widget_show_all(ui->window);
