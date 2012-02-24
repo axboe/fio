@@ -26,7 +26,6 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
-#include "fio_initialization.h"
 #include "fio.h"
 
 #define ARRAYSIZE(x) (sizeof((x)) / (sizeof((x)[0])))

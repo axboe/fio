@@ -36,7 +36,6 @@
 #include "memalign.h"
 #include "client.h"
 #include "server.h"
-#include "fio_initialization.h"
 
 int main(int argc, char *argv[], char *envp[])
 {

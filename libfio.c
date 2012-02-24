@@ -25,7 +25,12 @@
 #include <string.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <stdint.h>
+#include <locale.h>
+
 #include "fio.h"
+#include "smalloc.h"
+#include "os/os.h"
 
 /*
  * Just expose an empty list, if the OS does not support disk util stats
@@ -35,6 +40,9 @@ FLIST_HEAD(disk_list);
 #endif
 
 unsigned long arch_flags = 0;
+
+unsigned long page_mask;
+unsigned long page_size;
 
 static const char *fio_os_strings[os_nr] = {
 	"Invalid",
@@ -187,4 +195,66 @@ void fio_terminate_threads(int group_id)
 	}
 }
 
+static int endian_check(void)
+{
+	union {
+		uint8_t c[8];
+		uint64_t v;
+	} u;
+	int le = 0, be = 0;
 
+	u.v = 0x12;
+	if (u.c[7] == 0x12)
+		be = 1;
+	else if (u.c[0] == 0x12)
+		le = 1;
+
+#if defined(FIO_LITTLE_ENDIAN)
+	if (be)
+		return 1;
+#elif defined(FIO_BIG_ENDIAN)
+	if (le)
+		return 1;
+#else
+	return 1;
+#endif
+
+	if (!le && !be)
+		return 1;
+
+	return 0;
+}
+
+int initialize_fio(char *envp[])
+{
+	long ps;
+
+	if (endian_check()) {
+		log_err("fio: endianness settings appear wrong.\n");
+		log_err("fio: please report this to fio@vger.kernel.org\n");
+		return 1;
+	}
+
+	arch_init(envp);
+
+	sinit();
+
+	/*
+	 * We need locale for number printing, if it isn't set then just
+	 * go with the US format.
+	 */
+	if (!getenv("LC_NUMERIC"))
+		setlocale(LC_NUMERIC, "en_US");
+
+	ps = sysconf(_SC_PAGESIZE);
+	if (ps < 0) {
+		log_err("Failed to get page size\n");
+		return 1;
+	}
+
+	page_size = ps;
+	page_mask = ps - 1;
+
+	fio_keywords_init();
+	return 0;
+}
