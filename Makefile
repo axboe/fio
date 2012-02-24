@@ -9,8 +9,8 @@ PROGS	= fio
 SCRIPTS = fio_generate_plots
 UNAME  := $(shell uname)
 
-GTKCFLAGS = `pkg-config gtk+-2.0 --cflags`
-GTKLDFLAGS = `pkg-config gtk+-2.0 gthread-2.0 --libs`
+GTK_CFLAGS = `pkg-config --cflags gtk+-2.0 gthread-2.0`
+GTK_LDFLAGS = `pkg-config --libs gtk+-2.0 gthread-2.0`
 
 SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
@@ -66,9 +66,6 @@ ifneq (,$(findstring CYGWIN,$(UNAME)))
   CC	  = x86_64-w64-mingw32-gcc
 endif
 
-FIO_SOURCE = $(SOURCE) fio.c
-GFIO_SOURCE = $(SOURCE) gfio.c
-
 OBJS = $(SOURCE:.c=.o)
 FIO_OBJS = $(OBJS) fio.o
 GFIO_OBJS = $(OBJS) gfio.o
@@ -106,6 +103,9 @@ all: .depend $(PROGS) $(SCRIPTS)
 .c.o: .depend
 	$(QUIET_CC)$(CC) -o $@ -c $(CFLAGS) $(CPPFLAGS) $<
 
+gfio.o: gfio.c
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c gfio.c
+
 t/stest: $(T_SMALLOC_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_SMALLOC_OBJS) $(LIBS) $(LDFLAGS)
 
@@ -114,6 +114,9 @@ t/ieee754: $(T_IEEE_OBJS)
 
 fio: $(FIO_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(FIO_OBJS) $(LIBS) $(LDFLAGS)
+
+gfio: $(GFIO_OBJS)
+	$(QUIET_CC)$(CC) $(LIBS) -o gfio $(GFIO_OBJS) $(LIBS) $(GTK_LDFLAGS)
 
 .depend: $(SOURCE)
 	$(QUIET_DEP)$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SOURCE) 1> .depend
@@ -136,9 +139,5 @@ install: $(PROGS) $(SCRIPTS)
 ifneq ($(wildcard .depend),)
 include .depend
 endif
-
-gfio:	$(OBJS)	gfio.c
-	$(CC) ${CPPFLAGS} ${CFLAGS} ${GTKCFLAGS} ${LDFLAGS} ${GTKLDFLAGS} -pthread -o gfio $(OBJS) gfio.c $(LIBS) ${LDFLAGS}
-
 
 
