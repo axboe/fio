@@ -51,6 +51,7 @@ struct gui {
 	GtkWidget *window;
 	GtkWidget *buttonbox;
 	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
+	pthread_t t;
 };
 
 static void gfio_text_op(struct fio_client *client,
@@ -105,10 +106,28 @@ static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
         gtk_main_quit();
 }
 
-static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
-                __attribute__((unused)) gpointer data)
+static void *job_thread(void *arg)
 {
+	struct gui *ui = arg;
+
+	fio_handle_clients(&gfio_client_ops);
+	gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
+	return NULL;
+}
+
+static void start_job_thread(pthread_t *t, struct gui *ui)
+{
+	pthread_create(t, NULL, job_thread, ui);
+}
+
+static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
+                gpointer data)
+{
+	struct gui *ui = data;
+
 	printf("Start job button was clicked.\n");
+	gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 0);
+	start_job_thread(&ui->t, ui);
 }
 
 static void add_button(struct gui *ui, int i, GtkWidget *buttonbox,
