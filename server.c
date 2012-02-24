@@ -24,7 +24,7 @@
 
 #include "fio_version.h"
 
-int fio_net_port = 8765;
+int fio_net_port = FIO_NET_PORT;
 
 int exit_backend = 0;
 

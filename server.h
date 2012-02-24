@@ -10,6 +10,8 @@
 #include "os/os.h"
 #include "diskutil.h"
 
+#define FIO_NET_PORT 8765
+
 /*
  * On-wire encoding is little endian
  */
