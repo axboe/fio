@@ -27,8 +27,6 @@
 #include "fio_initialization.h"
 #include "fio.h"
 
-static struct client_ops *gfio_client_ops = &fio_client_ops;
-
 #define ARRAYSIZE(x) (sizeof((x)) / (sizeof((x)[0])))
 
 typedef void (*clickfunction)(GtkWidget *widget, gpointer data);
@@ -53,6 +51,52 @@ struct gui {
 	GtkWidget *window;
 	GtkWidget *buttonbox;
 	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
+};
+
+static void gfio_text_op(struct fio_client *client,
+                FILE *f, __u16 pdu_len, const char *buf)
+{
+	printf("gfio_text_op called\n");
+	fio_client_ops.text_op(client, f, pdu_len, buf);
+}
+
+static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	printf("gfio_disk_util_op called\n");
+	fio_client_ops.disk_util(client, cmd);
+}
+
+static void gfio_thread_status_op(struct fio_net_cmd *cmd)
+{
+	printf("gfio_thread_status_op called\n");
+	fio_client_ops.thread_status(cmd);
+}
+
+static void gfio_group_stats_op(struct fio_net_cmd *cmd)
+{
+	printf("gfio_group_stats_op called\n");
+	fio_client_ops.group_stats(cmd);
+}
+
+static void gfio_eta_op(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	printf("gfio_eta_op called\n");
+	fio_client_ops.eta(client, cmd);
+}
+
+static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	printf("gfio_probe_op called\n");
+	fio_client_ops.probe(client, cmd);
+}
+
+struct client_ops gfio_client_ops = {
+	gfio_text_op,
+	gfio_disk_util_op,
+	gfio_thread_status_op,
+	gfio_group_stats_op,
+	gfio_eta_op,
+	gfio_probe_op,
 };
 
 static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
@@ -109,6 +153,10 @@ int main(int argc, char *argv[], char *envp[])
 
 	if (initialize_fio(envp))
 		return 1;
+
+	if (parse_options(argc, argv))
+		return 1;
+
 	init_ui(&argc, &argv, &ui);
 	gtk_main();
 	return 0;
