@@ -54,6 +54,9 @@ struct gui {
 	char **argv;
 	GtkWidget *window;
 	GtkWidget *vbox;
+	GtkWidget *topvbox;
+	GtkWidget *topalign;
+	GtkWidget *bottomalign;
 	GtkWidget *thread_status_pb;
 	GtkWidget *buttonbox;
 	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
@@ -227,8 +230,6 @@ static void add_buttons(struct gui *ui,
 {
 	int i;
 
-	ui->buttonbox = gtk_hbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->buttonbox);
 	for (i = 0; i < nbuttons; i++)
 		add_button(ui, i, ui->buttonbox, &buttonlist[i]);
 }
@@ -259,6 +260,15 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_container_add(GTK_CONTAINER (ui->window), ui->vbox);
 
 	/*
+	 * Set up alignments for widgets at the top of ui, 
+	 * align top left, expand horizontally but not vertically
+	 */
+	ui->topalign = gtk_alignment_new(0, 0, 1, 0);
+	ui->topvbox = gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(ui->topalign), ui->topvbox);
+	gtk_container_add(GTK_CONTAINER(ui->vbox), ui->topalign);
+
+	/*
 	 * Set up hostname label + entry, port label + entry,
 	 */
 	ui->hostname_hbox = gtk_hbox_new(FALSE, 0);
@@ -286,7 +296,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->port_label);
 	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->port_entry);
 	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->hostname_combo_box);
-	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->hostname_hbox);
+	gtk_container_add(GTK_CONTAINER (ui->topvbox), ui->hostname_hbox);
 
 	/*
 	 * Set up jobfile text entry (temporary until gui really works)
@@ -296,7 +306,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	ui->jobfile_entry = gtk_entry_new();
 	gtk_container_add(GTK_CONTAINER (ui->jobfile_hbox), ui->jobfile_label);
 	gtk_container_add(GTK_CONTAINER (ui->jobfile_hbox), ui->jobfile_entry);
-	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->jobfile_hbox);
+	gtk_container_add(GTK_CONTAINER (ui->topvbox), ui->jobfile_hbox);
 
 	/*
 	 * Set up thread status progress bar
@@ -306,7 +316,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 		GTK_PROGRESS_BAR(ui->thread_status_pb), 0.0);
 	gtk_progress_bar_set_text(
 		GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
-	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->thread_status_pb);
+	gtk_container_add(GTK_CONTAINER (ui->topvbox), ui->thread_status_pb);
 
 	/*
 	 * Add a text box for text op messages 
@@ -321,6 +331,15 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 					GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_container_add(GTK_CONTAINER(ui->scrolled_window), ui->textview);
 	gtk_container_add(GTK_CONTAINER(ui->vbox), ui->scrolled_window);
+
+	/*
+	 * Set up alignments for widgets at the bottom of ui, 
+	 * align bottom left, expand horizontally but not vertically
+	 */
+	ui->bottomalign = gtk_alignment_new(0, 1, 1, 0);
+	ui->buttonbox = gtk_hbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(ui->bottomalign), ui->buttonbox);
+	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->bottomalign);
 
 	add_buttons(ui, buttonspeclist, ARRAYSIZE(buttonspeclist));
 	gtk_widget_show_all(ui->window);
