@@ -51,7 +51,7 @@ static struct button_spec {
 struct gui {
 	GtkWidget *window;
 	GtkWidget *vbox;
-	GtkWidget *thread_status_label;
+	GtkWidget *thread_status_pb;
 	GtkWidget *buttonbox;
 	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
 	pthread_t t;
@@ -93,13 +93,16 @@ static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	fio_client_ops.probe(client, cmd);
 }
 
-static void gfio_update_thread_status(char *status_message)
+static void gfio_update_thread_status(char *status_message, double perc)
 {
 	static char message[100];
 	const char *m = message;
 
 	strncpy(message, status_message, sizeof(message) - 1);
-	gtk_label_set_text(GTK_LABEL(ui.thread_status_label), m);
+	gtk_progress_bar_set_text(
+		GTK_PROGRESS_BAR(ui.thread_status_pb), m);
+	gtk_progress_bar_set_fraction(
+		GTK_PROGRESS_BAR(ui.thread_status_pb), perc / 100.0);
 	gdk_threads_enter();
 	gtk_widget_queue_draw(ui.window);
 	gdk_threads_leave();
@@ -169,7 +172,7 @@ static void add_buttons(struct gui *ui,
 static void init_ui(int *argc, char **argv[], struct gui *ui)
 {
 	/* Magical g*thread incantation, you just need this thread stuff.
-	 * Without it, the label update that happens in gfio_update_thread_status
+	 * Without it, the update that happens in gfio_update_thread_status
 	 * doesn't really happen in a timely fashion, you need expose events
 	 */
 	if (!g_thread_supported ())
@@ -187,8 +190,16 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 
 	ui->vbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER (ui->window), ui->vbox);
-	ui->thread_status_label = gtk_label_new("No jobs currently running.");
-	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->thread_status_label);
+
+	/*
+	 * Set up thread status progress bar
+	 */
+	ui->thread_status_pb = gtk_progress_bar_new();
+	gtk_progress_bar_set_fraction(
+		GTK_PROGRESS_BAR(ui->thread_status_pb), 0.0);
+	gtk_progress_bar_set_text(
+		GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
+	gtk_container_add(GTK_CONTAINER (ui->vbox), ui->thread_status_pb);
 
 	add_buttons(ui, buttonspeclist, ARRAYSIZE(buttonspeclist));
 	gtk_widget_show_all(ui->window);

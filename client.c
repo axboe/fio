@@ -21,7 +21,7 @@
 #include "flist.h"
 #include "hash.h"
 
-extern void (*update_thread_status)(char *status_message);
+extern void (*update_thread_status)(char *status_message, double perc);
 
 struct client_eta {
 	struct jobs_eta eta;

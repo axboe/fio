@@ -7,7 +7,7 @@
 
 #include "fio.h"
 
-void (*update_thread_status)(char *status_message) = NULL;
+void (*update_thread_status)(char *status_message, double perc) = NULL;
 
 static char run_str[REAL_MAX_JOBS + 1];
 
@@ -414,7 +414,7 @@ void display_thread_status(struct jobs_eta *je)
 	p += sprintf(p, "\r");
 
 	if (update_thread_status) {
-		update_thread_status(output);
+		update_thread_status(output, perc);
 	} else {
 		printf("%s", output);
 		fflush(stdout);

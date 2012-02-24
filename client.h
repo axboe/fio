@@ -17,7 +17,7 @@ typedef void (*client_eta_op)(struct fio_client *client, struct fio_net_cmd *cmd
 
 typedef void (*client_probe_op)(struct fio_client *client, struct fio_net_cmd *cmd);
 
-typedef void (*client_thread_status_display_op)(char *status_message);
+typedef void (*client_thread_status_display_op)(char *status_message, double perc);
 
 struct client_ops {
 	client_text_op_func text_op;
