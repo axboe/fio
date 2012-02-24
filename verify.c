@@ -654,7 +654,7 @@ static int verify_header(struct verify_header *hdr)
 	if (hdr->magic != FIO_HDR_MAGIC)
 		return 0;
 
-	crc = crc32c(p, sizeof(*hdr) - sizeof(hdr->crc32));
+	crc = crc32c(p, offsetof(struct verify_header, crc32));
 	if (crc == hdr->crc32)
 		return 1;
 
@@ -859,7 +859,7 @@ static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 	hdr->verify_type = td->o.verify;
 	hdr->len = header_len;
 	hdr->rand_seed = io_u->rand_seed;
-	hdr->crc32 = crc32c(p, sizeof(*hdr) - sizeof(hdr->crc32));
+	hdr->crc32 = crc32c(p, offsetof(struct verify_header, crc32));
 
 	data_len = header_len - hdr_size(hdr);
 
