@@ -16,6 +16,7 @@
 #include <signal.h>
 
 #include "fio.h"
+#include "client.h"
 #include "server.h"
 #include "flist.h"
 #include "hash.h"
@@ -59,6 +60,36 @@ struct fio_client {
 	char **argv;
 };
 
+static void fio_client_text_op(struct fio_client *client,
+		FILE *f, __u16 pdu_len, const char *buf)
+{
+	const char *name;
+	int fio_unused ret;
+
+	name = client->name ? client->name : client->hostname;
+
+	if (!client->skip_newline)
+		fprintf(f, "<%s> ", name);
+	ret = fwrite(buf, pdu_len, 1, f);
+	fflush(f);
+	client->skip_newline = strchr(buf, '\n') == NULL;
+}
+
+static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd);
+static void handle_ts(struct fio_net_cmd *cmd);
+static void handle_gs(struct fio_net_cmd *cmd);
+static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd);
+static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd);
+
+struct client_ops fio_client_ops = {
+	fio_client_text_op,
+	handle_du,
+	handle_ts,
+	handle_gs,
+	handle_eta,
+	handle_probe,
+};
+
 static struct timeval eta_tv;
 
 enum {
@@ -85,7 +116,7 @@ static int sum_stat_nr;
 #define FIO_CLIENT_HASH_MASK	(FIO_CLIENT_HASH_SZ - 1)
 static struct flist_head client_hash[FIO_CLIENT_HASH_SZ];
 
-static int handle_client(struct fio_client *client);
+static int handle_client(struct fio_client *client, struct client_ops *ops);
 static void dec_jobs_eta(struct client_eta *eta);
 
 static void fio_client_add_hash(struct fio_client *client)
@@ -819,7 +850,7 @@ static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd)
 		log_info("client <%s>: exited with error %d\n", client->hostname, client->error);
 }
 
-static int handle_client(struct fio_client *client)
+static int handle_client(struct fio_client *client, struct client_ops *ops)
 {
 	struct fio_net_cmd *cmd;
 
@@ -839,39 +870,30 @@ static int handle_client(struct fio_client *client)
 		break;
 	case FIO_NET_CMD_TEXT: {
 		const char *buf = (const char *) cmd->payload;
-		const char *name;
-		int fio_unused ret;
-
-		name = client->name ? client->name : client->hostname;
-
-		if (!client->skip_newline)
-			fprintf(f_out, "<%s> ", name);
-		ret = fwrite(buf, cmd->pdu_len, 1, f_out);
-		fflush(f_out);
-		client->skip_newline = strchr(buf, '\n') == NULL;
+		ops->text_op(client, f_out, cmd->pdu_len, buf);
 		free(cmd);
 		break;
 		}
 	case FIO_NET_CMD_DU:
-		handle_du(client, cmd);
+		ops->disk_util(client, cmd);
 		free(cmd);
 		break;
 	case FIO_NET_CMD_TS:
-		handle_ts(cmd);
+		ops->thread_status(cmd);
 		free(cmd);
 		break;
 	case FIO_NET_CMD_GS:
-		handle_gs(cmd);
+		ops->group_stats(cmd);
 		free(cmd);
 		break;
 	case FIO_NET_CMD_ETA:
 		remove_reply_cmd(client, cmd);
-		handle_eta(client, cmd);
+		ops->eta(client, cmd);
 		free(cmd);
 		break;
 	case FIO_NET_CMD_PROBE:
 		remove_reply_cmd(client, cmd);
-		handle_probe(client, cmd);
+		ops->probe(client, cmd);
 		free(cmd);
 		break;
 	case FIO_NET_CMD_RUN:
@@ -980,7 +1002,7 @@ static int fio_client_timed_out(void)
 	return ret;
 }
 
-int fio_handle_clients(void)
+int fio_handle_clients(struct client_ops *ops)
 {
 	struct pollfd *pfds;
 	int i, ret = 0, retval = 0;
@@ -1048,7 +1070,7 @@ int fio_handle_clients(void)
 				log_err("fio: unknown client fd %d\n", pfds[i].fd);
 				continue;
 			}
-			if (!handle_client(client)) {
+			if (!handle_client(client, ops)) {
 				log_info("client: host=%s disconnected\n",
 						client->hostname);
 				remove_client(client);

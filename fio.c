@@ -34,6 +34,7 @@
 #include "profile.h"
 #include "lib/rand.h"
 #include "memalign.h"
+#include "client.h"
 #include "server.h"
 
 unsigned long page_mask;
@@ -105,7 +106,7 @@ int main(int argc, char *argv[], char *envp[])
 		return 1;
 
 	if (nr_clients)
-		return fio_handle_clients();
+		return fio_handle_clients(&fio_client_ops);
 	else
 		return fio_backend();
 }

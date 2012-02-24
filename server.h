@@ -123,7 +123,7 @@ extern void fio_server_idle_loop(void);
 
 extern int fio_clients_connect(void);
 extern int fio_clients_send_ini(const char *);
-extern int fio_handle_clients(void);
+extern int fio_handle_clients(struct client_ops *ops);
 extern int fio_client_add(const char *, void **);
 extern void fio_client_add_cmd_option(void *, const char *);
 

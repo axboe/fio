@@ -36,6 +36,7 @@ struct thread_data;
 #include "gettime.h"
 #include "lib/getopt.h"
 #include "lib/rand.h"
+#include "client.h"
 #include "server.h"
 #include "stat.h"
 #include "flow.h"
