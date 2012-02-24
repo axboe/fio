@@ -9,6 +9,9 @@ PROGS	= fio
 SCRIPTS = fio_generate_plots
 UNAME  := $(shell uname)
 
+GTKCFLAGS = `pkg-config gtk+-2.0 --cflags`
+GTKLDFLAGS = `pkg-config gtk+-2.0 --libs`
+
 SOURCE := gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
 		rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
@@ -128,3 +131,8 @@ install: $(PROGS) $(SCRIPTS)
 ifneq ($(wildcard .depend),)
 include .depend
 endif
+
+gfio:	gfio.c
+	$(CC) ${CFLAGS} ${GTKCFLAGS} ${GTKLDFLAGS} -pthread -o gfio gfio.c
+
+
