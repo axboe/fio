@@ -20,7 +20,14 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+#include <locale.h>
+
 #include <gtk/gtk.h>
+
+#include "fio_initialization.h"
+#include "fio.h"
+
+static struct client_ops *gfio_client_ops = &fio_client_ops;
 
 #define ARRAYSIZE(x) (sizeof((x)) / (sizeof((x)[0])))
 
@@ -96,10 +103,12 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_widget_show_all(ui->window);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char *argv[], char *envp[])
 {
 	struct gui ui;
 
+	if (initialize_fio(envp))
+		return 1;
 	init_ui(&argc, &argv, &ui);
 	gtk_main();
 	return 0;

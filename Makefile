@@ -12,7 +12,7 @@ UNAME  := $(shell uname)
 GTKCFLAGS = `pkg-config gtk+-2.0 --cflags`
 GTKLDFLAGS = `pkg-config gtk+-2.0 --libs`
 
-SOURCE := gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
+SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
 		rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
 		lib/num2str.c lib/ieee754.c $(wildcard crc/*.c) engines/cpu.c \
@@ -67,7 +67,12 @@ ifneq (,$(findstring CYGWIN,$(UNAME)))
   CC	  = x86_64-w64-mingw32-gcc
 endif
 
+FIO_SOURCE = $(SOURCE) fio.c
+GFIO_SOURCE = $(SOURCE) gfio.c
+
 OBJS = $(SOURCE:.c=.o)
+FIO_OBJS = $(OBJS) fio.o
+GFIO_OBJS = $(OBJS) gfio.o
 
 T_SMALLOC_OBJS = t/stest.o
 T_SMALLOC_OBJS += mutex.o smalloc.o t/log.o
@@ -108,8 +113,8 @@ t/stest: $(T_SMALLOC_OBJS)
 t/ieee754: $(T_IEEE_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_IEEE_OBJS) $(LIBS) $(LDFLAGS)
 
-fio: $(OBJS)
-	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
+fio: $(FIO_OBJS)
+	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(FIO_OBJS) $(LIBS) $(LDFLAGS)
 
 .depend: $(SOURCE)
 	$(QUIET_DEP)$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SOURCE) 1> .depend
@@ -133,7 +138,8 @@ ifneq ($(wildcard .depend),)
 include .depend
 endif
 
-gfio:	gfio.c
-	$(CC) ${CFLAGS} ${GTKCFLAGS} ${GTKLDFLAGS} -pthread -o gfio gfio.c
+gfio:	$(OBJS)	gfio.c
+	$(CC) ${CPPFLAGS} ${CFLAGS} ${GTKCFLAGS} ${LDFLAGS} ${GTKLDFLAGS} -pthread -o gfio $(OBJS) gfio.c $(LIBS) ${LDFLAGS}
+
 
 
