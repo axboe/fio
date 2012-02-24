@@ -21,6 +21,8 @@
 #include "flist.h"
 #include "hash.h"
 
+extern void (*update_thread_status)(char *status_message);
+
 struct client_eta {
 	struct jobs_eta eta;
 	unsigned int pending;
@@ -88,6 +90,7 @@ struct client_ops fio_client_ops = {
 	handle_gs,
 	handle_eta,
 	handle_probe,
+	NULL, /* status display, if NULL, printf is used */
 };
 
 static struct timeval eta_tv;
@@ -1014,6 +1017,9 @@ int fio_handle_clients(struct client_ops *ops)
 	sum_stat_clients = nr_clients;
 	init_thread_stat(&client_ts);
 	init_group_run_stat(&client_gs);
+
+	/* Used by eta.c:display_thread_status() */
+	update_thread_status = ops->thread_status_display;
 
 	while (!exit_backend && nr_clients) {
 		struct flist_head *entry, *tmp;

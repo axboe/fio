@@ -17,6 +17,8 @@ typedef void (*client_eta_op)(struct fio_client *client, struct fio_net_cmd *cmd
 
 typedef void (*client_probe_op)(struct fio_client *client, struct fio_net_cmd *cmd);
 
+typedef void (*client_thread_status_display_op)(char *status_message);
+
 struct client_ops {
 	client_text_op_func text_op;
 	client_disk_util_op_func disk_util;
@@ -24,6 +26,7 @@ struct client_ops {
 	client_group_stats_op group_stats;
 	client_eta_op eta; 
 	client_probe_op probe;
+	client_thread_status_display_op thread_status_display;
 };
 
 extern struct client_ops fio_client_ops;
