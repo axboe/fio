@@ -21,6 +21,7 @@
  *
  */
 #include <locale.h>
+#include <malloc.h>
 
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -49,6 +50,8 @@ static struct button_spec {
 };
 
 struct gui {
+	int argc;
+	char **argv;
 	GtkWidget *window;
 	GtkWidget *vbox;
 	GtkWidget *thread_status_pb;
@@ -133,17 +136,58 @@ static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
         gtk_main_quit();
 }
 
+static void add_arg(char **argv, int index, const char *value)
+{
+	argv[index] = malloc(strlen(value) + 1);
+	strcpy(argv[index], value);
+}
+
+static void free_args(int argc, char **argv)
+{
+	int i;
+
+	for (i = 0; i < argc; i++)
+		free(argv[i]);
+	free(argv);
+}
+
 static void *job_thread(void *arg)
 {
 	struct gui *ui = arg;
 
 	fio_handle_clients(&gfio_client_ops);
 	gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
+	free_args(ui->argc, ui->argv);
 	return NULL;
+}
+
+static void construct_options(struct gui *ui, int *argc, char ***argv)
+{
+	const char *hostname, *hostname_type, *port, *jobfile;
+	char newarg[200];
+	
+	hostname_type = gtk_entry_get_text(GTK_ENTRY(GTK_COMBO(ui->hostname_combo_box)->entry));
+	hostname = gtk_entry_get_text(GTK_ENTRY(ui->hostname_entry));
+	port = gtk_entry_get_text(GTK_ENTRY(ui->port_entry));
+	jobfile = gtk_entry_get_text(GTK_ENTRY(ui->jobfile_entry));
+
+	*argc = 3;
+	*argv = malloc(*argc * sizeof(**argv)); 	
+	add_arg(*argv, 0,  "gfio");
+	snprintf(newarg, sizeof(newarg) - 1, "--client=%s", hostname);
+	add_arg(*argv, 1, newarg);
+	add_arg(*argv, 2, jobfile);
 }
 
 static void start_job_thread(pthread_t *t, struct gui *ui)
 {
+	construct_options(ui, &ui->argc, &ui->argv);
+	if (parse_options(ui->argc, ui->argv)) {
+		printf("Yeah, I didn't really like those options too much.\n");
+		free_args(ui->argc, ui->argv);
+		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
+		return;
+	}
 	pthread_create(t, NULL, job_thread, ui);
 }
 
@@ -260,9 +304,6 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 int main(int argc, char *argv[], char *envp[])
 {
 	if (initialize_fio(envp))
-		return 1;
-
-	if (parse_options(argc, argv))
 		return 1;
 
 	init_ui(&argc, &argv, &ui);
