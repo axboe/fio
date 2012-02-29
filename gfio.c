@@ -46,6 +46,13 @@ static struct button_spec {
 		"Send current fio job to fio server to be executed" },
 };
 
+struct probe_widget {
+	GtkWidget *hostname;
+	GtkWidget *os;
+	GtkWidget *arch;
+	GtkWidget *fio_ver;
+};
+
 struct gui {
 	GtkWidget *window;
 	GtkWidget *vbox;
@@ -66,6 +73,7 @@ struct gui {
 	GtkWidget *error_info_bar;
 	GtkWidget *error_label;
 	GtkTextBuffer *text;
+	struct probe_widget probe;
 	pthread_t t;
 
 	void *cookie;
@@ -113,8 +121,26 @@ static void gfio_eta_op(struct fio_client *client, struct fio_net_cmd *cmd)
 
 static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
-	printf("gfio_probe_op called\n");
-	fio_client_ops.probe(client, cmd);
+	struct cmd_probe_pdu *probe = (struct cmd_probe_pdu *) cmd->payload;
+	const char *os, *arch;
+	char buf[64];
+
+	os = fio_get_os_string(probe->os);
+	if (!os)
+		os = "unknown";
+
+	arch = fio_get_arch_string(probe->arch);
+	if (!arch)
+		os = "unknown";
+
+	if (!client->name)
+		client->name = strdup((char *) probe->hostname);
+
+	gtk_label_set_text(GTK_LABEL(ui.probe.hostname), (char *) probe->hostname);
+	gtk_label_set_text(GTK_LABEL(ui.probe.os), os);
+	gtk_label_set_text(GTK_LABEL(ui.probe.arch), arch);
+	sprintf(buf, "%u.%u.%u", probe->fio_major, probe->fio_minor, probe->fio_patch);
+	gtk_label_set_text(GTK_LABEL(ui.probe.fio_ver), buf);
 }
 
 static void gfio_update_thread_status(char *status_message, double perc)
@@ -383,13 +409,26 @@ void gfio_ui_setup(GtkSettings *settings, GtkWidget *menubar,
         gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, FALSE, 0);
 }
 
+static GtkWidget *new_info_label_in_frame(GtkWidget *box, const char *label)
+{
+	GtkWidget *label_widget;
+	GtkWidget *frame;
+
+	frame = gtk_frame_new(label);
+	label_widget = gtk_label_new(NULL);
+	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), label_widget);
+
+	return label_widget;
+}
+
 static void init_ui(int *argc, char **argv[], struct gui *ui)
 {
 	GList *hostname_type_list = NULL;
 	char portnum[20];
 	GtkSettings *settings;
 	GtkUIManager *uimanager;
-	GtkWidget *menu;
+	GtkWidget *menu, *probe, *probe_frame, *probe_box;
 
 	memset(ui, 0, sizeof(*ui));
 
@@ -458,6 +497,19 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->port_entry);
 	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->hostname_combo_box);
 	gtk_container_add(GTK_CONTAINER (ui->topvbox), ui->hostname_hbox);
+
+	probe = gtk_frame_new("Host");
+	gtk_box_pack_start(GTK_BOX(ui->topvbox), probe, TRUE, FALSE, 3);
+	probe_frame = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(probe), probe_frame);
+
+	probe_box = gtk_hbox_new(FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
+
+	ui->probe.hostname = new_info_label_in_frame(probe_box, "Host");
+	ui->probe.os = new_info_label_in_frame(probe_box, "OS");
+	ui->probe.arch = new_info_label_in_frame(probe_box, "Architecture");
+	ui->probe.fio_ver = new_info_label_in_frame(probe_box, "Fio version");
 
 	/*
 	 * Set up thread status progress bar
