@@ -28,40 +28,6 @@ struct client_eta {
 	unsigned int pending;
 };
 
-struct fio_client {
-	struct flist_head list;
-	struct flist_head hash_list;
-	struct flist_head arg_list;
-	union {
-		struct sockaddr_in addr;
-		struct sockaddr_in6 addr6;
-		struct sockaddr_un addr_un;
-	};
-	char *hostname;
-	int port;
-	int fd;
-
-	char *name;
-
-	int state;
-
-	int skip_newline;
-	int is_sock;
-	int disk_stats_shown;
-	unsigned int jobs;
-	int error;
-	int ipv6;
-	int sent_job;
-
-	struct flist_head eta_list;
-	struct client_eta *eta_in_flight;
-
-	struct flist_head cmd_list;
-
-	uint16_t argc;
-	char **argv;
-};
-
 static void fio_client_text_op(struct fio_client *client,
 		FILE *f, __u16 pdu_len, const char *buf)
 {
