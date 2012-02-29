@@ -17,7 +17,7 @@
 
 extern unsigned short const crc16_table[256];
 
-extern unsigned short crc16(const void *buffer, unsigned int len);
+extern unsigned short fio_crc16(const void *buffer, unsigned int len);
 
 static inline unsigned short crc16_byte(unsigned short crc,
 					const unsigned char data)

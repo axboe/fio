@@ -227,7 +227,7 @@ static void sha256_transform(uint32_t *state, const uint8_t *input)
 	memset(W, 0, 64 * sizeof(uint32_t));
 }
 
-void sha256_init(struct sha256_ctx *sctx)
+void fio_sha256_init(struct fio_sha256_ctx *sctx)
 {
 	sctx->state[0] = H0;
 	sctx->state[1] = H1;
@@ -240,8 +240,8 @@ void sha256_init(struct sha256_ctx *sctx)
 	sctx->count[0] = sctx->count[1] = 0;
 }
 
-void sha256_update(struct sha256_ctx *sctx, const uint8_t *data,
-		   unsigned int len)
+void fio_sha256_update(struct fio_sha256_ctx *sctx, const uint8_t *data,
+		       unsigned int len)
 {
 	unsigned int i, idx, part_len;
 

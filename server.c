@@ -124,7 +124,7 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 	cmd->cmd_crc16 = le16_to_cpu(cmd->cmd_crc16);
 	cmd->pdu_crc16 = le16_to_cpu(cmd->pdu_crc16);
 
-	crc = crc16(cmd, FIO_NET_CMD_CRC_SZ);
+	crc = fio_crc16(cmd, FIO_NET_CMD_CRC_SZ);
 	if (crc != cmd->cmd_crc16) {
 		log_err("fio: server bad crc on command (got %x, wanted %x)\n",
 				cmd->cmd_crc16, crc);
@@ -202,7 +202,7 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 			break;
 
 		/* Verify payload crc */
-		crc = crc16(pdu, cmd.pdu_len);
+		crc = fio_crc16(pdu, cmd.pdu_len);
 		if (crc != cmd.pdu_crc16) {
 			log_err("fio: server bad crc on payload ");
 			log_err("(got %x, wanted %x)\n", cmd.pdu_crc16, crc);
@@ -238,11 +238,11 @@ void fio_net_cmd_crc(struct fio_net_cmd *cmd)
 {
 	uint32_t pdu_len;
 
-	cmd->cmd_crc16 = __cpu_to_le16(crc16(cmd, FIO_NET_CMD_CRC_SZ));
+	cmd->cmd_crc16 = __cpu_to_le16(fio_crc16(cmd, FIO_NET_CMD_CRC_SZ));
 
 	pdu_len = le32_to_cpu(cmd->pdu_len);
 	if (pdu_len)
-		cmd->pdu_crc16 = __cpu_to_le16(crc16(cmd->payload, pdu_len));
+		cmd->pdu_crc16 = __cpu_to_le16(fio_crc16(cmd->payload, pdu_len));
 }
 
 int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size,

@@ -10,9 +10,9 @@
 #include "sha1.h"
 
 /* Hash one 64-byte block of data */
-static void blk_SHA1Block(struct sha1_ctx *ctx, const unsigned int *data);
+static void blk_SHA1Block(struct fio_sha1_ctx *ctx, const unsigned int *data);
 
-void sha1_init(struct sha1_ctx *ctx)
+void fio_sha1_init(struct fio_sha1_ctx *ctx)
 {
 	ctx->size = 0;
 
@@ -25,7 +25,8 @@ void sha1_init(struct sha1_ctx *ctx)
 	ctx->H[4] = 0xc3d2e1f0;
 }
 
-void sha1_update(struct sha1_ctx *ctx, const void *data, unsigned long len)
+void fio_sha1_update(struct fio_sha1_ctx *ctx, const void *data,
+		     unsigned long len)
 {
 	int lenW = ctx->size & 63;
 
@@ -54,7 +55,7 @@ void sha1_update(struct sha1_ctx *ctx, const void *data, unsigned long len)
 		memcpy(ctx->W, data, len);
 }
 
-void sha1_final(unsigned char hashout[20], struct sha1_ctx *ctx)
+void fio_sha1_final(unsigned char hashout[20], struct fio_sha1_ctx *ctx)
 {
 	static const unsigned char pad[64] = { 0x80 };
 	unsigned int padlen[2];
@@ -66,8 +67,8 @@ void sha1_final(unsigned char hashout[20], struct sha1_ctx *ctx)
 	padlen[1] = htonl(ctx->size << 3);
 
 	i = ctx->size & 63;
-	sha1_update(ctx, pad, 1+ (63 & (55 - i)));
-	sha1_update(ctx, padlen, 8);
+	fio_sha1_update(ctx, pad, 1+ (63 & (55 - i)));
+	fio_sha1_update(ctx, padlen, 8);
 
 	/* Output hash
 	 */
@@ -111,7 +112,7 @@ void sha1_final(unsigned char hashout[20], struct sha1_ctx *ctx)
 #define T_40_59(t, A, B, C, D, E) SHA_ROUND(t, SHA_MIX, ((B&C)+(D&(B^C))) , 0x8f1bbcdc, A, B, C, D, E )
 #define T_60_79(t, A, B, C, D, E) SHA_ROUND(t, SHA_MIX, (B^C^D) ,  0xca62c1d6, A, B, C, D, E )
 
-static void blk_SHA1Block(struct sha1_ctx *ctx, const unsigned int *data)
+static void blk_SHA1Block(struct fio_sha1_ctx *ctx, const unsigned int *data)
 {
 	unsigned int A,B,C,D,E;
 	unsigned int array[16];

@@ -33,7 +33,7 @@ static inline void crc32c_intel_probe(void)
 }
 #endif
 
-static inline uint32_t crc32c(unsigned char const *buf, unsigned long len)
+static inline uint32_t fio_crc32c(unsigned char const *buf, unsigned long len)
 {
 	if (crc32c_intel_available)
 		return crc32c_intel(buf, len);

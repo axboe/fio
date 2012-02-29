@@ -3,6 +3,6 @@
 
 #define FIO_MAJOR	2
 #define FIO_MINOR	0
-#define FIO_PATCH	3
+#define FIO_PATCH	5
 
 #endif
