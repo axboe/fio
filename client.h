@@ -6,6 +6,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "stat.h"
+
 struct fio_net_cmd;
 
 struct fio_client {
@@ -64,10 +66,19 @@ struct client_ops {
 	client_group_stats_op group_stats;
 	client_eta_op eta;
 	client_probe_op probe;
-	client_thread_status_display_op thread_status_display;
 };
 
 extern struct client_ops fio_client_ops;
+
+struct client_eta {
+	struct jobs_eta eta;
+	unsigned int pending;
+};
+
+extern int fio_handle_client(struct fio_client *, struct client_ops *ops);
+extern void fio_client_dec_jobs_eta(struct client_eta *eta, void (*fn)(struct jobs_eta *));
+extern void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je);
+extern void fio_client_convert_jobs_eta(struct jobs_eta *je);
 
 #endif
 

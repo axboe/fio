@@ -21,13 +21,6 @@
 #include "flist.h"
 #include "hash.h"
 
-extern void (*update_thread_status)(char *status_message, double perc);
-
-struct client_eta {
-	struct jobs_eta eta;
-	unsigned int pending;
-};
-
 static void fio_client_text_op(struct fio_client *client,
 		FILE *f, __u16 pdu_len, const char *buf)
 {
@@ -56,7 +49,6 @@ struct client_ops fio_client_ops = {
 	.group_stats	= handle_gs,
 	.eta		= handle_eta,
 	.probe		= handle_probe,
-	/* status display, if NULL, printf is used */
 };
 
 static struct timeval eta_tv;
@@ -84,9 +76,6 @@ static int sum_stat_nr;
 #define FIO_CLIENT_HASH_SZ	(1 << FIO_CLIENT_HASH_BITS)
 #define FIO_CLIENT_HASH_MASK	(FIO_CLIENT_HASH_SZ - 1)
 static struct flist_head client_hash[FIO_CLIENT_HASH_SZ];
-
-static int handle_client(struct fio_client *client, struct client_ops *ops);
-static void dec_jobs_eta(struct client_eta *eta);
 
 static void fio_client_add_hash(struct fio_client *client)
 {
@@ -135,7 +124,7 @@ static void remove_client(struct fio_client *client)
 
 	if (!flist_empty(&client->eta_list)) {
 		flist_del_init(&client->eta_list);
-		dec_jobs_eta(client->eta_in_flight);
+		fio_client_dec_jobs_eta(client->eta_in_flight, display_thread_status);
 	}
 
 	free(client->hostname);
@@ -681,7 +670,7 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 	print_disk_util(&du->dus, &du->agg, terse_output);
 }
 
-static void convert_jobs_eta(struct jobs_eta *je)
+void fio_client_convert_jobs_eta(struct jobs_eta *je)
 {
 	int i;
 
@@ -689,12 +678,12 @@ static void convert_jobs_eta(struct jobs_eta *je)
 	je->nr_ramp		= le32_to_cpu(je->nr_ramp);
 	je->nr_pending		= le32_to_cpu(je->nr_pending);
 	je->files_open		= le32_to_cpu(je->files_open);
-	je->m_rate		= le32_to_cpu(je->m_rate);
-	je->t_rate		= le32_to_cpu(je->t_rate);
-	je->m_iops		= le32_to_cpu(je->m_iops);
-	je->t_iops		= le32_to_cpu(je->t_iops);
 
 	for (i = 0; i < 2; i++) {
+		je->m_rate[i]		= le32_to_cpu(je->m_rate[i]);
+		je->t_rate[i]		= le32_to_cpu(je->t_rate[i]);
+		je->m_iops[i]		= le32_to_cpu(je->m_iops[i]);
+		je->t_iops[i]		= le32_to_cpu(je->t_iops[i]);
 		je->rate[i]	= le32_to_cpu(je->rate[i]);
 		je->iops[i]	= le32_to_cpu(je->iops[i]);
 	}
@@ -703,7 +692,7 @@ static void convert_jobs_eta(struct jobs_eta *je)
 	je->eta_sec		= le64_to_cpu(je->eta_sec);
 }
 
-static void sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
+void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 {
 	int i;
 
@@ -711,12 +700,12 @@ static void sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 	dst->nr_ramp		+= je->nr_ramp;
 	dst->nr_pending		+= je->nr_pending;
 	dst->files_open		+= je->files_open;
-	dst->m_rate		+= je->m_rate;
-	dst->t_rate		+= je->t_rate;
-	dst->m_iops		+= je->m_iops;
-	dst->t_iops		+= je->t_iops;
 
 	for (i = 0; i < 2; i++) {
+		dst->m_rate[i]	+= je->m_rate[i];
+		dst->t_rate[i]	+= je->t_rate[i];
+		dst->m_iops[i]	+= je->m_iops[i];
+		dst->t_iops[i]	+= je->t_iops[i];
 		dst->rate[i]	+= je->rate[i];
 		dst->iops[i]	+= je->iops[i];
 	}
@@ -727,10 +716,10 @@ static void sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 		dst->eta_sec = je->eta_sec;
 }
 
-static void dec_jobs_eta(struct client_eta *eta)
+void fio_client_dec_jobs_eta(struct client_eta *eta, void (*fn)(struct jobs_eta *))
 {
 	if (!--eta->pending) {
-		display_thread_status(&eta->eta);
+		fn(&eta->eta);
 		free(eta);
 	}
 }
@@ -771,9 +760,9 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 	client->eta_in_flight = NULL;
 	flist_del_init(&client->eta_list);
 
-	convert_jobs_eta(je);
-	sum_jobs_eta(&eta->eta, je);
-	dec_jobs_eta(eta);
+	fio_client_convert_jobs_eta(je);
+	fio_client_sum_jobs_eta(&eta->eta, je);
+	fio_client_dec_jobs_eta(eta, display_thread_status);
 }
 
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -819,7 +808,7 @@ static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd)
 		log_info("client <%s>: exited with error %d\n", client->hostname, client->error);
 }
 
-static int handle_client(struct fio_client *client, struct client_ops *ops)
+int fio_handle_client(struct fio_client *client, struct client_ops *ops)
 {
 	struct fio_net_cmd *cmd;
 
@@ -917,7 +906,7 @@ static void request_client_etas(void)
 	}
 
 	while (skipped--)
-		dec_jobs_eta(eta);
+		fio_client_dec_jobs_eta(eta, display_thread_status);
 
 	dprint(FD_NET, "client: requested eta tag %p\n", eta);
 }
@@ -984,9 +973,6 @@ int fio_handle_clients(struct client_ops *ops)
 	init_thread_stat(&client_ts);
 	init_group_run_stat(&client_gs);
 
-	/* Used by eta.c:display_thread_status() */
-	update_thread_status = ops->thread_status_display;
-
 	while (!exit_backend && nr_clients) {
 		struct flist_head *entry, *tmp;
 		struct fio_client *client;
@@ -1042,7 +1028,7 @@ int fio_handle_clients(struct client_ops *ops)
 				log_err("fio: unknown client fd %d\n", pfds[i].fd);
 				continue;
 			}
-			if (!handle_client(client, ops)) {
+			if (!fio_handle_client(client, ops)) {
 				log_info("client: host=%s disconnected\n",
 						client->hostname);
 				remove_client(client);

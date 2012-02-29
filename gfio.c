@@ -28,22 +28,27 @@
 
 #include "fio.h"
 
+static void gfio_update_thread_status(char *status_message, double perc);
+
 #define ARRAYSIZE(x) (sizeof((x)) / (sizeof((x)[0])))
 
 typedef void (*clickfunction)(GtkWidget *widget, gpointer data);
 
-static void quit_clicked(GtkWidget *widget, gpointer data);
+static void connect_clicked(GtkWidget *widget, gpointer data);
 static void start_job_clicked(GtkWidget *widget, gpointer data);
 
 static struct button_spec {
 	const char *buttontext;
 	clickfunction f;
 	const char *tooltiptext;
+	const int start_insensitive;
 } buttonspeclist[] = {
-#define START_JOB_BUTTON 0
+#define CONNECT_BUTTON 0
+#define START_JOB_BUTTON 1
+	{ "Connect", connect_clicked, "Connect to host", 0 },
 	{ "Start Job",
 		start_job_clicked,
-		"Send current fio job to fio server to be executed" },
+		"Send current fio job to fio server to be executed", 1 },
 };
 
 struct probe_widget {
@@ -51,6 +56,19 @@ struct probe_widget {
 	GtkWidget *os;
 	GtkWidget *arch;
 	GtkWidget *fio_ver;
+};
+
+struct eta_widget {
+	GtkWidget *jobs;
+	GtkWidget *files;
+	GtkWidget *read_bw;
+	GtkWidget *read_iops;
+	GtkWidget *cr_bw;
+	GtkWidget *cr_iops;
+	GtkWidget *write_bw;
+	GtkWidget *write_iops;
+	GtkWidget *cw_bw;
+	GtkWidget *cw_iops;
 };
 
 struct gui {
@@ -74,6 +92,7 @@ struct gui {
 	GtkWidget *error_label;
 	GtkTextBuffer *text;
 	struct probe_widget probe;
+	struct eta_widget eta;
 	pthread_t t;
 
 	void *cookie;
@@ -114,9 +133,97 @@ static void gfio_group_stats_op(struct fio_net_cmd *cmd)
 	fio_client_ops.group_stats(cmd);
 }
 
+static void gfio_update_eta(struct jobs_eta *je)
+{
+	static int eta_good;
+	char eta_str[128];
+	char output[256];
+	char tmp[32];
+	double perc = 0.0;
+	int i2p = 0;
+
+	eta_str[0] = '\0';
+	output[0] = '\0';
+
+	if (je->eta_sec != INT_MAX && je->elapsed_sec) {
+		perc = (double) je->elapsed_sec / (double) (je->elapsed_sec + je->eta_sec);
+		eta_to_str(eta_str, je->eta_sec);
+	}
+
+	sprintf(tmp, "%u", je->nr_running);
+	gtk_label_set_text(GTK_LABEL(ui.eta.jobs), tmp);
+	sprintf(tmp, "%u", je->files_open);
+	gtk_label_set_text(GTK_LABEL(ui.eta.files), tmp);
+
+#if 0
+	if (je->m_rate[0] || je->m_rate[1] || je->t_rate[0] || je->t_rate[1]) {
+	if (je->m_rate || je->t_rate) {
+		char *tr, *mr;
+
+		mr = num2str(je->m_rate, 4, 0, i2p);
+		tr = num2str(je->t_rate, 4, 0, i2p);
+		gtk_label_set_text(GTK_LABEL(ui.eta.
+		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
+		free(tr);
+		free(mr);
+	} else if (je->m_iops || je->t_iops)
+		p += sprintf(p, ", CR=%d/%d IOPS", je->t_iops, je->m_iops);
+#else
+	gtk_label_set_text(GTK_LABEL(ui.eta.cr_bw), "---");
+	gtk_label_set_text(GTK_LABEL(ui.eta.cr_iops), "---");
+	gtk_label_set_text(GTK_LABEL(ui.eta.cw_bw), "---");
+	gtk_label_set_text(GTK_LABEL(ui.eta.cw_iops), "---");
+#endif
+
+	if (je->eta_sec != INT_MAX && je->nr_running) {
+		char *iops_str[2];
+		char *rate_str[2];
+
+		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running)
+			strcpy(output, "-.-% done");
+		else {
+			eta_good = 1;
+			perc *= 100.0;
+			sprintf(output, "%3.1f%% done", perc);
+		}
+
+		rate_str[0] = num2str(je->rate[0], 5, 10, i2p);
+		rate_str[1] = num2str(je->rate[1], 5, 10, i2p);
+
+		iops_str[0] = num2str(je->iops[0], 4, 1, 0);
+		iops_str[1] = num2str(je->iops[1], 4, 1, 0);
+
+		gtk_label_set_text(GTK_LABEL(ui.eta.read_bw), rate_str[0]);
+		gtk_label_set_text(GTK_LABEL(ui.eta.read_iops), iops_str[0]);
+		gtk_label_set_text(GTK_LABEL(ui.eta.write_bw), rate_str[1]);
+		gtk_label_set_text(GTK_LABEL(ui.eta.write_iops), iops_str[1]);
+
+		free(rate_str[0]);
+		free(rate_str[1]);
+		free(iops_str[0]);
+		free(iops_str[1]);
+	}
+
+	if (eta_str[0]) {
+		char *dst = output + strlen(output);
+
+		sprintf(dst, " - %s", eta_str);
+	}
+		
+	gfio_update_thread_status(output, perc);
+}
+
 static void gfio_eta_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
-	fio_client_ops.eta(client, cmd);
+	struct jobs_eta *je = (struct jobs_eta *) cmd->payload;
+	struct client_eta *eta = (struct client_eta *) (uintptr_t) cmd->tag;
+
+	client->eta_in_flight = NULL;
+	flist_del_init(&client->eta_list);
+
+	fio_client_convert_jobs_eta(je);
+	fio_client_sum_jobs_eta(&eta->eta, je);
+	fio_client_dec_jobs_eta(eta, gfio_update_eta);
 }
 
 static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -165,7 +272,6 @@ struct client_ops gfio_client_ops = {
 	.group_stats		= gfio_group_stats_op,
 	.eta			= gfio_eta_op,
 	.probe			= gfio_probe_op,
-	.thread_status_display	= gfio_update_thread_status,
 };
 
 static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
@@ -200,8 +306,6 @@ static int send_job_files(struct gui *ui)
 
 static void start_job_thread(pthread_t *t, struct gui *ui)
 {
-	fio_clients_connect();
-
 	if (send_job_files(ui)) {
 		printf("Yeah, I didn't really like those options too much.\n");
 		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
@@ -216,9 +320,15 @@ static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
 {
 	struct gui *ui = data;
 
-	printf("Start job button was clicked.\n");
 	gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 0);
 	start_job_thread(&ui->t, ui);
+}
+
+static void connect_clicked(__attribute__((unused)) GtkWidget *widget,
+                gpointer data)
+{
+	fio_clients_connect();
+	gtk_widget_set_sensitive(ui.button[START_JOB_BUTTON], 1);
 }
 
 static void add_button(struct gui *ui, int i, GtkWidget *buttonbox,
@@ -228,6 +338,7 @@ static void add_button(struct gui *ui, int i, GtkWidget *buttonbox,
 	g_signal_connect(ui->button[i], "clicked", G_CALLBACK (buttonspec->f), ui);
 	gtk_box_pack_start(GTK_BOX (ui->buttonbox), ui->button[i], TRUE, TRUE, 0);
 	gtk_widget_set_tooltip_text(ui->button[i], buttonspeclist[i].tooltiptext);
+	gtk_widget_set_sensitive(ui->button[i], !buttonspec->start_insensitive);
 }
 
 static void add_buttons(struct gui *ui,
@@ -370,7 +481,7 @@ static GtkActionEntry menu_items[] = {
         { "Quit",           GTK_STOCK_QUIT, NULL,   "<Control>Q", NULL, G_CALLBACK(quit_clicked) },
 	{ "About",          GTK_STOCK_ABOUT, NULL,  NULL, NULL, G_CALLBACK(about_dialog) },
 };
-static gint nmenu_items = sizeof (menu_items) / sizeof(menu_items[0]);
+static gint nmenu_items = sizeof(menu_items) / sizeof(menu_items[0]);
 
 static const gchar *ui_string = " \
 	<ui> \
@@ -498,28 +609,44 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->hostname_combo_box);
 	gtk_container_add(GTK_CONTAINER (ui->topvbox), ui->hostname_hbox);
 
-	probe = gtk_frame_new("Host");
+	probe = gtk_frame_new("Job");
 	gtk_box_pack_start(GTK_BOX(ui->topvbox), probe, TRUE, FALSE, 3);
 	probe_frame = gtk_vbox_new(FALSE, 3);
 	gtk_container_add(GTK_CONTAINER(probe), probe_frame);
 
 	probe_box = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
-
 	ui->probe.hostname = new_info_label_in_frame(probe_box, "Host");
 	ui->probe.os = new_info_label_in_frame(probe_box, "OS");
 	ui->probe.arch = new_info_label_in_frame(probe_box, "Architecture");
 	ui->probe.fio_ver = new_info_label_in_frame(probe_box, "Fio version");
 
+	probe_box = gtk_hbox_new(FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
+	ui->eta.jobs = new_info_label_in_frame(probe_box, "Jobs");
+	ui->eta.files = new_info_label_in_frame(probe_box, "Open files");
+
+	probe_box = gtk_hbox_new(FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
+	ui->eta.read_bw = new_info_label_in_frame(probe_box, "Read BW");
+	ui->eta.read_iops = new_info_label_in_frame(probe_box, "IOPS");
+	ui->eta.cr_bw = new_info_label_in_frame(probe_box, "Commit BW");
+	ui->eta.cr_iops = new_info_label_in_frame(probe_box, "Commit IOPS");
+
+	probe_box = gtk_hbox_new(FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
+	ui->eta.write_bw = new_info_label_in_frame(probe_box, "Write BW");
+	ui->eta.write_iops = new_info_label_in_frame(probe_box, "IOPS");
+	ui->eta.cw_bw = new_info_label_in_frame(probe_box, "Commit BW");
+	ui->eta.cw_iops = new_info_label_in_frame(probe_box, "Commit IOPS");
+
 	/*
 	 * Set up thread status progress bar
 	 */
 	ui->thread_status_pb = gtk_progress_bar_new();
-	gtk_progress_bar_set_fraction(
-		GTK_PROGRESS_BAR(ui->thread_status_pb), 0.0);
-	gtk_progress_bar_set_text(
-		GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
-	gtk_container_add(GTK_CONTAINER (ui->topvbox), ui->thread_status_pb);
+	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ui->thread_status_pb), 0.0);
+	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
+	gtk_container_add(GTK_CONTAINER(ui->topvbox), ui->thread_status_pb);
 
 	/*
 	 * Add a text box for text op messages 

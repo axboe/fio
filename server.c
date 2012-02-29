@@ -443,12 +443,12 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 	je->nr_ramp		= cpu_to_le32(je->nr_ramp);
 	je->nr_pending		= cpu_to_le32(je->nr_pending);
 	je->files_open		= cpu_to_le32(je->files_open);
-	je->m_rate		= cpu_to_le32(je->m_rate);
-	je->t_rate		= cpu_to_le32(je->t_rate);
-	je->m_iops		= cpu_to_le32(je->m_iops);
-	je->t_iops		= cpu_to_le32(je->t_iops);
 
 	for (i = 0; i < 2; i++) {
+		je->m_rate[i]	= cpu_to_le32(je->m_rate[i]);
+		je->t_rate[i]	= cpu_to_le32(je->t_rate[i]);
+		je->m_iops[i]	= cpu_to_le32(je->m_iops[i]);
+		je->t_iops[i]	= cpu_to_le32(je->t_iops[i]);
 		je->rate[i]	= cpu_to_le32(je->rate[i]);
 		je->iops[i]	= cpu_to_le32(je->iops[i]);
 	}

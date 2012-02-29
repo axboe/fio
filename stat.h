@@ -174,8 +174,8 @@ struct jobs_eta {
 	uint32_t nr_ramp;
 	uint32_t nr_pending;
 	uint32_t files_open;
-	uint32_t m_rate, t_rate;
-	uint32_t m_iops, t_iops;
+	uint32_t m_rate[2], t_rate[2];
+	uint32_t m_iops[2], t_iops[2];
 	uint32_t rate[2];
 	uint32_t iops[2];
 	uint64_t elapsed_sec;
@@ -197,5 +197,6 @@ extern void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src, i
 extern void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src);
 extern void init_thread_stat(struct thread_stat *ts);
 extern void init_group_run_stat(struct group_run_stats *gs);
+extern void eta_to_str(char *str, unsigned long eta_sec);
 
 #endif

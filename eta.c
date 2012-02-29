@@ -7,8 +7,6 @@
 
 #include "fio.h"
 
-void (*update_thread_status)(char *status_message, double perc) = NULL;
-
 static char run_str[REAL_MAX_JOBS + 1];
 
 /*
@@ -85,7 +83,7 @@ static void check_str_update(struct thread_data *td)
 /*
  * Convert seconds to a printable string.
  */
-static void eta_to_str(char *str, unsigned long eta_sec)
+void eta_to_str(char *str, unsigned long eta_sec)
 {
 	unsigned int d, h, m, s;
 	int disp_hour = 0;
@@ -275,11 +273,14 @@ int calc_thread_status(struct jobs_eta *je, int force)
 		    || td->runstate == TD_FSYNCING
 		    || td->runstate == TD_PRE_READING) {
 			je->nr_running++;
-			je->t_rate += td->o.rate[0] + td->o.rate[1];
-			je->m_rate += td->o.ratemin[0] + td->o.ratemin[1];
-			je->t_iops += td->o.rate_iops[0] + td->o.rate_iops[1];
-			je->m_iops += td->o.rate_iops_min[0] +
-					td->o.rate_iops_min[1];
+			je->t_rate[0] += td->o.rate[0];
+			je->t_rate[1] += td->o.rate[1];
+			je->m_rate[0] += td->o.ratemin[0];
+			je->m_rate[1] += td->o.ratemin[1];
+			je->t_iops[0] += td->o.rate_iops[0];
+			je->t_iops[1] += td->o.rate_iops[1];
+			je->m_iops[0] += td->o.rate_iops_min[0];
+			je->m_iops[1] += td->o.rate_iops_min[1];
 			je->files_open += td->nr_open_files;
 		} else if (td->runstate == TD_RAMP) {
 			je->nr_running++;
@@ -368,16 +369,19 @@ void display_thread_status(struct jobs_eta *je)
 	}
 
 	p += sprintf(p, "Jobs: %d (f=%d)", je->nr_running, je->files_open);
-	if (je->m_rate || je->t_rate) {
+	if (je->m_rate[0] || je->m_rate[1] || je->t_rate[0] || je->t_rate[1]) {
 		char *tr, *mr;
 
-		mr = num2str(je->m_rate, 4, 0, i2p);
-		tr = num2str(je->t_rate, 4, 0, i2p);
+		mr = num2str(je->m_rate[0] + je->m_rate[1], 4, 0, i2p);
+		tr = num2str(je->t_rate[0] + je->t_rate[1], 4, 0, i2p);
 		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
 		free(tr);
 		free(mr);
-	} else if (je->m_iops || je->t_iops)
-		p += sprintf(p, ", CR=%d/%d IOPS", je->t_iops, je->m_iops);
+	} else if (je->m_iops[0] || je->m_iops[1] || je->t_iops[0] || je->t_iops[1]) {
+		p += sprintf(p, ", CR=%d/%d IOPS",
+					je->t_iops[0] + je->t_iops[1],
+					je->m_iops[0] + je->t_iops[1]);
+	}
 	if (je->eta_sec != INT_MAX && je->nr_running) {
 		char perc_str[32];
 		char *iops_str[2];
@@ -413,12 +417,8 @@ void display_thread_status(struct jobs_eta *je)
 	}
 	p += sprintf(p, "\r");
 
-	if (update_thread_status) {
-		update_thread_status(output, perc);
-	} else {
-		printf("%s", output);
-		fflush(stdout);
-	}
+	printf("%s", output);
+	fflush(stdout);
 }
 
 void print_thread_status(void)
