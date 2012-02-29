@@ -84,13 +84,13 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd);
 
 struct client_ops fio_client_ops = {
-	fio_client_text_op,
-	handle_du,
-	handle_ts,
-	handle_gs,
-	handle_eta,
-	handle_probe,
-	NULL, /* status display, if NULL, printf is used */
+	.text_op	= fio_client_text_op,
+	.disk_util	= handle_du,
+	.thread_status	= handle_ts,
+	.group_stats	= handle_gs,
+	.eta		= handle_eta,
+	.probe		= handle_probe,
+	/* status display, if NULL, printf is used */
 };
 
 static struct timeval eta_tv;

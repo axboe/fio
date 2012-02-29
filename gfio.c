@@ -44,13 +44,9 @@ static struct button_spec {
 	{ "Start Job",
 		start_job_clicked,
 		"Send current fio job to fio server to be executed" },
-#define QUIT_BUTTON 1
-	{ "Quit", quit_clicked, "Quit gfio" },
 };
 
 struct gui {
-	int argc;
-	char **argv;
 	GtkWidget *window;
 	GtkWidget *vbox;
 	GtkWidget *topvbox;
@@ -65,13 +61,16 @@ struct gui {
 	GtkWidget *port_label;
 	GtkWidget *port_entry;
 	GtkWidget *hostname_combo_box; /* ipv4, ipv6 or socket */
-	GtkWidget *jobfile_hbox;
-	GtkWidget *jobfile_label;
-	GtkWidget *jobfile_entry;
 	GtkWidget *scrolled_window;
 	GtkWidget *textview;
+	GtkWidget *error_info_bar;
+	GtkWidget *error_label;
 	GtkTextBuffer *text;
 	pthread_t t;
+
+	void *cookie;
+	int nr_job_files;
+	char **job_files;
 } ui;
 
 static void gfio_text_op(struct fio_client *client,
@@ -134,13 +133,13 @@ static void gfio_update_thread_status(char *status_message, double perc)
 }
 
 struct client_ops gfio_client_ops = {
-	gfio_text_op,
-	gfio_disk_util_op,
-	gfio_thread_status_op,
-	gfio_group_stats_op,
-	gfio_eta_op,
-	gfio_probe_op,
-	gfio_update_thread_status,
+	.text_op		= gfio_text_op,
+	.disk_util		= gfio_disk_util_op,
+	.thread_status		= gfio_thread_status_op,
+	.group_stats		= gfio_group_stats_op,
+	.eta			= gfio_eta_op,
+	.probe			= gfio_probe_op,
+	.thread_status_display	= gfio_update_thread_status,
 };
 
 static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
@@ -149,58 +148,40 @@ static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
         gtk_main_quit();
 }
 
-static void add_arg(char **argv, int index, const char *value)
-{
-	argv[index] = malloc(strlen(value) + 1);
-	strcpy(argv[index], value);
-}
-
-static void free_args(int argc, char **argv)
-{
-	int i;
-
-	for (i = 0; i < argc; i++)
-		free(argv[i]);
-	free(argv);
-}
-
 static void *job_thread(void *arg)
 {
 	struct gui *ui = arg;
 
 	fio_handle_clients(&gfio_client_ops);
 	gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
-	free_args(ui->argc, ui->argv);
 	return NULL;
 }
 
-static void construct_options(struct gui *ui, int *argc, char ***argv)
+static int send_job_files(struct gui *ui)
 {
-	const char *hostname, *hostname_type, *port, *jobfile;
-	char newarg[200];
-	
-	hostname_type = gtk_entry_get_text(GTK_ENTRY(GTK_COMBO(ui->hostname_combo_box)->entry));
-	hostname = gtk_entry_get_text(GTK_ENTRY(ui->hostname_entry));
-	port = gtk_entry_get_text(GTK_ENTRY(ui->port_entry));
-	jobfile = gtk_entry_get_text(GTK_ENTRY(ui->jobfile_entry));
+	int i, ret;
 
-	*argc = 3;
-	*argv = malloc(*argc * sizeof(**argv)); 	
-	add_arg(*argv, 0,  "gfio");
-	snprintf(newarg, sizeof(newarg) - 1, "--client=%s", hostname);
-	add_arg(*argv, 1, newarg);
-	add_arg(*argv, 2, jobfile);
+	for (i = 0; i < ui->nr_job_files; i++) {
+		ret = fio_clients_send_ini(ui->job_files[i]);
+		free(ui->job_files[i]);
+		ui->job_files[i] = NULL;
+		if (ret)
+			return ret;
+	}
+
+	return 0;
 }
 
 static void start_job_thread(pthread_t *t, struct gui *ui)
 {
-	construct_options(ui, &ui->argc, &ui->argv);
-	if (parse_options(ui->argc, ui->argv)) {
+	fio_clients_connect();
+
+	if (send_job_files(ui)) {
 		printf("Yeah, I didn't really like those options too much.\n");
-		free_args(ui->argc, ui->argv);
 		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
 		return;
 	}
+		
 	pthread_create(t, NULL, job_thread, ui);
 }
 
@@ -233,10 +214,184 @@ static void add_buttons(struct gui *ui,
 		add_button(ui, i, ui->buttonbox, &buttonlist[i]);
 }
 
+static void on_info_bar_response(GtkWidget *widget, gint response,
+                                 gpointer data)
+{
+	if (response == GTK_RESPONSE_OK) {
+		gtk_widget_destroy(widget);
+		ui.error_info_bar = NULL;
+	}
+}
+
+void report_error(GError* error)
+{
+	if (ui.error_info_bar == NULL) {
+		ui.error_info_bar = gtk_info_bar_new_with_buttons(GTK_STOCK_OK,
+		                                               GTK_RESPONSE_OK,
+		                                               NULL);
+		g_signal_connect(ui.error_info_bar, "response", G_CALLBACK(on_info_bar_response), NULL);
+		gtk_info_bar_set_message_type(GTK_INFO_BAR(ui.error_info_bar),
+		                              GTK_MESSAGE_ERROR);
+		
+		ui.error_label = gtk_label_new(error->message);
+		GtkWidget *container = gtk_info_bar_get_content_area(GTK_INFO_BAR(ui.error_info_bar));
+		gtk_container_add(GTK_CONTAINER(container), ui.error_label);
+		
+		gtk_box_pack_start(GTK_BOX(ui.vbox), ui.error_info_bar, FALSE, FALSE, 0);
+		gtk_widget_show_all(ui.vbox);
+	} else {
+		char buffer[256];
+		snprintf(buffer, sizeof(buffer), "Failed to open file.");
+		gtk_label_set(GTK_LABEL(ui.error_label), buffer);
+	}
+}
+
+static void file_open(GtkWidget *w, gpointer data)
+{
+	GtkWidget *dialog;
+	GSList *filenames, *fn_glist;
+	GtkFileFilter *filter;
+
+	dialog = gtk_file_chooser_dialog_new("Open File",
+		GTK_WINDOW(ui.window),
+		GTK_FILE_CHOOSER_ACTION_OPEN,
+		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+		GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
+		NULL);
+	gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), TRUE);
+
+	filter = gtk_file_filter_new();
+	gtk_file_filter_add_pattern(filter, "*.fio");
+	gtk_file_filter_add_pattern(filter, "*.job");
+	gtk_file_filter_add_mime_type(filter, "text/fio");
+	gtk_file_filter_set_name(filter, "Fio job file");
+	gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filter);
+
+	if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_ACCEPT) {
+		gtk_widget_destroy(dialog);
+		return;
+	}
+
+	fn_glist = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(dialog));
+	filenames = fn_glist;
+	while (filenames != NULL) {
+		const char *hostname;
+
+		ui.job_files = realloc(ui.job_files, (ui.nr_job_files + 1) * sizeof(char *));
+		ui.job_files[ui.nr_job_files] = strdup(filenames->data);
+		ui.nr_job_files++;
+
+		hostname = gtk_entry_get_text(GTK_ENTRY(ui.hostname_entry));
+		fio_client_add(hostname, &ui.cookie);
+#if 0
+		if (error) {
+			report_error(error);
+			g_error_free(error);
+			error = NULL;
+		}
+#endif
+			
+		g_free(filenames->data);
+		filenames = g_slist_next(filenames);
+	}
+	g_slist_free(fn_glist);
+	gtk_widget_destroy(dialog);
+}
+
+static void file_save(GtkWidget *w, gpointer data)
+{
+	GtkWidget *dialog;
+
+	dialog = gtk_file_chooser_dialog_new("Save File",
+		GTK_WINDOW(ui.window),
+		GTK_FILE_CHOOSER_ACTION_SAVE,
+		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+		GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT,
+		NULL);
+
+	gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(dialog), TRUE);
+	gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(dialog), "Untitled document");
+
+	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
+		char *filename;
+
+		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+		// save_job_file(filename);
+		g_free(filename);
+	}
+	gtk_widget_destroy(dialog);
+}
+
+static void about_dialog(GtkWidget *w, gpointer data)
+{
+	gtk_show_about_dialog(NULL,
+		"program-name", "gfio",
+		"comments", "Gtk2 UI for fio",
+		"license", "GPLv2",
+		"version", fio_version_string,
+		"copyright", "Jens Axboe <axboe@kernel.dk> 2012",
+		"logo-icon-name", "fio",
+		/* Must be last: */
+		NULL, NULL,
+		NULL);
+}
+
+static GtkActionEntry menu_items[] = {
+        { "FileMenuAction", GTK_STOCK_FILE, "File", NULL, NULL, NULL},
+        { "HelpMenuAction", GTK_STOCK_HELP, "Help", NULL, NULL, NULL},
+	{ "OpenFile",       GTK_STOCK_OPEN, NULL,   "<Control>O", NULL, G_CALLBACK(file_open) },
+        { "SaveFile",       GTK_STOCK_SAVE, NULL,   "<Control>S", NULL, G_CALLBACK(file_save) },
+        { "Quit",           GTK_STOCK_QUIT, NULL,   "<Control>Q", NULL, G_CALLBACK(quit_clicked) },
+	{ "About",          GTK_STOCK_ABOUT, NULL,  NULL, NULL, G_CALLBACK(about_dialog) },
+};
+static gint nmenu_items = sizeof (menu_items) / sizeof(menu_items[0]);
+
+static const gchar *ui_string = " \
+	<ui> \
+		<menubar name=\"MainMenu\"> \
+			<menu name=\"FileMenu\" action=\"FileMenuAction\"> \
+				<menuitem name=\"Open\" action=\"OpenFile\" /> \
+				<menuitem name=\"Save\" action=\"SaveFile\" /> \
+				<separator name=\"Separator\"/> \
+				<menuitem name=\"Quit\" action=\"Quit\" /> \
+			</menu> \
+			<menu name=\"Help\" action=\"HelpMenuAction\"> \
+				<menuitem name=\"About\" action=\"About\" /> \
+			</menu> \
+		</menubar> \
+	</ui> \
+";
+
+static GtkWidget *get_menubar_menu(GtkWidget *window, GtkUIManager *ui_manager)
+{
+	GtkActionGroup *action_group = gtk_action_group_new("Menu");
+	GError *error = 0;
+
+	action_group = gtk_action_group_new("Menu");
+	gtk_action_group_add_actions(action_group, menu_items, nmenu_items, 0);
+
+	gtk_ui_manager_insert_action_group(ui_manager, action_group, 0);
+	gtk_ui_manager_add_ui_from_string(GTK_UI_MANAGER(ui_manager), ui_string, -1, &error);
+
+	gtk_window_add_accel_group(GTK_WINDOW(window), gtk_ui_manager_get_accel_group(ui_manager));
+	return gtk_ui_manager_get_widget(ui_manager, "/MainMenu");
+}
+
+void gfio_ui_setup(GtkSettings *settings, GtkWidget *menubar,
+                   GtkWidget *vbox, GtkUIManager *ui_manager)
+{
+        gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, FALSE, 0);
+}
+
 static void init_ui(int *argc, char **argv[], struct gui *ui)
 {
 	GList *hostname_type_list = NULL;
 	char portnum[20];
+	GtkSettings *settings;
+	GtkUIManager *uimanager;
+	GtkWidget *menu;
+
+	memset(ui, 0, sizeof(*ui));
 
 	/* Magical g*thread incantation, you just need this thread stuff.
 	 * Without it, the update that happens in gfio_update_thread_status
@@ -247,16 +402,23 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gdk_threads_init();
 
 	gtk_init(argc, argv);
+	settings = gtk_settings_get_default();
+	gtk_settings_set_long_property(settings, "gtk_tooltip_timeout", 10, "gfio setting");
+	g_type_init();
 	
 	ui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
         gtk_window_set_title(GTK_WINDOW(ui->window), "fio");
 	gtk_window_set_default_size(GTK_WINDOW(ui->window), 700, 500);
 
-	g_signal_connect(ui->window, "delete-event", G_CALLBACK (quit_clicked), NULL);
-	g_signal_connect(ui->window, "destroy", G_CALLBACK (quit_clicked), NULL);
+	g_signal_connect(ui->window, "delete-event", G_CALLBACK(quit_clicked), NULL);
+	g_signal_connect(ui->window, "destroy", G_CALLBACK(quit_clicked), NULL);
 
 	ui->vbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER (ui->window), ui->vbox);
+
+	uimanager = gtk_ui_manager_new();
+	menu = get_menubar_menu(ui->window, uimanager);
+	gfio_ui_setup(settings, menu, ui->vbox, uimanager);
 
 	/*
 	 * Set up alignments for widgets at the top of ui, 
@@ -283,11 +445,11 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	 * Set up combo box for address type
 	 */
 	ui->hostname_combo_box = gtk_combo_new();
-	gtk_entry_set_text(GTK_ENTRY (GTK_COMBO(ui->hostname_combo_box)->entry), "IPv4");
+	gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(ui->hostname_combo_box)->entry), "IPv4");
 	hostname_type_list = g_list_append(hostname_type_list, (gpointer) "IPv4"); 
 	hostname_type_list = g_list_append(hostname_type_list, (gpointer) "local socket"); 
 	hostname_type_list = g_list_append(hostname_type_list, (gpointer) "IPv6"); 
-	gtk_combo_set_popdown_strings (GTK_COMBO (ui->hostname_combo_box), hostname_type_list);
+	gtk_combo_set_popdown_strings(GTK_COMBO(ui->hostname_combo_box), hostname_type_list);
 	g_list_free(hostname_type_list);
 
 	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->hostname_label);
@@ -296,16 +458,6 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->port_entry);
 	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->hostname_combo_box);
 	gtk_container_add(GTK_CONTAINER (ui->topvbox), ui->hostname_hbox);
-
-	/*
-	 * Set up jobfile text entry (temporary until gui really works)
-	 */
-	ui->jobfile_hbox = gtk_hbox_new(FALSE, 0);
-	ui->jobfile_label = gtk_label_new("Job file:");
-	ui->jobfile_entry = gtk_entry_new();
-	gtk_container_add(GTK_CONTAINER (ui->jobfile_hbox), ui->jobfile_label);
-	gtk_container_add(GTK_CONTAINER (ui->jobfile_hbox), ui->jobfile_entry);
-	gtk_container_add(GTK_CONTAINER (ui->topvbox), ui->jobfile_hbox);
 
 	/*
 	 * Set up thread status progress bar
@@ -349,6 +501,8 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 int main(int argc, char *argv[], char *envp[])
 {
 	if (initialize_fio(envp))
+		return 1;
+	if (fio_init_options())
 		return 1;
 
 	init_ui(&argc, &argv, &ui);

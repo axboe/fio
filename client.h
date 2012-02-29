@@ -24,7 +24,7 @@ struct client_ops {
 	client_disk_util_op_func disk_util;
 	client_thread_status_op thread_status;
 	client_group_stats_op group_stats;
-	client_eta_op eta; 
+	client_eta_op eta;
 	client_probe_op probe;
 	client_thread_status_display_op thread_status_display;
 };

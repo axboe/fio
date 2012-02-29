@@ -1571,10 +1571,8 @@ int parse_cmd_line(int argc, char *argv[])
 	return ini_idx;
 }
 
-int parse_options(int argc, char *argv[])
+int fio_init_options(void)
 {
-	int job_files, i;
-
 	f_out = stdout;
 	f_err = stderr;
 
@@ -1584,6 +1582,16 @@ int parse_options(int argc, char *argv[])
 	atexit(free_shm);
 
 	if (fill_def_thread())
+		return 1;
+
+	return 0;
+}
+
+int parse_options(int argc, char *argv[])
+{
+	int job_files, i;
+
+	if (fio_init_options())
 		return 1;
 
 	job_files = parse_cmd_line(argc, argv);
