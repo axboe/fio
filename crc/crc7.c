@@ -43,7 +43,7 @@ const unsigned char crc7_syndrome_table[256] = {
 	0x46, 0x4f, 0x54, 0x5d, 0x62, 0x6b, 0x70, 0x79
 };
 
-unsigned char crc7(const unsigned char *buffer, unsigned int len)
+unsigned char fio_crc7(const unsigned char *buffer, unsigned int len)
 {
 	unsigned char crc = 0;
 

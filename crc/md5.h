@@ -16,13 +16,13 @@
 #define MD5STEP(f, w, x, y, z, in, s) \
 	(w += f(x, y, z) + in, w = (w<<s | w>>(32-s)) + x)
 
-struct md5_ctx {
+struct fio_md5_ctx {
 	uint32_t *hash;
 	uint32_t block[MD5_BLOCK_WORDS];
 	uint64_t byte_count;
 };
 
-extern void md5_update(struct md5_ctx *, const uint8_t *, unsigned int);
-extern void md5_init(struct md5_ctx *);
+extern void fio_md5_update(struct fio_md5_ctx *, const uint8_t *, unsigned int);
+extern void fio_md5_init(struct fio_md5_ctx *);
 
 #endif

@@ -92,7 +92,7 @@ static const unsigned long long crctab64[256] = {
   0x29b7d047efec8728ULL
 };
 
-unsigned long long crc64(const unsigned char *buffer, unsigned long length)
+unsigned long long fio_crc64(const unsigned char *buffer, unsigned long length)
 {
 	unsigned long long crc = 0;
 

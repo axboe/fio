@@ -73,7 +73,7 @@ static const uint32_t crctab[256] = {
   0xA2F33668, 0xBCB4666D, 0xB8757BDA, 0xB5365D03, 0xB1F740B4
 };
 
-uint32_t crc32(const void *buffer, unsigned long length)
+uint32_t fio_crc32(const void *buffer, unsigned long length)
 {
 	const unsigned char *cp = (const unsigned char *) buffer;
 	uint32_t crc = 0;

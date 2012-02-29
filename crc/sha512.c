@@ -146,7 +146,7 @@ static void sha512_transform(uint64_t *state, uint64_t *W, const uint8_t *input)
 	a = b = c = d = e = f = g = h = t1 = t2 = 0;
 }
 
-void sha512_init(struct sha512_ctx *sctx)
+void fio_sha512_init(struct fio_sha512_ctx *sctx)
 {
 	sctx->state[0] = H0;
 	sctx->state[1] = H1;
@@ -159,8 +159,8 @@ void sha512_init(struct sha512_ctx *sctx)
 	sctx->count[0] = sctx->count[1] = sctx->count[2] = sctx->count[3] = 0;
 }
 
-void sha512_update(struct sha512_ctx *sctx, const uint8_t *data,
-		   unsigned int len)
+void fio_sha512_update(struct fio_sha512_ctx *sctx, const uint8_t *data,
+		       unsigned int len)
 {
 	unsigned int i, idx, part_len;
 
