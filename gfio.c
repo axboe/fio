@@ -291,17 +291,23 @@ static void *job_thread(void *arg)
 
 static int send_job_files(struct gui *ui)
 {
-	int i, ret;
+	int i, ret = 0;
 
 	for (i = 0; i < ui->nr_job_files; i++) {
 		ret = fio_clients_send_ini(ui->job_files[i]);
+		if (ret)
+			break;
+
 		free(ui->job_files[i]);
 		ui->job_files[i] = NULL;
-		if (ret)
-			return ret;
+	}
+	while (i < ui->nr_job_files) {
+		free(ui->job_files[i]);
+		ui->job_files[i] = NULL;
+		i++;
 	}
 
-	return 0;
+	return ret;
 }
 
 static void start_job_thread(pthread_t *t, struct gui *ui)
