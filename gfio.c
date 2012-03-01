@@ -83,8 +83,8 @@ struct gui {
 	GtkWidget *hostname_hbox;
 	GtkWidget *hostname_label;
 	GtkWidget *hostname_entry;
+	GtkWidget *port_button;
 	GtkWidget *port_label;
-	GtkWidget *port_entry;
 	GtkWidget *hostname_combo_box; /* ipv4, ipv6 or socket */
 	GtkWidget *scrolled_window;
 	GtkWidget *textview;
@@ -93,12 +93,26 @@ struct gui {
 	GtkTextBuffer *text;
 	struct probe_widget probe;
 	struct eta_widget eta;
+	int connected;
 	pthread_t t;
 
-	void *cookie;
+	struct fio_client *client;
 	int nr_job_files;
 	char **job_files;
 } ui;
+
+static void gfio_set_connected(struct gui *ui, int connected)
+{
+	if (connected) {
+		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
+		ui->connected = 1;
+		gtk_button_set_label(GTK_BUTTON(ui->button[CONNECT_BUTTON]), "Disconnect");
+	} else {
+		ui->connected = 0;
+		gtk_button_set_label(GTK_BUTTON(ui->button[CONNECT_BUTTON]), "Connect");
+		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 0);
+	}
+}
 
 static void gfio_text_op(struct fio_client *client,
                 FILE *f, __u16 pdu_len, const char *buf)
@@ -265,6 +279,13 @@ static void gfio_update_thread_status(char *status_message, double perc)
 	gdk_threads_leave();
 }
 
+static void gfio_quit_op(struct fio_client *client)
+{
+	struct gui *ui = client->client_data;
+
+	gfio_set_connected(ui, 0);
+}
+
 struct client_ops gfio_client_ops = {
 	.text_op		= gfio_text_op,
 	.disk_util		= gfio_disk_util_op,
@@ -272,6 +293,8 @@ struct client_ops gfio_client_ops = {
 	.group_stats		= gfio_group_stats_op,
 	.eta			= gfio_eta_op,
 	.probe			= gfio_probe_op,
+	.quit			= gfio_quit_op,
+	.stay_connected		= 1,
 };
 
 static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
@@ -282,10 +305,9 @@ static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
 
 static void *job_thread(void *arg)
 {
-	struct gui *ui = arg;
-
+	printf("job thread starts\n");
 	fio_handle_clients(&gfio_client_ops);
-	gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
+	printf("job thread exits\n");
 	return NULL;
 }
 
@@ -310,15 +332,13 @@ static int send_job_files(struct gui *ui)
 	return ret;
 }
 
-static void start_job_thread(pthread_t *t, struct gui *ui)
+static void start_job_thread(struct gui *ui)
 {
 	if (send_job_files(ui)) {
 		printf("Yeah, I didn't really like those options too much.\n");
 		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
 		return;
 	}
-		
-	pthread_create(t, NULL, job_thread, ui);
 }
 
 static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
@@ -327,14 +347,20 @@ static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
 	struct gui *ui = data;
 
 	gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 0);
-	start_job_thread(&ui->t, ui);
+	start_job_thread(ui);
 }
 
 static void connect_clicked(__attribute__((unused)) GtkWidget *widget,
                 gpointer data)
 {
-	fio_clients_connect();
-	gtk_widget_set_sensitive(ui.button[START_JOB_BUTTON], 1);
+	struct gui *ui = data;
+
+	if (!ui->connected) {
+		fio_clients_connect();
+		pthread_create(&ui->t, NULL, job_thread, NULL);
+		gfio_set_connected(ui, 1);
+	} else
+		gfio_set_connected(ui, 0);
 }
 
 static void add_button(struct gui *ui, int i, GtkWidget *buttonbox,
@@ -342,7 +368,7 @@ static void add_button(struct gui *ui, int i, GtkWidget *buttonbox,
 {
 	ui->button[i] = gtk_button_new_with_label(buttonspec->buttontext);
 	g_signal_connect(ui->button[i], "clicked", G_CALLBACK (buttonspec->f), ui);
-	gtk_box_pack_start(GTK_BOX (ui->buttonbox), ui->button[i], TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX (ui->buttonbox), ui->button[i], FALSE, FALSE, 3);
 	gtk_widget_set_tooltip_text(ui->button[i], buttonspeclist[i].tooltiptext);
 	gtk_widget_set_sensitive(ui->button[i], !buttonspec->start_insensitive);
 }
@@ -419,13 +445,27 @@ static void file_open(GtkWidget *w, gpointer data)
 	filenames = fn_glist;
 	while (filenames != NULL) {
 		const char *hostname;
+		char *typeentry;
+		gint port;
+		int type;
 
 		ui.job_files = realloc(ui.job_files, (ui.nr_job_files + 1) * sizeof(char *));
 		ui.job_files[ui.nr_job_files] = strdup(filenames->data);
 		ui.nr_job_files++;
 
 		hostname = gtk_entry_get_text(GTK_ENTRY(ui.hostname_entry));
-		fio_client_add(hostname, &ui.cookie);
+		port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(ui.port_button));
+		typeentry = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(ui.hostname_combo_box));
+		if (!typeentry || !strncmp(typeentry, "IPv4", 4))
+			type = Fio_client_ipv4;
+		else if (!strncmp(typeentry, "IPv6", 4))
+			type = Fio_client_ipv6;
+		else
+			type = Fio_client_socket;
+		g_free(typeentry);
+
+		ui.client = fio_client_add_explicit(hostname, type, port);
+		ui.client->client_data = &ui;
 #if 0
 		if (error) {
 			report_error(error);
@@ -539,10 +579,42 @@ static GtkWidget *new_info_label_in_frame(GtkWidget *box, const char *label)
 	return label_widget;
 }
 
+static GtkWidget *create_text_entry(GtkWidget *hbox, GtkWidget *label, const char *defval)
+{
+	GtkWidget *text, *box;
+
+	gtk_container_add(GTK_CONTAINER(hbox), label);
+
+	box = gtk_hbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(hbox), box);
+
+	text = gtk_entry_new();
+	gtk_box_pack_start(GTK_BOX(box), text, TRUE, TRUE, 0);
+	gtk_entry_set_text(GTK_ENTRY(text), "localhost");
+
+	return text;
+}
+
+static GtkWidget *create_spinbutton(GtkWidget *hbox, GtkWidget *label, double min, double max, double defval)
+{
+	GtkWidget *button, *box;
+
+	gtk_container_add(GTK_CONTAINER(hbox), label);
+
+	box = gtk_hbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(hbox), box);
+
+	button = gtk_spin_button_new_with_range(min, max, 1.0);
+	gtk_box_pack_start(GTK_BOX(box), button, TRUE, TRUE, 0);
+
+	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(button), GTK_UPDATE_IF_VALID);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(button), defval);
+
+	return button;
+}
+
 static void init_ui(int *argc, char **argv[], struct gui *ui)
 {
-	GList *hostname_type_list = NULL;
-	char portnum[20];
 	GtkSettings *settings;
 	GtkUIManager *uimanager;
 	GtkWidget *menu, *probe, *probe_frame, *probe_box;
@@ -581,7 +653,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	 * align top left, expand horizontally but not vertically
 	 */
 	ui->topalign = gtk_alignment_new(0, 0, 1, 0);
-	ui->topvbox = gtk_vbox_new(FALSE, 0);
+	ui->topvbox = gtk_vbox_new(FALSE, 3);
 	gtk_container_add(GTK_CONTAINER(ui->topalign), ui->topvbox);
 	gtk_box_pack_start(GTK_BOX(ui->vbox), ui->topalign, FALSE, FALSE, 0);
 
@@ -589,31 +661,24 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	 * Set up hostname label + entry, port label + entry,
 	 */
 	ui->hostname_hbox = gtk_hbox_new(FALSE, 0);
-	ui->hostname_label = gtk_label_new("Host:");
-	ui->hostname_entry = gtk_entry_new();
-	gtk_entry_set_text(GTK_ENTRY(ui->hostname_entry), "localhost");
+
+	ui->hostname_label = gtk_label_new("Hostname:");
+	ui->hostname_entry = create_text_entry(ui->hostname_hbox, ui->hostname_label, "localhost");
+
 	ui->port_label = gtk_label_new("Port:");
-	ui->port_entry = gtk_entry_new();
-	snprintf(portnum, sizeof(portnum) - 1, "%d", FIO_NET_PORT);
-	gtk_entry_set_text(GTK_ENTRY(ui->port_entry), (gchar *) portnum);
+	ui->port_button = create_spinbutton(ui->hostname_hbox, ui->port_label, 1, 65535, FIO_NET_PORT);
 
 	/*
 	 * Set up combo box for address type
 	 */
-	ui->hostname_combo_box = gtk_combo_new();
-	gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(ui->hostname_combo_box)->entry), "IPv4");
-	hostname_type_list = g_list_append(hostname_type_list, (gpointer) "IPv4"); 
-	hostname_type_list = g_list_append(hostname_type_list, (gpointer) "local socket"); 
-	hostname_type_list = g_list_append(hostname_type_list, (gpointer) "IPv6"); 
-	gtk_combo_set_popdown_strings(GTK_COMBO(ui->hostname_combo_box), hostname_type_list);
-	g_list_free(hostname_type_list);
+	ui->hostname_combo_box = gtk_combo_box_text_new();
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ui->hostname_combo_box), "IPv4");
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ui->hostname_combo_box), "IPv6");
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ui->hostname_combo_box), "local socket");
+	gtk_combo_box_set_active(GTK_COMBO_BOX(ui->hostname_combo_box), 0);
 
-	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->hostname_label);
-	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->hostname_entry);
-	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->port_label);
-	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->port_entry);
-	gtk_container_add(GTK_CONTAINER (ui->hostname_hbox), ui->hostname_combo_box);
-	gtk_container_add(GTK_CONTAINER (ui->topvbox), ui->hostname_hbox);
+	gtk_container_add(GTK_CONTAINER(ui->hostname_hbox), ui->hostname_combo_box);
+	gtk_container_add(GTK_CONTAINER(ui->topvbox), ui->hostname_hbox);
 
 	probe = gtk_frame_new("Job");
 	gtk_box_pack_start(GTK_BOX(ui->topvbox), probe, TRUE, FALSE, 3);
@@ -647,14 +712,6 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	ui->eta.cw_iops = new_info_label_in_frame(probe_box, "Commit IOPS");
 
 	/*
-	 * Set up thread status progress bar
-	 */
-	ui->thread_status_pb = gtk_progress_bar_new();
-	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ui->thread_status_pb), 0.0);
-	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
-	gtk_container_add(GTK_CONTAINER(ui->topvbox), ui->thread_status_pb);
-
-	/*
 	 * Add a text box for text op messages 
 	 */
 	ui->textview = gtk_text_view_new();
@@ -680,6 +737,16 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 					FALSE, FALSE, 0);
 
 	add_buttons(ui, buttonspeclist, ARRAYSIZE(buttonspeclist));
+
+	/*
+	 * Set up thread status progress bar
+	 */
+	ui->thread_status_pb = gtk_progress_bar_new();
+	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ui->thread_status_pb), 0.0);
+	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
+	gtk_container_add(GTK_CONTAINER(ui->buttonbox), ui->thread_status_pb);
+
+
 	gtk_widget_show_all(ui->window);
 }
 
@@ -690,6 +757,7 @@ int main(int argc, char *argv[], char *envp[])
 	if (fio_init_options())
 		return 1;
 
+	fio_debug = ~0UL;
 	init_ui(&argc, &argv, &ui);
 
 	gdk_threads_enter();

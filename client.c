@@ -169,6 +169,49 @@ void fio_client_add_cmd_option(void *cookie, const char *opt)
 	}
 }
 
+struct fio_client *fio_client_add_explicit(const char *hostname, int type,
+					   int port)
+{
+	struct fio_client *client;
+
+	client = malloc(sizeof(*client));
+	memset(client, 0, sizeof(*client));
+
+	INIT_FLIST_HEAD(&client->list);
+	INIT_FLIST_HEAD(&client->hash_list);
+	INIT_FLIST_HEAD(&client->arg_list);
+	INIT_FLIST_HEAD(&client->eta_list);
+	INIT_FLIST_HEAD(&client->cmd_list);
+
+	client->hostname = strdup(hostname);
+
+	if (type == Fio_client_socket)
+		client->is_sock = 1;
+	else {
+		int ipv6;
+
+		ipv6 = type == Fio_client_ipv6;
+		if (fio_server_parse_host(hostname, &ipv6,
+						&client->addr.sin_addr,
+						&client->addr6.sin6_addr))
+			goto err;
+
+		client->port = port;
+	}
+
+	client->fd = -1;
+
+	__fio_client_add_cmd_option(client, "fio");
+
+	flist_add(&client->list, &client_list);
+	nr_clients++;
+	dprint(FD_NET, "client: added <%s>\n", client->hostname);
+	return client;
+err:
+	free(client);
+	return NULL;
+}
+
 int fio_client_add(const char *hostname, void **cookie)
 {
 	struct fio_client *existing = *cookie;
@@ -823,6 +866,8 @@ int fio_handle_client(struct fio_client *client, struct client_ops *ops)
 
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
+		if (ops->quit)
+			ops->quit(client);
 		remove_client(client);
 		free(cmd);
 		break;
@@ -981,7 +1026,7 @@ int fio_handle_clients(struct client_ops *ops)
 		flist_for_each_safe(entry, tmp, &client_list) {
 			client = flist_entry(entry, struct fio_client, list);
 
-			if (!client->sent_job &&
+			if (!client->sent_job && !ops->stay_connected &&
 			    flist_empty(&client->cmd_list)) {
 				remove_client(client);
 				continue;

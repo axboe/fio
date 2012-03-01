@@ -554,8 +554,10 @@ static int handle_connection(int sk, int block)
 
 void fio_server_idle_loop(void)
 {
-	if (!first_cmd_check)
+	if (!first_cmd_check) {
 		fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_RUN, 0, NULL);
+		first_cmd_check = 1;
+	}
 	if (server_fd != -1)
 		handle_connection(server_fd, 0);
 }
@@ -943,6 +945,46 @@ static int fio_init_server_connection(void)
 	return sk;
 }
 
+int fio_server_parse_host(const char *host, int *ipv6, struct in_addr *inp,
+			  struct in6_addr *inp6)
+
+{
+	int ret = 0;
+
+	if (*ipv6)
+		ret = inet_pton(AF_INET6, host, inp6);
+	else
+		ret = inet_pton(AF_INET, host, inp);
+
+	if (ret != 1) {
+		struct hostent *hent;
+
+		hent = gethostbyname(host);
+		if (!hent) {
+			log_err("fio: failed to resolve <%s>\n", host);
+			return 0;
+		}
+
+		if (*ipv6) {
+			if (hent->h_addrtype != AF_INET6) {
+				log_info("fio: falling back to IPv4\n");
+				*ipv6 = 0;
+			} else
+				memcpy(inp6, hent->h_addr_list[0], 16);
+		}
+		if (!*ipv6) {
+			if (hent->h_addrtype != AF_INET) {
+				log_err("fio: lookup type mismatch\n");
+				return 0;
+			}
+			memcpy(inp, hent->h_addr_list[0], 4);
+		}
+		ret = 1;
+	}
+
+	return !(ret == 1);
+}
+
 /*
  * Parse a host/ip/port string. Reads from 'str'.
  *
@@ -961,7 +1003,7 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 {
 	const char *host = str;
 	char *portp;
-	int ret, lport = 0;
+	int lport = 0;
 
 	*ptr = NULL;
 	*is_sock = 0;
@@ -1022,38 +1064,10 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 
 	*ptr = strdup(host);
 
-	if (*ipv6)
-		ret = inet_pton(AF_INET6, host, inp6);
-	else
-		ret = inet_pton(AF_INET, host, inp);
-
-	if (ret != 1) {
-		struct hostent *hent;
-
-		hent = gethostbyname(host);
-		if (!hent) {
-			log_err("fio: failed to resolve <%s>\n", host);
-			free(*ptr);
-			*ptr = NULL;
-			return 1;
-		}
-
-		if (*ipv6) {
-			if (hent->h_addrtype != AF_INET6) {
-				log_info("fio: falling back to IPv4\n");
-				*ipv6 = 0;
-			} else
-				memcpy(inp6, hent->h_addr_list[0], 16);
-		}
-		if (!*ipv6) {
-			if (hent->h_addrtype != AF_INET) {
-				log_err("fio: lookup type mismatch\n");
-				free(*ptr);
-				*ptr = NULL;
-				return 1;
-			}
-			memcpy(inp, hent->h_addr_list[0], 4);
-		}
+	if (fio_server_parse_host(*ptr, ipv6, inp, inp6)) {
+		free(*ptr);
+		*ptr = NULL;
+		return 1;
 	}
 
 	if (*port == 0)
