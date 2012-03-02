@@ -59,6 +59,10 @@ struct probe_widget {
 };
 
 struct eta_widget {
+	GtkWidget *name;
+	GtkWidget *iotype;
+	GtkWidget *ioengine;
+	GtkWidget *iodepth;
 	GtkWidget *jobs;
 	GtkWidget *files;
 	GtkWidget *read_bw;
@@ -117,6 +121,7 @@ static void gfio_set_connected(struct gui *ui, int connected)
 static void gfio_text_op(struct fio_client *client,
                 FILE *f, __u16 pdu_len, const char *buf)
 {
+#if 0
 	GtkTextBuffer *buffer;
 	GtkTextIter end;
 
@@ -127,6 +132,9 @@ static void gfio_text_op(struct fio_client *client,
 	gdk_threads_leave();
 	gtk_text_view_scroll_to_iter(GTK_TEXT_VIEW(ui.textview),
 					&end, 0.0, FALSE, 0.0,0.0);
+#else
+	fio_client_ops.text_op(client, f, pdu_len, buf);
+#endif
 }
 
 static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -286,6 +294,32 @@ static void gfio_quit_op(struct fio_client *client)
 	gfio_set_connected(ui, 0);
 }
 
+static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct cmd_add_job_pdu *p = (struct cmd_add_job_pdu *) cmd->payload;
+	struct gui *ui = client->client_data;
+	char tmp[8];
+	int i;
+
+	p->iodepth		= le32_to_cpu(p->iodepth);
+	p->rw			= le32_to_cpu(p->rw);
+
+	for (i = 0; i < 2; i++) {
+		p->min_bs[i] 	= le32_to_cpu(p->min_bs[i]);
+		p->max_bs[i]	= le32_to_cpu(p->max_bs[i]);
+	}
+
+	p->numjobs		= le32_to_cpu(p->numjobs);
+	p->group_reporting	= le32_to_cpu(p->group_reporting);
+
+	gtk_label_set_text(GTK_LABEL(ui->eta.name), (gchar *) p->jobname);
+	gtk_label_set_text(GTK_LABEL(ui->eta.iotype), ddir_str(p->rw));
+	gtk_label_set_text(GTK_LABEL(ui->eta.ioengine), (gchar *) p->ioengine);
+
+	sprintf(tmp, "%u", p->iodepth);
+	gtk_label_set_text(GTK_LABEL(ui->eta.iodepth), tmp);
+}
+
 struct client_ops gfio_client_ops = {
 	.text_op		= gfio_text_op,
 	.disk_util		= gfio_disk_util_op,
@@ -294,6 +328,7 @@ struct client_ops gfio_client_ops = {
 	.eta			= gfio_eta_op,
 	.probe			= gfio_probe_op,
 	.quit			= gfio_quit_op,
+	.add_job		= gfio_add_job_op,
 	.stay_connected		= 1,
 };
 
@@ -694,6 +729,11 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 
 	probe_box = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
+
+	ui->eta.name = new_info_label_in_frame(probe_box, "Name");
+	ui->eta.iotype = new_info_label_in_frame(probe_box, "IO");
+	ui->eta.ioengine = new_info_label_in_frame(probe_box, "IO Engine");
+	ui->eta.iodepth = new_info_label_in_frame(probe_box, "IO Depth");
 	ui->eta.jobs = new_info_label_in_frame(probe_box, "Jobs");
 	ui->eta.files = new_info_label_in_frame(probe_box, "Open files");
 
@@ -701,15 +741,22 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
 	ui->eta.read_bw = new_info_label_in_frame(probe_box, "Read BW");
 	ui->eta.read_iops = new_info_label_in_frame(probe_box, "IOPS");
+	ui->eta.write_bw = new_info_label_in_frame(probe_box, "Write BW");
+	ui->eta.write_iops = new_info_label_in_frame(probe_box, "IOPS");
+
+	/*
+	 * Only add this if we have a commit rate
+	 */
+#if 0
+	probe_box = gtk_hbox_new(FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
+
 	ui->eta.cr_bw = new_info_label_in_frame(probe_box, "Commit BW");
 	ui->eta.cr_iops = new_info_label_in_frame(probe_box, "Commit IOPS");
 
-	probe_box = gtk_hbox_new(FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
-	ui->eta.write_bw = new_info_label_in_frame(probe_box, "Write BW");
-	ui->eta.write_iops = new_info_label_in_frame(probe_box, "IOPS");
 	ui->eta.cw_bw = new_info_label_in_frame(probe_box, "Commit BW");
 	ui->eta.cw_iops = new_info_label_in_frame(probe_box, "Commit IOPS");
+#endif
 
 	/*
 	 * Add a text box for text op messages 

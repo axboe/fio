@@ -38,7 +38,7 @@ struct fio_net_int_cmd {
 };
 
 enum {
-	FIO_SERVER_VER		= 7,
+	FIO_SERVER_VER		= 8,
 
 	FIO_SERVER_MAX_PDU	= 1024,
 
@@ -56,7 +56,8 @@ enum {
 	FIO_NET_CMD_STOP	= 12,
 	FIO_NET_CMD_DU		= 13,
 	FIO_NET_CMD_RUN		= 14,
-	FIO_NET_CMD_NR		= 15,
+	FIO_NET_CMD_ADD_JOB	= 15,
+	FIO_NET_CMD_NR		= 16,
 
 	FIO_NET_CMD_F_MORE	= 1UL << 0,
 
@@ -106,6 +107,17 @@ struct cmd_end_pdu {
 	uint32_t error;
 };
 
+struct cmd_add_job_pdu {
+	uint8_t jobname[32];
+	uint8_t ioengine[32];
+	uint32_t iodepth;
+	uint32_t rw;
+	uint32_t min_bs[2];
+	uint32_t max_bs[2];
+	uint32_t numjobs;
+	uint32_t group_reporting;
+};
+
 extern int fio_start_server(char *);
 extern int fio_server_text_output(const char *, size_t);
 extern int fio_server_log(const char *format, ...);
@@ -128,6 +140,9 @@ extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);
 extern void fio_net_cmd_crc(struct fio_net_cmd *);
 extern struct fio_net_cmd *fio_net_recv_cmd(int sk);
+
+struct thread_options;
+extern void fio_server_send_add_job(struct thread_options *, const char *);
 
 extern int exit_backend;
 extern int fio_net_port;

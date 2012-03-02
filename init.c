@@ -737,8 +737,6 @@ int ioengine_load(struct thread_data *td)
  */
 static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 {
-	const char *ddir_str[] = { NULL, "read", "write", "rw", NULL,
-				   "randread", "randwrite", "randrw" };
 	unsigned int i;
 	char fname[PATH_MAX];
 	int numjobs, file_alloced;
@@ -850,6 +848,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	if (!terse_output) {
 		if (!job_add_num) {
+			if (is_backend)
+				fio_server_send_add_job(&td->o, td->io_ops->name);
+
 			if (!strcmp(td->io_ops->name, "cpuio")) {
 				log_info("%s: ioengine=cpu, cpuload=%u,"
 					 " cpucycle=%u\n", td->o.name,
@@ -866,7 +867,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 				log_info("%s: (g=%d): rw=%s, bs=%s-%s/%s-%s,"
 					 " ioengine=%s, iodepth=%u\n",
 						td->o.name, td->groupid,
-						ddir_str[td->o.td_ddir],
+						ddir_str(td->o.td_ddir),
 						c1, c2, c3, c4,
 						td->io_ops->name,
 						td->o.iodepth);

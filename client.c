@@ -911,6 +911,11 @@ int fio_handle_client(struct fio_client *client, struct client_ops *ops)
 		handle_stop(client, cmd);
 		free(cmd);
 		break;
+	case FIO_NET_CMD_ADD_JOB:
+		if (ops->add_job)
+			ops->add_job(client, cmd);
+		free(cmd);
+		break;
 	default:
 		log_err("fio: unknown client op: %s\n", fio_server_op(cmd->opcode));
 		free(cmd);
