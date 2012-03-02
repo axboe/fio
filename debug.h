@@ -27,6 +27,7 @@ extern unsigned int fio_debug_jobno, *fio_debug_jobp;
 #ifdef FIO_INC_DEBUG
 struct debug_level {
 	const char *name;
+	const char *help;
 	unsigned long shift;
 	unsigned int jobno;
 };

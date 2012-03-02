@@ -712,7 +712,7 @@ static void preferences(GtkWidget *w, gpointer data)
 		GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
 		NULL);
 
-	frame = gtk_frame_new("Debug");
+	frame = gtk_frame_new("Debug logging");
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), frame, FALSE, FALSE, 5);
 	box = gtk_hbox_new(FALSE, 6);
 	gtk_container_add(GTK_CONTAINER(frame), box);
@@ -721,6 +721,7 @@ static void preferences(GtkWidget *w, gpointer data)
 
 	for (i = 0; i < FD_DEBUG_MAX; i++) {
 		buttons[i] = gtk_check_button_new_with_label(debug_levels[i].name);
+		gtk_widget_set_tooltip_text(buttons[i], debug_levels[i].help);
 		gtk_box_pack_start(GTK_BOX(box), buttons[i], FALSE, FALSE, 6);
 	}
 
