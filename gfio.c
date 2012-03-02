@@ -411,20 +411,6 @@ static GtkWidget *new_info_label_in_frame(GtkWidget *box, const char *label)
 	return label_widget;
 }
 
-static GtkWidget *create_text_entry(GtkWidget *hbox, const char *defval)
-{
-	GtkWidget *text, *box;
-
-	box = gtk_hbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(hbox), box);
-
-	text = gtk_entry_new();
-	gtk_box_pack_start(GTK_BOX(box), text, TRUE, TRUE, 0);
-	gtk_entry_set_text(GTK_ENTRY(text), defval);
-
-	return text;
-}
-
 static GtkWidget *create_spinbutton(GtkWidget *hbox, double min, double max, double defval)
 {
 	GtkWidget *button, *box;
@@ -450,17 +436,22 @@ static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
 	start_job_thread(ui);
 }
 
-static void connect_clicked(__attribute__((unused)) GtkWidget *widget,
-                gpointer data)
+static void file_open(GtkWidget *w, gpointer data);
+
+static void connect_clicked(GtkWidget *widget, gpointer data)
 {
 	struct gui *ui = data;
 
 	if (!ui->connected) {
+		if (!ui->nr_job_files)
+			file_open(widget, data);
 		fio_clients_connect();
 		pthread_create(&ui->t, NULL, job_thread, NULL);
 		gfio_set_connected(ui, 1);
-	} else
+	} else {
+		fio_clients_terminate();
 		gfio_set_connected(ui, 0);
+	}
 }
 
 static void add_button(struct gui *ui, int i, GtkWidget *buttonbox,
@@ -492,7 +483,7 @@ static void on_info_bar_response(GtkWidget *widget, gint response,
 	}
 }
 
-void report_error(GError* error)
+void report_error(GError *error)
 {
 	if (ui.error_info_bar == NULL) {
 		ui.error_info_bar = gtk_info_bar_new_with_buttons(GTK_STOCK_OK,
@@ -629,14 +620,15 @@ static void file_open(GtkWidget *w, gpointer data)
 		ui.nr_job_files++;
 
 		ui.client = fio_client_add_explicit(host, type, port);
-		ui.client->client_data = &ui;
-#if 0
-		if (error) {
+		if (!ui.client) {
+			GError *error;
+
+			error = g_error_new(g_quark_from_string("fio"), 1,
+					"Failed to add client %s", host);
 			report_error(error);
 			g_error_free(error);
-			error = NULL;
 		}
-#endif
+		ui.client->client_data = &ui;
 			
 		g_free(filenames->data);
 		filenames = g_slist_next(filenames);

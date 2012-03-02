@@ -95,5 +95,7 @@ extern int fio_handle_clients(struct client_ops *ops);
 extern int fio_client_add(const char *, void **);
 extern struct fio_client *fio_client_add_explicit(const char *, int, int);
 extern void fio_client_add_cmd_option(void *, const char *);
+extern void fio_clients_terminate(void);
+
 #endif
 
