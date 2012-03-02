@@ -190,7 +190,7 @@ static void gfio_update_eta(struct jobs_eta *je)
 		free(mr);
 	} else if (je->m_iops || je->t_iops)
 		p += sprintf(p, ", CR=%d/%d IOPS", je->t_iops, je->m_iops);
-#else
+
 	gtk_label_set_text(GTK_LABEL(ui.eta.cr_bw), "---");
 	gtk_label_set_text(GTK_LABEL(ui.eta.cr_iops), "---");
 	gtk_label_set_text(GTK_LABEL(ui.eta.cw_bw), "---");
