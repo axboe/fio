@@ -56,6 +56,7 @@ typedef void (*client_probe_op)(struct fio_client *client, struct fio_net_cmd *c
 typedef void (*client_thread_status_display_op)(char *status_message, double perc);
 typedef void (*client_quit_op)(struct fio_client *);
 typedef void (*client_add_job_op)(struct fio_client *, struct fio_net_cmd *);
+typedef void (*client_timed_out)(struct fio_client *);
 
 struct client_ops {
 	client_text_op_func text_op;
@@ -66,6 +67,7 @@ struct client_ops {
 	client_probe_op probe;
 	client_quit_op quit;
 	client_add_job_op add_job;
+	client_timed_out timed_out;
 	int stay_connected;
 };
 

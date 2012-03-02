@@ -984,7 +984,7 @@ static int client_check_cmd_timeout(struct fio_client *client,
 	return flist_empty(&client->cmd_list) && ret;
 }
 
-static int fio_client_timed_out(void)
+static int fio_client_timed_out(struct client_ops *ops)
 {
 	struct fio_client *client;
 	struct flist_head *entry, *tmp;
@@ -1002,7 +1002,11 @@ static int fio_client_timed_out(void)
 		if (!client_check_cmd_timeout(client, &tv))
 			continue;
 
-		log_err("fio: client %s timed out\n", client->hostname);
+		if (ops->timed_out)
+			ops->timed_out(client);
+		else
+			log_err("fio: client %s timed out\n", client->hostname);
+
 		remove_client(client);
 		ret = 1;
 	}
@@ -1055,7 +1059,7 @@ int fio_handle_clients(struct client_ops *ops)
 				request_client_etas();
 				memcpy(&eta_tv, &tv, sizeof(tv));
 
-				if (fio_client_timed_out())
+				if (fio_client_timed_out(ops))
 					break;
 			}
 

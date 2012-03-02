@@ -320,6 +320,35 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	gtk_label_set_text(GTK_LABEL(ui->eta.iodepth), tmp);
 }
 
+static void gfio_client_timed_out(struct fio_client *client)
+{
+	struct gui *ui = client->client_data;
+	GtkWidget *dialog, *label, *content;
+	char buf[256];
+
+	gdk_threads_enter();
+
+	gfio_set_connected(ui, 0);
+
+	sprintf(buf, "Client %s: timeout talking to server.\n", client->hostname);
+
+	dialog = gtk_dialog_new_with_buttons("Timed out!",
+			GTK_WINDOW(ui->window),
+			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+			GTK_STOCK_OK, GTK_RESPONSE_OK, NULL);
+
+	content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+	label = gtk_label_new((const gchar *) buf);
+	gtk_container_add(GTK_CONTAINER(content), label);
+	gtk_widget_show_all(dialog);
+	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
+
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+
+	gdk_threads_leave();
+}
+
 struct client_ops gfio_client_ops = {
 	.text_op		= gfio_text_op,
 	.disk_util		= gfio_disk_util_op,
@@ -329,6 +358,7 @@ struct client_ops gfio_client_ops = {
 	.probe			= gfio_probe_op,
 	.quit			= gfio_quit_op,
 	.add_job		= gfio_add_job_op,
+	.timed_out		= gfio_client_timed_out,
 	.stay_connected		= 1,
 };
 
@@ -340,9 +370,7 @@ static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
 
 static void *job_thread(void *arg)
 {
-	printf("job thread starts\n");
 	fio_handle_clients(&gfio_client_ops);
-	printf("job thread exits\n");
 	return NULL;
 }
 
@@ -660,7 +688,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	 * Without it, the update that happens in gfio_update_thread_status
 	 * doesn't really happen in a timely fashion, you need expose events
 	 */
-	if (!g_thread_supported ())
+	if (!g_thread_supported())
 		g_thread_init(NULL);
 	gdk_threads_init();
 
