@@ -354,6 +354,7 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 
 	fio_server_send_quit_cmd();
 	reset_fio_state();
+	first_cmd_check = 0;
 	return ret;
 }
 
@@ -394,6 +395,7 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 	ret = fio_backend();
 	fio_server_send_quit_cmd();
 	reset_fio_state();
+	first_cmd_check = 0;
 	return ret;
 }
 

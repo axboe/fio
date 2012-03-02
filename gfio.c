@@ -99,6 +99,24 @@ struct gui {
 	char **job_files;
 } ui;
 
+static void clear_ui_info(struct gui *ui)
+{
+	gtk_label_set_text(GTK_LABEL(ui->probe.hostname), "");
+	gtk_label_set_text(GTK_LABEL(ui->probe.os), "");
+	gtk_label_set_text(GTK_LABEL(ui->probe.arch), "");
+	gtk_label_set_text(GTK_LABEL(ui->probe.fio_ver), "");
+	gtk_label_set_text(GTK_LABEL(ui->eta.name), "");
+	gtk_label_set_text(GTK_LABEL(ui->eta.iotype), "");
+	gtk_label_set_text(GTK_LABEL(ui->eta.ioengine), "");
+	gtk_label_set_text(GTK_LABEL(ui->eta.iodepth), "");
+	gtk_label_set_text(GTK_LABEL(ui->eta.jobs), "");
+	gtk_label_set_text(GTK_LABEL(ui->eta.files), "");
+	gtk_label_set_text(GTK_LABEL(ui->eta.read_bw), "");
+	gtk_label_set_text(GTK_LABEL(ui->eta.read_iops), "");
+	gtk_label_set_text(GTK_LABEL(ui->eta.write_bw), "");
+	gtk_label_set_text(GTK_LABEL(ui->eta.write_iops), "");
+}
+
 static void gfio_set_connected(struct gui *ui, int connected)
 {
 	if (connected) {
@@ -109,6 +127,7 @@ static void gfio_set_connected(struct gui *ui, int connected)
 		ui->connected = 0;
 		gtk_button_set_label(GTK_BUTTON(ui->button[CONNECT_BUTTON]), "Connect");
 		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 0);
+		clear_ui_info(ui);
 	}
 }
 
@@ -445,6 +464,7 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 	if (!ui->connected) {
 		if (!ui->nr_job_files)
 			file_open(widget, data);
+		gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
 		fio_clients_connect();
 		pthread_create(&ui->t, NULL, job_thread, NULL);
 		gfio_set_connected(ui, 1);
@@ -842,7 +862,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	 */
 	ui->thread_status_pb = gtk_progress_bar_new();
 	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ui->thread_status_pb), 0.0);
-	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
+	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), "No connections");
 	gtk_container_add(GTK_CONTAINER(ui->buttonbox), ui->thread_status_pb);
 
 
