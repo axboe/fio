@@ -526,9 +526,11 @@ void report_error(GError *error)
 	}
 }
 
-static int get_connection_details(char **host, int *port, int *type)
+static int get_connection_details(char **host, int *port, int *type,
+				  int *server_start)
 {
 	GtkWidget *dialog, *box, *vbox, *hentry, *hbox, *frame, *pentry, *combo;
+	GtkWidget *button;
 	char *typeentry;
 
 	dialog = gtk_dialog_new_with_buttons("Connection details",
@@ -575,6 +577,19 @@ static int get_connection_details(char **host, int *port, int *type)
 
 	gtk_container_add(GTK_CONTAINER(hbox), combo);
 
+	frame = gtk_frame_new("Options");
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+	box = gtk_vbox_new(FALSE, 10);
+	gtk_container_add(GTK_CONTAINER(frame), box);
+
+	hbox = gtk_hbox_new(TRUE, 4);
+	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
+
+	button = gtk_check_button_new_with_label("Auto-spawn fio backend");
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), 1);
+	gtk_widget_set_tooltip_text(button, "When running fio locally, it is necessary to have the backend running on the same system. If this is checked, gfio will start the backend automatically for you if it isn't already running.");
+	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 6);
+
 	gtk_widget_show_all(dialog);
 
 	if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_ACCEPT) {
@@ -594,6 +609,8 @@ static int get_connection_details(char **host, int *port, int *type)
 		*type = Fio_client_socket;
 	g_free(typeentry);
 
+	*server_start = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button));
+
 	gtk_widget_destroy(dialog);
 	return 0;
 }
@@ -604,7 +621,7 @@ static void file_open(GtkWidget *w, gpointer data)
 	GSList *filenames, *fn_glist;
 	GtkFileFilter *filter;
 	char *host;
-	int port, type;
+	int port, type, server_start;
 
 	dialog = gtk_file_chooser_dialog_new("Open File",
 		GTK_WINDOW(ui.window),
@@ -630,7 +647,7 @@ static void file_open(GtkWidget *w, gpointer data)
 
 	gtk_widget_destroy(dialog);
 
-	if (get_connection_details(&host, &port, &type))
+	if (get_connection_details(&host, &port, &type, &server_start))
 		goto err;
 
 	filenames = fn_glist;
