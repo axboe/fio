@@ -194,6 +194,7 @@ struct thread_options {
 	unsigned int zero_buffers;
 	unsigned int refill_buffers;
 	unsigned int scramble_buffers;
+	unsigned int compress_percentage;
 	unsigned int time_based;
 	unsigned int disable_lat;
 	unsigned int disable_clat;

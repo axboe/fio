@@ -33,6 +33,8 @@
 
 */
 
+#include <string.h>
+#include <assert.h>
 #include "rand.h"
 #include "../hash.h"
 
@@ -86,5 +88,45 @@ unsigned long fill_random_buf(struct frand_state *fs, void *buf,
 		r *= (unsigned long) __rand(fs);
 
 	__fill_random_buf(buf, len, r);
+	return r;
+}
+
+unsigned long fill_random_buf_percentage(struct frand_state *fs, void *buf,
+					 unsigned int percentage,
+					 unsigned int segment, unsigned int len)
+{
+	unsigned int this_len, rep_len;
+	unsigned long r = __rand(fs);
+
+	assert(segment <= len);
+
+	if (sizeof(int) != sizeof(long *))
+		r *= (unsigned long) __rand(fs);
+
+	while (len) {
+		/*
+		 * Fill random chunk
+		 */
+		this_len = (segment * (100 - percentage)) / 100;
+		if (this_len > len)
+			this_len = len;
+
+		__fill_random_buf(buf, this_len, r);
+
+		len -= this_len;
+		buf += this_len;
+
+		/*
+		 * Now duplicate random chunk in rest of buf
+		 */
+		rep_len = segment - this_len;
+		if (rep_len > len)
+			rep_len = len;
+
+		memcpy(buf, buf + rep_len, rep_len);
+		buf += rep_len;
+		len -= rep_len;
+	}
+
 	return r;
 }

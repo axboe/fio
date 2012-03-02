@@ -1227,9 +1227,10 @@ struct io_u *get_io_u(struct thread_data *td)
 		if (io_u->ddir == DDIR_WRITE) {
 			if (td->o.verify != VERIFY_NONE)
 				populate_verify_io_u(td, io_u);
-			else if (td->o.refill_buffers)
-				io_u_fill_buffer(td, io_u, io_u->xfer_buflen);
-			else if (td->o.scramble_buffers)
+			else if (td->o.refill_buffers) {
+				io_u_fill_buffer(td, io_u,
+					io_u->xfer_buflen, io_u->xfer_buflen);
+			} else if (td->o.scramble_buffers)
 				do_scramble = 1;
 		} else if (io_u->ddir == DDIR_READ) {
 			/*
@@ -1532,12 +1533,18 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
  * "randomly" fill the buffer contents
  */
 void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
-		      unsigned int max_bs)
+		      unsigned int min_write, unsigned int max_bs)
 {
 	io_u->buf_filled_len = 0;
 
-	if (!td->o.zero_buffers)
-		fill_random_buf(&td->buf_state, io_u->buf, max_bs);
-	else
+	if (!td->o.zero_buffers) {
+		unsigned int perc = td->o.compress_percentage;
+
+		if (perc) {
+			fill_random_buf_percentage(&td->buf_state, io_u->buf,
+						perc, min_write, max_bs);
+		} else
+			fill_random_buf(&td->buf_state, io_u->buf, max_bs);
+	} else
 		memset(io_u->buf, 0, max_bs);
 }

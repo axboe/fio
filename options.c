@@ -2014,6 +2014,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.def	= "1",
 	},
 	{
+		.name	= "buffer_compress_percentage",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(compress_percentage),
+		.maxval	= 100,
+		.minval	= 1,
+		.help	= "How compressible the buffer is (approximately)",
+	},
+	{
 		.name	= "clat_percentiles",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(clat_percentiles),

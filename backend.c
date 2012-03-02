@@ -762,12 +762,13 @@ static void cleanup_io_u(struct thread_data *td)
 static int init_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
-	unsigned int max_bs;
+	unsigned int max_bs, min_write;
 	int cl_align, i, max_units;
 	char *p;
 
 	max_units = td->o.iodepth;
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+	min_write = td->o.min_bs[DDIR_WRITE];
 	td->orig_buffer_size = (unsigned long long) max_bs
 					* (unsigned long long) max_units;
 
@@ -816,7 +817,7 @@ static int init_io_u(struct thread_data *td)
 			dprint(FD_MEM, "io_u %p, mem %p\n", io_u, io_u->buf);
 
 			if (td_write(td))
-				io_u_fill_buffer(td, io_u, max_bs);
+				io_u_fill_buffer(td, io_u, min_write, max_bs);
 			if (td_write(td) && td->o.verify_pattern_bytes) {
 				/*
 				 * Fill the buffer with the pattern if we are
