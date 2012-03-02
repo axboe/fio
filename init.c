@@ -568,6 +568,15 @@ static int fixup_options(struct thread_data *td)
 	}
 #endif
 
+	/*
+	 * For fully compressible data, just zero them at init time.
+	 * It's faster than repeatedly filling it.
+	 */
+	if (td->o.compress_percentage == 100) {
+		td->o.zero_buffers = 1;
+		td->o.compress_percentage = 0;
+	}
+
 	return ret;
 }
 
