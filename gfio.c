@@ -700,6 +700,48 @@ static void file_save(GtkWidget *w, gpointer data)
 	gtk_widget_destroy(dialog);
 }
 
+static void preferences(GtkWidget *w, gpointer data)
+{
+	GtkWidget *dialog, *frame, *box, **buttons;
+	int i;
+
+	dialog = gtk_dialog_new_with_buttons("Preferences",
+		GTK_WINDOW(ui.window),
+		GTK_DIALOG_DESTROY_WITH_PARENT,
+		GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
+		GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
+		NULL);
+
+	frame = gtk_frame_new("Debug");
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), frame, FALSE, FALSE, 5);
+	box = gtk_hbox_new(FALSE, 6);
+	gtk_container_add(GTK_CONTAINER(frame), box);
+
+	buttons = malloc(sizeof(GtkWidget *) * FD_DEBUG_MAX);
+
+	for (i = 0; i < FD_DEBUG_MAX; i++) {
+		buttons[i] = gtk_check_button_new_with_label(debug_levels[i].name);
+		gtk_box_pack_start(GTK_BOX(box), buttons[i], FALSE, FALSE, 6);
+	}
+
+	gtk_widget_show_all(dialog);
+
+	if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_ACCEPT) {
+		gtk_widget_destroy(dialog);
+		return;
+	}
+
+	for (i = 0; i < FD_DEBUG_MAX; i++) {
+		int set;
+
+		set = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buttons[i]));
+		if (set)
+			fio_debug |= (1UL << i);
+	}
+
+	gtk_widget_destroy(dialog);
+}
+
 static void about_dialog(GtkWidget *w, gpointer data)
 {
 	gtk_show_about_dialog(NULL,
@@ -715,12 +757,13 @@ static void about_dialog(GtkWidget *w, gpointer data)
 }
 
 static GtkActionEntry menu_items[] = {
-        { "FileMenuAction", GTK_STOCK_FILE, "File", NULL, NULL, NULL},
-        { "HelpMenuAction", GTK_STOCK_HELP, "Help", NULL, NULL, NULL},
-	{ "OpenFile",       GTK_STOCK_OPEN, NULL,   "<Control>O", NULL, G_CALLBACK(file_open) },
-        { "SaveFile",       GTK_STOCK_SAVE, NULL,   "<Control>S", NULL, G_CALLBACK(file_save) },
-        { "Quit",           GTK_STOCK_QUIT, NULL,   "<Control>Q", NULL, G_CALLBACK(quit_clicked) },
-	{ "About",          GTK_STOCK_ABOUT, NULL,  NULL, NULL, G_CALLBACK(about_dialog) },
+	{ "FileMenuAction", GTK_STOCK_FILE, "File", NULL, NULL, NULL},
+	{ "HelpMenuAction", GTK_STOCK_HELP, "Help", NULL, NULL, NULL},
+	{ "OpenFile", GTK_STOCK_OPEN, NULL,   "<Control>O", NULL, G_CALLBACK(file_open) },
+	{ "SaveFile", GTK_STOCK_SAVE, NULL,   "<Control>S", NULL, G_CALLBACK(file_save) },
+	{ "Preferences", GTK_STOCK_PREFERENCES, NULL, "<Control>p", NULL, G_CALLBACK(preferences) },
+	{ "Quit", GTK_STOCK_QUIT, NULL,   "<Control>Q", NULL, G_CALLBACK(quit_clicked) },
+	{ "About", GTK_STOCK_ABOUT, NULL,  NULL, NULL, G_CALLBACK(about_dialog) },
 };
 static gint nmenu_items = sizeof(menu_items) / sizeof(menu_items[0]);
 
@@ -731,6 +774,8 @@ static const gchar *ui_string = " \
 				<menuitem name=\"Open\" action=\"OpenFile\" /> \
 				<menuitem name=\"Save\" action=\"SaveFile\" /> \
 				<separator name=\"Separator\"/> \
+				<menuitem name=\"Preferences\" action=\"Preferences\" /> \
+				<separator name=\"Separator2\"/> \
 				<menuitem name=\"Quit\" action=\"Quit\" /> \
 			</menu> \
 			<menu name=\"Help\" action=\"HelpMenuAction\"> \
