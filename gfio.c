@@ -127,7 +127,6 @@ static void gfio_set_connected(struct gui *ui, int connected)
 		ui->connected = 0;
 		gtk_button_set_label(GTK_BUTTON(ui->button[CONNECT_BUTTON]), "Connect");
 		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 0);
-		clear_ui_info(ui);
 	}
 }
 
@@ -342,6 +341,7 @@ static void gfio_client_timed_out(struct fio_client *client)
 	gdk_threads_enter();
 
 	gfio_set_connected(ui, 0);
+	clear_ui_info(ui);
 
 	sprintf(buf, "Client %s: timeout talking to server.\n", client->hostname);
 
@@ -471,6 +471,7 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 	} else {
 		fio_clients_terminate();
 		gfio_set_connected(ui, 0);
+		clear_ui_info(ui);
 	}
 }
 
@@ -893,7 +894,6 @@ int main(int argc, char *argv[], char *envp[])
 	if (fio_init_options())
 		return 1;
 
-	fio_debug = ~0UL;
 	init_ui(&argc, &argv, &ui);
 
 	gdk_threads_enter();
