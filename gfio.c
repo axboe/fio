@@ -84,12 +84,6 @@ struct gui {
 	GtkWidget *thread_status_pb;
 	GtkWidget *buttonbox;
 	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
-	GtkWidget *hostname_hbox;
-	GtkWidget *hostname_label;
-	GtkWidget *hostname_entry;
-	GtkWidget *port_button;
-	GtkWidget *port_label;
-	GtkWidget *hostname_combo_box; /* ipv4, ipv6 or socket */
 	GtkWidget *scrolled_window;
 	GtkWidget *textview;
 	GtkWidget *error_info_bar;
@@ -404,6 +398,49 @@ static void start_job_thread(struct gui *ui)
 	}
 }
 
+static GtkWidget *new_info_label_in_frame(GtkWidget *box, const char *label)
+{
+	GtkWidget *label_widget;
+	GtkWidget *frame;
+
+	frame = gtk_frame_new(label);
+	label_widget = gtk_label_new(NULL);
+	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), label_widget);
+
+	return label_widget;
+}
+
+static GtkWidget *create_text_entry(GtkWidget *hbox, const char *defval)
+{
+	GtkWidget *text, *box;
+
+	box = gtk_hbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(hbox), box);
+
+	text = gtk_entry_new();
+	gtk_box_pack_start(GTK_BOX(box), text, TRUE, TRUE, 0);
+	gtk_entry_set_text(GTK_ENTRY(text), defval);
+
+	return text;
+}
+
+static GtkWidget *create_spinbutton(GtkWidget *hbox, double min, double max, double defval)
+{
+	GtkWidget *button, *box;
+
+	box = gtk_hbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(hbox), box);
+
+	button = gtk_spin_button_new_with_range(min, max, 1.0);
+	gtk_box_pack_start(GTK_BOX(box), button, TRUE, TRUE, 0);
+
+	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(button), GTK_UPDATE_IF_VALID);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(button), defval);
+
+	return button;
+}
+
 static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
                 gpointer data)
 {
@@ -478,11 +515,85 @@ void report_error(GError* error)
 	}
 }
 
+static int get_connection_details(char **host, int *port, int *type)
+{
+	GtkWidget *dialog, *box, *vbox, *hentry, *hbox, *frame, *pentry, *combo;
+	char *typeentry;
+
+	dialog = gtk_dialog_new_with_buttons("Connection details",
+			GTK_WINDOW(ui.window),
+			GTK_DIALOG_DESTROY_WITH_PARENT,
+			GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
+			GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
+
+	frame = gtk_frame_new("Hostname / socket name");
+	vbox = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+
+	box = gtk_vbox_new(FALSE, 6);
+	gtk_container_add(GTK_CONTAINER(frame), box);
+
+	hbox = gtk_hbox_new(TRUE, 10);
+	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
+	hentry = gtk_entry_new();
+	gtk_entry_set_text(GTK_ENTRY(hentry), "localhost");
+	gtk_box_pack_start(GTK_BOX(hbox), hentry, TRUE, TRUE, 0);
+
+	frame = gtk_frame_new("Port");
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+	box = gtk_vbox_new(FALSE, 10);
+	gtk_container_add(GTK_CONTAINER(frame), box);
+
+	hbox = gtk_hbox_new(TRUE, 4);
+	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
+	pentry = create_spinbutton(hbox, 1, 65535, FIO_NET_PORT);
+
+	frame = gtk_frame_new("Type");
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+	box = gtk_vbox_new(FALSE, 10);
+	gtk_container_add(GTK_CONTAINER(frame), box);
+
+	hbox = gtk_hbox_new(TRUE, 4);
+	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
+
+	combo = gtk_combo_box_text_new();
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), "IPv4");
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), "IPv6");
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), "local socket");
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 0);
+
+	gtk_container_add(GTK_CONTAINER(hbox), combo);
+
+	gtk_widget_show_all(dialog);
+
+	if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_ACCEPT) {
+		gtk_widget_destroy(dialog);
+		return 1;
+	}
+
+	*host = strdup(gtk_entry_get_text(GTK_ENTRY(hentry)));
+	*port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(pentry));
+
+	typeentry = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo));
+	if (!typeentry || !strncmp(typeentry, "IPv4", 4))
+		*type = Fio_client_ipv4;
+	else if (!strncmp(typeentry, "IPv6", 4))
+		*type = Fio_client_ipv6;
+	else
+		*type = Fio_client_socket;
+	g_free(typeentry);
+
+	gtk_widget_destroy(dialog);
+	return 0;
+}
+
 static void file_open(GtkWidget *w, gpointer data)
 {
 	GtkWidget *dialog;
 	GSList *filenames, *fn_glist;
 	GtkFileFilter *filter;
+	char *host;
+	int port, type;
 
 	dialog = gtk_file_chooser_dialog_new("Open File",
 		GTK_WINDOW(ui.window),
@@ -505,29 +616,19 @@ static void file_open(GtkWidget *w, gpointer data)
 	}
 
 	fn_glist = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(dialog));
+
+	gtk_widget_destroy(dialog);
+
+	if (get_connection_details(&host, &port, &type))
+		goto err;
+
 	filenames = fn_glist;
 	while (filenames != NULL) {
-		const char *hostname;
-		char *typeentry;
-		gint port;
-		int type;
-
 		ui.job_files = realloc(ui.job_files, (ui.nr_job_files + 1) * sizeof(char *));
 		ui.job_files[ui.nr_job_files] = strdup(filenames->data);
 		ui.nr_job_files++;
 
-		hostname = gtk_entry_get_text(GTK_ENTRY(ui.hostname_entry));
-		port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(ui.port_button));
-		typeentry = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(ui.hostname_combo_box));
-		if (!typeentry || !strncmp(typeentry, "IPv4", 4))
-			type = Fio_client_ipv4;
-		else if (!strncmp(typeentry, "IPv6", 4))
-			type = Fio_client_ipv6;
-		else
-			type = Fio_client_socket;
-		g_free(typeentry);
-
-		ui.client = fio_client_add_explicit(hostname, type, port);
+		ui.client = fio_client_add_explicit(host, type, port);
 		ui.client->client_data = &ui;
 #if 0
 		if (error) {
@@ -540,8 +641,9 @@ static void file_open(GtkWidget *w, gpointer data)
 		g_free(filenames->data);
 		filenames = g_slist_next(filenames);
 	}
+	free(host);
+err:
 	g_slist_free(fn_glist);
-	gtk_widget_destroy(dialog);
 }
 
 static void file_save(GtkWidget *w, gpointer data)
@@ -629,53 +731,6 @@ void gfio_ui_setup(GtkSettings *settings, GtkWidget *menubar,
         gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, FALSE, 0);
 }
 
-static GtkWidget *new_info_label_in_frame(GtkWidget *box, const char *label)
-{
-	GtkWidget *label_widget;
-	GtkWidget *frame;
-
-	frame = gtk_frame_new(label);
-	label_widget = gtk_label_new(NULL);
-	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
-	gtk_container_add(GTK_CONTAINER(frame), label_widget);
-
-	return label_widget;
-}
-
-static GtkWidget *create_text_entry(GtkWidget *hbox, GtkWidget *label, const char *defval)
-{
-	GtkWidget *text, *box;
-
-	gtk_container_add(GTK_CONTAINER(hbox), label);
-
-	box = gtk_hbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(hbox), box);
-
-	text = gtk_entry_new();
-	gtk_box_pack_start(GTK_BOX(box), text, TRUE, TRUE, 0);
-	gtk_entry_set_text(GTK_ENTRY(text), "localhost");
-
-	return text;
-}
-
-static GtkWidget *create_spinbutton(GtkWidget *hbox, GtkWidget *label, double min, double max, double defval)
-{
-	GtkWidget *button, *box;
-
-	gtk_container_add(GTK_CONTAINER(hbox), label);
-
-	box = gtk_hbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(hbox), box);
-
-	button = gtk_spin_button_new_with_range(min, max, 1.0);
-	gtk_box_pack_start(GTK_BOX(box), button, TRUE, TRUE, 0);
-
-	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(button), GTK_UPDATE_IF_VALID);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(button), defval);
-
-	return button;
-}
-
 static void init_ui(int *argc, char **argv[], struct gui *ui)
 {
 	GtkSettings *settings;
@@ -719,29 +774,6 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	ui->topvbox = gtk_vbox_new(FALSE, 3);
 	gtk_container_add(GTK_CONTAINER(ui->topalign), ui->topvbox);
 	gtk_box_pack_start(GTK_BOX(ui->vbox), ui->topalign, FALSE, FALSE, 0);
-
-	/*
-	 * Set up hostname label + entry, port label + entry,
-	 */
-	ui->hostname_hbox = gtk_hbox_new(FALSE, 0);
-
-	ui->hostname_label = gtk_label_new("Hostname:");
-	ui->hostname_entry = create_text_entry(ui->hostname_hbox, ui->hostname_label, "localhost");
-
-	ui->port_label = gtk_label_new("Port:");
-	ui->port_button = create_spinbutton(ui->hostname_hbox, ui->port_label, 1, 65535, FIO_NET_PORT);
-
-	/*
-	 * Set up combo box for address type
-	 */
-	ui->hostname_combo_box = gtk_combo_box_text_new();
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ui->hostname_combo_box), "IPv4");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ui->hostname_combo_box), "IPv6");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ui->hostname_combo_box), "local socket");
-	gtk_combo_box_set_active(GTK_COMBO_BOX(ui->hostname_combo_box), 0);
-
-	gtk_container_add(GTK_CONTAINER(ui->hostname_hbox), ui->hostname_combo_box);
-	gtk_container_add(GTK_CONTAINER(ui->topvbox), ui->hostname_hbox);
 
 	probe = gtk_frame_new("Job");
 	gtk_box_pack_start(GTK_BOX(ui->topvbox), probe, TRUE, FALSE, 3);
