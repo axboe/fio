@@ -623,9 +623,6 @@ static void handle_ts(struct fio_net_cmd *cmd)
 {
 	struct cmd_ts_pdu *p = (struct cmd_ts_pdu *) cmd->payload;
 
-	convert_ts(&p->ts, &p->ts);
-	convert_gs(&p->rs, &p->rs);
-
 	show_thread_status(&p->ts, &p->rs);
 
 	if (sum_stat_clients == 1)
@@ -647,8 +644,23 @@ static void handle_gs(struct fio_net_cmd *cmd)
 {
 	struct group_run_stats *gs = (struct group_run_stats *) cmd->payload;
 
-	convert_gs(gs, gs);
 	show_group_stats(gs);
+}
+
+static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct cmd_text_pdu *pdu = (struct cmd_text_pdu *) cmd->payload;
+	const char *buf = (const char *) pdu->buf;
+	const char *name;
+	int fio_unused ret;
+
+	name = client->name ? client->name : client->hostname;
+
+	if (!client->skip_newline)
+		fprintf(f_out, "<%s> ", name);
+	ret = fwrite(buf, pdu->buf_len, 1, f_out);
+	fflush(f_out);
+	client->skip_newline = strchr(buf, '\n') == NULL;
 }
 
 static void convert_agg(struct disk_util_agg *agg)
@@ -684,29 +696,9 @@ static void convert_dus(struct disk_util_stat *dus)
 	dus->msec		= le64_to_cpu(dus->msec);
 }
 
-static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)
-{
-	struct cmd_text_pdu *pdu = (struct cmd_text_pdu *) cmd->payload;
-	const char *buf = (const char *) pdu->buf;
-	const char *name;
-	int fio_unused ret;
-
-	name = client->name ? client->name : client->hostname;
-
-	if (!client->skip_newline)
-		fprintf(f_out, "<%s> ", name);
-	ret = fwrite(buf, pdu->buf_len, 1, f_out);
-	fflush(f_out);
-	client->skip_newline = strchr(buf, '\n') == NULL;
-}
-
-
 static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_du_pdu *du = (struct cmd_du_pdu *) cmd->payload;
-
-	convert_dus(&du->dus);
-	convert_agg(&du->agg);
 
 	if (!client->disk_stats_shown) {
 		client->disk_stats_shown = 1;
@@ -716,7 +708,7 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 	print_disk_util(&du->dus, &du->agg, terse_output);
 }
 
-void fio_client_convert_jobs_eta(struct jobs_eta *je)
+static void convert_jobs_eta(struct jobs_eta *je)
 {
 	int i;
 
@@ -806,7 +798,6 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 	client->eta_in_flight = NULL;
 	flist_del_init(&client->eta_list);
 
-	fio_client_convert_jobs_eta(je);
 	fio_client_sum_jobs_eta(&eta->eta, je);
 	fio_client_dec_jobs_eta(eta, display_thread_status);
 }
@@ -889,23 +880,44 @@ int fio_handle_client(struct fio_client *client, struct client_ops *ops)
 		ops->text_op(client, cmd);
 		free(cmd);
 		break;
-	case FIO_NET_CMD_DU:
+	case FIO_NET_CMD_DU: {
+		struct cmd_du_pdu *du = (struct cmd_du_pdu *) cmd->payload;
+
+		convert_dus(&du->dus);
+		convert_agg(&du->agg);
+
 		ops->disk_util(client, cmd);
 		free(cmd);
 		break;
-	case FIO_NET_CMD_TS:
+		}
+	case FIO_NET_CMD_TS: {
+		struct cmd_ts_pdu *p = (struct cmd_ts_pdu *) cmd->payload;
+
+		convert_ts(&p->ts, &p->ts);
+		convert_gs(&p->rs, &p->rs);
+
 		ops->thread_status(cmd);
 		free(cmd);
 		break;
-	case FIO_NET_CMD_GS:
+		}
+	case FIO_NET_CMD_GS: {
+		struct group_run_stats *gs = (struct group_run_stats *) cmd->payload;
+
+		convert_gs(gs, gs);
+
 		ops->group_stats(cmd);
 		free(cmd);
 		break;
-	case FIO_NET_CMD_ETA:
+		}
+	case FIO_NET_CMD_ETA: {
+		struct jobs_eta *je = (struct jobs_eta *) cmd->payload;
+
 		remove_reply_cmd(client, cmd);
+		convert_jobs_eta(je);
 		ops->eta(client, cmd);
 		free(cmd);
 		break;
+		}
 	case FIO_NET_CMD_PROBE:
 		remove_reply_cmd(client, cmd);
 		ops->probe(client, cmd);

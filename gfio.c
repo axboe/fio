@@ -254,7 +254,6 @@ static void gfio_eta_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	client->eta_in_flight = NULL;
 	flist_del_init(&client->eta_list);
 
-	fio_client_convert_jobs_eta(je);
 	fio_client_sum_jobs_eta(&eta->eta, je);
 	fio_client_dec_jobs_eta(eta, gfio_update_eta);
 }
