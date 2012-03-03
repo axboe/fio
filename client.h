@@ -46,8 +46,7 @@ struct fio_client {
 	void *client_data;
 };
 
-typedef void (*client_text_op_func)(struct fio_client *client,
-		FILE *f, __u16 pdu_len, const char *buf);
+typedef void (*client_text_op_func)(struct fio_client *client, struct fio_net_cmd *cmd);
 typedef void (*client_disk_util_op_func)(struct fio_client *client, struct fio_net_cmd *cmd);
 typedef void (*client_thread_status_op)(struct fio_net_cmd *cmd);
 typedef void (*client_group_stats_op)(struct fio_net_cmd *cmd);

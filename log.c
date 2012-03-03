@@ -60,7 +60,7 @@ int log_info(const char *format, ...)
 	va_end(args);
 
 	if (is_backend)
-		return fio_server_text_output(buffer, len);
+		return fio_server_text_output(FIO_LOG_INFO, buffer, len);
 	else if (log_syslog) {
 		syslog(LOG_INFO, "%s", buffer);
 		return len;
@@ -79,7 +79,7 @@ int log_err(const char *format, ...)
 	va_end(args);
 
 	if (is_backend)
-		return fio_server_text_output(buffer, len);
+		return fio_server_text_output(FIO_LOG_ERR, buffer, len);
 	else if (log_syslog) {
 		syslog(LOG_INFO, "%s", buffer);
 		return len;

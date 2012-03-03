@@ -38,7 +38,7 @@ struct fio_net_int_cmd {
 };
 
 enum {
-	FIO_SERVER_VER		= 8,
+	FIO_SERVER_VER		= 9,
 
 	FIO_SERVER_MAX_PDU	= 1024,
 
@@ -118,9 +118,16 @@ struct cmd_add_job_pdu {
 	uint32_t group_reporting;
 };
 
+struct cmd_text_pdu {
+	uint32_t level;
+	uint32_t buf_len;
+	uint64_t log_sec;
+	uint64_t log_usec;
+	uint8_t buf[0];
+};
+
 extern int fio_start_server(char *);
-extern int fio_server_text_output(const char *, size_t);
-extern int fio_server_log(const char *format, ...);
+extern int fio_server_text_output(int, const char *, size_t);
 extern int fio_net_send_cmd(int, uint16_t, const void *, off_t, uint64_t);
 extern int fio_net_send_simple_cmd(int, uint16_t, uint64_t, struct flist_head *);
 extern void fio_server_set_arg(const char *);

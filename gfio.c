@@ -130,8 +130,7 @@ static void gfio_set_connected(struct gui *ui, int connected)
 	}
 }
 
-static void gfio_text_op(struct fio_client *client,
-                FILE *f, __u16 pdu_len, const char *buf)
+static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 #if 0
 	GtkTextBuffer *buffer;
@@ -145,7 +144,7 @@ static void gfio_text_op(struct fio_client *client,
 	gtk_text_view_scroll_to_iter(GTK_TEXT_VIEW(ui.textview),
 					&end, 0.0, FALSE, 0.0,0.0);
 #else
-	fio_client_ops.text_op(client, f, pdu_len, buf);
+	fio_client_ops.text_op(client, cmd);
 #endif
 }
 

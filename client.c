@@ -21,29 +21,15 @@
 #include "flist.h"
 #include "hash.h"
 
-static void fio_client_text_op(struct fio_client *client,
-		FILE *f, __u16 pdu_len, const char *buf)
-{
-	const char *name;
-	int fio_unused ret;
-
-	name = client->name ? client->name : client->hostname;
-
-	if (!client->skip_newline)
-		fprintf(f, "<%s> ", name);
-	ret = fwrite(buf, pdu_len, 1, f);
-	fflush(f);
-	client->skip_newline = strchr(buf, '\n') == NULL;
-}
-
 static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_ts(struct fio_net_cmd *cmd);
 static void handle_gs(struct fio_net_cmd *cmd);
 static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd);
+static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd);
 
 struct client_ops fio_client_ops = {
-	.text_op	= fio_client_text_op,
+	.text_op	= handle_text,
 	.disk_util	= handle_du,
 	.thread_status	= handle_ts,
 	.group_stats	= handle_gs,
@@ -698,6 +684,23 @@ static void convert_dus(struct disk_util_stat *dus)
 	dus->msec		= le64_to_cpu(dus->msec);
 }
 
+static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct cmd_text_pdu *pdu = (struct cmd_text_pdu *) cmd->payload;
+	const char *buf = (const char *) pdu->buf;
+	const char *name;
+	int fio_unused ret;
+
+	name = client->name ? client->name : client->hostname;
+
+	if (!client->skip_newline)
+		fprintf(f_out, "<%s> ", name);
+	ret = fwrite(buf, pdu->buf_len, 1, f_out);
+	fflush(f_out);
+	client->skip_newline = strchr(buf, '\n') == NULL;
+}
+
+
 static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_du_pdu *du = (struct cmd_du_pdu *) cmd->payload;
@@ -851,6 +854,16 @@ static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd)
 		log_info("client <%s>: exited with error %d\n", client->hostname, client->error);
 }
 
+static void convert_text(struct fio_net_cmd *cmd)
+{
+	struct cmd_text_pdu *pdu = (struct cmd_text_pdu *) cmd->payload;
+
+	pdu->level	= le32_to_cpu(pdu->level);
+	pdu->buf_len	= le32_to_cpu(pdu->buf_len);
+	pdu->log_sec	= le64_to_cpu(pdu->log_sec);
+	pdu->log_usec	= le64_to_cpu(pdu->log_usec);
+}
+
 int fio_handle_client(struct fio_client *client, struct client_ops *ops)
 {
 	struct fio_net_cmd *cmd;
@@ -871,12 +884,11 @@ int fio_handle_client(struct fio_client *client, struct client_ops *ops)
 		remove_client(client);
 		free(cmd);
 		break;
-	case FIO_NET_CMD_TEXT: {
-		const char *buf = (const char *) cmd->payload;
-		ops->text_op(client, f_out, cmd->pdu_len, buf);
+	case FIO_NET_CMD_TEXT:
+		convert_text(cmd);
+		ops->text_op(client, cmd);
 		free(cmd);
 		break;
-		}
 	case FIO_NET_CMD_DU:
 		ops->disk_util(client, cmd);
 		free(cmd);

@@ -222,12 +222,19 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 		cmdret = NULL;
 	} else if (cmdret) {
 		/* zero-terminate text input */
-		if (cmdret->pdu_len && (cmdret->opcode == FIO_NET_CMD_TEXT ||
-		    cmdret->opcode == FIO_NET_CMD_JOB)) {
-			char *buf = (char *) cmdret->payload;
+		if (cmdret->pdu_len) {
+			if (cmdret->opcode == FIO_NET_CMD_TEXT) {
+				struct cmd_text_pdu *pdu = (struct cmd_text_pdu *) cmdret->payload;
+				char *buf = (char *) pdu->buf;
 
-			buf[cmdret->pdu_len ] = '\0';
+				buf[pdu->buf_len ] = '\0';
+			} else if (cmdret->opcode == FIO_NET_CMD_JOB) {
+				char *buf = (char *) cmdret->payload;
+
+				buf[cmdret->pdu_len ] = '\0';
+			}
 		}
+
 		/* frag flag is internal */
 		cmdret->flags &= ~FIO_NET_CMD_F_MORE;
 	}
@@ -619,12 +626,30 @@ out:
 	return exitval;
 }
 
-int fio_server_text_output(const char *buf, size_t len)
+int fio_server_text_output(int level, const char *buf, size_t len)
 {
-	if (server_fd != -1)
-		return fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, buf, len, 0);
+	struct cmd_text_pdu *pdu;
+	unsigned int tlen;
+	struct timeval tv;
 
-	return log_local_buf(buf, len);
+	if (server_fd == -1)
+		return log_local_buf(buf, len);
+
+	tlen = sizeof(*pdu) + len;
+	pdu = malloc(tlen);
+
+	pdu->level	= __cpu_to_le32(level);
+	pdu->buf_len	= __cpu_to_le32(len);
+
+	gettimeofday(&tv, NULL);
+	pdu->log_sec	= __cpu_to_le64(tv.tv_sec);
+	pdu->log_usec	= __cpu_to_le64(tv.tv_usec);
+
+	memcpy(pdu->buf, buf, len);
+
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, pdu, tlen, 0);
+	free(pdu);
+	return len;
 }
 
 static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
@@ -824,21 +849,6 @@ void fio_server_send_add_job(struct thread_options *o, const char *ioengine)
 	pdu.group_reporting	= cpu_to_le32(o->group_reporting);
 
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_ADD_JOB, &pdu, sizeof(pdu), 0);
-}
-
-int fio_server_log(const char *format, ...)
-{
-	char buffer[1024];
-	va_list args;
-	size_t len;
-
-	dprint(FD_NET, "server log\n");
-
-	va_start(args, format);
-	len = vsnprintf(buffer, sizeof(buffer), format, args);
-	va_end(args);
-
-	return fio_server_text_output(buffer, len);
 }
 
 static int fio_init_server_ip(void)
