@@ -1569,7 +1569,7 @@ int parse_cmd_line(int argc, char *argv[])
 				exit_val = 1;
 				break;
 			}
-			if (fio_client_add(optarg, &cur_client)) {
+			if (fio_client_add(&fio_client_ops, optarg, &cur_client)) {
 				log_err("fio: failed adding client %s\n", optarg);
 				do_exit++;
 				exit_val = 1;

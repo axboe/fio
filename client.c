@@ -24,7 +24,6 @@
 static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_ts(struct fio_net_cmd *cmd);
 static void handle_gs(struct fio_net_cmd *cmd);
-static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd);
 
@@ -33,7 +32,7 @@ struct client_ops fio_client_ops = {
 	.disk_util	= handle_du,
 	.thread_status	= handle_ts,
 	.group_stats	= handle_gs,
-	.eta		= handle_eta,
+	.eta		= display_thread_status,
 	.probe		= handle_probe,
 };
 
@@ -110,7 +109,7 @@ static void remove_client(struct fio_client *client)
 
 	if (!flist_empty(&client->eta_list)) {
 		flist_del_init(&client->eta_list);
-		fio_client_dec_jobs_eta(client->eta_in_flight, display_thread_status);
+		fio_client_dec_jobs_eta(client->eta_in_flight, client->ops->eta);
 	}
 
 	free(client->hostname);
@@ -155,7 +154,8 @@ void fio_client_add_cmd_option(void *cookie, const char *opt)
 	}
 }
 
-struct fio_client *fio_client_add_explicit(const char *hostname, int type,
+struct fio_client *fio_client_add_explicit(struct client_ops *ops,
+					   const char *hostname, int type,
 					   int port)
 {
 	struct fio_client *client;
@@ -186,6 +186,7 @@ struct fio_client *fio_client_add_explicit(const char *hostname, int type,
 	}
 
 	client->fd = -1;
+	client->ops = ops;
 
 	__fio_client_add_cmd_option(client, "fio");
 
@@ -198,7 +199,7 @@ err:
 	return NULL;
 }
 
-int fio_client_add(const char *hostname, void **cookie)
+int fio_client_add(struct client_ops *ops, const char *hostname, void **cookie)
 {
 	struct fio_client *existing = *cookie;
 	struct fio_client *client;
@@ -233,6 +234,7 @@ int fio_client_add(const char *hostname, void **cookie)
 		return -1;
 
 	client->fd = -1;
+	client->ops = ops;
 
 	__fio_client_add_cmd_option(client, "fio");
 
@@ -754,10 +756,10 @@ void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 		dst->eta_sec = je->eta_sec;
 }
 
-void fio_client_dec_jobs_eta(struct client_eta *eta, void (*fn)(struct jobs_eta *))
+void fio_client_dec_jobs_eta(struct client_eta *eta, client_eta_op eta_fn)
 {
 	if (!--eta->pending) {
-		fn(&eta->eta);
+		eta_fn(&eta->eta);
 		free(eta);
 	}
 }
@@ -799,7 +801,7 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 	flist_del_init(&client->eta_list);
 
 	fio_client_sum_jobs_eta(&eta->eta, je);
-	fio_client_dec_jobs_eta(eta, display_thread_status);
+	fio_client_dec_jobs_eta(eta, client->ops->eta);
 }
 
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -855,8 +857,9 @@ static void convert_text(struct fio_net_cmd *cmd)
 	pdu->log_usec	= le64_to_cpu(pdu->log_usec);
 }
 
-int fio_handle_client(struct fio_client *client, struct client_ops *ops)
+int fio_handle_client(struct fio_client *client)
 {
+	struct client_ops *ops = client->ops;
 	struct fio_net_cmd *cmd;
 
 	dprint(FD_NET, "client: handle %s\n", client->hostname);
@@ -914,7 +917,7 @@ int fio_handle_client(struct fio_client *client, struct client_ops *ops)
 
 		remove_reply_cmd(client, cmd);
 		convert_jobs_eta(je);
-		ops->eta(client, cmd);
+		handle_eta(client, cmd);
 		free(cmd);
 		break;
 		}
@@ -949,7 +952,7 @@ int fio_handle_client(struct fio_client *client, struct client_ops *ops)
 	return 1;
 }
 
-static void request_client_etas(void)
+static void request_client_etas(struct client_ops *ops)
 {
 	struct fio_client *client;
 	struct flist_head *entry;
@@ -980,7 +983,7 @@ static void request_client_etas(void)
 	}
 
 	while (skipped--)
-		fio_client_dec_jobs_eta(eta, display_thread_status);
+		fio_client_dec_jobs_eta(eta, ops->eta);
 
 	dprint(FD_NET, "client: requested eta tag %p\n", eta);
 }
@@ -1008,7 +1011,7 @@ static int client_check_cmd_timeout(struct fio_client *client,
 	return flist_empty(&client->cmd_list) && ret;
 }
 
-static int fio_client_timed_out(struct client_ops *ops)
+static int fio_check_clients_timed_out(void)
 {
 	struct fio_client *client;
 	struct flist_head *entry, *tmp;
@@ -1026,8 +1029,8 @@ static int fio_client_timed_out(struct client_ops *ops)
 		if (!client_check_cmd_timeout(client, &tv))
 			continue;
 
-		if (ops->timed_out)
-			ops->timed_out(client);
+		if (client->ops->timed_out)
+			client->ops->timed_out(client);
 		else
 			log_err("fio: client %s timed out\n", client->hostname);
 
@@ -1059,7 +1062,7 @@ int fio_handle_clients(struct client_ops *ops)
 		flist_for_each_safe(entry, tmp, &client_list) {
 			client = flist_entry(entry, struct fio_client, list);
 
-			if (!client->sent_job && !ops->stay_connected &&
+			if (!client->sent_job && !client->ops->stay_connected &&
 			    flist_empty(&client->cmd_list)) {
 				remove_client(client);
 				continue;
@@ -1080,10 +1083,10 @@ int fio_handle_clients(struct client_ops *ops)
 
 			gettimeofday(&tv, NULL);
 			if (mtime_since(&eta_tv, &tv) >= 900) {
-				request_client_etas();
+				request_client_etas(ops);
 				memcpy(&eta_tv, &tv, sizeof(tv));
 
-				if (fio_client_timed_out(ops))
+				if (fio_check_clients_timed_out())
 					break;
 			}
 
@@ -1106,7 +1109,7 @@ int fio_handle_clients(struct client_ops *ops)
 				log_err("fio: unknown client fd %d\n", pfds[i].fd);
 				continue;
 			}
-			if (!fio_handle_client(client, ops)) {
+			if (!fio_handle_client(client)) {
 				log_info("client: host=%s disconnected\n",
 						client->hostname);
 				remove_client(client);

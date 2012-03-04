@@ -9,6 +9,7 @@
 #include "stat.h"
 
 struct fio_net_cmd;
+struct client_ops;
 
 struct fio_client {
 	struct flist_head list;
@@ -43,6 +44,7 @@ struct fio_client {
 	uint16_t argc;
 	char **argv;
 
+	struct client_ops *ops;
 	void *client_data;
 };
 
@@ -50,7 +52,7 @@ typedef void (*client_text_op_func)(struct fio_client *client, struct fio_net_cm
 typedef void (*client_disk_util_op_func)(struct fio_client *client, struct fio_net_cmd *cmd);
 typedef void (*client_thread_status_op)(struct fio_net_cmd *cmd);
 typedef void (*client_group_stats_op)(struct fio_net_cmd *cmd);
-typedef void (*client_eta_op)(struct fio_client *client, struct fio_net_cmd *cmd);
+typedef void (*client_eta_op)(struct jobs_eta *je);
 typedef void (*client_probe_op)(struct fio_client *client, struct fio_net_cmd *cmd);
 typedef void (*client_thread_status_display_op)(char *status_message, double perc);
 typedef void (*client_quit_op)(struct fio_client *);
@@ -77,8 +79,8 @@ struct client_eta {
 	unsigned int pending;
 };
 
-extern int fio_handle_client(struct fio_client *, struct client_ops *ops);
-extern void fio_client_dec_jobs_eta(struct client_eta *eta, void (*fn)(struct jobs_eta *));
+extern int fio_handle_client(struct fio_client *);
+extern void fio_client_dec_jobs_eta(struct client_eta *eta, client_eta_op fn);
 extern void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je);
 
 enum {
@@ -89,9 +91,9 @@ enum {
 
 extern int fio_clients_connect(void);
 extern int fio_clients_send_ini(const char *);
-extern int fio_handle_clients(struct client_ops *ops);
-extern int fio_client_add(const char *, void **);
-extern struct fio_client *fio_client_add_explicit(const char *, int, int);
+extern int fio_handle_clients(struct client_ops *);
+extern int fio_client_add(struct client_ops *, const char *, void **);
+extern struct fio_client *fio_client_add_explicit(struct client_ops *, const char *, int, int);
 extern void fio_client_add_cmd_option(void *, const char *);
 extern void fio_clients_terminate(void);
 

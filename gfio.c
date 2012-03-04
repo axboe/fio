@@ -246,18 +246,6 @@ static void gfio_update_eta(struct jobs_eta *je)
 	gfio_update_thread_status(output, perc);
 }
 
-static void gfio_eta_op(struct fio_client *client, struct fio_net_cmd *cmd)
-{
-	struct jobs_eta *je = (struct jobs_eta *) cmd->payload;
-	struct client_eta *eta = (struct client_eta *) (uintptr_t) cmd->tag;
-
-	client->eta_in_flight = NULL;
-	flist_del_init(&client->eta_list);
-
-	fio_client_sum_jobs_eta(&eta->eta, je);
-	fio_client_dec_jobs_eta(eta, gfio_update_eta);
-}
-
 static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_probe_pdu *probe = (struct cmd_probe_pdu *) cmd->payload;
@@ -365,7 +353,7 @@ struct client_ops gfio_client_ops = {
 	.disk_util		= gfio_disk_util_op,
 	.thread_status		= gfio_thread_status_op,
 	.group_stats		= gfio_group_stats_op,
-	.eta			= gfio_eta_op,
+	.eta			= gfio_update_eta,
 	.probe			= gfio_probe_op,
 	.quit			= gfio_quit_op,
 	.add_job		= gfio_add_job_op,
@@ -655,7 +643,7 @@ static void file_open(GtkWidget *w, gpointer data)
 		ui.job_files[ui.nr_job_files] = strdup(filenames->data);
 		ui.nr_job_files++;
 
-		ui.client = fio_client_add_explicit(host, type, port);
+		ui.client = fio_client_add_explicit(&gfio_client_ops, host, type, port);
 		if (!ui.client) {
 			GError *error;
 
