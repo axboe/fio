@@ -474,8 +474,12 @@ static void show_lat_m(double *io_u_lat_m)
 	show_lat(io_u_lat_m, FIO_IO_U_LAT_M_NR, ranges, "msec");
 }
 
-static void show_latencies(double *io_u_lat_u, double *io_u_lat_m)
+static void show_latencies(struct thread_stat *ts, double *io_u_lat_u,
+			   double *io_u_lat_m)
 {
+	stat_calc_lat_u(ts, io_u_lat_u);
+	stat_calc_lat_m(ts, io_u_lat_m);
+
 	show_lat_u(io_u_lat_u);
 	show_lat_m(io_u_lat_m);
 }
@@ -510,9 +514,7 @@ void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 	if (ts->io_bytes[DDIR_WRITE])
 		show_ddir_status(rs, ts, DDIR_WRITE);
 
-	stat_calc_lat_u(ts, io_u_lat_u);
-	stat_calc_lat_m(ts, io_u_lat_m);
-	show_latencies(io_u_lat_u, io_u_lat_m);
+	show_latencies(ts, io_u_lat_u, io_u_lat_m);
 
 	runtime = ts->total_run_time;
 	if (runtime) {
