@@ -561,6 +561,126 @@ static void gfio_show_latency_buckets(GtkWidget *vbox, struct thread_stat *ts)
 	}
 }
 
+static void gfio_show_cpu_usage(GtkWidget *vbox, struct thread_stat *ts)
+{
+	GtkWidget *box, *frame, *entry;
+	double usr_cpu, sys_cpu;
+	unsigned long runtime;
+	char tmp[32];
+
+	runtime = ts->total_run_time;
+	if (runtime) {
+		double runt = (double) runtime;
+
+		usr_cpu = (double) ts->usr_time * 100 / runt;
+		sys_cpu = (double) ts->sys_time * 100 / runt;
+	} else {
+		usr_cpu = 0;
+		sys_cpu = 0;
+	}
+
+	frame = gtk_frame_new("OS resources");
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+
+	box = gtk_hbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), box);
+
+	entry = new_info_entry_in_frame(box, "User CPU");
+	sprintf(tmp, "%3.2f%%", usr_cpu);
+	gtk_entry_set_text(GTK_ENTRY(entry), tmp);
+	entry = new_info_entry_in_frame(box, "System CPU");
+	sprintf(tmp, "%3.2f%%", sys_cpu);
+	gtk_entry_set_text(GTK_ENTRY(entry), tmp);
+	entry = new_info_entry_in_frame(box, "Context switches");
+	entry_set_int_value(entry, ts->ctx);
+	entry = new_info_entry_in_frame(box, "Major faults");
+	entry_set_int_value(entry, ts->majf);
+	entry = new_info_entry_in_frame(box, "Minor faults");
+	entry_set_int_value(entry, ts->minf);
+}
+
+static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
+{
+	double io_u_dist[FIO_IO_U_MAP_NR];
+	double io_u_dist_s[FIO_IO_U_MAP_NR];
+	double io_u_dist_c[FIO_IO_U_MAP_NR];
+	GtkWidget *frame, *box, *tree_view;
+	GtkTreeSelection *selection;
+	GtkListStore *model;
+	GtkTreeIter iter;
+	GType types[FIO_IO_U_MAP_NR + 1];
+	int i;
+	const char *labels[] = { "Type", "0", "4", "8", "16", "32", "64", ">= 64" };
+
+	stat_calc_dist(ts->io_u_map, ts_total_io_u(ts), io_u_dist);
+	stat_calc_dist(ts->io_u_submit, ts->total_submit, io_u_dist_s);
+	stat_calc_dist(ts->io_u_complete, ts->total_complete, io_u_dist_c);
+
+	frame = gtk_frame_new("IO depths");
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+
+	box = gtk_hbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), box);
+
+	for (i = 0; i < FIO_IO_U_MAP_NR + 1; i++)
+		types[i] = G_TYPE_STRING;
+
+	model = gtk_list_store_newv(FIO_IO_U_MAP_NR + 1, types);
+
+	tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
+	gtk_widget_set_can_focus(tree_view, FALSE);
+
+	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree_view));
+	gtk_tree_selection_set_mode(GTK_TREE_SELECTION(selection), GTK_SELECTION_BROWSE);
+
+	for (i = 0; i < FIO_IO_U_MAP_NR + 1; i++)
+		tree_view_column(tree_view, i, labels[i], ALIGN_RIGHT | UNSORTABLE);
+
+	gtk_list_store_append(model, &iter);
+
+	for (i = 0; i < FIO_IO_U_MAP_NR + 1; i++) {
+		char fbuf[32];
+
+		if (i == 0) {
+			gtk_list_store_set(model, &iter, i, "Total", -1);
+			continue;
+		}
+
+		sprintf(fbuf, "%3.1f%%", io_u_dist[i - 1]);
+		gtk_list_store_set(model, &iter, i, fbuf, -1);
+	}
+
+	gtk_list_store_append(model, &iter);
+
+	for (i = 0; i < FIO_IO_U_MAP_NR + 1; i++) {
+		char fbuf[32];
+
+		if (i == 0) {
+			gtk_list_store_set(model, &iter, i, "Submit", -1);
+			continue;
+		}
+
+		sprintf(fbuf, "%3.1f%%", io_u_dist_s[i - 1]);
+		gtk_list_store_set(model, &iter, i, fbuf, -1);
+	}
+
+	gtk_list_store_append(model, &iter);
+
+	for (i = 0; i < FIO_IO_U_MAP_NR + 1; i++) {
+		char fbuf[32];
+
+		if (i == 0) {
+			gtk_list_store_set(model, &iter, i, "Complete", -1);
+			continue;
+		}
+
+		sprintf(fbuf, "%3.1f%%", io_u_dist_c[i - 1]);
+		gtk_list_store_set(model, &iter, i, fbuf, -1);
+	}
+
+	gtk_box_pack_start(GTK_BOX(box), tree_view, TRUE, FALSE, 3);
+}
+
 static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 			    struct group_run_stats *rs)
 {
@@ -606,9 +726,10 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 		gfio_show_ddir_status(vbox, rs, ts, DDIR_WRITE);
 
 	gfio_show_latency_buckets(vbox, ts);
+	gfio_show_cpu_usage(vbox, ts);
+	gfio_show_io_depths(vbox, ts);
 
 	gtk_widget_show_all(dialog);
-
 	gdk_threads_leave();
 }
 

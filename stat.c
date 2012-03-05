@@ -285,11 +285,7 @@ void show_group_stats(struct group_run_stats *rs)
 	}
 }
 
-#define ts_total_io_u(ts)	\
-	((ts)->total_io_u[0] + (ts)->total_io_u[1])
-
-static void stat_calc_dist(unsigned int *map, unsigned long total,
-			   double *io_u_dist)
+void stat_calc_dist(unsigned int *map, unsigned long total, double *io_u_dist)
 {
 	int i;
 

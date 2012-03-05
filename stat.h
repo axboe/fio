@@ -202,6 +202,9 @@ extern int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max, 
 extern unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr, fio_fp64_t *plist, unsigned int **output, unsigned int *maxv, unsigned int *minv);
 extern void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat);
 extern void stat_calc_lat_u(struct thread_stat *ts, double *io_u_lat);
+extern void stat_calc_dist(unsigned int *map, unsigned long total, double *io_u_dist);
+
+#define ts_total_io_u(ts)	((ts)->total_io_u[0] + (ts)->total_io_u[1])
 
 static inline int usec_to_msec(unsigned long *min, unsigned long *max,
 			       double *mean, double *dev)
