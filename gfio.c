@@ -123,6 +123,7 @@ static GtkWidget *new_info_entry_in_frame(GtkWidget *box, const char *label)
 
 	frame = gtk_frame_new(label);
 	entry = gtk_entry_new();
+	gtk_entry_set_editable(GTK_ENTRY(entry), 0);
 	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
 	gtk_container_add(GTK_CONTAINER(frame), entry);
 
@@ -191,7 +192,7 @@ static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long min,
 			  unsigned long max, double mean, double dev)
 {
 	const char *base = "(usec)";
-	GtkWidget *hbox, *label, *frame, *box;
+	GtkWidget *hbox, *label, *frame;
 	char *minp, *maxp;
 	char tmp[64];
 
@@ -201,17 +202,12 @@ static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long min,
 	minp = num2str(min, 6, 1, 0);
 	maxp = num2str(max, 6, 1, 0);
 
-	printf("adding %s\n", name);
-
 	sprintf(tmp, "%s %s", name, base);
 	frame = gtk_frame_new(tmp);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
 
-	box = gtk_vbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(frame), box);
-
 	hbox = gtk_hbox_new(FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(box), hbox, TRUE, FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), hbox);
 
 	label = new_info_label_in_frame(hbox, "Minimum");
 	gtk_label_set_text(GTK_LABEL(label), minp);
