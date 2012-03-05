@@ -472,6 +472,95 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 	free(iops_p);
 }
 
+static GtkWidget *gfio_output_lat_buckets(double *lat, unsigned int num,
+					  const char **labels)
+{
+	GtkWidget *tree_view;
+	GtkTreeSelection *selection;
+	GtkListStore *model;
+	GtkTreeIter iter;
+	GType *types;
+	int i, skipped;
+
+	/*
+	 * Check if all are empty, in which case don't bother
+	 */
+	for (i = 0, skipped = 0; i < num; i++)
+		if (lat[i] <= 0.0)
+			skipped++;
+
+	if (skipped == num)
+		return NULL;
+
+	types = malloc(num * sizeof(GType));
+
+	for (i = 0; i < num; i++)
+		types[i] = G_TYPE_STRING;
+
+	model = gtk_list_store_newv(num, types);
+	free(types);
+	types = NULL;
+
+	tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
+	gtk_widget_set_can_focus(tree_view, FALSE);
+
+	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree_view));
+	gtk_tree_selection_set_mode(GTK_TREE_SELECTION(selection), GTK_SELECTION_BROWSE);
+
+	for (i = 0; i < num; i++)
+		tree_view_column(tree_view, i, labels[i], ALIGN_RIGHT | UNSORTABLE);
+
+	gtk_list_store_append(model, &iter);
+
+	for (i = 0; i < num; i++) {
+		char fbuf[32];
+
+		if (lat[i] <= 0.0)
+			sprintf(fbuf, "0.00");
+		else
+			sprintf(fbuf, "%3.2f%%", lat[i]);
+
+		gtk_list_store_set(model, &iter, i, fbuf, -1);
+	}
+
+	return tree_view;
+}
+
+static void gfio_show_latency_buckets(GtkWidget *vbox, struct thread_stat *ts)
+{
+	GtkWidget *box, *frame, *tree_view;
+	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
+	double io_u_lat_m[FIO_IO_U_LAT_M_NR];
+	const char *uranges[] = { "2", "4", "10", "20", "50", "100",
+				  "250", "500", "750", "1000", };
+	const char *mranges[] = { "2", "4", "10", "20", "50", "100",
+				  "250", "500", "750", "1000", "2000",
+				  ">= 2000", };
+
+	stat_calc_lat_u(ts, io_u_lat_u);
+	stat_calc_lat_m(ts, io_u_lat_m);
+
+	tree_view = gfio_output_lat_buckets(io_u_lat_u, FIO_IO_U_LAT_U_NR, uranges);
+	if (tree_view) {
+		frame = gtk_frame_new("Latency buckets (usec)");
+		gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+
+		box = gtk_hbox_new(FALSE, 3);
+		gtk_container_add(GTK_CONTAINER(frame), box);
+		gtk_box_pack_start(GTK_BOX(box), tree_view, TRUE, FALSE, 3);
+	}
+
+	tree_view = gfio_output_lat_buckets(io_u_lat_m, FIO_IO_U_LAT_M_NR, mranges);
+	if (tree_view) {
+		frame = gtk_frame_new("Latency buckets (msec)");
+		gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+
+		box = gtk_hbox_new(FALSE, 3);
+		gtk_container_add(GTK_CONTAINER(frame), box);
+		gtk_box_pack_start(GTK_BOX(box), tree_view, TRUE, FALSE, 3);
+	}
+}
+
 static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 			    struct group_run_stats *rs)
 {
@@ -515,6 +604,8 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 		gfio_show_ddir_status(vbox, rs, ts, DDIR_READ);
 	if (ts->io_bytes[DDIR_WRITE])
 		gfio_show_ddir_status(vbox, rs, ts, DDIR_WRITE);
+
+	gfio_show_latency_buckets(vbox, ts);
 
 	gtk_widget_show_all(dialog);
 

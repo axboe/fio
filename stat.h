@@ -200,6 +200,8 @@ extern void init_group_run_stat(struct group_run_stats *gs);
 extern void eta_to_str(char *str, unsigned long eta_sec);
 extern int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max, double *mean, double *dev);
 extern unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr, fio_fp64_t *plist, unsigned int **output, unsigned int *maxv, unsigned int *minv);
+extern void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat);
+extern void stat_calc_lat_u(struct thread_stat *ts, double *io_u_lat);
 
 static inline int usec_to_msec(unsigned long *min, unsigned long *max,
 			       double *mean, double *dev)

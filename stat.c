@@ -327,12 +327,12 @@ static void stat_calc_lat(struct thread_stat *ts, double *dst,
 	}
 }
 
-static void stat_calc_lat_u(struct thread_stat *ts, double *io_u_lat)
+void stat_calc_lat_u(struct thread_stat *ts, double *io_u_lat)
 {
 	stat_calc_lat(ts, io_u_lat, ts->io_u_lat_u, FIO_IO_U_LAT_U_NR);
 }
 
-static void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat)
+void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat)
 {
 	stat_calc_lat(ts, io_u_lat, ts->io_u_lat_m, FIO_IO_U_LAT_M_NR);
 }
