@@ -154,16 +154,18 @@ static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd
 	fio_client_ops.disk_util(client, cmd);
 }
 
-static void gfio_thread_status_op(struct fio_net_cmd *cmd)
+static void gfio_thread_status_op(struct fio_client *client,
+				  struct fio_net_cmd *cmd)
 {
 	printf("gfio_thread_status_op called\n");
-	fio_client_ops.thread_status(cmd);
+	fio_client_ops.thread_status(client, cmd);
 }
 
-static void gfio_group_stats_op(struct fio_net_cmd *cmd)
+static void gfio_group_stats_op(struct fio_client *client,
+				struct fio_net_cmd *cmd)
 {
 	printf("gfio_group_stats_op called\n");
-	fio_client_ops.group_stats(cmd);
+	fio_client_ops.group_stats(client, cmd);
 }
 
 static void gfio_update_eta(struct jobs_eta *je)

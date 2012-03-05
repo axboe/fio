@@ -22,8 +22,8 @@
 #include "hash.h"
 
 static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd);
-static void handle_ts(struct fio_net_cmd *cmd);
-static void handle_gs(struct fio_net_cmd *cmd);
+static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd);
+static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd);
 
@@ -621,7 +621,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 	dst->groupid	= le32_to_cpu(src->groupid);
 }
 
-static void handle_ts(struct fio_net_cmd *cmd)
+static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_ts_pdu *p = (struct cmd_ts_pdu *) cmd->payload;
 
@@ -642,7 +642,7 @@ static void handle_ts(struct fio_net_cmd *cmd)
 	}
 }
 
-static void handle_gs(struct fio_net_cmd *cmd)
+static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct group_run_stats *gs = (struct group_run_stats *) cmd->payload;
 
@@ -899,7 +899,7 @@ int fio_handle_client(struct fio_client *client)
 		convert_ts(&p->ts, &p->ts);
 		convert_gs(&p->rs, &p->rs);
 
-		ops->thread_status(cmd);
+		ops->thread_status(client, cmd);
 		free(cmd);
 		break;
 		}
@@ -908,7 +908,7 @@ int fio_handle_client(struct fio_client *client)
 
 		convert_gs(gs, gs);
 
-		ops->group_stats(cmd);
+		ops->group_stats(client, cmd);
 		free(cmd);
 		break;
 		}

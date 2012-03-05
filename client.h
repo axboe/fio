@@ -50,8 +50,8 @@ struct fio_client {
 
 typedef void (*client_text_op_func)(struct fio_client *client, struct fio_net_cmd *cmd);
 typedef void (*client_disk_util_op_func)(struct fio_client *client, struct fio_net_cmd *cmd);
-typedef void (*client_thread_status_op)(struct fio_net_cmd *cmd);
-typedef void (*client_group_stats_op)(struct fio_net_cmd *cmd);
+typedef void (*client_thread_status_op)(struct fio_client *client, struct fio_net_cmd *cmd);
+typedef void (*client_group_stats_op)(struct fio_client *client, struct fio_net_cmd *cmd);
 typedef void (*client_eta_op)(struct jobs_eta *je);
 typedef void (*client_probe_op)(struct fio_client *client, struct fio_net_cmd *cmd);
 typedef void (*client_thread_status_display_op)(char *status_message, double perc);
