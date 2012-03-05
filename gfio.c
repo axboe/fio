@@ -188,6 +188,132 @@ static void entry_set_int_value(GtkWidget *entry, unsigned int val)
 	gtk_entry_set_text(GTK_ENTRY(entry), tmp);
 }
 
+#define ALIGN_LEFT 1
+#define ALIGN_RIGHT 2
+#define INVISIBLE 4
+#define UNSORTABLE 8
+
+GtkTreeViewColumn *tree_view_column(GtkWidget *tree_view, int index, const char *title, unsigned int flags)
+{
+	GtkCellRenderer *renderer;
+	GtkTreeViewColumn *col;
+	double xalign = 0.0; /* left as default */
+	PangoAlignment align;
+	gboolean visible;
+
+	align = (flags & ALIGN_LEFT) ? PANGO_ALIGN_LEFT :
+		(flags & ALIGN_RIGHT) ? PANGO_ALIGN_RIGHT :
+		PANGO_ALIGN_CENTER;
+	visible = !(flags & INVISIBLE);
+
+	renderer = gtk_cell_renderer_text_new();
+	col = gtk_tree_view_column_new();
+
+	gtk_tree_view_column_set_title(col, title);
+	if (!(flags & UNSORTABLE))
+		gtk_tree_view_column_set_sort_column_id(col, index);
+	gtk_tree_view_column_set_resizable(col, TRUE);
+	gtk_tree_view_column_pack_start(col, renderer, TRUE);
+	gtk_tree_view_column_add_attribute(col, renderer, "text", index);
+	gtk_object_set(GTK_OBJECT(renderer), "alignment", align, NULL);
+	switch (align) {
+	case PANGO_ALIGN_LEFT:
+		xalign = 0.0;
+		break;
+	case PANGO_ALIGN_CENTER:
+		xalign = 0.5;
+		break;
+	case PANGO_ALIGN_RIGHT:
+		xalign = 1.0;
+		break;
+	}
+	gtk_cell_renderer_set_alignment(GTK_CELL_RENDERER(renderer), xalign, 0.5);
+	gtk_tree_view_column_set_visible(col, visible);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(tree_view), col);
+	return col;
+}
+
+static GtkWidget *gfio_output_clat_percentiles(unsigned int *ovals,
+					       fio_fp64_t *plist,
+					       unsigned int len,
+					       const char *base,
+					       unsigned int scale)
+{
+	GType types[FIO_IO_U_LIST_MAX_LEN];
+	GtkWidget *tree_view;
+	GtkTreeSelection *selection;
+	GtkListStore *model;
+	GtkTreeIter iter;
+	int i;
+
+	for (i = 0; i < len; i++)
+		types[i] = G_TYPE_INT;
+
+	model = gtk_list_store_newv(len, types);
+
+	tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
+	gtk_widget_set_can_focus(tree_view, FALSE);
+
+	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree_view));
+	gtk_tree_selection_set_mode(GTK_TREE_SELECTION(selection), GTK_SELECTION_BROWSE);
+
+	for (i = 0; i < len; i++) {
+		char fbuf[8];
+
+		sprintf(fbuf, "%2.2f%%", plist[i].u.f);
+		tree_view_column(tree_view, i, fbuf, ALIGN_RIGHT | UNSORTABLE);
+	}
+
+	gtk_list_store_append(model, &iter);
+
+	for (i = 0; i < len; i++)
+		gtk_list_store_set(model, &iter, i, ovals[i], -1);
+
+	return tree_view;
+}
+
+static void gfio_show_clat_percentiles(GtkWidget *vbox, struct thread_stat *ts,
+				       int ddir)
+{
+	unsigned int *io_u_plat = ts->io_u_plat[ddir];
+	unsigned long nr = ts->clat_stat[ddir].samples;
+	fio_fp64_t *plist = ts->percentile_list;
+	unsigned int *ovals, len, minv, maxv, scale_down;
+	const char *base;
+	GtkWidget *tree_view, *frame, *hbox;
+	char tmp[64];
+
+	len = calc_clat_percentiles(io_u_plat, nr, plist, &ovals, &maxv, &minv);
+	if (!len)
+		goto out;
+
+	/*
+	 * We default to usecs, but if the value range is such that we
+	 * should scale down to msecs, do that.
+	 */
+	if (minv > 2000 && maxv > 99999) {
+		scale_down = 1;
+		base = "msec";
+	} else {
+		scale_down = 0;
+		base = "usec";
+	}
+
+	tree_view = gfio_output_clat_percentiles(ovals, plist, len, base, scale_down);
+
+	sprintf(tmp, "Completion percentiles (%s)", base);
+	frame = gtk_frame_new(tmp);
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+
+	hbox = gtk_hbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), hbox);
+
+	gtk_box_pack_start(GTK_BOX(hbox), tree_view, TRUE, FALSE, 3);
+out:
+	if (ovals)
+		free(ovals);
+}
+
 static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long min,
 			  unsigned long max, double mean, double dev)
 {
@@ -282,6 +408,8 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 		gfio_show_lat(vbox, "Completion latency", min, max, mean, dev);
 	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
 		gfio_show_lat(vbox, "Total latency", min, max, mean, dev);
+	if (ts->clat_percentiles)
+		gfio_show_clat_percentiles(vbox, ts, ddir);
 
 	free(io_p);
 	free(bw_p);

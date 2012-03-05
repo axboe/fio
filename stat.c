@@ -114,11 +114,9 @@ static int double_cmp(const void *a, const void *b)
 	return cmp;
 }
 
-static unsigned int calc_clat_percentiles(unsigned int *io_u_plat,
-					  unsigned long nr, fio_fp64_t *plist,
-					  unsigned int **output,
-					  unsigned int *maxv,
-					  unsigned int *minv)
+unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
+				   fio_fp64_t *plist, unsigned int **output,
+				   unsigned int *maxv, unsigned int *minv)
 {
 	unsigned long sum = 0;
 	unsigned int len, i, j = 0;
