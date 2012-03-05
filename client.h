@@ -23,6 +23,7 @@ struct fio_client {
 	char *hostname;
 	int port;
 	int fd;
+	unsigned int refs;
 
 	char *name;
 
