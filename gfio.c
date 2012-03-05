@@ -105,16 +105,16 @@ static void clear_ui_info(struct gui *ui)
 	gtk_label_set_text(GTK_LABEL(ui->probe.os), "");
 	gtk_label_set_text(GTK_LABEL(ui->probe.arch), "");
 	gtk_label_set_text(GTK_LABEL(ui->probe.fio_ver), "");
-	gtk_label_set_text(GTK_LABEL(ui->eta.name), "");
-	gtk_label_set_text(GTK_LABEL(ui->eta.iotype), "");
-	gtk_label_set_text(GTK_LABEL(ui->eta.ioengine), "");
-	gtk_label_set_text(GTK_LABEL(ui->eta.iodepth), "");
-	gtk_label_set_text(GTK_LABEL(ui->eta.jobs), "");
-	gtk_label_set_text(GTK_LABEL(ui->eta.files), "");
-	gtk_label_set_text(GTK_LABEL(ui->eta.read_bw), "");
-	gtk_label_set_text(GTK_LABEL(ui->eta.read_iops), "");
-	gtk_label_set_text(GTK_LABEL(ui->eta.write_bw), "");
-	gtk_label_set_text(GTK_LABEL(ui->eta.write_iops), "");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.name), "");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.iotype), "");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.ioengine), "");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.iodepth), "");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.jobs), "");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.files), "");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.read_bw), "");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.read_iops), "");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.write_bw), "");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.write_iops), "");
 }
 
 static GtkWidget *new_info_entry_in_frame(GtkWidget *box, const char *label)
@@ -351,6 +351,10 @@ static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long min,
 
 }
 
+#define GFIO_CLAT	1
+#define GFIO_SLAT	2
+#define GFIO_LAT	4
+
 static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 				  struct thread_stat *ts, int ddir)
 {
@@ -358,6 +362,7 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 	GtkWidget *frame, *label, *box, *vbox;
 	unsigned long min, max, runt;
 	unsigned long long bw, iops;
+	unsigned int flags = 0;
 	double mean, dev;
 	char *io_p, *bw_p, *iops_p;
 	int i2p;
@@ -396,20 +401,72 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 	label = new_info_label_in_frame(box, "Runtime (msec)");
 	label_set_int_value(label, ts->runtime[ddir]);
 
-	frame = gtk_frame_new("Latency");
-	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
-
-	vbox = gtk_vbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(frame), vbox);
-
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
-		gfio_show_lat(vbox, "Submission latency", min, max, mean, dev);
+		flags |= GFIO_SLAT;
 	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
-		gfio_show_lat(vbox, "Completion latency", min, max, mean, dev);
+		flags |= GFIO_CLAT;
 	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
-		gfio_show_lat(vbox, "Total latency", min, max, mean, dev);
+		flags |= GFIO_LAT;
+
+	if (flags) {
+		frame = gtk_frame_new("Latency");
+		gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+
+		vbox = gtk_vbox_new(FALSE, 3);
+		gtk_container_add(GTK_CONTAINER(frame), vbox);
+
+		if (flags & GFIO_SLAT)
+			gfio_show_lat(vbox, "Submission latency", min, max, mean, dev);
+		if (flags & GFIO_CLAT)
+			gfio_show_lat(vbox, "Completion latency", min, max, mean, dev);
+		if (flags & GFIO_LAT)
+			gfio_show_lat(vbox, "Total latency", min, max, mean, dev);
+	}
+
 	if (ts->clat_percentiles)
 		gfio_show_clat_percentiles(vbox, ts, ddir);
+
+	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
+		double p_of_agg = 100.0;
+		const char *bw_str = "KB";
+		char tmp[32];
+
+		if (rs->agg[ddir]) {
+			p_of_agg = mean * 100 / (double) rs->agg[ddir];
+			if (p_of_agg > 100.0)
+				p_of_agg = 100.0;
+		}
+
+		if (mean > 999999.9) {
+			min /= 1000.0;
+			max /= 1000.0;
+			mean /= 1000.0;
+			dev /= 1000.0;
+			bw_str = "MB";
+		}
+
+		frame = gtk_frame_new("Bandwidth");
+		gtk_box_pack_start(GTK_BOX(box), frame, FALSE, FALSE, 5);
+
+		vbox = gtk_vbox_new(FALSE, 3);
+		gtk_container_add(GTK_CONTAINER(frame), vbox);
+
+		label = new_info_label_in_frame(vbox, "Bandwidth");
+		gtk_label_set_text(GTK_LABEL(label), bw_str);
+		label = new_info_label_in_frame(vbox, "Minimum");
+		label_set_int_value(label, min);
+		label = new_info_label_in_frame(vbox, "Maximum");
+		label_set_int_value(label, max);
+		label = new_info_label_in_frame(vbox, "Percentage of jobs");
+		sprintf(tmp, "%3.2f%%", p_of_agg);
+		gtk_label_set_text(GTK_LABEL(label), tmp);
+		label = new_info_label_in_frame(vbox, "Average");
+		sprintf(tmp, "%5.02f", mean);
+		gtk_label_set_text(GTK_LABEL(label), tmp);
+		label = new_info_label_in_frame(vbox, "Standard deviation");
+		sprintf(tmp, "%5.02f", dev);
+		gtk_label_set_text(GTK_LABEL(label), tmp);
+	}
 
 	free(io_p);
 	free(bw_p);
@@ -542,9 +599,9 @@ static void gfio_update_eta(struct jobs_eta *je)
 	}
 
 	sprintf(tmp, "%u", je->nr_running);
-	gtk_label_set_text(GTK_LABEL(ui.eta.jobs), tmp);
+	gtk_entry_set_text(GTK_ENTRY(ui.eta.jobs), tmp);
 	sprintf(tmp, "%u", je->files_open);
-	gtk_label_set_text(GTK_LABEL(ui.eta.files), tmp);
+	gtk_entry_set_text(GTK_ENTRY(ui.eta.files), tmp);
 
 #if 0
 	if (je->m_rate[0] || je->m_rate[1] || je->t_rate[0] || je->t_rate[1]) {
@@ -553,17 +610,17 @@ static void gfio_update_eta(struct jobs_eta *je)
 
 		mr = num2str(je->m_rate, 4, 0, i2p);
 		tr = num2str(je->t_rate, 4, 0, i2p);
-		gtk_label_set_text(GTK_LABEL(ui.eta.
+		gtk_entry_set_text(GTK_ENTRY(ui.eta);
 		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
 		free(tr);
 		free(mr);
 	} else if (je->m_iops || je->t_iops)
 		p += sprintf(p, ", CR=%d/%d IOPS", je->t_iops, je->m_iops);
 
-	gtk_label_set_text(GTK_LABEL(ui.eta.cr_bw), "---");
-	gtk_label_set_text(GTK_LABEL(ui.eta.cr_iops), "---");
-	gtk_label_set_text(GTK_LABEL(ui.eta.cw_bw), "---");
-	gtk_label_set_text(GTK_LABEL(ui.eta.cw_iops), "---");
+	gtk_entry_set_text(GTK_ENTRY(ui.eta.cr_bw), "---");
+	gtk_entry_set_text(GTK_ENTRY(ui.eta.cr_iops), "---");
+	gtk_entry_set_text(GTK_ENTRY(ui.eta.cw_bw), "---");
+	gtk_entry_set_text(GTK_ENTRY(ui.eta.cw_iops), "---");
 #endif
 
 	if (je->eta_sec != INT_MAX && je->nr_running) {
@@ -584,10 +641,10 @@ static void gfio_update_eta(struct jobs_eta *je)
 		iops_str[0] = num2str(je->iops[0], 4, 1, 0);
 		iops_str[1] = num2str(je->iops[1], 4, 1, 0);
 
-		gtk_label_set_text(GTK_LABEL(ui.eta.read_bw), rate_str[0]);
-		gtk_label_set_text(GTK_LABEL(ui.eta.read_iops), iops_str[0]);
-		gtk_label_set_text(GTK_LABEL(ui.eta.write_bw), rate_str[1]);
-		gtk_label_set_text(GTK_LABEL(ui.eta.write_iops), iops_str[1]);
+		gtk_entry_set_text(GTK_ENTRY(ui.eta.read_bw), rate_str[0]);
+		gtk_entry_set_text(GTK_ENTRY(ui.eta.read_iops), iops_str[0]);
+		gtk_entry_set_text(GTK_ENTRY(ui.eta.write_bw), rate_str[1]);
+		gtk_entry_set_text(GTK_ENTRY(ui.eta.write_iops), iops_str[1]);
 
 		free(rate_str[0]);
 		free(rate_str[1]);
@@ -668,12 +725,12 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	p->numjobs		= le32_to_cpu(p->numjobs);
 	p->group_reporting	= le32_to_cpu(p->group_reporting);
 
-	gtk_label_set_text(GTK_LABEL(ui->eta.name), (gchar *) p->jobname);
-	gtk_label_set_text(GTK_LABEL(ui->eta.iotype), ddir_str(p->rw));
-	gtk_label_set_text(GTK_LABEL(ui->eta.ioengine), (gchar *) p->ioengine);
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.name), (gchar *) p->jobname);
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.iotype), ddir_str(p->rw));
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.ioengine), (gchar *) p->ioengine);
 
 	sprintf(tmp, "%u", p->iodepth);
-	gtk_label_set_text(GTK_LABEL(ui->eta.iodepth), tmp);
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.iodepth), tmp);
 }
 
 static void gfio_client_timed_out(struct fio_client *client)
@@ -1181,19 +1238,19 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	probe_box = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
 
-	ui->eta.name = new_info_label_in_frame(probe_box, "Name");
-	ui->eta.iotype = new_info_label_in_frame(probe_box, "IO");
-	ui->eta.ioengine = new_info_label_in_frame(probe_box, "IO Engine");
-	ui->eta.iodepth = new_info_label_in_frame(probe_box, "IO Depth");
-	ui->eta.jobs = new_info_label_in_frame(probe_box, "Jobs");
-	ui->eta.files = new_info_label_in_frame(probe_box, "Open files");
+	ui->eta.name = new_info_entry_in_frame(probe_box, "Name");
+	ui->eta.iotype = new_info_entry_in_frame(probe_box, "IO");
+	ui->eta.ioengine = new_info_entry_in_frame(probe_box, "IO Engine");
+	ui->eta.iodepth = new_info_entry_in_frame(probe_box, "IO Depth");
+	ui->eta.jobs = new_info_entry_in_frame(probe_box, "Jobs");
+	ui->eta.files = new_info_entry_in_frame(probe_box, "Open files");
 
 	probe_box = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
-	ui->eta.read_bw = new_info_label_in_frame(probe_box, "Read BW");
-	ui->eta.read_iops = new_info_label_in_frame(probe_box, "IOPS");
-	ui->eta.write_bw = new_info_label_in_frame(probe_box, "Write BW");
-	ui->eta.write_iops = new_info_label_in_frame(probe_box, "IOPS");
+	ui->eta.read_bw = new_info_entry_in_frame(probe_box, "Read BW");
+	ui->eta.read_iops = new_info_entry_in_frame(probe_box, "IOPS");
+	ui->eta.write_bw = new_info_entry_in_frame(probe_box, "Write BW");
+	ui->eta.write_iops = new_info_entry_in_frame(probe_box, "IOPS");
 
 	/*
 	 * Only add this if we have a commit rate
