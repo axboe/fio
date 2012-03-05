@@ -359,7 +359,7 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 				  struct thread_stat *ts, int ddir)
 {
 	const char *ddir_label[2] = { "Read", "Write" };
-	GtkWidget *frame, *label, *box, *vbox;
+	GtkWidget *frame, *label, *box, *vbox, *main_vbox;
 	unsigned long min, max, runt;
 	unsigned long long bw, iops;
 	unsigned int flags = 0;
@@ -386,11 +386,11 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 	frame = gtk_frame_new(ddir_label[ddir]);
 	gtk_box_pack_start(GTK_BOX(box), frame, FALSE, FALSE, 5);
 
-	vbox = gtk_vbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(frame), vbox);
+	main_vbox = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), main_vbox);
 
 	box = gtk_hbox_new(FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), box, TRUE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(main_vbox), box, TRUE, FALSE, 3);
 
 	label = new_info_label_in_frame(box, "IO");
 	gtk_label_set_text(GTK_LABEL(label), io_p);
@@ -410,7 +410,7 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 
 	if (flags) {
 		frame = gtk_frame_new("Latency");
-		gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+		gtk_box_pack_start(GTK_BOX(main_vbox), frame, FALSE, FALSE, 5);
 
 		vbox = gtk_vbox_new(FALSE, 3);
 		gtk_container_add(GTK_CONTAINER(frame), vbox);
@@ -424,7 +424,7 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 	}
 
 	if (ts->clat_percentiles)
-		gfio_show_clat_percentiles(vbox, ts, ddir);
+		gfio_show_clat_percentiles(main_vbox, ts, ddir);
 
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg = 100.0;
@@ -445,25 +445,24 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 			bw_str = "MB";
 		}
 
-		frame = gtk_frame_new("Bandwidth");
-		gtk_box_pack_start(GTK_BOX(box), frame, FALSE, FALSE, 5);
+		sprintf(tmp, "Bandwidth (%s)", bw_str);
+		frame = gtk_frame_new(tmp);
+		gtk_box_pack_start(GTK_BOX(main_vbox), frame, FALSE, FALSE, 5);
 
-		vbox = gtk_vbox_new(FALSE, 3);
-		gtk_container_add(GTK_CONTAINER(frame), vbox);
+		box = gtk_hbox_new(FALSE, 3);
+		gtk_container_add(GTK_CONTAINER(frame), box);
 
-		label = new_info_label_in_frame(vbox, "Bandwidth");
-		gtk_label_set_text(GTK_LABEL(label), bw_str);
-		label = new_info_label_in_frame(vbox, "Minimum");
+		label = new_info_label_in_frame(box, "Minimum");
 		label_set_int_value(label, min);
-		label = new_info_label_in_frame(vbox, "Maximum");
+		label = new_info_label_in_frame(box, "Maximum");
 		label_set_int_value(label, max);
-		label = new_info_label_in_frame(vbox, "Percentage of jobs");
+		label = new_info_label_in_frame(box, "Percentage of jobs");
 		sprintf(tmp, "%3.2f%%", p_of_agg);
 		gtk_label_set_text(GTK_LABEL(label), tmp);
-		label = new_info_label_in_frame(vbox, "Average");
+		label = new_info_label_in_frame(box, "Average");
 		sprintf(tmp, "%5.02f", mean);
 		gtk_label_set_text(GTK_LABEL(label), tmp);
-		label = new_info_label_in_frame(vbox, "Standard deviation");
+		label = new_info_label_in_frame(box, "Standard deviation");
 		sprintf(tmp, "%5.02f", dev);
 		gtk_label_set_text(GTK_LABEL(label), tmp);
 	}
