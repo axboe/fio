@@ -117,6 +117,47 @@ static void clear_ui_info(struct gui *ui)
 	gtk_label_set_text(GTK_LABEL(ui->eta.write_iops), "");
 }
 
+static GtkWidget *new_info_entry_in_frame(GtkWidget *box, const char *label)
+{
+	GtkWidget *entry, *frame;
+
+	frame = gtk_frame_new(label);
+	entry = gtk_entry_new();
+	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), entry);
+
+	return entry;
+}
+
+static GtkWidget *new_info_label_in_frame(GtkWidget *box, const char *label)
+{
+	GtkWidget *label_widget;
+	GtkWidget *frame;
+
+	frame = gtk_frame_new(label);
+	label_widget = gtk_label_new(NULL);
+	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), label_widget);
+
+	return label_widget;
+}
+
+static GtkWidget *create_spinbutton(GtkWidget *hbox, double min, double max, double defval)
+{
+	GtkWidget *button, *box;
+
+	box = gtk_hbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(hbox), box);
+
+	button = gtk_spin_button_new_with_range(min, max, 1.0);
+	gtk_box_pack_start(GTK_BOX(box), button, TRUE, TRUE, 0);
+
+	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(button), GTK_UPDATE_IF_VALID);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(button), defval);
+
+	return button;
+}
+
 static void gfio_set_connected(struct gui *ui, int connected)
 {
 	if (connected) {
@@ -128,6 +169,176 @@ static void gfio_set_connected(struct gui *ui, int connected)
 		gtk_button_set_label(GTK_BUTTON(ui->button[CONNECT_BUTTON]), "Connect");
 		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 0);
 	}
+}
+
+static void label_set_int_value(GtkWidget *entry, unsigned int val)
+{
+	char tmp[80];
+
+	sprintf(tmp, "%u", val);
+	gtk_label_set_text(GTK_LABEL(entry), tmp);
+}
+
+static void entry_set_int_value(GtkWidget *entry, unsigned int val)
+{
+	char tmp[80];
+
+	sprintf(tmp, "%u", val);
+	gtk_entry_set_text(GTK_ENTRY(entry), tmp);
+}
+
+static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long min,
+			  unsigned long max, double mean, double dev)
+{
+	const char *base = "(usec)";
+	GtkWidget *hbox, *label, *frame, *box;
+	char *minp, *maxp;
+	char tmp[64];
+
+	if (!usec_to_msec(&min, &max, &mean, &dev))
+		base = "(msec)";
+
+	minp = num2str(min, 6, 1, 0);
+	maxp = num2str(max, 6, 1, 0);
+
+	printf("adding %s\n", name);
+
+	sprintf(tmp, "%s %s", name, base);
+	frame = gtk_frame_new(tmp);
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+
+	box = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), box);
+
+	hbox = gtk_hbox_new(FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(box), hbox, TRUE, FALSE, 3);
+
+	label = new_info_label_in_frame(hbox, "Minimum");
+	gtk_label_set_text(GTK_LABEL(label), minp);
+	label = new_info_label_in_frame(hbox, "Maximum");
+	gtk_label_set_text(GTK_LABEL(label), maxp);
+	label = new_info_label_in_frame(hbox, "Average");
+	sprintf(tmp, "%5.02f", mean);
+	gtk_label_set_text(GTK_LABEL(label), tmp);
+	label = new_info_label_in_frame(hbox, "Standard deviation");
+	sprintf(tmp, "%5.02f", dev);
+	gtk_label_set_text(GTK_LABEL(label), tmp);
+
+	free(minp);
+	free(maxp);
+
+}
+
+static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
+				  struct thread_stat *ts, int ddir)
+{
+	const char *ddir_label[2] = { "Read", "Write" };
+	GtkWidget *frame, *label, *box, *vbox;
+	unsigned long min, max, runt;
+	unsigned long long bw, iops;
+	double mean, dev;
+	char *io_p, *bw_p, *iops_p;
+	int i2p;
+
+	if (!ts->runtime[ddir])
+		return;
+
+	i2p = is_power_of_2(rs->kb_base);
+	runt = ts->runtime[ddir];
+
+	bw = (1000 * ts->io_bytes[ddir]) / runt;
+	io_p = num2str(ts->io_bytes[ddir], 6, 1, i2p);
+	bw_p = num2str(bw, 6, 1, i2p);
+
+	iops = (1000 * (uint64_t)ts->total_io_u[ddir]) / runt;
+	iops_p = num2str(iops, 6, 1, 0);
+
+	box = gtk_hbox_new(FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(mbox), box, TRUE, FALSE, 3);
+
+	frame = gtk_frame_new(ddir_label[ddir]);
+	gtk_box_pack_start(GTK_BOX(box), frame, FALSE, FALSE, 5);
+
+	vbox = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), vbox);
+
+	box = gtk_hbox_new(FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(vbox), box, TRUE, FALSE, 3);
+
+	label = new_info_label_in_frame(box, "IO");
+	gtk_label_set_text(GTK_LABEL(label), io_p);
+	label = new_info_label_in_frame(box, "Bandwidth");
+	gtk_label_set_text(GTK_LABEL(label), bw_p);
+	label = new_info_label_in_frame(box, "IOPS");
+	gtk_label_set_text(GTK_LABEL(label), iops_p);
+	label = new_info_label_in_frame(box, "Runtime (msec)");
+	label_set_int_value(label, ts->runtime[ddir]);
+
+	frame = gtk_frame_new("Latency");
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+
+	vbox = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), vbox);
+
+	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
+		gfio_show_lat(vbox, "Submission latency", min, max, mean, dev);
+	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
+		gfio_show_lat(vbox, "Completion latency", min, max, mean, dev);
+	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
+		gfio_show_lat(vbox, "Total latency", min, max, mean, dev);
+
+	free(io_p);
+	free(bw_p);
+	free(iops_p);
+}
+
+static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
+			    struct group_run_stats *rs)
+{
+	GtkWidget *dialog, *box, *vbox, *entry, *content;
+	struct gui *ui = client->client_data;
+
+	gdk_threads_enter();
+
+	dialog = gtk_dialog_new_with_buttons("Results", GTK_WINDOW(ui->window),
+			GTK_DIALOG_DESTROY_WITH_PARENT,
+			GTK_STOCK_OK, GTK_RESPONSE_ACCEPT, NULL);
+
+	g_signal_connect_swapped(dialog, "response",
+                             G_CALLBACK(gtk_widget_destroy),
+                             dialog);
+
+	content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+
+	vbox = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(content), vbox);
+
+	box = gtk_hbox_new(TRUE, 3);
+	gtk_box_pack_start(GTK_BOX(vbox), box, FALSE, FALSE, 5);
+
+	entry = new_info_entry_in_frame(box, "Name");
+	gtk_entry_set_text(GTK_ENTRY(entry), ts->name);
+	if (strlen(ts->description)) {
+		entry = new_info_entry_in_frame(box, "Description");
+		gtk_entry_set_text(GTK_ENTRY(entry), ts->description);
+	}
+	entry = new_info_entry_in_frame(box, "Group ID");
+	entry_set_int_value(entry, ts->groupid);
+	entry = new_info_entry_in_frame(box, "Jobs");
+	entry_set_int_value(entry, ts->members);
+	entry = new_info_entry_in_frame(box, "Error");
+	entry_set_int_value(entry, ts->error);
+	entry = new_info_entry_in_frame(box, "PID");
+	entry_set_int_value(entry, ts->pid);
+
+	if (ts->io_bytes[DDIR_READ])
+		gfio_show_ddir_status(vbox, rs, ts, DDIR_READ);
+	if (ts->io_bytes[DDIR_WRITE])
+		gfio_show_ddir_status(vbox, rs, ts, DDIR_WRITE);
+
+	gtk_widget_show_all(dialog);
+
+	gdk_threads_leave();
 }
 
 static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -154,11 +365,32 @@ static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd
 	fio_client_ops.disk_util(client, cmd);
 }
 
+extern int sum_stat_clients;
+extern struct thread_stat client_ts;
+extern struct group_run_stats client_gs;
+
+static int sum_stat_nr;
+
 static void gfio_thread_status_op(struct fio_client *client,
 				  struct fio_net_cmd *cmd)
 {
-	printf("gfio_thread_status_op called\n");
-	fio_client_ops.thread_status(client, cmd);
+	struct cmd_ts_pdu *p = (struct cmd_ts_pdu *) cmd->payload;
+
+	gfio_display_ts(client, &p->ts, &p->rs);
+
+	if (sum_stat_clients == 1)
+		return;
+
+	sum_thread_stats(&client_ts, &p->ts, sum_stat_nr);
+	sum_group_stats(&client_gs, &p->rs);
+
+	client_ts.members++;
+	client_ts.groupid = p->ts.groupid;
+
+	if (++sum_stat_nr == sum_stat_clients) {
+		strcpy(client_ts.name, "All clients");
+		gfio_display_ts(client, &client_ts, &client_gs);
+	}
 }
 
 static void gfio_group_stats_op(struct fio_client *client,
@@ -403,35 +635,6 @@ static void start_job_thread(struct gui *ui)
 		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
 		return;
 	}
-}
-
-static GtkWidget *new_info_label_in_frame(GtkWidget *box, const char *label)
-{
-	GtkWidget *label_widget;
-	GtkWidget *frame;
-
-	frame = gtk_frame_new(label);
-	label_widget = gtk_label_new(NULL);
-	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
-	gtk_container_add(GTK_CONTAINER(frame), label_widget);
-
-	return label_widget;
-}
-
-static GtkWidget *create_spinbutton(GtkWidget *hbox, double min, double max, double defval)
-{
-	GtkWidget *button, *box;
-
-	box = gtk_hbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(hbox), box);
-
-	button = gtk_spin_button_new_with_range(min, max, 1.0);
-	gtk_box_pack_start(GTK_BOX(box), button, TRUE, TRUE, 0);
-
-	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(button), GTK_UPDATE_IF_VALID);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(button), defval);
-
-	return button;
 }
 
 static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,

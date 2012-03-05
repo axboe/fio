@@ -52,9 +52,10 @@ static FLIST_HEAD(eta_list);
 
 static FLIST_HEAD(arg_list);
 
-static struct thread_stat client_ts;
-static struct group_run_stats client_gs;
-static int sum_stat_clients;
+struct thread_stat client_ts;
+struct group_run_stats client_gs;
+int sum_stat_clients;
+
 static int sum_stat_nr;
 
 #define FIO_CLIENT_HASH_BITS	7
