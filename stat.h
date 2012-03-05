@@ -198,5 +198,20 @@ extern void sum_group_stats(struct group_run_stats *dst, struct group_run_stats 
 extern void init_thread_stat(struct thread_stat *ts);
 extern void init_group_run_stat(struct group_run_stats *gs);
 extern void eta_to_str(char *str, unsigned long eta_sec);
+extern int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max, double *mean, double *dev);
+
+static inline int usec_to_msec(unsigned long *min, unsigned long *max,
+			       double *mean, double *dev)
+{
+	if (*min > 1000 && *max > 1000 && *mean > 1000.0 && *dev > 1000.0) {
+		*min /= 1000;
+		*max /= 1000;
+		*mean /= 1000.0;
+		*dev /= 1000.0;
+		return 0;
+	}
+
+	return 1;
+}
 
 #endif

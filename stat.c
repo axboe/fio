@@ -234,8 +234,8 @@ out:
 		free(ovals);
 }
 
-static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
-		    double *mean, double *dev)
+int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
+	     double *mean, double *dev)
 {
 	double n = is->samples;
 
@@ -339,18 +339,23 @@ static void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat)
 	stat_calc_lat(ts, io_u_lat, ts->io_u_lat_m, FIO_IO_U_LAT_M_NR);
 }
 
-static int usec_to_msec(unsigned long *min, unsigned long *max, double *mean,
-			double *dev)
+static void display_lat(const char *name, unsigned long min, unsigned long max,
+			double mean, double dev)
 {
-	if (*min > 1000 && *max > 1000 && *mean > 1000.0 && *dev > 1000.0) {
-		*min /= 1000;
-		*max /= 1000;
-		*mean /= 1000.0;
-		*dev /= 1000.0;
-		return 0;
-	}
+	const char *base = "(usec)";
+	char *minp, *maxp;
 
-	return 1;
+	if (!usec_to_msec(&min, &max, &mean, &dev))
+		base = "(msec)";
+
+	minp = num2str(min, 6, 1, 0);
+	maxp = num2str(max, 6, 1, 0);
+
+	log_info("    %s %s: min=%s, max=%s, avg=%5.02f,"
+		 " stdev=%5.02f\n", name, base, minp, maxp, mean, dev);
+
+	free(minp);
+	free(maxp);
 }
 
 static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
@@ -386,54 +391,13 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	free(bw_p);
 	free(iops_p);
 
-	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev)) {
-		const char *base = "(usec)";
-		char *minp, *maxp;
+	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
+		display_lat("slat", min, max, mean, dev);
+	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
+		display_lat("clat", min, max, mean, dev);
+	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
+		display_lat(" lat", min, max, mean, dev);
 
-		if (!usec_to_msec(&min, &max, &mean, &dev))
-			base = "(msec)";
-
-		minp = num2str(min, 6, 1, 0);
-		maxp = num2str(max, 6, 1, 0);
-
-		log_info("    slat %s: min=%s, max=%s, avg=%5.02f,"
-			 " stdev=%5.02f\n", base, minp, maxp, mean, dev);
-
-		free(minp);
-		free(maxp);
-	}
-	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev)) {
-		const char *base = "(usec)";
-		char *minp, *maxp;
-
-		if (!usec_to_msec(&min, &max, &mean, &dev))
-			base = "(msec)";
-
-		minp = num2str(min, 6, 1, 0);
-		maxp = num2str(max, 6, 1, 0);
-
-		log_info("    clat %s: min=%s, max=%s, avg=%5.02f,"
-			 " stdev=%5.02f\n", base, minp, maxp, mean, dev);
-
-		free(minp);
-		free(maxp);
-	}
-	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev)) {
-		const char *base = "(usec)";
-		char *minp, *maxp;
-
-		if (!usec_to_msec(&min, &max, &mean, &dev))
-			base = "(msec)";
-
-		minp = num2str(min, 6, 1, 0);
-		maxp = num2str(max, 6, 1, 0);
-
-		log_info("     lat %s: min=%s, max=%s, avg=%5.02f,"
-			 " stdev=%5.02f\n", base, minp, maxp, mean, dev);
-
-		free(minp);
-		free(maxp);
-	}
 	if (ts->clat_percentiles) {
 		show_clat_percentiles(ts->io_u_plat[ddir],
 					ts->clat_stat[ddir].samples,
