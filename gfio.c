@@ -88,6 +88,8 @@ struct gui {
 	GtkWidget *textview;
 	GtkWidget *error_info_bar;
 	GtkWidget *error_label;
+	GtkWidget *results_notebook;
+	GtkWidget *results_window;
 	GtkTextBuffer *text;
 	struct probe_widget probe;
 	struct eta_widget eta;
@@ -700,24 +702,52 @@ static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 	gtk_box_pack_start(GTK_BOX(box), tree_view, TRUE, FALSE, 3);
 }
 
+static gboolean results_window_delete(GtkWidget *w, gpointer data)
+{
+	struct gui *ui = (struct gui *) data;
+
+	gtk_widget_destroy(w);
+	ui->results_window = NULL;
+	ui->results_notebook = NULL;
+	return TRUE;
+}
+
+static GtkWidget *get_results_window(struct gui *ui)
+{
+	GtkWidget *win, *notebook;
+
+	if (ui->results_window)
+		return ui->results_notebook;
+
+	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_window_set_title(GTK_WINDOW(win), "Results");
+	g_signal_connect(win, "delete-event", G_CALLBACK(results_window_delete), ui);
+	g_signal_connect(win, "destroy", G_CALLBACK(results_window_delete), ui);
+
+	notebook = gtk_notebook_new();
+	gtk_container_add(GTK_CONTAINER(win), notebook);
+
+	ui->results_window = win;
+	ui->results_notebook = notebook;
+	return ui->results_notebook;
+}
+
 static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 			    struct group_run_stats *rs)
 {
-	GtkWidget *win, *box, *vbox, *entry;
+	GtkWidget *res_win, *box, *vbox, *entry;
 	struct gui *ui = client->client_data;
 
 	gdk_threads_enter();
 
-	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-
-	g_signal_connect(win, "delete-event", G_CALLBACK(gtk_widget_destroy), win);
-	g_signal_connect(win, "destroy", G_CALLBACK(gtk_widget_destroy), win);
+	res_win = get_results_window(ui);
 
 	vbox = gtk_vbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(win), vbox);
 
 	box = gtk_hbox_new(TRUE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox), box, FALSE, FALSE, 5);
+
+	gtk_notebook_append_page(GTK_NOTEBOOK(res_win), vbox, gtk_label_new(ts->name));
 
 	entry = new_info_entry_in_frame(box, "Name");
 	gtk_entry_set_text(GTK_ENTRY(entry), ts->name);
@@ -743,7 +773,7 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 	gfio_show_cpu_usage(vbox, ts);
 	gfio_show_io_depths(vbox, ts);
 
-	gtk_widget_show_all(win);
+	gtk_widget_show_all(ui->results_window);
 	gdk_threads_leave();
 }
 
