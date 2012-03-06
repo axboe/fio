@@ -29,6 +29,8 @@
 
 #include "fio.h"
 
+static int gfio_server_running;
+
 static void gfio_update_thread_status(char *status_message, double perc);
 
 #define ARRAYSIZE(x) (sizeof((x)) / (sizeof((x)[0])))
@@ -99,6 +101,7 @@ struct gui {
 	struct eta_widget eta;
 	int connected;
 	pthread_t t;
+	pthread_t server_t;
 
 	struct fio_client *client;
 	int nr_job_files;
@@ -182,6 +185,7 @@ static void gfio_set_connected(struct gui *ui, int connected)
 		ui->connected = 0;
 		gtk_button_set_label(GTK_BUTTON(ui->button[CONNECT_BUTTON]), "Connect");
 		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 0);
+		gtk_widget_set_sensitive(ui->button[CONNECT_BUTTON], 1);
 	}
 }
 
@@ -1209,6 +1213,23 @@ static void start_job_thread(struct gui *ui)
 	}
 }
 
+static void *server_thread(void *arg)
+{
+	is_backend = 1;
+	gfio_server_running = 1;
+	fio_start_server(NULL);
+	gfio_server_running = 0;
+	return NULL;
+}
+
+static void gfio_start_server(struct gui *ui)
+{
+	if (!gfio_server_running) {
+		gfio_server_running = 1;
+		pthread_create(&ui->server_t, NULL, server_thread, NULL);
+	}
+}
+
 static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
                 gpointer data)
 {
@@ -1394,13 +1415,14 @@ static void gfio_client_added(struct gui *ui, struct fio_client *client)
 static void file_open(GtkWidget *w, gpointer data)
 {
 	GtkWidget *dialog;
+	struct gui *ui = data;
 	GSList *filenames, *fn_glist;
 	GtkFileFilter *filter;
 	char *host;
 	int port, type, server_start;
 
 	dialog = gtk_file_chooser_dialog_new("Open File",
-		GTK_WINDOW(ui.window),
+		GTK_WINDOW(ui->window),
 		GTK_FILE_CHOOSER_ACTION_OPEN,
 		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 		GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
@@ -1430,9 +1452,9 @@ static void file_open(GtkWidget *w, gpointer data)
 	while (filenames != NULL) {
 		struct fio_client *client;
 
-		ui.job_files = realloc(ui.job_files, (ui.nr_job_files + 1) * sizeof(char *));
-		ui.job_files[ui.nr_job_files] = strdup(filenames->data);
-		ui.nr_job_files++;
+		ui->job_files = realloc(ui->job_files, (ui->nr_job_files + 1) * sizeof(char *));
+		ui->job_files[ui->nr_job_files] = strdup(filenames->data);
+		ui->nr_job_files++;
 
 		client = fio_client_add_explicit(&gfio_client_ops, host, type, port);
 		if (!client) {
@@ -1443,22 +1465,26 @@ static void file_open(GtkWidget *w, gpointer data)
 			report_error(error);
 			g_error_free(error);
 		}
-		gfio_client_added(&ui, client);
+		gfio_client_added(ui, client);
 			
 		g_free(filenames->data);
 		filenames = g_slist_next(filenames);
 	}
 	free(host);
+
+	if (server_start)
+		gfio_start_server(ui);
 err:
 	g_slist_free(fn_glist);
 }
 
 static void file_save(GtkWidget *w, gpointer data)
 {
+	struct gui *ui = data;
 	GtkWidget *dialog;
 
 	dialog = gtk_file_chooser_dialog_new("Save File",
-		GTK_WINDOW(ui.window),
+		GTK_WINDOW(ui->window),
 		GTK_FILE_CHOOSER_ACTION_SAVE,
 		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 		GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT,
