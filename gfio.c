@@ -1321,10 +1321,10 @@ static int get_connection_details(char **host, int *port, int *type,
 	hbox = gtk_hbox_new(TRUE, 4);
 	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
 
-	combo = gtk_combo_box_text_new();
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), "IPv4");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), "IPv6");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), "local socket");
+	combo = gtk_combo_box_new_text();
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo), "IPv4");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo), "IPv6");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo), "local socket");
 	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 0);
 
 	gtk_container_add(GTK_CONTAINER(hbox), combo);
@@ -1352,7 +1352,7 @@ static int get_connection_details(char **host, int *port, int *type,
 	*host = strdup(gtk_entry_get_text(GTK_ENTRY(hentry)));
 	*port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(pentry));
 
-	typeentry = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo));
+	typeentry = gtk_combo_box_get_active_text(GTK_COMBO_BOX(combo));
 	if (!typeentry || !strncmp(typeentry, "IPv4", 4))
 		*type = Fio_client_ipv4;
 	else if (!strncmp(typeentry, "IPv6", 4))
