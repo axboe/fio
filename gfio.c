@@ -262,7 +262,7 @@ static void gfio_ui_setup_log(struct gui *ui)
 	tree_view_column(tree_view, 0, "Time", ALIGN_RIGHT | UNSORTABLE);
 	tree_view_column(tree_view, 1, "Host", ALIGN_RIGHT | UNSORTABLE);
 	tree_view_column(tree_view, 2, "Level", ALIGN_RIGHT | UNSORTABLE);
-	tree_view_column(tree_view, 3, "Text", ALIGN_RIGHT | UNSORTABLE);
+	tree_view_column(tree_view, 3, "Text", ALIGN_LEFT | UNSORTABLE);
 
 	ui->log_model = model;
 	ui->log_tree = tree_view;
