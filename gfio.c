@@ -92,6 +92,7 @@ struct gui {
 	GtkWidget *results_window;
 	GtkListStore *log_model;
 	GtkWidget *log_tree;
+	GtkWidget *log_view;
 	GtkTextBuffer *text;
 	struct probe_widget probe;
 	struct eta_widget eta;
@@ -1470,21 +1471,36 @@ static void view_log_destroy(GtkWidget *w, gpointer data)
 	gtk_widget_ref(ui->log_tree);
 	gtk_container_remove(GTK_CONTAINER(w), ui->log_tree);
 	gtk_widget_destroy(w);
+	ui->log_view = NULL;
 }
 
 static void view_log(GtkWidget *w, gpointer data)
 {
-	GtkWidget *win, *box;
+	GtkWidget *win, *scroll, *vbox, *box;
+	struct gui *ui = (struct gui *) data;
 
-	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	if (ui->log_view)
+		return;
+
+	ui->log_view = win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(win), "Log");
+	gtk_window_set_default_size(GTK_WINDOW(win), 700, 500);
 
-	box = gtk_hbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(win), box);
+	scroll = gtk_scrolled_window_new(NULL, NULL);
 
-	g_signal_connect(box, "delete-event", G_CALLBACK(view_log_destroy), (gpointer) &ui);
-	g_signal_connect(box, "destroy", G_CALLBACK(view_log_destroy), (gpointer) &ui);
-	gtk_container_add(GTK_CONTAINER(box), ui.log_tree);
+	gtk_container_set_border_width(GTK_CONTAINER(scroll), 5);
+
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+
+	box = gtk_hbox_new(TRUE, 0);
+	gtk_box_pack_start_defaults(GTK_BOX(box), ui->log_tree);
+	g_signal_connect(box, "destroy", G_CALLBACK(view_log_destroy), ui);
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), box);
+
+	vbox = gtk_vbox_new(TRUE, 5);
+	gtk_box_pack_start_defaults(GTK_BOX(vbox), scroll);
+
+	gtk_container_add(GTK_CONTAINER(win), vbox);
 	gtk_widget_show_all(win);
 }
 
@@ -1579,13 +1595,14 @@ static const gchar *ui_string = " \
 	</ui> \
 ";
 
-static GtkWidget *get_menubar_menu(GtkWidget *window, GtkUIManager *ui_manager)
+static GtkWidget *get_menubar_menu(GtkWidget *window, GtkUIManager *ui_manager,
+				   struct gui *ui)
 {
 	GtkActionGroup *action_group = gtk_action_group_new("Menu");
 	GError *error = 0;
 
 	action_group = gtk_action_group_new("Menu");
-	gtk_action_group_add_actions(action_group, menu_items, nmenu_items, 0);
+	gtk_action_group_add_actions(action_group, menu_items, nmenu_items, ui);
 
 	gtk_ui_manager_insert_action_group(ui_manager, action_group, 0);
 	gtk_ui_manager_add_ui_from_string(GTK_UI_MANAGER(ui_manager), ui_string, -1, &error);
@@ -1632,7 +1649,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_container_add(GTK_CONTAINER (ui->window), ui->vbox);
 
 	uimanager = gtk_ui_manager_new();
-	menu = get_menubar_menu(ui->window, uimanager);
+	menu = get_menubar_menu(ui->window, uimanager, ui);
 	gfio_ui_setup(settings, menu, ui->vbox, uimanager);
 
 	/*
