@@ -703,23 +703,18 @@ static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 			    struct group_run_stats *rs)
 {
-	GtkWidget *dialog, *box, *vbox, *entry, *content;
+	GtkWidget *win, *box, *vbox, *entry;
 	struct gui *ui = client->client_data;
 
 	gdk_threads_enter();
 
-	dialog = gtk_dialog_new_with_buttons("Results", GTK_WINDOW(ui->window),
-			GTK_DIALOG_DESTROY_WITH_PARENT,
-			GTK_STOCK_OK, GTK_RESPONSE_ACCEPT, NULL);
+	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
-	g_signal_connect_swapped(dialog, "response",
-                             G_CALLBACK(gtk_widget_destroy),
-                             dialog);
-
-	content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+	g_signal_connect(win, "delete-event", G_CALLBACK(gtk_widget_destroy), win);
+	g_signal_connect(win, "destroy", G_CALLBACK(gtk_widget_destroy), win);
 
 	vbox = gtk_vbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(content), vbox);
+	gtk_container_add(GTK_CONTAINER(win), vbox);
 
 	box = gtk_hbox_new(TRUE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox), box, FALSE, FALSE, 5);
@@ -748,7 +743,7 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 	gfio_show_cpu_usage(vbox, ts);
 	gfio_show_io_depths(vbox, ts);
 
-	gtk_widget_show_all(dialog);
+	gtk_widget_show_all(win);
 	gdk_threads_leave();
 }
 
