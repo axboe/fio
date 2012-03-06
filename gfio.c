@@ -1227,6 +1227,7 @@ static void gfio_start_server(struct gui *ui)
 	if (!gfio_server_running) {
 		gfio_server_running = 1;
 		pthread_create(&ui->server_t, NULL, server_thread, NULL);
+		pthread_detach(ui->server_t);
 	}
 }
 
@@ -1249,6 +1250,7 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 		if (!ui->nr_job_files)
 			file_open(widget, data);
 		gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
+		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ui->thread_status_pb), 0.0);
 		if (!fio_clients_connect()) {
 			pthread_create(&ui->t, NULL, job_thread, NULL);
 			gtk_widget_set_sensitive(ui->button[CONNECT_BUTTON], 0);
