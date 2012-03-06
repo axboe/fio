@@ -90,6 +90,8 @@ struct gui {
 	GtkWidget *error_label;
 	GtkWidget *results_notebook;
 	GtkWidget *results_window;
+	GtkListStore *log_model;
+	GtkWidget *log_tree;
 	GtkTextBuffer *text;
 	struct probe_widget probe;
 	struct eta_widget eta;
@@ -233,6 +235,29 @@ GtkTreeViewColumn *tree_view_column(GtkWidget *tree_view, int index, const char 
 	gtk_tree_view_column_set_visible(col, visible);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(tree_view), col);
 	return col;
+}
+
+static void gfio_ui_setup_log(struct gui *ui)
+{
+	GtkTreeSelection *selection;
+	GtkListStore *model;
+	GtkWidget *tree_view;
+
+	model = gtk_list_store_new(4, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING);
+
+	tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
+	gtk_widget_set_can_focus(tree_view, FALSE);
+
+	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree_view));
+	gtk_tree_selection_set_mode(GTK_TREE_SELECTION(selection), GTK_SELECTION_BROWSE);
+
+	tree_view_column(tree_view, 0, "Time", ALIGN_RIGHT | UNSORTABLE);
+	tree_view_column(tree_view, 1, "Host", ALIGN_RIGHT | UNSORTABLE);
+	tree_view_column(tree_view, 2, "Level", ALIGN_RIGHT | UNSORTABLE);
+	tree_view_column(tree_view, 3, "Text", ALIGN_RIGHT | UNSORTABLE);
+
+	ui->log_model = model;
+	ui->log_tree = tree_view;
 }
 
 static GtkWidget *gfio_output_clat_percentiles(unsigned int *ovals,
@@ -779,20 +804,27 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 
 static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
-#if 0
-	GtkTextBuffer *buffer;
-	GtkTextIter end;
+	struct cmd_text_pdu *p = (struct cmd_text_pdu *) cmd->payload;
+	struct gui *ui = client->client_data;
+	GtkTreeIter iter;
+	struct tm *tm;
+	time_t sec;
+	char tmp[64], timebuf[80];
 
-	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(ui.textview));
+	sec = p->log_sec;
+	tm = localtime(&sec);
+	strftime(tmp, sizeof(tmp), "%Y-%m-%d %H:%M:%S", tm);
+	sprintf(timebuf, "%s.%03ld", tmp, p->log_usec / 1000);
+
 	gdk_threads_enter();
-	gtk_text_buffer_get_end_iter(buffer, &end);
-	gtk_text_buffer_insert(buffer, &end, buf, -1);
+
+	gtk_list_store_append(ui->log_model, &iter);
+	gtk_list_store_set(ui->log_model, &iter, 0, timebuf, -1);
+	gtk_list_store_set(ui->log_model, &iter, 1, client->hostname, -1);
+	gtk_list_store_set(ui->log_model, &iter, 2, p->level, -1);
+	gtk_list_store_set(ui->log_model, &iter, 3, p->buf, -1);
+
 	gdk_threads_leave();
-	gtk_text_view_scroll_to_iter(GTK_TEXT_VIEW(ui.textview),
-					&end, 0.0, FALSE, 0.0,0.0);
-#else
-	fio_client_ops.text_op(client, cmd);
-#endif
 }
 
 static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -1342,6 +1374,31 @@ static void file_save(GtkWidget *w, gpointer data)
 	gtk_widget_destroy(dialog);
 }
 
+static void view_log_destroy(GtkWidget *w, gpointer data)
+{
+	struct gui *ui = (struct gui *) data;
+
+	gtk_widget_ref(ui->log_tree);
+	gtk_container_remove(GTK_CONTAINER(w), ui->log_tree);
+	gtk_widget_destroy(w);
+}
+
+static void view_log(GtkWidget *w, gpointer data)
+{
+	GtkWidget *win, *box;
+
+	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_window_set_title(GTK_WINDOW(win), "Log");
+
+	box = gtk_hbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(win), box);
+
+	g_signal_connect(box, "delete-event", G_CALLBACK(view_log_destroy), (gpointer) &ui);
+	g_signal_connect(box, "destroy", G_CALLBACK(view_log_destroy), (gpointer) &ui);
+	gtk_container_add(GTK_CONTAINER(box), ui.log_tree);
+	gtk_widget_show_all(win);
+}
+
 static void preferences(GtkWidget *w, gpointer data)
 {
 	GtkWidget *dialog, *frame, *box, **buttons;
@@ -1401,10 +1458,12 @@ static void about_dialog(GtkWidget *w, gpointer data)
 
 static GtkActionEntry menu_items[] = {
 	{ "FileMenuAction", GTK_STOCK_FILE, "File", NULL, NULL, NULL},
+	{ "ViewMenuAction", GTK_STOCK_FILE, "View", NULL, NULL, NULL},
 	{ "HelpMenuAction", GTK_STOCK_HELP, "Help", NULL, NULL, NULL},
 	{ "OpenFile", GTK_STOCK_OPEN, NULL,   "<Control>O", NULL, G_CALLBACK(file_open) },
 	{ "SaveFile", GTK_STOCK_SAVE, NULL,   "<Control>S", NULL, G_CALLBACK(file_save) },
 	{ "Preferences", GTK_STOCK_PREFERENCES, NULL, "<Control>p", NULL, G_CALLBACK(preferences) },
+	{ "ViewLog", NULL, "Log", "<Control>l", NULL, G_CALLBACK(view_log) },
 	{ "Quit", GTK_STOCK_QUIT, NULL,   "<Control>Q", NULL, G_CALLBACK(quit_clicked) },
 	{ "About", GTK_STOCK_ABOUT, NULL,  NULL, NULL, G_CALLBACK(about_dialog) },
 };
@@ -1421,6 +1480,9 @@ static const gchar *ui_string = " \
 				<separator name=\"Separator2\"/> \
 				<menuitem name=\"Quit\" action=\"Quit\" /> \
 			</menu> \
+			<menu name=\"ViewMenu\" action=\"ViewMenuAction\"> \
+				<menuitem name=\"Log\" action=\"ViewLog\" /> \
+			</menu>\
 			<menu name=\"Help\" action=\"HelpMenuAction\"> \
 				<menuitem name=\"About\" action=\"About\" /> \
 			</menu> \
@@ -1571,6 +1633,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), "No connections");
 	gtk_container_add(GTK_CONTAINER(ui->buttonbox), ui->thread_status_pb);
 
+	gfio_ui_setup_log(ui);
 
 	gtk_widget_show_all(ui->window);
 }
