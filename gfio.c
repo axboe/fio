@@ -2,6 +2,7 @@
  * gfio - gui front end for fio - the flexible io tester
  *
  * Copyright (C) 2012 Stephen M. Cameron <stephenmcameron@gmail.com> 
+ * Copyright (C) 2012 Jens Axboe <axboe@kernel.dk>
  *
  * The license below covers all files distributed with fio unless otherwise
  * noted in the file itself.
