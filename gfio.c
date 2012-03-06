@@ -401,31 +401,6 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 	label = new_info_label_in_frame(box, "Runtime (msec)");
 	label_set_int_value(label, ts->runtime[ddir]);
 
-	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
-		flags |= GFIO_SLAT;
-	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
-		flags |= GFIO_CLAT;
-	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
-		flags |= GFIO_LAT;
-
-	if (flags) {
-		frame = gtk_frame_new("Latency");
-		gtk_box_pack_start(GTK_BOX(main_vbox), frame, FALSE, FALSE, 5);
-
-		vbox = gtk_vbox_new(FALSE, 3);
-		gtk_container_add(GTK_CONTAINER(frame), vbox);
-
-		if (flags & GFIO_SLAT)
-			gfio_show_lat(vbox, "Submission latency", min, max, mean, dev);
-		if (flags & GFIO_CLAT)
-			gfio_show_lat(vbox, "Completion latency", min, max, mean, dev);
-		if (flags & GFIO_LAT)
-			gfio_show_lat(vbox, "Total latency", min, max, mean, dev);
-	}
-
-	if (ts->clat_percentiles)
-		gfio_show_clat_percentiles(main_vbox, ts, ddir);
-
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg = 100.0;
 		const char *bw_str = "KB";
@@ -466,6 +441,32 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 		sprintf(tmp, "%5.02f", dev);
 		gtk_label_set_text(GTK_LABEL(label), tmp);
 	}
+
+	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
+		flags |= GFIO_SLAT;
+	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
+		flags |= GFIO_CLAT;
+	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
+		flags |= GFIO_LAT;
+
+	if (flags) {
+		frame = gtk_frame_new("Latency");
+		gtk_box_pack_start(GTK_BOX(main_vbox), frame, FALSE, FALSE, 5);
+
+		vbox = gtk_vbox_new(FALSE, 3);
+		gtk_container_add(GTK_CONTAINER(frame), vbox);
+
+		if (flags & GFIO_SLAT)
+			gfio_show_lat(vbox, "Submission latency", min, max, mean, dev);
+		if (flags & GFIO_CLAT)
+			gfio_show_lat(vbox, "Completion latency", min, max, mean, dev);
+		if (flags & GFIO_LAT)
+			gfio_show_lat(vbox, "Total latency", min, max, mean, dev);
+	}
+
+	if (ts->clat_percentiles)
+		gfio_show_clat_percentiles(main_vbox, ts, ddir);
+
 
 	free(io_p);
 	free(bw_p);
