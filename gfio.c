@@ -599,23 +599,79 @@ static void gfio_show_cpu_usage(GtkWidget *vbox, struct thread_stat *ts)
 	entry = new_info_entry_in_frame(box, "Minor faults");
 	entry_set_int_value(entry, ts->minf);
 }
+static void gfio_add_sc_depths_tree(GtkListStore *model,
+				    struct thread_stat *ts, unsigned int len,
+				    int submit)
+{
+	double io_u_dist[FIO_IO_U_MAP_NR];
+	GtkTreeIter iter;
+	/* Bits 0, and 3-8 */
+	const int add_mask = 0x1f9;
+	int i, j;
+
+	if (submit)
+		stat_calc_dist(ts->io_u_submit, ts->total_submit, io_u_dist);
+	else
+		stat_calc_dist(ts->io_u_complete, ts->total_complete, io_u_dist);
+
+	gtk_list_store_append(model, &iter);
+
+	gtk_list_store_set(model, &iter, 0, submit ? "Submit" : "Complete", -1);
+
+	for (i = 1, j = 0; i < len; i++) {
+		char fbuf[32];
+
+		if (!(add_mask & (1UL << (i - 1))))
+			sprintf(fbuf, "0.0%%");
+		else {
+			sprintf(fbuf, "%3.1f%%", io_u_dist[j]);
+			j++;
+		}
+
+		gtk_list_store_set(model, &iter, i, fbuf, -1);
+	}
+
+}
+
+static void gfio_add_total_depths_tree(GtkListStore *model,
+				       struct thread_stat *ts, unsigned int len)
+{
+	double io_u_dist[FIO_IO_U_MAP_NR];
+	GtkTreeIter iter;
+	/* Bits 1-6, and 8 */
+	const int add_mask = 0x17e;
+	int i, j;
+
+	stat_calc_dist(ts->io_u_map, ts_total_io_u(ts), io_u_dist);
+
+	gtk_list_store_append(model, &iter);
+
+	gtk_list_store_set(model, &iter, 0, "Total", -1);
+
+	for (i = 1, j = 0; i < len; i++) {
+		char fbuf[32];
+
+		if (!(add_mask & (1UL << (i - 1))))
+			sprintf(fbuf, "0.0%%");
+		else {
+			sprintf(fbuf, "%3.1f%%", io_u_dist[j]);
+			j++;
+		}
+
+		gtk_list_store_set(model, &iter, i, fbuf, -1);
+	}
+
+}
 
 static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 {
-	double io_u_dist[FIO_IO_U_MAP_NR];
-	double io_u_dist_s[FIO_IO_U_MAP_NR];
-	double io_u_dist_c[FIO_IO_U_MAP_NR];
 	GtkWidget *frame, *box, *tree_view;
 	GtkTreeSelection *selection;
 	GtkListStore *model;
-	GtkTreeIter iter;
 	GType types[FIO_IO_U_MAP_NR + 1];
 	int i;
-	const char *labels[] = { "Type", "0", "4", "8", "16", "32", "64", ">= 64" };
-
-	stat_calc_dist(ts->io_u_map, ts_total_io_u(ts), io_u_dist);
-	stat_calc_dist(ts->io_u_submit, ts->total_submit, io_u_dist_s);
-	stat_calc_dist(ts->io_u_complete, ts->total_complete, io_u_dist_c);
+#define NR_LABELS	10
+	const char *labels[NR_LABELS] = { "Depth", "0", "1", "2", "4", "8", "16", "32", "64", ">= 64" };
 
 	frame = gtk_frame_new("IO depths");
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
@@ -623,10 +679,10 @@ static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 	box = gtk_hbox_new(FALSE, 3);
 	gtk_container_add(GTK_CONTAINER(frame), box);
 
-	for (i = 0; i < FIO_IO_U_MAP_NR + 1; i++)
+	for (i = 0; i < NR_LABELS; i++)
 		types[i] = G_TYPE_STRING;
 
-	model = gtk_list_store_newv(FIO_IO_U_MAP_NR + 1, types);
+	model = gtk_list_store_newv(NR_LABELS, types);
 
 	tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
 	gtk_widget_set_can_focus(tree_view, FALSE);
@@ -634,50 +690,12 @@ static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree_view));
 	gtk_tree_selection_set_mode(GTK_TREE_SELECTION(selection), GTK_SELECTION_BROWSE);
 
-	for (i = 0; i < FIO_IO_U_MAP_NR + 1; i++)
+	for (i = 0; i < NR_LABELS; i++)
 		tree_view_column(tree_view, i, labels[i], ALIGN_RIGHT | UNSORTABLE);
 
-	gtk_list_store_append(model, &iter);
-
-	for (i = 0; i < FIO_IO_U_MAP_NR + 1; i++) {
-		char fbuf[32];
-
-		if (i == 0) {
-			gtk_list_store_set(model, &iter, i, "Total", -1);
-			continue;
-		}
-
-		sprintf(fbuf, "%3.1f%%", io_u_dist[i - 1]);
-		gtk_list_store_set(model, &iter, i, fbuf, -1);
-	}
-
-	gtk_list_store_append(model, &iter);
-
-	for (i = 0; i < FIO_IO_U_MAP_NR + 1; i++) {
-		char fbuf[32];
-
-		if (i == 0) {
-			gtk_list_store_set(model, &iter, i, "Submit", -1);
-			continue;
-		}
-
-		sprintf(fbuf, "%3.1f%%", io_u_dist_s[i - 1]);
-		gtk_list_store_set(model, &iter, i, fbuf, -1);
-	}
-
-	gtk_list_store_append(model, &iter);
-
-	for (i = 0; i < FIO_IO_U_MAP_NR + 1; i++) {
-		char fbuf[32];
-
-		if (i == 0) {
-			gtk_list_store_set(model, &iter, i, "Complete", -1);
-			continue;
-		}
-
-		sprintf(fbuf, "%3.1f%%", io_u_dist_c[i - 1]);
-		gtk_list_store_set(model, &iter, i, fbuf, -1);
-	}
+	gfio_add_total_depths_tree(model, ts, NR_LABELS);
+	gfio_add_sc_depths_tree(model, ts, NR_LABELS, 1);
+	gfio_add_sc_depths_tree(model, ts, NR_LABELS, 0);
 
 	gtk_box_pack_start(GTK_BOX(box), tree_view, TRUE, FALSE, 3);
 }
