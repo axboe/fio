@@ -103,6 +103,12 @@ struct gui {
 	char **job_files;
 } ui;
 
+struct gfio_client {
+	struct gui *ui;
+	GtkWidget *results_widget;
+	GtkWidget *disk_util_frame;
+};
+
 static void clear_ui_info(struct gui *ui)
 {
 	gtk_label_set_text(GTK_LABEL(ui->probe.hostname), "");
@@ -293,8 +299,11 @@ static GtkWidget *gfio_output_clat_percentiles(unsigned int *ovals,
 
 	gtk_list_store_append(model, &iter);
 
-	for (i = 0; i < len; i++)
+	for (i = 0; i < len; i++) {
+		if (scale)
+			ovals[i] = (ovals[i] + 999) / 1000;
 		gtk_list_store_set(model, &iter, i, ovals[i], -1);
+	}
 
 	return tree_view;
 }
@@ -387,10 +396,10 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 {
 	const char *ddir_label[2] = { "Read", "Write" };
 	GtkWidget *frame, *label, *box, *vbox, *main_vbox;
-	unsigned long min, max, runt;
+	unsigned long min[3], max[3], runt;
 	unsigned long long bw, iops;
 	unsigned int flags = 0;
-	double mean, dev;
+	double mean[3], dev[3];
 	char *io_p, *bw_p, *iops_p;
 	int i2p;
 
@@ -428,22 +437,22 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 	label = new_info_label_in_frame(box, "Runtime (msec)");
 	label_set_int_value(label, ts->runtime[ddir]);
 
-	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
+	if (calc_lat(&ts->bw_stat[ddir], &min[0], &max[0], &mean[0], &dev[0])) {
 		double p_of_agg = 100.0;
 		const char *bw_str = "KB";
 		char tmp[32];
 
 		if (rs->agg[ddir]) {
-			p_of_agg = mean * 100 / (double) rs->agg[ddir];
+			p_of_agg = mean[0] * 100 / (double) rs->agg[ddir];
 			if (p_of_agg > 100.0)
 				p_of_agg = 100.0;
 		}
 
-		if (mean > 999999.9) {
-			min /= 1000.0;
-			max /= 1000.0;
-			mean /= 1000.0;
-			dev /= 1000.0;
+		if (mean[0] > 999999.9) {
+			min[0] /= 1000.0;
+			max[0] /= 1000.0;
+			mean[0] /= 1000.0;
+			dev[0] /= 1000.0;
 			bw_str = "MB";
 		}
 
@@ -455,25 +464,25 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 		gtk_container_add(GTK_CONTAINER(frame), box);
 
 		label = new_info_label_in_frame(box, "Minimum");
-		label_set_int_value(label, min);
+		label_set_int_value(label, min[0]);
 		label = new_info_label_in_frame(box, "Maximum");
-		label_set_int_value(label, max);
+		label_set_int_value(label, max[0]);
 		label = new_info_label_in_frame(box, "Percentage of jobs");
 		sprintf(tmp, "%3.2f%%", p_of_agg);
 		gtk_label_set_text(GTK_LABEL(label), tmp);
 		label = new_info_label_in_frame(box, "Average");
-		sprintf(tmp, "%5.02f", mean);
+		sprintf(tmp, "%5.02f", mean[0]);
 		gtk_label_set_text(GTK_LABEL(label), tmp);
 		label = new_info_label_in_frame(box, "Standard deviation");
-		sprintf(tmp, "%5.02f", dev);
+		sprintf(tmp, "%5.02f", dev[0]);
 		gtk_label_set_text(GTK_LABEL(label), tmp);
 	}
 
-	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
+	if (calc_lat(&ts->slat_stat[ddir], &min[0], &max[0], &mean[0], &dev[0]))
 		flags |= GFIO_SLAT;
-	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
+	if (calc_lat(&ts->clat_stat[ddir], &min[1], &max[1], &mean[1], &dev[1]))
 		flags |= GFIO_CLAT;
-	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
+	if (calc_lat(&ts->lat_stat[ddir], &min[2], &max[2], &mean[2], &dev[2]))
 		flags |= GFIO_LAT;
 
 	if (flags) {
@@ -484,11 +493,11 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 		gtk_container_add(GTK_CONTAINER(frame), vbox);
 
 		if (flags & GFIO_SLAT)
-			gfio_show_lat(vbox, "Submission latency", min, max, mean, dev);
+			gfio_show_lat(vbox, "Submission latency", min[0], max[0], mean[0], dev[0]);
 		if (flags & GFIO_CLAT)
-			gfio_show_lat(vbox, "Completion latency", min, max, mean, dev);
+			gfio_show_lat(vbox, "Completion latency", min[1], max[1], mean[1], dev[1]);
 		if (flags & GFIO_LAT)
-			gfio_show_lat(vbox, "Total latency", min, max, mean, dev);
+			gfio_show_lat(vbox, "Total latency", min[2], max[2], mean[2], dev[2]);
 	}
 
 	if (ts->clat_percentiles)
@@ -761,11 +770,11 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 			    struct group_run_stats *rs)
 {
 	GtkWidget *res_win, *box, *vbox, *entry;
-	struct gui *ui = client->client_data;
+	struct gfio_client *gc = client->client_data;
 
 	gdk_threads_enter();
 
-	res_win = get_results_window(ui);
+	res_win = get_results_window(gc->ui);
 
 	vbox = gtk_vbox_new(FALSE, 3);
 
@@ -773,6 +782,8 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 	gtk_box_pack_start(GTK_BOX(vbox), box, FALSE, FALSE, 5);
 
 	gtk_notebook_append_page(GTK_NOTEBOOK(res_win), vbox, gtk_label_new(ts->name));
+
+	gc->results_widget = vbox;
 
 	entry = new_info_entry_in_frame(box, "Name");
 	gtk_entry_set_text(GTK_ENTRY(entry), ts->name);
@@ -798,14 +809,14 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 	gfio_show_cpu_usage(vbox, ts);
 	gfio_show_io_depths(vbox, ts);
 
-	gtk_widget_show_all(ui->results_window);
+	gtk_widget_show_all(gc->ui->results_window);
 	gdk_threads_leave();
 }
 
 static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_text_pdu *p = (struct cmd_text_pdu *) cmd->payload;
-	struct gui *ui = client->client_data;
+	struct gfio_client *gc = client->client_data;
 	GtkTreeIter iter;
 	struct tm *tm;
 	time_t sec;
@@ -818,20 +829,79 @@ static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	gdk_threads_enter();
 
-	gtk_list_store_append(ui->log_model, &iter);
-	gtk_list_store_set(ui->log_model, &iter, 0, timebuf, -1);
-	gtk_list_store_set(ui->log_model, &iter, 1, client->hostname, -1);
-	gtk_list_store_set(ui->log_model, &iter, 2, p->level, -1);
-	gtk_list_store_set(ui->log_model, &iter, 3, p->buf, -1);
+	gtk_list_store_append(gc->ui->log_model, &iter);
+	gtk_list_store_set(gc->ui->log_model, &iter, 0, timebuf, -1);
+	gtk_list_store_set(gc->ui->log_model, &iter, 1, client->hostname, -1);
+	gtk_list_store_set(gc->ui->log_model, &iter, 2, p->level, -1);
+	gtk_list_store_set(gc->ui->log_model, &iter, 3, p->buf, -1);
 
 	gdk_threads_leave();
 }
 
 static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
+	struct cmd_du_pdu *p = (struct cmd_du_pdu *) cmd->payload;
+	struct gfio_client *gc = client->client_data;
+	GtkWidget *box, *frame, *entry, *vbox;
+
 	gdk_threads_enter();
-	printf("gfio_disk_util_op called\n");
-	fio_client_ops.disk_util(client, cmd);
+
+	if (!gc->results_widget) {
+		printf("no results!\n");
+		goto out;
+	}
+
+	if (!gc->disk_util_frame) {
+		gc->disk_util_frame = gtk_frame_new("Disk utilization");
+		gtk_box_pack_start(GTK_BOX(gc->results_widget), gc->disk_util_frame, FALSE, FALSE, 5);
+	}
+
+	vbox = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(gc->disk_util_frame), vbox);
+
+	frame = gtk_frame_new((char *) p->dus.name);
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 2);
+
+	box = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), box);
+
+	frame = gtk_frame_new("Read");
+	gtk_box_pack_start(GTK_BOX(box), frame, FALSE, FALSE, 2);
+	vbox = gtk_hbox_new(TRUE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), vbox);
+	entry = new_info_entry_in_frame(vbox, "IOs");
+	entry_set_int_value(entry, p->dus.ios[0]);
+	entry = new_info_entry_in_frame(vbox, "Merges");
+	entry_set_int_value(entry, p->dus.merges[0]);
+	entry = new_info_entry_in_frame(vbox, "Sectors");
+	entry_set_int_value(entry, p->dus.sectors[0]);
+	entry = new_info_entry_in_frame(vbox, "Ticks");
+	entry_set_int_value(entry, p->dus.ticks[0]);
+
+	frame = gtk_frame_new("Write");
+	gtk_box_pack_start(GTK_BOX(box), frame, FALSE, FALSE, 2);
+	vbox = gtk_hbox_new(TRUE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), vbox);
+	entry = new_info_entry_in_frame(vbox, "IOs");
+	entry_set_int_value(entry, p->dus.ios[1]);
+	entry = new_info_entry_in_frame(vbox, "Merges");
+	entry_set_int_value(entry, p->dus.merges[1]);
+	entry = new_info_entry_in_frame(vbox, "Sectors");
+	entry_set_int_value(entry, p->dus.sectors[1]);
+	entry = new_info_entry_in_frame(vbox, "Ticks");
+	entry_set_int_value(entry, p->dus.ticks[1]);
+
+	frame = gtk_frame_new("Shared");
+	gtk_box_pack_start(GTK_BOX(box), frame, FALSE, FALSE, 2);
+	vbox = gtk_hbox_new(TRUE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), vbox);
+	entry = new_info_entry_in_frame(vbox, "IO ticks");
+	entry_set_int_value(entry, p->dus.io_ticks);
+	entry = new_info_entry_in_frame(vbox, "Time in queue");
+	entry_set_int_value(entry, p->dus.time_in_queue);
+
+	gtk_widget_show_all(gc->results_widget);
+out:
 	gdk_threads_leave();
 }
 
@@ -998,17 +1068,18 @@ static void gfio_update_thread_status(char *status_message, double perc)
 
 static void gfio_quit_op(struct fio_client *client)
 {
-	struct gui *ui = client->client_data;
+	struct gfio_client *gc = client->client_data;
 
 	gdk_threads_enter();
-	gfio_set_connected(ui, 0);
+	gfio_set_connected(gc->ui, 0);
 	gdk_threads_leave();
 }
 
 static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_add_job_pdu *p = (struct cmd_add_job_pdu *) cmd->payload;
-	struct gui *ui = client->client_data;
+	struct gfio_client *gc = client->client_data;
+	struct gui *ui = gc->ui;
 	char tmp[8];
 	int i;
 
@@ -1037,19 +1108,19 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 
 static void gfio_client_timed_out(struct fio_client *client)
 {
-	struct gui *ui = client->client_data;
+	struct gfio_client *gc = client->client_data;
 	GtkWidget *dialog, *label, *content;
 	char buf[256];
 
 	gdk_threads_enter();
 
-	gfio_set_connected(ui, 0);
-	clear_ui_info(ui);
+	gfio_set_connected(gc->ui, 0);
+	clear_ui_info(gc->ui);
 
 	sprintf(buf, "Client %s: timeout talking to server.\n", client->hostname);
 
 	dialog = gtk_dialog_new_with_buttons("Timed out!",
-			GTK_WINDOW(ui->window),
+			GTK_WINDOW(gc->ui->window),
 			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
 			GTK_STOCK_OK, GTK_RESPONSE_OK, NULL);
 
@@ -1290,6 +1361,17 @@ static int get_connection_details(char **host, int *port, int *type,
 	return 0;
 }
 
+static void gfio_client_added(struct gui *ui, struct fio_client *client)
+{
+	struct gfio_client *gc;
+
+	gc = malloc(sizeof(*gc));
+	memset(gc, 0, sizeof(*gc));
+	gc->ui = ui;
+
+	client->client_data = gc;
+}
+
 static void file_open(GtkWidget *w, gpointer data)
 {
 	GtkWidget *dialog;
@@ -1327,12 +1409,14 @@ static void file_open(GtkWidget *w, gpointer data)
 
 	filenames = fn_glist;
 	while (filenames != NULL) {
+		struct fio_client *client;
+
 		ui.job_files = realloc(ui.job_files, (ui.nr_job_files + 1) * sizeof(char *));
 		ui.job_files[ui.nr_job_files] = strdup(filenames->data);
 		ui.nr_job_files++;
 
-		ui.client = fio_client_add_explicit(&gfio_client_ops, host, type, port);
-		if (!ui.client) {
+		client = fio_client_add_explicit(&gfio_client_ops, host, type, port);
+		if (!client) {
 			GError *error;
 
 			error = g_error_new(g_quark_from_string("fio"), 1,
@@ -1340,7 +1424,7 @@ static void file_open(GtkWidget *w, gpointer data)
 			report_error(error);
 			g_error_free(error);
 		}
-		ui.client->client_data = &ui;
+		gfio_client_added(&ui, client);
 			
 		g_free(filenames->data);
 		filenames = g_slist_next(filenames);
