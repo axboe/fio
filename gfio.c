@@ -772,8 +772,10 @@ static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
 
 static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
+	gdk_threads_enter();
 	printf("gfio_disk_util_op called\n");
 	fio_client_ops.disk_util(client, cmd);
+	gdk_threads_leave();
 }
 
 extern int sum_stat_clients;
@@ -807,8 +809,10 @@ static void gfio_thread_status_op(struct fio_client *client,
 static void gfio_group_stats_op(struct fio_client *client,
 				struct fio_net_cmd *cmd)
 {
+	gdk_threads_enter();
 	printf("gfio_group_stats_op called\n");
 	fio_client_ops.group_stats(client, cmd);
+	gdk_threads_leave();
 }
 
 static void gfio_update_eta(struct jobs_eta *je)
@@ -819,6 +823,8 @@ static void gfio_update_eta(struct jobs_eta *je)
 	char tmp[32];
 	double perc = 0.0;
 	int i2p = 0;
+
+	gdk_threads_enter();
 
 	eta_str[0] = '\0';
 	output[0] = '\0';
@@ -889,6 +895,7 @@ static void gfio_update_eta(struct jobs_eta *je)
 	}
 		
 	gfio_update_thread_status(output, perc);
+	gdk_threads_leave();
 }
 
 static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -908,11 +915,15 @@ static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	if (!client->name)
 		client->name = strdup((char *) probe->hostname);
 
+	gdk_threads_enter();
+
 	gtk_label_set_text(GTK_LABEL(ui.probe.hostname), (char *) probe->hostname);
 	gtk_label_set_text(GTK_LABEL(ui.probe.os), os);
 	gtk_label_set_text(GTK_LABEL(ui.probe.arch), arch);
 	sprintf(buf, "%u.%u.%u", probe->fio_major, probe->fio_minor, probe->fio_patch);
 	gtk_label_set_text(GTK_LABEL(ui.probe.fio_ver), buf);
+
+	gdk_threads_leave();
 }
 
 static void gfio_update_thread_status(char *status_message, double perc)
@@ -925,16 +936,16 @@ static void gfio_update_thread_status(char *status_message, double perc)
 		GTK_PROGRESS_BAR(ui.thread_status_pb), m);
 	gtk_progress_bar_set_fraction(
 		GTK_PROGRESS_BAR(ui.thread_status_pb), perc / 100.0);
-	gdk_threads_enter();
 	gtk_widget_queue_draw(ui.window);
-	gdk_threads_leave();
 }
 
 static void gfio_quit_op(struct fio_client *client)
 {
 	struct gui *ui = client->client_data;
 
+	gdk_threads_enter();
 	gfio_set_connected(ui, 0);
+	gdk_threads_leave();
 }
 
 static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -955,12 +966,16 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	p->numjobs		= le32_to_cpu(p->numjobs);
 	p->group_reporting	= le32_to_cpu(p->group_reporting);
 
+	gdk_threads_enter();
+
 	gtk_entry_set_text(GTK_ENTRY(ui->eta.name), (gchar *) p->jobname);
 	gtk_entry_set_text(GTK_ENTRY(ui->eta.iotype), ddir_str(p->rw));
 	gtk_entry_set_text(GTK_ENTRY(ui->eta.ioengine), (gchar *) p->ioengine);
 
 	sprintf(tmp, "%u", p->iodepth);
 	gtk_entry_set_text(GTK_ENTRY(ui->eta.iodepth), tmp);
+
+	gdk_threads_leave();
 }
 
 static void gfio_client_timed_out(struct fio_client *client)
