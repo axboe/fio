@@ -37,6 +37,7 @@ struct fio_client {
 	char *hostname;
 	int port;
 	int fd;
+	unsigned int refs;
 
 	char *name;
 
@@ -119,8 +120,10 @@ static struct fio_client *find_client_by_fd(int fd)
 	flist_for_each(entry, &client_hash[bucket]) {
 		client = flist_entry(entry, struct fio_client, hash_list);
 
-		if (client->fd == fd)
+		if (client->fd == fd) {
+			client->refs++;
 			return client;
+		}
 	}
 
 	return NULL;
@@ -128,6 +131,11 @@ static struct fio_client *find_client_by_fd(int fd)
 
 static void remove_client(struct fio_client *client)
 {
+	assert(client->refs);
+
+	if (--client->refs)
+		return;
+
 	dprint(FD_NET, "client: removed <%s>\n", client->hostname);
 	flist_del(&client->list);
 
@@ -147,6 +155,11 @@ static void remove_client(struct fio_client *client)
 	free(client);
 	nr_clients--;
 	sum_stat_clients--;
+}
+
+static void put_client(struct fio_client *client)
+{
+	remove_client(client);
 }
 
 static void __fio_client_add_cmd_option(struct fio_client *client,
@@ -215,6 +228,7 @@ int fio_client_add(const char *hostname, void **cookie)
 		return -1;
 
 	client->fd = -1;
+	client->refs = 1;
 
 	__fio_client_add_cmd_option(client, "fio");
 
@@ -1055,6 +1069,7 @@ int fio_handle_clients(void)
 				retval = 1;
 			} else if (client->error)
 				retval = 1;
+			put_client(client);
 		}
 	}
 
