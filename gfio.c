@@ -1227,9 +1227,10 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 		if (!ui->nr_job_files)
 			file_open(widget, data);
 		gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
-		fio_clients_connect();
-		pthread_create(&ui->t, NULL, job_thread, NULL);
-		gtk_widget_set_sensitive(ui->button[CONNECT_BUTTON], 0);
+		if (!fio_clients_connect()) {
+			pthread_create(&ui->t, NULL, job_thread, NULL);
+			gtk_widget_set_sensitive(ui->button[CONNECT_BUTTON], 0);
+		}
 	} else {
 		fio_clients_terminate();
 		gfio_set_connected(ui, 0);
