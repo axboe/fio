@@ -258,6 +258,8 @@ static void gfio_ui_setup_log(struct gui *ui)
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree_view));
 	gtk_tree_selection_set_mode(GTK_TREE_SELECTION(selection), GTK_SELECTION_BROWSE);
+	g_object_set(G_OBJECT(tree_view), "headers-visible", TRUE,
+		"enable-grid-lines", GTK_TREE_VIEW_GRID_LINES_BOTH, NULL);
 
 	tree_view_column(tree_view, 0, "Time", ALIGN_RIGHT | UNSORTABLE);
 	tree_view_column(tree_view, 1, "Host", ALIGN_RIGHT | UNSORTABLE);
@@ -288,6 +290,9 @@ static GtkWidget *gfio_output_clat_percentiles(unsigned int *ovals,
 
 	tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
 	gtk_widget_set_can_focus(tree_view, FALSE);
+
+	g_object_set(G_OBJECT(tree_view), "headers-visible", TRUE,
+		"enable-grid-lines", GTK_TREE_VIEW_GRID_LINES_BOTH, NULL);
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree_view));
 	gtk_tree_selection_set_mode(GTK_TREE_SELECTION(selection), GTK_SELECTION_BROWSE);
@@ -543,6 +548,9 @@ static GtkWidget *gfio_output_lat_buckets(double *lat, unsigned int num,
 	tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
 	gtk_widget_set_can_focus(tree_view, FALSE);
 
+	g_object_set(G_OBJECT(tree_view), "headers-visible", TRUE,
+		"enable-grid-lines", GTK_TREE_VIEW_GRID_LINES_BOTH, NULL);
+
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree_view));
 	gtk_tree_selection_set_mode(GTK_TREE_SELECTION(selection), GTK_SELECTION_BROWSE);
 
@@ -724,6 +732,9 @@ static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 
 	tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
 	gtk_widget_set_can_focus(tree_view, FALSE);
+
+	g_object_set(G_OBJECT(tree_view), "headers-visible", TRUE,
+		"enable-grid-lines", GTK_TREE_VIEW_GRID_LINES_BOTH, NULL);
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree_view));
 	gtk_tree_selection_set_mode(GTK_TREE_SELECTION(selection), GTK_SELECTION_BROWSE);
