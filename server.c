@@ -463,7 +463,7 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 		je->iops[i]	= cpu_to_le32(je->iops[i]);
 	}
 
-	je->elapsed_sec		= cpu_to_le32(je->nr_running);
+	je->elapsed_sec		= cpu_to_le64(je->elapsed_sec);
 	je->eta_sec		= cpu_to_le64(je->eta_sec);
 
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_ETA, je, size, cmd->tag);
