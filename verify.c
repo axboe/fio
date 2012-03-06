@@ -78,7 +78,7 @@ static unsigned int get_hdr_inc(struct thread_data *td, struct io_u *io_u)
 	unsigned int hdr_inc;
 
 	hdr_inc = io_u->buflen;
-	if (td->o.verify_interval)
+	if (td->o.verify_interval && td->o.verify_interval <= io_u->buflen)
 		hdr_inc = td->o.verify_interval;
 
 	return hdr_inc;
