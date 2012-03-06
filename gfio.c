@@ -175,6 +175,7 @@ static void gfio_set_connected(struct gui *ui, int connected)
 		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
 		ui->connected = 1;
 		gtk_button_set_label(GTK_BUTTON(ui->button[CONNECT_BUTTON]), "Disconnect");
+		gtk_widget_set_sensitive(ui->button[CONNECT_BUTTON], 1);
 	} else {
 		ui->connected = 0;
 		gtk_button_set_label(GTK_BUTTON(ui->button[CONNECT_BUTTON]), "Connect");
@@ -1028,6 +1029,8 @@ static void gfio_update_eta(struct jobs_eta *je)
 static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_probe_pdu *probe = (struct cmd_probe_pdu *) cmd->payload;
+	struct gfio_client *gc = client->client_data;
+	struct gui *ui = gc->ui;
 	const char *os, *arch;
 	char buf[64];
 
@@ -1044,11 +1047,13 @@ static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	gdk_threads_enter();
 
-	gtk_label_set_text(GTK_LABEL(ui.probe.hostname), (char *) probe->hostname);
-	gtk_label_set_text(GTK_LABEL(ui.probe.os), os);
-	gtk_label_set_text(GTK_LABEL(ui.probe.arch), arch);
+	gtk_label_set_text(GTK_LABEL(ui->probe.hostname), (char *) probe->hostname);
+	gtk_label_set_text(GTK_LABEL(ui->probe.os), os);
+	gtk_label_set_text(GTK_LABEL(ui->probe.arch), arch);
 	sprintf(buf, "%u.%u.%u", probe->fio_major, probe->fio_minor, probe->fio_patch);
-	gtk_label_set_text(GTK_LABEL(ui.probe.fio_ver), buf);
+	gtk_label_set_text(GTK_LABEL(ui->probe.fio_ver), buf);
+
+	gfio_set_connected(ui, 1);
 
 	gdk_threads_leave();
 }
@@ -1212,7 +1217,7 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 		gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
 		fio_clients_connect();
 		pthread_create(&ui->t, NULL, job_thread, NULL);
-		gfio_set_connected(ui, 1);
+		gtk_widget_set_sensitive(ui->button[CONNECT_BUTTON], 0);
 	} else {
 		fio_clients_terminate();
 		gfio_set_connected(ui, 0);
