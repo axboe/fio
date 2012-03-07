@@ -32,6 +32,7 @@
 #include "graph.h"
 
 static int gfio_server_running;
+static const char *gfio_graph_font;
 
 static void gfio_update_thread_status(char *status_message, double perc);
 
@@ -125,7 +126,7 @@ static void setup_iops_graph(struct gui *ui)
 	if (ui->iops_graph)
 		graph_free(ui->iops_graph);
 	ui->iops_graph = graph_new(DRAWING_AREA_XDIM / 2.0,
-					DRAWING_AREA_YDIM);
+					DRAWING_AREA_YDIM, gfio_graph_font);
 	graph_title(ui->iops_graph, "IOPS");
 	graph_x_title(ui->iops_graph, "Time");
 	graph_y_title(ui->iops_graph, "IOPS");
@@ -140,7 +141,7 @@ static void setup_bandwidth_graph(struct gui *ui)
 	if (ui->bandwidth_graph)
 		graph_free(ui->bandwidth_graph);
 	ui->bandwidth_graph = graph_new(DRAWING_AREA_XDIM / 2.0,
-						DRAWING_AREA_YDIM);
+					DRAWING_AREA_YDIM, gfio_graph_font);
 	graph_title(ui->bandwidth_graph, "Bandwidth");
 	graph_x_title(ui->bandwidth_graph, "Time");
 	graph_y_title(ui->bandwidth_graph, "Bandwidth");
@@ -1662,7 +1663,7 @@ static void view_log(GtkWidget *w, gpointer data)
 
 static void preferences(GtkWidget *w, gpointer data)
 {
-	GtkWidget *dialog, *frame, *box, **buttons;
+	GtkWidget *dialog, *frame, *box, **buttons, *vbox, *font;
 	int i;
 
 	dialog = gtk_dialog_new_with_buttons("Preferences",
@@ -1674,16 +1675,34 @@ static void preferences(GtkWidget *w, gpointer data)
 
 	frame = gtk_frame_new("Debug logging");
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), frame, FALSE, FALSE, 5);
+
+	vbox = gtk_vbox_new(FALSE, 6);
+	gtk_container_add(GTK_CONTAINER(frame), vbox);
+
 	box = gtk_hbox_new(FALSE, 6);
-	gtk_container_add(GTK_CONTAINER(frame), box);
+	gtk_container_add(GTK_CONTAINER(vbox), box);
 
 	buttons = malloc(sizeof(GtkWidget *) * FD_DEBUG_MAX);
 
 	for (i = 0; i < FD_DEBUG_MAX; i++) {
+		if (i == 7) {
+			box = gtk_hbox_new(FALSE, 6);
+			gtk_container_add(GTK_CONTAINER(vbox), box);
+		}
+
+
 		buttons[i] = gtk_check_button_new_with_label(debug_levels[i].name);
 		gtk_widget_set_tooltip_text(buttons[i], debug_levels[i].help);
 		gtk_box_pack_start(GTK_BOX(box), buttons[i], FALSE, FALSE, 6);
 	}
+
+	frame = gtk_frame_new("Graph font");
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), frame, FALSE, FALSE, 5);
+	vbox = gtk_vbox_new(FALSE, 6);
+	gtk_container_add(GTK_CONTAINER(frame), vbox);
+
+	font = gtk_font_button_new();
+	gtk_box_pack_start(GTK_BOX(vbox), font, FALSE, FALSE, 5);
 
 	gtk_widget_show_all(dialog);
 
@@ -1699,6 +1718,9 @@ static void preferences(GtkWidget *w, gpointer data)
 		if (set)
 			fio_debug |= (1UL << i);
 	}
+
+	gfio_graph_font = strdup(gtk_font_button_get_font_name(GTK_FONT_BUTTON(font)));
+	printf("got font %s\n", gfio_graph_font);
 
 	gtk_widget_destroy(dialog);
 }
@@ -1796,7 +1818,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	
 	ui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
         gtk_window_set_title(GTK_WINDOW(ui->window), "fio");
-	gtk_window_set_default_size(GTK_WINDOW(ui->window), 700, 500);
+	gtk_window_set_default_size(GTK_WINDOW(ui->window), 700, 700);
 
 	g_signal_connect(ui->window, "delete-event", G_CALLBACK(quit_clicked), NULL);
 	g_signal_connect(ui->window, "destroy", G_CALLBACK(quit_clicked), NULL);

@@ -57,9 +57,10 @@ struct graph {
 	struct graph_label *labels;
 	struct graph_label *tail;
 	int per_label_limit;
+	const char *font;
 };
 
-struct graph *graph_new(unsigned int xdim, unsigned int ydim)
+struct graph *graph_new(unsigned int xdim, unsigned int ydim, const char *font)
 {
 	struct graph *g;
 
@@ -67,6 +68,9 @@ struct graph *graph_new(unsigned int xdim, unsigned int ydim)
 	g->xdim = xdim;
 	g->ydim = ydim;
 	g->per_label_limit = -1;
+	g->font = font;
+	if (!g->font)
+		g->font = "Sans";
 	return g;
 }
 
@@ -182,14 +186,12 @@ static void draw_bars(struct graph *bg, cairo_t *cr, struct graph_label *lb,
 	}
 }
 
-static void draw_centered_text(cairo_t *cr, double x, double y,
-		double fontsize, const char *text)
+static void draw_centered_text(struct graph *g, cairo_t *cr, double x, double y,
+			       double fontsize, const char *text)
 {
 	cairo_text_extents_t extents;
 
-	cairo_select_font_face (cr, "Sans",
-		CAIRO_FONT_SLANT_NORMAL,
-		CAIRO_FONT_WEIGHT_NORMAL);
+	cairo_select_font_face (cr, g->font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
 
 	cairo_set_font_size(cr, fontsize);
 	cairo_text_extents(cr, text, &extents);
@@ -200,15 +202,14 @@ static void draw_centered_text(cairo_t *cr, double x, double y,
 	cairo_show_text(cr, text);
 }
 
-static void draw_vertical_centered_text(cairo_t *cr, double x, double y,
-		double fontsize, const char *text)
+static void draw_vertical_centered_text(struct graph *g, cairo_t *cr, double x,
+					double y, double fontsize,
+					const char *text)
 {
 	double sx, sy;
 	cairo_text_extents_t extents;
 
-	cairo_select_font_face (cr, "Sans",
-		CAIRO_FONT_SLANT_NORMAL,
-		CAIRO_FONT_WEIGHT_NORMAL);
+	cairo_select_font_face(cr, g->font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
 
 	cairo_set_font_size(cr, fontsize);
 	cairo_text_extents(cr, text, &extents);
@@ -230,7 +231,7 @@ static void graph_draw_common(struct graph *g, cairo_t *cr,
 	double *x1, double *y1, double *x2, double *y2)
 {
         cairo_set_source_rgb(cr, 0, 0, 0);
-        cairo_set_line_width (cr, 1.0);
+        cairo_set_line_width (cr, 0.8);
 
         cairo_move_to(cr, 0, 0);
         cairo_line_to(cr, 0, g->ydim);
@@ -240,9 +241,9 @@ static void graph_draw_common(struct graph *g, cairo_t *cr,
 
 	/* for now just set margins at 10% of width.  This is not very good. */
 	*x1 = g->xdim / 10.0;	
-	*x2 = 9.0 * *x1; 
+	*x2 = 9.0 * *x1;
 	*y1 = g->ydim / 10.0;	
-	*y2 = 9.0 * *y1; 
+	*y2 = 9.0 * *y1;
 
 	cairo_move_to(cr, *x1, *y1);
 	cairo_line_to(cr, *x1, *y2);
@@ -251,9 +252,9 @@ static void graph_draw_common(struct graph *g, cairo_t *cr,
 	cairo_line_to(cr, *x1, *y1);
 	cairo_stroke(cr);
 
-	draw_centered_text(cr, g->xdim / 2, g->ydim / 20, 20.0, g->title);
-	draw_centered_text(cr, g->xdim / 2, g->ydim * 0.97, 14.0, g->xtitle);
-	draw_vertical_centered_text(cr, g->xdim * 0.02, g->ydim / 2, 14.0, g->ytitle);
+	draw_centered_text(g, cr, g->xdim / 2, g->ydim / 20, 20.0, g->title);
+	draw_centered_text(g, cr, g->xdim / 2, g->ydim * 0.97, 14.0, g->xtitle);
+	draw_vertical_centered_text(g, cr, g->xdim * 0.02, g->ydim / 2, 14.0, g->ytitle);
 	cairo_stroke(cr);
 }
 
@@ -274,7 +275,7 @@ static void graph_draw_x_ticks(struct graph *g, cairo_t *cr,
 			continue;
 
 		/* Draw tick mark */
-		cairo_set_line_width(cr, 1.0);
+		cairo_set_line_width(cr, 0.8);
 		cairo_move_to(cr, tx, y2);
 		cairo_line_to(cr, tx, y2 + (y2 - y1) * 0.03);
 		cairo_stroke(cr);
@@ -289,7 +290,7 @@ static void graph_draw_x_ticks(struct graph *g, cairo_t *cr,
 		cairo_restore(cr);
 
 		/* draw tickmark label */
-		draw_centered_text(cr, tx, y2 * 1.04, 12.0, tm[i].string);
+		draw_centered_text(g, cr, tx, y2 * 1.04, 12.0, tm[i].string);
 		cairo_stroke(cr);
 		
 	}
@@ -325,7 +326,7 @@ static void graph_draw_y_ticks(struct graph *g, cairo_t *cr,
 		cairo_restore(cr);
 
 		/* draw tickmark label */
-		draw_centered_text(cr, x1 - (x2 - x1) * 0.04, ty, 12.0, tm[i].string);
+		draw_centered_text(g, cr, x1 - (x2 - x1) * 0.04, ty, 12.0, tm[i].string);
 		cairo_stroke(cr);
 	}
 }
@@ -348,7 +349,7 @@ void bar_graph_draw(struct graph *bg, cairo_t *cr)
 	maxdata = find_max_data(bg->labels);
 
 	if (fabs(maxdata - mindata) < 1e-20) {
-		draw_centered_text(cr,
+		draw_centered_text(bg, cr,
 			x1 + (x2 - x1) / 2.0,
 			y1 + (y2 - y1) / 2.0, 20.0, "No good data");
 		return;
@@ -364,7 +365,7 @@ void bar_graph_draw(struct graph *bg, cairo_t *cr)
 		label_offset = bg->xdim * 0.1 + space_per_label * (double) i + space_per_label * 0.1;
 		draw_bars(bg, cr, lb, label_offset, bar_width, mindata, maxdata);
 		// draw_centered_text(cr, label_offset + (bar_width / 2.0 + bar_width * 0.1), bg->ydim * 0.93,
-		draw_centered_text(cr, x1 + space_per_label * (i + 0.5), bg->ydim * 0.93,
+		draw_centered_text(bg, cr, x1 + space_per_label * (i + 0.5), bg->ydim * 0.93,
 			12.0, lb->label); 
 		i++;
 	}
@@ -418,7 +419,7 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 	maxy = find_xy_value(g, gety, maxdouble);
 
 	if (fabs(maxx - minx) < 1e-20 || fabs(maxy - miny) < 1e-20) {
-		draw_centered_text(cr,
+		draw_centered_text(g, cr,
 			x1 + (x2 - x1) / 2.0,
 			y1 + (y2 - y1) / 2.0, 20.0, "No good Data");
 		return;
@@ -427,7 +428,7 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 	graph_draw_x_ticks(g, cr, x1, y1, x2, y2, minx, maxx, 10);
 	graph_draw_y_ticks(g, cr, x1, y1, x2, y2, miny, maxy, 10);
 
-	cairo_set_line_width(cr, 2.5);
+	cairo_set_line_width(cr, 1.5);
 	for (i = g->labels; i; i = i->next) {
 		first = 1;
 		cairo_set_source_rgb(cr, i->r, i->g, i->b);
