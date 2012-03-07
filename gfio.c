@@ -1501,6 +1501,7 @@ static void file_open(GtkWidget *w, gpointer data)
 	filter = gtk_file_filter_new();
 	gtk_file_filter_add_pattern(filter, "*.fio");
 	gtk_file_filter_add_pattern(filter, "*.job");
+	gtk_file_filter_add_pattern(filter, "*.ini");
 	gtk_file_filter_add_mime_type(filter, "text/fio");
 	gtk_file_filter_set_name(filter, "Fio job file");
 	gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filter);
