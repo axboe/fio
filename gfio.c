@@ -1732,11 +1732,28 @@ static void about_dialog(GtkWidget *w, gpointer data)
 		"Stephen Carmeron <stephenmcameron@gmail.com>",
 		NULL
 	};
+	const char *license[] = {
+		"Fio is free software; you can redistribute it and/or modify "
+		"it under the terms of the GNU General Public License as published by "
+		"the Free Software Foundation; either version 2 of the License, or "
+		"(at your option) any later version.\n",
+		"Fio is distributed in the hope that it will be useful, "
+		"but WITHOUT ANY WARRANTY; without even the implied warranty of "
+		"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the "
+		"GNU General Public License for more details.\n",
+		"You should have received a copy of the GNU General Public License "
+		"along with Fio; if not, write to the Free Software Foundation, Inc., "
+		"51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA\n"
+	};
+	char *license_trans;
+
+	license_trans = g_strconcat(license[0], "\n", license[1], "\n",
+				     license[2], "\n", NULL);
 
 	gtk_show_about_dialog(NULL,
 		"program-name", "gfio",
 		"comments", "Gtk2 UI for fio",
-		"license", "GPLv2",
+		"license", license_trans,
 		"website", "http://git.kernel.dk/?p=fio.git;a=summary",
 		"authors", authors,
 		"version", fio_version_string,
@@ -1745,6 +1762,8 @@ static void about_dialog(GtkWidget *w, gpointer data)
 		/* Must be last: */
 		"wrap-license", TRUE,
 		NULL);
+
+	g_free (license_trans);
 }
 
 static GtkActionEntry menu_items[] = {
