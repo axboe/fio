@@ -153,32 +153,32 @@ static unsigned long long __get_mult_bytes(const char *p, void *data,
 	for (i = 0; i < strlen(c); i++)
 		c[i] = tolower(c[i]);
 
-	if (!strcmp("pib", c)) {
+	if (!strncmp("pib", c, 3)) {
 		pow = 5;
 		mult = 1000;
-	} else if (!strcmp("tib", c)) {
+	} else if (!strncmp("tib", c, 3)) {
 		pow = 4;
 		mult = 1000;
-	} else if (!strcmp("gib", c)) {
+	} else if (!strncmp("gib", c, 3)) {
 		pow = 3;
 		mult = 1000;
-	} else if (!strcmp("mib", c)) {
+	} else if (!strncmp("mib", c, 3)) {
 		pow = 2;
 		mult = 1000;
-	} else if (!strcmp("kib", c)) {
+	} else if (!strncmp("kib", c, 3)) {
 		pow = 1;
 		mult = 1000;
-	} else if (!strcmp("p", c) || !strcmp("pb", c))
+	} else if (!strncmp("p", c, 1) || !strncmp("pb", c, 2))
 		pow = 5;
-	else if (!strcmp("t", c) || !strcmp("tb", c))
+	else if (!strncmp("t", c, 1) || !strncmp("tb", c, 2))
 		pow = 4;
-	else if (!strcmp("g", c) || !strcmp("gb", c))
+	else if (!strncmp("g", c, 1) || !strncmp("gb", c, 2))
 		pow = 3;
-	else if (!strcmp("m", c) || !strcmp("mb", c))
+	else if (!strncmp("m", c, 1) || !strncmp("mb", c, 2))
 		pow = 2;
-	else if (!strcmp("k", c) || !strcmp("kb", c))
+	else if (!strncmp("k", c, 1) || !strncmp("kb", c, 2))
 		pow = 1;
-	else if (!strcmp("%", c)) {
+	else if (!strncmp("%", c, 1)) {
 		*percent = 1;
 		free(c);
 		return ret;
