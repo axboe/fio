@@ -68,7 +68,7 @@ endif
 
 OBJS = $(SOURCE:.c=.o)
 FIO_OBJS = $(OBJS) fio.o
-GFIO_OBJS = $(OBJS) gfio.o
+GFIO_OBJS = $(OBJS) gfio.o graph.o tickmarks.o
 
 T_SMALLOC_OBJS = t/stest.o
 T_SMALLOC_OBJS += mutex.o smalloc.o t/log.o
@@ -105,6 +105,9 @@ all: .depend $(PROGS) $(SCRIPTS)
 
 gfio.o: gfio.c
 	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c gfio.c
+
+graph.o:	graph.c graph.h
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c graph.c
 
 t/stest: $(T_SMALLOC_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_SMALLOC_OBJS) $(LIBS) $(LDFLAGS)
