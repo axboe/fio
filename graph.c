@@ -233,12 +233,6 @@ static void graph_draw_common(struct graph *g, cairo_t *cr,
         cairo_set_source_rgb(cr, 0, 0, 0);
         cairo_set_line_width (cr, 0.8);
 
-        cairo_move_to(cr, 0, 0);
-        cairo_line_to(cr, 0, g->ydim);
-        cairo_line_to(cr, g->xdim, g->ydim);
-        cairo_line_to(cr, g->xdim, 0);
-        cairo_line_to(cr, 0, 0);
-
 	/* for now just set margins at 10% of width.  This is not very good. */
 	*x1 = g->xdim / 10.0;	
 	*x2 = 9.0 * *x1;
