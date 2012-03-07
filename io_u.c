@@ -1117,10 +1117,9 @@ static int check_get_verify(struct thread_data *td, struct io_u *io_u)
 	if (td->o.verify_backlog && td->io_hist_len) {
 		int get_verify = 0;
 
-		if (td->verify_batch) {
-			td->verify_batch--;
+		if (td->verify_batch)
 			get_verify = 1;
-		} else if (!(td->io_hist_len % td->o.verify_backlog) &&
+		else if (!(td->io_hist_len % td->o.verify_backlog) &&
 			 td->last_ddir != DDIR_READ) {
 			td->verify_batch = td->o.verify_batch;
 			if (!td->verify_batch)
@@ -1128,8 +1127,10 @@ static int check_get_verify(struct thread_data *td, struct io_u *io_u)
 			get_verify = 1;
 		}
 
-		if (get_verify && !get_next_verify(td, io_u))
+		if (get_verify && !get_next_verify(td, io_u)) {
+			td->verify_batch--;
 			return 1;
+		}
 	}
 
 	return 0;
