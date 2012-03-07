@@ -140,8 +140,7 @@ static void setup_iops_graph(struct gui *ui)
 	ui->iops_graph = graph_new(DRAWING_AREA_XDIM / 2.0,
 					DRAWING_AREA_YDIM, gfio_graph_font);
 	graph_title(ui->iops_graph, "IOPS");
-	graph_x_title(ui->iops_graph, "Time");
-	graph_y_title(ui->iops_graph, "IOPS");
+	graph_x_title(ui->iops_graph, "Time (secs)");
 	graph_add_label(ui->iops_graph, "Read IOPS");
 	graph_add_label(ui->iops_graph, "Write IOPS");
 	graph_set_color(ui->iops_graph, "Read IOPS", 0.7, 0.0, 0.0);
@@ -156,8 +155,7 @@ static void setup_bandwidth_graph(struct gui *ui)
 	ui->bandwidth_graph = graph_new(DRAWING_AREA_XDIM / 2.0,
 					DRAWING_AREA_YDIM, gfio_graph_font);
 	graph_title(ui->bandwidth_graph, "Bandwidth");
-	graph_x_title(ui->bandwidth_graph, "Time");
-	graph_y_title(ui->bandwidth_graph, "Bandwidth");
+	graph_x_title(ui->bandwidth_graph, "Time (secs)");
 	graph_add_label(ui->bandwidth_graph, "Read Bandwidth");
 	graph_add_label(ui->bandwidth_graph, "Write Bandwidth");
 	graph_set_color(ui->bandwidth_graph, "Read Bandwidth", 0.7, 0.0, 0.0);
