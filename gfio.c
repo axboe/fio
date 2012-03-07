@@ -1381,11 +1381,52 @@ void report_error(GError *error)
 	}
 }
 
+struct connection_widgets
+{
+	GtkWidget *hentry;
+	GtkWidget *combo;
+	GtkWidget *button;
+};
+
+static void hostname_cb(GtkEntry *entry, gpointer data)
+{
+	struct connection_widgets *cw = data;
+	int uses_net = 0, is_localhost = 0;
+	const gchar *text;
+	gchar *ctext;
+
+	/*
+	 * Check whether to display the 'auto start backend' box
+	 * or not. Show it if we are a localhost and using network,
+	 * or using a socket.
+	 */
+	ctext = gtk_combo_box_get_active_text(GTK_COMBO_BOX(cw->combo));
+	if (!ctext || !strncmp(ctext, "IPv4", 4) || !strncmp(ctext, "IPv6", 4))
+		uses_net = 1;
+	g_free(ctext);
+
+	if (uses_net) {
+		text = gtk_entry_get_text(GTK_ENTRY(cw->hentry));
+		if (!strcmp(text, "127.0.0.1") || !strcmp(text, "localhost") ||
+		    !strcmp(text, "::1") || !strcmp(text, "ip6-localhost") ||
+		    !strcmp(text, "ip6-loopback"))
+			is_localhost = 1;
+	}
+
+	if (!uses_net || is_localhost) {
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(cw->button), 1);
+		gtk_widget_set_sensitive(cw->button, 1);
+	} else {
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(cw->button), 0);
+		gtk_widget_set_sensitive(cw->button, 0);
+	}
+}
+
 static int get_connection_details(char **host, int *port, int *type,
 				  int *server_start)
 {
-	GtkWidget *dialog, *box, *vbox, *hentry, *hbox, *frame, *pentry, *combo;
-	GtkWidget *button;
+	GtkWidget *dialog, *box, *vbox, *hbox, *frame, *pentry;
+	struct connection_widgets cw;
 	char *typeentry;
 
 	dialog = gtk_dialog_new_with_buttons("Connection details",
@@ -1403,9 +1444,9 @@ static int get_connection_details(char **host, int *port, int *type,
 
 	hbox = gtk_hbox_new(TRUE, 10);
 	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
-	hentry = gtk_entry_new();
-	gtk_entry_set_text(GTK_ENTRY(hentry), "localhost");
-	gtk_box_pack_start(GTK_BOX(hbox), hentry, TRUE, TRUE, 0);
+	cw.hentry = gtk_entry_new();
+	gtk_entry_set_text(GTK_ENTRY(cw.hentry), "localhost");
+	gtk_box_pack_start(GTK_BOX(hbox), cw.hentry, TRUE, TRUE, 0);
 
 	frame = gtk_frame_new("Port");
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
@@ -1424,13 +1465,13 @@ static int get_connection_details(char **host, int *port, int *type,
 	hbox = gtk_hbox_new(TRUE, 4);
 	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
 
-	combo = gtk_combo_box_new_text();
-	gtk_combo_box_append_text(GTK_COMBO_BOX(combo), "IPv4");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(combo), "IPv6");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(combo), "local socket");
-	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 0);
+	cw.combo = gtk_combo_box_new_text();
+	gtk_combo_box_append_text(GTK_COMBO_BOX(cw.combo), "IPv4");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(cw.combo), "IPv6");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(cw.combo), "local socket");
+	gtk_combo_box_set_active(GTK_COMBO_BOX(cw.combo), 0);
 
-	gtk_container_add(GTK_CONTAINER(hbox), combo);
+	gtk_container_add(GTK_CONTAINER(hbox), cw.combo);
 
 	frame = gtk_frame_new("Options");
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
@@ -1440,10 +1481,16 @@ static int get_connection_details(char **host, int *port, int *type,
 	hbox = gtk_hbox_new(TRUE, 4);
 	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
 
-	button = gtk_check_button_new_with_label("Auto-spawn fio backend");
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), 1);
-	gtk_widget_set_tooltip_text(button, "When running fio locally, it is necessary to have the backend running on the same system. If this is checked, gfio will start the backend automatically for you if it isn't already running.");
-	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 6);
+	cw.button = gtk_check_button_new_with_label("Auto-spawn fio backend");
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(cw.button), 1);
+	gtk_widget_set_tooltip_text(cw.button, "When running fio locally, it is necessary to have the backend running on the same system. If this is checked, gfio will start the backend automatically for you if it isn't already running.");
+	gtk_box_pack_start(GTK_BOX(hbox), cw.button, FALSE, FALSE, 6);
+
+	/*
+	 * Connect edit signal, so we can show/not-show the auto start button
+	 */
+	g_signal_connect(GTK_OBJECT(cw.hentry), "changed", G_CALLBACK(hostname_cb), &cw);
+	g_signal_connect(GTK_OBJECT(cw.combo), "changed", G_CALLBACK(hostname_cb), &cw);
 
 	gtk_widget_show_all(dialog);
 
@@ -1452,10 +1499,10 @@ static int get_connection_details(char **host, int *port, int *type,
 		return 1;
 	}
 
-	*host = strdup(gtk_entry_get_text(GTK_ENTRY(hentry)));
+	*host = strdup(gtk_entry_get_text(GTK_ENTRY(cw.hentry)));
 	*port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(pentry));
 
-	typeentry = gtk_combo_box_get_active_text(GTK_COMBO_BOX(combo));
+	typeentry = gtk_combo_box_get_active_text(GTK_COMBO_BOX(cw.combo));
 	if (!typeentry || !strncmp(typeentry, "IPv4", 4))
 		*type = Fio_client_ipv4;
 	else if (!strncmp(typeentry, "IPv6", 4))
@@ -1464,7 +1511,7 @@ static int get_connection_details(char **host, int *port, int *type,
 		*type = Fio_client_socket;
 	g_free(typeentry);
 
-	*server_start = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button));
+	*server_start = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(cw.button));
 
 	gtk_widget_destroy(dialog);
 	return 0;
