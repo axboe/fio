@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <malloc.h>
+#include <string.h>
 
 /* 
  * adapted from Paul Heckbert's algorithm on p 657-659 of
@@ -38,6 +39,23 @@ static double nicenum(double x, int round)
 	return 10.0 * pow(10.0, exp);
 }
 
+static void shorten(char *str)
+{
+	int l;
+
+	l = strlen(str);
+	if (l > 9 && strcmp(&str[l - 9], "000000000") == 0) {
+		str[l - 9] = 'G';
+		str[l - 8] = '\0';
+	} else if (l > 9 && strcmp(&str[l - 6], "000000") == 0) {
+		str[l - 6] = 'M';
+		str[l - 5] = '\0';
+	} else if (l > 9 && strcmp(&str[l - 3], "000") == 0) {
+		str[l - 3] = 'K';
+		str[l - 2] = '\0';
+	}
+}
+
 int calc_tickmarks(double min, double max, int nticks, struct tickmark **tm)
 {
 	char str[100];
@@ -62,6 +80,7 @@ int calc_tickmarks(double min, double max, int nticks, struct tickmark **tm)
 	for (x = graphmin; x < graphmax + 0.5 * d; x += d) {
 		(*tm)[i].value = x;
 		sprintf((*tm)[i].string, str, x);
+		shorten((*tm)[i].string);
 		i++;
 	}
 	return i;
