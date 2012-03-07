@@ -812,6 +812,7 @@ static GtkWidget *get_results_window(struct gui *ui)
 
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(win), "Results");
+	gtk_window_set_default_size(GTK_WINDOW(win), 1024, 768);
 	g_signal_connect(win, "delete-event", G_CALLBACK(results_window_delete), ui);
 	g_signal_connect(win, "destroy", G_CALLBACK(results_window_delete), ui);
 
@@ -826,19 +827,25 @@ static GtkWidget *get_results_window(struct gui *ui)
 static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 			    struct group_run_stats *rs)
 {
-	GtkWidget *res_win, *box, *vbox, *entry;
+	GtkWidget *res_win, *box, *vbox, *entry, *scroll;
 	struct gfio_client *gc = client->client_data;
 
 	gdk_threads_enter();
 
 	res_win = get_results_window(gc->ui);
 
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_container_set_border_width(GTK_CONTAINER(scroll), 5);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+
 	vbox = gtk_vbox_new(FALSE, 3);
 
-	box = gtk_hbox_new(TRUE, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), box, FALSE, FALSE, 5);
+	box = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), box, TRUE, FALSE, 5);
 
-	gtk_notebook_append_page(GTK_NOTEBOOK(res_win), vbox, gtk_label_new(ts->name));
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), vbox);
+
+	gtk_notebook_append_page(GTK_NOTEBOOK(res_win), scroll, gtk_label_new(ts->name));
 
 	gc->results_widget = vbox;
 
