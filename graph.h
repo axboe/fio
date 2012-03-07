@@ -3,6 +3,8 @@
 
 struct graph;
 
+#define INVISIBLE_COLOR (-1.0)
+
 struct graph *graph_new(unsigned int xdim, unsigned int ydim, const char *font);
 void bar_graph_draw(struct graph *g, cairo_t *cr);
 void line_graph_draw(struct graph *g, cairo_t *cr);

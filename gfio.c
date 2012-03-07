@@ -121,6 +121,18 @@ struct gfio_client {
 	GtkWidget *disk_util_frame;
 };
 
+static void add_invisible_data(struct graph *g)
+{
+	/*
+	 * This puts some invisible data into a graph so that it will
+	 * initially have some grid lines instead of "No good data"
+	 */
+	graph_add_label(g, "invisible");
+	graph_set_color(g, "invisible", INVISIBLE_COLOR, 0.0, 0.7);
+	graph_add_xy_data(g, "invisible", 0.0, 0.0);
+	graph_add_xy_data(g, "invisible", 1.0, 100.0);
+}
+
 static void setup_iops_graph(struct gui *ui)
 {
 	if (ui->iops_graph)
@@ -134,6 +146,7 @@ static void setup_iops_graph(struct gui *ui)
 	graph_add_label(ui->iops_graph, "Write IOPS");
 	graph_set_color(ui->iops_graph, "Read IOPS", 0.7, 0.0, 0.0);
 	graph_set_color(ui->iops_graph, "Write IOPS", 0.0, 0.0, 0.7);
+	add_invisible_data(ui->iops_graph);
 }
 
 static void setup_bandwidth_graph(struct gui *ui)
@@ -149,6 +162,7 @@ static void setup_bandwidth_graph(struct gui *ui)
 	graph_add_label(ui->bandwidth_graph, "Write Bandwidth");
 	graph_set_color(ui->bandwidth_graph, "Read Bandwidth", 0.7, 0.0, 0.0);
 	graph_set_color(ui->bandwidth_graph, "Write Bandwidth", 0.0, 0.0, 0.7);
+	add_invisible_data(ui->bandwidth_graph);
 }
 
 static void clear_ui_info(struct gui *ui)

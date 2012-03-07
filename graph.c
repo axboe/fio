@@ -431,6 +431,8 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 	cairo_set_line_width(cr, 1.5);
 	for (i = g->labels; i; i = i->next) {
 		first = 1;
+		if (i->r < 0) /* invisible data */
+			continue;
 		cairo_set_source_rgb(cr, i->r, i->g, i->b);
 		for (j = i->values; j; j = j->next) {
 			tx = ((getx(j) - minx) / (maxx - minx)) * (x2 - x1) + x1;
@@ -588,16 +590,22 @@ void graph_set_color(struct graph *gr, const char *label,
 	struct graph_label *i;
 	double r, g, b;
 
-	r = fabs(red);
-	g = fabs(green);
-	b = fabs(blue);
+	if (red < 0.0) { /* invisible color */
+		r = -1.0;
+		g = -1.0;
+		b = -1.0;
+	} else {
+		r = fabs(red);
+		g = fabs(green);
+		b = fabs(blue);
 
-	if (r > 1.0)
-		r = 1.0;
-	if (g > 1.0)
-		g = 1.0;
-	if (b > 1.0)
-		b =1.0;
+		if (r > 1.0)
+			r = 1.0;
+		if (g > 1.0)
+			g = 1.0;
+		if (b > 1.0)
+			b =1.0;
+	}
 
 	for (i = gr->labels; i; i = i->next)
 		if (strcmp(i->label, label) == 0) {
