@@ -1236,7 +1236,9 @@ static void gfio_client_timed_out(struct fio_client *client)
 			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
 			GTK_STOCK_OK, GTK_RESPONSE_OK, NULL);
 
-	content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+	/* gtk_dialog_get_content_area() is 2.14 and newer */
+	content = GTK_DIALOG(dialog)->vbox;
+
 	label = gtk_label_new((const gchar *) buf);
 	gtk_container_add(GTK_CONTAINER(content), label);
 	gtk_widget_show_all(dialog);
@@ -1459,7 +1461,8 @@ static int get_connection_details(char **host, int *port, int *type,
 			GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
 
 	frame = gtk_frame_new("Hostname / socket name");
-	vbox = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+	/* gtk_dialog_get_content_area() is 2.14 and newer */
+	vbox = GTK_DIALOG(dialog)->vbox;
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
 
 	box = gtk_vbox_new(FALSE, 6);
