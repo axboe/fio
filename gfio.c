@@ -913,10 +913,8 @@ static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd
 
 	gdk_threads_enter();
 
-	if (!gc->results_widget) {
-		printf("no results!\n");
+	if (!gc->results_widget)
 		goto out;
-	}
 
 	if (!gc->disk_util_frame) {
 		gc->disk_util_frame = gtk_frame_new("Disk utilization");
@@ -1732,8 +1730,6 @@ static void preferences(GtkWidget *w, gpointer data)
 	}
 
 	gfio_graph_font = strdup(gtk_font_button_get_font_name(GTK_FONT_BUTTON(font)));
-	printf("got font %s\n", gfio_graph_font);
-
 	gtk_widget_destroy(dialog);
 }
 
