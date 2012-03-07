@@ -25,9 +25,11 @@
 #include <malloc.h>
 
 #include <glib.h>
+#include <cairo.h>
 #include <gtk/gtk.h>
 
 #include "fio.h"
+#include "graph.h"
 
 static int gfio_server_running;
 
@@ -88,7 +90,9 @@ struct gui {
 	GtkWidget *buttonbox;
 	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
 	GtkWidget *scrolled_window;
-	GtkWidget *textview;
+#define DRAWING_AREA_XDIM 1000
+#define DRAWING_AREA_YDIM 400
+	GtkWidget *drawing_area;
 	GtkWidget *error_info_bar;
 	GtkWidget *error_label;
 	GtkWidget *results_notebook;
@@ -103,6 +107,8 @@ struct gui {
 	pthread_t t;
 	pthread_t server_t;
 
+	struct graph *iops_graph;
+	struct graph *bandwidth_graph;
 	struct fio_client *client;
 	int nr_job_files;
 	char **job_files;
@@ -113,6 +119,36 @@ struct gfio_client {
 	GtkWidget *results_widget;
 	GtkWidget *disk_util_frame;
 };
+
+static void setup_iops_graph(struct gui *ui)
+{
+	if (ui->iops_graph)
+		graph_free(ui->iops_graph);
+	ui->iops_graph = graph_new((int) DRAWING_AREA_XDIM / 2.0,
+					(int) DRAWING_AREA_YDIM);
+	graph_title(ui->iops_graph, "IOPS");
+	graph_x_title(ui->iops_graph, "Time");
+	graph_y_title(ui->iops_graph, "IOPS");
+	graph_add_label(ui->iops_graph, "Read IOPS");
+	graph_add_label(ui->iops_graph, "Write IOPS");
+	graph_set_color(ui->iops_graph, "Read IOPS", 0.7, 0.0, 0.0);
+	graph_set_color(ui->iops_graph, "Write IOPS", 0.0, 0.0, 0.7);
+}
+
+static void setup_bandwidth_graph(struct gui *ui)
+{
+	if (ui->bandwidth_graph)
+		graph_free(ui->bandwidth_graph);
+	ui->bandwidth_graph = graph_new((int) DRAWING_AREA_XDIM / 2.0,
+					(int) DRAWING_AREA_YDIM);
+	graph_title(ui->bandwidth_graph, "Bandwidth");
+	graph_x_title(ui->bandwidth_graph, "Time");
+	graph_y_title(ui->bandwidth_graph, "Bandwidth");
+	graph_add_label(ui->bandwidth_graph, "Read Bandwidth");
+	graph_add_label(ui->bandwidth_graph, "Write Bandwidth");
+	graph_set_color(ui->bandwidth_graph, "Read Bandwidth", 0.7, 0.0, 0.0);
+	graph_set_color(ui->bandwidth_graph, "Write Bandwidth", 0.0, 0.0, 0.7);
+}
 
 static void clear_ui_info(struct gui *ui)
 {
@@ -960,6 +996,32 @@ static void gfio_group_stats_op(struct fio_client *client,
 	gdk_threads_leave();
 }
 
+static int on_expose_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
+{
+	struct gui *ui = (struct gui *) p;
+	cairo_t *cr;
+
+	cr = gdk_cairo_create(w->window);
+
+	cairo_set_source_rgb(cr, 0, 0, 0);
+
+	cairo_save(cr);
+	cairo_translate(cr, 0, 0);
+	line_graph_draw(ui->bandwidth_graph, cr);
+	cairo_stroke(cr);
+	cairo_restore(cr);
+
+	cairo_save(cr);
+	cairo_translate(cr, DRAWING_AREA_XDIM / 2.0, 0);
+				// DRAWING_AREA_YDIM * 0.05);
+	line_graph_draw(ui->iops_graph, cr);
+	cairo_stroke(cr);
+	cairo_restore(cr);
+	cairo_destroy(cr);
+
+	return FALSE;
+}
+
 static void gfio_update_eta(struct jobs_eta *je)
 {
 	static int eta_good;
@@ -1026,6 +1088,11 @@ static void gfio_update_eta(struct jobs_eta *je)
 		gtk_entry_set_text(GTK_ENTRY(ui.eta.read_iops), iops_str[0]);
 		gtk_entry_set_text(GTK_ENTRY(ui.eta.write_bw), rate_str[1]);
 		gtk_entry_set_text(GTK_ENTRY(ui.eta.write_iops), iops_str[1]);
+
+		graph_add_xy_data(ui.iops_graph, "Read IOPS", je->elapsed_sec, je->iops[0]);
+		graph_add_xy_data(ui.iops_graph, "Write IOPS", je->elapsed_sec, je->iops[1]);
+		graph_add_xy_data(ui.bandwidth_graph, "Read Bandwidth", je->elapsed_sec, je->rate[0]);
+		graph_add_xy_data(ui.bandwidth_graph, "Write Bandwidth", je->elapsed_sec, je->rate[1]);
 
 		free(rate_str[0]);
 		free(rate_str[1]);
@@ -1746,19 +1813,23 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 #endif
 
 	/*
-	 * Add a text box for text op messages 
+	 * Set up a drawing area and IOPS and bandwidth graphs
 	 */
-	ui->textview = gtk_text_view_new();
-	ui->text = gtk_text_view_get_buffer(GTK_TEXT_VIEW(ui->textview));
-	gtk_text_buffer_set_text(ui->text, "", -1);
-	gtk_text_view_set_editable(GTK_TEXT_VIEW(ui->textview), FALSE);
-	gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(ui->textview), FALSE);
+	ui->drawing_area = gtk_drawing_area_new();
+	gtk_widget_set_size_request(GTK_WIDGET(ui->drawing_area), 
+			DRAWING_AREA_XDIM, DRAWING_AREA_YDIM);
+	g_signal_connect(G_OBJECT(ui->drawing_area), "expose_event",
+				G_CALLBACK (on_expose_drawing_area), ui);
 	ui->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(ui->scrolled_window),
 					GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_container_add(GTK_CONTAINER(ui->scrolled_window), ui->textview);
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(ui->scrolled_window),
+					ui->drawing_area);
 	gtk_box_pack_start(GTK_BOX(ui->vbox), ui->scrolled_window,
 			TRUE, TRUE, 0);
+
+	setup_iops_graph(ui);
+	setup_bandwidth_graph(ui);
 
 	/*
 	 * Set up alignments for widgets at the bottom of ui, 
