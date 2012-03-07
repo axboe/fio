@@ -526,6 +526,20 @@ sync_done:
 	dprint(FD_VERIFY, "exiting loop\n");
 }
 
+static int io_bytes_exceeded(struct thread_data *td)
+{
+	unsigned long long bytes;
+
+	if (td_rw(td))
+		bytes = td->this_io_bytes[0] + td->this_io_bytes[1];
+	else if (td_write(td))
+		bytes = td->this_io_bytes[1];
+	else
+		bytes = td->this_io_bytes[0];
+
+	return bytes >= td->o.size;
+}
+
 /*
  * Main IO worker function. It retrieves io_u's to process and queues
  * and reaps them, checking for rate and errors along the way.
@@ -540,9 +554,8 @@ static void do_io(struct thread_data *td)
 	else
 		td_set_runstate(td, TD_RUNNING);
 
-	while ( (td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
-		(!flist_empty(&td->trim_list)) ||
-	        ((td->this_io_bytes[0] + td->this_io_bytes[1]) < td->o.size) ) {
+	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
+		(!flist_empty(&td->trim_list)) || !io_bytes_exceeded(td)) {
 		struct timeval comp_time;
 		unsigned long bytes_done[2] = { 0, 0 };
 		int min_evts = 0;
