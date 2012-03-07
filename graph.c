@@ -186,20 +186,60 @@ static void draw_bars(struct graph *bg, cairo_t *cr, struct graph_label *lb,
 	}
 }
 
-static void draw_centered_text(struct graph *g, cairo_t *cr, double x, double y,
-			       double fontsize, const char *text)
+static void draw_aligned_text(struct graph *g, cairo_t *cr, double x, double y,
+			       double fontsize, const char *text, int alignment)
 {
+#define CENTERED 0
+#define LEFT_JUSTIFIED 1
+#define RIGHT_JUSTIFIED 2
+
+	double factor, direction;
 	cairo_text_extents_t extents;
 
+	switch(alignment) {
+		case CENTERED:
+			direction = -1.0;
+			factor = 0.5;
+			break;
+		case RIGHT_JUSTIFIED:
+			direction = -1.0;
+			factor = 1.0;
+			break;
+		case LEFT_JUSTIFIED:
+		default:
+			direction = 1.0;
+			factor = 1.0;
+			break;
+	}
 	cairo_select_font_face (cr, g->font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
 
 	cairo_set_font_size(cr, fontsize);
 	cairo_text_extents(cr, text, &extents);
-	x = x - (extents.width / 2 + extents.x_bearing);
+	x = x + direction * (factor * extents.width  + extents.x_bearing);
 	y = y - (extents.height / 2 + extents.y_bearing);
 
 	cairo_move_to(cr, x, y);
 	cairo_show_text(cr, text);
+}
+
+static inline void draw_centered_text(struct graph *g, cairo_t *cr, double x, double y,
+			       double fontsize, const char *text)
+{
+	draw_aligned_text(g, cr, x, y, fontsize, text, CENTERED);
+}
+
+static inline void draw_right_justified_text(struct graph *g, cairo_t *cr,
+				double x, double y,
+				double fontsize, const char *text)
+{
+	draw_aligned_text(g, cr, x, y, fontsize, text, RIGHT_JUSTIFIED);
+}
+
+static inline void draw_left_justified_text(struct graph *g, cairo_t *cr,
+				double x, double y,
+				double fontsize, const char *text)
+{
+	draw_aligned_text(g, cr, x, y, fontsize, text, LEFT_JUSTIFIED);
 }
 
 static void draw_vertical_centered_text(struct graph *g, cairo_t *cr, double x,
@@ -320,7 +360,7 @@ static void graph_draw_y_ticks(struct graph *g, cairo_t *cr,
 		cairo_restore(cr);
 
 		/* draw tickmark label */
-		draw_centered_text(g, cr, x1 - (x2 - x1) * 0.04, ty, 12.0, tm[i].string);
+		draw_right_justified_text(g, cr, x1 - (x2 - x1) * 0.025, ty, 12.0, tm[i].string);
 		cairo_stroke(cr);
 	}
 }
@@ -383,7 +423,7 @@ static double gety(struct graph_value *v)
 
 static double find_xy_value(struct graph *g, xy_value_extractor getvalue, double_comparator cmp)
 {
-	double tmp, answer;
+	double tmp, answer = 0.0;
 	struct graph_label *i;
 	struct graph_value *j;
 	int first = 1;
