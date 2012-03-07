@@ -60,13 +60,18 @@ struct graph {
 	const char *font;
 };
 
+void graph_set_size(struct graph *g, unsigned int xdim, unsigned int ydim)
+{
+	g->xdim = xdim;
+	g->ydim = ydim;
+}
+
 struct graph *graph_new(unsigned int xdim, unsigned int ydim, const char *font)
 {
 	struct graph *g;
 
 	g = calloc(1, sizeof(*g));
-	g->xdim = xdim;
-	g->ydim = ydim;
+	graph_set_size(g, xdim, ydim);
 	g->per_label_limit = -1;
 	g->font = font;
 	if (!g->font)

@@ -94,6 +94,8 @@ struct gui {
 #define DRAWING_AREA_XDIM 1000
 #define DRAWING_AREA_YDIM 400
 	GtkWidget *drawing_area;
+	int drawing_area_xdim;
+	int drawing_area_ydim;
 	GtkWidget *error_info_bar;
 	GtkWidget *error_label;
 	GtkWidget *results_notebook;
@@ -995,11 +997,22 @@ static void gfio_group_stats_op(struct fio_client *client,
 	gdk_threads_leave();
 }
 
+static gint on_config_drawing_area(GtkWidget *w, GdkEventConfigure *event)
+{
+	ui.drawing_area_xdim = w->allocation.width;
+	ui.drawing_area_ydim = w->allocation.height;
+	return TRUE;
+}
+
 static int on_expose_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	struct gui *ui = (struct gui *) p;
 	cairo_t *cr;
 
+	graph_set_size(ui->iops_graph, ui->drawing_area_xdim / 2.0,
+					ui->drawing_area_ydim);
+	graph_set_size(ui->bandwidth_graph, ui->drawing_area_xdim / 2.0,
+					ui->drawing_area_ydim);
 	cr = gdk_cairo_create(w->window);
 
 	cairo_set_source_rgb(cr, 0, 0, 0);
@@ -1011,8 +1024,7 @@ static int on_expose_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
 	cairo_restore(cr);
 
 	cairo_save(cr);
-	cairo_translate(cr, DRAWING_AREA_XDIM / 2.0, 0);
-				// DRAWING_AREA_YDIM * 0.05);
+	cairo_translate(cr, ui->drawing_area_xdim / 2.0, 0);
 	line_graph_draw(ui->iops_graph, cr);
 	cairo_stroke(cr);
 	cairo_restore(cr);
@@ -1911,11 +1923,15 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	 */
 	gdk_color_parse("white", &white);
 	ui->drawing_area = gtk_drawing_area_new();
+	ui->drawing_area_xdim = DRAWING_AREA_XDIM;
+	ui->drawing_area_ydim = DRAWING_AREA_YDIM;
 	gtk_widget_set_size_request(GTK_WIDGET(ui->drawing_area), 
-			DRAWING_AREA_XDIM, DRAWING_AREA_YDIM);
+			ui->drawing_area_xdim, ui->drawing_area_ydim);
 	gtk_widget_modify_bg(ui->drawing_area, GTK_STATE_NORMAL, &white);
 	g_signal_connect(G_OBJECT(ui->drawing_area), "expose_event",
 				G_CALLBACK (on_expose_drawing_area), ui);
+	g_signal_connect(G_OBJECT(ui->drawing_area), "configure_event",
+				G_CALLBACK (on_config_drawing_area), ui);
 	ui->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(ui->scrolled_window),
 					GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);

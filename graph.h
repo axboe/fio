@@ -6,6 +6,7 @@ struct graph;
 #define INVISIBLE_COLOR (-1.0)
 
 struct graph *graph_new(unsigned int xdim, unsigned int ydim, const char *font);
+void graph_set_size(struct graph *g, unsigned int xdim, unsigned int ydim);
 void bar_graph_draw(struct graph *g, cairo_t *cr);
 void line_graph_draw(struct graph *g, cairo_t *cr);
 void line_graph_set_data_count_limit(struct graph *g, int per_label_limit);
