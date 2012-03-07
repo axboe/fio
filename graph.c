@@ -53,13 +53,13 @@ struct graph {
 	char *title;
 	char *xtitle;
 	char *ytitle;
-	int xdim, ydim;
+	unsigned int xdim, ydim;
 	struct graph_label *labels;
 	struct graph_label *tail;
 	int per_label_limit;
 };
 
-struct graph *graph_new(int xdim, int ydim)
+struct graph *graph_new(unsigned int xdim, unsigned int ydim)
 {
 	struct graph *g;
 

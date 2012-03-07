@@ -124,8 +124,8 @@ static void setup_iops_graph(struct gui *ui)
 {
 	if (ui->iops_graph)
 		graph_free(ui->iops_graph);
-	ui->iops_graph = graph_new((int) DRAWING_AREA_XDIM / 2.0,
-					(int) DRAWING_AREA_YDIM);
+	ui->iops_graph = graph_new(DRAWING_AREA_XDIM / 2.0,
+					DRAWING_AREA_YDIM);
 	graph_title(ui->iops_graph, "IOPS");
 	graph_x_title(ui->iops_graph, "Time");
 	graph_y_title(ui->iops_graph, "IOPS");
@@ -139,8 +139,8 @@ static void setup_bandwidth_graph(struct gui *ui)
 {
 	if (ui->bandwidth_graph)
 		graph_free(ui->bandwidth_graph);
-	ui->bandwidth_graph = graph_new((int) DRAWING_AREA_XDIM / 2.0,
-					(int) DRAWING_AREA_YDIM);
+	ui->bandwidth_graph = graph_new(DRAWING_AREA_XDIM / 2.0,
+						DRAWING_AREA_YDIM);
 	graph_title(ui->bandwidth_graph, "Bandwidth");
 	graph_x_title(ui->bandwidth_graph, "Time");
 	graph_y_title(ui->bandwidth_graph, "Bandwidth");
