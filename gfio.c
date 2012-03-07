@@ -1727,15 +1727,23 @@ static void preferences(GtkWidget *w, gpointer data)
 
 static void about_dialog(GtkWidget *w, gpointer data)
 {
+	const char *authors[] = {
+		"Jens Axboe <axboe@kernel.dk>",
+		"Stephen Carmeron <stephenmcameron@gmail.com>",
+		NULL
+	};
+
 	gtk_show_about_dialog(NULL,
 		"program-name", "gfio",
 		"comments", "Gtk2 UI for fio",
 		"license", "GPLv2",
+		"website", "http://git.kernel.dk/?p=fio.git;a=summary",
+		"authors", authors,
 		"version", fio_version_string,
-		"copyright", "Jens Axboe <axboe@kernel.dk> 2012",
+		"copyright", "© 2012 Jens Axboe <axboe@kernel.dk>",
 		"logo-icon-name", "fio",
 		/* Must be last: */
-		NULL, NULL,
+		"wrap-license", TRUE,
 		NULL);
 }
 
