@@ -900,6 +900,8 @@ static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd
 	struct cmd_du_pdu *p = (struct cmd_du_pdu *) cmd->payload;
 	struct gfio_client *gc = client->client_data;
 	GtkWidget *box, *frame, *entry, *vbox;
+	double util;
+	char tmp[16];
 
 	gdk_threads_enter();
 
@@ -954,6 +956,16 @@ static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd
 	entry_set_int_value(entry, p->dus.io_ticks);
 	entry = new_info_entry_in_frame(vbox, "Time in queue");
 	entry_set_int_value(entry, p->dus.time_in_queue);
+
+	util = 0.0;
+	if (p->dus.msec)
+		util = (double) 100 * p->dus.io_ticks / (double) p->dus.msec;
+	if (util > 100.0)
+		util = 100.0;
+
+	sprintf(tmp, "%3.2f%%", util);
+	entry = new_info_entry_in_frame(vbox, "Disk utilization");
+	gtk_entry_set_text(GTK_ENTRY(entry), tmp);
 
 	gtk_widget_show_all(gc->results_widget);
 out:
