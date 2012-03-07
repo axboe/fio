@@ -1827,6 +1827,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	GtkSettings *settings;
 	GtkUIManager *uimanager;
 	GtkWidget *menu, *probe, *probe_frame, *probe_box;
+	GdkColor white;
 
 	memset(ui, 0, sizeof(*ui));
 
@@ -1912,9 +1913,11 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	/*
 	 * Set up a drawing area and IOPS and bandwidth graphs
 	 */
+	gdk_color_parse("white", &white);
 	ui->drawing_area = gtk_drawing_area_new();
 	gtk_widget_set_size_request(GTK_WIDGET(ui->drawing_area), 
 			DRAWING_AREA_XDIM, DRAWING_AREA_YDIM);
+	gtk_widget_modify_bg(ui->drawing_area, GTK_STATE_NORMAL, &white);
 	g_signal_connect(G_OBJECT(ui->drawing_area), "expose_event",
 				G_CALLBACK (on_expose_drawing_area), ui);
 	ui->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
