@@ -383,13 +383,18 @@ static double gety(struct graph_value *v)
 
 static double find_xy_value(struct graph *g, xy_value_extractor getvalue, double_comparator cmp)
 {
-	double tmp, answer = 0.0;
+	double tmp, answer;
 	struct graph_label *i;
 	struct graph_value *j;
+	int first = 1;
 
 	for (i = g->labels; i; i = i->next)
 		for (j = i->values; j; j = j->next) {
 			tmp = getvalue(j);
+			if (first) {
+				first = 0;
+				answer = tmp;
+			}
 			answer = cmp(tmp, answer);	
 		}
 	return answer;
