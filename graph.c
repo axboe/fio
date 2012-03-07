@@ -402,7 +402,7 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 	double tx, ty;
 	struct graph_label *i;
 	struct graph_value *j;
-	int first = 1;
+	int good_data = 1, first = 1;
 
 	cairo_save(cr);
 	graph_draw_common(g, cr, &x1, &y1, &x2, &y2);
@@ -413,14 +413,18 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 	maxy = find_xy_value(g, gety, maxdouble);
 
 	if (fabs(maxx - minx) < 1e-20 || fabs(maxy - miny) < 1e-20) {
-		draw_centered_text(g, cr,
-			x1 + (x2 - x1) / 2.0,
-			y1 + (y2 - y1) / 2.0, 20.0, "No good Data");
-		return;
+		good_data = 0;
+		minx = 0.0;
+		miny = 0.0;
+		maxx = 10.0;
+		maxy = 100.0;
 	}
 
 	graph_draw_x_ticks(g, cr, x1, y1, x2, y2, minx, maxx, 10);
 	graph_draw_y_ticks(g, cr, x1, y1, x2, y2, miny, maxy, 10);
+
+	if (!good_data)
+		goto skip_data;
 
 	cairo_set_line_width(cr, 1.5);
 	for (i = g->labels; i; i = i->next) {
@@ -440,7 +444,10 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 		}
 		cairo_stroke(cr);
 	}
+
+skip_data:
 	cairo_restore(cr);
+
 }
 
 static void gfree(void *f)
