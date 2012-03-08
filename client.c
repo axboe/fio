@@ -949,7 +949,7 @@ int fio_handle_client(struct fio_client *client)
 		ops->probe(client, cmd);
 		free(cmd);
 		break;
-	case FIO_NET_CMD_RUN:
+	case FIO_NET_CMD_SERVER_START:
 		client->state = Client_running;
 		free(cmd);
 		break;

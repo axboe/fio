@@ -38,34 +38,34 @@ struct fio_net_int_cmd {
 };
 
 enum {
-	FIO_SERVER_VER		= 9,
+	FIO_SERVER_VER			= 9,
 
-	FIO_SERVER_MAX_PDU	= 1024,
+	FIO_SERVER_MAX_PDU		= 1024,
 
-	FIO_NET_CMD_QUIT	= 1,
-	FIO_NET_CMD_EXIT	= 2,
-	FIO_NET_CMD_JOB		= 3,
-	FIO_NET_CMD_JOBLINE	= 4,
-	FIO_NET_CMD_TEXT	= 5,
-	FIO_NET_CMD_TS		= 6,
-	FIO_NET_CMD_GS		= 7,
-	FIO_NET_CMD_SEND_ETA	= 8,
-	FIO_NET_CMD_ETA		= 9,
-	FIO_NET_CMD_PROBE	= 10,
-	FIO_NET_CMD_START	= 11,
-	FIO_NET_CMD_STOP	= 12,
-	FIO_NET_CMD_DU		= 13,
-	FIO_NET_CMD_RUN		= 14,
-	FIO_NET_CMD_ADD_JOB	= 15,
-	FIO_NET_CMD_NR		= 16,
+	FIO_NET_CMD_QUIT		= 1,
+	FIO_NET_CMD_EXIT		= 2,
+	FIO_NET_CMD_JOB			= 3,
+	FIO_NET_CMD_JOBLINE		= 4,
+	FIO_NET_CMD_TEXT		= 5,
+	FIO_NET_CMD_TS			= 6,
+	FIO_NET_CMD_GS			= 7,
+	FIO_NET_CMD_SEND_ETA		= 8,
+	FIO_NET_CMD_ETA			= 9,
+	FIO_NET_CMD_PROBE		= 10,
+	FIO_NET_CMD_START		= 11,
+	FIO_NET_CMD_STOP		= 12,
+	FIO_NET_CMD_DU			= 13,
+	FIO_NET_CMD_SERVER_START	= 14,
+	FIO_NET_CMD_ADD_JOB		= 15,
+	FIO_NET_CMD_NR			= 16,
 
-	FIO_NET_CMD_F_MORE	= 1UL << 0,
+	FIO_NET_CMD_F_MORE		= 1UL << 0,
 
 	/* crc does not include the crc fields */
-	FIO_NET_CMD_CRC_SZ	= sizeof(struct fio_net_cmd) -
-					2 * sizeof(uint16_t),
+	FIO_NET_CMD_CRC_SZ		= sizeof(struct fio_net_cmd) -
+						2 * sizeof(uint16_t),
 
-	FIO_NET_CLIENT_TIMEOUT	= 5000,
+	FIO_NET_CLIENT_TIMEOUT		= 5000,
 };
 
 struct cmd_ts_pdu {

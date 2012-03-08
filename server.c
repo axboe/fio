@@ -566,7 +566,7 @@ static int handle_connection(int sk, int block)
 void fio_server_idle_loop(void)
 {
 	if (!first_cmd_check) {
-		fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_RUN, 0, NULL);
+		fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_SERVER_START, 0, NULL);
 		first_cmd_check = 1;
 	}
 	if (server_fd != -1)
