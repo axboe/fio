@@ -6,7 +6,7 @@ port=8888
 #Use =udp for UDP, =unix for local unix domain socket
 protocol=tcp
 bs=4k
-size=10g
+size=100g
 #set the below option to enable end-to-end data integrity tests
 #verify=md5
 
