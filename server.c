@@ -833,21 +833,8 @@ void fio_server_send_du(void)
 void fio_server_send_add_job(struct thread_options *o, const char *ioengine)
 {
 	struct cmd_add_job_pdu pdu;
-	int i;
 
-	strcpy((char *) pdu.jobname, o->name);
-	strcpy((char *) pdu.ioengine, ioengine);
-
-	pdu.iodepth		= cpu_to_le32(o->iodepth);
-	pdu.rw			= cpu_to_le32(o->td_ddir);
-
-	for (i = 0; i < 2; i++) {
-		pdu.min_bs[i]	= cpu_to_le32(o->min_bs[i]);
-		pdu.max_bs[i]	= cpu_to_le32(o->max_bs[i]);
-	}
-
-	pdu.numjobs		= cpu_to_le32(o->numjobs);
-	pdu.group_reporting	= cpu_to_le32(o->group_reporting);
+	convert_thread_options_to_net(&pdu.top, o);
 
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_ADD_JOB, &pdu, sizeof(pdu), 0);
 }

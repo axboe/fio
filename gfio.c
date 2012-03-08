@@ -124,6 +124,8 @@ struct gfio_client {
 	GtkWidget *results_widget;
 	GtkWidget *disk_util_frame;
 	GtkWidget *err_entry;
+	unsigned int job_added;
+	struct thread_options o;
 };
 
 static void setup_iops_graph(struct gui *ui)
@@ -1206,29 +1208,22 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_add_job_pdu *p = (struct cmd_add_job_pdu *) cmd->payload;
 	struct gfio_client *gc = client->client_data;
+	struct thread_options *o = &gc->o;
 	struct gui *ui = gc->ui;
 	char tmp[8];
-	int i;
 
-	p->iodepth		= le32_to_cpu(p->iodepth);
-	p->rw			= le32_to_cpu(p->rw);
-
-	for (i = 0; i < 2; i++) {
-		p->min_bs[i] 	= le32_to_cpu(p->min_bs[i]);
-		p->max_bs[i]	= le32_to_cpu(p->max_bs[i]);
-	}
-
-	p->numjobs		= le32_to_cpu(p->numjobs);
-	p->group_reporting	= le32_to_cpu(p->group_reporting);
+	convert_thread_options_to_cpu(o, &p->top);
 
 	gdk_threads_enter();
 
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.name), (gchar *) p->jobname);
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.iotype), ddir_str(p->rw));
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.ioengine), (gchar *) p->ioengine);
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.name), (gchar *) o->name);
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.iotype), ddir_str(o->td_ddir));
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.ioengine), (gchar *) o->ioengine);
 
-	sprintf(tmp, "%u", p->iodepth);
+	sprintf(tmp, "%u", o->iodepth);
 	gtk_entry_set_text(GTK_ENTRY(ui->eta.iodepth), tmp);
+
+	gc->job_added++;
 
 	gdk_threads_leave();
 }

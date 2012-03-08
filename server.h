@@ -108,14 +108,7 @@ struct cmd_end_pdu {
 };
 
 struct cmd_add_job_pdu {
-	uint8_t jobname[32];
-	uint8_t ioengine[32];
-	uint32_t iodepth;
-	uint32_t rw;
-	uint32_t min_bs[2];
-	uint32_t max_bs[2];
-	uint32_t numjobs;
-	uint32_t group_reporting;
+	struct thread_options_pack top;
 };
 
 struct cmd_text_pdu {
