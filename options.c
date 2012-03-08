@@ -160,7 +160,6 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 	qsort(bssplit, td->o.bssplit_nr[ddir], sizeof(struct bssplit), bs_cmp);
 	td->o.bssplit[ddir] = bssplit;
 	return 0;
-
 }
 
 static int str_bssplit_cb(void *data, const char *input)
