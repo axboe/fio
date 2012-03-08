@@ -1,7 +1,9 @@
 #ifndef FIO_IOLOG_H
 #define FIO_IOLOG_H
 
+#include "rbtree.h"
 #include "lib/ieee754.h"
+#include "ioengine.h"
 
 /*
  * Use for maintaining statistics

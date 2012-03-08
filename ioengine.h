@@ -1,6 +1,8 @@
 #ifndef FIO_IOENGINE_H
 #define FIO_IOENGINE_H
 
+#include "debug.h"
+
 #define FIO_IOOPS_VERSION	13
 
 enum {

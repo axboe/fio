@@ -1,6 +1,8 @@
 #ifndef FIO_STAT_H
 #define FIO_STAT_H
 
+#include "iolog.h"
+
 struct group_run_stats {
 	uint64_t max_run[2], min_run[2];
 	uint64_t max_bw[2], min_bw[2];
