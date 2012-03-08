@@ -11,6 +11,15 @@
 struct fio_net_cmd;
 struct client_ops;
 
+enum {
+	Client_created		= 0,
+	Client_connected	= 1,
+	Client_started		= 2,
+	Client_running		= 3,
+	Client_stopped		= 4,
+	Client_exited		= 5,
+};
+
 struct fio_client {
 	struct flist_head list;
 	struct flist_head hash_list;
@@ -93,6 +102,8 @@ enum {
 };
 
 extern int fio_clients_connect(void);
+extern int fio_start_client(struct fio_client *);
+extern int fio_start_all_clients(void);
 extern int fio_clients_send_ini(const char *);
 extern int fio_handle_clients(struct client_ops *);
 extern int fio_client_add(struct client_ops *, const char *, void **);

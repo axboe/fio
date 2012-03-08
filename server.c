@@ -51,8 +51,9 @@ static const char *fio_server_ops[FIO_NET_CMD_NR] = {
 	"START",
 	"STOP",
 	"DISK_UTIL",
-	"RUN",
+	"SERVER_START",
 	"ADD_JOB",
+	"CMD_RUN"
 };
 
 const char *fio_server_op(unsigned int op)
@@ -68,7 +69,7 @@ const char *fio_server_op(unsigned int op)
 
 int fio_send_data(int sk, const void *p, unsigned int len)
 {
-	assert(len <= sizeof(struct fio_net_cmd) + FIO_SERVER_MAX_PDU);
+	assert(len <= sizeof(struct fio_net_cmd) + FIO_SERVER_MAX_FRAGMENT_PDU);
 
 	do {
 		int ret = send(sk, p, len, 0);
@@ -146,7 +147,7 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 		return 1;
 	}
 
-	if (cmd->pdu_len > FIO_SERVER_MAX_PDU) {
+	if (cmd->pdu_len > FIO_SERVER_MAX_FRAGMENT_PDU) {
 		log_err("fio: command payload too large: %u\n", cmd->pdu_len);
 		return 1;
 	}
@@ -262,8 +263,8 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size,
 
 	do {
 		this_len = size;
-		if (this_len > FIO_SERVER_MAX_PDU)
-			this_len = FIO_SERVER_MAX_PDU;
+		if (this_len > FIO_SERVER_MAX_FRAGMENT_PDU)
+			this_len = FIO_SERVER_MAX_FRAGMENT_PDU;
 
 		if (!cmd || cur_len < sizeof(*cmd) + this_len) {
 			if (cmd)
@@ -339,20 +340,10 @@ static int fio_server_send_quit_cmd(void)
 	return fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_QUIT, 0, NULL);
 }
 
-static int handle_job_cmd(struct fio_net_cmd *cmd)
+static int handle_run_cmd(struct fio_net_cmd *cmd)
 {
-	char *buf = (char *) cmd->payload;
-	struct cmd_start_pdu spdu;
 	struct cmd_end_pdu epdu;
 	int ret;
-
-	if (parse_jobs_ini(buf, 1, 0)) {
-		fio_server_send_quit_cmd();
-		return -1;
-	}
-
-	spdu.jobs = cpu_to_le32(thread_number);
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), 0);
 
 	ret = fio_backend();
 
@@ -365,14 +356,30 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 	return ret;
 }
 
+static int handle_job_cmd(struct fio_net_cmd *cmd)
+{
+	char *buf = (char *) cmd->payload;
+	struct cmd_start_pdu spdu;
+
+	if (parse_jobs_ini(buf, 1, 0)) {
+		fio_server_send_quit_cmd();
+		return -1;
+	}
+
+	spdu.jobs = cpu_to_le32(thread_number);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), 0);
+	return 0;
+}
+
 static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 {
 	void *pdu = cmd->payload;
 	struct cmd_single_line_pdu *cslp;
 	struct cmd_line_pdu *clp;
 	unsigned long offset;
+	struct cmd_start_pdu spdu;
 	char **argv;
-	int ret, i;
+	int i;
 
 	clp = pdu;
 	clp->lines = le16_to_cpu(clp->lines);
@@ -397,13 +404,9 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 
 	free(argv);
 
-	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_START, 0, NULL);
-
-	ret = fio_backend();
-	fio_server_send_quit_cmd();
-	reset_fio_state();
-	first_cmd_check = 0;
-	return ret;
+	spdu.jobs = cpu_to_le32(thread_number);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), 0);
+	return 0;
 }
 
 static int handle_probe_cmd(struct fio_net_cmd *cmd)
@@ -497,6 +500,9 @@ static int handle_command(struct fio_net_cmd *cmd)
 		break;
 	case FIO_NET_CMD_SEND_ETA:
 		ret = handle_send_eta_cmd(cmd);
+		break;
+	case FIO_NET_CMD_RUN:
+		ret = handle_run_cmd(cmd);
 		break;
 	default:
 		log_err("fio: unknown opcode: %s\n",fio_server_op(cmd->opcode));

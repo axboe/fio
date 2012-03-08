@@ -44,6 +44,7 @@ typedef void (*clickfunction)(GtkWidget *widget, gpointer data);
 
 static void connect_clicked(GtkWidget *widget, gpointer data);
 static void start_job_clicked(GtkWidget *widget, gpointer data);
+static void send_clicked(GtkWidget *widget, gpointer data);
 
 static struct button_spec {
 	const char *buttontext;
@@ -52,10 +53,11 @@ static struct button_spec {
 	const int start_insensitive;
 } buttonspeclist[] = {
 #define CONNECT_BUTTON 0
-#define START_JOB_BUTTON 1
+#define SEND_BUTTON 1
+#define START_JOB_BUTTON 2
 	{ "Connect", connect_clicked, "Connect to host", 0 },
-	{ "Start Job",
-		start_job_clicked,
+	{ "Send", send_clicked, "Send job description to host", 1 },
+	{ "Start Job", start_job_clicked,
 		"Send current fio job to fio server to be executed", 1 },
 };
 
@@ -114,13 +116,14 @@ struct gui {
 
 	struct graph *iops_graph;
 	struct graph *bandwidth_graph;
-	struct fio_client *client;
+	struct gfio_client *client;
 	int nr_job_files;
 	char **job_files;
 } ui;
 
 struct gfio_client {
 	struct gui *ui;
+	struct fio_client *client;
 	GtkWidget *results_widget;
 	GtkWidget *disk_util_frame;
 	GtkWidget *err_entry;
@@ -223,13 +226,14 @@ static GtkWidget *create_spinbutton(GtkWidget *hbox, double min, double max, dou
 static void gfio_set_connected(struct gui *ui, int connected)
 {
 	if (connected) {
-		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
+		gtk_widget_set_sensitive(ui->button[SEND_BUTTON], 1);
 		ui->connected = 1;
 		gtk_button_set_label(GTK_BUTTON(ui->button[CONNECT_BUTTON]), "Disconnect");
 		gtk_widget_set_sensitive(ui->button[CONNECT_BUTTON], 1);
 	} else {
 		ui->connected = 0;
 		gtk_button_set_label(GTK_BUTTON(ui->button[CONNECT_BUTTON]), "Connect");
+		gtk_widget_set_sensitive(ui->button[SEND_BUTTON], 0);
 		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 0);
 		gtk_widget_set_sensitive(ui->button[CONNECT_BUTTON], 1);
 	}
@@ -1321,15 +1325,6 @@ static int send_job_files(struct gui *ui)
 	return ret;
 }
 
-static void start_job_thread(struct gui *ui)
-{
-	if (send_job_files(ui)) {
-		printf("Yeah, I didn't really like those options too much.\n");
-		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
-		return;
-	}
-}
-
 static void *server_thread(void *arg)
 {
 	is_backend = 1;
@@ -1352,9 +1347,10 @@ static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
                 gpointer data)
 {
 	struct gui *ui = data;
+	struct gfio_client *gc = ui->client;
 
 	gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 0);
-	start_job_thread(ui);
+	fio_net_send_simple_cmd(gc->client->fd, FIO_NET_CMD_RUN, 0, NULL);
 }
 
 static void file_open(GtkWidget *w, gpointer data);
@@ -1371,12 +1367,26 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 		if (!fio_clients_connect()) {
 			pthread_create(&ui->t, NULL, job_thread, NULL);
 			gtk_widget_set_sensitive(ui->button[CONNECT_BUTTON], 0);
+			gtk_widget_set_sensitive(ui->button[SEND_BUTTON], 1);
 		}
 	} else {
 		fio_clients_terminate();
 		gfio_set_connected(ui, 0);
 		clear_ui_info(ui);
 	}
+}
+
+static void send_clicked(GtkWidget *widget, gpointer data)
+{
+	struct gui *ui = data;
+
+	if (send_job_files(ui)) {
+		printf("Yeah, I didn't really like those options too much.\n");
+		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
+	}
+
+	gtk_widget_set_sensitive(ui->button[SEND_BUTTON], 0);
+	gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
 }
 
 static void add_button(struct gui *ui, int i, GtkWidget *buttonbox,
@@ -1575,6 +1585,9 @@ static void gfio_client_added(struct gui *ui, struct fio_client *client)
 	gc = malloc(sizeof(*gc));
 	memset(gc, 0, sizeof(*gc));
 	gc->ui = ui;
+	gc->client = client;
+
+	ui->client = gc;
 
 	client->client_data = gc;
 }

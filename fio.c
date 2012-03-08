@@ -45,8 +45,10 @@ int main(int argc, char *argv[], char *envp[])
 	if (parse_options(argc, argv))
 		return 1;
 
-	if (nr_clients)
+	if (nr_clients) {
+		if (fio_start_all_clients())
+			return 1;
 		return fio_handle_clients(&fio_client_ops);
-	else
+	} else
 		return fio_backend();
 }

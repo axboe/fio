@@ -40,15 +40,6 @@ struct client_ops fio_client_ops = {
 
 static struct timeval eta_tv;
 
-enum {
-	Client_created		= 0,
-	Client_connected	= 1,
-	Client_started		= 2,
-	Client_running		= 3,
-	Client_stopped		= 4,
-	Client_exited		= 5,
-};
-
 static FLIST_HEAD(client_list);
 static FLIST_HEAD(eta_list);
 
@@ -467,6 +458,33 @@ int fio_clients_connect(void)
 	}
 
 	return !nr_clients;
+}
+
+int fio_start_client(struct fio_client *client)
+{
+	dprint(FD_NET, "client: start %s\n", client->hostname);
+	return fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_RUN, 0, NULL);
+}
+
+int fio_start_all_clients(void)
+{
+	struct fio_client *client;
+	struct flist_head *entry, *tmp;
+	int ret;
+
+	dprint(FD_NET, "client: start all\n");
+
+	flist_for_each_safe(entry, tmp, &client_list) {
+		client = flist_entry(entry, struct fio_client, list);
+
+		ret = fio_start_client(client);
+		if (ret) {
+			remove_client(client);
+			continue;
+		}
+	}
+
+	return flist_empty(&client_list);
 }
 
 /*
@@ -891,8 +909,8 @@ int fio_handle_client(struct fio_client *client)
 	if (!cmd)
 		return 0;
 
-	dprint(FD_NET, "client: got cmd op %s from %s\n",
-				fio_server_op(cmd->opcode), client->hostname);
+	dprint(FD_NET, "client: got cmd op %s from %s (pdu=%u)\n",
+		fio_server_op(cmd->opcode), client->hostname, cmd->pdu_len);
 
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
