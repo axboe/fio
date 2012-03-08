@@ -406,5 +406,6 @@ struct thread_options_pack {
 
 extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);
 extern void convert_thread_options_to_net(struct thread_options_pack *top, struct thread_options *);
+extern int fio_test_cconv(struct thread_options *);
 
 #endif

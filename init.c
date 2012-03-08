@@ -1630,12 +1630,16 @@ int fio_init_options(void)
 	return 0;
 }
 
+extern int fio_check_options(struct thread_options *);
+
 int parse_options(int argc, char *argv[])
 {
 	int job_files, i;
 
 	if (fio_init_options())
 		return 1;
+	if (fio_test_cconv(&def_thread.o))
+		log_err("fio: failed internal cconv test\n");
 
 	job_files = parse_cmd_line(argc, argv);
 

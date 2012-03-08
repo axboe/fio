@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "thread_options.h"
 
 static void string_to_cpu(char **dst, const uint8_t *src)
@@ -372,3 +374,23 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 
 }
 
+/*
+ * Basic conversion test. We'd really need to fill in more of the options
+ * to have a thorough test. Even better, we should auto-generate the
+ * converter functions...
+ */
+int fio_test_cconv(struct thread_options *__o)
+{
+	struct thread_options o;
+	struct thread_options_pack top1, top2;
+
+	memset(&top1, 0, sizeof(top1));
+	memset(&top2, 0, sizeof(top2));
+
+	convert_thread_options_to_net(&top1, __o);
+	memset(&o, 0, sizeof(o));
+	convert_thread_options_to_cpu(&o, &top1);
+	convert_thread_options_to_net(&top2, &o);
+
+	return memcmp(&top1, &top2, sizeof(top1));
+}
