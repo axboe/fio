@@ -26,12 +26,14 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd);
+static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd);
 
 struct client_ops fio_client_ops = {
 	.text_op	= handle_text,
 	.disk_util	= handle_du,
 	.thread_status	= handle_ts,
 	.group_stats	= handle_gs,
+	.stop		= handle_stop,
 	.eta		= display_thread_status,
 	.probe		= handle_probe,
 };
@@ -853,13 +855,15 @@ static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd)
 
 static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd)
 {
-	struct cmd_end_pdu *pdu = (struct cmd_end_pdu *) cmd->payload;
-
-	client->state = Client_stopped;
-	client->error = le32_to_cpu(pdu->error);
-
 	if (client->error)
 		log_info("client <%s>: exited with error %d\n", client->hostname, client->error);
+}
+
+static void convert_stop(struct fio_net_cmd *cmd)
+{
+	struct cmd_end_pdu *pdu = (struct cmd_end_pdu *) cmd->payload;
+
+	pdu->error = le32_to_cpu(pdu->error);
 }
 
 static void convert_text(struct fio_net_cmd *cmd)
@@ -949,10 +953,16 @@ int fio_handle_client(struct fio_client *client)
 		handle_start(client, cmd);
 		free(cmd);
 		break;
-	case FIO_NET_CMD_STOP:
-		handle_stop(client, cmd);
+	case FIO_NET_CMD_STOP: {
+		struct cmd_end_pdu *pdu = (struct cmd_end_pdu *) cmd->payload;
+
+		convert_stop(cmd);
+		client->state = Client_stopped;
+		client->error = pdu->error;
+		ops->stop(client, cmd);
 		free(cmd);
 		break;
+		}
 	case FIO_NET_CMD_ADD_JOB:
 		if (ops->add_job)
 			ops->add_job(client, cmd);

@@ -23,6 +23,7 @@
  */
 #include <locale.h>
 #include <malloc.h>
+#include <string.h>
 
 #include <glib.h>
 #include <cairo.h>
@@ -35,6 +36,7 @@ static int gfio_server_running;
 static const char *gfio_graph_font;
 
 static void gfio_update_thread_status(char *status_message, double perc);
+static void view_log(GtkWidget *w, gpointer data);
 
 #define ARRAYSIZE(x) (sizeof((x)) / (sizeof((x)[0])))
 
@@ -121,6 +123,7 @@ struct gfio_client {
 	struct gui *ui;
 	GtkWidget *results_widget;
 	GtkWidget *disk_util_frame;
+	GtkWidget *err_entry;
 };
 
 static void setup_iops_graph(struct gui *ui)
@@ -859,7 +862,7 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 	entry_set_int_value(entry, ts->groupid);
 	entry = new_info_entry_in_frame(box, "Jobs");
 	entry_set_int_value(entry, ts->members);
-	entry = new_info_entry_in_frame(box, "Error");
+	gc->err_entry = entry = new_info_entry_in_frame(box, "Error");
 	entry_set_int_value(entry, ts->error);
 	entry = new_info_entry_in_frame(box, "PID");
 	entry_set_int_value(entry, ts->pid);
@@ -898,6 +901,9 @@ static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	gtk_list_store_set(gc->ui->log_model, &iter, 1, client->hostname, -1);
 	gtk_list_store_set(gc->ui->log_model, &iter, 2, p->level, -1);
 	gtk_list_store_set(gc->ui->log_model, &iter, 3, p->buf, -1);
+
+	if (p->level == FIO_LOG_ERR)
+		view_log(NULL, (gpointer) gc->ui);
 
 	gdk_threads_leave();
 }
@@ -1257,6 +1263,20 @@ static void gfio_client_timed_out(struct fio_client *client)
 	gdk_threads_leave();
 }
 
+static void gfio_client_stop(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct gfio_client *gc = client->client_data;
+
+	gdk_threads_enter();
+
+	gfio_set_connected(gc->ui, 0);
+
+	if (gc->err_entry)
+		entry_set_int_value(gc->err_entry, client->error);
+
+	gdk_threads_leave();
+}
+
 struct client_ops gfio_client_ops = {
 	.text_op		= gfio_text_op,
 	.disk_util		= gfio_disk_util_op,
@@ -1267,6 +1287,7 @@ struct client_ops gfio_client_ops = {
 	.quit			= gfio_quit_op,
 	.add_job		= gfio_add_job_op,
 	.timed_out		= gfio_client_timed_out,
+	.stop			= gfio_client_stop,
 	.stay_connected		= 1,
 };
 

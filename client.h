@@ -59,6 +59,7 @@ typedef void (*client_thread_status_display_op)(char *status_message, double per
 typedef void (*client_quit_op)(struct fio_client *);
 typedef void (*client_add_job_op)(struct fio_client *, struct fio_net_cmd *);
 typedef void (*client_timed_out)(struct fio_client *);
+typedef void (*client_stop_op)(struct fio_client *, struct fio_net_cmd *);
 
 struct client_ops {
 	client_text_op_func text_op;
@@ -70,6 +71,7 @@ struct client_ops {
 	client_quit_op quit;
 	client_add_job_op add_job;
 	client_timed_out timed_out;
+	client_stop_op stop;
 	int stay_connected;
 };
 
