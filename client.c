@@ -747,6 +747,7 @@ static void convert_jobs_eta(struct jobs_eta *je)
 
 	je->elapsed_sec		= le64_to_cpu(je->elapsed_sec);
 	je->eta_sec		= le64_to_cpu(je->eta_sec);
+	je->nr_threads		= le32_to_cpu(je->nr_threads);
 }
 
 void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
@@ -771,6 +772,9 @@ void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 
 	if (je->eta_sec > dst->eta_sec)
 		dst->eta_sec = je->eta_sec;
+
+	dst->nr_threads		+= je->nr_threads;
+	/* we need to handle je->run_str too ... */
 }
 
 void fio_client_dec_jobs_eta(struct client_eta *eta, client_eta_op eta_fn)
