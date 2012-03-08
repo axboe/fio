@@ -47,10 +47,10 @@ static void shorten(char *str)
 	if (l > 9 && strcmp(&str[l - 9], "000000000") == 0) {
 		str[l - 9] = 'G';
 		str[l - 8] = '\0';
-	} else if (l > 9 && strcmp(&str[l - 6], "000000") == 0) {
+	} else if (l > 6 && strcmp(&str[l - 6], "000000") == 0) {
 		str[l - 6] = 'M';
 		str[l - 5] = '\0';
-	} else if (l > 9 && strcmp(&str[l - 3], "000") == 0) {
+	} else if (l > 3 && strcmp(&str[l - 3], "000") == 0) {
 		str[l - 3] = 'K';
 		str[l - 2] = '\0';
 	}
