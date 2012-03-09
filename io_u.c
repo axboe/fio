@@ -1544,8 +1544,11 @@ void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
 		unsigned int perc = td->o.compress_percentage;
 
 		if (perc) {
+			unsigned int seg = min_write;
+
+			seg = min(min_write, td->o.compress_chunk);
 			fill_random_buf_percentage(&td->buf_state, io_u->buf,
-						perc, min_write, max_bs);
+						perc, seg, max_bs);
 		} else
 			fill_random_buf(&td->buf_state, io_u->buf, max_bs);
 	} else
