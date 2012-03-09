@@ -1024,10 +1024,7 @@ static void gfio_thread_status_op(struct fio_client *client,
 static void gfio_group_stats_op(struct fio_client *client,
 				struct fio_net_cmd *cmd)
 {
-	gdk_threads_enter();
-	printf("gfio_group_stats_op called\n");
-	fio_client_ops.group_stats(client, cmd);
-	gdk_threads_leave();
+	/* We're ignoring group stats for now */
 }
 
 static gint on_config_drawing_area(GtkWidget *w, GdkEventConfigure *event)
