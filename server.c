@@ -91,6 +91,9 @@ int fio_send_data(int sk, const void *p, unsigned int len)
 	if (!len)
 		return 0;
 
+	if (errno)
+		return -errno;
+
 	return 1;
 }
 
