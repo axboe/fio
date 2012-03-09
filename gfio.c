@@ -119,6 +119,9 @@ struct gui {
 	struct eta_widget eta;
 	pthread_t server_t;
 
+	pthread_t t;
+	int handler_running;
+
 	struct flist_head list;
 } main_ui;
 
@@ -151,7 +154,6 @@ struct gui_entry {
 	GtkWidget *page_label;
 	gint page_num;
 	int connected;
-	pthread_t t;
 
 	struct gfio_client *client;
 	int nr_job_files;
@@ -1436,7 +1438,11 @@ static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
 
 static void *job_thread(void *arg)
 {
+	struct gui *ui = arg;
+
+	ui->handler_running = 1;
 	fio_handle_clients(&gfio_client_ops);
+	ui->handler_running = 0;
 	return NULL;
 }
 
@@ -1507,7 +1513,8 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 		gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ge->thread_status_pb), "No jobs running");
 		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ge->thread_status_pb), 0.0);
 		if (!fio_client_connect(gc->client)) {
-			pthread_create(&ge->t, NULL, job_thread, NULL);
+			if (!ge->ui->handler_running)
+				pthread_create(&ge->ui->t, NULL, job_thread, ge->ui);
 			gtk_widget_set_sensitive(ge->button[CONNECT_BUTTON], 0);
 			gtk_widget_set_sensitive(ge->button[SEND_BUTTON], 1);
 		}
