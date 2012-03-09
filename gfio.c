@@ -876,6 +876,8 @@ static GtkWidget *get_results_window(struct gui_entry *ge)
 	g_signal_connect(win, "destroy", G_CALLBACK(results_window_delete), ge);
 
 	notebook = gtk_notebook_new();
+	gtk_notebook_set_scrollable(GTK_NOTEBOOK(notebook), 1);
+	gtk_notebook_popup_enable(GTK_NOTEBOOK(notebook));
 	gtk_container_add(GTK_CONTAINER(win), notebook);
 
 	ge->results_window = win;
@@ -2395,6 +2397,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	ui->notebook = gtk_notebook_new();
 	g_signal_connect(ui->notebook, "switch-page", G_CALLBACK(notebook_switch_page), ui);
 	gtk_notebook_set_scrollable(GTK_NOTEBOOK(ui->notebook), 1);
+	gtk_notebook_popup_enable(GTK_NOTEBOOK(ui->notebook));
 	gtk_container_add(GTK_CONTAINER(ui->vbox), ui->notebook);
 
 	vbox = new_main_page(ui);
