@@ -257,6 +257,13 @@ int fio_client_add(struct client_ops *ops, const char *hostname, void **cookie)
 	return 0;
 }
 
+static void probe_client(struct fio_client *client)
+{
+	dprint(FD_NET, "client: send probe\n");
+
+	fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_PROBE, 0, &client->cmd_list);
+}
+
 static int fio_client_connect_ip(struct fio_client *client)
 {
 	struct sockaddr *addr;
@@ -347,6 +354,8 @@ int fio_client_connect(struct fio_client *client)
 	client->fd = fd;
 	fio_client_add_hash(client);
 	client->state = Client_connected;
+
+	probe_client(client);
 	return 0;
 }
 
@@ -387,13 +396,6 @@ static void client_signal_handler(void)
 	act.sa_handler = sig_int;
 	act.sa_flags = SA_RESTART;
 	sigaction(SIGTERM, &act, NULL);
-}
-
-static void probe_client(struct fio_client *client)
-{
-	dprint(FD_NET, "client: send probe\n");
-
-	fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_PROBE, 0, &client->cmd_list);
 }
 
 static int send_client_cmd_line(struct fio_client *client)
@@ -466,8 +468,6 @@ int fio_clients_connect(void)
 			remove_client(client);
 			continue;
 		}
-
-		probe_client(client);
 
 		if (client->argc > 1)
 			send_client_cmd_line(client);
