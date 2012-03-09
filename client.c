@@ -495,7 +495,7 @@ int fio_start_all_clients(void)
  * Send file contents to server backend. We could use sendfile(), but to remain
  * more portable lets just read/write the darn thing.
  */
-static int fio_client_send_ini(struct fio_client *client, const char *filename)
+static int __fio_client_send_ini(struct fio_client *client, const char *filename)
 {
 	struct stat sb;
 	char *p, *buf;
@@ -548,6 +548,17 @@ static int fio_client_send_ini(struct fio_client *client, const char *filename)
 	return ret;
 }
 
+int fio_client_send_ini(struct fio_client *client, const char *filename)
+{
+	if (__fio_client_send_ini(client, filename)) {
+		remove_client(client);
+		return 1;
+	}
+
+	client->sent_job = 1;
+	return 0;
+}
+
 int fio_clients_send_ini(const char *filename)
 {
 	struct fio_client *client;
@@ -556,10 +567,7 @@ int fio_clients_send_ini(const char *filename)
 	flist_for_each_safe(entry, tmp, &client_list) {
 		client = flist_entry(entry, struct fio_client, list);
 
-		if (fio_client_send_ini(client, filename))
-			remove_client(client);
-
-		client->sent_job = 1;
+		fio_client_send_ini(client, filename);
 	}
 
 	return !nr_clients;

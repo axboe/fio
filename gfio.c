@@ -35,7 +35,6 @@
 static int gfio_server_running;
 static const char *gfio_graph_font;
 
-static void gfio_update_thread_status(char *status_message, double perc);
 static void view_log(GtkWidget *w, gpointer data);
 
 #define ARRAYSIZE(x) (sizeof((x)) / (sizeof((x)[0])))
@@ -169,6 +168,9 @@ struct gfio_client {
 	unsigned int job_added;
 	struct thread_options o;
 };
+
+static void gfio_update_thread_status(struct gui_entry *ge, char *status_message, double perc);
+static void gfio_update_thread_status_all(char *status_message, double perc);
 
 static struct graph *setup_iops_graph(void)
 {
@@ -1200,7 +1202,7 @@ static void gfio_update_client_eta(struct fio_client *client, struct jobs_eta *j
 		sprintf(dst, " - %s", eta_str);
 	}
 		
-	gfio_update_thread_status(output, perc);
+	gfio_update_thread_status(ge, output, perc);
 	gdk_threads_leave();
 }
 
@@ -1286,7 +1288,7 @@ static void gfio_update_all_eta(struct jobs_eta *je)
 		sprintf(dst, " - %s", eta_str);
 	}
 		
-	gfio_update_thread_status(output, perc);
+	gfio_update_thread_status_all(output, perc);
 	gdk_threads_leave();
 }
 
@@ -1322,7 +1324,19 @@ static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	gdk_threads_leave();
 }
 
-static void gfio_update_thread_status(char *status_message, double perc)
+static void gfio_update_thread_status(struct gui_entry *ge,
+				      char *status_message, double perc)
+{
+	static char message[100];
+	const char *m = message;
+
+	strncpy(message, status_message, sizeof(message) - 1);
+	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ge->thread_status_pb), m);
+	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ge->thread_status_pb), perc / 100.0);
+	gtk_widget_queue_draw(main_ui.window);
+}
+
+static void gfio_update_thread_status_all(char *status_message, double perc)
 {
 	struct gui *ui = &main_ui;
 	static char message[100];
@@ -1448,10 +1462,11 @@ static void *job_thread(void *arg)
 
 static int send_job_files(struct gui_entry *ge)
 {
+	struct gfio_client *gc = ge->client;
 	int i, ret = 0;
 
 	for (i = 0; i < ge->nr_job_files; i++) {
-		ret = fio_clients_send_ini(ge->job_files[i]);
+		ret = fio_client_send_ini(gc->client, ge->job_files[i]);
 		if (ret)
 			break;
 

@@ -107,6 +107,7 @@ extern int fio_client_connect(struct fio_client *);
 extern int fio_clients_connect(void);
 extern int fio_start_client(struct fio_client *);
 extern int fio_start_all_clients(void);
+extern int fio_client_send_ini(struct fio_client *, const char *);
 extern int fio_clients_send_ini(const char *);
 extern int fio_handle_clients(struct client_ops *);
 extern int fio_client_add(struct client_ops *, const char *, void **);
