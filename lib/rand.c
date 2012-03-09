@@ -125,6 +125,8 @@ unsigned long fill_random_buf_percentage(struct frand_state *fs, void *buf,
 			this_len = len;
 
 		memset(buf, 0, this_len);
+		len -= this_len;
+		buf += this_len;
 	}
 
 	return r;
