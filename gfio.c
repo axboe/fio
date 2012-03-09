@@ -58,7 +58,7 @@ static struct button_spec {
 	{ "Connect", connect_clicked, "Connect to host", 0 },
 	{ "Send", send_clicked, "Send job description to host", 1 },
 	{ "Start Job", start_job_clicked,
-		"Send current fio job to fio server to be executed", 1 },
+		"Start the current job on the server", 1 },
 };
 
 struct probe_widget {
@@ -85,6 +85,20 @@ struct eta_widget {
 	GtkWidget *cw_iops;
 };
 
+struct gfio_graphs {
+#define DRAWING_AREA_XDIM 1000
+#define DRAWING_AREA_YDIM 400
+	GtkWidget *drawing_area;
+	int drawing_area_xdim;
+	int drawing_area_ydim;
+
+	struct graph *iops_graph;
+	struct graph *bandwidth_graph;
+};
+
+/*
+ * Main window widgets and data
+ */
 struct gui {
 	GtkWidget *window;
 	GtkWidget *vbox;
@@ -93,13 +107,37 @@ struct gui {
 	GtkWidget *bottomalign;
 	GtkWidget *thread_status_pb;
 	GtkWidget *buttonbox;
+	GtkWidget *scrolled_window;
+	GtkWidget *notebook;
+	GtkWidget *error_info_bar;
+	GtkWidget *error_label;
+	GtkListStore *log_model;
+	GtkWidget *log_tree;
+	GtkWidget *log_view;
+	struct gfio_graphs graphs;
+	struct probe_widget probe;
+	struct eta_widget eta;
+	pthread_t server_t;
+
+	struct flist_head list;
+} main_ui;
+
+/*
+ * Notebook entry
+ */
+struct gui_entry {
+	struct flist_head list;
+	struct gui *ui;
+
+	GtkWidget *vbox;
+	GtkWidget *topvbox;
+	GtkWidget *topalign;
+	GtkWidget *bottomalign;
+	GtkWidget *thread_status_pb;
+	GtkWidget *buttonbox;
 	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
 	GtkWidget *scrolled_window;
-#define DRAWING_AREA_XDIM 1000
-#define DRAWING_AREA_YDIM 400
-	GtkWidget *drawing_area;
-	int drawing_area_xdim;
-	int drawing_area_ydim;
+	GtkWidget *notebook;
 	GtkWidget *error_info_bar;
 	GtkWidget *error_label;
 	GtkWidget *results_notebook;
@@ -107,22 +145,21 @@ struct gui {
 	GtkListStore *log_model;
 	GtkWidget *log_tree;
 	GtkWidget *log_view;
-	GtkTextBuffer *text;
+	struct gfio_graphs graphs;
 	struct probe_widget probe;
 	struct eta_widget eta;
+	GtkWidget *page_label;
+	gint page_num;
 	int connected;
 	pthread_t t;
-	pthread_t server_t;
 
-	struct graph *iops_graph;
-	struct graph *bandwidth_graph;
 	struct gfio_client *client;
 	int nr_job_files;
 	char **job_files;
-} ui;
+};
 
 struct gfio_client {
-	struct gui *ui;
+	struct gui_entry *ge;
 	struct fio_client *client;
 	GtkWidget *results_widget;
 	GtkWidget *disk_util_frame;
@@ -131,54 +168,60 @@ struct gfio_client {
 	struct thread_options o;
 };
 
-static void setup_iops_graph(struct gui *ui)
+static struct graph *setup_iops_graph(void)
 {
-	if (ui->iops_graph)
-		graph_free(ui->iops_graph);
-	ui->iops_graph = graph_new(DRAWING_AREA_XDIM / 2.0,
-					DRAWING_AREA_YDIM, gfio_graph_font);
-	graph_title(ui->iops_graph, "IOPS");
-	graph_x_title(ui->iops_graph, "Time (secs)");
-	graph_y_title(ui->iops_graph, "IOs / sec");
-	graph_add_label(ui->iops_graph, "Read IOPS");
-	graph_add_label(ui->iops_graph, "Write IOPS");
-	graph_set_color(ui->iops_graph, "Read IOPS", 0.13, 0.54, 0.13);
-	graph_set_color(ui->iops_graph, "Write IOPS", 1.0, 0.0, 0.0);
-	line_graph_set_data_count_limit(ui->iops_graph, 100);
+	struct graph *g;
+
+	g = graph_new(DRAWING_AREA_XDIM / 2.0, DRAWING_AREA_YDIM, gfio_graph_font);
+	graph_title(g, "IOPS");
+	graph_x_title(g, "Time (secs)");
+	graph_y_title(g, "IOs / sec");
+	graph_add_label(g, "Read IOPS");
+	graph_add_label(g, "Write IOPS");
+	graph_set_color(g, "Read IOPS", 0.13, 0.54, 0.13);
+	graph_set_color(g, "Write IOPS", 1.0, 0.0, 0.0);
+	line_graph_set_data_count_limit(g, 100);
+	return g;
 }
 
-static void setup_bandwidth_graph(struct gui *ui)
+static struct graph *setup_bandwidth_graph(void)
 {
-	if (ui->bandwidth_graph)
-		graph_free(ui->bandwidth_graph);
-	ui->bandwidth_graph = graph_new(DRAWING_AREA_XDIM / 2.0,
-					DRAWING_AREA_YDIM, gfio_graph_font);
-	graph_title(ui->bandwidth_graph, "Bandwidth");
-	graph_x_title(ui->bandwidth_graph, "Time (secs)");
-	graph_y_title(ui->bandwidth_graph, "Kbytes / sec");
-	graph_add_label(ui->bandwidth_graph, "Read Bandwidth");
-	graph_add_label(ui->bandwidth_graph, "Write Bandwidth");
-	graph_set_color(ui->bandwidth_graph, "Read Bandwidth", 0.13, 0.54, 0.13);
-	graph_set_color(ui->bandwidth_graph, "Write Bandwidth", 1.0, 0.0, 0.0);
-	line_graph_set_data_count_limit(ui->bandwidth_graph, 100);
+	struct graph *g;
+
+	g = graph_new(DRAWING_AREA_XDIM / 2.0, DRAWING_AREA_YDIM, gfio_graph_font);
+	graph_title(g, "Bandwidth");
+	graph_x_title(g, "Time (secs)");
+	graph_y_title(g, "Kbytes / sec");
+	graph_add_label(g, "Read Bandwidth");
+	graph_add_label(g, "Write Bandwidth");
+	graph_set_color(g, "Read Bandwidth", 0.13, 0.54, 0.13);
+	graph_set_color(g, "Write Bandwidth", 1.0, 0.0, 0.0);
+	line_graph_set_data_count_limit(g, 100);
+	return g;
 }
 
-static void clear_ui_info(struct gui *ui)
+static void setup_graphs(struct gfio_graphs *g)
 {
-	gtk_label_set_text(GTK_LABEL(ui->probe.hostname), "");
-	gtk_label_set_text(GTK_LABEL(ui->probe.os), "");
-	gtk_label_set_text(GTK_LABEL(ui->probe.arch), "");
-	gtk_label_set_text(GTK_LABEL(ui->probe.fio_ver), "");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.name), "");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.iotype), "");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.ioengine), "");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.iodepth), "");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.jobs), "");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.files), "");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.read_bw), "");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.read_iops), "");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.write_bw), "");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.write_iops), "");
+	g->iops_graph = setup_iops_graph();
+	g->bandwidth_graph = setup_bandwidth_graph();
+}
+
+static void clear_ge_ui_info(struct gui_entry *ge)
+{
+	gtk_label_set_text(GTK_LABEL(ge->probe.hostname), "");
+	gtk_label_set_text(GTK_LABEL(ge->probe.os), "");
+	gtk_label_set_text(GTK_LABEL(ge->probe.arch), "");
+	gtk_label_set_text(GTK_LABEL(ge->probe.fio_ver), "");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.name), "");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.iotype), "");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.ioengine), "");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.iodepth), "");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.jobs), "");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.files), "");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.read_bw), "");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.read_iops), "");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.write_bw), "");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.write_iops), "");
 }
 
 static GtkWidget *new_info_entry_in_frame(GtkWidget *box, const char *label)
@@ -223,19 +266,19 @@ static GtkWidget *create_spinbutton(GtkWidget *hbox, double min, double max, dou
 	return button;
 }
 
-static void gfio_set_connected(struct gui *ui, int connected)
+static void gfio_set_connected(struct gui_entry *ge, int connected)
 {
 	if (connected) {
-		gtk_widget_set_sensitive(ui->button[SEND_BUTTON], 1);
-		ui->connected = 1;
-		gtk_button_set_label(GTK_BUTTON(ui->button[CONNECT_BUTTON]), "Disconnect");
-		gtk_widget_set_sensitive(ui->button[CONNECT_BUTTON], 1);
+		gtk_widget_set_sensitive(ge->button[SEND_BUTTON], 1);
+		ge->connected = 1;
+		gtk_button_set_label(GTK_BUTTON(ge->button[CONNECT_BUTTON]), "Disconnect");
+		gtk_widget_set_sensitive(ge->button[CONNECT_BUTTON], 1);
 	} else {
-		ui->connected = 0;
-		gtk_button_set_label(GTK_BUTTON(ui->button[CONNECT_BUTTON]), "Connect");
-		gtk_widget_set_sensitive(ui->button[SEND_BUTTON], 0);
-		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 0);
-		gtk_widget_set_sensitive(ui->button[CONNECT_BUTTON], 1);
+		ge->connected = 0;
+		gtk_button_set_label(GTK_BUTTON(ge->button[CONNECT_BUTTON]), "Connect");
+		gtk_widget_set_sensitive(ge->button[SEND_BUTTON], 0);
+		gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], 0);
+		gtk_widget_set_sensitive(ge->button[CONNECT_BUTTON], 1);
 	}
 }
 
@@ -806,33 +849,33 @@ static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 
 static gboolean results_window_delete(GtkWidget *w, gpointer data)
 {
-	struct gui *ui = (struct gui *) data;
+	struct gui_entry *ge = (struct gui_entry *) data;
 
 	gtk_widget_destroy(w);
-	ui->results_window = NULL;
-	ui->results_notebook = NULL;
+	ge->results_window = NULL;
+	ge->results_notebook = NULL;
 	return TRUE;
 }
 
-static GtkWidget *get_results_window(struct gui *ui)
+static GtkWidget *get_results_window(struct gui_entry *ge)
 {
 	GtkWidget *win, *notebook;
 
-	if (ui->results_window)
-		return ui->results_notebook;
+	if (ge->results_window)
+		return ge->results_notebook;
 
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(win), "Results");
 	gtk_window_set_default_size(GTK_WINDOW(win), 1024, 768);
-	g_signal_connect(win, "delete-event", G_CALLBACK(results_window_delete), ui);
-	g_signal_connect(win, "destroy", G_CALLBACK(results_window_delete), ui);
+	g_signal_connect(win, "delete-event", G_CALLBACK(results_window_delete), ge);
+	g_signal_connect(win, "destroy", G_CALLBACK(results_window_delete), ge);
 
 	notebook = gtk_notebook_new();
 	gtk_container_add(GTK_CONTAINER(win), notebook);
 
-	ui->results_window = win;
-	ui->results_notebook = notebook;
-	return ui->results_notebook;
+	ge->results_window = win;
+	ge->results_notebook = notebook;
+	return ge->results_notebook;
 }
 
 static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
@@ -843,7 +886,7 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 
 	gdk_threads_enter();
 
-	res_win = get_results_window(gc->ui);
+	res_win = get_results_window(gc->ge);
 
 	scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_container_set_border_width(GTK_CONTAINER(scroll), 5);
@@ -884,14 +927,14 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 	gfio_show_cpu_usage(vbox, ts);
 	gfio_show_io_depths(vbox, ts);
 
-	gtk_widget_show_all(gc->ui->results_window);
+	gtk_widget_show_all(gc->ge->results_window);
 	gdk_threads_leave();
 }
 
 static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_text_pdu *p = (struct cmd_text_pdu *) cmd->payload;
-	struct gfio_client *gc = client->client_data;
+	struct gui *ui = &main_ui;
 	GtkTreeIter iter;
 	struct tm *tm;
 	time_t sec;
@@ -904,14 +947,14 @@ static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	gdk_threads_enter();
 
-	gtk_list_store_append(gc->ui->log_model, &iter);
-	gtk_list_store_set(gc->ui->log_model, &iter, 0, timebuf, -1);
-	gtk_list_store_set(gc->ui->log_model, &iter, 1, client->hostname, -1);
-	gtk_list_store_set(gc->ui->log_model, &iter, 2, p->level, -1);
-	gtk_list_store_set(gc->ui->log_model, &iter, 3, p->buf, -1);
+	gtk_list_store_append(ui->log_model, &iter);
+	gtk_list_store_set(ui->log_model, &iter, 0, timebuf, -1);
+	gtk_list_store_set(ui->log_model, &iter, 1, client->hostname, -1);
+	gtk_list_store_set(ui->log_model, &iter, 2, p->level, -1);
+	gtk_list_store_set(ui->log_model, &iter, 3, p->buf, -1);
 
 	if (p->level == FIO_LOG_ERR)
-		view_log(NULL, (gpointer) gc->ui);
+		view_log(NULL, (gpointer) ui);
 
 	gdk_threads_leave();
 }
@@ -1027,35 +1070,38 @@ static void gfio_group_stats_op(struct fio_client *client,
 	/* We're ignoring group stats for now */
 }
 
-static gint on_config_drawing_area(GtkWidget *w, GdkEventConfigure *event)
+static gint on_config_drawing_area(GtkWidget *w, GdkEventConfigure *event,
+				   gpointer data)
 {
-	ui.drawing_area_xdim = w->allocation.width;
-	ui.drawing_area_ydim = w->allocation.height;
+	struct gfio_graphs *g = data;
+
+	g->drawing_area_xdim = w->allocation.width;
+	g->drawing_area_ydim = w->allocation.height;
 	return TRUE;
 }
 
 static int on_expose_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
 {
-	struct gui *ui = (struct gui *) p;
+	struct gfio_graphs *g = p;
 	cairo_t *cr;
 
-	graph_set_size(ui->iops_graph, ui->drawing_area_xdim / 2.0,
-					ui->drawing_area_ydim);
-	graph_set_size(ui->bandwidth_graph, ui->drawing_area_xdim / 2.0,
-					ui->drawing_area_ydim);
+	graph_set_size(g->iops_graph, g->drawing_area_xdim / 2.0,
+					g->drawing_area_ydim);
+	graph_set_size(g->bandwidth_graph, g->drawing_area_xdim / 2.0,
+					g->drawing_area_ydim);
 	cr = gdk_cairo_create(w->window);
 
 	cairo_set_source_rgb(cr, 0, 0, 0);
 
 	cairo_save(cr);
 	cairo_translate(cr, 0, 0);
-	line_graph_draw(ui->bandwidth_graph, cr);
+	line_graph_draw(g->bandwidth_graph, cr);
 	cairo_stroke(cr);
 	cairo_restore(cr);
 
 	cairo_save(cr);
-	cairo_translate(cr, ui->drawing_area_xdim / 2.0, 0);
-	line_graph_draw(ui->iops_graph, cr);
+	cairo_translate(cr, g->drawing_area_xdim / 2.0, 0);
+	line_graph_draw(g->iops_graph, cr);
 	cairo_stroke(cr);
 	cairo_restore(cr);
 	cairo_destroy(cr);
@@ -1063,8 +1109,13 @@ static int on_expose_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
 	return FALSE;
 }
 
-static void gfio_update_eta(struct jobs_eta *je)
+/*
+ * Client specific ETA
+ */
+static void gfio_update_client_eta(struct fio_client *client, struct jobs_eta *je)
 {
+	struct gfio_client *gc = client->client_data;
+	struct gui_entry *ge = gc->ge;
 	static int eta_good;
 	char eta_str[128];
 	char output[256];
@@ -1083,9 +1134,9 @@ static void gfio_update_eta(struct jobs_eta *je)
 	}
 
 	sprintf(tmp, "%u", je->nr_running);
-	gtk_entry_set_text(GTK_ENTRY(ui.eta.jobs), tmp);
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.jobs), tmp);
 	sprintf(tmp, "%u", je->files_open);
-	gtk_entry_set_text(GTK_ENTRY(ui.eta.files), tmp);
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.files), tmp);
 
 #if 0
 	if (je->m_rate[0] || je->m_rate[1] || je->t_rate[0] || je->t_rate[1]) {
@@ -1094,17 +1145,17 @@ static void gfio_update_eta(struct jobs_eta *je)
 
 		mr = num2str(je->m_rate, 4, 0, i2p);
 		tr = num2str(je->t_rate, 4, 0, i2p);
-		gtk_entry_set_text(GTK_ENTRY(ui.eta);
+		gtk_entry_set_text(GTK_ENTRY(ge->eta);
 		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
 		free(tr);
 		free(mr);
 	} else if (je->m_iops || je->t_iops)
 		p += sprintf(p, ", CR=%d/%d IOPS", je->t_iops, je->m_iops);
 
-	gtk_entry_set_text(GTK_ENTRY(ui.eta.cr_bw), "---");
-	gtk_entry_set_text(GTK_ENTRY(ui.eta.cr_iops), "---");
-	gtk_entry_set_text(GTK_ENTRY(ui.eta.cw_bw), "---");
-	gtk_entry_set_text(GTK_ENTRY(ui.eta.cw_iops), "---");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.cr_bw), "---");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.cr_iops), "---");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.cw_bw), "---");
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.cw_iops), "---");
 #endif
 
 	if (je->eta_sec != INT_MAX && je->nr_running) {
@@ -1125,15 +1176,101 @@ static void gfio_update_eta(struct jobs_eta *je)
 		iops_str[0] = num2str(je->iops[0], 4, 1, 0);
 		iops_str[1] = num2str(je->iops[1], 4, 1, 0);
 
-		gtk_entry_set_text(GTK_ENTRY(ui.eta.read_bw), rate_str[0]);
-		gtk_entry_set_text(GTK_ENTRY(ui.eta.read_iops), iops_str[0]);
-		gtk_entry_set_text(GTK_ENTRY(ui.eta.write_bw), rate_str[1]);
-		gtk_entry_set_text(GTK_ENTRY(ui.eta.write_iops), iops_str[1]);
+		gtk_entry_set_text(GTK_ENTRY(ge->eta.read_bw), rate_str[0]);
+		gtk_entry_set_text(GTK_ENTRY(ge->eta.read_iops), iops_str[0]);
+		gtk_entry_set_text(GTK_ENTRY(ge->eta.write_bw), rate_str[1]);
+		gtk_entry_set_text(GTK_ENTRY(ge->eta.write_iops), iops_str[1]);
 
-		graph_add_xy_data(ui.iops_graph, "Read IOPS", je->elapsed_sec, je->iops[0]);
-		graph_add_xy_data(ui.iops_graph, "Write IOPS", je->elapsed_sec, je->iops[1]);
-		graph_add_xy_data(ui.bandwidth_graph, "Read Bandwidth", je->elapsed_sec, je->rate[0]);
-		graph_add_xy_data(ui.bandwidth_graph, "Write Bandwidth", je->elapsed_sec, je->rate[1]);
+		graph_add_xy_data(ge->graphs.iops_graph, "Read IOPS", je->elapsed_sec, je->iops[0]);
+		graph_add_xy_data(ge->graphs.iops_graph, "Write IOPS", je->elapsed_sec, je->iops[1]);
+		graph_add_xy_data(ge->graphs.bandwidth_graph, "Read Bandwidth", je->elapsed_sec, je->rate[0]);
+		graph_add_xy_data(ge->graphs.bandwidth_graph, "Write Bandwidth", je->elapsed_sec, je->rate[1]);
+
+		free(rate_str[0]);
+		free(rate_str[1]);
+		free(iops_str[0]);
+		free(iops_str[1]);
+	}
+
+	if (eta_str[0]) {
+		char *dst = output + strlen(output);
+
+		sprintf(dst, " - %s", eta_str);
+	}
+		
+	gfio_update_thread_status(output, perc);
+	gdk_threads_leave();
+}
+
+/*
+ * Update ETA in main window for all clients
+ */
+static void gfio_update_all_eta(struct jobs_eta *je)
+{
+	struct gui *ui = &main_ui;
+	static int eta_good;
+	char eta_str[128];
+	char output[256];
+	double perc = 0.0;
+	int i2p = 0;
+
+	gdk_threads_enter();
+
+	eta_str[0] = '\0';
+	output[0] = '\0';
+
+	if (je->eta_sec != INT_MAX && je->elapsed_sec) {
+		perc = (double) je->elapsed_sec / (double) (je->elapsed_sec + je->eta_sec);
+		eta_to_str(eta_str, je->eta_sec);
+	}
+
+#if 0
+	if (je->m_rate[0] || je->m_rate[1] || je->t_rate[0] || je->t_rate[1]) {
+	if (je->m_rate || je->t_rate) {
+		char *tr, *mr;
+
+		mr = num2str(je->m_rate, 4, 0, i2p);
+		tr = num2str(je->t_rate, 4, 0, i2p);
+		gtk_entry_set_text(GTK_ENTRY(ui->eta);
+		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
+		free(tr);
+		free(mr);
+	} else if (je->m_iops || je->t_iops)
+		p += sprintf(p, ", CR=%d/%d IOPS", je->t_iops, je->m_iops);
+
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.cr_bw), "---");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.cr_iops), "---");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.cw_bw), "---");
+	gtk_entry_set_text(GTK_ENTRY(ui->eta.cw_iops), "---");
+#endif
+
+	if (je->eta_sec != INT_MAX && je->nr_running) {
+		char *iops_str[2];
+		char *rate_str[2];
+
+		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running)
+			strcpy(output, "-.-% done");
+		else {
+			eta_good = 1;
+			perc *= 100.0;
+			sprintf(output, "%3.1f%% done", perc);
+		}
+
+		rate_str[0] = num2str(je->rate[0], 5, 10, i2p);
+		rate_str[1] = num2str(je->rate[1], 5, 10, i2p);
+
+		iops_str[0] = num2str(je->iops[0], 4, 1, 0);
+		iops_str[1] = num2str(je->iops[1], 4, 1, 0);
+
+		gtk_entry_set_text(GTK_ENTRY(ui->eta.read_bw), rate_str[0]);
+		gtk_entry_set_text(GTK_ENTRY(ui->eta.read_iops), iops_str[0]);
+		gtk_entry_set_text(GTK_ENTRY(ui->eta.write_bw), rate_str[1]);
+		gtk_entry_set_text(GTK_ENTRY(ui->eta.write_iops), iops_str[1]);
+
+		graph_add_xy_data(ui->graphs.iops_graph, "Read IOPS", je->elapsed_sec, je->iops[0]);
+		graph_add_xy_data(ui->graphs.iops_graph, "Write IOPS", je->elapsed_sec, je->iops[1]);
+		graph_add_xy_data(ui->graphs.bandwidth_graph, "Read Bandwidth", je->elapsed_sec, je->rate[0]);
+		graph_add_xy_data(ui->graphs.bandwidth_graph, "Write Bandwidth", je->elapsed_sec, je->rate[1]);
 
 		free(rate_str[0]);
 		free(rate_str[1]);
@@ -1155,7 +1292,7 @@ static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_probe_pdu *probe = (struct cmd_probe_pdu *) cmd->payload;
 	struct gfio_client *gc = client->client_data;
-	struct gui *ui = gc->ui;
+	struct gui_entry *ge = gc->ge;
 	const char *os, *arch;
 	char buf[64];
 
@@ -1172,28 +1309,27 @@ static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	gdk_threads_enter();
 
-	gtk_label_set_text(GTK_LABEL(ui->probe.hostname), (char *) probe->hostname);
-	gtk_label_set_text(GTK_LABEL(ui->probe.os), os);
-	gtk_label_set_text(GTK_LABEL(ui->probe.arch), arch);
+	gtk_label_set_text(GTK_LABEL(ge->probe.hostname), (char *) probe->hostname);
+	gtk_label_set_text(GTK_LABEL(ge->probe.os), os);
+	gtk_label_set_text(GTK_LABEL(ge->probe.arch), arch);
 	sprintf(buf, "%u.%u.%u", probe->fio_major, probe->fio_minor, probe->fio_patch);
-	gtk_label_set_text(GTK_LABEL(ui->probe.fio_ver), buf);
+	gtk_label_set_text(GTK_LABEL(ge->probe.fio_ver), buf);
 
-	gfio_set_connected(ui, 1);
+	gfio_set_connected(ge, 1);
 
 	gdk_threads_leave();
 }
 
 static void gfio_update_thread_status(char *status_message, double perc)
 {
+	struct gui *ui = &main_ui;
 	static char message[100];
 	const char *m = message;
 
 	strncpy(message, status_message, sizeof(message) - 1);
-	gtk_progress_bar_set_text(
-		GTK_PROGRESS_BAR(ui.thread_status_pb), m);
-	gtk_progress_bar_set_fraction(
-		GTK_PROGRESS_BAR(ui.thread_status_pb), perc / 100.0);
-	gtk_widget_queue_draw(ui.window);
+	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), m);
+	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ui->thread_status_pb), perc / 100.0);
+	gtk_widget_queue_draw(ui->window);
 }
 
 static void gfio_quit_op(struct fio_client *client)
@@ -1201,7 +1337,7 @@ static void gfio_quit_op(struct fio_client *client)
 	struct gfio_client *gc = client->client_data;
 
 	gdk_threads_enter();
-	gfio_set_connected(gc->ui, 0);
+	gfio_set_connected(gc->ge, 0);
 	gdk_threads_leave();
 }
 
@@ -1210,19 +1346,21 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct cmd_add_job_pdu *p = (struct cmd_add_job_pdu *) cmd->payload;
 	struct gfio_client *gc = client->client_data;
 	struct thread_options *o = &gc->o;
-	struct gui *ui = gc->ui;
+	struct gui_entry *ge = gc->ge;
 	char tmp[8];
 
 	convert_thread_options_to_cpu(o, &p->top);
 
 	gdk_threads_enter();
 
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.name), (gchar *) o->name);
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.iotype), ddir_str(o->td_ddir));
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.ioengine), (gchar *) o->ioengine);
+	gtk_label_set_text(GTK_LABEL(ge->page_label), (gchar *) o->name);
+
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.name), (gchar *) o->name);
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.iotype), ddir_str(o->td_ddir));
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.ioengine), (gchar *) o->ioengine);
 
 	sprintf(tmp, "%u", o->iodepth);
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.iodepth), tmp);
+	gtk_entry_set_text(GTK_ENTRY(ge->eta.iodepth), tmp);
 
 	gc->job_added++;
 
@@ -1237,13 +1375,13 @@ static void gfio_client_timed_out(struct fio_client *client)
 
 	gdk_threads_enter();
 
-	gfio_set_connected(gc->ui, 0);
-	clear_ui_info(gc->ui);
+	gfio_set_connected(gc->ge, 0);
+	clear_ge_ui_info(gc->ge);
 
 	sprintf(buf, "Client %s: timeout talking to server.\n", client->hostname);
 
 	dialog = gtk_dialog_new_with_buttons("Timed out!",
-			GTK_WINDOW(gc->ui->window),
+			GTK_WINDOW(main_ui.window),
 			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
 			GTK_STOCK_OK, GTK_RESPONSE_OK, NULL);
 
@@ -1267,7 +1405,7 @@ static void gfio_client_stop(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	gdk_threads_enter();
 
-	gfio_set_connected(gc->ui, 0);
+	gfio_set_connected(gc->ge, 0);
 
 	if (gc->err_entry)
 		entry_set_int_value(gc->err_entry, client->error);
@@ -1280,7 +1418,8 @@ struct client_ops gfio_client_ops = {
 	.disk_util		= gfio_disk_util_op,
 	.thread_status		= gfio_thread_status_op,
 	.group_stats		= gfio_group_stats_op,
-	.eta			= gfio_update_eta,
+	.jobs_eta		= gfio_update_client_eta,
+	.eta			= gfio_update_all_eta,
 	.probe			= gfio_probe_op,
 	.quit			= gfio_quit_op,
 	.add_job		= gfio_add_job_op,
@@ -1301,21 +1440,21 @@ static void *job_thread(void *arg)
 	return NULL;
 }
 
-static int send_job_files(struct gui *ui)
+static int send_job_files(struct gui_entry *ge)
 {
 	int i, ret = 0;
 
-	for (i = 0; i < ui->nr_job_files; i++) {
-		ret = fio_clients_send_ini(ui->job_files[i]);
+	for (i = 0; i < ge->nr_job_files; i++) {
+		ret = fio_clients_send_ini(ge->job_files[i]);
 		if (ret)
 			break;
 
-		free(ui->job_files[i]);
-		ui->job_files[i] = NULL;
+		free(ge->job_files[i]);
+		ge->job_files[i] = NULL;
 	}
-	while (i < ui->nr_job_files) {
-		free(ui->job_files[i]);
-		ui->job_files[i] = NULL;
+	while (i < ge->nr_job_files) {
+		free(ge->job_files[i]);
+		ge->job_files[i] = NULL;
 		i++;
 	}
 
@@ -1331,8 +1470,10 @@ static void *server_thread(void *arg)
 	return NULL;
 }
 
-static void gfio_start_server(struct gui *ui)
+static void gfio_start_server(void)
 {
+	struct gui *ui = &main_ui;
+
 	if (!gfio_server_running) {
 		gfio_server_running = 1;
 		pthread_create(&ui->server_t, NULL, server_thread, NULL);
@@ -1343,98 +1484,108 @@ static void gfio_start_server(struct gui *ui)
 static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
                 gpointer data)
 {
-	struct gui *ui = data;
-	struct gfio_client *gc = ui->client;
+	struct gui_entry *ge = data;
+	struct gfio_client *gc = ge->client;
 
-	gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 0);
-	fio_net_send_simple_cmd(gc->client->fd, FIO_NET_CMD_RUN, 0, NULL);
+	gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], 0);
+	fio_start_client(gc->client);
 }
 
 static void file_open(GtkWidget *w, gpointer data);
 
 static void connect_clicked(GtkWidget *widget, gpointer data)
 {
-	struct gui *ui = data;
+	struct gui_entry *ge = data;
+	struct gfio_client *gc = ge->client;
 
-	if (!ui->connected) {
-		if (!ui->nr_job_files)
+	if (!ge->connected) {
+		if (!ge->nr_job_files)
 			file_open(widget, data);
-		gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), "No jobs running");
-		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ui->thread_status_pb), 0.0);
-		if (!fio_clients_connect()) {
-			pthread_create(&ui->t, NULL, job_thread, NULL);
-			gtk_widget_set_sensitive(ui->button[CONNECT_BUTTON], 0);
-			gtk_widget_set_sensitive(ui->button[SEND_BUTTON], 1);
+		if (!ge->nr_job_files)
+			return;
+
+		gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ge->thread_status_pb), "No jobs running");
+		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ge->thread_status_pb), 0.0);
+		if (!fio_client_connect(gc->client)) {
+			pthread_create(&ge->t, NULL, job_thread, NULL);
+			gtk_widget_set_sensitive(ge->button[CONNECT_BUTTON], 0);
+			gtk_widget_set_sensitive(ge->button[SEND_BUTTON], 1);
 		}
 	} else {
-		fio_clients_terminate();
-		gfio_set_connected(ui, 0);
-		clear_ui_info(ui);
+		fio_client_terminate(gc->client);
+		gfio_set_connected(ge, 0);
+		clear_ge_ui_info(ge);
 	}
 }
 
 static void send_clicked(GtkWidget *widget, gpointer data)
 {
-	struct gui *ui = data;
+	struct gui_entry *ge = data;
 
-	if (send_job_files(ui)) {
+	if (send_job_files(ge)) {
 		printf("Yeah, I didn't really like those options too much.\n");
-		gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
+		gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], 1);
 	}
 
-	gtk_widget_set_sensitive(ui->button[SEND_BUTTON], 0);
-	gtk_widget_set_sensitive(ui->button[START_JOB_BUTTON], 1);
+	gtk_widget_set_sensitive(ge->button[SEND_BUTTON], 0);
+	gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], 1);
 }
 
-static void add_button(struct gui *ui, int i, GtkWidget *buttonbox,
-			struct button_spec *buttonspec)
+static GtkWidget *add_button(GtkWidget *buttonbox,
+			     struct button_spec *buttonspec, gpointer data)
 {
-	ui->button[i] = gtk_button_new_with_label(buttonspec->buttontext);
-	g_signal_connect(ui->button[i], "clicked", G_CALLBACK (buttonspec->f), ui);
-	gtk_box_pack_start(GTK_BOX (ui->buttonbox), ui->button[i], FALSE, FALSE, 3);
-	gtk_widget_set_tooltip_text(ui->button[i], buttonspeclist[i].tooltiptext);
-	gtk_widget_set_sensitive(ui->button[i], !buttonspec->start_insensitive);
+	GtkWidget *button = gtk_button_new_with_label(buttonspec->buttontext);
+
+	g_signal_connect(button, "clicked", G_CALLBACK(buttonspec->f), data);
+	gtk_box_pack_start(GTK_BOX(buttonbox), button, FALSE, FALSE, 3);
+	gtk_widget_set_tooltip_text(button, buttonspec->tooltiptext);
+	gtk_widget_set_sensitive(button, !buttonspec->start_insensitive);
+
+	return button;
 }
 
-static void add_buttons(struct gui *ui,
-				struct button_spec *buttonlist,
-				int nbuttons)
+static void add_buttons(struct gui_entry *ge, struct button_spec *buttonlist,
+			int nbuttons)
 {
 	int i;
 
 	for (i = 0; i < nbuttons; i++)
-		add_button(ui, i, ui->buttonbox, &buttonlist[i]);
+		ge->button[i] = add_button(ge->buttonbox, &buttonlist[i], ge);
 }
 
 static void on_info_bar_response(GtkWidget *widget, gint response,
                                  gpointer data)
 {
+	struct gui *ui = &main_ui;
+
 	if (response == GTK_RESPONSE_OK) {
 		gtk_widget_destroy(widget);
-		ui.error_info_bar = NULL;
+		ui->error_info_bar = NULL;
 	}
 }
 
 void report_error(GError *error)
 {
-	if (ui.error_info_bar == NULL) {
-		ui.error_info_bar = gtk_info_bar_new_with_buttons(GTK_STOCK_OK,
+	struct gui *ui = &main_ui;
+
+	if (ui->error_info_bar == NULL) {
+		ui->error_info_bar = gtk_info_bar_new_with_buttons(GTK_STOCK_OK,
 		                                               GTK_RESPONSE_OK,
 		                                               NULL);
-		g_signal_connect(ui.error_info_bar, "response", G_CALLBACK(on_info_bar_response), NULL);
-		gtk_info_bar_set_message_type(GTK_INFO_BAR(ui.error_info_bar),
+		g_signal_connect(ui->error_info_bar, "response", G_CALLBACK(on_info_bar_response), NULL);
+		gtk_info_bar_set_message_type(GTK_INFO_BAR(ui->error_info_bar),
 		                              GTK_MESSAGE_ERROR);
 		
-		ui.error_label = gtk_label_new(error->message);
-		GtkWidget *container = gtk_info_bar_get_content_area(GTK_INFO_BAR(ui.error_info_bar));
-		gtk_container_add(GTK_CONTAINER(container), ui.error_label);
+		ui->error_label = gtk_label_new(error->message);
+		GtkWidget *container = gtk_info_bar_get_content_area(GTK_INFO_BAR(ui->error_info_bar));
+		gtk_container_add(GTK_CONTAINER(container), ui->error_label);
 		
-		gtk_box_pack_start(GTK_BOX(ui.vbox), ui.error_info_bar, FALSE, FALSE, 0);
-		gtk_widget_show_all(ui.vbox);
+		gtk_box_pack_start(GTK_BOX(ui->vbox), ui->error_info_bar, FALSE, FALSE, 0);
+		gtk_widget_show_all(ui->vbox);
 	} else {
 		char buffer[256];
 		snprintf(buffer, sizeof(buffer), "Failed to open file.");
-		gtk_label_set(GTK_LABEL(ui.error_label), buffer);
+		gtk_label_set(GTK_LABEL(ui->error_label), buffer);
 	}
 }
 
@@ -1487,7 +1638,7 @@ static int get_connection_details(char **host, int *port, int *type,
 	char *typeentry;
 
 	dialog = gtk_dialog_new_with_buttons("Connection details",
-			GTK_WINDOW(ui.window),
+			GTK_WINDOW(main_ui.window),
 			GTK_DIALOG_DESTROY_WITH_PARENT,
 			GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
 			GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
@@ -1575,28 +1726,108 @@ static int get_connection_details(char **host, int *port, int *type,
 	return 0;
 }
 
-static void gfio_client_added(struct gui *ui, struct fio_client *client)
+static void gfio_client_added(struct gui_entry *ge, struct fio_client *client)
 {
 	struct gfio_client *gc;
 
 	gc = malloc(sizeof(*gc));
 	memset(gc, 0, sizeof(*gc));
-	gc->ui = ui;
+	gc->ge = ge;
 	gc->client = client;
 
-	ui->client = gc;
+	ge->client = gc;
 
 	client->client_data = gc;
 }
 
+static GtkWidget *new_client_page(struct gui_entry *ge);
+
+static struct gui_entry *alloc_new_gui_entry(struct gui *ui)
+{
+	struct gui_entry *ge;
+
+	ge = malloc(sizeof(*ge));
+	memset(ge, 0, sizeof(*ge));
+	INIT_FLIST_HEAD(&ge->list);
+	flist_add_tail(&ge->list, &ui->list);
+	ge->ui = ui;
+	return ge;
+}
+
+/*
+ * FIXME: need more handling here
+ */
+static void ge_destroy(GtkWidget *w, gpointer data)
+{
+	struct gui_entry *ge = data;
+
+	flist_del(&ge->list);
+	free(ge);
+}
+
+static struct gui_entry *get_new_ge_with_tab(const char *name)
+{
+	struct gui_entry *ge;
+
+	ge = alloc_new_gui_entry(&main_ui);
+
+	ge->vbox = new_client_page(ge);
+	g_signal_connect(ge->vbox, "destroy", G_CALLBACK(ge_destroy), ge);
+
+	ge->page_label = gtk_label_new(name);
+	ge->page_num = gtk_notebook_append_page(GTK_NOTEBOOK(main_ui.notebook), ge->vbox, ge->page_label);
+
+	gtk_widget_show_all(main_ui.window);
+	return ge;
+}
+
+static void file_new(GtkWidget *w, gpointer data)
+{
+	get_new_ge_with_tab("Untitled");
+}
+
+/*
+ * Return the 'ge' corresponding to the tab. If the active tab is the
+ * main tab, open a new tab.
+ */
+static struct gui_entry *get_ge_from_page(unsigned int cur_page)
+{
+	struct flist_head *entry;
+	struct gui_entry *ge;
+
+	if (!cur_page)
+		return get_new_ge_with_tab("Untitled");
+
+	flist_for_each(entry, &main_ui.list) {
+		ge = flist_entry(entry, struct gui_entry, list);
+		if (ge->page_num == cur_page)
+			return ge;
+	}
+
+	return NULL;
+}
+
 static void file_open(GtkWidget *w, gpointer data)
 {
-	GtkWidget *dialog;
 	struct gui *ui = data;
+	GtkWidget *dialog;
 	GSList *filenames, *fn_glist;
 	GtkFileFilter *filter;
 	char *host;
 	int port, type, server_start;
+	struct gui_entry *ge;
+	gint cur_page;
+
+	/*
+	 * Creates new tab if current tab is the main window, or the
+	 * current tab already has a client.
+	 */
+	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
+	ge = get_ge_from_page(cur_page);
+	if (ge->client)
+		ge = get_new_ge_with_tab("Untitled");
+
+	gtk_notebook_set_current_page(GTK_NOTEBOOK(ui->notebook), ge->page_num);
 
 	dialog = gtk_file_chooser_dialog_new("Open File",
 		GTK_WINDOW(ui->window),
@@ -1630,9 +1861,9 @@ static void file_open(GtkWidget *w, gpointer data)
 	while (filenames != NULL) {
 		struct fio_client *client;
 
-		ui->job_files = realloc(ui->job_files, (ui->nr_job_files + 1) * sizeof(char *));
-		ui->job_files[ui->nr_job_files] = strdup(filenames->data);
-		ui->nr_job_files++;
+		ge->job_files = realloc(ge->job_files, (ge->nr_job_files + 1) * sizeof(char *));
+		ge->job_files[ge->nr_job_files] = strdup(filenames->data);
+		ge->nr_job_files++;
 
 		client = fio_client_add_explicit(&gfio_client_ops, host, type, port);
 		if (!client) {
@@ -1643,7 +1874,7 @@ static void file_open(GtkWidget *w, gpointer data)
 			report_error(error);
 			g_error_free(error);
 		}
-		gfio_client_added(ui, client);
+		gfio_client_added(ge, client);
 			
 		g_free(filenames->data);
 		filenames = g_slist_next(filenames);
@@ -1651,7 +1882,7 @@ static void file_open(GtkWidget *w, gpointer data)
 	free(host);
 
 	if (server_start)
-		gfio_start_server(ui);
+		gfio_start_server();
 err:
 	g_slist_free(fn_glist);
 }
@@ -1727,7 +1958,7 @@ static void preferences(GtkWidget *w, gpointer data)
 	int i;
 
 	dialog = gtk_dialog_new_with_buttons("Preferences",
-		GTK_WINDOW(ui.window),
+		GTK_WINDOW(main_ui.window),
 		GTK_DIALOG_DESTROY_WITH_PARENT,
 		GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
 		GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
@@ -1821,13 +2052,14 @@ static void about_dialog(GtkWidget *w, gpointer data)
 		"wrap-license", TRUE,
 		NULL);
 
-	g_free (license_trans);
+	g_free(license_trans);
 }
 
 static GtkActionEntry menu_items[] = {
 	{ "FileMenuAction", GTK_STOCK_FILE, "File", NULL, NULL, NULL},
 	{ "ViewMenuAction", GTK_STOCK_FILE, "View", NULL, NULL, NULL},
 	{ "HelpMenuAction", GTK_STOCK_HELP, "Help", NULL, NULL, NULL},
+	{ "NewFile", GTK_STOCK_NEW, "New", "<Control>N", NULL, G_CALLBACK(file_new) },
 	{ "OpenFile", GTK_STOCK_OPEN, NULL,   "<Control>O", NULL, G_CALLBACK(file_open) },
 	{ "SaveFile", GTK_STOCK_SAVE, NULL,   "<Control>S", NULL, G_CALLBACK(file_save) },
 	{ "Preferences", GTK_STOCK_PREFERENCES, NULL, "<Control>p", NULL, G_CALLBACK(preferences) },
@@ -1841,11 +2073,13 @@ static const gchar *ui_string = " \
 	<ui> \
 		<menubar name=\"MainMenu\"> \
 			<menu name=\"FileMenu\" action=\"FileMenuAction\"> \
+				<menuitem name=\"New\" action=\"NewFile\" /> \
+				<separator name=\"Separator1\"/> \
 				<menuitem name=\"Open\" action=\"OpenFile\" /> \
 				<menuitem name=\"Save\" action=\"SaveFile\" /> \
-				<separator name=\"Separator\"/> \
-				<menuitem name=\"Preferences\" action=\"Preferences\" /> \
 				<separator name=\"Separator2\"/> \
+				<menuitem name=\"Preferences\" action=\"Preferences\" /> \
+				<separator name=\"Separator3\"/> \
 				<menuitem name=\"Quit\" action=\"Quit\" /> \
 			</menu> \
 			<menu name=\"ViewMenu\" action=\"ViewMenuAction\"> \
@@ -1880,75 +2114,132 @@ void gfio_ui_setup(GtkSettings *settings, GtkWidget *menubar,
         gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, FALSE, 0);
 }
 
-static void init_ui(int *argc, char **argv[], struct gui *ui)
+static GtkWidget *new_client_page(struct gui_entry *ge)
 {
-	GtkSettings *settings;
-	GtkUIManager *uimanager;
-	GtkWidget *menu, *probe, *probe_frame, *probe_box;
+	GtkWidget *main_vbox, *probe, *probe_frame, *probe_box;
 	GdkColor white;
 
-	memset(ui, 0, sizeof(*ui));
+	main_vbox = gtk_vbox_new(FALSE, 3);
 
-	/* Magical g*thread incantation, you just need this thread stuff.
-	 * Without it, the update that happens in gfio_update_thread_status
-	 * doesn't really happen in a timely fashion, you need expose events
-	 */
-	if (!g_thread_supported())
-		g_thread_init(NULL);
-	gdk_threads_init();
-
-	gtk_init(argc, argv);
-	settings = gtk_settings_get_default();
-	gtk_settings_set_long_property(settings, "gtk_tooltip_timeout", 10, "gfio setting");
-	g_type_init();
-	
-	ui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-        gtk_window_set_title(GTK_WINDOW(ui->window), "fio");
-	gtk_window_set_default_size(GTK_WINDOW(ui->window), 700, 700);
-
-	g_signal_connect(ui->window, "delete-event", G_CALLBACK(quit_clicked), NULL);
-	g_signal_connect(ui->window, "destroy", G_CALLBACK(quit_clicked), NULL);
-
-	ui->vbox = gtk_vbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER (ui->window), ui->vbox);
-
-	uimanager = gtk_ui_manager_new();
-	menu = get_menubar_menu(ui->window, uimanager, ui);
-	gfio_ui_setup(settings, menu, ui->vbox, uimanager);
-
-	/*
-	 * Set up alignments for widgets at the top of ui, 
-	 * align top left, expand horizontally but not vertically
-	 */
-	ui->topalign = gtk_alignment_new(0, 0, 1, 0);
-	ui->topvbox = gtk_vbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(ui->topalign), ui->topvbox);
-	gtk_box_pack_start(GTK_BOX(ui->vbox), ui->topalign, FALSE, FALSE, 0);
+	ge->topalign = gtk_alignment_new(0, 0, 1, 0);
+	ge->topvbox = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(ge->topalign), ge->topvbox);
+	gtk_box_pack_start(GTK_BOX(main_vbox), ge->topalign, FALSE, FALSE, 0);
 
 	probe = gtk_frame_new("Job");
-	gtk_box_pack_start(GTK_BOX(ui->topvbox), probe, TRUE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(main_vbox), probe, FALSE, FALSE, 3);
 	probe_frame = gtk_vbox_new(FALSE, 3);
 	gtk_container_add(GTK_CONTAINER(probe), probe_frame);
 
 	probe_box = gtk_hbox_new(FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
-	ui->probe.hostname = new_info_label_in_frame(probe_box, "Host");
-	ui->probe.os = new_info_label_in_frame(probe_box, "OS");
-	ui->probe.arch = new_info_label_in_frame(probe_box, "Architecture");
-	ui->probe.fio_ver = new_info_label_in_frame(probe_box, "Fio version");
+	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, FALSE, FALSE, 3);
+	ge->probe.hostname = new_info_label_in_frame(probe_box, "Host");
+	ge->probe.os = new_info_label_in_frame(probe_box, "OS");
+	ge->probe.arch = new_info_label_in_frame(probe_box, "Architecture");
+	ge->probe.fio_ver = new_info_label_in_frame(probe_box, "Fio version");
 
+	probe_box = gtk_hbox_new(FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, FALSE, FALSE, 3);
+
+	ge->eta.name = new_info_entry_in_frame(probe_box, "Name");
+	ge->eta.iotype = new_info_entry_in_frame(probe_box, "IO");
+	ge->eta.ioengine = new_info_entry_in_frame(probe_box, "IO Engine");
+	ge->eta.iodepth = new_info_entry_in_frame(probe_box, "IO Depth");
+	ge->eta.jobs = new_info_entry_in_frame(probe_box, "Jobs");
+	ge->eta.files = new_info_entry_in_frame(probe_box, "Open files");
+
+	probe_box = gtk_hbox_new(FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, FALSE, FALSE, 3);
+	ge->eta.read_bw = new_info_entry_in_frame(probe_box, "Read BW");
+	ge->eta.read_iops = new_info_entry_in_frame(probe_box, "IOPS");
+	ge->eta.write_bw = new_info_entry_in_frame(probe_box, "Write BW");
+	ge->eta.write_iops = new_info_entry_in_frame(probe_box, "IOPS");
+
+	/*
+	 * Only add this if we have a commit rate
+	 */
+#if 0
 	probe_box = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
 
-	ui->eta.name = new_info_entry_in_frame(probe_box, "Name");
-	ui->eta.iotype = new_info_entry_in_frame(probe_box, "IO");
-	ui->eta.ioengine = new_info_entry_in_frame(probe_box, "IO Engine");
-	ui->eta.iodepth = new_info_entry_in_frame(probe_box, "IO Depth");
-	ui->eta.jobs = new_info_entry_in_frame(probe_box, "Jobs");
-	ui->eta.files = new_info_entry_in_frame(probe_box, "Open files");
+	ge->eta.cr_bw = new_info_label_in_frame(probe_box, "Commit BW");
+	ge->eta.cr_iops = new_info_label_in_frame(probe_box, "Commit IOPS");
+
+	ge->eta.cw_bw = new_info_label_in_frame(probe_box, "Commit BW");
+	ge->eta.cw_iops = new_info_label_in_frame(probe_box, "Commit IOPS");
+#endif
+
+	/*
+	 * Set up a drawing area and IOPS and bandwidth graphs
+	 */
+	gdk_color_parse("white", &white);
+	ge->graphs.drawing_area = gtk_drawing_area_new();
+	ge->graphs.drawing_area_xdim = DRAWING_AREA_XDIM;
+	ge->graphs.drawing_area_ydim = DRAWING_AREA_YDIM;
+	gtk_widget_set_size_request(GTK_WIDGET(ge->graphs.drawing_area),
+		ge->graphs.drawing_area_xdim, ge->graphs.drawing_area_ydim);
+	gtk_widget_modify_bg(ge->graphs.drawing_area, GTK_STATE_NORMAL, &white);
+	g_signal_connect(G_OBJECT(ge->graphs.drawing_area), "expose_event",
+				G_CALLBACK(on_expose_drawing_area), &ge->graphs);
+	g_signal_connect(G_OBJECT(ge->graphs.drawing_area), "configure_event",
+				G_CALLBACK(on_config_drawing_area), &ge->graphs);
+	ge->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(ge->scrolled_window),
+					GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(ge->scrolled_window),
+					ge->graphs.drawing_area);
+	gtk_box_pack_start(GTK_BOX(main_vbox), ge->scrolled_window,
+			TRUE, TRUE, 0);
+
+	setup_graphs(&ge->graphs);
+
+	/*
+	 * Set up alignments for widgets at the bottom of ui, 
+	 * align bottom left, expand horizontally but not vertically
+	 */
+	ge->bottomalign = gtk_alignment_new(0, 1, 1, 0);
+	ge->buttonbox = gtk_hbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(ge->bottomalign), ge->buttonbox);
+	gtk_box_pack_start(GTK_BOX(main_vbox), ge->bottomalign,
+					FALSE, FALSE, 0);
+
+	add_buttons(ge, buttonspeclist, ARRAYSIZE(buttonspeclist));
+
+	/*
+	 * Set up thread status progress bar
+	 */
+	ge->thread_status_pb = gtk_progress_bar_new();
+	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ge->thread_status_pb), 0.0);
+	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ge->thread_status_pb), "No connections");
+	gtk_container_add(GTK_CONTAINER(ge->buttonbox), ge->thread_status_pb);
+
+
+	return main_vbox;
+}
+
+static GtkWidget *new_main_page(struct gui *ui)
+{
+	GtkWidget *main_vbox, *probe, *probe_frame, *probe_box;
+	GdkColor white;
+
+	main_vbox = gtk_vbox_new(FALSE, 3);
+
+	/*
+	 * Set up alignments for widgets at the top of ui,
+	 * align top left, expand horizontally but not vertically
+	 */
+	ui->topalign = gtk_alignment_new(0, 0, 1, 0);
+	ui->topvbox = gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(ui->topalign), ui->topvbox);
+	gtk_box_pack_start(GTK_BOX(main_vbox), ui->topalign, FALSE, FALSE, 0);
+
+	probe = gtk_frame_new("Run statistics");
+	gtk_box_pack_start(GTK_BOX(main_vbox), probe, FALSE, FALSE, 3);
+	probe_frame = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(probe), probe_frame);
 
 	probe_box = gtk_hbox_new(FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, TRUE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, FALSE, FALSE, 3);
 	ui->eta.read_bw = new_info_entry_in_frame(probe_box, "Read BW");
 	ui->eta.read_iops = new_info_entry_in_frame(probe_box, "IOPS");
 	ui->eta.write_bw = new_info_entry_in_frame(probe_box, "Write BW");
@@ -1972,26 +2263,25 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	 * Set up a drawing area and IOPS and bandwidth graphs
 	 */
 	gdk_color_parse("white", &white);
-	ui->drawing_area = gtk_drawing_area_new();
-	ui->drawing_area_xdim = DRAWING_AREA_XDIM;
-	ui->drawing_area_ydim = DRAWING_AREA_YDIM;
-	gtk_widget_set_size_request(GTK_WIDGET(ui->drawing_area), 
-			ui->drawing_area_xdim, ui->drawing_area_ydim);
-	gtk_widget_modify_bg(ui->drawing_area, GTK_STATE_NORMAL, &white);
-	g_signal_connect(G_OBJECT(ui->drawing_area), "expose_event",
-				G_CALLBACK (on_expose_drawing_area), ui);
-	g_signal_connect(G_OBJECT(ui->drawing_area), "configure_event",
-				G_CALLBACK (on_config_drawing_area), ui);
+	ui->graphs.drawing_area = gtk_drawing_area_new();
+	ui->graphs.drawing_area_xdim = DRAWING_AREA_XDIM;
+	ui->graphs.drawing_area_ydim = DRAWING_AREA_YDIM;
+	gtk_widget_set_size_request(GTK_WIDGET(ui->graphs.drawing_area),
+		ui->graphs.drawing_area_xdim, ui->graphs.drawing_area_ydim);
+	gtk_widget_modify_bg(ui->graphs.drawing_area, GTK_STATE_NORMAL, &white);
+	g_signal_connect(G_OBJECT(ui->graphs.drawing_area), "expose_event",
+			G_CALLBACK(on_expose_drawing_area), &ui->graphs);
+	g_signal_connect(G_OBJECT(ui->graphs.drawing_area), "configure_event",
+			G_CALLBACK(on_config_drawing_area), &ui->graphs);
 	ui->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(ui->scrolled_window),
 					GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(ui->scrolled_window),
-					ui->drawing_area);
-	gtk_box_pack_start(GTK_BOX(ui->vbox), ui->scrolled_window,
+					ui->graphs.drawing_area);
+	gtk_box_pack_start(GTK_BOX(main_vbox), ui->scrolled_window,
 			TRUE, TRUE, 0);
 
-	setup_iops_graph(ui);
-	setup_bandwidth_graph(ui);
+	setup_graphs(&ui->graphs);
 
 	/*
 	 * Set up alignments for widgets at the bottom of ui, 
@@ -2000,10 +2290,8 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	ui->bottomalign = gtk_alignment_new(0, 1, 1, 0);
 	ui->buttonbox = gtk_hbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(ui->bottomalign), ui->buttonbox);
-	gtk_box_pack_start(GTK_BOX(ui->vbox), ui->bottomalign,
+	gtk_box_pack_start(GTK_BOX(main_vbox), ui->bottomalign,
 					FALSE, FALSE, 0);
-
-	add_buttons(ui, buttonspeclist, ARRAYSIZE(buttonspeclist));
 
 	/*
 	 * Set up thread status progress bar
@@ -2012,6 +2300,57 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ui->thread_status_pb), 0.0);
 	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ui->thread_status_pb), "No connections");
 	gtk_container_add(GTK_CONTAINER(ui->buttonbox), ui->thread_status_pb);
+
+	return main_vbox;
+}
+
+static gboolean notebook_switch_page(GtkNotebook *notebook, GtkWidget *widget,
+				     guint page, gpointer data)
+
+{
+	return TRUE;
+}
+
+static void init_ui(int *argc, char **argv[], struct gui *ui)
+{
+	GtkSettings *settings;
+	GtkUIManager *uimanager;
+	GtkWidget *menu, *vbox;
+
+	/* Magical g*thread incantation, you just need this thread stuff.
+	 * Without it, the update that happens in gfio_update_thread_status
+	 * doesn't really happen in a timely fashion, you need expose events
+	 */
+	if (!g_thread_supported())
+		g_thread_init(NULL);
+	gdk_threads_init();
+
+	gtk_init(argc, argv);
+	settings = gtk_settings_get_default();
+	gtk_settings_set_long_property(settings, "gtk_tooltip_timeout", 10, "gfio setting");
+	g_type_init();
+	
+	ui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+        gtk_window_set_title(GTK_WINDOW(ui->window), "fio");
+	gtk_window_set_default_size(GTK_WINDOW(ui->window), 1024, 768);
+
+	g_signal_connect(ui->window, "delete-event", G_CALLBACK(quit_clicked), NULL);
+	g_signal_connect(ui->window, "destroy", G_CALLBACK(quit_clicked), NULL);
+
+	ui->vbox = gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(ui->window), ui->vbox);
+
+	uimanager = gtk_ui_manager_new();
+	menu = get_menubar_menu(ui->window, uimanager, ui);
+	gfio_ui_setup(settings, menu, ui->vbox, uimanager);
+
+	ui->notebook = gtk_notebook_new();
+	g_signal_connect(ui->notebook, "switch-page", G_CALLBACK(notebook_switch_page), ui);
+	gtk_container_add(GTK_CONTAINER(ui->vbox), ui->notebook);
+
+	vbox = new_main_page(ui);
+
+	gtk_notebook_append_page(GTK_NOTEBOOK(ui->notebook), vbox, gtk_label_new("Main"));
 
 	gfio_ui_setup_log(ui);
 
@@ -2025,7 +2364,10 @@ int main(int argc, char *argv[], char *envp[])
 	if (fio_init_options())
 		return 1;
 
-	init_ui(&argc, &argv, &ui);
+	memset(&main_ui, 0, sizeof(main_ui));
+	INIT_FLIST_HEAD(&main_ui.list);
+
+	init_ui(&argc, &argv, &main_ui);
 
 	gdk_threads_enter();
 	gtk_main();

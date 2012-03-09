@@ -63,6 +63,7 @@ typedef void (*client_disk_util_op_func)(struct fio_client *client, struct fio_n
 typedef void (*client_thread_status_op)(struct fio_client *client, struct fio_net_cmd *cmd);
 typedef void (*client_group_stats_op)(struct fio_client *client, struct fio_net_cmd *cmd);
 typedef void (*client_eta_op)(struct jobs_eta *je);
+typedef void (*client_jobs_eta_op)(struct fio_client *client, struct jobs_eta *je);
 typedef void (*client_probe_op)(struct fio_client *client, struct fio_net_cmd *cmd);
 typedef void (*client_thread_status_display_op)(char *status_message, double perc);
 typedef void (*client_quit_op)(struct fio_client *);
@@ -75,6 +76,7 @@ struct client_ops {
 	client_disk_util_op_func disk_util;
 	client_thread_status_op thread_status;
 	client_group_stats_op group_stats;
+	client_jobs_eta_op jobs_eta;
 	client_eta_op eta;
 	client_probe_op probe;
 	client_quit_op quit;
@@ -101,6 +103,7 @@ enum {
 	Fio_client_socket,
 };
 
+extern int fio_client_connect(struct fio_client *);
 extern int fio_clients_connect(void);
 extern int fio_start_client(struct fio_client *);
 extern int fio_start_all_clients(void);
@@ -109,6 +112,7 @@ extern int fio_handle_clients(struct client_ops *);
 extern int fio_client_add(struct client_ops *, const char *, void **);
 extern struct fio_client *fio_client_add_explicit(struct client_ops *, const char *, int, int);
 extern void fio_client_add_cmd_option(void *, const char *);
+extern void fio_client_terminate(struct fio_client *);
 extern void fio_clients_terminate(void);
 
 #endif

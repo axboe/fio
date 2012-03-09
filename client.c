@@ -316,7 +316,7 @@ static int fio_client_connect_sock(struct fio_client *client)
 	return fd;
 }
 
-static int fio_client_connect(struct fio_client *client)
+int fio_client_connect(struct fio_client *client)
 {
 	int fd;
 
@@ -338,6 +338,11 @@ static int fio_client_connect(struct fio_client *client)
 	return 0;
 }
 
+void fio_client_terminate(struct fio_client *client)
+{
+	fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_QUIT, 0, NULL);
+}
+
 void fio_clients_terminate(void)
 {
 	struct flist_head *entry;
@@ -347,8 +352,7 @@ void fio_clients_terminate(void)
 
 	flist_for_each(entry, &client_list) {
 		client = flist_entry(entry, struct fio_client, list);
-
-		fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_QUIT, 0, NULL);
+		fio_client_terminate(client);
 	}
 }
 
@@ -838,6 +842,9 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	client->eta_in_flight = NULL;
 	flist_del_init(&client->eta_list);
+
+	if (client->ops->jobs_eta)
+		client->ops->jobs_eta(client, je);
 
 	fio_client_sum_jobs_eta(&eta->eta, je);
 	fio_client_dec_jobs_eta(eta, client->ops->eta);
