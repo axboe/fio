@@ -2025,6 +2025,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.name	= "buffer_compress_chunk",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(compress_chunk),
+		.parent	= "buffer_compress_percentage",
 		.help	= "Size of compressible region in buffer",
 	},
 	{
