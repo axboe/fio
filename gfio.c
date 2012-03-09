@@ -34,6 +34,7 @@
 
 static int gfio_server_running;
 static const char *gfio_graph_font;
+static unsigned int gfio_graph_limit = 100;
 
 static void view_log(GtkWidget *w, gpointer data);
 
@@ -185,7 +186,7 @@ static struct graph *setup_iops_graph(void)
 	graph_add_label(g, "Write IOPS");
 	graph_set_color(g, "Read IOPS", 0.13, 0.54, 0.13);
 	graph_set_color(g, "Write IOPS", 1.0, 0.0, 0.0);
-	line_graph_set_data_count_limit(g, 100);
+	line_graph_set_data_count_limit(g, gfio_graph_limit);
 	return g;
 }
 
@@ -2021,9 +2022,29 @@ static void view_log(GtkWidget *w, gpointer data)
 	gtk_widget_show_all(win);
 }
 
+static void __update_graph_limits(struct gfio_graphs *g)
+{
+	line_graph_set_data_count_limit(g->iops_graph, gfio_graph_limit);
+	line_graph_set_data_count_limit(g->bandwidth_graph, gfio_graph_limit);
+}
+
+static void update_graph_limits(void)
+{
+	struct flist_head *entry;
+	struct gui_entry *ge;
+
+	__update_graph_limits(&main_ui.graphs);
+
+	flist_for_each(entry, &main_ui.list) {
+		ge = flist_entry(entry, struct gui_entry, list);
+		__update_graph_limits(&ge->graphs);
+	}
+}
+
 static void preferences(GtkWidget *w, gpointer data)
 {
 	GtkWidget *dialog, *frame, *box, **buttons, *vbox, *font;
+	GtkWidget *hbox, *spin, *entry;
 	int i;
 
 	dialog = gtk_dialog_new_with_buttons("Preferences",
@@ -2056,13 +2077,23 @@ static void preferences(GtkWidget *w, gpointer data)
 		gtk_box_pack_start(GTK_BOX(box), buttons[i], FALSE, FALSE, 6);
 	}
 
-	frame = gtk_frame_new("Graph font");
+	frame = gtk_frame_new("Graphing");
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), frame, FALSE, FALSE, 5);
 	vbox = gtk_vbox_new(FALSE, 6);
 	gtk_container_add(GTK_CONTAINER(frame), vbox);
 
 	font = gtk_font_button_new();
 	gtk_box_pack_start(GTK_BOX(vbox), font, FALSE, FALSE, 5);
+
+	box = gtk_vbox_new(FALSE, 6);
+	gtk_box_pack_start(GTK_BOX(vbox), box, FALSE, FALSE, 5);
+
+	hbox = gtk_hbox_new(FALSE, 5);
+	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 5);
+	entry = gtk_label_new("Maximum number of data points in graph (seconds)");
+	gtk_box_pack_start(GTK_BOX(hbox), entry, FALSE, FALSE, 5);
+
+	spin = create_spinbutton(hbox, 10, 1000000, 100);
 
 	gtk_widget_show_all(dialog);
 
@@ -2080,6 +2111,9 @@ static void preferences(GtkWidget *w, gpointer data)
 	}
 
 	gfio_graph_font = strdup(gtk_font_button_get_font_name(GTK_FONT_BUTTON(font)));
+	gfio_graph_limit = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spin));
+	update_graph_limits();
+
 	gtk_widget_destroy(dialog);
 }
 
