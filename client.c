@@ -276,7 +276,7 @@ static int fio_client_connect_ip(struct fio_client *client)
 	fd = socket(domain, SOCK_STREAM, 0);
 	if (fd < 0) {
 		log_err("fio: socket: %s\n", strerror(errno));
-		return -1;
+		return -errno;
 	}
 
 	if (connect(fd, addr, socklen) < 0) {
@@ -284,7 +284,7 @@ static int fio_client_connect_ip(struct fio_client *client)
 		log_err("fio: failed to connect to %s:%u\n", client->hostname,
 								client->port);
 		close(fd);
-		return -1;
+		return -errno;
 	}
 
 	return fd;
@@ -303,14 +303,14 @@ static int fio_client_connect_sock(struct fio_client *client)
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd < 0) {
 		log_err("fio: socket: %s\n", strerror(errno));
-		return -1;
+		return -errno;
 	}
 
 	len = sizeof(addr->sun_family) + strlen(addr->sun_path) + 1;
 	if (connect(fd, (struct sockaddr *) addr, len) < 0) {
 		log_err("fio: connect; %s\n", strerror(errno));
 		close(fd);
-		return -1;
+		return -errno;
 	}
 
 	return fd;
@@ -330,7 +330,7 @@ int fio_client_connect(struct fio_client *client)
 	dprint(FD_NET, "client: %s connected %d\n", client->hostname, fd);
 
 	if (fd < 0)
-		return 1;
+		return fd;
 
 	client->fd = fd;
 	fio_client_add_hash(client);
