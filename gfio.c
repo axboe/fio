@@ -2045,7 +2045,7 @@ static void update_graph_limits(void)
 static void preferences(GtkWidget *w, gpointer data)
 {
 	GtkWidget *dialog, *frame, *box, **buttons, *vbox, *font;
-	GtkWidget *hbox, *spin, *entry;
+	GtkWidget *hbox, *spin, *entry, *spin_int;
 	int i;
 
 	dialog = gtk_dialog_new_with_buttons("Preferences",
@@ -2083,19 +2083,33 @@ static void preferences(GtkWidget *w, gpointer data)
 	vbox = gtk_vbox_new(FALSE, 6);
 	gtk_container_add(GTK_CONTAINER(frame), vbox);
 
+	hbox = gtk_hbox_new(FALSE, 5);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 5);
+	entry = gtk_label_new("Font face to use for graph labels");
+	gtk_box_pack_start(GTK_BOX(hbox), entry, TRUE, TRUE, 5);
+
 	font = gtk_font_button_new();
-	gtk_box_pack_start(GTK_BOX(vbox), font, FALSE, FALSE, 5);
+	gtk_box_pack_start(GTK_BOX(hbox), font, FALSE, FALSE, 5);
 
 	box = gtk_vbox_new(FALSE, 6);
 	gtk_box_pack_start(GTK_BOX(vbox), box, FALSE, FALSE, 5);
 
 	hbox = gtk_hbox_new(FALSE, 5);
-	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 5);
+	gtk_box_pack_start(GTK_BOX(box), hbox, TRUE, TRUE, 5);
 	entry = gtk_label_new("Maximum number of data points in graph (seconds)");
 	gtk_box_pack_start(GTK_BOX(hbox), entry, FALSE, FALSE, 5);
 
 	spin = create_spinbutton(hbox, 10, 1000000, 100);
 
+	box = gtk_vbox_new(FALSE, 6);
+	gtk_box_pack_start(GTK_BOX(vbox), box, FALSE, FALSE, 5);
+
+	hbox = gtk_hbox_new(FALSE, 5);
+	gtk_box_pack_start(GTK_BOX(box), hbox, TRUE, TRUE, 5);
+	entry = gtk_label_new("Client ETA request interval (msec)");
+	gtk_box_pack_start(GTK_BOX(hbox), entry, FALSE, FALSE, 5);
+
+	spin_int = create_spinbutton(hbox, 100, 100000, gfio_client_ops.eta_msec);
 	gtk_widget_show_all(dialog);
 
 	if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_ACCEPT) {
@@ -2114,6 +2128,7 @@ static void preferences(GtkWidget *w, gpointer data)
 	gfio_graph_font = strdup(gtk_font_button_get_font_name(GTK_FONT_BUTTON(font)));
 	gfio_graph_limit = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spin));
 	update_graph_limits();
+	gfio_client_ops.eta_msec = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spin_int));
 
 	gtk_widget_destroy(dialog);
 }
