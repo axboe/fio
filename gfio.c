@@ -1464,6 +1464,7 @@ struct client_ops gfio_client_ops = {
 	.add_job		= gfio_add_job_op,
 	.timed_out		= gfio_client_timed_out,
 	.stop			= gfio_client_stop,
+	.eta_msec		= FIO_CLIENT_DEF_ETA_MSEC,
 	.stay_connected		= 1,
 };
 

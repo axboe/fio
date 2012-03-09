@@ -36,6 +36,7 @@ struct client_ops fio_client_ops = {
 	.stop		= handle_stop,
 	.eta		= display_thread_status,
 	.probe		= handle_probe,
+	.eta_msec	= FIO_CLIENT_DEF_ETA_MSEC,
 };
 
 static struct timeval eta_tv;
@@ -1163,7 +1164,7 @@ int fio_handle_clients(struct client_ops *ops)
 			struct timeval tv;
 
 			gettimeofday(&tv, NULL);
-			if (mtime_since(&eta_tv, &tv) >= 900) {
+			if (mtime_since(&eta_tv, &tv) >= ops->eta_msec) {
 				request_client_etas(ops);
 				memcpy(&eta_tv, &tv, sizeof(tv));
 

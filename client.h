@@ -83,6 +83,7 @@ struct client_ops {
 	client_add_job_op add_job;
 	client_timed_out timed_out;
 	client_stop_op stop;
+	unsigned int eta_msec;
 	int stay_connected;
 };
 
@@ -117,6 +118,8 @@ extern void fio_client_terminate(struct fio_client *);
 extern void fio_clients_terminate(void);
 extern struct fio_client *fio_get_client(struct fio_client *);
 extern void fio_put_client(struct fio_client *);
+
+#define FIO_CLIENT_DEF_ETA_MSEC		900
 
 #endif
 
