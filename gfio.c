@@ -171,6 +171,7 @@ struct gfio_client {
 
 static void gfio_update_thread_status(struct gui_entry *ge, char *status_message, double perc);
 static void gfio_update_thread_status_all(char *status_message, double perc);
+void report_error(GError *error);
 
 static struct graph *setup_iops_graph(void)
 {
@@ -1467,7 +1468,14 @@ static int send_job_files(struct gui_entry *ge)
 
 	for (i = 0; i < ge->nr_job_files; i++) {
 		ret = fio_client_send_ini(gc->client, ge->job_files[i]);
-		if (ret)
+		if (ret < 0) {
+			GError *error;
+
+			error = g_error_new(g_quark_from_string("fio"), 1, "Failed to send file %s: %s\n", ge->job_files[i], strerror(-ret));
+			report_error(error);
+			g_error_free(error);
+			break;
+		} else if (ret)
 			break;
 
 		free(ge->job_files[i]);
@@ -1520,6 +1528,8 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 	struct gfio_client *gc = ge->client;
 
 	if (!ge->connected) {
+		int ret;
+
 		if (!ge->nr_job_files)
 			file_open(widget, data);
 		if (!ge->nr_job_files)
@@ -1527,11 +1537,18 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 
 		gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ge->thread_status_pb), "No jobs running");
 		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ge->thread_status_pb), 0.0);
-		if (!fio_client_connect(gc->client)) {
+		ret = fio_client_connect(gc->client);
+		if (!ret) {
 			if (!ge->ui->handler_running)
 				pthread_create(&ge->ui->t, NULL, job_thread, ge->ui);
 			gtk_widget_set_sensitive(ge->button[CONNECT_BUTTON], 0);
 			gtk_widget_set_sensitive(ge->button[SEND_BUTTON], 1);
+		} else {
+			GError *error;
+
+			error = g_error_new(g_quark_from_string("fio"), 1, "Failed to connect to %s: %s\n", ge->client->client->hostname, strerror(-ret));
+			report_error(error);
+			g_error_free(error);
 		}
 	} else {
 		fio_client_terminate(gc->client);
@@ -1545,7 +1562,12 @@ static void send_clicked(GtkWidget *widget, gpointer data)
 	struct gui_entry *ge = data;
 
 	if (send_job_files(ge)) {
-		printf("Yeah, I didn't really like those options too much.\n");
+		GError *error;
+
+		error = g_error_new(g_quark_from_string("fio"), 1, "Failed to send one or more job files for client %s", ge->client->client->hostname);
+		report_error(error);
+		g_error_free(error);
+
 		gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], 1);
 	}
 
