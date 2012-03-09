@@ -2394,6 +2394,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 
 	ui->notebook = gtk_notebook_new();
 	g_signal_connect(ui->notebook, "switch-page", G_CALLBACK(notebook_switch_page), ui);
+	gtk_notebook_set_scrollable(GTK_NOTEBOOK(ui->notebook), 1);
 	gtk_container_add(GTK_CONTAINER(ui->vbox), ui->notebook);
 
 	vbox = new_main_page(ui);
