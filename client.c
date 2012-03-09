@@ -87,10 +87,8 @@ static struct fio_client *find_client_by_fd(int fd)
 	flist_for_each(entry, &client_hash[bucket]) {
 		client = flist_entry(entry, struct fio_client, hash_list);
 
-		if (client->fd == fd) {
-			client->refs++;
-			return client;
-		}
+		if (client->fd == fd)
+			return fio_get_client(client);
 	}
 
 	return NULL;
@@ -124,9 +122,15 @@ static void remove_client(struct fio_client *client)
 	sum_stat_clients--;
 }
 
-static void put_client(struct fio_client *client)
+void fio_put_client(struct fio_client *client)
 {
 	remove_client(client);
+}
+
+struct fio_client *fio_get_client(struct fio_client *client)
+{
+	client->refs++;
+	return client;
 }
 
 static void __fio_client_add_cmd_option(struct fio_client *client,
@@ -1193,7 +1197,7 @@ int fio_handle_clients(struct client_ops *ops)
 				retval = 1;
 			} else if (client->error)
 				retval = 1;
-			put_client(client);
+			fio_put_client(client);
 		}
 	}
 

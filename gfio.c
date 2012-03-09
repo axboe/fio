@@ -1777,7 +1777,7 @@ static void gfio_client_added(struct gui_entry *ge, struct fio_client *client)
 	gc = malloc(sizeof(*gc));
 	memset(gc, 0, sizeof(*gc));
 	gc->ge = ge;
-	gc->client = client;
+	gc->client = fio_get_client(client);
 
 	ge->client = gc;
 
@@ -1804,6 +1804,10 @@ static struct gui_entry *alloc_new_gui_entry(struct gui *ui)
 static void ge_destroy(GtkWidget *w, gpointer data)
 {
 	struct gui_entry *ge = data;
+	struct gfio_client *gc = ge->client;
+
+	if (gc->client)
+		fio_put_client(gc->client);
 
 	flist_del(&ge->list);
 	free(ge);
