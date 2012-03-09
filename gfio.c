@@ -68,7 +68,7 @@ struct probe_widget {
 };
 
 struct eta_widget {
-	GtkWidget *name;
+	GtkWidget *names;
 	GtkWidget *iotype;
 	GtkWidget *ioengine;
 	GtkWidget *iodepth;
@@ -217,7 +217,10 @@ static void clear_ge_ui_info(struct gui_entry *ge)
 	gtk_label_set_text(GTK_LABEL(ge->probe.os), "");
 	gtk_label_set_text(GTK_LABEL(ge->probe.arch), "");
 	gtk_label_set_text(GTK_LABEL(ge->probe.fio_ver), "");
+#if 0
+	/* should we empty it... */
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.name), "");
+#endif
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.iotype), "");
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.ioengine), "");
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.iodepth), "");
@@ -227,6 +230,18 @@ static void clear_ge_ui_info(struct gui_entry *ge)
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.read_iops), "");
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.write_bw), "");
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.write_iops), "");
+}
+
+static GtkWidget *new_combo_entry_in_frame(GtkWidget *box, const char *label)
+{
+	GtkWidget *entry, *frame;
+
+	frame = gtk_frame_new(label);
+	entry = gtk_combo_box_new_text();
+	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), entry);
+
+	return entry;
 }
 
 static GtkWidget *new_info_entry_in_frame(GtkWidget *box, const char *label)
@@ -1251,6 +1266,8 @@ static void gfio_update_all_eta(struct jobs_eta *je)
 	gtk_entry_set_text(GTK_ENTRY(ui->eta.cw_iops), "---");
 #endif
 
+	entry_set_int_value(ui->eta.jobs, je->nr_running);
+
 	if (je->eta_sec != INT_MAX && je->nr_running) {
 		char *iops_str[2];
 		char *rate_str[2];
@@ -1374,7 +1391,9 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	gtk_label_set_text(GTK_LABEL(ge->page_label), (gchar *) o->name);
 
-	gtk_entry_set_text(GTK_ENTRY(ge->eta.name), (gchar *) o->name);
+	gtk_combo_box_append_text(GTK_COMBO_BOX(ge->eta.names), (gchar *) o->name);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(ge->eta.names), 0);
+
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.iotype), ddir_str(o->td_ddir));
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.ioengine), (gchar *) o->ioengine);
 
@@ -2191,7 +2210,7 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	probe_box = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, FALSE, FALSE, 3);
 
-	ge->eta.name = new_info_entry_in_frame(probe_box, "Name");
+	ge->eta.names = new_combo_entry_in_frame(probe_box, "Jobs");
 	ge->eta.iotype = new_info_entry_in_frame(probe_box, "IO");
 	ge->eta.ioengine = new_info_entry_in_frame(probe_box, "IO Engine");
 	ge->eta.iodepth = new_info_entry_in_frame(probe_box, "IO Depth");
@@ -2290,6 +2309,7 @@ static GtkWidget *new_main_page(struct gui *ui)
 
 	probe_box = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, FALSE, FALSE, 3);
+	ui->eta.jobs = new_info_entry_in_frame(probe_box, "Running");
 	ui->eta.read_bw = new_info_entry_in_frame(probe_box, "Read BW");
 	ui->eta.read_iops = new_info_entry_in_frame(probe_box, "IOPS");
 	ui->eta.write_bw = new_info_entry_in_frame(probe_box, "Write BW");
