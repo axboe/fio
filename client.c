@@ -275,16 +275,20 @@ static int fio_client_connect_ip(struct fio_client *client)
 
 	fd = socket(domain, SOCK_STREAM, 0);
 	if (fd < 0) {
+		int ret = -errno;
+
 		log_err("fio: socket: %s\n", strerror(errno));
-		return -errno;
+		return ret;
 	}
 
 	if (connect(fd, addr, socklen) < 0) {
+		int ret = -errno;
+
 		log_err("fio: connect: %s\n", strerror(errno));
 		log_err("fio: failed to connect to %s:%u\n", client->hostname,
 								client->port);
 		close(fd);
-		return -errno;
+		return ret;
 	}
 
 	return fd;
@@ -302,15 +306,19 @@ static int fio_client_connect_sock(struct fio_client *client)
 
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd < 0) {
+		int ret = -errno;
+
 		log_err("fio: socket: %s\n", strerror(errno));
-		return -errno;
+		return ret;
 	}
 
 	len = sizeof(addr->sun_family) + strlen(addr->sun_path) + 1;
 	if (connect(fd, (struct sockaddr *) addr, len) < 0) {
+		int ret = -errno;
+
 		log_err("fio: connect; %s\n", strerror(errno));
 		close(fd);
-		return -errno;
+		return ret;
 	}
 
 	return fd;
@@ -506,14 +514,18 @@ static int __fio_client_send_ini(struct fio_client *client, const char *filename
 
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
+		int ret = -errno;
+
 		log_err("fio: job file <%s> open: %s\n", filename, strerror(errno));
-		return 1;
+		return ret;
 	}
 
 	if (fstat(fd, &sb) < 0) {
+		int ret = -errno;
+
 		log_err("fio: job file stat: %s\n", strerror(errno));
 		close(fd);
-		return 1;
+		return ret;
 	}
 
 	buf = malloc(sb.st_size);
@@ -550,13 +562,16 @@ static int __fio_client_send_ini(struct fio_client *client, const char *filename
 
 int fio_client_send_ini(struct fio_client *client, const char *filename)
 {
-	if (__fio_client_send_ini(client, filename)) {
+	int ret;
+
+	ret = __fio_client_send_ini(client, filename);
+	if (ret) {
 		remove_client(client);
-		return 1;
+		return ret;
 	}
 
 	client->sent_job = 1;
-	return 0;
+	return ret;
 }
 
 int fio_clients_send_ini(const char *filename)
