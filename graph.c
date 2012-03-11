@@ -29,6 +29,7 @@
 #include <gtk/gtk.h>
 
 #include "tickmarks.h"
+#include "graph.h"
 
 struct xyvalue {
 	double x, y;

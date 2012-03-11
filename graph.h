@@ -14,8 +14,8 @@ void graph_title(struct graph *g, const char *title);
 void graph_x_title(struct graph *g, const char *title);
 void graph_y_title(struct graph *g, const char *title);
 void graph_add_label(struct graph *g, const char *label);
-void graph_add_data(struct graph *g, const char *label, const double value);
-void graph_add_xy_data(struct graph *g, const char *label,
+int graph_add_data(struct graph *g, const char *label, const double value);
+int graph_add_xy_data(struct graph *g, const char *label,
 		const double x, const double y);
 void graph_set_color(struct graph *g, const char *label,
 		double red, double green, double blue);
