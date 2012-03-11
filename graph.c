@@ -600,11 +600,24 @@ static void graph_label_add_value(struct graph_label *i, void *value)
 
 	if (i->parent->per_label_limit != -1 &&
 		i->value_count > i->parent->per_label_limit) {
-		x = i->values;
-		i->values = i->values->next;
-		free(x->value);
-		free(x);
-		i->value_count--;
+		int to_drop = 1;
+
+		/*
+		 * If the limit was dynamically reduced, making us more
+		 * than 1 entry ahead after adding this one, drop two
+		 * entries. This will make us (eventually) reach the
+		 * specified limit.
+		 */
+		if (i->value_count - i->parent->per_label_limit >= 2)
+			to_drop = 2;
+
+		while (to_drop--) {
+			x = i->values;
+			i->values = i->values->next;
+			free(x->value);
+			free(x);
+			i->value_count--;
+		}
 	}
 }
 
