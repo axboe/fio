@@ -39,20 +39,43 @@ static double nicenum(double x, int round)
 	return 10.0 * pow(10.0, exp);
 }
 
-static void shorten(char *str)
+static void shorten(struct tickmark *tm, int nticks)
 {
-	int l;
+	int i, l, minshorten, can_shorten_by;
+	char *str;
+	char shorten_char = '?';
 
-	l = strlen(str);
-	if (l > 9 && strcmp(&str[l - 9], "000000000") == 0) {
-		str[l - 9] = 'G';
-		str[l - 8] = '\0';
-	} else if (l > 6 && strcmp(&str[l - 6], "000000") == 0) {
-		str[l - 6] = 'M';
-		str[l - 5] = '\0';
-	} else if (l > 3 && strcmp(&str[l - 3], "000") == 0) {
-		str[l - 3] = 'K';
-		str[l - 2] = '\0';
+	minshorten = 100;
+	for (i = 0; i < nticks; i++) {
+		str = tm[i].string;
+		l = strlen(str);
+
+		if (l > 9 && strcmp(&str[l - 9], "000000000") == 0) {
+			can_shorten_by = 9;
+			shorten_char = 'G';
+		} else if (6 < minshorten && l > 6 &&
+				strcmp(&str[l - 6], "000000") == 0) {
+			can_shorten_by = 6;
+			shorten_char = 'M';
+		} else if (l > 3 && strcmp(&str[l - 3], "000") == 0) {
+			can_shorten_by = 3;
+			shorten_char = 'K';
+		} else {
+			can_shorten_by = 0;
+		}
+
+		if (can_shorten_by < minshorten)
+			minshorten = can_shorten_by;
+	}
+
+	if (minshorten == 0)
+		return;
+
+	for (i = 0; i < nticks; i++) {
+		str = tm[i].string;
+		l = strlen(str);
+		str[l - minshorten] = shorten_char;
+		str[l - minshorten + 1] = '\0';
 	}
 }
 
@@ -80,9 +103,9 @@ int calc_tickmarks(double min, double max, int nticks, struct tickmark **tm)
 	for (x = graphmin; x < graphmax + 0.5 * d; x += d) {
 		(*tm)[i].value = x;
 		sprintf((*tm)[i].string, str, x);
-		shorten((*tm)[i].string);
 		i++;
 	}
+	shorten(*tm, i);
 	return i;
 }
 
