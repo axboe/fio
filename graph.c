@@ -55,6 +55,7 @@ struct graph {
 	char *xtitle;
 	char *ytitle;
 	unsigned int xdim, ydim;
+	double xoffset, yoffset;
 	struct graph_label *labels;
 	struct graph_label *tail;
 	int per_label_limit;
@@ -67,6 +68,12 @@ void graph_set_size(struct graph *g, unsigned int xdim, unsigned int ydim)
 {
 	g->xdim = xdim;
 	g->ydim = ydim;
+}
+
+void graph_set_position(struct graph *g, double xoffset, double yoffset)
+{
+	g->xoffset = xoffset;
+	g->yoffset = yoffset;
 }
 
 struct graph *graph_new(unsigned int xdim, unsigned int ydim, const char *font)
@@ -397,6 +404,7 @@ void bar_graph_draw(struct graph *bg, cairo_t *cr)
 	struct graph_label *lb;
 
 	cairo_save(cr);
+	cairo_translate(cr, bg->xoffset, bg->yoffset);
 	graph_draw_common(bg, cr, &x1, &y1, &x2, &y2);
 
 	nlabels = count_labels(bg->labels);
@@ -473,6 +481,7 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 	int good_data = 1, first = 1;
 
 	cairo_save(cr);
+	cairo_translate(cr, g->xoffset, g->yoffset);
 	graph_draw_common(g, cr, &x1, &y1, &x2, &y2);
 
 	minx = find_xy_value(g, getx, mindouble);

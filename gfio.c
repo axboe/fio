@@ -89,9 +89,6 @@ struct gfio_graphs {
 #define DRAWING_AREA_XDIM 1000
 #define DRAWING_AREA_YDIM 400
 	GtkWidget *drawing_area;
-	int drawing_area_xdim;
-	int drawing_area_ydim;
-
 	struct graph *iops_graph;
 	struct graph *bandwidth_graph;
 };
@@ -1130,9 +1127,17 @@ static gint on_config_drawing_area(GtkWidget *w, GdkEventConfigure *event,
 {
 	struct gfio_graphs *g = data;
 
-	g->drawing_area_xdim = w->allocation.width;
-	g->drawing_area_ydim = w->allocation.height;
+	graph_set_size(g->iops_graph, w->allocation.width / 2.0, w->allocation.height);
+	graph_set_position(g->iops_graph, w->allocation.width / 2.0, 0.0);
+	graph_set_size(g->bandwidth_graph, w->allocation.width / 2.0, w->allocation.height);
+	graph_set_position(g->bandwidth_graph, 0, 0);
 	return TRUE;
+}
+
+static void draw_graph(struct graph *g, cairo_t *cr)
+{
+	line_graph_draw(g, cr);
+	cairo_stroke(cr);
 }
 
 static int on_expose_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
@@ -1140,25 +1145,10 @@ static int on_expose_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
 	struct gfio_graphs *g = p;
 	cairo_t *cr;
 
-	graph_set_size(g->iops_graph, g->drawing_area_xdim / 2.0,
-					g->drawing_area_ydim);
-	graph_set_size(g->bandwidth_graph, g->drawing_area_xdim / 2.0,
-					g->drawing_area_ydim);
 	cr = gdk_cairo_create(w->window);
-
 	cairo_set_source_rgb(cr, 0, 0, 0);
-
-	cairo_save(cr);
-	cairo_translate(cr, 0, 0);
-	line_graph_draw(g->bandwidth_graph, cr);
-	cairo_stroke(cr);
-	cairo_restore(cr);
-
-	cairo_save(cr);
-	cairo_translate(cr, g->drawing_area_xdim / 2.0, 0);
-	line_graph_draw(g->iops_graph, cr);
-	cairo_stroke(cr);
-	cairo_restore(cr);
+	draw_graph(g->iops_graph, cr);
+	draw_graph(g->bandwidth_graph, cr);
 	cairo_destroy(cr);
 
 	return FALSE;
@@ -2324,10 +2314,8 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	 */
 	gdk_color_parse("white", &white);
 	ge->graphs.drawing_area = gtk_drawing_area_new();
-	ge->graphs.drawing_area_xdim = DRAWING_AREA_XDIM;
-	ge->graphs.drawing_area_ydim = DRAWING_AREA_YDIM;
 	gtk_widget_set_size_request(GTK_WIDGET(ge->graphs.drawing_area),
-		ge->graphs.drawing_area_xdim, ge->graphs.drawing_area_ydim);
+		DRAWING_AREA_XDIM, DRAWING_AREA_YDIM);
 	gtk_widget_modify_bg(ge->graphs.drawing_area, GTK_STATE_NORMAL, &white);
 	g_signal_connect(G_OBJECT(ge->graphs.drawing_area), "expose_event",
 				G_CALLBACK(on_expose_drawing_area), &ge->graphs);
@@ -2415,10 +2403,8 @@ static GtkWidget *new_main_page(struct gui *ui)
 	 */
 	gdk_color_parse("white", &white);
 	ui->graphs.drawing_area = gtk_drawing_area_new();
-	ui->graphs.drawing_area_xdim = DRAWING_AREA_XDIM;
-	ui->graphs.drawing_area_ydim = DRAWING_AREA_YDIM;
 	gtk_widget_set_size_request(GTK_WIDGET(ui->graphs.drawing_area),
-		ui->graphs.drawing_area_xdim, ui->graphs.drawing_area_ydim);
+		DRAWING_AREA_XDIM, DRAWING_AREA_YDIM);
 	gtk_widget_modify_bg(ui->graphs.drawing_area, GTK_STATE_NORMAL, &white);
 	g_signal_connect(G_OBJECT(ui->graphs.drawing_area), "expose_event",
 			G_CALLBACK(on_expose_drawing_area), &ui->graphs);

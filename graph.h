@@ -8,6 +8,8 @@ struct graph *graph_new(unsigned int xdim, unsigned int ydim, const char *font);
 /* graph_new() Returns a new graph structure of the given dimensions and font */
 void graph_set_size(struct graph *g, unsigned int xdim, unsigned int ydim);
 /* graph_set_size() Changes the size of a graph to the given dimensions. */ 
+void graph_set_position(struct graph *g, double xoffset, double yoffset);
+/* graph_set_position() sets the x- and y-offset to translate the graph */
 void bar_graph_draw(struct graph *g, cairo_t *cr);
 /* bar_graph_draw() draws the given graph as a bar graph */
 void line_graph_draw(struct graph *g, cairo_t *cr);
