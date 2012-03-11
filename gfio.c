@@ -2098,7 +2098,7 @@ static void preferences(GtkWidget *w, gpointer data)
 	entry = gtk_label_new("Maximum number of data points in graph (seconds)");
 	gtk_box_pack_start(GTK_BOX(hbox), entry, FALSE, FALSE, 5);
 
-	spin = create_spinbutton(hbox, 10, 1000000, 100);
+	spin = create_spinbutton(hbox, 10, 1000000, gfio_graph_limit);
 
 	box = gtk_vbox_new(FALSE, 6);
 	gtk_box_pack_start(GTK_BOX(vbox), box, FALSE, FALSE, 5);
