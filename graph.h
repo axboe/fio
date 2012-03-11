@@ -21,6 +21,9 @@ void graph_set_color(struct graph *g, const char *label,
 		double red, double green, double blue);
 void graph_free(struct graph *bg);
 
+typedef void (*graph_axis_unit_change_callback)(struct graph *g, int power_of_ten);
+void graph_x_axis_unit_change_notify(struct graph *g, graph_axis_unit_change_callback f);
+void graph_y_axis_unit_change_notify(struct graph *g, graph_axis_unit_change_callback f);
 
 #endif
 

@@ -59,6 +59,8 @@ struct graph {
 	struct graph_label *tail;
 	int per_label_limit;
 	const char *font;
+	graph_axis_unit_change_callback x_axis_unit_change_callback;
+	graph_axis_unit_change_callback y_axis_unit_change_callback;
 };
 
 void graph_set_size(struct graph *g, unsigned int xdim, unsigned int ydim)
@@ -78,6 +80,16 @@ struct graph *graph_new(unsigned int xdim, unsigned int ydim, const char *font)
 	if (!g->font)
 		g->font = "Sans";
 	return g;
+}
+
+void graph_x_axis_unit_change_notify(struct graph *g, graph_axis_unit_change_callback f)
+{
+	g->x_axis_unit_change_callback = f;
+}
+
+void graph_y_axis_unit_change_notify(struct graph *g, graph_axis_unit_change_callback f)
+{
+	g->y_axis_unit_change_callback = f;
 }
 
 static int count_labels(struct graph_label *labels)
@@ -303,10 +315,13 @@ static void graph_draw_x_ticks(struct graph *g, cairo_t *cr,
 {
 	struct tickmark *tm;
 	double tx;
-	int i;
+	int i, power_of_ten;
 	static double dash[] = { 1.0, 2.0 };
 
-	nticks = calc_tickmarks(minx, maxx, nticks, &tm);
+	nticks = calc_tickmarks(minx, maxx, nticks, &tm, &power_of_ten,
+		g->x_axis_unit_change_callback == NULL);
+	if (g->x_axis_unit_change_callback)
+		g->x_axis_unit_change_callback(g, power_of_ten);
 
 	for (i = 0; i < nticks; i++) {
 		tx = (((tm[i].value) - minx) / (maxx - minx)) * (x2 - x1) + x1;
@@ -341,10 +356,13 @@ static void graph_draw_y_ticks(struct graph *g, cairo_t *cr,
 {
 	struct tickmark *tm;
 	double ty;
-	int i;
+	int i, power_of_ten;
 	static double dash[] = { 2.0, 2.0 };
 
-	nticks = calc_tickmarks(miny, maxy, nticks, &tm);
+	nticks = calc_tickmarks(miny, maxy, nticks, &tm, &power_of_ten,
+		g->y_axis_unit_change_callback == NULL);
+	if (g->y_axis_unit_change_callback)
+		g->y_axis_unit_change_callback(g, power_of_ten);
 
 	for (i = 0; i < nticks; i++) {
 		ty = y2 - (((tm[i].value) - miny) / (maxy - miny)) * (y2 - y1);
