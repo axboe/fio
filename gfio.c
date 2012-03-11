@@ -174,6 +174,21 @@ static void gfio_update_thread_status(struct gui_entry *ge, char *status_message
 static void gfio_update_thread_status_all(char *status_message, double perc);
 void report_error(GError *error);
 
+static void iops_graph_y_axis_unit_change(struct graph *g, int power_of_ten)
+{
+	switch (power_of_ten) {
+		case 9: graph_y_title(g, "Billions of IOs / sec");
+			break;
+		case 6: graph_y_title(g, "Millions of IOs / sec");
+			break;
+		case 3: graph_y_title(g, "Thousands of IOs / sec");
+			break;
+		case 0:
+		default: graph_y_title(g, "IOs / sec");
+			break;
+	}
+}
+
 static struct graph *setup_iops_graph(void)
 {
 	struct graph *g;
@@ -187,7 +202,23 @@ static struct graph *setup_iops_graph(void)
 	graph_set_color(g, "Read IOPS", 0.13, 0.54, 0.13);
 	graph_set_color(g, "Write IOPS", 1.0, 0.0, 0.0);
 	line_graph_set_data_count_limit(g, gfio_graph_limit);
+	graph_y_axis_unit_change_notify(g, iops_graph_y_axis_unit_change);
 	return g;
+}
+
+static void bandwidth_graph_y_axis_unit_change(struct graph *g, int power_of_ten)
+{
+	switch (power_of_ten) {
+		case 9: graph_y_title(g, "Petabytes / sec");
+			break;
+		case 6: graph_y_title(g, "Gigabytes / sec");
+			break;
+		case 3: graph_y_title(g, "Megabytes / sec");
+			break;
+		case 0:
+		default: graph_y_title(g, "Kilobytes / sec");
+			break;
+	}
 }
 
 static struct graph *setup_bandwidth_graph(void)
@@ -203,6 +234,7 @@ static struct graph *setup_bandwidth_graph(void)
 	graph_set_color(g, "Read Bandwidth", 0.13, 0.54, 0.13);
 	graph_set_color(g, "Write Bandwidth", 1.0, 0.0, 0.0);
 	line_graph_set_data_count_limit(g, 100);
+	graph_y_axis_unit_change_notify(g, bandwidth_graph_y_axis_unit_change);
 	return g;
 }
 
