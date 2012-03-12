@@ -735,7 +735,8 @@ int ioengine_load(struct thread_data *td)
  * to make sure we don't have conflicts, and initializes various
  * members of td.
  */
-static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
+static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
+		   int recursed)
 {
 	unsigned int i;
 	char fname[PATH_MAX];
@@ -848,7 +849,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	if (!terse_output) {
 		if (!job_add_num) {
-			if (is_backend)
+			if (is_backend && !recursed)
 				fio_server_send_add_job(&td->o, td->io_ops->name);
 
 			if (!strcmp(td->io_ops->name, "cpuio")) {
@@ -905,7 +906,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 		job_add_num = numjobs - 1;
 
-		if (add_job(td_new, jobname, job_add_num))
+		if (add_job(td_new, jobname, job_add_num, 1))
 			goto err;
 	}
 
@@ -930,7 +931,7 @@ void add_job_opts(const char **o)
 		if (!strncmp(o[i], "name", 4)) {
 			in_global = 0;
 			if (td)
-				add_job(td, jobname, 0);
+				add_job(td, jobname, 0, 0);
 			td = NULL;
 			sprintf(jobname, "%s", o[i] + 5);
 		}
@@ -949,7 +950,7 @@ void add_job_opts(const char **o)
 	}
 
 	if (td)
-		add_job(td, jobname, 0);
+		add_job(td, jobname, 0, 0);
 }
 
 static int skip_this_section(const char *name)
@@ -1131,7 +1132,7 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag)
 				for (i = 0; i < num_opts; i++)
 					log_info("--%s ", opts[i]);
 
-			ret = add_job(td, name, 0);
+			ret = add_job(td, name, 0, 0);
 		} else {
 			log_err("fio: job %s dropped\n", name);
 			put_job(td);
@@ -1497,7 +1498,7 @@ int parse_cmd_line(int argc, char *argv[])
 			char *val = optarg;
 
 			if (!strncmp(opt, "name", 4) && td) {
-				ret = add_job(td, td->o.name ?: "fio", 0);
+				ret = add_job(td, td->o.name ?: "fio", 0, 0);
 				if (ret)
 					return 0;
 				td = NULL;
@@ -1601,7 +1602,7 @@ int parse_cmd_line(int argc, char *argv[])
 
 	if (td) {
 		if (!ret)
-			ret = add_job(td, td->o.name ?: "fio", 0);
+			ret = add_job(td, td->o.name ?: "fio", 0, 0);
 	}
 
 	while (!ret && optind < argc) {
