@@ -51,6 +51,8 @@ static void shorten(struct tickmark *tm, int nticks, int *power_of_ten,
 		str = tm[i].string;
 		l = strlen(str);
 
+		if (strcmp(str, "0") == 0)
+			continue;
 		if (l > 9 && strcmp(&str[l - 9], "000000000") == 0) {
 			*power_of_ten = 9;
 			shorten_char = use_KMG_symbols ? 'G' : '\0';
