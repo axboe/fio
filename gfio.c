@@ -263,7 +263,7 @@ static void multitext_set_entry(struct multitext_widget *mt, unsigned int index)
 {
 	if (index >= mt->max_text)
 		return;
-	if (!mt->text[index])
+	if (!mt->text || !mt->text[index])
 		return;
 
 	mt->cur_text = index;
@@ -273,6 +273,9 @@ static void multitext_set_entry(struct multitext_widget *mt, unsigned int index)
 static void multitext_update_entry(struct multitext_widget *mt,
 				   unsigned int index, const char *text)
 {
+	if (!mt->text)
+		return;
+
 	if (mt->text[index])
 		free(mt->text[index]);
 
