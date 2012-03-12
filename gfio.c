@@ -1753,7 +1753,7 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 		int ret;
 
 		if (!ge->nr_job_files)
-			file_open(widget, data);
+			file_open(widget, ge->ui);
 		if (!ge->nr_job_files)
 			return;
 
@@ -2065,7 +2065,7 @@ static void file_new(GtkWidget *w, gpointer data)
  * Return the 'ge' corresponding to the tab. If the active tab is the
  * main tab, open a new tab.
  */
-static struct gui_entry *get_ge_from_page(unsigned int cur_page)
+static struct gui_entry *get_ge_from_page(gint cur_page)
 {
 	struct flist_head *entry;
 	struct gui_entry *ge;
