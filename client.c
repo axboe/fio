@@ -27,6 +27,7 @@ static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd);
+static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd);
 
 struct client_ops fio_client_ops = {
 	.text_op	= handle_text,
@@ -34,6 +35,7 @@ struct client_ops fio_client_ops = {
 	.thread_status	= handle_ts,
 	.group_stats	= handle_gs,
 	.stop		= handle_stop,
+	.start		= handle_start,
 	.eta		= display_thread_status,
 	.probe		= handle_probe,
 	.eta_msec	= FIO_CLIENT_DEF_ETA_MSEC,
@@ -907,7 +909,7 @@ static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct cmd_start_pdu *pdu = (struct cmd_start_pdu *) cmd->payload;
 
 	client->state = Client_started;
-	client->jobs = le32_to_cpu(pdu->jobs);
+	client->jobs = pdu->jobs;
 }
 
 static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -1004,12 +1006,18 @@ int fio_handle_client(struct fio_client *client)
 		break;
 	case FIO_NET_CMD_SERVER_START:
 		client->state = Client_running;
+		if (ops->job_start)
+			ops->job_start(client, cmd);
 		free(cmd);
 		break;
-	case FIO_NET_CMD_START:
-		handle_start(client, cmd);
+	case FIO_NET_CMD_START: {
+		struct cmd_start_pdu *pdu = (struct cmd_start_pdu *) cmd->payload;
+
+		pdu->jobs = le32_to_cpu(pdu->jobs);
+		ops->start(client, cmd);
 		free(cmd);
 		break;
+		}
 	case FIO_NET_CMD_STOP: {
 		struct cmd_end_pdu *pdu = (struct cmd_end_pdu *) cmd->payload;
 

@@ -70,6 +70,8 @@ typedef void (*client_quit_op)(struct fio_client *);
 typedef void (*client_add_job_op)(struct fio_client *, struct fio_net_cmd *);
 typedef void (*client_timed_out)(struct fio_client *);
 typedef void (*client_stop_op)(struct fio_client *, struct fio_net_cmd *);
+typedef void (*client_start_op)(struct fio_client *, struct fio_net_cmd *);
+typedef void (*client_job_start_op)(struct fio_client *, struct fio_net_cmd *);
 
 struct client_ops {
 	client_text_op_func text_op;
@@ -83,6 +85,8 @@ struct client_ops {
 	client_add_job_op add_job;
 	client_timed_out timed_out;
 	client_stop_op stop;
+	client_start_op start;
+	client_job_start_op job_start;
 	unsigned int eta_msec;
 	int stay_connected;
 };

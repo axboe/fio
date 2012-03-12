@@ -131,6 +131,15 @@ struct gui {
 	struct flist_head list;
 } main_ui;
 
+enum {
+	GE_STATE_NEW = 1,
+	GE_STATE_CONNECTED,
+	GE_STATE_JOB_SENT,
+	GE_STATE_JOB_STARTED,
+	GE_STATE_JOB_RUNNING,
+	GE_STATE_JOB_DONE,
+};
+
 /*
  * Notebook entry
  */
@@ -160,7 +169,7 @@ struct gui_entry {
 	struct eta_widget eta;
 	GtkWidget *page_label;
 	gint page_num;
-	int connected;
+	unsigned int state;
 
 	struct gfio_client *client;
 	int nr_job_files;
@@ -377,22 +386,6 @@ static GtkWidget *create_spinbutton(GtkWidget *hbox, double min, double max, dou
 	return button;
 }
 
-static void gfio_set_connected(struct gui_entry *ge, int connected)
-{
-	if (connected) {
-		gtk_widget_set_sensitive(ge->button[SEND_BUTTON], 1);
-		ge->connected = 1;
-		gtk_button_set_label(GTK_BUTTON(ge->button[CONNECT_BUTTON]), "Disconnect");
-		gtk_widget_set_sensitive(ge->button[CONNECT_BUTTON], 1);
-	} else {
-		ge->connected = 0;
-		gtk_button_set_label(GTK_BUTTON(ge->button[CONNECT_BUTTON]), "Connect");
-		gtk_widget_set_sensitive(ge->button[SEND_BUTTON], 0);
-		gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], 0);
-		gtk_widget_set_sensitive(ge->button[CONNECT_BUTTON], 1);
-	}
-}
-
 static void label_set_int_value(GtkWidget *entry, unsigned int val)
 {
 	char tmp[80];
@@ -425,6 +418,101 @@ static void show_info_dialog(struct gui *ui, const char *title,
 	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
 	gtk_dialog_run(GTK_DIALOG(dialog));
 	gtk_widget_destroy(dialog);
+}
+
+/*
+ * Update sensitivity of job buttons and job menu items, based on the
+ * state of the client.
+ */
+static void update_button_states(struct gui *ui, struct gui_entry *ge)
+{
+	unsigned int connect_state, send_state, start_state, edit_state;
+	const char *connect_str = NULL;
+	GtkWidget *w;
+
+	switch (ge->state) {
+	default: {
+		char tmp[80];
+
+		sprintf(tmp, "Bad client state: %u\n", ge->state);
+		show_info_dialog(ui, "Error", tmp);
+		/* fall through to new state */
+		}
+
+	case GE_STATE_NEW:
+		connect_state = 1;
+		edit_state = 0;
+		connect_str = "Connect";
+		send_state = 0;
+		start_state = 0;
+		break;
+	case GE_STATE_CONNECTED:
+		connect_state = 1;
+		edit_state = 0;
+		connect_str = "Disconnect";
+		send_state = 1;
+		start_state = 0;
+		break;
+	case GE_STATE_JOB_SENT:
+		connect_state = 1;
+		edit_state = 0;
+		connect_str = "Disconnect";
+		send_state = 0;
+		start_state = 1;
+		break;
+	case GE_STATE_JOB_STARTED:
+		connect_state = 1;
+		edit_state = 1;
+		connect_str = "Disconnect";
+		send_state = 0;
+		start_state = 1;
+		break;
+	case GE_STATE_JOB_RUNNING:
+		connect_state = 1;
+		edit_state = 0;
+		connect_str = "Disconnect";
+		send_state = 0;
+		start_state = 0;
+		break;
+	case GE_STATE_JOB_DONE:
+		connect_state = 1;
+		edit_state = 0;
+		connect_str = "Connect";
+		send_state = 0;
+		start_state = 0;
+		break;
+	}
+
+	gtk_widget_set_sensitive(ge->button[CONNECT_BUTTON], connect_state);
+	gtk_widget_set_sensitive(ge->button[SEND_BUTTON], send_state);
+	gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], start_state);
+	gtk_button_set_label(GTK_BUTTON(ge->button[CONNECT_BUTTON]), connect_str);
+
+	/*
+	 * So the below doesn't work at all, how to set those menu items
+	 * invisibible...
+	 */
+	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Connect");
+	if (w)
+		gtk_widget_set_sensitive(w, connect_state);
+
+	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Edit Job");
+	if (w)
+		gtk_widget_set_sensitive(w, edit_state);
+
+	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Send Job");
+	if (w)
+		gtk_widget_set_sensitive(w, send_state);
+
+	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Start Job");
+	if (w)
+		gtk_widget_set_sensitive(w, start_state);
+}
+
+static void gfio_set_state(struct gui_entry *ge, unsigned int state)
+{
+	ge->state = state;
+	update_button_states(ge->ui, ge);
 }
 
 #define ALIGN_LEFT 1
@@ -1441,7 +1529,7 @@ static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	sprintf(buf, "%u.%u.%u", probe->fio_major, probe->fio_minor, probe->fio_patch);
 	gtk_label_set_text(GTK_LABEL(ge->probe.fio_ver), buf);
 
-	gfio_set_connected(ge, 1);
+	gfio_set_state(ge, GE_STATE_CONNECTED);
 
 	gdk_threads_leave();
 }
@@ -1475,7 +1563,7 @@ static void gfio_quit_op(struct fio_client *client)
 	struct gfio_client *gc = client->client_data;
 
 	gdk_threads_enter();
-	gfio_set_connected(gc->ge, 0);
+	gfio_set_state(gc->ge, GE_STATE_NEW);
 	gdk_threads_leave();
 }
 
@@ -1508,6 +1596,8 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	gc->job_added++;
 
+	gfio_set_state(ge, GE_STATE_JOB_SENT);
+
 	gdk_threads_leave();
 }
 
@@ -1518,7 +1608,7 @@ static void gfio_client_timed_out(struct fio_client *client)
 
 	gdk_threads_enter();
 
-	gfio_set_connected(gc->ge, 0);
+	gfio_set_state(gc->ge, GE_STATE_NEW);
 	clear_ge_ui_info(gc->ge);
 
 	sprintf(buf, "Client %s: timeout talking to server.\n", client->hostname);
@@ -1533,11 +1623,29 @@ static void gfio_client_stop(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	gdk_threads_enter();
 
-	gfio_set_connected(gc->ge, 0);
+	gfio_set_state(gc->ge, GE_STATE_JOB_DONE);
 
 	if (gc->err_entry)
 		entry_set_int_value(gc->err_entry, client->error);
 
+	gdk_threads_leave();
+}
+
+static void gfio_client_start(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct gfio_client *gc = client->client_data;
+
+	gdk_threads_enter();
+	gfio_set_state(gc->ge, GE_STATE_JOB_STARTED);
+	gdk_threads_leave();
+}
+
+static void gfio_client_job_start(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct gfio_client *gc = client->client_data;
+
+	gdk_threads_enter();
+	gfio_set_state(gc->ge, GE_STATE_JOB_RUNNING);
 	gdk_threads_leave();
 }
 
@@ -1553,6 +1661,8 @@ struct client_ops gfio_client_ops = {
 	.add_job		= gfio_add_job_op,
 	.timed_out		= gfio_client_timed_out,
 	.stop			= gfio_client_stop,
+	.start			= gfio_client_start,
+	.job_start		= gfio_client_job_start,
 	.eta_msec		= FIO_CLIENT_DEF_ETA_MSEC,
 	.stay_connected		= 1,
 };
@@ -1639,7 +1749,7 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 	struct gui_entry *ge = data;
 	struct gfio_client *gc = ge->client;
 
-	if (!ge->connected) {
+	if (ge->state == GE_STATE_NEW) {
 		int ret;
 
 		if (!ge->nr_job_files)
@@ -1653,8 +1763,7 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 		if (!ret) {
 			if (!ge->ui->handler_running)
 				pthread_create(&ge->ui->t, NULL, job_thread, ge->ui);
-			gtk_widget_set_sensitive(ge->button[CONNECT_BUTTON], 0);
-			gtk_widget_set_sensitive(ge->button[SEND_BUTTON], 1);
+			gfio_set_state(ge, GE_STATE_CONNECTED);
 		} else {
 			GError *error;
 
@@ -1664,7 +1773,7 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 		}
 	} else {
 		fio_client_terminate(gc->client);
-		gfio_set_connected(ge, 0);
+		gfio_set_state(ge, GE_STATE_NEW);
 		clear_ge_ui_info(ge);
 	}
 }
@@ -1682,9 +1791,6 @@ static void send_clicked(GtkWidget *widget, gpointer data)
 
 		gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], 1);
 	}
-
-	gtk_widget_set_sensitive(ge->button[SEND_BUTTON], 0);
-	gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], 1);
 }
 
 static GtkWidget *add_button(GtkWidget *buttonbox,
@@ -1904,6 +2010,7 @@ static struct gui_entry *alloc_new_gui_entry(struct gui *ui)
 
 	ge = malloc(sizeof(*ge));
 	memset(ge, 0, sizeof(*ge));
+	ge->state = GE_STATE_NEW;
 	INIT_FLIST_HEAD(&ge->list);
 	flist_add_tail(&ge->list, &ui->list);
 	ge->ui = ui;
@@ -1919,7 +2026,7 @@ static void ge_destroy(GtkWidget *w, gpointer data)
 	struct gfio_client *gc = ge->client;
 
 	if (gc && gc->client) {
-		if (ge->connected)
+		if (ge->state >= GE_STATE_CONNECTED)
 			fio_client_terminate(gc->client);
 
 		fio_put_client(gc->client);
@@ -1975,18 +2082,31 @@ static struct gui_entry *get_ge_from_page(unsigned int cur_page)
 	return NULL;
 }
 
+static struct gui_entry *get_ge_from_cur_tab(struct gui *ui)
+{
+	gint cur_page;
+
+	/*
+	 * Main tab is tab 0, so any current page other than 0 holds
+	 * a ge entry.
+	 */
+	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
+	if (cur_page)
+		return get_ge_from_page(cur_page);
+
+	return NULL;
+}
+
 static void file_close(GtkWidget *w, gpointer data)
 {
 	struct gui *ui = (struct gui *) data;
-	gint cur_page;
+	struct gui_entry *ge;
 
 	/*
 	 * Can't close the main tab
 	 */
-	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
-	if (cur_page) {
-		struct gui_entry *ge = get_ge_from_page(cur_page);
-
+	ge = get_ge_from_cur_tab(ui);
+	if (ge) {
 		gtk_widget_destroy(ge->vbox);
 		return;
 	}
@@ -2139,8 +2259,39 @@ static void view_log(GtkWidget *w, gpointer data)
 	gtk_widget_show_all(win);
 }
 
-static void edit_options(GtkWidget *w, gpointer data)
+static void connect_job_entry(GtkWidget *w, gpointer data)
 {
+	struct gui *ui = (struct gui *) data;
+	struct gui_entry *ge;
+	
+	ge = get_ge_from_cur_tab(ui);
+	if (ge)
+		connect_clicked(w, ge);
+}
+
+static void send_job_entry(GtkWidget *w, gpointer data)
+{
+	struct gui *ui = (struct gui *) data;
+	struct gui_entry *ge;
+
+	ge = get_ge_from_cur_tab(ui);
+	if (ge)
+		send_clicked(w, ge);
+
+}
+
+static void edit_job_entry(GtkWidget *w, gpointer data)
+{
+}
+
+static void start_job_entry(GtkWidget *w, gpointer data)
+{
+	struct gui *ui = (struct gui *) data;
+	struct gui_entry *ge;
+
+	ge = get_ge_from_cur_tab(ui);
+	if (ge)
+		start_job_clicked(w, ge);
 }
 
 static void __update_graph_limits(struct gfio_graphs *g)
@@ -2304,7 +2455,10 @@ static GtkActionEntry menu_items[] = {
 	{ "SaveFile", GTK_STOCK_SAVE, NULL,   "<Control>S", NULL, G_CALLBACK(file_save) },
 	{ "Preferences", GTK_STOCK_PREFERENCES, NULL, "<Control>p", NULL, G_CALLBACK(preferences) },
 	{ "ViewLog", NULL, "Log", "<Control>l", NULL, G_CALLBACK(view_log) },
-	{ "EditOptions", NULL, "Edit Options", "<Control>E", NULL, G_CALLBACK(edit_options) },
+	{ "ConnectJob", NULL, "Connect", "<Control>E", NULL, G_CALLBACK(connect_job_entry) },
+	{ "EditJob", NULL, "Edit job", "<Control>E", NULL, G_CALLBACK(edit_job_entry) },
+	{ "SendJob", NULL, "Send job", "<Control>X", NULL, G_CALLBACK(send_job_entry) },
+	{ "StartJob", NULL, "Start job", "<Control>L", NULL, G_CALLBACK(start_job_entry) },
 	{ "Quit", GTK_STOCK_QUIT, NULL,   "<Control>Q", NULL, G_CALLBACK(quit_clicked) },
 	{ "About", GTK_STOCK_ABOUT, NULL,  NULL, NULL, G_CALLBACK(about_dialog) },
 };
@@ -2325,7 +2479,12 @@ static const gchar *ui_string = " \
 				<menuitem name=\"Quit\" action=\"Quit\" /> \
 			</menu> \
 			<menu name=\"JobMenu\" action=\"JobMenuAction\"> \
-				<menuitem name=\"Edit Options\" action=\"EditOptions\" /> \
+				<menuitem name=\"Connect\" action=\"ConnectJob\" /> \
+				<separator name=\"Separator4\"/> \
+				<menuitem name=\"Edit job\" action=\"EditJob\" /> \
+				<menuitem name=\"Send job\" action=\"SendJob\" /> \
+				<separator name=\"Separator5\"/> \
+				<menuitem name=\"Start job\" action=\"StartJob\" /> \
 			</menu>\
 			<menu name=\"ViewMenu\" action=\"ViewMenuAction\"> \
 				<menuitem name=\"Log\" action=\"ViewLog\" /> \
@@ -2583,8 +2742,18 @@ static gboolean notebook_switch_page(GtkNotebook *notebook, GtkWidget *widget,
 
 {
 	struct gui *ui = (struct gui *) data;
+	struct gui_entry *ge;
 
-	set_job_menu_visible(ui, page);
+	if (!page) {
+		set_job_menu_visible(ui, 0);
+		return TRUE;
+	}
+
+	set_job_menu_visible(ui, 1);
+	ge = get_ge_from_page(page);
+	if (ge)
+		update_button_states(ui, ge);
+
 	return TRUE;
 }
 
