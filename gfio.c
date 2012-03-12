@@ -200,6 +200,7 @@ static struct graph *setup_iops_graph(void)
 	graph_set_color(g, "Write IOPS", 1.0, 0.0, 0.0);
 	line_graph_set_data_count_limit(g, gfio_graph_limit);
 	graph_y_axis_unit_change_notify(g, iops_graph_y_axis_unit_change);
+	graph_add_extra_space(g, 0.005, 0.005, 0.03, 0.03);
 	return g;
 }
 
@@ -232,6 +233,8 @@ static struct graph *setup_bandwidth_graph(void)
 	graph_set_color(g, "Write Bandwidth", 1.0, 0.0, 0.0);
 	line_graph_set_data_count_limit(g, 100);
 	graph_y_axis_unit_change_notify(g, bandwidth_graph_y_axis_unit_change);
+	graph_add_extra_space(g, 0.005, 0.005, 0.03, 0.03);
+
 	return g;
 }
 

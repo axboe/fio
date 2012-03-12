@@ -75,5 +75,11 @@ void graph_y_axis_unit_change_notify(struct graph *g, graph_axis_unit_change_cal
  * millions, thousands and ones. 
  */ 
 
+void graph_add_extra_space(struct graph *g, double left_percent, double right_percent,
+				double top_percent, double bottom_percent);
+/* graph_add_extra_space() adds extra space to edges of the the graph
+ * so that the data doesn't go to the very edges.
+ */
+
 #endif
 

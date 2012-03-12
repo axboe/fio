@@ -62,6 +62,10 @@ struct graph {
 	const char *font;
 	graph_axis_unit_change_callback x_axis_unit_change_callback;
 	graph_axis_unit_change_callback y_axis_unit_change_callback;
+	double left_extra;	
+	double right_extra;	
+	double top_extra;	
+	double bottom_extra;	
 };
 
 void graph_set_size(struct graph *g, unsigned int xdim, unsigned int ydim)
@@ -474,8 +478,8 @@ static double find_xy_value(struct graph *g, xy_value_extractor getvalue, double
 void line_graph_draw(struct graph *g, cairo_t *cr)
 {
 	double x1, y1, x2, y2;
-	double minx, miny, maxx, maxy;
-	double tx, ty;
+	double minx, miny, maxx, maxy, gminx, gminy, gmaxx, gmaxy;
+	double tx, ty, top_extra, bottom_extra, left_extra, right_extra;
 	struct graph_label *i;
 	struct graph_value *j;
 	int good_data = 1, first = 1;
@@ -497,8 +501,27 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 		maxy = 100.0;
 	}
 
-	graph_draw_x_ticks(g, cr, x1, y1, x2, y2, minx, maxx, 10);
-	graph_draw_y_ticks(g, cr, x1, y1, x2, y2, miny, maxy, 10);
+	top_extra = 0.0;
+	bottom_extra = 0.0;
+	left_extra = 0.0;
+	right_extra = 0.0;
+
+	if (g->top_extra > 0.001)
+		top_extra = fabs(maxy - miny) * g->top_extra;
+	if (g->bottom_extra > 0.001)
+		bottom_extra = fabs(maxy - miny) * g->bottom_extra;
+	if (g->left_extra > 0.001)
+		left_extra = fabs(maxx - minx) * g->left_extra;
+	if (g->right_extra > 0.001)
+		right_extra = fabs(maxx - minx) * g->right_extra;
+
+	gminx = minx - left_extra;
+	gmaxx = maxx + right_extra;
+	gminy = miny - bottom_extra;
+	gmaxy = maxy + top_extra;
+
+	graph_draw_x_ticks(g, cr, x1, y1, x2, y2, gminx, gmaxx, 10);
+	graph_draw_y_ticks(g, cr, x1, y1, x2, y2, gminy, gmaxy, 10);
 
 	if (!good_data)
 		goto skip_data;
@@ -510,8 +533,8 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 			continue;
 		cairo_set_source_rgb(cr, i->r, i->g, i->b);
 		for (j = i->values; j; j = j->next) {
-			tx = ((getx(j) - minx) / (maxx - minx)) * (x2 - x1) + x1;
-			ty = y2 - ((gety(j) - miny) / (maxy - miny)) * (y2 - y1);
+			tx = ((getx(j) - gminx) / (gmaxx - gminx)) * (x2 - x1) + x1;
+			ty = y2 - ((gety(j) - gminy) / (gmaxy - gminy)) * (y2 - y1);
 			if (first) {
 				cairo_move_to(cr, tx, ty);
 				first = 0;
@@ -723,4 +746,14 @@ void line_graph_set_data_count_limit(struct graph *g, int per_label_limit)
 {
 	g->per_label_limit = per_label_limit;
 }
+
+void graph_add_extra_space(struct graph *g, double left_percent, double right_percent,
+                                double top_percent, double bottom_percent)
+{
+	g->left_extra = left_percent;	
+	g->right_extra = right_percent;	
+	g->top_extra = top_percent;	
+	g->bottom_extra = bottom_percent;	
+}
+
 
