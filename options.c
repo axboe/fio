@@ -851,12 +851,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(description),
 		.help	= "Text job description",
+		.category = FIO_OPT_G_DESC,
 	},
 	{
 		.name	= "name",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(name),
 		.help	= "Name of this job",
+		.category = FIO_OPT_G_DESC,
 	},
 	{
 		.name	= "directory",
@@ -864,6 +866,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(directory),
 		.cb	= str_directory_cb,
 		.help	= "Directory to store files in",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "filename",
@@ -872,6 +875,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= str_filename_cb,
 		.prio	= -1, /* must come after "directory" */
 		.help	= "File(s) to use for the workload",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "kb_base",
@@ -881,6 +885,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.prio	= 1,
 		.def	= "1024",
 		.help	= "How many bytes per KB for reporting (1000 or 1024)",
+		.category = FIO_OPT_G_MISC,
 	},
 	{
 		.name	= "lockfile",
@@ -890,6 +895,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Lock file when doing IO to it",
 		.parent	= "filename",
 		.def	= "none",
+		.category = FIO_OPT_G_FILE,
 		.posval = {
 			  { .ival = "none",
 			    .oval = FILE_LOCK_NONE,
@@ -912,6 +918,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(opendir),
 		.cb	= str_opendir_cb,
 		.help	= "Recursively add files from this directory and down",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "rw",
@@ -922,6 +929,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "IO direction",
 		.def	= "read",
 		.verify	= rw_verify,
+		.category = FIO_OPT_G_IO_DDIR,
 		.posval = {
 			  { .ival = "read",
 			    .oval = TD_DDIR_READ,
@@ -955,6 +963,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(rw_seq),
 		.help	= "IO offset generator modifier",
 		.def	= "sequential",
+		.category = FIO_OPT_G_IO_DDIR,
 		.posval = {
 			  { .ival = "sequential",
 			    .oval = RW_SEQ_SEQ,
@@ -973,6 +982,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(ioengine),
 		.help	= "IO engine to use",
 		.def	= FIO_PREFERRED_ENGINE,
+		.category = FIO_OPT_G_IO,
 		.posval	= {
 			  { .ival = "sync",
 			    .help = "Use read/write",
@@ -1060,6 +1070,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Number of IO buffers to keep in flight",
 		.minval = 1,
 		.def	= "1",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "iodepth_batch",
@@ -1070,6 +1081,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.parent	= "iodepth",
 		.minval	= 1,
 		.def	= "1",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "iodepth_batch_complete",
@@ -1079,6 +1091,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.parent	= "iodepth",
 		.minval	= 0,
 		.def	= "1",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "iodepth_low",
@@ -1086,12 +1099,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(iodepth_low),
 		.help	= "Low water mark for queuing depth",
 		.parent	= "iodepth",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "size",
 		.type	= FIO_OPT_STR_VAL,
 		.cb	= str_size_cb,
 		.help	= "Total size of device or files",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "fill_device",
@@ -1100,6 +1115,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(fill_device),
 		.help	= "Write until an ENOSPC error occurs",
 		.def	= "0",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "filesize",
@@ -1108,6 +1124,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off2	= td_var_offset(file_size_high),
 		.minval = 1,
 		.help	= "Size of individual files",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "offset",
@@ -1116,6 +1133,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(start_offset),
 		.help	= "Start IO from this offset",
 		.def	= "0",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "bs",
@@ -1127,6 +1145,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Block size unit",
 		.def	= "4k",
 		.parent = "rw",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "ba",
@@ -1137,6 +1156,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.minval	= 1,
 		.help	= "IO block offset alignment",
 		.parent	= "rw",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "bsrange",
@@ -1149,6 +1169,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.minval = 1,
 		.help	= "Set block size range (in more detail than bs)",
 		.parent = "rw",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "bssplit",
@@ -1156,6 +1177,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= str_bssplit_cb,
 		.help	= "Set a specific mix of block sizes",
 		.parent	= "rw",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "bs_unaligned",
@@ -1164,6 +1186,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(bs_unaligned),
 		.help	= "Don't sector align IO buffer sizes",
 		.parent = "rw",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "randrepeat",
@@ -1172,6 +1195,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Use repeatable random IO pattern",
 		.def	= "1",
 		.parent = "rw",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_RAND,
 	},
 	{
 		.name	= "use_os_rand",
@@ -1180,6 +1204,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Set to use OS random generator",
 		.def	= "0",
 		.parent = "rw",
+		.category = FIO_OPT_G_RAND,
 	},
 	{
 		.name	= "norandommap",
@@ -1187,6 +1212,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(norandommap),
 		.help	= "Accept potential duplicate random blocks",
 		.parent = "rw",
+		.category = FIO_OPT_G_RAND,
 	},
 	{
 		.name	= "softrandommap",
@@ -1195,6 +1221,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Set norandommap if randommap allocation fails",
 		.parent	= "norandommap",
 		.def	= "0",
+		.category = FIO_OPT_G_RAND,
 	},
 	{
 		.name	= "nrfiles",
@@ -1203,12 +1230,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(nr_files),
 		.help	= "Split job workload between this number of files",
 		.def	= "1",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "openfiles",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(open_files),
 		.help	= "Number of files to keep open at the same time",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "file_service_type",
@@ -1217,6 +1246,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(file_service_type),
 		.help	= "How to select which file to service next",
 		.def	= "roundrobin",
+		.category = FIO_OPT_G_FILE,
 		.posval	= {
 			  { .ival = "random",
 			    .oval = FIO_FSERVICE_RANDOM,
@@ -1240,6 +1270,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(fallocate_mode),
 		.help	= "Whether pre-allocation is performed when laying out files",
 		.def	= "posix",
+		.category = FIO_OPT_G_FILE,
 		.posval	= {
 			  { .ival = "none",
 			    .oval = FIO_FALLOCATE_NONE,
@@ -1273,6 +1304,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(fadvise_hint),
 		.help	= "Use fadvise() to advise the kernel on IO pattern",
 		.def	= "1",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "fsync",
@@ -1280,6 +1312,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(fsync_blocks),
 		.help	= "Issue fsync for writes every given number of blocks",
 		.def	= "0",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "fdatasync",
@@ -1287,6 +1320,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(fdatasync_blocks),
 		.help	= "Issue fdatasync for writes every given number of blocks",
 		.def	= "0",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "write_barrier",
@@ -1294,6 +1328,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(barrier_blocks),
 		.help	= "Make every Nth write a barrier write",
 		.def	= "0",
+		.category = FIO_OPT_G_IO,
 	},
 #ifdef FIO_HAVE_SYNC_FILE_RANGE
 	{
@@ -1320,6 +1355,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= str_sfr_cb,
 		.off1	= td_var_offset(sync_file_range),
 		.help	= "Use sync_file_range()",
+		.category = FIO_OPT_G_FILE,
 	},
 #endif
 	{
@@ -1328,6 +1364,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(odirect),
 		.help	= "Use O_DIRECT IO (negates buffered)",
 		.def	= "0",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "buffered",
@@ -1336,6 +1373,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.neg	= 1,
 		.help	= "Use buffered IO (negates direct)",
 		.def	= "1",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "overwrite",
@@ -1343,6 +1381,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(overwrite),
 		.help	= "When writing, set whether to overwrite current data",
 		.def	= "0",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "loops",
@@ -1350,6 +1389,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(loops),
 		.help	= "Number of times to run the job",
 		.def	= "1",
+		.category = FIO_OPT_G_MISC,
 	},
 	{
 		.name	= "numjobs",
@@ -1357,6 +1397,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(numjobs),
 		.help	= "Duplicate this job this many times",
 		.def	= "1",
+		.category = FIO_OPT_G_MISC,
 	},
 	{
 		.name	= "startdelay",
@@ -1364,6 +1405,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(start_delay),
 		.help	= "Only start job when this period has passed",
 		.def	= "0",
+		.category = FIO_OPT_G_MISC,
 	},
 	{
 		.name	= "runtime",
@@ -1372,18 +1414,21 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(timeout),
 		.help	= "Stop workload when this amount of time has passed",
 		.def	= "0",
+		.category = FIO_OPT_G_MISC,
 	},
 	{
 		.name	= "time_based",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(time_based),
 		.help	= "Keep running until runtime/timeout is met",
+		.category = FIO_OPT_G_MISC,
 	},
 	{
 		.name	= "ramp_time",
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= td_var_offset(ramp_time),
 		.help	= "Ramp up time before measuring performance",
+		.category = FIO_OPT_G_MISC,
 	},
 	{
 		.name	= "clocksource",
@@ -1391,6 +1436,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= fio_clock_source_cb,
 		.off1	= td_var_offset(clocksource),
 		.help	= "What type of timing source to use",
+		.category = FIO_OPT_G_OS,
 		.posval	= {
 			  { .ival = "gettimeofday",
 			    .oval = CS_GTOD,
@@ -1416,6 +1462,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(mem_type),
 		.help	= "Backing type for IO buffers",
 		.def	= "malloc",
+		.category = FIO_OPT_G_IO_BUF | FIO_OPT_G_MEM,
 		.posval	= {
 			  { .ival = "malloc",
 			    .oval = MEM_MALLOC,
@@ -1452,6 +1499,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "IO memory buffer offset alignment",
 		.def	= "0",
 		.parent	= "iomem",
+		.category = FIO_OPT_G_IO_BUF | FIO_OPT_G_MEM,
 	},
 	{
 		.name	= "verify",
@@ -1460,6 +1508,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Verify data written",
 		.cb	= str_verify_cb,
 		.def	= "0",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 		.posval = {
 			  { .ival = "0",
 			    .oval = VERIFY_NONE,
@@ -1523,6 +1572,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Run verification stage after write",
 		.def	= "1",
 		.parent = "verify",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verifysort",
@@ -1531,6 +1581,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Sort written verify blocks for read back",
 		.def	= "1",
 		.parent = "verify",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
 		.name   = "verify_interval",
@@ -1539,6 +1590,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.minval	= 2 * sizeof(struct verify_header),
 		.help   = "Store verify buffer header every N bytes",
 		.parent	= "verify",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verify_offset",
@@ -1547,6 +1599,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.cb	= str_verify_offset_cb,
 		.parent	= "verify",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verify_pattern",
@@ -1554,6 +1607,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= str_verify_pattern_cb,
 		.help	= "Fill pattern for IO buffers",
 		.parent	= "verify",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verify_fatal",
@@ -1562,6 +1616,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.help	= "Exit on a single verify failure, don't continue",
 		.parent = "verify",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY | FIO_OPT_G_ERR,
 	},
 	{
 		.name	= "verify_dump",
@@ -1570,6 +1625,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.help	= "Dump contents of good and bad blocks on failure",
 		.parent = "verify",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY | FIO_OPT_G_ERR,
 	},
 	{
 		.name	= "verify_async",
@@ -1578,6 +1634,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.help	= "Number of async verifier threads to use",
 		.parent	= "verify",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verify_backlog",
@@ -1585,6 +1642,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(verify_backlog),
 		.help	= "Verify after this number of blocks are written",
 		.parent	= "verify",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verify_backlog_batch",
@@ -1592,6 +1650,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(verify_batch),
 		.help	= "Verify this number of IO blocks",
 		.parent	= "verify",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 #ifdef FIO_HAVE_CPU_AFFINITY
 	{
@@ -1600,6 +1659,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= str_verify_cpus_allowed_cb,
 		.help	= "Set CPUs allowed for async verify threads",
 		.parent	= "verify_async",
+		.category = FIO_OPT_G_OS | FIO_OPT_G_CPU | FIO_OPT_G_VERIFY,
 	},
 #endif
 #ifdef FIO_HAVE_TRIM
@@ -1611,6 +1671,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Number of verify blocks to discard/trim",
 		.parent	= "verify",
 		.def	= "0",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "trim_verify_zero",
@@ -1619,6 +1680,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(trim_zero),
 		.parent	= "trim_percentage",
 		.def	= "1",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "trim_backlog",
@@ -1626,6 +1688,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(trim_backlog),
 		.help	= "Trim after this number of blocks are written",
 		.parent	= "trim_percentage",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "trim_backlog_batch",
@@ -1633,6 +1696,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(trim_batch),
 		.help	= "Trim this number of IO blocks",
 		.parent	= "trim_percentage",
+		.category = FIO_OPT_G_IO,
 	},
 #endif
 	{
@@ -1640,12 +1704,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(write_iolog_file),
 		.help	= "Store IO pattern to file",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_LOG,
 	},
 	{
 		.name	= "read_iolog",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(read_iolog_file),
 		.help	= "Playback IO pattern from file",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_LOG,
 	},
 	{
 		.name	= "replay_no_stall",
@@ -1654,6 +1720,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.parent	= "read_iolog",
 		.help	= "Playback IO pattern file as fast as possible without stalls",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_LOG,
 	},
 	{
 		.name	= "replay_redirect",
@@ -1661,18 +1728,21 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(replay_redirect),
 		.parent	= "read_iolog",
 		.help	= "Replay all I/O onto this device, regardless of trace device",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_LOG,
 	},
 	{
 		.name	= "exec_prerun",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(exec_prerun),
 		.help	= "Execute this file prior to running job",
+		.category = FIO_OPT_G_MISC | FIO_OPT_G_OS,
 	},
 	{
 		.name	= "exec_postrun",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(exec_postrun),
 		.help	= "Execute this file after running job",
+		.category = FIO_OPT_G_MISC | FIO_OPT_G_OS,
 	},
 #ifdef FIO_HAVE_IOSCHED_SWITCH
 	{
@@ -1680,6 +1750,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(ioscheduler),
 		.help	= "Use this IO scheduler on the backing device",
+		.category = FIO_OPT_G_OS | FIO_OPT_G_IO,
 	},
 #endif
 	{
@@ -1688,6 +1759,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(zone_size),
 		.help	= "Amount of data to read per zone",
 		.def	= "0",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_ZONE,
 	},
 	{
 		.name	= "zonerange",
@@ -1695,6 +1767,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(zone_range),
 		.help	= "Give size of an IO zone",
 		.def	= "0",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_ZONE,
 	},
 	{
 		.name	= "zoneskip",
@@ -1702,6 +1775,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(zone_skip),
 		.help	= "Space between IO zones",
 		.def	= "0",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_ZONE,
 	},
 	{
 		.name	= "lockmem",
@@ -1709,6 +1783,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= str_lockmem_cb,
 		.help	= "Lock down this amount of memory",
 		.def	= "0",
+		.category = FIO_OPT_G_OS | FIO_OPT_G_MEM,
 	},
 	{
 		.name	= "rwmixread",
@@ -1717,6 +1792,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is reads",
 		.def	= "50",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "rwmixwrite",
@@ -1725,10 +1801,12 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is writes",
 		.def	= "50",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "rwmixcycle",
 		.type	= FIO_OPT_DEPRECATED,
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "nice",
@@ -1738,6 +1816,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.minval	= -19,
 		.maxval	= 20,
 		.def	= "0",
+		.category = FIO_OPT_G_OS | FIO_OPT_G_CPU,
 	},
 #ifdef FIO_HAVE_IOPRIO
 	{
@@ -1747,6 +1826,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Set job IO priority value",
 		.minval	= 0,
 		.maxval	= 7,
+		.category = FIO_OPT_G_OS | FIO_OPT_G_CPU,
 	},
 	{
 		.name	= "prioclass",
@@ -1755,6 +1835,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Set job IO priority class",
 		.minval	= 0,
 		.maxval	= 3,
+		.category = FIO_OPT_G_OS | FIO_OPT_G_CPU,
 	},
 #endif
 	{
@@ -1763,6 +1844,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(thinktime),
 		.help	= "Idle time between IO buffers (usec)",
 		.def	= "0",
+		.category = FIO_OPT_G_MISC,
 	},
 	{
 		.name	= "thinktime_spin",
@@ -1771,6 +1853,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Start think time by spinning this amount (usec)",
 		.def	= "0",
 		.parent	= "thinktime",
+		.category = FIO_OPT_G_MISC,
 	},
 	{
 		.name	= "thinktime_blocks",
@@ -1779,6 +1862,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "IO buffer period between 'thinktime'",
 		.def	= "1",
 		.parent	= "thinktime",
+		.category = FIO_OPT_G_MISC,
 	},
 	{
 		.name	= "rate",
@@ -1786,6 +1870,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(rate[0]),
 		.off2	= td_var_offset(rate[1]),
 		.help	= "Set bandwidth rate",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "ratemin",
@@ -1794,6 +1879,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off2	= td_var_offset(ratemin[1]),
 		.help	= "Job must meet this rate or it will be shutdown",
 		.parent	= "rate",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "rate_iops",
@@ -1801,6 +1887,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(rate_iops[0]),
 		.off2	= td_var_offset(rate_iops[1]),
 		.help	= "Limit IO used to this number of IO operations/sec",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "rate_iops_min",
@@ -1809,6 +1896,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off2	= td_var_offset(rate_iops_min[1]),
 		.help	= "Job must meet this rate or it will be shut down",
 		.parent	= "rate_iops",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "ratecycle",
@@ -1817,6 +1905,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Window average for rate limits (msec)",
 		.def	= "1000",
 		.parent = "rate",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "invalidate",
@@ -1824,6 +1913,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(invalidate_cache),
 		.help	= "Invalidate buffer/page cache prior to running job",
 		.def	= "1",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_CACHE,
 	},
 	{
 		.name	= "sync",
@@ -1832,6 +1922,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Use O_SYNC for buffered writes",
 		.def	= "0",
 		.parent = "buffered",
+		.category = FIO_OPT_G_IO | FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "bwavgtime",
@@ -1841,6 +1932,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			  " (msec)",
 		.def	= "500",
 		.parent	= "write_bw_log",
+		.category = FIO_OPT_G_LOG | FIO_OPT_G_STAT,
 	},
 	{
 		.name	= "iopsavgtime",
@@ -1849,6 +1941,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Time window over which to calculate IOPS (msec)",
 		.def	= "500",
 		.parent	= "write_iops_log",
+		.category = FIO_OPT_G_LOG | FIO_OPT_G_STAT,
 	},
 	{
 		.name	= "create_serialize",
@@ -1856,6 +1949,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(create_serialize),
 		.help	= "Serialize creating of job files",
 		.def	= "1",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "create_fsync",
@@ -1863,6 +1957,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(create_fsync),
 		.help	= "fsync file after creation",
 		.def	= "1",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "create_on_open",
@@ -1870,6 +1965,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(create_on_open),
 		.help	= "Create files when they are opened for IO",
 		.def	= "0",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "pre_read",
@@ -1877,12 +1973,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(pre_read),
 		.help	= "Pre-read files before starting official testing",
 		.def	= "0",
+		.category = FIO_OPT_G_FILE | FIO_OPT_G_CACHE,
 	},
 	{
 		.name	= "cpuload",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(cpuload),
 		.help	= "Use this percentage of CPU",
+		.category = FIO_OPT_G_CPU,
 	},
 	{
 		.name	= "cpuchunks",
@@ -1891,6 +1989,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Length of the CPU burn cycles (usecs)",
 		.def	= "50000",
 		.parent = "cpuload",
+		.category = FIO_OPT_G_CPU,
 	},
 #ifdef FIO_HAVE_CPU_AFFINITY
 	{
@@ -1898,12 +1997,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_INT,
 		.cb	= str_cpumask_cb,
 		.help	= "CPU affinity mask",
+		.category = FIO_OPT_G_CPU | FIO_OPT_G_OS,
 	},
 	{
 		.name	= "cpus_allowed",
 		.type	= FIO_OPT_STR,
 		.cb	= str_cpus_allowed_cb,
 		.help	= "Set CPUs allowed",
+		.category = FIO_OPT_G_CPU | FIO_OPT_G_OS,
 	},
 #endif
 	{
@@ -1912,6 +2013,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(end_fsync),
 		.help	= "Include fsync at the end of job",
 		.def	= "0",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "fsync_on_close",
@@ -1919,6 +2021,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(fsync_on_close),
 		.help	= "fsync files on close",
 		.def	= "0",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "unlink",
@@ -1926,12 +2029,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(unlink),
 		.help	= "Unlink created files after job has completed",
 		.def	= "0",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "exitall",
 		.type	= FIO_OPT_STR_SET,
 		.cb	= str_exitall_cb,
 		.help	= "Terminate all jobs when one exits",
+		.category = FIO_OPT_G_MISC | FIO_OPT_G_JOB,
 	},
 	{
 		.name	= "stonewall",
@@ -1939,18 +2044,21 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(stonewall),
 		.help	= "Insert a hard barrier between this job and previous",
+		.category = FIO_OPT_G_MISC | FIO_OPT_G_JOB,
 	},
 	{
 		.name	= "new_group",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(new_group),
 		.help	= "Mark the start of a new group (for reporting)",
+		.category = FIO_OPT_G_MISC | FIO_OPT_G_JOB,
 	},
 	{
 		.name	= "thread",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(use_thread),
 		.help	= "Use threads instead of forks",
+		.category = FIO_OPT_G_MISC | FIO_OPT_G_OS | FIO_OPT_G_JOB,
 	},
 	{
 		.name	= "write_bw_log",
@@ -1958,6 +2066,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(write_bw_log),
 		.cb	= str_write_bw_log_cb,
 		.help	= "Write log of bandwidth during run",
+		.category = FIO_OPT_G_LOG,
 	},
 	{
 		.name	= "write_lat_log",
@@ -1965,6 +2074,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(write_lat_log),
 		.cb	= str_write_lat_log_cb,
 		.help	= "Write log of latency during run",
+		.category = FIO_OPT_G_LOG,
 	},
 	{
 		.name	= "write_iops_log",
@@ -1972,6 +2082,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(write_iops_log),
 		.cb	= str_write_iops_log_cb,
 		.help	= "Write log of IOPS during run",
+		.category = FIO_OPT_G_LOG,
 	},
 	{
 		.name	= "log_avg_msec",
@@ -1979,6 +2090,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(log_avg_msec),
 		.help	= "Average bw/iops/lat logs over this period of time",
 		.def	= "0",
+		.category = FIO_OPT_G_LOG,
 	},
 	{
 		.name	= "hugepage-size",
@@ -1986,24 +2098,28 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(hugepage_size),
 		.help	= "When using hugepages, specify size of each page",
 		.def	= __fio_stringify(FIO_HUGE_PAGE),
+		.category = FIO_OPT_G_OS | FIO_OPT_G_MEM,
 	},
 	{
 		.name	= "group_reporting",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(group_reporting),
 		.help	= "Do reporting on a per-group basis",
+		.category = FIO_OPT_G_MISC,
 	},
 	{
 		.name	= "zero_buffers",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(zero_buffers),
 		.help	= "Init IO buffers to all zeroes",
+		.category = FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "refill_buffers",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(refill_buffers),
 		.help	= "Refill IO buffers on every IO submit",
+		.category = FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "scramble_buffers",
@@ -2011,6 +2127,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(scramble_buffers),
 		.help	= "Slightly scramble buffers on every IO submit",
 		.def	= "1",
+		.category = FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "clat_percentiles",
@@ -2018,6 +2135,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(clat_percentiles),
 		.help	= "Enable the reporting of completion latency percentiles",
 		.def	= "1",
+		.category = FIO_OPT_G_STAT,
 	},
 	{
 		.name	= "percentile_list",
@@ -2028,6 +2146,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.maxlen	= FIO_IO_U_LIST_MAX_LEN,
 		.minfp	= 0.0,
 		.maxfp	= 100.0,
+		.category = FIO_OPT_G_STAT,
 	},
 
 #ifdef FIO_HAVE_DISK_UTIL
@@ -2037,6 +2156,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(do_disk_util),
 		.help	= "Log disk utilization statistics",
 		.def	= "1",
+		.category = FIO_OPT_G_OS | FIO_OPT_G_STAT,
 	},
 #endif
 	{
@@ -2045,6 +2165,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Greatly reduce number of gettimeofday() calls",
 		.cb	= str_gtod_reduce_cb,
 		.def	= "0",
+		.category = FIO_OPT_G_OS | FIO_OPT_G_MISC | FIO_OPT_G_STAT,
 	},
 	{
 		.name	= "disable_lat",
@@ -2053,6 +2174,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Disable latency numbers",
 		.parent	= "gtod_reduce",
 		.def	= "0",
+		.category = FIO_OPT_G_OS | FIO_OPT_G_MISC | FIO_OPT_G_STAT,
 	},
 	{
 		.name	= "disable_clat",
@@ -2061,6 +2183,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Disable completion latency numbers",
 		.parent	= "gtod_reduce",
 		.def	= "0",
+		.category = FIO_OPT_G_OS | FIO_OPT_G_MISC | FIO_OPT_G_STAT,
 	},
 	{
 		.name	= "disable_slat",
@@ -2069,6 +2192,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Disable submission latency numbers",
 		.parent	= "gtod_reduce",
 		.def	= "0",
+		.category = FIO_OPT_G_OS | FIO_OPT_G_MISC | FIO_OPT_G_STAT,
 	},
 	{
 		.name	= "disable_bw_measurement",
@@ -2077,6 +2201,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Disable bandwidth logging",
 		.parent	= "gtod_reduce",
 		.def	= "0",
+		.category = FIO_OPT_G_OS | FIO_OPT_G_MISC | FIO_OPT_G_STAT,
 	},
 	{
 		.name	= "gtod_cpu",
@@ -2084,6 +2209,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= str_gtod_cpu_cb,
 		.help	= "Set up dedicated gettimeofday() thread on this CPU",
 		.verify	= gtod_cpu_verify,
+		.category = FIO_OPT_G_OS | FIO_OPT_G_MISC | FIO_OPT_G_STAT,
 	},
 	{
 		.name	= "continue_on_error",
@@ -2091,6 +2217,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(continue_on_error),
 		.help	= "Continue on non-fatal errors during IO",
 		.def	= "none",
+		.category = FIO_OPT_G_MISC | FIO_OPT_G_ERR,
 		.posval = {
 			  { .ival = "none",
 			    .oval = ERROR_TYPE_NONE,
@@ -2131,12 +2258,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(profile),
 		.help	= "Select a specific builtin performance test",
+		.category = FIO_OPT_G_MISC | FIO_OPT_G_JOB,
 	},
 	{
 		.name	= "cgroup",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(cgroup),
 		.help	= "Add job to cgroup of this name",
+		.category = FIO_OPT_G_MISC | FIO_OPT_G_OS,
 	},
 	{
 		.name	= "cgroup_weight",
@@ -2145,6 +2274,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Use given weight for cgroup",
 		.minval = 100,
 		.maxval	= 1000,
+		.category = FIO_OPT_G_MISC | FIO_OPT_G_OS,
 	},
 	{
 		.name	= "cgroup_nodelete",
@@ -2152,18 +2282,21 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(cgroup_nodelete),
 		.help	= "Do not delete cgroups after job completion",
 		.def	= "0",
+		.category = FIO_OPT_G_MISC | FIO_OPT_G_OS,
 	},
 	{
 		.name	= "uid",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(uid),
 		.help	= "Run job with this user ID",
+		.category = FIO_OPT_G_OS | FIO_OPT_G_JOB,
 	},
 	{
 		.name	= "gid",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(gid),
 		.help	= "Run job with this group ID",
+		.category = FIO_OPT_G_OS | FIO_OPT_G_JOB,
 	},
 	{
 		.name	= "flow_id",
@@ -2171,6 +2304,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(flow_id),
 		.help	= "The flow index ID to use",
 		.def	= "0",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "flow",
@@ -2179,6 +2313,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Weight for flow control of this job",
 		.parent	= "flow_id",
 		.def	= "0",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "flow_watermark",
@@ -2189,6 +2324,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			" with non-zero flow.",
 		.parent	= "flow_id",
 		.def	= "1024",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "flow_sleep",
@@ -2198,6 +2334,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			" back by the flow control mechanism",
 		.parent	= "flow_id",
 		.def	= "0",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name = NULL,

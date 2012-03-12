@@ -35,6 +35,26 @@ struct value_pair {
 #define OPT_LEN_MAX 	4096
 #define PARSE_MAX_VP	16
 
+enum opt_category {
+	FIO_OPT_G_DESC		= 1UL << 0,
+	FIO_OPT_G_FILE		= 1UL << 1,
+	FIO_OPT_G_MISC		= 1UL << 2,
+	FIO_OPT_G_IO		= 1UL << 3,
+	FIO_OPT_G_IO_DDIR	= 1UL << 4,
+	FIO_OPT_G_IO_BUF	= 1UL << 5,
+	FIO_OPT_G_RAND		= 1UL << 6,
+	FIO_OPT_G_OS		= 1UL << 7,
+	FIO_OPT_G_MEM		= 1UL << 8,
+	FIO_OPT_G_VERIFY	= 1UL << 9,
+	FIO_OPT_G_CPU		= 1UL << 10,
+	FIO_OPT_G_LOG		= 1UL << 11,
+	FIO_OPT_G_ZONE		= 1UL << 12,
+	FIO_OPT_G_CACHE		= 1UL << 13,
+	FIO_OPT_G_STAT		= 1UL << 14,
+	FIO_OPT_G_ERR		= 1UL << 15,
+	FIO_OPT_G_JOB		= 1UL << 16,
+};
+
 /*
  * Option define
  */
@@ -61,6 +81,7 @@ struct fio_option {
 	const char *parent;		/* parent option */
 	int (*verify)(struct fio_option *, void *);
 	const char *prof_name;		/* only valid for specific profile */
+	unsigned int category;		/* for type grouping */
 };
 
 typedef int (str_cb_fn)(void *, char *);
