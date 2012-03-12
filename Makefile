@@ -128,7 +128,7 @@ gfio: $(GFIO_OBJS)
 $(PROGS): .depend
 
 clean:
-	-rm -f .depend $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core
+	-rm -f .depend $(GFIO_OBJS) $(FIO_OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio
 
 cscope:
 	@cscope -b -R
