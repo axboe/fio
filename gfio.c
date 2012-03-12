@@ -407,6 +407,24 @@ static void entry_set_int_value(GtkWidget *entry, unsigned int val)
 	gtk_entry_set_text(GTK_ENTRY(entry), tmp);
 }
 
+static void show_info_dialog(struct gui *ui, const char *title,
+			     const char *message)
+{
+	GtkWidget *dialog, *content, *label;
+
+	dialog = gtk_dialog_new_with_buttons(title, GTK_WINDOW(ui->window),
+			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+			GTK_STOCK_OK, GTK_RESPONSE_OK, NULL);
+
+	content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+	label = gtk_label_new(message);
+	gtk_container_add(GTK_CONTAINER(content), label);
+	gtk_widget_show_all(dialog);
+	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+}
+
 #define ALIGN_LEFT 1
 #define ALIGN_RIGHT 2
 #define INVISIBLE 4
@@ -1494,7 +1512,6 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 static void gfio_client_timed_out(struct fio_client *client)
 {
 	struct gfio_client *gc = client->client_data;
-	GtkWidget *dialog, *label, *content;
 	char buf[256];
 
 	gdk_threads_enter();
@@ -1503,22 +1520,7 @@ static void gfio_client_timed_out(struct fio_client *client)
 	clear_ge_ui_info(gc->ge);
 
 	sprintf(buf, "Client %s: timeout talking to server.\n", client->hostname);
-
-	dialog = gtk_dialog_new_with_buttons("Timed out!",
-			GTK_WINDOW(main_ui.window),
-			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-			GTK_STOCK_OK, GTK_RESPONSE_OK, NULL);
-
-	/* gtk_dialog_get_content_area() is 2.14 and newer */
-	content = GTK_DIALOG(dialog)->vbox;
-
-	label = gtk_label_new((const gchar *) buf);
-	gtk_container_add(GTK_CONTAINER(content), label);
-	gtk_widget_show_all(dialog);
-	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
-
-	gtk_dialog_run(GTK_DIALOG(dialog));
-	gtk_widget_destroy(dialog);
+	show_info_dialog(gc->ge->ui, "Network timeout", buf);
 
 	gdk_threads_leave();
 }
@@ -1914,8 +1916,12 @@ static void ge_destroy(GtkWidget *w, gpointer data)
 	struct gui_entry *ge = data;
 	struct gfio_client *gc = ge->client;
 
-	if (gc->client)
+	if (gc && gc->client) {
+		if (ge->connected)
+			fio_client_terminate(gc->client);
+
 		fio_put_client(gc->client);
+	}
 
 	flist_del(&ge->list);
 	free(ge);
@@ -1939,7 +1945,11 @@ static struct gui_entry *get_new_ge_with_tab(const char *name)
 
 static void file_new(GtkWidget *w, gpointer data)
 {
-	get_new_ge_with_tab("Untitled");
+	struct gui *ui = (struct gui *) data;
+	struct gui_entry *ge;
+
+	ge = get_new_ge_with_tab("Untitled");
+	gtk_notebook_set_current_page(GTK_NOTEBOOK(ui->notebook), ge->page_num);
 }
 
 /*
@@ -1961,6 +1971,25 @@ static struct gui_entry *get_ge_from_page(unsigned int cur_page)
 	}
 
 	return NULL;
+}
+
+static void file_close(GtkWidget *w, gpointer data)
+{
+	struct gui *ui = (struct gui *) data;
+	gint cur_page;
+
+	/*
+	 * Can't close the main tab
+	 */
+	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
+	if (cur_page) {
+		struct gui_entry *ge = get_ge_from_page(cur_page);
+
+		gtk_widget_destroy(ge->vbox);
+		return;
+	}
+
+	show_info_dialog(ui, "Error", "The main page view cannot be closed\n");
 }
 
 static void file_open(GtkWidget *w, gpointer data)
@@ -2106,6 +2135,10 @@ static void view_log(GtkWidget *w, gpointer data)
 
 	gtk_container_add(GTK_CONTAINER(win), vbox);
 	gtk_widget_show_all(win);
+}
+
+static void edit_options(GtkWidget *w, gpointer data)
+{
 }
 
 static void __update_graph_limits(struct gfio_graphs *g)
@@ -2261,12 +2294,15 @@ static void about_dialog(GtkWidget *w, gpointer data)
 static GtkActionEntry menu_items[] = {
 	{ "FileMenuAction", GTK_STOCK_FILE, "File", NULL, NULL, NULL},
 	{ "ViewMenuAction", GTK_STOCK_FILE, "View", NULL, NULL, NULL},
+	{ "JobMenuAction", GTK_STOCK_FILE, "Job", NULL, NULL, NULL},
 	{ "HelpMenuAction", GTK_STOCK_HELP, "Help", NULL, NULL, NULL},
 	{ "NewFile", GTK_STOCK_NEW, "New", "<Control>N", NULL, G_CALLBACK(file_new) },
+	{ "CloseFile", GTK_STOCK_CLOSE, "Close", "<Control>W", NULL, G_CALLBACK(file_close) },
 	{ "OpenFile", GTK_STOCK_OPEN, NULL,   "<Control>O", NULL, G_CALLBACK(file_open) },
 	{ "SaveFile", GTK_STOCK_SAVE, NULL,   "<Control>S", NULL, G_CALLBACK(file_save) },
 	{ "Preferences", GTK_STOCK_PREFERENCES, NULL, "<Control>p", NULL, G_CALLBACK(preferences) },
 	{ "ViewLog", NULL, "Log", "<Control>l", NULL, G_CALLBACK(view_log) },
+	{ "EditOptions", NULL, "Edit Options", "<Control>E", NULL, G_CALLBACK(edit_options) },
 	{ "Quit", GTK_STOCK_QUIT, NULL,   "<Control>Q", NULL, G_CALLBACK(quit_clicked) },
 	{ "About", GTK_STOCK_ABOUT, NULL,  NULL, NULL, G_CALLBACK(about_dialog) },
 };
@@ -2277,6 +2313,7 @@ static const gchar *ui_string = " \
 		<menubar name=\"MainMenu\"> \
 			<menu name=\"FileMenu\" action=\"FileMenuAction\"> \
 				<menuitem name=\"New\" action=\"NewFile\" /> \
+				<menuitem name=\"Close\" action=\"CloseFile\" /> \
 				<separator name=\"Separator1\"/> \
 				<menuitem name=\"Open\" action=\"OpenFile\" /> \
 				<menuitem name=\"Save\" action=\"SaveFile\" /> \
@@ -2285,6 +2322,9 @@ static const gchar *ui_string = " \
 				<separator name=\"Separator3\"/> \
 				<menuitem name=\"Quit\" action=\"Quit\" /> \
 			</menu> \
+			<menu name=\"JobMenu\" action=\"JobMenuAction\"> \
+				<menuitem name=\"Edit Options\" action=\"EditOptions\" /> \
+			</menu>\
 			<menu name=\"ViewMenu\" action=\"ViewMenuAction\"> \
 				<menuitem name=\"Log\" action=\"ViewLog\" /> \
 			</menu>\
