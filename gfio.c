@@ -1738,8 +1738,8 @@ static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
 	struct gui_entry *ge = data;
 	struct gfio_client *gc = ge->client;
 
-	gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], 0);
-	fio_start_client(gc->client);
+	if (gc)
+		fio_start_client(gc->client);
 }
 
 static void file_open(GtkWidget *w, gpointer data);
