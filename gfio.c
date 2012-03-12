@@ -104,6 +104,8 @@ struct gfio_graphs {
  * Main window widgets and data
  */
 struct gui {
+	GtkUIManager *uimanager;
+	GtkWidget *menu;
 	GtkWidget *window;
 	GtkWidget *vbox;
 	GtkWidget *topvbox;
@@ -2335,6 +2337,14 @@ static const gchar *ui_string = " \
 	</ui> \
 ";
 
+static void set_job_menu_visible(struct gui *ui, int visible)
+{
+	GtkWidget *job;
+
+	job = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu");
+	gtk_widget_set_sensitive(job, visible);
+}
+
 static GtkWidget *get_menubar_menu(GtkWidget *window, GtkUIManager *ui_manager,
 				   struct gui *ui)
 {
@@ -2348,6 +2358,7 @@ static GtkWidget *get_menubar_menu(GtkWidget *window, GtkUIManager *ui_manager,
 	gtk_ui_manager_add_ui_from_string(GTK_UI_MANAGER(ui_manager), ui_string, -1, &error);
 
 	gtk_window_add_accel_group(GTK_WINDOW(window), gtk_ui_manager_get_accel_group(ui_manager));
+
 	return gtk_ui_manager_get_widget(ui_manager, "/MainMenu");
 }
 
@@ -2571,14 +2582,16 @@ static gboolean notebook_switch_page(GtkNotebook *notebook, GtkWidget *widget,
 				     guint page, gpointer data)
 
 {
+	struct gui *ui = (struct gui *) data;
+
+	set_job_menu_visible(ui, page);
 	return TRUE;
 }
 
 static void init_ui(int *argc, char **argv[], struct gui *ui)
 {
 	GtkSettings *settings;
-	GtkUIManager *uimanager;
-	GtkWidget *menu, *vbox;
+	GtkWidget *vbox;
 
 	/* Magical g*thread incantation, you just need this thread stuff.
 	 * Without it, the update that happens in gfio_update_thread_status
@@ -2603,9 +2616,9 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	ui->vbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(ui->window), ui->vbox);
 
-	uimanager = gtk_ui_manager_new();
-	menu = get_menubar_menu(ui->window, uimanager, ui);
-	gfio_ui_setup(settings, menu, ui->vbox, uimanager);
+	ui->uimanager = gtk_ui_manager_new();
+	ui->menu = get_menubar_menu(ui->window, ui->uimanager, ui);
+	gfio_ui_setup(settings, ui->menu, ui->vbox, ui->uimanager);
 
 	ui->notebook = gtk_notebook_new();
 	g_signal_connect(ui->notebook, "switch-page", G_CALLBACK(notebook_switch_page), ui);
