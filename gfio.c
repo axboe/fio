@@ -68,11 +68,18 @@ struct probe_widget {
 	GtkWidget *fio_ver;
 };
 
+struct multitext_widget {
+	GtkWidget *entry;
+	char **text;
+	unsigned int cur_text;
+	unsigned int max_text;
+};
+
 struct eta_widget {
 	GtkWidget *names;
-	GtkWidget *iotype;
-	GtkWidget *ioengine;
-	GtkWidget *iodepth;
+	struct multitext_widget iotype;
+	struct multitext_widget ioengine;
+	struct multitext_widget iodepth;
 	GtkWidget *jobs;
 	GtkWidget *files;
 	GtkWidget *read_bw;
@@ -133,6 +140,7 @@ struct gui_entry {
 	GtkWidget *topvbox;
 	GtkWidget *topalign;
 	GtkWidget *bottomalign;
+	GtkWidget *job_notebook;
 	GtkWidget *thread_status_pb;
 	GtkWidget *buttonbox;
 	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
@@ -244,6 +252,51 @@ static void setup_graphs(struct gfio_graphs *g)
 	g->bandwidth_graph = setup_bandwidth_graph();
 }
 
+static void multitext_add_entry(struct multitext_widget *mt, const char *text)
+{
+	mt->text = realloc(mt->text, (mt->max_text + 1) * sizeof(char *));
+	mt->text[mt->max_text] = strdup(text);
+	mt->max_text++;
+}
+
+static void multitext_set_entry(struct multitext_widget *mt, unsigned int index)
+{
+	if (index >= mt->max_text)
+		return;
+	if (!mt->text[index])
+		return;
+
+	mt->cur_text = index;
+	gtk_entry_set_text(GTK_ENTRY(mt->entry), mt->text[index]);
+}
+
+static void multitext_update_entry(struct multitext_widget *mt,
+				   unsigned int index, const char *text)
+{
+	if (mt->text[index])
+		free(mt->text[index]);
+
+	mt->text[index] = strdup(text);
+	if (mt->cur_text == index)
+		gtk_entry_set_text(GTK_ENTRY(mt->entry), mt->text[index]);
+}
+
+static void multitext_free(struct multitext_widget *mt)
+{
+	int i;
+
+	gtk_entry_set_text(GTK_ENTRY(mt->entry), "");
+
+	for (i = 0; i < mt->max_text; i++) {
+		if (mt->text[i])
+			free(mt->text[i]);
+	}
+
+	free(mt->text);
+	mt->cur_text = -1;
+	mt->max_text = 0;
+}
+
 static void clear_ge_ui_info(struct gui_entry *ge)
 {
 	gtk_label_set_text(GTK_LABEL(ge->probe.hostname), "");
@@ -254,9 +307,9 @@ static void clear_ge_ui_info(struct gui_entry *ge)
 	/* should we empty it... */
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.name), "");
 #endif
-	gtk_entry_set_text(GTK_ENTRY(ge->eta.iotype), "");
-	gtk_entry_set_text(GTK_ENTRY(ge->eta.ioengine), "");
-	gtk_entry_set_text(GTK_ENTRY(ge->eta.iodepth), "");
+	multitext_update_entry(&ge->eta.iotype, 0, "");
+	multitext_update_entry(&ge->eta.ioengine, 0, "");
+	multitext_update_entry(&ge->eta.iodepth, 0, "");
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.jobs), "");
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.files), "");
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.read_bw), "");
@@ -1420,11 +1473,15 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	gtk_combo_box_append_text(GTK_COMBO_BOX(ge->eta.names), (gchar *) o->name);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(ge->eta.names), 0);
 
-	gtk_entry_set_text(GTK_ENTRY(ge->eta.iotype), ddir_str(o->td_ddir));
-	gtk_entry_set_text(GTK_ENTRY(ge->eta.ioengine), (gchar *) o->ioengine);
+	multitext_add_entry(&ge->eta.iotype, ddir_str(o->td_ddir));
+	multitext_add_entry(&ge->eta.ioengine, (const char *) o->ioengine);
 
 	sprintf(tmp, "%u", o->iodepth);
-	gtk_entry_set_text(GTK_ENTRY(ge->eta.iodepth), tmp);
+	multitext_add_entry(&ge->eta.iodepth, tmp);
+
+	multitext_set_entry(&ge->eta.iotype, 0);
+	multitext_set_entry(&ge->eta.ioengine, 0);
+	multitext_set_entry(&ge->eta.iodepth, 0);
 
 	gc->job_added++;
 
@@ -2257,6 +2314,27 @@ void gfio_ui_setup(GtkSettings *settings, GtkWidget *menubar,
         gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, FALSE, 0);
 }
 
+static void combo_entry_changed(GtkComboBox *box, gpointer data)
+{
+	struct gui_entry *ge = (struct gui_entry *) data;
+	gint index;
+
+	index = gtk_combo_box_get_active(box);
+
+	multitext_set_entry(&ge->eta.iotype, index);
+	multitext_set_entry(&ge->eta.ioengine, index);
+	multitext_set_entry(&ge->eta.iodepth, index);
+}
+
+static void combo_entry_destroy(GtkWidget *widget, gpointer data)
+{
+	struct gui_entry *ge = (struct gui_entry *) data;
+
+	multitext_free(&ge->eta.iotype);
+	multitext_free(&ge->eta.ioengine);
+	multitext_free(&ge->eta.iodepth);
+}
+
 static GtkWidget *new_client_page(struct gui_entry *ge)
 {
 	GtkWidget *main_vbox, *probe, *probe_frame, *probe_box;
@@ -2285,9 +2363,11 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, FALSE, FALSE, 3);
 
 	ge->eta.names = new_combo_entry_in_frame(probe_box, "Jobs");
-	ge->eta.iotype = new_info_entry_in_frame(probe_box, "IO");
-	ge->eta.ioengine = new_info_entry_in_frame(probe_box, "IO Engine");
-	ge->eta.iodepth = new_info_entry_in_frame(probe_box, "IO Depth");
+	g_signal_connect(ge->eta.names, "changed", G_CALLBACK(combo_entry_changed), ge);
+	g_signal_connect(ge->eta.names, "destroy", G_CALLBACK(combo_entry_destroy), ge);
+	ge->eta.iotype.entry = new_info_entry_in_frame(probe_box, "IO");
+	ge->eta.ioengine.entry = new_info_entry_in_frame(probe_box, "IO Engine");
+	ge->eta.iodepth.entry = new_info_entry_in_frame(probe_box, "IO Depth");
 	ge->eta.jobs = new_info_entry_in_frame(probe_box, "Jobs");
 	ge->eta.files = new_info_entry_in_frame(probe_box, "Open files");
 
