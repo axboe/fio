@@ -2476,14 +2476,16 @@ static const gchar *ui_string = " \
 				<separator name=\"Separator2\"/> \
 				<menuitem name=\"Preferences\" action=\"Preferences\" /> \
 				<separator name=\"Separator3\"/> \
+				<placeholder name=\"FileRecentFiles\"/> \
+				<separator name=\"Separator4\"/> \
 				<menuitem name=\"Quit\" action=\"Quit\" /> \
 			</menu> \
 			<menu name=\"JobMenu\" action=\"JobMenuAction\"> \
 				<menuitem name=\"Connect\" action=\"ConnectJob\" /> \
-				<separator name=\"Separator4\"/> \
+				<separator name=\"Separator5\"/> \
 				<menuitem name=\"Edit job\" action=\"EditJob\" /> \
 				<menuitem name=\"Send job\" action=\"SendJob\" /> \
-				<separator name=\"Separator5\"/> \
+				<separator name=\"Separator6\"/> \
 				<menuitem name=\"Start job\" action=\"StartJob\" /> \
 			</menu>\
 			<menu name=\"ViewMenu\" action=\"ViewMenuAction\"> \
