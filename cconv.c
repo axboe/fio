@@ -184,6 +184,8 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->flow_watermark = __le32_to_cpu(top->flow_watermark);
 	o->flow_sleep = le32_to_cpu(top->flow_sleep);
 	o->sync_file_range = le32_to_cpu(top->sync_file_range);
+	o->compress_percentage = le32_to_cpu(top->compress_percentage);
+	o->compress_chunk = le32_to_cpu(top->compress_chunk);
 
 	o->trim_backlog = le64_to_cpu(top->trim_backlog);
 
@@ -321,6 +323,8 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->flow_watermark = __cpu_to_le32(o->flow_watermark);
 	top->flow_sleep = cpu_to_le32(o->flow_sleep);
 	top->sync_file_range = cpu_to_le32(o->sync_file_range);
+	top->compress_percentage = cpu_to_le32(o->compress_percentage);
+	top->compress_chunk = cpu_to_le32(o->compress_chunk);
 
 	for (i = 0; i < 2; i++) {
 		top->bs[i] = cpu_to_le32(o->bs[i]);

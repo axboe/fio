@@ -1070,6 +1070,7 @@ again:
 		assert(io_u->flags & IO_U_F_FREE);
 		io_u->flags &= ~(IO_U_F_FREE | IO_U_F_FREE_DEF);
 		io_u->flags &= ~(IO_U_F_TRIMMED | IO_U_F_BARRIER);
+		io_u->flags &= ~IO_U_F_VER_LIST;
 
 		io_u->error = 0;
 		flist_del(&io_u->list);
@@ -1117,10 +1118,9 @@ static int check_get_verify(struct thread_data *td, struct io_u *io_u)
 	if (td->o.verify_backlog && td->io_hist_len) {
 		int get_verify = 0;
 
-		if (td->verify_batch) {
-			td->verify_batch--;
+		if (td->verify_batch)
 			get_verify = 1;
-		} else if (!(td->io_hist_len % td->o.verify_backlog) &&
+		else if (!(td->io_hist_len % td->o.verify_backlog) &&
 			 td->last_ddir != DDIR_READ) {
 			td->verify_batch = td->o.verify_batch;
 			if (!td->verify_batch)
@@ -1128,8 +1128,10 @@ static int check_get_verify(struct thread_data *td, struct io_u *io_u)
 			get_verify = 1;
 		}
 
-		if (get_verify && !get_next_verify(td, io_u))
+		if (get_verify && !get_next_verify(td, io_u)) {
+			td->verify_batch--;
 			return 1;
+		}
 	}
 
 	return 0;
@@ -1225,12 +1227,15 @@ struct io_u *get_io_u(struct thread_data *td)
 		f->last_pos = io_u->offset + io_u->buflen;
 
 		if (io_u->ddir == DDIR_WRITE) {
-			if (td->o.verify != VERIFY_NONE)
-				populate_verify_io_u(td, io_u);
-			else if (td->o.refill_buffers)
-				io_u_fill_buffer(td, io_u, io_u->xfer_buflen);
-			else if (td->o.scramble_buffers)
+			if (td->o.refill_buffers) {
+				io_u_fill_buffer(td, io_u,
+					io_u->xfer_buflen, io_u->xfer_buflen);
+			} else if (td->o.scramble_buffers)
 				do_scramble = 1;
+			if (td->o.verify != VERIFY_NONE) {
+				populate_verify_io_u(td, io_u);
+				do_scramble = 0;
+			}
 		} else if (io_u->ddir == DDIR_READ) {
 			/*
 			 * Reset the buf_filled parameters so next time if the
@@ -1532,12 +1537,21 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
  * "randomly" fill the buffer contents
  */
 void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
-		      unsigned int max_bs)
+		      unsigned int min_write, unsigned int max_bs)
 {
 	io_u->buf_filled_len = 0;
 
-	if (!td->o.zero_buffers)
-		fill_random_buf(&td->buf_state, io_u->buf, max_bs);
-	else
+	if (!td->o.zero_buffers) {
+		unsigned int perc = td->o.compress_percentage;
+
+		if (perc) {
+			unsigned int seg = min_write;
+
+			seg = min(min_write, td->o.compress_chunk);
+			fill_random_buf_percentage(&td->buf_state, io_u->buf,
+						perc, seg, max_bs);
+		} else
+			fill_random_buf(&td->buf_state, io_u->buf, max_bs);
+	} else
 		memset(io_u->buf, 0, max_bs);
 }

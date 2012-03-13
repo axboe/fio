@@ -2130,6 +2130,21 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_G_IO_BUF,
 	},
 	{
+		.name	= "buffer_compress_percentage",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(compress_percentage),
+		.maxval	= 100,
+		.minval	= 1,
+		.help	= "How compressible the buffer is (approximately)",
+	},
+	{
+		.name	= "buffer_compress_chunk",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(compress_chunk),
+		.parent	= "buffer_compress_percentage",
+		.help	= "Size of compressible region in buffer",
+	},
+	{
 		.name	= "clat_percentiles",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(clat_percentiles),

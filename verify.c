@@ -78,7 +78,7 @@ static unsigned int get_hdr_inc(struct thread_data *td, struct io_u *io_u)
 	unsigned int hdr_inc;
 
 	hdr_inc = io_u->buflen;
-	if (td->o.verify_interval)
+	if (td->o.verify_interval && td->o.verify_interval <= io_u->buflen)
 		hdr_inc = td->o.verify_interval;
 
 	return hdr_inc;
@@ -646,13 +646,17 @@ static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
 	return ret;
 }
 
-static int verify_header(struct verify_header *hdr)
+static int verify_header(struct io_u *io_u, struct verify_header *hdr)
 {
 	void *p = hdr;
 	uint32_t crc;
 
 	if (hdr->magic != FIO_HDR_MAGIC)
 		return 0;
+	if (hdr->len > io_u->buflen) {
+		log_err("fio: verify header exceeds buffer length (%u > %lu)\n", hdr->len, io_u->buflen);
+		return 0;
+	}
 
 	crc = fio_crc32c(p, offsetof(struct verify_header, crc32));
 	if (crc == hdr->crc32)
@@ -695,7 +699,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			memswp(p, p + td->o.verify_offset, header_size);
 		hdr = p;
 
-		if (!verify_header(hdr)) {
+		if (!verify_header(io_u, hdr)) {
 			log_err("verify: bad magic header %x, wanted %x at "
 				"file %s offset %llu, length %u\n",
 				hdr->magic, FIO_HDR_MAGIC,
@@ -969,6 +973,7 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		io_u->offset = ipo->offset;
 		io_u->buflen = ipo->len;
 		io_u->file = ipo->file;
+		io_u->flags |= IO_U_F_VER_LIST;
 
 		if (ipo->flags & IP_F_TRIMMED)
 			io_u->flags |= IO_U_F_TRIMMED;

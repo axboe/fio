@@ -146,6 +146,8 @@ struct thread_options {
 	unsigned int zero_buffers;
 	unsigned int refill_buffers;
 	unsigned int scramble_buffers;
+	unsigned int compress_percentage;
+	unsigned int compress_chunk;
 	unsigned int time_based;
 	unsigned int disable_lat;
 	unsigned int disable_clat;
@@ -331,6 +333,8 @@ struct thread_options_pack {
 	uint32_t zero_buffers;
 	uint32_t refill_buffers;
 	uint32_t scramble_buffers;
+	unsigned int compress_percentage;
+	unsigned int compress_chunk;
 	uint32_t time_based;
 	uint32_t disable_lat;
 	uint32_t disable_clat;

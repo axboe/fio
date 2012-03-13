@@ -526,6 +526,20 @@ sync_done:
 	dprint(FD_VERIFY, "exiting loop\n");
 }
 
+static int io_bytes_exceeded(struct thread_data *td)
+{
+	unsigned long long bytes;
+
+	if (td_rw(td))
+		bytes = td->this_io_bytes[0] + td->this_io_bytes[1];
+	else if (td_write(td))
+		bytes = td->this_io_bytes[1];
+	else
+		bytes = td->this_io_bytes[0];
+
+	return bytes >= td->o.size;
+}
+
 /*
  * Main IO worker function. It retrieves io_u's to process and queues
  * and reaps them, checking for rate and errors along the way.
@@ -540,9 +554,8 @@ static void do_io(struct thread_data *td)
 	else
 		td_set_runstate(td, TD_RUNNING);
 
-	while ( (td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
-		(!flist_empty(&td->trim_list)) ||
-	        ((td->this_io_bytes[0] + td->this_io_bytes[1]) < td->o.size) ) {
+	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
+		(!flist_empty(&td->trim_list)) || !io_bytes_exceeded(td)) {
 		struct timeval comp_time;
 		unsigned long bytes_done[2] = { 0, 0 };
 		int min_evts = 0;
@@ -573,11 +586,12 @@ static void do_io(struct thread_data *td)
 		ddir = io_u->ddir;
 
 		/*
-		 * Add verification end_io handler, if asked to verify
-		 * a previously written file.
+		 * Add verification end_io handler if:
+		 *	- Asked to verify (!td_rw(td))
+		 *	- Or the io_u is from our verify list (mixed write/ver)
 		 */
 		if (td->o.verify != VERIFY_NONE && io_u->ddir == DDIR_READ &&
-		    !td_rw(td)) {
+		    ((io_u->flags & IO_U_F_VER_LIST) || !td_rw(td))) {
 			if (td->o.verify_async)
 				io_u->end_io = verify_io_u_async;
 			else
@@ -762,12 +776,13 @@ static void cleanup_io_u(struct thread_data *td)
 static int init_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
-	unsigned int max_bs;
+	unsigned int max_bs, min_write;
 	int cl_align, i, max_units;
 	char *p;
 
 	max_units = td->o.iodepth;
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+	min_write = td->o.min_bs[DDIR_WRITE];
 	td->orig_buffer_size = (unsigned long long) max_bs
 					* (unsigned long long) max_units;
 
@@ -816,7 +831,7 @@ static int init_io_u(struct thread_data *td)
 			dprint(FD_MEM, "io_u %p, mem %p\n", io_u, io_u->buf);
 
 			if (td_write(td))
-				io_u_fill_buffer(td, io_u, max_bs);
+				io_u_fill_buffer(td, io_u, min_write, max_bs);
 			if (td_write(td) && td->o.verify_pattern_bytes) {
 				/*
 				 * Fill the buffer with the pattern if we are

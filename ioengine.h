@@ -13,6 +13,7 @@ enum {
 	IO_U_F_BUSY_OK		= 1 << 4,
 	IO_U_F_TRIMMED		= 1 << 5,
 	IO_U_F_BARRIER		= 1 << 6,
+	IO_U_F_VER_LIST		= 1 << 7,
 };
 
 /*
@@ -178,7 +179,7 @@ extern int __must_check io_u_queued_complete(struct thread_data *, int, unsigned
 extern void io_u_queued(struct thread_data *, struct io_u *);
 extern void io_u_log_error(struct thread_data *, struct io_u *);
 extern void io_u_mark_depth(struct thread_data *, unsigned int);
-extern void io_u_fill_buffer(struct thread_data *td, struct io_u *, unsigned int);
+extern void io_u_fill_buffer(struct thread_data *td, struct io_u *, unsigned int, unsigned int);
 void io_u_mark_complete(struct thread_data *, unsigned int);
 void io_u_mark_submit(struct thread_data *, unsigned int);
 

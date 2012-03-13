@@ -22,5 +22,6 @@ extern void init_rand(struct frand_state *);
 extern void init_rand_seed(struct frand_state *, unsigned int seed);
 extern void __fill_random_buf(void *buf, unsigned int len, unsigned long seed);
 extern unsigned long fill_random_buf(struct frand_state *, void *buf, unsigned int len);
+extern unsigned long fill_random_buf_percentage(struct frand_state *, void *buf, unsigned int percentage, unsigned int segment, unsigned int len);
 
 #endif

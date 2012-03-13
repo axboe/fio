@@ -90,8 +90,10 @@ static struct fio_client *find_client_by_fd(int fd)
 	flist_for_each(entry, &client_hash[bucket]) {
 		client = flist_entry(entry, struct fio_client, hash_list);
 
-		if (client->fd == fd)
-			return fio_get_client(client);
+		if (client->fd == fd) {
+			client->refs++;
+			return client;
+		}
 	}
 
 	return NULL;

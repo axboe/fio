@@ -1,0 +1,13 @@
+# Expected result: fio reads and writes 100m
+# Buggy result: fio reads and writes ~100m/2
+[global]
+bs=4k
+ioengine=sync
+size=100m
+direct=1
+filename=xxx
+
+[write]
+verify=md5
+verify_backlog=32
+rw=write
