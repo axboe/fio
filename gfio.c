@@ -2151,7 +2151,16 @@ static void file_close(GtkWidget *w, gpointer data)
 
 static void file_add_recent(struct gui *ui, const gchar *uri)
 {
-	gtk_recent_manager_add_item(ui->recentmanager, uri);
+	GtkRecentData grd;
+
+	memset(&grd, 0, sizeof(grd));
+	grd.display_name = strdup("gfio");
+	grd.description = strdup("Fio job file");
+	grd.mime_type = strdup(GFIO_MIME);
+	grd.app_name = strdup(g_get_application_name());
+	grd.app_exec = strdup("gfio %f/%u");
+
+	gtk_recent_manager_add_full(ui->recentmanager, uri, &grd);
 }
 
 static gchar *get_filename_from_uri(const gchar *uri)
