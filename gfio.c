@@ -32,6 +32,8 @@
 #include "fio.h"
 #include "graph.h"
 
+#define GFIO_MIME	"text/fio"
+
 static int gfio_server_running;
 static const char *gfio_graph_font;
 static unsigned int gfio_graph_limit = 100;
@@ -105,6 +107,9 @@ struct gfio_graphs {
  */
 struct gui {
 	GtkUIManager *uimanager;
+	GtkRecentManager *recentmanager;
+	GtkActionGroup *actiongroup;
+	guint recent_ui_id;
 	GtkWidget *menu;
 	GtkWidget *window;
 	GtkWidget *vbox;
@@ -2082,13 +2087,19 @@ static void file_new(GtkWidget *w, gpointer data)
  * Return the 'ge' corresponding to the tab. If the active tab is the
  * main tab, open a new tab.
  */
-static struct gui_entry *get_ge_from_page(gint cur_page)
+static struct gui_entry *get_ge_from_page(gint cur_page, int *created)
 {
 	struct flist_head *entry;
 	struct gui_entry *ge;
 
-	if (!cur_page)
+	if (!cur_page) {
+		if (created)
+			*created = 1;
 		return get_new_ge_with_tab("Untitled");
+	}
+
+	if (created)
+		*created = 0;
 
 	flist_for_each(entry, &main_ui.list) {
 		ge = flist_entry(entry, struct gui_entry, list);
@@ -2109,7 +2120,7 @@ static struct gui_entry *get_ge_from_cur_tab(struct gui *ui)
 	 */
 	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
 	if (cur_page)
-		return get_ge_from_page(cur_page);
+		return get_ge_from_page(cur_page, NULL);
 
 	return NULL;
 }
@@ -2136,25 +2147,68 @@ static void file_close(GtkWidget *w, gpointer data)
        	gtk_main_quit();
 }
 
+static void file_add_recent(struct gui *ui, const gchar *uri)
+{
+	gtk_recent_manager_add_item(ui->recentmanager, uri);
+}
+
+static gchar *get_filename_from_uri(const gchar *uri)
+{
+	if (strncmp(uri, "file://", 7))
+		return strdup(uri);
+
+	return strdup(uri + 7);
+}
+
+static int do_file_open(struct gui_entry *ge, const gchar *uri, char *host,
+			int type, int port)
+{
+	struct fio_client *client;
+	gchar *filename;
+
+	filename = get_filename_from_uri(uri);
+
+	ge->job_files = realloc(ge->job_files, (ge->nr_job_files + 1) * sizeof(char *));
+	ge->job_files[ge->nr_job_files] = strdup(filename);
+	ge->nr_job_files++;
+
+	client = fio_client_add_explicit(&gfio_client_ops, host, type, port);
+	if (!client) {
+		GError *error;
+
+		error = g_error_new(g_quark_from_string("fio"), 1,
+				"Failed to add client %s", host);
+		report_error(error);
+		g_error_free(error);
+		return 1;
+	}
+
+	gfio_client_added(ge, client);
+	file_add_recent(ge->ui, uri);
+	return 0;
+}
+
 static void file_open(GtkWidget *w, gpointer data)
 {
 	struct gui *ui = data;
 	GtkWidget *dialog;
 	GSList *filenames, *fn_glist;
 	GtkFileFilter *filter;
-	char *host;
-	int port, type, server_start;
+	int port, type, server_start, ge_is_new = 0;
 	struct gui_entry *ge;
 	gint cur_page;
+	char *host;
 
 	/*
 	 * Creates new tab if current tab is the main window, or the
 	 * current tab already has a client.
 	 */
 	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
-	ge = get_ge_from_page(cur_page);
-	if (ge->client)
+	ge = get_ge_from_page(cur_page, &ge_is_new);
+	if (ge->client) {
 		ge = get_new_ge_with_tab("Untitled");
+		ge_is_new = 1;
+	}
 
 	gtk_notebook_set_current_page(GTK_NOTEBOOK(ui->notebook), ge->page_num);
 
@@ -2170,11 +2224,14 @@ static void file_open(GtkWidget *w, gpointer data)
 	gtk_file_filter_add_pattern(filter, "*.fio");
 	gtk_file_filter_add_pattern(filter, "*.job");
 	gtk_file_filter_add_pattern(filter, "*.ini");
-	gtk_file_filter_add_mime_type(filter, "text/fio");
+	gtk_file_filter_add_mime_type(filter, GFIO_MIME);
 	gtk_file_filter_set_name(filter, "Fio job file");
 	gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filter);
 
 	if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_ACCEPT) {
+		if (ge_is_new)
+			gtk_widget_destroy(ge->vbox);
+
 		gtk_widget_destroy(dialog);
 		return;
 	}
@@ -2183,28 +2240,16 @@ static void file_open(GtkWidget *w, gpointer data)
 
 	gtk_widget_destroy(dialog);
 
-	if (get_connection_details(&host, &port, &type, &server_start))
-		goto err;
+	if (get_connection_details(&host, &port, &type, &server_start)) {
+		if (ge_is_new)
+			gtk_widget_destroy(ge->vbox);
+	
+		goto done;
+	}
 
 	filenames = fn_glist;
 	while (filenames != NULL) {
-		struct fio_client *client;
-
-		ge->job_files = realloc(ge->job_files, (ge->nr_job_files + 1) * sizeof(char *));
-		ge->job_files[ge->nr_job_files] = strdup(filenames->data);
-		ge->nr_job_files++;
-
-		client = fio_client_add_explicit(&gfio_client_ops, host, type, port);
-		if (!client) {
-			GError *error;
-
-			error = g_error_new(g_quark_from_string("fio"), 1,
-					"Failed to add client %s", host);
-			report_error(error);
-			g_error_free(error);
-		}
-		gfio_client_added(ge, client);
-			
+		do_file_open(ge, filenames->data, host, type, port);
 		g_free(filenames->data);
 		filenames = g_slist_next(filenames);
 	}
@@ -2212,8 +2257,9 @@ static void file_open(GtkWidget *w, gpointer data)
 
 	if (server_start)
 		gfio_start_server();
-err:
+done:
 	g_slist_free(fn_glist);
+
 }
 
 static void file_save(GtkWidget *w, gpointer data)
@@ -2773,11 +2819,136 @@ static gboolean notebook_switch_page(GtkNotebook *notebook, GtkWidget *widget,
 	}
 
 	set_job_menu_visible(ui, 1);
-	ge = get_ge_from_page(page);
+	ge = get_ge_from_page(page, NULL);
 	if (ge)
 		update_button_states(ui, ge);
 
 	return TRUE;
+}
+
+static void recent_open(GtkAction *action, gpointer data)
+{
+	struct gui *ui = (struct gui *) data;
+	int port, type, server_start;
+	struct gui_entry *ge;
+	GtkRecentInfo *info;
+	const gchar *uri;
+	gint cur_page;
+	char *host;
+	int ret, ge_is_new = 0;
+
+	/*
+	 * Creates new tab if current tab is the main window, or the
+	 * current tab already has a client.
+	 */
+	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
+	ge = get_ge_from_page(cur_page, &ge_is_new);
+	if (ge->client) {
+		ge = get_new_ge_with_tab("Untitled");
+		ge_is_new = 1;
+	}
+
+	gtk_notebook_set_current_page(GTK_NOTEBOOK(ui->notebook), ge->page_num);
+
+	info = g_object_get_data(G_OBJECT(action), "gtk-recent-info");
+	uri = gtk_recent_info_get_uri(info);
+
+	if (get_connection_details(&host, &port, &type, &server_start)) {
+		if (ge_is_new)
+			gtk_widget_destroy(ge->vbox);
+			
+		return;
+	}
+
+	ret = do_file_open(ge, uri, host, type, port);
+
+	free(host);
+
+	if (!ret) {
+		if (server_start)
+			gfio_start_server();
+	} else {
+		if (ge_is_new)
+			gtk_widget_destroy(ge->vbox);
+	}
+}
+
+static gint compare_recent_items(GtkRecentInfo *a, GtkRecentInfo *b)
+{
+	time_t time_a = gtk_recent_info_get_visited(a);
+	time_t time_b = gtk_recent_info_get_visited(b);
+
+	return time_b - time_a;
+}
+
+static void add_recent_file_items(struct gui *ui)
+{
+	const gchar *gfio = g_get_application_name();
+	GList *items, *item;
+	int i = 0;
+
+	if (ui->recent_ui_id) {
+		gtk_ui_manager_remove_ui(ui->uimanager, ui->recent_ui_id);
+		gtk_ui_manager_ensure_update(ui->uimanager);
+	}
+	ui->recent_ui_id = gtk_ui_manager_new_merge_id(ui->uimanager);
+
+	if (ui->actiongroup) {
+		gtk_ui_manager_remove_action_group(ui->uimanager, ui->actiongroup);
+		g_object_unref(ui->actiongroup);
+	}
+	ui->actiongroup = gtk_action_group_new("RecentFileActions");
+
+	gtk_ui_manager_insert_action_group(ui->uimanager, ui->actiongroup, -1);
+
+	items = gtk_recent_manager_get_items(ui->recentmanager);
+	items = g_list_sort(items, (GCompareFunc) compare_recent_items);
+
+	for (item = items; item && item->data; item = g_list_next(item)) {
+		GtkRecentInfo *info = (GtkRecentInfo *) item->data;
+		gchar *action_name;
+		const gchar *label;
+		GtkAction *action;
+
+		if (!gtk_recent_info_has_application(info, gfio))
+			continue;
+
+		/*
+		 * We only support local files for now
+		 */
+		if (!gtk_recent_info_is_local(info) || !gtk_recent_info_exists(info))
+			continue;
+
+		action_name = g_strdup_printf("RecentFile%u", i++);
+		label = gtk_recent_info_get_display_name(info);
+
+		action = g_object_new(GTK_TYPE_ACTION,
+					"name", action_name,
+					"label", label, NULL);
+
+		g_object_set_data_full(G_OBJECT(action), "gtk-recent-info",
+					gtk_recent_info_ref(info),
+					(GDestroyNotify) gtk_recent_info_unref);
+
+
+		g_signal_connect(action, "activate", G_CALLBACK(recent_open), ui);
+
+		gtk_action_group_add_action(ui->actiongroup, action);
+		g_object_unref(action);
+
+		gtk_ui_manager_add_ui(ui->uimanager, ui->recent_ui_id,
+					"/MainMenu/FileMenu/FileRecentFiles",
+					label, action_name,
+					GTK_UI_MANAGER_MENUITEM, FALSE);
+
+		g_free(action_name);
+
+		if (i == 8)
+			break;
+	}
+
+	g_list_foreach(items, (GFunc) gtk_recent_info_unref, NULL);
+	g_list_free(items);
 }
 
 static void init_ui(int *argc, char **argv[], struct gui *ui)
@@ -2811,6 +2982,9 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	ui->uimanager = gtk_ui_manager_new();
 	ui->menu = get_menubar_menu(ui->window, ui->uimanager, ui);
 	gfio_ui_setup(settings, ui->menu, ui->vbox, ui->uimanager);
+
+	ui->recentmanager = gtk_recent_manager_get_default();
+	add_recent_file_items(ui);
 
 	ui->notebook = gtk_notebook_new();
 	g_signal_connect(ui->notebook, "switch-page", G_CALLBACK(notebook_switch_page), ui);
