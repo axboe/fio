@@ -485,20 +485,17 @@ static void update_button_states(struct gui *ui, struct gui_entry *ge)
 	 * invisibible...
 	 */
 	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Connect");
-	if (w)
-		gtk_widget_set_sensitive(w, connect_state);
+	gtk_widget_set_sensitive(w, connect_state);
+	gtk_menu_item_set_label(GTK_MENU_ITEM(w), connect_str);
 
 	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Edit job");
-	if (w)
-		gtk_widget_set_sensitive(w, edit_state);
+	gtk_widget_set_sensitive(w, edit_state);
 
 	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Send job");
-	if (w)
-		gtk_widget_set_sensitive(w, send_state);
+	gtk_widget_set_sensitive(w, send_state);
 
 	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Start job");
-	if (w)
-		gtk_widget_set_sensitive(w, start_state);
+	gtk_widget_set_sensitive(w, start_state);
 }
 
 static void gfio_set_state(struct gui_entry *ge, unsigned int state)
