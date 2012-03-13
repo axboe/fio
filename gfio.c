@@ -496,15 +496,15 @@ static void update_button_states(struct gui *ui, struct gui_entry *ge)
 	if (w)
 		gtk_widget_set_sensitive(w, connect_state);
 
-	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Edit Job");
+	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Edit job");
 	if (w)
 		gtk_widget_set_sensitive(w, edit_state);
 
-	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Send Job");
+	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Send job");
 	if (w)
 		gtk_widget_set_sensitive(w, send_state);
 
-	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Start Job");
+	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Start job");
 	if (w)
 		gtk_widget_set_sensitive(w, start_state);
 }
