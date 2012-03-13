@@ -97,22 +97,10 @@ static struct fio_client *find_client_by_fd(int fd)
 	return NULL;
 }
 
-static void remove_client(struct fio_client *client)
+void fio_put_client(struct fio_client *client)
 {
-	assert(client->refs);
-
 	if (--client->refs)
 		return;
-
-	dprint(FD_NET, "client: removed <%s>\n", client->hostname);
-	flist_del(&client->list);
-
-	fio_client_remove_hash(client);
-
-	if (!flist_empty(&client->eta_list)) {
-		flist_del_init(&client->eta_list);
-		fio_client_dec_jobs_eta(client->eta_in_flight, client->ops->eta);
-	}
 
 	free(client->hostname);
 	if (client->argv)
@@ -121,13 +109,28 @@ static void remove_client(struct fio_client *client)
 		free(client->name);
 
 	free(client);
-	nr_clients--;
-	sum_stat_clients--;
 }
 
-void fio_put_client(struct fio_client *client)
+static void remove_client(struct fio_client *client)
 {
-	remove_client(client);
+	assert(client->refs);
+
+	dprint(FD_NET, "client: removed <%s>\n", client->hostname);
+
+	if (!flist_empty(&client->list))
+		flist_del_init(&client->list);
+
+	fio_client_remove_hash(client);
+
+	if (!flist_empty(&client->eta_list)) {
+		flist_del_init(&client->eta_list);
+		fio_client_dec_jobs_eta(client->eta_in_flight, client->ops->eta);
+	}
+
+	nr_clients--;
+	sum_stat_clients--;
+
+	fio_put_client(client);
 }
 
 struct fio_client *fio_get_client(struct fio_client *client)
@@ -572,12 +575,9 @@ int fio_client_send_ini(struct fio_client *client, const char *filename)
 	int ret;
 
 	ret = __fio_client_send_ini(client, filename);
-	if (ret) {
-		remove_client(client);
-		return ret;
-	}
+	if (!ret)
+		client->sent_job = 1;
 
-	client->sent_job = 1;
 	return ret;
 }
 
@@ -589,7 +589,8 @@ int fio_clients_send_ini(const char *filename)
 	flist_for_each_safe(entry, tmp, &client_list) {
 		client = flist_entry(entry, struct fio_client, list);
 
-		fio_client_send_ini(client, filename);
+		if (fio_client_send_ini(client, filename))
+			remove_client(client);
 	}
 
 	return !nr_clients;

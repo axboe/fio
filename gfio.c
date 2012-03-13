@@ -1736,6 +1736,7 @@ static int send_job_files(struct gui_entry *ge)
 		i++;
 	}
 
+	ge->nr_job_files = 0;
 	return ret;
 }
 
