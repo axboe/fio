@@ -2111,7 +2111,12 @@ static void file_close(GtkWidget *w, gpointer data)
 		return;
 	}
 
-	show_info_dialog(ui, "Error", "The main page view cannot be closed\n");
+	if (!flist_empty(&ui->list)) {
+		show_info_dialog(ui, "Error", "The main page view cannot be closed\n");
+		return;
+	}
+
+       	gtk_main_quit();
 }
 
 static void file_open(GtkWidget *w, gpointer data)
