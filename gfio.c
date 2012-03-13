@@ -1307,12 +1307,39 @@ static void draw_graph(struct graph *g, cairo_t *cr)
 	cairo_stroke(cr);
 }
 
+static gboolean graph_tooltip(GtkWidget *w, gint x, gint y,
+			      gboolean keyboard_mode, GtkTooltip *tooltip,
+			      gpointer data)
+{
+	struct gfio_graphs *g = data;
+	const char *text = NULL;
+
+	if (graph_contains_xy(g->iops_graph, x, y))
+		text = graph_find_tooltip(g->iops_graph, x, y);
+	else if (graph_contains_xy(g->bandwidth_graph, x, y))
+		text = graph_find_tooltip(g->bandwidth_graph, x, y);
+
+	if (text) {
+		gtk_tooltip_set_text(tooltip, text);
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
 static int on_expose_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	struct gfio_graphs *g = p;
 	cairo_t *cr;
 
 	cr = gdk_cairo_create(w->window);
+
+	if (graph_has_tooltips(g->iops_graph) ||
+	    graph_has_tooltips(g->bandwidth_graph)) {
+		g_object_set(w, "has-tooltip", TRUE, NULL);
+		g_signal_connect(w, "query-tooltip", G_CALLBACK(graph_tooltip), g);
+	}
+
 	cairo_set_source_rgb(cr, 0, 0, 0);
 	draw_graph(g->iops_graph, cr);
 	draw_graph(g->bandwidth_graph, cr);
@@ -1393,10 +1420,10 @@ static void gfio_update_client_eta(struct fio_client *client, struct jobs_eta *j
 		gtk_entry_set_text(GTK_ENTRY(ge->eta.write_bw), rate_str[1]);
 		gtk_entry_set_text(GTK_ENTRY(ge->eta.write_iops), iops_str[1]);
 
-		graph_add_xy_data(ge->graphs.iops_graph, "Read IOPS", je->elapsed_sec, je->iops[0]);
-		graph_add_xy_data(ge->graphs.iops_graph, "Write IOPS", je->elapsed_sec, je->iops[1]);
-		graph_add_xy_data(ge->graphs.bandwidth_graph, "Read Bandwidth", je->elapsed_sec, je->rate[0]);
-		graph_add_xy_data(ge->graphs.bandwidth_graph, "Write Bandwidth", je->elapsed_sec, je->rate[1]);
+		graph_add_xy_data(ge->graphs.iops_graph, "Read IOPS", je->elapsed_sec, je->iops[0], iops_str[0]);
+		graph_add_xy_data(ge->graphs.iops_graph, "Write IOPS", je->elapsed_sec, je->iops[1], iops_str[1]);
+		graph_add_xy_data(ge->graphs.bandwidth_graph, "Read Bandwidth", je->elapsed_sec, je->rate[0], rate_str[0]);
+		graph_add_xy_data(ge->graphs.bandwidth_graph, "Write Bandwidth", je->elapsed_sec, je->rate[1], rate_str[1]);
 
 		free(rate_str[0]);
 		free(rate_str[1]);
@@ -1481,10 +1508,10 @@ static void gfio_update_all_eta(struct jobs_eta *je)
 		gtk_entry_set_text(GTK_ENTRY(ui->eta.write_bw), rate_str[1]);
 		gtk_entry_set_text(GTK_ENTRY(ui->eta.write_iops), iops_str[1]);
 
-		graph_add_xy_data(ui->graphs.iops_graph, "Read IOPS", je->elapsed_sec, je->iops[0]);
-		graph_add_xy_data(ui->graphs.iops_graph, "Write IOPS", je->elapsed_sec, je->iops[1]);
-		graph_add_xy_data(ui->graphs.bandwidth_graph, "Read Bandwidth", je->elapsed_sec, je->rate[0]);
-		graph_add_xy_data(ui->graphs.bandwidth_graph, "Write Bandwidth", je->elapsed_sec, je->rate[1]);
+		graph_add_xy_data(ui->graphs.iops_graph, "Read IOPS", je->elapsed_sec, je->iops[0], iops_str[0]);
+		graph_add_xy_data(ui->graphs.iops_graph, "Write IOPS", je->elapsed_sec, je->iops[1], iops_str[1]);
+		graph_add_xy_data(ui->graphs.bandwidth_graph, "Read Bandwidth", je->elapsed_sec, je->rate[0], rate_str[0]);
+		graph_add_xy_data(ui->graphs.bandwidth_graph, "Write Bandwidth", je->elapsed_sec, je->rate[1], rate_str[1]);
 
 		free(rate_str[0]);
 		free(rate_str[1]);

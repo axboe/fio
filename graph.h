@@ -50,7 +50,7 @@ void graph_add_label(struct graph *g, const char *label);
 int graph_add_data(struct graph *g, const char *label, const double value);
 /* graph_add_data() is used to add data to the labels of a bar graph */
 int graph_add_xy_data(struct graph *g, const char *label,
-		const double x, const double y);
+		const double x, const double y, const char *tooltip);
 /* graph_add_xy_data is used to add data to the labels of a line graph */
 
 void graph_set_color(struct graph *g, const char *label,
@@ -80,6 +80,10 @@ void graph_add_extra_space(struct graph *g, double left_percent, double right_pe
 /* graph_add_extra_space() adds extra space to edges of the the graph
  * so that the data doesn't go to the very edges.
  */
+
+extern int graph_has_tooltips(struct graph *g);
+extern const char *graph_find_tooltip(struct graph *g, int x, int y);
+extern int graph_contains_xy(struct graph *p, int x, int y);
 
 #endif
 

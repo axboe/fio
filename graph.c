@@ -24,6 +24,7 @@
 #include <malloc.h>
 #include <math.h>
 #include <assert.h>
+#include <stdlib.h>
 
 #include <cairo.h>
 #include <gtk/gtk.h>
@@ -33,10 +34,12 @@
 
 struct xyvalue {
 	double x, y;
+	int gx, gy;
 };
 
 struct graph_value {
 	struct graph_value *next;
+	char *tooltip;
 	void *value;
 };
 
@@ -47,6 +50,7 @@ struct graph_label {
 	struct graph_label *next;
 	double r, g, b;
 	int value_count;
+	unsigned int tooltip_count;
 	struct graph *parent;
 };
 
@@ -533,6 +537,8 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 			continue;
 		cairo_set_source_rgb(cr, i->r, i->g, i->b);
 		for (j = i->values; j; j = j->next) {
+			struct xyvalue *xy = j->value;
+
 			tx = ((getx(j) - gminx) / (gmaxx - gminx)) * (x2 - x1) + x1;
 			ty = y2 - ((gety(j) - gminy) / (gmaxy - gminy)) * (y2 - y1);
 			if (first) {
@@ -541,6 +547,8 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 			} else {
 				cairo_line_to(cr, tx, ty);
 			}
+			xy->gx = tx;
+			xy->gy = ty;
 		}
 		cairo_stroke(cr);
 	}
@@ -606,12 +614,17 @@ void graph_add_label(struct graph *bg, const char *label)
 	bg->tail = i;
 }
 
-static void graph_label_add_value(struct graph_label *i, void *value)
+static void graph_label_add_value(struct graph_label *i, void *value,
+				  const char *tooltip)
 {
 	struct graph_value *x;
 
 	x = malloc(sizeof(*x));
 	x->value = value;
+	if (tooltip)
+		x->tooltip = strdup(tooltip);
+	else
+		x->tooltip = NULL;
 	x->next = NULL;
 	if (!i->tail) {
 		i->values = x;
@@ -620,6 +633,8 @@ static void graph_label_add_value(struct graph_label *i, void *value)
 	}
 	i->tail = x;
 	i->value_count++;
+	if (x->tooltip)
+		i->tooltip_count++;
 
 	if (i->parent->per_label_limit != -1 &&
 		i->value_count > i->parent->per_label_limit) {
@@ -637,6 +652,10 @@ static void graph_label_add_value(struct graph_label *i, void *value)
 		while (to_drop--) {
 			x = i->values;
 			i->values = i->values->next;
+			if (x->tooltip) {
+				free(x->tooltip);
+				i->tooltip_count--;
+			}
 			free(x->value);
 			free(x);
 			i->value_count--;
@@ -655,12 +674,12 @@ int graph_add_data(struct graph *bg, const char *label, const double value)
 	i = graph_find_label(bg, label);
 	if (!i)
 		return -1;
-	graph_label_add_value(i, d);
+	graph_label_add_value(i, d, NULL);
 	return 0;
 }
 
 int graph_add_xy_data(struct graph *bg, const char *label,
-		const double x, const double y)
+		      const double x, const double y, const char *tooltip)
 {
 	struct graph_label *i;
 	struct xyvalue *xy;
@@ -672,7 +691,8 @@ int graph_add_xy_data(struct graph *bg, const char *label,
 	i = graph_find_label(bg, label);
 	if (!i)
 		return -1;
-	graph_label_add_value(i, xy);
+
+	graph_label_add_value(i, xy, tooltip);
 	return 0;
 }
 
@@ -756,4 +776,48 @@ void graph_add_extra_space(struct graph *g, double left_percent, double right_pe
 	g->bottom_extra = bottom_percent;	
 }
 
+int graph_has_tooltips(struct graph *g)
+{
+	struct graph_label *i;
 
+	for (i = g->labels; i; i = i->next)
+		if (i->tooltip_count)
+			return 1;
+
+	return 0;
+}
+
+int graph_contains_xy(struct graph *g, int x, int y)
+{
+	int first_x = g->xoffset;
+	int last_x = g->xoffset + g->xdim;
+	int first_y = g->yoffset;
+	int last_y = g->yoffset + g->ydim;
+
+	return (x >= first_x && x <= last_x) && (y >= first_y && y <= last_y);
+}
+
+static int xy_match(struct xyvalue *xy, int x, int y)
+{
+	int xdiff = abs(xy->gx - x);
+	int ydiff = abs(xy->gy - y);
+
+	return xdiff <= 20 && ydiff <= 10;
+}
+
+const char *graph_find_tooltip(struct graph *g, int x, int y)
+{
+	struct graph_label *i;
+	struct graph_value *j;
+
+	for (i = g->labels; i; i = i->next) {
+		for (j = i->values; j; j = j->next) {
+			struct xyvalue *xy = j->value;
+
+			if (xy_match(xy, x - g->xoffset, y))
+				return j->tooltip;
+		}
+	}
+
+	return NULL;
+}
