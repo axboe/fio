@@ -108,12 +108,8 @@ struct gui {
 	GtkWidget *menu;
 	GtkWidget *window;
 	GtkWidget *vbox;
-	GtkWidget *topvbox;
-	GtkWidget *topalign;
-	GtkWidget *bottomalign;
 	GtkWidget *thread_status_pb;
 	GtkWidget *buttonbox;
-	GtkWidget *scrolled_window;
 	GtkWidget *notebook;
 	GtkWidget *error_info_bar;
 	GtkWidget *error_label;
@@ -148,14 +144,10 @@ struct gui_entry {
 	struct gui *ui;
 
 	GtkWidget *vbox;
-	GtkWidget *topvbox;
-	GtkWidget *topalign;
-	GtkWidget *bottomalign;
 	GtkWidget *job_notebook;
 	GtkWidget *thread_status_pb;
 	GtkWidget *buttonbox;
 	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
-	GtkWidget *scrolled_window;
 	GtkWidget *notebook;
 	GtkWidget *error_info_bar;
 	GtkWidget *error_label;
@@ -2586,14 +2578,15 @@ static void combo_entry_destroy(GtkWidget *widget, gpointer data)
 static GtkWidget *new_client_page(struct gui_entry *ge)
 {
 	GtkWidget *main_vbox, *probe, *probe_frame, *probe_box;
+	GtkWidget *scrolled_window, *bottom_align, *top_align, *top_vbox;
 	GdkColor white;
 
 	main_vbox = gtk_vbox_new(FALSE, 3);
 
-	ge->topalign = gtk_alignment_new(0, 0, 1, 0);
-	ge->topvbox = gtk_vbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(ge->topalign), ge->topvbox);
-	gtk_box_pack_start(GTK_BOX(main_vbox), ge->topalign, FALSE, FALSE, 0);
+	top_align = gtk_alignment_new(0, 0, 1, 0);
+	top_vbox = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(top_align), top_vbox);
+	gtk_box_pack_start(GTK_BOX(main_vbox), top_align, FALSE, FALSE, 0);
 
 	probe = gtk_frame_new("Job");
 	gtk_box_pack_start(GTK_BOX(main_vbox), probe, FALSE, FALSE, 3);
@@ -2652,13 +2645,12 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 				G_CALLBACK(on_expose_drawing_area), &ge->graphs);
 	g_signal_connect(G_OBJECT(ge->graphs.drawing_area), "configure_event",
 				G_CALLBACK(on_config_drawing_area), &ge->graphs);
-	ge->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(ge->scrolled_window),
+	scrolled_window = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window),
 					GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(ge->scrolled_window),
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window),
 					ge->graphs.drawing_area);
-	gtk_box_pack_start(GTK_BOX(main_vbox), ge->scrolled_window,
-			TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(main_vbox), scrolled_window, TRUE, TRUE, 0);
 
 	setup_graphs(&ge->graphs);
 
@@ -2666,11 +2658,10 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	 * Set up alignments for widgets at the bottom of ui, 
 	 * align bottom left, expand horizontally but not vertically
 	 */
-	ge->bottomalign = gtk_alignment_new(0, 1, 1, 0);
+	bottom_align = gtk_alignment_new(0, 1, 1, 0);
 	ge->buttonbox = gtk_hbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER(ge->bottomalign), ge->buttonbox);
-	gtk_box_pack_start(GTK_BOX(main_vbox), ge->bottomalign,
-					FALSE, FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(bottom_align), ge->buttonbox);
+	gtk_box_pack_start(GTK_BOX(main_vbox), bottom_align, FALSE, FALSE, 0);
 
 	add_buttons(ge, buttonspeclist, ARRAYSIZE(buttonspeclist));
 
@@ -2689,6 +2680,7 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 static GtkWidget *new_main_page(struct gui *ui)
 {
 	GtkWidget *main_vbox, *probe, *probe_frame, *probe_box;
+	GtkWidget *scrolled_window, *bottom_align, *top_align, *top_vbox;
 	GdkColor white;
 
 	main_vbox = gtk_vbox_new(FALSE, 3);
@@ -2697,10 +2689,10 @@ static GtkWidget *new_main_page(struct gui *ui)
 	 * Set up alignments for widgets at the top of ui,
 	 * align top left, expand horizontally but not vertically
 	 */
-	ui->topalign = gtk_alignment_new(0, 0, 1, 0);
-	ui->topvbox = gtk_vbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER(ui->topalign), ui->topvbox);
-	gtk_box_pack_start(GTK_BOX(main_vbox), ui->topalign, FALSE, FALSE, 0);
+	top_align = gtk_alignment_new(0, 0, 1, 0);
+	top_vbox = gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(top_align), top_vbox);
+	gtk_box_pack_start(GTK_BOX(main_vbox), top_align, FALSE, FALSE, 0);
 
 	probe = gtk_frame_new("Run statistics");
 	gtk_box_pack_start(GTK_BOX(main_vbox), probe, FALSE, FALSE, 3);
@@ -2741,12 +2733,12 @@ static GtkWidget *new_main_page(struct gui *ui)
 			G_CALLBACK(on_expose_drawing_area), &ui->graphs);
 	g_signal_connect(G_OBJECT(ui->graphs.drawing_area), "configure_event",
 			G_CALLBACK(on_config_drawing_area), &ui->graphs);
-	ui->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(ui->scrolled_window),
+	scrolled_window = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window),
 					GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(ui->scrolled_window),
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window),
 					ui->graphs.drawing_area);
-	gtk_box_pack_start(GTK_BOX(main_vbox), ui->scrolled_window,
+	gtk_box_pack_start(GTK_BOX(main_vbox), scrolled_window,
 			TRUE, TRUE, 0);
 
 	setup_graphs(&ui->graphs);
@@ -2755,11 +2747,10 @@ static GtkWidget *new_main_page(struct gui *ui)
 	 * Set up alignments for widgets at the bottom of ui, 
 	 * align bottom left, expand horizontally but not vertically
 	 */
-	ui->bottomalign = gtk_alignment_new(0, 1, 1, 0);
+	bottom_align = gtk_alignment_new(0, 1, 1, 0);
 	ui->buttonbox = gtk_hbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER(ui->bottomalign), ui->buttonbox);
-	gtk_box_pack_start(GTK_BOX(main_vbox), ui->bottomalign,
-					FALSE, FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(bottom_align), ui->buttonbox);
+	gtk_box_pack_start(GTK_BOX(main_vbox), bottom_align, FALSE, FALSE, 0);
 
 	/*
 	 * Set up thread status progress bar
