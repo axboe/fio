@@ -32,8 +32,6 @@ In no particular order:
 - Persistent store of prefences set. This will need a per-OS bit as well,
   using gfonf on Linux, registry on Windows, ?? on OSX.
 
-- Add 'Recent Files' to File menu.
-
 - Ensure that local errors go to our log, instead of being displayed on
   the console.
 
