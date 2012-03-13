@@ -973,6 +973,7 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		io_u->offset = ipo->offset;
 		io_u->buflen = ipo->len;
 		io_u->file = ipo->file;
+		io_u->flags |= IO_U_F_VER_LIST;
 
 		if (ipo->flags & IP_F_TRIMMED)
 			io_u->flags |= IO_U_F_TRIMMED;

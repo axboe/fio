@@ -1070,6 +1070,7 @@ again:
 		assert(io_u->flags & IO_U_F_FREE);
 		io_u->flags &= ~(IO_U_F_FREE | IO_U_F_FREE_DEF);
 		io_u->flags &= ~(IO_U_F_TRIMMED | IO_U_F_BARRIER);
+		io_u->flags &= ~IO_U_F_VER_LIST;
 
 		io_u->error = 0;
 		flist_del(&io_u->list);
