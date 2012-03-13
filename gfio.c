@@ -2188,16 +2188,13 @@ static int do_file_open(struct gui_entry *ge, const gchar *uri, char *host,
 	return 0;
 }
 
-static void file_open(GtkWidget *w, gpointer data)
+static int do_file_open_with_tab(struct gui *ui, const gchar *uri)
 {
-	struct gui *ui = data;
-	GtkWidget *dialog;
-	GSList *filenames, *fn_glist;
-	GtkFileFilter *filter;
-	int port, type, server_start, ge_is_new = 0;
+	int port, type, server_start;
 	struct gui_entry *ge;
 	gint cur_page;
 	char *host;
+	int ret, ge_is_new = 0;
 
 	/*
 	 * Creates new tab if current tab is the main window, or the
@@ -2211,6 +2208,47 @@ static void file_open(GtkWidget *w, gpointer data)
 	}
 
 	gtk_notebook_set_current_page(GTK_NOTEBOOK(ui->notebook), ge->page_num);
+
+	if (get_connection_details(&host, &port, &type, &server_start)) {
+		if (ge_is_new)
+			gtk_widget_destroy(ge->vbox);
+			
+		return 1;
+	}
+
+	ret = do_file_open(ge, uri, host, type, port);
+
+	free(host);
+
+	if (!ret) {
+		if (server_start)
+			gfio_start_server();
+	} else {
+		if (ge_is_new)
+			gtk_widget_destroy(ge->vbox);
+	}
+
+	return ret;
+}
+
+static void recent_open(GtkAction *action, gpointer data)
+{
+	struct gui *ui = (struct gui *) data;
+	GtkRecentInfo *info;
+	const gchar *uri;
+
+	info = g_object_get_data(G_OBJECT(action), "gtk-recent-info");
+	uri = gtk_recent_info_get_uri(info);
+
+	do_file_open_with_tab(ui, uri);
+}
+
+static void file_open(GtkWidget *w, gpointer data)
+{
+	struct gui *ui = data;
+	GtkWidget *dialog;
+	GSList *filenames, *fn_glist;
+	GtkFileFilter *filter;
 
 	dialog = gtk_file_chooser_dialog_new("Open File",
 		GTK_WINDOW(ui->window),
@@ -2229,9 +2267,6 @@ static void file_open(GtkWidget *w, gpointer data)
 	gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filter);
 
 	if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_ACCEPT) {
-		if (ge_is_new)
-			gtk_widget_destroy(ge->vbox);
-
 		gtk_widget_destroy(dialog);
 		return;
 	}
@@ -2240,26 +2275,14 @@ static void file_open(GtkWidget *w, gpointer data)
 
 	gtk_widget_destroy(dialog);
 
-	if (get_connection_details(&host, &port, &type, &server_start)) {
-		if (ge_is_new)
-			gtk_widget_destroy(ge->vbox);
-	
-		goto done;
-	}
-
 	filenames = fn_glist;
 	while (filenames != NULL) {
-		do_file_open(ge, filenames->data, host, type, port);
-		g_free(filenames->data);
+		if (do_file_open_with_tab(ui, filenames->data))
+			break;
 		filenames = g_slist_next(filenames);
 	}
-	free(host);
 
-	if (server_start)
-		gfio_start_server();
-done:
 	g_slist_free(fn_glist);
-
 }
 
 static void file_save(GtkWidget *w, gpointer data)
@@ -2826,53 +2849,6 @@ static gboolean notebook_switch_page(GtkNotebook *notebook, GtkWidget *widget,
 	return TRUE;
 }
 
-static void recent_open(GtkAction *action, gpointer data)
-{
-	struct gui *ui = (struct gui *) data;
-	int port, type, server_start;
-	struct gui_entry *ge;
-	GtkRecentInfo *info;
-	const gchar *uri;
-	gint cur_page;
-	char *host;
-	int ret, ge_is_new = 0;
-
-	/*
-	 * Creates new tab if current tab is the main window, or the
-	 * current tab already has a client.
-	 */
-	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
-	ge = get_ge_from_page(cur_page, &ge_is_new);
-	if (ge->client) {
-		ge = get_new_ge_with_tab("Untitled");
-		ge_is_new = 1;
-	}
-
-	gtk_notebook_set_current_page(GTK_NOTEBOOK(ui->notebook), ge->page_num);
-
-	info = g_object_get_data(G_OBJECT(action), "gtk-recent-info");
-	uri = gtk_recent_info_get_uri(info);
-
-	if (get_connection_details(&host, &port, &type, &server_start)) {
-		if (ge_is_new)
-			gtk_widget_destroy(ge->vbox);
-			
-		return;
-	}
-
-	ret = do_file_open(ge, uri, host, type, port);
-
-	free(host);
-
-	if (!ret) {
-		if (server_start)
-			gfio_start_server();
-	} else {
-		if (ge_is_new)
-			gtk_widget_destroy(ge->vbox);
-	}
-}
-
 static gint compare_recent_items(GtkRecentInfo *a, GtkRecentInfo *b)
 {
 	time_t time_a = gtk_recent_info_get_visited(a);
@@ -2951,6 +2927,38 @@ static void add_recent_file_items(struct gui *ui)
 	g_list_free(items);
 }
 
+static void drag_and_drop_received(GtkWidget *widget, GdkDragContext *ctx,
+				   gint x, gint y, GtkSelectionData *data,
+				   guint info, guint time)
+{
+	struct gui *ui = &main_ui;
+	gchar **uris;
+	GtkWidget *source;
+	int i;
+
+	source = gtk_drag_get_source_widget(ctx);
+	if (source && widget == gtk_widget_get_toplevel(source)) {
+		gtk_drag_finish(ctx, FALSE, FALSE, time);
+		return;
+	}
+
+	uris = gtk_selection_data_get_uris(data);
+	if (!uris) {
+		gtk_drag_finish(ctx, FALSE, FALSE, time);
+		return;
+	}
+
+	i = 0;
+	while (uris[i]) {
+		if (do_file_open_with_tab(ui, uris[i]))
+			break;
+		i++;
+	}
+
+	gtk_drag_finish(ctx, TRUE, FALSE, time);
+	g_strfreev(uris);
+}
+
 static void init_ui(int *argc, char **argv[], struct gui *ui)
 {
 	GtkSettings *settings;
@@ -2993,6 +3001,9 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_container_add(GTK_CONTAINER(ui->vbox), ui->notebook);
 
 	vbox = new_main_page(ui);
+	gtk_drag_dest_set(GTK_WIDGET(ui->window), GTK_DEST_DEFAULT_ALL, NULL, 0, GDK_ACTION_COPY);
+	gtk_drag_dest_add_uri_targets(GTK_WIDGET(ui->window));
+	g_signal_connect(ui->window, "drag-data-received", G_CALLBACK(drag_and_drop_received), ui);
 
 	gtk_notebook_append_page(GTK_NOTEBOOK(ui->notebook), vbox, gtk_label_new("Main"));
 
