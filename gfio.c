@@ -1730,6 +1730,8 @@ static int send_job_files(struct gui_entry *ge)
 		i++;
 	}
 
+	free(ge->job_files);
+	ge->job_files = NULL;
 	ge->nr_job_files = 0;
 	return ret;
 }
