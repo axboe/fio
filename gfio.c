@@ -454,10 +454,6 @@ static void update_button_states(struct gui *ui, struct gui_entry *ge)
 	gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], start_state);
 	gtk_button_set_label(GTK_BUTTON(ge->button[CONNECT_BUTTON]), connect_str);
 
-	/*
-	 * So the below doesn't work at all, how to set those menu items
-	 * invisibible...
-	 */
 	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Connect");
 	gtk_widget_set_sensitive(w, connect_state);
 	gtk_menu_item_set_label(GTK_MENU_ITEM(w), connect_str);
