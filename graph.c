@@ -307,7 +307,7 @@ static void graph_draw_common(struct graph *g, cairo_t *cr,
         cairo_set_source_rgb(cr, 0, 0, 0);
         cairo_set_line_width (cr, 0.8);
 
-	*x1 = 0.15 * g->xdim;	
+	*x1 = 0.10 * g->xdim;	
 	*x2 = 0.95 * g->xdim;
 	*y1 = 0.10 * g->ydim;	
 	*y2 = 0.90 * g->ydim;
