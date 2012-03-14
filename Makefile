@@ -4,7 +4,7 @@ CPPFLAGS= -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	$(DEBUGFLAGS)
 OPTFLAGS= -O3 -fno-omit-frame-pointer -g $(EXTFLAGS)
 CFLAGS	= -std=gnu99 -Wwrite-strings -Wall $(OPTFLAGS)
-LIBS	= -lm $(EXTLIBS)
+LIBS	= -lm -lz $(EXTLIBS)
 PROGS	= fio
 SCRIPTS = fio_generate_plots
 UNAME  := $(shell uname)

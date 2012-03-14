@@ -1636,6 +1636,11 @@ static void gfio_client_job_start(struct fio_client *client, struct fio_net_cmd 
 	gdk_threads_leave();
 }
 
+static void gfio_client_iolog(struct fio_client *client, struct cmd_iolog_pdu *pdu)
+{
+	free(pdu);
+}
+
 struct client_ops gfio_client_ops = {
 	.text			= gfio_text_op,
 	.disk_util		= gfio_disk_util_op,
@@ -1650,6 +1655,7 @@ struct client_ops gfio_client_ops = {
 	.stop			= gfio_client_stop,
 	.start			= gfio_client_start,
 	.job_start		= gfio_client_job_start,
+	.iolog			= gfio_client_iolog,
 	.eta_msec		= FIO_CLIENT_DEF_ETA_MSEC,
 	.stay_connected		= 1,
 	.client_type		= FIO_CLIENT_TYPE_GUI,

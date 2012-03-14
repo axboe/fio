@@ -535,6 +535,10 @@ void finish_log_named(struct thread_data *td, struct io_log *log,
 
 	snprintf(file_name, 200, "%s_%s.log", prefix, postfix);
 	p = basename(file_name);
+
+	if (td->client_type == FIO_CLIENT_TYPE_GUI)
+		fio_send_iolog(td, log, p);
+
 	__finish_log(log, p);
 }
 

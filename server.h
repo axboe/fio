@@ -38,7 +38,7 @@ struct fio_net_int_cmd {
 };
 
 enum {
-	FIO_SERVER_VER			= 11,
+	FIO_SERVER_VER			= 12,
 
 	FIO_SERVER_MAX_FRAGMENT_PDU	= 1024,
 
@@ -58,13 +58,16 @@ enum {
 	FIO_NET_CMD_SERVER_START	= 14,
 	FIO_NET_CMD_ADD_JOB		= 15,
 	FIO_NET_CMD_RUN			= 16,
-	FIO_NET_CMD_NR			= 17,
+	FIO_NET_CMD_IOLOG		= 17,
+	FIO_NET_CMD_NR			= 18,
 
 	FIO_NET_CMD_F_MORE		= 1UL << 0,
 
 	/* crc does not include the crc fields */
 	FIO_NET_CMD_CRC_SZ		= sizeof(struct fio_net_cmd) -
 						2 * sizeof(uint16_t),
+
+	FIO_NET_NAME_MAX		= 256,
 
 	FIO_NET_CLIENT_TIMEOUT		= 5000,
 };
@@ -127,6 +130,13 @@ struct cmd_text_pdu {
 	uint8_t buf[0];
 };
 
+struct cmd_iolog_pdu {
+	uint32_t nr_samples;
+	uint32_t log_type;
+	uint8_t name[FIO_NET_NAME_MAX];
+	struct io_sample samples[0];
+};
+
 extern int fio_start_server(char *);
 extern int fio_server_text_output(int, const char *, size_t);
 extern int fio_net_send_cmd(int, uint16_t, const void *, off_t, uint64_t);
@@ -147,7 +157,10 @@ extern void fio_server_idle_loop(void);
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);
 extern void fio_net_cmd_crc(struct fio_net_cmd *);
+extern void fio_net_cmd_crc_pdu(struct fio_net_cmd *, void *);
 extern struct fio_net_cmd *fio_net_recv_cmd(int sk);
+
+extern int fio_send_iolog(struct thread_data *, struct io_log *, const char *);
 
 struct thread_options;
 extern void fio_server_send_add_job(struct thread_options *, const char *);
@@ -155,20 +168,26 @@ extern void fio_server_send_add_job(struct thread_options *, const char *);
 extern int exit_backend;
 extern int fio_net_port;
 
-static inline void fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
-				    const void *pdu, uint32_t pdu_len,
-				    uint64_t tag)
+static inline void __fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
+				      uint32_t pdu_len, uint64_t tag)
 {
 	memset(cmd, 0, sizeof(*cmd));
 
 	cmd->version	= __cpu_to_le16(FIO_SERVER_VER);
 	cmd->opcode	= cpu_to_le16(opcode);
 	cmd->tag	= cpu_to_le64(tag);
+	cmd->pdu_len	= cpu_to_le32(pdu_len);
+}
 
-	if (pdu) {
-		cmd->pdu_len	= cpu_to_le32(pdu_len);
+
+static inline void fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
+				    const void *pdu, uint32_t pdu_len,
+				    uint64_t tag)
+{
+	__fio_init_net_cmd(cmd, opcode, pdu_len, tag);
+
+	if (pdu)
 		memcpy(&cmd->payload, pdu, pdu_len);
-	}
 }
 
 #endif

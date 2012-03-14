@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <signal.h>
+#include <zlib.h>
 
 #include "fio.h"
 #include "client.h"
@@ -950,6 +951,67 @@ static void convert_text(struct fio_net_cmd *cmd)
 	pdu->log_usec	= le64_to_cpu(pdu->log_usec);
 }
 
+/*
+ * This has been compressed on the server side, since it can be big.
+ * Uncompress here.
+ */
+static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
+{
+	struct cmd_iolog_pdu *pdu = (struct cmd_iolog_pdu *) cmd->payload;
+	struct cmd_iolog_pdu *ret;
+	uint32_t nr_samples;
+	unsigned long total;
+	z_stream stream;
+	void *p;
+
+	stream.zalloc = Z_NULL;
+	stream.zfree = Z_NULL;
+	stream.opaque = Z_NULL;
+	stream.avail_in = 0;
+	stream.next_in = Z_NULL;
+
+	if (inflateInit(&stream) != Z_OK)
+		return NULL;
+
+	/*
+	 * Everything beyond the first entry is compressed.
+	 */
+	nr_samples = le32_to_cpu(pdu->nr_samples);
+
+	total = sizeof(*pdu) + nr_samples * sizeof(struct io_sample);
+	ret = malloc(total);
+	ret->nr_samples = nr_samples;
+	p = (void *) ret + sizeof(pdu->nr_samples);
+
+	stream.avail_in = cmd->pdu_len - sizeof(pdu->nr_samples);
+	stream.next_in = (void *) pdu + sizeof(pdu->nr_samples);
+	while (stream.avail_in) {
+		unsigned int this_chunk = 65536;
+		unsigned int this_len;
+		int err;
+
+		if (this_chunk > total)
+			this_chunk = total;
+
+		stream.avail_out = this_chunk;
+		stream.next_out = p;
+		err = inflate(&stream, Z_NO_FLUSH);
+		if (err != Z_OK) {
+			log_err("fio: inflate error %d\n", err);
+			goto out;
+		}
+
+		this_len = this_chunk - stream.avail_out;
+		p += this_len;
+		total -= this_len;
+	}
+
+	ret->log_type = cpu_to_le32(ret->log_type);
+out:
+	inflateEnd(&stream);
+	return ret;
+}
+
 int fio_handle_client(struct fio_client *client)
 {
 	struct client_ops *ops = client->ops;
@@ -1046,6 +1108,15 @@ int fio_handle_client(struct fio_client *client)
 	case FIO_NET_CMD_ADD_JOB:
 		if (ops->add_job)
 			ops->add_job(client, cmd);
+		free(cmd);
+		break;
+	case FIO_NET_CMD_IOLOG:
+		if (ops->iolog) {
+			struct cmd_iolog_pdu *pdu;
+
+			pdu = convert_iolog(cmd);
+			ops->iolog(client, pdu);
+		}
 		free(cmd);
 		break;
 	default:
