@@ -40,11 +40,11 @@ static double nicenum(double x, int round)
 }
 
 static void shorten(struct tickmark *tm, int nticks, int *power_of_ten,
-			int use_KMG_symbols)
+			int use_KMG_symbols, int base_offset)
 {
-	int i, l, minshorten;
+	const char shorten_chr[] = { 0, 'K', 'M', 'G', 'P', 'E', 0 };
+	int i, l, minshorten, shorten_idx = 0;
 	char *str;
-	char shorten_char = '?';
 
 	minshorten = 100;
 	for (i = 0; i < nticks; i++) {
@@ -55,14 +55,14 @@ static void shorten(struct tickmark *tm, int nticks, int *power_of_ten,
 			continue;
 		if (l > 9 && strcmp(&str[l - 9], "000000000") == 0) {
 			*power_of_ten = 9;
-			shorten_char = use_KMG_symbols ? 'G' : '\0';
+			shorten_idx = 3;
 		} else if (6 < minshorten && l > 6 &&
 				strcmp(&str[l - 6], "000000") == 0) {
 			*power_of_ten = 6;
-			shorten_char = use_KMG_symbols ? 'M' : '\0';
+			shorten_idx = 2;
 		} else if (l > 3 && strcmp(&str[l - 3], "000") == 0) {
 			*power_of_ten = 3;
-			shorten_char = use_KMG_symbols ? 'K': '\0';
+			shorten_idx = 1;
 		} else {
 			*power_of_ten = 0;
 		}
@@ -73,17 +73,22 @@ static void shorten(struct tickmark *tm, int nticks, int *power_of_ten,
 
 	if (minshorten == 0)
 		return;
+	if (!use_KMG_symbols)
+		shorten_idx = 0;
+	else if (base_offset)
+		shorten_idx += base_offset;
 
 	for (i = 0; i < nticks; i++) {
 		str = tm[i].string;
 		l = strlen(str);
-		str[l - minshorten] = shorten_char;
-		str[l - minshorten + 1] = '\0';
+		str[l - minshorten] = shorten_chr[shorten_idx];
+		if (shorten_idx)
+			str[l - minshorten + 1] = '\0';
 	}
 }
 
 int calc_tickmarks(double min, double max, int nticks, struct tickmark **tm,
-		int *power_of_ten, int use_KMG_symbols)
+		int *power_of_ten, int use_KMG_symbols, int base_offset)
 {
 	char str[100];
 	int nfrac;
@@ -109,7 +114,7 @@ int calc_tickmarks(double min, double max, int nticks, struct tickmark **tm,
 		sprintf((*tm)[i].string, str, x);
 		i++;
 	}
-	shorten(*tm, i, power_of_ten, use_KMG_symbols);
+	shorten(*tm, i, power_of_ten, use_KMG_symbols, base_offset);
 	return i;
 }
 

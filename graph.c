@@ -66,6 +66,7 @@ struct graph {
 	const char *font;
 	graph_axis_unit_change_callback x_axis_unit_change_callback;
 	graph_axis_unit_change_callback y_axis_unit_change_callback;
+	unsigned int base_offset;
 	double left_extra;	
 	double right_extra;	
 	double top_extra;	
@@ -326,7 +327,7 @@ static void graph_draw_common(struct graph *g, cairo_t *cr,
 
 static void graph_draw_x_ticks(struct graph *g, cairo_t *cr,
 	double x1, double y1, double x2, double y2,
-	double minx, double maxx, int nticks)
+	double minx, double maxx, int nticks, int add_tm_text)
 {
 	struct tickmark *tm;
 	double tx;
@@ -334,13 +335,15 @@ static void graph_draw_x_ticks(struct graph *g, cairo_t *cr,
 	static double dash[] = { 1.0, 2.0 };
 
 	nticks = calc_tickmarks(minx, maxx, nticks, &tm, &power_of_ten,
-		g->x_axis_unit_change_callback == NULL);
+		g->x_axis_unit_change_callback == NULL, g->base_offset);
 	if (g->x_axis_unit_change_callback)
 		g->x_axis_unit_change_callback(g, power_of_ten);
 
 	for (i = 0; i < nticks; i++) {
 		tx = (((tm[i].value) - minx) / (maxx - minx)) * (x2 - x1) + x1;
-		if (tx < x1 || tx > x2)
+
+		/* really tx < yx || tx > x2, but protect against rounding */
+		if (x1 - tx > 0.01 || tx - x2 > 0.01)
 			continue;
 
 		/* Draw tick mark */
@@ -358,6 +361,9 @@ static void graph_draw_x_ticks(struct graph *g, cairo_t *cr,
 		cairo_stroke(cr);
 		cairo_restore(cr);
 
+		if (!add_tm_text)
+			continue;
+
 		/* draw tickmark label */
 		draw_centered_text(g, cr, tx, y2 * 1.04, 12.0, tm[i].string);
 		cairo_stroke(cr);
@@ -365,9 +371,9 @@ static void graph_draw_x_ticks(struct graph *g, cairo_t *cr,
 	}
 }
 
-static void graph_draw_y_ticks(struct graph *g, cairo_t *cr,
+static double graph_draw_y_ticks(struct graph *g, cairo_t *cr,
 	double x1, double y1, double x2, double y2,
-	double miny, double maxy, int nticks)
+	double miny, double maxy, int nticks, int add_tm_text)
 {
 	struct tickmark *tm;
 	double ty;
@@ -375,14 +381,24 @@ static void graph_draw_y_ticks(struct graph *g, cairo_t *cr,
 	static double dash[] = { 2.0, 2.0 };
 
 	nticks = calc_tickmarks(miny, maxy, nticks, &tm, &power_of_ten,
-		g->y_axis_unit_change_callback == NULL);
+		g->y_axis_unit_change_callback == NULL, g->base_offset);
 	if (g->y_axis_unit_change_callback)
 		g->y_axis_unit_change_callback(g, power_of_ten);
 
+	/*
+	 * Use highest tickmark as top of graph, not highest value. Otherwise
+	 * it's impossible to see what the max value is, if the graph is
+	 * fairly flat.
+	 */
+	maxy = tm[nticks - 1].value;
+
 	for (i = 0; i < nticks; i++) {
 		ty = y2 - (((tm[i].value) - miny) / (maxy - miny)) * (y2 - y1);
-		if (ty < y1 || ty > y2)
+
+		/* really ty < y1 || ty > y2, but protect against rounding */
+		if (y1 - ty > 0.01 || ty - y2 > 0.01)
 			continue;
+
 		/* draw tick mark */
 		cairo_move_to(cr, x1, ty);
 		cairo_line_to(cr, x1 - (x2 - x1) * 0.02, ty);
@@ -397,10 +413,18 @@ static void graph_draw_y_ticks(struct graph *g, cairo_t *cr,
 		cairo_stroke(cr);
 		cairo_restore(cr);
 
+		if (!add_tm_text)
+			continue;
+
 		/* draw tickmark label */
 		draw_right_justified_text(g, cr, x1 - (x2 - x1) * 0.025, ty, 12.0, tm[i].string);
 		cairo_stroke(cr);
 	}
+
+	/*
+	 * Return new max to use
+	 */
+	return maxy;
 }
 
 void bar_graph_draw(struct graph *bg, cairo_t *cr)
@@ -416,7 +440,7 @@ void bar_graph_draw(struct graph *bg, cairo_t *cr)
 	graph_draw_common(bg, cr, &x1, &y1, &x2, &y2);
 
 	nlabels = count_labels(bg->labels);
-	space_per_label = (x2 - x1) / (double) nlabels; 
+	space_per_label = (x2 - x1) / (double) nlabels;
 
 	mindata = find_min_data(bg->labels);
 	maxdata = find_max_data(bg->labels);
@@ -428,7 +452,7 @@ void bar_graph_draw(struct graph *bg, cairo_t *cr)
 		return;
 	}
 
-	graph_draw_y_ticks(bg, cr, x1, y1, x2, y2, mindata, maxdata, 10);
+	graph_draw_y_ticks(bg, cr, x1, y1, x2, y2, mindata, maxdata, 10, 1);
 
 	i = 0;
 	for (lb = bg->labels; lb; lb = lb->next) {
@@ -524,8 +548,8 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 	gminy = miny - bottom_extra;
 	gmaxy = maxy + top_extra;
 
-	graph_draw_x_ticks(g, cr, x1, y1, x2, y2, gminx, gmaxx, 10);
-	graph_draw_y_ticks(g, cr, x1, y1, x2, y2, gminy, gmaxy, 10);
+	graph_draw_x_ticks(g, cr, x1, y1, x2, y2, gminx, gmaxx, 10, good_data);
+	gmaxy = graph_draw_y_ticks(g, cr, x1, y1, x2, y2, gminy, gmaxy, 10, good_data);
 
 	if (!good_data)
 		goto skip_data;
@@ -774,6 +798,16 @@ void graph_add_extra_space(struct graph *g, double left_percent, double right_pe
 	g->right_extra = right_percent;	
 	g->top_extra = top_percent;	
 	g->bottom_extra = bottom_percent;	
+}
+
+/*
+ * Normally values are logged in a base unit of 0, but for other purposes
+ * it makes more sense to log in higher unit. For instance for bandwidth
+ * purposes, you may want to log in KB/sec (or MB/sec) rather than bytes/sec.
+ */
+void graph_set_base_offset(struct graph *g, unsigned int base_offset)
+{
+	g->base_offset = base_offset;
 }
 
 int graph_has_tooltips(struct graph *g)
