@@ -157,7 +157,7 @@ extern void fio_server_idle_loop(void);
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);
 extern void fio_net_cmd_crc(struct fio_net_cmd *);
-extern void fio_net_cmd_crc_pdu(struct fio_net_cmd *, void *);
+extern void fio_net_cmd_crc_pdu(struct fio_net_cmd *, const void *);
 extern struct fio_net_cmd *fio_net_recv_cmd(int sk);
 
 extern int fio_send_iolog(struct thread_data *, struct io_log *, const char *);
