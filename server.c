@@ -853,27 +853,23 @@ void fio_server_send_du(void)
 
 int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 {
-	struct cmd_iolog_pdu *pdu;
+	struct cmd_iolog_pdu pdu;
 	struct fio_net_cmd cmd;
 	z_stream stream;
 	void *out_pdu;
-	size_t p_size;
 	int i;
 
-	p_size = sizeof(*pdu) + log->nr_samples * sizeof(struct io_sample);
-	pdu = malloc(p_size);
-
-	pdu->nr_samples = __cpu_to_le32(log->nr_samples);
-	pdu->log_type = cpu_to_le32(log->log_type);
-	strcpy((char *) pdu->name, name);
+	pdu.nr_samples = __cpu_to_le32(log->nr_samples);
+	pdu.log_type = cpu_to_le32(log->log_type);
+	strcpy((char *) pdu.name, name);
 
 	for (i = 0; i < log->nr_samples; i++) {
-		struct io_sample *s = &pdu->samples[i];
+		struct io_sample *s = &log->log[i];
 
-		s->time	= cpu_to_le64(log->log[i].time);
-		s->val	= cpu_to_le64(log->log[i].val);
-		s->ddir	= cpu_to_le32(log->log[i].ddir);
-		s->bs	= cpu_to_le32(log->log[i].bs);
+		s->time	= cpu_to_le64(s->time);
+		s->val	= cpu_to_le64(s->val);
+		s->ddir	= cpu_to_le32(s->ddir);
+		s->bs	= cpu_to_le32(s->bs);
 	}
 
 	/*
@@ -889,29 +885,27 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 
 	if (deflateInit(&stream, Z_DEFAULT_COMPRESSION) != Z_OK) {
 		free(out_pdu);
-		free(pdu);
 		return 1;
 	}
 
 	/*
-	 * Don't compress the nr samples entry, we want to know on the
-	 * client side how much data to allocate before starting inflate.
+	 * Send header first, it's not compressed.
 	 */
-	__fio_init_net_cmd(&cmd, FIO_NET_CMD_IOLOG, sizeof(pdu->nr_samples), 0);
+	__fio_init_net_cmd(&cmd, FIO_NET_CMD_IOLOG, sizeof(pdu), 0);
 	cmd.flags = __cpu_to_le32(FIO_NET_CMD_F_MORE);
-	fio_net_cmd_crc_pdu(&cmd, pdu);
+	fio_net_cmd_crc_pdu(&cmd, &pdu);
 	fio_send_data(server_fd, &cmd, sizeof(cmd));
-	fio_send_data(server_fd, pdu, sizeof(pdu->nr_samples));
+	fio_send_data(server_fd, &pdu, sizeof(pdu));
 
-	stream.next_in = (void *) pdu + sizeof(pdu->nr_samples);
-	stream.avail_in = p_size - sizeof(pdu->nr_samples);
+	stream.next_in = (void *) log->log;
+	stream.avail_in = log->nr_samples * sizeof(struct io_sample);
 
 	do {
 		unsigned int this_len;
 
 		stream.avail_out = FIO_SERVER_MAX_FRAGMENT_PDU;
 		stream.next_out = out_pdu;
-		deflate(&stream, Z_FINISH);
+		assert(deflate(&stream, Z_FINISH) == Z_OK);
 
 		this_len = FIO_SERVER_MAX_FRAGMENT_PDU - stream.avail_out;
 
@@ -926,7 +920,6 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 		fio_send_data(server_fd, out_pdu, this_len);
 	} while (stream.avail_in);
 
-	free(pdu);
 	free(out_pdu);
 	deflateEnd(&stream);
 	return 0;

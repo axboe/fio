@@ -963,6 +963,7 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 	unsigned long total;
 	z_stream stream;
 	void *p;
+	int i;
 
 	stream.zalloc = Z_NULL;
 	stream.zfree = Z_NULL;
@@ -974,17 +975,20 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 		return NULL;
 
 	/*
-	 * Everything beyond the first entry is compressed.
+	 * Get header first, it's not compressed
 	 */
 	nr_samples = le32_to_cpu(pdu->nr_samples);
 
-	total = sizeof(*pdu) + nr_samples * sizeof(struct io_sample);
-	ret = malloc(total);
+	total = nr_samples * sizeof(struct io_sample);
+	ret = malloc(total + sizeof(*pdu));
 	ret->nr_samples = nr_samples;
-	p = (void *) ret + sizeof(pdu->nr_samples);
+	ret->log_type = le32_to_cpu(pdu->log_type);
+	strcpy((char *) ret->name, (char *) pdu->name);
 
-	stream.avail_in = cmd->pdu_len - sizeof(pdu->nr_samples);
-	stream.next_in = (void *) pdu + sizeof(pdu->nr_samples);
+	p = (void *) ret + sizeof(*pdu);
+
+	stream.avail_in = cmd->pdu_len - sizeof(*pdu);
+	stream.next_in = (void *) pdu + sizeof(*pdu);
 	while (stream.avail_in) {
 		unsigned int this_chunk = 65536;
 		unsigned int this_len;
@@ -998,6 +1002,8 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 		err = inflate(&stream, Z_NO_FLUSH);
 		if (err != Z_OK) {
 			log_err("fio: inflate error %d\n", err);
+			free(ret);
+			ret = NULL;
 			goto out;
 		}
 
@@ -1006,7 +1012,15 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 		total -= this_len;
 	}
 
-	ret->log_type = cpu_to_le32(ret->log_type);
+	for (i = 0; i < ret->nr_samples; i++) {
+		struct io_sample *s = &ret->samples[i];
+
+		s->time	= le64_to_cpu(s->time);
+		s->val	= le64_to_cpu(s->val);
+		s->ddir	= le32_to_cpu(s->ddir);
+		s->bs	= le32_to_cpu(s->bs);
+	}
+
 out:
 	inflateEnd(&stream);
 	return ret;
