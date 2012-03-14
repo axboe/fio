@@ -955,7 +955,10 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 
 		stream.avail_out = FIO_SERVER_MAX_FRAGMENT_PDU;
 		stream.next_out = out_pdu;
-		assert(deflate(&stream, Z_FINISH) == Z_OK);
+		ret = deflate(&stream, Z_FINISH);
+		/* may be Z_OK, or Z_STREAM_END */
+		if (ret < 0)
+			goto err_zlib;
 
 		this_len = FIO_SERVER_MAX_FRAGMENT_PDU - stream.avail_out;
 

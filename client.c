@@ -1000,7 +1000,8 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 		stream.avail_out = this_chunk;
 		stream.next_out = p;
 		err = inflate(&stream, Z_NO_FLUSH);
-		if (err != Z_OK) {
+		/* may be Z_OK, or Z_STREAM_END */
+		if (err < 0) {
 			log_err("fio: inflate error %d\n", err);
 			free(ret);
 			ret = NULL;
