@@ -158,6 +158,9 @@ struct gui_entry {
 	GtkWidget *error_label;
 	GtkWidget *results_notebook;
 	GtkWidget *results_window;
+	GtkUIManager *results_uimanager;
+	GtkWidget *results_vbox;
+	GtkWidget *results_menu;
 	GtkListStore *log_model;
 	GtkWidget *log_tree;
 	GtkWidget *log_view;
@@ -1034,9 +1037,55 @@ static gboolean results_window_delete(GtkWidget *w, gpointer data)
 	return TRUE;
 }
 
+static void results_close(GtkWidget *w, gpointer *data)
+{
+	struct gui_entry *ge = (struct gui_entry *) data;
+
+	gtk_widget_destroy(ge->results_window);
+}
+
+static GtkActionEntry results_menu_items[] = {
+	{ "FileMenuAction", GTK_STOCK_FILE, "File", NULL, NULL, NULL},
+	{ "GraphMenuAction", GTK_STOCK_FILE, "Graph", NULL, NULL, NULL},
+	{ "CloseFile", GTK_STOCK_CLOSE, "Close", "<Control>W", NULL, G_CALLBACK(results_close) },
+};
+static gint results_nmenu_items = sizeof(results_menu_items) / sizeof(results_menu_items[0]);
+
+static const gchar *results_ui_string = " \
+	<ui> \
+		<menubar name=\"MainMenu\"> \
+			<menu name=\"FileMenu\" action=\"FileMenuAction\"> \
+				<menuitem name=\"Close\" action=\"CloseFile\" /> \
+			</menu> \
+			<menu name=\"GraphMenu\" action=\"GraphMenuAction\"> \
+			</menu>\
+		</menubar> \
+	</ui> \
+";
+
+static GtkWidget *get_results_menubar(GtkWidget *window, struct gui_entry *ge)
+{
+	GtkActionGroup *action_group;
+	GtkWidget *widget;
+	GError *error = 0;
+
+	ge->results_uimanager = gtk_ui_manager_new();
+
+	action_group = gtk_action_group_new("ResultsMenu");
+	gtk_action_group_add_actions(action_group, results_menu_items, results_nmenu_items, ge);
+
+	gtk_ui_manager_insert_action_group(ge->results_uimanager, action_group, 0);
+	gtk_ui_manager_add_ui_from_string(GTK_UI_MANAGER(ge->results_uimanager), results_ui_string, -1, &error);
+
+	gtk_window_add_accel_group(GTK_WINDOW(window), gtk_ui_manager_get_accel_group(ge->results_uimanager));
+
+	widget = gtk_ui_manager_get_widget(ge->results_uimanager, "/MainMenu");
+	return widget;
+}
+
 static GtkWidget *get_results_window(struct gui_entry *ge)
 {
-	GtkWidget *win, *notebook;
+	GtkWidget *win, *notebook, *vbox;
 
 	if (ge->results_window)
 		return ge->results_notebook;
@@ -1047,10 +1096,16 @@ static GtkWidget *get_results_window(struct gui_entry *ge)
 	g_signal_connect(win, "delete-event", G_CALLBACK(results_window_delete), ge);
 	g_signal_connect(win, "destroy", G_CALLBACK(results_window_delete), ge);
 
+	vbox = gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(win), vbox);
+
+	ge->results_menu = get_results_menubar(win, ge);
+	gtk_box_pack_start(GTK_BOX(vbox), ge->results_menu, FALSE, FALSE, 0);
+
 	notebook = gtk_notebook_new();
 	gtk_notebook_set_scrollable(GTK_NOTEBOOK(notebook), 1);
 	gtk_notebook_popup_enable(GTK_NOTEBOOK(notebook));
-	gtk_container_add(GTK_CONTAINER(win), notebook);
+	gtk_container_add(GTK_CONTAINER(vbox), notebook);
 
 	ge->results_window = win;
 	ge->results_notebook = notebook;
@@ -1681,13 +1736,6 @@ static void ge_destroy(struct gui_entry *ge)
 
 static void ge_widget_destroy(GtkWidget *w, gpointer data)
 {
-	struct gui_entry *ge = data;
-
-	/*
-	 * Why are we getting NULL data here sometimes?
-	 */
-	if (ge)
-		ge_destroy(ge);
 }
 
 static void gfio_quit(struct gui *ui)
