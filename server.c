@@ -929,6 +929,7 @@ void fio_server_send_add_job(struct thread_options *o, const char *ioengine)
 {
 	struct cmd_add_job_pdu pdu;
 
+	memset(&pdu, 0, sizeof(pdu));
 	convert_thread_options_to_net(&pdu.top, o);
 
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_ADD_JOB, &pdu, sizeof(pdu), 0);
