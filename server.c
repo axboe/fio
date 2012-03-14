@@ -233,9 +233,11 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 
 				buf[pdu->buf_len ] = '\0';
 			} else if (cmdret->opcode == FIO_NET_CMD_JOB) {
-				char *buf = (char *) cmdret->payload;
+				struct cmd_job_pdu *pdu = (struct cmd_job_pdu *) cmdret->payload;
+				char *buf = (char *) pdu->buf;
+				int len = le32_to_cpu(pdu->buf_len);
 
-				buf[cmdret->pdu_len ] = '\0';
+				buf[len] = '\0';
 			}
 		}
 
@@ -361,10 +363,14 @@ static int handle_run_cmd(struct fio_net_cmd *cmd)
 
 static int handle_job_cmd(struct fio_net_cmd *cmd)
 {
-	char *buf = (char *) cmd->payload;
+	struct cmd_job_pdu *pdu = (struct cmd_job_pdu *) cmd->payload;
+	void *buf = pdu->buf;
 	struct cmd_start_pdu spdu;
 
-	if (parse_jobs_ini(buf, 1, 0)) {
+	pdu->buf_len = le32_to_cpu(pdu->buf_len);
+	pdu->client_type = le32_to_cpu(pdu->client_type);
+
+	if (parse_jobs_ini(buf, 1, 0, pdu->client_type)) {
 		fio_server_send_quit_cmd();
 		return -1;
 	}
@@ -386,6 +392,7 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 
 	clp = pdu;
 	clp->lines = le16_to_cpu(clp->lines);
+	clp->client_type = le16_to_cpu(clp->client_type);
 	argv = malloc(clp->lines * sizeof(char *));
 	offset = sizeof(*clp);
 
@@ -399,7 +406,7 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 		dprint(FD_NET, "server: %d: %s\n", i, argv[i]);
 	}
 
-	if (parse_cmd_line(clp->lines, argv)) {
+	if (parse_cmd_line(clp->lines, argv, clp->client_type)) {
 		fio_server_send_quit_cmd();
 		free(argv);
 		return -1;

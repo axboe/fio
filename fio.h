@@ -70,6 +70,8 @@ struct thread_data {
 	int groupid;
 	struct thread_stat ts;
 
+	int client_type;
+
 	struct io_log *slat_log;
 	struct io_log *clat_log;
 	struct io_log *lat_log;
@@ -379,8 +381,8 @@ static inline int should_fsync(struct thread_data *td)
  */
 extern int __must_check fio_init_options(void);
 extern int __must_check parse_options(int, char **);
-extern int parse_jobs_ini(char *, int, int);
-extern int parse_cmd_line(int, char **);
+extern int parse_jobs_ini(char *, int, int, int);
+extern int parse_cmd_line(int, char **, int);
 extern int fio_backend(void);
 extern void reset_fio_state(void);
 extern void clear_io_state(struct thread_data *);
@@ -395,7 +397,7 @@ extern void fio_options_dup_and_init(struct option *);
 extern void fio_options_mem_dupe(struct thread_data *);
 extern void options_mem_dupe(void *data, struct fio_option *options);
 extern void td_fill_rand_seeds(struct thread_data *);
-extern void add_job_opts(const char **);
+extern void add_job_opts(const char **, int);
 extern char *num2str(unsigned long, int, int, int);
 extern int ioengine_load(struct thread_data *);
 

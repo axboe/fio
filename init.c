@@ -745,7 +745,7 @@ int ioengine_load(struct thread_data *td)
  * members of td.
  */
 static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
-		   int recursed)
+		   int recursed, int client_type)
 {
 	unsigned int i;
 	char fname[PATH_MAX];
@@ -764,6 +764,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		put_job(td);
 		return 0;
 	}
+
+	td->client_type = client_type;
 
 	if (profile_td_init(td))
 		goto err;
@@ -915,7 +917,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 
 		job_add_num = numjobs - 1;
 
-		if (add_job(td_new, jobname, job_add_num, 1))
+		if (add_job(td_new, jobname, job_add_num, 1, client_type))
 			goto err;
 	}
 
@@ -928,7 +930,7 @@ err:
 /*
  * Parse as if 'o' was a command line
  */
-void add_job_opts(const char **o)
+void add_job_opts(const char **o, int client_type)
 {
 	struct thread_data *td, *td_parent;
 	int i, in_global = 1;
@@ -940,7 +942,7 @@ void add_job_opts(const char **o)
 		if (!strncmp(o[i], "name", 4)) {
 			in_global = 0;
 			if (td)
-				add_job(td, jobname, 0, 0);
+				add_job(td, jobname, 0, 0, client_type);
 			td = NULL;
 			sprintf(jobname, "%s", o[i] + 5);
 		}
@@ -959,7 +961,7 @@ void add_job_opts(const char **o)
 	}
 
 	if (td)
-		add_job(td, jobname, 0, 0);
+		add_job(td, jobname, 0, 0, client_type);
 }
 
 static int skip_this_section(const char *name)
@@ -997,7 +999,7 @@ static int is_empty_or_comment(char *line)
 /*
  * This is our [ini] type file parser.
  */
-int parse_jobs_ini(char *file, int is_buf, int stonewall_flag)
+int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 {
 	unsigned int global;
 	struct thread_data *td;
@@ -1141,7 +1143,7 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag)
 				for (i = 0; i < num_opts; i++)
 					log_info("--%s ", opts[i]);
 
-			ret = add_job(td, name, 0, 0);
+			ret = add_job(td, name, 0, 0, type);
 		} else {
 			log_err("fio: job %s dropped\n", name);
 			put_job(td);
@@ -1388,7 +1390,7 @@ void parse_cmd_client(void *client, char *opt)
 	fio_client_add_cmd_option(client, opt);
 }
 
-int parse_cmd_line(int argc, char *argv[])
+int parse_cmd_line(int argc, char *argv[], int client_type)
 {
 	struct thread_data *td = NULL;
 	int c, ini_idx = 0, lidx, ret = 0, do_exit = 0, exit_val = 0;
@@ -1507,7 +1509,7 @@ int parse_cmd_line(int argc, char *argv[])
 			char *val = optarg;
 
 			if (!strncmp(opt, "name", 4) && td) {
-				ret = add_job(td, td->o.name ?: "fio", 0, 0);
+				ret = add_job(td, td->o.name ?: "fio", 0, 0, client_type);
 				if (ret)
 					return 0;
 				td = NULL;
@@ -1611,7 +1613,7 @@ int parse_cmd_line(int argc, char *argv[])
 
 	if (td) {
 		if (!ret)
-			ret = add_job(td, td->o.name ?: "fio", 0, 0);
+			ret = add_job(td, td->o.name ?: "fio", 0, 0, client_type);
 	}
 
 	while (!ret && optind < argc) {
@@ -1644,6 +1646,7 @@ extern int fio_check_options(struct thread_options *);
 
 int parse_options(int argc, char *argv[])
 {
+	const int type = FIO_CLIENT_TYPE_CLI;
 	int job_files, i;
 
 	if (fio_init_options())
@@ -1651,7 +1654,7 @@ int parse_options(int argc, char *argv[])
 	if (fio_test_cconv(&def_thread.o))
 		log_err("fio: failed internal cconv test\n");
 
-	job_files = parse_cmd_line(argc, argv);
+	job_files = parse_cmd_line(argc, argv, type);
 
 	if (job_files > 0) {
 		for (i = 0; i < job_files; i++) {
@@ -1662,7 +1665,7 @@ int parse_options(int argc, char *argv[])
 					return 1;
 				free(ini_file[i]);
 			} else if (!is_backend) {
-				if (parse_jobs_ini(ini_file[i], 0, i))
+				if (parse_jobs_ini(ini_file[i], 0, i, type))
 					return 1;
 				free(ini_file[i]);
 			}

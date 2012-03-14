@@ -38,7 +38,7 @@ struct fio_net_int_cmd {
 };
 
 enum {
-	FIO_SERVER_VER			= 10,
+	FIO_SERVER_VER			= 11,
 
 	FIO_SERVER_MAX_FRAGMENT_PDU	= 1024,
 
@@ -97,7 +97,14 @@ struct cmd_single_line_pdu {
 
 struct cmd_line_pdu {
 	uint16_t lines;
+	uint16_t client_type;
 	struct cmd_single_line_pdu options[0];
+};
+
+struct cmd_job_pdu {
+	uint32_t buf_len;
+	uint32_t client_type;
+	uint8_t buf[0];
 };
 
 struct cmd_start_pdu {

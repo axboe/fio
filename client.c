@@ -39,6 +39,7 @@ struct client_ops fio_client_ops = {
 	.eta		= display_thread_status,
 	.probe		= handle_probe,
 	.eta_msec	= FIO_CLIENT_DEF_ETA_MSEC,
+	.client_type	= FIO_CLIENT_TYPE_CLI,
 };
 
 static struct timeval eta_tv;
@@ -206,6 +207,7 @@ struct fio_client *fio_client_add_explicit(struct client_ops *ops,
 	client->fd = -1;
 	client->ops = ops;
 	client->refs = 1;
+	client->type = ops->client_type;
 
 	__fio_client_add_cmd_option(client, "fio");
 
@@ -255,6 +257,7 @@ int fio_client_add(struct client_ops *ops, const char *hostname, void **cookie)
 	client->fd = -1;
 	client->ops = ops;
 	client->refs = 1;
+	client->type = ops->client_type;
 
 	__fio_client_add_cmd_option(client, "fio");
 
@@ -448,6 +451,7 @@ static int send_client_cmd_line(struct fio_client *client)
 
 	free(lens);
 	clp->lines = cpu_to_le16(client->argc);
+	clp->client_type = __cpu_to_le16(client->type);
 	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOBLINE, pdu, mem, 0);
 	free(pdu);
 	return ret;
@@ -517,8 +521,11 @@ int fio_start_all_clients(void)
  */
 static int __fio_client_send_ini(struct fio_client *client, const char *filename)
 {
+	struct cmd_job_pdu *pdu;
+	size_t p_size;
 	struct stat sb;
-	char *p, *buf;
+	char *p;
+	void *buf;
 	off_t len;
 	int fd, ret;
 
@@ -540,7 +547,9 @@ static int __fio_client_send_ini(struct fio_client *client, const char *filename
 		return ret;
 	}
 
-	buf = malloc(sb.st_size);
+	p_size = sb.st_size + sizeof(*pdu);
+	pdu = malloc(p_size);
+	buf = pdu->buf;
 
 	len = sb.st_size;
 	p = buf;
@@ -565,9 +574,12 @@ static int __fio_client_send_ini(struct fio_client *client, const char *filename
 		return 1;
 	}
 
+	pdu->buf_len = __cpu_to_le32(sb.st_size);
+	pdu->client_type = cpu_to_le32(client->type);
+
 	client->sent_job = 1;
-	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOB, buf, sb.st_size, 0);
-	free(buf);
+	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOB, pdu, p_size, 0);
+	free(pdu);
 	close(fd);
 	return ret;
 }

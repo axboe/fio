@@ -1652,6 +1652,7 @@ struct client_ops gfio_client_ops = {
 	.job_start		= gfio_client_job_start,
 	.eta_msec		= FIO_CLIENT_DEF_ETA_MSEC,
 	.stay_connected		= 1,
+	.client_type		= FIO_CLIENT_TYPE_GUI,
 };
 
 /*

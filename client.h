@@ -45,6 +45,7 @@ struct fio_client {
 	int error;
 	int ipv6;
 	int sent_job;
+	uint32_t type;
 
 	struct flist_head eta_list;
 	struct client_eta *eta_in_flight;
@@ -80,6 +81,7 @@ struct client_ops {
 
 	unsigned int eta_msec;
 	int stay_connected;
+	uint32_t client_type;
 };
 
 extern struct client_ops fio_client_ops;
@@ -115,6 +117,11 @@ extern struct fio_client *fio_get_client(struct fio_client *);
 extern void fio_put_client(struct fio_client *);
 
 #define FIO_CLIENT_DEF_ETA_MSEC		900
+
+enum {
+	FIO_CLIENT_TYPE_CLI		= 1,
+	FIO_CLIENT_TYPE_GUI		= 2,
+};
 
 #endif
 
