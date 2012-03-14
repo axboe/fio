@@ -2606,7 +2606,7 @@ static void set_job_menu_visible(struct gui *ui, int visible)
 static GtkWidget *get_menubar_menu(GtkWidget *window, GtkUIManager *ui_manager,
 				   struct gui *ui)
 {
-	GtkActionGroup *action_group = gtk_action_group_new("Menu");
+	GtkActionGroup *action_group;
 	GError *error = 0;
 
 	action_group = gtk_action_group_new("Menu");
