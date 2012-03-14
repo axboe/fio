@@ -984,14 +984,14 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		goto err;
 
 	if (o->write_lat_log) {
-		setup_log(&td->lat_log, o->log_avg_msec);
-		setup_log(&td->slat_log, o->log_avg_msec);
-		setup_log(&td->clat_log, o->log_avg_msec);
+		setup_log(&td->lat_log, o->log_avg_msec, IO_LOG_TYPE_LAT);
+		setup_log(&td->slat_log, o->log_avg_msec, IO_LOG_TYPE_LAT);
+		setup_log(&td->clat_log, o->log_avg_msec, IO_LOG_TYPE_LAT);
 	}
 	if (o->write_bw_log)
-		setup_log(&td->bw_log, o->log_avg_msec);
+		setup_log(&td->bw_log, o->log_avg_msec, IO_LOG_TYPE_BW);
 	if (o->write_iops_log)
-		setup_log(&td->iops_log, o->log_avg_msec);
+		setup_log(&td->iops_log, o->log_avg_msec, IO_LOG_TYPE_IOPS);
 
 	if (!o->name)
 		o->name = strdup(jobname);

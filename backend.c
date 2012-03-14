@@ -1868,9 +1868,9 @@ int fio_backend(void)
 		return 0;
 
 	if (write_bw_log) {
-		setup_log(&agg_io_log[DDIR_READ], 0);
-		setup_log(&agg_io_log[DDIR_WRITE], 0);
-		setup_log(&agg_io_log[DDIR_TRIM], 0);
+		setup_log(&agg_io_log[DDIR_READ], 0, IO_LOG_TYPE_BW);
+		setup_log(&agg_io_log[DDIR_WRITE], 0, IO_LOG_TYPE_BW);
+		setup_log(&agg_io_log[DDIR_TRIM], 0, IO_LOG_TYPE_BW);
 	}
 
 	startup_mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
