@@ -68,19 +68,40 @@ const char *fio_server_op(unsigned int op)
 	return buf;
 }
 
-int fio_send_data(int sk, const void *p, unsigned int len)
+static ssize_t iov_total_len(const struct iovec *iov, int count)
 {
-	assert(len <= sizeof(struct fio_net_cmd) + FIO_SERVER_MAX_FRAGMENT_PDU);
+	ssize_t ret = 0;
+
+	while (count--) {
+		ret += iov->iov_len;
+		iov++;
+	}
+
+	return ret;
+}
+
+static int fio_sendv_data(int sk, struct iovec *iov, int count)
+{
+	ssize_t total_len = iov_total_len(iov, count);
+	ssize_t ret;
 
 	do {
-		int ret = send(sk, p, len, 0);
-
+		ret = writev(sk, iov, count);
 		if (ret > 0) {
-			len -= ret;
-			if (!len)
+			total_len -= ret;
+			if (!total_len)
 				break;
-			p += ret;
-			continue;
+
+			while (ret) {
+				if (ret >= iov->iov_len) {
+					ret -= iov->iov_len;
+					iov++;
+					continue;
+				}
+				iov->iov_base += ret;
+				iov->iov_len -= ret;
+				ret = 0;
+			}
 		} else if (!ret)
 			break;
 		else if (errno == EAGAIN || errno == EINTR)
@@ -89,13 +110,22 @@ int fio_send_data(int sk, const void *p, unsigned int len)
 			break;
 	} while (!exit_backend);
 
-	if (!len)
+	if (!total_len)
 		return 0;
 
 	if (errno)
 		return -errno;
 
 	return 1;
+}
+
+int fio_send_data(int sk, const void *p, unsigned int len)
+{
+	struct iovec iov = { .iov_base = (void *) p, .iov_len = len };
+
+	assert(len <= sizeof(struct fio_net_cmd) + FIO_SERVER_MAX_FRAGMENT_PDU);
+
+	return fio_sendv_data(sk, &iov, 1);
 }
 
 int fio_recv_data(int sk, void *p, unsigned int len)
