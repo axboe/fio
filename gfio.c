@@ -1683,7 +1683,11 @@ static void ge_widget_destroy(GtkWidget *w, gpointer data)
 {
 	struct gui_entry *ge = data;
 
-	ge_destroy(ge);
+	/*
+	 * Why are we getting NULL data here sometimes?
+	 */
+	if (ge)
+		ge_destroy(ge);
 }
 
 static void gfio_quit(struct gui *ui)
