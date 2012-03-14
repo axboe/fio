@@ -58,35 +58,26 @@ struct fio_client {
 	void *client_data;
 };
 
-typedef void (*client_text_op_func)(struct fio_client *client, struct fio_net_cmd *cmd);
-typedef void (*client_disk_util_op_func)(struct fio_client *client, struct fio_net_cmd *cmd);
-typedef void (*client_thread_status_op)(struct fio_client *client, struct fio_net_cmd *cmd);
-typedef void (*client_group_stats_op)(struct fio_client *client, struct fio_net_cmd *cmd);
-typedef void (*client_eta_op)(struct jobs_eta *je);
-typedef void (*client_jobs_eta_op)(struct fio_client *client, struct jobs_eta *je);
-typedef void (*client_probe_op)(struct fio_client *client, struct fio_net_cmd *cmd);
-typedef void (*client_thread_status_display_op)(char *status_message, double perc);
-typedef void (*client_quit_op)(struct fio_client *);
-typedef void (*client_add_job_op)(struct fio_client *, struct fio_net_cmd *);
-typedef void (*client_timed_out)(struct fio_client *);
-typedef void (*client_stop_op)(struct fio_client *, struct fio_net_cmd *);
-typedef void (*client_start_op)(struct fio_client *, struct fio_net_cmd *);
-typedef void (*client_job_start_op)(struct fio_client *, struct fio_net_cmd *);
+typedef void (client_cmd_op)(struct fio_client *, struct fio_net_cmd *);
+typedef void (client_eta_op)(struct jobs_eta *je);
+typedef void (client_timed_out_op)(struct fio_client *);
+typedef void (client_jobs_eta_op)(struct fio_client *client, struct jobs_eta *je);
 
 struct client_ops {
-	client_text_op_func text_op;
-	client_disk_util_op_func disk_util;
-	client_thread_status_op thread_status;
-	client_group_stats_op group_stats;
-	client_jobs_eta_op jobs_eta;
-	client_eta_op eta;
-	client_probe_op probe;
-	client_quit_op quit;
-	client_add_job_op add_job;
-	client_timed_out timed_out;
-	client_stop_op stop;
-	client_start_op start;
-	client_job_start_op job_start;
+	client_cmd_op		*text;
+	client_cmd_op		*disk_util;
+	client_cmd_op		*thread_status;
+	client_cmd_op		*group_stats;
+	client_jobs_eta_op	*jobs_eta;
+	client_eta_op		*eta;
+	client_cmd_op		*probe;
+	client_cmd_op		*quit;
+	client_cmd_op		*add_job;
+	client_timed_out_op	*timed_out;
+	client_cmd_op		*stop;
+	client_cmd_op		*start;
+	client_cmd_op		*job_start;
+
 	unsigned int eta_msec;
 	int stay_connected;
 };

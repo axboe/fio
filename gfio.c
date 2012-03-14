@@ -1545,7 +1545,7 @@ static void gfio_update_thread_status_all(char *status_message, double perc)
 	gtk_widget_queue_draw(ui->window);
 }
 
-static void gfio_quit_op(struct fio_client *client)
+static void gfio_quit_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct gfio_client *gc = client->client_data;
 
@@ -1637,7 +1637,7 @@ static void gfio_client_job_start(struct fio_client *client, struct fio_net_cmd 
 }
 
 struct client_ops gfio_client_ops = {
-	.text_op		= gfio_text_op,
+	.text			= gfio_text_op,
 	.disk_util		= gfio_disk_util_op,
 	.thread_status		= gfio_thread_status_op,
 	.group_stats		= gfio_group_stats_op,

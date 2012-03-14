@@ -30,7 +30,7 @@ static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd);
 
 struct client_ops fio_client_ops = {
-	.text_op	= handle_text,
+	.text		= handle_text,
 	.disk_util	= handle_du,
 	.thread_status	= handle_ts,
 	.group_stats	= handle_gs,
@@ -955,13 +955,13 @@ int fio_handle_client(struct fio_client *client)
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
 		if (ops->quit)
-			ops->quit(client);
+			ops->quit(client, cmd);
 		remove_client(client);
 		free(cmd);
 		break;
 	case FIO_NET_CMD_TEXT:
 		convert_text(cmd);
-		ops->text_op(client, cmd);
+		ops->text(client, cmd);
 		free(cmd);
 		break;
 	case FIO_NET_CMD_DU: {
