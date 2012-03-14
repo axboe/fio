@@ -1654,10 +1654,47 @@ struct client_ops gfio_client_ops = {
 	.stay_connected		= 1,
 };
 
+/*
+ * FIXME: need more handling here
+ */
+static void ge_destroy(struct gui_entry *ge)
+{
+	struct gfio_client *gc = ge->client;
+
+	if (gc && gc->client) {
+		if (ge->state >= GE_STATE_CONNECTED)
+			fio_client_terminate(gc->client);
+
+		fio_put_client(gc->client);
+	}
+
+	flist_del(&ge->list);
+	free(ge);
+}
+
+static void ge_widget_destroy(GtkWidget *w, gpointer data)
+{
+	struct gui_entry *ge = data;
+
+	ge_destroy(ge);
+}
+
+static void gfio_quit(struct gui *ui)
+{
+	struct gui_entry *ge;
+
+	while (!flist_empty(&ui->list)) {
+		ge = flist_entry(ui->list.next, struct gui_entry, list);
+		ge_destroy(ge);
+	}
+
+        gtk_main_quit();
+}
+
 static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
                 __attribute__((unused)) gpointer data)
 {
-        gtk_main_quit();
+	gfio_quit(data);
 }
 
 static void *job_thread(void *arg)
@@ -2007,25 +2044,6 @@ static struct gui_entry *alloc_new_gui_entry(struct gui *ui)
 	return ge;
 }
 
-/*
- * FIXME: need more handling here
- */
-static void ge_destroy(GtkWidget *w, gpointer data)
-{
-	struct gui_entry *ge = data;
-	struct gfio_client *gc = ge->client;
-
-	if (gc && gc->client) {
-		if (ge->state >= GE_STATE_CONNECTED)
-			fio_client_terminate(gc->client);
-
-		fio_put_client(gc->client);
-	}
-
-	flist_del(&ge->list);
-	free(ge);
-}
-
 static struct gui_entry *get_new_ge_with_tab(const char *name)
 {
 	struct gui_entry *ge;
@@ -2033,7 +2051,7 @@ static struct gui_entry *get_new_ge_with_tab(const char *name)
 	ge = alloc_new_gui_entry(&main_ui);
 
 	ge->vbox = new_client_page(ge);
-	g_signal_connect(ge->vbox, "destroy", G_CALLBACK(ge_destroy), ge);
+	g_signal_connect(ge->vbox, "destroy", G_CALLBACK(ge_widget_destroy), ge);
 
 	ge->page_label = gtk_label_new(name);
 	ge->page_num = gtk_notebook_append_page(GTK_NOTEBOOK(main_ui.notebook), ge->vbox, ge->page_label);
@@ -2112,7 +2130,7 @@ static void file_close(GtkWidget *w, gpointer data)
 		return;
 	}
 
-       	gtk_main_quit();
+	gfio_quit(ui);
 }
 
 static void file_add_recent(struct gui *ui, const gchar *uri)
