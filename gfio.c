@@ -1689,7 +1689,7 @@ static void gfio_client_job_start(struct fio_client *client, struct fio_net_cmd 
 
 static void gfio_client_iolog(struct fio_client *client, struct cmd_iolog_pdu *pdu)
 {
-	printf("got iolog: type=%u, entries=%u\n", pdu->log_type, pdu->nr_samples);
+	printf("got iolog: name=%s, type=%u, entries=%u\n", pdu->name, pdu->log_type, pdu->nr_samples);
 	free(pdu);
 }
 
