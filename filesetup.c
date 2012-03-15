@@ -714,7 +714,7 @@ int setup_files(struct thread_data *td)
 	need_extend = 0;
 	for_each_file(td, f, i) {
 		f->file_offset = td->o.start_offset +
-			td->thread_number * td->o.offset_increment;
+			(td->thread_number - 1) * td->o.offset_increment;
 
 		if (!td->o.file_size_low) {
 			/*

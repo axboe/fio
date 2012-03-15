@@ -495,6 +495,13 @@ Default: true.
 .BI offset \fR=\fPint
 Offset in the file to start I/O. Data before the offset will not be touched.
 .TP
+.BI offset_increment \fR=\fPint
+If this is provided, then the real offset becomes the
+offset + offset_increment * thread_number, where the thread number is a counter
+that starts at 0 and is incremented for each job. This option is useful if
+there are several jobs which are intended to operate on a file in parallel in
+disjoint segments, with even spacing between the starting points.
+.TP
 .BI fsync \fR=\fPint
 How many I/Os to perform before issuing an \fBfsync\fR\|(2) of dirty data.  If
 0, don't sync.  Default: 0.
