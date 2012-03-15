@@ -52,16 +52,16 @@ static void send_clicked(GtkWidget *widget, gpointer data);
 static struct button_spec {
 	const char *buttontext;
 	clickfunction f;
-	const char *tooltiptext;
-	const int start_insensitive;
+	const char *tooltiptext[2];
+	const int start_sensitive;
 } buttonspeclist[] = {
 #define CONNECT_BUTTON 0
 #define SEND_BUTTON 1
 #define START_JOB_BUTTON 2
-	{ "Connect", connect_clicked, "Connect to host", 0 },
-	{ "Send", send_clicked, "Send job description to host", 1 },
+	{ "Connect", connect_clicked, { "Disconnect from host", "Connect to host" }, 1 },
+	{ "Send", send_clicked, { "Send job description to host", NULL }, 0 },
 	{ "Start Job", start_job_clicked,
-		"Start the current job on the server", 1 },
+		{ "Start the current job on the server", NULL }, 0 },
 };
 
 struct probe_widget {
@@ -433,6 +433,39 @@ static void set_view_results_visible(struct gui *ui, int visible)
 	set_menu_entry_visible(ui, "/MainMenu/ViewMenu/Results", visible);
 }
 
+static const char *get_button_tooltip(struct button_spec *s, int sensitive)
+{
+	if (s->tooltiptext[sensitive])
+		return s->tooltiptext[sensitive];
+
+	return s->tooltiptext[0];
+}
+
+static GtkWidget *add_button(GtkWidget *buttonbox,
+			     struct button_spec *buttonspec, gpointer data)
+{
+	GtkWidget *button = gtk_button_new_with_label(buttonspec->buttontext);
+	gboolean sens = buttonspec->start_sensitive;
+
+	g_signal_connect(button, "clicked", G_CALLBACK(buttonspec->f), data);
+	gtk_box_pack_start(GTK_BOX(buttonbox), button, FALSE, FALSE, 3);
+
+	sens = buttonspec->start_sensitive;
+	gtk_widget_set_tooltip_text(button, get_button_tooltip(buttonspec, sens));
+	gtk_widget_set_sensitive(button, sens);
+
+	return button;
+}
+
+static void add_buttons(struct gui_entry *ge, struct button_spec *buttonlist,
+			int nbuttons)
+{
+	int i;
+
+	for (i = 0; i < nbuttons; i++)
+		ge->button[i] = add_button(ge->buttonbox, &buttonlist[i], ge);
+}
+
 /*
  * Update sensitivity of job buttons and job menu items, based on the
  * state of the client.
@@ -499,6 +532,7 @@ static void update_button_states(struct gui *ui, struct gui_entry *ge)
 	gtk_widget_set_sensitive(ge->button[SEND_BUTTON], send_state);
 	gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], start_state);
 	gtk_button_set_label(GTK_BUTTON(ge->button[CONNECT_BUTTON]), connect_str);
+	gtk_widget_set_tooltip_text(ge->button[CONNECT_BUTTON], get_button_tooltip(&buttonspeclist[CONNECT_BUTTON], connect_state));
 
 	set_menu_entry_visible(ui, "/MainMenu/JobMenu/Connect", connect_state);
 	set_menu_entry_text(ui, "/MainMenu/JobMenu/Connect", connect_str);
@@ -2091,28 +2125,6 @@ static void send_clicked(GtkWidget *widget, gpointer data)
 
 		gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], 1);
 	}
-}
-
-static GtkWidget *add_button(GtkWidget *buttonbox,
-			     struct button_spec *buttonspec, gpointer data)
-{
-	GtkWidget *button = gtk_button_new_with_label(buttonspec->buttontext);
-
-	g_signal_connect(button, "clicked", G_CALLBACK(buttonspec->f), data);
-	gtk_box_pack_start(GTK_BOX(buttonbox), button, FALSE, FALSE, 3);
-	gtk_widget_set_tooltip_text(button, buttonspec->tooltiptext);
-	gtk_widget_set_sensitive(button, !buttonspec->start_insensitive);
-
-	return button;
-}
-
-static void add_buttons(struct gui_entry *ge, struct button_spec *buttonlist,
-			int nbuttons)
-{
-	int i;
-
-	for (i = 0; i < nbuttons; i++)
-		ge->button[i] = add_button(ge->buttonbox, &buttonlist[i], ge);
 }
 
 static void on_info_bar_response(GtkWidget *widget, gint response,
