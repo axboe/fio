@@ -1909,7 +1909,8 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	gtk_combo_box_append_text(GTK_COMBO_BOX(ge->eta.names), (gchar *) o->name);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(ge->eta.names), 0);
 
-	multitext_add_entry(&ge->eta.iotype, ddir_str(o->td_ddir));
+	sprintf(tmp, "%s %s", o->odirect ? "direct" : "buffered", ddir_str(o->td_ddir));
+	multitext_add_entry(&ge->eta.iotype, tmp);
 
 	c1 = fio_uint_to_kmg(o->min_bs[DDIR_READ]);
 	c2 = fio_uint_to_kmg(o->max_bs[DDIR_WRITE]);
