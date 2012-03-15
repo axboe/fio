@@ -861,7 +861,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (!terse_output) {
 		if (!job_add_num) {
 			if (is_backend && !recursed)
-				fio_server_send_add_job(&td->o, td->io_ops->name);
+				fio_server_send_add_job(td);
 
 			if (!strcmp(td->io_ops->name, "cpuio")) {
 				log_info("%s: ioengine=cpu, cpuload=%u,"

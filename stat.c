@@ -956,6 +956,11 @@ void show_run_stats(void)
 			else
 				memset(ts->description, 0, FIO_JOBNAME_SIZE);
 
+			/*
+			 * If multiple entries in this group, this is
+			 * the first member.
+			 */
+			ts->thread_number = td->thread_number;
 			ts->groupid = td->groupid;
 
 			/*

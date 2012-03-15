@@ -66,8 +66,8 @@ struct thread_data {
 	void *eo;
 	char verror[FIO_VERROR_SIZE];
 	pthread_t thread;
-	int thread_number;
-	int groupid;
+	unsigned int thread_number;
+	unsigned int groupid;
 	struct thread_stat ts;
 
 	int client_type;

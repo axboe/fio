@@ -1461,6 +1461,7 @@ static void gfio_thread_status_op(struct fio_client *client,
 	sum_group_stats(&client_gs, &p->rs);
 
 	client_ts.members++;
+	client_ts.thread_number = p->ts.thread_number;
 	client_ts.groupid = p->ts.groupid;
 
 	if (++sum_stat_nr == sum_stat_clients) {
@@ -1788,6 +1789,8 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct gui_entry *ge = gc->ge;
 	char tmp[8];
 
+	p->thread_number = le32_to_cpu(p->thread_number);
+	p->groupid = le32_to_cpu(p->groupid);
 	convert_thread_options_to_cpu(o, &p->top);
 
 	gdk_threads_enter();

@@ -38,7 +38,7 @@ struct fio_net_int_cmd {
 };
 
 enum {
-	FIO_SERVER_VER			= 12,
+	FIO_SERVER_VER			= 13,
 
 	FIO_SERVER_MAX_FRAGMENT_PDU	= 1024,
 
@@ -119,6 +119,8 @@ struct cmd_end_pdu {
 };
 
 struct cmd_add_job_pdu {
+	uint32_t thread_number;
+	uint32_t groupid;
 	struct thread_options_pack top;
 };
 
@@ -131,6 +133,7 @@ struct cmd_text_pdu {
 };
 
 struct cmd_iolog_pdu {
+	uint32_t thread_number;
 	uint32_t nr_samples;
 	uint32_t log_type;
 	uint8_t name[FIO_NET_NAME_MAX];
@@ -161,9 +164,7 @@ extern void fio_net_cmd_crc_pdu(struct fio_net_cmd *, const void *);
 extern struct fio_net_cmd *fio_net_recv_cmd(int sk);
 
 extern int fio_send_iolog(struct thread_data *, struct io_log *, const char *);
-
-struct thread_options;
-extern void fio_server_send_add_job(struct thread_options *, const char *);
+extern void fio_server_send_add_job(struct thread_data *);
 
 extern int exit_backend;
 extern int fio_net_port;

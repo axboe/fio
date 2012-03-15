@@ -118,6 +118,7 @@ struct thread_stat {
 	char name[FIO_JOBNAME_SIZE];
 	char verror[FIO_VERROR_SIZE];
 	uint32_t error;
+	uint32_t thread_number;
 	uint32_t groupid;
 	uint32_t pid;
 	char description[FIO_JOBNAME_SIZE];

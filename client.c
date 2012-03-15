@@ -628,10 +628,11 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 {
 	int i, j;
 
-	dst->error	= le32_to_cpu(src->error);
-	dst->groupid	= le32_to_cpu(src->groupid);
-	dst->pid	= le32_to_cpu(src->pid);
-	dst->members	= le32_to_cpu(src->members);
+	dst->error		= le32_to_cpu(src->error);
+	dst->thread_number	= le32_to_cpu(src->thread_number);
+	dst->groupid		= le32_to_cpu(src->groupid);
+	dst->pid		= le32_to_cpu(src->pid);
+	dst->members		= le32_to_cpu(src->members);
 
 	for (i = 0; i < 2; i++) {
 		convert_io_stat(&dst->clat_stat[i], &src->clat_stat[i]);
@@ -719,6 +720,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 	sum_group_stats(&client_gs, &p->rs);
 
 	client_ts.members++;
+	client_ts.thread_number = p->ts.thread_number;
 	client_ts.groupid = p->ts.groupid;
 
 	if (++sum_stat_nr == sum_stat_clients) {
@@ -981,6 +983,7 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 
 	total = nr_samples * sizeof(struct io_sample);
 	ret = malloc(total + sizeof(*pdu));
+	ret->thread_number = le32_to_cpu(pdu->thread_number);
 	ret->nr_samples = nr_samples;
 	ret->log_type = le32_to_cpu(pdu->log_type);
 	strcpy((char *) ret->name, (char *) pdu->name);

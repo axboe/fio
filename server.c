@@ -752,10 +752,11 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	strcpy(p.ts.verror, ts->verror);
 	strcpy(p.ts.description, ts->description);
 
-	p.ts.error	= cpu_to_le32(ts->error);
-	p.ts.groupid	= cpu_to_le32(ts->groupid);
-	p.ts.pid	= cpu_to_le32(ts->pid);
-	p.ts.members	= cpu_to_le32(ts->members);
+	p.ts.error		= cpu_to_le32(ts->error);
+	p.ts.thread_number	= cpu_to_le32(ts->thread_number);
+	p.ts.groupid		= cpu_to_le32(ts->groupid);
+	p.ts.pid		= cpu_to_le32(ts->pid);
+	p.ts.members		= cpu_to_le32(ts->members);
 
 	for (i = 0; i < 2; i++) {
 		convert_io_stat(&p.ts.clat_stat[i], &ts->clat_stat[i]);
@@ -910,6 +911,7 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	void *out_pdu;
 	int i, ret = 0;
 
+	pdu.thread_number = cpu_to_le32(td->thread_number);
 	pdu.nr_samples = __cpu_to_le32(log->nr_samples);
 	pdu.log_type = cpu_to_le32(log->log_type);
 	strcpy((char *) pdu.name, name);
@@ -979,12 +981,14 @@ err:
 	return ret;
 }
 
-void fio_server_send_add_job(struct thread_options *o, const char *ioengine)
+void fio_server_send_add_job(struct thread_data *td)
 {
 	struct cmd_add_job_pdu pdu;
 
 	memset(&pdu, 0, sizeof(pdu));
-	convert_thread_options_to_net(&pdu.top, o);
+	pdu.thread_number = cpu_to_le32(td->thread_number);
+	pdu.groupid = cpu_to_le32(td->groupid);
+	convert_thread_options_to_net(&pdu.top, &td->o);
 
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_ADD_JOB, &pdu, sizeof(pdu), 0);
 }
