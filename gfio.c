@@ -172,10 +172,12 @@ struct gui_entry {
 	gint page_num;
 	unsigned int state;
 
+	struct graph *clat_graph;
+	struct graph *lat_bucket_graph;
+
 	struct gfio_client *client;
 	int nr_job_files;
 	char **job_files;
-	struct graph *clat_graph;
 };
 
 struct end_results {
@@ -654,7 +656,7 @@ static GtkWidget *gfio_output_clat_percentiles(unsigned int *ovals,
 	return tree_view;
 }
 
-static int on_expose_clat_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
+static int on_expose_lat_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	struct graph *g = p;
 	cairo_t *cr;
@@ -673,8 +675,8 @@ static int on_expose_clat_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p
 	return FALSE;
 }
 
-static gint on_config_clat_drawing_area(GtkWidget *w, GdkEventConfigure *event,
-				   gpointer data)
+static gint on_config_lat_drawing_area(GtkWidget *w, GdkEventConfigure *event,
+				       gpointer data)
 {
 	struct graph *g = data;
 
@@ -694,6 +696,7 @@ static void gfio_show_clat_percentiles(struct gfio_client *gc,
 	unsigned int *ovals, len, minv, maxv, scale_down;
 	const char *base;
 	GtkWidget *tree_view, *frame, *hbox, *drawing_area, *completion_vbox;
+	struct gui_entry *ge = gc->ge;
 	char tmp[64];
 
 	len = calc_clat_percentiles(io_u_plat, nr, plist, &ovals, &maxv, &minv);
@@ -714,7 +717,7 @@ static void gfio_show_clat_percentiles(struct gfio_client *gc,
 
 	sprintf(tmp, "Completion percentiles (%s)", base);
 	tree_view = gfio_output_clat_percentiles(ovals, plist, len, base, scale_down);
-	gc->ge->clat_graph = setup_clat_graph(tmp, ovals, plist, len, 700.0, 300.0);
+	ge->clat_graph = setup_clat_graph(tmp, ovals, plist, len, 700.0, 300.0);
 
 	frame = gtk_frame_new(tmp);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
@@ -727,10 +730,8 @@ static void gfio_show_clat_percentiles(struct gfio_client *gc,
 	gtk_widget_set_size_request(GTK_WIDGET(drawing_area), 700, 300);
 	gtk_widget_modify_bg(drawing_area, GTK_STATE_NORMAL, &white);
 	gtk_container_add(GTK_CONTAINER(completion_vbox), drawing_area);
-	g_signal_connect(G_OBJECT(drawing_area), "expose_event",
-				G_CALLBACK(on_expose_clat_drawing_area), gc->ge->clat_graph);
-	g_signal_connect(G_OBJECT(drawing_area), "configure_event",
-				G_CALLBACK(on_config_clat_drawing_area), gc->ge->clat_graph);
+	g_signal_connect(G_OBJECT(drawing_area), "expose_event", G_CALLBACK(on_expose_lat_drawing_area), ge->clat_graph);
+	g_signal_connect(G_OBJECT(drawing_area), "configure_event", G_CALLBACK(on_config_lat_drawing_area), ge->clat_graph);
 
 	gtk_box_pack_start(GTK_BOX(hbox), tree_view, TRUE, FALSE, 3);
 out:
@@ -898,25 +899,35 @@ static void gfio_show_ddir_status(struct gfio_client *gc, GtkWidget *mbox,
 	free(iops_p);
 }
 
-static GtkWidget *gfio_output_lat_buckets(double *lat, unsigned int num,
-					  const char **labels)
+static struct graph *setup_lat_bucket_graph(const char *title, double *lat,
+					    const char **labels,
+					    unsigned int len,
+					    double xdim, double ydim)
+{
+	struct graph *g;
+	int i;
+
+	g = graph_new(xdim, ydim, gfio_graph_font);
+	graph_title(g, title);
+	graph_x_title(g, "Buckets");
+
+	for (i = 0; i < len; i++) {
+		graph_add_label(g, labels[i]);
+		graph_add_data(g, labels[i], lat[i]);
+	}
+
+	return g;
+}
+
+static GtkWidget *gfio_output_lat_buckets(double *lat, const char **labels,
+					  int num)
 {
 	GtkWidget *tree_view;
 	GtkTreeSelection *selection;
 	GtkListStore *model;
 	GtkTreeIter iter;
 	GType *types;
-	int i, skipped;
-
-	/*
-	 * Check if all are empty, in which case don't bother
-	 */
-	for (i = 0, skipped = 0; i < num; i++)
-		if (lat[i] <= 0.0)
-			skipped++;
-
-	if (skipped == num)
-		return NULL;
+	int i;
 
 	types = malloc(num * sizeof(GType));
 
@@ -955,39 +966,60 @@ static GtkWidget *gfio_output_lat_buckets(double *lat, unsigned int num,
 	return tree_view;
 }
 
-static void gfio_show_latency_buckets(GtkWidget *vbox, struct thread_stat *ts)
+static void gfio_show_latency_buckets(struct gfio_client *gc, GtkWidget *vbox,
+				      struct thread_stat *ts)
 {
-	GtkWidget *box, *frame, *tree_view;
-	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
-	double io_u_lat_m[FIO_IO_U_LAT_M_NR];
-	const char *uranges[] = { "2", "4", "10", "20", "50", "100",
-				  "250", "500", "750", "1000", };
-	const char *mranges[] = { "2", "4", "10", "20", "50", "100",
-				  "250", "500", "750", "1000", "2000",
-				  ">= 2000", };
+	double io_u_lat[FIO_IO_U_LAT_U_NR + FIO_IO_U_LAT_M_NR];
+	const char *ranges[] = { "2u", "4u", "10u", "20u", "50u", "100u",
+				 "250u", "500u", "750u", "1m", "2m",
+				 "4m", "10m", "20m", "50m", "100m",
+				 "250m", "500m", "750m", "1s", "2s", ">= 2s" };
+	int start, end, i;
+	const int total = FIO_IO_U_LAT_U_NR + FIO_IO_U_LAT_M_NR;
+	GtkWidget *frame, *tree_view, *hbox, *completion_vbox, *drawing_area;
+	struct gui_entry *ge = gc->ge;
 
-	stat_calc_lat_u(ts, io_u_lat_u);
-	stat_calc_lat_m(ts, io_u_lat_m);
+	stat_calc_lat_u(ts, io_u_lat);
+	stat_calc_lat_m(ts, &io_u_lat[FIO_IO_U_LAT_U_NR]);
 
-	tree_view = gfio_output_lat_buckets(io_u_lat_u, FIO_IO_U_LAT_U_NR, uranges);
-	if (tree_view) {
-		frame = gtk_frame_new("Latency buckets (usec)");
-		gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+	/*
+	 * Found out which first bucket has entries, and which last bucket
+	 */
+	start = end = -1U;
+	for (i = 0; i < total; i++) {
+		if (io_u_lat[i] == 0.00)
+			continue;
 
-		box = gtk_hbox_new(FALSE, 3);
-		gtk_container_add(GTK_CONTAINER(frame), box);
-		gtk_box_pack_start(GTK_BOX(box), tree_view, TRUE, FALSE, 3);
+		if (start == -1U)
+			start = i;
+		end = i;
 	}
 
-	tree_view = gfio_output_lat_buckets(io_u_lat_m, FIO_IO_U_LAT_M_NR, mranges);
-	if (tree_view) {
-		frame = gtk_frame_new("Latency buckets (msec)");
-		gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+	/*
+	 * No entries...
+	 */
+	if (start == -1U)
+		return;
+		
+	tree_view = gfio_output_lat_buckets(&io_u_lat[start], &ranges[start], end - start + 1);
+	ge->lat_bucket_graph = setup_lat_bucket_graph("Latency Buckets", &io_u_lat[start], &ranges[start], end - start + 1, 700.0, 300.0);
 
-		box = gtk_hbox_new(FALSE, 3);
-		gtk_container_add(GTK_CONTAINER(frame), box);
-		gtk_box_pack_start(GTK_BOX(box), tree_view, TRUE, FALSE, 3);
-	}
+	frame = gtk_frame_new("Latency buckets");
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+
+	completion_vbox = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), completion_vbox);
+	hbox = gtk_hbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(completion_vbox), hbox);
+
+	drawing_area = gtk_drawing_area_new();
+	gtk_widget_set_size_request(GTK_WIDGET(drawing_area), 700, 300);
+	gtk_widget_modify_bg(drawing_area, GTK_STATE_NORMAL, &white);
+	gtk_container_add(GTK_CONTAINER(completion_vbox), drawing_area);
+	g_signal_connect(G_OBJECT(drawing_area), "expose_event", G_CALLBACK(on_expose_lat_drawing_area), ge->lat_bucket_graph);
+        g_signal_connect(G_OBJECT(drawing_area), "configure_event", G_CALLBACK(on_config_lat_drawing_area), ge->lat_bucket_graph);
+
+	gtk_box_pack_start(GTK_BOX(hbox), tree_view, TRUE, FALSE, 3);
 }
 
 static void gfio_show_cpu_usage(GtkWidget *vbox, struct thread_stat *ts)
@@ -1268,7 +1300,7 @@ static void __gfio_display_end_results(GtkWidget *win, struct gfio_client *gc,
 	if (ts->io_bytes[DDIR_WRITE])
 		gfio_show_ddir_status(gc, vbox, rs, ts, DDIR_WRITE);
 
-	gfio_show_latency_buckets(vbox, ts);
+	gfio_show_latency_buckets(gc, vbox, ts);
 	gfio_show_cpu_usage(vbox, ts);
 	gfio_show_io_depths(vbox, ts);
 }
