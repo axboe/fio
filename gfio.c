@@ -189,7 +189,7 @@ struct gfio_client {
 	struct gui_entry *ge;
 	struct fio_client *client;
 	GtkWidget *results_widget;
-	GtkWidget *disk_util_frame;
+	GtkWidget *disk_util_vbox;
 	GtkWidget *err_entry;
 	unsigned int job_added;
 	struct thread_options o;
@@ -893,7 +893,6 @@ static void gfio_show_ddir_status(struct gfio_client *gc, GtkWidget *mbox,
 	if (ts->clat_percentiles)
 		gfio_show_clat_percentiles(gc, main_vbox, ts, ddir);
 
-
 	free(io_p);
 	free(bw_p);
 	free(iops_p);
@@ -1307,18 +1306,19 @@ static void __gfio_display_end_results(GtkWidget *win, struct gfio_client *gc,
 
 static void gfio_display_end_results(struct gfio_client *gc)
 {
-	GtkWidget *res_win;
+	struct gui_entry *ge = gc->ge;
+	GtkWidget *res_notebook;
 	int i;
 
-	res_win = get_results_window(gc->ge);
+	res_notebook = get_results_window(ge);
 
 	for (i = 0; i < gc->nr_results; i++) {
 		struct end_results *e = &gc->results[i];
 
-		__gfio_display_end_results(res_win, gc, &e->ts, &e->gs);
+		__gfio_display_end_results(res_notebook, gc, &e->ts, &e->gs);
 	}
 
-	gtk_widget_show_all(gc->ge->results_window);
+	gtk_widget_show_all(ge->results_window);
 }
 
 static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
@@ -1374,13 +1374,16 @@ static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd
 	if (!gc->results_widget)
 		goto out;
 
-	if (!gc->disk_util_frame) {
-		gc->disk_util_frame = gtk_frame_new("Disk utilization");
-		gtk_box_pack_start(GTK_BOX(gc->results_widget), gc->disk_util_frame, FALSE, FALSE, 5);
+	if (!gc->disk_util_vbox) {
+		frame = gtk_frame_new("Disk utilization");
+		gtk_box_pack_start(GTK_BOX(gc->results_widget), frame, FALSE, FALSE, 5);
+		vbox = gtk_vbox_new(FALSE, 3);
+		gtk_container_add(GTK_CONTAINER(frame), vbox);
+		gc->disk_util_vbox = vbox;
 	}
 
 	vbox = gtk_vbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(gc->disk_util_frame), vbox);
+	gtk_container_add(GTK_CONTAINER(gc->disk_util_vbox), vbox);
 
 	frame = gtk_frame_new((char *) p->dus.name);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 2);
