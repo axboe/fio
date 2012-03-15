@@ -81,6 +81,7 @@ struct multitext_widget {
 struct eta_widget {
 	GtkWidget *names;
 	struct multitext_widget iotype;
+	struct multitext_widget bs;
 	struct multitext_widget ioengine;
 	struct multitext_widget iodepth;
 	GtkWidget *jobs;
@@ -300,6 +301,7 @@ static void clear_ge_ui_info(struct gui_entry *ge)
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.name), "");
 #endif
 	multitext_update_entry(&ge->eta.iotype, 0, "");
+	multitext_update_entry(&ge->eta.bs, 0, "");
 	multitext_update_entry(&ge->eta.ioengine, 0, "");
 	multitext_update_entry(&ge->eta.iodepth, 0, "");
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.jobs), "");
@@ -1893,7 +1895,8 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct gfio_client *gc = client->client_data;
 	struct thread_options *o = &gc->o;
 	struct gui_entry *ge = gc->ge;
-	char tmp[8];
+	char *c1, *c2, *c3, *c4;
+	char tmp[80];
 
 	p->thread_number = le32_to_cpu(p->thread_number);
 	p->groupid = le32_to_cpu(p->groupid);
@@ -1907,12 +1910,25 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	gtk_combo_box_set_active(GTK_COMBO_BOX(ge->eta.names), 0);
 
 	multitext_add_entry(&ge->eta.iotype, ddir_str(o->td_ddir));
+
+	c1 = fio_uint_to_kmg(o->min_bs[DDIR_READ]);
+	c2 = fio_uint_to_kmg(o->max_bs[DDIR_WRITE]);
+	c3 = fio_uint_to_kmg(o->min_bs[DDIR_READ]);
+	c4 = fio_uint_to_kmg(o->max_bs[DDIR_WRITE]);
+	sprintf(tmp, "%s-%s/%s-%s", c1, c2, c3, c4);
+	free(c1);
+	free(c2);
+	free(c3);
+	free(c4);
+	multitext_add_entry(&ge->eta.bs, tmp);
+
 	multitext_add_entry(&ge->eta.ioengine, (const char *) o->ioengine);
 
 	sprintf(tmp, "%u", o->iodepth);
 	multitext_add_entry(&ge->eta.iodepth, tmp);
 
 	multitext_set_entry(&ge->eta.iotype, 0);
+	multitext_set_entry(&ge->eta.bs, 0);
 	multitext_set_entry(&ge->eta.ioengine, 0);
 	multitext_set_entry(&ge->eta.iodepth, 0);
 
@@ -2954,6 +2970,7 @@ static void combo_entry_changed(GtkComboBox *box, gpointer data)
 	index = gtk_combo_box_get_active(box);
 
 	multitext_set_entry(&ge->eta.iotype, index);
+	multitext_set_entry(&ge->eta.bs, index);
 	multitext_set_entry(&ge->eta.ioengine, index);
 	multitext_set_entry(&ge->eta.iodepth, index);
 }
@@ -2963,6 +2980,7 @@ static void combo_entry_destroy(GtkWidget *widget, gpointer data)
 	struct gui_entry *ge = (struct gui_entry *) data;
 
 	multitext_free(&ge->eta.iotype);
+	multitext_free(&ge->eta.bs);
 	multitext_free(&ge->eta.ioengine);
 	multitext_free(&ge->eta.iodepth);
 }
@@ -2998,6 +3016,7 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	g_signal_connect(ge->eta.names, "changed", G_CALLBACK(combo_entry_changed), ge);
 	g_signal_connect(ge->eta.names, "destroy", G_CALLBACK(combo_entry_destroy), ge);
 	ge->eta.iotype.entry = new_info_entry_in_frame(probe_box, "IO");
+	ge->eta.bs.entry = new_info_entry_in_frame(probe_box, "Blocksize (Read/Write)");
 	ge->eta.ioengine.entry = new_info_entry_in_frame(probe_box, "IO Engine");
 	ge->eta.iodepth.entry = new_info_entry_in_frame(probe_box, "IO Depth");
 	ge->eta.jobs = new_info_entry_in_frame(probe_box, "Jobs");
