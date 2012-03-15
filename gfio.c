@@ -175,6 +175,7 @@ struct gui_entry {
 	struct gfio_client *client;
 	int nr_job_files;
 	char **job_files;
+	struct graph *clat_graph;
 };
 
 struct gfio_client {
@@ -545,6 +546,29 @@ static void gfio_ui_setup_log(struct gui *ui)
 	ui->log_tree = tree_view;
 }
 
+static struct graph *setup_clat_graph(char *title, unsigned int *ovals,
+				      fio_fp64_t *plist,
+				      unsigned int len,
+				      double xdim, double ydim)
+{
+	struct graph *g;
+	int i;
+
+	g = graph_new(xdim, ydim, gfio_graph_font);
+	graph_title(g, title);
+	graph_x_title(g, "Percentile");
+
+	for (i = 0; i < len; i++) {
+		char fbuf[8];
+
+		sprintf(fbuf, "%2.2f%%", plist[i].u.f);
+		graph_add_label(g, fbuf);
+		graph_add_data(g, fbuf, (double) ovals[i]);
+	}
+
+	return g;
+}
+
 static GtkWidget *gfio_output_clat_percentiles(unsigned int *ovals,
 					       fio_fp64_t *plist,
 					       unsigned int len,
@@ -590,7 +614,38 @@ static GtkWidget *gfio_output_clat_percentiles(unsigned int *ovals,
 	return tree_view;
 }
 
-static void gfio_show_clat_percentiles(GtkWidget *vbox, struct thread_stat *ts,
+static int on_expose_clat_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
+{
+	struct graph *g = p;
+	cairo_t *cr;
+
+	cr = gdk_cairo_create(w->window);
+#if 0
+	if (graph_has_tooltips(g)) {
+		g_object_set(w, "has-tooltip", TRUE, NULL);
+		g_signal_connect(w, "query-tooltip", G_CALLBACK(clat_graph_tooltip), g);
+	}
+#endif
+	cairo_set_source_rgb(cr, 0, 0, 0);
+	bar_graph_draw(g, cr);
+	cairo_destroy(cr);
+
+	return FALSE;
+}
+
+static gint on_config_clat_drawing_area(GtkWidget *w, GdkEventConfigure *event,
+				   gpointer data)
+{
+	struct graph *g = data;
+
+	graph_set_size(g, w->allocation.width, w->allocation.height);
+	graph_set_size(g, w->allocation.width, w->allocation.height);
+	graph_set_position(g, 0, 0);
+	return TRUE;
+}
+
+static void gfio_show_clat_percentiles(struct gfio_client *gc,
+				       GtkWidget *vbox, struct thread_stat *ts,
 				       int ddir)
 {
 	unsigned int *io_u_plat = ts->io_u_plat[ddir];
@@ -598,7 +653,7 @@ static void gfio_show_clat_percentiles(GtkWidget *vbox, struct thread_stat *ts,
 	fio_fp64_t *plist = ts->percentile_list;
 	unsigned int *ovals, len, minv, maxv, scale_down;
 	const char *base;
-	GtkWidget *tree_view, *frame, *hbox;
+	GtkWidget *tree_view, *frame, *hbox, *drawing_area, *completion_vbox;
 	char tmp[64];
 
 	len = calc_clat_percentiles(io_u_plat, nr, plist, &ovals, &maxv, &minv);
@@ -617,14 +672,25 @@ static void gfio_show_clat_percentiles(GtkWidget *vbox, struct thread_stat *ts,
 		base = "usec";
 	}
 
-	tree_view = gfio_output_clat_percentiles(ovals, plist, len, base, scale_down);
-
 	sprintf(tmp, "Completion percentiles (%s)", base);
+	tree_view = gfio_output_clat_percentiles(ovals, plist, len, base, scale_down);
+	gc->ge->clat_graph = setup_clat_graph(tmp, ovals, plist, len, 700.0, 300.0);
+
 	frame = gtk_frame_new(tmp);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
 
+	completion_vbox = gtk_vbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), completion_vbox);
 	hbox = gtk_hbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(frame), hbox);
+	gtk_container_add(GTK_CONTAINER(completion_vbox), hbox);
+	drawing_area = gtk_drawing_area_new();
+	gtk_widget_set_size_request(GTK_WIDGET(drawing_area), 700, 300);
+	gtk_widget_modify_bg(drawing_area, GTK_STATE_NORMAL, &white);
+	gtk_container_add(GTK_CONTAINER(completion_vbox), drawing_area);
+	g_signal_connect(G_OBJECT(drawing_area), "expose_event",
+				G_CALLBACK(on_expose_clat_drawing_area), gc->ge->clat_graph);
+	g_signal_connect(G_OBJECT(drawing_area), "configure_event",
+				G_CALLBACK(on_config_clat_drawing_area), gc->ge->clat_graph);
 
 	gtk_box_pack_start(GTK_BOX(hbox), tree_view, TRUE, FALSE, 3);
 out:
@@ -673,7 +739,8 @@ static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long min,
 #define GFIO_SLAT	2
 #define GFIO_LAT	4
 
-static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
+static void gfio_show_ddir_status(struct gfio_client *gc, GtkWidget *mbox,
+				  struct group_run_stats *rs,
 				  struct thread_stat *ts, int ddir)
 {
 	const char *ddir_label[2] = { "Read", "Write" };
@@ -783,7 +850,7 @@ static void gfio_show_ddir_status(GtkWidget *mbox, struct group_run_stats *rs,
 	}
 
 	if (ts->clat_percentiles)
-		gfio_show_clat_percentiles(main_vbox, ts, ddir);
+		gfio_show_clat_percentiles(gc, main_vbox, ts, ddir);
 
 
 	free(io_p);
@@ -1150,9 +1217,9 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 	entry_set_int_value(entry, ts->pid);
 
 	if (ts->io_bytes[DDIR_READ])
-		gfio_show_ddir_status(vbox, rs, ts, DDIR_READ);
+		gfio_show_ddir_status(gc, vbox, rs, ts, DDIR_READ);
 	if (ts->io_bytes[DDIR_WRITE])
-		gfio_show_ddir_status(vbox, rs, ts, DDIR_WRITE);
+		gfio_show_ddir_status(gc, vbox, rs, ts, DDIR_WRITE);
 
 	gfio_show_latency_buckets(vbox, ts);
 	gfio_show_cpu_usage(vbox, ts);
