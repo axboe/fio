@@ -2847,9 +2847,9 @@ static const gchar *ui_string = " \
 		<menubar name=\"MainMenu\"> \
 			<menu name=\"FileMenu\" action=\"FileMenuAction\"> \
 				<menuitem name=\"New\" action=\"NewFile\" /> \
+				<menuitem name=\"Open\" action=\"OpenFile\" /> \
 				<menuitem name=\"Close\" action=\"CloseFile\" /> \
 				<separator name=\"Separator1\"/> \
-				<menuitem name=\"Open\" action=\"OpenFile\" /> \
 				<menuitem name=\"Save\" action=\"SaveFile\" /> \
 				<separator name=\"Separator2\"/> \
 				<menuitem name=\"Preferences\" action=\"Preferences\" /> \
