@@ -1462,11 +1462,15 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 			    struct group_run_stats *rs)
 {
 	struct gfio_client *gc = client->client_data;
+	struct gui_entry *ge = gc->ge;
 
 	gfio_add_end_results(gc, ts, rs);
 
 	gdk_threads_enter();
-	gfio_display_end_results(gc);
+	if (ge->results_window)
+		__gfio_display_end_results(ge->results_notebook, gc, ts, rs);
+	else
+		gfio_display_end_results(gc);
 	gdk_threads_leave();
 }
 
@@ -1502,6 +1506,7 @@ static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd
 {
 	struct cmd_du_pdu *p = (struct cmd_du_pdu *) cmd->payload;
 	struct gfio_client *gc = client->client_data;
+	struct gui_entry *ge = gc->ge;
 	unsigned int nr = gc->nr_du;
 
 	gc->du = realloc(gc->du, (nr + 1) * sizeof(struct cmd_du_pdu));
@@ -1509,7 +1514,10 @@ static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd
 	gc->nr_du++;
 
 	gdk_threads_enter();
-	gfio_disk_util_show(gc);
+	if (ge->results_window)
+		__gfio_disk_util_show(ge->results_notebook, gc, p);
+	else
+		gfio_disk_util_show(gc);
 	gdk_threads_leave();
 }
 
