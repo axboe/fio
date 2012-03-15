@@ -178,6 +178,11 @@ struct gui_entry {
 	struct graph *clat_graph;
 };
 
+struct end_results {
+	struct group_run_stats gs;
+	struct thread_stat ts;
+};
+
 struct gfio_client {
 	struct gui_entry *ge;
 	struct fio_client *client;
@@ -186,6 +191,9 @@ struct gfio_client {
 	GtkWidget *err_entry;
 	unsigned int job_added;
 	struct thread_options o;
+
+	struct end_results *results;
+	unsigned int nr_results;
 };
 
 static void gfio_update_thread_status(struct gui_entry *ge, char *status_message, double perc);
@@ -388,6 +396,40 @@ static void show_info_dialog(struct gui *ui, const char *title,
 	gtk_widget_destroy(dialog);
 }
 
+static void set_menu_entry_text(struct gui *ui, const char *path,
+				const char *text)
+{
+	GtkWidget *w;
+
+	w = gtk_ui_manager_get_widget(ui->uimanager, path);
+	if (w)
+		gtk_menu_item_set_label(GTK_MENU_ITEM(w), text);
+	else
+		fprintf(stderr, "gfio: can't find path %s\n", path);
+}
+
+
+static void set_menu_entry_visible(struct gui *ui, const char *path, int show)
+{
+	GtkWidget *w;
+
+	w = gtk_ui_manager_get_widget(ui->uimanager, path);
+	if (w)
+		gtk_widget_set_sensitive(w, show);
+	else
+		fprintf(stderr, "gfio: can't find path %s\n", path);
+}
+
+static void set_job_menu_visible(struct gui *ui, int visible)
+{
+	set_menu_entry_visible(ui, "/MainMenu/JobMenu", visible);
+}
+
+static void set_view_results_visible(struct gui *ui, int visible)
+{
+	set_menu_entry_visible(ui, "/MainMenu/ViewMenu/Results", visible);
+}
+
 /*
  * Update sensitivity of job buttons and job menu items, based on the
  * state of the client.
@@ -396,7 +438,6 @@ static void update_button_states(struct gui *ui, struct gui_entry *ge)
 {
 	unsigned int connect_state, send_state, start_state, edit_state;
 	const char *connect_str = NULL;
-	GtkWidget *w;
 
 	switch (ge->state) {
 	default: {
@@ -456,18 +497,17 @@ static void update_button_states(struct gui *ui, struct gui_entry *ge)
 	gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], start_state);
 	gtk_button_set_label(GTK_BUTTON(ge->button[CONNECT_BUTTON]), connect_str);
 
-	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Connect");
-	gtk_widget_set_sensitive(w, connect_state);
-	gtk_menu_item_set_label(GTK_MENU_ITEM(w), connect_str);
+	set_menu_entry_visible(ui, "/MainMenu/JobMenu/Connect", connect_state);
+	set_menu_entry_text(ui, "/MainMenu/JobMenu/Connect", connect_str);
 
-	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Edit job");
-	gtk_widget_set_sensitive(w, edit_state);
+	set_menu_entry_visible(ui, "/MainMenu/JobMenu/Edit job", edit_state);
+	set_menu_entry_visible(ui, "/MainMenu/JobMenu/Send job", send_state);
+	set_menu_entry_visible(ui, "/MainMenu/JobMenu/Start job", start_state);
 
-	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Send job");
-	gtk_widget_set_sensitive(w, send_state);
-
-	w = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu/Start job");
-	gtk_widget_set_sensitive(w, start_state);
+	if (ge->client && ge->client->nr_results)
+		set_view_results_visible(ui, 1);
+	else
+		set_view_results_visible(ui, 0);
 }
 
 static void gfio_set_state(struct gui_entry *ge, unsigned int state)
@@ -1176,15 +1216,22 @@ static GtkWidget *get_results_window(struct gui_entry *ge)
 	return ge->results_notebook;
 }
 
-static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
-			    struct group_run_stats *rs)
+static void gfio_add_end_results(struct gfio_client *gc, struct thread_stat *ts,
+				 struct group_run_stats *rs)
 {
-	GtkWidget *res_win, *box, *vbox, *entry, *scroll;
-	struct gfio_client *gc = client->client_data;
+	unsigned int nr = gc->nr_results;
 
-	gdk_threads_enter();
+	gc->results = realloc(gc->results, (nr + 1) * sizeof(struct end_results));
+	memcpy(&gc->results[nr].ts, ts, sizeof(*ts));
+	memcpy(&gc->results[nr].gs, rs, sizeof(*rs));
+	gc->nr_results++;
+}
 
-	res_win = get_results_window(gc->ge);
+static void __gfio_display_end_results(GtkWidget *win, struct gfio_client *gc,
+				       struct thread_stat *ts,
+				       struct group_run_stats *rs)
+{
+	GtkWidget *box, *vbox, *entry, *scroll;
 
 	scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_container_set_border_width(GTK_CONTAINER(scroll), 5);
@@ -1197,7 +1244,7 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), vbox);
 
-	gtk_notebook_append_page(GTK_NOTEBOOK(res_win), scroll, gtk_label_new(ts->name));
+	gtk_notebook_append_page(GTK_NOTEBOOK(win), scroll, gtk_label_new(ts->name));
 
 	gc->results_widget = vbox;
 
@@ -1224,8 +1271,33 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 	gfio_show_latency_buckets(vbox, ts);
 	gfio_show_cpu_usage(vbox, ts);
 	gfio_show_io_depths(vbox, ts);
+}
+
+static void gfio_display_end_results(struct gfio_client *gc)
+{
+	GtkWidget *res_win;
+	int i;
+
+	res_win = get_results_window(gc->ge);
+
+	for (i = 0; i < gc->nr_results; i++) {
+		struct end_results *e = &gc->results[i];
+
+		__gfio_display_end_results(res_win, gc, &e->ts, &e->gs);
+	}
 
 	gtk_widget_show_all(gc->ge->results_window);
+}
+
+static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
+			    struct group_run_stats *rs)
+{
+	struct gfio_client *gc = client->client_data;
+
+	gfio_add_end_results(gc, ts, rs);
+
+	gdk_threads_enter();
+	gfio_display_end_results(gc);
 	gdk_threads_leave();
 }
 
@@ -2504,6 +2576,25 @@ static void start_job_entry(GtkWidget *w, gpointer data)
 		start_job_clicked(w, ge);
 }
 
+static void view_results(GtkWidget *w, gpointer data)
+{
+	struct gui *ui = (struct gui *) data;
+	struct gfio_client *gc;
+	struct gui_entry *ge;
+
+	ge = get_ge_from_cur_tab(ui);
+	if (!ge)
+		return;
+
+	if (ge->results_window)
+		return;
+
+	gc = ge->client;
+	if (gc && gc->nr_results)
+		gfio_display_end_results(gc);
+}
+
+
 static void __update_graph_limits(struct gfio_graphs *g)
 {
 	line_graph_set_data_count_limit(g->iops_graph, gfio_graph_limit);
@@ -2665,6 +2756,7 @@ static GtkActionEntry menu_items[] = {
 	{ "SaveFile", GTK_STOCK_SAVE, NULL,   "<Control>S", NULL, G_CALLBACK(file_save) },
 	{ "Preferences", GTK_STOCK_PREFERENCES, NULL, "<Control>p", NULL, G_CALLBACK(preferences) },
 	{ "ViewLog", NULL, "Log", "<Control>l", NULL, G_CALLBACK(view_log) },
+	{ "ViewResults", NULL, "Results", "<Control>R", NULL, G_CALLBACK(view_results) },
 	{ "ConnectJob", NULL, "Connect", "<Control>E", NULL, G_CALLBACK(connect_job_entry) },
 	{ "EditJob", NULL, "Edit job", "<Control>E", NULL, G_CALLBACK(edit_job_entry) },
 	{ "SendJob", NULL, "Send job", "<Control>X", NULL, G_CALLBACK(send_job_entry) },
@@ -2699,6 +2791,8 @@ static const gchar *ui_string = " \
 				<menuitem name=\"Start job\" action=\"StartJob\" /> \
 			</menu>\
 			<menu name=\"ViewMenu\" action=\"ViewMenuAction\"> \
+				<menuitem name=\"Results\" action=\"ViewResults\" /> \
+				<separator name=\"Separator7\"/> \
 				<menuitem name=\"Log\" action=\"ViewLog\" /> \
 			</menu>\
 			<menu name=\"Help\" action=\"HelpMenuAction\"> \
@@ -2707,14 +2801,6 @@ static const gchar *ui_string = " \
 		</menubar> \
 	</ui> \
 ";
-
-static void set_job_menu_visible(struct gui *ui, int visible)
-{
-	GtkWidget *job;
-
-	job = gtk_ui_manager_get_widget(ui->uimanager, "/MainMenu/JobMenu");
-	gtk_widget_set_sensitive(job, visible);
-}
 
 static GtkWidget *get_menubar_menu(GtkWidget *window, GtkUIManager *ui_manager,
 				   struct gui *ui)
@@ -2953,6 +3039,7 @@ static gboolean notebook_switch_page(GtkNotebook *notebook, GtkWidget *widget,
 
 	if (!page) {
 		set_job_menu_visible(ui, 0);
+		set_view_results_visible(ui, 0);
 		return TRUE;
 	}
 
