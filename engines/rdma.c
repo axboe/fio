@@ -674,7 +674,8 @@ static int fio_rdmaio_recv(struct thread_data *td, struct io_u **io_us,
 		rdma_poll_wait(td, IBV_WC_RECV);
 
 		dprint(FD_IO, "fio: recv FINISH message\n");
-		exit(0);
+		td->done = 1;
+		return 0;
 	}
 
 	return i;
