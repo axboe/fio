@@ -842,7 +842,7 @@ static int xy_match(struct xyvalue *xy, int x, int y)
 	int xdiff = abs(xy->gx - x);
 	int ydiff = abs(xy->gy - y);
 
-	return xdiff <= 20 && ydiff <= 10;
+	return xdiff <= 10 && ydiff <= 10;
 }
 
 const char *graph_find_tooltip(struct graph *g, int x, int y)
