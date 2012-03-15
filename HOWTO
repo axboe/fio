@@ -488,6 +488,22 @@ scramble_buffers=bool	If refill_buffers is too costly and the target is
 		block compression attempts, but it will stop naive dedupe of
 		blocks. Default: true.
 
+buffer_compress_percentage=int	If this is set, then fio will attempt to
+		provide IO buffer content (on WRITEs) that compress to
+		the specified level. Fio does this by providing a mix of
+		random data and zeroes. Note that this is per block size
+		unit, for file/disk wide compression level that matches
+		this setting, you'll also want to set refill_buffers.
+
+buffer_compress_chunk=int	See buffer_compress_percentage. This
+		setting allows fio to manage how big the ranges of random
+		data and zeroed data is. Without this set, fio will
+		provide buffer_compress_percentage of blocksize random
+		data, followed by the remaining zeroed. With this set
+		to some chunk size smaller than the block size, fio can
+		alternate random and zeroed data throughout the IO
+		buffer.
+
 nrfiles=int	Number of files to use for this job. Defaults to 1.
 
 openfiles=int	Number of files to keep open at the same time. Defaults to
