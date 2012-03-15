@@ -2091,6 +2091,8 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 		if (!ge->nr_job_files)
 			return;
 
+		gc = ge->client;
+
 		gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ge->thread_status_pb), "No jobs running");
 		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ge->thread_status_pb), 0.0);
 		ret = fio_client_connect(gc->client);
