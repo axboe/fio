@@ -157,11 +157,11 @@ struct gui_entry {
 	GtkWidget *notebook;
 	GtkWidget *error_info_bar;
 	GtkWidget *error_label;
-	GtkWidget *results_notebook;
 	GtkWidget *results_window;
+	GtkWidget *results_notebook;
 	GtkUIManager *results_uimanager;
-	GtkWidget *results_vbox;
 	GtkWidget *results_menu;
+	GtkWidget *disk_util_vbox;
 	GtkListStore *log_model;
 	GtkWidget *log_tree;
 	GtkWidget *log_view;
@@ -188,14 +188,15 @@ struct end_results {
 struct gfio_client {
 	struct gui_entry *ge;
 	struct fio_client *client;
-	GtkWidget *results_widget;
-	GtkWidget *disk_util_vbox;
 	GtkWidget *err_entry;
 	unsigned int job_added;
 	struct thread_options o;
 
 	struct end_results *results;
 	unsigned int nr_results;
+
+	struct cmd_du_pdu *du;
+	unsigned int nr_du;
 };
 
 static void gfio_update_thread_status(struct gui_entry *ge, char *status_message, double perc);
@@ -1247,143 +1248,33 @@ static GtkWidget *get_results_window(struct gui_entry *ge)
 	return ge->results_notebook;
 }
 
-static void gfio_add_end_results(struct gfio_client *gc, struct thread_stat *ts,
-				 struct group_run_stats *rs)
+static void disk_util_destroy(GtkWidget *w, gpointer data)
 {
-	unsigned int nr = gc->nr_results;
+	struct gui_entry *ge = (struct gui_entry *) data;
 
-	gc->results = realloc(gc->results, (nr + 1) * sizeof(struct end_results));
-	memcpy(&gc->results[nr].ts, ts, sizeof(*ts));
-	memcpy(&gc->results[nr].gs, rs, sizeof(*rs));
-	gc->nr_results++;
+	ge->disk_util_vbox = NULL;
+	gtk_widget_destroy(w);
 }
 
-static void __gfio_display_end_results(GtkWidget *win, struct gfio_client *gc,
-				       struct thread_stat *ts,
-				       struct group_run_stats *rs)
+static int __gfio_disk_util_show(GtkWidget *res_notebook,
+				 struct gfio_client *gc, struct cmd_du_pdu *p)
 {
-	GtkWidget *box, *vbox, *entry, *scroll;
-
-	scroll = gtk_scrolled_window_new(NULL, NULL);
-	gtk_container_set_border_width(GTK_CONTAINER(scroll), 5);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-
-	vbox = gtk_vbox_new(FALSE, 3);
-
-	box = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), box, TRUE, FALSE, 5);
-
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), vbox);
-
-	gtk_notebook_append_page(GTK_NOTEBOOK(win), scroll, gtk_label_new(ts->name));
-
-	gc->results_widget = vbox;
-
-	entry = new_info_entry_in_frame(box, "Name");
-	gtk_entry_set_text(GTK_ENTRY(entry), ts->name);
-	if (strlen(ts->description)) {
-		entry = new_info_entry_in_frame(box, "Description");
-		gtk_entry_set_text(GTK_ENTRY(entry), ts->description);
-	}
-	entry = new_info_entry_in_frame(box, "Group ID");
-	entry_set_int_value(entry, ts->groupid);
-	entry = new_info_entry_in_frame(box, "Jobs");
-	entry_set_int_value(entry, ts->members);
-	gc->err_entry = entry = new_info_entry_in_frame(box, "Error");
-	entry_set_int_value(entry, ts->error);
-	entry = new_info_entry_in_frame(box, "PID");
-	entry_set_int_value(entry, ts->pid);
-
-	if (ts->io_bytes[DDIR_READ])
-		gfio_show_ddir_status(gc, vbox, rs, ts, DDIR_READ);
-	if (ts->io_bytes[DDIR_WRITE])
-		gfio_show_ddir_status(gc, vbox, rs, ts, DDIR_WRITE);
-
-	gfio_show_latency_buckets(gc, vbox, ts);
-	gfio_show_cpu_usage(vbox, ts);
-	gfio_show_io_depths(vbox, ts);
-}
-
-static void gfio_display_end_results(struct gfio_client *gc)
-{
-	struct gui_entry *ge = gc->ge;
-	GtkWidget *res_notebook;
-	int i;
-
-	res_notebook = get_results_window(ge);
-
-	for (i = 0; i < gc->nr_results; i++) {
-		struct end_results *e = &gc->results[i];
-
-		__gfio_display_end_results(res_notebook, gc, &e->ts, &e->gs);
-	}
-
-	gtk_widget_show_all(ge->results_window);
-}
-
-static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
-			    struct group_run_stats *rs)
-{
-	struct gfio_client *gc = client->client_data;
-
-	gfio_add_end_results(gc, ts, rs);
-
-	gdk_threads_enter();
-	gfio_display_end_results(gc);
-	gdk_threads_leave();
-}
-
-static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
-{
-	struct cmd_text_pdu *p = (struct cmd_text_pdu *) cmd->payload;
-	struct gui *ui = &main_ui;
-	GtkTreeIter iter;
-	struct tm *tm;
-	time_t sec;
-	char tmp[64], timebuf[80];
-
-	sec = p->log_sec;
-	tm = localtime(&sec);
-	strftime(tmp, sizeof(tmp), "%Y-%m-%d %H:%M:%S", tm);
-	sprintf(timebuf, "%s.%03ld", tmp, p->log_usec / 1000);
-
-	gdk_threads_enter();
-
-	gtk_list_store_append(ui->log_model, &iter);
-	gtk_list_store_set(ui->log_model, &iter, 0, timebuf, -1);
-	gtk_list_store_set(ui->log_model, &iter, 1, client->hostname, -1);
-	gtk_list_store_set(ui->log_model, &iter, 2, p->level, -1);
-	gtk_list_store_set(ui->log_model, &iter, 3, p->buf, -1);
-
-	if (p->level == FIO_LOG_ERR)
-		view_log(NULL, (gpointer) ui);
-
-	gdk_threads_leave();
-}
-
-static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd)
-{
-	struct cmd_du_pdu *p = (struct cmd_du_pdu *) cmd->payload;
-	struct gfio_client *gc = client->client_data;
 	GtkWidget *box, *frame, *entry, *vbox;
+	struct gui_entry *ge = gc->ge;
 	double util;
 	char tmp[16];
 
-	gdk_threads_enter();
+	res_notebook = get_results_window(ge);
 
-	if (!gc->results_widget)
-		goto out;
-
-	if (!gc->disk_util_vbox) {
-		frame = gtk_frame_new("Disk utilization");
-		gtk_box_pack_start(GTK_BOX(gc->results_widget), frame, FALSE, FALSE, 5);
+	if (!ge->disk_util_vbox) {
 		vbox = gtk_vbox_new(FALSE, 3);
-		gtk_container_add(GTK_CONTAINER(frame), vbox);
-		gc->disk_util_vbox = vbox;
+		gtk_notebook_append_page(GTK_NOTEBOOK(res_notebook), vbox, gtk_label_new("Disk utilization"));
+		ge->disk_util_vbox = vbox;
+		g_signal_connect(vbox, "destroy", G_CALLBACK(disk_util_destroy), ge);
 	}
 
 	vbox = gtk_vbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(gc->disk_util_vbox), vbox);
+	gtk_container_add(GTK_CONTAINER(ge->disk_util_vbox), vbox);
 
 	frame = gtk_frame_new((char *) p->dus.name);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 2);
@@ -1436,8 +1327,156 @@ static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd
 	entry = new_info_entry_in_frame(vbox, "Disk utilization");
 	gtk_entry_set_text(GTK_ENTRY(entry), tmp);
 
-	gtk_widget_show_all(gc->results_widget);
-out:
+	gtk_widget_show_all(ge->results_window);
+	return 0;
+}
+
+static int gfio_disk_util_show(struct gfio_client *gc)
+{
+	struct gui_entry *ge = gc->ge;
+	GtkWidget *res_notebook;
+	int i;
+
+	if (!gc->nr_du)
+		return 1;
+
+	res_notebook = get_results_window(ge);
+
+	for (i = 0; i < gc->nr_du; i++) {
+		struct cmd_du_pdu *p = &gc->du[i];
+
+		__gfio_disk_util_show(res_notebook, gc, p);
+	}
+
+	gtk_widget_show_all(ge->results_window);
+	return 0;
+}
+
+static void gfio_add_end_results(struct gfio_client *gc, struct thread_stat *ts,
+				 struct group_run_stats *rs)
+{
+	unsigned int nr = gc->nr_results;
+
+	gc->results = realloc(gc->results, (nr + 1) * sizeof(struct end_results));
+	memcpy(&gc->results[nr].ts, ts, sizeof(*ts));
+	memcpy(&gc->results[nr].gs, rs, sizeof(*rs));
+	gc->nr_results++;
+}
+
+static void __gfio_display_end_results(GtkWidget *win, struct gfio_client *gc,
+				       struct thread_stat *ts,
+				       struct group_run_stats *rs)
+{
+	GtkWidget *box, *vbox, *entry, *scroll;
+
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_container_set_border_width(GTK_CONTAINER(scroll), 5);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+
+	vbox = gtk_vbox_new(FALSE, 3);
+
+	box = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), box, TRUE, FALSE, 5);
+
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), vbox);
+
+	gtk_notebook_append_page(GTK_NOTEBOOK(win), scroll, gtk_label_new(ts->name));
+
+	entry = new_info_entry_in_frame(box, "Name");
+	gtk_entry_set_text(GTK_ENTRY(entry), ts->name);
+	if (strlen(ts->description)) {
+		entry = new_info_entry_in_frame(box, "Description");
+		gtk_entry_set_text(GTK_ENTRY(entry), ts->description);
+	}
+	entry = new_info_entry_in_frame(box, "Group ID");
+	entry_set_int_value(entry, ts->groupid);
+	entry = new_info_entry_in_frame(box, "Jobs");
+	entry_set_int_value(entry, ts->members);
+	gc->err_entry = entry = new_info_entry_in_frame(box, "Error");
+	entry_set_int_value(entry, ts->error);
+	entry = new_info_entry_in_frame(box, "PID");
+	entry_set_int_value(entry, ts->pid);
+
+	if (ts->io_bytes[DDIR_READ])
+		gfio_show_ddir_status(gc, vbox, rs, ts, DDIR_READ);
+	if (ts->io_bytes[DDIR_WRITE])
+		gfio_show_ddir_status(gc, vbox, rs, ts, DDIR_WRITE);
+
+	gfio_show_latency_buckets(gc, vbox, ts);
+	gfio_show_cpu_usage(vbox, ts);
+	gfio_show_io_depths(vbox, ts);
+}
+
+static void gfio_display_end_results(struct gfio_client *gc)
+{
+	struct gui_entry *ge = gc->ge;
+	GtkWidget *res_notebook;
+	int i;
+
+	res_notebook = get_results_window(ge);
+
+	for (i = 0; i < gc->nr_results; i++) {
+		struct end_results *e = &gc->results[i];
+
+		__gfio_display_end_results(res_notebook, gc, &e->ts, &e->gs);
+	}
+
+	if (gfio_disk_util_show(gc))
+		gtk_widget_show_all(ge->results_window);
+}
+
+static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
+			    struct group_run_stats *rs)
+{
+	struct gfio_client *gc = client->client_data;
+
+	gfio_add_end_results(gc, ts, rs);
+
+	gdk_threads_enter();
+	gfio_display_end_results(gc);
+	gdk_threads_leave();
+}
+
+static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct cmd_text_pdu *p = (struct cmd_text_pdu *) cmd->payload;
+	struct gui *ui = &main_ui;
+	GtkTreeIter iter;
+	struct tm *tm;
+	time_t sec;
+	char tmp[64], timebuf[80];
+
+	sec = p->log_sec;
+	tm = localtime(&sec);
+	strftime(tmp, sizeof(tmp), "%Y-%m-%d %H:%M:%S", tm);
+	sprintf(timebuf, "%s.%03ld", tmp, p->log_usec / 1000);
+
+	gdk_threads_enter();
+
+	gtk_list_store_append(ui->log_model, &iter);
+	gtk_list_store_set(ui->log_model, &iter, 0, timebuf, -1);
+	gtk_list_store_set(ui->log_model, &iter, 1, client->hostname, -1);
+	gtk_list_store_set(ui->log_model, &iter, 2, p->level, -1);
+	gtk_list_store_set(ui->log_model, &iter, 3, p->buf, -1);
+
+	if (p->level == FIO_LOG_ERR)
+		view_log(NULL, (gpointer) ui);
+
+	gdk_threads_leave();
+}
+
+static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct cmd_du_pdu *p = (struct cmd_du_pdu *) cmd->payload;
+	struct gfio_client *gc = client->client_data;
+	unsigned int nr = gc->nr_du;
+
+	gc->du = realloc(gc->du, (nr + 1) * sizeof(struct cmd_du_pdu));
+	memcpy(&gc->du[nr], p, sizeof(*p));
+	gc->nr_du++;
+
+	gdk_threads_enter();
+	gfio_disk_util_show(gc);
 	gdk_threads_leave();
 }
 
@@ -2631,7 +2670,6 @@ static void view_results(GtkWidget *w, gpointer data)
 	if (gc && gc->nr_results)
 		gfio_display_end_results(gc);
 }
-
 
 static void __update_graph_limits(struct gfio_graphs *g)
 {
