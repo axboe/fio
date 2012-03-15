@@ -442,7 +442,14 @@ void bar_graph_draw(struct graph *bg, cairo_t *cr)
 	nlabels = count_labels(bg->labels);
 	space_per_label = (x2 - x1) / (double) nlabels;
 
+	/*
+	 * Start bars at 0 unless we have negative values, otherwise we
+	 * present a skewed picture comparing label X and X+1.
+	 */
 	mindata = find_min_data(bg->labels);
+	if (mindata > 0)
+		mindata = 0;
+
 	maxdata = find_max_data(bg->labels);
 
 	if (fabs(maxdata - mindata) < 1e-20) {
@@ -452,8 +459,7 @@ void bar_graph_draw(struct graph *bg, cairo_t *cr)
 		return;
 	}
 
-	graph_draw_y_ticks(bg, cr, x1, y1, x2, y2, mindata, maxdata, 10, 1);
-
+	maxdata = graph_draw_y_ticks(bg, cr, x1, y1, x2, y2, mindata, maxdata, 10, 1);
 	i = 0;
 	for (lb = bg->labels; lb; lb = lb->next) {
 		int nvalues;
