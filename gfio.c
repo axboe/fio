@@ -37,6 +37,7 @@
 static int gfio_server_running;
 static const char *gfio_graph_font;
 static unsigned int gfio_graph_limit = 100;
+static GdkColor white;
 
 static void view_log(GtkWidget *w, gpointer data);
 
@@ -2696,7 +2697,6 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 {
 	GtkWidget *main_vbox, *probe, *probe_frame, *probe_box;
 	GtkWidget *scrolled_window, *bottom_align, *top_align, *top_vbox;
-	GdkColor white;
 
 	main_vbox = gtk_vbox_new(FALSE, 3);
 
@@ -2753,7 +2753,6 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	/*
 	 * Set up a drawing area and IOPS and bandwidth graphs
 	 */
-	gdk_color_parse("white", &white);
 	ge->graphs.drawing_area = gtk_drawing_area_new();
 	gtk_widget_set_size_request(GTK_WIDGET(ge->graphs.drawing_area),
 		DRAWING_AREA_XDIM, DRAWING_AREA_YDIM);
@@ -2798,7 +2797,6 @@ static GtkWidget *new_main_page(struct gui *ui)
 {
 	GtkWidget *main_vbox, *probe, *probe_frame, *probe_box;
 	GtkWidget *scrolled_window, *bottom_align, *top_align, *top_vbox;
-	GdkColor white;
 
 	main_vbox = gtk_vbox_new(FALSE, 3);
 
@@ -2841,7 +2839,6 @@ static GtkWidget *new_main_page(struct gui *ui)
 	/*
 	 * Set up a drawing area and IOPS and bandwidth graphs
 	 */
-	gdk_color_parse("white", &white);
 	ui->graphs.drawing_area = gtk_drawing_area_new();
 	gtk_widget_set_size_request(GTK_WIDGET(ui->graphs.drawing_area),
 		DRAWING_AREA_XDIM, DRAWING_AREA_YDIM);
@@ -3027,9 +3024,10 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	settings = gtk_settings_get_default();
 	gtk_settings_set_long_property(settings, "gtk_tooltip_timeout", 10, "gfio setting");
 	g_type_init();
+	gdk_color_parse("white", &white);
 	
 	ui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-        gtk_window_set_title(GTK_WINDOW(ui->window), "fio");
+	gtk_window_set_title(GTK_WINDOW(ui->window), "fio");
 	gtk_window_set_default_size(GTK_WINDOW(ui->window), 1024, 768);
 
 	g_signal_connect(ui->window, "delete-event", G_CALLBACK(quit_clicked), NULL);
