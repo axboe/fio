@@ -2699,7 +2699,7 @@ static GtkActionEntry menu_items[] = {
 	{ "Preferences", GTK_STOCK_PREFERENCES, NULL, "<Control>p", NULL, G_CALLBACK(preferences) },
 	{ "ViewLog", NULL, "Log", "<Control>l", NULL, G_CALLBACK(view_log) },
 	{ "ViewResults", NULL, "Results", "<Control>R", NULL, G_CALLBACK(view_results) },
-	{ "ConnectJob", NULL, "Connect", "<Control>E", NULL, G_CALLBACK(connect_job_entry) },
+	{ "ConnectJob", NULL, "Connect", "<Control>D", NULL, G_CALLBACK(connect_job_entry) },
 	{ "EditJob", NULL, "Edit job", "<Control>E", NULL, G_CALLBACK(edit_job_entry) },
 	{ "SendJob", NULL, "Send job", "<Control>X", NULL, G_CALLBACK(send_job_entry) },
 	{ "StartJob", NULL, "Start job", "<Control>L", NULL, G_CALLBACK(start_job_entry) },
