@@ -189,7 +189,6 @@ struct gfio_client {
 	struct gui_entry *ge;
 	struct fio_client *client;
 	GtkWidget *err_entry;
-	unsigned int job_added;
 	struct thread_options o;
 
 	struct end_results *results;
@@ -1882,8 +1881,6 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	multitext_set_entry(&ge->eta.iotype, 0);
 	multitext_set_entry(&ge->eta.ioengine, 0);
 	multitext_set_entry(&ge->eta.iodepth, 0);
-
-	gc->job_added++;
 
 	gfio_set_state(ge, GE_STATE_JOB_SENT);
 
