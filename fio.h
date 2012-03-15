@@ -266,6 +266,8 @@ struct thread_options {
 	int flow_watermark;
 	unsigned int flow_sleep;
 
+	unsigned long long offset_increment;
+
 	unsigned int sync_file_range;
 };
 

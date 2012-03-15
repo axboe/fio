@@ -2216,6 +2216,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.def	= "0",
 	},
 	{
+		.name	= "offset_increment",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(offset_increment),
+		.help	= "What is the increment from one offset to the next",
+		.def	= "0",
+	},
+	{
 		.name = NULL,
 	},
 };

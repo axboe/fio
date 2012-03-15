@@ -278,6 +278,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	 */
 	if (io_u->error == EINVAL && td->io_issues[io_u->ddir & 1] == 1 &&
 	    td->o.odirect) {
+
 		log_info("fio: first direct IO errored. File system may not "
 			 "support direct IO, or iomem_align= is bad.\n");
 	}

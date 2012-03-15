@@ -636,6 +636,13 @@ offset=int	Start io at the given offset in the file. The data before
 		the given offset will not be touched. This effectively
 		caps the file size at real_size - offset.
 
+offset_increment=int	If this is provided, then the real offset becomes
+		the offset + offset_increment * thread_number, where the
+		thread number is a counter that starts at 0 and is incremented
+		for each job. This option is useful if there are several jobs
+		which are intended to operate on a file in parallel in disjoint
+		segments, with even spacing between the starting points.
+
 fsync=int	If writing to a file, issue a sync of the dirty data
 		for every number of blocks given. For example, if you give
 		32 as a parameter, fio will sync the file for every 32
