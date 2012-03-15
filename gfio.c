@@ -30,9 +30,9 @@
 #include <gtk/gtk.h>
 
 #include "fio.h"
+#include "gfio.h"
+#include "ghelpers.h"
 #include "graph.h"
-
-#define GFIO_MIME	"text/fio"
 
 static int gfio_server_running;
 static const char *gfio_graph_font;
@@ -40,8 +40,6 @@ static unsigned int gfio_graph_limit = 100;
 static GdkColor white;
 
 static void view_log(GtkWidget *w, gpointer data);
-
-#define ARRAYSIZE(x) (sizeof((x)) / (sizeof((x)[0])))
 
 typedef void (*clickfunction)(GtkWidget *widget, gpointer data);
 
@@ -55,148 +53,24 @@ static struct button_spec {
 	const char *tooltiptext[2];
 	const int start_sensitive;
 } buttonspeclist[] = {
-#define CONNECT_BUTTON 0
-#define SEND_BUTTON 1
-#define START_JOB_BUTTON 2
-	{ "Connect", connect_clicked, { "Disconnect from host", "Connect to host" }, 1 },
-	{ "Send", send_clicked, { "Send job description to host", NULL }, 0 },
-	{ "Start Job", start_job_clicked,
-		{ "Start the current job on the server", NULL }, 0 },
-};
-
-struct probe_widget {
-	GtkWidget *hostname;
-	GtkWidget *os;
-	GtkWidget *arch;
-	GtkWidget *fio_ver;
-};
-
-struct multitext_widget {
-	GtkWidget *entry;
-	char **text;
-	unsigned int cur_text;
-	unsigned int max_text;
-};
-
-struct eta_widget {
-	GtkWidget *names;
-	struct multitext_widget iotype;
-	struct multitext_widget bs;
-	struct multitext_widget ioengine;
-	struct multitext_widget iodepth;
-	GtkWidget *jobs;
-	GtkWidget *files;
-	GtkWidget *read_bw;
-	GtkWidget *read_iops;
-	GtkWidget *cr_bw;
-	GtkWidget *cr_iops;
-	GtkWidget *write_bw;
-	GtkWidget *write_iops;
-	GtkWidget *cw_bw;
-	GtkWidget *cw_iops;
-};
-
-struct gfio_graphs {
-#define DRAWING_AREA_XDIM 1000
-#define DRAWING_AREA_YDIM 400
-	GtkWidget *drawing_area;
-	struct graph *iops_graph;
-	struct graph *bandwidth_graph;
-};
-
-/*
- * Main window widgets and data
- */
-struct gui {
-	GtkUIManager *uimanager;
-	GtkRecentManager *recentmanager;
-	GtkActionGroup *actiongroup;
-	guint recent_ui_id;
-	GtkWidget *menu;
-	GtkWidget *window;
-	GtkWidget *vbox;
-	GtkWidget *thread_status_pb;
-	GtkWidget *buttonbox;
-	GtkWidget *notebook;
-	GtkWidget *error_info_bar;
-	GtkWidget *error_label;
-	GtkListStore *log_model;
-	GtkWidget *log_tree;
-	GtkWidget *log_view;
-	struct gfio_graphs graphs;
-	struct probe_widget probe;
-	struct eta_widget eta;
-	pthread_t server_t;
-
-	pthread_t t;
-	int handler_running;
-
-	struct flist_head list;
-} main_ui;
-
-enum {
-	GE_STATE_NEW = 1,
-	GE_STATE_CONNECTED,
-	GE_STATE_JOB_SENT,
-	GE_STATE_JOB_STARTED,
-	GE_STATE_JOB_RUNNING,
-	GE_STATE_JOB_DONE,
-};
-
-/*
- * Notebook entry
- */
-struct gui_entry {
-	struct flist_head list;
-	struct gui *ui;
-
-	GtkWidget *vbox;
-	GtkWidget *job_notebook;
-	GtkWidget *thread_status_pb;
-	GtkWidget *buttonbox;
-	GtkWidget *button[ARRAYSIZE(buttonspeclist)];
-	GtkWidget *notebook;
-	GtkWidget *error_info_bar;
-	GtkWidget *error_label;
-	GtkWidget *results_window;
-	GtkWidget *results_notebook;
-	GtkUIManager *results_uimanager;
-	GtkWidget *results_menu;
-	GtkWidget *disk_util_vbox;
-	GtkListStore *log_model;
-	GtkWidget *log_tree;
-	GtkWidget *log_view;
-	struct gfio_graphs graphs;
-	struct probe_widget probe;
-	struct eta_widget eta;
-	GtkWidget *page_label;
-	gint page_num;
-	unsigned int state;
-
-	struct graph *clat_graph;
-	struct graph *lat_bucket_graph;
-
-	struct gfio_client *client;
-	int nr_job_files;
-	char **job_files;
-};
-
-struct end_results {
-	struct group_run_stats gs;
-	struct thread_stat ts;
-};
-
-struct gfio_client {
-	struct gui_entry *ge;
-	struct fio_client *client;
-	GtkWidget *err_entry;
-	struct thread_options o;
-
-	struct end_results *results;
-	unsigned int nr_results;
-
-	struct cmd_du_pdu *du;
-	unsigned int nr_du;
+	{
+	  .buttontext		= "Connect",
+	  .f			= connect_clicked,
+	  .tooltiptext		= { "Disconnect from host", "Connect to host" },
+	  .start_sensitive	= 1,
+	},
+	{
+	  .buttontext		= "Send",
+	  .f			= send_clicked,
+	  .tooltiptext		= { "Send job description to host", NULL },
+	  .start_sensitive	= 0,
+	},
+	{
+	  .buttontext		= "Start Job",
+	  .f			= start_job_clicked,
+	  .tooltiptext		= { "Start the current job on the server", NULL },
+	  .start_sensitive	= 0,
+	},
 };
 
 static void gfio_update_thread_status(struct gui_entry *ge, char *status_message, double perc);
@@ -310,76 +184,6 @@ static void clear_ge_ui_info(struct gui_entry *ge)
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.read_iops), "");
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.write_bw), "");
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.write_iops), "");
-}
-
-static GtkWidget *new_combo_entry_in_frame(GtkWidget *box, const char *label)
-{
-	GtkWidget *entry, *frame;
-
-	frame = gtk_frame_new(label);
-	entry = gtk_combo_box_new_text();
-	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
-	gtk_container_add(GTK_CONTAINER(frame), entry);
-
-	return entry;
-}
-
-static GtkWidget *new_info_entry_in_frame(GtkWidget *box, const char *label)
-{
-	GtkWidget *entry, *frame;
-
-	frame = gtk_frame_new(label);
-	entry = gtk_entry_new();
-	gtk_entry_set_editable(GTK_ENTRY(entry), 0);
-	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
-	gtk_container_add(GTK_CONTAINER(frame), entry);
-
-	return entry;
-}
-
-static GtkWidget *new_info_label_in_frame(GtkWidget *box, const char *label)
-{
-	GtkWidget *label_widget;
-	GtkWidget *frame;
-
-	frame = gtk_frame_new(label);
-	label_widget = gtk_label_new(NULL);
-	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
-	gtk_container_add(GTK_CONTAINER(frame), label_widget);
-
-	return label_widget;
-}
-
-static GtkWidget *create_spinbutton(GtkWidget *hbox, double min, double max, double defval)
-{
-	GtkWidget *button, *box;
-
-	box = gtk_hbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(hbox), box);
-
-	button = gtk_spin_button_new_with_range(min, max, 1.0);
-	gtk_box_pack_start(GTK_BOX(box), button, TRUE, TRUE, 0);
-
-	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(button), GTK_UPDATE_IF_VALID);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(button), defval);
-
-	return button;
-}
-
-static void label_set_int_value(GtkWidget *entry, unsigned int val)
-{
-	char tmp[80];
-
-	sprintf(tmp, "%u", val);
-	gtk_label_set_text(GTK_LABEL(entry), tmp);
-}
-
-static void entry_set_int_value(GtkWidget *entry, unsigned int val)
-{
-	char tmp[80];
-
-	sprintf(tmp, "%u", val);
-	gtk_entry_set_text(GTK_ENTRY(entry), tmp);
 }
 
 static void show_info_dialog(struct gui *ui, const char *title,
@@ -529,11 +333,11 @@ static void update_button_states(struct gui *ui, struct gui_entry *ge)
 		break;
 	}
 
-	gtk_widget_set_sensitive(ge->button[CONNECT_BUTTON], connect_state);
-	gtk_widget_set_sensitive(ge->button[SEND_BUTTON], send_state);
-	gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], start_state);
-	gtk_button_set_label(GTK_BUTTON(ge->button[CONNECT_BUTTON]), connect_str);
-	gtk_widget_set_tooltip_text(ge->button[CONNECT_BUTTON], get_button_tooltip(&buttonspeclist[CONNECT_BUTTON], connect_state));
+	gtk_widget_set_sensitive(ge->button[GFIO_BUTTON_CONNECT], connect_state);
+	gtk_widget_set_sensitive(ge->button[GFIO_BUTTON_SEND], send_state);
+	gtk_widget_set_sensitive(ge->button[GFIO_BUTTON_START], start_state);
+	gtk_button_set_label(GTK_BUTTON(ge->button[GFIO_BUTTON_CONNECT]), connect_str);
+	gtk_widget_set_tooltip_text(ge->button[GFIO_BUTTON_CONNECT], get_button_tooltip(&buttonspeclist[GFIO_BUTTON_CONNECT], connect_state));
 
 	set_menu_entry_visible(ui, "/MainMenu/JobMenu/Connect", connect_state);
 	set_menu_entry_text(ui, "/MainMenu/JobMenu/Connect", connect_str);
@@ -2173,7 +1977,7 @@ static void send_clicked(GtkWidget *widget, gpointer data)
 		report_error(error);
 		g_error_free(error);
 
-		gtk_widget_set_sensitive(ge->button[START_JOB_BUTTON], 1);
+		gtk_widget_set_sensitive(ge->button[GFIO_BUTTON_START], 1);
 	}
 }
 
