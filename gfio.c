@@ -1289,25 +1289,51 @@ static void disk_util_destroy(GtkWidget *w, gpointer data)
 	gtk_widget_destroy(w);
 }
 
+static GtkWidget *get_scrolled_window(gint border_width)
+{
+	GtkWidget *scroll;
+
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_container_set_border_width(GTK_CONTAINER(scroll), border_width);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+
+	return scroll;
+}
+
+static GtkWidget *gfio_disk_util_get_vbox(struct gui_entry *ge)
+{
+	GtkWidget *vbox, *box, *scroll, *res_notebook;
+
+	if (ge->disk_util_vbox)
+		return ge->disk_util_vbox;
+
+	scroll = get_scrolled_window(5);
+	vbox = gtk_vbox_new(FALSE, 3);
+	box = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), box, TRUE, FALSE, 5);
+
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), vbox);
+	res_notebook = get_results_window(ge);
+
+	gtk_notebook_append_page(GTK_NOTEBOOK(res_notebook), scroll, gtk_label_new("Disk utilization"));
+	ge->disk_util_vbox = box;
+	g_signal_connect(vbox, "destroy", G_CALLBACK(disk_util_destroy), ge);
+
+	return ge->disk_util_vbox;
+}
+
 static int __gfio_disk_util_show(GtkWidget *res_notebook,
 				 struct gfio_client *gc, struct cmd_du_pdu *p)
 {
-	GtkWidget *box, *frame, *entry, *vbox;
+	GtkWidget *box, *frame, *entry, *vbox, *util_vbox;
 	struct gui_entry *ge = gc->ge;
 	double util;
 	char tmp[16];
 
-	res_notebook = get_results_window(ge);
-
-	if (!ge->disk_util_vbox) {
-		vbox = gtk_vbox_new(FALSE, 3);
-		gtk_notebook_append_page(GTK_NOTEBOOK(res_notebook), vbox, gtk_label_new("Disk utilization"));
-		ge->disk_util_vbox = vbox;
-		g_signal_connect(vbox, "destroy", G_CALLBACK(disk_util_destroy), ge);
-	}
+	util_vbox = gfio_disk_util_get_vbox(ge);
 
 	vbox = gtk_vbox_new(FALSE, 3);
-	gtk_container_add(GTK_CONTAINER(ge->disk_util_vbox), vbox);
+	gtk_container_add(GTK_CONTAINER(util_vbox), vbox);
 
 	frame = gtk_frame_new((char *) p->dus.name);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 2);
