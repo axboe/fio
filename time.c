@@ -48,15 +48,12 @@ unsigned long mtime_since(struct timeval *s, struct timeval *e)
 		usec += 1000000;
 	}
 
+	if (sec < 0 || (sec == 0 && usec < 0))
+		return 0;
+
 	sec *= 1000UL;
 	usec /= 1000UL;
 	ret = sec + usec;
-
-	/*
-	 * time warp bug on some kernels?
-	 */
-	if (ret < 0)
-		ret = 0;
 
 	return ret;
 }
