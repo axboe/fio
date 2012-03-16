@@ -1170,6 +1170,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(iodepth),
 		.help	= "Number of IO buffers to keep in flight",
 		.minval = 1,
+		.interval = 1,
 		.def	= "1",
 		.category = FIO_OPT_G_IO,
 	},
@@ -1181,6 +1182,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Number of IO buffers to submit in one go",
 		.parent	= "iodepth",
 		.minval	= 1,
+		.interval = 1,
 		.def	= "1",
 		.category = FIO_OPT_G_IO,
 	},
@@ -1191,6 +1193,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Number of IO buffers to retrieve in one go",
 		.parent	= "iodepth",
 		.minval	= 0,
+		.interval = 1,
 		.def	= "1",
 		.category = FIO_OPT_G_IO,
 	},
@@ -1200,6 +1203,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(iodepth_low),
 		.help	= "Low water mark for queuing depth",
 		.parent	= "iodepth",
+		.interval = 1,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -1207,6 +1211,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_VAL,
 		.cb	= str_size_cb,
 		.help	= "Total size of device or files",
+		.interval = 1024 * 1024,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -1225,6 +1230,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off2	= td_var_offset(file_size_high),
 		.minval = 1,
 		.help	= "Size of individual files",
+		.interval = 1024 * 1024,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_FILE,
 	},
 	{
@@ -1234,6 +1240,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(start_offset),
 		.help	= "Start IO from this offset",
 		.def	= "0",
+		.interval = 1024 * 1024,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -1243,6 +1250,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "What is the increment from one offset to the next",
 		.parent = "offset",
 		.def	= "0",
+		.interval = 1024 * 1024,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -1255,6 +1263,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Block size unit",
 		.def	= "4k",
 		.parent = "rw",
+		.interval = 512,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -1266,6 +1275,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.minval	= 1,
 		.help	= "IO block offset alignment",
 		.parent	= "rw",
+		.interval = 512,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_IO_BUF,
 	},
 	{
@@ -1279,6 +1289,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.minval = 1,
 		.help	= "Set block size range (in more detail than bs)",
 		.parent = "rw",
+		.interval = 4096,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -1340,6 +1351,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(nr_files),
 		.help	= "Split job workload between this number of files",
 		.def	= "1",
+		.interval = 1,
 		.category = FIO_OPT_G_FILE,
 	},
 	{
@@ -1422,6 +1434,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(fsync_blocks),
 		.help	= "Issue fsync for writes every given number of blocks",
 		.def	= "0",
+		.interval = 1,
 		.category = FIO_OPT_G_FILE,
 	},
 	{
@@ -1430,6 +1443,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(fdatasync_blocks),
 		.help	= "Issue fdatasync for writes every given number of blocks",
 		.def	= "0",
+		.interval = 1,
 		.category = FIO_OPT_G_FILE,
 	},
 	{
@@ -1438,6 +1452,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(barrier_blocks),
 		.help	= "Make every Nth write a barrier write",
 		.def	= "0",
+		.interval = 1,
 		.category = FIO_OPT_G_IO,
 	},
 #ifdef FIO_HAVE_SYNC_FILE_RANGE
@@ -1499,6 +1514,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(loops),
 		.help	= "Number of times to run the job",
 		.def	= "1",
+		.interval = 1,
 		.category = FIO_OPT_G_MISC,
 	},
 	{
@@ -1507,6 +1523,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(numjobs),
 		.help	= "Duplicate this job this many times",
 		.def	= "1",
+		.interval = 1,
 		.category = FIO_OPT_G_MISC,
 	},
 	{
@@ -1700,6 +1717,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.minval	= 2 * sizeof(struct verify_header),
 		.help   = "Store verify buffer header every N bytes",
 		.parent	= "verify",
+		.interval = 2 * sizeof(struct verify_header),
 		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
@@ -1777,15 +1795,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "trim_percentage",
 		.type	= FIO_OPT_INT,
 		.cb	= str_verify_trim_cb,
+		.minval = 0,
 		.maxval = 100,
 		.help	= "Number of verify blocks to discard/trim",
 		.parent	= "verify",
 		.def	= "0",
+		.interval = 1,
 		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "trim_verify_zero",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.help	= "Verify that trim/discarded blocks are returned as zeroes",
 		.off1	= td_var_offset(trim_zero),
 		.parent	= "trim_percentage",
@@ -1798,6 +1818,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(trim_backlog),
 		.help	= "Trim after this number of blocks are written",
 		.parent	= "trim_percentage",
+		.interval = 1,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -1806,6 +1827,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(trim_batch),
 		.help	= "Trim this number of IO blocks",
 		.parent	= "trim_percentage",
+		.interval = 1,
 		.category = FIO_OPT_G_IO,
 	},
 #endif
@@ -1825,7 +1847,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "replay_no_stall",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(no_stall),
 		.def	= "0",
 		.parent	= "read_iolog",
@@ -1869,6 +1891,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(zone_size),
 		.help	= "Amount of data to read per zone",
 		.def	= "0",
+		.interval = 1024 * 1024,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_ZONE,
 	},
 	{
@@ -1877,6 +1900,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(zone_range),
 		.help	= "Give size of an IO zone",
 		.def	= "0",
+		.interval = 1024 * 1024,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_ZONE,
 	},
 	{
@@ -1885,6 +1909,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(zone_skip),
 		.help	= "Space between IO zones",
 		.def	= "0",
+		.interval = 1024 * 1024,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_ZONE,
 	},
 	{
@@ -1893,6 +1918,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.cb	= str_lockmem_cb,
 		.help	= "Lock down this amount of memory",
 		.def	= "0",
+		.interval = 1024 * 1024,
 		.category = FIO_OPT_G_OS | FIO_OPT_G_MEM,
 	},
 	{
@@ -1902,6 +1928,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is reads",
 		.def	= "50",
+		.interval = 5,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -1911,6 +1938,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is writes",
 		.def	= "50",
+		.interval = 5,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -1926,6 +1954,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.minval	= -19,
 		.maxval	= 20,
 		.def	= "0",
+		.interval = 1,
 		.category = FIO_OPT_G_OS | FIO_OPT_G_CPU,
 	},
 #ifdef FIO_HAVE_IOPRIO
@@ -1936,6 +1965,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Set job IO priority value",
 		.minval	= 0,
 		.maxval	= 7,
+		.interval = 1,
 		.category = FIO_OPT_G_OS | FIO_OPT_G_CPU,
 	},
 	{
@@ -1945,6 +1975,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Set job IO priority class",
 		.minval	= 0,
 		.maxval	= 3,
+		.interval = 1,
 		.category = FIO_OPT_G_OS | FIO_OPT_G_CPU,
 	},
 #endif
@@ -2042,6 +2073,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  " (msec)",
 		.def	= "500",
 		.parent	= "write_bw_log",
+		.interval = 100,
 		.category = FIO_OPT_G_LOG | FIO_OPT_G_STAT,
 	},
 	{
@@ -2051,6 +2083,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Time window over which to calculate IOPS (msec)",
 		.def	= "500",
 		.parent	= "write_iops_log",
+		.interval = 100,
 		.category = FIO_OPT_G_LOG | FIO_OPT_G_STAT,
 	},
 	{
@@ -2167,7 +2200,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "thread",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(use_thread),
-		.help	= "Use threads instead of forks",
+		.help	= "Use threads instead of processes",
 		.category = FIO_OPT_G_MISC | FIO_OPT_G_OS | FIO_OPT_G_JOB,
 	},
 	{
@@ -2208,6 +2241,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(hugepage_size),
 		.help	= "When using hugepages, specify size of each page",
 		.def	= __fio_stringify(FIO_HUGE_PAGE),
+		.interval = 1024 * 1024,
 		.category = FIO_OPT_G_OS | FIO_OPT_G_MEM,
 	},
 	{
@@ -2246,6 +2280,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.maxval	= 100,
 		.minval	= 1,
 		.help	= "How compressible the buffer is (approximately)",
+		.interval = 5,
 		.category = FIO_OPT_G_IO_BUF,
 	},
 	{
@@ -2254,6 +2289,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(compress_chunk),
 		.parent	= "buffer_compress_percentage",
 		.help	= "Size of compressible region in buffer",
+		.interval = 256,
 		.category = FIO_OPT_G_IO_BUF,
 	},
 	{

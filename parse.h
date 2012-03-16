@@ -51,6 +51,7 @@ struct fio_option {
 	int minval;
 	double maxfp;			/* max and min floating value */
 	double minfp;
+	unsigned int interval;		/* client hint for suitable interval */
 	unsigned int maxlen;		/* max length */
 	int neg;			/* negate value stored */
 	int prio;

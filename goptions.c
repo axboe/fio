@@ -134,7 +134,7 @@ static struct gopt *__gopt_new_int(struct fio_option *o, unsigned long long *p)
 {
 	unsigned long long defval;
 	struct gopt_int *i;
-	guint maxval;
+	guint maxval, interval;
 	GtkWidget *label;
 
 	i = malloc(sizeof(*i));
@@ -156,7 +156,11 @@ static struct gopt *__gopt_new_int(struct fio_option *o, unsigned long long *p)
 		defval = val;
 	}
 
-	i->spin = gtk_spin_button_new_with_range(o->minval, maxval, 1.0);
+	interval = 1.0;
+	if (o->interval)
+		interval = o->interval;
+
+	i->spin = gtk_spin_button_new_with_range(o->minval, maxval, interval);
 	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(i->spin), GTK_UPDATE_IF_VALID);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(i->spin), defval);
 
@@ -249,6 +253,7 @@ static struct gopt *gopt_new_int_range(struct fio_option *o, unsigned int **ip)
 	struct gopt_range *r;
 	gint maxval, defval;
 	GtkWidget *label;
+	guint interval;
 	int i;
 
 	r = malloc(sizeof(*r));
@@ -268,8 +273,12 @@ static struct gopt *gopt_new_int_range(struct fio_option *o, unsigned int **ip)
 		defval = val;
 	}
 
+	interval = 1.0;
+	if (o->interval)
+		interval = o->interval;
+
 	for (i = 0; i < GOPT_RANGE_SPIN; i++) {
-		r->spins[i] = gtk_spin_button_new_with_range(o->minval, maxval, 512);
+		r->spins[i] = gtk_spin_button_new_with_range(o->minval, maxval, interval);
 		gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(r->spins[i]), GTK_UPDATE_IF_VALID);
 		if (ip)
 			gtk_spin_button_set_value(GTK_SPIN_BUTTON(r->spins[i]), *ip[i]);
