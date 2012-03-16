@@ -26,6 +26,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_VAL,
 		.roff1	= &size,
 		.help	= "Size in MB",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "block",
@@ -33,24 +34,28 @@ static struct fio_option options[] = {
 		.roff1	= &bs,
 		.help	= "Block size in bytes",
 		.def	= "4k",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "numruns",
 		.type	= FIO_OPT_INT,
 		.roff1	= &loops,
 		.help	= "Number of runs",
+		.category = FIO_OPT_G_JOB,
 	},
 	{
 		.name	= "dir",
 		.type	= FIO_OPT_STR_STORE,
 		.roff1	= &dir,
 		.help	= "Test directory",
+		.category = FIO_OPT_G_FILE,
 	},
 	{
 		.name	= "threads",
 		.type	= FIO_OPT_INT,
 		.roff1	= &nthreads,
 		.help	= "Number of Threads",
+		.category = FIO_OPT_G_JOB,
 	},
 	{
 		.name	= NULL,

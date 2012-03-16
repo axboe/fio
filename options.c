@@ -1239,6 +1239,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "What is the increment from one offset to the next",
 		.parent = "offset",
 		.def	= "0",
+		.category = FIO_OPT_G_IO,
 	},
 	{
 		.name	= "bs",
@@ -2241,6 +2242,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.maxval	= 100,
 		.minval	= 1,
 		.help	= "How compressible the buffer is (approximately)",
+		.category = FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "buffer_compress_chunk",
@@ -2248,6 +2250,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(compress_chunk),
 		.parent	= "buffer_compress_percentage",
 		.help	= "Size of compressible region in buffer",
+		.category = FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "clat_percentiles",
