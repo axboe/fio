@@ -44,7 +44,23 @@ struct gopt_range {
 	GtkWidget *spins[GOPT_RANGE_SPIN];
 };
 
-static GtkWidget *widgets[FIO_MAX_OPTS];
+struct gopt_widget {
+	struct flist_head list;
+	GtkWidget *widget;
+};
+
+static struct flist_head gopt_list[FIO_MAX_OPTS];
+
+static void __gopt_set_children_visible(unsigned int idx, gboolean visible)
+{
+	struct flist_head *entry;
+	struct gopt_widget *gw;
+
+	flist_for_each(entry, &gopt_list[idx]) {
+		gw = flist_entry(entry, struct gopt_widget, list);
+		gtk_widget_set_sensitive(gw->widget, visible);
+	}
+}
 
 /*
  * Mark children as invisible, if needed.
@@ -61,16 +77,13 @@ static void gopt_set_children_visible(struct fio_option *parent, gboolean visibl
 	 */
 	for (i = 0; fio_options[i].name; i++) {
 		o = &fio_options[i];
-		if (!o->parent)
+		if (!o->parent || !o->hide)
 			continue;
 
 		if (strcmp(parent->name, o->parent))
 			continue;
 
-		/*
-		 * This doesn't work for either the box or the widget itself...
-		 */
-		gtk_widget_set_sensitive(widgets[i], visible);
+		__gopt_set_children_visible(i, visible);
 	}
 }
 
@@ -86,10 +99,15 @@ static void gopt_str_changed(GtkEntry *entry, gpointer data)
 	gopt_set_children_visible(o, set);
 }
 
-static void gopt_mark_index(struct gopt *gopt, GtkWidget *widget, unsigned int idx)
+static void gopt_mark_index(struct gopt *gopt, unsigned int idx)
 {
+	struct gopt_widget *gw;
+
 	gopt->opt_index = idx;
-	widgets[idx] = widget;
+
+	gw = malloc(sizeof(*gw));
+	gw->widget = gopt->box;
+	flist_add_tail(&gw->list, &gopt_list[idx]);
 }
 
 static struct gopt *gopt_new_str_store(struct fio_option *o, const char *text, unsigned int idx)
@@ -104,7 +122,7 @@ static struct gopt *gopt_new_str_store(struct fio_option *o, const char *text, u
 	gtk_box_pack_start(GTK_BOX(s->gopt.box), label, FALSE, FALSE, 0);
 
 	s->entry = gtk_entry_new();
-	gopt_mark_index(&s->gopt, s->gopt.box, idx);
+	gopt_mark_index(&s->gopt, idx);
 	if (text)
 		gtk_entry_set_text(GTK_ENTRY(s->entry), text);
 	gtk_entry_set_editable(GTK_ENTRY(s->entry), 1);
@@ -137,7 +155,7 @@ static struct gopt_combo *__gopt_new_combo(struct fio_option *o, unsigned int id
 	gtk_box_pack_start(GTK_BOX(c->gopt.box), label, FALSE, FALSE, 0);
 
 	c->combo = gtk_combo_box_new_text();
-	gopt_mark_index(&c->gopt, c->gopt.box, idx);
+	gopt_mark_index(&c->gopt, idx);
 	gtk_box_pack_start(GTK_BOX(c->gopt.box), c->combo, FALSE, FALSE, 0);
 
 	g_signal_connect(GTK_OBJECT(c->combo), "changed", G_CALLBACK(gopt_combo_changed), c);
@@ -231,7 +249,7 @@ static struct gopt_int *__gopt_new_int(struct fio_option *o, unsigned long long 
 		interval = o->interval;
 
 	i->spin = gtk_spin_button_new_with_range(o->minval, maxval, interval);
-	gopt_mark_index(&i->gopt, i->gopt.box, idx);
+	gopt_mark_index(&i->gopt, idx);
 	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(i->spin), GTK_UPDATE_IF_VALID);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(i->spin), defval);
 
@@ -287,7 +305,7 @@ static struct gopt *gopt_new_bool(struct fio_option *o, unsigned int *val, unsig
 	gtk_box_pack_start(GTK_BOX(b->gopt.box), label, FALSE, FALSE, 0);
 
 	b->check = gtk_check_button_new();
-	gopt_mark_index(&b->gopt, b->gopt.box, idx);
+	gopt_mark_index(&b->gopt, idx);
 	if (val)
 		defstate = *val;
 	else if (o->def && !strcmp(o->def, "1"))
@@ -351,7 +369,7 @@ static struct gopt *gopt_new_int_range(struct fio_option *o, unsigned int **ip,
 
 	r = malloc(sizeof(*r));
 	r->gopt.box = gtk_hbox_new(FALSE, 3);
-	gopt_mark_index(&r->gopt, r->gopt.box, idx);
+	gopt_mark_index(&r->gopt, idx);
 	label = gtk_label_new(o->name);
 	gtk_box_pack_start(GTK_BOX(r->gopt.box), label, FALSE, FALSE, 0);
 
@@ -517,8 +535,12 @@ static GtkWidget *gopt_add_group_tab(GtkWidget *notebook, struct opt_group *og)
 static void gopt_add_group_tabs(GtkWidget *notebook, GtkWidget **vbox)
 {
 	struct opt_group *og;
-	unsigned int i = 0;
+	unsigned int i;
 
+	for (i = 0; i < FIO_MAX_OPTS; i++)
+		INIT_FLIST_HEAD(&gopt_list[i]);
+
+	i = 0;
 	do {
 		unsigned int mask = (1U << i);
 
