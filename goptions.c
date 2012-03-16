@@ -65,12 +65,10 @@ static struct gopt *gopt_new_str_store(struct fio_option *o, const char *text)
 	return &s->gopt;
 }
 
-static struct gopt *gopt_new_combo(struct fio_option *o)
+static struct gopt_combo *__gopt_new_combo(struct fio_option *o)
 {
 	struct gopt_combo *combo;
-	struct value_pair *vp;
 	GtkWidget *label;
-	int i, active = 0;
 
 	combo = malloc(sizeof(*combo));
 
@@ -81,11 +79,24 @@ static struct gopt *gopt_new_combo(struct fio_option *o)
 	combo->combo = gtk_combo_box_new_text();
 	gtk_box_pack_start(GTK_BOX(combo->gopt.box), combo->combo, FALSE, FALSE, 0);
 
+	return combo;
+}
+
+static struct gopt *gopt_new_combo_str(struct fio_option *o, const char *text)
+{
+	struct gopt_combo *combo;
+	struct value_pair *vp;
+	int i, active = 0;
+
+	combo = __gopt_new_combo(o);
+
 	i = 0;
 	vp = &o->posval[0];
 	while (vp->ival) {
 		gtk_combo_box_append_text(GTK_COMBO_BOX(combo->combo), vp->ival);
 		if (o->def && !strcmp(vp->ival, o->def))
+			active = i;
+		if (text && !strcmp(vp->ival, text))
 			active = i;
 		vp++;
 		i++;
@@ -95,10 +106,33 @@ static struct gopt *gopt_new_combo(struct fio_option *o)
 	return &combo->gopt;
 }
 
-static struct gopt *gopt_new_int(struct fio_option *o)
+static struct gopt *gopt_new_combo_int(struct fio_option *o, unsigned int *ip)
 {
+	struct gopt_combo *combo;
+	struct value_pair *vp;
+	int i, active = 0;
+
+	combo = __gopt_new_combo(o);
+
+	i = 0;
+	vp = &o->posval[0];
+	while (vp->ival) {
+		gtk_combo_box_append_text(GTK_COMBO_BOX(combo->combo), vp->ival);
+		if (ip && vp->oval == *ip)
+			active = i;
+		vp++;
+		i++;
+	}
+
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo->combo), active);
+	return &combo->gopt;
+}
+
+static struct gopt *__gopt_new_int(struct fio_option *o, unsigned long long *p)
+{
+	unsigned long long defval;
 	struct gopt_int *i;
-	gint maxval, defval;
+	guint maxval;
 	GtkWidget *label;
 
 	i = malloc(sizeof(*i));
@@ -108,10 +142,12 @@ static struct gopt *gopt_new_int(struct fio_option *o)
 
 	maxval = o->maxval;
 	if (!maxval)
-		maxval = INT_MAX;
+		maxval = UINT_MAX;
 
 	defval = 0;
-	if (o->def) {
+	if (p)
+		defval = *p;
+	else if (o->def) {
 		long long val;
 
 		check_str_bytes(o->def, &val, NULL);
@@ -126,7 +162,24 @@ static struct gopt *gopt_new_int(struct fio_option *o)
 	return &i->gopt;
 }
 
-static struct gopt *gopt_new_bool(struct fio_option *o)
+static struct gopt *gopt_new_int(struct fio_option *o, unsigned int *ip)
+{
+	unsigned long long ullp;
+
+	if (ip) {
+		ullp = *ip;
+		return __gopt_new_int(o, &ullp);
+	}
+
+	return __gopt_new_int(o, NULL);
+}
+
+static struct gopt *gopt_new_ullong(struct fio_option *o, unsigned long long *p)
+{
+	return __gopt_new_int(o, p);
+}
+
+static struct gopt *gopt_new_bool(struct fio_option *o, unsigned int *val)
 {
 	struct gopt_bool *b;
 	GtkWidget *label;
@@ -138,7 +191,9 @@ static struct gopt *gopt_new_bool(struct fio_option *o)
 	gtk_box_pack_start(GTK_BOX(b->gopt.box), label, FALSE, FALSE, 0);
 
 	b->check = gtk_check_button_new();
-	if (o->def && !strcmp(o->def, "1"))
+	if (val)
+		defstate = *val;
+	else if (o->def && !strcmp(o->def, "1"))
 		defstate = 1;
 
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(b->check), defstate);
@@ -147,7 +202,7 @@ static struct gopt *gopt_new_bool(struct fio_option *o)
 	return &b->gopt;
 }
 
-static struct gopt *gopt_new_int_range(struct fio_option *o)
+static struct gopt *gopt_new_int_range(struct fio_option *o, unsigned int **ip)
 {
 	struct gopt_range *r;
 	gint maxval, defval;
@@ -172,9 +227,12 @@ static struct gopt *gopt_new_int_range(struct fio_option *o)
 	}
 
 	for (i = 0; i < 4; i++) {
-		r->spins[i] = gtk_spin_button_new_with_range(o->minval, maxval, 1.0);
+		r->spins[i] = gtk_spin_button_new_with_range(o->minval, maxval, 512);
 		gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(r->spins[i]), GTK_UPDATE_IF_VALID);
-		gtk_spin_button_set_value(GTK_SPIN_BUTTON(r->spins[i]), defval);
+		if (ip)
+			gtk_spin_button_set_value(GTK_SPIN_BUTTON(r->spins[i]), *ip[i]);
+		else
+			gtk_spin_button_set_value(GTK_SPIN_BUTTON(r->spins[i]), defval);
 
 		gtk_box_pack_start(GTK_BOX(r->gopt.box), r->spins[i], FALSE, FALSE, 0);
 	}
@@ -188,32 +246,72 @@ static void gopt_add_option(GtkWidget *hbox, struct fio_option *o,
 	struct gopt *go = NULL;
 
 	switch (o->type) {
-	case FIO_OPT_STR_STORE: {
-		char **p = td_var(to, o->off1);
+	case FIO_OPT_STR_VAL:
+	case FIO_OPT_STR_VAL_TIME: {
+		unsigned long long *ullp = NULL;
 
-		go = gopt_new_str_store(o, *p);
+		if (o->off1)
+			ullp = td_var(to, o->off1);
+
+		go = gopt_new_ullong(o, ullp);
 		break;
 		}
-	case FIO_OPT_STR_VAL:
-	case FIO_OPT_STR_VAL_TIME:
-	case FIO_OPT_INT:
-		go = gopt_new_int(o);
+	case FIO_OPT_INT: {
+		unsigned int *ip = NULL;
+
+		if (o->off1)
+			ip = td_var(to, o->off1);
+
+		go = gopt_new_int(o, ip);
 		break;
+		}
 	case FIO_OPT_STR_SET:
-	case FIO_OPT_BOOL:
-		go = gopt_new_bool(o);
+	case FIO_OPT_BOOL: {
+		unsigned int *ip = NULL;
+
+		if (o->off1)
+			ip = td_var(to, o->off1);
+
+		go = gopt_new_bool(o, ip);
 		break;
-	case FIO_OPT_STR:
+		}
+	case FIO_OPT_STR: {
+		unsigned int *ip = NULL;
+
+		if (o->off1)
+			ip = td_var(to, o->off1);
+
+		go = gopt_new_combo_int(o, ip);
+		break;
+		}
+	case FIO_OPT_STR_STORE: {
+		char *text = NULL;
+
+		if (o->off1 && !o->cb) {
+			char **p = td_var(to, o->off1);
+			text = *p;
+		}
+
 		if (!o->posval[0].ival) {
-			go = gopt_new_str_store(o, NULL);
+			go = gopt_new_str_store(o, text);
 			break;
 		}
+
+		go = gopt_new_combo_str(o, text);
+		break;
+		}
 	case FIO_OPT_STR_MULTI:
-		go = gopt_new_combo(o);
+		go = gopt_new_combo_str(o, NULL);
 		break;
-	case FIO_OPT_RANGE:
-		go = gopt_new_int_range(o);
+	case FIO_OPT_RANGE: {
+		unsigned int *ip[4] = { td_var(to, o->off1),
+					td_var(to, o->off2),
+					td_var(to, o->off3),
+					td_var(to, o->off4) };
+
+		go = gopt_new_int_range(o, ip);
 		break;
+		}
 	/* still need to handle this one */
 	case FIO_OPT_FLOAT_LIST:
 		break;
