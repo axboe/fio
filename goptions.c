@@ -287,7 +287,7 @@ static void gopt_add_option(GtkWidget *hbox, struct fio_option *o,
 	case FIO_OPT_STR_STORE: {
 		char *text = NULL;
 
-		if (o->off1 && !o->cb) {
+		if (o->off1) {
 			char **p = td_var(to, o->off1);
 			text = *p;
 		}
