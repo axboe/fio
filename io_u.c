@@ -237,19 +237,27 @@ ret:
 static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 			       enum fio_ddir ddir, unsigned long long *b)
 {
-	if (get_next_rand_offset(td, f, ddir, b)) {
-		dprint(FD_IO, "%s: rand offset failed, last=%llu, size=%llu\n",
-				f->file_name, f->last_pos, f->real_file_size);
-		return 1;
+	if (!get_next_rand_offset(td, f, ddir, b))
+		return 0;
+
+	if (td->o.time_based) {
+		fio_file_reset(f);
+		if (!get_next_rand_offset(td, f, ddir, b))
+			return 0;
 	}
 
-	return 0;
+	dprint(FD_IO, "%s: rand offset failed, last=%llu, size=%llu\n",
+			f->file_name, f->last_pos, f->real_file_size);
+	return 1;
 }
 
 static int get_next_seq_block(struct thread_data *td, struct fio_file *f,
 			      enum fio_ddir ddir, unsigned long long *b)
 {
 	assert(ddir_rw(ddir));
+
+	if (f->last_pos >= f->io_size && td->o.time_based)
+		f->last_pos = f->last_pos - f->io_size;
 
 	if (f->last_pos < f->real_file_size) {
 		unsigned long long pos;
