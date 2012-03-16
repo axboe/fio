@@ -37,9 +37,11 @@ struct gopt_str {
 	GtkWidget *entry;
 };
 
+#define GOPT_RANGE_SPIN	4
+
 struct gopt_range {
 	struct gopt gopt;
-	GtkWidget *spins[4];
+	GtkWidget *spins[GOPT_RANGE_SPIN];
 };
 
 static struct gopt *gopt_new_str_store(struct fio_option *o, const char *text)
@@ -202,6 +204,46 @@ static struct gopt *gopt_new_bool(struct fio_option *o, unsigned int *val)
 	return &b->gopt;
 }
 
+/*
+ * These are paired 0/1 and 2/3. 0/2 are min values, 1/3 are max values.
+ * If the max is made smaller than min, adjust min down.
+ * If the min is made larger than max, adjust the max.
+ */
+static void range_value_changed(GtkSpinButton *spin, gpointer data)
+{
+	struct gopt_range *r = (struct gopt_range *) data;
+	int changed = -1, i;
+	gint val, mval;
+
+	for (i = 0; i < GOPT_RANGE_SPIN; i++) {
+		if (GTK_SPIN_BUTTON(r->spins[i]) == spin) {
+			changed = i;
+			break;
+		}
+	}
+
+	assert(changed != -1);
+
+	/*
+	 * Min changed
+	 */
+	if (changed == 0 || changed == 2) {
+		GtkWidget *mspin = r->spins[changed + 1];
+
+		val = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(r->spins[changed]));
+		mval = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(mspin));
+		if (val > mval)
+			gtk_spin_button_set_value(GTK_SPIN_BUTTON(mspin), val);
+	} else {
+		GtkWidget *mspin = r->spins[changed - 1];
+
+		val = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(r->spins[changed]));
+		mval = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(mspin));
+		if (val < mval)
+			gtk_spin_button_set_value(GTK_SPIN_BUTTON(mspin), val);
+	}
+}
+
 static struct gopt *gopt_new_int_range(struct fio_option *o, unsigned int **ip)
 {
 	struct gopt_range *r;
@@ -226,7 +268,7 @@ static struct gopt *gopt_new_int_range(struct fio_option *o, unsigned int **ip)
 		defval = val;
 	}
 
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < GOPT_RANGE_SPIN; i++) {
 		r->spins[i] = gtk_spin_button_new_with_range(o->minval, maxval, 512);
 		gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(r->spins[i]), GTK_UPDATE_IF_VALID);
 		if (ip)
@@ -235,6 +277,7 @@ static struct gopt *gopt_new_int_range(struct fio_option *o, unsigned int **ip)
 			gtk_spin_button_set_value(GTK_SPIN_BUTTON(r->spins[i]), defval);
 
 		gtk_box_pack_start(GTK_BOX(r->gopt.box), r->spins[i], FALSE, FALSE, 0);
+		g_signal_connect(G_OBJECT(r->spins[i]), "value-changed", G_CALLBACK(range_value_changed), r);
 	}
 
 	return &r->gopt;
