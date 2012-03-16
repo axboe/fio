@@ -525,6 +525,15 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 	minx = find_xy_value(g, getx, mindouble);
 	maxx = find_xy_value(g, getx, maxdouble);
 	miny = find_xy_value(g, gety, mindouble);
+
+	/*
+	 * Start graphs at zero, unless we have a value below. Otherwise
+	 * it's hard to visually compare the read and write graph, since
+	 * the lowest valued one will be the floor of the graph view.
+	 */
+	if (miny > 0)
+		miny = 0;
+
 	maxy = find_xy_value(g, gety, maxdouble);
 
 	if (fabs(maxx - minx) < 1e-20 || fabs(maxy - miny) < 1e-20) {
