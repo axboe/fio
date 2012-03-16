@@ -871,6 +871,10 @@ static struct opt_group fio_opt_groups[] = {
 		.mask	= FIO_OPT_G_IO_BUF,
 	},
 	{
+		.name	= "IO engine",
+		.mask	= FIO_OPT_G_IO_ENG,
+	},
+	{
 		.name	= "Random",
 		.mask	= FIO_OPT_G_RAND,
 	},

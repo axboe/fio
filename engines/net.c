@@ -56,6 +56,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_STORE,
 		.cb	= str_hostname_cb,
 		.help	= "Hostname for net IO engine",
+		.category = FIO_OPT_G_IO_ENG,
 	},
 	{
 		.name	= "port",
@@ -64,6 +65,7 @@ static struct fio_option options[] = {
 		.minval	= 1,
 		.maxval	= 65535,
 		.help	= "Port to use for TCP or UDP net connections",
+		.category = FIO_OPT_G_IO_ENG,
 	},
 	{
 		.name	= "protocol",
@@ -72,6 +74,7 @@ static struct fio_option options[] = {
 		.off1	= offsetof(struct netio_options, proto),
 		.help	= "Network protocol to use",
 		.def	= "tcp",
+		.category = FIO_OPT_G_IO_ENG,
 		.posval = {
 			  { .ival = "tcp",
 			    .oval = FIO_TYPE_TCP,
@@ -92,6 +95,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct netio_options, listen),
 		.help	= "Listen for incoming TCP connections",
+		.category = FIO_OPT_G_IO_ENG,
 	},
 	{
 		.name	= NULL,
