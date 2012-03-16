@@ -1047,6 +1047,10 @@ void option_init(struct fio_option *o)
 		      (o->roff1 || o->roff2 || o->roff3 || o->roff4))) {
 		log_err("Option %s: both cb and offset given\n", o->name);
 	}
+	if (!o->category) {
+		log_info("Options %s: no category defined. Setting to misc\n", o->name);
+		o->category = FIO_OPT_G_MISC;
+	}
 }
 
 /*
