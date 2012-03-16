@@ -1,4 +1,8 @@
+#include <stdlib.h>
+#include <string.h>
 #include <gtk/gtk.h>
+
+#include "ghelpers.h"
 
 GtkWidget *new_combo_entry_in_frame(GtkWidget *box, const char *label)
 {
@@ -68,4 +72,92 @@ void entry_set_int_value(GtkWidget *entry, unsigned int val)
 
 	sprintf(tmp, "%u", val);
 	gtk_entry_set_text(GTK_ENTRY(entry), tmp);
+}
+
+GtkTreeViewColumn *tree_view_column(GtkWidget *tree_view, int index, const char *title, unsigned int flags)
+{
+	GtkCellRenderer *renderer;
+	GtkTreeViewColumn *col;
+	double xalign = 0.0; /* left as default */
+	PangoAlignment align;
+	gboolean visible;
+
+	align = (flags & ALIGN_LEFT) ? PANGO_ALIGN_LEFT :
+		(flags & ALIGN_RIGHT) ? PANGO_ALIGN_RIGHT :
+		PANGO_ALIGN_CENTER;
+	visible = !(flags & INVISIBLE);
+
+	renderer = gtk_cell_renderer_text_new();
+	col = gtk_tree_view_column_new();
+
+	gtk_tree_view_column_set_title(col, title);
+	if (!(flags & UNSORTABLE))
+		gtk_tree_view_column_set_sort_column_id(col, index);
+	gtk_tree_view_column_set_resizable(col, TRUE);
+	gtk_tree_view_column_pack_start(col, renderer, TRUE);
+	gtk_tree_view_column_add_attribute(col, renderer, "text", index);
+	gtk_object_set(GTK_OBJECT(renderer), "alignment", align, NULL);
+	switch (align) {
+	case PANGO_ALIGN_LEFT:
+		xalign = 0.0;
+		break;
+	case PANGO_ALIGN_CENTER:
+		xalign = 0.5;
+		break;
+	case PANGO_ALIGN_RIGHT:
+		xalign = 1.0;
+		break;
+	}
+	gtk_cell_renderer_set_alignment(GTK_CELL_RENDERER(renderer), xalign, 0.5);
+	gtk_tree_view_column_set_visible(col, visible);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(tree_view), col);
+	return col;
+}
+
+void multitext_add_entry(struct multitext_widget *mt, const char *text)
+{
+	mt->text = realloc(mt->text, (mt->max_text + 1) * sizeof(char *));
+	mt->text[mt->max_text] = strdup(text);
+	mt->max_text++;
+}
+
+void multitext_set_entry(struct multitext_widget *mt, unsigned int index)
+{
+	if (index >= mt->max_text)
+		return;
+	if (!mt->text || !mt->text[index])
+		return;
+
+	mt->cur_text = index;
+	gtk_entry_set_text(GTK_ENTRY(mt->entry), mt->text[index]);
+}
+
+void multitext_update_entry(struct multitext_widget *mt, unsigned int index,
+			    const char *text)
+{
+	if (!mt->text)
+		return;
+
+	if (mt->text[index])
+		free(mt->text[index]);
+
+	mt->text[index] = strdup(text);
+	if (mt->cur_text == index)
+		gtk_entry_set_text(GTK_ENTRY(mt->entry), mt->text[index]);
+}
+
+void multitext_free(struct multitext_widget *mt)
+{
+	int i;
+
+	gtk_entry_set_text(GTK_ENTRY(mt->entry), "");
+
+	for (i = 0; i < mt->max_text; i++) {
+		if (mt->text[i])
+			free(mt->text[i]);
+	}
+
+	free(mt->text);
+	mt->cur_text = -1;
+	mt->max_text = 0;
 }

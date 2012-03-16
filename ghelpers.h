@@ -8,4 +8,25 @@ GtkWidget *create_spinbutton(GtkWidget *hbox, double min, double max, double def
 void label_set_int_value(GtkWidget *entry, unsigned int val);
 void entry_set_int_value(GtkWidget *entry, unsigned int val);
 
+
+struct multitext_widget {
+	GtkWidget *entry;
+	char **text;
+	unsigned int cur_text;
+	unsigned int max_text;
+};
+
+void multitext_add_entry(struct multitext_widget *mt, const char *text);
+void multitext_set_entry(struct multitext_widget *mt, unsigned int index);
+void multitext_update_entry(struct multitext_widget *mt, unsigned int index,
+			    const char *text);
+void multitext_free(struct multitext_widget *mt);
+
+#define ALIGN_LEFT 1
+#define ALIGN_RIGHT 2
+#define INVISIBLE 4
+#define UNSORTABLE 8
+
+GtkTreeViewColumn *tree_view_column(GtkWidget *tree_view, int index, const char *title, unsigned int flags);
+
 #endif

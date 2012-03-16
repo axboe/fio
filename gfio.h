@@ -3,18 +3,13 @@
 
 #include <gtk/gtk.h>
 
+#include "ghelpers.h"
+
 struct probe_widget {
 	GtkWidget *hostname;
 	GtkWidget *os;
 	GtkWidget *arch;
 	GtkWidget *fio_ver;
-};
-
-struct multitext_widget {
-	GtkWidget *entry;
-	char **text;
-	unsigned int cur_text;
-	unsigned int max_text;
 };
 
 struct eta_widget {
