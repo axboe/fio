@@ -843,9 +843,106 @@ static int kb_base_verify(struct fio_option *o, void *data)
 }
 
 /*
+ * Option grouping
+ */
+static struct opt_group fio_opt_groups[] = {
+	{
+		.name	= "Description",
+		.mask	= FIO_OPT_G_DESC,
+	},
+	{
+		.name	= "File",
+		.mask	= FIO_OPT_G_FILE,
+	},
+	{
+		.name	= "Misc",
+		.mask	= FIO_OPT_G_MISC,
+	},
+	{
+		.name	= "IO (main)",
+		.mask	= FIO_OPT_G_IO,
+	},
+	{
+		.name	= "IO direction",
+		.mask	= FIO_OPT_G_IO_DDIR,
+	},
+	{
+		.name	= "IO buffer",
+		.mask	= FIO_OPT_G_IO_BUF,
+	},
+	{
+		.name	= "Random",
+		.mask	= FIO_OPT_G_RAND,
+	},
+	{
+		.name	= "OS",
+		.mask	= FIO_OPT_G_OS,
+	},
+	{
+		.name	= "Memory",
+		.mask	= FIO_OPT_G_MEM,
+	},
+	{
+		.name	= "Verify",
+		.mask	= FIO_OPT_G_VERIFY,
+	},
+	{
+		.name	= "CPU",
+		.mask	= FIO_OPT_G_CPU,
+	},
+	{
+		.name	= "Log",
+		.mask	= FIO_OPT_G_LOG,
+	},
+	{
+		.name	= "Zone",
+		.mask	= FIO_OPT_G_ZONE,
+	},
+	{
+		.name	= "Cache",
+		.mask	= FIO_OPT_G_CACHE,
+	},
+	{
+		.name	= "Stat",
+		.mask	= FIO_OPT_G_STAT,
+	},
+	{
+		.name	= "Error",
+		.mask	= FIO_OPT_G_ERR,
+	},
+	{
+		.name	= "Job",
+		.mask	= FIO_OPT_G_JOB,
+	},
+	{
+		.name	= NULL,
+	},
+};
+
+struct opt_group *opt_group_from_mask(unsigned int *mask)
+{
+	struct opt_group *og;
+	int i;
+
+	if (*mask == FIO_OPT_G_INVALID)
+		return NULL;
+
+	for (i = 0; fio_opt_groups[i].name; i++) {
+		og = &fio_opt_groups[i];
+
+		if (*mask & og->mask) {
+			*mask &= ~(og->mask);
+			return og;
+		}
+	}
+
+	return NULL;
+}
+
+/*
  * Map of job/command line options
  */
-static struct fio_option options[FIO_MAX_OPTS] = {
+struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "description",
 		.type	= FIO_OPT_STR_STORE,
@@ -2413,13 +2510,13 @@ void fio_options_dup_and_init(struct option *long_options)
 {
 	unsigned int i;
 
-	options_init(options);
+	options_init(fio_options);
 
 	i = 0;
 	while (long_options[i].name)
 		i++;
 
-	options_to_lopts(options, long_options, i, FIO_GETOPT_JOB);
+	options_to_lopts(fio_options, long_options, i, FIO_GETOPT_JOB);
 }
 
 struct fio_keyword {
@@ -2642,13 +2739,13 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 	int i, ret, unknown;
 	char **opts_copy;
 
-	sort_options(opts, options, num_opts);
+	sort_options(opts, fio_options, num_opts);
 	opts_copy = dup_and_sub_options(opts, num_opts);
 
 	for (ret = 0, i = 0, unknown = 0; i < num_opts; i++) {
 		struct fio_option *o;
-		int newret = parse_option(opts_copy[i], opts[i], options, &o,
-					  td);
+		int newret = parse_option(opts_copy[i], opts[i], fio_options,
+						&o, td);
 
 		if (opts_copy[i]) {
 			if (newret && !o) {
@@ -2694,7 +2791,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 
 int fio_cmd_option_parse(struct thread_data *td, const char *opt, char *val)
 {
-	return parse_cmd_option(opt, val, options, td);
+	return parse_cmd_option(opt, val, fio_options, td);
 }
 
 int fio_cmd_ioengine_option_parse(struct thread_data *td, const char *opt,
@@ -2705,12 +2802,12 @@ int fio_cmd_ioengine_option_parse(struct thread_data *td, const char *opt,
 
 void fio_fill_default_options(struct thread_data *td)
 {
-	fill_default_options(td, options);
+	fill_default_options(td, fio_options);
 }
 
 int fio_show_option_help(const char *opt)
 {
-	return show_cmd_help(options, opt);
+	return show_cmd_help(fio_options, opt);
 }
 
 void options_mem_dupe(void *data, struct fio_option *options)
@@ -2733,7 +2830,7 @@ void options_mem_dupe(void *data, struct fio_option *options)
  */
 void fio_options_mem_dupe(struct thread_data *td)
 {
-	options_mem_dupe(&td->o, options);
+	options_mem_dupe(&td->o, fio_options);
 
 	if (td->eo && td->io_ops) {
 		void *oldeo = td->eo;
@@ -2762,13 +2859,13 @@ int add_option(struct fio_option *o)
 	struct fio_option *__o;
 	int opt_index = 0;
 
-	__o = options;
+	__o = fio_options;
 	while (__o->name) {
 		opt_index++;
 		__o++;
 	}
 
-	memcpy(&options[opt_index], o, sizeof(*o));
+	memcpy(&fio_options[opt_index], o, sizeof(*o));
 	return 0;
 }
 
@@ -2776,7 +2873,7 @@ void invalidate_profile_options(const char *prof_name)
 {
 	struct fio_option *o;
 
-	o = options;
+	o = fio_options;
 	while (o->name) {
 		if (o->prof_name && !strcmp(o->prof_name, prof_name)) {
 			o->type = FIO_OPT_INVALID;
@@ -2791,7 +2888,7 @@ void add_opt_posval(const char *optname, const char *ival, const char *help)
 	struct fio_option *o;
 	unsigned int i;
 
-	o = find_option(options, optname);
+	o = find_option(fio_options, optname);
 	if (!o)
 		return;
 
@@ -2810,7 +2907,7 @@ void del_opt_posval(const char *optname, const char *ival)
 	struct fio_option *o;
 	unsigned int i;
 
-	o = find_option(options, optname);
+	o = find_option(fio_options, optname);
 	if (!o)
 		return;
 
@@ -2827,7 +2924,7 @@ void del_opt_posval(const char *optname, const char *ival)
 
 void fio_options_free(struct thread_data *td)
 {
-	options_free(options, td);
+	options_free(fio_options, td);
 	if (td->eo && td->io_ops && td->io_ops->options) {
 		options_free(td->io_ops->options, td->eo);
 		free(td->eo);

@@ -32,6 +32,7 @@
 #include "fio.h"
 #include "gfio.h"
 #include "ghelpers.h"
+#include "goptions.h"
 #include "graph.h"
 
 static int gfio_server_running;
@@ -291,21 +292,21 @@ static void update_button_states(struct gui *ui, struct gui_entry *ge)
 
 	case GE_STATE_NEW:
 		connect_state = 1;
-		edit_state = 0;
+		edit_state = 1;
 		connect_str = "Connect";
 		send_state = 0;
 		start_state = 0;
 		break;
 	case GE_STATE_CONNECTED:
 		connect_state = 1;
-		edit_state = 0;
+		edit_state = 1;
 		connect_str = "Disconnect";
 		send_state = 1;
 		start_state = 0;
 		break;
 	case GE_STATE_JOB_SENT:
 		connect_state = 1;
-		edit_state = 0;
+		edit_state = 1;
 		connect_str = "Disconnect";
 		send_state = 0;
 		start_state = 1;
@@ -2507,6 +2508,9 @@ static void send_job_entry(GtkWidget *w, gpointer data)
 
 static void edit_job_entry(GtkWidget *w, gpointer data)
 {
+	struct gui *ui = (struct gui *) data;
+
+	gopt_get_options_window(ui->window);
 }
 
 static void start_job_entry(GtkWidget *w, gpointer data)

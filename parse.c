@@ -15,7 +15,7 @@
 #include "debug.h"
 #include "options.h"
 
-static struct fio_option *fio_options;
+static struct fio_option *__fio_options;
 extern unsigned int fio_get_kb_base(void *);
 
 static int vp_cmp(const void *p1, const void *p2)
@@ -260,7 +260,7 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data)
 	return 0;
 }
 
-static int check_str_bytes(const char *p, long long *val, void *data)
+int check_str_bytes(const char *p, long long *val, void *data)
 {
 	return str_to_decimal(p, val, 1, data);
 }
@@ -770,14 +770,14 @@ static int opt_cmp(const void *p1, const void *p2)
 
 	if (*(char **)p1) {
 		s = strdup(*((char **) p1));
-		o = get_option(s, fio_options, &foo);
+		o = get_option(s, __fio_options, &foo);
 		if (o)
 			prio1 = o->prio;
 		free(s);
 	}
 	if (*(char **)p2) {
 		s = strdup(*((char **) p2));
-		o = get_option(s, fio_options, &foo);
+		o = get_option(s, __fio_options, &foo);
 		if (o)
 			prio2 = o->prio;
 		free(s);
@@ -788,9 +788,9 @@ static int opt_cmp(const void *p1, const void *p2)
 
 void sort_options(char **opts, struct fio_option *options, int num_opts)
 {
-	fio_options = options;
+	__fio_options = options;
 	qsort(opts, num_opts, sizeof(char *), opt_cmp);
-	fio_options = NULL;
+	__fio_options = NULL;
 }
 
 int parse_cmd_option(const char *opt, const char *val,
