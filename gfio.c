@@ -2416,8 +2416,11 @@ static void send_job_entry(GtkWidget *w, gpointer data)
 static void edit_job_entry(GtkWidget *w, gpointer data)
 {
 	struct gui *ui = (struct gui *) data;
+	struct gui_entry *ge;
 
-	gopt_get_options_window(ui->window);
+	ge = get_ge_from_cur_tab(ui);
+	if (ge && ge->client)
+		gopt_get_options_window(ui->window, &ge->client->o);
 }
 
 static void start_job_entry(GtkWidget *w, gpointer data)

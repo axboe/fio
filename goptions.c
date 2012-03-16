@@ -42,7 +42,7 @@ struct gopt_range {
 	GtkWidget *spins[4];
 };
 
-static struct gopt *gopt_new_str_store(struct fio_option *o)
+static struct gopt *gopt_new_str_store(struct fio_option *o, const char *text)
 {
 	struct gopt_str *s;
 	GtkWidget *label;
@@ -54,6 +54,8 @@ static struct gopt *gopt_new_str_store(struct fio_option *o)
 	gtk_box_pack_start(GTK_BOX(s->gopt.box), label, FALSE, FALSE, 0);
 
 	s->entry = gtk_entry_new();
+	if (text)
+		gtk_entry_set_text(GTK_ENTRY(s->entry), text);
 	gtk_entry_set_editable(GTK_ENTRY(s->entry), 1);
 
 	if (o->def)
@@ -181,14 +183,17 @@ static struct gopt *gopt_new_int_range(struct fio_option *o)
 }
 
 static void gopt_add_option(GtkWidget *hbox, struct fio_option *o,
-			    unsigned int opt_index)
+			    unsigned int opt_index, struct thread_options *to)
 {
 	struct gopt *go = NULL;
 
 	switch (o->type) {
-	case FIO_OPT_STR_STORE:
-		go = gopt_new_str_store(o);
+	case FIO_OPT_STR_STORE: {
+		char **p = td_var(to, o->off1);
+
+		go = gopt_new_str_store(o, *p);
 		break;
+		}
 	case FIO_OPT_STR_VAL:
 	case FIO_OPT_STR_VAL_TIME:
 	case FIO_OPT_INT:
@@ -200,7 +205,7 @@ static void gopt_add_option(GtkWidget *hbox, struct fio_option *o,
 		break;
 	case FIO_OPT_STR:
 		if (!o->posval[0].ival) {
-			go = gopt_new_str_store(o);
+			go = gopt_new_str_store(o, NULL);
 			break;
 		}
 	case FIO_OPT_STR_MULTI:
@@ -229,7 +234,7 @@ static void gopt_add_option(GtkWidget *hbox, struct fio_option *o,
 	}
 }
 
-static void gopt_add_options(GtkWidget **vboxes)
+static void gopt_add_options(GtkWidget **vboxes, struct thread_options *to)
 {
 	GtkWidget *hbox = NULL;
 	int i;
@@ -244,7 +249,7 @@ static void gopt_add_options(GtkWidget **vboxes)
 
 			hbox = gtk_hbox_new(FALSE, 3);
 			gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 5);
-			gopt_add_option(hbox, &fio_options[i], i);
+			gopt_add_option(hbox, o, i, to);
 		}
 	}
 }
@@ -282,7 +287,7 @@ static void gopt_add_group_tabs(GtkWidget *notebook, GtkWidget **vbox)
 	} while (1);
 }
 
-void gopt_get_options_window(GtkWidget *window)
+void gopt_get_options_window(GtkWidget *window, struct thread_options *o)
 {
 	GtkWidget *dialog, *notebook;
 	GtkWidget *vboxes[__FIO_OPT_G_NR];
@@ -301,7 +306,7 @@ void gopt_get_options_window(GtkWidget *window)
 
 	gopt_add_group_tabs(notebook, vboxes);
 
-	gopt_add_options(vboxes);
+	gopt_add_options(vboxes, o);
 
 	gtk_widget_show_all(dialog);
 
