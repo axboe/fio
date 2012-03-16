@@ -218,6 +218,8 @@ struct thread_options {
 	int flow_watermark;
 	unsigned int flow_sleep;
 
+	unsigned long long offset_increment;
+
 	unsigned int sync_file_range;
 };
 
@@ -404,6 +406,8 @@ struct thread_options_pack {
 	int32_t flow;
 	int32_t flow_watermark;
 	uint32_t flow_sleep;
+
+	uint64_t offset_increment;
 
 	uint32_t sync_file_range;
 } __attribute__((packed));

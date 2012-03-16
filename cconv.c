@@ -135,6 +135,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->zone_range = le64_to_cpu(top->zone_range);
 	o->zone_size = le64_to_cpu(top->zone_size);
 	o->zone_skip = le64_to_cpu(top->zone_skip);
+	o->offset_increment = le64_to_cpu(top->offset_increment);
 
 	o->overwrite = le32_to_cpu(top->overwrite);
 	o->bw_avg_time = le32_to_cpu(top->bw_avg_time);
@@ -368,6 +369,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->file_size_high = __cpu_to_le64(o->file_size_high);
 	top->start_offset = __cpu_to_le64(o->start_offset);
 	top->trim_backlog = __cpu_to_le64(o->trim_backlog);
+	top->offset_increment = __cpu_to_le64(o->offset_increment);
 
 	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++)
 		top->percentile_list[i].u.i = __cpu_to_le64(fio_double_to_uint64(o->percentile_list[i].u.f));

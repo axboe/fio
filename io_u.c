@@ -13,7 +13,6 @@
 
 struct io_completion_data {
 	int nr;				/* input */
-	int account;			/* input */
 
 	int error;			/* output */
 	unsigned long bytes_done[2];	/* output */
@@ -1293,9 +1292,6 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 {
 	unsigned long uninitialized_var(lusec);
 
-	if (!icd->account)
-		return;
-
 	if (!td->o.disable_clat || !td->o.disable_bw)
 		lusec = utime_since(&io_u->issue_time, &icd->time);
 
@@ -1431,7 +1427,6 @@ static void init_icd(struct thread_data *td, struct io_completion_data *icd,
 		fio_gettime(&icd->time, NULL);
 
 	icd->nr = nr;
-	icd->account = 1;
 
 	icd->error = 0;
 	icd->bytes_done[0] = icd->bytes_done[1] = 0;
@@ -1450,8 +1445,6 @@ static void ios_completed(struct thread_data *td,
 
 		if (!(io_u->flags & IO_U_F_FREE_DEF))
 			put_io_u(td, io_u);
-
-		icd->account = 0;
 	}
 }
 

@@ -359,6 +359,20 @@ contents to defeat normal de-dupe attempts. This is not enough to defeat
 more clever block compression attempts, but it will stop naive dedupe
 of blocks. Default: true.
 .TP
+.BI buffer_compress_percentage \fR=\fPint
+If this is set, then fio will attempt to provide IO buffer content (on WRITEs)
+that compress to the specified level. Fio does this by providing a mix of
+random data and zeroes. Note that this is per block size unit, for file/disk
+wide compression level that matches this setting, you'll also want to set
+\fBrefill_buffers\fR.
+.TP
+.BI buffer_compress_chunk \fR=\fPint
+See \fBbuffer_compress_percentage\fR. This setting allows fio to manage how
+big the ranges of random data and zeroed data is. Without this set, fio will
+provide \fBbuffer_compress_percentage\fR of blocksize random data, followed by
+the remaining zeroed. With this set to some chunk size smaller than the block
+size, fio can alternate random and zeroed data throughout the IO buffer.
+.TP
 .BI nrfiles \fR=\fPint
 Number of files to use for this job.  Default: 1.
 .TP
@@ -494,6 +508,13 @@ Default: true.
 .TP
 .BI offset \fR=\fPint
 Offset in the file to start I/O. Data before the offset will not be touched.
+.TP
+.BI offset_increment \fR=\fPint
+If this is provided, then the real offset becomes the
+offset + offset_increment * thread_number, where the thread number is a counter
+that starts at 0 and is incremented for each job. This option is useful if
+there are several jobs which are intended to operate on a file in parallel in
+disjoint segments, with even spacing between the starting points.
 .TP
 .BI fsync \fR=\fPint
 How many I/Os to perform before issuing an \fBfsync\fR\|(2) of dirty data.  If

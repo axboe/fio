@@ -208,6 +208,16 @@ int td_io_getevents(struct thread_data *td, unsigned int min, unsigned int max,
 {
 	int r = 0;
 
+	/*
+	 * For ioengine=rdma one side operation RDMA_WRITE or RDMA_READ,
+	 * server side gets a message from the client
+	 * side that the task is finished, and
+	 * td->done is set to 1 after td_io_commit(). In this case,
+	 * there is no need to reap complete event in server side.
+	 */
+	if (td->done)
+		return 0;
+
 	if (min > 0 && td->io_ops->commit) {
 		r = td->io_ops->commit(td);
 		if (r < 0)
@@ -278,6 +288,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	 */
 	if (io_u->error == EINVAL && td->io_issues[io_u->ddir & 1] == 1 &&
 	    td->o.odirect) {
+
 		log_info("fio: first direct IO errored. File system may not "
 			 "support direct IO, or iomem_align= is bad.\n");
 	}
