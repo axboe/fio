@@ -60,6 +60,7 @@ struct fio_option {
 	const char *def;		/* default setting */
 	struct value_pair posval[PARSE_MAX_VP];/* possible values */
 	const char *parent;		/* parent option */
+	int hide;			/* hide if parent isn't set */
 	int (*verify)(struct fio_option *, void *);
 	const char *prof_name;		/* only valid for specific profile */
 	unsigned int category;		/* for type grouping */

@@ -995,6 +995,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(file_lock_mode),
 		.help	= "Lock file when doing IO to it",
 		.parent	= "filename",
+		.hide	= 0,
 		.def	= "none",
 		.category = FIO_OPT_G_FILE,
 		.posval = {
@@ -1181,6 +1182,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(iodepth_batch),
 		.help	= "Number of IO buffers to submit in one go",
 		.parent	= "iodepth",
+		.hide	= 1,
 		.minval	= 1,
 		.interval = 1,
 		.def	= "1",
@@ -1192,6 +1194,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(iodepth_batch_complete),
 		.help	= "Number of IO buffers to retrieve in one go",
 		.parent	= "iodepth",
+		.hide	= 1,
 		.minval	= 0,
 		.interval = 1,
 		.def	= "1",
@@ -1203,6 +1206,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(iodepth_low),
 		.help	= "Low water mark for queuing depth",
 		.parent	= "iodepth",
+		.hide	= 1,
 		.interval = 1,
 		.category = FIO_OPT_G_IO,
 	},
@@ -1249,6 +1253,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(offset_increment),
 		.help	= "What is the increment from one offset to the next",
 		.parent = "offset",
+		.hide	= 1,
 		.def	= "0",
 		.interval = 1024 * 1024,
 		.category = FIO_OPT_G_IO,
@@ -1263,6 +1268,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Block size unit",
 		.def	= "4k",
 		.parent = "rw",
+		.hide	= 1,
 		.interval = 512,
 		.category = FIO_OPT_G_IO,
 	},
@@ -1275,6 +1281,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.minval	= 1,
 		.help	= "IO block offset alignment",
 		.parent	= "rw",
+		.hide	= 1,
 		.interval = 512,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_IO_BUF,
 	},
@@ -1289,6 +1296,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.minval = 1,
 		.help	= "Set block size range (in more detail than bs)",
 		.parent = "rw",
+		.hide	= 1,
 		.interval = 4096,
 		.category = FIO_OPT_G_IO,
 	},
@@ -1298,6 +1306,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.cb	= str_bssplit_cb,
 		.help	= "Set a specific mix of block sizes",
 		.parent	= "rw",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -1307,6 +1316,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(bs_unaligned),
 		.help	= "Don't sector align IO buffer sizes",
 		.parent = "rw",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -1316,6 +1326,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Use repeatable random IO pattern",
 		.def	= "1",
 		.parent = "rw",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_RAND,
 	},
 	{
@@ -1325,6 +1336,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Set to use OS random generator",
 		.def	= "0",
 		.parent = "rw",
+		.hide	= 1,
 		.category = FIO_OPT_G_RAND,
 	},
 	{
@@ -1333,6 +1345,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(norandommap),
 		.help	= "Accept potential duplicate random blocks",
 		.parent = "rw",
+		.hide	= 1,
 		.category = FIO_OPT_G_RAND,
 	},
 	{
@@ -1341,6 +1354,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(softrandommap),
 		.help	= "Set norandommap if randommap allocation fails",
 		.parent	= "norandommap",
+		.hide	= 1,
 		.def	= "0",
 		.category = FIO_OPT_G_RAND,
 	},
@@ -1384,6 +1398,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  },
 		},
 		.parent = "nrfiles",
+		.hide	= 1,
 	},
 #ifdef FIO_HAVE_FALLOCATE
 	{
@@ -1626,6 +1641,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "IO memory buffer offset alignment",
 		.def	= "0",
 		.parent	= "iomem",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO_BUF | FIO_OPT_G_MEM,
 	},
 	{
@@ -1699,6 +1715,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Run verification stage after write",
 		.def	= "1",
 		.parent = "verify",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
@@ -1708,6 +1725,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Sort written verify blocks for read back",
 		.def	= "1",
 		.parent = "verify",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
@@ -1717,6 +1735,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.minval	= 2 * sizeof(struct verify_header),
 		.help   = "Store verify buffer header every N bytes",
 		.parent	= "verify",
+		.hide	= 1,
 		.interval = 2 * sizeof(struct verify_header),
 		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
@@ -1727,6 +1746,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.cb	= str_verify_offset_cb,
 		.parent	= "verify",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
@@ -1735,6 +1755,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.cb	= str_verify_pattern_cb,
 		.help	= "Fill pattern for IO buffers",
 		.parent	= "verify",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
@@ -1744,6 +1765,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.help	= "Exit on a single verify failure, don't continue",
 		.parent = "verify",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY | FIO_OPT_G_ERR,
 	},
 	{
@@ -1753,6 +1775,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.help	= "Dump contents of good and bad blocks on failure",
 		.parent = "verify",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY | FIO_OPT_G_ERR,
 	},
 	{
@@ -1762,6 +1785,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.help	= "Number of async verifier threads to use",
 		.parent	= "verify",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
@@ -1770,6 +1794,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(verify_backlog),
 		.help	= "Verify after this number of blocks are written",
 		.parent	= "verify",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 	{
@@ -1778,6 +1803,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(verify_batch),
 		.help	= "Verify this number of IO blocks",
 		.parent	= "verify",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_VERIFY,
 	},
 #ifdef FIO_HAVE_CPU_AFFINITY
@@ -1787,6 +1813,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.cb	= str_verify_cpus_allowed_cb,
 		.help	= "Set CPUs allowed for async verify threads",
 		.parent	= "verify_async",
+		.hide	= 1,
 		.category = FIO_OPT_G_OS | FIO_OPT_G_CPU | FIO_OPT_G_VERIFY,
 	},
 #endif
@@ -1801,6 +1828,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent	= "verify",
 		.def	= "0",
 		.interval = 1,
+		.hide	= 1,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -1809,6 +1837,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Verify that trim/discarded blocks are returned as zeroes",
 		.off1	= td_var_offset(trim_zero),
 		.parent	= "trim_percentage",
+		.hide	= 1,
 		.def	= "1",
 		.category = FIO_OPT_G_IO,
 	},
@@ -1818,6 +1847,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(trim_backlog),
 		.help	= "Trim after this number of blocks are written",
 		.parent	= "trim_percentage",
+		.hide	= 1,
 		.interval = 1,
 		.category = FIO_OPT_G_IO,
 	},
@@ -1827,6 +1857,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(trim_batch),
 		.help	= "Trim this number of IO blocks",
 		.parent	= "trim_percentage",
+		.hide	= 1,
 		.interval = 1,
 		.category = FIO_OPT_G_IO,
 	},
@@ -1851,6 +1882,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(no_stall),
 		.def	= "0",
 		.parent	= "read_iolog",
+		.hide	= 1,
 		.help	= "Playback IO pattern file as fast as possible without stalls",
 		.category = FIO_OPT_G_IO | FIO_OPT_G_LOG,
 	},
@@ -1859,6 +1891,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(replay_redirect),
 		.parent	= "read_iolog",
+		.hide	= 1,
 		.help	= "Replay all I/O onto this device, regardless of trace device",
 		.category = FIO_OPT_G_IO | FIO_OPT_G_LOG,
 	},
@@ -1994,6 +2027,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Start think time by spinning this amount (usec)",
 		.def	= "0",
 		.parent	= "thinktime",
+		.hide	= 1,
 		.category = FIO_OPT_G_MISC,
 	},
 	{
@@ -2003,6 +2037,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "IO buffer period between 'thinktime'",
 		.def	= "1",
 		.parent	= "thinktime",
+		.hide	= 1,
 		.category = FIO_OPT_G_MISC,
 	},
 	{
@@ -2020,6 +2055,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off2	= td_var_offset(ratemin[1]),
 		.help	= "Job must meet this rate or it will be shutdown",
 		.parent	= "rate",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -2028,6 +2064,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(rate_iops[0]),
 		.off2	= td_var_offset(rate_iops[1]),
 		.help	= "Limit IO used to this number of IO operations/sec",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -2037,6 +2074,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off2	= td_var_offset(rate_iops_min[1]),
 		.help	= "Job must meet this rate or it will be shut down",
 		.parent	= "rate_iops",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -2046,6 +2084,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Window average for rate limits (msec)",
 		.def	= "1000",
 		.parent = "rate",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO,
 	},
 	{
@@ -2063,6 +2102,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Use O_SYNC for buffered writes",
 		.def	= "0",
 		.parent = "buffered",
+		.hide	= 1,
 		.category = FIO_OPT_G_IO | FIO_OPT_G_FILE,
 	},
 	{
@@ -2073,6 +2113,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  " (msec)",
 		.def	= "500",
 		.parent	= "write_bw_log",
+		.hide	= 1,
 		.interval = 100,
 		.category = FIO_OPT_G_LOG | FIO_OPT_G_STAT,
 	},
@@ -2083,6 +2124,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Time window over which to calculate IOPS (msec)",
 		.def	= "500",
 		.parent	= "write_iops_log",
+		.hide	= 1,
 		.interval = 100,
 		.category = FIO_OPT_G_LOG | FIO_OPT_G_STAT,
 	},
@@ -2132,6 +2174,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Length of the CPU burn cycles (usecs)",
 		.def	= "50000",
 		.parent = "cpuload",
+		.hide	= 1,
 		.category = FIO_OPT_G_CPU,
 	},
 #ifdef FIO_HAVE_CPU_AFFINITY
@@ -2288,6 +2331,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(compress_chunk),
 		.parent	= "buffer_compress_percentage",
+		.hide	= 1,
 		.help	= "Size of compressible region in buffer",
 		.interval = 256,
 		.category = FIO_OPT_G_IO_BUF,
@@ -2336,6 +2380,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(disable_lat),
 		.help	= "Disable latency numbers",
 		.parent	= "gtod_reduce",
+		.hide	= 1,
 		.def	= "0",
 		.category = FIO_OPT_G_OS | FIO_OPT_G_MISC | FIO_OPT_G_STAT,
 	},
@@ -2345,6 +2390,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(disable_clat),
 		.help	= "Disable completion latency numbers",
 		.parent	= "gtod_reduce",
+		.hide	= 1,
 		.def	= "0",
 		.category = FIO_OPT_G_OS | FIO_OPT_G_MISC | FIO_OPT_G_STAT,
 	},
@@ -2354,6 +2400,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(disable_slat),
 		.help	= "Disable submission latency numbers",
 		.parent	= "gtod_reduce",
+		.hide	= 1,
 		.def	= "0",
 		.category = FIO_OPT_G_OS | FIO_OPT_G_MISC | FIO_OPT_G_STAT,
 	},
@@ -2363,6 +2410,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(disable_bw),
 		.help	= "Disable bandwidth logging",
 		.parent	= "gtod_reduce",
+		.hide	= 1,
 		.def	= "0",
 		.category = FIO_OPT_G_OS | FIO_OPT_G_MISC | FIO_OPT_G_STAT,
 	},
@@ -2475,6 +2523,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(flow),
 		.help	= "Weight for flow control of this job",
 		.parent	= "flow_id",
+		.hide	= 1,
 		.def	= "0",
 		.category = FIO_OPT_G_IO,
 	},
@@ -2486,6 +2535,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			" should be set to the same value for all threads"
 			" with non-zero flow.",
 		.parent	= "flow_id",
+		.hide	= 1,
 		.def	= "1024",
 		.category = FIO_OPT_G_IO,
 	},
@@ -2496,6 +2546,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "How many microseconds to sleep after being held"
 			" back by the flow control mechanism",
 		.parent	= "flow_id",
+		.hide	= 1,
 		.def	= "0",
 		.category = FIO_OPT_G_IO,
 	},
