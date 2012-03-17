@@ -251,8 +251,8 @@ static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 	return 1;
 }
 
-static int get_next_seq_block(struct thread_data *td, struct fio_file *f,
-			      enum fio_ddir ddir, unsigned long long *b)
+static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
+			       enum fio_ddir ddir, unsigned long long *offset)
 {
 	assert(ddir_rw(ddir));
 
@@ -269,7 +269,7 @@ static int get_next_seq_block(struct thread_data *td, struct fio_file *f,
 		if (pos)
 			pos += td->o.ddir_seq_add;
 
-		*b = pos / td->o.min_bs[ddir];
+		*offset = pos;
 		return 0;
 	}
 
@@ -277,31 +277,33 @@ static int get_next_seq_block(struct thread_data *td, struct fio_file *f,
 }
 
 static int get_next_block(struct thread_data *td, struct io_u *io_u,
-			  enum fio_ddir ddir, int rw_seq, unsigned long long *b)
+			  enum fio_ddir ddir, int rw_seq)
 {
 	struct fio_file *f = io_u->file;
+	unsigned long long b, offset;
 	int ret;
 
 	assert(ddir_rw(ddir));
 
+	b = offset = -1ULL;
+
 	if (rw_seq) {
 		if (td_random(td))
-			ret = get_next_rand_block(td, f, ddir, b);
+			ret = get_next_rand_block(td, f, ddir, &b);
 		else
-			ret = get_next_seq_block(td, f, ddir, b);
+			ret = get_next_seq_offset(td, f, ddir, &offset);
 	} else {
 		io_u->flags |= IO_U_F_BUSY_OK;
 
 		if (td->o.rw_seq == RW_SEQ_SEQ) {
-			ret = get_next_seq_block(td, f, ddir, b);
+			ret = get_next_seq_offset(td, f, ddir, &offset);
 			if (ret)
-				ret = get_next_rand_block(td, f, ddir, b);
+				ret = get_next_rand_block(td, f, ddir, &b);
 		} else if (td->o.rw_seq == RW_SEQ_IDENT) {
 			if (f->last_start != -1ULL)
-				*b = (f->last_start - f->file_offset)
-					/ td->o.min_bs[ddir];
+				offset = f->last_start - f->file_offset;
 			else
-				*b = 0;
+				offset = 0;
 			ret = 0;
 		} else {
 			log_err("fio: unknown rw_seq=%d\n", td->o.rw_seq);
@@ -309,6 +311,17 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 		}
 	}
 	
+	if (!ret) {
+		if (offset != -1ULL)
+			io_u->offset = offset;
+		else if (b != -1ULL)
+			io_u->offset = b * td->o.ba[ddir];
+		else {
+			log_err("fio: bug in offset generation\n");
+			ret = 1;
+		}
+	}
+
 	return ret;
 }
 
@@ -320,7 +333,6 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
-	unsigned long long b;
 	enum fio_ddir ddir = io_u->ddir;
 	int rw_seq_hit = 0;
 
@@ -331,10 +343,9 @@ static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
 		td->ddir_seq_nr = td->o.ddir_seq_nr;
 	}
 
-	if (get_next_block(td, io_u, ddir, rw_seq_hit, &b))
+	if (get_next_block(td, io_u, ddir, rw_seq_hit))
 		return 1;
 
-	io_u->offset = b * td->o.ba[ddir];
 	if (io_u->offset >= f->io_size) {
 		dprint(FD_IO, "get_next_offset: offset %llu >= io_size %llu\n",
 					io_u->offset, f->io_size);
