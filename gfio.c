@@ -347,6 +347,7 @@ static struct graph *setup_clat_graph(char *title, unsigned int *ovals,
 	g = graph_new(xdim, ydim, gfio_graph_font);
 	graph_title(g, title);
 	graph_x_title(g, "Percentile");
+	graph_y_title(g, "Time");
 
 	for (i = 0; i < len; i++) {
 		char fbuf[8];
@@ -657,6 +658,7 @@ static struct graph *setup_lat_bucket_graph(const char *title, double *lat,
 	g = graph_new(xdim, ydim, gfio_graph_font);
 	graph_title(g, title);
 	graph_x_title(g, "Buckets");
+	graph_y_title(g, "Percent");
 
 	for (i = 0; i < len; i++) {
 		graph_add_label(g, labels[i]);
@@ -1024,7 +1026,7 @@ static GtkWidget *gfio_disk_util_get_vbox(struct gui_entry *ge)
 	scroll = get_scrolled_window(5);
 	vbox = gtk_vbox_new(FALSE, 3);
 	box = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), box, TRUE, FALSE, 5);
+	gtk_box_pack_start(GTK_BOX(vbox), box, FALSE, FALSE, 5);
 
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), vbox);
 	res_notebook = get_results_window(ge);
