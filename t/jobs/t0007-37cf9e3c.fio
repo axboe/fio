@@ -1,0 +1,10 @@
+# Expected result: fio reads 87040KB of data
+# Buggy result: fio reads the full 128MB of data
+[foo]
+size=128mb
+rw=read:512k
+bs=1m
+time_based
+norandommap
+write_iolog=log
+direct=1
