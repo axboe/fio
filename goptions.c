@@ -15,6 +15,7 @@ struct gopt {
 	GtkWidget *box;
 	unsigned int opt_index;
 	unsigned int opt_type;
+	gulong sig_handler;
 };
 
 struct gopt_combo {
@@ -25,13 +26,11 @@ struct gopt_combo {
 struct gopt_int {
 	struct gopt gopt;
 	unsigned int lastval;
-	unsigned int in_change;
 	GtkWidget *spin;
 };
 
 struct gopt_bool {
 	struct gopt gopt;
-	unsigned int in_change;
 	GtkWidget *check;
 };
 
@@ -157,7 +156,7 @@ static struct gopt *gopt_new_str_store(struct fio_option *o, const char *text, u
 	if (text)
 		gtk_entry_set_text(GTK_ENTRY(s->entry), text);
 	gtk_entry_set_editable(GTK_ENTRY(s->entry), 1);
-	g_signal_connect(GTK_OBJECT(s->entry), "changed", G_CALLBACK(gopt_str_changed), s);
+	s->gopt.sig_handler = g_signal_connect(GTK_OBJECT(s->entry), "changed", G_CALLBACK(gopt_str_changed), s);
 
 	if (o->def)
 		gtk_entry_set_text(GTK_ENTRY(s->entry), o->def);
@@ -192,7 +191,7 @@ static struct gopt_combo *__gopt_new_combo(struct fio_option *o, unsigned int id
 
 	c->combo = gtk_combo_box_new_text();
 	gopt_mark_index(&c->gopt, idx);
-	g_signal_connect(GTK_OBJECT(c->combo), "changed", G_CALLBACK(gopt_combo_changed), c);
+	c->gopt.sig_handler = g_signal_connect(GTK_OBJECT(c->combo), "changed", G_CALLBACK(gopt_combo_changed), c);
 
 	gtk_box_pack_start(GTK_BOX(c->gopt.box), c->combo, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(c->gopt.box), label, FALSE, FALSE, 0);
@@ -298,19 +297,11 @@ static void gopt_int_changed(GtkSpinButton *spin, gpointer data)
 
 		assert(o->type == o->inv_opt->type);
 
-		/*
-		 * Don't recourse into notify changes. Is there a better
-		 * way than this? We essentially want to block the update
-		 * signal while we perform the below set_value().
-		 */
-		if (i_inv->in_change)
-			return;
-
-		i->in_change = 1;
 		cur_val = gtk_spin_button_get_value(GTK_SPIN_BUTTON(i_inv->spin));
 		cur_val -= delta;
+		g_signal_handler_block(G_OBJECT(i_inv->spin), i_inv->gopt.sig_handler);
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(i_inv->spin), cur_val);
-		i->in_change = 0;
+		g_signal_handler_unblock(G_OBJECT(i_inv->spin), i_inv->gopt.sig_handler);
 	}
 }
 
@@ -353,7 +344,7 @@ static struct gopt_int *__gopt_new_int(struct fio_option *o, unsigned long long 
 	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(i->spin), GTK_UPDATE_IF_VALID);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(i->spin), defval);
 	i->lastval = defval;
-	g_signal_connect(G_OBJECT(i->spin), "value-changed", G_CALLBACK(gopt_int_changed), i);
+	i->gopt.sig_handler = g_signal_connect(G_OBJECT(i->spin), "value-changed", G_CALLBACK(gopt_int_changed), i);
 
 	gtk_box_pack_start(GTK_BOX(i->gopt.box), i->spin, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(i->gopt.box), label, FALSE, FALSE, 0);
@@ -398,17 +389,9 @@ static void gopt_bool_toggled(GtkToggleButton *button, gpointer data)
 
 		assert(o->type == o->inv_opt->type);
 
-		/*
-		 * Don't recourse into notify changes. Is there a better
-		 * way than this? We essentially want to block the update
-		 * signal while we perform the below set_value().
-		 */
-		if (b_inv->in_change)
-			return;
-
-		b->in_change = 1;
+		g_signal_handler_block(G_OBJECT(b_inv->check), b_inv->gopt.sig_handler);
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(b_inv->check), !set);
-		b->in_change = 0;
+		g_signal_handler_unblock(G_OBJECT(b_inv->check), b_inv->gopt.sig_handler);
 	}
 
 	gopt_set_children_visible(o, set);
@@ -439,7 +422,7 @@ static struct gopt *gopt_new_bool(struct fio_option *o, unsigned int *val, unsig
 		defstate = !defstate;
 
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(b->check), defstate);
-	g_signal_connect(G_OBJECT(b->check), "toggled", G_CALLBACK(gopt_bool_toggled), b);
+	b->gopt.sig_handler = g_signal_connect(G_OBJECT(b->check), "toggled", G_CALLBACK(gopt_bool_toggled), b);
 
 	gtk_box_pack_start(GTK_BOX(b->gopt.box), b->check, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(b->gopt.box), label, FALSE, FALSE, 0);
