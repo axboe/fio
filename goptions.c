@@ -378,6 +378,9 @@ static struct gopt *gopt_new_bool(struct fio_option *o, unsigned int *val, unsig
 	else if (o->def && !strcmp(o->def, "1"))
 		defstate = 1;
 
+	if (o->neg)
+		defstate = !defstate;
+
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(b->check), defstate);
 	g_signal_connect(G_OBJECT(b->check), "toggled", G_CALLBACK(gopt_bool_toggled), b);
 
@@ -511,12 +514,18 @@ static void gopt_add_option(GtkWidget *hbox, struct fio_option *o,
 		break;
 		}
 	case FIO_OPT_STR: {
-		unsigned int *ip = NULL;
+		if (o->posval[0].ival) {
+			unsigned int *ip = NULL;
 
-		if (o->off1)
-			ip = td_var(to, o->off1);
+			if (o->off1)
+				ip = td_var(to, o->off1);
 
-		go = gopt_new_combo_int(o, ip, opt_index);
+			go = gopt_new_combo_int(o, ip, opt_index);
+		} else {
+			/* TODO: usually ->cb, or unsigned int pointer */
+			go = gopt_new_str_store(o, NULL, opt_index);
+		}
+
 		break;
 		}
 	case FIO_OPT_STR_STORE: {
