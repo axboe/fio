@@ -943,6 +943,14 @@ static struct opt_group fio_opt_cat_groups[] = {
 		.mask	= FIO_OPT_G_IO_BASIC,
 	},
 	{
+		.name	= "Cgroups",
+		.mask	= FIO_OPT_G_CGROUP,
+	},
+	{
+		.name	= "Runtime",
+		.mask	= FIO_OPT_G_RUNTIME,
+	},
+	{
 		.name	= NULL,
 	}
 };
@@ -973,18 +981,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Name of this job",
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_DESC,
-	},
-	{
-		.name	= "kb_base",
-		.lname	= "KB Base",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(kb_base),
-		.verify	= kb_base_verify,
-		.prio	= 1,
-		.def	= "1024",
-		.help	= "How many bytes per KB for reporting (1000 or 1024)",
-		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "filename",
@@ -1621,7 +1617,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "1",
 		.interval = 1,
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name	= "numjobs",
@@ -1632,7 +1628,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "1",
 		.interval = 1,
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name	= "startdelay",
@@ -1642,7 +1638,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Only start job when this period has passed",
 		.def	= "0",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name	= "runtime",
@@ -1653,7 +1649,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Stop workload when this amount of time has passed",
 		.def	= "0",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name	= "time_based",
@@ -1662,7 +1658,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(time_based),
 		.help	= "Keep running until runtime/timeout is met",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name	= "ramp_time",
@@ -1671,7 +1667,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(ramp_time),
 		.help	= "Ramp up time before measuring performance",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name	= "clocksource",
@@ -2445,7 +2441,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.cb	= str_exitall_cb,
 		.help	= "Terminate all jobs when one exits",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_PROCESS,
 	},
 	{
 		.name	= "stonewall",
@@ -2455,7 +2451,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(stonewall),
 		.help	= "Insert a hard barrier between this job and previous",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_PROCESS,
 	},
 	{
 		.name	= "new_group",
@@ -2464,7 +2460,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(new_group),
 		.help	= "Mark the start of a new group (for reporting)",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_PROCESS,
 	},
 	{
 		.name	= "thread",
@@ -2473,7 +2469,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(use_thread),
 		.help	= "Use threads instead of processes",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_PROCESS,
 	},
 	{
 		.name	= "write_bw_log",
@@ -2752,7 +2748,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(cgroup),
 		.help	= "Add job to cgroup of this name",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_CGROUP,
+	},
+	{
+		.name	= "cgroup_nodelete",
+		.lname	= "Cgroup no-delete",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(cgroup_nodelete),
+		.help	= "Do not delete cgroups after job completion",
+		.def	= "0",
+		.parent	= "cgroup",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CGROUP,
 	},
 	{
 		.name	= "cgroup_weight",
@@ -2762,18 +2769,9 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Use given weight for cgroup",
 		.minval = 100,
 		.maxval	= 1000,
+		.parent	= "cgroup",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
-	},
-	{
-		.name	= "cgroup_nodelete",
-		.lname	= "Cgroup no-delete",
-		.type	= FIO_OPT_BOOL,
-		.off1	= td_var_offset(cgroup_nodelete),
-		.help	= "Do not delete cgroups after job completion",
-		.def	= "0",
-		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_CGROUP,
 	},
 	{
 		.name	= "uid",
@@ -2790,6 +2788,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(gid),
 		.help	= "Run job with this group ID",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "kb_base",
+		.lname	= "KB Base",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(kb_base),
+		.verify	= kb_base_verify,
+		.prio	= 1,
+		.def	= "1024",
+		.help	= "How many bytes per KB for reporting (1000 or 1024)",
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_INVALID,
 	},
