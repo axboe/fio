@@ -1049,7 +1049,7 @@ void option_init(struct fio_option *o)
 	}
 	if (!o->category) {
 		log_info("Options %s: no category defined. Setting to misc\n", o->name);
-		o->category = FIO_OPT_G_MISC;
+		o->category = FIO_OPT_C_GENERAL;
 	}
 }
 

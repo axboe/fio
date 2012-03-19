@@ -48,47 +48,44 @@ struct opt_group {
 };
 
 enum opt_category {
-	__FIO_OPT_G_DESC	= 0,
-	__FIO_OPT_G_FILE,
-	__FIO_OPT_G_IO,
-	__FIO_OPT_G_IO_DDIR,
-	__FIO_OPT_G_IO_BUF,
-	__FIO_OPT_G_IO_ENG,
-	__FIO_OPT_G_CACHE,
-	__FIO_OPT_G_VERIFY,
+	__FIO_OPT_C_GENERAL	= 0,
+	__FIO_OPT_C_IO,
+	__FIO_OPT_C_FILE,
+	__FIO_OPT_C_STAT,
+	__FIO_OPT_C_LOG,
+	__FIO_OPT_C_NR,
+
+	FIO_OPT_C_GENERAL	= (1U << __FIO_OPT_C_GENERAL),
+	FIO_OPT_C_IO		= (1U << __FIO_OPT_C_IO),
+	FIO_OPT_C_FILE		= (1U << __FIO_OPT_C_FILE),
+	FIO_OPT_C_STAT		= (1U << __FIO_OPT_C_STAT),
+	FIO_OPT_C_LOG		= (1U << __FIO_OPT_C_LOG),
+	FIO_OPT_C_INVALID	= (1U << __FIO_OPT_C_NR),
+};
+
+enum opt_category_group {
+	__FIO_OPT_G_RATE	= 0,
 	__FIO_OPT_G_ZONE,
-	__FIO_OPT_G_MEM,
-	__FIO_OPT_G_LOG,
-	__FIO_OPT_G_ERR,
-	__FIO_OPT_G_STAT,
-	__FIO_OPT_G_CPU,
-	__FIO_OPT_G_OS,
-	__FIO_OPT_G_MISC,
-	__FIO_OPT_G_RAND,
-	__FIO_OPT_G_JOB,
+	__FIO_OPT_G_RWMIX,
+	__FIO_OPT_G_VERIFY,
+	__FIO_OPT_G_TRIM,
+	__FIO_OPT_G_IOLOG,
+	__FIO_OPT_G_IO_DEPTH,
+	__FIO_OPT_G_IO_FLOW,
 	__FIO_OPT_G_NR,
 
-	FIO_OPT_G_DESC		= (1U << __FIO_OPT_G_DESC),
-	FIO_OPT_G_FILE		= (1U << __FIO_OPT_G_FILE),
-	FIO_OPT_G_MISC		= (1U << __FIO_OPT_G_MISC),
-	FIO_OPT_G_IO		= (1U << __FIO_OPT_G_IO),
-	FIO_OPT_G_IO_DDIR	= (1U << __FIO_OPT_G_IO_DDIR),
-	FIO_OPT_G_IO_BUF	= (1U << __FIO_OPT_G_IO_BUF),
-	FIO_OPT_G_IO_ENG	= (1U << __FIO_OPT_G_IO_ENG),
-	FIO_OPT_G_RAND		= (1U << __FIO_OPT_G_RAND),
-	FIO_OPT_G_OS		= (1U << __FIO_OPT_G_OS),
-	FIO_OPT_G_MEM		= (1U << __FIO_OPT_G_MEM),
-	FIO_OPT_G_VERIFY	= (1U << __FIO_OPT_G_VERIFY),
-	FIO_OPT_G_CPU		= (1U << __FIO_OPT_G_CPU),
-	FIO_OPT_G_LOG		= (1U << __FIO_OPT_G_LOG),
+	FIO_OPT_G_RATE		= (1U << __FIO_OPT_G_RATE),
 	FIO_OPT_G_ZONE		= (1U << __FIO_OPT_G_ZONE),
-	FIO_OPT_G_CACHE		= (1U << __FIO_OPT_G_CACHE),
-	FIO_OPT_G_STAT		= (1U << __FIO_OPT_G_STAT),
-	FIO_OPT_G_ERR		= (1U << __FIO_OPT_G_ERR),
-	FIO_OPT_G_JOB		= (1U << __FIO_OPT_G_JOB),
+	FIO_OPT_G_RWMIX		= (1U << __FIO_OPT_G_RWMIX),
+	FIO_OPT_G_VERIFY	= (1U << __FIO_OPT_G_VERIFY),
+	FIO_OPT_G_TRIM		= (1U << __FIO_OPT_G_TRIM),
+	FIO_OPT_G_IOLOG		= (1U << __FIO_OPT_G_IOLOG),
+	FIO_OPT_G_IO_DEPTH	= (1U << __FIO_OPT_G_IO_DEPTH),
+	FIO_OPT_G_IO_FLOW	= (1U << __FIO_OPT_G_IO_FLOW),
 	FIO_OPT_G_INVALID	= (1U << __FIO_OPT_G_NR),
 };
 
 extern struct opt_group *opt_group_from_mask(unsigned int *mask);
+extern struct opt_group *opt_group_cat_from_mask(unsigned int *mask);
 
 #endif

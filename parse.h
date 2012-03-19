@@ -40,6 +40,7 @@ struct value_pair {
  */
 struct fio_option {
 	const char *name;		/* option name */
+	const char *lname;		/* long option name */
 	const char *alias;		/* possible old allowed name */
 	enum fio_opt_type type;		/* option type */
 	unsigned int off1;		/* potential parameters */
@@ -63,7 +64,8 @@ struct fio_option {
 	int hide;			/* hide if parent isn't set */
 	int (*verify)(struct fio_option *, void *);
 	const char *prof_name;		/* only valid for specific profile */
-	unsigned int category;		/* for type grouping */
+	unsigned int category;		/* what type of option */
+	unsigned int group;		/* who to group with */
 };
 
 typedef int (str_cb_fn)(void *, char *);
