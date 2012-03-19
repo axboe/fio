@@ -72,6 +72,9 @@ enum opt_category_group {
 	__FIO_OPT_G_IOLOG,
 	__FIO_OPT_G_IO_DEPTH,
 	__FIO_OPT_G_IO_FLOW,
+	__FIO_OPT_G_DESC,
+	__FIO_OPT_G_FILENAME,
+	__FIO_OPT_G_IO_BASIC,
 	__FIO_OPT_G_NR,
 
 	FIO_OPT_G_RATE		= (1U << __FIO_OPT_G_RATE),
@@ -82,6 +85,9 @@ enum opt_category_group {
 	FIO_OPT_G_IOLOG		= (1U << __FIO_OPT_G_IOLOG),
 	FIO_OPT_G_IO_DEPTH	= (1U << __FIO_OPT_G_IO_DEPTH),
 	FIO_OPT_G_IO_FLOW	= (1U << __FIO_OPT_G_IO_FLOW),
+	FIO_OPT_G_DESC		= (1U << __FIO_OPT_G_DESC),
+	FIO_OPT_G_FILENAME	= (1U << __FIO_OPT_G_FILENAME),
+	FIO_OPT_G_IO_BASIC	= (1U << __FIO_OPT_G_IO_BASIC),
 	FIO_OPT_G_INVALID	= (1U << __FIO_OPT_G_NR),
 };
 

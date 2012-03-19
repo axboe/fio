@@ -931,6 +931,18 @@ static struct opt_group fio_opt_cat_groups[] = {
 		.mask	= FIO_OPT_G_IO_FLOW,
 	},
 	{
+		.name	= "Description",
+		.mask	= FIO_OPT_G_DESC,
+	},
+	{
+		.name	= "Filename",
+		.mask	= FIO_OPT_G_FILENAME,
+	},
+	{
+		.name	= "General I/O",
+		.mask	= FIO_OPT_G_IO_BASIC,
+	},
+	{
 		.name	= NULL,
 	}
 };
@@ -951,7 +963,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(description),
 		.help	= "Text job description",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_DESC,
 	},
 	{
 		.name	= "name",
@@ -960,7 +972,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(name),
 		.help	= "Name of this job",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_DESC,
 	},
 	{
 		.name	= "kb_base",
@@ -983,7 +995,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.prio	= -1, /* must come after "directory" */
 		.help	= "File(s) to use for the workload",
 		.category = FIO_OPT_C_FILE,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_FILENAME,
 	},
 	{
 		.name	= "directory",
@@ -993,7 +1005,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.cb	= str_directory_cb,
 		.help	= "Directory to store files in",
 		.category = FIO_OPT_C_FILE,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_FILENAME,
 	},
 	{
 		.name	= "lockfile",
@@ -1006,7 +1018,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.hide	= 0,
 		.def	= "none",
 		.category = FIO_OPT_C_FILE,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_FILENAME,
 		.posval = {
 			  { .ival = "none",
 			    .oval = FILE_LOCK_NONE,
@@ -1031,7 +1043,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.cb	= str_opendir_cb,
 		.help	= "Recursively add files from this directory and down",
 		.category = FIO_OPT_C_FILE,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_FILENAME,
 	},
 	{
 		.name	= "rw",
@@ -1044,7 +1056,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "read",
 		.verify	= rw_verify,
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_IO_BASIC,
 		.posval = {
 			  { .ival = "read",
 			    .oval = TD_DDIR_READ,
@@ -1080,7 +1092,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "IO offset generator modifier",
 		.def	= "sequential",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_IO_BASIC,
 		.posval = {
 			  { .ival = "sequential",
 			    .oval = RW_SEQ_SEQ,
@@ -1101,7 +1113,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "IO engine to use",
 		.def	= FIO_PREFERRED_ENGINE,
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_IO_BASIC,
 		.posval	= {
 			  { .ival = "sync",
 			    .help = "Use read/write",
@@ -1192,7 +1204,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.interval = 1,
 		.def	= "1",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_IO_DEPTH,
+		.group	= FIO_OPT_G_IO_BASIC,
 	},
 	{
 		.name	= "iodepth_batch",
@@ -1207,7 +1219,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.interval = 1,
 		.def	= "1",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_IO_DEPTH,
+		.group	= FIO_OPT_G_IO_BASIC,
 	},
 	{
 		.name	= "iodepth_batch_complete",
@@ -1221,7 +1233,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.interval = 1,
 		.def	= "1",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_IO_DEPTH,
+		.group	= FIO_OPT_G_IO_BASIC,
 	},
 	{
 		.name	= "iodepth_low",
@@ -1233,7 +1245,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.hide	= 1,
 		.interval = 1,
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_IO_DEPTH,
+		.group	= FIO_OPT_G_IO_BASIC,
 	},
 	{
 		.name	= "size",
