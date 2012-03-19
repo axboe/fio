@@ -31,6 +31,7 @@ struct gopt_int {
 
 struct gopt_bool {
 	struct gopt gopt;
+	unsigned int in_change;
 	GtkWidget *check;
 };
 
@@ -143,6 +144,7 @@ static struct gopt *gopt_new_str_store(struct fio_option *o, const char *text, u
 	GtkWidget *label;
 
 	s = malloc(sizeof(*s));
+	memset(s, 0, sizeof(*s));
 
 	s->gopt.box = gtk_hbox_new(FALSE, 3);
 	if (!o->lname)
@@ -180,6 +182,7 @@ static struct gopt_combo *__gopt_new_combo(struct fio_option *o, unsigned int id
 	GtkWidget *label;
 
 	c = malloc(sizeof(*c));
+	memset(c, 0, sizeof(*c));
 
 	c->gopt.box = gtk_hbox_new(FALSE, 3);
 	if (!o->lname)
@@ -252,6 +255,7 @@ static struct gopt *gopt_new_str_multi(struct fio_option *o, unsigned int idx)
 	int i;
 
 	m = malloc(sizeof(*m));
+	memset(m, 0, sizeof(*m));
 	m->gopt.box = gtk_hbox_new(FALSE, 3);
 	gopt_mark_index(&m->gopt, idx);
 
@@ -292,6 +296,8 @@ static void gopt_int_changed(GtkSpinButton *spin, gpointer data)
 		struct gopt_int *i_inv = o->inv_opt->gui_data;
 		int cur_val;
 
+		assert(o->type == o->inv_opt->type);
+
 		/*
 		 * Don't recourse into notify changes. Is there a better
 		 * way than this? We essentially want to block the update
@@ -317,6 +323,7 @@ static struct gopt_int *__gopt_new_int(struct fio_option *o, unsigned long long 
 	GtkWidget *label;
 
 	i = malloc(sizeof(*i));
+	memset(i, 0, sizeof(*i));
 	i->gopt.box = gtk_hbox_new(FALSE, 3);
 	if (!o->lname)
 		label = gtk_label_new(o->name);
@@ -385,6 +392,25 @@ static void gopt_bool_toggled(GtkToggleButton *button, gpointer data)
 	gboolean set;
 
 	set = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(b->check));
+
+	if (o->inv_opt) {
+		struct gopt_bool *b_inv = o->inv_opt->gui_data;
+
+		assert(o->type == o->inv_opt->type);
+
+		/*
+		 * Don't recourse into notify changes. Is there a better
+		 * way than this? We essentially want to block the update
+		 * signal while we perform the below set_value().
+		 */
+		if (b_inv->in_change)
+			return;
+
+		b->in_change = 1;
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(b_inv->check), !set);
+		b->in_change = 0;
+	}
+
 	gopt_set_children_visible(o, set);
 }
 
@@ -395,6 +421,7 @@ static struct gopt *gopt_new_bool(struct fio_option *o, unsigned int *val, unsig
 	int defstate = 0;
 
 	b = malloc(sizeof(*b));
+	memset(b, 0, sizeof(*b));
 	b->gopt.box = gtk_hbox_new(FALSE, 3);
 	if (!o->lname)
 		label = gtk_label_new(o->name);
@@ -470,6 +497,7 @@ static struct gopt *gopt_new_int_range(struct fio_option *o, unsigned int **ip,
 	int i;
 
 	r = malloc(sizeof(*r));
+	memset(r, 0, sizeof(*r));
 	r->gopt.box = gtk_hbox_new(FALSE, 3);
 	gopt_mark_index(&r->gopt, idx);
 	if (!o->lname)
