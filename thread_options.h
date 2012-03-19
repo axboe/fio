@@ -188,12 +188,6 @@ struct thread_options {
 	char *ioscheduler;
 
 	/*
-	 * CPU "io" cycle burner
-	 */
-	unsigned int cpuload;
-	unsigned int cpucycle;
-
-	/*
 	 * I/O Error handling
 	 */
 	enum error_type continue_on_error;
@@ -375,12 +369,6 @@ struct thread_options_pack {
 	uint32_t rate_iops_min[2];
 
 	uint8_t ioscheduler[FIO_TOP_STR_MAX];
-
-	/*
-	 * CPU "io" cycle burner
-	 */
-	uint32_t cpuload;
-	uint32_t cpucycle;
 
 	/*
 	 * I/O Error handling

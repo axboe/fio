@@ -865,12 +865,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			if (is_backend && !recursed)
 				fio_server_send_add_job(td);
 
-			if (!strcmp(td->io_ops->name, "cpuio")) {
-				log_info("%s: ioengine=cpu, cpuload=%u,"
-					 " cpucycle=%u\n", td->o.name,
-							td->o.cpuload,
-							td->o.cpucycle);
-			} else {
+			if (!(td->io_ops->flags & FIO_NOIO)) {
 				char *c1, *c2, *c3, *c4;
 
 				c1 = fio_uint_to_kmg(td->o.min_bs[DDIR_READ]);
