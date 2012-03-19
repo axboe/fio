@@ -1708,3 +1708,8 @@ int parse_options(int argc, char *argv[])
 
 	return 0;
 }
+
+void options_default_fill(struct thread_options *o)
+{
+	memcpy(o, &def_thread.o, sizeof(*o));
+}

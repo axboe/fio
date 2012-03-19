@@ -2070,6 +2070,7 @@ static void gfio_client_added(struct gui_entry *ge, struct fio_client *client)
 
 	gc = malloc(sizeof(*gc));
 	memset(gc, 0, sizeof(*gc));
+	options_default_fill(&gc->o);
 	gc->ge = ge;
 	gc->client = fio_get_client(client);
 
