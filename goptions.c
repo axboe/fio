@@ -44,6 +44,11 @@ struct gopt_range {
 	GtkWidget *spins[GOPT_RANGE_SPIN];
 };
 
+struct gopt_str_multi {
+	struct gopt gopt;
+	GtkWidget *checks[PARSE_MAX_VP];
+};
+
 static GtkWidget *gopt_widgets[FIO_MAX_OPTS];
 
 struct gopt_frame_widget {
@@ -233,6 +238,38 @@ static struct gopt *gopt_new_combo_int(struct fio_option *o, unsigned int *ip, u
 
 	gtk_combo_box_set_active(GTK_COMBO_BOX(combo->combo), active);
 	return &combo->gopt;
+}
+
+static struct gopt *gopt_new_str_multi(struct fio_option *o, unsigned int idx)
+{
+	struct gopt_str_multi *m;
+	struct value_pair *vp;
+	GtkWidget *frame, *hbox;
+	int i;
+
+	m = malloc(sizeof(*m));
+	m->gopt.box = gtk_hbox_new(FALSE, 3);
+	gopt_mark_index(&m->gopt, idx);
+
+	if (!o->lname)
+		frame = gtk_frame_new(o->name);
+	else
+		frame = gtk_frame_new(o->lname);
+	gtk_box_pack_start(GTK_BOX(m->gopt.box), frame, FALSE, FALSE, 3);
+
+	hbox = gtk_hbox_new(FALSE, 3);
+	gtk_container_add(GTK_CONTAINER(frame), hbox);
+
+	i = 0;
+	vp = &o->posval[0];
+	while (vp->ival) {
+		m->checks[i] = gtk_check_button_new_with_label(vp->ival);
+		gtk_widget_set_tooltip_text(m->checks[i], vp->help);
+		gtk_box_pack_start(GTK_BOX(hbox), m->checks[i], FALSE, FALSE, 3);
+		vp++;
+	}
+
+	return &m->gopt;
 }
 
 static void gopt_int_changed(GtkSpinButton *spin, gpointer data)
@@ -499,7 +536,7 @@ static void gopt_add_option(GtkWidget *hbox, struct fio_option *o,
 		break;
 		}
 	case FIO_OPT_STR_MULTI:
-		go = gopt_new_combo_str(o, NULL, opt_index);
+		go = gopt_new_str_multi(o, opt_index);
 		break;
 	case FIO_OPT_RANGE: {
 		unsigned int *ip[4] = { td_var(to, o->off1),
