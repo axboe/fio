@@ -62,10 +62,13 @@ struct fio_option {
 	struct value_pair posval[PARSE_MAX_VP];/* possible values */
 	const char *parent;		/* parent option */
 	int hide;			/* hide if parent isn't set */
+	const char *inverse;		/* if set, apply opposite action to this option */
+	struct fio_option *inv_opt;	/* cached lookup */
 	int (*verify)(struct fio_option *, void *);
 	const char *prof_name;		/* only valid for specific profile */
 	unsigned int category;		/* what type of option */
 	unsigned int group;		/* who to group with */
+	void *gui_data;
 };
 
 typedef int (str_cb_fn)(void *, char *);
