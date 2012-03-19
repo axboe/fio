@@ -963,6 +963,22 @@ static struct opt_group fio_opt_cat_groups[] = {
 		.mask	= FIO_OPT_G_CLOCK,
 	},
 	{
+		.name	= "I/O Type",
+		.mask	= FIO_OPT_G_IO_TYPE,
+	},
+	{
+		.name	= "I/O Thinktime",
+		.mask	= FIO_OPT_G_THINKTIME,
+	},
+	{
+		.name	= "Randomizations",
+		.mask	= FIO_OPT_G_RANDOM,
+	},
+	{
+		.name	= "I/O buffers",
+		.mask	= FIO_OPT_G_IO_BUF,
+	},
+	{
 		.name	= NULL,
 	}
 };
@@ -1394,7 +1410,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent = "rw",
 		.hide	= 1,
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "use_os_rand",
@@ -1406,7 +1422,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent = "rw",
 		.hide	= 1,
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "norandommap",
@@ -1417,7 +1433,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent = "rw",
 		.hide	= 1,
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "softrandommap",
@@ -1429,7 +1445,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.hide	= 1,
 		.def	= "0",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "nrfiles",
@@ -1598,7 +1614,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.inverse = "buffered",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_IO_TYPE,
 	},
 	{
 		.name	= "buffered",
@@ -1610,7 +1626,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "1",
 		.inverse = "direct",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_IO_TYPE,
 	},
 	{
 		.name	= "overwrite",
@@ -1770,7 +1786,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.cb	= str_verify_cb,
 		.def	= "0",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_VERIFY,
 		.posval = {
 			  { .ival = "0",
 			    .oval = VERIFY_NONE,
@@ -2205,7 +2221,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Idle time between IO buffers (usec)",
 		.def	= "0",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_THINKTIME,
 	},
 	{
 		.name	= "thinktime_spin",
@@ -2217,7 +2233,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent	= "thinktime",
 		.hide	= 1,
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_THINKTIME,
 	},
 	{
 		.name	= "thinktime_blocks",
@@ -2229,7 +2245,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent	= "thinktime",
 		.hide	= 1,
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_THINKTIME,
 	},
 	{
 		.name	= "rate",
@@ -2296,7 +2312,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Invalidate buffer/page cache prior to running job",
 		.def	= "1",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_IO_TYPE,
 	},
 	{
 		.name	= "sync",
@@ -2308,7 +2324,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent = "buffered",
 		.hide	= 1,
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_IO_TYPE,
 	},
 	{
 		.name	= "bwavgtime",
@@ -2526,17 +2542,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
-		.name	= "hugepage-size",
-		.lname	= "Hugepage size",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(hugepage_size),
-		.help	= "When using hugepages, specify size of each page",
-		.def	= __fio_stringify(FIO_HUGE_PAGE),
-		.interval = 1024 * 1024,
-		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
-	},
-	{
 		.name	= "group_reporting",
 		.lname	= "Group reporting",
 		.type	= FIO_OPT_BOOL,
@@ -2553,7 +2558,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(zero_buffers),
 		.help	= "Init IO buffers to all zeroes",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "refill_buffers",
@@ -2562,7 +2567,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(refill_buffers),
 		.help	= "Refill IO buffers on every IO submit",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "scramble_buffers",
@@ -2572,7 +2577,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Slightly scramble buffers on every IO submit",
 		.def	= "1",
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "buffer_compress_percentage",
@@ -2584,7 +2589,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "How compressible the buffer is (approximately)",
 		.interval = 5,
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "buffer_compress_chunk",
@@ -2596,7 +2601,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Size of compressible region in buffer",
 		.interval = 256,
 		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "clat_percentiles",
@@ -2814,6 +2819,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.prio	= 1,
 		.def	= "1024",
 		.help	= "How many bytes per KB for reporting (1000 or 1024)",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "hugepage-size",
+		.lname	= "Hugepage size",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(hugepage_size),
+		.help	= "When using hugepages, specify size of each page",
+		.def	= __fio_stringify(FIO_HUGE_PAGE),
+		.interval = 1024 * 1024,
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_INVALID,
 	},
