@@ -373,7 +373,7 @@ int fio_client_connect(struct fio_client *client)
 
 void fio_client_terminate(struct fio_client *client)
 {
-	fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_QUIT, 0, NULL);
+	fio_net_send_quit(client->fd);
 }
 
 void fio_clients_terminate(void)
@@ -1118,7 +1118,8 @@ int fio_handle_client(struct fio_client *client)
 
 		convert_stop(cmd);
 		client->state = Client_stopped;
-		client->error = pdu->error;
+		client->error = le32_to_cpu(pdu->error);
+		client->signal = le32_to_cpu(pdu->signal);
 		ops->stop(client, cmd);
 		free(cmd);
 		break;

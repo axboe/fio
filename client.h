@@ -43,6 +43,7 @@ struct fio_client {
 	int disk_stats_shown;
 	unsigned int jobs;
 	int error;
+	int signal;
 	int ipv6;
 	int sent_job;
 	uint32_t type;

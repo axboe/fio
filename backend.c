@@ -969,6 +969,9 @@ static void *thread_main(void *data)
 
 	dprint(FD_PROCESS, "jobs pid=%d started\n", (int) td->pid);
 
+	if (is_backend)
+		fio_server_send_start(td);
+
 	INIT_FLIST_HEAD(&td->io_u_freelist);
 	INIT_FLIST_HEAD(&td->io_u_busylist);
 	INIT_FLIST_HEAD(&td->io_u_requeues);
@@ -1555,21 +1558,13 @@ static void run_threads(void)
 
 		reap_threads(&nr_running, &t_rate, &m_rate);
 
-		if (todo) {
-			if (is_backend)
-				fio_server_idle_loop();
-			else
-				usleep(100000);
-		}
+		if (todo)
+			usleep(100000);
 	}
 
 	while (nr_running) {
 		reap_threads(&nr_running, &t_rate, &m_rate);
-
-		if (is_backend)
-			fio_server_idle_loop();
-		else
-			usleep(10000);
+		usleep(10000);
 	}
 
 	update_io_ticks();
