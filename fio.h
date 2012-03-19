@@ -310,7 +310,6 @@ enum {
 
 extern int exitall_on_terminate;
 extern unsigned int thread_number;
-extern unsigned int nr_process, nr_thread;
 extern int shm_id;
 extern int groupid;
 extern int terse_output;

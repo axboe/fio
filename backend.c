@@ -56,13 +56,13 @@ static struct flist_head *cgroup_list;
 static char *cgroup_mnt;
 static int exit_value;
 static volatile int fio_abort;
+static unsigned int nr_process = 0;
+static unsigned int nr_thread = 0;
 
 struct io_log *agg_io_log[2];
 
 int groupid = 0;
 unsigned int thread_number = 0;
-unsigned int nr_process = 0;
-unsigned int nr_thread = 0;
 int shm_id = 0;
 int temp_stall_ts;
 unsigned long done_secs = 0;
@@ -998,6 +998,7 @@ static void *thread_main(void *data)
 	 * eating a file descriptor
 	 */
 	fio_mutex_remove(td->mutex);
+	td->mutex = NULL;
 
 	/*
 	 * A new gid requires privilege, so we need to do this before setting
@@ -1358,6 +1359,14 @@ static void run_threads(void)
 		return;
 
 	set_sig_handlers();
+
+	nr_thread = nr_process = 0;
+	for_each_td(td, i) {
+		if (td->o.use_thread)
+			nr_thread++;
+		else
+			nr_process++;
+	}
 
 	if (!terse_output) {
 		log_info("Starting ");
