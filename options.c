@@ -951,6 +951,18 @@ static struct opt_group fio_opt_cat_groups[] = {
 		.mask	= FIO_OPT_G_RUNTIME,
 	},
 	{
+		.name	= "Process",
+		.mask	= FIO_OPT_G_PROCESS,
+	},
+	{
+		.name	= "Job credentials / priority",
+		.mask	= FIO_OPT_G_CRED,
+	},
+	{
+		.name	= "Clock settings",
+		.mask	= FIO_OPT_G_CLOCK,
+	},
+	{
 		.name	= NULL,
 	}
 };
@@ -1677,7 +1689,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(clocksource),
 		.help	= "What type of timing source to use",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_CLOCK,
 		.posval	= {
 			  { .ival = "gettimeofday",
 			    .oval = CS_GTOD,
@@ -2155,7 +2167,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.interval = 1,
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_CRED,
 	},
 #ifdef FIO_HAVE_IOPRIO
 	{
@@ -2168,7 +2180,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.maxval	= 7,
 		.interval = 1,
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_CRED,
 	},
 	{
 		.name	= "prioclass",
@@ -2180,7 +2192,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.maxval	= 3,
 		.interval = 1,
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_CRED,
 	},
 #endif
 	{
@@ -2392,7 +2404,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.cb	= str_cpumask_cb,
 		.help	= "CPU affinity mask",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_CRED,
 	},
 	{
 		.name	= "cpus_allowed",
@@ -2401,7 +2413,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.cb	= str_cpus_allowed_cb,
 		.help	= "Set CPUs allowed",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_CRED,
 	},
 #endif
 	{
@@ -2529,7 +2541,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(group_reporting),
 		.help	= "Do reporting on a per-group basis",
 		.def	= "1",
-		.category = FIO_OPT_C_GENERAL,
+		.category = FIO_OPT_C_STAT,
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
@@ -2686,7 +2698,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Set up dedicated gettimeofday() thread on this CPU",
 		.verify	= gtod_cpu_verify,
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_CLOCK,
 	},
 	{
 		.name	= "continue_on_error",
@@ -2780,7 +2792,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(uid),
 		.help	= "Run job with this user ID",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_CRED,
 	},
 	{
 		.name	= "gid",
@@ -2789,7 +2801,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(gid),
 		.help	= "Run job with this group ID",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_CRED,
 	},
 	{
 		.name	= "kb_base",

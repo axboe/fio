@@ -77,6 +77,9 @@ enum opt_category_group {
 	__FIO_OPT_G_IO_BASIC,
 	__FIO_OPT_G_CGROUP,
 	__FIO_OPT_G_RUNTIME,
+	__FIO_OPT_G_PROCESS,
+	__FIO_OPT_G_CRED,
+	__FIO_OPT_G_CLOCK,
 	__FIO_OPT_G_NR,
 
 	FIO_OPT_G_RATE		= (1U << __FIO_OPT_G_RATE),
@@ -92,6 +95,9 @@ enum opt_category_group {
 	FIO_OPT_G_IO_BASIC	= (1U << __FIO_OPT_G_IO_BASIC),
 	FIO_OPT_G_CGROUP	= (1U << __FIO_OPT_G_CGROUP),
 	FIO_OPT_G_RUNTIME	= (1U << __FIO_OPT_G_RUNTIME),
+	FIO_OPT_G_PROCESS	= (1U << __FIO_OPT_G_PROCESS),
+	FIO_OPT_G_CRED		= (1U << __FIO_OPT_G_CRED),
+	FIO_OPT_G_CLOCK		= (1U << __FIO_OPT_G_CLOCK),
 	FIO_OPT_G_INVALID	= (1U << __FIO_OPT_G_NR),
 };
 
