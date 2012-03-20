@@ -66,6 +66,8 @@ struct gopt_frame_widget {
 };
 static struct gopt_frame_widget gopt_g_widgets[__FIO_OPT_G_NR];
 
+static GNode *gopt_dep_tree;
+
 static GtkWidget *gopt_get_group_frame(GtkWidget *box, unsigned int groupmask)
 {
 	unsigned int mask, group;
@@ -105,27 +107,27 @@ static GtkWidget *gopt_get_group_frame(GtkWidget *box, unsigned int groupmask)
 static void gopt_set_children_visible(struct fio_option *parent,
 				      gboolean visible)
 {
-	struct fio_option *o;
-	int i;
+	GNode *child, *node;
 
 	if (parent->hide_on_set)
 		visible = !visible;
 
-	/*
-	 * This isn't super fast, but it should not be an issue. If it is, we
-	 * can speed it up by caching the lookup at least. Or we can do it
-	 * once, at init time.
-	 */
-	for (i = 0; fio_options[i].name; i++) {
-		o = &fio_options[i];
-		if (!o->parent || !o->hide)
-			continue;
+	node = g_node_find(gopt_dep_tree, G_IN_ORDER, G_TRAVERSE_ALL, parent);
+	child = g_node_first_child(node);
+	while (child) {
+		struct fio_option *o = child->data;
+		struct gopt *g = o->gui_data;
 
-		if (strcmp(parent->name, o->parent))
-			continue;
+		/*
+		 * Recurse into child, if it also has children
+		 */
+		if (g_node_n_children(child))
+			gopt_set_children_visible(o, visible);
 
-		if (gopt_widgets[i])
-			gtk_widget_set_sensitive(gopt_widgets[i], visible);
+		if (gopt_widgets[g->opt_index])
+			gtk_widget_set_sensitive(gopt_widgets[g->opt_index], visible);
+
+		child = g_node_next_sibling(child);
 	}
 }
 
@@ -185,7 +187,6 @@ static struct gopt *gopt_new_str_store(struct fio_option *o, const char *text,
 
 	gtk_box_pack_start(GTK_BOX(s->gopt.box), s->entry, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(s->gopt.box), label, FALSE, FALSE, 0);
-	o->gui_data = s;
 	return &s->gopt;
 }
 
@@ -229,7 +230,6 @@ static struct gopt_combo *__gopt_new_combo(struct fio_option *o,
 	gtk_box_pack_start(GTK_BOX(c->gopt.box), c->combo, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(c->gopt.box), label, FALSE, FALSE, 0);
 
-	o->gui_data = c;
 	return c;
 }
 
@@ -329,7 +329,8 @@ static void gopt_int_changed(GtkSpinButton *spin, gpointer data)
 	i->lastval = value;
 
 	if (o->inv_opt) {
-		struct gopt_int *i_inv = o->inv_opt->gui_data;
+		struct gopt *b_inv = o->inv_opt->gui_data;
+		struct gopt_int *i_inv = container_of(b_inv, struct gopt_int, gopt);
 		int cur_val;
 
 		assert(o->type == o->inv_opt->type);
@@ -395,7 +396,6 @@ static struct gopt_int *__gopt_new_int(struct fio_option *o,
 	gtk_box_pack_start(GTK_BOX(i->gopt.box), i->spin, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(i->gopt.box), label, FALSE, FALSE, 0);
 
-	o->gui_data = i;
 	return i;
 }
 
@@ -432,7 +432,8 @@ static void gopt_bool_toggled(GtkToggleButton *button, gpointer data)
 	set = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(b->check));
 
 	if (o->inv_opt) {
-		struct gopt_bool *b_inv = o->inv_opt->gui_data;
+		struct gopt *g_inv = o->inv_opt->gui_data;
+		struct gopt_bool *b_inv = container_of(g_inv, struct gopt_bool, gopt);
 
 		assert(o->type == o->inv_opt->type);
 
@@ -483,7 +484,6 @@ static struct gopt *gopt_new_bool(struct fio_option *o, unsigned int *val,
 
 	gtk_box_pack_start(GTK_BOX(b->gopt.box), b->check, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(b->gopt.box), label, FALSE, FALSE, 0);
-	o->gui_data = b;
 	return &b->gopt;
 }
 
@@ -583,7 +583,6 @@ static struct gopt *gopt_new_int_range(struct fio_option *o, unsigned int **ip,
 
 	gtk_box_pack_start(GTK_BOX(r->gopt.box), label, FALSE, FALSE, 0);
 	g_signal_connect(G_OBJECT(r->gopt.box), "destroy", G_CALLBACK(gopt_range_destroy), r);
-	o->gui_data = r;
 	return &r->gopt;
 }
 
@@ -661,7 +660,6 @@ static struct gopt *gopt_new_str_val(struct fio_option *o,
 	gtk_box_pack_start(GTK_BOX(g->gopt.box), label, FALSE, FALSE, 3);
 
 	g_signal_connect(G_OBJECT(g->gopt.box), "destroy", G_CALLBACK(gopt_str_val_destroy), g);
-	o->gui_data = g;
 	return &g->gopt;
 }
 
@@ -768,6 +766,7 @@ static void gopt_add_option(GtkWidget *hbox, struct fio_option *o,
 			gtk_widget_set_tooltip_text(go->box, o->help);
 
 		go->opt_type = o->type;
+		o->gui_data = go;
 
 		dest = gopt_get_group_frame(hbox, o->group);
 		if (!dest)
@@ -782,6 +781,8 @@ static void gopt_add_options(GtkWidget **vboxes, struct thread_options *to)
 	GtkWidget *hbox = NULL;
 	int i;
 
+	gopt_dep_tree = g_node_new(NULL);
+
 	/*
 	 * First add all options
 	 */
@@ -789,6 +790,26 @@ static void gopt_add_options(GtkWidget **vboxes, struct thread_options *to)
 		struct fio_option *o = &fio_options[i];
 		unsigned int mask = o->category;
 		struct opt_group *og;
+		GNode *node, *nparent;
+
+		/*
+		 * Insert node with either the root parent, or an
+		 * option parent.
+		 */
+		node = g_node_new(o);
+		nparent = gopt_dep_tree;
+		if (o->parent) {
+			struct fio_option *parent;
+
+			parent = fio_option_find(o->parent);
+			nparent = g_node_find(gopt_dep_tree, G_IN_ORDER, G_TRAVERSE_ALL, parent);
+			if (!nparent) {
+				log_err("fio: did not find parent %s for opt %s\n", o->name, o->parent);
+				nparent = gopt_dep_tree;
+			}
+		}
+
+		g_node_insert(nparent, -1, node);
 
 		while ((og = opt_group_from_mask(&mask)) != NULL) {
 			GtkWidget *vbox = vboxes[ffz(~og->mask)];
@@ -860,6 +881,9 @@ void gopt_get_options_window(GtkWidget *window, struct thread_options *o)
 	gtk_dialog_run(GTK_DIALOG(dialog));
 
 	gtk_widget_destroy(dialog);
+
+	g_node_destroy(gopt_dep_tree);
+	gopt_dep_tree = NULL;
 	memset(gopt_widgets, 0, sizeof(gopt_widgets));
 	memset(gopt_g_widgets, 0, sizeof(gopt_g_widgets));
 }

@@ -111,5 +111,6 @@ enum opt_category_group {
 
 extern struct opt_group *opt_group_from_mask(unsigned int *mask);
 extern struct opt_group *opt_group_cat_from_mask(unsigned int *mask);
+extern struct fio_option *fio_option_find(const char *name);
 
 #endif

@@ -2328,33 +2328,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_IO_TYPE,
 	},
 	{
-		.name	= "bwavgtime",
-		.lname	= "Bandwidth average time",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(bw_avg_time),
-		.help	= "Time window over which to calculate bandwidth"
-			  " (msec)",
-		.def	= "500",
-		.parent	= "write_bw_log",
-		.hide	= 1,
-		.interval = 100,
-		.category = FIO_OPT_C_LOG,
-		.group	= FIO_OPT_G_INVALID,
-	},
-	{
-		.name	= "iopsavgtime",
-		.lname	= "IOPS average time",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(iops_avg_time),
-		.help	= "Time window over which to calculate IOPS (msec)",
-		.def	= "500",
-		.parent	= "write_iops_log",
-		.hide	= 1,
-		.interval = 100,
-		.category = FIO_OPT_C_LOG,
-		.group	= FIO_OPT_G_INVALID,
-	},
-	{
 		.name	= "create_serialize",
 		.lname	= "Create serialize",
 		.type	= FIO_OPT_BOOL,
@@ -2518,6 +2491,33 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(log_avg_msec),
 		.help	= "Average bw/iops/lat logs over this period of time",
 		.def	= "0",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "bwavgtime",
+		.lname	= "Bandwidth average time",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(bw_avg_time),
+		.help	= "Time window over which to calculate bandwidth"
+			  " (msec)",
+		.def	= "500",
+		.parent	= "write_bw_log",
+		.hide	= 1,
+		.interval = 100,
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "iopsavgtime",
+		.lname	= "IOPS average time",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(iops_avg_time),
+		.help	= "Time window over which to calculate IOPS (msec)",
+		.def	= "500",
+		.parent	= "write_iops_log",
+		.hide	= 1,
+		.interval = 100,
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
 	},
@@ -3346,3 +3346,9 @@ void fio_options_free(struct thread_data *td)
 		td->eo = NULL;
 	}
 }
+
+struct fio_option *fio_option_find(const char *name)
+{
+	return find_option(fio_options, name);
+}
+
