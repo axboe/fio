@@ -708,4 +708,6 @@ void gopt_get_options_window(GtkWidget *window, struct thread_options *o)
 	gtk_dialog_run(GTK_DIALOG(dialog));
 
 	gtk_widget_destroy(dialog);
+	memset(gopt_widgets, 0, sizeof(gopt_widgets));
+	memset(gopt_g_widgets, 0, sizeof(gopt_g_widgets));
 }
