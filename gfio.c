@@ -1746,6 +1746,9 @@ static void ge_destroy(struct gui_entry *ge)
 
 static void ge_widget_destroy(GtkWidget *w, gpointer data)
 {
+	struct gui_entry *ge = (struct gui_entry *) data;
+
+	ge_destroy(ge);
 }
 
 static void gfio_quit(struct gui *ui)
