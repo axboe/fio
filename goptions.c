@@ -43,6 +43,7 @@ struct gopt_str_val {
 	struct gopt gopt;
 	GtkWidget *spin;
 	GtkWidget *combo;
+	unsigned int maxindex;
 };
 
 #define GOPT_RANGE_SPIN	4
@@ -601,9 +602,12 @@ static void gopt_str_val_spin_wrapped(GtkSpinButton *spin, gpointer data)
 	 * Can't rely on exact value, as fast changes increment >= 1
 	 */
 	if (!val) {
-		val = 1;
 		index = gtk_combo_box_get_active(GTK_COMBO_BOX(g->combo));
-		gtk_combo_box_set_active(GTK_COMBO_BOX(g->combo), ++index);
+		if (index + 1 <= g->maxindex) {
+			val = 1;
+			gtk_combo_box_set_active(GTK_COMBO_BOX(g->combo), ++index);
+		} else
+			val = 1023;
 		gtk_spin_button_set_value(spin, val);
 	} else {
 		index = gtk_combo_box_get_active(GTK_COMBO_BOX(g->combo));
@@ -644,6 +648,7 @@ static struct gopt *gopt_new_str_val(struct fio_option *o,
 		gtk_combo_box_append_text(GTK_COMBO_BOX(g->combo), postfix[i]);
 		i++;
 	}
+	g->maxindex = i - 1;
 	gtk_combo_box_set_active(GTK_COMBO_BOX(g->combo), 0);
 	gtk_box_pack_start(GTK_BOX(g->gopt.box), g->combo, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(g->gopt.box), label, FALSE, FALSE, 3);
