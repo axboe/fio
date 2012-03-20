@@ -640,6 +640,7 @@ static struct gopt *gopt_new_str_val(struct fio_option *o,
 		label = gtk_label_new(o->name);
 	else
 		label = gtk_label_new(o->lname);
+	gopt_mark_index(&g->gopt, idx);
 
 	g->spin = gtk_spin_button_new_with_range(0.0, 1023.0, 1.0);
 	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(g->spin), GTK_UPDATE_IF_VALID);
