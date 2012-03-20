@@ -75,7 +75,7 @@ static struct button_spec {
 };
 
 static void gfio_update_thread_status(struct gui_entry *ge, char *status_message, double perc);
-static void gfio_update_thread_status_all(char *status_message, double perc);
+static void gfio_update_thread_status_all(struct gui *ui, char *status_message, double perc);
 static void report_error(GError *error);
 
 static struct graph *setup_iops_graph(void)
@@ -1219,7 +1219,9 @@ static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_text_pdu *p = (struct cmd_text_pdu *) cmd->payload;
-	struct gui *ui = &main_ui;
+	struct gfio_client *gc = client->client_data;
+	struct gui_entry *ge = gc->ge;
+	struct gui *ui = ge->ui;
 	GtkTreeIter iter;
 	struct tm *tm;
 	time_t sec;
@@ -1534,7 +1536,7 @@ static void gfio_update_all_eta(struct jobs_eta *je)
 		sprintf(dst, " - %s", eta_str);
 	}
 		
-	gfio_update_thread_status_all(output, perc);
+	gfio_update_thread_status_all(ui, output, perc);
 	gdk_threads_leave();
 }
 
@@ -1579,12 +1581,12 @@ static void gfio_update_thread_status(struct gui_entry *ge,
 	strncpy(message, status_message, sizeof(message) - 1);
 	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ge->thread_status_pb), m);
 	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ge->thread_status_pb), perc / 100.0);
-	gtk_widget_queue_draw(main_ui.window);
+	gtk_widget_queue_draw(ge->ui->window);
 }
 
-static void gfio_update_thread_status_all(char *status_message, double perc)
+static void gfio_update_thread_status_all(struct gui *ui, char *status_message,
+					  double perc)
 {
-	struct gui *ui = &main_ui;
 	static char message[100];
 	const char *m = message;
 
@@ -1766,7 +1768,9 @@ static void gfio_quit(struct gui *ui)
 static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
                 __attribute__((unused)) gpointer data)
 {
-	gfio_quit(&main_ui);
+	struct gui *ui = (struct gui *) data;
+
+	gfio_quit(ui);
 }
 
 static void *job_thread(void *arg)
@@ -1820,10 +1824,8 @@ static void *server_thread(void *arg)
 	return NULL;
 }
 
-static void gfio_start_server(void)
+static void gfio_start_server(struct gui *ui)
 {
-	struct gui *ui = &main_ui;
-
 	if (!gfio_server_running) {
 		gfio_server_running = 1;
 		pthread_create(&ui->server_t, NULL, server_thread, NULL);
@@ -2126,7 +2128,8 @@ static void file_new(GtkWidget *w, gpointer data)
  * Return the 'ge' corresponding to the tab. If the active tab is the
  * main tab, open a new tab.
  */
-static struct gui_entry *get_ge_from_page(gint cur_page, int *created)
+static struct gui_entry *get_ge_from_page(struct gui *ui, gint cur_page,
+					  int *created)
 {
 	struct flist_head *entry;
 	struct gui_entry *ge;
@@ -2140,7 +2143,7 @@ static struct gui_entry *get_ge_from_page(gint cur_page, int *created)
 	if (created)
 		*created = 0;
 
-	flist_for_each(entry, &main_ui.list) {
+	flist_for_each(entry, &ui->list) {
 		ge = flist_entry(entry, struct gui_entry, list);
 		if (ge->page_num == cur_page)
 			return ge;
@@ -2159,7 +2162,7 @@ static struct gui_entry *get_ge_from_cur_tab(struct gui *ui)
 	 */
 	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
 	if (cur_page)
-		return get_ge_from_page(cur_page, NULL);
+		return get_ge_from_page(ui, cur_page, NULL);
 
 	return NULL;
 }
@@ -2249,7 +2252,7 @@ static int do_file_open_with_tab(struct gui *ui, const gchar *uri)
 	 * current tab already has a client.
 	 */
 	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
-	ge = get_ge_from_page(cur_page, &ge_is_new);
+	ge = get_ge_from_page(ui, cur_page, &ge_is_new);
 	if (ge->client) {
 		ge = get_new_ge_with_tab("Untitled");
 		ge_is_new = 1;
@@ -2270,7 +2273,7 @@ static int do_file_open_with_tab(struct gui *ui, const gchar *uri)
 
 	if (!ret) {
 		if (server_start)
-			gfio_start_server();
+			gfio_start_server(ui);
 	} else {
 		if (ge_is_new)
 			gtk_widget_destroy(ge->vbox);
@@ -2480,10 +2483,11 @@ static void preferences(GtkWidget *w, gpointer data)
 {
 	GtkWidget *dialog, *frame, *box, **buttons, *vbox, *font;
 	GtkWidget *hbox, *spin, *entry, *spin_int;
+	struct gui *ui = (struct gui *) data;
 	int i;
 
 	dialog = gtk_dialog_new_with_buttons("Preferences",
-		GTK_WINDOW(main_ui.window),
+		GTK_WINDOW(ui->window),
 		GTK_DIALOG_DESTROY_WITH_PARENT,
 		GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
 		GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
@@ -2909,7 +2913,7 @@ static gboolean notebook_switch_page(GtkNotebook *notebook, GtkWidget *widget,
 	}
 
 	set_job_menu_visible(ui, 1);
-	ge = get_ge_from_page(page, NULL);
+	ge = get_ge_from_page(ui, page, NULL);
 	if (ge)
 		update_button_states(ui, ge);
 
@@ -2995,10 +2999,10 @@ static void add_recent_file_items(struct gui *ui)
 }
 
 static void drag_and_drop_received(GtkWidget *widget, GdkDragContext *ctx,
-				   gint x, gint y, GtkSelectionData *data,
-				   guint info, guint time)
+				   gint x, gint y, GtkSelectionData *seldata,
+				   guint info, guint time, gpointer *data)
 {
-	struct gui *ui = &main_ui;
+	struct gui *ui = (struct gui *) data;
 	gchar **uris;
 	GtkWidget *source;
 	int i;
@@ -3009,7 +3013,7 @@ static void drag_and_drop_received(GtkWidget *widget, GdkDragContext *ctx,
 		return;
 	}
 
-	uris = gtk_selection_data_get_uris(data);
+	uris = gtk_selection_data_get_uris(seldata);
 	if (!uris) {
 		gtk_drag_finish(ctx, FALSE, FALSE, time);
 		return;
@@ -3049,8 +3053,8 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_window_set_title(GTK_WINDOW(ui->window), "fio");
 	gtk_window_set_default_size(GTK_WINDOW(ui->window), 1024, 768);
 
-	g_signal_connect(ui->window, "delete-event", G_CALLBACK(quit_clicked), NULL);
-	g_signal_connect(ui->window, "destroy", G_CALLBACK(quit_clicked), NULL);
+	g_signal_connect(ui->window, "delete-event", G_CALLBACK(quit_clicked), ui);
+	g_signal_connect(ui->window, "destroy", G_CALLBACK(quit_clicked), ui);
 
 	ui->vbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(ui->window), ui->vbox);
