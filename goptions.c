@@ -173,11 +173,12 @@ static struct gopt *gopt_new_str_store(struct fio_option *o, const char *text,
 	if (text)
 		gtk_entry_set_text(GTK_ENTRY(s->entry), text);
 	gtk_entry_set_editable(GTK_ENTRY(s->entry), 1);
-	s->gopt.sig_handler = g_signal_connect(GTK_OBJECT(s->entry), "changed", G_CALLBACK(gopt_str_changed), s);
-	g_signal_connect(GTK_OBJECT(s->entry), "destroy", G_CALLBACK(gopt_str_destroy), s);
 
 	if (o->def)
 		gtk_entry_set_text(GTK_ENTRY(s->entry), o->def);
+
+	s->gopt.sig_handler = g_signal_connect(GTK_OBJECT(s->entry), "changed", G_CALLBACK(gopt_str_changed), s);
+	g_signal_connect(GTK_OBJECT(s->entry), "destroy", G_CALLBACK(gopt_str_destroy), s);
 
 	gtk_box_pack_start(GTK_BOX(s->gopt.box), s->entry, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(s->gopt.box), label, FALSE, FALSE, 0);
@@ -218,7 +219,6 @@ static struct gopt_combo *__gopt_new_combo(struct fio_option *o,
 
 	c->combo = gtk_combo_box_new_text();
 	gopt_mark_index(&c->gopt, idx);
-	c->gopt.sig_handler = g_signal_connect(GTK_OBJECT(c->combo), "changed", G_CALLBACK(gopt_combo_changed), c);
 	g_signal_connect(GTK_OBJECT(c->combo), "destroy", G_CALLBACK(gopt_combo_destroy), c);
 
 	gtk_box_pack_start(GTK_BOX(c->gopt.box), c->combo, FALSE, FALSE, 0);
@@ -231,16 +231,16 @@ static struct gopt_combo *__gopt_new_combo(struct fio_option *o,
 static struct gopt *gopt_new_combo_str(struct fio_option *o, const char *text,
 				       unsigned int idx)
 {
-	struct gopt_combo *combo;
+	struct gopt_combo *c;
 	struct value_pair *vp;
 	int i, active = 0;
 
-	combo = __gopt_new_combo(o, idx);
+	c = __gopt_new_combo(o, idx);
 
 	i = 0;
 	vp = &o->posval[0];
 	while (vp->ival) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(combo->combo), vp->ival);
+		gtk_combo_box_append_text(GTK_COMBO_BOX(c->combo), vp->ival);
 		if (o->def && !strcmp(vp->ival, o->def))
 			active = i;
 		if (text && !strcmp(vp->ival, text))
@@ -249,31 +249,33 @@ static struct gopt *gopt_new_combo_str(struct fio_option *o, const char *text,
 		i++;
 	}
 
-	gtk_combo_box_set_active(GTK_COMBO_BOX(combo->combo), active);
-	return &combo->gopt;
+	gtk_combo_box_set_active(GTK_COMBO_BOX(c->combo), active);
+	c->gopt.sig_handler = g_signal_connect(GTK_OBJECT(c->combo), "changed", G_CALLBACK(gopt_combo_changed), c);
+	return &c->gopt;
 }
 
 static struct gopt *gopt_new_combo_int(struct fio_option *o, unsigned int *ip,
 				       unsigned int idx)
 {
-	struct gopt_combo *combo;
+	struct gopt_combo *c;
 	struct value_pair *vp;
 	int i, active = 0;
 
-	combo = __gopt_new_combo(o, idx);
+	c = __gopt_new_combo(o, idx);
 
 	i = 0;
 	vp = &o->posval[0];
 	while (vp->ival) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(combo->combo), vp->ival);
+		gtk_combo_box_append_text(GTK_COMBO_BOX(c->combo), vp->ival);
 		if (ip && vp->oval == *ip)
 			active = i;
 		vp++;
 		i++;
 	}
 
-	gtk_combo_box_set_active(GTK_COMBO_BOX(combo->combo), active);
-	return &combo->gopt;
+	gtk_combo_box_set_active(GTK_COMBO_BOX(c->combo), active);
+	c->gopt.sig_handler = g_signal_connect(GTK_OBJECT(c->combo), "changed", G_CALLBACK(gopt_combo_changed), c);
+	return &c->gopt;
 }
 
 static struct gopt *gopt_new_str_multi(struct fio_option *o, unsigned int idx)
