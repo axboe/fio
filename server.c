@@ -392,7 +392,7 @@ int fio_net_send_quit(int sk)
 {
 	dprint(FD_NET, "server: sending quit\n");
 
-	return fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_QUIT, 0, NULL);
+	return fio_net_send_simple_cmd(sk, FIO_NET_CMD_QUIT, 0, NULL);
 }
 
 int fio_net_send_stop(int sk, int error, int signal)
@@ -403,7 +403,7 @@ int fio_net_send_stop(int sk, int error, int signal)
 
 	epdu.error = __cpu_to_le32(error);
 	epdu.signal = __cpu_to_le32(signal);
-	return fio_net_send_cmd(server_fd, FIO_NET_CMD_STOP, &epdu, sizeof(epdu), 0);
+	return fio_net_send_cmd(sk, FIO_NET_CMD_STOP, &epdu, sizeof(epdu), 0);
 }
 
 static void fio_server_add_fork_item(pid_t pid, struct flist_head *list)
@@ -1016,7 +1016,7 @@ static int fio_send_cmd_ext_pdu(int sk, uint16_t opcode, const void *buf,
 	cmd.flags = __cpu_to_le32(flags);
 	fio_net_cmd_crc_pdu(&cmd, buf);
 
-	return fio_sendv_data(server_fd, iov, 2);
+	return fio_sendv_data(sk, iov, 2);
 }
 
 int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
