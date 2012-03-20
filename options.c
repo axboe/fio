@@ -1432,6 +1432,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Accept potential duplicate random blocks",
 		.parent = "rw",
 		.hide	= 1,
+		.hide_on_set = 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_RANDOM,
 	},

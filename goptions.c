@@ -193,8 +193,10 @@ static void gopt_combo_changed(GtkComboBox *box, gpointer data)
 {
 	struct gopt_combo *c = (struct gopt_combo *) data;
 	struct fio_option *o = &fio_options[c->gopt.opt_index];
+	unsigned int index;
 
-	printf("combo %s changed\n", o->name);
+	index = gtk_combo_box_get_active(GTK_COMBO_BOX(c->combo));
+	gopt_set_children_visible(o, index);
 }
 
 static void gopt_combo_destroy(GtkWidget *w, gpointer data)
