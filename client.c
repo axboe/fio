@@ -131,6 +131,9 @@ static void remove_client(struct fio_client *client)
 		fio_client_dec_jobs_eta(client->eta_in_flight, client->ops->eta);
 	}
 
+	close(client->fd);
+	client->fd = -1;
+
 	nr_clients--;
 	sum_stat_clients--;
 
