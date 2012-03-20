@@ -62,6 +62,7 @@ struct fio_option {
 	struct value_pair posval[PARSE_MAX_VP];/* possible values */
 	const char *parent;		/* parent option */
 	int hide;			/* hide if parent isn't set */
+	int hide_on_set;		/* hide on set, not on unset */
 	const char *inverse;		/* if set, apply opposite action to this option */
 	struct fio_option *inv_opt;	/* cached lookup */
 	int (*verify)(struct fio_option *, void *);

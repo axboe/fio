@@ -2625,6 +2625,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Greatly reduce number of gettimeofday() calls",
 		.cb	= str_gtod_reduce_cb,
 		.def	= "0",
+		.hide_on_set = 1,
 		.category = FIO_OPT_C_STAT,
 		.group	= FIO_OPT_G_INVALID,
 	},

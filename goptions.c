@@ -108,6 +108,9 @@ static void gopt_set_children_visible(struct fio_option *parent,
 	struct fio_option *o;
 	int i;
 
+	if (parent->hide_on_set)
+		visible = !visible;
+
 	/*
 	 * This isn't super fast, but it should not be an issue. If it is, we
 	 * can speed it up by caching the lookup at least. Or we can do it
