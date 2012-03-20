@@ -53,28 +53,31 @@ static int str_hostname_cb(void *data, const char *input);
 static struct fio_option options[] = {
 	{
 		.name	= "hostname",
+		.lname	= "net engine hostname",
 		.type	= FIO_OPT_STR_STORE,
 		.cb	= str_hostname_cb,
 		.help	= "Hostname for net IO engine",
-		.category = FIO_OPT_G_IO_ENG,
+		.category = FIO_OPT_C_IO,
 	},
 	{
 		.name	= "port",
+		.lname	= "net engine port",
 		.type	= FIO_OPT_INT,
 		.off1	= offsetof(struct netio_options, port),
 		.minval	= 1,
 		.maxval	= 65535,
 		.help	= "Port to use for TCP or UDP net connections",
-		.category = FIO_OPT_G_IO_ENG,
+		.category = FIO_OPT_C_IO,
 	},
 	{
 		.name	= "protocol",
+		.lname	= "net engine protocol",
 		.alias	= "proto",
 		.type	= FIO_OPT_STR,
 		.off1	= offsetof(struct netio_options, proto),
 		.help	= "Network protocol to use",
 		.def	= "tcp",
-		.category = FIO_OPT_G_IO_ENG,
+		.category = FIO_OPT_C_IO,
 		.posval = {
 			  { .ival = "tcp",
 			    .oval = FIO_TYPE_TCP,
@@ -92,10 +95,11 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "listen",
+		.lname	= "net engine listen",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct netio_options, listen),
 		.help	= "Listen for incoming TCP connections",
-		.category = FIO_OPT_G_IO_ENG,
+		.category = FIO_OPT_C_IO,
 	},
 	{
 		.name	= NULL,

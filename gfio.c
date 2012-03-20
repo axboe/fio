@@ -1763,7 +1763,7 @@ static void gfio_quit(struct gui *ui)
 static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
                 __attribute__((unused)) gpointer data)
 {
-	gfio_quit(data);
+	gfio_quit(&main_ui);
 }
 
 static void *job_thread(void *arg)
@@ -2070,6 +2070,7 @@ static void gfio_client_added(struct gui_entry *ge, struct fio_client *client)
 
 	gc = malloc(sizeof(*gc));
 	memset(gc, 0, sizeof(*gc));
+	options_default_fill(&gc->o);
 	gc->ge = ge;
 	gc->client = fio_get_client(client);
 

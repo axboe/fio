@@ -188,12 +188,6 @@ struct thread_options {
 	char *ioscheduler;
 
 	/*
-	 * CPU "io" cycle burner
-	 */
-	unsigned int cpuload;
-	unsigned int cpucycle;
-
-	/*
 	 * I/O Error handling
 	 */
 	enum error_type continue_on_error;
@@ -377,12 +371,6 @@ struct thread_options_pack {
 	uint8_t ioscheduler[FIO_TOP_STR_MAX];
 
 	/*
-	 * CPU "io" cycle burner
-	 */
-	uint32_t cpuload;
-	uint32_t cpucycle;
-
-	/*
 	 * I/O Error handling
 	 */
 	uint32_t continue_on_error;
@@ -415,5 +403,6 @@ struct thread_options_pack {
 extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);
 extern void convert_thread_options_to_net(struct thread_options_pack *top, struct thread_options *);
 extern int fio_test_cconv(struct thread_options *);
+extern void options_default_fill(struct thread_options *o);
 
 #endif

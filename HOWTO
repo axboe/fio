@@ -1150,12 +1150,6 @@ exec_postrun=str After the job completes, issue the command specified
 ioscheduler=str	Attempt to switch the device hosting the file to the specified
 		io scheduler before running.
 
-cpuload=int	If the job is a CPU cycle eater, attempt to use the specified
-		percentage of CPU cycles.
-
-cpuchunks=int	If the job is a CPU cycle eater, split the load into
-		cycles of the given time. In microseconds.
-
 disk_util=bool	Generate disk utilization statistics, if the platform
 		supports it. Defaults to on.
 
@@ -1285,6 +1279,11 @@ that defines them is selected.
 		from user-space to reap events. The reaping mode is only
 		enabled when polling for a minimum of 0 events (eg when
 		iodepth_batch_complete=0).
+
+[cpu] cpuload=int Attempt to use the specified percentage of CPU cycles.
+
+[cpu] cpuchunks=int Split the load into cycles of the given time. In
+		microseconds.
 
 [netsplice] hostname=str
 [net] hostname=str The host name or IP address to use for TCP or UDP based IO.

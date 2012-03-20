@@ -833,9 +833,8 @@ int parse_option(char *opt, const char *input,
 		return 1;
 	}
 
-	if (!handle_option(*o, post, data)) {
+	if (!handle_option(*o, post, data))
 		return 0;
-	}
 
 	log_err("fio: failed parsing %s\n", input);
 	return 1;
@@ -1049,7 +1048,7 @@ void option_init(struct fio_option *o)
 	}
 	if (!o->category) {
 		log_info("Options %s: no category defined. Setting to misc\n", o->name);
-		o->category = FIO_OPT_G_MISC;
+		o->category = FIO_OPT_C_GENERAL;
 	}
 }
 
@@ -1063,8 +1062,11 @@ void options_init(struct fio_option *options)
 
 	dprint(FD_PARSE, "init options\n");
 
-	for (o = &options[0]; o->name; o++)
+	for (o = &options[0]; o->name; o++) {
 		option_init(o);
+		if (o->inverse)
+			o->inv_opt = find_option(options, o->inverse);
+	}
 }
 
 void options_free(struct fio_option *options, void *data)
