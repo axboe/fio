@@ -39,6 +39,12 @@ struct gopt_str {
 	GtkWidget *entry;
 };
 
+struct gopt_str_val {
+	struct gopt gopt;
+	GtkWidget *spin;
+	GtkWidget *combo;
+};
+
 #define GOPT_RANGE_SPIN	4
 
 struct gopt_range {
@@ -573,13 +579,95 @@ static struct gopt *gopt_new_int_range(struct fio_option *o, unsigned int **ip,
 	return &r->gopt;
 }
 
+static void gopt_str_val_destroy(GtkWidget *w, gpointer data)
+{
+	struct gopt_str_val *g = (struct gopt_str_val *) data;
+
+	free(g);
+	gtk_widget_destroy(w);
+}
+
+static void gopt_str_val_spin_wrapped(GtkSpinButton *spin, gpointer data)
+{
+	struct gopt_str_val *g = (struct gopt_str_val *) data;
+	unsigned int val;
+	GtkAdjustment *adj;
+	gint index;
+
+	adj = gtk_spin_button_get_adjustment(spin);
+	val = gtk_adjustment_get_value(adj);
+
+	/*
+	 * Can't rely on exact value, as fast changes increment >= 1
+	 */
+	if (!val) {
+		val = 1;
+		index = gtk_combo_box_get_active(GTK_COMBO_BOX(g->combo));
+		gtk_combo_box_set_active(GTK_COMBO_BOX(g->combo), ++index);
+		gtk_spin_button_set_value(spin, val);
+	} else {
+		index = gtk_combo_box_get_active(GTK_COMBO_BOX(g->combo));
+		if (index) {
+			gtk_combo_box_set_active(GTK_COMBO_BOX(g->combo), --index);
+			gtk_spin_button_set_value(spin, 1023);
+		} else
+			gtk_spin_button_set_value(spin, 0);
+	}
+}
+
+static struct gopt *gopt_new_str_val(struct fio_option *o,
+				     unsigned long long *p, unsigned int idx)
+{
+	struct gopt_str_val *g;
+	const gchar *postfix[] = { "B", "KB", "MB", "GB", "PB", "TB", "" };
+	GtkWidget *label;
+	int i;
+
+	g = malloc(sizeof(*g));
+	memset(g, 0, sizeof(*g));
+	g->gopt.box = gtk_hbox_new(FALSE, 3);
+	if (!o->lname)
+		label = gtk_label_new(o->name);
+	else
+		label = gtk_label_new(o->lname);
+
+	g->spin = gtk_spin_button_new_with_range(0.0, 1023.0, 1.0);
+	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(g->spin), GTK_UPDATE_IF_VALID);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(g->spin), 0);
+	gtk_spin_button_set_wrap(GTK_SPIN_BUTTON(g->spin), 1);
+	gtk_box_pack_start(GTK_BOX(g->gopt.box), g->spin, FALSE, FALSE, 0);
+	g_signal_connect(G_OBJECT(g->spin), "wrapped", G_CALLBACK(gopt_str_val_spin_wrapped), g);
+
+	g->combo = gtk_combo_box_new_text();
+	i = 0;
+	while (strlen(postfix[i])) {
+		gtk_combo_box_append_text(GTK_COMBO_BOX(g->combo), postfix[i]);
+		i++;
+	}
+	gtk_combo_box_set_active(GTK_COMBO_BOX(g->combo), 0);
+	gtk_box_pack_start(GTK_BOX(g->gopt.box), g->combo, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(g->gopt.box), label, FALSE, FALSE, 3);
+
+	g_signal_connect(G_OBJECT(g->gopt.box), "destroy", G_CALLBACK(gopt_str_val_destroy), g);
+	o->gui_data = g;
+	return &g->gopt;
+}
+
 static void gopt_add_option(GtkWidget *hbox, struct fio_option *o,
 			    unsigned int opt_index, struct thread_options *to)
 {
 	struct gopt *go = NULL;
 
 	switch (o->type) {
-	case FIO_OPT_STR_VAL:
+	case FIO_OPT_STR_VAL: {
+		unsigned long long *ullp = NULL;
+
+		if (o->off1)
+			ullp = td_var(to, o->off1);
+
+		go = gopt_new_str_val(o, ullp, opt_index);
+		break;
+		}
 	case FIO_OPT_STR_VAL_TIME: {
 		unsigned long long *ullp = NULL;
 
