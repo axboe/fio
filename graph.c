@@ -682,8 +682,8 @@ void graph_add_label(struct graph *bg, const char *label)
 	INIT_PRIO_TREE_ROOT(&i->prio_tree);
 }
 
-static void graph_label_add_value(struct graph_label *i, void *value,
-				  const char *tooltip)
+static void graph_label_add_value(struct graph *g, struct graph_label *i,
+				  void *value, const char *tooltip)
 {
 	struct graph_value *x;
 
@@ -707,8 +707,10 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 		INIT_PRIO_TREE_NODE(&x->node);
 		x->node.start = miny;
 		x->node.last = maxy;
-		if (x->node.last == x->node.start)
-			x->node.last++;
+		if (x->node.last == x->node.start) {
+			x->node.last += fabs(g->ytick_delta);
+			printf("last bumped to %lu\n", x->node.last);
+		}
 
 		/*
 		 * If ret != &x->node, we have an alias. Since the values
@@ -760,7 +762,7 @@ int graph_add_data(struct graph *bg, const char *label, const double value)
 	i = graph_find_label(bg, label);
 	if (!i)
 		return -1;
-	graph_label_add_value(i, d, NULL);
+	graph_label_add_value(bg, i, d, NULL);
 	return 0;
 }
 
@@ -778,7 +780,7 @@ int graph_add_xy_data(struct graph *bg, const char *label,
 	if (!i)
 		return -1;
 
-	graph_label_add_value(i, xy, tooltip);
+	graph_label_add_value(bg, i, xy, tooltip);
 	return 0;
 }
 
