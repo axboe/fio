@@ -690,20 +690,15 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 	x = malloc(sizeof(*x));
 	memset(x, 0, sizeof(*x));
 	x->value = value;
-	if (tooltip)
-		x->tooltip = strdup(tooltip);
-	else
-		x->tooltip = NULL;
 	x->next = NULL;
-	if (!i->tail) {
+	if (!i->tail)
 		i->values = x;
-	} else {
+	else
 		i->tail->next = x;
-	}
 	i->tail = x;
 	i->value_count++;
 
-	if (x->tooltip) {
+	if (tooltip) {
 		double yval = gety(x);
 		double miny = yval / TOOLTIP_DELTA;
 		double maxy = yval * TOOLTIP_DELTA;
@@ -720,11 +715,10 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 		 * should be identical, we can drop it
 		 */
 		ret = prio_tree_insert(&i->prio_tree, &x->node);
-		if (ret != &x->node) {
-			free(x->tooltip);
-			x->tooltip = NULL;
-		} else
+		if (ret == &x->node) {
+			x->tooltip = strdup(tooltip);
 			i->tooltip_count++;
+		}
 	}
 
 	if (i->parent->per_label_limit != -1 &&
