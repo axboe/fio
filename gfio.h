@@ -144,8 +144,6 @@ struct gfio_client {
 	unsigned int nr_du;
 };
 
-#define ARRAYSIZE(x) (sizeof((x)) / (sizeof((x)[0])))
-
 #define GFIO_MIME	"text/fio"
 
 extern void gfio_view_log(struct gui *ui);

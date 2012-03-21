@@ -736,7 +736,7 @@ static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 	GType types[FIO_IO_U_MAP_NR + 1];
 	int i;
 	const char *labels[] = { "Depth", "0", "1", "2", "4", "8", "16", "32", "64", ">= 64" };
-	const int nr_labels = ARRAYSIZE(labels);
+	const int nr_labels = ARRAY_SIZE(labels);
 
 	frame = gtk_frame_new("IO depths");
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);

@@ -20,7 +20,7 @@ struct thread_data;
 #include "thread_options.h"
 #include "flist.h"
 #include "fifo.h"
-#include "rbtree.h"
+#include "lib/rbtree.h"
 #include "arch/arch.h"
 #include "os/os.h"
 #include "mutex.h"
@@ -550,5 +550,7 @@ static inline void td_io_u_free_notify(struct thread_data *td)
 
 extern const char *fio_get_arch_string(int);
 extern const char *fio_get_os_string(int);
+
+#define ARRAY_SIZE(x) (sizeof((x)) / (sizeof((x)[0])))
 
 #endif

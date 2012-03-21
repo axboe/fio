@@ -1389,7 +1389,7 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	gtk_container_add(GTK_CONTAINER(bottom_align), ge->buttonbox);
 	gtk_box_pack_start(GTK_BOX(main_vbox), bottom_align, FALSE, FALSE, 0);
 
-	add_buttons(ge, buttonspeclist, ARRAYSIZE(buttonspeclist));
+	add_buttons(ge, buttonspeclist, ARRAY_SIZE(buttonspeclist));
 
 	/*
 	 * Set up thread status progress bar
