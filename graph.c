@@ -31,14 +31,24 @@
 
 #include "tickmarks.h"
 #include "graph.h"
+#include "flist.h"
+#include "lib/prio_tree.h"
+#include "gettime.h"
+struct thread_data;
+#include "time.h"
+
+/*
+ * Allowable difference to show tooltip
+ */
+#define TOOLTIP_DELTA	1.02
 
 struct xyvalue {
 	double x, y;
-	int gx, gy;
 };
 
 struct graph_value {
 	struct graph_value *next;
+	struct prio_tree_node node;
 	char *tooltip;
 	void *value;
 };
@@ -48,10 +58,16 @@ struct graph_label {
 	struct graph_value *tail;
 	struct graph_value *values;
 	struct graph_label *next;
+	struct prio_tree_root prio_tree;
 	double r, g, b;
 	int value_count;
 	unsigned int tooltip_count;
 	struct graph *parent;
+};
+
+struct tick_value {
+	unsigned int offset;
+	double value;
 };
 
 struct graph {
@@ -71,6 +87,13 @@ struct graph {
 	double right_extra;	
 	double top_extra;	
 	double bottom_extra;	
+
+	double xtick_zero;
+	double xtick_delta;
+	double xtick_zero_val;
+	double ytick_zero;
+	double ytick_delta;
+	double ytick_zero_val;
 };
 
 void graph_set_size(struct graph *g, unsigned int xdim, unsigned int ydim)
@@ -342,6 +365,15 @@ static void graph_draw_x_ticks(struct graph *g, cairo_t *cr,
 	for (i = 0; i < nticks; i++) {
 		tx = (((tm[i].value) - minx) / (maxx - minx)) * (x2 - x1) + x1;
 
+		/*
+		 * Update tick delta
+		 */
+		if (!i) {
+			g->xtick_zero = tx;
+			g->xtick_zero_val = tm[0].value;
+		} else if (i == 1)
+			g->xtick_delta = (tm[1].value - tm[0].value) / (tx - g->xtick_zero);
+
 		/* really tx < yx || tx > x2, but protect against rounding */
 		if (x1 - tx > 0.01 || tx - x2 > 0.01)
 			continue;
@@ -367,7 +399,6 @@ static void graph_draw_x_ticks(struct graph *g, cairo_t *cr,
 		/* draw tickmark label */
 		draw_centered_text(g, cr, tx, y2 * 1.04, 12.0, tm[i].string);
 		cairo_stroke(cr);
-		
 	}
 }
 
@@ -394,6 +425,15 @@ static double graph_draw_y_ticks(struct graph *g, cairo_t *cr,
 
 	for (i = 0; i < nticks; i++) {
 		ty = y2 - (((tm[i].value) - miny) / (maxy - miny)) * (y2 - y1);
+
+		/*
+		 * Update tick delta
+		 */
+		if (!i) {
+			g->ytick_zero = ty;
+			g->ytick_zero_val = tm[0].value;
+		} else if (i == 1)
+			g->ytick_delta = (tm[1].value - tm[0].value) / (ty - g->ytick_zero);
 
 		/* really ty < y1 || ty > y2, but protect against rounding */
 		if (y1 - ty > 0.01 || ty - y2 > 0.01)
@@ -574,10 +614,9 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 		first = 1;
 		if (i->r < 0) /* invisible data */
 			continue;
+
 		cairo_set_source_rgb(cr, i->r, i->g, i->b);
 		for (j = i->values; j; j = j->next) {
-			struct xyvalue *xy = j->value;
-
 			tx = ((getx(j) - gminx) / (gmaxx - gminx)) * (x2 - x1) + x1;
 			ty = y2 - ((gety(j) - gminy) / (gmaxy - gminy)) * (y2 - y1);
 			if (first) {
@@ -586,8 +625,6 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 			} else {
 				cairo_line_to(cr, tx, ty);
 			}
-			xy->gx = tx;
-			xy->gy = ty;
 		}
 		cairo_stroke(cr);
 	}
@@ -597,15 +634,9 @@ skip_data:
 
 }
 
-static void gfree(void *f)
-{
-	if (f)
-		free(f);
-}
-
 static void setstring(char **str, const char *value)
 {
-	gfree(*str);
+	free(*str);
 	*str = strdup(value);
 }
 
@@ -651,6 +682,7 @@ void graph_add_label(struct graph *bg, const char *label)
 	else
 		bg->tail->next = i;
 	bg->tail = i;
+	INIT_PRIO_TREE_ROOT(&i->prio_tree);
 }
 
 static void graph_label_add_value(struct graph_label *i, void *value,
@@ -672,8 +704,21 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 	}
 	i->tail = x;
 	i->value_count++;
-	if (x->tooltip)
+
+	if (x->tooltip) {
+		double yval = gety(x);
+		double miny = yval / TOOLTIP_DELTA;
+		double maxy = yval * TOOLTIP_DELTA;
+
+		x->node.start = miny;
+		x->node.last = maxy;
+		if (x->node.last == x->node.start)
+			x->node.last++;
+
+		prio_tree_insert(&i->prio_tree, &x->node);
+		printf("insert (x=%u,y=%u) range %lu-%lu (%s)\n", (int)getx(x), (int)gety(x), x->node.start, x->node.last, x->tooltip);
 		i->tooltip_count++;
+	}
 
 	if (i->parent->per_label_limit != -1 &&
 		i->value_count > i->parent->per_label_limit) {
@@ -693,6 +738,7 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 			i->values = i->values->next;
 			if (x->tooltip) {
 				free(x->tooltip);
+				prio_tree_remove(&i->prio_tree, &x->node);
 				i->tooltip_count--;
 			}
 			free(x->value);
@@ -741,8 +787,8 @@ static void graph_free_values(struct graph_value *values)
 
 	for (i = values; i; i = next) {
 		next = i->next;
-		gfree(i->value);
-		gfree(i);
+		free(i->value);
+		free(i);
 	}	
 }
 
@@ -753,7 +799,7 @@ static void graph_free_labels(struct graph_label *labels)
 	for (i = labels; i; i = next) {
 		next = i->next;
 		graph_free_values(i->values);
-		gfree(i);
+		free(i);
 	}	
 }
 
@@ -777,7 +823,7 @@ void graph_set_color(struct graph *gr, const char *label,
 		if (g > 1.0)
 			g = 1.0;
 		if (b > 1.0)
-			b =1.0;
+			b = 1.0;
 	}
 
 	for (i = gr->labels; i; i = i->next)
@@ -791,9 +837,9 @@ void graph_set_color(struct graph *gr, const char *label,
 
 void graph_free(struct graph *bg)
 {
-	gfree(bg->title);
-	gfree(bg->xtitle);
-	gfree(bg->ytitle);
+	free(bg->title);
+	free(bg->xtitle);
+	free(bg->ytitle);
 	graph_free_labels(bg->labels);
 }
 
@@ -846,41 +892,66 @@ int graph_contains_xy(struct graph *g, int x, int y)
 	return (x >= first_x && x <= last_x) && (y >= first_y && y <= last_y);
 }
 
-/*
- * Allowable difference to show tooltip
- */
-#define TOOLTIP_XDIFF	10
-#define TOOLTIP_YDIFF	10
-
-static int xy_match(struct xyvalue *xy, int x, int y)
+const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 {
-	int xdiff = abs(xy->gx - x);
-	int ydiff = abs(xy->gy - y);
-
-	return xdiff <= TOOLTIP_XDIFF && ydiff <= TOOLTIP_YDIFF;
-}
-
-const char *graph_find_tooltip(struct graph *g, int x, int y)
-{
+	double x = ix, y = iy;
+	struct prio_tree_iter iter;
+	struct prio_tree_node *n;
 	struct graph_label *i;
-	struct graph_value *j;
+	struct graph_value *best = NULL;
+	double best_delta;
+	double maxx, minx;
 
-	for (i = g->labels; i; i = i->next) {
-		for (j = i->values; j; j = j->next) {
-			struct xyvalue *xy = j->value;
-			int graphx = x - g->xoffset;
+	x -= g->xoffset;
+	y -= g->yoffset;
+
+	x = g->xtick_zero_val + ((x - g->xtick_zero) * g->xtick_delta);
+	y = g->ytick_zero_val + ((y - g->ytick_zero) * g->ytick_delta);
+
+	maxx = x * TOOLTIP_DELTA;
+	minx = x / TOOLTIP_DELTA;
+	best_delta = UINT_MAX;
+	i = g->labels;
+	do {
+		prio_tree_iter_init(&iter, &i->prio_tree, y, y);
+
+		n = prio_tree_next(&iter);
+		if (!n)
+			continue;
+
+		do {
+			struct graph_value *v;
+			double xval, xdiff;
+
+			v = container_of(n, struct graph_value, node);
+			xval = getx(v);
+
+			if (xval > x)
+				xdiff = xval - x;
+			else
+				xdiff = x - xval;
 
 			/*
-			 * Return match if close enough. Take advantage
-			 * of the X axis being monotonically increasing,
-			 * so we can break out if we exceed it.
+			 * zero delta, or within or match critera, break
 			 */
-			if (xy_match(xy, graphx, y))
-				return j->tooltip;
-			else if (xy->gx - graphx > TOOLTIP_XDIFF)
-				break;
-		}
-	}
+			if (xdiff < best_delta) {
+				best_delta = xdiff;
+				if (!best_delta ||
+				    (xval >= minx && xval <= maxx)) {
+					best = v;
+					break;
+				}
+			}
+		} while ((n = prio_tree_next(&iter)) != NULL);
+
+		/*
+		 * If we got matches in one label, don't check others.
+		 */
+		break;
+	} while ((i = i->next) != NULL);
+
+	if (best)
+		return best->tooltip;
 
 	return NULL;
 }
