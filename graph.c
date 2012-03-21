@@ -688,6 +688,7 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 	struct graph_value *x;
 
 	x = malloc(sizeof(*x));
+	memset(x, 0, sizeof(*x));
 	x->value = value;
 	if (tooltip)
 		x->tooltip = strdup(tooltip);
@@ -707,6 +708,7 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 		double miny = yval / TOOLTIP_DELTA;
 		double maxy = yval * TOOLTIP_DELTA;
 
+		INIT_PRIO_TREE_NODE(&x->node);
 		x->node.start = miny;
 		x->node.last = maxy;
 		if (x->node.last == x->node.start)
@@ -777,13 +779,18 @@ int graph_add_xy_data(struct graph *bg, const char *label,
 	return 0;
 }
 
-static void graph_free_values(struct graph_value *values)
+static void graph_free_values(struct graph_label *l, struct graph_value *values)
 {
 	struct graph_value *i, *next;
 
 	for (i = values; i; i = next) {
 		next = i->next;
 		free(i->value);
+		if (i->tooltip) {
+			free(i->tooltip);
+			prio_tree_remove(&l->prio_tree, &i->node);
+			l->tooltip_count--;
+		}
 		free(i);
 	}	
 }
@@ -794,7 +801,7 @@ static void graph_free_labels(struct graph_label *labels)
 
 	for (i = labels; i; i = next) {
 		next = i->next;
-		graph_free_values(i->values);
+		graph_free_values(i, i->values);
 		free(i);
 	}	
 }
