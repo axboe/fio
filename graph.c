@@ -37,7 +37,7 @@
 /*
  * Allowable difference to show tooltip
  */
-#define TOOLTIP_DELTA	1.02
+#define TOOLTIP_DELTA	0.08
 
 struct xyvalue {
 	double x, y;
@@ -88,9 +88,11 @@ struct graph {
 	double xtick_zero;
 	double xtick_delta;
 	double xtick_zero_val;
+	double xtick_one_val;
 	double ytick_zero;
 	double ytick_delta;
 	double ytick_zero_val;
+	double ytick_one_val;
 };
 
 void graph_set_size(struct graph *g, unsigned int xdim, unsigned int ydim)
@@ -368,8 +370,10 @@ static void graph_draw_x_ticks(struct graph *g, cairo_t *cr,
 		if (!i) {
 			g->xtick_zero = tx;
 			g->xtick_zero_val = tm[0].value;
-		} else if (i == 1)
+		} else if (i == 1) {
 			g->xtick_delta = (tm[1].value - tm[0].value) / (tx - g->xtick_zero);
+			g->xtick_one_val = tm[1].value;
+		}
 
 		/* really tx < yx || tx > x2, but protect against rounding */
 		if (x1 - tx > 0.01 || tx - x2 > 0.01)
@@ -429,8 +433,10 @@ static double graph_draw_y_ticks(struct graph *g, cairo_t *cr,
 		if (!i) {
 			g->ytick_zero = ty;
 			g->ytick_zero_val = tm[0].value;
-		} else if (i == 1)
+		} else if (i == 1) {
 			g->ytick_delta = (tm[1].value - tm[0].value) / (ty - g->ytick_zero);
+			g->ytick_one_val = tm[1].value;
+		}
 
 		/* really ty < y1 || ty > y2, but protect against rounding */
 		if (y1 - ty > 0.01 || ty - y2 > 0.01)
@@ -628,7 +634,6 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 
 skip_data:
 	cairo_restore(cr);
-
 }
 
 static void setstring(char **str, const char *value)
@@ -682,9 +687,10 @@ void graph_add_label(struct graph *bg, const char *label)
 	INIT_PRIO_TREE_ROOT(&i->prio_tree);
 }
 
-static void graph_label_add_value(struct graph *g, struct graph_label *i,
-				  void *value, const char *tooltip)
+static void graph_label_add_value(struct graph_label *i, void *value,
+				  const char *tooltip)
 {
+	struct graph *g = i->parent;
 	struct graph_value *x;
 
 	x = malloc(sizeof(*x));
@@ -699,17 +705,26 @@ static void graph_label_add_value(struct graph *g, struct graph_label *i,
 	i->value_count++;
 
 	if (tooltip) {
-		double yval = gety(x);
-		double miny = yval / TOOLTIP_DELTA;
-		double maxy = yval * TOOLTIP_DELTA;
+		/*
+		 * use msec to avoid dropping too much precision when
+		 * storing as an integer.
+		 */
+		double xval = getx(x);
+		double minx = xval - (g->xtick_one_val * TOOLTIP_DELTA);
+		double maxx = xval + (g->xtick_one_val * TOOLTIP_DELTA);
 		struct prio_tree_node *ret;
 
+		xval = xval * 1000.0;
+		minx = minx * 1000.0;
+		maxx = maxx * 1000.0;
+
 		INIT_PRIO_TREE_NODE(&x->node);
-		x->node.start = miny;
-		x->node.last = maxy;
+		x->node.start = minx;
+		x->node.last = maxx;
 		if (x->node.last == x->node.start) {
-			x->node.last += fabs(g->ytick_delta);
-			printf("last bumped to %lu\n", x->node.last);
+			x->node.last += fabs(g->xtick_delta);
+			if (x->node.last == x->node.start)
+				x->node.last++;
 		}
 
 		/*
@@ -723,8 +738,8 @@ static void graph_label_add_value(struct graph *g, struct graph_label *i,
 		}
 	}
 
-	if (i->parent->per_label_limit != -1 &&
-		i->value_count > i->parent->per_label_limit) {
+	if (g->per_label_limit != -1 &&
+		i->value_count > g->per_label_limit) {
 		int to_drop = 1;
 
 		/*
@@ -733,7 +748,7 @@ static void graph_label_add_value(struct graph *g, struct graph_label *i,
 		 * entries. This will make us (eventually) reach the
 		 * specified limit.
 		 */
-		if (i->value_count - i->parent->per_label_limit >= 2)
+		if (i->value_count - g->per_label_limit >= 2)
 			to_drop = 2;
 
 		while (to_drop--) {
@@ -762,7 +777,7 @@ int graph_add_data(struct graph *bg, const char *label, const double value)
 	i = graph_find_label(bg, label);
 	if (!i)
 		return -1;
-	graph_label_add_value(bg, i, d, NULL);
+	graph_label_add_value(i, d, NULL);
 	return 0;
 }
 
@@ -780,7 +795,7 @@ int graph_add_xy_data(struct graph *bg, const char *label,
 	if (!i)
 		return -1;
 
-	graph_label_add_value(bg, i, xy, tooltip);
+	graph_label_add_value(i, xy, tooltip);
 	return 0;
 }
 
@@ -908,7 +923,7 @@ const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 	struct graph_label *i;
 	struct graph_value *best = NULL;
 	double best_delta;
-	double maxx, minx;
+	double maxy, miny;
 
 	x -= g->xoffset;
 	y -= g->yoffset;
@@ -916,13 +931,14 @@ const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 	x = g->xtick_zero_val + ((x - g->xtick_zero) * g->xtick_delta);
 	y = g->ytick_zero_val + ((y - g->ytick_zero) * g->ytick_delta);
 
-	maxx = x * TOOLTIP_DELTA;
-	minx = x / TOOLTIP_DELTA;
+	x = x * 1000.0;
+	maxy = y + (g->ytick_one_val * TOOLTIP_DELTA);
+	miny = y - (g->ytick_one_val * TOOLTIP_DELTA);
 	best_delta = UINT_MAX;
 	i = g->labels;
 	do {
 		INIT_PRIO_TREE_ITER(&iter);
-		prio_tree_iter_init(&iter, &i->prio_tree, y, y);
+		prio_tree_iter_init(&iter, &i->prio_tree, x, x);
 
 		n = prio_tree_next(&iter);
 		if (!n)
@@ -930,23 +946,19 @@ const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 
 		do {
 			struct graph_value *v;
-			double xval, xdiff;
+			double yval, ydiff;
 
 			v = container_of(n, struct graph_value, node);
-			xval = getx(v);
-
-			if (xval > x)
-				xdiff = xval - x;
-			else
-				xdiff = x - xval;
+			yval = gety(v);
+			ydiff = fabs(yval - y);
 
 			/*
 			 * zero delta, or within or match critera, break
 			 */
-			if (xdiff < best_delta) {
-				best_delta = xdiff;
+			if (ydiff < best_delta) {
+				best_delta = ydiff;
 				if (!best_delta ||
-				    (xval >= minx && xval <= maxx)) {
+				    (yval >= miny && yval <= maxy)) {
 					best = v;
 					break;
 				}
