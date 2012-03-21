@@ -118,8 +118,11 @@ struct gui_entry {
 	struct graph *lat_bucket_graph;
 
 	struct gfio_client *client;
-	int nr_job_files;
-	char **job_files;
+	char *job_file;
+	char *host;
+	int port;
+	int type;
+	int server_start;
 };
 
 struct end_results {

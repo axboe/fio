@@ -76,7 +76,7 @@ static struct button_spec {
 
 static void gfio_update_thread_status(struct gui_entry *ge, char *status_message, double perc);
 static void gfio_update_thread_status_all(struct gui *ui, char *status_message, double perc);
-static void report_error(GError *error);
+static void report_error(struct gui_entry *ge, GError *error);
 
 static struct graph *setup_iops_graph(void)
 {
@@ -874,13 +874,13 @@ static void gfio_add_total_depths_tree(GtkListStore *model,
 
 static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 {
-	GtkWidget *frame, *box, *tree_view;
+	GtkWidget *frame, *box, *tree_view = NULL;
 	GtkTreeSelection *selection;
 	GtkListStore *model;
 	GType types[FIO_IO_U_MAP_NR + 1];
 	int i;
-#define NR_LABELS	10
-	const char *labels[NR_LABELS] = { "Depth", "0", "1", "2", "4", "8", "16", "32", "64", ">= 64" };
+	const char *labels[] = { "Depth", "0", "1", "2", "4", "8", "16", "32", "64", ">= 64" };
+	const int nr_labels = ARRAYSIZE(labels);
 
 	frame = gtk_frame_new("IO depths");
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
@@ -888,10 +888,10 @@ static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 	box = gtk_hbox_new(FALSE, 3);
 	gtk_container_add(GTK_CONTAINER(frame), box);
 
-	for (i = 0; i < NR_LABELS; i++)
+	for (i = 0; i < nr_labels; i++)
 		types[i] = G_TYPE_STRING;
 
-	model = gtk_list_store_newv(NR_LABELS, types);
+	model = gtk_list_store_newv(nr_labels, types);
 
 	tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
 	gtk_widget_set_can_focus(tree_view, FALSE);
@@ -902,12 +902,12 @@ static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree_view));
 	gtk_tree_selection_set_mode(GTK_TREE_SELECTION(selection), GTK_SELECTION_BROWSE);
 
-	for (i = 0; i < NR_LABELS; i++)
+	for (i = 0; i < nr_labels; i++)
 		tree_view_column(tree_view, i, labels[i], ALIGN_RIGHT | UNSORTABLE);
 
-	gfio_add_total_depths_tree(model, ts, NR_LABELS);
-	gfio_add_sc_depths_tree(model, ts, NR_LABELS, 1);
-	gfio_add_sc_depths_tree(model, ts, NR_LABELS, 0);
+	gfio_add_total_depths_tree(model, ts, nr_labels);
+	gfio_add_sc_depths_tree(model, ts, nr_labels, 1);
+	gfio_add_sc_depths_tree(model, ts, nr_labels, 0);
 
 	gtk_box_pack_start(GTK_BOX(box), tree_view, TRUE, FALSE, 3);
 }
@@ -1708,6 +1708,15 @@ static void gfio_client_iolog(struct fio_client *client, struct cmd_iolog_pdu *p
 	free(pdu);
 }
 
+static void gfio_client_removed(struct fio_client *client)
+{
+	struct gfio_client *gc = client->client_data;
+
+	assert(gc->client == client);
+	fio_put_client(gc->client);
+	gc->client = NULL;
+}
+
 struct client_ops gfio_client_ops = {
 	.text			= gfio_text_op,
 	.disk_util		= gfio_disk_util_op,
@@ -1723,6 +1732,7 @@ struct client_ops gfio_client_ops = {
 	.start			= gfio_client_start,
 	.job_start		= gfio_client_job_start,
 	.iolog			= gfio_client_iolog,
+	.removed		= gfio_client_removed,
 	.eta_msec		= FIO_CLIENT_DEF_ETA_MSEC,
 	.stay_connected		= 1,
 	.client_type		= FIO_CLIENT_TYPE_GUI,
@@ -1742,6 +1752,8 @@ static void ge_destroy(struct gui_entry *ge)
 		fio_put_client(gc->client);
 	}
 
+	free(ge->job_file);
+	free(ge->host);
 	flist_del(&ge->list);
 	free(ge);
 }
@@ -1783,36 +1795,20 @@ static void *job_thread(void *arg)
 	return NULL;
 }
 
-static int send_job_files(struct gui_entry *ge)
+static int send_job_file(struct gui_entry *ge)
 {
 	struct gfio_client *gc = ge->client;
-	int i, ret = 0;
+	GError *error;
+	int ret = 0;
 
-	for (i = 0; i < ge->nr_job_files; i++) {
-		ret = fio_client_send_ini(gc->client, ge->job_files[i]);
-		if (ret < 0) {
-			GError *error;
+	ret = fio_client_send_ini(gc->client, ge->job_file);
+	if (!ret)
+		return 0;
 
-			error = g_error_new(g_quark_from_string("fio"), 1, "Failed to send file %s: %s\n", ge->job_files[i], strerror(-ret));
-			report_error(error);
-			g_error_free(error);
-			break;
-		} else if (ret)
-			break;
-
-		free(ge->job_files[i]);
-		ge->job_files[i] = NULL;
-	}
-	while (i < ge->nr_job_files) {
-		free(ge->job_files[i]);
-		ge->job_files[i] = NULL;
-		i++;
-	}
-
-	free(ge->job_files);
-	ge->job_files = NULL;
-	ge->nr_job_files = 0;
-	return ret;
+	error = g_error_new(g_quark_from_string("fio"), 1, "Failed to send file %s: %s\n", ge->job_file, strerror(-ret));
+	report_error(ge, error);
+	g_error_free(error);
+	return 1;
 }
 
 static void *server_thread(void *arg)
@@ -1844,93 +1840,6 @@ static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
 }
 
 static void file_open(GtkWidget *w, gpointer data);
-
-static void connect_clicked(GtkWidget *widget, gpointer data)
-{
-	struct gui_entry *ge = data;
-	struct gfio_client *gc = ge->client;
-
-	if (ge->state == GE_STATE_NEW) {
-		int ret;
-
-		if (!ge->nr_job_files)
-			file_open(widget, ge->ui);
-		if (!ge->nr_job_files)
-			return;
-
-		gc = ge->client;
-
-		gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ge->thread_status_pb), "No jobs running");
-		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ge->thread_status_pb), 0.0);
-		ret = fio_client_connect(gc->client);
-		if (!ret) {
-			if (!ge->ui->handler_running)
-				pthread_create(&ge->ui->t, NULL, job_thread, ge->ui);
-			gfio_set_state(ge, GE_STATE_CONNECTED);
-		} else {
-			GError *error;
-
-			error = g_error_new(g_quark_from_string("fio"), 1, "Failed to connect to %s: %s\n", ge->client->client->hostname, strerror(-ret));
-			report_error(error);
-			g_error_free(error);
-		}
-	} else {
-		fio_client_terminate(gc->client);
-		gfio_set_state(ge, GE_STATE_NEW);
-		clear_ge_ui_info(ge);
-	}
-}
-
-static void send_clicked(GtkWidget *widget, gpointer data)
-{
-	struct gui_entry *ge = data;
-
-	if (send_job_files(ge)) {
-		GError *error;
-
-		error = g_error_new(g_quark_from_string("fio"), 1, "Failed to send one or more job files for client %s", ge->client->client->hostname);
-		report_error(error);
-		g_error_free(error);
-
-		gtk_widget_set_sensitive(ge->button[GFIO_BUTTON_START], 1);
-	}
-}
-
-static void on_info_bar_response(GtkWidget *widget, gint response,
-                                 gpointer data)
-{
-	struct gui *ui = &main_ui;
-
-	if (response == GTK_RESPONSE_OK) {
-		gtk_widget_destroy(widget);
-		ui->error_info_bar = NULL;
-	}
-}
-
-static void report_error(GError *error)
-{
-	struct gui *ui = &main_ui;
-
-	if (ui->error_info_bar == NULL) {
-		ui->error_info_bar = gtk_info_bar_new_with_buttons(GTK_STOCK_OK,
-		                                               GTK_RESPONSE_OK,
-		                                               NULL);
-		g_signal_connect(ui->error_info_bar, "response", G_CALLBACK(on_info_bar_response), NULL);
-		gtk_info_bar_set_message_type(GTK_INFO_BAR(ui->error_info_bar),
-		                              GTK_MESSAGE_ERROR);
-		
-		ui->error_label = gtk_label_new(error->message);
-		GtkWidget *container = gtk_info_bar_get_content_area(GTK_INFO_BAR(ui->error_info_bar));
-		gtk_container_add(GTK_CONTAINER(container), ui->error_label);
-		
-		gtk_box_pack_start(GTK_BOX(ui->vbox), ui->error_info_bar, FALSE, FALSE, 0);
-		gtk_widget_show_all(ui->vbox);
-	} else {
-		char buffer[256];
-		snprintf(buffer, sizeof(buffer), "Failed to open file.");
-		gtk_label_set(GTK_LABEL(ui->error_label), buffer);
-	}
-}
 
 struct connection_widgets
 {
@@ -1973,15 +1882,18 @@ static void hostname_cb(GtkEntry *entry, gpointer data)
 	}
 }
 
-static int get_connection_details(char **host, int *port, int *type,
-				  int *server_start)
+static int get_connection_details(struct gui_entry *ge)
 {
 	GtkWidget *dialog, *box, *vbox, *hbox, *frame, *pentry;
 	struct connection_widgets cw;
+	struct gui *ui = ge->ui;
 	char *typeentry;
 
+	if (ge->host)
+		return 0;
+
 	dialog = gtk_dialog_new_with_buttons("Connection details",
-			GTK_WINDOW(main_ui.window),
+			GTK_WINDOW(ui->window),
 			GTK_DIALOG_DESTROY_WITH_PARENT,
 			GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
 			GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
@@ -2051,22 +1963,28 @@ static int get_connection_details(char **host, int *port, int *type,
 		return 1;
 	}
 
-	*host = strdup(gtk_entry_get_text(GTK_ENTRY(cw.hentry)));
-	*port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(pentry));
+	ge->host = strdup(gtk_entry_get_text(GTK_ENTRY(cw.hentry)));
+	ge->port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(pentry));
 
 	typeentry = gtk_combo_box_get_active_text(GTK_COMBO_BOX(cw.combo));
 	if (!typeentry || !strncmp(typeentry, "IPv4", 4))
-		*type = Fio_client_ipv4;
+		ge->type = Fio_client_ipv4;
 	else if (!strncmp(typeentry, "IPv6", 4))
-		*type = Fio_client_ipv6;
+		ge->type = Fio_client_ipv6;
 	else
-		*type = Fio_client_socket;
+		ge->type = Fio_client_socket;
 	g_free(typeentry);
 
-	*server_start = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(cw.button));
+	ge->server_start = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(cw.button));
 
 	gtk_widget_destroy(dialog);
 	return 0;
+}
+
+static void gfio_set_client(struct gfio_client *gc, struct fio_client *client)
+{
+	gc->client = fio_get_client(client);
+	client->client_data = gc;
 }
 
 static void gfio_client_added(struct gui_entry *ge, struct fio_client *client)
@@ -2077,11 +1995,119 @@ static void gfio_client_added(struct gui_entry *ge, struct fio_client *client)
 	memset(gc, 0, sizeof(*gc));
 	options_default_fill(&gc->o);
 	gc->ge = ge;
-	gc->client = fio_get_client(client);
-
 	ge->client = gc;
+	gfio_set_client(gc, client);
+}
 
-	client->client_data = gc;
+static void gfio_report_error(struct gui_entry *ge, const char *format, ...)
+{
+	va_list args;
+	GError *error;
+
+	va_start(args, format);
+	error = g_error_new_valist(g_quark_from_string("fio"), 1, format, args);
+	va_end(args);
+
+	report_error(ge, error);
+	g_error_free(error);
+}
+
+static void connect_clicked(GtkWidget *widget, gpointer data)
+{
+	struct gui_entry *ge = data;
+	struct gfio_client *gc = ge->client;
+
+	if (ge->state == GE_STATE_NEW) {
+		int ret;
+
+		if (!ge->job_file)
+			file_open(widget, ge->ui);
+		if (!ge->job_file)
+			return;
+
+		gc = ge->client;
+
+		if (!gc->client) {
+			struct fio_client *client;
+
+			if (get_connection_details(ge)) {
+				gfio_report_error(ge, "Failed to get connection details\n");
+				return;
+			}
+
+			client = fio_client_add_explicit(&gfio_client_ops, ge->host, ge->type, ge->port);
+			if (!client) {
+				gfio_report_error(ge, "Failed to add client %s\n", ge->host);
+				free(ge->host);
+				ge->host = NULL;
+				return;
+			}
+			gfio_set_client(gc, client);
+		}
+
+		gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ge->thread_status_pb), "No jobs running");
+		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ge->thread_status_pb), 0.0);
+		ret = fio_client_connect(gc->client);
+		if (!ret) {
+			if (!ge->ui->handler_running)
+				pthread_create(&ge->ui->t, NULL, job_thread, ge->ui);
+			gfio_set_state(ge, GE_STATE_CONNECTED);
+		} else {
+			GError *error;
+
+			error = g_error_new(g_quark_from_string("fio"), 1, "Failed to connect to %s: %s\n", ge->client->client->hostname, strerror(-ret));
+			report_error(ge, error);
+			g_error_free(error);
+		}
+	} else {
+		fio_client_terminate(gc->client);
+		gfio_set_state(ge, GE_STATE_NEW);
+		clear_ge_ui_info(ge);
+	}
+}
+
+static void send_clicked(GtkWidget *widget, gpointer data)
+{
+	struct gui_entry *ge = data;
+
+	if (send_job_file(ge))
+		gtk_widget_set_sensitive(ge->button[GFIO_BUTTON_START], 1);
+}
+
+static void on_info_bar_response(GtkWidget *widget, gint response,
+                                 gpointer data)
+{
+	struct gui *ui = (struct gui *) data;
+
+	if (response == GTK_RESPONSE_OK) {
+		gtk_widget_destroy(widget);
+		ui->error_info_bar = NULL;
+	}
+}
+
+static void report_error(struct gui_entry *ge, GError *error)
+{
+	struct gui *ui = ge->ui;
+
+	if (ui->error_info_bar == NULL) {
+		ui->error_info_bar = gtk_info_bar_new_with_buttons(GTK_STOCK_OK,
+		                                               GTK_RESPONSE_OK,
+		                                               NULL);
+		g_signal_connect(ui->error_info_bar, "response", G_CALLBACK(on_info_bar_response), ui);
+		gtk_info_bar_set_message_type(GTK_INFO_BAR(ui->error_info_bar),
+		                              GTK_MESSAGE_ERROR);
+		
+		ui->error_label = gtk_label_new(error->message);
+		GtkWidget *container = gtk_info_bar_get_content_area(GTK_INFO_BAR(ui->error_info_bar));
+		gtk_container_add(GTK_CONTAINER(container), ui->error_label);
+		
+		gtk_box_pack_start(GTK_BOX(ui->vbox), ui->error_info_bar, FALSE, FALSE, 0);
+		gtk_widget_show_all(ui->vbox);
+	} else {
+		char buffer[256];
+		snprintf(buffer, sizeof(buffer), "Failed to open file.");
+		gtk_label_set(GTK_LABEL(ui->error_label), buffer);
+	}
 }
 
 static GtkWidget *new_client_page(struct gui_entry *ge);
@@ -2099,19 +2125,19 @@ static struct gui_entry *alloc_new_gui_entry(struct gui *ui)
 	return ge;
 }
 
-static struct gui_entry *get_new_ge_with_tab(const char *name)
+static struct gui_entry *get_new_ge_with_tab(struct gui *ui, const char *name)
 {
 	struct gui_entry *ge;
 
-	ge = alloc_new_gui_entry(&main_ui);
+	ge = alloc_new_gui_entry(ui);
 
 	ge->vbox = new_client_page(ge);
 	g_signal_connect(ge->vbox, "destroy", G_CALLBACK(ge_widget_destroy), ge);
 
 	ge->page_label = gtk_label_new(name);
-	ge->page_num = gtk_notebook_append_page(GTK_NOTEBOOK(main_ui.notebook), ge->vbox, ge->page_label);
+	ge->page_num = gtk_notebook_append_page(GTK_NOTEBOOK(ui->notebook), ge->vbox, ge->page_label);
 
-	gtk_widget_show_all(main_ui.window);
+	gtk_widget_show_all(ui->window);
 	return ge;
 }
 
@@ -2120,7 +2146,7 @@ static void file_new(GtkWidget *w, gpointer data)
 	struct gui *ui = (struct gui *) data;
 	struct gui_entry *ge;
 
-	ge = get_new_ge_with_tab("Untitled");
+	ge = get_new_ge_with_tab(ui, "Untitled");
 	gtk_notebook_set_current_page(GTK_NOTEBOOK(ui->notebook), ge->page_num);
 }
 
@@ -2137,7 +2163,7 @@ static struct gui_entry *get_ge_from_page(struct gui *ui, gint cur_page,
 	if (!cur_page) {
 		if (created)
 			*created = 1;
-		return get_new_ge_with_tab("Untitled");
+		return get_new_ge_with_tab(ui, "Untitled");
 	}
 
 	if (created)
@@ -2211,40 +2237,34 @@ static gchar *get_filename_from_uri(const gchar *uri)
 	return strdup(uri + 7);
 }
 
-static int do_file_open(struct gui_entry *ge, const gchar *uri, char *host,
-			int type, int port)
+static int do_file_open(struct gui_entry *ge, const gchar *uri)
 {
 	struct fio_client *client;
-	gchar *filename;
+	GError *error;
 
-	filename = get_filename_from_uri(uri);
+	assert(!ge->job_file);
 
-	ge->job_files = realloc(ge->job_files, (ge->nr_job_files + 1) * sizeof(char *));
-	ge->job_files[ge->nr_job_files] = strdup(filename);
-	ge->nr_job_files++;
+	ge->job_file = get_filename_from_uri(uri);
 
-	client = fio_client_add_explicit(&gfio_client_ops, host, type, port);
-	if (!client) {
-		GError *error;
-
-		error = g_error_new(g_quark_from_string("fio"), 1,
-				"Failed to add client %s", host);
-		report_error(error);
-		g_error_free(error);
-		return 1;
+	client = fio_client_add_explicit(&gfio_client_ops, ge->host, ge->type, ge->port);
+	if (client) {
+		gfio_client_added(ge, client);
+		file_add_recent(ge->ui, uri);
+		return 0;
 	}
 
-	gfio_client_added(ge, client);
-	file_add_recent(ge->ui, uri);
-	return 0;
+	error = g_error_new(g_quark_from_string("fio"), 1, "Failed to add client %s", ge->host);
+	free(ge->host);
+	ge->host = NULL;
+	report_error(ge, error);
+	g_error_free(error);
+	return 1;
 }
 
 static int do_file_open_with_tab(struct gui *ui, const gchar *uri)
 {
-	int port, type, server_start;
 	struct gui_entry *ge;
 	gint cur_page;
-	char *host;
 	int ret, ge_is_new = 0;
 
 	/*
@@ -2254,25 +2274,23 @@ static int do_file_open_with_tab(struct gui *ui, const gchar *uri)
 	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
 	ge = get_ge_from_page(ui, cur_page, &ge_is_new);
 	if (ge->client) {
-		ge = get_new_ge_with_tab("Untitled");
+		ge = get_new_ge_with_tab(ui, "Untitled");
 		ge_is_new = 1;
 	}
 
 	gtk_notebook_set_current_page(GTK_NOTEBOOK(ui->notebook), ge->page_num);
 
-	if (get_connection_details(&host, &port, &type, &server_start)) {
+	if (get_connection_details(ge)) {
 		if (ge_is_new)
 			gtk_widget_destroy(ge->vbox);
 			
 		return 1;
 	}
 
-	ret = do_file_open(ge, uri, host, type, port);
-
-	free(host);
+	ret = do_file_open(ge, uri);
 
 	if (!ret) {
-		if (server_start)
+		if (ge->server_start)
 			gfio_start_server(ui);
 	} else {
 		if (ge_is_new)
@@ -2298,8 +2316,8 @@ static void file_open(GtkWidget *w, gpointer data)
 {
 	struct gui *ui = data;
 	GtkWidget *dialog;
-	GSList *filenames, *fn_glist;
 	GtkFileFilter *filter;
+	gchar *filename;
 
 	dialog = gtk_file_chooser_dialog_new("Open File",
 		GTK_WINDOW(ui->window),
@@ -2307,7 +2325,7 @@ static void file_open(GtkWidget *w, gpointer data)
 		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 		GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
 		NULL);
-	gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), TRUE);
+	gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), FALSE);
 
 	filter = gtk_file_filter_new();
 	gtk_file_filter_add_pattern(filter, "*.fio");
@@ -2322,18 +2340,12 @@ static void file_open(GtkWidget *w, gpointer data)
 		return;
 	}
 
-	fn_glist = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(dialog));
+	filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 
 	gtk_widget_destroy(dialog);
 
-	filenames = fn_glist;
-	while (filenames != NULL) {
-		if (do_file_open_with_tab(ui, filenames->data))
-			break;
-		filenames = g_slist_next(filenames);
-	}
-
-	g_slist_free(fn_glist);
+	do_file_open_with_tab(ui, filename);
+	g_free(filename);
 }
 
 static void file_save(GtkWidget *w, gpointer data)
@@ -3005,7 +3017,6 @@ static void drag_and_drop_received(GtkWidget *widget, GdkDragContext *ctx,
 	struct gui *ui = (struct gui *) data;
 	gchar **uris;
 	GtkWidget *source;
-	int i;
 
 	source = gtk_drag_get_source_widget(ctx);
 	if (source && widget == gtk_widget_get_toplevel(source)) {
@@ -3019,12 +3030,8 @@ static void drag_and_drop_received(GtkWidget *widget, GdkDragContext *ctx,
 		return;
 	}
 
-	i = 0;
-	while (uris[i]) {
-		if (do_file_open_with_tab(ui, uris[i]))
-			break;
-		i++;
-	}
+	if (uris[0])
+		do_file_open_with_tab(ui, uris[0]);
 
 	gtk_drag_finish(ctx, TRUE, FALSE, time);
 	g_strfreev(uris);
@@ -3073,7 +3080,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_container_add(GTK_CONTAINER(ui->vbox), ui->notebook);
 
 	vbox = new_main_page(ui);
-	gtk_drag_dest_set(GTK_WIDGET(ui->window), GTK_DEST_DEFAULT_ALL, NULL, 0, GDK_ACTION_COPY);
+	gtk_drag_dest_set(GTK_WIDGET(ui->window), GTK_DEST_DEFAULT_ALL, NULL, 1, GDK_ACTION_COPY);
 	gtk_drag_dest_add_uri_targets(GTK_WIDGET(ui->window));
 	g_signal_connect(ui->window, "drag-data-received", G_CALLBACK(drag_and_drop_received), ui);
 

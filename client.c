@@ -134,6 +134,9 @@ static void remove_client(struct fio_client *client)
 	close(client->fd);
 	client->fd = -1;
 
+	if (client->ops->removed)
+		client->ops->removed(client);
+
 	nr_clients--;
 	sum_stat_clients--;
 
@@ -374,9 +377,9 @@ int fio_client_connect(struct fio_client *client)
 	return 0;
 }
 
-void fio_client_terminate(struct fio_client *client)
+int fio_client_terminate(struct fio_client *client)
 {
-	fio_net_send_quit(client->fd);
+	return fio_net_send_quit(client->fd);
 }
 
 void fio_clients_terminate(void)
