@@ -376,11 +376,14 @@ static void ge_destroy(struct gui_entry *ge)
 {
 	struct gfio_client *gc = ge->client;
 
-	if (gc && gc->client) {
-		if (ge->state >= GE_STATE_CONNECTED)
-			fio_client_terminate(gc->client);
+	if (gc) {
+		if (gc->client) {
+			if (ge->state >= GE_STATE_CONNECTED)
+				fio_client_terminate(gc->client);
 
-		fio_put_client(gc->client);
+			fio_put_client(gc->client);
+		}
+		free(gc);
 	}
 
 	free(ge->job_file);
