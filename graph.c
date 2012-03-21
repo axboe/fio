@@ -705,16 +705,15 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 	i->value_count++;
 
 	if (tooltip) {
-		/*
-		 * use msec to avoid dropping too much precision when
-		 * storing as an integer.
-		 */
 		double xval = getx(x);
 		double minx = xval - (g->xtick_one_val * TOOLTIP_DELTA);
 		double maxx = xval + (g->xtick_one_val * TOOLTIP_DELTA);
 		struct prio_tree_node *ret;
 
-		xval = xval * 1000.0;
+		/*
+		 * use msec to avoid dropping too much precision when
+		 * storing as an integer.
+		 */
 		minx = minx * 1000.0;
 		maxx = maxx * 1000.0;
 
