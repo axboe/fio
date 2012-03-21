@@ -100,9 +100,18 @@ else
 mandir = $(prefix)/man
 endif
 
-all: .depend $(PROGS) $(SCRIPTS)
+all: .depend $(PROGS) $(SCRIPTS) FORCE
 
-.c.o: .depend
+.PHONY: all install clean
+.PHONY: FORCE cscope
+
+FIO-VERSION-FILE: FORCE
+	@$(SHELL_PATH) ./FIO-VERSION-GEN
+-include FIO-VERSION-FILE
+
+CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
+
+.c.o: .depend FORCE
 	$(QUIET_CC)$(CC) -o $@ -c $(CFLAGS) $(CPPFLAGS) $<
 
 goptions.o: goptions.c goptions.h
@@ -129,7 +138,7 @@ t/stest: $(T_SMALLOC_OBJS)
 t/ieee754: $(T_IEEE_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_IEEE_OBJS) $(LIBS) $(LDFLAGS)
 
-fio: $(FIO_OBJS)
+fio: $(FIO_OBJS) FORCE
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(FIO_OBJS) $(LIBS) $(LDFLAGS)
 
 gfio: $(GFIO_OBJS)
@@ -138,15 +147,15 @@ gfio: $(GFIO_OBJS)
 .depend: $(SOURCE)
 	$(QUIET_DEP)$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SOURCE) 1> .depend
 
-$(PROGS): .depend
+$(PROGS): .depend FORCE
 
-clean:
-	-rm -f .depend $(GFIO_OBJS) $(FIO_OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio
+clean: FORCE
+	-rm -f .depend $(GFIO_OBJS) $(FIO_OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE
 
 cscope:
 	@cscope -b -R
 
-install: $(PROGS) $(SCRIPTS)
+install: $(PROGS) $(SCRIPTS) FORCE
 	$(INSTALL) -m 755 -d $(DESTDIR)$(bindir)
 	$(INSTALL) $(PROGS) $(SCRIPTS) $(DESTDIR)$(bindir)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
