@@ -508,442 +508,442 @@ static void hostname_cb(GtkEntry *entry, gpointer data)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(cw->button), 0);
 		gtk_widget_set_sensitive(cw->button, 0);
 	}
-	}
+}
 
-	static int get_connection_details(struct gui_entry *ge)
-	{
-		GtkWidget *dialog, *box, *vbox, *hbox, *frame, *pentry;
-		struct connection_widgets cw;
-		struct gui *ui = ge->ui;
-		char *typeentry;
+static int get_connection_details(struct gui_entry *ge)
+{
+	GtkWidget *dialog, *box, *vbox, *hbox, *frame, *pentry;
+	struct connection_widgets cw;
+	struct gui *ui = ge->ui;
+	char *typeentry;
 
-		if (ge->host)
-			return 0;
-
-		dialog = gtk_dialog_new_with_buttons("Connection details",
-				GTK_WINDOW(ui->window),
-				GTK_DIALOG_DESTROY_WITH_PARENT,
-				GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
-				GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
-
-		frame = gtk_frame_new("Hostname / socket name");
-		/* gtk_dialog_get_content_area() is 2.14 and newer */
-		vbox = GTK_DIALOG(dialog)->vbox;
-		gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
-
-		box = gtk_vbox_new(FALSE, 6);
-		gtk_container_add(GTK_CONTAINER(frame), box);
-
-		hbox = gtk_hbox_new(TRUE, 10);
-		gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
-		cw.hentry = gtk_entry_new();
-		gtk_entry_set_text(GTK_ENTRY(cw.hentry), "localhost");
-		gtk_box_pack_start(GTK_BOX(hbox), cw.hentry, TRUE, TRUE, 0);
-
-		frame = gtk_frame_new("Port");
-		gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
-		box = gtk_vbox_new(FALSE, 10);
-		gtk_container_add(GTK_CONTAINER(frame), box);
-
-		hbox = gtk_hbox_new(TRUE, 4);
-		gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
-		pentry = create_spinbutton(hbox, 1, 65535, FIO_NET_PORT);
-
-		frame = gtk_frame_new("Type");
-		gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
-		box = gtk_vbox_new(FALSE, 10);
-		gtk_container_add(GTK_CONTAINER(frame), box);
-
-		hbox = gtk_hbox_new(TRUE, 4);
-		gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
-
-		cw.combo = gtk_combo_box_new_text();
-		gtk_combo_box_append_text(GTK_COMBO_BOX(cw.combo), "IPv4");
-		gtk_combo_box_append_text(GTK_COMBO_BOX(cw.combo), "IPv6");
-		gtk_combo_box_append_text(GTK_COMBO_BOX(cw.combo), "local socket");
-		gtk_combo_box_set_active(GTK_COMBO_BOX(cw.combo), 0);
-
-		gtk_container_add(GTK_CONTAINER(hbox), cw.combo);
-
-		frame = gtk_frame_new("Options");
-		gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
-		box = gtk_vbox_new(FALSE, 10);
-		gtk_container_add(GTK_CONTAINER(frame), box);
-
-		hbox = gtk_hbox_new(TRUE, 4);
-		gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
-
-		cw.button = gtk_check_button_new_with_label("Auto-spawn fio backend");
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(cw.button), 1);
-		gtk_widget_set_tooltip_text(cw.button, "When running fio locally, it is necessary to have the backend running on the same system. If this is checked, gfio will start the backend automatically for you if it isn't already running.");
-		gtk_box_pack_start(GTK_BOX(hbox), cw.button, FALSE, FALSE, 6);
-
-		/*
-		 * Connect edit signal, so we can show/not-show the auto start button
-		 */
-		g_signal_connect(GTK_OBJECT(cw.hentry), "changed", G_CALLBACK(hostname_cb), &cw);
-		g_signal_connect(GTK_OBJECT(cw.combo), "changed", G_CALLBACK(hostname_cb), &cw);
-
-		gtk_widget_show_all(dialog);
-
-		if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_ACCEPT) {
-			gtk_widget_destroy(dialog);
-			return 1;
-		}
-
-		ge->host = strdup(gtk_entry_get_text(GTK_ENTRY(cw.hentry)));
-		ge->port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(pentry));
-
-		typeentry = gtk_combo_box_get_active_text(GTK_COMBO_BOX(cw.combo));
-		if (!typeentry || !strncmp(typeentry, "IPv4", 4))
-			ge->type = Fio_client_ipv4;
-		else if (!strncmp(typeentry, "IPv6", 4))
-			ge->type = Fio_client_ipv6;
-		else
-			ge->type = Fio_client_socket;
-		g_free(typeentry);
-
-		ge->server_start = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(cw.button));
-
-		gtk_widget_destroy(dialog);
+	if (ge->host)
 		return 0;
-	}
 
-	static void gfio_set_client(struct gfio_client *gc, struct fio_client *client)
-	{
-		gc->client = fio_get_client(client);
-		client->client_data = gc;
-	}
+	dialog = gtk_dialog_new_with_buttons("Connection details",
+			GTK_WINDOW(ui->window),
+			GTK_DIALOG_DESTROY_WITH_PARENT,
+			GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
+			GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
 
-	static void gfio_client_added(struct gui_entry *ge, struct fio_client *client)
-	{
-		struct gfio_client *gc;
+	frame = gtk_frame_new("Hostname / socket name");
+	/* gtk_dialog_get_content_area() is 2.14 and newer */
+	vbox = GTK_DIALOG(dialog)->vbox;
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
 
-		gc = malloc(sizeof(*gc));
-		memset(gc, 0, sizeof(*gc));
-		options_default_fill(&gc->o);
-		gc->ge = ge;
-		ge->client = gc;
-		gfio_set_client(gc, client);
-	}
+	box = gtk_vbox_new(FALSE, 6);
+	gtk_container_add(GTK_CONTAINER(frame), box);
 
-	static void connect_clicked(GtkWidget *widget, gpointer data)
-	{
-		struct gui_entry *ge = data;
-		struct gfio_client *gc = ge->client;
+	hbox = gtk_hbox_new(TRUE, 10);
+	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
+	cw.hentry = gtk_entry_new();
+	gtk_entry_set_text(GTK_ENTRY(cw.hentry), "localhost");
+	gtk_box_pack_start(GTK_BOX(hbox), cw.hentry, TRUE, TRUE, 0);
 
-		if (ge->state == GE_STATE_NEW) {
-			int ret;
+	frame = gtk_frame_new("Port");
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+	box = gtk_vbox_new(FALSE, 10);
+	gtk_container_add(GTK_CONTAINER(frame), box);
 
-			if (!ge->job_file)
-				file_open(widget, ge->ui);
-			if (!ge->job_file)
-				return;
+	hbox = gtk_hbox_new(TRUE, 4);
+	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
+	pentry = create_spinbutton(hbox, 1, 65535, FIO_NET_PORT);
 
-			gc = ge->client;
+	frame = gtk_frame_new("Type");
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+	box = gtk_vbox_new(FALSE, 10);
+	gtk_container_add(GTK_CONTAINER(frame), box);
 
-			if (!gc->client) {
-				struct fio_client *client;
+	hbox = gtk_hbox_new(TRUE, 4);
+	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
 
-				if (get_connection_details(ge)) {
-					gfio_report_error(ge, "Failed to get connection details\n");
-					return;
-				}
+	cw.combo = gtk_combo_box_new_text();
+	gtk_combo_box_append_text(GTK_COMBO_BOX(cw.combo), "IPv4");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(cw.combo), "IPv6");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(cw.combo), "local socket");
+	gtk_combo_box_set_active(GTK_COMBO_BOX(cw.combo), 0);
 
-				client = fio_client_add_explicit(&gfio_client_ops, ge->host, ge->type, ge->port);
-				if (!client) {
-					gfio_report_error(ge, "Failed to add client %s\n", ge->host);
-					free(ge->host);
-					ge->host = NULL;
-					return;
-				}
-				gfio_set_client(gc, client);
-			}
+	gtk_container_add(GTK_CONTAINER(hbox), cw.combo);
 
-			gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ge->thread_status_pb), "No jobs running");
-			gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ge->thread_status_pb), 0.0);
-			ret = fio_client_connect(gc->client);
-			if (!ret) {
-				if (!ge->ui->handler_running)
-					pthread_create(&ge->ui->t, NULL, job_thread, ge->ui);
-				gfio_set_state(ge, GE_STATE_CONNECTED);
-			} else {
-				gfio_report_error(ge, "Failed to connect to %s: %s\n", ge->client->client->hostname, strerror(-ret));
-			}
-		} else {
-			fio_client_terminate(gc->client);
-			gfio_set_state(ge, GE_STATE_NEW);
-			clear_ge_ui_info(ge);
-		}
-	}
+	frame = gtk_frame_new("Options");
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
+	box = gtk_vbox_new(FALSE, 10);
+	gtk_container_add(GTK_CONTAINER(frame), box);
 
-	static void send_clicked(GtkWidget *widget, gpointer data)
-	{
-		struct gui_entry *ge = data;
+	hbox = gtk_hbox_new(TRUE, 4);
+	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
 
-		if (send_job_file(ge))
-			gtk_widget_set_sensitive(ge->button[GFIO_BUTTON_START], 1);
-	}
-
-	static GtkWidget *new_client_page(struct gui_entry *ge);
-
-	static struct gui_entry *alloc_new_gui_entry(struct gui *ui)
-	{
-		struct gui_entry *ge;
-
-		ge = malloc(sizeof(*ge));
-		memset(ge, 0, sizeof(*ge));
-		ge->state = GE_STATE_NEW;
-		INIT_FLIST_HEAD(&ge->list);
-		flist_add_tail(&ge->list, &ui->list);
-		ge->ui = ui;
-		return ge;
-	}
-
-	static struct gui_entry *get_new_ge_with_tab(struct gui *ui, const char *name)
-	{
-		struct gui_entry *ge;
-
-		ge = alloc_new_gui_entry(ui);
-
-		ge->vbox = new_client_page(ge);
-		g_signal_connect(ge->vbox, "destroy", G_CALLBACK(ge_widget_destroy), ge);
-
-		ge->page_label = gtk_label_new(name);
-		ge->page_num = gtk_notebook_append_page(GTK_NOTEBOOK(ui->notebook), ge->vbox, ge->page_label);
-
-		gtk_widget_show_all(ui->window);
-		return ge;
-	}
-
-	static void file_new(GtkWidget *w, gpointer data)
-	{
-		struct gui *ui = (struct gui *) data;
-		struct gui_entry *ge;
-
-		ge = get_new_ge_with_tab(ui, "Untitled");
-		gtk_notebook_set_current_page(GTK_NOTEBOOK(ui->notebook), ge->page_num);
-	}
+	cw.button = gtk_check_button_new_with_label("Auto-spawn fio backend");
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(cw.button), 1);
+	gtk_widget_set_tooltip_text(cw.button, "When running fio locally, it is necessary to have the backend running on the same system. If this is checked, gfio will start the backend automatically for you if it isn't already running.");
+	gtk_box_pack_start(GTK_BOX(hbox), cw.button, FALSE, FALSE, 6);
 
 	/*
-	 * Return the 'ge' corresponding to the tab. If the active tab is the
-	 * main tab, open a new tab.
+	 * Connect edit signal, so we can show/not-show the auto start button
 	 */
-	static struct gui_entry *get_ge_from_page(struct gui *ui, gint cur_page,
-						  int *created)
-	{
-		struct flist_head *entry;
-		struct gui_entry *ge;
+	g_signal_connect(GTK_OBJECT(cw.hentry), "changed", G_CALLBACK(hostname_cb), &cw);
+	g_signal_connect(GTK_OBJECT(cw.combo), "changed", G_CALLBACK(hostname_cb), &cw);
 
-		if (!cur_page) {
-			if (created)
-				*created = 1;
-			return get_new_ge_with_tab(ui, "Untitled");
-		}
+	gtk_widget_show_all(dialog);
 
-		if (created)
-			*created = 0;
-
-		flist_for_each(entry, &ui->list) {
-			ge = flist_entry(entry, struct gui_entry, list);
-			if (ge->page_num == cur_page)
-				return ge;
-		}
-
-		return NULL;
-	}
-
-	static struct gui_entry *get_ge_from_cur_tab(struct gui *ui)
-	{
-		gint cur_page;
-
-		/*
-		 * Main tab is tab 0, so any current page other than 0 holds
-		 * a ge entry.
-		 */
-		cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
-		if (cur_page)
-			return get_ge_from_page(ui, cur_page, NULL);
-
-		return NULL;
-	}
-
-	static void file_close(GtkWidget *w, gpointer data)
-	{
-		struct gui *ui = (struct gui *) data;
-		struct gui_entry *ge;
-
-		/*
-		 * Can't close the main tab
-		 */
-		ge = get_ge_from_cur_tab(ui);
-		if (ge) {
-			gtk_widget_destroy(ge->vbox);
-			return;
-		}
-
-		if (!flist_empty(&ui->list)) {
-			gfio_report_info(ui, "Error", "The main page view cannot be closed\n");
-			return;
-		}
-
-		gfio_quit(ui);
-	}
-
-	static void file_add_recent(struct gui *ui, const gchar *uri)
-	{
-		GtkRecentData grd;
-
-		memset(&grd, 0, sizeof(grd));
-		grd.display_name = strdup("gfio");
-		grd.description = strdup("Fio job file");
-		grd.mime_type = strdup(GFIO_MIME);
-		grd.app_name = strdup(g_get_application_name());
-		grd.app_exec = strdup("gfio %f/%u");
-
-		gtk_recent_manager_add_full(ui->recentmanager, uri, &grd);
-	}
-
-	static gchar *get_filename_from_uri(const gchar *uri)
-	{
-		if (strncmp(uri, "file://", 7))
-			return strdup(uri);
-
-		return strdup(uri + 7);
-	}
-
-	static int do_file_open(struct gui_entry *ge, const gchar *uri)
-	{
-		struct fio_client *client;
-
-		assert(!ge->job_file);
-
-		ge->job_file = get_filename_from_uri(uri);
-
-		client = fio_client_add_explicit(&gfio_client_ops, ge->host, ge->type, ge->port);
-		if (client) {
-			gfio_client_added(ge, client);
-			file_add_recent(ge->ui, uri);
-			return 0;
-		}
-
-		gfio_report_error(ge, "Failed to add client %s\n", ge->host);
-		free(ge->host);
-		ge->host = NULL;
+	if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_ACCEPT) {
+		gtk_widget_destroy(dialog);
 		return 1;
 	}
 
-	static int do_file_open_with_tab(struct gui *ui, const gchar *uri)
-	{
-		struct gui_entry *ge;
-		gint cur_page;
-		int ret, ge_is_new = 0;
+	ge->host = strdup(gtk_entry_get_text(GTK_ENTRY(cw.hentry)));
+	ge->port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(pentry));
 
-		/*
-		 * Creates new tab if current tab is the main window, or the
-		 * current tab already has a client.
-		 */
-		cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
-		ge = get_ge_from_page(ui, cur_page, &ge_is_new);
-		if (ge->client) {
-			ge = get_new_ge_with_tab(ui, "Untitled");
-			ge_is_new = 1;
-		}
+	typeentry = gtk_combo_box_get_active_text(GTK_COMBO_BOX(cw.combo));
+	if (!typeentry || !strncmp(typeentry, "IPv4", 4))
+		ge->type = Fio_client_ipv4;
+	else if (!strncmp(typeentry, "IPv6", 4))
+		ge->type = Fio_client_ipv6;
+	else
+		ge->type = Fio_client_socket;
+	g_free(typeentry);
 
-		gtk_notebook_set_current_page(GTK_NOTEBOOK(ui->notebook), ge->page_num);
+	ge->server_start = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(cw.button));
 
-		if (get_connection_details(ge)) {
-			if (ge_is_new)
-				gtk_widget_destroy(ge->vbox);
-				
-			return 1;
-		}
+	gtk_widget_destroy(dialog);
+	return 0;
+}
 
-		ret = do_file_open(ge, uri);
+static void gfio_set_client(struct gfio_client *gc, struct fio_client *client)
+{
+	gc->client = fio_get_client(client);
+	client->client_data = gc;
+}
 
-		if (!ret) {
-			if (ge->server_start)
-				gfio_start_server(ui);
-		} else {
-			if (ge_is_new)
-				gtk_widget_destroy(ge->vbox);
-		}
+static void gfio_client_added(struct gui_entry *ge, struct fio_client *client)
+{
+	struct gfio_client *gc;
 
-		return ret;
-	}
+	gc = malloc(sizeof(*gc));
+	memset(gc, 0, sizeof(*gc));
+	options_default_fill(&gc->o);
+	gc->ge = ge;
+	ge->client = gc;
+	gfio_set_client(gc, client);
+}
 
-	static void recent_open(GtkAction *action, gpointer data)
-	{
-		struct gui *ui = (struct gui *) data;
-		GtkRecentInfo *info;
-		const gchar *uri;
+static void connect_clicked(GtkWidget *widget, gpointer data)
+{
+	struct gui_entry *ge = data;
+	struct gfio_client *gc = ge->client;
 
-		info = g_object_get_data(G_OBJECT(action), "gtk-recent-info");
-		uri = gtk_recent_info_get_uri(info);
+	if (ge->state == GE_STATE_NEW) {
+		int ret;
 
-		do_file_open_with_tab(ui, uri);
-	}
-
-	static void file_open(GtkWidget *w, gpointer data)
-	{
-		struct gui *ui = data;
-		GtkWidget *dialog;
-		GtkFileFilter *filter;
-		gchar *filename;
-
-		dialog = gtk_file_chooser_dialog_new("Open File",
-			GTK_WINDOW(ui->window),
-			GTK_FILE_CHOOSER_ACTION_OPEN,
-			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-			GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
-			NULL);
-		gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), FALSE);
-
-		filter = gtk_file_filter_new();
-		gtk_file_filter_add_pattern(filter, "*.fio");
-		gtk_file_filter_add_pattern(filter, "*.job");
-		gtk_file_filter_add_pattern(filter, "*.ini");
-		gtk_file_filter_add_mime_type(filter, GFIO_MIME);
-		gtk_file_filter_set_name(filter, "Fio job file");
-		gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filter);
-
-		if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_ACCEPT) {
-			gtk_widget_destroy(dialog);
+		if (!ge->job_file)
+			file_open(widget, ge->ui);
+		if (!ge->job_file)
 			return;
+
+		gc = ge->client;
+
+		if (!gc->client) {
+			struct fio_client *client;
+
+			if (get_connection_details(ge)) {
+				gfio_report_error(ge, "Failed to get connection details\n");
+				return;
+			}
+
+			client = fio_client_add_explicit(&gfio_client_ops, ge->host, ge->type, ge->port);
+			if (!client) {
+				gfio_report_error(ge, "Failed to add client %s\n", ge->host);
+				free(ge->host);
+				ge->host = NULL;
+				return;
+			}
+			gfio_set_client(gc, client);
 		}
+
+		gtk_progress_bar_set_text(GTK_PROGRESS_BAR(ge->thread_status_pb), "No jobs running");
+		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ge->thread_status_pb), 0.0);
+		ret = fio_client_connect(gc->client);
+		if (!ret) {
+			if (!ge->ui->handler_running)
+				pthread_create(&ge->ui->t, NULL, job_thread, ge->ui);
+			gfio_set_state(ge, GE_STATE_CONNECTED);
+		} else {
+			gfio_report_error(ge, "Failed to connect to %s: %s\n", ge->client->client->hostname, strerror(-ret));
+		}
+	} else {
+		fio_client_terminate(gc->client);
+		gfio_set_state(ge, GE_STATE_NEW);
+		clear_ge_ui_info(ge);
+	}
+}
+
+static void send_clicked(GtkWidget *widget, gpointer data)
+{
+	struct gui_entry *ge = data;
+
+	if (send_job_file(ge))
+		gtk_widget_set_sensitive(ge->button[GFIO_BUTTON_START], 1);
+}
+
+static GtkWidget *new_client_page(struct gui_entry *ge);
+
+static struct gui_entry *alloc_new_gui_entry(struct gui *ui)
+{
+	struct gui_entry *ge;
+
+	ge = malloc(sizeof(*ge));
+	memset(ge, 0, sizeof(*ge));
+	ge->state = GE_STATE_NEW;
+	INIT_FLIST_HEAD(&ge->list);
+	flist_add_tail(&ge->list, &ui->list);
+	ge->ui = ui;
+	return ge;
+}
+
+static struct gui_entry *get_new_ge_with_tab(struct gui *ui, const char *name)
+{
+	struct gui_entry *ge;
+
+	ge = alloc_new_gui_entry(ui);
+
+	ge->vbox = new_client_page(ge);
+	g_signal_connect(ge->vbox, "destroy", G_CALLBACK(ge_widget_destroy), ge);
+
+	ge->page_label = gtk_label_new(name);
+	ge->page_num = gtk_notebook_append_page(GTK_NOTEBOOK(ui->notebook), ge->vbox, ge->page_label);
+
+	gtk_widget_show_all(ui->window);
+	return ge;
+}
+
+static void file_new(GtkWidget *w, gpointer data)
+{
+	struct gui *ui = (struct gui *) data;
+	struct gui_entry *ge;
+
+	ge = get_new_ge_with_tab(ui, "Untitled");
+	gtk_notebook_set_current_page(GTK_NOTEBOOK(ui->notebook), ge->page_num);
+}
+
+/*
+ * Return the 'ge' corresponding to the tab. If the active tab is the
+ * main tab, open a new tab.
+ */
+static struct gui_entry *get_ge_from_page(struct gui *ui, gint cur_page,
+					  int *created)
+{
+	struct flist_head *entry;
+	struct gui_entry *ge;
+
+	if (!cur_page) {
+		if (created)
+			*created = 1;
+		return get_new_ge_with_tab(ui, "Untitled");
+	}
+
+	if (created)
+		*created = 0;
+
+	flist_for_each(entry, &ui->list) {
+		ge = flist_entry(entry, struct gui_entry, list);
+		if (ge->page_num == cur_page)
+			return ge;
+	}
+
+	return NULL;
+}
+
+static struct gui_entry *get_ge_from_cur_tab(struct gui *ui)
+{
+	gint cur_page;
+
+	/*
+	 * Main tab is tab 0, so any current page other than 0 holds
+	 * a ge entry.
+	 */
+	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
+	if (cur_page)
+		return get_ge_from_page(ui, cur_page, NULL);
+
+	return NULL;
+}
+
+static void file_close(GtkWidget *w, gpointer data)
+{
+	struct gui *ui = (struct gui *) data;
+	struct gui_entry *ge;
+
+	/*
+	 * Can't close the main tab
+	 */
+	ge = get_ge_from_cur_tab(ui);
+	if (ge) {
+		gtk_widget_destroy(ge->vbox);
+		return;
+	}
+
+	if (!flist_empty(&ui->list)) {
+		gfio_report_info(ui, "Error", "The main page view cannot be closed\n");
+		return;
+	}
+
+	gfio_quit(ui);
+}
+
+static void file_add_recent(struct gui *ui, const gchar *uri)
+{
+	GtkRecentData grd;
+
+	memset(&grd, 0, sizeof(grd));
+	grd.display_name = strdup("gfio");
+	grd.description = strdup("Fio job file");
+	grd.mime_type = strdup(GFIO_MIME);
+	grd.app_name = strdup(g_get_application_name());
+	grd.app_exec = strdup("gfio %f/%u");
+
+	gtk_recent_manager_add_full(ui->recentmanager, uri, &grd);
+}
+
+static gchar *get_filename_from_uri(const gchar *uri)
+{
+	if (strncmp(uri, "file://", 7))
+		return strdup(uri);
+
+	return strdup(uri + 7);
+}
+
+static int do_file_open(struct gui_entry *ge, const gchar *uri)
+{
+	struct fio_client *client;
+
+	assert(!ge->job_file);
+
+	ge->job_file = get_filename_from_uri(uri);
+
+	client = fio_client_add_explicit(&gfio_client_ops, ge->host, ge->type, ge->port);
+	if (client) {
+		gfio_client_added(ge, client);
+		file_add_recent(ge->ui, uri);
+		return 0;
+	}
+
+	gfio_report_error(ge, "Failed to add client %s\n", ge->host);
+	free(ge->host);
+	ge->host = NULL;
+	return 1;
+}
+
+static int do_file_open_with_tab(struct gui *ui, const gchar *uri)
+{
+	struct gui_entry *ge;
+	gint cur_page;
+	int ret, ge_is_new = 0;
+
+	/*
+	 * Creates new tab if current tab is the main window, or the
+	 * current tab already has a client.
+	 */
+	cur_page = gtk_notebook_get_current_page(GTK_NOTEBOOK(ui->notebook));
+	ge = get_ge_from_page(ui, cur_page, &ge_is_new);
+	if (ge->client) {
+		ge = get_new_ge_with_tab(ui, "Untitled");
+		ge_is_new = 1;
+	}
+
+	gtk_notebook_set_current_page(GTK_NOTEBOOK(ui->notebook), ge->page_num);
+
+	if (get_connection_details(ge)) {
+		if (ge_is_new)
+			gtk_widget_destroy(ge->vbox);
+			
+		return 1;
+	}
+
+	ret = do_file_open(ge, uri);
+
+	if (!ret) {
+		if (ge->server_start)
+			gfio_start_server(ui);
+	} else {
+		if (ge_is_new)
+			gtk_widget_destroy(ge->vbox);
+	}
+
+	return ret;
+}
+
+static void recent_open(GtkAction *action, gpointer data)
+{
+	struct gui *ui = (struct gui *) data;
+	GtkRecentInfo *info;
+	const gchar *uri;
+
+	info = g_object_get_data(G_OBJECT(action), "gtk-recent-info");
+	uri = gtk_recent_info_get_uri(info);
+
+	do_file_open_with_tab(ui, uri);
+}
+
+static void file_open(GtkWidget *w, gpointer data)
+{
+	struct gui *ui = data;
+	GtkWidget *dialog;
+	GtkFileFilter *filter;
+	gchar *filename;
+
+	dialog = gtk_file_chooser_dialog_new("Open File",
+		GTK_WINDOW(ui->window),
+		GTK_FILE_CHOOSER_ACTION_OPEN,
+		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+		GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
+		NULL);
+	gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), FALSE);
+
+	filter = gtk_file_filter_new();
+	gtk_file_filter_add_pattern(filter, "*.fio");
+	gtk_file_filter_add_pattern(filter, "*.job");
+	gtk_file_filter_add_pattern(filter, "*.ini");
+	gtk_file_filter_add_mime_type(filter, GFIO_MIME);
+	gtk_file_filter_set_name(filter, "Fio job file");
+	gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filter);
+
+	if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_ACCEPT) {
+		gtk_widget_destroy(dialog);
+		return;
+	}
+
+	filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+
+	gtk_widget_destroy(dialog);
+
+	do_file_open_with_tab(ui, filename);
+	g_free(filename);
+}
+
+static void file_save(GtkWidget *w, gpointer data)
+{
+	struct gui *ui = data;
+	GtkWidget *dialog;
+
+	dialog = gtk_file_chooser_dialog_new("Save File",
+		GTK_WINDOW(ui->window),
+		GTK_FILE_CHOOSER_ACTION_SAVE,
+		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+		GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT,
+		NULL);
+
+	gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(dialog), TRUE);
+	gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(dialog), "Untitled document");
+
+	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
+		char *filename;
 
 		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
-
-		gtk_widget_destroy(dialog);
-
-		do_file_open_with_tab(ui, filename);
+		// save_job_file(filename);
 		g_free(filename);
 	}
-
-	static void file_save(GtkWidget *w, gpointer data)
-	{
-		struct gui *ui = data;
-		GtkWidget *dialog;
-
-		dialog = gtk_file_chooser_dialog_new("Save File",
-			GTK_WINDOW(ui->window),
-			GTK_FILE_CHOOSER_ACTION_SAVE,
-			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-			GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT,
-			NULL);
-
-		gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(dialog), TRUE);
-		gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(dialog), "Untitled document");
-
-		if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
-			char *filename;
-
-			filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
-			// save_job_file(filename);
-			g_free(filename);
-		}
-		gtk_widget_destroy(dialog);
-	}
+	gtk_widget_destroy(dialog);
+}
 
 static void view_log_destroy(GtkWidget *w, gpointer data)
 {
