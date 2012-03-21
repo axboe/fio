@@ -3,7 +3,6 @@
 
 #include <gtk/gtk.h>
 
-#include "flist.h"
 #include "stat.h"
 #include "thread_options.h"
 #include "ghelpers.h"
@@ -68,7 +67,7 @@ struct gui {
 	pthread_t t;
 	int handler_running;
 
-	struct flist_head list;
+	GHashTable *ge_hash;
 } main_ui;
 
 enum {
@@ -91,7 +90,6 @@ enum {
  * Notebook entry
  */
 struct gui_entry {
-	struct flist_head list;
 	struct gui *ui;
 
 	GtkWidget *vbox;

@@ -386,9 +386,10 @@ static void ge_destroy(struct gui_entry *ge)
 		free(gc);
 	}
 
+	g_hash_table_remove(ge->ui->ge_hash, &ge->page_num);
+
 	free(ge->job_file);
 	free(ge->host);
-	flist_del(&ge->list);
 	free(ge);
 }
 
@@ -401,13 +402,6 @@ static void ge_widget_destroy(GtkWidget *w, gpointer data)
 
 static void gfio_quit(struct gui *ui)
 {
-	struct gui_entry *ge;
-
-	while (!flist_empty(&ui->list)) {
-		ge = flist_entry(ui->list.next, struct gui_entry, list);
-		ge_destroy(ge);
-	}
-
         gtk_main_quit();
 }
 
@@ -697,8 +691,6 @@ static struct gui_entry *alloc_new_gui_entry(struct gui *ui)
 	ge = malloc(sizeof(*ge));
 	memset(ge, 0, sizeof(*ge));
 	ge->state = GE_STATE_NEW;
-	INIT_FLIST_HEAD(&ge->list);
-	flist_add_tail(&ge->list, &ui->list);
 	ge->ui = ui;
 	return ge;
 }
@@ -714,6 +706,8 @@ static struct gui_entry *get_new_ge_with_tab(struct gui *ui, const char *name)
 
 	ge->page_label = gtk_label_new(name);
 	ge->page_num = gtk_notebook_append_page(GTK_NOTEBOOK(ui->notebook), ge->vbox, ge->page_label);
+
+	g_hash_table_insert(ui->ge_hash, &ge->page_num, ge);
 
 	gtk_widget_show_all(ui->window);
 	return ge;
@@ -735,9 +729,6 @@ static void file_new(GtkWidget *w, gpointer data)
 static struct gui_entry *get_ge_from_page(struct gui *ui, gint cur_page,
 					  int *created)
 {
-	struct flist_head *entry;
-	struct gui_entry *ge;
-
 	if (!cur_page) {
 		if (created)
 			*created = 1;
@@ -747,13 +738,7 @@ static struct gui_entry *get_ge_from_page(struct gui *ui, gint cur_page,
 	if (created)
 		*created = 0;
 
-	flist_for_each(entry, &ui->list) {
-		ge = flist_entry(entry, struct gui_entry, list);
-		if (ge->page_num == cur_page)
-			return ge;
-	}
-
-	return NULL;
+	return g_hash_table_lookup(ui->ge_hash, &cur_page);
 }
 
 static struct gui_entry *get_ge_from_cur_tab(struct gui *ui)
@@ -785,7 +770,7 @@ static void file_close(GtkWidget *w, gpointer data)
 		return;
 	}
 
-	if (!flist_empty(&ui->list)) {
+	if (g_hash_table_size(ui->ge_hash)) {
 		gfio_report_info(ui, "Error", "The main page view cannot be closed\n");
 		return;
 	}
@@ -833,6 +818,8 @@ static int do_file_open(struct gui_entry *ge, const gchar *uri)
 	gfio_report_error(ge, "Failed to add client %s\n", ge->host);
 	free(ge->host);
 	ge->host = NULL;
+	free(ge->job_file);
+	ge->job_file = NULL;
 	return 1;
 }
 
@@ -1058,17 +1045,20 @@ static void __update_graph_limits(struct gfio_graphs *g)
 	line_graph_set_data_count_limit(g->bandwidth_graph, gfio_graph_limit);
 }
 
+static void ge_update_lim_fn(gpointer key, gpointer value, gpointer data)
+{
+	struct gui_entry *ge = (struct gui_entry *) value;
+
+	__update_graph_limits(&ge->graphs);
+}
+
 static void update_graph_limits(void)
 {
-	struct flist_head *entry;
-	struct gui_entry *ge;
+	struct gui *ui = &main_ui;
 
-	__update_graph_limits(&main_ui.graphs);
+	__update_graph_limits(&ui->graphs);
 
-	flist_for_each(entry, &main_ui.list) {
-		ge = flist_entry(entry, struct gui_entry, list);
-		__update_graph_limits(&ge->graphs);
-	}
+	g_hash_table_foreach(ui->ge_hash, ge_update_lim_fn, NULL);
 }
 
 static void preferences(GtkWidget *w, gpointer data)
@@ -1679,12 +1669,14 @@ int main(int argc, char *argv[], char *envp[])
 		return 1;
 
 	memset(&main_ui, 0, sizeof(main_ui));
-	INIT_FLIST_HEAD(&main_ui.list);
+	main_ui.ge_hash = g_hash_table_new(g_int_hash, g_int_equal);
 
 	init_ui(&argc, &argv, &main_ui);
 
 	gdk_threads_enter();
 	gtk_main();
 	gdk_threads_leave();
+
+	g_hash_table_destroy(main_ui.ge_hash);
 	return 0;
 }
