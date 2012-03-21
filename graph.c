@@ -846,12 +846,18 @@ int graph_contains_xy(struct graph *g, int x, int y)
 	return (x >= first_x && x <= last_x) && (y >= first_y && y <= last_y);
 }
 
+/*
+ * Allowable difference to show tooltip
+ */
+#define TOOLTIP_XDIFF	10
+#define TOOLTIP_YDIFF	10
+
 static int xy_match(struct xyvalue *xy, int x, int y)
 {
 	int xdiff = abs(xy->gx - x);
 	int ydiff = abs(xy->gy - y);
 
-	return xdiff <= 10 && ydiff <= 10;
+	return xdiff <= TOOLTIP_XDIFF && ydiff <= TOOLTIP_YDIFF;
 }
 
 const char *graph_find_tooltip(struct graph *g, int x, int y)
@@ -862,9 +868,17 @@ const char *graph_find_tooltip(struct graph *g, int x, int y)
 	for (i = g->labels; i; i = i->next) {
 		for (j = i->values; j; j = j->next) {
 			struct xyvalue *xy = j->value;
+			int graphx = x - g->xoffset;
 
-			if (xy_match(xy, x - g->xoffset, y))
+			/*
+			 * Return match if close enough. Take advantage
+			 * of the X axis being monotonically increasing,
+			 * so we can break out if we exceed it.
+			 */
+			if (xy_match(xy, graphx, y))
 				return j->tooltip;
+			else if (xy->gx - graphx > TOOLTIP_XDIFF)
+				break;
 		}
 	}
 
