@@ -57,4 +57,19 @@ void gfio_report_error(struct gui_entry *ge, const char *format, ...)
 	g_error_free(error);
 }
 
+void gfio_report_info(struct gui *ui, const char *title, const char *message)
+{
+	GtkWidget *dialog, *content, *label;
 
+	dialog = gtk_dialog_new_with_buttons(title, GTK_WINDOW(ui->window),
+			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+			GTK_STOCK_OK, GTK_RESPONSE_OK, NULL);
+
+	content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+	label = gtk_label_new(message);
+	gtk_container_add(GTK_CONTAINER(content), label);
+	gtk_widget_show_all(dialog);
+	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+}

@@ -161,3 +161,14 @@ void multitext_free(struct multitext_widget *mt)
 	mt->cur_text = -1;
 	mt->max_text = 0;
 }
+
+GtkWidget *get_scrolled_window(gint border_width)
+{
+	GtkWidget *scroll;
+
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_container_set_border_width(GTK_CONTAINER(scroll), border_width);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+
+	return scroll;
+}

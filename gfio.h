@@ -150,4 +150,11 @@ struct gfio_client {
 
 #define GFIO_MIME	"text/fio"
 
+extern void gfio_view_log(struct gui *ui);
+extern void gfio_set_state(struct gui_entry *ge, unsigned int state);
+extern void clear_ge_ui_info(struct gui_entry *ge);
+
+extern const char *gfio_graph_font;
+extern GdkColor gfio_color_white;
+
 #endif

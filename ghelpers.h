@@ -8,6 +8,7 @@ GtkWidget *create_spinbutton(GtkWidget *hbox, double min, double max, double def
 void label_set_int_value(GtkWidget *entry, unsigned int val);
 void entry_set_int_value(GtkWidget *entry, unsigned int val);
 
+GtkWidget *get_scrolled_window(gint border_width);
 
 struct multitext_widget {
 	GtkWidget *entry;
