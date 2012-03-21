@@ -707,6 +707,7 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 		double yval = gety(x);
 		double miny = yval / TOOLTIP_DELTA;
 		double maxy = yval * TOOLTIP_DELTA;
+		struct prio_tree_node *ret;
 
 		INIT_PRIO_TREE_NODE(&x->node);
 		x->node.start = miny;
@@ -714,8 +715,16 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 		if (x->node.last == x->node.start)
 			x->node.last++;
 
-		prio_tree_insert(&i->prio_tree, &x->node);
-		i->tooltip_count++;
+		/*
+		 * If ret != &x->node, we have an alias. Since the values
+		 * should be identical, we can drop it
+		 */
+		ret = prio_tree_insert(&i->prio_tree, &x->node);
+		if (ret != &x->node) {
+			free(x->tooltip);
+			x->tooltip = NULL;
+		} else
+			i->tooltip_count++;
 	}
 
 	if (i->parent->per_label_limit != -1 &&
