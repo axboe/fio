@@ -810,6 +810,12 @@ static int do_file_open(struct gui_entry *ge, const gchar *uri)
 
 	client = fio_client_add_explicit(&gfio_client_ops, ge->host, ge->type, ge->port);
 	if (client) {
+		char *label = strdup(uri);
+
+		basename(label);
+		gtk_label_set_text(GTK_LABEL(ge->page_label), basename(label));
+		free(label);
+
 		gfio_client_added(ge, client);
 		file_add_recent(ge->ui, uri);
 		return 0;
