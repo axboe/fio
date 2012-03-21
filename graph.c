@@ -916,6 +916,7 @@ const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 	best_delta = UINT_MAX;
 	i = g->labels;
 	do {
+		INIT_PRIO_TREE_ITER(&iter);
 		prio_tree_iter_init(&iter, &i->prio_tree, y, y);
 
 		n = prio_tree_next(&iter);
