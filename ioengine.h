@@ -1,7 +1,10 @@
 #ifndef FIO_IOENGINE_H
 #define FIO_IOENGINE_H
 
+#include "compiler/compiler.h"
+#include "io_ddir.h"
 #include "debug.h"
+#include "file.h"
 
 #define FIO_IOOPS_VERSION	13
 
@@ -15,6 +18,8 @@ enum {
 	IO_U_F_BARRIER		= 1 << 6,
 	IO_U_F_VER_LIST		= 1 << 7,
 };
+
+struct thread_data;
 
 /*
  * The io unit

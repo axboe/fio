@@ -3,6 +3,9 @@
 
 #include <gtk/gtk.h>
 
+#include "flist.h"
+#include "stat.h"
+#include "thread_options.h"
 #include "ghelpers.h"
 
 struct probe_widget {

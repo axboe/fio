@@ -33,6 +33,7 @@
 #include "gfio.h"
 #include "ghelpers.h"
 #include "goptions.h"
+#include "gerror.h"
 #include "graph.h"
 
 static int gfio_server_running;
@@ -76,7 +77,6 @@ static struct button_spec {
 
 static void gfio_update_thread_status(struct gui_entry *ge, char *status_message, double perc);
 static void gfio_update_thread_status_all(struct gui *ui, char *status_message, double perc);
-static void report_error(struct gui_entry *ge, GError *error);
 
 static struct graph *setup_iops_graph(void)
 {
@@ -1798,16 +1798,13 @@ static void *job_thread(void *arg)
 static int send_job_file(struct gui_entry *ge)
 {
 	struct gfio_client *gc = ge->client;
-	GError *error;
 	int ret = 0;
 
 	ret = fio_client_send_ini(gc->client, ge->job_file);
 	if (!ret)
 		return 0;
 
-	error = g_error_new(g_quark_from_string("fio"), 1, "Failed to send file %s: %s\n", ge->job_file, strerror(-ret));
-	report_error(ge, error);
-	g_error_free(error);
+	gfio_report_error(ge, "Failed to send file %s: %s\n", ge->job_file, strerror(-ret));
 	return 1;
 }
 
@@ -1999,19 +1996,6 @@ static void gfio_client_added(struct gui_entry *ge, struct fio_client *client)
 	gfio_set_client(gc, client);
 }
 
-static void gfio_report_error(struct gui_entry *ge, const char *format, ...)
-{
-	va_list args;
-	GError *error;
-
-	va_start(args, format);
-	error = g_error_new_valist(g_quark_from_string("fio"), 1, format, args);
-	va_end(args);
-
-	report_error(ge, error);
-	g_error_free(error);
-}
-
 static void connect_clicked(GtkWidget *widget, gpointer data)
 {
 	struct gui_entry *ge = data;
@@ -2053,11 +2037,7 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 				pthread_create(&ge->ui->t, NULL, job_thread, ge->ui);
 			gfio_set_state(ge, GE_STATE_CONNECTED);
 		} else {
-			GError *error;
-
-			error = g_error_new(g_quark_from_string("fio"), 1, "Failed to connect to %s: %s\n", ge->client->client->hostname, strerror(-ret));
-			report_error(ge, error);
-			g_error_free(error);
+			gfio_report_error(ge, "Failed to connect to %s: %s\n", ge->client->client->hostname, strerror(-ret));
 		}
 	} else {
 		fio_client_terminate(gc->client);
@@ -2072,42 +2052,6 @@ static void send_clicked(GtkWidget *widget, gpointer data)
 
 	if (send_job_file(ge))
 		gtk_widget_set_sensitive(ge->button[GFIO_BUTTON_START], 1);
-}
-
-static void on_info_bar_response(GtkWidget *widget, gint response,
-                                 gpointer data)
-{
-	struct gui *ui = (struct gui *) data;
-
-	if (response == GTK_RESPONSE_OK) {
-		gtk_widget_destroy(widget);
-		ui->error_info_bar = NULL;
-	}
-}
-
-static void report_error(struct gui_entry *ge, GError *error)
-{
-	struct gui *ui = ge->ui;
-
-	if (ui->error_info_bar == NULL) {
-		ui->error_info_bar = gtk_info_bar_new_with_buttons(GTK_STOCK_OK,
-		                                               GTK_RESPONSE_OK,
-		                                               NULL);
-		g_signal_connect(ui->error_info_bar, "response", G_CALLBACK(on_info_bar_response), ui);
-		gtk_info_bar_set_message_type(GTK_INFO_BAR(ui->error_info_bar),
-		                              GTK_MESSAGE_ERROR);
-		
-		ui->error_label = gtk_label_new(error->message);
-		GtkWidget *container = gtk_info_bar_get_content_area(GTK_INFO_BAR(ui->error_info_bar));
-		gtk_container_add(GTK_CONTAINER(container), ui->error_label);
-		
-		gtk_box_pack_start(GTK_BOX(ui->vbox), ui->error_info_bar, FALSE, FALSE, 0);
-		gtk_widget_show_all(ui->vbox);
-	} else {
-		char buffer[256];
-		snprintf(buffer, sizeof(buffer), "Failed to open file.");
-		gtk_label_set(GTK_LABEL(ui->error_label), buffer);
-	}
 }
 
 static GtkWidget *new_client_page(struct gui_entry *ge);
@@ -2240,7 +2184,6 @@ static gchar *get_filename_from_uri(const gchar *uri)
 static int do_file_open(struct gui_entry *ge, const gchar *uri)
 {
 	struct fio_client *client;
-	GError *error;
 
 	assert(!ge->job_file);
 
@@ -2253,11 +2196,9 @@ static int do_file_open(struct gui_entry *ge, const gchar *uri)
 		return 0;
 	}
 
-	error = g_error_new(g_quark_from_string("fio"), 1, "Failed to add client %s", ge->host);
+	gfio_report_error(ge, "Failed to add client %s\n", ge->host);
 	free(ge->host);
 	ge->host = NULL;
-	report_error(ge, error);
-	g_error_free(error);
 	return 1;
 }
 

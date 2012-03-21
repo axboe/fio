@@ -69,7 +69,7 @@ endif
 
 OBJS = $(SOURCE:.c=.o)
 FIO_OBJS = $(OBJS) fio.o
-GFIO_OBJS = $(OBJS) gfio.o graph.o tickmarks.o ghelpers.o goptions.o
+GFIO_OBJS = $(OBJS) gfio.o graph.o tickmarks.o ghelpers.o goptions.o gerror.o
 
 T_SMALLOC_OBJS = t/stest.o
 T_SMALLOC_OBJS += mutex.o smalloc.o t/log.o
@@ -109,6 +109,9 @@ goptions.o: goptions.c goptions.h
 
 ghelpers.o: ghelpers.c ghelpers.h
 	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c ghelpers.c
+
+gerror.o: gerror.c gerror.h
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c gerror.c
 
 gfio.o: gfio.c ghelpers.c
 	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c gfio.c
