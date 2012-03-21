@@ -33,9 +33,6 @@
 #include "graph.h"
 #include "flist.h"
 #include "lib/prio_tree.h"
-#include "gettime.h"
-struct thread_data;
-#include "time.h"
 
 /*
  * Allowable difference to show tooltip
@@ -716,7 +713,6 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 			x->node.last++;
 
 		prio_tree_insert(&i->prio_tree, &x->node);
-		printf("insert (x=%u,y=%u) range %lu-%lu (%s)\n", (int)getx(x), (int)gety(x), x->node.start, x->node.last, x->tooltip);
 		i->tooltip_count++;
 	}
 
