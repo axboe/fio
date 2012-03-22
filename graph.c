@@ -716,7 +716,7 @@ void graph_add_label(struct graph *bg, const char *label)
 
 static void __graph_value_drop(struct graph_label *l, struct graph_value *v)
 {
-	flist_del(&v->list);
+	flist_del_init(&v->list);
 	if (v->tooltip)
 		free(v->tooltip);
 	free(v->value);
@@ -726,8 +726,6 @@ static void __graph_value_drop(struct graph_label *l, struct graph_value *v)
 
 static void graph_value_drop(struct graph_label *l, struct graph_value *v)
 {
-	struct flist_head *entry, *tmp;
-
 	/*
 	 * Find head, the guy that's on the prio tree
 	 */
@@ -741,11 +739,11 @@ static void graph_value_drop(struct graph_label *l, struct graph_value *v)
 	/*
 	 * Free aliases
 	 */
-	flist_for_each_safe(entry, tmp, &v->alias) {
+	while (!flist_empty(&v->alias)) {
 		struct graph_value *a;
 
-		a = flist_entry(entry, struct graph_value, alias);
-		flist_del(&a->alias);
+		a = flist_entry(v->alias.next, struct graph_value, alias);
+		flist_del_init(&a->alias);
 
 		__graph_value_drop(l, a);
 	}
@@ -1043,7 +1041,8 @@ const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 		/*
 		 * If we got matches in one label, don't check others.
 		 */
-		break;
+		if (best)
+			break;
 	}
 
 	if (best)
