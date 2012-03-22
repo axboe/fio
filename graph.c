@@ -45,6 +45,7 @@ struct xyvalue {
 
 enum {
 	GV_F_ON_PRIO	= 1,
+	GV_F_PRIO_SKIP	= 2,
 };
 
 struct graph_value {
@@ -703,19 +704,20 @@ static struct graph_label *graph_find_label(struct graph *bg,
 	return NULL;
 }
 
-void graph_add_label(struct graph *bg, const char *label)
+graph_label_t graph_add_label(struct graph *bg, const char *label)
 {
 	struct graph_label *i;
 	
 	i = graph_find_label(bg, label);
 	if (i)
-		return; /* already present. */
+		return i; /* already present. */
 	i = calloc(1, sizeof(*i));
 	INIT_FLIST_HEAD(&i->value_list);
 	i->parent = bg;
 	setstring(&i->label, label);
 	flist_add_tail(&i->list, &bg->label_list);
 	INIT_PRIO_TREE_ROOT(&i->prio_tree);
+	return i;
 }
 
 static void __graph_value_drop(struct graph_label *l, struct graph_value *v)
@@ -730,6 +732,11 @@ static void __graph_value_drop(struct graph_label *l, struct graph_value *v)
 
 static void graph_value_drop(struct graph_label *l, struct graph_value *v)
 {
+	if (v->flags & GV_F_PRIO_SKIP) {
+		__graph_value_drop(l, v);
+		return;
+	}
+
 	/*
 	 * Find head, the guy that's on the prio tree
 	 */
@@ -804,7 +811,8 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 			flist_add_tail(&x->alias, &alias->alias);
 		} else
 			x->flags = GV_F_ON_PRIO;
-	}
+	} else
+		x->flags = GV_F_PRIO_SKIP;
 
 	if (g->per_label_limit != -1 &&
 		i->value_count > g->per_label_limit) {
@@ -832,17 +840,14 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 	}
 }
 
-int graph_add_data(struct graph *bg, const char *label, const double value)
+int graph_add_data(struct graph *bg, graph_label_t label, const double value)
 {
-	struct graph_label *i;
+	struct graph_label *i = label;
 	double *d;
 
 	d = malloc(sizeof(*d));
 	*d = value;
 
-	i = graph_find_label(bg, label);
-	if (!i)
-		return -1;
 	graph_label_add_value(i, d, NULL);
 	return 0;
 }
@@ -862,15 +867,11 @@ static int graph_nonzero_y(struct graph_label *l)
 	return 0;
 }
 
-int graph_add_xy_data(struct graph *bg, const char *label,
+int graph_add_xy_data(struct graph *bg, graph_label_t label,
 		      const double x, const double y, const char *tooltip)
 {
-	struct graph_label *i;
+	struct graph_label *i = label;
 	struct xyvalue *xy;
-
-	i = graph_find_label(bg, label);
-	if (!i)
-		return -1;
 
 	if (bg->dont_graph_all_zeroes && y == 0.0 && !graph_nonzero_y(i))
 		i->hide = 1;
@@ -907,11 +908,10 @@ static void graph_free_labels(struct graph *g)
 	}	
 }
 
-void graph_set_color(struct graph *gr, const char *label,
-	double red, double green, double blue)
+void graph_set_color(struct graph *gr, graph_label_t label, double red,
+		     double green, double blue)
 {
-	struct flist_head *entry;
-	struct graph_label *i;
+	struct graph_label *i = label;
 	double r, g, b;
 
 	if (red < 0.0) { /* invisible color */
@@ -931,16 +931,9 @@ void graph_set_color(struct graph *gr, const char *label,
 			b = 1.0;
 	}
 
-	flist_for_each(entry, &gr->label_list) {
-		i = flist_entry(entry, struct graph_label, list);
-
-		if (strcmp(i->label, label) == 0) {
-			i->r = r;	
-			i->g = g;	
-			i->b = b;	
-			break;
-		}
-	}
+	i->r = r;
+	i->g = g;
+	i->b = b;
 }
 
 void graph_free(struct graph *bg)

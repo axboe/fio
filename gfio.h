@@ -6,6 +6,7 @@
 #include "stat.h"
 #include "thread_options.h"
 #include "ghelpers.h"
+#include "graph.h"
 
 struct probe_widget {
 	GtkWidget *hostname;
@@ -37,7 +38,11 @@ struct gfio_graphs {
 #define DRAWING_AREA_YDIM 400
 	GtkWidget *drawing_area;
 	struct graph *iops_graph;
+	graph_label_t read_iops;
+	graph_label_t write_iops;
 	struct graph *bandwidth_graph;
+	graph_label_t read_bw;
+	graph_label_t write_bw;
 };
 
 /*

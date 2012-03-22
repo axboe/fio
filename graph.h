@@ -2,7 +2,9 @@
 #define GRAPH_H
 
 struct graph;
+struct graph_label;
 
+typedef struct graph_label * graph_label_t;
 
 struct graph *graph_new(unsigned int xdim, unsigned int ydim, const char *font);
 /* graph_new() Returns a new graph structure of the given dimensions and font */
@@ -25,7 +27,7 @@ void graph_x_title(struct graph *g, const char *title);
 /* graph_x_title() sets the title of the x axis to the given string */
 void graph_y_title(struct graph *g, const char *title);
 /* graph_y_title() sets the title of the y axis to the given string */
-void graph_add_label(struct graph *g, const char *label);
+graph_label_t graph_add_label(struct graph *g, const char *label);
 /* graph_add_label() adds a new "stream" of data to be graphed.
  * For line charts, each label is a separate line on the graph.
  * For bar charts, each label is a grouping of columns on the x-axis
@@ -47,13 +49,13 @@ void graph_add_label(struct graph *g, const char *label);
  * label.
  */
 
-int graph_add_data(struct graph *g, const char *label, const double value);
+int graph_add_data(struct graph *g, graph_label_t label, const double value);
 /* graph_add_data() is used to add data to the labels of a bar graph */
-int graph_add_xy_data(struct graph *g, const char *label,
+int graph_add_xy_data(struct graph *g, graph_label_t label,
 		const double x, const double y, const char *tooltip);
 /* graph_add_xy_data is used to add data to the labels of a line graph */
 
-void graph_set_color(struct graph *g, const char *label,
+void graph_set_color(struct graph *g, graph_label_t label,
 		double red, double green, double blue);
 #define INVISIBLE_COLOR (-1.0)
 /* graph_set_color is used to set the color used to plot the data in

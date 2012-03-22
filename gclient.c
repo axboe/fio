@@ -400,10 +400,10 @@ static void gfio_update_client_eta(struct fio_client *client, struct jobs_eta *j
 		gtk_entry_set_text(GTK_ENTRY(ge->eta.write_bw), rate_str[1]);
 		gtk_entry_set_text(GTK_ENTRY(ge->eta.write_iops), iops_str[1]);
 
-		graph_add_xy_data(ge->graphs.iops_graph, "Read IOPS", je->elapsed_sec, je->iops[0], iops_str[0]);
-		graph_add_xy_data(ge->graphs.iops_graph, "Write IOPS", je->elapsed_sec, je->iops[1], iops_str[1]);
-		graph_add_xy_data(ge->graphs.bandwidth_graph, "Read Bandwidth", je->elapsed_sec, je->rate[0], rate_str[0]);
-		graph_add_xy_data(ge->graphs.bandwidth_graph, "Write Bandwidth", je->elapsed_sec, je->rate[1], rate_str[1]);
+		graph_add_xy_data(ge->graphs.iops_graph, ge->graphs.read_iops, je->elapsed_sec, je->iops[0], iops_str[0]);
+		graph_add_xy_data(ge->graphs.iops_graph, ge->graphs.write_iops, je->elapsed_sec, je->iops[1], iops_str[1]);
+		graph_add_xy_data(ge->graphs.bandwidth_graph, ge->graphs.read_bw, je->elapsed_sec, je->rate[0], rate_str[0]);
+		graph_add_xy_data(ge->graphs.bandwidth_graph, ge->graphs.write_bw, je->elapsed_sec, je->rate[1], rate_str[1]);
 
 		free(rate_str[0]);
 		free(rate_str[1]);
@@ -488,10 +488,10 @@ static void gfio_update_all_eta(struct jobs_eta *je)
 		gtk_entry_set_text(GTK_ENTRY(ui->eta.write_bw), rate_str[1]);
 		gtk_entry_set_text(GTK_ENTRY(ui->eta.write_iops), iops_str[1]);
 
-		graph_add_xy_data(ui->graphs.iops_graph, "Read IOPS", je->elapsed_sec, je->iops[0], iops_str[0]);
-		graph_add_xy_data(ui->graphs.iops_graph, "Write IOPS", je->elapsed_sec, je->iops[1], iops_str[1]);
-		graph_add_xy_data(ui->graphs.bandwidth_graph, "Read Bandwidth", je->elapsed_sec, je->rate[0], rate_str[0]);
-		graph_add_xy_data(ui->graphs.bandwidth_graph, "Write Bandwidth", je->elapsed_sec, je->rate[1], rate_str[1]);
+		graph_add_xy_data(ui->graphs.iops_graph, ui->graphs.read_iops, je->elapsed_sec, je->iops[0], iops_str[0]);
+		graph_add_xy_data(ui->graphs.iops_graph, ui->graphs.write_iops, je->elapsed_sec, je->iops[1], iops_str[1]);
+		graph_add_xy_data(ui->graphs.bandwidth_graph, ui->graphs.read_bw, je->elapsed_sec, je->rate[0], rate_str[0]);
+		graph_add_xy_data(ui->graphs.bandwidth_graph, ui->graphs.write_bw, je->elapsed_sec, je->rate[1], rate_str[1]);
 
 		free(rate_str[0]);
 		free(rate_str[1]);
@@ -865,8 +865,10 @@ static struct graph *setup_lat_bucket_graph(const char *title, double *lat,
 	graph_y_title(g, "Percent");
 
 	for (i = 0; i < len; i++) {
-		graph_add_label(g, labels[i]);
-		graph_add_data(g, labels[i], lat[i]);
+		graph_label_t l;
+
+		l = graph_add_label(g, labels[i]);
+		graph_add_data(g, l, lat[i]);
 	}
 
 	return g;
@@ -1053,11 +1055,12 @@ static struct graph *setup_clat_graph(char *title, unsigned int *ovals,
 	graph_y_title(g, "Time");
 
 	for (i = 0; i < len; i++) {
+		graph_label_t l;
 		char fbuf[8];
 
 		sprintf(fbuf, "%2.2f%%", plist[i].u.f);
-		graph_add_label(g, fbuf);
-		graph_add_data(g, fbuf, (double) ovals[i]);
+		l = graph_add_label(g, fbuf);
+		graph_add_data(g, l, (double) ovals[i]);
 	}
 
 	return g;

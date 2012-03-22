@@ -75,45 +75,45 @@ static struct button_spec {
 	},
 };
 
-static struct graph *setup_iops_graph(void)
+static void setup_iops_graph(struct gfio_graphs *gg)
 {
 	struct graph *g;
 
 	g = graph_new(DRAWING_AREA_XDIM / 2.0, DRAWING_AREA_YDIM, gfio_graph_font);
 	graph_title(g, "IOPS (IOs/sec)");
 	graph_x_title(g, "Time (secs)");
-	graph_add_label(g, "Read IOPS");
-	graph_add_label(g, "Write IOPS");
-	graph_set_color(g, "Read IOPS", 0.13, 0.54, 0.13);
-	graph_set_color(g, "Write IOPS", 1.0, 0.0, 0.0);
+	gg->read_iops = graph_add_label(g, "Read IOPS");
+	gg->write_iops = graph_add_label(g, "Write IOPS");
+	graph_set_color(g, gg->read_iops, 0.13, 0.54, 0.13);
+	graph_set_color(g, gg->write_iops, 1.0, 0.0, 0.0);
 	line_graph_set_data_count_limit(g, gfio_graph_limit);
 	graph_add_extra_space(g, 0.0, 0.0, 0.0, 0.0);
 	graph_set_graph_all_zeroes(g, 0);
-	return g;
+	gg->bandwidth_graph = g;
 }
 
-static struct graph *setup_bandwidth_graph(void)
+static void setup_bandwidth_graph(struct gfio_graphs *gg)
 {
 	struct graph *g;
 
 	g = graph_new(DRAWING_AREA_XDIM / 2.0, DRAWING_AREA_YDIM, gfio_graph_font);
 	graph_title(g, "Bandwidth (bytes/sec)");
 	graph_x_title(g, "Time (secs)");
-	graph_add_label(g, "Read Bandwidth");
-	graph_add_label(g, "Write Bandwidth");
-	graph_set_color(g, "Read Bandwidth", 0.13, 0.54, 0.13);
-	graph_set_color(g, "Write Bandwidth", 1.0, 0.0, 0.0);
+	gg->read_bw = graph_add_label(g, "Read Bandwidth");
+	gg->write_bw = graph_add_label(g, "Write Bandwidth");
+	graph_set_color(g, gg->read_bw, 0.13, 0.54, 0.13);
+	graph_set_color(g, gg->write_bw, 1.0, 0.0, 0.0);
 	graph_set_base_offset(g, 1);
 	line_graph_set_data_count_limit(g, 100);
 	graph_add_extra_space(g, 0.0, 0.0, 0.0, 0.0);
 	graph_set_graph_all_zeroes(g, 0);
-	return g;
+	gg->iops_graph = g;
 }
 
 static void setup_graphs(struct gfio_graphs *g)
 {
-	g->iops_graph = setup_iops_graph();
-	g->bandwidth_graph = setup_bandwidth_graph();
+	setup_iops_graph(g);
+	setup_bandwidth_graph(g);
 }
 
 void clear_ge_ui_info(struct gui_entry *ge)
