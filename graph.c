@@ -43,22 +43,26 @@ struct xyvalue {
 	double x, y;
 };
 
+enum {
+	GV_F_ON_PRIO	= 1,
+};
+
 struct graph_value {
-	struct graph_value *next;
+	struct flist_head list;
 	struct prio_tree_node node;
+	struct flist_head alias;
+	unsigned int flags;
 	char *tooltip;
 	void *value;
 };
 
 struct graph_label {
+	struct flist_head list;
 	char *label;
-	struct graph_value *tail;
-	struct graph_value *values;
-	struct graph_label *next;
+	struct flist_head value_list;
 	struct prio_tree_root prio_tree;
 	double r, g, b;
 	int value_count;
-	unsigned int tooltip_count;
 	struct graph *parent;
 };
 
@@ -73,8 +77,7 @@ struct graph {
 	char *ytitle;
 	unsigned int xdim, ydim;
 	double xoffset, yoffset;
-	struct graph_label *labels;
-	struct graph_label *tail;
+	struct flist_head label_list;
 	int per_label_limit;
 	const char *font;
 	graph_axis_unit_change_callback x_axis_unit_change_callback;
@@ -112,6 +115,7 @@ struct graph *graph_new(unsigned int xdim, unsigned int ydim, const char *font)
 	struct graph *g;
 
 	g = calloc(1, sizeof(*g));
+	INIT_FLIST_HEAD(&g->label_list);
 	graph_set_size(g, xdim, ydim);
 	g->per_label_limit = -1;
 	g->font = font;
@@ -130,23 +134,25 @@ void graph_y_axis_unit_change_notify(struct graph *g, graph_axis_unit_change_cal
 	g->y_axis_unit_change_callback = f;
 }
 
-static int count_labels(struct graph_label *labels)
+static int count_labels(struct graph *g)
 {
+	struct flist_head *entry;
 	int count = 0;
-	struct graph_label *i;
 
-	for (i = labels; i; i = i->next)
+	flist_for_each(entry, &g->label_list)
 		count++;
+
 	return count;
 }
 
-static int count_values(struct graph_value *values)
+static int count_values(struct graph_label *l)
 {
+	struct flist_head *entry;
 	int count = 0;
-	struct graph_value *i;
 
-	for (i = values; i; i = i->next)
+	flist_for_each(entry, &l->value_list)
 		count++;
+
 	return count;
 }
 
@@ -162,16 +168,19 @@ static double maxdouble(double a, double b)
 	return a < b ? b : a;
 }
 
-static double find_double_values(struct graph_value *values, double_comparator cmp)
+static double find_double_values(struct graph_label *l, double_comparator cmp)
 {
-	struct graph_value *i;
-	int first = 1;
+	struct flist_head *entry;
 	double answer, tmp;
+	int first = 1;
 
-	assert(values != NULL);
+	assert(!flist_empty(&l->value_list));
 	answer = 0.0; /* shut the compiler up, might need to think harder though. */
-	for (i = values; i; i = i->next) {
-		tmp = *(double *) i->value; 
+	flist_for_each(entry, &l->value_list) {
+		struct graph_value *i;
+
+		i = flist_entry(entry, struct graph_value, list);
+		tmp = *(double *) i->value;
 		if (first) {
 			answer = tmp;
 			first = 0;
@@ -182,16 +191,18 @@ static double find_double_values(struct graph_value *values, double_comparator c
 	return answer;
 }
 
-static double find_double_data(struct graph_label *labels, double_comparator cmp)
+static double find_double_data(struct graph *g, double_comparator cmp)
 {
+	struct flist_head *entry;
 	struct graph_label *i;
 	int first = 1;
 	double answer, tmp;
 
-	assert(labels != NULL);
+	assert(!flist_empty(&g->label_list));
 	answer = 0.0; /* shut the compiler up, might need to think harder though. */
-	for (i = labels; i; i = i->next) {
-		tmp = find_double_values(i->values, cmp);
+	flist_for_each(entry, &g->label_list) {
+		i = flist_entry(entry, struct graph_label, list);
+		tmp = find_double_values(i, cmp);
 		if (first) {
 			answer = tmp;
 			first = 0;
@@ -202,21 +213,21 @@ static double find_double_data(struct graph_label *labels, double_comparator cmp
 	return answer;
 }
 
-static double find_min_data(struct graph_label *labels)
+static double find_min_data(struct graph *g)
 {
-	return find_double_data(labels, mindouble);
+	return find_double_data(g, mindouble);
 }
 
-static double find_max_data(struct graph_label *labels)
+static double find_max_data(struct graph *g)
 {
-	return find_double_data(labels, maxdouble);
+	return find_double_data(g, maxdouble);
 }
 
 static void draw_bars(struct graph *bg, cairo_t *cr, struct graph_label *lb,
 			double label_offset, double bar_width,
 			double mindata, double maxdata)
 {
-	struct graph_value *i;
+	struct flist_head *entry;
 	double x1, y1, x2, y2;
 	int bar_num = 0;
 	double domain, range, v;
@@ -224,7 +235,10 @@ static void draw_bars(struct graph *bg, cairo_t *cr, struct graph_label *lb,
 	domain = (maxdata - mindata);
 	range = (double) bg->ydim * 0.80; /* FIXME */
 	cairo_stroke(cr);
-	for (i = lb->values; i; i = i->next) {
+	flist_for_each(entry, &lb->value_list) {
+		struct graph_value *i;
+
+		i = flist_entry(entry, struct graph_value, list);
 
 		x1 = label_offset + (double) bar_num * bar_width + (bar_width * 0.05);
 		x2 = x1 + bar_width * 0.90;
@@ -477,23 +491,24 @@ void bar_graph_draw(struct graph *bg, cairo_t *cr)
 	double label_offset, mindata, maxdata;
 	int i, nlabels;
 	struct graph_label *lb;
+	struct flist_head *entry;
 
 	cairo_save(cr);
 	cairo_translate(cr, bg->xoffset, bg->yoffset);
 	graph_draw_common(bg, cr, &x1, &y1, &x2, &y2);
 
-	nlabels = count_labels(bg->labels);
+	nlabels = count_labels(bg);
 	space_per_label = (x2 - x1) / (double) nlabels;
 
 	/*
 	 * Start bars at 0 unless we have negative values, otherwise we
 	 * present a skewed picture comparing label X and X+1.
 	 */
-	mindata = find_min_data(bg->labels);
+	mindata = find_min_data(bg);
 	if (mindata > 0)
 		mindata = 0;
 
-	maxdata = find_max_data(bg->labels);
+	maxdata = find_max_data(bg);
 
 	if (fabs(maxdata - mindata) < 1e-20) {
 		draw_centered_text(bg, cr,
@@ -504,9 +519,11 @@ void bar_graph_draw(struct graph *bg, cairo_t *cr)
 
 	maxdata = graph_draw_y_ticks(bg, cr, x1, y1, x2, y2, mindata, maxdata, 10, 1);
 	i = 0;
-	for (lb = bg->labels; lb; lb = lb->next) {
+	flist_for_each(entry, &bg->label_list) {
 		int nvalues;
-		nvalues = count_values(lb->values);
+
+		lb = flist_entry(entry, struct graph_label, list);
+		nvalues = count_values(lb);
 		bar_width = (space_per_label - space_per_label * 0.2) / (double) nvalues;
 		label_offset = bg->xdim * 0.1 + space_per_label * (double) i + space_per_label * 0.1;
 		draw_bars(bg, cr, lb, label_offset, bar_width, mindata, maxdata);
@@ -538,10 +555,14 @@ static double find_xy_value(struct graph *g, xy_value_extractor getvalue, double
 	double tmp, answer = 0.0;
 	struct graph_label *i;
 	struct graph_value *j;
+	struct flist_head *jentry, *entry;
 	int first = 1;
 
-	for (i = g->labels; i; i = i->next)
-		for (j = i->values; j; j = j->next) {
+	flist_for_each(entry, &g->label_list) {
+		i = flist_entry(entry, struct graph_label, list);
+
+		flist_for_each(jentry, &i->value_list) {
+			j = flist_entry(jentry, struct graph_value, list);
 			tmp = getvalue(j);
 			if (first) {
 				first = 0;
@@ -549,6 +570,8 @@ static double find_xy_value(struct graph *g, xy_value_extractor getvalue, double
 			}
 			answer = cmp(tmp, answer);	
 		}
+	}
+
 	return answer;
 } 
 
@@ -560,6 +583,7 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 	struct graph_label *i;
 	struct graph_value *j;
 	int good_data = 1, first = 1;
+	struct flist_head *entry, *lentry;
 
 	cairo_save(cr);
 	cairo_translate(cr, g->xoffset, g->yoffset);
@@ -613,13 +637,15 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 		goto skip_data;
 
 	cairo_set_line_width(cr, 1.5);
-	for (i = g->labels; i; i = i->next) {
+	flist_for_each(lentry, &g->label_list) {
+		i = flist_entry(lentry, struct graph_label, list);
 		first = 1;
 		if (i->r < 0) /* invisible data */
 			continue;
 
 		cairo_set_source_rgb(cr, i->r, i->g, i->b);
-		for (j = i->values; j; j = j->next) {
+		flist_for_each(entry, &i->value_list) {
+			j = flist_entry(entry, struct graph_value, list);
 			tx = ((getx(j) - gminx) / (gmaxx - gminx)) * (x2 - x1) + x1;
 			ty = y2 - ((gety(j) - gminy) / (gmaxy - gminy)) * (y2 - y1);
 			if (first) {
@@ -660,11 +686,16 @@ void graph_y_title(struct graph *bg, const char *title)
 static struct graph_label *graph_find_label(struct graph *bg,
 				const char *label)
 {
+	struct flist_head *entry;
 	struct graph_label *i;
 	
-	for (i = bg->labels; i; i = i->next)
+	flist_for_each(entry, &bg->label_list) {
+		i = flist_entry(entry, struct graph_label, list);
+
 		if (strcmp(label, i->label) == 0)
 			return i;
+	}
+
 	return NULL;
 }
 
@@ -676,15 +707,50 @@ void graph_add_label(struct graph *bg, const char *label)
 	if (i)
 		return; /* already present. */
 	i = calloc(1, sizeof(*i));
+	INIT_FLIST_HEAD(&i->value_list);
 	i->parent = bg;
 	setstring(&i->label, label);
-	i->next = NULL;
-	if (!bg->tail)
-		bg->labels = i;
-	else
-		bg->tail->next = i;
-	bg->tail = i;
+	flist_add_tail(&i->list, &bg->label_list);
 	INIT_PRIO_TREE_ROOT(&i->prio_tree);
+}
+
+static void __graph_value_drop(struct graph_label *l, struct graph_value *v)
+{
+	flist_del(&v->list);
+	if (v->tooltip)
+		free(v->tooltip);
+	free(v->value);
+	free(v);
+	l->value_count--;
+}
+
+static void graph_value_drop(struct graph_label *l, struct graph_value *v)
+{
+	struct flist_head *entry, *tmp;
+
+	/*
+	 * Find head, the guy that's on the prio tree
+	 */
+	while (!(v->flags & GV_F_ON_PRIO)) {
+		assert(!flist_empty(&v->alias));
+		v = flist_entry(v->alias.next, struct graph_value, alias);
+	}
+
+	prio_tree_remove(&l->prio_tree, &v->node);
+
+	/*
+	 * Free aliases
+	 */
+	flist_for_each_safe(entry, tmp, &v->alias) {
+		struct graph_value *a;
+
+		a = flist_entry(entry, struct graph_value, alias);
+		flist_del(&a->alias);
+
+		__graph_value_drop(l, a);
+	}
+
+	__graph_value_drop(l, v);
 }
 
 static void graph_label_add_value(struct graph_label *i, void *value,
@@ -695,14 +761,11 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 
 	x = malloc(sizeof(*x));
 	memset(x, 0, sizeof(*x));
-	x->value = value;
-	x->next = NULL;
-	if (!i->tail)
-		i->values = x;
-	else
-		i->tail->next = x;
-	i->tail = x;
+	INIT_FLIST_HEAD(&x->alias);
+	INIT_FLIST_HEAD(&x->list);
+	flist_add_tail(&x->list, &i->value_list);
 	i->value_count++;
+	x->value = value;
 
 	if (tooltip) {
 		double xval = getx(x);
@@ -720,6 +783,7 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 		INIT_PRIO_TREE_NODE(&x->node);
 		x->node.start = minx;
 		x->node.last = maxx;
+		x->tooltip = strdup(tooltip);
 		if (x->node.last == x->node.start) {
 			x->node.last += fabs(g->xtick_delta);
 			if (x->node.last == x->node.start)
@@ -731,10 +795,13 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 		 * should be identical, we can drop it
 		 */
 		ret = prio_tree_insert(&i->prio_tree, &x->node);
-		if (ret == &x->node) {
-			x->tooltip = strdup(tooltip);
-			i->tooltip_count++;
+		if (ret != &x->node) {
+			struct graph_value *alias;
+
+			alias = container_of(ret, struct graph_value, node);
+			flist_add_tail(&x->alias, &alias->alias);
 		}
+			x->flags = GV_F_ON_PRIO;
 	}
 
 	if (g->per_label_limit != -1 &&
@@ -750,17 +817,15 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 		if (i->value_count - g->per_label_limit >= 2)
 			to_drop = 2;
 
-		while (to_drop--) {
-			x = i->values;
-			i->values = i->values->next;
-			if (x->tooltip) {
-				free(x->tooltip);
-				prio_tree_remove(&i->prio_tree, &x->node);
-				i->tooltip_count--;
-			}
-			free(x->value);
-			free(x);
-			i->value_count--;
+		while (to_drop-- && !flist_empty(&i->value_list)) {
+			x = flist_entry(i->value_list.next, struct graph_value, list);
+			graph_value_drop(i, x);
+
+			/*
+			 * If we have aliases, we could drop > 1 above.
+			 */
+			if (i->value_count <= g->per_label_limit)
+				break;
 		}
 	}
 }
@@ -798,29 +863,24 @@ int graph_add_xy_data(struct graph *bg, const char *label,
 	return 0;
 }
 
-static void graph_free_values(struct graph_label *l, struct graph_value *values)
+static void graph_free_values(struct graph_label *l)
 {
-	struct graph_value *i, *next;
+	struct graph_value *i;
 
-	for (i = values; i; i = next) {
-		next = i->next;
-		free(i->value);
-		if (i->tooltip) {
-			free(i->tooltip);
-			prio_tree_remove(&l->prio_tree, &i->node);
-			l->tooltip_count--;
-		}
-		free(i);
+	while (!flist_empty(&l->value_list)) {
+		i = flist_entry(l->value_list.next, struct graph_value, list);
+		graph_value_drop(l, i);
 	}	
 }
 
-static void graph_free_labels(struct graph_label *labels)
+static void graph_free_labels(struct graph *g)
 {
-	struct graph_label *i, *next;
+	struct graph_label *i;
 
-	for (i = labels; i; i = next) {
-		next = i->next;
-		graph_free_values(i, i->values);
+	while (!flist_empty(&g->label_list)) {
+		i = flist_entry(g->label_list.next, struct graph_label, list);
+		flist_del(&i->list);
+		graph_free_values(i);
 		free(i);
 	}	
 }
@@ -828,6 +888,7 @@ static void graph_free_labels(struct graph_label *labels)
 void graph_set_color(struct graph *gr, const char *label,
 	double red, double green, double blue)
 {
+	struct flist_head *entry;
 	struct graph_label *i;
 	double r, g, b;
 
@@ -848,13 +909,16 @@ void graph_set_color(struct graph *gr, const char *label,
 			b = 1.0;
 	}
 
-	for (i = gr->labels; i; i = i->next)
+	flist_for_each(entry, &gr->label_list) {
+		i = flist_entry(entry, struct graph_label, list);
+
 		if (strcmp(i->label, label) == 0) {
 			i->r = r;	
 			i->g = g;	
 			i->b = b;	
 			break;
 		}
+	}
 }
 
 void graph_free(struct graph *bg)
@@ -862,7 +926,7 @@ void graph_free(struct graph *bg)
 	free(bg->title);
 	free(bg->xtitle);
 	free(bg->ytitle);
-	graph_free_labels(bg->labels);
+	graph_free_labels(bg);
 }
 
 /* For each line in the line graph, up to per_label_limit segments may
@@ -895,11 +959,15 @@ void graph_set_base_offset(struct graph *g, unsigned int base_offset)
 
 int graph_has_tooltips(struct graph *g)
 {
+	struct flist_head *entry;
 	struct graph_label *i;
 
-	for (i = g->labels; i; i = i->next)
-		if (i->tooltip_count)
+	flist_for_each(entry, &g->label_list) {
+		i = flist_entry(entry, struct graph_label, list);
+
+		if (!prio_tree_empty(&i->prio_tree))
 			return 1;
+	}
 
 	return 0;
 }
@@ -919,8 +987,8 @@ const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 	double x = ix, y = iy;
 	struct prio_tree_iter iter;
 	struct prio_tree_node *n;
-	struct graph_label *i;
 	struct graph_value *best = NULL;
+	struct flist_head *entry;
 	double best_delta;
 	double maxy, miny;
 
@@ -934,8 +1002,11 @@ const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 	maxy = y + (g->ytick_one_val * TOOLTIP_DELTA);
 	miny = y - (g->ytick_one_val * TOOLTIP_DELTA);
 	best_delta = UINT_MAX;
-	i = g->labels;
-	do {
+	flist_for_each(entry, &g->label_list) {
+		struct graph_label *i;
+
+		i = flist_entry(entry, struct graph_label, list);
+
 		INIT_PRIO_TREE_ITER(&iter);
 		prio_tree_iter_init(&iter, &i->prio_tree, x, x);
 
@@ -944,31 +1015,36 @@ const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 			continue;
 
 		do {
-			struct graph_value *v;
+			struct graph_value *v, *rootv;
 			double yval, ydiff;
 
 			v = container_of(n, struct graph_value, node);
-			yval = gety(v);
-			ydiff = fabs(yval - y);
+			rootv = v;
+			do {
+				yval = gety(v);
+				ydiff = fabs(yval - y);
 
-			/*
-			 * zero delta, or within or match critera, break
-			 */
-			if (ydiff < best_delta) {
-				best_delta = ydiff;
-				if (!best_delta ||
-				    (yval >= miny && yval <= maxy)) {
-					best = v;
-					break;
+				/*
+				 * zero delta, or within or match critera, break
+				 */
+				if (ydiff < best_delta) {
+					best_delta = ydiff;
+					if (!best_delta ||
+					    (yval >= miny && yval <= maxy)) {
+						best = v;
+						break;
+					}
 				}
-			}
+				if (!flist_empty(&v->alias))
+					v = flist_entry(v->alias.next, struct graph_value, alias);
+			} while (v != rootv);
 		} while ((n = prio_tree_next(&iter)) != NULL);
 
 		/*
 		 * If we got matches in one label, don't check others.
 		 */
 		break;
-	} while ((i = i->next) != NULL);
+	}
 
 	if (best)
 		return best->tooltip;
