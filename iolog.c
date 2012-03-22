@@ -517,10 +517,10 @@ void __finish_log(struct io_log *log, const char *name)
 	}
 
 	for (i = 0; i < log->nr_samples; i++) {
-		fprintf(f, "%lu, %lu, %u, %u\n", log->log[i].time,
-						log->log[i].val,
-						log->log[i].ddir,
-						log->log[i].bs);
+		fprintf(f, "%lu, %lu, %u, %u\n",
+				(unsigned long) log->log[i].time,
+				(unsigned long) log->log[i].val,
+				log->log[i].ddir, log->log[i].bs);
 	}
 
 	fclose(f);

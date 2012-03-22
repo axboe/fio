@@ -115,7 +115,7 @@ static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	sec = p->log_sec;
 	tm = localtime(&sec);
 	strftime(tmp, sizeof(tmp), "%Y-%m-%d %H:%M:%S", tm);
-	sprintf(timebuf, "%s.%03ld", tmp, p->log_usec / 1000);
+	sprintf(timebuf, "%s.%03ld", tmp, (long) p->log_usec / 1000);
 
 	gdk_threads_enter();
 
@@ -733,10 +733,10 @@ static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 	GtkWidget *frame, *box, *tree_view = NULL;
 	GtkTreeSelection *selection;
 	GtkListStore *model;
-	GType types[FIO_IO_U_MAP_NR + 1];
 	int i;
 	const char *labels[] = { "Depth", "0", "1", "2", "4", "8", "16", "32", "64", ">= 64" };
 	const int nr_labels = ARRAY_SIZE(labels);
+	GType types[nr_labels];
 
 	frame = gtk_frame_new("IO depths");
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
