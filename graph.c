@@ -800,7 +800,7 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 
 			alias = container_of(ret, struct graph_value, node);
 			flist_add_tail(&x->alias, &alias->alias);
-		}
+		} else
 			x->flags = GV_F_ON_PRIO;
 	}
 
