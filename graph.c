@@ -62,6 +62,7 @@ struct graph_label {
 	struct flist_head value_list;
 	struct prio_tree_root prio_tree;
 	double r, g, b;
+	int hide;
 	int value_count;
 	struct graph *parent;
 };
@@ -83,6 +84,7 @@ struct graph {
 	graph_axis_unit_change_callback x_axis_unit_change_callback;
 	graph_axis_unit_change_callback y_axis_unit_change_callback;
 	unsigned int base_offset;
+	unsigned int dont_graph_all_zeroes;
 	double left_extra;	
 	double right_extra;	
 	double top_extra;	
@@ -174,8 +176,9 @@ static double find_double_values(struct graph_label *l, double_comparator cmp)
 	double answer, tmp;
 	int first = 1;
 
-	assert(!flist_empty(&l->value_list));
-	answer = 0.0; /* shut the compiler up, might need to think harder though. */
+	if (flist_empty(&l->value_list))
+		return 0.0;
+
 	flist_for_each(entry, &l->value_list) {
 		struct graph_value *i;
 
@@ -198,8 +201,9 @@ static double find_double_data(struct graph *g, double_comparator cmp)
 	int first = 1;
 	double answer, tmp;
 
-	assert(!flist_empty(&g->label_list));
-	answer = 0.0; /* shut the compiler up, might need to think harder though. */
+	if (flist_empty(&g->label_list))
+		return 0.0;
+
 	flist_for_each(entry, &g->label_list) {
 		i = flist_entry(entry, struct graph_label, list);
 		tmp = find_double_values(i, cmp);
@@ -573,7 +577,7 @@ static double find_xy_value(struct graph *g, xy_value_extractor getvalue, double
 	}
 
 	return answer;
-} 
+}
 
 void line_graph_draw(struct graph *g, cairo_t *cr)
 {
@@ -640,7 +644,7 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 	flist_for_each(lentry, &g->label_list) {
 		i = flist_entry(lentry, struct graph_label, list);
 		first = 1;
-		if (i->r < 0) /* invisible data */
+		if (i->hide || i->r < 0) /* invisible data */
 			continue;
 
 		cairo_set_source_rgb(cr, i->r, i->g, i->b);
@@ -843,19 +847,39 @@ int graph_add_data(struct graph *bg, const char *label, const double value)
 	return 0;
 }
 
+static int graph_nonzero_y(struct graph_label *l)
+{
+	struct flist_head *entry;
+
+	flist_for_each(entry, &l->value_list) {
+		struct graph_value *v;
+
+		v = flist_entry(entry, struct graph_value, list);
+		if (gety(v) != 0.0)
+			return 1;
+	}
+
+	return 0;
+}
+
 int graph_add_xy_data(struct graph *bg, const char *label,
 		      const double x, const double y, const char *tooltip)
 {
 	struct graph_label *i;
 	struct xyvalue *xy;
 
-	xy = malloc(sizeof(*xy));
-	xy->x = x;
-	xy->y = y;
-
 	i = graph_find_label(bg, label);
 	if (!i)
 		return -1;
+
+	if (bg->dont_graph_all_zeroes && y == 0.0 && !graph_nonzero_y(i))
+		i->hide = 1;
+	else
+		i->hide = 0;
+
+	xy = malloc(sizeof(*xy));
+	xy->x = x;
+	xy->y = y;
 
 	graph_label_add_value(i, xy, tooltip);
 	return 0;
@@ -1004,6 +1028,8 @@ const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 		struct graph_label *i;
 
 		i = flist_entry(entry, struct graph_label, list);
+		if (i->hide)
+			continue;
 
 		INIT_PRIO_TREE_ITER(&iter);
 		prio_tree_iter_init(&iter, &i->prio_tree, x, x);
@@ -1049,4 +1075,9 @@ const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 		return best->tooltip;
 
 	return NULL;
+}
+
+void graph_set_graph_all_zeroes(struct graph *g, unsigned int set)
+{
+	g->dont_graph_all_zeroes = !set;
 }

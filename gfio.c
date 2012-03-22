@@ -88,6 +88,7 @@ static struct graph *setup_iops_graph(void)
 	graph_set_color(g, "Write IOPS", 1.0, 0.0, 0.0);
 	line_graph_set_data_count_limit(g, gfio_graph_limit);
 	graph_add_extra_space(g, 0.0, 0.0, 0.0, 0.0);
+	graph_set_graph_all_zeroes(g, 0);
 	return g;
 }
 
@@ -105,6 +106,7 @@ static struct graph *setup_bandwidth_graph(void)
 	graph_set_base_offset(g, 1);
 	line_graph_set_data_count_limit(g, 100);
 	graph_add_extra_space(g, 0.0, 0.0, 0.0, 0.0);
+	graph_set_graph_all_zeroes(g, 0);
 	return g;
 }
 

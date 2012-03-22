@@ -86,6 +86,7 @@ extern const char *graph_find_tooltip(struct graph *g, int x, int y);
 extern int graph_contains_xy(struct graph *p, int x, int y);
 
 extern void graph_set_base_offset(struct graph *g, unsigned int base_offset);
+extern void graph_set_graph_all_zeroes(struct graph *g, unsigned int set);
 
 #endif
 
