@@ -763,7 +763,7 @@ static void gfio_show_io_depths(GtkWidget *vbox, struct thread_stat *ts)
 	gfio_add_sc_depths_tree(model, ts, nr_labels, 1);
 	gfio_add_sc_depths_tree(model, ts, nr_labels, 0);
 
-	gtk_box_pack_start(GTK_BOX(box), tree_view, TRUE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(box), tree_view, TRUE, TRUE, 3);
 }
 
 static void gfio_show_cpu_usage(GtkWidget *vbox, struct thread_stat *ts)
