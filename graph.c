@@ -345,8 +345,8 @@ static void draw_vertical_centered_text(struct graph *g, cairo_t *cr, double x,
 static void graph_draw_common(struct graph *g, cairo_t *cr,
 	double *x1, double *y1, double *x2, double *y2)
 {
-        cairo_set_source_rgb(cr, 0, 0, 0);
-        cairo_set_line_width (cr, 0.8);
+	cairo_set_source_rgb(cr, 0, 0, 0);
+	cairo_set_line_width (cr, 0.8);
 
 	*x1 = 0.10 * g->xdim;	
 	*x2 = 0.95 * g->xdim;
