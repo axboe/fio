@@ -310,7 +310,7 @@ rw=str		Type of io pattern. Accepted values are:
 			write		Sequential writes
 			randwrite	Random writes
 			randread	Random reads
-			rw		Sequential mixed reads and writes
+			rw,readwrite	Sequential mixed reads and writes
 			randrw		Random mixed reads and writes
 
 		For the mixed io types, the default is to split them 50/50.
