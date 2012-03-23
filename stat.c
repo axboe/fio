@@ -786,7 +786,7 @@ static void show_thread_status_terse_v3(struct thread_stat *ts,
 
 	/* Additional output if description is set */
 	if (strlen(ts->description))
-		log_info(";%s", ts->description);
+		log_info(";%s\n", ts->description);
 }
 
 static void show_thread_status_terse(struct thread_stat *ts,
