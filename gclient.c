@@ -957,7 +957,7 @@ static void gfio_show_latency_buckets(struct gfio_client *gc, GtkWidget *vbox,
 	g_signal_connect(G_OBJECT(drawing_area), "expose_event", G_CALLBACK(on_expose_lat_drawing_area), ge->lat_bucket_graph);
         g_signal_connect(G_OBJECT(drawing_area), "configure_event", G_CALLBACK(on_config_lat_drawing_area), ge->lat_bucket_graph);
 
-	gtk_box_pack_start(GTK_BOX(hbox), tree_view, TRUE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox), tree_view, TRUE, TRUE, 3);
 }
 
 static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long min,
