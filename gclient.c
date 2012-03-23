@@ -1153,7 +1153,7 @@ static void gfio_show_ddir_status(struct gfio_client *gc, GtkWidget *mbox,
 	gtk_box_pack_start(GTK_BOX(mbox), box, TRUE, FALSE, 3);
 
 	frame = gtk_frame_new(ddir_label[ddir]);
-	gtk_box_pack_start(GTK_BOX(box), frame, FALSE, FALSE, 5);
+	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 5);
 
 	main_vbox = gtk_vbox_new(FALSE, 3);
 	gtk_container_add(GTK_CONTAINER(frame), main_vbox);
