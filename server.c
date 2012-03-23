@@ -467,7 +467,7 @@ static void fio_server_fork_item_done(struct fio_fork_item *ffi)
 	free(ffi);
 }
 
-static void fio_server_check_fork_items(struct flist_head *list, int bla)
+static void fio_server_check_fork_items(struct flist_head *list)
 {
 	struct flist_head *entry, *tmp;
 	struct fio_fork_item *ffi;
@@ -484,12 +484,12 @@ static void fio_server_check_fork_items(struct flist_head *list, int bla)
 
 static void fio_server_check_jobs(void)
 {
-	fio_server_check_fork_items(&job_list, 0);
+	fio_server_check_fork_items(&job_list);
 }
 
 static void fio_server_check_conns(void)
 {
-	fio_server_check_fork_items(&conn_list, 1);
+	fio_server_check_fork_items(&conn_list);
 }
 
 static int handle_run_cmd(struct fio_net_cmd *cmd)
@@ -688,7 +688,12 @@ static int handle_connection(int sk)
 
 		ret = 0;
 		do {
-			ret = poll(&pfd, 1, 100);
+			int timeout = 1000;
+
+			if (!flist_empty(&job_list))
+				timeout = 100;
+		
+			ret = poll(&pfd, 1, timeout);
 			if (ret < 0) {
 				if (errno == EINTR)
 					break;
@@ -752,7 +757,12 @@ static int accept_loop(int listen_sk)
 		pfd.fd = listen_sk;
 		pfd.events = POLLIN;
 		do {
-			ret = poll(&pfd, 1, 100);
+			int timeout = 1000;
+
+			if (!flist_empty(&conn_list))
+				timeout = 100;
+
+			ret = poll(&pfd, 1, timeout);
 			if (ret < 0) {
 				if (errno == EINTR)
 					break;
