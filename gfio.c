@@ -89,7 +89,7 @@ static void setup_iops_graph(struct gfio_graphs *gg)
 	line_graph_set_data_count_limit(g, gfio_graph_limit);
 	graph_add_extra_space(g, 0.0, 0.0, 0.0, 0.0);
 	graph_set_graph_all_zeroes(g, 0);
-	gg->bandwidth_graph = g;
+	gg->iops_graph = g;
 }
 
 static void setup_bandwidth_graph(struct gfio_graphs *gg)
@@ -107,7 +107,7 @@ static void setup_bandwidth_graph(struct gfio_graphs *gg)
 	line_graph_set_data_count_limit(g, 100);
 	graph_add_extra_space(g, 0.0, 0.0, 0.0, 0.0);
 	graph_set_graph_all_zeroes(g, 0);
-	gg->iops_graph = g;
+	gg->bandwidth_graph = g;
 }
 
 static void setup_graphs(struct gfio_graphs *g)
