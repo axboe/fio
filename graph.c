@@ -123,8 +123,13 @@ struct graph *graph_new(unsigned int xdim, unsigned int ydim, const char *font)
 	g->per_label_limit = -1;
 	g->font = font;
 	if (!g->font)
-		g->font = "Sans";
+		g->font = GRAPH_DEFAULT_FONT;
 	return g;
+}
+
+void graph_set_font(struct graph *g, const char *font)
+{
+	g->font = font;
 }
 
 void graph_x_axis_unit_change_notify(struct graph *g, graph_axis_unit_change_callback f)
@@ -286,7 +291,7 @@ static void draw_aligned_text(struct graph *g, cairo_t *cr, double x, double y,
 			factor = 1.0;
 			break;
 	}
-	cairo_select_font_face (cr, g->font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+	cairo_select_font_face(cr, g->font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
 
 	cairo_set_font_size(cr, fontsize);
 	cairo_text_extents(cr, text, &extents);

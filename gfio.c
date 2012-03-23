@@ -41,7 +41,7 @@ static int gfio_server_running;
 static unsigned int gfio_graph_limit = 100;
 
 GdkColor gfio_color_white;
-const char *gfio_graph_font;
+const char *gfio_graph_font = GRAPH_DEFAULT_FONT;
 
 typedef void (*clickfunction)(GtkWidget *widget, gpointer data);
 
@@ -1047,26 +1047,38 @@ static void view_results(GtkWidget *w, gpointer data)
 		gfio_display_end_results(gc);
 }
 
-static void __update_graph_limits(struct gfio_graphs *g)
+static void __update_graph_settings(struct gfio_graphs *g)
 {
 	line_graph_set_data_count_limit(g->iops_graph, gfio_graph_limit);
+	graph_set_font(g->iops_graph, gfio_graph_font);
 	line_graph_set_data_count_limit(g->bandwidth_graph, gfio_graph_limit);
+	graph_set_font(g->bandwidth_graph, gfio_graph_font);
 }
 
-static void ge_update_lim_fn(gpointer key, gpointer value, gpointer data)
+static void ge_update_settings_fn(gpointer key, gpointer value, gpointer data)
 {
 	struct gui_entry *ge = (struct gui_entry *) value;
+	GdkEvent *ev;
 
-	__update_graph_limits(&ge->graphs);
+	__update_graph_settings(&ge->graphs);
+
+	ev = gdk_event_new(GDK_EXPOSE);
+	g_signal_emit_by_name(G_OBJECT(ge->graphs.drawing_area), "expose_event", GTK_WIDGET(ge->graphs.drawing_area), ev, &ge->graphs);
+	gdk_event_free(ev);
 }
 
 static void update_graph_limits(void)
 {
 	struct gui *ui = &main_ui;
+	GdkEvent *ev;
 
-	__update_graph_limits(&ui->graphs);
+	__update_graph_settings(&ui->graphs);
 
-	g_hash_table_foreach(ui->ge_hash, ge_update_lim_fn, NULL);
+	ev = gdk_event_new(GDK_EXPOSE);
+	g_signal_emit_by_name(G_OBJECT(ui->graphs.drawing_area), "expose_event", GTK_WIDGET(ui->graphs.drawing_area), ev, &ui->graphs);
+	gdk_event_free(ev);
+
+	g_hash_table_foreach(ui->ge_hash, ge_update_settings_fn, NULL);
 }
 
 static void preferences(GtkWidget *w, gpointer data)
@@ -1093,7 +1105,7 @@ static void preferences(GtkWidget *w, gpointer data)
 	entry = gtk_label_new("Font face to use for graph labels");
 	gtk_box_pack_start(GTK_BOX(hbox), entry, TRUE, TRUE, 5);
 
-	font = gtk_font_button_new();
+	font = gtk_font_button_new_with_font(gfio_graph_font);
 	gtk_box_pack_start(GTK_BOX(hbox), font, FALSE, FALSE, 5);
 
 	box = gtk_vbox_new(FALSE, 6);

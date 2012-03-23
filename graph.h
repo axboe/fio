@@ -6,6 +6,8 @@ struct graph_label;
 
 typedef struct graph_label * graph_label_t;
 
+#define GRAPH_DEFAULT_FONT	"Sans 12"
+
 struct graph *graph_new(unsigned int xdim, unsigned int ydim, const char *font);
 /* graph_new() Returns a new graph structure of the given dimensions and font */
 void graph_set_size(struct graph *g, unsigned int xdim, unsigned int ydim);
@@ -21,6 +23,7 @@ void line_graph_set_data_count_limit(struct graph *g, int per_label_limit);
  * be added to a line graph.  Once the limit is reached, the oldest data 
  * is discarded as new data is added
  */
+void graph_set_font(struct graph *g, const char *font);
 void graph_title(struct graph *g, const char *title);
 /* graph_title() sets the main title of the graph to the given string */
 void graph_x_title(struct graph *g, const char *title);
