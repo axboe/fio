@@ -1113,7 +1113,7 @@ static void gfio_show_clat_percentiles(struct gfio_client *gc,
 	g_signal_connect(G_OBJECT(drawing_area), "expose_event", G_CALLBACK(on_expose_lat_drawing_area), ge->clat_graph);
 	g_signal_connect(G_OBJECT(drawing_area), "configure_event", G_CALLBACK(on_config_lat_drawing_area), ge->clat_graph);
 
-	gtk_box_pack_start(GTK_BOX(hbox), tree_view, TRUE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox), tree_view, TRUE, TRUE, 3);
 out:
 	if (ovals)
 		free(ovals);
