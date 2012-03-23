@@ -1291,7 +1291,7 @@ int fio_handle_clients(struct client_ops *ops)
 					break;
 			}
 
-			ret = poll(pfds, nr_clients, 100);
+			ret = poll(pfds, nr_clients, ops->eta_msec);
 			if (ret < 0) {
 				if (errno == EINTR)
 					continue;
