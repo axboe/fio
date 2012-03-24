@@ -804,8 +804,6 @@ static void gopt_add_options(struct gopt_job_view *gjv,
 	GtkWidget *hbox = NULL;
 	int i;
 
-	gopt_dep_tree = g_node_new(NULL);
-
 	/*
 	 * First add all options
 	 */
