@@ -110,7 +110,8 @@ static GtkWidget *gopt_get_group_frame(struct gopt_job_view *gjv,
 /*
  * Mark children as invisible, if needed.
  */
-static void gopt_set_children_visible(struct fio_option *parent,
+static void gopt_set_children_visible(struct gopt_job_view *gjv,
+				      struct fio_option *parent,
 				      gboolean visible)
 {
 	GNode *child, *node;
@@ -123,13 +124,12 @@ static void gopt_set_children_visible(struct fio_option *parent,
 	while (child) {
 		struct fio_option *o = child->data;
 		struct gopt *g = o->gui_data;
-		struct gopt_job_view *gjv = g->gjv;
 
 		/*
 		 * Recurse into child, if it also has children
 		 */
 		if (g_node_n_children(child))
-			gopt_set_children_visible(o, visible);
+			gopt_set_children_visible(gjv, o, visible);
 
 		if (gjv->widgets[g->opt_index])
 			gtk_widget_set_sensitive(gjv->widgets[g->opt_index], visible);
@@ -147,7 +147,8 @@ static void gopt_str_changed(GtkEntry *entry, gpointer data)
 
 	text = gtk_entry_get_text(GTK_ENTRY(s->entry));
 	set = strcmp(text, "") != 0;
-	gopt_set_children_visible(o, set);
+
+	gopt_set_children_visible(s->gopt.gjv, o, set);
 }
 
 static void gopt_mark_index(struct gopt_job_view *gjv, struct gopt *gopt,
@@ -207,7 +208,8 @@ static void gopt_combo_changed(GtkComboBox *box, gpointer data)
 	unsigned int index;
 
 	index = gtk_combo_box_get_active(GTK_COMBO_BOX(c->combo));
-	gopt_set_children_visible(o, index);
+
+	gopt_set_children_visible(c->gopt.gjv, o, index);
 }
 
 static void gopt_combo_destroy(GtkWidget *w, gpointer data)
@@ -459,7 +461,7 @@ static void gopt_bool_toggled(GtkToggleButton *button, gpointer data)
 		g_signal_handler_unblock(G_OBJECT(b_inv->check), b_inv->gopt.sig_handler);
 	}
 
-	gopt_set_children_visible(o, set);
+	gopt_set_children_visible(b->gopt.gjv, o, set);
 }
 
 static void gopt_bool_destroy(GtkWidget *w, gpointer data)
