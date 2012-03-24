@@ -550,18 +550,29 @@ static void gfio_quit_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	gdk_threads_leave();
 }
 
+static struct thread_options *gfio_client_add_job(struct gfio_client *gc,
+			struct thread_options_pack *top)
+{
+	struct gfio_client_options *gco;
+
+	gco = calloc(1, sizeof(*gco));
+	convert_thread_options_to_cpu(&gco->o, top);
+	flist_add_tail(&gco->list, &gc->o_list);
+	return &gco->o;
+}
+
 static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_add_job_pdu *p = (struct cmd_add_job_pdu *) cmd->payload;
 	struct gfio_client *gc = client->client_data;
-	struct thread_options *o = &gc->o;
 	struct gui_entry *ge = gc->ge;
+	struct thread_options *o;
 	char *c1, *c2, *c3, *c4;
 	char tmp[80];
 
 	p->thread_number = le32_to_cpu(p->thread_number);
 	p->groupid = le32_to_cpu(p->groupid);
-	convert_thread_options_to_cpu(o, &p->top);
+	o = gfio_client_add_job(gc, &p->top);
 
 	gdk_threads_enter();
 

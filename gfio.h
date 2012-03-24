@@ -136,11 +136,16 @@ struct end_results {
 	struct thread_stat ts;
 };
 
+struct gfio_client_options {
+	struct flist_head list;
+	struct thread_options o;
+};
+
 struct gfio_client {
 	struct gui_entry *ge;
 	struct fio_client *client;
 	GtkWidget *err_entry;
-	struct thread_options o;
+	struct flist_head o_list;
 
 	struct end_results *results;
 	unsigned int nr_results;

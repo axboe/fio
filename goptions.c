@@ -856,10 +856,21 @@ static void gopt_add_group_tabs(GtkWidget *notebook, GtkWidget **vbox)
 	} while (1);
 }
 
-void gopt_get_options_window(GtkWidget *window, struct thread_options *o)
+void gopt_get_options_window(GtkWidget *window, struct gfio_client *gc)
 {
 	GtkWidget *dialog, *notebook;
 	GtkWidget *vboxes[__FIO_OPT_C_NR];
+	struct gfio_client_options *gco;
+	struct thread_options *o;
+
+	/*
+	 * Just choose the first item, we need to make each options
+	 * entry the main notebook, with the below options view as
+	 * a sub-notebook
+	 */
+	assert(!flist_empty(&gc->o_list));
+	gco = flist_entry(gc->o_list.next, struct gfio_client_options, list);
+	o = &gco->o;
 
 	dialog = gtk_dialog_new_with_buttons("Fio options",
 			GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,

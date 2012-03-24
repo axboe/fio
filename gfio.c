@@ -616,14 +616,22 @@ static void gfio_set_client(struct gfio_client *gc, struct fio_client *client)
 
 static void gfio_client_added(struct gui_entry *ge, struct fio_client *client)
 {
+	struct gfio_client_options *gco;
 	struct gfio_client *gc;
 
-	gc = malloc(sizeof(*gc));
-	memset(gc, 0, sizeof(*gc));
-	options_default_fill(&gc->o);
+	gc = calloc(1, sizeof(*gc));
+	INIT_FLIST_HEAD(&gc->o_list);
 	gc->ge = ge;
 	ge->client = gc;
 	gfio_set_client(gc, client);
+
+	/*
+	 * Just add a default set of options, need to consider how best
+	 * to handle this
+	 */
+	gco = calloc(1, sizeof(*gco));
+	options_default_fill(&gco->o);
+	flist_add_tail(&gco->list, &gc->o_list);
 }
 
 static void connect_clicked(GtkWidget *widget, gpointer data)
@@ -1016,7 +1024,7 @@ static void edit_job_entry(GtkWidget *w, gpointer data)
 
 	ge = get_ge_from_cur_tab(ui);
 	if (ge && ge->client)
-		gopt_get_options_window(ui->window, &ge->client->o);
+		gopt_get_options_window(ui->window, ge->client);
 }
 
 static void start_job_entry(GtkWidget *w, gpointer data)
