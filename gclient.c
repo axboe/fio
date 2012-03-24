@@ -557,7 +557,9 @@ static struct thread_options *gfio_client_add_job(struct gfio_client *gc,
 
 	gco = calloc(1, sizeof(*gco));
 	convert_thread_options_to_cpu(&gco->o, top);
+	INIT_FLIST_HEAD(&gco->list);
 	flist_add_tail(&gco->list, &gc->o_list);
+	gc->o_list_nr = 1;
 	return &gco->o;
 }
 

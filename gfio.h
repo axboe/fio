@@ -145,7 +145,9 @@ struct gfio_client {
 	struct gui_entry *ge;
 	struct fio_client *client;
 	GtkWidget *err_entry;
+
 	struct flist_head o_list;
+	unsigned int o_list_nr;
 
 	struct end_results *results;
 	unsigned int nr_results;

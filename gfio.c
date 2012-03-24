@@ -430,6 +430,18 @@ static int send_job_file(struct gui_entry *ge)
 	struct gfio_client *gc = ge->client;
 	int ret = 0;
 
+	/*
+	 * Prune old options, we are expecting the return options
+	 * when the job file is parsed remotely and returned to us.
+	 */
+	while (!flist_empty(&gc->o_list)) {
+		struct gfio_client_options *gco;
+
+		gco = flist_entry(gc->o_list.next, struct gfio_client_options, list);
+		flist_del(&gco->list);
+		free(gco);
+	}
+
 	ret = fio_client_send_ini(gc->client, ge->job_file);
 	if (!ret)
 		return 0;
@@ -630,8 +642,10 @@ static void gfio_client_added(struct gui_entry *ge, struct fio_client *client)
 	 * to handle this
 	 */
 	gco = calloc(1, sizeof(*gco));
+	INIT_FLIST_HEAD(&gco->list);
 	options_default_fill(&gco->o);
 	flist_add_tail(&gco->list, &gc->o_list);
+	gc->o_list_nr++;
 }
 
 static void connect_clicked(GtkWidget *widget, gpointer data)
@@ -1696,6 +1710,8 @@ int main(int argc, char *argv[], char *envp[])
 	if (fio_init_options())
 		return 1;
 
+	gopt_init();
+
 	memset(&main_ui, 0, sizeof(main_ui));
 	main_ui.ge_hash = g_hash_table_new(g_int_hash, g_int_equal);
 
@@ -1706,5 +1722,7 @@ int main(int argc, char *argv[], char *envp[])
 	gdk_threads_leave();
 
 	g_hash_table_destroy(main_ui.ge_hash);
+
+	gopt_exit();
 	return 0;
 }
