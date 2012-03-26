@@ -12,8 +12,6 @@ UNAME  := $(shell uname)
 GTK_CFLAGS = `pkg-config --cflags gtk+-2.0 gthread-2.0`
 GTK_LDFLAGS = `pkg-config --libs gtk+-2.0 gthread-2.0`
 
-GTK_CFLAGS += -DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED
-
 SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
 		lib/rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \

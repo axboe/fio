@@ -24,4 +24,9 @@ static inline GtkWidget *gtk_dialog_get_content_area(GtkDialog *dialog)
 }
 #endif
 
+#if GTK_MAJOR_VERSION < 3
+guint gtk_widget_get_allocated_width(GtkWidget *w);
+guint gtk_widget_get_allocated_height(GtkWidget *w);
+#endif
+
 #endif

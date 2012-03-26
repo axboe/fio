@@ -315,11 +315,13 @@ static void gfio_ui_setup_log(struct gui *ui)
 static gint on_config_drawing_area(GtkWidget *w, GdkEventConfigure *event,
 				   gpointer data)
 {
+	guint width = gtk_widget_get_allocated_width(w);
+	guint height = gtk_widget_get_allocated_height(w);
 	struct gfio_graphs *g = data;
 
-	graph_set_size(g->iops_graph, w->allocation.width / 2.0, w->allocation.height);
-	graph_set_position(g->iops_graph, w->allocation.width / 2.0, 0.0);
-	graph_set_size(g->bandwidth_graph, w->allocation.width / 2.0, w->allocation.height);
+	graph_set_size(g->iops_graph, width / 2.0, height);
+	graph_set_position(g->iops_graph, width / 2.0, 0.0);
+	graph_set_size(g->bandwidth_graph, width / 2.0, height);
 	graph_set_position(g->bandwidth_graph, 0, 0);
 	return TRUE;
 }
@@ -355,7 +357,7 @@ static int on_expose_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
 	struct gfio_graphs *g = p;
 	cairo_t *cr;
 
-	cr = gdk_cairo_create(w->window);
+	cr = gdk_cairo_create(gtk_widget_get_window(w));
 
 	if (graph_has_tooltips(g->iops_graph) ||
 	    graph_has_tooltips(g->bandwidth_graph)) {

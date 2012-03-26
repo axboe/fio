@@ -33,3 +33,17 @@ gchar *gtk_combo_box_text_get_active_text(GtkComboBoxText *combo_box)
 }
 
 #endif
+
+#if GTK_MAJOR_VERSION < 3
+
+guint gtk_widget_get_allocated_width(GtkWidget *w)
+{
+	return w->allocation.width;
+}
+
+guint gtk_widget_get_allocated_height(GtkWidget *w)
+{
+	return w->allocation.height;
+}
+
+#endif

@@ -892,7 +892,7 @@ static int on_expose_lat_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
 	struct graph *g = p;
 	cairo_t *cr;
 
-	cr = gdk_cairo_create(w->window);
+	cr = gdk_cairo_create(gtk_widget_get_window(w));
 #if 0
 	if (graph_has_tooltips(g)) {
 		g_object_set(w, "has-tooltip", TRUE, NULL);
@@ -909,10 +909,12 @@ static int on_expose_lat_drawing_area(GtkWidget *w, GdkEvent *event, gpointer p)
 static gint on_config_lat_drawing_area(GtkWidget *w, GdkEventConfigure *event,
 				       gpointer data)
 {
+	guint width = gtk_widget_get_allocated_width(w);
+	guint height = gtk_widget_get_allocated_height(w);
 	struct graph *g = data;
 
-	graph_set_size(g, w->allocation.width, w->allocation.height);
-	graph_set_size(g, w->allocation.width, w->allocation.height);
+	graph_set_size(g, width, height);
+	graph_set_size(g, width, height);
 	graph_set_position(g, 0, 0);
 	return TRUE;
 }
