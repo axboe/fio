@@ -17,6 +17,7 @@ struct gopt {
 	unsigned int opt_type;
 	gulong sig_handler;
 	struct gopt_job_view *gjv;
+	struct flist_head changed_list;
 };
 
 struct gopt_combo {
@@ -59,6 +60,17 @@ struct gopt_str_multi {
 	GtkWidget *checks[PARSE_MAX_VP];
 };
 
+enum {
+	GOPT_COMBO_INT = 1,
+	GOPT_COMBO_STR,
+	GOPT_INT,
+	GOPT_BOOL,
+	GOPT_STR,
+	GOPT_STR_VAL,
+	GOPT_RANGE,
+	GOPT_STR_MULTI,
+};
+
 struct gopt_frame_widget {
 	GtkWidget *vbox[2];
 	unsigned int nr;
@@ -69,6 +81,8 @@ struct gopt_job_view {
 	struct gopt_frame_widget g_widgets[__FIO_OPT_G_NR];
 	GtkWidget *widgets[FIO_MAX_OPTS];
 	GtkWidget *vboxes[__FIO_OPT_C_NR];
+	struct flist_head changed_list;
+	struct thread_options *o;
 };
 
 static GNode *gopt_dep_tree;
@@ -138,6 +152,31 @@ static void gopt_set_children_visible(struct gopt_job_view *gjv,
 	}
 }
 
+static void gopt_mark_index(struct gopt_job_view *gjv, struct gopt *gopt,
+			    unsigned int idx, int type)
+{
+	INIT_FLIST_HEAD(&gopt->changed_list);
+	g_object_ref(G_OBJECT(gopt->box));
+
+	assert(!gjv->widgets[idx]);
+	gopt->opt_index = idx;
+	gopt->opt_type = type;
+	gopt->gjv = gjv;
+	gjv->widgets[idx] = gopt->box;
+}
+
+static void gopt_changed(struct gopt *gopt)
+{
+	struct gopt_job_view *gjv = gopt->gjv;
+
+	/*
+	 * Add to changed list. This also prevents the option from being
+	 * freed when the widget is destroyed.
+	 */
+	if (flist_empty(&gopt->changed_list))
+		flist_add_tail(&gopt->changed_list, &gjv->changed_list);
+}
+
 static void gopt_str_changed(GtkEntry *entry, gpointer data)
 {
 	struct gopt_str *s = (struct gopt_str *) data;
@@ -145,26 +184,21 @@ static void gopt_str_changed(GtkEntry *entry, gpointer data)
 	const gchar *text;
 	int set;
 
+	gopt_changed(&s->gopt);
+
 	text = gtk_entry_get_text(GTK_ENTRY(s->entry));
 	set = strcmp(text, "") != 0;
 
 	gopt_set_children_visible(s->gopt.gjv, o, set);
 }
 
-static void gopt_mark_index(struct gopt_job_view *gjv, struct gopt *gopt,
-			    unsigned int idx)
-{
-	assert(!gjv->widgets[idx]);
-	gopt->opt_index = idx;
-	gopt->gjv = gjv;
-	gjv->widgets[idx] = gopt->box;
-}
-
 static void gopt_str_destroy(GtkWidget *w, gpointer data)
 {
 	struct gopt_str *s = (struct gopt_str *) data;
 
-	free(s);
+	if (flist_empty(&s->gopt.changed_list))
+		free(s);
+
 	gtk_widget_destroy(w);
 }
 
@@ -175,8 +209,7 @@ static struct gopt *gopt_new_str_store(struct gopt_job_view *gjv,
 	struct gopt_str *s;
 	GtkWidget *label;
 
-	s = malloc(sizeof(*s));
-	memset(s, 0, sizeof(*s));
+	s = calloc(1, sizeof(*s));
 
 	s->gopt.box = gtk_hbox_new(FALSE, 3);
 	if (!o->lname)
@@ -185,7 +218,7 @@ static struct gopt *gopt_new_str_store(struct gopt_job_view *gjv,
 		label = gtk_label_new(o->lname);
 
 	s->entry = gtk_entry_new();
-	gopt_mark_index(gjv, &s->gopt, idx);
+	gopt_mark_index(gjv, &s->gopt, idx, GOPT_STR);
 	if (text)
 		gtk_entry_set_text(GTK_ENTRY(s->entry), text);
 	gtk_entry_set_editable(GTK_ENTRY(s->entry), 1);
@@ -193,8 +226,8 @@ static struct gopt *gopt_new_str_store(struct gopt_job_view *gjv,
 	if (o->def)
 		gtk_entry_set_text(GTK_ENTRY(s->entry), o->def);
 
-	s->gopt.sig_handler = g_signal_connect(GTK_OBJECT(s->entry), "changed", G_CALLBACK(gopt_str_changed), s);
-	g_signal_connect(GTK_OBJECT(s->entry), "destroy", G_CALLBACK(gopt_str_destroy), s);
+	s->gopt.sig_handler = g_signal_connect(G_OBJECT(s->entry), "changed", G_CALLBACK(gopt_str_changed), s);
+	g_signal_connect(G_OBJECT(s->entry), "destroy", G_CALLBACK(gopt_str_destroy), s);
 
 	gtk_box_pack_start(GTK_BOX(s->gopt.box), s->entry, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(s->gopt.box), label, FALSE, FALSE, 0);
@@ -207,6 +240,8 @@ static void gopt_combo_changed(GtkComboBox *box, gpointer data)
 	struct fio_option *o = &fio_options[c->gopt.opt_index];
 	unsigned int index;
 
+	gopt_changed(&c->gopt);
+
 	index = gtk_combo_box_get_active(GTK_COMBO_BOX(c->combo));
 
 	gopt_set_children_visible(c->gopt.gjv, o, index);
@@ -216,19 +251,20 @@ static void gopt_combo_destroy(GtkWidget *w, gpointer data)
 {
 	struct gopt_combo *c = (struct gopt_combo *) data;
 
-	free(c);
+	if (flist_empty(&c->gopt.changed_list))
+		free(c);
+
 	gtk_widget_destroy(w);
 }
 
 static struct gopt_combo *__gopt_new_combo(struct gopt_job_view *gjv,
 					   struct fio_option *o,
-					   unsigned int idx)
+					   unsigned int idx, int type)
 {
 	struct gopt_combo *c;
 	GtkWidget *label;
 
-	c = malloc(sizeof(*c));
-	memset(c, 0, sizeof(*c));
+	c = calloc(1, sizeof(*c));
 
 	c->gopt.box = gtk_hbox_new(FALSE, 3);
 	if (!o->lname)
@@ -237,8 +273,8 @@ static struct gopt_combo *__gopt_new_combo(struct gopt_job_view *gjv,
 		label = gtk_label_new(o->lname);
 
 	c->combo = gtk_combo_box_new_text();
-	gopt_mark_index(gjv, &c->gopt, idx);
-	g_signal_connect(GTK_OBJECT(c->combo), "destroy", G_CALLBACK(gopt_combo_destroy), c);
+	gopt_mark_index(gjv, &c->gopt, idx, type);
+	g_signal_connect(G_OBJECT(c->combo), "destroy", G_CALLBACK(gopt_combo_destroy), c);
 
 	gtk_box_pack_start(GTK_BOX(c->gopt.box), c->combo, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(c->gopt.box), label, FALSE, FALSE, 0);
@@ -254,7 +290,7 @@ static struct gopt *gopt_new_combo_str(struct gopt_job_view *gjv,
 	struct value_pair *vp;
 	int i, active = 0;
 
-	c = __gopt_new_combo(gjv, o, idx);
+	c = __gopt_new_combo(gjv, o, idx, GOPT_COMBO_STR);
 
 	i = 0;
 	vp = &o->posval[0];
@@ -269,7 +305,7 @@ static struct gopt *gopt_new_combo_str(struct gopt_job_view *gjv,
 	}
 
 	gtk_combo_box_set_active(GTK_COMBO_BOX(c->combo), active);
-	c->gopt.sig_handler = g_signal_connect(GTK_OBJECT(c->combo), "changed", G_CALLBACK(gopt_combo_changed), c);
+	c->gopt.sig_handler = g_signal_connect(G_OBJECT(c->combo), "changed", G_CALLBACK(gopt_combo_changed), c);
 	return &c->gopt;
 }
 
@@ -281,7 +317,7 @@ static struct gopt *gopt_new_combo_int(struct gopt_job_view *gjv,
 	struct value_pair *vp;
 	int i, active = 0;
 
-	c = __gopt_new_combo(gjv, o, idx);
+	c = __gopt_new_combo(gjv, o, idx, GOPT_COMBO_INT);
 
 	i = 0;
 	vp = &o->posval[0];
@@ -294,8 +330,15 @@ static struct gopt *gopt_new_combo_int(struct gopt_job_view *gjv,
 	}
 
 	gtk_combo_box_set_active(GTK_COMBO_BOX(c->combo), active);
-	c->gopt.sig_handler = g_signal_connect(GTK_OBJECT(c->combo), "changed", G_CALLBACK(gopt_combo_changed), c);
+	c->gopt.sig_handler = g_signal_connect(G_OBJECT(c->combo), "changed", G_CALLBACK(gopt_combo_changed), c);
 	return &c->gopt;
+}
+
+static void gopt_str_multi_toggled(GtkToggleButton *button, gpointer data)
+{
+	struct gopt_str_multi *m = (struct gopt_str_multi *) data;
+
+	gopt_changed(&m->gopt);
 }
 
 static struct gopt *gopt_new_str_multi(struct gopt_job_view *gjv,
@@ -306,10 +349,9 @@ static struct gopt *gopt_new_str_multi(struct gopt_job_view *gjv,
 	GtkWidget *frame, *hbox;
 	int i;
 
-	m = malloc(sizeof(*m));
-	memset(m, 0, sizeof(*m));
+	m = calloc(1, sizeof(*m));
 	m->gopt.box = gtk_hbox_new(FALSE, 3);
-	gopt_mark_index(gjv, &m->gopt, idx);
+	gopt_mark_index(gjv, &m->gopt, idx, GOPT_STR_MULTI);
 
 	if (!o->lname)
 		frame = gtk_frame_new(o->name);
@@ -327,6 +369,7 @@ static struct gopt *gopt_new_str_multi(struct gopt_job_view *gjv,
 		gtk_widget_set_tooltip_text(m->checks[i], vp->help);
 		gtk_box_pack_start(GTK_BOX(hbox), m->checks[i], FALSE, FALSE, 3);
 		vp++;
+		g_signal_connect(G_OBJECT(m->checks[i]), "toggled", G_CALLBACK(gopt_str_multi_toggled), m);
 	}
 
 	return &m->gopt;
@@ -338,6 +381,8 @@ static void gopt_int_changed(GtkSpinButton *spin, gpointer data)
 	struct fio_option *o = &fio_options[i->gopt.opt_index];
 	GtkAdjustment *adj;
 	int value, delta;
+
+	gopt_changed(&i->gopt);
 
 	adj = gtk_spin_button_get_adjustment(spin);
 	value = gtk_adjustment_get_value(adj);
@@ -363,7 +408,9 @@ static void gopt_int_destroy(GtkWidget *w, gpointer data)
 {
 	struct gopt_int *i = (struct gopt_int *) data;
 
-	free(i);
+	if (flist_empty(&i->gopt.changed_list))
+		free(i);
+
 	gtk_widget_destroy(w);
 }
 
@@ -376,8 +423,7 @@ static struct gopt_int *__gopt_new_int(struct gopt_job_view *gjv,
 	guint maxval, interval;
 	GtkWidget *label;
 
-	i = malloc(sizeof(*i));
-	memset(i, 0, sizeof(*i));
+	i = calloc(1, sizeof(*i));
 	i->gopt.box = gtk_hbox_new(FALSE, 3);
 	if (!o->lname)
 		label = gtk_label_new(o->name);
@@ -403,7 +449,7 @@ static struct gopt_int *__gopt_new_int(struct gopt_job_view *gjv,
 		interval = o->interval;
 
 	i->spin = gtk_spin_button_new_with_range(o->minval, maxval, interval);
-	gopt_mark_index(gjv, &i->gopt, idx);
+	gopt_mark_index(gjv, &i->gopt, idx, GOPT_INT);
 	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(i->spin), GTK_UPDATE_IF_VALID);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(i->spin), defval);
 	i->lastval = defval;
@@ -448,6 +494,8 @@ static void gopt_bool_toggled(GtkToggleButton *button, gpointer data)
 	struct fio_option *o = &fio_options[b->gopt.opt_index];
 	gboolean set;
 
+	gopt_changed(&b->gopt);
+
 	set = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(b->check));
 
 	if (o->inv_opt) {
@@ -468,7 +516,9 @@ static void gopt_bool_destroy(GtkWidget *w, gpointer data)
 {
 	struct gopt_bool *b = (struct gopt_bool *) data;
 
-	free(b);
+	if (flist_empty(&b->gopt.changed_list))
+		free(b);
+
 	gtk_widget_destroy(w);
 }
 
@@ -480,8 +530,7 @@ static struct gopt *gopt_new_bool(struct gopt_job_view *gjv,
 	GtkWidget *label;
 	int defstate = 0;
 
-	b = malloc(sizeof(*b));
-	memset(b, 0, sizeof(*b));
+	b = calloc(1, sizeof(*b));
 	b->gopt.box = gtk_hbox_new(FALSE, 3);
 	if (!o->lname)
 		label = gtk_label_new(o->name);
@@ -489,7 +538,7 @@ static struct gopt *gopt_new_bool(struct gopt_job_view *gjv,
 		label = gtk_label_new(o->lname);
 
 	b->check = gtk_check_button_new();
-	gopt_mark_index(gjv, &b->gopt, idx);
+	gopt_mark_index(gjv, &b->gopt, idx, GOPT_BOOL);
 	if (val)
 		defstate = *val;
 	else if (o->def && !strcmp(o->def, "1"))
@@ -517,6 +566,8 @@ static void range_value_changed(GtkSpinButton *spin, gpointer data)
 	struct gopt_range *r = (struct gopt_range *) data;
 	int changed = -1, i;
 	gint val, mval;
+
+	gopt_changed(&r->gopt);
 
 	for (i = 0; i < GOPT_RANGE_SPIN; i++) {
 		if (GTK_SPIN_BUTTON(r->spins[i]) == spin) {
@@ -551,7 +602,9 @@ static void gopt_range_destroy(GtkWidget *w, gpointer data)
 {
 	struct gopt_range *r = (struct gopt_range *) data;
 
-	free(r);
+	if (flist_empty(&r->gopt.changed_list))
+		free(r);
+
 	gtk_widget_destroy(w);
 }
 
@@ -565,10 +618,9 @@ static struct gopt *gopt_new_int_range(struct gopt_job_view *gjv,
 	guint interval;
 	int i;
 
-	r = malloc(sizeof(*r));
-	memset(r, 0, sizeof(*r));
+	r = calloc(1, sizeof(*r));
 	r->gopt.box = gtk_hbox_new(FALSE, 3);
-	gopt_mark_index(gjv, &r->gopt, idx);
+	gopt_mark_index(gjv, &r->gopt, idx, GOPT_RANGE);
 	if (!o->lname)
 		label = gtk_label_new(o->name);
 	else
@@ -611,7 +663,9 @@ static void gopt_str_val_destroy(GtkWidget *w, gpointer data)
 {
 	struct gopt_str_val *g = (struct gopt_str_val *) data;
 
-	free(g);
+	if (flist_empty(&g->gopt.changed_list))
+		free(g);
+
 	gtk_widget_destroy(w);
 }
 
@@ -646,23 +700,30 @@ static void gopt_str_val_spin_wrapped(GtkSpinButton *spin, gpointer data)
 	}
 }
 
+static void gopt_str_val_changed(GtkSpinButton *spin, gpointer data)
+{
+	struct gopt_str_val *g = (struct gopt_str_val *) data;
+
+	gopt_changed(&g->gopt);
+}
+
 static struct gopt *gopt_new_str_val(struct gopt_job_view *gjv,
 				     struct fio_option *o,
 				     unsigned long long *p, unsigned int idx)
 {
 	struct gopt_str_val *g;
 	const gchar *postfix[] = { "B", "KB", "MB", "GB", "PB", "TB", "" };
+	unsigned long long val;
 	GtkWidget *label;
 	int i;
 
-	g = malloc(sizeof(*g));
-	memset(g, 0, sizeof(*g));
+	g = calloc(1, sizeof(*g));
 	g->gopt.box = gtk_hbox_new(FALSE, 3);
 	if (!o->lname)
 		label = gtk_label_new(o->name);
 	else
 		label = gtk_label_new(o->lname);
-	gopt_mark_index(gjv, &g->gopt, idx);
+	gopt_mark_index(gjv, &g->gopt, idx, GOPT_STR_VAL);
 
 	g->spin = gtk_spin_button_new_with_range(0.0, 1023.0, 1.0);
 	gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON(g->spin), GTK_UPDATE_IF_VALID);
@@ -670,6 +731,7 @@ static struct gopt *gopt_new_str_val(struct gopt_job_view *gjv,
 	gtk_spin_button_set_wrap(GTK_SPIN_BUTTON(g->spin), 1);
 	gtk_box_pack_start(GTK_BOX(g->gopt.box), g->spin, FALSE, FALSE, 0);
 	g_signal_connect(G_OBJECT(g->spin), "wrapped", G_CALLBACK(gopt_str_val_spin_wrapped), g);
+	g_signal_connect(G_OBJECT(g->spin), "changed", G_CALLBACK(gopt_str_val_changed), g);
 
 	g->combo = gtk_combo_box_new_text();
 	i = 0;
@@ -681,6 +743,26 @@ static struct gopt *gopt_new_str_val(struct gopt_job_view *gjv,
 	gtk_combo_box_set_active(GTK_COMBO_BOX(g->combo), 0);
 	gtk_box_pack_start(GTK_BOX(g->gopt.box), g->combo, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(g->gopt.box), label, FALSE, FALSE, 3);
+
+	/*
+	 * Set the value
+	 */
+	if (p) {
+		val = *p;
+		i = 0;
+		do {
+			if (!val || (val % 1024))
+				break;
+
+			i++;
+			val /= 1024;
+		} while (1);
+
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(g->spin), val);
+		gtk_combo_box_set_active(GTK_COMBO_BOX(g->combo), i);
+	}
+
+	g_signal_connect(G_OBJECT(g->combo), "changed", G_CALLBACK(gopt_str_val_changed), g);
 
 	g_signal_connect(G_OBJECT(g->gopt.box), "destroy", G_CALLBACK(gopt_str_val_destroy), g);
 	return &g->gopt;
@@ -789,7 +871,6 @@ static void gopt_add_option(struct gopt_job_view *gjv, GtkWidget *hbox,
 		if (o->help)
 			gtk_widget_set_tooltip_text(go->box, o->help);
 
-		go->opt_type = o->type;
 		o->gui_data = go;
 
 		dest = gopt_get_group_frame(gjv, hbox, o->group);
@@ -862,6 +943,222 @@ static void gopt_add_group_tabs(GtkWidget *notebook, struct gopt_job_view *gjv)
 	} while (1);
 }
 
+static void gopt_handle_str_multi_changed(struct gopt_job_view *gjv,
+					  struct gopt_str_multi *m,
+					  struct fio_option *o)
+{
+	unsigned int *ip = td_var(gjv->o, o->off1);
+	gboolean set;
+	guint val = 0;
+	int i;
+
+	i = 0;
+	while (o->posval[i].ival) {
+		if (!m->checks[i])
+			break;
+		set = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(m->checks[i]));
+		if (set) {
+			if (o->posval[i].or)
+				val |= o->posval[i].oval;
+			else
+				val = o->posval[i].oval;
+		}
+		i++;
+	}
+
+	if (o->off1)
+		*ip = val;
+}
+
+static void gopt_handle_range_changed(struct gopt_job_view *gjv,
+				      struct gopt_range *r,
+				      struct fio_option *o)
+{
+	unsigned int *ip[4] = { td_var(gjv->o, o->off1),
+				td_var(gjv->o, o->off2),
+				td_var(gjv->o, o->off3),
+				td_var(gjv->o, o->off4) };
+	gint val;
+	int i;
+
+	for (i = 0; i < GOPT_RANGE_SPIN; i++) {
+		val = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(r->spins[i]));
+		*ip[i] = val;
+	}
+}
+
+static void gopt_handle_str_val_changed(struct gopt_job_view *gjv,
+					struct gopt_str_val *s,
+					struct fio_option *o)
+{
+	unsigned long long *ullp = td_var(gjv->o, o->off1);
+	GtkAdjustment *adj;
+	gint index;
+
+	if (!ullp)
+		return;
+
+	/*
+	 * Numerical value
+	 */
+	adj = gtk_spin_button_get_adjustment(GTK_SPIN_BUTTON(s->spin));
+	*ullp = gtk_adjustment_get_value(adj);
+
+	/*
+	 * Multiplier
+	 */
+	index = gtk_combo_box_get_active(GTK_COMBO_BOX(s->combo));
+	while (index--)
+		*ullp *= 1024ULL;
+}
+
+static void gopt_handle_str_changed(struct gopt_job_view *gjv,
+				    struct gopt_str *s, struct fio_option *o)
+{
+	char **p = td_var(gjv->o, o->off1);
+
+	if (*p)
+		free(*p);
+
+	*p = strdup(gtk_entry_get_text(GTK_ENTRY(s->entry)));
+}
+
+static void gopt_handle_bool_changed(struct gopt_job_view *gjv,
+				     struct gopt_bool *b, struct fio_option *o)
+{
+	unsigned int *ip = td_var(gjv->o, o->off1);
+	gboolean set;
+
+	set = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(b->check));
+	*ip = set;
+}
+
+static void gopt_handle_int_changed(struct gopt_job_view *gjv,
+				    struct gopt_int *i, struct fio_option *o)
+{
+	unsigned int *ip = td_var(gjv->o, o->off1);
+	GtkAdjustment *adj;
+	guint val;
+
+	adj = gtk_spin_button_get_adjustment(GTK_SPIN_BUTTON(i->spin));
+	val = gtk_adjustment_get_value(adj);
+	*ip = val;
+}
+
+static void gopt_handle_combo_str_changed(struct gopt_job_view *gjv,
+					  struct gopt_combo *c,
+					  struct fio_option *o)
+{
+	char **p = td_var(gjv->o, o->off1);
+
+	if (*p)
+		free(*p);
+
+	*p = strdup(gtk_combo_box_get_active_text(GTK_COMBO_BOX(c->combo)));
+}
+
+static void gopt_handle_combo_int_changed(struct gopt_job_view *gjv,
+					  struct gopt_combo *c,
+					  struct fio_option *o)
+{
+	unsigned int *ip = td_var(gjv->o, o->off1);
+	gint index;
+
+	index = gtk_combo_box_get_active(GTK_COMBO_BOX(c->combo));
+	*ip = o->posval[index].oval;
+}
+
+static void gopt_handle_changed(struct gopt *gopt)
+{
+	struct fio_option *o = &fio_options[gopt->opt_index];
+	struct gopt_job_view *gjv = gopt->gjv;
+	void *to_free = NULL;
+
+	switch (gopt->opt_type) {
+	case GOPT_COMBO_INT: {
+		struct gopt_combo *c;
+
+		c = container_of(gopt, struct gopt_combo, gopt);
+		gopt_handle_combo_int_changed(gjv, c, o);
+		to_free = c;
+		break;
+		}
+	case GOPT_COMBO_STR: {
+		struct gopt_combo *c;
+
+		c = container_of(gopt, struct gopt_combo, gopt);
+		gopt_handle_combo_str_changed(gjv, c, o);
+		to_free = c;
+		break;
+		}
+	case GOPT_INT: {
+		struct gopt_int *i;
+
+		i = container_of(gopt, struct gopt_int, gopt);
+		gopt_handle_int_changed(gjv, i, o);
+		to_free = i;
+		break;
+		}
+	case GOPT_BOOL: {
+		struct gopt_bool *b;
+
+		b = container_of(gopt, struct gopt_bool, gopt);
+		gopt_handle_bool_changed(gjv, b, o);
+		to_free = b;
+		break;
+		}
+	case GOPT_STR: {
+		struct gopt_str *s;
+
+		s = container_of(gopt, struct gopt_str, gopt);
+		gopt_handle_str_changed(gjv, s, o);
+		to_free = s;
+		break;
+		}
+	case GOPT_STR_VAL: {
+		struct gopt_str_val *s;
+
+		s = container_of(gopt, struct gopt_str_val, gopt);
+		gopt_handle_str_val_changed(gjv, s, o);
+		to_free = s;
+		break;
+		}
+	case GOPT_RANGE: {
+		struct gopt_range *r;
+
+		r = container_of(gopt, struct gopt_range, gopt);
+		gopt_handle_range_changed(gjv, r, o);
+		to_free = r;
+		break;
+		}
+	case GOPT_STR_MULTI: {
+		struct gopt_str_multi *m;
+
+		m = container_of(gopt, struct gopt_str_multi, gopt);
+		gopt_handle_str_multi_changed(gjv, m, o);
+		to_free = m;
+		break;
+		}
+	default:
+		log_err("gfio: bad option type %s/%d\n", gopt->opt_type);
+		return;
+	}
+
+	g_object_unref(G_OBJECT(gopt->box));
+	free(to_free);
+}
+
+static void gopt_handle_changed_options(struct gopt_job_view *gjv)
+{
+	struct gopt *gopt;
+
+	while (!flist_empty(&gjv->changed_list)) {
+		gopt = flist_entry(gjv->changed_list.next, struct gopt, changed_list);
+		flist_del(&gopt->changed_list);
+		gopt_handle_changed(gopt);
+	}
+}
+
 void gopt_get_options_window(GtkWidget *window, struct gfio_client *gc)
 {
 	GtkWidget *dialog, *notebook, *topnotebook, *vbox;
@@ -908,6 +1205,8 @@ void gopt_get_options_window(GtkWidget *window, struct gfio_client *gc)
 
 		gjv = calloc(1, sizeof(*gjv));
 		INIT_FLIST_HEAD(&gjv->list);
+		INIT_FLIST_HEAD(&gjv->changed_list);
+		gjv->o = o;
 		flist_add_tail(&gjv->list, &gjv_list);
 		gopt_add_group_tabs(notebook, gjv);
 		gopt_add_options(gjv, o);
@@ -917,13 +1216,16 @@ void gopt_get_options_window(GtkWidget *window, struct gfio_client *gc)
 
 	gtk_dialog_run(GTK_DIALOG(dialog));
 
-	gtk_widget_destroy(dialog);
-
 	while (!flist_empty(&gjv_list)) {
 		gjv = flist_entry(gjv_list.next, struct gopt_job_view, list);
+
+		gopt_handle_changed_options(gjv);
+
 		flist_del(&gjv->list);
 		free(gjv);
 	}
+
+	gtk_widget_destroy(dialog);
 }
 
 /*
