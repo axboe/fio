@@ -196,9 +196,7 @@ static void gopt_str_destroy(GtkWidget *w, gpointer data)
 {
 	struct gopt_str *s = (struct gopt_str *) data;
 
-	if (flist_empty(&s->gopt.changed_list))
-		free(s);
-
+	free(s);
 	gtk_widget_destroy(w);
 }
 
@@ -251,9 +249,7 @@ static void gopt_combo_destroy(GtkWidget *w, gpointer data)
 {
 	struct gopt_combo *c = (struct gopt_combo *) data;
 
-	if (flist_empty(&c->gopt.changed_list))
-		free(c);
-
+	free(c);
 	gtk_widget_destroy(w);
 }
 
@@ -409,9 +405,7 @@ static void gopt_int_destroy(GtkWidget *w, gpointer data)
 {
 	struct gopt_int *i = (struct gopt_int *) data;
 
-	if (flist_empty(&i->gopt.changed_list))
-		free(i);
-
+	free(i);
 	gtk_widget_destroy(w);
 }
 
@@ -517,9 +511,7 @@ static void gopt_bool_destroy(GtkWidget *w, gpointer data)
 {
 	struct gopt_bool *b = (struct gopt_bool *) data;
 
-	if (flist_empty(&b->gopt.changed_list))
-		free(b);
-
+	free(b);
 	gtk_widget_destroy(w);
 }
 
@@ -603,9 +595,7 @@ static void gopt_range_destroy(GtkWidget *w, gpointer data)
 {
 	struct gopt_range *r = (struct gopt_range *) data;
 
-	if (flist_empty(&r->gopt.changed_list))
-		free(r);
-
+	free(r);
 	gtk_widget_destroy(w);
 }
 
@@ -664,9 +654,7 @@ static void gopt_str_val_destroy(GtkWidget *w, gpointer data)
 {
 	struct gopt_str_val *g = (struct gopt_str_val *) data;
 
-	if (flist_empty(&g->gopt.changed_list))
-		free(g);
-
+	free(g);
 	gtk_widget_destroy(w);
 }
 
@@ -1076,7 +1064,6 @@ static void gopt_handle_changed(struct gopt *gopt)
 {
 	struct fio_option *o = &fio_options[gopt->opt_index];
 	struct gopt_job_view *gjv = gopt->gjv;
-	void *to_free = NULL;
 
 	switch (gopt->opt_type) {
 	case GOPT_COMBO_INT: {
@@ -1084,7 +1071,6 @@ static void gopt_handle_changed(struct gopt *gopt)
 
 		c = container_of(gopt, struct gopt_combo, gopt);
 		gopt_handle_combo_int_changed(gjv, c, o);
-		to_free = c;
 		break;
 		}
 	case GOPT_COMBO_STR: {
@@ -1092,7 +1078,6 @@ static void gopt_handle_changed(struct gopt *gopt)
 
 		c = container_of(gopt, struct gopt_combo, gopt);
 		gopt_handle_combo_str_changed(gjv, c, o);
-		to_free = c;
 		break;
 		}
 	case GOPT_INT: {
@@ -1100,7 +1085,6 @@ static void gopt_handle_changed(struct gopt *gopt)
 
 		i = container_of(gopt, struct gopt_int, gopt);
 		gopt_handle_int_changed(gjv, i, o);
-		to_free = i;
 		break;
 		}
 	case GOPT_BOOL: {
@@ -1108,7 +1092,6 @@ static void gopt_handle_changed(struct gopt *gopt)
 
 		b = container_of(gopt, struct gopt_bool, gopt);
 		gopt_handle_bool_changed(gjv, b, o);
-		to_free = b;
 		break;
 		}
 	case GOPT_STR: {
@@ -1116,7 +1099,6 @@ static void gopt_handle_changed(struct gopt *gopt)
 
 		s = container_of(gopt, struct gopt_str, gopt);
 		gopt_handle_str_changed(gjv, s, o);
-		to_free = s;
 		break;
 		}
 	case GOPT_STR_VAL: {
@@ -1124,7 +1106,6 @@ static void gopt_handle_changed(struct gopt *gopt)
 
 		s = container_of(gopt, struct gopt_str_val, gopt);
 		gopt_handle_str_val_changed(gjv, s, o);
-		to_free = s;
 		break;
 		}
 	case GOPT_RANGE: {
@@ -1132,7 +1113,6 @@ static void gopt_handle_changed(struct gopt *gopt)
 
 		r = container_of(gopt, struct gopt_range, gopt);
 		gopt_handle_range_changed(gjv, r, o);
-		to_free = r;
 		break;
 		}
 	case GOPT_STR_MULTI: {
@@ -1140,7 +1120,6 @@ static void gopt_handle_changed(struct gopt *gopt)
 
 		m = container_of(gopt, struct gopt_str_multi, gopt);
 		gopt_handle_str_multi_changed(gjv, m, o);
-		to_free = m;
 		break;
 		}
 	default:
@@ -1149,7 +1128,6 @@ static void gopt_handle_changed(struct gopt *gopt)
 	}
 
 	g_object_unref(G_OBJECT(gopt->box));
-	free(to_free);
 }
 
 static void gopt_handle_changed_options(struct gopt_job_view *gjv)
