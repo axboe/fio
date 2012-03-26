@@ -368,8 +368,9 @@ static struct gopt *gopt_new_str_multi(struct gopt_job_view *gjv,
 		m->checks[i] = gtk_check_button_new_with_label(vp->ival);
 		gtk_widget_set_tooltip_text(m->checks[i], vp->help);
 		gtk_box_pack_start(GTK_BOX(hbox), m->checks[i], FALSE, FALSE, 3);
-		vp++;
 		g_signal_connect(G_OBJECT(m->checks[i]), "toggled", G_CALLBACK(gopt_str_multi_toggled), m);
+		vp++;
+		i++;
 	}
 
 	return &m->gopt;
@@ -948,22 +949,25 @@ static void gopt_handle_str_multi_changed(struct gopt_job_view *gjv,
 					  struct fio_option *o)
 {
 	unsigned int *ip = td_var(gjv->o, o->off1);
+	struct value_pair *vp;
 	gboolean set;
 	guint val = 0;
 	int i;
 
 	i = 0;
-	while (o->posval[i].ival) {
+	vp = &o->posval[0];
+	while (vp->ival) {
 		if (!m->checks[i])
 			break;
 		set = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(m->checks[i]));
 		if (set) {
-			if (o->posval[i].or)
-				val |= o->posval[i].oval;
+			if (vp->or)
+				val |= vp->oval;
 			else
-				val = o->posval[i].oval;
+				val = vp->oval;
 		}
 		i++;
+		vp++;
 	}
 
 	if (o->off1)
