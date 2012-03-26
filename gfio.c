@@ -592,8 +592,8 @@ static int get_connection_details(struct gui_entry *ge)
 	/*
 	 * Connect edit signal, so we can show/not-show the auto start button
 	 */
-	g_signal_connect(GTK_OBJECT(cw.hentry), "changed", G_CALLBACK(hostname_cb), &cw);
-	g_signal_connect(GTK_OBJECT(cw.combo), "changed", G_CALLBACK(hostname_cb), &cw);
+	g_signal_connect(G_OBJECT(cw.hentry), "changed", G_CALLBACK(hostname_cb), &cw);
+	g_signal_connect(G_OBJECT(cw.combo), "changed", G_CALLBACK(hostname_cb), &cw);
 
 	gtk_widget_show_all(dialog);
 

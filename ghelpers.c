@@ -97,7 +97,7 @@ GtkTreeViewColumn *tree_view_column(GtkWidget *tree_view, int index, const char 
 	gtk_tree_view_column_pack_start(col, renderer, TRUE);
 	gtk_tree_view_column_set_expand(col, TRUE);
 	gtk_tree_view_column_add_attribute(col, renderer, "text", index);
-	gtk_object_set(GTK_OBJECT(renderer), "alignment", align, NULL);
+	g_object_set(G_OBJECT(renderer), "alignment", align, NULL);
 	switch (align) {
 	case PANGO_ALIGN_LEFT:
 		xalign = 0.0;
