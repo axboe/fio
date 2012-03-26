@@ -221,7 +221,7 @@ static struct gopt *gopt_new_str_store(struct gopt_job_view *gjv,
 	gopt_mark_index(gjv, &s->gopt, idx, GOPT_STR);
 	if (text)
 		gtk_entry_set_text(GTK_ENTRY(s->entry), text);
-	gtk_entry_set_editable(GTK_ENTRY(s->entry), 1);
+	gtk_editable_set_editable(GTK_EDITABLE(s->entry), 1);
 
 	if (o->def)
 		gtk_entry_set_text(GTK_ENTRY(s->entry), o->def);
@@ -272,7 +272,7 @@ static struct gopt_combo *__gopt_new_combo(struct gopt_job_view *gjv,
 	else
 		label = gtk_label_new(o->lname);
 
-	c->combo = gtk_combo_box_new_text();
+	c->combo = gtk_combo_box_text_new();
 	gopt_mark_index(gjv, &c->gopt, idx, type);
 	g_signal_connect(G_OBJECT(c->combo), "destroy", G_CALLBACK(gopt_combo_destroy), c);
 
@@ -295,7 +295,7 @@ static struct gopt *gopt_new_combo_str(struct gopt_job_view *gjv,
 	i = 0;
 	vp = &o->posval[0];
 	while (vp->ival) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(c->combo), vp->ival);
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(c->combo), vp->ival);
 		if (o->def && !strcmp(vp->ival, o->def))
 			active = i;
 		if (text && !strcmp(vp->ival, text))
@@ -322,7 +322,7 @@ static struct gopt *gopt_new_combo_int(struct gopt_job_view *gjv,
 	i = 0;
 	vp = &o->posval[0];
 	while (vp->ival) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(c->combo), vp->ival);
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(c->combo), vp->ival);
 		if (ip && vp->oval == *ip)
 			active = i;
 		vp++;
@@ -734,10 +734,10 @@ static struct gopt *gopt_new_str_val(struct gopt_job_view *gjv,
 	g_signal_connect(G_OBJECT(g->spin), "wrapped", G_CALLBACK(gopt_str_val_spin_wrapped), g);
 	g_signal_connect(G_OBJECT(g->spin), "changed", G_CALLBACK(gopt_str_val_changed), g);
 
-	g->combo = gtk_combo_box_new_text();
+	g->combo = gtk_combo_box_text_new();
 	i = 0;
 	while (strlen(postfix[i])) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(g->combo), postfix[i]);
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(g->combo), postfix[i]);
 		i++;
 	}
 	g->maxindex = i - 1;
@@ -1058,7 +1058,7 @@ static void gopt_handle_combo_str_changed(struct gopt_job_view *gjv,
 	if (*p)
 		free(*p);
 
-	*p = strdup(gtk_combo_box_get_active_text(GTK_COMBO_BOX(c->combo)));
+	*p = strdup(gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(c->combo)));
 }
 
 static void gopt_handle_combo_int_changed(struct gopt_job_view *gjv,
@@ -1189,7 +1189,8 @@ void gopt_get_options_window(GtkWidget *window, struct gfio_client *gc)
 	topnotebook = gtk_notebook_new();
 	gtk_notebook_set_scrollable(GTK_NOTEBOOK(topnotebook), 1);
 	gtk_notebook_popup_enable(GTK_NOTEBOOK(topnotebook));
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), topnotebook, TRUE, TRUE, 5);
+	vbox = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+	gtk_box_pack_start(GTK_BOX(vbox), topnotebook, TRUE, TRUE, 5);
 
 	flist_for_each(entry, &gc->o_list) {
 		const char *name;

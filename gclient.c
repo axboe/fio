@@ -578,7 +578,7 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	gdk_threads_enter();
 
-	gtk_combo_box_append_text(GTK_COMBO_BOX(ge->eta.names), (gchar *) o->name);
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ge->eta.names), (gchar *) o->name);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(ge->eta.names), 0);
 
 	sprintf(tmp, "%s %s", o->odirect ? "direct" : "buffered", ddir_str(o->td_ddir));

@@ -3,6 +3,7 @@
 
 #include <gtk/gtk.h>
 
+#include "gcompat.h"
 #include "stat.h"
 #include "thread_options.h"
 #include "ghelpers.h"

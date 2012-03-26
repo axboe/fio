@@ -499,7 +499,7 @@ static void hostname_cb(GtkEntry *entry, gpointer data)
 	 * or not. Show it if we are a localhost and using network,
 	 * or using a socket.
 	 */
-	ctext = gtk_combo_box_get_active_text(GTK_COMBO_BOX(cw->combo));
+	ctext = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(cw->combo));
 	if (!ctext || !strncmp(ctext, "IPv4", 4) || !strncmp(ctext, "IPv6", 4))
 		uses_net = 1;
 	g_free(ctext);
@@ -538,8 +538,7 @@ static int get_connection_details(struct gui_entry *ge)
 			GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
 
 	frame = gtk_frame_new("Hostname / socket name");
-	/* gtk_dialog_get_content_area() is 2.14 and newer */
-	vbox = GTK_DIALOG(dialog)->vbox;
+	vbox = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
 
 	box = gtk_vbox_new(FALSE, 6);
@@ -568,10 +567,10 @@ static int get_connection_details(struct gui_entry *ge)
 	hbox = gtk_hbox_new(TRUE, 4);
 	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
 
-	cw.combo = gtk_combo_box_new_text();
-	gtk_combo_box_append_text(GTK_COMBO_BOX(cw.combo), "IPv4");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(cw.combo), "IPv6");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(cw.combo), "local socket");
+	cw.combo = gtk_combo_box_text_new();
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(cw.combo), "IPv4");
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(cw.combo), "IPv6");
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(cw.combo), "local socket");
 	gtk_combo_box_set_active(GTK_COMBO_BOX(cw.combo), 0);
 
 	gtk_container_add(GTK_CONTAINER(hbox), cw.combo);
@@ -605,7 +604,7 @@ static int get_connection_details(struct gui_entry *ge)
 	ge->host = strdup(gtk_entry_get_text(GTK_ENTRY(cw.hentry)));
 	ge->port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(pentry));
 
-	typeentry = gtk_combo_box_get_active_text(GTK_COMBO_BOX(cw.combo));
+	typeentry = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(cw.combo));
 	if (!typeentry || !strncmp(typeentry, "IPv4", 4))
 		ge->type = Fio_client_ipv4;
 	else if (!strncmp(typeentry, "IPv6", 4))
@@ -969,7 +968,7 @@ static void view_log_destroy(GtkWidget *w, gpointer data)
 {
 	struct gui *ui = (struct gui *) data;
 
-	gtk_widget_ref(ui->log_tree);
+	g_object_ref(G_OBJECT(ui->log_tree));
 	gtk_container_remove(GTK_CONTAINER(w), ui->log_tree);
 	gtk_widget_destroy(w);
 	ui->log_view = NULL;
@@ -993,12 +992,12 @@ void gfio_view_log(struct gui *ui)
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
 	box = gtk_hbox_new(TRUE, 0);
-	gtk_box_pack_start_defaults(GTK_BOX(box), ui->log_tree);
+	gtk_box_pack_start(GTK_BOX(box), ui->log_tree, TRUE, TRUE, 0);
 	g_signal_connect(box, "destroy", G_CALLBACK(view_log_destroy), ui);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), box);
 
 	vbox = gtk_vbox_new(TRUE, 5);
-	gtk_box_pack_start_defaults(GTK_BOX(vbox), scroll);
+	gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
 
 	gtk_container_add(GTK_CONTAINER(win), vbox);
 	gtk_widget_show_all(win);
@@ -1118,7 +1117,8 @@ static void preferences(GtkWidget *w, gpointer data)
 		NULL);
 
 	frame = gtk_frame_new("Graphing");
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), frame, FALSE, FALSE, 5);
+	vbox = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
 	vbox = gtk_vbox_new(FALSE, 6);
 	gtk_container_add(GTK_CONTAINER(frame), vbox);
 
@@ -1150,7 +1150,8 @@ static void preferences(GtkWidget *w, gpointer data)
 
 	spin_int = create_spinbutton(hbox, 100, 100000, gfio_client_ops.eta_msec);
 	frame = gtk_frame_new("Debug logging");
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), frame, FALSE, FALSE, 5);
+	vbox = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
 	vbox = gtk_vbox_new(FALSE, 6);
 	gtk_container_add(GTK_CONTAINER(frame), vbox);
 

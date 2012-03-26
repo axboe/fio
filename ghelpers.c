@@ -2,6 +2,7 @@
 #include <string.h>
 #include <gtk/gtk.h>
 
+#include "gcompat.h"
 #include "ghelpers.h"
 
 GtkWidget *new_combo_entry_in_frame(GtkWidget *box, const char *label)
@@ -9,7 +10,7 @@ GtkWidget *new_combo_entry_in_frame(GtkWidget *box, const char *label)
 	GtkWidget *entry, *frame;
 
 	frame = gtk_frame_new(label);
-	entry = gtk_combo_box_new_text();
+	entry = gtk_combo_box_text_new();
 	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
 	gtk_container_add(GTK_CONTAINER(frame), entry);
 
@@ -22,7 +23,7 @@ GtkWidget *new_info_entry_in_frame(GtkWidget *box, const char *label)
 
 	frame = gtk_frame_new(label);
 	entry = gtk_entry_new();
-	gtk_entry_set_editable(GTK_ENTRY(entry), 0);
+	gtk_editable_set_editable(GTK_EDITABLE(entry), 0);
 	gtk_box_pack_start(GTK_BOX(box), frame, TRUE, TRUE, 3);
 	gtk_container_add(GTK_CONTAINER(frame), entry);
 

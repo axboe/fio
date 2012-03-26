@@ -40,7 +40,7 @@ static void report_error(struct gui_entry *ge, GError *error)
 	} else {
 		char buffer[256];
 		snprintf(buffer, sizeof(buffer), "Failed to open file.");
-		gtk_label_set(GTK_LABEL(ui->error_label), buffer);
+		gtk_label_set_text(GTK_LABEL(ui->error_label), buffer);
 	}
 }
 

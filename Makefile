@@ -12,6 +12,8 @@ UNAME  := $(shell uname)
 GTK_CFLAGS = `pkg-config --cflags gtk+-2.0 gthread-2.0`
 GTK_LDFLAGS = `pkg-config --libs gtk+-2.0 gthread-2.0`
 
+GTK_CFLAGS += -DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED
+
 SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
 		lib/rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
@@ -70,7 +72,7 @@ endif
 OBJS = $(SOURCE:.c=.o)
 FIO_OBJS = $(OBJS) fio.o
 GFIO_OBJS = $(OBJS) gfio.o graph.o tickmarks.o ghelpers.o goptions.o gerror.o \
-			gclient.o
+			gclient.o gcompat.o
 
 T_SMALLOC_OBJS = t/stest.o
 T_SMALLOC_OBJS += mutex.o smalloc.o t/log.o
@@ -113,6 +115,9 @@ CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 
 .c.o: .depend FORCE
 	$(QUIET_CC)$(CC) -o $@ -c $(CFLAGS) $(CPPFLAGS) $<
+
+gcompat.o: gcompat.c gcompat.h
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c gcompat.c
 
 goptions.o: goptions.c goptions.h
 	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c goptions.c
