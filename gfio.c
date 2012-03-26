@@ -1086,7 +1086,7 @@ static void ge_update_settings_fn(gpointer key, gpointer value, gpointer data)
 	__update_graph_settings(&ge->graphs);
 
 	ev = gdk_event_new(GDK_EXPOSE);
-	g_signal_emit_by_name(G_OBJECT(ge->graphs.drawing_area), "expose_event", GTK_WIDGET(ge->graphs.drawing_area), ev, &ge->graphs);
+	g_signal_emit_by_name(G_OBJECT(ge->graphs.drawing_area), GFIO_DRAW_EVENT, GTK_WIDGET(ge->graphs.drawing_area), ev, &ge->graphs);
 	gdk_event_free(ev);
 }
 
@@ -1098,7 +1098,7 @@ static void update_graph_limits(void)
 	__update_graph_settings(&ui->graphs);
 
 	ev = gdk_event_new(GDK_EXPOSE);
-	g_signal_emit_by_name(G_OBJECT(ui->graphs.drawing_area), "expose_event", GTK_WIDGET(ui->graphs.drawing_area), ev, &ui->graphs);
+	g_signal_emit_by_name(G_OBJECT(ui->graphs.drawing_area), GFIO_DRAW_EVENT, GTK_WIDGET(ui->graphs.drawing_area), ev, &ui->graphs);
 	gdk_event_free(ev);
 
 	g_hash_table_foreach(ui->ge_hash, ge_update_settings_fn, NULL);
@@ -1406,7 +1406,7 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	gtk_widget_set_size_request(GTK_WIDGET(ge->graphs.drawing_area),
 		DRAWING_AREA_XDIM, DRAWING_AREA_YDIM);
 	gtk_widget_modify_bg(ge->graphs.drawing_area, GTK_STATE_NORMAL, &gfio_color_white);
-	g_signal_connect(G_OBJECT(ge->graphs.drawing_area), "expose_event",
+	g_signal_connect(G_OBJECT(ge->graphs.drawing_area), GFIO_DRAW_EVENT,
 				G_CALLBACK(on_expose_drawing_area), &ge->graphs);
 	g_signal_connect(G_OBJECT(ge->graphs.drawing_area), "configure_event",
 				G_CALLBACK(on_config_drawing_area), &ge->graphs);
@@ -1492,7 +1492,7 @@ static GtkWidget *new_main_page(struct gui *ui)
 	gtk_widget_set_size_request(GTK_WIDGET(ui->graphs.drawing_area),
 		DRAWING_AREA_XDIM, DRAWING_AREA_YDIM);
 	gtk_widget_modify_bg(ui->graphs.drawing_area, GTK_STATE_NORMAL, &gfio_color_white);
-	g_signal_connect(G_OBJECT(ui->graphs.drawing_area), "expose_event",
+	g_signal_connect(G_OBJECT(ui->graphs.drawing_area), GFIO_DRAW_EVENT,
 			G_CALLBACK(on_expose_drawing_area), &ui->graphs);
 	g_signal_connect(G_OBJECT(ui->graphs.drawing_area), "configure_event",
 			G_CALLBACK(on_config_drawing_area), &ui->graphs);

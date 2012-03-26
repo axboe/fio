@@ -969,7 +969,7 @@ static void gfio_show_latency_buckets(struct gfio_client *gc, GtkWidget *vbox,
 	gtk_widget_set_size_request(GTK_WIDGET(drawing_area), 700, 300);
 	gtk_widget_modify_bg(drawing_area, GTK_STATE_NORMAL, &gfio_color_white);
 	gtk_container_add(GTK_CONTAINER(completion_vbox), drawing_area);
-	g_signal_connect(G_OBJECT(drawing_area), "expose_event", G_CALLBACK(on_expose_lat_drawing_area), ge->lat_bucket_graph);
+	g_signal_connect(G_OBJECT(drawing_area), GFIO_DRAW_EVENT, G_CALLBACK(on_expose_lat_drawing_area), ge->lat_bucket_graph);
         g_signal_connect(G_OBJECT(drawing_area), "configure_event", G_CALLBACK(on_config_lat_drawing_area), ge->lat_bucket_graph);
 
 	gtk_box_pack_start(GTK_BOX(hbox), tree_view, TRUE, TRUE, 3);
@@ -1125,7 +1125,7 @@ static void gfio_show_clat_percentiles(struct gfio_client *gc,
 	gtk_widget_set_size_request(GTK_WIDGET(drawing_area), 700, 300);
 	gtk_widget_modify_bg(drawing_area, GTK_STATE_NORMAL, &gfio_color_white);
 	gtk_container_add(GTK_CONTAINER(completion_vbox), drawing_area);
-	g_signal_connect(G_OBJECT(drawing_area), "expose_event", G_CALLBACK(on_expose_lat_drawing_area), ge->clat_graph);
+	g_signal_connect(G_OBJECT(drawing_area), GFIO_DRAW_EVENT, G_CALLBACK(on_expose_lat_drawing_area), ge->clat_graph);
 	g_signal_connect(G_OBJECT(drawing_area), "configure_event", G_CALLBACK(on_config_lat_drawing_area), ge->clat_graph);
 
 	gtk_box_pack_start(GTK_BOX(hbox), tree_view, TRUE, TRUE, 3);

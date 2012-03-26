@@ -29,4 +29,10 @@ guint gtk_widget_get_allocated_width(GtkWidget *w);
 guint gtk_widget_get_allocated_height(GtkWidget *w);
 #endif
 
+#if GTK_MAJOR_VERSION == 3
+#define GFIO_DRAW_EVENT		"draw"
+#elif GTK_MAJOR_VERSION == 2
+#define GFIO_DRAW_EVENT		"expose_event"
+#endif
+
 #endif
