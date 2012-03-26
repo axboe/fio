@@ -22,6 +22,10 @@ static inline GtkWidget *gtk_dialog_get_content_area(GtkDialog *dialog)
 {
 	return dialog->vbox;
 }
+static inline GdkWindow *gtk_widget_get_window(GtkWidget *w)
+{
+	return w->window;
+}
 #endif
 
 #if GTK_MAJOR_VERSION < 3
