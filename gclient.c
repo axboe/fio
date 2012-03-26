@@ -122,7 +122,7 @@ static void gfio_text_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	gtk_list_store_append(ui->log_model, &iter);
 	gtk_list_store_set(ui->log_model, &iter, 0, timebuf, -1);
 	gtk_list_store_set(ui->log_model, &iter, 1, client->hostname, -1);
-	gtk_list_store_set(ui->log_model, &iter, 2, p->level, -1);
+	gtk_list_store_set(ui->log_model, &iter, 2, log_get_level(p->level), -1);
 	gtk_list_store_set(ui->log_model, &iter, 3, p->buf, -1);
 
 	if (p->level == FIO_LOG_ERR)

@@ -93,3 +93,14 @@ int log_err(const char *format, ...)
 		return fwrite(buffer, len, 1, f_err);
 	}
 }
+
+const char *log_get_level(int level)
+{
+	static const char *levels[] = { "Unknown", "Debug", "Info", "Error",
+						"Unknown" };
+
+	if (level >= FIO_LOG_NR)
+		level = FIO_LOG_NR;
+
+	return levels[level];
+}

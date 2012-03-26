@@ -293,7 +293,7 @@ static void gfio_ui_setup_log(struct gui *ui)
 	GtkListStore *model;
 	GtkWidget *tree_view;
 
-	model = gtk_list_store_new(4, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING);
+	model = gtk_list_store_new(4, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
 
 	tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
 	gtk_widget_set_can_focus(tree_view, FALSE);

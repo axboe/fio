@@ -17,6 +17,9 @@ enum {
 	FIO_LOG_DEBUG	= 1,
 	FIO_LOG_INFO	= 2,
 	FIO_LOG_ERR	= 3,
+	FIO_LOG_NR	= 4,
 };
+
+extern const char *log_get_level(int level);
 
 #endif
