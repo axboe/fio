@@ -337,6 +337,14 @@ static void gopt_str_multi_toggled(GtkToggleButton *button, gpointer data)
 	gopt_changed(&m->gopt);
 }
 
+static void gopt_str_multi_destroy(GtkWidget *w, gpointer data)
+{
+	struct gopt_str_multi *m = (struct gopt_str_multi *) data;
+
+	free(m);
+	gtk_widget_destroy(w);
+}
+
 static struct gopt *gopt_new_str_multi(struct gopt_job_view *gjv,
 				       struct fio_option *o, unsigned int idx)
 {
@@ -369,6 +377,7 @@ static struct gopt *gopt_new_str_multi(struct gopt_job_view *gjv,
 		i++;
 	}
 
+	g_signal_connect(G_OBJECT(m->gopt.box), "destroy", G_CALLBACK(gopt_str_multi_destroy), m);
 	return &m->gopt;
 }
 
