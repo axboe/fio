@@ -39,4 +39,8 @@ guint gtk_widget_get_allocated_height(GtkWidget *w);
 #define GFIO_DRAW_EVENT		"expose_event"
 #endif
 
+#if GTK_MAJOR_VERSION <= 2 && GTK_MINOR_VERSION < 18
+void gtk_widget_set_can_focus(GtkWidget *widget, gboolean can_focus);
+#endif
+
 #endif

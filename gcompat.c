@@ -47,3 +47,13 @@ guint gtk_widget_get_allocated_height(GtkWidget *w)
 }
 
 #endif
+
+#if GTK_MAJOR_VERSION <= 2 && GTK_MINOR_VERSION < 18
+void gtk_widget_set_can_focus(GtkWidget *widget, gboolean can_focus)
+{
+	if (can_focus)
+		GTK_WIDGET_SET_FLAGS(widget, GTK_CAN_FOCUS);
+	else
+		GTK_WIDGET_UNSET_FLAGS(widget, GTK_CAN_FOCUS);
+}
+#endif
