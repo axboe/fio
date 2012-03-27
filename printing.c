@@ -26,8 +26,9 @@ static void begin_print(GtkPrintOperation *operation,
 	gtk_print_operation_set_n_pages(operation, 1);
 }
 
-static void results_draw_page(GtkPrintOperation *operation, GtkPrintContext *context,
-			gint page_nr, gpointer data) 
+static void results_draw_page(GtkPrintOperation *operation,
+			      GtkPrintContext *context, gint page_nr,
+			      gpointer data)
 {
 	cairo_t *cr;
 	char str[20];
@@ -77,7 +78,7 @@ static void printing_error_dialog(GtkWidget *window, GError *print_error)
 			GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR,
 			GTK_BUTTONS_CLOSE, "Print error:\n%s",
 			print_error->message);
-	g_signal_connect(error_dialog, "response", 
+	g_signal_connect(error_dialog, "response",
 			G_CALLBACK(gtk_widget_destroy), NULL);
 	gtk_widget_show(error_dialog);
 }
