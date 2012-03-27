@@ -395,15 +395,24 @@ int fio_net_send_quit(int sk)
 	return fio_net_send_simple_cmd(sk, FIO_NET_CMD_QUIT, 0, NULL);
 }
 
-int fio_net_send_stop(int sk, int error, int signal)
+static int fio_net_send_ack(int sk, struct fio_net_cmd *cmd, int error,
+			    int signal)
 {
 	struct cmd_end_pdu epdu;
+	uint64_t tag = 0;
 
-	dprint(FD_NET, "server: sending stop (%d, %d)\n", error, signal);
+	if (cmd)
+		tag = cmd->tag;
 
 	epdu.error = __cpu_to_le32(error);
 	epdu.signal = __cpu_to_le32(signal);
-	return fio_net_send_cmd(sk, FIO_NET_CMD_STOP, &epdu, sizeof(epdu), 0);
+	return fio_net_send_cmd(sk, FIO_NET_CMD_STOP, &epdu, sizeof(epdu), tag);
+}
+
+int fio_net_send_stop(int sk, int error, int signal)
+{
+	dprint(FD_NET, "server: sending stop (%d, %d)\n", error, signal);
+	return fio_net_send_ack(sk, NULL, error, signal);
 }
 
 static void fio_server_add_fork_item(pid_t pid, struct flist_head *list)
@@ -633,6 +642,27 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 	return 0;
 }
 
+static int handle_update_job_cmd(struct fio_net_cmd *cmd)
+{
+	struct cmd_add_job_pdu *pdu = (struct cmd_add_job_pdu *) cmd->payload;
+	struct thread_data *td;
+	uint32_t tnumber;
+
+	tnumber = le32_to_cpu(pdu->thread_number);
+
+	dprint(FD_NET, "server: updating options for job %u\n", tnumber);
+
+	if (tnumber >= thread_number) {
+		fio_net_send_ack(server_fd, cmd, ENODEV, 0);
+		return 0;
+	}
+
+	td = &threads[tnumber];
+	convert_thread_options_to_cpu(&td->o, &pdu->top);
+	fio_net_send_ack(server_fd, cmd, 0, 0);
+	return 0;
+}
+
 static int handle_command(struct fio_net_cmd *cmd)
 {
 	int ret;
@@ -661,6 +691,9 @@ static int handle_command(struct fio_net_cmd *cmd)
 		break;
 	case FIO_NET_CMD_RUN:
 		ret = handle_run_cmd(cmd);
+		break;
+	case FIO_NET_CMD_UPDATE_JOB:
+		ret = handle_update_job_cmd(cmd);
 		break;
 	default:
 		log_err("fio: unknown opcode: %s\n", fio_server_op(cmd->opcode));
