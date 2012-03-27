@@ -33,6 +33,7 @@
 #include "graph.h"
 #include "flist.h"
 #include "lib/prio_tree.h"
+#include "cairo_text_helpers.h"
 
 /*
  * Allowable difference to show tooltip
@@ -266,87 +267,6 @@ static void draw_bars(struct graph *bg, cairo_t *cr, struct graph_label *lb,
 	}
 }
 
-static void draw_aligned_text(struct graph *g, cairo_t *cr, double x, double y,
-			       double fontsize, const char *text, int alignment)
-{
-#define CENTERED 0
-#define LEFT_JUSTIFIED 1
-#define RIGHT_JUSTIFIED 2
-
-	double factor, direction;
-	cairo_text_extents_t extents;
-
-	switch(alignment) {
-		case CENTERED:
-			direction = -1.0;
-			factor = 0.5;
-			break;
-		case RIGHT_JUSTIFIED:
-			direction = -1.0;
-			factor = 1.0;
-			break;
-		case LEFT_JUSTIFIED:
-		default:
-			direction = 1.0;
-			factor = 1.0;
-			break;
-	}
-	cairo_select_font_face(cr, g->font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-
-	cairo_set_font_size(cr, fontsize);
-	cairo_text_extents(cr, text, &extents);
-	x = x + direction * (factor * extents.width  + extents.x_bearing);
-	y = y - (extents.height / 2 + extents.y_bearing);
-
-	cairo_move_to(cr, x, y);
-	cairo_show_text(cr, text);
-}
-
-static inline void draw_centered_text(struct graph *g, cairo_t *cr, double x, double y,
-			       double fontsize, const char *text)
-{
-	draw_aligned_text(g, cr, x, y, fontsize, text, CENTERED);
-}
-
-static inline void draw_right_justified_text(struct graph *g, cairo_t *cr,
-				double x, double y,
-				double fontsize, const char *text)
-{
-	draw_aligned_text(g, cr, x, y, fontsize, text, RIGHT_JUSTIFIED);
-}
-
-static inline void draw_left_justified_text(struct graph *g, cairo_t *cr,
-				double x, double y,
-				double fontsize, const char *text)
-{
-	draw_aligned_text(g, cr, x, y, fontsize, text, LEFT_JUSTIFIED);
-}
-
-static void draw_vertical_centered_text(struct graph *g, cairo_t *cr, double x,
-					double y, double fontsize,
-					const char *text)
-{
-	double sx, sy;
-	cairo_text_extents_t extents;
-
-	cairo_select_font_face(cr, g->font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-
-	cairo_set_font_size(cr, fontsize);
-	cairo_text_extents(cr, text, &extents);
-	sx = x;
-	sy = y;
-	y = y + (extents.width / 2.0 + extents.x_bearing);
-	x = x - (extents.height / 2.0 + extents.y_bearing);
-
-	cairo_move_to(cr, x, y);
-	cairo_save(cr);
-	cairo_translate(cr, -sx, -sy);
-	cairo_rotate(cr, -90.0 * M_PI / 180.0);
-	cairo_translate(cr, sx, sy);
-	cairo_show_text(cr, text);
-	cairo_restore(cr);
-}
-
 static void graph_draw_common(struct graph *g, cairo_t *cr,
 	double *x1, double *y1, double *x2, double *y2)
 {
@@ -365,9 +285,9 @@ static void graph_draw_common(struct graph *g, cairo_t *cr,
 	cairo_line_to(cr, *x1, *y1);
 	cairo_stroke(cr);
 
-	draw_centered_text(g, cr, g->xdim / 2, g->ydim / 20, 20.0, g->title);
-	draw_centered_text(g, cr, g->xdim / 2, g->ydim * 0.97, 14.0, g->xtitle);
-	draw_vertical_centered_text(g, cr, g->xdim * 0.02, g->ydim / 2, 14.0, g->ytitle);
+	draw_centered_text(cr, g->font, g->xdim / 2, g->ydim / 20, 20.0, g->title);
+	draw_centered_text(cr, g->font, g->xdim / 2, g->ydim * 0.97, 14.0, g->xtitle);
+	draw_vertical_centered_text(cr, g->font, g->xdim * 0.02, g->ydim / 2, 14.0, g->ytitle);
 	cairo_stroke(cr);
 }
 
@@ -422,7 +342,7 @@ static void graph_draw_x_ticks(struct graph *g, cairo_t *cr,
 			continue;
 
 		/* draw tickmark label */
-		draw_centered_text(g, cr, tx, y2 * 1.04, 12.0, tm[i].string);
+		draw_centered_text(cr, g->font, tx, y2 * 1.04, 12.0, tm[i].string);
 		cairo_stroke(cr);
 	}
 }
@@ -484,7 +404,7 @@ static double graph_draw_y_ticks(struct graph *g, cairo_t *cr,
 			continue;
 
 		/* draw tickmark label */
-		draw_right_justified_text(g, cr, x1 - (x2 - x1) * 0.025, ty, 12.0, tm[i].string);
+		draw_right_justified_text(cr, g->font, x1 - (x2 - x1) * 0.025, ty, 12.0, tm[i].string);
 		cairo_stroke(cr);
 	}
 
@@ -521,7 +441,7 @@ void bar_graph_draw(struct graph *bg, cairo_t *cr)
 	maxdata = find_max_data(bg);
 
 	if (fabs(maxdata - mindata) < 1e-20) {
-		draw_centered_text(bg, cr,
+		draw_centered_text(cr, bg->font,
 			x1 + (x2 - x1) / 2.0,
 			y1 + (y2 - y1) / 2.0, 20.0, "No good data");
 		return;
@@ -538,7 +458,7 @@ void bar_graph_draw(struct graph *bg, cairo_t *cr)
 		label_offset = bg->xdim * 0.1 + space_per_label * (double) i + space_per_label * 0.1;
 		draw_bars(bg, cr, lb, label_offset, bar_width, mindata, maxdata);
 		// draw_centered_text(cr, label_offset + (bar_width / 2.0 + bar_width * 0.1), bg->ydim * 0.93,
-		draw_centered_text(bg, cr, x1 + space_per_label * (i + 0.5), bg->ydim * 0.93,
+		draw_centered_text(cr, bg->font, x1 + space_per_label * (i + 0.5), bg->ydim * 0.93,
 			12.0, lb->label); 
 		i++;
 	}
