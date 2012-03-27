@@ -12,6 +12,7 @@
 #include "gerror.h"
 #include "graph.h"
 #include "gclient.h"
+#include "printing.h"
 
 static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 			    struct group_run_stats *rs);
@@ -33,9 +34,17 @@ static void results_close(GtkWidget *w, gpointer *data)
 	gtk_widget_destroy(ge->results_window);
 }
 
+static void results_print(GtkWidget *w, gpointer *data)
+{
+	struct gui_entry *ge = (struct gui_entry *) data;
+
+	gfio_print_results(ge);
+}
+
 static GtkActionEntry results_menu_items[] = {
 	{ "FileMenuAction", GTK_STOCK_FILE, "File", NULL, NULL, NULL},
 	{ "GraphMenuAction", GTK_STOCK_FILE, "Graph", NULL, NULL, NULL},
+	{ "PrintFile", GTK_STOCK_PRINT, "Print", "<Control>P", NULL, G_CALLBACK(results_print) },
 	{ "CloseFile", GTK_STOCK_CLOSE, "Close", "<Control>W", NULL, G_CALLBACK(results_close) },
 };
 static gint results_nmenu_items = sizeof(results_menu_items) / sizeof(results_menu_items[0]);
@@ -44,6 +53,7 @@ static const gchar *results_ui_string = " \
 	<ui> \
 		<menubar name=\"MainMenu\"> \
 			<menu name=\"FileMenu\" action=\"FileMenuAction\"> \
+				<menuitem name=\"Print\" action=\"PrintFile\" /> \
 				<menuitem name=\"Close\" action=\"CloseFile\" /> \
 			</menu> \
 			<menu name=\"GraphMenu\" action=\"GraphMenuAction\"> \

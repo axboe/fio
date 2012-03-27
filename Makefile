@@ -70,7 +70,7 @@ endif
 OBJS = $(SOURCE:.c=.o)
 FIO_OBJS = $(OBJS) fio.o
 GFIO_OBJS = $(OBJS) gfio.o graph.o tickmarks.o ghelpers.o goptions.o gerror.o \
-			gclient.o gcompat.o cairo_text_helpers.o
+			gclient.o gcompat.o cairo_text_helpers.o printing.o
 
 T_SMALLOC_OBJS = t/stest.o
 T_SMALLOC_OBJS += mutex.o smalloc.o t/log.o
@@ -137,6 +137,9 @@ graph.o: graph.c graph.h
 
 cairo_text_helpers.o: cairo_text_helpers.c cairo_text_helpers.h
 	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c cairo_text_helpers.c
+
+printing.o: printing.c printing.h
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c printing.c
 
 t/stest: $(T_SMALLOC_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_SMALLOC_OBJS) $(LIBS) $(LDFLAGS)
