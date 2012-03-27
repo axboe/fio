@@ -335,8 +335,8 @@ static int break_on_this_error(struct thread_data *td, enum fio_ddir ddir,
 			return 1;
 
 		if (td_non_fatal_error(err)) {
-		        /*
-		         * Continue with the I/Os in case of
+			/*
+			 * Continue with the I/Os in case of
 			 * a non fatal error.
 			 */
 			update_error_count(td, err);
@@ -1091,9 +1091,9 @@ static void *thread_main(void *data)
 		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
 
 		if (td->o.ratemin[0] || td->o.ratemin[1]) {
-		        memcpy(&td->lastrate[0], &td->bw_sample_time,
+			memcpy(&td->lastrate[0], &td->bw_sample_time,
 						sizeof(td->bw_sample_time));
-		        memcpy(&td->lastrate[1], &td->bw_sample_time,
+			memcpy(&td->lastrate[1], &td->bw_sample_time,
 						sizeof(td->bw_sample_time));
 		}
 

@@ -16,7 +16,6 @@
 #include "options.h"
 
 static struct fio_option *__fio_options;
-extern unsigned int fio_get_kb_base(void *);
 
 static int vp_cmp(const void *p1, const void *p2)
 {
@@ -47,7 +46,7 @@ static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
 static void show_option_range(struct fio_option *o,
 				int (*logger)(const char *format, ...))
 {
-	if (o->type == FIO_OPT_FLOAT_LIST){
+	if (o->type == FIO_OPT_FLOAT_LIST) {
 		if (isnan(o->minfp) && isnan(o->maxfp))
 			return;
 
@@ -356,7 +355,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			   int first, int more, int curr)
 {
 	int il, *ilp;
-	double* flp;
+	double *flp;
 	long long ull, *ullp;
 	long ul1, ul2;
 	double uf;
@@ -479,7 +478,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 					o->maxlen);
 			return 1;
 		}
-		if(!str_to_float(ptr, &uf)){
+		if (!str_to_float(ptr, &uf)) {
 			log_err("not a floating point value: %s\n", ptr);
 			return 1;
 		}

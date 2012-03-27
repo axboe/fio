@@ -94,9 +94,9 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 
 			r = fallocate(f->fd, FALLOC_FL_KEEP_SIZE, 0,
 					f->real_file_size);
-			if (r != 0) {
+			if (r != 0)
 				td_verror(td, errno, "fallocate");
-			}
+
 			break;
 #endif /* FIO_HAVE_LINUX_FALLOCATE */
 		default:

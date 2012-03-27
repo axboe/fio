@@ -1,7 +1,7 @@
 /*
  * gfio - gui front end for fio - the flexible io tester
  *
- * Copyright (C) 2012 Stephen M. Cameron <stephenmcameron@gmail.com> 
+ * Copyright (C) 2012 Stephen M. Cameron <stephenmcameron@gmail.com>
  * Copyright (C) 2012 Jens Axboe <axboe@kernel.dk>
  *
  * The license below covers all files distributed with fio unless otherwise
@@ -406,11 +406,11 @@ static void ge_widget_destroy(GtkWidget *w, gpointer data)
 
 static void gfio_quit(struct gui *ui)
 {
-        gtk_main_quit();
+	gtk_main_quit();
 }
 
 static void quit_clicked(__attribute__((unused)) GtkWidget *widget,
-                __attribute__((unused)) gpointer data)
+			 gpointer data)
 {
 	struct gui *ui = (struct gui *) data;
 
@@ -471,7 +471,7 @@ static void gfio_start_server(struct gui *ui)
 }
 
 static void start_job_clicked(__attribute__((unused)) GtkWidget *widget,
-                gpointer data)
+			      gpointer data)
 {
 	struct gui_entry *ge = data;
 	struct gfio_client *gc = ge->client;
@@ -876,7 +876,7 @@ static int do_file_open_with_tab(struct gui *ui, const gchar *uri)
 	if (get_connection_details(ge)) {
 		if (ge_is_new)
 			gtk_widget_destroy(ge->vbox);
-			
+
 		return 1;
 	}
 
@@ -1016,7 +1016,7 @@ static void connect_job_entry(GtkWidget *w, gpointer data)
 {
 	struct gui *ui = (struct gui *) data;
 	struct gui_entry *ge;
-	
+
 	ge = get_ge_from_cur_tab(ui);
 	if (ge)
 		connect_clicked(w, ge);
@@ -1420,7 +1420,7 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	setup_graphs(&ge->graphs);
 
 	/*
-	 * Set up alignments for widgets at the bottom of ui, 
+	 * Set up alignments for widgets at the bottom of ui,
 	 * align bottom left, expand horizontally but not vertically
 	 */
 	bottom_align = gtk_alignment_new(0, 1, 1, 0);
@@ -1507,7 +1507,7 @@ static GtkWidget *new_main_page(struct gui *ui)
 	setup_graphs(&ui->graphs);
 
 	/*
-	 * Set up alignments for widgets at the bottom of ui, 
+	 * Set up alignments for widgets at the bottom of ui,
 	 * align bottom left, expand horizontally but not vertically
 	 */
 	bottom_align = gtk_alignment_new(0, 1, 1, 0);
@@ -1670,7 +1670,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	gtk_settings_set_long_property(settings, "gtk_tooltip_timeout", 10, "gfio setting");
 	g_type_init();
 	gdk_color_parse("white", &gfio_color_white);
-	
+
 	ui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(ui->window), "fio");
 	gtk_window_set_default_size(GTK_WINDOW(ui->window), 1024, 768);

@@ -9,7 +9,7 @@
 #include "gerror.h"
 
 static void on_info_bar_response(GtkWidget *widget, gint response,
-                                 gpointer data)
+				 gpointer data)
 {
 	struct gui *ui = (struct gui *) data;
 
@@ -25,16 +25,15 @@ static void report_error(struct gui_entry *ge, GError *error)
 
 	if (ui->error_info_bar == NULL) {
 		ui->error_info_bar = gtk_info_bar_new_with_buttons(GTK_STOCK_OK,
-		                                               GTK_RESPONSE_OK,
-		                                               NULL);
+						GTK_RESPONSE_OK, NULL);
 		g_signal_connect(ui->error_info_bar, "response", G_CALLBACK(on_info_bar_response), ui);
 		gtk_info_bar_set_message_type(GTK_INFO_BAR(ui->error_info_bar),
-		                              GTK_MESSAGE_ERROR);
-		
+						GTK_MESSAGE_ERROR);
+
 		ui->error_label = gtk_label_new(error->message);
 		GtkWidget *container = gtk_info_bar_get_content_area(GTK_INFO_BAR(ui->error_info_bar));
 		gtk_container_add(GTK_CONTAINER(container), ui->error_label);
-		
+
 		gtk_box_pack_start(GTK_BOX(ui->vbox), ui->error_info_bar, FALSE, FALSE, 0);
 		gtk_widget_show_all(ui->vbox);
 	} else {

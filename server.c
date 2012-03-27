@@ -276,7 +276,7 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 				struct cmd_text_pdu *pdu = (struct cmd_text_pdu *) cmdret->payload;
 				char *buf = (char *) pdu->buf;
 
-				buf[pdu->buf_len ] = '\0';
+				buf[pdu->buf_len] = '\0';
 			} else if (cmdret->opcode == FIO_NET_CMD_JOB) {
 				struct cmd_job_pdu *pdu = (struct cmd_job_pdu *) cmdret->payload;
 				char *buf = (char *) pdu->buf;
@@ -663,7 +663,7 @@ static int handle_command(struct fio_net_cmd *cmd)
 		ret = handle_run_cmd(cmd);
 		break;
 	default:
-		log_err("fio: unknown opcode: %s\n",fio_server_op(cmd->opcode));
+		log_err("fio: unknown opcode: %s\n", fio_server_op(cmd->opcode));
 		ret = 1;
 	}
 
@@ -692,7 +692,7 @@ static int handle_connection(int sk)
 
 			if (!flist_empty(&job_list))
 				timeout = 100;
-		
+
 			ret = poll(&pfd, 1, timeout);
 			if (ret < 0) {
 				if (errno == EINTR)
@@ -1512,7 +1512,7 @@ int fio_start_server(char *pidfile)
 
 #if defined(WIN32)
 	WSADATA wsd;
-	WSAStartup(MAKEWORD(2,2), &wsd);
+	WSAStartup(MAKEWORD(2, 2), &wsd);
 #endif
 
 	if (!pidfile)

@@ -78,7 +78,7 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 				mask = -1UL;
 			else
 				mask = ((1UL << this_blocks) - 1) << bit;
-	
+
 			if (!(f->file_map[idx] & mask))
 				break;
 
@@ -310,7 +310,7 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 			ret = 1;
 		}
 	}
-	
+
 	if (!ret) {
 		if (offset != -1ULL)
 			io_u->offset = offset;
@@ -1427,7 +1427,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		io_u_log_error(td, io_u);
 	}
 	if (icd->error && td_non_fatal_error(icd->error) &&
-           (td->o.continue_on_error & td_error_type(io_u->ddir, icd->error))) {
+	    (td->o.continue_on_error & td_error_type(io_u->ddir, icd->error))) {
 		/*
 		 * If there is a non_fatal error, then add to the error count
 		 * and clear all the errors.

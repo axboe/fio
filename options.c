@@ -37,7 +37,7 @@ static int converthexchartoint(char a)
 {
 	int base;
 
-	switch(a) {
+	switch (a) {
 	case '0'...'9':
 		base = '0';
 		break;
@@ -50,7 +50,7 @@ static int converthexchartoint(char a)
 	default:
 		base = 0;
 	}
-	return (a - base);
+	return a - base;
 }
 
 static int bs_cmp(const void *p1, const void *p2)
@@ -652,7 +652,7 @@ static int str_verify_pattern_cb(void *data, const char *input)
 	struct thread_data *td = data;
 	long off;
 	int i = 0, j = 0, len, k, base = 10;
-	char* loc1, * loc2;
+	char *loc1, *loc2;
 
 	loc1 = strstr(input, "0x");
 	loc2 = strstr(input, "0X");
@@ -3014,14 +3014,12 @@ static char *bc_calc(char *str)
 
 	sprintf(buf, "echo '%s' | %s", tmp, BC_APP);
 	f = popen(buf, "r");
-	if (!f) {
+	if (!f)
 		return NULL;
-	}
 
 	ret = fread(&buf[tmp - str], 1, 128 - (tmp - str), f);
-	if (ret <= 0) {
+	if (ret <= 0)
 		return NULL;
-	}
 
 	pclose(f);
 	buf[(tmp - str) + ret - 1] = '\0';

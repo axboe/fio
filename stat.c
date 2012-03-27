@@ -63,12 +63,12 @@ static unsigned int plat_val_to_idx(unsigned int val)
 
 	/*
 	 * Discard the error bits and apply the mask to find the
-         * index for the buckets in the group
+	 * index for the buckets in the group
 	 */
 	offset = (FIO_IO_U_PLAT_VAL - 1) & (val >> error_bits);
 
 	/* Make sure the index does not exceed (array size - 1) */
-	idx = (base + offset) < (FIO_IO_U_PLAT_NR - 1)?
+	idx = (base + offset) < (FIO_IO_U_PLAT_NR - 1) ?
 		(base + offset) : (FIO_IO_U_PLAT_NR - 1);
 
 	return idx;
@@ -86,11 +86,11 @@ static unsigned int plat_idx_to_val(unsigned int idx)
 
 	/* MSB <= (FIO_IO_U_PLAT_BITS-1), cannot be rounded off. Use
 	 * all bits of the sample as index */
-	if (idx < (FIO_IO_U_PLAT_VAL << 1) )
+	if (idx < (FIO_IO_U_PLAT_VAL << 1))
 		return idx;
 
 	/* Find the group and compute the minimum value of that group */
-	error_bits = (idx >> FIO_IO_U_PLAT_BITS) -1;
+	error_bits = (idx >> FIO_IO_U_PLAT_BITS) - 1;
 	base = 1 << (error_bits + FIO_IO_U_PLAT_BITS);
 
 	/* Find its bucket number of the group */
@@ -140,7 +140,7 @@ unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 	 * isn't a worry. Also note that this does not work for NaN values.
 	 */
 	if (len > 1)
-		qsort((void*)plist, len, sizeof(plist[0]), double_cmp);
+		qsort((void *)plist, len, sizeof(plist[0]), double_cmp);
 
 	/*
 	 * Calculate bucket values, note down max and min values
@@ -629,7 +629,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 }
 
 static void show_thread_status_terse_v2(struct thread_stat *ts,
-				        struct group_run_stats *rs)
+					struct group_run_stats *rs)
 {
 	double io_u_dist[FIO_IO_U_MAP_NR];
 	double io_u_lat_u[FIO_IO_U_LAT_U_NR];

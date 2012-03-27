@@ -12,7 +12,7 @@ static void draw_aligned_text(cairo_t *cr, const char *font, double x, double y,
 	double factor, direction;
 	cairo_text_extents_t extents;
 
-	switch(alignment) {
+	switch (alignment) {
 		case CENTERED:
 			direction = -1.0;
 			factor = 0.5;
@@ -58,7 +58,7 @@ void draw_left_justified_text(cairo_t *cr, const char *font,
 	draw_aligned_text(cr, font, x, y, fontsize, text, LEFT_JUSTIFIED);
 }
 
-void draw_vertical_centered_text(cairo_t *cr, const char * font, double x,
+void draw_vertical_centered_text(cairo_t *cr, const char *font, double x,
 					double y, double fontsize,
 					const char *text)
 {

@@ -110,7 +110,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
 	unsigned long elapsed;
-	
+
 	while (!flist_empty(&td->io_log_list)) {
 		int ret;
 
@@ -141,11 +141,10 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 			elapsed = mtime_since_genesis();
 			if (ipo->delay > elapsed)
 				usec_sleep(td, (ipo->delay - elapsed) * 1000);
-				
 		}
 
 		free(ipo);
-		
+
 		if (io_u->ddir != DDIR_WAIT)
 			return 0;
 	}
@@ -370,7 +369,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 			ipo->fileno = fileno;
 			ipo->file_action = file_action;
 		}
-			
+
 		queue_io_piece(td, ipo);
 	}
 

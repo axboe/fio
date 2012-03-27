@@ -1,7 +1,7 @@
 /*
  * gfio - gui front end for fio - the flexible io tester
  *
- * Copyright (C) 2012 Stephen M. Cameron <stephenmcameron@gmail.com> 
+ * Copyright (C) 2012 Stephen M. Cameron <stephenmcameron@gmail.com>
  *
  * The license below covers all files distributed with fio unless otherwise
  * noted in the file itself.
@@ -87,10 +87,10 @@ struct graph {
 	graph_axis_unit_change_callback y_axis_unit_change_callback;
 	unsigned int base_offset;
 	unsigned int dont_graph_all_zeroes;
-	double left_extra;	
-	double right_extra;	
-	double top_extra;	
-	double bottom_extra;	
+	double left_extra;
+	double right_extra;
+	double top_extra;
+	double bottom_extra;
 
 	double xtick_zero;
 	double xtick_delta;
@@ -263,7 +263,7 @@ static void draw_bars(struct graph *bg, cairo_t *cr, struct graph_label *lb,
 		cairo_close_path(cr);
 		cairo_fill(cr);
 		cairo_stroke(cr);
-		bar_num++;	
+		bar_num++;
 	}
 }
 
@@ -271,11 +271,11 @@ static void graph_draw_common(struct graph *g, cairo_t *cr,
 	double *x1, double *y1, double *x2, double *y2)
 {
 	cairo_set_source_rgb(cr, 0, 0, 0);
-	cairo_set_line_width (cr, 0.8);
+	cairo_set_line_width(cr, 0.8);
 
-	*x1 = 0.10 * g->xdim;	
+	*x1 = 0.10 * g->xdim;
 	*x2 = 0.95 * g->xdim;
-	*y1 = 0.10 * g->ydim;	
+	*y1 = 0.10 * g->ydim;
 	*y2 = 0.90 * g->ydim;
 
 	cairo_move_to(cr, *x1, *y1);
@@ -459,7 +459,7 @@ void bar_graph_draw(struct graph *bg, cairo_t *cr)
 		draw_bars(bg, cr, lb, label_offset, bar_width, mindata, maxdata);
 		// draw_centered_text(cr, label_offset + (bar_width / 2.0 + bar_width * 0.1), bg->ydim * 0.93,
 		draw_centered_text(cr, bg->font, x1 + space_per_label * (i + 0.5), bg->ydim * 0.93,
-			12.0, lb->label); 
+			12.0, lb->label);
 		i++;
 	}
 	cairo_stroke(cr);
@@ -498,7 +498,7 @@ static double find_xy_value(struct graph *g, xy_value_extractor getvalue, double
 				first = 0;
 				answer = tmp;
 			}
-			answer = cmp(tmp, answer);	
+			answer = cmp(tmp, answer);
 		}
 	}
 
@@ -618,7 +618,7 @@ static struct graph_label *graph_find_label(struct graph *bg,
 {
 	struct flist_head *entry;
 	struct graph_label *i;
-	
+
 	flist_for_each(entry, &bg->label_list) {
 		i = flist_entry(entry, struct graph_label, list);
 
@@ -632,7 +632,7 @@ static struct graph_label *graph_find_label(struct graph *bg,
 graph_label_t graph_add_label(struct graph *bg, const char *label)
 {
 	struct graph_label *i;
-	
+
 	i = graph_find_label(bg, label);
 	if (i)
 		return i; /* already present. */
@@ -818,7 +818,7 @@ static void graph_free_values(struct graph_label *l)
 	while (!flist_empty(&l->value_list)) {
 		i = flist_entry(l->value_list.next, struct graph_value, list);
 		graph_value_drop(l, i);
-	}	
+	}
 }
 
 static void graph_free_labels(struct graph *g)
@@ -830,7 +830,7 @@ static void graph_free_labels(struct graph *g)
 		flist_del(&i->list);
 		graph_free_values(i);
 		free(i);
-	}	
+	}
 }
 
 void graph_set_color(struct graph *gr, graph_label_t label, double red,
@@ -878,13 +878,14 @@ void line_graph_set_data_count_limit(struct graph *g, int per_label_limit)
 	g->per_label_limit = per_label_limit;
 }
 
-void graph_add_extra_space(struct graph *g, double left_percent, double right_percent,
-                                double top_percent, double bottom_percent)
+void graph_add_extra_space(struct graph *g, double left_percent,
+			   double right_percent, double top_percent,
+			   double bottom_percent)
 {
-	g->left_extra = left_percent;	
-	g->right_extra = right_percent;	
-	g->top_extra = top_percent;	
-	g->bottom_extra = bottom_percent;	
+	g->left_extra = left_percent;
+	g->right_extra = right_percent;
+	g->top_extra = top_percent;
+	g->bottom_extra = bottom_percent;
 }
 
 /*

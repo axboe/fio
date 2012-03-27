@@ -472,7 +472,7 @@ int fio_clients_connect(void)
 
 #ifdef WIN32
 	WSADATA wsd;
-	WSAStartup(MAKEWORD(2,2), &wsd);
+	WSAStartup(MAKEWORD(2, 2), &wsd);
 #endif
 
 	dprint(FD_NET, "client: connect all\n");

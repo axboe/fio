@@ -36,8 +36,8 @@ static void results_draw_page(GtkPrintOperation *operation,
 
 	cr = gtk_print_context_get_cairo_context(context);
 
-        cairo_set_source_rgb(cr, 0, 0, 0);
-        cairo_set_line_width (cr, 5.0);
+	cairo_set_source_rgb(cr, 0, 0, 0);
+	cairo_set_line_width(cr, 5.0);
 	cairo_move_to(cr, 0.0, 0.0);
 	cairo_line_to(cr, print_params.width, print_params.height);
 	cairo_move_to(cr, 0.0, print_params.height);
@@ -48,8 +48,8 @@ static void results_draw_page(GtkPrintOperation *operation,
 	y = print_params.height / 5.0;
 	sprintf(str, "(%g,%g)", x, y);
 	draw_right_justified_text(cr, "Sans", x, y, 12.0, str);
-        cairo_set_source_rgb(cr, 0, 0, 0);
-        cairo_set_line_width (cr, 2.0);
+	cairo_set_source_rgb(cr, 0, 0, 0);
+	cairo_set_line_width(cr, 2.0);
 	cairo_move_to(cr, x, y - 30.0);
 	cairo_line_to(cr, x, y + 30.0);
 	cairo_move_to(cr, x - 30, y);
@@ -59,8 +59,8 @@ static void results_draw_page(GtkPrintOperation *operation,
 	x *= 2.0;
 	sprintf(str, "(%g,%g)", x, y);
 	draw_right_justified_text(cr, "Sans", x, y, 12.0, str);
-        cairo_set_source_rgb(cr, 0, 0, 0);
-        cairo_set_line_width (cr, 2.0);
+	cairo_set_source_rgb(cr, 0, 0, 0);
+	cairo_set_line_width(cr, 2.0);
 	cairo_move_to(cr, x, y - 30.0);
 	cairo_line_to(cr, x, y + 30.0);
 	cairo_move_to(cr, x - 30, y);

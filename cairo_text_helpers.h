@@ -12,7 +12,7 @@ void draw_left_justified_text(cairo_t *cr, const char *font,
 				double x, double y,
 				double fontsize, const char *text);
 
-void draw_vertical_centered_text(cairo_t *cr, const char * font, double x,
+void draw_vertical_centered_text(cairo_t *cr, const char *font, double x,
 					double y, double fontsize,
 					const char *text);
 #endif

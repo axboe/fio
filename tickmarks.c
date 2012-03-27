@@ -3,7 +3,7 @@
 #include <malloc.h>
 #include <string.h>
 
-/* 
+/*
  * adapted from Paul Heckbert's algorithm on p 657-659 of
  * Andrew S. Glassner's book, "Graphics Gems"
  * ISBN 0-12-286166-3
@@ -128,20 +128,20 @@ static void test_range(double x, double y)
 	printf("Testing range %g - %g\n", x, y);
 	nticks = calc_tickmarks(x, y, 10, &tm);
 
-	for (i = 0; i < nticks; i++) {
+	for (i = 0; i < nticks; i++)
 		printf("   (%s) %g\n", tm[i].string, tm[i].value);
-	}
+
 	printf("\n\n");
 	free(tm);
 }
 
 int main(int argc, char *argv[])
 {
-	test_range(0.0005, 0.008);	
-	test_range(0.5, 0.8);	
-	test_range(5.5, 8.8);	
-	test_range(50.5, 80.8);	
-	test_range(-20, 20.8);	
-	test_range(-30, 700.8);	
+	test_range(0.0005, 0.008);
+	test_range(0.5, 0.8);
+	test_range(5.5, 8.8);
+	test_range(50.5, 80.8);
+	test_range(-20, 20.8);
+	test_range(-30, 700.8);
 }
 #endif

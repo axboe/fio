@@ -426,7 +426,7 @@ static void gfio_update_client_eta(struct fio_client *client, struct jobs_eta *j
 
 		sprintf(dst, " - %s", eta_str);
 	}
-		
+
 	gfio_update_thread_status(ge, output, perc);
 	gdk_threads_leave();
 }
@@ -514,7 +514,7 @@ static void gfio_update_all_eta(struct jobs_eta *je)
 
 		sprintf(dst, " - %s", eta_str);
 	}
-		
+
 	gfio_update_thread_status_all(ui, output, perc);
 	gdk_threads_leave();
 }
@@ -963,7 +963,7 @@ static void gfio_show_latency_buckets(struct gfio_client *gc, GtkWidget *vbox,
 	 */
 	if (start == -1U)
 		return;
-		
+
 	tree_view = gfio_output_lat_buckets(&io_u_lat[start], &ranges[start], end - start + 1);
 	ge->lat_bucket_graph = setup_lat_bucket_graph("Latency Buckets", &io_u_lat[start], &ranges[start], end - start + 1, 700.0, 300.0);
 
@@ -980,7 +980,7 @@ static void gfio_show_latency_buckets(struct gfio_client *gc, GtkWidget *vbox,
 	gtk_widget_modify_bg(drawing_area, GTK_STATE_NORMAL, &gfio_color_white);
 	gtk_container_add(GTK_CONTAINER(completion_vbox), drawing_area);
 	g_signal_connect(G_OBJECT(drawing_area), GFIO_DRAW_EVENT, G_CALLBACK(on_expose_lat_drawing_area), ge->lat_bucket_graph);
-        g_signal_connect(G_OBJECT(drawing_area), "configure_event", G_CALLBACK(on_config_lat_drawing_area), ge->lat_bucket_graph);
+	g_signal_connect(G_OBJECT(drawing_area), "configure_event", G_CALLBACK(on_config_lat_drawing_area), ge->lat_bucket_graph);
 
 	gtk_box_pack_start(GTK_BOX(hbox), tree_view, TRUE, TRUE, 3);
 }

@@ -42,7 +42,7 @@ int load_profile(const char *profile)
 static int add_profile_options(struct profile_ops *ops)
 {
 	struct fio_option *o;
-	
+
 	if (!ops->options)
 		return 0;
 
