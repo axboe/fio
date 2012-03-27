@@ -620,6 +620,15 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	gdk_threads_leave();
 }
 
+static void gfio_update_job_op(struct fio_client *client,
+			       struct fio_net_cmd *cmd)
+{
+	uint32_t *pdu_error = (uint32_t *) cmd->payload;
+	struct gfio_client *gc = client->client_data;
+
+	*pdu_error = le32_to_cpu(*pdu_error);
+}
+
 static void gfio_client_timed_out(struct fio_client *client)
 {
 	struct gfio_client *gc = client->client_data;
@@ -1363,6 +1372,7 @@ struct client_ops gfio_client_ops = {
 	.probe			= gfio_probe_op,
 	.quit			= gfio_quit_op,
 	.add_job		= gfio_add_job_op,
+	.update_job		= gfio_update_job_op,
 	.timed_out		= gfio_client_timed_out,
 	.stop			= gfio_client_stop,
 	.start			= gfio_client_start,

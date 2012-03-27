@@ -459,7 +459,7 @@ static int send_client_cmd_line(struct fio_client *client)
 	free(lens);
 	clp->lines = cpu_to_le16(client->argc);
 	clp->client_type = __cpu_to_le16(client->type);
-	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOBLINE, pdu, mem, 0);
+	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOBLINE, pdu, mem, NULL, NULL);
 	free(pdu);
 	return ret;
 }
@@ -585,7 +585,7 @@ static int __fio_client_send_ini(struct fio_client *client, const char *filename
 	pdu->client_type = cpu_to_le32(client->type);
 
 	client->sent_job = 1;
-	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOB, pdu, p_size, 0);
+	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOB, pdu, p_size, NULL, NULL);
 	free(pdu);
 	close(fd);
 	return ret;
@@ -615,6 +615,18 @@ int fio_clients_send_ini(const char *filename)
 	}
 
 	return !nr_clients;
+}
+
+int fio_client_update_options(struct fio_client *client,
+			      struct thread_options *o, uint64_t *tag)
+{
+	struct cmd_add_job_pdu pdu;
+
+	pdu.thread_number = cpu_to_le32(client->thread_number);
+	pdu.groupid = cpu_to_le32(client->groupid);
+	convert_thread_options_to_net(&pdu.top, o);
+	
+	return fio_net_send_cmd(client->fd, FIO_NET_CMD_UPDATE_JOB, &pdu, sizeof(pdu), tag, &client->cmd_list);
 }
 
 static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
@@ -863,26 +875,50 @@ void fio_client_dec_jobs_eta(struct client_eta *eta, client_eta_op eta_fn)
 
 static void remove_reply_cmd(struct fio_client *client, struct fio_net_cmd *cmd)
 {
-	struct fio_net_int_cmd *icmd = NULL;
+	struct fio_net_cmd_reply *reply = NULL;
 	struct flist_head *entry;
 
 	flist_for_each(entry, &client->cmd_list) {
-		icmd = flist_entry(entry, struct fio_net_int_cmd, list);
+		reply = flist_entry(entry, struct fio_net_cmd_reply, list);
 
-		if (cmd->tag == (uintptr_t) icmd)
+		if (cmd->tag == (uintptr_t) reply)
 			break;
 
-		icmd = NULL;
+		reply = NULL;
 	}
 
-	if (!icmd) {
-		log_err("fio: client: unable to find matching tag\n");
+	if (!reply) {
+		log_err("fio: client: unable to find matching tag (%lx)\n", cmd->tag);
 		return;
 	}
 
-	flist_del(&icmd->list);
-	cmd->tag = icmd->saved_tag;
-	free(icmd);
+	flist_del(&reply->list);
+	cmd->tag = reply->saved_tag;
+	free(reply);
+}
+
+int fio_client_wait_for_reply(struct fio_client *client, uint64_t tag)
+{
+	do {
+		struct fio_net_cmd_reply *reply = NULL;
+		struct flist_head *entry;
+
+		flist_for_each(entry, &client->cmd_list) {
+			reply = flist_entry(entry, struct fio_net_cmd_reply, list);
+
+			if (tag == (uintptr_t) reply)
+				break;
+
+			reply = NULL;
+		}
+
+		if (!reply)
+			break;
+
+		usleep(1000);
+	} while (1);
+
+	return 0;
 }
 
 static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -1130,11 +1166,17 @@ int fio_handle_client(struct fio_client *client)
 		free(cmd);
 		break;
 		}
-	case FIO_NET_CMD_ADD_JOB:
+	case FIO_NET_CMD_ADD_JOB: {
+		struct cmd_add_job_pdu *pdu = (struct cmd_add_job_pdu *) cmd->payload;
+
+		client->thread_number = le32_to_cpu(pdu->thread_number);
+		client->groupid = le32_to_cpu(pdu->groupid);
+
 		if (ops->add_job)
 			ops->add_job(client, cmd);
 		free(cmd);
 		break;
+		}
 	case FIO_NET_CMD_IOLOG:
 		if (ops->iolog) {
 			struct cmd_iolog_pdu *pdu;
@@ -1142,6 +1184,11 @@ int fio_handle_client(struct fio_client *client)
 			pdu = convert_iolog(cmd);
 			ops->iolog(client, pdu);
 		}
+		free(cmd);
+		break;
+	case FIO_NET_CMD_UPDATE_JOB:
+		remove_reply_cmd(client, cmd);
+		ops->update_job(client, cmd);
 		free(cmd);
 		break;
 	default:
@@ -1192,20 +1239,20 @@ static void request_client_etas(struct client_ops *ops)
 static int client_check_cmd_timeout(struct fio_client *client,
 				    struct timeval *now)
 {
-	struct fio_net_int_cmd *cmd;
+	struct fio_net_cmd_reply *reply;
 	struct flist_head *entry, *tmp;
 	int ret = 0;
 
 	flist_for_each_safe(entry, tmp, &client->cmd_list) {
-		cmd = flist_entry(entry, struct fio_net_int_cmd, list);
+		reply = flist_entry(entry, struct fio_net_cmd_reply, list);
 
-		if (mtime_since(&cmd->tv, now) < FIO_NET_CLIENT_TIMEOUT)
+		if (mtime_since(&reply->tv, now) < FIO_NET_CLIENT_TIMEOUT)
 			continue;
 
 		log_err("fio: client %s, timeout on cmd %s\n", client->hostname,
-						fio_server_op(cmd->cmd.opcode));
-		flist_del(&cmd->list);
-		free(cmd);
+						fio_server_op(reply->opcode));
+		flist_del(&reply->list);
+		free(reply);
 		ret = 1;
 	}
 

@@ -48,6 +48,9 @@ struct fio_client {
 	int sent_job;
 	uint32_t type;
 
+	uint32_t thread_number;
+	uint32_t groupid;
+
 	struct flist_head eta_list;
 	struct client_eta *eta_in_flight;
 
@@ -77,6 +80,7 @@ struct client_ops {
 	client_cmd_op		*probe;
 	client_cmd_op		*quit;
 	client_cmd_op		*add_job;
+	client_cmd_op		*update_job;
 	client_timed_out_op	*timed_out;
 	client_cmd_op		*stop;
 	client_cmd_op		*start;
@@ -120,6 +124,8 @@ extern int fio_client_terminate(struct fio_client *);
 extern void fio_clients_terminate(void);
 extern struct fio_client *fio_get_client(struct fio_client *);
 extern void fio_put_client(struct fio_client *);
+extern int fio_client_update_options(struct fio_client *, struct thread_options *, uint64_t *);
+extern int fio_client_wait_for_reply(struct fio_client *, uint64_t);
 
 #define FIO_CLIENT_DEF_ETA_MSEC		900
 

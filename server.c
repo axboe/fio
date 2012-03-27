@@ -293,6 +293,33 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 	return cmdret;
 }
 
+static void add_reply(uint64_t tag, struct flist_head *list)
+{
+	struct fio_net_cmd_reply *reply = (struct fio_net_cmd_reply *) tag;
+
+	flist_add_tail(&reply->list, list);
+}
+
+static uint64_t alloc_reply(uint64_t tag, uint16_t opcode)
+{
+	struct fio_net_cmd_reply *reply;
+
+	reply = calloc(1, sizeof(*reply));
+	INIT_FLIST_HEAD(&reply->list);
+	gettimeofday(&reply->tv, NULL);
+	reply->saved_tag = tag;
+	reply->opcode = opcode;
+
+	return (uintptr_t) reply;
+}
+
+static void free_reply(uint64_t tag)
+{
+	struct fio_net_cmd_reply *reply = (struct fio_net_cmd_reply *) tag;
+
+	free(reply);
+}
+
 void fio_net_cmd_crc_pdu(struct fio_net_cmd *cmd, const void *pdu)
 {
 	uint32_t pdu_len;
@@ -309,11 +336,18 @@ void fio_net_cmd_crc(struct fio_net_cmd *cmd)
 }
 
 int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size,
-		     uint64_t tag)
+		     uint64_t *tagptr, struct flist_head *list)
 {
 	struct fio_net_cmd *cmd = NULL;
 	size_t this_len, cur_len = 0;
+	uint64_t tag;
 	int ret;
+
+	if (list) {
+		assert(tagptr);
+		tag = *tagptr = alloc_reply(*tagptr, opcode);
+	} else
+		tag = tagptr ? *tagptr : 0;
 
 	do {
 		this_len = size;
@@ -340,6 +374,13 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size,
 		buf += this_len;
 	} while (!ret && size);
 
+	if (list) {
+		if (ret)
+			free_reply(tag);
+		else
+			add_reply(tag, list);
+	}
+
 	if (cmd)
 		free(cmd);
 
@@ -363,28 +404,22 @@ static int fio_net_send_simple_stack_cmd(int sk, uint16_t opcode, uint64_t tag)
 int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t tag,
 			    struct flist_head *list)
 {
-	struct fio_net_int_cmd *cmd;
 	int ret;
 
-	if (!list)
-		return fio_net_send_simple_stack_cmd(sk, opcode, tag);
+	if (list)
+		tag = alloc_reply(tag, opcode);
 
-	cmd = malloc(sizeof(*cmd));
-
-	fio_init_net_cmd(&cmd->cmd, opcode, NULL, 0, (uintptr_t) cmd);
-	fio_net_cmd_crc(&cmd->cmd);
-
-	INIT_FLIST_HEAD(&cmd->list);
-	gettimeofday(&cmd->tv, NULL);
-	cmd->saved_tag = tag;
-
-	ret = fio_send_data(sk, &cmd->cmd, sizeof(cmd->cmd));
+	ret = fio_net_send_simple_stack_cmd(sk, opcode, tag);
 	if (ret) {
-		free(cmd);
+		if (list)
+			free_reply(tag);
+
 		return ret;
 	}
 
-	flist_add_tail(&cmd->list, list);
+	if (list)
+		add_reply(tag, list);
+
 	return 0;
 }
 
@@ -406,7 +441,7 @@ static int fio_net_send_ack(int sk, struct fio_net_cmd *cmd, int error,
 
 	epdu.error = __cpu_to_le32(error);
 	epdu.signal = __cpu_to_le32(signal);
-	return fio_net_send_cmd(sk, FIO_NET_CMD_STOP, &epdu, sizeof(epdu), tag);
+	return fio_net_send_cmd(sk, FIO_NET_CMD_STOP, &epdu, sizeof(epdu), &tag, NULL);
 }
 
 int fio_net_send_stop(int sk, int error, int signal)
@@ -533,7 +568,7 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 	}
 
 	spdu.jobs = cpu_to_le32(thread_number);
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), 0);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), NULL, NULL);
 	return 0;
 }
 
@@ -572,13 +607,14 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 	free(argv);
 
 	spdu.jobs = cpu_to_le32(thread_number);
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), 0);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), NULL, NULL);
 	return 0;
 }
 
 static int handle_probe_cmd(struct fio_net_cmd *cmd)
 {
 	struct cmd_probe_pdu probe;
+	uint64_t tag = cmd->tag;
 
 	dprint(FD_NET, "server: sending probe reply\n");
 
@@ -596,13 +632,14 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 
 	probe.bpp	= sizeof(void *);
 
-	return fio_net_send_cmd(server_fd, FIO_NET_CMD_PROBE, &probe, sizeof(probe), cmd->tag);
+	return fio_net_send_cmd(server_fd, FIO_NET_CMD_PROBE, &probe, sizeof(probe), &tag, NULL);
 }
 
 static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 {
 	struct jobs_eta *je;
 	size_t size;
+	uint64_t tag = cmd->tag;
 	int i;
 
 	if (!thread_number)
@@ -637,9 +674,18 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 	je->eta_sec		= cpu_to_le64(je->eta_sec);
 	je->nr_threads		= cpu_to_le32(je->nr_threads);
 
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_ETA, je, size, cmd->tag);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_ETA, je, size, &tag, NULL);
 	free(je);
 	return 0;
+}
+
+static int send_update_job_reply(int fd, uint64_t __tag, int error)
+{
+	uint64_t tag = __tag;
+	uint32_t pdu_error;
+
+	pdu_error = __cpu_to_le32(error);
+	return fio_net_send_cmd(fd, FIO_NET_CMD_UPDATE_JOB, &pdu_error, sizeof(pdu_error), &tag, NULL);
 }
 
 static int handle_update_job_cmd(struct fio_net_cmd *cmd)
@@ -653,13 +699,13 @@ static int handle_update_job_cmd(struct fio_net_cmd *cmd)
 	dprint(FD_NET, "server: updating options for job %u\n", tnumber);
 
 	if (tnumber >= thread_number) {
-		fio_net_send_ack(server_fd, cmd, ENODEV, 0);
+		send_update_job_reply(server_fd, cmd->tag, ENODEV);
 		return 0;
 	}
 
 	td = &threads[tnumber];
 	convert_thread_options_to_cpu(&td->o, &pdu->top);
-	fio_net_send_ack(server_fd, cmd, 0, 0);
+	send_update_job_reply(server_fd, cmd->tag, 0);
 	return 0;
 }
 
@@ -858,7 +904,7 @@ int fio_server_text_output(int level, const char *buf, size_t len)
 
 	memcpy(pdu->buf, buf, len);
 
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, pdu, tlen, 0);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, pdu, tlen, NULL, NULL);
 	free(pdu);
 	return len;
 }
@@ -973,7 +1019,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	convert_gs(&p.rs, rs);
 
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_TS, &p, sizeof(p), 0);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_TS, &p, sizeof(p), NULL, NULL);
 }
 
 void fio_server_send_gs(struct group_run_stats *rs)
@@ -983,7 +1029,7 @@ void fio_server_send_gs(struct group_run_stats *rs)
 	dprint(FD_NET, "server sending group run stats\n");
 
 	convert_gs(&gs, rs);
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_GS, &gs, sizeof(gs), 0);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_GS, &gs, sizeof(gs), NULL, NULL);
 }
 
 static void convert_agg(struct disk_util_agg *dst, struct disk_util_agg *src)
@@ -1037,7 +1083,7 @@ void fio_server_send_du(void)
 		convert_dus(&pdu.dus, &du->dus);
 		convert_agg(&pdu.agg, &du->agg);
 
-		fio_net_send_cmd(server_fd, FIO_NET_CMD_DU, &pdu, sizeof(pdu), 0);
+		fio_net_send_cmd(server_fd, FIO_NET_CMD_DU, &pdu, sizeof(pdu), NULL, NULL);
 	}
 }
 
@@ -1148,7 +1194,7 @@ void fio_server_send_add_job(struct thread_data *td)
 	pdu.groupid = cpu_to_le32(td->groupid);
 	convert_thread_options_to_net(&pdu.top, &td->o);
 
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_ADD_JOB, &pdu, sizeof(pdu), 0);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_ADD_JOB, &pdu, sizeof(pdu), NULL, NULL);
 }
 
 void fio_server_send_start(struct thread_data *td)

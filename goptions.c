@@ -81,6 +81,8 @@ struct gopt_job_view {
 	struct gopt_frame_widget g_widgets[__FIO_OPT_G_NR];
 	GtkWidget *widgets[FIO_MAX_OPTS];
 	GtkWidget *vboxes[__FIO_OPT_C_NR];
+	GtkWidget *dialog;
+	struct gfio_client *client;
 	struct flist_head changed_list;
 	struct thread_options *o;
 };
@@ -165,6 +167,15 @@ static void gopt_mark_index(struct gopt_job_view *gjv, struct gopt *gopt,
 	gjv->widgets[idx] = gopt->box;
 }
 
+static void gopt_dialog_update_apply(struct gopt_job_view *gjv)
+{
+	GtkDialog *dialog = GTK_DIALOG(gjv->dialog);
+	gboolean set;
+
+	set = !flist_empty(&gjv->changed_list);
+	gtk_dialog_set_response_sensitive(dialog, GTK_RESPONSE_APPLY, set);
+}
+
 static void gopt_changed(struct gopt *gopt)
 {
 	struct gopt_job_view *gjv = gopt->gjv;
@@ -173,8 +184,10 @@ static void gopt_changed(struct gopt *gopt)
 	 * Add to changed list. This also prevents the option from being
 	 * freed when the widget is destroyed.
 	 */
-	if (flist_empty(&gopt->changed_list))
+	if (flist_empty(&gopt->changed_list)) {
 		flist_add_tail(&gopt->changed_list, &gjv->changed_list);
+		gopt_dialog_update_apply(gjv);
+	}
 }
 
 static void gopt_str_changed(GtkEntry *entry, gpointer data)
@@ -1139,14 +1152,86 @@ static void gopt_handle_changed(struct gopt *gopt)
 	g_object_unref(G_OBJECT(gopt->box));
 }
 
-static void gopt_handle_changed_options(struct gopt_job_view *gjv)
+static int gopt_handle_changed_options(struct gopt_job_view *gjv)
 {
+	struct gfio_client *gc = gjv->client;
+	uint64_t waitid = 0;
 	struct gopt *gopt;
+	int ret;
 
 	while (!flist_empty(&gjv->changed_list)) {
 		gopt = flist_entry(gjv->changed_list.next, struct gopt, changed_list);
 		flist_del(&gopt->changed_list);
 		gopt_handle_changed(gopt);
+	}
+
+	gopt_dialog_update_apply(gjv);
+
+	ret = fio_client_update_options(gc->client, gjv->o, &waitid);
+	if (ret)
+		return ret;
+
+	return fio_client_wait_for_reply(gc->client, waitid);
+}
+
+static gint gopt_dialog_cancel(gint response)
+{
+	switch (response) {
+	case GTK_RESPONSE_NONE:
+	case GTK_RESPONSE_REJECT:
+	case GTK_RESPONSE_DELETE_EVENT:
+	case GTK_RESPONSE_CANCEL:
+	case GTK_RESPONSE_NO:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+static gint gopt_dialog_done(gint response)
+{
+	switch (response) {
+	case GTK_RESPONSE_ACCEPT:
+	case GTK_RESPONSE_OK:
+	case GTK_RESPONSE_YES:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+
+static void gopt_handle_option_dialog(GtkWidget *dialog,
+				      struct flist_head *gjv_list)
+{
+	struct flist_head *entry;
+	struct gopt_job_view *gjv;
+	gint response;
+
+	do {
+		response = gtk_dialog_run(GTK_DIALOG(dialog));
+		if (gopt_dialog_cancel(response))
+			break;
+		else if (gopt_dialog_done(response))
+			break;
+
+		flist_for_each(entry, gjv_list) {
+			gjv = flist_entry(gjv_list->next, struct gopt_job_view, list);
+
+			gopt_handle_changed_options(gjv);
+		}
+	} while (1);
+
+	if (gopt_dialog_cancel(response))
+		return;
+
+	while (!flist_empty(gjv_list)) {
+		gjv = flist_entry(gjv_list->next, struct gopt_job_view, list);
+
+		gopt_handle_changed_options(gjv);
+
+		flist_del(&gjv->list);
+		free(gjv);
 	}
 }
 
@@ -1169,6 +1254,7 @@ void gopt_get_options_window(GtkWidget *window, struct gfio_client *gc)
 	dialog = gtk_dialog_new_with_buttons("Fio options",
 			GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,
 			GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
+			GTK_STOCK_APPLY, GTK_RESPONSE_APPLY,
 			GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
 
 	gtk_widget_set_size_request(GTK_WIDGET(dialog), 1024, 768);
@@ -1199,23 +1285,17 @@ void gopt_get_options_window(GtkWidget *window, struct gfio_client *gc)
 		INIT_FLIST_HEAD(&gjv->list);
 		INIT_FLIST_HEAD(&gjv->changed_list);
 		gjv->o = o;
+		gjv->dialog = dialog;
+		gjv->client = gc;
 		flist_add_tail(&gjv->list, &gjv_list);
 		gopt_add_group_tabs(notebook, gjv);
 		gopt_add_options(gjv, o);
+		gopt_dialog_update_apply(gjv);
 	}
 
 	gtk_widget_show_all(dialog);
 
-	gtk_dialog_run(GTK_DIALOG(dialog));
-
-	while (!flist_empty(&gjv_list)) {
-		gjv = flist_entry(gjv_list.next, struct gopt_job_view, list);
-
-		gopt_handle_changed_options(gjv);
-
-		flist_del(&gjv->list);
-		free(gjv);
-	}
+	gopt_handle_option_dialog(dialog, &gjv_list);
 
 	gtk_widget_destroy(dialog);
 }

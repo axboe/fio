@@ -30,11 +30,11 @@ struct fio_net_cmd {
 	uint8_t payload[0];	/* payload */
 };
 
-struct fio_net_int_cmd {
-	struct fio_net_cmd cmd;
+struct fio_net_cmd_reply {
 	struct flist_head list;
 	struct timeval tv;
 	uint64_t saved_tag;
+	uint16_t opcode;
 };
 
 enum {
@@ -144,7 +144,7 @@ struct cmd_iolog_pdu {
 
 extern int fio_start_server(char *);
 extern int fio_server_text_output(int, const char *, size_t);
-extern int fio_net_send_cmd(int, uint16_t, const void *, off_t, uint64_t);
+extern int fio_net_send_cmd(int, uint16_t, const void *, off_t, uint64_t *, struct flist_head *);
 extern int fio_net_send_simple_cmd(int, uint16_t, uint64_t, struct flist_head *);
 extern void fio_server_set_arg(const char *);
 extern int fio_server_parse_string(const char *, char **, int *, int *, struct in_addr *, struct in6_addr *, int *);
