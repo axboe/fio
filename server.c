@@ -698,12 +698,12 @@ static int handle_update_job_cmd(struct fio_net_cmd *cmd)
 
 	dprint(FD_NET, "server: updating options for job %u\n", tnumber);
 
-	if (tnumber >= thread_number) {
+	if (!tnumber || tnumber > thread_number) {
 		send_update_job_reply(server_fd, cmd->tag, ENODEV);
 		return 0;
 	}
 
-	td = &threads[tnumber];
+	td = &threads[tnumber - 1];
 	convert_thread_options_to_cpu(&td->o, &pdu->top);
 	send_update_job_reply(server_fd, cmd->tag, 0);
 	return 0;
