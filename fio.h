@@ -110,7 +110,6 @@ struct thread_data {
 	unsigned int last_was_sync;
 	enum fio_ddir last_ddir;
 
-	char *mmapfile;
 	int mmapfd;
 
 	void *iolog_buf;

@@ -1080,6 +1080,8 @@ static void *thread_main(void *data)
 			goto err;
 	}
 
+	fio_verify_init(td);
+
 	fio_gettime(&td->epoch, NULL);
 	getrusage(RUSAGE_SELF, &td->ru_start);
 

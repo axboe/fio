@@ -43,6 +43,7 @@ struct thread_options {
 	char *filename;
 	char *opendir;
 	char *ioengine;
+	char *mmapfile;
 	enum td_ddir td_ddir;
 	unsigned int rw_seq;
 	unsigned int kb_base;
@@ -226,6 +227,7 @@ struct thread_options_pack {
 	uint8_t filename[FIO_TOP_STR_MAX];
 	uint8_t opendir[FIO_TOP_STR_MAX];
 	uint8_t ioengine[FIO_TOP_STR_MAX];
+	uint8_t mmapfile[FIO_TOP_STR_MAX];
 	uint32_t td_ddir;
 	uint32_t rw_seq;
 	uint32_t kb_base;

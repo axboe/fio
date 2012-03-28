@@ -523,7 +523,7 @@ static struct gopt_int *__gopt_new_int(struct gopt_job_view *gjv,
 	else if (o->def) {
 		long long val;
 
-		check_str_bytes(o->def, &val, NULL);
+		check_str_bytes(o->def, &val, o);
 		defval = val;
 	}
 
@@ -730,7 +730,7 @@ static struct gopt *gopt_new_int_range(struct gopt_job_view *gjv,
 	if (o->def) {
 		long long val;
 
-		check_str_bytes(o->def, &val, NULL);
+		check_str_bytes(o->def, &val, o);
 		for (i = 0; i < GOPT_RANGE_SPIN; i++)
 			defvals[i] = val;
 	}

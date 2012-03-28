@@ -29,6 +29,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	string_to_cpu(&o->filename, top->filename);
 	string_to_cpu(&o->opendir, top->opendir);
 	string_to_cpu(&o->ioengine, top->ioengine);
+	string_to_cpu(&o->mmapfile, top->mmapfile);
 	string_to_cpu(&o->read_iolog_file, top->read_iolog_file);
 	string_to_cpu(&o->write_iolog_file, top->write_iolog_file);
 	string_to_cpu(&o->bw_log_file, top->bw_log_file);
@@ -207,6 +208,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	string_to_net(top->filename, o->filename);
 	string_to_net(top->opendir, o->opendir);
 	string_to_net(top->ioengine, o->ioengine);
+	string_to_net(top->mmapfile, o->mmapfile);
 	string_to_net(top->read_iolog_file, o->read_iolog_file);
 	string_to_net(top->write_iolog_file, o->write_iolog_file);
 	string_to_net(top->bw_log_file, o->bw_log_file);

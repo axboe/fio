@@ -61,7 +61,7 @@ static int bs_cmp(const void *p1, const void *p2)
 	return bsp1->perc < bsp2->perc;
 }
 
-static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
+static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 {
 	struct bssplit *bssplit;
 	unsigned int i, perc, perc_missing;
@@ -69,7 +69,7 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 	long long val;
 	char *fname;
 
-	td->o.bssplit_nr[ddir] = 4;
+	o->bssplit_nr[ddir] = 4;
 	bssplit = malloc(4 * sizeof(struct bssplit));
 
 	i = 0;
@@ -84,9 +84,9 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 		/*
 		 * grow struct buffer, if needed
 		 */
-		if (i == td->o.bssplit_nr[ddir]) {
-			td->o.bssplit_nr[ddir] <<= 1;
-			bssplit = realloc(bssplit, td->o.bssplit_nr[ddir]
+		if (i == o->bssplit_nr[ddir]) {
+			o->bssplit_nr[ddir] <<= 1;
+			bssplit = realloc(bssplit, o->bssplit_nr[ddir]
 						  * sizeof(struct bssplit));
 		}
 
@@ -102,9 +102,9 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 		} else
 			perc = -1;
 
-		if (str_to_decimal(fname, &val, 1, td)) {
+		if (str_to_decimal(fname, &val, 1, o)) {
 			log_err("fio: bssplit conversion failed\n");
-			free(td->o.bssplit);
+			free(o->bssplit);
 			return 1;
 		}
 
@@ -118,13 +118,13 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 		i++;
 	}
 
-	td->o.bssplit_nr[ddir] = i;
+	o->bssplit_nr[ddir] = i;
 
 	/*
 	 * Now check if the percentages add up, and how much is missing
 	 */
 	perc = perc_missing = 0;
-	for (i = 0; i < td->o.bssplit_nr[ddir]; i++) {
+	for (i = 0; i < o->bssplit_nr[ddir]; i++) {
 		struct bssplit *bsp = &bssplit[i];
 
 		if (bsp->perc == (unsigned char) -1)
@@ -143,7 +143,7 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 	 * them.
 	 */
 	if (perc_missing) {
-		for (i = 0; i < td->o.bssplit_nr[ddir]; i++) {
+		for (i = 0; i < o->bssplit_nr[ddir]; i++) {
 			struct bssplit *bsp = &bssplit[i];
 
 			if (bsp->perc == (unsigned char) -1)
@@ -151,14 +151,14 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 		}
 	}
 
-	td->o.min_bs[ddir] = min_bs;
-	td->o.max_bs[ddir] = max_bs;
+	o->min_bs[ddir] = min_bs;
+	o->max_bs[ddir] = max_bs;
 
 	/*
 	 * now sort based on percentages, for ease of lookup
 	 */
-	qsort(bssplit, td->o.bssplit_nr[ddir], sizeof(struct bssplit), bs_cmp);
-	td->o.bssplit[ddir] = bssplit;
+	qsort(bssplit, o->bssplit_nr[ddir], sizeof(struct bssplit), bs_cmp);
+	o->bssplit[ddir] = bssplit;
 	return 0;
 }
 
@@ -175,19 +175,19 @@ static int str_bssplit_cb(void *data, const char *input)
 
 	odir = strchr(str, ',');
 	if (odir) {
-		ret = bssplit_ddir(td, DDIR_WRITE, odir + 1);
+		ret = bssplit_ddir(&td->o, DDIR_WRITE, odir + 1);
 		if (!ret) {
 			*odir = '\0';
-			ret = bssplit_ddir(td, DDIR_READ, str);
+			ret = bssplit_ddir(&td->o, DDIR_READ, str);
 		}
 	} else {
 		char *op;
 
 		op = strdup(str);
 
-		ret = bssplit_ddir(td, DDIR_READ, str);
+		ret = bssplit_ddir(&td->o, DDIR_READ, str);
 		if (!ret)
-			ret = bssplit_ddir(td, DDIR_WRITE, op);
+			ret = bssplit_ddir(&td->o, DDIR_WRITE, op);
 
 		free(op);
 	}
@@ -199,26 +199,27 @@ static int str_bssplit_cb(void *data, const char *input)
 static int str_rw_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
+	struct thread_options *o = &td->o;
 	char *nr = get_opt_postfix(str);
 
-	td->o.ddir_seq_nr = 1;
-	td->o.ddir_seq_add = 0;
+	o->ddir_seq_nr = 1;
+	o->ddir_seq_add = 0;
 
 	if (!nr)
 		return 0;
 
 	if (td_random(td))
-		td->o.ddir_seq_nr = atoi(nr);
+		o->ddir_seq_nr = atoi(nr);
 	else {
 		long long val;
 
-		if (str_to_decimal(nr, &val, 1, td)) {
+		if (str_to_decimal(nr, &val, 1, o)) {
 			log_err("fio: rw postfix parsing failed\n");
 			free(nr);
 			return 1;
 		}
 
-		td->o.ddir_seq_add = val;
+		o->ddir_seq_add = val;
 	}
 
 	free(nr);
@@ -228,25 +229,14 @@ static int str_rw_cb(void *data, const char *str)
 static int str_mem_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
+	struct thread_options *o = &td->o;
 
-	if (td->o.mem_type == MEM_MMAPHUGE || td->o.mem_type == MEM_MMAP) {
-		td->mmapfile = get_opt_postfix(mem);
-		if (td->o.mem_type == MEM_MMAPHUGE && !td->mmapfile) {
+	if (o->mem_type == MEM_MMAPHUGE || o->mem_type == MEM_MMAP) {
+		o->mmapfile = get_opt_postfix(mem);
+		if (o->mem_type == MEM_MMAPHUGE && !o->mmapfile) {
 			log_err("fio: mmaphuge:/path/to/file\n");
 			return 1;
 		}
-	}
-
-	return 0;
-}
-
-static int str_verify_cb(void *data, const char *mem)
-{
-	struct thread_data *td = data;
-
-	if (td->o.verify == VERIFY_CRC32C_INTEL ||
-	    td->o.verify == VERIFY_CRC32C) {
-		crc32c_intel_probe();
 	}
 
 	return 0;
@@ -1784,7 +1774,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(verify),
 		.help	= "Verify data written",
-		.cb	= str_verify_cb,
 		.def	= "0",
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_VERIFY,
@@ -3256,11 +3245,11 @@ void fio_options_mem_dupe(struct thread_data *td)
 
 unsigned int fio_get_kb_base(void *data)
 {
-	struct thread_data *td = data;
+	struct thread_options *o = data;
 	unsigned int kb_base = 0;
 
-	if (td)
-		kb_base = td->o.kb_base;
+	if (o)
+		kb_base = o->kb_base;
 	if (!kb_base)
 		kb_base = 1024;
 
