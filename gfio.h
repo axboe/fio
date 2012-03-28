@@ -153,6 +153,9 @@ struct gfio_client {
 	struct end_results *results;
 	unsigned int nr_results;
 
+	uint32_t update_job_status;
+	volatile uint32_t update_job_done;
+
 	struct cmd_du_pdu *du;
 	unsigned int nr_du;
 };

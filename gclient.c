@@ -626,7 +626,8 @@ static void gfio_update_job_op(struct fio_client *client,
 	uint32_t *pdu_error = (uint32_t *) cmd->payload;
 	struct gfio_client *gc = client->client_data;
 
-	*pdu_error = le32_to_cpu(*pdu_error);
+	gc->update_job_status = le32_to_cpu(*pdu_error);
+	gc->update_job_done = 1;
 }
 
 static void gfio_client_timed_out(struct fio_client *client)
