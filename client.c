@@ -1187,8 +1187,8 @@ int fio_handle_client(struct fio_client *client)
 		free(cmd);
 		break;
 	case FIO_NET_CMD_UPDATE_JOB:
-		remove_reply_cmd(client, cmd);
 		ops->update_job(client, cmd);
+		remove_reply_cmd(client, cmd);
 		free(cmd);
 		break;
 	default:
