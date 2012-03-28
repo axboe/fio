@@ -445,6 +445,7 @@ extern int __must_check fio_pin_memory(void);
 extern void fio_unpin_memory(void);
 extern int __must_check allocate_io_mem(struct thread_data *);
 extern void free_io_mem(struct thread_data *);
+extern void free_threads_shm(void);
 
 /*
  * Reset stats after ramp time completes

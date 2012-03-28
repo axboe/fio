@@ -550,6 +550,7 @@ static int handle_run_cmd(struct fio_net_cmd *cmd)
 	}
 
 	ret = fio_backend();
+	free_threads_shm();
 	_exit(ret);
 }
 

@@ -207,7 +207,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 	},
 };
 
-static void free_shm(void)
+void free_threads_shm(void)
 {
 	struct shmid_ds sbuf;
 
@@ -215,11 +215,19 @@ static void free_shm(void)
 		void *tp = threads;
 
 		threads = NULL;
+		shmdt(tp);
+		shmctl(shm_id, IPC_RMID, &sbuf);
+		shm_id = -1;
+	}
+}
+
+void free_shm(void)
+{
+	if (threads) {
 		file_hash_exit();
 		flow_exit();
 		fio_debug_jobp = NULL;
-		shmdt(tp);
-		shmctl(shm_id, IPC_RMID, &sbuf);
+		free_threads_shm();
 	}
 
 	scleanup();
