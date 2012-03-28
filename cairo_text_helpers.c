@@ -24,7 +24,7 @@ static void draw_aligned_text(cairo_t *cr, const char *font, double x, double y,
 		case LEFT_JUSTIFIED:
 		default:
 			direction = 1.0;
-			factor = 1.0;
+			factor = 0.0;
 			break;
 	}
 	cairo_select_font_face(cr, font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
