@@ -538,6 +538,9 @@ static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	if (!client->name)
 		client->name = strdup((char *) probe->hostname);
 
+	gc->client_cpus = le32_to_cpu(probe->cpus);
+	gc->client_flags = le64_to_cpu(probe->flags);
+
 	gdk_threads_enter();
 
 	gtk_label_set_text(GTK_LABEL(ge->probe.hostname), (char *) probe->hostname);
