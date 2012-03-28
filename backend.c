@@ -1205,6 +1205,9 @@ static void *thread_main(void *data)
 	}
 #endif
 
+	if (fio_pin_memory(td))
+		goto err;
+
 	/*
 	 * May alter parameters that init_io_u() will use, so we need to
 	 * do this first.
@@ -1329,6 +1332,8 @@ static void *thread_main(void *data)
 	td->ts.io_bytes[DDIR_READ] = td->io_bytes[DDIR_READ];
 	td->ts.io_bytes[DDIR_WRITE] = td->io_bytes[DDIR_WRITE];
 	td->ts.io_bytes[DDIR_TRIM] = td->io_bytes[DDIR_TRIM];
+
+	fio_unpin_memory(td);
 
 	fio_mutex_down(writeout_mutex);
 	if (td->bw_log) {
@@ -1544,9 +1549,6 @@ static void run_threads(void)
 	struct thread_data *td;
 	unsigned long spent;
 	unsigned int i, todo, nr_running, m_rate, t_rate, nr_started;
-
-	if (fio_pin_memory())
-		return;
 
 	if (fio_gtod_offload && fio_start_gtod_thread())
 		return;
@@ -1780,7 +1782,6 @@ static void run_threads(void)
 	fio_idle_prof_stop();
 
 	update_io_ticks();
-	fio_unpin_memory();
 }
 
 void wait_for_disk_thread_exit(void)
