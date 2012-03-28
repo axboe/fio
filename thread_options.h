@@ -311,6 +311,7 @@ struct thread_options_pack {
 	uint64_t zone_range;
 	uint64_t zone_size;
 	uint64_t zone_skip;
+	uint64_t lockmem;
 	uint32_t mem_type;
 	uint32_t mem_align;
 
