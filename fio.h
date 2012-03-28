@@ -275,6 +275,8 @@ struct thread_data {
 	 */
 	struct prof_io_ops prof_io_ops;
 	void *prof_data;
+
+	void *pinned_mem;
 };
 
 /*
@@ -313,7 +315,6 @@ extern int shm_id;
 extern int groupid;
 extern int terse_output;
 extern int temp_stall_ts;
-extern unsigned long long mlock_size;
 extern unsigned long page_mask, page_size;
 extern int read_only;
 extern int eta_print;
@@ -440,8 +441,8 @@ extern void fio_terminate_threads(int);
 /*
  * Memory helpers
  */
-extern int __must_check fio_pin_memory(void);
-extern void fio_unpin_memory(void);
+extern int __must_check fio_pin_memory(struct thread_data *);
+extern void fio_unpin_memory(struct thread_data *);
 extern int __must_check allocate_io_mem(struct thread_data *);
 extern void free_io_mem(struct thread_data *);
 extern void free_threads_shm(void);

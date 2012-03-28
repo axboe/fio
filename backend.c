@@ -1029,6 +1029,9 @@ static void *thread_main(void *data)
 		goto err;
 	}
 
+	if (fio_pin_memory(td))
+		goto err;
+
 	/*
 	 * May alter parameters that init_io_u() will use, so we need to
 	 * do this first.
@@ -1143,6 +1146,8 @@ static void *thread_main(void *data)
 	td->ts.total_run_time = mtime_since_now(&td->epoch);
 	td->ts.io_bytes[0] = td->io_bytes[0];
 	td->ts.io_bytes[1] = td->io_bytes[1];
+
+	fio_unpin_memory(td);
 
 	fio_mutex_down(writeout_mutex);
 	if (td->bw_log) {
@@ -1353,9 +1358,6 @@ static void run_threads(void)
 	struct thread_data *td;
 	unsigned long spent;
 	unsigned int i, todo, nr_running, m_rate, t_rate, nr_started;
-
-	if (fio_pin_memory())
-		return;
 
 	if (fio_gtod_offload && fio_start_gtod_thread())
 		return;
@@ -1579,7 +1581,6 @@ static void run_threads(void)
 	}
 
 	update_io_ticks();
-	fio_unpin_memory();
 }
 
 static void *disk_thread_main(void *data)

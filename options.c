@@ -251,12 +251,6 @@ static int fio_clock_source_cb(void *data, const char *str)
 	return 0;
 }
 
-static int str_lockmem_cb(void fio_unused *data, unsigned long long *val)
-{
-	mlock_size = *val;
-	return 0;
-}
-
 static int str_rwmix_read_cb(void *data, unsigned long long *val)
 {
 	struct thread_data *td = data;
@@ -2124,7 +2118,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "lockmem",
 		.lname	= "Lock memory",
 		.type	= FIO_OPT_STR_VAL,
-		.cb	= str_lockmem_cb,
+		.off1	= td_var_offset(lockmem),
 		.help	= "Lock down this amount of memory",
 		.def	= "0",
 		.interval = 1024 * 1024,

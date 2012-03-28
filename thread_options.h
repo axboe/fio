@@ -126,6 +126,7 @@ struct thread_options {
 	unsigned long long zone_range;
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
+	unsigned long long lockmem;
 	enum fio_memtype mem_type;
 	unsigned int mem_align;
 

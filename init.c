@@ -40,7 +40,6 @@ struct thread_data *threads = NULL;
 int exitall_on_terminate = 0;
 int terse_output = 0;
 int eta_print;
-unsigned long long mlock_size = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
 char **job_sections = NULL;
