@@ -401,16 +401,6 @@ static int str_verify_cpus_allowed_cb(void *data, const char *input)
 }
 #endif
 
-#ifdef FIO_HAVE_TRIM
-static int str_verify_trim_cb(void *data, unsigned long long *val)
-{
-	struct thread_data *td = data;
-
-	td->o.trim_percentage = *val;
-	return 0;
-}
-#endif
-
 static int str_fst_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
@@ -440,45 +430,6 @@ static int str_sfr_cb(void *data, const char *str)
 	return 0;
 }
 #endif
-
-static int check_dir(struct thread_data *td, char *fname)
-{
-#if 0
-	char file[PATH_MAX], *dir;
-	int elen = 0;
-
-	if (td->o.directory) {
-		strcpy(file, td->o.directory);
-		strcat(file, "/");
-		elen = strlen(file);
-	}
-
-	sprintf(file + elen, "%s", fname);
-	dir = dirname(file);
-
-	{
-	struct stat sb;
-	/*
-	 * We can't do this on FIO_DISKLESSIO engines. The engine isn't loaded
-	 * yet, so we can't do this check right here...
-	 */
-	if (lstat(dir, &sb) < 0) {
-		int ret = errno;
-
-		log_err("fio: %s is not a directory\n", dir);
-		td_verror(td, ret, "lstat");
-		return 1;
-	}
-
-	if (!S_ISDIR(sb.st_mode)) {
-		log_err("fio: %s is not a directory\n", dir);
-		return 1;
-	}
-	}
-#endif
-
-	return 0;
-}
 
 /*
  * Return next file in the string. Files are separated with ':'. If the ':'
@@ -542,10 +493,6 @@ static int str_filename_cb(void *data, const char *input)
 	while ((fname = get_next_file_name(&str)) != NULL) {
 		if (!strlen(fname))
 			break;
-		if (check_dir(td, fname)) {
-			free(p);
-			return 1;
-		}
 		add_file(td, fname);
 		td->o.nr_files++;
 	}
@@ -582,19 +529,6 @@ static int str_opendir_cb(void *data, const char fio_unused *str)
 		td->o.nr_files = 0;
 
 	return add_dir_files(td, td->o.opendir);
-}
-
-static int str_verify_offset_cb(void *data, unsigned long long *off)
-{
-	struct thread_data *td = data;
-
-	if (*off && *off < sizeof(struct verify_header)) {
-		log_err("fio: verify_offset too small\n");
-		return 1;
-	}
-
-	td->o.verify_offset = *off;
-	return 0;
 }
 
 static int str_verify_pattern_cb(void *data, const char *input)
@@ -675,39 +609,6 @@ static int str_lockfile_cb(void *data, const char *str)
 		free(nr);
 	}
 
-	return 0;
-}
-
-static int str_write_bw_log_cb(void *data, const char *str)
-{
-	struct thread_data *td = data;
-
-	if (str)
-		td->o.bw_log_file = strdup(str);
-
-	td->o.write_bw_log = 1;
-	return 0;
-}
-
-static int str_write_lat_log_cb(void *data, const char *str)
-{
-	struct thread_data *td = data;
-
-	if (str)
-		td->o.lat_log_file = strdup(str);
-
-	td->o.write_lat_log = 1;
-	return 0;
-}
-
-static int str_write_iops_log_cb(void *data, const char *str)
-{
-	struct thread_data *td = data;
-
-	if (str)
-		td->o.iops_log_file = strdup(str);
-
-	td->o.write_iops_log = 1;
 	return 0;
 }
 
@@ -1835,8 +1736,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Verify offset",
 		.type	= FIO_OPT_INT,
 		.help	= "Offset verify header location by N bytes",
-		.def	= "0",
-		.cb	= str_verify_offset_cb,
+		.off1	= td_var_offset(verify_offset),
+		.minval	= sizeof(struct verify_header),
 		.parent	= "verify",
 		.hide	= 1,
 		.category = FIO_OPT_C_IO,
@@ -1929,7 +1830,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "trim_percentage",
 		.lname	= "Trim percentage",
 		.type	= FIO_OPT_INT,
-		.cb	= str_verify_trim_cb,
+		.off1	= td_var_offset(trim_percentage),
 		.minval = 0,
 		.maxval = 100,
 		.help	= "Number of verify blocks to discard/trim",
@@ -2406,9 +2307,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "write_bw_log",
 		.lname	= "Write bandwidth log",
-		.type	= FIO_OPT_STR,
-		.off1	= td_var_offset(write_bw_log),
-		.cb	= str_write_bw_log_cb,
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(bw_log_file),
 		.help	= "Write log of bandwidth during run",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
@@ -2416,9 +2316,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "write_lat_log",
 		.lname	= "Write latency log",
-		.type	= FIO_OPT_STR,
-		.off1	= td_var_offset(write_lat_log),
-		.cb	= str_write_lat_log_cb,
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(lat_log_file),
 		.help	= "Write log of latency during run",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
@@ -2427,8 +2326,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "write_iops_log",
 		.lname	= "Write IOPS log",
 		.type	= FIO_OPT_STR,
-		.off1	= td_var_offset(write_iops_log),
-		.cb	= str_write_iops_log_cb,
+		.off1	= td_var_offset(iops_log_file),
 		.help	= "Write log of IOPS during run",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,

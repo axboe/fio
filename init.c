@@ -842,14 +842,14 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (setup_rate(td))
 		goto err;
 
-	if (td->o.write_lat_log) {
+	if (td->o.lat_log_file) {
 		setup_log(&td->lat_log, td->o.log_avg_msec, IO_LOG_TYPE_LAT);
 		setup_log(&td->slat_log, td->o.log_avg_msec, IO_LOG_TYPE_SLAT);
 		setup_log(&td->clat_log, td->o.log_avg_msec, IO_LOG_TYPE_CLAT);
 	}
-	if (td->o.write_bw_log)
+	if (td->o.bw_log_file)
 		setup_log(&td->bw_log, td->o.log_avg_msec, IO_LOG_TYPE_BW);
-	if (td->o.write_iops_log)
+	if (td->o.iops_log_file)
 		setup_log(&td->iops_log, td->o.log_avg_msec, IO_LOG_TYPE_IOPS);
 
 	if (!td->o.name)

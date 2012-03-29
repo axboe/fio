@@ -99,9 +99,6 @@ struct thread_options {
 	unsigned int override_sync;
 	unsigned int rand_repeatable;
 	unsigned int use_os_rand;
-	unsigned int write_lat_log;
-	unsigned int write_bw_log;
-	unsigned int write_iops_log;
 	unsigned int log_avg_msec;
 	unsigned int norandommap;
 	unsigned int softrandommap;
@@ -286,9 +283,6 @@ struct thread_options_pack {
 	uint32_t override_sync;
 	uint32_t rand_repeatable;
 	uint32_t use_os_rand;
-	uint32_t write_lat_log;
-	uint32_t write_bw_log;
-	uint32_t write_iops_log;
 	uint32_t log_avg_msec;
 	uint32_t norandommap;
 	uint32_t softrandommap;

@@ -112,9 +112,6 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->override_sync = le32_to_cpu(top->override_sync);
 	o->rand_repeatable = le32_to_cpu(top->rand_repeatable);
 	o->use_os_rand = le32_to_cpu(top->use_os_rand);
-	o->write_lat_log = le32_to_cpu(top->write_lat_log);
-	o->write_bw_log = le32_to_cpu(top->write_bw_log);
-	o->write_iops_log = le32_to_cpu(top->write_iops_log);
 	o->log_avg_msec = le32_to_cpu(top->log_avg_msec);
 	o->norandommap = le32_to_cpu(top->norandommap);
 	o->softrandommap = le32_to_cpu(top->softrandommap);
@@ -263,9 +260,6 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->override_sync = cpu_to_le32(o->override_sync);
 	top->rand_repeatable = cpu_to_le32(o->rand_repeatable);
 	top->use_os_rand = cpu_to_le32(o->use_os_rand);
-	top->write_lat_log = cpu_to_le32(o->write_lat_log);
-	top->write_bw_log = cpu_to_le32(o->write_bw_log);
-	top->write_iops_log = cpu_to_le32(o->write_iops_log);
 	top->log_avg_msec = cpu_to_le32(o->log_avg_msec);
 	top->norandommap = cpu_to_le32(o->norandommap);
 	top->softrandommap = cpu_to_le32(o->softrandommap);
