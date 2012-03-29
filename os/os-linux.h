@@ -111,8 +111,31 @@ static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
 
 #define FIO_MAX_CPUS			CPU_SETSIZE
 
-static inline int ioprio_set(int which, int who, int ioprio)
+enum {
+	IOPRIO_CLASS_NONE,
+	IOPRIO_CLASS_RT,
+	IOPRIO_CLASS_BE,
+	IOPRIO_CLASS_IDLE,
+};
+
+enum {
+	IOPRIO_WHO_PROCESS = 1,
+	IOPRIO_WHO_PGRP,
+	IOPRIO_WHO_USER,
+};
+
+#define IOPRIO_BITS		16
+#define IOPRIO_CLASS_SHIFT	13
+
+static inline int ioprio_set(int which, int who, int ioprio_class, int ioprio)
 {
+	/*
+	 * If no class is set, assume BE
+	 */
+	if (!ioprio_class)
+		ioprio_class = IOPRIO_CLASS_BE;
+
+	ioprio |= ioprio_class << IOPRIO_CLASS_SHIFT;
 	return syscall(__NR_ioprio_set, which, who, ioprio);
 }
 
@@ -185,22 +208,6 @@ static inline long umem_add(unsigned long *uptr, unsigned long inc)
 	return syscall(__NR_umem_add, uptr, inc);
 }
 #endif /* FIO_HAVE_SYSLET */
-
-enum {
-	IOPRIO_CLASS_NONE,
-	IOPRIO_CLASS_RT,
-	IOPRIO_CLASS_BE,
-	IOPRIO_CLASS_IDLE,
-};
-
-enum {
-	IOPRIO_WHO_PROCESS = 1,
-	IOPRIO_WHO_PGRP,
-	IOPRIO_WHO_USER,
-};
-
-#define IOPRIO_BITS		16
-#define IOPRIO_CLASS_SHIFT	13
 
 #ifndef BLKGETSIZE64
 #define BLKGETSIZE64	_IOR(0x12,114,size_t)

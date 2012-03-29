@@ -84,7 +84,7 @@ typedef unsigned long os_cpu_mask_t;
 #endif
 
 #ifndef FIO_HAVE_IOPRIO
-#define ioprio_set(which, who, prio)	(0)
+#define ioprio_set(which, who, prioclass, prio)	(0)
 #endif
 
 #ifndef FIO_HAVE_ODIRECT

@@ -958,10 +958,12 @@ static void *thread_main(void *data)
 {
 	unsigned long long elapsed;
 	struct thread_data *td = data;
+	struct thread_options *o = &td->o;
 	pthread_condattr_t attr;
 	int clear_state;
+	int ret;
 
-	if (!td->o.use_thread) {
+	if (!o->use_thread) {
 		setsid();
 		td->pid = getpid();
 	} else
@@ -1004,11 +1006,11 @@ static void *thread_main(void *data)
 	 * A new gid requires privilege, so we need to do this before setting
 	 * the uid.
 	 */
-	if (td->o.gid != -1U && setgid(td->o.gid)) {
+	if (o->gid != -1U && setgid(o->gid)) {
 		td_verror(td, errno, "setgid");
 		goto err;
 	}
-	if (td->o.uid != -1U && setuid(td->o.uid)) {
+	if (o->uid != -1U && setuid(o->uid)) {
 		td_verror(td, errno, "setuid");
 		goto err;
 	}
@@ -1017,16 +1019,19 @@ static void *thread_main(void *data)
 	 * If we have a gettimeofday() thread, make sure we exclude that
 	 * thread from this job
 	 */
-	if (td->o.gtod_cpu)
-		fio_cpu_clear(&td->o.cpumask, td->o.gtod_cpu);
+	if (o->gtod_cpu)
+		fio_cpu_clear(&o->cpumask, o->gtod_cpu);
 
 	/*
 	 * Set affinity first, in case it has an impact on the memory
 	 * allocations.
 	 */
-	if (td->o.cpumask_set && fio_setaffinity(td->pid, td->o.cpumask) == -1) {
-		td_verror(td, errno, "cpu_set_affinity");
-		goto err;
+	if (o->cpumask_set) {
+		ret = fio_setaffinity(td->pid, o->cpumask);
+		if (ret == -1) {
+			td_verror(td, errno, "cpu_set_affinity");
+			goto err;
+		}
 	}
 
 	if (fio_pin_memory(td))
@@ -1042,29 +1047,30 @@ static void *thread_main(void *data)
 	if (init_io_u(td))
 		goto err;
 
-	if (td->o.verify_async && verify_async_init(td))
+	if (o->verify_async && verify_async_init(td))
 		goto err;
 
-	if (td->ioprio_set) {
-		if (ioprio_set(IOPRIO_WHO_PROCESS, 0, td->ioprio) == -1) {
+	if (o->ioprio) {
+		ret = ioprio_set(IOPRIO_WHO_PROCESS, 0, o->ioprio_class, o->ioprio);
+		if (ret == -1) {
 			td_verror(td, errno, "ioprio_set");
 			goto err;
 		}
 	}
 
-	if (td->o.cgroup_weight && cgroup_setup(td, cgroup_list, &cgroup_mnt))
+	if (o->cgroup_weight && cgroup_setup(td, cgroup_list, &cgroup_mnt))
 		goto err;
 
 	errno = 0;
-	if (nice(td->o.nice) == -1 && errno != 0) {
+	if (nice(o->nice) == -1 && errno != 0) {
 		td_verror(td, errno, "nice");
 		goto err;
 	}
 
-	if (td->o.ioscheduler && switch_ioscheduler(td))
+	if (o->ioscheduler && switch_ioscheduler(td))
 		goto err;
 
-	if (!td->o.create_serialize && setup_files(td))
+	if (!o->create_serialize && setup_files(td))
 		goto err;
 
 	if (td_io_init(td))
@@ -1073,12 +1079,10 @@ static void *thread_main(void *data)
 	if (init_random_map(td))
 		goto err;
 
-	if (td->o.exec_prerun) {
-		if (exec_string(td->o.exec_prerun))
-			goto err;
-	}
+	if (o->exec_prerun && exec_string(o->exec_prerun))
+		goto err;
 
-	if (td->o.pre_read) {
+	if (o->pre_read) {
 		if (pre_read_files(td) < 0)
 			goto err;
 	}
@@ -1206,8 +1210,8 @@ err:
 	cleanup_io_u(td);
 	cgroup_shutdown(td, &cgroup_mnt);
 
-	if (td->o.cpumask_set) {
-		int ret = fio_cpuset_exit(&td->o.cpumask);
+	if (o->cpumask_set) {
+		int ret = fio_cpuset_exit(&o->cpumask);
 
 		td_verror(td, ret, "fio_cpuset_exit");
 	}

@@ -269,40 +269,6 @@ static int str_rwmix_write_cb(void *data, unsigned long long *val)
 	return 0;
 }
 
-#ifdef FIO_HAVE_IOPRIO
-static int str_prioclass_cb(void *data, unsigned long long *val)
-{
-	struct thread_data *td = data;
-	unsigned short mask;
-
-	/*
-	 * mask off old class bits, str_prio_cb() may have set a default class
-	 */
-	mask = (1 << IOPRIO_CLASS_SHIFT) - 1;
-	td->ioprio &= mask;
-
-	td->ioprio |= *val << IOPRIO_CLASS_SHIFT;
-	td->ioprio_set = 1;
-	return 0;
-}
-
-static int str_prio_cb(void *data, unsigned long long *val)
-{
-	struct thread_data *td = data;
-
-	td->ioprio |= *val;
-
-	/*
-	 * If no class is set, assume BE
-	 */
-	if ((td->ioprio >> IOPRIO_CLASS_SHIFT) == 0)
-		td->ioprio |= IOPRIO_CLASS_BE << IOPRIO_CLASS_SHIFT;
-
-	td->ioprio_set = 1;
-	return 0;
-}
-#endif
-
 static int str_exitall_cb(void)
 {
 	exitall_on_terminate = 1;
@@ -2176,7 +2142,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "prio",
 		.lname	= "I/O nice priority",
 		.type	= FIO_OPT_INT,
-		.cb	= str_prio_cb,
+		.off1	= td_var_offset(ioprio),
 		.help	= "Set job IO priority value",
 		.minval	= 0,
 		.maxval	= 7,
@@ -2188,7 +2154,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "prioclass",
 		.lname	= "I/O nice priority class",
 		.type	= FIO_OPT_INT,
-		.cb	= str_prioclass_cb,
+		.off1	= td_var_offset(ioprio_class),
 		.help	= "Set job IO priority class",
 		.minval	= 0,
 		.maxval	= 3,

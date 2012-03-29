@@ -141,6 +141,8 @@ struct thread_options {
 	unsigned int rwmixcycle;
 	unsigned int rwmix[2];
 	unsigned int nice;
+	unsigned int ioprio;
+	unsigned int ioprio_class;
 	unsigned int file_service_type;
 	unsigned int group_reporting;
 	unsigned int fadvise_hint;
@@ -326,6 +328,8 @@ struct thread_options_pack {
 	uint32_t rwmixcycle;
 	uint32_t rwmix[2];
 	uint32_t nice;
+	uint32_t ioprio;
+	uint32_t ioprio_class;
 	uint32_t file_service_type;
 	uint32_t group_reporting;
 	uint32_t fadvise_hint;

@@ -153,6 +153,8 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->iolog = le32_to_cpu(top->iolog);
 	o->rwmixcycle = le32_to_cpu(top->rwmixcycle);
 	o->nice = le32_to_cpu(top->nice);
+	o->ioprio = le32_to_cpu(top->ioprio);
+	o->ioprio_class = le32_to_cpu(top->ioprio_class);
 	o->file_service_type = le32_to_cpu(top->file_service_type);
 	o->group_reporting = le32_to_cpu(top->group_reporting);
 	o->fadvise_hint = le32_to_cpu(top->fadvise_hint);
@@ -291,6 +293,8 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->iolog = cpu_to_le32(o->iolog);
 	top->rwmixcycle = cpu_to_le32(o->rwmixcycle);
 	top->nice = cpu_to_le32(o->nice);
+	top->ioprio = cpu_to_le32(o->ioprio);
+	top->ioprio_class = cpu_to_le32(o->ioprio_class);
 	top->file_service_type = cpu_to_le32(o->file_service_type);
 	top->group_reporting = cpu_to_le32(o->group_reporting);
 	top->fadvise_hint = cpu_to_le32(o->fadvise_hint);
