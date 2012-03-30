@@ -1102,8 +1102,6 @@ void show_run_stats(void)
 	else if (!terse_output)
 		show_disk_util(0);
 
-	free_disk_util();
-
 	free(runstats);
 	free(threadstats);
 }

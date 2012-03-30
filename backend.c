@@ -1663,6 +1663,7 @@ int fio_backend(void)
 	for_each_td(td, i)
 		fio_options_free(td);
 
+	free_disk_util();
 	cgroup_kill(cgroup_list);
 	sfree(cgroup_list);
 	sfree(cgroup_mnt);
