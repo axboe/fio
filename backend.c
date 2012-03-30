@@ -87,6 +87,11 @@ static void sig_int(int sig)
 	}
 }
 
+static void sig_show_status(int sig)
+{
+	show_running_run_stats();
+}
+
 static void set_sig_handlers(void)
 {
 	struct sigaction act;
@@ -100,6 +105,11 @@ static void set_sig_handlers(void)
 	act.sa_handler = sig_int;
 	act.sa_flags = SA_RESTART;
 	sigaction(SIGTERM, &act, NULL);
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_show_status;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGUSR1, &act, NULL);
 
 	if (is_backend) {
 		memset(&act, 0, sizeof(act));

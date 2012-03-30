@@ -1073,6 +1073,55 @@ void show_run_stats(void)
 	free(threadstats);
 }
 
+static void *__show_running_run_stats(void *arg)
+{
+	struct thread_data *td;
+	unsigned long long *rt;
+	struct timeval tv;
+	int i;
+
+	rt = malloc(thread_number * sizeof(unsigned long long));
+	fio_gettime(&tv, NULL);
+
+	for_each_td(td, i) {
+		rt[i] = mtime_since(&td->start, &tv);
+		if (td_read(td) && td->io_bytes[DDIR_READ])
+			td->ts.runtime[DDIR_READ] += rt[i];
+		if (td_write(td) && td->io_bytes[DDIR_WRITE])
+			td->ts.runtime[DDIR_WRITE] += rt[i];
+
+		update_rusage_stat(td);
+		td->ts.io_bytes[0] = td->io_bytes[0];
+		td->ts.io_bytes[1] = td->io_bytes[1];
+		td->ts.total_run_time = mtime_since(&td->epoch, &tv);
+	}
+
+	show_run_stats();
+
+	for_each_td(td, i) {
+		if (td_read(td) && td->io_bytes[DDIR_READ])
+			td->ts.runtime[DDIR_READ] -= rt[i];
+		if (td_write(td) && td->io_bytes[DDIR_WRITE])
+			td->ts.runtime[DDIR_WRITE] -= rt[i];
+	}
+
+	free(rt);
+	return NULL;
+}
+
+/*
+ * Called from signal handler. It _should_ be safe to just run this inline
+ * in the sig handler, but we should be disturbing the system less by just
+ * creating a thread to do it.
+ */
+void show_running_run_stats(void)
+{
+	pthread_t thread;
+
+	pthread_create(&thread, NULL, __show_running_run_stats, NULL);
+	pthread_detach(thread);
+}
+
 static inline void add_stat_sample(struct io_stat *is, unsigned long data)
 {
 	double val = data;
