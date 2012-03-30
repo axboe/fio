@@ -344,6 +344,11 @@ static void sig_int(int sig)
 	fio_clients_terminate();
 }
 
+static void sig_show_status(int sig)
+{
+	show_running_run_stats();
+}
+
 static void client_signal_handler(void)
 {
 	struct sigaction act;
@@ -357,6 +362,11 @@ static void client_signal_handler(void)
 	act.sa_handler = sig_int;
 	act.sa_flags = SA_RESTART;
 	sigaction(SIGTERM, &act, NULL);
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_show_status;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGUSR1, &act, NULL);
 }
 
 static void probe_client(struct fio_client *client)
