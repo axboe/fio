@@ -18,7 +18,10 @@ static void check_str_update(struct thread_data *td)
 
 	switch (td->runstate) {
 	case TD_REAPED:
-		c = '_';
+		if (td->error)
+			c = 'X';
+		else
+			c = '_';
 		break;
 	case TD_EXITED:
 		c = 'E';
