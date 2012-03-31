@@ -718,6 +718,10 @@ static struct opt_group fio_opt_groups[] = {
 		.mask	= FIO_OPT_C_LOG,
 	},
 	{
+		.name	= "Profiles",
+		.mask	= FIO_OPT_C_PROFILE,
+	},
+	{
 		.name	= NULL,
 	},
 };
@@ -829,6 +833,11 @@ static struct opt_group fio_opt_cat_groups[] = {
 		.name	= "I/O buffers",
 		.mask	= FIO_OPT_G_IO_BUF,
 	},
+	{
+		.name	= "Tiobench profile",
+		.mask	= FIO_OPT_G_TIOBENCH,
+	},
+
 	{
 		.name	= NULL,
 	}
@@ -2585,7 +2594,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(profile),
 		.help	= "Select a specific builtin performance test",
-		.category = FIO_OPT_C_GENERAL,
+		.category = FIO_OPT_C_PROFILE,
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
