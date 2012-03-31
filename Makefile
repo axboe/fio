@@ -73,11 +73,11 @@ GFIO_OBJS = $(OBJS) gfio.o graph.o tickmarks.o ghelpers.o goptions.o gerror.o \
 			gclient.o gcompat.o cairo_text_helpers.o printing.o
 
 T_SMALLOC_OBJS = t/stest.o
-T_SMALLOC_OBJS += mutex.o smalloc.o t/log.o
+T_SMALLOC_OBJS += mutex.o smalloc.o t/log.o gettime.o time.o
 T_SMALLOC_PROGS = t/stest
 
 T_IEEE_OBJS = t/ieee754.o
-T_IEEE_OBJS += ieee754.o
+T_IEEE_OBJS += lib/ieee754.o
 T_IEEE_PROGS = t/ieee754
 
 T_OBJS = $(T_SMALLOC_OBJS)
