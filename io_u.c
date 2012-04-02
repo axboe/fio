@@ -1381,7 +1381,9 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		td->io_blocks[idx]++;
 		td->this_io_blocks[idx]++;
 		td->io_bytes[idx] += bytes;
-		td->this_io_bytes[idx] += bytes;
+
+		if (!(io_u->flags & IO_U_F_VER_LIST))
+			td->this_io_bytes[idx] += bytes;
 
 		if (idx == DDIR_WRITE) {
 			f = io_u->file;

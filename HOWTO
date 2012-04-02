@@ -310,7 +310,7 @@ rw=str		Type of io pattern. Accepted values are:
 			write		Sequential writes
 			randwrite	Random writes
 			randread	Random reads
-			rw		Sequential mixed reads and writes
+			rw,readwrite	Sequential mixed reads and writes
 			randrw		Random mixed reads and writes
 
 		For the mixed io types, the default is to split them 50/50.
@@ -1338,13 +1338,17 @@ I		Thread initialized, waiting.
 	F	Running, currently waiting for fsync()
 	V	Running, doing verification of written data.
 E		Thread exited, not reaped by main thread yet.
-_		Thread reaped.
+_		Thread reaped, or
+X		Thread reaped, exited with an error.
+K		Thread reaped, exited due to signal.
 
 The other values are fairly self explanatory - number of threads
 currently running and doing io, rate of io since last check (read speed
 listed first, then write speed), and the estimated completion percentage
 and time for the running group. It's impossible to estimate runtime of
-the following groups (if any).
+the following groups (if any). Note that the string is displayed in order,
+so it's possible to tell which of the jobs are currently doing what. The
+first character is the first job defined in the job file, and so forth.
 
 When fio is done (or interrupted by ctrl-c), it will show the data for
 each thread, group of threads, and disks in that order. For each data
@@ -1465,17 +1469,17 @@ Split up, the format is as follows:
 	terse version, fio version, jobname, groupid, error
 	READ status:
 		Total IO (KB), bandwidth (KB/sec), IOPS, runtime (msec)
-		Submission latency: min, max, mean, deviation
-		Completion latency: min, max, mean, deviation
+		Submission latency: min, max, mean, deviation (usec)
+		Completion latency: min, max, mean, deviation (usec)
 		Completion latency percentiles: 20 fields (see below)
-		Total latency: min, max, mean, deviation
+		Total latency: min, max, mean, deviation (usec)
 		Bw: min, max, aggregate percentage of total, mean, deviation
 	WRITE status:
 		Total IO (KB), bandwidth (KB/sec), IOPS, runtime (msec)
-		Submission latency: min, max, mean, deviation
-		Completion latency: min, max, mean, deviation
+		Submission latency: min, max, mean, deviation (usec)
+		Completion latency: min, max, mean, deviation (usec)
 		Completion latency percentiles: 20 fields (see below)
-		Total latency: min, max, mean, deviation
+		Total latency: min, max, mean, deviation (usec)
 		Bw: min, max, aggregate percentage of total, mean, deviation
 	CPU usage: user, system, context switches, major faults, minor faults
 	IO depths: <=1, 2, 4, 8, 16, 32, >=64

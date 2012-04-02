@@ -742,11 +742,12 @@ static void show_thread_status_terse_v3(struct thread_stat *ts,
 	/* Additional output if continue_on_error set - default off*/
 	if (ts->continue_on_error)
 		log_info(";%lu;%d", ts->total_err_count, ts->first_error);
-	log_info("\n");
 
 	/* Additional output if description is set */
 	if (strlen(ts->description))
 		log_info(";%s", ts->description);
+
+	log_info("\n");
 }
 
 static void show_thread_status_terse(struct thread_stat *ts,

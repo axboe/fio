@@ -1,0 +1,12 @@
+# Expected result: fio writes 16MB, reads 16+16MB
+# Buggy result: fio writes 16MB, reads ~21MB
+[global]
+bs=4k
+verify=crc32c
+rw=readwrite
+direct=1
+
+[foo]
+size=32m
+do_verify=1
+verify_backlog=1

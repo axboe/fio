@@ -99,6 +99,7 @@ struct thread_data {
 		struct frand_state __next_file_state;
 	};
 	int error;
+	int sig;
 	int done;
 	pid_t pid;
 	char *orig_buffer;

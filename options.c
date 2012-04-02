@@ -962,6 +962,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = TD_DDIR_RW,
 			    .help = "Sequential read and write mix",
 			  },
+			  { .ival = "readwrite",
+			    .oval = TD_DDIR_RW,
+			    .help = "Sequential read and write mix",
+			  },
 			  { .ival = "randrw",
 			    .oval = TD_DDIR_RANDRW,
 			    .help = "Random read and write mix"
