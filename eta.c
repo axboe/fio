@@ -20,6 +20,8 @@ static void check_str_update(struct thread_data *td)
 	case TD_REAPED:
 		if (td->error)
 			c = 'X';
+		else if (td->sig)
+			c = 'K';
 		else
 			c = '_';
 		break;

@@ -1294,6 +1294,7 @@ static void reap_threads(unsigned int *nr_running, unsigned int *t_rate,
 			if (errno == ECHILD) {
 				log_err("fio: pid=%d disappeared %d\n",
 						(int) td->pid, td->runstate);
+				td->sig = ECHILD;
 				td_set_runstate(td, TD_REAPED);
 				goto reaped;
 			}
@@ -1305,6 +1306,7 @@ static void reap_threads(unsigned int *nr_running, unsigned int *t_rate,
 				if (sig != SIGTERM)
 					log_err("fio: pid=%d, got signal=%d\n",
 							(int) td->pid, sig);
+				td->sig = sig;
 				td_set_runstate(td, TD_REAPED);
 				goto reaped;
 			}

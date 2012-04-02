@@ -1341,6 +1341,7 @@ I		Thread initialized, waiting.
 E		Thread exited, not reaped by main thread yet.
 _		Thread reaped, or
 X		Thread reaped, exited with an error.
+K		Thread reaped, exited due to signal.
 
 The other values are fairly self explanatory - number of threads
 currently running and doing io, rate of io since last check (read speed
