@@ -1469,17 +1469,17 @@ Split up, the format is as follows:
 	terse version, fio version, jobname, groupid, error
 	READ status:
 		Total IO (KB), bandwidth (KB/sec), IOPS, runtime (msec)
-		Submission latency: min, max, mean, deviation
-		Completion latency: min, max, mean, deviation
+		Submission latency: min, max, mean, deviation (usec)
+		Completion latency: min, max, mean, deviation (usec)
 		Completion latency percentiles: 20 fields (see below)
-		Total latency: min, max, mean, deviation
+		Total latency: min, max, mean, deviation (usec)
 		Bw: min, max, aggregate percentage of total, mean, deviation
 	WRITE status:
 		Total IO (KB), bandwidth (KB/sec), IOPS, runtime (msec)
-		Submission latency: min, max, mean, deviation
-		Completion latency: min, max, mean, deviation
+		Submission latency: min, max, mean, deviation (usec)
+		Completion latency: min, max, mean, deviation (usec)
 		Completion latency percentiles: 20 fields (see below)
-		Total latency: min, max, mean, deviation
+		Total latency: min, max, mean, deviation (usec)
 		Bw: min, max, aggregate percentage of total, mean, deviation
 	CPU usage: user, system, context switches, major faults, minor faults
 	IO depths: <=1, 2, 4, 8, 16, 32, >=64
