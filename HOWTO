@@ -1382,7 +1382,8 @@ runt=		The runtime of that thread
 		latency, since queue/complete is one operation there. This
 		value can be in milliseconds or microseconds, fio will choose
 		the most appropriate base and print that. In the example
-		above, milliseconds is the best scale.
+		above, milliseconds is the best scale. Note: in --minimal mode
+		latencies are always expressed in microseconds.
 	clat=	Completion latency. Same names as slat, this denotes the
 		time from submission to completion of the io pieces. For
 		sync io, clat will usually be equal (or very close) to 0,
@@ -1474,14 +1475,14 @@ Split up, the format is as follows:
 		Completion latency: min, max, mean, deviation (usec)
 		Completion latency percentiles: 20 fields (see below)
 		Total latency: min, max, mean, deviation (usec)
-		Bw: min, max, aggregate percentage of total, mean, deviation
+		Bw (KB/s): min, max, aggregate percentage of total, mean, deviation
 	WRITE status:
 		Total IO (KB), bandwidth (KB/sec), IOPS, runtime (msec)
 		Submission latency: min, max, mean, deviation (usec)
 		Completion latency: min, max, mean, deviation (usec)
 		Completion latency percentiles: 20 fields (see below)
 		Total latency: min, max, mean, deviation (usec)
-		Bw: min, max, aggregate percentage of total, mean, deviation
+		Bw (KB/s): min, max, aggregate percentage of total, mean, deviation
 	CPU usage: user, system, context switches, major faults, minor faults
 	IO depths: <=1, 2, 4, 8, 16, 32, >=64
 	IO latencies microseconds: <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000
