@@ -36,8 +36,8 @@
 #include "memalign.h"
 #include "server.h"
 
-unsigned long page_mask;
-unsigned long page_size;
+uintptr_t page_mask;
+uintptr_t page_size;
 
 static int endian_check(void)
 {
