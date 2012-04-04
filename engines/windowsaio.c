@@ -82,16 +82,16 @@ static int fio_windowsaio_init(struct thread_data *td)
 	}
 
 	if (!rc) {
-	    for (i = 0; i < td->o.iodepth; i++) {
-	        wd->ovls[i].io_free = TRUE;
-	        wd->ovls[i].io_complete = FALSE;
+		for (i = 0; i < td->o.iodepth; i++) {
+			wd->ovls[i].io_free = TRUE;
+			wd->ovls[i].io_complete = FALSE;
 
 			wd->ovls[i].o.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 			if (wd->ovls[i].o.hEvent == NULL) {
 				rc = 1;
 				break;
 			}
-	    }
+		}
 	}
 
 	if (!rc) {
@@ -287,6 +287,7 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 			if (fov->io_complete) {
 				fov->io_complete = FALSE;
 				fov->io_free  = TRUE;
+				ResetEvent(fov->o.hEvent);
 				wd->aio_events[dequeued] = io_u;
 				dequeued++;
 			}
@@ -297,7 +298,7 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 
 		if (dequeued < min) {
 			status = WaitForSingleObject(wd->iocomplete_event, mswait);
-			if (status != WAIT_OBJECT_0 && dequeued > 0)
+			if (status != WAIT_OBJECT_0 && dequeued >= min)
 			    break;
 		}
 
@@ -322,17 +323,15 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 	wd = td->io_ops->data;
 
 	for (index = 0; index < td->o.iodepth; index++) {
-		if (wd->ovls[index].io_free) {
-			wd->ovls[index].io_free = FALSE;
-			ResetEvent(wd->ovls[index].o.hEvent);
+		if (wd->ovls[index].io_free)
 			break;
-		}
 	}
 
 	assert(index < td->o.iodepth);
 
-	lpOvl = &wd->ovls[index].o;
+	wd->ovls[index].io_free = FALSE;
 	wd->ovls[index].io_u = io_u;
+	lpOvl = &wd->ovls[index].o;
 	lpOvl->Internal = STATUS_PENDING;
 	lpOvl->InternalHigh = 0;
 	lpOvl->Offset = io_u->offset & 0xFFFFFFFF;
