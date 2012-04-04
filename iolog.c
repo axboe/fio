@@ -239,7 +239,9 @@ restart:
 		else if (ipo->offset > __ipo->offset)
 			p = &(*p)->rb_right;
 		else {
-			assert(ipo->len == __ipo->len);
+			dprint(FD_IO, "iolog: overlap %llu/%lu, %llu/%lu",
+				__ipo->offset, __ipo->len,
+				ipo->offset, ipo->len);
 			td->io_hist_len--;
 			rb_erase(parent, &td->io_hist_tree);
 			remove_trim_entry(td, __ipo);
