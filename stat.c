@@ -1045,10 +1045,11 @@ void show_run_stats(void)
 
 			bw = 0;
 			if (ts->runtime[j]) {
-				unsigned long runt;
+				unsigned long runt = ts->runtime[j];
+				unsigned long long kb;
 
-				runt = ts->runtime[j];
-				bw = ts->io_bytes[j] / runt;
+				kb = ts->io_bytes[j] / rs->kb_base;
+				bw = kb * 1000 / runt;
 			}
 			if (bw < rs->min_bw[j])
 				rs->min_bw[j] = bw;
@@ -1060,16 +1061,12 @@ void show_run_stats(void)
 	}
 
 	for (i = 0; i < groupid + 1; i++) {
-		unsigned long max_run[2];
-
 		rs = &runstats[i];
-		max_run[0] = rs->max_run[0];
-		max_run[1] = rs->max_run[1];
 
 		if (rs->max_run[0])
-			rs->agg[0] = (rs->io_kb[0] * 1000) / max_run[0];
+			rs->agg[0] = (rs->io_kb[0] * 1000) / rs->max_run[0];
 		if (rs->max_run[1])
-			rs->agg[1] = (rs->io_kb[1] * 1000) / max_run[1];
+			rs->agg[1] = (rs->io_kb[1] * 1000) / rs->max_run[1];
 	}
 
 	/*
