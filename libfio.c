@@ -41,8 +41,8 @@ FLIST_HEAD(disk_list);
 
 unsigned long arch_flags = 0;
 
-unsigned long page_mask;
-unsigned long page_size;
+uintptr_t page_mask;
+uintptr_t page_size;
 
 static const char *fio_os_strings[os_nr] = {
 	"Invalid",

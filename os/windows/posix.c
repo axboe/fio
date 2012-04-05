@@ -331,9 +331,43 @@ char *basename(char *path)
 
 int posix_fallocate(int fd, off_t offset, off_t len)
 {
-	log_err("%s is not implemented\n", __func__);
-	errno = ENOSYS;
-	return (-1);
+	const int BUFFER_SIZE = 64*1024*1024;
+	int rc = 0;
+	char *buf;
+	unsigned int write_len;
+	unsigned int bytes_written;
+	off_t bytes_remaining = len;
+
+	if (len == 0 || offset < 0)
+		return EINVAL;
+
+	buf = malloc(BUFFER_SIZE);
+
+	if (buf == NULL)
+		return ENOMEM;
+
+	memset(buf, 0, BUFFER_SIZE);
+
+	if (lseek(fd, offset, SEEK_SET) == -1)
+		return errno;
+
+	while (bytes_remaining > 0) {
+		if (bytes_remaining < BUFFER_SIZE)
+			write_len = (unsigned int)bytes_remaining;
+		else
+			write_len = BUFFER_SIZE;
+
+		bytes_written = _write(fd, buf, write_len);
+		if (bytes_written == -1) {
+			rc = errno;
+			break;
+		}
+
+		bytes_remaining -= bytes_written;
+	}
+
+	free(buf);
+	return rc;
 }
 
 int ftruncate(int fildes, off_t length)
@@ -545,7 +579,7 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 	int rc;
 
 	if (timeout != -1)
-		to = &tv;		
+		to = &tv;
 
 	to->tv_sec = timeout / 1000;
 	to->tv_usec = (timeout % 1000) * 1000;
@@ -567,7 +601,7 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 		if (fds[i].events & POLLOUT)
 			FD_SET(fds[i].fd, &writefds);
 
-		FD_SET(fds[i].fd, &exceptfds);		
+		FD_SET(fds[i].fd, &exceptfds);
 	}
 
 	rc = select(nfds, &readfds, &writefds, &exceptfds, to);

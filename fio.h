@@ -314,7 +314,7 @@ extern int shm_id;
 extern int groupid;
 extern int terse_output;
 extern int temp_stall_ts;
-extern unsigned long page_mask, page_size;
+extern uintptr_t page_mask, page_size;
 extern int read_only;
 extern int eta_print;
 extern unsigned long done_secs;
