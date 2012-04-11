@@ -147,7 +147,7 @@ t/stest: $(T_SMALLOC_OBJS)
 t/ieee754: $(T_IEEE_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_IEEE_OBJS) $(LIBS) $(LDFLAGS)
 
-fio: $(FIO_OBJS) FORCE
+fio: $(FIO_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(FIO_OBJS) $(LIBS) $(LDFLAGS)
 
 gfio: $(GFIO_OBJS)
@@ -156,7 +156,7 @@ gfio: $(GFIO_OBJS)
 .depend: $(SOURCE)
 	$(QUIET_DEP)$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SOURCE) 1> .depend
 
-$(PROGS): .depend FORCE
+$(PROGS): .depend
 
 clean: FORCE
 	-rm -f .depend $(GFIO_OBJS) $(FIO_OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE
