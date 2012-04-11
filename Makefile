@@ -119,7 +119,7 @@ fio: $(OBJS)
 .depend: $(SOURCE)
 	$(QUIET_DEP)$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SOURCE) 1> .depend
 
-$(PROGS): .depend FORCE
+$(PROGS): .depend
 
 clean: FORCE
 	-rm -f .depend $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core FIO-VERSION-FILE
