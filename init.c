@@ -25,14 +25,7 @@
 
 #include "fio_version.h"
 
-#if FIO_PATCH > 0
-const char fio_version_string[] =	__fio_stringify(FIO_MAJOR) "."	\
-					__fio_stringify(FIO_MINOR) "."	\
-					__fio_stringify(FIO_PATCH);
-#else
-const char fio_version_string[] =	__fio_stringify(FIO_MAJOR) "."	\
-					__fio_stringify(FIO_MINOR);
-#endif
+const char fio_version_string[] = FIO_VERSION;
 
 #define FIO_RANDSEED		(0xb1899bedUL)
 
@@ -1188,7 +1181,7 @@ static int fill_def_thread(void)
 
 static void usage(const char *name)
 {
-	printf("fio %s\n", fio_version_string);
+	printf("%s\n", fio_version_string);
 	printf("%s [options] [job options] <job file(s)>\n", name);
 	printf("  --debug=options\tEnable debug logging. May be one/more of:\n"
 		"\t\t\tprocess,file,io,mem,blktrace,verify,random,parse,\n"
@@ -1419,7 +1412,7 @@ int parse_cmd_line(int argc, char *argv[])
 			break;
 		case 'v':
 			if (!cur_client) {
-				log_info("fio %s\n", fio_version_string);
+				log_info("%s\n", fio_version_string);
 				do_exit++;
 			}
 			break;
@@ -1645,7 +1638,7 @@ int parse_options(int argc, char *argv[])
 	}
 
 	if (!terse_output)
-		log_info("fio %s\n", fio_version_string);
+		log_info("%s\n", fio_version_string);
 
 	return 0;
 }
