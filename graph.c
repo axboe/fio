@@ -267,16 +267,35 @@ static void draw_bars(struct graph *bg, cairo_t *cr, struct graph_label *lb,
 	}
 }
 
-static void graph_draw_common(struct graph *g, cairo_t *cr,
-	double *x1, double *y1, double *x2, double *y2)
+static void graph_draw_common(struct graph *g, cairo_t *cr, double *x1,
+			      double *y1, double *x2, double *y2)
 {
-	cairo_set_source_rgb(cr, 0, 0, 0);
-	cairo_set_line_width(cr, 0.8);
+	const double shade_col[3][3] = { { 0.55, 0.54, 0.54 },
+					 { 0.80, 0.78, 0.78 },
+					 { 0.93, 0.91, 0.91 } };
+	int i;
 
 	*x1 = 0.10 * g->xdim;
 	*x2 = 0.95 * g->xdim;
 	*y1 = 0.10 * g->ydim;
 	*y2 = 0.90 * g->ydim;
+
+	/*
+	 * Add shade
+	 */
+	cairo_set_line_width(cr, 1.0);
+	for (i = 0; i < 3; i++) {
+		float offset = i + 1.0;
+
+		cairo_set_source_rgb(cr, shade_col[i][0], shade_col[i][1], shade_col[i][2]);
+		cairo_move_to(cr, offset + *x1, *y1 - offset);
+		cairo_line_to(cr, *x2 + offset, *y1 - offset);
+		cairo_line_to(cr, *x2 + offset, *y2 - offset);
+		cairo_stroke(cr);
+	}
+
+	cairo_set_source_rgb(cr, 0, 0, 0);
+	cairo_set_line_width(cr, 1.2);
 
 	cairo_move_to(cr, *x1, *y1);
 	cairo_line_to(cr, *x1, *y2);
