@@ -1448,6 +1448,9 @@ io_queue=	Total time spent in the disk queue.
 util=		The disk utilization. A value of 100% means we kept the disk
 		busy constantly, 50% would be a disk idling half of the time.
 
+It is also possible to get fio to dump the current output while it is
+running, without terminating the job. To do that, send fio the USR1 signal.
+
 
 7.0 Terse output
 ----------------

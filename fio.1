@@ -1203,6 +1203,10 @@ Total time spent in the disk queue.
 Disk utilization.
 .RE
 .PD
+.P
+It is also possible to get fio to dump the current output while it is
+running, without terminating the job. To do that, send fio the \fBUSR1\fR
+signal.
 .SH TERSE OUTPUT
 If the \fB\-\-minimal\fR option is given, the results will be printed in a
 semicolon-delimited format suitable for scripted use - a job description
