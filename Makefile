@@ -107,6 +107,9 @@ CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 .c.o: .depend FORCE
 	$(QUIET_CC)$(CC) -o $@ -c $(CFLAGS) $(CPPFLAGS) $<
 
+init.o: FIO-VERSION-FILE
+	$(QUIET_CC)$(CC) -o init.o -c $(CFLAGS) $(CPPFLAGS) -c init.c
+
 t/stest: $(T_SMALLOC_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_SMALLOC_OBJS) $(LIBS) $(LDFLAGS)
 
