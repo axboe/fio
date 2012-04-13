@@ -586,6 +586,8 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 		goto skip_data;
 
 	cairo_set_line_width(cr, 1.5);
+	cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
+
 	flist_for_each(lentry, &g->label_list) {
 		i = flist_entry(lentry, struct graph_label, list);
 		first = 1;
@@ -600,9 +602,8 @@ void line_graph_draw(struct graph *g, cairo_t *cr)
 			if (first) {
 				cairo_move_to(cr, tx, ty);
 				first = 0;
-			} else {
+			} else
 				cairo_line_to(cr, tx, ty);
-			}
 		}
 		cairo_stroke(cr);
 	}
