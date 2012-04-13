@@ -114,6 +114,9 @@ CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 .c.o: .depend FORCE
 	$(QUIET_CC)$(CC) -o $@ -c $(CFLAGS) $(CPPFLAGS) $<
 
+init.o: FIO-VERSION-FILE
+	$(QUIET_CC)$(CC) -o init.o -c $(CFLAGS) $(CPPFLAGS) -c init.c
+
 gcompat.o: gcompat.c gcompat.h
 	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c gcompat.c
 
