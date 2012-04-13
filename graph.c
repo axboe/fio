@@ -343,15 +343,15 @@ static void graph_draw_x_ticks(struct graph *g, cairo_t *cr,
 			continue;
 
 		/* Draw tick mark */
-		cairo_set_line_width(cr, 0.8);
+		cairo_set_line_width(cr, 1.0);
 		cairo_move_to(cr, tx, y2);
 		cairo_line_to(cr, tx, y2 + (y2 - y1) * 0.03);
 		cairo_stroke(cr);
 
 		/* draw grid lines */
 		cairo_save(cr);
-		cairo_set_dash(cr, dash, 2, 2.0);
-		cairo_set_line_width(cr, 0.5);
+		cairo_set_dash(cr, dash, 2, 0.66);
+		cairo_set_line_width(cr, 0.33);
 		cairo_move_to(cr, tx, y1);
 		cairo_line_to(cr, tx, y2);
 		cairo_stroke(cr);
@@ -373,7 +373,7 @@ static double graph_draw_y_ticks(struct graph *g, cairo_t *cr,
 	struct tickmark *tm;
 	double ty;
 	int i, power_of_ten;
-	static double dash[] = { 2.0, 2.0 };
+	static double dash[] = { 1.0, 2.0 };
 
 	nticks = calc_tickmarks(miny, maxy, nticks, &tm, &power_of_ten,
 		g->y_axis_unit_change_callback == NULL, g->base_offset);
@@ -412,8 +412,8 @@ static double graph_draw_y_ticks(struct graph *g, cairo_t *cr,
 
 		/* draw grid lines */
 		cairo_save(cr);
-		cairo_set_dash(cr, dash, 2, 2.0);
-		cairo_set_line_width(cr, 0.5);
+		cairo_set_dash(cr, dash, 2, 0.66);
+		cairo_set_line_width(cr, 0.33);
 		cairo_move_to(cr, x1, ty);
 		cairo_line_to(cr, x2, ty);
 		cairo_stroke(cr);
