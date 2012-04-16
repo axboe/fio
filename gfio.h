@@ -170,5 +170,6 @@ extern void clear_ge_ui_info(struct gui_entry *ge);
 
 extern const char *gfio_graph_font;
 extern GdkColor gfio_color_white;
+extern GdkColor gfio_color_lightyellow;
 
 #endif

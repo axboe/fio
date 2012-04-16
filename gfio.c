@@ -41,6 +41,7 @@ static int gfio_server_running;
 static unsigned int gfio_graph_limit = 100;
 
 GdkColor gfio_color_white;
+GdkColor gfio_color_lightyellow;
 const char *gfio_graph_font = GRAPH_DEFAULT_FONT;
 
 typedef void (*clickfunction)(GtkWidget *widget, gpointer data);
@@ -1405,7 +1406,7 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	ge->graphs.drawing_area = gtk_drawing_area_new();
 	gtk_widget_set_size_request(GTK_WIDGET(ge->graphs.drawing_area),
 		DRAWING_AREA_XDIM, DRAWING_AREA_YDIM);
-	gtk_widget_modify_bg(ge->graphs.drawing_area, GTK_STATE_NORMAL, &gfio_color_white);
+	gtk_widget_modify_bg(ge->graphs.drawing_area, GTK_STATE_NORMAL, &gfio_color_lightyellow);
 	g_signal_connect(G_OBJECT(ge->graphs.drawing_area), GFIO_DRAW_EVENT,
 				G_CALLBACK(on_expose_drawing_area), &ge->graphs);
 	g_signal_connect(G_OBJECT(ge->graphs.drawing_area), "configure_event",
@@ -1491,7 +1492,7 @@ static GtkWidget *new_main_page(struct gui *ui)
 	ui->graphs.drawing_area = gtk_drawing_area_new();
 	gtk_widget_set_size_request(GTK_WIDGET(ui->graphs.drawing_area),
 		DRAWING_AREA_XDIM, DRAWING_AREA_YDIM);
-	gtk_widget_modify_bg(ui->graphs.drawing_area, GTK_STATE_NORMAL, &gfio_color_white);
+	gtk_widget_modify_bg(ui->graphs.drawing_area, GTK_STATE_NORMAL, &gfio_color_lightyellow);
 	g_signal_connect(G_OBJECT(ui->graphs.drawing_area), GFIO_DRAW_EVENT,
 			G_CALLBACK(on_expose_drawing_area), &ui->graphs);
 	g_signal_connect(G_OBJECT(ui->graphs.drawing_area), "configure_event",
@@ -1669,6 +1670,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	settings = gtk_settings_get_default();
 	gtk_settings_set_long_property(settings, "gtk_tooltip_timeout", 10, "gfio setting");
 	g_type_init();
+	gdk_color_parse("#ffffee", &gfio_color_lightyellow);
 	gdk_color_parse("white", &gfio_color_white);
 
 	ui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
