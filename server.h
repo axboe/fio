@@ -86,7 +86,7 @@ struct cmd_du_pdu {
 struct cmd_probe_pdu {
 	uint8_t hostname[64];
 	uint8_t bigendian;
-	uint8_t fio_version[8];
+	uint8_t fio_version[32];
 	uint8_t os;
 	uint8_t arch;
 	uint8_t bpp;
