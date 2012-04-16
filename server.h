@@ -36,7 +36,7 @@ struct fio_net_int_cmd {
 };
 
 enum {
-	FIO_SERVER_VER		= 6,
+	FIO_SERVER_VER		= 7,
 
 	FIO_SERVER_MAX_PDU	= 1024,
 
@@ -78,9 +78,7 @@ struct cmd_du_pdu {
 struct cmd_probe_pdu {
 	uint8_t hostname[64];
 	uint8_t bigendian;
-	uint8_t fio_major;
-	uint8_t fio_minor;
-	uint8_t fio_patch;
+	uint8_t fio_version[8];
 	uint8_t os;
 	uint8_t arch;
 	uint8_t bpp;

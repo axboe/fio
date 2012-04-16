@@ -23,8 +23,6 @@
 
 #include "lib/getopt.h"
 
-#include "fio_version.h"
-
 const char fio_version_string[] = FIO_VERSION;
 
 #define FIO_RANDSEED		(0xb1899bedUL)
