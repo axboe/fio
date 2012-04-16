@@ -10,7 +10,7 @@
 	<Product Id="*"
 	  Codepage="1252" Language="1033"
 	  Manufacturer="fio" Name="FIO"
-	  UpgradeCode="{2338A332-5511-43cf-b9BD-5C60496CCFCC}" Version="$(env.FIO_MAJOR).$(env.FIO_MINOR).$(env.FIO_PATCH)">
+	  UpgradeCode="{2338A332-5511-43cf-b9BD-5C60496CCFCC}" Version="$(env.FIO_VERSION)">
 		<Package 
 		  Comments="Contact: Your local administrator"
 		  Description="Flexible IO Tester"

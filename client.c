@@ -966,9 +966,9 @@ static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	sprintf(bit, "%d-bit", probe->bpp * 8);
 
-	log_info("hostname=%s, be=%u, %s, os=%s, arch=%s, fio=%u.%u.%u\n",
+	log_info("hostname=%s, be=%u, %s, os=%s, arch=%s, fio=%s\n",
 		probe->hostname, probe->bigendian, bit, os, arch,
-		probe->fio_major, probe->fio_minor, probe->fio_patch);
+		probe->fio_version);
 
 	if (!client->name)
 		client->name = strdup((char *) probe->hostname);

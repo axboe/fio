@@ -525,7 +525,6 @@ static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct gfio_client *gc = client->client_data;
 	struct gui_entry *ge = gc->ge;
 	const char *os, *arch;
-	char buf[64];
 
 	os = fio_get_os_string(probe->os);
 	if (!os)
@@ -546,8 +545,7 @@ static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 	gtk_label_set_text(GTK_LABEL(ge->probe.hostname), (char *) probe->hostname);
 	gtk_label_set_text(GTK_LABEL(ge->probe.os), os);
 	gtk_label_set_text(GTK_LABEL(ge->probe.arch), arch);
-	sprintf(buf, "%u.%u.%u", probe->fio_major, probe->fio_minor, probe->fio_patch);
-	gtk_label_set_text(GTK_LABEL(ge->probe.fio_ver), buf);
+	gtk_label_set_text(GTK_LABEL(ge->probe.fio_ver), (char *) probe->fio_version);
 
 	gfio_set_state(ge, GE_STATE_CONNECTED);
 
