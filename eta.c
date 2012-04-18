@@ -360,7 +360,7 @@ void display_thread_status(struct jobs_eta *je)
 {
 	static int linelen_last;
 	static int eta_good;
-	char output[512], *p = output;
+	char output[REAL_MAX_JOBS + 512], *p = output;
 	char eta_str[128];
 	double perc = 0.0;
 	int i2p = 0;
@@ -385,6 +385,7 @@ void display_thread_status(struct jobs_eta *je)
 		char perc_str[32];
 		char *iops_str[2];
 		char *rate_str[2];
+		size_t left;
 		int l;
 
 		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running)
@@ -401,7 +402,9 @@ void display_thread_status(struct jobs_eta *je)
 		iops_str[0] = num2str(je->iops[0], 4, 1, 0);
 		iops_str[1] = num2str(je->iops[1], 4, 1, 0);
 
-		l = sprintf(p, ": [%s] [%s] [%s/%s /s] [%s/%s iops] [eta %s]",
+		left = sizeof(output) - (p - output) - 1;
+
+		l = snprintf(p, left, ": [%s] [%s] [%s/%s /s] [%s/%s iops] [eta %s]",
 				je->run_str, perc_str, rate_str[0],
 				rate_str[1], iops_str[0], iops_str[1], eta_str);
 		p += l;
