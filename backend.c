@@ -1055,7 +1055,7 @@ static void *thread_main(void *data)
 		}
 	}
 
-	if (td->o.cgroup_weight && cgroup_setup(td, cgroup_list, &cgroup_mnt))
+	if (td->o.cgroup && cgroup_setup(td, cgroup_list, &cgroup_mnt))
 		goto err;
 
 	errno = 0;
