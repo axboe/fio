@@ -204,7 +204,7 @@ Mixed random reads and writes.
 .P
 For mixed I/O, the default split is 50/50. For certain types of io the result
 may still be skewed a bit, since the speed may be different. It is possible to
-specify a number of IO's to do before getting a new offset, this is one by
+specify a number of IO's to do before getting a new offset, this is done by
 appending a `:\fI<nr>\fR to the end of the string given. For a random read, it
 would look like \fBrw=randread:8\fR for passing in an offset modifier with a
 value of 8. If the postfix is used with a sequential IO pattern, then the value
