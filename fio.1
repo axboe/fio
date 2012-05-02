@@ -725,6 +725,11 @@ If true, serialize file creation for the jobs.  Default: true.
 .BI create_on_open \fR=\fPbool
 If true, the files are not created until they are opened for IO by the job.
 .TP
+.BI create_only \fR=\fPbool
+If true, fio will only run the setup phase of the job. If files need to be
+laid out or updated on disk, only that will be done. The actual job contents
+are not executed.
+.TP
 .BI pre_read \fR=\fPbool
 If this is given, files will be pre-read into memory before starting the given
 IO operation. This will also clear the \fR \fBinvalidate\fR flag, since it is

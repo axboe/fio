@@ -893,6 +893,11 @@ create_fsync=bool	fsync the data file after creation. This is the
 create_on_open=bool	Don't pre-setup the files for IO, just create open()
 			when it's time to do IO to that file.
 
+create_only=bool	If true, fio will only run the setup phase of the job.
+			If files need to be laid out or updated on disk, only
+			that will be done. The actual job contents are not
+			executed.
+
 pre_read=bool	If this is given, files will be pre-read into memory before
 		starting the given IO operation. This will also clear
 		the 'invalidate' flag, since it is pointless to pre-read

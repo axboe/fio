@@ -1885,6 +1885,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.def	= "0",
 	},
 	{
+		.name	= "create_only",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(create_only),
+		.help	= "Only perform file creation phase",
+		.def	= "0",
+	},
+	{
 		.name	= "pre_read",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(pre_read),

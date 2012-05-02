@@ -665,7 +665,7 @@ int setup_files(struct thread_data *td)
 	dprint(FD_FILE, "setup files\n");
 
 	if (td->o.read_iolog_file)
-		return 0;
+		goto done;
 
 	/*
 	 * if ioengine defines a setup() method, it's responsible for
@@ -816,6 +816,11 @@ int setup_files(struct thread_data *td)
 	 */
 	if (!td->o.read_iolog_file)
 		td->total_io_size = td->o.size * td->o.loops;
+
+done:
+	if (td->o.create_only)
+		td->done = 1;
+
 	return 0;
 err_offset:
 	log_err("%s: you need to specify valid offset=\n", td->o.name);

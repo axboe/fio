@@ -125,6 +125,7 @@ struct thread_options {
 	unsigned int create_serialize;
 	unsigned int create_fsync;
 	unsigned int create_on_open;
+	unsigned int create_only;
 	unsigned int end_fsync;
 	unsigned int pre_read;
 	unsigned int sync_io;
