@@ -555,10 +555,6 @@ Sync file contents when job exits.  Default: false.
 If true, sync file contents on close.  This differs from \fBend_fsync\fR in that
 it will happen on every close, not just at the end of the job.  Default: false.
 .TP
-.BI rwmixcycle \fR=\fPint
-How many milliseconds before switching between reads and writes for a mixed
-workload. Default: 500ms.
-.TP
 .BI rwmixread \fR=\fPint
 Percentage of a mixed workload that should be reads. Default: 50.
 .TP
