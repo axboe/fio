@@ -2221,6 +2221,13 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "create_only",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(create_only),
+		.help	= "Only perform file creation phase",
+		.def	= "0",
+	},
+	{
 		.name	= "pre_read",
 		.lname	= "Pre-read files",
 		.type	= FIO_OPT_BOOL,

@@ -204,7 +204,7 @@ Mixed random reads and writes.
 .P
 For mixed I/O, the default split is 50/50. For certain types of io the result
 may still be skewed a bit, since the speed may be different. It is possible to
-specify a number of IO's to do before getting a new offset, this is one by
+specify a number of IO's to do before getting a new offset, this is done by
 appending a `:\fI<nr>\fR to the end of the string given. For a random read, it
 would look like \fBrw=randread:8\fR for passing in an offset modifier with a
 value of 8. If the postfix is used with a sequential IO pattern, then the value
@@ -555,10 +555,6 @@ Sync file contents when job exits.  Default: false.
 If true, sync file contents on close.  This differs from \fBend_fsync\fR in that
 it will happen on every close, not just at the end of the job.  Default: false.
 .TP
-.BI rwmixcycle \fR=\fPint
-How many milliseconds before switching between reads and writes for a mixed
-workload. Default: 500ms.
-.TP
 .BI rwmixread \fR=\fPint
 Percentage of a mixed workload that should be reads. Default: 50.
 .TP
@@ -724,6 +720,11 @@ If true, serialize file creation for the jobs.  Default: true.
 .TP
 .BI create_on_open \fR=\fPbool
 If true, the files are not created until they are opened for IO by the job.
+.TP
+.BI create_only \fR=\fPbool
+If true, fio will only run the setup phase of the job. If files need to be
+laid out or updated on disk, only that will be done. The actual job contents
+are not executed.
 .TP
 .BI pre_read \fR=\fPbool
 If this is given, files will be pre-read into memory before starting the given
@@ -1209,6 +1210,10 @@ Total time spent in the disk queue.
 Disk utilization.
 .RE
 .PD
+.P
+It is also possible to get fio to dump the current output while it is
+running, without terminating the job. To do that, send fio the \fBUSR1\fR
+signal.
 .SH TERSE OUTPUT
 If the \fB\-\-minimal\fR option is given, the results will be printed in a
 semicolon-delimited format suitable for scripted use - a job description

@@ -106,7 +106,7 @@ all: .depend $(PROGS) $(SCRIPTS) FORCE
 .PHONY: FORCE cscope
 
 FIO-VERSION-FILE: FORCE
-	@$(SHELL_PATH) ./FIO-VERSION-GEN
+	@$(SHELL) ./FIO-VERSION-GEN
 -include FIO-VERSION-FILE
 
 CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
@@ -162,7 +162,7 @@ gfio: $(GFIO_OBJS)
 $(PROGS): .depend
 
 clean: FORCE
-	-rm -f .depend $(GFIO_OBJS) $(FIO_OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE
+	-rm -f .depend $(GFIO_OBJS )$(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE
 
 cscope:
 	@cscope -b -R

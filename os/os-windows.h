@@ -82,6 +82,7 @@ typedef DWORD_PTR os_cpu_mask_t;
 #define POLLHUP	1
 
 #define SIGCONT	0
+#define SIGUSR1	1
 
 typedef int sigset_t;
 typedef int siginfo_t;

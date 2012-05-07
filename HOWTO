@@ -320,7 +320,7 @@ rw=str		Type of io pattern. Accepted values are:
 		one by appending a ':<nr>' to the end of the string given.
 		For a random read, it would look like 'rw=randread:8' for
 		passing in an offset modifier with a value of 8. If the
-		postfix is used with a sequential IO pattern, then the value
+		suffix is used with a sequential IO pattern, then the value
 		specified will be added to the generated offset for each IO.
 		For instance, using rw=write:4k will skip 4k for every
 		write. It turns sequential IO into sequential IO with holes.
@@ -893,6 +893,11 @@ create_fsync=bool	fsync the data file after creation. This is the
 create_on_open=bool	Don't pre-setup the files for IO, just create open()
 			when it's time to do IO to that file.
 
+create_only=bool	If true, fio will only run the setup phase of the job.
+			If files need to be laid out or updated on disk, only
+			that will be done. The actual job contents are not
+			executed.
+
 pre_read=bool	If this is given, files will be pre-read into memory before
 		starting the given IO operation. This will also clear
 		the 'invalidate' flag, since it is pointless to pre-read
@@ -1107,8 +1112,8 @@ write_bw_log=str If given, write a bandwidth log of the jobs in this job
 		file. Can be used to store data of the bandwidth of the
 		jobs in their lifetime. The included fio_generate_plots
 		script uses gnuplot to turn these text files into nice
-		graphs. See write_log_log for behaviour of given
-		filename. For this option, the postfix is _bw.log.
+		graphs. See write_lat_log for behaviour of given
+		filename. For this option, the suffix is _bw.log.
 
 write_lat_log=str Same as write_bw_log, except that this option stores io
 		submission, completion, and total latencies instead. If no
@@ -1446,6 +1451,9 @@ ticks=		Number of ticks we kept the disk busy.
 io_queue=	Total time spent in the disk queue.
 util=		The disk utilization. A value of 100% means we kept the disk
 		busy constantly, 50% would be a disk idling half of the time.
+
+It is also possible to get fio to dump the current output while it is
+running, without terminating the job. To do that, send fio the USR1 signal.
 
 
 7.0 Terse output

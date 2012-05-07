@@ -78,6 +78,7 @@ struct thread_options {
 	unsigned int create_serialize;
 	unsigned int create_fsync;
 	unsigned int create_on_open;
+	unsigned int create_only;
 	unsigned int end_fsync;
 	unsigned int pre_read;
 	unsigned int sync_io;
@@ -262,6 +263,7 @@ struct thread_options_pack {
 	uint32_t create_serialize;
 	uint32_t create_fsync;
 	uint32_t create_on_open;
+	uint32_t create_only;
 	uint32_t end_fsync;
 	uint32_t pre_read;
 	uint32_t sync_io;
