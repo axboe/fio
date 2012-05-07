@@ -2225,6 +2225,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(create_only),
 		.help	= "Only perform file creation phase",
+		.category = FIO_OPT_C_FILE,
 		.def	= "0",
 	},
 	{
