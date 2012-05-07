@@ -613,7 +613,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	if (ts->runtime[ddir]) {
 		uint64_t runt = ts->runtime[ddir];
 
-		bw = ts->io_bytes[ddir] / runt;
+		bw = ((1000 * ts->io_bytes[ddir]) / runt) / 1024;
 		iops = (1000 * (uint64_t) ts->total_io_u[ddir]) / runt;
 	}
 
