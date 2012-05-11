@@ -846,6 +846,7 @@ static void convert_jobs_eta(struct jobs_eta *je)
 	je->elapsed_sec		= le64_to_cpu(je->elapsed_sec);
 	je->eta_sec		= le64_to_cpu(je->eta_sec);
 	je->nr_threads		= le32_to_cpu(je->nr_threads);
+	je->is_pow2		= le32_to_cpu(je->is_pow2);
 }
 
 void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)

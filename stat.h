@@ -183,6 +183,7 @@ struct jobs_eta {
 	uint32_t iops[2];
 	uint64_t elapsed_sec;
 	uint64_t eta_sec;
+	uint32_t is_pow2;
 
 	/*
 	 * Network 'copy' of run_str[]
