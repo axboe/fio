@@ -725,6 +725,7 @@ static void convert_jobs_eta(struct jobs_eta *je)
 
 	je->elapsed_sec		= le64_to_cpu(je->elapsed_sec);
 	je->eta_sec		= le64_to_cpu(je->eta_sec);
+	je->is_pow2		= le32_to_cpu(je->is_pow2);
 }
 
 static void sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)

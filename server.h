@@ -36,7 +36,7 @@ struct fio_net_int_cmd {
 };
 
 enum {
-	FIO_SERVER_VER		= 7,
+	FIO_SERVER_VER		= 8,
 
 	FIO_SERVER_MAX_PDU	= 1024,
 

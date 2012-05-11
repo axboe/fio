@@ -216,8 +216,14 @@ static int thread_eta(struct thread_data *td)
 static void calc_rate(unsigned long mtime, unsigned long long *io_bytes,
 		      unsigned long long *prev_io_bytes, unsigned int *rate)
 {
-	rate[0] = (io_bytes[0] - prev_io_bytes[0]) / mtime;
-	rate[1] = (io_bytes[1] - prev_io_bytes[1]) / mtime;
+	int i;
+
+	for (i = 0; i <= DDIR_WRITE; i++) {
+		unsigned long long diff;
+
+		diff = io_bytes[i] - prev_io_bytes[i];
+		rate[i] = ((1000 * diff) / mtime) / 1024;
+	}
 	prev_io_bytes[0] = io_bytes[0];
 	prev_io_bytes[1] = io_bytes[1];
 }
@@ -248,7 +254,6 @@ int calc_thread_status(struct jobs_eta *je, int force)
 	static unsigned long long disp_io_bytes[2];
 	static unsigned long long disp_io_iops[2];
 	static struct timeval rate_prev_time, disp_prev_time;
-	int i2p = 0;
 
 	if (!force) {
 		if (temp_stall_ts || terse_output || eta_print == FIO_ETA_NEVER)
@@ -272,6 +277,8 @@ int calc_thread_status(struct jobs_eta *je, int force)
 	io_iops[0] = io_iops[1] = 0;
 	bw_avg_time = ULONG_MAX;
 	for_each_td(td, i) {
+		if (is_power_of_2(td->o.kb_base))
+			je->is_pow2 = 1;
 		if (td->o.bw_avg_time < bw_avg_time)
 			bw_avg_time = td->o.bw_avg_time;
 		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING
@@ -311,8 +318,6 @@ int calc_thread_status(struct jobs_eta *je, int force)
 		je->eta_sec = 0;
 
 	for_each_td(td, i) {
-		if (!i2p && is_power_of_2(td->o.kb_base))
-			i2p = 1;
 		if (exitall_on_terminate) {
 			if (eta_secs[i] < je->eta_sec)
 				je->eta_sec = eta_secs[i];
@@ -363,7 +368,6 @@ void display_thread_status(struct jobs_eta *je)
 	char output[REAL_MAX_JOBS + 512], *p = output;
 	char eta_str[128];
 	double perc = 0.0;
-	int i2p = 0;
 
 	if (je->eta_sec != INT_MAX && je->elapsed_sec) {
 		perc = (double) je->elapsed_sec / (double) (je->elapsed_sec + je->eta_sec);
@@ -374,8 +378,8 @@ void display_thread_status(struct jobs_eta *je)
 	if (je->m_rate || je->t_rate) {
 		char *tr, *mr;
 
-		mr = num2str(je->m_rate, 4, 0, i2p);
-		tr = num2str(je->t_rate, 4, 0, i2p);
+		mr = num2str(je->m_rate, 4, 0, je->is_pow2);
+		tr = num2str(je->t_rate, 4, 0, je->is_pow2);
 		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
 		free(tr);
 		free(mr);
@@ -396,8 +400,8 @@ void display_thread_status(struct jobs_eta *je)
 			sprintf(perc_str, "%3.1f%% done", perc);
 		}
 
-		rate_str[0] = num2str(je->rate[0], 5, 10, i2p);
-		rate_str[1] = num2str(je->rate[1], 5, 10, i2p);
+		rate_str[0] = num2str(je->rate[0], 5, 1024, je->is_pow2);
+		rate_str[1] = num2str(je->rate[1], 5, 1024, je->is_pow2);
 
 		iops_str[0] = num2str(je->iops[0], 4, 1, 0);
 		iops_str[1] = num2str(je->iops[1], 4, 1, 0);

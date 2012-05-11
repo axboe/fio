@@ -451,6 +451,7 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 
 	je->elapsed_sec		= cpu_to_le64(je->elapsed_sec);
 	je->eta_sec		= cpu_to_le64(je->eta_sec);
+	je->is_pow2		= cpu_to_le32(je->is_pow2);
 
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_ETA, je, size, cmd->tag);
 	free(je);
