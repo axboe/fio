@@ -393,7 +393,9 @@ HANDLE fileMappings[1024];
 int shmget(key_t key, size_t size, int shmflg)
 {
 	int mapid = -1;
-	HANDLE hMapping = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, (PAGE_EXECUTE_READWRITE | SEC_RESERVE), size >> 32, size & 0xFFFFFFFF, NULL);
+	uint32_t size_low = size & 0xFFFFFFFF;
+	uint32_t size_high = ((uint64_t)size) >> 32;
+	HANDLE hMapping = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, (PAGE_EXECUTE_READWRITE | SEC_RESERVE), size_high, size_low, NULL);
 	if (hMapping != NULL) {
 		fileMappings[nFileMappings] = hMapping;
 		mapid = nFileMappings;

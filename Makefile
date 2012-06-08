@@ -61,6 +61,7 @@ ifneq (,$(findstring CYGWIN,$(UNAME)))
   LIBS	 += -lpthread -lpsapi -lws2_32
   CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format
   CC	  = x86_64-w64-mingw32-gcc
+  #CC	  = i686-w64-mingw32-gcc
 endif
 
 OBJS = $(SOURCE:.c=.o)
