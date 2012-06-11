@@ -979,6 +979,7 @@ int add_file(struct thread_data *td, const char *fname)
 		td->files_size = new_size;
 	}
 	td->files[cur_files] = f;
+	f->fileno = cur_files;
 
 	/*
 	 * init function, io engine may not be loaded yet

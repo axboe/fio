@@ -72,6 +72,7 @@ struct fio_file {
 	 */
 	char *file_name;
 	unsigned int major, minor;
+	int fileno;
 
 	void *mmap_ptr;
 	size_t mmap_sz;
