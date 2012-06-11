@@ -526,6 +526,11 @@ open_again:
 
 		snprintf(buf, sizeof(buf) - 1, "open(%s)", f->file_name);
 
+		if (__e == EINVAL && (flags & OS_O_DIRECT)) {
+			log_err("fio: looks like your file system does not " \
+				"support direct=1/buffered=0\n");
+		}
+
 		td_verror(td, __e, buf);
 	}
 
