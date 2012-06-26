@@ -523,19 +523,25 @@ void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 	double io_u_dist[FIO_IO_U_MAP_NR];
 	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	double io_u_lat_m[FIO_IO_U_LAT_M_NR];
+	time_t time_p;
+	char time_buf[64];
 
 	if (!(ts->io_bytes[0] + ts->io_bytes[1]) &&
 	    !(ts->total_io_u[0] + ts->total_io_u[1]))
 		return;
 
+	time(&time_p);
+	ctime_r((const time_t *) &time_p, time_buf);
+
 	if (!ts->error) {
-		log_info("%s: (groupid=%d, jobs=%d): err=%2d: pid=%d\n",
+		log_info("%s: (groupid=%d, jobs=%d): err=%2d: pid=%d: %s",
 					ts->name, ts->groupid, ts->members,
-					ts->error, (int) ts->pid);
+					ts->error, (int) ts->pid, time_buf);
 	} else {
-		log_info("%s: (groupid=%d, jobs=%d): err=%2d (%s): pid=%d\n",
+		log_info("%s: (groupid=%d, jobs=%d): err=%2d (%s): pid=%d: %s",
 					ts->name, ts->groupid, ts->members,
-					ts->error, ts->verror, (int) ts->pid);
+					ts->error, ts->verror, (int) ts->pid,
+					time_buf);
 	}
 
 	if (strlen(ts->description))
