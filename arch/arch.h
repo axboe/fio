@@ -19,6 +19,7 @@ enum {
 	arch_arm,
 	arch_sh,
 	arch_hppa,
+	arch_mips,
 
 	arch_generic,
 

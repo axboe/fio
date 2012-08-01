@@ -163,7 +163,7 @@ static int lookup_device(struct thread_data *td, char *path, unsigned int maj,
 #define FMAJOR(dev)	((unsigned int) ((dev) >> FMINORBITS))
 #define FMINOR(dev)	((unsigned int) ((dev) & FMINORMASK))
 
-static void trace_add_open_event(struct thread_data *td, int fileno)
+static void trace_add_open_close_event(struct thread_data *td, int fileno, enum file_log_act action)
 {
 	struct io_piece *ipo;
 
@@ -172,13 +172,13 @@ static void trace_add_open_event(struct thread_data *td, int fileno)
 
 	ipo->ddir = DDIR_INVAL;
 	ipo->fileno = fileno;
-	ipo->file_action = FIO_LOG_OPEN_FILE;
+	ipo->file_action = action;
 	flist_add_tail(&ipo->list, &td->io_log_list);
 }
 
-static void trace_add_file(struct thread_data *td, __u32 device)
+static int trace_add_file(struct thread_data *td, __u32 device)
 {
-	static unsigned int last_maj, last_min;
+	static unsigned int last_maj, last_min, last_fileno;
 	unsigned int maj = FMAJOR(device);
 	unsigned int min = FMINOR(device);
 	struct fio_file *f;
@@ -186,7 +186,7 @@ static void trace_add_file(struct thread_data *td, __u32 device)
 	unsigned int i;
 
 	if (last_maj == maj && last_min == min)
-		return;
+		return last_fileno;
 
 	last_maj = maj;
 	last_min = min;
@@ -195,8 +195,10 @@ static void trace_add_file(struct thread_data *td, __u32 device)
 	 * check for this file in our list
 	 */
 	for_each_file(td, f, i)
-		if (f->major == maj && f->minor == min)
-			return;
+		if (f->major == maj && f->minor == min) {
+			last_fileno = f->fileno;
+			return last_fileno;
+		}
 
 	strcpy(dev, "/dev");
 	if (lookup_device(td, dev, maj, min)) {
@@ -204,15 +206,18 @@ static void trace_add_file(struct thread_data *td, __u32 device)
 
 		dprint(FD_BLKTRACE, "add devices %s\n", dev);
 		fileno = add_file_exclusive(td, dev);
-		trace_add_open_event(td, fileno);
+		trace_add_open_close_event(td, fileno, FIO_LOG_OPEN_FILE);
+		last_fileno = fileno;
 	}
+	return last_fileno;
 }
 
 /*
  * Store blk_io_trace data in an ipo for later retrieval.
  */
 static void store_ipo(struct thread_data *td, unsigned long long offset,
-		      unsigned int bytes, int rw, unsigned long long ttime)
+		      unsigned int bytes, int rw, unsigned long long ttime,
+		      int fileno)
 {
 	struct io_piece *ipo = malloc(sizeof(*ipo));
 
@@ -228,6 +233,7 @@ static void store_ipo(struct thread_data *td, unsigned long long offset,
 		ipo->ddir = DDIR_WRITE;
 	else
 		ipo->ddir = DDIR_READ;
+	ipo->fileno = fileno;
 
 	dprint(FD_BLKTRACE, "store ddir=%d, off=%llu, len=%lu, delay=%lu\n",
 							ipo->ddir, ipo->offset,
@@ -256,9 +262,10 @@ static void handle_trace_discard(struct thread_data *td, struct blk_io_trace *t,
 				 unsigned long long ttime, unsigned long *ios)
 {
 	struct io_piece *ipo = malloc(sizeof(*ipo));
+	int fileno;
 
 	init_ipo(ipo);
-	trace_add_file(td, t->device);
+	fileno = trace_add_file(td, t->device);
 
 	ios[DDIR_WRITE]++;
 	td->o.size += t->bytes;
@@ -273,6 +280,7 @@ static void handle_trace_discard(struct thread_data *td, struct blk_io_trace *t,
 	ipo->len = t->bytes;
 	ipo->delay = ttime / 1000;
 	ipo->ddir = DDIR_TRIM;
+	ipo->fileno = fileno;
 
 	dprint(FD_BLKTRACE, "store discard, off=%llu, len=%lu, delay=%lu\n",
 							ipo->offset, ipo->len,
@@ -285,8 +293,9 @@ static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 			    unsigned int *bs)
 {
 	int rw;
+	int fileno;
 
-	trace_add_file(td, t->device);
+	fileno = trace_add_file(td, t->device);
 
 	rw = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
 
@@ -295,7 +304,7 @@ static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 
 	ios[rw]++;
 	td->o.size += t->bytes;
-	store_ipo(td, t->sector, t->bytes, rw, ttime);
+	store_ipo(td, t->sector, t->bytes, rw, ttime, fileno);
 }
 
 /*
@@ -331,7 +340,8 @@ int load_blktrace(struct thread_data *td, const char *filename)
 	unsigned int cpu;
 	unsigned int rw_bs[2];
 	struct fifo *fifo;
-	int fd;
+	int fd, i;
+	struct fio_file *f;
 
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
@@ -407,6 +417,11 @@ int load_blktrace(struct thread_data *td, const char *filename)
 			handle_trace(td, &t, delay, ios, rw_bs);
 		}
 	} while (1);
+
+	for (i = 0; i < td->files_index; i++) {
+		f= td->files[i];
+		trace_add_open_close_event(td, f->fileno, FIO_LOG_CLOSE_FILE);
+	}
 
 	fifo_free(fifo);
 	close(fd);
