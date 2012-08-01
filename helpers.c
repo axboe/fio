@@ -9,11 +9,13 @@
 #include "arch/arch.h"
 #include "os/os.h"
 
+#ifndef FIO_HAVE_LINUX_FALLOCATE 
 int _weak fallocate(int fd, int mode, off_t offset, off_t len)
 {
 	errno = ENOSYS;
 	return -1;
 }
+#endif
 
 #ifndef __NR_fallocate
 int _weak posix_fallocate(int fd, off_t offset, off_t len)
