@@ -50,7 +50,6 @@
 #include "server.h"
 
 static pthread_t disk_util_thread;
-static struct fio_mutex *disk_thread_mutex;
 static struct fio_mutex *startup_mutex;
 static struct fio_mutex *writeout_mutex;
 static struct flist_head *cgroup_list;
@@ -1589,28 +1588,20 @@ static void run_threads(void)
 	fio_unpin_memory();
 }
 
-void wait_for_disk_thread_exit(void)
-{
-	fio_mutex_down(disk_thread_mutex);
-}
-
 static void *disk_thread_main(void *data)
 {
-	int ret = 0;
-
 	fio_mutex_up(startup_mutex);
 
-	while (threads && !ret) {
+	while (threads) {
 		usleep(DISK_UTIL_MSEC * 1000);
 		if (!threads)
 			break;
-		ret = update_io_ticks();
+		update_io_ticks();
 
 		if (!is_backend)
 			print_thread_status();
 	}
 
-	fio_mutex_up(disk_thread_mutex);
 	return NULL;
 }
 
@@ -1618,20 +1609,14 @@ static int create_disk_util_thread(void)
 {
 	int ret;
 
-	setup_disk_util();
-
-	disk_thread_mutex = fio_mutex_init(0);
-
 	ret = pthread_create(&disk_util_thread, NULL, disk_thread_main, NULL);
 	if (ret) {
-		fio_mutex_remove(disk_thread_mutex);
 		log_err("Can't create disk util thread: %s\n", strerror(ret));
 		return 1;
 	}
 
 	ret = pthread_detach(disk_util_thread);
 	if (ret) {
-		fio_mutex_remove(disk_thread_mutex);
 		log_err("Can't detatch disk util thread: %s\n", strerror(ret));
 		return 1;
 	}
@@ -1695,6 +1680,5 @@ int fio_backend(void)
 
 	fio_mutex_remove(startup_mutex);
 	fio_mutex_remove(writeout_mutex);
-	fio_mutex_remove(disk_thread_mutex);
 	return exit_value;
 }
