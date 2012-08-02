@@ -1620,7 +1620,7 @@ static int create_disk_util_thread(void)
 
 	setup_disk_util();
 
-	disk_thread_mutex = fio_mutex_init(0);
+	disk_thread_mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
 
 	ret = pthread_create(&disk_util_thread, NULL, disk_thread_main, NULL);
 	if (ret) {
@@ -1661,10 +1661,10 @@ int fio_backend(void)
 		setup_log(&agg_io_log[DDIR_WRITE], 0);
 	}
 
-	startup_mutex = fio_mutex_init(0);
+	startup_mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
 	if (startup_mutex == NULL)
 		return 1;
-	writeout_mutex = fio_mutex_init(1);
+	writeout_mutex = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 	if (writeout_mutex == NULL)
 		return 1;
 

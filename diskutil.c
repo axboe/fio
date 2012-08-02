@@ -290,7 +290,7 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 	du->minor = mindev;
 	INIT_FLIST_HEAD(&du->slavelist);
 	INIT_FLIST_HEAD(&du->slaves);
-	du->lock = fio_mutex_init(1);
+	du->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 	du->users = 0;
 
 	fio_mutex_down(disk_util_mutex);
@@ -624,5 +624,5 @@ void show_disk_util(int terse)
 
 void setup_disk_util(void)
 {
-	disk_util_mutex = fio_mutex_init(1);
+	disk_util_mutex = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 }

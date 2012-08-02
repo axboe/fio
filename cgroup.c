@@ -182,7 +182,7 @@ void cgroup_shutdown(struct thread_data *td, char **mnt)
 
 static void fio_init cgroup_init(void)
 {
-	lock = fio_mutex_init(1);
+	lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 }
 
 static void fio_exit cgroup_exit(void)

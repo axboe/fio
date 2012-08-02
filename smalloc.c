@@ -206,7 +206,7 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 	pool->map = ptr;
 	pool->bitmap = (void *) ptr + (pool->nr_blocks * SMALLOC_BPL);
 
-	pool->lock = fio_mutex_init(1);
+	pool->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 	if (!pool->lock)
 		goto out_fail;
 

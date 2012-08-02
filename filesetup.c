@@ -1006,7 +1006,7 @@ int add_file(struct thread_data *td, const char *fname)
 		f->lock = fio_mutex_rw_init();
 		break;
 	case FILE_LOCK_EXCLUSIVE:
-		f->lock = fio_mutex_init(1);
+		f->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 		break;
 	default:
 		log_err("fio: unknown lock mode: %d\n", td->o.file_lock_mode);

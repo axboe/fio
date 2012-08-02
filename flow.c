@@ -92,7 +92,7 @@ void flow_exit_job(struct thread_data *td)
 
 void flow_init(void)
 {
-	flow_lock = fio_mutex_init(1);
+	flow_lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 	flow_list = smalloc(sizeof(*flow_list));
 	INIT_FLIST_HEAD(flow_list);
 }
