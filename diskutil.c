@@ -14,6 +14,9 @@
 static int last_majdev, last_mindev;
 static struct disk_util *last_du;
 
+static struct fio_mutex *disk_util_mutex;
+static int disk_util_exit;
+
 FLIST_HEAD(disk_list);
 
 static struct disk_util *__init_per_file_disk_util(struct thread_data *td,
@@ -102,17 +105,26 @@ static void update_io_tick_disk(struct disk_util *du)
 	memcpy(ldus, &__dus, sizeof(__dus));
 }
 
-void update_io_ticks(void)
+int update_io_ticks(void)
 {
 	struct flist_head *entry;
 	struct disk_util *du;
+	int ret = 0;
 
 	dprint(FD_DISKUTIL, "update io ticks\n");
 
-	flist_for_each(entry, &disk_list) {
-		du = flist_entry(entry, struct disk_util, list);
-		update_io_tick_disk(du);
-	}
+	fio_mutex_down(disk_util_mutex);
+
+	if (!disk_util_exit) {
+		flist_for_each(entry, &disk_list) {
+			du = flist_entry(entry, struct disk_util, list);
+			update_io_tick_disk(du);
+		}
+	} else
+		ret = 1;
+
+	fio_mutex_up(disk_util_mutex);
+	return ret;
 }
 
 static struct disk_util *disk_util_exists(int major, int minor)
@@ -120,13 +132,18 @@ static struct disk_util *disk_util_exists(int major, int minor)
 	struct flist_head *entry;
 	struct disk_util *du;
 
+	fio_mutex_down(disk_util_mutex);
+
 	flist_for_each(entry, &disk_list) {
 		du = flist_entry(entry, struct disk_util, list);
 
-		if (major == du->major && minor == du->minor)
+		if (major == du->major && minor == du->minor) {
+			fio_mutex_up(disk_util_mutex);
 			return du;
+		}
 	}
 
+	fio_mutex_up(disk_util_mutex);
 	return NULL;
 }
 
@@ -276,6 +293,8 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 	du->lock = fio_mutex_init(1);
 	du->users = 0;
 
+	fio_mutex_down(disk_util_mutex);
+
 	flist_for_each(entry, &disk_list) {
 		__du = flist_entry(entry, struct disk_util, list);
 
@@ -283,6 +302,7 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 
 		if (!strcmp((char *) du->dus.name, (char *) __du->dus.name)) {
 			disk_util_free(du);
+			fio_mutex_up(disk_util_mutex);
 			return __du;
 		}
 	}
@@ -293,6 +313,8 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 	get_io_ticks(du, &du->last_dus);
 
 	flist_add_tail(&du->list, &disk_list);
+	fio_mutex_up(disk_util_mutex);
+
 	find_add_disk_slaves(td, path, du);
 	return du;
 }
@@ -521,6 +543,11 @@ void free_disk_util(void)
 {
 	struct disk_util *du;
 
+	disk_util_exit = 1;
+	wait_for_disk_thread_exit();
+
+	fio_mutex_down(disk_util_mutex);
+
 	while (!flist_empty(&disk_list)) {
 		du = flist_entry(disk_list.next, struct disk_util, list);
 		flist_del(&du->list);
@@ -528,6 +555,8 @@ void free_disk_util(void)
 	}
 
 	last_majdev = last_mindev = -1;
+	fio_mutex_up(disk_util_mutex);
+	fio_mutex_remove(disk_util_mutex);
 }
 
 void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
@@ -573,8 +602,12 @@ void show_disk_util(int terse)
 	struct flist_head *entry;
 	struct disk_util *du;
 
-	if (flist_empty(&disk_list))
+	fio_mutex_down(disk_util_mutex);
+
+	if (flist_empty(&disk_list)) {
+		fio_mutex_up(disk_util_mutex);
 		return;
+	}
 
 	if (!terse)
 		log_info("\nDisk stats (read/write):\n");
@@ -585,4 +618,11 @@ void show_disk_util(int terse)
 		aggregate_slaves_stats(du);
 		print_disk_util(&du->dus, &du->agg, terse);
 	}
+
+	fio_mutex_up(disk_util_mutex);
+}
+
+void setup_disk_util(void)
+{
+	disk_util_mutex = fio_mutex_init(1);
 }
