@@ -20,6 +20,9 @@
 
 #include "../os-windows.h"
 
+extern unsigned long mtime_since_now(struct timeval *);
+extern void fio_gettime(struct timeval *, void *);
+
 long sysconf(int name)
 {
 	long long val = -1;
@@ -631,9 +634,30 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 
 int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 {
-	log_err("%s is not implemented\n", __func__);
-	errno = ENOSYS;
-	return -1;
+	struct timeval tv;
+	DWORD ms_remaining;
+	DWORD ms_total = (rqtp->tv_sec * 1000) + (rqtp->tv_nsec / 1000000.0);
+
+	if (ms_total == 0)
+		ms_total = 1;
+
+	ms_remaining = ms_total;
+
+	/* Since Sleep() can sleep for less than the requested time, add a loop to
+	   ensure we only return after the requested length of time has elapsed */
+	do {
+		fio_gettime(&tv, NULL);
+		Sleep(ms_remaining);
+		ms_remaining = ms_total - mtime_since_now(&tv);
+	} while (ms_remaining > 0 && ms_remaining < ms_total);
+
+	/* this implementation will never sleep for less than the requested time */
+	if (rmtp != NULL) {
+		rmtp->tv_sec = 0;
+		rmtp->tv_nsec = 0;
+	}
+
+	return 0;
 }
 
 DIR *opendir(const char *dirname)
