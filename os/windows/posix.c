@@ -99,7 +99,7 @@ int gettimeofday(struct timeval *restrict tp, void *restrict tzp)
 {
 	FILETIME fileTime;
 	unsigned long long unix_time, windows_time;
-	const time_t MILLISECONDS_BETWEEN_1601_AND_1970 = 11644473600000;
+	const unsigned long long MILLISECONDS_BETWEEN_1601_AND_1970 = 11644473600000;
 
 	/* Ignore the timezone parameter */
 	(void)tzp;
@@ -462,7 +462,7 @@ int nice(int incr)
 
 int getrusage(int who, struct rusage *r_usage)
 {
-	const time_t SECONDS_BETWEEN_1601_AND_1970 = 11644473600;
+	const unsigned long long SECONDS_BETWEEN_1601_AND_1970 = 11644473600;
 	FILETIME cTime, eTime, kTime, uTime;
 	time_t time;
 
