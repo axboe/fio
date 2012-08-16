@@ -657,6 +657,12 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 	return ret;
 }
 
+unsigned long long get_start_offset(struct thread_data *td)
+{
+	return td->o.start_offset +
+		(td->thread_number - 1) * td->o.offset_increment;
+}
+
 /*
  * Open the files and setup files sizes, creating files if necessary.
  */
@@ -718,8 +724,7 @@ int setup_files(struct thread_data *td)
 	extend_size = total_size = 0;
 	need_extend = 0;
 	for_each_file(td, f, i) {
-		f->file_offset = td->o.start_offset +
-			(td->thread_number - 1) * td->o.offset_increment;
+		f->file_offset = get_start_offset(td);
 
 		if (!td->o.file_size_low) {
 			/*
