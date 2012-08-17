@@ -98,8 +98,8 @@ char *dlerror(void)
 int gettimeofday(struct timeval *restrict tp, void *restrict tzp)
 {
 	FILETIME fileTime;
-	unsigned long long unix_time, windows_time;
-	const unsigned long long MILLISECONDS_BETWEEN_1601_AND_1970 = 11644473600000;
+	uint64_t unix_time, windows_time;
+	const uint64_t MILLISECONDS_BETWEEN_1601_AND_1970 = 11644473600000;
 
 	/* Ignore the timezone parameter */
 	(void)tzp;
@@ -110,7 +110,7 @@ int gettimeofday(struct timeval *restrict tp, void *restrict tzp)
 	 * Its precision is 100 ns but accuracy is only one clock tick, or normally around 15 ms.
 	 */
 	GetSystemTimeAsFileTime(&fileTime);
-	windows_time = ((unsigned long long)fileTime.dwHighDateTime << 32) + fileTime.dwLowDateTime;
+	windows_time = ((uint64_t)fileTime.dwHighDateTime << 32) + fileTime.dwLowDateTime;
 	/* Divide by 10,000 to convert to ms and subtract the time between 1601 and 1970 */
 	unix_time = (((windows_time)/10000) - MILLISECONDS_BETWEEN_1601_AND_1970);
 	/* unix_time is now the number of milliseconds since 1970 (the Unix epoch) */
@@ -267,7 +267,7 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
 		tp->tv_sec = counts.QuadPart / freq.QuadPart;
 		/* Get the difference between the number of ns stored
 		 * in 'tv_sec' and that stored in 'counts' */
-		unsigned long long t = tp->tv_sec * freq.QuadPart;
+		uint64_t t = tp->tv_sec * freq.QuadPart;
 		t = counts.QuadPart - t;
 		/* 't' now contains the number of cycles since the last second.
 		 * We want the number of nanoseconds, so multiply out by 1,000,000,000
@@ -324,17 +324,17 @@ char *basename(char *path)
 
 	i = strlen(path) - 1;
 
-	while (name[i] != '\\' && name[i] != '/' && i >= 0)
+	while (path[i] != '\\' && path[i] != '/' && i >= 0)
 		i--;
 
-	strcpy(name, path + i);
+	strncpy(name, path + i + 1, MAX_PATH);
 
 	return name;
 }
 
 int posix_fallocate(int fd, off_t offset, off_t len)
 {
-	const int BUFFER_SIZE = 64*1024*1024;
+	const int BUFFER_SIZE = 64 * 1024 * 1024;
 	int rc = 0;
 	char *buf;
 	unsigned int write_len;
@@ -351,7 +351,9 @@ int posix_fallocate(int fd, off_t offset, off_t len)
 
 	memset(buf, 0, BUFFER_SIZE);
 
-	if (lseek(fd, offset, SEEK_SET) == -1)
+	int64_t prev_pos = _telli64(fd);
+
+	if (_lseeki64(fd, offset, SEEK_SET) == -1)
 		return errno;
 
 	while (bytes_remaining > 0) {
@@ -370,17 +372,18 @@ int posix_fallocate(int fd, off_t offset, off_t len)
 	}
 
 	free(buf);
+	_lseeki64(fd, prev_pos, SEEK_SET);
 	return rc;
 }
 
 int ftruncate(int fildes, off_t length)
 {
 	BOOL bSuccess;
-	int old_pos = tell(fildes);
-	lseek(fildes, length, SEEK_SET);
+	int64_t prev_pos = _telli64(fildes);
+	_lseeki64(fildes, length, SEEK_SET);
 	HANDLE hFile = (HANDLE)_get_osfhandle(fildes);
 	bSuccess = SetEndOfFile(hFile);
-	lseek(fildes, old_pos, SEEK_SET);
+	_lseeki64(fildes, prev_pos, SEEK_SET);
 	return !bSuccess;
 }
 
@@ -462,7 +465,7 @@ int nice(int incr)
 
 int getrusage(int who, struct rusage *r_usage)
 {
-	const unsigned long long SECONDS_BETWEEN_1601_AND_1970 = 11644473600;
+	const uint64_t SECONDS_BETWEEN_1601_AND_1970 = 11644473600;
 	FILETIME cTime, eTime, kTime, uTime;
 	time_t time;
 
@@ -470,14 +473,14 @@ int getrusage(int who, struct rusage *r_usage)
 
 	HANDLE hProcess = GetCurrentProcess();
 	GetProcessTimes(hProcess, &cTime, &eTime, &kTime, &uTime);
-	time = ((unsigned long long)uTime.dwHighDateTime << 32) + uTime.dwLowDateTime;
+	time = ((uint64_t)uTime.dwHighDateTime << 32) + uTime.dwLowDateTime;
 	/* Divide by 10,000,000 to get the number of seconds and move the epoch from
 	 * 1601 to 1970 */
 	time = (time_t)(((time)/10000000) - SECONDS_BETWEEN_1601_AND_1970);
 	r_usage->ru_utime.tv_sec = time;
 	/* getrusage() doesn't care about anything other than seconds, so set tv_usec to 0 */
 	r_usage->ru_utime.tv_usec = 0;
-	time = ((unsigned long long)kTime.dwHighDateTime << 32) + kTime.dwLowDateTime;
+	time = ((uint64_t)kTime.dwHighDateTime << 32) + kTime.dwLowDateTime;
 	/* Divide by 10,000,000 to get the number of seconds and move the epoch from
 	 * 1601 to 1970 */
 	time = (time_t)(((time)/10000000) - SECONDS_BETWEEN_1601_AND_1970);
@@ -508,17 +511,17 @@ int fdatasync(int fildes)
 ssize_t pwrite(int fildes, const void *buf, size_t nbyte,
 		off_t offset)
 {
-	long pos = tell(fildes);
-	ssize_t len = write(fildes, buf, nbyte);
-	lseek(fildes, pos, SEEK_SET);
+	int64_t pos = _telli64(fildes);
+	ssize_t len = _write(fildes, buf, nbyte);
+	_lseeki64(fildes, pos, SEEK_SET);
 	return len;
 }
 
 ssize_t pread(int fildes, void *buf, size_t nbyte, off_t offset)
 {
-	long pos = tell(fildes);
+	int64_t pos = _telli64(fildes);
 	ssize_t len = read(fildes, buf, nbyte);
-	lseek(fildes, pos, SEEK_SET);
+	_lseeki64(fildes, pos, SEEK_SET);
 	return len;
 }
 
