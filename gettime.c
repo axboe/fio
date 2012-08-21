@@ -304,7 +304,7 @@ int fio_start_gtod_thread(void)
 	pthread_attr_t attr;
 	int ret;
 
-	mutex = fio_mutex_init(0);
+	mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
 	if (!mutex)
 		return 1;
 

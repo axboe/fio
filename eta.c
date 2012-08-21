@@ -285,14 +285,18 @@ int calc_thread_status(struct jobs_eta *je, int force)
 		    || td->runstate == TD_FSYNCING
 		    || td->runstate == TD_PRE_READING) {
 			je->nr_running++;
-			je->t_rate[0] += td->o.rate[0];
-			je->t_rate[1] += td->o.rate[1];
-			je->m_rate[0] += td->o.ratemin[0];
-			je->m_rate[1] += td->o.ratemin[1];
-			je->t_iops[0] += td->o.rate_iops[0];
-			je->t_iops[1] += td->o.rate_iops[1];
-			je->m_iops[0] += td->o.rate_iops_min[0];
-			je->m_iops[1] += td->o.rate_iops_min[1];
+			if (td_read(td)) {
+				je->t_rate[0] += td->o.rate[DDIR_READ];
+				je->t_iops[0] += td->o.rate_iops[DDIR_READ];
+				je->m_rate[0] += td->o.ratemin[DDIR_READ];
+				je->m_iops[0] += td->o.rate_iops_min[DDIR_READ];
+			}
+			if (td_write(td)) {
+				je->t_rate[1] += td->o.rate[DDIR_WRITE];
+				je->t_iops[1] += td->o.rate_iops[DDIR_WRITE];
+				je->m_rate[1] += td->o.ratemin[DDIR_WRITE];
+				je->m_iops[1] += td->o.rate_iops_min[DDIR_WRITE];
+			}
 			je->files_open += td->nr_open_files;
 		} else if (td->runstate == TD_RAMP) {
 			je->nr_running++;

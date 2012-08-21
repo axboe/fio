@@ -10,6 +10,11 @@ struct fio_mutex {
 	int waiters;
 };
 
+enum {
+	FIO_MUTEX_LOCKED	= 0,
+	FIO_MUTEX_UNLOCKED	= 1,
+};
+
 extern struct fio_mutex *fio_mutex_init(int);
 extern void fio_mutex_remove(struct fio_mutex *);
 extern void fio_mutex_down(struct fio_mutex *);

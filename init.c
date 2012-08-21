@@ -810,7 +810,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			f->real_file_size = -1ULL;
 	}
 
-	td->mutex = fio_mutex_init(0);
+	td->mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
 
 	td->ts.clat_percentiles = td->o.clat_percentiles;
 	if (td->o.overwrite_plist)

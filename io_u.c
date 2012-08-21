@@ -256,7 +256,7 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 {
 	assert(ddir_rw(ddir));
 
-	if (f->last_pos >= f->io_size && td->o.time_based)
+	if (f->last_pos >= f->io_size + get_start_offset(td) && td->o.time_based)
 		f->last_pos = f->last_pos - f->io_size;
 
 	if (f->last_pos < f->real_file_size) {
@@ -377,7 +377,7 @@ static inline int io_u_fits(struct thread_data *td, struct io_u *io_u,
 {
 	struct fio_file *f = io_u->file;
 
-	return io_u->offset + buflen <= f->io_size + td->o.start_offset;
+	return io_u->offset + buflen <= f->io_size + get_start_offset(td);
 }
 
 static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)

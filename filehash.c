@@ -107,5 +107,5 @@ void file_hash_init(void *ptr)
 	for (i = 0; i < HASH_BUCKETS; i++)
 		INIT_FLIST_HEAD(&file_hash[i]);
 
-	hash_lock = fio_mutex_init(1);
+	hash_lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 }

@@ -132,13 +132,18 @@ static struct disk_util *disk_util_exists(int major, int minor)
 	struct flist_head *entry;
 	struct disk_util *du;
 
+	fio_mutex_down(disk_util_mutex);
+
 	flist_for_each(entry, &disk_list) {
 		du = flist_entry(entry, struct disk_util, list);
 
-		if (major == du->major && minor == du->minor)
+		if (major == du->major && minor == du->minor) {
+			fio_mutex_up(disk_util_mutex);
 			return du;
+		}
 	}
 
+	fio_mutex_up(disk_util_mutex);
 	return NULL;
 }
 
@@ -285,7 +290,7 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 	du->minor = mindev;
 	INIT_FLIST_HEAD(&du->slavelist);
 	INIT_FLIST_HEAD(&du->slaves);
-	du->lock = fio_mutex_init(1);
+	du->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 	du->users = 0;
 
 	fio_mutex_down(disk_util_mutex);
@@ -308,8 +313,9 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 	get_io_ticks(du, &du->last_dus);
 
 	flist_add_tail(&du->list, &disk_list);
-	find_add_disk_slaves(td, path, du);
 	fio_mutex_up(disk_util_mutex);
+
+	find_add_disk_slaves(td, path, du);
 	return du;
 }
 
@@ -618,5 +624,5 @@ void show_disk_util(int terse)
 
 void setup_disk_util(void)
 {
-	disk_util_mutex = fio_mutex_init(1);
+	disk_util_mutex = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 }
