@@ -393,7 +393,7 @@ void display_thread_status(struct jobs_eta *je)
 	} else if (je->m_iops[0] || je->m_iops[1] || je->t_iops[0] || je->t_iops[1]) {
 		p += sprintf(p, ", CR=%d/%d IOPS",
 					je->t_iops[0] + je->t_iops[1],
-					je->m_iops[0] + je->t_iops[1]);
+					je->m_iops[0] + je->m_iops[1]);
 	}
 	if (je->eta_sec != INT_MAX && je->nr_running) {
 		char perc_str[32];
