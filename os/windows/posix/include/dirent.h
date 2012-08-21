@@ -1,13 +1,21 @@
 #ifndef DIRENT_H
 #define DIRENT_H
 
+#include <windows.h>
+
 struct dirent
 {
 	ino_t  d_ino;     /*  File serial number */
-	char   d_name[];  /* Name of entry */
+	char   d_name[MAX_PATH];  /* Name of entry */
 };
 
-typedef int DIR;
+struct dirent_ctx
+{
+	HANDLE find_handle;
+	char dirname[MAX_PATH];
+};
+
+typedef struct dirent_ctx DIR;
 
 DIR *opendir(const char *dirname);
 struct dirent *readdir(DIR *dirp);
