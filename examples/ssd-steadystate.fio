@@ -1,0 +1,36 @@
+# Get a decent idea about the steady state performance of an SSD.
+#
+# First we sequentially write the drive. Then we completely
+# overwrite the device again, this time randomly at 4K. The former gives
+# us a good idea of the ideal write performance, you should see flat graph
+# of steady write performance. The latter we would expect to start out at
+# approximately the same rate as the sequential fill, but at some point
+# hit a write cliff and hit steady state. The latency numbers of the steady
+# state also provide a good idea of what kind of latencies to expect when
+# the device is pushed to steady state instead of peak benchmark-like
+# numbers that are usually reported.
+#
+# Note that this is a DESTRUCTIVE test. It operates on the device itself.
+# It's not destructive in the sense that it will ruin the device, but
+# whatever data you have on there will be gone.
+#
+[global]
+ioengine=libaio
+direct=1
+group_reporting
+filename=/dev/fioa
+
+[sequential-fill]
+description=Sequential fill phase
+rw=write
+iodepth=16
+bs=1M
+
+[random-write-steady]
+stonewall
+description=Random write steady state phase
+rw=randwrite
+bs=4K
+iodepth=32
+numjobs=4
+write_bw_log=fioa-steady-state
