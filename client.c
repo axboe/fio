@@ -58,6 +58,9 @@ struct fio_client {
 
 	uint16_t argc;
 	char **argv;
+
+	char **ini_file;
+	unsigned int nr_ini_file;
 };
 
 static struct timeval eta_tv;
@@ -151,6 +154,10 @@ static void remove_client(struct fio_client *client)
 		free(client->argv);
 	if (client->name)
 		free(client->name);
+	while (client->nr_ini_file)
+		free(client->ini_file[--client->nr_ini_file]);
+	if (client->ini_file)
+		free(client->ini_file);
 
 	free(client);
 	nr_clients--;
@@ -191,6 +198,19 @@ void fio_client_add_cmd_option(void *cookie, const char *opt)
 
 		__fio_client_add_cmd_option(client, opt);
 	}
+}
+
+void fio_client_add_ini_file(void *cookie, const char *ini_file)
+{
+	struct fio_client *client = cookie;
+	size_t new_size;
+
+	dprint(FD_NET, "client <%s>: add ini %s\n", client->hostname, ini_file);
+
+	new_size = (client->nr_ini_file + 1) * sizeof(char *);
+	client->ini_file = realloc(client->ini_file, new_size);
+	client->ini_file[client->nr_ini_file] = strdup(ini_file);
+	client->nr_ini_file++;
 }
 
 int fio_client_add(const char *hostname, void **cookie)
@@ -521,7 +541,18 @@ int fio_clients_send_ini(const char *filename)
 	flist_for_each_safe(entry, tmp, &client_list) {
 		client = flist_entry(entry, struct fio_client, list);
 
-		if (fio_client_send_ini(client, filename))
+		if (client->nr_ini_file) {
+			int i;
+
+			for (i = 0; i < client->nr_ini_file; i++) {
+				const char *ini = client->ini_file[i];
+
+				if (fio_client_send_ini(client, ini)) {
+					remove_client(client);
+					break;
+				}
+			}
+		} else if (!filename || fio_client_send_ini(client, filename))
 			remove_client(client);
 
 		client->sent_job = 1;

@@ -124,6 +124,7 @@ extern int fio_clients_send_ini(const char *);
 extern int fio_handle_clients(void);
 extern int fio_client_add(const char *, void **);
 extern void fio_client_add_cmd_option(void *, const char *);
+extern void fio_client_add_ini_file(void *, const char *);
 
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);

@@ -1534,6 +1534,18 @@ int parse_cmd_line(int argc, char *argv[])
 				exit_val = 1;
 				break;
 			}
+			/*
+			 * If the next argument exists and isn't an option,
+			 * assume it's a job file for this client only.
+			 */
+			while (optind < argc) {
+				if (!strncmp(argv[optind], "--", 2) ||
+				    !strncmp(argv[optind], "-", 1))
+					break;
+
+				fio_client_add_ini_file(cur_client, argv[optind]);
+				optind++;
+			}
 			break;
 		default:
 			do_exit++;
@@ -1604,6 +1616,11 @@ int parse_options(int argc, char *argv[])
 				free(ini_file[i]);
 			}
 		}
+	} else if (nr_clients) {
+		if (fill_def_thread())
+			return 1;
+		if (fio_clients_send_ini(NULL))
+			return 1;
 	}
 
 	free(ini_file);
