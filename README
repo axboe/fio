@@ -362,7 +362,7 @@ are sent to the server. The 'server' string follows the same format as it
 does on the server side, to allow IP/hostname/socket and port strings.
 You can connect to multiple clients as well, to do that you could run:
 
-fio --client=server2 --client=server2 <job file(s)>
+fio --client=server2 <job file(s)> --client=server2 <job file(s)>
 
 
 Platforms
