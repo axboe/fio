@@ -61,6 +61,9 @@ struct fio_client {
 
 	struct client_ops *ops;
 	void *client_data;
+
+	char **ini_file;
+	unsigned int nr_ini_file;
 };
 
 struct cmd_iolog_pdu;
@@ -120,6 +123,7 @@ extern int fio_handle_clients(struct client_ops *);
 extern int fio_client_add(struct client_ops *, const char *, void **);
 extern struct fio_client *fio_client_add_explicit(struct client_ops *, const char *, int, int);
 extern void fio_client_add_cmd_option(void *, const char *);
+extern void fio_client_add_ini_file(void *, const char *);
 extern int fio_client_terminate(struct fio_client *);
 extern void fio_clients_terminate(void);
 extern struct fio_client *fio_get_client(struct fio_client *);
