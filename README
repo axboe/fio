@@ -138,8 +138,8 @@ $ fio
 				May be "always", "never" or "auto"
 	--section=name		Only run specified section in job file.
 				Multiple sections can be specified.
-	--alloc-size=kb	Set smalloc pool to this size in kb (def 1024)
-	--warnings-fatal Fio parser warnings are fatal
+	--alloc-size=kb		Set smalloc pool to this size in kb (def 1024)
+	--warnings-fatal	Fio parser warnings are fatal
 	--max-jobs		Maximum number of threads/processes to support
 	--server=args		Start backend server. See Client/Server section.
 	--client=host		Connect to specified backend.
@@ -161,11 +161,11 @@ options in fio. Currently the options are:
 
 	process		Dump info related to processes
 	file		Dump info related to file actions
-	io			Dump info related to IO queuing
-	mem			Dump info related to memory allocations
+	io		Dump info related to IO queuing
+	mem		Dump info related to memory allocations
 	blktrace	Dump info related to blktrace setup
 	verify		Dump info related to IO verification
-	all			Enable all debug options
+	all		Enable all debug options
 	random		Dump info related to random offset generation
 	parse		Dump info related to option matching and parsing
 	diskutil	Dump info related to disk utilization updates
