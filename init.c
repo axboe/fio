@@ -1185,7 +1185,7 @@ static void usage(const char *name)
 		"\t\t\tprocess,file,io,mem,blktrace,verify,random,parse,\n"
 		"\t\t\tdiskutil,job,mutex,profile,time,net\n");
 	printf("  --output\t\tWrite output to file\n");
-	printf("  --timeout\t\tRuntime in seconds\n");
+	printf("  --runtime\t\tRuntime in seconds\n");
 	printf("  --latency-log\t\tGenerate per-job latency logs\n");
 	printf("  --bandwidth-log\tGenerate per-job bandwidth logs\n");
 	printf("  --minimal\t\tMinimal (terse) output\n");
