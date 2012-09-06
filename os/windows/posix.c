@@ -377,7 +377,7 @@ char *basename(char *path)
 
 int posix_fallocate(int fd, off_t offset, off_t len)
 {
-	const int BUFFER_SIZE = 64 * 1024 * 1024;
+	const int BUFFER_SIZE = 256 * 1024;
 	int rc = 0;
 	char *buf;
 	unsigned int write_len;
