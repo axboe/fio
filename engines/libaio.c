@@ -266,7 +266,7 @@ static int fio_libaio_init(struct thread_data *td)
 	 * and we need the right depth.
 	 */
 	if (!o->userspace_reap)
-		err = io_queue_init(0, &ld->aio_ctx);
+		err = io_queue_init(INT_MAX, &ld->aio_ctx);
 	if (o->userspace_reap || err == -EINVAL)
 		err = io_queue_init(td->o.iodepth, &ld->aio_ctx);
 	if (err) {
