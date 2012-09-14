@@ -738,10 +738,8 @@ static void show_thread_status_terse_v2(struct thread_stat *ts,
 	log_info("\n");
 }
 
-#define FIO_TERSE_VERSION	"3"
-
-static void show_thread_status_terse_v3(struct thread_stat *ts,
-					struct group_run_stats *rs)
+static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
+					   struct group_run_stats *rs, int ver)
 {
 	double io_u_dist[FIO_IO_U_MAP_NR];
 	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
@@ -750,14 +748,15 @@ static void show_thread_status_terse_v3(struct thread_stat *ts,
 	int i;
 
 	/* General Info */
-	log_info("%s;%s;%s;%d;%d", FIO_TERSE_VERSION, fio_version_string,
+	log_info("%s;%s;%s;%d;%d", ver, fio_version_string,
 					ts->name, ts->groupid, ts->error);
 	/* Log Read Status */
 	show_ddir_status_terse(ts, rs, DDIR_READ);
 	/* Log Write Status */
 	show_ddir_status_terse(ts, rs, DDIR_WRITE);
 	/* Log Trim Status */
-	show_ddir_status_terse(ts, rs, DDIR_TRIM);
+	if (ver == 4)
+		show_ddir_status_terse(ts, rs, DDIR_TRIM);
 
 	/* CPU Usage */
 	if (ts->total_run_time) {
@@ -809,8 +808,8 @@ static void show_thread_status_terse(struct thread_stat *ts,
 {
 	if (terse_version == 2)
 		show_thread_status_terse_v2(ts, rs);
-	else if (terse_version == 3)
-		show_thread_status_terse_v3(ts, rs);
+	else if (terse_version == 3 || terse_version == 4)
+		show_thread_status_terse_v3_v4(ts, rs, terse_version);
 	else
 		log_err("fio: bad terse version!? %d\n", terse_version);
 }
