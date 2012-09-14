@@ -2,10 +2,10 @@
 #define FIO_STAT_H
 
 struct group_run_stats {
-	uint64_t max_run[2], min_run[2];
-	uint64_t max_bw[2], min_bw[2];
-	uint64_t io_kb[2];
-	uint64_t agg[2];
+	uint64_t max_run[DDIR_RWDIR_CNT], min_run[DDIR_RWDIR_CNT];
+	uint64_t max_bw[DDIR_RWDIR_CNT], min_bw[DDIR_RWDIR_CNT];
+	uint64_t io_kb[DDIR_RWDIR_CNT];
+	uint64_t agg[DDIR_RWDIR_CNT];
 	uint32_t kb_base;
 	uint32_t groupid;
 };
@@ -124,11 +124,11 @@ struct thread_stat {
 	/*
 	 * bandwidth and latency stats
 	 */
-	struct io_stat clat_stat[2];		/* completion latency */
-	struct io_stat slat_stat[2];		/* submission latency */
-	struct io_stat lat_stat[2];		/* total latency */
-	struct io_stat bw_stat[2];		/* bandwidth stats */
-	struct io_stat iops_stat[2];		/* IOPS stats */
+	struct io_stat clat_stat[DDIR_RWDIR_CNT]; /* completion latency */
+	struct io_stat slat_stat[DDIR_RWDIR_CNT]; /* submission latency */
+	struct io_stat lat_stat[DDIR_RWDIR_CNT]; /* total latency */
+	struct io_stat bw_stat[DDIR_RWDIR_CNT]; /* bandwidth stats */
+	struct io_stat iops_stat[DDIR_RWDIR_CNT]; /* IOPS stats */
 
 	/*
 	 * fio system usage accounting
@@ -149,14 +149,14 @@ struct thread_stat {
 	uint32_t io_u_complete[FIO_IO_U_MAP_NR];
 	uint32_t io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	uint32_t io_u_lat_m[FIO_IO_U_LAT_M_NR];
-	uint32_t io_u_plat[2][FIO_IO_U_PLAT_NR];
+	uint32_t io_u_plat[DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR];
 	uint64_t total_io_u[3];
 	uint64_t short_io_u[3];
 	uint64_t total_submit;
 	uint64_t total_complete;
 
-	uint64_t io_bytes[2];
-	uint64_t runtime[2];
+	uint64_t io_bytes[DDIR_RWDIR_CNT];
+	uint64_t runtime[DDIR_RWDIR_CNT];
 	uint64_t total_run_time;
 
 	/*
@@ -176,8 +176,8 @@ struct jobs_eta {
 	uint32_t files_open;
 	uint32_t m_rate, t_rate;
 	uint32_t m_iops, t_iops;
-	uint32_t rate[2];
-	uint32_t iops[2];
+	uint32_t rate[DDIR_RWDIR_CNT];
+	uint32_t iops[DDIR_RWDIR_CNT];
 	uint64_t elapsed_sec;
 	uint64_t eta_sec;
 	uint32_t is_pow2;

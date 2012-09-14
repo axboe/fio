@@ -468,6 +468,11 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 
 	dprint(FD_FILE, "fd open %s\n", f->file_name);
 
+	if (td_trim(td) && f->filetype != FIO_TYPE_BD) {
+		log_err("fio: trim only applies to block device\n");
+		return 1;
+	}
+
 	if (!strcmp(f->file_name, "-")) {
 		if (td_rw(td)) {
 			log_err("fio: can't read/write to stdin/out\n");
@@ -482,14 +487,17 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 			f_out = stderr;
 	}
 
+	if (td_trim(td))
+		goto skip_flags;
 	if (td->o.odirect)
 		flags |= OS_O_DIRECT;
 	if (td->o.sync_io)
 		flags |= O_SYNC;
-	if (f->filetype != FIO_TYPE_FILE)
-		flags |= FIO_O_NOATIME;
 	if (td->o.create_on_open)
 		flags |= O_CREAT;
+skip_flags:
+	if (f->filetype != FIO_TYPE_FILE)
+		flags |= FIO_O_NOATIME;
 
 open_again:
 	if (td_write(td)) {
@@ -503,7 +511,7 @@ open_again:
 			f->fd = dup(STDOUT_FILENO);
 		else
 			from_hash = file_lookup_open(f, flags);
-	} else {
+	} else if (td_read(td)) {
 		if (f->filetype == FIO_TYPE_CHAR && !read_only)
 			flags |= O_RDWR;
 		else
@@ -513,6 +521,9 @@ open_again:
 			f->fd = dup(STDIN_FILENO);
 		else
 			from_hash = file_lookup_open(f, flags);
+	} else { //td trim
+		flags |= O_RDWR;
+		from_hash = file_lookup_open(f, flags);
 	}
 
 	if (f->fd == -1) {

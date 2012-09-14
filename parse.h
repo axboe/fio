@@ -46,7 +46,9 @@ struct fio_option {
 	unsigned int off2;
 	unsigned int off3;
 	unsigned int off4;
-	void *roff1, *roff2, *roff3, *roff4;
+	unsigned int off5;
+	unsigned int off6;
+	void *roff1, *roff2, *roff3, *roff4, *roff5, *roff6;
 	unsigned int maxval;		/* max and min value */
 	int minval;
 	double maxfp;			/* max and min floating value */

@@ -15,7 +15,7 @@ struct io_completion_data {
 	int nr;				/* input */
 
 	int error;			/* output */
-	unsigned long bytes_done[2];	/* output */
+	unsigned long bytes_done[DDIR_RWDIR_CNT];	/* output */
 	struct timeval time;		/* output */
 };
 
@@ -543,6 +543,8 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	if (td_rw(td) && __should_check_rate(td, odir))
 		td->rate_pending_usleep[odir] -= usec;
 
+	if (ddir_trim(ddir))
+		return ddir;
 	return ddir;
 }
 
@@ -599,8 +601,10 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 		ddir = td->rwmix_ddir;
 	} else if (td_read(td))
 		ddir = DDIR_READ;
-	else
+	else if (td_write(td))
 		ddir = DDIR_WRITE;
+	else
+		ddir = DDIR_TRIM;
 
 	td->rwmix_ddir = rate_ddir(td, ddir);
 	return td->rwmix_ddir;
@@ -1406,7 +1410,7 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 					(usec_for_io(td, idx) -
 					 utime_since_now(&td->start));
 			}
-			if (__should_check_rate(td, odx))
+			if (idx != DDIR_TRIM && __should_check_rate(td, odx))
 				td->rate_pending_usleep[odx] =
 					(usec_for_io(td, odx) -
 					 utime_since_now(&td->start));
@@ -1444,13 +1448,15 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 static void init_icd(struct thread_data *td, struct io_completion_data *icd,
 		     int nr)
 {
+	int ddir;
 	if (!td->o.disable_clat || !td->o.disable_bw)
 		fio_gettime(&icd->time, NULL);
 
 	icd->nr = nr;
 
 	icd->error = 0;
-	icd->bytes_done[0] = icd->bytes_done[1] = 0;
+	for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++)
+		icd->bytes_done[ddir] = 0;
 }
 
 static void ios_completed(struct thread_data *td,
@@ -1489,8 +1495,10 @@ int io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
 	}
 
 	if (bytes) {
-		bytes[0] += icd.bytes_done[0];
-		bytes[1] += icd.bytes_done[1];
+		int ddir;
+
+		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++)
+			bytes[ddir] += icd.bytes_done[ddir];
 	}
 
 	return 0;
@@ -1527,8 +1535,10 @@ int io_u_queued_complete(struct thread_data *td, int min_evts,
 	}
 
 	if (bytes) {
-		bytes[0] += icd.bytes_done[0];
-		bytes[1] += icd.bytes_done[1];
+		int ddir;
+
+		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++)
+			bytes[ddir] += icd.bytes_done[ddir];
 	}
 
 	return 0;

@@ -108,12 +108,12 @@ struct thread_options {
 	unsigned long long file_size_high;
 	unsigned long long start_offset;
 
-	unsigned int bs[2];
-	unsigned int ba[2];
-	unsigned int min_bs[2];
-	unsigned int max_bs[2];
-	struct bssplit *bssplit[2];
-	unsigned int bssplit_nr[2];
+	unsigned int bs[DDIR_RWDIR_CNT];
+	unsigned int ba[DDIR_RWDIR_CNT];
+	unsigned int min_bs[DDIR_RWDIR_CNT];
+	unsigned int max_bs[DDIR_RWDIR_CNT];
+	struct bssplit *bssplit[DDIR_RWDIR_CNT];
+	unsigned int bssplit_nr[DDIR_RWDIR_CNT];
 
 	unsigned int nr_files;
 	unsigned int open_files;
@@ -228,11 +228,11 @@ struct thread_options {
 	char *exec_prerun;
 	char *exec_postrun;
 
-	unsigned int rate[2];
-	unsigned int ratemin[2];
+	unsigned int rate[DDIR_RWDIR_CNT];
+	unsigned int ratemin[DDIR_RWDIR_CNT];
 	unsigned int ratecycle;
-	unsigned int rate_iops[2];
-	unsigned int rate_iops_min[2];
+	unsigned int rate_iops[DDIR_RWDIR_CNT];
+	unsigned int rate_iops_min[DDIR_RWDIR_CNT];
 
 	char *ioscheduler;
 
@@ -290,10 +290,10 @@ struct thread_data {
 	struct io_log *bw_log;
 	struct io_log *iops_log;
 
-	uint64_t stat_io_bytes[2];
+	uint64_t stat_io_bytes[DDIR_RWDIR_CNT];
 	struct timeval bw_sample_time;
 
-	uint64_t stat_io_blocks[2];
+	uint64_t stat_io_blocks[DDIR_RWDIR_CNT];
 	struct timeval iops_sample_time;
 
 	struct rusage ru_start;
@@ -395,21 +395,21 @@ struct thread_data {
 	/*
 	 * Rate state
 	 */
-	unsigned long long rate_bps[2];
-	long rate_pending_usleep[2];
-	unsigned long rate_bytes[2];
-	unsigned long rate_blocks[2];
-	struct timeval lastrate[2];
+	unsigned long long rate_bps[DDIR_RWDIR_CNT];
+	long rate_pending_usleep[DDIR_RWDIR_CNT];
+	unsigned long rate_bytes[DDIR_RWDIR_CNT];
+	unsigned long rate_blocks[DDIR_RWDIR_CNT];
+	struct timeval lastrate[DDIR_RWDIR_CNT];
 
 	unsigned long long total_io_size;
 	unsigned long long fill_device_size;
 
-	unsigned long io_issues[2];
-	unsigned long long io_blocks[2];
-	unsigned long long this_io_blocks[2];
-	unsigned long long io_bytes[2];
+	unsigned long io_issues[DDIR_RWDIR_CNT];
+	unsigned long long io_blocks[DDIR_RWDIR_CNT];
+	unsigned long long this_io_blocks[DDIR_RWDIR_CNT];
+	unsigned long long io_bytes[DDIR_RWDIR_CNT];
 	unsigned long long io_skip_bytes;
-	unsigned long long this_io_bytes[2];
+	unsigned long long this_io_bytes[DDIR_RWDIR_CNT];
 	unsigned long long zone_bytes;
 	struct fio_mutex *mutex;
 
@@ -721,10 +721,12 @@ static inline int should_check_rate(struct thread_data *td,
 {
 	int ret = 0;
 
-	if (bytes_done[0])
-		ret |= __should_check_rate(td, 0);
-	if (bytes_done[1])
-		ret |= __should_check_rate(td, 1);
+	if (bytes_done[DDIR_READ])
+		ret |= __should_check_rate(td, DDIR_READ);
+	if (bytes_done[DDIR_WRITE])
+		ret |= __should_check_rate(td, DDIR_WRITE);
+	if (bytes_done[DDIR_TRIM])
+		ret |= __should_check_rate(td, DDIR_TRIM);
 
 	return ret;
 }

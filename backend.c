@@ -58,7 +58,7 @@ static char *cgroup_mnt;
 static int exit_value;
 static volatile int fio_abort;
 
-struct io_log *agg_io_log[2];
+struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 
 int groupid = 0;
 unsigned int thread_number = 0;
@@ -208,10 +208,12 @@ static int check_min_rate(struct thread_data *td, struct timeval *now,
 {
 	int ret = 0;
 
-	if (bytes_done[0])
-		ret |= __check_min_rate(td, now, 0);
-	if (bytes_done[1])
-		ret |= __check_min_rate(td, now, 1);
+	if (bytes_done[DDIR_READ])
+		ret |= __check_min_rate(td, now, DDIR_READ);
+	if (bytes_done[DDIR_WRITE])
+		ret |= __check_min_rate(td, now, DDIR_WRITE);
+	if (bytes_done[DDIR_TRIM])
+		ret |= __check_min_rate(td, now, DDIR_TRIM);
 
 	return ret;
 }
@@ -545,11 +547,13 @@ static int io_bytes_exceeded(struct thread_data *td)
 	unsigned long long bytes;
 
 	if (td_rw(td))
-		bytes = td->this_io_bytes[0] + td->this_io_bytes[1];
+		bytes = td->this_io_bytes[DDIR_READ] + td->this_io_bytes[DDIR_WRITE];
 	else if (td_write(td))
-		bytes = td->this_io_bytes[1];
+		bytes = td->this_io_bytes[DDIR_WRITE];
+	else if (td_read(td))
+		bytes = td->this_io_bytes[DDIR_READ];
 	else
-		bytes = td->this_io_bytes[0];
+		bytes = td->this_io_bytes[DDIR_TRIM];
 
 	return bytes >= td->o.size;
 }
@@ -572,7 +576,7 @@ static void do_io(struct thread_data *td)
 		(!flist_empty(&td->trim_list)) || !io_bytes_exceeded(td) ||
 		td->o.time_based) {
 		struct timeval comp_time;
-		unsigned long bytes_done[2] = { 0, 0 };
+		unsigned long bytes_done[DDIR_RWDIR_CNT] = { 0, 0, 0 };
 		int min_evts = 0;
 		struct io_u *io_u;
 		int ret2, full;
@@ -649,8 +653,9 @@ static void do_io(struct thread_data *td)
 				requeue_io_u(td, &io_u);
 			} else {
 sync_done:
-				if (__should_check_rate(td, 0) ||
-				    __should_check_rate(td, 1))
+				if (__should_check_rate(td, DDIR_READ) ||
+				    __should_check_rate(td, DDIR_WRITE) ||
+				    __should_check_rate(td, DDIR_TRIM))
 					fio_gettime(&comp_time, NULL);
 
 				ret = io_u_sync_complete(td, io_u, bytes_done);
@@ -697,8 +702,9 @@ sync_done:
 			if (full && !min_evts)
 				min_evts = 1;
 
-			if (__should_check_rate(td, 0) ||
-			    __should_check_rate(td, 1))
+			if (__should_check_rate(td, DDIR_READ) ||
+			    __should_check_rate(td, DDIR_WRITE) ||
+			    __should_check_rate(td, DDIR_TRIM))
 				fio_gettime(&comp_time, NULL);
 
 			do {
@@ -711,7 +717,8 @@ sync_done:
 
 		if (ret < 0)
 			break;
-		if (!(bytes_done[0] + bytes_done[1]))
+		if (!(bytes_done[DDIR_READ] + bytes_done[DDIR_WRITE]
+				+ bytes_done[DDIR_TRIM]))
 			continue;
 
 		if (!in_ramp_time(td) && should_check_rate(td, bytes_done)) {
@@ -726,7 +733,8 @@ sync_done:
 		if (td->o.thinktime) {
 			unsigned long long b;
 
-			b = td->io_blocks[0] + td->io_blocks[1];
+			b = td->io_blocks[DDIR_READ] + td->io_blocks[DDIR_WRITE] +
+				td->io_blocks[DDIR_TRIM];
 			if (!(b % td->o.thinktime_blocks)) {
 				int left;
 
@@ -772,7 +780,8 @@ sync_done:
 	/*
 	 * stop job if we failed doing any IO
 	 */
-	if ((td->this_io_bytes[0] + td->this_io_bytes[1]) == 0)
+	if ((td->this_io_bytes[DDIR_READ] + td->this_io_bytes[DDIR_WRITE] +
+			td->this_io_bytes[DDIR_TRIM]) == 0)
 		td->done = 1;
 }
 
@@ -800,6 +809,7 @@ static int init_io_u(struct thread_data *td)
 
 	max_units = td->o.iodepth;
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+	max_bs = max(td->o.max_bs[DDIR_TRIM], max_bs);
 	min_write = td->o.min_bs[DDIR_WRITE];
 	td->orig_buffer_size = (unsigned long long) max_bs
 					* (unsigned long long) max_units;
@@ -937,8 +947,8 @@ static int keep_running(struct thread_data *td)
 		return 1;
 	}
 
-	io_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE]
-			+ td->io_skip_bytes;
+	io_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE] +
+			td->io_bytes[DDIR_TRIM] + td->io_skip_bytes;
 	if (io_done < td->o.size)
 		return 1;
 
@@ -1097,10 +1107,13 @@ static void *thread_main(void *data)
 		memcpy(&td->iops_sample_time, &td->start, sizeof(td->start));
 		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
 
-		if (td->o.ratemin[0] || td->o.ratemin[1]) {
-		        memcpy(&td->lastrate[0], &td->bw_sample_time,
+		if (td->o.ratemin[DDIR_READ] || td->o.ratemin[DDIR_WRITE] ||
+				td->o.ratemin[DDIR_TRIM]) {
+		        memcpy(&td->lastrate[DDIR_READ], &td->bw_sample_time,
 						sizeof(td->bw_sample_time));
-		        memcpy(&td->lastrate[1], &td->bw_sample_time,
+		        memcpy(&td->lastrate[DDIR_WRITE], &td->bw_sample_time,
+						sizeof(td->bw_sample_time));
+		        memcpy(&td->lastrate[DDIR_TRIM], &td->bw_sample_time,
 						sizeof(td->bw_sample_time));
 		}
 
@@ -1120,6 +1133,10 @@ static void *thread_main(void *data)
 		if (td_write(td) && td->io_bytes[DDIR_WRITE]) {
 			elapsed = utime_since_now(&td->start);
 			td->ts.runtime[DDIR_WRITE] += elapsed;
+		}
+		if (td_trim(td) && td->io_bytes[DDIR_TRIM]) {
+			elapsed = utime_since_now(&td->start);
+			td->ts.runtime[DDIR_TRIM] += elapsed;
 		}
 
 		if (td->error || td->terminate)
@@ -1143,11 +1160,13 @@ static void *thread_main(void *data)
 	}
 
 	update_rusage_stat(td);
-	td->ts.runtime[0] = (td->ts.runtime[0] + 999) / 1000;
-	td->ts.runtime[1] = (td->ts.runtime[1] + 999) / 1000;
+	td->ts.runtime[DDIR_READ] = (td->ts.runtime[DDIR_READ] + 999) / 1000;
+	td->ts.runtime[DDIR_WRITE] = (td->ts.runtime[DDIR_WRITE] + 999) / 1000;
+	td->ts.runtime[DDIR_TRIM] = (td->ts.runtime[DDIR_TRIM] + 999) / 1000;
 	td->ts.total_run_time = mtime_since_now(&td->epoch);
-	td->ts.io_bytes[0] = td->io_bytes[0];
-	td->ts.io_bytes[1] = td->io_bytes[1];
+	td->ts.io_bytes[DDIR_READ] = td->io_bytes[DDIR_READ];
+	td->ts.io_bytes[DDIR_WRITE] = td->io_bytes[DDIR_WRITE];
+	td->ts.io_bytes[DDIR_TRIM] = td->io_bytes[DDIR_TRIM];
 
 	fio_mutex_down(writeout_mutex);
 	if (td->bw_log) {
@@ -1337,8 +1356,10 @@ static void reap_threads(unsigned int *nr_running, unsigned int *t_rate,
 		continue;
 reaped:
 		(*nr_running)--;
-		(*m_rate) -= (td->o.ratemin[0] + td->o.ratemin[1]);
-		(*t_rate) -= (td->o.rate[0] + td->o.rate[1]);
+		(*m_rate) -= (td->o.ratemin[DDIR_READ] + td->o.ratemin[DDIR_WRITE] +
+			td->o.ratemin[DDIR_TRIM]);
+		(*t_rate) -= (td->o.rate[DDIR_READ] + td->o.rate[DDIR_WRITE] +
+			td->o.rate[DDIR_TRIM]);
 		if (!td->pid)
 			pending--;
 
@@ -1560,8 +1581,10 @@ static void run_threads(void)
 				td_set_runstate(td, TD_RUNNING);
 			nr_running++;
 			nr_started--;
-			m_rate += td->o.ratemin[0] + td->o.ratemin[1];
-			t_rate += td->o.rate[0] + td->o.rate[1];
+			m_rate += td->o.ratemin[DDIR_READ] +
+				td->o.ratemin[DDIR_WRITE] + td->o.ratemin[DDIR_TRIM];
+			t_rate += td->o.rate[DDIR_READ] +
+				td->o.rate[DDIR_WRITE] + td->o.rate[DDIR_TRIM];
 			todo--;
 			fio_mutex_up(td->mutex);
 		}
@@ -1659,6 +1682,7 @@ int fio_backend(void)
 	if (write_bw_log) {
 		setup_log(&agg_io_log[DDIR_READ], 0);
 		setup_log(&agg_io_log[DDIR_WRITE], 0);
+		setup_log(&agg_io_log[DDIR_TRIM], 0);
 	}
 
 	startup_mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
@@ -1681,6 +1705,8 @@ int fio_backend(void)
 		if (write_bw_log) {
 			__finish_log(agg_io_log[DDIR_READ], "agg-read_bw.log");
 			__finish_log(agg_io_log[DDIR_WRITE],
+					"agg-write_bw.log");
+			__finish_log(agg_io_log[DDIR_TRIM],
 					"agg-write_bw.log");
 		}
 	}

@@ -66,13 +66,16 @@ static const char *fio_arch_strings[arch_nr] = {
 
 static void reset_io_counters(struct thread_data *td)
 {
-	td->stat_io_bytes[0] = td->stat_io_bytes[1] = 0;
-	td->this_io_bytes[0] = td->this_io_bytes[1] = 0;
-	td->stat_io_blocks[0] = td->stat_io_blocks[1] = 0;
-	td->this_io_blocks[0] = td->this_io_blocks[1] = 0;
+	int ddir;
+	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
+		td->stat_io_bytes[ddir] = 0;
+		td->this_io_bytes[ddir] = 0;
+		td->stat_io_blocks[ddir] = 0;
+		td->this_io_blocks[ddir] = 0;
+		td->rate_bytes[ddir] = 0;
+		td->rate_blocks[ddir] = 0;
+	}
 	td->zone_bytes = 0;
-	td->rate_bytes[0] = td->rate_bytes[1] = 0;
-	td->rate_blocks[0] = td->rate_blocks[1] = 0;
 
 	td->last_was_sync = 0;
 
@@ -107,16 +110,15 @@ void reset_all_stats(struct thread_data *td)
 
 	reset_io_counters(td);
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		td->io_bytes[i] = 0;
 		td->io_blocks[i] = 0;
 		td->io_issues[i] = 0;
 		td->ts.total_io_u[i] = 0;
+		td->ts.runtime[i] = 0;
 	}
 
 	fio_gettime(&tv, NULL);
-	td->ts.runtime[0] = 0;
-	td->ts.runtime[1] = 0;
 	memcpy(&td->epoch, &tv, sizeof(tv));
 	memcpy(&td->start, &tv, sizeof(tv));
 }

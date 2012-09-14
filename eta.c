@@ -53,11 +53,16 @@ static void check_str_update(struct thread_data *td)
 				c = 'r';
 			else
 				c = 'R';
-		} else {
+		} else if (td_write(td)) {
 			if (td_random(td))
 				c = 'w';
 			else
 				c = 'W';
+		} else {
+			if (td_random(td))
+				c = 'd';
+			else
+				c = 'D';
 		}
 		break;
 	case TD_PRE_READING:
@@ -150,7 +155,8 @@ static int thread_eta(struct thread_data *td)
 	if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING) {
 		double perc, perc_t;
 
-		bytes_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE];
+		bytes_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE] +
+			td->io_bytes[DDIR_TRIM];
 		perc = (double) bytes_done / (double) bytes_total;
 		if (perc > 1.0)
 			perc = 1.0;
@@ -189,9 +195,11 @@ static int thread_eta(struct thread_data *td)
 					t_eta -= ramp_left;
 			}
 		}
-		if (td->o.rate[0] || td->o.rate[1]) {
+		if (td->o.rate[DDIR_READ] || td->o.rate[DDIR_WRITE] ||
+		    td->o.rate[DDIR_TRIM]) {
 			r_eta = (bytes_total / 1024) /
-					(td->o.rate[0] + td->o.rate[1]);
+				(td->o.rate[DDIR_READ] + td->o.rate[DDIR_WRITE] +
+				td->o.rate[DDIR_TRIM]);
 			r_eta += td->o.start_delay;
 		}
 
@@ -218,23 +226,25 @@ static void calc_rate(unsigned long mtime, unsigned long long *io_bytes,
 {
 	int i;
 
-	for (i = 0; i <= DDIR_WRITE; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		unsigned long long diff;
 
 		diff = io_bytes[i] - prev_io_bytes[i];
 		rate[i] = ((1000 * diff) / mtime) / 1024;
+
+		prev_io_bytes[i] = io_bytes[i];
 	}
-	prev_io_bytes[0] = io_bytes[0];
-	prev_io_bytes[1] = io_bytes[1];
 }
 
 static void calc_iops(unsigned long mtime, unsigned long long *io_iops,
 		      unsigned long long *prev_io_iops, unsigned int *iops)
 {
-	iops[0] = ((io_iops[0] - prev_io_iops[0]) * 1000) / mtime;
-	iops[1] = ((io_iops[1] - prev_io_iops[1]) * 1000) / mtime;
-	prev_io_iops[0] = io_iops[0];
-	prev_io_iops[1] = io_iops[1];
+	int i;
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		iops[i] = ((io_iops[i] - prev_io_iops[i]) * 1000) / mtime;
+		prev_io_iops[i] = io_iops[i];
+	}
 }
 
 /*
@@ -246,13 +256,13 @@ int calc_thread_status(struct jobs_eta *je, int force)
 	struct thread_data *td;
 	int i;
 	unsigned long rate_time, disp_time, bw_avg_time, *eta_secs;
-	unsigned long long io_bytes[2];
-	unsigned long long io_iops[2];
+	unsigned long long io_bytes[DDIR_RWDIR_CNT];
+	unsigned long long io_iops[DDIR_RWDIR_CNT];
 	struct timeval now;
 
-	static unsigned long long rate_io_bytes[2];
-	static unsigned long long disp_io_bytes[2];
-	static unsigned long long disp_io_iops[2];
+	static unsigned long long rate_io_bytes[DDIR_RWDIR_CNT];
+	static unsigned long long disp_io_bytes[DDIR_RWDIR_CNT];
+	static unsigned long long disp_io_iops[DDIR_RWDIR_CNT];
 	static struct timeval rate_prev_time, disp_prev_time;
 
 	if (!force) {
@@ -263,9 +273,11 @@ int calc_thread_status(struct jobs_eta *je, int force)
 			return 0;
 	}
 
-	if (!rate_io_bytes[0] && !rate_io_bytes[1])
+	if (!rate_io_bytes[DDIR_READ] && !rate_io_bytes[DDIR_WRITE] &&
+			!rate_io_bytes[DDIR_TRIM])
 		fill_start_time(&rate_prev_time);
-	if (!disp_io_bytes[0] && !disp_io_bytes[1])
+	if (!disp_io_bytes[DDIR_READ] && !disp_io_bytes[DDIR_WRITE] &&
+			!disp_io_bytes[DDIR_TRIM])
 		fill_start_time(&disp_prev_time);
 
 	eta_secs = malloc(thread_number * sizeof(unsigned long));
@@ -273,8 +285,8 @@ int calc_thread_status(struct jobs_eta *je, int force)
 
 	je->elapsed_sec = (mtime_since_genesis() + 999) / 1000;
 
-	io_bytes[0] = io_bytes[1] = 0;
-	io_iops[0] = io_iops[1] = 0;
+	io_bytes[DDIR_READ] = io_bytes[DDIR_WRITE] = io_bytes[DDIR_TRIM] = 0;
+	io_iops[DDIR_READ] = io_iops[DDIR_WRITE] = io_iops[DDIR_TRIM] = 0;
 	bw_avg_time = ULONG_MAX;
 	for_each_td(td, i) {
 		if (is_power_of_2(td->o.kb_base))
@@ -297,6 +309,13 @@ int calc_thread_status(struct jobs_eta *je, int force)
 				je->m_rate += td->o.ratemin[DDIR_WRITE];
 				je->m_iops += td->o.rate_iops_min[DDIR_WRITE];
 			}
+			if (td_trim(td)) {
+				je->t_rate += td->o.rate[DDIR_TRIM];
+				je->t_iops += td->o.rate_iops[DDIR_TRIM];
+				je->m_rate += td->o.ratemin[DDIR_TRIM];
+				je->m_iops += td->o.rate_iops_min[DDIR_TRIM];
+			}
+
 			je->files_open += td->nr_open_files;
 		} else if (td->runstate == TD_RAMP) {
 			je->nr_running++;
@@ -312,10 +331,11 @@ int calc_thread_status(struct jobs_eta *je, int force)
 		check_str_update(td);
 
 		if (td->runstate > TD_RAMP) {
-			io_bytes[0] += td->io_bytes[0];
-			io_bytes[1] += td->io_bytes[1];
-			io_iops[0] += td->io_blocks[0];
-			io_iops[1] += td->io_blocks[1];
+			int ddir;
+			for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
+				io_bytes[ddir] += td->io_bytes[ddir];
+				io_iops[ddir] += td->io_blocks[ddir];
+			}
 		}
 	}
 
@@ -344,6 +364,7 @@ int calc_thread_status(struct jobs_eta *je, int force)
 		memcpy(&rate_prev_time, &now, sizeof(now));
 		add_agg_sample(je->rate[DDIR_READ], DDIR_READ, 0);
 		add_agg_sample(je->rate[DDIR_WRITE], DDIR_WRITE, 0);
+		add_agg_sample(je->rate[DDIR_TRIM], DDIR_TRIM, 0);
 	}
 
 	disp_time = mtime_since(&disp_prev_time, &now);
@@ -394,10 +415,11 @@ void display_thread_status(struct jobs_eta *je)
 		p += sprintf(p, ", CR=%d/%d IOPS", je->t_iops, je->m_iops);
 	if (je->eta_sec != INT_MAX && je->nr_running) {
 		char perc_str[32];
-		char *iops_str[2];
-		char *rate_str[2];
+		char *iops_str[DDIR_RWDIR_CNT];
+		char *rate_str[DDIR_RWDIR_CNT];
 		size_t left;
 		int l;
+		int ddir;
 
 		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running)
 			strcpy(perc_str, "-.-% done");
@@ -407,26 +429,28 @@ void display_thread_status(struct jobs_eta *je)
 			sprintf(perc_str, "%3.1f%% done", perc);
 		}
 
-		rate_str[0] = num2str(je->rate[0], 5, 1024, je->is_pow2);
-		rate_str[1] = num2str(je->rate[1], 5, 1024, je->is_pow2);
-
-		iops_str[0] = num2str(je->iops[0], 4, 1, 0);
-		iops_str[1] = num2str(je->iops[1], 4, 1, 0);
+		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
+			rate_str[ddir] = num2str(je->rate[ddir], 5,
+						1024, je->is_pow2);
+			iops_str[ddir] = num2str(je->iops[ddir], 4, 1, 0);
+		}
 
 		left = sizeof(output) - (p - output) - 1;
 
-		l = snprintf(p, left, ": [%s] [%s] [%s/%s /s] [%s/%s iops] [eta %s]",
-				je->run_str, perc_str, rate_str[0],
-				rate_str[1], iops_str[0], iops_str[1], eta_str);
+		l = snprintf(p, left, ": [%s] [%s] [%s/%s/%s /s] [%s/%s/%s iops] [eta %s]",
+				je->run_str, perc_str, rate_str[DDIR_READ],
+				rate_str[DDIR_WRITE], rate_str[DDIR_TRIM],
+				iops_str[DDIR_READ], iops_str[DDIR_WRITE],
+				iops_str[DDIR_TRIM], eta_str);
 		p += l;
 		if (l >= 0 && l < linelen_last)
 			p += sprintf(p, "%*s", linelen_last - l, "");
 		linelen_last = l;
 
-		free(rate_str[0]);
-		free(rate_str[1]);
-		free(iops_str[0]);
-		free(iops_str[1]);
+		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
+			free(rate_str[ddir]);
+			free(iops_str[ddir]);
+		}
 	}
 	p += sprintf(p, "\r");
 
