@@ -45,4 +45,7 @@ static inline int ddir_rw(enum fio_ddir ddir)
 
 #define ddir_trim(ddir) ((ddir) == DDIR_TRIM)
 
+#define ddir_rw_sum(arr)	\
+	((arr)[DDIR_READ] + (arr)[DDIR_WRITE] + (arr)[DDIR_TRIM])
+
 #endif

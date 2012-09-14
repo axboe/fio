@@ -717,8 +717,7 @@ sync_done:
 
 		if (ret < 0)
 			break;
-		if (!(bytes_done[DDIR_READ] + bytes_done[DDIR_WRITE]
-				+ bytes_done[DDIR_TRIM]))
+		if (!ddir_rw_sum(bytes_done))
 			continue;
 
 		if (!in_ramp_time(td) && should_check_rate(td, bytes_done)) {
@@ -733,8 +732,7 @@ sync_done:
 		if (td->o.thinktime) {
 			unsigned long long b;
 
-			b = td->io_blocks[DDIR_READ] + td->io_blocks[DDIR_WRITE] +
-				td->io_blocks[DDIR_TRIM];
+			b = ddir_rw_sum(td->io_blocks);
 			if (!(b % td->o.thinktime_blocks)) {
 				int left;
 
@@ -780,8 +778,7 @@ sync_done:
 	/*
 	 * stop job if we failed doing any IO
 	 */
-	if ((td->this_io_bytes[DDIR_READ] + td->this_io_bytes[DDIR_WRITE] +
-			td->this_io_bytes[DDIR_TRIM]) == 0)
+	if (!ddir_rw_sum(td->this_io_bytes))
 		td->done = 1;
 }
 
@@ -936,8 +933,6 @@ static int switch_ioscheduler(struct thread_data *td)
 
 static int keep_running(struct thread_data *td)
 {
-	unsigned long long io_done;
-
 	if (td->done)
 		return 0;
 	if (td->o.time_based)
@@ -947,9 +942,7 @@ static int keep_running(struct thread_data *td)
 		return 1;
 	}
 
-	io_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE] +
-			td->io_bytes[DDIR_TRIM] + td->io_skip_bytes;
-	if (io_done < td->o.size)
+	if (ddir_rw_sum(td->io_bytes) < td->o.size)
 		return 1;
 
 	return 0;
@@ -1356,10 +1349,8 @@ static void reap_threads(unsigned int *nr_running, unsigned int *t_rate,
 		continue;
 reaped:
 		(*nr_running)--;
-		(*m_rate) -= (td->o.ratemin[DDIR_READ] + td->o.ratemin[DDIR_WRITE] +
-			td->o.ratemin[DDIR_TRIM]);
-		(*t_rate) -= (td->o.rate[DDIR_READ] + td->o.rate[DDIR_WRITE] +
-			td->o.rate[DDIR_TRIM]);
+		(*m_rate) -= ddir_rw_sum(td->o.ratemin);
+		(*t_rate) -= ddir_rw_sum(td->o.rate);
 		if (!td->pid)
 			pending--;
 
@@ -1581,10 +1572,8 @@ static void run_threads(void)
 				td_set_runstate(td, TD_RUNNING);
 			nr_running++;
 			nr_started--;
-			m_rate += td->o.ratemin[DDIR_READ] +
-				td->o.ratemin[DDIR_WRITE] + td->o.ratemin[DDIR_TRIM];
-			t_rate += td->o.rate[DDIR_READ] +
-				td->o.rate[DDIR_WRITE] + td->o.rate[DDIR_TRIM];
+			m_rate += ddir_rw_sum(td->o.ratemin);
+			t_rate += ddir_rw_sum(td->o.rate);
 			todo--;
 			fio_mutex_up(td->mutex);
 		}

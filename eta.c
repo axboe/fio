@@ -155,8 +155,7 @@ static int thread_eta(struct thread_data *td)
 	if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING) {
 		double perc, perc_t;
 
-		bytes_done = td->io_bytes[DDIR_READ] + td->io_bytes[DDIR_WRITE] +
-			td->io_bytes[DDIR_TRIM];
+		bytes_done = ddir_rw_sum(td->io_bytes);
 		perc = (double) bytes_done / (double) bytes_total;
 		if (perc > 1.0)
 			perc = 1.0;
@@ -177,6 +176,7 @@ static int thread_eta(struct thread_data *td)
 			|| td->runstate == TD_RAMP
 			|| td->runstate == TD_PRE_READING) {
 		int t_eta = 0, r_eta = 0;
+		unsigned long long rate_bytes;
 
 		/*
 		 * We can only guess - assume it'll run the full timeout
@@ -195,11 +195,9 @@ static int thread_eta(struct thread_data *td)
 					t_eta -= ramp_left;
 			}
 		}
-		if (td->o.rate[DDIR_READ] || td->o.rate[DDIR_WRITE] ||
-		    td->o.rate[DDIR_TRIM]) {
-			r_eta = (bytes_total / 1024) /
-				(td->o.rate[DDIR_READ] + td->o.rate[DDIR_WRITE] +
-				td->o.rate[DDIR_TRIM]);
+		rate_bytes = ddir_rw_sum(td->o.rate);
+		if (rate_bytes) {
+			r_eta = (bytes_total / 1024) / rate_bytes;
 			r_eta += td->o.start_delay;
 		}
 
@@ -273,11 +271,9 @@ int calc_thread_status(struct jobs_eta *je, int force)
 			return 0;
 	}
 
-	if (!rate_io_bytes[DDIR_READ] && !rate_io_bytes[DDIR_WRITE] &&
-			!rate_io_bytes[DDIR_TRIM])
+	if (!ddir_rw_sum(rate_io_bytes))
 		fill_start_time(&rate_prev_time);
-	if (!disp_io_bytes[DDIR_READ] && !disp_io_bytes[DDIR_WRITE] &&
-			!disp_io_bytes[DDIR_TRIM])
+	if (!ddir_rw_sum(disp_io_bytes))
 		fill_start_time(&disp_prev_time);
 
 	eta_secs = malloc(thread_number * sizeof(unsigned long));
