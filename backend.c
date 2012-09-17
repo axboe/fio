@@ -1381,7 +1381,7 @@ static void run_threads(void)
 
 	set_sig_handlers();
 
-	if (!terse_output) {
+	if (output_format == FIO_OUTPUT_NORMAL) {
 		log_info("Starting ");
 		if (nr_thread)
 			log_info("%d thread%s", nr_thread,

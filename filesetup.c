@@ -792,7 +792,7 @@ int setup_files(struct thread_data *td)
 	 */
 	if (need_extend) {
 		temp_stall_ts = 1;
-		if (!terse_output)
+		if (output_format == FIO_OUTPUT_NORMAL)
 			log_info("%s: Laying out IO file(s) (%u file(s) /"
 				 " %lluMB)\n", td->o.name, need_extend,
 					extend_size >> 20);

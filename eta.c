@@ -264,7 +264,9 @@ int calc_thread_status(struct jobs_eta *je, int force)
 	static struct timeval rate_prev_time, disp_prev_time;
 
 	if (!force) {
-		if (temp_stall_ts || terse_output || eta_print == FIO_ETA_NEVER)
+		if (output_format != FIO_OUTPUT_NORMAL)
+			return 0;
+		if (temp_stall_ts || eta_print == FIO_ETA_NEVER)
 			return 0;
 
 		if (!isatty(STDOUT_FILENO) && (eta_print != FIO_ETA_ALWAYS))

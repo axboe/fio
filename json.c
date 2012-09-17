@@ -96,9 +96,9 @@ static struct json_value *json_create_value_array(struct json_array *array)
 	return value;
 }
 
-static void json_free_array(struct json_array *array);
 static void json_free_pair(struct json_pair *pair);
 static void json_free_value(struct json_value *value);
+
 void json_free_object(struct json_object *obj)
 {
 	int i;

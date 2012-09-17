@@ -36,7 +36,7 @@ static struct thread_data def_thread;
 struct thread_data *threads = NULL;
 
 int exitall_on_terminate = 0;
-int terse_output = 0;
+int output_format = FIO_OUTPUT_NORMAL;
 int eta_print;
 unsigned long long mlock_size = 0;
 FILE *f_out = NULL;
@@ -117,9 +117,9 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'm' | FIO_CLIENT_FLAG,
 	},
 	{
-		.name		= (char *) "json-output",
+		.name		= (char *) "output-format",
 		.has_arg	= optional_argument,
-		.val		= 'J' | FIO_CLIENT_FLAG,
+		.val		= 'F' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "version",
@@ -875,7 +875,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (!td->o.name)
 		td->o.name = strdup(jobname);
 
-	if (!terse_output) {
+	if (output_format == FIO_OUTPUT_NORMAL) {
 		if (!job_add_num) {
 			if (!strcmp(td->io_ops->name, "cpuio")) {
 				log_info("%s: ioengine=cpu, cpuload=%u,"
@@ -1218,8 +1218,9 @@ static void usage(const char *name)
 	printf("  --latency-log\t\tGenerate per-job latency logs\n");
 	printf("  --bandwidth-log\tGenerate per-job bandwidth logs\n");
 	printf("  --minimal\t\tMinimal (terse) output\n");
-	printf("  --version\t\tPrint version info and exit\n");
+	printf("  --output-format=x\tOutput format (terse,json,normal)\n");
 	printf("  --terse-version=x\tSet terse version output format to 'x'\n");
+	printf("  --version\t\tPrint version info and exit\n");
 	printf("  --help\t\tPrint this page\n");
 	printf("  --cmdhelp=cmd\t\tPrint command help, \"all\" for all of"
 		" them\n");
@@ -1411,11 +1412,17 @@ int parse_cmd_line(int argc, char *argv[])
 			f_err = f_out;
 			break;
 		case 'm':
-			terse_output = 1;
+			output_format = FIO_OUTPUT_TERSE;
 			break;
-		case 'J':
-			terse_version = 4;
-			terse_output = 1;
+		case 'F':
+			if (!strcmp(optarg, "minimal") ||
+			    !strcmp(optarg, "terse") ||
+			    !strcmp(optarg, "csv"))
+				output_format = FIO_OUTPUT_TERSE;
+			else if (!strcmp(optarg, "json"))
+				output_format = FIO_OUTPUT_JSON;
+			else
+				output_format = FIO_OUTPUT_NORMAL;
 			break;
 		case 'h':
 			if (!cur_client) {
@@ -1448,10 +1455,9 @@ int parse_cmd_line(int argc, char *argv[])
 			}
 			break;
 		case 'V':
-			if (terse_version == 4)
-				break;
 			terse_version = atoi(optarg);
-			if (!(terse_version == 2 || terse_version == 3)) {
+			if (!(terse_version == 2 || terse_version == 3) ||
+			     (terse_version == 4)) {
 				log_err("fio: bad terse version format\n");
 				exit_val = 1;
 				do_exit++;
@@ -1687,7 +1693,7 @@ int parse_options(int argc, char *argv[])
 		fio_gtod_cpu = def_thread.o.gtod_cpu;
 	}
 
-	if (!terse_output)
+	if (output_format == FIO_OUTPUT_NORMAL)
 		log_info("%s\n", fio_version_string);
 
 	return 0;

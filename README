@@ -125,8 +125,9 @@ $ fio
 	--latency-log		Generate per-job latency logs
 	--bandwidth-log		Generate per-job bandwidth logs
 	--minimal		Minimal (terse) output
-	--version		Print version info and exit
+	--output-format=type	Output format (terse,json,normal)
 	--terse-version=type	Terse version output format (default 3, or 2 or 4).
+	--version		Print version info and exit
 	--help			Print this page
 	--cmdhelp=cmd		Print command help, "all" for all of them
 	--enghelp=engine	Print ioengine help, or list available ioengines

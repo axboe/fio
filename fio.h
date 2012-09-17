@@ -526,7 +526,7 @@ extern unsigned int thread_number;
 extern unsigned int nr_process, nr_thread;
 extern int shm_id;
 extern int groupid;
-extern int terse_output;
+extern int output_format;
 extern int temp_stall_ts;
 extern unsigned long long mlock_size;
 extern uintptr_t page_mask, page_size;
@@ -760,5 +760,11 @@ static inline void td_io_u_free_notify(struct thread_data *td)
 
 extern const char *fio_get_arch_string(int);
 extern const char *fio_get_os_string(int);
+
+enum {
+	FIO_OUTPUT_TERSE	= 0,
+	FIO_OUTPUT_JSON,
+	FIO_OUTPUT_NORMAL,
+};
 
 #endif

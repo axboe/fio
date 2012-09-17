@@ -733,7 +733,7 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 		log_info("\nDisk stats (read/write):\n");
 	}
 
-	print_disk_util(&du->dus, &du->agg, terse_output);
+	print_disk_util(&du->dus, &du->agg, output_format == FIO_OUTPUT_TERSE);
 }
 
 static void convert_jobs_eta(struct jobs_eta *je)

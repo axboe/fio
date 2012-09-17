@@ -852,7 +852,7 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 	int i;
 
 	/* General Info */
-	log_info("%s;%s;%s;%d;%d", ver, fio_version_string,
+	log_info("%d;%s;%s;%d;%d", ver, fio_version_string,
 					ts->name, ts->groupid, ts->error);
 	/* Log Read Status */
 	show_ddir_status_terse(ts, rs, DDIR_READ);
@@ -924,7 +924,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 
 	add_ddir_status_json(ts, rs, DDIR_READ, root);
 	add_ddir_status_json(ts, rs, DDIR_WRITE, root);
-//	add_ddir_status_json(ts, rs, DDIR_TRIM, root);
+	add_ddir_status_json(ts, rs, DDIR_TRIM, root);
 
 	/* CPU Usage */
 	if (ts->total_run_time) {
@@ -1280,10 +1280,9 @@ void show_run_stats(void)
 	/*
 	 * don't overwrite last signal output
 	 */
-	if (!terse_output)
+	if (output_format == FIO_OUTPUT_NORMAL)
 		log_info("\n");
-
-	if (terse_output && terse_version == 4) {
+	else if (output_format == FIO_OUTPUT_JSON) {
 		root = json_create_object();
 		json_object_add_value_string(root, "fio version", fio_version_string);
 		array = json_create_array();
@@ -1296,18 +1295,15 @@ void show_run_stats(void)
 
 		if (is_backend)
 			fio_server_send_ts(ts, rs);
-		else if (terse_output) {
-			if (terse_version != 4)
-				show_thread_status_terse(ts, rs);
-			else {
-				struct json_object *tmp = show_thread_status_json(ts,
-					rs);
-				json_array_add_value_object(array, tmp);
-			}
+		else if (output_format == FIO_OUTPUT_TERSE)
+			show_thread_status_terse(ts, rs);
+		else if (output_format == FIO_OUTPUT_JSON) {
+			struct json_object *tmp = show_thread_status_json(ts, rs);
+			json_array_add_value_object(array, tmp);
 		} else
 			show_thread_status(ts, rs);
 	}
-	if (terse_output && terse_version == 4) {
+	if (output_format == FIO_OUTPUT_JSON) {
 		/* disk util stats, if any */
 		show_disk_util(1, root);
 
@@ -1322,13 +1318,13 @@ void show_run_stats(void)
 		rs->groupid = i;
 		if (is_backend)
 			fio_server_send_gs(rs);
-		else if (!terse_output)
+		else if (output_format == FIO_OUTPUT_NORMAL)
 			show_group_stats(rs);
 	}
 
 	if (is_backend)
 		fio_server_send_du();
-	else if (!terse_output)
+	else if (output_format == FIO_OUTPUT_NORMAL)
 		show_disk_util(0, NULL);
 
 	free(runstats);
