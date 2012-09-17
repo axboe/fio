@@ -10,6 +10,7 @@
 #include "fio.h"
 #include "diskutil.h"
 #include "lib/ieee754.h"
+#include "json.h"
 
 void update_rusage_stat(struct thread_data *td)
 {
@@ -678,6 +679,109 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 		log_info(";%lu;%lu;%f%%;%f;%f", 0UL, 0UL, 0.0, 0.0, 0.0);
 }
 
+static void add_ddir_status_json(struct thread_stat *ts,
+		struct group_run_stats *rs, int ddir, struct json_object *parent)
+{
+	unsigned long min, max;
+	unsigned long long bw, iops;
+	unsigned int *ovals = NULL;
+	double mean, dev;
+	unsigned int len, minv, maxv;
+	int i;
+	const char *ddirname[] = {"read", "write", "trim"};
+	struct json_object *dir_object, *tmp_object, *percentile_object;
+	char buf[120];
+	double p_of_agg = 100.0;
+
+	assert(ddir_rw(ddir));
+
+	dir_object = json_create_object();
+	json_object_add_value_object(parent, ddirname[ddir], dir_object);
+
+	iops = bw = 0;
+	if (ts->runtime[ddir]) {
+		uint64_t runt = ts->runtime[ddir];
+
+		bw = ((1000 * ts->io_bytes[ddir]) / runt) / 1024;
+		iops = (1000 * (uint64_t) ts->total_io_u[ddir]) / runt;
+	}
+
+	json_object_add_value_int(dir_object, "io_bytes", ts->io_bytes[ddir] >> 10);
+	json_object_add_value_int(dir_object, "bw", bw);
+	json_object_add_value_int(dir_object, "iops", iops);
+	json_object_add_value_int(dir_object, "runtime", ts->runtime[ddir]);
+
+	if (!calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev)) {
+		min = max = 0;
+		mean = dev = 0.0;
+	}
+	tmp_object = json_create_object();
+	json_object_add_value_object(dir_object, "slat", tmp_object);
+	json_object_add_value_int(tmp_object, "min", min);
+	json_object_add_value_int(tmp_object, "max", max);
+	json_object_add_value_float(tmp_object, "mean", mean);
+	json_object_add_value_float(tmp_object, "stddev", dev);
+
+	if (!calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev)) {
+		min = max = 0;
+		mean = dev = 0.0;
+	}
+	tmp_object = json_create_object();
+	json_object_add_value_object(dir_object, "clat", tmp_object);
+	json_object_add_value_int(tmp_object, "min", min);
+	json_object_add_value_int(tmp_object, "max", max);
+	json_object_add_value_float(tmp_object, "mean", mean);
+	json_object_add_value_float(tmp_object, "stddev", dev);
+
+	if (ts->clat_percentiles) {
+		len = calc_clat_percentiles(ts->io_u_plat[ddir],
+					ts->clat_stat[ddir].samples,
+					ts->percentile_list, &ovals, &maxv,
+					&minv);
+	} else
+		len = 0;
+
+	percentile_object = json_create_object();
+	json_object_add_value_object(tmp_object, "percentile", percentile_object);
+	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++) {
+		if (i >= len) {
+			json_object_add_value_int(percentile_object, "0.00", 0);
+			continue;
+		}
+		snprintf(buf, sizeof(buf) - 1, "%2.2f", ts->percentile_list[i].u.f);
+		json_object_add_value_int(percentile_object, (const char *)buf, ovals[i]);
+	}
+
+	if (!calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev)) {
+		min = max = 0;
+		mean = dev = 0.0;
+	}
+	tmp_object = json_create_object();
+	json_object_add_value_object(dir_object, "lat", tmp_object);
+	json_object_add_value_int(tmp_object, "min", min);
+	json_object_add_value_int(tmp_object, "max", max);
+	json_object_add_value_float(tmp_object, "mean", mean);
+	json_object_add_value_float(tmp_object, "stddev", dev);
+	if (ovals)
+		free(ovals);
+
+	if (!calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
+		if (rs->agg[ddir]) {
+			p_of_agg = mean * 100 / (double) rs->agg[ddir];
+			if (p_of_agg > 100.0)
+				p_of_agg = 100.0;
+		}
+	} else {
+		min = max = 0;
+		p_of_agg = mean = dev = 0.0;
+	}
+	json_object_add_value_int(dir_object, "bw_min", min);
+	json_object_add_value_int(dir_object, "bw_max", max);
+	json_object_add_value_float(dir_object, "bw_agg", mean);
+	json_object_add_value_float(dir_object, "bw_mean", mean);
+	json_object_add_value_float(dir_object, "bw_dev", dev);
+}
+
 static void show_thread_status_terse_v2(struct thread_stat *ts,
 				        struct group_run_stats *rs)
 {
@@ -790,7 +894,7 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 		log_info(";%3.2f%%", io_u_lat_m[i]);
 
 	/* disk util stats, if any */
-	show_disk_util(1);
+	show_disk_util(1, NULL);
 
 	/* Additional output if continue_on_error set - default off*/
 	if (ts->continue_on_error)
@@ -801,6 +905,90 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 		log_info(";%s", ts->description);
 
 	log_info("\n");
+}
+
+static struct json_object *show_thread_status_json(struct thread_stat *ts,
+				    struct group_run_stats *rs)
+{
+	struct json_object *root, *tmp;
+	double io_u_dist[FIO_IO_U_MAP_NR];
+	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
+	double io_u_lat_m[FIO_IO_U_LAT_M_NR];
+	double usr_cpu, sys_cpu;
+	int i;
+
+	root = json_create_object();
+	json_object_add_value_string(root, "jobname", ts->name);
+	json_object_add_value_int(root, "groupid", ts->groupid);
+	json_object_add_value_int(root, "error", ts->error);
+
+	add_ddir_status_json(ts, rs, DDIR_READ, root);
+	add_ddir_status_json(ts, rs, DDIR_WRITE, root);
+//	add_ddir_status_json(ts, rs, DDIR_TRIM, root);
+
+	/* CPU Usage */
+	if (ts->total_run_time) {
+		double runt = (double) ts->total_run_time;
+
+		usr_cpu = (double) ts->usr_time * 100 / runt;
+		sys_cpu = (double) ts->sys_time * 100 / runt;
+	} else {
+		usr_cpu = 0;
+		sys_cpu = 0;
+	}
+	json_object_add_value_float(root, "usr_cpu", usr_cpu);
+	json_object_add_value_float(root, "sys_cpu", sys_cpu);
+	json_object_add_value_int(root, "ctx", ts->ctx);
+	json_object_add_value_int(root, "majf", ts->majf);
+	json_object_add_value_int(root, "minf", ts->minf);
+
+
+	/* Calc % distribution of IO depths, usecond, msecond latency */
+	stat_calc_dist(ts->io_u_map, ts_total_io_u(ts), io_u_dist);
+	stat_calc_lat_u(ts, io_u_lat_u);
+	stat_calc_lat_m(ts, io_u_lat_m);
+
+	tmp = json_create_object();
+	json_object_add_value_object(root, "iodepth_level", tmp);
+	/* Only show fixed 7 I/O depth levels*/
+	for (i = 0; i < 7; i++) {
+		char name[20];
+		if (i < 6)
+			snprintf(name, 19, "%d", 1 << i);
+		else
+			snprintf(name, 19, ">=%d", 1 << i);
+		json_object_add_value_float(tmp, (const char *)name, io_u_dist[i]);
+	}
+
+	tmp = json_create_object();
+	json_object_add_value_object(root, "latency_us", tmp);
+	/* Microsecond latency */
+	for (i = 0; i < FIO_IO_U_LAT_U_NR; i++) {
+		const char *ranges[] = { "2", "4", "10", "20", "50", "100",
+				 "250", "500", "750", "1000", };
+		json_object_add_value_float(tmp, ranges[i], io_u_lat_u[i]);
+	}
+	/* Millisecond latency */
+	tmp = json_create_object();
+	json_object_add_value_object(root, "latency_ms", tmp);
+	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++) {
+		const char *ranges[] = { "2", "4", "10", "20", "50", "100",
+				 "250", "500", "750", "1000", "2000",
+				 ">=2000", };
+		json_object_add_value_float(tmp, ranges[i], io_u_lat_m[i]);
+	}
+
+	/* Additional output if continue_on_error set - default off*/
+	if (ts->continue_on_error) {
+		json_object_add_value_int(root, "total_err", ts->total_err_count);
+		json_object_add_value_int(root, "total_err", ts->first_error);
+	}
+
+	/* Additional output if description is set */
+	if (strlen(ts->description))
+		json_object_add_value_string(root, "desc", ts->description);
+
+	return root;
 }
 
 static void show_thread_status_terse(struct thread_stat *ts,
@@ -949,6 +1137,8 @@ void show_run_stats(void)
 	struct thread_stat *threadstats, *ts;
 	int i, j, nr_ts, last_ts, idx;
 	int kb_base_warned = 0;
+	struct json_object *root = NULL;
+	struct json_array *array = NULL;
 
 	runstats = malloc(sizeof(struct group_run_stats) * (groupid + 1));
 
@@ -1093,16 +1283,37 @@ void show_run_stats(void)
 	if (!terse_output)
 		log_info("\n");
 
+	if (terse_output && terse_version == 4) {
+		root = json_create_object();
+		json_object_add_value_string(root, "fio version", fio_version_string);
+		array = json_create_array();
+		json_object_add_value_array(root, "jobs", array);
+	}
+
 	for (i = 0; i < nr_ts; i++) {
 		ts = &threadstats[i];
 		rs = &runstats[ts->groupid];
 
 		if (is_backend)
 			fio_server_send_ts(ts, rs);
-		else if (terse_output)
-			show_thread_status_terse(ts, rs);
-		else
+		else if (terse_output) {
+			if (terse_version != 4)
+				show_thread_status_terse(ts, rs);
+			else {
+				struct json_object *tmp = show_thread_status_json(ts,
+					rs);
+				json_array_add_value_object(array, tmp);
+			}
+		} else
 			show_thread_status(ts, rs);
+	}
+	if (terse_output && terse_version == 4) {
+		/* disk util stats, if any */
+		show_disk_util(1, root);
+
+		json_print_object(root);
+		log_info("\n");
+		json_free_object(root);
 	}
 
 	for (i = 0; i < groupid + 1; i++) {
@@ -1118,7 +1329,7 @@ void show_run_stats(void)
 	if (is_backend)
 		fio_server_send_du();
 	else if (!terse_output)
-		show_disk_util(0);
+		show_disk_util(0, NULL);
 
 	free(runstats);
 	free(threadstats);

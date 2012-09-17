@@ -1,6 +1,6 @@
 #ifndef FIO_DISKUTIL_H
 #define FIO_DISKUTIL_H
-
+#include "json.h"
 #define FIO_DU_NAME_SZ		64
 
 /*
@@ -101,14 +101,14 @@ extern void wait_for_disk_thread_exit(void);
  */
 #ifdef FIO_HAVE_DISK_UTIL
 extern void print_disk_util(struct disk_util_stat *, struct disk_util_agg *, int terse);
-extern void show_disk_util(int terse);
+extern void show_disk_util(int terse, struct json_object *parent);
 extern void free_disk_util(void);
 extern void init_disk_util(struct thread_data *);
 extern int update_io_ticks(void);
 extern void setup_disk_util(void);
 #else
 #define print_disk_util(dus, agg, terse)
-#define show_disk_util(terse)
+#define show_disk_util(terse, parent)
 #define free_disk_util()
 #define init_disk_util(td)
 #define setup_disk_util()

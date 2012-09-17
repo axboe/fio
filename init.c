@@ -117,6 +117,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'm' | FIO_CLIENT_FLAG,
 	},
 	{
+		.name		= (char *) "json-output",
+		.has_arg	= optional_argument,
+		.val		= 'J' | FIO_CLIENT_FLAG,
+	},
+	{
 		.name		= (char *) "version",
 		.has_arg	= no_argument,
 		.val		= 'v' | FIO_CLIENT_FLAG,
@@ -1408,6 +1413,10 @@ int parse_cmd_line(int argc, char *argv[])
 		case 'm':
 			terse_output = 1;
 			break;
+		case 'J':
+			terse_version = 4;
+			terse_output = 1;
+			break;
 		case 'h':
 			if (!cur_client) {
 				usage(argv[0]);
@@ -1439,9 +1448,10 @@ int parse_cmd_line(int argc, char *argv[])
 			}
 			break;
 		case 'V':
+			if (terse_version == 4)
+				break;
 			terse_version = atoi(optarg);
-			if (!(terse_version == 2 || terse_version == 3) ||
-			     (terse_version == 4)) {
+			if (!(terse_version == 2 || terse_version == 3)) {
 				log_err("fio: bad terse version format\n");
 				exit_val = 1;
 				do_exit++;
