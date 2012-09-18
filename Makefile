@@ -20,7 +20,8 @@ ifeq ($(UNAME), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c helpers.c cgroup.c trim.c \
 		engines/libaio.c engines/posixaio.c engines/sg.c \
 		engines/splice.c engines/syslet-rw.c engines/guasi.c \
-		engines/binject.c engines/rdma.c profiles/tiobench.c
+		engines/binject.c engines/rdma.c profiles/tiobench.c \
+		engines/fusion-aw.c
   LIBS += -lpthread -ldl -lrt -laio
   LDFLAGS += -rdynamic
 endif
