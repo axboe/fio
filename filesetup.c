@@ -435,7 +435,7 @@ int generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 	return ret;
 }
 
-static int file_lookup_open(struct fio_file *f, int flags)
+int file_lookup_open(struct fio_file *f, int flags)
 {
 	struct fio_file *__f;
 	int from_hash;
