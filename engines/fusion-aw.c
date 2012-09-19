@@ -6,10 +6,7 @@
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; under version 2 of the License.  You may obtain a copy
- * of the source code for DirectFS by sending a request to Fusion-io, Inc.,
- * 2855 E. Cottonwood Parkway, Suite 100, Salt Lake City, UT 84121; Attention:
- * Legal Department.
+ * Software Foundation; under version 2 of the License.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
