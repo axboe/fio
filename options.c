@@ -1083,6 +1083,16 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .help = "Fusion-io atomic write engine",
 			  },
 #endif
+#ifdef FIO_HAVE_E4_ENG
+			  { .ival = "e4defrag",
+			    .help = "ext4 defrag engine",
+			  },
+#endif
+#ifdef FIO_HAVE_FALLOC_ENG
+			  { .ival = "falloc",
+			    .help = "fallocate() file based engine",
+			  },
+#endif
 			  { .ival = "external",
 			    .help = "Load external engine (append name)",
 			  },
