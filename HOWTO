@@ -602,8 +602,16 @@ ioengine=str	Defines how the job issues io to the file. The following
 				channel semantics (Send/Recv) for the
 				InfiniBand, RoCE and iWARP protocols.
 
-			falloc  Perform fallocate/punch_hole to files
-	
+			falloc   IO engine that does regular fallocate to
+				 simulate data transfer as fio ioengine.
+				 DDIR_READ  does fallocate(,mode = keep_size,)
+				 DDIR_WRITE does fallocate(,mode = 0)  
+				 DDIR_TRIM  does fallocate(,mode = punch_hole)
+
+			e4defrag IO engine that does regular EXT4_IOC_MOVE_EXT
+				 ioctls to simulate defragment activity in
+				 request to DDIR_WRITE event
+	      
 			external Prefix to specify loading an external
 				IO engine object file. Append the engine
 				filename, eg ioengine=external:/tmp/foo.o
@@ -1318,6 +1326,14 @@ that defines them is selected.
 [net] listen	For TCP network connections, tell fio to listen for incoming
 		connections rather than initiating an outgoing connection. The
 		hostname must be omitted if this option is used.
+[e4defrag] donorname=str
+	        File will be used as a block donor(swap extents between files)
+[e4defrag] inplace=int
+		Configure donor file blocks allocation strategy		
+		0(default): Preallocate donor's file on init
+		1 	  : allocate space immidietly inside defragment event,
+			    and free right after event
+
 
 
 6.0 Interpreting the output

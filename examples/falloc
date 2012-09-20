@@ -1,0 +1,54 @@
+[global]
+ioengine=falloc
+iodepth=1
+direct=0
+buffered=0
+directory=/scratch
+nrfiles=1
+size=100M
+filesize=100M
+group_reporting
+
+
+# Run falloc and punch_hole threads in parallel
+# After activity file will be highly fragmented
+[falloc-fuzzer]
+stonewall
+runtime=10
+time_based=10
+bssplit=4k/10:64k/50:32k/40
+rw=randwrite
+numjobs=1
+filename=fragmented_file
+
+[punch hole-fuzzer]
+bs=4k
+runtime=10
+time_based=10
+rw=randtrim
+numjobs=2
+filename=fragmented_file
+
+## Mesure IO performance on fragmented file
+[sequential aio-dio write]
+stonewall
+ioengine=libaio
+numjobs=1
+iodepth=128
+buffered=0
+direct=1
+rw=write
+bs=64k
+filename=fragmented_file
+
+[sequential buffered read]
+stonewall
+ioengine=sync
+numjobs=1
+iodepth=1
+buffered=1
+direct=0
+rw=read
+bs=64k
+filename=fragmented_file
+
