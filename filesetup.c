@@ -766,8 +766,11 @@ int setup_files(struct thread_data *td)
 
 		if (f->io_size == -1ULL)
 			total_size = -1ULL;
-		else
+		else {
+                        if (td->o.size_percent)
+                                f->io_size = (f->io_size * td->o.size_percent) / 100;
 			total_size += f->io_size;
+		}
 
 		if (f->filetype == FIO_TYPE_FILE &&
 		    (f->io_size + f->file_offset) > f->real_file_size &&
@@ -780,9 +783,6 @@ int setup_files(struct thread_data *td)
 			fio_file_set_extend(f);
 		}
 	}
-
-	if (td->o.size_percent)
-		total_size = (total_size * td->o.size_percent) / 100;
 
 	if (!td->o.size || td->o.size > total_size)
 		td->o.size = total_size;
