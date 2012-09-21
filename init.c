@@ -254,7 +254,7 @@ static int setup_thread_area(void)
 		shm_id = shmget(0, size, IPC_CREAT | 0600);
 		if (shm_id != -1)
 			break;
-		if (errno != EINVAL && errno != ENOMEM) {
+		if (errno != EINVAL && errno != ENOMEM && errno != ENOSPC) {
 			perror("shmget");
 			break;
 		}
