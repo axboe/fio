@@ -472,6 +472,21 @@ and channel semantics (Send/Recv) for the InfiniBand, RoCE and iWARP protocols.
 .B external
 Loads an external I/O engine object file.  Append the engine filename as
 `:\fIenginepath\fR'.
+.TP
+.B falloc
+   IO engine that does regular linux native fallocate callt to simulate data
+transfer as fio ioengine
+.br
+  DDIR_READ  does fallocate(,mode = FALLOC_FL_KEEP_SIZE,)
+.br
+  DIR_WRITE does fallocate(,mode = 0)
+.br
+  DDIR_TRIM does fallocate(,mode = FALLOC_FL_KEEP_SIZE|FALLOC_FL_PUNCH_HOLE)
+.TP
+.B e4defrag
+IO engine that does regular EXT4_IOC_MOVE_EXT ioctls to simulate defragment activity
+request to DDIR_WRITE event
+.TP
 .RE
 .RE
 .TP
@@ -1057,6 +1072,20 @@ used and the port is invalid.
 For TCP network connections, tell fio to listen for incoming
 connections rather than initiating an outgoing connection. The
 hostname must be omitted if this option is used.
+.TP
+.BI (e4defrag,donorname) \fR=\fPstr
+File will be used as a block donor (swap extents between files)
+.TP
+.BI (e4defrag,inplace) \fR=\fPint
+Configure donor file block allocation strategy		
+.RS
+.BI 0(default) :
+Preallocate donor's file on init
+.TP
+.BI 1:
+allocate space immidietly inside defragment event, and free right after event
+.RE
+.TP
 .SH OUTPUT
 While running, \fBfio\fR will display the status of the created jobs.  For
 example:

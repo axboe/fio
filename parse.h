@@ -33,7 +33,7 @@ struct value_pair {
 };
 
 #define OPT_LEN_MAX 	4096
-#define PARSE_MAX_VP	16
+#define PARSE_MAX_VP	24
 
 /*
  * Option define

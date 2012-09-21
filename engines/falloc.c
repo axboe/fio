@@ -91,8 +91,6 @@ static int fio_fallocate_queue(struct thread_data *td, struct io_u *io_u)
 		if (io_u->error)
 			td_verror(td, io_u->error, "xfer");
 	}
-	if (io_u->ddir == DDIR_TRIM && !ret)
-		return io_u->xfer_buflen;
 
 	if (io_u->file && ret == 0 && ddir_rw(io_u->ddir))
 		io_u->file->file_pos = io_u->offset + ret;
