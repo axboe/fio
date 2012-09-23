@@ -141,16 +141,14 @@ static int fio_e4defrag_queue(struct thread_data *td, struct io_u *io_u)
 	 * in order to satisfy strict read only access pattern
 	 */
 	if (io_u->ddir != DDIR_WRITE) {
-		io_u->error = errno;
+		io_u->error = EINVAL;
 		return FIO_Q_COMPLETED;
 	}
 
 	if (o->inplace) {
 		ret = fallocate(ed->donor_fd, 0, io_u->offset, io_u->xfer_buflen);
-		if (ret) {
-			io_u->error = errno;
+		if (ret)
 			goto out;
-		}
 	}
 
 	memset(&me, 0, sizeof(me));
@@ -175,16 +173,12 @@ static int fio_e4defrag_queue(struct thread_data *td, struct io_u *io_u)
 	}
 	if (ret)
 		io_u->error = errno;
-	
-	if (o->inplace) {
-		ret = ftruncate(ed->donor_fd, 0);
-		if (ret)
-			io_u->error = errno;
-	}
-out:
-	if (io_u->error)
-		td_verror(td, errno, "xfer");
 
+	if (o->inplace)
+		ret = ftruncate(ed->donor_fd, 0);
+out:
+	if (ret && !io_u->error)
+		io_u->error = errno;
 
 	return FIO_Q_COMPLETED;
 }
