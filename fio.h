@@ -70,11 +70,18 @@ enum {
 /*
  * What type of errors to continue on when continue_on_error is used
  */
+enum error_type_bit {
+	ERROR_TYPE_READ_BIT = 0,
+	ERROR_TYPE_WRITE_BIT = 1,
+	ERROR_TYPE_VERIFY_BIT = 2,
+	ERROR_TYPE_CNT = 3,
+};
+
 enum error_type {
         ERROR_TYPE_NONE = 0,
-        ERROR_TYPE_READ = 1 << 0,
-        ERROR_TYPE_WRITE = 1 << 1,
-        ERROR_TYPE_VERIFY = 1 << 2,
+        ERROR_TYPE_READ = 1 << ERROR_TYPE_READ_BIT,
+        ERROR_TYPE_WRITE = 1 << ERROR_TYPE_WRITE_BIT,
+        ERROR_TYPE_VERIFY = 1 << ERROR_TYPE_VERIFY_BIT,
         ERROR_TYPE_ANY = 0xffff,
 };
 
@@ -114,6 +121,10 @@ struct thread_options {
 	unsigned int max_bs[DDIR_RWDIR_CNT];
 	struct bssplit *bssplit[DDIR_RWDIR_CNT];
 	unsigned int bssplit_nr[DDIR_RWDIR_CNT];
+
+	int *ignore_error[ERROR_TYPE_CNT];
+	unsigned int ignore_error_nr[ERROR_TYPE_CNT];
+	unsigned int error_dump;
 
 	unsigned int nr_files;
 	unsigned int open_files;
@@ -559,15 +570,32 @@ static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
 
 #define REAL_MAX_JOBS		2048
 
-#define td_non_fatal_error(e)	((e) == EIO || (e) == EILSEQ)
-
 static inline enum error_type td_error_type(enum fio_ddir ddir, int err)
 {
 	if (err == EILSEQ)
-		return ERROR_TYPE_VERIFY;
+		return ERROR_TYPE_VERIFY_BIT;
 	if (ddir == DDIR_READ)
-		return ERROR_TYPE_READ;
-	return ERROR_TYPE_WRITE;
+		return ERROR_TYPE_READ_BIT;
+	return ERROR_TYPE_WRITE_BIT;
+}
+
+static int __NON_FATAL_ERR[] = {EIO, EILSEQ};
+static inline int td_non_fatal_error(struct thread_data *td,
+				     enum error_type_bit etype, int err)
+{
+	int i;
+	if (!td->o.ignore_error[etype]) {
+		td->o.ignore_error[etype] = __NON_FATAL_ERR;
+		td->o.ignore_error_nr[etype] = sizeof(__NON_FATAL_ERR)
+			/ sizeof(int);
+	}
+
+	if (!(td->o.continue_on_error & (1 << etype)))
+		return 0;
+	for (i = 0; i < td->o.ignore_error_nr[etype]; i++)
+		if (td->o.ignore_error[etype][i] == err)
+			return 1;
+	return 0;
 }
 
 static inline void update_error_count(struct thread_data *td, int err)

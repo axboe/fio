@@ -1198,7 +1198,7 @@ static int fill_def_thread(void)
 
 	fio_getaffinity(getpid(), &def_thread.o.cpumask);
 	def_thread.o.timeout = def_timeout;
-
+	def_thread.o.error_dump = 1;
 	/*
 	 * fill default options
 	 */

@@ -1049,8 +1049,7 @@ static void *verify_async_thread(void *data)
 			put_io_u(td, io_u);
 			if (!ret)
 				continue;
-			if (td->o.continue_on_error & ERROR_TYPE_VERIFY &&
-			    td_non_fatal_error(ret)) {
+			if (td_non_fatal_error(td, ERROR_TYPE_VERIFY_BIT, ret)) {
 				update_error_count(td, ret);
 				td_clear_error(td);
 				ret = 0;
