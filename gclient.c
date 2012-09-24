@@ -388,8 +388,9 @@ static void gfio_update_client_eta(struct fio_client *client, struct jobs_eta *j
 #endif
 
 	if (je->eta_sec != INT_MAX && je->nr_running) {
-		char *iops_str[2];
-		char *rate_str[2];
+		char *iops_str[DDIR_RWDIR_CNT];
+		char *rate_str[DDIR_RWDIR_CNT];
+		int i;
 
 		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running)
 			strcpy(output, "-.-% done");
@@ -401,24 +402,30 @@ static void gfio_update_client_eta(struct fio_client *client, struct jobs_eta *j
 
 		rate_str[0] = num2str(je->rate[0], 5, 10, i2p);
 		rate_str[1] = num2str(je->rate[1], 5, 10, i2p);
+		rate_str[2] = num2str(je->rate[2], 5, 10, i2p);
 
 		iops_str[0] = num2str(je->iops[0], 4, 1, 0);
 		iops_str[1] = num2str(je->iops[1], 4, 1, 0);
+		iops_str[2] = num2str(je->iops[2], 4, 1, 0);
 
 		gtk_entry_set_text(GTK_ENTRY(ge->eta.read_bw), rate_str[0]);
 		gtk_entry_set_text(GTK_ENTRY(ge->eta.read_iops), iops_str[0]);
 		gtk_entry_set_text(GTK_ENTRY(ge->eta.write_bw), rate_str[1]);
 		gtk_entry_set_text(GTK_ENTRY(ge->eta.write_iops), iops_str[1]);
+		gtk_entry_set_text(GTK_ENTRY(ge->eta.trim_bw), rate_str[2]);
+		gtk_entry_set_text(GTK_ENTRY(ge->eta.trim_iops), iops_str[2]);
 
 		graph_add_xy_data(ge->graphs.iops_graph, ge->graphs.read_iops, je->elapsed_sec, je->iops[0], iops_str[0]);
 		graph_add_xy_data(ge->graphs.iops_graph, ge->graphs.write_iops, je->elapsed_sec, je->iops[1], iops_str[1]);
+		graph_add_xy_data(ge->graphs.iops_graph, ge->graphs.trim_iops, je->elapsed_sec, je->iops[2], iops_str[2]);
 		graph_add_xy_data(ge->graphs.bandwidth_graph, ge->graphs.read_bw, je->elapsed_sec, je->rate[0], rate_str[0]);
 		graph_add_xy_data(ge->graphs.bandwidth_graph, ge->graphs.write_bw, je->elapsed_sec, je->rate[1], rate_str[1]);
+		graph_add_xy_data(ge->graphs.bandwidth_graph, ge->graphs.trim_bw, je->elapsed_sec, je->rate[2], rate_str[2]);
 
-		free(rate_str[0]);
-		free(rate_str[1]);
-		free(iops_str[0]);
-		free(iops_str[1]);
+		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+			free(rate_str[i]);
+			free(iops_str[i]);
+		}
 	}
 
 	if (eta_str[0]) {

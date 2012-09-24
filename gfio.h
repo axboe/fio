@@ -32,6 +32,8 @@ struct eta_widget {
 	GtkWidget *write_iops;
 	GtkWidget *cw_bw;
 	GtkWidget *cw_iops;
+	GtkWidget *trim_bw;
+	GtkWidget *trim_iops;
 };
 
 struct gfio_graphs {
@@ -41,9 +43,11 @@ struct gfio_graphs {
 	struct graph *iops_graph;
 	graph_label_t read_iops;
 	graph_label_t write_iops;
+	graph_label_t trim_iops;
 	struct graph *bandwidth_graph;
 	graph_label_t read_bw;
 	graph_label_t write_bw;
+	graph_label_t trim_bw;
 };
 
 /*

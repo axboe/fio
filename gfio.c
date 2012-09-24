@@ -85,8 +85,10 @@ static void setup_iops_graph(struct gfio_graphs *gg)
 	graph_x_title(g, "Time (secs)");
 	gg->read_iops = graph_add_label(g, "Read IOPS");
 	gg->write_iops = graph_add_label(g, "Write IOPS");
+	gg->trim_iops = graph_add_label(g, "Trim IOPS");
 	graph_set_color(g, gg->read_iops, 0.13, 0.54, 0.13);
 	graph_set_color(g, gg->write_iops, 1.0, 0.0, 0.0);
+	graph_set_color(g, gg->trim_iops, 0.24, 0.18, 0.52);
 	line_graph_set_data_count_limit(g, gfio_graph_limit);
 	graph_add_extra_space(g, 0.0, 0.0, 0.0, 0.0);
 	graph_set_graph_all_zeroes(g, 0);
@@ -102,8 +104,10 @@ static void setup_bandwidth_graph(struct gfio_graphs *gg)
 	graph_x_title(g, "Time (secs)");
 	gg->read_bw = graph_add_label(g, "Read Bandwidth");
 	gg->write_bw = graph_add_label(g, "Write Bandwidth");
+	gg->trim_bw = graph_add_label(g, "Trim Bandwidth");
 	graph_set_color(g, gg->read_bw, 0.13, 0.54, 0.13);
 	graph_set_color(g, gg->write_bw, 1.0, 0.0, 0.0);
+	graph_set_color(g, gg->trim_bw, 0.24, 0.18, 0.52);
 	graph_set_base_offset(g, 1);
 	line_graph_set_data_count_limit(g, 100);
 	graph_add_extra_space(g, 0.0, 0.0, 0.0, 0.0);
@@ -1385,6 +1389,8 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	ge->eta.read_iops = new_info_entry_in_frame(probe_box, "IOPS");
 	ge->eta.write_bw = new_info_entry_in_frame(probe_box, "Write BW");
 	ge->eta.write_iops = new_info_entry_in_frame(probe_box, "IOPS");
+	ge->eta.trim_bw = new_info_entry_in_frame(probe_box, "Trim BW");
+	ge->eta.trim_iops = new_info_entry_in_frame(probe_box, "IOPS");
 
 	/*
 	 * Only add this if we have a commit rate
@@ -1471,6 +1477,9 @@ static GtkWidget *new_main_page(struct gui *ui)
 	ui->eta.read_iops = new_info_entry_in_frame(probe_box, "IOPS");
 	ui->eta.write_bw = new_info_entry_in_frame(probe_box, "Write BW");
 	ui->eta.write_iops = new_info_entry_in_frame(probe_box, "IOPS");
+	ui->eta.trim_bw = new_info_entry_in_frame(probe_box, "Trim BW");
+	ui->eta.trim_iops = new_info_entry_in_frame(probe_box, "IOPS");
+
 
 	/*
 	 * Only add this if we have a commit rate
