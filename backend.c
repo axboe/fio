@@ -337,19 +337,19 @@ static int break_on_this_error(struct thread_data *td, enum fio_ddir ddir,
 	int ret = *retptr;
 
 	if (ret < 0 || td->error) {
-		int err;
+		int err = td->error;
+		enum error_type_bit eb;
 
 		if (ret < 0)
 			err = -ret;
-		else
-			err = td->error;
 
-		if (!(td->o.continue_on_error & td_error_type(ddir, err)))
+		eb = td_error_type(ddir, err);
+		if (!(td->o.continue_on_error & (1 << eb)))
 			return 1;
 
-		if (td_non_fatal_error(err)) {
-			/*
-			 * Continue with the I/Os in case of
+		if (td_non_fatal_error(td, eb, err)) {
+		        /*
+		         * Continue with the I/Os in case of
 			 * a non fatal error.
 			 */
 			update_error_count(td, err);

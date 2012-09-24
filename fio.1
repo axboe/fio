@@ -971,6 +971,23 @@ entering the kernel with a gettimeofday() call. The CPU set aside for doing
 these time calls will be excluded from other uses. Fio will manually clear it
 from the CPU mask of other jobs.
 .TP
+.BI ignore_error \fR=\fPstr
+Sometimes you want to ignore some errors during test in that case you can specify
+error list for each error type.
+.br
+ignore_error=READ_ERR_LIST,WRITE_ERR_LIST,VERIFY_ERR_LIST
+.br
+errors for given error type is separated with ':'.
+Error may be symbol ('ENOSPC', 'ENOMEM') or an integer.
+.br
+Example: ignore_error=EAGAIN,ENOSPC:122 .
+.br	
+This option will ignore EAGAIN from READ, and ENOSPC and 122(EDQUOT) from WRITE. 
+.TP
+.BI error_dump \fR=\fPbool
+If set dump every error even if it is non fatal, true by default. If disabled
+only fatal error will be dumped
+.TP
 .BI cgroup \fR=\fPstr
 Add job to this control group. If it doesn't exist, it will be created.
 The system must have a mounted cgroup blkio mount point for this to work. If

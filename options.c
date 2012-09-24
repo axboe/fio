@@ -213,6 +213,101 @@ static int str_bssplit_cb(void *data, const char *input)
 	return ret;
 }
 
+static int str2error(char *str)
+{
+	const char * err[] = {"EPERM", "ENOENT", "ESRCH", "EINTR", "EIO",
+			    "ENXIO", "E2BIG", "ENOEXEC", "EBADF",
+			    "ECHILD", "EAGAIN", "ENOMEM", "EACCES",
+			    "EFAULT", "ENOTBLK", "EBUSY", "EEXIST",
+			    "EXDEV", "ENODEV", "ENOTDIR", "EISDIR",
+			    "EINVAL", "ENFILE", "EMFILE", "ENOTTY",
+			    "ETXTBSY","EFBIG", "ENOSPC", "ESPIPE",
+			    "EROFS","EMLINK", "EPIPE", "EDOM", "ERANGE"};
+	int i = 0, num = sizeof(err) / sizeof(void *);
+
+	while( i < num) {
+		if (!strcmp(err[i], str))
+			return i + 1;
+		i++;
+	}
+	return 0;
+}
+
+static int ignore_error_type(struct thread_data *td, int etype, char *str)
+{
+	unsigned int i;
+	int *error;
+	char *fname;
+
+	if (etype >= ERROR_TYPE_CNT) {
+		log_err("Illegal error type\n");
+		return 1;
+	}
+
+	td->o.ignore_error_nr[etype] = 4;
+	error = malloc(4 * sizeof(struct bssplit));
+
+	i = 0;
+	while ((fname = strsep(&str, ":")) != NULL) {
+
+		if (!strlen(fname))
+			break;
+
+		/*
+		 * grow struct buffer, if needed
+		 */
+		if (i == td->o.ignore_error_nr[etype]) {
+			td->o.ignore_error_nr[etype] <<= 1;
+			error = realloc(error, td->o.ignore_error_nr[etype]
+						  * sizeof(int));
+		}
+		if (fname[0] == 'E') {
+			error[i] = str2error(fname);
+		} else {
+			error[i] = atoi(fname);
+			if (error[i] < 0)
+				error[i] = error[i];
+		}
+		if (!error[i]) {
+			log_err("Unknown error %s, please use number value \n",
+				  fname);
+			return 1;
+		}
+		i++;
+	}
+	if (i) {
+		td->o.continue_on_error |= 1 << etype;
+		td->o.ignore_error_nr[etype] = i;
+		td->o.ignore_error[etype] = error;
+	}
+	return 0;
+
+}
+
+static int str_ignore_error_cb(void *data, const char *input)
+{
+	struct thread_data *td = data;
+	char *str, *p, *n;
+	int type = 0, ret = 1;
+	p = str = strdup(input);
+
+	strip_blank_front(&str);
+	strip_blank_end(str);
+
+	while (p) {
+		n = strchr(p, ',');
+		if (n)
+			*n++ = '\0';
+		ret = ignore_error_type(td, type, p);
+		if (ret)
+			break;
+		p = n;
+		type++;
+	}
+	free(str);
+	return ret;
+}
+
 static int str_rw_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
@@ -2648,6 +2743,21 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  },
 		},
 	},
+	{
+		.name	= "ignore_error",
+		.type	= FIO_OPT_STR,
+		.cb	= str_ignore_error_cb,
+		.help	= "Set a specific list of errors to ignore",
+		.parent	= "rw",
+	},
+	{
+		.name	= "error_dump",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(error_dump),
+		.def	= "0",
+		.help	= "Dump info on each error",
+	},
+
 	{
 		.name	= "profile",
 		.lname	= "Profile",

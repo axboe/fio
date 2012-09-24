@@ -20,11 +20,20 @@ enum fio_memtype {
 /*
  * What type of errors to continue on when continue_on_error is used
  */
+enum error_type_bit {
+	ERROR_TYPE_READ_BIT = 0,
+	ERROR_TYPE_WRITE_BIT = 1,
+	ERROR_TYPE_VERIFY_BIT = 2,
+	ERROR_TYPE_CNT = 3,
+};
+
+#define ERROR_STR_MAX	128
+
 enum error_type {
         ERROR_TYPE_NONE = 0,
-        ERROR_TYPE_READ = 1 << 0,
-        ERROR_TYPE_WRITE = 1 << 1,
-        ERROR_TYPE_VERIFY = 1 << 2,
+        ERROR_TYPE_READ = 1 << ERROR_TYPE_READ_BIT,
+        ERROR_TYPE_WRITE = 1 << ERROR_TYPE_WRITE_BIT,
+        ERROR_TYPE_VERIFY = 1 << ERROR_TYPE_VERIFY_BIT,
         ERROR_TYPE_ANY = 0xffff,
 };
 
@@ -67,6 +76,10 @@ struct thread_options {
 	unsigned int max_bs[DDIR_RWDIR_CNT];
 	struct bssplit *bssplit[DDIR_RWDIR_CNT];
 	unsigned int bssplit_nr[DDIR_RWDIR_CNT];
+
+	int *ignore_error[ERROR_TYPE_CNT];
+	unsigned int ignore_error_nr[ERROR_TYPE_CNT];
+	unsigned int error_dump;
 
 	unsigned int nr_files;
 	unsigned int open_files;
@@ -252,6 +265,10 @@ struct thread_options_pack {
 	uint32_t max_bs[2];
 	struct bssplit bssplit[2][BSSPLIT_MAX];
 	uint32_t bssplit_nr[2];
+
+	uint32_t ignore_error[ERROR_TYPE_CNT][ERROR_STR_MAX];
+	uint32_t ignore_error_nr[ERROR_TYPE_CNT];
+	uint32_t error_dump;
 
 	uint32_t nr_files;
 	uint32_t open_files;

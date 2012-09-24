@@ -261,7 +261,7 @@ static int setup_thread_area(void)
 		shm_id = shmget(0, size, IPC_CREAT | 0600);
 		if (shm_id != -1)
 			break;
-		if (errno != EINVAL && errno != ENOMEM) {
+		if (errno != EINVAL && errno != ENOMEM && errno != ENOSPC) {
 			perror("shmget");
 			break;
 		}
@@ -1198,7 +1198,7 @@ static int fill_def_thread(void)
 
 	fio_getaffinity(getpid(), &def_thread.o.cpumask);
 	def_thread.o.timeout = def_timeout;
-
+	def_thread.o.error_dump = 1;
 	/*
 	 * fill default options
 	 */

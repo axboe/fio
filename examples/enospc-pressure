@@ -1,0 +1,51 @@
+#
+# Test for race-condition DIO-write vs punch_hole
+# If race exist dio may rewrite punched block after
+# it was allocated to another file, we will catch that
+# by verifying blocks content
+#
+[global]
+ioengine=libaio 
+directory=/scratch
+# File size is reasonably huge to provoke ENOSPC
+filesize=128G
+size=999G
+iodepth=128
+
+# Expect write failure due to ENOSPC, skip error dump
+continue_on_error=write
+ignore_error=,ENOSPC
+error_dump=0
+fallocate=none
+exitall
+
+# Two threads (dio and punch_hole) operate on single file:'raicer',
+# We do not care about data content here
+[dio-raicer]
+bs=128k 
+direct=1
+buffered=0 
+rw=randwrite
+runtime=100
+filename=raicer
+time_based
+
+[punch_hole-raicer]
+bs=4k
+rw=randtrim
+filename=raicer
+
+# Verifier thread continiously write to newly allcated blocks
+# and veryfy written content
+[aio-dio-verifier]
+create_on_open=1
+verify=crc32c-intel
+verify_fatal=1
+verify_dump=1
+verify_backlog=1024
+verify_async=4
+direct=1
+# block size should be equals to fs block size to prevent short writes
+bs=4k
+rw=randrw
+filename=aio-dio-verifier
