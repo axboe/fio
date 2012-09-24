@@ -215,17 +215,17 @@ static int str_bssplit_cb(void *data, const char *input)
 
 static int str2error(char *str)
 {
-	const char * err[] = {"EPERM", "ENOENT", "ESRCH", "EINTR", "EIO",
+	const char *err[] = { "EPERM", "ENOENT", "ESRCH", "EINTR", "EIO",
 			    "ENXIO", "E2BIG", "ENOEXEC", "EBADF",
 			    "ECHILD", "EAGAIN", "ENOMEM", "EACCES",
 			    "EFAULT", "ENOTBLK", "EBUSY", "EEXIST",
 			    "EXDEV", "ENODEV", "ENOTDIR", "EISDIR",
 			    "EINVAL", "ENFILE", "EMFILE", "ENOTTY",
 			    "ETXTBSY","EFBIG", "ENOSPC", "ESPIPE",
-			    "EROFS","EMLINK", "EPIPE", "EDOM", "ERANGE"};
+			    "EROFS","EMLINK", "EPIPE", "EDOM", "ERANGE" };
 	int i = 0, num = sizeof(err) / sizeof(void *);
 
-	while( i < num) {
+	while (i < num) {
 		if (!strcmp(err[i], str))
 			return i + 1;
 		i++;
@@ -2749,6 +2749,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.cb	= str_ignore_error_cb,
 		.help	= "Set a specific list of errors to ignore",
 		.parent	= "rw",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "error_dump",
@@ -2756,8 +2758,9 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(error_dump),
 		.def	= "0",
 		.help	= "Dump info on each error",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
-
 	{
 		.name	= "profile",
 		.lname	= "Profile",
