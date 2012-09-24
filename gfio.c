@@ -86,9 +86,9 @@ static void setup_iops_graph(struct gfio_graphs *gg)
 	gg->read_iops = graph_add_label(g, "Read IOPS");
 	gg->write_iops = graph_add_label(g, "Write IOPS");
 	gg->trim_iops = graph_add_label(g, "Trim IOPS");
-	graph_set_color(g, gg->read_iops, 0.13, 0.54, 0.13);
-	graph_set_color(g, gg->write_iops, 1.0, 0.0, 0.0);
-	graph_set_color(g, gg->trim_iops, 0.24, 0.18, 0.52);
+	graph_set_color(g, gg->read_iops, GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
+	graph_set_color(g, gg->write_iops, GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
+	graph_set_color(g, gg->trim_iops, GFIO_IOPS_R, GFIO_IOPS_G, GFIO_IOPS_B);
 	line_graph_set_data_count_limit(g, gfio_graph_limit);
 	graph_add_extra_space(g, 0.0, 0.0, 0.0, 0.0);
 	graph_set_graph_all_zeroes(g, 0);
@@ -105,9 +105,9 @@ static void setup_bandwidth_graph(struct gfio_graphs *gg)
 	gg->read_bw = graph_add_label(g, "Read Bandwidth");
 	gg->write_bw = graph_add_label(g, "Write Bandwidth");
 	gg->trim_bw = graph_add_label(g, "Trim Bandwidth");
-	graph_set_color(g, gg->read_bw, 0.13, 0.54, 0.13);
-	graph_set_color(g, gg->write_bw, 1.0, 0.0, 0.0);
-	graph_set_color(g, gg->trim_bw, 0.24, 0.18, 0.52);
+	graph_set_color(g, gg->read_bw, GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
+	graph_set_color(g, gg->write_bw, GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
+	graph_set_color(g, gg->trim_bw, GFIO_IOPS_R, GFIO_IOPS_G, GFIO_IOPS_B);
 	graph_set_base_offset(g, 1);
 	line_graph_set_data_count_limit(g, 100);
 	graph_add_extra_space(g, 0.0, 0.0, 0.0, 0.0);
@@ -1346,10 +1346,25 @@ static void combo_entry_destroy(GtkWidget *widget, gpointer data)
 	multitext_free(&ge->eta.iodepth);
 }
 
+static void fill_color_from_rgb(GdkColor *c, gfloat r, gfloat g, gfloat b)
+{
+	gint R, G, B;
+	gchar tmp[32];
+
+	memset(c, 0, sizeof(*c));
+	R = r * 255;
+	G = g * 255;
+	B = b * 255;
+	sprintf(tmp, "#%02x%02x%02x", R, G, B);
+	printf("%s\n", tmp);
+	gdk_color_parse(tmp, c);
+}
+
 static GtkWidget *new_client_page(struct gui_entry *ge)
 {
 	GtkWidget *main_vbox, *probe, *probe_frame, *probe_box;
 	GtkWidget *scrolled_window, *bottom_align, *top_align, *top_vbox;
+	GdkColor color;
 
 	main_vbox = gtk_vbox_new(FALSE, 3);
 
@@ -1391,6 +1406,18 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	ge->eta.write_iops = new_info_entry_in_frame(probe_box, "IOPS");
 	ge->eta.trim_bw = new_info_entry_in_frame(probe_box, "Trim BW");
 	ge->eta.trim_iops = new_info_entry_in_frame(probe_box, "IOPS");
+
+	fill_color_from_rgb(&color, GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
+	gtk_widget_modify_text(ge->eta.read_bw, GTK_STATE_NORMAL, &color);
+	gtk_widget_modify_text(ge->eta.read_iops, GTK_STATE_NORMAL, &color);
+
+	fill_color_from_rgb(&color, GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
+	gtk_widget_modify_text(ge->eta.write_bw, GTK_STATE_NORMAL, &color);
+	gtk_widget_modify_text(ge->eta.write_iops, GTK_STATE_NORMAL, &color);
+
+	fill_color_from_rgb(&color, GFIO_IOPS_R, GFIO_IOPS_G, GFIO_IOPS_B);
+	gtk_widget_modify_text(ge->eta.trim_bw, GTK_STATE_NORMAL, &color);
+	gtk_widget_modify_text(ge->eta.trim_iops, GTK_STATE_NORMAL, &color);
 
 	/*
 	 * Only add this if we have a commit rate
