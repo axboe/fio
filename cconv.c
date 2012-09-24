@@ -58,7 +58,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->file_size_high = le64_to_cpu(top->file_size_high);
 	o->start_offset = le64_to_cpu(top->start_offset);
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		o->bs[i] = le32_to_cpu(top->bs[i]);
 		o->ba[i] = le32_to_cpu(top->ba[i]);
 		o->min_bs[i] = le32_to_cpu(top->min_bs[i]);
@@ -326,7 +326,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->compress_percentage = cpu_to_le32(o->compress_percentage);
 	top->compress_chunk = cpu_to_le32(o->compress_chunk);
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		top->bs[i] = cpu_to_le32(o->bs[i]);
 		top->ba[i] = cpu_to_le32(o->ba[i]);
 		top->min_bs[i] = cpu_to_le32(o->min_bs[i]);

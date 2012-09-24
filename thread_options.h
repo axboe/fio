@@ -259,12 +259,12 @@ struct thread_options_pack {
 	uint64_t file_size_high;
 	uint64_t start_offset;
 
-	uint32_t bs[2];
-	uint32_t ba[2];
-	uint32_t min_bs[2];
-	uint32_t max_bs[2];
-	struct bssplit bssplit[2][BSSPLIT_MAX];
-	uint32_t bssplit_nr[2];
+	uint32_t bs[DDIR_RWDIR_CNT];
+	uint32_t ba[DDIR_RWDIR_CNT];
+	uint32_t min_bs[DDIR_RWDIR_CNT];
+	uint32_t max_bs[DDIR_RWDIR_CNT];
+	struct bssplit bssplit[DDIR_RWDIR_CNT][BSSPLIT_MAX];
+	uint32_t bssplit_nr[DDIR_RWDIR_CNT];
 
 	uint32_t ignore_error[ERROR_TYPE_CNT][ERROR_STR_MAX];
 	uint32_t ignore_error_nr[ERROR_TYPE_CNT];
@@ -383,11 +383,11 @@ struct thread_options_pack {
 	uint8_t exec_prerun[FIO_TOP_STR_MAX];
 	uint8_t exec_postrun[FIO_TOP_STR_MAX];
 
-	uint32_t rate[2];
-	uint32_t ratemin[2];
+	uint32_t rate[DDIR_RWDIR_CNT];
+	uint32_t ratemin[DDIR_RWDIR_CNT];
 	uint32_t ratecycle;
-	uint32_t rate_iops[2];
-	uint32_t rate_iops_min[2];
+	uint32_t rate_iops[DDIR_RWDIR_CNT];
+	uint32_t rate_iops_min[DDIR_RWDIR_CNT];
 
 	uint8_t ioscheduler[FIO_TOP_STR_MAX];
 
