@@ -659,7 +659,7 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 	je->nr_pending		= cpu_to_le32(je->nr_pending);
 	je->files_open		= cpu_to_le32(je->files_open);
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		je->m_rate[i]	= cpu_to_le32(je->m_rate[i]);
 		je->t_rate[i]	= cpu_to_le32(je->t_rate[i]);
 		je->m_iops[i]	= cpu_to_le32(je->m_iops[i]);
@@ -925,7 +925,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 {
 	int i;
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		dst->max_run[i]		= cpu_to_le64(src->max_run[i]);
 		dst->min_run[i]		= cpu_to_le64(src->min_run[i]);
 		dst->max_bw[i]		= cpu_to_le64(src->max_bw[i]);
@@ -961,7 +961,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.pid		= cpu_to_le32(ts->pid);
 	p.ts.members		= cpu_to_le32(ts->members);
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		convert_io_stat(&p.ts.clat_stat[i], &ts->clat_stat[i]);
 		convert_io_stat(&p.ts.slat_stat[i], &ts->slat_stat[i]);
 		convert_io_stat(&p.ts.lat_stat[i], &ts->lat_stat[i]);
@@ -993,7 +993,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 		p.ts.io_u_lat_m[i]	= cpu_to_le32(ts->io_u_lat_m[i]);
 	}
 
-	for (i = 0; i < 2; i++)
+	for (i = 0; i < DDIR_RWDIR_CNT; i++)
 		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
 			p.ts.io_u_plat[i][j] = cpu_to_le32(ts->io_u_plat[i][j]);
 
@@ -1005,7 +1005,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.total_submit	= cpu_to_le64(ts->total_submit);
 	p.ts.total_complete	= cpu_to_le64(ts->total_complete);
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		p.ts.io_bytes[i]	= cpu_to_le64(ts->io_bytes[i]);
 		p.ts.runtime[i]		= cpu_to_le64(ts->runtime[i]);
 	}
