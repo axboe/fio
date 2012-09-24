@@ -430,13 +430,13 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			break;
 
 		if (o->maxval && ull > o->maxval) {
-			log_err("max value out of range: %lld"
-					" (%d max)\n", ull, o->maxval);
+			log_err("max value out of range: %llu"
+					" (%u max)\n", ull, o->maxval);
 			return 1;
 		}
 		if (o->minval && ull < o->minval) {
-			log_err("min value out of range: %lld"
-					" (%d min)\n", ull, o->minval);
+			log_err("min value out of range: %llu"
+					" (%u min)\n", ull, o->minval);
 			return 1;
 		}
 
@@ -1086,6 +1086,10 @@ void option_init(struct fio_option *o)
 	if (o->type == FIO_OPT_BOOL) {
 		o->minval = 0;
 		o->maxval = 1;
+	}
+	if (o->type == FIO_OPT_INT) {
+		if (!o->maxval)
+			o->maxval = UINT_MAX;
 	}
 	if (o->type == FIO_OPT_FLOAT_LIST) {
 		o->minfp = NAN;
