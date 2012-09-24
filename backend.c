@@ -802,6 +802,7 @@ static int init_io_u(struct thread_data *td)
 	struct io_u *io_u;
 	unsigned int max_bs, min_write;
 	int cl_align, i, max_units;
+	int data_xfer = 1;
 	char *p;
 
 	max_units = td->o.iodepth;
@@ -810,6 +811,9 @@ static int init_io_u(struct thread_data *td)
 	min_write = td->o.min_bs[DDIR_WRITE];
 	td->orig_buffer_size = (unsigned long long) max_bs
 					* (unsigned long long) max_units;
+
+	if ((td->io_ops->flags & FIO_NOIO) || !td_rw(td))
+		data_xfer = 0;
 
 	if (td->o.mem_type == MEM_SHMHUGE || td->o.mem_type == MEM_MMAPHUGE) {
 		unsigned long bs;
@@ -823,7 +827,7 @@ static int init_io_u(struct thread_data *td)
 		return 1;
 	}
 
-	if (allocate_io_mem(td))
+	if (data_xfer && allocate_io_mem(td))
 		return 1;
 
 	if (td->o.odirect || td->o.mem_align ||
@@ -851,7 +855,7 @@ static int init_io_u(struct thread_data *td)
 		INIT_FLIST_HEAD(&io_u->list);
 		dprint(FD_MEM, "io_u alloc %p, index %u\n", io_u, i);
 
-		if (!(td->io_ops->flags & FIO_NOIO)) {
+		if (data_xfer) {
 			io_u->buf = p;
 			dprint(FD_MEM, "io_u %p, mem %p\n", io_u, io_u->buf);
 
