@@ -52,7 +52,7 @@ struct io_log {
 	 * Windowed average, for logging single entries average over some
 	 * period of time.
 	 */
-	struct io_stat avg_window[2];
+	struct io_stat avg_window[DDIR_RWDIR_CNT];
 	unsigned long avg_msec;
 	unsigned long avg_last;
 };
@@ -123,7 +123,7 @@ extern void setup_log(struct io_log **, unsigned long, int);
 extern void finish_log(struct thread_data *, struct io_log *, const char *);
 extern void finish_log_named(struct thread_data *, struct io_log *, const char *, const char *);
 extern void __finish_log(struct io_log *, const char *);
-extern struct io_log *agg_io_log[2];
+extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 extern int write_bw_log;
 extern void add_agg_sample(unsigned long, enum fio_ddir, unsigned int);
 

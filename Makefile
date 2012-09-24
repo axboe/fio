@@ -18,13 +18,14 @@ SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		lib/num2str.c lib/ieee754.c $(wildcard crc/*.c) engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
 		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
-		cconv.c lib/prio_tree.c
+		cconv.c lib/prio_tree.c json.c
 
 ifeq ($(UNAME), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c helpers.c cgroup.c trim.c \
 		engines/libaio.c engines/posixaio.c engines/sg.c \
 		engines/splice.c engines/syslet-rw.c engines/guasi.c \
-		engines/binject.c engines/rdma.c profiles/tiobench.c
+		engines/binject.c engines/rdma.c profiles/tiobench.c \
+		engines/fusion-aw.c engines/falloc.c engines/e4defrag.c
   LIBS += -lpthread -ldl -lrt -laio
   LDFLAGS += -rdynamic
 endif

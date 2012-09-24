@@ -78,10 +78,10 @@ struct thread_data {
 	struct io_log *bw_log;
 	struct io_log *iops_log;
 
-	uint64_t stat_io_bytes[2];
+	uint64_t stat_io_bytes[DDIR_RWDIR_CNT];
 	struct timeval bw_sample_time;
 
-	uint64_t stat_io_blocks[2];
+	uint64_t stat_io_blocks[DDIR_RWDIR_CNT];
 	struct timeval iops_sample_time;
 
 	struct rusage ru_start;
@@ -180,21 +180,21 @@ struct thread_data {
 	/*
 	 * Rate state
 	 */
-	unsigned long long rate_bps[2];
-	long rate_pending_usleep[2];
-	unsigned long rate_bytes[2];
-	unsigned long rate_blocks[2];
-	struct timeval lastrate[2];
+	unsigned long long rate_bps[DDIR_RWDIR_CNT];
+	long rate_pending_usleep[DDIR_RWDIR_CNT];
+	unsigned long rate_bytes[DDIR_RWDIR_CNT];
+	unsigned long rate_blocks[DDIR_RWDIR_CNT];
+	struct timeval lastrate[DDIR_RWDIR_CNT];
 
 	unsigned long long total_io_size;
 	unsigned long long fill_device_size;
 
-	unsigned long io_issues[2];
-	unsigned long long io_blocks[2];
-	unsigned long long this_io_blocks[2];
-	unsigned long long io_bytes[2];
+	unsigned long io_issues[DDIR_RWDIR_CNT];
+	unsigned long long io_blocks[DDIR_RWDIR_CNT];
+	unsigned long long this_io_blocks[DDIR_RWDIR_CNT];
+	unsigned long long io_bytes[DDIR_RWDIR_CNT];
 	unsigned long long io_skip_bytes;
-	unsigned long long this_io_bytes[2];
+	unsigned long long this_io_bytes[DDIR_RWDIR_CNT];
 	unsigned long long zone_bytes;
 	struct fio_mutex *mutex;
 
@@ -312,7 +312,7 @@ extern int exitall_on_terminate;
 extern unsigned int thread_number;
 extern int shm_id;
 extern int groupid;
-extern int terse_output;
+extern int output_format;
 extern int temp_stall_ts;
 extern uintptr_t page_mask, page_size;
 extern int read_only;
@@ -513,10 +513,12 @@ static inline int should_check_rate(struct thread_data *td,
 {
 	int ret = 0;
 
-	if (bytes_done[0])
-		ret |= __should_check_rate(td, 0);
-	if (bytes_done[1])
-		ret |= __should_check_rate(td, 1);
+	if (bytes_done[DDIR_READ])
+		ret |= __should_check_rate(td, DDIR_READ);
+	if (bytes_done[DDIR_WRITE])
+		ret |= __should_check_rate(td, DDIR_WRITE);
+	if (bytes_done[DDIR_TRIM])
+		ret |= __should_check_rate(td, DDIR_TRIM);
 
 	return ret;
 }
@@ -552,5 +554,11 @@ extern const char *fio_get_arch_string(int);
 extern const char *fio_get_os_string(int);
 
 #define ARRAY_SIZE(x) (sizeof((x)) / (sizeof((x)[0])))
+
+enum {
+	FIO_OUTPUT_TERSE	= 0,
+	FIO_OUTPUT_JSON,
+	FIO_OUTPUT_NORMAL,
+};
 
 #endif

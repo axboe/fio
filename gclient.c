@@ -694,7 +694,7 @@ static void gfio_add_total_depths_tree(GtkListStore *model,
 	const int add_mask = 0x17e;
 	int i, j;
 
-	stat_calc_dist(ts->io_u_map, ts_total_io_u(ts), io_u_dist);
+	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
 
 	gtk_list_store_append(model, &iter);
 

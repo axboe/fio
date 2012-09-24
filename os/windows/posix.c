@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <windows.h>
 #include <stddef.h>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
@@ -22,6 +23,24 @@
 
 extern unsigned long mtime_since_now(struct timeval *);
 extern void fio_gettime(struct timeval *, void *);
+
+/* These aren't defined in the MinGW headers */
+HRESULT WINAPI StringCchCopyA(
+  char *pszDest,
+  size_t cchDest,
+  const char *pszSrc);
+
+HRESULT WINAPI StringCchPrintfA(
+  char *pszDest,
+  size_t cchDest,
+  const char *pszFormat,
+  ...);
+
+int vsprintf_s(
+  char *buffer,
+  size_t numberOfElements,
+  const char *format,
+  va_list argptr);
 
 long sysconf(int name)
 {
@@ -119,11 +138,6 @@ int gettimeofday(struct timeval *restrict tp, void *restrict tzp)
 	return 0;
 }
 
-void syslog(int priority, const char *message, ... /* argument */)
-{
-	log_err("%s is not implemented\n", __func__);
-}
-
 int sigaction(int sig, const struct sigaction *act,
 		struct sigaction *oact)
 {
@@ -187,14 +201,43 @@ pid_t setsid(void)
 	return (-1);
 }
 
+static HANDLE log_file = INVALID_HANDLE_VALUE;
+
 void openlog(const char *ident, int logopt, int facility)
 {
-	log_err("%s is not implemented\n", __func__);
+	if (log_file == INVALID_HANDLE_VALUE)
+		log_file = CreateFileA("syslog.txt", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, 0, NULL);
 }
 
 void closelog(void)
 {
-	log_err("%s is not implemented\n", __func__);
+	CloseHandle(log_file);
+	log_file = INVALID_HANDLE_VALUE;
+}
+
+void syslog(int priority, const char *message, ... /* argument */)
+{
+	va_list v;
+	int len;
+	char *output;
+	DWORD bytes_written;
+
+	if (log_file == INVALID_HANDLE_VALUE) {
+		log_file = CreateFileA("syslog.txt", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, 0, NULL);
+	}
+
+	if (log_file == INVALID_HANDLE_VALUE) {
+		log_err("syslog: failed to open log file\n");
+		return;
+	}
+
+	va_start(v, message);
+	len = _vscprintf(message, v);
+	output = malloc(len + sizeof(char));
+	vsprintf_s(output, len + sizeof(char), message, v);
+	WriteFile(log_file, output, len, &bytes_written, NULL);
+	va_end(v);
+    free(output);
 }
 
 int kill(pid_t pid, int sig)
@@ -334,7 +377,7 @@ char *basename(char *path)
 
 int posix_fallocate(int fd, off_t offset, off_t len)
 {
-	const int BUFFER_SIZE = 64 * 1024 * 1024;
+	const int BUFFER_SIZE = 256 * 1024;
 	int rc = 0;
 	char *buf;
 	unsigned int write_len;
@@ -498,7 +541,6 @@ int posix_madvise(void *addr, size_t len, int advice)
 /* Windows doesn't support advice for memory pages. Just ignore it. */
 int msync(void *addr, size_t len, int flags)
 {
-	log_err("%s is not implemented\n", __func__);
 	errno = ENOSYS;
 	return -1;
 }
@@ -665,23 +707,65 @@ int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 
 DIR *opendir(const char *dirname)
 {
-	log_err("%s is not implemented\n", __func__);
-	errno = ENOSYS;
-	return NULL;
+    struct dirent_ctx *dc = NULL;
+
+    /* See if we can open it. If not, we'll return an error here */
+    HANDLE file = CreateFileA(dirname, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    if (file != INVALID_HANDLE_VALUE) {
+        CloseHandle(file);
+        dc = (struct dirent_ctx*)malloc(sizeof(struct dirent_ctx));
+        StringCchCopyA(dc->dirname, MAX_PATH, dirname);
+        dc->find_handle = INVALID_HANDLE_VALUE;
+    } else {
+        DWORD error = GetLastError();
+        if (error == ERROR_FILE_NOT_FOUND)
+            errno = ENOENT;
+
+        else if (error == ERROR_PATH_NOT_FOUND)
+            errno = ENOTDIR;
+        else if (error == ERROR_TOO_MANY_OPEN_FILES)
+            errno = ENFILE;
+        else if (error == ERROR_ACCESS_DENIED)
+            errno = EACCES;
+        else
+            errno = error;
+    }
+
+    return dc;
 }
 
 int closedir(DIR *dirp)
 {
-	log_err("%s is not implemented\n", __func__);
-	errno = ENOSYS;
-	return -1;
+    if (dirp != NULL && dirp->find_handle != INVALID_HANDLE_VALUE)
+        FindClose(dirp->find_handle);
+
+    free(dirp);
+    return 0;
 }
 
 struct dirent *readdir(DIR *dirp)
 {
-	log_err("%s is not implemented\n", __func__);
-	errno = ENOSYS;
-	return NULL;
+	static struct dirent de;
+	WIN32_FIND_DATA find_data;
+
+	if (dirp == NULL)
+		return NULL;
+
+	if (dirp->find_handle == INVALID_HANDLE_VALUE) {
+		char search_pattern[MAX_PATH];
+		StringCchPrintfA(search_pattern, MAX_PATH, "%s\\*", dirp->dirname);
+		dirp->find_handle = FindFirstFileA(search_pattern, &find_data);
+		if (dirp->find_handle == INVALID_HANDLE_VALUE)
+			return NULL;
+	} else {
+		if (!FindNextFile(dirp->find_handle, &find_data))
+			return NULL;
+	}
+
+	StringCchCopyA(de.d_name, MAX_PATH, find_data.cFileName);
+	de.d_ino = 0;
+
+	return &de;
 }
 
 uid_t geteuid(void)
@@ -689,13 +773,6 @@ uid_t geteuid(void)
 	log_err("%s is not implemented\n", __func__);
 	errno = ENOSYS;
 	return -1;
-}
-
-int inet_aton(char *addr)
-{
-	log_err("%s is not implemented\n", __func__);
-	errno = ENOSYS;
-	return 0;
 }
 
 const char* inet_ntop(int af, const void *restrict src,

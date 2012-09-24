@@ -75,9 +75,10 @@ static int fio_psyncio_queue(struct thread_data *td, struct io_u *io_u)
 		ret = pread(f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 	else if (io_u->ddir == DDIR_WRITE)
 		ret = pwrite(f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
-	else if (io_u->ddir == DDIR_TRIM)
-		ret = do_io_u_trim(td, io_u);
-	else
+	else if (io_u->ddir == DDIR_TRIM) {
+		do_io_u_trim(td, io_u);
+		return FIO_Q_COMPLETED;
+	} else
 		ret = do_io_u_sync(td, io_u);
 
 	return fio_io_end(td, io_u, ret);
@@ -94,9 +95,10 @@ static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 		ret = read(f->fd, io_u->xfer_buf, io_u->xfer_buflen);
 	else if (io_u->ddir == DDIR_WRITE)
 		ret = write(f->fd, io_u->xfer_buf, io_u->xfer_buflen);
-	else if (io_u->ddir == DDIR_TRIM)
-		ret = do_io_u_trim(td, io_u);
-	else
+	else if (io_u->ddir == DDIR_TRIM) {
+		do_io_u_trim(td, io_u);
+		return FIO_Q_COMPLETED;
+	} else
 		ret = do_io_u_sync(td, io_u);
 
 	return fio_io_end(td, io_u, ret);

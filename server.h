@@ -157,6 +157,12 @@ struct group_run_stats;
 extern void fio_server_send_ts(struct thread_stat *, struct group_run_stats *);
 extern void fio_server_send_gs(struct group_run_stats *);
 extern void fio_server_send_du(void);
+extern void fio_server_idle_loop(void);
+
+extern int fio_clients_connect(void);
+extern int fio_clients_send_ini(const char *);
+extern void fio_client_add_cmd_option(void *, const char *);
+extern void fio_client_add_ini_file(void *, const char *);
 
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);

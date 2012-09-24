@@ -45,6 +45,7 @@
 #define FIO_HAVE_CLOCK_MONOTONIC
 #define FIO_HAVE_GETTID
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
+#define FIO_HAVE_E4_ENG
 
 /*
  * Can only enable this for newer glibcs, or the header and defines are
@@ -55,6 +56,10 @@
 #endif
 #if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 8
 #define FIO_HAVE_LINUX_FALLOCATE
+#endif
+
+#ifdef FIO_HAVE_LINUX_FALLOCATE
+#define FIO_HAVE_FALLOC_ENG
 #endif
 
 #ifdef SYNC_FILE_RANGE_WAIT_BEFORE

@@ -165,7 +165,7 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 static int str_bssplit_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
-	char *str, *p, *odir;
+	char *str, *p, *odir, *ddir;
 	int ret = 0;
 
 	p = str = strdup(input);
@@ -175,7 +175,21 @@ static int str_bssplit_cb(void *data, const char *input)
 
 	odir = strchr(str, ',');
 	if (odir) {
-		ret = bssplit_ddir(&td->o, DDIR_WRITE, odir + 1);
+		ddir = strchr(odir + 1, ',');
+		if (ddir) {
+			ret = bssplit_ddir(&td->o, DDIR_TRIM, ddir + 1);
+			if (!ret)
+				*ddir = '\0';
+		} else {
+			char *op;
+
+			op = strdup(odir + 1);
+			ret = bssplit_ddir(&td->o, DDIR_TRIM, op);
+
+			free(op);
+		}
+		if (!ret)
+			ret = bssplit_ddir(&td->o, DDIR_WRITE, odir + 1);
 		if (!ret) {
 			*odir = '\0';
 			ret = bssplit_ddir(&td->o, DDIR_READ, str);
@@ -184,12 +198,15 @@ static int str_bssplit_cb(void *data, const char *input)
 		char *op;
 
 		op = strdup(str);
-
-		ret = bssplit_ddir(&td->o, DDIR_READ, str);
-		if (!ret)
-			ret = bssplit_ddir(&td->o, DDIR_WRITE, op);
-
+		ret = bssplit_ddir(&td->o, DDIR_WRITE, op);
 		free(op);
+
+		if (!ret) {
+			op = strdup(str);
+			ret = bssplit_ddir(&td->o, DDIR_TRIM, op);
+			free(op);
+		}
+		ret = bssplit_ddir(&td->o, DDIR_READ, str);
 	}
 
 	free(p);
@@ -950,6 +967,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = TD_DDIR_WRITE,
 			    .help = "Sequential write",
 			  },
+			  { .ival = "trim",
+			    .oval = TD_DDIR_TRIM,
+			    .help = "Sequential trim",
+			  },
 			  { .ival = "randread",
 			    .oval = TD_DDIR_RANDREAD,
 			    .help = "Random read",
@@ -957,6 +978,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  { .ival = "randwrite",
 			    .oval = TD_DDIR_RANDWRITE,
 			    .help = "Random write",
+			  },
+			  { .ival = "randtrim",
+			    .oval = TD_DDIR_RANDTRIM,
+			    .help = "Random trim",
 			  },
 			  { .ival = "rw",
 			    .oval = TD_DDIR_RW,
@@ -1075,6 +1100,21 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 #ifdef FIO_HAVE_RDMA
 			  { .ival = "rdma",
 			    .help = "RDMA IO engine",
+			  },
+#endif
+#ifdef FIO_HAVE_FUSION_AW
+			  { .ival = "fusion-aw-sync",
+			    .help = "Fusion-io atomic write engine",
+			  },
+#endif
+#ifdef FIO_HAVE_E4_ENG
+			  { .ival = "e4defrag",
+			    .help = "ext4 defrag engine",
+			  },
+#endif
+#ifdef FIO_HAVE_FALLOC_ENG
+			  { .ival = "falloc",
+			    .help = "fallocate() file based engine",
 			  },
 #endif
 			  { .ival = "external",
@@ -1200,6 +1240,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(bs[DDIR_READ]),
 		.off2	= td_var_offset(bs[DDIR_WRITE]),
+		.off3	= td_var_offset(bs[DDIR_TRIM]),
 		.minval = 1,
 		.help	= "Block size unit",
 		.def	= "4k",
@@ -1216,6 +1257,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ba[DDIR_READ]),
 		.off2	= td_var_offset(ba[DDIR_WRITE]),
+		.off3	= td_var_offset(ba[DDIR_TRIM]),
 		.minval	= 1,
 		.help	= "IO block offset alignment",
 		.parent	= "rw",
@@ -1233,6 +1275,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off2	= td_var_offset(max_bs[DDIR_READ]),
 		.off3	= td_var_offset(min_bs[DDIR_WRITE]),
 		.off4	= td_var_offset(max_bs[DDIR_WRITE]),
+		.off5	= td_var_offset(min_bs[DDIR_TRIM]),
+		.off6	= td_var_offset(max_bs[DDIR_TRIM]),
 		.minval = 1,
 		.help	= "Set block size range (in more detail than bs)",
 		.parent = "rw",
@@ -2115,8 +2159,9 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "rate",
 		.lname	= "I/O rate",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(rate[0]),
-		.off2	= td_var_offset(rate[1]),
+		.off1	= td_var_offset(rate[DDIR_READ]),
+		.off2	= td_var_offset(rate[DDIR_WRITE]),
+		.off3	= td_var_offset(rate[DDIR_TRIM]),
 		.help	= "Set bandwidth rate",
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_RATE,
@@ -2125,8 +2170,9 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "ratemin",
 		.lname	= "I/O min rate",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(ratemin[0]),
-		.off2	= td_var_offset(ratemin[1]),
+		.off1	= td_var_offset(ratemin[DDIR_READ]),
+		.off2	= td_var_offset(ratemin[DDIR_WRITE]),
+		.off3	= td_var_offset(ratemin[DDIR_TRIM]),
 		.help	= "Job must meet this rate or it will be shutdown",
 		.parent	= "rate",
 		.hide	= 1,
@@ -2137,8 +2183,9 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "rate_iops",
 		.lname	= "I/O rate IOPS",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(rate_iops[0]),
-		.off2	= td_var_offset(rate_iops[1]),
+		.off1	= td_var_offset(rate_iops[DDIR_READ]),
+		.off2	= td_var_offset(rate_iops[DDIR_WRITE]),
+		.off3	= td_var_offset(rate_iops[DDIR_TRIM]),
 		.help	= "Limit IO used to this number of IO operations/sec",
 		.hide	= 1,
 		.category = FIO_OPT_C_IO,
@@ -2148,8 +2195,9 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "rate_iops_min",
 		.lname	= "I/O min rate IOPS",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(rate_iops_min[0]),
-		.off2	= td_var_offset(rate_iops_min[1]),
+		.off1	= td_var_offset(rate_iops_min[DDIR_READ]),
+		.off2	= td_var_offset(rate_iops_min[DDIR_WRITE]),
+		.off3	= td_var_offset(rate_iops_min[DDIR_TRIM]),
 		.help	= "Job must meet this rate or it will be shut down",
 		.parent	= "rate_iops",
 		.hide	= 1,

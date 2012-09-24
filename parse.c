@@ -413,11 +413,17 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	case FIO_OPT_INT:
 	case FIO_OPT_STR_VAL: {
 		fio_opt_str_val_fn *fn = o->cb;
+		char tmp[128], *p;
+
+		strncpy(tmp, ptr, sizeof(tmp) - 1);
+		p = strchr(tmp, ',');
+		if (p)
+			*p = '\0';
 
 		if (is_time)
-			ret = check_str_time(ptr, &ull);
+			ret = check_str_time(tmp, &ull);
 		else
-			ret = check_str_bytes(ptr, &ull, data);
+			ret = check_str_bytes(tmp, &ull, data);
 
 		if (ret)
 			break;
@@ -443,11 +449,31 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 					else
 						val_store(ilp, ull, o->off1, 0, data);
 				}
-				if (!more) {
+				if (curr == 1) {
 					if (o->roff2)
 						*(unsigned int *) o->roff2 = ull;
 					else if (o->off2)
 						val_store(ilp, ull, o->off2, 0, data);
+				}
+				if (curr == 2) {
+					if (o->roff3)
+						*(unsigned int *) o->roff3 = ull;
+					else if (o->off3)
+						val_store(ilp, ull, o->off3, 0, data);
+				}
+				if (!more) {
+					if (curr < 1) {
+						if (o->roff2)
+							*(unsigned int *) o->roff2 = ull;
+						else if (o->off2)
+							val_store(ilp, ull, o->off2, 0, data);
+					}
+					if (curr < 2) {
+						if (o->roff3)
+							*(unsigned int *) o->roff3 = ull;
+						else if (o->off3)
+							val_store(ilp, ull, o->off3, 0, data);
+					}
 				}
 			} else {
 				if (first) {
@@ -597,12 +623,43 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 				else
 					val_store(ilp, ul2, o->off2, 0, data);
 			}
-			if (o->roff3 && o->roff4) {
-				*(unsigned int *) o->roff3 = ul1;
-				*(unsigned int *) o->roff4 = ul2;
-			} else if (o->off3 && o->off4) {
-				val_store(ilp, ul1, o->off3, 0, data);
-				val_store(ilp, ul2, o->off4, 0, data);
+			if (curr == 1) {
+				if (o->roff3 && o->roff4) {
+					*(unsigned int *) o->roff3 = ul1;
+					*(unsigned int *) o->roff4 = ul2;
+				} else if (o->off3 && o->off4) {
+					val_store(ilp, ul1, o->off3, 0, data);
+					val_store(ilp, ul2, o->off4, 0, data);
+				}
+			}
+			if (curr == 2) {
+				if (o->roff5 && o->roff6) {
+					*(unsigned int *) o->roff5 = ul1;
+					*(unsigned int *) o->roff6 = ul2;
+				} else if (o->off5 && o->off6) {
+					val_store(ilp, ul1, o->off5, 0, data);
+					val_store(ilp, ul2, o->off6, 0, data);
+				}
+			}
+			if (!more) {
+				if (curr < 1) {
+					if (o->roff3 && o->roff4) {
+						*(unsigned int *) o->roff3 = ul1;
+						*(unsigned int *) o->roff4 = ul2;
+					} else if (o->off3 && o->off4) {
+						val_store(ilp, ul1, o->off3, 0, data);
+						val_store(ilp, ul2, o->off4, 0, data);
+					}
+				}
+				if (curr < 2) {
+					if (o->roff5 && o->roff6) {
+						*(unsigned int *) o->roff5 = ul1;
+						*(unsigned int *) o->roff6 = ul2;
+					} else if (o->off5 && o->off6) {
+						val_store(ilp, ul1, o->off5, 0, data);
+						val_store(ilp, ul2, o->off6, 0, data);
+					}
+				}
 			}
 		}
 
@@ -706,7 +763,7 @@ static int handle_option(struct fio_option *o, const char *__ptr, void *data)
 			ptr2 = strchr(ptr, ',');
 			if (ptr2 && *(ptr2 + 1) == '\0')
 				*ptr2 = '\0';
-			if (o->type != FIO_OPT_STR_MULTI) {
+			if (o->type != FIO_OPT_STR_MULTI && o->type != FIO_OPT_RANGE) {
 				if (!ptr2)
 					ptr2 = strchr(ptr, ':');
 				if (!ptr2)

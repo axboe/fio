@@ -597,10 +597,60 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 		log_info("\n");
 }
 
-void show_disk_util(int terse)
+static void print_disk_util_json(struct disk_util *du, struct json_array *array)
+{
+	double util = 0;
+	struct disk_util_stat *dus = &du->dus;
+	struct disk_util_agg *agg = &du->agg;
+	struct json_object *obj;
+
+	obj = json_create_object();
+	json_array_add_value_object(array, obj);
+
+	if (dus->msec)
+		util = (double) 100 * dus->io_ticks / (double) dus->msec;
+	if (util > 100.0)
+		util = 100.0;
+
+
+	json_object_add_value_string(obj, "name", dus->name);
+	json_object_add_value_int(obj, "read_ios", dus->ios[0]);
+	json_object_add_value_int(obj, "write_ios", dus->ios[1]);
+	json_object_add_value_int(obj, "read_merges", dus->merges[0]);
+	json_object_add_value_int(obj, "write_merges", dus->merges[1]);
+	json_object_add_value_int(obj, "read_ticks", dus->ticks[0]);
+	json_object_add_value_int(obj, "write_ticks", dus->ticks[1]);
+	json_object_add_value_int(obj, "in_queue", dus->time_in_queue);
+	json_object_add_value_float(obj, "util", util);
+
+	/*
+	 * If the device has slaves, aggregate the stats for
+	 * those slave devices also.
+	 */
+	if (!agg->slavecount)
+		return;
+	json_object_add_value_int(obj, "aggr_read_ios",
+				agg->ios[0] / agg->slavecount);
+	json_object_add_value_int(obj, "aggr_write_ios",
+				agg->ios[1] / agg->slavecount);
+	json_object_add_value_int(obj, "aggr_read_merges",
+				agg->merges[0] / agg->slavecount);
+	json_object_add_value_int(obj, "aggr_write_merge",
+				agg->merges[1] / agg->slavecount);
+	json_object_add_value_int(obj, "aggr_read_ticks",
+				agg->ticks[0] / agg->slavecount);
+	json_object_add_value_int(obj, "aggr_write_ticks",
+				agg->ticks[1] / agg->slavecount);
+	json_object_add_value_int(obj, "aggr_in_queue",
+				agg->time_in_queue / agg->slavecount);
+	json_object_add_value_float(obj, "aggr_util", agg->max_util.u.f);
+}
+
+void show_disk_util(int terse, struct json_object *parent)
 {
 	struct flist_head *entry;
 	struct disk_util *du;
+	struct json_array *array = NULL;
 
 	fio_mutex_down(disk_util_mutex);
 
@@ -612,11 +662,19 @@ void show_disk_util(int terse)
 	if (!terse)
 		log_info("\nDisk stats (read/write):\n");
 
+	if (terse && terse_version == 4) {
+		array = json_create_array();
+		json_object_add_value_array(parent, "disk_util", array);
+	}
+
 	flist_for_each(entry, &disk_list) {
 		du = flist_entry(entry, struct disk_util, list);
 
 		aggregate_slaves_stats(du);
-		print_disk_util(&du->dus, &du->agg, terse);
+		if (terse && terse_version == 4)
+			print_disk_util_json(du, array);
+		else
+			print_disk_util(&du->dus, &du->agg, terse);
 	}
 
 	fio_mutex_up(disk_util_mutex);

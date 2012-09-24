@@ -257,11 +257,20 @@ static void fio_libaio_cleanup(struct thread_data *td)
 static int fio_libaio_init(struct thread_data *td)
 {
 	struct libaio_data *ld = malloc(sizeof(*ld));
-	int err;
+	struct libaio_options *o = td->eo;
+	int err = 0;
 
 	memset(ld, 0, sizeof(*ld));
 
-	err = io_queue_init(td->o.iodepth, &ld->aio_ctx);
+	/*
+	 * First try passing in 0 for queue depth, since we don't
+	 * care about the user ring. If that fails, the kernel is too old
+	 * and we need the right depth.
+	 */
+	if (!o->userspace_reap)
+		err = io_queue_init(INT_MAX, &ld->aio_ctx);
+	if (o->userspace_reap || err == -EINVAL)
+		err = io_queue_init(td->o.iodepth, &ld->aio_ctx);
 	if (err) {
 		td_verror(td, -err, "io_queue_init");
 		log_err("fio: check /proc/sys/fs/aio-max-nr\n");

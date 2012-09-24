@@ -61,12 +61,12 @@ struct thread_options {
 	unsigned long long file_size_high;
 	unsigned long long start_offset;
 
-	unsigned int bs[2];
-	unsigned int ba[2];
-	unsigned int min_bs[2];
-	unsigned int max_bs[2];
-	struct bssplit *bssplit[2];
-	unsigned int bssplit_nr[2];
+	unsigned int bs[DDIR_RWDIR_CNT];
+	unsigned int ba[DDIR_RWDIR_CNT];
+	unsigned int min_bs[DDIR_RWDIR_CNT];
+	unsigned int max_bs[DDIR_RWDIR_CNT];
+	struct bssplit *bssplit[DDIR_RWDIR_CNT];
+	unsigned int bssplit_nr[DDIR_RWDIR_CNT];
 
 	unsigned int nr_files;
 	unsigned int open_files;
@@ -181,11 +181,11 @@ struct thread_options {
 	char *exec_prerun;
 	char *exec_postrun;
 
-	unsigned int rate[2];
-	unsigned int ratemin[2];
+	unsigned int rate[DDIR_RWDIR_CNT];
+	unsigned int ratemin[DDIR_RWDIR_CNT];
 	unsigned int ratecycle;
-	unsigned int rate_iops[2];
-	unsigned int rate_iops_min[2];
+	unsigned int rate_iops[DDIR_RWDIR_CNT];
+	unsigned int rate_iops_min[DDIR_RWDIR_CNT];
 
 	char *ioscheduler;
 

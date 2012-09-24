@@ -36,7 +36,7 @@ static struct thread_data def_thread;
 struct thread_data *threads = NULL;
 
 int exitall_on_terminate = 0;
-int terse_output = 0;
+int output_format = FIO_OUTPUT_NORMAL;
 int eta_print;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
@@ -114,6 +114,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "minimal",
 		.has_arg	= optional_argument,
 		.val		= 'm' | FIO_CLIENT_FLAG,
+	},
+	{
+		.name		= (char *) "output-format",
+		.has_arg	= optional_argument,
+		.val		= 'F' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "version",
@@ -369,6 +374,8 @@ static int setup_rate(struct thread_data *td)
 		ret = __setup_rate(td, DDIR_READ);
 	if (td->o.rate[DDIR_WRITE] || td->o.rate_iops[DDIR_WRITE])
 		ret |= __setup_rate(td, DDIR_WRITE);
+	if (td->o.rate[DDIR_TRIM] || td->o.rate_iops[DDIR_TRIM])
+		ret |= __setup_rate(td, DDIR_TRIM);
 
 	return ret;
 }
@@ -377,7 +384,9 @@ static int fixed_block_size(struct thread_options *o)
 {
 	return o->min_bs[DDIR_READ] == o->max_bs[DDIR_READ] &&
 		o->min_bs[DDIR_WRITE] == o->max_bs[DDIR_WRITE] &&
-		o->min_bs[DDIR_READ] == o->min_bs[DDIR_WRITE];
+		o->min_bs[DDIR_TRIM] == o->max_bs[DDIR_TRIM] &&
+		o->min_bs[DDIR_READ] == o->min_bs[DDIR_WRITE] &&
+		o->min_bs[DDIR_READ] == o->min_bs[DDIR_TRIM];
 }
 
 /*
@@ -433,8 +442,14 @@ static int fixup_options(struct thread_data *td)
 		o->min_bs[DDIR_WRITE] = o->bs[DDIR_WRITE];
 	if (!o->max_bs[DDIR_WRITE])
 		o->max_bs[DDIR_WRITE] = o->bs[DDIR_WRITE];
+	if (!o->min_bs[DDIR_TRIM])
+		o->min_bs[DDIR_TRIM] = o->bs[DDIR_TRIM];
+	if (!o->max_bs[DDIR_TRIM])
+		o->max_bs[DDIR_TRIM] = o->bs[DDIR_TRIM];
+
 
 	o->rw_min_bs = min(o->min_bs[DDIR_READ], o->min_bs[DDIR_WRITE]);
+	o->rw_min_bs = min(o->min_bs[DDIR_TRIM], o->rw_min_bs);
 
 	/*
 	 * For random IO, allow blockalign offset other than min_bs.
@@ -443,9 +458,12 @@ static int fixup_options(struct thread_data *td)
 		o->ba[DDIR_READ] = o->min_bs[DDIR_READ];
 	if (!o->ba[DDIR_WRITE] || !td_random(td))
 		o->ba[DDIR_WRITE] = o->min_bs[DDIR_WRITE];
+	if (!o->ba[DDIR_TRIM] || !td_random(td))
+		o->ba[DDIR_TRIM] = o->min_bs[DDIR_TRIM];
 
 	if ((o->ba[DDIR_READ] != o->min_bs[DDIR_READ] ||
-	    o->ba[DDIR_WRITE] != o->min_bs[DDIR_WRITE]) &&
+	    o->ba[DDIR_WRITE] != o->min_bs[DDIR_WRITE] ||
+	    o->ba[DDIR_TRIM] != o->min_bs[DDIR_TRIM]) &&
 	    !o->norandommap) {
 		log_err("fio: Any use of blockalign= turns off randommap\n");
 		o->norandommap = 1;
@@ -498,15 +516,19 @@ static int fixup_options(struct thread_data *td)
 	if (o->open_files > o->nr_files || !o->open_files)
 		o->open_files = o->nr_files;
 
-	if (((o->rate[0] + o->rate[1]) && (o->rate_iops[0] + o->rate_iops[1]))||
-	    ((o->ratemin[0] + o->ratemin[1]) && (o->rate_iops_min[0] +
-		o->rate_iops_min[1]))) {
+	if (((o->rate[DDIR_READ] + o->rate[DDIR_WRITE] + o->rate[DDIR_TRIM]) &&
+	    (o->rate_iops[DDIR_READ] + o->rate_iops[DDIR_WRITE] + o->rate_iops[DDIR_TRIM])) ||
+	    ((o->ratemin[DDIR_READ] + o->ratemin[DDIR_WRITE] + o->ratemin[DDIR_TRIM]) &&
+	    (o->rate_iops_min[DDIR_READ] + o->rate_iops_min[DDIR_WRITE] + o->rate_iops_min[DDIR_TRIM]))) {
 		log_err("fio: rate and rate_iops are mutually exclusive\n");
 		ret = 1;
 	}
-	if ((o->rate[0] < o->ratemin[0]) || (o->rate[1] < o->ratemin[1]) ||
-	    (o->rate_iops[0] < o->rate_iops_min[0]) ||
-	    (o->rate_iops[1] < o->rate_iops_min[1])) {
+	if ((o->rate[DDIR_READ] < o->ratemin[DDIR_READ]) ||
+	    (o->rate[DDIR_WRITE] < o->ratemin[DDIR_WRITE]) ||
+	    (o->rate[DDIR_TRIM] < o->ratemin[DDIR_TRIM]) ||
+	    (o->rate_iops[DDIR_READ] < o->rate_iops_min[DDIR_READ]) ||
+	    (o->rate_iops[DDIR_WRITE] < o->rate_iops_min[DDIR_WRITE]) ||
+	    (o->rate_iops[DDIR_TRIM] < o->rate_iops_min[DDIR_TRIM])) {
 		log_err("fio: minimum rate exceeds rate\n");
 		ret = 1;
 	}
@@ -818,10 +840,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	else
 		memcpy(td->ts.percentile_list, def_percentile_list, sizeof(def_percentile_list));
 
-	td->ts.clat_stat[0].min_val = td->ts.clat_stat[1].min_val = ULONG_MAX;
-	td->ts.slat_stat[0].min_val = td->ts.slat_stat[1].min_val = ULONG_MAX;
-	td->ts.lat_stat[0].min_val = td->ts.lat_stat[1].min_val = ULONG_MAX;
-	td->ts.bw_stat[0].min_val = td->ts.bw_stat[1].min_val = ULONG_MAX;
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		td->ts.clat_stat[i].min_val = ULONG_MAX;
+		td->ts.slat_stat[i].min_val = ULONG_MAX;
+		td->ts.lat_stat[i].min_val = ULONG_MAX;
+		td->ts.bw_stat[i].min_val = ULONG_MAX;
+	}
 	td->ddir_seq_nr = td->o.ddir_seq_nr;
 
 	if ((td->o.stonewall || td->o.new_group) && prev_group_jobs) {
@@ -853,24 +877,26 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (!td->o.name)
 		td->o.name = strdup(jobname);
 
-	if (!terse_output) {
+	if (output_format == FIO_OUTPUT_NORMAL) {
 		if (!job_add_num) {
 			if (is_backend && !recursed)
 				fio_server_send_add_job(td);
 
 			if (!(td->io_ops->flags & FIO_NOIO)) {
-				char *c1, *c2, *c3, *c4;
+				char *c1, *c2, *c3, *c4, *c5, *c6;
 
 				c1 = fio_uint_to_kmg(td->o.min_bs[DDIR_READ]);
 				c2 = fio_uint_to_kmg(td->o.max_bs[DDIR_READ]);
 				c3 = fio_uint_to_kmg(td->o.min_bs[DDIR_WRITE]);
 				c4 = fio_uint_to_kmg(td->o.max_bs[DDIR_WRITE]);
+				c5 = fio_uint_to_kmg(td->o.min_bs[DDIR_TRIM]);
+				c6 = fio_uint_to_kmg(td->o.max_bs[DDIR_TRIM]);
 
-				log_info("%s: (g=%d): rw=%s, bs=%s-%s/%s-%s,"
+				log_info("%s: (g=%d): rw=%s, bs=%s-%s/%s-%s/%s-%s,"
 					 " ioengine=%s, iodepth=%u\n",
 						td->o.name, td->groupid,
 						ddir_str(td->o.td_ddir),
-						c1, c2, c3, c4,
+						c1, c2, c3, c4, c5, c6,
 						td->io_ops->name,
 						td->o.iodepth);
 
@@ -878,6 +904,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 				free(c2);
 				free(c3);
 				free(c4);
+				free(c5);
+				free(c6);
 			}
 		} else if (job_add_num == 1)
 			log_info("...\n");
@@ -1186,12 +1214,13 @@ static void usage(const char *name)
 		"\t\t\tprocess,file,io,mem,blktrace,verify,random,parse,\n"
 		"\t\t\tdiskutil,job,mutex,profile,time,net\n");
 	printf("  --output\t\tWrite output to file\n");
-	printf("  --timeout\t\tRuntime in seconds\n");
+	printf("  --runtime\t\tRuntime in seconds\n");
 	printf("  --latency-log\t\tGenerate per-job latency logs\n");
 	printf("  --bandwidth-log\tGenerate per-job bandwidth logs\n");
 	printf("  --minimal\t\tMinimal (terse) output\n");
-	printf("  --version\t\tPrint version info and exit\n");
+	printf("  --output-format=x\tOutput format (terse,json,normal)\n");
 	printf("  --terse-version=x\tSet terse version output format to 'x'\n");
+	printf("  --version\t\tPrint version info and exit\n");
 	printf("  --help\t\tPrint this page\n");
 	printf("  --cmdhelp=cmd\t\tPrint command help, \"all\" for all of"
 		" them\n");
@@ -1425,7 +1454,17 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			f_err = f_out;
 			break;
 		case 'm':
-			terse_output = 1;
+			output_format = FIO_OUTPUT_TERSE;
+			break;
+		case 'F':
+			if (!strcmp(optarg, "minimal") ||
+			    !strcmp(optarg, "terse") ||
+			    !strcmp(optarg, "csv"))
+				output_format = FIO_OUTPUT_TERSE;
+			else if (!strcmp(optarg, "json"))
+				output_format = FIO_OUTPUT_JSON;
+			else
+				output_format = FIO_OUTPUT_NORMAL;
 			break;
 		case 'h':
 			if (!cur_client) {
@@ -1459,7 +1498,8 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			break;
 		case 'V':
 			terse_version = atoi(optarg);
-			if (!(terse_version == 2 || terse_version == 3)) {
+			if (!(terse_version == 2 || terse_version == 3) ||
+			     (terse_version == 4)) {
 				log_err("fio: bad terse version format\n");
 				exit_val = 1;
 				do_exit++;
@@ -1708,7 +1748,7 @@ int parse_options(int argc, char *argv[])
 		fio_gtod_cpu = def_thread.o.gtod_cpu;
 	}
 
-	if (!terse_output)
+	if (output_format == FIO_OUTPUT_NORMAL)
 		log_info("%s\n", fio_version_string);
 
 	return 0;
