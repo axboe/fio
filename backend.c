@@ -812,7 +812,7 @@ static int init_io_u(struct thread_data *td)
 	td->orig_buffer_size = (unsigned long long) max_bs
 					* (unsigned long long) max_units;
 
-	if ((td->io_ops->flags & FIO_NOIO) || !td_rw(td))
+	if ((td->io_ops->flags & FIO_NOIO) || !(td_read(td) || td_write(td)))
 		data_xfer = 0;
 
 	if (td->o.mem_type == MEM_SHMHUGE || td->o.mem_type == MEM_MMAPHUGE) {
