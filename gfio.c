@@ -1356,7 +1356,6 @@ static void fill_color_from_rgb(GdkColor *c, gfloat r, gfloat g, gfloat b)
 	G = g * 255;
 	B = b * 255;
 	sprintf(tmp, "#%02x%02x%02x", R, G, B);
-	printf("%s\n", tmp);
 	gdk_color_parse(tmp, c);
 }
 
