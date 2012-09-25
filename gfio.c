@@ -1349,13 +1349,13 @@ static void combo_entry_destroy(GtkWidget *widget, gpointer data)
 static void fill_color_from_rgb(GdkColor *c, gfloat r, gfloat g, gfloat b)
 {
 	gint R, G, B;
-	gchar tmp[32];
+	gchar tmp[8];
 
 	memset(c, 0, sizeof(*c));
 	R = r * 255;
 	G = g * 255;
 	B = b * 255;
-	sprintf(tmp, "#%02x%02x%02x", R, G, B);
+	snprintf(tmp, sizeof(tmp), "#%02x%02x%02x", R, G, B);
 	gdk_color_parse(tmp, c);
 }
 
