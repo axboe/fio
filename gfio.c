@@ -1678,7 +1678,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	settings = gtk_settings_get_default();
 	gtk_settings_set_long_property(settings, "gtk_tooltip_timeout", 10, "gfio setting");
 	g_type_init();
-	gdk_color_parse("#ffffee", &gfio_color_lightyellow);
+	gdk_color_parse("#fffff4", &gfio_color_lightyellow);
 	gdk_color_parse("white", &gfio_color_white);
 
 	ui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
