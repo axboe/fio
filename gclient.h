@@ -11,8 +11,8 @@ extern void gfio_display_end_results(struct gfio_client *);
 #define GFIO_WRITE_R	1.00
 #define GFIO_WRITE_G	0.00
 #define GFIO_WRITE_B	0.00
-#define GFIO_IOPS_R	0.24
-#define GFIO_IOPS_G	0.18
-#define GFIO_IOPS_B	0.52
+#define GFIO_TRIM_R	0.24
+#define GFIO_TRIM_G	0.18
+#define GFIO_TRIM_B	0.52
 
 #endif

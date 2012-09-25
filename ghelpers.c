@@ -30,6 +30,31 @@ GtkWidget *new_info_entry_in_frame(GtkWidget *box, const char *label)
 	return entry;
 }
 
+static void fill_color_from_rgb(GdkColor *c, gfloat r, gfloat g, gfloat b)
+{
+	gint R, G, B;
+	gchar tmp[8];
+
+	memset(c, 0, sizeof(*c));
+	R = r * 255;
+	G = g * 255;
+	B = b * 255;
+	snprintf(tmp, sizeof(tmp), "#%02x%02x%02x", R, G, B);
+	gdk_color_parse(tmp, c);
+}
+
+GtkWidget *new_info_entry_in_frame_rgb(GtkWidget *box, const char *label,
+					gfloat r, gfloat g, gfloat b)
+{
+	GtkWidget *entry;
+	GdkColor c;
+
+	entry = new_info_entry_in_frame(box, label);
+	fill_color_from_rgb(&c, r, g, b);
+	gtk_widget_modify_text(entry, GTK_STATE_NORMAL, &c);
+	return entry;
+}
+
 GtkWidget *new_info_label_in_frame(GtkWidget *box, const char *label)
 {
 	GtkWidget *label_widget;

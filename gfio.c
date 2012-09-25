@@ -88,7 +88,7 @@ static void setup_iops_graph(struct gfio_graphs *gg)
 	gg->trim_iops = graph_add_label(g, "Trim IOPS");
 	graph_set_color(g, gg->read_iops, GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
 	graph_set_color(g, gg->write_iops, GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
-	graph_set_color(g, gg->trim_iops, GFIO_IOPS_R, GFIO_IOPS_G, GFIO_IOPS_B);
+	graph_set_color(g, gg->trim_iops, GFIO_TRIM_R, GFIO_TRIM_G, GFIO_TRIM_B);
 	line_graph_set_data_count_limit(g, gfio_graph_limit);
 	graph_add_extra_space(g, 0.0, 0.0, 0.0, 0.0);
 	graph_set_graph_all_zeroes(g, 0);
@@ -107,7 +107,7 @@ static void setup_bandwidth_graph(struct gfio_graphs *gg)
 	gg->trim_bw = graph_add_label(g, "Trim Bandwidth");
 	graph_set_color(g, gg->read_bw, GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
 	graph_set_color(g, gg->write_bw, GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
-	graph_set_color(g, gg->trim_bw, GFIO_IOPS_R, GFIO_IOPS_G, GFIO_IOPS_B);
+	graph_set_color(g, gg->trim_bw, GFIO_TRIM_R, GFIO_TRIM_G, GFIO_TRIM_B);
 	graph_set_base_offset(g, 1);
 	line_graph_set_data_count_limit(g, 100);
 	graph_add_extra_space(g, 0.0, 0.0, 0.0, 0.0);
@@ -1346,24 +1346,10 @@ static void combo_entry_destroy(GtkWidget *widget, gpointer data)
 	multitext_free(&ge->eta.iodepth);
 }
 
-static void fill_color_from_rgb(GdkColor *c, gfloat r, gfloat g, gfloat b)
-{
-	gint R, G, B;
-	gchar tmp[8];
-
-	memset(c, 0, sizeof(*c));
-	R = r * 255;
-	G = g * 255;
-	B = b * 255;
-	snprintf(tmp, sizeof(tmp), "#%02x%02x%02x", R, G, B);
-	gdk_color_parse(tmp, c);
-}
-
 static GtkWidget *new_client_page(struct gui_entry *ge)
 {
 	GtkWidget *main_vbox, *probe, *probe_frame, *probe_box;
 	GtkWidget *scrolled_window, *bottom_align, *top_align, *top_vbox;
-	GdkColor color;
 
 	main_vbox = gtk_vbox_new(FALSE, 3);
 
@@ -1399,24 +1385,12 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 
 	probe_box = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, FALSE, FALSE, 3);
-	ge->eta.read_bw = new_info_entry_in_frame(probe_box, "Read BW");
-	ge->eta.read_iops = new_info_entry_in_frame(probe_box, "IOPS");
-	ge->eta.write_bw = new_info_entry_in_frame(probe_box, "Write BW");
-	ge->eta.write_iops = new_info_entry_in_frame(probe_box, "IOPS");
-	ge->eta.trim_bw = new_info_entry_in_frame(probe_box, "Trim BW");
-	ge->eta.trim_iops = new_info_entry_in_frame(probe_box, "IOPS");
-
-	fill_color_from_rgb(&color, GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
-	gtk_widget_modify_text(ge->eta.read_bw, GTK_STATE_NORMAL, &color);
-	gtk_widget_modify_text(ge->eta.read_iops, GTK_STATE_NORMAL, &color);
-
-	fill_color_from_rgb(&color, GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
-	gtk_widget_modify_text(ge->eta.write_bw, GTK_STATE_NORMAL, &color);
-	gtk_widget_modify_text(ge->eta.write_iops, GTK_STATE_NORMAL, &color);
-
-	fill_color_from_rgb(&color, GFIO_IOPS_R, GFIO_IOPS_G, GFIO_IOPS_B);
-	gtk_widget_modify_text(ge->eta.trim_bw, GTK_STATE_NORMAL, &color);
-	gtk_widget_modify_text(ge->eta.trim_iops, GTK_STATE_NORMAL, &color);
+	ge->eta.read_bw = new_info_entry_in_frame_rgb(probe_box, "Read BW", GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
+	ge->eta.read_iops = new_info_entry_in_frame_rgb(probe_box, "IOPS", GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
+	ge->eta.write_bw = new_info_entry_in_frame_rgb(probe_box, "Write BW", GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
+	ge->eta.write_iops = new_info_entry_in_frame_rgb(probe_box, "IOPS", GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
+	ge->eta.trim_bw = new_info_entry_in_frame_rgb(probe_box, "Trim BW", GFIO_TRIM_R, GFIO_TRIM_G, GFIO_TRIM_B);
+	ge->eta.trim_iops = new_info_entry_in_frame_rgb(probe_box, "IOPS", GFIO_TRIM_R, GFIO_TRIM_G, GFIO_TRIM_B);
 
 	/*
 	 * Only add this if we have a commit rate
@@ -1499,13 +1473,12 @@ static GtkWidget *new_main_page(struct gui *ui)
 	probe_box = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, FALSE, FALSE, 3);
 	ui->eta.jobs = new_info_entry_in_frame(probe_box, "Running");
-	ui->eta.read_bw = new_info_entry_in_frame(probe_box, "Read BW");
-	ui->eta.read_iops = new_info_entry_in_frame(probe_box, "IOPS");
-	ui->eta.write_bw = new_info_entry_in_frame(probe_box, "Write BW");
-	ui->eta.write_iops = new_info_entry_in_frame(probe_box, "IOPS");
-	ui->eta.trim_bw = new_info_entry_in_frame(probe_box, "Trim BW");
-	ui->eta.trim_iops = new_info_entry_in_frame(probe_box, "IOPS");
-
+	ui->eta.read_bw = new_info_entry_in_frame_rgb(probe_box, "Read BW", GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
+	ui->eta.read_iops = new_info_entry_in_frame_rgb(probe_box, "IOPS", GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
+	ui->eta.write_bw = new_info_entry_in_frame_rgb(probe_box, "Write BW", GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
+	ui->eta.write_iops = new_info_entry_in_frame_rgb(probe_box, "IOPS", GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
+	ui->eta.trim_bw = new_info_entry_in_frame_rgb(probe_box, "Trim BW", GFIO_TRIM_R, GFIO_TRIM_G, GFIO_TRIM_B);
+	ui->eta.trim_iops = new_info_entry_in_frame_rgb(probe_box, "IOPS", GFIO_TRIM_R, GFIO_TRIM_G, GFIO_TRIM_B);
 
 	/*
 	 * Only add this if we have a commit rate

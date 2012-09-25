@@ -448,7 +448,7 @@ static void gfio_update_all_eta(struct jobs_eta *je)
 	char eta_str[128];
 	char output[256];
 	double perc = 0.0;
-	int i2p = 0;
+	int i, i2p = 0;
 
 	gdk_threads_enter();
 
@@ -483,8 +483,8 @@ static void gfio_update_all_eta(struct jobs_eta *je)
 	entry_set_int_value(ui->eta.jobs, je->nr_running);
 
 	if (je->eta_sec != INT_MAX && je->nr_running) {
-		char *iops_str[2];
-		char *rate_str[2];
+		char *iops_str[3];
+		char *rate_str[3];
 
 		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running)
 			strcpy(output, "-.-% done");
@@ -496,24 +496,30 @@ static void gfio_update_all_eta(struct jobs_eta *je)
 
 		rate_str[0] = num2str(je->rate[0], 5, 10, i2p);
 		rate_str[1] = num2str(je->rate[1], 5, 10, i2p);
+		rate_str[2] = num2str(je->rate[2], 5, 10, i2p);
 
 		iops_str[0] = num2str(je->iops[0], 4, 1, 0);
 		iops_str[1] = num2str(je->iops[1], 4, 1, 0);
+		iops_str[2] = num2str(je->iops[2], 4, 1, 0);
 
 		gtk_entry_set_text(GTK_ENTRY(ui->eta.read_bw), rate_str[0]);
 		gtk_entry_set_text(GTK_ENTRY(ui->eta.read_iops), iops_str[0]);
 		gtk_entry_set_text(GTK_ENTRY(ui->eta.write_bw), rate_str[1]);
 		gtk_entry_set_text(GTK_ENTRY(ui->eta.write_iops), iops_str[1]);
+		gtk_entry_set_text(GTK_ENTRY(ui->eta.trim_bw), rate_str[2]);
+		gtk_entry_set_text(GTK_ENTRY(ui->eta.trim_iops), iops_str[2]);
 
 		graph_add_xy_data(ui->graphs.iops_graph, ui->graphs.read_iops, je->elapsed_sec, je->iops[0], iops_str[0]);
 		graph_add_xy_data(ui->graphs.iops_graph, ui->graphs.write_iops, je->elapsed_sec, je->iops[1], iops_str[1]);
+		graph_add_xy_data(ui->graphs.iops_graph, ui->graphs.trim_iops, je->elapsed_sec, je->iops[2], iops_str[2]);
 		graph_add_xy_data(ui->graphs.bandwidth_graph, ui->graphs.read_bw, je->elapsed_sec, je->rate[0], rate_str[0]);
 		graph_add_xy_data(ui->graphs.bandwidth_graph, ui->graphs.write_bw, je->elapsed_sec, je->rate[1], rate_str[1]);
+		graph_add_xy_data(ui->graphs.bandwidth_graph, ui->graphs.trim_bw, je->elapsed_sec, je->rate[2], rate_str[2]);
 
-		free(rate_str[0]);
-		free(rate_str[1]);
-		free(iops_str[0]);
-		free(iops_str[1]);
+		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+			free(rate_str[i]);
+			free(iops_str[i]);
+		}
 	}
 
 	if (eta_str[0]) {
@@ -1170,7 +1176,7 @@ static void gfio_show_ddir_status(struct gfio_client *gc, GtkWidget *mbox,
 				  struct group_run_stats *rs,
 				  struct thread_stat *ts, int ddir)
 {
-	const char *ddir_label[2] = { "Read", "Write" };
+	const char *ddir_label[3] = { "Read", "Write", "Trim" };
 	GtkWidget *frame, *label, *box, *vbox, *main_vbox;
 	unsigned long min[3], max[3], runt;
 	unsigned long long bw, iops;
@@ -1289,6 +1295,7 @@ static void __gfio_display_end_results(GtkWidget *win, struct gfio_client *gc,
 				       struct group_run_stats *rs)
 {
 	GtkWidget *box, *vbox, *entry, *scroll;
+	int i;
 
 	scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_container_set_border_width(GTK_CONTAINER(scroll), 5);
@@ -1318,10 +1325,10 @@ static void __gfio_display_end_results(GtkWidget *win, struct gfio_client *gc,
 	entry = new_info_entry_in_frame(box, "PID");
 	entry_set_int_value(entry, ts->pid);
 
-	if (ts->io_bytes[DDIR_READ])
-		gfio_show_ddir_status(gc, vbox, rs, ts, DDIR_READ);
-	if (ts->io_bytes[DDIR_WRITE])
-		gfio_show_ddir_status(gc, vbox, rs, ts, DDIR_WRITE);
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		if (ts->io_bytes[i])
+			gfio_show_ddir_status(gc, vbox, rs, ts, i);
+	}
 
 	gfio_show_latency_buckets(gc, vbox, ts);
 	gfio_show_cpu_usage(vbox, ts);
