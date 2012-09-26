@@ -853,6 +853,17 @@ static void graph_free_labels(struct graph *g)
 	}
 }
 
+void graph_clear_values(struct graph *g)
+{
+	struct flist_head *node;
+	struct graph_label *i;
+
+	flist_for_each(node, &g->label_list) {
+		i = flist_entry(node, struct graph_label, list);
+		graph_free_values(i);
+	}
+}
+
 void graph_set_color(struct graph *gr, graph_label_t label, double red,
 		     double green, double blue)
 {

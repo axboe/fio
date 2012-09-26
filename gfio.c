@@ -654,6 +654,12 @@ static void gfio_client_added(struct gui_entry *ge, struct fio_client *client)
 	gc->o_list_nr++;
 }
 
+static void gfio_clear_graph_data(struct gfio_graphs *g)
+{
+	graph_clear_values(g->iops_graph);
+	graph_clear_values(g->bandwidth_graph);
+}
+
 static void connect_clicked(GtkWidget *widget, gpointer data)
 {
 	struct gui_entry *ge = data;
@@ -694,6 +700,7 @@ static void connect_clicked(GtkWidget *widget, gpointer data)
 			if (!ge->ui->handler_running)
 				pthread_create(&ge->ui->t, NULL, job_thread, ge->ui);
 			gfio_set_state(ge, GE_STATE_CONNECTED);
+			gfio_clear_graph_data(&ge->graphs);
 		} else {
 			gfio_report_error(ge, "Failed to connect to %s: %s\n", ge->client->client->hostname, strerror(-ret));
 		}

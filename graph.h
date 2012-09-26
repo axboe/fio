@@ -93,5 +93,7 @@ extern int graph_contains_xy(struct graph *p, int x, int y);
 extern void graph_set_base_offset(struct graph *g, unsigned int base_offset);
 extern void graph_set_graph_all_zeroes(struct graph *g, unsigned int set);
 
+extern void graph_clear_values(struct graph *g);
+
 #endif
 
