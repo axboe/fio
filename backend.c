@@ -67,6 +67,7 @@ unsigned int thread_number = 0;
 int shm_id = 0;
 int temp_stall_ts;
 unsigned long done_secs = 0;
+volatile int disk_util_exit = 0;
 
 #define PAGE_ALIGN(buf)	\
 	(char *) (((uintptr_t) (buf) + page_mask) & ~page_mask)
@@ -1619,6 +1620,13 @@ static void run_threads(void)
 void wait_for_disk_thread_exit(void)
 {
 	fio_mutex_down(disk_thread_mutex);
+}
+
+static void free_disk_util(void)
+{
+	disk_util_start_exit();
+	wait_for_disk_thread_exit();
+	disk_util_prune_entries();
 }
 
 static void *disk_thread_main(void *data)

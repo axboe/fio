@@ -15,7 +15,6 @@ static int last_majdev, last_mindev;
 static struct disk_util *last_du;
 
 static struct fio_mutex *disk_util_mutex;
-static int disk_util_exit;
 
 FLIST_HEAD(disk_list);
 
@@ -539,16 +538,13 @@ static void aggregate_slaves_stats(struct disk_util *masterdu)
 		agg->max_util.u.f = 100.0;
 }
 
-void free_disk_util(void)
+void disk_util_prune_entries(void)
 {
-	struct disk_util *du;
-
-	disk_util_exit = 1;
-	wait_for_disk_thread_exit();
-
 	fio_mutex_down(disk_util_mutex);
 
 	while (!flist_empty(&disk_list)) {
+		struct disk_util *du;
+
 		du = flist_entry(disk_list.next, struct disk_util, list);
 		flist_del(&du->list);
 		disk_util_free(du);
