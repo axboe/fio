@@ -2707,7 +2707,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Continue on non-fatal errors during IO",
 		.def	= "none",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_ERR,
 		.posval = {
 			  { .ival = "none",
 			    .oval = ERROR_TYPE_NONE,
@@ -2750,7 +2750,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Set a specific list of errors to ignore",
 		.parent	= "rw",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_ERR,
 	},
 	{
 		.name	= "error_dump",
@@ -2759,7 +2759,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.help	= "Dump info on each error",
 		.category = FIO_OPT_C_GENERAL,
-		.group	= FIO_OPT_G_INVALID,
+		.group	= FIO_OPT_G_ERR,
 	},
 	{
 		.name	= "profile",

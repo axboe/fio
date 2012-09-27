@@ -87,6 +87,7 @@ enum opt_category_group {
 	__FIO_OPT_G_RANDOM,
 	__FIO_OPT_G_IO_BUF,
 	__FIO_OPT_G_TIOBENCH,
+	__FIO_OPT_G_ERR,
 	__FIO_OPT_G_NR,
 
 	FIO_OPT_G_RATE		= (1U << __FIO_OPT_G_RATE),
@@ -110,6 +111,7 @@ enum opt_category_group {
 	FIO_OPT_G_RANDOM	= (1U << __FIO_OPT_G_RANDOM),
 	FIO_OPT_G_IO_BUF	= (1U << __FIO_OPT_G_IO_BUF),
 	FIO_OPT_G_TIOBENCH	= (1U << __FIO_OPT_G_TIOBENCH),
+	FIO_OPT_G_ERR		= (1U << __FIO_OPT_G_ERR),
 	FIO_OPT_G_INVALID	= (1U << __FIO_OPT_G_NR),
 };
 
