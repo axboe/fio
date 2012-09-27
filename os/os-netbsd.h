@@ -4,8 +4,8 @@
 #define	FIO_OS	os_netbsd
 
 #include <errno.h>
+#include <lwp.h>
 #include <sys/param.h>
-#include <sys/thr.h>
 #include <sys/endian.h>
 /* XXX hack to avoid confilcts between rbtree.h and <sys/rb.h> */
 #define	rb_node	_rb_node
@@ -63,10 +63,7 @@ static inline unsigned long long os_phys_mem(void)
 
 static inline int gettid(void)
 {
-	long lwpid;
-
-	thr_self(&lwpid);
-	return (int) lwpid;
+	return (int) _lwp_self();
 }
 
 #ifdef MADV_FREE

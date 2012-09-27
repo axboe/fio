@@ -3,6 +3,8 @@
 #include "json.h"
 #define FIO_DU_NAME_SZ		64
 
+extern volatile int disk_util_exit;
+
 /*
  * Disk utils as read in /sys/block/<dev>/stat
  */
@@ -102,20 +104,25 @@ extern void wait_for_disk_thread_exit(void);
 #ifdef FIO_HAVE_DISK_UTIL
 extern void print_disk_util(struct disk_util_stat *, struct disk_util_agg *, int terse);
 extern void show_disk_util(int terse, struct json_object *parent);
-extern void free_disk_util(void);
 extern void init_disk_util(struct thread_data *);
 extern int update_io_ticks(void);
 extern void setup_disk_util(void);
+extern void disk_util_prune_entries(void);
 #else
 #define print_disk_util(dus, agg, terse)
 #define show_disk_util(terse, parent)
-#define free_disk_util()
+#define disk_util_prune_entries()
 #define init_disk_util(td)
 #define setup_disk_util()
 static inline int update_io_ticks(void)
 {
-	return 0;
+	return disk_util_exit;
 }
 #endif
+
+static inline void disk_util_start_exit(void)
+{
+	disk_util_exit = 1;
+}
 
 #endif
