@@ -234,10 +234,10 @@ void syslog(int priority, const char *message, ... /* argument */)
 	va_start(v, message);
 	len = _vscprintf(message, v);
 	output = malloc(len + sizeof(char));
-	vsprintf_s(output, len + sizeof(char), message, v);
+	vsprintf(output, message, v);
 	WriteFile(log_file, output, len, &bytes_written, NULL);
 	va_end(v);
-    free(output);
+	free(output);
 }
 
 int kill(pid_t pid, int sig)
