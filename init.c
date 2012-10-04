@@ -1498,8 +1498,8 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			break;
 		case 'V':
 			terse_version = atoi(optarg);
-			if (!(terse_version == 2 || terse_version == 3) ||
-			     (terse_version == 4)) {
+			if (!(terse_version == 2 || terse_version == 3 ||
+			     terse_version == 4)) {
 				log_err("fio: bad terse version format\n");
 				exit_val = 1;
 				do_exit++;
