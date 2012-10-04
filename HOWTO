@@ -1053,22 +1053,21 @@ wait_for_previous Wait for preceeding jobs in the job file to exit, before
 		points in the job file. A stone wall also implies starting
 		a new reporting group.
 
-new_group	Start a new reporting group. If this option isn't given,
-		jobs in a file will be part of the same reporting group
-		unless separated by a stone wall (or if it's a group
-		by itself, with the numjobs option).
+new_group	Start a new reporting group. See: group_reporting.
 
 numjobs=int	Create the specified number of clones of this job. May be
 		used to setup a larger number of threads/processes doing
-		the same thing. We regard that grouping of jobs as a
-		specific group.
+		the same thing. Each thread is reported separately; to see
+		statistics for all clones as a whole, use group_reporting in
+		conjunction with new_group.
 
-group_reporting	If 'numjobs' is set, it may be interesting to display
-		statistics for the group as a whole instead of for each
-		individual job. This is especially true of 'numjobs' is
-		large, looking at individual thread/process output quickly
-		becomes unwieldy. If 'group_reporting' is specified, fio
-		will show the final report per-group instead of per-job.
+group_reporting	It may sometimes be interesting to display statistics for
+		groups of jobs as a whole instead of for each individual job. This is
+		especially true if 'numjobs' is used; looking at individual
+		thread/process output quickly becomes unwieldy. To see the final report
+		per-group instead of per-job, use 'group_reporting'. Jobs in a file
+		will be part of the same reporting group, unless if separated by a
+		stonewall, or by using 'new_group'.
 
 thread		fio defaults to forking jobs, however if this option is
 		given, fio will use pthread_create(3) to create threads
