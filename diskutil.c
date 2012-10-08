@@ -658,7 +658,7 @@ void show_disk_util(int terse, struct json_object *parent)
 	if (!terse)
 		log_info("\nDisk stats (read/write):\n");
 
-	if (terse && terse_version == 4) {
+	if (output_format == FIO_OUTPUT_JSON) {
 		array = json_create_array();
 		json_object_add_value_array(parent, "disk_util", array);
 	}
@@ -667,7 +667,7 @@ void show_disk_util(int terse, struct json_object *parent)
 		du = flist_entry(entry, struct disk_util, list);
 
 		aggregate_slaves_stats(du);
-		if (terse && terse_version == 4)
+		if (output_format == FIO_OUTPUT_JSON)
 			print_disk_util_json(du, array);
 		else
 			print_disk_util(&du->dus, &du->agg, terse);
