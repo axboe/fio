@@ -534,7 +534,7 @@ void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 		return;
 
 	time(&time_p);
-	ctime_r((const time_t *) &time_p, time_buf);
+	os_ctime_r((const time_t *) &time_p, time_buf, sizeof(time_buf));
 
 	if (!ts->error) {
 		log_info("%s: (groupid=%d, jobs=%d): err=%2d: pid=%d: %s",

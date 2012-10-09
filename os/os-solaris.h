@@ -49,6 +49,9 @@ struct solaris_rand_seed {
 #define POSIX_MADV_RANDOM	MADV_RANDOM
 #endif
 
+#define os_ctime_r(x, y, z)     ctime_r((x), (y), (z))
+#define FIO_OS_HAS_CTIME_R
+
 typedef psetid_t os_cpu_mask_t;
 typedef struct solaris_rand_seed os_random_state_t;
 
