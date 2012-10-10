@@ -1062,12 +1062,13 @@ numjobs=int	Create the specified number of clones of this job. May be
 		conjunction with new_group.
 
 group_reporting	It may sometimes be interesting to display statistics for
-		groups of jobs as a whole instead of for each individual job. This is
-		especially true if 'numjobs' is used; looking at individual
-		thread/process output quickly becomes unwieldy. To see the final report
-		per-group instead of per-job, use 'group_reporting'. Jobs in a file
-		will be part of the same reporting group, unless if separated by a
-		stonewall, or by using 'new_group'.
+		groups of jobs as a whole instead of for each individual job.
+		This is especially true if 'numjobs' is used; looking at
+		individual thread/process output quickly becomes unwieldy.
+		To see the final report per-group instead of per-job, use
+		'group_reporting'. Jobs in a file will be part of the same
+		reporting group, unless if separated by a stonewall, or by
+		using 'new_group'.
 
 thread		fio defaults to forking jobs, however if this option is
 		given, fio will use pthread_create(3) to create threads
