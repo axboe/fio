@@ -411,6 +411,9 @@ int posix_fallocate(int fd, off_t offset, off_t len)
 			break;
 		}
 
+		/* Don't allow Windows to cache the write: flush it to disk */
+		_commit(fd);
+
 		bytes_remaining -= bytes_written;
 	}
 
