@@ -1096,7 +1096,7 @@ again:
 
 		io_u->error = 0;
 		flist_del(&io_u->list);
-		flist_add(&io_u->list, &td->io_u_busylist);
+		flist_add_tail(&io_u->list, &td->io_u_busylist);
 		td->cur_depth++;
 		io_u->flags |= IO_U_F_IN_CUR_DEPTH;
 	} else if (td->o.verify_async) {
