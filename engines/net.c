@@ -79,7 +79,7 @@ static struct fio_option options[] = {
 			  },
 			  { .ival = "udp",
 			    .oval = FIO_TYPE_UDP,
-			    .help = "Unreliable Datagram Protocol",
+			    .help = "User Datagram Protocol",
 			  },
 			  { .ival = "unix",
 			    .oval = FIO_TYPE_UNIX,
