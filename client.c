@@ -437,6 +437,14 @@ static void client_signal_handler(void)
 	act.sa_flags = SA_RESTART;
 	sigaction(SIGTERM, &act, NULL);
 
+/* Windows uses SIGBREAK as a quit signal from other applications */
+#ifdef WIN32
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_int;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGBREAK, &act, NULL);
+#endif
+
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = sig_show_status;
 	act.sa_flags = SA_RESTART;

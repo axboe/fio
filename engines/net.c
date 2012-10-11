@@ -85,7 +85,7 @@ static struct fio_option options[] = {
 			  },
 			  { .ival = "udp",
 			    .oval = FIO_TYPE_UDP,
-			    .help = "Unreliable Datagram Protocol",
+			    .help = "User Datagram Protocol",
 			  },
 			  { .ival = "unix",
 			    .oval = FIO_TYPE_UNIX,
@@ -152,7 +152,7 @@ static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 		td_verror(td, EINVAL, "bad direction");
 		return 1;
 	}
-		
+
 	return 0;
 }
 
@@ -694,6 +694,11 @@ static int fio_netio_init(struct thread_data *td)
 {
 	struct netio_options *o = td->eo;
 	int ret;
+
+#ifdef WIN32
+	WSADATA wsd;
+	WSAStartup(MAKEWORD(2,2), &wsd);
+#endif
 
 	if (td_random(td)) {
 		log_err("fio: network IO can't be random\n");

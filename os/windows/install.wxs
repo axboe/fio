@@ -10,7 +10,7 @@
 	<Product Id="2BA394F9-0D9E-4597-BB9D-6B18097D64BB"
 	  Codepage="1252" Language="1033"
 	  Manufacturer="fio" Name="fio"
-	  UpgradeCode="2338A332-5511-43cf-b9BD-5C60496CCFCC" Version="2.0.9">
+	  UpgradeCode="2338A332-5511-43cf-b9BD-5C60496CCFCC" Version="2.0.10">
 		<Package 
 		  Comments="Contact: Your local administrator"
 		  Description="Flexible IO Tester"

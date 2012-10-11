@@ -234,10 +234,10 @@ void syslog(int priority, const char *message, ... /* argument */)
 	va_start(v, message);
 	len = _vscprintf(message, v);
 	output = malloc(len + sizeof(char));
-	vsprintf_s(output, len + sizeof(char), message, v);
+	vsprintf(output, message, v);
 	WriteFile(log_file, output, len, &bytes_written, NULL);
 	va_end(v);
-    free(output);
+	free(output);
 }
 
 int kill(pid_t pid, int sig)
@@ -410,6 +410,9 @@ int posix_fallocate(int fd, off_t offset, off_t len)
 			rc = errno;
 			break;
 		}
+
+		/* Don't allow Windows to cache the write: flush it to disk */
+		_commit(fd);
 
 		bytes_remaining -= bytes_written;
 	}
@@ -628,11 +631,11 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 	int i;
 	int rc;
 
-	if (timeout != -1)
+	if (timeout != -1) {
 		to = &tv;
-
-	to->tv_sec = timeout / 1000;
-	to->tv_usec = (timeout % 1000) * 1000;
+		to->tv_sec = timeout / 1000;
+		to->tv_usec = (timeout % 1000) * 1000;
+	}
 
 	FD_ZERO(&readfds);
 	FD_ZERO(&writefds);
@@ -811,7 +814,13 @@ const char* inet_ntop(int af, const void *restrict src,
 		errno = ENOSPC;
 
 	WSACleanup();
+
 	return ret;
+}
+
+int inet_aton(const char *cp, struct in_addr *inp)
+{
+	return inet_pton(AF_INET, cp, inp);
 }
 
 int inet_pton(int af, const char *restrict src, void *restrict dst)

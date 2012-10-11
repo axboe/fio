@@ -2993,7 +2993,7 @@ void fio_keywords_init(void)
 	char buf[128];
 	long l;
 
-	sprintf(buf, "%lu", page_size);
+	sprintf(buf, "%lu", (unsigned long) page_size);
 	fio_keywords[0].replace = strdup(buf);
 
 	mb_memory = os_phys_mem() / (1024 * 1024);

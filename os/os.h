@@ -142,6 +142,10 @@ typedef unsigned long os_cpu_mask_t;
 typedef socklen_t fio_socklen_t;
 #endif
 
+#ifndef FIO_OS_HAS_CTIME_R
+#define os_ctime_r(x, y, z)     ctime_r((x), (y))
+#endif
+
 #ifdef FIO_USE_GENERIC_SWAP
 static inline uint16_t fio_swap16(uint16_t val)
 {
