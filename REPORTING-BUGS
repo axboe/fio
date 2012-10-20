@@ -8,8 +8,7 @@ to report at least:
 1) A description of what you think the bug is
 2) Environment (Linux distro version, kernel version). This is mostly
    needed if it's a build bug.
-3) The fio version. The most useful is the git top level commit, you
-   can find out by doing a cat .git/HEAD from the top level fio directory.
+3) The output from fio --version.
 4) How to reproduce. Please include a full list of the parameters
    passed to fio and the job file used (if any).
 
