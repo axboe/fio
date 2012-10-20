@@ -1,0 +1,21 @@
+; setup numa policy for each thread
+; 'numactl --show' to determine the maximum numa nodes
+[global]
+ioengine=libaio
+buffered=0
+rw=randread
+bs=512K
+iodepth=16
+size=512m
+filename=/dev/sdb1
+
+; Fix memory blocks (512K * 16) in numa node 0
+[job1]
+numa_cpu_nodes=0
+numa_mem_policy=bind:0
+
+; Interleave memory blocks (512K * 16) in numa node 0 and 1
+[job2]
+numa_cpu_nodes=0-1
+numa_mem_policy=interleave:0-1
+

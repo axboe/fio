@@ -799,6 +799,24 @@ cpus_allowed=str Controls the same options as cpumask, but it allows a text
 		allows a range of CPUs. Say you wanted a binding to CPUs
 		1, 5, and 8-15, you would set cpus_allowed=1,5,8-15.
 
+numa_cpu_nodes=str Set this job running on spcified NUMA nodes' CPUs. The
+		arguments allow comma delimited list of cpu numbers,
+		A-B ranges, or 'all'. Note, to enable numa options support,
+		export the following environment variables,
+			export EXTFLAGS+=" -DFIO_HAVE_LIBNUMA "
+			export EXTLIBS+=" -lnuma "
+
+numa_mem_policy=str Set this job's memory policy and corresponding NUMA
+		nodes. Format of the argements:
+			<mode>[:<nodelist>]
+		`mode' is one of the following memory policy:
+			default, prefer, bind, interleave, local
+		For `default' and `local' memory policy, no node is
+		needed to be specified.
+		For `prefer', only one node is allowed.
+		For `bind' and `interleave', it allow comma delimited
+		list of numbers, A-B ranges, or 'all'.
+
 startdelay=time	Start this job the specified number of seconds after fio
 		has started. Only useful if the job file contains several
 		jobs, and you want to delay starting some jobs to a certain

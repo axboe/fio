@@ -233,10 +233,11 @@ The job file parameters are:
 			readv/writev (with queuing emulation) mmap for mmap'ed
 			io, syslet-rw for syslet driven read/write, splice for
 			using splice/vmsplice, sg for direct SG_IO io, net
-			for network io, or cpuio for a cycler burner load. sg
-			only works on Linux on SCSI (or SCSI-like devices, such
-			as usb-storage or sata/libata driven) devices. Fio also
-			has a null io engine, which is mainly used for testing
+			for network io, rdma for RDMA io, or cpuio for a
+			cycler burner load. sg only works on Linux on
+			SCSI (or SCSI-like devices, such as usb-storage or
+			sata/libata driven) devices. Fio also has a null
+			io engine, which is mainly used for testing
 			fio itself.
 
 	iodepth=x	For async io, allow 'x' ios in flight
@@ -255,6 +256,11 @@ The job file parameters are:
 	ratecycle=x	ratemin averaged over x msecs
 	cpumask=x	Only allow job to run on CPUs defined by mask.
 	cpus_allowed=x	Like 'cpumask', but allow text setting of CPU affinity.
+	numa_cpu_nodes=x,y-z  Allow job to run on specified NUMA nodes' CPU.
+	numa_mem_policy=m:x,y-z  Setup numa memory allocation policy.
+			'm' stands for policy, such as local, interleave,
+			bind, prefer, local. 'x, y-z' are numa node(s) for
+			memory allocation according to policy.
 	fsync=x		If writing with buffered IO, fsync after every
 			'x' blocks have been written.
 	end_fsync=x	If 'x', run fsync() after end-of-job.

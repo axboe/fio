@@ -646,6 +646,28 @@ may run on.  See \fBsched_setaffinity\fR\|(2).
 .BI cpus_allowed \fR=\fPstr
 Same as \fBcpumask\fR, but allows a comma-delimited list of CPU numbers.
 .TP
+.BI numa_cpu_nodes \fR=\fPstr
+Set this job running on spcified NUMA nodes' CPUs. The arguments allow
+comma delimited list of cpu numbers, A-B ranges, or 'all'.
+.TP
+.BI numa_mem_policy \fR=\fPstr
+Set this job's memory policy and corresponding NUMA nodes. Format of
+the argements:
+.RS
+.TP
+.B <mode>[:<nodelist>]
+.TP
+.B mode
+is one of the following memory policy:
+.TP
+.B default, prefer, bind, interleave, local
+.TP
+.RE
+For \fBdefault\fR and \fBlocal\fR memory policy, no \fBnodelist\fR is
+needed to be specified. For \fBprefer\fR, only one node is
+allowed. For \fBbind\fR and \fBinterleave\fR, \fBnodelist\fR allows
+comma delimited list of numbers, A-B ranges, or 'all'.
+.TP
 .BI startdelay \fR=\fPint
 Delay start of job for the specified number of seconds.
 .TP

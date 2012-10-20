@@ -48,6 +48,16 @@ struct thread_data;
 #include <sys/asynch.h>
 #endif
 
+#ifdef FIO_HAVE_LIBNUMA
+#include <linux/mempolicy.h>
+#include <numa.h>
+
+/*
+ * "local" is pseudo-policy
+ */
+#define MPOL_LOCAL MPOL_MAX
+#endif
+
 /*
  * What type of allocation to use for io buffers
  */
@@ -195,6 +205,14 @@ struct thread_options {
 	unsigned int cpumask_set;
 	os_cpu_mask_t verify_cpumask;
 	unsigned int verify_cpumask_set;
+#ifdef FIO_HAVE_LIBNUMA
+	struct bitmask *numa_cpunodesmask;
+	unsigned int numa_cpumask_set;
+	unsigned short numa_mem_mode;
+	unsigned int numa_mem_prefer_node;
+	struct bitmask *numa_memnodesmask;
+	unsigned int numa_memmask_set;
+#endif
 	unsigned int iolog;
 	unsigned int rwmixcycle;
 	unsigned int rwmix[2];

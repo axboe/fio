@@ -1052,6 +1052,49 @@ static void *thread_main(void *data)
 		goto err;
 	}
 
+#ifdef FIO_HAVE_LIBNUMA
+	/* numa node setup */
+	if (td->o.numa_cpumask_set || td->o.numa_memmask_set) {
+		int ret;
+
+		if (numa_available() < 0) {
+			td_verror(td, errno, "Does not support NUMA API\n");
+			goto err;
+		}
+
+		if (td->o.numa_cpumask_set) {
+			ret = numa_run_on_node_mask(td->o.numa_cpunodesmask);
+			if (ret == -1) {
+				td_verror(td, errno, \
+					"numa_run_on_node_mask failed\n");
+				goto err;
+			}
+		}
+
+		if (td->o.numa_memmask_set) {
+
+			switch (td->o.numa_mem_mode) {
+			case MPOL_INTERLEAVE:
+				numa_set_interleave_mask(td->o.numa_memnodesmask);
+				break;
+			case MPOL_BIND:
+				numa_set_membind(td->o.numa_memnodesmask);
+				break;
+			case MPOL_LOCAL:
+				numa_set_localalloc();
+				break;
+			case MPOL_PREFERRED:
+				numa_set_preferred(td->o.numa_mem_prefer_node);
+				break;
+			case MPOL_DEFAULT:
+			default:
+				break;
+			}
+
+		}
+	}
+#endif
+
 	/*
 	 * May alter parameters that init_io_u() will use, so we need to
 	 * do this first.

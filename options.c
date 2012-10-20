@@ -564,6 +564,130 @@ static int str_verify_cpus_allowed_cb(void *data, const char *input)
 }
 #endif
 
+#ifdef FIO_HAVE_LIBNUMA
+static int str_numa_cpunodes_cb(void *data, char *input)
+{
+	struct thread_data *td = data;
+
+	/* numa_parse_nodestring() parses a character string list
+	 * of nodes into a bit mask. The bit mask is allocated by
+	 * numa_allocate_nodemask(), so it should be freed by
+	 * numa_free_nodemask().
+	 */
+	td->o.numa_cpunodesmask = numa_parse_nodestring(input);
+	if (td->o.numa_cpunodesmask == NULL) {
+		log_err("fio: numa_parse_nodestring failed\n");
+		td_verror(td, 1, "str_numa_cpunodes_cb");
+		return 1;
+	}
+
+	td->o.numa_cpumask_set = 1;
+	return 0;
+}
+
+static int str_numa_mpol_cb(void *data, char *input)
+{
+	struct thread_data *td = data;
+	const char * const policy_types[] =
+		{ "default", "prefer", "bind", "interleave", "local" };
+	int i;
+
+	char *nodelist = strchr(input, ':');
+	if (nodelist) {
+		/* NUL-terminate mode */
+		*nodelist++ = '\0';
+	}
+
+	for (i = 0; i <= MPOL_LOCAL; i++) {
+		if (!strcmp(input, policy_types[i])) {
+			td->o.numa_mem_mode = i;
+			break;
+		}
+	}
+	if (i > MPOL_LOCAL) {
+		log_err("fio: memory policy should be: default, prefer, bind, interleave, local\n");
+		goto out;
+	}
+
+	switch (td->o.numa_mem_mode) {
+	case MPOL_PREFERRED:
+		/*
+		 * Insist on a nodelist of one node only
+		 */
+		if (nodelist) {
+			char *rest = nodelist;
+			while (isdigit(*rest))
+				rest++;
+			if (*rest) {
+				log_err("fio: one node only for \'prefer\'\n");
+				goto out;
+			}
+		} else {
+			log_err("fio: one node is needed for \'prefer\'\n");
+			goto out;
+		}
+		break;
+	case MPOL_INTERLEAVE:
+		/*
+		 * Default to online nodes with memory if no nodelist
+		 */
+		if (!nodelist)
+			nodelist = strdup("all");
+		break;
+	case MPOL_LOCAL:
+	case MPOL_DEFAULT:
+		/*
+		 * Don't allow a nodelist
+		 */
+		if (nodelist) {
+			log_err("fio: NO nodelist for \'local\'\n");
+			goto out;
+		}
+		break;
+	case MPOL_BIND:
+		/*
+		 * Insist on a nodelist
+		 */
+		if (!nodelist) {
+			log_err("fio: a nodelist is needed for \'bind\'\n");
+			goto out;
+		}
+		break;
+	}
+
+
+	/* numa_parse_nodestring() parses a character string list
+	 * of nodes into a bit mask. The bit mask is allocated by
+	 * numa_allocate_nodemask(), so it should be freed by
+	 * numa_free_nodemask().
+	 */
+	switch (td->o.numa_mem_mode) {
+	case MPOL_PREFERRED:
+		td->o.numa_mem_prefer_node = atoi(nodelist);
+		break;
+	case MPOL_INTERLEAVE:
+	case MPOL_BIND:
+		td->o.numa_memnodesmask = numa_parse_nodestring(nodelist);
+		if (td->o.numa_memnodesmask == NULL) {
+			log_err("fio: numa_parse_nodestring failed\n");
+			td_verror(td, 1, "str_numa_memnodes_cb");
+			return 1;
+		}
+		break;
+	case MPOL_LOCAL:
+	case MPOL_DEFAULT:
+	default:
+		break;
+	}
+
+	td->o.numa_memmask_set = 1;
+	return 0;
+
+out:
+	return 1;
+}
+#endif
+
 #ifdef FIO_HAVE_TRIM
 static int str_verify_trim_cb(void *data, unsigned long long *val)
 {
@@ -2067,6 +2191,20 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR,
 		.cb	= str_cpus_allowed_cb,
 		.help	= "Set CPUs allowed",
+	},
+#endif
+#ifdef FIO_HAVE_LIBNUMA
+	{
+		.name	= "numa_cpu_nodes",
+		.type	= FIO_OPT_STR,
+		.cb	= str_numa_cpunodes_cb,
+		.help	= "NUMA CPU nodes bind",
+	},
+	{
+		.name	= "numa_mem_policy",
+		.type	= FIO_OPT_STR,
+		.cb	= str_numa_mpol_cb,
+		.help	= "NUMA memory policy setup",
 	},
 #endif
 	{
