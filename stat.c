@@ -16,7 +16,11 @@ void update_rusage_stat(struct thread_data *td)
 {
 	struct thread_stat *ts = &td->ts;
 
+#ifdef FIO_HAVE_RUSAGE_THREAD
+	getrusage(RUSAGE_THREAD, &td->ru_end);
+#else
 	getrusage(RUSAGE_SELF, &td->ru_end);
+#endif
 
 	ts->usr_time += mtime_since(&td->ru_start.ru_utime,
 					&td->ru_end.ru_utime);

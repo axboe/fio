@@ -14,6 +14,7 @@
 #include <linux/unistd.h>
 #include <linux/raw.h>
 #include <linux/major.h>
+#include <linux/version.h>
 #include <endian.h>
 
 #include "indirect.h"
@@ -60,6 +61,10 @@
 
 #ifdef FIO_HAVE_LINUX_FALLOCATE
 #define FIO_HAVE_FALLOC_ENG
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26)
+#define FIO_HAVE_RUSAGE_THREAD
 #endif
 
 #ifdef SYNC_FILE_RANGE_WAIT_BEFORE
