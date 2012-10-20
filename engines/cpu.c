@@ -10,6 +10,11 @@
 static int fio_cpuio_queue(struct thread_data *td, struct io_u fio_unused *io_u)
 {
 	usec_spin(td->o.cpucycle);
+
+	if (io_u->buflen == 0)
+		io_u->buflen = 1;
+	io_u->resid = 0;
+
 	return FIO_Q_COMPLETED;
 }
 
