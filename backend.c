@@ -726,7 +726,7 @@ sync_done:
 
 		if (ret < 0)
 			break;
-		if (!ddir_rw_sum(bytes_done))
+		if (!ddir_rw_sum(bytes_done) && !(td->io_ops->flags & FIO_NOIO))
 			continue;
 
 		if (!in_ramp_time(td) && should_check_rate(td, bytes_done)) {
