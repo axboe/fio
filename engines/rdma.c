@@ -7,13 +7,24 @@
  *
  * This I/O engine is disabled by default. To enable it, execute:
  *
- * $ export EXTFLAGS="-DFIO_HAVE_RDMA"
- * $ export EXTLIBS="-libverbs -lrdmacm"
+ * $ export EXTFLAGS+=" -DFIO_HAVE_RDMA "
+ * $ export EXTLIBS+=" -libverbs -lrdmacm "
  *
  * before running make. You will need the Linux RDMA software as well, either
  * from your Linux distributor or directly from openfabrics.org:
  *
  * http://www.openfabrics.org/downloads/OFED/
+ *
+ * Exchanging steps of RDMA ioengine control messages:
+ *	1. client side sends test mode (RDMA_WRITE/RDMA_READ/SEND)
+ *	   to server side.
+ * 	2. server side parses test mode, and sends back confirmation
+ *	   to client side. In RDMA WRITE/READ test, this confirmation
+ * 	   includes memory information, such as rkey, address.
+ *	3. client side initiates test loop.
+ * 	4. In RDMA WRITE/READ test, client side sends a completion
+ *	   notification to server side. Server side updates its
+ * 	   td->done as true.
  *
  */
 #include <stdio.h>
@@ -41,7 +52,7 @@
 #include <rdma/rdma_cma.h>
 #include <infiniband/arch.h>
 
-#define FIO_RDMA_MAX_IO_DEPTH    128
+#define FIO_RDMA_MAX_IO_DEPTH    512
 
 enum rdma_io_mode {
 	FIO_RDMA_UNKNOWN = 0,
@@ -591,7 +602,8 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 	enum ibv_wc_opcode comp_opcode;
 	comp_opcode = IBV_WC_RDMA_WRITE;
 #endif
-	int i, index;
+	int i;
+	long index;
 	struct rdma_io_u_data *r_io_u_d;
 
 	r_io_u_d = NULL;
@@ -602,7 +614,10 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 		case FIO_RDMA_MEM_WRITE:
 			/* compose work request */
 			r_io_u_d = io_us[i]->engine_data;
-			index = rand() % rd->rmt_nr;
+			if (td->o.use_os_rand)
+				index = os_random_long(&td->random_state) % rd->rmt_nr;
+			else
+				index = __rand(&td->__random_state) % rd->rmt_nr;
 			r_io_u_d->sq_wr.opcode = IBV_WR_RDMA_WRITE;
 			r_io_u_d->sq_wr.wr.rdma.rkey = rd->rmt_us[index].rkey;
 			r_io_u_d->sq_wr.wr.rdma.remote_addr = \
@@ -612,7 +627,10 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 		case FIO_RDMA_MEM_READ:
 			/* compose work request */
 			r_io_u_d = io_us[i]->engine_data;
-			index = rand() % rd->rmt_nr;
+			if (td->o.use_os_rand)
+				index = os_random_long(&td->random_state) % rd->rmt_nr;
+			else
+				index = __rand(&td->__random_state) % rd->rmt_nr;
 			r_io_u_d->sq_wr.opcode = IBV_WR_RDMA_READ;
 			r_io_u_d->sq_wr.wr.rdma.rkey = rd->rmt_us[index].rkey;
 			r_io_u_d->sq_wr.wr.rdma.remote_addr = \
@@ -790,6 +808,16 @@ static int fio_rdmaio_connect(struct thread_data *td, struct fio_file *f)
 	/* wait for remote MR info from server side */
 	rdma_poll_wait(td, IBV_WC_RECV);
 
+	/* In SEND/RECV test, it's a good practice to setup the iodepth of
+	 * of the RECV side deeper than that of the SEND side to
+	 * avoid RNR (receiver not ready) error. The
+	 * SEND side may send so many unsolicited message before 
+	 * RECV side commits sufficient recv buffers into recv queue.
+	 * This may lead to RNR error. Here, SEND side pauses for a while
+	 * during which RECV side commits sufficient recv buffers.
+	 */
+	usleep(500000);
+
 	return 0;
 }
 
@@ -872,8 +900,8 @@ static int fio_rdmaio_close_file(struct thread_data *td, struct fio_file *f)
         return 1;
     }*/
 
-	ibv_destroy_qp(rd->qp);
 	ibv_destroy_cq(rd->cq);
+	ibv_destroy_qp(rd->qp);
 
 	if (rd->is_client == 1)
 		rdma_destroy_id(rd->cm_id);
@@ -1229,8 +1257,8 @@ static int fio_rdmaio_init(struct thread_data fio_unused * td)
 	log_err("     make sure OFED is installed,\n");
 	log_err("     $ ofed_info\n");
 	log_err("     then try to make fio as follows:\n");
-	log_err("     $ export EXTFLAGS=\"-DFIO_HAVE_RDMA\"\n");
-	log_err("     $ export EXTLIBS=\"-libverbs -lrdmacm\"\n");
+	log_err("     $ export EXTFLAGS+=\" -DFIO_HAVE_RDMA \"\n");
+	log_err("     $ export EXTLIBS+=\" -libverbs -lrdmacm \"\n");
 	log_err("     $ make clean && make\n");
 	return 1;
 }

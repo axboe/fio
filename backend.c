@@ -591,7 +591,7 @@ static void do_io(struct thread_data *td)
 		int ret2, full;
 		enum fio_ddir ddir;
 
-		if (td->terminate)
+		if (td->terminate || td->done)
 			break;
 
 		update_tv_cache(td);
