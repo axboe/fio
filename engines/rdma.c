@@ -119,6 +119,8 @@ struct rdmaio_data {
 	int io_u_flight_nr;
 	struct io_u **io_us_completed;
 	int io_u_completed_nr;
+
+	struct frand_state rand_state;
 };
 
 static int client_recv(struct thread_data *td, struct ibv_wc *wc)
@@ -617,7 +619,7 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 			if (td->o.use_os_rand)
 				index = os_random_long(&td->random_state) % rd->rmt_nr;
 			else
-				index = __rand(&td->__random_state) % rd->rmt_nr;
+				index = __rand(&rd->rand_state) % rd->rmt_nr;
 			r_io_u_d->sq_wr.opcode = IBV_WR_RDMA_WRITE;
 			r_io_u_d->sq_wr.wr.rdma.rkey = rd->rmt_us[index].rkey;
 			r_io_u_d->sq_wr.wr.rdma.remote_addr = \
@@ -630,7 +632,7 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 			if (td->o.use_os_rand)
 				index = os_random_long(&td->random_state) % rd->rmt_nr;
 			else
-				index = __rand(&td->__random_state) % rd->rmt_nr;
+				index = __rand(&rd->rand_state) % rd->rmt_nr;
 			r_io_u_d->sq_wr.opcode = IBV_WR_RDMA_READ;
 			r_io_u_d->sq_wr.wr.rdma.rkey = rd->rmt_us[index].rkey;
 			r_io_u_d->sq_wr.wr.rdma.remote_addr = \
@@ -1210,6 +1212,7 @@ static int fio_rdmaio_setup(struct thread_data *td)
 		rd = malloc(sizeof(*rd));;
 
 		memset(rd, 0, sizeof(*rd));
+		init_rand_seed(&rd->rand_state, GOLDEN_RATIO_PRIME);
 		td->io_ops->data = rd;
 	}
 
