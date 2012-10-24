@@ -18,13 +18,13 @@
  * Exchanging steps of RDMA ioengine control messages:
  *	1. client side sends test mode (RDMA_WRITE/RDMA_READ/SEND)
  *	   to server side.
- * 	2. server side parses test mode, and sends back confirmation
+ *	2. server side parses test mode, and sends back confirmation
  *	   to client side. In RDMA WRITE/READ test, this confirmation
- * 	   includes memory information, such as rkey, address.
+ *	   includes memory information, such as rkey, address.
  *	3. client side initiates test loop.
- * 	4. In RDMA WRITE/READ test, client side sends a completion
+ *	4. In RDMA WRITE/READ test, client side sends a completion
  *	   notification to server side. Server side updates its
- * 	   td->done as true.
+ *	   td->done as true.
  *
  */
 #include <stdio.h>
@@ -325,6 +325,7 @@ static int fio_rdmaio_setup_qp(struct thread_data *td)
 		rd->pd = ibv_alloc_pd(rd->child_cm_id->verbs);
 	else
 		rd->pd = ibv_alloc_pd(rd->cm_id->verbs);
+
 	if (rd->pd == NULL) {
 		log_err("fio: ibv_alloc_pd fail\n");
 		return 1;
@@ -416,7 +417,7 @@ static int fio_rdmaio_setup_control_msg_buffers(struct thread_data *td)
 	/* setup work request */
 	/* recv wq */
 	rd->recv_sgl.addr = (uint64_t) (unsigned long)&rd->recv_buf;
-	rd->recv_sgl.length = sizeof rd->recv_buf;
+	rd->recv_sgl.length = sizeof(rd->recv_buf);
 	rd->recv_sgl.lkey = rd->recv_mr->lkey;
 	rd->rq_wr.sg_list = &rd->recv_sgl;
 	rd->rq_wr.num_sge = 1;
@@ -424,7 +425,7 @@ static int fio_rdmaio_setup_control_msg_buffers(struct thread_data *td)
 
 	/* send wq */
 	rd->send_sgl.addr = (uint64_t) (unsigned long)&rd->send_buf;
-	rd->send_sgl.length = sizeof rd->send_buf;
+	rd->send_sgl.length = sizeof(rd->send_buf);
 	rd->send_sgl.lkey = rd->send_mr->lkey;
 
 	rd->sq_wr.opcode = IBV_WR_SEND;
@@ -441,13 +442,12 @@ static int get_next_channel_event(struct thread_data *td,
 				  enum rdma_cm_event_type wait_event)
 {
 	struct rdmaio_data *rd = td->io_ops->data;
-
-	int ret;
 	struct rdma_cm_event *event;
+	int ret;
 
 	ret = rdma_get_cm_event(channel, &event);
 	if (ret) {
-		log_err("fio: rdma_get_cm_event");
+		log_err("fio: rdma_get_cm_event: %d\n", ret);
 		return 1;
 	}
 
@@ -521,9 +521,9 @@ static struct io_u *fio_rdmaio_event(struct thread_data *td, int event)
 	int i;
 
 	io_u = rd->io_us_completed[0];
-	for (i = 0; i < rd->io_u_completed_nr - 1; i++) {
+	for (i = 0; i < rd->io_u_completed_nr - 1; i++)
 		rd->io_us_completed[i] = rd->io_us_completed[i + 1];
-	}
+
 	rd->io_u_completed_nr--;
 
 	dprint_io_u(io_u, "fio_rdmaio_event");
@@ -535,14 +535,11 @@ static int fio_rdmaio_getevents(struct thread_data *td, unsigned int min,
 				unsigned int max, struct timespec *t)
 {
 	struct rdmaio_data *rd = td->io_ops->data;
-	int r;
 	enum ibv_wc_opcode comp_opcode;
 	comp_opcode = IBV_WC_RDMA_WRITE;
 	struct ibv_cq *ev_cq;
 	void *ev_ctx;
-	int ret;
-
-	r = 0;
+	int ret, r = 0;
 
 	switch (rd->rdma_protocol) {
 	case FIO_RDMA_MEM_WRITE:
@@ -617,10 +614,7 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 		case FIO_RDMA_MEM_WRITE:
 			/* compose work request */
 			r_io_u_d = io_us[i]->engine_data;
-			if (td->o.use_os_rand)
-				index = os_random_long(&td->random_state) % rd->rmt_nr;
-			else
-				index = __rand(&rd->rand_state) % rd->rmt_nr;
+			index = __rand(&rd->rand_state) % rd->rmt_nr;
 			r_io_u_d->sq_wr.opcode = IBV_WR_RDMA_WRITE;
 			r_io_u_d->sq_wr.wr.rdma.rkey = rd->rmt_us[index].rkey;
 			r_io_u_d->sq_wr.wr.rdma.remote_addr = \
@@ -630,10 +624,7 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 		case FIO_RDMA_MEM_READ:
 			/* compose work request */
 			r_io_u_d = io_us[i]->engine_data;
-			if (td->o.use_os_rand)
-				index = os_random_long(&td->random_state) % rd->rmt_nr;
-			else
-				index = __rand(&rd->rand_state) % rd->rmt_nr;
+			index = __rand(&rd->rand_state) % rd->rmt_nr;
 			r_io_u_d->sq_wr.opcode = IBV_WR_RDMA_READ;
 			r_io_u_d->sq_wr.wr.rdma.rkey = rd->rmt_us[index].rkey;
 			r_io_u_d->sq_wr.wr.rdma.remote_addr = \
@@ -755,11 +746,11 @@ static int fio_rdmaio_commit(struct thread_data *td)
 	io_us = rd->io_us_queued;
 	do {
 		/* RDMA_WRITE or RDMA_READ */
-		if (rd->is_client) {
+		if (rd->is_client)
 			ret = fio_rdmaio_send(td, io_us, rd->io_u_queued_nr);
-		} else if (!rd->is_client) {
+		else if (!rd->is_client)
 			ret = fio_rdmaio_recv(td, io_us, rd->io_u_queued_nr);
-		} else
+		else
 			ret = 0;	/* must be a SYNC */
 
 		if (ret > 0) {
@@ -781,7 +772,7 @@ static int fio_rdmaio_connect(struct thread_data *td, struct fio_file *f)
 	struct rdma_conn_param conn_param;
 	struct ibv_send_wr *bad_wr;
 
-	memset(&conn_param, 0, sizeof conn_param);
+	memset(&conn_param, 0, sizeof(conn_param));
 	conn_param.responder_resources = 1;
 	conn_param.initiator_depth = 1;
 	conn_param.retry_count = 10;
@@ -814,7 +805,7 @@ static int fio_rdmaio_connect(struct thread_data *td, struct fio_file *f)
 	/* In SEND/RECV test, it's a good practice to setup the iodepth of
 	 * of the RECV side deeper than that of the SEND side to
 	 * avoid RNR (receiver not ready) error. The
-	 * SEND side may send so many unsolicited message before 
+	 * SEND side may send so many unsolicited message before
 	 * RECV side commits sufficient recv buffers into recv queue.
 	 * This may lead to RNR error. Here, SEND side pauses for a while
 	 * during which RECV side commits sufficient recv buffers.
@@ -831,7 +822,7 @@ static int fio_rdmaio_accept(struct thread_data *td, struct fio_file *f)
 	struct ibv_send_wr *bad_wr;
 
 	/* rdma_accept() - then wait for accept success */
-	memset(&conn_param, 0, sizeof conn_param);
+	memset(&conn_param, 0, sizeof(conn_param));
 	conn_param.responder_resources = 1;
 	conn_param.initiator_depth = 1;
 
@@ -894,14 +885,17 @@ static int fio_rdmaio_close_file(struct thread_data *td, struct fio_file *f)
 		rdma_disconnect(rd->cm_id);
 	else {
 		rdma_disconnect(rd->child_cm_id);
-/*        rdma_disconnect(rd->cm_id); */
+#if 0
+		rdma_disconnect(rd->cm_id);
+#endif
 	}
 
-/*    if (get_next_channel_event(td, rd->cm_channel, RDMA_CM_EVENT_DISCONNECTED) != 0)
-    {
-        log_err("fio: wait for RDMA_CM_EVENT_DISCONNECTED\n");
-        return 1;
-    }*/
+#if 0
+	if (get_next_channel_event(td, rd->cm_channel, RDMA_CM_EVENT_DISCONNECTED) != 0) {
+		log_err("fio: wait for RDMA_CM_EVENT_DISCONNECTED\n");
+		return 1;
+	}
+#endif
 
 	ibv_destroy_cq(rd->cq);
 	ibv_destroy_qp(rd->qp);
@@ -924,6 +918,7 @@ static int fio_rdmaio_setup_connect(struct thread_data *td, const char *host,
 {
 	struct rdmaio_data *rd = td->io_ops->data;
 	struct ibv_recv_wr *bad_wr;
+	int err;
 
 	rd->addr.sin_family = AF_INET;
 	rd->addr.sin_port = htons(port);
@@ -941,28 +936,28 @@ static int fio_rdmaio_setup_connect(struct thread_data *td, const char *host,
 	}
 
 	/* resolve route */
-	if (rdma_resolve_addr(rd->cm_id, NULL,
-			      (struct sockaddr *)&rd->addr, 2000) != 0) {
-		log_err("fio: rdma_resolve_addr");
+	err = rdma_resolve_addr(rd->cm_id, NULL, (struct sockaddr *)&rd->addr, 2000);
+	if (err != 0) {
+		log_err("fio: rdma_resolve_addr: %d\n", err);
 		return 1;
 	}
 
-	if (get_next_channel_event
-	    (td, rd->cm_channel, RDMA_CM_EVENT_ADDR_RESOLVED)
-	    != 0) {
-		log_err("fio: get_next_channel_event");
+	err = get_next_channel_event(td, rd->cm_channel, RDMA_CM_EVENT_ADDR_RESOLVED);
+	if (err != 0) {
+		log_err("fio: get_next_channel_event: %d\n", err);
 		return 1;
 	}
 
 	/* resolve route */
-	if (rdma_resolve_route(rd->cm_id, 2000) != 0) {
-		log_err("fio: rdma_resolve_route");
+	err = rdma_resolve_route(rd->cm_id, 2000);
+	if (err != 0) {
+		log_err("fio: rdma_resolve_route: %d\n", err);
 		return 1;
 	}
 
-	if (get_next_channel_event
-	    (td, rd->cm_channel, RDMA_CM_EVENT_ROUTE_RESOLVED) != 0) {
-		log_err("fio: get_next_channel_event");
+	err = get_next_channel_event(td, rd->cm_channel, RDMA_CM_EVENT_ROUTE_RESOLVED);
+	if (err != 0) {
+		log_err("fio: get_next_channel_event: %d\n", err);
 		return 1;
 	}
 
@@ -974,8 +969,9 @@ static int fio_rdmaio_setup_connect(struct thread_data *td, const char *host,
 		return 1;
 
 	/* post recv buf */
-	if (ibv_post_recv(rd->qp, &rd->rq_wr, &bad_wr) != 0) {
-		log_err("fio: ibv_post_recv fail\n");
+	err = ibv_post_recv(rd->qp, &rd->rq_wr, &bad_wr);
+	if (err != 0) {
+		log_err("fio: ibv_post_recv fail: %d\n", err);
 		return 1;
 	}
 
@@ -1027,10 +1023,12 @@ static int fio_rdmaio_setup_listen(struct thread_data *td, short port)
 static int fio_rdmaio_init(struct thread_data *td)
 {
 	struct rdmaio_data *rd = td->io_ops->data;
+	struct flist_head *entry;
+	unsigned int max_bs;
 	unsigned int port;
 	char host[64], buf[128];
 	char *sep, *portp, *modep;
-	int ret;
+	int ret, i = 0;
 	struct rlimit rl;
 
 	if (td_rw(td)) {
@@ -1150,11 +1148,8 @@ static int fio_rdmaio_init(struct thread_data *td)
 		ret = fio_rdmaio_setup_connect(td, host, port);
 	}
 
-	struct flist_head *entry;
-	unsigned int max_bs;
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
 	/* register each io_u in the free list */
-	int i = 0;
 	flist_for_each(entry, &td->io_u_freelist) {
 		struct io_u *io_u = flist_entry(entry, struct io_u, list);
 
@@ -1176,8 +1171,9 @@ static int fio_rdmaio_init(struct thread_data *td)
 		rd->send_buf.rmt_us[i].rkey = htonl(io_u->mr->rkey);
 		rd->send_buf.rmt_us[i].size = htonl(max_bs);
 
-/*    log_info("fio: Send rkey %x addr %" PRIx64 " len %d to client\n",
-          io_u->mr->rkey, io_u->buf, max_bs); */
+#if 0
+		log_info("fio: Send rkey %x addr %" PRIx64 " len %d to client\n", io_u->mr->rkey, io_u->buf, max_bs); */
+#endif
 		i++;
 	}
 
@@ -1193,16 +1189,8 @@ static void fio_rdmaio_cleanup(struct thread_data *td)
 {
 	struct rdmaio_data *rd = td->io_ops->data;
 
-	if (rd) {
-/*        if (nd->listenfd != -1)
-            close(nd->listenfd);
-        if (nd->pipes[0] != -1)
-            close(nd->pipes[0]);
-        if (nd->pipes[1] != -1)
-            close(nd->pipes[1]);
-*/
+	if (rd)
 		free(rd);
-	}
 }
 
 static int fio_rdmaio_setup(struct thread_data *td)
@@ -1210,7 +1198,7 @@ static int fio_rdmaio_setup(struct thread_data *td)
 	struct rdmaio_data *rd;
 
 	if (!td->io_ops->data) {
-		rd = malloc(sizeof(*rd));;
+		rd = malloc(sizeof(*rd));
 
 		memset(rd, 0, sizeof(*rd));
 		init_rand_seed(&rd->rand_state, (unsigned int) GOLDEN_RATIO_PRIME);
