@@ -2099,6 +2099,12 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.parent = "rate",
 	},
 	{
+		.name	= "max_latency",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(max_latency),
+		.help	= "Maximum tolerated IO latency (usec)",
+	},
+	{
 		.name	= "invalidate",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(invalidate_cache),

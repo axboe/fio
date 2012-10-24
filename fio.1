@@ -639,6 +639,10 @@ is used for read vs write seperation.
 Average bandwidth for \fBrate\fR and \fBratemin\fR over this number of
 milliseconds.  Default: 1000ms.
 .TP
+.BI max_latency \fR=\fPint
+If set, fio will exit the job if it exceeds this maximum latency. It will exit
+with an ETIME error.
+.TP
 .BI cpumask \fR=\fPint
 Set CPU affinity for this job. \fIint\fR is a bitmask of allowed CPUs the job
 may run on.  See \fBsched_setaffinity\fR\|(2).

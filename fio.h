@@ -198,6 +198,8 @@ struct thread_options {
 	enum fio_memtype mem_type;
 	unsigned int mem_align;
 
+	unsigned int max_latency;
+
 	unsigned int stonewall;
 	unsigned int new_group;
 	unsigned int numjobs;
