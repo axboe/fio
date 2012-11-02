@@ -1325,6 +1325,13 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 
 		tusec = utime_since(&io_u->start_time, &icd->time);
 		add_lat_sample(td, idx, tusec, bytes);
+
+		if (td->o.max_latency && tusec > td->o.max_latency) {
+			if (!td->error)
+				log_err("fio: latency of %lu usec exceeds specified max (%u usec)\n", tusec, td->o.max_latency);
+			td_verror(td, ETIME, "max latency exceeded");
+			icd->error = ETIME;
+		}
 	}
 
 	if (!td->o.disable_clat) {

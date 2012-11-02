@@ -780,6 +780,9 @@ rate_iops_min=int If fio doesn't meet this rate of IO, it will cause
 		the job to exit. The same format as rate is used for read vs
 		write seperation.
 
+max_latency=int	If set, fio will exit the job if it exceeds this maximum
+		latency. It will exit with an ETIME error.
+
 ratecycle=int	Average bandwidth for 'rate' and 'ratemin' over this number
 		of milliseconds.
 
