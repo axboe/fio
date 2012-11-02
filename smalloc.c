@@ -431,9 +431,12 @@ static void *smalloc_pool(struct pool *pool, unsigned int size)
 	return ptr;
 }
 
-void *smalloc(unsigned int size)
+void *smalloc(size_t size)
 {
 	unsigned int i;
+
+	if (size != (unsigned int) size)
+		return NULL;
 
 	global_write_lock();
 	i = last_pool;
