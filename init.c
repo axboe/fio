@@ -393,7 +393,11 @@ static void init_rand_distribution(struct thread_data *td)
 	range_size = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
 
 	nranges = (td->o.size + range_size - 1) / range_size;
-	zipf_init(&td->zipf, nranges, td->o.zipf_theta);
+
+	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
+		zipf_init(&td->zipf, nranges, td->o.zipf_theta);
+	else
+		pareto_init(&td->zipf, nranges, td->o.pareto_h);
 }
 
 /*

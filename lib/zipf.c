@@ -126,3 +126,21 @@ unsigned long long zipf_next(struct zipf_state *zs)
 
 	return val - 1;
 }
+
+void pareto_init(struct zipf_state *zs, unsigned long nranges, double h)
+{
+	memset(zs, 0, sizeof(*zs));
+
+	zs->nranges = nranges;
+	zs->pareto_pow = log(h) / log(1.0 - h);
+
+	init_rand(&zs->rand);
+}
+
+unsigned long long pareto_next(struct zipf_state *zs)
+{
+	double rand = (double) __rand(&zs->rand) / (double) FRAND_MAX;
+	unsigned long long n = zs->nranges - 1;
+
+	return n * pow(rand, zs->pareto_pow);
+}

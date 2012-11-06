@@ -180,6 +180,7 @@ struct thread_options {
 
 	unsigned int random_distribution;
 	double zipf_theta;
+	double pareto_h;
 
 	unsigned int hugepage_size;
 	unsigned int rw_min_bs;
@@ -827,6 +828,7 @@ enum {
 enum {
 	FIO_RAND_DIST_RANDOM	= 0,
 	FIO_RAND_DIST_ZIPF,
+	FIO_RAND_DIST_PARETO,
 };
 
 #endif

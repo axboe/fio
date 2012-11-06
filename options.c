@@ -734,19 +734,25 @@ static int str_random_distribution_cb(void *data, const char *str)
 	double val;
 	char *nr;
 
-	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM)
+	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
+		val = 1.1;
+	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
+		val = 0.2;
+	else
 		return 0;
 
 	nr = get_opt_postfix(str);
-	if (!nr)
-		val = 0.6;
-	else if (!str_to_float(nr, &val)) {
+	if (nr && !str_to_float(nr, &val)) {
 		log_err("fio: random postfix parsing failed\n");
 		free(nr);
 		return 1;
 	}
 
-	td->o.zipf_theta = val;
+	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
+		td->o.zipf_theta = val;
+	else
+		td->o.pareto_h = val;
+
 	free(nr);
 	return 0;
 }
@@ -1510,6 +1516,10 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			  { .ival = "zipf",
 			    .oval = FIO_RAND_DIST_ZIPF,
 			    .help = "Zipf distribution",
+			  },
+			  { .ival = "pareto",
+			    .oval = FIO_RAND_DIST_PARETO,
+			    .help = "Pareto distribution",
 			  },
 		},
 	},

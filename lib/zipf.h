@@ -8,10 +8,14 @@ struct zipf_state {
 	double theta;
 	double zeta2;
 	double zetan;
+	double pareto_pow;
 	struct frand_state rand;
 };
 
 void zipf_init(struct zipf_state *zs, unsigned long nranges, double theta);
 unsigned long long zipf_next(struct zipf_state *zs);
+
+void pareto_init(struct zipf_state *zs, unsigned long nranges, double h);
+unsigned long long pareto_next(struct zipf_state *zs);
 
 #endif

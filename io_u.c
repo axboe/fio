@@ -234,10 +234,19 @@ ret:
 	return 0;
 }
 
-static int __get_next_rand_offset_zipf(struct thread_data *td, struct fio_file *f,
-				  enum fio_ddir ddir, unsigned long long *b)
+static int __get_next_rand_offset_zipf(struct thread_data *td,
+				       struct fio_file *f, enum fio_ddir ddir,
+				       unsigned long long *b)
 {
 	*b = zipf_next(&td->zipf);
+	return 0;
+}
+
+static int __get_next_rand_offset_pareto(struct thread_data *td,
+					 struct fio_file *f, enum fio_ddir ddir,
+					 unsigned long long *b)
+{
+	*b = pareto_next(&td->zipf);
 	return 0;
 }
 
@@ -248,6 +257,8 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		return __get_next_rand_offset(td, f, ddir, b);
 	else if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
 		return __get_next_rand_offset_zipf(td, f, ddir, b);
+	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
+		return __get_next_rand_offset_pareto(td, f, ddir, b);
 
 	log_err("fio: unknown random distribution: %d\n", td->o.random_distribution);
 	return 1;
