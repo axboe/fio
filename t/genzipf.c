@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 {
 	unsigned long nranges, output_nranges;
 	unsigned long *vals;
-	unsigned long i, j, nr_vals, cur_vals, max_val, interval, total;
+	unsigned long i, j, nr_vals, cur_vals, max_val, interval;
 	double *output;
 	struct zipf_state zs;
 	int use_zipf;
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 
 	vals = malloc(nranges * sizeof(unsigned long));
 
-	total = max_val = nr_vals = 0;
+	max_val = nr_vals = 0;
 	for (i = 0; i < nranges; i++) {
 		if (use_zipf)
 			vals[nr_vals] = zipf_next(&zs);
@@ -83,23 +83,23 @@ int main(int argc, char *argv[])
 
 	output = malloc(output_nranges * sizeof(double));
 
-	for (i = j = 0, cur_vals = 1; i < nr_vals; i++) {
+	for (i = j = 0, cur_vals = 0; i < nr_vals; i++) {
 		if (vals[i] > interval) {
-			output[j] = (double) cur_vals / (double) nr_vals;
+			output[j] = (double) (cur_vals + 1) / (double) nr_vals;
 			output[j] *= 100.0;
 			j++;
-			total += cur_vals;
-			cur_vals = 1;
+			cur_vals = 0;
 			interval += (max_val + output_nranges - 1) / output_nranges;
 			continue;
 		}
 		cur_vals++;
 	}
 
-	output[j] = (double) cur_vals / (double) nr_vals;
-	output[j] *= 100.0;
-	j++;
-	total += cur_vals;
+	if (cur_vals) {
+		output[j] = (double) (cur_vals + 1) / (double) nr_vals;
+		output[j] *= 100.0;
+		j++;
+	}
 
 	for (i = 0; i < j; i++)
 		printf("%.2f%%\n", output[i]);
