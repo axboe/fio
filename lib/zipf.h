@@ -1,6 +1,7 @@
 #ifndef FIO_ZIPF_H
 #define FIO_ZIPF_H
 
+#include <inttypes.h>
 #include "rand.h"
 
 struct zipf_state {
