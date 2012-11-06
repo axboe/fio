@@ -8,6 +8,9 @@
  *
  *	t/genzipf zipf 1.2 100000 20
  *
+ * Only the distribution type (zipf or pareto) and spread input need
+ * to be given, if not given defaults are used.
+ *
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +18,9 @@
 #include <string.h>
 
 #include "../lib/zipf.h"
+
+#define DEF_NR		1000000
+#define DEF_NR_OUTPUT	23
 
 static int val_cmp(const void *p1, const void *p2)
 {
@@ -29,12 +35,12 @@ int main(int argc, char *argv[])
 	unsigned long nranges, output_nranges;
 	unsigned long *vals;
 	unsigned long i, j, nr_vals, cur_vals, max_val, interval;
-	double *output;
+	double *output, perc, perc_i;
 	struct zipf_state zs;
 	int use_zipf;
 	double val;
 
-	if (argc < 4) {
+	if (argc < 3) {
 		printf("%s: {zipf,pareto} val values [output ranges]\n", argv[0]);
 		return 1;
 	}
@@ -49,14 +55,16 @@ int main(int argc, char *argv[])
 	}
 
 	val = atof(argv[2]);
-	nranges = strtoul(argv[3], NULL, 10);
-	if (argc == 5)
-		output_nranges = strtoul(argv[4], NULL, 10);
-	else
-		output_nranges = nranges;
 
-	printf("Generating %s distribution with %f input and %lu ranges\n", use_zipf ? "zipf" : "pareto", val, nranges);
-	getchar();
+	nranges = DEF_NR;
+	output_nranges = DEF_NR_OUTPUT;
+
+	if (argc >= 4)
+		nranges = strtoul(argv[3], NULL, 10);
+	if (argc >= 5)
+		output_nranges = strtoul(argv[4], NULL, 10);
+
+	printf("Generating %s distribution with %f input and %lu ranges.\n", use_zipf ? "zipf" : "pareto", val, nranges);
 
 	if (use_zipf)
 		zipf_init(&zs, nranges, val);
@@ -101,8 +109,12 @@ int main(int argc, char *argv[])
 		j++;
 	}
 
-	for (i = 0; i < j; i++)
-		printf("%.2f%%\n", output[i]);
+	perc_i = 100.0 / (double) output_nranges;
+	perc = 0.0;
+	for (i = 0; i < j; i++) {
+		printf("%6.2f%% -> %6.2f%%:\t%6.2f%%\n",  perc, perc + perc_i, output[i]);
+		perc += perc_i;
+	}
 
 	free(output);
 	free(vals);
