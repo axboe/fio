@@ -73,7 +73,7 @@ T_SMALLOC_OBJS += mutex.o smalloc.o t/log.o
 T_SMALLOC_PROGS = t/stest
 
 T_IEEE_OBJS = t/ieee754.o
-T_IEEE_OBJS += ieee754.o
+T_IEEE_OBJS += lib/ieee754.o
 T_IEEE_PROGS = t/ieee754
 
 T_ZIPF_OBS = t/genzipf.o

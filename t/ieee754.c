@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "../ieee754.h"
+#include "../lib/ieee754.h"
 
 static double values[] = { -17.23, 17.23, 123.4567, 98765.4321, 0.0 };
 
