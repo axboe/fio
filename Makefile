@@ -76,8 +76,17 @@ T_IEEE_OBJS = t/ieee754.o
 T_IEEE_OBJS += ieee754.o
 T_IEEE_PROGS = t/ieee754
 
+T_ZIPF_OBS = t/genzipf.o
+T_ZIPF_OBJS += t/log.o lib/ieee754.o lib/rand.o lib/zipf.o t/genzipf.o
+T_ZIPF_PROGS = t/genzip
+
 T_OBJS = $(T_SMALLOC_OBJS)
 T_OBJS += $(T_IEEE_OBJS)
+T_OBJS += $(T_ZIPF_OBJS)
+
+T_PROGS = $(T_SMALLOC_PROGS)
+T_PROGS += $(T_IEEE_PROGS)
+T_PROGS += $(T_ZIPF_PROGS)
 
 ifneq ($(findstring $(MAKEFLAGS),s),s)
 ifndef V
@@ -118,6 +127,9 @@ t/stest: $(T_SMALLOC_OBJS)
 
 t/ieee754: $(T_IEEE_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_IEEE_OBJS) $(LIBS) $(LDFLAGS)
+
+t/genzipf: $(T_ZIPF_OBJS)
+	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_ZIPF_OBJS) $(LIBS) $(LDFLAGS)
 
 fio: $(OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
