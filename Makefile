@@ -15,7 +15,7 @@ SOURCE := gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		lib/num2str.c lib/ieee754.c $(wildcard crc/*.c) engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
 		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
-		json.c lib/zipf.c
+		json.c lib/zipf.c gettime-thread.c
 
 ifeq ($(UNAME), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c helpers.c cgroup.c trim.c \
@@ -69,7 +69,7 @@ endif
 OBJS = $(SOURCE:.c=.o)
 
 T_SMALLOC_OBJS = t/stest.o
-T_SMALLOC_OBJS += mutex.o smalloc.o t/log.o
+T_SMALLOC_OBJS += gettime.o mutex.o smalloc.o t/log.o
 T_SMALLOC_PROGS = t/stest
 
 T_IEEE_OBJS = t/ieee754.o
