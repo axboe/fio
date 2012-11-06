@@ -382,6 +382,20 @@ static int fixed_block_size(struct thread_options *o)
 		o->min_bs[DDIR_READ] == o->min_bs[DDIR_TRIM];
 }
 
+static void init_rand_distribution(struct thread_data *td)
+{
+	unsigned int range_size;
+	unsigned long nranges;
+
+	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM)
+		return;
+
+	range_size = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
+
+	nranges = (td->o.size + range_size - 1) / range_size;
+	zipf_init(&td->zipf, nranges, td->o.zipf_theta);
+}
+
 /*
  * Lazy way of fixing up options that depend on each other. We could also
  * define option callback handlers, but this is easier.
@@ -591,6 +605,8 @@ static int fixup_options(struct thread_data *td)
 		td->o.zero_buffers = 1;
 		td->o.compress_percentage = 0;
 	}
+
+	init_rand_distribution(td);
 
 	return ret;
 }

@@ -14,6 +14,7 @@
 #include "parse.h"
 #include "debug.h"
 #include "options.h"
+#include "minmax.h"
 
 static struct fio_option *fio_options;
 extern unsigned int fio_get_kb_base(void *);
@@ -220,7 +221,7 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
 /*
  * Convert string into a floating number. Return 1 for success and 0 otherwise.
  */
-static int str_to_float(const char *str, double *val)
+int str_to_float(const char *str, double *val)
 {
 	return (1 == sscanf(str, "%lf", val));
 }
@@ -505,7 +506,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 					o->maxlen);
 			return 1;
 		}
-		if(!str_to_float(ptr, &uf)){
+		if (!str_to_float(ptr, &uf)){
 			log_err("not a floating point value: %s\n", ptr);
 			return 1;
 		}

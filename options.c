@@ -728,6 +728,29 @@ static int str_sfr_cb(void *data, const char *str)
 }
 #endif
 
+static int str_random_distribution_cb(void *data, const char *str)
+{
+	struct thread_data *td = data;
+	double val;
+	char *nr;
+
+	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM)
+		return 0;
+
+	nr = get_opt_postfix(str);
+	if (!nr)
+		val = 0.6;
+	else if (!str_to_float(nr, &val)) {
+		log_err("fio: random postfix parsing failed\n");
+		free(nr);
+		return 1;
+	}
+
+	td->o.zipf_theta = val;
+	free(nr);
+	return 0;
+}
+
 static int check_dir(struct thread_data *td, char *fname)
 {
 #if 0
@@ -1471,6 +1494,24 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Set norandommap if randommap allocation fails",
 		.parent	= "norandommap",
 		.def	= "0",
+	},
+	{
+		.name	= "random_distribution",
+		.type	= FIO_OPT_STR,
+		.off1	= td_var_offset(random_distribution),
+		.cb	= str_random_distribution_cb,
+		.help	= "Random offset distribution generator",
+		.def	= "random",
+		.posval	= {
+			  { .ival = "random",
+			    .oval = FIO_RAND_DIST_RANDOM,
+			    .help = "Completely random",
+			  },
+			  { .ival = "zipf",
+			    .oval = FIO_RAND_DIST_ZIPF,
+			    .help = "Zipf distribution",
+			  },
+		},
 	},
 	{
 		.name	= "nrfiles",

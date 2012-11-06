@@ -39,6 +39,7 @@ struct thread_data;
 #include "server.h"
 #include "stat.h"
 #include "flow.h"
+#include "lib/zipf.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
@@ -176,6 +177,9 @@ struct thread_options {
 	unsigned int softrandommap;
 	unsigned int bs_unaligned;
 	unsigned int fsync_on_close;
+
+	unsigned int random_distribution;
+	double zipf_theta;
 
 	unsigned int hugepage_size;
 	unsigned int rw_min_bs;
@@ -451,6 +455,11 @@ struct thread_data {
 		os_random_state_t random_state;
 		struct frand_state __random_state;
 	};
+
+	/*
+	 * Used for zipf random distribution
+	 */
+	struct zipf_state zipf;
 
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
@@ -813,6 +822,11 @@ enum {
 	FIO_OUTPUT_TERSE	= 0,
 	FIO_OUTPUT_JSON,
 	FIO_OUTPUT_NORMAL,
+};
+
+enum {
+	FIO_RAND_DIST_RANDOM	= 0,
+	FIO_RAND_DIST_ZIPF,
 };
 
 #endif
