@@ -14,10 +14,10 @@ struct zipf_state {
 	unsigned long rand_off;
 };
 
-void zipf_init(struct zipf_state *zs, unsigned long nranges, double theta);
+void zipf_init(struct zipf_state *zs, unsigned long nranges, double theta, unsigned int seed);
 unsigned long long zipf_next(struct zipf_state *zs);
 
-void pareto_init(struct zipf_state *zs, unsigned long nranges, double h);
+void pareto_init(struct zipf_state *zs, unsigned long nranges, double h, unsigned int seed);
 unsigned long long pareto_next(struct zipf_state *zs);
 
 #endif

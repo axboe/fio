@@ -153,9 +153,9 @@ int main(int argc, char *argv[])
 	printf("Generating %s distribution with %f input and %lu ranges.\n", use_zipf ? "zipf" : "pareto", val, nranges);
 
 	if (use_zipf)
-		zipf_init(&zs, nranges, val);
+		zipf_init(&zs, nranges, val, 1);
 	else
-		pareto_init(&zs, nranges, val);
+		pareto_init(&zs, nranges, val, 1);
 
 	hash_bits = 0;
 	hash_size = nranges;

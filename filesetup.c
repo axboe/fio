@@ -12,6 +12,7 @@
 #include "smalloc.h"
 #include "filehash.h"
 #include "os/os.h"
+#include "hash.h"
 
 #ifdef FIO_HAVE_LINUX_FALLOCATE
 #include <linux/falloc.h>
@@ -864,17 +865,18 @@ int pre_read_files(struct thread_data *td)
 
 static int __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 {
-	unsigned int range_size;
+	unsigned int range_size, seed;
 	unsigned long nranges;
 
 	range_size = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
 
 	nranges = (f->real_file_size + range_size - 1) / range_size;
 
+	seed = jhash(f->file_name, strlen(f->file_name), 0) * td->thread_number;
 	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
-		zipf_init(&f->zipf, nranges, td->o.zipf_theta);
+		zipf_init(&f->zipf, nranges, td->o.zipf_theta, seed);
 	else
-		pareto_init(&f->zipf, nranges, td->o.pareto_h);
+		pareto_init(&f->zipf, nranges, td->o.pareto_h, seed);
 
 	return 1;
 }

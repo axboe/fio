@@ -88,18 +88,20 @@ punt:
 	zs->nranges = f.nranges;
 }
 
-static void shared_rand_init(struct zipf_state *zs, unsigned long nranges)
+static void shared_rand_init(struct zipf_state *zs, unsigned long nranges,
+			     unsigned int seed)
 {
 	memset(zs, 0, sizeof(*zs));
 	zs->nranges = nranges;
 
-	init_rand(&zs->rand);
+	init_rand_seed(&zs->rand, seed);
 	zs->rand_off = __rand(&zs->rand);
 }
 
-void zipf_init(struct zipf_state *zs, unsigned long nranges, double theta)
+void zipf_init(struct zipf_state *zs, unsigned long nranges, double theta,
+	       unsigned int seed)
 {
-	shared_rand_init(zs, nranges);
+	shared_rand_init(zs, nranges, seed);
 
 	zs->theta = theta;
 	zs->zeta2 = pow(1.0, zs->theta) + pow(0.5, zs->theta);
@@ -129,9 +131,10 @@ unsigned long long zipf_next(struct zipf_state *zs)
 	return (__hash_long(val - 1) + zs->rand_off) % zs->nranges;
 }
 
-void pareto_init(struct zipf_state *zs, unsigned long nranges, double h)
+void pareto_init(struct zipf_state *zs, unsigned long nranges, double h,
+		 unsigned int seed)
 {
-	shared_rand_init(zs, nranges);
+	shared_rand_init(zs, nranges, seed);
 	zs->pareto_pow = log(h) / log(1.0 - h);
 }
 
