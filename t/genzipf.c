@@ -153,6 +153,13 @@ int main(int argc, char *argv[])
 	else
 		pareto_init(&zs, nranges, val);
 
+	hash_bits = 0;
+	hash_size = nranges;
+	while ((hash_size >>= 1) != 0)
+		hash_bits++;
+
+	hash_size = 1 << hash_bits;
+
 	hash = malloc(hash_size * sizeof(struct flist_head));
 	for (i = 0; i < hash_size; i++)
 		INIT_FLIST_HEAD(&hash[i]);
@@ -176,7 +183,7 @@ int main(int argc, char *argv[])
 
 	nr_vals = rb_gen();
 
-	interval = nr_vals / output_nranges;
+	interval = (nr_vals + output_nranges - 1) / output_nranges;
 
 	output = malloc(output_nranges * sizeof(double));
 
@@ -191,7 +198,7 @@ int main(int argc, char *argv[])
 			output[j] *= 100.0;
 			j++;
 			cur_vals = node->hits;
-			interval += nr_vals / output_nranges;
+			interval += (nr_vals + output_nranges - 1) / output_nranges;
 		} else
 			cur_vals += node->hits;
 
@@ -203,7 +210,7 @@ int main(int argc, char *argv[])
 	perc = 0.0;
 	for (i = 0; i < j; i++) {
 		perc += perc_i;
-		printf("Top %6.2f%%:\t%6.2f%% of hits\n",  perc, output[i]);
+		printf("%s %6.2f%%:\t%6.2f%% of hits\n", i ? "|->" : "Top", perc, output[i]);
 	}
 
 	free(output);
