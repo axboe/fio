@@ -1385,7 +1385,7 @@ Idle	Run
 ----    ---
 P		Thread setup, but not started.
 C		Thread created.
-I		Thread initialized, waiting.
+I		Thread initialized, waiting or generating necessary data.
 	p	Thread running pre-reading file(s).
 	R	Running, doing sequential reads.
 	r	Running, doing random reads.

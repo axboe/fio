@@ -862,12 +862,49 @@ int pre_read_files(struct thread_data *td)
 	return 1;
 }
 
+static int __init_rand_distribution(struct thread_data *td, struct fio_file *f)
+{
+	unsigned int range_size;
+	unsigned long nranges;
+
+	range_size = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
+
+	nranges = (f->real_file_size + range_size - 1) / range_size;
+
+	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
+		zipf_init(&f->zipf, nranges, td->o.zipf_theta);
+	else
+		pareto_init(&f->zipf, nranges, td->o.pareto_h);
+
+	return 1;
+}
+
+static int init_rand_distribution(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+	int state;
+
+	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM)
+		return 0;
+
+	state = td->runstate;
+	td_set_runstate(td, TD_SETTING_UP);
+	for_each_file(td, f, i)
+		__init_rand_distribution(td, f);
+	td_set_runstate(td, state);
+
+	return 1;
+}
+
 int init_random_map(struct thread_data *td)
 {
 	unsigned long long blocks, num_maps;
 	struct fio_file *f;
 	unsigned int i;
 
+	if (init_rand_distribution(td))
+		return 0;
 	if (td->o.norandommap || !td_random(td))
 		return 0;
 

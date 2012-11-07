@@ -39,7 +39,6 @@ struct thread_data;
 #include "server.h"
 #include "stat.h"
 #include "flow.h"
-#include "lib/zipf.h"
 
 #ifdef FIO_HAVE_GUASI
 #include <guasi.h>
@@ -457,11 +456,6 @@ struct thread_data {
 		struct frand_state __random_state;
 	};
 
-	/*
-	 * Used for zipf random distribution
-	 */
-	struct zipf_state zipf;
-
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
 	struct timeval last_issue;
@@ -691,6 +685,7 @@ enum {
 	TD_NOT_CREATED = 0,
 	TD_CREATED,
 	TD_INITIALIZED,
+	TD_SETTING_UP,
 	TD_RAMP,
 	TD_RUNNING,
 	TD_PRE_READING,

@@ -5,6 +5,7 @@
 #include "compiler/compiler.h"
 #include "io_ddir.h"
 #include "flist.h"
+#include "lib/zipf.h"
 
 /*
  * The type of object we are working on
@@ -111,6 +112,11 @@ struct fio_file {
 	unsigned long num_maps;
 	unsigned long last_free_lookup;
 	unsigned failed_rands;
+
+	/*
+	 * Used for zipf random distribution
+	 */
+	struct zipf_state zipf;
 
 	int references;
 	enum fio_file_flags flags;
