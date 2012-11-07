@@ -137,6 +137,10 @@ int main(int argc, char *argv[])
 	}
 
 	val = atof(argv[2]);
+	if ((val >= 1.00 || val < 0.00) && !use_zipf) {
+		printf("pareto input must be > 0.00 and < 1.00\n");
+		return 1;
+	}
 
 	nranges = DEF_NR;
 	output_nranges = DEF_NR_OUTPUT;
