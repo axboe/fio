@@ -99,21 +99,16 @@ static void shared_rand_init(struct zipf_state *zs, unsigned long nranges)
 
 void zipf_init(struct zipf_state *zs, unsigned long nranges, double theta)
 {
-	unsigned int i;
-
 	shared_rand_init(zs, nranges);
 
 	zs->theta = theta;
-
-	for (i = 1; i <= 2; i++)
-		zs->zeta2 += pow(1.0 / (double) i, zs->theta);
+	zs->zeta2 = pow(1.0, zs->theta) + pow(0.5, zs->theta);
 
 	zipf_load_gen_zeta(zs);
 }
 
 unsigned long long zipf_next(struct zipf_state *zs)
 {
-
 	double alpha, eta, rand_uni, rand_z;
 	unsigned long long n = zs->nranges;
 	unsigned long long val;
