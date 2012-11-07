@@ -300,3 +300,34 @@ struct rb_node *rb_first(struct rb_root *root)
 		n = n->rb_left;
 	return n;
 }
+
+struct rb_node *rb_next(const struct rb_node *node)
+{
+	struct rb_node *parent;
+
+	if (RB_EMPTY_NODE(node))
+		return NULL;
+
+	/*
+	 * If we have a right-hand child, go down and then left as far
+	 * as we can.
+	 */
+	if (node->rb_right) {
+		node = node->rb_right; 
+		while (node->rb_left)
+			node=node->rb_left;
+		return (struct rb_node *)node;
+	}
+
+	/*
+	 * No right-hand children. Everything down and left is smaller than us,
+	 * so any 'next' node must be in the general direction of our parent.
+	 * Go up the tree; any time the ancestor is a right-hand child of its
+	 * parent, keep going up. First time it's a left-hand child of its
+	 * parent, said parent is our 'next' node.
+	 */
+	while ((parent = rb_parent(node)) && node == parent->rb_right)
+		node = parent;
+
+	return parent;
+}
