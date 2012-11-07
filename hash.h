@@ -28,7 +28,7 @@
 #error Define GOLDEN_RATIO_PRIME for your wordsize.
 #endif
 
-static inline unsigned long hash_long(unsigned long val, unsigned int bits)
+static inline unsigned long __hash_long(unsigned long val)
 {
 	unsigned long hash = val;
 
@@ -52,8 +52,13 @@ static inline unsigned long hash_long(unsigned long val, unsigned int bits)
 	hash *= GOLDEN_RATIO_PRIME;
 #endif
 
+	return hash;
+}
+
+static inline unsigned long hash_long(unsigned long val, unsigned int bits)
+{
 	/* High bits are more random, so use them. */
-	return hash >> (BITS_PER_LONG - bits);
+	return __hash_long(val) >> (BITS_PER_LONG - bits);
 }
 	
 static inline unsigned long hash_ptr(void *ptr, unsigned int bits)
