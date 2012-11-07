@@ -238,7 +238,7 @@ static int __get_next_rand_offset_zipf(struct thread_data *td,
 				       struct fio_file *f, enum fio_ddir ddir,
 				       unsigned long long *b)
 {
-	*b = zipf_next(&td->zipf);
+	*b = zipf_next(&f->zipf);
 	return 0;
 }
 
@@ -246,7 +246,7 @@ static int __get_next_rand_offset_pareto(struct thread_data *td,
 					 struct fio_file *f, enum fio_ddir ddir,
 					 unsigned long long *b)
 {
-	*b = pareto_next(&td->zipf);
+	*b = pareto_next(&f->zipf);
 	return 0;
 }
 
