@@ -77,7 +77,7 @@ T_IEEE_OBJS += ieee754.o
 T_IEEE_PROGS = t/ieee754
 
 T_ZIPF_OBS = t/genzipf.o
-T_ZIPF_OBJS += t/log.o lib/ieee754.o lib/rand.o lib/zipf.o t/genzipf.o
+T_ZIPF_OBJS += rbtree.o t/log.o lib/ieee754.o lib/rand.o lib/zipf.o t/genzipf.o
 T_ZIPF_PROGS = t/genzip
 
 T_OBJS = $(T_SMALLOC_OBJS)
