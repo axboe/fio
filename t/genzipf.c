@@ -141,6 +141,10 @@ int main(int argc, char *argv[])
 		printf("pareto input must be > 0.00 and < 1.00\n");
 		return 1;
 	}
+	if (val == 1.0 && use_zipf) {
+		printf("zipf input must be different than 1.0\n");
+		return 1;
+	}
 
 	nranges = DEF_NR;
 	output_nranges = DEF_NR_OUTPUT;

@@ -750,9 +750,13 @@ static int str_random_distribution_cb(void *data, const char *str)
 
 	free(nr);
 
-	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
+	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF) {
+		if (val == 1.00) {
+			log_err("fio: zipf theta must different than 1.0\n");
+			return 1;
+		}
 		td->o.zipf_theta = val;
-	else {
+	} else {
 		if (val <= 0.00 || val >= 1.00) {
 			log_err("fio: pareto input out of range (0 < input < 1.0)\n");
 			return 1;
