@@ -1,4 +1,4 @@
-ifeq ($(CC),)
+ifneq ($(origin CC), environment)
 CC	= gcc
 endif
 DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
