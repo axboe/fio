@@ -10,82 +10,25 @@
 #include "zipf.h"
 #include "../minmax.h"
 #include "../hash.h"
-#include "../os/os.h"
 
-struct fio_zipf_disk {
-	uint64_t ver_magic;
-	uint64_t nranges;
-	uint64_t zetan;
-};
-
-#define FIO_ZIPF_DISK_MAGIC	0x7a697066
-#define FIO_ZIPF_DISK_VER	1
-#define FIO_ZIPF_MAGIC		((FIO_ZIPF_DISK_MAGIC << 16) | FIO_ZIPF_DISK_VER)
-
-static void write_zipf(struct zipf_state *zs)
-{
-	struct fio_zipf_disk f;
-	char tmp[80];
-	int fd;
-
-	sprintf(tmp, "fio.zipf.%f.%llu", zs->theta, (unsigned long long) zs->nranges);
-	fd = open(tmp, O_CREAT | O_WRONLY, 0644);
-	if (fd == -1)
-		return;
-
-	f.ver_magic = __cpu_to_le64(FIO_ZIPF_MAGIC);
-	f.nranges = __cpu_to_le64(zs->nranges);
-	f.zetan = __cpu_to_le64(fio_double_to_uint64(zs->zetan));
-	if (write(fd, &f, sizeof(f)) != sizeof(f))
-		unlink(tmp);
-
-	close(fd);
-}
+#define ZIPF_MAX_GEN	10000000
 
 static void zipf_update(struct zipf_state *zs)
 {
+	unsigned long to_gen;
 	unsigned int i;
 
 	log_info("fio: generating zetan for theta=%f, ranges=%lu\n", zs->theta, zs->nranges);
 
-	for (i = 0; i < zs->nranges; i++)
+	/*
+	 * It can become very costly to generate long sequences. Just cap it at
+	 * 10M max, that should be doable in 1-2s on even slow machines. Precision
+	 * will take a slight hit, but nothing major.
+	 */
+	to_gen = min(zs->nranges, ZIPF_MAX_GEN);
+
+	for (i = 0; i < to_gen; i++)
 		zs->zetan += pow(1.0 / (double) (i + 1), zs->theta);
-
-	write_zipf(zs);
-}
-
-static void zipf_load_gen_zeta(struct zipf_state *zs)
-{
-	struct fio_zipf_disk f;
-	char tmp[80];
-	int fd;
-
-	sprintf(tmp, "fio.zipf.%f.%llu", zs->theta, (unsigned long long) zs->nranges);
-	fd = open(tmp, O_RDONLY);
-	if (fd == -1) {
-punt:
-		zipf_update(zs);
-		return;
-	}
-
-	if (read(fd, &f, sizeof(f)) != sizeof(f)) {
-		close(fd);
-		goto punt;
-	}
-
-	close(fd);
-
-	f.ver_magic = le64_to_cpu(f.ver_magic);
-	f.nranges = le64_to_cpu(f.nranges);
-	f.zetan = le64_to_cpu(f.zetan);
-
-	if (f.ver_magic != FIO_ZIPF_MAGIC) {
-		unlink(tmp);
-		goto punt;
-	}
-
-	zs->zetan = fio_uint64_to_double(f.zetan);
-	zs->nranges = f.nranges;
 }
 
 static void shared_rand_init(struct zipf_state *zs, unsigned long nranges,
@@ -106,7 +49,7 @@ void zipf_init(struct zipf_state *zs, unsigned long nranges, double theta,
 	zs->theta = theta;
 	zs->zeta2 = pow(1.0, zs->theta) + pow(0.5, zs->theta);
 
-	zipf_load_gen_zeta(zs);
+	zipf_update(zs);
 }
 
 unsigned long long zipf_next(struct zipf_state *zs)
