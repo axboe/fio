@@ -18,12 +18,10 @@ static void zipf_update(struct zipf_state *zs)
 	unsigned long to_gen;
 	unsigned int i;
 
-	log_info("fio: generating zetan for theta=%f, ranges=%lu\n", zs->theta, zs->nranges);
-
 	/*
 	 * It can become very costly to generate long sequences. Just cap it at
-	 * 10M max, that should be doable in 1-2s on even slow machines. Precision
-	 * will take a slight hit, but nothing major.
+	 * 10M max, that should be doable in 1-2s on even slow machines.
+	 * Precision will take a slight hit, but nothing major.
 	 */
 	to_gen = min(zs->nranges, ZIPF_MAX_GEN);
 
