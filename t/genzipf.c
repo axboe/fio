@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "../lib/zipf.h"
 #include "../flist.h"
@@ -36,6 +37,22 @@ static struct flist_head *hash;
 static unsigned long hash_bits = 24;
 static unsigned long hash_size = 1 << 24;
 static struct rb_root rb;
+
+enum {
+	TYPE_NONE = 0,
+	TYPE_ZIPF,
+	TYPE_PARETO,
+};
+static const char *dist_types[] = { "None", "Zipf", "Pareto" };
+
+static int dist_type = TYPE_ZIPF;
+static unsigned long gb_size = 500;
+static unsigned long nranges = DEF_NR;
+static unsigned long output_nranges = DEF_NR_OUTPUT;
+static double dist_val;
+
+#define DEF_ZIPF_VAL	1.2
+#define DEF_PARETO_VAL	0.3
 
 static struct node *hash_lookup(unsigned long long val)
 {
@@ -111,55 +128,79 @@ static unsigned long rb_gen(void)
 	return ret;
 }
 
+static int parse_options(int argc, char *argv[])
+{
+	const char *optstring = "t:g:i:r:o:";
+	int c, dist_val_set = 0;
+
+	while ((c = getopt(argc, argv, optstring)) != -1) {
+		switch (c) {
+		case 't':
+			if (!strncmp(optarg, "zipf", 4))
+				dist_type = TYPE_ZIPF;
+			else if (!strncmp(optarg, "pareto", 6))
+				dist_type = TYPE_PARETO;
+			else {
+				printf("wrong dist type: %s\n", optarg);
+				return 1;
+			}
+			break;
+		case 'g':
+			gb_size = strtoul(optarg, NULL, 10);
+			break;
+		case 'i':
+			dist_val = atof(optarg);
+			dist_val_set = 1;
+			break;
+		case 'r':
+			nranges = strtoul(optarg, NULL, 10);
+			break;
+		case 'o':
+			output_nranges = strtoul(optarg, NULL, 10);
+			break;
+		default:
+			printf("bad option %c\n", c);
+			return 1;
+		}
+	}
+
+	if (dist_type == TYPE_PARETO) {
+		if ((dist_val >= 1.00 || dist_val < 0.00)) {
+			printf("pareto input must be > 0.00 and < 1.00\n");
+			return 1;
+		}
+		if (!dist_val_set)
+			dist_val = DEF_PARETO_VAL;
+	} else if (dist_type == TYPE_ZIPF) {
+		if (dist_val == 1.0) {
+			printf("zipf input must be different than 1.0\n");
+			return 1;
+		}
+		if (!dist_val_set)
+			dist_val = DEF_ZIPF_VAL;
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
-	unsigned long nranges, output_nranges;
 	unsigned long offset;
 	unsigned long i, j, nr_vals, cur_vals, interval;
 	double *output, perc, perc_i;
 	struct zipf_state zs;
 	struct rb_node *n;
-	int use_zipf;
-	double val;
 
-	if (argc < 3) {
-		printf("%s: {zipf,pareto} val values [output ranges]\n", argv[0]);
+	if (parse_options(argc, argv))
 		return 1;
-	}
 
-	if (!strcmp(argv[1], "zipf"))
-		use_zipf = 1;
-	else if (!strcmp(argv[1], "pareto"))
-		use_zipf = 0;
-	else {
-		printf("Bad distribution type <%s>\n", argv[1]);
-		return 1;
-	}
+	printf("Generating %s distribution with %f input and %lu ranges.\n", dist_types[dist_type], dist_val, nranges);
+	printf("Using device gb=%lu\n\n", gb_size);
 
-	val = atof(argv[2]);
-	if ((val >= 1.00 || val < 0.00) && !use_zipf) {
-		printf("pareto input must be > 0.00 and < 1.00\n");
-		return 1;
-	}
-	if (val == 1.0 && use_zipf) {
-		printf("zipf input must be different than 1.0\n");
-		return 1;
-	}
-
-	nranges = DEF_NR;
-	output_nranges = DEF_NR_OUTPUT;
-
-	if (argc >= 4)
-		nranges = strtoul(argv[3], NULL, 10);
-	if (argc >= 5)
-		output_nranges = strtoul(argv[4], NULL, 10);
-
-	printf("Generating %s distribution with %f input and %lu ranges.\n", use_zipf ? "zipf" : "pareto", val, nranges);
-
-	if (use_zipf)
-		zipf_init(&zs, nranges, val, 1);
+	if (dist_type == TYPE_ZIPF)
+		zipf_init(&zs, nranges, dist_val, 1);
 	else
-		pareto_init(&zs, nranges, val, 1);
+		pareto_init(&zs, nranges, dist_val, 1);
 
 	hash_bits = 0;
 	hash_size = nranges;
@@ -175,7 +216,7 @@ int main(int argc, char *argv[])
 	for (nr_vals = 0, i = 0; i < nranges; i++) {
 		struct node *n;
 
-		if (use_zipf)
+		if (dist_type == TYPE_ZIPF)
 			offset = zipf_next(&zs);
 		else
 			offset = pareto_next(&zs);
@@ -216,9 +257,20 @@ int main(int argc, char *argv[])
 
 	perc_i = 100.0 / (double) output_nranges;
 	perc = 0.0;
+
+	printf("   Rows           Hits           Size\n");
+	printf("-------------------------------------------\n");
 	for (i = 0; i < j; i++) {
+		double gb = (double) gb_size * perc_i / 100.0;
+		char p = 'G';
+
+		if (gb < 1.0) {
+			p = 'M';
+			gb *= 1024.0;
+		}
+
 		perc += perc_i;
-		printf("%s %6.2f%%:\t%6.2f%% of hits\n", i ? "|->" : "Top", perc, output[i]);
+		printf("%s %6.2f%%\t%6.2f%%\t\t%6.2f%c\n", i ? "|->" : "Top", perc, output[i], gb, p);
 	}
 
 	free(output);
