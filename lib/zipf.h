@@ -11,7 +11,7 @@ struct zipf_state {
 	double zetan;
 	double pareto_pow;
 	struct frand_state rand;
-	unsigned long rand_off;
+	uint64_t rand_off;
 };
 
 void zipf_init(struct zipf_state *zs, unsigned long nranges, double theta, unsigned int seed);

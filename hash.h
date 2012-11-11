@@ -28,6 +28,8 @@
 #error Define GOLDEN_RATIO_PRIME for your wordsize.
 #endif
 
+#define GR_PRIME_64	0x9e37fffffffc0001UL
+
 static inline unsigned long __hash_long(unsigned long val)
 {
 	unsigned long hash = val;
@@ -59,6 +61,11 @@ static inline unsigned long hash_long(unsigned long val, unsigned int bits)
 {
 	/* High bits are more random, so use them. */
 	return __hash_long(val) >> (BITS_PER_LONG - bits);
+}
+
+static inline uint64_t __hash_u64(uint64_t val)
+{
+	return val * GR_PRIME_64;
 }
 	
 static inline unsigned long hash_ptr(void *ptr, unsigned int bits)
