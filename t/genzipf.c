@@ -47,8 +47,9 @@ static const char *dist_types[] = { "None", "Zipf", "Pareto" };
 
 static int dist_type = TYPE_ZIPF;
 static unsigned long gb_size = 500;
-static unsigned long nranges = DEF_NR;
+static unsigned long block_size = 4096;
 static unsigned long output_nranges = DEF_NR_OUTPUT;
+static double percentage;
 static double dist_val;
 
 #define DEF_ZIPF_VAL	1.2
@@ -130,11 +131,17 @@ static unsigned long rb_gen(void)
 
 static int parse_options(int argc, char *argv[])
 {
-	const char *optstring = "t:g:i:r:o:";
+	const char *optstring = "t:g:i:o:b:p:";
 	int c, dist_val_set = 0;
 
 	while ((c = getopt(argc, argv, optstring)) != -1) {
 		switch (c) {
+		case 'p':
+			percentage = atof(optarg);
+			break;
+		case 'b':
+			block_size = strtoul(optarg, NULL, 10);
+			break;
 		case 't':
 			if (!strncmp(optarg, "zipf", 4))
 				dist_type = TYPE_ZIPF;
@@ -151,9 +158,6 @@ static int parse_options(int argc, char *argv[])
 		case 'i':
 			dist_val = atof(optarg);
 			dist_val_set = 1;
-			break;
-		case 'r':
-			nranges = strtoul(optarg, NULL, 10);
 			break;
 		case 'o':
 			output_nranges = strtoul(optarg, NULL, 10);
@@ -183,19 +187,28 @@ static int parse_options(int argc, char *argv[])
 	return 0;
 }
 
+struct output_sum {
+	double output;
+	unsigned int nranges;
+};
+
 int main(int argc, char *argv[])
 {
 	unsigned long offset;
-	unsigned long i, j, nr_vals, cur_vals, interval;
-	double *output, perc, perc_i;
+	unsigned long i, j, nr_vals, cur_vals, interval, total_vals;
+	unsigned long long nranges;
+	struct output_sum *output_sums;
+	double perc, perc_i;
 	struct zipf_state zs;
 	struct rb_node *n;
 
 	if (parse_options(argc, argv))
 		return 1;
 
-	printf("Generating %s distribution with %f input and %lu ranges.\n", dist_types[dist_type], dist_val, nranges);
-	printf("Using device gb=%lu\n\n", gb_size);
+	printf("Generating %s distribution with %f input and %lu GB size and %lu block_size.\n", dist_types[dist_type], dist_val, gb_size, block_size);
+
+	nranges = gb_size * 1024 * 1024 * 1024ULL;
+	nranges /= block_size;
 
 	if (dist_type == TYPE_ZIPF)
 		zipf_init(&zs, nranges, dist_val, 1);
@@ -213,7 +226,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < hash_size; i++)
 		INIT_FLIST_HEAD(&hash[i]);
 
-	for (nr_vals = 0, i = 0; i < nranges; i++) {
+	for (nr_vals = i = 0; i < nranges; i++) {
 		struct node *n;
 
 		if (dist_type == TYPE_ZIPF)
@@ -234,46 +247,81 @@ int main(int argc, char *argv[])
 
 	interval = (nr_vals + output_nranges - 1) / output_nranges;
 
-	output = malloc(output_nranges * sizeof(double));
+	output_sums = malloc(output_nranges * sizeof(struct output_sum));
+	for (i = 0; i < output_nranges; i++) {
+		output_sums[i].output = 0.0;
+		output_sums[i].nranges = 1;
+	}
 
-	i = j = cur_vals = 0;
+	total_vals = i = j = cur_vals = 0;
 	
 	n = rb_first(&rb);
 	while (n) {
 		struct node *node = rb_entry(n, struct node, rb);
+		struct output_sum *os = &output_sums[j];
 
 		if (i >= interval) {
-			output[j] = (double) (cur_vals + 1) / (double) nranges;
-			output[j] *= 100.0;
+			os->output = (double) (cur_vals + 1) / (double) nranges;
+			os->output *= 100.0;
 			j++;
 			cur_vals = node->hits;
 			interval += (nr_vals + output_nranges - 1) / output_nranges;
-		} else
+		} else {
 			cur_vals += node->hits;
+			os->nranges += node->hits;
+		}
+
+		i++;
+		total_vals += node->hits;
+
+		if (percentage) {
+			unsigned long blocks = percentage * nranges / 100;
+
+			if (total_vals >= blocks) {
+				double cs = i * block_size / (1024 * 1024);
+				char p = 'M';
+
+				if (cs > 1024.0) {
+					cs /= 1024.0;
+					p = 'G';
+				}
+				if (cs > 1024.0) {
+					cs /= 1024.0;
+					p = 'T';
+				}
+
+				printf("%.2f%% of hits satisfied in %.3f%cB of cache\n", percentage, cs, p);
+				percentage = 0.0;
+			}
+		}
 
 		n = rb_next(n);
-		i++;
 	}
 
 	perc_i = 100.0 / (double) output_nranges;
 	perc = 0.0;
 
-	printf("   Rows           Hits           Size\n");
-	printf("-------------------------------------------\n");
+	printf("\n   Rows           Hits           No Hits         Size\n");
+	printf("--------------------------------------------------------\n");
 	for (i = 0; i < j; i++) {
-		double gb = (double) gb_size * perc_i / 100.0;
-		char p = 'G';
+		struct output_sum *os = &output_sums[i];
+		double gb = (double) os->nranges * block_size / 1024.0;
+		char p = 'K';
 
-		if (gb < 1.0) {
+		if (gb > 1024.0) {
 			p = 'M';
-			gb *= 1024.0;
+			gb /= 1024.0;
+		}
+		if (gb > 1024.0) {
+			p = 'G';
+			gb /= 1024.0;
 		}
 
 		perc += perc_i;
-		printf("%s %6.2f%%\t%6.2f%%\t\t%6.2f%c\n", i ? "|->" : "Top", perc, output[i], gb, p);
+		printf("%s %6.2f%%\t%6.2f%%\t\t%8u\t%6.2f%c\n", i ? "|->" : "Top", perc, os->output, os->nranges, gb, p);
 	}
 
-	free(output);
+	free(output_sums);
 	free(hash);
 	return 0;
 }
