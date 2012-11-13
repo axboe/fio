@@ -57,13 +57,38 @@ static struct json_value *json_create_value_float(float number)
 	return value;
 }
 
+static char *strdup_escape(const char *str)
+{
+	const char *input = str;
+	char *p, *ret;
+	int escapes;
+
+	escapes = 0;
+	while ((input = strpbrk(input, "\\\"")) != NULL) {
+		escapes++;
+		input++;
+	}
+
+	p = ret = malloc(strlen(str) + escapes);
+	while (*str) {
+		if (*str == '\\' || *str == '\"')
+			*p++ = '\\';
+		*p++ = *str++;
+	}
+
+	return ret;
+}
+
+/*
+ * Valid JSON strings must escape '"' and '/' with a preceeding '/'
+ */
 static struct json_value *json_create_value_string(const char *str)
 {
 	struct json_value *value = malloc(sizeof(struct json_value));
 
 	if (value) {
 		value->type = JSON_TYPE_STRING;
-		value->string = strdup(str);
+		value->string = strdup_escape(str);
 		if (!value->string) {
 			free(value);
 			value = NULL;
