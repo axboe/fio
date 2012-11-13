@@ -161,7 +161,7 @@ static int fio_e4defrag_queue(struct thread_data *td, struct io_u *io_u)
 	ret = ioctl(f->fd, EXT4_IOC_MOVE_EXT, &me);
 	len = me.moved_len * ed->bsz;
 
-	if (io_u->file && len >= 0 && ddir_rw(io_u->ddir))
+	if (io_u->file && len && ddir_rw(io_u->ddir))
 		io_u->file->file_pos = io_u->offset + len;
 
 	if (len > io_u->xfer_buflen)
