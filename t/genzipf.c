@@ -28,7 +28,6 @@
 
 struct node {
 	struct flist_head list;
-	struct rb_node rb;
 	unsigned long long val;
 	unsigned long hits;
 };
@@ -36,7 +35,6 @@ struct node {
 static struct flist_head *hash;
 static unsigned long hash_bits = 24;
 static unsigned long hash_size = 1 << 24;
-static struct rb_root rb;
 
 enum {
 	TYPE_NONE = 0,
@@ -70,63 +68,14 @@ static struct node *hash_lookup(unsigned long long val)
 	return NULL;
 }
 
-static void hash_insert(unsigned long long val)
+static struct node *hash_insert(struct node *n, unsigned long long val)
 {
 	struct flist_head *l = &hash[hash_long(val, hash_bits)];
-	struct node *n = malloc(sizeof(*n));
 
 	n->val = val;
 	n->hits = 1;
 	flist_add_tail(&n->list, l);
-}
-
-static void rb_insert(struct node *n)
-{
-	struct rb_node **p, *parent;
-
-	memset(&n->rb, 0, sizeof(n->rb));
-	p = &rb.rb_node;
-	parent = NULL;
-	while (*p) {
-		struct node *__n;
-
-		parent = *p;
-		__n = rb_entry(parent, struct node, rb);
-		if (n->hits > __n->hits)
-			p = &(*p)->rb_left;
-		else
-			p = &(*p)->rb_right;
-	}
-
-	rb_link_node(&n->rb, parent, p);
-	rb_insert_color(&n->rb, &rb);
-}
-
-static unsigned long rb_add(struct flist_head *list)
-{
-	struct flist_head *entry;
-	unsigned long ret = 0;
-	struct node *n;
-
-	flist_for_each(entry, list) {
-		n = flist_entry(entry, struct node, list);
-
-		rb_insert(n);
-		ret++;
-	}
-
-	return ret;
-}
-
-static unsigned long rb_gen(void)
-{
-	unsigned long ret = 0;
-	unsigned int i;
-
-	for (i = 0; i < hash_size; i++)
-		ret += rb_add(&hash[i]);
-
-	return ret;
+	return n;
 }
 
 static int parse_options(int argc, char *argv[])
@@ -192,15 +141,23 @@ struct output_sum {
 	unsigned int nranges;
 };
 
+static int node_cmp(const void *p1, const void *p2)
+{
+	const struct node *n1 = p1;
+	const struct node *n2 = p2;
+
+	return n2->hits - n1->hits;
+}
+
 int main(int argc, char *argv[])
 {
 	unsigned long offset;
-	unsigned long i, j, nr_vals, cur_vals, interval, total_vals;
+	unsigned long i, j, k, nr_vals, cur_vals, interval, total_vals, nnodes;
 	unsigned long long nranges;
 	struct output_sum *output_sums;
+	struct node *nodes;
 	double perc, perc_i;
 	struct zipf_state zs;
-	struct rb_node *n;
 
 	if (parse_options(argc, argv))
 		return 1;
@@ -226,7 +183,9 @@ int main(int argc, char *argv[])
 	for (i = 0; i < hash_size; i++)
 		INIT_FLIST_HEAD(&hash[i]);
 
-	for (nr_vals = i = 0; i < nranges; i++) {
+	nodes = malloc(nranges * sizeof(struct node));
+
+	for (nr_vals = i = j = 0; i < nranges; i++) {
 		struct node *n;
 
 		if (dist_type == TYPE_ZIPF)
@@ -237,13 +196,17 @@ int main(int argc, char *argv[])
 		n = hash_lookup(offset);
 		if (n)
 			n->hits++;
-		else
-			hash_insert(offset);
+		else {
+			hash_insert(&nodes[j], offset);
+			j++;
+		}
 
 		nr_vals++;
 	}
 
-	nr_vals = rb_gen();
+	qsort(nodes, j, sizeof(struct node), node_cmp);
+	nnodes = j;
+	nr_vals = nnodes;
 
 	interval = (nr_vals + output_nranges - 1) / output_nranges;
 
@@ -255,10 +218,9 @@ int main(int argc, char *argv[])
 
 	total_vals = i = j = cur_vals = 0;
 	
-	n = rb_first(&rb);
-	while (n) {
-		struct node *node = rb_entry(n, struct node, rb);
+	for (k = 0; k < nnodes; k++) {
 		struct output_sum *os = &output_sums[j];
+		struct node *node = &nodes[k];
 
 		if (i >= interval) {
 			os->output = (double) (cur_vals + 1) / (double) nranges;
@@ -294,8 +256,6 @@ int main(int argc, char *argv[])
 				percentage = 0.0;
 			}
 		}
-
-		n = rb_next(n);
 	}
 
 	perc_i = 100.0 / (double) output_nranges;
