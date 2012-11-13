@@ -594,7 +594,7 @@ static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
 
 #define REAL_MAX_JOBS		2048
 
-static inline enum error_type td_error_type(enum fio_ddir ddir, int err)
+static inline enum error_type_bit td_error_type(enum fio_ddir ddir, int err)
 {
 	if (err == EILSEQ)
 		return ERROR_TYPE_VERIFY_BIT;
