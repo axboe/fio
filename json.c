@@ -63,18 +63,22 @@ static char *strdup_escape(const char *str)
 	char *p, *ret;
 	int escapes;
 
+	if (!strlen(str))
+		return NULL;
+
 	escapes = 0;
 	while ((input = strpbrk(input, "\\\"")) != NULL) {
 		escapes++;
 		input++;
 	}
 
-	p = ret = malloc(strlen(str) + escapes);
+	p = ret = malloc(strlen(str) + escapes + 1);
 	while (*str) {
 		if (*str == '\\' || *str == '\"')
 			*p++ = '\\';
 		*p++ = *str++;
 	}
+	*p = '\0';
 
 	return ret;
 }
