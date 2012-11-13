@@ -413,7 +413,7 @@ static inline int io_u_fits(struct thread_data *td, struct io_u *io_u,
 static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 {
 	const int ddir = io_u->ddir;
-	unsigned int uninitialized_var(buflen);
+	unsigned int buflen = 0;
 	unsigned int minbs, maxbs;
 	unsigned long r, rand_max;
 
@@ -1345,7 +1345,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 				  struct io_completion_data *icd,
 				  const enum fio_ddir idx, unsigned int bytes)
 {
-	unsigned long uninitialized_var(lusec);
+	unsigned long lusec = 0;
 
 	if (!td->o.disable_clat || !td->o.disable_bw)
 		lusec = utime_since(&io_u->issue_time, &icd->time);
@@ -1388,11 +1388,6 @@ static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 static void io_completed(struct thread_data *td, struct io_u *io_u,
 			 struct io_completion_data *icd)
 {
-	/*
-	 * Older gcc's are too dumb to realize that usec is always used
-	 * initialized, silence that warning.
-	 */
-	unsigned long uninitialized_var(usec);
 	struct fio_file *f;
 
 	dprint_io_u(io_u, "io complete");
