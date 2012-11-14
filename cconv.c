@@ -118,6 +118,9 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->softrandommap = le32_to_cpu(top->softrandommap);
 	o->bs_unaligned = le32_to_cpu(top->bs_unaligned);
 	o->fsync_on_close = le32_to_cpu(top->fsync_on_close);
+	o->random_distribution = le32_to_cpu(top->random_distribution);
+	o->zipf_theta.u.f = fio_uint64_to_double(le64_to_cpu(top->zipf_theta.u.i));
+	o->pareto_h.u.f = fio_uint64_to_double(le64_to_cpu(top->pareto_h.u.i));
 	o->hugepage_size = le32_to_cpu(top->hugepage_size);
 	o->rw_min_bs = le32_to_cpu(top->rw_min_bs);
 	o->thinktime = le32_to_cpu(top->thinktime);
@@ -143,6 +146,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->loops = le32_to_cpu(top->loops);
 	o->mem_type = le32_to_cpu(top->mem_type);
 	o->mem_align = le32_to_cpu(top->mem_align);
+	o->max_latency = le32_to_cpu(top->max_latency);
 	o->stonewall = le32_to_cpu(top->stonewall);
 	o->new_group = le32_to_cpu(top->new_group);
 	o->numjobs = le32_to_cpu(top->numjobs);
@@ -267,6 +271,9 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->softrandommap = cpu_to_le32(o->softrandommap);
 	top->bs_unaligned = cpu_to_le32(o->bs_unaligned);
 	top->fsync_on_close = cpu_to_le32(o->fsync_on_close);
+	top->random_distribution = cpu_to_le32(o->random_distribution);
+	top->zipf_theta.u.i = __cpu_to_le64(fio_double_to_uint64(o->zipf_theta.u.f));
+	top->pareto_h.u.i = __cpu_to_le64(fio_double_to_uint64(o->pareto_h.u.f));
 	top->hugepage_size = cpu_to_le32(o->hugepage_size);
 	top->rw_min_bs = cpu_to_le32(o->rw_min_bs);
 	top->thinktime = cpu_to_le32(o->thinktime);
@@ -281,6 +288,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->loops = cpu_to_le32(o->loops);
 	top->mem_type = cpu_to_le32(o->mem_type);
 	top->mem_align = cpu_to_le32(o->mem_align);
+	top->max_latency = cpu_to_le32(o->max_latency);
 	top->stonewall = cpu_to_le32(o->stonewall);
 	top->new_group = cpu_to_le32(o->new_group);
 	top->numjobs = cpu_to_le32(o->numjobs);

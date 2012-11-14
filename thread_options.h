@@ -119,6 +119,10 @@ struct thread_options {
 	unsigned int bs_unaligned;
 	unsigned int fsync_on_close;
 
+	unsigned int random_distribution;
+	fio_fp64_t zipf_theta;
+	fio_fp64_t pareto_h;
+
 	unsigned int hugepage_size;
 	unsigned int rw_min_bs;
 	unsigned int thinktime;
@@ -141,6 +145,8 @@ struct thread_options {
 	enum fio_memtype mem_type;
 	unsigned int mem_align;
 
+	unsigned max_latency;
+
 	unsigned int stonewall;
 	unsigned int new_group;
 	unsigned int numjobs;
@@ -148,6 +154,14 @@ struct thread_options {
 	unsigned int cpumask_set;
 	os_cpu_mask_t verify_cpumask;
 	unsigned int verify_cpumask_set;
+#ifdef FIO_HAVE_LIBNUMA
+	struct bitmask *numa_cpunodesmask;
+	unsigned int numa_cpumask_set;
+	unsigned short numa_mem_mode;
+	unsigned int numa_mem_prefer_node;
+	struct bitmask *numa_memnodesmask;
+	unsigned int numa_memmask_set;
+#endif
 	unsigned int iolog;
 	unsigned int rwmixcycle;
 	unsigned int rwmix[2];
@@ -308,6 +322,10 @@ struct thread_options_pack {
 	uint32_t bs_unaligned;
 	uint32_t fsync_on_close;
 
+	uint32_t random_distribution;
+	fio_fp64_t zipf_theta;
+	fio_fp64_t pareto_h;
+
 	uint32_t hugepage_size;
 	uint32_t rw_min_bs;
 	uint32_t thinktime;
@@ -329,6 +347,8 @@ struct thread_options_pack {
 	uint64_t lockmem;
 	uint32_t mem_type;
 	uint32_t mem_align;
+
+	uint32_t max_latency;
 
 	uint32_t stonewall;
 	uint32_t new_group;

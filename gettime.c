@@ -19,11 +19,6 @@ static unsigned long last_cycles;
 static struct timeval last_tv;
 static int last_tv_valid;
 
-static struct timeval *fio_tv;
-int fio_gtod_offload = 0;
-int fio_gtod_cpu = -1;
-static pthread_t gtod_thread;
-
 enum fio_cs fio_clock_source = FIO_PREFERRED_CLOCK_SOURCE;
 
 #ifdef FIO_DEBUG_TIME
@@ -267,66 +262,68 @@ void fio_clock_init(void)
 	calibrate_cpu_clock();
 }
 
-void fio_gtod_init(void)
+unsigned long long utime_since(struct timeval *s, struct timeval *e)
 {
-	fio_tv = smalloc(sizeof(struct timeval));
-	assert(fio_tv);
-}
+	long sec, usec;
+	unsigned long long ret;
 
-static void fio_gtod_update(void)
-{
-	gettimeofday(fio_tv, NULL);
-}
-
-static void *gtod_thread_main(void *data)
-{
-	struct fio_mutex *mutex = data;
-
-	fio_mutex_up(mutex);
+	sec = e->tv_sec - s->tv_sec;
+	usec = e->tv_usec - s->tv_usec;
+	if (sec > 0 && usec < 0) {
+		sec--;
+		usec += 1000000;
+	}
 
 	/*
-	 * As long as we have jobs around, update the clock. It would be nice
-	 * to have some way of NOT hammering that CPU with gettimeofday(),
-	 * but I'm not sure what to use outside of a simple CPU nop to relax
-	 * it - we don't want to lose precision.
+	 * time warp bug on some kernels?
 	 */
-	while (threads) {
-		fio_gtod_update();
-		nop;
-	}
+	if (sec < 0 || (sec == 0 && usec < 0))
+		return 0;
 
-	return NULL;
+	ret = sec * 1000000ULL + usec;
+
+	return ret;
 }
 
-int fio_start_gtod_thread(void)
+unsigned long long utime_since_now(struct timeval *s)
 {
-	struct fio_mutex *mutex;
-	pthread_attr_t attr;
-	int ret;
+	struct timeval t;
 
-	mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
-	if (!mutex)
-		return 1;
+	fio_gettime(&t, NULL);
+	return utime_since(s, &t);
+}
 
-	pthread_attr_init(&attr);
-	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
-	ret = pthread_create(&gtod_thread, &attr, gtod_thread_main, NULL);
-	pthread_attr_destroy(&attr);
-	if (ret) {
-		log_err("Can't create gtod thread: %s\n", strerror(ret));
-		goto err;
+unsigned long mtime_since(struct timeval *s, struct timeval *e)
+{
+	long sec, usec, ret;
+
+	sec = e->tv_sec - s->tv_sec;
+	usec = e->tv_usec - s->tv_usec;
+	if (sec > 0 && usec < 0) {
+		sec--;
+		usec += 1000000;
 	}
 
-	ret = pthread_detach(gtod_thread);
-	if (ret) {
-		log_err("Can't detatch gtod thread: %s\n", strerror(ret));
-		goto err;
-	}
+	if (sec < 0 || (sec == 0 && usec < 0))
+		return 0;
 
-	dprint(FD_MUTEX, "wait on startup_mutex\n");
-	fio_mutex_down(mutex);
-	dprint(FD_MUTEX, "done waiting on startup_mutex\n");
-err:
-	fio_mutex_remove(mutex);
+	sec *= 1000UL;
+	usec /= 1000UL;
+	ret = sec + usec;
+
 	return ret;
+}
+
+unsigned long mtime_since_now(struct timeval *s)
+{
+	struct timeval t;
+	void *p = __builtin_return_address(0);
+
+	fio_gettime(&t, p);
+	return mtime_since(s, &t);
+}
+
+unsigned long time_since_now(struct timeval *s)
+{
+	return mtime_since_now(s) / 1000;
 }

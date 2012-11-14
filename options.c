@@ -513,6 +513,130 @@ static int str_verify_cpus_allowed_cb(void *data, const char *input)
 }
 #endif
 
+#ifdef FIO_HAVE_LIBNUMA
+static int str_numa_cpunodes_cb(void *data, char *input)
+{
+	struct thread_data *td = data;
+
+	/* numa_parse_nodestring() parses a character string list
+	 * of nodes into a bit mask. The bit mask is allocated by
+	 * numa_allocate_nodemask(), so it should be freed by
+	 * numa_free_nodemask().
+	 */
+	td->o.numa_cpunodesmask = numa_parse_nodestring(input);
+	if (td->o.numa_cpunodesmask == NULL) {
+		log_err("fio: numa_parse_nodestring failed\n");
+		td_verror(td, 1, "str_numa_cpunodes_cb");
+		return 1;
+	}
+
+	td->o.numa_cpumask_set = 1;
+	return 0;
+}
+
+static int str_numa_mpol_cb(void *data, char *input)
+{
+	struct thread_data *td = data;
+	const char * const policy_types[] =
+		{ "default", "prefer", "bind", "interleave", "local" };
+	int i;
+
+	char *nodelist = strchr(input, ':');
+	if (nodelist) {
+		/* NUL-terminate mode */
+		*nodelist++ = '\0';
+	}
+
+	for (i = 0; i <= MPOL_LOCAL; i++) {
+		if (!strcmp(input, policy_types[i])) {
+			td->o.numa_mem_mode = i;
+			break;
+		}
+	}
+	if (i > MPOL_LOCAL) {
+		log_err("fio: memory policy should be: default, prefer, bind, interleave, local\n");
+		goto out;
+	}
+
+	switch (td->o.numa_mem_mode) {
+	case MPOL_PREFERRED:
+		/*
+		 * Insist on a nodelist of one node only
+		 */
+		if (nodelist) {
+			char *rest = nodelist;
+			while (isdigit(*rest))
+				rest++;
+			if (*rest) {
+				log_err("fio: one node only for \'prefer\'\n");
+				goto out;
+			}
+		} else {
+			log_err("fio: one node is needed for \'prefer\'\n");
+			goto out;
+		}
+		break;
+	case MPOL_INTERLEAVE:
+		/*
+		 * Default to online nodes with memory if no nodelist
+		 */
+		if (!nodelist)
+			nodelist = strdup("all");
+		break;
+	case MPOL_LOCAL:
+	case MPOL_DEFAULT:
+		/*
+		 * Don't allow a nodelist
+		 */
+		if (nodelist) {
+			log_err("fio: NO nodelist for \'local\'\n");
+			goto out;
+		}
+		break;
+	case MPOL_BIND:
+		/*
+		 * Insist on a nodelist
+		 */
+		if (!nodelist) {
+			log_err("fio: a nodelist is needed for \'bind\'\n");
+			goto out;
+		}
+		break;
+	}
+
+
+	/* numa_parse_nodestring() parses a character string list
+	 * of nodes into a bit mask. The bit mask is allocated by
+	 * numa_allocate_nodemask(), so it should be freed by
+	 * numa_free_nodemask().
+	 */
+	switch (td->o.numa_mem_mode) {
+	case MPOL_PREFERRED:
+		td->o.numa_mem_prefer_node = atoi(nodelist);
+		break;
+	case MPOL_INTERLEAVE:
+	case MPOL_BIND:
+		td->o.numa_memnodesmask = numa_parse_nodestring(nodelist);
+		if (td->o.numa_memnodesmask == NULL) {
+			log_err("fio: numa_parse_nodestring failed\n");
+			td_verror(td, 1, "str_numa_memnodes_cb");
+			return 1;
+		}
+		break;
+	case MPOL_LOCAL:
+	case MPOL_DEFAULT:
+	default:
+		break;
+	}
+
+	td->o.numa_memmask_set = 1;
+	return 0;
+
+out:
+	return 1;
+}
+#endif
+
 static int str_fst_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
@@ -542,6 +666,45 @@ static int str_sfr_cb(void *data, const char *str)
 	return 0;
 }
 #endif
+
+static int str_random_distribution_cb(void *data, const char *str)
+{
+	struct thread_data *td = data;
+	double val;
+	char *nr;
+
+	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
+		val = 1.1;
+	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
+		val = 0.2;
+	else
+		return 0;
+
+	nr = get_opt_postfix(str);
+	if (nr && !str_to_float(nr, &val)) {
+		log_err("fio: random postfix parsing failed\n");
+		free(nr);
+		return 1;
+	}
+
+	free(nr);
+
+	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF) {
+		if (val == 1.00) {
+			log_err("fio: zipf theta must different than 1.0\n");
+			return 1;
+		}
+		td->o.zipf_theta.u.f = val;
+	} else {
+		if (val <= 0.00 || val >= 1.00) {
+			log_err("fio: pareto input out of range (0 < input < 1.0)\n");
+			return 1;
+		}
+		td->o.pareto_h.u.f = val;
+	}
+
+	return 0;
+}
 
 /*
  * Return next file in the string. Files are separated with ':'. If the ':'
@@ -1452,6 +1615,28 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
+		.name	= "random_distribution",
+		.type	= FIO_OPT_STR,
+		.off1	= td_var_offset(random_distribution),
+		.cb	= str_random_distribution_cb,
+		.help	= "Random offset distribution generator",
+		.def	= "random",
+		.posval	= {
+			  { .ival = "random",
+			    .oval = FIO_RAND_DIST_RANDOM,
+			    .help = "Completely random",
+			  },
+			  { .ival = "zipf",
+			    .oval = FIO_RAND_DIST_ZIPF,
+			    .help = "Zipf distribution",
+			  },
+			  { .ival = "pareto",
+			    .oval = FIO_RAND_DIST_PARETO,
+			    .help = "Pareto distribution",
+			  },
+		},
+	},
+	{
 		.name	= "nrfiles",
 		.lname	= "Number of files",
 		.alias	= "nr_files",
@@ -2312,6 +2497,14 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RATE,
 	},
 	{
+		.name	= "max_latency",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(max_latency),
+		.help	= "Maximum tolerated IO latency (usec)",
+		.category = FIO_OPT_C_IO,
+		.group = FIO_OPT_G_RATE,
+	},
+	{
 		.name	= "invalidate",
 		.lname	= "Cache invalidate",
 		.type	= FIO_OPT_BOOL,
@@ -2399,6 +2592,20 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Set CPUs allowed",
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_CRED,
+	},
+#endif
+#ifdef FIO_HAVE_LIBNUMA
+	{
+		.name	= "numa_cpu_nodes",
+		.type	= FIO_OPT_STR,
+		.cb	= str_numa_cpunodes_cb,
+		.help	= "NUMA CPU nodes bind",
+	},
+	{
+		.name	= "numa_mem_policy",
+		.type	= FIO_OPT_STR,
+		.cb	= str_numa_mpol_cb,
+		.help	= "NUMA memory policy setup",
 	},
 #endif
 	{

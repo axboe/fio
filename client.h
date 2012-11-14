@@ -42,10 +42,12 @@ struct fio_client {
 	int is_sock;
 	int disk_stats_shown;
 	unsigned int jobs;
+	unsigned int nr_stat;
 	int error;
 	int signal;
 	int ipv6;
 	int sent_job;
+	int did_stat;
 	uint32_t type;
 
 	uint32_t thread_number;

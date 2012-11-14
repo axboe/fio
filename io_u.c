@@ -157,8 +157,8 @@ static int get_next_free_block(struct thread_data *td, struct fio_file *f,
 	return 1;
 }
 
-static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
-				enum fio_ddir ddir, unsigned long long *b)
+static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
+				  enum fio_ddir ddir, unsigned long long *b)
 {
 	unsigned long long rmax, r, lastb;
 	int loops = 5;
@@ -232,6 +232,36 @@ ret_good:
 	f->failed_rands = 0;
 ret:
 	return 0;
+}
+
+static int __get_next_rand_offset_zipf(struct thread_data *td,
+				       struct fio_file *f, enum fio_ddir ddir,
+				       unsigned long long *b)
+{
+	*b = zipf_next(&f->zipf);
+	return 0;
+}
+
+static int __get_next_rand_offset_pareto(struct thread_data *td,
+					 struct fio_file *f, enum fio_ddir ddir,
+					 unsigned long long *b)
+{
+	*b = pareto_next(&f->zipf);
+	return 0;
+}
+
+static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
+				enum fio_ddir ddir, unsigned long long *b)
+{
+	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM)
+		return __get_next_rand_offset(td, f, ddir, b);
+	else if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
+		return __get_next_rand_offset_zipf(td, f, ddir, b);
+	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
+		return __get_next_rand_offset_pareto(td, f, ddir, b);
+
+	log_err("fio: unknown random distribution: %d\n", td->o.random_distribution);
+	return 1;
 }
 
 static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
@@ -383,7 +413,7 @@ static inline int io_u_fits(struct thread_data *td, struct io_u *io_u,
 static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 {
 	const int ddir = io_u->ddir;
-	unsigned int uninitialized_var(buflen);
+	unsigned int buflen = 0;
 	unsigned int minbs, maxbs;
 	unsigned long r, rand_max;
 
@@ -1315,7 +1345,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 				  struct io_completion_data *icd,
 				  const enum fio_ddir idx, unsigned int bytes)
 {
-	unsigned long uninitialized_var(lusec);
+	unsigned long lusec = 0;
 
 	if (!td->o.disable_clat || !td->o.disable_bw)
 		lusec = utime_since(&io_u->issue_time, &icd->time);
@@ -1325,6 +1355,13 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 
 		tusec = utime_since(&io_u->start_time, &icd->time);
 		add_lat_sample(td, idx, tusec, bytes);
+
+		if (td->o.max_latency && tusec > td->o.max_latency) {
+			if (!td->error)
+				log_err("fio: latency of %lu usec exceeds specified max (%u usec)\n", tusec, td->o.max_latency);
+			td_verror(td, ETIMEDOUT, "max latency exceeded");
+			icd->error = ETIMEDOUT;
+		}
 	}
 
 	if (!td->o.disable_clat) {
@@ -1351,11 +1388,6 @@ static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 static void io_completed(struct thread_data *td, struct io_u *io_u,
 			 struct io_completion_data *icd)
 {
-	/*
-	 * Older gcc's are too dumb to realize that usec is always used
-	 * initialized, silence that warning.
-	 */
-	unsigned long uninitialized_var(usec);
 	struct fio_file *f;
 
 	dprint_io_u(io_u, "io complete");

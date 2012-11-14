@@ -561,12 +561,15 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 	pdu->buf_len = le32_to_cpu(pdu->buf_len);
 	pdu->client_type = le32_to_cpu(pdu->client_type);
 
+	stat_number = 0;
+
 	if (parse_jobs_ini(buf, 1, 0, pdu->client_type)) {
 		fio_net_send_quit(server_fd);
 		return -1;
 	}
 
 	spdu.jobs = cpu_to_le32(thread_number);
+	spdu.stat_outputs = cpu_to_le32(stat_number);
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), NULL, NULL);
 	return 0;
 }
@@ -597,6 +600,8 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 		dprint(FD_NET, "server: %d: %s\n", i, argv[i]);
 	}
 
+	stat_number = 0;
+
 	if (parse_cmd_line(clp->lines, argv, clp->client_type)) {
 		fio_net_send_quit(server_fd);
 		free(argv);
@@ -606,6 +611,7 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 	free(argv);
 
 	spdu.jobs = cpu_to_le32(thread_number);
+	spdu.stat_outputs = cpu_to_le32(stat_number);
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), NULL, NULL);
 	return 0;
 }

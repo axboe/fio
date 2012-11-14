@@ -50,6 +50,16 @@ struct thread_data;
 #include <sys/asynch.h>
 #endif
 
+#ifdef FIO_HAVE_LIBNUMA
+#include <linux/mempolicy.h>
+#include <numa.h>
+
+/*
+ * "local" is pseudo-policy
+ */
+#define MPOL_LOCAL MPOL_MAX
+#endif
+
 /*
  * offset generator types
  */
@@ -310,6 +320,7 @@ enum {
 
 extern int exitall_on_terminate;
 extern unsigned int thread_number;
+extern unsigned int stat_number;
 extern int shm_id;
 extern int groupid;
 extern int output_format;
@@ -344,7 +355,7 @@ static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
 
 #define REAL_MAX_JOBS		2048
 
-static inline enum error_type td_error_type(enum fio_ddir ddir, int err)
+static inline enum error_type_bit td_error_type(enum fio_ddir ddir, int err)
 {
 	if (err == EILSEQ)
 		return ERROR_TYPE_VERIFY_BIT;
@@ -441,6 +452,7 @@ enum {
 	TD_NOT_CREATED = 0,
 	TD_CREATED,
 	TD_INITIALIZED,
+	TD_SETTING_UP,
 	TD_RAMP,
 	TD_RUNNING,
 	TD_PRE_READING,
@@ -576,6 +588,12 @@ enum {
 	FIO_OUTPUT_TERSE	= 0,
 	FIO_OUTPUT_JSON,
 	FIO_OUTPUT_NORMAL,
+};
+
+enum {
+	FIO_RAND_DIST_RANDOM	= 0,
+	FIO_RAND_DIST_ZIPF,
+	FIO_RAND_DIST_PARETO,
 };
 
 #endif

@@ -64,6 +64,7 @@ struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 
 int groupid = 0;
 unsigned int thread_number = 0;
+unsigned int stat_number = 0;
 int shm_id = 0;
 int temp_stall_ts;
 unsigned long done_secs = 0;
@@ -591,7 +592,7 @@ static void do_io(struct thread_data *td)
 		int ret2, full;
 		enum fio_ddir ddir;
 
-		if (td->terminate)
+		if (td->terminate || td->done)
 			break;
 
 		update_tv_cache(td);
@@ -726,7 +727,7 @@ sync_done:
 
 		if (ret < 0)
 			break;
-		if (!ddir_rw_sum(bytes_done))
+		if (!ddir_rw_sum(bytes_done) && !(td->io_ops->flags & FIO_NOIO))
 			continue;
 
 		if (!in_ramp_time(td) && should_check_rate(td, bytes_done)) {
@@ -1063,6 +1064,49 @@ static void *thread_main(void *data)
 
 	if (fio_pin_memory(td))
 		goto err;
+
+#ifdef FIO_HAVE_LIBNUMA
+	/* numa node setup */
+	if (td->o.numa_cpumask_set || td->o.numa_memmask_set) {
+		int ret;
+
+		if (numa_available() < 0) {
+			td_verror(td, errno, "Does not support NUMA API\n");
+			goto err;
+		}
+
+		if (td->o.numa_cpumask_set) {
+			ret = numa_run_on_node_mask(td->o.numa_cpunodesmask);
+			if (ret == -1) {
+				td_verror(td, errno, \
+					"numa_run_on_node_mask failed\n");
+				goto err;
+			}
+		}
+
+		if (td->o.numa_memmask_set) {
+
+			switch (td->o.numa_mem_mode) {
+			case MPOL_INTERLEAVE:
+				numa_set_interleave_mask(td->o.numa_memnodesmask);
+				break;
+			case MPOL_BIND:
+				numa_set_membind(td->o.numa_memnodesmask);
+				break;
+			case MPOL_LOCAL:
+				numa_set_localalloc();
+				break;
+			case MPOL_PREFERRED:
+				numa_set_preferred(td->o.numa_mem_prefer_node);
+				break;
+			case MPOL_DEFAULT:
+			default:
+				break;
+			}
+
+		}
+	}
+#endif
 
 	/*
 	 * May alter parameters that init_io_u() will use, so we need to

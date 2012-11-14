@@ -141,6 +141,7 @@ extern void rb_erase(struct rb_node *, struct rb_root *);
 
 /* Find logical next and previous nodes in a tree */
 extern struct rb_node *rb_first(struct rb_root *);
+extern struct rb_node *rb_next(const struct rb_node *);
 
 static inline void rb_link_node(struct rb_node * node, struct rb_node * parent,
 				struct rb_node ** rb_link)

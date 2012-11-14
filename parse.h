@@ -89,6 +89,7 @@ extern void strip_blank_front(char **);
 extern void strip_blank_end(char *);
 extern int str_to_decimal(const char *, long long *, int, void *);
 extern int check_str_bytes(const char *p, long long *val, void *data);
+extern int str_to_float(const char *str, double *val);
 
 /*
  * Handlers for the options
@@ -99,13 +100,6 @@ typedef int (fio_opt_int_fn)(void *, int *);
 typedef int (fio_opt_str_set_fn)(void *);
 
 #define td_var(start, offset)	((void *) start + (offset))
-
-#ifndef min
-#define min(a, b)	((a) < (b) ? (a) : (b))
-#endif
-#ifndef max
-#define max(a, b)	((a) > (b) ? (a) : (b))
-#endif
 
 static inline int parse_is_percent(unsigned long long val)
 {

@@ -38,7 +38,7 @@ struct fio_net_cmd_reply {
 };
 
 enum {
-	FIO_SERVER_VER			= 18,
+	FIO_SERVER_VER			= 19,
 
 	FIO_SERVER_MAX_FRAGMENT_PDU	= 1024,
 
@@ -113,6 +113,7 @@ struct cmd_job_pdu {
 
 struct cmd_start_pdu {
 	uint32_t jobs;
+	uint32_t stat_outputs;
 };
 
 struct cmd_end_pdu {

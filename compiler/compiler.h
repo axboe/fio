@@ -13,8 +13,6 @@
 #define __must_check
 #endif
 
-#define uninitialized_var(x) x = x
-
 #ifndef _weak
 #ifndef __CYGWIN__
 #define _weak	__attribute__((weak))

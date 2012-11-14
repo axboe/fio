@@ -1,4 +1,6 @@
-CC	?= gcc
+ifneq ($(origin CC), environment)
+CC	= gcc
+endif
 DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
 CPPFLAGS= -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	$(DEBUGFLAGS)
@@ -18,7 +20,7 @@ SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		lib/num2str.c lib/ieee754.c $(wildcard crc/*.c) engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
 		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
-		cconv.c lib/prio_tree.c json.c
+		cconv.c lib/prio_tree.c lib/zipf.c json.c gettime-thread.c
 
 ifeq ($(UNAME), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c helpers.c cgroup.c trim.c \
@@ -75,15 +77,24 @@ GFIO_OBJS = $(OBJS) gfio.o graph.o tickmarks.o ghelpers.o goptions.o gerror.o \
 			gclient.o gcompat.o cairo_text_helpers.o printing.o
 
 T_SMALLOC_OBJS = t/stest.o
-T_SMALLOC_OBJS += mutex.o smalloc.o t/log.o gettime.o time.o
+T_SMALLOC_OBJS += gettime.o mutex.o smalloc.o t/log.o
 T_SMALLOC_PROGS = t/stest
 
 T_IEEE_OBJS = t/ieee754.o
 T_IEEE_OBJS += lib/ieee754.o
 T_IEEE_PROGS = t/ieee754
 
+T_ZIPF_OBS = t/genzipf.o
+T_ZIPF_OBJS += t/log.o lib/ieee754.o lib/rand.o lib/zipf.o t/genzipf.o
+T_ZIPF_PROGS = t/genzipf
+
 T_OBJS = $(T_SMALLOC_OBJS)
 T_OBJS += $(T_IEEE_OBJS)
+T_OBJS += $(T_ZIPF_OBJS)
+
+T_PROGS = $(T_SMALLOC_PROGS)
+T_PROGS += $(T_IEEE_PROGS)
+T_PROGS += $(T_ZIPF_PROGS)
 
 ifneq ($(findstring $(MAKEFLAGS),s),s)
 ifndef V
@@ -157,6 +168,9 @@ fio: $(FIO_OBJS)
 
 gfio: $(GFIO_OBJS)
 	$(QUIET_CC)$(CC) $(LIBS) -o gfio $(GFIO_OBJS) $(LIBS) $(GTK_LDFLAGS)
+
+t/genzipf: $(T_ZIPF_OBJS)
+	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_ZIPF_OBJS) $(LIBS) $(LDFLAGS)
 
 .depend: $(SOURCE)
 	$(QUIET_DEP)$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SOURCE) 1> .depend
