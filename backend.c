@@ -62,6 +62,7 @@ struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 
 int groupid = 0;
 unsigned int thread_number = 0;
+unsigned int stat_number = 0;
 unsigned int nr_process = 0;
 unsigned int nr_thread = 0;
 int shm_id = 0;

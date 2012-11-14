@@ -317,6 +317,10 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 	profile_add_hooks(td);
 
 	td->thread_number = thread_number;
+
+	if (!parent || !parent->o.group_reporting)
+		stat_number++;
+
 	return td;
 }
 

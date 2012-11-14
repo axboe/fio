@@ -336,12 +336,15 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 	struct cmd_end_pdu epdu;
 	int ret;
 
+	stat_number = 0;
+
 	if (parse_jobs_ini(buf, 1, 0)) {
 		fio_server_send_quit_cmd();
 		return -1;
 	}
 
 	spdu.jobs = cpu_to_le32(thread_number);
+	spdu.stat_outputs = cpu_to_le32(stat_number);
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), 0);
 
 	ret = fio_backend();

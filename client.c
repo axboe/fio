@@ -47,9 +47,11 @@ struct fio_client {
 	int is_sock;
 	int disk_stats_shown;
 	unsigned int jobs;
+	unsigned int nr_stat;
 	int error;
 	int ipv6;
 	int sent_job;
+	int did_stat;
 
 	struct flist_head eta_list;
 	struct client_eta *eta_in_flight;
@@ -81,8 +83,9 @@ static FLIST_HEAD(arg_list);
 
 static struct thread_stat client_ts;
 static struct group_run_stats client_gs;
-static int sum_stat_clients;
+static int sum_stat_clients = 0;
 static int sum_stat_nr;
+static int do_output_all_clients;
 
 #define FIO_CLIENT_HASH_BITS	7
 #define FIO_CLIENT_HASH_SZ	(1 << FIO_CLIENT_HASH_BITS)
@@ -159,9 +162,11 @@ static void remove_client(struct fio_client *client)
 	if (client->ini_file)
 		free(client->ini_file);
 
+	if (!client->did_stat)
+		sum_stat_clients -= client->nr_stat;
+
 	free(client);
 	nr_clients--;
-	sum_stat_clients--;
 }
 
 static void put_client(struct fio_client *client)
@@ -664,7 +669,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 	dst->groupid	= le32_to_cpu(src->groupid);
 }
 
-static void handle_ts(struct fio_net_cmd *cmd)
+static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_ts_pdu *p = (struct cmd_ts_pdu *) cmd->payload;
 
@@ -672,8 +677,9 @@ static void handle_ts(struct fio_net_cmd *cmd)
 	convert_gs(&p->rs, &p->rs);
 
 	show_thread_status(&p->ts, &p->rs);
+	client->did_stat = 1;
 
-	if (sum_stat_clients == 1)
+	if (!do_output_all_clients)
 		return;
 
 	sum_thread_stats(&client_ts, &p->ts, sum_stat_nr);
@@ -870,6 +876,12 @@ static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	client->state = Client_started;
 	client->jobs = le32_to_cpu(pdu->jobs);
+	client->nr_stat = le32_to_cpu(pdu->stat_outputs);
+
+	if (sum_stat_clients > 1)
+		do_output_all_clients = 1;
+
+	sum_stat_clients += client->nr_stat;
 }
 
 static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -921,7 +933,7 @@ static int handle_client(struct fio_client *client)
 		free(cmd);
 		break;
 	case FIO_NET_CMD_TS:
-		handle_ts(cmd);
+		handle_ts(client, cmd);
 		free(cmd);
 		break;
 	case FIO_NET_CMD_GS:
@@ -1053,7 +1065,6 @@ int fio_handle_clients(void)
 
 	pfds = malloc(nr_clients * sizeof(struct pollfd));
 
-	sum_stat_clients = nr_clients;
 	init_thread_stat(&client_ts);
 	init_group_run_stat(&client_gs);
 
