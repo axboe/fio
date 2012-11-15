@@ -580,6 +580,32 @@ overrides the first. This may interfere with a given rate setting, if fio is
 asked to limit reads or writes to a certain rate. If that is the case, then
 the distribution may be skewed. Default: 50.
 .TP
+.BI random_distribution \fR=\fPstr:float
+By default, fio will use a completely uniform random distribution when asked
+to perform random IO. Sometimes it is useful to skew the distribution in
+specific ways, ensuring that some parts of the data is more hot than others.
+Fio includes the following distribution models:
+.RS
+.TP
+.B random
+Uniform random distribution
+.TP
+.B zipf
+Zipf distribution
+.TP
+.B pareto
+Pareto distribution
+.TP
+.RE
+.P
+When using a zipf or pareto distribution, an input value is also needed to
+define the access pattern. For zipf, this is the zipf theta. For pareto,
+it's the pareto power. Fio includes a test program, genzipf, that can be
+used visualize what the given input values will yield in terms of hit rates.
+If you wanted to use zipf with a theta of 1.2, you would use
+random_distribution=zipf:1.2 as the option. If a non-uniform model is used,
+fio will disable use of the random map.
+.TP
 .B norandommap
 Normally \fBfio\fR will cover every block of the file when doing random I/O. If
 this parameter is given, a new offset will be chosen without looking at past
