@@ -561,8 +561,6 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 	pdu->buf_len = le32_to_cpu(pdu->buf_len);
 	pdu->client_type = le32_to_cpu(pdu->client_type);
 
-	stat_number = 0;
-
 	if (parse_jobs_ini(buf, 1, 0, pdu->client_type)) {
 		fio_net_send_quit(server_fd);
 		return -1;
@@ -599,8 +597,6 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 		offset += sizeof(*cslp) + le16_to_cpu(cslp->len);
 		dprint(FD_NET, "server: %d: %s\n", i, argv[i]);
 	}
-
-	stat_number = 0;
 
 	if (parse_cmd_line(clp->lines, argv, clp->client_type)) {
 		fio_net_send_quit(server_fd);
