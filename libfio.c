@@ -127,6 +127,7 @@ void reset_fio_state(void)
 {
 	groupid = 0;
 	thread_number = 0;
+	stat_number = 0;
 	nr_process = 0;
 	nr_thread = 0;
 	done_secs = 0;
