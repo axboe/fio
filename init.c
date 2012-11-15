@@ -596,6 +596,13 @@ static int fixup_options(struct thread_data *td)
 		td->o.compress_percentage = 0;
 	}
 
+	/*
+	 * Using a non-uniform random distribution excludes usage of
+	 * a random map
+	 */
+	if (td->o.random_distribution != FIO_RAND_DIST_RANDOM)
+		td->o.norandommap = 1;
+
 	return ret;
 }
 
