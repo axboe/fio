@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	
+
 	<?if $(env.FIO_ARCH) = x86 ?>
 		<?define ProgramDirectory = ProgramFilesFolder ?>
 	<?else?>
 		<?define ProgramDirectory = ProgramFiles64Folder ?>
 	<?endif?>
 
-	<Product Id="2BA394F9-0D9E-4597-BB9D-6B18097D64BB"
+    <Product Id="C3DC8A4F-1191-412F-8287-ACB6BA798F6A"
 	  Codepage="1252" Language="1033"
 	  Manufacturer="fio" Name="fio"
 	  UpgradeCode="2338A332-5511-43cf-b9BD-5C60496CCFCC" Version="2.0.11">
-		<Package 
+		<Package
 		  Comments="Contact: Your local administrator"
 		  Description="Flexible IO Tester"
 		  InstallerVersion="200" Keywords="Installer,MSI,Database"
@@ -57,7 +57,7 @@
 		<ComponentRef Id="COPYING"/>
 		<ComponentGroupRef Id="examples"/>
 	</Feature>
-		
+
 	<Property Id="ARPURLINFOABOUT" Value="http://git.kernel.dk/?p=fio.git" />
 	<Property Id='ARPCONTACT'>fio@vger.kernel.org</Property>
 	<Property Id='ARPHELPLINK'>http://www.spinics.net/lists/fio/</Property>
