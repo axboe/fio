@@ -14,7 +14,7 @@
                 <Component>
                     <File Source="..\..\examples\fsx" />
                 </Component>
-                <Component >
+                <Component>
                     <File Source="..\..\examples\iometer-file-access-server" />
                 </Component>
                 <Component>
@@ -35,6 +35,21 @@
                 <Component>
                   <File Source="..\..\examples\flow" />
                 </Component>
+                <Component>
+                  <File Source="..\..\examples\cpuio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\falloc" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\fusion-aw-sync.ini" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\ssd-steadystate.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\zipf" />
+                </Component>
         </DirectoryRef>
     </Fragment>
     <Fragment>
@@ -50,6 +65,11 @@
             <ComponentRef Id="tiobench_example" />
             <ComponentRef Id="null" />
             <ComponentRef Id="flow" />
+            <ComponentRef Id="cpuio" />
+            <ComponentRef Id="falloc" />
+            <ComponentRef Id="fusion_aw_sync.ini" />
+            <ComponentRef Id="ssd_steadystate.fio" />
+            <ComponentRef Id="zipf" />
         </ComponentGroup>
     </Fragment>
 </Wix>
