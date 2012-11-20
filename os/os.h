@@ -95,6 +95,7 @@ typedef unsigned long os_cpu_mask_t;
 
 #ifndef FIO_HAVE_HUGETLB
 #define SHM_HUGETLB			0
+#define MAP_HUGETLB			0
 #ifndef FIO_HUGE_PAGE
 #define FIO_HUGE_PAGE			0
 #endif

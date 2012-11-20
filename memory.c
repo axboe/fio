@@ -121,6 +121,13 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 
 	td->mmapfd = 1;
 
+	if (td->o.mem_type == MEM_MMAPHUGE) {
+		unsigned long mask = td->o.hugepage_size - 1;
+
+		flags |= MAP_HUGETLB;
+		total_mem = (total_mem + mask) & ~mask;
+	}
+
 	if (td->mmapfile) {
 		td->mmapfd = open(td->mmapfile, O_RDWR|O_CREAT, 0644);
 
