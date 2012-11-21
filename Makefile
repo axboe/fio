@@ -1,5 +1,5 @@
 ifneq ($(origin CC), environment)
-CC	= gcc
+CC	= $(CROSS_COMPILE)gcc
 endif
 DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
 CPPFLAGS= -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
@@ -27,6 +27,14 @@ ifeq ($(UNAME), Linux)
 		engines/fusion-aw.c engines/falloc.c engines/e4defrag.c
   LIBS += -lpthread -ldl -lrt -laio
   LDFLAGS += -rdynamic
+endif
+ifeq ($(UNAME), Android)
+  SOURCE += diskutil.c fifo.c blktrace.c helpers.c trim.c \
+		engines/splice.c profiles/tiobench.c engines/falloc.c \
+		engines/e4defrag.c
+  LIBS += -ldl
+  LDFLAGS += -rdynamic
+  CPPFLAGS += -DFIO_NO_HAVE_SHM_H
 endif
 ifeq ($(UNAME), SunOS)
   SOURCE += fifo.c lib/strsep.c helpers.c engines/posixaio.c \

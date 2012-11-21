@@ -17,11 +17,14 @@ enum {
 	os_netbsd,
 	os_solaris,
 	os_windows,
+	os_android,
 
 	os_nr,
 };
 
-#if defined(__linux__)
+#if defined(__ANDROID__)
+#include "os-android.h"
+#elif defined(__linux__)
 #include "os-linux.h"
 #elif defined(__FreeBSD__)
 #include "os-freebsd.h"
@@ -66,7 +69,14 @@ typedef struct aiocb os_aiocb_t;
 #endif
 
 #ifndef FIO_HAVE_FADVISE
-#define posix_fadvise(fd, off, len, advice)	(0)
+static inline int posix_fadvise(int fd, int off, int len, int advice)
+{
+	(void)fd;
+	(void)off;
+	(void)len;
+	(void)advice;
+	return 0;
+}
 
 #ifndef POSIX_FADV_DONTNEED
 #define POSIX_FADV_DONTNEED	(0)
@@ -171,6 +181,7 @@ static inline uint64_t fio_swap64(uint64_t val)
 }
 #endif
 
+#ifndef FIO_HAVE_BYTEORDER_FUNCS
 #ifdef FIO_LITTLE_ENDIAN
 #define __le16_to_cpu(x)		(x)
 #define __le32_to_cpu(x)		(x)
@@ -186,6 +197,7 @@ static inline uint64_t fio_swap64(uint64_t val)
 #define __cpu_to_le32(x)		fio_swap32(x)
 #define __cpu_to_le64(x)		fio_swap64(x)
 #endif
+#endif /* FIO_HAVE_BYTEORDER_FUNCS */
 
 #define le16_to_cpu(val) ({			\
 	uint16_t *__val = &(val);		\
