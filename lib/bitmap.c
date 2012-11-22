@@ -61,18 +61,8 @@ void bitmap_free(struct bitmap *bitmap)
 	if (!bitmap)
 		return;
 
-	for (i = 0; i < bitmap->nr_levels; i++) {
-#if 0
-		unsigned long j;
-
-		for (j = 0; j < bitmap->levels[i].map_size; j++) {
-			if (bitmap->levels[i].map[j] != ~0UL)
-				printf("L%d: %.5ld=%.16lx\n", i, j, bitmap->levels[i].map[j]);
-		}
-#endif
-
+	for (i = 0; i < bitmap->nr_levels; i++)
 		sfree(bitmap->levels[i].map);
-	}
 
 	sfree(bitmap->levels);
 	sfree(bitmap);
@@ -195,15 +185,14 @@ static unsigned long bit_masks[] = {
 	0x000000000fffffff, 0x000000001fffffff, 0x000000003fffffff, 0x000000007fffffff,
 	0x00000000ffffffff,
 #if BITS_PER_LONG == 64
-	0x00000001ffffffff, 0x00000003ffffffff, 0x00000007ffffffff,
-	0x0000000fffffffff, 0x0000001fffffffff, 0x0000003fffffffff, 0x0000007fffffffff,
-	0x000000ffffffffff, 0x000001ffffffffff, 0x000003ffffffffff, 0x000007ffffffffff,
-	0x00000fffffffffff, 0x00001fffffffffff, 0x00003fffffffffff, 0x00007fffffffffff,
-	0x0000ffffffffffff, 0x0001ffffffffffff, 0x0003ffffffffffff, 0x0007ffffffffffff,
-	0x000fffffffffffff, 0x001fffffffffffff, 0x003fffffffffffff, 0x007fffffffffffff,
-	0x00ffffffffffffff, 0x01ffffffffffffff, 0x03ffffffffffffff, 0x07ffffffffffffff,
-	0x0fffffffffffffff, 0x1fffffffffffffff, 0x3fffffffffffffff, 0x7fffffffffffffff,
-	0xffffffffffffffff
+	0x00000001ffffffff, 0x00000003ffffffff, 0x00000007ffffffff, 0x0000000fffffffff,
+	0x0000001fffffffff, 0x0000003fffffffff, 0x0000007fffffffff, 0x000000ffffffffff,
+	0x000001ffffffffff, 0x000003ffffffffff, 0x000007ffffffffff, 0x00000fffffffffff,
+	0x00001fffffffffff, 0x00003fffffffffff, 0x00007fffffffffff, 0x0000ffffffffffff,
+	0x0001ffffffffffff, 0x0003ffffffffffff, 0x0007ffffffffffff, 0x000fffffffffffff,
+	0x001fffffffffffff, 0x003fffffffffffff, 0x007fffffffffffff, 0x00ffffffffffffff,
+	0x01ffffffffffffff, 0x03ffffffffffffff, 0x07ffffffffffffff, 0x0fffffffffffffff,
+	0x1fffffffffffffff, 0x3fffffffffffffff, 0x7fffffffffffffff, 0xffffffffffffffff
 #endif
 };
 
