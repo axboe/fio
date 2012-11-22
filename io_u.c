@@ -42,7 +42,8 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 	block = (io_u->offset - f->file_offset) / (unsigned long long) min_bs;
 	nr_blocks = (io_u->buflen + min_bs - 1) / min_bs;
 
-	nr_blocks = bitmap_set_nr(f->io_bitmap, block, nr_blocks);
+	if (!(io_u->flags & IO_U_F_BUSY_OK))
+		nr_blocks = bitmap_set_nr(f->io_bitmap, block, nr_blocks);
 
 	if ((nr_blocks * min_bs) < io_u->buflen)
 		io_u->buflen = nr_blocks * min_bs;
