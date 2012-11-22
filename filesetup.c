@@ -13,6 +13,7 @@
 #include "filehash.h"
 #include "os/os.h"
 #include "hash.h"
+#include "lib/bitmap.h"
 
 #ifdef FIO_HAVE_LINUX_FALLOCATE
 #include <linux/falloc.h>
@@ -904,7 +905,7 @@ static int init_rand_distribution(struct thread_data *td)
 
 int init_random_map(struct thread_data *td)
 {
-	unsigned long long blocks, num_maps;
+	unsigned long long blocks;
 	struct fio_file *f;
 	unsigned int i;
 
@@ -916,16 +917,9 @@ int init_random_map(struct thread_data *td)
 	for_each_file(td, f, i) {
 		blocks = (f->real_file_size + td->o.rw_min_bs - 1) /
 				(unsigned long long) td->o.rw_min_bs;
-		num_maps = (blocks + BLOCKS_PER_MAP - 1) /
-				(unsigned long long) BLOCKS_PER_MAP;
-		if (num_maps == (unsigned long) num_maps) {
-			f->file_map = smalloc(num_maps * sizeof(unsigned long));
-			if (f->file_map) {
-				f->num_maps = num_maps;
-				continue;
-			}
-		} else
-			f->file_map = NULL;
+		f->io_bitmap = bitmap_new(blocks);
+		if (f->io_bitmap)
+			continue;
 
 		if (!td->o.softrandommap) {
 			log_err("fio: failed allocating random map. If running"
@@ -937,7 +931,6 @@ int init_random_map(struct thread_data *td)
 
 		log_info("fio: file %s failed allocating random map. Running "
 			 "job without.\n", f->file_name);
-		f->num_maps = 0;
 	}
 
 	return 0;
@@ -974,8 +967,8 @@ void close_and_free_files(struct thread_data *td)
 
 		sfree(f->file_name);
 		f->file_name = NULL;
-		sfree(f->file_map);
-		f->file_map = NULL;
+		bitmap_free(f->io_bitmap);
+		f->io_bitmap = NULL;
 		sfree(f);
 	}
 
