@@ -917,9 +917,14 @@ int init_random_map(struct thread_data *td)
 	for_each_file(td, f, i) {
 		blocks = (f->real_file_size + td->o.rw_min_bs - 1) /
 				(unsigned long long) td->o.rw_min_bs;
-		f->io_bitmap = bitmap_new(blocks);
-		if (f->io_bitmap)
-			continue;
+		if (td->o.random_generator == FIO_RAND_GEN_LFSR) {
+			if (!lfsr_init(&f->lfsr, blocks))
+				continue;
+		} else {
+			f->io_bitmap = bitmap_new(blocks);
+			if (f->io_bitmap)
+				continue;
+		}
 
 		if (!td->o.softrandommap) {
 			log_err("fio: failed allocating random map. If running"

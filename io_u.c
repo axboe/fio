@@ -77,25 +77,36 @@ static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
 static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				  enum fio_ddir ddir, unsigned long long *b)
 {
-	unsigned long long rmax, r, lastb;
+	unsigned long long r;
 
-	lastb = last_block(td, f, ddir);
-	if (!lastb)
-		return 1;
+	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE) {
+		unsigned long long rmax, lastb;
 
-	rmax = td->o.use_os_rand ? OS_RAND_MAX : FRAND_MAX;
+		lastb = last_block(td, f, ddir);
+		if (!lastb)
+			return 1;
 
-	if (td->o.use_os_rand) {
-		rmax = OS_RAND_MAX;
-		r = os_random_long(&td->random_state);
+		rmax = td->o.use_os_rand ? OS_RAND_MAX : FRAND_MAX;
+
+		if (td->o.use_os_rand) {
+			rmax = OS_RAND_MAX;
+			r = os_random_long(&td->random_state);
+		} else {
+			rmax = FRAND_MAX;
+			r = __rand(&td->__random_state);
+		}
+
+		dprint(FD_RANDOM, "off rand %llu\n", r);
+
+		*b = (lastb - 1) * (r / ((unsigned long long) rmax + 1.0));
 	} else {
-		rmax = FRAND_MAX;
-		r = __rand(&td->__random_state);
+		uint64_t off = 0;
+
+		if (lfsr_next(&f->lfsr, &off))
+			return 1;
+
+		*b = off;
 	}
-
-	*b = (lastb - 1) * (r / ((unsigned long long) rmax + 1.0));
-
-	dprint(FD_RANDOM, "off rand %llu\n", r);
 
 	/*
 	 * if we are not maintaining a random map, we are done.

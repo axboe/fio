@@ -7,6 +7,7 @@
 #include "flist.h"
 #include "lib/zipf.h"
 #include "lib/bitmap.h"
+#include "lib/lfsr.h"
 
 /*
  * The type of object we are working on
@@ -110,6 +111,8 @@ struct fio_file {
 	 * block map for random io
 	 */
 	struct bitmap *io_bitmap;
+
+	struct fio_lfsr lfsr;
 
 	/*
 	 * Used for zipf random distribution

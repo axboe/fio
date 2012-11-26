@@ -181,6 +181,8 @@ struct thread_options {
 	double zipf_theta;
 	double pareto_h;
 
+	unsigned int random_generator;
+
 	unsigned int hugepage_size;
 	unsigned int rw_min_bs;
 	unsigned int thinktime;
@@ -820,6 +822,11 @@ enum {
 	FIO_RAND_DIST_RANDOM	= 0,
 	FIO_RAND_DIST_ZIPF,
 	FIO_RAND_DIST_PARETO,
+};
+
+enum {
+	FIO_RAND_GEN_TAUSWORTHE = 0,
+	FIO_RAND_GEN_LFSR,
 };
 
 #endif
