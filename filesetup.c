@@ -911,7 +911,7 @@ int init_random_map(struct thread_data *td)
 
 	if (init_rand_distribution(td))
 		return 0;
-	if (td->o.norandommap || !td_random(td))
+	if (!td_random(td))
 		return 0;
 
 	for_each_file(td, f, i) {
@@ -920,7 +920,7 @@ int init_random_map(struct thread_data *td)
 		if (td->o.random_generator == FIO_RAND_GEN_LFSR) {
 			if (!lfsr_init(&f->lfsr, blocks))
 				continue;
-		} else {
+		} else if (!td->o.norandommap) {
 			f->io_bitmap = bitmap_new(blocks);
 			if (f->io_bitmap)
 				continue;
