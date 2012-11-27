@@ -7,6 +7,7 @@
 #include <sys/uio.h>
 #include <sys/syscall.h>
 #include <sys/vfs.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -46,6 +47,10 @@
 #define FIO_HAVE_GETTID
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_E4_ENG
+
+#ifdef MAP_HUGETLB
+#define FIO_HAVE_MMAP_HUGE
+#endif
 
 /*
  * Can only enable this for newer glibcs, or the header and defines are

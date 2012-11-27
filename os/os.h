@@ -115,6 +115,10 @@ typedef unsigned long os_cpu_mask_t;
 #endif
 #endif
 
+#ifndef FIO_HAVE_MMAP_HUGE
+#define MAP_HUGETLB			0
+#endif
+
 #ifndef FIO_O_NOATIME
 #define FIO_O_NOATIME			0
 #endif
