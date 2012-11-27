@@ -3,7 +3,7 @@
 #include "lfsr.h"
 
 /*
- * Trom table 3 of
+ * From table 3 of
  *
  * http://www.xilinx.com/support/documentation/application_notes/xapp052.pdf
  */
@@ -202,6 +202,8 @@ static struct lfsr_taps lfsr_taps[] = {
 	},
 };
 
+#define FIO_LFSR_CRANKS		128
+
 static uint64_t __lfsr_next(uint64_t v, struct lfsr_taps *lt)
 {
 	uint64_t xor_mask = 0;
@@ -235,7 +237,7 @@ static struct lfsr_taps *find_lfsr(uint64_t size)
 	int i;
 
 	for (i = 0; lfsr_taps[i].length; i++)
-		if ((1UL << lfsr_taps[i].length) >= size)
+		if (((1UL << lfsr_taps[i].length) + FIO_LFSR_CRANKS) >= size)
 			return &lfsr_taps[i];
 
 	return NULL;
@@ -259,6 +261,9 @@ int lfsr_init(struct fio_lfsr *fl, uint64_t size)
 		if (!fl->taps.taps[i])
 			break;
 	}
+
+	for (i = 0; i < FIO_LFSR_CRANKS; i++)
+		fl->last_val = __lfsr_next(fl->last_val, &fl->taps);
 
 	return 0;
 }
