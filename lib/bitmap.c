@@ -9,10 +9,8 @@
 #include "../minmax.h"
 
 #if BITS_PER_LONG == 64
-#define UNIT_SIZE		8
 #define UNIT_SHIFT		6
 #elif BITS_PER_LONG == 32
-#define UNIT_SIZE		4
 #define UNIT_SHIFT		5
 #else
 #error "Number of arch bits unknown"
@@ -50,7 +48,7 @@ void bitmap_reset(struct bitmap *bitmap)
 	for (i = 0; i < bitmap->nr_levels; i++) {
 		struct bitmap_level *bl = &bitmap->levels[i];
 
-		memset(bl->map, 0, bl->map_size * UNIT_SIZE);
+		memset(bl->map, 0, bl->map_size * sizeof(unsigned long));
 	}
 }
 
@@ -93,7 +91,7 @@ struct bitmap *bitmap_new(unsigned long nr_bits)
 
 		bl->level = i;
 		bl->map_size = (nr_bits + BLOCKS_PER_UNIT - 1) >> UNIT_SHIFT;
-		bl->map = smalloc(bl->map_size << UNIT_SHIFT);
+		bl->map = smalloc(bl->map_size * sizeof(unsigned long));
 		if (!bl->map)
 			goto err;
 
