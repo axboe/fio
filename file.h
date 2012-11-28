@@ -6,7 +6,7 @@
 #include "io_ddir.h"
 #include "flist.h"
 #include "lib/zipf.h"
-#include "lib/bitmap.h"
+#include "lib/axmap.h"
 #include "lib/lfsr.h"
 
 /*
@@ -110,7 +110,7 @@ struct fio_file {
 	/*
 	 * block map for random io
 	 */
-	struct bitmap *io_bitmap;
+	struct axmap *io_axmap;
 
 	struct fio_lfsr lfsr;
 
@@ -181,8 +181,8 @@ static inline void fio_file_reset(struct fio_file *f)
 	f->last_pos = f->file_offset;
 	f->last_start = -1ULL;
 	f->file_pos = -1ULL;
-	if (f->io_bitmap)
-		bitmap_reset(f->io_bitmap);
+	if (f->io_axmap)
+		axmap_reset(f->io_axmap);
 }
 
 #endif

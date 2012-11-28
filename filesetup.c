@@ -13,7 +13,7 @@
 #include "filehash.h"
 #include "os/os.h"
 #include "hash.h"
-#include "lib/bitmap.h"
+#include "lib/axmap.h"
 
 #ifdef FIO_HAVE_LINUX_FALLOCATE
 #include <linux/falloc.h>
@@ -921,8 +921,8 @@ int init_random_map(struct thread_data *td)
 			if (!lfsr_init(&f->lfsr, blocks))
 				continue;
 		} else if (!td->o.norandommap) {
-			f->io_bitmap = bitmap_new(blocks);
-			if (f->io_bitmap)
+			f->io_axmap = axmap_new(blocks);
+			if (f->io_axmap)
 				continue;
 		}
 
@@ -972,8 +972,8 @@ void close_and_free_files(struct thread_data *td)
 
 		sfree(f->file_name);
 		f->file_name = NULL;
-		bitmap_free(f->io_bitmap);
-		f->io_bitmap = NULL;
+		axmap_free(f->io_axmap);
+		f->io_axmap = NULL;
 		sfree(f);
 	}
 

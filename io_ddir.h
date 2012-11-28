@@ -30,7 +30,7 @@ enum td_ddir {
 #define td_trim(td)		((td)->o.td_ddir & TD_DDIR_TRIM)
 #define td_rw(td)		(((td)->o.td_ddir & TD_DDIR_RW) == TD_DDIR_RW)
 #define td_random(td)		((td)->o.td_ddir & TD_DDIR_RAND)
-#define file_randommap(td, f)	(!(td)->o.norandommap && (f)->io_bitmap)
+#define file_randommap(td, f)	(!(td)->o.norandommap && (f)->io_axmap)
 
 static inline int ddir_sync(enum fio_ddir ddir)
 {

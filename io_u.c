@@ -10,7 +10,7 @@
 #include "verify.h"
 #include "trim.h"
 #include "lib/rand.h"
-#include "lib/bitmap.h"
+#include "lib/axmap.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -21,12 +21,12 @@ struct io_completion_data {
 };
 
 /*
- * The ->io_bitmap contains a map of blocks we have or have not done io
+ * The ->io_axmap contains a map of blocks we have or have not done io
  * to yet. Used to make sure we cover the entire range in a fair fashion.
  */
 static int random_map_free(struct fio_file *f, const unsigned long long block)
 {
-	return !bitmap_isset(f->io_bitmap, block);
+	return !axmap_isset(f->io_axmap, block);
 }
 
 /*
@@ -43,7 +43,7 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 	nr_blocks = (io_u->buflen + min_bs - 1) / min_bs;
 
 	if (!(io_u->flags & IO_U_F_BUSY_OK))
-		nr_blocks = bitmap_set_nr(f->io_bitmap, block, nr_blocks);
+		nr_blocks = axmap_set_nr(f->io_axmap, block, nr_blocks);
 
 	if ((nr_blocks * min_bs) < io_u->buflen)
 		io_u->buflen = nr_blocks * min_bs;
@@ -122,7 +122,7 @@ static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 
 	dprint(FD_RANDOM, "get_next_rand_offset: offset %llu busy\n", *b);
 
-	*b = bitmap_next_free(f->io_bitmap, *b);
+	*b = axmap_next_free(f->io_axmap, *b);
 	if (*b == (uint64_t) -1ULL)
 		return 1;
 ret:
