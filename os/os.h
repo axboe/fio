@@ -68,22 +68,11 @@ typedef struct aiocb os_aiocb_t;
 #define OS_MSG_DONTWAIT	MSG_DONTWAIT
 #endif
 
-#ifndef FIO_HAVE_FADVISE
-static inline int posix_fadvise(int fd, int off, int len, int advice)
-{
-	(void)fd;
-	(void)off;
-	(void)len;
-	(void)advice;
-	return 0;
-}
-
 #ifndef POSIX_FADV_DONTNEED
 #define POSIX_FADV_DONTNEED	(0)
 #define POSIX_FADV_SEQUENTIAL	(0)
 #define POSIX_FADV_RANDOM	(0)
 #endif
-#endif /* FIO_HAVE_FADVISE */
 
 #ifndef FIO_HAVE_CPU_AFFINITY
 #define fio_setaffinity(pid, mask)	(0)
