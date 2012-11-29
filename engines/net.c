@@ -475,24 +475,32 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
 	fio_socklen_t socklen = sizeof(nd->addr);
+	int state;
 
 	if (o->proto == FIO_TYPE_UDP) {
 		f->fd = nd->listenfd;
 		return 0;
 	}
 
+	state = td->runstate;
+	td_set_runstate(td, TD_SETTING_UP);
+
 	log_info("fio: waiting for connection\n");
 
 	if (poll_wait(td, nd->listenfd, POLLIN) < 0)
-		return 1;
+		goto err;
 
 	f->fd = accept(nd->listenfd, (struct sockaddr *) &nd->addr, &socklen);
 	if (f->fd < 0) {
 		td_verror(td, errno, "accept");
-		return 1;
+		goto err;
 	}
 
+	td_set_runstate(td, state);
 	return 0;
+err:
+	td_set_runstate(td, state);
+	return 1;
 }
 
 static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
