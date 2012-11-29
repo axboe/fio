@@ -543,6 +543,15 @@ static int fio_netio_setup_connect_inet(struct thread_data *td,
 {
 	struct netio_data *nd = td->io_ops->data;
 
+	if (!host) {
+		log_err("fio: connect with no host to connect to.\n");
+		if (td_read(td))
+			log_err("fio: did you forget to set 'listen'?\n");
+
+		td_verror(td, EINVAL, "no hostname= set");
+		return 1;
+	}
+
 	nd->addr.sin_family = AF_INET;
 	nd->addr.sin_port = htons(port);
 
