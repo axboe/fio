@@ -924,7 +924,8 @@ int init_random_map(struct thread_data *td)
 			f->io_axmap = axmap_new(blocks);
 			if (f->io_axmap)
 				continue;
-		}
+		} else if (td->o.norandommap)
+			continue;
 
 		if (!td->o.softrandommap) {
 			log_err("fio: failed allocating random map. If running"
