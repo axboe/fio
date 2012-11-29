@@ -360,6 +360,8 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 		}
 		if (ret > 0)
 			break;
+		else if (!ret && (flags & MSG_WAITALL))
+			break;
 
 		ret = poll_wait(td, io_u->file->fd, POLLIN);
 		if (ret <= 0)
