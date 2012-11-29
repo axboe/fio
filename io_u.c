@@ -10,6 +10,7 @@
 #include "verify.h"
 #include "trim.h"
 #include "lib/rand.h"
+#include "lib/axmap.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -20,17 +21,12 @@ struct io_completion_data {
 };
 
 /*
- * The ->file_map[] contains a map of blocks we have or have not done io
+ * The ->io_axmap contains a map of blocks we have or have not done io
  * to yet. Used to make sure we cover the entire range in a fair fashion.
  */
 static int random_map_free(struct fio_file *f, const unsigned long long block)
 {
-	unsigned int idx = RAND_MAP_IDX(f, block);
-	unsigned int bit = RAND_MAP_BIT(f, block);
-
-	dprint(FD_RANDOM, "free: b=%llu, idx=%u, bit=%u\n", block, idx, bit);
-
-	return (f->file_map[idx] & (1UL << bit)) == 0;
+	return !axmap_isset(f->io_axmap, block);
 }
 
 /*
@@ -41,61 +37,16 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 	unsigned int min_bs = td->o.rw_min_bs;
 	struct fio_file *f = io_u->file;
 	unsigned long long block;
-	unsigned int blocks, nr_blocks;
-	int busy_check;
+	unsigned int nr_blocks;
 
 	block = (io_u->offset - f->file_offset) / (unsigned long long) min_bs;
 	nr_blocks = (io_u->buflen + min_bs - 1) / min_bs;
-	blocks = 0;
-	busy_check = !(io_u->flags & IO_U_F_BUSY_OK);
 
-	while (nr_blocks) {
-		unsigned int idx, bit;
-		unsigned long mask, this_blocks;
+	if (!(io_u->flags & IO_U_F_BUSY_OK))
+		nr_blocks = axmap_set_nr(f->io_axmap, block, nr_blocks);
 
-		/*
-		 * If we have a mixed random workload, we may
-		 * encounter blocks we already did IO to.
-		 */
-		if (!busy_check) {
-			blocks = nr_blocks;
-			break;
-		}
-		if ((td->o.ddir_seq_nr == 1) && !random_map_free(f, block))
-			break;
-
-		idx = RAND_MAP_IDX(f, block);
-		bit = RAND_MAP_BIT(f, block);
-
-		fio_assert(td, idx < f->num_maps);
-
-		this_blocks = nr_blocks;
-		if (this_blocks + bit > BLOCKS_PER_MAP)
-			this_blocks = BLOCKS_PER_MAP - bit;
-
-		do {
-			if (this_blocks == BLOCKS_PER_MAP)
-				mask = -1UL;
-			else
-				mask = ((1UL << this_blocks) - 1) << bit;
-	
-			if (!(f->file_map[idx] & mask))
-				break;
-
-			this_blocks--;
-		} while (this_blocks);
-
-		if (!this_blocks)
-			break;
-
-		f->file_map[idx] |= mask;
-		nr_blocks -= this_blocks;
-		blocks += this_blocks;
-		block += this_blocks;
-	}
-
-	if ((blocks * min_bs) < io_u->buflen)
-		io_u->buflen = blocks * min_bs;
+	if ((nr_blocks * min_bs) < io_u->buflen)
+		io_u->buflen = nr_blocks * min_bs;
 }
 
 static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
@@ -123,113 +74,57 @@ static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
 	return max_blocks;
 }
 
-/*
- * Return the next free block in the map.
- */
-static int get_next_free_block(struct thread_data *td, struct fio_file *f,
-			       enum fio_ddir ddir, unsigned long long *b)
-{
-	unsigned long long block, min_bs = td->o.rw_min_bs, lastb;
-	int i;
-
-	lastb = last_block(td, f, ddir);
-	if (!lastb)
-		return 1;
-
-	i = f->last_free_lookup;
-	block = i * BLOCKS_PER_MAP;
-	while (block * min_bs < f->real_file_size &&
-		block * min_bs < f->io_size) {
-		if (f->file_map[i] != -1UL) {
-			block += ffz(f->file_map[i]);
-			if (block > lastb)
-				break;
-			f->last_free_lookup = i;
-			*b = block;
-			return 0;
-		}
-
-		block += BLOCKS_PER_MAP;
-		i++;
-	}
-
-	dprint(FD_IO, "failed finding a free block\n");
-	return 1;
-}
-
 static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				  enum fio_ddir ddir, unsigned long long *b)
 {
-	unsigned long long rmax, r, lastb;
-	int loops = 5;
+	unsigned long long r;
 
-	lastb = last_block(td, f, ddir);
-	if (!lastb)
-		return 1;
+	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE) {
+		unsigned long long rmax, lastb;
 
-	if (f->failed_rands >= 200)
-		goto ffz;
+		lastb = last_block(td, f, ddir);
+		if (!lastb)
+			return 1;
 
-	rmax = td->o.use_os_rand ? OS_RAND_MAX : FRAND_MAX;
-	do {
-		if (td->o.use_os_rand)
+		rmax = td->o.use_os_rand ? OS_RAND_MAX : FRAND_MAX;
+
+		if (td->o.use_os_rand) {
+			rmax = OS_RAND_MAX;
 			r = os_random_long(&td->random_state);
-		else
+		} else {
+			rmax = FRAND_MAX;
 			r = __rand(&td->__random_state);
-
-		*b = (lastb - 1) * (r / ((unsigned long long) rmax + 1.0));
+		}
 
 		dprint(FD_RANDOM, "off rand %llu\n", r);
 
+		*b = (lastb - 1) * (r / ((unsigned long long) rmax + 1.0));
+	} else {
+		uint64_t off = 0;
 
-		/*
-		 * if we are not maintaining a random map, we are done.
-		 */
-		if (!file_randommap(td, f))
-			goto ret_good;
+		if (lfsr_next(&f->lfsr, &off))
+			return 1;
 
-		/*
-		 * calculate map offset and check if it's free
-		 */
-		if (random_map_free(f, *b))
-			goto ret_good;
-
-		dprint(FD_RANDOM, "get_next_rand_offset: offset %llu busy\n",
-									*b);
-	} while (--loops);
-
-	if (!f->failed_rands++)
-		f->last_free_lookup = 0;
+		*b = off;
+	}
 
 	/*
-	 * we get here, if we didn't suceed in looking up a block. generate
-	 * a random start offset into the filemap, and find the first free
-	 * block from there.
+	 * if we are not maintaining a random map, we are done.
 	 */
-	loops = 10;
-	do {
-		f->last_free_lookup = (f->num_maps - 1) *
-					(r / ((unsigned long long) rmax + 1.0));
-		if (!get_next_free_block(td, f, ddir, b))
-			goto ret;
-
-		if (td->o.use_os_rand)
-			r = os_random_long(&td->random_state);
-		else
-			r = __rand(&td->__random_state);
-	} while (--loops);
+	if (!file_randommap(td, f))
+		goto ret;
 
 	/*
-	 * that didn't work either, try exhaustive search from the start
+	 * calculate map offset and check if it's free
 	 */
-	f->last_free_lookup = 0;
-ffz:
-	if (!get_next_free_block(td, f, ddir, b))
-		return 0;
-	f->last_free_lookup = 0;
-	return get_next_free_block(td, f, ddir, b);
-ret_good:
-	f->failed_rands = 0;
+	if (random_map_free(f, *b))
+		goto ret;
+
+	dprint(FD_RANDOM, "get_next_rand_offset: offset %llu busy\n", *b);
+
+	*b = axmap_next_free(f->io_axmap, *b);
+	if (*b == (uint64_t) -1ULL)
+		return 1;
 ret:
 	return 0;
 }
@@ -347,7 +242,8 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 		else if (b != -1ULL)
 			io_u->offset = b * td->o.ba[ddir];
 		else {
-			log_err("fio: bug in offset generation\n");
+			log_err("fio: bug in offset generation: offset=%llu, b=%llu\n",
+								offset, b);
 			ret = 1;
 		}
 	}

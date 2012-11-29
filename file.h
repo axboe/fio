@@ -6,6 +6,8 @@
 #include "io_ddir.h"
 #include "flist.h"
 #include "lib/zipf.h"
+#include "lib/axmap.h"
+#include "lib/lfsr.h"
 
 /*
  * The type of object we are working on
@@ -108,10 +110,9 @@ struct fio_file {
 	/*
 	 * block map for random io
 	 */
-	unsigned long *file_map;
-	unsigned long num_maps;
-	unsigned long last_free_lookup;
-	unsigned failed_rands;
+	struct axmap *io_axmap;
+
+	struct fio_lfsr lfsr;
 
 	/*
 	 * Used for zipf random distribution
@@ -177,13 +178,11 @@ extern void free_release_files(struct thread_data *);
 
 static inline void fio_file_reset(struct fio_file *f)
 {
-	f->last_free_lookup = 0;
-	f->failed_rands = 0;
 	f->last_pos = f->file_offset;
 	f->last_start = -1ULL;
 	f->file_pos = -1ULL;
-	if (f->file_map)
-		memset(f->file_map, 0, f->num_maps * sizeof(unsigned long));
+	if (f->io_axmap)
+		axmap_reset(f->io_axmap);
 }
 
 #endif

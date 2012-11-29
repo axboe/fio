@@ -181,6 +181,8 @@ struct thread_options {
 	double zipf_theta;
 	double pareto_h;
 
+	unsigned int random_generator;
+
 	unsigned int hugepage_size;
 	unsigned int rw_min_bs;
 	unsigned int thinktime;
@@ -588,11 +590,6 @@ static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
 	assert(!(io_u->ddir == DDIR_WRITE && !td_write(td)));
 }
 
-#define BLOCKS_PER_MAP		(8 * sizeof(unsigned long))
-#define TO_MAP_BLOCK(f, b)	(b)
-#define RAND_MAP_IDX(f, b)	(TO_MAP_BLOCK(f, b) / BLOCKS_PER_MAP)
-#define RAND_MAP_BIT(f, b)	(TO_MAP_BLOCK(f, b) & (BLOCKS_PER_MAP - 1))
-
 #define REAL_MAX_JOBS		2048
 
 static inline enum error_type_bit td_error_type(enum fio_ddir ddir, int err)
@@ -825,6 +822,11 @@ enum {
 	FIO_RAND_DIST_RANDOM	= 0,
 	FIO_RAND_DIST_ZIPF,
 	FIO_RAND_DIST_PARETO,
+};
+
+enum {
+	FIO_RAND_GEN_TAUSWORTHE = 0,
+	FIO_RAND_GEN_LFSR,
 };
 
 #endif

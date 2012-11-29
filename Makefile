@@ -17,7 +17,7 @@ SOURCE := gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		lib/num2str.c lib/ieee754.c $(wildcard crc/*.c) engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
 		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
-		json.c lib/zipf.c gettime-thread.c
+		json.c lib/zipf.c lib/axmap.c lib/lfsr.c gettime-thread.c
 
 ifeq ($(UNAME), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c helpers.c cgroup.c trim.c \
@@ -90,13 +90,19 @@ T_ZIPF_OBS = t/genzipf.o
 T_ZIPF_OBJS += t/log.o lib/ieee754.o lib/rand.o lib/zipf.o t/genzipf.o
 T_ZIPF_PROGS = t/genzipf
 
+T_AXMAP_OBJS = t/axmap.o
+T_AXMAP_OBJS += lib/lfsr.o lib/axmap.o
+T_AXMAP_PROGS = t/axmap
+
 T_OBJS = $(T_SMALLOC_OBJS)
 T_OBJS += $(T_IEEE_OBJS)
 T_OBJS += $(T_ZIPF_OBJS)
+T_OBJS += $(T_AXMAP_OBJS)
 
 T_PROGS = $(T_SMALLOC_PROGS)
 T_PROGS += $(T_IEEE_PROGS)
 T_PROGS += $(T_ZIPF_PROGS)
+T_PROGS += $(T_AXMAP_PROGS)
 
 ifneq ($(findstring $(MAKEFLAGS),s),s)
 ifndef V
@@ -140,6 +146,9 @@ t/ieee754: $(T_IEEE_OBJS)
 
 t/genzipf: $(T_ZIPF_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_ZIPF_OBJS) $(LIBS) $(LDFLAGS)
+
+t/axmap: $(T_AXMAP_OBJS)
+	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_AXMAP_OBJS) $(LIBS) $(LDFLAGS)
 
 fio: $(OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
