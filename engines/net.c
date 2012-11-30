@@ -522,6 +522,7 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 		goto err;
 	}
 
+	reset_all_stats(td);
 	td_set_runstate(td, state);
 	return 0;
 err:
