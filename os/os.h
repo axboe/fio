@@ -135,7 +135,7 @@ typedef unsigned long os_cpu_mask_t;
 #endif
 
 #ifndef FIO_PREFERRED_CLOCK_SOURCE
-#define FIO_PREFERRED_CLOCK_SOURCE	CS_CGETTIME
+#define FIO_PREFERRED_CLOCK_SOURCE	CS_GTOD
 #endif
 
 #ifndef FIO_MAX_JOBS
