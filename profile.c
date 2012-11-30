@@ -93,8 +93,10 @@ void profile_add_hooks(struct thread_data *td)
 	if (!ops)
 		return;
 
-	if (ops->io_ops)
+	if (ops->io_ops) {
 		td->prof_io_ops = *ops->io_ops;
+		td->flags |= TD_F_PROFILE_OPS;
+	}
 }
 
 int profile_td_init(struct thread_data *td)

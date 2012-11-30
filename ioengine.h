@@ -45,12 +45,16 @@ struct io_u {
 	struct timeval start_time;
 	struct timeval issue_time;
 
+	struct fio_file *file;
+	unsigned int flags;
+	enum fio_ddir ddir;
+
 	/*
 	 * Allocated/set buffer and length
 	 */
-	void *buf;
 	unsigned long buflen;
 	unsigned long long offset;
+	void *buf;
 
 	/*
 	 * Initial seed for generating the buffer contents
@@ -73,8 +77,6 @@ struct io_u {
 	unsigned int resid;
 	unsigned int error;
 
-	enum fio_ddir ddir;
-
 	/*
 	 * io engine private data
 	 */
@@ -83,10 +85,6 @@ struct io_u {
 		unsigned int seen;
 		void *engine_data;
 	};
-
-	unsigned int flags;
-
-	struct fio_file *file;
 
 	struct flist_head list;
 

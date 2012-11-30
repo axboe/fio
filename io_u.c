@@ -290,10 +290,12 @@ static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
 
 static int get_next_offset(struct thread_data *td, struct io_u *io_u)
 {
-	struct prof_io_ops *ops = &td->prof_io_ops;
+	if (td->flags & TD_F_PROFILE_OPS) {
+		struct prof_io_ops *ops = &td->prof_io_ops;
 
-	if (ops->fill_io_u_off)
-		return ops->fill_io_u_off(td, io_u);
+		if (ops->fill_io_u_off)
+			return ops->fill_io_u_off(td, io_u);
+	}
 
 	return __get_next_offset(td, io_u);
 }
@@ -368,10 +370,12 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 
 static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
 {
-	struct prof_io_ops *ops = &td->prof_io_ops;
+	if (td->flags & TD_F_PROFILE_OPS) {
+		struct prof_io_ops *ops = &td->prof_io_ops;
 
-	if (ops->fill_io_u_size)
-		return ops->fill_io_u_size(td, io_u);
+		if (ops->fill_io_u_size)
+			return ops->fill_io_u_size(td, io_u);
+	}
 
 	return __get_next_buflen(td, io_u);
 }
@@ -960,10 +964,12 @@ out:
 
 static struct fio_file *get_next_file(struct thread_data *td)
 {
-	struct prof_io_ops *ops = &td->prof_io_ops;
+	if (!(td->flags & TD_F_PROFILE_OPS)) {
+		struct prof_io_ops *ops = &td->prof_io_ops;
 
-	if (ops->get_next_file)
-		return ops->get_next_file(td);
+		if (ops->get_next_file)
+			return ops->get_next_file(td);
+	}
 
 	return __get_next_file(td);
 }
@@ -1040,7 +1046,10 @@ again:
 
 static int check_get_trim(struct thread_data *td, struct io_u *io_u)
 {
-	if (td->o.trim_backlog && td->trim_entries) {
+	if (!(td->flags & TD_F_TRIM_BACKLOG))
+		return 0;
+
+	if (td->trim_entries) {
 		int get_trim = 0;
 
 		if (td->trim_batch) {
@@ -1063,7 +1072,10 @@ static int check_get_trim(struct thread_data *td, struct io_u *io_u)
 
 static int check_get_verify(struct thread_data *td, struct io_u *io_u)
 {
-	if (td->o.verify_backlog && td->io_hist_len) {
+	if (!(td->flags & TD_F_VER_BACKLOG))
+		return 0;
+
+	if (td->io_hist_len) {
 		int get_verify = 0;
 
 		if (td->verify_batch)
@@ -1154,7 +1166,7 @@ struct io_u *get_io_u(struct thread_data *td)
 	/*
 	 * If using an iolog, grab next piece if any available.
 	 */
-	if (td->o.read_iolog_file) {
+	if (td->flags & TD_F_READ_IOLOG) {
 		if (read_iolog_get(td, io_u))
 			goto err_put;
 	} else if (set_io_u_file(td, io_u)) {
@@ -1175,12 +1187,12 @@ struct io_u *get_io_u(struct thread_data *td)
 		f->last_pos = io_u->offset + io_u->buflen;
 
 		if (io_u->ddir == DDIR_WRITE) {
-			if (td->o.refill_buffers) {
+			if (td->flags & TD_F_REFILL_BUFFERS) {
 				io_u_fill_buffer(td, io_u,
 					io_u->xfer_buflen, io_u->xfer_buflen);
-			} else if (td->o.scramble_buffers)
+			} else if (td->flags & TD_F_SCRAMBLE_BUFFERS)
 				do_scramble = 1;
-			if (td->o.verify != VERIFY_NONE) {
+			if (td->flags & TD_F_VER_NONE) {
 				populate_verify_io_u(td, io_u);
 				do_scramble = 0;
 			}

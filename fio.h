@@ -309,11 +309,22 @@ struct thread_options {
 	unsigned int sync_file_range;
 };
 
+enum {
+	TD_F_VER_BACKLOG	= 1,
+	TD_F_TRIM_BACKLOG	= 2,
+	TD_F_READ_IOLOG		= 4,
+	TD_F_REFILL_BUFFERS	= 8,
+	TD_F_SCRAMBLE_BUFFERS	= 16,
+	TD_F_VER_NONE		= 32,
+	TD_F_PROFILE_OPS	= 64,
+};
+
 /*
  * This describes a single thread/process executing a fio job.
  */
 struct thread_data {
 	struct thread_options o;
+	unsigned long flags;
 	void *eo;
 	char verror[FIO_VERROR_SIZE];
 	pthread_t thread;
