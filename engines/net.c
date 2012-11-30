@@ -881,6 +881,11 @@ static int fio_netio_setup(struct thread_data *td)
 	return 0;
 }
 
+static void fio_netio_terminate(struct thread_data *td)
+{
+	kill(td->pid, SIGUSR2);
+}
+
 #ifdef FIO_HAVE_SPLICE
 static int fio_netio_setup_splice(struct thread_data *td)
 {
@@ -909,11 +914,12 @@ static struct ioengine_ops ioengine_splice = {
 	.init			= fio_netio_init,
 	.cleanup		= fio_netio_cleanup,
 	.open_file		= fio_netio_open_file,
-	.close_file		= generic_close_file,
+	.close_file		= fio_netio_close_file,
+	.terminate		= fio_netio_terminate,
 	.options		= options,
 	.option_struct_size	= sizeof(struct netio_options),
 	.flags			= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR |
-				  FIO_SIGTERM | FIO_PIPEIO,
+				  FIO_PIPEIO,
 };
 #endif
 
@@ -927,10 +933,11 @@ static struct ioengine_ops ioengine_rw = {
 	.cleanup		= fio_netio_cleanup,
 	.open_file		= fio_netio_open_file,
 	.close_file		= fio_netio_close_file,
+	.terminate		= fio_netio_terminate,
 	.options		= options,
 	.option_struct_size	= sizeof(struct netio_options),
 	.flags			= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR |
-				  FIO_SIGTERM | FIO_PIPEIO,
+				  FIO_PIPEIO,
 };
 
 static int str_hostname_cb(void *data, const char *input)

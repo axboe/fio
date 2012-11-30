@@ -1,7 +1,7 @@
 #ifndef FIO_IOENGINE_H
 #define FIO_IOENGINE_H
 
-#define FIO_IOOPS_VERSION	13
+#define FIO_IOOPS_VERSION	14
 
 enum {
 	IO_U_F_FREE		= 1 << 0,
@@ -120,6 +120,7 @@ struct ioengine_ops {
 	int (*open_file)(struct thread_data *, struct fio_file *);
 	int (*close_file)(struct thread_data *, struct fio_file *);
 	int (*get_file_size)(struct thread_data *, struct fio_file *);
+	void (*terminate)(struct thread_data *);
 	int option_struct_size;
 	struct fio_option *options;
 	void *data;
@@ -134,10 +135,9 @@ enum fio_ioengine_flags {
 	FIO_NODISKUTIL  = 1 << 4,	/* diskutil can't handle filename */
 	FIO_UNIDIR	= 1 << 5,	/* engine is uni-directional */
 	FIO_NOIO	= 1 << 6,	/* thread does only pseudo IO */
-	FIO_SIGTERM	= 1 << 7,	/* needs SIGTERM to exit */
-	FIO_PIPEIO	= 1 << 8,	/* input/output no seekable */
-	FIO_BARRIER	= 1 << 9,	/* engine supports barriers */
-	FIO_MEMALIGN	= 1 << 10,	/* engine wants aligned memory */
+	FIO_PIPEIO	= 1 << 7,	/* input/output no seekable */
+	FIO_BARRIER	= 1 << 8,	/* engine supports barriers */
+	FIO_MEMALIGN	= 1 << 9,	/* engine wants aligned memory */
 };
 
 /*
