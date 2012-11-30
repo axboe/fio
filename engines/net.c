@@ -42,7 +42,8 @@ struct udp_close_msg {
 
 enum {
 	FIO_LINK_CLOSE = 0x89,
-	FIO_LINK_CLOSE_MAGIC = 0x6c696e6b,
+	FIO_LINK_OPEN_CLOSE_MAGIC = 0x6c696e6b,
+	FIO_LINK_OPEN = 0x98,
 
 	FIO_TYPE_TCP	= 1,
 	FIO_TYPE_UDP	= 2,
@@ -329,7 +330,7 @@ static int is_udp_close(struct io_u *io_u, int len)
 		return 0;
 
 	msg = io_u->xfer_buf;
-	if (ntohl(msg->magic) != FIO_LINK_CLOSE_MAGIC)
+	if (ntohl(msg->magic) != FIO_LINK_OPEN_CLOSE_MAGIC)
 		return 0;
 	if (ntohl(msg->cmd) != FIO_LINK_CLOSE)
 		return 0;
@@ -503,21 +504,6 @@ err:
 	return 1;
 }
 
-static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
-{
-	int ret;
-	struct netio_options *o = td->eo;
-
-	if (o->listen)
-		ret = fio_netio_accept(td, f);
-	else
-		ret = fio_netio_connect(td, f);
-
-	if (ret)
-		f->fd = -1;
-	return ret;
-}
-
 static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
@@ -525,7 +511,7 @@ static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
 	struct sockaddr *to = (struct sockaddr *) &nd->addr;
 	int ret;
 
-	msg.magic = htonl(FIO_LINK_CLOSE_MAGIC);
+	msg.magic = htonl(FIO_LINK_OPEN_CLOSE_MAGIC);
 	msg.cmd = htonl(FIO_LINK_CLOSE);
 
 	ret = sendto(f->fd, &msg, sizeof(msg), MSG_WAITALL, to,
@@ -546,6 +532,84 @@ static int fio_netio_close_file(struct thread_data *td, struct fio_file *f)
 		fio_netio_udp_close(td, f);
 
 	return generic_close_file(td, f);
+}
+
+static int fio_netio_udp_recv_open(struct thread_data *td, struct fio_file *f)
+{
+	struct netio_data *nd = td->io_ops->data;
+	struct udp_close_msg msg;
+	struct sockaddr *to = (struct sockaddr *) &nd->addr;
+	fio_socklen_t len = sizeof(nd->addr);
+	int ret;
+
+	ret = recvfrom(f->fd, &msg, sizeof(msg), MSG_WAITALL, to, &len);
+	if (ret < 0) {
+		td_verror(td, errno, "sendto udp link open");
+		return ret;
+	}
+
+	if (ntohl(msg.magic) != FIO_LINK_OPEN_CLOSE_MAGIC ||
+	    ntohl(msg.cmd) != FIO_LINK_OPEN) {
+		log_err("fio: bad udp open magic %x/%x\n", ntohl(msg.magic),
+								ntohl(msg.cmd));
+		return -1;
+	}
+
+	return 0;
+}
+
+static int fio_netio_udp_send_open(struct thread_data *td, struct fio_file *f)
+{
+	struct netio_data *nd = td->io_ops->data;
+	struct udp_close_msg msg;
+	struct sockaddr *to = (struct sockaddr *) &nd->addr;
+	int ret;
+
+	msg.magic = htonl(FIO_LINK_OPEN_CLOSE_MAGIC);
+	msg.cmd = htonl(FIO_LINK_OPEN);
+
+	ret = sendto(f->fd, &msg, sizeof(msg), MSG_WAITALL, to,
+			sizeof(nd->addr));
+	if (ret < 0) {
+		td_verror(td, errno, "sendto udp link open");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
+{
+	int ret;
+	struct netio_options *o = td->eo;
+
+	if (o->listen)
+		ret = fio_netio_accept(td, f);
+	else
+		ret = fio_netio_connect(td, f);
+
+	if (ret) {
+		f->fd = -1;
+		return ret;
+	}
+
+	if (o->proto == FIO_TYPE_UDP) {
+		if (td_write(td))
+			ret = fio_netio_udp_send_open(td, f);
+		else {
+			int state;
+
+			state = td->runstate;
+			td_set_runstate(td, TD_SETTING_UP);
+			ret = fio_netio_udp_recv_open(td, f);
+			td_set_runstate(td, state);
+		}
+	}
+
+	if (ret)
+		fio_netio_close_file(td, f);
+
+	return ret;
 }
 
 static int fio_netio_setup_connect_inet(struct thread_data *td,
