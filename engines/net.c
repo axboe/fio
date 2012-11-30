@@ -33,6 +33,7 @@ struct netio_options {
 	unsigned int port;
 	unsigned int proto;
 	unsigned int listen;
+	unsigned int pingpong;
 };
 
 struct udp_close_msg {
@@ -93,6 +94,12 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct netio_options, listen),
 		.help	= "Listen for incoming TCP connections",
+	},
+	{
+		.name	= "pingpong",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct netio_options, pingpong),
+		.help	= "Ping-pong IO requests",
 	},
 	{
 		.name	= NULL,
@@ -288,7 +295,7 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
-	int ret, flags = OS_MSG_DONTWAIT;
+	int ret, flags = 0;
 
 	do {
 		if (o->proto == FIO_TYPE_UDP) {
@@ -302,8 +309,8 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 			 * if we are going to write more, set MSG_MORE
 			 */
 #ifdef MSG_MORE
-			if (td->this_io_bytes[DDIR_WRITE] + io_u->xfer_buflen <
-			    td->o.size)
+			if ((td->this_io_bytes[DDIR_WRITE] + io_u->xfer_buflen <
+			    td->o.size) && !o->pingpong)
 				flags |= MSG_MORE;
 #endif
 			ret = send(io_u->file->fd, io_u->xfer_buf,
@@ -315,8 +322,6 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 		ret = poll_wait(td, io_u->file->fd, POLLOUT);
 		if (ret <= 0)
 			break;
-
-		flags &= ~OS_MSG_DONTWAIT;
 	} while (1);
 
 	return ret;
@@ -342,7 +347,7 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
-	int ret, flags = OS_MSG_DONTWAIT;
+	int ret, flags = 0;
 
 	do {
 		if (o->proto == FIO_TYPE_UDP) {
@@ -367,28 +372,26 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 		ret = poll_wait(td, io_u->file->fd, POLLIN);
 		if (ret <= 0)
 			break;
-		flags &= ~OS_MSG_DONTWAIT;
 		flags |= MSG_WAITALL;
 	} while (1);
 
 	return ret;
 }
 
-static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
+static int __fio_netio_queue(struct thread_data *td, struct io_u *io_u,
+			     enum fio_ddir ddir)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
 	int ret;
 
-	fio_ro_check(td, io_u);
-
-	if (io_u->ddir == DDIR_WRITE) {
+	if (ddir == DDIR_WRITE) {
 		if (!nd->use_splice || o->proto == FIO_TYPE_UDP ||
 		    o->proto == FIO_TYPE_UNIX)
 			ret = fio_netio_send(td, io_u);
 		else
 			ret = fio_netio_splice_out(td, io_u);
-	} else if (io_u->ddir == DDIR_READ) {
+	} else if (ddir == DDIR_READ) {
 		if (!nd->use_splice || o->proto == FIO_TYPE_UDP ||
 		    o->proto == FIO_TYPE_UNIX)
 			ret = fio_netio_recv(td, io_u);
@@ -405,7 +408,7 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 		} else {
 			int err = errno;
 
-			if (io_u->ddir == DDIR_WRITE && err == EMSGSIZE)
+			if (ddir == DDIR_WRITE && err == EMSGSIZE)
 				return FIO_Q_BUSY;
 
 			io_u->error = err;
@@ -416,6 +419,28 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 		td_verror(td, io_u->error, "xfer");
 
 	return FIO_Q_COMPLETED;
+}
+
+static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
+{
+	struct netio_options *o = td->eo;
+	int ret;
+
+	fio_ro_check(td, io_u);
+
+	ret = __fio_netio_queue(td, io_u, io_u->ddir);
+	if (!o->pingpong || ret != FIO_Q_COMPLETED)
+		return ret;
+
+	/*
+	 * For ping-pong mode, receive or send reply as needed
+	 */
+	if (td_read(td) && io_u->ddir == DDIR_READ)
+		ret = __fio_netio_queue(td, io_u, DDIR_WRITE);
+	else if (td_write(td) && io_u->ddir == DDIR_WRITE)
+		ret = __fio_netio_queue(td, io_u, DDIR_READ);
+
+	return ret;
 }
 
 static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
