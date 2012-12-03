@@ -5,7 +5,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#ifndef FIO_NO_HAVE_SHM_H
 #include <sys/shm.h>
+#endif
 #include <sys/mman.h>
 
 #include "fio.h"
@@ -118,6 +120,13 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 	int flags = MAP_PRIVATE;
 
 	td->mmapfd = 1;
+
+	if (td->o.mem_type == MEM_MMAPHUGE) {
+		unsigned long mask = td->o.hugepage_size - 1;
+
+		flags |= MAP_HUGETLB;
+		total_mem = (total_mem + mask) & ~mask;
+	}
 
 	if (td->o.mmapfile) {
 		td->mmapfd = open(td->o.mmapfile, O_RDWR|O_CREAT, 0644);

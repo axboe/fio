@@ -68,11 +68,23 @@ enum {
 	RW_SEQ_IDENT,
 };
 
+
+enum {
+	TD_F_VER_BACKLOG	= 1,
+	TD_F_TRIM_BACKLOG	= 2,
+	TD_F_READ_IOLOG		= 4,
+	TD_F_REFILL_BUFFERS	= 8,
+	TD_F_SCRAMBLE_BUFFERS	= 16,
+	TD_F_VER_NONE		= 32,
+	TD_F_PROFILE_OPS	= 64,
+};
+
 /*
  * This describes a single thread/process executing a fio job.
  */
 struct thread_data {
 	struct thread_options o;
+	unsigned long flags;
 	void *eo;
 	char verror[FIO_VERROR_SIZE];
 	pthread_t thread;
@@ -348,11 +360,6 @@ static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
 	assert(!(io_u->ddir == DDIR_WRITE && !td_write(td)));
 }
 
-#define BLOCKS_PER_MAP		(8 * sizeof(unsigned long))
-#define TO_MAP_BLOCK(f, b)	(b)
-#define RAND_MAP_IDX(f, b)	(TO_MAP_BLOCK(f, b) / BLOCKS_PER_MAP)
-#define RAND_MAP_BIT(f, b)	(TO_MAP_BLOCK(f, b) & (BLOCKS_PER_MAP - 1))
-
 #define REAL_MAX_JOBS		2048
 
 static inline enum error_type_bit td_error_type(enum fio_ddir ddir, int err)
@@ -452,8 +459,8 @@ enum {
 	TD_NOT_CREATED = 0,
 	TD_CREATED,
 	TD_INITIALIZED,
-	TD_SETTING_UP,
 	TD_RAMP,
+	TD_SETTING_UP,
 	TD_RUNNING,
 	TD_PRE_READING,
 	TD_VERIFYING,
@@ -594,6 +601,11 @@ enum {
 	FIO_RAND_DIST_RANDOM	= 0,
 	FIO_RAND_DIST_ZIPF,
 	FIO_RAND_DIST_PARETO,
+};
+
+enum {
+	FIO_RAND_GEN_TAUSWORTHE = 0,
+	FIO_RAND_GEN_LFSR,
 };
 
 #endif

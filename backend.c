@@ -34,7 +34,9 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
+#ifndef FIO_NO_HAVE_SHM_H
 #include <sys/shm.h>
+#endif
 #include <sys/mman.h>
 
 #include "fio.h"
@@ -1398,7 +1400,7 @@ static void reap_threads(unsigned int *nr_running, unsigned int *t_rate,
 			if (WIFSIGNALED(status)) {
 				int sig = WTERMSIG(status);
 
-				if (sig != SIGTERM)
+				if (sig != SIGTERM && sig != SIGUSR2)
 					log_err("fio: pid=%d, got signal=%d\n",
 							(int) td->pid, sig);
 				td->sig = sig;

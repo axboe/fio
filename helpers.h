@@ -15,5 +15,6 @@ extern int _weak inet_aton(const char *cp, struct in_addr *inp);
 extern int _weak clock_gettime(clockid_t clk_id, struct timespec *ts);
 extern int _weak sync_file_range(int fd, off64_t offset, off64_t nbytes,
 					unsigned int flags);
+extern int _weak posix_fadvise(int fd, off_t offset, off_t len, int advice);
 
 #endif /* FIO_HELPERS_H_ */

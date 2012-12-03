@@ -14,6 +14,8 @@
 
 typedef BOOL (WINAPI *CANCELIOEX)(HANDLE hFile, LPOVERLAPPED lpOverlapped);
 
+int geterrno_from_win_error (DWORD code, int deferrno);
+
 struct fio_overlapped {
 	OVERLAPPED o;
 	struct io_u *io_u;
@@ -48,6 +50,82 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter);
 static int fio_windowsaio_init(struct thread_data *td);
 static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f);
 static int fio_windowsaio_close_file(struct thread_data fio_unused *td, struct fio_file *f);
+static int win_to_poxix_error(DWORD winerr);
+
+static int win_to_poxix_error(DWORD winerr)
+{
+	switch (winerr)
+	{
+	case ERROR_FILE_NOT_FOUND:		return ENOENT;
+	case ERROR_PATH_NOT_FOUND:		return ENOENT;
+	case ERROR_ACCESS_DENIED:		return EACCES;
+	case ERROR_INVALID_HANDLE:		return EBADF;
+	case ERROR_NOT_ENOUGH_MEMORY:	return ENOMEM;
+	case ERROR_INVALID_DATA:		return EINVAL;
+	case ERROR_OUTOFMEMORY:			return ENOMEM;
+	case ERROR_INVALID_DRIVE:		return ENODEV;
+	case ERROR_NOT_SAME_DEVICE:		return EXDEV;
+	case ERROR_WRITE_PROTECT:		return EROFS;
+	case ERROR_BAD_UNIT:			return ENODEV;
+	case ERROR_SHARING_VIOLATION:	return EACCES;
+	case ERROR_LOCK_VIOLATION:		return EACCES;
+	case ERROR_SHARING_BUFFER_EXCEEDED:	return ENOLCK;
+	case ERROR_HANDLE_DISK_FULL:	return ENOSPC;
+	case ERROR_NOT_SUPPORTED:		return ENOSYS;
+	case ERROR_FILE_EXISTS:			return EEXIST;
+	case ERROR_CANNOT_MAKE:			return EPERM;
+	case ERROR_INVALID_PARAMETER:	return EINVAL;
+	case ERROR_NO_PROC_SLOTS:		return EAGAIN;
+	case ERROR_BROKEN_PIPE:			return EPIPE;
+	case ERROR_OPEN_FAILED:			return EIO;
+	case ERROR_NO_MORE_SEARCH_HANDLES:	return ENFILE;
+	case ERROR_CALL_NOT_IMPLEMENTED:	return ENOSYS;
+	case ERROR_INVALID_NAME:		return ENOENT;
+	case ERROR_WAIT_NO_CHILDREN:	return ECHILD;
+	case ERROR_CHILD_NOT_COMPLETE:	return EBUSY;
+	case ERROR_DIR_NOT_EMPTY:		return ENOTEMPTY;
+	case ERROR_SIGNAL_REFUSED:		return EIO;
+	case ERROR_BAD_PATHNAME:		return ENOENT;
+	case ERROR_SIGNAL_PENDING:		return EBUSY;
+	case ERROR_MAX_THRDS_REACHED:	return EAGAIN;
+	case ERROR_BUSY:				return EBUSY;
+	case ERROR_ALREADY_EXISTS:		return EEXIST;
+	case ERROR_NO_SIGNAL_SENT:		return EIO;
+	case ERROR_FILENAME_EXCED_RANGE:	return EINVAL;
+	case ERROR_META_EXPANSION_TOO_LONG:	return EINVAL;
+	case ERROR_INVALID_SIGNAL_NUMBER:	return EINVAL;
+	case ERROR_THREAD_1_INACTIVE:	return EINVAL;
+	case ERROR_BAD_PIPE:			return EINVAL;
+	case ERROR_PIPE_BUSY:			return EBUSY;
+	case ERROR_NO_DATA:				return EPIPE;
+	case ERROR_MORE_DATA:			return EAGAIN;
+	case ERROR_DIRECTORY:			return ENOTDIR;
+	case ERROR_PIPE_CONNECTED:		return EBUSY;
+	case ERROR_NO_TOKEN:			return EINVAL;
+	case ERROR_PROCESS_ABORTED:		return EFAULT;
+	case ERROR_BAD_DEVICE:			return ENODEV;
+	case ERROR_BAD_USERNAME:		return EINVAL;
+	case ERROR_OPEN_FILES:			return EAGAIN;
+	case ERROR_ACTIVE_CONNECTIONS:	return EAGAIN;
+	case ERROR_DEVICE_IN_USE:		return EAGAIN;
+	case ERROR_INVALID_AT_INTERRUPT_TIME:	return EINTR;
+	case ERROR_IO_DEVICE:			return EIO;
+	case ERROR_NOT_OWNER:			return EPERM;
+	case ERROR_END_OF_MEDIA:		return ENOSPC;
+	case ERROR_EOM_OVERFLOW:		return ENOSPC;
+	case ERROR_BEGINNING_OF_MEDIA:	return ESPIPE;
+	case ERROR_SETMARK_DETECTED:	return ESPIPE;
+	case ERROR_NO_DATA_DETECTED:	return ENOSPC;
+	case ERROR_POSSIBLE_DEADLOCK:	return EDEADLOCK;
+	case ERROR_CRC:					return EIO;
+	case ERROR_NEGATIVE_SEEK:		return EINVAL;
+	case ERROR_DISK_FULL:			return ENOSPC;
+	case ERROR_NOACCESS:			return EFAULT;
+	case ERROR_FILE_INVALID:		return ENXIO;
+	}
+
+	return winerr;
+}
 
 int sync_file_range(int fd, off64_t offset, off64_t nbytes,
 			   unsigned int flags)
@@ -350,7 +428,7 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 	case DDIR_SYNC_FILE_RANGE:
 		success = FlushFileBuffers(io_u->file->hFile);
 		if (!success)
-		    io_u->error = GetLastError();
+		    io_u->error = win_to_poxix_error(GetLastError());
 
 		return FIO_Q_COMPLETED;
 		break;
@@ -368,7 +446,7 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 	if (success || GetLastError() == ERROR_IO_PENDING)
 		rc = FIO_Q_QUEUED;
 	else {
-		io_u->error = GetLastError();
+		io_u->error = win_to_poxix_error(GetLastError());
 		io_u->resid = io_u->xfer_buflen;
 	}
 
@@ -390,7 +468,7 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 	wd = ctx->wd;
 
 	do {
-		if (!GetQueuedCompletionStatus(ctx->iocp, &bytes, &ulKey, &ovl, 250))
+		if (!GetQueuedCompletionStatus(ctx->iocp, &bytes, &ulKey, &ovl, 250) && ovl == NULL)
 			continue;
 
 		fov = CONTAINING_RECORD(ovl, struct fio_overlapped, o);
@@ -401,7 +479,7 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 			io_u->error = 0;
 		} else {
 			io_u->resid = io_u->xfer_buflen;
-			io_u->error = ovl->Internal;
+			io_u->error = win_to_poxix_error(GetLastError());
 		}
 
 		fov->io_complete = TRUE;

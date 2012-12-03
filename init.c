@@ -9,7 +9,9 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/ipc.h>
+#ifndef FIO_NO_HAVE_SHM_H
 #include <sys/shm.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -603,6 +605,13 @@ static int fixup_options(struct thread_data *td)
 		td->o.compress_percentage = 0;
 	}
 
+	/*
+	 * Using a non-uniform random distribution excludes usage of
+	 * a random map
+	 */
+	if (td->o.random_distribution != FIO_RAND_DIST_RANDOM)
+		td->o.norandommap = 1;
+
 	return ret;
 }
 
@@ -765,6 +774,24 @@ int ioengine_load(struct thread_data *td)
 	return 0;
 }
 
+static void init_flags(struct thread_data *td)
+{
+	struct thread_options *o = &td->o;
+
+	if (o->verify_backlog)
+		td->flags |= TD_F_VER_BACKLOG;
+	if (o->trim_backlog)
+		td->flags |= TD_F_TRIM_BACKLOG;
+	if (o->read_iolog_file)
+		td->flags |= TD_F_READ_IOLOG;
+	if (o->refill_buffers)
+		td->flags |= TD_F_REFILL_BUFFERS;
+	if (o->scramble_buffers)
+		td->flags |= TD_F_SCRAMBLE_BUFFERS;
+	if (o->verify != VERIFY_NONE)
+		td->flags |= TD_F_VER_NONE;
+}
+
 /*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
@@ -782,6 +809,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	 */
 	if (td == &def_thread)
 		return 0;
+
+	init_flags(td);
 
 	/*
 	 * if we are just dumping the output command line, don't add the job

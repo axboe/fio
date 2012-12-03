@@ -17,11 +17,14 @@ enum {
 	os_netbsd,
 	os_solaris,
 	os_windows,
+	os_android,
 
 	os_nr,
 };
 
-#if defined(__linux__)
+#if defined(__ANDROID__)
+#include "os-android.h"
+#elif defined(__linux__)
 #include "os-linux.h"
 #elif defined(__FreeBSD__)
 #include "os-freebsd.h"
@@ -65,15 +68,11 @@ typedef struct aiocb os_aiocb_t;
 #define OS_MSG_DONTWAIT	MSG_DONTWAIT
 #endif
 
-#ifndef FIO_HAVE_FADVISE
-#define posix_fadvise(fd, off, len, advice)	(0)
-
 #ifndef POSIX_FADV_DONTNEED
 #define POSIX_FADV_DONTNEED	(0)
 #define POSIX_FADV_SEQUENTIAL	(0)
 #define POSIX_FADV_RANDOM	(0)
 #endif
-#endif /* FIO_HAVE_FADVISE */
 
 #ifndef FIO_HAVE_CPU_AFFINITY
 #define fio_setaffinity(pid, mask)	(0)
@@ -95,6 +94,7 @@ typedef unsigned long os_cpu_mask_t;
 
 #ifndef FIO_HAVE_HUGETLB
 #define SHM_HUGETLB			0
+#define MAP_HUGETLB			0
 #ifndef FIO_HUGE_PAGE
 #define FIO_HUGE_PAGE			0
 #endif
@@ -102,6 +102,10 @@ typedef unsigned long os_cpu_mask_t;
 #ifndef FIO_HUGE_PAGE
 #define FIO_HUGE_PAGE			4194304
 #endif
+#endif
+
+#ifndef FIO_HAVE_MMAP_HUGE
+#define MAP_HUGETLB			0
 #endif
 
 #ifndef FIO_O_NOATIME
@@ -170,6 +174,7 @@ static inline uint64_t fio_swap64(uint64_t val)
 }
 #endif
 
+#ifndef FIO_HAVE_BYTEORDER_FUNCS
 #ifdef FIO_LITTLE_ENDIAN
 #define __le16_to_cpu(x)		(x)
 #define __le32_to_cpu(x)		(x)
@@ -185,6 +190,7 @@ static inline uint64_t fio_swap64(uint64_t val)
 #define __cpu_to_le32(x)		fio_swap32(x)
 #define __cpu_to_le64(x)		fio_swap64(x)
 #endif
+#endif /* FIO_HAVE_BYTEORDER_FUNCS */
 
 #define le16_to_cpu(val) ({			\
 	uint16_t *__val = &(val);		\

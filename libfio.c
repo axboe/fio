@@ -168,6 +168,7 @@ void td_set_runstate(struct thread_data *td, int runstate)
 void fio_terminate_threads(int group_id)
 {
 	struct thread_data *td;
+	pid_t pid = getpid();
 	int i;
 
 	dprint(FD_PROCESS, "terminate group_id=%d\n", group_id);
@@ -182,15 +183,15 @@ void fio_terminate_threads(int group_id)
 			/*
 			 * if the thread is running, just let it exit
 			 */
-			if (!td->pid)
+			if (!td->pid || pid == td->pid)
 				continue;
 			else if (td->runstate < TD_RAMP)
 				kill(td->pid, SIGTERM);
 			else {
 				struct ioengine_ops *ops = td->io_ops;
 
-				if (ops && (ops->flags & FIO_SIGTERM))
-					kill(td->pid, SIGTERM);
+				if (ops && ops->terminate)
+					ops->terminate(td);
 			}
 		}
 	}

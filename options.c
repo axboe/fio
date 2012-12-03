@@ -1615,6 +1615,23 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
+		.name	= "random_generator",
+		.type	= FIO_OPT_STR,
+		.off1	= td_var_offset(random_generator),
+		.help	= "Type of random number generator to use",
+		.def	= "tausworthe",
+		.posval	= {
+			  { .ival = "tausworthe",
+			    .oval = FIO_RAND_GEN_TAUSWORTHE,
+			    .help = "Strong Tausworthe generator",
+			  },
+			  { .ival = "lfsr",
+			    .oval = FIO_RAND_GEN_LFSR,
+			    .help = "Variable length LFSR",
+			  },
+		},
+	},
+	{
 		.name	= "random_distribution",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(random_distribution),

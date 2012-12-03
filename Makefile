@@ -1,10 +1,10 @@
 ifneq ($(origin CC), environment)
-CC	= gcc
+CC	= $(CROSS_COMPILE)gcc
 endif
 DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
 CPPFLAGS= -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	$(DEBUGFLAGS)
-OPTFLAGS= -O3 -fno-omit-frame-pointer -g $(EXTFLAGS)
+OPTFLAGS= -O3 -g $(EXTFLAGS)
 CFLAGS	= -std=gnu99 -Wwrite-strings -Wall $(OPTFLAGS)
 LIBS	= -lm -lz $(EXTLIBS)
 PROGS	= fio
@@ -20,7 +20,8 @@ SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		lib/num2str.c lib/ieee754.c $(wildcard crc/*.c) engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
 		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
-		cconv.c lib/prio_tree.c lib/zipf.c json.c gettime-thread.c
+		cconv.c json.c lib/zipf.c lib/axmap.c lib/lfsr.c \
+		gettime-thread.c
 
 ifeq ($(UNAME), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c helpers.c cgroup.c trim.c \
@@ -30,6 +31,14 @@ ifeq ($(UNAME), Linux)
 		engines/fusion-aw.c engines/falloc.c engines/e4defrag.c
   LIBS += -lpthread -ldl -lrt -laio
   LDFLAGS += -rdynamic
+endif
+ifeq ($(UNAME), Android)
+  SOURCE += diskutil.c fifo.c blktrace.c helpers.c trim.c \
+		engines/splice.c profiles/tiobench.c engines/falloc.c \
+		engines/e4defrag.c
+  LIBS += -ldl
+  LDFLAGS += -rdynamic
+  CPPFLAGS += -DFIO_NO_HAVE_SHM_H
 endif
 ifeq ($(UNAME), SunOS)
   SOURCE += fifo.c lib/strsep.c helpers.c engines/posixaio.c \
@@ -88,13 +97,19 @@ T_ZIPF_OBS = t/genzipf.o
 T_ZIPF_OBJS += t/log.o lib/ieee754.o lib/rand.o lib/zipf.o t/genzipf.o
 T_ZIPF_PROGS = t/genzipf
 
+T_AXMAP_OBJS = t/axmap.o
+T_AXMAP_OBJS += lib/lfsr.o lib/axmap.o
+T_AXMAP_PROGS = t/axmap
+
 T_OBJS = $(T_SMALLOC_OBJS)
 T_OBJS += $(T_IEEE_OBJS)
 T_OBJS += $(T_ZIPF_OBJS)
+T_OBJS += $(T_AXMAP_OBJS)
 
 T_PROGS = $(T_SMALLOC_PROGS)
 T_PROGS += $(T_IEEE_PROGS)
 T_PROGS += $(T_ZIPF_PROGS)
+T_PROGS += $(T_AXMAP_PROGS)
 
 ifneq ($(findstring $(MAKEFLAGS),s),s)
 ifndef V
@@ -171,6 +186,9 @@ gfio: $(GFIO_OBJS)
 
 t/genzipf: $(T_ZIPF_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_ZIPF_OBJS) $(LIBS) $(LDFLAGS)
+
+t/axmap: $(T_AXMAP_OBJS)
+	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_AXMAP_OBJS) $(LIBS) $(LDFLAGS)
 
 .depend: $(SOURCE)
 	$(QUIET_DEP)$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SOURCE) 1> .depend

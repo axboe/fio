@@ -123,6 +123,8 @@ struct thread_options {
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
 
+	unsigned int random_generator;
+
 	unsigned int hugepage_size;
 	unsigned int rw_min_bs;
 	unsigned int thinktime;
@@ -325,6 +327,8 @@ struct thread_options_pack {
 	uint32_t random_distribution;
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
+
+	uint32_t random_generator;
 
 	uint32_t hugepage_size;
 	uint32_t rw_min_bs;

@@ -61,7 +61,7 @@ bottom, it contains the following basic parameters:
 
 	Num threads	How many threads or processes should we spread
 			this workload over.
-	
+
 The above are the basic parameters defined for a workload, in addition
 there's a multitude of parameters that modify other aspects of how this
 job behaves.
@@ -274,11 +274,14 @@ filename=str	Fio normally makes up a filename based on the job name,
 		as the two working files, you would use
 		filename=/dev/sda:/dev/sdb. On Windows, disk devices are accessed
 		as \\.\PhysicalDrive0 for the first device, \\.\PhysicalDrive1
-		for the second etc.  If the wanted filename does need to 
-		include a colon, then escape that with a '\' character. 
-		For instance, if the filename is "/dev/dsk/foo@3,0:c", 
-		then you would use filename="/dev/dsk/foo@3,0\:c". 
-		'-' is a reserved name, meaning stdin or stdout. Which of the 
+		for the second etc.
+		Note: Windows and FreeBSD prevent write access to areas of the disk
+		containing in-use data (e.g. filesystems).
+		If the wanted filename does need to include a colon, then escape that
+ 		with a '\' character.
+		For instance, if the filename is "/dev/dsk/foo@3,0:c",
+		then you would use filename="/dev/dsk/foo@3,0\:c".
+		'-' is a reserved name, meaning stdin or stdout. Which of the
 		two depends on the read/write direction set.
 
 opendir=str	Tell fio to recursively add any file it can find in this
@@ -716,6 +719,25 @@ rwmixwrite=int	How large a percentage of the mix should be writes. If both
 		if fio is asked to limit reads or writes to a certain rate.
 		If that is the case, then the distribution may be skewed.
 
+random_distribution=str:float	By default, fio will use a completely uniform
+		random distribution when asked to perform random IO. Sometimes
+		it is useful to skew the distribution in specific ways,
+		ensuring that some parts of the data is more hot than others.
+		fio includes the following distribution models:
+
+		random		Uniform random distribution
+		zipf		Zipf distribution
+		pareto		Pareto distribution
+
+		When using a zipf or pareto distribution, an input value
+		is also needed to define the access pattern. For zipf, this
+		is the zipf theta. For pareto, it's the pareto power. Fio
+		includes a test program, genzipf, that can be used visualize
+		what the given input values will yield in terms of hit rates.
+		If you wanted to use zipf with a theta of 1.2, you would use
+		random_distribution=zipf:1.2 as the option. If a non-uniform
+		model is used, fio will disable use of the random map.
+
 norandommap	Normally fio will cover every block of the file when doing
 		random IO. If this option is given, fio will just get a
 		new random offset without looking at past io history. This
@@ -1067,7 +1089,7 @@ verify_backlog_batch=int	Control how many blocks fio will verify
 		less than verify_backlog then not all blocks will be verified,
 		if verify_backlog_batch is larger than verify_backlog, some
 		blocks will be verified more than once.
-		
+
 stonewall
 wait_for_previous Wait for preceeding jobs in the job file to exit, before
 		starting this one. Can be used to insert serialization
@@ -1113,7 +1135,7 @@ read_iolog=str	Open an iolog with the specified file name and replay the
 		for how to capture such logging data. For blktrace replay,
 		the file needs to be turned into a blkparse binary data
 		file first (blkparse <device> -o /dev/null -d file_for_fio.bin).
-		
+
 replay_no_stall=int When replaying I/O with read_iolog the default behavior
 		is to attempt to respect the time stamps within the log and
 		replay them with the appropriate delay between IOPS.  By
@@ -1270,12 +1292,12 @@ ignore_error=str Sometimes you want to ignore some errors during test
 		 may be symbol ('ENOSPC', 'ENOMEM') or integer.
 		 Example:
 			ignore_error=EAGAIN,ENOSPC:122
-		 This option will ignore EAGAIN from READ, and ENOSPC and 
-		 122(EDQUOT) from WRITE. 
+		 This option will ignore EAGAIN from READ, and ENOSPC and
+		 122(EDQUOT) from WRITE.
 
 error_dump=bool If set dump every error even if it is non fatal, true
 		by default. If disabled only fatal error will be dumped
-				 
+
 cgroup=str	Add job to this control group. If it doesn't exist, it will
 		be created. The system must have a mounted cgroup blkio
 		mount point for this to work. If your system doesn't have it
@@ -1362,7 +1384,7 @@ that defines them is selected.
 [e4defrag] donorname=str
 	        File will be used as a block donor(swap extents between files)
 [e4defrag] inplace=int
-		Configure donor file blocks allocation strategy		
+		Configure donor file blocks allocation strategy
 		0(default): Preallocate donor's file on init
 		1 	  : allocate space immidietly inside defragment event,
 			    and free right after event
@@ -1550,8 +1572,8 @@ Split up, the format is as follows:
 			  Read merges, write merges,
 			  Read ticks, write ticks,
 			  Time spent in queue, disk utilization percentage
-	Additional Info (dependant on continue_on_error, default off): total # errors, first error code 
-	
+	Additional Info (dependant on continue_on_error, default off): total # errors, first error code
+
 	Additional Info (dependant on description being set): Text description
 
 Completion latency percentiles can be a grouping of up to 20 sets, so
@@ -1567,7 +1589,7 @@ there will be a disk utilization section.
 
 8.0 Trace file format
 ---------------------
-There are two trace file format that you can encounter. The older (v1) format 
+There are two trace file format that you can encounter. The older (v1) format
 is unsupported since version 1.20-rc3 (March 2008). It will still be described
 below in case that you get an old trace and want to understand it.
 
@@ -1604,7 +1626,7 @@ filename action
 The filename is given as an absolute path. The action can be one of these:
 
 add          Add the given filename to the trace
-open         Open the file with the given filename. The filename has to have 
+open         Open the file with the given filename. The filename has to have
              been added with the add action before.
 close        Close the file with the given filename. The file has to have been
              opened before.
@@ -1615,7 +1637,7 @@ The file io action format:
 filename action offset length
 
 The filename is given as an absolute path, and has to have been added and opened
-before it can be used with this format. The offset and length are given in 
+before it can be used with this format. The offset and length are given in
 bytes. The action can be one of these:
 
 wait       Wait for 'offset' microseconds. Everything below 100 is discarded.

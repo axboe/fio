@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 #include <errno.h>
 #include <assert.h>
 #include <netinet/in.h>
@@ -33,6 +34,7 @@ struct netio_options {
 	unsigned int port;
 	unsigned int proto;
 	unsigned int listen;
+	unsigned int pingpong;
 };
 
 struct udp_close_msg {
@@ -42,7 +44,8 @@ struct udp_close_msg {
 
 enum {
 	FIO_LINK_CLOSE = 0x89,
-	FIO_LINK_CLOSE_MAGIC = 0x6c696e6b,
+	FIO_LINK_OPEN_CLOSE_MAGIC = 0x6c696e6b,
+	FIO_LINK_OPEN = 0x98,
 
 	FIO_TYPE_TCP	= 1,
 	FIO_TYPE_UDP	= 2,
@@ -100,6 +103,12 @@ static struct fio_option options[] = {
 		.off1	= offsetof(struct netio_options, listen),
 		.help	= "Listen for incoming TCP connections",
 		.category = FIO_OPT_C_IO,
+	},
+	{
+		.name	= "pingpong",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct netio_options, pingpong),
+		.help	= "Ping-pong IO requests",
 	},
 	{
 		.name	= NULL,
@@ -295,7 +304,7 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
-	int ret, flags = OS_MSG_DONTWAIT;
+	int ret, flags = 0;
 
 	do {
 		if (o->proto == FIO_TYPE_UDP) {
@@ -309,8 +318,8 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 			 * if we are going to write more, set MSG_MORE
 			 */
 #ifdef MSG_MORE
-			if (td->this_io_bytes[DDIR_WRITE] + io_u->xfer_buflen <
-			    td->o.size)
+			if ((td->this_io_bytes[DDIR_WRITE] + io_u->xfer_buflen <
+			    td->o.size) && !o->pingpong)
 				flags |= MSG_MORE;
 #endif
 			ret = send(io_u->file->fd, io_u->xfer_buf,
@@ -322,8 +331,6 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 		ret = poll_wait(td, io_u->file->fd, POLLOUT);
 		if (ret <= 0)
 			break;
-
-		flags &= ~OS_MSG_DONTWAIT;
 	} while (1);
 
 	return ret;
@@ -337,7 +344,7 @@ static int is_udp_close(struct io_u *io_u, int len)
 		return 0;
 
 	msg = io_u->xfer_buf;
-	if (ntohl(msg->magic) != FIO_LINK_CLOSE_MAGIC)
+	if (ntohl(msg->magic) != FIO_LINK_OPEN_CLOSE_MAGIC)
 		return 0;
 	if (ntohl(msg->cmd) != FIO_LINK_CLOSE)
 		return 0;
@@ -349,7 +356,7 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
-	int ret, flags = OS_MSG_DONTWAIT;
+	int ret, flags = 0;
 
 	do {
 		if (o->proto == FIO_TYPE_UDP) {
@@ -368,32 +375,32 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 		}
 		if (ret > 0)
 			break;
+		else if (!ret && (flags & MSG_WAITALL))
+			break;
 
 		ret = poll_wait(td, io_u->file->fd, POLLIN);
 		if (ret <= 0)
 			break;
-		flags &= ~OS_MSG_DONTWAIT;
 		flags |= MSG_WAITALL;
 	} while (1);
 
 	return ret;
 }
 
-static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
+static int __fio_netio_queue(struct thread_data *td, struct io_u *io_u,
+			     enum fio_ddir ddir)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
 	int ret;
 
-	fio_ro_check(td, io_u);
-
-	if (io_u->ddir == DDIR_WRITE) {
+	if (ddir == DDIR_WRITE) {
 		if (!nd->use_splice || o->proto == FIO_TYPE_UDP ||
 		    o->proto == FIO_TYPE_UNIX)
 			ret = fio_netio_send(td, io_u);
 		else
 			ret = fio_netio_splice_out(td, io_u);
-	} else if (io_u->ddir == DDIR_READ) {
+	} else if (ddir == DDIR_READ) {
 		if (!nd->use_splice || o->proto == FIO_TYPE_UDP ||
 		    o->proto == FIO_TYPE_UNIX)
 			ret = fio_netio_recv(td, io_u);
@@ -410,7 +417,7 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 		} else {
 			int err = errno;
 
-			if (io_u->ddir == DDIR_WRITE && err == EMSGSIZE)
+			if (ddir == DDIR_WRITE && err == EMSGSIZE)
 				return FIO_Q_BUSY;
 
 			io_u->error = err;
@@ -421,6 +428,28 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 		td_verror(td, io_u->error, "xfer");
 
 	return FIO_Q_COMPLETED;
+}
+
+static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
+{
+	struct netio_options *o = td->eo;
+	int ret;
+
+	fio_ro_check(td, io_u);
+
+	ret = __fio_netio_queue(td, io_u, io_u->ddir);
+	if (!o->pingpong || ret != FIO_Q_COMPLETED)
+		return ret;
+
+	/*
+	 * For ping-pong mode, receive or send reply as needed
+	 */
+	if (td_read(td) && io_u->ddir == DDIR_READ)
+		ret = __fio_netio_queue(td, io_u, DDIR_WRITE);
+	else if (td_write(td) && io_u->ddir == DDIR_WRITE)
+		ret = __fio_netio_queue(td, io_u, DDIR_READ);
+
+	return ret;
 }
 
 static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
@@ -481,39 +510,33 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
 	fio_socklen_t socklen = sizeof(nd->addr);
+	int state;
 
 	if (o->proto == FIO_TYPE_UDP) {
 		f->fd = nd->listenfd;
 		return 0;
 	}
 
+	state = td->runstate;
+	td_set_runstate(td, TD_SETTING_UP);
+
 	log_info("fio: waiting for connection\n");
 
 	if (poll_wait(td, nd->listenfd, POLLIN) < 0)
-		return 1;
+		goto err;
 
 	f->fd = accept(nd->listenfd, (struct sockaddr *) &nd->addr, &socklen);
 	if (f->fd < 0) {
 		td_verror(td, errno, "accept");
-		return 1;
+		goto err;
 	}
 
+	reset_all_stats(td);
+	td_set_runstate(td, state);
 	return 0;
-}
-
-static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
-{
-	int ret;
-	struct netio_options *o = td->eo;
-
-	if (o->listen)
-		ret = fio_netio_accept(td, f);
-	else
-		ret = fio_netio_connect(td, f);
-
-	if (ret)
-		f->fd = -1;
-	return ret;
+err:
+	td_set_runstate(td, state);
+	return 1;
 }
 
 static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
@@ -523,7 +546,7 @@ static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
 	struct sockaddr *to = (struct sockaddr *) &nd->addr;
 	int ret;
 
-	msg.magic = htonl(FIO_LINK_CLOSE_MAGIC);
+	msg.magic = htonl(FIO_LINK_OPEN_CLOSE_MAGIC);
 	msg.cmd = htonl(FIO_LINK_CLOSE);
 
 	ret = sendto(f->fd, &msg, sizeof(msg), MSG_WAITALL, to,
@@ -546,10 +569,97 @@ static int fio_netio_close_file(struct thread_data *td, struct fio_file *f)
 	return generic_close_file(td, f);
 }
 
+static int fio_netio_udp_recv_open(struct thread_data *td, struct fio_file *f)
+{
+	struct netio_data *nd = td->io_ops->data;
+	struct udp_close_msg msg;
+	struct sockaddr *to = (struct sockaddr *) &nd->addr;
+	fio_socklen_t len = sizeof(nd->addr);
+	int ret;
+
+	ret = recvfrom(f->fd, &msg, sizeof(msg), MSG_WAITALL, to, &len);
+	if (ret < 0) {
+		td_verror(td, errno, "sendto udp link open");
+		return ret;
+	}
+
+	if (ntohl(msg.magic) != FIO_LINK_OPEN_CLOSE_MAGIC ||
+	    ntohl(msg.cmd) != FIO_LINK_OPEN) {
+		log_err("fio: bad udp open magic %x/%x\n", ntohl(msg.magic),
+								ntohl(msg.cmd));
+		return -1;
+	}
+
+	return 0;
+}
+
+static int fio_netio_udp_send_open(struct thread_data *td, struct fio_file *f)
+{
+	struct netio_data *nd = td->io_ops->data;
+	struct udp_close_msg msg;
+	struct sockaddr *to = (struct sockaddr *) &nd->addr;
+	int ret;
+
+	msg.magic = htonl(FIO_LINK_OPEN_CLOSE_MAGIC);
+	msg.cmd = htonl(FIO_LINK_OPEN);
+
+	ret = sendto(f->fd, &msg, sizeof(msg), MSG_WAITALL, to,
+			sizeof(nd->addr));
+	if (ret < 0) {
+		td_verror(td, errno, "sendto udp link open");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
+{
+	int ret;
+	struct netio_options *o = td->eo;
+
+	if (o->listen)
+		ret = fio_netio_accept(td, f);
+	else
+		ret = fio_netio_connect(td, f);
+
+	if (ret) {
+		f->fd = -1;
+		return ret;
+	}
+
+	if (o->proto == FIO_TYPE_UDP) {
+		if (td_write(td))
+			ret = fio_netio_udp_send_open(td, f);
+		else {
+			int state;
+
+			state = td->runstate;
+			td_set_runstate(td, TD_SETTING_UP);
+			ret = fio_netio_udp_recv_open(td, f);
+			td_set_runstate(td, state);
+		}
+	}
+
+	if (ret)
+		fio_netio_close_file(td, f);
+
+	return ret;
+}
+
 static int fio_netio_setup_connect_inet(struct thread_data *td,
 					const char *host, unsigned short port)
 {
 	struct netio_data *nd = td->io_ops->data;
+
+	if (!host) {
+		log_err("fio: connect with no host to connect to.\n");
+		if (td_read(td))
+			log_err("fio: did you forget to set 'listen'?\n");
+
+		td_verror(td, EINVAL, "no hostname= set");
+		return 1;
+	}
 
 	nd->addr.sin_family = AF_INET;
 	nd->addr.sin_port = htons(port);
@@ -780,6 +890,11 @@ static int fio_netio_setup(struct thread_data *td)
 	return 0;
 }
 
+static void fio_netio_terminate(struct thread_data *td)
+{
+	kill(td->pid, SIGUSR2);
+}
+
 #ifdef FIO_HAVE_SPLICE
 static int fio_netio_setup_splice(struct thread_data *td)
 {
@@ -808,11 +923,12 @@ static struct ioengine_ops ioengine_splice = {
 	.init			= fio_netio_init,
 	.cleanup		= fio_netio_cleanup,
 	.open_file		= fio_netio_open_file,
-	.close_file		= generic_close_file,
+	.close_file		= fio_netio_close_file,
+	.terminate		= fio_netio_terminate,
 	.options		= options,
 	.option_struct_size	= sizeof(struct netio_options),
 	.flags			= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR |
-				  FIO_SIGTERM | FIO_PIPEIO,
+				  FIO_PIPEIO,
 };
 #endif
 
@@ -826,10 +942,11 @@ static struct ioengine_ops ioengine_rw = {
 	.cleanup		= fio_netio_cleanup,
 	.open_file		= fio_netio_open_file,
 	.close_file		= fio_netio_close_file,
+	.terminate		= fio_netio_terminate,
 	.options		= options,
 	.option_struct_size	= sizeof(struct netio_options),
 	.flags			= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR |
-				  FIO_SIGTERM | FIO_PIPEIO,
+				  FIO_PIPEIO,
 };
 
 static int str_hostname_cb(void *data, const char *input)

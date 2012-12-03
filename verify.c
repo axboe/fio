@@ -690,6 +690,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			.hdr_num	= hdr_num,
 			.td		= td,
 		};
+		unsigned int verify_type;
 
 		if (ret && td->o.verify_fatal)
 			break;
@@ -708,7 +709,12 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			return EILSEQ;
 		}
 
-		switch (hdr->verify_type) {
+		if (td->o.verify != VERIFY_NONE)
+			verify_type = td->o.verify;
+		else
+			verify_type = hdr->verify_type;
+
+		switch (verify_type) {
 		case VERIFY_MD5:
 			ret = verify_io_u_md5(hdr, &vc);
 			break;
@@ -747,6 +753,10 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			log_err("Bad verify type %u\n", hdr->verify_type);
 			ret = EINVAL;
 		}
+
+		if (ret && verify_type != hdr->verify_type)
+			log_err("fio: verify type mismatch (%u media, %u given)\n",
+					hdr->verify_type, verify_type);
 	}
 
 done:

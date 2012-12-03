@@ -360,7 +360,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	long long ull, *ullp;
 	long ul1, ul2;
 	double uf;
-	char **cp;
+	char **cp = NULL;
 	int ret = 0, is_time = 0;
 	const struct value_pair *vp;
 	struct value_pair posval[PARSE_MAX_VP];
@@ -535,8 +535,6 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 				cp = td_var(data, o->off1);
 
 			*cp = strdup(ptr);
-		} else {
-			cp = NULL;
 		}
 
 		if (fn)

@@ -78,13 +78,29 @@ static struct node *hash_insert(struct node *n, unsigned long long val)
 	return n;
 }
 
+static void usage(void)
+{
+	printf("genzipf: test zipf/pareto values for fio input\n");
+	printf("\t-h\tThis help screen\n");
+	printf("\t-p\tGenerate size of data set that are hit by this percentage\n");
+	printf("\t-t\tDistribution type (zipf or pareto)\n");
+	printf("\t-i\tDistribution algorithm input (zipf theta or pareto power)\n");
+	printf("\t-b\tBlock size of a given range (in bytes)\n");
+	printf("\t-g\tSize of data set (in gigabytes)\n");
+	printf("\t-o\tNumber of output columns\n");
+	printf("\t-c\tOutput ranges in CSV format\n");
+}
+
 static int parse_options(int argc, char *argv[])
 {
-	const char *optstring = "t:g:i:o:b:p:c";
+	const char *optstring = "t:g:i:o:b:p:ch";
 	int c, dist_val_set = 0;
 
 	while ((c = getopt(argc, argv, optstring)) != -1) {
 		switch (c) {
+		case 'h':
+			usage();
+			return 1;
 		case 'p':
 			percentage = atof(optarg);
 			break;
