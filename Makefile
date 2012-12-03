@@ -196,7 +196,7 @@ t/axmap: $(T_AXMAP_OBJS)
 $(PROGS): .depend
 
 clean: FORCE
-	-rm -f .depend $(GFIO_OBJS )$(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE
+	-rm -f .depend $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE
 
 cscope:
 	@cscope -b -R
