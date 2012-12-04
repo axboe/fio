@@ -1630,6 +1630,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Variable length LFSR",
 			  },
 		},
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "random_distribution",
@@ -1652,6 +1654,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Pareto distribution",
 			  },
 		},
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "nrfiles",
