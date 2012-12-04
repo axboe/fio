@@ -319,6 +319,18 @@ enum {
 	TD_F_PROFILE_OPS	= 64,
 };
 
+enum {
+	FIO_RAND_BS_OFF		= 0,
+	FIO_RAND_VER_OFF,
+	FIO_RAND_MIX_OFF,
+	FIO_RAND_FILE_OFF,
+	FIO_RAND_BLOCK_OFF,
+	FIO_RAND_FILE_SIZE_OFF,
+	FIO_RAND_TRIM_OFF,
+	FIO_RAND_BUF_OFF,
+	FIO_RAND_NR_OFFS,
+};
+
 /*
  * This describes a single thread/process executing a fio job.
  */
@@ -379,7 +391,7 @@ struct thread_data {
 
 	char *sysfs_root;
 
-	unsigned long rand_seeds[8];
+	unsigned long rand_seeds[FIO_RAND_NR_OFFS];
 
 	union {
 		os_random_state_t bsrange_state;
