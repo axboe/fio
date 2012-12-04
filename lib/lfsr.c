@@ -243,7 +243,7 @@ static struct lfsr_taps *find_lfsr(uint64_t size)
 	return NULL;
 }
 
-int lfsr_init(struct fio_lfsr *fl, uint64_t size)
+int lfsr_init(struct fio_lfsr *fl, uint64_t size, unsigned long seed)
 {
 	struct lfsr_taps *tap;
 	int i;
@@ -252,7 +252,7 @@ int lfsr_init(struct fio_lfsr *fl, uint64_t size)
 	if (!tap)
 		return 1;
 
-	fl->last_val = 1;
+	fl->last_val = seed;
 	fl->max_val = size - 1;
 	fl->num_vals = 0;
 	fl->taps.length = tap->length;

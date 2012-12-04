@@ -918,7 +918,11 @@ int init_random_map(struct thread_data *td)
 		blocks = (f->real_file_size + td->o.rw_min_bs - 1) /
 				(unsigned long long) td->o.rw_min_bs;
 		if (td->o.random_generator == FIO_RAND_GEN_LFSR) {
-			if (!lfsr_init(&f->lfsr, blocks))
+			unsigned long seed;
+
+			seed = td->rand_seeds[FIO_RAND_BLOCK_OFF];
+			
+			if (!lfsr_init(&f->lfsr, blocks, seed))
 				continue;
 		} else if (!td->o.norandommap) {
 			f->io_axmap = axmap_new(blocks);

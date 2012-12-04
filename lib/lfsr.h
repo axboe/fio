@@ -19,6 +19,6 @@ struct fio_lfsr {
 };
 
 int lfsr_next(struct fio_lfsr *fl, uint64_t *off);
-int lfsr_init(struct fio_lfsr *fl, uint64_t size);
+int lfsr_init(struct fio_lfsr *fl, uint64_t size, unsigned long seed);
 
 #endif
