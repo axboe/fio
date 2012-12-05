@@ -617,6 +617,26 @@ fails to allocate the map, if this option is set it will continue without a
 random block map. As coverage will not be as complete as with random maps, this
 option is disabled by default.
 .TP
+.BI random_generator \fR=\fPstr
+Fio supports the following engines for generating IO offsets for random IO:
+.RS
+.TP
+.B tausworthe
+Strong 2^88 cycle random number generator
+.TP
+.B lfsr
+Linear feedback shift register generator
+.TP
+.RE
+.P
+Tausworthe is a strong random number generator, but it requires tracking on the
+side if we want to ensure that blocks are only read or written once. LFSR
+guarantees that we never generate the same offset twice, and it's also less
+computationally expensive. It's not a true random generator, however, though
+for IO purposes it's typically good enough. LFSR only works with single block
+sizes, not with workloads that use multiple block sizes. If used with such a
+workload, fio may read or write some blocks multiple times.
+.TP
 .BI nice \fR=\fPint
 Run job with given nice value.  See \fInice\fR\|(2).
 .TP
