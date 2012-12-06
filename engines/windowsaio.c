@@ -48,9 +48,9 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter);
 static int fio_windowsaio_init(struct thread_data *td);
 static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f);
 static int fio_windowsaio_close_file(struct thread_data fio_unused *td, struct fio_file *f);
-static int win_to_poxix_error(DWORD winerr);
+static int win_to_posix_error(DWORD winerr);
 
-static int win_to_poxix_error(DWORD winerr)
+static int win_to_posix_error(DWORD winerr)
 {
 	switch (winerr)
 	{
@@ -253,15 +253,27 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 		struct windowsaio_data *wd;
 
 		hFile = CreateIoCompletionPort(f->hFile, NULL, 0, 0);
+		if (hFile == INVALID_HANDLE_VALUE)
+			rc = 1;
 
 		wd = td->io_ops->data;
 		wd->iothread_running = TRUE;
 
-		if (!rc) {
+		if (!rc)
 			ctx = malloc(sizeof(struct thread_ctx));
+
+		if (!rc && ctx == NULL)
+		{
+			log_err("fio: out of memory in windowsaio\n");
+			CloseHandle(hFile);
+			CloseHandle(f->hFile);
+			rc = 1;
+		}
+
+		if (!rc)
+		{
 			ctx->iocp = hFile;
 			ctx->wd = wd;
-
 			wd->iothread = CreateThread(NULL, 0, IoCompletionRoutine, ctx, 0, NULL);
 		}
 
@@ -383,7 +395,7 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 	case DDIR_SYNC_FILE_RANGE:
 		success = FlushFileBuffers(io_u->file->hFile);
 		if (!success)
-		    io_u->error = win_to_poxix_error(GetLastError());
+		    io_u->error = win_to_posix_error(GetLastError());
 
 		return FIO_Q_COMPLETED;
 		break;
@@ -401,7 +413,7 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 	if (success || GetLastError() == ERROR_IO_PENDING)
 		rc = FIO_Q_QUEUED;
 	else {
-		io_u->error = win_to_poxix_error(GetLastError());
+		io_u->error = win_to_posix_error(GetLastError());
 		io_u->resid = io_u->xfer_buflen;
 	}
 
@@ -434,7 +446,7 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 			io_u->error = 0;
 		} else {
 			io_u->resid = io_u->xfer_buflen;
-			io_u->error = win_to_poxix_error(GetLastError());
+			io_u->error = win_to_posix_error(GetLastError());
 		}
 
 		fov->io_complete = TRUE;
