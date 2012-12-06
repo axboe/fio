@@ -1287,8 +1287,8 @@ err:
 		verify_async_exit(td);
 
 	close_and_free_files(td);
-	close_ioengine(td);
 	cleanup_io_u(td);
+	close_ioengine(td);
 	cgroup_shutdown(td, &cgroup_mnt);
 
 	if (td->o.cpumask_set) {
