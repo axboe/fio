@@ -803,6 +803,10 @@ static void cleanup_io_u(struct thread_data *td)
 		io_u = flist_entry(entry, struct io_u, list);
 
 		flist_del(&io_u->list);
+
+		if (td->io_ops->io_u_free)
+			td->io_ops->io_u_free(td, io_u);
+
 		fio_memfree(io_u, sizeof(*io_u));
 	}
 
@@ -885,6 +889,16 @@ static int init_io_u(struct thread_data *td)
 		io_u->index = i;
 		io_u->flags = IO_U_F_FREE;
 		flist_add(&io_u->list, &td->io_u_freelist);
+
+		if (td->io_ops->io_u_init) {
+			int ret = td->io_ops->io_u_init(td, io_u);
+
+			if (ret) {
+				log_err("fio: failed to init engine data: %d\n", ret);
+				return 1;
+			}
+		}
+
 		p += max_bs;
 	}
 

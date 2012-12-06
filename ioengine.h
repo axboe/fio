@@ -121,6 +121,8 @@ struct ioengine_ops {
 	int (*close_file)(struct thread_data *, struct fio_file *);
 	int (*get_file_size)(struct thread_data *, struct fio_file *);
 	void (*terminate)(struct thread_data *);
+	int (*io_u_init)(struct thread_data *, struct io_u *);
+	void (*io_u_free)(struct thread_data *, struct io_u *);
 	int option_struct_size;
 	struct fio_option *options;
 	void *data;
