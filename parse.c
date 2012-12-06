@@ -344,6 +344,11 @@ static int opt_len(const char *str)
 	return (int)(postfix - str);
 }
 
+static int str_match_len(const struct value_pair *vp, const char *str)
+{
+	return max(strlen(vp->ival), opt_len(str));
+}
+
 #define val_store(ptr, val, off, or, data)		\
 	do {						\
 		ptr = td_var((data), (off));		\
@@ -388,7 +393,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			if (!vp->ival || vp->ival[0] == '\0')
 				continue;
 			all_skipped = 0;
-			if (!strncmp(vp->ival, ptr, opt_len(ptr))) {
+			if (!strncmp(vp->ival, ptr, str_match_len(vp, ptr))) {
 				ret = 0;
 				if (o->roff1) {
 					if (vp->or)
@@ -549,7 +554,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 				if (!vp->ival || vp->ival[0] == '\0')
 					continue;
 				all_skipped = 0;
-				if (!strncmp(vp->ival, ptr, opt_len(ptr))) {
+				if (!strncmp(vp->ival, ptr, str_match_len(vp, ptr))) {
 					char *rest;
 
 					ret = 0;
