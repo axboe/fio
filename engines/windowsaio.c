@@ -24,6 +24,7 @@ struct fio_overlapped {
 
 struct windowsaio_data {
 	struct io_u **aio_events;
+	HANDLE iocp;
 	HANDLE iothread;
 	HANDLE iocomplete_event;
 	CANCELIOEX pCancelIoEx;
@@ -170,6 +171,41 @@ static int fio_windowsaio_init(struct thread_data *td)
 	wd->pCancelIoEx = (CANCELIOEX)GetProcAddress(hKernel32Dll, "CancelIoEx");
 	td->io_ops->data = wd;
 
+
+	if (!rc) {
+		struct thread_ctx *ctx;
+		struct windowsaio_data *wd;
+		HANDLE hFile;
+
+		hFile = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+		if (hFile == INVALID_HANDLE_VALUE)
+			rc = 1;
+
+		wd = td->io_ops->data;
+		wd->iothread_running = TRUE;
+		wd->iocp = hFile;
+
+		if (!rc)
+			ctx = malloc(sizeof(struct thread_ctx));
+
+		if (!rc && ctx == NULL)
+		{
+			log_err("fio: out of memory in windowsaio\n");
+			CloseHandle(hFile);
+			rc = 1;
+		}
+
+		if (!rc)
+		{
+			ctx->iocp = hFile;
+			ctx->wd = wd;
+			wd->iothread = CreateThread(NULL, 0, IoCompletionRoutine, ctx, 0, NULL);
+		}
+
+		if (rc || wd->iothread == NULL)
+			rc = 1;
+	}
+
 	return rc;
 }
 
@@ -197,7 +233,6 @@ static void fio_windowsaio_cleanup(struct thread_data *td)
 static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 {
 	int rc = 0;
-	HANDLE hFile;
 	DWORD flags = FILE_FLAG_POSIX_SEMANTICS | FILE_FLAG_OVERLAPPED;
 	DWORD sharemode = FILE_SHARE_READ | FILE_SHARE_WRITE;
 	DWORD openmode = OPEN_ALWAYS;
@@ -249,35 +284,11 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 	/* Only set up the completion port and thread if we're not just
 	 * querying the device size */
 	if (!rc && td->io_ops->data != NULL) {
-		struct thread_ctx *ctx;
 		struct windowsaio_data *wd;
 
-		hFile = CreateIoCompletionPort(f->hFile, NULL, 0, 0);
-		if (hFile == INVALID_HANDLE_VALUE)
-			rc = 1;
-
 		wd = td->io_ops->data;
-		wd->iothread_running = TRUE;
 
-		if (!rc)
-			ctx = malloc(sizeof(struct thread_ctx));
-
-		if (!rc && ctx == NULL)
-		{
-			log_err("fio: out of memory in windowsaio\n");
-			CloseHandle(hFile);
-			CloseHandle(f->hFile);
-			rc = 1;
-		}
-
-		if (!rc)
-		{
-			ctx->iocp = hFile;
-			ctx->wd = wd;
-			wd->iothread = CreateThread(NULL, 0, IoCompletionRoutine, ctx, 0, NULL);
-		}
-
-		if (rc || wd->iothread == NULL)
+		if (CreateIoCompletionPort(f->hFile, wd->iocp, 0, 0) == NULL)
 			rc = 1;
 	}
 
