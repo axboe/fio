@@ -104,6 +104,8 @@ int main(int argc, char *argv[], char *envp[])
 	if (parse_options(argc, argv))
 		return 1;
 
+	fio_time_init();
+
 	if (nr_clients)
 		return fio_handle_clients();
 	else

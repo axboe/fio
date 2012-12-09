@@ -1,6 +1,8 @@
 #ifndef ARCH_X86_H
 #define ARCH_X86_H
 
+#include "arch-x86-common.h"
+
 #define FIO_ARCH	(arch_i386)
 
 #ifndef __NR_ioprio_set

@@ -370,7 +370,7 @@ static int fio_clock_source_cb(void *data, const char *str)
 	struct thread_data *td = data;
 
 	fio_clock_source = td->o.clocksource;
-	fio_time_init();
+	fio_clock_source_set = 1;
 	return 0;
 }
 
