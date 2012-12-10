@@ -242,7 +242,7 @@ static void calibrate_cpu_clock(void)
 	}
 
 	S /= (double) NR_TIME_ITERS;
-	mean /= (double) NR_TIME_ITERS;
+	mean /= 10.0;
 
 	for (i = 0; i < NR_TIME_ITERS; i++)
 		dprint(FD_TIME, "cycles[%d]=%lu\n", i, cycles[i] / 10);
