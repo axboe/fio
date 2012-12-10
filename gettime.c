@@ -247,7 +247,8 @@ static void calibrate_cpu_clock(void)
 	for (i = 0; i < NR_TIME_ITERS; i++)
 		dprint(FD_TIME, "cycles[%d]=%lu\n", i, cycles[i] / 10);
 
-	avg /= (samples * 10);
+	avg /= samples;
+	avg = (avg + 9) / 10;
 	dprint(FD_TIME, "avg: %lu\n", avg);
 	dprint(FD_TIME, "mean=%f, S=%f\n", mean, S);
 
