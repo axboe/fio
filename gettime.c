@@ -207,7 +207,7 @@ static unsigned long get_cycles_per_usec(void)
 		}
 	} while (1);
 
-	return (c_e - c_s) >> 7;
+	return (c_e - c_s + 127) >> 7;
 }
 
 #define NR_TIME_ITERS	50
