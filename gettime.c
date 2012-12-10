@@ -201,13 +201,13 @@ static unsigned long get_cycles_per_usec(void)
 
 		gettimeofday(&e, NULL);
 		elapsed = utime_since(&s, &e);
-		if (elapsed >= 10) {
+		if (elapsed >= 1280) {
 			c_e = get_cpu_clock();
 			break;
 		}
 	} while (1);
 
-	return c_e - c_s;
+	return (c_e - c_s) >> 7;
 }
 
 #define NR_TIME_ITERS	50
