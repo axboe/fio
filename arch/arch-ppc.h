@@ -58,6 +58,13 @@ static inline unsigned long long get_cpu_clock(void)
 	return ret;
 }
 
+#define ARCH_HAVE_INIT
+extern int tsc_reliable;
+static inline int arch_init(char *envp[])
+{
+	tsc_reliable = 1;
+}
+
 #define ARCH_HAVE_FFZ
 #define ARCH_HAVE_CPU_CLOCK
 

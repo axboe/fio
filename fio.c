@@ -45,6 +45,8 @@ int main(int argc, char *argv[], char *envp[])
 	if (parse_options(argc, argv))
 		return 1;
 
+	fio_time_init();
+
 	if (nr_clients) {
 		if (fio_start_all_clients())
 			return 1;

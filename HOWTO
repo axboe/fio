@@ -753,6 +753,23 @@ softrandommap=bool See norandommap. If fio runs with the random block map
 		will not be as complete as with random maps, this option is
 		disabled by default.
 
+random_generator=str	Fio supports the following engines for generating
+		IO offsets for random IO:
+
+		tausworthe	Strong 2^88 cycle random number generator
+		lfsr		Linear feedback shift register generator
+
+		Tausworthe is a strong random number generator, but it
+		requires tracking on the side if we want to ensure that
+		blocks are only read or written once. LFSR guarantees
+		that we never generate the same offset twice, and it's
+		also less computationally expensive. It's not a true
+		random generator, however, though for IO purposes it's
+		typically good enough. LFSR only works with single
+		block sizes, not with workloads that use multiple block
+		sizes. If used with such a workload, fio may read or write
+		some blocks multiple times.
+		
 nice=int	Run the job with the given nice value. See man nice(2).
 
 prio=int	Set the io priority value of this job. Linux limits us to
@@ -1381,6 +1398,15 @@ that defines them is selected.
 [net] listen	For TCP network connections, tell fio to listen for incoming
 		connections rather than initiating an outgoing connection. The
 		hostname must be omitted if this option is used.
+[net] pingpong	Normal a network writer will just continue writing data, and
+		a network reader will just consume packages. If pingpong=1
+		is set, a writer will send its normal payload to the reader,
+		then wait for the reader to send the same payload back. This
+		allows fio to measure network latencies. The submission
+		and completion latencies then measure local time spent
+		sending or receiving, and the completion latency measures
+		how long it took for the other end to receive and send back.
+
 [e4defrag] donorname=str
 	        File will be used as a block donor(swap extents between files)
 [e4defrag] inplace=int

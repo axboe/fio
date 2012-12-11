@@ -20,12 +20,11 @@ struct fio_overlapped {
 	OVERLAPPED o;
 	struct io_u *io_u;
 	BOOL io_complete;
-	BOOL io_free;
 };
 
 struct windowsaio_data {
-	struct fio_overlapped *ovls;
 	struct io_u **aio_events;
+	HANDLE iocp;
 	HANDLE iothread;
 	HANDLE iocomplete_event;
 	CANCELIOEX pCancelIoEx;
@@ -50,9 +49,9 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter);
 static int fio_windowsaio_init(struct thread_data *td);
 static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f);
 static int fio_windowsaio_close_file(struct thread_data fio_unused *td, struct fio_file *f);
-static int win_to_poxix_error(DWORD winerr);
+static int win_to_posix_error(DWORD winerr);
 
-static int win_to_poxix_error(DWORD winerr)
+static int win_to_posix_error(DWORD winerr)
 {
 	switch (winerr)
 	{
@@ -139,7 +138,6 @@ static int fio_windowsaio_init(struct thread_data *td)
 	struct windowsaio_data *wd;
 	HANDLE hKernel32Dll;
 	int rc = 0;
-	int i;
 
 	wd = malloc(sizeof(struct windowsaio_data));
 	if (wd != NULL)
@@ -154,25 +152,6 @@ static int fio_windowsaio_init(struct thread_data *td)
 	}
 
 	if (!rc) {
-		wd->ovls = malloc(td->o.iodepth * sizeof(struct fio_overlapped));
-		if (wd->ovls == NULL)
-			rc = 1;
-	}
-
-	if (!rc) {
-		for (i = 0; i < td->o.iodepth; i++) {
-			wd->ovls[i].io_free = TRUE;
-			wd->ovls[i].io_complete = FALSE;
-
-			wd->ovls[i].o.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-			if (wd->ovls[i].o.hEvent == NULL) {
-				rc = 1;
-				break;
-			}
-		}
-	}
-
-	if (!rc) {
 		/* Create an auto-reset event */
 		wd->iocomplete_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 		if (wd->iocomplete_event == NULL)
@@ -181,8 +160,6 @@ static int fio_windowsaio_init(struct thread_data *td)
 
 	if (rc) {
 		if (wd != NULL) {
-			if (wd->ovls != NULL)
-				free(wd->ovls);
 			if (wd->aio_events != NULL)
 				free(wd->aio_events);
 
@@ -194,12 +171,46 @@ static int fio_windowsaio_init(struct thread_data *td)
 	wd->pCancelIoEx = (CANCELIOEX)GetProcAddress(hKernel32Dll, "CancelIoEx");
 	td->io_ops->data = wd;
 
+
+	if (!rc) {
+		struct thread_ctx *ctx;
+		struct windowsaio_data *wd;
+		HANDLE hFile;
+
+		hFile = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+		if (hFile == INVALID_HANDLE_VALUE)
+			rc = 1;
+
+		wd = td->io_ops->data;
+		wd->iothread_running = TRUE;
+		wd->iocp = hFile;
+
+		if (!rc)
+			ctx = malloc(sizeof(struct thread_ctx));
+
+		if (!rc && ctx == NULL)
+		{
+			log_err("fio: out of memory in windowsaio\n");
+			CloseHandle(hFile);
+			rc = 1;
+		}
+
+		if (!rc)
+		{
+			ctx->iocp = hFile;
+			ctx->wd = wd;
+			wd->iothread = CreateThread(NULL, 0, IoCompletionRoutine, ctx, 0, NULL);
+		}
+
+		if (rc || wd->iothread == NULL)
+			rc = 1;
+	}
+
 	return rc;
 }
 
 static void fio_windowsaio_cleanup(struct thread_data *td)
 {
-	int i;
 	struct windowsaio_data *wd;
 
 	wd = td->io_ops->data;
@@ -211,12 +222,7 @@ static void fio_windowsaio_cleanup(struct thread_data *td)
 		CloseHandle(wd->iothread);
 		CloseHandle(wd->iocomplete_event);
 
-		for (i = 0; i < td->o.iodepth; i++) {
-			CloseHandle(wd->ovls[i].o.hEvent);
-		}
-
 		free(wd->aio_events);
-		free(wd->ovls);
 		free(wd);
 
 		td->io_ops->data = NULL;
@@ -227,7 +233,6 @@ static void fio_windowsaio_cleanup(struct thread_data *td)
 static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 {
 	int rc = 0;
-	HANDLE hFile;
 	DWORD flags = FILE_FLAG_POSIX_SEMANTICS | FILE_FLAG_OVERLAPPED;
 	DWORD sharemode = FILE_SHARE_READ | FILE_SHARE_WRITE;
 	DWORD openmode = OPEN_ALWAYS;
@@ -279,23 +284,11 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 	/* Only set up the completion port and thread if we're not just
 	 * querying the device size */
 	if (!rc && td->io_ops->data != NULL) {
-		struct thread_ctx *ctx;
 		struct windowsaio_data *wd;
 
-		hFile = CreateIoCompletionPort(f->hFile, NULL, 0, 0);
-
 		wd = td->io_ops->data;
-		wd->iothread_running = TRUE;
 
-		if (!rc) {
-			ctx = malloc(sizeof(struct thread_ctx));
-			ctx->iocp = hFile;
-			ctx->wd = wd;
-
-			wd->iothread = CreateThread(NULL, 0, IoCompletionRoutine, ctx, 0, NULL);
-		}
-
-		if (rc || wd->iothread == NULL)
+		if (CreateIoCompletionPort(f->hFile, wd->iocp, 0, 0) == NULL)
 			rc = 1;
 	}
 
@@ -364,7 +357,6 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 
 			if (fov->io_complete) {
 				fov->io_complete = FALSE;
-				fov->io_free  = TRUE;
 				ResetEvent(fov->o.hEvent);
 				wd->aio_events[dequeued] = io_u;
 				dequeued++;
@@ -389,32 +381,18 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 
 static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 {
-	LPOVERLAPPED lpOvl = NULL;
-	struct windowsaio_data *wd;
+	struct fio_overlapped *o = io_u->engine_data;
+	LPOVERLAPPED lpOvl = &o->o;
 	DWORD iobytes;
 	BOOL success = FALSE;
-	int index;
 	int rc = FIO_Q_COMPLETED;
 
 	fio_ro_check(td, io_u);
 
-	wd = td->io_ops->data;
-
-	for (index = 0; index < td->o.iodepth; index++) {
-		if (wd->ovls[index].io_free)
-			break;
-	}
-
-	assert(index < td->o.iodepth);
-
-	wd->ovls[index].io_free = FALSE;
-	wd->ovls[index].io_u = io_u;
-	lpOvl = &wd->ovls[index].o;
 	lpOvl->Internal = STATUS_PENDING;
 	lpOvl->InternalHigh = 0;
 	lpOvl->Offset = io_u->offset & 0xFFFFFFFF;
 	lpOvl->OffsetHigh = io_u->offset >> 32;
-	io_u->engine_data = &wd->ovls[index];
 
 	switch (io_u->ddir) {
 	case DDIR_WRITE:
@@ -428,7 +406,7 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 	case DDIR_SYNC_FILE_RANGE:
 		success = FlushFileBuffers(io_u->file->hFile);
 		if (!success)
-		    io_u->error = win_to_poxix_error(GetLastError());
+		    io_u->error = win_to_posix_error(GetLastError());
 
 		return FIO_Q_COMPLETED;
 		break;
@@ -446,7 +424,7 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 	if (success || GetLastError() == ERROR_IO_PENDING)
 		rc = FIO_Q_QUEUED;
 	else {
-		io_u->error = win_to_poxix_error(GetLastError());
+		io_u->error = win_to_posix_error(GetLastError());
 		io_u->resid = io_u->xfer_buflen;
 	}
 
@@ -479,7 +457,7 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 			io_u->error = 0;
 		} else {
 			io_u->resid = io_u->xfer_buflen;
-			io_u->error = win_to_poxix_error(GetLastError());
+			io_u->error = win_to_posix_error(GetLastError());
 		}
 
 		fov->io_complete = TRUE;
@@ -510,6 +488,34 @@ static int fio_windowsaio_cancel(struct thread_data *td,
 	return rc;
 }
 
+static void fio_windowsaio_io_u_free(struct thread_data *td, struct io_u *io_u)
+{
+	struct fio_overlapped *o = io_u->engine_data;
+
+	if (o) {
+		CloseHandle(o->o.hEvent);
+		io_u->engine_data = NULL;
+		free(o);
+	}
+}
+
+static int fio_windowsaio_io_u_init(struct thread_data *td, struct io_u *io_u)
+{
+	struct fio_overlapped *o;
+
+	o = malloc(sizeof(*o));
+	o->io_complete = FALSE:
+	o->io_u = io_u;
+	o->o.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	if (!o->o.hEvent) {
+		free(o);
+		return 1;
+	}
+
+	io_u->engine_data = o;
+	return 0;
+}
+
 static struct ioengine_ops ioengine = {
 	.name		= "windowsaio",
 	.version	= FIO_IOOPS_VERSION,
@@ -521,7 +527,9 @@ static struct ioengine_ops ioengine = {
 	.cleanup	= fio_windowsaio_cleanup,
 	.open_file	= fio_windowsaio_open_file,
 	.close_file	= fio_windowsaio_close_file,
-	.get_file_size	= generic_get_file_size
+	.get_file_size	= generic_get_file_size,
+	.io_u_init	= fio_windowsaio_io_u_init,
+	.io_u_free	= fio_windowsaio_io_u_free,
 };
 
 static void fio_init fio_posixaio_register(void)

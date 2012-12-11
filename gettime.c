@@ -15,11 +15,13 @@
 #ifdef ARCH_HAVE_CPU_CLOCK
 static unsigned long cycles_per_usec;
 static unsigned long last_cycles;
+int tsc_reliable = 0;
 #endif
 static struct timeval last_tv;
 static int last_tv_valid;
 
 enum fio_cs fio_clock_source = FIO_PREFERRED_CLOCK_SOURCE;
+int fio_clock_source_set = 0;
 
 #ifdef FIO_DEBUG_TIME
 
@@ -199,24 +201,26 @@ static unsigned long get_cycles_per_usec(void)
 
 		gettimeofday(&e, NULL);
 		elapsed = utime_since(&s, &e);
-		if (elapsed >= 10) {
+		if (elapsed >= 1280) {
 			c_e = get_cpu_clock();
 			break;
 		}
 	} while (1);
 
-	return c_e - c_s;
+	return (c_e - c_s + 127) >> 7;
 }
+
+#define NR_TIME_ITERS	50
 
 static void calibrate_cpu_clock(void)
 {
 	double delta, mean, S;
-	unsigned long avg, cycles[10];
+	unsigned long avg, cycles[NR_TIME_ITERS];
 	int i, samples;
 
 	cycles[0] = get_cycles_per_usec();
 	S = delta = mean = 0.0;
-	for (i = 0; i < 10; i++) {
+	for (i = 0; i < NR_TIME_ITERS; i++) {
 		cycles[i] = get_cycles_per_usec();
 		delta = cycles[i] - mean;
 		if (delta) {
@@ -225,10 +229,10 @@ static void calibrate_cpu_clock(void)
 		}
 	}
 
-	S = sqrt(S / (10 - 1.0));
+	S = sqrt(S / (NR_TIME_ITERS - 1.0));
 
 	samples = avg = 0;
-	for (i = 0; i < 10; i++) {
+	for (i = 0; i < NR_TIME_ITERS; i++) {
 		double this = cycles[i];
 
 		if ((fmax(this, mean) - fmin(this, mean)) > S)
@@ -237,18 +241,18 @@ static void calibrate_cpu_clock(void)
 		avg += this;
 	}
 
-	S /= 10.0;
+	S /= (double) NR_TIME_ITERS;
 	mean /= 10.0;
 
-	for (i = 0; i < 10; i++)
+	for (i = 0; i < NR_TIME_ITERS; i++)
 		dprint(FD_TIME, "cycles[%d]=%lu\n", i, cycles[i] / 10);
 
-	avg /= (samples * 10);
+	avg /= samples;
+	avg = (avg + 9) / 10;
 	dprint(FD_TIME, "avg: %lu\n", avg);
 	dprint(FD_TIME, "mean=%f, S=%f\n", mean, S);
 
 	cycles_per_usec = avg;
-
 }
 #else
 static void calibrate_cpu_clock(void)
@@ -260,6 +264,17 @@ void fio_clock_init(void)
 {
 	last_tv_valid = 0;
 	calibrate_cpu_clock();
+
+	/*
+	 * If the arch sets tsc_reliable != 0, then it must be good enough
+	 * to use as THE clock source. For x86 CPUs, this means the TSC
+	 * runs at a constant rate and is synced across CPU cores.
+	 */
+	if (tsc_reliable) {
+		if (!fio_clock_source_set)
+			fio_clock_source = CS_CPUCLOCK;
+	} else if (fio_clock_source == CS_CPUCLOCK)
+		log_info("fio: clocksource=cpu may not be reliable\n");
 }
 
 unsigned long long utime_since(struct timeval *s, struct timeval *e)

@@ -23,6 +23,7 @@
 #define FIO_HAVE_FALLOCATE
 #define FIO_HAVE_GETTID
 #define FIO_HAVE_CLOCK_MONOTONIC
+#define FIO_HAVE_FADVISE
 #define FIO_USE_GENERIC_RAND
 
 #define FIO_PREFERRED_ENGINE		"windowsaio"
@@ -83,6 +84,7 @@ typedef DWORD_PTR os_cpu_mask_t;
 
 #define SIGCONT	0
 #define SIGUSR1	1
+#define SIGUSR2 2
 
 typedef int sigset_t;
 typedef int siginfo_t;

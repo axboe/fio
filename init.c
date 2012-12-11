@@ -667,44 +667,44 @@ static int exists_and_not_file(const char *filename)
 
 static void td_fill_rand_seeds_os(struct thread_data *td)
 {
-	os_random_seed(td->rand_seeds[0], &td->bsrange_state);
-	os_random_seed(td->rand_seeds[1], &td->verify_state);
-	os_random_seed(td->rand_seeds[2], &td->rwmix_state);
+	os_random_seed(td->rand_seeds[FIO_RAND_BS_OFF], &td->bsrange_state);
+	os_random_seed(td->rand_seeds[FIO_RAND_VER_OFF], &td->verify_state);
+	os_random_seed(td->rand_seeds[FIO_RAND_MIX_OFF], &td->rwmix_state);
 
 	if (td->o.file_service_type == FIO_FSERVICE_RANDOM)
-		os_random_seed(td->rand_seeds[3], &td->next_file_state);
+		os_random_seed(td->rand_seeds[FIO_RAND_FILE_OFF], &td->next_file_state);
 
-	os_random_seed(td->rand_seeds[5], &td->file_size_state);
-	os_random_seed(td->rand_seeds[6], &td->trim_state);
+	os_random_seed(td->rand_seeds[FIO_RAND_FILE_SIZE_OFF], &td->file_size_state);
+	os_random_seed(td->rand_seeds[FIO_RAND_TRIM_OFF], &td->trim_state);
 
 	if (!td_random(td))
 		return;
 
 	if (td->o.rand_repeatable)
-		td->rand_seeds[4] = FIO_RANDSEED * td->thread_number;
+		td->rand_seeds[FIO_RAND_BLOCK_OFF] = FIO_RANDSEED * td->thread_number;
 
-	os_random_seed(td->rand_seeds[4], &td->random_state);
+	os_random_seed(td->rand_seeds[FIO_RAND_BLOCK_OFF], &td->random_state);
 }
 
 static void td_fill_rand_seeds_internal(struct thread_data *td)
 {
-	init_rand_seed(&td->__bsrange_state, td->rand_seeds[0]);
-	init_rand_seed(&td->__verify_state, td->rand_seeds[1]);
-	init_rand_seed(&td->__rwmix_state, td->rand_seeds[2]);
+	init_rand_seed(&td->__bsrange_state, td->rand_seeds[FIO_RAND_BS_OFF]);
+	init_rand_seed(&td->__verify_state, td->rand_seeds[FIO_RAND_VER_OFF]);
+	init_rand_seed(&td->__rwmix_state, td->rand_seeds[FIO_RAND_MIX_OFF]);
 
 	if (td->o.file_service_type == FIO_FSERVICE_RANDOM)
-		init_rand_seed(&td->__next_file_state, td->rand_seeds[3]);
+		init_rand_seed(&td->__next_file_state, td->rand_seeds[FIO_RAND_FILE_OFF]);
 
-	init_rand_seed(&td->__file_size_state, td->rand_seeds[5]);
-	init_rand_seed(&td->__trim_state, td->rand_seeds[6]);
+	init_rand_seed(&td->__file_size_state, td->rand_seeds[FIO_RAND_FILE_SIZE_OFF]);
+	init_rand_seed(&td->__trim_state, td->rand_seeds[FIO_RAND_TRIM_OFF]);
 
 	if (!td_random(td))
 		return;
 
 	if (td->o.rand_repeatable)
-		td->rand_seeds[4] = FIO_RANDSEED * td->thread_number;
+		td->rand_seeds[FIO_RAND_BLOCK_OFF] = FIO_RANDSEED * td->thread_number;
 
-	init_rand_seed(&td->__random_state, td->rand_seeds[4]);
+	init_rand_seed(&td->__random_state, td->rand_seeds[FIO_RAND_BLOCK_OFF]);
 }
 
 void td_fill_rand_seeds(struct thread_data *td)
@@ -714,7 +714,7 @@ void td_fill_rand_seeds(struct thread_data *td)
 	else
 		td_fill_rand_seeds_internal(td);
 
-	init_rand_seed(&td->buf_state, td->rand_seeds[7]);
+	init_rand_seed(&td->buf_state, td->rand_seeds[FIO_RAND_BUF_OFF]);
 }
 
 
