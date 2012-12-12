@@ -434,6 +434,12 @@ int generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 		ret = errno;
 
 	f->fd = -1;
+
+	if (f->shadow_fd != -1) {
+		close(f->shadow_fd);
+		f->shadow_fd = -1;
+	}
+
 	return ret;
 }
 
@@ -460,6 +466,24 @@ int file_lookup_open(struct fio_file *f, int flags)
 
 	f->fd = open(f->file_name, flags, 0600);
 	return from_hash;
+}
+
+static int file_close_shadow_fds(struct thread_data *td)
+{
+	struct fio_file *f;
+	int num_closed = 0;
+	unsigned int i;
+
+	for_each_file(td, f, i) {
+		if (f->shadow_fd == -1)
+			continue;
+
+		close(f->shadow_fd);
+		f->shadow_fd = -1;
+		num_closed++;
+	}
+
+	return num_closed;
 }
 
 int generic_open_file(struct thread_data *td, struct fio_file *f)
@@ -536,6 +560,8 @@ open_again:
 			flags &= ~FIO_O_NOATIME;
 			goto open_again;
 		}
+		if (__e == EMFILE && file_close_shadow_fds(td))
+			goto open_again;
 
 		snprintf(buf, sizeof(buf) - 1, "open(%s)", f->file_name);
 
@@ -552,9 +578,22 @@ open_again:
 			int fio_unused ret;
 
 			/*
-			 * OK to ignore, we haven't done anything with it
+			 * Stash away descriptor for later close. This is to
+			 * work-around a "feature" on Linux, where a close of
+			 * an fd that has been opened for write will trigger
+			 * udev to call blkid to check partitions, fs id, etc.
+			 * That polutes the device cache, which can slow down
+			 * unbuffered accesses.
 			 */
-			ret = generic_close_file(td, f);
+			if (f->shadow_fd == -1)
+				f->shadow_fd = f->fd;
+			else {
+				/*
+			 	 * OK to ignore, we haven't done anything
+				 * with it
+				 */
+				ret = generic_close_file(td, f);
+			}
 			goto open_again;
 		}
 	}
@@ -1029,6 +1068,7 @@ int add_file(struct thread_data *td, const char *fname)
 	}
 
 	f->fd = -1;
+	f->shadow_fd = -1;
 	fio_file_reset(f);
 
 	if (td->files_size <= td->files_index) {

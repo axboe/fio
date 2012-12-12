@@ -65,6 +65,7 @@ struct fio_file {
 
 	void *file_data;
 	int fd;
+	int shadow_fd;
 #ifdef WIN32
 	HANDLE hFile;
 	HANDLE ioCP;
