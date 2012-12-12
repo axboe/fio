@@ -88,7 +88,6 @@ static int queue(struct thread_data *td, struct io_u *io_u)
 		goto out;
 	} else {
 		io_u->error = 0;
-		io_u->file->file_pos = io_u->offset + rc;
 		rc = FIO_Q_COMPLETED;
 	}
 

@@ -63,7 +63,6 @@ struct fio_file {
 	struct flist_head hash_list;
 	enum fio_filetype filetype;
 
-	void *file_data;
 	int fd;
 	int shadow_fd;
 #ifdef WIN32
@@ -98,7 +97,7 @@ struct fio_file {
 	/*
 	 * For use by the io engine
 	 */
-	unsigned long long file_pos;
+	uint64_t engine_data;
 
 	/*
 	 * if io is protected by a semaphore, this is set
@@ -181,7 +180,6 @@ static inline void fio_file_reset(struct fio_file *f)
 {
 	f->last_pos = f->file_offset;
 	f->last_start = -1ULL;
-	f->file_pos = -1ULL;
 	if (f->io_axmap)
 		axmap_reset(f->io_axmap);
 }

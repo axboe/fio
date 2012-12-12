@@ -89,9 +89,6 @@ static int fio_fallocate_queue(struct thread_data *td, struct io_u *io_u)
 	if (ret)
 		io_u->error = errno;
 
-	if (io_u->file && ret == 0 && ddir_rw(io_u->ddir))
-		io_u->file->file_pos = io_u->offset + ret;
-
 	return FIO_Q_COMPLETED;
 }
 
