@@ -360,6 +360,7 @@ static int fio_clock_source_cb(void *data, const char *str)
 
 	fio_clock_source = td->o.clocksource;
 	fio_clock_source_set = 1;
+	fio_clock_init();
 	return 0;
 }
 

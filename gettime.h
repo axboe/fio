@@ -8,6 +8,7 @@ enum fio_cs {
 	CS_GTOD		= 1,
 	CS_CGETTIME,
 	CS_CPUCLOCK,
+	CS_INVAL,
 };
 
 extern void fio_gettime(struct timeval *, void *);
