@@ -22,6 +22,7 @@ static int last_tv_valid;
 
 enum fio_cs fio_clock_source = FIO_PREFERRED_CLOCK_SOURCE;
 int fio_clock_source_set = 0;
+enum fio_cs fio_clock_source_inited = CS_INVAL;
 
 #ifdef FIO_DEBUG_TIME
 
@@ -262,7 +263,11 @@ static void calibrate_cpu_clock(void)
 
 void fio_clock_init(void)
 {
+	if (fio_clock_source == fio_clock_source_inited)
+		return;
+
 	last_tv_valid = 0;
+	fio_clock_source_inited = fio_clock_source;
 	calibrate_cpu_clock();
 
 	/*
