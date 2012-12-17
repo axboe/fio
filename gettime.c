@@ -429,6 +429,10 @@ int fio_monotonic_clocktest(void)
 	uint64_t seq = 0;
 	int i;
 
+	fio_debug |= 1U << FD_TIME;
+	calibrate_cpu_clock();
+	fio_debug &= ~(1U << FD_TIME);
+
 	threads = malloc(nr_cpus * sizeof(struct clock_thread));
 	tentries = CLOCK_ENTRIES * nr_cpus;
 	entries = malloc(tentries * sizeof(struct clock_entry));
