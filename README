@@ -129,6 +129,7 @@ $ fio
 	--terse-version=type	Terse version output format (default 3, or 2 or 4).
 	--version		Print version info and exit
 	--help			Print this page
+	--cpuclock-test		Perform test/validation of CPU clock
 	--cmdhelp=cmd		Print command help, "all" for all of them
 	--enghelp=engine	Print ioengine help, or list available ioengines
 	--enghelp=engine,cmd	Print help for an ioengine cmd

@@ -1027,6 +1027,27 @@ given time in milliseconds.
 .BI disk_util \fR=\fPbool
 Generate disk utilization statistics if the platform supports it. Default: true.
 .TP
+.BI clocksource \fR=\fPstr
+Use the given clocksource as the base of timing. The supported options are:
+.RS
+.TP
+.B gettimeofday
+gettimeofday(2)
+.TP
+.B clock_gettime
+clock_gettime(2)
+.TP
+.B cpu
+Internal CPU clock source
+.TP
+.RE
+.P
+\fBcpu\fR is the preferred clocksource if it is reliable, as it is very fast
+(and fio is heavy on time calls). Fio will automatically use this clocksource
+if it's supported and considered reliable on the system it is running on,
+unless another clocksource is specifically set. For x86/x86-64 CPUs, this
+means supporting TSC Invariant.
+.TP
 .BI gtod_reduce \fR=\fPbool
 Enable all of the gettimeofday() reducing options (disable_clat, disable_slat,
 disable_bw) plus reduce precision of the timeout somewhat to really shrink the

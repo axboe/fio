@@ -1262,6 +1262,22 @@ percentile_list=float_list Overwrite the default list of percentiles
 		the values of completion latency below which 99.5% and
 		99.9% of the observed latencies fell, respectively.
 
+clocksource=str	Use the given clocksource as the base of timing. The
+		supported options are:
+
+			gettimeofday	gettimeofday(2)
+
+			clock_gettime	clock_gettime(2)
+
+			cpu		Internal CPU clock source
+
+		cpu is the preferred clocksource if it is reliable, as it
+		is very fast (and fio is heavy on time calls). Fio will
+		automatically use this clocksource if it's supported and
+		considered reliable on the system it is running on, unless
+		another clocksource is specifically set. For x86/x86-64 CPUs,
+		this means supporting TSC Invariant.
+
 gtod_reduce=bool Enable all of the gettimeofday() reducing options
 		(disable_clat, disable_slat, disable_bw) plus reduce
 		precision of the timeout somewhat to really shrink
