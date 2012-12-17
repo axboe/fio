@@ -388,8 +388,8 @@ static void *clock_thread_fn(void *data)
 		return (void *) 1;
 	}
 
-	pthread_mutex_unlock(&t->started);
 	pthread_mutex_lock(&t->lock);
+	pthread_mutex_unlock(&t->started);
 
 	c = &t->entries[0];
 	for (i = 0; i < CLOCK_ENTRIES; i++, c++) {
@@ -413,6 +413,9 @@ static int clock_cmp(const void *p1, const void *p2)
 {
 	const struct clock_entry *c1 = p1;
 	const struct clock_entry *c2 = p2;
+
+	if (c1->seq == c2->seq)
+		log_err("cs: bug in atomic sequence!\n");
 
 	return c1->seq - c2->seq;
 }
