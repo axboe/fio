@@ -208,6 +208,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'C',
 	},
 	{
+		.name		= (char *) "cpuclock-test",
+		.has_arg	= no_argument,
+		.val		= 'T',
+	},
+	{
 		.name		= NULL,
 	},
 };
@@ -1620,6 +1625,10 @@ int parse_cmd_line(int argc, char *argv[])
 				fio_client_add_ini_file(cur_client, argv[optind]);
 				optind++;
 			}
+			break;
+		case 'T':
+			do_exit++;
+			exit_val = fio_monotonic_clocktest();
 			break;
 		default:
 			do_exit++;

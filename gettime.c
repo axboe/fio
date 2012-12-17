@@ -11,6 +11,7 @@
 #include "smalloc.h"
 
 #include "hash.h"
+#include "os/os.h"
 
 #ifdef ARCH_HAVE_CPU_CLOCK
 static unsigned long cycles_per_usec;
@@ -347,3 +348,167 @@ unsigned long time_since_now(struct timeval *s)
 {
 	return mtime_since_now(s) / 1000;
 }
+
+#if defined(FIO_HAVE_CPU_AFFINITY) && defined(ARCH_HAVE_CPU_CLOCK)
+
+#define CLOCK_ENTRIES	100000
+
+struct clock_entry {
+	unsigned long seq;
+	unsigned long tsc;
+	unsigned long cpu;
+};
+
+struct clock_thread {
+	pthread_t thread;
+	int cpu;
+	pthread_mutex_t lock;
+	pthread_mutex_t started;
+	uint64_t *seq;
+	struct clock_entry *entries;
+};
+
+static inline uint64_t atomic64_inc_return(uint64_t *seq)
+{
+	return 1 + __sync_fetch_and_add(seq, 1);
+}
+
+static void *clock_thread_fn(void *data)
+{
+	struct clock_thread *t = data;
+	struct clock_entry *c;
+	os_cpu_mask_t cpu_mask;
+	int i;
+
+	memset(&cpu_mask, 0, sizeof(cpu_mask));
+	fio_cpu_set(&cpu_mask, t->cpu);
+
+	if (fio_setaffinity(gettid(), cpu_mask) == -1) {
+		log_err("clock setaffinity failed\n");
+		return (void *) 1;
+	}
+
+	pthread_mutex_unlock(&t->started);
+	pthread_mutex_lock(&t->lock);
+
+	c = &t->entries[0];
+	for (i = 0; i < CLOCK_ENTRIES; i++, c++) {
+		uint64_t seq, tsc;
+
+		c->cpu = t->cpu;
+		do {
+			seq = atomic64_inc_return(t->seq);
+			tsc = get_cpu_clock();
+		} while (seq != *t->seq);
+
+		c->seq = seq;
+		c->tsc = tsc;
+	}
+
+	log_info("cs: cpu%3d: %lu clocks seen\n", t->cpu, t->entries[CLOCK_ENTRIES - 1].tsc - t->entries[0].tsc);
+	return NULL;
+}
+
+static int clock_cmp(const void *p1, const void *p2)
+{
+	const struct clock_entry *c1 = p1;
+	const struct clock_entry *c2 = p2;
+
+	return c1->seq - c2->seq;
+}
+
+int fio_monotonic_clocktest(void)
+{
+	struct clock_thread *threads;
+	unsigned int nr_cpus = cpus_online();
+	struct clock_entry *entries;
+	unsigned long tentries, failed;
+	uint64_t seq = 0;
+	int i;
+
+	threads = malloc(nr_cpus * sizeof(struct clock_thread));
+	tentries = CLOCK_ENTRIES * nr_cpus;
+	entries = malloc(tentries * sizeof(struct clock_entry));
+
+	log_info("cs: Testing %u CPUs\n", nr_cpus);
+
+	for (i = 0; i < nr_cpus; i++) {
+		struct clock_thread *t = &threads[i];
+
+		t->cpu = i;
+		t->seq = &seq;
+		t->entries = &entries[i * CLOCK_ENTRIES];
+		pthread_mutex_init(&t->lock, NULL);
+		pthread_mutex_init(&t->started, NULL);
+		pthread_mutex_lock(&t->lock);
+		pthread_create(&t->thread, NULL, clock_thread_fn, t);
+	}
+
+	for (i = 0; i < nr_cpus; i++) {
+		struct clock_thread *t = &threads[i];
+
+		pthread_mutex_lock(&t->started);
+	}
+
+	for (i = 0; i < nr_cpus; i++) {
+		struct clock_thread *t = &threads[i];
+
+		pthread_mutex_unlock(&t->lock);
+	}
+
+	for (failed = i = 0; i < nr_cpus; i++) {
+		struct clock_thread *t = &threads[i];
+		void *ret;
+
+		pthread_join(t->thread, &ret);
+		if (ret)
+			failed++;
+	}
+	free(threads);
+
+	if (failed) {
+		log_err("Clocksource test: %u threads failed\n", failed);
+		goto err;
+	}
+
+	qsort(entries, tentries, sizeof(struct clock_entry), clock_cmp);
+
+	for (failed = i = 0; i < tentries; i++) {
+		struct clock_entry *prev, *this = &entries[i];
+
+		if (!i) {
+			prev = this;
+			continue;
+		}
+
+		if (prev->tsc > this->tsc) {
+			uint64_t diff = prev->tsc - this->tsc;
+
+			log_info("cs: CPU clock mismatch (diff=%lu):\n", diff);
+			log_info("\t CPU%3lu: TSC=%lu, SEQ=%lu\n", prev->cpu, prev->tsc, prev->seq);
+			log_info("\t CPU%3lu: TSC=%lu, SEQ=%lu\n", this->cpu, this->tsc, this->seq);
+			failed++;
+		}
+
+		prev = this;
+	}
+
+	if (failed)
+		log_info("cs: Failed: %lu\n", failed);
+	else
+		log_info("cs: Pass!\n");
+
+err:
+	free(entries);
+	return !!failed;
+}
+
+#else /* defined(FIO_HAVE_CPU_AFFINITY) && defined(ARCH_HAVE_CPU_CLOCK) */
+
+int fio_monotonic_clocktest(void)
+{
+	log_info("cs: current platform does not support CPU clocks\n");
+	return 0;
+}
+
+#endif
