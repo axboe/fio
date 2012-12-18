@@ -15,13 +15,13 @@
 
 #ifdef ARCH_HAVE_CPU_CLOCK
 static unsigned long cycles_per_usec;
-static unsigned long last_cycles;
 int tsc_reliable = 0;
 #endif
 
 struct tv_valid {
 	struct timeval last_tv;
 	int last_tv_valid;
+	unsigned long last_cycles;
 };
 static pthread_key_t tv_tls_key;
 
@@ -126,7 +126,7 @@ void fio_gettime(struct timeval *tp, void *caller)
 void fio_gettime(struct timeval *tp, void fio_unused *caller)
 #endif
 {
-	struct tv_valid *t;
+	struct tv_valid *tv;
 
 #ifdef FIO_DEBUG_TIME
 	if (!caller)
@@ -138,6 +138,8 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 		memcpy(tp, fio_tv, sizeof(*tp));
 		return;
 	}
+
+	tv = pthread_getspecific(tv_tls_key);
 
 	switch (fio_clock_source) {
 	case CS_GTOD:
@@ -164,15 +166,15 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 		unsigned long long usecs, t;
 
 		t = get_cpu_clock();
-		if (t < last_cycles) {
+		if (tv && t < tv->last_cycles) {
 			dprint(FD_TIME, "CPU clock going back in time\n");
-			t = last_cycles;
-		}
+			t = tv->last_cycles;
+		} else if (tv)
+			tv->last_cycles = t;
 
 		usecs = t / cycles_per_usec;
 		tp->tv_sec = usecs / 1000000;
 		tp->tv_usec = usecs % 1000000;
-		last_cycles = t;
 		break;
 		}
 #endif
@@ -185,17 +187,16 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 	 * If Linux is using the tsc clock on non-synced processors,
 	 * sometimes time can appear to drift backwards. Fix that up.
 	 */
-	t = pthread_getspecific(tv_tls_key);
-	if (t) {
-		if (t->last_tv_valid) {
-			if (tp->tv_sec < t->last_tv.tv_sec)
-				tp->tv_sec = t->last_tv.tv_sec;
-			else if (t->last_tv.tv_sec == tp->tv_sec &&
-				 tp->tv_usec < t->last_tv.tv_usec)
-				tp->tv_usec = t->last_tv.tv_usec;
+	if (tv) {
+		if (tv->last_tv_valid) {
+			if (tp->tv_sec < tv->last_tv.tv_sec)
+				tp->tv_sec = tv->last_tv.tv_sec;
+			else if (tv->last_tv.tv_sec == tp->tv_sec &&
+				 tp->tv_usec < tv->last_tv.tv_usec)
+				tp->tv_usec = tv->last_tv.tv_usec;
 		}
-		t->last_tv_valid = 1;
-		memcpy(&t->last_tv, tp, sizeof(*tp));
+		tv->last_tv_valid = 1;
+		memcpy(&tv->last_tv, tp, sizeof(*tp));
 	}
 }
 
