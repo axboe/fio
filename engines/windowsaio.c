@@ -504,7 +504,7 @@ static int fio_windowsaio_io_u_init(struct thread_data *td, struct io_u *io_u)
 	struct fio_overlapped *o;
 
 	o = malloc(sizeof(*o));
-	o->io_complete = FALSE:
+	o->io_complete = FALSE;
 	o->io_u = io_u;
 	o->o.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	if (!o->o.hEvent) {
