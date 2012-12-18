@@ -18,8 +18,8 @@ static unsigned long cycles_per_usec;
 static unsigned long last_cycles;
 int tsc_reliable = 0;
 #endif
-static struct timeval last_tv;
-static int last_tv_valid;
+static __thread struct timeval last_tv;
+static __thread int last_tv_valid;
 
 enum fio_cs fio_clock_source = FIO_PREFERRED_CLOCK_SOURCE;
 int fio_clock_source_set = 0;
