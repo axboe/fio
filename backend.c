@@ -1011,6 +1011,8 @@ static void *thread_main(void *data)
 	} else
 		td->pid = gettid();
 
+	fio_local_clock_init(td->o.use_thread);
+
 	dprint(FD_PROCESS, "jobs pid=%d started\n", (int) td->pid);
 
 	INIT_FLIST_HEAD(&td->io_u_freelist);

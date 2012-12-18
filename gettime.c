@@ -18,8 +18,12 @@ static unsigned long cycles_per_usec;
 static unsigned long last_cycles;
 int tsc_reliable = 0;
 #endif
-static __thread struct timeval last_tv;
-static __thread int last_tv_valid;
+
+struct tv_valid {
+	struct timeval last_tv;
+	int last_tv_valid;
+};
+static pthread_key_t tv_tls_key;
 
 enum fio_cs fio_clock_source = FIO_PREFERRED_CLOCK_SOURCE;
 int fio_clock_source_set = 0;
@@ -122,6 +126,8 @@ void fio_gettime(struct timeval *tp, void *caller)
 void fio_gettime(struct timeval *tp, void fio_unused *caller)
 #endif
 {
+	struct tv_valid *t;
+
 #ifdef FIO_DEBUG_TIME
 	if (!caller)
 		caller = __builtin_return_address(0);
@@ -179,15 +185,18 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 	 * If Linux is using the tsc clock on non-synced processors,
 	 * sometimes time can appear to drift backwards. Fix that up.
 	 */
-	if (last_tv_valid) {
-		if (tp->tv_sec < last_tv.tv_sec)
-			tp->tv_sec = last_tv.tv_sec;
-		else if (last_tv.tv_sec == tp->tv_sec &&
-			 tp->tv_usec < last_tv.tv_usec)
-			tp->tv_usec = last_tv.tv_usec;
+	t = pthread_getspecific(tv_tls_key);
+	if (t) {
+		if (t->last_tv_valid) {
+			if (tp->tv_sec < t->last_tv.tv_sec)
+				tp->tv_sec = t->last_tv.tv_sec;
+			else if (t->last_tv.tv_sec == tp->tv_sec &&
+				 tp->tv_usec < t->last_tv.tv_usec)
+				tp->tv_usec = t->last_tv.tv_usec;
+		}
+		t->last_tv_valid = 1;
+		memcpy(&t->last_tv, tp, sizeof(*tp));
 	}
-	last_tv_valid = 1;
-	memcpy(&last_tv, tp, sizeof(*tp));
 }
 
 #ifdef ARCH_HAVE_CPU_CLOCK
@@ -262,12 +271,28 @@ static void calibrate_cpu_clock(void)
 }
 #endif
 
+void fio_local_clock_init(int is_thread)
+{
+	struct tv_valid *t;
+
+	t = calloc(sizeof(*t), 1);
+	if (pthread_setspecific(tv_tls_key, t))
+		log_err("fio: can't set TLS key\n");
+}
+
+static void kill_tv_tls_key(void *data)
+{
+	free(data);
+}
+
 void fio_clock_init(void)
 {
 	if (fio_clock_source == fio_clock_source_inited)
 		return;
 
-	last_tv_valid = 0;
+	if (pthread_key_create(&tv_tls_key, kill_tv_tls_key))
+		log_err("fio: can't create TLS key\n");
+
 	fio_clock_source_inited = fio_clock_source;
 	calibrate_cpu_clock();
 
