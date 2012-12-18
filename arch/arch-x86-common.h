@@ -4,24 +4,17 @@
 static inline void do_cpuid(unsigned int *eax, unsigned int *ebx,
 			    unsigned int *ecx, unsigned int *edx)
 {
-	unsigned int id = *eax;
-
-	asm("movl %4, %%eax;"
-	    "cpuid;"
-	    "movl %%eax, %0;"
-	    "movl %%ebx, %1;"
-	    "movl %%ecx, %2;"
-	    "movl %%edx, %3;"
-		: "=r" (*eax), "=r" (*ebx), "=r" (*ecx), "=r" (*edx)
-		: "r" (id)
-		: "eax", "ebx", "ecx", "edx");
+	asm volatile("cpuid"
+		: "=a" (*eax), "=b" (*ebx), "=c" (*ecx), "=d" (*edx)
+		: "0" (*eax), "2" (*ecx)
+		: "memory");
 }
 
 #define ARCH_HAVE_INIT
 extern int tsc_reliable;
 static inline int arch_init(char *envp[])
 {
-	unsigned int eax, ebx, ecx, edx;
+	unsigned int eax, ebx, ecx = 0, edx;
 
 	/*
 	 * Check for TSC

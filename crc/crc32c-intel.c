@@ -81,7 +81,7 @@ uint32_t crc32c_intel(unsigned char const *data, unsigned long length)
 void crc32c_intel_probe(void)
 {
 	if (!crc32c_probed) {
-		unsigned int eax, ebx, ecx, edx;
+		unsigned int eax, ebx, ecx = 0, edx;
 
 		eax = 1;
 
