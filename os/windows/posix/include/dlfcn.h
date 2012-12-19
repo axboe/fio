@@ -1,6 +1,6 @@
 #ifndef DLFCN_H
 #define DLFCN_H
- 
+
 #define RTLD_LAZY 1
 
 void *dlopen(const char *file, int mode);

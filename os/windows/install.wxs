@@ -7,7 +7,7 @@
 		<?define ProgramDirectory = ProgramFiles64Folder ?>
 	<?endif?>
 
-    <Product Id="F9883688-6AB3-4BD1-AB93-91D39F12F003"
+	<Product Id="F9883688-6AB3-4BD1-AB93-91D39F12F003"
 	  Codepage="1252" Language="1033"
 	  Manufacturer="fio" Name="fio"
 	  UpgradeCode="2338A332-5511-43cf-b9BD-5C60496CCFCC" Version="2.0.12.1">

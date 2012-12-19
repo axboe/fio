@@ -6,7 +6,7 @@ typedef int in_port_t;
 
  struct sockaddr_un
  {
- 	sa_family_t	sun_family; /* Address family */
+	sa_family_t	sun_family; /* Address family */
 	char		sun_path[]; /* Socket pathname */
 };
 
