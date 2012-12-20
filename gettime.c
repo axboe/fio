@@ -120,6 +120,15 @@ static void fio_init gtod_init(void)
 
 #endif /* FIO_DEBUG_TIME */
 
+static int fill_clock_gettime(struct timespec *ts)
+{
+#ifdef FIO_HAVE_CLOCK_MONOTONIC
+	return clock_gettime(CLOCK_MONOTONIC, ts);
+#else
+	return clock_gettime(CLOCK_REALTIME, ts);
+#endif
+}
+
 #ifdef FIO_DEBUG_TIME
 void fio_gettime(struct timeval *tp, void *caller)
 #else
@@ -148,11 +157,7 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 	case CS_CGETTIME: {
 		struct timespec ts;
 
-#ifdef FIO_HAVE_CLOCK_MONOTONIC
-		if (clock_gettime(CLOCK_MONOTONIC, &ts) < 0) {
-#else
-		if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
-#endif
+		if (fill_clock_gettime(&ts) < 0) {
 			log_err("fio: clock_gettime fails\n");
 			assert(0);
 		}
@@ -203,15 +208,22 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 #ifdef ARCH_HAVE_CPU_CLOCK
 static unsigned long get_cycles_per_usec(void)
 {
+	struct timespec ts;
 	struct timeval s, e;
 	unsigned long long c_s, c_e;
 
-	gettimeofday(&s, NULL);
+	fill_clock_gettime(&ts);
+	s.tv_sec = ts.tv_sec;
+	s.tv_usec = ts.tv_nsec / 1000;
+
 	c_s = get_cpu_clock();
 	do {
 		unsigned long long elapsed;
 
-		gettimeofday(&e, NULL);
+		fill_clock_gettime(&ts);
+		e.tv_sec = ts.tv_sec;
+		e.tv_usec = ts.tv_nsec / 1000;
+
 		elapsed = utime_since(&s, &e);
 		if (elapsed >= 1280) {
 			c_e = get_cpu_clock();
