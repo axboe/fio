@@ -15,6 +15,7 @@
 
 #ifdef ARCH_HAVE_CPU_CLOCK
 static unsigned long cycles_per_usec;
+static unsigned long inv_cycles_per_usec;
 int tsc_reliable = 0;
 #endif
 
@@ -177,7 +178,7 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 		} else if (tv)
 			tv->last_cycles = t;
 
-		usecs = t / cycles_per_usec;
+		usecs = (t * inv_cycles_per_usec) / 16777216UL;
 		tp->tv_sec = usecs / 1000000;
 		tp->tv_usec = usecs % 1000000;
 		break;
@@ -277,6 +278,8 @@ static void calibrate_cpu_clock(void)
 	dprint(FD_TIME, "mean=%f, S=%f\n", mean, S);
 
 	cycles_per_usec = avg;
+	inv_cycles_per_usec = 16777216UL / cycles_per_usec;
+	dprint(FD_TIME, "inv_cycles_per_usec=%lu\n", inv_cycles_per_usec);
 }
 #else
 static void calibrate_cpu_clock(void)
