@@ -1,6 +1,8 @@
 #ifndef ARCH_H
 #define ARCH_H
 
+#include <stdint.h>
+
 #ifdef __WORDSIZE
 #define BITS_PER_LONG	__WORDSIZE
 #else
