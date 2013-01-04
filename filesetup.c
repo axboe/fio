@@ -910,7 +910,7 @@ static int __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 
 	range_size = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
 
-	nranges = (f->real_file_size + range_size - 1) / range_size;
+	nranges = (f->io_size + range_size - 1) / range_size;
 
 	seed = jhash(f->file_name, strlen(f->file_name), 0) * td->thread_number;
 	if (!td->o.rand_repeatable)
