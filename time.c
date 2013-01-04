@@ -53,7 +53,7 @@ void usec_sleep(struct thread_data *td, unsigned long usec)
 	} while (!td->terminate);
 }
 
-unsigned long mtime_since_genesis(void)
+uint64_t mtime_since_genesis(void)
 {
 	return mtime_since_now(&genesis);
 }
