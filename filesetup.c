@@ -709,7 +709,7 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 	return ret;
 }
 
-unsigned long long get_start_offset(struct thread_data *td)
+uint64_t get_start_offset(struct thread_data *td)
 {
 	return td->o.start_offset +
 		(td->thread_number - 1) * td->o.offset_increment;
