@@ -69,7 +69,7 @@ static unsigned int binject_read_commands(struct thread_data *td, void *p,
 one_more:
 	events = 0;
 	for_each_file(td, f, i) {
-		bf = (void *) f->engine_data;
+		bf = (struct binject_file *) f->engine_data;
 		ret = read(bf->fd, p, left * sizeof(struct b_user_cmd));
 		if (ret < 0) {
 			if (errno == EAGAIN)
@@ -104,7 +104,7 @@ static int fio_binject_getevents(struct thread_data *td, unsigned int min,
 	 * Fill in the file descriptors
 	 */
 	for_each_file(td, f, i) {
-		bf = (void *) f->engine_data;
+		bf = (struct binject_file *) f->engine_data;
 
 		/*
 		 * don't block for min events == 0
@@ -153,7 +153,7 @@ static int fio_binject_getevents(struct thread_data *td, unsigned int min,
 
 	if (!min) {
 		for_each_file(td, f, i) {
-			bf = (void *) f->engine_data;
+			bf = (struct binject_file *) f->engine_data;
 			fcntl(bf->fd, F_SETFL, bd->fd_flags[i]);
 		}
 	}
@@ -167,7 +167,7 @@ static int fio_binject_getevents(struct thread_data *td, unsigned int min,
 static int fio_binject_doio(struct thread_data *td, struct io_u *io_u)
 {
 	struct b_user_cmd *buc = &io_u->buc;
-	struct binject_file *bf = (void *) io_u->file->engine_data;
+	struct binject_file *bf = (struct binject_file *) io_u->file->engine_data;
 	int ret;
 
 	ret = write(bf->fd, buc, sizeof(*buc));
@@ -181,7 +181,7 @@ static int fio_binject_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct binject_data *bd = td->io_ops->data;
 	struct b_user_cmd *buc = &io_u->buc;
-	struct binject_file *bf = (void *) io_u->file->engine_data;
+	struct binject_file *bf = (struct binject_file *) io_u->file->engine_data;
 
 	if (io_u->xfer_buflen & (bf->bs - 1)) {
 		log_err("read/write not sector aligned\n");
@@ -323,7 +323,7 @@ err_unmap:
 
 static int fio_binject_close_file(struct thread_data *td, struct fio_file *f)
 {
-	struct binject_file *bf = (void *) f->engine_data;
+	struct binject_file *bf = (struct binject_file *) f->engine_data;
 
 	if (bf) {
 		binject_unmap_dev(td, bf);
@@ -357,7 +357,7 @@ static int fio_binject_open_file(struct thread_data *td, struct fio_file *f)
 	bf = malloc(sizeof(*bf));
 	bf->bs = bs;
 	bf->minor = bf->fd = -1;
-	f->engine_data = (uint64_t) bf;
+	f->engine_data = (uintptr_t) bf;
 
 	if (binject_map_dev(td, bf, f->fd)) {
 err_close:
