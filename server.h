@@ -29,10 +29,10 @@ struct fio_net_cmd {
 };
 
 struct fio_net_int_cmd {
-	struct fio_net_cmd cmd;
 	struct flist_head list;
 	struct timeval tv;
 	uint64_t saved_tag;
+	struct fio_net_cmd cmd;
 };
 
 enum {
