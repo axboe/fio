@@ -422,6 +422,7 @@ static void do_verify(struct thread_data *td)
 
 	io_u = NULL;
 	while (!td->terminate) {
+		enum fio_ddir ddir;
 		int ret2, full;
 
 		update_tv_cache(td);
@@ -455,6 +456,8 @@ static void do_verify(struct thread_data *td)
 			io_u->end_io = verify_io_u_async;
 		else
 			io_u->end_io = verify_io_u;
+
+		ddir = io_u->ddir;
 
 		ret = td_io_queue(td, io_u);
 		switch (ret) {
@@ -507,7 +510,7 @@ sync_done:
 			break;
 		}
 
-		if (break_on_this_error(td, io_u->ddir, &ret))
+		if (break_on_this_error(td, ddir, &ret))
 			break;
 
 		/*
