@@ -186,7 +186,7 @@ struct jobs_eta {
 	 * Network 'copy' of run_str[]
 	 */
 	uint32_t nr_threads;
-	uint8_t run_str[0];
+	uint8_t run_str[];
 };
 
 extern void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs);
