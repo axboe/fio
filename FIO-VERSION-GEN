@@ -1,7 +1,7 @@
 #!/bin/sh
 
 GVF=FIO-VERSION-FILE
-DEF_VER=fio-2.0.12.2
+DEF_VER=fio-2.0.13
 
 LF='
 '
