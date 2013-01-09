@@ -14,8 +14,6 @@
 
 #ifdef FIO_HAVE_LIBAIO
 
-#define ev_to_iou(ev)	(struct io_u *) ((unsigned long) (ev)->obj)
-
 struct libaio_data {
 	io_context_t aio_ctx;
 	struct io_event *aio_events;
@@ -64,7 +62,7 @@ static struct io_u *fio_libaio_event(struct thread_data *td, int event)
 	struct io_u *io_u;
 
 	ev = ld->aio_events + event;
-	io_u = ev_to_iou(ev);
+	io_u = container_of(ev->obj, struct io_u, iocb);
 
 	if (ev->res != io_u->xfer_buflen) {
 		if (ev->res > io_u->xfer_buflen)

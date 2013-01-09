@@ -84,20 +84,20 @@ struct fio_file {
 	/*
 	 * size of the file, offset into file, and io size from that offset
 	 */
-	unsigned long long real_file_size;
-	unsigned long long file_offset;
-	unsigned long long io_size;
+	uint64_t real_file_size;
+	uint64_t file_offset;
+	uint64_t io_size;
 
-	unsigned long long last_pos;
-	unsigned long long last_start;
+	uint64_t last_pos;
+	uint64_t last_start;
 
-	unsigned long long first_write;
-	unsigned long long last_write;
+	uint64_t first_write;
+	uint64_t last_write;
 
 	/*
 	 * For use by the io engine
 	 */
-	uint64_t engine_data;
+	uintptr_t engine_data;
 
 	/*
 	 * if io is protected by a semaphore, this is set
@@ -154,7 +154,7 @@ FILE_FLAG_FNS(partial_mmap);
 struct thread_data;
 extern void close_files(struct thread_data *);
 extern void close_and_free_files(struct thread_data *);
-extern unsigned long long get_start_offset(struct thread_data *);
+extern uint64_t get_start_offset(struct thread_data *);
 extern int __must_check setup_files(struct thread_data *);
 extern int __must_check file_invalidate_cache(struct thread_data *, struct fio_file *);
 extern int __must_check generic_open_file(struct thread_data *, struct fio_file *);

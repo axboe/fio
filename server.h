@@ -27,7 +27,7 @@ struct fio_net_cmd {
 	 */
 	uint16_t cmd_crc16;	/* cmd checksum */
 	uint16_t pdu_crc16;	/* payload checksum */
-	uint8_t payload[0];	/* payload */
+	uint8_t payload[];	/* payload */
 };
 
 struct fio_net_cmd_reply {
@@ -96,13 +96,13 @@ struct cmd_probe_pdu {
 
 struct cmd_single_line_pdu {
 	uint16_t len;
-	uint8_t text[0];
+	uint8_t text[];
 };
 
 struct cmd_line_pdu {
 	uint16_t lines;
 	uint16_t client_type;
-	struct cmd_single_line_pdu options[0];
+	struct cmd_single_line_pdu options[];
 };
 
 struct cmd_job_pdu {

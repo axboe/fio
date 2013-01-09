@@ -709,7 +709,7 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 	return ret;
 }
 
-unsigned long long get_start_offset(struct thread_data *td)
+uint64_t get_start_offset(struct thread_data *td)
 {
 	return td->o.start_offset +
 		(td->thread_number - 1) * td->o.offset_increment;
@@ -907,10 +907,12 @@ static int __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 {
 	unsigned int range_size, seed;
 	unsigned long nranges;
+	uint64_t file_size;
 
 	range_size = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
+	file_size = min(f->real_file_size, f->io_size);
 
-	nranges = (f->real_file_size + range_size - 1) / range_size;
+	nranges = (file_size + range_size - 1) / range_size;
 
 	seed = jhash(f->file_name, strlen(f->file_name), 0) * td->thread_number;
 	if (!td->o.rand_repeatable)

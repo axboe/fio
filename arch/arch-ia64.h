@@ -47,6 +47,7 @@ extern int tsc_reliable;
 static inline int arch_init(char *envp[])
 {
 	tsc_reliable = 1;
+	return 0;
 }
 
 #define ARCH_HAVE_FFZ

@@ -207,6 +207,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'C',
 	},
 	{
+		.name		= (char *) "cpuclock-test",
+		.has_arg	= no_argument,
+		.val		= 'T',
+	},
+	{
 		.name		= NULL,
 	},
 };
@@ -1255,6 +1260,7 @@ static void usage(const char *name)
 	printf("  --terse-version=x\tSet terse version output format to 'x'\n");
 	printf("  --version\t\tPrint version info and exit\n");
 	printf("  --help\t\tPrint this page\n");
+	printf("  --cpuclock-test\tPerform test/validation of CPU clock\n");
 	printf("  --cmdhelp=cmd\t\tPrint command help, \"all\" for all of"
 		" them\n");
 	printf("  --enghelp=engine\tPrint ioengine help, or list"
@@ -1275,7 +1281,7 @@ static void usage(const char *name)
 	printf("  --daemonize=pidfile\tBackground fio server, write pid to file\n");
 	printf("  --client=hostname\tTalk to remote backend fio server at hostname\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
-	printf("\n                 Jens Axboe <jaxboe@fusionio.com>\n");
+	printf("\n                   Jens Axboe <jaxboe@fusionio.com>\n");
 }
 
 #ifdef FIO_INC_DEBUG
@@ -1662,6 +1668,10 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				fio_client_add_ini_file(cur_client, argv[optind]);
 				optind++;
 			}
+			break;
+		case 'T':
+			do_exit++;
+			exit_val = fio_monotonic_clocktest();
 			break;
 		default:
 			do_exit++;

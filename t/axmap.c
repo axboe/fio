@@ -26,13 +26,17 @@ int main(int argc, char *argv[])
 	struct fio_lfsr lfsr;
 	size_t size = (1UL << 28) - 200;
 	struct axmap *map;
+	int seed = 1;
 
-	if (argc > 1)
+	if (argc > 1) {
 		size = strtoul(argv[1], NULL, 10);
+		if (argc > 2)
+			seed = strtoul(argv[2], NULL, 10);
+	}
 
 	printf("Using %llu entries\n", (unsigned long long) size);
 
-	lfsr_init(&lfsr, size);
+	lfsr_init(&lfsr, size, seed);
 	map = axmap_new(size);
 
 	while (size--) {

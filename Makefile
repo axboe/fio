@@ -1,10 +1,8 @@
-ifneq ($(origin CC), environment)
-CC	= $(CROSS_COMPILE)gcc
-endif
+CC ?= gcc
 DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
 CPPFLAGS= -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	$(DEBUGFLAGS)
-OPTFLAGS= -O3 -g $(EXTFLAGS)
+OPTFLAGS= -O3 -g -ffast-math $(EXTFLAGS)
 CFLAGS	= -std=gnu99 -Wwrite-strings -Wall $(OPTFLAGS)
 LIBS	= -lm -lz $(EXTLIBS)
 PROGS	= fio
@@ -41,6 +39,7 @@ ifeq ($(UNAME), Android)
   CPPFLAGS += -DFIO_NO_HAVE_SHM_H
 endif
 ifeq ($(UNAME), SunOS)
+  CC      = gcc
   SOURCE += fifo.c lib/strsep.c helpers.c engines/posixaio.c \
 		engines/solarisaio.c
   LIBS	 += -lpthread -ldl -laio -lrt -lnsl -lsocket
@@ -63,6 +62,7 @@ ifeq ($(UNAME), AIX)
   LDFLAGS += -L/opt/freeware/lib -Wl,-blibpath:/opt/freeware/lib:/usr/lib:/lib -Wl,-bmaxdata:0x80000000
 endif
 ifeq ($(UNAME), HP-UX)
+  CC      = gcc
   SOURCE += fifo.c helpers.c lib/getopt_long.c lib/strsep.c engines/posixaio.c
   LIBS   += -lpthread -ldl -lrt
   CFLAGS += -D_LARGEFILE64_SOURCE
