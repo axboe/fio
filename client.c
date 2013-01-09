@@ -21,8 +21,8 @@
 #include "hash.h"
 
 struct client_eta {
-	struct jobs_eta eta;
 	unsigned int pending;
+	struct jobs_eta eta;
 };
 
 struct fio_client {
