@@ -180,7 +180,7 @@ static double maxdouble(double a, double b)
 static double find_double_values(struct graph_label *l, double_comparator cmp)
 {
 	struct flist_head *entry;
-	double answer, tmp;
+	double answer = 0.0, tmp;
 	int first = 1;
 
 	if (flist_empty(&l->value_list))
