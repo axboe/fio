@@ -22,8 +22,6 @@
 
 #include "../fio.h"
 
-#ifdef FIO_HAVE_FUSION_AW
-
 #include <vsl_dp_experimental/vectored_write.h>
 
 /* Fix sector size to 512 bytes independent of actual sector size, just like
@@ -144,22 +142,6 @@ static struct ioengine_ops ioengine = {
 	.get_file_size = generic_get_file_size,
 	.flags = FIO_SYNCIO | FIO_RAWIO | FIO_MEMALIGN
 };
-
-#else /* !FUSION_HAVE_FUSION_AW */
-
-static int fio_fusion_aw_eng_init(struct thread_data fio_unused *td)
-{
-	log_err("fio: fusion atomic write engine not available\n");
-	return 1;
-}
-
-static struct ioengine_ops ioengine = {
-	.name		= "fusion-aw-sync",
-	.version	= FIO_IOOPS_VERSION,
-	.init		= fio_fusion_aw_eng_init,
-};
-
-#endif /* FUSION_HAVE_FUSION_AW */
 
 static void fio_init fio_fusion_aw_init(void)
 {

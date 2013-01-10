@@ -565,7 +565,7 @@ static int str_verify_cpus_allowed_cb(void *data, const char *input)
 }
 #endif
 
-#ifdef FIO_HAVE_LIBNUMA
+#ifdef CONFIG_LIBNUMA
 static int str_numa_cpunodes_cb(void *data, char *input)
 {
 	struct thread_data *td = data;
@@ -713,7 +713,7 @@ static int str_fst_cb(void *data, const char *str)
 	return 0;
 }
 
-#ifdef FIO_HAVE_SYNC_FILE_RANGE
+#ifdef CONFIG_SYNC_FILE_RANGE
 static int str_sfr_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
@@ -1272,12 +1272,12 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			  { .ival = "vsync",
 			    .help = "Use readv/writev",
 			  },
-#ifdef FIO_HAVE_LIBAIO
+#ifdef CONFIG_LIBAIO
 			  { .ival = "libaio",
 			    .help = "Linux native asynchronous IO",
 			  },
 #endif
-#ifdef FIO_HAVE_POSIXAIO
+#ifdef CONFIG_POSIXAIO
 			  { .ival = "posixaio",
 			    .help = "POSIX asynchronous IO",
 			  },
@@ -1295,7 +1295,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			  { .ival = "mmap",
 			    .help = "Memory mapped IO"
 			  },
-#ifdef FIO_HAVE_SPLICE
+#ifdef CONFIG_LINUX_SPLICE
 			  { .ival = "splice",
 			    .help = "splice/vmsplice based IO",
 			  },
@@ -1314,15 +1314,10 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			  { .ival = "net",
 			    .help = "Network IO",
 			  },
-#ifdef FIO_HAVE_SYSLET
-			  { .ival = "syslet-rw",
-			    .help = "syslet enabled async pread/pwrite IO",
-			  },
-#endif
 			  { .ival = "cpuio",
 			    .help = "CPU cycle burner engine",
 			  },
-#ifdef FIO_HAVE_GUASI
+#ifdef CONFIG_GUASI
 			  { .ival = "guasi",
 			    .help = "GUASI IO engine",
 			  },
@@ -1332,12 +1327,12 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .help = "binject direct inject block engine",
 			  },
 #endif
-#ifdef FIO_HAVE_RDMA
+#ifdef CONFIG_RDMA
 			  { .ival = "rdma",
 			    .help = "RDMA IO engine",
 			  },
 #endif
-#ifdef FIO_HAVE_FUSION_AW
+#ifdef CONFIG_FUSION_AW
 			  { .ival = "fusion-aw-sync",
 			    .help = "Fusion-io atomic write engine",
 			  },
@@ -1650,7 +1645,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Make every Nth write a barrier write",
 		.def	= "0",
 	},
-#ifdef FIO_HAVE_SYNC_FILE_RANGE
+#ifdef CONFIG_SYNC_FILE_RANGE
 	{
 		.name	= "sync_file_range",
 		.posval	= {
@@ -1747,14 +1742,18 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(clocksource),
 		.help	= "What type of timing source to use",
 		.posval	= {
+#ifdef CONFIG_GETTIMEOFDAY
 			  { .ival = "gettimeofday",
 			    .oval = CS_GTOD,
 			    .help = "Use gettimeofday(2) for timing",
 			  },
+#endif
+#ifdef CONFIG_CLOCK_GETTIME
 			  { .ival = "clock_gettime",
 			    .oval = CS_CGETTIME,
 			    .help = "Use clock_gettime(2) for timing",
 			  },
+#endif
 #ifdef ARCH_HAVE_CPU_CLOCK
 			  { .ival = "cpu",
 			    .oval = CS_CPUCLOCK,
@@ -2278,7 +2277,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Set CPUs allowed",
 	},
 #endif
-#ifdef FIO_HAVE_LIBNUMA
+#ifdef CONFIG_LIBNUMA
 	{
 		.name	= "numa_cpu_nodes",
 		.type	= FIO_OPT_STR,

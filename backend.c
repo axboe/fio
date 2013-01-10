@@ -1074,7 +1074,7 @@ static void *thread_main(void *data)
 		goto err;
 	}
 
-#ifdef FIO_HAVE_LIBNUMA
+#ifdef CONFIG_LIBNUMA
 	/* numa node setup */
 	if (td->o.numa_cpumask_set || td->o.numa_memmask_set) {
 		int ret;

@@ -1,6 +1,13 @@
 #ifndef FIO_IOENGINE_H
 #define FIO_IOENGINE_H
 
+#ifdef CONFIG_LIBAIO
+#include <libaio.h>
+#endif
+#ifdef CONFIG_GUASI
+#include <guasi.h>
+#endif
+
 #define FIO_IOOPS_VERSION	14
 
 enum {
@@ -19,25 +26,25 @@ enum {
  */
 struct io_u {
 	union {
-#ifdef FIO_HAVE_LIBAIO
+#ifdef CONFIG_LIBAIO
 		struct iocb iocb;
 #endif
-#ifdef FIO_HAVE_POSIXAIO
+#ifdef CONFIG_POSIXAIO
 		os_aiocb_t aiocb;
 #endif
 #ifdef FIO_HAVE_SGIO
 		struct sg_io_hdr hdr;
 #endif
-#ifdef FIO_HAVE_GUASI
+#ifdef CONFIG_GUASI
 		guasi_req_t greq;
 #endif
-#ifdef FIO_HAVE_SOLARISAIO
+#ifdef CONFIG_SOLARISAIO
 		aio_result_t resultp;
 #endif
 #ifdef FIO_HAVE_BINJECT
 		struct b_user_cmd buc;
 #endif
-#ifdef FIO_HAVE_RDMA
+#ifdef CONFIG_RDMA
 		struct ibv_mr *mr;
 #endif
 		void *mmap_data;

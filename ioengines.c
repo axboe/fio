@@ -503,7 +503,7 @@ int do_io_u_sync(struct thread_data *td, struct io_u *io_u)
 	if (io_u->ddir == DDIR_SYNC) {
 		ret = fsync(io_u->file->fd);
 	} else if (io_u->ddir == DDIR_DATASYNC) {
-#ifdef FIO_HAVE_FDATASYNC
+#ifdef CONFIG_FDATASYNC
 		ret = fdatasync(io_u->file->fd);
 #else
 		ret = io_u->xfer_buflen;

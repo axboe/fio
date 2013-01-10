@@ -12,8 +12,6 @@
 
 #include "../fio.h"
 
-#ifdef FIO_HAVE_POSIXAIO
-
 struct posixaio_data {
 	struct io_u **aio_events;
 	unsigned int queued;
@@ -173,7 +171,7 @@ static int fio_posixaio_queue(struct thread_data *td,
 		do_io_u_trim(td, io_u);
 		return FIO_Q_COMPLETED;
 	} else {
-#ifdef FIO_HAVE_POSIXAIO_FSYNC
+#ifdef CONFIG_POSIXAIO_FSYNC
 		ret = aio_fsync(O_SYNC, aiocb);
 #else
 		if (pd->queued)
@@ -239,27 +237,6 @@ static struct ioengine_ops ioengine = {
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
 };
-
-#else /* FIO_HAVE_POSIXAIO */
-
-/*
- * When we have a proper configure system in place, we simply wont build
- * and install this io engine. For now install a crippled version that
- * just complains and fails to load.
- */
-static int fio_posixaio_init(struct thread_data fio_unused *td)
-{
-	log_err("fio: posixaio not available\n");
-	return 1;
-}
-
-static struct ioengine_ops ioengine = {
-	.name		= "posixaio",
-	.version	= FIO_IOOPS_VERSION,
-	.init		= fio_posixaio_init,
-};
-
-#endif
 
 static void fio_init fio_posixaio_register(void)
 {

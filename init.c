@@ -496,17 +496,8 @@ static int fixup_options(struct thread_data *td)
 	/*
 	 * The low water mark cannot be bigger than the iodepth
 	 */
-	if (o->iodepth_low > o->iodepth || !o->iodepth_low) {
-		/*
-		 * syslet work around - if the workload is sequential,
-		 * we want to let the queue drain all the way down to
-		 * avoid seeking between async threads
-		 */
-		if (!strcmp(td->io_ops->name, "syslet-rw") && !td_random(td))
-			o->iodepth_low = 1;
-		else
-			o->iodepth_low = o->iodepth;
-	}
+	if (o->iodepth_low > o->iodepth || !o->iodepth_low)
+		o->iodepth_low = o->iodepth;
 
 	/*
 	 * If batch number isn't set, default to the same as iodepth
@@ -569,7 +560,7 @@ static int fixup_options(struct thread_data *td)
 		}
 	}
 
-#ifndef FIO_HAVE_FDATASYNC
+#ifndef CONFIG_FDATASYNC
 	if (o->fdatasync_blocks) {
 		log_info("fio: this platform does not support fdatasync()"
 			 " falling back to using fsync().  Use the 'fsync'"

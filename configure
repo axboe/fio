@@ -1,0 +1,840 @@
+#!/bin/sh
+#
+# Fio configure script. Heavily influenced by the manual qemu configure
+# script. Sad this this is easier than autoconf and enemies.
+#
+
+# set temporary file name
+if test ! -z "$TMPDIR" ; then
+    TMPDIR1="${TMPDIR}"
+elif test ! -z "$TEMPDIR" ; then
+    TMPDIR1="${TEMPDIR}"
+else
+    TMPDIR1="/tmp"
+fi
+
+TMPC="${TMPDIR1}/fio-conf-${RANDOM}-$$-${RANDOM}.c"
+TMPO="${TMPDIR1}/fio-conf-${RANDOM}-$$-${RANDOM}.o"
+TMPE="${TMPDIR1}/fio-conf-${RANDOM}-$$-${RANDOM}.exe"
+
+# NB: do not call "exit" in the trap handler; this is buggy with some shells;
+# see <1285349658-3122-1-git-send-email-loic.minier@linaro.org>
+trap "rm -f $TMPC $TMPO $TMPE" EXIT INT QUIT TERM
+
+rm -rf config.log
+
+config_host_mak="config-host.mak"
+config_host_ld="config-host.ld"
+
+# Print a helpful header at the top of config.log
+echo "# FIO configure log $(date)" >> config.log
+printf "# Configured with:" >> config.log
+printf " '%s'" "$0" "$@" >> config.log
+echo >> config.log
+echo "#" >> config.log
+
+do_cc() {
+    # Run the compiler, capturing its output to the log.
+    echo $cc "$@" >> config.log
+    $cc "$@" >> config.log 2>&1 || return $?
+    # Test passed. If this is an --enable-werror build, rerun
+    # the test with -Werror and bail out if it fails. This
+    # makes warning-generating-errors in configure test code
+    # obvious to developers.
+    if test "$werror" != "yes"; then
+        return 0
+    fi
+    # Don't bother rerunning the compile if we were already using -Werror
+    case "$*" in
+        *-Werror*)
+           return 0
+        ;;
+    esac
+    echo $cc -Werror "$@" >> config.log
+    $cc -Werror "$@" >> config.log 2>&1 && return $?
+    echo "ERROR: configure test passed without -Werror but failed with -Werror."
+    echo "This is probably a bug in the configure script. The failing command"
+    echo "will be at the bottom of config.log."
+    echo "You can run configure with --disable-werror to bypass this check."
+    exit 1
+}
+
+compile_object() {
+  do_cc $CFLAGS -c -o $TMPO $TMPC
+}
+
+compile_prog() {
+  local_cflags="$1"
+  local_ldflags="$2"
+  echo "Compiling test case $3" >> config.log
+  do_cc $CFLAGS $local_cflags -o $TMPE $TMPC $LDFLAGS $local_ldflags
+}
+
+feature_not_found() {
+  feature=$1
+
+  echo "ERROR"
+  echo "ERROR: User requested feature $feature"
+  echo "ERROR: configure was not able to find it"
+  echo "ERROR"
+  exit 1;
+}
+
+has() {
+  type "$1" >/dev/null 2>&1
+}
+
+check_define() {
+  cat > $TMPC <<EOF
+#if !defined($1)
+#error $1 not defined
+#endif
+int main(void)
+{
+  return 0;
+}
+EOF
+  compile_object
+}
+
+targetos=""
+cpu=""
+
+cc="${CC-${cross_prefix}gcc}"
+
+if check_define __linux__ ; then
+  targetos="Linux"
+elif check_define _WIN32 ; then
+  targetos='MINGW32'
+elif check_define __OpenBSD__ ; then
+  targetos='OpenBSD'
+elif check_define __sun__ ; then
+  targetos='SunOS'
+else
+  targetos=`uname -s`
+fi
+
+# Some host OSes need non-standard checks for which CPU to use.
+# Note that these checks are broken for cross-compilation: if you're
+# cross-compiling to one of these OSes then you'll need to specify
+# the correct CPU with the --cpu option.
+case $targetos in
+Darwin)
+  # on Leopard most of the system is 32-bit, so we have to ask the kernel if
+  # we can run 64-bit userspace code.
+  # If the user didn't specify a CPU explicitly and the kernel says this is
+  # 64 bit hw, then assume x86_64. Otherwise fall through to the usual
+  # detection code.
+  if test -z "$cpu" && test "$(sysctl -n hw.optional.x86_64)" = "1"; then
+    cpu="x86_64"
+  fi
+  ;;
+SunOS)
+  # `uname -m` returns i86pc even on an x86_64 box, so default based on isainfo
+  if test -z "$cpu" && test "$(isainfo -k)" = "amd64"; then
+    cpu="x86_64"
+  fi
+esac
+
+if test ! -z "$cpu" ; then
+  # command line argument
+  :
+elif check_define __i386__ ; then
+  cpu="i386"
+elif check_define __x86_64__ ; then
+  cpu="x86_64"
+elif check_define __sparc__ ; then
+  if check_define __arch64__ ; then
+    cpu="sparc64"
+  else
+    cpu="sparc"
+  fi
+elif check_define _ARCH_PPC ; then
+  if check_define _ARCH_PPC64 ; then
+    cpu="ppc64"
+  else
+    cpu="ppc"
+  fi
+elif check_define __mips__ ; then
+  cpu="mips"
+elif check_define __ia64__ ; then
+  cpu="ia64"
+elif check_define __s390__ ; then
+  if check_define __s390x__ ; then
+    cpu="s390x"
+  else
+    cpu="s390"
+  fi
+elif check_define __arm__ ; then
+  cpu="arm"
+elif check_define __hppa__ ; then
+  cpu="hppa"
+else
+  cpu=`uname -m`
+fi
+
+# Normalise host CPU name and set ARCH.
+case "$cpu" in
+  ia64|ppc|ppc64|s390|s390x|sparc64)
+    cpu="$cpu"
+  ;;
+  i386|i486|i586|i686|i86pc|BePC)
+    cpu="i386"
+  ;;
+  x86_64|amd64)
+    cpu="x86_64"
+  ;;
+  armv*b|armv*l|arm)
+    cpu="arm"
+  ;;
+  hppa|parisc|parisc64)
+    cpu="hppa"
+  ;;
+  mips*)
+    cpu="mips"
+  ;;
+  sparc|sun4[cdmuv])
+    cpu="sparc"
+  ;;
+  *)
+    echo "Unknown CPU"
+    exit 1;
+  ;;
+esac
+
+if test -z $CC; then
+  if test "$targetos" = "FreeBSD"; then
+    if has clang; then
+      CC=clang
+    else
+      CC=gcc
+    fi
+  elif test "$targetos" = "MINGW32"; then
+    CC=x86_64-w64-mingw32-gcc
+  fi
+fi
+
+cc="${CC-${cross_prefix}gcc}"
+
+echo "Operating system              $targetos"
+echo "CPU                           $cpu"
+echo "Compiler                      $cc"
+echo
+
+##########################################
+# check for wordsize
+wordsize="0"
+cat > $TMPC <<EOF
+#include <stdio.h>
+int main(void)
+{
+  unsigned int wsize = sizeof(long) * 8;
+  printf("%d\n", wsize);
+  return 0;
+}
+EOF
+if compile_prog "" "" "wordsize"; then
+  wordsize=$($TMPE)
+fi
+echo "Wordsize                      $wordsize"
+
+##########################################
+# linux-aio probe
+libaio="no"
+cat > $TMPC <<EOF
+#include <libaio.h>
+#include <stddef.h>
+int main(void)
+{
+  io_setup(0, NULL);
+  return 0;
+}
+EOF
+if compile_prog "" "-laio" "libaio" ; then
+  libaio=yes
+  LIBS="-laio $LIBS"
+else
+  if test "$libaio" = "yes" ; then
+    feature_not_found "linux AIO"
+  fi
+  libaio=no
+fi
+echo "Linux AIO support             $libaio"
+
+##########################################
+# posix aio probe
+posix_aio="no"
+posix_aio_lrt="no"
+cat > $TMPC <<EOF
+#include <aio.h>
+int main(void)
+{
+  struct aiocb cb;
+  aio_read(&cb);
+  return 0;
+}
+EOF
+if compile_prog "" "" "posixaio" ; then
+  posix_aio="yes"
+elif compile_prog "" "-lrt" "posixaio"; then
+  posix_aio="yes"
+  posix_aio_lrt="yes"
+  LIBS="-lrt $LIBS"
+fi
+echo "POSIX AIO support             $posix_aio"
+echo "POSIX AIO support needs -lrt  $posix_aio_lrt"
+
+##########################################
+# posix aio fsync probe
+posix_aio_fsync="no"
+if test "$posix_aio" = "yes" ; then
+  cat > $TMPC <<EOF
+#include <fcntl.h>
+#include <aio.h>
+int main(void)
+{
+  struct aiocb cb;
+  return aio_fsync(O_SYNC, &cb);
+  return 0;
+}
+EOF
+  if compile_prog "" "$LIBS" "posix_aio_fsync" ; then
+    posix_aio_fsync=yes
+  fi
+fi
+echo "POSIX AIO fsync               $posix_aio_fsync"
+
+##########################################
+# solaris aio probe
+solaris_aio="no"
+cat > $TMPC <<EOF
+#include <sys/types.h>
+#include <sys/asynch.h>
+#include <unistd.h>
+int main(void)
+{
+  aio_result_t res;
+  return aioread(0, NULL, 0, 0, SEEK_SET, &res);
+  return 0;
+}
+EOF
+if compile_prog "" "-laio" "solarisaio" ; then
+  solaris_aio=yes
+  LIBS="-laio $LIBS"
+fi
+echo "Solaris AIO support           $solaris_aio"
+
+##########################################
+# __sync_fetch_and_and test
+sfaa="no"
+cat > $TMPC << EOF
+static int sfaa(int *ptr)
+{
+  return __sync_fetch_and_and(ptr, 0);
+}
+
+int main(int argc, char **argv)
+{
+  int val = 42;
+  sfaa(&val);
+  return val;
+}
+EOF
+if compile_prog "" "" "__sync_fetch_and_add()" ; then
+    sfaa="yes"
+fi
+echo "__sync_fetch_and add          $sfaa"
+
+##########################################
+# libverbs probe
+libverbs="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <infiniband/arch.h>
+int main(int argc, char **argv)
+{
+  struct ibv_pd *pd = ibv_alloc_pd(NULL);
+  return 0;
+}
+EOF
+if compile_prog "" "-libverbs" "libverbs" ; then
+    libverbs="yes"
+    LIBS="-libverbs $LIBS"
+fi
+echo "libverbs                      $libverbs"
+
+##########################################
+# rdmacm probe
+rdmacm="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <rdma/rdma_cma.h>
+int main(int argc, char **argv)
+{
+  rdma_destroy_qp(NULL);
+  return 0;
+}
+EOF
+if compile_prog "" "-lrdmacm" "rdma"; then
+    rdmacm="yes"
+    LIBS="-lrdmacm $LIBS"
+fi
+echo "rdmacm                        $rdmacm"
+
+##########################################
+# Linux fallocate probe
+linux_fallocate="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <linux/falloc.h>
+int main(int argc, char **argv)
+{
+  int r = fallocate(0, FALLOC_FL_KEEP_SIZE, 0, 1024);
+  return r;
+}
+EOF
+if compile_prog "" "" "linux_fallocate"; then
+    linux_fallocate="yes"
+fi
+echo "Linux fallocate               $linux_fallocate"
+
+##########################################
+# POSIX fadvise probe
+posix_fadvise="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <fcntl.h>
+int main(int argc, char **argv)
+{
+  int r = posix_fadvise(0, 0, 0, POSIX_FADV_NORMAL);
+  return r;
+}
+EOF
+if compile_prog "" "" "posix_fadvise"; then
+    posix_fadvise="yes"
+fi
+echo "POSIX fadvise                 $posix_fadvise"
+
+##########################################
+# POSIX fallocate probe
+posix_fallocate="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <fcntl.h>
+int main(int argc, char **argv)
+{
+  int r = posix_fallocate(0, 0, 1024);
+  return r;
+}
+EOF
+if compile_prog "" "" "posix_fallocate"; then
+    posix_fallocate="yes"
+fi
+echo "POSIX fallocate               $posix_fallocate"
+
+##########################################
+# sched_set/getaffinity 2 or 3 argument test
+linux_2arg_affinity="no"
+linux_3arg_affinity="no"
+cat > $TMPC << EOF
+#define _GNU_SOURCE
+#include <sched.h>
+int main(int argc, char **argv)
+{
+  cpu_set_t mask;
+  return sched_setaffinity(0, sizeof(mask), &mask);
+}
+EOF
+if compile_prog "" "" "sched_setaffinity(,,)"; then
+  linux_3arg_affinity="yes"
+else
+  cat > $TMPC << EOF
+#define _GNU_SOURCE
+#include <sched.h>
+int main(int argc, char **argv)
+{
+  cpu_set_t mask;
+  return sched_setaffinity(0, &mask);
+}
+EOF
+  if compile_prog "" "" "sched_setaffinity(,)"; then
+    linux_2arg_affinity="yes"
+  fi
+fi
+echo "sched_setaffinity(3 arg)      $linux_3arg_affinity"
+echo "sched_setaffinity(2 arg)      $linux_2arg_affinity"
+
+##########################################
+# clock_gettime probe
+clock_gettime="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <time.h>
+int main(int argc, char **argv)
+{
+  return clock_gettime(0, NULL);
+}
+EOF
+if compile_prog "" "" "clock_gettime"; then
+    clock_gettime="yes"
+elif compile_prog "" "-lrt" "clock_gettime"; then
+    clock_gettime="yes"
+    LIBS="-lrt $LIBS"
+fi
+echo "clock_gettime                 $clock_gettime"
+
+##########################################
+# CLOCK_MONOTONIC probe
+clock_monotonic="no"
+if test "$clock_gettime" = "yes" ; then
+  cat > $TMPC << EOF
+#include <stdio.h>
+#include <time.h>
+int main(int argc, char **argv)
+{
+  return clock_gettime(CLOCK_MONOTONIC, NULL);
+}
+EOF
+  if compile_prog "" "$LIBS" "clock monotonic"; then
+      clock_monotonic="yes"
+  fi
+fi
+echo "CLOCK_MONOTONIC               $clock_monotonic"
+
+##########################################
+# CLOCK_MONOTONIC_PRECISE probe
+clock_monotonic_precise="no"
+if test "$clock_gettime" = "yes" ; then
+  cat > $TMPC << EOF
+#include <stdio.h>
+#include <time.h>
+int main(int argc, char **argv)
+{
+  return clock_gettime(CLOCK_MONOTONIC_PRECISE, NULL);
+}
+EOF
+  if compile_prog "" "$LIBS" "clock monotonic precise"; then
+      clock_monotonic_precise="yes"
+  fi
+fi
+echo "CLOCK_MONOTONIC_PRECISE       $clock_monotonic_precise"
+
+##########################################
+# gettimeofday() probe
+gettimeofday="no"
+cat > $TMPC << EOF
+#include <sys/time.h>
+#include <stdio.h>
+int main(int argc, char **argv)
+{
+  struct timeval tv;
+  return gettimeofday(&tv, NULL);
+}
+EOF
+if compile_prog "" "" "gettimeofday"; then
+    gettimeofday="yes"
+fi
+echo "gettimeofday                  $gettimeofday"
+
+##########################################
+# fdatasync() probe
+fdatasync="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <unistd.h>
+int main(int argc, char **argv)
+{
+  return fdatasync(0);
+}
+EOF
+if compile_prog "" "" "fdatasync"; then
+  fdatasync="yes"
+fi
+echo "fdatasync                     $fdatasync"
+
+##########################################
+# sync_file_range() probe
+sync_file_range="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <unistd.h>
+#define _GNU_SOURCE
+#include <fcntl.h>
+#include <linux/fs.h>
+int main(int argc, char **argv)
+{
+  unsigned int flags = SYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE |
+			SYNC_FILE_RANGE_WAIT_AFTER;
+  return sync_file_range(0, 0, 0, flags);
+}
+EOF
+if compile_prog "" "" "sync_file_range"; then
+  sync_file_range="yes"
+fi
+echo "sync_file_range               $sync_file_range"
+
+##########################################
+# ext4 move extent probe
+ext4_me="no"
+cat > $TMPC << EOF
+#include <fcntl.h>
+#include <sys/ioctl.h>
+int main(int argc, char **argv)
+{
+  struct move_extent me;
+  return ioctl(0, EXT4_IOC_MOVE_EXT, &me);
+}
+EOF
+if compile_prog "" "" "ext4 move extent"; then
+  ext4_me="yes"
+fi
+echo "EXT4 move extent              $ext4_me"
+
+##########################################
+# splice probe
+linux_splice="no"
+cat > $TMPC << EOF
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <fcntl.h>
+int main(int argc, char **argv)
+{
+  return splice(0, NULL, 0, NULL, 0, SPLICE_F_NONBLOCK);
+}
+EOF
+if compile_prog "" "" "linux splice"; then
+  linux_splice="yes"
+fi
+echo "Linux splice(2)               $linux_splice"
+
+##########################################
+# GUASI probe
+guasi="no"
+cat > $TMPC << EOF
+#include <guasi.h>
+#include <guasi_syscalls.h>
+int main(int argc, char **argv)
+{
+  guasi_t ctx = guasi_create(0, 0, 0);
+  return 0;
+}
+EOF
+if compile_prog "" "" "guasi"; then
+  guasi="yes"
+fi
+echo "GUASI                         $guasi"
+
+##########################################
+# fusion-aw probe
+fusion_aw="no"
+cat > $TMPC << EOF
+#include <vsl_dp_experimental/vectored_write.h>
+int main(int argc, char **argv)
+{
+  struct vsl_iovec iov;
+  return vsl_vectored_write(0, &iov, 0, O_ATOMIC);
+}
+EOF
+if compile_prog "" "" "fusion-aw"; then
+  fusion_aw="yes"
+fi
+echo "Fusion-io atomic engine       $fusion_aw"
+
+##########################################
+# libnuma probe
+libnuma="no"
+cat > $TMPC << EOF
+#include <numa.h>
+int main(int argc, char **argv)
+{
+  return numa_available();
+}
+EOF
+if compile_prog "" "-lnuma" "libnuma"; then
+  libnuma="yes"
+  LIBS="-lnuma $LIBS"
+fi
+echo "libnuma                       $libnuma"
+
+##########################################
+# strsep() probe
+strsep="no"
+cat > $TMPC << EOF
+#include <string.h>
+int main(int argc, char **argv)
+{
+  strsep(NULL, NULL);
+  return 0;
+}
+EOF
+if compile_prog "" "" "strsep"; then
+  strsep="yes"
+fi
+echo "strsep                        $strsep"
+
+##########################################
+# getopt_long_only() probe
+getopt_long_only="no"
+cat > $TMPC << EOF
+#include <unistd.h>
+#include <stdio.h>
+int main(int argc, char **argv)
+{
+  int c = getopt_long_only(argc, argv, NULL, NULL, NULL);
+  return c;
+}
+EOF
+if compile_prog "" "" "getopt_long_only"; then
+  getopt_long_only="yes"
+fi
+echo "getopt_long_only()            $getopt_long_only"
+
+##########################################
+# inet_aton() probe
+inet_aton="no"
+cat > $TMPC << EOF
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <stdio.h>
+int main(int argc, char **argv)
+{
+  struct in_addr in;
+  return inet_aton(NULL, &in);
+}
+EOF
+if compile_prog "" "" "inet_aton"; then
+  inet_aton="yes"
+fi
+echo "inet_aton                     $inet_aton"
+
+##########################################
+# socklen_t probe
+socklen_t="no"
+cat > $TMPC << EOF
+#include <string.h>
+#include <netinet/in.h>
+int main(int argc, char **argv)
+{
+  socklen_t len = 0;
+  return len;
+}
+EOF
+if compile_prog "" "" "socklen_t"; then
+  socklen_t="yes"
+fi
+echo "socklen_t                     $socklen_t"
+
+##########################################
+# Whether or not __thread is supported for TLS
+tls_thread="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+static int __thread ret;
+int main(int argc, char **argv)
+{
+  return ret;
+}
+EOF
+if compile_prog "" "" "__thread"; then
+  tls_thread="yes"
+fi
+echo "__thread                      $tls_thread"
+
+#############################################################################
+
+echo "# Automatically generated by configure - do not modify" > $config_host_mak
+printf "# Configured with:" >> $config_host_mak
+printf " '%s'" "$0" "$@" >> $config_host_mak
+echo >> $config_host_mak
+
+if test "$wordsize" = "64" ; then
+  echo "CONFIG_64BIT=y" >> $config_host_mak
+elif test "$wordsize" = "32" ; then
+  echo "CONFIG_32BIT=y" >> $config_host_mak
+else
+  echo "Unknown wordsize!"
+  exit 1
+fi
+if test "$libaio" = "yes" ; then
+  echo "CONFIG_LIBAIO=y" >> $config_host_mak
+fi
+if test "$posix_aio" = "yes" ; then
+  echo "CONFIG_POSIXAIO=y" >> $config_host_mak
+fi
+if test "$posix_aio_fsync" = "yes" ; then
+  echo "CONFIG_POSIXAIO_FSYNC=y" >> $config_host_mak
+fi
+if test "$linux_fallocate" = "yes" ; then
+  echo "CONFIG_LINUX_FALLOCATE=y" >> $config_host_mak
+fi
+if test "$posix_fallocate" = "yes" ; then
+  echo "CONFIG_POSIX_FALLOCATE=y" >> $config_host_mak
+fi
+if test "$fdatasync" = "yes" ; then
+  echo "CONFIG_FDATASYNC=y" >> $config_host_mak
+fi
+if test "$sync_file_range" = "yes" ; then
+  echo "CONFIG_SYNC_FILE_RANGE=y" >> $config_host_mak
+fi
+if test "$sfaa" = "yes" ; then
+  echo "CONFIG_SFAA=y" >> $config_host_mak
+fi
+if test "$libverbs" = "yes" -o "rdmacm" = "yes" ; then
+  echo "CONFIG_RDMA=y" >> $config_host_mak
+fi
+if test "$clock_gettime" = "yes" ; then
+  echo "CONFIG_CLOCK_GETTIME=y" >> $config_host_mak
+fi
+if test "$clock_monotonic" = "yes" ; then
+  echo "CONFIG_CLOCK_MONOTONIC=y" >> $config_host_mak
+fi
+if test "$clock_monotonic_precise" = "yes" ; then
+  echo "CONFIG_CLOCK_MONOTONIC_PRECISE=y" >> $config_host_mak
+fi
+if test "$gettimeofday" = "yes" ; then
+  echo "CONFIG_GETTIMEOFDAY=y" >> $config_host_mak
+fi
+if test "$posix_fadvise" = "yes" ; then
+  echo "CONFIG_POSIX_FADVISE=y" >> $config_host_mak
+fi
+if test "$linux_3arg_affinity" = "yes" ; then
+  echo "CONFIG_3ARG_AFFINITY=y" >> $config_host_mak
+elif test "$linux_2arg_affinity" = "yes" ; then
+  echo "CONFIG_2ARG_AFFINITY=y" >> $config_host_mak
+fi
+if test "$strsep" = "yes" ; then
+  echo "CONFIG_STRSEP=y" >> $config_host_mak
+fi
+if test "$getopt_long_only" = "yes" ; then
+  echo "CONFIG_GETOPT_LONG_ONLY=y" >> $config_host_mak
+fi
+if test "$inet_aton" = "yes" ; then
+  echo "CONFIG_INET_ATON=y" >> $config_host_mak
+fi
+if test "$socklen_t" = "yes" ; then
+  echo "CONFIG_SOCKLEN_T=y" >> $config_host_mak
+fi
+if test "$ext4_me" = "yes" ; then
+  echo "CONFIG_LINUX_EXT4_MOVE_EXTENT=y" >> $config_host_mak
+fi
+if test "$linux_splice" = "yes" ; then
+  echo "CONFIG_LINUX_SPLICE=y" >> $config_host_mak
+fi
+if test "$guasi" = "yes" ; then
+  echo "CONFIG_GUASI=y" >> $config_host_mak
+fi
+if test "$fusion_aw" = "yes" ; then
+  echo "CONFIG_FUSION_AW=y" >> $config_host_mak
+fi
+if test "$libnuma" = "yes" ; then
+  echo "CONFIG_LIBNUMA=y" >> $config_host_mak
+fi
+if test "$solaris_aio" = "yes" ; then
+  echo "CONFIG_SOLARISAIO=y" >> $config_host_mak
+fi
+if test "$tls_thread" = "yes" ; then
+  echo "CONFIG_TLS_THREAD=y" >> $config_host_mak
+fi
+
+echo "LIBS+=$LIBS" >> $config_host_mak
+echo "CC=$cc" >> $config_host_mak

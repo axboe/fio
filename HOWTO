@@ -844,9 +844,7 @@ cpus_allowed=str Controls the same options as cpumask, but it allows a text
 numa_cpu_nodes=str Set this job running on spcified NUMA nodes' CPUs. The
 		arguments allow comma delimited list of cpu numbers,
 		A-B ranges, or 'all'. Note, to enable numa options support,
-		export the following environment variables,
-			export EXTFLAGS+=" -DFIO_HAVE_LIBNUMA "
-			export EXTLIBS+=" -lnuma "
+		fio must be built on a system with libnuma-dev(el) installed.
 
 numa_mem_policy=str Set this job's memory policy and corresponding NUMA
 		nodes. Format of the argements:

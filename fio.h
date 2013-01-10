@@ -40,15 +40,11 @@ struct thread_data;
 #include "stat.h"
 #include "flow.h"
 
-#ifdef FIO_HAVE_GUASI
-#include <guasi.h>
-#endif
-
 #ifdef FIO_HAVE_SOLARISAIO
 #include <sys/asynch.h>
 #endif
 
-#ifdef FIO_HAVE_LIBNUMA
+#ifdef CONFIG_LIBNUMA
 #include <linux/mempolicy.h>
 #include <numa.h>
 
@@ -213,7 +209,7 @@ struct thread_options {
 	unsigned int cpumask_set;
 	os_cpu_mask_t verify_cpumask;
 	unsigned int verify_cpumask_set;
-#ifdef FIO_HAVE_LIBNUMA
+#ifdef CONFIG_LIBNUMA
 	struct bitmask *numa_cpunodesmask;
 	unsigned int numa_cpumask_set;
 	unsigned short numa_mem_mode;

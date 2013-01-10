@@ -823,11 +823,6 @@ const char* inet_ntop(int af, const void *restrict src,
 	return ret;
 }
 
-int inet_aton(const char *cp, struct in_addr *inp)
-{
-	return inet_pton(AF_INET, cp, inp);
-}
-
 int inet_pton(int af, const char *restrict src, void *restrict dst)
 {
 	INT status = SOCKET_ERROR;

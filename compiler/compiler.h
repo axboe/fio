@@ -13,12 +13,4 @@
 #define __must_check
 #endif
 
-#ifndef _weak
-#ifndef __CYGWIN__
-#define _weak	__attribute__((weak))
-#else
-#define _weak
-#endif
-#endif
-
 #endif

@@ -10,18 +10,9 @@
 
 #include "../file.h"
 
-#define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_ODIRECT
 #define FIO_USE_GENERIC_RAND
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
-#define FIO_HAVE_CLOCK_MONOTONIC
-
-/*
- * This is broken on AIX if _LARGE_FILES is defined...
- */
-#if 0
-#define FIO_HAVE_FALLOCATE
-#endif
 
 #define FIO_HAVE_PSHARED_MUTEX
 
@@ -35,9 +26,6 @@
 #endif
 
 #define FIO_USE_GENERIC_SWAP
-
-#define FIO_OS_HAVE_SOCKLEN_T
-#define fio_socklen_t socklen_t
 
 static inline int blockdev_invalidate_cache(struct fio_file *f)
 {

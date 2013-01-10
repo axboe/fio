@@ -24,7 +24,11 @@ struct tv_valid {
 	int last_tv_valid;
 	unsigned long last_cycles;
 };
+#ifdef CONFIG_TLS_THREAD
+static struct tv_valid __thread static_tv_valid;
+#else
 static pthread_key_t tv_tls_key;
+#endif
 
 enum fio_cs fio_clock_source = FIO_PREFERRED_CLOCK_SOURCE;
 int fio_clock_source_set = 0;
@@ -121,40 +125,34 @@ static void fio_init gtod_init(void)
 
 #endif /* FIO_DEBUG_TIME */
 
+#ifdef CONFIG_CLOCK_GETTIME
 static int fill_clock_gettime(struct timespec *ts)
 {
-#ifdef FIO_HAVE_CLOCK_MONOTONIC
+#ifdef CONFIG_CLOCK_MONOTONIC
 	return clock_gettime(CLOCK_MONOTONIC, ts);
 #else
 	return clock_gettime(CLOCK_REALTIME, ts);
 #endif
 }
-
-#ifdef FIO_DEBUG_TIME
-void fio_gettime(struct timeval *tp, void *caller)
-#else
-void fio_gettime(struct timeval *tp, void fio_unused *caller)
 #endif
+
+static void *__fio_gettime(struct timeval *tp)
 {
 	struct tv_valid *tv;
 
-#ifdef FIO_DEBUG_TIME
-	if (!caller)
-		caller = __builtin_return_address(0);
-
-	gtod_log_caller(caller);
-#endif
-	if (fio_tv) {
-		memcpy(tp, fio_tv, sizeof(*tp));
-		return;
-	}
-
+#ifdef CONFIG_TLS_THREAD
+	tv = &static_tv_valid;
+#else
 	tv = pthread_getspecific(tv_tls_key);
+#endif
 
 	switch (fio_clock_source) {
+#ifdef CONFIG_GETTIMEOFDAY
 	case CS_GTOD:
 		gettimeofday(tp, NULL);
 		break;
+#endif
+#ifdef CONFIG_CLOCK_GETTIME
 	case CS_CGETTIME: {
 		struct timespec ts;
 
@@ -167,6 +165,7 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 		tp->tv_usec = ts.tv_nsec / 1000;
 		break;
 		}
+#endif
 #ifdef ARCH_HAVE_CPU_CLOCK
 	case CS_CPUCLOCK: {
 		unsigned long long usecs, t;
@@ -189,6 +188,30 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 		break;
 	}
 
+	return tv;
+}
+
+#ifdef FIO_DEBUG_TIME
+void fio_gettime(struct timeval *tp, void *caller)
+#else
+void fio_gettime(struct timeval *tp, void fio_unused *caller)
+#endif
+{
+	struct tv_valid *tv;
+
+#ifdef FIO_DEBUG_TIME
+	if (!caller)
+		caller = __builtin_return_address(0);
+
+	gtod_log_caller(caller);
+#endif
+	if (fio_tv) {
+		memcpy(tp, fio_tv, sizeof(*tp));
+		return;
+	}
+
+	tv = __fio_gettime(tp);
+
 	/*
 	 * If Linux is using the tsc clock on non-synced processors,
 	 * sometimes time can appear to drift backwards. Fix that up.
@@ -209,21 +232,22 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 #ifdef ARCH_HAVE_CPU_CLOCK
 static unsigned long get_cycles_per_usec(void)
 {
-	struct timespec ts;
 	struct timeval s, e;
 	unsigned long long c_s, c_e;
+	enum fio_cs old_cs = fio_clock_source;
 
-	fill_clock_gettime(&ts);
-	s.tv_sec = ts.tv_sec;
-	s.tv_usec = ts.tv_nsec / 1000;
+#ifdef CONFIG_CLOCK_GETTIME
+	fio_clock_source = CS_CGETTIME;
+#else
+	fio_clock_source = CS_GTOD;
+#endif
+	__fio_gettime(&s);
 
 	c_s = get_cpu_clock();
 	do {
 		unsigned long long elapsed;
 
-		fill_clock_gettime(&ts);
-		e.tv_sec = ts.tv_sec;
-		e.tv_usec = ts.tv_nsec / 1000;
+		__fio_gettime(&e);
 
 		elapsed = utime_since(&s, &e);
 		if (elapsed >= 1280) {
@@ -232,6 +256,7 @@ static unsigned long get_cycles_per_usec(void)
 		}
 	} while (1);
 
+	fio_clock_source = old_cs;
 	return (c_e - c_s + 127) >> 7;
 }
 
@@ -287,6 +312,7 @@ static void calibrate_cpu_clock(void)
 }
 #endif
 
+#ifndef CONFIG_TLS_THREAD
 void fio_local_clock_init(int is_thread)
 {
 	struct tv_valid *t;
@@ -300,14 +326,21 @@ static void kill_tv_tls_key(void *data)
 {
 	free(data);
 }
+#else
+void fio_local_clock_init(int is_thread)
+{
+}
+#endif
 
 void fio_clock_init(void)
 {
 	if (fio_clock_source == fio_clock_source_inited)
 		return;
 
+#ifndef CONFIG_TLS_THREAD
 	if (pthread_key_create(&tv_tls_key, kill_tv_tls_key))
 		log_err("fio: can't create TLS key\n");
+#endif
 
 	fio_clock_source_inited = fio_clock_source;
 	calibrate_cpu_clock();
@@ -390,7 +423,8 @@ uint64_t time_since_now(struct timeval *s)
 	return mtime_since_now(s) / 1000;
 }
 
-#if defined(FIO_HAVE_CPU_AFFINITY) && defined(ARCH_HAVE_CPU_CLOCK)
+#if defined(FIO_HAVE_CPU_AFFINITY) && defined(ARCH_HAVE_CPU_CLOCK)  && \
+    defined(CONFIG_SFAA)
 
 #define CLOCK_ENTRIES	100000
 

@@ -9,10 +9,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
+#include <libaio.h>
 
 #include "../fio.h"
-
-#ifdef FIO_HAVE_LIBAIO
 
 struct libaio_data {
 	io_context_t aio_ctx;
@@ -303,27 +302,6 @@ static struct ioengine_ops ioengine = {
 	.options		= options,
 	.option_struct_size	= sizeof(struct libaio_options),
 };
-
-#else /* FIO_HAVE_LIBAIO */
-
-/*
- * When we have a proper configure system in place, we simply wont build
- * and install this io engine. For now install a crippled version that
- * just complains and fails to load.
- */
-static int fio_libaio_init(struct thread_data fio_unused *td)
-{
-	log_err("fio: libaio not available\n");
-	return 1;
-}
-
-static struct ioengine_ops ioengine = {
-	.name		= "libaio",
-	.version	= FIO_IOOPS_VERSION,
-	.init		= fio_libaio_init,
-};
-
-#endif
 
 static void fio_init fio_libaio_register(void)
 {

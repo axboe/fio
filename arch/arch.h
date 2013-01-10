@@ -1,14 +1,6 @@
 #ifndef ARCH_H
 #define ARCH_H
 
-#include <stdint.h>
-
-#ifdef __WORDSIZE
-#define BITS_PER_LONG	__WORDSIZE
-#else
-#define BITS_PER_LONG	32
-#endif
-
 enum {
 	arch_x86_64 = 1,
 	arch_i386,

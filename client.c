@@ -267,7 +267,7 @@ int fio_client_add(const char *hostname, void **cookie)
 static int fio_client_connect_ip(struct fio_client *client)
 {
 	struct sockaddr *addr;
-	fio_socklen_t socklen;
+	socklen_t socklen;
 	int fd, domain;
 
 	if (client->ipv6) {
@@ -304,7 +304,7 @@ static int fio_client_connect_ip(struct fio_client *client)
 static int fio_client_connect_sock(struct fio_client *client)
 {
 	struct sockaddr_un *addr = &client->addr_un;
-	fio_socklen_t len;
+	socklen_t len;
 	int fd;
 
 	memset(addr, 0, sizeof(*addr));
@@ -1037,7 +1037,7 @@ static int fio_client_timed_out(void)
 	struct timeval tv;
 	int ret = 0;
 
-	gettimeofday(&tv, NULL);
+	fio_gettime(&tv, NULL);
 
 	flist_for_each_safe(entry, tmp, &client_list) {
 		client = flist_entry(entry, struct fio_client, list);
@@ -1061,7 +1061,7 @@ int fio_handle_clients(void)
 	struct pollfd *pfds;
 	int i, ret = 0, retval = 0;
 
-	gettimeofday(&eta_tv, NULL);
+	fio_gettime(&eta_tv, NULL);
 
 	pfds = malloc(nr_clients * sizeof(struct pollfd));
 
@@ -1095,7 +1095,7 @@ int fio_handle_clients(void)
 		do {
 			struct timeval tv;
 
-			gettimeofday(&tv, NULL);
+			fio_gettime(&tv, NULL);
 			if (mtime_since(&eta_tv, &tv) >= 900) {
 				request_client_etas();
 				memcpy(&eta_tv, &tv, sizeof(tv));

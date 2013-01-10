@@ -48,8 +48,6 @@
 #include "../fio.h"
 #include "../hash.h"
 
-#ifdef FIO_HAVE_RDMA
-
 #include <rdma/rdma_cma.h>
 #include <infiniband/arch.h>
 
@@ -1223,49 +1221,6 @@ static struct ioengine_ops ioengine_rw = {
 	.close_file	= fio_rdmaio_close_file,
 	.flags		= FIO_DISKLESSIO | FIO_UNIDIR | FIO_PIPEIO,
 };
-
-#else /* FIO_HAVE_RDMA */
-
-static int fio_rdmaio_open_file(struct thread_data *td, struct fio_file *f)
-{
-	return 0;
-}
-
-static int fio_rdmaio_close_file(struct thread_data *td, struct fio_file *f)
-{
-	return 0;
-}
-
-static int fio_rdmaio_queue(struct thread_data *td, struct io_u *io_u)
-{
-	return FIO_Q_COMPLETED;
-}
-
-static int fio_rdmaio_init(struct thread_data fio_unused * td)
-{
-	log_err("fio: rdma(librdmacm libibverbs) not available\n");
-	log_err("     You haven't compiled rdma ioengine into fio.\n");
-	log_err("     If you want to try rdma ioengine,\n");
-	log_err("     make sure OFED is installed,\n");
-	log_err("     $ ofed_info\n");
-	log_err("     then try to make fio as follows:\n");
-	log_err("     $ export EXTFLAGS+=\" -DFIO_HAVE_RDMA \"\n");
-	log_err("     $ export EXTLIBS+=\" -libverbs -lrdmacm \"\n");
-	log_err("     $ make clean && make\n");
-	return 1;
-}
-
-static struct ioengine_ops ioengine_rw = {
-	.name		= "rdma",
-	.version	= FIO_IOOPS_VERSION,
-	.init		= fio_rdmaio_init,
-	.queue		= fio_rdmaio_queue,
-	.open_file	= fio_rdmaio_open_file,
-	.close_file	= fio_rdmaio_close_file,
-	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR | FIO_PIPEIO,
-};
-
-#endif
 
 static void fio_init fio_rdmaio_register(void)
 {

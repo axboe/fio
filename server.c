@@ -310,7 +310,7 @@ int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t tag,
 	fio_net_cmd_crc(&cmd->cmd);
 
 	INIT_FLIST_HEAD(&cmd->list);
-	gettimeofday(&cmd->tv, NULL);
+	fio_gettime(&cmd->tv, NULL);
 	cmd->saved_tag = tag;
 
 	ret = fio_send_data(sk, &cmd->cmd, sizeof(cmd->cmd));
@@ -561,7 +561,7 @@ void fio_server_idle_loop(void)
 static int accept_loop(int listen_sk)
 {
 	struct sockaddr_in addr;
-	fio_socklen_t len = sizeof(addr);
+	socklen_t len = sizeof(addr);
 	struct pollfd pfd;
 	int ret, sk, flags, exitval = 0;
 
@@ -815,7 +815,7 @@ int fio_server_log(const char *format, ...)
 static int fio_init_server_ip(void)
 {
 	struct sockaddr *addr;
-	fio_socklen_t socklen;
+	socklen_t socklen;
 	int sk, opt;
 
 	if (use_ipv6)
@@ -864,7 +864,7 @@ static int fio_init_server_ip(void)
 static int fio_init_server_sock(void)
 {
 	struct sockaddr_un addr;
-	fio_socklen_t len;
+	socklen_t len;
 	mode_t mode;
 	int sk;
 

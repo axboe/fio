@@ -10,8 +10,6 @@
 
 #include "../fio.h"
 
-#ifdef FIO_HAVE_SOLARISAIO
-
 #include <sys/asynch.h>
 
 struct solarisaio_data {
@@ -224,27 +222,6 @@ static struct ioengine_ops ioengine = {
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
 };
-
-#else /* FIO_HAVE_SOLARISAIO */
-
-/*
- * When we have a proper configure system in place, we simply wont build
- * and install this io engine. For now install a crippled version that
- * just complains and fails to load.
- */
-static int fio_solarisaio_init(struct thread_data fio_unused *td)
-{
-	log_err("fio: solarisaio not available\n");
-	return 1;
-}
-
-static struct ioengine_ops ioengine = {
-	.name		= "solarisaio",
-	.version	= FIO_IOOPS_VERSION,
-	.init		= fio_solarisaio_init,
-};
-
-#endif
 
 static void fio_init fio_solarisaio_register(void)
 {
