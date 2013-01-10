@@ -1074,7 +1074,7 @@ int add_file(struct thread_data *td, const char *fname)
 	fio_file_reset(f);
 
 	if (td->files_size <= td->files_index) {
-		int new_size = td->o.nr_files + 1;
+		unsigned int new_size = td->o.nr_files + 1;
 
 		dprint(FD_FILE, "resize file array to %d files\n", new_size);
 
