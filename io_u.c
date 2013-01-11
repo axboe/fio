@@ -49,11 +49,11 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 		io_u->buflen = nr_blocks * min_bs;
 }
 
-static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
-				     enum fio_ddir ddir)
+static uint64_t last_block(struct thread_data *td, struct fio_file *f,
+			   enum fio_ddir ddir)
 {
-	unsigned long long max_blocks;
-	unsigned long long max_size;
+	uint64_t max_blocks;
+	uint64_t max_size;
 
 	assert(ddir_rw(ddir));
 
@@ -77,14 +77,14 @@ static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
 static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				  enum fio_ddir ddir, unsigned long long *b)
 {
-	unsigned long long r;
+	unsigned long long r, lastb;
+
+	lastb = last_block(td, f, ddir);
+	if (!lastb)
+		return 1;
 
 	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE) {
-		unsigned long long rmax, lastb;
-
-		lastb = last_block(td, f, ddir);
-		if (!lastb)
-			return 1;
+		unsigned long long rmax;
 
 		rmax = td->o.use_os_rand ? OS_RAND_MAX : FRAND_MAX;
 
@@ -102,7 +102,7 @@ static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	} else {
 		uint64_t off = 0;
 
-		if (lfsr_next(&f->lfsr, &off))
+		if (lfsr_next(&f->lfsr, &off, lastb))
 			return 1;
 
 		*b = off;

@@ -216,14 +216,15 @@ static uint64_t __lfsr_next(uint64_t v, struct lfsr_taps *lt)
 	return xor_mask | (v >> 1);
 }
 
-int lfsr_next(struct fio_lfsr *fl, uint64_t *off)
+int lfsr_next(struct fio_lfsr *fl, uint64_t *off, uint64_t last)
 {
 	if (fl->num_vals > fl->max_val)
 		return 1;
 
 	do {
 		fl->last_val = __lfsr_next(fl->last_val, &fl->taps);
-		if (fl->last_val - 1 <= fl->max_val)
+		if (fl->last_val - 1 <= fl->max_val &&
+		    fl->last_val <= last)
 			break;
 	} while (1);
 
