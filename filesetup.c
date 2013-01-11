@@ -956,7 +956,9 @@ int init_random_map(struct thread_data *td)
 		return 0;
 
 	for_each_file(td, f, i) {
-		blocks = (f->real_file_size + td->o.rw_min_bs - 1) /
+		uint64_t file_size = min(f->real_file_size, f->io_size);
+
+		blocks = (file_size + td->o.rw_min_bs - 1) /
 				(unsigned long long) td->o.rw_min_bs;
 		if (td->o.random_generator == FIO_RAND_GEN_LFSR) {
 			unsigned long seed;
