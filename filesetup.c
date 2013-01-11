@@ -1079,6 +1079,10 @@ int add_file(struct thread_data *td, const char *fname)
 		dprint(FD_FILE, "resize file array to %d files\n", new_size);
 
 		td->files = realloc(td->files, new_size * sizeof(f));
+		if (td->files == NULL) {
+			log_err("fio: realloc OOM\n");
+			assert(0);
+		}
 		td->files_size = new_size;
 	}
 	td->files[cur_files] = f;
