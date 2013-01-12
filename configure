@@ -585,7 +585,12 @@ int main(int argc, char **argv)
   return ioctl(0, EXT4_IOC_MOVE_EXT, &me);
 }
 EOF
-if compile_prog "" "" "ext4 move extent"; then
+if compile_prog "" "" "ext4 move extent" ; then
+  ext4_me="yes"
+elif test $targetos = "Linux" ; then
+  # On Linux, just default to it on and let it error at runtime if we really
+  # don't have it. None of my updated systems have it defined, but it does
+  # work. Takes a while to bubble back.
   ext4_me="yes"
 fi
 echo "EXT4 move extent              $ext4_me"
