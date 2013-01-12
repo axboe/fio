@@ -29,7 +29,7 @@ SOURCE := gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
 		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
 		json.c lib/zipf.c lib/axmap.c lib/lfsr.c gettime-thread.c \
-		helpers.c
+		helpers.c lib/flist_sort.c
 
 ifdef CONFIG_64BIT
   CFLAGS += -DBITS_PER_LONG=64

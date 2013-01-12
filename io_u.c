@@ -24,7 +24,7 @@ struct io_completion_data {
  * The ->io_axmap contains a map of blocks we have or have not done io
  * to yet. Used to make sure we cover the entire range in a fair fashion.
  */
-static int random_map_free(struct fio_file *f, const unsigned long long block)
+static int random_map_free(struct fio_file *f, const uint64_t block)
 {
 	return !axmap_isset(f->io_axmap, block);
 }
@@ -36,10 +36,10 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 {
 	unsigned int min_bs = td->o.rw_min_bs;
 	struct fio_file *f = io_u->file;
-	unsigned long long block;
 	unsigned int nr_blocks;
+	uint64_t block;
 
-	block = (io_u->offset - f->file_offset) / (unsigned long long) min_bs;
+	block = (io_u->offset - f->file_offset) / (uint64_t) min_bs;
 	nr_blocks = (io_u->buflen + min_bs - 1) / min_bs;
 
 	if (!(io_u->flags & IO_U_F_BUSY_OK))
@@ -67,24 +67,29 @@ static uint64_t last_block(struct thread_data *td, struct fio_file *f,
 	if (td->o.zone_range)
 		max_size = td->o.zone_range;
 
-	max_blocks = max_size / (unsigned long long) td->o.ba[ddir];
+	max_blocks = max_size / (uint64_t) td->o.ba[ddir];
 	if (!max_blocks)
 		return 0;
 
 	return max_blocks;
 }
 
+struct rand_off {
+	struct flist_head list;
+	uint64_t off;
+};
+
 static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
-				  enum fio_ddir ddir, unsigned long long *b)
+				  enum fio_ddir ddir, uint64_t *b)
 {
-	unsigned long long r, lastb;
+	uint64_t r, lastb;
 
 	lastb = last_block(td, f, ddir);
 	if (!lastb)
 		return 1;
 
 	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE) {
-		unsigned long long rmax;
+		uint64_t rmax;
 
 		rmax = td->o.use_os_rand ? OS_RAND_MAX : FRAND_MAX;
 
@@ -98,7 +103,7 @@ static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 
 		dprint(FD_RANDOM, "off rand %llu\n", r);
 
-		*b = (lastb - 1) * (r / ((unsigned long long) rmax + 1.0));
+		*b = (lastb - 1) * (r / ((uint64_t) rmax + 1.0));
 	} else {
 		uint64_t off = 0;
 
@@ -131,7 +136,7 @@ ret:
 
 static int __get_next_rand_offset_zipf(struct thread_data *td,
 				       struct fio_file *f, enum fio_ddir ddir,
-				       unsigned long long *b)
+				       uint64_t *b)
 {
 	*b = zipf_next(&f->zipf);
 	return 0;
@@ -139,14 +144,22 @@ static int __get_next_rand_offset_zipf(struct thread_data *td,
 
 static int __get_next_rand_offset_pareto(struct thread_data *td,
 					 struct fio_file *f, enum fio_ddir ddir,
-					 unsigned long long *b)
+					 uint64_t *b)
 {
 	*b = pareto_next(&f->zipf);
 	return 0;
 }
 
-static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
-				enum fio_ddir ddir, unsigned long long *b)
+static int flist_cmp(void *data, struct flist_head *a, struct flist_head *b)
+{
+	struct rand_off *r1 = flist_entry(a, struct rand_off, list);
+	struct rand_off *r2 = flist_entry(b, struct rand_off, list);
+
+	return r1->off - r2->off;
+}
+
+static int get_off_from_method(struct thread_data *td, struct fio_file *f,
+			       enum fio_ddir ddir, uint64_t *b)
 {
 	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM)
 		return __get_next_rand_offset(td, f, ddir, b);
@@ -159,8 +172,52 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	return 1;
 }
 
+static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
+				enum fio_ddir ddir, uint64_t *b)
+{
+	struct rand_off *r;
+	int i, ret = 1;
+
+	/*
+	 * If sort not enabled, or not a pure random read workload without
+	 * any stored write metadata, just return a random offset
+	 */
+	if (!td->o.verifysort_nr || !(ddir == READ && td->o.do_verify &&
+	    td->o.verify != VERIFY_NONE && td_random(td)))
+		return get_off_from_method(td, f, ddir, b);
+
+	if (!flist_empty(&td->next_rand_list)) {
+		struct rand_off *r;
+fetch:
+		r = flist_entry(td->next_rand_list.next, struct rand_off, list);
+		flist_del(&r->list);
+		*b = r->off;
+		free(r);
+		return 0;
+	}
+
+	for (i = 0; i < td->o.verifysort_nr; i++) {
+		r = malloc(sizeof(*r));
+
+		ret = get_off_from_method(td, f, ddir, &r->off);
+		if (ret) {
+			free(r);
+			break;
+		}
+
+		flist_add(&r->list, &td->next_rand_list);
+	}
+
+	if (ret && !i)
+		return ret;
+
+	assert(!flist_empty(&td->next_rand_list));
+	flist_sort(NULL, &td->next_rand_list, flist_cmp);
+	goto fetch;
+}
+
 static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
-			       enum fio_ddir ddir, unsigned long long *b)
+			       enum fio_ddir ddir, uint64_t *b)
 {
 	if (!get_next_rand_offset(td, f, ddir, b))
 		return 0;
@@ -177,7 +234,7 @@ static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 }
 
 static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
-			       enum fio_ddir ddir, unsigned long long *offset)
+			       enum fio_ddir ddir, uint64_t *offset)
 {
 	assert(ddir_rw(ddir));
 
@@ -185,7 +242,7 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 		f->last_pos = f->last_pos - f->io_size;
 
 	if (f->last_pos < f->real_file_size) {
-		unsigned long long pos;
+		uint64_t pos;
 
 		if (f->last_pos == f->file_offset && td->o.ddir_seq_add < 0)
 			f->last_pos = f->real_file_size;
@@ -205,7 +262,7 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 			  enum fio_ddir ddir, int rw_seq)
 {
 	struct fio_file *f = io_u->file;
-	unsigned long long b, offset;
+	uint64_t b, offset;
 	int ret;
 
 	assert(ddir_rw(ddir));
@@ -1106,7 +1163,7 @@ static int check_get_verify(struct thread_data *td, struct io_u *io_u)
 static void small_content_scramble(struct io_u *io_u)
 {
 	unsigned int i, nr_blocks = io_u->buflen / 512;
-	unsigned long long boffset;
+	uint64_t boffset;
 	unsigned int offset;
 	void *p, *end;
 
@@ -1124,9 +1181,9 @@ static void small_content_scramble(struct io_u *io_u)
 		 * and the actual offset.
 		 */
 		offset = (io_u->start_time.tv_usec ^ boffset) & 511;
-		offset &= ~(sizeof(unsigned long long) - 1);
-		if (offset >= 512 - sizeof(unsigned long long))
-			offset -= sizeof(unsigned long long);
+		offset &= ~(sizeof(uint64_t) - 1);
+		if (offset >= 512 - sizeof(uint64_t))
+			offset -= sizeof(uint64_t);
 		memcpy(p + offset, &boffset, sizeof(boffset));
 
 		end = p + 512 - sizeof(io_u->start_time);
@@ -1285,7 +1342,8 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 
 static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 {
-	unsigned long long secs, remainder, bps, bytes;
+	uint64_t secs, remainder, bps, bytes;
+
 	bytes = td->this_io_bytes[ddir];
 	bps = td->rate_bps[ddir];
 	secs = bytes / bps;

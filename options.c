@@ -1887,6 +1887,16 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.parent = "verify",
 	},
 	{
+		.name	= "verifysort_nr",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(verifysort_nr),
+		.help	= "Pre-load and sort verify blocks for a read workload",
+		.minval	= 0,
+		.maxval	= 131072,
+		.def	= "1024",
+		.parent = "verify",
+	},
+	{
 		.name   = "verify_interval",
 		.type   = FIO_OPT_INT,
 		.off1   = td_var_offset(verify_interval),

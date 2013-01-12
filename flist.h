@@ -176,4 +176,7 @@ static inline void flist_splice_init(struct flist_head *list,
 	for (pos = (head)->next, n = pos->next; pos != (head); \
 		pos = n, n = pos->next)
 
+extern void flist_sort(void *priv, struct flist_head *head,
+	int (*cmp)(void *priv, struct flist_head *a, struct flist_head *b));
+
 #endif

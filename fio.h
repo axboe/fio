@@ -149,6 +149,7 @@ struct thread_options {
 	unsigned int verify;
 	unsigned int do_verify;
 	unsigned int verifysort;
+	unsigned int verifysort_nr;
 	unsigned int verify_interval;
 	unsigned int verify_offset;
 	char verify_pattern[MAX_PATTERN_SIZE];
@@ -514,6 +515,8 @@ struct thread_data {
 	 */
 	struct flist_head trim_list;
 	unsigned long trim_entries;
+
+	struct flist_head next_rand_list;
 
 	/*
 	 * for fileservice, how often to switch to a new file
