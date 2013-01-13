@@ -704,7 +704,7 @@ overwrite=bool	If true, writes to a file will always overwrite existing
 		and is large enough for the specified write phase, nothing
 		will be done.
 
-end_fsync=bool	If true, fsync file contents when the job exits.
+end_fsync=bool	If true, fsync file contents when a write stage has completed.
 
 fsync_on_close=bool	If true, fio will fsync() a dirty file on close.
 		This differs from end_fsync in that it will happen on every

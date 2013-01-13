@@ -561,7 +561,7 @@ Also see the sync_file_range(2) man page.  This option is Linux specific.
 If writing, setup the file first and do overwrites.  Default: false.
 .TP
 .BI end_fsync \fR=\fPbool
-Sync file contents when job exits.  Default: false.
+Sync file contents when a write stage has completed.  Default: false.
 .TP
 .BI fsync_on_close \fR=\fPbool
 If true, sync file contents on close.  This differs from \fBend_fsync\fR in that
