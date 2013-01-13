@@ -31,13 +31,15 @@ SOURCE := gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		json.c lib/zipf.c lib/axmap.c lib/lfsr.c gettime-thread.c \
 		helpers.c lib/flist_sort.c
 
+ifdef CONFIG_64BIT_LLP64
+  CFLAGS += -DBITS_PER_LONG=32
+endif
 ifdef CONFIG_64BIT
   CFLAGS += -DBITS_PER_LONG=64
 endif
 ifdef CONFIG_32BIT
   CFLAGS += -DBITS_PER_LONG=32
 endif
-
 ifdef CONFIG_LIBAIO
   CFLAGS += -DCONFIG_LIBAIO
   SOURCE += engines/libaio.c
@@ -127,6 +129,12 @@ ifdef CONFIG_LIBNUMA
 endif
 ifdef CONFIG_TLS_THREAD
   CFLAGS += -DCONFIG_TLS_THREAD
+endif
+ifdef CONFIG_POSIX_FALLOCATE
+  CFLAGS += -DCONFIG_POSIX_FALLOCATE
+endif
+ifdef CONFIG_LINUX_FALLOCATE
+  CFLAGS += -DCONFIG_LINUX_FALLOCATE
 endif
 
 ifeq ($(UNAME), Linux)
