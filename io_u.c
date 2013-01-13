@@ -182,7 +182,7 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	 * If sort not enabled, or not a pure random read workload without
 	 * any stored write metadata, just return a random offset
 	 */
-	if (!td->o.verifysort_nr || !(ddir == READ && td->o.do_verify &&
+	if (!td->o.verifysort_nr || !(ddir == DDIR_READ && td->o.do_verify &&
 	    td->o.verify != VERIFY_NONE && td_random(td)))
 		return get_off_from_method(td, f, ddir, b);
 
@@ -292,7 +292,7 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 			ret = 1;
 		}
 	}
-	
+
 	if (!ret) {
 		if (offset != -1ULL)
 			io_u->offset = offset;
