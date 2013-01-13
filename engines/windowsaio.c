@@ -126,13 +126,6 @@ static int win_to_posix_error(DWORD winerr)
 	return winerr;
 }
 
-int sync_file_range(int fd, off64_t offset, off64_t nbytes,
-			   unsigned int flags)
-{
-	errno = ENOSYS;
-	return -1;
-}
-
 static int fio_windowsaio_init(struct thread_data *td)
 {
 	struct windowsaio_data *wd;

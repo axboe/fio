@@ -104,8 +104,20 @@ cc="${CC-${cross_prefix}gcc}"
 
 if check_define __linux__ ; then
   targetos="Linux"
-elif check_define _WIN32 ; then
-  targetos='MINGW32'
+elif test `uname -o` = Cygwin ; then
+  echo "Forcing known good options on Windows"
+  echo "CC=x86_64-w64-mingw32-gcc" >> $config_host_mak
+  echo "CONFIG_64BIT_LLP64=y"      >> $config_host_mak
+  echo "CONFIG_CLOCK_GETTIME=y"    >> $config_host_mak
+  echo "CONFIG_CLOCK_MONOTONIC=y"  >> $config_host_mak
+  echo "CONFIG_GETTIMEOFDAY=y"     >> $config_host_mak
+  echo "CONFIG_FADVISE=y"          >> $config_host_mak
+  echo "CONFIG_STRSEP=y"           >> $config_host_mak
+  echo "CONFIG_SOCKLEN_T=y"        >> $config_host_mak
+  echo "CONFIG_POSIX_FALLOCATE=y"  >> $config_host_mak
+  echo "CONFIG_FADVISE=y"          >> $config_host_mak
+  echo "CONFIG_SFAA=y"             >> $config_host_mak
+  exit
 elif check_define __OpenBSD__ ; then
   targetos='OpenBSD'
 elif check_define __sun__ ; then
@@ -209,8 +221,6 @@ if test -z $CC; then
     else
       CC=gcc
     fi
-  elif test "$targetos" = "MINGW32"; then
-    CC=x86_64-w64-mingw32-gcc
   fi
 fi
 
