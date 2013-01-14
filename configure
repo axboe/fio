@@ -117,7 +117,7 @@ elif test `uname -o` = Cygwin ; then
   echo "CONFIG_POSIX_FALLOCATE=y"  >> $config_host_mak
   echo "CONFIG_FADVISE=y"          >> $config_host_mak
   echo "CONFIG_SFAA=y"             >> $config_host_mak
-  exit
+  exit 0
 elif check_define __OpenBSD__ ; then
   targetos='OpenBSD'
 elif check_define __sun__ ; then
