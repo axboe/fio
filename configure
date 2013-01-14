@@ -650,7 +650,7 @@ int main(int argc, char **argv)
   return vsl_vectored_write(0, &iov, 0, O_ATOMIC);
 }
 EOF
-if compile_prog "" "" "fusion-aw"; then
+if compile_prog "" "-lvsldpexp" "fusion-aw"; then
   fusion_aw="yes"
 fi
 echo "Fusion-io atomic engine       $fusion_aw"
