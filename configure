@@ -643,14 +643,15 @@ echo "GUASI                         $guasi"
 # fusion-aw probe
 fusion_aw="no"
 cat > $TMPC << EOF
-#include <vsl_dp_experimental/vectored_write.h>
+#include <nvm/vectored_write.h>
 int main(int argc, char **argv)
 {
   struct vsl_iovec iov;
   return vsl_vectored_write(0, &iov, 0, O_ATOMIC);
 }
 EOF
-if compile_prog "" "-lvsldpexp" "fusion-aw"; then
+if compile_prog "" "-L/usr/lib/fio -lnvm-primitives" "fusion-aw"; then
+  LIBS="-L/usr/lib/fio -lnvm-primitives $LIBS"
   fusion_aw="yes"
 fi
 echo "Fusion-io atomic engine       $fusion_aw"

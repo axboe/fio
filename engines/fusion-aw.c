@@ -22,7 +22,7 @@
 
 #include "../fio.h"
 
-#include <vsl_dp_experimental/vectored_write.h>
+#include <nvm/vectored_write.h>
 
 /* Fix sector size to 512 bytes independent of actual sector size, just like
  * the linux kernel. */
