@@ -119,14 +119,16 @@ static void free_mem_shm(struct thread_data *td)
 
 static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 {
-	int flags = MAP_PRIVATE;
+	int flags = 0;
 
 	td->mmapfd = 1;
 
 	if (td->o.mem_type == MEM_MMAPHUGE) {
 		unsigned long mask = td->o.hugepage_size - 1;
 
-		flags |= MAP_HUGETLB;
+		/* TODO: make sure the file is a real hugetlbfs file */
+		if (!td->mmapfile)
+			flags |= MAP_HUGETLB;
 		total_mem = (total_mem + mask) & ~mask;
 	}
 
@@ -138,13 +140,18 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 			td->orig_buffer = NULL;
 			return 1;
 		}
-		if (ftruncate(td->mmapfd, total_mem) < 0) {
+		if (td->o.mem_type != MEM_MMAPHUGE &&
+		    ftruncate(td->mmapfd, total_mem) < 0) {
 			td_verror(td, errno, "truncate mmap file");
 			td->orig_buffer = NULL;
 			return 1;
 		}
+		if (td->o.mem_type == MEM_MMAPHUGE)
+			flags |= MAP_SHARED;
+		else
+			flags |= MAP_PRIVATE;
 	} else
-		flags |= OS_MAP_ANON;
+		flags |= OS_MAP_ANON | MAP_PRIVATE;
 
 	td->orig_buffer = mmap(NULL, total_mem, PROT_READ | PROT_WRITE, flags,
 				td->mmapfd, 0);

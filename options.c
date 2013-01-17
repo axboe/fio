@@ -342,13 +342,8 @@ static int str_mem_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
 
-	if (td->o.mem_type == MEM_MMAPHUGE || td->o.mem_type == MEM_MMAP) {
+	if (td->o.mem_type == MEM_MMAPHUGE || td->o.mem_type == MEM_MMAP)
 		td->mmapfile = get_opt_postfix(mem);
-		if (td->o.mem_type == MEM_MMAPHUGE && !td->mmapfile) {
-			log_err("fio: mmaphuge:/path/to/file\n");
-			return 1;
-		}
-	}
 
 	return 0;
 }
