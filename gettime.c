@@ -504,6 +504,8 @@ int fio_monotonic_clocktest(void)
 	uint64_t seq = 0;
 	int i;
 
+	log_info("cs: reliable_tsc: %s\n", tsc_reliable ? "yes" : "no");
+
 	fio_debug |= 1U << FD_TIME;
 	calibrate_cpu_clock();
 	fio_debug &= ~(1U << FD_TIME);
