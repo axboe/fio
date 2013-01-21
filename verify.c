@@ -13,6 +13,7 @@
 #include "smalloc.h"
 #include "trim.h"
 #include "lib/rand.h"
+#include "lib/hweight.h"
 
 #include "crc/md5.h"
 #include "crc/crc64.h"
@@ -306,14 +307,6 @@ static void log_verify_failure(struct verify_header *hdr, struct vcont *vc)
 static inline void *io_u_verify_off(struct verify_header *hdr, struct vcont *vc)
 {
 	return vc->io_u->buf + vc->hdr_num * hdr->len + hdr_size(hdr);
-}
-
-static unsigned int hweight8(unsigned int w)
-{
-	unsigned int res = w - ((w >> 1) & 0x55);
-
-	res = (res & 0x33) + ((res >> 2) & 0x33);
-	return (res + (res >> 4)) & 0x0F;
 }
 
 static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)

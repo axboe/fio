@@ -1961,6 +1961,11 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.parent	= "verify_async",
 	},
 #endif
+	{
+		.name	= "experimental_verify",
+		.off1	= td_var_offset(experimental_verify),
+		.type	= FIO_OPT_BOOL,
+	},
 #ifdef FIO_HAVE_TRIM
 	{
 		.name	= "trim_percentage",
