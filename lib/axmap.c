@@ -67,6 +67,8 @@ void axmap_reset(struct axmap *axmap)
 
 		memset(al->map, 0, al->map_size * sizeof(unsigned long));
 	}
+
+	axmap->first_free = 0;
 }
 
 void axmap_free(struct axmap *axmap)
@@ -101,7 +103,6 @@ struct axmap *axmap_new(unsigned long nr_bits)
 
 	axmap->nr_levels = levels;
 	axmap->levels = smalloc(axmap->nr_levels * sizeof(struct axmap_level));
-	axmap->first_free = 0;
 
 	for (i = 0; i < axmap->nr_levels; i++) {
 		struct axmap_level *al = &axmap->levels[i];
