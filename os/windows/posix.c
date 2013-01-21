@@ -69,7 +69,7 @@ int GetNumLogicalProcessors(void)
 	for (i = 0; i < len / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION); i++)
 	{
 		if (processor_info[i].Relationship == RelationProcessorCore)
-			num_processors += hweight32(processor_info[i].ProcessorMask);
+			num_processors += hweight64(processor_info[i].ProcessorMask);
 	}
 
 	free(processor_info);
