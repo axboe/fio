@@ -21,8 +21,8 @@ int tsc_reliable = 0;
 
 struct tv_valid {
 	struct timeval last_tv;
+	uint64_t last_cycles;
 	int last_tv_valid;
-	unsigned long last_cycles;
 };
 #ifdef CONFIG_TLS_THREAD
 static struct tv_valid __thread static_tv_valid;
@@ -168,7 +168,7 @@ static void *__fio_gettime(struct timeval *tp)
 #endif
 #ifdef ARCH_HAVE_CPU_CLOCK
 	case CS_CPUCLOCK: {
-		unsigned long long usecs, t;
+		uint64_t usecs, t;
 
 		t = get_cpu_clock();
 		if (tv && t < tv->last_cycles) {
@@ -233,7 +233,7 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 static unsigned long get_cycles_per_usec(void)
 {
 	struct timeval s, e;
-	unsigned long long c_s, c_e;
+	uint64_t c_s, c_e;
 	enum fio_cs old_cs = fio_clock_source;
 
 #ifdef CONFIG_CLOCK_GETTIME
@@ -245,7 +245,7 @@ static unsigned long get_cycles_per_usec(void)
 
 	c_s = get_cpu_clock();
 	do {
-		unsigned long long elapsed;
+		uint64_t elapsed;
 
 		__fio_gettime(&e);
 
@@ -265,7 +265,7 @@ static unsigned long get_cycles_per_usec(void)
 static void calibrate_cpu_clock(void)
 {
 	double delta, mean, S;
-	unsigned long avg, cycles[NR_TIME_ITERS];
+	uint64_t avg, cycles[NR_TIME_ITERS];
 	int i, samples;
 
 	cycles[0] = get_cycles_per_usec();
@@ -429,9 +429,9 @@ uint64_t time_since_now(struct timeval *s)
 #define CLOCK_ENTRIES	100000
 
 struct clock_entry {
-	unsigned long seq;
-	unsigned long tsc;
-	unsigned long cpu;
+	uint64_t seq;
+	uint64_t tsc;
+	uint64_t cpu;
 };
 
 struct clock_thread {
