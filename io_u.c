@@ -223,7 +223,7 @@ static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 		return 0;
 
 	if (td->o.time_based) {
-		fio_file_reset(f);
+		fio_file_reset(td, f);
 		if (!get_next_rand_offset(td, f, ddir, b))
 			return 0;
 	}

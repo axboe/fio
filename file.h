@@ -175,13 +175,6 @@ extern int init_random_map(struct thread_data *);
 extern void dup_files(struct thread_data *, struct thread_data *);
 extern int get_fileno(struct thread_data *, const char *);
 extern void free_release_files(struct thread_data *);
-
-static inline void fio_file_reset(struct fio_file *f)
-{
-	f->last_pos = f->file_offset;
-	f->last_start = -1ULL;
-	if (f->io_axmap)
-		axmap_reset(f->io_axmap);
-}
+void fio_file_reset(struct thread_data *, struct fio_file *);
 
 #endif

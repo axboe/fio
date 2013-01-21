@@ -1073,7 +1073,7 @@ int add_file(struct thread_data *td, const char *fname)
 
 	f->fd = -1;
 	f->shadow_fd = -1;
-	fio_file_reset(f);
+	fio_file_reset(td, f);
 
 	if (td->files_size <= td->files_index) {
 		unsigned int new_size = td->o.nr_files + 1;
@@ -1319,7 +1319,7 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 			assert(0);
 		}
 		__f->fd = -1;
-		fio_file_reset(__f);
+		fio_file_reset(td, __f);
 
 		if (f->file_name) {
 			__f->file_name = smalloc_strdup(f->file_name);
@@ -1358,4 +1358,14 @@ void free_release_files(struct thread_data *td)
 	close_files(td);
 	td->files_index = 0;
 	td->nr_normal_files = 0;
+}
+
+void fio_file_reset(struct thread_data *td, struct fio_file *f)
+{
+	f->last_pos = f->file_offset;
+	f->last_start = -1ULL;
+	if (f->io_axmap)
+		axmap_reset(f->io_axmap);
+	if (td->o.random_generator == FIO_RAND_GEN_LFSR)
+		lfsr_reset(&f->lfsr, td->rand_seeds[FIO_RAND_BLOCK_OFF]);
 }

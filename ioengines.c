@@ -397,7 +397,7 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	fio_file_reset(f);
+	fio_file_reset(td, f);
 	fio_file_set_open(f);
 	fio_file_clear_closing(f);
 	disk_util_inc(f->du);
