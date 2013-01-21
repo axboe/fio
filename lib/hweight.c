@@ -17,3 +17,17 @@ unsigned int hweight32(uint32_t w)
 	res = res + (res >> 8);
 	return (res + (res >> 16)) & 0x000000FF;
 }
+
+unsigned int hweight64(uint64_t w)
+{
+#if BITS_PER_LONG == 32
+	return hweight32((unsigned int)(w >> 32)) + hweight32((unsigned int)w);
+#else
+	uint64_t res = w - ((w >> 1) & 0x5555555555555555ul);
+	res = (res & 0x3333333333333333ul) + ((res >> 2) & 0x3333333333333333ul);
+	res = (res + (res >> 4)) & 0x0F0F0F0F0F0F0F0Ful;
+	res = res + (res >> 8);
+	res = res + (res >> 16);
+	return (res + (res >> 32)) & 0x00000000000000FFul;
+#endif
+}

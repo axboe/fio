@@ -5,5 +5,6 @@
 
 unsigned int hweight8(uint8_t w);
 unsigned int hweight32(uint32_t w);
+unsigned int hweight64(uint64_t w);
 
 #endif
