@@ -393,11 +393,12 @@ static int break_on_this_error(struct thread_data *td, enum fio_ddir ddir,
  * The main verify engine. Runs over the writes we previously submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
  */
-static void do_verify(struct thread_data *td)
+static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 {
 	struct fio_file *f;
 	struct io_u *io_u;
 	int ret, min_events;
+	uint64_t io_bytes;
 	unsigned int i;
 
 	dprint(FD_VERIFY, "starting loop\n");
@@ -421,6 +422,7 @@ static void do_verify(struct thread_data *td)
 	td_set_runstate(td, TD_VERIFYING);
 
 	io_u = NULL;
+	io_bytes = 0;
 	while (!td->terminate) {
 		enum fio_ddir ddir;
 		int ret2, full;
@@ -438,18 +440,27 @@ static void do_verify(struct thread_data *td)
 		if (flow_threshold_exceeded(td))
 			continue;
 
-		io_u = __get_io_u(td);
-		if (!io_u)
-			break;
+		if (!td->o.experimental_verify) {
+			io_u = __get_io_u(td);
+			if (!io_u)
+				break;
 
-		if (get_next_verify(td, io_u)) {
-			put_io_u(td, io_u);
-			break;
-		}
+			if (get_next_verify(td, io_u)) {
+				put_io_u(td, io_u);
+				break;
+			}
 
-		if (td_io_prep(td, io_u)) {
-			put_io_u(td, io_u);
-			break;
+			if (td_io_prep(td, io_u)) {
+				put_io_u(td, io_u);
+				break;
+			}
+		} else {
+			io_u = get_io_u(td);
+			if (!io_u)
+				break;
+
+			if (io_u->buflen + io_bytes > verify_bytes)
+				break;
 		}
 
 		if (td->o.verify_async)
@@ -480,6 +491,7 @@ static void do_verify(struct thread_data *td)
 				io_u->xfer_buflen = io_u->resid;
 				io_u->xfer_buf += bytes;
 				io_u->offset += bytes;
+				io_bytes += bytes;
 
 				if (ddir_rw(io_u->ddir))
 					td->ts.short_io_u[io_u->ddir]++;
@@ -495,6 +507,7 @@ sync_done:
 				if (ret < 0)
 					break;
 			}
+			io_bytes += io_u->xfer_buflen;
 			continue;
 		case FIO_Q_QUEUED:
 			break;
@@ -529,15 +542,18 @@ sync_done:
 				min_events = 1;
 
 			do {
+				unsigned long bytes = 0;
+
 				/*
 				 * Reap required number of io units, if any,
 				 * and do the verification on them through
 				 * the callback handler
 				 */
-				if (io_u_queued_complete(td, min_events, NULL) < 0) {
+				if (io_u_queued_complete(td, min_events, &bytes) < 0) {
 					ret = -1;
 					break;
 				}
+				io_bytes += bytes;
 			} while (full && (td->cur_depth > td->o.iodepth_low));
 		}
 		if (ret < 0)
@@ -1174,6 +1190,8 @@ static void *thread_main(void *data)
 
 	clear_state = 0;
 	while (keep_running(td)) {
+		uint64_t write_bytes;
+
 		fio_gettime(&td->start, NULL);
 		memcpy(&td->bw_sample_time, &td->start, sizeof(td->start));
 		memcpy(&td->iops_sample_time, &td->start, sizeof(td->start));
@@ -1194,7 +1212,9 @@ static void *thread_main(void *data)
 
 		prune_io_piece_log(td);
 
+		write_bytes = td->io_bytes[DDIR_WRITE];
 		do_io(td);
+		write_bytes = td->io_bytes[DDIR_WRITE] - write_bytes;
 
 		clear_state = 1;
 
@@ -1223,7 +1243,7 @@ static void *thread_main(void *data)
 
 		fio_gettime(&td->start, NULL);
 
-		do_verify(td);
+		do_verify(td, write_bytes);
 
 		td->ts.runtime[DDIR_READ] += utime_since_now(&td->start);
 

@@ -183,7 +183,8 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	 * any stored write metadata, just return a random offset
 	 */
 	if (!td->o.verifysort_nr || !(ddir == DDIR_READ && td->o.do_verify &&
-	    td->o.verify != VERIFY_NONE && td_random(td)))
+	    td->o.verify != VERIFY_NONE && td_random(td)) ||
+	    td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE)
 		return get_off_from_method(td, f, ddir, b);
 
 	if (!flist_empty(&td->next_rand_list)) {
@@ -543,6 +544,12 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 static enum fio_ddir get_rw_ddir(struct thread_data *td)
 {
 	enum fio_ddir ddir;
+
+	/*
+	 * If verify phase started, it's always a READ
+	 */
+	if (td->runstate == TD_VERIFYING)
+		return DDIR_READ;
 
 	/*
 	 * see if it's time to fsync
@@ -1418,7 +1425,8 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 		if (td_write(td) && idx == DDIR_WRITE &&
 		    td->o.do_verify &&
-		    td->o.verify != VERIFY_NONE)
+		    td->o.verify != VERIFY_NONE &&
+		    !td->o.experimental_verify)
 			log_io_piece(td, io_u);
 
 		icd->bytes_done[idx] += bytes;

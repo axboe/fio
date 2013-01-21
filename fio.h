@@ -159,6 +159,7 @@ struct thread_options {
 	unsigned int verify_async;
 	unsigned long long verify_backlog;
 	unsigned int verify_batch;
+	unsigned int experimental_verify;
 	unsigned int use_thread;
 	unsigned int unlink;
 	unsigned int do_disk_util;
