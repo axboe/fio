@@ -16,10 +16,6 @@
 
 #include "../file.h"
 
-#ifndef CLOCK_REALTIME
-#define CLOCK_REALTIME 1
-#endif
-
 #define FIO_USE_GENERIC_RAND
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_GETTID
