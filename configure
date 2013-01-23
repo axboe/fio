@@ -147,6 +147,9 @@ SunOS)
   ;;
 CYGWIN*)
   echo "Forcing known good options on Windows"
+  if test -z "$CC" ; then
+    CC="x86_64-w64-mingw32-gcc"
+  fi
   echo "CC=$CC"                    >  $config_host_mak
   echo "CONFIG_LITTLE_ENDIAN=y"    >> $config_host_mak
   echo "CONFIG_64BIT_LLP64=y"      >> $config_host_mak
