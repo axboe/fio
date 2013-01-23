@@ -25,12 +25,6 @@
 #define OS_MAP_ANON		MAP_ANON
 #define OS_RAND_MAX		2147483648UL
 
-#if defined(_BIG_ENDIAN)
-#define FIO_BIG_ENDIAN
-#else
-#define FIO_LITTLE_ENDIAN
-#endif
-
 #define fio_swap16(x)	BSWAP_16(x)
 #define fio_swap32(x)	BSWAP_32(x)
 #define fio_swap64(x)	BSWAP_64(x)

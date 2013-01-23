@@ -6,7 +6,6 @@
 #include <errno.h>
 #include <lwp.h>
 #include <sys/param.h>
-#include <sys/endian.h>
 /* XXX hack to avoid confilcts between rbtree.h and <sys/rb.h> */
 #define	rb_node	_rb_node
 #include <sys/sysctl.h>
@@ -28,12 +27,6 @@
 
 #ifndef PTHREAD_STACK_MIN
 #define PTHREAD_STACK_MIN 4096
-#endif
-
-#if BYTE_ORDER == LITTLE_ENDIAN
-#define FIO_LITTLE_ENDIAN
-#else
-#define FIO_BIG_ENDIAN
 #endif
 
 #define fio_swap16(x)	bswap16(x)

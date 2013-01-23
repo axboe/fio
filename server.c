@@ -403,7 +403,7 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 
 	memset(&probe, 0, sizeof(probe));
 	gethostname((char *) probe.hostname, sizeof(probe.hostname));
-#ifdef FIO_BIG_ENDIAN
+#ifdef CONFIG_BIG_ENDIAN
 	probe.bigendian = 1;
 #endif
 	strncpy((char *) probe.fio_version, fio_version_string, sizeof(probe.fio_version));

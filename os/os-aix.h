@@ -19,12 +19,6 @@
 #define OS_MAP_ANON		MAP_ANON
 #define OS_MSG_DONTWAIT		0
 
-#if BYTE_ORDER == BIG_ENDIAN
-#define FIO_BIG_ENDIAN
-#else
-#define FIO_LITTLE_ENDIAN
-#endif
-
 #define FIO_USE_GENERIC_SWAP
 
 static inline int blockdev_invalidate_cache(struct fio_file *f)

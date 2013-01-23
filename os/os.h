@@ -165,7 +165,7 @@ static inline uint64_t fio_swap64(uint64_t val)
 #endif
 
 #ifndef FIO_HAVE_BYTEORDER_FUNCS
-#ifdef FIO_LITTLE_ENDIAN
+#ifdef CONFIG_LITTLE_ENDIAN
 #define __le16_to_cpu(x)		(x)
 #define __le32_to_cpu(x)		(x)
 #define __le64_to_cpu(x)		(x)

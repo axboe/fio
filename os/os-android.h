@@ -13,7 +13,6 @@
 #include <sched.h>
 #include <linux/unistd.h>
 #include <linux/major.h>
-#include <endian.h>
 
 #include "binject.h"
 #include "../file.h"
@@ -132,14 +131,6 @@ static inline long os_random_long(os_random_state_t *rs)
 #define FIO_O_NOATIME	O_NOATIME
 #else
 #define FIO_O_NOATIME	0
-#endif
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define FIO_LITTLE_ENDIAN
-#elif __BYTE_ORDER == __BIG_ENDIAN
-#define FIO_BIG_ENDIAN
-#else
-#error "Unknown endianness"
 #endif
 
 #define fio_swap16(x)	__bswap_16(x)

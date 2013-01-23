@@ -53,10 +53,10 @@ static int endian_check(void)
 	else if (u.c[0] == 0x12)
 		le = 1;
 
-#if defined(FIO_LITTLE_ENDIAN)
+#if defined(CONFIG_LITTLE_ENDIAN)
 	if (be)
 		return 1;
-#elif defined(FIO_BIG_ENDIAN)
+#elif defined(CONFIG_BIG_ENDIAN)
 	if (le)
 		return 1;
 #else

@@ -32,7 +32,6 @@
 
 #define OS_MAP_ANON		MAP_ANON
 
-#define FIO_LITTLE_ENDIAN
 #define fio_swap16(x)	_byteswap_ushort(x)
 #define fio_swap32(x)	_byteswap_ulong(x)
 #define fio_swap64(x)	_byteswap_uint64(x)

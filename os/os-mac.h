@@ -23,14 +23,6 @@
 
 #define OS_MAP_ANON		MAP_ANON
 
-#if defined(__LITTLE_ENDIAN__)
-#define FIO_LITTLE_ENDIAN
-#elif defined(__BIG_ENDIAN__)
-#define FIO_BIG_ENDIAN
-#else
-#error "Undefined byte order"
-#endif
-
 #define fio_swap16(x)	OSSwapInt16(x)
 #define fio_swap32(x)	OSSwapInt32(x)
 #define fio_swap64(x)	OSSwapInt64(x)

@@ -37,12 +37,6 @@
 #define MSG_WAITALL	0x40
 #endif
 
-#ifdef LITTLE_ENDIAN
-#define FIO_LITTLE_ENDIAN
-#else
-#define FIO_BIG_ENDIAN
-#endif
-
 #define FIO_USE_GENERIC_SWAP
 
 #define FIO_OS_HAVE_AIOCB_TYPEDEF

@@ -238,8 +238,25 @@ fi
 
 cc="${CC-${cross_prefix}gcc}"
 
+##########################################
+# check endianness
+bigendian="no"
+cat > $TMPC <<EOF
+#include <inttypes.h>
+int main(void)
+{
+  volatile uint32_t i=0x01234567;
+  return (*((uint8_t*)(&i))) == 0x67;
+}
+EOF
+if compile_prog "" "" "endian"; then
+  $TMPE && bigendian="yes"
+fi
+
+
 echo "Operating system              $targetos"
 echo "CPU                           $cpu"
+echo "Big endian                    $bigendian"
 echo "Compiler                      $cc"
 echo
 
@@ -782,6 +799,11 @@ elif test "$wordsize" = "32" ; then
 else
   echo "Unknown wordsize!"
   exit 1
+fi
+if test "$bigendian" = "yes" ; then
+  echo "CONFIG_BIG_ENDIAN=y" >> $config_host_mak
+else
+  echo "CONFIG_LITTLE_ENDIAN=y" >> $config_host_mak
 fi
 if test "$libaio" = "yes" ; then
   echo "CONFIG_LIBAIO=y" >> $config_host_mak
