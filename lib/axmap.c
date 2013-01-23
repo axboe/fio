@@ -308,8 +308,9 @@ int axmap_isset(struct axmap *axmap, uint64_t bit_nr)
 static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 				       uint64_t index)
 {
+	uint64_t ret = -1ULL;
 	unsigned long j;
-	int i, found = 0;
+	int i;
 
 	/*
 	 * Start at the bottom, then converge towards first free bit at the top
@@ -317,8 +318,11 @@ static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 	for (i = level; i >= 0; i--) {
 		struct axmap_level *al = &axmap->levels[i];
 
+		/*
+		 * Clear 'ret', this is a bug condition.
+		 */
 		if (index >= al->map_size) {
-			index = -1ULL;
+			ret = -1ULL;
 			break;
 		}
 
@@ -330,13 +334,12 @@ static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 			 * First free bit here is our index into the first
 			 * free bit at the next higher level
 			 */
-			index = (j << UNIT_SHIFT) + ffz(al->map[j]);
-			found = 1;
+			ret = index = (j << UNIT_SHIFT) + ffz(al->map[j]);
 			break;
 		}
 	}
 
-	return found ? index : (uint64_t) -1ULL;
+	return ret;
 }
 
 uint64_t axmap_first_free(struct axmap *axmap)
