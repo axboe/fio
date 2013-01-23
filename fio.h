@@ -792,7 +792,7 @@ static inline int __should_check_rate(struct thread_data *td,
 }
 
 static inline int should_check_rate(struct thread_data *td,
-				    unsigned long *bytes_done)
+				    uint64_t *bytes_done)
 {
 	int ret = 0;
 
