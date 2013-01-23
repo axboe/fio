@@ -67,6 +67,7 @@ static const char *fio_arch_strings[arch_nr] = {
 static void reset_io_counters(struct thread_data *td)
 {
 	int ddir;
+
 	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 		td->stat_io_bytes[ddir] = 0;
 		td->this_io_bytes[ddir] = 0;
@@ -74,10 +75,12 @@ static void reset_io_counters(struct thread_data *td)
 		td->this_io_blocks[ddir] = 0;
 		td->rate_bytes[ddir] = 0;
 		td->rate_blocks[ddir] = 0;
+		td->io_issues[ddir] = 0;
 	}
 	td->zone_bytes = 0;
 
 	td->last_was_sync = 0;
+	td->rwmix_issues = 0;
 
 	/*
 	 * reset file done count if we are to start over

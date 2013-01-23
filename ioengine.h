@@ -8,7 +8,7 @@
 #include <guasi.h>
 #endif
 
-#define FIO_IOOPS_VERSION	14
+#define FIO_IOOPS_VERSION	15
 
 enum {
 	IO_U_F_FREE		= 1 << 0,
@@ -55,6 +55,12 @@ struct io_u {
 	struct fio_file *file;
 	unsigned int flags;
 	enum fio_ddir ddir;
+
+	/*
+	 * For replay workloads, we may want to account as a different
+	 * IO type than what is being submitted.
+	 */
+	enum fio_ddir acct_ddir;
 
 	/*
 	 * Allocated/set buffer and length
@@ -209,5 +215,13 @@ static inline void dprint_io_u(struct io_u *io_u, const char *p)
 #else
 #define dprint_io_u(io_u, p)
 #endif
+
+static inline enum fio_ddir acct_ddir(struct io_u *io_u)
+{
+	if (io_u->acct_ddir != -1)
+		return io_u->acct_ddir;
+
+	return io_u->ddir;
+}
 
 #endif

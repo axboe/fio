@@ -172,19 +172,31 @@ static int get_off_from_method(struct thread_data *td, struct fio_file *f,
 	return 1;
 }
 
+/*
+ * Sort the reads for a verify phase in batches of verifysort_nr, if
+ * specified.
+ */
+static inline int should_sort_io(struct thread_data *td)
+{
+	if (!td->o.verifysort_nr || !td->o.do_verify)
+		return 0;
+	if (!td_random(td))
+		return 0;
+	if (td->runstate != TD_VERIFYING)
+		return 0;
+	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE)
+		return 0;
+
+	return 1;
+}
+
 static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				enum fio_ddir ddir, uint64_t *b)
 {
 	struct rand_off *r;
 	int i, ret = 1;
 
-	/*
-	 * If sort not enabled, or not a pure random read workload without
-	 * any stored write metadata, just return a random offset
-	 */
-	if (!td->o.verifysort_nr || !(ddir == DDIR_READ && td->o.do_verify &&
-	    td->o.verify != VERIFY_NONE && td_random(td)) ||
-	    td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE)
+	if (!should_sort_io(td))
 		return get_off_from_method(td, f, ddir, b);
 
 	if (!flist_empty(&td->next_rand_list)) {
@@ -546,12 +558,6 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 	enum fio_ddir ddir;
 
 	/*
-	 * If verify phase started, it's always a READ
-	 */
-	if (td->runstate == TD_VERIFYING)
-		return DDIR_READ;
-
-	/*
 	 * see if it's time to fsync
 	 */
 	if (td->o.fsync_blocks &&
@@ -606,7 +612,7 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 
 static void set_rw_ddir(struct thread_data *td, struct io_u *io_u)
 {
-	io_u->ddir = get_rw_ddir(td);
+	io_u->ddir = io_u->acct_ddir = get_rw_ddir(td);
 
 	if (io_u->ddir == DDIR_WRITE && (td->io_ops->flags & FIO_BARRIER) &&
 	    td->o.barrier_blocks &&
@@ -650,14 +656,15 @@ void clear_io_u(struct thread_data *td, struct io_u *io_u)
 void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 {
 	struct io_u *__io_u = *io_u;
+	enum fio_ddir ddir = acct_ddir(__io_u);
 
 	dprint(FD_IO, "requeue %p\n", __io_u);
 
 	td_io_u_lock(td);
 
 	__io_u->flags |= IO_U_F_FREE;
-	if ((__io_u->flags & IO_U_F_FLIGHT) && ddir_rw(__io_u->ddir))
-		td->io_issues[__io_u->ddir]--;
+	if ((__io_u->flags & IO_U_F_FLIGHT) && ddir_rw(ddir))
+		td->io_issues[ddir]--;
 
 	__io_u->flags &= ~IO_U_F_FLIGHT;
 	if (__io_u->flags & IO_U_F_IN_CUR_DEPTH)
@@ -719,13 +726,9 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td_random(td) && file_randommap(td, io_u->file))
 		mark_random_map(td, io_u);
 
-	/*
-	 * If using a write iolog, store this entry.
-	 */
 out:
 	dprint_io_u(io_u, "fill_io_u");
 	td->zone_bytes += io_u->buflen;
-	log_io_u(td, io_u);
 	return 0;
 }
 
@@ -1091,6 +1094,7 @@ again:
 		io_u->flags &= ~IO_U_F_VER_LIST;
 
 		io_u->error = 0;
+		io_u->acct_ddir = -1;
 		flist_del(&io_u->list);
 		flist_add_tail(&io_u->list, &td->io_u_busylist);
 		td->cur_depth++;

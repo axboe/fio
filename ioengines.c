@@ -260,6 +260,11 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	assert(fio_file_open(io_u->file));
 
+	/*
+	 * If using a write iolog, store this entry.
+	 */
+	log_io_u(td, io_u);
+
 	io_u->error = 0;
 	io_u->resid = 0;
 
@@ -275,8 +280,8 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 					sizeof(struct timeval));
 	}
 
-	if (ddir_rw(io_u->ddir))
-		td->io_issues[io_u->ddir]++;
+	if (ddir_rw(acct_ddir(io_u)))
+		td->io_issues[acct_ddir(io_u)]++;
 
 	ret = td->io_ops->queue(td, io_u);
 
