@@ -6,10 +6,7 @@
 #include <inttypes.h>
 
 #include "../lib/lfsr.h"
-
-struct axmap;
-void axmap_set(struct axmap *, uint64_t);
-struct axmap *axmap_new(uint64_t size);
+#include "../lib/axmap.h"
 
 void *smalloc(size_t size)
 {
@@ -24,8 +21,9 @@ void sfree(void *ptr)
 int main(int argc, char *argv[])
 {
 	struct fio_lfsr lfsr;
-	size_t size = (1UL << 28) - 200;
+	size_t osize, size = (1UL << 28) - 200;
 	struct axmap *map;
+	uint64_t ff;
 	int seed = 1;
 
 	if (argc > 1) {
@@ -38,12 +36,22 @@ int main(int argc, char *argv[])
 
 	lfsr_init(&lfsr, size, seed);
 	map = axmap_new(size);
+	osize = size;
 
 	while (size--) {
 		uint64_t val;
 
-		lfsr_next(&lfsr, &val);
+		if (lfsr_next(&lfsr, &val, osize)) {
+			printf("lfsr: short loop\n");
+			break;
+		}
 		axmap_set(map, val);
+	}
+
+	ff = axmap_next_free(map, osize);
+	if (ff != (uint64_t) -1ULL) {
+		printf("axmap_next_free broken: got %llu\n", (unsigned long long) ff);
+		return 1;
 	}
 
 	return 0;
