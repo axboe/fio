@@ -19,13 +19,25 @@ struct posixaio_data {
 
 static int fill_timespec(struct timespec *ts)
 {
-#ifdef _POSIX_TIMERS
-	if (!clock_gettime(CLOCK_MONOTONIC, ts))
+#ifdef CONFIG_CLOCK_GETTIME
+#ifdef CONFIG_CLOCK_MONOTONIC
+	clockid_t clk = CLOCK_MONOTONIC;
+#else
+	clockid_t clk = CLOCK_REALTIME;
+#endif
+	if (!clock_gettime(clk, ts))
 		return 0;
 
 	perror("clock_gettime");
-#endif
 	return 1;
+#else
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+	ts->tv_sec = tv.tv_sec;
+	ts->tv_nsec = tv.tv_usec * 1000;
+	return 0;
+#endif
 }
 
 static unsigned long long ts_utime_since_now(struct timespec *t)
@@ -91,6 +103,8 @@ static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 
 	if (t && !fill_timespec(&start))
 		have_timeout = 1;
+	else
+		memset(&start, 0, sizeof(start));
 
 	r = 0;
 	memset(suspend_list, 0, sizeof(*suspend_list));

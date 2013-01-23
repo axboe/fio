@@ -16,10 +16,6 @@
 
 #include "../file.h"
 
-#ifndef CLOCK_MONOTONIC
-#define CLOCK_MONOTONIC 1
-#endif
-
 #ifndef CLOCK_REALTIME
 #define CLOCK_REALTIME 1
 #endif
@@ -177,4 +173,11 @@ static inline int gettid(void)
 {
 	return mach_thread_self();
 }
+
+/*
+ * For some reason, there's no header definition for fdatasync(), even
+ * if it exists.
+ */
+extern int fdatasync(int fd);
+
 #endif
