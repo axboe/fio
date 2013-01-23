@@ -140,13 +140,19 @@ static int thread_eta(struct thread_data *td)
 	}
 
 	/*
-	 * if writing, bytes_total will be twice the size. If mixing,
-	 * assume a 50/50 split and thus bytes_total will be 50% larger.
+	 * if writing and verifying afterwards, bytes_total will be twice the
+	 * size. In a mixed workload, verify phase will be the size of the
+	 * first stage writes.
 	 */
 	if (td->o.do_verify && td->o.verify && td_write(td)) {
-		if (td_rw(td))
-			bytes_total = bytes_total * 3 / 2;
-		else
+		if (td_rw(td)) {
+			unsigned int perc = 50;
+
+			if (td->o.rwmix[DDIR_WRITE])
+				perc = td->o.rwmix[DDIR_WRITE];
+
+			bytes_total += (bytes_total * perc) / 100;
+		} else
 			bytes_total <<= 1;
 	}
 
