@@ -216,7 +216,7 @@ static int __check_min_rate(struct thread_data *td, struct timeval *now,
 }
 
 static int check_min_rate(struct thread_data *td, struct timeval *now,
-			  unsigned long *bytes_done)
+			  uint64_t *bytes_done)
 {
 	int ret = 0;
 
@@ -393,8 +393,9 @@ static int break_on_this_error(struct thread_data *td, enum fio_ddir ddir,
  * The main verify engine. Runs over the writes we previously submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
  */
-static void do_verify(struct thread_data *td)
+static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 {
+	uint64_t bytes_done[DDIR_RWDIR_CNT] = { 0, 0, 0 };
 	struct fio_file *f;
 	struct io_u *io_u;
 	int ret, min_events;
@@ -453,6 +454,9 @@ static void do_verify(struct thread_data *td)
 				break;
 			}
 		} else {
+			if (ddir_rw_sum(bytes_done) + td->o.rw_min_bs > verify_bytes)
+				break;
+
 			while ((io_u = get_io_u(td)) != NULL) {
 				/*
 				 * We are only interested in the places where
@@ -523,7 +527,7 @@ static void do_verify(struct thread_data *td)
 				requeue_io_u(td, &io_u);
 			} else {
 sync_done:
-				ret = io_u_sync_complete(td, io_u, NULL);
+				ret = io_u_sync_complete(td, io_u, bytes_done);
 				if (ret < 0)
 					break;
 			}
@@ -566,7 +570,7 @@ sync_done:
 				 * and do the verification on them through
 				 * the callback handler
 				 */
-				if (io_u_queued_complete(td, min_events, NULL) < 0) {
+				if (io_u_queued_complete(td, min_events, bytes_done) < 0) {
 					ret = -1;
 					break;
 				}
@@ -608,9 +612,12 @@ static int io_bytes_exceeded(struct thread_data *td)
 /*
  * Main IO worker function. It retrieves io_u's to process and queues
  * and reaps them, checking for rate and errors along the way.
+ *
+ * Returns number of bytes written and trimmed.
  */
-static void do_io(struct thread_data *td)
+static uint64_t do_io(struct thread_data *td)
 {
+	uint64_t bytes_done[DDIR_RWDIR_CNT] = { 0, 0, 0 };
 	unsigned int i;
 	int ret = 0;
 
@@ -623,7 +630,6 @@ static void do_io(struct thread_data *td)
 		(!flist_empty(&td->trim_list)) || !io_bytes_exceeded(td) ||
 		td->o.time_based) {
 		struct timeval comp_time;
-		unsigned long bytes_done[DDIR_RWDIR_CNT] = { 0, 0, 0 };
 		int min_evts = 0;
 		struct io_u *io_u;
 		int ret2, full;
@@ -827,6 +833,8 @@ sync_done:
 	 */
 	if (!ddir_rw_sum(td->this_io_bytes))
 		td->done = 1;
+
+	return bytes_done[DDIR_WRITE] + bytes_done[DDIR_TRIM];
 }
 
 static void cleanup_io_u(struct thread_data *td)
@@ -1206,6 +1214,8 @@ static void *thread_main(void *data)
 
 	clear_state = 0;
 	while (keep_running(td)) {
+		uint64_t verify_bytes;
+
 		fio_gettime(&td->start, NULL);
 		memcpy(&td->bw_sample_time, &td->start, sizeof(td->start));
 		memcpy(&td->iops_sample_time, &td->start, sizeof(td->start));
@@ -1226,7 +1236,7 @@ static void *thread_main(void *data)
 
 		prune_io_piece_log(td);
 
-		do_io(td);
+		verify_bytes = do_io(td);
 
 		clear_state = 1;
 
@@ -1255,7 +1265,7 @@ static void *thread_main(void *data)
 
 		fio_gettime(&td->start, NULL);
 
-		do_verify(td);
+		do_verify(td, verify_bytes);
 
 		td->ts.runtime[DDIR_READ] += utime_since_now(&td->start);
 

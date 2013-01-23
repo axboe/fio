@@ -16,7 +16,7 @@ struct io_completion_data {
 	int nr;				/* input */
 
 	int error;			/* output */
-	unsigned long bytes_done[DDIR_RWDIR_CNT];	/* output */
+	uint64_t bytes_done[DDIR_RWDIR_CNT];	/* output */
 	struct timeval time;		/* output */
 };
 
@@ -1493,7 +1493,7 @@ static void ios_completed(struct thread_data *td,
  * Complete a single io_u for the sync engines.
  */
 int io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
-		       unsigned long *bytes)
+		       uint64_t *bytes)
 {
 	struct io_completion_data icd;
 
@@ -1522,7 +1522,7 @@ int io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
  * Called to complete min_events number of io for the async engines.
  */
 int io_u_queued_complete(struct thread_data *td, int min_evts,
-			 unsigned long *bytes)
+			 uint64_t *bytes)
 {
 	struct io_completion_data icd;
 	struct timespec *tvp = NULL;
