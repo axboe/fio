@@ -157,7 +157,6 @@ CYGWIN*)
   echo "CONFIG_CLOCK_MONOTONIC=y"  >> $config_host_mak
   echo "CONFIG_GETTIMEOFDAY=y"     >> $config_host_mak
   echo "CONFIG_FADVISE=y"          >> $config_host_mak
-  echo "CONFIG_STRSEP=y"           >> $config_host_mak
   echo "CONFIG_SOCKLEN_T=y"        >> $config_host_mak
   echo "CONFIG_POSIX_FALLOCATE=y"  >> $config_host_mak
   echo "CONFIG_FADVISE=y"          >> $config_host_mak

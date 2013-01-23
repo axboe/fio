@@ -628,39 +628,6 @@ long long strtoll(const char *restrict str, char **restrict endptr,
 	return _strtoi64(str, endptr, base);
 }
 
-char *strsep(char **stringp, const char *delim)
-{
-	char *orig = *stringp;
-	BOOL gotMatch = FALSE;
-	int i = 0;
-	int j = 0;
-
-	if (*stringp == NULL)
-		return NULL;
-
-	while ((*stringp)[i] != '\0') {
-		j = 0;
-		while (delim[j] != '\0') {
-			if ((*stringp)[i] == delim[j]) {
-				gotMatch = TRUE;
-				(*stringp)[i] = '\0';
-				*stringp = *stringp + i + 1;
-				break;
-			}
-			j++;
-		}
-		if (gotMatch)
-			break;
-
-		i++;
-	}
-
-	if (!gotMatch)
-		*stringp = NULL;
-
-	return orig;
-}
-
 int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 {
 	struct timeval tv;
