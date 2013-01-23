@@ -706,7 +706,6 @@ void td_fill_rand_seeds(struct thread_data *td)
 	init_rand_seed(&td->buf_state, td->rand_seeds[FIO_RAND_BUF_OFF]);
 }
 
-
 /*
  * Initializes the ioengine configured for a job, if it has not been done so
  * already.
@@ -779,6 +778,26 @@ static void init_flags(struct thread_data *td)
 		td->flags |= TD_F_SCRAMBLE_BUFFERS;
 	if (o->verify != VERIFY_NONE)
 		td->flags |= TD_F_VER_NONE;
+}
+
+static int setup_random_seeds(struct thread_data *td)
+{
+	unsigned long seed;
+	unsigned int i;
+
+	if (!td->o.rand_repeatable)
+		return init_random_state(td, td->rand_seeds, sizeof(td->rand_seeds));
+
+	for (seed = 0x89, i = 0; i < 4; i++)
+		seed *= 0x9e370001UL;
+
+	for (i = 0; i < FIO_RAND_NR_OFFS; i++) {
+		td->rand_seeds[i] = seed;
+		seed *= 0x9e370001UL;
+	}
+
+	td_fill_rand_seeds(td);
+	return 0;
 }
 
 /*
@@ -883,7 +902,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	td->groupid = groupid;
 	prev_group_jobs++;
 
-	if (init_random_state(td, td->rand_seeds, sizeof(td->rand_seeds))) {
+	if (setup_random_seeds(td)) {
 		td_verror(td, errno, "init_random_state");
 		goto err;
 	}
