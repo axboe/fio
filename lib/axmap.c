@@ -309,7 +309,7 @@ static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 				       uint64_t index)
 {
 	unsigned long j;
-	int i;
+	int i, found = 0;
 
 	/*
 	 * Start at the bottom, then converge towards first free bit at the top
@@ -331,11 +331,12 @@ static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 			 * free bit at the next higher level
 			 */
 			index = (j << UNIT_SHIFT) + ffz(al->map[j]);
+			found = 1;
 			break;
 		}
 	}
 
-	return index;
+	return found ? index : (uint64_t) -1ULL;
 }
 
 uint64_t axmap_first_free(struct axmap *axmap)
