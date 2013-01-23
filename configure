@@ -128,6 +128,7 @@ elif check_define _WIN32 ; then
   echo "CONFIG_POSIX_FALLOCATE=y"  >> $config_host_mak
   echo "CONFIG_FADVISE=y"          >> $config_host_mak
   echo "CONFIG_SFAA=y"             >> $config_host_mak
+  echo "CC=$cc"			   >> $config_host_mak
   exit 0
 elif check_define __OpenBSD__ ; then
   targetos='OpenBSD'
