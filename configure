@@ -116,20 +116,6 @@ done
 
 if check_define __linux__ ; then
   targetos="Linux"
-elif check_define _WIN32 ; then
-  echo "Forcing known good options on Windows"
-  echo "CONFIG_64BIT_LLP64=y"      >> $config_host_mak
-  echo "CONFIG_CLOCK_GETTIME=y"    >> $config_host_mak
-  echo "CONFIG_CLOCK_MONOTONIC=y"  >> $config_host_mak
-  echo "CONFIG_GETTIMEOFDAY=y"     >> $config_host_mak
-  echo "CONFIG_FADVISE=y"          >> $config_host_mak
-  echo "CONFIG_STRSEP=y"           >> $config_host_mak
-  echo "CONFIG_SOCKLEN_T=y"        >> $config_host_mak
-  echo "CONFIG_POSIX_FALLOCATE=y"  >> $config_host_mak
-  echo "CONFIG_FADVISE=y"          >> $config_host_mak
-  echo "CONFIG_SFAA=y"             >> $config_host_mak
-  echo "CC=$cc"			   >> $config_host_mak
-  exit 0
 elif check_define __OpenBSD__ ; then
   targetos='OpenBSD'
 elif check_define __sun__ ; then
@@ -158,6 +144,22 @@ SunOS)
   if test -z "$cpu" && test "$(isainfo -k)" = "amd64"; then
     cpu="x86_64"
   fi
+  ;;
+CYGWIN*)
+  echo "Forcing known good options on Windows"
+  echo "CC=$CC"                    >  $config_host_mak
+  echo "CONFIG_LITTLE_ENDIAN=y"    >> $config_host_mak
+  echo "CONFIG_64BIT_LLP64=y"      >> $config_host_mak
+  echo "CONFIG_CLOCK_GETTIME=y"    >> $config_host_mak
+  echo "CONFIG_CLOCK_MONOTONIC=y"  >> $config_host_mak
+  echo "CONFIG_GETTIMEOFDAY=y"     >> $config_host_mak
+  echo "CONFIG_FADVISE=y"          >> $config_host_mak
+  echo "CONFIG_STRSEP=y"           >> $config_host_mak
+  echo "CONFIG_SOCKLEN_T=y"        >> $config_host_mak
+  echo "CONFIG_POSIX_FALLOCATE=y"  >> $config_host_mak
+  echo "CONFIG_FADVISE=y"          >> $config_host_mak
+  echo "CONFIG_SFAA=y"             >> $config_host_mak
+  exit 0
 esac
 
 if test ! -z "$cpu" ; then
