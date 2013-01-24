@@ -8,9 +8,6 @@ PROGS	= fio
 SCRIPTS = fio_generate_plots
 UNAME  := $(shell uname)
 
-GTK_CFLAGS = `pkg-config --cflags gtk+-2.0 gthread-2.0`
-GTK_LDFLAGS = `pkg-config --libs gtk+-2.0 gthread-2.0`
-
 ifneq ($(wildcard config-host.mak),)
 all:
 include config-host.mak
@@ -23,6 +20,10 @@ config-host.mak:
 	@./configure
 all:
 include config-host.mak
+endif
+
+ifdef CONFIG_GFIO
+  PROGS += gfio
 endif
 
 SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
