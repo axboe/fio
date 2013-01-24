@@ -1,6 +1,5 @@
 DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
-CPPFLAGS= -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
-	$(DEBUGFLAGS)
+CPPFLAGS= -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(DEBUGFLAGS)
 OPTFLAGS= -O3 -g -ffast-math $(EXTFLAGS)
 CFLAGS	= -std=gnu99 -Wwrite-strings -Wall $(OPTFLAGS)
 LIBS	= -lm $(EXTLIBS)
@@ -29,7 +28,7 @@ SOURCE := gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
 		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
 		json.c lib/zipf.c lib/axmap.c lib/lfsr.c gettime-thread.c \
-		helpers.c lib/flist_sort.c lib/hweight.c
+		helpers.c lib/flist_sort.c lib/hweight.c lib/getrusage.c
 
 ifdef CONFIG_64BIT_LLP64
   CFLAGS += -DBITS_PER_LONG=32
@@ -141,6 +140,9 @@ ifdef CONFIG_POSIX_FALLOCATE
 endif
 ifdef CONFIG_LINUX_FALLOCATE
   CFLAGS += -DCONFIG_LINUX_FALLOCATE
+endif
+ifdef CONFIG_RUSAGE_THREAD
+  CFLAGS += -DCONFIG_RUSAGE_THREAD
 endif
 
 ifeq ($(UNAME), Linux)

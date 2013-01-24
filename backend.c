@@ -50,6 +50,7 @@
 #include "lib/rand.h"
 #include "memalign.h"
 #include "server.h"
+#include "lib/getrusage.h"
 
 static pthread_t disk_util_thread;
 static struct fio_mutex *disk_thread_mutex;
@@ -1210,11 +1211,7 @@ static void *thread_main(void *data)
 	}
 
 	fio_gettime(&td->epoch, NULL);
-#ifdef RUSAGE_THREAD
-	getrusage(RUSAGE_THREAD, &td->ru_start);
-#else
-	getrusage(RUSAGE_SELF, &td->ru_start);
-#endif
+	fio_getrusage(&td->ru_start);
 	clear_state = 0;
 	while (keep_running(td)) {
 		uint64_t verify_bytes;
