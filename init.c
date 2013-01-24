@@ -1641,6 +1641,9 @@ int parse_cmd_line(int argc, char *argv[])
 			do_exit++;
 			exit_val = fio_monotonic_clocktest();
 			break;
+		case '?':
+			log_err("%s: unrecognized option '%s'\n", argv[0],
+							argv[optind - 1]);
 		default:
 			do_exit++;
 			exit_val = 1;
