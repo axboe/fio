@@ -1578,7 +1578,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		},
 		.parent = "nrfiles",
 	},
-#ifdef FIO_HAVE_FALLOCATE
+#ifdef CONFIG_POSIX_FALLOCATE
 	{
 		.name	= "fallocate",
 		.type	= FIO_OPT_STR,
@@ -1594,7 +1594,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .oval = FIO_FALLOCATE_POSIX,
 			    .help = "Use posix_fallocate()",
 			  },
-#ifdef FIO_HAVE_LINUX_FALLOCATE
+#ifdef CONFIG_LINUX_FALLOCATE
 			  { .ival = "keep",
 			    .oval = FIO_FALLOCATE_KEEP_SIZE,
 			    .help = "Use fallocate(..., FALLOC_FL_KEEP_SIZE, ...)",
@@ -1611,7 +1611,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			  },
 		},
 	},
-#endif	/* FIO_HAVE_FALLOCATE */
+#endif	/* CONFIG_POSIX_FALLOCATE */
 	{
 		.name	= "fadvise_hint",
 		.type	= FIO_OPT_BOOL,
