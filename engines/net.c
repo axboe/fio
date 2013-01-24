@@ -541,7 +541,7 @@ static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
 	msg.magic = htonl(FIO_LINK_OPEN_CLOSE_MAGIC);
 	msg.cmd = htonl(FIO_LINK_CLOSE);
 
-	ret = sendto(f->fd, &msg, sizeof(msg), MSG_WAITALL, to,
+	ret = sendto(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to,
 			sizeof(nd->addr));
 	if (ret < 0)
 		td_verror(td, errno, "sendto udp link close");
@@ -569,7 +569,7 @@ static int fio_netio_udp_recv_open(struct thread_data *td, struct fio_file *f)
 	socklen_t len = sizeof(nd->addr);
 	int ret;
 
-	ret = recvfrom(f->fd, &msg, sizeof(msg), MSG_WAITALL, to, &len);
+	ret = recvfrom(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to, &len);
 	if (ret < 0) {
 		td_verror(td, errno, "sendto udp link open");
 		return ret;
@@ -595,7 +595,7 @@ static int fio_netio_udp_send_open(struct thread_data *td, struct fio_file *f)
 	msg.magic = htonl(FIO_LINK_OPEN_CLOSE_MAGIC);
 	msg.cmd = htonl(FIO_LINK_OPEN);
 
-	ret = sendto(f->fd, &msg, sizeof(msg), MSG_WAITALL, to,
+	ret = sendto(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to,
 			sizeof(nd->addr));
 	if (ret < 0) {
 		td_verror(td, errno, "sendto udp link open");
@@ -743,7 +743,7 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 	}
 
 	opt = 1;
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) < 0) {
 		td_verror(td, errno, "setsockopt");
 		return 1;
 	}

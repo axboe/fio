@@ -137,7 +137,7 @@ typedef unsigned int socklen_t;
 #endif
 
 #ifndef FIO_OS_HAS_CTIME_R
-#define os_ctime_r(x, y, z)     ctime_r((x), (y))
+#define os_ctime_r(x, y, z)     (void) ctime_r((x), (y))
 #endif
 
 #ifdef FIO_USE_GENERIC_SWAP

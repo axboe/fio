@@ -15,6 +15,8 @@
 #include "../file.h"
 #include "../log.h"
 
+#include "windows/posix.h"
+
 #define FIO_HAVE_ODIRECT
 #define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_CHARDEV_SIZE
@@ -35,9 +37,6 @@
 #define fio_swap16(x)	_byteswap_ushort(x)
 #define fio_swap32(x)	_byteswap_ulong(x)
 #define fio_swap64(x)	_byteswap_uint64(x)
-
-typedef off_t off64_t;
-typedef int clockid_t;
 
 typedef DWORD_PTR os_cpu_mask_t;
 

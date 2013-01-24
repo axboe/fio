@@ -829,7 +829,7 @@ static int fio_init_server_ip(void)
 	}
 
 	opt = 1;
-	if (setsockopt(sk, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(sk, SOL_SOCKET, SO_REUSEADDR, (void *)&opt, sizeof(opt)) < 0) {
 		log_err("fio: setsockopt: %s\n", strerror(errno));
 		close(sk);
 		return -1;
