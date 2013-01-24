@@ -3,7 +3,7 @@
 
 #include <inttypes.h>
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
+#ifdef CONFIG_LITTLE_ENDIAN
 static inline uint32_t __be32_to_cpu(uint32_t val)
 {
 	uint32_t c1, c2, c3, c4;

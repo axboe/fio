@@ -16,7 +16,7 @@ struct io_completion_data {
 	int nr;				/* input */
 
 	int error;			/* output */
-	unsigned long bytes_done[DDIR_RWDIR_CNT];	/* output */
+	uint64_t bytes_done[DDIR_RWDIR_CNT];	/* output */
 	struct timeval time;		/* output */
 };
 
@@ -24,7 +24,7 @@ struct io_completion_data {
  * The ->io_axmap contains a map of blocks we have or have not done io
  * to yet. Used to make sure we cover the entire range in a fair fashion.
  */
-static int random_map_free(struct fio_file *f, const unsigned long long block)
+static int random_map_free(struct fio_file *f, const uint64_t block)
 {
 	return !axmap_isset(f->io_axmap, block);
 }
@@ -36,10 +36,10 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 {
 	unsigned int min_bs = td->o.rw_min_bs;
 	struct fio_file *f = io_u->file;
-	unsigned long long block;
 	unsigned int nr_blocks;
+	uint64_t block;
 
-	block = (io_u->offset - f->file_offset) / (unsigned long long) min_bs;
+	block = (io_u->offset - f->file_offset) / (uint64_t) min_bs;
 	nr_blocks = (io_u->buflen + min_bs - 1) / min_bs;
 
 	if (!(io_u->flags & IO_U_F_BUSY_OK))
@@ -49,11 +49,11 @@ static void mark_random_map(struct thread_data *td, struct io_u *io_u)
 		io_u->buflen = nr_blocks * min_bs;
 }
 
-static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
-				     enum fio_ddir ddir)
+static uint64_t last_block(struct thread_data *td, struct fio_file *f,
+			   enum fio_ddir ddir)
 {
-	unsigned long long max_blocks;
-	unsigned long long max_size;
+	uint64_t max_blocks;
+	uint64_t max_size;
 
 	assert(ddir_rw(ddir));
 
@@ -67,24 +67,29 @@ static unsigned long long last_block(struct thread_data *td, struct fio_file *f,
 	if (td->o.zone_range)
 		max_size = td->o.zone_range;
 
-	max_blocks = max_size / (unsigned long long) td->o.ba[ddir];
+	max_blocks = max_size / (uint64_t) td->o.ba[ddir];
 	if (!max_blocks)
 		return 0;
 
 	return max_blocks;
 }
 
+struct rand_off {
+	struct flist_head list;
+	uint64_t off;
+};
+
 static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
-				  enum fio_ddir ddir, unsigned long long *b)
+				  enum fio_ddir ddir, uint64_t *b)
 {
-	unsigned long long r;
+	uint64_t r, lastb;
+
+	lastb = last_block(td, f, ddir);
+	if (!lastb)
+		return 1;
 
 	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE) {
-		unsigned long long rmax, lastb;
-
-		lastb = last_block(td, f, ddir);
-		if (!lastb)
-			return 1;
+		uint64_t rmax;
 
 		rmax = td->o.use_os_rand ? OS_RAND_MAX : FRAND_MAX;
 
@@ -98,11 +103,11 @@ static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 
 		dprint(FD_RANDOM, "off rand %llu\n", r);
 
-		*b = (lastb - 1) * (r / ((unsigned long long) rmax + 1.0));
+		*b = (lastb - 1) * (r / ((uint64_t) rmax + 1.0));
 	} else {
 		uint64_t off = 0;
 
-		if (lfsr_next(&f->lfsr, &off))
+		if (lfsr_next(&f->lfsr, &off, lastb))
 			return 1;
 
 		*b = off;
@@ -131,7 +136,7 @@ ret:
 
 static int __get_next_rand_offset_zipf(struct thread_data *td,
 				       struct fio_file *f, enum fio_ddir ddir,
-				       unsigned long long *b)
+				       uint64_t *b)
 {
 	*b = zipf_next(&f->zipf);
 	return 0;
@@ -139,14 +144,22 @@ static int __get_next_rand_offset_zipf(struct thread_data *td,
 
 static int __get_next_rand_offset_pareto(struct thread_data *td,
 					 struct fio_file *f, enum fio_ddir ddir,
-					 unsigned long long *b)
+					 uint64_t *b)
 {
 	*b = pareto_next(&f->zipf);
 	return 0;
 }
 
-static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
-				enum fio_ddir ddir, unsigned long long *b)
+static int flist_cmp(void *data, struct flist_head *a, struct flist_head *b)
+{
+	struct rand_off *r1 = flist_entry(a, struct rand_off, list);
+	struct rand_off *r2 = flist_entry(b, struct rand_off, list);
+
+	return r1->off - r2->off;
+}
+
+static int get_off_from_method(struct thread_data *td, struct fio_file *f,
+			       enum fio_ddir ddir, uint64_t *b)
 {
 	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM)
 		return __get_next_rand_offset(td, f, ddir, b);
@@ -159,14 +172,71 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	return 1;
 }
 
+/*
+ * Sort the reads for a verify phase in batches of verifysort_nr, if
+ * specified.
+ */
+static inline int should_sort_io(struct thread_data *td)
+{
+	if (!td->o.verifysort_nr || !td->o.do_verify)
+		return 0;
+	if (!td_random(td))
+		return 0;
+	if (td->runstate != TD_VERIFYING)
+		return 0;
+	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE)
+		return 0;
+
+	return 1;
+}
+
+static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
+				enum fio_ddir ddir, uint64_t *b)
+{
+	struct rand_off *r;
+	int i, ret = 1;
+
+	if (!should_sort_io(td))
+		return get_off_from_method(td, f, ddir, b);
+
+	if (!flist_empty(&td->next_rand_list)) {
+		struct rand_off *r;
+fetch:
+		r = flist_entry(td->next_rand_list.next, struct rand_off, list);
+		flist_del(&r->list);
+		*b = r->off;
+		free(r);
+		return 0;
+	}
+
+	for (i = 0; i < td->o.verifysort_nr; i++) {
+		r = malloc(sizeof(*r));
+
+		ret = get_off_from_method(td, f, ddir, &r->off);
+		if (ret) {
+			free(r);
+			break;
+		}
+
+		flist_add(&r->list, &td->next_rand_list);
+	}
+
+	if (ret && !i)
+		return ret;
+
+	assert(!flist_empty(&td->next_rand_list));
+	flist_sort(NULL, &td->next_rand_list, flist_cmp);
+	goto fetch;
+}
+
 static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
-			       enum fio_ddir ddir, unsigned long long *b)
+			       enum fio_ddir ddir, uint64_t *b)
 {
 	if (!get_next_rand_offset(td, f, ddir, b))
 		return 0;
 
 	if (td->o.time_based) {
-		fio_file_reset(f);
+		fio_file_reset(td, f);
 		if (!get_next_rand_offset(td, f, ddir, b))
 			return 0;
 	}
@@ -177,7 +247,7 @@ static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 }
 
 static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
-			       enum fio_ddir ddir, unsigned long long *offset)
+			       enum fio_ddir ddir, uint64_t *offset)
 {
 	assert(ddir_rw(ddir));
 
@@ -185,7 +255,7 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 		f->last_pos = f->last_pos - f->io_size;
 
 	if (f->last_pos < f->real_file_size) {
-		unsigned long long pos;
+		uint64_t pos;
 
 		if (f->last_pos == f->file_offset && td->o.ddir_seq_add < 0)
 			f->last_pos = f->real_file_size;
@@ -205,7 +275,7 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 			  enum fio_ddir ddir, int rw_seq)
 {
 	struct fio_file *f = io_u->file;
-	unsigned long long b, offset;
+	uint64_t b, offset;
 	int ret;
 
 	assert(ddir_rw(ddir));
@@ -542,7 +612,7 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 
 static void set_rw_ddir(struct thread_data *td, struct io_u *io_u)
 {
-	io_u->ddir = get_rw_ddir(td);
+	io_u->ddir = io_u->acct_ddir = get_rw_ddir(td);
 
 	if (io_u->ddir == DDIR_WRITE && (td->io_ops->flags & FIO_BARRIER) &&
 	    td->o.barrier_blocks &&
@@ -586,14 +656,15 @@ void clear_io_u(struct thread_data *td, struct io_u *io_u)
 void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 {
 	struct io_u *__io_u = *io_u;
+	enum fio_ddir ddir = acct_ddir(__io_u);
 
 	dprint(FD_IO, "requeue %p\n", __io_u);
 
 	td_io_u_lock(td);
 
 	__io_u->flags |= IO_U_F_FREE;
-	if ((__io_u->flags & IO_U_F_FLIGHT) && ddir_rw(__io_u->ddir))
-		td->io_issues[__io_u->ddir]--;
+	if ((__io_u->flags & IO_U_F_FLIGHT) && ddir_rw(ddir))
+		td->io_issues[ddir]--;
 
 	__io_u->flags &= ~IO_U_F_FLIGHT;
 	if (__io_u->flags & IO_U_F_IN_CUR_DEPTH)
@@ -655,13 +726,9 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td_random(td) && file_randommap(td, io_u->file))
 		mark_random_map(td, io_u);
 
-	/*
-	 * If using a write iolog, store this entry.
-	 */
 out:
 	dprint_io_u(io_u, "fill_io_u");
 	td->zone_bytes += io_u->buflen;
-	log_io_u(td, io_u);
 	return 0;
 }
 
@@ -1027,6 +1094,7 @@ again:
 		io_u->flags &= ~IO_U_F_VER_LIST;
 
 		io_u->error = 0;
+		io_u->acct_ddir = -1;
 		flist_del(&io_u->list);
 		flist_add_tail(&io_u->list, &td->io_u_busylist);
 		td->cur_depth++;
@@ -1106,7 +1174,7 @@ static int check_get_verify(struct thread_data *td, struct io_u *io_u)
 static void small_content_scramble(struct io_u *io_u)
 {
 	unsigned int i, nr_blocks = io_u->buflen / 512;
-	unsigned long long boffset;
+	uint64_t boffset;
 	unsigned int offset;
 	void *p, *end;
 
@@ -1124,9 +1192,9 @@ static void small_content_scramble(struct io_u *io_u)
 		 * and the actual offset.
 		 */
 		offset = (io_u->start_time.tv_usec ^ boffset) & 511;
-		offset &= ~(sizeof(unsigned long long) - 1);
-		if (offset >= 512 - sizeof(unsigned long long))
-			offset -= sizeof(unsigned long long);
+		offset &= ~(sizeof(uint64_t) - 1);
+		if (offset >= 512 - sizeof(uint64_t))
+			offset -= sizeof(uint64_t);
 		memcpy(p + offset, &boffset, sizeof(boffset));
 
 		end = p + 512 - sizeof(io_u->start_time);
@@ -1285,7 +1353,8 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 
 static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 {
-	unsigned long long secs, remainder, bps, bytes;
+	uint64_t secs, remainder, bps, bytes;
+
 	bytes = td->this_io_bytes[ddir];
 	bps = td->rate_bps[ddir];
 	secs = bytes / bps;
@@ -1360,7 +1429,8 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 		if (td_write(td) && idx == DDIR_WRITE &&
 		    td->o.do_verify &&
-		    td->o.verify != VERIFY_NONE)
+		    td->o.verify != VERIFY_NONE &&
+		    !td->o.experimental_verify)
 			log_io_piece(td, io_u);
 
 		icd->bytes_done[idx] += bytes;
@@ -1423,7 +1493,7 @@ static void ios_completed(struct thread_data *td,
  * Complete a single io_u for the sync engines.
  */
 int io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
-		       unsigned long *bytes)
+		       uint64_t *bytes)
 {
 	struct io_completion_data icd;
 
@@ -1452,7 +1522,7 @@ int io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
  * Called to complete min_events number of io for the async engines.
  */
 int io_u_queued_complete(struct thread_data *td, int min_evts,
-			 unsigned long *bytes)
+			 uint64_t *bytes)
 {
 	struct io_completion_data icd;
 	struct timespec *tvp = NULL;

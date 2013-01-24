@@ -503,17 +503,8 @@ static int fixup_options(struct thread_data *td)
 	/*
 	 * The low water mark cannot be bigger than the iodepth
 	 */
-	if (o->iodepth_low > o->iodepth || !o->iodepth_low) {
-		/*
-		 * syslet work around - if the workload is sequential,
-		 * we want to let the queue drain all the way down to
-		 * avoid seeking between async threads
-		 */
-		if (!strcmp(td->io_ops->name, "syslet-rw") && !td_random(td))
-			o->iodepth_low = 1;
-		else
-			o->iodepth_low = o->iodepth;
-	}
+	if (o->iodepth_low > o->iodepth || !o->iodepth_low)
+		o->iodepth_low = o->iodepth;
 
 	/*
 	 * If batch number isn't set, default to the same as iodepth
@@ -576,7 +567,7 @@ static int fixup_options(struct thread_data *td)
 		}
 	}
 
-#ifndef FIO_HAVE_FDATASYNC
+#ifndef CONFIG_FDATASYNC
 	if (o->fdatasync_blocks) {
 		log_info("fio: this platform does not support fdatasync()"
 			 " falling back to using fsync().  Use the 'fsync'"
@@ -722,7 +713,6 @@ void td_fill_rand_seeds(struct thread_data *td)
 	init_rand_seed(&td->buf_state, td->rand_seeds[FIO_RAND_BUF_OFF]);
 }
 
-
 /*
  * Initializes the ioengine configured for a job, if it has not been done so
  * already.
@@ -795,6 +785,26 @@ static void init_flags(struct thread_data *td)
 		td->flags |= TD_F_SCRAMBLE_BUFFERS;
 	if (o->verify != VERIFY_NONE)
 		td->flags |= TD_F_VER_NONE;
+}
+
+static int setup_random_seeds(struct thread_data *td)
+{
+	unsigned long seed;
+	unsigned int i;
+
+	if (!td->o.rand_repeatable)
+		return init_random_state(td, td->rand_seeds, sizeof(td->rand_seeds));
+
+	for (seed = 0x89, i = 0; i < 4; i++)
+		seed *= 0x9e370001UL;
+
+	for (i = 0; i < FIO_RAND_NR_OFFS; i++) {
+		td->rand_seeds[i] = seed;
+		seed *= 0x9e370001UL;
+	}
+
+	td_fill_rand_seeds(td);
+	return 0;
 }
 
 /*
@@ -894,7 +904,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	td->groupid = groupid;
 	prev_group_jobs++;
 
-	if (init_random_state(td, td->rand_seeds, sizeof(td->rand_seeds))) {
+	if (setup_random_seeds(td)) {
 		td_verror(td, errno, "init_random_state");
 		goto err;
 	}
@@ -1673,6 +1683,9 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			do_exit++;
 			exit_val = fio_monotonic_clocktest();
 			break;
+		case '?':
+			log_err("%s: unrecognized option '%s'\n", argv[0],
+							argv[optind - 1]);
 		default:
 			do_exit++;
 			exit_val = 1;

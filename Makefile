@@ -1,4 +1,3 @@
-CC ?= gcc
 DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
 CPPFLAGS= -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	$(DEBUGFLAGS)
@@ -12,6 +11,20 @@ UNAME  := $(shell uname)
 GTK_CFLAGS = `pkg-config --cflags gtk+-2.0 gthread-2.0`
 GTK_LDFLAGS = `pkg-config --libs gtk+-2.0 gthread-2.0`
 
+ifneq ($(wildcard config-host.mak),)
+all:
+include config-host.mak
+config-host-mak: configure
+	@echo $@ is out-of-date, running configure
+	@sed -n "/.*Configured with/s/[^:]*: //p" $@ | sh
+else
+config-host.mak:
+	@echo "Running configure for you..."
+	@./configure
+all:
+include config-host.mak
+endif
+
 SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
 		lib/rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
@@ -19,56 +32,155 @@ SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
 		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
 		cconv.c lib/prio_tree.c json.c lib/zipf.c lib/axmap.c \
-		lib/lfsr.c gettime-thread.c
+		lib/lfsr.c gettime-thread.c helpers.c lib/flist_sort.c \
+		lib/hweight.c
+
+ifdef CONFIG_64BIT_LLP64
+  CFLAGS += -DBITS_PER_LONG=32
+endif
+ifdef CONFIG_64BIT
+  CFLAGS += -DBITS_PER_LONG=64
+endif
+ifdef CONFIG_32BIT
+  CFLAGS += -DBITS_PER_LONG=32
+endif
+ifdef CONFIG_BIG_ENDIAN
+  CFLAGS += -DCONFIG_BIG_ENDIAN
+endif
+ifdef CONFIG_LITTLE_ENDIAN
+  CFLAGS += -DCONFIG_LITTLE_ENDIAN
+endif
+ifdef CONFIG_LIBAIO
+  CFLAGS += -DCONFIG_LIBAIO
+  SOURCE += engines/libaio.c
+endif
+ifdef CONFIG_RDMA
+  CFLAGS += -DCONFIG_RDMA
+  SOURCE += engines/rdma.c
+endif
+ifdef CONFIG_POSIXAIO
+  CFLAGS += -DCONFIG_POSIXAIO
+  SOURCE += engines/posixaio.c
+endif
+ifdef CONFIG_LINUX_FALLOCATE
+  SOURCE += engines/falloc.c
+endif
+ifdef CONFIG_LINUX_EXT4_MOVE_EXTENT
+  SOURCE += engines/e4defrag.c
+endif
+ifdef CONFIG_LINUX_SPLICE
+  CFLAGS += -DCONFIG_LINUX_SPLICE
+  SOURCE += engines/splice.c
+endif
+ifdef CONFIG_GUASI
+  CFLAGS += -DCONFIG_GUASI
+  SOURCE += engines/guasi.c
+endif
+ifdef CONFIG_FUSION_AW
+  CFLAGS += -DCONFIG_FUSION_AW
+  SOURCE += engines/fusion-aw.c
+endif
+ifdef CONFIG_SOLARISAIO
+  CFLAGS += -DCONFIG_SOLARISAIO
+  SOURCE += engines/solarisaio.c
+endif
+
+ifndef CONFIG_STRSEP
+  CFLAGS += -DCONFIG_STRSEP
+  SOURCE += lib/strsep.c
+endif
+ifndef CONFIG_GETOPT_LONG_ONLY
+  CFLAGS += -DCONFIG_GETOPT_LONG_ONLY
+  SOURCE += lib/getopt_long.c
+endif
+
+ifndef CONFIG_INET_ATON
+  CFLAGS += -DCONFIG_INET_ATON
+  SOURCE += lib/inet_aton.c
+endif
+ifdef CONFIG_CLOCK_GETTIME
+  CFLAGS += -DCONFIG_CLOCK_GETTIME
+endif
+ifdef CONFIG_POSIXAIO_FSYNC
+  CFLAGS += -DCONFIG_POSIXAIO_FSYNC
+endif
+ifdef CONFIG_FADVISE
+  CFLAGS += -DCONFIG_FADVISE
+endif
+ifdef CONFIG_CLOCK_MONOTONIC
+  CFLAGS += -DCONFIG_CLOCK_MONOTONIC
+endif
+ifdef CONFIG_CLOCK_MONOTONIC_PRECISE
+  CFLAGS += -DCONFIG_CLOCK_MONOTONIC_PRECISE
+endif
+ifdef CONFIG_GETTIMEOFDAY
+  CFLAGS += -DCONFIG_GETTIMEOFDAY
+endif
+ifdef CONFIG_SOCKLEN_T
+  CFLAGS += -DCONFIG_SOCKLEN_T
+endif
+ifdef CONFIG_SFAA
+  CFLAGS += -DCONFIG_SFAA
+endif
+ifdef CONFIG_FDATASYNC
+  CFLAGS += -DCONFIG_FDATASYNC
+endif
+ifdef CONFIG_3ARG_AFFINITY
+  CFLAGS += -DCONFIG_3ARG_AFFINITY
+endif
+ifdef CONFIG_2ARG_AFFINITY
+  CFLAGS += -DCONFIG_2ARG_AFFINITY
+endif
+ifdef CONFIG_SYNC_FILE_RANGE
+  CFLAGS += -DCONFIG_SYNC_FILE_RANGE
+endif
+ifdef CONFIG_LIBNUMA
+  CFLAGS += -DCONFIG_LIBNUMA
+endif
+ifdef CONFIG_TLS_THREAD
+  CFLAGS += -DCONFIG_TLS_THREAD
+endif
+ifdef CONFIG_POSIX_FALLOCATE
+  CFLAGS += -DCONFIG_POSIX_FALLOCATE
+endif
+ifdef CONFIG_LINUX_FALLOCATE
+  CFLAGS += -DCONFIG_LINUX_FALLOCATE
+endif
 
 ifeq ($(UNAME), Linux)
-  SOURCE += diskutil.c fifo.c blktrace.c helpers.c cgroup.c trim.c \
-		engines/libaio.c engines/posixaio.c engines/sg.c \
-		engines/splice.c engines/syslet-rw.c engines/guasi.c \
-		engines/binject.c engines/rdma.c profiles/tiobench.c \
-		engines/fusion-aw.c engines/falloc.c engines/e4defrag.c
-  LIBS += -lpthread -ldl -lrt -laio
+  SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
+		engines/binject.c profiles/tiobench.c
+  LIBS += -lpthread -ldl
   LDFLAGS += -rdynamic
 endif
 ifeq ($(UNAME), Android)
-  SOURCE += diskutil.c fifo.c blktrace.c helpers.c trim.c \
-		engines/splice.c profiles/tiobench.c engines/falloc.c \
-		engines/e4defrag.c
+  SOURCE += diskutil.c fifo.c blktrace.c trim.c profiles/tiobench.c
   LIBS += -ldl
   LDFLAGS += -rdynamic
   CPPFLAGS += -DFIO_NO_HAVE_SHM_H
 endif
 ifeq ($(UNAME), SunOS)
-  CC      = gcc
-  SOURCE += fifo.c lib/strsep.c helpers.c engines/posixaio.c \
-		engines/solarisaio.c
   LIBS	 += -lpthread -ldl -laio -lrt -lnsl -lsocket
   CPPFLAGS += -D__EXTENSIONS__
 endif
 ifeq ($(UNAME), FreeBSD)
-  SOURCE += helpers.c engines/posixaio.c
   LIBS	 += -lpthread -lrt
   LDFLAGS += -rdynamic
 endif
 ifeq ($(UNAME), NetBSD)
-  SOURCE += helpers.c engines/posixaio.c
   LIBS	 += -lpthread -lrt
   LDFLAGS += -rdynamic
 endif
 ifeq ($(UNAME), AIX)
-  SOURCE += fifo.c helpers.c lib/getopt_long.c engines/posixaio.c
   LIBS	 += -lpthread -ldl -lrt
   CPPFLAGS += -D_LARGE_FILES -D__ppc__
   LDFLAGS += -L/opt/freeware/lib -Wl,-blibpath:/opt/freeware/lib:/usr/lib:/lib -Wl,-bmaxdata:0x80000000
 endif
 ifeq ($(UNAME), HP-UX)
-  CC      = gcc
-  SOURCE += fifo.c helpers.c lib/getopt_long.c lib/strsep.c engines/posixaio.c
   LIBS   += -lpthread -ldl -lrt
-  CFLAGS += -D_LARGEFILE64_SOURCE
+  CFLAGS += -D_LARGEFILE64_SOURCE -D_XOPEN_SOURCE_EXTENDED
 endif
 ifeq ($(UNAME), Darwin)
-  SOURCE += helpers.c engines/posixaio.c
   LIBS	 += -lpthread -ldl
 endif
 ifneq (,$(findstring CYGWIN,$(UNAME)))
@@ -76,8 +188,6 @@ ifneq (,$(findstring CYGWIN,$(UNAME)))
   SOURCE += engines/windowsaio.c os/windows/posix.c
   LIBS	 += -lpthread -lpsapi -lws2_32
   CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format
-  CC	  = x86_64-w64-mingw32-gcc
-  #CC	  = i686-w64-mingw32-gcc
 endif
 
 OBJS = $(SOURCE:.c=.o)
@@ -196,7 +306,7 @@ t/axmap: $(T_AXMAP_OBJS)
 $(PROGS): .depend
 
 clean: FORCE
-	-rm -f .depend $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE
+	-rm -f .depend $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE config-host.mak config-host.ld cscope.out
 
 cscope:
 	@cscope -b -R

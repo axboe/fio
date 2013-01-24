@@ -42,6 +42,10 @@ int main(int argc, char *argv[], char *envp[])
 	if (initialize_fio(envp))
 		return 1;
 
+#if !defined(CONFIG_GETTIMEOFDAY) && !defined(CONFIG_CLOCK_GETTIME)
+#error "No available clock source!"
+#endif
+
 	if (parse_options(argc, argv))
 		return 1;
 

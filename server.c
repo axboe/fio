@@ -621,7 +621,7 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 
 	memset(&probe, 0, sizeof(probe));
 	gethostname((char *) probe.hostname, sizeof(probe.hostname));
-#ifdef FIO_BIG_ENDIAN
+#ifdef CONFIG_BIG_ENDIAN
 	probe.bigendian = 1;
 #endif
 	strncpy((char *) probe.fio_version, fio_version_string, sizeof(probe.fio_version));
@@ -821,7 +821,7 @@ static int handle_connection(int sk)
 static int accept_loop(int listen_sk)
 {
 	struct sockaddr_in addr;
-	fio_socklen_t len = sizeof(addr);
+	socklen_t len = sizeof(addr);
 	struct pollfd pfd;
 	int ret = 0, sk, flags, exitval = 0;
 
@@ -1208,7 +1208,7 @@ void fio_server_send_start(struct thread_data *td)
 static int fio_init_server_ip(void)
 {
 	struct sockaddr *addr;
-	fio_socklen_t socklen;
+	socklen_t socklen;
 	int sk, opt;
 
 	if (use_ipv6)
@@ -1222,7 +1222,7 @@ static int fio_init_server_ip(void)
 	}
 
 	opt = 1;
-	if (setsockopt(sk, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(sk, SOL_SOCKET, SO_REUSEADDR, (void *)&opt, sizeof(opt)) < 0) {
 		log_err("fio: setsockopt: %s\n", strerror(errno));
 		close(sk);
 		return -1;
@@ -1257,7 +1257,7 @@ static int fio_init_server_ip(void)
 static int fio_init_server_sock(void)
 {
 	struct sockaddr_un addr;
-	fio_socklen_t len;
+	socklen_t len;
 	mode_t mode;
 	int sk;
 

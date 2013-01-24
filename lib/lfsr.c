@@ -216,14 +216,15 @@ static uint64_t __lfsr_next(uint64_t v, struct lfsr_taps *lt)
 	return xor_mask | (v >> 1);
 }
 
-int lfsr_next(struct fio_lfsr *fl, uint64_t *off)
+int lfsr_next(struct fio_lfsr *fl, uint64_t *off, uint64_t last)
 {
 	if (fl->num_vals > fl->max_val)
 		return 1;
 
 	do {
 		fl->last_val = __lfsr_next(fl->last_val, &fl->taps);
-		if (fl->last_val - 1 <= fl->max_val)
+		if (fl->last_val - 1 <= fl->max_val &&
+		    fl->last_val <= last)
 			break;
 	} while (1);
 
@@ -243,6 +244,17 @@ static struct lfsr_taps *find_lfsr(uint64_t size)
 	return NULL;
 }
 
+void lfsr_reset(struct fio_lfsr *fl, unsigned long seed)
+{
+	unsigned int i;
+
+	fl->last_val = seed;
+	fl->num_vals = 0;
+
+	for (i = 0; i < FIO_LFSR_CRANKS; i++)
+		fl->last_val = __lfsr_next(fl->last_val, &fl->taps);
+}
+
 int lfsr_init(struct fio_lfsr *fl, uint64_t size, unsigned long seed)
 {
 	struct lfsr_taps *tap;
@@ -252,18 +264,15 @@ int lfsr_init(struct fio_lfsr *fl, uint64_t size, unsigned long seed)
 	if (!tap)
 		return 1;
 
-	fl->last_val = seed;
 	fl->max_val = size - 1;
-	fl->num_vals = 0;
 	fl->taps.length = tap->length;
+
 	for (i = 0; i < FIO_MAX_TAPS; i++) {
 		fl->taps.taps[i] = tap->taps[i];
 		if (!fl->taps.taps[i])
 			break;
 	}
 
-	for (i = 0; i < FIO_LFSR_CRANKS; i++)
-		fl->last_val = __lfsr_next(fl->last_val, &fl->taps);
-
+	lfsr_reset(fl, seed);
 	return 0;
 }

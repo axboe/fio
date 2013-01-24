@@ -7,27 +7,17 @@
 #include <sys/sysctl.h>
 #include <sys/disk.h>
 #include <sys/thr.h>
-#include <sys/endian.h>
 #include <sys/socket.h>
 
 #include "../file.h"
 
-#define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_ODIRECT
-#define FIO_HAVE_STRSEP
 #define FIO_USE_GENERIC_RAND
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_CHARDEV_SIZE
 #define FIO_HAVE_GETTID
-#define FIO_HAVE_CLOCK_MONOTONIC
 
 #define OS_MAP_ANON		MAP_ANON
-
-#if BYTE_ORDER == LITTLE_ENDIAN
-#define FIO_LITTLE_ENDIAN
-#else
-#define FIO_BIG_ENDIAN
-#endif
 
 #define fio_swap16(x)	bswap16(x)
 #define fio_swap32(x)	bswap32(x)

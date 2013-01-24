@@ -98,6 +98,7 @@ struct thread_options {
 	unsigned int verify;
 	unsigned int do_verify;
 	unsigned int verifysort;
+	unsigned int verifysort_nr;
 	unsigned int verify_interval;
 	unsigned int verify_offset;
 	char verify_pattern[MAX_PATTERN_SIZE];
@@ -107,6 +108,7 @@ struct thread_options {
 	unsigned int verify_async;
 	unsigned long long verify_backlog;
 	unsigned int verify_batch;
+	unsigned int experimental_verify;
 	unsigned int use_thread;
 	unsigned int unlink;
 	unsigned int do_disk_util;
@@ -156,7 +158,7 @@ struct thread_options {
 	unsigned int cpumask_set;
 	os_cpu_mask_t verify_cpumask;
 	unsigned int verify_cpumask_set;
-#ifdef FIO_HAVE_LIBNUMA
+#ifdef CONFIG_LIBNUMA
 	struct bitmask *numa_cpunodesmask;
 	unsigned int numa_cpumask_set;
 	unsigned short numa_mem_mode;
@@ -303,6 +305,7 @@ struct thread_options_pack {
 	uint32_t verify;
 	uint32_t do_verify;
 	uint32_t verifysort;
+	uint32_t verifysort_nr;
 	uint32_t verify_interval;
 	uint32_t verify_offset;
 	uint8_t verify_pattern[MAX_PATTERN_SIZE];
@@ -312,6 +315,7 @@ struct thread_options_pack {
 	uint32_t verify_async;
 	uint64_t verify_backlog;
 	uint32_t verify_batch;
+	uint32_t experimental_verify;
 	uint32_t use_thread;
 	uint32_t unlink;
 	uint32_t do_disk_util;

@@ -341,15 +341,9 @@ static int str_rw_cb(void *data, const char *str)
 static int str_mem_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
-	struct thread_options *o = &td->o;
 
-	if (o->mem_type == MEM_MMAPHUGE || o->mem_type == MEM_MMAP) {
-		o->mmapfile = get_opt_postfix(mem);
-		if (o->mem_type == MEM_MMAPHUGE && !o->mmapfile) {
-			log_err("fio: mmaphuge:/path/to/file\n");
-			return 1;
-		}
-	}
+	if (td->o.mem_type == MEM_MMAPHUGE || td->o.mem_type == MEM_MMAP)
+		td->o.mmapfile = get_opt_postfix(mem);
 
 	return 0;
 }
@@ -514,7 +508,7 @@ static int str_verify_cpus_allowed_cb(void *data, const char *input)
 }
 #endif
 
-#ifdef FIO_HAVE_LIBNUMA
+#ifdef CONFIG_LIBNUMA
 static int str_numa_cpunodes_cb(void *data, char *input)
 {
 	struct thread_data *td = data;
@@ -652,7 +646,7 @@ static int str_fst_cb(void *data, const char *str)
 	return 0;
 }
 
-#ifdef FIO_HAVE_SYNC_FILE_RANGE
+#ifdef CONFIG_SYNC_FILE_RANGE
 static int str_sfr_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
@@ -1296,12 +1290,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  { .ival = "vsync",
 			    .help = "Use readv/writev",
 			  },
-#ifdef FIO_HAVE_LIBAIO
+#ifdef CONFIG_LIBAIO
 			  { .ival = "libaio",
 			    .help = "Linux native asynchronous IO",
 			  },
 #endif
-#ifdef FIO_HAVE_POSIXAIO
+#ifdef CONFIG_POSIXAIO
 			  { .ival = "posixaio",
 			    .help = "POSIX asynchronous IO",
 			  },
@@ -1319,7 +1313,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  { .ival = "mmap",
 			    .help = "Memory mapped IO"
 			  },
-#ifdef FIO_HAVE_SPLICE
+#ifdef CONFIG_LINUX_SPLICE
 			  { .ival = "splice",
 			    .help = "splice/vmsplice based IO",
 			  },
@@ -1338,15 +1332,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  { .ival = "net",
 			    .help = "Network IO",
 			  },
-#ifdef FIO_HAVE_SYSLET
-			  { .ival = "syslet-rw",
-			    .help = "syslet enabled async pread/pwrite IO",
-			  },
-#endif
 			  { .ival = "cpuio",
 			    .help = "CPU cycle burner engine",
 			  },
-#ifdef FIO_HAVE_GUASI
+#ifdef CONFIG_GUASI
 			  { .ival = "guasi",
 			    .help = "GUASI IO engine",
 			  },
@@ -1356,12 +1345,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "binject direct inject block engine",
 			  },
 #endif
-#ifdef FIO_HAVE_RDMA
+#ifdef CONFIG_RDMA
 			  { .ival = "rdma",
 			    .help = "RDMA IO engine",
 			  },
 #endif
-#ifdef FIO_HAVE_FUSION_AW
+#ifdef CONFIG_FUSION_AW
 			  { .ival = "fusion-aw-sync",
 			    .help = "Fusion-io atomic write engine",
 			  },
@@ -1786,7 +1775,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_INVALID,
 	},
-#ifdef FIO_HAVE_SYNC_FILE_RANGE
+#ifdef CONFIG_SYNC_FILE_RANGE
 	{
 		.name	= "sync_file_range",
 		.lname	= "Sync file range",
@@ -1920,14 +1909,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_CLOCK,
 		.posval	= {
+#ifdef CONFIG_GETTIMEOFDAY
 			  { .ival = "gettimeofday",
 			    .oval = CS_GTOD,
 			    .help = "Use gettimeofday(2) for timing",
 			  },
+#endif
+#ifdef CONFIG_CLOCK_GETTIME
 			  { .ival = "clock_gettime",
 			    .oval = CS_CGETTIME,
 			    .help = "Use clock_gettime(2) for timing",
 			  },
+#endif
 #ifdef ARCH_HAVE_CPU_CLOCK
 			  { .ival = "cpu",
 			    .oval = CS_CPUCLOCK,
@@ -2078,6 +2071,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_VERIFY,
 	},
 	{
+		.name	= "verifysort_nr",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(verifysort_nr),
+		.help	= "Pre-load and sort verify blocks for a read workload",
+		.minval	= 0,
+		.maxval	= 131072,
+		.def	= "1024",
+		.parent = "verify",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
+	},
+	{
 		.name   = "verify_interval",
 		.lname	= "Verify interval",
 		.type   = FIO_OPT_INT,
@@ -2184,6 +2189,13 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_VERIFY,
 	},
 #endif
+	{
+		.name	= "experimental_verify",
+		.off1	= td_var_offset(experimental_verify),
+		.type	= FIO_OPT_BOOL,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
+	},
 #ifdef FIO_HAVE_TRIM
 	{
 		.name	= "trim_percentage",
@@ -2616,7 +2628,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_CRED,
 	},
 #endif
-#ifdef FIO_HAVE_LIBNUMA
+#ifdef CONFIG_LIBNUMA
 	{
 		.name	= "numa_cpu_nodes",
 		.type	= FIO_OPT_STR,

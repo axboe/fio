@@ -20,16 +20,7 @@
 #define __NR_sys_vmsplice	316
 #endif
 
-#ifndef __NR_async_exec
-#define __NR_async_exec		325
-#define __NR_async_wait		326
-#define __NR_umem_add		327
-#define __NR_async_thread	328
-#endif
-
 #define	FIO_HUGE_PAGE		4194304
-
-#define FIO_HAVE_SYSLET
 
 #define nop		__asm__ __volatile__("rep;nop": : :"memory")
 #define read_barrier()	__asm__ __volatile__("": : :"memory")

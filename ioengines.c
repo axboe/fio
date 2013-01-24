@@ -260,6 +260,11 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	assert(fio_file_open(io_u->file));
 
+	/*
+	 * If using a write iolog, store this entry.
+	 */
+	log_io_u(td, io_u);
+
 	io_u->error = 0;
 	io_u->resid = 0;
 
@@ -275,8 +280,8 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 					sizeof(struct timeval));
 	}
 
-	if (ddir_rw(io_u->ddir))
-		td->io_issues[io_u->ddir]++;
+	if (ddir_rw(acct_ddir(io_u)))
+		td->io_issues[acct_ddir(io_u)]++;
 
 	ret = td->io_ops->queue(td, io_u);
 
@@ -397,7 +402,7 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	fio_file_reset(f);
+	fio_file_reset(td, f);
 	fio_file_set_open(f);
 	fio_file_clear_closing(f);
 	disk_util_inc(f->du);
@@ -503,7 +508,7 @@ int do_io_u_sync(struct thread_data *td, struct io_u *io_u)
 	if (io_u->ddir == DDIR_SYNC) {
 		ret = fsync(io_u->file->fd);
 	} else if (io_u->ddir == DDIR_DATASYNC) {
-#ifdef FIO_HAVE_FDATASYNC
+#ifdef CONFIG_FDATASYNC
 		ret = fdatasync(io_u->file->fd);
 #else
 		ret = io_u->xfer_buflen;

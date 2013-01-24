@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#include "../arch/arch.h"
+
 enum {
 	os_linux = 1,
 	os_aix,
@@ -44,11 +46,7 @@ enum {
 #error "unsupported os"
 #endif
 
-#ifdef FIO_HAVE_LIBAIO
-#include <libaio.h>
-#endif
-
-#ifdef FIO_HAVE_POSIXAIO
+#ifdef CONFIG_POSIXAIO
 #include <aio.h>
 #ifndef FIO_OS_HAVE_AIOCB_TYPEDEF
 typedef struct aiocb os_aiocb_t;
@@ -60,7 +58,7 @@ typedef struct aiocb os_aiocb_t;
 #include <scsi/sg.h>
 #endif
 
-#ifndef FIO_HAVE_STRSEP
+#ifdef CONFIG_STRSEP
 #include "../lib/strsep.h"
 #endif
 
@@ -116,12 +114,6 @@ typedef unsigned long os_cpu_mask_t;
 #define OS_RAND_MAX			RAND_MAX
 #endif
 
-#ifdef FIO_HAVE_CLOCK_MONOTONIC
-#define FIO_TIMER_CLOCK CLOCK_MONOTONIC
-#else
-#define FIO_TIMER_CLOCK CLOCK_REALTIME
-#endif
-
 #ifndef FIO_HAVE_RAWBIND
 #define fio_lookup_raw(dev, majdev, mindev)	1
 #endif
@@ -142,12 +134,12 @@ typedef unsigned long os_cpu_mask_t;
 #define FIO_MAX_JOBS		2048
 #endif
 
-#ifndef FIO_OS_HAVE_SOCKLEN_T
-typedef socklen_t fio_socklen_t;
+#ifndef CONFIG_SOCKLEN_T
+typedef unsigned int socklen_t;
 #endif
 
 #ifndef FIO_OS_HAS_CTIME_R
-#define os_ctime_r(x, y, z)     ctime_r((x), (y))
+#define os_ctime_r(x, y, z)     (void) ctime_r((x), (y))
 #endif
 
 #ifdef FIO_USE_GENERIC_SWAP
@@ -175,7 +167,7 @@ static inline uint64_t fio_swap64(uint64_t val)
 #endif
 
 #ifndef FIO_HAVE_BYTEORDER_FUNCS
-#ifdef FIO_LITTLE_ENDIAN
+#ifdef CONFIG_LITTLE_ENDIAN
 #define __le16_to_cpu(x)		(x)
 #define __le32_to_cpu(x)		(x)
 #define __le64_to_cpu(x)		(x)

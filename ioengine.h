@@ -2,11 +2,20 @@
 #define FIO_IOENGINE_H
 
 #include "compiler/compiler.h"
+#include "os/os.h"
+#include "log.h"
 #include "io_ddir.h"
 #include "debug.h"
 #include "file.h"
 
-#define FIO_IOOPS_VERSION	14
+#ifdef CONFIG_LIBAIO
+#include <libaio.h>
+#endif
+#ifdef CONFIG_GUASI
+#include <guasi.h>
+#endif
+
+#define FIO_IOOPS_VERSION	15
 
 enum {
 	IO_U_F_FREE		= 1 << 0,
@@ -26,25 +35,25 @@ struct thread_data;
  */
 struct io_u {
 	union {
-#ifdef FIO_HAVE_LIBAIO
+#ifdef CONFIG_LIBAIO
 		struct iocb iocb;
 #endif
-#ifdef FIO_HAVE_POSIXAIO
+#ifdef CONFIG_POSIXAIO
 		os_aiocb_t aiocb;
 #endif
 #ifdef FIO_HAVE_SGIO
 		struct sg_io_hdr hdr;
 #endif
-#ifdef FIO_HAVE_GUASI
+#ifdef CONFIG_GUASI
 		guasi_req_t greq;
 #endif
-#ifdef FIO_HAVE_SOLARISAIO
+#ifdef CONFIG_SOLARISAIO
 		aio_result_t resultp;
 #endif
 #ifdef FIO_HAVE_BINJECT
 		struct b_user_cmd buc;
 #endif
-#ifdef FIO_HAVE_RDMA
+#ifdef CONFIG_RDMA
 		struct ibv_mr *mr;
 #endif
 		void *mmap_data;
@@ -55,6 +64,12 @@ struct io_u {
 	struct fio_file *file;
 	unsigned int flags;
 	enum fio_ddir ddir;
+
+	/*
+	 * For replay workloads, we may want to account as a different
+	 * IO type than what is being submitted.
+	 */
+	enum fio_ddir acct_ddir;
 
 	/*
 	 * Allocated/set buffer and length
@@ -179,8 +194,8 @@ extern struct io_u *get_io_u(struct thread_data *);
 extern void put_io_u(struct thread_data *, struct io_u *);
 extern void clear_io_u(struct thread_data *, struct io_u *);
 extern void requeue_io_u(struct thread_data *, struct io_u **);
-extern int __must_check io_u_sync_complete(struct thread_data *, struct io_u *, unsigned long *);
-extern int __must_check io_u_queued_complete(struct thread_data *, int, unsigned long *);
+extern int __must_check io_u_sync_complete(struct thread_data *, struct io_u *, uint64_t *);
+extern int __must_check io_u_queued_complete(struct thread_data *, int, uint64_t *);
 extern void io_u_queued(struct thread_data *, struct io_u *);
 extern void io_u_log_error(struct thread_data *, struct io_u *);
 extern void io_u_mark_depth(struct thread_data *, unsigned int);
@@ -209,5 +224,13 @@ static inline void dprint_io_u(struct io_u *io_u, const char *p)
 #else
 #define dprint_io_u(io_u, p)
 #endif
+
+static inline enum fio_ddir acct_ddir(struct io_u *io_u)
+{
+	if (io_u->acct_ddir != -1)
+		return io_u->acct_ddir;
+
+	return io_u->ddir;
+}
 
 #endif

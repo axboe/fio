@@ -48,6 +48,7 @@ struct axmap {
 	unsigned int nr_levels;
 	struct axmap_level *levels;
 	uint64_t first_free;
+	uint64_t nr_bits;
 };
 
 static unsigned long ulog64(unsigned long val, unsigned int log)
@@ -67,6 +68,8 @@ void axmap_reset(struct axmap *axmap)
 
 		memset(al->map, 0, al->map_size * sizeof(unsigned long));
 	}
+
+	axmap->first_free = 0;
 }
 
 void axmap_free(struct axmap *axmap)
@@ -101,7 +104,7 @@ struct axmap *axmap_new(unsigned long nr_bits)
 
 	axmap->nr_levels = levels;
 	axmap->levels = smalloc(axmap->nr_levels * sizeof(struct axmap_level));
-	axmap->first_free = 0;
+	axmap->nr_bits = nr_bits;
 
 	for (i = 0; i < axmap->nr_levels; i++) {
 		struct axmap_level *al = &axmap->levels[i];
@@ -260,6 +263,11 @@ static void __axmap_set(struct axmap *axmap, uint64_t bit_nr,
 	    axmap->first_free < bit_nr + data->nr_bits)
 		axmap->first_free = -1ULL;
 
+	if (bit_nr > axmap->nr_bits)
+		return;
+	else if (bit_nr + nr_bits > axmap->nr_bits)
+		nr_bits = axmap->nr_bits - bit_nr;
+
 	set_bits = 0;
 	while (nr_bits) {
 		axmap_handler(axmap, bit_nr, axmap_set_fn, data);
@@ -301,12 +309,16 @@ static int axmap_isset_fn(struct axmap_level *al, unsigned long offset,
 
 int axmap_isset(struct axmap *axmap, uint64_t bit_nr)
 {
-	return axmap_handler_topdown(axmap, bit_nr, axmap_isset_fn, NULL);
+	if (bit_nr <= axmap->nr_bits)
+		return axmap_handler_topdown(axmap, bit_nr, axmap_isset_fn, NULL);
+
+	return 0;
 }
 
 static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 				       uint64_t index)
 {
+	uint64_t ret = -1ULL;
 	unsigned long j;
 	int i;
 
@@ -316,8 +328,11 @@ static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 	for (i = level; i >= 0; i--) {
 		struct axmap_level *al = &axmap->levels[i];
 
+		/*
+		 * Clear 'ret', this is a bug condition.
+		 */
 		if (index >= al->map_size) {
-			index = -1ULL;
+			ret = -1ULL;
 			break;
 		}
 
@@ -329,12 +344,15 @@ static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 			 * First free bit here is our index into the first
 			 * free bit at the next higher level
 			 */
-			index = (j << UNIT_SHIFT) + ffz(al->map[j]);
+			ret = index = (j << UNIT_SHIFT) + ffz(al->map[j]);
 			break;
 		}
 	}
 
-	return index;
+	if (ret < axmap->nr_bits)
+		return ret;
+
+	return (uint64_t) -1ULL;
 }
 
 uint64_t axmap_first_free(struct axmap *axmap)

@@ -42,15 +42,11 @@ struct thread_data;
 #include "stat.h"
 #include "flow.h"
 
-#ifdef FIO_HAVE_GUASI
-#include <guasi.h>
-#endif
-
 #ifdef FIO_HAVE_SOLARISAIO
 #include <sys/asynch.h>
 #endif
 
-#ifdef FIO_HAVE_LIBNUMA
+#ifdef CONFIG_LIBNUMA
 #include <linux/mempolicy.h>
 #include <numa.h>
 
@@ -67,7 +63,6 @@ enum {
 	RW_SEQ_SEQ	= 0,
 	RW_SEQ_IDENT,
 };
-
 
 enum {
 	TD_F_VER_BACKLOG	= 1,
@@ -277,6 +272,8 @@ struct thread_data {
 	 */
 	struct flist_head trim_list;
 	unsigned long trim_entries;
+
+	struct flist_head next_rand_list;
 
 	/*
 	 * for fileservice, how often to switch to a new file
@@ -558,7 +555,7 @@ static inline int __should_check_rate(struct thread_data *td,
 }
 
 static inline int should_check_rate(struct thread_data *td,
-				    unsigned long *bytes_done)
+				    uint64_t *bytes_done)
 {
 	int ret = 0;
 

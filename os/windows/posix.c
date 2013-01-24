@@ -20,6 +20,7 @@
 #include <sys/poll.h>
 
 #include "../os-windows.h"
+#include "../../lib/hweight.h"
 
 extern unsigned long mtime_since_now(struct timeval *);
 extern void fio_gettime(struct timeval *, void *);
@@ -42,20 +43,52 @@ int vsprintf_s(
   const char *format,
   va_list argptr);
 
+int GetNumLogicalProcessors(void)
+{
+	SYSTEM_LOGICAL_PROCESSOR_INFORMATION *processor_info = NULL;
+	DWORD len = 0;
+	DWORD num_processors = 0;
+	DWORD error = 0;
+	DWORD i;
+
+	while (!GetLogicalProcessorInformation(processor_info, &len)) {
+		error = GetLastError();
+		if (error == ERROR_INSUFFICIENT_BUFFER)
+			processor_info = malloc(len);
+		else {
+			log_err("Error: GetLogicalProcessorInformation failed: %d\n", error);
+			return -1;
+		}
+
+		if (processor_info == NULL) {
+			log_err("Error: failed to allocate memory for GetLogicalProcessorInformation");
+			return -1;
+		}
+	}
+
+	for (i = 0; i < len / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION); i++)
+	{
+		if (processor_info[i].Relationship == RelationProcessorCore)
+			num_processors += hweight64(processor_info[i].ProcessorMask);
+	}
+
+	free(processor_info);
+	return num_processors;
+}
+
 long sysconf(int name)
 {
-	long long val = -1;
-	DWORD len;
-	SYSTEM_LOGICAL_PROCESSOR_INFORMATION processorInfo;
+	long val = -1;
 	SYSTEM_INFO sysInfo;
 	MEMORYSTATUSEX status;
 
 	switch (name)
 	{
 	case _SC_NPROCESSORS_ONLN:
-		len = sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
-		GetLogicalProcessorInformation(&processorInfo, &len);
-		val = len / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
+		val = GetNumLogicalProcessors();
+		if (val == -1)
+			log_err("_SC_NPROCESSORS_ONLN failed\n");
+
 		break;
 
 	case _SC_PAGESIZE:
@@ -595,39 +628,6 @@ long long strtoll(const char *restrict str, char **restrict endptr,
 	return _strtoi64(str, endptr, base);
 }
 
-char *strsep(char **stringp, const char *delim)
-{
-	char *orig = *stringp;
-	BOOL gotMatch = FALSE;
-	int i = 0;
-	int j = 0;
-
-	if (*stringp == NULL)
-		return NULL;
-
-	while ((*stringp)[i] != '\0') {
-		j = 0;
-		while (delim[j] != '\0') {
-			if ((*stringp)[i] == delim[j]) {
-				gotMatch = TRUE;
-				(*stringp)[i] = '\0';
-				*stringp = *stringp + i + 1;
-				break;
-			}
-			j++;
-		}
-		if (gotMatch)
-			break;
-
-		i++;
-	}
-
-	if (!gotMatch)
-		*stringp = NULL;
-
-	return orig;
-}
-
 int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 {
 	struct timeval tv;
@@ -821,11 +821,6 @@ const char* inet_ntop(int af, const void *restrict src,
 	WSACleanup();
 
 	return ret;
-}
-
-int inet_aton(const char *cp, struct in_addr *inp)
-{
-	return inet_pton(AF_INET, cp, inp);
 }
 
 int inet_pton(int af, const char *restrict src, void *restrict dst)

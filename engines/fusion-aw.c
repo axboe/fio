@@ -22,16 +22,14 @@
 
 #include "../fio.h"
 
-#ifdef FIO_HAVE_FUSION_AW
-
-#include <vsl_dp_experimental/vectored_write.h>
+#include <nvm/vectored_write.h>
 
 /* Fix sector size to 512 bytes independent of actual sector size, just like
  * the linux kernel. */
 #define SECTOR_SHIFT    9
 #define SECTOR_SIZE    (1U<<SECTOR_SHIFT)
 
-struct acs_file_data {
+struct acs_engine_data {
 	struct vsl_iovec iov[IO_VECTOR_LIMIT];
 };
 
@@ -42,7 +40,8 @@ static int queue(struct thread_data *td, struct io_u *io_u)
 	off_t offset;
 	char *xfer_buf;
 	size_t xfer_buflen;
-	struct acs_file_data *d = io_u->file->file_data;
+	struct acs_engine_data *d =
+		(struct acs_engine_data *) io_u->file->engine_data;
 
 	if (io_u->ddir != DDIR_WRITE) {
 		td_vmsg(td, -EIO, "only writes supported", "io_u->ddir");
@@ -101,7 +100,7 @@ out:
 static int open_file(struct thread_data *td, struct fio_file *f)
 {
 	int rc;
-	struct acs_file_data *d = NULL;
+	struct acs_engine_data *d = NULL;
 
 	d = malloc(sizeof(*d));
 	if (!d) {
@@ -109,7 +108,7 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 		rc = -ENOMEM;
 		goto error;
 	}
-	f->file_data = d;
+	f->engine_data = (uintptr_t) d;
 
 	rc = generic_open_file(td, f);
 
@@ -118,7 +117,7 @@ out:
 
 error:
 	f->fd = -1;
-	f->file_data = NULL;
+	f->engine_data = 0;
 	if (d)
 		free(d);
 
@@ -127,9 +126,9 @@ error:
 
 static int close_file(struct thread_data *td, struct fio_file *f)
 {
-	if (f->file_data) {
-		free(f->file_data);
-		f->file_data = NULL;
+	if (f->engine_data) {
+		free((void *) f->engine_data);
+		f->engine_data = 0;
 	}
 
 	return generic_close_file(td, f);
@@ -144,22 +143,6 @@ static struct ioengine_ops ioengine = {
 	.get_file_size = generic_get_file_size,
 	.flags = FIO_SYNCIO | FIO_RAWIO | FIO_MEMALIGN
 };
-
-#else /* !FUSION_HAVE_FUSION_AW */
-
-static int fio_fusion_aw_eng_init(struct thread_data fio_unused *td)
-{
-	log_err("fio: fusion atomic write engine not available\n");
-	return 1;
-}
-
-static struct ioengine_ops ioengine = {
-	.name		= "fusion-aw-sync",
-	.version	= FIO_IOOPS_VERSION,
-	.init		= fio_fusion_aw_eng_init,
-};
-
-#endif /* FUSION_HAVE_FUSION_AW */
 
 static void fio_init fio_fusion_aw_init(void)
 {

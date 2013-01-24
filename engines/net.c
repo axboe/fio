@@ -165,7 +165,7 @@ static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-#ifdef FIO_HAVE_SPLICE
+#ifdef CONFIG_LINUX_SPLICE
 static int splice_io_u(int fdin, int fdout, unsigned int len)
 {
 	int bytes = 0;
@@ -360,7 +360,7 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 
 	do {
 		if (o->proto == FIO_TYPE_UDP) {
-			fio_socklen_t len = sizeof(nd->addr);
+			socklen_t len = sizeof(nd->addr);
 			struct sockaddr *from = (struct sockaddr *) &nd->addr;
 
 			ret = recvfrom(io_u->file->fd, io_u->xfer_buf,
@@ -482,7 +482,7 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 	if (o->proto == FIO_TYPE_UDP)
 		return 0;
 	else if (o->proto == FIO_TYPE_TCP) {
-		fio_socklen_t len = sizeof(nd->addr);
+		socklen_t len = sizeof(nd->addr);
 
 		if (connect(f->fd, (struct sockaddr *) &nd->addr, len) < 0) {
 			td_verror(td, errno, "connect");
@@ -491,7 +491,7 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 		}
 	} else {
 		struct sockaddr_un *addr = &nd->addr_un;
-		fio_socklen_t len;
+		socklen_t len;
 
 		len = sizeof(addr->sun_family) + strlen(addr->sun_path) + 1;
 
@@ -509,7 +509,7 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
-	fio_socklen_t socklen = sizeof(nd->addr);
+	socklen_t socklen = sizeof(nd->addr);
 	int state;
 
 	if (o->proto == FIO_TYPE_UDP) {
@@ -549,7 +549,7 @@ static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
 	msg.magic = htonl(FIO_LINK_OPEN_CLOSE_MAGIC);
 	msg.cmd = htonl(FIO_LINK_CLOSE);
 
-	ret = sendto(f->fd, &msg, sizeof(msg), MSG_WAITALL, to,
+	ret = sendto(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to,
 			sizeof(nd->addr));
 	if (ret < 0)
 		td_verror(td, errno, "sendto udp link close");
@@ -574,10 +574,10 @@ static int fio_netio_udp_recv_open(struct thread_data *td, struct fio_file *f)
 	struct netio_data *nd = td->io_ops->data;
 	struct udp_close_msg msg;
 	struct sockaddr *to = (struct sockaddr *) &nd->addr;
-	fio_socklen_t len = sizeof(nd->addr);
+	socklen_t len = sizeof(nd->addr);
 	int ret;
 
-	ret = recvfrom(f->fd, &msg, sizeof(msg), MSG_WAITALL, to, &len);
+	ret = recvfrom(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to, &len);
 	if (ret < 0) {
 		td_verror(td, errno, "sendto udp link open");
 		return ret;
@@ -603,7 +603,7 @@ static int fio_netio_udp_send_open(struct thread_data *td, struct fio_file *f)
 	msg.magic = htonl(FIO_LINK_OPEN_CLOSE_MAGIC);
 	msg.cmd = htonl(FIO_LINK_OPEN);
 
-	ret = sendto(f->fd, &msg, sizeof(msg), MSG_WAITALL, to,
+	ret = sendto(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to,
 			sizeof(nd->addr));
 	if (ret < 0) {
 		td_verror(td, errno, "sendto udp link open");
@@ -751,7 +751,7 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 	}
 
 	opt = 1;
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) < 0) {
 		td_verror(td, errno, "setsockopt");
 		return 1;
 	}
@@ -895,7 +895,7 @@ static void fio_netio_terminate(struct thread_data *td)
 	kill(td->pid, SIGUSR2);
 }
 
-#ifdef FIO_HAVE_SPLICE
+#ifdef CONFIG_LINUX_SPLICE
 static int fio_netio_setup_splice(struct thread_data *td)
 {
 	struct netio_data *nd;
@@ -962,7 +962,7 @@ static int str_hostname_cb(void *data, const char *input)
 static void fio_init fio_netio_register(void)
 {
 	register_ioengine(&ioengine_rw);
-#ifdef FIO_HAVE_SPLICE
+#ifdef CONFIG_LINUX_SPLICE
 	register_ioengine(&ioengine_splice);
 #endif
 }
@@ -970,7 +970,7 @@ static void fio_init fio_netio_register(void)
 static void fio_exit fio_netio_unregister(void)
 {
 	unregister_ioengine(&ioengine_rw);
-#ifdef FIO_HAVE_SPLICE
+#ifdef CONFIG_LINUX_SPLICE
 	unregister_ioengine(&ioengine_splice);
 #endif
 }

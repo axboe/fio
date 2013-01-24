@@ -16,30 +16,12 @@
 
 #include "../file.h"
 
-#ifndef CLOCK_MONOTONIC
-#define CLOCK_MONOTONIC 1
-#endif
-
-#ifndef CLOCK_REALTIME
-#define CLOCK_REALTIME 1
-#endif
-
-#define FIO_HAVE_POSIXAIO
-#define FIO_HAVE_CLOCK_MONOTONIC
 #define FIO_USE_GENERIC_RAND
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_GETTID
 #define FIO_HAVE_CHARDEV_SIZE
 
 #define OS_MAP_ANON		MAP_ANON
-
-#if defined(__LITTLE_ENDIAN__)
-#define FIO_LITTLE_ENDIAN
-#elif defined(__BIG_ENDIAN__)
-#define FIO_BIG_ENDIAN
-#else
-#error "Undefined byte order"
-#endif
 
 #define fio_swap16(x)	OSSwapInt16(x)
 #define fio_swap32(x)	OSSwapInt32(x)
@@ -179,4 +161,11 @@ static inline int gettid(void)
 {
 	return mach_thread_self();
 }
+
+/*
+ * For some reason, there's no header definition for fdatasync(), even
+ * if it exists.
+ */
+extern int fdatasync(int fd);
+
 #endif

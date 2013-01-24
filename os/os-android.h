@@ -13,26 +13,19 @@
 #include <sched.h>
 #include <linux/unistd.h>
 #include <linux/major.h>
-#include <endian.h>
 
-#include "indirect.h"
 #include "binject.h"
 #include "../file.h"
 
 #define FIO_HAVE_DISK_UTIL
-#define FIO_HAVE_SPLICE
 #define FIO_HAVE_IOSCHED_SWITCH
 #define FIO_HAVE_ODIRECT
 #define FIO_HAVE_HUGETLB
 #define FIO_HAVE_BLKTRACE
-#define FIO_HAVE_STRSEP
-#define FIO_HAVE_POSIXAIO_FSYNC
 #define FIO_HAVE_PSHARED_MUTEX
 #define FIO_HAVE_CL_SIZE
-#define FIO_HAVE_FDATASYNC
 #define FIO_HAVE_FS_STAT
 #define FIO_HAVE_TRIM
-#define FIO_HAVE_CLOCK_MONOTONIC
 #define FIO_HAVE_GETTID
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_E4_ENG
@@ -77,36 +70,6 @@ static inline int shmdt (const void *__shmaddr)
 	return syscall(__NR_shmctl, __shmaddr);
 }
 
-
-/*
- * Just check for SPLICE_F_MOVE, if that isn't there, assume the others
- * aren't either.
- */
-#ifndef SPLICE_F_MOVE
-#define SPLICE_F_MOVE	(0x01)	/* move pages instead of copying */
-#define SPLICE_F_NONBLOCK (0x02) /* don't block on the pipe splicing (but */
-				 /* we may still block on the fd we splice */
-				 /* from/to, of course */
-#define SPLICE_F_MORE	(0x04)	/* expect more data */
-#define SPLICE_F_GIFT   (0x08)  /* pages passed in are a gift */
-
-static inline int splice(int fdin, loff_t *off_in, int fdout, loff_t *off_out,
-			 size_t len, unsigned int flags)
-{
-	return syscall(__NR_sys_splice, fdin, off_in, fdout, off_out, len, flags);
-}
-
-static inline int tee(int fdin, int fdout, size_t len, unsigned int flags)
-{
-	return syscall(__NR_sys_tee, fdin, fdout, len, flags);
-}
-
-static inline int vmsplice(int fd, const struct iovec *iov,
-			   unsigned long nr_segs, unsigned int flags)
-{
-	return syscall(__NR_sys_vmsplice, fd, iov, nr_segs, flags);
-}
-#endif
 
 #define SPLICE_DEF_SIZE	(64*1024)
 
@@ -168,14 +131,6 @@ static inline long os_random_long(os_random_state_t *rs)
 #define FIO_O_NOATIME	O_NOATIME
 #else
 #define FIO_O_NOATIME	0
-#endif
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define FIO_LITTLE_ENDIAN
-#elif __BYTE_ORDER == __BIG_ENDIAN
-#define FIO_BIG_ENDIAN
-#else
-#error "Unknown endianness"
 #endif
 
 #define fio_swap16(x)	__bswap_16(x)

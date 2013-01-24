@@ -19,17 +19,11 @@
 
 #include "../file.h"
 
-#define FIO_HAVE_POSIXAIO
 #define FIO_HAVE_ODIRECT
 #define FIO_USE_GENERIC_RAND
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
-#define FIO_HAVE_CLOCK_MONOTONIC
 #define FIO_HAVE_PSHARED_MUTEX
-#define FIO_HAVE_FADVISE
 #define FIO_HAVE_CHARDEV_SIZE
-#define FIO_HAVE_FALLOCATE
-#define FIO_HAVE_POSIXAIO_FSYNC
-#define FIO_HAVE_FDATASYNC
 
 #define OS_MAP_ANON		MAP_ANONYMOUS
 #define OS_MSG_DONTWAIT		0
@@ -39,27 +33,14 @@
 #define POSIX_MADV_RANDOM	MADV_RANDOM
 #define posix_madvise(ptr, sz, hint)	madvise((ptr), (sz), (hint))
 
-#ifndef CLOCK_MONOTONIC
-#define CLOCK_MONOTONIC		CLOCK_REALTIME
-#endif
-
 #ifndef MSG_WAITALL
 #define MSG_WAITALL	0x40
-#endif
-
-#ifdef LITTLE_ENDIAN
-#define FIO_LITTLE_ENDIAN
-#else
-#define FIO_BIG_ENDIAN
 #endif
 
 #define FIO_USE_GENERIC_SWAP
 
 #define FIO_OS_HAVE_AIOCB_TYPEDEF
 typedef struct aiocb64 os_aiocb_t;
-
-#define FIO_OS_HAVE_SOCKLEN_T
-typedef int fio_socklen_t;
 
 static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
