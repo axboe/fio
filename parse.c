@@ -1096,6 +1096,9 @@ void option_init(struct fio_option *o)
 			o->maxval = UINT_MAX;
 	}
 	if (o->type == FIO_OPT_FLOAT_LIST) {
+#ifndef NAN
+#define NAN __builtin_nanf("")
+#endif
 		o->minfp = NAN;
 		o->maxfp = NAN;
 	}
