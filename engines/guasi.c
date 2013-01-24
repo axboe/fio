@@ -3,12 +3,7 @@
  *
  * IO engine using the GUASI library.
  *
- * This is currently disabled. To enable it, execute:
- *
- * $ export EXTFLAGS="-DFIO_HAVE_GUASI"
- * $ export EXTLIBS="-lguasi"
- *
- * before running make. You'll need the GUASI lib as well:
+ * Before running make. You'll need the GUASI lib as well:
  *
  * http://www.xmailserver.org/guasi-lib.html
  *
