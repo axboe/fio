@@ -80,6 +80,10 @@ ifdef CONFIG_SOLARISAIO
   CFLAGS += -DCONFIG_SOLARISAIO
   SOURCE += engines/solarisaio.c
 endif
+ifdef CONFIG_WINDOWSAIO
+  CFLAGS += -DCONFIG_WINDOWSAIO
+  SOURCE += engines/windowsaio.c
+endif
 
 ifndef CONFIG_STRSEP
   CFLAGS += -DCONFIG_STRSEP
@@ -184,7 +188,7 @@ ifeq ($(UNAME), Darwin)
 endif
 ifneq (,$(findstring CYGWIN,$(UNAME)))
   SOURCE := $(filter-out engines/mmap.c,$(SOURCE))
-  SOURCE += engines/windowsaio.c os/windows/posix.c
+  SOURCE += os/windows/posix.c
   LIBS	 += -lpthread -lpsapi -lws2_32
   CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format
 endif

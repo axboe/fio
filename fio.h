@@ -40,7 +40,7 @@ struct thread_data;
 #include "stat.h"
 #include "flow.h"
 
-#ifdef FIO_HAVE_SOLARISAIO
+#ifdef CONFIG_SOLARISAIO
 #include <sys/asynch.h>
 #endif
 

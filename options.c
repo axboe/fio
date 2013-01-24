@@ -1282,7 +1282,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .help = "Solaris native asynchronous IO",
 			  },
 #endif
-#ifdef FIO_HAVE_WINDOWSAIO
+#ifdef CONFIG_WINDOWSAIO
 			  { .ival = "windowsaio",
 			    .help = "Windows native asynchronous IO"
 			  },
