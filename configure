@@ -166,6 +166,7 @@ CYGWIN*)
   echo "CONFIG_SFAA=y"             >> $config_host_mak
   echo "CONFIG_RUSAGE_THREAD=y"    >> $config_host_mak
   echo "CONFIG_WINDOWSAIO=y"       >> $config_host_mak
+  echo "CONFIG_FDATASYNC=y"        >> $config_host_mak
   exit 0
 esac
 
