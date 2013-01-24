@@ -61,6 +61,7 @@ ifdef CONFIG_LINUX_FALLOCATE
   SOURCE += engines/falloc.c
 endif
 ifdef CONFIG_LINUX_EXT4_MOVE_EXTENT
+  CFLAGS += -DCONFIG_LINUX_EXT4_MOVE_EXTENT
   SOURCE += engines/e4defrag.c
 endif
 ifdef CONFIG_LINUX_SPLICE

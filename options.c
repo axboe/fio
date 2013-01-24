@@ -1277,7 +1277,7 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .help = "POSIX asynchronous IO",
 			  },
 #endif
-#ifdef FIO_HAVE_SOLARISAIO
+#ifdef CONFIG_SOLARISAIO
 			  { .ival = "solarisaio",
 			    .help = "Solaris native asynchronous IO",
 			  },
@@ -1332,12 +1332,12 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .help = "Fusion-io atomic write engine",
 			  },
 #endif
-#ifdef FIO_HAVE_E4_ENG
+#ifdef CONFIG_LINUX_EXT4_MOVE_EXTENT
 			  { .ival = "e4defrag",
 			    .help = "ext4 defrag engine",
 			  },
 #endif
-#ifdef FIO_HAVE_FALLOC_ENG
+#ifdef CONFIG_LINUX_FALLOCATE
 			  { .ival = "falloc",
 			    .help = "fallocate() file based engine",
 			  },
