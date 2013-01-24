@@ -2,6 +2,7 @@
 #define SYS_RESOURCE_H
 
 #define RUSAGE_SELF	0
+#define RUSAGE_THREAD	1
 
 struct rusage
 {
