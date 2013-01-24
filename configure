@@ -115,6 +115,11 @@ for opt do
   --enable-gfio)
     gfio="yes"
     ;;
+  --help)
+    echo "--cc=                  Specify compiler to use"
+    echo "--enable-gfio          Enable building of gtk gfio"
+    exit 0
+    ;;
   *)
   echo "Bad option $opt"
   exit 1
