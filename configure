@@ -104,6 +104,8 @@ cc="${CC-${cross_prefix}gcc}"
 
 # default options
 gfio="no"
+show_help="no"
+exit_val=0
 
 # parse options
 for opt do
@@ -116,15 +118,20 @@ for opt do
     gfio="yes"
     ;;
   --help)
-    echo "--cc=                  Specify compiler to use"
-    echo "--enable-gfio          Enable building of gtk gfio"
-    exit 0
+    show_help="yes"
     ;;
   *)
   echo "Bad option $opt"
-  exit 1
+  show_help="yes"
+  exit_val=1
   esac
 done
+
+if test "$show_help" = "yes" ; then
+    echo "--cc=                  Specify compiler to use"
+    echo "--enable-gfio          Enable building of gtk gfio"
+    exit $exit_val
+fi
 
 if check_define __linux__ ; then
   targetos="Linux"
