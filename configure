@@ -24,10 +24,13 @@ trap "rm -f $TMPC $TMPO $TMPE" EXIT INT QUIT TERM
 rm -rf config.log
 
 config_host_mak="config-host.mak"
-config_host_ld="config-host.ld"
+config_host_h="config-host.h"
+
+rm -rf $config_host_mak
+rm -rf $config_host_h
 
 # Default CFLAGS
-CFLAGS="-D_GNU_SOURCE"
+EXTFLAGS="-include config-host.h -D_GNU_SOURCE"
 
 # Print a helpful header at the top of config.log
 echo "# FIO configure log $(date)" >> config.log
@@ -100,6 +103,11 @@ EOF
   compile_object
 }
 
+output_sym() {
+  echo "$1=y" >> $config_host_mak
+  echo "#define $1" >> $config_host_h
+}
+
 targetos=""
 cpu=""
 
@@ -153,20 +161,20 @@ CYGWIN*)
   if test -z "$CC" ; then
     CC="x86_64-w64-mingw32-gcc"
   fi
-  echo "CC=$CC"                    >  $config_host_mak
-  echo "CONFIG_LITTLE_ENDIAN=y"    >> $config_host_mak
-  echo "CONFIG_64BIT_LLP64=y"      >> $config_host_mak
-  echo "CONFIG_CLOCK_GETTIME=y"    >> $config_host_mak
-  echo "CONFIG_CLOCK_MONOTONIC=y"  >> $config_host_mak
-  echo "CONFIG_GETTIMEOFDAY=y"     >> $config_host_mak
-  echo "CONFIG_FADVISE=y"          >> $config_host_mak
-  echo "CONFIG_SOCKLEN_T=y"        >> $config_host_mak
-  echo "CONFIG_POSIX_FALLOCATE=y"  >> $config_host_mak
-  echo "CONFIG_FADVISE=y"          >> $config_host_mak
-  echo "CONFIG_SFAA=y"             >> $config_host_mak
-  echo "CONFIG_RUSAGE_THREAD=y"    >> $config_host_mak
-  echo "CONFIG_WINDOWSAIO=y"       >> $config_host_mak
-  echo "CONFIG_FDATASYNC=y"        >> $config_host_mak
+  output_sym "CONFIG_LITTLE_ENDIAN"
+  output_sym "CONFIG_64BIT_LLP64"
+  output_sym "CONFIG_CLOCK_GETTIME"
+  output_sym "CONFIG_CLOCK_MONOTONIC"
+  output_sym "CONFIG_GETTIMEOFDAY"
+  output_sym "CONFIG_FADVISE"
+  output_sym "CONFIG_SOCKLEN_T"
+  output_sym "CONFIG_POSIX_FALLOCATE"
+  output_sym "CONFIG_FADVISE"
+  output_sym "CONFIG_SFAA"
+  output_sym "CONFIG_RUSAGE_THREAD"
+  output_sym "CONFIG_WINDOWSAIO"
+  output_sym "CONFIG_FDATASYNC"
+  echo "CC=$CC" >> $config_host_mak
   exit 0
 esac
 
@@ -817,102 +825,102 @@ printf " '%s'" "$0" "$@" >> $config_host_mak
 echo >> $config_host_mak
 
 if test "$wordsize" = "64" ; then
-  echo "CONFIG_64BIT=y" >> $config_host_mak
+  output_sym "CONFIG_64BIT"
 elif test "$wordsize" = "32" ; then
-  echo "CONFIG_32BIT=y" >> $config_host_mak
+  output_sym "CONFIG_32BIT"
 else
   echo "Unknown wordsize!"
   exit 1
 fi
 if test "$bigendian" = "yes" ; then
-  echo "CONFIG_BIG_ENDIAN=y" >> $config_host_mak
+  output_sym "CONFIG_BIG_ENDIAN"
 else
-  echo "CONFIG_LITTLE_ENDIAN=y" >> $config_host_mak
+  output_sym "CONFIG_LITTLE_ENDIAN"
 fi
 if test "$libaio" = "yes" ; then
-  echo "CONFIG_LIBAIO=y" >> $config_host_mak
+  output_sym "CONFIG_LIBAIO"
 fi
 if test "$posix_aio" = "yes" ; then
-  echo "CONFIG_POSIXAIO=y" >> $config_host_mak
+  output_sym "CONFIG_POSIXAIO"
 fi
 if test "$posix_aio_fsync" = "yes" ; then
-  echo "CONFIG_POSIXAIO_FSYNC=y" >> $config_host_mak
+  output_sym "CONFIG_POSIXAIO_FSYNC"
 fi
 if test "$linux_fallocate" = "yes" ; then
-  echo "CONFIG_LINUX_FALLOCATE=y" >> $config_host_mak
+  output_sym "CONFIG_LINUX_FALLOCATE"
 fi
 if test "$posix_fallocate" = "yes" ; then
-  echo "CONFIG_POSIX_FALLOCATE=y" >> $config_host_mak
+  output_sym "CONFIG_POSIX_FALLOCATE"
 fi
 if test "$fdatasync" = "yes" ; then
-  echo "CONFIG_FDATASYNC=y" >> $config_host_mak
+  output_sym "CONFIG_FDATASYNC"
 fi
 if test "$sync_file_range" = "yes" ; then
-  echo "CONFIG_SYNC_FILE_RANGE=y" >> $config_host_mak
+  output_sym "CONFIG_SYNC_FILE_RANGE"
 fi
 if test "$sfaa" = "yes" ; then
-  echo "CONFIG_SFAA=y" >> $config_host_mak
+  output_sym "CONFIG_SFAA"
 fi
 if test "$libverbs" = "yes" -o "rdmacm" = "yes" ; then
-  echo "CONFIG_RDMA=y" >> $config_host_mak
+  output_sym "CONFIG_RDMA"
 fi
 if test "$clock_gettime" = "yes" ; then
-  echo "CONFIG_CLOCK_GETTIME=y" >> $config_host_mak
+  output_sym "CONFIG_CLOCK_GETTIME"
 fi
 if test "$clock_monotonic" = "yes" ; then
-  echo "CONFIG_CLOCK_MONOTONIC=y" >> $config_host_mak
+  output_sym "CONFIG_CLOCK_MONOTONIC"
 fi
 if test "$clock_monotonic_precise" = "yes" ; then
-  echo "CONFIG_CLOCK_MONOTONIC_PRECISE=y" >> $config_host_mak
+  output_sym "CONFIG_CLOCK_MONOTONIC_PRECISE"
 fi
 if test "$gettimeofday" = "yes" ; then
-  echo "CONFIG_GETTIMEOFDAY=y" >> $config_host_mak
+  output_sym "CONFIG_GETTIMEOFDAY"
 fi
 if test "$posix_fadvise" = "yes" ; then
-  echo "CONFIG_POSIX_FADVISE=y" >> $config_host_mak
+  output_sym "CONFIG_POSIX_FADVISE"
 fi
 if test "$linux_3arg_affinity" = "yes" ; then
-  echo "CONFIG_3ARG_AFFINITY=y" >> $config_host_mak
+  output_sym "CONFIG_3ARG_AFFINITY"
 elif test "$linux_2arg_affinity" = "yes" ; then
-  echo "CONFIG_2ARG_AFFINITY=y" >> $config_host_mak
+  output_sym "CONFIG_2ARG_AFFINITY"
 fi
 if test "$strsep" = "yes" ; then
-  echo "CONFIG_STRSEP=y" >> $config_host_mak
+  output_sym "CONFIG_STRSEP"
 fi
 if test "$getopt_long_only" = "yes" ; then
-  echo "CONFIG_GETOPT_LONG_ONLY=y" >> $config_host_mak
+  output_sym "CONFIG_GETOPT_LONG_ONLY"
 fi
 if test "$inet_aton" = "yes" ; then
-  echo "CONFIG_INET_ATON=y" >> $config_host_mak
+  output_sym "CONFIG_INET_ATON"
 fi
 if test "$socklen_t" = "yes" ; then
-  echo "CONFIG_SOCKLEN_T=y" >> $config_host_mak
+  output_sym "CONFIG_SOCKLEN_T"
 fi
 if test "$ext4_me" = "yes" ; then
-  echo "CONFIG_LINUX_EXT4_MOVE_EXTENT=y" >> $config_host_mak
+  output_sym "CONFIG_LINUX_EXT4_MOVE_EXTENT"
 fi
 if test "$linux_splice" = "yes" ; then
-  echo "CONFIG_LINUX_SPLICE=y" >> $config_host_mak
+  output_sym "CONFIG_LINUX_SPLICE"
 fi
 if test "$guasi" = "yes" ; then
-  echo "CONFIG_GUASI=y" >> $config_host_mak
+  output_sym "CONFIG_GUASI"
 fi
 if test "$fusion_aw" = "yes" ; then
-  echo "CONFIG_FUSION_AW=y" >> $config_host_mak
+  output_sym "CONFIG_FUSION_AW"
 fi
 if test "$libnuma" = "yes" ; then
-  echo "CONFIG_LIBNUMA=y" >> $config_host_mak
+  output_sym "CONFIG_LIBNUMA"
 fi
 if test "$solaris_aio" = "yes" ; then
-  echo "CONFIG_SOLARISAIO=y" >> $config_host_mak
+  output_sym "CONFIG_SOLARISAIO"
 fi
 if test "$tls_thread" = "yes" ; then
-  echo "CONFIG_TLS_THREAD=y" >> $config_host_mak
+  output_sym "CONFIG_TLS_THREAD"
 fi
 if test "$rusage_thread" = "yes" ; then
-  echo "CONFIG_RUSAGE_THREAD=y" >> $config_host_mak
+  output_sym "CONFIG_RUSAGE_THREAD"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
 echo "CC=$cc" >> $config_host_mak
-echo "CFLAGS=$CFLAGS" >> $config_host_mak
+echo "EXTFLAGS=$EXTFLAGS" >> $config_host_mak
