@@ -252,7 +252,7 @@ case "$cpu" in
   ;;
 esac
 
-if test -z $CC; then
+if test -z "$CC" ; then
   if test "$targetos" = "FreeBSD"; then
     if has clang; then
       CC=clang
