@@ -205,7 +205,7 @@ fio: $(OBJS)
 $(PROGS): .depend
 
 clean: FORCE
-	-rm -f .depend $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core FIO-VERSION-FILE config-host.mak config-host.ld cscope.out
+	-rm -f .depend $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core FIO-VERSION-FILE config-host.mak cscope.out
 
 cscope:
 	@cscope -b -R
