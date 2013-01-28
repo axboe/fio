@@ -182,7 +182,10 @@ CYGWIN*)
   output_sym "CONFIG_RUSAGE_THREAD"
   output_sym "CONFIG_WINDOWSAIO"
   output_sym "CONFIG_FDATASYNC"
+  output_sym "CONFIG_GETTIMEOFDAY"
+  output_sym "CONFIG_CLOCK_GETTIME"
   echo "CC=$CC" >> $config_host_mak
+  echo "EXTFLAGS=-include config-host.h -D_GNU_SOURCE" >> $config_host_mak
   exit 0
 esac
 
