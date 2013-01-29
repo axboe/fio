@@ -122,6 +122,9 @@ cpu=""
 
 cc="${CC-${cross_prefix}gcc}"
 
+show_help="no"
+exit_val=0
+
 # parse options
 for opt do
   optarg=`expr "x$opt" : 'x[^=]*=\(.*\)'`
@@ -130,11 +133,21 @@ for opt do
   ;;
   --extra-cflags=*) CFLAGS="$CFLAGS $optarg"
   ;;
+  --help)
+  show_help="yes"
+  ;;
   *)
   echo "Bad option $opt"
-  exit 1
+  show_help="yes"
+  exit_val=1
   esac
 done
+
+if test "$show_help" = "yes" ; then
+  echo "--cc=                  Specify compiler to use"
+  echo "--extra-cflags=        Specify extra CFLAGS to pass to compiler"
+  exit $exit_val
+fi
 
 if check_define __linux__ ; then
   targetos="Linux"
@@ -188,7 +201,7 @@ CYGWIN*)
   output_sym "CONFIG_GETTIMEOFDAY"
   output_sym "CONFIG_CLOCK_GETTIME"
   echo "CC=$CC" >> $config_host_mak
-  echo "EXTFLAGS=-include config-host.h -D_GNU_SOURCE" >> $config_host_mak
+  echo "EXTFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
   exit 0
 esac
 
