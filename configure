@@ -30,7 +30,8 @@ rm -rf $config_host_mak
 rm -rf $config_host_h
 
 # Default CFLAGS
-EXTFLAGS="-include config-host.h -D_GNU_SOURCE"
+CFLAGS="-D_GNU_SOURCE"
+EXTFLAGS="-include config-host.h"
 
 # Print a helpful header at the top of config.log
 echo "# FIO configure log $(date)" >> config.log
@@ -126,6 +127,8 @@ for opt do
   optarg=`expr "x$opt" : 'x[^=]*=\(.*\)'`
   case "$opt" in
   --cc=*) CC="$optarg"
+  ;;
+  --extra-cflags=*) CFLAGS="$CFLAGS $optarg"
   ;;
   *)
   echo "Bad option $opt"
@@ -934,4 +937,4 @@ fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
 echo "CC=$cc" >> $config_host_mak
-echo "EXTFLAGS=$EXTFLAGS" >> $config_host_mak
+echo "EXTFLAGS=$EXTFLAGS $CFLAGS" >> $config_host_mak
