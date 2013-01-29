@@ -1300,12 +1300,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "POSIX asynchronous IO",
 			  },
 #endif
-#ifdef FIO_HAVE_SOLARISAIO
+#ifdef CONFIG_SOLARISAIO
 			  { .ival = "solarisaio",
 			    .help = "Solaris native asynchronous IO",
 			  },
 #endif
-#ifdef FIO_HAVE_WINDOWSAIO
+#ifdef CONFIG_WINDOWSAIO
 			  { .ival = "windowsaio",
 			    .help = "Windows native asynchronous IO"
 			  },
@@ -1355,12 +1355,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Fusion-io atomic write engine",
 			  },
 #endif
-#ifdef FIO_HAVE_E4_ENG
+#ifdef CONFIG_LINUX_EXT4_MOVE_EXTENT
 			  { .ival = "e4defrag",
 			    .help = "ext4 defrag engine",
 			  },
 #endif
-#ifdef FIO_HAVE_FALLOC_ENG
+#ifdef CONFIG_LINUX_FALLOCATE
 			  { .ival = "falloc",
 			    .help = "fallocate() file based engine",
 			  },
@@ -1695,7 +1695,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent = "nrfiles",
 		.hide	= 1,
 	},
-#ifdef FIO_HAVE_FALLOCATE
+#ifdef CONFIG_POSIX_FALLOCATE
 	{
 		.name	= "fallocate",
 		.lname	= "Fallocate",
@@ -1714,7 +1714,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = FIO_FALLOCATE_POSIX,
 			    .help = "Use posix_fallocate()",
 			  },
-#ifdef FIO_HAVE_LINUX_FALLOCATE
+#ifdef CONFIG_LINUX_FALLOCATE
 			  { .ival = "keep",
 			    .oval = FIO_FALLOCATE_KEEP_SIZE,
 			    .help = "Use fallocate(..., FALLOC_FL_KEEP_SIZE, ...)",
@@ -1731,7 +1731,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  },
 		},
 	},
-#endif	/* FIO_HAVE_FALLOCATE */
+#endif	/* CONFIG_POSIX_FALLOCATE */
 	{
 		.name	= "fadvise_hint",
 		.lname	= "Fadvise hint",
@@ -2193,6 +2193,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "experimental_verify",
 		.off1	= td_var_offset(experimental_verify),
 		.type	= FIO_OPT_BOOL,
+		.help	= "Enable experimental verification",
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_VERIFY,
 	},

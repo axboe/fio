@@ -1,4 +1,4 @@
-#ifndef CONFIG_GETOPT_LONG_ONLY
+#ifdef CONFIG_GETOPT_LONG_ONLY
 
 #include <getopt.h>
 

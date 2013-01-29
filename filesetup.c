@@ -15,7 +15,7 @@
 #include "hash.h"
 #include "lib/axmap.h"
 
-#ifdef FIO_HAVE_LINUX_FALLOCATE
+#ifdef CONFIG_LINUX_FALLOCATE
 #include <linux/falloc.h>
 #endif
 
@@ -72,7 +72,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-#ifdef FIO_HAVE_FALLOCATE
+#ifdef CONFIG_POSIX_FALLOCATE
 	if (!td->o.fill_device) {
 		switch (td->o.fallocate_mode) {
 		case FIO_FALLOCATE_NONE:
@@ -87,7 +87,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 						strerror(r));
 			}
 			break;
-#ifdef FIO_HAVE_LINUX_FALLOCATE
+#ifdef CONFIG_LINUX_FALLOCATE
 		case FIO_FALLOCATE_KEEP_SIZE:
 			dprint(FD_FILE,
 				"fallocate(FALLOC_FL_KEEP_SIZE) "
@@ -100,14 +100,14 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 				td_verror(td, errno, "fallocate");
 
 			break;
-#endif /* FIO_HAVE_LINUX_FALLOCATE */
+#endif /* CONFIG_LINUX_FALLOCATE */
 		default:
 			log_err("fio: unknown fallocate mode: %d\n",
 				td->o.fallocate_mode);
 			assert(0);
 		}
 	}
-#endif /* FIO_HAVE_FALLOCATE */
+#endif /* CONFIG_POSIX_FALLOCATE */
 
 	if (!new_layout)
 		goto done;

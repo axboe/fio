@@ -14,7 +14,6 @@
 
 #include "../file.h"
 
-#define FIO_HAVE_SOLARISAIO
 #define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_PSHARED_MUTEX
 #define FIO_HAVE_CHARDEV_SIZE

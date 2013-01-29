@@ -42,7 +42,7 @@ struct thread_data;
 #include "stat.h"
 #include "flow.h"
 
-#ifdef FIO_HAVE_SOLARISAIO
+#ifdef CONFIG_SOLARISAIO
 #include <sys/asynch.h>
 #endif
 
@@ -410,8 +410,6 @@ static inline void update_error_count(struct thread_data *td, int err)
 static inline int should_fsync(struct thread_data *td)
 {
 	if (td->last_was_sync)
-		return 0;
-	if (td->o.odirect)
 		return 0;
 	if (td_write(td) || td_rw(td) || td->o.override_sync)
 		return 1;

@@ -28,7 +28,7 @@
 #error Define GOLDEN_RATIO_PRIME for your wordsize.
 #endif
 
-#define GR_PRIME_64	0x9e37fffffffc0001UL
+#define GR_PRIME_64	0x9e37fffffffc0001ULL
 
 static inline unsigned long __hash_long(unsigned long val)
 {

@@ -11,17 +11,13 @@
 #include "diskutil.h"
 #include "lib/ieee754.h"
 #include "json.h"
+#include "lib/getrusage.h"
 
 void update_rusage_stat(struct thread_data *td)
 {
 	struct thread_stat *ts = &td->ts;
 
-#ifdef RUSAGE_THREAD
-	getrusage(RUSAGE_THREAD, &td->ru_end);
-#else
-	getrusage(RUSAGE_SELF, &td->ru_end);
-#endif
-
+	fio_getrusage(&td->ru_end);
 	ts->usr_time += mtime_since(&td->ru_start.ru_utime,
 					&td->ru_end.ru_utime);
 	ts->sys_time += mtime_since(&td->ru_start.ru_stime,

@@ -547,11 +547,21 @@ int getrusage(int who, struct rusage *r_usage)
 	const uint64_t SECONDS_BETWEEN_1601_AND_1970 = 11644473600;
 	FILETIME cTime, eTime, kTime, uTime;
 	time_t time;
+	HANDLE h;
 
 	memset(r_usage, 0, sizeof(*r_usage));
 
-	HANDLE hProcess = GetCurrentProcess();
-	GetProcessTimes(hProcess, &cTime, &eTime, &kTime, &uTime);
+	if (who == RUSAGE_SELF) {
+		h = GetCurrentProcess();
+		GetProcessTimes(h, &cTime, &eTime, &kTime, &uTime);
+	} else if (who == RUSAGE_THREAD) {
+		h = GetCurrentThread();
+		GetThreadTimes(h, &cTime, &eTime, &kTime, &uTime);
+	} else {
+		log_err("fio: getrusage %d is not implemented\n", who);
+		return -1;
+	}
+
 	time = ((uint64_t)uTime.dwHighDateTime << 32) + uTime.dwLowDateTime;
 	/* Divide by 10,000,000 to get the number of seconds and move the epoch from
 	 * 1601 to 1970 */

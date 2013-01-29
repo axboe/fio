@@ -5,12 +5,7 @@
  * Supports both RDMA memory semantics and channel semantics
  *   for the InfiniBand, RoCE and iWARP protocols.
  *
- * This I/O engine is disabled by default. To enable it, execute:
- *
- * $ export EXTFLAGS+=" -DFIO_HAVE_RDMA "
- * $ export EXTLIBS+=" -libverbs -lrdmacm "
- *
- * before running make. You will need the Linux RDMA software as well, either
+ * You will need the Linux RDMA software installed, either
  * from your Linux distributor or directly from openfabrics.org:
  *
  * http://www.openfabrics.org/downloads/OFED/

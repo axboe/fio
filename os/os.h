@@ -58,7 +58,7 @@ typedef struct aiocb os_aiocb_t;
 #include <scsi/sg.h>
 #endif
 
-#ifdef CONFIG_STRSEP
+#ifndef CONFIG_STRSEP
 #include "../lib/strsep.h"
 #endif
 
