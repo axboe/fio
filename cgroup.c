@@ -52,9 +52,22 @@ static void add_cgroup(struct thread_data *td, const char *name,
 {
 	struct cgroup_member *cm;
 
+	if (!lock)
+		return;
+
 	cm = smalloc(sizeof(*cm));
+	if (!cm) {
+err:
+		log_err("fio: failed to allocate cgroup member\n");
+		return;
+	}
+
 	INIT_FLIST_HEAD(&cm->list);
 	cm->root = smalloc_strdup(name);
+	if (!cm->root) {
+		sfree(cm);
+		goto err;
+	}
 	if (td->o.cgroup_nodelete)
 		cm->cgroup_nodelete = 1;
 	fio_mutex_down(lock);
@@ -66,6 +79,9 @@ void cgroup_kill(struct flist_head *clist)
 {
 	struct flist_head *n, *tmp;
 	struct cgroup_member *cm;
+
+	if (!lock)
+		return;
 
 	fio_mutex_down(lock);
 
@@ -183,6 +199,8 @@ void cgroup_shutdown(struct thread_data *td, char **mnt)
 static void fio_init cgroup_init(void)
 {
 	lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+	if (!lock)
+		log_err("fio: failed to allocate cgroup lock\n");
 }
 
 static void fio_exit cgroup_exit(void)

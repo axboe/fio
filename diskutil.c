@@ -281,6 +281,11 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 	dprint(FD_DISKUTIL, "add maj/min %d/%d: %s\n", majdev, mindev, path);
 
 	du = smalloc(sizeof(*du));
+	if (!du) {
+		log_err("fio: smalloc() pool exhausted\n");
+		return NULL;
+	}
+
 	memset(du, 0, sizeof(*du));
 	INIT_FLIST_HEAD(&du->list);
 	l = snprintf(du->path, sizeof(du->path), "%s/stat", path);

@@ -10,7 +10,6 @@
 
 #include "fio.h"
 #include "verify.h"
-#include "smalloc.h"
 #include "trim.h"
 #include "lib/rand.h"
 #include "lib/hweight.h"
