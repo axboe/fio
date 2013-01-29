@@ -596,7 +596,7 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->pid	= le32_to_cpu(src->pid);
 	dst->members	= le32_to_cpu(src->members);
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		convert_io_stat(&dst->clat_stat[i], &src->clat_stat[i]);
 		convert_io_stat(&dst->slat_stat[i], &src->slat_stat[i]);
 		convert_io_stat(&dst->lat_stat[i], &src->lat_stat[i]);
@@ -628,11 +628,11 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 		dst->io_u_lat_m[i]	= le32_to_cpu(src->io_u_lat_m[i]);
 	}
 
-	for (i = 0; i < 2; i++)
+	for (i = 0; i < DDIR_RWDIR_CNT; i++)
 		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
 			dst->io_u_plat[i][j] = le32_to_cpu(src->io_u_plat[i][j]);
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		dst->total_io_u[i]	= le64_to_cpu(src->total_io_u[i]);
 		dst->short_io_u[i]	= le64_to_cpu(src->short_io_u[i]);
 	}
@@ -640,7 +640,7 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->total_submit	= le64_to_cpu(src->total_submit);
 	dst->total_complete	= le64_to_cpu(src->total_complete);
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		dst->io_bytes[i]	= le64_to_cpu(src->io_bytes[i]);
 		dst->runtime[i]		= le64_to_cpu(src->runtime[i]);
 	}
@@ -656,7 +656,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 {
 	int i;
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		dst->max_run[i]		= le64_to_cpu(src->max_run[i]);
 		dst->min_run[i]		= le64_to_cpu(src->min_run[i]);
 		dst->max_bw[i]		= le64_to_cpu(src->max_bw[i]);
@@ -763,7 +763,7 @@ static void convert_jobs_eta(struct jobs_eta *je)
 	je->m_iops		= le32_to_cpu(je->m_iops);
 	je->t_iops		= le32_to_cpu(je->t_iops);
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		je->rate[i]	= le32_to_cpu(je->rate[i]);
 		je->iops[i]	= le32_to_cpu(je->iops[i]);
 	}
@@ -786,7 +786,7 @@ static void sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 	dst->m_iops		+= je->m_iops;
 	dst->t_iops		+= je->t_iops;
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		dst->rate[i]	+= je->rate[i];
 		dst->iops[i]	+= je->iops[i];
 	}
