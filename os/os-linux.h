@@ -35,7 +35,6 @@
 #define FIO_HAVE_TRIM
 #define FIO_HAVE_BINJECT
 #define FIO_HAVE_GETTID
-#define FIO_HAVE_SCHED_IDLE
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 
 #ifdef MAP_HUGETLB
@@ -247,10 +246,12 @@ static inline int os_trim(int fd, unsigned long long start,
 	return errno;
 }
 
+#ifdef CONFIG_SCHED_IDLE
 static inline int fio_set_sched_idle(void)
 {
 	struct sched_param p = { .sched_priority = 0, };
 	return sched_setscheduler(gettid(), SCHED_IDLE, &p);
 }
+#endif
 
 #endif

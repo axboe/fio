@@ -74,7 +74,7 @@ static void *idle_prof_thread_fn(void *data)
 	ipt->cali_time = calibrate_unit(ipt->data);
 
 	/* delay to set IDLE class till now for better calibration accuracy */
-#if defined(FIO_HAVE_SCHED_IDLE)
+#if defined(CONFIG_SCHED_IDLE)
 	if ((retval = fio_set_sched_idle()))
 		log_err("fio: fio_set_sched_idle failed\n");
 #else
@@ -385,7 +385,7 @@ int fio_idle_prof_parse_opt(const char *args)
 		return -1;
 	}	
 
-#if defined(FIO_HAVE_CPU_AFFINITY) && defined(FIO_HAVE_SCHED_IDLE)
+#if defined(FIO_HAVE_CPU_AFFINITY) && defined(CONFIG_SCHED_IDLE)
 	if (strcmp("calibrate", args) == 0) {
 		ipc.opt = IDLE_PROF_OPT_CALI;
 		fio_idle_prof_init();
