@@ -12,6 +12,7 @@
 #include "lib/ieee754.h"
 #include "json.h"
 #include "lib/getrusage.h"
+#include "idletime.h"
 
 void update_rusage_stat(struct thread_data *td)
 {
@@ -1335,6 +1336,8 @@ void show_run_stats(void)
 		/* disk util stats, if any */
 		show_disk_util(1, root);
 
+		show_idle_prof_stats(FIO_OUTPUT_JSON, root);
+
 		json_print_object(root);
 		log_info("\n");
 		json_free_object(root);
@@ -1354,6 +1357,8 @@ void show_run_stats(void)
 		fio_server_send_du();
 	else if (output_format == FIO_OUTPUT_NORMAL)
 		show_disk_util(0, NULL);
+
+	show_idle_prof_stats(FIO_OUTPUT_NORMAL, NULL);
 
 	free(runstats);
 	free(threadstats);

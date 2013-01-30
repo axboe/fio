@@ -77,6 +77,9 @@ Background a fio server, writing the pid to the given pid file.
 .TP
 .BI \-\-client \fR=\fPhost
 Instead of running the jobs locally, send and run them on the given host.
+.TP
+.BI \-\-idle\-prof \fR=\fPoption
+Report cpu idleness on a system or percpu basis (\fIoption\fP=system,percpu) or run unit work calibration only (\fIoption\fP=calibrate).
 .SH "JOB FILE FORMAT"
 Job files are in `ini' format. They consist of one or more
 job definitions, which begin with a job name in square brackets and

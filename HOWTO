@@ -1693,3 +1693,18 @@ write      Write 'length' bytes beginning from 'offset'
 sync       fsync() the file
 datasync   fdatasync() the file
 trim       trim the given file from the given 'offset' for 'length' bytes
+
+
+9.0 CPU idleness profiling
+
+In some cases, we want to understand CPU overhead in a test. For example,
+we test patches for the specific goodness of whether they reduce CPU usage.
+fio implements a balloon approach to create a thread per CPU that runs at
+idle priority, meaning that it only runs when nobody else needs the cpu.
+By measuring the amount of work completed by the thread, idleness of each
+CPU can be derived accordingly.
+
+An unit work is defined as touching a full page of unsigned characters. Mean
+and standard deviation of time to complete an unit work is reported in "unit
+work" section. Options can be chosen to report detailed percpu idleness or
+overall system idleness by aggregating percpu stats.

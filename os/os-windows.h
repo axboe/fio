@@ -21,6 +21,7 @@
 #define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_CHARDEV_SIZE
 #define FIO_HAVE_GETTID
+#define FIO_HAVE_SCHED_IDLE
 #define FIO_USE_GENERIC_RAND
 
 #define FIO_PREFERRED_ENGINE		"windowsaio"
@@ -244,6 +245,13 @@ static inline int init_random_state(struct thread_data *td, unsigned long *rand_
 	CryptReleaseContext(hCryptProv, 0);
 	td_fill_rand_seeds(td);
 	return 0;
+}
+
+
+static inline int fio_set_sched_idle(void)
+{
+	/* SetThreadPriority returns nonzero for success */
+	return (SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_IDLE))? 0 : -1;
 }
 
 
