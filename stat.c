@@ -753,7 +753,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 			json_object_add_value_int(percentile_object, "0.00", 0);
 			continue;
 		}
-		snprintf(buf, sizeof(buf) - 1, "%2.2f", ts->percentile_list[i].u.f);
+		snprintf(buf, sizeof(buf), "%2.2f", ts->percentile_list[i].u.f);
 		json_object_add_value_int(percentile_object, (const char *)buf, ovals[i]);
 	}
 
@@ -959,9 +959,9 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	for (i = 0; i < 7; i++) {
 		char name[20];
 		if (i < 6)
-			snprintf(name, 19, "%d", 1 << i);
+			snprintf(name, 20, "%d", 1 << i);
 		else
-			snprintf(name, 19, ">=%d", 1 << i);
+			snprintf(name, 20, ">=%d", 1 << i);
 		json_object_add_value_float(tmp, (const char *)name, io_u_dist[i]);
 	}
 

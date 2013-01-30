@@ -10,6 +10,7 @@ int log_err(const char *format, ...)
 	va_start(args, format);
 	len = vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
+	len = min(len, sizeof(buffer) - 1);
 
 	return fwrite(buffer, len, 1, stderr);
 }
@@ -23,6 +24,7 @@ int log_info(const char *format, ...)
 	va_start(args, format);
 	len = vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
+	len = min(len, sizeof(buffer) - 1);
 
 	return fwrite(buffer, len, 1, stdout);
 }

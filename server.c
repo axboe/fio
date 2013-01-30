@@ -811,6 +811,7 @@ int fio_server_log(const char *format, ...)
 	va_start(args, format);
 	len = vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
+	len = min(len, sizeof(buffer) - 1);
 
 	return fio_server_text_output(buffer, len);
 }

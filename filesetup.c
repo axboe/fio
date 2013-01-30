@@ -563,7 +563,7 @@ open_again:
 		if (__e == EMFILE && file_close_shadow_fds(td))
 			goto open_again;
 
-		snprintf(buf, sizeof(buf) - 1, "open(%s)", f->file_name);
+		snprintf(buf, sizeof(buf), "open(%s)", f->file_name);
 
 		if (__e == EINVAL && (flags & OS_O_DIRECT)) {
 			log_err("fio: looks like your file system does not " \
@@ -1250,7 +1250,7 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 	if (!D) {
 		char buf[FIO_VERROR_SIZE];
 
-		snprintf(buf, FIO_VERROR_SIZE - 1, "opendir(%s)", dirname);
+		snprintf(buf, FIO_VERROR_SIZE, "opendir(%s)", dirname);
 		td_verror(td, errno, buf);
 		return 1;
 	}

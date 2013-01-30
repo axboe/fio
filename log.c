@@ -12,6 +12,7 @@ int log_valist(const char *str, va_list args)
 	size_t len;
 
 	len = vsnprintf(buffer, sizeof(buffer), str, args);
+	len = min(len, sizeof(buffer) - 1);
 
 	if (log_syslog)
 		syslog(LOG_INFO, "%s", buffer);
@@ -40,6 +41,7 @@ int log_local(const char *format, ...)
 	va_start(args, format);
 	len = vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
+	len = min(len, sizeof(buffer) - 1);
 
 	if (log_syslog)
 		syslog(LOG_INFO, "%s", buffer);
@@ -58,6 +60,7 @@ int log_info(const char *format, ...)
 	va_start(args, format);
 	len = vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
+	len = min(len, sizeof(buffer) - 1);
 
 	if (is_backend)
 		return fio_server_text_output(buffer, len);
@@ -77,6 +80,7 @@ int log_err(const char *format, ...)
 	va_start(args, format);
 	len = vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
+	len = min(len, sizeof(buffer) - 1);
 
 	if (is_backend)
 		return fio_server_text_output(buffer, len);

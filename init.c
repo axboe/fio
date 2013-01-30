@@ -627,7 +627,7 @@ static char *to_kmg(unsigned int val)
 		p++;
 	} while (*p);
 
-	snprintf(buf, 31, "%u%c", val, *p);
+	snprintf(buf, 32, "%u%c", val, *p);
 	return buf;
 }
 

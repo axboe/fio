@@ -534,7 +534,7 @@ void finish_log_named(struct thread_data *td, struct io_log *log,
 {
 	char file_name[256], *p;
 
-	snprintf(file_name, 200, "%s_%s.log", prefix, postfix);
+	snprintf(file_name, sizeof(file_name), "%s_%s.log", prefix, postfix);
 	p = basename(file_name);
 	__finish_log(log, p);
 }
