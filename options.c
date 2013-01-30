@@ -2497,6 +2497,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.verify	= gtod_cpu_verify,
 	},
 	{
+		.name	= "unified_rw_reporting",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(unified_rw_rep),
+		.help	= "Unify reporting across data direction",
+		.def	= "0",
+	},
+	{
 		.name	= "continue_on_error",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(continue_on_error),

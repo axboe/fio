@@ -595,6 +595,7 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->groupid	= le32_to_cpu(src->groupid);
 	dst->pid	= le32_to_cpu(src->pid);
 	dst->members	= le32_to_cpu(src->members);
+	dst->unified_rw_rep	= le32_to_cpu(src->unified_rw_rep);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		convert_io_stat(&dst->clat_stat[i], &src->clat_stat[i]);
@@ -667,6 +668,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 
 	dst->kb_base	= le32_to_cpu(src->kb_base);
 	dst->groupid	= le32_to_cpu(src->groupid);
+	dst->unified_rw_rep	= le32_to_cpu(src->unified_rw_rep);
 }
 
 static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -687,6 +689,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	client_ts.members++;
 	client_ts.groupid = p->ts.groupid;
+	client_ts.unified_rw_rep = p->ts.unified_rw_rep;
 
 	if (++sum_stat_nr == sum_stat_clients) {
 		strcpy(client_ts.name, "All clients");

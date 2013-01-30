@@ -353,6 +353,12 @@ kb_base=int	The base unit for a kilobyte. The defacto base is 2^10, 1024.
 		ten unit instead, for obvious reasons. Allow values are
 		1024 or 1000, with 1024 being the default.
 
+unified_rw_reporting=bool	Fio normally reports statistics on a per
+		data direction basis, meaning that read, write, and trim are
+		accounted and reported separately. If this option is set,
+		the fio will sum the results and report them as "mixed"
+		instead.
+
 randrepeat=bool	For random IO workloads, seed the generator in a predictable
 		way so that results are repeatable across repetitions.
 

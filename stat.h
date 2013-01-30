@@ -8,6 +8,7 @@ struct group_run_stats {
 	uint64_t agg[DDIR_RWDIR_CNT];
 	uint32_t kb_base;
 	uint32_t groupid;
+	uint32_t unified_rw_rep;
 };
 
 /*
@@ -120,6 +121,7 @@ struct thread_stat {
 	uint32_t pid;
 	char description[FIO_JOBNAME_SIZE];
 	uint32_t members;
+	uint32_t unified_rw_rep;
 
 	/*
 	 * bandwidth and latency stats
