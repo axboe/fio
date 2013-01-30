@@ -481,7 +481,7 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 
 	if (o->nodelay && o->proto == FIO_TYPE_TCP) {
 		optval = 1;
-		if (setsockopt(f->fd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(int)) < 0) {
+		if (setsockopt(f->fd, IPPROTO_TCP, TCP_NODELAY, (void *) &optval, sizeof(int)) < 0) {
 			log_err("fio: cannot set TCP_NODELAY option on socket (%s), disable with 'nodelay=0'\n", strerror(errno));
 			return 1;
 		}
@@ -541,7 +541,7 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 
 	if (o->nodelay && o->proto == FIO_TYPE_TCP) {
 		optval = 1;
-		if (setsockopt(f->fd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(int)) < 0) {
+		if (setsockopt(f->fd, IPPROTO_TCP, TCP_NODELAY, (void *) &optval, sizeof(int)) < 0) {
 			log_err("fio: cannot set TCP_NODELAY option on socket (%s), disable with 'nodelay=0'\n", strerror(errno));
 			return 1;
 		}
@@ -767,12 +767,12 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 	}
 
 	opt = 1;
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) < 0) {
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) &opt, sizeof(opt)) < 0) {
 		td_verror(td, errno, "setsockopt");
 		return 1;
 	}
 #ifdef SO_REUSEPORT
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (void *) &opt, sizeof(opt)) < 0) {
 		td_verror(td, errno, "setsockopt");
 		return 1;
 	}
