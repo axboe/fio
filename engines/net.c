@@ -92,12 +92,14 @@ static struct fio_option options[] = {
 			  },
 		},
 	},
+#ifdef CONFIG_TCP_NODELAY
 	{
 		.name	= "nodelay",
 		.type	= FIO_OPT_BOOL,
 		.off1	= offsetof(struct netio_options, nodelay),
 		.help	= "Use TCP_NODELAY on TCP connections",
 	},
+#endif
 	{
 		.name	= "listen",
 		.type	= FIO_OPT_STR_SET,
@@ -479,6 +481,7 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
+#ifdef CONFIG_TCP_NODELAY
 	if (o->nodelay && o->proto == FIO_TYPE_TCP) {
 		optval = 1;
 		if (setsockopt(f->fd, IPPROTO_TCP, TCP_NODELAY, (void *) &optval, sizeof(int)) < 0) {
@@ -486,6 +489,7 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 			return 1;
 		}
 	}
+#endif
 
 	if (o->proto == FIO_TYPE_UDP)
 		return 0;
@@ -539,6 +543,7 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 		goto err;
 	}
 
+#ifdef CONFIG_TCP_NODELAY
 	if (o->nodelay && o->proto == FIO_TYPE_TCP) {
 		optval = 1;
 		if (setsockopt(f->fd, IPPROTO_TCP, TCP_NODELAY, (void *) &optval, sizeof(int)) < 0) {
@@ -546,6 +551,7 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 			return 1;
 		}
 	}
+#endif
 
 	reset_all_stats(td);
 	td_set_runstate(td, state);
