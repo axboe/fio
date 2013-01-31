@@ -33,7 +33,7 @@ SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
 		cconv.c lib/prio_tree.c json.c lib/zipf.c lib/axmap.c \
 		lib/lfsr.c gettime-thread.c helpers.c lib/flist_sort.c \
-		lib/hweight.c lib/getrusage.c
+		lib/hweight.c lib/getrusage.c idletime.c
 
 ifdef CONFIG_64BIT_LLP64
   CFLAGS += -DBITS_PER_LONG=32

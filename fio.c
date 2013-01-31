@@ -26,16 +26,7 @@
 #include <time.h>
 
 #include "fio.h"
-#include "hash.h"
 #include "smalloc.h"
-#include "verify.h"
-#include "trim.h"
-#include "diskutil.h"
-#include "profile.h"
-#include "lib/rand.h"
-#include "memalign.h"
-#include "client.h"
-#include "server.h"
 
 int main(int argc, char *argv[], char *envp[])
 {

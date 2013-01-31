@@ -272,17 +272,17 @@ filename=str	Fio normally makes up a filename based on the job name,
 		can specify a number of files by separating the names with a
 		':' colon. So if you wanted a job to open /dev/sda and /dev/sdb
 		as the two working files, you would use
-		filename=/dev/sda:/dev/sdb. On Windows, disk devices are accessed
-		as \\.\PhysicalDrive0 for the first device, \\.\PhysicalDrive1
-		for the second etc.
-		Note: Windows and FreeBSD prevent write access to areas of the disk
-		containing in-use data (e.g. filesystems).
-		If the wanted filename does need to include a colon, then escape that
- 		with a '\' character.
-		For instance, if the filename is "/dev/dsk/foo@3,0:c",
-		then you would use filename="/dev/dsk/foo@3,0\:c".
-		'-' is a reserved name, meaning stdin or stdout. Which of the
-		two depends on the read/write direction set.
+		filename=/dev/sda:/dev/sdb. On Windows, disk devices are
+		accessed as \\.\PhysicalDrive0 for the first device,
+		\\.\PhysicalDrive1 for the second etc. Note: Windows and
+		FreeBSD prevent write access to areas of the disk containing
+		in-use data (e.g. filesystems).
+		If the wanted filename does need to include a colon, then
+		escape that with a '\' character. For instance, if the filename
+		is "/dev/dsk/foo@3,0:c", then you would use
+		filename="/dev/dsk/foo@3,0\:c". '-' is a reserved name, meaning
+		stdin or stdout. Which of the two depends on the read/write
+		direction set.
 
 opendir=str	Tell fio to recursively add any file it can find in this
 		directory and down the file system tree.
@@ -352,6 +352,12 @@ kb_base=int	The base unit for a kilobyte. The defacto base is 2^10, 1024.
 		Storage manufacturers like to use 10^3 or 1000 as a base
 		ten unit instead, for obvious reasons. Allow values are
 		1024 or 1000, with 1024 being the default.
+
+unified_rw_reporting=bool	Fio normally reports statistics on a per
+		data direction basis, meaning that read, write, and trim are
+		accounted and reported separately. If this option is set,
+		the fio will sum the results and report them as "mixed"
+		instead.
 
 randrepeat=bool	For random IO workloads, seed the generator in a predictable
 		way so that results are repeatable across repetitions.
@@ -1686,3 +1692,18 @@ write      Write 'length' bytes beginning from 'offset'
 sync       fsync() the file
 datasync   fdatasync() the file
 trim       trim the given file from the given 'offset' for 'length' bytes
+
+
+9.0 CPU idleness profiling
+
+In some cases, we want to understand CPU overhead in a test. For example,
+we test patches for the specific goodness of whether they reduce CPU usage.
+fio implements a balloon approach to create a thread per CPU that runs at
+idle priority, meaning that it only runs when nobody else needs the cpu.
+By measuring the amount of work completed by the thread, idleness of each
+CPU can be derived accordingly.
+
+An unit work is defined as touching a full page of unsigned characters. Mean
+and standard deviation of time to complete an unit work is reported in "unit
+work" section. Options can be chosen to report detailed percpu idleness or
+overall system idleness by aggregating percpu stats.

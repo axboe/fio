@@ -666,8 +666,6 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 		je->t_rate[i]	= cpu_to_le32(je->t_rate[i]);
 		je->m_iops[i]	= cpu_to_le32(je->m_iops[i]);
 		je->t_iops[i]	= cpu_to_le32(je->t_iops[i]);
-		je->rate[i]	= cpu_to_le32(je->rate[i]);
-		je->iops[i]	= cpu_to_le32(je->iops[i]);
 	}
 
 	je->elapsed_sec		= cpu_to_le64(je->elapsed_sec);
@@ -938,6 +936,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 
 	dst->kb_base	= cpu_to_le32(src->kb_base);
 	dst->groupid	= cpu_to_le32(src->groupid);
+	dst->unified_rw_rep	= cpu_to_le32(src->unified_rw_rep);
 }
 
 /*
@@ -962,6 +961,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.groupid		= cpu_to_le32(ts->groupid);
 	p.ts.pid		= cpu_to_le32(ts->pid);
 	p.ts.members		= cpu_to_le32(ts->members);
+	p.ts.unified_rw_rep	= cpu_to_le32(ts->unified_rw_rep);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		convert_io_stat(&p.ts.clat_stat[i], &ts->clat_stat[i]);
@@ -999,7 +999,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
 			p.ts.io_u_plat[i][j] = cpu_to_le32(ts->io_u_plat[i][j]);
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		p.ts.total_io_u[i]	= cpu_to_le64(ts->total_io_u[i]);
 		p.ts.short_io_u[i]	= cpu_to_le64(ts->short_io_u[i]);
 	}

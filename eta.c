@@ -226,7 +226,8 @@ static int thread_eta(struct thread_data *td)
 	return eta_sec;
 }
 
-static void calc_rate(unsigned long mtime, unsigned long long *io_bytes,
+static void calc_rate(int unified_rw_rep, unsigned long mtime,
+		      unsigned long long *io_bytes,
 		      unsigned long long *prev_io_bytes, unsigned int *rate)
 {
 	int i;
@@ -235,19 +236,32 @@ static void calc_rate(unsigned long mtime, unsigned long long *io_bytes,
 		unsigned long long diff;
 
 		diff = io_bytes[i] - prev_io_bytes[i];
-		rate[i] = ((1000 * diff) / mtime) / 1024;
+		if (unified_rw_rep) {
+			rate[i] = 0;
+			rate[0] += ((1000 * diff) / mtime) / 1024;
+		} else
+			rate[i] = ((1000 * diff) / mtime) / 1024;
 
 		prev_io_bytes[i] = io_bytes[i];
 	}
 }
 
-static void calc_iops(unsigned long mtime, unsigned long long *io_iops,
+static void calc_iops(int unified_rw_rep, unsigned long mtime,
+		      unsigned long long *io_iops,
 		      unsigned long long *prev_io_iops, unsigned int *iops)
 {
 	int i;
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		iops[i] = ((io_iops[i] - prev_io_iops[i]) * 1000) / mtime;
+		unsigned long long diff;
+
+		diff = io_iops[i] - prev_io_iops[i];
+		if (unified_rw_rep) {
+			iops[i] = 0;
+			iops[0] += (diff * 1000) / mtime;
+		} else
+			iops[i] = (diff * 1000) / mtime;
+
 		prev_io_iops[i] = io_iops[i];
 	}
 }
@@ -259,7 +273,7 @@ static void calc_iops(unsigned long mtime, unsigned long long *io_iops,
 int calc_thread_status(struct jobs_eta *je, int force)
 {
 	struct thread_data *td;
-	int i;
+	int i, unified_rw_rep;
 	unsigned long rate_time, disp_time, bw_avg_time, *eta_secs;
 	unsigned long long io_bytes[DDIR_RWDIR_CNT];
 	unsigned long long io_iops[DDIR_RWDIR_CNT];
@@ -293,7 +307,9 @@ int calc_thread_status(struct jobs_eta *je, int force)
 	io_bytes[DDIR_READ] = io_bytes[DDIR_WRITE] = io_bytes[DDIR_TRIM] = 0;
 	io_iops[DDIR_READ] = io_iops[DDIR_WRITE] = io_iops[DDIR_TRIM] = 0;
 	bw_avg_time = ULONG_MAX;
+	unified_rw_rep = 0;
 	for_each_td(td, i) {
+		unified_rw_rep += td->o.unified_rw_rep;
 		if (is_power_of_2(td->o.kb_base))
 			je->is_pow2 = 1;
 		if (td->o.bw_avg_time < bw_avg_time)
@@ -339,9 +355,15 @@ int calc_thread_status(struct jobs_eta *je, int force)
 
 		if (td->runstate > TD_RAMP) {
 			int ddir;
+
 			for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
-				io_bytes[ddir] += td->io_bytes[ddir];
-				io_iops[ddir] += td->io_blocks[ddir];
+				if (unified_rw_rep) {
+					io_bytes[0] += td->io_bytes[ddir];
+					io_iops[0] += td->io_blocks[ddir];
+				} else {
+					io_bytes[ddir] += td->io_bytes[ddir];
+					io_iops[ddir] += td->io_blocks[ddir];
+				}
 			}
 		}
 	}
@@ -367,7 +389,8 @@ int calc_thread_status(struct jobs_eta *je, int force)
 	rate_time = mtime_since(&rate_prev_time, &now);
 
 	if (write_bw_log && rate_time > bw_avg_time && !in_ramp_time(td)) {
-		calc_rate(rate_time, io_bytes, rate_io_bytes, je->rate);
+		calc_rate(unified_rw_rep, rate_time, io_bytes, rate_io_bytes,
+				je->rate);
 		memcpy(&rate_prev_time, &now, sizeof(now));
 		add_agg_sample(je->rate[DDIR_READ], DDIR_READ, 0);
 		add_agg_sample(je->rate[DDIR_WRITE], DDIR_WRITE, 0);
@@ -382,8 +405,8 @@ int calc_thread_status(struct jobs_eta *je, int force)
 	if (!force && disp_time < 900)
 		return 0;
 
-	calc_rate(disp_time, io_bytes, disp_io_bytes, je->rate);
-	calc_iops(disp_time, io_iops, disp_io_iops, je->iops);
+	calc_rate(unified_rw_rep, disp_time, io_bytes, disp_io_bytes, je->rate);
+	calc_iops(unified_rw_rep, disp_time, io_iops, disp_io_iops, je->iops);
 
 	memcpy(&disp_prev_time, &now, sizeof(now));
 

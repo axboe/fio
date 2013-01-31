@@ -51,6 +51,7 @@
 #include "memalign.h"
 #include "server.h"
 #include "lib/getrusage.h"
+#include "idletime.h"
 
 static pthread_t disk_util_thread;
 static struct fio_mutex *disk_thread_mutex;
@@ -1508,6 +1509,8 @@ static void run_threads(void)
 
 	if (fio_gtod_offload && fio_start_gtod_thread())
 		return;
+	
+	fio_idle_prof_init();
 
 	set_sig_handlers();
 
@@ -1572,6 +1575,9 @@ static void run_threads(void)
 			}
 		}
 	}
+
+	/* start idle threads before io threads start to run */
+	fio_idle_prof_start();
 
 	set_genesis_time();
 
@@ -1726,6 +1732,8 @@ static void run_threads(void)
 		reap_threads(&nr_running, &t_rate, &m_rate);
 		usleep(10000);
 	}
+
+	fio_idle_prof_stop();
 
 	update_io_ticks();
 }

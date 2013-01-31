@@ -2942,6 +2942,13 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_CLOCK,
 	},
 	{
+		.name	= "unified_rw_reporting",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(unified_rw_rep),
+		.help	= "Unify reporting across data direction",
+		.def	= "0",
+	},
+	{
 		.name	= "continue_on_error",
 		.lname	= "Continue on error",
 		.type	= FIO_OPT_STR,

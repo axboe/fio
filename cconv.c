@@ -172,6 +172,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->disable_clat = le32_to_cpu(top->disable_clat);
 	o->disable_slat = le32_to_cpu(top->disable_slat);
 	o->disable_bw = le32_to_cpu(top->disable_bw);
+	o->unified_rw_rep = le32_to_cpu(top->unified_rw_rep);
 	o->gtod_reduce = le32_to_cpu(top->gtod_reduce);
 	o->gtod_cpu = le32_to_cpu(top->gtod_cpu);
 	o->gtod_offload = le32_to_cpu(top->gtod_offload);
@@ -317,6 +318,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->disable_clat = cpu_to_le32(o->disable_clat);
 	top->disable_slat = cpu_to_le32(o->disable_slat);
 	top->disable_bw = cpu_to_le32(o->disable_bw);
+	top->unified_rw_rep = cpu_to_le32(o->unified_rw_rep);
 	top->gtod_reduce = cpu_to_le32(o->gtod_reduce);
 	top->gtod_cpu = cpu_to_le32(o->gtod_cpu);
 	top->gtod_offload = cpu_to_le32(o->gtod_offload);

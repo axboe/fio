@@ -247,4 +247,11 @@ static inline int init_random_state(struct thread_data *td, unsigned long *rand_
 }
 
 
+static inline int fio_set_sched_idle(void)
+{
+	/* SetThreadPriority returns nonzero for success */
+	return (SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_IDLE))? 0 : -1;
+}
+
+
 #endif /* FIO_OS_WINDOWS_H */

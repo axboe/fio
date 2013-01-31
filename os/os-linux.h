@@ -253,4 +253,12 @@ static inline int os_trim(int fd, unsigned long long start,
 	return errno;
 }
 
+#ifdef CONFIG_SCHED_IDLE
+static inline int fio_set_sched_idle(void)
+{
+	struct sched_param p = { .sched_priority = 0, };
+	return sched_setscheduler(gettid(), SCHED_IDLE, &p);
+}
+#endif
+
 #endif

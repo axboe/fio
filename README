@@ -145,6 +145,9 @@ $ fio
 	--max-jobs		Maximum number of threads/processes to support
 	--server=args		Start backend server. See Client/Server section.
 	--client=host		Connect to specified backend.
+	--idle-prof=option	Report cpu idleness on a system or percpu basis
+				(option=system,percpu) or run unit work
+				calibration only (option=calibrate).
 
 
 Any parameters following the options will be assumed to be job files,

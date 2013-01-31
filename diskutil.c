@@ -276,13 +276,25 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 {
 	struct disk_util *du, *__du;
 	struct flist_head *entry;
+	int l;
 
 	dprint(FD_DISKUTIL, "add maj/min %d/%d: %s\n", majdev, mindev, path);
 
 	du = smalloc(sizeof(*du));
+	if (!du) {
+		log_err("fio: smalloc() pool exhausted\n");
+		return NULL;
+	}
+
 	memset(du, 0, sizeof(*du));
 	INIT_FLIST_HEAD(&du->list);
-	sprintf(du->path, "%s/stat", path);
+	l = snprintf(du->path, sizeof(du->path), "%s/stat", path);
+	if (l < 0 || l >= sizeof(du->path)) {
+		log_err("constructed path \"%.100s[...]/stat\" larger than buffer (%zu bytes)\n",
+			path, sizeof(du->path) - 1);
+		sfree(du);
+		return NULL;
+	}
 	strncpy((char *) du->dus.name, basename(path), FIO_DU_NAME_SZ);
 	du->sysfs_root = path;
 	du->major = majdev;

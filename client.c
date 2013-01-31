@@ -699,6 +699,7 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->groupid		= le32_to_cpu(src->groupid);
 	dst->pid		= le32_to_cpu(src->pid);
 	dst->members		= le32_to_cpu(src->members);
+	dst->unified_rw_rep	= le32_to_cpu(src->unified_rw_rep);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		convert_io_stat(&dst->clat_stat[i], &src->clat_stat[i]);
@@ -736,7 +737,7 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
 			dst->io_u_plat[i][j] = le32_to_cpu(src->io_u_plat[i][j]);
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		dst->total_io_u[i]	= le64_to_cpu(src->total_io_u[i]);
 		dst->short_io_u[i]	= le64_to_cpu(src->short_io_u[i]);
 	}
@@ -771,6 +772,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 
 	dst->kb_base	= le32_to_cpu(src->kb_base);
 	dst->groupid	= le32_to_cpu(src->groupid);
+	dst->unified_rw_rep	= le32_to_cpu(src->unified_rw_rep);
 }
 
 static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -789,6 +791,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 	client_ts.members++;
 	client_ts.thread_number = p->ts.thread_number;
 	client_ts.groupid = p->ts.groupid;
+	client_ts.unified_rw_rep = p->ts.unified_rw_rep;
 
 	if (++sum_stat_nr == sum_stat_clients) {
 		strcpy(client_ts.name, "All clients");
@@ -878,8 +881,6 @@ static void convert_jobs_eta(struct jobs_eta *je)
 		je->t_rate[i]	= le32_to_cpu(je->t_rate[i]);
 		je->m_iops[i]	= le32_to_cpu(je->m_iops[i]);
 		je->t_iops[i]	= le32_to_cpu(je->t_iops[i]);
-		je->rate[i]	= le32_to_cpu(je->rate[i]);
-		je->iops[i]	= le32_to_cpu(je->iops[i]);
 	}
 
 	je->elapsed_sec		= le64_to_cpu(je->elapsed_sec);
@@ -902,8 +903,6 @@ void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 		dst->t_rate[i]	+= je->t_rate[i];
 		dst->m_iops[i]	+= je->m_iops[i];
 		dst->t_iops[i]	+= je->t_iops[i];
-		dst->rate[i]	+= je->rate[i];
-		dst->iops[i]	+= je->iops[i];
 	}
 
 	dst->elapsed_sec	+= je->elapsed_sec;

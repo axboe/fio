@@ -325,7 +325,7 @@ enum {
 		int e = (err);						\
 		(td)->error = e;					\
 		if (!(td)->first_error)					\
-			snprintf(td->verror, sizeof(td->verror) - 1, "file:%s:%d, func=%s, error=%s", __FILE__, __LINE__, (func), (msg));		\
+			snprintf(td->verror, sizeof(td->verror), "file:%s:%d, func=%s, error=%s", __FILE__, __LINE__, (func), (msg));		\
 	} while (0)
 
 

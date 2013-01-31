@@ -44,7 +44,7 @@ open_again:
 	if (f->fd == -1) {
 		char buf[FIO_VERROR_SIZE];
 		int __e = errno;
-		snprintf(buf, sizeof(buf) - 1, "open(%s)", f->file_name);
+		snprintf(buf, sizeof(buf), "open(%s)", f->file_name);
 		td_verror(td, __e, buf);
 	}
 

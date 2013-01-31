@@ -39,6 +39,9 @@ static struct fio_flow *flow_get(unsigned int id)
 	struct fio_flow *flow = NULL;
 	struct flist_head *n;
 
+	if (!flow_lock)
+		return NULL;
+
 	fio_mutex_down(flow_lock);
 
 	flist_for_each(n, flow_list) {
@@ -51,6 +54,10 @@ static struct fio_flow *flow_get(unsigned int id)
 
 	if (!flow) {
 		flow = smalloc(sizeof(*flow));
+		if (!flow) {
+			log_err("fio: smalloc pool exhausted\n");
+			return NULL;
+		}
 		flow->refs = 0;
 		INIT_FLIST_HEAD(&flow->list);
 		flow->id = id;
@@ -66,6 +73,9 @@ static struct fio_flow *flow_get(unsigned int id)
 
 static void flow_put(struct fio_flow *flow)
 {
+	if (!flow_lock)
+		return;
+
 	fio_mutex_down(flow_lock);
 
 	if (!--flow->refs) {
@@ -92,13 +102,26 @@ void flow_exit_job(struct thread_data *td)
 
 void flow_init(void)
 {
-	flow_lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 	flow_list = smalloc(sizeof(*flow_list));
+	if (!flow_list) {
+		log_err("fio: smalloc pool exhausted\n");
+		return;
+	}
+
+	flow_lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+	if (!flow_lock) {
+		log_err("fio: failed to allocate flow lock\n");
+		sfree(flow_list);
+		return;
+	}
+
 	INIT_FLIST_HEAD(flow_list);
 }
 
 void flow_exit(void)
 {
-	fio_mutex_remove(flow_lock);
-	sfree(flow_list);
+	if (flow_lock)
+		fio_mutex_remove(flow_lock);
+	if (flow_list)
+		sfree(flow_list);
 }

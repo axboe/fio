@@ -12,6 +12,7 @@
 #include "lib/ieee754.h"
 #include "json.h"
 #include "lib/getrusage.h"
+#include "idletime.h"
 
 void update_rusage_stat(struct thread_data *td)
 {
@@ -275,9 +276,9 @@ void show_group_stats(struct group_run_stats *rs)
 		p4 = num2str(rs->max_bw[i], 6, rs->kb_base, i2p);
 
 		log_info("%s: io=%sB, aggrb=%sB/s, minb=%sB/s, maxb=%sB/s,"
-			 " mint=%llumsec, maxt=%llumsec\n", ddir_str[i], p1, p2,
-						p3, p4, rs->min_run[i],
-						rs->max_run[i]);
+			 " mint=%llumsec, maxt=%llumsec\n",
+				rs->unified_rw_rep ? "  MIXED" : ddir_str[i],
+				p1, p2, p3, p4, rs->min_run[i], rs->max_run[i]);
 
 		free(p1);
 		free(p2);
@@ -379,8 +380,8 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	iops_p = num2str(iops, 6, 1, 0);
 
 	log_info("  %s: io=%sB, bw=%sB/s, iops=%s, runt=%6llumsec\n",
-					ddir_str[ddir], io_p, bw_p, iops_p,
-					ts->runtime[ddir]);
+				rs->unified_rw_rep ? "mixed" : ddir_str[ddir],
+				io_p, bw_p, iops_p, ts->runtime[ddir]);
 
 	free(io_p);
 	free(bw_p);
@@ -654,8 +655,12 @@ static void add_ddir_status_json(struct thread_stat *ts,
 
 	assert(ddir_rw(ddir));
 
+	if (ts->unified_rw_rep && ddir != DDIR_READ)
+		return;
+
 	dir_object = json_create_object();
-	json_object_add_value_object(parent, ddirname[ddir], dir_object);
+	json_object_add_value_object(parent,
+		ts->unified_rw_rep ? "mixed" : ddirname[ddir], dir_object);
 
 	iops = bw = 0;
 	if (ts->runtime[ddir]) {
@@ -707,7 +712,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 			json_object_add_value_int(percentile_object, "0.00", 0);
 			continue;
 		}
-		snprintf(buf, sizeof(buf) - 1, "%2.2f", ts->percentile_list[i].u.f);
+		snprintf(buf, sizeof(buf), "%2.2f", ts->percentile_list[i].u.f);
 		json_object_add_value_int(percentile_object, (const char *)buf, ovals[i]);
 	}
 
@@ -913,9 +918,9 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	for (i = 0; i < 7; i++) {
 		char name[20];
 		if (i < 6)
-			snprintf(name, 19, "%d", 1 << i);
+			snprintf(name, 20, "%d", 1 << i);
 		else
-			snprintf(name, 19, ">=%d", 1 << i);
+			snprintf(name, 20, ">=%d", 1 << i);
 		json_object_add_value_float(tmp, (const char *)name, io_u_dist[i]);
 	}
 
@@ -1021,15 +1026,27 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src, int nr)
 	int l, k;
 
 	for (l = 0; l < DDIR_RWDIR_CNT; l++) {
-		sum_stat(&dst->clat_stat[l], &src->clat_stat[l], nr);
-		sum_stat(&dst->slat_stat[l], &src->slat_stat[l], nr);
-		sum_stat(&dst->lat_stat[l], &src->lat_stat[l], nr);
-		sum_stat(&dst->bw_stat[l], &src->bw_stat[l], nr);
+		if (!dst->unified_rw_rep) {
+			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], nr);
+			sum_stat(&dst->slat_stat[l], &src->slat_stat[l], nr);
+			sum_stat(&dst->lat_stat[l], &src->lat_stat[l], nr);
+			sum_stat(&dst->bw_stat[l], &src->bw_stat[l], nr);
 
-		dst->io_bytes[l] += src->io_bytes[l];
+			dst->io_bytes[l] += src->io_bytes[l];
 
-		if (dst->runtime[l] < src->runtime[l])
-			dst->runtime[l] = src->runtime[l];
+			if (dst->runtime[l] < src->runtime[l])
+				dst->runtime[l] = src->runtime[l];
+		} else {
+			sum_stat(&dst->clat_stat[0], &src->clat_stat[l], nr);
+			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], nr);
+			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], nr);
+			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], nr);
+
+			dst->io_bytes[0] += src->io_bytes[l];
+
+			if (dst->runtime[0] < src->runtime[l])
+				dst->runtime[0] = src->runtime[l];
+		}
 	}
 
 	dst->usr_time += src->usr_time;
@@ -1050,14 +1067,24 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src, int nr)
 		dst->io_u_lat_m[k] += src->io_u_lat_m[k];
 
 	for (k = 0; k < DDIR_RWDIR_CNT; k++) {
-		dst->total_io_u[k] += src->total_io_u[k];
-		dst->short_io_u[k] += src->short_io_u[k];
+		if (!dst->unified_rw_rep) {
+			dst->total_io_u[k] += src->total_io_u[k];
+			dst->short_io_u[k] += src->short_io_u[k];
+		} else {
+			dst->total_io_u[0] += src->total_io_u[k];
+			dst->short_io_u[0] += src->short_io_u[k];
+		}
 	}
 
 	for (k = 0; k < DDIR_RWDIR_CNT; k++) {
 		int m;
-		for (m = 0; m < FIO_IO_U_PLAT_NR; m++)
-			dst->io_u_plat[k][m] += src->io_u_plat[k][m];
+
+		for (m = 0; m < FIO_IO_U_PLAT_NR; m++) {
+			if (!dst->unified_rw_rep)
+				dst->io_u_plat[k][m] += src->io_u_plat[k][m];
+			else
+				dst->io_u_plat[0][m] += src->io_u_plat[k][m];
+		}
 	}
 
 	dst->total_run_time += src->total_run_time;
@@ -1174,6 +1201,7 @@ void show_run_stats(void)
 			ts->pid = td->pid;
 
 			ts->kb_base = td->o.kb_base;
+			ts->unified_rw_rep = td->o.unified_rw_rep;
 		} else if (ts->kb_base != td->o.kb_base && !kb_base_warned) {
 			log_info("fio: kb_base differs for jobs in group, using"
 				 " %u as the base\n", ts->kb_base);
@@ -1203,6 +1231,7 @@ void show_run_stats(void)
 		ts = &threadstats[i];
 		rs = &runstats[ts->groupid];
 		rs->kb_base = ts->kb_base;
+		rs->unified_rw_rep += ts->unified_rw_rep;
 
 		for (j = 0; j < DDIR_RWDIR_CNT; j++) {
 			if (!ts->runtime[j])
@@ -1271,6 +1300,8 @@ void show_run_stats(void)
 		/* disk util stats, if any */
 		show_disk_util(1, root);
 
+		show_idle_prof_stats(FIO_OUTPUT_JSON, root);
+
 		json_print_object(root);
 		log_info("\n");
 		json_free_object(root);
@@ -1290,6 +1321,8 @@ void show_run_stats(void)
 		fio_server_send_du();
 	else if (output_format == FIO_OUTPUT_NORMAL)
 		show_disk_util(0, NULL);
+
+	show_idle_prof_stats(FIO_OUTPUT_NORMAL, NULL);
 
 	free(runstats);
 	free(threadstats);

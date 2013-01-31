@@ -22,6 +22,7 @@
 #include "verify.h"
 #include "profile.h"
 #include "server.h"
+#include "idletime.h"
 
 #include "lib/getopt.h"
 
@@ -210,6 +211,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "cpuclock-test",
 		.has_arg	= no_argument,
 		.val		= 'T',
+	},
+	{
+		.name		= (char *) "idle-prof",
+		.has_arg	= required_argument,
+		.val		= 'I',
 	},
 	{
 		.name		= NULL,
@@ -628,7 +634,7 @@ char *fio_uint_to_kmg(unsigned int val)
 		p++;
 	} while (*p);
 
-	snprintf(buf, 31, "%u%c", val, *p);
+	snprintf(buf, 32, "%u%c", val, *p);
 	return buf;
 }
 
@@ -1290,6 +1296,9 @@ static void usage(const char *name)
 	printf("  --server=args\t\tStart a backend fio server\n");
 	printf("  --daemonize=pidfile\tBackground fio server, write pid to file\n");
 	printf("  --client=hostname\tTalk to remote backend fio server at hostname\n");
+	printf("  --idle-prof=option\tReport cpu idleness on a system or percpu basis\n"
+		"\t\t\t(option=system,percpu) or run unit work\n"
+		"\t\t\tcalibration only (option=calibrate)\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
 	printf("\n                   Jens Axboe <jaxboe@fusionio.com>\n");
 }
@@ -1652,6 +1661,14 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			break;
 		case 'D':
 			pid_file = strdup(optarg);
+			break;
+		case 'I':
+			if ((ret = fio_idle_prof_parse_opt(optarg))) {
+				/* exit on error and calibration only */
+				do_exit++;
+				if (ret == -1) 
+					exit_val = 1;
+			}
 			break;
 		case 'C':
 			if (is_backend) {

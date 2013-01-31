@@ -186,6 +186,7 @@ struct thread_options {
 	unsigned int disable_clat;
 	unsigned int disable_slat;
 	unsigned int disable_bw;
+	unsigned int unified_rw_rep;
 	unsigned int gtod_reduce;
 	unsigned int gtod_cpu;
 	unsigned int gtod_offload;
@@ -385,6 +386,7 @@ struct thread_options_pack {
 	uint32_t disable_clat;
 	uint32_t disable_slat;
 	uint32_t disable_bw;
+	uint32_t unified_rw_rep;
 	uint32_t gtod_reduce;
 	uint32_t gtod_cpu;
 	uint32_t gtod_offload;

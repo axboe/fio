@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/poll.h>
@@ -35,6 +36,7 @@ struct netio_options {
 	unsigned int proto;
 	unsigned int listen;
 	unsigned int pingpong;
+	unsigned int nodelay;
 };
 
 struct udp_close_msg {
@@ -96,6 +98,14 @@ static struct fio_option options[] = {
 			  },
 		},
 	},
+#ifdef CONFIG_TCP_NODELAY
+	{
+		.name	= "nodelay",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct netio_options, nodelay),
+		.help	= "Use TCP_NODELAY on TCP connections",
+	},
+#endif
 	{
 		.name	= "listen",
 		.lname	= "net engine listen",
@@ -456,7 +466,7 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
-	int type, domain;
+	int type, domain, optval;
 
 	if (o->proto == FIO_TYPE_TCP) {
 		domain = AF_INET;
@@ -478,6 +488,16 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 		td_verror(td, errno, "socket");
 		return 1;
 	}
+
+#ifdef CONFIG_TCP_NODELAY
+	if (o->nodelay && o->proto == FIO_TYPE_TCP) {
+		optval = 1;
+		if (setsockopt(f->fd, IPPROTO_TCP, TCP_NODELAY, (void *) &optval, sizeof(int)) < 0) {
+			log_err("fio: cannot set TCP_NODELAY option on socket (%s), disable with 'nodelay=0'\n", strerror(errno));
+			return 1;
+		}
+	}
+#endif
 
 	if (o->proto == FIO_TYPE_UDP)
 		return 0;
@@ -510,7 +530,7 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
 	socklen_t socklen = sizeof(nd->addr);
-	int state;
+	int state, optval;
 
 	if (o->proto == FIO_TYPE_UDP) {
 		f->fd = nd->listenfd;
@@ -530,6 +550,16 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 		td_verror(td, errno, "accept");
 		goto err;
 	}
+
+#ifdef CONFIG_TCP_NODELAY
+	if (o->nodelay && o->proto == FIO_TYPE_TCP) {
+		optval = 1;
+		if (setsockopt(f->fd, IPPROTO_TCP, TCP_NODELAY, (void *) &optval, sizeof(int)) < 0) {
+			log_err("fio: cannot set TCP_NODELAY option on socket (%s), disable with 'nodelay=0'\n", strerror(errno));
+			return 1;
+		}
+	}
+#endif
 
 	reset_all_stats(td);
 	td_set_runstate(td, state);
@@ -751,12 +781,12 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 	}
 
 	opt = 1;
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) < 0) {
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) &opt, sizeof(opt)) < 0) {
 		td_verror(td, errno, "setsockopt");
 		return 1;
 	}
 #ifdef SO_REUSEPORT
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (void *) &opt, sizeof(opt)) < 0) {
 		td_verror(td, errno, "setsockopt");
 		return 1;
 	}

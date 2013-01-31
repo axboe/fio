@@ -14,12 +14,14 @@ static pthread_t gtod_thread;
 void fio_gtod_init(void)
 {
 	fio_tv = smalloc(sizeof(struct timeval));
-	assert(fio_tv);
+	if (!fio_tv)
+		log_err("fio: smalloc pool exhausted\n");
 }
 
 static void fio_gtod_update(void)
 {
-	gettimeofday(fio_tv, NULL);
+	if (fio_tv)
+		gettimeofday(fio_tv, NULL);
 }
 
 static void *gtod_thread_main(void *data)

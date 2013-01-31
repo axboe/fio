@@ -42,7 +42,7 @@ struct disk_util {
 
 	char *name;
 	char *sysfs_root;
-	char path[256];
+	char path[PATH_MAX];
 	int major, minor;
 
 	struct disk_util_stat dus;
