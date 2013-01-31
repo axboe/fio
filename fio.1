@@ -1162,6 +1162,9 @@ used and must be omitted.
 .BI (net,netsplice)port \fR=\fPint
 The TCP or UDP port to bind to or connect to.
 .TP
+.BI (net,netsplice)nodelay \fR=\fPbool
+Set TCP_NODELAY on TCP connections.
+.TP
 .BI (net,netsplice)protocol \fR=\fPstr "\fR,\fP proto" \fR=\fPstr
 The network protocol to use. Accepted values are:
 .RS

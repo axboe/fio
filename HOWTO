@@ -1402,6 +1402,9 @@ that defines them is selected.
 [netsplice] port=int
 [net] port=int	The TCP or UDP port to bind to or connect to.
 
+[netsplice] nodelay=bool
+[net] nodelay=bool	Set TCP_NODELAY on TCP connections.
+
 [netsplice] protocol=str
 [netsplice] proto=str
 [net] protocol=str
