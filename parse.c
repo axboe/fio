@@ -10,6 +10,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <math.h>
+#include <values.h>
 
 #include "parse.h"
 #include "debug.h"
@@ -50,11 +51,11 @@ static void show_option_range(struct fio_option *o,
 				int (*logger)(const char *format, ...))
 {
 	if (o->type == FIO_OPT_FLOAT_LIST){
-		if (isnan(o->minfp) && isnan(o->maxfp))
+		if (o->minfp == MINDOUBLE && o->maxfp == MAXDOUBLE)
 			return;
 
 		logger("%20s: min=%f", "range", o->minfp);
-		if (!isnan(o->maxfp))
+		if (o->maxfp != MAXDOUBLE)
 			logger(", max=%f", o->maxfp);
 		logger("\n");
 	} else {
@@ -510,12 +511,12 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			log_err("not a floating point value: %s\n", ptr);
 			return 1;
 		}
-		if (!isnan(o->maxfp) && uf > o->maxfp) {
+		if (uf > o->maxfp) {
 			log_err("value out of range: %f"
 				" (range max: %f)\n", uf, o->maxfp);
 			return 1;
 		}
-		if (!isnan(o->minfp) && uf < o->minfp) {
+		if (uf < o->minfp) {
 			log_err("value out of range: %f"
 				" (range min: %f)\n", uf, o->minfp);
 			return 1;
@@ -1091,11 +1092,8 @@ void option_init(struct fio_option *o)
 			o->maxval = UINT_MAX;
 	}
 	if (o->type == FIO_OPT_FLOAT_LIST) {
-#ifndef NAN
-#define NAN __builtin_nanf("")
-#endif
-		o->minfp = NAN;
-		o->maxfp = NAN;
+		o->minfp = MINDOUBLE;
+		o->maxfp = MAXDOUBLE;
 	}
 	if (o->type == FIO_OPT_STR_SET && o->def) {
 		log_err("Option %s: string set option with"
