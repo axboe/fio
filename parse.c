@@ -15,6 +15,7 @@
 #include "debug.h"
 #include "options.h"
 #include "minmax.h"
+#include "lib/ieee754.h"
 
 static struct fio_option *fio_options;
 extern unsigned int fio_get_kb_base(void *);
@@ -362,7 +363,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			   int first, int more, int curr)
 {
 	int il, *ilp;
-	double* flp;
+	fio_fp64_t *flp;
 	long long ull, *ullp;
 	long ul1, ul2;
 	double uf;
@@ -500,12 +501,6 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		break;
 	}
 	case FIO_OPT_FLOAT_LIST: {
-
-		if (first) {
-			ul2 = 1;
-			ilp = td_var(data, o->off2);
-			*ilp = ul2;
-		}
 		if (curr >= o->maxlen) {
 			log_err("the list exceeding max length %d\n",
 					o->maxlen);
@@ -527,7 +522,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		}
 
 		flp = td_var(data, o->off1);
-		flp[curr] = uf;
+		flp[curr].u.f = uf;
 
 		break;
 	}

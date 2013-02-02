@@ -67,26 +67,6 @@ unsigned int *fio_debug_jobp = NULL;
 static char cmd_optstr[256];
 static int did_arg;
 
-const fio_fp64_t def_percentile_list[FIO_IO_U_LIST_MAX_LEN] = {
-	{ .u.f	=  1.00 },
-	{ .u.f	=  5.00 },
-	{ .u.f	= 10.00 },
-	{ .u.f	= 20.00 },
-	{ .u.f	= 30.00 },
-	{ .u.f	= 40.00 },
-	{ .u.f	= 50.00 },
-	{ .u.f	= 60.00 },
-	{ .u.f	= 70.00 },
-	{ .u.f	= 80.00 },
-	{ .u.f	= 90.00 },
-	{ .u.f	= 95.00 },
-	{ .u.f	= 99.00 },
-	{ .u.f	= 99.50 },
-	{ .u.f	= 99.90 },
-	{ .u.f	= 99.95 },
-	{ .u.f	= 99.99 },
-};
-
 #define FIO_CLIENT_FLAG		(1 << 16)
 
 /*
@@ -887,10 +867,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	td->mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
 
 	td->ts.clat_percentiles = td->o.clat_percentiles;
-	if (td->o.overwrite_plist)
-		memcpy(td->ts.percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
-	else
-		memcpy(td->ts.percentile_list, def_percentile_list, sizeof(def_percentile_list));
+	memcpy(td->ts.percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		td->ts.clat_stat[i].min_val = ULONG_MAX;

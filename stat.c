@@ -1210,10 +1210,7 @@ void show_run_stats(void)
 		ts = &threadstats[j];
 
 		ts->clat_percentiles = td->o.clat_percentiles;
-		if (td->o.overwrite_plist)
-			memcpy(ts->percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
-		else
-			memcpy(ts->percentile_list, def_percentile_list, sizeof(def_percentile_list));
+		memcpy(ts->percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
 
 		idx++;
 		ts->members++;
