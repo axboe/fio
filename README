@@ -109,29 +109,21 @@ based distros, it's typically called libaio-devel.
 Windows
 -------
 
-On Windows MinGW (http://www.mingw.org/) is required in order to
-build fio. To create an MSI installer package install WiX 3.6 from
-http://wix.sourceforge.net/releases/ and run dobuild.cmd from the
+On Windows Cygwin (http://www.cygwin.com/) is required in order to
+build fio. To create an MSI installer package install WiX 3.7 from
+http://wixtoolset.org and run dobuild.cmd from the
 os/windows directory.
 
-How to compile FIO on Windows 64 bits
- 
- 1. Install Cygwin - search for MinGW and install all MinGW packages.
- 2. Download x86_64-w64-mingw32-gcc-4.7.2-release-win64_rubenvb.7z (http://sourceforge.net/projects/mingw-w64/files) - Select Toolchains targeting Win64 -> 
-    Personal Builds -> rubenv -> gcc-4.7-release
- 3. Unzip the directory mingw64 to c:\ (c:\mingw64)
- 4. Add to PATH - c:\mingw64\bin
- 5. Copy c:\mingw64\bin\mingw32-make to c:\mingw64\bin\make.exe
- 6. Download pthreads-20100604.zip (http://sourceforge.net/projects/mingw-w64/files) - Select External binary packages (Win64 hosted) -> pthreads
- 7. Unzip pthreads-20100604.zip
- 8. Unzip pthreads-w64.zip
- 9. Copy pthreadGC2-w64.dll to c:\mingw64\bin
-10. Copy c:\mingw64\bin\pthreadGC2-w64.dll to c:\mingw64\bin\pthreadGC2.dll
-11. Open Cygwin Terminal
-12. Go to fio directory (source files)
-13. make clean
-14. ./configure
-15. make
+How to compile FIO on 64-bit Windows:
+
+ 1. Install Cygwin (http://www.cygwin.com/setup.exe). Install 'make' and all
+    packages starting with 'mingw64-i686' and 'mingw64-x86_64'.
+ 2. Download ftp://sourceware.org/pub/pthreads-win32/prebuilt-dll-2-9-1-release/dll/x64/pthreadGC2.dll
+    and copy to the fio source directory.
+ 3. Open the Cygwin Terminal.
+ 4. Go to the fio directory (source files).
+ 5. Run 'make clean'.
+ 6. Run 'make'.
 
 
 Command line
