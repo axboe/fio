@@ -10,7 +10,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <math.h>
-#include <values.h>
+#include <float.h>
 
 #include "parse.h"
 #include "debug.h"
@@ -51,11 +51,11 @@ static void show_option_range(struct fio_option *o,
 				int (*logger)(const char *format, ...))
 {
 	if (o->type == FIO_OPT_FLOAT_LIST){
-		if (o->minfp == MINDOUBLE && o->maxfp == MAXDOUBLE)
+		if (o->minfp == DBL_MIN && o->maxfp == DBL_MAX)
 			return;
 
 		logger("%20s: min=%f", "range", o->minfp);
-		if (o->maxfp != MAXDOUBLE)
+		if (o->maxfp != DBL_MAX)
 			logger(", max=%f", o->maxfp);
 		logger("\n");
 	} else {
@@ -1092,8 +1092,8 @@ void option_init(struct fio_option *o)
 			o->maxval = UINT_MAX;
 	}
 	if (o->type == FIO_OPT_FLOAT_LIST) {
-		o->minfp = MINDOUBLE;
-		o->maxfp = MAXDOUBLE;
+		o->minfp = DBL_MIN;
+		o->maxfp = DBL_MAX;
 	}
 	if (o->type == FIO_OPT_STR_SET && o->def) {
 		log_err("Option %s: string set option with"
