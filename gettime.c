@@ -342,14 +342,6 @@ void fio_clock_init(void)
 		log_err("fio: can't create TLS key\n");
 #endif
 
-	/*
-	 * Probably an AMD issue, will need to investigate. Until that
-	 * is done, disable the CPU clock.
-	 */
-#if FIO_OS == os_solaris
-	tsc_reliable = 0;
-#endif
-
 	fio_clock_source_inited = fio_clock_source;
 	calibrate_cpu_clock();
 
