@@ -195,9 +195,6 @@ CYGWIN*)
   fi
   output_sym "CONFIG_LITTLE_ENDIAN"
   output_sym "CONFIG_64BIT_LLP64"
-  output_sym "CONFIG_CLOCK_GETTIME"
-  output_sym "CONFIG_CLOCK_MONOTONIC"
-  output_sym "CONFIG_GETTIMEOFDAY"
   output_sym "CONFIG_FADVISE"
   output_sym "CONFIG_SOCKLEN_T"
   output_sym "CONFIG_POSIX_FALLOCATE"
@@ -206,6 +203,7 @@ CYGWIN*)
   output_sym "CONFIG_RUSAGE_THREAD"
   output_sym "CONFIG_WINDOWSAIO"
   output_sym "CONFIG_FDATASYNC"
+  output_sym "CONFIG_CLOCK_MONOTONIC"
   output_sym "CONFIG_GETTIMEOFDAY"
   output_sym "CONFIG_CLOCK_GETTIME"
   output_sym "CONFIG_SCHED_IDLE"

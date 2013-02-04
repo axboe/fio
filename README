@@ -109,10 +109,21 @@ based distros, it's typically called libaio-devel.
 Windows
 -------
 
-On Windows MinGW (http://www.mingw.org/) is required in order to
-build fio. To create an MSI installer package install WiX 3.6 from
-http://wix.sourceforge.net/releases/ and run dobuild.cmd from the
+On Windows Cygwin (http://www.cygwin.com/) is required in order to
+build fio. To create an MSI installer package install WiX 3.7 from
+http://wixtoolset.org and run dobuild.cmd from the
 os/windows directory.
+
+How to compile FIO on 64-bit Windows:
+
+ 1. Install Cygwin (http://www.cygwin.com/setup.exe). Install 'make' and all
+    packages starting with 'mingw64-i686' and 'mingw64-x86_64'.
+ 2. Download ftp://sourceware.org/pub/pthreads-win32/prebuilt-dll-2-9-1-release/dll/x64/pthreadGC2.dll
+    and copy to the fio source directory.
+ 3. Open the Cygwin Terminal.
+ 4. Go to the fio directory (source files).
+ 5. Run 'make clean'.
+ 6. Run 'make'.
 
 
 Command line

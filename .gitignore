@@ -1,4 +1,5 @@
 fio
 *.o
+*.d
 .depend
 cscope.out

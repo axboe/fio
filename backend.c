@@ -813,7 +813,7 @@ sync_done:
 
 		i = td->cur_depth;
 		if (i) {
-			ret = io_u_queued_complete(td, i, NULL);
+			ret = io_u_queued_complete(td, i, bytes_done);
 			if (td->o.fill_device && td->error == ENOSPC)
 				td->error = 0;
 		}
@@ -1017,8 +1017,19 @@ static int keep_running(struct thread_data *td)
 		return 1;
 	}
 
-	if (ddir_rw_sum(td->io_bytes) < td->o.size)
+	if (ddir_rw_sum(td->io_bytes) < td->o.size) {
+		uint64_t diff;
+
+		/*
+		 * If the difference is less than the minimum IO size, we
+		 * are done.
+		 */
+		diff = td->o.size - ddir_rw_sum(td->io_bytes);
+		if (diff < td->o.rw_min_bs)
+			return 0;
+
 		return 1;
+	}
 
 	return 0;
 }

@@ -2851,8 +2851,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Completion latency percentile list",
 		.type	= FIO_OPT_FLOAT_LIST,
 		.off1	= td_var_offset(percentile_list),
-		.off2   = td_var_offset(overwrite_plist),
 		.help	= "Specify a custom list of percentiles to report",
+		.def    = "1:5:10:20:30:40:50:60:70:80:90:95:99:99.5:99.9:99.95:99.99",
 		.maxlen	= FIO_IO_U_LIST_MAX_LEN,
 		.minfp	= 0.0,
 		.maxfp	= 100.0,
@@ -2947,6 +2947,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(unified_rw_rep),
 		.help	= "Unify reporting across data direction",
 		.def	= "0",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "continue_on_error",

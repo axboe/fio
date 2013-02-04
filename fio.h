@@ -361,7 +361,6 @@ extern int is_backend;
 extern int nr_clients;
 extern int log_syslog;
 extern const char fio_version_string[];
-extern const fio_fp64_t def_percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 extern struct thread_data *threads;
 

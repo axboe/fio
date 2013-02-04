@@ -128,9 +128,12 @@ ifneq (,$(findstring CYGWIN,$(UNAME)))
 endif
 
 OBJS = $(SOURCE:.c=.o)
+
 FIO_OBJS = $(OBJS) fio.o
 GFIO_OBJS = $(OBJS) gfio.o graph.o tickmarks.o ghelpers.o goptions.o gerror.o \
 			gclient.o gcompat.o cairo_text_helpers.o printing.o
+
+-include $(OBJS:.o=.d)
 
 T_SMALLOC_OBJS = t/stest.o
 T_SMALLOC_OBJS += gettime.o mutex.o smalloc.o t/log.o
@@ -175,7 +178,7 @@ else
 mandir = $(prefix)/man
 endif
 
-all: .depend $(PROGS) $(SCRIPTS) FORCE
+all: $(PROGS) $(SCRIPTS) FORCE
 
 .PHONY: all install clean
 .PHONY: FORCE cscope
@@ -184,10 +187,16 @@ FIO-VERSION-FILE: FORCE
 	@$(SHELL) ./FIO-VERSION-GEN
 -include FIO-VERSION-FILE
 
-CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
+override CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 
-.c.o: .depend FORCE
+.c.o: FORCE
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
+	@$(CC) -MM $(CFLAGS) $(CPPFLAGS) $*.c > $*.d
+	@mv -f $*.d $*.d.tmp
+	@sed -e 's|.*:|$*.o:|' < $*.d.tmp > $*.d
+	@sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | fmt -1 | \
+		sed -e 's/^ *//' -e 's/$$/:/' >> $*.d
+	@rm -f $*.d.tmp
 
 init.o: FIO-VERSION-FILE
 	$(QUIET_CC)$(CC) -o init.o $(CFLAGS) $(CPPFLAGS) -c init.c
@@ -237,13 +246,8 @@ t/genzipf: $(T_ZIPF_OBJS)
 t/axmap: $(T_AXMAP_OBJS)
 	$(QUIET_CC)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_AXMAP_OBJS) $(LIBS) $(LDFLAGS)
 
-.depend: $(SOURCE)
-	$(QUIET_DEP)$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SOURCE) 1> .depend
-
-$(PROGS): .depend
-
 clean: FORCE
-	-rm -f .depend $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE config-host.mak cscope.out
+	-rm -f .depend $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE config-host.mak cscope.out *.d
 
 cscope:
 	@cscope -b -R
@@ -254,9 +258,3 @@ install: $(PROGS) $(SCRIPTS) FORCE
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 fio.1 $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 fio_generate_plots.1 $(DESTDIR)$(mandir)/man1
-
-ifneq ($(wildcard .depend),)
-include .depend
-endif
-
-

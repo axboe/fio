@@ -10,11 +10,13 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 
 #include "parse.h"
 #include "debug.h"
 #include "options.h"
 #include "minmax.h"
+#include "lib/ieee754.h"
 
 static struct fio_option *__fio_options;
 
@@ -47,12 +49,12 @@ static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
 static void show_option_range(struct fio_option *o,
 				int (*logger)(const char *format, ...))
 {
-	if (o->type == FIO_OPT_FLOAT_LIST) {
-		if (isnan(o->minfp) && isnan(o->maxfp))
+	if (o->type == FIO_OPT_FLOAT_LIST){
+		if (o->minfp == DBL_MIN && o->maxfp == DBL_MAX)
 			return;
 
 		logger("%20s: min=%f", "range", o->minfp);
-		if (!isnan(o->maxfp))
+		if (o->maxfp != DBL_MAX)
 			logger(", max=%f", o->maxfp);
 		logger("\n");
 	} else {
@@ -361,7 +363,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			   int first, int more, int curr)
 {
 	int il, *ilp;
-	double *flp;
+	fio_fp64_t *flp;
 	long long ull, *ullp;
 	long ul1, ul2;
 	double uf;
@@ -499,12 +501,6 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		break;
 	}
 	case FIO_OPT_FLOAT_LIST: {
-
-		if (first) {
-			ul2 = 1;
-			ilp = td_var(data, o->off2);
-			*ilp = ul2;
-		}
 		if (curr >= o->maxlen) {
 			log_err("the list exceeding max length %d\n",
 					o->maxlen);
@@ -514,19 +510,19 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			log_err("not a floating point value: %s\n", ptr);
 			return 1;
 		}
-		if (!isnan(o->maxfp) && uf > o->maxfp) {
+		if (uf > o->maxfp) {
 			log_err("value out of range: %f"
 				" (range max: %f)\n", uf, o->maxfp);
 			return 1;
 		}
-		if (!isnan(o->minfp) && uf < o->minfp) {
+		if (uf < o->minfp) {
 			log_err("value out of range: %f"
 				" (range min: %f)\n", uf, o->minfp);
 			return 1;
 		}
 
 		flp = td_var(data, o->off1);
-		flp[curr] = uf;
+		flp[curr].u.f = uf;
 
 		break;
 	}
@@ -1094,11 +1090,8 @@ void option_init(struct fio_option *o)
 			o->maxval = UINT_MAX;
 	}
 	if (o->type == FIO_OPT_FLOAT_LIST) {
-#ifndef NAN
-#define NAN __builtin_nanf("")
-#endif
-		o->minfp = NAN;
-		o->maxfp = NAN;
+		o->minfp = DBL_MIN;
+		o->maxfp = DBL_MAX;
 	}
 	if (o->type == FIO_OPT_STR_SET && o->def) {
 		log_err("Option %s: string set option with"
