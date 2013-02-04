@@ -151,10 +151,10 @@ for opt do
 done
 
 if test "$show_help" = "yes" ; then
-    echo "--cc=                  Specify compiler to use"
+  echo "--cc=                  Specify compiler to use"
   echo "--extra-cflags=        Specify extra CFLAGS to pass to compiler"
-    echo "--enable-gfio          Enable building of gtk gfio"
-    exit $exit_val
+  echo "--enable-gfio          Enable building of gtk gfio"
+  exit $exit_val
 fi
 
 if check_define __linux__ ; then
@@ -846,9 +846,9 @@ if test "$gfio" = "yes" ; then
 int main(void)
 {
   gdk_threads_enter();
-  gtk_main();
   gdk_threads_leave();
-  return 0;
+
+  printf("%d", GTK_CHECK_VERSION(2, 18, 0));
 }
 EOF
 GTK_CFLAGS=$(pkg-config --cflags gtk+-2.0 gthread-2.0)
@@ -861,10 +861,16 @@ if test "$?" != "0" ; then
   echo "configure: gtk and gthread not found"
   exit 1
 fi
-if compile_prog "$GTK_CFLAGS" "$GTK_LIBS" "gfio"; then
-  gfio="yes"
-  LIBS="$LIBS $GTK_LIBS"
-  CFLAGS="$CFLAGS $GTK_CFLAGS"
+if compile_prog "$GTK_CFLAGS" "$GTK_LIBS" "gfio" ; then
+  r=$($TMPE)
+  if test "$r" != "0" ; then
+    gfio="yes"
+    LIBS="$LIBS $GTK_LIBS"
+    CFLAGS="$CFLAGS $GTK_CFLAGS"
+  else
+    echo "GTK found, but need version 2.18 or higher"
+    gfio="no"
+  fi
 else
   echo "Please install gtk and gdk libraries"
   gfio="no"
