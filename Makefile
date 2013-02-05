@@ -180,7 +180,7 @@ FIO-VERSION-FILE: FORCE
 
 override CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 
-.c.o: FORCE
+.c.o: FORCE FIO-VERSION-FILE
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
 	@$(CC) -MM $(CFLAGS) $(CPPFLAGS) $*.c > $*.d
 	@mv -f $*.d $*.d.tmp
@@ -189,7 +189,7 @@ override CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 		sed -e 's/^ *//' -e 's/$$/:/' >> $*.d
 	@rm -f $*.d.tmp
 
-init.o: FIO-VERSION-FILE
+init.o: FIO-VERSION-FILE init.c
 	$(QUIET_CC)$(CC) -o init.o $(CFLAGS) $(CPPFLAGS) -c init.c
 
 t/stest: $(T_SMALLOC_OBJS)
