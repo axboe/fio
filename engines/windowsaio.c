@@ -1,6 +1,6 @@
 /*
  * Native Windows async IO engine
- * Copyright (C) 2012 Bruce Cran <bruce@cran.org.uk>
+ * Copyright (C) 2012-2013 Bruce Cran <bruce@cran.org.uk>
  */
 
 #include <stdio.h>
@@ -525,12 +525,12 @@ static struct ioengine_ops ioengine = {
 	.io_u_free	= fio_windowsaio_io_u_free,
 };
 
-static void fio_init fio_posixaio_register(void)
+static void fio_init fio_windowsaio_register(void)
 {
 	register_ioengine(&ioengine);
 }
 
-static void fio_exit fio_posixaio_unregister(void)
+static void fio_exit fio_windowsaio_unregister(void)
 {
 	unregister_ioengine(&ioengine);
 }
