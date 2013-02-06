@@ -408,53 +408,6 @@ char *basename(char *path)
 	return name;
 }
 
-int posix_fallocate(int fd, off_t offset, off_t len)
-{
-	const int BUFFER_SIZE = 256 * 1024;
-	int rc = 0;
-	char *buf;
-	unsigned int write_len;
-	unsigned int bytes_written;
-	off_t bytes_remaining = len;
-
-	if (len == 0 || offset < 0)
-		return EINVAL;
-
-	buf = malloc(BUFFER_SIZE);
-
-	if (buf == NULL)
-		return ENOMEM;
-
-	memset(buf, 0, BUFFER_SIZE);
-
-	int64_t prev_pos = _telli64(fd);
-
-	if (_lseeki64(fd, offset, SEEK_SET) == -1)
-		return errno;
-
-	while (bytes_remaining > 0) {
-		if (bytes_remaining < BUFFER_SIZE)
-			write_len = (unsigned int)bytes_remaining;
-		else
-			write_len = BUFFER_SIZE;
-
-		bytes_written = _write(fd, buf, write_len);
-		if (bytes_written == -1) {
-			rc = errno;
-			break;
-		}
-
-		/* Don't allow Windows to cache the write: flush it to disk */
-		_commit(fd);
-
-		bytes_remaining -= bytes_written;
-	}
-
-	free(buf);
-	_lseeki64(fd, prev_pos, SEEK_SET);
-	return rc;
-}
-
 int ftruncate(int fildes, off_t length)
 {
 	BOOL bSuccess;

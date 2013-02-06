@@ -200,7 +200,6 @@ CYGWIN*)
   fi
   output_sym "CONFIG_FADVISE"
   output_sym "CONFIG_SOCKLEN_T"
-  output_sym "CONFIG_POSIX_FALLOCATE"
   output_sym "CONFIG_FADVISE"
   output_sym "CONFIG_SFAA"
   output_sym "CONFIG_RUSAGE_THREAD"
