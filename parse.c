@@ -369,11 +369,10 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	long ul1, ul2;
 	double uf;
 	char **cp = NULL;
-	char *cp2;
 	int ret = 0, is_time = 0;
 	const struct value_pair *vp;
 	struct value_pair posval[PARSE_MAX_VP];
-	int i, len, all_skipped = 1;
+	int i, all_skipped = 1;
 
 	dprint(FD_PARSE, "__handle_option=%s, type=%d, ptr=%s\n", o->name,
 							o->type, ptr);
@@ -503,6 +502,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		break;
 	}
 	case FIO_OPT_FLOAT_LIST: {
+		char *cp2;
+
 		if (first) {
 			/*
 			** Initialize precision to 0 and zero out list
@@ -546,7 +547,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		*/
 		cp2 = strchr(ptr, '.');
 		if (cp2 != NULL) {
-			len = 0;
+			int len = 0;
 
 			while (*++cp2 != '\0' && *cp2 >= '0' && *cp2 <= '9')
 				len++;

@@ -186,8 +186,8 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 {
 	unsigned int len, j = 0, minv, maxv;
 	unsigned int *ovals;
-	int is_last, scale_down;
-	char buf[32];
+	int is_last, per_line, scale_down;
+	char fmt[32];
 
 	len = calc_clat_percentiles(io_u_plat, nr, plist, &ovals, &maxv, &minv);
 	if (!len)
@@ -205,13 +205,14 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 		log_info("    clat percentiles (usec):\n     |");
 	}
 
-	snprintf(buf, sizeof(buf), "%%1.%luf", precision);
+	snprintf(fmt, sizeof(fmt), "%%1.%luf", precision);
+	per_line = (80 - 7) / (precision + 14);
 
 	for (j = 0; j < len; j++) {
 		char fbuf[16], *ptr = fbuf;
 
 		/* for formatting */
-		if (j != 0 && (j % 4) == 0)
+		if (j != 0 && (j % per_line) == 0)
 			log_info("     |");
 
 		/* end of the list */
@@ -220,7 +221,7 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 		if (plist[j].u.f < 10.0)
 			ptr += sprintf(fbuf, " ");
 
-		snprintf(ptr, sizeof(fbuf), buf, plist[j].u.f);
+		snprintf(ptr, sizeof(fbuf), fmt, plist[j].u.f);
 
 		if (scale_down)
 			ovals[j] = (ovals[j] + 999) / 1000;
@@ -230,7 +231,7 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 		if (is_last)
 			break;
 
-		if (j % 4 == 3)	/* for formatting */
+		if ((j % per_line) == per_line - 1)	/* for formatting */
 			log_info("\n");
 	}
 
