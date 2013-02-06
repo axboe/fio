@@ -369,10 +369,11 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	long ul1, ul2;
 	double uf;
 	char **cp = NULL;
+	char *cp2;
 	int ret = 0, is_time = 0;
 	const struct value_pair *vp;
 	struct value_pair posval[PARSE_MAX_VP];
-	int i, all_skipped = 1;
+	int i, len, all_skipped = 1;
 
 	dprint(FD_PARSE, "__handle_option=%s, type=%d, ptr=%s\n", o->name,
 							o->type, ptr);
@@ -502,6 +503,19 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		break;
 	}
 	case FIO_OPT_FLOAT_LIST: {
+		if (first) {
+			/*
+			** Initialize precision to 0 and zero out list
+			** in case specified list is shorter than default
+			*/
+			ul2 = 0;
+			ilp = td_var(data, o->off2);
+			*ilp = ul2;
+
+			flp = td_var(data, o->off1);
+			for(i = 0; i < o->maxlen; i++)
+				flp[i].u.f = 0.0;
+		}
 		if (curr >= o->maxlen) {
 			log_err("the list exceeding max length %d\n",
 					o->maxlen);
@@ -524,6 +538,23 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 		flp = td_var(data, o->off1);
 		flp[curr].u.f = uf;
+
+		/*
+		** Calculate precision for output by counting
+		** number of digits after period. Find first
+		** period in entire remaining list each time
+		*/
+		cp2 = strchr(ptr, '.');
+		if (cp2 != NULL) {
+			len = 0;
+
+			while (*++cp2 != '\0' && *cp2 >= '0' && *cp2 <= '9')
+				len++;
+
+			ilp = td_var(data, o->off2);
+			if (len > *ilp)
+				*ilp = len;
+		}
 
 		break;
 	}

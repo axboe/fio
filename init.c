@@ -867,6 +867,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	td->mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
 
 	td->ts.clat_percentiles = td->o.clat_percentiles;
+	td->ts.percentile_precision = td->o.percentile_precision;
 	memcpy(td->ts.percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {

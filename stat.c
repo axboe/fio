@@ -182,11 +182,12 @@ static unsigned int calc_clat_percentiles(unsigned int *io_u_plat,
  * Find and display the p-th percentile of clat
  */
 static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
-				  fio_fp64_t *plist)
+				  fio_fp64_t *plist, uint64_t precision)
 {
 	unsigned int len, j = 0, minv, maxv;
 	unsigned int *ovals;
 	int is_last, scale_down;
+	char buf1[32], buf2[32];
 
 	len = calc_clat_percentiles(io_u_plat, nr, plist, &ovals, &maxv, &minv);
 	if (!len)
@@ -204,8 +205,10 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 		log_info("    clat percentiles (usec):\n     |");
 	}
 
+	snprintf(buf1, sizeof(buf1), " %%1.%luf", precision);
+	snprintf(buf2, sizeof(buf1), "%%1.%luf", precision);
 	for (j = 0; j < len; j++) {
-		char fbuf[8];
+		char fbuf[16];
 
 		/* for formatting */
 		if (j != 0 && (j % 4) == 0)
@@ -215,9 +218,9 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 		is_last = (j == len - 1);
 
 		if (plist[j].u.f < 10.0)
-			sprintf(fbuf, " %2.2f", plist[j].u.f);
+			snprintf(fbuf, sizeof(fbuf), buf1, plist[j].u.f);
 		else
-			sprintf(fbuf, "%2.2f", plist[j].u.f);
+			snprintf(fbuf, sizeof(fbuf), buf2, plist[j].u.f);
 
 		if (scale_down)
 			ovals[j] = (ovals[j] + 999) / 1000;
@@ -440,7 +443,8 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	if (ts->clat_percentiles) {
 		show_clat_percentiles(ts->io_u_plat[ddir],
 					ts->clat_stat[ddir].samples,
-					ts->percentile_list);
+					ts->percentile_list,
+					ts->percentile_precision);
 	}
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg = 100.0;
@@ -655,7 +659,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 			log_info(";0%%=0");
 			continue;
 		}
-		log_info(";%2.2f%%=%u", ts->percentile_list[i].u.f, ovals[i]);
+		log_info(";%f%%=%u", ts->percentile_list[i].u.f, ovals[i]);
 	}
 
 	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
@@ -753,7 +757,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 			json_object_add_value_int(percentile_object, "0.00", 0);
 			continue;
 		}
-		snprintf(buf, sizeof(buf), "%2.2f", ts->percentile_list[i].u.f);
+		snprintf(buf, sizeof(buf), "%f", ts->percentile_list[i].u.f);
 		json_object_add_value_int(percentile_object, (const char *)buf, ovals[i]);
 	}
 
@@ -1210,6 +1214,7 @@ void show_run_stats(void)
 		ts = &threadstats[j];
 
 		ts->clat_percentiles = td->o.clat_percentiles;
+		ts->percentile_precision = td->o.percentile_precision;
 		memcpy(ts->percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
 
 		idx++;
