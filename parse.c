@@ -521,7 +521,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 					o->maxlen);
 			return 1;
 		}
-		if (!str_to_float(ptr, &uf)){
+		if (!str_to_float(ptr, &uf)) {
 			log_err("not a floating point value: %s\n", ptr);
 			return 1;
 		}
