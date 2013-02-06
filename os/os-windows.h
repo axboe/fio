@@ -151,12 +151,14 @@ static inline int blockdev_invalidate_cache(struct fio_file *f)
 
 static inline unsigned long long os_phys_mem(void)
 {
-	SYSTEM_INFO sysInfo;
-	uintptr_t addr;
+	long pagesize, pages;
 
-	GetSystemInfo(&sysInfo);
-	addr = (uintptr_t)sysInfo.lpMaximumApplicationAddress;
-	return (unsigned long long)addr;
+	pagesize = sysconf(_SC_PAGESIZE);
+	pages = sysconf(_SC_PHYS_PAGES);
+	if (pages == -1 || pagesize == -1)
+		return 0;
+
+	return (unsigned long long) pages * (unsigned long long) pagesize;
 }
 
 static inline void os_get_tmpdir(char *path, int len)

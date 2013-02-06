@@ -79,6 +79,7 @@ int GetNumLogicalProcessors(void)
 long sysconf(int name)
 {
 	long val = -1;
+	long val2 = -1;
 	SYSTEM_INFO sysInfo;
 	MEMORYSTATUSEX status;
 
@@ -87,7 +88,7 @@ long sysconf(int name)
 	case _SC_NPROCESSORS_ONLN:
 		val = GetNumLogicalProcessors();
 		if (val == -1)
-			log_err("_SC_NPROCESSORS_ONLN failed\n");
+			log_err("sysconf(_SC_NPROCESSORS_ONLN) failed\n");
 
 		break;
 
@@ -98,8 +99,11 @@ long sysconf(int name)
 
 	case _SC_PHYS_PAGES:
 		status.dwLength = sizeof(status);
-		GlobalMemoryStatusEx(&status);
-		val = status.ullTotalPhys;
+		val2 = sysconf(_SC_PAGESIZE);
+		if (GlobalMemoryStatusEx(&status) && val2 != -1)
+			val = status.ullTotalPhys / val2;
+		else
+			log_err("sysconf(_SC_PHYS_PAGES) failed\n");
 		break;
 	default:
 		log_err("sysconf(%d) is not implemented\n", name);
@@ -678,40 +682,40 @@ int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 
 DIR *opendir(const char *dirname)
 {
-    struct dirent_ctx *dc = NULL;
+	struct dirent_ctx *dc = NULL;
 
-    /* See if we can open it. If not, we'll return an error here */
-    HANDLE file = CreateFileA(dirname, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
-    if (file != INVALID_HANDLE_VALUE) {
-        CloseHandle(file);
-        dc = (struct dirent_ctx*)malloc(sizeof(struct dirent_ctx));
-        StringCchCopyA(dc->dirname, MAX_PATH, dirname);
-        dc->find_handle = INVALID_HANDLE_VALUE;
-    } else {
-        DWORD error = GetLastError();
-        if (error == ERROR_FILE_NOT_FOUND)
-            errno = ENOENT;
+	/* See if we can open it. If not, we'll return an error here */
+	HANDLE file = CreateFileA(dirname, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+	if (file != INVALID_HANDLE_VALUE) {
+		CloseHandle(file);
+		dc = (struct dirent_ctx*)malloc(sizeof(struct dirent_ctx));
+		StringCchCopyA(dc->dirname, MAX_PATH, dirname);
+		dc->find_handle = INVALID_HANDLE_VALUE;
+	} else {
+		DWORD error = GetLastError();
+		if (error == ERROR_FILE_NOT_FOUND)
+			errno = ENOENT;
 
-        else if (error == ERROR_PATH_NOT_FOUND)
-            errno = ENOTDIR;
-        else if (error == ERROR_TOO_MANY_OPEN_FILES)
-            errno = ENFILE;
-        else if (error == ERROR_ACCESS_DENIED)
-            errno = EACCES;
-        else
-            errno = error;
-    }
+		else if (error == ERROR_PATH_NOT_FOUND)
+			errno = ENOTDIR;
+		else if (error == ERROR_TOO_MANY_OPEN_FILES)
+			errno = ENFILE;
+		else if (error == ERROR_ACCESS_DENIED)
+			errno = EACCES;
+		else
+			errno = error;
+	}
 
-    return dc;
+	return dc;
 }
 
 int closedir(DIR *dirp)
 {
-    if (dirp != NULL && dirp->find_handle != INVALID_HANDLE_VALUE)
-        FindClose(dirp->find_handle);
+	if (dirp != NULL && dirp->find_handle != INVALID_HANDLE_VALUE)
+		FindClose(dirp->find_handle);
 
-    free(dirp);
-    return 0;
+	free(dirp);
+	return 0;
 }
 
 struct dirent *readdir(DIR *dirp)
