@@ -490,7 +490,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 
 	assert(ddir_rw(ddir));
 
-	if (td->rate_pending_usleep[ddir] <= 0)
+	if (td->rate_pending_usleep[ddir] <= 0 || !td->o.rwmix[odir])
 		return ddir;
 
 	/*
@@ -545,6 +545,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 
 	if (ddir_trim(ddir))
 		return ddir;
+
 	return ddir;
 }
 
