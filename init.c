@@ -408,7 +408,7 @@ static int fixup_options(struct thread_data *td)
 	/*
 	 * only really works with 1 file
 	 */
-	if (o->zone_size && o->open_files == 1)
+	if (o->zone_size && o->open_files > 1)
 		o->zone_size = 0;
 
 	/*
