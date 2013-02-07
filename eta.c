@@ -139,6 +139,15 @@ static int thread_eta(struct thread_data *td)
 		bytes_total = td->fill_device_size;
 	}
 
+	if (td->o.zone_size && td->o.zone_skip && bytes_total) {
+		unsigned int nr_zones;
+		uint64_t zone_bytes;
+
+		zone_bytes = bytes_total + td->o.zone_size + td->o.zone_skip;
+		nr_zones = (zone_bytes - 1) / (td->o.zone_size + td->o.zone_skip);
+		bytes_total -= nr_zones * td->o.zone_skip;
+	}
+
 	/*
 	 * if writing and verifying afterwards, bytes_total will be twice the
 	 * size. In a mixed workload, verify phase will be the size of the
@@ -155,9 +164,6 @@ static int thread_eta(struct thread_data *td)
 		} else
 			bytes_total <<= 1;
 	}
-
-	if (td->o.zone_size && td->o.zone_skip)
-		bytes_total /= (td->o.zone_skip / td->o.zone_size);
 
 	if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING) {
 		double perc, perc_t;
