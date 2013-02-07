@@ -1,6 +1,7 @@
 /*
- * Native Windows async IO engine
- * Copyright (C) 2012 Bruce Cran <bruce@cran.org.uk>
+ * windowsaio engine
+ *
+ * IO engine using Windows IO Completion Ports.
  */
 
 #include <stdio.h>
@@ -37,94 +38,18 @@ struct thread_ctx {
 };
 
 static int fio_windowsaio_cancel(struct thread_data *td,
-			       struct io_u *io_u);
+				   struct io_u *io_u);
 static BOOL timeout_expired(DWORD start_count, DWORD end_count);
 static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
-				    unsigned int max, struct timespec *t);
+					unsigned int max, struct timespec *t);
 static struct io_u *fio_windowsaio_event(struct thread_data *td, int event);
 static int fio_windowsaio_queue(struct thread_data *td,
-			      struct io_u *io_u);
+				  struct io_u *io_u);
 static void fio_windowsaio_cleanup(struct thread_data *td);
 static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter);
 static int fio_windowsaio_init(struct thread_data *td);
 static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f);
 static int fio_windowsaio_close_file(struct thread_data fio_unused *td, struct fio_file *f);
-static int win_to_posix_error(DWORD winerr);
-
-static int win_to_posix_error(DWORD winerr)
-{
-	switch (winerr)
-	{
-	case ERROR_FILE_NOT_FOUND:		return ENOENT;
-	case ERROR_PATH_NOT_FOUND:		return ENOENT;
-	case ERROR_ACCESS_DENIED:		return EACCES;
-	case ERROR_INVALID_HANDLE:		return EBADF;
-	case ERROR_NOT_ENOUGH_MEMORY:	return ENOMEM;
-	case ERROR_INVALID_DATA:		return EINVAL;
-	case ERROR_OUTOFMEMORY:			return ENOMEM;
-	case ERROR_INVALID_DRIVE:		return ENODEV;
-	case ERROR_NOT_SAME_DEVICE:		return EXDEV;
-	case ERROR_WRITE_PROTECT:		return EROFS;
-	case ERROR_BAD_UNIT:			return ENODEV;
-	case ERROR_SHARING_VIOLATION:	return EACCES;
-	case ERROR_LOCK_VIOLATION:		return EACCES;
-	case ERROR_SHARING_BUFFER_EXCEEDED:	return ENOLCK;
-	case ERROR_HANDLE_DISK_FULL:	return ENOSPC;
-	case ERROR_NOT_SUPPORTED:		return ENOSYS;
-	case ERROR_FILE_EXISTS:			return EEXIST;
-	case ERROR_CANNOT_MAKE:			return EPERM;
-	case ERROR_INVALID_PARAMETER:	return EINVAL;
-	case ERROR_NO_PROC_SLOTS:		return EAGAIN;
-	case ERROR_BROKEN_PIPE:			return EPIPE;
-	case ERROR_OPEN_FAILED:			return EIO;
-	case ERROR_NO_MORE_SEARCH_HANDLES:	return ENFILE;
-	case ERROR_CALL_NOT_IMPLEMENTED:	return ENOSYS;
-	case ERROR_INVALID_NAME:		return ENOENT;
-	case ERROR_WAIT_NO_CHILDREN:	return ECHILD;
-	case ERROR_CHILD_NOT_COMPLETE:	return EBUSY;
-	case ERROR_DIR_NOT_EMPTY:		return ENOTEMPTY;
-	case ERROR_SIGNAL_REFUSED:		return EIO;
-	case ERROR_BAD_PATHNAME:		return ENOENT;
-	case ERROR_SIGNAL_PENDING:		return EBUSY;
-	case ERROR_MAX_THRDS_REACHED:	return EAGAIN;
-	case ERROR_BUSY:				return EBUSY;
-	case ERROR_ALREADY_EXISTS:		return EEXIST;
-	case ERROR_NO_SIGNAL_SENT:		return EIO;
-	case ERROR_FILENAME_EXCED_RANGE:	return EINVAL;
-	case ERROR_META_EXPANSION_TOO_LONG:	return EINVAL;
-	case ERROR_INVALID_SIGNAL_NUMBER:	return EINVAL;
-	case ERROR_THREAD_1_INACTIVE:	return EINVAL;
-	case ERROR_BAD_PIPE:			return EINVAL;
-	case ERROR_PIPE_BUSY:			return EBUSY;
-	case ERROR_NO_DATA:				return EPIPE;
-	case ERROR_MORE_DATA:			return EAGAIN;
-	case ERROR_DIRECTORY:			return ENOTDIR;
-	case ERROR_PIPE_CONNECTED:		return EBUSY;
-	case ERROR_NO_TOKEN:			return EINVAL;
-	case ERROR_PROCESS_ABORTED:		return EFAULT;
-	case ERROR_BAD_DEVICE:			return ENODEV;
-	case ERROR_BAD_USERNAME:		return EINVAL;
-	case ERROR_OPEN_FILES:			return EAGAIN;
-	case ERROR_ACTIVE_CONNECTIONS:	return EAGAIN;
-	case ERROR_DEVICE_IN_USE:		return EAGAIN;
-	case ERROR_INVALID_AT_INTERRUPT_TIME:	return EINTR;
-	case ERROR_IO_DEVICE:			return EIO;
-	case ERROR_NOT_OWNER:			return EPERM;
-	case ERROR_END_OF_MEDIA:		return ENOSPC;
-	case ERROR_EOM_OVERFLOW:		return ENOSPC;
-	case ERROR_BEGINNING_OF_MEDIA:	return ESPIPE;
-	case ERROR_SETMARK_DETECTED:	return ESPIPE;
-	case ERROR_NO_DATA_DETECTED:	return ENOSPC;
-	case ERROR_POSSIBLE_DEADLOCK:	return EDEADLOCK;
-	case ERROR_CRC:					return EIO;
-	case ERROR_NEGATIVE_SEEK:		return EINVAL;
-	case ERROR_DISK_FULL:			return ENOSPC;
-	case ERROR_NOACCESS:			return EFAULT;
-	case ERROR_FILE_INVALID:		return ENXIO;
-	}
-
-	return winerr;
-}
 
 static int fio_windowsaio_init(struct thread_data *td)
 {
@@ -132,23 +57,27 @@ static int fio_windowsaio_init(struct thread_data *td)
 	HANDLE hKernel32Dll;
 	int rc = 0;
 
-	wd = malloc(sizeof(struct windowsaio_data));
-	if (wd != NULL)
-		ZeroMemory(wd, sizeof(struct windowsaio_data));
-	else
+	wd = calloc(1, sizeof(struct windowsaio_data));
+	if (wd == NULL) {
+		 log_err("windowsaio: failed to allocate memory for engine data\n");
 		rc = 1;
+	}
 
 	if (!rc) {
 		wd->aio_events = malloc(td->o.iodepth * sizeof(struct io_u*));
-		if (wd->aio_events == NULL)
+		if (wd->aio_events == NULL) {
+			log_err("windowsaio: failed to allocate memory for aio events list\n");
 			rc = 1;
+		}
 	}
 
 	if (!rc) {
 		/* Create an auto-reset event */
 		wd->iocomplete_event = CreateEvent(NULL, FALSE, FALSE, NULL);
-		if (wd->iocomplete_event == NULL)
+		if (wd->iocomplete_event == NULL) {
+			log_err("windowsaio: failed to create io complete event handle\n");
 			rc = 1;
+		}
 	}
 
 	if (rc) {
@@ -164,15 +93,16 @@ static int fio_windowsaio_init(struct thread_data *td)
 	wd->pCancelIoEx = (CANCELIOEX)GetProcAddress(hKernel32Dll, "CancelIoEx");
 	td->io_ops->data = wd;
 
-
 	if (!rc) {
 		struct thread_ctx *ctx;
 		struct windowsaio_data *wd;
 		HANDLE hFile;
 
 		hFile = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-		if (hFile == INVALID_HANDLE_VALUE)
+		if (hFile == INVALID_HANDLE_VALUE) {
+			log_err("windowsaio: failed to create io completion port\n");
 			rc = 1;
+		}
 
 		wd = td->io_ops->data;
 		wd->iothread_running = TRUE;
@@ -183,7 +113,7 @@ static int fio_windowsaio_init(struct thread_data *td)
 
 		if (!rc && ctx == NULL)
 		{
-			log_err("fio: out of memory in windowsaio\n");
+			log_err("windowsaio: failed to allocate memory for thread context structure\n");
 			CloseHandle(hFile);
 			rc = 1;
 		}
@@ -193,6 +123,8 @@ static int fio_windowsaio_init(struct thread_data *td)
 			ctx->iocp = hFile;
 			ctx->wd = wd;
 			wd->iothread = CreateThread(NULL, 0, IoCompletionRoutine, ctx, 0, NULL);
+			if (wd->iothread == NULL)
+				log_err("windowsaio: failed to create io completion thread\n");
 		}
 
 		if (rc || wd->iothread == NULL)
@@ -234,12 +166,12 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 	dprint(FD_FILE, "fd open %s\n", f->file_name);
 
 	if (f->filetype == FIO_TYPE_PIPE) {
-		log_err("fio: windowsaio doesn't support pipes\n");
+		log_err("windowsaio: pipes are not supported\n");
 		return 1;
 	}
 
 	if (!strcmp(f->file_name, "-")) {
-		log_err("fio: can't read/write to stdin/out\n");
+		log_err("windowsaio: can't read/write to stdin/out\n");
 		return 1;
 	}
 
@@ -271,8 +203,10 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 	f->hFile = CreateFile(f->file_name, access, sharemode,
 		NULL, openmode, flags, NULL);
 
-	if (f->hFile == INVALID_HANDLE_VALUE)
+	if (f->hFile == INVALID_HANDLE_VALUE) {
+		log_err("windowsaio: failed to open file \"%s\"\n", f->file_name);
 		rc = 1;
+	}
 
 	/* Only set up the completion port and thread if we're not just
 	 * querying the device size */
@@ -281,8 +215,10 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 
 		wd = td->io_ops->data;
 
-		if (CreateIoCompletionPort(f->hFile, wd->iocp, 0, 0) == NULL)
+		if (CreateIoCompletionPort(f->hFile, wd->iocp, 0, 0) == NULL) {
+			log_err("windowsaio: failed to create io completion port\n");
 			rc = 1;
+		}
 	}
 
 	return rc;
@@ -295,8 +231,10 @@ static int fio_windowsaio_close_file(struct thread_data fio_unused *td, struct f
 	dprint(FD_FILE, "fd close %s\n", f->file_name);
 
 	if (f->hFile != INVALID_HANDLE_VALUE) {
-		if (!CloseHandle(f->hFile))
+		if (!CloseHandle(f->hFile)) {
+			log_info("windowsaio: failed to close file handle for \"%s\"\n", f->file_name);
 			rc = 1;
+		}
 	}
 
 	f->hFile = INVALID_HANDLE_VALUE;
@@ -325,7 +263,7 @@ static struct io_u* fio_windowsaio_event(struct thread_data *td, int event)
 }
 
 static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
-				    unsigned int max, struct timespec *t)
+					unsigned int max, struct timespec *t)
 {
 	struct windowsaio_data *wd = td->io_ops->data;
 	struct flist_head *entry;
@@ -362,7 +300,7 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 		if (dequeued < min) {
 			status = WaitForSingleObject(wd->iocomplete_event, mswait);
 			if (status != WAIT_OBJECT_0 && dequeued >= min)
-			    break;
+				break;
 		}
 
 		if (dequeued >= min || (t != NULL && timeout_expired(start_count, end_count)))
@@ -398,13 +336,15 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 	case DDIR_DATASYNC:
 	case DDIR_SYNC_FILE_RANGE:
 		success = FlushFileBuffers(io_u->file->hFile);
-		if (!success)
-		    io_u->error = win_to_posix_error(GetLastError());
+		if (!success) {
+			log_err("windowsaio: failed to flush file buffers\n");
+			io_u->error = win_to_posix_error(GetLastError());
+		}
 
 		return FIO_Q_COMPLETED;
 		break;
 	case DDIR_TRIM:
-		log_err("manual TRIM isn't supported on Windows");
+		log_err("windowsaio: manual TRIM isn't supported on Windows\n");
 		io_u->error = 1;
 		io_u->resid = io_u->xfer_buflen;
 		return FIO_Q_COMPLETED;
@@ -463,7 +403,7 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 }
 
 static int fio_windowsaio_cancel(struct thread_data *td,
-			       struct io_u *io_u)
+				   struct io_u *io_u)
 {
 	int rc = 0;
 
@@ -473,8 +413,10 @@ static int fio_windowsaio_cancel(struct thread_data *td,
 	if (wd->pCancelIoEx != NULL) {
 		struct fio_overlapped *ovl = io_u->engine_data;
 
-		if (!wd->pCancelIoEx(io_u->file->hFile, &ovl->o))
+		if (!wd->pCancelIoEx(io_u->file->hFile, &ovl->o)) {
+			log_err("windowsaio: failed to cancel io\n");
 			rc = 1;
+		}
 	} else
 		rc = 1;
 
@@ -500,7 +442,8 @@ static int fio_windowsaio_io_u_init(struct thread_data *td, struct io_u *io_u)
 	o->io_complete = FALSE;
 	o->io_u = io_u;
 	o->o.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-	if (!o->o.hEvent) {
+	if (o->o.hEvent == NULL) {
+		log_err("windowsaio: failed to create event handle\n");
 		free(o);
 		return 1;
 	}
@@ -525,12 +468,12 @@ static struct ioengine_ops ioengine = {
 	.io_u_free	= fio_windowsaio_io_u_free,
 };
 
-static void fio_init fio_posixaio_register(void)
+static void fio_init fio_windowsaio_register(void)
 {
 	register_ioengine(&ioengine);
 }
 
-static void fio_exit fio_posixaio_unregister(void)
+static void fio_exit fio_windowsaio_unregister(void)
 {
 	unregister_ioengine(&ioengine);
 }

@@ -43,6 +43,81 @@ int vsprintf_s(
   const char *format,
   va_list argptr);
 
+int win_to_posix_error(DWORD winerr)
+{
+	switch (winerr)
+	{
+	case ERROR_FILE_NOT_FOUND:		return ENOENT;
+	case ERROR_PATH_NOT_FOUND:		return ENOENT;
+	case ERROR_ACCESS_DENIED:		return EACCES;
+	case ERROR_INVALID_HANDLE:		return EBADF;
+	case ERROR_NOT_ENOUGH_MEMORY:	return ENOMEM;
+	case ERROR_INVALID_DATA:		return EINVAL;
+	case ERROR_OUTOFMEMORY:			return ENOMEM;
+	case ERROR_INVALID_DRIVE:		return ENODEV;
+	case ERROR_NOT_SAME_DEVICE:		return EXDEV;
+	case ERROR_WRITE_PROTECT:		return EROFS;
+	case ERROR_BAD_UNIT:			return ENODEV;
+	case ERROR_SHARING_VIOLATION:	return EACCES;
+	case ERROR_LOCK_VIOLATION:		return EACCES;
+	case ERROR_SHARING_BUFFER_EXCEEDED:	return ENOLCK;
+	case ERROR_HANDLE_DISK_FULL:	return ENOSPC;
+	case ERROR_NOT_SUPPORTED:		return ENOSYS;
+	case ERROR_FILE_EXISTS:			return EEXIST;
+	case ERROR_CANNOT_MAKE:			return EPERM;
+	case ERROR_INVALID_PARAMETER:	return EINVAL;
+	case ERROR_NO_PROC_SLOTS:		return EAGAIN;
+	case ERROR_BROKEN_PIPE:			return EPIPE;
+	case ERROR_OPEN_FAILED:			return EIO;
+	case ERROR_NO_MORE_SEARCH_HANDLES:	return ENFILE;
+	case ERROR_CALL_NOT_IMPLEMENTED:	return ENOSYS;
+	case ERROR_INVALID_NAME:		return ENOENT;
+	case ERROR_WAIT_NO_CHILDREN:	return ECHILD;
+	case ERROR_CHILD_NOT_COMPLETE:	return EBUSY;
+	case ERROR_DIR_NOT_EMPTY:		return ENOTEMPTY;
+	case ERROR_SIGNAL_REFUSED:		return EIO;
+	case ERROR_BAD_PATHNAME:		return ENOENT;
+	case ERROR_SIGNAL_PENDING:		return EBUSY;
+	case ERROR_MAX_THRDS_REACHED:	return EAGAIN;
+	case ERROR_BUSY:				return EBUSY;
+	case ERROR_ALREADY_EXISTS:		return EEXIST;
+	case ERROR_NO_SIGNAL_SENT:		return EIO;
+	case ERROR_FILENAME_EXCED_RANGE:	return EINVAL;
+	case ERROR_META_EXPANSION_TOO_LONG:	return EINVAL;
+	case ERROR_INVALID_SIGNAL_NUMBER:	return EINVAL;
+	case ERROR_THREAD_1_INACTIVE:	return EINVAL;
+	case ERROR_BAD_PIPE:			return EINVAL;
+	case ERROR_PIPE_BUSY:			return EBUSY;
+	case ERROR_NO_DATA:				return EPIPE;
+	case ERROR_MORE_DATA:			return EAGAIN;
+	case ERROR_DIRECTORY:			return ENOTDIR;
+	case ERROR_PIPE_CONNECTED:		return EBUSY;
+	case ERROR_NO_TOKEN:			return EINVAL;
+	case ERROR_PROCESS_ABORTED:		return EFAULT;
+	case ERROR_BAD_DEVICE:			return ENODEV;
+	case ERROR_BAD_USERNAME:		return EINVAL;
+	case ERROR_OPEN_FILES:			return EAGAIN;
+	case ERROR_ACTIVE_CONNECTIONS:	return EAGAIN;
+	case ERROR_DEVICE_IN_USE:		return EAGAIN;
+	case ERROR_INVALID_AT_INTERRUPT_TIME:	return EINTR;
+	case ERROR_IO_DEVICE:			return EIO;
+	case ERROR_NOT_OWNER:			return EPERM;
+	case ERROR_END_OF_MEDIA:		return ENOSPC;
+	case ERROR_EOM_OVERFLOW:		return ENOSPC;
+	case ERROR_BEGINNING_OF_MEDIA:	return ESPIPE;
+	case ERROR_SETMARK_DETECTED:	return ESPIPE;
+	case ERROR_NO_DATA_DETECTED:	return ENOSPC;
+	case ERROR_POSSIBLE_DEADLOCK:	return EDEADLOCK;
+	case ERROR_CRC:					return EIO;
+	case ERROR_NEGATIVE_SEEK:		return EINVAL;
+	case ERROR_DISK_FULL:			return ENOSPC;
+	case ERROR_NOACCESS:			return EFAULT;
+	case ERROR_FILE_INVALID:		return ENXIO;
+	}
+
+	return winerr;
+}
+
 int GetNumLogicalProcessors(void)
 {
 	SYSTEM_LOGICAL_PROCESSOR_INFORMATION *processor_info = NULL;
@@ -79,6 +154,7 @@ int GetNumLogicalProcessors(void)
 long sysconf(int name)
 {
 	long val = -1;
+	long val2 = -1;
 	SYSTEM_INFO sysInfo;
 	MEMORYSTATUSEX status;
 
@@ -87,7 +163,7 @@ long sysconf(int name)
 	case _SC_NPROCESSORS_ONLN:
 		val = GetNumLogicalProcessors();
 		if (val == -1)
-			log_err("_SC_NPROCESSORS_ONLN failed\n");
+			log_err("sysconf(_SC_NPROCESSORS_ONLN) failed\n");
 
 		break;
 
@@ -98,8 +174,11 @@ long sysconf(int name)
 
 	case _SC_PHYS_PAGES:
 		status.dwLength = sizeof(status);
-		GlobalMemoryStatusEx(&status);
-		val = status.ullTotalPhys;
+		val2 = sysconf(_SC_PAGESIZE);
+		if (GlobalMemoryStatusEx(&status) && val2 != -1)
+			val = status.ullTotalPhys / val2;
+		else
+			log_err("sysconf(_SC_PHYS_PAGES) failed\n");
 		break;
 	default:
 		log_err("sysconf(%d) is not implemented\n", name);
@@ -210,6 +289,8 @@ void *mmap(void *addr, size_t len, int prot, int flags,
 	if ((flags & MAP_ANON) | (flags & MAP_ANONYMOUS))
 	{
 		allocAddr = VirtualAlloc(addr, len, MEM_COMMIT, vaProt);
+		if (allocAddr == NULL)
+			errno = win_to_posix_error(GetLastError());
 	}
 
 	return allocAddr;
@@ -217,21 +298,26 @@ void *mmap(void *addr, size_t len, int prot, int flags,
 
 int munmap(void *addr, size_t len)
 {
-	return !VirtualFree(addr, 0, MEM_RELEASE);
+	if (!VirtualFree(addr, 0, MEM_RELEASE)) {
+		errno = win_to_posix_error(GetLastError());
+		return -1;
+	}
+
+	return 0;
 }
 
 int fork(void)
 {
 	log_err("%s is not implemented\n", __func__);
 	errno = ENOSYS;
-	return (-1);
+	return -1;
 }
 
 pid_t setsid(void)
 {
 	log_err("%s is not implemented\n", __func__);
 	errno = ENOSYS;
-	return (-1);
+	return -1;
 }
 
 static HANDLE log_file = INVALID_HANDLE_VALUE;
@@ -276,7 +362,7 @@ void syslog(int priority, const char *message, ... /* argument */)
 int kill(pid_t pid, int sig)
 {
 	errno = ESRCH;
-	return (-1);
+	return -1;
 }
 
 /*
@@ -297,7 +383,7 @@ int fcntl(int fildes, int cmd, ...)
 		return 0;
 	else if (cmd != F_SETFL) {
 		errno = EINVAL;
-		return (-1);
+		return -1;
 	}
 
 	va_start(ap, 1);
@@ -369,12 +455,42 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
 
 int mlock(const void * addr, size_t len)
 {
-	return !VirtualLock((LPVOID)addr, len);
+	SIZE_T min, max;
+	BOOL success;
+	HANDLE process = GetCurrentProcess();
+
+	success = GetProcessWorkingSetSize(process, &min, &max);
+	if (!success) {
+		errno = win_to_posix_error(GetLastError());
+		return -1;
+	}
+
+	min += len;
+	max += len;
+	success = SetProcessWorkingSetSize(process, min, max);
+	if (!success) {
+		errno = win_to_posix_error(GetLastError());
+		return -1;
+	}
+
+	success = VirtualLock((LPVOID)addr, len);
+	if (!success) {
+		errno = win_to_posix_error(GetLastError());
+		return -1;
+	}
+
+	return 0;
 }
 
 int munlock(const void * addr, size_t len)
 {
-	return !VirtualUnlock((LPVOID)addr, len);
+	BOOL success = VirtualUnlock((LPVOID)addr, len);
+	if (!success) {
+		errno = win_to_posix_error(GetLastError());
+		return -1;
+	}
+
+	return 0;
 }
 
 pid_t waitpid(pid_t pid, int *stat_loc, int options)
@@ -408,68 +524,15 @@ char *basename(char *path)
 	return name;
 }
 
-int posix_fallocate(int fd, off_t offset, off_t len)
-{
-	const int BUFFER_SIZE = 256 * 1024;
-	int rc = 0;
-	char *buf;
-	unsigned int write_len;
-	unsigned int bytes_written;
-	off_t bytes_remaining = len;
-
-	if (len == 0 || offset < 0)
-		return EINVAL;
-
-	buf = malloc(BUFFER_SIZE);
-
-	if (buf == NULL)
-		return ENOMEM;
-
-	memset(buf, 0, BUFFER_SIZE);
-
-	int64_t prev_pos = _telli64(fd);
-
-	if (_lseeki64(fd, offset, SEEK_SET) == -1)
-		return errno;
-
-	while (bytes_remaining > 0) {
-		if (bytes_remaining < BUFFER_SIZE)
-			write_len = (unsigned int)bytes_remaining;
-		else
-			write_len = BUFFER_SIZE;
-
-		bytes_written = _write(fd, buf, write_len);
-		if (bytes_written == -1) {
-			rc = errno;
-			break;
-		}
-
-		/* Don't allow Windows to cache the write: flush it to disk */
-		_commit(fd);
-
-		bytes_remaining -= bytes_written;
-	}
-
-	free(buf);
-	_lseeki64(fd, prev_pos, SEEK_SET);
-	return rc;
-}
-
-int ftruncate(int fildes, off_t length)
-{
-	BOOL bSuccess;
-	int64_t prev_pos = _telli64(fildes);
-	_lseeki64(fildes, length, SEEK_SET);
-	HANDLE hFile = (HANDLE)_get_osfhandle(fildes);
-	bSuccess = SetEndOfFile(hFile);
-	_lseeki64(fildes, prev_pos, SEEK_SET);
-	return !bSuccess;
-}
-
 int fsync(int fildes)
 {
 	HANDLE hFile = (HANDLE)_get_osfhandle(fildes);
-	return !FlushFileBuffers(hFile);
+	if (!FlushFileBuffers(hFile)) {
+		errno = win_to_posix_error(GetLastError());
+		return -1;
+	}
+
+	return 0;
 }
 
 int nFileMappings = 0;
@@ -497,14 +560,33 @@ void *shmat(int shmid, const void *shmaddr, int shmflg)
 	void* mapAddr;
 	MEMORY_BASIC_INFORMATION memInfo;
 	mapAddr = MapViewOfFile(fileMappings[shmid], FILE_MAP_ALL_ACCESS, 0, 0, 0);
-	VirtualQuery(mapAddr, &memInfo, sizeof(memInfo));
+	if (mapAddr == NULL) {
+		errno = win_to_posix_error(GetLastError());
+		return (void*)-1;
+	}
+
+	if (VirtualQuery(mapAddr, &memInfo, sizeof(memInfo)) == 0) {
+		errno = win_to_posix_error(GetLastError());
+		return (void*)-1;
+	}
+
 	mapAddr = VirtualAlloc(mapAddr, memInfo.RegionSize, MEM_COMMIT, PAGE_READWRITE);
+	if (mapAddr == NULL) {
+		errno = win_to_posix_error(GetLastError());
+		return (void*)-1;
+	}
+
 	return mapAddr;
 }
 
 int shmdt(const void *shmaddr)
 {
-	return !UnmapViewOfFile(shmaddr);
+	if (!UnmapViewOfFile(shmaddr)) {
+		errno = win_to_posix_error(GetLastError());
+		return -1;
+	}
+
+	return 0;
 }
 
 int shmctl(int shmid, int cmd, struct shmid_ds *buf)
@@ -515,21 +597,22 @@ int shmctl(int shmid, int cmd, struct shmid_ds *buf)
 	} else {
 		log_err("%s is not implemented\n", __func__);
 	}
-	return (-1);
+	errno = ENOSYS;
+	return -1;
 }
 
 int setuid(uid_t uid)
 {
 	log_err("%s is not implemented\n", __func__);
 	errno = ENOSYS;
-	return (-1);
+	return -1;
 }
 
 int setgid(gid_t gid)
 {
 	log_err("%s is not implemented\n", __func__);
 	errno = ENOSYS;
-	return (-1);
+	return -1;
 }
 
 int nice(int incr)
@@ -622,14 +705,14 @@ ssize_t readv(int fildes, const struct iovec *iov, int iovcnt)
 {
 	log_err("%s is not implemented\n", __func__);
 	errno = ENOSYS;
-	return (-1);
+	return -1;
 }
 
 ssize_t writev(int fildes, const struct iovec *iov, int iovcnt)
 {
 	log_err("%s is not implemented\n", __func__);
 	errno = ENOSYS;
-	return (-1);
+	return -1;
 }
 
 long long strtoll(const char *restrict str, char **restrict endptr,
@@ -725,40 +808,40 @@ int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 
 DIR *opendir(const char *dirname)
 {
-    struct dirent_ctx *dc = NULL;
+	struct dirent_ctx *dc = NULL;
 
-    /* See if we can open it. If not, we'll return an error here */
-    HANDLE file = CreateFileA(dirname, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
-    if (file != INVALID_HANDLE_VALUE) {
-        CloseHandle(file);
-        dc = (struct dirent_ctx*)malloc(sizeof(struct dirent_ctx));
-        StringCchCopyA(dc->dirname, MAX_PATH, dirname);
-        dc->find_handle = INVALID_HANDLE_VALUE;
-    } else {
-        DWORD error = GetLastError();
-        if (error == ERROR_FILE_NOT_FOUND)
-            errno = ENOENT;
+	/* See if we can open it. If not, we'll return an error here */
+	HANDLE file = CreateFileA(dirname, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+	if (file != INVALID_HANDLE_VALUE) {
+		CloseHandle(file);
+		dc = (struct dirent_ctx*)malloc(sizeof(struct dirent_ctx));
+		StringCchCopyA(dc->dirname, MAX_PATH, dirname);
+		dc->find_handle = INVALID_HANDLE_VALUE;
+	} else {
+		DWORD error = GetLastError();
+		if (error == ERROR_FILE_NOT_FOUND)
+			errno = ENOENT;
 
-        else if (error == ERROR_PATH_NOT_FOUND)
-            errno = ENOTDIR;
-        else if (error == ERROR_TOO_MANY_OPEN_FILES)
-            errno = ENFILE;
-        else if (error == ERROR_ACCESS_DENIED)
-            errno = EACCES;
-        else
-            errno = error;
-    }
+		else if (error == ERROR_PATH_NOT_FOUND)
+			errno = ENOTDIR;
+		else if (error == ERROR_TOO_MANY_OPEN_FILES)
+			errno = ENFILE;
+		else if (error == ERROR_ACCESS_DENIED)
+			errno = EACCES;
+		else
+			errno = error;
+	}
 
-    return dc;
+	return dc;
 }
 
 int closedir(DIR *dirp)
 {
-    if (dirp != NULL && dirp->find_handle != INVALID_HANDLE_VALUE)
-        FindClose(dirp->find_handle);
+	if (dirp != NULL && dirp->find_handle != INVALID_HANDLE_VALUE)
+		FindClose(dirp->find_handle);
 
-    free(dirp);
-    return 0;
+	free(dirp);
+	return 0;
 }
 
 struct dirent *readdir(DIR *dirp)

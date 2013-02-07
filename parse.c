@@ -501,6 +501,21 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		break;
 	}
 	case FIO_OPT_FLOAT_LIST: {
+		char *cp2;
+
+		if (first) {
+			/*
+			** Initialize precision to 0 and zero out list
+			** in case specified list is shorter than default
+			*/
+			ul2 = 0;
+			ilp = td_var(data, o->off2);
+			*ilp = ul2;
+
+			flp = td_var(data, o->off1);
+			for(i = 0; i < o->maxlen; i++)
+				flp[i].u.f = 0.0;
+		}
 		if (curr >= o->maxlen) {
 			log_err("the list exceeding max length %d\n",
 					o->maxlen);
@@ -523,6 +538,23 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 		flp = td_var(data, o->off1);
 		flp[curr].u.f = uf;
+
+		/*
+		** Calculate precision for output by counting
+		** number of digits after period. Find first
+		** period in entire remaining list each time
+		*/
+		cp2 = strchr(ptr, '.');
+		if (cp2 != NULL) {
+			int len = 0;
+
+			while (*++cp2 != '\0' && *cp2 >= '0' && *cp2 <= '9')
+				len++;
+
+			ilp = td_var(data, o->off2);
+			if (len > *ilp)
+				*ilp = len;
+		}
 
 		break;
 	}

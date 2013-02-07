@@ -137,9 +137,11 @@ for opt do
   --extra-cflags=*)
   CFLAGS="$CFLAGS $optarg"
   ;;
+  --build-32bit-win=*) build_32bit_win="$optarg"
+  ;;
   --enable-gfio)
-    gfio="yes"
-    ;;
+  gfio="yes"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -153,6 +155,7 @@ done
 if test "$show_help" = "yes" ; then
   echo "--cc=                  Specify compiler to use"
   echo "--extra-cflags=        Specify extra CFLAGS to pass to compiler"
+  echo "--build-32bit-win=     Specify yes for a 32-bit build on Windows"
   echo "--enable-gfio          Enable building of gtk gfio"
   exit $exit_val
 fi
@@ -191,13 +194,20 @@ SunOS)
 CYGWIN*)
   echo "Forcing known good options on Windows"
   if test -z "$CC" ; then
-    CC="x86_64-w64-mingw32-gcc"
+    if test ! -z "$build_32bit_win" && test "$build_32bit_win" = "yes"; then
+      CC="i686-w64-mingw32-gcc"
+    else
+      CC="x86_64-w64-mingw32-gcc"
+    fi
   fi
   output_sym "CONFIG_LITTLE_ENDIAN"
-  output_sym "CONFIG_64BIT_LLP64"
+  if test ! -z "$build_32bit_win" && test "$build_32bit_win" = "yes"; then
+    output_sym "CONFIG_32BIT"
+  else
+    output_sym "CONFIG_64BIT_LLP64"
+  fi
   output_sym "CONFIG_FADVISE"
   output_sym "CONFIG_SOCKLEN_T"
-  output_sym "CONFIG_POSIX_FALLOCATE"
   output_sym "CONFIG_FADVISE"
   output_sym "CONFIG_SFAA"
   output_sym "CONFIG_RUSAGE_THREAD"

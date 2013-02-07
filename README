@@ -125,6 +125,9 @@ How to compile FIO on 64-bit Windows:
  5. Run 'make clean'.
  6. Run 'make'.
 
+To build fio on 32-bit Windows, download x86/pthreadGC2.dll instead and do
+'./configure --build-32bit-win=yes' before 'make'.
+
 
 Command line
 ------------

@@ -7,14 +7,13 @@
 		<?define ProgramDirectory = ProgramFiles64Folder ?>
 	<?endif?>
 
-	<Product Id="F9883688-6AB3-4BD1-AB93-91D39F12F003"
+	<Product Id="*"
 	  Codepage="1252" Language="1033"
 	  Manufacturer="fio" Name="fio"
-	  UpgradeCode="2338A332-5511-43cf-b9BD-5C60496CCFCC" Version="2.0.13">
+	  UpgradeCode="2338A332-5511-43CF-B9BD-5C60496CCFCC" Version="2.0.13">
 		<Package
-		  Comments="Contact: Your local administrator"
 		  Description="Flexible IO Tester"
-		  InstallerVersion="200" Keywords="Installer,MSI,Database"
+		  InstallerVersion="301" Keywords="Installer,MSI,Database"
 		  Languages="1033" Manufacturer="fio"
 		  InstallScope="perMachine" InstallPrivileges="elevated" Compressed="yes"/>
 
@@ -66,11 +65,6 @@
 	<WixVariable Id="WixUILicenseRtf" Value="eula.rtf" />
 
 	<UIRef Id="WixUI_Minimal"/>
-
-	<Condition Message="Per-user installations are not supported">
-		Installed OR
-		ALLUSERS=1
-	</Condition>
 
 	<MajorUpgrade AllowDowngrades="no" DowngradeErrorMessage="A newer version of the application is already installed."/>
 </Product>

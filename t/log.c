@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdarg.h>
+#include "../minmax.h"
 
 int log_err(const char *format, ...)
 {
