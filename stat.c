@@ -182,7 +182,7 @@ static unsigned int calc_clat_percentiles(unsigned int *io_u_plat,
  * Find and display the p-th percentile of clat
  */
 static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
-				  fio_fp64_t *plist, uint64_t precision)
+				  fio_fp64_t *plist, unsigned int precision)
 {
 	unsigned int len, j = 0, minv, maxv;
 	unsigned int *ovals;
@@ -205,7 +205,7 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 		log_info("    clat percentiles (usec):\n     |");
 	}
 
-	snprintf(fmt, sizeof(fmt), "%%1.%luf", precision);
+	snprintf(fmt, sizeof(fmt), "%%1.%uf", precision);
 	per_line = (80 - 7) / (precision + 14);
 
 	for (j = 0; j < len; j++) {
