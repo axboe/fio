@@ -28,7 +28,6 @@ struct windowsaio_data {
 	HANDLE iocp;
 	HANDLE iothread;
 	HANDLE iocomplete_event;
-	CANCELIOEX pCancelIoEx;
 	BOOL iothread_running;
 };
 
@@ -37,8 +36,6 @@ struct thread_ctx {
 	struct windowsaio_data *wd;
 };
 
-static int fio_windowsaio_cancel(struct thread_data *td,
-				   struct io_u *io_u);
 static BOOL timeout_expired(DWORD start_count, DWORD end_count);
 static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 					unsigned int max, struct timespec *t);
@@ -54,7 +51,6 @@ static int fio_windowsaio_close_file(struct thread_data fio_unused *td, struct f
 static int fio_windowsaio_init(struct thread_data *td)
 {
 	struct windowsaio_data *wd;
-	HANDLE hKernel32Dll;
 	int rc = 0;
 
 	wd = calloc(1, sizeof(struct windowsaio_data));
@@ -89,8 +85,6 @@ static int fio_windowsaio_init(struct thread_data *td)
 		}
 	}
 
-	hKernel32Dll = GetModuleHandle("kernel32.dll");
-	wd->pCancelIoEx = (CANCELIOEX)GetProcAddress(hKernel32Dll, "CancelIoEx");
 	td->io_ops->data = wd;
 
 	if (!rc) {
@@ -402,27 +396,6 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 	return 0;
 }
 
-static int fio_windowsaio_cancel(struct thread_data *td,
-				   struct io_u *io_u)
-{
-	int rc = 0;
-
-	struct windowsaio_data *wd = td->io_ops->data;
-
-	/* If we're running on Vista or newer, we can cancel individual IO requests */
-	if (wd->pCancelIoEx != NULL) {
-		struct fio_overlapped *ovl = io_u->engine_data;
-
-		if (!wd->pCancelIoEx(io_u->file->hFile, &ovl->o)) {
-			log_err("windowsaio: failed to cancel io\n");
-			rc = 1;
-		}
-	} else
-		rc = 1;
-
-	return rc;
-}
-
 static void fio_windowsaio_io_u_free(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_overlapped *o = io_u->engine_data;
@@ -457,7 +430,6 @@ static struct ioengine_ops ioengine = {
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_windowsaio_init,
 	.queue		= fio_windowsaio_queue,
-	.cancel		= fio_windowsaio_cancel,
 	.getevents	= fio_windowsaio_getevents,
 	.event		= fio_windowsaio_event,
 	.cleanup	= fio_windowsaio_cleanup,
