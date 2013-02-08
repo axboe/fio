@@ -490,14 +490,14 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 
 	assert(ddir_rw(ddir));
 
-	if (td->rate_pending_usleep[ddir] <= 0 || !td->o.rwmix[odir])
+	if (td->rate_pending_usleep[ddir] <= 0)
 		return ddir;
 
 	/*
 	 * We have too much pending sleep in this direction. See if we
 	 * should switch.
 	 */
-	if (td_rw(td)) {
+	if (td_rw(td) && td->o.rwmix[odir]) {
 		/*
 		 * Other direction does not have too much pending, switch
 		 */
