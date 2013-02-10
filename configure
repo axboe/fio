@@ -129,6 +129,8 @@ exit_val=0
 for opt do
   optarg=`expr "x$opt" : 'x[^=]*=\(.*\)'`
   case "$opt" in
+  --cpu=*) cpu="$optarg"
+  ;;
   --cc=*) CC="$optarg"
   ;;
   --extra-cflags=*) CFLAGS="$CFLAGS $optarg"
@@ -146,6 +148,7 @@ for opt do
 done
 
 if test "$show_help" = "yes" ; then
+  echo "--cpu=                 Specify target CPU if auto-detect fails"
   echo "--cc=                  Specify compiler to use"
   echo "--extra-cflags=        Specify extra CFLAGS to pass to compiler"
   echo "--build-32bit-win=     Specify yes for a 32-bit build on Windows"
@@ -276,8 +279,7 @@ case "$cpu" in
     cpu="sparc"
   ;;
   *)
-    echo "Unknown CPU"
-    exit 1;
+  echo "Unknown CPU"
   ;;
 esac
 
