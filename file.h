@@ -97,7 +97,7 @@ struct fio_file {
 	/*
 	 * For use by the io engine
 	 */
-	uintptr_t engine_data;
+	uint64_t engine_data;
 
 	/*
 	 * if io is protected by a semaphore, this is set
