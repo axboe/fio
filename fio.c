@@ -28,8 +28,8 @@
 #include "fio.h"
 #include "smalloc.h"
 
-uintptr_t page_mask;
-uintptr_t page_size;
+uintptr_t page_mask = 0;
+uintptr_t page_size = 0;
 
 static int endian_check(void)
 {

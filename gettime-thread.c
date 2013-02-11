@@ -6,7 +6,7 @@
 #include "fio.h"
 #include "smalloc.h"
 
-struct timeval *fio_tv;
+struct timeval *fio_tv = NULL;
 int fio_gtod_offload = 0;
 int fio_gtod_cpu = -1;
 static pthread_t gtod_thread;

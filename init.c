@@ -40,7 +40,7 @@ struct thread_data *threads = NULL;
 
 int exitall_on_terminate = 0;
 int output_format = FIO_OUTPUT_NORMAL;
-int eta_print;
+int eta_print = FIO_ETA_AUTO;
 unsigned long long mlock_size = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
