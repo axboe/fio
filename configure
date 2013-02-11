@@ -29,6 +29,14 @@ config_host_h="config-host.h"
 rm -rf $config_host_mak
 rm -rf $config_host_h
 
+fatal() {
+  echo $@
+  echo "Configure failed, check config.log and/or the above output"
+  rm -rf $config_host_mak
+  rm -rf $config_host_h
+  exit 1
+}
+
 # Default CFLAGS
 CFLAGS="-D_GNU_SOURCE"
 EXTFLAGS="-include config-host.h"
@@ -70,8 +78,7 @@ do_cc() {
     echo "ERROR: configure test passed without -Werror but failed with -Werror."
     echo "This is probably a bug in the configure script. The failing command"
     echo "will be at the bottom of config.log."
-    echo "You can run configure with --disable-werror to bypass this check."
-    exit 1
+    fatal "You can run configure with --disable-werror to bypass this check."
 }
 
 compile_object() {
@@ -91,8 +98,7 @@ feature_not_found() {
   echo "ERROR"
   echo "ERROR: User requested feature $feature"
   echo "ERROR: configure was not able to find it"
-  echo "ERROR"
-  exit 1;
+  fatal "ERROR"
 }
 
 has() {
@@ -902,8 +908,7 @@ if test "$wordsize" = "64" ; then
 elif test "$wordsize" = "32" ; then
   output_sym "CONFIG_32BIT"
 else
-  echo "Unknown wordsize!"
-  exit 1
+  fatal "Unknown wordsize!"
 fi
 if test "$bigendian" = "yes" ; then
   output_sym "CONFIG_BIG_ENDIAN"
