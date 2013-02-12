@@ -90,7 +90,6 @@ ifeq ($(UNAME), Android)
   SOURCE += diskutil.c fifo.c blktrace.c trim.c profiles/tiobench.c
   LIBS += -ldl
   LDFLAGS += -rdynamic
-  CPPFLAGS += -DFIO_NO_HAVE_SHM_H
 endif
 ifeq ($(UNAME), SunOS)
   LIBS	 += -lpthread -ldl -laio -lrt -lnsl -lsocket

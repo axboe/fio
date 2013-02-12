@@ -161,7 +161,9 @@ if test "$show_help" = "yes" ; then
   exit $exit_val
 fi
 
-if check_define __linux__ ; then
+if check_define __ANDROID__ ; then
+  targetos="Android"
+elif check_define __linux__ ; then
   targetos="Linux"
 elif check_define __OpenBSD__ ; then
   targetos='OpenBSD'
@@ -221,6 +223,15 @@ CYGWIN*)
   output_sym "CONFIG_TCP_NODELAY"
   echo "CC=$CC" >> $config_host_mak
   echo "EXTFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
+  exit 0
+  ;;
+Android)
+  output_sym "CONFIG_32BIT"
+  output_sym "CONFIG_SOCKLEN_T"
+  output_sym "CONFIG_GETTIMEOFDAY"
+  output_sym "CONFIG_CLOCK_GETTIME"
+  echo "CC=$cc" >> $config_host_mak
+  echo "EXTFLAGS=$CFLAGS -include config-host.h -DFIO_NO_HAVE_SHM_H -D_GNU_SOURCE" >> $config_host_mak
   exit 0
 esac
 
