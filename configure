@@ -227,9 +227,11 @@ CYGWIN*)
   ;;
 Android)
   output_sym "CONFIG_32BIT"
+  output_sym "CONFIG_LITTLE_ENDIAN"
   output_sym "CONFIG_SOCKLEN_T"
   output_sym "CONFIG_GETTIMEOFDAY"
   output_sym "CONFIG_CLOCK_GETTIME"
+  output_sym "CONFIG_CLOCK_MONOTONIC"
   echo "CC=$cc" >> $config_host_mak
   echo "EXTFLAGS=$CFLAGS -include config-host.h -DFIO_NO_HAVE_SHM_H -D_GNU_SOURCE" >> $config_host_mak
   exit 0
