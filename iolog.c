@@ -316,6 +316,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 									act);
 				continue;
 			}
+			fileno = get_fileno(td, fname);
 		} else if (r == 2) {
 			rw = DDIR_INVAL;
 			if (!strcmp(act, "add")) {
