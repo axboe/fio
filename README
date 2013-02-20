@@ -59,7 +59,7 @@ tool (http://www.opencsw.org/get-it/pkgutil/) and then install fio via
 
 Windows:
 Bruce Cran <bruce@cran.org.uk> has fio packages for Windows at
-http://www.bluestop.org/fio .
+http://www.bluestop.org/fio/ .
 
 
 Mailing list
@@ -127,6 +127,11 @@ How to compile FIO on 64-bit Windows:
 
 To build fio on 32-bit Windows, download x86/pthreadGC2.dll instead and do
 './configure --build-32bit-win=yes' before 'make'.
+
+It's recommended that once built or installed, fio be run in a Command Prompt
+or other 'native' console such as console2, since there are known to be display
+and signal issues when running it under a Cygwin shell
+(see http://code.google.com/p/mintty/issues/detail?id=56 for details).
 
 
 Command line
