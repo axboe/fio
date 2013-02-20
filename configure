@@ -29,6 +29,14 @@ config_host_h="config-host.h"
 rm -rf $config_host_mak
 rm -rf $config_host_h
 
+fatal() {
+  echo $@
+  echo "Configure failed, check config.log and/or the above output"
+  rm -rf $config_host_mak
+  rm -rf $config_host_h
+  exit 1
+}
+
 # Default CFLAGS
 CFLAGS="-D_GNU_SOURCE"
 EXTFLAGS="-include config-host.h"
@@ -70,8 +78,7 @@ do_cc() {
     echo "ERROR: configure test passed without -Werror but failed with -Werror."
     echo "This is probably a bug in the configure script. The failing command"
     echo "will be at the bottom of config.log."
-    echo "You can run configure with --disable-werror to bypass this check."
-    exit 1
+    fatal "You can run configure with --disable-werror to bypass this check."
 }
 
 compile_object() {
@@ -91,8 +98,7 @@ feature_not_found() {
   echo "ERROR"
   echo "ERROR: User requested feature $feature"
   echo "ERROR: configure was not able to find it"
-  echo "ERROR"
-  exit 1;
+  fatal "ERROR"
 }
 
 has() {
@@ -131,11 +137,11 @@ gfio="no"
 for opt do
   optarg=`expr "x$opt" : 'x[^=]*=\(.*\)'`
   case "$opt" in
-  --cc=*)
-    CC="$optarg"
-    ;;
-  --extra-cflags=*)
-  CFLAGS="$CFLAGS $optarg"
+  --cpu=*) cpu="$optarg"
+  ;;
+  --cc=*) CC="$optarg"
+  ;;
+  --extra-cflags=*) CFLAGS="$CFLAGS $optarg"
   ;;
   --build-32bit-win=*) build_32bit_win="$optarg"
   ;;
@@ -153,6 +159,7 @@ for opt do
 done
 
 if test "$show_help" = "yes" ; then
+  echo "--cpu=                 Specify target CPU if auto-detect fails"
   echo "--cc=                  Specify compiler to use"
   echo "--extra-cflags=        Specify extra CFLAGS to pass to compiler"
   echo "--build-32bit-win=     Specify yes for a 32-bit build on Windows"
@@ -160,7 +167,9 @@ if test "$show_help" = "yes" ; then
   exit $exit_val
 fi
 
-if check_define __linux__ ; then
+if check_define __ANDROID__ ; then
+  targetos="Android"
+elif check_define __linux__ ; then
   targetos="Linux"
 elif check_define __OpenBSD__ ; then
   targetos='OpenBSD'
@@ -220,6 +229,17 @@ CYGWIN*)
   output_sym "CONFIG_TCP_NODELAY"
   echo "CC=$CC" >> $config_host_mak
   echo "EXTFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
+  exit 0
+  ;;
+Android)
+  output_sym "CONFIG_32BIT"
+  output_sym "CONFIG_LITTLE_ENDIAN"
+  output_sym "CONFIG_SOCKLEN_T"
+  output_sym "CONFIG_GETTIMEOFDAY"
+  output_sym "CONFIG_CLOCK_GETTIME"
+  output_sym "CONFIG_CLOCK_MONOTONIC"
+  echo "CC=$cc" >> $config_host_mak
+  echo "EXTFLAGS=$CFLAGS -include config-host.h -DFIO_NO_HAVE_SHM_H -D_GNU_SOURCE" >> $config_host_mak
   exit 0
 esac
 
@@ -284,8 +304,7 @@ case "$cpu" in
     cpu="sparc"
   ;;
   *)
-    echo "Unknown CPU"
-    exit 1;
+  echo "Unknown CPU"
   ;;
 esac
 
@@ -950,8 +969,7 @@ if test "$wordsize" = "64" ; then
 elif test "$wordsize" = "32" ; then
   output_sym "CONFIG_32BIT"
 else
-  echo "Unknown wordsize!"
-  exit 1
+  fatal "Unknown wordsize!"
 fi
 if test "$bigendian" = "yes" ; then
   output_sym "CONFIG_BIG_ENDIAN"

@@ -497,7 +497,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	 * We have too much pending sleep in this direction. See if we
 	 * should switch.
 	 */
-	if (td_rw(td)) {
+	if (td_rw(td) && td->o.rwmix[odir]) {
 		/*
 		 * Other direction does not have too much pending, switch
 		 */
@@ -545,6 +545,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 
 	if (ddir_trim(ddir))
 		return ddir;
+
 	return ddir;
 }
 

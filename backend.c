@@ -322,6 +322,21 @@ requeue:
 	return 0;
 }
 
+static int fio_file_fsync(struct thread_data *td, struct fio_file *f)
+{
+	int ret;
+
+	if (fio_file_open(f))
+		return fio_io_sync(td, f);
+
+	if (td_io_open_file(td, f))
+		return 1;
+
+	ret = fio_io_sync(td, f);
+	td_io_close_file(td, f);
+	return ret;
+}
+
 static inline void __update_tv_cache(struct thread_data *td)
 {
 	fio_gettime(&td->tv_cache, NULL);
@@ -822,9 +837,11 @@ sync_done:
 			td_set_runstate(td, TD_FSYNCING);
 
 			for_each_file(td, f, i) {
-				if (!fio_file_open(f))
+				if (!fio_file_fsync(td, f))
 					continue;
-				fio_io_sync(td, f);
+
+				log_err("fio: end_fsync failed for file %s\n",
+								f->file_name);
 			}
 		}
 	} else
