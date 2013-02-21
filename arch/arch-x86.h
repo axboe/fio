@@ -34,7 +34,7 @@ static inline unsigned long arch_ffz(unsigned long bitmask)
 
 static inline unsigned long long get_cpu_clock(void)
 {
-	unsigned long ret;
+	unsigned long long ret;
 
 	__asm__ __volatile__("rdtsc" : "=A" (ret));
 	return ret;
