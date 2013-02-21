@@ -1358,10 +1358,10 @@ void show_run_stats(void)
 
 	if (is_backend)
 		fio_server_send_du();
-	else if (output_format == FIO_OUTPUT_NORMAL)
+	else if (output_format == FIO_OUTPUT_NORMAL) {
 		show_disk_util(0, NULL);
-
-	show_idle_prof_stats(FIO_OUTPUT_NORMAL, NULL);
+		show_idle_prof_stats(FIO_OUTPUT_NORMAL, NULL);
+	}
 
 	free(runstats);
 	free(threadstats);
