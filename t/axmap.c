@@ -45,7 +45,15 @@ int main(int argc, char *argv[])
 			printf("lfsr: short loop\n");
 			break;
 		}
+		if (axmap_isset(map, val)) {
+			printf("bit already set\n");
+			break;
+		}
 		axmap_set(map, val);
+		if (!axmap_isset(map, val)) {
+			printf("bit not set\n");
+			break;
+		}
 	}
 
 	ff = axmap_next_free(map, osize);
