@@ -501,6 +501,7 @@ int fio_monotonic_clocktest(void)
 	unsigned int nr_cpus = cpus_online();
 	struct clock_entry *entries;
 	unsigned long tentries, failed;
+	struct clock_entry *prev, *this;
 	uint64_t seq = 0;
 	int i;
 
@@ -558,7 +559,7 @@ int fio_monotonic_clocktest(void)
 	qsort(entries, tentries, sizeof(struct clock_entry), clock_cmp);
 
 	for (failed = i = 0; i < tentries; i++) {
-		struct clock_entry *prev, *this = &entries[i];
+		this = &entries[i];
 
 		if (!i) {
 			prev = this;
