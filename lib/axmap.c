@@ -374,9 +374,9 @@ static int axmap_next_free_fn(struct axmap_level *al, unsigned long offset,
 			       unsigned int bit, void *__data)
 {
 	struct axmap_next_free_data *data = __data;
-	uint64_t mask = ~((1UL << ((data->bit & BLOCKS_PER_UNIT_MASK) + 1)) - 1);
+	uint64_t mask = ~bit_masks[(data->bit + 1) & BLOCKS_PER_UNIT_MASK];
 
-	if (!(mask & al->map[offset]))
+	if (!(mask & ~al->map[offset]))
 		return 0;
 
 	if (al->map[offset] != -1UL) {
@@ -395,6 +395,7 @@ static int axmap_next_free_fn(struct axmap_level *al, unsigned long offset,
 uint64_t axmap_next_free(struct axmap *axmap, uint64_t bit_nr)
 {
 	struct axmap_next_free_data data = { .level = -1U, .bit = bit_nr, };
+	uint64_t ret;
 
 	if (firstfree_valid(axmap) && bit_nr < axmap->first_free)
 		return axmap->first_free;
@@ -404,5 +405,14 @@ uint64_t axmap_next_free(struct axmap *axmap, uint64_t bit_nr)
 
 	assert(data.level != -1U);
 
-	return axmap_find_first_free(axmap, data.level, data.offset);
+	/*
+	 * In the rare case that the map is unaligned, we might end up
+	 * finding an offset that's beyond the valid end. For that case,
+	 * find the first free one, the map is practically full.
+	 */
+	ret = axmap_find_first_free(axmap, data.level, data.offset);
+	if (ret != -1ULL)
+		return ret;
+
+	return axmap_first_free(axmap);
 }
