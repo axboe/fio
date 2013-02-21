@@ -39,11 +39,6 @@ Starting with Ubuntu 10.04 LTS (aka "Lucid Lynx"), fio packages are part
 of the Ubuntu "universe" repository.
 http://packages.ubuntu.com/search?keywords=fio
 
-SUSE:
-Pascal Bleser <guru@unixtech.be> has fio RPMs in his repository for SUSE
-variants, you can find them here:
-http://linux01.gwdg.de/~pbleser/rpm-navigation.php?cat=System/fio
-
 Red Hat, CentOS & Co:
 Dag Wieërs has RPMs for Red Hat related distros, find them here:
 http://dag.wieers.com/rpm/packages/fio/
