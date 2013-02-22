@@ -41,6 +41,7 @@ struct thread_data *threads = NULL;
 int exitall_on_terminate = 0;
 int output_format = FIO_OUTPUT_NORMAL;
 int eta_print = FIO_ETA_AUTO;
+int eta_new_line = 0;
 unsigned long long mlock_size = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
@@ -138,6 +139,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "eta",
 		.has_arg	= required_argument,
 		.val		= 'e' | FIO_CLIENT_FLAG,
+	},
+	{
+		.name		= (char *) "eta-newline",
+		.has_arg	= required_argument,
+		.val		= 'E' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "debug",
@@ -1264,6 +1270,8 @@ static void usage(const char *name)
 	printf("  --showcmd\t\tTurn a job file into command line options\n");
 	printf("  --eta=when\t\tWhen ETA estimate should be printed\n");
 	printf("            \t\tMay be \"always\", \"never\" or \"auto\"\n");
+	printf("  --eta-newline=time\tForce a new line for every 'time'");
+	printf(" period passed\n");
 	printf("  --readonly\t\tTurn on safety read-only checks, preventing"
 		" writes\n");
 	printf("  --section=name\tOnly run specified section in job file\n");
@@ -1505,6 +1513,17 @@ int parse_cmd_line(int argc, char *argv[])
 			else if (!strcmp("never", optarg))
 				eta_print = FIO_ETA_NEVER;
 			break;
+		case 'E': {
+			long long t = 0;
+
+			if (str_to_decimal(optarg, &t, 0, NULL)) {
+				log_err("fio: failed parsing eta time %s\n", optarg);
+				exit_val = 1;
+				do_exit++;
+			}
+			eta_new_line = t;
+			break;
+			}
 		case 'd':
 			if (set_debug(optarg))
 				do_exit++;

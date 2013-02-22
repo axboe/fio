@@ -594,6 +594,7 @@ extern unsigned long long mlock_size;
 extern uintptr_t page_mask, page_size;
 extern int read_only;
 extern int eta_print;
+extern int eta_new_line;
 extern unsigned long done_secs;
 extern char *job_section;
 extern int fio_gtod_offload;
