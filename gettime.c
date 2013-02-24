@@ -262,7 +262,7 @@ static unsigned long get_cycles_per_usec(void)
 
 #define NR_TIME_ITERS	50
 
-static void calibrate_cpu_clock(void)
+static int calibrate_cpu_clock(void)
 {
 	double delta, mean, S;
 	uint64_t avg, cycles[NR_TIME_ITERS];
@@ -278,6 +278,13 @@ static void calibrate_cpu_clock(void)
 			S += delta * (cycles[i] - mean);
 		}
 	}
+
+	/*
+	 * The most common platform clock breakage is returning zero
+	 * indefinitely. Check for that and return failure.
+	 */
+	if (!cycles[0] && !cycles[NR_TIME_ITERS - 1])
+		return 1;
 
 	S = sqrt(S / (NR_TIME_ITERS - 1.0));
 
@@ -305,10 +312,12 @@ static void calibrate_cpu_clock(void)
 	cycles_per_usec = avg;
 	inv_cycles_per_usec = 16777216UL / cycles_per_usec;
 	dprint(FD_TIME, "inv_cycles_per_usec=%lu\n", inv_cycles_per_usec);
+	return 0;
 }
 #else
-static void calibrate_cpu_clock(void)
+static int calibrate_cpu_clock(void)
 {
+	return 1;
 }
 #endif
 
@@ -343,7 +352,9 @@ void fio_clock_init(void)
 #endif
 
 	fio_clock_source_inited = fio_clock_source;
-	calibrate_cpu_clock();
+
+	if (calibrate_cpu_clock())
+		tsc_reliable = 0;
 
 	/*
 	 * If the arch sets tsc_reliable != 0, then it must be good enough
@@ -481,6 +492,13 @@ static void *clock_thread_fn(void *data)
 	}
 
 	log_info("cs: cpu%3d: %lu clocks seen\n", t->cpu, t->entries[CLOCK_ENTRIES - 1].tsc - t->entries[0].tsc);
+	/*
+	 * The most common platform clock breakage is returning zero
+	 * indefinitely. Check for that and return failure.
+	 */
+	if (!t->entries[CLOCK_ENTRIES - 1].tsc && !t->entries[0].tsc)
+		return (void *) 1;
+
 	return NULL;
 }
 
