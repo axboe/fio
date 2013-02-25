@@ -441,9 +441,9 @@ uint64_t time_since_now(struct timeval *s)
 #define CLOCK_ENTRIES	100000
 
 struct clock_entry {
-	uint64_t seq;
+	uint32_t seq;
+	uint32_t cpu;
 	uint64_t tsc;
-	uint64_t cpu;
 };
 
 struct clock_thread {
@@ -451,11 +451,11 @@ struct clock_thread {
 	int cpu;
 	pthread_mutex_t lock;
 	pthread_mutex_t started;
-	uint64_t *seq;
+	uint32_t *seq;
 	struct clock_entry *entries;
 };
 
-static inline uint64_t atomic64_inc_return(uint64_t *seq)
+static inline uint32_t atomic32_inc_return(uint32_t *seq)
 {
 	return 1 + __sync_fetch_and_add(seq, 1);
 }
@@ -465,6 +465,7 @@ static void *clock_thread_fn(void *data)
 	struct clock_thread *t = data;
 	struct clock_entry *c;
 	os_cpu_mask_t cpu_mask;
+	uint32_t last_seq;
 	int i;
 
 	memset(&cpu_mask, 0, sizeof(cpu_mask));
@@ -478,13 +479,17 @@ static void *clock_thread_fn(void *data)
 	pthread_mutex_lock(&t->lock);
 	pthread_mutex_unlock(&t->started);
 
+	last_seq = 0;
 	c = &t->entries[0];
 	for (i = 0; i < CLOCK_ENTRIES; i++, c++) {
-		uint64_t seq, tsc;
+		uint32_t seq;
+		uint64_t tsc;
 
 		c->cpu = t->cpu;
 		do {
-			seq = atomic64_inc_return(t->seq);
+			seq = atomic32_inc_return(t->seq);
+			if (seq < last_seq)
+				break;
 			tsc = get_cpu_clock();
 		} while (seq != *t->seq);
 
@@ -492,12 +497,13 @@ static void *clock_thread_fn(void *data)
 		c->tsc = tsc;
 	}
 
-	log_info("cs: cpu%3d: %lu clocks seen\n", t->cpu, t->entries[CLOCK_ENTRIES - 1].tsc - t->entries[0].tsc);
+	log_info("cs: cpu%3d: %lu clocks seen\n", t->cpu, t->entries[i - 1].tsc - t->entries[0].tsc);
+
 	/*
 	 * The most common platform clock breakage is returning zero
 	 * indefinitely. Check for that and return failure.
 	 */
-	if (!t->entries[CLOCK_ENTRIES - 1].tsc && !t->entries[0].tsc)
+	if (!t->entries[i - 1].tsc && !t->entries[0].tsc)
 		return (void *) 1;
 
 	return NULL;
@@ -521,7 +527,7 @@ int fio_monotonic_clocktest(void)
 	struct clock_entry *entries;
 	unsigned long tentries, failed;
 	struct clock_entry *prev, *this;
-	uint64_t seq = 0;
+	uint32_t seq = 0;
 	int i;
 
 	log_info("cs: reliable_tsc: %s\n", tsc_reliable ? "yes" : "no");
