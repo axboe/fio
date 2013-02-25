@@ -11,9 +11,8 @@ void __dprint(int type, const char *str, ...)
 
 	assert(type < FD_DEBUG_MAX);
 
-	pid = getpid();
 	if (fio_debug_jobp && *fio_debug_jobp != -1U
-	    && pid != *fio_debug_jobp)
+	    && (pid = getpid() != *fio_debug_jobp))
 		return;
 
 	log_local("%-8s ", debug_levels[type].name);
