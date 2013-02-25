@@ -302,11 +302,12 @@ static int calibrate_cpu_clock(void)
 	mean /= 10.0;
 
 	for (i = 0; i < NR_TIME_ITERS; i++)
-		dprint(FD_TIME, "cycles[%d]=%lu\n", i, cycles[i] / 10);
+		dprint(FD_TIME, "cycles[%d]=%llu\n", i,
+					(unsigned long long) cycles[i] / 10);
 
 	avg /= samples;
 	avg = (avg + 5) / 10;
-	dprint(FD_TIME, "avg: %lu\n", avg);
+	dprint(FD_TIME, "avg: %llu\n", (unsigned long long) avg);
 	dprint(FD_TIME, "mean=%f, S=%f\n", mean, S);
 
 	cycles_per_usec = avg;

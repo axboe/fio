@@ -463,8 +463,9 @@ static int handle_command(struct fio_net_cmd *cmd)
 {
 	int ret;
 
-	dprint(FD_NET, "server: got op [%s], pdu=%u, tag=%lx\n",
-			fio_server_op(cmd->opcode), cmd->pdu_len, cmd->tag);
+	dprint(FD_NET, "server: got op [%s], pdu=%u, tag=%llx\n",
+			fio_server_op(cmd->opcode), cmd->pdu_len,
+			(unsigned long long) cmd->tag);
 
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:

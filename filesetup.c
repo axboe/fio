@@ -79,7 +79,8 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 			break;
 		case FIO_FALLOCATE_POSIX:
 			dprint(FD_FILE, "posix_fallocate file %s size %llu\n",
-				 f->file_name, f->real_file_size);
+				 f->file_name,
+				 (unsigned long long) f->real_file_size);
 
 			r = posix_fallocate(f->fd, 0, f->real_file_size);
 			if (r > 0) {
@@ -91,8 +92,8 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		case FIO_FALLOCATE_KEEP_SIZE:
 			dprint(FD_FILE,
 				"fallocate(FALLOC_FL_KEEP_SIZE) "
-				"file %s size %llu\n",
-				f->file_name, f->real_file_size);
+				"file %s size %llu\n", f->file_name,
+				(unsigned long long) f->real_file_size);
 
 			r = fallocate(f->fd, FALLOC_FL_KEEP_SIZE, 0,
 					f->real_file_size);
@@ -118,7 +119,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	 */
 	if (!td->o.fill_device) {
 		dprint(FD_FILE, "truncate file %s, size %llu\n", f->file_name,
-							f->real_file_size);
+					(unsigned long long) f->real_file_size);
 		if (ftruncate(f->fd, f->real_file_size) == -1) {
 			td_verror(td, errno, "ftruncate");
 			goto err;

@@ -155,8 +155,8 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 
 	td->orig_buffer = mmap(NULL, total_mem, PROT_READ | PROT_WRITE, flags,
 				td->mmapfd, 0);
-	dprint(FD_MEM, "mmap %u/%d %p\n", total_mem, td->mmapfd,
-						td->orig_buffer);
+	dprint(FD_MEM, "mmap %llu/%d %p\n", (unsigned long long) total_mem,
+						td->mmapfd, td->orig_buffer);
 	if (td->orig_buffer == MAP_FAILED) {
 		td_verror(td, errno, "mmap");
 		td->orig_buffer = NULL;
@@ -173,7 +173,8 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 
 static void free_mem_mmap(struct thread_data *td, size_t total_mem)
 {
-	dprint(FD_MEM, "munmap %u %p\n", total_mem, td->orig_buffer);
+	dprint(FD_MEM, "munmap %llu %p\n", (unsigned long long) total_mem,
+						td->orig_buffer);
 	munmap(td->orig_buffer, td->orig_buffer_size);
 	if (td->mmapfile) {
 		close(td->mmapfd);
@@ -185,7 +186,8 @@ static void free_mem_mmap(struct thread_data *td, size_t total_mem)
 static int alloc_mem_malloc(struct thread_data *td, size_t total_mem)
 {
 	td->orig_buffer = malloc(total_mem);
-	dprint(FD_MEM, "malloc %u %p\n", total_mem, td->orig_buffer);
+	dprint(FD_MEM, "malloc %llu %p\n", (unsigned long long) total_mem,
+							td->orig_buffer);
 
 	return td->orig_buffer == NULL;
 }
@@ -216,7 +218,7 @@ int allocate_io_mem(struct thread_data *td)
 			total_mem += td->o.mem_align - page_size;
 	}
 
-	dprint(FD_MEM, "Alloc %lu for buffers\n", (size_t) total_mem);
+	dprint(FD_MEM, "Alloc %llu for buffers\n", (unsigned long long) total_mem);
 
 	if (td->o.mem_type == MEM_MALLOC)
 		ret = alloc_mem_malloc(td, total_mem);
