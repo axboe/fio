@@ -27,6 +27,8 @@ enum {
 	ARCH_FLAG_4	= 1 << 3,
 };
 
+extern unsigned long arch_flags;
+
 #if defined(__i386__)
 #include "arch-x86.h"
 #elif defined(__x86_64__)

@@ -497,7 +497,8 @@ static void *clock_thread_fn(void *data)
 		c->tsc = tsc;
 	}
 
-	log_info("cs: cpu%3d: %lu clocks seen\n", t->cpu, t->entries[i - 1].tsc - t->entries[0].tsc);
+	log_info("cs: cpu%3d: %llu clocks seen\n", t->cpu,
+		(unsigned long long) t->entries[i - 1].tsc - t->entries[0].tsc);
 
 	/*
 	 * The most common platform clock breakage is returning zero
