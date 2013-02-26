@@ -96,11 +96,11 @@ static void atb_clocktest(void)
 	pid = fork();
 	if (!pid)
 		atb_child();
-	else {
+	else if (pid != -1) {
 		int status;
 
-		wait(&status);
-		if (!WIFEXITED(status))
+		pid = wait(&status);
+		if (pid == -1 || !WIFEXITED(status))
 			arch_flags &= ~ARCH_FLAG_1;
 		else
 			arch_flags |= ARCH_FLAG_1;
