@@ -349,7 +349,7 @@ int main(void)
 }
 EOF
 if compile_prog "" "" "wordsize"; then
-  wordsize=$($TMPE)
+  wordsize=`$TMPE`
 fi
 echo "Wordsize                      $wordsize"
 
