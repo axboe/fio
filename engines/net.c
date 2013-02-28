@@ -458,7 +458,7 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
-	int type, domain, optval;
+	int type, domain;
 
 	if (o->proto == FIO_TYPE_TCP) {
 		domain = AF_INET;
@@ -483,7 +483,8 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 
 #ifdef CONFIG_TCP_NODELAY
 	if (o->nodelay && o->proto == FIO_TYPE_TCP) {
-		optval = 1;
+		int optval = 1;
+
 		if (setsockopt(f->fd, IPPROTO_TCP, TCP_NODELAY, (void *) &optval, sizeof(int)) < 0) {
 			log_err("fio: cannot set TCP_NODELAY option on socket (%s), disable with 'nodelay=0'\n", strerror(errno));
 			return 1;
@@ -522,7 +523,7 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
 	socklen_t socklen = sizeof(nd->addr);
-	int state, optval;
+	int state;
 
 	if (o->proto == FIO_TYPE_UDP) {
 		f->fd = nd->listenfd;
@@ -545,7 +546,8 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 
 #ifdef CONFIG_TCP_NODELAY
 	if (o->nodelay && o->proto == FIO_TYPE_TCP) {
-		optval = 1;
+		int optval = 1;
+
 		if (setsockopt(f->fd, IPPROTO_TCP, TCP_NODELAY, (void *) &optval, sizeof(int)) < 0) {
 			log_err("fio: cannot set TCP_NODELAY option on socket (%s), disable with 'nodelay=0'\n", strerror(errno));
 			return 1;
