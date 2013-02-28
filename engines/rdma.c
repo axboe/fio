@@ -36,7 +36,6 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#include <byteswap.h>
 #include <pthread.h>
 #include <inttypes.h>
 
@@ -1013,25 +1012,10 @@ static int fio_rdmaio_setup_listen(struct thread_data *td, short port)
 	return 0;
 }
 
-static int fio_rdmaio_init(struct thread_data *td)
+static int check_set_rlimits(struct thread_data *td)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
-	struct flist_head *entry;
-	unsigned int max_bs;
-	unsigned int port;
-	char host[64], buf[128];
-	char *sep, *portp, *modep;
-	int ret, i = 0;
+#ifdef CONFIG_RLIMIT_MEMLOCK
 	struct rlimit rl;
-
-	if (td_rw(td)) {
-		log_err("fio: rdma connections must be read OR write\n");
-		return 1;
-	}
-	if (td_random(td)) {
-		log_err("fio: RDMA network IO can't be random\n");
-		return 1;
-	}
 
 	/* check RLIMIT_MEMLOCK */
 	if (getrlimit(RLIMIT_MEMLOCK, &rl) != 0) {
@@ -1057,6 +1041,32 @@ static int fio_rdmaio_init(struct thread_data *td)
 			return 1;
 		}
 	}
+#endif
+
+	return 0;
+}
+
+static int fio_rdmaio_init(struct thread_data *td)
+{
+	struct rdmaio_data *rd = td->io_ops->data;
+	struct flist_head *entry;
+	unsigned int max_bs;
+	unsigned int port;
+	char host[64], buf[128];
+	char *sep, *portp, *modep;
+	int ret, i = 0;
+
+	if (td_rw(td)) {
+		log_err("fio: rdma connections must be read OR write\n");
+		return 1;
+	}
+	if (td_random(td)) {
+		log_err("fio: RDMA network IO can't be random\n");
+		return 1;
+	}
+
+	if (check_set_rlimits(td))
+		return 1;
 
 	strcpy(buf, td->o.filename);
 
