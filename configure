@@ -906,6 +906,9 @@ int main(int argc, char **argv)
 EOF
 if compile_prog "" "" "TCP_NODELAY"; then
   tcp_nodelay="yes"
+elif compile_prog "" "-lnsl -lsocket" "TCP_NODELAY"; then
+  tcp_nodelay="yes"
+  LIBS="-lnsl -lsocket $LIBS" 
 fi
 echo "TCP_NODELAY                   $tcp_nodelay"
 
