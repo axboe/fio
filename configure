@@ -87,7 +87,7 @@ compile_object() {
 
 compile_prog() {
   local_cflags="$1"
-  local_ldflags="$2"
+  local_ldflags="$2 $LIBS"
   echo "Compiling test case $3" >> config.log
   do_cc $CFLAGS $local_cflags -o $TMPE $TMPC $LDFLAGS $local_ldflags
 }
@@ -193,6 +193,7 @@ SunOS)
   if test -z "$cpu" && test "$(isainfo -k)" = "amd64"; then
     cpu="x86_64"
   fi
+  LIBS="-lnsl -lsocket"
   ;;
 CYGWIN*)
   echo "Forcing known good options on Windows"
@@ -906,9 +907,6 @@ int main(int argc, char **argv)
 EOF
 if compile_prog "" "" "TCP_NODELAY"; then
   tcp_nodelay="yes"
-elif compile_prog "" "-lnsl -lsocket" "TCP_NODELAY"; then
-  tcp_nodelay="yes"
-  LIBS="-lnsl -lsocket $LIBS" 
 fi
 echo "TCP_NODELAY                   $tcp_nodelay"
 
