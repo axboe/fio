@@ -72,9 +72,9 @@ static inline unsigned long long get_cpu_clock(void)
 			tbl = mfspr(SPRN_ATBL);
 			tbu1 = mfspr(SPRN_ATBU);
 		} else {
-			__asm__ __volatile__("mftbu %0" : "=r"(tbu0));
-			__asm__ __volatile__("mftb %0"  : "=r"(tbl) );
-			__asm__ __volatile__("mftbu %0" : "=r"(tbu1));
+			tbu0 = mfspr(SPRN_TBRU);
+			tbl = mfspr(SPRN_TBRL);
+			tbu1 = mfspr(SPRN_TBRU);
 		}
 	} while (tbu0 != tbu1);
 
