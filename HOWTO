@@ -9,6 +9,7 @@ Table of contents
 6. Normal output
 7. Terse output
 8. Trace file format
+9. CPU idleness profiling
 
 1.0 Overview and history
 ------------------------
@@ -775,7 +776,7 @@ random_generator=str	Fio supports the following engines for generating
 		block sizes, not with workloads that use multiple block
 		sizes. If used with such a workload, fio may read or write
 		some blocks multiple times.
-		
+
 nice=int	Run the job with the given nice value. See man nice(2).
 
 prio=int	Set the io priority value of this job. Linux limits us to

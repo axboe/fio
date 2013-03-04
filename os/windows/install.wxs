@@ -30,16 +30,19 @@
 							<File KeyPath="yes" Source="..\..\pthreadGC2.dll"/>
 						</Component>
 						<Component>
-							<File Id="README" Name="README.rtf" Source="..\..\README"/>
+							<File Id="README" Name="README.txt" Source="..\..\README"/>
 						</Component>
 						<Component>
-							<File Id="REPORTING_BUGS" Name="REPORTING-BUGS.rtf" Source="..\..\REPORTING-BUGS"/>
+							<File Id="REPORTING_BUGS" Name="REPORTING-BUGS.txt" Source="..\..\REPORTING-BUGS"/>
 						</Component>
 						<Component>
-							<File Id="HOWTO" Name="HOWTO.rtf" Source="..\..\HOWTO"/>
+							<File Id="HOWTO" Name="HOWTO.txt" Source="..\..\HOWTO"/>
 						</Component>
 						<Component>
-							<File Id="COPYING" Name="COPYING.rtf" Source="..\..\COPYING"/>
+							<File Id="COPYING" Name="COPYING.txt" Source="..\..\COPYING"/>
+						</Component>
+						<Component>
+							<File Id="LICENSE" Name="LICENSE.txt" Source="..\..\LICENSE"/>
 						</Component>
 						<Directory Id="examples" Name="examples"/>
 					</Directory>
@@ -54,13 +57,14 @@
 		<ComponentRef Id="README"/>
 		<ComponentRef Id="REPORTING_BUGS"/>
 		<ComponentRef Id="COPYING"/>
+		<ComponentRef Id="LICENSE"/>
 		<ComponentGroupRef Id="examples"/>
 	</Feature>
 
 	<Property Id="ARPURLINFOABOUT" Value="http://git.kernel.dk/?p=fio.git" />
 	<Property Id='ARPCONTACT'>fio@vger.kernel.org</Property>
 	<Property Id='ARPHELPLINK'>http://www.spinics.net/lists/fio/</Property>
-	<Property Id='ARPURLUPDATEINFO'>http://git.kernel.dk/?p=fio.git</Property>
+	<Property Id='ARPURLUPDATEINFO'>http://bluestop.org/fio/</Property>
 
 	<WixVariable Id="WixUILicenseRtf" Value="eula.rtf" />
 

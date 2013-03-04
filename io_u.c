@@ -101,7 +101,7 @@ static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 			r = __rand(&td->__random_state);
 		}
 
-		dprint(FD_RANDOM, "off rand %llu\n", r);
+		dprint(FD_RANDOM, "off rand %llu\n", (unsigned long long) r);
 
 		*b = (lastb - 1) * (r / ((uint64_t) rmax + 1.0));
 	} else {
@@ -125,7 +125,8 @@ static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	if (random_map_free(f, *b))
 		goto ret;
 
-	dprint(FD_RANDOM, "get_next_rand_offset: offset %llu busy\n", *b);
+	dprint(FD_RANDOM, "get_next_rand_offset: offset %llu busy\n",
+						(unsigned long long) *b);
 
 	*b = axmap_next_free(f->io_axmap, *b);
 	if (*b == (uint64_t) -1ULL)
@@ -242,7 +243,8 @@ static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 	}
 
 	dprint(FD_IO, "%s: rand offset failed, last=%llu, size=%llu\n",
-			f->file_name, f->last_pos, f->real_file_size);
+			f->file_name, (unsigned long long) f->last_pos,
+			(unsigned long long) f->real_file_size);
 	return 1;
 }
 
@@ -344,14 +346,16 @@ static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
 
 	if (io_u->offset >= f->io_size) {
 		dprint(FD_IO, "get_next_offset: offset %llu >= io_size %llu\n",
-					io_u->offset, f->io_size);
+					(unsigned long long) io_u->offset,
+					(unsigned long long) f->io_size);
 		return 1;
 	}
 
 	io_u->offset += f->file_offset;
 	if (io_u->offset >= f->real_file_size) {
 		dprint(FD_IO, "get_next_offset: offset %llu >= size %llu\n",
-					io_u->offset, f->real_file_size);
+					(unsigned long long) io_u->offset,
+					(unsigned long long) f->real_file_size);
 		return 1;
 	}
 
@@ -716,8 +720,9 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 
 	if (io_u->offset + io_u->buflen > io_u->file->real_file_size) {
 		dprint(FD_IO, "io_u %p, offset too large\n", io_u);
-		dprint(FD_IO, "  off=%llu/%lu > %llu\n", io_u->offset,
-				io_u->buflen, io_u->file->real_file_size);
+		dprint(FD_IO, "  off=%llu/%lu > %llu\n",
+			(unsigned long long) io_u->offset, io_u->buflen,
+			(unsigned long long) io_u->file->real_file_size);
 		return 1;
 	}
 

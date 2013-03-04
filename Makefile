@@ -96,7 +96,7 @@ ifeq ($(UNAME), Android)
   LDFLAGS += -rdynamic
 endif
 ifeq ($(UNAME), SunOS)
-  LIBS	 += -lpthread -ldl -laio -lrt -lnsl -lsocket
+  LIBS	 += -lpthread -ldl
   CPPFLAGS += -D__EXTENSIONS__
 endif
 ifeq ($(UNAME), FreeBSD)
