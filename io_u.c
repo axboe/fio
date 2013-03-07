@@ -531,10 +531,10 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	 * io's that have been actually submitted to an async engine,
 	 * and cur_depth is meaningless for sync engines.
 	 */
-	if (td->io_u_in_flight) {
+	while (td->io_u_in_flight) {
 		int fio_unused ret;
 
-		ret = io_u_queued_complete(td, td->io_u_in_flight, NULL);
+		ret = io_u_queued_complete(td, 1, NULL);
 	}
 
 	fio_gettime(&t, NULL);
