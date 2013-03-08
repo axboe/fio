@@ -141,15 +141,21 @@ T_AXMAP_OBJS = t/axmap.o
 T_AXMAP_OBJS += lib/lfsr.o lib/axmap.o
 T_AXMAP_PROGS = t/axmap
 
+T_LFSR_TEST_OBJS = t/lfsr-test.o
+T_LFSR_TEST_OBJS += lib/lfsr.o
+T_LFSR_TEST_PROGS = t/lfsr-test
+
 T_OBJS = $(T_SMALLOC_OBJS)
 T_OBJS += $(T_IEEE_OBJS)
 T_OBJS += $(T_ZIPF_OBJS)
 T_OBJS += $(T_AXMAP_OBJS)
+T_OBJS += $(T_LFSR_TEST_OBJS)
 
 T_PROGS = $(T_SMALLOC_PROGS)
 T_PROGS += $(T_IEEE_PROGS)
 T_PROGS += $(T_ZIPF_PROGS)
 T_PROGS += $(T_AXMAP_PROGS)
+T_PROGS += $(T_LFSR_TEST_PROGS)
 
 ifneq ($(findstring $(MAKEFLAGS),s),s)
 ifndef V
@@ -203,6 +209,9 @@ t/genzipf: $(T_ZIPF_OBJS)
 
 t/axmap: $(T_AXMAP_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_AXMAP_OBJS) $(LIBS) $(LDFLAGS)
+
+t/lfsr-test: $(T_LFSR_TEST_OBJS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_LFSR_TEST_OBJS) $(LIBS) $(LDFLAGS)
 
 fio: $(OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
