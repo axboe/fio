@@ -3,7 +3,7 @@
 
 #include <inttypes.h>
 
-#define FIO_MAX_TAPS	8
+#define FIO_MAX_TAPS	6
 
 struct lfsr_taps {
 	unsigned int length;
@@ -12,14 +12,18 @@ struct lfsr_taps {
 
 
 struct fio_lfsr {
+	uint64_t xormask;
 	uint64_t last_val;
+	uint64_t cached_bit;
 	uint64_t max_val;
 	uint64_t num_vals;
-	struct lfsr_taps taps;
+	uint64_t cycle_length;
+	unsigned int spin;
 };
 
 int lfsr_next(struct fio_lfsr *fl, uint64_t *off, uint64_t);
-int lfsr_init(struct fio_lfsr *fl, uint64_t size, unsigned long seed);
-void lfsr_reset(struct fio_lfsr *fl, unsigned long seed);
+int lfsr_init(struct fio_lfsr *fl, uint64_t size,
+		unsigned long seed, unsigned int spin);
+int lfsr_reset(struct fio_lfsr *fl, unsigned long seed);
 
 #endif
