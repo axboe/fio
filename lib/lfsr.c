@@ -12,68 +12,68 @@
  */
 static uint8_t taps[64][FIO_MAX_TAPS] =
 {
-		{0}, {0}, {0},		//LFSRs with less that 3-bits cannot exist
-		{3, 2},				//Tap position for 3-bit LFSR
-		{4, 3},				//Tap position for 4-bit LFSR
-		{5, 3},				//Tap position for 5-bit LFSR
-		{6, 5},				//Tap position for 6-bit LFSR
-		{7, 6},				//Tap position for 7-bit LFSR
-		{8, 6, 5 ,4},		//Tap position for 8-bit LFSR
-		{9, 5},				//Tap position for 9-bit LFSR
-		{10, 7},			//Tap position for 10-bit LFSR
-		{11, 9},			//Tap position for 11-bit LFSR
-		{12, 6, 4, 1},		//Tap position for 12-bit LFSR
-		{13, 4, 3, 1},		//Tap position for 13-bit LFSR
-		{14, 5, 3, 1},		//Tap position for 14-bit LFSR
-		{15, 14},			//Tap position for 15-bit LFSR
-		{16, 15, 13, 4},	//Tap position for 16-bit LFSR
-		{17, 14},			//Tap position for 17-bit LFSR
-		{18, 11},			//Tap position for 18-bit LFSR
-		{19, 6, 2, 1},		//Tap position for 19-bit LFSR
-		{20, 17},			//Tap position for 20-bit LFSR
-		{21, 19},			//Tap position for 21-bit LFSR
-		{22, 21},			//Tap position for 22-bit LFSR
-		{23, 18},			//Tap position for 23-bit LFSR
-		{24, 23, 22, 17},	//Tap position for 24-bit LFSR
-		{25, 22},			//Tap position for 25-bit LFSR
-		{26, 6, 2, 1},		//Tap position for 26-bit LFSR
-		{27, 5, 2, 1},		//Tap position for 27-bit LFSR
-		{28, 25},			//Tap position for 28-bit LFSR
-		{29, 27},			//Tap position for 29-bit LFSR
-		{30, 6, 4, 1},		//Tap position for 30-bit LFSR
-		{31, 28},			//Tap position for 31-bit LFSR
-		{32, 31, 29, 1},	//Tap position for 32-bit LFSR
-		{33, 20},			//Tap position for 33-bit LFSR
-		{34, 27, 2, 1},		//Tap position for 34-bit LFSR
-		{35, 33},			//Tap position for 35-bit LFSR
-		{36, 25},			//Tap position for 36-bit LFSR
-		{37, 5, 4, 3, 2, 1},//Tap position for 37-bit LFSR
-		{38, 6, 5, 1},		//Tap position for 38-bit LFSR
-		{39, 35},			//Tap position for 39-bit LFSR
-		{40, 38, 21, 19},	//Tap position for 40-bit LFSR
-		{41, 38},			//Tap position for 41-bit LFSR
-		{42, 41, 20, 19},	//Tap position for 42-bit LFSR
-		{43, 42, 38, 37},	//Tap position for 43-bit LFSR
-		{44, 43, 18, 17},	//Tap position for 44-bit LFSR
-		{45, 44, 42, 41},	//Tap position for 45-bit LFSR
-		{46, 45, 26, 25},	//Tap position for 46-bit LFSR
-		{47, 42},			//Tap position for 47-bit LFSR
-		{48, 47, 21, 20},	//Tap position for 48-bit LFSR
-		{49, 40},			//Tap position for 49-bit LFSR
-		{50, 49, 24, 23},	//Tap position for 50-bit LFSR
-		{51, 50, 36, 35},	//Tap position for 51-bit LFSR
-		{52, 49},			//Tap position for 52-bit LFSR
-		{53, 52, 38, 37},	//Tap position for 53-bit LFSR
-		{54, 53, 18, 17},	//Tap position for 54-bit LFSR
-		{55, 31},			//Tap position for 55-bit LFSR
-		{56, 55, 35, 34},	//Tap position for 56-bit LFSR
-		{57, 50},			//Tap position for 57-bit LFSR
-		{58, 39},			//Tap position for 58-bit LFSR
-		{59, 58, 38, 37},	//Tap position for 59-bit LFSR
-		{60, 59},			//Tap position for 60-bit LFSR
-		{61, 60, 46, 45},	//Tap position for 61-bit LFSR
-		{62, 61, 6, 5},		//Tap position for 62-bit LFSR
-		{63, 62},			//Tap position for 63-bit LFSR
+	{0}, {0}, {0},		//LFSRs with less that 3-bits cannot exist
+	{3, 2},			//Tap position for 3-bit LFSR
+	{4, 3},			//Tap position for 4-bit LFSR
+	{5, 3},			//Tap position for 5-bit LFSR
+	{6, 5},			//Tap position for 6-bit LFSR
+	{7, 6},			//Tap position for 7-bit LFSR
+	{8, 6, 5 ,4},		//Tap position for 8-bit LFSR
+	{9, 5},			//Tap position for 9-bit LFSR
+	{10, 7},		//Tap position for 10-bit LFSR
+	{11, 9},		//Tap position for 11-bit LFSR
+	{12, 6, 4, 1},		//Tap position for 12-bit LFSR
+	{13, 4, 3, 1},		//Tap position for 13-bit LFSR
+	{14, 5, 3, 1},		//Tap position for 14-bit LFSR
+	{15, 14},		//Tap position for 15-bit LFSR
+	{16, 15, 13, 4},	//Tap position for 16-bit LFSR
+	{17, 14},		//Tap position for 17-bit LFSR
+	{18, 11},		//Tap position for 18-bit LFSR
+	{19, 6, 2, 1},		//Tap position for 19-bit LFSR
+	{20, 17},		//Tap position for 20-bit LFSR
+	{21, 19},		//Tap position for 21-bit LFSR
+	{22, 21},		//Tap position for 22-bit LFSR
+	{23, 18},		//Tap position for 23-bit LFSR
+	{24, 23, 22, 17},	//Tap position for 24-bit LFSR
+	{25, 22},		//Tap position for 25-bit LFSR
+	{26, 6, 2, 1},		//Tap position for 26-bit LFSR
+	{27, 5, 2, 1},		//Tap position for 27-bit LFSR
+	{28, 25},		//Tap position for 28-bit LFSR
+	{29, 27},		//Tap position for 29-bit LFSR
+	{30, 6, 4, 1},		//Tap position for 30-bit LFSR
+	{31, 28},		//Tap position for 31-bit LFSR
+	{32, 31, 29, 1},	//Tap position for 32-bit LFSR
+	{33, 20},		//Tap position for 33-bit LFSR
+	{34, 27, 2, 1},		//Tap position for 34-bit LFSR
+	{35, 33},		//Tap position for 35-bit LFSR
+	{36, 25},		//Tap position for 36-bit LFSR
+	{37, 5, 4, 3, 2, 1},	//Tap position for 37-bit LFSR
+	{38, 6, 5, 1},		//Tap position for 38-bit LFSR
+	{39, 35},		//Tap position for 39-bit LFSR
+	{40, 38, 21, 19},	//Tap position for 40-bit LFSR
+	{41, 38},		//Tap position for 41-bit LFSR
+	{42, 41, 20, 19},	//Tap position for 42-bit LFSR
+	{43, 42, 38, 37},	//Tap position for 43-bit LFSR
+	{44, 43, 18, 17},	//Tap position for 44-bit LFSR
+	{45, 44, 42, 41},	//Tap position for 45-bit LFSR
+	{46, 45, 26, 25},	//Tap position for 46-bit LFSR
+	{47, 42},		//Tap position for 47-bit LFSR
+	{48, 47, 21, 20},	//Tap position for 48-bit LFSR
+	{49, 40},		//Tap position for 49-bit LFSR
+	{50, 49, 24, 23},	//Tap position for 50-bit LFSR
+	{51, 50, 36, 35},	//Tap position for 51-bit LFSR
+	{52, 49},		//Tap position for 52-bit LFSR
+	{53, 52, 38, 37},	//Tap position for 53-bit LFSR
+	{54, 53, 18, 17},	//Tap position for 54-bit LFSR
+	{55, 31},		//Tap position for 55-bit LFSR
+	{56, 55, 35, 34},	//Tap position for 56-bit LFSR
+	{57, 50},		//Tap position for 57-bit LFSR
+	{58, 39},		//Tap position for 58-bit LFSR
+	{59, 58, 38, 37},	//Tap position for 59-bit LFSR
+	{60, 59},		//Tap position for 60-bit LFSR
+	{61, 60, 46, 45},	//Tap position for 61-bit LFSR
+	{62, 61, 6, 5},		//Tap position for 62-bit LFSR
+	{63, 62},		//Tap position for 63-bit LFSR
 };
 
 #define __LFSR_NEXT(__fl, __v)						\
