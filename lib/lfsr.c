@@ -108,21 +108,27 @@ static inline void __lfsr_next(struct fio_lfsr *fl, unsigned int spin)
 	}
 }
 
+/*
+ * lfsr_next does the following:
+ *
+ * a. Return if the number of max values has been exceeded.
+ * b. Check if the next iteration(s) produce a cycle (due to spin) and add "1"
+ *    where necessary.
+ * c. Calculate the next value and return.
+ */
 int lfsr_next(struct fio_lfsr *fl, uint64_t *off, uint64_t last)
 {
 	int repeat;
 	unsigned int spin;
+
+	if (fl->num_vals++ > fl->max_val)
+		return 1;
 
 	repeat = fl->num_vals % fl->cycle_length;
 	if (repeat == 0)
 		spin = fl->spin + 1;
 	else
 		spin = fl->spin;
-
-	if (fl->num_vals > fl->max_val)
-		return 1;
-
-	fl->num_vals++;
 
 	do {
 		__lfsr_next(fl, spin);
