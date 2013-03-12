@@ -112,26 +112,36 @@ static inline void __lfsr_next(struct fio_lfsr *fl, unsigned int spin)
  * lfsr_next does the following:
  *
  * a. Return if the number of max values has been exceeded.
- * b. Check if the next iteration(s) produce a cycle (due to spin) and add "1"
- *    where necessary.
- * c. Calculate the next value and return.
+ * b. Check if we have a spin value that produces a repeating subsequence.
+ *    This is previously calculated in `prepare_spin` and cycle_length should
+ *    be > 0. If we do have such a spin:
+ *
+ *    i. Decrement the calculated cycle.
+ *    ii. If it reaches zero, add "+1" to the spin and reset the cycle_length
+ *        (we have it cached in the struct fio_lfsr)
+ *
+ *    In either case, continue with the calculation of the next value.
+ * c. Check if the calculated value exceeds the desirable range. In this case,
+ *    go back to b, else return.
  */
 int lfsr_next(struct fio_lfsr *fl, uint64_t *off, uint64_t last)
 {
-	int repeat;
-	unsigned int spin;
+	unsigned int spin = fl->spin;
 
 	if (fl->num_vals++ > fl->max_val)
 		return 1;
 
-	repeat = fl->num_vals % fl->cycle_length;
-	if (repeat == 0)
-		spin = fl->spin + 1;
-	else
-		spin = fl->spin;
-
 	do {
+		if (fl->cycle_length) {
+			fl->cycle_length--;
+			if (!fl->cycle_length) {
+				__lfsr_next(fl, fl->spin + 1);
+				fl->cycle_length = fl->cached_cycle_length;
+				goto check;
+			}
+		}
 		__lfsr_next(fl, spin);
+check: ;
 	} while (fl->last_val > fl->max_val);
 
 	*off = fl->last_val;
@@ -189,7 +199,7 @@ int prepare_spin(struct fio_lfsr *fl, unsigned int spin)
 
 	x = max / (spin + 1);
 	y = max % (spin + 1);
-	fl->cycle_length = max;	/* This is the expected cycle */
+	fl->cycle_length = 0;	/* No cycle occurs, other than the expected */
 	fl->spin = spin;
 
 	for (i = 1; i <= spin; i++) {
@@ -198,6 +208,7 @@ int prepare_spin(struct fio_lfsr *fl, unsigned int spin)
 			break;
 		}
 	}
+	fl->cached_cycle_length = fl->cycle_length;
 
 	return 0;
 }

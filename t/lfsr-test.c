@@ -94,13 +94,15 @@ int main(int argc, char *argv[])
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
 	fprintf(stderr, "finished.\n");
 
+
 	/* Check if all expected numbers within range have been calculated */
 	r = 0;
 	if (verify) {
 		fprintf(stderr, "Verifying results... ");
 		for (i = 0; i < numbers; i++) {
-			if (*(uint8_t *)(v + 1) != 1) {
-				fprintf(stderr, "failed.\n");
+			if (*(uint8_t *)(v + i) != 1) {
+				fprintf(stderr, "failed (%lu = %d).\n",
+						i, *(uint8_t *)(v + i));
 				r = 1;
 				break;
 			}

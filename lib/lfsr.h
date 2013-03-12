@@ -18,6 +18,7 @@ struct fio_lfsr {
 	uint64_t max_val;
 	uint64_t num_vals;
 	uint64_t cycle_length;
+	uint64_t cached_cycle_length;
 	unsigned int spin;
 };
 
