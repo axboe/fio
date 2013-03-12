@@ -31,6 +31,7 @@
 #define FIO_HAVE_E4_ENG
 #define FIO_HAVE_BYTEORDER_FUNCS
 #define FIO_HAVE_MMAP_HUGE
+#define FIO_NO_HAVE_SHM_H
 
 #define OS_MAP_ANON		MAP_ANONYMOUS
 
@@ -40,6 +41,9 @@
 #define POSIX_MADV_RANDOM	MADV_RANDOM
 #ifdef MADV_REMOVE
 #define FIO_MADV_FREE	MADV_REMOVE
+#endif
+#ifndef MAP_HUGETLB
+#define MAP_HUGETLB 0x40000 /* arch specific */
 #endif
 
 

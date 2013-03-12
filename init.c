@@ -9,13 +9,14 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/ipc.h>
-#ifndef FIO_NO_HAVE_SHM_H
-#include <sys/shm.h>
-#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 
 #include "fio.h"
+#ifndef FIO_NO_HAVE_SHM_H
+#include <sys/shm.h>
+#endif
+
 #include "parse.h"
 #include "smalloc.h"
 #include "filehash.h"

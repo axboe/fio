@@ -34,12 +34,12 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
-#ifndef FIO_NO_HAVE_SHM_H
-#include <sys/shm.h>
-#endif
 #include <sys/mman.h>
 
 #include "fio.h"
+#ifndef FIO_NO_HAVE_SHM_H
+#include <sys/shm.h>
+#endif
 #include "hash.h"
 #include "smalloc.h"
 #include "verify.h"
