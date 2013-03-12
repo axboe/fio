@@ -217,7 +217,7 @@ fio: $(OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
 
 clean: FORCE
-	-rm -f .depend $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core FIO-VERSION-FILE config-host.mak cscope.out *.d
+	-rm -f .depend $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core FIO-VERSION-FILE config-host.mak config-host.h cscope.out *.d
 
 cscope:
 	@cscope -b -R
