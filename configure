@@ -234,7 +234,7 @@ Android)
   output_sym "CONFIG_CLOCK_GETTIME"
   output_sym "CONFIG_CLOCK_MONOTONIC"
   echo "CC=$cc" >> $config_host_mak
-  echo "EXTFLAGS=$CFLAGS -include config-host.h -DFIO_NO_HAVE_SHM_H -D_GNU_SOURCE" >> $config_host_mak
+  echo "EXTFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
   exit 0
 esac
 
@@ -1032,9 +1032,9 @@ fi
 if test "$sched_idle" = "yes" ; then
   output_sym "CONFIG_SCHED_IDLE"
 fi
-if test "$tcp_nodelay" = "yes" ; then
-  output_sym "CONFIG_TCP_NODELAY"
-fi
+#if test "$tcp_nodelay" = "yes" ; then
+  #output_sym "CONFIG_TCP_NODELAY"
+#fi
 if test "$rlimit_memlock" = "yes" ; then
   output_sym "CONFIG_RLIMIT_MEMLOCK"
 fi
