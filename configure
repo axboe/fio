@@ -233,16 +233,6 @@ CYGWIN*)
   echo "EXTFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
   exit 0
   ;;
-Android)
-  output_sym "CONFIG_32BIT"
-  output_sym "CONFIG_LITTLE_ENDIAN"
-  output_sym "CONFIG_SOCKLEN_T"
-  output_sym "CONFIG_GETTIMEOFDAY"
-  output_sym "CONFIG_CLOCK_GETTIME"
-  output_sym "CONFIG_CLOCK_MONOTONIC"
-  echo "CC=$cc" >> $config_host_mak
-  echo "EXTFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
-  exit 0
 esac
 
 if test ! -z "$cpu" ; then
@@ -874,8 +864,7 @@ echo "inet_aton                     $inet_aton"
 # socklen_t probe
 socklen_t="no"
 cat > $TMPC << EOF
-#include <string.h>
-#include <netinet/in.h>
+#include <sys/socket.h>
 int main(int argc, char **argv)
 {
   socklen_t len = 0;
