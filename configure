@@ -323,9 +323,26 @@ fi
 cc="${CC-${cross_prefix}gcc}"
 
 ##########################################
+# check cross compile
+
+cross_compile="no"
+cat > $TMPC <<EOF
+int main(void)
+{
+  return 0;
+}
+EOF
+if compile_prog "" "" "cross"; then
+  $TMPE 2>/dev/null || cross_compile="yes"
+else
+  fatal "compile test failed"
+fi
+
+##########################################
 # check endianness
 bigendian="no"
-cat > $TMPC <<EOF
+if test "$cross_compile" = "no" ; then
+  cat > $TMPC <<EOF
 #include <inttypes.h>
 int main(void)
 {
@@ -333,8 +350,24 @@ int main(void)
   return (*((uint8_t*)(&i))) == 0x67;
 }
 EOF
-if compile_prog "" "" "endian"; then
-  $TMPE && bigendian="yes"
+  if compile_prog "" "" "endian"; then
+    $TMPE && bigendian="yes"
+  fi
+else
+  # If we're cross compiling, try our best to work it out and rely on the
+  # run-time check to fail if we get it wrong.
+  cat > $TMPC <<EOF
+#include <endian.h>
+int main(void)
+{
+#if __BYTE_ORDER != __BIG_ENDIAN
+# error "Unknown endianness"
+#endif
+}
+EOF
+  compile_prog "" "" "endian" && bigendian="yes"
+  check_define "__ARMEB__" && bigendian="yes"
+  check_define "__MIPSEB__" && bigendian="yes"
 fi
 
 
@@ -342,6 +375,7 @@ echo "Operating system              $targetos"
 echo "CPU                           $cpu"
 echo "Big endian                    $bigendian"
 echo "Compiler                      $cc"
+echo "Cross compile                 $cross_compile"
 echo
 
 ##########################################
