@@ -348,16 +348,20 @@ echo
 # check for wordsize
 wordsize="0"
 cat > $TMPC <<EOF
-#include <stdio.h>
+#include <limits.h>
+#define BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
 int main(void)
 {
-  unsigned int wsize = sizeof(long) * 8;
-  printf("%d\n", wsize);
+  BUILD_BUG_ON(sizeof(long)*CHAR_BIT != WORDSIZE);
   return 0;
 }
 EOF
-if compile_prog "" "" "wordsize"; then
-  wordsize=`$TMPE`
+if compile_prog "-DWORDSIZE=32" "" "wordsize"; then
+  wordsize="32"
+elif compile_prog "-DWORDSIZE=64" "" "wordsize"; then
+  wordsize="64"
+else
+  fatal "Unknown wordsize"
 fi
 echo "Wordsize                      $wordsize"
 
