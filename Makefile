@@ -5,7 +5,6 @@ CFLAGS	= -std=gnu99 -Wwrite-strings -Wall $(OPTFLAGS)
 LIBS	= -lm $(EXTLIBS)
 PROGS	= fio
 SCRIPTS = fio_generate_plots
-UNAME  := $(shell uname)
 
 ifneq ($(wildcard config-host.mak),)
 all:
@@ -80,42 +79,42 @@ ifndef CONFIG_INET_ATON
   SOURCE += lib/inet_aton.c
 endif
 
-ifeq ($(UNAME), Linux)
+ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
 		engines/binject.c profiles/tiobench.c
   LIBS += -lpthread -ldl
   LDFLAGS += -rdynamic
 endif
-ifeq ($(UNAME), Android)
+ifeq ($(CONFIG_TARGET_OS), Android)
   SOURCE += diskutil.c fifo.c blktrace.c trim.c profiles/tiobench.c
   LIBS += -ldl
   LDFLAGS += -rdynamic
 endif
-ifeq ($(UNAME), SunOS)
+ifeq ($(CONFIG_TARGET_OS), SunOS)
   LIBS	 += -lpthread -ldl
   CPPFLAGS += -D__EXTENSIONS__
 endif
-ifeq ($(UNAME), FreeBSD)
+ifeq ($(CONFIG_TARGET_OS), FreeBSD)
   LIBS	 += -lpthread -lrt
   LDFLAGS += -rdynamic
 endif
-ifeq ($(UNAME), NetBSD)
+ifeq ($(CONFIG_TARGET_OS), NetBSD)
   LIBS	 += -lpthread -lrt
   LDFLAGS += -rdynamic
 endif
-ifeq ($(UNAME), AIX)
+ifeq ($(CONFIG_TARGET_OS), AIX)
   LIBS	 += -lpthread -ldl -lrt
   CPPFLAGS += -D_LARGE_FILES -D__ppc__
   LDFLAGS += -L/opt/freeware/lib -Wl,-blibpath:/opt/freeware/lib:/usr/lib:/lib -Wl,-bmaxdata:0x80000000
 endif
-ifeq ($(UNAME), HP-UX)
+ifeq ($(CONFIG_TARGET_OS), HP-UX)
   LIBS   += -lpthread -ldl -lrt
   CFLAGS += -D_LARGEFILE64_SOURCE -D_XOPEN_SOURCE_EXTENDED
 endif
-ifeq ($(UNAME), Darwin)
+ifeq ($(CONFIG_TARGET_OS), Darwin)
   LIBS	 += -lpthread -ldl
 endif
-ifneq (,$(findstring CYGWIN,$(UNAME)))
+ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
   SOURCE := $(filter-out engines/mmap.c,$(SOURCE))
   SOURCE += os/windows/posix.c
   LIBS	 += -lpthread -lpsapi -lws2_32
@@ -169,7 +168,7 @@ INSTALL = install
 prefix = /usr/local
 bindir = $(prefix)/bin
 
-ifeq ($(UNAME), Darwin)
+ifeq ($(CONFIG_TARGET_OS), Darwin)
 mandir = /usr/share/man
 else
 mandir = $(prefix)/man
