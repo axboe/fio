@@ -1061,9 +1061,9 @@ fi
 if test "$sched_idle" = "yes" ; then
   output_sym "CONFIG_SCHED_IDLE"
 fi
-#if test "$tcp_nodelay" = "yes" ; then
-  #output_sym "CONFIG_TCP_NODELAY"
-#fi
+if test "$tcp_nodelay" = "yes" ; then
+  output_sym "CONFIG_TCP_NODELAY"
+fi
 if test "$rlimit_memlock" = "yes" ; then
   output_sym "CONFIG_RLIMIT_MEMLOCK"
 fi
