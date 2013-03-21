@@ -3,15 +3,20 @@
 
 #include <pthread.h>
 
+#define FIO_MUTEX_MAGIC		0x4d555445U
+#define FIO_RWLOCK_MAGIC	0x52574c4fU
+
 struct fio_mutex {
 	pthread_mutex_t lock;
 	pthread_cond_t cond;
 	int value;
 	int waiters;
+	int magic;
 };
 
 struct fio_rwlock {
 	pthread_rwlock_t lock;
+	int magic;
 };
 
 enum {
