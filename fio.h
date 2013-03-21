@@ -135,7 +135,6 @@ struct thread_options {
 	unsigned int nr_files;
 	unsigned int open_files;
 	enum file_lock_mode file_lock_mode;
-	unsigned int lockfile_batch;
 
 	unsigned int odirect;
 	unsigned int invalidate_cache;
