@@ -359,6 +359,7 @@ struct thread_data {
 	struct rusage ru_end;
 
 	struct fio_file **files;
+	unsigned char *file_locks;
 	unsigned int files_size;
 	unsigned int files_index;
 	unsigned int nr_open_files;

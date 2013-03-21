@@ -456,9 +456,6 @@ int file_lookup_open(struct fio_file *f, int flags)
 		 * racy, need the __f->lock locked
 		 */
 		f->lock = __f->lock;
-		f->lock_owner = __f->lock_owner;
-		f->lock_batch = __f->lock_batch;
-		f->lock_ddir = __f->lock_ddir;
 		from_hash = 1;
 	} else {
 		dprint(FD_FILE, "file not found in hash %s\n", f->file_name);
@@ -1028,8 +1025,10 @@ void close_and_free_files(struct thread_data *td)
 
 	td->o.filename = NULL;
 	free(td->files);
+	free(td->file_locks);
 	td->files_index = 0;
 	td->files = NULL;
+	td->file_locks = NULL;
 	td->o.nr_files = 0;
 }
 
@@ -1086,6 +1085,14 @@ int add_file(struct thread_data *td, const char *fname)
 			log_err("fio: realloc OOM\n");
 			assert(0);
 		}
+		if (td->o.file_lock_mode != FILE_LOCK_NONE) {
+			td->file_locks = realloc(td->file_locks, new_size);
+			if (!td->file_locks) {
+				log_err("fio: realloc OOM\n");
+				assert(0);
+			}
+			td->file_locks[cur_files] = FILE_LOCK_NONE;
+		}
 		td->files_size = new_size;
 	}
 	td->files[cur_files] = f;
@@ -1113,7 +1120,7 @@ int add_file(struct thread_data *td, const char *fname)
 	case FILE_LOCK_NONE:
 		break;
 	case FILE_LOCK_READWRITE:
-		f->lock = fio_mutex_rw_init();
+		f->rwlock = fio_rwlock_init();
 		break;
 	case FILE_LOCK_EXCLUSIVE:
 		f->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
@@ -1188,57 +1195,34 @@ void lock_file(struct thread_data *td, struct fio_file *f, enum fio_ddir ddir)
 	if (!f->lock || td->o.file_lock_mode == FILE_LOCK_NONE)
 		return;
 
-	if (f->lock_owner == td && f->lock_batch--)
-		return;
-
 	if (td->o.file_lock_mode == FILE_LOCK_READWRITE) {
 		if (ddir == DDIR_READ)
-			fio_mutex_down_read(f->lock);
+			fio_rwlock_read(f->rwlock);
 		else
-			fio_mutex_down_write(f->lock);
+			fio_rwlock_write(f->rwlock);
 	} else if (td->o.file_lock_mode == FILE_LOCK_EXCLUSIVE)
 		fio_mutex_down(f->lock);
 
-	f->lock_owner = td;
-	f->lock_batch = td->o.lockfile_batch;
-	f->lock_ddir = ddir;
+	td->file_locks[f->fileno] = td->o.file_lock_mode;
 }
 
 void unlock_file(struct thread_data *td, struct fio_file *f)
 {
 	if (!f->lock || td->o.file_lock_mode == FILE_LOCK_NONE)
 		return;
-	if (f->lock_batch)
-		return;
 
-	if (td->o.file_lock_mode == FILE_LOCK_READWRITE) {
-		const int is_read = f->lock_ddir == DDIR_READ;
-		int val = fio_mutex_getval(f->lock);
-
-		if ((is_read && val == 1) || (!is_read && val == -1))
-			f->lock_owner = NULL;
-
-		if (is_read)
-			fio_mutex_up_read(f->lock);
-		else
-			fio_mutex_up_write(f->lock);
-	} else if (td->o.file_lock_mode == FILE_LOCK_EXCLUSIVE) {
-		int val = fio_mutex_getval(f->lock);
-
-		if (val == 0)
-			f->lock_owner = NULL;
-
+	if (td->o.file_lock_mode == FILE_LOCK_READWRITE)
+		fio_rwlock_unlock(f->rwlock);
+	else if (td->o.file_lock_mode == FILE_LOCK_EXCLUSIVE)
 		fio_mutex_up(f->lock);
-	}
+
+	td->file_locks[f->fileno] = FILE_LOCK_NONE;
 }
 
 void unlock_file_all(struct thread_data *td, struct fio_file *f)
 {
-	if (f->lock_owner != td)
-		return;
-
-	f->lock_batch = 0;
-	unlock_file(td, f);
+	if (td->file_locks[f->fileno] != FILE_LOCK_NONE)
+		unlock_file(td, f);
 }
 
 static int recurse_dir(struct thread_data *td, const char *dirname)
@@ -1310,6 +1294,9 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 		return;
 
 	td->files = malloc(org->files_index * sizeof(f));
+
+	if (td->o.file_lock_mode != FILE_LOCK_NONE)
+		td->file_locks = malloc(org->files_index);
 
 	for_each_file(org, f, i) {
 		struct fio_file *__f;

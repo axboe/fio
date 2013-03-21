@@ -102,10 +102,10 @@ struct fio_file {
 	/*
 	 * if io is protected by a semaphore, this is set
 	 */
-	struct fio_mutex *lock;
-	void *lock_owner;
-	unsigned int lock_batch;
-	enum fio_ddir lock_ddir;
+	union {
+		struct fio_mutex *lock;
+		struct fio_rwlock *rwlock;
+	};
 
 	/*
 	 * block map for random io

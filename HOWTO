@@ -302,11 +302,6 @@ lockfile=str	Fio defaults to not locking any files before it does
 					same time, but writes get exclusive
 					access.
 
-		The option may be post-fixed with a lock batch number. If
-		set, then each thread/process may do that amount of IOs to
-		the file before giving up the lock. Since lock acquisition is
-		expensive, batching the lock/unlocks will speed up IO.
-
 readwrite=str
 rw=str		Type of io pattern. Accepted values are:
 
