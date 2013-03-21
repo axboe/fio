@@ -170,11 +170,6 @@ Read-write locking on the file. Many readers may access the file at the same
 time, but writes get exclusive access.
 .RE
 .P
-The option may be post-fixed with a lock batch number. If set, then each
-thread/process may do that amount of IOs to the file before giving up the lock.
-Since lock acquisition is expensive, batching the lock/unlocks will speed up IO.
-.RE
-.P
 .BI opendir \fR=\fPstr
 Recursively open any files below directory \fIstr\fR.
 .TP

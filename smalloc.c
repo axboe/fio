@@ -52,7 +52,7 @@ struct block_hdr {
 static struct pool mp[MAX_POOLS];
 static unsigned int nr_pools;
 static unsigned int last_pool;
-static struct fio_mutex *lock;
+static struct fio_rwlock *lock;
 
 static inline void pool_lock(struct pool *pool)
 {
@@ -66,22 +66,22 @@ static inline void pool_unlock(struct pool *pool)
 
 static inline void global_read_lock(void)
 {
-	fio_mutex_down_read(lock);
+	fio_rwlock_read(lock);
 }
 
 static inline void global_read_unlock(void)
 {
-	fio_mutex_up_read(lock);
+	fio_rwlock_unlock(lock);
 }
 
 static inline void global_write_lock(void)
 {
-	fio_mutex_down_write(lock);
+	fio_rwlock_write(lock);
 }
 
 static inline void global_write_unlock(void)
 {
-	fio_mutex_up_write(lock);
+	fio_rwlock_unlock(lock);
 }
 
 static inline int ptr_valid(struct pool *pool, void *ptr)
@@ -223,7 +223,7 @@ void sinit(void)
 {
 	int ret;
 
-	lock = fio_mutex_rw_init();
+	lock = fio_rwlock_init();
 	ret = add_pool(&mp[0], INITIAL_SIZE);
 	assert(!ret);
 }
@@ -248,7 +248,7 @@ void scleanup(void)
 		cleanup_pool(&mp[i]);
 
 	if (lock)
-		fio_mutex_remove(lock);
+		fio_rwlock_remove(lock);
 }
 
 #ifdef SMALLOC_REDZONE

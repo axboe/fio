@@ -8,7 +8,7 @@ if [ "$1"x = "x" ]; then
 fi
 
 GNUPLOT=$(which gnuplot)
-if [ ! -x $GNUPLOT ]; then
+if [ ! -x "$GNUPLOT" ]; then
 	echo You need gnuplot installed to generate graphs
 	exit 1
 fi

@@ -10,6 +10,10 @@ struct fio_mutex {
 	int waiters;
 };
 
+struct fio_rwlock {
+	pthread_rwlock_t lock;
+};
+
 enum {
 	FIO_MUTEX_LOCKED	= 0,
 	FIO_MUTEX_UNLOCKED	= 1,
@@ -17,22 +21,14 @@ enum {
 
 extern struct fio_mutex *fio_mutex_init(int);
 extern void fio_mutex_remove(struct fio_mutex *);
+extern void fio_mutex_up(struct fio_mutex *);
 extern void fio_mutex_down(struct fio_mutex *);
 extern int fio_mutex_down_timeout(struct fio_mutex *, unsigned int);
-extern void fio_mutex_down_read(struct fio_mutex *);
-extern void fio_mutex_down_write(struct fio_mutex *);
-extern void fio_mutex_up(struct fio_mutex *);
-extern void fio_mutex_up_read(struct fio_mutex *);
-extern void fio_mutex_up_write(struct fio_mutex *);
 
-static inline struct fio_mutex *fio_mutex_rw_init(void)
-{
-	return fio_mutex_init(0);
-}
-
-static inline int fio_mutex_getval(struct fio_mutex *mutex)
-{
-	return mutex->value;
-}
+extern void fio_rwlock_read(struct fio_rwlock *);
+extern void fio_rwlock_write(struct fio_rwlock *);
+extern void fio_rwlock_unlock(struct fio_rwlock *);
+extern struct fio_rwlock *fio_rwlock_init(void);
+extern void fio_rwlock_remove(struct fio_rwlock *);
 
 #endif

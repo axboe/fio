@@ -84,7 +84,6 @@ struct thread_options {
 	unsigned int nr_files;
 	unsigned int open_files;
 	enum file_lock_mode file_lock_mode;
-	unsigned int lockfile_batch;
 
 	unsigned int odirect;
 	unsigned int invalidate_cache;
@@ -292,7 +291,6 @@ struct thread_options_pack {
 	uint32_t nr_files;
 	uint32_t open_files;
 	uint32_t file_lock_mode;
-	uint32_t lockfile_batch;
 
 	uint32_t odirect;
 	uint32_t invalidate_cache;

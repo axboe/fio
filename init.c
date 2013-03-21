@@ -9,13 +9,14 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/ipc.h>
-#ifndef FIO_NO_HAVE_SHM_H
-#include <sys/shm.h>
-#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 
 #include "fio.h"
+#ifndef FIO_NO_HAVE_SHM_H
+#include <sys/shm.h>
+#endif
+
 #include "parse.h"
 #include "smalloc.h"
 #include "filehash.h"
@@ -34,6 +35,7 @@ static char **ini_file;
 static int max_jobs = FIO_MAX_JOBS;
 static int dump_cmdline;
 static int def_timeout;
+static int parse_only;
 
 static struct thread_data def_thread;
 struct thread_data *threads = NULL;
@@ -149,6 +151,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "debug",
 		.has_arg	= required_argument,
 		.val		= 'd' | FIO_CLIENT_FLAG,
+	},
+	{
+		.name		= (char *) "parse-only",
+		.has_arg	= no_argument,
+		.val		= 'P' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "section",
@@ -823,7 +830,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	/*
 	 * if we are just dumping the output command line, don't add the job
 	 */
-	if (dump_cmdline) {
+	if (dump_cmdline || parse_only) {
 		put_job(td);
 		return 0;
 	}
@@ -1252,6 +1259,7 @@ static void usage(const char *name)
 	printf("  --debug=options\tEnable debug logging. May be one/more of:\n"
 		"\t\t\tprocess,file,io,mem,blktrace,verify,random,parse,\n"
 		"\t\t\tdiskutil,job,mutex,profile,time,net\n");
+	printf("  --parse-only\t\tParse options only, don't start any IO\n");
 	printf("  --output\t\tWrite output to file\n");
 	printf("  --runtime\t\tRuntime in seconds\n");
 	printf("  --latency-log\t\tGenerate per-job latency logs\n");
@@ -1571,6 +1579,9 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			if (set_debug(optarg))
 				do_exit++;
 			break;
+		case 'P':
+			parse_only = 1;
+			break;
 		case 'x': {
 			size_t new_size;
 
@@ -1794,7 +1805,7 @@ int parse_options(int argc, char *argv[])
 	fio_options_free(&def_thread);
 
 	if (!thread_number) {
-		if (dump_cmdline)
+		if (dump_cmdline || parse_only)
 			return 0;
 		if (exec_profile)
 			return 0;

@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 
 	printf("Using %llu entries\n", (unsigned long long) size);
 
-	lfsr_init(&lfsr, size, seed);
+	lfsr_init(&lfsr, size, seed, seed & 0xF);
 	map = axmap_new(size);
 	osize = size;
 

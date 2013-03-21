@@ -34,12 +34,12 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
-#ifndef FIO_NO_HAVE_SHM_H
-#include <sys/shm.h>
-#endif
 #include <sys/mman.h>
 
 #include "fio.h"
+#ifndef FIO_NO_HAVE_SHM_H
+#include <sys/shm.h>
+#endif
 #include "hash.h"
 #include "smalloc.h"
 #include "verify.h"
@@ -1034,7 +1034,7 @@ static int keep_running(struct thread_data *td)
 		return 1;
 	}
 
-	if (ddir_rw_sum(td->io_bytes) < td->o.size) {
+	if (td->o.size != -1ULL && ddir_rw_sum(td->io_bytes) < td->o.size) {
 		uint64_t diff;
 
 		/*

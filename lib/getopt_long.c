@@ -46,6 +46,8 @@ int getopt_long_only(int argc, char *const *argv, const char *optstring,
 	const char *osptr;
 	int opt;
 
+	optarg = NULL;
+
 	/* getopt() relies on a number of different global state
 	   variables, which can make this really confusing if there is
 	   more than one use of getopt() in the same program.  This

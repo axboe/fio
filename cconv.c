@@ -84,7 +84,6 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->nr_files = le32_to_cpu(top->nr_files);
 	o->open_files = le32_to_cpu(top->open_files);
 	o->file_lock_mode = le32_to_cpu(top->file_lock_mode);
-	o->lockfile_batch = le32_to_cpu(top->lockfile_batch);
 	o->odirect = le32_to_cpu(top->odirect);
 	o->invalidate_cache = le32_to_cpu(top->invalidate_cache);
 	o->create_serialize = le32_to_cpu(top->create_serialize);
@@ -244,7 +243,6 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->nr_files = cpu_to_le32(o->nr_files);
 	top->open_files = cpu_to_le32(o->open_files);
 	top->file_lock_mode = cpu_to_le32(o->file_lock_mode);
-	top->lockfile_batch = cpu_to_le32(o->lockfile_batch);
 	top->odirect = cpu_to_le32(o->odirect);
 	top->invalidate_cache = cpu_to_le32(o->invalidate_cache);
 	top->create_serialize = cpu_to_le32(o->create_serialize);

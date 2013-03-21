@@ -5,12 +5,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#ifndef FIO_NO_HAVE_SHM_H
-#include <sys/shm.h>
-#endif
 #include <sys/mman.h>
 
 #include "fio.h"
+#ifndef FIO_NO_HAVE_SHM_H
+#include <sys/shm.h>
+#endif
 
 void fio_unpin_memory(struct thread_data *td)
 {

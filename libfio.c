@@ -127,6 +127,7 @@ void reset_all_stats(struct thread_data *td)
 		td->io_issues[i] = 0;
 		td->ts.total_io_u[i] = 0;
 		td->ts.runtime[i] = 0;
+		td->rwmix_issues = 0;
 	}
 
 	fio_gettime(&tv, NULL);

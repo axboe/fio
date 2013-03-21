@@ -868,20 +868,6 @@ static int str_verify_pattern_cb(void *data, const char *input)
 	return 0;
 }
 
-static int str_lockfile_cb(void *data, const char *str)
-{
-	struct thread_data *td = data;
-	char *nr = get_opt_postfix(str);
-
-	td->o.lockfile_batch = 1;
-	if (nr) {
-		td->o.lockfile_batch = atoi(nr);
-		free(nr);
-	}
-
-	return 0;
-}
-
 static int str_gtod_reduce_cb(void *data, int *il)
 {
 	struct thread_data *td = data;
@@ -1165,7 +1151,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "lockfile",
 		.lname	= "Lockfile",
 		.type	= FIO_OPT_STR,
-		.cb	= str_lockfile_cb,
 		.off1	= td_var_offset(file_lock_mode),
 		.help	= "Lock file when doing IO to it",
 		.parent	= "filename",

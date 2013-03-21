@@ -117,6 +117,7 @@ struct thread_data {
 	struct rusage ru_end;
 
 	struct fio_file **files;
+	unsigned char *file_locks;
 	unsigned int files_size;
 	unsigned int files_index;
 	unsigned int nr_open_files;
@@ -209,22 +210,22 @@ struct thread_data {
 	/*
 	 * Rate state
 	 */
-	unsigned long long rate_bps[DDIR_RWDIR_CNT];
+	uint64_t rate_bps[DDIR_RWDIR_CNT];
 	long rate_pending_usleep[DDIR_RWDIR_CNT];
 	unsigned long rate_bytes[DDIR_RWDIR_CNT];
 	unsigned long rate_blocks[DDIR_RWDIR_CNT];
 	struct timeval lastrate[DDIR_RWDIR_CNT];
 
-	unsigned long long total_io_size;
-	unsigned long long fill_device_size;
+	uint64_t total_io_size;
+	uint64_t fill_device_size;
 
 	unsigned long io_issues[DDIR_RWDIR_CNT];
-	unsigned long long io_blocks[DDIR_RWDIR_CNT];
-	unsigned long long this_io_blocks[DDIR_RWDIR_CNT];
-	unsigned long long io_bytes[DDIR_RWDIR_CNT];
-	unsigned long long io_skip_bytes;
-	unsigned long long this_io_bytes[DDIR_RWDIR_CNT];
-	unsigned long long zone_bytes;
+	uint64_t io_blocks[DDIR_RWDIR_CNT];
+	uint64_t this_io_blocks[DDIR_RWDIR_CNT];
+	uint64_t io_bytes[DDIR_RWDIR_CNT];
+	uint64_t io_skip_bytes;
+	uint64_t this_io_bytes[DDIR_RWDIR_CNT];
+	uint64_t zone_bytes;
 	struct fio_mutex *mutex;
 
 	/*

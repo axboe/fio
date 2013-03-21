@@ -106,10 +106,8 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 		 * way too early, double check.
 		 */
 		ret = pthread_cond_timedwait(&mutex->cond, &mutex->lock, &t);
-		if (ret == ETIMEDOUT && !mutex_timed_out(&tv_s, seconds)) {
-			pthread_mutex_lock(&mutex->lock);
+		if (ret == ETIMEDOUT && !mutex_timed_out(&tv_s, seconds))
 			ret = 0;
-		}
 
 		mutex->waiters--;
 	}
@@ -146,50 +144,49 @@ void fio_mutex_up(struct fio_mutex *mutex)
 	pthread_mutex_unlock(&mutex->lock);
 }
 
-void fio_mutex_down_write(struct fio_mutex *mutex)
+void fio_rwlock_write(struct fio_rwlock *lock)
 {
-	pthread_mutex_lock(&mutex->lock);
+	pthread_rwlock_wrlock(&lock->lock);
+}
 
-	while (mutex->value != 0) {
-		mutex->waiters++;
-		pthread_cond_wait(&mutex->cond, &mutex->lock);
-		mutex->waiters--;
+void fio_rwlock_read(struct fio_rwlock *lock)
+{
+	pthread_rwlock_rdlock(&lock->lock);
+}
+
+void fio_rwlock_unlock(struct fio_rwlock *lock)
+{
+	pthread_rwlock_unlock(&lock->lock);
+}
+
+void fio_rwlock_remove(struct fio_rwlock *lock)
+{
+	munmap((void *) lock, sizeof(*lock));
+}
+
+struct fio_rwlock *fio_rwlock_init(void)
+{
+	struct fio_rwlock *lock;
+	int ret;
+
+	lock = (void *) mmap(NULL, sizeof(struct fio_rwlock),
+				PROT_READ | PROT_WRITE,
+				OS_MAP_ANON | MAP_SHARED, -1, 0);
+	if (lock == MAP_FAILED) {
+		perror("mmap rwlock");
+		lock = NULL;
+		goto err;
 	}
 
-	mutex->value--;
-	pthread_mutex_unlock(&mutex->lock);
-}
-
-void fio_mutex_down_read(struct fio_mutex *mutex)
-{
-	pthread_mutex_lock(&mutex->lock);
-
-	while (mutex->value < 0) {
-		mutex->waiters++;
-		pthread_cond_wait(&mutex->cond, &mutex->lock);
-		mutex->waiters--;
+	ret = pthread_rwlock_init(&lock->lock, NULL);
+	if (ret) {
+		log_err("pthread_rwlock_init: %s\n", strerror(ret));
+		goto err;
 	}
 
-	mutex->value++;
-	pthread_mutex_unlock(&mutex->lock);
-}
-
-void fio_mutex_up_read(struct fio_mutex *mutex)
-{
-	pthread_mutex_lock(&mutex->lock);
-	mutex->value--;
-	read_barrier();
-	if (mutex->value >= 0 && mutex->waiters)
-		pthread_cond_signal(&mutex->cond);
-	pthread_mutex_unlock(&mutex->lock);
-}
-
-void fio_mutex_up_write(struct fio_mutex *mutex)
-{
-	pthread_mutex_lock(&mutex->lock);
-	mutex->value++;
-	read_barrier();
-	if (mutex->value >= 0 && mutex->waiters)
-		pthread_cond_signal(&mutex->cond);
-	pthread_mutex_unlock(&mutex->lock);
+	return lock;
+err:
+	if (lock)
+		fio_rwlock_remove(lock);
+	return NULL;
 }

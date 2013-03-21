@@ -19,6 +19,7 @@
 
 #define FIO_HAVE_DISK_UTIL
 #define FIO_HAVE_IOSCHED_SWITCH
+#define FIO_HAVE_IOPRIO
 #define FIO_HAVE_ODIRECT
 #define FIO_HAVE_HUGETLB
 #define FIO_HAVE_BLKTRACE
@@ -31,6 +32,7 @@
 #define FIO_HAVE_E4_ENG
 #define FIO_HAVE_BYTEORDER_FUNCS
 #define FIO_HAVE_MMAP_HUGE
+#define FIO_NO_HAVE_SHM_H
 
 #define OS_MAP_ANON		MAP_ANONYMOUS
 
@@ -40,6 +42,9 @@
 #define POSIX_MADV_RANDOM	MADV_RANDOM
 #ifdef MADV_REMOVE
 #define FIO_MADV_FREE	MADV_REMOVE
+#endif
+#ifndef MAP_HUGETLB
+#define MAP_HUGETLB 0x40000 /* arch specific */
 #endif
 
 
@@ -73,6 +78,27 @@ static inline int shmdt (const void *__shmaddr)
 
 
 #define SPLICE_DEF_SIZE	(64*1024)
+
+static inline int ioprio_set(int which, int who, int ioprio)
+{
+	return syscall(__NR_ioprio_set, which, who, ioprio);
+}
+
+enum {
+	IOPRIO_CLASS_NONE,
+	IOPRIO_CLASS_RT,
+	IOPRIO_CLASS_BE,
+	IOPRIO_CLASS_IDLE,
+};
+
+enum {
+	IOPRIO_WHO_PROCESS = 1,
+	IOPRIO_WHO_PGRP,
+	IOPRIO_WHO_USER,
+};
+
+#define IOPRIO_BITS		16
+#define IOPRIO_CLASS_SHIFT	13
 
 #ifndef BLKGETSIZE64
 #define BLKGETSIZE64	_IOR(0x12,114,size_t)
