@@ -475,7 +475,9 @@ int td_io_close_file(struct thread_data *td, struct fio_file *f)
 	fio_file_set_closing(f);
 
 	disk_util_dec(f->du);
-	unlock_file_all(td, f);
+
+	if (td->o.file_lock_mode != FILE_LOCK_NONE)
+		unlock_file_all(td, f);
 
 	return put_file(td, f);
 }
