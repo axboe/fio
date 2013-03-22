@@ -20,7 +20,7 @@
 
 void fio_mutex_remove(struct fio_mutex *mutex)
 {
-	assert(mutex->magic = FIO_MUTEX_MAGIC);
+	assert(mutex->magic == FIO_MUTEX_MAGIC);
 	pthread_cond_destroy(&mutex->cond);
 	munmap((void *) mutex, sizeof(*mutex));
 }
@@ -95,7 +95,7 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 	struct timespec t;
 	int ret = 0;
 
-	assert(mutex->magic = FIO_MUTEX_MAGIC);
+	assert(mutex->magic == FIO_MUTEX_MAGIC);
 
 	gettimeofday(&tv_s, NULL);
 	t.tv_sec = tv_s.tv_sec + seconds;
@@ -127,7 +127,7 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 
 void fio_mutex_down(struct fio_mutex *mutex)
 {
-	assert(mutex->magic = FIO_MUTEX_MAGIC);
+	assert(mutex->magic == FIO_MUTEX_MAGIC);
 
 	pthread_mutex_lock(&mutex->lock);
 
@@ -143,7 +143,7 @@ void fio_mutex_down(struct fio_mutex *mutex)
 
 void fio_mutex_up(struct fio_mutex *mutex)
 {
-	assert(mutex->magic = FIO_MUTEX_MAGIC);
+	assert(mutex->magic == FIO_MUTEX_MAGIC);
 
 	pthread_mutex_lock(&mutex->lock);
 	read_barrier();
@@ -155,25 +155,25 @@ void fio_mutex_up(struct fio_mutex *mutex)
 
 void fio_rwlock_write(struct fio_rwlock *lock)
 {
-	assert(lock->magic = FIO_RWLOCK_MAGIC);
+	assert(lock->magic == FIO_RWLOCK_MAGIC);
 	pthread_rwlock_wrlock(&lock->lock);
 }
 
 void fio_rwlock_read(struct fio_rwlock *lock)
 {
-	assert(lock->magic = FIO_RWLOCK_MAGIC);
+	assert(lock->magic == FIO_RWLOCK_MAGIC);
 	pthread_rwlock_rdlock(&lock->lock);
 }
 
 void fio_rwlock_unlock(struct fio_rwlock *lock)
 {
-	assert(lock->magic = FIO_RWLOCK_MAGIC);
+	assert(lock->magic == FIO_RWLOCK_MAGIC);
 	pthread_rwlock_unlock(&lock->lock);
 }
 
 void fio_rwlock_remove(struct fio_rwlock *lock)
 {
-	assert(lock->magic = FIO_RWLOCK_MAGIC);
+	assert(lock->magic == FIO_RWLOCK_MAGIC);
 	munmap((void *) lock, sizeof(*lock));
 }
 
