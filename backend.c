@@ -884,8 +884,7 @@ static int init_io_u(struct thread_data *td)
 	char *p;
 
 	max_units = td->o.iodepth;
-	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
-	max_bs = max(td->o.max_bs[DDIR_TRIM], max_bs);
+	max_bs = td_max_bs(td);
 	min_write = td->o.min_bs[DDIR_WRITE];
 	td->orig_buffer_size = (unsigned long long) max_bs
 					* (unsigned long long) max_units;
@@ -1042,7 +1041,7 @@ static int keep_running(struct thread_data *td)
 		 * are done.
 		 */
 		diff = td->o.size - ddir_rw_sum(td->io_bytes);
-		if (diff < td->o.rw_min_bs)
+		if (diff < td_max_bs(td))
 			return 0;
 
 		return 1;

@@ -805,6 +805,14 @@ static inline int should_check_rate(struct thread_data *td,
 	return ret;
 }
 
+static inline unsigned int td_max_bs(struct thread_data *td)
+{
+	unsigned int max_bs;
+
+	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+	return max(td->o.max_bs[DDIR_TRIM], max_bs);
+}
+
 static inline int is_power_of_2(unsigned int val)
 {
 	return (val != 0 && ((val & (val - 1)) == 0));
