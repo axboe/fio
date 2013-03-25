@@ -810,6 +810,24 @@ fi
 echo "libnuma                       $libnuma"
 
 ##########################################
+# libnuma 2.x version API
+if test "$libnuma" = "yes" ; then
+libnuma_v2="no"
+cat > $TMPC << EOF
+#include <numa.h>
+int main(int argc, char **argv)
+{
+  struct bitmask *mask = numa_parse_nodestring(NULL);
+  return 0;
+}
+EOF
+if compile_prog "" "" "libnuma api"; then
+  libnuma_v2="yes"
+fi
+echo "libnuma v2                    $libnuma_v2"
+fi
+
+##########################################
 # strsep() probe
 strsep="no"
 cat > $TMPC << EOF
@@ -1046,7 +1064,7 @@ fi
 if test "$fusion_aw" = "yes" ; then
   output_sym "CONFIG_FUSION_AW"
 fi
-if test "$libnuma" = "yes" ; then
+if test "$libnuma_v2" = "yes" ; then
   output_sym "CONFIG_LIBNUMA"
 fi
 if test "$solaris_aio" = "yes" ; then
