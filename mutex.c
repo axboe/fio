@@ -180,6 +180,7 @@ void fio_rwlock_remove(struct fio_rwlock *lock)
 struct fio_rwlock *fio_rwlock_init(void)
 {
 	struct fio_rwlock *lock;
+	pthread_rwlockattr_t attr;
 	int ret;
 
 	lock = (void *) mmap(NULL, sizeof(struct fio_rwlock),
@@ -193,13 +194,30 @@ struct fio_rwlock *fio_rwlock_init(void)
 
 	lock->magic = FIO_RWLOCK_MAGIC;
 
-	ret = pthread_rwlock_init(&lock->lock, NULL);
+	ret = pthread_rwlockattr_init(&attr);
 	if (ret) {
 		log_err("pthread_rwlock_init: %s\n", strerror(ret));
 		goto err;
 	}
+#ifdef FIO_HAVE_PSHARED_MUTEX
+	ret = pthread_rwlockattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	if (ret) {
+		log_err("pthread_rwlock_init: %s\n", strerror(ret));
+		goto destroy_attr;
+	}
+#endif
+
+	ret = pthread_rwlock_init(&lock->lock, &attr);
+	if (ret) {
+		log_err("pthread_rwlock_init: %s\n", strerror(ret));
+		goto destroy_attr;
+	}
+
+	pthread_rwlockattr_destroy(&attr);
 
 	return lock;
+destroy_attr:
+	pthread_rwlockattr_destroy(&attr);
 err:
 	if (lock)
 		fio_rwlock_remove(lock);
