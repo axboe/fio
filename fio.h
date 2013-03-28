@@ -354,6 +354,8 @@ struct thread_data {
 	uint64_t stat_io_blocks[DDIR_RWDIR_CNT];
 	struct timeval iops_sample_time;
 
+	volatile int update_rusage;
+	struct fio_mutex *rusage_sem;
 	struct rusage ru_start;
 	struct rusage ru_end;
 

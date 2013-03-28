@@ -1386,11 +1386,19 @@ static void *__show_running_run_stats(void *arg)
 		if (td_trim(td) && td->io_bytes[DDIR_TRIM])
 			td->ts.runtime[DDIR_TRIM] += rt[i];
 
-		update_rusage_stat(td);
+		td->update_rusage = 1;
 		td->ts.io_bytes[DDIR_READ] = td->io_bytes[DDIR_READ];
 		td->ts.io_bytes[DDIR_WRITE] = td->io_bytes[DDIR_WRITE];
 		td->ts.io_bytes[DDIR_TRIM] = td->io_bytes[DDIR_TRIM];
 		td->ts.total_run_time = mtime_since(&td->epoch, &tv);
+	}
+
+	for_each_td(td, i) {
+		if (td->rusage_sem) {
+			td->update_rusage = 1;
+			fio_mutex_down(td->rusage_sem);
+		}
+		td->update_rusage = 0;
 	}
 
 	show_run_stats();

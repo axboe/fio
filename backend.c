@@ -406,6 +406,15 @@ static int break_on_this_error(struct thread_data *td, enum fio_ddir ddir,
 	return 0;
 }
 
+static void check_update_rusage(struct thread_data *td)
+{
+	if (td->update_rusage) {
+		td->update_rusage = 0;
+		update_rusage_stat(td);
+		fio_mutex_up(td->rusage_sem);
+	}
+}
+
 /*
  * The main verify engine. Runs over the writes we previously submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
@@ -433,6 +442,8 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 			break;
 	}
 
+	check_update_rusage(td);
+
 	if (td->error)
 		return;
 
@@ -444,6 +455,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 		int ret2, full;
 
 		update_tv_cache(td);
+		check_update_rusage(td);
 
 		if (runtime_exceeded(td, &td->tv_cache)) {
 			__update_tv_cache(td);
@@ -597,6 +609,8 @@ sync_done:
 			break;
 	}
 
+	check_update_rusage(td);
+
 	if (!td->error) {
 		min_events = td->cur_depth;
 
@@ -651,6 +665,8 @@ static uint64_t do_io(struct thread_data *td)
 		struct io_u *io_u;
 		int ret2, full;
 		enum fio_ddir ddir;
+
+		check_update_rusage(td);
 
 		if (td->terminate || td->done)
 			break;
@@ -815,6 +831,8 @@ sync_done:
 			}
 		}
 	}
+
+	check_update_rusage(td);
 
 	if (td->trim_entries)
 		log_err("fio: %d trim entries leaked?\n", td->trim_entries);
@@ -1379,6 +1397,9 @@ err:
 	if (td->o.write_iolog_file)
 		write_iolog_close(td);
 
+	fio_mutex_remove(td->rusage_sem);
+	td->rusage_sem = NULL;
+
 	td_set_runstate(td, TD_EXITED);
 	return (void *) (uintptr_t) td->error;
 }
@@ -1626,6 +1647,9 @@ static void run_threads(void)
 			}
 
 			init_disk_util(td);
+
+			td->rusage_sem = fio_mutex_init(FIO_MUTEX_LOCKED);
+			td->update_rusage = 0;
 
 			/*
 			 * Set state to created. Thread will transition
