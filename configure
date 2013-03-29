@@ -38,8 +38,8 @@ fatal() {
 }
 
 # Default CFLAGS
-CFLAGS="-D_GNU_SOURCE"
-EXTFLAGS="-include config-host.h"
+CFLAGS="-D_GNU_SOURCE -include config-host.h"
+BUILD_CFLAGS=""
 
 # Print a helpful header at the top of config.log
 echo "# FIO configure log $(date)" >> config.log
@@ -230,7 +230,7 @@ CYGWIN*)
   output_sym "CONFIG_SCHED_IDLE"
   output_sym "CONFIG_TCP_NODELAY"
   echo "CC=$CC" >> $config_host_mak
-  echo "EXTFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
+  echo "BUILD_CFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
   exit 0
   ;;
 esac
@@ -1088,4 +1088,4 @@ fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
 echo "CC=$cc" >> $config_host_mak
-echo "EXTFLAGS=$EXTFLAGS $CFLAGS" >> $config_host_mak
+echo "BUILD_CFLAGS=$BUILD_CFLAGS $CFLAGS" >> $config_host_mak

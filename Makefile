@@ -1,11 +1,3 @@
-DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
-CPPFLAGS= -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(DEBUGFLAGS)
-OPTFLAGS= -O3 -g -ffast-math $(EXTFLAGS)
-CFLAGS	= -std=gnu99 -Wwrite-strings -Wall $(OPTFLAGS)
-LIBS	= -lm $(EXTLIBS)
-PROGS	= fio
-SCRIPTS = fio_generate_plots
-
 ifneq ($(wildcard config-host.mak),)
 all:
 include config-host.mak
@@ -19,6 +11,14 @@ config-host.mak:
 all:
 include config-host.mak
 endif
+
+DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
+CPPFLAGS= -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(DEBUGFLAGS)
+OPTFLAGS= -O3 -g -ffast-math
+CFLAGS	= -std=gnu99 -Wwrite-strings -Wall $(OPTFLAGS) $(EXTFLAGS) $(BUILD_CFLAGS)
+LIBS	+= -lm $(EXTLIBS)
+PROGS	= fio
+SCRIPTS = fio_generate_plots
 
 SOURCE := gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
