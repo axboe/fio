@@ -196,13 +196,13 @@ struct fio_rwlock *fio_rwlock_init(void)
 
 	ret = pthread_rwlockattr_init(&attr);
 	if (ret) {
-		log_err("pthread_rwlock_init: %s\n", strerror(ret));
+		log_err("pthread_rwlockattr_init: %s\n", strerror(ret));
 		goto err;
 	}
 #ifdef FIO_HAVE_PSHARED_MUTEX
 	ret = pthread_rwlockattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
 	if (ret) {
-		log_err("pthread_rwlock_init: %s\n", strerror(ret));
+		log_err("pthread_rwlockattr_setpshared: %s\n", strerror(ret));
 		goto destroy_attr;
 	}
 #endif
