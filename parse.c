@@ -140,6 +140,19 @@ static unsigned long get_mult_time(char c)
 	}
 }
 
+static int is_separator(char c)
+{
+	switch (c) {
+	case ':':
+	case '-':
+	case ',':
+	case '/':
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 static unsigned long long __get_mult_bytes(const char *p, void *data,
 					   int *percent)
 {
@@ -153,8 +166,13 @@ static unsigned long long __get_mult_bytes(const char *p, void *data,
 
 	c = strdup(p);
 
-	for (i = 0; i < strlen(c); i++)
+	for (i = 0; i < strlen(c); i++) {
 		c[i] = tolower(c[i]);
+		if (is_separator(c[i])) {
+			c[i] = '\0';
+			break;
+		}
+	}
 
 	if (!strcmp("pib", c)) {
 		pow = 5;
