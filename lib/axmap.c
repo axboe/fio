@@ -189,7 +189,6 @@ void axmap_clear(struct axmap *axmap, uint64_t bit_nr)
 struct axmap_set_data {
 	unsigned int nr_bits;
 	unsigned int set_bits;
-	unsigned int fail_ok;
 };
 
 static unsigned long bit_masks[] = {
@@ -229,10 +228,8 @@ static int axmap_set_fn(struct axmap_level *al, unsigned long offset,
 	 * Mask off any potential overlap, only sets contig regions
 	 */
 	overlap = al->map[offset] & mask;
-	if (overlap == mask) {
-		assert(data->fail_ok);
+	if (overlap == mask)
 		return 1;
-	}
 
 	while (overlap) {
 		unsigned long clear_mask = ~(1UL << ffz(~overlap));
@@ -281,7 +278,6 @@ static void __axmap_set(struct axmap *axmap, uint64_t bit_nr,
 		bit_nr += data->set_bits;
 
 		data->nr_bits = nr_bits;
-		data->fail_ok = 1;
 	}
 
 	data->set_bits = set_bits;
@@ -299,10 +295,7 @@ unsigned int axmap_set_nr(struct axmap *axmap, uint64_t bit_nr, unsigned int nr_
 	unsigned int set_bits = 0;
 
 	do {
-		struct axmap_set_data data = {
-						.nr_bits = nr_bits,
-						.fail_ok = set_bits != 0,
-						};
+		struct axmap_set_data data = { .nr_bits = nr_bits, };
 		unsigned int max_bits, this_set;
 
 		max_bits = BLOCKS_PER_UNIT - (bit_nr & BLOCKS_PER_UNIT_MASK);
