@@ -205,9 +205,12 @@ struct fio_rwlock *fio_rwlock_init(void)
 		log_err("pthread_rwlockattr_setpshared: %s\n", strerror(ret));
 		goto destroy_attr;
 	}
-#endif
 
 	ret = pthread_rwlock_init(&lock->lock, &attr);
+#else
+	ret = pthread_rwlock_init(&lock->lock, NULL);
+#endif
+
 	if (ret) {
 		log_err("pthread_rwlock_init: %s\n", strerror(ret));
 		goto destroy_attr;
