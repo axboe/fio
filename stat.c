@@ -775,7 +775,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	if (ovals)
 		free(ovals);
 
-	if (!calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
+	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		if (rs->agg[ddir]) {
 			p_of_agg = mean * 100 / (double) rs->agg[ddir];
 			if (p_of_agg > 100.0)
