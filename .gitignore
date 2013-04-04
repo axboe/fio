@@ -1,5 +1,9 @@
-fio
-*.o
 *.d
-.depend
-cscope.out
+*.o
+/.depend
+/FIO-VERSION-FILE
+/config-host.h
+/config-host.mak
+/config.log
+/cscope.out
+/fio
