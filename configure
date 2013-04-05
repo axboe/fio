@@ -396,6 +396,28 @@ fi
 echo "Wordsize                      $wordsize"
 
 ##########################################
+# zlib probe
+zlib="no"
+cat > $TMPC <<EOF
+#include <zlib.h>
+int main(void)
+{
+  z_stream stream;
+  if (inflateInit(&stream) != Z_OK)
+    return 1;
+  return 0;
+}
+EOF
+if compile_prog "" "-lz" "zlib" ; then
+  zlib=yes
+  LIBS="-lz $LIBS"
+else
+  feature_not_found "zlib"
+  zlib=no
+fi
+echo "zlib                          $zlib"
+
+##########################################
 # linux-aio probe
 libaio="no"
 cat > $TMPC <<EOF
