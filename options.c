@@ -1132,6 +1132,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "File(s) to use for the workload",
 	},
 	{
+		.name	= "filename_format",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(filename_format),
+		.prio	= -1, /* must come after "directory" */
+		.help	= "Override default $jobname.$jobnum.$filenum naming",
+		.def	= "$jobname.$jobnum.$filenum",
+	},
+	{
 		.name	= "kb_base",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(kb_base),
