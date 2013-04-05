@@ -26,6 +26,7 @@
 #include "idletime.h"
 
 #include "lib/getopt.h"
+#include "lib/strcasestr.h"
 
 const char fio_version_string[] = FIO_VERSION;
 
@@ -838,7 +839,7 @@ static char *make_filename(char *buf, struct thread_options *o,
 			size_t pre_len, post_start = 0;
 			char *str, *dst = copy;
 
-			str = strstr(buf, f->keyword);
+			str = strcasestr(buf, f->keyword);
 			if (!str)
 				break;
 
