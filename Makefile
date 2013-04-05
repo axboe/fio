@@ -72,6 +72,9 @@ endif
 ifndef CONFIG_STRSEP
   SOURCE += lib/strsep.c
 endif
+ifndef CONFIG_STRCASESTR
+  SOURCE += lib/strcasestr.c
+endif
 ifndef CONFIG_GETOPT_LONG_ONLY
   SOURCE += lib/getopt_long.c
 endif
