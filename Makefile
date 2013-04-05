@@ -24,7 +24,7 @@ ifdef CONFIG_GFIO
   PROGS += gfio
 endif
 
-SOURCE := gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
+SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
 		lib/rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
 		lib/num2str.c lib/ieee754.c $(wildcard crc/*.c) engines/cpu.c \
