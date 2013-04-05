@@ -38,8 +38,8 @@ fatal() {
 }
 
 # Default CFLAGS
-CFLAGS="-D_GNU_SOURCE"
-EXTFLAGS="-include config-host.h"
+CFLAGS="-D_GNU_SOURCE -include config-host.h"
+BUILD_CFLAGS=""
 
 # Print a helpful header at the top of config.log
 echo "# FIO configure log $(date)" >> config.log
@@ -236,7 +236,7 @@ CYGWIN*)
   output_sym "CONFIG_SCHED_IDLE"
   output_sym "CONFIG_TCP_NODELAY"
   echo "CC=$CC" >> $config_host_mak
-  echo "EXTFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
+  echo "BUILD_CFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
   exit 0
   ;;
 esac
@@ -816,6 +816,24 @@ fi
 echo "libnuma                       $libnuma"
 
 ##########################################
+# libnuma 2.x version API
+if test "$libnuma" = "yes" ; then
+libnuma_v2="no"
+cat > $TMPC << EOF
+#include <numa.h>
+int main(int argc, char **argv)
+{
+  struct bitmask *mask = numa_parse_nodestring(NULL);
+  return 0;
+}
+EOF
+if compile_prog "" "" "libnuma api"; then
+  libnuma_v2="yes"
+fi
+echo "libnuma v2                    $libnuma_v2"
+fi
+
+##########################################
 # strsep() probe
 strsep="no"
 cat > $TMPC << EOF
@@ -1047,7 +1065,7 @@ fi
 if test "$sfaa" = "yes" ; then
   output_sym "CONFIG_SFAA"
 fi
-if test "$libverbs" = "yes" -o "rdmacm" = "yes" ; then
+if test "$libverbs" = "yes" -a "rdmacm" = "yes" ; then
   output_sym "CONFIG_RDMA"
 fi
 if test "$clock_gettime" = "yes" ; then
@@ -1094,7 +1112,7 @@ fi
 if test "$fusion_aw" = "yes" ; then
   output_sym "CONFIG_FUSION_AW"
 fi
-if test "$libnuma" = "yes" ; then
+if test "$libnuma_v2" = "yes" ; then
   output_sym "CONFIG_LIBNUMA"
 fi
 if test "$solaris_aio" = "yes" ; then
@@ -1122,4 +1140,4 @@ fi
 echo "LIBS+=$LIBS" >> $config_host_mak
 echo "CFLAGS+=$CFLAGS" >> $config_host_mak
 echo "CC=$cc" >> $config_host_mak
-echo "EXTFLAGS=$EXTFLAGS $CFLAGS" >> $config_host_mak
+echo "BUILD_CFLAGS=$BUILD_CFLAGS $CFLAGS" >> $config_host_mak

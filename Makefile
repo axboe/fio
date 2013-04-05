@@ -1,11 +1,3 @@
-DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
-CPPFLAGS= -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(DEBUGFLAGS)
-OPTFLAGS= -O3 -g -ffast-math $(EXTFLAGS)
-CFLAGS	= -std=gnu99 -Wwrite-strings -Wall $(OPTFLAGS)
-LIBS	= -lm -lz $(EXTLIBS)
-PROGS	= fio
-SCRIPTS = fio_generate_plots
-
 ifneq ($(wildcard config-host.mak),)
 all:
 include config-host.mak
@@ -20,11 +12,19 @@ all:
 include config-host.mak
 endif
 
+DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
+CPPFLAGS= -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(DEBUGFLAGS)
+OPTFLAGS= -O3 -g -ffast-math
+CFLAGS	= -std=gnu99 -Wwrite-strings -Wall $(OPTFLAGS) $(EXTFLAGS) $(BUILD_CFLAGS)
+LIBS	+= -lm $(EXTLIBS)
+PROGS	= fio
+SCRIPTS = fio_generate_plots
+
 ifdef CONFIG_GFIO
   PROGS += gfio
 endif
 
-SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
+SOURCE := gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
 		lib/rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
 		lib/num2str.c lib/ieee754.c $(wildcard crc/*.c) engines/cpu.c \

@@ -734,7 +734,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	if (ovals)
 		free(ovals);
 
-	if (!calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
+	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		if (rs->agg[ddir]) {
 			p_of_agg = mean * 100 / (double) rs->agg[ddir];
 			if (p_of_agg > 100.0)
@@ -1350,11 +1350,19 @@ static void *__show_running_run_stats(void *arg)
 		if (td_trim(td) && td->io_bytes[DDIR_TRIM])
 			td->ts.runtime[DDIR_TRIM] += rt[i];
 
-		update_rusage_stat(td);
+		td->update_rusage = 1;
 		td->ts.io_bytes[DDIR_READ] = td->io_bytes[DDIR_READ];
 		td->ts.io_bytes[DDIR_WRITE] = td->io_bytes[DDIR_WRITE];
 		td->ts.io_bytes[DDIR_TRIM] = td->io_bytes[DDIR_TRIM];
 		td->ts.total_run_time = mtime_since(&td->epoch, &tv);
+	}
+
+	for_each_td(td, i) {
+		if (td->rusage_sem) {
+			td->update_rusage = 1;
+			fio_mutex_down(td->rusage_sem);
+		}
+		td->update_rusage = 0;
 	}
 
 	show_run_stats();

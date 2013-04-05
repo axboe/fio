@@ -98,7 +98,7 @@ static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 	struct flist_head *entry;
 	struct timespec start;
 	int have_timeout = 0;
-	int suspend_entries = 0;
+	int suspend_entries;
 	unsigned int r;
 
 	if (t && !fill_timespec(&start))
@@ -107,8 +107,9 @@ static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 		memset(&start, 0, sizeof(start));
 
 	r = 0;
-	memset(suspend_list, 0, sizeof(*suspend_list));
 restart:
+	memset(suspend_list, 0, sizeof(*suspend_list));
+	suspend_entries = 0;
 	flist_for_each(entry, &td->io_u_busylist) {
 		struct io_u *io_u = flist_entry(entry, struct io_u, list);
 		int err;

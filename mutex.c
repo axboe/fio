@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <sys/mman.h>
+#include <assert.h>
 
 #include "fio.h"
 #include "log.h"
@@ -19,6 +20,7 @@
 
 void fio_mutex_remove(struct fio_mutex *mutex)
 {
+	assert(mutex->magic == FIO_MUTEX_MAGIC);
 	pthread_cond_destroy(&mutex->cond);
 	munmap((void *) mutex, sizeof(*mutex));
 }
@@ -40,6 +42,7 @@ struct fio_mutex *fio_mutex_init(int value)
 	}
 
 	mutex->value = value;
+	mutex->magic = FIO_MUTEX_MAGIC;
 
 	ret = pthread_mutexattr_init(&attr);
 	if (ret) {
@@ -92,6 +95,8 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 	struct timespec t;
 	int ret = 0;
 
+	assert(mutex->magic == FIO_MUTEX_MAGIC);
+
 	gettimeofday(&tv_s, NULL);
 	t.tv_sec = tv_s.tv_sec + seconds;
 	t.tv_nsec = tv_s.tv_usec * 1000;
@@ -122,6 +127,8 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 
 void fio_mutex_down(struct fio_mutex *mutex)
 {
+	assert(mutex->magic == FIO_MUTEX_MAGIC);
+
 	pthread_mutex_lock(&mutex->lock);
 
 	while (!mutex->value) {
@@ -136,6 +143,8 @@ void fio_mutex_down(struct fio_mutex *mutex)
 
 void fio_mutex_up(struct fio_mutex *mutex)
 {
+	assert(mutex->magic == FIO_MUTEX_MAGIC);
+
 	pthread_mutex_lock(&mutex->lock);
 	read_barrier();
 	if (!mutex->value && mutex->waiters)
@@ -146,27 +155,32 @@ void fio_mutex_up(struct fio_mutex *mutex)
 
 void fio_rwlock_write(struct fio_rwlock *lock)
 {
+	assert(lock->magic == FIO_RWLOCK_MAGIC);
 	pthread_rwlock_wrlock(&lock->lock);
 }
 
 void fio_rwlock_read(struct fio_rwlock *lock)
 {
+	assert(lock->magic == FIO_RWLOCK_MAGIC);
 	pthread_rwlock_rdlock(&lock->lock);
 }
 
 void fio_rwlock_unlock(struct fio_rwlock *lock)
 {
+	assert(lock->magic == FIO_RWLOCK_MAGIC);
 	pthread_rwlock_unlock(&lock->lock);
 }
 
 void fio_rwlock_remove(struct fio_rwlock *lock)
 {
+	assert(lock->magic == FIO_RWLOCK_MAGIC);
 	munmap((void *) lock, sizeof(*lock));
 }
 
 struct fio_rwlock *fio_rwlock_init(void)
 {
 	struct fio_rwlock *lock;
+	pthread_rwlockattr_t attr;
 	int ret;
 
 	lock = (void *) mmap(NULL, sizeof(struct fio_rwlock),
@@ -178,13 +192,35 @@ struct fio_rwlock *fio_rwlock_init(void)
 		goto err;
 	}
 
-	ret = pthread_rwlock_init(&lock->lock, NULL);
+	lock->magic = FIO_RWLOCK_MAGIC;
+
+	ret = pthread_rwlockattr_init(&attr);
 	if (ret) {
-		log_err("pthread_rwlock_init: %s\n", strerror(ret));
+		log_err("pthread_rwlockattr_init: %s\n", strerror(ret));
 		goto err;
 	}
+#ifdef FIO_HAVE_PSHARED_MUTEX
+	ret = pthread_rwlockattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	if (ret) {
+		log_err("pthread_rwlockattr_setpshared: %s\n", strerror(ret));
+		goto destroy_attr;
+	}
+
+	ret = pthread_rwlock_init(&lock->lock, &attr);
+#else
+	ret = pthread_rwlock_init(&lock->lock, NULL);
+#endif
+
+	if (ret) {
+		log_err("pthread_rwlock_init: %s\n", strerror(ret));
+		goto destroy_attr;
+	}
+
+	pthread_rwlockattr_destroy(&attr);
 
 	return lock;
+destroy_attr:
+	pthread_rwlockattr_destroy(&attr);
 err:
 	if (lock)
 		fio_rwlock_remove(lock);

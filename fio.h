@@ -113,6 +113,8 @@ struct thread_data {
 	uint64_t stat_io_blocks[DDIR_RWDIR_CNT];
 	struct timeval iops_sample_time;
 
+	volatile int update_rusage;
+	struct fio_mutex *rusage_sem;
 	struct rusage ru_start;
 	struct rusage ru_end;
 
@@ -566,6 +568,14 @@ static inline int should_check_rate(struct thread_data *td,
 		ret |= __should_check_rate(td, DDIR_TRIM);
 
 	return ret;
+}
+
+static inline unsigned int td_max_bs(struct thread_data *td)
+{
+	unsigned int max_bs;
+
+	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+	return max(td->o.max_bs[DDIR_TRIM], max_bs);
 }
 
 static inline int is_power_of_2(unsigned int val)
