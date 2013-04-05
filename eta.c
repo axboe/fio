@@ -449,9 +449,9 @@ void display_thread_status(struct jobs_eta *je)
 	if (je->m_rate || je->t_rate) {
 		char *tr, *mr;
 
-		mr = num2str(je->m_rate, 4, 0, je->is_pow2);
-		tr = num2str(je->t_rate, 4, 0, je->is_pow2);
-		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
+		mr = num2str(je->m_rate, 4, 0, je->is_pow2, 8);
+		tr = num2str(je->t_rate, 4, 0, je->is_pow2, 8);
+		p += sprintf(p, ", CR=%s/%s /s", tr, mr);
 		free(tr);
 		free(mr);
 	} else if (je->m_iops || je->t_iops)
@@ -474,8 +474,8 @@ void display_thread_status(struct jobs_eta *je)
 
 		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
 			rate_str[ddir] = num2str(je->rate[ddir], 5,
-						1024, je->is_pow2);
-			iops_str[ddir] = num2str(je->iops[ddir], 4, 1, 0);
+						1024, je->is_pow2, 8);
+			iops_str[ddir] = num2str(je->iops[ddir], 4, 1, 0, 0);
 		}
 
 		left = sizeof(output) - (p - output) - 1;

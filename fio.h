@@ -686,7 +686,7 @@ extern void fio_options_mem_dupe(struct thread_data *);
 extern void options_mem_dupe(void *data, struct fio_option *options);
 extern void td_fill_rand_seeds(struct thread_data *);
 extern void add_job_opts(const char **);
-extern char *num2str(unsigned long, int, int, int);
+extern char *num2str(unsigned long, int, int, int, int);
 extern int ioengine_load(struct thread_data *);
 
 #define FIO_GETOPT_JOB		0x89000000

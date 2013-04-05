@@ -5,12 +5,13 @@
 /*
  * Cheesy number->string conversion, complete with carry rounding error.
  */
-char *num2str(unsigned long num, int maxlen, int base, int pow2)
+char *num2str(unsigned long num, int maxlen, int base, int pow2, int unit_base)
 {
-	char postfix[] = { ' ', 'K', 'M', 'G', 'P', 'E' };
-	unsigned int thousand[] = { 1000, 1024 };
+	const char *postfix[] = { "", "K", "M", "G", "P", "E" };
+	const char *byte_postfix[] = { "", "B", "bit" };
+	const unsigned int thousand[] = { 1000, 1024 };
 	unsigned int modulo, decimals;
-	int post_index, carry = 0;
+	int byte_post_index = 0, post_index, carry = 0;
 	char tmp[32];
 	char *buf;
 
@@ -18,6 +19,16 @@ char *num2str(unsigned long num, int maxlen, int base, int pow2)
 
 	for (post_index = 0; base > 1; post_index++)
 		base /= thousand[!!pow2];
+
+	switch (unit_base) {
+	case 1:
+		byte_post_index = 2;
+		num *= 8;
+		break;
+	case 8:
+		byte_post_index = 1;
+		break;
+	}
 
 	modulo = -1U;
 	while (post_index < sizeof(postfix)) {
@@ -33,7 +44,8 @@ char *num2str(unsigned long num, int maxlen, int base, int pow2)
 
 	if (modulo == -1U) {
 done:
-		sprintf(buf, "%lu%c", num, postfix[post_index]);
+		sprintf(buf, "%lu%s%s", num, postfix[post_index],
+			byte_postfix[byte_post_index]);
 		return buf;
 	}
 
@@ -53,6 +65,7 @@ done:
 		modulo = (modulo + 9) / 10;
 	} while (1);
 
-	sprintf(buf, "%lu.%u%c", num, modulo, postfix[post_index]);
+	sprintf(buf, "%lu.%u%s%s", num, modulo, postfix[post_index],
+		byte_postfix[byte_post_index]);
 	return buf;
 }

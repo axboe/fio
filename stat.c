@@ -276,12 +276,12 @@ void show_group_stats(struct group_run_stats *rs)
 		if (!rs->max_run[i])
 			continue;
 
-		p1 = num2str(rs->io_kb[i], 6, rs->kb_base, i2p);
-		p2 = num2str(rs->agg[i], 6, rs->kb_base, i2p);
-		p3 = num2str(rs->min_bw[i], 6, rs->kb_base, i2p);
-		p4 = num2str(rs->max_bw[i], 6, rs->kb_base, i2p);
+		p1 = num2str(rs->io_kb[i], 6, rs->kb_base, i2p, 8);
+		p2 = num2str(rs->agg[i], 6, rs->kb_base, i2p, 8);
+		p3 = num2str(rs->min_bw[i], 6, rs->kb_base, i2p, 8);
+		p4 = num2str(rs->max_bw[i], 6, rs->kb_base, i2p, 8);
 
-		log_info("%s: io=%sB, aggrb=%sB/s, minb=%sB/s, maxb=%sB/s,"
+		log_info("%s: io=%s, aggrb=%s/s, minb=%s/s, maxb=%s/s,"
 			 " mint=%llumsec, maxt=%llumsec\n",
 				rs->unified_rw_rep ? "  MIXED" : ddir_str[i],
 				p1, p2, p3, p4, rs->min_run[i], rs->max_run[i]);
@@ -379,13 +379,13 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	runt = ts->runtime[ddir];
 
 	bw = (1000 * ts->io_bytes[ddir]) / runt;
-	io_p = num2str(ts->io_bytes[ddir], 6, 1, i2p);
-	bw_p = num2str(bw, 6, 1, i2p);
+	io_p = num2str(ts->io_bytes[ddir], 6, 1, i2p, 8);
+	bw_p = num2str(bw, 6, 1, i2p, 8);
 
 	iops = (1000 * (uint64_t)ts->total_io_u[ddir]) / runt;
-	iops_p = num2str(iops, 6, 1, 0);
+	iops_p = num2str(iops, 6, 1, 0, 0);
 
-	log_info("  %s: io=%sB, bw=%sB/s, iops=%s, runt=%6llumsec\n",
+	log_info("  %s: io=%s, bw=%s/s, iops=%s, runt=%6llumsec\n",
 				rs->unified_rw_rep ? "mixed" : ddir_str[ddir],
 				io_p, bw_p, iops_p, ts->runtime[ddir]);
 
@@ -400,8 +400,8 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		if (!usec_to_msec(&min, &max, &mean, &dev))
 			base = "(msec)";
 
-		minp = num2str(min, 6, 1, 0);
-		maxp = num2str(max, 6, 1, 0);
+		minp = num2str(min, 6, 1, 0, 0);
+		maxp = num2str(max, 6, 1, 0, 0);
 
 		log_info("    slat %s: min=%s, max=%s, avg=%5.02f,"
 			 " stdev=%5.02f\n", base, minp, maxp, mean, dev);
@@ -416,8 +416,8 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		if (!usec_to_msec(&min, &max, &mean, &dev))
 			base = "(msec)";
 
-		minp = num2str(min, 6, 1, 0);
-		maxp = num2str(max, 6, 1, 0);
+		minp = num2str(min, 6, 1, 0, 0);
+		maxp = num2str(max, 6, 1, 0, 0);
 
 		log_info("    clat %s: min=%s, max=%s, avg=%5.02f,"
 			 " stdev=%5.02f\n", base, minp, maxp, mean, dev);
@@ -432,8 +432,8 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		if (!usec_to_msec(&min, &max, &mean, &dev))
 			base = "(msec)";
 
-		minp = num2str(min, 6, 1, 0);
-		maxp = num2str(max, 6, 1, 0);
+		minp = num2str(min, 6, 1, 0, 0);
+		maxp = num2str(max, 6, 1, 0, 0);
 
 		log_info("     lat %s: min=%s, max=%s, avg=%5.02f,"
 			 " stdev=%5.02f\n", base, minp, maxp, mean, dev);
