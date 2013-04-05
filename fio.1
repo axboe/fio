@@ -152,7 +152,7 @@ reserved name, meaning stdin or stdout, depending on the read/write direction
 set.
 .TP
 .BI filename_format \fR=\fPstr
-.B If sharing multiple files between jobs, it is usually necessary to have
+If sharing multiple files between jobs, it is usually necessary to have
 fio generate the exact names that you want. By default, fio will name a file
 based on the default file format specification of
 \fBjobname.jobnumber.filenumber\fP. With this option, that can be
@@ -196,6 +196,7 @@ Only one thread or process may do IO at the time, excluding all others.
 .B readwrite
 Read-write locking on the file. Many readers may access the file at the same
 time, but writes get exclusive access.
+.RE
 .RE
 .P
 .BI opendir \fR=\fPstr
