@@ -167,7 +167,11 @@ ifndef V
 endif
 endif
 
-INSTALL = install
+ifeq ($(CONFIG_TARGET_OS), SunOS)
+	INSTALL = ginstall
+else
+	INSTALL = install
+endif
 prefix = /usr/local
 bindir = $(prefix)/bin
 
