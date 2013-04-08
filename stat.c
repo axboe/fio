@@ -449,7 +449,14 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	}
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg = 100.0, fkb_base = (double)rs->kb_base;
-		const char *bw_str = "KB";
+		const char *bw_str = (rs->unit_base == 1 ? "Kbit" : "KB");
+
+		if (rs->unit_base == 1) {
+			min *= 8.0;
+			max *= 8.0;
+			mean *= 8.0;
+			dev *= 8.0;
+		}
 
 		if (rs->agg[ddir]) {
 			p_of_agg = mean * 100 / (double) rs->agg[ddir];
@@ -462,10 +469,10 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			max /= fkb_base;
 			mean /= fkb_base;
 			dev /= fkb_base;
-			bw_str = "MB";
+			bw_str = (rs->unit_base == 1 ? "Mbit" : "MB");
 		}
 
-		log_info("    bw (%s/s)  : min=%5lu, max=%5lu, per=%3.2f%%,"
+		log_info("    bw (%-4s/s): min=%5lu, max=%5lu, per=%3.2f%%,"
 			 " avg=%5.02f, stdev=%5.02f\n", bw_str, min, max,
 							p_of_agg, mean, dev);
 	}
