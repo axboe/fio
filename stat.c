@@ -277,9 +277,9 @@ void show_group_stats(struct group_run_stats *rs)
 			continue;
 
 		p1 = num2str(rs->io_kb[i], 6, rs->kb_base, i2p, 8);
-		p2 = num2str(rs->agg[i], 6, rs->kb_base, i2p, 8);
-		p3 = num2str(rs->min_bw[i], 6, rs->kb_base, i2p, 8);
-		p4 = num2str(rs->max_bw[i], 6, rs->kb_base, i2p, 8);
+		p2 = num2str(rs->agg[i], 6, rs->kb_base, i2p, rs->unit_base);
+		p3 = num2str(rs->min_bw[i], 6, rs->kb_base, i2p, rs->unit_base);
+		p4 = num2str(rs->max_bw[i], 6, rs->kb_base, i2p, rs->unit_base);
 
 		log_info("%s: io=%s, aggrb=%s/s, minb=%s/s, maxb=%s/s,"
 			 " mint=%llumsec, maxt=%llumsec\n",
@@ -380,7 +380,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 
 	bw = (1000 * ts->io_bytes[ddir]) / runt;
 	io_p = num2str(ts->io_bytes[ddir], 6, 1, i2p, 8);
-	bw_p = num2str(bw, 6, 1, i2p, 8);
+	bw_p = num2str(bw, 6, 1, i2p, ts->unit_base);
 
 	iops = (1000 * (uint64_t)ts->total_io_u[ddir]) / runt;
 	iops_p = num2str(iops, 6, 1, 0, 0);
@@ -1169,6 +1169,7 @@ void show_run_stats(void)
 	struct thread_stat *threadstats, *ts;
 	int i, j, nr_ts, last_ts, idx;
 	int kb_base_warned = 0;
+	int unit_base_warned = 0;
 	struct json_object *root = NULL;
 	struct json_array *array = NULL;
 
@@ -1240,11 +1241,16 @@ void show_run_stats(void)
 			ts->pid = td->pid;
 
 			ts->kb_base = td->o.kb_base;
+			ts->unit_base = td->o.unit_base;
 			ts->unified_rw_rep = td->o.unified_rw_rep;
 		} else if (ts->kb_base != td->o.kb_base && !kb_base_warned) {
 			log_info("fio: kb_base differs for jobs in group, using"
 				 " %u as the base\n", ts->kb_base);
 			kb_base_warned = 1;
+		} else if (ts->unit_base != td->o.unit_base && !unit_base_warned) {
+			log_info("fio: unit_base differs for jobs in group, using"
+				 " %u as the base\n", ts->unit_base);
+			unit_base_warned = 1;
 		}
 
 		ts->continue_on_error = td->o.continue_on_error;
@@ -1270,6 +1276,7 @@ void show_run_stats(void)
 		ts = &threadstats[i];
 		rs = &runstats[ts->groupid];
 		rs->kb_base = ts->kb_base;
+		rs->unit_base = ts->unit_base;
 		rs->unified_rw_rep += ts->unified_rw_rep;
 
 		for (j = 0; j < DDIR_RWDIR_CNT; j++) {

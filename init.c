@@ -560,6 +560,13 @@ static int fixup_options(struct thread_data *td)
 		}
 	}
 
+	if (!o->unit_base) {
+		if (td->io_ops->flags & FIO_BIT_BASED)
+			o->unit_base = 1;
+		else
+			o->unit_base = 8;
+	}
+
 #ifndef CONFIG_FDATASYNC
 	if (o->fdatasync_blocks) {
 		log_info("fio: this platform does not support fdatasync()"

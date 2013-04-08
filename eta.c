@@ -319,6 +319,7 @@ int calc_thread_status(struct jobs_eta *je, int force)
 		unified_rw_rep += td->o.unified_rw_rep;
 		if (is_power_of_2(td->o.kb_base))
 			je->is_pow2 = 1;
+		je->unit_base = td->o.unit_base;
 		if (td->o.bw_avg_time < bw_avg_time)
 			bw_avg_time = td->o.bw_avg_time;
 		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING
@@ -474,7 +475,7 @@ void display_thread_status(struct jobs_eta *je)
 
 		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
 			rate_str[ddir] = num2str(je->rate[ddir], 5,
-						1024, je->is_pow2, 8);
+						1024, je->is_pow2, je->unit_base);
 			iops_str[ddir] = num2str(je->iops[ddir], 4, 1, 0, 0);
 		}
 

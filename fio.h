@@ -108,6 +108,7 @@ struct thread_options {
 	enum td_ddir td_ddir;
 	unsigned int rw_seq;
 	unsigned int kb_base;
+	unsigned int unit_base;
 	unsigned int ddir_seq_nr;
 	long ddir_seq_add;
 	unsigned int iodepth;
