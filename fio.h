@@ -102,6 +102,7 @@ struct thread_options {
 	char *name;
 	char *directory;
 	char *filename;
+	char *filename_format;
 	char *opendir;
 	char *ioengine;
 	enum td_ddir td_ddir;
