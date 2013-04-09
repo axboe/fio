@@ -151,6 +151,34 @@ a number of files by separating the names with a `:' character. `\-' is a
 reserved name, meaning stdin or stdout, depending on the read/write direction
 set.
 .TP
+.BI filename_format \fR=\fPstr
+If sharing multiple files between jobs, it is usually necessary to have
+fio generate the exact names that you want. By default, fio will name a file
+based on the default file format specification of
+\fBjobname.jobnumber.filenumber\fP. With this option, that can be
+customized. Fio will recognize and replace the following keywords in this
+string:
+.RS
+.RS
+.TP
+.B $jobname
+The name of the worker thread or process.
+.TP
+.B $jobnum
+The incremental number of the worker thread or process.
+.TP
+.B $filenum
+The incremental number of the file for that worker thread or process.
+.RE
+.P
+To have dependent jobs share a set of files, this option can be set to
+have fio generate filenames that are shared between the two. For instance,
+if \fBtestfiles.$filenum\fR is specified, file number 4 for any job will
+be named \fBtestfiles.4\fR. The default of \fB$jobname.$jobnum.$filenum\fR
+will be used if no other format specifier is given.
+.RE
+.P
+.TP
 .BI lockfile \fR=\fPstr
 Fio defaults to not locking any files before it does IO to them. If a file or
 file descriptor is shared, fio can serialize IO to that file to make the end
@@ -168,6 +196,7 @@ Only one thread or process may do IO at the time, excluding all others.
 .B readwrite
 Read-write locking on the file. Many readers may access the file at the same
 time, but writes get exclusive access.
+.RE
 .RE
 .P
 .BI opendir \fR=\fPstr

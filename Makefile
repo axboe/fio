@@ -76,6 +76,9 @@ endif
 ifndef CONFIG_STRSEP
   SOURCE += lib/strsep.c
 endif
+ifndef CONFIG_STRCASESTR
+  SOURCE += lib/strcasestr.c
+endif
 ifndef CONFIG_GETOPT_LONG_ONLY
   SOURCE += lib/getopt_long.c
 endif
@@ -173,7 +176,11 @@ ifndef V
 endif
 endif
 
-INSTALL = install
+ifeq ($(CONFIG_TARGET_OS), SunOS)
+	INSTALL = ginstall
+else
+	INSTALL = install
+endif
 prefix = /usr/local
 bindir = $(prefix)/bin
 

@@ -719,13 +719,14 @@ uint64_t get_start_offset(struct thread_data *td)
 int setup_files(struct thread_data *td)
 {
 	unsigned long long total_size, extend_size;
+	struct thread_options *o = &td->o;
 	struct fio_file *f;
 	unsigned int i;
 	int err = 0, need_extend;
 
 	dprint(FD_FILE, "setup files\n");
 
-	if (td->o.read_iolog_file)
+	if (o->read_iolog_file)
 		goto done;
 
 	/*
@@ -753,15 +754,16 @@ int setup_files(struct thread_data *td)
 			total_size += f->real_file_size;
 	}
 
-	if (td->o.fill_device)
+	if (o->fill_device)
 		td->fill_device_size = get_fs_free_counts(td);
 
 	/*
 	 * device/file sizes are zero and no size given, punt
 	 */
-	if ((!total_size || total_size == -1ULL) && !td->o.size &&
-	    !(td->io_ops->flags & FIO_NOIO) && !td->o.fill_device) {
-		log_err("%s: you need to specify size=\n", td->o.name);
+	if ((!total_size || total_size == -1ULL) && !o->size &&
+	    !(td->io_ops->flags & FIO_NOIO) && !o->fill_device &&
+	    !(o->nr_files && (o->file_size_low || o->file_size_high))) {
+		log_err("%s: you need to specify size=\n", o->name);
 		td_verror(td, EINVAL, "total_file_size");
 		return 1;
 	}
@@ -776,27 +778,26 @@ int setup_files(struct thread_data *td)
 	for_each_file(td, f, i) {
 		f->file_offset = get_start_offset(td);
 
-		if (!td->o.file_size_low) {
+		if (!o->file_size_low) {
 			/*
 			 * no file size range given, file size is equal to
 			 * total size divided by number of files. if that is
 			 * zero, set it to the real file size.
 			 */
-			f->io_size = td->o.size / td->o.nr_files;
+			f->io_size = o->size / o->nr_files;
 			if (!f->io_size)
 				f->io_size = f->real_file_size - f->file_offset;
-		} else if (f->real_file_size < td->o.file_size_low ||
-			   f->real_file_size > td->o.file_size_high) {
-			if (f->file_offset > td->o.file_size_low)
+		} else if (f->real_file_size < o->file_size_low ||
+			   f->real_file_size > o->file_size_high) {
+			if (f->file_offset > o->file_size_low)
 				goto err_offset;
 			/*
 			 * file size given. if it's fixed, use that. if it's a
 			 * range, generate a random size in-between.
 			 */
-			if (td->o.file_size_low == td->o.file_size_high) {
-				f->io_size = td->o.file_size_low
-						- f->file_offset;
-			} else {
+			if (o->file_size_low == o->file_size_high)
+				f->io_size = o->file_size_low - f->file_offset;
+			else {
 				f->io_size = get_rand_file_size(td)
 						- f->file_offset;
 			}
@@ -806,15 +807,15 @@ int setup_files(struct thread_data *td)
 		if (f->io_size == -1ULL)
 			total_size = -1ULL;
 		else {
-                        if (td->o.size_percent)
-                                f->io_size = (f->io_size * td->o.size_percent) / 100;
+                        if (o->size_percent)
+                                f->io_size = (f->io_size * o->size_percent) / 100;
 			total_size += f->io_size;
 		}
 
 		if (f->filetype == FIO_TYPE_FILE &&
 		    (f->io_size + f->file_offset) > f->real_file_size &&
 		    !(td->io_ops->flags & FIO_DISKLESSIO)) {
-			if (!td->o.create_on_open) {
+			if (!o->create_on_open) {
 				need_extend++;
 				extend_size += (f->io_size + f->file_offset);
 			} else
@@ -823,8 +824,8 @@ int setup_files(struct thread_data *td)
 		}
 	}
 
-	if (!td->o.size || td->o.size > total_size)
-		td->o.size = total_size;
+	if (!o->size || o->size > total_size)
+		o->size = total_size;
 
 	/*
 	 * See if we need to extend some files
@@ -833,7 +834,7 @@ int setup_files(struct thread_data *td)
 		temp_stall_ts = 1;
 		if (output_format == FIO_OUTPUT_NORMAL)
 			log_info("%s: Laying out IO file(s) (%u file(s) /"
-				 " %lluMB)\n", td->o.name, need_extend,
+				 " %lluMB)\n", o->name, need_extend,
 					extend_size >> 20);
 
 		for_each_file(td, f, i) {
@@ -844,7 +845,7 @@ int setup_files(struct thread_data *td)
 
 			assert(f->filetype == FIO_TYPE_FILE);
 			fio_file_clear_extend(f);
-			if (!td->o.fill_device) {
+			if (!o->fill_device) {
 				old_len = f->real_file_size;
 				extend_len = f->io_size + f->file_offset -
 						old_len;
@@ -867,23 +868,23 @@ int setup_files(struct thread_data *td)
 	if (err)
 		return err;
 
-	if (!td->o.zone_size)
-		td->o.zone_size = td->o.size;
+	if (!o->zone_size)
+		o->zone_size = o->size;
 
 	/*
 	 * iolog already set the total io size, if we read back
 	 * stored entries.
 	 */
-	if (!td->o.read_iolog_file)
-		td->total_io_size = td->o.size * td->o.loops;
+	if (!o->read_iolog_file)
+		td->total_io_size = o->size * o->loops;
 
 done:
-	if (td->o.create_only)
+	if (o->create_only)
 		td->done = 1;
 
 	return 0;
 err_offset:
-	log_err("%s: you need to specify valid offset=\n", td->o.name);
+	log_err("%s: you need to specify valid offset=\n", o->name);
 	return 1;
 }
 

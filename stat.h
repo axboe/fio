@@ -9,6 +9,7 @@ struct group_run_stats {
 	uint64_t io_kb[DDIR_RWDIR_CNT];
 	uint64_t agg[DDIR_RWDIR_CNT];
 	uint32_t kb_base;
+	uint32_t unit_base;
 	uint32_t groupid;
 	uint32_t unified_rw_rep;
 };
@@ -173,6 +174,7 @@ struct thread_stat {
 	uint32_t first_error;
 
 	uint32_t kb_base;
+	uint32_t unit_base;
 };
 
 struct jobs_eta {
@@ -187,6 +189,7 @@ struct jobs_eta {
 	uint64_t elapsed_sec;
 	uint64_t eta_sec;
 	uint32_t is_pow2;
+	uint32_t unit_base;
 
 	/*
 	 * Network 'copy' of run_str[]

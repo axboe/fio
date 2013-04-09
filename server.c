@@ -936,6 +936,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 	}
 
 	dst->kb_base	= cpu_to_le32(src->kb_base);
+	dst->unit_base	= cpu_to_le32(src->unit_base);
 	dst->groupid	= cpu_to_le32(src->groupid);
 	dst->unified_rw_rep	= cpu_to_le32(src->unified_rw_rep);
 }
@@ -1018,6 +1019,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.total_err_count	= cpu_to_le64(ts->total_err_count);
 	p.ts.first_error	= cpu_to_le32(ts->first_error);
 	p.ts.kb_base		= cpu_to_le32(ts->kb_base);
+	p.ts.unit_base		= cpu_to_le32(ts->unit_base);
 
 	convert_gs(&p.rs, rs);
 

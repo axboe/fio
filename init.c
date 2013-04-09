@@ -26,6 +26,7 @@
 #include "idletime.h"
 
 #include "lib/getopt.h"
+#include "lib/strcasestr.h"
 
 const char fio_version_string[] = FIO_VERSION;
 
@@ -567,6 +568,13 @@ static int fixup_options(struct thread_data *td)
 		}
 	}
 
+	if (!o->unit_base) {
+		if (td->io_ops->flags & FIO_BIT_BASED)
+			o->unit_base = 1;
+		else
+			o->unit_base = 8;
+	}
+
 #ifndef CONFIG_FDATASYNC
 	if (o->fdatasync_blocks) {
 		log_info("fio: this platform does not support fdatasync()"
@@ -807,6 +815,82 @@ static int setup_random_seeds(struct thread_data *td)
 	return 0;
 }
 
+enum {
+	FPRE_NONE = 0,
+	FPRE_JOBNAME,
+	FPRE_JOBNUM,
+	FPRE_FILENUM
+};
+
+static struct fpre_keyword {
+	const char *keyword;
+	size_t strlen;
+	int key;
+} fpre_keywords[] = {
+	{ .keyword = "$jobname",	.key = FPRE_JOBNAME, },
+	{ .keyword = "$jobnum",		.key = FPRE_JOBNUM, },
+	{ .keyword = "$filenum",	.key = FPRE_FILENUM, },
+	{ .keyword = NULL, },
+	};
+
+static char *make_filename(char *buf, struct thread_options *o,
+			   const char *jobname, int jobnum, int filenum)
+{
+	struct fpre_keyword *f;
+	char copy[PATH_MAX];
+
+	if (!o->filename_format || !strlen(o->filename_format)) {
+		sprintf(buf, "%s.%d.%d", jobname, jobnum, filenum);
+		return NULL;
+	}
+
+	for (f = &fpre_keywords[0]; f->keyword; f++)
+		f->strlen = strlen(f->keyword);
+
+	strcpy(buf, o->filename_format);
+	memset(copy, 0, sizeof(copy));
+	for (f = &fpre_keywords[0]; f->keyword; f++) {
+		do {
+			size_t pre_len, post_start = 0;
+			char *str, *dst = copy;
+
+			str = strcasestr(buf, f->keyword);
+			if (!str)
+				break;
+
+			pre_len = str - buf;
+			if (strlen(str) != f->strlen)
+				post_start = pre_len + f->strlen;
+
+			if (pre_len) {
+				strncpy(dst, buf, pre_len);
+				dst += pre_len;
+			}
+
+			switch (f->key) {
+			case FPRE_JOBNAME:
+				dst += sprintf(dst, "%s", jobname);
+				break;
+			case FPRE_JOBNUM:
+				dst += sprintf(dst, "%d", jobnum);
+				break;
+			case FPRE_FILENUM:
+				dst += sprintf(dst, "%d", filenum);
+				break;
+			default:
+				assert(0);
+				break;
+			}
+
+			if (post_start)
+				strcpy(dst, buf + post_start);
+
+			strcpy(buf, copy);
+		} while (1);
+	}
+
+	return buf;
+}
 /*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
@@ -818,6 +902,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	unsigned int i;
 	char fname[PATH_MAX];
 	int numjobs, file_alloced;
+	struct thread_options *o = &td->o;
 
 	/*
 	 * the def_thread is just for options, it's not a real job
@@ -843,21 +928,18 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (ioengine_load(td))
 		goto err;
 
-	if (td->o.odirect)
+	if (o->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
 
 	file_alloced = 0;
-	if (!td->o.filename && !td->files_index && !td->o.read_iolog_file) {
+	if (!o->filename && !td->files_index && !o->read_iolog_file) {
 		file_alloced = 1;
 
-		if (td->o.nr_files == 1 && exists_and_not_file(jobname))
+		if (o->nr_files == 1 && exists_and_not_file(jobname))
 			add_file(td, jobname);
 		else {
-			for (i = 0; i < td->o.nr_files; i++) {
-				sprintf(fname, "%s.%d.%d", jobname,
-							td->thread_number, i);
-				add_file(td, fname);
-			}
+			for (i = 0; i < o->nr_files; i++)
+				add_file(td, make_filename(fname, o, jobname, td->thread_number, i));
 		}
 	}
 
@@ -882,9 +964,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 
 	td->mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
 
-	td->ts.clat_percentiles = td->o.clat_percentiles;
-	td->ts.percentile_precision = td->o.percentile_precision;
-	memcpy(td->ts.percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
+	td->ts.clat_percentiles = o->clat_percentiles;
+	td->ts.percentile_precision = o->percentile_precision;
+	memcpy(td->ts.percentile_list, o->percentile_list, sizeof(o->percentile_list));
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		td->ts.clat_stat[i].min_val = ULONG_MAX;
@@ -892,9 +974,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		td->ts.lat_stat[i].min_val = ULONG_MAX;
 		td->ts.bw_stat[i].min_val = ULONG_MAX;
 	}
-	td->ddir_seq_nr = td->o.ddir_seq_nr;
+	td->ddir_seq_nr = o->ddir_seq_nr;
 
-	if ((td->o.stonewall || td->o.new_group) && prev_group_jobs) {
+	if ((o->stonewall || o->new_group) && prev_group_jobs) {
 		prev_group_jobs = 0;
 		groupid++;
 	}
@@ -910,18 +992,18 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (setup_rate(td))
 		goto err;
 
-	if (td->o.lat_log_file) {
-		setup_log(&td->lat_log, td->o.log_avg_msec, IO_LOG_TYPE_LAT);
-		setup_log(&td->slat_log, td->o.log_avg_msec, IO_LOG_TYPE_SLAT);
-		setup_log(&td->clat_log, td->o.log_avg_msec, IO_LOG_TYPE_CLAT);
+	if (o->lat_log_file) {
+		setup_log(&td->lat_log, o->log_avg_msec, IO_LOG_TYPE_LAT);
+		setup_log(&td->slat_log, o->log_avg_msec, IO_LOG_TYPE_SLAT);
+		setup_log(&td->clat_log, o->log_avg_msec, IO_LOG_TYPE_CLAT);
 	}
-	if (td->o.bw_log_file)
-		setup_log(&td->bw_log, td->o.log_avg_msec, IO_LOG_TYPE_BW);
-	if (td->o.iops_log_file)
-		setup_log(&td->iops_log, td->o.log_avg_msec, IO_LOG_TYPE_IOPS);
+	if (o->bw_log_file)
+		setup_log(&td->bw_log, o->log_avg_msec, IO_LOG_TYPE_BW);
+	if (o->iops_log_file)
+		setup_log(&td->iops_log, o->log_avg_msec, IO_LOG_TYPE_IOPS);
 
-	if (!td->o.name)
-		td->o.name = strdup(jobname);
+	if (!o->name)
+		o->name = strdup(jobname);
 
 	if (output_format == FIO_OUTPUT_NORMAL) {
 		if (!job_add_num) {
@@ -931,20 +1013,19 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			if (!(td->io_ops->flags & FIO_NOIO)) {
 				char *c1, *c2, *c3, *c4, *c5, *c6;
 
-				c1 = fio_uint_to_kmg(td->o.min_bs[DDIR_READ]);
-				c2 = fio_uint_to_kmg(td->o.max_bs[DDIR_READ]);
-				c3 = fio_uint_to_kmg(td->o.min_bs[DDIR_WRITE]);
-				c4 = fio_uint_to_kmg(td->o.max_bs[DDIR_WRITE]);
-				c5 = fio_uint_to_kmg(td->o.min_bs[DDIR_TRIM]);
-				c6 = fio_uint_to_kmg(td->o.max_bs[DDIR_TRIM]);
+				c1 = fio_uint_to_kmg(o->min_bs[DDIR_READ]);
+				c2 = fio_uint_to_kmg(o->max_bs[DDIR_READ]);
+				c3 = fio_uint_to_kmg(o->min_bs[DDIR_WRITE]);
+				c4 = fio_uint_to_kmg(o->max_bs[DDIR_WRITE]);
+				c5 = fio_uint_to_kmg(o->min_bs[DDIR_TRIM]);
+				c6 = fio_uint_to_kmg(o->max_bs[DDIR_TRIM]);
 
 				log_info("%s: (g=%d): rw=%s, bs=%s-%s/%s-%s/%s-%s,"
 					 " ioengine=%s, iodepth=%u\n",
 						td->o.name, td->groupid,
-						ddir_str(td->o.td_ddir),
+						ddir_str(o->td_ddir),
 						c1, c2, c3, c4, c5, c6,
-						td->io_ops->name,
-						td->o.iodepth);
+						td->io_ops->name, o->iodepth);
 
 				free(c1);
 				free(c2);
@@ -961,7 +1042,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	 * recurse add identical jobs, clear numjobs and stonewall options
 	 * as they don't apply to sub-jobs
 	 */
-	numjobs = td->o.numjobs;
+	numjobs = o->numjobs;
 	while (--numjobs) {
 		struct thread_data *td_new = get_new_job(0, td, 1);
 

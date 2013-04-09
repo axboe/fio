@@ -949,6 +949,25 @@ static int kb_base_verify(struct fio_option *o, void *data)
 	return 0;
 }
 
+static int unit_base_verify(struct fio_option *o, void *data)
+{
+	struct thread_data *td = data;
+
+	/* 0 = default, pick based on engine
+	 * 1 = use bits
+	 * 8 = use bytes
+	 */
+	if (td->o.unit_base != 0 &&
+		td->o.unit_base != 1 &&
+		td->o.unit_base != 8) {
+		log_err("fio: unit_base set to nonsensical value: %u\n",
+				td->o.unit_base);
+		return 1;
+	}
+
+	return 0;
+}
+
 /*
  * Option grouping
  */
@@ -1146,6 +1165,32 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Directory to store files in",
 		.category = FIO_OPT_C_FILE,
 		.group	= FIO_OPT_G_FILENAME,
+	},
+	{
+		.name	= "filename_format",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(filename_format),
+		.prio	= -1, /* must come after "directory" */
+		.help	= "Override default $jobname.$jobnum.$filenum naming",
+		.def	= "$jobname.$jobnum.$filenum",
+	},
+	{
+		.name	= "kb_base",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(kb_base),
+		.verify	= kb_base_verify,
+		.prio	= 1,
+		.def	= "1024",
+		.help	= "How many bytes per KB for reporting (1000 or 1024)",
+	},
+	{
+		.name	= "unit_base",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(unit_base),
+		.verify	= unit_base_verify,
+		.prio	= 1,
+		.def	= "0",
+		.help	= "Bit multiple of result summary data (8 for byte, 1 for bit)",
 	},
 	{
 		.name	= "lockfile",

@@ -285,6 +285,32 @@ filename=str	Fio normally makes up a filename based on the job name,
 		stdin or stdout. Which of the two depends on the read/write
 		direction set.
 
+filename_format=str
+		If sharing multiple files between jobs, it is usually necessary
+		to  have fio generate the exact names that you want. By default,
+		fio will name a file based on the default file format
+		specification of jobname.jobnumber.filenumber. With this
+		option, that can be customized. Fio will recognize and replace
+		the following keywords in this string:
+
+		$jobname
+			The name of the worker thread or process.
+
+		$jobnum
+			The incremental number of the worker thread or
+			process.
+
+		$filenum
+			The incremental number of the file for that worker
+			thread or process.
+
+		To have dependent jobs share a set of files, this option can
+		be set to have fio generate filenames that are shared between
+		the two. For instance, if testfiles.$filenum is specified,
+		file number 4 for any job will be named testfiles.4. The
+		default of $jobname.$jobnum.$filenum will be used if
+		no other format specifier is given.
+
 opendir=str	Tell fio to recursively add any file it can find in this
 		directory and down the file system tree.
 
@@ -405,7 +431,7 @@ filesize=int	Individual file sizes. May be a range, in which case fio
 fill_device=bool
 fill_fs=bool	Sets size to something really large and waits for ENOSPC (no
 		space left on device) as the terminating condition. Only makes
-                sense with sequential write. For a read workload, the mount
+		sense with sequential write. For a read workload, the mount
 		point will be filled first then IO started on the result. This
 		option doesn't make sense if operating on a raw device node,
 		since the size of that is already known by the file system.

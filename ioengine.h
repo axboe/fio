@@ -162,6 +162,7 @@ enum fio_ioengine_flags {
 	FIO_PIPEIO	= 1 << 7,	/* input/output no seekable */
 	FIO_BARRIER	= 1 << 8,	/* engine supports barriers */
 	FIO_MEMALIGN	= 1 << 9,	/* engine wants aligned memory */
+	FIO_BIT_BASED	= 1 << 10,	/* engine uses a bit base (e.g. uses Kbit as opposed to KB) */
 };
 
 /*

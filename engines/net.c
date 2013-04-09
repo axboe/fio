@@ -978,7 +978,7 @@ static struct ioengine_ops ioengine_rw = {
 	.options		= options,
 	.option_struct_size	= sizeof(struct netio_options),
 	.flags			= FIO_SYNCIO | FIO_DISKLESSIO | FIO_UNIDIR |
-				  FIO_PIPEIO,
+				  FIO_PIPEIO | FIO_BIT_BASED,
 };
 
 static int str_hostname_cb(void *data, const char *input)
