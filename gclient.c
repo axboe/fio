@@ -400,13 +400,13 @@ static void gfio_update_client_eta(struct fio_client *client, struct jobs_eta *j
 			sprintf(output, "%3.1f%% done", perc);
 		}
 
-		rate_str[0] = num2str(je->rate[0], 5, 10, i2p);
-		rate_str[1] = num2str(je->rate[1], 5, 10, i2p);
-		rate_str[2] = num2str(je->rate[2], 5, 10, i2p);
+		rate_str[0] = num2str(je->rate[0], 5, 10, i2p, 0);
+		rate_str[1] = num2str(je->rate[1], 5, 10, i2p, 0);
+		rate_str[2] = num2str(je->rate[2], 5, 10, i2p, 0);
 
-		iops_str[0] = num2str(je->iops[0], 4, 1, 0);
-		iops_str[1] = num2str(je->iops[1], 4, 1, 0);
-		iops_str[2] = num2str(je->iops[2], 4, 1, 0);
+		iops_str[0] = num2str(je->iops[0], 4, 1, 0, 0);
+		iops_str[1] = num2str(je->iops[1], 4, 1, 0, 0);
+		iops_str[2] = num2str(je->iops[2], 4, 1, 0, 0);
 
 		gtk_entry_set_text(GTK_ENTRY(ge->eta.read_bw), rate_str[0]);
 		gtk_entry_set_text(GTK_ENTRY(ge->eta.read_iops), iops_str[0]);
@@ -494,13 +494,13 @@ static void gfio_update_all_eta(struct jobs_eta *je)
 			sprintf(output, "%3.1f%% done", perc);
 		}
 
-		rate_str[0] = num2str(je->rate[0], 5, 10, i2p);
-		rate_str[1] = num2str(je->rate[1], 5, 10, i2p);
-		rate_str[2] = num2str(je->rate[2], 5, 10, i2p);
+		rate_str[0] = num2str(je->rate[0], 5, 10, i2p, 0);
+		rate_str[1] = num2str(je->rate[1], 5, 10, i2p, 0);
+		rate_str[2] = num2str(je->rate[2], 5, 10, i2p, 0);
 
-		iops_str[0] = num2str(je->iops[0], 4, 1, 0);
-		iops_str[1] = num2str(je->iops[1], 4, 1, 0);
-		iops_str[2] = num2str(je->iops[2], 4, 1, 0);
+		iops_str[0] = num2str(je->iops[0], 4, 1, 0, 0);
+		iops_str[1] = num2str(je->iops[1], 4, 1, 0, 0);
+		iops_str[2] = num2str(je->iops[2], 4, 1, 0, 0);
 
 		gtk_entry_set_text(GTK_ENTRY(ui->eta.read_bw), rate_str[0]);
 		gtk_entry_set_text(GTK_ENTRY(ui->eta.read_iops), iops_str[0]);
@@ -1020,8 +1020,8 @@ static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long min,
 	if (!usec_to_msec(&min, &max, &mean, &dev))
 		base = "(msec)";
 
-	minp = num2str(min, 6, 1, 0);
-	maxp = num2str(max, 6, 1, 0);
+	minp = num2str(min, 6, 1, 0, 0);
+	maxp = num2str(max, 6, 1, 0, 0);
 
 	sprintf(tmp, "%s %s", name, base);
 	frame = gtk_frame_new(tmp);
@@ -1192,11 +1192,11 @@ static void gfio_show_ddir_status(struct gfio_client *gc, GtkWidget *mbox,
 	runt = ts->runtime[ddir];
 
 	bw = (1000 * ts->io_bytes[ddir]) / runt;
-	io_p = num2str(ts->io_bytes[ddir], 6, 1, i2p);
-	bw_p = num2str(bw, 6, 1, i2p);
+	io_p = num2str(ts->io_bytes[ddir], 6, 1, i2p, 8);
+	bw_p = num2str(bw, 6, 1, i2p, ts->unit_base);
 
 	iops = (1000 * (uint64_t)ts->total_io_u[ddir]) / runt;
-	iops_p = num2str(iops, 6, 1, 0);
+	iops_p = num2str(iops, 6, 1, 0, 0);
 
 	box = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(mbox), box, TRUE, FALSE, 3);
