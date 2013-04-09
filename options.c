@@ -1100,25 +1100,6 @@ static int kb_base_verify(struct fio_option *o, void *data)
 	return 0;
 }
 
-static int unit_base_verify(struct fio_option *o, void *data)
-{
-	struct thread_data *td = data;
-
-	/* 0 = default, pick based on engine
-	 * 1 = use bits
-	 * 8 = use bytes
-	 */
-	if (td->o.unit_base != 0 &&
-		td->o.unit_base != 1 &&
-		td->o.unit_base != 8) {
-		log_err("fio: unit_base set to nonsensical value: %u\n",
-				td->o.unit_base);
-		return 1;
-	}
-
-	return 0;
-}
-
 /*
  * Map of job/command line options
  */
@@ -1171,9 +1152,21 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.name	= "unit_base",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(unit_base),
-		.verify	= unit_base_verify,
 		.prio	= 1,
-		.def	= "0",
+		.posval = {
+			  { .ival = "0",
+			    .oval = 0,
+			    .help = "Auto-detect",
+			  },
+			  { .ival = "8",
+			    .oval = 8,
+			    .help = "Normal (byte based)",
+			  },
+			  { .ival = "1",
+			    .oval = 1,
+			    .help = "Bit based",
+			  },
+		},
 		.help	= "Bit multiple of result summary data (8 for byte, 1 for bit)",
 	},
 	{
