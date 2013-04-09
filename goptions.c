@@ -893,18 +893,29 @@ static void gopt_set_option(struct gopt_job_view *gjv, struct fio_option *o,
 			gopt_int_set_val(i, *ullp);
 		break;
 		}
-	case FIO_OPT_INT: {
-		unsigned int *ip = NULL;
-		struct gopt_int *i;
+	case FIO_OPT_INT:
+		if (o->posval[0].ival) {
+			unsigned int *ip = NULL;
+			struct gopt_combo *c;
 
-		if (o->off1)
-			ip = td_var(to, o->off1);
+			if (o->off1)
+				ip = td_var(to, o->off1);
 
-		i = container_of(gopt, struct gopt_int, gopt);
-		if (ip)
-			gopt_int_set_val(i, *ip);
-		break;
+			c = container_of(gopt, struct gopt_combo, gopt);
+			if (ip)
+				gopt_combo_int_set_val(c, *ip);
+		} else {
+			unsigned int *ip = NULL;
+			struct gopt_int *i;
+
+			if (o->off1)
+				ip = td_var(to, o->off1);
+
+			i = container_of(gopt, struct gopt_int, gopt);
+			if (ip)
+				gopt_int_set_val(i, *ip);
 		}
+		break;
 	case FIO_OPT_STR_SET:
 	case FIO_OPT_BOOL: {
 		unsigned int *ip = NULL;
@@ -1017,15 +1028,23 @@ static void gopt_add_option(struct gopt_job_view *gjv, GtkWidget *hbox,
 		go = gopt_new_ullong(gjv, o, ullp, opt_index);
 		break;
 		}
-	case FIO_OPT_INT: {
-		unsigned int *ip = NULL;
+	case FIO_OPT_INT:
+		if (o->posval[0].ival) {
+			unsigned int *ip = NULL;
 
-		if (o->off1)
-			ip = td_var(to, o->off1);
+			if (o->off1)
+				ip = td_var(to, o->off1);
 
-		go = gopt_new_int(gjv, o, ip, opt_index);
-		break;
+			go = gopt_new_combo_int(gjv, o, ip, opt_index);
+		} else {
+			unsigned int *ip = NULL;
+
+			if (o->off1)
+				ip = td_var(to, o->off1);
+
+			go = gopt_new_int(gjv, o, ip, opt_index);
 		}
+		break;
 	case FIO_OPT_STR_SET:
 	case FIO_OPT_BOOL: {
 		unsigned int *ip = NULL;
