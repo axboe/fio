@@ -464,6 +464,24 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 					" (%u min)\n", ull, o->minval);
 			return 1;
 		}
+		if (o->posval[0].ival) {
+			posval_sort(o, posval);
+
+			ret = 1;
+			for (i = 0; i < PARSE_MAX_VP; i++) {
+				vp = &posval[i];
+				if (!vp->ival || vp->ival[0] == '\0')
+					continue;
+				if (vp->oval == ull) {
+					ret = 0;
+					break;
+				}
+			}
+			if (ret) {
+				log_err("value %d not in allowed range\n",ull);
+				return 1;
+			}
+		}
 
 		if (fn)
 			ret = fn(data, &ull);
