@@ -1168,16 +1168,16 @@ void option_init(struct fio_option *o)
 	}
 	if (!o->cb && (!o->off1 && !o->roff1))
 		log_err("Option %s: neither cb nor offset given\n", o->name);
+	if (!o->category) {
+		log_info("Options %s: no category defined. Setting to misc\n", o->name);
+		o->category = FIO_OPT_C_GENERAL;
+	}
 	if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE ||
 	    o->type == FIO_OPT_STR_MULTI)
 		return;
 	if (o->cb && ((o->off1 || o->off2 || o->off3 || o->off4) ||
 		      (o->roff1 || o->roff2 || o->roff3 || o->roff4))) {
 		log_err("Option %s: both cb and offset given\n", o->name);
-	}
-	if (!o->category) {
-		log_info("Options %s: no category defined. Setting to misc\n", o->name);
-		o->category = FIO_OPT_C_GENERAL;
 	}
 }
 
