@@ -479,7 +479,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 				}
 			}
 			if (ret) {
-				log_err("value %d not in allowed range\n",ull);
+				log_err("fio: value %llu not allowed:\n", ull);
+				show_option_values(o);
 				return 1;
 			}
 		}
