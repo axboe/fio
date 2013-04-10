@@ -27,7 +27,7 @@ static struct fio_option options[] = {
 		.roff1	= &size,
 		.help	= "Size in MB",
 		.category = FIO_OPT_C_PROFILE,
-		.group	= FIO_OPT_G_TIOPROF,
+		.group	= FIO_OPT_G_TIOBENCH,
 	},
 	{
 		.name	= "block",
@@ -36,7 +36,7 @@ static struct fio_option options[] = {
 		.help	= "Block size in bytes",
 		.def	= "4k",
 		.category = FIO_OPT_C_PROFILE,
-		.group	= FIO_OPT_G_TIOPROF,
+		.group	= FIO_OPT_G_TIOBENCH,
 	},
 	{
 		.name	= "numruns",
@@ -44,7 +44,7 @@ static struct fio_option options[] = {
 		.roff1	= &loops,
 		.help	= "Number of runs",
 		.category = FIO_OPT_C_PROFILE,
-		.group	= FIO_OPT_G_TIOPROF,
+		.group	= FIO_OPT_G_TIOBENCH,
 	},
 	{
 		.name	= "dir",
@@ -52,7 +52,7 @@ static struct fio_option options[] = {
 		.roff1	= &dir,
 		.help	= "Test directory",
 		.category = FIO_OPT_C_PROFILE,
-		.group	= FIO_OPT_G_TIOPROF,
+		.group	= FIO_OPT_G_TIOBENCH,
 	},
 	{
 		.name	= "threads",
@@ -60,7 +60,7 @@ static struct fio_option options[] = {
 		.roff1	= &nthreads,
 		.help	= "Number of Threads",
 		.category = FIO_OPT_C_PROFILE,
-		.group	= FIO_OPT_G_TIOPROF,
+		.group	= FIO_OPT_G_TIOBENCH,
 	},
 	{
 		.name	= NULL,
