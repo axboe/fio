@@ -1141,6 +1141,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.prio	= -1, /* must come after "directory" */
 		.help	= "Override default $jobname.$jobnum.$filenum naming",
 		.def	= "$jobname.$jobnum.$filenum",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_FILENAME,
 	},
 	{
 		.name	= "lockfile",
