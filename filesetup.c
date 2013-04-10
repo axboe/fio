@@ -97,9 +97,9 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 
 			r = fallocate(f->fd, FALLOC_FL_KEEP_SIZE, 0,
 					f->real_file_size);
-			if (r != 0) {
+			if (r != 0)
 				td_verror(td, errno, "fallocate");
-			}
+
 			break;
 #endif /* CONFIG_LINUX_FALLOCATE */
 		default:
@@ -918,9 +918,9 @@ static int __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 		seed = td->rand_seeds[4];
 
 	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
-		zipf_init(&f->zipf, nranges, td->o.zipf_theta, seed);
+		zipf_init(&f->zipf, nranges, td->o.zipf_theta.u.f, seed);
 	else
-		pareto_init(&f->zipf, nranges, td->o.pareto_h, seed);
+		pareto_init(&f->zipf, nranges, td->o.pareto_h.u.f, seed);
 
 	return 1;
 }

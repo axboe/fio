@@ -735,13 +735,13 @@ static int str_random_distribution_cb(void *data, const char *str)
 			log_err("fio: zipf theta must different than 1.0\n");
 			return 1;
 		}
-		td->o.zipf_theta = val;
+		td->o.zipf_theta.u.f = val;
 	} else {
 		if (val <= 0.00 || val >= 1.00) {
 			log_err("fio: pareto input out of range (0 < input < 1.0)\n");
 			return 1;
 		}
-		td->o.pareto_h = val;
+		td->o.pareto_h.u.f = val;
 	}
 
 	return 0;

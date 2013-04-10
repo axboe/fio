@@ -5,6 +5,7 @@
 #include "os/os.h"
 #include "stat.h"
 #include "gettime.h"
+#include "lib/ieee754.h"
 
 /*
  * What type of allocation to use for io buffers
@@ -125,8 +126,8 @@ struct thread_options {
 	unsigned int fsync_on_close;
 
 	unsigned int random_distribution;
-	double zipf_theta;
-	double pareto_h;
+	fio_fp64_t zipf_theta;
+	fio_fp64_t pareto_h;
 
 	unsigned int random_generator;
 
