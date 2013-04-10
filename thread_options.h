@@ -148,6 +148,7 @@ struct thread_options {
 	unsigned long long zone_range;
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
+	unsigned long long lockmem;
 	enum fio_memtype mem_type;
 	unsigned int mem_align;
 
@@ -172,6 +173,8 @@ struct thread_options {
 	unsigned int rwmixcycle;
 	unsigned int rwmix[2];
 	unsigned int nice;
+	unsigned int ioprio;
+	unsigned int ioprio_class;
 	unsigned int file_service_type;
 	unsigned int group_reporting;
 	unsigned int fadvise_hint;

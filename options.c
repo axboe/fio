@@ -370,12 +370,6 @@ static int fio_clock_source_cb(void *data, const char *str)
 	return 0;
 }
 
-static int str_lockmem_cb(void fio_unused *data, unsigned long long *val)
-{
-	mlock_size = *val;
-	return 0;
-}
-
 static int str_rwmix_read_cb(void *data, unsigned long long *val)
 {
 	struct thread_data *td = data;
@@ -681,16 +675,6 @@ static int str_numa_mpol_cb(void *data, char *input)
 
 out:
 	return 1;
-}
-#endif
-
-#ifdef FIO_HAVE_TRIM
-static int str_verify_trim_cb(void *data, unsigned long long *val)
-{
-	struct thread_data *td = data;
-
-	td->o.trim_percentage = *val;
-	return 0;
 }
 #endif
 
@@ -1088,35 +1072,202 @@ static int gtod_cpu_verify(struct fio_option *o, void *data)
 }
 
 /*
+ * Option grouping
+ */
+static struct opt_group fio_opt_groups[] = {
+	{
+		.name	= "General",
+		.mask	= FIO_OPT_C_GENERAL,
+	},
+	{
+		.name	= "I/O",
+		.mask	= FIO_OPT_C_IO,
+	},
+	{
+		.name	= "File",
+		.mask	= FIO_OPT_C_FILE,
+	},
+	{
+		.name	= "Statistics",
+		.mask	= FIO_OPT_C_STAT,
+	},
+	{
+		.name	= "Logging",
+		.mask	= FIO_OPT_C_LOG,
+	},
+	{
+		.name	= "Profiles",
+		.mask	= FIO_OPT_C_PROFILE,
+	},
+	{
+		.name	= NULL,
+	},
+};
+
+static struct opt_group *__opt_group_from_mask(struct opt_group *ogs, unsigned int *mask,
+					       unsigned int inv_mask)
+{
+	struct opt_group *og;
+	int i;
+
+	if (*mask == inv_mask || !*mask)
+		return NULL;
+
+	for (i = 0; ogs[i].name; i++) {
+		og = &ogs[i];
+
+		if (*mask & og->mask) {
+			*mask &= ~(og->mask);
+			return og;
+		}
+	}
+
+	return NULL;
+}
+
+struct opt_group *opt_group_from_mask(unsigned int *mask)
+{
+	return __opt_group_from_mask(fio_opt_groups, mask, FIO_OPT_C_INVALID);
+}
+
+static struct opt_group fio_opt_cat_groups[] = {
+	{
+		.name	= "Rate",
+		.mask	= FIO_OPT_G_RATE,
+	},
+	{
+		.name	= "Zone",
+		.mask	= FIO_OPT_G_ZONE,
+	},
+	{
+		.name	= "Read/write mix",
+		.mask	= FIO_OPT_G_RWMIX,
+	},
+	{
+		.name	= "Verify",
+		.mask	= FIO_OPT_G_VERIFY,
+	},
+	{
+		.name	= "Trim",
+		.mask	= FIO_OPT_G_TRIM,
+	},
+	{
+		.name	= "I/O Logging",
+		.mask	= FIO_OPT_G_IOLOG,
+	},
+	{
+		.name	= "I/O Depth",
+		.mask	= FIO_OPT_G_IO_DEPTH,
+	},
+	{
+		.name	= "I/O Flow",
+		.mask	= FIO_OPT_G_IO_FLOW,
+	},
+	{
+		.name	= "Description",
+		.mask	= FIO_OPT_G_DESC,
+	},
+	{
+		.name	= "Filename",
+		.mask	= FIO_OPT_G_FILENAME,
+	},
+	{
+		.name	= "General I/O",
+		.mask	= FIO_OPT_G_IO_BASIC,
+	},
+	{
+		.name	= "Cgroups",
+		.mask	= FIO_OPT_G_CGROUP,
+	},
+	{
+		.name	= "Runtime",
+		.mask	= FIO_OPT_G_RUNTIME,
+	},
+	{
+		.name	= "Process",
+		.mask	= FIO_OPT_G_PROCESS,
+	},
+	{
+		.name	= "Job credentials / priority",
+		.mask	= FIO_OPT_G_CRED,
+	},
+	{
+		.name	= "Clock settings",
+		.mask	= FIO_OPT_G_CLOCK,
+	},
+	{
+		.name	= "I/O Type",
+		.mask	= FIO_OPT_G_IO_TYPE,
+	},
+	{
+		.name	= "I/O Thinktime",
+		.mask	= FIO_OPT_G_THINKTIME,
+	},
+	{
+		.name	= "Randomizations",
+		.mask	= FIO_OPT_G_RANDOM,
+	},
+	{
+		.name	= "I/O buffers",
+		.mask	= FIO_OPT_G_IO_BUF,
+	},
+	{
+		.name	= "Tiobench profile",
+		.mask	= FIO_OPT_G_TIOBENCH,
+	},
+
+	{
+		.name	= NULL,
+	}
+};
+
+struct opt_group *opt_group_cat_from_mask(unsigned int *mask)
+{
+	return __opt_group_from_mask(fio_opt_cat_groups, mask, FIO_OPT_G_INVALID);
+}
+
+/*
  * Map of job/command line options
  */
-static struct fio_option options[FIO_MAX_OPTS] = {
+static struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "description",
+		.lname	= "Description of job",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(description),
 		.help	= "Text job description",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_DESC,
 	},
 	{
 		.name	= "name",
+		.lname	= "Job name",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(name),
 		.help	= "Name of this job",
-	},
-	{
-		.name	= "directory",
-		.type	= FIO_OPT_STR_STORE,
-		.off1	= td_var_offset(directory),
-		.cb	= str_directory_cb,
-		.help	= "Directory to store files in",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_DESC,
 	},
 	{
 		.name	= "filename",
+		.lname	= "Filename(s)",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(filename),
 		.cb	= str_filename_cb,
 		.prio	= -1, /* must come after "directory" */
 		.help	= "File(s) to use for the workload",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_FILENAME,
+	},
+	{
+		.name	= "directory",
+		.lname	= "Directory",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(directory),
+		.cb	= str_directory_cb,
+		.help	= "Directory to store files in",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_FILENAME,
 	},
 	{
 		.name	= "filename_format",
@@ -1125,53 +1276,20 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.prio	= -1, /* must come after "directory" */
 		.help	= "Override default $jobname.$jobnum.$filenum naming",
 		.def	= "$jobname.$jobnum.$filenum",
-	},
-	{
-		.name	= "kb_base",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(kb_base),
-		.prio	= 1,
-		.def	= "1024",
-		.posval = {
-			  { .ival = "1024",
-			    .oval = 1024,
-			    .help = "Use 1024 as the K base",
-			  },
-			  { .ival = "1000",
-			    .oval = 1000,
-			    .help = "Use 1000 as the K base",
-			  },
-		},
-		.help	= "How many bytes per KB for reporting (1000 or 1024)",
-	},
-	{
-		.name	= "unit_base",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(unit_base),
-		.prio	= 1,
-		.posval = {
-			  { .ival = "0",
-			    .oval = 0,
-			    .help = "Auto-detect",
-			  },
-			  { .ival = "8",
-			    .oval = 8,
-			    .help = "Normal (byte based)",
-			  },
-			  { .ival = "1",
-			    .oval = 1,
-			    .help = "Bit based",
-			  },
-		},
-		.help	= "Bit multiple of result summary data (8 for byte, 1 for bit)",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_FILENAME,
 	},
 	{
 		.name	= "lockfile",
+		.lname	= "Lockfile",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(file_lock_mode),
 		.help	= "Lock file when doing IO to it",
 		.parent	= "filename",
+		.hide	= 0,
 		.def	= "none",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_FILENAME,
 		.posval = {
 			  { .ival = "none",
 			    .oval = FILE_LOCK_NONE,
@@ -1190,13 +1308,17 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "opendir",
+		.lname	= "Open directory",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(opendir),
 		.cb	= str_opendir_cb,
 		.help	= "Recursively add files from this directory and down",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_FILENAME,
 	},
 	{
 		.name	= "rw",
+		.lname	= "Read/write",
 		.alias	= "readwrite",
 		.type	= FIO_OPT_STR,
 		.cb	= str_rw_cb,
@@ -1204,6 +1326,8 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "IO direction",
 		.def	= "read",
 		.verify	= rw_verify,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
 		.posval = {
 			  { .ival = "read",
 			    .oval = TD_DDIR_READ,
@@ -1245,10 +1369,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "rw_sequencer",
+		.lname	= "RW Sequencer",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(rw_seq),
 		.help	= "IO offset generator modifier",
 		.def	= "sequential",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
 		.posval = {
 			  { .ival = "sequential",
 			    .oval = RW_SEQ_SEQ,
@@ -1263,10 +1390,13 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 
 	{
 		.name	= "ioengine",
+		.lname	= "IO Engine",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(ioengine),
 		.help	= "IO engine to use",
 		.def	= FIO_PREFERRED_ENGINE,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
 		.posval	= {
 			  { .ival = "sync",
 			    .help = "Use read/write",
@@ -1359,78 +1489,118 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "iodepth",
+		.lname	= "IO Depth",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(iodepth),
 		.help	= "Number of IO buffers to keep in flight",
 		.minval = 1,
+		.interval = 1,
 		.def	= "1",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
 	},
 	{
 		.name	= "iodepth_batch",
+		.lname	= "IO Depth batch",
 		.alias	= "iodepth_batch_submit",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(iodepth_batch),
 		.help	= "Number of IO buffers to submit in one go",
 		.parent	= "iodepth",
+		.hide	= 1,
 		.minval	= 1,
+		.interval = 1,
 		.def	= "1",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
 	},
 	{
 		.name	= "iodepth_batch_complete",
+		.lname	= "IO Depth batch complete",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(iodepth_batch_complete),
 		.help	= "Number of IO buffers to retrieve in one go",
 		.parent	= "iodepth",
+		.hide	= 1,
 		.minval	= 0,
+		.interval = 1,
 		.def	= "1",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
 	},
 	{
 		.name	= "iodepth_low",
+		.lname	= "IO Depth batch low",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(iodepth_low),
 		.help	= "Low water mark for queuing depth",
 		.parent	= "iodepth",
+		.hide	= 1,
+		.interval = 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
 	},
 	{
 		.name	= "size",
+		.lname	= "Size",
 		.type	= FIO_OPT_STR_VAL,
 		.cb	= str_size_cb,
 		.help	= "Total size of device or files",
+		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "fill_device",
+		.lname	= "Fill device",
 		.alias	= "fill_fs",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(fill_device),
 		.help	= "Write until an ENOSPC error occurs",
 		.def	= "0",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "filesize",
+		.lname	= "File size",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(file_size_low),
 		.off2	= td_var_offset(file_size_high),
 		.minval = 1,
 		.help	= "Size of individual files",
+		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "offset",
+		.lname	= "IO offset",
 		.alias	= "fileoffset",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(start_offset),
 		.help	= "Start IO from this offset",
 		.def	= "0",
+		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "offset_increment",
+		.lname	= "IO offset increment",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(offset_increment),
 		.help	= "What is the increment from one offset to the next",
 		.parent = "offset",
+		.hide	= 1,
 		.def	= "0",
+		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "bs",
+		.lname	= "Block size",
 		.alias	= "blocksize",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(bs[DDIR_READ]),
@@ -1440,9 +1610,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.help	= "Block size unit",
 		.def	= "4k",
 		.parent = "rw",
+		.hide	= 1,
+		.interval = 512,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "ba",
+		.lname	= "Block size align",
 		.alias	= "blockalign",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ba[DDIR_READ]),
@@ -1451,9 +1626,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.minval	= 1,
 		.help	= "IO block offset alignment",
 		.parent	= "rw",
+		.hide	= 1,
+		.interval = 512,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "bsrange",
+		.lname	= "Block size range",
 		.alias	= "blocksize_range",
 		.type	= FIO_OPT_RANGE,
 		.off1	= td_var_offset(min_bs[DDIR_READ]),
@@ -1465,52 +1645,81 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.minval = 1,
 		.help	= "Set block size range (in more detail than bs)",
 		.parent = "rw",
+		.hide	= 1,
+		.interval = 4096,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "bssplit",
+		.lname	= "Block size split",
 		.type	= FIO_OPT_STR,
 		.cb	= str_bssplit_cb,
 		.help	= "Set a specific mix of block sizes",
 		.parent	= "rw",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "bs_unaligned",
+		.lname	= "Block size unaligned",
 		.alias	= "blocksize_unaligned",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(bs_unaligned),
 		.help	= "Don't sector align IO buffer sizes",
 		.parent = "rw",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "randrepeat",
+		.lname	= "Random repeatable",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(rand_repeatable),
 		.help	= "Use repeatable random IO pattern",
 		.def	= "1",
 		.parent = "rw",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "use_os_rand",
+		.lname	= "Use OS random",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(use_os_rand),
 		.help	= "Set to use OS random generator",
 		.def	= "0",
 		.parent = "rw",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "norandommap",
+		.lname	= "No randommap",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(norandommap),
 		.help	= "Accept potential duplicate random blocks",
 		.parent = "rw",
+		.hide	= 1,
+		.hide_on_set = 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "softrandommap",
+		.lname	= "Soft randommap",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(softrandommap),
 		.help	= "Set norandommap if randommap allocation fails",
 		.parent	= "norandommap",
+		.hide	= 1,
 		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "random_generator",
@@ -1528,6 +1737,8 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .help = "Variable length LFSR",
 			  },
 		},
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "random_distribution",
@@ -1550,28 +1761,40 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			    .help = "Pareto distribution",
 			  },
 		},
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "nrfiles",
+		.lname	= "Number of files",
 		.alias	= "nr_files",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(nr_files),
 		.help	= "Split job workload between this number of files",
 		.def	= "1",
+		.interval = 1,
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "openfiles",
+		.lname	= "Number of open files",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(open_files),
 		.help	= "Number of files to keep open at the same time",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "file_service_type",
+		.lname	= "File service type",
 		.type	= FIO_OPT_STR,
 		.cb	= str_fst_cb,
 		.off1	= td_var_offset(file_service_type),
 		.help	= "How to select which file to service next",
 		.def	= "roundrobin",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 		.posval	= {
 			  { .ival = "random",
 			    .oval = FIO_FSERVICE_RANDOM,
@@ -1587,14 +1810,18 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 			  },
 		},
 		.parent = "nrfiles",
+		.hide	= 1,
 	},
 #ifdef CONFIG_POSIX_FALLOCATE
 	{
 		.name	= "fallocate",
+		.lname	= "Fallocate",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(fallocate_mode),
 		.help	= "Whether pre-allocation is performed when laying out files",
 		.def	= "posix",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 		.posval	= {
 			  { .ival = "none",
 			    .oval = FIO_FALLOCATE_NONE,
@@ -1624,35 +1851,51 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 #endif	/* CONFIG_POSIX_FALLOCATE */
 	{
 		.name	= "fadvise_hint",
+		.lname	= "Fadvise hint",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(fadvise_hint),
 		.help	= "Use fadvise() to advise the kernel on IO pattern",
 		.def	= "1",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "fsync",
+		.lname	= "Fsync",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(fsync_blocks),
 		.help	= "Issue fsync for writes every given number of blocks",
 		.def	= "0",
+		.interval = 1,
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "fdatasync",
+		.lname	= "Fdatasync",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(fdatasync_blocks),
 		.help	= "Issue fdatasync for writes every given number of blocks",
 		.def	= "0",
+		.interval = 1,
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "write_barrier",
+		.lname	= "Write barrier",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(barrier_blocks),
 		.help	= "Make every Nth write a barrier write",
 		.def	= "0",
+		.interval = 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
 	},
 #ifdef CONFIG_SYNC_FILE_RANGE
 	{
 		.name	= "sync_file_range",
+		.lname	= "Sync file range",
 		.posval	= {
 			  { .ival = "wait_before",
 			    .oval = SYNC_FILE_RANGE_WAIT_BEFORE,
@@ -1675,77 +1918,113 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= str_sfr_cb,
 		.off1	= td_var_offset(sync_file_range),
 		.help	= "Use sync_file_range()",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 #endif
 	{
 		.name	= "direct",
+		.lname	= "Direct I/O",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(odirect),
 		.help	= "Use O_DIRECT IO (negates buffered)",
 		.def	= "0",
+		.inverse = "buffered",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_TYPE,
 	},
 	{
 		.name	= "buffered",
+		.lname	= "Buffered I/O",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(odirect),
 		.neg	= 1,
 		.help	= "Use buffered IO (negates direct)",
 		.def	= "1",
+		.inverse = "direct",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_TYPE,
 	},
 	{
 		.name	= "overwrite",
+		.lname	= "Overwrite",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(overwrite),
 		.help	= "When writing, set whether to overwrite current data",
 		.def	= "0",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "loops",
+		.lname	= "Loops",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(loops),
 		.help	= "Number of times to run the job",
 		.def	= "1",
+		.interval = 1,
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name	= "numjobs",
+		.lname	= "Number of jobs",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(numjobs),
 		.help	= "Duplicate this job this many times",
 		.def	= "1",
+		.interval = 1,
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name	= "startdelay",
+		.lname	= "Start delay",
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= td_var_offset(start_delay),
 		.help	= "Only start job when this period has passed",
 		.def	= "0",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name	= "runtime",
+		.lname	= "Runtime",
 		.alias	= "timeout",
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= td_var_offset(timeout),
 		.help	= "Stop workload when this amount of time has passed",
 		.def	= "0",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name	= "time_based",
+		.lname	= "Time based",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(time_based),
 		.help	= "Keep running until runtime/timeout is met",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name	= "ramp_time",
+		.lname	= "Ramp time",
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= td_var_offset(ramp_time),
 		.help	= "Ramp up time before measuring performance",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name	= "clocksource",
+		.lname	= "Clock source",
 		.type	= FIO_OPT_STR,
 		.cb	= fio_clock_source_cb,
 		.off1	= td_var_offset(clocksource),
 		.help	= "What type of timing source to use",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CLOCK,
 		.posval	= {
 #ifdef CONFIG_GETTIMEOFDAY
 			  { .ival = "gettimeofday",
@@ -1770,11 +2049,14 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 	{
 		.name	= "mem",
 		.alias	= "iomem",
+		.lname	= "I/O Memory",
 		.type	= FIO_OPT_STR,
 		.cb	= str_mem_cb,
 		.off1	= td_var_offset(mem_type),
 		.help	= "Backing type for IO buffers",
 		.def	= "malloc",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
 		.posval	= {
 			  { .ival = "malloc",
 			    .oval = MEM_MALLOC,
@@ -1805,20 +2087,27 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 	{
 		.name	= "iomem_align",
 		.alias	= "mem_align",
+		.lname	= "I/O memory alignment",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(mem_align),
 		.minval	= 0,
 		.help	= "IO memory buffer offset alignment",
 		.def	= "0",
 		.parent	= "iomem",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "verify",
+		.lname	= "Verify",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(verify),
 		.help	= "Verify data written",
 		.cb	= str_verify_cb,
 		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 		.posval = {
 			  { .ival = "0",
 			    .oval = VERIFY_NONE,
@@ -1877,19 +2166,27 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "do_verify",
+		.lname	= "Perform verify step",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(do_verify),
 		.help	= "Run verification stage after write",
 		.def	= "1",
 		.parent = "verify",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verifysort",
+		.lname	= "Verify sort",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(verifysort),
 		.help	= "Sort written verify blocks for read back",
 		.def	= "1",
 		.parent = "verify",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verifysort_nr",
@@ -1900,75 +2197,115 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.maxval	= 131072,
 		.def	= "1024",
 		.parent = "verify",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 	{
 		.name   = "verify_interval",
+		.lname	= "Verify interval",
 		.type   = FIO_OPT_INT,
 		.off1   = td_var_offset(verify_interval),
 		.minval	= 2 * sizeof(struct verify_header),
 		.help   = "Store verify buffer header every N bytes",
 		.parent	= "verify",
+		.hide	= 1,
+		.interval = 2 * sizeof(struct verify_header),
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verify_offset",
+		.lname	= "Verify offset",
 		.type	= FIO_OPT_INT,
 		.help	= "Offset verify header location by N bytes",
-		.def	= "0",
+		.off1	= td_var_offset(verify_offset),
+		.minval	= sizeof(struct verify_header),
 		.cb	= str_verify_offset_cb,
 		.parent	= "verify",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verify_pattern",
+		.lname	= "Verify pattern",
 		.type	= FIO_OPT_STR,
 		.cb	= str_verify_pattern_cb,
 		.help	= "Fill pattern for IO buffers",
 		.parent	= "verify",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verify_fatal",
+		.lname	= "Verify fatal",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(verify_fatal),
 		.def	= "0",
 		.help	= "Exit on a single verify failure, don't continue",
 		.parent = "verify",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verify_dump",
+		.lname	= "Verify dump",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(verify_dump),
 		.def	= "0",
 		.help	= "Dump contents of good and bad blocks on failure",
 		.parent = "verify",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verify_async",
+		.lname	= "Verify asynchronously",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(verify_async),
 		.def	= "0",
 		.help	= "Number of async verifier threads to use",
 		.parent	= "verify",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verify_backlog",
+		.lname	= "Verify backlog",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(verify_backlog),
 		.help	= "Verify after this number of blocks are written",
 		.parent	= "verify",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 	{
 		.name	= "verify_backlog_batch",
+		.lname	= "Verify backlog batch",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(verify_batch),
 		.help	= "Verify this number of IO blocks",
 		.parent	= "verify",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 #ifdef FIO_HAVE_CPU_AFFINITY
 	{
 		.name	= "verify_async_cpus",
+		.lname	= "Async verify CPUs",
 		.type	= FIO_OPT_STR,
 		.cb	= str_verify_cpus_allowed_cb,
 		.help	= "Set CPUs allowed for async verify threads",
 		.parent	= "verify_async",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 #endif
 	{
@@ -1976,326 +2313,441 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(experimental_verify),
 		.type	= FIO_OPT_BOOL,
 		.help	= "Enable experimental verification",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
 	},
 #ifdef FIO_HAVE_TRIM
 	{
 		.name	= "trim_percentage",
+		.lname	= "Trim percentage",
 		.type	= FIO_OPT_INT,
-		.cb	= str_verify_trim_cb,
+		.off1	= td_var_offset(trim_percentage),
+		.minval = 0,
 		.maxval = 100,
 		.help	= "Number of verify blocks to discard/trim",
 		.parent	= "verify",
 		.def	= "0",
+		.interval = 1,
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_TRIM,
 	},
 	{
 		.name	= "trim_verify_zero",
-		.type	= FIO_OPT_INT,
+		.lname	= "Verify trim zero",
+		.type	= FIO_OPT_BOOL,
 		.help	= "Verify that trim/discarded blocks are returned as zeroes",
 		.off1	= td_var_offset(trim_zero),
 		.parent	= "trim_percentage",
+		.hide	= 1,
 		.def	= "1",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_TRIM,
 	},
 	{
 		.name	= "trim_backlog",
+		.lname	= "Trim backlog",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(trim_backlog),
 		.help	= "Trim after this number of blocks are written",
 		.parent	= "trim_percentage",
+		.hide	= 1,
+		.interval = 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_TRIM,
 	},
 	{
 		.name	= "trim_backlog_batch",
+		.lname	= "Trim backlog batch",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(trim_batch),
 		.help	= "Trim this number of IO blocks",
 		.parent	= "trim_percentage",
+		.hide	= 1,
+		.interval = 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_TRIM,
 	},
 #endif
 	{
 		.name	= "write_iolog",
+		.lname	= "Write I/O log",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(write_iolog_file),
 		.help	= "Store IO pattern to file",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IOLOG,
 	},
 	{
 		.name	= "read_iolog",
+		.lname	= "Read I/O log",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(read_iolog_file),
 		.help	= "Playback IO pattern from file",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IOLOG,
 	},
 	{
 		.name	= "replay_no_stall",
-		.type	= FIO_OPT_INT,
+		.lname	= "Don't stall on replay",
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(no_stall),
 		.def	= "0",
 		.parent	= "read_iolog",
+		.hide	= 1,
 		.help	= "Playback IO pattern file as fast as possible without stalls",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IOLOG,
 	},
 	{
 		.name	= "replay_redirect",
+		.lname	= "Redirect device for replay",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(replay_redirect),
 		.parent	= "read_iolog",
+		.hide	= 1,
 		.help	= "Replay all I/O onto this device, regardless of trace device",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IOLOG,
 	},
 	{
 		.name	= "exec_prerun",
+		.lname	= "Pre-execute runnable",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(exec_prerun),
 		.help	= "Execute this file prior to running job",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "exec_postrun",
+		.lname	= "Post-execute runnable",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(exec_postrun),
 		.help	= "Execute this file after running job",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
 #ifdef FIO_HAVE_IOSCHED_SWITCH
 	{
 		.name	= "ioscheduler",
+		.lname	= "I/O scheduler",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(ioscheduler),
 		.help	= "Use this IO scheduler on the backing device",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 #endif
 	{
 		.name	= "zonesize",
+		.lname	= "Zone size",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(zone_size),
 		.help	= "Amount of data to read per zone",
 		.def	= "0",
+		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_ZONE,
 	},
 	{
 		.name	= "zonerange",
+		.lname	= "Zone range",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(zone_range),
 		.help	= "Give size of an IO zone",
 		.def	= "0",
+		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_ZONE,
 	},
 	{
 		.name	= "zoneskip",
+		.lname	= "Zone skip",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(zone_skip),
 		.help	= "Space between IO zones",
 		.def	= "0",
+		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_ZONE,
 	},
 	{
 		.name	= "lockmem",
+		.lname	= "Lock memory",
 		.type	= FIO_OPT_STR_VAL,
-		.cb	= str_lockmem_cb,
-		.help	= "Lock down this amount of memory",
+		.off1	= td_var_offset(lockmem),
+		.help	= "Lock down this amount of memory (per worker)",
 		.def	= "0",
+		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "rwmixread",
+		.lname	= "Read/write mix read",
 		.type	= FIO_OPT_INT,
 		.cb	= str_rwmix_read_cb,
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is reads",
 		.def	= "50",
+		.interval = 5,
+		.inverse = "rwmixwrite",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RWMIX,
 	},
 	{
 		.name	= "rwmixwrite",
+		.lname	= "Read/write mix write",
 		.type	= FIO_OPT_INT,
 		.cb	= str_rwmix_write_cb,
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is writes",
 		.def	= "50",
+		.interval = 5,
+		.inverse = "rwmixread",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RWMIX,
 	},
 	{
 		.name	= "rwmixcycle",
+		.lname	= "Read/write mix cycle",
 		.type	= FIO_OPT_DEPRECATED,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RWMIX,
 	},
 	{
 		.name	= "nice",
+		.lname	= "Nice",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(nice),
 		.help	= "Set job CPU nice value",
 		.minval	= -19,
 		.maxval	= 20,
 		.def	= "0",
+		.interval = 1,
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CRED,
 	},
 #ifdef FIO_HAVE_IOPRIO
 	{
 		.name	= "prio",
+		.lname	= "I/O nice priority",
 		.type	= FIO_OPT_INT,
 		.cb	= str_prio_cb,
+		.off1	= td_var_offset(ioprio),
 		.help	= "Set job IO priority value",
 		.minval	= 0,
 		.maxval	= 7,
+		.interval = 1,
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CRED,
 	},
 	{
 		.name	= "prioclass",
+		.lname	= "I/O nice priority class",
 		.type	= FIO_OPT_INT,
 		.cb	= str_prioclass_cb,
+		.off1	= td_var_offset(ioprio_class),
 		.help	= "Set job IO priority class",
 		.minval	= 0,
 		.maxval	= 3,
+		.interval = 1,
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CRED,
 	},
 #endif
 	{
 		.name	= "thinktime",
+		.lname	= "Thinktime",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(thinktime),
 		.help	= "Idle time between IO buffers (usec)",
 		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_THINKTIME,
 	},
 	{
 		.name	= "thinktime_spin",
+		.lname	= "Thinktime spin",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(thinktime_spin),
 		.help	= "Start think time by spinning this amount (usec)",
 		.def	= "0",
 		.parent	= "thinktime",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_THINKTIME,
 	},
 	{
 		.name	= "thinktime_blocks",
+		.lname	= "Thinktime blocks",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(thinktime_blocks),
 		.help	= "IO buffer period between 'thinktime'",
 		.def	= "1",
 		.parent	= "thinktime",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_THINKTIME,
 	},
 	{
 		.name	= "rate",
+		.lname	= "I/O rate",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rate[DDIR_READ]),
 		.off2	= td_var_offset(rate[DDIR_WRITE]),
 		.off3	= td_var_offset(rate[DDIR_TRIM]),
 		.help	= "Set bandwidth rate",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RATE,
 	},
 	{
 		.name	= "ratemin",
+		.lname	= "I/O min rate",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratemin[DDIR_READ]),
 		.off2	= td_var_offset(ratemin[DDIR_WRITE]),
 		.off3	= td_var_offset(ratemin[DDIR_TRIM]),
 		.help	= "Job must meet this rate or it will be shutdown",
 		.parent	= "rate",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RATE,
 	},
 	{
 		.name	= "rate_iops",
+		.lname	= "I/O rate IOPS",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rate_iops[DDIR_READ]),
 		.off2	= td_var_offset(rate_iops[DDIR_WRITE]),
 		.off3	= td_var_offset(rate_iops[DDIR_TRIM]),
 		.help	= "Limit IO used to this number of IO operations/sec",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RATE,
 	},
 	{
 		.name	= "rate_iops_min",
+		.lname	= "I/O min rate IOPS",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(rate_iops_min[DDIR_READ]),
 		.off2	= td_var_offset(rate_iops_min[DDIR_WRITE]),
 		.off3	= td_var_offset(rate_iops_min[DDIR_TRIM]),
 		.help	= "Job must meet this rate or it will be shut down",
 		.parent	= "rate_iops",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RATE,
 	},
 	{
 		.name	= "ratecycle",
+		.lname	= "I/O rate cycle",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratecycle),
 		.help	= "Window average for rate limits (msec)",
 		.def	= "1000",
 		.parent = "rate",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RATE,
 	},
 	{
 		.name	= "max_latency",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(max_latency),
 		.help	= "Maximum tolerated IO latency (usec)",
+		.category = FIO_OPT_C_IO,
+		.group = FIO_OPT_G_RATE,
 	},
 	{
 		.name	= "invalidate",
+		.lname	= "Cache invalidate",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(invalidate_cache),
 		.help	= "Invalidate buffer/page cache prior to running job",
 		.def	= "1",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_TYPE,
 	},
 	{
 		.name	= "sync",
+		.lname	= "Synchronous I/O",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(sync_io),
 		.help	= "Use O_SYNC for buffered writes",
 		.def	= "0",
 		.parent = "buffered",
-	},
-	{
-		.name	= "bwavgtime",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(bw_avg_time),
-		.help	= "Time window over which to calculate bandwidth"
-			  " (msec)",
-		.def	= "500",
-		.parent	= "write_bw_log",
-	},
-	{
-		.name	= "iopsavgtime",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(iops_avg_time),
-		.help	= "Time window over which to calculate IOPS (msec)",
-		.def	= "500",
-		.parent	= "write_iops_log",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_TYPE,
 	},
 	{
 		.name	= "create_serialize",
+		.lname	= "Create serialize",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(create_serialize),
 		.help	= "Serialize creating of job files",
 		.def	= "1",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "create_fsync",
+		.lname	= "Create fsync",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(create_fsync),
 		.help	= "fsync file after creation",
 		.def	= "1",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "create_on_open",
+		.lname	= "Create on open",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(create_on_open),
 		.help	= "Create files when they are opened for IO",
 		.def	= "0",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "create_only",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(create_only),
 		.help	= "Only perform file creation phase",
+		.category = FIO_OPT_C_FILE,
 		.def	= "0",
 	},
 	{
 		.name	= "pre_read",
+		.lname	= "Pre-read files",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(pre_read),
 		.help	= "Pre-read files before starting official testing",
 		.def	= "0",
-	},
-	{
-		.name	= "cpuload",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(cpuload),
-		.help	= "Use this percentage of CPU",
-	},
-	{
-		.name	= "cpuchunks",
-		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(cpucycle),
-		.help	= "Length of the CPU burn cycles (usecs)",
-		.def	= "50000",
-		.parent = "cpuload",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 #ifdef FIO_HAVE_CPU_AFFINITY
 	{
 		.name	= "cpumask",
+		.lname	= "CPU mask",
 		.type	= FIO_OPT_INT,
 		.cb	= str_cpumask_cb,
 		.help	= "CPU affinity mask",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CRED,
 	},
 	{
 		.name	= "cpus_allowed",
+		.lname	= "CPUs allowed",
 		.type	= FIO_OPT_STR,
 		.cb	= str_cpus_allowed_cb,
 		.help	= "Set CPUs allowed",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CRED,
 	},
 #endif
 #ifdef CONFIG_LIBNUMA
@@ -2304,144 +2756,227 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR,
 		.cb	= str_numa_cpunodes_cb,
 		.help	= "NUMA CPU nodes bind",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "numa_mem_policy",
 		.type	= FIO_OPT_STR,
 		.cb	= str_numa_mpol_cb,
 		.help	= "NUMA memory policy setup",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
 #endif
 	{
 		.name	= "end_fsync",
+		.lname	= "End fsync",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(end_fsync),
 		.help	= "Include fsync at the end of job",
 		.def	= "0",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "fsync_on_close",
+		.lname	= "Fsync on close",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(fsync_on_close),
 		.help	= "fsync files on close",
 		.def	= "0",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "unlink",
+		.lname	= "Unlink file",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(unlink),
 		.help	= "Unlink created files after job has completed",
 		.def	= "0",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "exitall",
+		.lname	= "Exit-all on terminate",
 		.type	= FIO_OPT_STR_SET,
 		.cb	= str_exitall_cb,
 		.help	= "Terminate all jobs when one exits",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_PROCESS,
 	},
 	{
 		.name	= "stonewall",
+		.lname	= "Wait for previous",
 		.alias	= "wait_for_previous",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(stonewall),
 		.help	= "Insert a hard barrier between this job and previous",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_PROCESS,
 	},
 	{
 		.name	= "new_group",
+		.lname	= "New group",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(new_group),
 		.help	= "Mark the start of a new group (for reporting)",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_PROCESS,
 	},
 	{
 		.name	= "thread",
+		.lname	= "Thread",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(use_thread),
-		.help	= "Use threads instead of forks",
+		.help	= "Use threads instead of processes",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_PROCESS,
 	},
 	{
 		.name	= "write_bw_log",
+		.lname	= "Write bandwidth log",
 		.type	= FIO_OPT_STR,
-		.off1	= td_var_offset(write_bw_log),
+		.off1	= td_var_offset(bw_log_file),
 		.cb	= str_write_bw_log_cb,
 		.help	= "Write log of bandwidth during run",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "write_lat_log",
+		.lname	= "Write latency log",
 		.type	= FIO_OPT_STR,
-		.off1	= td_var_offset(write_lat_log),
+		.off1	= td_var_offset(lat_log_file),
 		.cb	= str_write_lat_log_cb,
 		.help	= "Write log of latency during run",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "write_iops_log",
+		.lname	= "Write IOPS log",
 		.type	= FIO_OPT_STR,
-		.off1	= td_var_offset(write_iops_log),
+		.off1	= td_var_offset(iops_log_file),
 		.cb	= str_write_iops_log_cb,
 		.help	= "Write log of IOPS during run",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "log_avg_msec",
+		.lname	= "Log averaging (msec)",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(log_avg_msec),
 		.help	= "Average bw/iops/lat logs over this period of time",
 		.def	= "0",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
-		.name	= "hugepage-size",
+		.name	= "bwavgtime",
+		.lname	= "Bandwidth average time",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(hugepage_size),
-		.help	= "When using hugepages, specify size of each page",
-		.def	= __fio_stringify(FIO_HUGE_PAGE),
+		.off1	= td_var_offset(bw_avg_time),
+		.help	= "Time window over which to calculate bandwidth"
+			  " (msec)",
+		.def	= "500",
+		.parent	= "write_bw_log",
+		.hide	= 1,
+		.interval = 100,
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "iopsavgtime",
+		.lname	= "IOPS average time",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(iops_avg_time),
+		.help	= "Time window over which to calculate IOPS (msec)",
+		.def	= "500",
+		.parent	= "write_iops_log",
+		.hide	= 1,
+		.interval = 100,
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "group_reporting",
-		.type	= FIO_OPT_STR_SET,
+		.lname	= "Group reporting",
+		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(group_reporting),
 		.help	= "Do reporting on a per-group basis",
+		.def	= "1",
+		.category = FIO_OPT_C_STAT,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "zero_buffers",
+		.lname	= "Zero I/O buffers",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(zero_buffers),
 		.help	= "Init IO buffers to all zeroes",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "refill_buffers",
+		.lname	= "Refill I/O buffers",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(refill_buffers),
 		.help	= "Refill IO buffers on every IO submit",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "scramble_buffers",
+		.lname	= "Scramble I/O buffers",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(scramble_buffers),
 		.help	= "Slightly scramble buffers on every IO submit",
 		.def	= "1",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "buffer_compress_percentage",
+		.lname	= "Buffer compression percentage",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(compress_percentage),
 		.maxval	= 100,
 		.minval	= 1,
 		.help	= "How compressible the buffer is (approximately)",
+		.interval = 5,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "buffer_compress_chunk",
+		.lname	= "Buffer compression chunk size",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(compress_chunk),
 		.parent	= "buffer_compress_percentage",
+		.hide	= 1,
 		.help	= "Size of compressible region in buffer",
+		.interval = 256,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BUF,
 	},
 	{
 		.name	= "clat_percentiles",
+		.lname	= "Completion latency percentiles",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(clat_percentiles),
 		.help	= "Enable the reporting of completion latency percentiles",
 		.def	= "1",
+		.category = FIO_OPT_C_STAT,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "percentile_list",
+		.lname	= "Completion latency percentile list",
 		.type	= FIO_OPT_FLOAT_LIST,
 		.off1	= td_var_offset(percentile_list),
 		.off2	= td_var_offset(percentile_precision),
@@ -2450,62 +2985,90 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.maxlen	= FIO_IO_U_LIST_MAX_LEN,
 		.minfp	= 0.0,
 		.maxfp	= 100.0,
+		.category = FIO_OPT_C_STAT,
+		.group	= FIO_OPT_G_INVALID,
 	},
 
 #ifdef FIO_HAVE_DISK_UTIL
 	{
 		.name	= "disk_util",
+		.lname	= "Disk utilization",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(do_disk_util),
 		.help	= "Log disk utilization statistics",
 		.def	= "1",
+		.category = FIO_OPT_C_STAT,
+		.group	= FIO_OPT_G_INVALID,
 	},
 #endif
 	{
 		.name	= "gtod_reduce",
+		.lname	= "Reduce gettimeofday() calls",
 		.type	= FIO_OPT_BOOL,
 		.help	= "Greatly reduce number of gettimeofday() calls",
 		.cb	= str_gtod_reduce_cb,
 		.def	= "0",
+		.hide_on_set = 1,
+		.category = FIO_OPT_C_STAT,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "disable_lat",
+		.lname	= "Disable all latency stats",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(disable_lat),
 		.help	= "Disable latency numbers",
 		.parent	= "gtod_reduce",
+		.hide	= 1,
 		.def	= "0",
+		.category = FIO_OPT_C_STAT,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "disable_clat",
+		.lname	= "Disable completion latency stats",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(disable_clat),
 		.help	= "Disable completion latency numbers",
 		.parent	= "gtod_reduce",
+		.hide	= 1,
 		.def	= "0",
+		.category = FIO_OPT_C_STAT,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "disable_slat",
+		.lname	= "Disable submission latency stats",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(disable_slat),
 		.help	= "Disable submission latency numbers",
 		.parent	= "gtod_reduce",
+		.hide	= 1,
 		.def	= "0",
+		.category = FIO_OPT_C_STAT,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "disable_bw_measurement",
+		.lname	= "Disable bandwidth stats",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(disable_bw),
 		.help	= "Disable bandwidth logging",
 		.parent	= "gtod_reduce",
+		.hide	= 1,
 		.def	= "0",
+		.category = FIO_OPT_C_STAT,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "gtod_cpu",
+		.lname	= "Dedicated gettimeofday() CPU",
 		.type	= FIO_OPT_INT,
 		.cb	= str_gtod_cpu_cb,
 		.help	= "Set up dedicated gettimeofday() thread on this CPU",
 		.verify	= gtod_cpu_verify,
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CLOCK,
 	},
 	{
 		.name	= "unified_rw_reporting",
@@ -2513,13 +3076,18 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(unified_rw_rep),
 		.help	= "Unify reporting across data direction",
 		.def	= "0",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "continue_on_error",
+		.lname	= "Continue on error",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(continue_on_error),
 		.help	= "Continue on non-fatal errors during IO",
 		.def	= "none",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_ERR,
 		.posval = {
 			  { .ival = "none",
 			    .oval = ERROR_TYPE_NONE,
@@ -2561,6 +3129,8 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.cb	= str_ignore_error_cb,
 		.help	= "Set a specific list of errors to ignore",
 		.parent	= "rw",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_ERR,
 	},
 	{
 		.name	= "error_dump",
@@ -2568,80 +3138,172 @@ static struct fio_option options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(error_dump),
 		.def	= "0",
 		.help	= "Dump info on each error",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_ERR,
 	},
-
 	{
 		.name	= "profile",
+		.lname	= "Profile",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(profile),
 		.help	= "Select a specific builtin performance test",
+		.category = FIO_OPT_C_PROFILE,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "cgroup",
+		.lname	= "Cgroup",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(cgroup),
 		.help	= "Add job to cgroup of this name",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CGROUP,
+	},
+	{
+		.name	= "cgroup_nodelete",
+		.lname	= "Cgroup no-delete",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(cgroup_nodelete),
+		.help	= "Do not delete cgroups after job completion",
+		.def	= "0",
+		.parent	= "cgroup",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CGROUP,
 	},
 	{
 		.name	= "cgroup_weight",
+		.lname	= "Cgroup weight",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(cgroup_weight),
 		.help	= "Use given weight for cgroup",
 		.minval = 100,
 		.maxval	= 1000,
-	},
-	{
-		.name	= "cgroup_nodelete",
-		.type	= FIO_OPT_BOOL,
-		.off1	= td_var_offset(cgroup_nodelete),
-		.help	= "Do not delete cgroups after job completion",
-		.def	= "0",
+		.parent	= "cgroup",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CGROUP,
 	},
 	{
 		.name	= "uid",
+		.lname	= "User ID",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(uid),
 		.help	= "Run job with this user ID",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CRED,
 	},
 	{
 		.name	= "gid",
+		.lname	= "Group ID",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(gid),
 		.help	= "Run job with this group ID",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CRED,
+	},
+	{
+		.name	= "kb_base",
+		.lname	= "KB Base",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(kb_base),
+		.prio	= 1,
+		.def	= "1024",
+		.posval = {
+			  { .ival = "1024",
+			    .oval = 1024,
+			    .help = "Use 1024 as the K base",
+			  },
+			  { .ival = "1000",
+			    .oval = 1000,
+			    .help = "Use 1000 as the K base",
+			  },
+		},
+		.help	= "How many bytes per KB for reporting (1000 or 1024)",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "unit_base",
+		.lname	= "Base unit for reporting (Bits or Bytes)",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(unit_base),
+		.prio	= 1,
+		.posval = {
+			  { .ival = "0",
+			    .oval = 0,
+			    .help = "Auto-detect",
+			  },
+			  { .ival = "8",
+			    .oval = 8,
+			    .help = "Normal (byte based)",
+			  },
+			  { .ival = "1",
+			    .oval = 1,
+			    .help = "Bit based",
+			  },
+		},
+		.help	= "Bit multiple of result summary data (8 for byte, 1 for bit)",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "hugepage-size",
+		.lname	= "Hugepage size",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(hugepage_size),
+		.help	= "When using hugepages, specify size of each page",
+		.def	= __fio_stringify(FIO_HUGE_PAGE),
+		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "flow_id",
+		.lname	= "I/O flow ID",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(flow_id),
 		.help	= "The flow index ID to use",
 		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_FLOW,
 	},
 	{
 		.name	= "flow",
+		.lname	= "I/O flow weight",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(flow),
 		.help	= "Weight for flow control of this job",
 		.parent	= "flow_id",
+		.hide	= 1,
 		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_FLOW,
 	},
 	{
 		.name	= "flow_watermark",
+		.lname	= "I/O flow watermark",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(flow_watermark),
 		.help	= "High watermark for flow control. This option"
 			" should be set to the same value for all threads"
 			" with non-zero flow.",
 		.parent	= "flow_id",
+		.hide	= 1,
 		.def	= "1024",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_FLOW,
 	},
 	{
 		.name	= "flow_sleep",
+		.lname	= "I/O flow sleep",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(flow_sleep),
 		.help	= "How many microseconds to sleep after being held"
 			" back by the flow control mechanism",
 		.parent	= "flow_id",
+		.hide	= 1,
 		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_FLOW,
 	},
 	{
 		.name = NULL,
@@ -2705,13 +3367,13 @@ void fio_options_dup_and_init(struct option *long_options)
 {
 	unsigned int i;
 
-	options_init(options);
+	options_init(fio_options);
 
 	i = 0;
 	while (long_options[i].name)
 		i++;
 
-	options_to_lopts(options, long_options, i, FIO_GETOPT_JOB);
+	options_to_lopts(fio_options, long_options, i, FIO_GETOPT_JOB);
 }
 
 struct fio_keyword {
@@ -2934,13 +3596,13 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 	int i, ret, unknown;
 	char **opts_copy;
 
-	sort_options(opts, options, num_opts);
+	sort_options(opts, fio_options, num_opts);
 	opts_copy = dup_and_sub_options(opts, num_opts);
 
 	for (ret = 0, i = 0, unknown = 0; i < num_opts; i++) {
 		struct fio_option *o;
-		int newret = parse_option(opts_copy[i], opts[i], options, &o,
-					  td);
+		int newret = parse_option(opts_copy[i], opts[i], fio_options,
+						&o, td);
 
 		if (opts_copy[i]) {
 			if (newret && !o) {
@@ -2986,7 +3648,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 
 int fio_cmd_option_parse(struct thread_data *td, const char *opt, char *val)
 {
-	return parse_cmd_option(opt, val, options, td);
+	return parse_cmd_option(opt, val, fio_options, td);
 }
 
 int fio_cmd_ioengine_option_parse(struct thread_data *td, const char *opt,
@@ -2997,12 +3659,12 @@ int fio_cmd_ioengine_option_parse(struct thread_data *td, const char *opt,
 
 void fio_fill_default_options(struct thread_data *td)
 {
-	fill_default_options(td, options);
+	fill_default_options(td, fio_options);
 }
 
 int fio_show_option_help(const char *opt)
 {
-	return show_cmd_help(options, opt);
+	return show_cmd_help(fio_options, opt);
 }
 
 void options_mem_dupe(void *data, struct fio_option *options)
@@ -3025,7 +3687,7 @@ void options_mem_dupe(void *data, struct fio_option *options)
  */
 void fio_options_mem_dupe(struct thread_data *td)
 {
-	options_mem_dupe(&td->o, options);
+	options_mem_dupe(&td->o, fio_options);
 
 	if (td->eo && td->io_ops) {
 		void *oldeo = td->eo;
@@ -3054,13 +3716,13 @@ int add_option(struct fio_option *o)
 	struct fio_option *__o;
 	int opt_index = 0;
 
-	__o = options;
+	__o = fio_options;
 	while (__o->name) {
 		opt_index++;
 		__o++;
 	}
 
-	memcpy(&options[opt_index], o, sizeof(*o));
+	memcpy(&fio_options[opt_index], o, sizeof(*o));
 	return 0;
 }
 
@@ -3068,7 +3730,7 @@ void invalidate_profile_options(const char *prof_name)
 {
 	struct fio_option *o;
 
-	o = options;
+	o = fio_options;
 	while (o->name) {
 		if (o->prof_name && !strcmp(o->prof_name, prof_name)) {
 			o->type = FIO_OPT_INVALID;
@@ -3083,7 +3745,7 @@ void add_opt_posval(const char *optname, const char *ival, const char *help)
 	struct fio_option *o;
 	unsigned int i;
 
-	o = find_option(options, optname);
+	o = find_option(fio_options, optname);
 	if (!o)
 		return;
 
@@ -3102,7 +3764,7 @@ void del_opt_posval(const char *optname, const char *ival)
 	struct fio_option *o;
 	unsigned int i;
 
-	o = find_option(options, optname);
+	o = find_option(fio_options, optname);
 	if (!o)
 		return;
 
@@ -3119,7 +3781,7 @@ void del_opt_posval(const char *optname, const char *ival)
 
 void fio_options_free(struct thread_data *td)
 {
-	options_free(options, td);
+	options_free(fio_options, td);
 	if (td->eo && td->io_ops && td->io_ops->options) {
 		options_free(td->io_ops->options, td->eo);
 		free(td->eo);

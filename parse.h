@@ -40,6 +40,7 @@ struct value_pair {
  */
 struct fio_option {
 	const char *name;		/* option name */
+	const char *lname;		/* long option name */
 	const char *alias;		/* possible old allowed name */
 	enum fio_opt_type type;		/* option type */
 	unsigned int off1;		/* potential parameters */
@@ -53,6 +54,7 @@ struct fio_option {
 	int minval;
 	double maxfp;			/* max and min floating value */
 	double minfp;
+	unsigned int interval;		/* client hint for suitable interval */
 	unsigned int maxlen;		/* max length */
 	int neg;			/* negate value stored */
 	int prio;
@@ -61,8 +63,14 @@ struct fio_option {
 	const char *def;		/* default setting */
 	struct value_pair posval[PARSE_MAX_VP];/* possible values */
 	const char *parent;		/* parent option */
+	int hide;			/* hide if parent isn't set */
+	int hide_on_set;		/* hide on set, not on unset */
+	const char *inverse;		/* if set, apply opposite action to this option */
+	struct fio_option *inv_opt;	/* cached lookup */
 	int (*verify)(struct fio_option *, void *);
 	const char *prof_name;		/* only valid for specific profile */
+	unsigned int category;		/* what type of option */
+	unsigned int group;		/* who to group with */
 };
 
 typedef int (str_cb_fn)(void *, char *);
