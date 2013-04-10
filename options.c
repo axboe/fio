@@ -2617,12 +2617,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR,
 		.cb	= str_numa_cpunodes_cb,
 		.help	= "NUMA CPU nodes bind",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "numa_mem_policy",
 		.type	= FIO_OPT_STR,
 		.cb	= str_numa_mpol_cb,
 		.help	= "NUMA memory policy setup",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
 #endif
 	{
