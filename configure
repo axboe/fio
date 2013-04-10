@@ -955,7 +955,7 @@ fi
 echo "__thread                      $tls_thread"
 
 ##########################################
-# Whether or not __thread is supported for TLS
+# Check if we have required gtk/glib support for gfio
 if test "$gfio" = "yes" ; then
   cat > $TMPC << EOF
 #include <glib.h>
@@ -995,7 +995,7 @@ else
 fi
 fi
 
-echo "gfio                          $gfio"
+echo "gtk 2.18 or higher            $gfio"
 
 # Check whether we have getrusage(RUSAGE_THREAD)
 rusage_thread="no"
