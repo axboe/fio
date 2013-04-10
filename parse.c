@@ -1170,7 +1170,7 @@ void option_init(struct fio_option *o)
 	if (!o->cb && (!o->off1 && !o->roff1))
 		log_err("Option %s: neither cb nor offset given\n", o->name);
 	if (!o->category) {
-		log_info("Options %s: no category defined. Setting to misc\n", o->name);
+		log_info("Option %s: no category defined. Setting to misc\n", o->name);
 		o->category = FIO_OPT_C_GENERAL;
 		o->group = FIO_OPT_G_INVALID;
 	}
