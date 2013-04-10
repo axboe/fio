@@ -52,6 +52,7 @@ enum opt_category {
 	__FIO_OPT_C_STAT,
 	__FIO_OPT_C_LOG,
 	__FIO_OPT_C_PROFILE,
+	__FIO_OPT_C_ENGINE,
 	__FIO_OPT_C_NR,
 
 	FIO_OPT_C_GENERAL	= (1U << __FIO_OPT_C_GENERAL),
@@ -60,6 +61,7 @@ enum opt_category {
 	FIO_OPT_C_STAT		= (1U << __FIO_OPT_C_STAT),
 	FIO_OPT_C_LOG		= (1U << __FIO_OPT_C_LOG),
 	FIO_OPT_C_PROFILE	= (1U << __FIO_OPT_C_PROFILE),
+	FIO_OPT_C_ENGINE	= (1U << __FIO_OPT_C_ENGINE),
 	FIO_OPT_C_INVALID	= (1U << __FIO_OPT_C_NR),
 };
 
@@ -86,6 +88,10 @@ enum opt_category_group {
 	__FIO_OPT_G_IO_BUF,
 	__FIO_OPT_G_TIOBENCH,
 	__FIO_OPT_G_ERR,
+	__FIO_OPT_G_E4DEFRAG,
+	__FIO_OPT_G_NETIO,
+	__FIO_OPT_G_LIBAIO,
+	__FIO_OPT_G_TIOPROF,
 	__FIO_OPT_G_NR,
 
 	FIO_OPT_G_RATE		= (1U << __FIO_OPT_G_RATE),
@@ -110,6 +116,10 @@ enum opt_category_group {
 	FIO_OPT_G_IO_BUF	= (1U << __FIO_OPT_G_IO_BUF),
 	FIO_OPT_G_TIOBENCH	= (1U << __FIO_OPT_G_TIOBENCH),
 	FIO_OPT_G_ERR		= (1U << __FIO_OPT_G_ERR),
+	FIO_OPT_G_E4DEFRAG	= (1U << __FIO_OPT_G_E4DEFRAG),
+	FIO_OPT_G_NETIO		= (1U << __FIO_OPT_G_NETIO),
+	FIO_OPT_G_LIBAIO	= (1U << __FIO_OPT_G_LIBAIO),
+	FIO_OPT_G_TIOPROF	= (1U << __FIO_OPT_G_TIOPROF),
 	FIO_OPT_G_INVALID	= (1U << __FIO_OPT_G_NR),
 };
 

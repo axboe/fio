@@ -890,19 +890,6 @@ static int str_opendir_cb(void *data, const char fio_unused *str)
 	return add_dir_files(td, td->o.opendir);
 }
 
-static int str_verify_offset_cb(void *data, unsigned long long *off)
-{
-	struct thread_data *td = data;
-
-	if (*off && *off < sizeof(struct verify_header)) {
-		log_err("fio: verify_offset too small\n");
-		return 1;
-	}
-
-	td->o.verify_offset = *off;
-	return 0;
-}
-
 static int str_verify_pattern_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
@@ -2220,7 +2207,6 @@ static struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Offset verify header location by N bytes",
 		.off1	= td_var_offset(verify_offset),
 		.minval	= sizeof(struct verify_header),
-		.cb	= str_verify_offset_cb,
 		.parent	= "verify",
 		.hide	= 1,
 		.category = FIO_OPT_C_IO,
@@ -2535,7 +2521,6 @@ static struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "I/O nice priority",
 		.type	= FIO_OPT_INT,
 		.cb	= str_prio_cb,
-		.off1	= td_var_offset(ioprio),
 		.help	= "Set job IO priority value",
 		.minval	= 0,
 		.maxval	= 7,
@@ -2548,7 +2533,6 @@ static struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "I/O nice priority class",
 		.type	= FIO_OPT_INT,
 		.cb	= str_prioclass_cb,
-		.off1	= td_var_offset(ioprio_class),
 		.help	= "Set job IO priority class",
 		.minval	= 0,
 		.maxval	= 3,
