@@ -50,7 +50,7 @@ static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
 static void show_option_range(struct fio_option *o,
 				int (*logger)(const char *format, ...))
 {
-	if (o->type == FIO_OPT_FLOAT_LIST){
+	if (o->type == FIO_OPT_FLOAT_LIST) {
 		if (o->minfp == DBL_MIN && o->maxfp == DBL_MAX)
 			return;
 
@@ -58,7 +58,7 @@ static void show_option_range(struct fio_option *o,
 		if (o->maxfp != DBL_MAX)
 			logger(", max=%f", o->maxfp);
 		logger("\n");
-	} else {
+	} else if (!o->posval[0].ival) {
 		if (!o->minval && !o->maxval)
 			return;
 
