@@ -1006,6 +1006,14 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 	return 1;
 }
 
+void fio_verify_init(struct thread_data *td)
+{
+	if (td->o.verify == VERIFY_CRC32C_INTEL ||
+	    td->o.verify == VERIFY_CRC32C) {
+		crc32c_intel_probe();
+	}
+}
+
 static void *verify_async_thread(void *data)
 {
 	struct thread_data *td = data;

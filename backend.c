@@ -1256,6 +1256,8 @@ static void *thread_main(void *data)
 			goto err;
 	}
 
+	fio_verify_init(td);
+
 	fio_gettime(&td->epoch, NULL);
 	fio_getrusage(&td->ru_start);
 	clear_state = 0;

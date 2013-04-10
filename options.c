@@ -348,18 +348,6 @@ static int str_mem_cb(void *data, const char *mem)
 	return 0;
 }
 
-static int str_verify_cb(void *data, const char *mem)
-{
-	struct thread_data *td = data;
-
-	if (td->o.verify == VERIFY_CRC32C_INTEL ||
-	    td->o.verify == VERIFY_CRC32C) {
-		crc32c_intel_probe();
-	}
-
-	return 0;
-}
-
 static int fio_clock_source_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
@@ -2091,7 +2079,6 @@ static struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(verify),
 		.help	= "Verify data written",
-		.cb	= str_verify_cb,
 		.def	= "0",
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_VERIFY,
