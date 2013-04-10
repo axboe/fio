@@ -1,7 +1,7 @@
 #ifndef FIO_IOLOG_H
 #define FIO_IOLOG_H
 
-#include "rbtree.h"
+#include "lib/rbtree.h"
 #include "lib/ieee754.h"
 
 /*
