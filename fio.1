@@ -1034,7 +1034,7 @@ Disable measurements of throughput/bandwidth numbers. See \fBdisable_lat\fR.
 .TP
 .BI lockmem \fR=\fPint
 Pin the specified amount of memory with \fBmlock\fR\|(2).  Can be used to
-simulate a smaller amount of memory.
+simulate a smaller amount of memory. The amount specified is per worker.
 .TP
 .BI exec_prerun \fR=\fPstr
 Before running the job, execute the specified command with \fBsystem\fR\|(3).

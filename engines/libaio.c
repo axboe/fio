@@ -33,7 +33,8 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct libaio_options, userspace_reap),
 		.help	= "Use alternative user-space reap implementation",
-		.category = FIO_OPT_C_IO,
+		.category = FIO_OPT_C_ENGINE,
+		.category = FIO_OPT_G_LIBAIO,
 	},
 	{
 		.name	= NULL,

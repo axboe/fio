@@ -97,6 +97,7 @@ enum file_log_act {
 	FIO_LOG_UNLINK_FILE,
 };
 
+struct io_u;
 extern int __must_check read_iolog_get(struct thread_data *, struct io_u *);
 extern void log_io_u(struct thread_data *, struct io_u *);
 extern void log_file(struct thread_data *, struct fio_file *, enum file_log_act);

@@ -123,6 +123,7 @@ struct thread_options {
 	unsigned int fsync_on_close;
 
 	unsigned int random_distribution;
+
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
 
@@ -150,7 +151,7 @@ struct thread_options {
 	enum fio_memtype mem_type;
 	unsigned int mem_align;
 
-	unsigned max_latency;
+	unsigned int max_latency;
 
 	unsigned int stonewall;
 	unsigned int new_group;

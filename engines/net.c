@@ -62,7 +62,8 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_STORE,
 		.cb	= str_hostname_cb,
 		.help	= "Hostname for net IO engine",
-		.category = FIO_OPT_C_IO,
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_NETIO,
 	},
 	{
 		.name	= "port",
@@ -72,7 +73,8 @@ static struct fio_option options[] = {
 		.minval	= 1,
 		.maxval	= 65535,
 		.help	= "Port to use for TCP or UDP net connections",
-		.category = FIO_OPT_C_IO,
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_NETIO,
 	},
 	{
 		.name	= "protocol",
@@ -97,6 +99,8 @@ static struct fio_option options[] = {
 			    .help = "UNIX domain socket",
 			  },
 		},
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_NETIO,
 	},
 #ifdef CONFIG_TCP_NODELAY
 	{
@@ -104,6 +108,8 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_BOOL,
 		.off1	= offsetof(struct netio_options, nodelay),
 		.help	= "Use TCP_NODELAY on TCP connections",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_NETIO,
 	},
 #endif
 	{
@@ -112,13 +118,16 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct netio_options, listen),
 		.help	= "Listen for incoming TCP connections",
-		.category = FIO_OPT_C_IO,
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_NETIO,
 	},
 	{
 		.name	= "pingpong",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct netio_options, pingpong),
 		.help	= "Ping-pong IO requests",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_NETIO,
 	},
 	{
 		.name	= NULL,
