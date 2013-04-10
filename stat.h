@@ -1,6 +1,8 @@
 #ifndef FIO_STAT_H
 #define FIO_STAT_H
 
+#include "iolog.h"
+
 struct group_run_stats {
 	uint64_t max_run[DDIR_RWDIR_CNT], min_run[DDIR_RWDIR_CNT];
 	uint64_t max_bw[DDIR_RWDIR_CNT], min_bw[DDIR_RWDIR_CNT];
