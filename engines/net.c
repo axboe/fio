@@ -84,7 +84,6 @@ static struct fio_option options[] = {
 		.off1	= offsetof(struct netio_options, proto),
 		.help	= "Network protocol to use",
 		.def	= "tcp",
-		.category = FIO_OPT_C_IO,
 		.posval = {
 			  { .ival = "tcp",
 			    .oval = FIO_TYPE_TCP,
