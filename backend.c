@@ -1092,16 +1092,17 @@ static void *thread_main(void *data)
 {
 	unsigned long long elapsed;
 	struct thread_data *td = data;
+	struct thread_options *o = &td->o;
 	pthread_condattr_t attr;
 	int clear_state;
 
-	if (!td->o.use_thread) {
+	if (!o->use_thread) {
 		setsid();
 		td->pid = getpid();
 	} else
 		td->pid = gettid();
 
-	fio_local_clock_init(td->o.use_thread);
+	fio_local_clock_init(o->use_thread);
 
 	dprint(FD_PROCESS, "jobs pid=%d started\n", (int) td->pid);
 
@@ -1137,11 +1138,11 @@ static void *thread_main(void *data)
 	 * A new gid requires privilege, so we need to do this before setting
 	 * the uid.
 	 */
-	if (td->o.gid != -1U && setgid(td->o.gid)) {
+	if (o->gid != -1U && setgid(o->gid)) {
 		td_verror(td, errno, "setgid");
 		goto err;
 	}
-	if (td->o.uid != -1U && setuid(td->o.uid)) {
+	if (o->uid != -1U && setuid(o->uid)) {
 		td_verror(td, errno, "setuid");
 		goto err;
 	}
@@ -1150,21 +1151,23 @@ static void *thread_main(void *data)
 	 * If we have a gettimeofday() thread, make sure we exclude that
 	 * thread from this job
 	 */
-	if (td->o.gtod_cpu)
-		fio_cpu_clear(&td->o.cpumask, td->o.gtod_cpu);
+	if (o->gtod_cpu)
+		fio_cpu_clear(&o->cpumask, o->gtod_cpu);
 
 	/*
 	 * Set affinity first, in case it has an impact on the memory
 	 * allocations.
 	 */
-	if (td->o.cpumask_set && fio_setaffinity(td->pid, td->o.cpumask) == -1) {
-		td_verror(td, errno, "cpu_set_affinity");
-		goto err;
+	if (o->cpumask_set) {
+		if (fio_setaffinity(td->pid, o->cpumask) == -1) {
+			td_verror(td, errno, "cpu_set_affinity");
+			goto err;
+		}
 	}
 
 #ifdef CONFIG_LIBNUMA
 	/* numa node setup */
-	if (td->o.numa_cpumask_set || td->o.numa_memmask_set) {
+	if (o->numa_cpumask_set || o->numa_memmask_set) {
 		int ret;
 
 		if (numa_available() < 0) {
@@ -1172,8 +1175,8 @@ static void *thread_main(void *data)
 			goto err;
 		}
 
-		if (td->o.numa_cpumask_set) {
-			ret = numa_run_on_node_mask(td->o.numa_cpunodesmask);
+		if (o->numa_cpumask_set) {
+			ret = numa_run_on_node_mask(o->numa_cpunodesmask);
 			if (ret == -1) {
 				td_verror(td, errno, \
 					"numa_run_on_node_mask failed\n");
@@ -1181,20 +1184,20 @@ static void *thread_main(void *data)
 			}
 		}
 
-		if (td->o.numa_memmask_set) {
+		if (o->numa_memmask_set) {
 
-			switch (td->o.numa_mem_mode) {
+			switch (o->numa_mem_mode) {
 			case MPOL_INTERLEAVE:
-				numa_set_interleave_mask(td->o.numa_memnodesmask);
+				numa_set_interleave_mask(o->numa_memnodesmask);
 				break;
 			case MPOL_BIND:
-				numa_set_membind(td->o.numa_memnodesmask);
+				numa_set_membind(o->numa_memnodesmask);
 				break;
 			case MPOL_LOCAL:
 				numa_set_localalloc();
 				break;
 			case MPOL_PREFERRED:
-				numa_set_preferred(td->o.numa_mem_prefer_node);
+				numa_set_preferred(o->numa_mem_prefer_node);
 				break;
 			case MPOL_DEFAULT:
 			default:
@@ -1218,7 +1221,7 @@ static void *thread_main(void *data)
 	if (init_io_u(td))
 		goto err;
 
-	if (td->o.verify_async && verify_async_init(td))
+	if (o->verify_async && verify_async_init(td))
 		goto err;
 
 	if (td->ioprio_set) {
@@ -1228,19 +1231,19 @@ static void *thread_main(void *data)
 		}
 	}
 
-	if (td->o.cgroup && cgroup_setup(td, cgroup_list, &cgroup_mnt))
+	if (o->cgroup && cgroup_setup(td, cgroup_list, &cgroup_mnt))
 		goto err;
 
 	errno = 0;
-	if (nice(td->o.nice) == -1 && errno != 0) {
+	if (nice(o->nice) == -1 && errno != 0) {
 		td_verror(td, errno, "nice");
 		goto err;
 	}
 
-	if (td->o.ioscheduler && switch_ioscheduler(td))
+	if (o->ioscheduler && switch_ioscheduler(td))
 		goto err;
 
-	if (!td->o.create_serialize && setup_files(td))
+	if (!o->create_serialize && setup_files(td))
 		goto err;
 
 	if (td_io_init(td))
@@ -1249,12 +1252,10 @@ static void *thread_main(void *data)
 	if (init_random_map(td))
 		goto err;
 
-	if (td->o.exec_prerun) {
-		if (exec_string(td->o.exec_prerun))
-			goto err;
-	}
+	if (o->exec_prerun && exec_string(o->exec_prerun))
+		goto err;
 
-	if (td->o.pre_read) {
+	if (o->pre_read) {
 		if (pre_read_files(td) < 0)
 			goto err;
 	}
@@ -1272,8 +1273,8 @@ static void *thread_main(void *data)
 		memcpy(&td->iops_sample_time, &td->start, sizeof(td->start));
 		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
 
-		if (td->o.ratemin[DDIR_READ] || td->o.ratemin[DDIR_WRITE] ||
-				td->o.ratemin[DDIR_TRIM]) {
+		if (o->ratemin[DDIR_READ] || o->ratemin[DDIR_WRITE] ||
+				o->ratemin[DDIR_TRIM]) {
 		        memcpy(&td->lastrate[DDIR_READ], &td->bw_sample_time,
 						sizeof(td->bw_sample_time));
 		        memcpy(&td->lastrate[DDIR_WRITE], &td->bw_sample_time,
@@ -1307,8 +1308,8 @@ static void *thread_main(void *data)
 		if (td->error || td->terminate)
 			break;
 
-		if (!td->o.do_verify ||
-		    td->o.verify == VERIFY_NONE ||
+		if (!o->do_verify ||
+		    o->verify == VERIFY_NONE ||
 		    (td->io_ops->flags & FIO_UNIDIR))
 			continue;
 
@@ -1337,44 +1338,44 @@ static void *thread_main(void *data)
 
 	fio_mutex_down(writeout_mutex);
 	if (td->bw_log) {
-		if (td->o.bw_log_file) {
+		if (o->bw_log_file) {
 			finish_log_named(td, td->bw_log,
-						td->o.bw_log_file, "bw");
+						o->bw_log_file, "bw");
 		} else
 			finish_log(td, td->bw_log, "bw");
 	}
 	if (td->lat_log) {
-		if (td->o.lat_log_file) {
+		if (o->lat_log_file) {
 			finish_log_named(td, td->lat_log,
-						td->o.lat_log_file, "lat");
+						o->lat_log_file, "lat");
 		} else
 			finish_log(td, td->lat_log, "lat");
 	}
 	if (td->slat_log) {
-		if (td->o.lat_log_file) {
+		if (o->lat_log_file) {
 			finish_log_named(td, td->slat_log,
-						td->o.lat_log_file, "slat");
+						o->lat_log_file, "slat");
 		} else
 			finish_log(td, td->slat_log, "slat");
 	}
 	if (td->clat_log) {
-		if (td->o.lat_log_file) {
+		if (o->lat_log_file) {
 			finish_log_named(td, td->clat_log,
-						td->o.lat_log_file, "clat");
+						o->lat_log_file, "clat");
 		} else
 			finish_log(td, td->clat_log, "clat");
 	}
 	if (td->iops_log) {
-		if (td->o.iops_log_file) {
+		if (o->iops_log_file) {
 			finish_log_named(td, td->iops_log,
-						td->o.iops_log_file, "iops");
+						o->iops_log_file, "iops");
 		} else
 			finish_log(td, td->iops_log, "iops");
 	}
 
 	fio_mutex_up(writeout_mutex);
-	if (td->o.exec_postrun)
-		exec_string(td->o.exec_postrun);
+	if (o->exec_postrun)
+		exec_string(o->exec_postrun);
 
 	if (exitall_on_terminate)
 		fio_terminate_threads(td->groupid);
@@ -1384,7 +1385,7 @@ err:
 		log_info("fio: pid=%d, err=%d/%s\n", (int) td->pid, td->error,
 							td->verror);
 
-	if (td->o.verify_async)
+	if (o->verify_async)
 		verify_async_exit(td);
 
 	close_and_free_files(td);
@@ -1392,8 +1393,8 @@ err:
 	close_ioengine(td);
 	cgroup_shutdown(td, &cgroup_mnt);
 
-	if (td->o.cpumask_set) {
-		int ret = fio_cpuset_exit(&td->o.cpumask);
+	if (o->cpumask_set) {
+		int ret = fio_cpuset_exit(&o->cpumask);
 
 		td_verror(td, ret, "fio_cpuset_exit");
 	}
@@ -1401,7 +1402,7 @@ err:
 	/*
 	 * do this very late, it will log file closing as well
 	 */
-	if (td->o.write_iolog_file)
+	if (o->write_iolog_file)
 		write_iolog_close(td);
 
 	fio_mutex_remove(td->rusage_sem);
