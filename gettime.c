@@ -25,7 +25,7 @@ struct tv_valid {
 	int last_tv_valid;
 };
 #ifdef CONFIG_TLS_THREAD
-static struct tv_valid __thread static_tv_valid;
+static __thread struct tv_valid static_tv_valid;
 #else
 static pthread_key_t tv_tls_key;
 #endif

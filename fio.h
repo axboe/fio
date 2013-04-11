@@ -388,7 +388,8 @@ static int __NON_FATAL_ERR[] = {EIO, EILSEQ};
 static inline int td_non_fatal_error(struct thread_data *td,
 				     enum error_type_bit etype, int err)
 {
-	int i;
+	unsigned int i;
+
 	if (!td->o.ignore_error[etype]) {
 		td->o.ignore_error[etype] = __NON_FATAL_ERR;
 		td->o.ignore_error_nr[etype] = sizeof(__NON_FATAL_ERR)

@@ -1345,7 +1345,7 @@ void show_run_stats(void)
 	free(threadstats);
 }
 
-static void *__show_running_run_stats(void *arg)
+static void *__show_running_run_stats(void fio_unused *arg)
 {
 	struct thread_data *td;
 	unsigned long long *rt;
