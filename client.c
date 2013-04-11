@@ -883,6 +883,8 @@ static void convert_jobs_eta(struct jobs_eta *je)
 		je->t_rate[i]	= le32_to_cpu(je->t_rate[i]);
 		je->m_iops[i]	= le32_to_cpu(je->m_iops[i]);
 		je->t_iops[i]	= le32_to_cpu(je->t_iops[i]);
+		je->rate[i]	= le32_to_cpu(je->rate[i]);
+		je->iops[i]	= le32_to_cpu(je->iops[i]);
 	}
 
 	je->elapsed_sec		= le64_to_cpu(je->elapsed_sec);
@@ -906,6 +908,8 @@ void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 		dst->t_rate[i]	+= je->t_rate[i];
 		dst->m_iops[i]	+= je->m_iops[i];
 		dst->t_iops[i]	+= je->t_iops[i];
+		dst->rate[i]	+= je->rate[i];
+		dst->iops[i]	+= je->iops[i];
 	}
 
 	dst->elapsed_sec	+= je->elapsed_sec;

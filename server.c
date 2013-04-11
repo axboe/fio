@@ -666,6 +666,8 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 		je->t_rate[i]	= cpu_to_le32(je->t_rate[i]);
 		je->m_iops[i]	= cpu_to_le32(je->m_iops[i]);
 		je->t_iops[i]	= cpu_to_le32(je->t_iops[i]);
+		je->rate[i]	= cpu_to_le32(je->rate[i]);
+		je->iops[i]	= cpu_to_le32(je->iops[i]);
 	}
 
 	je->elapsed_sec		= cpu_to_le64(je->elapsed_sec);
