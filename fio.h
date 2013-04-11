@@ -37,6 +37,7 @@ struct thread_data;
 #include "lib/getopt.h"
 #include "lib/rand.h"
 #include "lib/rbtree.h"
+#include "client.h"
 #include "server.h"
 #include "stat.h"
 #include "flow.h"
@@ -94,9 +95,11 @@ struct thread_data {
 	void *eo;
 	char verror[FIO_VERROR_SIZE];
 	pthread_t thread;
-	int thread_number;
-	int groupid;
+	unsigned int thread_number;
+	unsigned int groupid;
 	struct thread_stat ts;
+
+	int client_type;
 
 	struct io_log *slat_log;
 	struct io_log *clat_log;
@@ -135,12 +138,9 @@ struct thread_data {
 	size_t orig_buffer_size;
 	volatile int terminate;
 	volatile int runstate;
-	unsigned int ioprio;
-	unsigned int ioprio_set;
 	unsigned int last_was_sync;
 	enum fio_ddir last_ddir;
 
-	char *mmapfile;
 	int mmapfd;
 
 	void *iolog_buf;
@@ -423,9 +423,10 @@ static inline int should_fsync(struct thread_data *td)
 /*
  * Init/option functions
  */
+extern int __must_check fio_init_options(void);
 extern int __must_check parse_options(int, char **);
-extern int parse_jobs_ini(char *, int, int);
-extern int parse_cmd_line(int, char **);
+extern int parse_jobs_ini(char *, int, int, int);
+extern int parse_cmd_line(int, char **, int);
 extern int fio_backend(void);
 extern void reset_fio_state(void);
 extern void clear_io_state(struct thread_data *);
@@ -440,7 +441,7 @@ extern void fio_options_dup_and_init(struct option *);
 extern void fio_options_mem_dupe(struct thread_data *);
 extern void options_mem_dupe(void *data, struct fio_option *options);
 extern void td_fill_rand_seeds(struct thread_data *);
-extern void add_job_opts(const char **);
+extern void add_job_opts(const char **, int);
 extern char *num2str(unsigned long, int, int, int, int);
 extern int ioengine_load(struct thread_data *);
 
@@ -490,6 +491,7 @@ extern int __must_check fio_pin_memory(struct thread_data *);
 extern void fio_unpin_memory(struct thread_data *);
 extern int __must_check allocate_io_mem(struct thread_data *);
 extern void free_io_mem(struct thread_data *);
+extern void free_threads_shm(void);
 
 /*
  * Reset stats after ramp time completes
@@ -605,6 +607,8 @@ static inline void td_io_u_free_notify(struct thread_data *td)
 
 extern const char *fio_get_arch_string(int);
 extern const char *fio_get_os_string(int);
+
+#define ARRAY_SIZE(x) (sizeof((x)) / (sizeof((x)[0])))
 
 enum {
 	FIO_OUTPUT_TERSE	= 0,

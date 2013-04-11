@@ -23,6 +23,7 @@ static const char *tb_opts[] = {
 static struct fio_option options[] = {
 	{
 		.name	= "size",
+		.lname	= "Tiobench size",
 		.type	= FIO_OPT_STR_VAL,
 		.roff1	= &size,
 		.help	= "Size in MB",
@@ -31,6 +32,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "block",
+		.lname	= "Tiobench block",
 		.type	= FIO_OPT_INT,
 		.roff1	= &bs,
 		.help	= "Block size in bytes",
@@ -40,6 +42,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "numruns",
+		.lname	= "Tiobench numruns",
 		.type	= FIO_OPT_INT,
 		.roff1	= &loops,
 		.help	= "Number of runs",
@@ -48,6 +51,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "dir",
+		.lname	= "Tiobench directory",
 		.type	= FIO_OPT_STR_STORE,
 		.roff1	= &dir,
 		.help	= "Test directory",
@@ -56,6 +60,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "threads",
+		.lname	= "Tiobench threads",
 		.type	= FIO_OPT_INT,
 		.roff1	= &nthreads,
 		.help	= "Number of Threads",

@@ -75,18 +75,6 @@ static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
 
 #define FIO_MAX_CPUS			CPU_SETSIZE
 
-static inline int ioprio_set(int which, int who, int ioprio)
-{
-	return syscall(__NR_ioprio_set, which, who, ioprio);
-}
-
-static inline int gettid(void)
-{
-	return syscall(__NR_gettid);
-}
-
-#define SPLICE_DEF_SIZE	(64*1024)
-
 enum {
 	IOPRIO_CLASS_NONE,
 	IOPRIO_CLASS_RT,
@@ -102,6 +90,25 @@ enum {
 
 #define IOPRIO_BITS		16
 #define IOPRIO_CLASS_SHIFT	13
+
+static inline int ioprio_set(int which, int who, int ioprio_class, int ioprio)
+{
+	/*
+	 * If no class is set, assume BE
+	 */
+	if (!ioprio_class)
+		ioprio_class = IOPRIO_CLASS_BE;
+
+	ioprio |= ioprio_class << IOPRIO_CLASS_SHIFT;
+	return syscall(__NR_ioprio_set, which, who, ioprio);
+}
+
+static inline int gettid(void)
+{
+	return syscall(__NR_gettid);
+}
+
+#define SPLICE_DEF_SIZE	(64*1024)
 
 #ifndef BLKGETSIZE64
 #define BLKGETSIZE64	_IOR(0x12,114,size_t)

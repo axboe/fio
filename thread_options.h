@@ -54,6 +54,7 @@ struct thread_options {
 	char *filename_format;
 	char *opendir;
 	char *ioengine;
+	char *mmapfile;
 	enum td_ddir td_ddir;
 	unsigned int rw_seq;
 	unsigned int kb_base;
@@ -116,9 +117,6 @@ struct thread_options {
 	unsigned int override_sync;
 	unsigned int rand_repeatable;
 	unsigned int use_os_rand;
-	unsigned int write_lat_log;
-	unsigned int write_bw_log;
-	unsigned int write_iops_log;
 	unsigned int log_avg_msec;
 	unsigned int norandommap;
 	unsigned int softrandommap;
@@ -126,6 +124,7 @@ struct thread_options {
 	unsigned int fsync_on_close;
 
 	unsigned int random_distribution;
+
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
 
@@ -226,12 +225,6 @@ struct thread_options {
 	char *ioscheduler;
 
 	/*
-	 * CPU "io" cycle burner
-	 */
-	unsigned int cpuload;
-	unsigned int cpucycle;
-
-	/*
 	 * I/O Error handling
 	 */
 	enum error_type continue_on_error;
@@ -260,5 +253,211 @@ struct thread_options {
 
 	unsigned int sync_file_range;
 };
+
+#define FIO_TOP_STR_MAX		256
+
+struct thread_options_pack {
+	uint8_t description[FIO_TOP_STR_MAX];
+	uint8_t name[FIO_TOP_STR_MAX];
+	uint8_t directory[FIO_TOP_STR_MAX];
+	uint8_t filename[FIO_TOP_STR_MAX];
+	uint8_t filename_format[FIO_TOP_STR_MAX];
+	uint8_t opendir[FIO_TOP_STR_MAX];
+	uint8_t ioengine[FIO_TOP_STR_MAX];
+	uint8_t mmapfile[FIO_TOP_STR_MAX];
+	uint32_t td_ddir;
+	uint32_t rw_seq;
+	uint32_t kb_base;
+	uint32_t unit_base;
+	uint32_t ddir_seq_nr;
+	uint64_t ddir_seq_add;
+	uint32_t iodepth;
+	uint32_t iodepth_low;
+	uint32_t iodepth_batch;
+	uint32_t iodepth_batch_complete;
+
+	uint64_t size;
+	uint32_t size_percent;
+	uint32_t fill_device;
+	uint64_t file_size_low;
+	uint64_t file_size_high;
+	uint64_t start_offset;
+
+	uint32_t bs[DDIR_RWDIR_CNT];
+	uint32_t ba[DDIR_RWDIR_CNT];
+	uint32_t min_bs[DDIR_RWDIR_CNT];
+	uint32_t max_bs[DDIR_RWDIR_CNT];
+	struct bssplit bssplit[DDIR_RWDIR_CNT][BSSPLIT_MAX];
+	uint32_t bssplit_nr[DDIR_RWDIR_CNT];
+
+	uint32_t ignore_error[ERROR_TYPE_CNT][ERROR_STR_MAX];
+	uint32_t ignore_error_nr[ERROR_TYPE_CNT];
+	uint32_t error_dump;
+
+	uint32_t nr_files;
+	uint32_t open_files;
+	uint32_t file_lock_mode;
+
+	uint32_t odirect;
+	uint32_t invalidate_cache;
+	uint32_t create_serialize;
+	uint32_t create_fsync;
+	uint32_t create_on_open;
+	uint32_t create_only;
+	uint32_t end_fsync;
+	uint32_t pre_read;
+	uint32_t sync_io;
+	uint32_t verify;
+	uint32_t do_verify;
+	uint32_t verifysort;
+	uint32_t verifysort_nr;
+	uint32_t verify_interval;
+	uint32_t verify_offset;
+	uint8_t verify_pattern[MAX_PATTERN_SIZE];
+	uint32_t verify_pattern_bytes;
+	uint32_t verify_fatal;
+	uint32_t verify_dump;
+	uint32_t verify_async;
+	uint64_t verify_backlog;
+	uint32_t verify_batch;
+	uint32_t experimental_verify;
+	uint32_t use_thread;
+	uint32_t unlink;
+	uint32_t do_disk_util;
+	uint32_t override_sync;
+	uint32_t rand_repeatable;
+	uint32_t use_os_rand;
+	uint32_t log_avg_msec;
+	uint32_t norandommap;
+	uint32_t softrandommap;
+	uint32_t bs_unaligned;
+	uint32_t fsync_on_close;
+
+	uint32_t random_distribution;
+	fio_fp64_t zipf_theta;
+	fio_fp64_t pareto_h;
+
+	uint32_t random_generator;
+
+	uint32_t hugepage_size;
+	uint32_t rw_min_bs;
+	uint32_t thinktime;
+	uint32_t thinktime_spin;
+	uint32_t thinktime_blocks;
+	uint32_t fsync_blocks;
+	uint32_t fdatasync_blocks;
+	uint32_t barrier_blocks;
+	uint64_t start_delay;
+	uint64_t timeout;
+	uint64_t ramp_time;
+	uint32_t overwrite;
+	uint32_t bw_avg_time;
+	uint32_t iops_avg_time;
+	uint32_t loops;
+	uint64_t zone_range;
+	uint64_t zone_size;
+	uint64_t zone_skip;
+	uint64_t lockmem;
+	uint32_t mem_type;
+	uint32_t mem_align;
+
+	uint32_t max_latency;
+
+	uint32_t stonewall;
+	uint32_t new_group;
+	uint32_t numjobs;
+	uint8_t cpumask[FIO_TOP_STR_MAX];
+	uint32_t cpumask_set;
+	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
+	uint32_t verify_cpumask_set;
+	uint32_t iolog;
+	uint32_t rwmixcycle;
+	uint32_t rwmix[2];
+	uint32_t nice;
+	uint32_t ioprio;
+	uint32_t ioprio_class;
+	uint32_t file_service_type;
+	uint32_t group_reporting;
+	uint32_t fadvise_hint;
+	uint32_t fallocate_mode;
+	uint32_t zero_buffers;
+	uint32_t refill_buffers;
+	uint32_t scramble_buffers;
+	unsigned int compress_percentage;
+	unsigned int compress_chunk;
+	uint32_t time_based;
+	uint32_t disable_lat;
+	uint32_t disable_clat;
+	uint32_t disable_slat;
+	uint32_t disable_bw;
+	uint32_t unified_rw_rep;
+	uint32_t gtod_reduce;
+	uint32_t gtod_cpu;
+	uint32_t gtod_offload;
+	uint32_t clocksource;
+	uint32_t no_stall;
+	uint32_t trim_percentage;
+	uint32_t trim_batch;
+	uint32_t trim_zero;
+	uint64_t trim_backlog;
+	uint32_t clat_percentiles;
+	uint32_t percentile_precision;
+	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
+
+	uint8_t read_iolog_file[FIO_TOP_STR_MAX];
+	uint8_t write_iolog_file[FIO_TOP_STR_MAX];
+	uint8_t bw_log_file[FIO_TOP_STR_MAX];
+	uint8_t lat_log_file[FIO_TOP_STR_MAX];
+	uint8_t iops_log_file[FIO_TOP_STR_MAX];
+	uint8_t replay_redirect[FIO_TOP_STR_MAX];
+
+	/*
+	 * Pre-run and post-run shell
+	 */
+	uint8_t exec_prerun[FIO_TOP_STR_MAX];
+	uint8_t exec_postrun[FIO_TOP_STR_MAX];
+
+	uint32_t rate[DDIR_RWDIR_CNT];
+	uint32_t ratemin[DDIR_RWDIR_CNT];
+	uint32_t ratecycle;
+	uint32_t rate_iops[DDIR_RWDIR_CNT];
+	uint32_t rate_iops_min[DDIR_RWDIR_CNT];
+
+	uint8_t ioscheduler[FIO_TOP_STR_MAX];
+
+	/*
+	 * I/O Error handling
+	 */
+	uint32_t continue_on_error;
+
+	/*
+	 * Benchmark profile type
+	 */
+	uint8_t profile[FIO_TOP_STR_MAX];
+
+	/*
+	 * blkio cgroup support
+	 */
+	uint8_t cgroup[FIO_TOP_STR_MAX];
+	uint32_t cgroup_weight;
+	uint32_t cgroup_nodelete;
+
+	uint32_t uid;
+	uint32_t gid;
+
+	int32_t flow_id;
+	int32_t flow;
+	int32_t flow_watermark;
+	uint32_t flow_sleep;
+
+	uint64_t offset_increment;
+
+	uint32_t sync_file_range;
+} __attribute__((packed));
+
+extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);
+extern void convert_thread_options_to_net(struct thread_options_pack *top, struct thread_options *);
+extern int fio_test_cconv(struct thread_options *);
+extern void options_default_fill(struct thread_options *o);
 
 #endif

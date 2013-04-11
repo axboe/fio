@@ -31,7 +31,7 @@ int load_profile(const char *profile)
 	ops = find_profile(profile);
 	if (ops) {
 		ops->prep_cmd();
-		add_job_opts(ops->cmdline);
+		add_job_opts(ops->cmdline, FIO_CLIENT_TYPE_CLI);
 		return 0;
 	}
 
@@ -42,7 +42,7 @@ int load_profile(const char *profile)
 static int add_profile_options(struct profile_ops *ops)
 {
 	struct fio_option *o;
-	
+
 	if (!ops->options)
 		return 0;
 

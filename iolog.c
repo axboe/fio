@@ -110,7 +110,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
 	unsigned long elapsed;
-	
+
 	while (!flist_empty(&td->io_log_list)) {
 		int ret;
 
@@ -141,11 +141,10 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 			elapsed = mtime_since_genesis();
 			if (ipo->delay > elapsed)
 				usec_sleep(td, (ipo->delay - elapsed) * 1000);
-				
 		}
 
 		free(ipo);
-		
+
 		if (io_u->ddir != DDIR_WAIT)
 			return 0;
 	}
@@ -373,7 +372,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 			ipo->fileno = fileno;
 			ipo->file_action = file_action;
 		}
-			
+
 		queue_io_piece(td, ipo);
 	}
 
@@ -520,10 +519,10 @@ void __finish_log(struct io_log *log, const char *name)
 	}
 
 	for (i = 0; i < log->nr_samples; i++) {
-		fprintf(f, "%lu, %lu, %u, %u\n", log->log[i].time,
-						log->log[i].val,
-						log->log[i].ddir,
-						log->log[i].bs);
+		fprintf(f, "%lu, %lu, %u, %u\n",
+				(unsigned long) log->log[i].time,
+				(unsigned long) log->log[i].val,
+				log->log[i].ddir, log->log[i].bs);
 	}
 
 	fclose(f);
@@ -538,7 +537,13 @@ void finish_log_named(struct thread_data *td, struct io_log *log,
 
 	snprintf(file_name, sizeof(file_name), "%s_%s.log", prefix, postfix);
 	p = basename(file_name);
-	__finish_log(log, p);
+
+	if (td->client_type == FIO_CLIENT_TYPE_GUI) {
+		fio_send_iolog(td, log, p);
+		free(log->log);
+		free(log);
+	} else
+		__finish_log(log, p);
 }
 
 void finish_log(struct thread_data *td, struct io_log *log, const char *name)

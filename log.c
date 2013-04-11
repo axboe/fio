@@ -63,7 +63,7 @@ int log_info(const char *format, ...)
 	len = min(len, sizeof(buffer) - 1);
 
 	if (is_backend)
-		return fio_server_text_output(buffer, len);
+		return fio_server_text_output(FIO_LOG_INFO, buffer, len);
 	else if (log_syslog) {
 		syslog(LOG_INFO, "%s", buffer);
 		return len;
@@ -83,7 +83,7 @@ int log_err(const char *format, ...)
 	len = min(len, sizeof(buffer) - 1);
 
 	if (is_backend)
-		return fio_server_text_output(buffer, len);
+		return fio_server_text_output(FIO_LOG_ERR, buffer, len);
 	else if (log_syslog) {
 		syslog(LOG_INFO, "%s", buffer);
 		return len;
@@ -96,4 +96,15 @@ int log_err(const char *format, ...)
 
 		return fwrite(buffer, len, 1, f_err);
 	}
+}
+
+const char *log_get_level(int level)
+{
+	static const char *levels[] = { "Unknown", "Debug", "Info", "Error",
+						"Unknown" };
+
+	if (level >= FIO_LOG_NR)
+		level = FIO_LOG_NR;
+
+	return levels[level];
 }

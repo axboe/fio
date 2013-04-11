@@ -7,32 +7,73 @@
  */
 #include "../fio.h"
 
+struct cpu_options {
+	struct thread_data *td;
+	unsigned int cpuload;
+	unsigned int cpucycle;
+};
+
+static struct fio_option options[] = {
+	{
+		.name	= "cpuload",
+		.lname	= "CPU load",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct cpu_options, cpuload),
+		.help	= "Use this percentage of CPU",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "cpuchunks",
+		.lname	= "CPU chunk",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct cpu_options, cpucycle),
+		.help	= "Length of the CPU burn cycles (usecs)",
+		.def	= "50000",
+		.parent = "cpuload",
+		.hide	= 1,
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= NULL,
+	},
+};
+
+
 static int fio_cpuio_queue(struct thread_data *td, struct io_u fio_unused *io_u)
 {
-	usec_spin(td->o.cpucycle);
+	struct cpu_options *co = td->eo;
+
+	usec_spin(co->cpucycle);
 	return FIO_Q_COMPLETED;
 }
 
 static int fio_cpuio_init(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
+	struct cpu_options *co = td->eo;
 
-	if (!o->cpuload) {
+	if (!co->cpuload) {
 		td_vmsg(td, EINVAL, "cpu thread needs rate (cpuload=)","cpuio");
 		return 1;
 	}
 
-	if (o->cpuload > 100)
-		o->cpuload = 100;
+	if (co->cpuload > 100)
+		co->cpuload = 100;
 
 	/*
 	 * set thinktime_sleep and thinktime_spin appropriately
 	 */
 	o->thinktime_blocks = 1;
 	o->thinktime_spin = 0;
-	o->thinktime = (o->cpucycle * (100 - o->cpuload)) / o->cpuload;
+	o->thinktime = (co->cpucycle * (100 - co->cpuload)) / co->cpuload;
 
 	o->nr_files = o->open_files = 1;
+
+	log_info("%s: ioengine=cpu, cpuload=%u, cpucycle=%u\n", td->o.name,
+						co->cpuload, co->cpucycle);
+
 	return 0;
 }
 
@@ -49,6 +90,8 @@ static struct ioengine_ops ioengine = {
 	.init		= fio_cpuio_init,
 	.open_file	= fio_cpuio_open,
 	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_NOIO,
+	.options		= options,
+	.option_struct_size	= sizeof(struct cpu_options),
 };
 
 static void fio_init fio_cpuio_register(void)

@@ -18,6 +18,8 @@ void del_opt_posval(const char *, const char *);
 struct thread_data;
 void fio_options_free(struct thread_data *);
 
+extern struct fio_option fio_options[FIO_MAX_OPTS];
+
 static inline int o_match(struct fio_option *o, const char *opt)
 {
 	if (!strcmp(o->name, opt))
@@ -120,5 +122,10 @@ enum opt_category_group {
 	FIO_OPT_G_LIBAIO	= (1U << __FIO_OPT_G_LIBAIO),
 	FIO_OPT_G_INVALID	= (1U << __FIO_OPT_G_NR),
 };
+
+extern struct opt_group *opt_group_from_mask(unsigned int *mask);
+extern struct opt_group *opt_group_cat_from_mask(unsigned int *mask);
+extern struct fio_option *fio_option_find(const char *name);
+extern unsigned int fio_get_kb_base(void *);
 
 #endif

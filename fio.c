@@ -32,13 +32,20 @@ int main(int argc, char *argv[], char *envp[])
 {
 	if (initialize_fio(envp))
 		return 1;
+
+#if !defined(CONFIG_GETTIMEOFDAY) && !defined(CONFIG_CLOCK_GETTIME)
+#error "No available clock source!"
+#endif
+
 	if (parse_options(argc, argv))
 		return 1;
 
 	fio_time_init();
 
-	if (nr_clients)
-		return fio_handle_clients();
-	else
+	if (nr_clients) {
+		if (fio_start_all_clients())
+			return 1;
+		return fio_handle_clients(&fio_client_ops);
+	} else
 		return fio_backend();
 }

@@ -3,6 +3,8 @@
 
 #include "lib/rbtree.h"
 #include "lib/ieee754.h"
+#include "flist.h"
+#include "ioengine.h"
 
 /*
  * Use for maintaining statistics

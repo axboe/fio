@@ -125,13 +125,13 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 		unsigned long mask = td->o.hugepage_size - 1;
 
 		/* TODO: make sure the file is a real hugetlbfs file */
-		if (!td->mmapfile)
+		if (!td->o.mmapfile)
 			flags |= MAP_HUGETLB;
 		total_mem = (total_mem + mask) & ~mask;
 	}
 
-	if (td->mmapfile) {
-		td->mmapfd = open(td->mmapfile, O_RDWR|O_CREAT, 0644);
+	if (td->o.mmapfile) {
+		td->mmapfd = open(td->o.mmapfile, O_RDWR|O_CREAT, 0644);
 
 		if (td->mmapfd < 0) {
 			td_verror(td, errno, "open mmap file");
@@ -160,7 +160,7 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 		td->orig_buffer = NULL;
 		if (td->mmapfd) {
 			close(td->mmapfd);
-			unlink(td->mmapfile);
+			unlink(td->o.mmapfile);
 		}
 
 		return 1;
@@ -174,10 +174,10 @@ static void free_mem_mmap(struct thread_data *td, size_t total_mem)
 	dprint(FD_MEM, "munmap %llu %p\n", (unsigned long long) total_mem,
 						td->orig_buffer);
 	munmap(td->orig_buffer, td->orig_buffer_size);
-	if (td->mmapfile) {
+	if (td->o.mmapfile) {
 		close(td->mmapfd);
-		unlink(td->mmapfile);
-		free(td->mmapfile);
+		unlink(td->o.mmapfile);
+		free(td->o.mmapfile);
 	}
 }
 

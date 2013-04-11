@@ -129,8 +129,10 @@ cpu=""
 cross_prefix=${cross_prefix-${CROSS_COMPILE}}
 cc="${CC-${cross_prefix}gcc}"
 
+# default options
 show_help="no"
 exit_val=0
+gfio="no"
 
 # parse options
 for opt do
@@ -144,9 +146,12 @@ for opt do
   ;;
   --build-32bit-win=*) build_32bit_win="$optarg"
   ;;
-  --help)
-  show_help="yes"
+  --enable-gfio)
+  gfio="yes"
   ;;
+  --help)
+    show_help="yes"
+    ;;
   *)
   echo "Bad option $opt"
   show_help="yes"
@@ -159,6 +164,7 @@ if test "$show_help" = "yes" ; then
   echo "--cc=                  Specify compiler to use"
   echo "--extra-cflags=        Specify extra CFLAGS to pass to compiler"
   echo "--build-32bit-win=     Specify yes for a 32-bit build on Windows"
+  echo "--enable-gfio          Enable building of gtk gfio"
   exit $exit_val
 fi
 
@@ -388,6 +394,28 @@ else
   fatal "Unknown wordsize"
 fi
 echo "Wordsize                      $wordsize"
+
+##########################################
+# zlib probe
+zlib="no"
+cat > $TMPC <<EOF
+#include <zlib.h>
+int main(void)
+{
+  z_stream stream;
+  if (inflateInit(&stream) != Z_OK)
+    return 1;
+  return 0;
+}
+EOF
+if compile_prog "" "-lz" "zlib" ; then
+  zlib=yes
+  LIBS="-lz $LIBS"
+else
+  feature_not_found "zlib"
+  zlib=no
+fi
+echo "zlib                          $zlib"
 
 ##########################################
 # linux-aio probe
@@ -927,6 +955,48 @@ fi
 echo "__thread                      $tls_thread"
 
 ##########################################
+# Check if we have required gtk/glib support for gfio
+if test "$gfio" = "yes" ; then
+  cat > $TMPC << EOF
+#include <glib.h>
+#include <cairo.h>
+#include <gtk/gtk.h>
+int main(void)
+{
+  gdk_threads_enter();
+  gdk_threads_leave();
+
+  printf("%d", GTK_CHECK_VERSION(2, 18, 0));
+}
+EOF
+GTK_CFLAGS=$(pkg-config --cflags gtk+-2.0 gthread-2.0)
+if test "$?" != "0" ; then
+  echo "configure: gtk and gthread not found"
+  exit 1
+fi
+GTK_LIBS=$(pkg-config --libs gtk+-2.0 gthread-2.0)
+if test "$?" != "0" ; then
+  echo "configure: gtk and gthread not found"
+  exit 1
+fi
+if compile_prog "$GTK_CFLAGS" "$GTK_LIBS" "gfio" ; then
+  r=$($TMPE)
+  if test "$r" != "0" ; then
+    gfio="yes"
+    LIBS="$LIBS $GTK_LIBS"
+    CFLAGS="$CFLAGS $GTK_CFLAGS"
+  else
+    echo "GTK found, but need version 2.18 or higher"
+    gfio="no"
+  fi
+else
+  echo "Please install gtk and gdk libraries"
+  gfio="no"
+fi
+fi
+
+echo "gtk 2.18 or higher            $gfio"
+
 # Check whether we have getrusage(RUSAGE_THREAD)
 rusage_thread="no"
 cat > $TMPC << EOF
@@ -1095,6 +1165,9 @@ fi
 if test "$rusage_thread" = "yes" ; then
   output_sym "CONFIG_RUSAGE_THREAD"
 fi
+if test "$gfio" = "yes" ; then
+  echo "CONFIG_GFIO=y" >> $config_host_mak
+fi
 if test "$sched_idle" = "yes" ; then
   output_sym "CONFIG_SCHED_IDLE"
 fi
@@ -1106,5 +1179,6 @@ if test "$rlimit_memlock" = "yes" ; then
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
+echo "CFLAGS+=$CFLAGS" >> $config_host_mak
 echo "CC=$cc" >> $config_host_mak
 echo "BUILD_CFLAGS=$BUILD_CFLAGS $CFLAGS" >> $config_host_mak

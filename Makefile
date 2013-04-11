@@ -20,15 +20,19 @@ LIBS	+= -lm $(EXTLIBS)
 PROGS	= fio
 SCRIPTS = fio_generate_plots
 
-SOURCE := gettime.c fio.c ioengines.c init.c stat.c log.c time.c filesetup.c \
+ifdef CONFIG_GFIO
+  PROGS += gfio
+endif
+
+SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
 		lib/rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
 		lib/num2str.c lib/ieee754.c $(wildcard crc/*.c) engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
 		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
-		json.c lib/zipf.c lib/axmap.c lib/lfsr.c gettime-thread.c \
-		helpers.c lib/flist_sort.c lib/hweight.c lib/getrusage.c \
-		idletime.c
+		cconv.c lib/prio_tree.c json.c lib/zipf.c lib/axmap.c \
+		lib/lfsr.c gettime-thread.c helpers.c lib/flist_sort.c \
+		lib/hweight.c lib/getrusage.c idletime.c
 
 ifdef CONFIG_64BIT_LLP64
   CFLAGS += -DBITS_PER_LONG=32
@@ -125,6 +129,11 @@ ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
 endif
 
 OBJS = $(SOURCE:.c=.o)
+
+FIO_OBJS = $(OBJS) fio.o
+GFIO_OBJS = $(OBJS) gfio.o graph.o tickmarks.o ghelpers.o goptions.o gerror.o \
+			gclient.o gcompat.o cairo_text_helpers.o printing.o
+
 -include $(OBJS:.o=.d)
 
 T_SMALLOC_OBJS = t/stest.o
@@ -204,11 +213,44 @@ override CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 init.o: FIO-VERSION-FILE init.c
 	$(QUIET_CC)$(CC) -o init.o $(CFLAGS) $(CPPFLAGS) -c init.c
 
+gcompat.o: gcompat.c gcompat.h
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c gcompat.c
+
+goptions.o: goptions.c goptions.h
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c goptions.c
+
+ghelpers.o: ghelpers.c ghelpers.h
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c ghelpers.c
+
+gerror.o: gerror.c gerror.h
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c gerror.c
+
+gclient.o: gclient.c gclient.h
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c gclient.c
+
+gfio.o: gfio.c ghelpers.c
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c gfio.c
+
+graph.o: graph.c graph.h
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c graph.c
+
+cairo_text_helpers.o: cairo_text_helpers.c cairo_text_helpers.h
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c cairo_text_helpers.c
+
+printing.o: printing.c printing.h
+	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c printing.c
+
 t/stest: $(T_SMALLOC_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_SMALLOC_OBJS) $(LIBS) $(LDFLAGS)
 
 t/ieee754: $(T_IEEE_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_IEEE_OBJS) $(LIBS) $(LDFLAGS)
+
+fio: $(FIO_OBJS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(FIO_OBJS) $(LIBS) $(LDFLAGS)
+
+gfio: $(GFIO_OBJS)
+	$(QUIET_LINK)$(CC) $(LIBS) -o gfio $(GFIO_OBJS) $(LIBS) $(GTK_LDFLAGS)
 
 t/genzipf: $(T_ZIPF_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_ZIPF_OBJS) $(LIBS) $(LDFLAGS)
@@ -219,11 +261,8 @@ t/axmap: $(T_AXMAP_OBJS)
 t/lfsr-test: $(T_LFSR_TEST_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_LFSR_TEST_OBJS) $(LIBS) $(LDFLAGS)
 
-fio: $(OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
-
 clean: FORCE
-	-rm -f .depend $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core FIO-VERSION-FILE config-host.mak config-host.h cscope.out *.d
+	-rm -f .depend $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE config-host.mak config-host.h cscope.out *.d
 
 cscope:
 	@cscope -b -R

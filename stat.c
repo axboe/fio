@@ -65,12 +65,12 @@ static unsigned int plat_val_to_idx(unsigned int val)
 
 	/*
 	 * Discard the error bits and apply the mask to find the
-         * index for the buckets in the group
+	 * index for the buckets in the group
 	 */
 	offset = (FIO_IO_U_PLAT_VAL - 1) & (val >> error_bits);
 
 	/* Make sure the index does not exceed (array size - 1) */
-	idx = (base + offset) < (FIO_IO_U_PLAT_NR - 1)?
+	idx = (base + offset) < (FIO_IO_U_PLAT_NR - 1) ?
 		(base + offset) : (FIO_IO_U_PLAT_NR - 1);
 
 	return idx;
@@ -88,11 +88,11 @@ static unsigned int plat_idx_to_val(unsigned int idx)
 
 	/* MSB <= (FIO_IO_U_PLAT_BITS-1), cannot be rounded off. Use
 	 * all bits of the sample as index */
-	if (idx < (FIO_IO_U_PLAT_VAL << 1) )
+	if (idx < (FIO_IO_U_PLAT_VAL << 1))
 		return idx;
 
 	/* Find the group and compute the minimum value of that group */
-	error_bits = (idx >> FIO_IO_U_PLAT_BITS) -1;
+	error_bits = (idx >> FIO_IO_U_PLAT_BITS) - 1;
 	base = 1 << (error_bits + FIO_IO_U_PLAT_BITS);
 
 	/* Find its bucket number of the group */
@@ -116,11 +116,9 @@ static int double_cmp(const void *a, const void *b)
 	return cmp;
 }
 
-static unsigned int calc_clat_percentiles(unsigned int *io_u_plat,
-					  unsigned long nr, fio_fp64_t *plist,
-					  unsigned int **output,
-					  unsigned int *maxv,
-					  unsigned int *minv)
+unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
+				   fio_fp64_t *plist, unsigned int **output,
+				   unsigned int *maxv, unsigned int *minv)
 {
 	unsigned long sum = 0;
 	unsigned int len, i, j = 0;
@@ -144,7 +142,7 @@ static unsigned int calc_clat_percentiles(unsigned int *io_u_plat,
 	 * isn't a worry. Also note that this does not work for NaN values.
 	 */
 	if (len > 1)
-		qsort((void*)plist, len, sizeof(plist[0]), double_cmp);
+		qsort((void *)plist, len, sizeof(plist[0]), double_cmp);
 
 	/*
 	 * Calculate bucket values, note down max and min values
@@ -240,8 +238,8 @@ out:
 		free(ovals);
 }
 
-static int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
-		    double *mean, double *dev)
+int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
+	     double *mean, double *dev)
 {
 	double n = is->samples;
 
@@ -293,12 +291,7 @@ void show_group_stats(struct group_run_stats *rs)
 	}
 }
 
-#define ts_total_io_u(ts)	\
-	((ts)->total_io_u[DDIR_READ] + (ts)->total_io_u[DDIR_WRITE] +\
-		(ts)->total_io_u[DDIR_TRIM])
-
-static void stat_calc_dist(unsigned int *map, unsigned long total,
-			   double *io_u_dist)
+void stat_calc_dist(unsigned int *map, unsigned long total, double *io_u_dist)
 {
 	int i;
 
@@ -319,7 +312,7 @@ static void stat_calc_dist(unsigned int *map, unsigned long total,
 static void stat_calc_lat(struct thread_stat *ts, double *dst,
 			  unsigned int *src, int nr)
 {
-	unsigned long total = ts_total_io_u(ts);
+	unsigned long total = ddir_rw_sum(ts->total_io_u);
 	int i;
 
 	/*
@@ -336,28 +329,33 @@ static void stat_calc_lat(struct thread_stat *ts, double *dst,
 	}
 }
 
-static void stat_calc_lat_u(struct thread_stat *ts, double *io_u_lat)
+void stat_calc_lat_u(struct thread_stat *ts, double *io_u_lat)
 {
 	stat_calc_lat(ts, io_u_lat, ts->io_u_lat_u, FIO_IO_U_LAT_U_NR);
 }
 
-static void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat)
+void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat)
 {
 	stat_calc_lat(ts, io_u_lat, ts->io_u_lat_m, FIO_IO_U_LAT_M_NR);
 }
 
-static int usec_to_msec(unsigned long *min, unsigned long *max, double *mean,
-			double *dev)
+static void display_lat(const char *name, unsigned long min, unsigned long max,
+			double mean, double dev)
 {
-	if (*min > 1000 && *max > 1000 && *mean > 1000.0 && *dev > 1000.0) {
-		*min /= 1000;
-		*max /= 1000;
-		*mean /= 1000.0;
-		*dev /= 1000.0;
-		return 0;
-	}
+	const char *base = "(usec)";
+	char *minp, *maxp;
 
-	return 1;
+	if (!usec_to_msec(&min, &max, &mean, &dev))
+		base = "(msec)";
+
+	minp = num2str(min, 6, 1, 0, 0);
+	maxp = num2str(max, 6, 1, 0, 0);
+
+	log_info("    %s %s: min=%s, max=%s, avg=%5.02f,"
+		 " stdev=%5.02f\n", name, base, minp, maxp, mean, dev);
+
+	free(minp);
+	free(maxp);
 }
 
 static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
@@ -393,54 +391,13 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	free(bw_p);
 	free(iops_p);
 
-	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev)) {
-		const char *base = "(usec)";
-		char *minp, *maxp;
+	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
+		display_lat("slat", min, max, mean, dev);
+	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
+		display_lat("clat", min, max, mean, dev);
+	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
+		display_lat(" lat", min, max, mean, dev);
 
-		if (!usec_to_msec(&min, &max, &mean, &dev))
-			base = "(msec)";
-
-		minp = num2str(min, 6, 1, 0, 0);
-		maxp = num2str(max, 6, 1, 0, 0);
-
-		log_info("    slat %s: min=%s, max=%s, avg=%5.02f,"
-			 " stdev=%5.02f\n", base, minp, maxp, mean, dev);
-
-		free(minp);
-		free(maxp);
-	}
-	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev)) {
-		const char *base = "(usec)";
-		char *minp, *maxp;
-
-		if (!usec_to_msec(&min, &max, &mean, &dev))
-			base = "(msec)";
-
-		minp = num2str(min, 6, 1, 0, 0);
-		maxp = num2str(max, 6, 1, 0, 0);
-
-		log_info("    clat %s: min=%s, max=%s, avg=%5.02f,"
-			 " stdev=%5.02f\n", base, minp, maxp, mean, dev);
-
-		free(minp);
-		free(maxp);
-	}
-	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev)) {
-		const char *base = "(usec)";
-		char *minp, *maxp;
-
-		if (!usec_to_msec(&min, &max, &mean, &dev))
-			base = "(msec)";
-
-		minp = num2str(min, 6, 1, 0, 0);
-		maxp = num2str(max, 6, 1, 0, 0);
-
-		log_info("     lat %s: min=%s, max=%s, avg=%5.02f,"
-			 " stdev=%5.02f\n", base, minp, maxp, mean, dev);
-
-		free(minp);
-		free(maxp);
-	}
 	if (ts->clat_percentiles) {
 		show_clat_percentiles(ts->io_u_plat[ddir],
 					ts->clat_stat[ddir].samples,
@@ -525,8 +482,14 @@ static void show_lat_m(double *io_u_lat_m)
 	show_lat(io_u_lat_m, FIO_IO_U_LAT_M_NR, ranges, "msec");
 }
 
-static void show_latencies(double *io_u_lat_u, double *io_u_lat_m)
+static void show_latencies(struct thread_stat *ts)
 {
+	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
+	double io_u_lat_m[FIO_IO_U_LAT_M_NR];
+
+	stat_calc_lat_u(ts, io_u_lat_u);
+	stat_calc_lat_m(ts, io_u_lat_m);
+
 	show_lat_u(io_u_lat_u);
 	show_lat_m(io_u_lat_m);
 }
@@ -536,8 +499,6 @@ void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 	double usr_cpu, sys_cpu;
 	unsigned long runtime;
 	double io_u_dist[FIO_IO_U_MAP_NR];
-	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
-	double io_u_lat_m[FIO_IO_U_LAT_M_NR];
 	time_t time_p;
 	char time_buf[64];
 
@@ -570,9 +531,7 @@ void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 	if (ts->io_bytes[DDIR_TRIM])
 		show_ddir_status(rs, ts, DDIR_TRIM);
 
-	stat_calc_lat_u(ts, io_u_lat_u);
-	stat_calc_lat_m(ts, io_u_lat_m);
-	show_latencies(io_u_lat_u, io_u_lat_m);
+	show_latencies(ts);
 
 	runtime = ts->total_run_time;
 	if (runtime) {
@@ -588,7 +547,7 @@ void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 	log_info("  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu, majf=%lu,"
 		 " minf=%lu\n", usr_cpu, sys_cpu, ts->ctx, ts->majf, ts->minf);
 
-	stat_calc_dist(ts->io_u_map, ts_total_io_u(ts), io_u_dist);
+	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
 	log_info("  IO depths    : 1=%3.1f%%, 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%,"
 		 " 16=%3.1f%%, 32=%3.1f%%, >=64=%3.1f%%\n", io_u_dist[0],
 					io_u_dist[1], io_u_dist[2],
@@ -800,7 +759,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 }
 
 static void show_thread_status_terse_v2(struct thread_stat *ts,
-				        struct group_run_stats *rs)
+					struct group_run_stats *rs)
 {
 	double io_u_dist[FIO_IO_U_MAP_NR];
 	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
@@ -832,7 +791,7 @@ static void show_thread_status_terse_v2(struct thread_stat *ts,
 								ts->minf);
 
 	/* Calc % distribution of IO depths, usecond, msecond latency */
-	stat_calc_dist(ts->io_u_map, ts_total_io_u(ts), io_u_dist);
+	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
 	stat_calc_lat_u(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 
@@ -894,7 +853,7 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 								ts->minf);
 
 	/* Calc % distribution of IO depths, usecond, msecond latency */
-	stat_calc_dist(ts->io_u_map, ts_total_io_u(ts), io_u_dist);
+	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
 	stat_calc_lat_u(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 
@@ -961,7 +920,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 
 
 	/* Calc % distribution of IO depths, usecond, msecond latency */
-	stat_calc_dist(ts->io_u_map, ts_total_io_u(ts), io_u_dist);
+	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
 	stat_calc_lat_u(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 
@@ -1240,6 +1199,11 @@ void show_run_stats(void)
 			else
 				memset(ts->description, 0, FIO_JOBNAME_SIZE);
 
+			/*
+			 * If multiple entries in this group, this is
+			 * the first member.
+			 */
+			ts->thread_number = td->thread_number;
 			ts->groupid = td->groupid;
 
 			/*

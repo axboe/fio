@@ -37,7 +37,7 @@ static int converthexchartoint(char a)
 {
 	int base;
 
-	switch(a) {
+	switch (a) {
 	case '0'...'9':
 		base = '0';
 		break;
@@ -50,7 +50,7 @@ static int converthexchartoint(char a)
 	default:
 		base = 0;
 	}
-	return (a - base);
+	return a - base;
 }
 
 static int bs_cmp(const void *p1, const void *p2)
@@ -61,7 +61,7 @@ static int bs_cmp(const void *p1, const void *p2)
 	return bsp1->perc < bsp2->perc;
 }
 
-static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
+static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 {
 	struct bssplit *bssplit;
 	unsigned int i, perc, perc_missing;
@@ -69,7 +69,7 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 	long long val;
 	char *fname;
 
-	td->o.bssplit_nr[ddir] = 4;
+	o->bssplit_nr[ddir] = 4;
 	bssplit = malloc(4 * sizeof(struct bssplit));
 
 	i = 0;
@@ -84,9 +84,9 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 		/*
 		 * grow struct buffer, if needed
 		 */
-		if (i == td->o.bssplit_nr[ddir]) {
-			td->o.bssplit_nr[ddir] <<= 1;
-			bssplit = realloc(bssplit, td->o.bssplit_nr[ddir]
+		if (i == o->bssplit_nr[ddir]) {
+			o->bssplit_nr[ddir] <<= 1;
+			bssplit = realloc(bssplit, o->bssplit_nr[ddir]
 						  * sizeof(struct bssplit));
 		}
 
@@ -102,9 +102,9 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 		} else
 			perc = -1;
 
-		if (str_to_decimal(fname, &val, 1, td)) {
+		if (str_to_decimal(fname, &val, 1, o)) {
 			log_err("fio: bssplit conversion failed\n");
-			free(td->o.bssplit);
+			free(o->bssplit);
 			return 1;
 		}
 
@@ -118,13 +118,13 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 		i++;
 	}
 
-	td->o.bssplit_nr[ddir] = i;
+	o->bssplit_nr[ddir] = i;
 
 	/*
 	 * Now check if the percentages add up, and how much is missing
 	 */
 	perc = perc_missing = 0;
-	for (i = 0; i < td->o.bssplit_nr[ddir]; i++) {
+	for (i = 0; i < o->bssplit_nr[ddir]; i++) {
 		struct bssplit *bsp = &bssplit[i];
 
 		if (bsp->perc == (unsigned char) -1)
@@ -143,7 +143,7 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 	 * them.
 	 */
 	if (perc_missing) {
-		for (i = 0; i < td->o.bssplit_nr[ddir]; i++) {
+		for (i = 0; i < o->bssplit_nr[ddir]; i++) {
 			struct bssplit *bsp = &bssplit[i];
 
 			if (bsp->perc == (unsigned char) -1)
@@ -151,16 +151,15 @@ static int bssplit_ddir(struct thread_data *td, int ddir, char *str)
 		}
 	}
 
-	td->o.min_bs[ddir] = min_bs;
-	td->o.max_bs[ddir] = max_bs;
+	o->min_bs[ddir] = min_bs;
+	o->max_bs[ddir] = max_bs;
 
 	/*
 	 * now sort based on percentages, for ease of lookup
 	 */
-	qsort(bssplit, td->o.bssplit_nr[ddir], sizeof(struct bssplit), bs_cmp);
-	td->o.bssplit[ddir] = bssplit;
+	qsort(bssplit, o->bssplit_nr[ddir], sizeof(struct bssplit), bs_cmp);
+	o->bssplit[ddir] = bssplit;
 	return 0;
-
 }
 
 static int str_bssplit_cb(void *data, const char *input)
@@ -178,36 +177,36 @@ static int str_bssplit_cb(void *data, const char *input)
 	if (odir) {
 		ddir = strchr(odir + 1, ',');
 		if (ddir) {
-			ret = bssplit_ddir(td, DDIR_TRIM, ddir + 1);
+			ret = bssplit_ddir(&td->o, DDIR_TRIM, ddir + 1);
 			if (!ret)
 				*ddir = '\0';
 		} else {
 			char *op;
 
 			op = strdup(odir + 1);
-			ret = bssplit_ddir(td, DDIR_TRIM, op);
+			ret = bssplit_ddir(&td->o, DDIR_TRIM, op);
 
 			free(op);
 		}
-		if (!ret) 
-			ret = bssplit_ddir(td, DDIR_WRITE, odir + 1);
+		if (!ret)
+			ret = bssplit_ddir(&td->o, DDIR_WRITE, odir + 1);
 		if (!ret) {
 			*odir = '\0';
-			ret = bssplit_ddir(td, DDIR_READ, str);
+			ret = bssplit_ddir(&td->o, DDIR_READ, str);
 		}
 	} else {
 		char *op;
 
 		op = strdup(str);
-		ret = bssplit_ddir(td, DDIR_WRITE, op);
+		ret = bssplit_ddir(&td->o, DDIR_WRITE, op);
 		free(op);
 
 		if (!ret) {
 			op = strdup(str);
-			ret = bssplit_ddir(td, DDIR_TRIM, op);
+			ret = bssplit_ddir(&td->o, DDIR_TRIM, op);
 			free(op);
 		}
-		ret = bssplit_ddir(td, DDIR_READ, str);
+		ret = bssplit_ddir(&td->o, DDIR_READ, str);
 	}
 
 	free(p);
@@ -216,17 +215,17 @@ static int str_bssplit_cb(void *data, const char *input)
 
 static int str2error(char *str)
 {
-	const char * err[] = {"EPERM", "ENOENT", "ESRCH", "EINTR", "EIO",
+	const char *err[] = { "EPERM", "ENOENT", "ESRCH", "EINTR", "EIO",
 			    "ENXIO", "E2BIG", "ENOEXEC", "EBADF",
 			    "ECHILD", "EAGAIN", "ENOMEM", "EACCES",
 			    "EFAULT", "ENOTBLK", "EBUSY", "EEXIST",
 			    "EXDEV", "ENODEV", "ENOTDIR", "EISDIR",
 			    "EINVAL", "ENFILE", "EMFILE", "ENOTTY",
 			    "ETXTBSY","EFBIG", "ENOSPC", "ESPIPE",
-			    "EROFS","EMLINK", "EPIPE", "EDOM", "ERANGE"};
+			    "EROFS","EMLINK", "EPIPE", "EDOM", "ERANGE" };
 	int i = 0, num = sizeof(err) / sizeof(void *);
 
-	while( i < num) {
+	while (i < num) {
 		if (!strcmp(err[i], str))
 			return i + 1;
 		i++;
@@ -312,26 +311,27 @@ static int str_ignore_error_cb(void *data, const char *input)
 static int str_rw_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
+	struct thread_options *o = &td->o;
 	char *nr = get_opt_postfix(str);
 
-	td->o.ddir_seq_nr = 1;
-	td->o.ddir_seq_add = 0;
+	o->ddir_seq_nr = 1;
+	o->ddir_seq_add = 0;
 
 	if (!nr)
 		return 0;
 
 	if (td_random(td))
-		td->o.ddir_seq_nr = atoi(nr);
+		o->ddir_seq_nr = atoi(nr);
 	else {
 		long long val;
 
-		if (str_to_decimal(nr, &val, 1, td)) {
+		if (str_to_decimal(nr, &val, 1, o)) {
 			log_err("fio: rw postfix parsing failed\n");
 			free(nr);
 			return 1;
 		}
 
-		td->o.ddir_seq_add = val;
+		o->ddir_seq_add = val;
 	}
 
 	free(nr);
@@ -343,7 +343,7 @@ static int str_mem_cb(void *data, const char *mem)
 	struct thread_data *td = data;
 
 	if (td->o.mem_type == MEM_MMAPHUGE || td->o.mem_type == MEM_MMAP)
-		td->mmapfile = get_opt_postfix(mem);
+		td->o.mmapfile = get_opt_postfix(mem);
 
 	return 0;
 }
@@ -375,40 +375,6 @@ static int str_rwmix_write_cb(void *data, unsigned long long *val)
 	td->o.rwmix[DDIR_READ] = 100 - *val;
 	return 0;
 }
-
-#ifdef FIO_HAVE_IOPRIO
-static int str_prioclass_cb(void *data, unsigned long long *val)
-{
-	struct thread_data *td = data;
-	unsigned short mask;
-
-	/*
-	 * mask off old class bits, str_prio_cb() may have set a default class
-	 */
-	mask = (1 << IOPRIO_CLASS_SHIFT) - 1;
-	td->ioprio &= mask;
-
-	td->ioprio |= *val << IOPRIO_CLASS_SHIFT;
-	td->ioprio_set = 1;
-	return 0;
-}
-
-static int str_prio_cb(void *data, unsigned long long *val)
-{
-	struct thread_data *td = data;
-
-	td->ioprio |= *val;
-
-	/*
-	 * If no class is set, assume BE
-	 */
-	if ((td->ioprio >> IOPRIO_CLASS_SHIFT) == 0)
-		td->ioprio |= IOPRIO_CLASS_BE << IOPRIO_CLASS_SHIFT;
-
-	td->ioprio_set = 1;
-	return 0;
-}
-#endif
 
 static int str_exitall_cb(void)
 {
@@ -735,45 +701,6 @@ static int str_random_distribution_cb(void *data, const char *str)
 	return 0;
 }
 
-static int check_dir(struct thread_data *td, char *fname)
-{
-#if 0
-	char file[PATH_MAX], *dir;
-	int elen = 0;
-
-	if (td->o.directory) {
-		strcpy(file, td->o.directory);
-		strcat(file, "/");
-		elen = strlen(file);
-	}
-
-	sprintf(file + elen, "%s", fname);
-	dir = dirname(file);
-
-	{
-	struct stat sb;
-	/*
-	 * We can't do this on FIO_DISKLESSIO engines. The engine isn't loaded
-	 * yet, so we can't do this check right here...
-	 */
-	if (lstat(dir, &sb) < 0) {
-		int ret = errno;
-
-		log_err("fio: %s is not a directory\n", dir);
-		td_verror(td, ret, "lstat");
-		return 1;
-	}
-
-	if (!S_ISDIR(sb.st_mode)) {
-		log_err("fio: %s is not a directory\n", dir);
-		return 1;
-	}
-	}
-#endif
-
-	return 0;
-}
-
 /*
  * Return next file in the string. Files are separated with ':'. If the ':'
  * is escaped with a '\', then that ':' is part of the filename and does not
@@ -836,10 +763,6 @@ static int str_filename_cb(void *data, const char *input)
 	while ((fname = get_next_file_name(&str)) != NULL) {
 		if (!strlen(fname))
 			break;
-		if (check_dir(td, fname)) {
-			free(p);
-			return 1;
-		}
 		add_file(td, fname);
 		td->o.nr_files++;
 	}
@@ -883,7 +806,7 @@ static int str_verify_pattern_cb(void *data, const char *input)
 	struct thread_data *td = data;
 	long off;
 	int i = 0, j = 0, len, k, base = 10;
-	char* loc1, * loc2;
+	char *loc1, *loc2;
 
 	loc1 = strstr(input, "0x");
 	loc2 = strstr(input, "0X");
@@ -942,39 +865,6 @@ static int str_verify_pattern_cb(void *data, const char *input)
 	if (td->o.verify == VERIFY_NONE)
 		td->o.verify = VERIFY_PATTERN;
 
-	return 0;
-}
-
-static int str_write_bw_log_cb(void *data, const char *str)
-{
-	struct thread_data *td = data;
-
-	if (str)
-		td->o.bw_log_file = strdup(str);
-
-	td->o.write_bw_log = 1;
-	return 0;
-}
-
-static int str_write_lat_log_cb(void *data, const char *str)
-{
-	struct thread_data *td = data;
-
-	if (str)
-		td->o.lat_log_file = strdup(str);
-
-	td->o.write_lat_log = 1;
-	return 0;
-}
-
-static int str_write_iops_log_cb(void *data, const char *str)
-{
-	struct thread_data *td = data;
-
-	if (str)
-		td->o.iops_log_file = strdup(str);
-
-	td->o.write_iops_log = 1;
 	return 0;
 }
 
@@ -1204,7 +1094,7 @@ struct opt_group *opt_group_cat_from_mask(unsigned int *mask)
 /*
  * Map of job/command line options
  */
-static struct fio_option fio_options[FIO_MAX_OPTS] = {
+struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "description",
 		.lname	= "Description of job",
@@ -2507,7 +2397,7 @@ static struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "prio",
 		.lname	= "I/O nice priority",
 		.type	= FIO_OPT_INT,
-		.cb	= str_prio_cb,
+		.off1	= td_var_offset(ioprio),
 		.help	= "Set job IO priority value",
 		.minval	= 0,
 		.maxval	= 7,
@@ -2519,7 +2409,7 @@ static struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "prioclass",
 		.lname	= "I/O nice priority class",
 		.type	= FIO_OPT_INT,
-		.cb	= str_prioclass_cb,
+		.off1	= td_var_offset(ioprio_class),
 		.help	= "Set job IO priority class",
 		.minval	= 0,
 		.maxval	= 3,
@@ -2809,9 +2699,8 @@ static struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "write_bw_log",
 		.lname	= "Write bandwidth log",
-		.type	= FIO_OPT_STR,
+		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(bw_log_file),
-		.cb	= str_write_bw_log_cb,
 		.help	= "Write log of bandwidth during run",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
@@ -2819,9 +2708,8 @@ static struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "write_lat_log",
 		.lname	= "Write latency log",
-		.type	= FIO_OPT_STR,
+		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(lat_log_file),
-		.cb	= str_write_lat_log_cb,
 		.help	= "Write log of latency during run",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
@@ -2831,7 +2719,6 @@ static struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Write IOPS log",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(iops_log_file),
-		.cb	= str_write_iops_log_cb,
 		.help	= "Write log of IOPS during run",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
@@ -3427,14 +3314,12 @@ static char *bc_calc(char *str)
 
 	sprintf(buf, "echo '%s' | %s", tmp, BC_APP);
 	f = popen(buf, "r");
-	if (!f) {
+	if (!f)
 		return NULL;
-	}
 
 	ret = fread(&buf[tmp - str], 1, 128 - (tmp - str), f);
-	if (ret <= 0) {
+	if (ret <= 0)
 		return NULL;
-	}
 
 	pclose(f);
 	buf[(tmp - str) + ret - 1] = '\0';
@@ -3671,11 +3556,11 @@ void fio_options_mem_dupe(struct thread_data *td)
 
 unsigned int fio_get_kb_base(void *data)
 {
-	struct thread_data *td = data;
+	struct thread_options *o = data;
 	unsigned int kb_base = 0;
 
-	if (td)
-		kb_base = td->o.kb_base;
+	if (o)
+		kb_base = o->kb_base;
 	if (!kb_base)
 		kb_base = 1024;
 
@@ -3759,3 +3644,9 @@ void fio_options_free(struct thread_data *td)
 		td->eo = NULL;
 	}
 }
+
+struct fio_option *fio_option_find(const char *name)
+{
+	return find_option(fio_options, name);
+}
+

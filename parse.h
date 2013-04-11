@@ -71,6 +71,7 @@ struct fio_option {
 	const char *prof_name;		/* only valid for specific profile */
 	unsigned int category;		/* what type of option */
 	unsigned int group;		/* who to group with */
+	void *gui_data;
 };
 
 typedef int (str_cb_fn)(void *, char *);
@@ -87,6 +88,7 @@ extern void options_free(struct fio_option *, void *);
 extern void strip_blank_front(char **);
 extern void strip_blank_end(char *);
 extern int str_to_decimal(const char *, long long *, int, void *);
+extern int check_str_bytes(const char *p, long long *val, void *data);
 extern int str_to_float(const char *str, double *val);
 
 /*

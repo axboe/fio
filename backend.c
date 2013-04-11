@@ -1095,6 +1095,7 @@ static void *thread_main(void *data)
 	struct thread_options *o = &td->o;
 	pthread_condattr_t attr;
 	int clear_state;
+	int ret;
 
 	if (!o->use_thread) {
 		setsid();
@@ -1105,6 +1106,9 @@ static void *thread_main(void *data)
 	fio_local_clock_init(o->use_thread);
 
 	dprint(FD_PROCESS, "jobs pid=%d started\n", (int) td->pid);
+
+	if (is_backend)
+		fio_server_send_start(td);
 
 	INIT_FLIST_HEAD(&td->io_u_freelist);
 	INIT_FLIST_HEAD(&td->io_u_busylist);
@@ -1133,6 +1137,7 @@ static void *thread_main(void *data)
 	 * eating a file descriptor
 	 */
 	fio_mutex_remove(td->mutex);
+	td->mutex = NULL;
 
 	/*
 	 * A new gid requires privilege, so we need to do this before setting
@@ -1159,7 +1164,8 @@ static void *thread_main(void *data)
 	 * allocations.
 	 */
 	if (o->cpumask_set) {
-		if (fio_setaffinity(td->pid, o->cpumask) == -1) {
+		ret = fio_setaffinity(td->pid, o->cpumask);
+		if (ret == -1) {
 			td_verror(td, errno, "cpu_set_affinity");
 			goto err;
 		}
@@ -1224,8 +1230,9 @@ static void *thread_main(void *data)
 	if (o->verify_async && verify_async_init(td))
 		goto err;
 
-	if (td->ioprio_set) {
-		if (ioprio_set(IOPRIO_WHO_PROCESS, 0, td->ioprio) == -1) {
+	if (o->ioprio) {
+		ret = ioprio_set(IOPRIO_WHO_PROCESS, 0, o->ioprio_class, o->ioprio);
+		if (ret == -1) {
 			td_verror(td, errno, "ioprio_set");
 			goto err;
 		}
@@ -1771,21 +1778,13 @@ static void run_threads(void)
 
 		reap_threads(&nr_running, &t_rate, &m_rate);
 
-		if (todo) {
-			if (is_backend)
-				fio_server_idle_loop();
-			else
-				usleep(100000);
-		}
+		if (todo)
+			usleep(100000);
 	}
 
 	while (nr_running) {
 		reap_threads(&nr_running, &t_rate, &m_rate);
-
-		if (is_backend)
-			fio_server_idle_loop();
-		else
-			usleep(10000);
+		usleep(10000);
 	}
 
 	fio_idle_prof_stop();

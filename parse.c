@@ -18,8 +18,7 @@
 #include "minmax.h"
 #include "lib/ieee754.h"
 
-static struct fio_option *fio_options;
-extern unsigned int fio_get_kb_base(void *);
+static struct fio_option *__fio_options;
 
 static int vp_cmp(const void *p1, const void *p2)
 {
@@ -174,32 +173,32 @@ static unsigned long long __get_mult_bytes(const char *p, void *data,
 		}
 	}
 
-	if (!strcmp("pib", c)) {
+	if (!strncmp("pib", c, 3)) {
 		pow = 5;
 		mult = 1000;
-	} else if (!strcmp("tib", c)) {
+	} else if (!strncmp("tib", c, 3)) {
 		pow = 4;
 		mult = 1000;
-	} else if (!strcmp("gib", c)) {
+	} else if (!strncmp("gib", c, 3)) {
 		pow = 3;
 		mult = 1000;
-	} else if (!strcmp("mib", c)) {
+	} else if (!strncmp("mib", c, 3)) {
 		pow = 2;
 		mult = 1000;
-	} else if (!strcmp("kib", c)) {
+	} else if (!strncmp("kib", c, 3)) {
 		pow = 1;
 		mult = 1000;
-	} else if (!strcmp("p", c) || !strcmp("pb", c))
+	} else if (!strncmp("p", c, 1) || !strncmp("pb", c, 2))
 		pow = 5;
-	else if (!strcmp("t", c) || !strcmp("tb", c))
+	else if (!strncmp("t", c, 1) || !strncmp("tb", c, 2))
 		pow = 4;
-	else if (!strcmp("g", c) || !strcmp("gb", c))
+	else if (!strncmp("g", c, 1) || !strncmp("gb", c, 2))
 		pow = 3;
-	else if (!strcmp("m", c) || !strcmp("mb", c))
+	else if (!strncmp("m", c, 1) || !strncmp("mb", c, 2))
 		pow = 2;
-	else if (!strcmp("k", c) || !strcmp("kb", c))
+	else if (!strncmp("k", c, 1) || !strncmp("kb", c, 2))
 		pow = 1;
-	else if (!strcmp("%", c)) {
+	else if (!strncmp("%", c, 1)) {
 		*percent = 1;
 		free(c);
 		return ret;
@@ -281,7 +280,7 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data)
 	return 0;
 }
 
-static int check_str_bytes(const char *p, long long *val, void *data)
+int check_str_bytes(const char *p, long long *val, void *data)
 {
 	return str_to_decimal(p, val, 1, data);
 }
@@ -896,14 +895,14 @@ static int opt_cmp(const void *p1, const void *p2)
 
 	if (*(char **)p1) {
 		s = strdup(*((char **) p1));
-		o = get_option(s, fio_options, &foo);
+		o = get_option(s, __fio_options, &foo);
 		if (o)
 			prio1 = o->prio;
 		free(s);
 	}
 	if (*(char **)p2) {
 		s = strdup(*((char **) p2));
-		o = get_option(s, fio_options, &foo);
+		o = get_option(s, __fio_options, &foo);
 		if (o)
 			prio2 = o->prio;
 		free(s);
@@ -914,9 +913,9 @@ static int opt_cmp(const void *p1, const void *p2)
 
 void sort_options(char **opts, struct fio_option *options, int num_opts)
 {
-	fio_options = options;
+	__fio_options = options;
 	qsort(opts, num_opts, sizeof(char *), opt_cmp);
-	fio_options = NULL;
+	__fio_options = NULL;
 }
 
 int parse_cmd_option(const char *opt, const char *val,

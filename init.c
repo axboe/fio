@@ -216,7 +216,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 	},
 };
 
-static void free_shm(void)
+void free_threads_shm(void)
 {
 	struct shmid_ds sbuf;
 
@@ -224,11 +224,19 @@ static void free_shm(void)
 		void *tp = threads;
 
 		threads = NULL;
+		shmdt(tp);
+		shmctl(shm_id, IPC_RMID, &sbuf);
+		shm_id = -1;
+	}
+}
+
+void free_shm(void)
+{
+	if (threads) {
 		file_hash_exit();
 		flow_exit();
 		fio_debug_jobp = NULL;
-		shmdt(tp);
-		shmctl(shm_id, IPC_RMID, &sbuf);
+		free_threads_shm();
 	}
 
 	scleanup();
@@ -887,11 +895,9 @@ static char *make_filename(char *buf, struct thread_options *o,
  * to make sure we don't have conflicts, and initializes various
  * members of td.
  */
-static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
+static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
+		   int recursed, int client_type)
 {
-	const char *ddir_str[] = { NULL, "read", "write", "rw", NULL,
-				   "randread", "randwrite", "randrw",
-				   "trim", NULL, NULL, NULL, "randtrim" };
 	unsigned int i;
 	char fname[PATH_MAX];
 	int numjobs, file_alloced;
@@ -912,6 +918,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 		put_job(td);
 		return 0;
 	}
+
+	td->client_type = client_type;
 
 	if (profile_td_init(td))
 		goto err;
@@ -983,14 +991,14 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (setup_rate(td))
 		goto err;
 
-	if (o->write_lat_log) {
+	if (o->lat_log_file) {
 		setup_log(&td->lat_log, o->log_avg_msec, IO_LOG_TYPE_LAT);
-		setup_log(&td->slat_log, o->log_avg_msec, IO_LOG_TYPE_LAT);
-		setup_log(&td->clat_log, o->log_avg_msec, IO_LOG_TYPE_LAT);
+		setup_log(&td->slat_log, o->log_avg_msec, IO_LOG_TYPE_SLAT);
+		setup_log(&td->clat_log, o->log_avg_msec, IO_LOG_TYPE_CLAT);
 	}
-	if (o->write_bw_log)
+	if (o->bw_log_file)
 		setup_log(&td->bw_log, o->log_avg_msec, IO_LOG_TYPE_BW);
-	if (o->write_iops_log)
+	if (o->iops_log_file)
 		setup_log(&td->iops_log, o->log_avg_msec, IO_LOG_TYPE_IOPS);
 
 	if (!o->name)
@@ -998,11 +1006,10 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 	if (output_format == FIO_OUTPUT_NORMAL) {
 		if (!job_add_num) {
-			if (!strcmp(td->io_ops->name, "cpuio")) {
-				log_info("%s: ioengine=cpu, cpuload=%u,"
-					 " cpucycle=%u\n", o->name,
-						o->cpuload, o->cpucycle);
-			} else {
+			if (is_backend && !recursed)
+				fio_server_send_add_job(td);
+
+			if (!(td->io_ops->flags & FIO_NOIO)) {
 				char *c1, *c2, *c3, *c4, *c5, *c6;
 
 				c1 = fio_uint_to_kmg(o->min_bs[DDIR_READ]);
@@ -1014,8 +1021,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 				log_info("%s: (g=%d): rw=%s, bs=%s-%s/%s-%s/%s-%s,"
 					 " ioengine=%s, iodepth=%u\n",
-						o->name, td->groupid,
-						ddir_str[o->td_ddir],
+						td->o.name, td->groupid,
+						ddir_str(o->td_ddir),
 						c1, c2, c3, c4, c5, c6,
 						td->io_ops->name, o->iodepth);
 
@@ -1054,7 +1061,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 
 		job_add_num = numjobs - 1;
 
-		if (add_job(td_new, jobname, job_add_num))
+		if (add_job(td_new, jobname, job_add_num, 1, client_type))
 			goto err;
 	}
 
@@ -1067,7 +1074,7 @@ err:
 /*
  * Parse as if 'o' was a command line
  */
-void add_job_opts(const char **o)
+void add_job_opts(const char **o, int client_type)
 {
 	struct thread_data *td, *td_parent;
 	int i, in_global = 1;
@@ -1079,7 +1086,7 @@ void add_job_opts(const char **o)
 		if (!strncmp(o[i], "name", 4)) {
 			in_global = 0;
 			if (td)
-				add_job(td, jobname, 0);
+				add_job(td, jobname, 0, 0, client_type);
 			td = NULL;
 			sprintf(jobname, "%s", o[i] + 5);
 		}
@@ -1098,7 +1105,7 @@ void add_job_opts(const char **o)
 	}
 
 	if (td)
-		add_job(td, jobname, 0);
+		add_job(td, jobname, 0, 0, client_type);
 }
 
 static int skip_this_section(const char *name)
@@ -1136,7 +1143,7 @@ static int is_empty_or_comment(char *line)
 /*
  * This is our [ini] type file parser.
  */
-int parse_jobs_ini(char *file, int is_buf, int stonewall_flag)
+int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 {
 	unsigned int global;
 	struct thread_data *td;
@@ -1280,7 +1287,7 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag)
 				for (i = 0; i < num_opts; i++)
 					log_info("--%s ", opts[i]);
 
-			ret = add_job(td, name, 0);
+			ret = add_job(td, name, 0, 0, type);
 		} else {
 			log_err("fio: job %s dropped\n", name);
 			put_job(td);
@@ -1373,20 +1380,62 @@ static void usage(const char *name)
 
 #ifdef FIO_INC_DEBUG
 struct debug_level debug_levels[] = {
-	{ .name = "process",	.shift = FD_PROCESS, },
-	{ .name = "file",	.shift = FD_FILE, },
-	{ .name = "io",		.shift = FD_IO, },
-	{ .name = "mem",	.shift = FD_MEM, },
-	{ .name = "blktrace",	.shift = FD_BLKTRACE },
-	{ .name = "verify",	.shift = FD_VERIFY },
-	{ .name = "random",	.shift = FD_RANDOM },
-	{ .name = "parse",	.shift = FD_PARSE },
-	{ .name = "diskutil",	.shift = FD_DISKUTIL },
-	{ .name = "job",	.shift = FD_JOB },
-	{ .name = "mutex",	.shift = FD_MUTEX },
-	{ .name	= "profile",	.shift = FD_PROFILE },
-	{ .name = "time",	.shift = FD_TIME },
-	{ .name = "net",	.shift = FD_NET },
+	{ .name = "process",
+	  .help = "Process creation/exit logging",
+	  .shift = FD_PROCESS,
+	},
+	{ .name = "file",
+	  .help = "File related action logging",
+	  .shift = FD_FILE,
+	},
+	{ .name = "io",
+	  .help = "IO and IO engine action logging (offsets, queue, completions, etc)",
+	  .shift = FD_IO,
+	},
+	{ .name = "mem",
+	  .help = "Memory allocation/freeing logging",
+	  .shift = FD_MEM,
+	},
+	{ .name = "blktrace",
+	  .help = "blktrace action logging",
+	  .shift = FD_BLKTRACE,
+	},
+	{ .name = "verify",
+	  .help = "IO verification action logging",
+	  .shift = FD_VERIFY,
+	},
+	{ .name = "random",
+	  .help = "Random generation logging",
+	  .shift = FD_RANDOM,
+	},
+	{ .name = "parse",
+	  .help = "Parser logging",
+	  .shift = FD_PARSE,
+	},
+	{ .name = "diskutil",
+	  .help = "Disk utility logging actions",
+	  .shift = FD_DISKUTIL,
+	},
+	{ .name = "job",
+	  .help = "Logging related to creating/destroying jobs",
+	  .shift = FD_JOB,
+	},
+	{ .name = "mutex",
+	  .help = "Mutex logging",
+	  .shift = FD_MUTEX
+	},
+	{ .name	= "profile",
+	  .help = "Logging related to profiles",
+	  .shift = FD_PROFILE,
+	},
+	{ .name = "time",
+	  .help = "Logging related to time keeping functions",
+	  .shift = FD_TIME,
+	},
+	{ .name = "net",
+	  .help = "Network logging",
+	  .shift = FD_NET,
+	},
 	{ .name = NULL, },
 };
 
@@ -1493,7 +1542,7 @@ void parse_cmd_client(void *client, char *opt)
 	fio_client_add_cmd_option(client, opt);
 }
 
-int parse_cmd_line(int argc, char *argv[])
+int parse_cmd_line(int argc, char *argv[], int client_type)
 {
 	struct thread_data *td = NULL;
 	int c, ini_idx = 0, lidx, ret = 0, do_exit = 0, exit_val = 0;
@@ -1637,7 +1686,7 @@ int parse_cmd_line(int argc, char *argv[])
 			char *val = optarg;
 
 			if (!strncmp(opt, "name", 4) && td) {
-				ret = add_job(td, td->o.name ?: "fio", 0);
+				ret = add_job(td, td->o.name ?: "fio", 0, 0, client_type);
 				if (ret)
 					return 0;
 				td = NULL;
@@ -1717,7 +1766,7 @@ int parse_cmd_line(int argc, char *argv[])
 				exit_val = 1;
 				break;
 			}
-			if (fio_client_add(optarg, &cur_client)) {
+			if (fio_client_add(&fio_client_ops, optarg, &cur_client)) {
 				log_err("fio: failed adding client %s\n", optarg);
 				do_exit++;
 				exit_val = 1;
@@ -1768,7 +1817,7 @@ int parse_cmd_line(int argc, char *argv[])
 
 	if (td) {
 		if (!ret)
-			ret = add_job(td, td->o.name ?: "fio", 0);
+			ret = add_job(td, td->o.name ?: "fio", 0, 0, client_type);
 	}
 
 	while (!ret && optind < argc) {
@@ -1781,10 +1830,8 @@ int parse_cmd_line(int argc, char *argv[])
 	return ini_idx;
 }
 
-int parse_options(int argc, char *argv[])
+int fio_init_options(void)
 {
-	int job_files, i;
-
 	f_out = stdout;
 	f_err = stderr;
 
@@ -1796,7 +1843,22 @@ int parse_options(int argc, char *argv[])
 	if (fill_def_thread())
 		return 1;
 
-	job_files = parse_cmd_line(argc, argv);
+	return 0;
+}
+
+extern int fio_check_options(struct thread_options *);
+
+int parse_options(int argc, char *argv[])
+{
+	const int type = FIO_CLIENT_TYPE_CLI;
+	int job_files, i;
+
+	if (fio_init_options())
+		return 1;
+	if (fio_test_cconv(&def_thread.o))
+		log_err("fio: failed internal cconv test\n");
+
+	job_files = parse_cmd_line(argc, argv, type);
 
 	if (job_files > 0) {
 		for (i = 0; i < job_files; i++) {
@@ -1807,7 +1869,7 @@ int parse_options(int argc, char *argv[])
 					return 1;
 				free(ini_file[i]);
 			} else if (!is_backend) {
-				if (parse_jobs_ini(ini_file[i], 0, i))
+				if (parse_jobs_ini(ini_file[i], 0, i, type))
 					return 1;
 				free(ini_file[i]);
 			}
@@ -1852,4 +1914,9 @@ int parse_options(int argc, char *argv[])
 		log_info("%s\n", fio_version_string);
 
 	return 0;
+}
+
+void options_default_fill(struct thread_options *o)
+{
+	memcpy(o, &def_thread.o, sizeof(*o));
 }

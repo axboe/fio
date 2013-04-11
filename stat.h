@@ -120,6 +120,7 @@ struct thread_stat {
 	char name[FIO_JOBNAME_SIZE];
 	char verror[FIO_VERROR_SIZE];
 	uint32_t error;
+	uint32_t thread_number;
 	uint32_t groupid;
 	uint32_t pid;
 	char description[FIO_JOBNAME_SIZE];
@@ -181,8 +182,8 @@ struct jobs_eta {
 	uint32_t nr_ramp;
 	uint32_t nr_pending;
 	uint32_t files_open;
-	uint32_t m_rate, t_rate;
-	uint32_t m_iops, t_iops;
+	uint32_t m_rate[DDIR_RWDIR_CNT], t_rate[DDIR_RWDIR_CNT];
+	uint32_t m_iops[DDIR_RWDIR_CNT], t_iops[DDIR_RWDIR_CNT];
 	uint32_t rate[DDIR_RWDIR_CNT];
 	uint32_t iops[DDIR_RWDIR_CNT];
 	uint64_t elapsed_sec;
@@ -207,5 +208,25 @@ extern void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src, i
 extern void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src);
 extern void init_thread_stat(struct thread_stat *ts);
 extern void init_group_run_stat(struct group_run_stats *gs);
+extern void eta_to_str(char *str, unsigned long eta_sec);
+extern int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max, double *mean, double *dev);
+extern unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr, fio_fp64_t *plist, unsigned int **output, unsigned int *maxv, unsigned int *minv);
+extern void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat);
+extern void stat_calc_lat_u(struct thread_stat *ts, double *io_u_lat);
+extern void stat_calc_dist(unsigned int *map, unsigned long total, double *io_u_dist);
+
+static inline int usec_to_msec(unsigned long *min, unsigned long *max,
+			       double *mean, double *dev)
+{
+	if (*min > 1000 && *max > 1000 && *mean > 1000.0 && *dev > 1000.0) {
+		*min /= 1000;
+		*max /= 1000;
+		*mean /= 1000.0;
+		*dev /= 1000.0;
+		return 0;
+	}
+
+	return 1;
+}
 
 #endif

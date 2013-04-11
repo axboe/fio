@@ -94,7 +94,7 @@ static void check_str_update(struct thread_data *td)
 /*
  * Convert seconds to a printable string.
  */
-static void eta_to_str(char *str, unsigned long eta_sec)
+void eta_to_str(char *str, unsigned long eta_sec)
 {
 	unsigned int d, h, m, s;
 	int disp_hour = 0;
@@ -327,22 +327,22 @@ int calc_thread_status(struct jobs_eta *je, int force)
 		    || td->runstate == TD_PRE_READING) {
 			je->nr_running++;
 			if (td_read(td)) {
-				je->t_rate += td->o.rate[DDIR_READ];
-				je->t_iops += td->o.rate_iops[DDIR_READ];
-				je->m_rate += td->o.ratemin[DDIR_READ];
-				je->m_iops += td->o.rate_iops_min[DDIR_READ];
+				je->t_rate[0] += td->o.rate[DDIR_READ];
+				je->t_iops[0] += td->o.rate_iops[DDIR_READ];
+				je->m_rate[0] += td->o.ratemin[DDIR_READ];
+				je->m_iops[0] += td->o.rate_iops_min[DDIR_READ];
 			}
 			if (td_write(td)) {
-				je->t_rate += td->o.rate[DDIR_WRITE];
-				je->t_iops += td->o.rate_iops[DDIR_WRITE];
-				je->m_rate += td->o.ratemin[DDIR_WRITE];
-				je->m_iops += td->o.rate_iops_min[DDIR_WRITE];
+				je->t_rate[1] += td->o.rate[DDIR_WRITE];
+				je->t_iops[1] += td->o.rate_iops[DDIR_WRITE];
+				je->m_rate[1] += td->o.ratemin[DDIR_WRITE];
+				je->m_iops[1] += td->o.rate_iops_min[DDIR_WRITE];
 			}
 			if (td_trim(td)) {
-				je->t_rate += td->o.rate[DDIR_TRIM];
-				je->t_iops += td->o.rate_iops[DDIR_TRIM];
-				je->m_rate += td->o.ratemin[DDIR_TRIM];
-				je->m_iops += td->o.rate_iops_min[DDIR_TRIM];
+				je->t_rate[2] += td->o.rate[DDIR_TRIM];
+				je->t_iops[2] += td->o.rate_iops[DDIR_TRIM];
+				je->m_rate[2] += td->o.ratemin[DDIR_TRIM];
+				je->m_iops[2] += td->o.rate_iops_min[DDIR_TRIM];
 			}
 
 			je->files_open += td->nr_open_files;
@@ -447,16 +447,19 @@ void display_thread_status(struct jobs_eta *je)
 	}
 
 	p += sprintf(p, "Jobs: %d (f=%d)", je->nr_running, je->files_open);
-	if (je->m_rate || je->t_rate) {
+	if (je->m_rate[0] || je->m_rate[1] || je->t_rate[0] || je->t_rate[1]) {
 		char *tr, *mr;
 
-		mr = num2str(je->m_rate, 4, 0, je->is_pow2, 8);
-		tr = num2str(je->t_rate, 4, 0, je->is_pow2, 8);
-		p += sprintf(p, ", CR=%s/%s /s", tr, mr);
+		mr = num2str(je->m_rate[0] + je->m_rate[1], 4, 0, je->is_pow2, 8);
+		tr = num2str(je->t_rate[0] + je->t_rate[1], 4, 0, je->is_pow2, 8);
+		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
 		free(tr);
 		free(mr);
-	} else if (je->m_iops || je->t_iops)
-		p += sprintf(p, ", CR=%d/%d IOPS", je->t_iops, je->m_iops);
+	} else if (je->m_iops[0] || je->m_iops[1] || je->t_iops[0] || je->t_iops[1]) {
+		p += sprintf(p, ", CR=%d/%d IOPS",
+					je->t_iops[0] + je->t_iops[1],
+					je->m_iops[0] + je->m_iops[1]);
+	}
 	if (je->eta_sec != INT_MAX && je->nr_running) {
 		char perc_str[32];
 		char *iops_str[DDIR_RWDIR_CNT];
