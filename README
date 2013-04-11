@@ -81,24 +81,20 @@ http://maillist.kernel.dk/fio-devel/
 Building
 --------
 
-Just type 'make' and 'make install'.
+Just type 'configure', 'make' and 'make install'.
 
 Note that GNU make is required. On BSD it's available from devel/gmake;
 on Solaris it's in the SUNWgmake package. On platforms where GNU make
 isn't the default, type 'gmake' instead of 'make'.
 
-If your compile fails with an error like this:
+Configure will print the enabled options. Note that on Linux based
+platforms, you'll need to have the libaio development packages
+installed to use the libaio engine. Depending on distro, it is
+usually called libaio-devel or libaio-dev.
 
-    CC gettime.o
-In file included from fio.h:23,
-                 from gettime.c:8:
-os/os.h:15:20: error: libaio.h: No such file or directory
-In file included from gettime.c:8:
-fio.h:119: error: field 'iocb' has incomplete type
-make: *** [gettime.o] Error 1
-
-Check that you have the libaio development package installed. On RPM
-based distros, it's typically called libaio-devel.
+For gfio, you need gtk 2.18 or newer and associated glib threads
+and cairo. gfio isn't built automatically, it needs to be enabled
+with a --enable-gfio option to configure.
 
 
 Windows
