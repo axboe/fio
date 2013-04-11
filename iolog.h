@@ -20,10 +20,10 @@ struct io_stat {
  * A single data sample
  */
 struct io_sample {
-	unsigned long time;
-	unsigned long val;
-	enum fio_ddir ddir;
-	unsigned int bs;
+	uint64_t time;
+	uint64_t val;
+	uint32_t ddir;
+	uint32_t bs;
 };
 
 enum {
@@ -45,7 +45,7 @@ struct io_log {
 	unsigned long max_samples;
 	struct io_sample *log;
 
-	int log_type;
+	unsigned int log_type;
 
 	/*
 	 * Windowed average, for logging single entries average over some
