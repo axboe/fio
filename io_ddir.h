@@ -43,7 +43,7 @@ static inline int ddir_rw(enum fio_ddir ddir)
 	return ddir == DDIR_READ || ddir == DDIR_WRITE || ddir == DDIR_TRIM;
 }
 
-static inline const char *ddir_str(enum fio_ddir ddir)
+static inline const char *ddir_str(enum td_ddir ddir)
 {
 	const char *ddir_str[] = { NULL, "read", "write", "rw", NULL,
 				   "randread", "randwrite", "randrw",
