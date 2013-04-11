@@ -236,7 +236,7 @@ int td_io_getevents(struct thread_data *td, unsigned int min, unsigned int max,
 out:
 	if (r >= 0) {
 		/*
- 		 * Reflect that our submitted requests were retrieved with
+		 * Reflect that our submitted requests were retrieved with
 		 * whatever OS async calls are in the underlying engine.
 		 */
 		td->io_u_in_flight -= r;
@@ -366,14 +366,14 @@ int td_io_commit(struct thread_data *td)
 	if (!td->cur_depth || !td->io_u_queued)
 		return 0;
 
-	io_u_mark_depth(td, td->io_u_queued);	
+	io_u_mark_depth(td, td->io_u_queued);
 
 	if (td->io_ops->commit) {
 		ret = td->io_ops->commit(td);
 		if (ret)
 			td_verror(td, -ret, "io commit");
 	}
-	
+
 	/*
 	 * Reflect that events were submitted as async IO requests.
 	 */
@@ -540,7 +540,7 @@ int do_io_u_trim(struct thread_data *td, struct io_u *io_u)
 
 	ret = os_trim(f->fd, io_u->offset, io_u->xfer_buflen);
 	if (!ret)
-		return io_u->xfer_buflen;;
+		return io_u->xfer_buflen;
 
 	io_u->error = ret;
 	return 0;
