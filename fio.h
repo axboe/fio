@@ -457,6 +457,7 @@ extern int initialize_fio(char *envp[]);
  */
 extern void print_thread_status(void);
 extern void print_status_init(int);
+extern char *fio_uint_to_kmg(unsigned int val);
 
 /*
  * Thread life cycle. Once a thread has a runstate beyond TD_INITIALIZED, it

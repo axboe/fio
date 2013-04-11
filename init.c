@@ -613,7 +613,7 @@ static int fixup_options(struct thread_data *td)
 /*
  * This function leaks the buffer
  */
-static char *to_kmg(unsigned int val)
+char *fio_uint_to_kmg(unsigned int val)
 {
 	char *buf = malloc(32);
 	char post[] = { 0, 'K', 'M', 'G', 'P', 'E', 0 };
@@ -1005,12 +1005,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 			} else {
 				char *c1, *c2, *c3, *c4, *c5, *c6;
 
-				c1 = to_kmg(o->min_bs[DDIR_READ]);
-				c2 = to_kmg(o->max_bs[DDIR_READ]);
-				c3 = to_kmg(o->min_bs[DDIR_WRITE]);
-				c4 = to_kmg(o->max_bs[DDIR_WRITE]);
-				c5 = to_kmg(o->min_bs[DDIR_TRIM]);
-				c6 = to_kmg(o->max_bs[DDIR_TRIM]);
+				c1 = fio_uint_to_kmg(o->min_bs[DDIR_READ]);
+				c2 = fio_uint_to_kmg(o->max_bs[DDIR_READ]);
+				c3 = fio_uint_to_kmg(o->min_bs[DDIR_WRITE]);
+				c4 = fio_uint_to_kmg(o->max_bs[DDIR_WRITE]);
+				c5 = fio_uint_to_kmg(o->min_bs[DDIR_TRIM]);
+				c6 = fio_uint_to_kmg(o->max_bs[DDIR_TRIM]);
 
 				log_info("%s: (g=%d): rw=%s, bs=%s-%s/%s-%s/%s-%s,"
 					 " ioengine=%s, iodepth=%u\n",
