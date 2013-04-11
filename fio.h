@@ -445,6 +445,10 @@ extern void add_job_opts(const char **);
 extern char *num2str(unsigned long, int, int, int, int);
 extern int ioengine_load(struct thread_data *);
 
+extern uintptr_t page_mask;
+extern uintptr_t page_size;
+extern int initialize_fio(char *envp[]);
+
 #define FIO_GETOPT_JOB		0x89000000
 #define FIO_GETOPT_IOENGINE	0x98000000
 #define FIO_NR_OPTIONS		(FIO_MAX_OPTS + 128)
