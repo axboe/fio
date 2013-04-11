@@ -101,8 +101,8 @@ struct client_ops {
 extern struct client_ops fio_client_ops;
 
 struct client_eta {
-	struct jobs_eta eta;
 	unsigned int pending;
+	struct jobs_eta eta;
 };
 
 extern int fio_handle_client(struct fio_client *);
