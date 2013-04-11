@@ -919,11 +919,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num)
 	if (ioengine_load(td))
 		goto err;
 
-	if (o->use_thread)
-		nr_thread++;
-	else
-		nr_process++;
-
 	if (o->odirect)
 		td->io_ops->flags |= FIO_RAWIO;
 

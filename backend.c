@@ -61,14 +61,14 @@ static struct flist_head *cgroup_list;
 static char *cgroup_mnt;
 static int exit_value;
 static volatile int fio_abort;
+static unsigned int nr_process = 0;
+static unsigned int nr_thread = 0;
 
 struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 
 int groupid = 0;
 unsigned int thread_number = 0;
 unsigned int stat_number = 0;
-unsigned int nr_process = 0;
-unsigned int nr_thread = 0;
 int shm_id = 0;
 int temp_stall_ts;
 unsigned long done_secs = 0;
@@ -1557,6 +1557,14 @@ static void run_threads(void)
 	fio_idle_prof_init();
 
 	set_sig_handlers();
+
+	nr_thread = nr_process = 0;
+	for_each_td(td, i) {
+		if (td->o.use_thread)
+			nr_thread++;
+		else
+			nr_process++;
+	}
 
 	if (output_format == FIO_OUTPUT_NORMAL) {
 		log_info("Starting ");
