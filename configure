@@ -94,9 +94,13 @@ compile_prog() {
 
 feature_not_found() {
   feature=$1
+  packages=$2
 
   echo "ERROR"
   echo "ERROR: User requested feature $feature"
+  if test ! -z "$packages" ; then
+    echo "ERROR: That feature needs $packages installed"
+  fi
   echo "ERROR: configure was not able to find it"
   fatal "ERROR"
 }
@@ -412,7 +416,7 @@ if compile_prog "" "-lz" "zlib" ; then
   zlib=yes
   LIBS="-lz $LIBS"
 else
-  feature_not_found "zlib"
+  feature_not_found "zlib" "zlib development files"
   zlib=no
 fi
 echo "zlib                          $zlib"
@@ -434,7 +438,7 @@ if compile_prog "" "-laio" "libaio" ; then
   LIBS="-laio $LIBS"
 else
   if test "$libaio" = "yes" ; then
-    feature_not_found "linux AIO"
+    feature_not_found "linux AIO" "libaio-dev or libaio-devel"
   fi
   libaio=no
 fi
