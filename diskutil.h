@@ -109,7 +109,10 @@ extern int update_io_ticks(void);
 extern void setup_disk_util(void);
 extern void disk_util_prune_entries(void);
 #else
-#define print_disk_util(dus, agg, terse)
+static inline void print_disk_util(struct disk_util_stat *du,
+				   struct disk_util_agg *agg, int terse)
+{
+}
 #define show_disk_util(terse, parent)
 #define disk_util_prune_entries()
 #define init_disk_util(td)
