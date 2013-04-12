@@ -1,6 +1,15 @@
 #ifndef ARCH_X86_64_h
 #define ARCH_X86_64_h
 
+static inline void do_cpuid(unsigned int *eax, unsigned int *ebx,
+			    unsigned int *ecx, unsigned int *edx)
+{
+	asm volatile("cpuid"
+		: "=a" (*eax), "=b" (*ebx), "=r" (*ecx), "=d" (*edx)
+		: "0" (*eax), "2" (*ecx)
+		: "memory");
+}
+
 #include "arch-x86-common.h"
 
 #define FIO_ARCH	(arch_x86_64)
