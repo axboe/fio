@@ -534,7 +534,7 @@ static void gfio_update_all_eta(struct jobs_eta *je)
 
 static void gfio_probe_op(struct fio_client *client, struct fio_net_cmd *cmd)
 {
-	struct cmd_probe_pdu *probe = (struct cmd_probe_pdu *) cmd->payload;
+	struct cmd_probe_reply_pdu *probe = (struct cmd_probe_reply_pdu *) cmd->payload;
 	struct gfio_client *gc = client->client_data;
 	struct gui_entry *ge = gc->ge;
 	const char *os, *arch;
