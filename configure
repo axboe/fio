@@ -415,9 +415,6 @@ EOF
 if compile_prog "" "-lz" "zlib" ; then
   zlib=yes
   LIBS="-lz $LIBS"
-else
-  feature_not_found "zlib" "zlib development files"
-  zlib=no
 fi
 echo "zlib                          $zlib"
 
@@ -1082,6 +1079,9 @@ if test "$bigendian" = "yes" ; then
   output_sym "CONFIG_BIG_ENDIAN"
 else
   output_sym "CONFIG_LITTLE_ENDIAN"
+fi
+if test "$zlib" = "yes" ; then
+  output_sym "CONFIG_ZLIB"
 fi
 if test "$libaio" = "yes" ; then
   output_sym "CONFIG_LIBAIO"

@@ -16,7 +16,9 @@
 #include <netdb.h>
 #include <syslog.h>
 #include <signal.h>
+#ifdef CONFIG_ZLIB
 #include <zlib.h>
+#endif
 
 #include "fio.h"
 #include "server.h"
@@ -33,6 +35,12 @@ static char *bind_sock;
 static struct sockaddr_in saddr_in;
 static struct sockaddr_in6 saddr_in6;
 static int use_ipv6;
+#ifdef CONFIG_ZLIB
+static unsigned int has_zlib = 1;
+#else
+static unsigned int has_zlib = 0;
+#endif
+static unsigned int use_zlib;
 
 struct fio_fork_item {
 	struct flist_head list;
@@ -616,7 +624,8 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 
 static int handle_probe_cmd(struct fio_net_cmd *cmd)
 {
-	struct cmd_probe_pdu probe;
+	struct cmd_client_probe_pdu *pdu = (struct cmd_client_probe_pdu *) cmd->payload;
+	struct cmd_probe_reply_pdu probe;
 	uint64_t tag = cmd->tag;
 
 	dprint(FD_NET, "server: sending probe reply\n");
@@ -632,7 +641,17 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 	probe.arch	= FIO_ARCH;
 	probe.bpp	= sizeof(void *);
 	probe.cpus	= __cpu_to_le32(cpus_online());
-	probe.flags	= 0;
+
+	/*
+	 * If the client supports compression and we do too, then enable it
+	 */
+	if (has_zlib && le64_to_cpu(pdu->flags) & FIO_PROBE_FLAG_ZLIB) {
+		probe.flags = __cpu_to_le64(FIO_PROBE_FLAG_ZLIB);
+		use_zlib = 1;
+	} else {
+		probe.flags = 0;
+		use_zlib = 0;
+	}
 
 	return fio_net_send_cmd(server_fd, FIO_NET_CMD_PROBE, &probe, sizeof(probe), &tag, NULL);
 }
@@ -1117,26 +1136,12 @@ static int fio_send_cmd_ext_pdu(int sk, uint16_t opcode, const void *buf,
 	return fio_sendv_data(sk, iov, 2);
 }
 
-int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
+static int fio_send_iolog_gz(struct cmd_iolog_pdu *pdu, struct io_log *log)
 {
-	struct cmd_iolog_pdu pdu;
+	int ret = 0;
+#ifdef CONFIG_ZLIB
 	z_stream stream;
 	void *out_pdu;
-	int i, ret = 0;
-
-	pdu.thread_number = cpu_to_le32(td->thread_number);
-	pdu.nr_samples = __cpu_to_le32(log->nr_samples);
-	pdu.log_type = cpu_to_le32(log->log_type);
-	strcpy((char *) pdu.name, name);
-
-	for (i = 0; i < log->nr_samples; i++) {
-		struct io_sample *s = &log->log[i];
-
-		s->time	= cpu_to_le64(s->time);
-		s->val	= cpu_to_le64(s->val);
-		s->ddir	= cpu_to_le32(s->ddir);
-		s->bs	= cpu_to_le32(s->bs);
-	}
 
 	/*
 	 * Dirty - since the log is potentially huge, compress it into
@@ -1153,14 +1158,6 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 		ret = 1;
 		goto err;
 	}
-
-	/*
-	 * Send header first, it's not compressed.
-	 */
-	ret = fio_send_cmd_ext_pdu(server_fd, FIO_NET_CMD_IOLOG, &pdu,
-					sizeof(pdu), 0, FIO_NET_CMD_F_MORE);
-	if (ret)
-		goto err_zlib;
 
 	stream.next_in = (void *) log->log;
 	stream.avail_in = log->nr_samples * sizeof(struct io_sample);
@@ -1191,7 +1188,46 @@ err_zlib:
 	deflateEnd(&stream);
 err:
 	free(out_pdu);
+#endif
 	return ret;
+}
+
+int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
+{
+	struct cmd_iolog_pdu pdu;
+	int i, ret = 0;
+
+	pdu.thread_number = cpu_to_le32(td->thread_number);
+	pdu.nr_samples = __cpu_to_le32(log->nr_samples);
+	pdu.log_type = cpu_to_le32(log->log_type);
+	pdu.compressed = cpu_to_le32(use_zlib);
+	strcpy((char *) pdu.name, name);
+
+	for (i = 0; i < log->nr_samples; i++) {
+		struct io_sample *s = &log->log[i];
+
+		s->time	= cpu_to_le64(s->time);
+		s->val	= cpu_to_le64(s->val);
+		s->ddir	= cpu_to_le32(s->ddir);
+		s->bs	= cpu_to_le32(s->bs);
+	}
+
+	/*
+	 * Send header first, it's not compressed.
+	 */
+	ret = fio_send_cmd_ext_pdu(server_fd, FIO_NET_CMD_IOLOG, &pdu,
+					sizeof(pdu), 0, FIO_NET_CMD_F_MORE);
+	if (ret)
+		return ret;
+
+	/*
+	 * Now send actual log, compress if we can, otherwise just plain
+	 */
+	if (use_zlib)
+		return fio_send_iolog_gz(&pdu, log);
+
+	return fio_send_cmd_ext_pdu(server_fd, FIO_NET_CMD_IOLOG, log->log,
+			log->nr_samples * sizeof(struct io_sample), 0, 0);
 }
 
 void fio_server_send_add_job(struct thread_data *td)

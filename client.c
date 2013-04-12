@@ -14,7 +14,9 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <signal.h>
+#ifdef CONFIG_ZLIB
 #include <zlib.h>
+#endif
 
 #include "fio.h"
 #include "client.h"
@@ -296,9 +298,18 @@ int fio_client_add(struct client_ops *ops, const char *hostname, void **cookie)
 
 static void probe_client(struct fio_client *client)
 {
+	struct cmd_client_probe_pdu pdu;
+	uint64_t tag;
+
 	dprint(FD_NET, "client: send probe\n");
 
-	fio_net_send_simple_cmd(client->fd, FIO_NET_CMD_PROBE, 0, &client->cmd_list);
+#ifdef CONFIG_ZLIB
+	pdu.flags = __le64_to_cpu(FIO_PROBE_FLAG_ZLIB);
+#else
+	pdu.flags = 0;
+#endif
+
+	fio_net_send_cmd(client->fd, FIO_NET_CMD_PROBE, &pdu, sizeof(pdu), &tag, &client->cmd_list);
 }
 
 static int fio_client_connect_ip(struct fio_client *client)
@@ -998,7 +1009,7 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
 {
-	struct cmd_probe_pdu *probe = (struct cmd_probe_pdu *) cmd->payload;
+	struct cmd_probe_reply_pdu *probe = (struct cmd_probe_reply_pdu *) cmd->payload;
 	const char *os, *arch;
 	char bit[16];
 
@@ -1011,10 +1022,11 @@ static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
 		os = "unknown";
 
 	sprintf(bit, "%d-bit", probe->bpp * 8);
+	probe->flags = le64_to_cpu(probe->flags);
 
-	log_info("hostname=%s, be=%u, %s, os=%s, arch=%s, fio=%s\n",
+	log_info("hostname=%s, be=%u, %s, os=%s, arch=%s, fio=%s, flags=%lx\n",
 		probe->hostname, probe->bigendian, bit, os, arch,
-		probe->fio_version);
+		probe->fio_version, (unsigned long) probe->flags);
 
 	if (!client->name)
 		client->name = strdup((char *) probe->hostname);
@@ -1057,19 +1069,15 @@ static void convert_text(struct fio_net_cmd *cmd)
 	pdu->log_usec	= le64_to_cpu(pdu->log_usec);
 }
 
-/*
- * This has been compressed on the server side, since it can be big.
- * Uncompress here.
- */
-static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
+static struct cmd_iolog_pdu *convert_iolog_gz(struct fio_net_cmd *cmd,
+					      struct cmd_iolog_pdu *pdu)
 {
-	struct cmd_iolog_pdu *pdu = (struct cmd_iolog_pdu *) cmd->payload;
+#ifdef CONFIG_ZLIB
 	struct cmd_iolog_pdu *ret;
-	uint32_t nr_samples;
-	unsigned long total;
 	z_stream stream;
+	uint32_t nr_samples;
+	size_t total;
 	void *p;
-	int i;
 
 	stream.zalloc = Z_NULL;
 	stream.zfree = Z_NULL;
@@ -1087,10 +1095,9 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 
 	total = nr_samples * sizeof(struct io_sample);
 	ret = malloc(total + sizeof(*pdu));
-	ret->thread_number = le32_to_cpu(pdu->thread_number);
 	ret->nr_samples = nr_samples;
-	ret->log_type = le32_to_cpu(pdu->log_type);
-	strcpy((char *) ret->name, (char *) pdu->name);
+
+	memcpy(ret, pdu, sizeof(*pdu));
 
 	p = (void *) ret + sizeof(*pdu);
 
@@ -1112,13 +1119,53 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 			log_err("fio: inflate error %d\n", err);
 			free(ret);
 			ret = NULL;
-			goto out;
+			goto err;
 		}
 
 		this_len = this_chunk - stream.avail_out;
 		p += this_len;
 		total -= this_len;
 	}
+
+err:
+	inflateEnd(&stream);
+	return ret;
+#else
+	return NULL;
+#endif
+}
+
+/*
+ * This has been compressed on the server side, since it can be big.
+ * Uncompress here.
+ */
+static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
+{
+	struct cmd_iolog_pdu *pdu = (struct cmd_iolog_pdu *) cmd->payload;
+	struct cmd_iolog_pdu *ret;
+	int i;
+
+	/*
+	 * Convert if compressed and we support it. If it's not
+	 * compressed, we need not do anything.
+	 */
+	if (le32_to_cpu(pdu->compressed)) {
+#ifndef CONFIG_ZLIB
+		log_err("fio: server sent compressed data by mistake\n");
+		return NULL;
+#endif
+		ret = convert_iolog_gz(cmd, pdu);
+		if (!ret) {
+			log_err("fio: failed decompressing log\n");
+			return NULL;
+		}
+	} else
+		ret = pdu;
+
+	ret->thread_number	= le32_to_cpu(ret->thread_number);
+	ret->nr_samples		= le32_to_cpu(ret->nr_samples);
+	ret->log_type		= le32_to_cpu(ret->log_type);
+	ret->compressed		= le32_to_cpu(ret->compressed);
 
 	for (i = 0; i < ret->nr_samples; i++) {
 		struct io_sample *s = &ret->samples[i];
@@ -1129,8 +1176,6 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 		s->bs	= le32_to_cpu(s->bs);
 	}
 
-out:
-	inflateEnd(&stream);
 	return ret;
 }
 

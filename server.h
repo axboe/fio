@@ -38,7 +38,7 @@ struct fio_net_cmd_reply {
 };
 
 enum {
-	FIO_SERVER_VER			= 21,
+	FIO_SERVER_VER			= 22,
 
 	FIO_SERVER_MAX_FRAGMENT_PDU	= 1024,
 
@@ -71,6 +71,8 @@ enum {
 	FIO_NET_NAME_MAX		= 256,
 
 	FIO_NET_CLIENT_TIMEOUT		= 5000,
+
+	FIO_PROBE_FLAG_ZLIB		= 1UL << 0,
 };
 
 struct cmd_ts_pdu {
@@ -83,7 +85,11 @@ struct cmd_du_pdu {
 	struct disk_util_agg agg;
 };
 
-struct cmd_probe_pdu {
+struct cmd_client_probe_pdu {
+	uint64_t flags;
+};
+
+struct cmd_probe_reply_pdu {
 	uint8_t hostname[64];
 	uint8_t bigendian;
 	uint8_t fio_version[32];
@@ -139,6 +145,7 @@ struct cmd_iolog_pdu {
 	uint32_t thread_number;
 	uint32_t nr_samples;
 	uint32_t log_type;
+	uint32_t compressed;
 	uint8_t name[FIO_NET_NAME_MAX];
 	struct io_sample samples[0];
 };
