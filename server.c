@@ -293,8 +293,9 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 
 static void add_reply(uint64_t tag, struct flist_head *list)
 {
-	struct fio_net_cmd_reply *reply = (struct fio_net_cmd_reply *) tag;
+	struct fio_net_cmd_reply *reply;
 
+	reply = (struct fio_net_cmd_reply *) (uintptr_t) tag;
 	flist_add_tail(&reply->list, list);
 }
 
@@ -313,8 +314,9 @@ static uint64_t alloc_reply(uint64_t tag, uint16_t opcode)
 
 static void free_reply(uint64_t tag)
 {
-	struct fio_net_cmd_reply *reply = (struct fio_net_cmd_reply *) tag;
+	struct fio_net_cmd_reply *reply;
 
+	reply = (struct fio_net_cmd_reply *) (uintptr_t) tag;
 	free(reply);
 }
 
