@@ -13,6 +13,7 @@
 #include <sched.h>
 #include <linux/unistd.h>
 #include <linux/major.h>
+#include <asm/byteorder.h>
 
 #include "binject.h"
 #include "../file.h"
