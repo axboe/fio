@@ -723,8 +723,12 @@ int setup_files(struct thread_data *td)
 	struct fio_file *f;
 	unsigned int i;
 	int err = 0, need_extend;
+	int old_state;
 
 	dprint(FD_FILE, "setup files\n");
+
+	old_state = td->runstate;
+	td_set_runstate(td, TD_SETTING_UP);
 
 	if (o->read_iolog_file)
 		goto done;
@@ -740,7 +744,7 @@ int setup_files(struct thread_data *td)
 		err = get_file_sizes(td);
 
 	if (err)
-		return err;
+		goto err_out;
 
 	/*
 	 * check sizes. if the files/devices do not exist and the size
@@ -765,7 +769,7 @@ int setup_files(struct thread_data *td)
 	    !(o->nr_files && (o->file_size_low || o->file_size_high))) {
 		log_err("%s: you need to specify size=\n", o->name);
 		td_verror(td, EINVAL, "total_file_size");
-		return 1;
+		goto err_out;
 	}
 
 	/*
@@ -866,7 +870,7 @@ int setup_files(struct thread_data *td)
 	}
 
 	if (err)
-		return err;
+		goto err_out;
 
 	if (!o->zone_size)
 		o->zone_size = o->size;
@@ -882,9 +886,12 @@ done:
 	if (o->create_only)
 		td->done = 1;
 
+	td_set_runstate(td, old_state);
 	return 0;
 err_offset:
 	log_err("%s: you need to specify valid offset=\n", o->name);
+err_out:
+	td_set_runstate(td, old_state);
 	return 1;
 }
 
