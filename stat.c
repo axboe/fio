@@ -573,7 +573,7 @@ void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 					ts->short_io_u[0], ts->short_io_u[1],
 					ts->short_io_u[2]);
 	if (ts->continue_on_error) {
-		log_info("     errors    : total=%lu, first_error=%d/<%s>\n",
+		log_info("     errors    : total=%llu, first_error=%d/<%s>\n",
 					ts->total_err_count,
 					ts->first_error,
 					strerror(ts->first_error));
