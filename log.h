@@ -7,9 +7,9 @@
 extern FILE *f_out;
 extern FILE *f_err;
 
-extern int log_err(const char *format, ...);
-extern int log_info(const char *format, ...);
-extern int log_local(const char *format, ...);
+extern int log_err(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
+extern int log_info(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
+extern int log_local(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
 extern int log_valist(const char *str, va_list);
 extern int log_local_buf(const char *buf, size_t);
 
