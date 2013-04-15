@@ -835,7 +835,7 @@ sync_done:
 	check_update_rusage(td);
 
 	if (td->trim_entries)
-		log_err("fio: %d trim entries leaked?\n", td->trim_entries);
+		log_err("fio: %lu trim entries leaked?\n", td->trim_entries);
 
 	if (td->o.fill_device && td->error == ENOSPC) {
 		td->error = 0;

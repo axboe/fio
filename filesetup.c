@@ -355,7 +355,8 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 
 	if (f->file_offset > f->real_file_size) {
 		log_err("%s: offset extends end (%llu > %llu)\n", td->o.name,
-					f->file_offset, f->real_file_size);
+					(unsigned long long) f->file_offset,
+					(unsigned long long) f->real_file_size);
 		return 1;
 	}
 

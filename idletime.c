@@ -406,7 +406,7 @@ int fio_idle_prof_parse_opt(const char *args)
 		ipc.opt = IDLE_PROF_OPT_PERCPU;
 		return 0;
 	} else {
-		log_err("fio: incorrect idle-prof option\n", args);
+		log_err("fio: incorrect idle-prof option: %s\n", args);
 		return -1;
 	}	
 #else

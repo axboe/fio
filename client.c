@@ -957,7 +957,7 @@ static void remove_reply_cmd(struct fio_client *client, struct fio_net_cmd *cmd)
 	}
 
 	if (!reply) {
-		log_err("fio: client: unable to find matching tag (%lx)\n", cmd->tag);
+		log_err("fio: client: unable to find matching tag (%llx)\n", (unsigned long long) cmd->tag);
 		return;
 	}
 

@@ -578,7 +578,7 @@ int fio_monotonic_clocktest(void)
 	free(threads);
 
 	if (failed) {
-		log_err("Clocksource test: %u threads failed\n", failed);
+		log_err("Clocksource test: %lu threads failed\n", failed);
 		goto err;
 	}
 
@@ -595,9 +595,10 @@ int fio_monotonic_clocktest(void)
 		if (prev->tsc > this->tsc) {
 			uint64_t diff = prev->tsc - this->tsc;
 
-			log_info("cs: CPU clock mismatch (diff=%lu):\n", diff);
-			log_info("\t CPU%3lu: TSC=%lu, SEQ=%lu\n", prev->cpu, prev->tsc, prev->seq);
-			log_info("\t CPU%3lu: TSC=%lu, SEQ=%lu\n", this->cpu, this->tsc, this->seq);
+			log_info("cs: CPU clock mismatch (diff=%llu):\n",
+						(unsigned long long) diff);
+			log_info("\t CPU%3u: TSC=%llu, SEQ=%u\n", prev->cpu, (unsigned long long) prev->tsc, prev->seq);
+			log_info("\t CPU%3u: TSC=%llu, SEQ=%u\n", this->cpu, (unsigned long long) this->tsc, this->seq);
 			failed++;
 		}
 

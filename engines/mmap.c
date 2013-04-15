@@ -187,7 +187,7 @@ static int fio_mmapio_init(struct thread_data *td)
 	if ((td->o.rw_min_bs & page_mask) &&
 	    (o->odirect || o->fsync_blocks || o->fdatasync_blocks)) {
 		log_err("fio: mmap options dictate a minimum block size of "
-			"%lu bytes\n", page_size);
+			"%llu bytes\n", (unsigned long long) page_size);
 		return 1;
 	}
 

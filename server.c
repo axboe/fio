@@ -1467,7 +1467,7 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 		host++;
 		lport = atoi(host);
 		if (!lport || lport > 65535) {
-			log_err("fio: bad server port %u\n", port);
+			log_err("fio: bad server port %u\n", lport);
 			return 1;
 		}
 		/* no hostname given, we are done */
@@ -1485,7 +1485,7 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 			portp++;
 			lport = atoi(portp);
 			if (!lport || lport > 65535) {
-				log_err("fio: bad server port %u\n", port);
+				log_err("fio: bad server port %u\n", lport);
 				return 1;
 			}
 		}

@@ -282,7 +282,9 @@ void show_group_stats(struct group_run_stats *rs)
 		log_info("%s: io=%s, aggrb=%s/s, minb=%s/s, maxb=%s/s,"
 			 " mint=%llumsec, maxt=%llumsec\n",
 				rs->unified_rw_rep ? "  MIXED" : ddir_str[i],
-				p1, p2, p3, p4, rs->min_run[i], rs->max_run[i]);
+				p1, p2, p3, p4,
+				(unsigned long long) rs->min_run[i],
+				(unsigned long long) rs->max_run[i]);
 
 		free(p1);
 		free(p2);
@@ -385,7 +387,8 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 
 	log_info("  %s: io=%s, bw=%s/s, iops=%s, runt=%6llumsec\n",
 				rs->unified_rw_rep ? "mixed" : ddir_str[ddir],
-				io_p, bw_p, iops_p, ts->runtime[ddir]);
+				io_p, bw_p, iops_p,
+				(unsigned long long) ts->runtime[ddir]);
 
 	free(io_p);
 	free(bw_p);
@@ -544,8 +547,11 @@ void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 		sys_cpu = 0;
 	}
 
-	log_info("  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%lu, majf=%lu,"
-		 " minf=%lu\n", usr_cpu, sys_cpu, ts->ctx, ts->majf, ts->minf);
+	log_info("  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%llu,"
+		 " majf=%llu, minf=%llu\n", usr_cpu, sys_cpu,
+			(unsigned long long) ts->ctx,
+			(unsigned long long) ts->majf,
+			(unsigned long long) ts->minf);
 
 	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
 	log_info("  IO depths    : 1=%3.1f%%, 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%,"
@@ -566,15 +572,17 @@ void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
 					io_u_dist[1], io_u_dist[2],
 					io_u_dist[3], io_u_dist[4],
 					io_u_dist[5], io_u_dist[6]);
-	log_info("     issued    : total=r=%lu/w=%lu/d=%lu,"
-				 " short=r=%lu/w=%lu/d=%lu\n",
-					ts->total_io_u[0], ts->total_io_u[1],
-					ts->total_io_u[2],
-					ts->short_io_u[0], ts->short_io_u[1],
-					ts->short_io_u[2]);
+	log_info("     issued    : total=r=%llu/w=%llu/d=%llu,"
+				 " short=r=%llu/w=%llu/d=%llu\n",
+					(unsigned long long) ts->total_io_u[0],
+					(unsigned long long) ts->total_io_u[1],
+					(unsigned long long) ts->total_io_u[2],
+					(unsigned long long) ts->short_io_u[0],
+					(unsigned long long) ts->short_io_u[1],
+					(unsigned long long) ts->short_io_u[2]);
 	if (ts->continue_on_error) {
 		log_info("     errors    : total=%llu, first_error=%d/<%s>\n",
-					ts->total_err_count,
+					(unsigned long long)ts->total_err_count,
 					ts->first_error,
 					strerror(ts->first_error));
 	}
@@ -600,8 +608,9 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 		iops = (1000 * (uint64_t) ts->total_io_u[ddir]) / runt;
 	}
 
-	log_info(";%llu;%llu;%llu;%llu", ts->io_bytes[ddir] >> 10, bw, iops,
-							ts->runtime[ddir]);
+	log_info(";%llu;%llu;%llu;%llu",
+		(unsigned long long) ts->io_bytes[ddir] >> 10, bw, iops,
+					(unsigned long long) ts->runtime[ddir]);
 
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
 		log_info(";%lu;%lu;%f;%f", min, max, mean, dev);
@@ -787,8 +796,10 @@ static void show_thread_status_terse_v2(struct thread_stat *ts,
 		sys_cpu = 0;
 	}
 
-	log_info(";%f%%;%f%%;%lu;%lu;%lu", usr_cpu, sys_cpu, ts->ctx, ts->majf,
-								ts->minf);
+	log_info(";%f%%;%f%%;%llu;%llu;%llu", usr_cpu, sys_cpu,
+						(unsigned long long) ts->ctx,
+						(unsigned long long) ts->majf,
+						(unsigned long long) ts->minf);
 
 	/* Calc % distribution of IO depths, usecond, msecond latency */
 	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
@@ -808,7 +819,7 @@ static void show_thread_status_terse_v2(struct thread_stat *ts,
 		log_info(";%3.2f%%", io_u_lat_m[i]);
 	/* Additional output if continue_on_error set - default off*/
 	if (ts->continue_on_error)
-		log_info(";%lu;%d", ts->total_err_count, ts->first_error);
+		log_info(";%llu;%d", (unsigned long long) ts->total_err_count, ts->first_error);
 	log_info("\n");
 
 	/* Additional output if description is set */
@@ -849,8 +860,10 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 		sys_cpu = 0;
 	}
 
-	log_info(";%f%%;%f%%;%lu;%lu;%lu", usr_cpu, sys_cpu, ts->ctx, ts->majf,
-								ts->minf);
+	log_info(";%f%%;%f%%;%llu;%llu;%llu", usr_cpu, sys_cpu,
+						(unsigned long long) ts->ctx,
+						(unsigned long long) ts->majf,
+						(unsigned long long) ts->minf);
 
 	/* Calc % distribution of IO depths, usecond, msecond latency */
 	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
@@ -874,7 +887,7 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 
 	/* Additional output if continue_on_error set - default off*/
 	if (ts->continue_on_error)
-		log_info(";%lu;%d", ts->total_err_count, ts->first_error);
+		log_info(";%llu;%d", (unsigned long long) ts->total_err_count, ts->first_error);
 
 	/* Additional output if description is set */
 	if (strlen(ts->description))
