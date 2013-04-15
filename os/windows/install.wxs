@@ -70,6 +70,7 @@
 
 	<UIRef Id="WixUI_Minimal"/>
 
-	<MajorUpgrade AllowDowngrades="no" DowngradeErrorMessage="A newer version of the application is already installed."/>
+	<MajorUpgrade AllowDowngrades="no" DowngradeErrorMessage="A newer version of the application is already installed."
+                  AllowSameVersionUpgrades="yes"/>
 </Product>
 </Wix>
