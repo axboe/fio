@@ -681,6 +681,7 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 	je->nr_running		= cpu_to_le32(je->nr_running);
 	je->nr_ramp		= cpu_to_le32(je->nr_ramp);
 	je->nr_pending		= cpu_to_le32(je->nr_pending);
+	je->nr_setting_up	= cpu_to_le32(je->nr_setting_up);
 	je->files_open		= cpu_to_le32(je->files_open);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {

@@ -186,6 +186,7 @@ static int thread_eta(struct thread_data *td)
 			eta_sec = td->o.timeout + done_secs - elapsed;
 	} else if (td->runstate == TD_NOT_CREATED || td->runstate == TD_CREATED
 			|| td->runstate == TD_INITIALIZED
+			|| td->runstate == TD_SETTING_UP
 			|| td->runstate == TD_RAMP
 			|| td->runstate == TD_PRE_READING) {
 		int t_eta = 0, r_eta = 0;
@@ -349,9 +350,10 @@ int calc_thread_status(struct jobs_eta *je, int force)
 		} else if (td->runstate == TD_RAMP) {
 			je->nr_running++;
 			je->nr_ramp++;
-		} else if (td->runstate == TD_SETTING_UP)
+		} else if (td->runstate == TD_SETTING_UP) {
 			je->nr_running++;
-		else if (td->runstate < TD_RUNNING)
+			je->nr_setting_up++;
+		} else if (td->runstate < TD_RUNNING)
 			je->nr_pending++;
 
 		if (je->elapsed_sec >= 3)
@@ -361,7 +363,7 @@ int calc_thread_status(struct jobs_eta *je, int force)
 
 		check_str_update(td);
 
-		if (td->runstate > TD_RAMP) {
+		if (td->runstate > TD_SETTING_UP) {
 			int ddir;
 
 			for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
@@ -471,8 +473,13 @@ void display_thread_status(struct jobs_eta *je)
 		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running)
 			strcpy(perc_str, "-.-% done");
 		else {
+			double mult = 100.0;
+
+			if (je->nr_setting_up && je->nr_running)
+				mult *= (1.0 - (double) je->nr_setting_up / (double) je->nr_running);
+
 			eta_good = 1;
-			perc *= 100.0;
+			perc *= mult;
 			sprintf(perc_str, "%3.1f%% done", perc);
 		}
 

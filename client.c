@@ -887,6 +887,7 @@ static void convert_jobs_eta(struct jobs_eta *je)
 	je->nr_running		= le32_to_cpu(je->nr_running);
 	je->nr_ramp		= le32_to_cpu(je->nr_ramp);
 	je->nr_pending		= le32_to_cpu(je->nr_pending);
+	je->nr_setting_up	= le32_to_cpu(je->nr_setting_up);
 	je->files_open		= le32_to_cpu(je->files_open);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
@@ -912,6 +913,7 @@ void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 	dst->nr_running		+= je->nr_running;
 	dst->nr_ramp		+= je->nr_ramp;
 	dst->nr_pending		+= je->nr_pending;
+	dst->nr_setting_up	+= je->nr_setting_up;
 	dst->files_open		+= je->files_open;
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
