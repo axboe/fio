@@ -1390,8 +1390,8 @@ static void gopt_handle_changed(struct gopt *gopt)
 		break;
 		}
 	default:
-		log_err("gfio: bad option type %s/%d\n", gopt->opt_type);
-		return;
+		log_err("gfio: bad option type: %d\n", gopt->opt_type);
+		break;
 	}
 }
 
