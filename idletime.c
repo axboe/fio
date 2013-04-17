@@ -43,6 +43,26 @@ static double calibrate_unit(unsigned char *data)
 	return tunit / CALIBRATE_SCALE;
 }
 
+static int set_cpu_affinity(struct idle_prof_thread *ipt)
+{
+#if defined(FIO_HAVE_CPU_AFFINITY)
+	os_cpu_mask_t cpu_mask;
+
+	memset(&cpu_mask, 0, sizeof(cpu_mask));
+	fio_cpu_set(&cpu_mask, ipt->cpu);
+
+	if (fio_setaffinity(gettid(), cpu_mask)) {
+		log_err("fio: fio_setaffinity failed\n");
+		return -1;
+	}
+
+	return 0;
+#else
+	log_err("fio: fio_setaffinity not supported\n");
+	return -1;
+#endif
+}
+
 static void *idle_prof_thread_fn(void *data)
 {
 	int retval;
@@ -56,17 +76,7 @@ static void *idle_prof_thread_fn(void *data)
 	if (ipc.status == IDLE_PROF_STATUS_ABORT)
 		return NULL;
 
-#if defined(FIO_HAVE_CPU_AFFINITY)
-	os_cpu_mask_t cpu_mask;
-	memset(&cpu_mask, 0, sizeof(cpu_mask));
-	fio_cpu_set(&cpu_mask, ipt->cpu);
-
-	if ((retval=fio_setaffinity(gettid(), cpu_mask)) == -1)
-		log_err("fio: fio_setaffinity failed\n");
-#else
-	retval = -1;
-	log_err("fio: fio_setaffinity not supported\n");
-#endif
+	retval = set_cpu_affinity(ipt);
 	if (retval == -1) {
 		ipt->state = TD_EXITED;
 		pthread_mutex_unlock(&ipt->init_lock);

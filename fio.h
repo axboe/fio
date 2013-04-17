@@ -321,9 +321,9 @@ enum {
 
 #define __td_verror(td, err, msg, func)					\
 	do {								\
+		int e = (err);						\
 		if ((td)->error)					\
 			break;						\
-		int e = (err);						\
 		(td)->error = e;					\
 		if (!(td)->first_error)					\
 			snprintf(td->verror, sizeof(td->verror), "file:%s:%d, func=%s, error=%s", __FILE__, __LINE__, (func), (msg));		\
