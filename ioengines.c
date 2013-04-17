@@ -288,6 +288,13 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	unlock_file(td, io_u->file);
 
 	/*
+	 * If an error was seen and the io engine didn't propagate it
+	 * back to 'td', do so.
+	 */
+	if (io_u->error && !td->error)
+		td_verror(td, io_u->error, "td_io_queue");
+
+	/*
 	 * Add warning for O_DIRECT so that users have an easier time
 	 * spotting potentially bad alignment. If this triggers for the first
 	 * IO, then it's likely an alignment problem or because the host fs
