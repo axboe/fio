@@ -13,4 +13,11 @@
 #define __must_check
 #endif
 
+/*
+ * Mark unused variables passed to ops functions as unused, to silence gcc
+ */
+#define fio_unused	__attribute__((__unused__))
+#define fio_init	__attribute__((constructor))
+#define fio_exit	__attribute__((destructor))
+
 #endif

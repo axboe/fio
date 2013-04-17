@@ -471,13 +471,6 @@ extern int is_blktrace(const char *);
 extern int load_blktrace(struct thread_data *, const char *);
 #endif
 
-/*
- * Mark unused variables passed to ops functions as unused, to silence gcc
- */
-#define fio_unused	__attribute((__unused__))
-#define fio_init	__attribute__((constructor))
-#define fio_exit	__attribute__((destructor))
-
 #define for_each_td(td, i)	\
 	for ((i) = 0, (td) = &threads[0]; (i) < (int) thread_number; (i)++, (td)++)
 #define for_each_file(td, f, i)	\
