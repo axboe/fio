@@ -54,7 +54,7 @@ static int fio_null_commit(struct thread_data *td)
 	return 0;
 }
 
-static int fio_null_queue(struct thread_data fio_unused *td, struct io_u *io_u)
+static int fio_null_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct null_data *nd = td->io_ops->data;
 
