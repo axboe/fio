@@ -6,6 +6,7 @@
 #include "stat.h"
 #include "gettime.h"
 #include "lib/ieee754.h"
+#include "td_error.h"
 
 /*
  * What type of allocation to use for io buffers
@@ -18,25 +19,7 @@ enum fio_memtype {
 	MEM_MMAPHUGE,	/* memory mapped huge file */
 };
 
-/*
- * What type of errors to continue on when continue_on_error is used
- */
-enum error_type_bit {
-	ERROR_TYPE_READ_BIT = 0,
-	ERROR_TYPE_WRITE_BIT = 1,
-	ERROR_TYPE_VERIFY_BIT = 2,
-	ERROR_TYPE_CNT = 3,
-};
-
 #define ERROR_STR_MAX	128
-
-enum error_type {
-        ERROR_TYPE_NONE = 0,
-        ERROR_TYPE_READ = 1 << ERROR_TYPE_READ_BIT,
-        ERROR_TYPE_WRITE = 1 << ERROR_TYPE_WRITE_BIT,
-        ERROR_TYPE_VERIFY = 1 << ERROR_TYPE_VERIFY_BIT,
-        ERROR_TYPE_ANY = 0xffff,
-};
 
 #define BSSPLIT_MAX	64
 
