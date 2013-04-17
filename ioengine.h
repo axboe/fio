@@ -28,8 +28,6 @@ enum {
 	IO_U_F_VER_LIST		= 1 << 7,
 };
 
-struct thread_data;
-
 /*
  * The io unit
  */
