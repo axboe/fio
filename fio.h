@@ -14,8 +14,6 @@
 #include <inttypes.h>
 #include <assert.h>
 
-struct thread_data;
-
 #include "compiler/compiler.h"
 #include "thread_options.h"
 #include "flist.h"
