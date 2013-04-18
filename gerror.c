@@ -24,6 +24,8 @@ static void report_error(struct gui_entry *ge, GError *error)
 	struct gui *ui = ge->ui;
 
 	if (ui->error_info_bar == NULL) {
+		GtkWidget *container;
+
 		ui->error_info_bar = gtk_info_bar_new_with_buttons(GTK_STOCK_OK,
 						GTK_RESPONSE_OK, NULL);
 		g_signal_connect(ui->error_info_bar, "response", G_CALLBACK(on_info_bar_response), ui);
@@ -31,7 +33,7 @@ static void report_error(struct gui_entry *ge, GError *error)
 						GTK_MESSAGE_ERROR);
 
 		ui->error_label = gtk_label_new(error->message);
-		GtkWidget *container = gtk_info_bar_get_content_area(GTK_INFO_BAR(ui->error_info_bar));
+		container = gtk_info_bar_get_content_area(GTK_INFO_BAR(ui->error_info_bar));
 		gtk_container_add(GTK_CONTAINER(container), ui->error_label);
 
 		gtk_box_pack_start(GTK_BOX(ui->vbox), ui->error_info_bar, FALSE, FALSE, 0);
