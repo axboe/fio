@@ -7,6 +7,7 @@
 #include <sys/shm.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <winsock2.h>
 #include <windows.h>
 #include <psapi.h>
 #include <stdlib.h>
@@ -112,6 +113,9 @@ static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
 	int rc = 0;
 	HANDLE hFile;
+	GET_LENGTH_INFORMATION info;
+	DWORD outBytes;
+	LARGE_INTEGER size;
 
 	if (f->hFile == NULL) {
 		hFile = CreateFile(f->file_name, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -120,9 +124,6 @@ static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 		hFile = f->hFile;
 	}
 
-	GET_LENGTH_INFORMATION info;
-	DWORD outBytes;
-	LARGE_INTEGER size;
 	size.QuadPart = 0;
 	if (DeviceIoControl(hFile, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &info, sizeof(info), &outBytes, NULL))
 		*bytes = info.Length.QuadPart;

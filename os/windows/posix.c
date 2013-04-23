@@ -421,6 +421,7 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
 	{
 		static LARGE_INTEGER freq = {{0,0}};
 		LARGE_INTEGER counts;
+		uint64_t t;
 
 		QueryPerformanceCounter(&counts);
 		if (freq.QuadPart == 0)
@@ -429,7 +430,7 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
 		tp->tv_sec = counts.QuadPart / freq.QuadPart;
 		/* Get the difference between the number of ns stored
 		 * in 'tv_sec' and that stored in 'counts' */
-		uint64_t t = tp->tv_sec * freq.QuadPart;
+		t = tp->tv_sec * freq.QuadPart;
 		t = counts.QuadPart - t;
 		/* 't' now contains the number of cycles since the last second.
 		 * We want the number of nanoseconds, so multiply out by 1,000,000,000

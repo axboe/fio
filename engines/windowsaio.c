@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
-#include <windows.h>
 
 #include "../fio.h"
 
