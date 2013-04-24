@@ -910,6 +910,15 @@ static int init_io_u(struct thread_data *td)
 	if ((td->io_ops->flags & FIO_NOIO) || !(td_read(td) || td_write(td)))
 		data_xfer = 0;
 
+	/*
+	 * if we may later need to do address alignment, then add any
+	 * possible adjustment here so that we don't cause a buffer
+	 * overflow later. this adjustment may be too much if we get
+	 * lucky and the allocator gives us an aligned address.
+	 */
+	if (td->o.odirect || td->o.mem_align || (td->io_ops->flags & FIO_RAWIO))
+		td->orig_buffer_size += page_mask + td->o.mem_align;
+
 	if (td->o.mem_type == MEM_SHMHUGE || td->o.mem_type == MEM_MMAPHUGE) {
 		unsigned long bs;
 
