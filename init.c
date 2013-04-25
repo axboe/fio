@@ -621,6 +621,14 @@ static int fixup_options(struct thread_data *td)
 	if (td->o.random_distribution != FIO_RAND_DIST_RANDOM)
 		td->o.norandommap = 1;
 
+	/*
+	 * If size is set but less than the min block size, complain
+	 */
+	if (o->size && o->size < td_min_bs(td)) {
+		log_err("fio: size too small, must be larger than the IO size: %llu\n", (unsigned long long) o->size);
+		ret = 1;
+	}
+
 	return ret;
 }
 

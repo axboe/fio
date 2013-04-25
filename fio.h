@@ -535,6 +535,14 @@ static inline unsigned int td_max_bs(struct thread_data *td)
 	return max(td->o.max_bs[DDIR_TRIM], max_bs);
 }
 
+static inline unsigned int td_min_bs(struct thread_data *td)
+{
+	unsigned int min_bs;
+
+	min_bs = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
+	return min(td->o.min_bs[DDIR_TRIM], min_bs);
+}
+
 static inline int is_power_of_2(unsigned int val)
 {
 	return (val != 0 && ((val & (val - 1)) == 0));
