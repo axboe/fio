@@ -1600,6 +1600,9 @@ util=		The disk utilization. A value of 100% means we kept the disk
 
 It is also possible to get fio to dump the current output while it is
 running, without terminating the job. To do that, send fio the USR1 signal.
+You can also get regularly timed dumps by using the --status-interval
+parameter, or by creating a file in /tmp named fio-dump-status. If fio
+sees this file, it will unlink it and dump the current output status.
 
 
 7.0 Terse output
@@ -1721,7 +1724,7 @@ trim       trim the given file from the given 'offset' for 'length' bytes
 
 
 9.0 CPU idleness profiling
-
+--------------------------
 In some cases, we want to understand CPU overhead in a test. For example,
 we test patches for the specific goodness of whether they reduce CPU usage.
 fio implements a balloon approach to create a thread per CPU that runs at

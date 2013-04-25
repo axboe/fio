@@ -58,6 +58,7 @@ int log_syslog = 0;
 
 int write_bw_log = 0;
 int read_only = 0;
+int status_interval = 0;
 
 static int write_lat_log;
 
@@ -123,9 +124,9 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'c' | FIO_CLIENT_FLAG,
 	},
 	{
-		.name		   = (char *) "enghelp",
+		.name		= (char *) "enghelp",
 		.has_arg	= optional_argument,
-		.val		    = 'i' | FIO_CLIENT_FLAG,
+		.val		= 'i' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "showcmd",
@@ -210,6 +211,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "idle-prof",
 		.has_arg	= required_argument,
 		.val		= 'I',
+	},
+	{
+		.name		= (char *) "status-interval",
+		.has_arg	= required_argument,
+		.val		= 'L',
 	},
 	{
 		.name		= NULL,
@@ -1361,6 +1367,8 @@ static void usage(const char *name)
 	printf("            \t\tMay be \"always\", \"never\" or \"auto\"\n");
 	printf("  --eta-newline=time\tForce a new line for every 'time'");
 	printf(" period passed\n");
+	printf("  --status-interval=t\tForce full status dump every");
+	printf(" 't' period passed\n");
 	printf("  --readonly\t\tTurn on safety read-only checks, preventing"
 		" writes\n");
 	printf("  --section=name\tOnly run specified section in job file\n");
@@ -1789,6 +1797,18 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			do_exit++;
 			exit_val = fio_monotonic_clocktest();
 			break;
+		case 'L': {
+			long long val;
+
+			if (check_str_time(optarg, &val)) {
+				log_err("fio: failed parsing time %s\n", optarg);
+				do_exit++;
+				exit_val = 1;
+				break;
+			}
+			status_interval = val * 1000;
+			break;
+			}
 		case '?':
 			log_err("%s: unrecognized option '%s'\n", argv[0],
 							argv[optind - 1]);

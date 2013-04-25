@@ -285,7 +285,7 @@ int check_str_bytes(const char *p, long long *val, void *data)
 	return str_to_decimal(p, val, 1, data);
 }
 
-static int check_str_time(const char *p, long long *val)
+int check_str_time(const char *p, long long *val)
 {
 	return str_to_decimal(p, val, 0, NULL);
 }

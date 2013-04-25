@@ -362,6 +362,7 @@ extern int terse_version;
 extern int is_backend;
 extern int nr_clients;
 extern int log_syslog;
+extern int status_interval;
 extern const char fio_version_string[];
 
 extern struct thread_data *threads;

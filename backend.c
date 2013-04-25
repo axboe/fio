@@ -1558,6 +1558,12 @@ reaped:
 		fio_terminate_threads(TERMINATE_ALL);
 }
 
+static void do_usleep(unsigned int usecs)
+{
+	check_for_running_stats();
+	usleep(usecs);
+}
+
 /*
  * Main function for kicking off and reaping jobs, as needed.
  */
@@ -1736,7 +1742,7 @@ static void run_threads(void)
 			if (mtime_since_now(&this_start) > JOB_START_TIMEOUT)
 				break;
 
-			usleep(100000);
+			do_usleep(100000);
 
 			for (i = 0; i < this_jobs; i++) {
 				td = map[i];
@@ -1788,12 +1794,12 @@ static void run_threads(void)
 		reap_threads(&nr_running, &t_rate, &m_rate);
 
 		if (todo)
-			usleep(100000);
+			do_usleep(100000);
 	}
 
 	while (nr_running) {
 		reap_threads(&nr_running, &t_rate, &m_rate);
-		usleep(10000);
+		do_usleep(10000);
 	}
 
 	fio_idle_prof_stop();

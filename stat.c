@@ -1420,6 +1420,40 @@ void show_running_run_stats(void)
 	pthread_detach(thread);
 }
 
+static int status_interval_init;
+static struct timeval status_time;
+
+#define FIO_STATUS_FILE		"/tmp/fio-dump-status"
+
+static int check_status_file(void)
+{
+	struct stat sb;
+
+	if (stat(FIO_STATUS_FILE, &sb))
+		return 0;
+
+	unlink(FIO_STATUS_FILE);
+	return 1;
+}
+
+void check_for_running_stats(void)
+{
+	if (status_interval) {
+		if (!status_interval_init) {
+			fio_gettime(&status_time, NULL);
+			status_interval_init = 1;
+		} else if (mtime_since_now(&status_time) >= status_interval) {
+			show_running_run_stats();
+			fio_gettime(&status_time, NULL);
+			return;
+		}
+	}
+	if (check_status_file()) {
+		show_running_run_stats();
+		return;
+	}
+}
+
 static inline void add_stat_sample(struct io_stat *is, unsigned long data)
 {
 	double val = data;

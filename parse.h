@@ -89,6 +89,7 @@ extern void strip_blank_front(char **);
 extern void strip_blank_end(char *);
 extern int str_to_decimal(const char *, long long *, int, void *);
 extern int check_str_bytes(const char *p, long long *val, void *data);
+extern int check_str_time(const char *p, long long *val);
 extern int str_to_float(const char *str, double *val);
 
 /*

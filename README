@@ -155,6 +155,7 @@ $ fio
 	--eta=when		When ETA estimate should be printed
 				May be "always", "never" or "auto"
 	--eta-newline=time	Force a new line for every 'time' period passed
+	--status-interval=t	Force full status dump every 't' period passed
 	--section=name		Only run specified section in job file.
 				Multiple sections can be specified.
 	--alloc-size=kb		Set smalloc pool to this size in kb (def 1024)
