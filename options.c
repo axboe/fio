@@ -805,7 +805,7 @@ static int str_verify_pattern_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
 	long off;
-	int i = 0, j = 0, len, k, base = 10;
+	int i = 0, j = 0, len, k, base = 10, pattern_length;
 	char *loc1, *loc2;
 
 	loc1 = strstr(input, "0x");
@@ -844,10 +844,23 @@ static int str_verify_pattern_cb(void *data, const char *input)
 	 * Fill the pattern all the way to the end. This greatly reduces
 	 * the number of memcpy's we have to do when verifying the IO.
 	 */
+	pattern_length = i;
 	while (i > 1 && i * 2 <= MAX_PATTERN_SIZE) {
 		memcpy(&td->o.verify_pattern[i], &td->o.verify_pattern[0], i);
 		i *= 2;
 	}
+
+	/*
+	 * Fill remainder, if the pattern multiple ends up not being
+	 * MAX_PATTERN_SIZE.
+	 */
+	while (i > 1 && i < MAX_PATTERN_SIZE) {
+		unsigned int b = min(pattern_length, MAX_PATTERN_SIZE - i);
+
+		memcpy(&td->o.verify_pattern[i], &td->o.verify_pattern[0], b);
+		i += b;
+	}
+
 	if (i == 1) {
 		/*
 		 * The code in verify_io_u_pattern assumes a single byte pattern
