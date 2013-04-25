@@ -451,6 +451,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		else
 			ret = check_str_bytes(tmp, &ull, data);
 
+		dprint(FD_PARSE, "  ret=%d, out=%llu\n", ret, ull);
+
 		if (ret)
 			break;
 
@@ -575,6 +577,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 		flp = td_var(data, o->off1);
 		flp[curr].u.f = uf;
+
+		dprint(FD_PARSE, "  out=%f\n", uf);
 
 		/*
 		** Calculate precision for output by counting
@@ -744,6 +748,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			ret = 1;
 		else
 			il = 1;
+
+		dprint(FD_PARSE, "  ret=%d, out=%d\n", ret, il);
 
 		if (ret)
 			break;
