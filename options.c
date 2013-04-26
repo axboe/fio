@@ -381,7 +381,6 @@ static int str_perc_rand_cb(void *data, unsigned long long *val)
 	struct thread_data *td = data;
 
 	td->o.perc_rand = *val;
-	td->o.perc_seq = 100 - *val;
 	return 0;
 }
 
@@ -389,7 +388,6 @@ static int str_perc_seq_cb(void *data, unsigned long long *val)
 {
 	struct thread_data *td = data;
 
-	td->o.perc_seq = *val;
 	td->o.perc_rand = 100 - *val;
 	return 0;
 }

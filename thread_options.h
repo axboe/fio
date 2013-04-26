@@ -114,7 +114,6 @@ struct thread_options {
 	unsigned int random_generator;
 
 	unsigned int perc_rand;
-	unsigned int perc_seq;
 
 	unsigned int hugepage_size;
 	unsigned int rw_min_bs;
@@ -326,7 +325,6 @@ struct thread_options_pack {
 	uint32_t random_generator;
 
 	uint32_t perc_rand;
-	uint32_t perc_seq;
 
 	uint32_t hugepage_size;
 	uint32_t rw_min_bs;
