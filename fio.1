@@ -641,6 +641,15 @@ If you wanted to use zipf with a theta of 1.2, you would use
 random_distribution=zipf:1.2 as the option. If a non-uniform model is used,
 fio will disable use of the random map.
 .TP
+.BI percentage_random \fR=\fPint
+For a random workload, set how big a percentage should be random. This defaults
+to 100%, in which case the workload is fully random. It can be set from
+anywhere from 0 to 100.  Setting it to 0 would make the workload fully
+sequential.
+.TP
+.BI percentage_sequential \fR=\fPint
+See \fBpercentage_random\fR.
+.TP
 .B norandommap
 Normally \fBfio\fR will cover every block of the file when doing random I/O. If
 this parameter is given, a new offset will be chosen without looking at past

@@ -81,6 +81,7 @@ enum {
 	FIO_RAND_FILE_SIZE_OFF,
 	FIO_RAND_TRIM_OFF,
 	FIO_RAND_BUF_OFF,
+	FIO_RAND_SEQ_RAND_OFF,
 	FIO_RAND_NR_OFFS,
 };
 
@@ -254,6 +255,14 @@ struct thread_data {
 	unsigned long rwmix_issues;
 	enum fio_ddir rwmix_ddir;
 	unsigned int ddir_seq_nr;
+
+	/*
+	 * rand/seq mixed workload state
+	 */
+	union {
+		os_random_state_t seq_rand_state;
+		struct frand_state __seq_rand_state;
+	};
 
 	/*
 	 * IO history logs for verification. We use a tree for sorting,

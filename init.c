@@ -701,6 +701,7 @@ static void td_fill_rand_seeds_os(struct thread_data *td)
 		td->rand_seeds[FIO_RAND_BLOCK_OFF] = FIO_RANDSEED * td->thread_number;
 
 	os_random_seed(td->rand_seeds[FIO_RAND_BLOCK_OFF], &td->random_state);
+	os_random_seed(td->rand_seeds[FIO_RAND_SEQ_RAND_OFF], &td->seq_rand_state);
 }
 
 static void td_fill_rand_seeds_internal(struct thread_data *td)
@@ -722,6 +723,7 @@ static void td_fill_rand_seeds_internal(struct thread_data *td)
 		td->rand_seeds[FIO_RAND_BLOCK_OFF] = FIO_RANDSEED * td->thread_number;
 
 	init_rand_seed(&td->__random_state, td->rand_seeds[FIO_RAND_BLOCK_OFF]);
+	init_rand_seed(&td->__seq_rand_state, td->rand_seeds[FIO_RAND_SEQ_RAND_OFF]);
 }
 
 void td_fill_rand_seeds(struct thread_data *td)

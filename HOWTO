@@ -766,6 +766,17 @@ random_distribution=str:float	By default, fio will use a completely uniform
 		random_distribution=zipf:1.2 as the option. If a non-uniform
 		model is used, fio will disable use of the random map.
 
+percentage_random=int	For a random workload, set how big a percentage should
+		be random. This defaults to 100%, in which case the workload
+		is fully random. It can be set from anywhere from 0 to 100.
+		Setting it to 0 would make the workload fully sequential. Any
+		setting in between will result in a random mix of sequential
+		and random IO, at the given percentages.
+	
+percentage_sequential=int	See percentage_random. It is guaranteed that
+		they add up to 100. The later setting has priority, each
+		will adjust the other.
+
 norandommap	Normally fio will cover every block of the file when doing
 		random IO. If this option is given, fio will just get a
 		new random offset without looking at past io history. This

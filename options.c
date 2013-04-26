@@ -376,6 +376,25 @@ static int str_rwmix_write_cb(void *data, unsigned long long *val)
 	return 0;
 }
 
+static int str_perc_rand_cb(void *data, unsigned long long *val)
+{
+	struct thread_data *td = data;
+
+	td->o.perc_rand = *val;
+	td->o.perc_seq = 100 - *val;
+	return 0;
+}
+
+static int str_perc_seq_cb(void *data, unsigned long long *val)
+{
+	struct thread_data *td = data;
+
+	td->o.perc_seq = *val;
+	td->o.perc_rand = 100 - *val;
+	return 0;
+}
+
+
 static int str_exitall_cb(void)
 {
 	exitall_on_terminate = 1;
@@ -1639,6 +1658,32 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Pareto distribution",
 			  },
 		},
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RANDOM,
+	},
+	{
+		.name	= "percentage_random",
+		.lname	= "Percentage Random",
+		.type	= FIO_OPT_INT,
+		.cb	= str_perc_rand_cb,
+		.maxval	= 100,
+		.help	= "Percentage of seq/random mix that should be random",
+		.def	= "100",
+		.interval = 5,
+		.inverse = "percentage_sequential",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RANDOM,
+	},
+	{
+		.name	= "percentage_sequential",
+		.lname	= "Percentage Sequential",
+		.type	= FIO_OPT_INT,
+		.cb	= str_perc_seq_cb,
+		.maxval	= 100,
+		.help	= "Percentage of seq/random mix that should be sequential",
+		.def	= "0",
+		.interval = 5,
+		.inverse = "percentage_random",
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_RANDOM,
 	},
