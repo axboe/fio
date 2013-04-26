@@ -1895,6 +1895,7 @@ int fio_backend(void)
 		return 1;
 
 	set_genesis_time();
+	stat_init();
 	create_disk_util_thread();
 
 	cgroup_list = smalloc(sizeof(*cgroup_list));
@@ -1924,5 +1925,6 @@ int fio_backend(void)
 	fio_mutex_remove(startup_mutex);
 	fio_mutex_remove(writeout_mutex);
 	fio_mutex_remove(disk_thread_mutex);
+	stat_exit();
 	return exit_value;
 }

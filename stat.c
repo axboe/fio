@@ -14,6 +14,8 @@
 #include "lib/getrusage.h"
 #include "idletime.h"
 
+static struct fio_mutex *stat_mutex;
+
 void update_rusage_stat(struct thread_data *td)
 {
 	struct thread_stat *ts = &td->ts;
@@ -1141,7 +1143,7 @@ void init_thread_stat(struct thread_stat *ts)
 	ts->groupid = -1;
 }
 
-void show_run_stats(void)
+static void __show_run_stats(void)
 {
 	struct group_run_stats *runstats, *rs;
 	struct thread_data *td;
@@ -1359,6 +1361,13 @@ void show_run_stats(void)
 	free(threadstats);
 }
 
+void show_run_stats(void)
+{
+	fio_mutex_down(stat_mutex);
+	__show_run_stats();
+	fio_mutex_up(stat_mutex);
+}
+
 static void *__show_running_run_stats(void fio_unused *arg)
 {
 	struct thread_data *td;
@@ -1393,7 +1402,7 @@ static void *__show_running_run_stats(void fio_unused *arg)
 		td->update_rusage = 0;
 	}
 
-	show_run_stats();
+	__show_run_stats();
 
 	for_each_td(td, i) {
 		if (td_read(td) && td->io_bytes[DDIR_READ])
@@ -1405,6 +1414,7 @@ static void *__show_running_run_stats(void fio_unused *arg)
 	}
 
 	free(rt);
+	fio_mutex_up(stat_mutex);
 	return NULL;
 }
 
@@ -1417,8 +1427,14 @@ void show_running_run_stats(void)
 {
 	pthread_t thread;
 
-	pthread_create(&thread, NULL, __show_running_run_stats, NULL);
-	pthread_detach(thread);
+	fio_mutex_down(stat_mutex);
+
+	if (!pthread_create(&thread, NULL, __show_running_run_stats, NULL)) {
+		pthread_detach(thread);
+		return;
+	}
+
+	fio_mutex_up(stat_mutex);
 }
 
 static int status_interval_init;
@@ -1700,4 +1716,19 @@ void add_iops_sample(struct thread_data *td, enum fio_ddir ddir,
 	}
 
 	fio_gettime(&td->iops_sample_time, NULL);
+}
+
+void stat_init(void)
+{
+	stat_mutex = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+}
+
+void stat_exit(void)
+{
+	/*
+	 * When we have the mutex, we know out-of-band access to it
+	 * have ended.
+	 */
+	fio_mutex_down(stat_mutex);
+	fio_mutex_remove(stat_mutex);
 }
