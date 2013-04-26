@@ -1354,6 +1354,7 @@ void show_run_stats(void)
 		show_idle_prof_stats(FIO_OUTPUT_NORMAL, NULL);
 	}
 
+	log_info_flush();
 	free(runstats);
 	free(threadstats);
 }

@@ -71,6 +71,14 @@ int log_info(const char *format, ...)
 		return fwrite(buffer, len, 1, f_out);
 }
 
+int log_info_flush(void)
+{
+	if (is_backend || log_syslog)
+		return 0;
+
+	return fflush(f_out);
+}
+
 int log_err(const char *format, ...)
 {
 	char buffer[1024];
