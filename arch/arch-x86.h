@@ -29,12 +29,6 @@ static inline void do_cpuid(unsigned int *eax, unsigned int *ebx,
 #define __NR_sys_vmsplice	316
 #endif
 
-#ifndef __NR_shmget
-#define __NR_shmget 29
-#define __NR_shmat 30
-#define __NR_shmctl 31
-#endif
-
 #define	FIO_HUGE_PAGE		4194304
 
 #define nop		__asm__ __volatile__("rep;nop": : :"memory")
