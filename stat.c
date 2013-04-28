@@ -1445,11 +1445,21 @@ static struct timeval status_time;
 static int check_status_file(void)
 {
 	struct stat sb;
+	const char *temp_dir;
+	char fio_status_file_path[PATH_MAX];
 
-	if (stat(FIO_STATUS_FILE, &sb))
+	temp_dir = getenv("TMPDIR");
+	if (temp_dir == NULL)
+		temp_dir = getenv("TEMP");
+	if (temp_dir == NULL)
+		temp_dir = "/tmp";
+
+	snprintf(fio_status_file_path, sizeof(fio_status_file_path), "%s/%s", temp_dir, FIO_STATUS_FILE);
+
+	if (stat(fio_status_file_path, &sb))
 		return 0;
 
-	unlink(FIO_STATUS_FILE);
+	unlink(fio_status_file_path);
 	return 1;
 }
 
