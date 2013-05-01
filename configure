@@ -148,7 +148,7 @@ for opt do
   ;;
   --extra-cflags=*) CFLAGS="$CFLAGS $optarg"
   ;;
-  --build-32bit-win=*) build_32bit_win="$optarg"
+  --build-32bit-win) build_32bit_win="yes"
   ;;
   --enable-gfio)
   gfio="yes"
@@ -167,7 +167,7 @@ if test "$show_help" = "yes" ; then
   echo "--cpu=                 Specify target CPU if auto-detect fails"
   echo "--cc=                  Specify compiler to use"
   echo "--extra-cflags=        Specify extra CFLAGS to pass to compiler"
-  echo "--build-32bit-win=     Specify yes for a 32-bit build on Windows"
+  echo "--build-32bit-win      Enable 32-bit build on Windows"
   echo "--enable-gfio          Enable building of gtk gfio"
   exit $exit_val
 fi
