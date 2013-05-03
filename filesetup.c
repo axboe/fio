@@ -127,13 +127,14 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	}
 
 	b = malloc(td->o.max_bs[DDIR_WRITE]);
-	memset(b, 0, td->o.max_bs[DDIR_WRITE]);
 
 	left = f->real_file_size;
 	while (left && !td->terminate) {
 		bs = td->o.max_bs[DDIR_WRITE];
 		if (bs > left)
 			bs = left;
+
+		fill_io_buffer(td, b, bs, bs);
 
 		r = write(f->fd, b, bs);
 

@@ -198,6 +198,7 @@ extern int __must_check io_u_queued_complete(struct thread_data *, int, uint64_t
 extern void io_u_queued(struct thread_data *, struct io_u *);
 extern void io_u_log_error(struct thread_data *, struct io_u *);
 extern void io_u_mark_depth(struct thread_data *, unsigned int);
+extern void fill_io_buffer(struct thread_data *, void *, unsigned int, unsigned int);
 extern void io_u_fill_buffer(struct thread_data *td, struct io_u *, unsigned int, unsigned int);
 void io_u_mark_complete(struct thread_data *, unsigned int);
 void io_u_mark_submit(struct thread_data *, unsigned int);

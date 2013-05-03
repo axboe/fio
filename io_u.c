@@ -1602,14 +1602,9 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 	}
 }
 
-/*
- * "randomly" fill the buffer contents
- */
-void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
-		      unsigned int min_write, unsigned int max_bs)
+void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
+		    unsigned int max_bs)
 {
-	io_u->buf_filled_len = 0;
-
 	if (!td->o.zero_buffers) {
 		unsigned int perc = td->o.compress_percentage;
 
@@ -1617,10 +1612,23 @@ void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
 			unsigned int seg = min_write;
 
 			seg = min(min_write, td->o.compress_chunk);
-			fill_random_buf_percentage(&td->buf_state, io_u->buf,
+			if (!seg)
+				seg = min_write;
+
+			fill_random_buf_percentage(&td->buf_state, buf,
 						perc, seg, max_bs);
 		} else
-			fill_random_buf(&td->buf_state, io_u->buf, max_bs);
+			fill_random_buf(&td->buf_state, buf, max_bs);
 	} else
-		memset(io_u->buf, 0, max_bs);
+		memset(buf, 0, max_bs);
+}
+
+/*
+ * "randomly" fill the buffer contents
+ */
+void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
+		      unsigned int min_write, unsigned int max_bs)
+{
+	io_u->buf_filled_len = 0;
+	fill_io_buffer(td, io_u->buf, min_write, max_bs);
 }
