@@ -1230,7 +1230,7 @@ write_lat_log=str Same as write_bw_log, except that this option stores io
 
 		write_lat_log=foo
 
-		The actual log names will be foo_slat.log, foo_slat.log,
+		The actual log names will be foo_slat.log, foo_clat.log,
 		and foo_lat.log. This helps fio_generate_plot fine the logs
 		automatically.
 
