@@ -448,6 +448,9 @@ Basic \fIpread\fR\|(2) or \fIpwrite\fR\|(2) I/O.
 Basic \fIreadv\fR\|(2) or \fIwritev\fR\|(2) I/O. Will emulate queuing by
 coalescing adjacents IOs into a single submission.
 .TP
+.B pvsync
+Basic \fIpreadv\fR\|(2) or \fIpwritev\fR\|(2) I/O.
+.TP
 .B libaio
 Linux native asynchronous I/O. This ioengine defines engine specific options.
 .TP
