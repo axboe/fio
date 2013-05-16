@@ -375,7 +375,9 @@ static void fio_init fio_syncio_register(void)
 	register_ioengine(&ioengine_rw);
 	register_ioengine(&ioengine_prw);
 	register_ioengine(&ioengine_vrw);
+#ifdef CONFIG_PWRITEV
 	register_ioengine(&ioengine_pvrw);
+#endif
 }
 
 static void fio_exit fio_syncio_unregister(void)
@@ -383,5 +385,7 @@ static void fio_exit fio_syncio_unregister(void)
 	unregister_ioengine(&ioengine_rw);
 	unregister_ioengine(&ioengine_prw);
 	unregister_ioengine(&ioengine_vrw);
+#ifdef CONFIG_PWRITEV
 	unregister_ioengine(&ioengine_pvrw);
+#endif
 }
