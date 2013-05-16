@@ -1066,6 +1066,23 @@ if compile_prog "" "" "RLIMIT_MEMLOCK"; then
 fi
 echo "RLIMIT_MEMLOCK                $rlimit_memlock"
 
+##########################################
+# Check whether we have pwritev/preadv
+pwritev="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <sys/uio.h>
+int main(int argc, char **argv)
+{
+  return pwritev(0, NULL, 1, 0) + preadv(0, NULL, 1, 0);
+}
+EOF
+if compile_prog "" "" "pwritev"; then
+  pwritev="yes"
+fi
+echo "pwritev/preadv                $pwritev"
+
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -1180,6 +1197,9 @@ if test "$tcp_nodelay" = "yes" ; then
 fi
 if test "$rlimit_memlock" = "yes" ; then
   output_sym "CONFIG_RLIMIT_MEMLOCK"
+fi
+if test "$pwritev" = "yes" ; then
+  output_sym "CONFIG_PWRITEV"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak

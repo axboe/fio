@@ -1302,6 +1302,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  { .ival = "vsync",
 			    .help = "Use readv/writev",
 			  },
+#ifdef CONFIG_PWRITEV
+			  { .ival = "pvsync",
+			    .help = "Use preadv/pwritev",
+			  },
+#endif
 #ifdef CONFIG_LIBAIO
 			  { .ival = "libaio",
 			    .help = "Linux native asynchronous IO",
