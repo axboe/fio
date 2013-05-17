@@ -511,6 +511,24 @@ static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
 	return DDIR_WRITE;
 }
 
+void io_u_quiesce(struct thread_data *td)
+{
+	/*
+	 * We are going to sleep, ensure that we flush anything pending as
+	 * not to skew our latency numbers.
+	 *
+	 * Changed to only monitor 'in flight' requests here instead of the
+	 * td->cur_depth, b/c td->cur_depth does not accurately represent
+	 * io's that have been actually submitted to an async engine,
+	 * and cur_depth is meaningless for sync engines.
+	 */
+	while (td->io_u_in_flight) {
+		int fio_unused ret;
+
+		ret = io_u_queued_complete(td, 1, NULL);
+	}
+}
+
 static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 {
 	enum fio_ddir odir = ddir ^ 1;
@@ -547,20 +565,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	} else
 		usec = td->rate_pending_usleep[ddir];
 
-	/*
-	 * We are going to sleep, ensure that we flush anything pending as
-	 * not to skew our latency numbers.
-	 *
-	 * Changed to only monitor 'in flight' requests here instead of the
-	 * td->cur_depth, b/c td->cur_depth does not accurately represent
-	 * io's that have been actually submitted to an async engine,
-	 * and cur_depth is meaningless for sync engines.
-	 */
-	while (td->io_u_in_flight) {
-		int fio_unused ret;
-
-		ret = io_u_queued_complete(td, 1, NULL);
-	}
+	io_u_quiesce(td);
 
 	fio_gettime(&t, NULL);
 	usec_sleep(td, usec);

@@ -822,6 +822,8 @@ sync_done:
 			if (!(b % td->o.thinktime_blocks)) {
 				int left;
 
+				io_u_quiesce(td);
+
 				if (td->o.thinktime_spin)
 					usec_spin(td->o.thinktime_spin);
 

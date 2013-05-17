@@ -196,6 +196,7 @@ extern void requeue_io_u(struct thread_data *, struct io_u **);
 extern int __must_check io_u_sync_complete(struct thread_data *, struct io_u *, uint64_t *);
 extern int __must_check io_u_queued_complete(struct thread_data *, int, uint64_t *);
 extern void io_u_queued(struct thread_data *, struct io_u *);
+extern void io_u_quiesce(struct thread_data *);
 extern void io_u_log_error(struct thread_data *, struct io_u *);
 extern void io_u_mark_depth(struct thread_data *, unsigned int);
 extern void fill_io_buffer(struct thread_data *, void *, unsigned int, unsigned int);
