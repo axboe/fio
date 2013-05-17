@@ -23,8 +23,11 @@ int flow_threshold_exceeded(struct thread_data *td)
 
 	sign = td->o.flow > 0 ? 1 : -1;
 	if (sign * flow->flow_counter > td->o.flow_watermark) {
-		if (td->o.flow_sleep)
+		if (td->o.flow_sleep) {
+			io_u_quiesce(td);
 			usleep(td->o.flow_sleep);
+		}
+
 		return 1;
 	}
 
