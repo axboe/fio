@@ -702,7 +702,12 @@ Pretend to spend CPU time for given number of microseconds, sleeping the rest
 of the time specified by \fBthinktime\fR.  Only valid if \fBthinktime\fR is set.
 .TP
 .BI thinktime_blocks \fR=\fPint
-Number of blocks to issue before waiting \fBthinktime\fR microseconds.
+Only valid if thinktime is set - control how many blocks to issue, before
+waiting \fBthinktime\fR microseconds. If not set, defaults to 1 which will
+make fio wait \fBthinktime\fR microseconds after every block. This
+effectively makes any queue depth setting redundant, since no more than 1 IO
+will be queued before we have to complete it and do our thinktime. In other
+words, this setting effectively caps the queue depth if the latter is larger.
 Default: 1.
 .TP
 .BI rate \fR=\fPint

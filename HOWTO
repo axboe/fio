@@ -830,11 +830,15 @@ thinktime_spin=int
 		to sleeping for the rest of the period specified by
 		thinktime.
 
-thinktime_blocks
+thinktime_blocks=int
 		Only valid if thinktime is set - control how many blocks
 		to issue, before waiting 'thinktime' usecs. If not set,
 		defaults to 1 which will make fio wait 'thinktime' usecs
-		after every block.
+		after every block. This effectively makes any queue depth
+		setting redundant, since no more than 1 IO will be queued
+		before we have to complete it and do our thinktime. In
+		other words, this setting effectively caps the queue depth
+		if the latter is larger.
 
 rate=int	Cap the bandwidth used by this job. The number is in bytes/sec,
 		the normal suffix rules apply. You can use rate=500k to limit
