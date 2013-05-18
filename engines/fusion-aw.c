@@ -1,8 +1,8 @@
 /*
  * Custom fio(1) engine that submits synchronous atomic writes to file.
  *
- * Copyright (C) 2012 Fusion-io, Inc.
- * Author: Santhosh Kumar Koundinya.
+ * Copyright (C) 2013 Fusion-io, Inc.
+ * Author: Santhosh Kumar Koundinya (skoundinya@fusionio.com).
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -22,77 +22,56 @@
 
 #include "../fio.h"
 
-#include <nvm/vectored_write.h>
+#include <nvm/nvm_primitives.h>
 
-/* Fix sector size to 512 bytes independent of actual sector size, just like
- * the linux kernel. */
-#define SECTOR_SHIFT    9
-#define SECTOR_SIZE    (1U<<SECTOR_SHIFT)
-
-struct acs_engine_data {
-	struct vsl_iovec iov[IO_VECTOR_LIMIT];
+struct fas_data {
+	nvm_handle_t nvm_handle;
+	size_t xfer_buf_align;
+	size_t xfer_buflen_align;
+	size_t xfer_buflen_max;
+	size_t sector_size;
 };
 
 static int queue(struct thread_data *td, struct io_u *io_u)
 {
 	int rc;
-	int iov_index;
-	off_t offset;
-	char *xfer_buf;
-	size_t xfer_buflen;
-	struct acs_engine_data *d =
-		(struct acs_engine_data *) io_u->file->engine_data;
+	struct fas_data *d = (struct fas_data *) io_u->file->engine_data;
 
 	if (io_u->ddir != DDIR_WRITE) {
-		td_vmsg(td, -EIO, "only writes supported", "io_u->ddir");
-		rc = -EIO;
-		goto out;
-	}
-	if (io_u->xfer_buflen > IO_SIZE_MAX) {
-		td_vmsg(td, -EIO, "data too big", "io_u->xfer_buflen");
-		rc = -EIO;
-		goto out;
-	}
-	if (io_u->xfer_buflen & (SECTOR_SIZE - 1)) {
-		td_vmsg(td, -EIO, "unaligned data size", "io_u->xfer_buflen");
-		rc = -EIO;
+		td_vmsg(td, EINVAL, "only writes supported", "io_u->ddir");
+		rc = -EINVAL;
 		goto out;
 	}
 
-	/* Chop up the write into minimal number of iovec's necessary */
-	iov_index = 0;
-	offset = io_u->offset;
-	xfer_buf = io_u->xfer_buf;
-	xfer_buflen = io_u->xfer_buflen;
-	while (xfer_buflen) {
-		struct vsl_iovec *iov = &d->iov[iov_index++];
-
-		iov->iov_len = xfer_buflen > IO_VECTOR_MAX_SIZE ?
-		    IO_VECTOR_MAX_SIZE : xfer_buflen;
-		iov->iov_base = (uint64_t) xfer_buf;
-		iov->sector = offset >> SECTOR_SHIFT;
-		iov->iov_flag = VSL_IOV_WRITE;
-
-		offset += iov->iov_len;
-		xfer_buf += iov->iov_len;
-		xfer_buflen -= iov->iov_len;
+	if ((size_t) io_u->xfer_buf % d->xfer_buf_align) {
+		td_vmsg(td, EINVAL, "unaligned data buffer", "io_u->xfer_buf");
+		rc = -EINVAL;
+		goto out;
 	}
-	assert(xfer_buflen == 0);
-	assert(iov_index <= IO_VECTOR_LIMIT);
 
-	rc = vsl_vectored_write(io_u->file->fd, d->iov, iov_index, O_ATOMIC);
+	if (io_u->xfer_buflen % d->xfer_buflen_align) {
+		td_vmsg(td, EINVAL, "unaligned data size", "io_u->xfer_buflen");
+		rc = -EINVAL;
+		goto out;
+	}
+
+	if (io_u->xfer_buflen > d->xfer_buflen_max) {
+		td_vmsg(td, EINVAL, "data too big", "io_u->xfer_buflen");
+		rc = -EINVAL;
+		goto out;
+	}
+
+	rc = nvm_atomic_write(d->nvm_handle, (uint64_t) io_u->xfer_buf,
+		io_u->xfer_buflen, io_u->offset / d->sector_size);
 	if (rc == -1) {
-		td_verror(td, -errno, "vsl_vectored_write");
-		rc = -EIO;
+		td_verror(td, errno, "nvm_atomic_write");
+		rc = -errno;
 		goto out;
-	} else {
-		io_u->error = 0;
-		rc = FIO_Q_COMPLETED;
 	}
-
+	rc = FIO_Q_COMPLETED;
 out:
 	if (rc < 0)
-		io_u->error = rc;
+		io_u->error = -rc;
 
 	return rc;
 }
@@ -100,34 +79,79 @@ out:
 static int open_file(struct thread_data *td, struct fio_file *f)
 {
 	int rc;
-	struct acs_engine_data *d = NULL;
+	int fio_unused close_file_rc;
+	struct fas_data *d;
+	nvm_version_t nvm_version;
+	nvm_capability_t nvm_capability[4];
+
 
 	d = malloc(sizeof(*d));
 	if (!d) {
-		td_verror(td, -ENOMEM, "malloc");
-		rc = -ENOMEM;
+		td_verror(td, ENOMEM, "malloc");
+		rc = ENOMEM;
 		goto error;
 	}
+	d->nvm_handle = -1;
 	f->engine_data = (uintptr_t) d;
 
 	rc = generic_open_file(td, f);
 
+	if (rc)
+		goto free_engine_data;
+
+	/* Set the version of the library as seen when engine is compiled */
+	nvm_version.major = NVM_PRIMITIVES_API_MAJOR;
+	nvm_version.minor = NVM_PRIMITIVES_API_MINOR;
+	nvm_version.micro = NVM_PRIMITIVES_API_MICRO;
+
+	d->nvm_handle = nvm_get_handle(f->fd, &nvm_version);
+	if (d->nvm_handle == -1) {
+		td_vmsg(td, errno, "nvm_get_handle failed", "nvm_get_handle");
+		rc = errno;
+		goto close_file;
+	}
+
+	nvm_capability[0].cap_id = NVM_CAP_ATOMIC_WRITE_START_ALIGN_ID;
+	nvm_capability[1].cap_id = NVM_CAP_ATOMIC_WRITE_MULTIPLICITY_ID;
+	nvm_capability[2].cap_id = NVM_CAP_ATOMIC_WRITE_MAX_VECTOR_SIZE_ID;
+	nvm_capability[3].cap_id = NVM_CAP_SECTOR_SIZE_ID;
+	rc = nvm_get_capabilities(d->nvm_handle, nvm_capability, 4, 0);
+	if (rc == -1) {
+		td_vmsg(td, errno, "error in getting atomic write capabilities", "nvm_get_capabilities");
+		rc = errno;
+		goto close_file;
+	} else if (rc < 4) {
+		td_vmsg(td, EINVAL, "couldn't get all the atomic write capabilities" , "nvm_get_capabilities");
+		rc = ECANCELED;
+		goto close_file;
+	}
+	/* Reset rc to 0 because we got all capabilities we needed */
+	rc = 0;
+	d->xfer_buf_align = nvm_capability[0].cap_value;
+	d->xfer_buflen_align = nvm_capability[1].cap_value;
+	d->xfer_buflen_max = d->xfer_buflen_align * nvm_capability[2].cap_value;
+	d->sector_size = nvm_capability[3].cap_value;
+
 out:
 	return rc;
-
+close_file:
+	close_file_rc = generic_close_file(td, f);
+free_engine_data:
+	free(d);
 error:
 	f->fd = -1;
 	f->engine_data = 0;
-	if (d)
-		free(d);
-
 	goto out;
 }
 
 static int close_file(struct thread_data *td, struct fio_file *f)
 {
-	if (f->engine_data) {
-		free((void *) f->engine_data);
+	struct fas_data *d = (struct fas_data *) f->engine_data;
+
+	if (d) {
+		if (d->nvm_handle != -1)
+			nvm_release_handle(d->nvm_handle);
+		free(d);
 		f->engine_data = 0;
 	}
 

@@ -809,15 +809,18 @@ echo "GUASI                         $guasi"
 # fusion-aw probe
 fusion_aw="no"
 cat > $TMPC << EOF
-#include <nvm/vectored_write.h>
+#include <nvm/nvm_primitives.h>
 int main(int argc, char **argv)
 {
-  struct vsl_iovec iov;
-  return vsl_vectored_write(0, &iov, 0, O_ATOMIC);
+  nvm_version_t ver_info;
+  nvm_handle_t handle;
+
+  handle = nvm_get_handle(0, &ver_info);
+  return nvm_atomic_write(handle, 0, 0, 0);
 }
 EOF
-if compile_prog "" "-L/usr/lib/fio -lnvm-primitives" "fusion-aw"; then
-  LIBS="-L/usr/lib/fio -lnvm-primitives $LIBS"
+if compile_prog "" "-L/usr/lib/fio -L/usr/lib/nvm -lnvm-primitives -lvsl -ldl" "fusion-aw"; then
+  LIBS="-L/usr/lib/fio -L/usr/lib/nvm -lnvm-primitives -lvsl -ldl $LIBS"
   fusion_aw="yes"
 fi
 echo "Fusion-io atomic engine       $fusion_aw"
