@@ -24,6 +24,8 @@
 
 #include <nvm/nvm_primitives.h>
 
+#define NUM_ATOMIC_CAPABILITIES (5)
+
 struct fas_data {
 	nvm_handle_t nvm_handle;
 	size_t xfer_buf_align;
@@ -82,7 +84,7 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 	int fio_unused close_file_rc;
 	struct fas_data *d;
 	nvm_version_t nvm_version;
-	nvm_capability_t nvm_capability[4];
+	nvm_capability_t nvm_capability[NUM_ATOMIC_CAPABILITIES];
 
 
 	d = malloc(sizeof(*d));
@@ -115,12 +117,14 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 	nvm_capability[1].cap_id = NVM_CAP_ATOMIC_WRITE_MULTIPLICITY_ID;
 	nvm_capability[2].cap_id = NVM_CAP_ATOMIC_WRITE_MAX_VECTOR_SIZE_ID;
 	nvm_capability[3].cap_id = NVM_CAP_SECTOR_SIZE_ID;
-	rc = nvm_get_capabilities(d->nvm_handle, nvm_capability, 4, 0);
+	nvm_capability[4].cap_id = NVM_CAP_ATOMIC_MAX_IOV_ID;
+	rc = nvm_get_capabilities(d->nvm_handle, nvm_capability,
+                                  NUM_ATOMIC_CAPABILITIES, false);
 	if (rc == -1) {
 		td_vmsg(td, errno, "error in getting atomic write capabilities", "nvm_get_capabilities");
 		rc = errno;
 		goto close_file;
-	} else if (rc < 4) {
+	} else if (rc < NUM_ATOMIC_CAPABILITIES) {
 		td_vmsg(td, EINVAL, "couldn't get all the atomic write capabilities" , "nvm_get_capabilities");
 		rc = ECANCELED;
 		goto close_file;
@@ -129,7 +133,7 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 	rc = 0;
 	d->xfer_buf_align = nvm_capability[0].cap_value;
 	d->xfer_buflen_align = nvm_capability[1].cap_value;
-	d->xfer_buflen_max = d->xfer_buflen_align * nvm_capability[2].cap_value;
+	d->xfer_buflen_max = d->xfer_buflen_align * nvm_capability[2].cap_value * nvm_capability[4].cap_value;
 	d->sector_size = nvm_capability[3].cap_value;
 
 out:
