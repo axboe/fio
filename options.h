@@ -93,6 +93,7 @@ enum opt_category_group {
 	__FIO_OPT_G_E4DEFRAG,
 	__FIO_OPT_G_NETIO,
 	__FIO_OPT_G_LIBAIO,
+	__FIO_OPT_G_ACT,
 	__FIO_OPT_G_NR,
 
 	FIO_OPT_G_RATE		= (1U << __FIO_OPT_G_RATE),
@@ -120,6 +121,7 @@ enum opt_category_group {
 	FIO_OPT_G_E4DEFRAG	= (1U << __FIO_OPT_G_E4DEFRAG),
 	FIO_OPT_G_NETIO		= (1U << __FIO_OPT_G_NETIO),
 	FIO_OPT_G_LIBAIO	= (1U << __FIO_OPT_G_LIBAIO),
+	FIO_OPT_G_ACT		= (1U << __FIO_OPT_G_ACT),
 	FIO_OPT_G_INVALID	= (1U << __FIO_OPT_G_NR),
 };
 

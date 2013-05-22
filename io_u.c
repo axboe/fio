@@ -1368,6 +1368,13 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 		tusec = utime_since(&io_u->start_time, &icd->time);
 		add_lat_sample(td, idx, tusec, bytes);
 
+		if (td->flags & TD_F_PROFILE_OPS) {
+			struct prof_io_ops *ops = &td->prof_io_ops;
+
+			if (ops->io_u_lat)
+				icd->error = ops->io_u_lat(td, tusec);
+		}
+
 		if (td->o.max_latency && tusec > td->o.max_latency) {
 			if (!td->error)
 				log_err("fio: latency of %lu usec exceeds specified max (%u usec)\n", tusec, td->o.max_latency);

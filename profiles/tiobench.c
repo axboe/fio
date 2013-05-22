@@ -75,9 +75,8 @@ static struct fio_option options[] = {
 /*
  * Fill our private options into the command line
  */
-static void tb_prep_cmdline(void)
+static int tb_prep_cmdline(void)
 {
-
 	/*
 	 * tiobench uses size as MB, so multiply up
 	 */
@@ -96,6 +95,7 @@ static void tb_prep_cmdline(void)
 		sprintf(dir_idx, "directory=./");
 
 	sprintf(t_idx, "numjobs=%u", nthreads);
+	return 0;
 }
 
 static struct profile_ops tiobench_profile = {
