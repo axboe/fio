@@ -22,7 +22,7 @@ static struct act_pass_criteria act_pass[ACT_MAX_CRIT] = {
 		.max_perm =	50,
 	},
 	{
-		.max_usec =	5000,
+		.max_usec =	8000,
 		.max_perm =	10,
 	},
 	{
@@ -42,13 +42,14 @@ static unsigned int load = 1;
 
 static const char *act_opts[128] = {
 	"direct=1",
-	"ioengine=sync",
+	"ioengine=libaio",
+	"iodepth=32",
 	"random_generator=lfsr",
 	"runtime=24h",
 	"time_based=1",
 	NULL,
 };
-static unsigned int opt_idx = 5;
+static unsigned int opt_idx = 6;
 static unsigned int org_idx;
 
 static void act_add_opt(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
@@ -138,16 +139,11 @@ static int act_io_u_lat(struct thread_data *td, uint64_t usec)
 
 	apd->total_ios++;
 
-	for (i = 0; i < ACT_MAX_CRIT; i++) {
-		if (usec <= act_pass[i].max_usec) {
+	for (i = ACT_MAX_CRIT - 1; i >= 0; i--) {
+		if (usec > act_pass[i].max_usec) {
 			apd->lat_buckets[i]++;
 			break;
 		}
-	}
-
-	if (i == ACT_MAX_CRIT) {
-		log_err("act: max latency exceeded!\n");
-		return 1;
 	}
 
 	if (time_since_now(&apd->sample_tv) < SAMPLE_SEC)
@@ -156,13 +152,16 @@ static int act_io_u_lat(struct thread_data *td, uint64_t usec)
 	/* SAMPLE_SEC has passed, check criteria for pass */
 	for (i = 0; i < ACT_MAX_CRIT; i++) {
 		perm = (1000.0 * apd->lat_buckets[i]) / apd->total_ios;
-		if (perm <= act_pass[i].max_perm)
+		if (perm < act_pass[i].max_perm)
 			continue;
 
 		log_err("act: %f%% exceeds pass criteria of %f%%\n", perm / 10.0, (double) act_pass[i].max_perm / 10.0);
 		ret = 1;
 		break;
 	}
+
+	memset(apd->lat_buckets, 0, sizeof(apd->lat_buckets));
+	apd->total_ios = 0;
 
 	fio_gettime(&apd->sample_tv, NULL);
 	return ret;
