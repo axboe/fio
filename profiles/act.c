@@ -31,10 +31,21 @@ static struct act_pass_criteria act_pass[ACT_MAX_CRIT] = {
 	},
 };
 
+struct act_run_data {
+	struct fio_mutex *mutex;
+	unsigned int pending;
+
+	uint64_t lat_buckets[ACT_MAX_CRIT];
+	uint64_t total_ios;
+};
+static struct act_run_data *act_run_data;
+
 struct act_prof_data {
 	struct timeval sample_tv;
 	uint64_t lat_buckets[ACT_MAX_CRIT];
 	uint64_t total_ios;
+	uint64_t cum_lat_buckets[ACT_MAX_CRIT];
+	uint64_t cum_total_ios;
 };
 
 static char *device_names;
@@ -50,9 +61,10 @@ static const char *act_opts[ACT_MAX_OPTS] = {
 	"ioengine=sync",
 	"random_generator=lfsr",
 	"group_reporting=1",
+	"thread",
 	NULL,
 };
-static unsigned int opt_idx = 4;
+static unsigned int opt_idx = 5;
 static unsigned int org_idx;
 
 static int act_add_opt(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
@@ -283,16 +295,82 @@ static int act_io_u_lat(struct thread_data *td, uint64_t usec)
 		break;
 	}
 
-	memset(apd->lat_buckets, 0, sizeof(apd->lat_buckets));
+	for (i = 0; i < ACT_MAX_CRIT; i++) {
+		apd->cum_lat_buckets[i] += apd->lat_buckets[i];
+		apd->lat_buckets[i] = 0;
+	}
+
+	apd->cum_total_ios += apd->total_ios;
 	apd->total_ios = 0;
 
 	fio_gettime(&apd->sample_tv, NULL);
 	return ret;
 }
 
+static void get_act_ref(void)
+{
+	fio_mutex_down(act_run_data->mutex);
+	act_run_data->pending++;
+	fio_mutex_up(act_run_data->mutex);
+}
+
+static void act_show_all_stats(void)
+{
+	unsigned int i;
+
+	log_info("         trans                  device\n");
+	log_info("         %%>(ms)                 %%>(ms)\n");
+	log_info(" slice");
+
+	for (i = 0; i < ACT_MAX_CRIT; i++)
+		log_info("\t%2u", act_pass[i].max_usec / 1000);
+	for (i = 0; i < ACT_MAX_CRIT; i++)
+		log_info("\t%2u", act_pass[i].max_usec / 1000);
+
+	log_info("\n");
+	log_info(" -----   ------ ------ ------   ------ ------ ------\n");
+	log_info("     1");
+
+	for (i = 0; i < ACT_MAX_CRIT; i++) {
+		double perc;
+
+		perc = 100.0 * (double) act_run_data->lat_buckets[i] / (double) act_run_data->total_ios;
+		log_info("\t%2.2f", perc);
+	}
+	for (i = 0; i < ACT_MAX_CRIT; i++) {
+		double perc;
+
+		perc = 100.0 * (double) act_run_data->lat_buckets[i] / (double) act_run_data->total_ios;
+		log_info("\t%2.2f", perc);
+	}
+
+}
+
+static void put_act_ref(struct thread_data *td)
+{
+	struct act_prof_data *apd = td->prof_data;
+	unsigned int i;
+
+	fio_mutex_down(act_run_data->mutex);
+
+	for (i = 0; i < ACT_MAX_CRIT; i++) {
+		act_run_data->lat_buckets[i] += apd->cum_lat_buckets[i];
+		act_run_data->lat_buckets[i] += apd->lat_buckets[i];
+	}
+
+	act_run_data->total_ios += apd->cum_total_ios + apd->total_ios;
+
+	if (!--act_run_data->pending)
+		act_show_all_stats();
+
+	fio_mutex_up(act_run_data->mutex);
+}
+
 static int act_td_init(struct thread_data *td)
 {
 	struct act_prof_data *apd;
+
+	get_act_ref();
 
 	apd = calloc(sizeof(*apd), 1);
 	fio_gettime(&apd->sample_tv, NULL);
@@ -302,6 +380,7 @@ static int act_td_init(struct thread_data *td)
 
 static void act_td_exit(struct thread_data *td)
 {
+	put_act_ref(td);
 	free(td->prof_data);
 	td->prof_data = NULL;
 }
@@ -323,6 +402,9 @@ static struct profile_ops act_profile = {
 
 static void fio_init act_register(void)
 {
+	act_run_data = calloc(sizeof(*act_run_data), 1);
+	act_run_data->mutex = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+
 	if (register_profile(&act_profile))
 		log_err("fio: failed to register profile 'act'\n");
 }
@@ -333,4 +415,7 @@ static void fio_exit act_unregister(void)
 		free((void *) act_opts[++org_idx]);
 
 	unregister_profile(&act_profile);
+	fio_mutex_remove(act_run_data->mutex);
+	free(act_run_data);
+	act_run_data = NULL;
 }

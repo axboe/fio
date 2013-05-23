@@ -1554,6 +1554,7 @@ reaped:
 			exit_value++;
 
 		done_secs += mtime_since_now(&td->epoch) / 1000;
+		profile_td_exit(td);
 	}
 
 	if (*nr_running == cputhreads && !pending && realthreads)
