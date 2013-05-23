@@ -1844,10 +1844,8 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			break;
 	}
 
-	if (do_exit) {
-		if (exit_val && !(is_backend || nr_clients))
-			exit(exit_val);
-	}
+	if (do_exit && !(is_backend || nr_clients))
+		exit(exit_val);
 
 	if (nr_clients && fio_clients_connect()) {
 		do_exit++;
