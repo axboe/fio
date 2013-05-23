@@ -1725,7 +1725,13 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				fio_options_set_ioengine_opts(l_opts, td);
 			}
 
-			ret = fio_cmd_option_parse(td, opt, val);
+			if ((!val || !strlen(val)) &&
+			    l_opts[lidx].has_arg == required_argument) {
+				log_err("fio: option %s requires an argument\n", opt);
+				ret = 1;
+			} else
+				ret = fio_cmd_option_parse(td, opt, val);
+
 			if (ret) {
 				if (td) {
 					put_job(td);
