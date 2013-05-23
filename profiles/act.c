@@ -2,9 +2,9 @@
 #include "../profile.h"
 #include "../parse.h"
 
-#define OBJ_SIZE	1536		/* each object */
-#define W_BUF_SIZE	128 * 1024	/* write coalescing */
-
+/*
+ * 1x loads
+ */
 #define R_LOAD		2000
 #define W_LOAD		1000
 
@@ -39,20 +39,23 @@ struct act_prof_data {
 
 static char *device_names;
 static unsigned int load = 1;
+static unsigned int prep;
+static unsigned int threads_per_queue;
+static unsigned int num_read_blocks;
+static unsigned int write_size;
 
-static const char *act_opts[128] = {
+#define ACT_MAX_OPTS	128
+static const char *act_opts[ACT_MAX_OPTS] = {
 	"direct=1",
-	"ioengine=libaio",
-	"iodepth=32",
+	"ioengine=sync",
 	"random_generator=lfsr",
-	"runtime=24h",
-	"time_based=1",
+	"group_reporting=1",
 	NULL,
 };
-static unsigned int opt_idx = 6;
+static unsigned int opt_idx = 4;
 static unsigned int org_idx;
 
-static void act_add_opt(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
+static int act_add_opt(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
 
 static struct fio_option options[] = {
 	{
@@ -70,6 +73,46 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.roff1	= &load,
 		.help	= "ACT load multipler (default 1x)",
+		.def	= "1",
+		.category = FIO_OPT_C_PROFILE,
+		.group	= FIO_OPT_G_ACT,
+	},
+	{
+		.name	= "threads-per-queue",
+		.lname	= "Number of read IO threads per device",
+		.type	= FIO_OPT_INT,
+		.roff1	= &threads_per_queue,
+		.help	= "Number of read IO threads per device",
+		.def	= "8",
+		.category = FIO_OPT_C_PROFILE,
+		.group	= FIO_OPT_G_ACT,
+	},
+	{
+		.name	= "read-req-num-512-blocks",
+		.lname	= "Number of 512b blocks to read",
+		.type	= FIO_OPT_INT,
+		.roff1	= &num_read_blocks,
+		.help	= "Number of 512b blocks to read at the time",
+		.def	= "3",
+		.category = FIO_OPT_C_PROFILE,
+		.group	= FIO_OPT_G_ACT,
+	},
+	{
+		.name	= "large-block-op-kbytes",
+		.lname	= "Size of large block ops (writes)",
+		.type	= FIO_OPT_INT,
+		.roff1	= &write_size,
+		.help	= "Size of large block ops (writes)",
+		.def	= "128k",
+		.category = FIO_OPT_C_PROFILE,
+		.group	= FIO_OPT_G_ACT,
+	},
+	{
+		.name	= "prep",
+		.lname	= "Run ACT prep phase",
+		.type	= FIO_OPT_STR_SET,
+		.roff1	= &prep,
+		.help	= "Set to run ACT prep phase",
 		.category = FIO_OPT_C_PROFILE,
 		.group	= FIO_OPT_G_ACT,
 	},
@@ -78,11 +121,16 @@ static struct fio_option options[] = {
 	},
 };
 
-static void act_add_opt(const char *str, ...)
+static int act_add_opt(const char *str, ...)
 {
 	char buffer[512];
 	va_list args;
 	size_t len;
+
+	if (opt_idx == ACT_MAX_OPTS) {
+		log_err("act: ACT_MAX_OPTS is too small\n");
+		return 1;
+	}
 
 	va_start(args, str);
 	len = vsnprintf(buffer, sizeof(buffer), str, args);
@@ -90,19 +138,89 @@ static void act_add_opt(const char *str, ...)
 
 	if (len)
 		act_opts[opt_idx++] = strdup(buffer);
+
+	return 0;
 }
 
-static void act_add_dev(const char *dev)
+static int act_add_rw(const char *dev, int reads)
 {
-	act_add_opt("name=act-read-%s", dev);
-	act_add_opt("filename=%s", dev);
-	act_add_opt("rw=randread");
-	act_add_opt("rate_iops=%u", load * R_LOAD);
+	if (act_add_opt("name=act-%s-%s", reads ? "read" : "write", dev))
+		return 1;
+	if (act_add_opt("filename=%s", dev))
+		return 1;
+	if (act_add_opt("rw=%s", reads ? "randread" : "randwrite"))
+		return 1;
+	if (reads) {
+		int rload = load * R_LOAD / threads_per_queue;
 
-	act_add_opt("name=act-write-%s", dev);
-	act_add_opt("filename=%s", dev);
-	act_add_opt("rw=randwrite");
-	act_add_opt("rate_iops=%u", load * W_LOAD);
+		if (act_add_opt("numjobs=%u", threads_per_queue))
+			return 1;
+		if (act_add_opt("rate_iops=%u", rload))
+			return 1;
+		if (act_add_opt("bs=%u", num_read_blocks * 512))
+			return 1;
+	} else {
+		const int rsize = write_size / (num_read_blocks * 512);
+		int wload = (load * W_LOAD + rsize - 1) / rsize;
+
+		if (act_add_opt("rate_iops=%u", wload))
+			return 1;
+		if (act_add_opt("bs=%u", write_size))
+			return 1;
+	}
+
+	return 0;
+}
+
+static int act_add_dev_prep(const char *dev)
+{
+	/* Add sequential zero phase */
+	if (act_add_opt("name=act-prep-zeroes-%s", dev))
+		return 1;
+	if (act_add_opt("filename=%s", dev))
+		return 1;
+	if (act_add_opt("bs=1M"))
+		return 1;
+	if (act_add_opt("zero_buffers"))
+		return 1;
+	if (act_add_opt("rw=write"))
+		return 1;
+
+	/* Randomly overwrite device */
+	if (act_add_opt("name=act-prep-salt-%s", dev))
+		return 1;
+	if (act_add_opt("stonewall"))
+		return 1;
+	if (act_add_opt("filename=%s", dev))
+		return 1;
+	if (act_add_opt("bs=4k"))
+		return 1;
+	if (act_add_opt("ioengine=libaio"))
+		return 1;
+	if (act_add_opt("iodepth=64"))
+		return 1;
+	if (act_add_opt("rw=randwrite"))
+		return 1;
+
+	return 0;
+}
+
+static int act_add_dev(const char *dev)
+{
+	if (prep)
+		return act_add_dev_prep(dev);
+
+	if (act_add_opt("runtime=24h"))
+		return 1;
+	if (act_add_opt("time_based=1"))
+		return 1;
+
+	if (act_add_rw(dev, 1))
+		return 1;
+	if (act_add_rw(dev, 0))
+		return 1;
+
+	return 0;
 }
 
 /*
@@ -116,7 +234,6 @@ static int act_prep_cmdline(void)
 	}
 
 	org_idx = opt_idx;
-	act_add_opt("bs=%u", OBJ_SIZE);
 
 	do {
 		char *dev;
@@ -125,7 +242,10 @@ static int act_prep_cmdline(void)
 		if (!dev)
 			break;
 
-		act_add_dev(dev);
+		if (act_add_dev(dev)) {
+			log_err("act: failed adding device to the mix\n");
+			break;
+		}
 	} while (1);
 
 	return 0;
@@ -136,6 +256,9 @@ static int act_io_u_lat(struct thread_data *td, uint64_t usec)
 	struct act_prof_data *apd = td->prof_data;
 	int i, ret = 0;
 	double perm;
+
+	if (prep)
+		return 0;
 
 	apd->total_ios++;
 
