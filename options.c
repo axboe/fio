@@ -2824,7 +2824,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "group_reporting",
 		.lname	= "Group reporting",
-		.type	= FIO_OPT_BOOL,
+		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(group_reporting),
 		.help	= "Do reporting on a per-group basis",
 		.category = FIO_OPT_C_STAT,
