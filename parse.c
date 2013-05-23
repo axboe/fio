@@ -1086,6 +1086,8 @@ int show_cmd_help(struct fio_option *options, const char *name)
 			continue;
 		if (!exec_profile && o->prof_name)
 			continue;
+		if (exec_profile && !(o->prof_name && !strcmp(exec_profile, o->prof_name)))
+			continue;
 
 		if (name) {
 			if (!strcmp(name, o->name) ||
