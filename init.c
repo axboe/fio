@@ -1726,8 +1726,13 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			}
 
 			ret = fio_cmd_option_parse(td, opt, val);
-			if (ret)
+			if (ret) {
+				if (td) {
+					put_job(td);
+					td = NULL;
+				}
 				do_exit++;
+			}
 
 			if (!ret && !strcmp(opt, "ioengine")) {
 				free_ioengine(td);
