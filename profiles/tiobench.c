@@ -14,6 +14,7 @@ static const char *tb_opts[] = {
 	"buffered=0", sz_idx, bs_idx, loop_idx, dir_idx, t_idx,
 	"timeout=600", "group_reporting", "thread", "overwrite=1",
 	"filename=.fio.tio.1:.fio.tio.2:.fio.tio.3:.fio.tio.4",
+	"ioengine=sync",
 	"name=seqwrite", "rw=write", "end_fsync=1",
 	"name=randwrite", "stonewall", "rw=randwrite", "end_fsync=1",
 	"name=seqread", "stonewall", "rw=read",
