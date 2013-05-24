@@ -31,7 +31,7 @@ int load_profile(const char *profile)
 	ops = find_profile(profile);
 	if (ops) {
 		if (ops->prep_cmd()) {
-			log_err("fio: profile prep failed\n");
+			log_err("fio: profile %s prep failed\n", profile);
 			return 1;
 		}
 		add_job_opts(ops->cmdline, FIO_CLIENT_TYPE_CLI);

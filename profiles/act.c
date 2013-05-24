@@ -31,29 +31,34 @@ static struct act_pass_criteria act_pass[ACT_MAX_CRIT] = {
 	},
 };
 
+struct act_slice {
+	uint64_t lat_buckets[ACT_MAX_CRIT];
+	uint64_t total_ios;
+};
+
 struct act_run_data {
 	struct fio_mutex *mutex;
 	unsigned int pending;
 
-	uint64_t lat_buckets[ACT_MAX_CRIT];
-	uint64_t total_ios;
+	struct act_slice *slices;
+	unsigned int nr_slices;
 };
 static struct act_run_data *act_run_data;
 
 struct act_prof_data {
 	struct timeval sample_tv;
-	uint64_t lat_buckets[ACT_MAX_CRIT];
-	uint64_t total_ios;
-	uint64_t cum_lat_buckets[ACT_MAX_CRIT];
-	uint64_t cum_total_ios;
+	struct act_slice *slices;
+	unsigned int cur_slice;
+	unsigned int nr_slices;
 };
 
 static char *device_names;
-static unsigned int load = 1;
+static unsigned int load;
 static unsigned int prep;
 static unsigned int threads_per_queue;
 static unsigned int num_read_blocks;
 static unsigned int write_size;
+static unsigned long long test_duration;
 
 #define ACT_MAX_OPTS	128
 static const char *act_opts[ACT_MAX_OPTS] = {
@@ -86,6 +91,16 @@ static struct fio_option options[] = {
 		.roff1	= &load,
 		.help	= "ACT load multipler (default 1x)",
 		.def	= "1",
+		.category = FIO_OPT_C_PROFILE,
+		.group	= FIO_OPT_G_ACT,
+	},
+	{
+		.name	= "test-duration",
+		.lname	= "Test duration",
+		.type	= FIO_OPT_STR_VAL_TIME,
+		.roff1	= &test_duration,
+		.help	= "How long the entire test takes to run",
+		.def	= "24h",
 		.category = FIO_OPT_C_PROFILE,
 		.group	= FIO_OPT_G_ACT,
 	},
@@ -222,7 +237,7 @@ static int act_add_dev(const char *dev)
 	if (prep)
 		return act_add_dev_prep(dev);
 
-	if (act_add_opt("runtime=24h"))
+	if (act_add_opt("runtime=%llus", test_duration))
 		return 1;
 	if (act_add_opt("time_based=1"))
 		return 1;
@@ -241,7 +256,8 @@ static int act_add_dev(const char *dev)
 static int act_prep_cmdline(void)
 {
 	if (!device_names) {
-		log_err("act: need device-names\n");
+		log_err("act: you need to set IO target(s) with the "
+			"device-names option.\n");
 		return 1;
 	}
 
@@ -266,17 +282,26 @@ static int act_prep_cmdline(void)
 static int act_io_u_lat(struct thread_data *td, uint64_t usec)
 {
 	struct act_prof_data *apd = td->prof_data;
+	struct act_slice *slice;
 	int i, ret = 0;
 	double perm;
 
 	if (prep)
 		return 0;
 
-	apd->total_ios++;
+	/*
+	 * Really should not happen, but lets not let jitter at the end
+	 * ruin our day.
+	 */
+	if (apd->cur_slice >= apd->nr_slices)
+		return 0;
+
+	slice = &apd->slices[apd->cur_slice];
+	slice->total_ios++;
 
 	for (i = ACT_MAX_CRIT - 1; i >= 0; i--) {
 		if (usec > act_pass[i].max_usec) {
-			apd->lat_buckets[i]++;
+			slice->lat_buckets[i]++;
 			break;
 		}
 	}
@@ -286,7 +311,7 @@ static int act_io_u_lat(struct thread_data *td, uint64_t usec)
 
 	/* SAMPLE_SEC has passed, check criteria for pass */
 	for (i = 0; i < ACT_MAX_CRIT; i++) {
-		perm = (1000.0 * apd->lat_buckets[i]) / apd->total_ios;
+		perm = (1000.0 * slice->lat_buckets[i]) / slice->total_ios;
 		if (perm < act_pass[i].max_perm)
 			continue;
 
@@ -295,15 +320,8 @@ static int act_io_u_lat(struct thread_data *td, uint64_t usec)
 		break;
 	}
 
-	for (i = 0; i < ACT_MAX_CRIT; i++) {
-		apd->cum_lat_buckets[i] += apd->lat_buckets[i];
-		apd->lat_buckets[i] = 0;
-	}
-
-	apd->cum_total_ios += apd->total_ios;
-	apd->total_ios = 0;
-
 	fio_gettime(&apd->sample_tv, NULL);
+	apd->cur_slice++;
 	return ret;
 }
 
@@ -314,51 +332,76 @@ static void get_act_ref(void)
 	fio_mutex_up(act_run_data->mutex);
 }
 
+static int show_slice(struct act_slice *slice, unsigned int slice_num)
+{
+	unsigned int i, failed = 0;
+
+	log_info("   %2u", slice_num);
+
+	for (i = 0; i < ACT_MAX_CRIT; i++) {
+		double perc = 0.0;
+
+		if (slice->total_ios)
+			perc = 100.0 * (double) slice->lat_buckets[i] / (double) slice->total_ios;
+		if ((perc * 10.0) >= act_pass[i].max_perm)
+			failed++;
+		log_info("\t%2.2f", perc);
+	}
+	for (i = 0; i < ACT_MAX_CRIT; i++) {
+		double perc = 0.0;
+
+		if (slice->total_ios)
+			perc = 100.0 * (double) slice->lat_buckets[i] / (double) slice->total_ios;
+		log_info("\t%2.2f", perc);
+	}
+	log_info("\n");
+
+	return failed;
+}
+
 static void act_show_all_stats(void)
 {
-	unsigned int i;
+	unsigned int i, fails = 0;
 
-	log_info("         trans                  device\n");
-	log_info("         %%>(ms)                 %%>(ms)\n");
+	log_info("        trans                   device\n");
+	log_info("        %%>(ms)                  %%>(ms)\n");
 	log_info(" slice");
 
 	for (i = 0; i < ACT_MAX_CRIT; i++)
-		log_info("\t%2u", act_pass[i].max_usec / 1000);
+		log_info("\t %2u", act_pass[i].max_usec / 1000);
 	for (i = 0; i < ACT_MAX_CRIT; i++)
-		log_info("\t%2u", act_pass[i].max_usec / 1000);
+		log_info("\t %2u", act_pass[i].max_usec / 1000);
 
 	log_info("\n");
-	log_info(" -----   ------ ------ ------   ------ ------ ------\n");
-	log_info("     1");
+	log_info(" -----  -----   -----  ------   -----   -----  ------\n");
 
-	for (i = 0; i < ACT_MAX_CRIT; i++) {
-		double perc;
+	for (i = 0; i < act_run_data->nr_slices; i++)
+		fails += show_slice(&act_run_data->slices[i], i + 1);
 
-		perc = 100.0 * (double) act_run_data->lat_buckets[i] / (double) act_run_data->total_ios;
-		log_info("\t%2.2f", perc);
-	}
-	for (i = 0; i < ACT_MAX_CRIT; i++) {
-		double perc;
-
-		perc = 100.0 * (double) act_run_data->lat_buckets[i] / (double) act_run_data->total_ios;
-		log_info("\t%2.2f", perc);
-	}
-
+	log_info("\nact: test complete, device(s): %s\n", fails ? "FAILED" : "PASSED");
 }
 
 static void put_act_ref(struct thread_data *td)
 {
 	struct act_prof_data *apd = td->prof_data;
-	unsigned int i;
+	unsigned int i, slice;
 
 	fio_mutex_down(act_run_data->mutex);
 
-	for (i = 0; i < ACT_MAX_CRIT; i++) {
-		act_run_data->lat_buckets[i] += apd->cum_lat_buckets[i];
-		act_run_data->lat_buckets[i] += apd->lat_buckets[i];
+	if (!act_run_data->slices) {
+		act_run_data->slices = calloc(sizeof(struct act_slice), apd->nr_slices);
+		act_run_data->nr_slices = apd->nr_slices;
 	}
 
-	act_run_data->total_ios += apd->cum_total_ios + apd->total_ios;
+	for (slice = 0; slice < apd->nr_slices; slice++) {
+		struct act_slice *dst = &act_run_data->slices[slice];
+		struct act_slice *src = &apd->slices[slice];
+
+		dst->total_ios += src->total_ios;
+
+		for (i = 0; i < ACT_MAX_CRIT; i++)
+			dst->lat_buckets[i] += src->lat_buckets[i];
+	}
 
 	if (!--act_run_data->pending)
 		act_show_all_stats();
@@ -369,10 +412,14 @@ static void put_act_ref(struct thread_data *td)
 static int act_td_init(struct thread_data *td)
 {
 	struct act_prof_data *apd;
+	unsigned int nr_slices;
 
 	get_act_ref();
 
 	apd = calloc(sizeof(*apd), 1);
+	nr_slices = (test_duration + SAMPLE_SEC - 1) / SAMPLE_SEC;
+	apd->slices = calloc(sizeof(struct act_slice), nr_slices);
+	apd->nr_slices = nr_slices;
 	fio_gettime(&apd->sample_tv, NULL);
 	td->prof_data = apd;
 	return 0;
@@ -380,8 +427,11 @@ static int act_td_init(struct thread_data *td)
 
 static void act_td_exit(struct thread_data *td)
 {
+	struct act_prof_data *apd = td->prof_data;
+
 	put_act_ref(td);
-	free(td->prof_data);
+	free(apd->slices);
+	free(apd);
 	td->prof_data = NULL;
 }
 
@@ -416,6 +466,7 @@ static void fio_exit act_unregister(void)
 
 	unregister_profile(&act_profile);
 	fio_mutex_remove(act_run_data->mutex);
+	free(act_run_data->slices);
 	free(act_run_data);
 	act_run_data = NULL;
 }
