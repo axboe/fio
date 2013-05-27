@@ -749,6 +749,10 @@ int ioengine_load(struct thread_data *td)
 	 */
 	if (td->io_ops)
 		return 0;
+	if (!td->o.ioengine) {
+		log_err("fio: internal fault, no IO engine specified\n");
+		return 1;
+	}
 
 	engine = get_engine_name(td->o.ioengine);
 	td->io_ops = load_ioengine(td, engine);
