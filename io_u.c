@@ -676,8 +676,7 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 
 	if (io_u->flags & IO_U_F_IN_CUR_DEPTH)
 		td->cur_depth--;
-	flist_del_init(&io_u->list);
-	flist_add(&io_u->list, &td->io_u_freelist);
+	io_u_qpush(&td->io_u_freelist, io_u);
 	td_io_u_unlock(td);
 	td_io_u_free_notify(td);
 }
@@ -704,8 +703,8 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 	__io_u->flags &= ~IO_U_F_FLIGHT;
 	if (__io_u->flags & IO_U_F_IN_CUR_DEPTH)
 		td->cur_depth--;
-	flist_del(&__io_u->list);
-	flist_add_tail(&__io_u->list, &td->io_u_requeues);
+
+	io_u_rpush(&td->io_u_requeues, __io_u);
 	td_io_u_unlock(td);
 	*io_u = NULL;
 }
@@ -1107,16 +1106,17 @@ static int set_io_u_file(struct thread_data *td, struct io_u *io_u)
 
 struct io_u *__get_io_u(struct thread_data *td)
 {
-	struct io_u *io_u = NULL;
+	struct io_u *io_u;
 
 	td_io_u_lock(td);
 
 again:
-	if (!flist_empty(&td->io_u_requeues))
-		io_u = flist_entry(td->io_u_requeues.next, struct io_u, list);
-	else if (!queue_full(td)) {
-		io_u = flist_entry(td->io_u_freelist.next, struct io_u, list);
+	if (!io_u_rempty(&td->io_u_requeues))
+		io_u = io_u_rpop(&td->io_u_requeues);
+	else if (!io_u_qempty(&td->io_u_freelist))
+		io_u = io_u_qpop(&td->io_u_freelist);
 
+	if (io_u) {
 		io_u->buflen = 0;
 		io_u->resid = 0;
 		io_u->file = NULL;
@@ -1131,8 +1131,6 @@ again:
 
 		io_u->error = 0;
 		io_u->acct_ddir = -1;
-		flist_del(&io_u->list);
-		flist_add_tail(&io_u->list, &td->io_u_busylist);
 		td->cur_depth++;
 		io_u->flags |= IO_U_F_IN_CUR_DEPTH;
 	} else if (td->o.verify_async) {

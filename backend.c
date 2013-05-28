@@ -238,8 +238,6 @@ static int check_min_rate(struct thread_data *td, struct timeval *now,
  */
 static void cleanup_pending_aio(struct thread_data *td)
 {
-	struct flist_head *entry, *n;
-	struct io_u *io_u;
 	int r;
 
 	/*
@@ -253,18 +251,11 @@ static void cleanup_pending_aio(struct thread_data *td)
 	 * now cancel remaining active events
 	 */
 	if (td->io_ops->cancel) {
-		flist_for_each_safe(entry, n, &td->io_u_busylist) {
-			io_u = flist_entry(entry, struct io_u, list);
+		struct io_u *io_u;
+		int i;
 
-			/*
-			 * if the io_u isn't in flight, then that generally
-			 * means someone leaked an io_u. complain but fix
-			 * it up, so we don't stall here.
-			 */
-			if ((io_u->flags & IO_U_F_FLIGHT) == 0) {
-				log_err("fio: non-busy IO on busy list\n");
-				put_io_u(td, io_u);
-			} else {
+		io_u_qiter(&td->io_u_all, io_u, i) {
+			if (io_u->flags & IO_U_F_FLIGHT) {
 				r = td->io_ops->cancel(td, io_u);
 				if (!r)
 					put_io_u(td, io_u);
@@ -878,13 +869,9 @@ sync_done:
 
 static void cleanup_io_u(struct thread_data *td)
 {
-	struct flist_head *entry, *n;
 	struct io_u *io_u;
 
-	flist_for_each_safe(entry, n, &td->io_u_freelist) {
-		io_u = flist_entry(entry, struct io_u, list);
-
-		flist_del(&io_u->list);
+	while ((io_u = io_u_qpop(&td->io_u_freelist)) != NULL) {
 
 		if (td->io_ops->io_u_free)
 			td->io_ops->io_u_free(td, io_u);
@@ -893,6 +880,10 @@ static void cleanup_io_u(struct thread_data *td)
 	}
 
 	free_io_mem(td);
+
+	io_u_rexit(&td->io_u_requeues);
+	io_u_qexit(&td->io_u_freelist);
+	io_u_qexit(&td->io_u_all);
 }
 
 static int init_io_u(struct thread_data *td)
@@ -900,7 +891,7 @@ static int init_io_u(struct thread_data *td)
 	struct io_u *io_u;
 	unsigned int max_bs, min_write;
 	int cl_align, i, max_units;
-	int data_xfer = 1;
+	int data_xfer = 1, err;
 	char *p;
 
 	max_units = td->o.iodepth;
@@ -911,6 +902,16 @@ static int init_io_u(struct thread_data *td)
 
 	if ((td->io_ops->flags & FIO_NOIO) || !(td_read(td) || td_write(td)))
 		data_xfer = 0;
+
+	err = 0;
+	err += io_u_rinit(&td->io_u_requeues, td->o.iodepth);
+	err += io_u_qinit(&td->io_u_freelist, td->o.iodepth);
+	err += io_u_qinit(&td->io_u_all, td->o.iodepth);
+
+	if (err) {
+		log_err("fio: failed setting up IO queues\n");
+		return 1;
+	}
 
 	/*
 	 * if we may later need to do address alignment, then add any
@@ -958,7 +959,7 @@ static int init_io_u(struct thread_data *td)
 
 		io_u = ptr;
 		memset(io_u, 0, sizeof(*io_u));
-		INIT_FLIST_HEAD(&io_u->list);
+		INIT_FLIST_HEAD(&io_u->verify_list);
 		dprint(FD_MEM, "io_u alloc %p, index %u\n", io_u, i);
 
 		if (data_xfer) {
@@ -978,7 +979,13 @@ static int init_io_u(struct thread_data *td)
 
 		io_u->index = i;
 		io_u->flags = IO_U_F_FREE;
-		flist_add(&io_u->list, &td->io_u_freelist);
+		io_u_qpush(&td->io_u_freelist, io_u);
+
+		/*
+		 * io_u never leaves this stack, used for iteration of all
+		 * io_u buffers.
+		 */
+		io_u_qpush(&td->io_u_all, io_u);
 
 		if (td->io_ops->io_u_init) {
 			int ret = td->io_ops->io_u_init(td, io_u);
@@ -1121,9 +1128,6 @@ static void *thread_main(void *data)
 	if (is_backend)
 		fio_server_send_start(td);
 
-	INIT_FLIST_HEAD(&td->io_u_freelist);
-	INIT_FLIST_HEAD(&td->io_u_busylist);
-	INIT_FLIST_HEAD(&td->io_u_requeues);
 	INIT_FLIST_HEAD(&td->io_log_list);
 	INIT_FLIST_HEAD(&td->io_hist_list);
 	INIT_FLIST_HEAD(&td->verify_list);

@@ -39,6 +39,7 @@
 #include "server.h"
 #include "stat.h"
 #include "flow.h"
+#include "io_u_queue.h"
 
 #ifdef CONFIG_SOLARISAIO
 #include <sys/asynch.h>
@@ -193,9 +194,9 @@ struct thread_data {
 	/*
 	 * List of free and busy io_u's
 	 */
-	struct flist_head io_u_freelist;
-	struct flist_head io_u_busylist;
-	struct flist_head io_u_requeues;
+	struct io_u_ring io_u_requeues;
+	struct io_u_queue io_u_freelist;
+	struct io_u_queue io_u_all;
 	pthread_mutex_t io_u_lock;
 	pthread_cond_t free_cond;
 

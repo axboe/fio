@@ -95,11 +95,12 @@ static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 {
 	struct posixaio_data *pd = td->io_ops->data;
 	os_aiocb_t *suspend_list[SUSPEND_ENTRIES];
-	struct flist_head *entry;
 	struct timespec start;
 	int have_timeout = 0;
 	int suspend_entries;
+	struct io_u *io_u;
 	unsigned int r;
+	int i;
 
 	if (t && !fill_timespec(&start))
 		have_timeout = 1;
@@ -110,11 +111,10 @@ static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 restart:
 	memset(suspend_list, 0, sizeof(*suspend_list));
 	suspend_entries = 0;
-	flist_for_each(entry, &td->io_u_busylist) {
-		struct io_u *io_u = flist_entry(entry, struct io_u, list);
+	io_u_qiter(&td->io_u_all, io_u, i) {
 		int err;
 
-		if (io_u->seen)
+		if (io_u->seen || !(io_u->flags & IO_U_F_FLIGHT))
 			continue;
 
 		err = aio_error(&io_u->aiocb);

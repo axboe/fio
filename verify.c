@@ -595,8 +595,7 @@ int verify_io_u_async(struct thread_data *td, struct io_u *io_u)
 		td->cur_depth--;
 		io_u->flags &= ~IO_U_F_IN_CUR_DEPTH;
 	}
-	flist_del(&io_u->list);
-	flist_add_tail(&io_u->list, &td->verify_list);
+	flist_add_tail(&io_u->verify_list, &td->verify_list);
 	io_u->flags |= IO_U_F_FREE_DEF;
 	pthread_mutex_unlock(&td->io_u_lock);
 
@@ -1052,8 +1051,8 @@ static void *verify_async_thread(void *data)
 			continue;
 
 		while (!flist_empty(&list)) {
-			io_u = flist_entry(list.next, struct io_u, list);
-			flist_del_init(&io_u->list);
+			io_u = flist_entry(list.next, struct io_u, verify_list);
+			flist_del(&io_u->verify_list);
 
 			ret = verify_io_u(td, io_u);
 			put_io_u(td, io_u);

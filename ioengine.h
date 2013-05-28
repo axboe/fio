@@ -32,30 +32,6 @@ enum {
  * The io unit
  */
 struct io_u {
-	union {
-#ifdef CONFIG_LIBAIO
-		struct iocb iocb;
-#endif
-#ifdef CONFIG_POSIXAIO
-		os_aiocb_t aiocb;
-#endif
-#ifdef FIO_HAVE_SGIO
-		struct sg_io_hdr hdr;
-#endif
-#ifdef CONFIG_GUASI
-		guasi_req_t greq;
-#endif
-#ifdef CONFIG_SOLARISAIO
-		aio_result_t resultp;
-#endif
-#ifdef FIO_HAVE_BINJECT
-		struct b_user_cmd buc;
-#endif
-#ifdef CONFIG_RDMA
-		struct ibv_mr *mr;
-#endif
-		void *mmap_data;
-	};
 	struct timeval start_time;
 	struct timeval issue_time;
 
@@ -94,6 +70,31 @@ struct io_u {
 	 */
 	unsigned long buf_filled_len;
 
+	union {
+#ifdef CONFIG_LIBAIO
+		struct iocb iocb;
+#endif
+#ifdef CONFIG_POSIXAIO
+		os_aiocb_t aiocb;
+#endif
+#ifdef FIO_HAVE_SGIO
+		struct sg_io_hdr hdr;
+#endif
+#ifdef CONFIG_GUASI
+		guasi_req_t greq;
+#endif
+#ifdef CONFIG_SOLARISAIO
+		aio_result_t resultp;
+#endif
+#ifdef FIO_HAVE_BINJECT
+		struct b_user_cmd buc;
+#endif
+#ifdef CONFIG_RDMA
+		struct ibv_mr *mr;
+#endif
+		void *mmap_data;
+	};
+
 	unsigned int resid;
 	unsigned int error;
 
@@ -106,7 +107,7 @@ struct io_u {
 		void *engine_data;
 	};
 
-	struct flist_head list;
+	struct flist_head verify_list;
 
 	/*
 	 * Callback for io completion
@@ -187,7 +188,7 @@ extern int fio_show_ioengine_help(const char *engine);
 /*
  * io unit handling
  */
-#define queue_full(td)	flist_empty(&(td)->io_u_freelist)
+#define queue_full(td)	io_u_qempty(&(td)->io_u_freelist)
 extern struct io_u *__get_io_u(struct thread_data *);
 extern struct io_u *get_io_u(struct thread_data *);
 extern void put_io_u(struct thread_data *, struct io_u *);
