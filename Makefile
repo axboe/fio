@@ -6,8 +6,10 @@ config-host-mak: configure
 	@sed -n "/.*Configured with/s/[^:]*: //p" $@ | sh
 else
 config-host.mak:
+ifneq ($(MAKECMDGOALS),clean)
 	@echo "Running configure for you..."
 	@./configure
+endif
 all:
 include config-host.mak
 endif
