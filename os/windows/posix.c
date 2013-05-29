@@ -662,11 +662,6 @@ int getrusage(int who, struct rusage *r_usage)
 	return 0;
 }
 
-int posix_fadvise(int fd, off_t offset, off_t len, int advice)
-{
-	return 0;
-}
-
 int posix_madvise(void *addr, size_t len, int advice)
 {
 	log_err("%s is not implemented\n", __func__);
