@@ -259,9 +259,9 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 					unsigned int max, struct timespec *t)
 {
 	struct windowsaio_data *wd = td->io_ops->data;
-	struct flist_head *entry;
 	unsigned int dequeued = 0;
 	struct io_u *io_u;
+	int i;
 	struct fio_overlapped *fov;
 	DWORD start_count = 0;
 	DWORD end_count = 0;
@@ -275,8 +275,10 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 	}
 
 	do {
-		flist_for_each(entry, &td->io_u_busylist) {
-			io_u = flist_entry(entry, struct io_u, list);
+		io_u_qiter(&td->io_u_all, io_u, i) {
+			if (!(io_u->flags & IO_U_F_FLIGHT))
+				continue;
+
 			fov = (struct fio_overlapped*)io_u->engine_data;
 
 			if (fov->io_complete) {
