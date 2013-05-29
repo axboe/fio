@@ -1,7 +1,7 @@
 #ifndef DIRENT_H
 #define DIRENT_H
 
-#include <windows.h>
+#include <winsock2.h>
 
 struct dirent
 {
