@@ -2778,7 +2778,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "write_iops_log",
 		.lname	= "Write IOPS log",
-		.type	= FIO_OPT_STR,
+		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(iops_log_file),
 		.help	= "Write log of IOPS during run",
 		.category = FIO_OPT_C_LOG,
