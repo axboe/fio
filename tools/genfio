@@ -1,0 +1,237 @@
+#!/bin/bash
+#
+#  Copyright (C) 2013 eNovance SAS <licensing@enovance.com>
+#  Author: Erwan Velu  <erwan@enovance.com>
+#
+#  The license below covers all files distributed with fio unless otherwise
+#  noted in the file itself.
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License version 2 as
+#  published by the Free Software Foundation.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+BLK_SIZE=
+BLOCK_SIZE=4k
+SEQ=-1
+TEMPLATE=/tmp/template.fio
+OUTFILE=
+DISKS=
+RUNTIME=300
+ETA=0
+MODES="read,write,randread,randwrite"
+SHORT_HOSTNAME=
+
+show_help() {
+	PROG=$(basename $0)
+	echo "usage of $PROG:"
+	cat << EOF
+-h				: Show this help & exit
+-a				: Run sequential test then parallel one
+-s				: Run sequential test (default value)
+					one test after another then one disk after another
+-p				: Run parallel test
+					one test after anoter but all disks at the same time
+-d disk1[,disk2,disk3,..]	: Run the tests on the selected disks
+					Separated each disk with a comma
+					Disk name shall be "sdxx", /dev/ shall NOT be used here
+-r seconds			: Time in seconds per benchmark (300 as default)
+					A simple task is set of 4 benchmarks :
+					read,write,randread,randwrite
+-b blocksize[,blocksize1, ...]  : The blocksizes to test under fio format (4k, 1m, ...)
+					Separated each blocksize with a comma
+-m mode1,[mode2,mode3, ...]     : Define the fio IO profile to use like read, write, randread, randwrite
+
+Example:
+
+$PROG -d sdb,sdc,sdd,sde -a -b 4k,128k,1m -r 100 -a
+
+	Will generate an fio file that will run
+		- a sequential bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 4k with read,write,randread,randwrite tests
+			ETA ~ 4 tests * 4 disks * 100 seconds
+		- a sequential bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 128k with read,write,randread,randwrite tests
+			ETA ~ 4 tests * 4 disks * 100 seconds
+		- a sequential bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 1m with read,write,randread,randwrite tests
+			ETA ~ 4 tests * 4 disks * 100 seconds
+		- a parallel bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 4k with read,write,randread,randwrite tests
+			ETA ~ 4 tests * 100 seconds
+		- a parallel bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 128k with read,write,randread,randwrite tests
+			ETA ~ 4 tests * 100 seconds
+		- a parallel bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 1m with read,write,randread,randwrite tests
+			ETA ~ 4 tests * 100 seconds
+
+Generating localhost-4k,128k,1m-all-read,write,randread,randwrite-sdb,sdc,sdd,sde.fio
+Estimated Time = 6000 seconds : 1 hour 40 minutes
+EOF
+}
+
+gen_template() {
+cat >$TEMPLATE << EOF
+[global]
+ioengine=libaio
+invalidate=1
+runtime=$RUNTIME
+ramp_time=5
+direct=1
+
+EOF
+}
+
+gen_seq_suite() {
+TYPE=$1
+cat >> $OUTFILE << EOF
+[$TYPE-$disk-$BLK_SIZE-seq]
+stonewall
+bs=$BLK_SIZE
+filename=/dev/$disk
+rw=$TYPE
+write_bw_log=$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-seq.results
+write_iops_log=$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-seq.results
+EOF
+ETA=$(($ETA + $RUNTIME))
+}
+
+gen_seq_fio() {
+for disk in $(echo $DISKS | tr "," " "); do
+	for mode in $(echo $MODES | tr "," " "); do
+		gen_seq_suite "$mode"
+	done
+done
+}
+
+
+gen_para_suite() {
+TYPE=$1
+NEED_WALL=$2
+D=0
+for disk in $(echo $DISKS | tr "," " "); do
+    cat >> $OUTFILE << EOF
+[$TYPE-$disk-$BLK_SIZE-para]
+bs=$BLK_SIZE
+EOF
+
+if [ "$D" = 0 ]; then
+    echo "stonewall" >> $OUTFILE
+    D=1
+fi
+
+cat >> $OUTFILE << EOF
+filename=/dev/$disk
+rw=$TYPE
+write_bw_log=$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-para.results
+write_iops_log=$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-para.results
+EOF
+done
+
+ETA=$(($ETA + $RUNTIME))
+echo >> $OUTFILE
+}
+
+gen_para_fio() {
+for mode in $(echo $MODES | tr "," " "); do
+	gen_para_suite "$mode"
+done
+}
+
+gen_fio() {
+case $SEQ in
+	2)
+		gen_seq_fio
+		gen_para_fio
+	;;
+	1)
+		gen_seq_fio
+	;;
+	0)
+		gen_para_fio
+	;;
+esac
+}
+
+parse_cmdline() {
+while getopts "hapsd:b:r:m:" opt; do
+  case $opt in
+    h)
+	show_help
+	exit 0
+	;;
+    b)
+	BLOCK_SIZE=$OPTARG
+	;;
+    s)
+	if [ "$SEQ" = "-1" ]; then
+		SEQ=1
+	fi
+      ;;
+    r)
+	RUNTIME=$OPTARG
+      ;;
+    p)
+	if [ "$SEQ" = "-1" ]; then
+		SEQ=0
+	fi
+      ;;
+    m)
+        MODES=$OPTARG;
+      ;;
+    d)
+ 	DISKS=$OPTARG
+      ;;
+    a)
+	SEQ=2
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      ;;
+  esac
+done
+
+if [ "$SEQ" = "-1" ]; then
+	SEQ=0
+fi
+
+SHORT_HOSTNAME=$(hostname -s)
+case $SEQ in
+	2)
+		OUTFILE=$SHORT_HOSTNAME-$BLOCK_SIZE-all-$MODES-$DISKS.fio
+	;;
+
+	1)
+		OUTFILE=$SHORT_HOSTNAME-$BLOCK_SIZE-sequential-$MODES-$DISKS.fio
+	;;
+	0)
+		OUTFILE=$SHORT_HOSTNAME-$BLOCK_SIZE-parallel-$MODES-$DISKS.fio
+	;;
+esac
+
+if [ -z "$DISKS" ]; then
+	echo "Missing DISKS !"
+	echo "Exiting !"
+	exit 1
+fi
+
+}
+
+
+########## MAIN
+parse_cmdline $@
+gen_template
+
+echo "Generating $OUTFILE"
+cp -f $TEMPLATE $OUTFILE
+echo >> $OUTFILE
+
+for BLK_SIZE in $(echo $BLOCK_SIZE | tr "," " "); do
+	gen_fio
+done
+ETA_H=$(($ETA / 3600))
+ETA_M=$((($ETA - ($ETA_H*3600)) / 60))
+echo "Estimated Time = $ETA seconds : $ETA_H hour $ETA_M minutes"
