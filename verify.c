@@ -273,6 +273,7 @@ static void dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
 	dummy.buf = buf;
 	dummy.rand_seed = hdr->rand_seed;
 	dummy.buf_filled_len = 0;
+	dummy.buflen = io_u->buflen;
 
 	fill_pattern_headers(td, &dummy, hdr->rand_seed, 1);
 
