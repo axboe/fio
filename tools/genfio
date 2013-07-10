@@ -44,8 +44,7 @@ show_help() {
 					Separated each disk with a comma
 					Disk name shall be "sdxx", /dev/ shall NOT be used here
 -r seconds			: Time in seconds per benchmark (300 as default)
-					A simple task is set of 4 benchmarks :
-					read,write,randread,randwrite
+					0 means till the end of the device
 -b blocksize[,blocksize1, ...]  : The blocksizes to test under fio format (4k, 1m, ...)
 					Separated each blocksize with a comma
 -m mode1,[mode2,mode3, ...]     : Define the fio IO profile to use like read, write, randread, randwrite
@@ -78,11 +77,16 @@ cat >$TEMPLATE << EOF
 [global]
 ioengine=libaio
 invalidate=1
-runtime=$RUNTIME
 ramp_time=5
 direct=1
-
 EOF
+
+if [ "$RUNTIME" != "0" ]; then
+cat >>$TEMPLATE << EOF
+runtime=$RUNTIME
+EOF
+fi
+
 }
 
 gen_seq_suite() {
@@ -234,4 +238,8 @@ for BLK_SIZE in $(echo $BLOCK_SIZE | tr "," " "); do
 done
 ETA_H=$(($ETA / 3600))
 ETA_M=$((($ETA - ($ETA_H*3600)) / 60))
-echo "Estimated Time = $ETA seconds : $ETA_H hour $ETA_M minutes"
+if [ "$ETA_M" = "0" ]; then
+	echo "Cannot estimate ETA as RUNTIME=0"
+else
+	echo "Estimated Time = $ETA seconds : $ETA_H hour $ETA_M minutes"
+fi
