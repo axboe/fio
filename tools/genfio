@@ -29,12 +29,15 @@ RUNTIME=300
 ETA=0
 MODES="read,write,randread,randwrite"
 SHORT_HOSTNAME=
+CACHED_IO="FALSE"
 
 show_help() {
 	PROG=$(basename $0)
 	echo "usage of $PROG:"
 	cat << EOF
 -h				: Show this help & exit
+-c				: Enable cached-based IOs
+					by default, fio is run in direct mode
 -a				: Run sequential test then parallel one
 -s				: Run sequential test (default value)
 					one test after another then one disk after another
@@ -78,12 +81,17 @@ cat >$TEMPLATE << EOF
 ioengine=libaio
 invalidate=1
 ramp_time=5
-direct=1
 EOF
 
 if [ "$RUNTIME" != "0" ]; then
 cat >>$TEMPLATE << EOF
 runtime=$RUNTIME
+EOF
+fi
+
+if [ "$CACHED_IO" = "FALSE" ]; then
+cat >>$TEMPLATE << EOF
+direct=1
 EOF
 fi
 
@@ -161,7 +169,7 @@ esac
 }
 
 parse_cmdline() {
-while getopts "hapsd:b:r:m:" opt; do
+while getopts "hacpsd:b:r:m:" opt; do
   case $opt in
     h)
 	show_help
@@ -169,6 +177,9 @@ while getopts "hapsd:b:r:m:" opt; do
 	;;
     b)
 	BLOCK_SIZE=$OPTARG
+	;;
+    c)
+	CACHED_IO="TRUE"
 	;;
     s)
 	if [ "$SEQ" = "-1" ]; then
