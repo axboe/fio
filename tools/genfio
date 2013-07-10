@@ -37,20 +37,26 @@ show_help() {
 	cat << EOF
 -h				: Show this help & exit
 -c				: Enable cached-based IOs
-					by default, fio is run in direct mode
+					Disabled by default
 -a				: Run sequential test then parallel one
+					Disabled by default
 -s				: Run sequential test (default value)
 					one test after another then one disk after another
+					Disabled by default
 -p				: Run parallel test
 					one test after anoter but all disks at the same time
+					Enabled by default
 -d disk1[,disk2,disk3,..]	: Run the tests on the selected disks
 					Separated each disk with a comma
 					Disk name shall be "sdxx", /dev/ shall NOT be used here
--r seconds			: Time in seconds per benchmark (300 as default)
+-r seconds			: Time in seconds per benchmark
 					0 means till the end of the device
+					Default is 300 seconds
 -b blocksize[,blocksize1, ...]  : The blocksizes to test under fio format (4k, 1m, ...)
 					Separated each blocksize with a comma
+					Default is 4k
 -m mode1,[mode2,mode3, ...]     : Define the fio IO profile to use like read, write, randread, randwrite
+					Default is "read,write,randread,randwrite"
 
 Example:
 
@@ -229,7 +235,8 @@ esac
 
 if [ -z "$DISKS" ]; then
 	echo "Missing DISKS !"
-	echo "Exiting !"
+	echo "Please read the help !"
+	show_help
 	exit 1
 fi
 
