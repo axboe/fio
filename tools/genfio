@@ -274,7 +274,7 @@ for BLK_SIZE in $(echo $BLOCK_SIZE | tr "," " "); do
 done
 ETA_H=$(($ETA / 3600))
 ETA_M=$((($ETA - ($ETA_H*3600)) / 60))
-if [ "$ETA_M" = "0" ]; then
+if [ "$ETA" = "0" ]; then
 	echo "Cannot estimate ETA as RUNTIME=0"
 else
 	echo "Estimated Time = $ETA seconds : $ETA_H hour $ETA_M minutes"
