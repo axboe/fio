@@ -30,6 +30,8 @@ ETA=0
 MODES="read,write,randread,randwrite"
 SHORT_HOSTNAME=
 CACHED_IO="FALSE"
+PREFIX=""
+PREFIX_FILENAME=""
 
 show_help() {
 	PROG=$(basename $0)
@@ -57,10 +59,13 @@ show_help() {
 					Default is 4k
 -m mode1,[mode2,mode3, ...]     : Define the fio IO profile to use like read, write, randread, randwrite
 					Default is "read,write,randread,randwrite"
+-x prefix			: Add a prefix to the fio filename
+					Useful to let a context associated with the file
+					If the prefix features a / (slash), prefix will be considered as a directory
 
 Example:
 
-$PROG -d sdb,sdc,sdd,sde -a -b 4k,128k,1m -r 100 -a
+$PROG -d sdb,sdc,sdd,sde -a -b 4k,128k,1m -r 100 -a -x dellr720-day2/
 
 	Will generate an fio file that will run
 		- a sequential bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 4k with read,write,randread,randwrite tests
@@ -76,7 +81,7 @@ $PROG -d sdb,sdc,sdd,sde -a -b 4k,128k,1m -r 100 -a
 		- a parallel bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 1m with read,write,randread,randwrite tests
 			ETA ~ 4 tests * 100 seconds
 
-Generating localhost-4k,128k,1m-all-read,write,randread,randwrite-sdb,sdc,sdd,sde.fio
+Generating dellr720-day2/localhost-4k,128k,1m-all-read,write,randread,randwrite-sdb,sdc,sdd,sde.fio
 Estimated Time = 6000 seconds : 1 hour 40 minutes
 EOF
 }
@@ -111,8 +116,8 @@ stonewall
 bs=$BLK_SIZE
 filename=/dev/$disk
 rw=$TYPE
-write_bw_log=$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-seq.results
-write_iops_log=$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-seq.results
+write_bw_log=${PREFIX_FILENAME}$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-seq.results
+write_iops_log=${PREFIX_FILENAME}$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-seq.results
 EOF
 ETA=$(($ETA + $RUNTIME))
 }
@@ -144,8 +149,8 @@ fi
 cat >> $OUTFILE << EOF
 filename=/dev/$disk
 rw=$TYPE
-write_bw_log=$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-para.results
-write_iops_log=$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-para.results
+write_bw_log=${PREFIX_FILENAME}$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-para.results
+write_iops_log=${PREFIX_FILENAME}$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-para.results
 EOF
 done
 
@@ -175,7 +180,7 @@ esac
 }
 
 parse_cmdline() {
-while getopts "hacpsd:b:r:m:" opt; do
+while getopts "hacpsd:b:r:m:x:" opt; do
   case $opt in
     h)
 	show_help
@@ -192,6 +197,19 @@ while getopts "hacpsd:b:r:m:" opt; do
 		SEQ=1
 	fi
       ;;
+    x)
+	PREFIX=$OPTARG
+	echo "$PREFIX" | grep -q "/"
+	if [ "$?" -eq 0 ]; then
+		mkdir -p $PREFIX
+		# No need to keep the prefix for the log files
+		# we do have a directory for that
+		PREFIX_FILENAME=""
+	else
+		# We need to keep the prefix for the log files
+		PREFIX_FILENAME=$PREFIX
+	fi
+	;;
     r)
 	RUNTIME=$OPTARG
       ;;
@@ -222,14 +240,14 @@ fi
 SHORT_HOSTNAME=$(hostname -s)
 case $SEQ in
 	2)
-		OUTFILE=$SHORT_HOSTNAME-$BLOCK_SIZE-all-$MODES-$DISKS.fio
+		OUTFILE=${PREFIX}$SHORT_HOSTNAME-$BLOCK_SIZE-all-$MODES-$DISKS.fio
 	;;
 
 	1)
-		OUTFILE=$SHORT_HOSTNAME-$BLOCK_SIZE-sequential-$MODES-$DISKS.fio
+		OUTFILE=${PREFIX}$SHORT_HOSTNAME-$BLOCK_SIZE-sequential-$MODES-$DISKS.fio
 	;;
 	0)
-		OUTFILE=$SHORT_HOSTNAME-$BLOCK_SIZE-parallel-$MODES-$DISKS.fio
+		OUTFILE=${PREFIX}$SHORT_HOSTNAME-$BLOCK_SIZE-parallel-$MODES-$DISKS.fio
 	;;
 esac
 
