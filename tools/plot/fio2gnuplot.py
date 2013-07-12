@@ -37,9 +37,22 @@ def find_file(path, pattern):
 
 	return fio_data_file
 
-def generate_gnuplot_script(title,gnuplot_output_filename,mode):
+def generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,mode,disk_perf):
 	f=open("mygraph",'w')
         f.write("call \'graph3D.gpm\' \'%s' \'%s\' \'\' \'%s\' \'%s\'\n" % (title,gnuplot_output_filename,gnuplot_output_filename,mode))
+
+        pos=0
+        # Let's create a temporary file for each selected fio file
+        for file in fio_data_file:
+                tmp_filename = "gnuplot_temp_file.%d" % pos
+                png_file=file.replace('.log','')
+                raw_filename = "%s-2Draw" % (png_file)
+                smooth_filename = "%s-2Dsmooth" % (png_file)
+                trend_filename = "%s-2Dtrend" % (png_file)
+                avg  = average(disk_perf[pos])
+                f.write("call \'graph2D.gpm\' \'%s' \'%s\' \'\' \'%s\' \'%s\' \'%s\' \'%s\' \'%f\'\n" % (title,tmp_filename,raw_filename,mode,smooth_filename,trend_filename,avg))
+                pos = pos +1
+
 	f.close()
 
 def generate_gnuplot_math_script(title,gnuplot_output_filename,mode,average):
@@ -330,7 +343,7 @@ def main(argv):
     	title="%s @ Blocksize = %dK" % (title,blk_size/1024)
     	compute_aggregated_file(fio_data_file, gnuplot_output_filename)
     	compute_math(fio_data_file,title,gnuplot_output_filename,mode,disk_perf)
-    	generate_gnuplot_script(title,gnuplot_output_filename,mode)
+    	generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,mode,disk_perf)
 
     	if (run_gnuplot==True):
     		render_gnuplot()
