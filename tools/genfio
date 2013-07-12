@@ -32,6 +32,7 @@ SHORT_HOSTNAME=
 CACHED_IO="FALSE"
 PREFIX=""
 PREFIX_FILENAME=""
+IODEPTH=1
 
 show_help() {
 	PROG=$(basename $0)
@@ -48,6 +49,8 @@ show_help() {
 -p				: Run parallel test
 					one test after anoter but all disks at the same time
 					Enabled by default
+-D iodepth			: Run with the specified iodepth
+					Default is 32
 -d disk1[,disk2,disk3,..]	: Run the tests on the selected disks
 					Separated each disk with a comma
 					Disk name shall be "sdxx", /dev/ shall NOT be used here
@@ -90,6 +93,7 @@ gen_template() {
 cat >$TEMPLATE << EOF
 [global]
 ioengine=libaio
+iodepth=$IODEPTH
 invalidate=1
 ramp_time=5
 EOF
@@ -180,7 +184,7 @@ esac
 }
 
 parse_cmdline() {
-while getopts "hacpsd:b:r:m:x:" opt; do
+while getopts "hacpsd:b:r:m:x:D:" opt; do
   case $opt in
     h)
 	show_help
@@ -223,6 +227,9 @@ while getopts "hacpsd:b:r:m:x:" opt; do
       ;;
     d)
  	DISKS=$OPTARG
+      ;;
+    D)
+	IODEPTH=$OPTARG
       ;;
     a)
 	SEQ=2
