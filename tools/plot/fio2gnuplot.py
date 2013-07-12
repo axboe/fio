@@ -39,7 +39,8 @@ def find_file(path, pattern):
 
 def generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,mode,disk_perf):
 	f=open("mygraph",'w')
-        f.write("call \'graph3D.gpm\' \'%s' \'%s\' \'\' \'%s\' \'%s\'\n" % (title,gnuplot_output_filename,gnuplot_output_filename,mode))
+	if len(fio_data_file) > 1:
+        	f.write("call \'graph3D.gpm\' \'%s' \'%s\' \'\' \'%s\' \'%s\'\n" % (title,gnuplot_output_filename,gnuplot_output_filename,mode))
 
         pos=0
         # Let's create a temporary file for each selected fio file
