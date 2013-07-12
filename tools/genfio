@@ -27,7 +27,7 @@ OUTFILE=
 DISKS=
 RUNTIME=300
 ETA=0
-MODES="read,write,randread,randwrite"
+MODES="write,randwrite,read,randread"
 SHORT_HOSTNAME=
 CACHED_IO="FALSE"
 PREFIX=""
@@ -58,7 +58,7 @@ show_help() {
 					Separated each blocksize with a comma
 					Default is 4k
 -m mode1,[mode2,mode3, ...]     : Define the fio IO profile to use like read, write, randread, randwrite
-					Default is "read,write,randread,randwrite"
+					Default is "write,randwrite,read,randread"
 -x prefix			: Add a prefix to the fio filename
 					Useful to let a context associated with the file
 					If the prefix features a / (slash), prefix will be considered as a directory
@@ -68,20 +68,20 @@ Example:
 $PROG -d sdb,sdc,sdd,sde -a -b 4k,128k,1m -r 100 -a -x dellr720-day2/
 
 	Will generate an fio file that will run
-		- a sequential bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 4k with read,write,randread,randwrite tests
+		- a sequential bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 4k with write,randwrite,read,randread tests
 			ETA ~ 4 tests * 4 disks * 100 seconds
-		- a sequential bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 128k with read,write,randread,randwrite tests
+		- a sequential bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 128k with write,randwrite,read,randread tests
 			ETA ~ 4 tests * 4 disks * 100 seconds
-		- a sequential bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 1m with read,write,randread,randwrite tests
+		- a sequential bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 1m with write,randwrite,read,randread tests
 			ETA ~ 4 tests * 4 disks * 100 seconds
-		- a parallel bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 4k with read,write,randread,randwrite tests
+		- a parallel bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 4k with write,randwrite,read,randread tests
 			ETA ~ 4 tests * 100 seconds
-		- a parallel bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 128k with read,write,randread,randwrite tests
+		- a parallel bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 128k with write,randwrite,read,randread tests
 			ETA ~ 4 tests * 100 seconds
-		- a parallel bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 1m with read,write,randread,randwrite tests
+		- a parallel bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 1m with write,randwrite,read,randread tests
 			ETA ~ 4 tests * 100 seconds
 
-Generating dellr720-day2/localhost-4k,128k,1m-all-read,write,randread,randwrite-sdb,sdc,sdd,sde.fio
+Generating dellr720-day2/localhost-4k,128k,1m-all-write,randwrite,read,randread-sdb,sdc,sdd,sde.fio
 Estimated Time = 6000 seconds : 1 hour 40 minutes
 EOF
 }
@@ -260,9 +260,43 @@ fi
 
 }
 
+check_mode_order() {
+FOUND_WRITE="NO"
+CAUSE="You are reading data before writing them          "
+
+# If no write occurs, let's show a different message
+echo $MODES | grep -q "write"
+if [ "$?" -ne 0 ]; then
+	CAUSE="You are reading data while never wrote them before"
+fi
+
+for mode in $(echo $MODES | tr "," " "); do
+	echo $mode | grep -q write
+	if [ "$?" -eq 0 ]; then
+		FOUND_WRITE="YES"
+	fi
+	echo $mode | grep -q "read"
+	if [ "$?" -eq 0 ]; then
+		if [ "$FOUND_WRITE" = "NO" ]; then
+			echo "###############################################################"
+			echo "# Warning : $CAUSE#"
+			echo "# On some storage devices, this could lead to invalid results #"
+			echo "#                                                             #"
+			echo "# Press Ctrl-C to adjust pattern order if you have doubts     #"
+			echo "# Or Wait 5 seconds before the file will be created           #"
+			echo "###############################################################"
+			sleep 5
+			# No need to try showing the message more than one time
+			return
+		fi
+	fi
+done
+}
+
 
 ########## MAIN
 parse_cmdline $@
+check_mode_order
 gen_template
 
 echo "Generating $OUTFILE"
