@@ -101,6 +101,7 @@ EOF
 if [ "$RUNTIME" != "0" ]; then
 cat >>$TEMPLATE << EOF
 runtime=$RUNTIME
+time_based
 EOF
 fi
 
