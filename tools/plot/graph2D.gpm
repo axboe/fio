@@ -8,7 +8,7 @@ set output '$3.png'
 
 #Preparing Axes
 #set logscale x
-set ytics axis out 0,5
+set ytics axis out
 #set data style lines
 set key top left reverse
 set xlabel "Time (Seconds)"
