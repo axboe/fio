@@ -65,6 +65,8 @@ show_help() {
 -x prefix			: Add a prefix to the fio filename
 					Useful to let a context associated with the file
 					If the prefix features a / (slash), prefix will be considered as a directory
+-A cmd_to_run			: System command to run after each job (exec_postrun in fio)
+-B cmd_to_run			: System command to run before each job (exec_prerun in fio)
 
 Example:
 
@@ -189,7 +191,7 @@ esac
 }
 
 parse_cmdline() {
-while getopts "hacpsd:b:r:m:x:D:" opt; do
+while getopts "hacpsd:b:r:m:x:D:A:B:" opt; do
   case $opt in
     h)
 	show_help
@@ -238,6 +240,12 @@ while getopts "hacpsd:b:r:m:x:D:" opt; do
       ;;
     a)
 	SEQ=2
+      ;;
+    B)
+	echo "exec_prerun=$OPTARG" >> $TEMPLATE
+      ;;
+    A)
+	echo "exec_postrun=$OPTARG" >> $TEMPLATE
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
