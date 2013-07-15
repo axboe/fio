@@ -310,7 +310,7 @@ done
 
 ########## MAIN
 gen_template
-parse_cmdline $@
+parse_cmdline "$@"
 finish_template
 check_mode_order
 
