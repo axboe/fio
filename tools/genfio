@@ -89,13 +89,9 @@ Estimated Time = 6000 seconds : 1 hour 40 minutes
 EOF
 }
 
-gen_template() {
-cat >$TEMPLATE << EOF
-[global]
-ioengine=libaio
+finish_template() {
+cat >>$TEMPLATE <<EOF
 iodepth=$IODEPTH
-invalidate=1
-ramp_time=5
 EOF
 
 if [ "$RUNTIME" != "0" ]; then
@@ -110,7 +106,15 @@ cat >>$TEMPLATE << EOF
 direct=1
 EOF
 fi
+}
 
+gen_template() {
+cat >$TEMPLATE << EOF
+[global]
+ioengine=libaio
+invalidate=1
+ramp_time=5
+EOF
 }
 
 gen_seq_suite() {
@@ -303,9 +307,10 @@ done
 
 
 ########## MAIN
-parse_cmdline $@
-check_mode_order
 gen_template
+parse_cmdline $@
+finish_template
+check_mode_order
 
 echo "Generating $OUTFILE"
 cp -f $TEMPLATE $OUTFILE
