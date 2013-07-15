@@ -92,21 +92,15 @@ EOF
 }
 
 finish_template() {
-cat >>$TEMPLATE <<EOF
-iodepth=$IODEPTH
-EOF
+echo "iodepth=$IODEPTH" >> $TEMPLATE
 
 if [ "$RUNTIME" != "0" ]; then
-cat >>$TEMPLATE << EOF
-runtime=$RUNTIME
-time_based
-EOF
+	echo "runtime=$RUNTIME" >> $TEMPLATE
+	echo "time_based" >> $TEMPLATE
 fi
 
 if [ "$CACHED_IO" = "FALSE" ]; then
-cat >>$TEMPLATE << EOF
-direct=1
-EOF
+	echo "direct=1" >> $TEMPLATE
 fi
 }
 
