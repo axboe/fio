@@ -1086,14 +1086,15 @@ static int keep_running(struct thread_data *td)
 	return 0;
 }
 
-static int exec_string(const char *string)
+static int exec_string(struct thread_options *o, const char *string, const char *mode)
 {
-	int ret, newlen = strlen(string) + 1 + 2;
+	int ret, newlen = strlen(string) + strlen(o->name) + strlen(mode) + 9 + 1;
 	char *str;
 
 	str = malloc(newlen);
-	sprintf(str, "%s", string);
+	sprintf(str, "%s &> %s.%s.txt", string, o->name, mode);
 
+	log_info("%s : Saving output of %s in %s.%s.txt\n",o->name, mode, o->name, mode);
 	ret = system(str);
 	if (ret == -1)
 		log_err("fio: exec of cmd <%s> failed\n", str);
@@ -1274,7 +1275,7 @@ static void *thread_main(void *data)
 	if (init_random_map(td))
 		goto err;
 
-	if (o->exec_prerun && exec_string(o->exec_prerun))
+	if (o->exec_prerun && exec_string(o, o->exec_prerun, (const char *)"prerun"))
 		goto err;
 
 	if (o->pre_read) {
@@ -1397,7 +1398,7 @@ static void *thread_main(void *data)
 
 	fio_mutex_up(writeout_mutex);
 	if (o->exec_postrun)
-		exec_string(o->exec_postrun);
+		exec_string(o, o->exec_postrun, (const char *)"postrun");
 
 	if (exitall_on_terminate)
 		fio_terminate_threads(td->groupid);

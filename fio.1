@@ -1061,9 +1061,15 @@ simulate a smaller amount of memory. The amount specified is per worker.
 .TP
 .BI exec_prerun \fR=\fPstr
 Before running the job, execute the specified command with \fBsystem\fR\|(3).
+.RS
+Output is redirected in a file called \fBjobname.prerun.txt\fR
+.RE
 .TP
 .BI exec_postrun \fR=\fPstr
 Same as \fBexec_prerun\fR, but the command is executed after the job completes.
+.RS
+Output is redirected in a file called \fBjobname.postrun.txt\fR
+.RE
 .TP
 .BI ioscheduler \fR=\fPstr
 Attempt to switch the device hosting the file to the specified I/O scheduler.
