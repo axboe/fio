@@ -1088,11 +1088,11 @@ static int keep_running(struct thread_data *td)
 
 static int exec_string(const char *string)
 {
-	int ret, newlen = strlen(string) + 1 + 8;
+	int ret, newlen = strlen(string) + 1 + 2;
 	char *str;
 
 	str = malloc(newlen);
-	sprintf(str, "sh -c %s", string);
+	sprintf(str, "%s", string);
 
 	ret = system(str);
 	if (ret == -1)
