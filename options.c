@@ -550,7 +550,7 @@ static int str_numa_mpol_cb(void *data, char *input)
 {
 	struct thread_data *td = data;
 	const char * const policy_types[] =
-		{ "default", "prefer", "bind", "interleave", "local" };
+		{ "default", "prefer", "bind", "interleave", "local", NULL };
 	int i;
 
 	char *nodelist = strchr(input, ':');
