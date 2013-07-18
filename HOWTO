@@ -1261,10 +1261,12 @@ lockmem=int	Pin down the specified amount of memory with mlock(2). Can
 		The amount specified is per worker.
 
 exec_prerun=str	Before running this job, issue the command specified
-		through system(3).
+		through system(3). Output is redirected in a file called
+		jobname.prerun.txt.
 
 exec_postrun=str After the job completes, issue the command specified
-		 though system(3).
+		 though system(3). Output is redirected in a file called
+		 jobname.postrun.txt.
 
 ioscheduler=str	Attempt to switch the device hosting the file to the specified
 		io scheduler before running.
