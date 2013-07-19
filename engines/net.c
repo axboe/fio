@@ -619,7 +619,7 @@ static int fio_netio_udp_recv_open(struct thread_data *td, struct fio_file *f)
 
 	ret = recvfrom(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to, &len);
 	if (ret < 0) {
-		td_verror(td, errno, "sendto udp link open");
+		td_verror(td, errno, "recvfrom udp link open");
 		return ret;
 	}
 
