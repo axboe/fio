@@ -37,6 +37,7 @@ struct netio_options {
 	unsigned int listen;
 	unsigned int pingpong;
 	unsigned int nodelay;
+	char * interface;
 };
 
 struct udp_close_msg {
@@ -125,6 +126,15 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct netio_options, pingpong),
 		.help	= "Ping-pong IO requests",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_NETIO,
+	},
+	{
+		.name	= "interface",
+		.lname	= "net engine interface",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= offsetof(struct netio_options, interface),
+		.help	= "Network interface to use",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_NETIO,
 	},
@@ -531,9 +541,22 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 	}
 #endif
 
-	if (o->proto == FIO_TYPE_UDP)
+	if (o->proto == FIO_TYPE_UDP) {
+		if (o->interface && fio_netio_is_multicast(td->o.filename)) {
+			struct in_addr interface_addr;
+			if (inet_aton(o->interface, &interface_addr) == 0) {
+				log_err("fio: interface not valid interface IP\n");
+				close(f->fd);
+				return 1;
+			}
+			if (setsockopt(f->fd, IPPROTO_IP, IP_MULTICAST_IF, &interface_addr, sizeof(interface_addr)) < 0) {
+				td_verror(td, errno, "setsockopt IP_MULTICAST_IF");
+				close(f->fd);
+				return 1;
+			}
+		}
 		return 0;
-	else if (o->proto == FIO_TYPE_TCP) {
+	} else if (o->proto == FIO_TYPE_TCP) {
 		socklen_t len = sizeof(nd->addr);
 
 		if (connect(f->fd, (struct sockaddr *) &nd->addr, len) < 0) {
@@ -841,7 +864,15 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 		inet_aton(td->o.filename, &sin.sin_addr);
 
 		mr.imr_multiaddr = sin.sin_addr;
-		mr.imr_interface.s_addr = htonl(INADDR_ANY);
+		if (o->interface) {
+			if (inet_aton(o->interface, &mr.imr_interface) == 0) {
+				log_err("fio: interface not valid interface IP\n");
+				close(fd);
+				return 1;
+			}
+		} else {
+			mr.imr_interface.s_addr = htonl(INADDR_ANY);
+		}
 		if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mr, sizeof(mr)) < 0) {
 			td_verror(td, errno, "setsockopt IP_ADD_MEMBERSHIP");
 			close(fd);
