@@ -793,11 +793,13 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 	opt = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) &opt, sizeof(opt)) < 0) {
 		td_verror(td, errno, "setsockopt");
+		close(fd);
 		return 1;
 	}
 #ifdef SO_REUSEPORT
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (void *) &opt, sizeof(opt)) < 0) {
 		td_verror(td, errno, "setsockopt");
+		close(fd);
 		return 1;
 	}
 #endif
