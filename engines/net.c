@@ -37,6 +37,7 @@ struct netio_options {
 	unsigned int listen;
 	unsigned int pingpong;
 	unsigned int nodelay;
+	unsigned int ttl;
 	char * interface;
 };
 
@@ -135,6 +136,17 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= offsetof(struct netio_options, interface),
 		.help	= "Network interface to use",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_NETIO,
+	},
+	{
+		.name	= "ttl",
+		.lname	= "net engine multicast ttl",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct netio_options, ttl),
+		.def    = "1",
+		.minval	= 0,
+		.help	= "Time-to-live value for outgoing UDP multicast packets",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_NETIO,
 	},
@@ -542,7 +554,10 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 #endif
 
 	if (o->proto == FIO_TYPE_UDP) {
-		if (o->interface && fio_netio_is_multicast(td->o.filename)) {
+		if (!fio_netio_is_multicast(td->o.filename))
+			return 0;
+
+		if (o->interface) {
 			struct in_addr interface_addr;
 			if (inet_aton(o->interface, &interface_addr) == 0) {
 				log_err("fio: interface not valid interface IP\n");
@@ -554,6 +569,11 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 				close(f->fd);
 				return 1;
 			}
+		}
+		if (setsockopt(f->fd, IPPROTO_IP, IP_MULTICAST_TTL, &o->ttl, sizeof(o->ttl)) < 0) {
+			td_verror(td, errno, "setsockopt IP_MULTICAST_TTL");
+			close(f->fd);
+			return 1;
 		}
 		return 0;
 	} else if (o->proto == FIO_TYPE_TCP) {

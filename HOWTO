@@ -1448,6 +1448,10 @@ that defines them is selected.
 [net] interface=str  The IP address of the network interface used to send or
 		receive UDP multicast
 
+[netsplice] ttl=int
+[net] ttl=int	Time-to-live value for outgoing UDP multicast packets.
+		Default: 1
+
 [netsplice] nodelay=bool
 [net] nodelay=bool	Set TCP_NODELAY on TCP connections.
 
