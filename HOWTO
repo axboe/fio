@@ -1438,7 +1438,8 @@ that defines them is selected.
 [netsplice] hostname=str
 [net] hostname=str The host name or IP address to use for TCP or UDP based IO.
 		If the job is a TCP listener or UDP reader, the hostname is not
-		used and must be omitted.
+		used and must be omitted unless it is a valid UDP multicast
+		address.
 
 [netsplice] port=int
 [net] port=int	The TCP or UDP port to bind to or connect to.
@@ -1463,7 +1464,7 @@ that defines them is selected.
 [net] listen	For TCP network connections, tell fio to listen for incoming
 		connections rather than initiating an outgoing connection. The
 		hostname must be omitted if this option is used.
-[net] pingpong	Normal a network writer will just continue writing data, and
+[net] pingpong	Normaly a network writer will just continue writing data, and
 		a network reader will just consume packages. If pingpong=1
 		is set, a writer will send its normal payload to the reader,
 		then wait for the reader to send the same payload back. This
@@ -1471,6 +1472,9 @@ that defines them is selected.
 		and completion latencies then measure local time spent
 		sending or receiving, and the completion latency measures
 		how long it took for the other end to receive and send back.
+		For UDP multicast traffic pingpong=1 should only be set for a
+		single reader when multiple readers are listening to the same
+		address.
 
 [e4defrag] donorname=str
 	        File will be used as a block donor(swap extents between files)

@@ -164,6 +164,20 @@ static int poll_wait(struct thread_data *td, int fd, short events)
 	return -1;
 }
 
+static int fio_netio_is_multicast(const char *mcaddr)
+{
+	in_addr_t addr = inet_network(mcaddr);
+	if (addr == -1)
+		return 0;
+
+	if (inet_network("224.0.0.0") <= addr &&
+	    inet_network("239.255.255.255") >= addr)
+		return 1;
+
+	return 0;
+}
+
+
 static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct netio_options *o = td->eo;
@@ -378,11 +392,20 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 
 	do {
 		if (o->proto == FIO_TYPE_UDP) {
-			socklen_t len = sizeof(nd->addr);
-			struct sockaddr *from = (struct sockaddr *) &nd->addr;
+			socklen_t l;
+			socklen_t *len = &l;
+			struct sockaddr *from;
+
+			if (o->listen) {
+				from = (struct sockaddr *) &nd->addr;
+				*len = sizeof(nd->addr);
+			} else {
+				from = NULL;
+				len = NULL;
+			}
 
 			ret = recvfrom(io_u->file->fd, io_u->xfer_buf,
-					io_u->xfer_buflen, flags, from, &len);
+					io_u->xfer_buflen, flags, from, len);
 			if (is_udp_close(io_u, ret)) {
 				td->done = 1;
 				return 0;
@@ -777,8 +800,11 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
+	struct ip_mreq mr;
+	struct sockaddr_in sin;
 	int fd, opt, type;
 
+	memset(&sin, 0, sizeof(sin));
 	if (o->proto == FIO_TYPE_TCP)
 		type = SOCK_STREAM;
 	else
@@ -804,8 +830,27 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 	}
 #endif
 
+	if (td->o.filename){
+		if(o->proto != FIO_TYPE_UDP ||
+		   !fio_netio_is_multicast(td->o.filename)) {
+			log_err("fio: hostname not valid for non-multicast inbound network IO\n");
+			close(fd);
+			return 1;
+		}
+
+		inet_aton(td->o.filename, &sin.sin_addr);
+
+		mr.imr_multiaddr = sin.sin_addr;
+		mr.imr_interface.s_addr = htonl(INADDR_ANY);
+		if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mr, sizeof(mr)) < 0) {
+			td_verror(td, errno, "setsockopt IP_ADD_MEMBERSHIP");
+			close(fd);
+			return 1;
+		}
+	}
+
 	nd->addr.sin_family = AF_INET;
-	nd->addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	nd->addr.sin_addr.s_addr = sin.sin_addr.s_addr ? sin.sin_addr.s_addr : htonl(INADDR_ANY);
 	nd->addr.sin_port = htons(port);
 
 	if (bind(fd, (struct sockaddr *) &nd->addr, sizeof(nd->addr)) < 0) {
@@ -880,11 +925,6 @@ static int fio_netio_init(struct thread_data *td)
 			return 1;
 		}
 		o->listen = td_read(td);
-	}
-
-	if (o->proto != FIO_TYPE_UNIX && o->listen && td->o.filename) {
-		log_err("fio: hostname not valid for inbound network IO\n");
-		return 1;
 	}
 
 	if (o->listen)
