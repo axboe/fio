@@ -91,7 +91,9 @@ def compute_temp_file(fio_data_file,disk_perf):
 		files.append(open(file))
 		pos = len(files) - 1
 		tmp_filename = "gnuplot_temp_file.%d" % pos
-		temp_outfile.append(open(tmp_filename,'w'))
+		gnuplot_file=open(tmp_filename,'w')
+		temp_outfile.append(gnuplot_file)
+		gnuplot_file.write("#Temporary file based on file %s\n" % file)
 		disk_perf.append([])
 
 	shall_break = False
