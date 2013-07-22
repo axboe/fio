@@ -99,11 +99,18 @@ def compute_temp_file(fio_data_file,disk_perf):
 	shall_break = False
 	while True:
 		current_line=[]
+		nb_empty_files=0
+		nb_files=len(files)
 		for file in files:
 			s=file.readline().replace(',',' ').split()
 			if not s:
+				nb_empty_files+=1
+				s="-1, 0, 0, 0'".replace(',',' ').split()
+
+			if (nb_empty_files == nb_files):
 				shall_break=True
 				break;
+
 			current_line.append(s);
 
 		if shall_break == True:
