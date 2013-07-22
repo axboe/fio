@@ -271,6 +271,7 @@ static int ignore_error_type(struct thread_data *td, int etype, char *str)
 		if (!error[i]) {
 			log_err("Unknown error %s, please use number value \n",
 				  fname);
+			free(error);
 			return 1;
 		}
 		i++;
