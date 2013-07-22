@@ -243,15 +243,13 @@ out:
 int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 	     double *mean, double *dev)
 {
-	double n = is->samples;
+	double n = (double) is->samples;
 
-	if (is->samples == 0)
+	if (n == 0)
 		return 0;
 
 	*min = is->min_val;
 	*max = is->max_val;
-
-	n = (double) is->samples;
 	*mean = is->mean.u.f;
 
 	if (n > 1.0)

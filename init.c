@@ -1755,8 +1755,6 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		case FIO_GETOPT_IOENGINE: {
 			const char *opt = l_opts[lidx].name;
 			char *val = optarg;
-			opt = l_opts[lidx].name;
-			val = optarg;
 			ret = fio_cmd_ioengine_option_parse(td, opt, val);
 			break;
 		}
