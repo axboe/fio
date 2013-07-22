@@ -126,14 +126,17 @@ def compute_temp_file(fio_data_file,disk_perf):
 
 			# We ignore the first 500msec as it doesn't seems to be part of the real benchmark
 			# Time < 500 usually reports BW=0 breaking the min computing
-			if ((int(time)) > 500):
+			if (((int(time)) > 500) or (int(time)==-1)):
 				disk_perf[index].append(int(perf))
-				perfs.append(perf)
+				perfs.append("%s %s"% (time, perf))
 				index = index + 1
 
 		# If we reach this point, it means that all the traces are coherent
 		for p in enumerate(perfs):
-			temp_outfile[p[0]].write("%s %.2f %s\n" % (p[0], float(float(time)/1000), p[1]))
+			perf_time,perf = p[1].split()
+			if (perf_time != "-1"):
+				temp_outfile[p[0]].write("%s %.2f %s\n" % (p[0], float(float(perf_time)/1000), perf))
+
 
 	for file in files:
 		file.close()
