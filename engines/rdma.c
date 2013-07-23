@@ -528,10 +528,10 @@ static int fio_rdmaio_getevents(struct thread_data *td, unsigned int min,
 {
 	struct rdmaio_data *rd = td->io_ops->data;
 	enum ibv_wc_opcode comp_opcode;
-	comp_opcode = IBV_WC_RDMA_WRITE;
 	struct ibv_cq *ev_cq;
 	void *ev_ctx;
 	int ret, r = 0;
+	comp_opcode = IBV_WC_RDMA_WRITE;
 
 	switch (rd->rdma_protocol) {
 	case FIO_RDMA_MEM_WRITE:
@@ -1049,12 +1049,11 @@ static int check_set_rlimits(struct thread_data *td)
 static int fio_rdmaio_init(struct thread_data *td)
 {
 	struct rdmaio_data *rd = td->io_ops->data;
-	struct flist_head *entry;
 	unsigned int max_bs;
 	unsigned int port;
 	char host[64], buf[128];
 	char *sep, *portp, *modep;
-	int ret, i = 0;
+	int ret, i;
 
 	if (td_rw(td)) {
 		log_err("fio: rdma connections must be read OR write\n");
@@ -1153,8 +1152,8 @@ static int fio_rdmaio_init(struct thread_data *td)
 
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
 	/* register each io_u in the free list */
-	flist_for_each(entry, &td->io_u_freelist) {
-		struct io_u *io_u = flist_entry(entry, struct io_u, list);
+	for (i = 0; i < td->io_u_freelist.nr; i++) {
+		struct io_u *io_u = td->io_u_freelist.io_us[i];
 
 		io_u->engine_data = malloc(sizeof(struct rdma_io_u_data));
 		memset(io_u->engine_data, 0, sizeof(struct rdma_io_u_data));
@@ -1177,7 +1176,6 @@ static int fio_rdmaio_init(struct thread_data *td)
 #if 0
 		log_info("fio: Send rkey %x addr %" PRIx64 " len %d to client\n", io_u->mr->rkey, io_u->buf, max_bs); */
 #endif
-		i++;
 	}
 
 	rd->send_buf.nr = htonl(i);

@@ -1127,7 +1127,7 @@ fi
 if test "$sfaa" = "yes" ; then
   output_sym "CONFIG_SFAA"
 fi
-if test "$libverbs" = "yes" -a "rdmacm" = "yes" ; then
+if test "$libverbs" = "yes" -a "$rdmacm" = "yes" ; then
   output_sym "CONFIG_RDMA"
 fi
 if test "$clock_gettime" = "yes" ; then
