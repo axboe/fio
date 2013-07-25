@@ -1558,6 +1558,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "bs_is_seq_rand",
+		.lname	= "Block size division is seq/random (not read/write)",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(bs_is_seq_rand),
+		.help	= "Consider any blocksize setting to be sequential,ramdom",
+		.def	= "0",
+		.parent = "blocksize",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "randrepeat",
 		.lname	= "Random repeatable",
 		.type	= FIO_OPT_BOOL,

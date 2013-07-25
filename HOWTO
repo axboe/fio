@@ -505,6 +505,11 @@ bs_unaligned	If this option is given, any byte size value within bsrange
 		may be used as a block range. This typically wont work with
 		direct IO, as that normally requires sector alignment.
 
+bs_is_seq_rand	If this option is set, fio will use the normal read,write
+		blocksize settings as sequential,random instead. Any random
+		read or write will use the WRITE blocksize settings, and any
+		sequential read or write will use the READ blocksize setting.
+
 zero_buffers	If this option is given, fio will init the IO buffers to
 		all zeroes. The default is to fill them with random data.
 

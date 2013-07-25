@@ -293,7 +293,8 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 }
 
 static int get_next_block(struct thread_data *td, struct io_u *io_u,
-			  enum fio_ddir ddir, int rw_seq)
+			  enum fio_ddir ddir, int rw_seq,
+			  unsigned int *is_random)
 {
 	struct fio_file *f = io_u->file;
 	uint64_t b, offset;
@@ -305,23 +306,30 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 
 	if (rw_seq) {
 		if (td_random(td)) {
-			if (should_do_random(td, ddir))
+			if (should_do_random(td, ddir)) {
 				ret = get_next_rand_block(td, f, ddir, &b);
-			else {
+				*is_random = 1;
+			} else {
+				*is_random = 0;
 				io_u->flags |= IO_U_F_BUSY_OK;
 				ret = get_next_seq_offset(td, f, ddir, &offset);
 				if (ret)
 					ret = get_next_rand_block(td, f, ddir, &b);
 			}
-		} else
+		} else {
+			*is_random = 0;
 			ret = get_next_seq_offset(td, f, ddir, &offset);
+		}
 	} else {
 		io_u->flags |= IO_U_F_BUSY_OK;
+		*is_random = 0;
 
 		if (td->o.rw_seq == RW_SEQ_SEQ) {
 			ret = get_next_seq_offset(td, f, ddir, &offset);
-			if (ret)
+			if (ret) {
 				ret = get_next_rand_block(td, f, ddir, &b);
+				*is_random = 0;
+			}
 		} else if (td->o.rw_seq == RW_SEQ_IDENT) {
 			if (f->last_start != -1ULL)
 				offset = f->last_start - f->file_offset;
@@ -353,7 +361,8 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
  * until we find a free one. For sequential io, just return the end of
  * the last io issued.
  */
-static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
+static int __get_next_offset(struct thread_data *td, struct io_u *io_u,
+			     unsigned int *is_random)
 {
 	struct fio_file *f = io_u->file;
 	enum fio_ddir ddir = io_u->ddir;
@@ -366,7 +375,7 @@ static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
 		td->ddir_seq_nr = td->o.ddir_seq_nr;
 	}
 
-	if (get_next_block(td, io_u, ddir, rw_seq_hit))
+	if (get_next_block(td, io_u, ddir, rw_seq_hit, is_random))
 		return 1;
 
 	if (io_u->offset >= f->io_size) {
@@ -387,16 +396,17 @@ static int __get_next_offset(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-static int get_next_offset(struct thread_data *td, struct io_u *io_u)
+static int get_next_offset(struct thread_data *td, struct io_u *io_u,
+			   unsigned int *is_random)
 {
 	if (td->flags & TD_F_PROFILE_OPS) {
 		struct prof_io_ops *ops = &td->prof_io_ops;
 
 		if (ops->fill_io_u_off)
-			return ops->fill_io_u_off(td, io_u);
+			return ops->fill_io_u_off(td, io_u, is_random);
 	}
 
-	return __get_next_offset(td, io_u);
+	return __get_next_offset(td, io_u, is_random);
 }
 
 static inline int io_u_fits(struct thread_data *td, struct io_u *io_u,
@@ -407,14 +417,20 @@ static inline int io_u_fits(struct thread_data *td, struct io_u *io_u,
 	return io_u->offset + buflen <= f->io_size + get_start_offset(td);
 }
 
-static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
+static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
+				      unsigned int is_random)
 {
-	const int ddir = io_u->ddir;
+	int ddir = io_u->ddir;
 	unsigned int buflen = 0;
 	unsigned int minbs, maxbs;
 	unsigned long r, rand_max;
 
-	assert(ddir_rw(ddir));
+	assert(ddir_rw(io_u->ddir));
+
+	if (td->o.bs_is_seq_rand)
+		ddir = is_random ? DDIR_WRITE: DDIR_READ;
+	else
+		ddir = io_u->ddir;
 
 	minbs = td->o.min_bs[ddir];
 	maxbs = td->o.max_bs[ddir];
@@ -471,16 +487,17 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u)
 	return buflen;
 }
 
-static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u)
+static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u,
+				    unsigned int is_random)
 {
 	if (td->flags & TD_F_PROFILE_OPS) {
 		struct prof_io_ops *ops = &td->prof_io_ops;
 
 		if (ops->fill_io_u_size)
-			return ops->fill_io_u_size(td, io_u);
+			return ops->fill_io_u_size(td, io_u, is_random);
 	}
 
-	return __get_next_buflen(td, io_u);
+	return __get_next_buflen(td, io_u, is_random);
 }
 
 static void set_rwmix_bytes(struct thread_data *td)
@@ -715,6 +732,8 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 
 static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 {
+	unsigned int is_random;
+
 	if (td->io_ops->flags & FIO_NOIO)
 		goto out;
 
@@ -740,12 +759,12 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	 * No log, let the seq/rand engine retrieve the next buflen and
 	 * position.
 	 */
-	if (get_next_offset(td, io_u)) {
+	if (get_next_offset(td, io_u, &is_random)) {
 		dprint(FD_IO, "io_u %p, failed getting offset\n", io_u);
 		return 1;
 	}
 
-	io_u->buflen = get_next_buflen(td, io_u);
+	io_u->buflen = get_next_buflen(td, io_u, is_random);
 	if (!io_u->buflen) {
 		dprint(FD_IO, "io_u %p, failed getting buflen\n", io_u);
 		return 1;

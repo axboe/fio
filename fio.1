@@ -379,6 +379,12 @@ for using direct IO, though it usually depends on the hardware block size.
 This option is mutually exclusive with using a random map for files, so it
 will turn off that option.
 .TP
+.BI bs_is_seq_rand \fR=\fPbool
+If this option is set, fio will use the normal read,write blocksize settings as
+sequential,random instead. Any random read or write will use the WRITE
+blocksize settings, and any sequential read or write will use the READ
+blocksize setting.
+.TP
 .B zero_buffers
 Initialise buffers with all zeros. Default: fill buffers with random data.
 .TP

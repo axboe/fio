@@ -105,6 +105,7 @@ struct thread_options {
 	unsigned int softrandommap;
 	unsigned int bs_unaligned;
 	unsigned int fsync_on_close;
+	unsigned int bs_is_seq_rand;
 
 	unsigned int random_distribution;
 
@@ -317,6 +318,7 @@ struct thread_options_pack {
 	uint32_t softrandommap;
 	uint32_t bs_unaligned;
 	uint32_t fsync_on_close;
+	uint32_t bs_is_seq_rand;
 
 	uint32_t random_distribution;
 	fio_fp64_t zipf_theta;
