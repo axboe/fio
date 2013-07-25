@@ -1035,20 +1035,31 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 				fio_server_send_add_job(td);
 
 			if (!(td->io_ops->flags & FIO_NOIO)) {
-				char *c1, *c2, *c3, *c4, *c5, *c6;
+				char *c1, *c2, *c3, *c4;
+				char *c5 = NULL, *c6 = NULL;
 
 				c1 = fio_uint_to_kmg(o->min_bs[DDIR_READ]);
 				c2 = fio_uint_to_kmg(o->max_bs[DDIR_READ]);
 				c3 = fio_uint_to_kmg(o->min_bs[DDIR_WRITE]);
 				c4 = fio_uint_to_kmg(o->max_bs[DDIR_WRITE]);
-				c5 = fio_uint_to_kmg(o->min_bs[DDIR_TRIM]);
-				c6 = fio_uint_to_kmg(o->max_bs[DDIR_TRIM]);
 
-				log_info("%s: (g=%d): rw=%s, bs=%s-%s/%s-%s/%s-%s,"
-					 " ioengine=%s, iodepth=%u\n",
-						td->o.name, td->groupid,
-						ddir_str(o->td_ddir),
-						c1, c2, c3, c4, c5, c6,
+				if (!o->bs_is_seq_rand) {
+					c5 = fio_uint_to_kmg(o->min_bs[DDIR_TRIM]);
+					c6 = fio_uint_to_kmg(o->max_bs[DDIR_TRIM]);
+				}
+
+				log_info("%s: (g=%d): rw=%s, ", td->o.name,
+							td->groupid,
+							ddir_str(o->td_ddir));
+
+				if (o->bs_is_seq_rand)
+					log_info("bs(seq/rand)=%s-%s/%s-%s, ",
+							c1, c2, c3, c4);
+				else
+					log_info("bs=%s-%s/%s-%s/%s-%s, ",
+							c1, c2, c3, c4, c5, c6);
+
+				log_info("ioengine=%s, iodepth=%u\n",
 						td->io_ops->name, o->iodepth);
 
 				free(c1);
