@@ -191,23 +191,23 @@ static inline int should_sort_io(struct thread_data *td)
 	return 1;
 }
 
-static int should_do_random(struct thread_data *td)
+static int should_do_random(struct thread_data *td, enum fio_ddir ddir)
 {
 	unsigned int v;
 	unsigned long r;
 
-	if (td->o.perc_rand == 100)
+	if (td->o.perc_rand[ddir] == 100)
 		return 1;
 
 	if (td->o.use_os_rand) {
-		r = os_random_long(&td->seq_rand_state);
+		r = os_random_long(&td->seq_rand_state[ddir]);
 		v = 1 + (int) (100.0 * (r / (OS_RAND_MAX + 1.0)));
 	} else {
-		r = __rand(&td->__seq_rand_state);
+		r = __rand(&td->__seq_rand_state[ddir]);
 		v = 1 + (int) (100.0 * (r / (FRAND_MAX + 1.0)));
 	}
 
-	return v <= td->o.perc_rand;
+	return v <= td->o.perc_rand[ddir];
 }
 
 static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
@@ -305,7 +305,7 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 
 	if (rw_seq) {
 		if (td_random(td)) {
-			if (should_do_random(td))
+			if (should_do_random(td, ddir))
 				ret = get_next_rand_block(td, f, ddir, &b);
 			else {
 				io_u->flags |= IO_U_F_BUSY_OK;

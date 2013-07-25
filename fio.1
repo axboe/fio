@@ -344,9 +344,10 @@ that is given). If \fBfilesize\fR is not specified, each created file is the
 same size.
 .TP
 .BI blocksize \fR=\fPint[,int] "\fR,\fB bs" \fR=\fPint[,int]
-Block size for I/O units.  Default: 4k.  Values for reads and writes can be
-specified separately in the format \fIread\fR,\fIwrite\fR, either of
-which may be empty to leave that value at its default.
+Block size for I/O units.  Default: 4k.  Values for reads, writes, and trims
+can be specified separately in the format \fIread\fR,\fIwrite\fR,\fItrim\fR
+either of which may be empty to leave that value at its default. If a trailing
+comma isn't given, the remainder will inherit the last value set.
 .TP
 .BI blocksize_range \fR=\fPirange[,irange] "\fR,\fB bsrange" \fR=\fPirange[,irange]
 Specify a range of I/O block sizes.  The issued I/O unit will always be a
@@ -648,10 +649,8 @@ fio will disable use of the random map.
 For a random workload, set how big a percentage should be random. This defaults
 to 100%, in which case the workload is fully random. It can be set from
 anywhere from 0 to 100.  Setting it to 0 would make the workload fully
-sequential.
-.TP
-.BI percentage_sequential \fR=\fPint
-See \fBpercentage_random\fR.
+sequential. It is possible to set different values for reads, writes, and
+trim. To do so, simply use a comma separated list. See \fBblocksize\fR.
 .TP
 .B norandommap
 Normally \fBfio\fR will cover every block of the file when doing random I/O. If

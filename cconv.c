@@ -80,6 +80,8 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 		o->ratemin[i] = le32_to_cpu(top->ratemin[i]);
 		o->rate_iops[i] = le32_to_cpu(top->rate_iops[i]);
 		o->rate_iops_min[i] = le32_to_cpu(top->rate_iops_min[i]);
+
+		o->perc_rand[i] = le32_to_cpu(top->perc_rand[i]);
 	}
 
 	o->ratecycle = le32_to_cpu(top->ratecycle);
@@ -125,7 +127,6 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->zipf_theta.u.f = fio_uint64_to_double(le64_to_cpu(top->zipf_theta.u.i));
 	o->pareto_h.u.f = fio_uint64_to_double(le64_to_cpu(top->pareto_h.u.i));
 	o->random_generator = le32_to_cpu(top->random_generator);
-	o->perc_rand = le32_to_cpu(top->perc_rand);
 	o->hugepage_size = le32_to_cpu(top->hugepage_size);
 	o->rw_min_bs = le32_to_cpu(top->rw_min_bs);
 	o->thinktime = le32_to_cpu(top->thinktime);
@@ -284,7 +285,6 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->zipf_theta.u.i = __cpu_to_le64(fio_double_to_uint64(o->zipf_theta.u.f));
 	top->pareto_h.u.i = __cpu_to_le64(fio_double_to_uint64(o->pareto_h.u.f));
 	top->random_generator = cpu_to_le32(o->random_generator);
-	top->perc_rand = cpu_to_le32(o->perc_rand);
 	top->hugepage_size = cpu_to_le32(o->hugepage_size);
 	top->rw_min_bs = cpu_to_le32(o->rw_min_bs);
 	top->thinktime = cpu_to_le32(o->thinktime);
@@ -371,6 +371,8 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 		top->ratemin[i] = cpu_to_le32(o->ratemin[i]);
 		top->rate_iops[i] = cpu_to_le32(o->rate_iops[i]);
 		top->rate_iops_min[i] = cpu_to_le32(o->rate_iops_min[i]);
+
+		top->perc_rand[i] = cpu_to_le32(o->perc_rand[i]);
 	}
 
 	memcpy(top->verify_pattern, o->verify_pattern, MAX_PATTERN_SIZE);

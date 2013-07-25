@@ -788,6 +788,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	}
 	case FIO_OPT_DEPRECATED:
 		log_info("Option %s is deprecated\n", o->name);
+		ret = 1;
 		break;
 	default:
 		log_err("Bad option type %u\n", o->type);

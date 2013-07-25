@@ -413,7 +413,7 @@ static int fixed_block_size(struct thread_options *o)
 static int fixup_options(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
-	int ret = 0;
+	int i, ret = 0;
 
 #ifndef FIO_HAVE_PSHARED_MUTEX
 	if (!o->use_thread) {
@@ -701,7 +701,10 @@ static void td_fill_rand_seeds_os(struct thread_data *td)
 		td->rand_seeds[FIO_RAND_BLOCK_OFF] = FIO_RANDSEED * td->thread_number;
 
 	os_random_seed(td->rand_seeds[FIO_RAND_BLOCK_OFF], &td->random_state);
-	os_random_seed(td->rand_seeds[FIO_RAND_SEQ_RAND_OFF], &td->seq_rand_state);
+
+	os_random_seed(td->rand_seeds[FIO_RAND_SEQ_RAND_READ_OFF], &td->seq_rand_state[DDIR_READ]);
+	os_random_seed(td->rand_seeds[FIO_RAND_SEQ_RAND_WRITE_OFF], &td->seq_rand_state[DDIR_WRITE]);
+	os_random_seed(td->rand_seeds[FIO_RAND_SEQ_RAND_TRIM_OFF], &td->seq_rand_state[DDIR_TRIM]);
 }
 
 static void td_fill_rand_seeds_internal(struct thread_data *td)
@@ -723,7 +726,9 @@ static void td_fill_rand_seeds_internal(struct thread_data *td)
 		td->rand_seeds[FIO_RAND_BLOCK_OFF] = FIO_RANDSEED * td->thread_number;
 
 	init_rand_seed(&td->__random_state, td->rand_seeds[FIO_RAND_BLOCK_OFF]);
-	init_rand_seed(&td->__seq_rand_state, td->rand_seeds[FIO_RAND_SEQ_RAND_OFF]);
+	init_rand_seed(&td->__seq_rand_state[DDIR_READ], td->rand_seeds[FIO_RAND_SEQ_RAND_READ_OFF]);
+	init_rand_seed(&td->__seq_rand_state[DDIR_WRITE], td->rand_seeds[FIO_RAND_SEQ_RAND_WRITE_OFF]);
+	init_rand_seed(&td->__seq_rand_state[DDIR_TRIM], td->rand_seeds[FIO_RAND_SEQ_RAND_TRIM_OFF]);
 }
 
 void td_fill_rand_seeds(struct thread_data *td)

@@ -443,9 +443,11 @@ bs=int		The block size used for the io units. Defaults to 4k. Values
 		can be given for both read and writes. If a single int is
 		given, it will apply to both. If a second int is specified
 		after a comma, it will apply to writes only. In other words,
-		the format is either bs=read_and_write or bs=read,write.
-		bs=4k,8k will thus use 4k blocks for reads, and 8k blocks
-		for writes. If you only wish to set the write size, you
+		the format is either bs=read_and_write or bs=read,write,trim.
+		bs=4k,8k will thus use 4k blocks for reads, 8k blocks for
+		writes, and 8k for trims. You can terminate the list with
+		a trailing comma. bs=4k,8k, would use the default value for
+		trims.. If you only wish to set the write size, you
 		can do so by passing an empty read size - bs=,8k will set
 		8k for writes and leave the read default value.
 
@@ -773,12 +775,10 @@ percentage_random=int	For a random workload, set how big a percentage should
 		is fully random. It can be set from anywhere from 0 to 100.
 		Setting it to 0 would make the workload fully sequential. Any
 		setting in between will result in a random mix of sequential
-		and random IO, at the given percentages.
+		and random IO, at the given percentages. It is possible to
+		set different values for reads, writes, and trim. To do so,
+		simply use a comma separated list. See blocksize.
 	
-percentage_sequential=int	See percentage_random. It is guaranteed that
-		they add up to 100. The later setting has priority, each
-		will adjust the other.
-
 norandommap	Normally fio will cover every block of the file when doing
 		random IO. If this option is given, fio will just get a
 		new random offset without looking at past io history. This
