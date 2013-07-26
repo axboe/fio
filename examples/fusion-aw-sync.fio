@@ -6,7 +6,10 @@ ioengine=fusion-aw-sync
 blocksize=8k
 blockalign=8k
 
+# if file system supports atomic write
 filename=/mnt/fs/file
+# or test on a direct block device instead
+#filename=/dev/fioa
 randrepeat=1
 fallocate=none
 direct=1
