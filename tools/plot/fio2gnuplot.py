@@ -340,10 +340,12 @@ def main(argv):
     if len(fio_data_file) == 0:
 	    print "No log file found with pattern %s!" % pattern
 	    sys.exit(1)
+    else:
+	    print "%d files Selected with pattern '%s'" % (len(fio_data_file), pattern)
 
     fio_data_file=sorted(fio_data_file, key=str.lower)
     for file in fio_data_file:
-	print 'Selected %s' % file
+	print ' |-> %s' % file
 	if "_bw.log" in file :
 		mode="Bandwidth (KB/sec)"
 	if "_iops.log" in file :
@@ -354,6 +356,7 @@ def main(argv):
 	    if "IO" in mode:
 		    title='IO benchmark with %d fio results' % len(fio_data_file)
 
+    print
     #We need to adjust the output filename regarding the pattern required by the user
     if (pattern_set_by_user == True):
 	    gnuplot_output_filename=pattern
