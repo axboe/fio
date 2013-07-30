@@ -20,7 +20,7 @@ OPTFLAGS= -O3 -g -ffast-math
 CFLAGS	= -std=gnu99 -Wwrite-strings -Wall -Wdeclaration-after-statement $(OPTFLAGS) $(EXTFLAGS) $(BUILD_CFLAGS)
 LIBS	+= -lm $(EXTLIBS)
 PROGS	= fio
-SCRIPTS = fio_generate_plots tools/plot/fio2gnuplot.py
+SCRIPTS = fio_generate_plots tools/plot/fio2gnuplot.py tools/genfio
 
 ifdef CONFIG_GFIO
   PROGS += gfio
