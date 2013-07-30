@@ -20,7 +20,7 @@ OPTFLAGS= -O3 -g -ffast-math
 CFLAGS	= -std=gnu99 -Wwrite-strings -Wall -Wdeclaration-after-statement $(OPTFLAGS) $(EXTFLAGS) $(BUILD_CFLAGS)
 LIBS	+= -lm $(EXTLIBS)
 PROGS	= fio
-SCRIPTS = fio_generate_plots tools/plot/fio2gnuplot.py tools/genfio
+SCRIPTS = tools/fio_generate_plots tools/plot/fio2gnuplot.py tools/genfio
 
 ifdef CONFIG_GFIO
   PROGS += gfio
@@ -280,6 +280,6 @@ install: $(PROGS) $(SCRIPTS) FORCE
 	$(INSTALL) $(PROGS) $(SCRIPTS) $(DESTDIR)$(bindir)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 fio.1 $(DESTDIR)$(mandir)/man1
-	$(INSTALL) -m 644 fio_generate_plots.1 $(DESTDIR)$(mandir)/man1
+	$(INSTALL) -m 644 tools/fio_generate_plots.1 $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sharedir)
 	$(INSTALL) -m 644 tools/plot/*gpm $(DESTDIR)$(sharedir)/
