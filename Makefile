@@ -20,7 +20,7 @@ OPTFLAGS= -O3 -g -ffast-math
 CFLAGS	= -std=gnu99 -Wwrite-strings -Wall -Wdeclaration-after-statement $(OPTFLAGS) $(EXTFLAGS) $(BUILD_CFLAGS)
 LIBS	+= -lm $(EXTLIBS)
 PROGS	= fio
-SCRIPTS = fio_generate_plots
+SCRIPTS = fio_generate_plots tools/plot/fio2gnuplot.py
 
 ifdef CONFIG_GFIO
   PROGS += gfio
@@ -189,8 +189,10 @@ bindir = $(prefix)/bin
 
 ifeq ($(CONFIG_TARGET_OS), Darwin)
 mandir = /usr/share/man
+sharedir = /usr/share/fio
 else
 mandir = $(prefix)/man
+sharedir = $(prefix)/share/fio
 endif
 
 all: $(PROGS) $(SCRIPTS) FORCE
@@ -279,3 +281,5 @@ install: $(PROGS) $(SCRIPTS) FORCE
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 fio.1 $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 fio_generate_plots.1 $(DESTDIR)$(mandir)/man1
+	$(INSTALL) -m 755 -d $(DESTDIR)$(sharedir)
+	$(INSTALL) -m 644 tools/plot/*gpm $(DESTDIR)$(sharedir)/
