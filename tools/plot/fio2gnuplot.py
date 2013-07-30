@@ -37,8 +37,9 @@ def find_file(path, pattern):
 
 	return fio_data_file
 
-def generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,mode,disk_perf):
-	f=open("mygraph",'w')
+def generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,gnuplot_output_dir,mode,disk_perf):
+	filename=gnuplot_output_dir+'mygraph'
+	f=open(filename,'w')
 	if len(fio_data_file) > 1:
         	f.write("call \'graph3D.gpm\' \'%s' \'%s\' \'\' \'%s\' \'%s\'\n" % (title,gnuplot_output_filename,gnuplot_output_filename,mode))
 
@@ -56,17 +57,19 @@ def generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,mode,dis
 
 	f.close()
 
-def generate_gnuplot_math_script(title,gnuplot_output_filename,mode,average):
-	f=open("mymath",'a')
+def generate_gnuplot_math_script(title,gnuplot_output_filename,mode,average,gnuplot_output_dir):
+	filename=gnuplot_output_dir+'mymath';
+	f=open(filename,'a')
         f.write("call \'math.gpm\' \'%s' \'%s\' \'\' \'%s\' \'%s\' %s\n" % (title,gnuplot_output_filename,gnuplot_output_filename,mode,average))
 	f.close()
 
-def compute_aggregated_file(fio_data_file, gnuplot_output_filename):
+def compute_aggregated_file(fio_data_file, gnuplot_output_filename, gnuplot_output_dir):
 	temp_files=[]
 	pos=0
+
 	# Let's create a temporary file for each selected fio file
 	for file in fio_data_file:
-		tmp_filename = "gnuplot_temp_file.%d" % pos
+		tmp_filename = "%sgnuplot_temp_file.%d" % (gnuplot_output_dir, pos)
 		temp_files.append(open(tmp_filename,'r'))
 		pos = pos +1
 
@@ -83,14 +86,14 @@ def compute_aggregated_file(fio_data_file, gnuplot_output_filename):
 
 def average(s): return sum(s) * 1.0 / len(s)
 
-def compute_temp_file(fio_data_file,disk_perf):
+def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir):
 	files=[]
 	temp_outfile=[]
 	blk_size=0
 	for file in fio_data_file:
 		files.append(open(file))
 		pos = len(files) - 1
-		tmp_filename = "gnuplot_temp_file.%d" % pos
+		tmp_filename = "%sgnuplot_temp_file.%d" % (gnuplot_output_dir,pos)
 		gnuplot_file=open(tmp_filename,'w')
 		temp_outfile.append(gnuplot_file)
 		gnuplot_file.write("#Temporary file based on file %s\n" % file)
@@ -144,14 +147,14 @@ def compute_temp_file(fio_data_file,disk_perf):
                 file.close()
 	return blk_size
 
-def compute_math(fio_data_file, title,gnuplot_output_filename,mode,disk_perf):
+def compute_math(fio_data_file, title,gnuplot_output_filename,gnuplot_output_dir,mode,disk_perf):
 	global_min=[]
 	global_max=[]
-	average_file=open(gnuplot_output_filename+'.average', 'w')
-	min_file=open(gnuplot_output_filename+'.min', 'w')
-	max_file=open(gnuplot_output_filename+'.max', 'w')
-	stddev_file=open(gnuplot_output_filename+'.stddev', 'w')
-	global_file=open(gnuplot_output_filename+'.global','w')
+	average_file=open(gnuplot_output_dir+gnuplot_output_filename+'.average', 'w')
+	min_file=open(gnuplot_output_dir+gnuplot_output_filename+'.min', 'w')
+	max_file=open(gnuplot_output_dir+gnuplot_output_filename+'.max', 'w')
+	stddev_file=open(gnuplot_output_dir+gnuplot_output_filename+'.stddev', 'w')
+	global_file=open(gnuplot_output_dir+gnuplot_output_filename+'.global','w')
 
 	min_file.write('DiskName %s\n' % mode)
 	max_file.write('DiskName %s\n'% mode)
@@ -199,10 +202,10 @@ def compute_math(fio_data_file, title,gnuplot_output_filename,mode,disk_perf):
 	except:
 		True
 
-	generate_gnuplot_math_script("Average values of "+title,gnuplot_output_filename+'.average',mode,int(avg))
-	generate_gnuplot_math_script("Min values of "+title,gnuplot_output_filename+'.min',mode,average(global_min))
-	generate_gnuplot_math_script("Max values of "+title,gnuplot_output_filename+'.max',mode,average(global_max))
-	generate_gnuplot_math_script("Standard Deviation of "+title,gnuplot_output_filename+'.stddev',mode,int(standard_deviation))
+	generate_gnuplot_math_script("Average values of "+title,gnuplot_output_filename+'.average',mode,int(avg),gnuplot_output_dir)
+	generate_gnuplot_math_script("Min values of "+title,gnuplot_output_filename+'.min',mode,average(global_min),gnuplot_output_dir)
+	generate_gnuplot_math_script("Max values of "+title,gnuplot_output_filename+'.max',mode,average(global_max),gnuplot_output_dir)
+	generate_gnuplot_math_script("Standard Deviation of "+title,gnuplot_output_filename+'.stddev',mode,int(standard_deviation),gnuplot_output_dir)
 
 def parse_global_files(fio_data_file, global_search):
 	max_result=0
@@ -249,11 +252,11 @@ def parse_global_files(fio_data_file, global_search):
 	else:
 		print "Global search %s is not yet implemented\n" % global_search
 
-def render_gnuplot():
+def render_gnuplot(gnuplot_output_dir):
 	print "Running gnuplot Rendering\n"
 	try:
-		os.system("gnuplot mymath")
-		os.system("gnuplot mygraph")
+		os.system("cd %s; gnuplot mymath" % gnuplot_output_dir)
+		os.system("cd %s; gnuplot mygraph" % gnuplot_output_dir)
 	except:
 		print "Could not run gnuplot on mymath or mygraph !\n"
 		sys.exit(1);
@@ -268,6 +271,7 @@ def print_help():
     print '-g           or --gnuplot           : Render gnuplot traces before exiting'
     print '-o           or --outputfile <file> : The basename for gnuplot traces'
     print '                                       - Basename is set with the pattern if defined'
+    print '-d           or --outputdir <dir>   : The directory where gnuplot shall render files'
     print '-t           or --title <title>     : The title of the gnuplot traces'
     print '                                       - Title is set with the block size detected in fio traces'
     print '-G		or --Global <type>     : Search for <type> in .global files match by a pattern'
@@ -280,13 +284,14 @@ def main(argv):
     pattern_set_by_user=False
     title='No title'
     gnuplot_output_filename='result'
+    gnuplot_output_dir='./'
     disk_perf=[]
     run_gnuplot=False
     parse_global=False
     global_search=''
 
     try:
-	    opts, args = getopt.getopt(argv[1:],"ghbio:t:p:G:")
+	    opts, args = getopt.getopt(argv[1:],"ghbio:d:t:p:G:")
     except getopt.GetoptError:
 	 print_help()
          sys.exit(2)
@@ -302,6 +307,12 @@ def main(argv):
 	 pattern=pattern.replace('\\','')
       elif opt in ("-o", "--outputfile"):
          gnuplot_output_filename=arg
+      elif opt in ("-d", "--outputdir"):
+         gnuplot_output_dir=arg
+	 if not gnuplot_output_dir.endswith('/'):
+		gnuplot_output_dir=gnuplot_output_dir+'/'
+	 if not os.path.exists(gnuplot_output_dir):
+		os.makedirs(gnuplot_output_dir)
       elif opt in ("-t", "--title"):
          title=arg
       elif opt in ("-g", "--gnuplot"):
@@ -352,14 +363,14 @@ def main(argv):
     if parse_global==True:
 	parse_global_files(fio_data_file, global_search)
     else:
-    	blk_size=compute_temp_file(fio_data_file,disk_perf)
+    	blk_size=compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir)
     	title="%s @ Blocksize = %dK" % (title,blk_size/1024)
-    	compute_aggregated_file(fio_data_file, gnuplot_output_filename)
-    	compute_math(fio_data_file,title,gnuplot_output_filename,mode,disk_perf)
-    	generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,mode,disk_perf)
+    	compute_aggregated_file(fio_data_file, gnuplot_output_filename, gnuplot_output_dir)
+    	compute_math(fio_data_file,title,gnuplot_output_filename,gnuplot_output_dir,mode,disk_perf)
+    	generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,gnuplot_output_dir,mode,disk_perf)
 
     	if (run_gnuplot==True):
-    		render_gnuplot()
+    		render_gnuplot(gnuplot_output_dir)
 
     # Cleaning temporary files
     try:
