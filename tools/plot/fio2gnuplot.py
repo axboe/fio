@@ -39,6 +39,7 @@ def find_file(path, pattern):
 	return fio_data_file
 
 def generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,gnuplot_output_dir,mode,disk_perf,gpm_dir):
+	print "Generating rendering scripts"
 	filename=gnuplot_output_dir+'mygraph'
 	f=open(filename,'w')
 
@@ -115,6 +116,7 @@ def generate_gnuplot_math_script(title,gnuplot_output_filename,mode,average,gnup
 	f.close()
 
 def compute_aggregated_file(fio_data_file, gnuplot_output_filename, gnuplot_output_dir):
+	print "Processing data file 2/2"
 	temp_files=[]
 	pos=0
 
@@ -138,6 +140,7 @@ def compute_aggregated_file(fio_data_file, gnuplot_output_filename, gnuplot_outp
 def average(s): return sum(s) * 1.0 / len(s)
 
 def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir):
+	print "Processing data file 1/2"
 	files=[]
 	temp_outfile=[]
 	blk_size=0
@@ -199,6 +202,7 @@ def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir):
 	return blk_size
 
 def compute_math(fio_data_file, title,gnuplot_output_filename,gnuplot_output_dir,mode,disk_perf,gpm_dir):
+	print "Computing Maths"
 	global_min=[]
 	global_max=[]
 	average_file=open(gnuplot_output_dir+gnuplot_output_filename+'.average', 'w')
@@ -314,6 +318,11 @@ def render_gnuplot(fio_data_file, gnuplot_output_dir):
 		os.system("cd %s; gnuplot mymath" % gnuplot_output_dir)
 		print " |-> Rendering 2D & 3D traces"
 		os.system("cd %s; gnuplot mygraph" % gnuplot_output_dir)
+
+		name_of_directory="the current"
+		if gnuplot_output_dir != "./":
+			name_of_directory=gnuplot_output_dir
+		print "\nRendering traces are available in %s directory" % name_of_directory
 	except:
 		print "Could not run gnuplot on mymath or mygraph !\n"
 		sys.exit(1);
