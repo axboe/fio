@@ -98,7 +98,7 @@ set yrange [0:]
                 smooth_filename = "%s-2Dsmooth" % (png_file)
                 trend_filename = "%s-2Dtrend" % (png_file)
                 avg  = average(disk_perf[pos])
-                f.write("call \'%s/graph2D.gpm\' \'%s' \'%s\' \'\' \'%s\' \'%s\' \'%s\' \'%s\' \'%f\'\n" % (gpm_dir,title,tmp_filename,raw_filename,mode,smooth_filename,trend_filename,avg))
+                f.write("call \'%s/graph2D.gpm\' \'%s' \'%s\' \'%s\' \'%s\' \'%s\' \'%s\' \'%s\' \'%f\'\n" % (gpm_dir,title,tmp_filename,fio_data_file[pos],raw_filename,mode,smooth_filename,trend_filename,avg))
                 pos = pos +1
 
 	# Plotting comparing graphs doesn't have a meaning unless if there is at least 2 traces
