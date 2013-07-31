@@ -25,6 +25,7 @@ import sys
 import getopt
 import re
 import math
+import shutil
 
 def find_file(path, pattern):
 	fio_data_file=[]
@@ -40,14 +41,58 @@ def find_file(path, pattern):
 def generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,gnuplot_output_dir,mode,disk_perf,gpm_dir):
 	filename=gnuplot_output_dir+'mygraph'
 	f=open(filename,'w')
+
+	# Plotting 3D or comparing graphs doesn't have a meaning unless if there is at least 2 traces
 	if len(fio_data_file) > 1:
         	f.write("call \'%s/graph3D.gpm\' \'%s' \'%s\' \'\' \'%s\' \'%s\'\n" % (gpm_dir,title,gnuplot_output_filename,gnuplot_output_filename,mode))
+
+		# Setting up the compare files that will be plot later
+		compare=open(gnuplot_output_dir + 'compare.gnuplot','w')
+		compare.write('''
+set title '%s'
+set terminal png size 1280,1024
+set ytics axis out auto
+set key top left reverse
+set xlabel "Time (Seconds)"
+set ylabel '%s'
+set xrange [0:]
+set yrange [0:]
+'''% (title,mode))
+		compare.close()
+		#Copying the common file for all kind of graph (raw/smooth/trend)
+		compare_raw_filename="compare-%s-2Draw" % (gnuplot_output_filename)
+		compare_smooth_filename="compare-%s-2Dsmooth" % (gnuplot_output_filename)
+		compare_trend_filename="compare-%s-2Dtrend" % (gnuplot_output_filename)
+		shutil.copy(gnuplot_output_dir+'compare.gnuplot',gnuplot_output_dir+compare_raw_filename+".gnuplot")
+		shutil.copy(gnuplot_output_dir+'compare.gnuplot',gnuplot_output_dir+compare_smooth_filename+".gnuplot")
+		shutil.copy(gnuplot_output_dir+'compare.gnuplot',gnuplot_output_dir+compare_trend_filename+".gnuplot")
+
+		#Setting up a different output filename for each kind of graph
+		compare_raw=open(gnuplot_output_dir+compare_raw_filename + ".gnuplot",'a')
+		compare_raw.write("set output '%s.png'\n" % compare_raw_filename)
+		compare_smooth=open(gnuplot_output_dir+compare_smooth_filename+".gnuplot",'a')
+		compare_smooth.write("set output '%s.png'\n" % compare_smooth_filename)
+		compare_trend=open(gnuplot_output_dir+compare_trend_filename+".gnuplot",'a')
+		compare_trend.write("set output '%s.png'\n" % compare_trend_filename)
 
         pos=0
         # Let's create a temporary file for each selected fio file
         for file in fio_data_file:
                 tmp_filename = "gnuplot_temp_file.%d" % pos
-                png_file=file.replace('.log','')
+
+		# Plotting comparing graphs doesn't have a meaning unless if there is at least 2 traces
+		if len(fio_data_file) > 1:
+			# Adding the plot instruction for each kind of comparing graphs
+			if pos ==0 :
+				compare_raw.write("plot '%s' using 2:3 with linespoints title '%s'" % (tmp_filename,fio_data_file[pos]))
+				compare_smooth.write("plot '%s' using 2:3 smooth csplines title '%s'" % (tmp_filename,fio_data_file[pos]))
+				compare_trend.write("plot '%s' using 2:3 smooth bezier title '%s'" % (tmp_filename,fio_data_file[pos]))
+			else:
+				compare_raw.write(",\\\n'%s' using 2:3 with linespoints title '%s'" % (tmp_filename,fio_data_file[pos]))
+				compare_smooth.write(",\\\n'%s' using 2:3 smooth csplines title '%s'" % (tmp_filename,fio_data_file[pos]))
+				compare_trend.write(",\\\n'%s' using 2:3 smooth bezier title '%s'" % (tmp_filename,fio_data_file[pos]))
+
+		png_file=file.replace('.log','')
                 raw_filename = "%s-2Draw" % (png_file)
                 smooth_filename = "%s-2Dsmooth" % (png_file)
                 trend_filename = "%s-2Dtrend" % (png_file)
@@ -55,6 +100,12 @@ def generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,gnuplot_
                 f.write("call \'%s/graph2D.gpm\' \'%s' \'%s\' \'\' \'%s\' \'%s\' \'%s\' \'%s\' \'%f\'\n" % (gpm_dir,title,tmp_filename,raw_filename,mode,smooth_filename,trend_filename,avg))
                 pos = pos +1
 
+	# Plotting comparing graphs doesn't have a meaning unless if there is at least 2 traces
+	if len(fio_data_file) > 1:
+		os.remove(gnuplot_output_dir+"compare.gnuplot")
+		compare_raw.close()
+		compare_smooth.close()
+		compare_trend.close()
 	f.close()
 
 def generate_gnuplot_math_script(title,gnuplot_output_filename,mode,average,gnuplot_output_dir,gpm_dir):
@@ -252,10 +303,16 @@ def parse_global_files(fio_data_file, global_search):
 	else:
 		print "Global search %s is not yet implemented\n" % global_search
 
-def render_gnuplot(gnuplot_output_dir):
-	print "Running gnuplot Rendering\n"
+def render_gnuplot(fio_data_file, gnuplot_output_dir):
+	print "Running gnuplot Rendering"
 	try:
+		# Let's render all the compared files if some
+		if len(fio_data_file) > 1:
+			print " |-> Rendering comparing traces"
+			os.system("cd %s; for i in *.gnuplot; do gnuplot $i; done" % gnuplot_output_dir)
+		print " |-> Rendering math traces"
 		os.system("cd %s; gnuplot mymath" % gnuplot_output_dir)
+		print " |-> Rendering 2D & 3D traces"
 		os.system("cd %s; gnuplot mygraph" % gnuplot_output_dir)
 	except:
 		print "Could not run gnuplot on mymath or mygraph !\n"
@@ -380,7 +437,7 @@ def main(argv):
     	generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,gnuplot_output_dir,mode,disk_perf,gpm_dir)
 
     	if (run_gnuplot==True):
-    		render_gnuplot(gnuplot_output_dir)
+    		render_gnuplot(fio_data_file, gnuplot_output_dir)
 
     # Cleaning temporary files
     try:
