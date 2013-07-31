@@ -319,7 +319,7 @@ def render_gnuplot(fio_data_file, gnuplot_output_dir):
 		sys.exit(1);
 
 def print_help():
-    print 'fio2gnuplot.py -ghbio -t <title> -o <outputfile> -p <pattern>'
+    print 'fio2gnuplot.py -ghbiod -t <title> -o <outputfile> -p <pattern> -G <type>'
     print
     print '-h --help                           : Print this help'
     print '-p <pattern> or --pattern <pattern> : A pattern in regexp to select fio input files'
