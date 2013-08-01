@@ -179,7 +179,12 @@ def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir):
 		for line in current_line:
 			time, perf, x, block_size = line
 			if (blk_size == 0):
-				blk_size=int(block_size)
+				try:
+					blk_size=int(block_size)
+				except:
+					print "Error while reading the following line :"
+					print line
+					sys.exit(1);
 
 			# We ignore the first 500msec as it doesn't seems to be part of the real benchmark
 			# Time < 500 usually reports BW=0 breaking the min computing
