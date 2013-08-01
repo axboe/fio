@@ -56,7 +56,6 @@ set ytics axis out auto
 set key top left reverse
 set xlabel "Time (Seconds)"
 set ylabel '%s'
-set xrange [0:]
 set yrange [0:]
 '''% (title,mode))
 		compare.close()
@@ -139,8 +138,11 @@ def compute_aggregated_file(fio_data_file, gnuplot_output_filename, gnuplot_outp
 
 def average(s): return sum(s) * 1.0 / len(s)
 
-def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir):
-	print "Processing data file 1/2"
+def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir, min_time, max_time):
+	end_time=max_time
+	if end_time == -1:
+		end_time="infinite"
+	print "Processing data file 1/2 with %s<time<%s" % (min_time,end_time)
 	files=[]
 	temp_outfile=[]
 	blk_size=0
@@ -189,9 +191,11 @@ def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir):
 			# We ignore the first 500msec as it doesn't seems to be part of the real benchmark
 			# Time < 500 usually reports BW=0 breaking the min computing
 			if (((int(time)) > 500) or (int(time)==-1)):
-				disk_perf[index].append(int(perf))
-				perfs.append("%s %s"% (time, perf))
-				index = index + 1
+				# Now it's time to estimate if the data we got is part of the time range we want to plot
+				if ((int(time)>(int(min_time)*1000)) and ((int(time) < (int(max_time)*1000)) or max_time=="-1")):
+					disk_perf[index].append(int(perf))
+					perfs.append("%s %s"% (time, perf))
+					index = index + 1
 
 		# If we reach this point, it means that all the traces are coherent
 		for p in enumerate(perfs):
@@ -333,7 +337,7 @@ def render_gnuplot(fio_data_file, gnuplot_output_dir):
 		sys.exit(1);
 
 def print_help():
-    print 'fio2gnuplot.py -ghbiod -t <title> -o <outputfile> -p <pattern> -G <type>'
+    print 'fio2gnuplot.py -ghbiod -t <title> -o <outputfile> -p <pattern> -G <type> -m <time> -M <time>'
     print
     print '-h --help                           : Print this help'
     print '-p <pattern> or --pattern <pattern> : A pattern in regexp to select fio input files'
@@ -348,6 +352,8 @@ def print_help():
     print '-G		or --Global <type>     : Search for <type> in .global files match by a pattern'
     print '                                       - Available types are : min, max, avg, stddev'
     print '                                       - The .global extension is added automatically to the pattern'
+    print '-m           or --min_time <time>   : Only consider data starting from <time> seconds (default is 0)'
+    print '-M           or --max_time <time>   : Only consider data ending before <time> seconds (default is -1 aka nolimit)'
 
 def main(argv):
     mode='unknown'
@@ -361,6 +367,8 @@ def main(argv):
     run_gnuplot=False
     parse_global=False
     global_search=''
+    min_time=0
+    max_time=-1
 
     if not os.path.isfile(gpm_dir+'math.gpm'):
 	    gpm_dir="/usr/local/share/fio/"
@@ -369,7 +377,7 @@ def main(argv):
 		    sys.exit(3)
 
     try:
-	    opts, args = getopt.getopt(argv[1:],"ghbio:d:t:p:G:")
+	    opts, args = getopt.getopt(argv[1:],"ghbio:d:t:p:G:m:M:")
     except getopt.GetoptError:
 	 print_help()
          sys.exit(2)
@@ -393,6 +401,10 @@ def main(argv):
 		os.makedirs(gnuplot_output_dir)
       elif opt in ("-t", "--title"):
          title=arg
+      elif opt in ("-m", "--min_time"):
+	 min_time=arg
+      elif opt in ("-M", "--max_time"):
+	 max_time=arg
       elif opt in ("-g", "--gnuplot"):
 	 run_gnuplot=True
       elif opt in ("-G", "--Global"):
@@ -444,7 +456,7 @@ def main(argv):
     if parse_global==True:
 	parse_global_files(fio_data_file, global_search)
     else:
-    	blk_size=compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir)
+    	blk_size=compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir,min_time,max_time)
     	title="%s @ Blocksize = %dK" % (title,blk_size/1024)
     	compute_aggregated_file(fio_data_file, gnuplot_output_filename, gnuplot_output_dir)
     	compute_math(fio_data_file,title,gnuplot_output_filename,gnuplot_output_dir,mode,disk_perf,gpm_dir)
