@@ -22,13 +22,13 @@ set yrange [0:]
 set style line 100 lt 7 lw 0.5
 set style line 1 lt 1 lw 3 pt 3 linecolor rgb "green"
 
-plot '$1' using 2:3 with linespoints title '$2', $7 w l ls 1 ti 'Global average value'
+plot '$1' using 2:3 with linespoints title '$2', $7 w l ls 1 ti 'Global average value ($7)'
 
 set output '$5.png'
-plot '$1' using 2:3 smooth csplines title '$2', $7 w l ls 1 ti 'Global average value'
+plot '$1' using 2:3 smooth csplines title '$2', $7 w l ls 1 ti 'Global average value ($7)'
 
 set output '$6.png'
-plot '$1' using 2:3 smooth bezier title '$2', $7 w l ls 1 ti 'Global average value'
+plot '$1' using 2:3 smooth bezier title '$2', $7 w l ls 1 ti 'Global average value ($7)'
 
 #pause -1
 #The End

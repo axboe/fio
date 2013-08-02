@@ -22,4 +22,4 @@ set xtics axis out
 set xtic rotate by 45 scale 0 font ",8" autojustify
 set xtics offset 0,-1 border -5,1,5
 set style line 1 lt 1 lw 3 pt 3 linecolor rgb "green"
-plot '$1' using 2:xtic(1) ti col, $5 w l ls 1 ti 'Global average value'
+plot '$1' using 2:xtic(1) ti col, $5 w l ls 1 ti 'Global average value ($5)'
