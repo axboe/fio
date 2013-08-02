@@ -176,10 +176,13 @@ def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir, min_time, max_
 			break
 
 		last_time = -1
-		index=0
+		index=-1
 		perfs=[]
-		for line in current_line:
-			time, perf, x, block_size = line
+		for line in enumerate(current_line):
+			# Index will be used to remember what file was featuring what value
+			index=index+1
+
+			time, perf, x, block_size = line[1]
 			if (blk_size == 0):
 				try:
 					blk_size=int(block_size)
@@ -190,18 +193,18 @@ def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir, min_time, max_
 
 			# We ignore the first 500msec as it doesn't seems to be part of the real benchmark
 			# Time < 500 usually reports BW=0 breaking the min computing
-			if (((int(time)) > 500) or (int(time)==-1)):
-				# Now it's time to estimate if the data we got is part of the time range we want to plot
-				if ((int(time)>(int(min_time)*1000)) and ((int(time) < (int(max_time)*1000)) or max_time=="-1")):
+			if (min_time == 0):
+				min_time==0.5
+
+			# Then we estimate if the data we got is part of the time range we want to plot
+			if ((float(time)>(float(min_time)*1000)) and ((int(time) < (int(max_time)*1000)) or max_time==-1)):
 					disk_perf[index].append(int(perf))
-					perfs.append("%s %s"% (time, perf))
-					index = index + 1
+					perfs.append("%d %s %s"% (index, time, perf))
 
 		# If we reach this point, it means that all the traces are coherent
 		for p in enumerate(perfs):
-			perf_time,perf = p[1].split()
-			if (perf_time != "-1"):
-				temp_outfile[p[0]].write("%s %.2f %s\n" % (p[0], float(float(perf_time)/1000), perf))
+			index, perf_time,perf = p[1].split()
+			temp_outfile[int(index)].write("%s %.2f %s\n" % (index, float(float(perf_time)/1000), perf))
 
 
 	for file in files:
