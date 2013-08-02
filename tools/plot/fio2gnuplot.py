@@ -160,8 +160,8 @@ def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir, min_time, max_
 		current_line=[]
 		nb_empty_files=0
 		nb_files=len(files)
-		for file in files:
-			s=file.readline().replace(',',' ').split()
+		for myfile in files:
+			s=myfile.readline().replace(',',' ').split()
 			if not s:
 				nb_empty_files+=1
 				s="-1, 0, 0, 0".replace(',',' ').split()
