@@ -57,6 +57,7 @@ set key top left reverse
 set xlabel "Time (Seconds)"
 set ylabel '%s'
 set yrange [0:]
+set style line 1 lt 1 lw 3 pt 3 linecolor rgb "green"
 '''% (title,mode))
 		compare.close()
 		#Copying the common file for all kind of graph (raw/smooth/trend)
@@ -75,6 +76,13 @@ set yrange [0:]
 		compare_trend=open(gnuplot_output_dir+compare_trend_filename+".gnuplot",'a')
 		compare_trend.write("set output '%s.png'\n" % compare_trend_filename)
 
+		# Let's plot the average value for all the traces
+		global_disk_perf = sum(disk_perf, [])
+		global_avg  = average(global_disk_perf)
+		compare_raw.write("plot %s w l ls 1 ti 'Global average value (%.2f)'" % (global_avg,global_avg));
+		compare_smooth.write("plot %s w l ls 1 ti 'Global average value (%.2f)'" % (global_avg,global_avg));
+		compare_trend.write("plot %s w l ls 1 ti 'Global average value (%.2f)'" % (global_avg,global_avg));
+
         pos=0
         # Let's create a temporary file for each selected fio file
         for file in fio_data_file:
@@ -83,14 +91,9 @@ set yrange [0:]
 		# Plotting comparing graphs doesn't have a meaning unless if there is at least 2 traces
 		if len(fio_data_file) > 1:
 			# Adding the plot instruction for each kind of comparing graphs
-			if pos ==0 :
-				compare_raw.write("plot '%s' using 2:3 with linespoints title '%s'" % (tmp_filename,fio_data_file[pos]))
-				compare_smooth.write("plot '%s' using 2:3 smooth csplines title '%s'" % (tmp_filename,fio_data_file[pos]))
-				compare_trend.write("plot '%s' using 2:3 smooth bezier title '%s'" % (tmp_filename,fio_data_file[pos]))
-			else:
-				compare_raw.write(",\\\n'%s' using 2:3 with linespoints title '%s'" % (tmp_filename,fio_data_file[pos]))
-				compare_smooth.write(",\\\n'%s' using 2:3 smooth csplines title '%s'" % (tmp_filename,fio_data_file[pos]))
-				compare_trend.write(",\\\n'%s' using 2:3 smooth bezier title '%s'" % (tmp_filename,fio_data_file[pos]))
+			compare_raw.write(",\\\n'%s' using 2:3 with linespoints title '%s'" % (tmp_filename,fio_data_file[pos]))
+			compare_smooth.write(",\\\n'%s' using 2:3 smooth csplines title '%s'" % (tmp_filename,fio_data_file[pos]))
+			compare_trend.write(",\\\n'%s' using 2:3 smooth bezier title '%s'" % (tmp_filename,fio_data_file[pos]))
 
 		png_file=file.replace('.log','')
                 raw_filename = "%s-2Draw" % (png_file)
