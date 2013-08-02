@@ -1412,7 +1412,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 	if (!td->o.disable_bw)
 		add_bw_sample(td, idx, bytes, &icd->time);
 
-	add_iops_sample(td, idx, &icd->time);
+	add_iops_sample(td, idx, bytes, &icd->time);
 }
 
 static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)

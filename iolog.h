@@ -118,7 +118,8 @@ extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long,
 				unsigned int);
 extern void add_bw_sample(struct thread_data *, enum fio_ddir, unsigned int,
 				struct timeval *);
-extern void add_iops_sample(struct thread_data *, enum fio_ddir, struct timeval *);
+extern void add_iops_sample(struct thread_data *, enum fio_ddir, unsigned int,
+				struct timeval *);
 extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
 extern void setup_log(struct io_log **, unsigned long, int);

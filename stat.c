@@ -1691,7 +1691,7 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 	fio_gettime(&td->bw_sample_time, NULL);
 }
 
-void add_iops_sample(struct thread_data *td, enum fio_ddir ddir,
+void add_iops_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 		     struct timeval *t)
 {
 	struct thread_stat *ts = &td->ts;
@@ -1718,7 +1718,7 @@ void add_iops_sample(struct thread_data *td, enum fio_ddir ddir,
 		add_stat_sample(&ts->iops_stat[ddir], iops);
 
 		if (td->iops_log)
-			add_log_sample(td, td->iops_log, iops, ddir, 0);
+			add_log_sample(td, td->iops_log, iops, ddir, bs);
 
 		td->stat_io_blocks[ddir] = td->this_io_blocks[ddir];
 	}
