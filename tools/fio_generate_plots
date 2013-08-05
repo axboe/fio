@@ -22,7 +22,7 @@ if [ -z "$1" ]; then
 fi
 
 GNUPLOT=$(which gnuplot)
-if [ ! -x $GNUPLOT ]
+if [ ! -x "$GNUPLOT" ]
 then
 	echo You need gnuplot installed to generate graphs
 	exit 1
