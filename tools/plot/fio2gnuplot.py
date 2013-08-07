@@ -39,7 +39,7 @@ def find_file(path, pattern):
 	return fio_data_file
 
 def generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,gnuplot_output_dir,mode,disk_perf,gpm_dir):
-	print "Generating rendering scripts"
+	if verbose: print "Generating rendering scripts"
 	filename=gnuplot_output_dir+'mygraph'
 	f=open(filename,'w')
 
@@ -118,7 +118,7 @@ def generate_gnuplot_math_script(title,gnuplot_output_filename,mode,average,gnup
 	f.close()
 
 def compute_aggregated_file(fio_data_file, gnuplot_output_filename, gnuplot_output_dir):
-	print "Processing data file 2/2"
+	if verbose: print "Processing data file 2/2"
 	temp_files=[]
 	pos=0
 
@@ -145,7 +145,7 @@ def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir, min_time, max_
 	end_time=max_time
 	if end_time == -1:
 		end_time="infinite"
-	print "Processing data file 1/2 with %s<time<%s" % (min_time,end_time)
+	if verbose: print "Processing data file 1/2 with %s<time<%s" % (min_time,end_time)
 	files=[]
 	temp_outfile=[]
 	blk_size=0
@@ -217,7 +217,7 @@ def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir, min_time, max_
 	return blk_size
 
 def compute_math(fio_data_file, title,gnuplot_output_filename,gnuplot_output_dir,mode,disk_perf,gpm_dir):
-	print "Computing Maths"
+	if verbose: print "Computing Maths"
 	global_min=[]
 	global_max=[]
 	average_file=open(gnuplot_output_dir+gnuplot_output_filename+'.average', 'w')
@@ -327,11 +327,11 @@ def render_gnuplot(fio_data_file, gnuplot_output_dir):
 	try:
 		# Let's render all the compared files if some
 		if len(fio_data_file) > 1:
-			print " |-> Rendering comparing traces"
+			if verbose: print " |-> Rendering comparing traces"
 			os.system("cd %s; for i in *.gnuplot; do gnuplot $i; done" % gnuplot_output_dir)
-		print " |-> Rendering math traces"
+		if verbose: print " |-> Rendering math traces"
 		os.system("cd %s; gnuplot mymath" % gnuplot_output_dir)
-		print " |-> Rendering 2D & 3D traces"
+		if verbose: print " |-> Rendering 2D & 3D traces"
 		os.system("cd %s; gnuplot mygraph" % gnuplot_output_dir)
 
 		name_of_directory="the current"
@@ -360,6 +360,7 @@ def print_help():
     print '                                       - The .global extension is added automatically to the pattern'
     print '-m           or --min_time <time>   : Only consider data starting from <time> seconds (default is 0)'
     print '-M           or --max_time <time>   : Only consider data ending before <time> seconds (default is -1 aka nolimit)'
+    print '-v           or --verbose           : Increasing verbosity'
 
 def main(argv):
     mode='unknown'
@@ -375,6 +376,8 @@ def main(argv):
     global_search=''
     min_time=0
     max_time=-1
+    global verbose
+    verbose=False
 
     if not os.path.isfile(gpm_dir+'math.gpm'):
 	    gpm_dir="/usr/local/share/fio/"
@@ -383,7 +386,7 @@ def main(argv):
 		    sys.exit(3)
 
     try:
-	    opts, args = getopt.getopt(argv[1:],"ghbio:d:t:p:G:m:M:",['bandwidth', 'iops', 'pattern', 'outputfile', 'outputdir', 'title', 'min_time', 'max_time', 'gnuplot', 'Global', 'help'])
+	    opts, args = getopt.getopt(argv[1:],"ghbivo:d:t:p:G:m:M:",['bandwidth', 'iops', 'pattern', 'outputfile', 'outputdir', 'title', 'min_time', 'max_time', 'gnuplot', 'Global', 'help', 'verbose'])
     except getopt.GetoptError:
 	 print "Error: One of the option passed to the cmdline was not supported"
 	 print "Please fix your command line or read the help (-h option)"
@@ -394,6 +397,8 @@ def main(argv):
          pattern='*_bw.log'
       elif opt in ("-i", "--iops"):
          pattern='*_iops.log'
+      elif opt in ("-v", "--verbose"):
+	 verbose=True
       elif opt in ("-p", "--pattern"):
          pattern_set_by_user=True
 	 pattern=arg
