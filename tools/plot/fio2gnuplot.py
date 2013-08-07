@@ -41,6 +41,7 @@ def find_file(path, pattern):
 def generate_gnuplot_script(fio_data_file,title,gnuplot_output_filename,gnuplot_output_dir,mode,disk_perf,gpm_dir):
 	if verbose: print "Generating rendering scripts"
 	filename=gnuplot_output_dir+'mygraph'
+	temporary_files.append(filename)
 	f=open(filename,'w')
 
 	# Plotting 3D or comparing graphs doesn't have a meaning unless if there is at least 2 traces
@@ -64,9 +65,13 @@ set style line 1 lt 1 lw 3 pt 3 linecolor rgb "green"
 		compare_raw_filename="compare-%s-2Draw" % (gnuplot_output_filename)
 		compare_smooth_filename="compare-%s-2Dsmooth" % (gnuplot_output_filename)
 		compare_trend_filename="compare-%s-2Dtrend" % (gnuplot_output_filename)
+
 		shutil.copy(gnuplot_output_dir+'compare.gnuplot',gnuplot_output_dir+compare_raw_filename+".gnuplot")
 		shutil.copy(gnuplot_output_dir+'compare.gnuplot',gnuplot_output_dir+compare_smooth_filename+".gnuplot")
 		shutil.copy(gnuplot_output_dir+'compare.gnuplot',gnuplot_output_dir+compare_trend_filename+".gnuplot")
+		temporary_files.append(gnuplot_output_dir+compare_raw_filename+".gnuplot")
+		temporary_files.append(gnuplot_output_dir+compare_smooth_filename+".gnuplot")
+		temporary_files.append(gnuplot_output_dir+compare_trend_filename+".gnuplot")
 
 		#Setting up a different output filename for each kind of graph
 		compare_raw=open(gnuplot_output_dir+compare_raw_filename + ".gnuplot",'a')
@@ -113,6 +118,7 @@ set style line 1 lt 1 lw 3 pt 3 linecolor rgb "green"
 
 def generate_gnuplot_math_script(title,gnuplot_output_filename,mode,average,gnuplot_output_dir,gpm_dir):
 	filename=gnuplot_output_dir+'mymath';
+	temporary_files.append(filename)
 	f=open(filename,'a')
         f.write("call \'%s/math.gpm\' \'%s' \'%s\' \'\' \'%s\' \'%s\' %s\n" % (gpm_dir,title,gnuplot_output_filename,gnuplot_output_filename,mode,average))
 	f.close()
@@ -129,6 +135,7 @@ def compute_aggregated_file(fio_data_file, gnuplot_output_filename, gnuplot_outp
 		pos = pos +1
 
 	f = open(gnuplot_output_dir+gnuplot_output_filename, "w")
+	temporary_files.append(gnuplot_output_dir+gnuplot_output_filename)
 	index=0
 	# Let's add some information
 	for tempfile in temp_files:
@@ -153,6 +160,7 @@ def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir, min_time, max_
 		files.append(open(file))
 		pos = len(files) - 1
 		tmp_filename = "%sgnuplot_temp_file.%d" % (gnuplot_output_dir,pos)
+		temporary_files.append(tmp_filename)
 		gnuplot_file=open(tmp_filename,'w')
 		temp_outfile.append(gnuplot_file)
 		gnuplot_file.write("#Temporary file based on file %s\n" % file)
@@ -225,6 +233,11 @@ def compute_math(fio_data_file, title,gnuplot_output_filename,gnuplot_output_dir
 	max_file=open(gnuplot_output_dir+gnuplot_output_filename+'.max', 'w')
 	stddev_file=open(gnuplot_output_dir+gnuplot_output_filename+'.stddev', 'w')
 	global_file=open(gnuplot_output_dir+gnuplot_output_filename+'.global','w')
+	temporary_files.append(gnuplot_output_dir+gnuplot_output_filename+'.average')
+	temporary_files.append(gnuplot_output_dir+gnuplot_output_filename+'.min')
+	temporary_files.append(gnuplot_output_dir+gnuplot_output_filename+'.max')
+	temporary_files.append(gnuplot_output_dir+gnuplot_output_filename+'.stddev')
+	temporary_files.append(gnuplot_output_dir+gnuplot_output_filename+'.global')
 
 	min_file.write('DiskName %s\n' % mode)
 	max_file.write('DiskName %s\n'% mode)
@@ -378,6 +391,9 @@ def main(argv):
     max_time=-1
     global verbose
     verbose=False
+    global temporary_files
+    temporary_files=[]
+    keep_temp_files=False
 
     if not os.path.isfile(gpm_dir+'math.gpm'):
 	    gpm_dir="/usr/local/share/fio/"
@@ -386,7 +402,7 @@ def main(argv):
 		    sys.exit(3)
 
     try:
-	    opts, args = getopt.getopt(argv[1:],"ghbivo:d:t:p:G:m:M:",['bandwidth', 'iops', 'pattern', 'outputfile', 'outputdir', 'title', 'min_time', 'max_time', 'gnuplot', 'Global', 'help', 'verbose'])
+	    opts, args = getopt.getopt(argv[1:],"ghkbivo:d:t:p:G:m:M:",['bandwidth', 'iops', 'pattern', 'outputfile', 'outputdir', 'title', 'min_time', 'max_time', 'gnuplot', 'Global', 'help', 'verbose','keep'])
     except getopt.GetoptError:
 	 print "Error: One of the option passed to the cmdline was not supported"
 	 print "Please fix your command line or read the help (-h option)"
@@ -399,6 +415,8 @@ def main(argv):
          pattern='*_iops.log'
       elif opt in ("-v", "--verbose"):
 	 verbose=True
+      elif opt in ("-k", "--keep"):
+	 keep_temp_files=True
       elif opt in ("-p", "--pattern"):
          pattern_set_by_user=True
 	 pattern=arg
@@ -477,11 +495,15 @@ def main(argv):
     	if (run_gnuplot==True):
     		render_gnuplot(fio_data_file, gnuplot_output_dir)
 
-    # Cleaning temporary files
-    try:
-	os.remove('gnuplot_temp_file.*')
-    except:
-	True
+	if keep_temp_files==False:
+	    	# Cleaning temporary files
+		if verbose: print "Cleaning temporary files"
+		for f in enumerate(temporary_files):
+		    	if verbose: print " -> %s"%f[1]
+			try:
+			    os.remove(f[1])
+			except:
+			    True
 
 #Main
 if __name__ == "__main__":
