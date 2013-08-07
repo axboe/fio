@@ -358,7 +358,7 @@ def render_gnuplot(fio_data_file, gnuplot_output_dir):
 		sys.exit(1);
 
 def print_help():
-    print 'fio2gnuplot.py -ghbiod -t <title> -o <outputfile> -p <pattern> -G <type> -m <time> -M <time>'
+    print 'fio2gnuplot.py -ghbiodvk -t <title> -o <outputfile> -p <pattern> -G <type> -m <time> -M <time>'
     print
     print '-h --help                           : Print this help'
     print '-p <pattern> or --pattern <pattern> : A pattern in regexp to select fio input files'
@@ -370,12 +370,13 @@ def print_help():
     print '-d           or --outputdir <dir>   : The directory where gnuplot shall render files'
     print '-t           or --title <title>     : The title of the gnuplot traces'
     print '                                       - Title is set with the block size detected in fio traces'
-    print '-G		or --Global <type>     : Search for <type> in .global files match by a pattern'
+    print '-G           or --Global <type>     : Search for <type> in .global files match by a pattern'
     print '                                       - Available types are : min, max, avg, stddev'
     print '                                       - The .global extension is added automatically to the pattern'
     print '-m           or --min_time <time>   : Only consider data starting from <time> seconds (default is 0)'
     print '-M           or --max_time <time>   : Only consider data ending before <time> seconds (default is -1 aka nolimit)'
     print '-v           or --verbose           : Increasing verbosity'
+    print '-k           or --keep              : Keep all temporary files from gnuplot\'s output dir'
 
 def main(argv):
     mode='unknown'
