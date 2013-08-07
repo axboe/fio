@@ -1,0 +1,117 @@
+NAME
+fio2gnuplot - Render fio's output files with gnuplot
+SYNOPSIS
+fio2gnuplot [-ghbiodvk] [-t title] [-o outputfile]
+		 [-d output_dir] [-p pattern]
+		 [-G type] [-m min_time] [-M max_time]
+
+DESCRIPTION
+ fio2gnuplot analyze a set of fio's log files to turn them into a set of graphical traces using gnuplot tool.
+  Several flavor of plotting are produced
+
+ Individual 2D Graph 	
+	Each file is plotted in a separate image file with several option
+	- raw : Plot the exact reported performance. This plotting could be difficult to read
+	- smooth :a smoother version of the raw print
+                  Using csplines option of gnuplot, the rendering is
+                  filtered to get an easier to read graph.
+	- trend : an even smoother version of the raw print to get trends
+                    	Bezier's curves makes much more filtered plots
+                    	The resulting graph helps at understanding trends.
+
+ Grouped 2D graph   
+	All files are plotted in a single image to ease the comparaison. The same rendering options as per the individual 2D graph are used :
+         - raw
+         - smooth
+         - trend
+
+ Grouped 3D graph  
+     All files are plotted into a single 3D graph.
+     The 3D plotting generates a 'surface' to estimate how close were
+     the performance.
+     A flat surface means a good coherency between traces.
+     A rugged surface means a lack of coherency between traces
+
+ Mathemical Plotting  
+  Average graph  
+     A bar graph to show the average performance of each file.
+     A green line is added to show the global average performance.
+     This green line helps at understanding how far from the average is
+     every individual file.
+
+  Min graph  
+     A green line is added to show the global average of minimal performance.
+     This green line helps at understanding how far from the average is
+     every individual file.
+
+  Max graph  
+     A bar graph to show the maximum performance of each file.
+     A green line is added to show the global average of maximal performance.
+     This green line helps at understanding how far from the average is
+     every individual file.
+
+  Standard Deviation  
+     A bar graph to show the standard deviation of each file.
+     A green line is added to show the global average of standard deviation.
+     This green line helps at understanding how far from the average is
+     every individual file.
+
+OPTIONS
+ -h or --help  
+	The option -h displays help
+
+ -p 'pattern' or --pattern 'pattern'  
+	A pattern in regexp to select fio input files.
+	Don't forget the simple quotes to avoid shell's interactions
+
+ -b or --bandwidth  
+	A predefined pattern for selecting *_bw.log files
+
+ -i or --iops  
+	A predefined pattern for selecting *_iops.log files
+
+ -g or --gnuplot  
+	Render gnuplot traces before exiting
+
+ -o file or --outputfile file  
+	The basename for gnuplot traces (set with the pattern if defined)
+
+ -d dir or --outputdir dir  
+	The directory where gnuplot shall render files.
+
+ -t title or --title title  
+	The title of the gnuplot traces.
+	Title is set with the block size detected in fio trace
+
+ -G type or --Global type  
+	Search for 'type' in .global files match by a pattern.
+ 	Available types are : min, max, avg, stddev.
+	The .global extension is added automatically to the pattern
+
+ -m time or --min_time time  
+	Only consider data starting from 'time' seconds. Default is 0
+
+ -M time or --max_time time  
+	 Only consider data ending before 'time' seconds. Default is -1 aka nolimit
+
+ -v or --verbose  
+	Increasing verbosity
+
+ -k or --keep  
+	Keep all temporary files from gnuplot's output dir
+
+EXAMPLE
+To plot all the traces named like 'host*_read_4k_iops.log'  
+	$ fio2gnuplot -p 'host*_read_4k_iops.log' -g
+
+To plot all IO oriented log files from the current directory  
+	$ fio2gnuplot -g -i
+
+To plot all Bandwidth oriented log files from the current directory  
+	$ fio2gnuplot -g -b
+
+To plot all Bandwidth oriented log files in a directory name 'outdir'  
+	$ fio2gnuplot -g -b -d outdir
+
+AUTHOR
+  Erwan Velu <erwan@enovance.com>
