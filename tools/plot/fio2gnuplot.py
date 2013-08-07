@@ -385,7 +385,7 @@ def main(argv):
     try:
 	    opts, args = getopt.getopt(argv[1:],"ghbio:d:t:p:G:m:M:",['bandwidth', 'iops', 'pattern', 'outputfile', 'outputdir', 'title', 'min_time', 'max_time', 'gnuplot', 'Global', 'help'])
     except getopt.GetoptError:
-	 print "Error: One of the option passed to the cmdline was supported"
+	 print "Error: One of the option passed to the cmdline was not supported"
 	 print "Please fix your command line or read the help (-h option)"
          sys.exit(2)
 
