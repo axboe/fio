@@ -385,7 +385,8 @@ def main(argv):
     try:
 	    opts, args = getopt.getopt(argv[1:],"ghbio:d:t:p:G:m:M:")
     except getopt.GetoptError:
-	 print_help()
+	 print "Error: One of the option passed to the cmdline was supported"
+	 print "Please fix your command line or read the help (-h option)"
          sys.exit(2)
 
     for opt, arg in opts:
