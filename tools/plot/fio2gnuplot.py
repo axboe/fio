@@ -351,6 +351,8 @@ def render_gnuplot(fio_data_file, gnuplot_output_dir):
 		if gnuplot_output_dir != "./":
 			name_of_directory=gnuplot_output_dir
 		print "\nRendering traces are available in %s directory" % name_of_directory
+		global keep_temp_files
+		keep_temp_files=False
 	except:
 		print "Could not run gnuplot on mymath or mygraph !\n"
 		sys.exit(1);
@@ -393,7 +395,9 @@ def main(argv):
     verbose=False
     global temporary_files
     temporary_files=[]
-    keep_temp_files=False
+    global keep_temp_files
+    keep_temp_files=True
+    force_keep_temp_files=False
 
     if not os.path.isfile(gpm_dir+'math.gpm'):
 	    gpm_dir="/usr/local/share/fio/"
@@ -416,7 +420,8 @@ def main(argv):
       elif opt in ("-v", "--verbose"):
 	 verbose=True
       elif opt in ("-k", "--keep"):
-	 keep_temp_files=True
+	 #User really wants to keep the temporary files
+	 force_keep_temp_files=True
       elif opt in ("-p", "--pattern"):
          pattern_set_by_user=True
 	 pattern=arg
@@ -495,7 +500,8 @@ def main(argv):
     	if (run_gnuplot==True):
     		render_gnuplot(fio_data_file, gnuplot_output_dir)
 
-	if keep_temp_files==False:
+	# Shall we clean the temporary files ?
+	if keep_temp_files==False and force_keep_temp_files==False:
 	    	# Cleaning temporary files
 		if verbose: print "Cleaning temporary files"
 		for f in enumerate(temporary_files):
