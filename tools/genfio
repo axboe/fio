@@ -25,6 +25,7 @@ SEQ=-1
 TEMPLATE=/tmp/template.fio
 OUTFILE=
 DISKS=
+PRINTABLE_DISKS=
 RUNTIME=300
 ETA=0
 MODES="write,randwrite,read,randread"
@@ -53,7 +54,6 @@ show_help() {
 					Default is $IODEPTH
 -d disk1[,disk2,disk3,..]	: Run the tests on the selected disks
 					Separated each disk with a comma
-					Disk name shall be "sdxx", /dev/ shall NOT be used here
 -r seconds			: Time in seconds per benchmark
 					0 means till the end of the device
 					Default is $RUNTIME seconds
@@ -70,7 +70,7 @@ show_help() {
 
 Example:
 
-$PROG -d sdb,sdc,sdd,sde -a -b 4k,128k,1m -r 100 -a -x dellr720-day2/
+$PROG -d /dev/sdb,/dev/sdc,/dev/sdd,/dev/sde -a -b 4k,128k,1m -r 100 -a -x dellr720-day2/
 
 	Will generate an fio file that will run
 		- a sequential bench on /dev/sdb /dev/sdc /dev/sdd /dev/sde for block size = 4k with write,randwrite,read,randread tests
@@ -104,6 +104,21 @@ if [ "$CACHED_IO" = "FALSE" ]; then
 fi
 }
 
+
+diskname_to_printable() {
+COUNT=0
+for disk in $(echo $@ | tr "," " "); do
+	R=$(basename $disk | sed 's|/|_|g')
+	COUNT=$(($COUNT + 1))
+	if [ $COUNT -eq 1 ]; then
+		P="$R"
+	else
+		P="$P,$R"
+	fi
+done
+echo $P
+}
+
 gen_template() {
 cat >$TEMPLATE << EOF
 [global]
@@ -115,14 +130,16 @@ EOF
 
 gen_seq_suite() {
 TYPE=$1
+disk=$2
+PRINTABLE_DISK=$(diskname_to_printable $disk)
 cat >> $OUTFILE << EOF
-[$TYPE-$disk-$BLK_SIZE-seq]
+[$TYPE-$PRINTABLE_DISK-$BLK_SIZE-seq]
 stonewall
 bs=$BLK_SIZE
-filename=/dev/$disk
+filename=$disk
 rw=$TYPE
-write_bw_log=${PREFIX_FILENAME}$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-seq.results
-write_iops_log=${PREFIX_FILENAME}$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-seq.results
+write_bw_log=${PREFIX_FILENAME}$SHORT_HOSTNAME-$BLK_SIZE-$PRINTABLE_DISK-$TYPE-seq.results
+write_iops_log=${PREFIX_FILENAME}$SHORT_HOSTNAME-$BLK_SIZE-$PRINTABLE_DISK-$TYPE-seq.results
 EOF
 ETA=$(($ETA + $RUNTIME))
 }
@@ -130,7 +147,7 @@ ETA=$(($ETA + $RUNTIME))
 gen_seq_fio() {
 for disk in $(echo $DISKS | tr "," " "); do
 	for mode in $(echo $MODES | tr "," " "); do
-		gen_seq_suite "$mode"
+		gen_seq_suite "$mode" "$disk"
 	done
 done
 }
@@ -141,8 +158,9 @@ TYPE=$1
 NEED_WALL=$2
 D=0
 for disk in $(echo $DISKS | tr "," " "); do
+    PRINTABLE_DISK=$(diskname_to_printable $disk)
     cat >> $OUTFILE << EOF
-[$TYPE-$disk-$BLK_SIZE-para]
+[$TYPE-$PRINTABLE_DISK-$BLK_SIZE-para]
 bs=$BLK_SIZE
 EOF
 
@@ -152,10 +170,10 @@ if [ "$D" = 0 ]; then
 fi
 
 cat >> $OUTFILE << EOF
-filename=/dev/$disk
+filename=$disk
 rw=$TYPE
-write_bw_log=${PREFIX_FILENAME}$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-para.results
-write_iops_log=${PREFIX_FILENAME}$SHORT_HOSTNAME-$BLK_SIZE-$disk-$TYPE-para.results
+write_bw_log=${PREFIX_FILENAME}$SHORT_HOSTNAME-$BLK_SIZE-$PRINTABLE_DISK-$TYPE-para.results
+write_iops_log=${PREFIX_FILENAME}$SHORT_HOSTNAME-$BLK_SIZE-$PRINTABLE_DISK-$TYPE-para.results
 EOF
 done
 
@@ -228,6 +246,7 @@ while getopts "hacpsd:b:r:m:x:D:A:B:" opt; do
       ;;
     d)
  	DISKS=$OPTARG
+	PRINTABLE_DISKS=$(diskname_to_printable "$DISKS")
       ;;
     D)
 	IODEPTH=$OPTARG
@@ -254,14 +273,14 @@ fi
 SHORT_HOSTNAME=$(hostname -s)
 case $SEQ in
 	2)
-		OUTFILE=${PREFIX}$SHORT_HOSTNAME-$BLOCK_SIZE-all-$MODES-$DISKS.fio
+		OUTFILE=${PREFIX}$SHORT_HOSTNAME-$BLOCK_SIZE-all-$MODES-$PRINTABLE_DISKS.fio
 	;;
 
 	1)
-		OUTFILE=${PREFIX}$SHORT_HOSTNAME-$BLOCK_SIZE-sequential-$MODES-$DISKS.fio
+		OUTFILE=${PREFIX}$SHORT_HOSTNAME-$BLOCK_SIZE-sequential-$MODES-$PRINTABLE_DISKS.fio
 	;;
 	0)
-		OUTFILE=${PREFIX}$SHORT_HOSTNAME-$BLOCK_SIZE-parallel-$MODES-$DISKS.fio
+		OUTFILE=${PREFIX}$SHORT_HOSTNAME-$BLOCK_SIZE-parallel-$MODES-$PRINTABLE_DISKS.fio
 	;;
 esac
 
