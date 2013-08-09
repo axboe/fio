@@ -1483,6 +1483,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "number_ios",
+		.lname	= "Number of IOs to perform",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(number_ios),
+		.help	= "Force job completion of this number of IOs",
+		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "bs",
 		.lname	= "Block size",
 		.alias	= "blocksize",

@@ -709,6 +709,13 @@ offset_increment=int	If this is provided, then the real offset becomes
 		which are intended to operate on a file in parallel in disjoint
 		segments, with even spacing between the starting points.
 
+number_ios=int	Fio will normally perform IOs until it has exhausted the size
+		of the region set by size=, or if it exhaust the allocated
+		time (or hits an error condition). With this setting, the
+		range/size can be set independently of the number of IOs to
+		perform. When fio reaches this number, it will exit normally
+		and report status.
+
 fsync=int	If writing to a file, issue a sync of the dirty data
 		for every number of blocks given. For example, if you give
 		32 as a parameter, fio will sync the file for every 32

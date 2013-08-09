@@ -576,6 +576,13 @@ that starts at 0 and is incremented for each job. This option is useful if
 there are several jobs which are intended to operate on a file in parallel in
 disjoint segments, with even spacing between the starting points.
 .TP
+.BI number_ios \fR=\fPint
+Fio will normally perform IOs until it has exhausted the size of the region
+set by \fBsize\fR, or if it exhaust the allocated time (or hits an error
+condition). With this setting, the range/size can be set independently of
+the number of IOs to perform. When fio reaches this number, it will exit
+normally and report status.
+.TP
 .BI fsync \fR=\fPint
 How many I/Os to perform before issuing an \fBfsync\fR\|(2) of dirty data.  If
 0, don't sync.  Default: 0.
