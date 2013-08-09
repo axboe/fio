@@ -118,6 +118,12 @@ static inline int arch_init(char *envp[])
 }
 
 #define ARCH_HAVE_FFZ
-#define ARCH_HAVE_CPU_CLOCK
+
+/*
+ * We don't have it on all platforms, lets comment this out until we
+ * can handle it more intelligently.
+ *
+ * #define ARCH_HAVE_CPU_CLOCK
+ */
 
 #endif
