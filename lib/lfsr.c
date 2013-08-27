@@ -87,7 +87,6 @@ static inline void __lfsr_next(struct fio_lfsr *fl, unsigned int spin)
 	 * this switch.
 	 */
 	switch (spin) {
-		case 16: __LFSR_NEXT(fl, fl->last_val);
 		case 15: __LFSR_NEXT(fl, fl->last_val);
 		case 14: __LFSR_NEXT(fl, fl->last_val);
 		case 13: __LFSR_NEXT(fl, fl->last_val);
@@ -126,21 +125,16 @@ static inline void __lfsr_next(struct fio_lfsr *fl, unsigned int spin)
  */
 int lfsr_next(struct fio_lfsr *fl, uint64_t *off, uint64_t last)
 {
-	unsigned int spin = fl->spin;
-
 	if (fl->num_vals++ > fl->max_val)
 		return 1;
 
 	do {
-		if (fl->cycle_length) {
-			fl->cycle_length--;
-			if (!fl->cycle_length) {
-				__lfsr_next(fl, fl->spin + 1);
-				fl->cycle_length = fl->cached_cycle_length;
-				goto check;
-			}
+		if (fl->cycle_length && !--fl->cycle_length) {
+			__lfsr_next(fl, fl->spin + 1);
+			fl->cycle_length = fl->cached_cycle_length;
+			goto check;
 		}
-		__lfsr_next(fl, spin);
+		__lfsr_next(fl, fl->spin);
 check: ;
 	} while (fl->last_val > fl->max_val);
 
@@ -163,8 +157,13 @@ static uint8_t *find_lfsr(uint64_t size)
 {
 	int i;
 
+	/*
+	 * For an LFSR, there is always a prohibited state (all ones).
+	 * Thus, if we need to find the proper LFSR for our size, we must take that
+	 * into account.
+	 */
 	for (i = 3; i < 64; i++)
-		if ((1UL << i) > size) /* TODO: Explain why. */
+		if ((1UL << i) > size)
 			return taps[i];
 
 	return NULL;
@@ -209,6 +208,12 @@ int prepare_spin(struct fio_lfsr *fl, unsigned int spin)
 		}
 	}
 	fl->cached_cycle_length = fl->cycle_length;
+
+	/*
+	 * Increment cycle length for the first time only since the stored value
+	 * will not be printed otherwise.
+	 */
+	fl->cycle_length++;
 
 	return 0;
 }
