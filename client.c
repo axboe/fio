@@ -1462,7 +1462,7 @@ int fio_handle_clients(struct client_ops *ops)
 
 			client = find_client_by_fd(pfds[i].fd);
 			if (!client) {
-				log_err("fio: unknown client fd %d\n", pfds[i].fd);
+				log_err("fio: unknown client fd %ld\n", (long) pfds[i].fd);
 				continue;
 			}
 			if (!fio_handle_client(client)) {
