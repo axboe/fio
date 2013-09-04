@@ -14,17 +14,17 @@ Source
 
 fio resides in a git repo, the canonical place is:
 
-git://git.kernel.dk/fio.git
+	git://git.kernel.dk/fio.git
 
-If you are inside a corporate firewall, git:// may not always work for
-you. In that case you can use the http protocol, path is the same:
+When inside a corporate firewall, git:// URL sometimes does not work.
+If git:// does not work, use the http protocol instead:
 
-http://git.kernel.dk/fio.git
+	http://git.kernel.dk/fio.git
 
-Snapshots are frequently generated and they include the git meta data as
-well. You can download them here:
+Snapshots are frequently generated and include the git meta data as well.
+Snapshots can download from:
 
-http://brick.kernel.dk/snaps/
+	http://brick.kernel.dk/snaps/
 
 
 Binary packages
@@ -60,22 +60,22 @@ http://www.bluestop.org/fio/ .
 Mailing list
 ------------
 
-There's a mailing list associated with fio. It's meant for general
-discussion, bug reporting, questions, and development - basically anything
-that has to do with fio. An automated mail detailing recent commits is
-automatically sent to the list at most daily. The list address is
-fio@vger.kernel.org, subscribe by sending an email to
-majordomo@vger.kernel.org with
+The fio project mailing list is meant for anything related to fio including
+general discussion, bug reporting, questions, and development.
 
-subscribe fio
+An automated mail detailing recent commits is automatically sent to the
+list at most daily. The list address is fio@vger.kernel.org, subscribe
+by sending an email to majordomo@vger.kernel.org with
+
+	subscribe fio
 
 in the body of the email. Archives can be found here:
 
-http://www.spinics.net/lists/fio/
+	http://www.spinics.net/lists/fio/
 
 and archives for the old list can be found here:
 
-http://maillist.kernel.dk/fio-devel/
+	http://maillist.kernel.dk/fio-devel/
 
 
 Building
@@ -88,12 +88,12 @@ on Solaris it's in the SUNWgmake package. On platforms where GNU make
 isn't the default, type 'gmake' instead of 'make'.
 
 Configure will print the enabled options. Note that on Linux based
-platforms, you'll need to have the libaio development packages
-installed to use the libaio engine. Depending on distro, it is
-usually called libaio-devel or libaio-dev.
+platforms, the libaio development packages must be installed to use
+the libaio engine. Depending on distro, it is usually called
+libaio-devel or libaio-dev.
 
-For gfio, you need gtk 2.18 or newer and associated glib threads
-and cairo. gfio isn't built automatically, it needs to be enabled
+For gfio, gtk 2.18 (or newer), associated glib threads, and cairo are required
+to be installed.  gfio isn't built automatically and can be enabled
 with a --enable-gfio option to configure.
 
 To build FIO with a cross-compiler:
@@ -169,18 +169,19 @@ $ fio
 
 
 Any parameters following the options will be assumed to be job files,
-unless they match a job file parameter. You can add as many as you want,
-each job file will be regarded as a separate group and fio will stonewall
-its execution.
+unless they match a job file parameter. Multiple job files can be listed 
+and each job file will be regarded as a separate group. fio will stonewall
+execution between each group.
 
-The --readonly switch is an extra safety guard to prevent accidentally
-turning on a write setting when that is not desired. Fio will only write
-if rw=write/randwrite/rw/randrw is given, but this extra safety net can
-be used as an extra precaution. It will also enable a write check in the
-io engine core to prevent an accidental write due to a fio bug.
+The --readonly option is an extra safety guard to prevent users from
+accidentally starting a write workload when that is not desired.  Fio
+will only write if rw=write/randwrite/rw/randrw is given.  This extra
+safety net can be used as an extra precaution as --readonly will also
+enable a write check in the io engine core to prevent writes due to
+unknown user space bug(s).
 
-The debug switch allows adding options that trigger certain logging
-options in fio. Currently the options are:
+The --debug option triggers additional logging by fio.
+Currently, additional logging is available for:
 
 	process		Dump info related to processes
 	file		Dump info related to file actions
@@ -198,55 +199,58 @@ options in fio. Currently the options are:
 	time		Dump info related to internal time keeping
 	? or help	Show available debug options.
 
-You can specify as many as you want, eg --debug=file,mem will enable
+One can specify multiple debug options: e.g. --debug=file,mem will enable
 file and memory debugging.
 
-The section switch is meant to make it easier to ship a bigger job file
-instead of several smaller ones. Say you define a job file with light,
-moderate, and heavy parts. Then you can ask fio to run the given part
-only by giving it a --section=heavy command line option. The section
-option only applies to job sections, the reserved 'global' section is
-always parsed and taken into account.
+The --section option allows one to combine related jobs into one file.
+E.g. one job file could define light, moderate, and heavy sections. Tell fio to
+run only the "heavy" section by giving --section=heavy command line option.
+One can also specify the "write" operations in one section and "verify"
+operation in another section.  The --section option only applies to job
+sections.  The reserved 'global' section is always parsed and used.
 
-Fio has an internal allocator for shared memory called smalloc. It
-allocates shared structures from this pool. The pool defaults to 1024k
-in size, and can grow to 128 pools. If running large jobs with randommap
-enabled it can run out of memory, in which case the --alloc-size switch
-is handy for starting with a larger pool size. The backing store is
-files in /tmp. Fio cleans up after itself, while it is running you
-may see .fio_smalloc.* files in /tmp.
+The --alloc-size switch allows one to use a larger pool size for smalloc.
+If running large jobs with randommap enabled, fio can run out of memory.
+Smalloc is an internal allocator for shared structures from a fixed size
+memory pool. The pool size defaults to 1024k and can grow to 128 pools.
+
+NOTE: While running .fio_smalloc.* backing store files are visible in /tmp.
 
 
 Job file
 --------
 
-See the HOWTO file for a more detailed description of parameters and what
-they mean. This file contains the terse version. You can describe big and
-complex setups with the command line, but generally it's a lot easier to
-just write a simple job file to describe the workload. The job file format
-is in the ini style format, as that is easy to read and write for the user.
+See the HOWTO file for a complete description of job file syntax and
+parameters.  The --cmdhelp option also lists all options. If used with
+an option argument, --cmdhelp will detail the given option.  The job file
+format is in the ini style format, as that is easy for the user to review
+and modify.
 
-The HOWTO or man page has a full list of all options, along with
-descriptions, etc. The --cmdhelp option also lists all options. If
-used with an option argument, it will detail that particular option.
+This README contains the terse version. Job files can describe big and
+complex setups that are not possible with the command line.  Job files
+are a good practice even for simple jobs since the file provides an
+easily accessed record of the workload and can include comments.
+
+See the examples/ directory for inspiration on how to write job files.  Note
+the copyright and license requirements currently apply to examples/ files.
 
 
 Client/server
 ------------
 
-Normally you would run fio as a stand-alone application on the machine
-where the IO workload should be generated. However, it is also possible to
-run the frontend and backend of fio separately. This makes it possible to
-have a fio server running on the machine(s) where the IO workload should
-be running, while controlling it from another machine.
+Normally fio is invoked as a stand-alone application on the machine
+where the IO workload should be generated. However, the frontend and
+backend of fio can be run separately. Ie the fio server can generate
+an IO workload on the "Device Under Test" while being controlled from
+another machine.
 
-To start the server, you would do:
+Start the server on the machine which has access to the storage DUT:
 
 fio --server=args
 
-on that machine, where args defines what fio listens to. The arguments
-are of the form 'type,hostname or IP,port'. 'type' is either 'ip' (or ip4)
-for TCP/IP v4, 'ip6' for TCP/IP v6, or 'sock' for a local unix domain socket.
+where args defines what fio listens to. The arguments are of the form
+'type,hostname or IP,port'. 'type' is either 'ip' (or ip4) for TCP/IP v4,
+'ip6' for TCP/IP v6, or 'sock' for a local unix domain socket.
 'hostname' is either a hostname or IP address, and 'port' is the port to
 listen to (only valid for TCP/IP, not a local socket). Some examples:
 
@@ -274,18 +278,18 @@ listen to (only valid for TCP/IP, not a local socket). Some examples:
 
    Start a fio server, listening on the local socket /tmp/fio.sock.
 
-When a server is running, you can connect to it from a client. The client
-is run with:
+Once a server is running, a "client" can connect to the fio server with:
 
-fio --local-args --client=server --remote-args <job file(s)>
+fio --local-args --client=<server> --remote-args <job file(s)>
 
-where --local-args are arguments that are local to the client where it is
+where --local-args are arguments for the client where it is
 running, 'server' is the connect string, and --remote-args and <job file(s)>
 are sent to the server. The 'server' string follows the same format as it
 does on the server side, to allow IP/hostname/socket and port strings.
-You can connect to multiple clients as well, to do that you could run:
 
-fio --client=server2 <job file(s)> --client=server2 <job file(s)>
+Fio can connect to multiple servers this way:
+
+fio --client=<server1> <job file(s)> --client=<server2> <job file(s)>
 
 
 Platforms
@@ -312,12 +316,12 @@ your mileage may vary. Sending me patches for other platforms is greatly
 appreciated. There's a lot of value in having the same test/benchmark tool
 available on all platforms.
 
-Note that POSIX aio is not enabled by default on AIX. If you get messages like:
+Note that POSIX aio is not enabled by default on AIX. Messages like these:
 
     Symbol resolution failed for /usr/lib/libc.a(posix_aio.o) because:
         Symbol _posix_kaio_rdwr (number 2) is not exported from dependent module /unix.
 
-you need to enable POSIX aio. Run the following commands as root:
+indicate one needs to enable POSIX aio. Run the following commands as root:
 
     # lsdev -C -l posix_aio0
         posix_aio0 Defined  Posix Asynchronous I/O
