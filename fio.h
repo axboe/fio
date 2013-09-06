@@ -420,6 +420,7 @@ extern void td_fill_rand_seeds(struct thread_data *);
 extern void add_job_opts(const char **, int);
 extern char *num2str(unsigned long, int, int, int, int);
 extern int ioengine_load(struct thread_data *);
+extern int parse_dryrun(void);
 
 extern uintptr_t page_mask;
 extern uintptr_t page_size;

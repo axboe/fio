@@ -915,6 +915,12 @@ static char *make_filename(char *buf, struct thread_options *o,
 
 	return buf;
 }
+
+int parse_dryrun(void)
+{
+	return dump_cmdline || parse_only;
+}
+
 /*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
@@ -939,7 +945,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	/*
 	 * if we are just dumping the output command line, don't add the job
 	 */
-	if (dump_cmdline || parse_only) {
+	if (parse_dryrun()) {
 		put_job(td);
 		return 0;
 	}
@@ -1944,7 +1950,7 @@ int parse_options(int argc, char *argv[])
 	fio_options_free(&def_thread);
 
 	if (!thread_number) {
-		if (dump_cmdline || parse_only)
+		if (parse_dryrun())
 			return 0;
 		if (exec_profile)
 			return 0;

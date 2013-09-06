@@ -777,6 +777,9 @@ static int str_directory_cb(void *data, const char fio_unused *str)
 	struct thread_data *td = data;
 	struct stat sb;
 
+	if (parse_dryrun())
+		return 0;
+
 	if (lstat(td->o.directory, &sb) < 0) {
 		int ret = errno;
 
