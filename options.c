@@ -168,6 +168,9 @@ static int str_bssplit_cb(void *data, const char *input)
 	char *str, *p, *odir, *ddir;
 	int ret = 0;
 
+	if (parse_dryrun())
+		return 0;
+
 	p = str = strdup(input);
 
 	strip_blank_front(&str);
@@ -290,6 +293,10 @@ static int str_ignore_error_cb(void *data, const char *input)
 	struct thread_data *td = data;
 	char *str, *p, *n;
 	int type = 0, ret = 1;
+
+	if (parse_dryrun())
+		return 0;
+
 	p = str = strdup(input);
 
 	strip_blank_front(&str);
@@ -314,6 +321,9 @@ static int str_rw_cb(void *data, const char *str)
 	struct thread_data *td = data;
 	struct thread_options *o = &td->o;
 	char *nr = get_opt_postfix(str);
+
+	if (parse_dryrun())
+		return 0;
 
 	o->ddir_seq_nr = 1;
 	o->ddir_seq_add = 0;
@@ -390,6 +400,9 @@ static int str_cpumask_cb(void *data, unsigned long long *val)
 	unsigned int i;
 	long max_cpu;
 	int ret;
+
+	if (parse_dryrun())
+		return 0;
 
 	ret = fio_cpuset_init(&td->o.cpumask);
 	if (ret < 0) {
@@ -489,6 +502,9 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 	struct thread_data *td = data;
 	int ret;
 
+	if (parse_dryrun())
+		return 0;
+
 	ret = set_cpus_allowed(td, &td->o.cpumask, input);
 	if (!ret)
 		td->o.cpumask_set = 1;
@@ -514,6 +530,9 @@ static int str_numa_cpunodes_cb(void *data, char *input)
 {
 	struct thread_data *td = data;
 
+	if (parse_dryrun())
+		return 0;
+
 	/* numa_parse_nodestring() parses a character string list
 	 * of nodes into a bit mask. The bit mask is allocated by
 	 * numa_allocate_nodemask(), so it should be freed by
@@ -536,8 +555,12 @@ static int str_numa_mpol_cb(void *data, char *input)
 	const char * const policy_types[] =
 		{ "default", "prefer", "bind", "interleave", "local", NULL };
 	int i;
+	char *nodelist;
 
-	char *nodelist = strchr(input, ':');
+	if (parse_dryrun())
+		return 0;
+
+	nodelist = strchr(input, ':');
 	if (nodelist) {
 		/* NUL-terminate mode */
 		*nodelist++ = '\0';
@@ -669,6 +692,9 @@ static int str_random_distribution_cb(void *data, const char *str)
 	double val;
 	char *nr;
 
+	if (parse_dryrun())
+		return 0;
+
 	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
 		val = 1.1;
 	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
@@ -798,6 +824,9 @@ static int str_directory_cb(void *data, const char fio_unused *str)
 static int str_opendir_cb(void *data, const char fio_unused *str)
 {
 	struct thread_data *td = data;
+
+	if (parse_dryrun())
+		return 0;
 
 	if (!td->files_index)
 		td->o.nr_files = 0;
