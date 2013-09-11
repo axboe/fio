@@ -14,6 +14,8 @@ int log_valist(const char *str, va_list args)
 	len = vsnprintf(buffer, sizeof(buffer), str, args);
 	len = min(len, sizeof(buffer) - 1);
 
+	if (is_backend)
+		len = fio_server_text_output(FIO_LOG_INFO, buffer, len);
 	if (log_syslog)
 		syslog(LOG_INFO, "%s", buffer);
 	else
