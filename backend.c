@@ -642,6 +642,7 @@ static uint64_t do_io(struct thread_data *td)
 	uint64_t bytes_done[DDIR_RWDIR_CNT] = { 0, 0, 0 };
 	unsigned int i;
 	int ret = 0;
+	uint64_t bytes_issued = 0;
 
 	if (in_ramp_time(td))
 		td_set_runstate(td, TD_RAMP);
@@ -674,6 +675,9 @@ static uint64_t do_io(struct thread_data *td)
 
 		if (flow_threshold_exceeded(td))
 			continue;
+
+		if (bytes_issued >= (uint64_t) td->o.size)
+			break;
 
 		io_u = get_io_u(td);
 		if (!io_u)
@@ -708,6 +712,7 @@ static uint64_t do_io(struct thread_data *td)
 				int bytes = io_u->xfer_buflen - io_u->resid;
 				struct fio_file *f = io_u->file;
 
+				bytes_issued += bytes;
 				/*
 				 * zero read, fail
 				 */
@@ -738,6 +743,7 @@ sync_done:
 				ret = io_u_sync_complete(td, io_u, bytes_done);
 				if (ret < 0)
 					break;
+				bytes_issued += io_u->xfer_buflen;
 			}
 			break;
 		case FIO_Q_QUEUED:
@@ -748,6 +754,7 @@ sync_done:
 			 */
 			if (td->io_ops->commit == NULL)
 				io_u_queued(td, io_u);
+			bytes_issued += io_u->xfer_buflen;
 			break;
 		case FIO_Q_BUSY:
 			requeue_io_u(td, &io_u);
