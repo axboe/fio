@@ -188,6 +188,7 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	ipo->file = io_u->file;
 	ipo->offset = io_u->offset;
 	ipo->len = io_u->buflen;
+	ipo->numberio = io_u->numberio;
 
 	if (io_u_should_trim(td, io_u)) {
 		flist_add_tail(&ipo->trim_list, &td->trim_list);

@@ -83,6 +83,7 @@ struct io_piece {
 		struct fio_file *file;
 	};
 	unsigned long long offset;
+	unsigned short numberio;
 	unsigned long len;
 	unsigned int flags;
 	enum fio_ddir ddir;

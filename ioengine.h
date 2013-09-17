@@ -50,6 +50,7 @@ struct io_u {
 	 */
 	unsigned long buflen;
 	unsigned long long offset;
+	unsigned short numberio;
 	void *buf;
 
 	/*
