@@ -1068,6 +1068,13 @@ loops=int	Run the specified number of iterations of this job. Used
 		to repeat the same workload a given number of times. Defaults
 		to 1.
 
+verify_only	Do not perform specified workload---only verify data still
+		matches previous invocation of this workload. This option
+		allows one to check data multiple times at a later date
+		without overwriting it. This option makes sense only for
+		workloads that write data, and does not support workloads
+		with the time_based option set.
+
 do_verify=bool	Run the verify phase after a write phase. Only makes sense if
 		verify is set. Defaults to 1.
 
@@ -1106,7 +1113,9 @@ verify=str	If writing to a file, fio can verify the file contents
 
 			meta	Write extra information about each io
 				(timestamp, block number etc.). The block
-				number is verified. See also verify_pattern.
+				number is verified. The io sequence number is
+				verified for workloads that write data.
+				See also verify_pattern.
 
 			null	Only pretend to verify. Useful for testing
 				internals with ioengine=null, not for much

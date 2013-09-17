@@ -109,6 +109,8 @@ struct thread_options {
 	unsigned int fsync_on_close;
 	unsigned int bs_is_seq_rand;
 
+	unsigned int verify_only;
+
 	unsigned int random_distribution;
 
 	fio_fp64_t zipf_theta;

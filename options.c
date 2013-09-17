@@ -2018,6 +2018,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
+		.name	= "verify_only",
+		.lname	= "Verify only",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(verify_only),
+		.help	= "Verifies previously written data is still valid",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_RUNTIME,
+	},
+	{
 		.name	= "ramp_time",
 		.lname	= "Ramp time",
 		.type	= FIO_OPT_STR_VAL_TIME,

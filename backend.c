@@ -1120,6 +1120,44 @@ static int exec_string(struct thread_options *o, const char *string, const char 
 }
 
 /*
+ * Dry run to compute correct state of numberio for verification.
+ */
+static uint64_t do_dry_run(struct thread_data *td)
+{
+	uint64_t bytes_done[DDIR_RWDIR_CNT] = { 0, 0, 0 };
+
+	td_set_runstate(td, TD_RUNNING);
+
+	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
+		(!flist_empty(&td->trim_list)) || !io_bytes_exceeded(td)) {
+		struct io_u *io_u;
+		int ret;
+
+		if (td->terminate || td->done)
+			break;
+
+		io_u = get_io_u(td);
+		if (!io_u)
+			break;
+
+		io_u->flags |= IO_U_F_FLIGHT;
+		io_u->error = 0;
+		io_u->resid = 0;
+		if (ddir_rw(acct_ddir(io_u)))
+			td->io_issues[acct_ddir(io_u)]++;
+		if (ddir_rw(io_u->ddir)) {
+			io_u_mark_depth(td, 1);
+			td->ts.total_io_u[io_u->ddir]++;
+		}
+
+		ret = io_u_sync_complete(td, io_u, bytes_done);
+		(void) ret;
+	}
+
+	return bytes_done[DDIR_WRITE] + bytes_done[DDIR_TRIM];
+}
+
+/*
  * Entry point for the thread based jobs. The process based jobs end up
  * here as well, after a little setup.
  */
@@ -1332,7 +1370,10 @@ static void *thread_main(void *data)
 
 		prune_io_piece_log(td);
 
-		verify_bytes = do_io(td);
+		if (td->o.verify_only && (td_write(td) || td_rw(td)))
+			verify_bytes = do_dry_run(td);
+		else
+			verify_bytes = do_io(td);
 
 		clear_state = 1;
 
