@@ -1252,6 +1252,11 @@ write_lat_log=str Same as write_bw_log, except that this option stores io
 		and foo_lat.log. This helps fio_generate_plot fine the logs
 		automatically.
 
+write_lat_log_with_filename=str Same as write_lat_log but outputs a slightly 
+		longer log entry. Each log entry contains one extra field, the 
+		filename to which the request was issued. Note that 
+		write_lat_log_with_filename and write_lat_log are mutually exclusive.
+
 write_bw_log=str If given, write an IOPS log of the jobs in this job
 		file. See write_bw_log.
 

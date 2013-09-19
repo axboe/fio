@@ -1040,6 +1040,12 @@ Same as \fBwrite_bw_log\fR, but writes I/O completion latencies.  If no
 filename is given with this option, the default filename of "jobname_type.log"
 is used. Even if the filename is given, fio will still append the type of log.
 .TP
+.BI write_lat_log_with_filename \fR=\fPstr
+Same as \fBwrite_lat_log\fR but outputs a slightly longer log entry. Each log 
+entry contains one extra field, the filename to which the request was issued. 
+Note that \fBwrite_lat_log_with_filename\fR and \fBwrite_lat_log\fR are 
+mutually exclusive.
+.TP
 .BI write_iops_log \fR=\fPstr
 Same as \fBwrite_bw_log\fR, but writes IOPS. If no filename is given with this
 option, the default filename of "jobname_type.log" is used. Even if the

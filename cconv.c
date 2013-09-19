@@ -35,6 +35,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	string_to_cpu(&o->write_iolog_file, top->write_iolog_file);
 	string_to_cpu(&o->bw_log_file, top->bw_log_file);
 	string_to_cpu(&o->lat_log_file, top->lat_log_file);
+	string_to_cpu(&o->lat_fname_log_file, top->lat_fname_log_file);
 	string_to_cpu(&o->iops_log_file, top->iops_log_file);
 	string_to_cpu(&o->replay_redirect, top->replay_redirect);
 	string_to_cpu(&o->exec_prerun, top->exec_prerun);

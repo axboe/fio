@@ -2809,6 +2809,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "write_lat_log_with_filename",
+		.lname	= "write latency log more verbose",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(lat_fname_log_file),
+		.help	= "Write log of latency (verbose) during run",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "write_iops_log",
 		.lname	= "Write IOPS log",
 		.type	= FIO_OPT_STR_STORE,
