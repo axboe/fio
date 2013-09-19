@@ -193,6 +193,7 @@ struct thread_options {
 	char *write_iolog_file;
 	char *bw_log_file;
 	char *lat_log_file;
+	char *lat_fname_log_file;
 	char *iops_log_file;
 	char *replay_redirect;
 
@@ -398,6 +399,7 @@ struct thread_options_pack {
 	uint8_t write_iolog_file[FIO_TOP_STR_MAX];
 	uint8_t bw_log_file[FIO_TOP_STR_MAX];
 	uint8_t lat_log_file[FIO_TOP_STR_MAX];
+	uint8_t lat_fname_log_file[FIO_TOP_STR_MAX];
 	uint8_t iops_log_file[FIO_TOP_STR_MAX];
 	uint8_t replay_redirect[FIO_TOP_STR_MAX];
 
