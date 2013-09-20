@@ -444,6 +444,7 @@ int generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 		f->shadow_fd = -1;
 	}
 
+	f->engine_data = 0;
 	return ret;
 }
 
