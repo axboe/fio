@@ -124,7 +124,7 @@ static void hexdump(void *buffer, int len)
 }
 
 /*
- * Prepare for seperation of verify_header and checksum header
+ * Prepare for separation of verify_header and checksum header
  */
 static inline unsigned int __hdr_size(int verify_type)
 {

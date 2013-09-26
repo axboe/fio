@@ -869,7 +869,7 @@ static int fio_rdmaio_close_file(struct thread_data *td, struct fio_file *f)
 			return 1;
 		}
 
-		dprint(FD_IO, "fio: close infomation sent success\n");
+		dprint(FD_IO, "fio: close information sent success\n");
 		rdma_poll_wait(td, IBV_WC_SEND);
 	}
 

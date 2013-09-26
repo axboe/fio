@@ -5,7 +5,7 @@
  * nothing to do with anything remotely narcissistic.
  *
  * A set bit at layer N indicates a full word at layer N-1, and so forth. As
- * the bitmap becomes progressively more full, checking for existance
+ * the bitmap becomes progressively more full, checking for existence
  * becomes cheaper (since fewer layers are walked, making it a lot more
  * cache friendly) and locating the next free space likewise.
  *

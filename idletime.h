@@ -27,7 +27,7 @@ struct idle_prof_thread {
 	int state;
 	struct timeval tps;
 	struct timeval tpe;
-	double cali_time; /* microseconds to finish a unit wrok */
+	double cali_time; /* microseconds to finish a unit work */
 	double loops;
 	double idleness;
 	unsigned char *data;             /* bytes to be touched */

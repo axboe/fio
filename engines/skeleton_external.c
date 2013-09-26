@@ -99,7 +99,7 @@ static int fio_skeleton_init(struct thread_data *td)
 }
 
 /*
- * This is paired with the ->init() funtion and is called when a thread is
+ * This is paired with the ->init() function and is called when a thread is
  * done doing io. Should tear down anything setup by the ->init() function.
  * Not required.
  */

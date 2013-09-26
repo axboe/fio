@@ -870,11 +870,11 @@ rate_iops=int	Cap the bandwidth to this number of IOPS. Basically the same
 		as rate, just specified independently of bandwidth. If the
 		job is given a block size range instead of a fixed value,
 		the smallest block size is used as the metric. The same format
-		as rate is used for read vs write seperation.
+		as rate is used for read vs write separation.
 
 rate_iops_min=int If fio doesn't meet this rate of IO, it will cause
 		the job to exit. The same format as rate is used for read vs
-		write seperation.
+		write separation.
 
 max_latency=int	If set, fio will exit the job if it exceeds this maximum
 		latency. It will exit with an ETIME error.
@@ -1163,7 +1163,7 @@ verify_backlog_batch=int	Control how many blocks fio will verify
 		blocks will be verified more than once.
 
 stonewall
-wait_for_previous Wait for preceeding jobs in the job file to exit, before
+wait_for_previous Wait for preceding jobs in the job file to exit, before
 		starting this one. Can be used to insert serialization
 		points in the job file. A stone wall also implies starting
 		a new reporting group.
@@ -1219,7 +1219,7 @@ replay_no_stall=int When replaying I/O with read_iolog the default behavior
 replay_redirect=str While replaying I/O patterns using read_iolog the
 		default behavior is to replay the IOPS onto the major/minor
 		device that each IOP was recorded from.  This is sometimes
-		undesireable because on a different machine those major/minor
+		undesirable because on a different machine those major/minor
 		numbers can map to a different device.  Changing hardware on
 		the same system can also result in a different major/minor
 		mapping.  Replay_redirect causes all IOPS to be replayed onto
@@ -1690,9 +1690,9 @@ Split up, the format is as follows:
 			  Read merges, write merges,
 			  Read ticks, write ticks,
 			  Time spent in queue, disk utilization percentage
-	Additional Info (dependant on continue_on_error, default off): total # errors, first error code
+	Additional Info (dependent on continue_on_error, default off): total # errors, first error code
 
-	Additional Info (dependant on description being set): Text description
+	Additional Info (dependent on description being set): Text description
 
 Completion latency percentiles can be a grouping of up to 20 sets, so
 for the terse output fio writes all of them. Each field will look like this:

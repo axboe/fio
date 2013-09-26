@@ -1279,7 +1279,7 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 		}
 
 		/*
-		 * Seperate multiple job files by a stonewall
+		 * Separate multiple job files by a stonewall
 		 */
 		if (!global && stonewall) {
 			td->o.stonewall = stonewall;
