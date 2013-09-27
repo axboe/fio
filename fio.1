@@ -271,7 +271,7 @@ new offset.
 .BI kb_base \fR=\fPint
 The base unit for a kilobyte. The defacto base is 2^10, 1024.  Storage
 manufacturers like to use 10^3 or 1000 as a base ten unit instead, for obvious
-reasons. Allow values are 1024 or 1000, with 1024 being the default.
+reasons. Allowed values are 1024 or 1000, with 1024 being the default.
 .TP
 .BI unified_rw_reporting \fR=\fPbool
 Fio normally reports statistics on a per data direction basis, meaning that
@@ -427,10 +427,11 @@ Defines how files to service are selected.  The following types are defined:
 .RS
 .TP
 .B random
-Choose a file at random
+Choose a file at random.
 .TP
 .B roundrobin
 Round robin over open files (default).
+.TP
 .B sequential
 Do each file in the set sequentially.
 .RE
@@ -921,7 +922,7 @@ written file. If the data direction includes any form of write, the verify will
 be of the newly written data.
 .RE
 .TP
-.BI verify_sort \fR=\fPbool
+.BI verifysort \fR=\fPbool
 If true, written verify blocks are sorted if \fBfio\fR deems it to be faster to
 read them back in a sorted manner.  Default: true.
 .TP
