@@ -304,10 +304,10 @@ are:
 Do not pre-allocate space.
 .TP
 .B posix
-Pre-allocate via posix_fallocate().
+Pre-allocate via \fBposix_fallocate\fR\|(3).
 .TP
 .B keep
-Pre-allocate via fallocate() with FALLOC_FL_KEEP_SIZE set.
+Pre-allocate via \fBfallocate\fR\|(2) with FALLOC_FL_KEEP_SIZE set.
 .TP
 .B 0
 Backward-compatible alias for 'none'.
@@ -322,7 +322,7 @@ because ZFS doesn't support it. Default: 'posix'.
 .RE
 .TP
 .BI fadvise_hint \fR=\fPbool
-Use of \fIposix_fadvise\fR\|(2) to advise the kernel what I/O patterns
+Use of \fBposix_fadvise\fR\|(2) to advise the kernel what I/O patterns
 are likely to be issued. Default: true.
 .TP
 .BI size \fR=\fPint
@@ -452,24 +452,24 @@ Defines how the job issues I/O.  The following types are defined:
 .RS
 .TP
 .B sync
-Basic \fIread\fR\|(2) or \fIwrite\fR\|(2) I/O.  \fIfseek\fR\|(2) is used to
+Basic \fBread\fR\|(2) or \fBwrite\fR\|(2) I/O.  \fBfseek\fR\|(2) is used to
 position the I/O location.
 .TP
 .B psync
-Basic \fIpread\fR\|(2) or \fIpwrite\fR\|(2) I/O.
+Basic \fBpread\fR\|(2) or \fBpwrite\fR\|(2) I/O.
 .TP
 .B vsync
-Basic \fIreadv\fR\|(2) or \fIwritev\fR\|(2) I/O. Will emulate queuing by
+Basic \fBreadv\fR\|(2) or \fBwritev\fR\|(2) I/O. Will emulate queuing by
 coalescing adjacent IOs into a single submission.
 .TP
 .B pvsync
-Basic \fIpreadv\fR\|(2) or \fIpwritev\fR\|(2) I/O.
+Basic \fBpreadv\fR\|(2) or \fBpwritev\fR\|(2) I/O.
 .TP
 .B libaio
 Linux native asynchronous I/O. This ioengine defines engine specific options.
 .TP
 .B posixaio
-POSIX asynchronous I/O using \fIaio_read\fR\|(3) and \fIaio_write\fR\|(3).
+POSIX asynchronous I/O using \fBaio_read\fR\|(3) and \fBaio_write\fR\|(3).
 .TP
 .B solarisaio
 Solaris native asynchronous I/O.
@@ -478,11 +478,11 @@ Solaris native asynchronous I/O.
 Windows native asynchronous I/O.
 .TP
 .B mmap
-File is memory mapped with \fImmap\fR\|(2) and data copied using
-\fImemcpy\fR\|(3).
+File is memory mapped with \fBmmap\fR\|(2) and data copied using
+\fBmemcpy\fR\|(3).
 .TP
 .B splice
-\fIsplice\fR\|(2) is used to transfer the data and \fIvmsplice\fR\|(2) to
+\fBsplice\fR\|(2) is used to transfer the data and \fBvmsplice\fR\|(2) to
 transfer data from user-space to the kernel.
 .TP
 .B syslet-rw
@@ -490,8 +490,8 @@ Use the syslet system calls to make regular read/write asynchronous.
 .TP
 .B sg
 SCSI generic sg v3 I/O. May be either synchronous using the SG_IO ioctl, or if
-the target is an sg character device, we use \fIread\fR\|(2) and
-\fIwrite\fR\|(2) for asynchronous I/O.
+the target is an sg character device, we use \fBread\fR\|(2) and
+\fBwrite\fR\|(2) for asynchronous I/O.
 .TP
 .B null
 Doesn't transfer any data, just pretends to.  Mainly used to exercise \fBfio\fR
@@ -504,7 +504,7 @@ Transfer over the network.  The protocol to be used can be defined with the
 This ioengine defines engine specific options.
 .TP
 .B netsplice
-Like \fBnet\fR, but uses \fIsplice\fR\|(2) and \fIvmsplice\fR\|(2) to map data
+Like \fBnet\fR, but uses \fBsplice\fR\|(2) and \fBvmsplice\fR\|(2) to map data
 and send/receive. This ioengine defines engine specific options.
 .TP
 .B cpuio
@@ -602,8 +602,8 @@ data parts of the file. Default: 0.
 Make every Nth write a barrier write.
 .TP
 .BI sync_file_range \fR=\fPstr:int
-Use sync_file_range() for every \fRval\fP number of write operations. Fio will
-track range of writes that have happened since the last sync_file_range() call.
+Use \fBsync_file_range\fR\|(2) for every \fRval\fP number of write operations. Fio will
+track range of writes that have happened since the last \fBsync_file_range\fR\|(2) call.
 \fRstr\fP can currently be one or more of:
 .RS
 .TP
@@ -620,7 +620,7 @@ SYNC_FILE_RANGE_WRITE
 .P
 So if you do sync_file_range=wait_before,write:8, fio would use
 \fBSYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE\fP for every 8 writes.
-Also see the sync_file_range(2) man page.  This option is Linux specific.
+Also see the \fBsync_file_range\fR\|(2) man page.  This option is Linux specific.
 .TP
 .BI overwrite \fR=\fPbool
 If writing, setup the file first and do overwrites.  Default: false.
@@ -707,14 +707,14 @@ sizes, not with workloads that use multiple block sizes. If used with such a
 workload, fio may read or write some blocks multiple times.
 .TP
 .BI nice \fR=\fPint
-Run job with given nice value.  See \fInice\fR\|(2).
+Run job with given nice value.  See \fBnice\fR\|(2).
 .TP
 .BI prio \fR=\fPint
 Set I/O priority value of this job between 0 (highest) and 7 (lowest).  See
-\fIionice\fR\|(1).
+\fBionice\fR\|(1).
 .TP
 .BI prioclass \fR=\fPint
-Set I/O priority class.  See \fIionice\fR\|(1).
+Set I/O priority class.  See \fBionice\fR\|(1).
 .TP
 .BI thinktime \fR=\fPint
 Stall job for given number of microseconds between issuing I/Os.
@@ -823,16 +823,16 @@ Allocation method for I/O unit buffer.  Allowed values are:
 .RS
 .TP
 .B malloc
-Allocate memory with \fImalloc\fR\|(3).
+Allocate memory with \fBmalloc\fR\|(3).
 .TP
 .B shm
-Use shared memory buffers allocated through \fIshmget\fR\|(2).
+Use shared memory buffers allocated through \fBshmget\fR\|(2).
 .TP
 .B shmhuge
 Same as \fBshm\fR, but use huge pages as backing.
 .TP
 .B mmap
-Use \fImmap\fR\|(2) for allocation.  Uses anonymous memory unless a filename
+Use \fBmmap\fR\|(2) for allocation.  Uses anonymous memory unless a filename
 is given after the option in the format `:\fIfile\fR'.
 .TP
 .B mmaphuge
@@ -877,7 +877,7 @@ Average IOPS calculations over the given time in milliseconds.  Default:
 If true, serialize file creation for the jobs.  Default: true.
 .TP
 .BI create_fsync \fR=\fPbool
-\fIfsync\fR\|(2) data file after creation.  Default: true.
+\fBfsync\fR\|(2) data file after creation.  Default: true.
 .TP
 .BI create_on_open \fR=\fPbool
 If true, the files are not created until they are opened for IO by the job.
@@ -1085,7 +1085,7 @@ Defaults to 0.
 .TP
 .BI disable_lat \fR=\fPbool
 Disable measurements of total latency numbers. Useful only for cutting
-back the number of calls to gettimeofday, as that does impact performance at
+back the number of calls to \fBgettimeofday\fR\|(2), as that does impact performance at
 really high IOPS rates.  Note that to really get rid of a large amount of these
 calls, this option must be used with disable_slat and disable_bw as well.
 .TP
@@ -1133,10 +1133,10 @@ Use the given clocksource as the base of timing. The supported options are:
 .RS
 .TP
 .B gettimeofday
-gettimeofday(2)
+\fBgettimeofday\fR\|(2)
 .TP
 .B clock_gettime
-clock_gettime(2)
+\fBclock_gettime\fR\|(2)
 .TP
 .B cpu
 Internal CPU clock source
@@ -1150,18 +1150,18 @@ unless another clocksource is specifically set. For x86/x86-64 CPUs, this
 means supporting TSC Invariant.
 .TP
 .BI gtod_reduce \fR=\fPbool
-Enable all of the gettimeofday() reducing options (disable_clat, disable_slat,
+Enable all of the \fBgettimeofday\fR\|(2) reducing options (disable_clat, disable_slat,
 disable_bw) plus reduce precision of the timeout somewhat to really shrink the
-gettimeofday() call count. With this option enabled, we only do about 0.4% of
+\fBgettimeofday\fR\|(2) call count. With this option enabled, we only do about 0.4% of
 the gtod() calls we would have done if all time keeping was enabled.
 .TP
 .BI gtod_cpu \fR=\fPint
 Sometimes it's cheaper to dedicate a single thread of execution to just getting
 the current time. Fio (and databases, for instance) are very intensive on
-gettimeofday() calls. With this option, you can set one CPU aside for doing
+\fBgettimeofday\fR\|(2) calls. With this option, you can set one CPU aside for doing
 nothing but logging current time to a shared memory location. Then the other
 threads/processes that run IO workloads need only copy that segment, instead of
-entering the kernel with a gettimeofday() call. The CPU set aside for doing
+entering the kernel with a \fBgettimeofday\fR\|(2) call. The CPU set aside for doing
 these time calls will be excluded from other uses. Fio will manually clear it
 from the CPU mask of other jobs.
 .TP
