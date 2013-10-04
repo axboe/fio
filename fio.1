@@ -219,11 +219,17 @@ Sequential reads.
 .B write
 Sequential writes.
 .TP
+.B trim
+Sequential trim (Linux block devices only).
+.TP
 .B randread
 Random reads.
 .TP
 .B randwrite
 Random writes.
+.TP
+.B randtrim
+Random trim (Linux block devices only).
 .TP
 .B rw, readwrite
 Mixed sequential reads and writes.
@@ -271,7 +277,7 @@ new offset.
 .BI kb_base \fR=\fPint
 The base unit for a kilobyte. The defacto base is 2^10, 1024.  Storage
 manufacturers like to use 10^3 or 1000 as a base ten unit instead, for obvious
-reasons. Allow values are 1024 or 1000, with 1024 being the default.
+reasons. Allowed values are 1024 or 1000, with 1024 being the default.
 .TP
 .BI unified_rw_reporting \fR=\fPbool
 Fio normally reports statistics on a per data direction basis, meaning that
@@ -427,10 +433,11 @@ Defines how files to service are selected.  The following types are defined:
 .RS
 .TP
 .B random
-Choose a file at random
+Choose a file at random.
 .TP
 .B roundrobin
 Round robin over open files (default).
+.TP
 .B sequential
 Do each file in the set sequentially.
 .RE
@@ -590,6 +597,9 @@ How many I/Os to perform before issuing an \fBfsync\fR\|(2) of dirty data.  If
 .BI fdatasync \fR=\fPint
 Like \fBfsync\fR, but uses \fBfdatasync\fR\|(2) instead to only sync the
 data parts of the file. Default: 0.
+.TP
+.BI write_barrier \fR=\fPint
+Make every Nth write a barrier write.
 .TP
 .BI sync_file_range \fR=\fPstr:int
 Use sync_file_range() for every \fRval\fP number of write operations. Fio will
@@ -921,9 +931,12 @@ written file. If the data direction includes any form of write, the verify will
 be of the newly written data.
 .RE
 .TP
-.BI verify_sort \fR=\fPbool
+.BI verifysort \fR=\fPbool
 If true, written verify blocks are sorted if \fBfio\fR deems it to be faster to
 read them back in a sorted manner.  Default: true.
+.TP
+.BI verifysort_nr \fR=\fPint
+Pre-load and sort verify blocks for a read workload.
 .TP
 .BI verify_offset \fR=\fPint
 Swap the verification header with data somewhere else in the block before
@@ -980,6 +993,21 @@ read back and verified).  If \fBverify_backlog_batch\fR is less than
 \fBverify_backlog_batch\fR is larger than \fBverify_backlog\fR,  some blocks
 will be verified more than once.
 .TP
+.BI trim_percentage \fR=\fPint
+Number of verify blocks to discard/trim.
+.TP
+.BI trim_verify_zero \fR=\fPbool
+Verify that trim/discarded blocks are returned as zeroes.
+.TP
+.BI trim_backlog \fR=\fPint
+Trim after this number of blocks are written.
+.TP
+.BI trim_backlog_batch \fR=\fPint
+Trim this number of IO blocks.
+.TP
+.BI experimental_verify \fR=\fPbool
+Enable experimental verification.
+.TP
 .B stonewall "\fR,\fP wait_for_previous"
 Wait for preceding jobs in the job file to exit before starting this one.
 \fBstonewall\fR implies \fBnew_group\fR.
@@ -1002,6 +1030,9 @@ with \fBfork\fR\|(2).
 .TP
 .BI zonesize \fR=\fPint
 Divide file into zones of the specified size in bytes.  See \fBzoneskip\fR.
+.TP
+.BI zonerange \fR=\fPint
+Give size of an IO zone.  See \fBzoneskip\fR.
 .TP
 .BI zoneskip \fR=\fPint
 Skip the specified number of bytes when \fBzonesize\fR bytes of data have been
@@ -1151,6 +1182,9 @@ This option will ignore EAGAIN from READ, and ENOSPC and 122(EDQUOT) from WRITE.
 If set dump every error even if it is non fatal, true by default. If disabled
 only fatal error will be dumped
 .TP
+.BI profile \fR=\fPstr
+Select a specific builtin performance test.
+.TP
 .BI cgroup \fR=\fPstr
 Add job to this control group. If it doesn't exist, it will be created.
 The system must have a mounted cgroup blkio mount point for this to work. If
@@ -1174,6 +1208,21 @@ the thread/process does any work.
 .TP
 .BI gid \fR=\fPint
 Set group ID, see \fBuid\fR.
+.TP
+.BI unit_base \fR=\fPint
+Base unit for reporting.  Allowed values are:
+.RS
+.TP
+.B 0
+Use auto-detection (default).
+.TP
+.B 8
+Byte based.
+.TP
+.B 1
+Bit based.
+.RE
+.P
 .TP
 .BI flow_id \fR=\fPint
 The ID of the flow. If not specified, it defaults to being a global flow. See
