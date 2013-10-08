@@ -1151,9 +1151,6 @@ verify_backlog=int	Fio will normally verify the written contents of a
 		holding this meta data. If this option is enabled, fio
 		will write only N blocks before verifying these blocks.
 
-		will verify the previously written blocks before continuing
-		to write new ones.
-
 verify_backlog_batch=int	Control how many blocks fio will verify
 		if verify_backlog is set. If not set, will default to
 		the value of verify_backlog (meaning the entire queue
@@ -1251,9 +1248,6 @@ write_lat_log=str Same as write_bw_log, except that this option stores io
 		The actual log names will be foo_slat.log, foo_clat.log,
 		and foo_lat.log. This helps fio_generate_plot fine the logs
 		automatically.
-
-write_bw_log=str If given, write an IOPS log of the jobs in this job
-		file. See write_bw_log.
 
 write_iops_log=str Same as write_bw_log, but writes IOPS. If no filename is
 		given with this option, the default filename of
