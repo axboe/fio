@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <pthread.h>
+#include <time.h>
 #include <semaphore.h>
 #include <sys/shm.h>
 #include <sys/mman.h>
@@ -870,6 +871,14 @@ uid_t geteuid(void)
 	log_err("%s is not implemented\n", __func__);
 	errno = ENOSYS;
 	return -1;
+}
+
+in_addr_t inet_network(const char *cp)
+{
+	in_addr_t hbo;
+	in_addr_t nbo = inet_addr(cp);
+	hbo = ((nbo & 0xFF) << 24) + ((nbo & 0xFF00) << 8) + ((nbo & 0xFF0000) >> 8) + ((nbo & 0xFF000000) >> 24);
+	return hbo;
 }
 
 const char* inet_ntop(int af, const void *restrict src,

@@ -18,6 +18,10 @@
 
 #include "windows/posix.h"
 
+#ifndef PTHREAD_STACK_MIN
+#define PTHREAD_STACK_MIN 65535
+#endif
+
 #define FIO_HAVE_ODIRECT
 #define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_CHARDEV_SIZE
@@ -37,9 +41,6 @@
 #define fio_swap64(x)	_byteswap_uint64(x)
 
 typedef DWORD_PTR os_cpu_mask_t;
-
-#define CLOCK_REALTIME	1
-#define CLOCK_MONOTONIC	2
 
 #define _SC_PAGESIZE			0x1
 #define _SC_NPROCESSORS_ONLN	0x2
@@ -115,7 +116,6 @@ static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 	HANDLE hFile;
 	GET_LENGTH_INFORMATION info;
 	DWORD outBytes;
-	LARGE_INTEGER size;
 
 	if (f->hFile == NULL) {
 		hFile = CreateFile(f->file_name, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -124,7 +124,6 @@ static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 		hFile = f->hFile;
 	}
 
-	size.QuadPart = 0;
 	if (DeviceIoControl(hFile, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &info, sizeof(info), &outBytes, NULL))
 		*bytes = info.Length.QuadPart;
 	else

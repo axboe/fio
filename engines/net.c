@@ -38,7 +38,7 @@ struct netio_options {
 	unsigned int pingpong;
 	unsigned int nodelay;
 	unsigned int ttl;
-	char * interface;
+	char *intfc;
 };
 
 struct udp_close_msg {
@@ -134,7 +134,7 @@ static struct fio_option options[] = {
 		.name	= "interface",
 		.lname	= "net engine interface",
 		.type	= FIO_OPT_STR_STORE,
-		.off1	= offsetof(struct netio_options, interface),
+		.off1	= offsetof(struct netio_options, intfc),
 		.help	= "Network interface to use",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_NETIO,
@@ -557,20 +557,20 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 		if (!fio_netio_is_multicast(td->o.filename))
 			return 0;
 
-		if (o->interface) {
+		if (o->intfc) {
 			struct in_addr interface_addr;
-			if (inet_aton(o->interface, &interface_addr) == 0) {
+			if (inet_aton(o->intfc, &interface_addr) == 0) {
 				log_err("fio: interface not valid interface IP\n");
 				close(f->fd);
 				return 1;
 			}
-			if (setsockopt(f->fd, IPPROTO_IP, IP_MULTICAST_IF, &interface_addr, sizeof(interface_addr)) < 0) {
+			if (setsockopt(f->fd, IPPROTO_IP, IP_MULTICAST_IF, (const char*)&interface_addr, sizeof(interface_addr)) < 0) {
 				td_verror(td, errno, "setsockopt IP_MULTICAST_IF");
 				close(f->fd);
 				return 1;
 			}
 		}
-		if (setsockopt(f->fd, IPPROTO_IP, IP_MULTICAST_TTL, &o->ttl, sizeof(o->ttl)) < 0) {
+		if (setsockopt(f->fd, IPPROTO_IP, IP_MULTICAST_TTL, (const char*)&o->ttl, sizeof(o->ttl)) < 0) {
 			td_verror(td, errno, "setsockopt IP_MULTICAST_TTL");
 			close(f->fd);
 			return 1;
@@ -884,8 +884,8 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 		inet_aton(td->o.filename, &sin.sin_addr);
 
 		mr.imr_multiaddr = sin.sin_addr;
-		if (o->interface) {
-			if (inet_aton(o->interface, &mr.imr_interface) == 0) {
+		if (o->intfc) {
+			if (inet_aton(o->intfc, &mr.imr_interface) == 0) {
 				log_err("fio: interface not valid interface IP\n");
 				close(fd);
 				return 1;
@@ -893,7 +893,7 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 		} else {
 			mr.imr_interface.s_addr = htonl(INADDR_ANY);
 		}
-		if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mr, sizeof(mr)) < 0) {
+		if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char*)&mr, sizeof(mr)) < 0) {
 			td_verror(td, errno, "setsockopt IP_ADD_MEMBERSHIP");
 			close(fd);
 			return 1;
