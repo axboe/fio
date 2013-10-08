@@ -104,7 +104,7 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 
 		if (str_to_decimal(fname, &val, 1, o)) {
 			log_err("fio: bssplit conversion failed\n");
-			free(o->bssplit);
+			free(bssplit);
 			return 1;
 		}
 
