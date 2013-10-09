@@ -3603,7 +3603,7 @@ int fio_cmd_option_parse(struct thread_data *td, const char *opt, char *val)
 int fio_cmd_ioengine_option_parse(struct thread_data *td, const char *opt,
 				char *val)
 {
-	return parse_cmd_option(opt, val, td->io_ops->options, td);
+	return parse_cmd_option(opt, val, td->io_ops->options, td->eo);
 }
 
 void fio_fill_default_options(struct thread_data *td)
