@@ -1,5 +1,5 @@
 #ifndef ARCH_PPC_H
-#define ARCH_PPH_H
+#define ARCH_PPC_H
 
 #include <unistd.h>
 #include <stdlib.h>
