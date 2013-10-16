@@ -625,7 +625,7 @@ static int __fio_client_send_ini(struct fio_client *client, const char *filename
 	if (len) {
 		log_err("fio: failed reading job file %s\n", filename);
 		close(fd);
-		free(buf);
+		free(pdu);
 		return 1;
 	}
 
