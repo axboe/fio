@@ -153,6 +153,8 @@ for opt do
   --enable-gfio)
   gfio="yes"
   ;;
+  --disable-numa) disable_numa="yes"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -169,6 +171,7 @@ if test "$show_help" = "yes" ; then
   echo "--extra-cflags=        Specify extra CFLAGS to pass to compiler"
   echo "--build-32bit-win      Enable 32-bit build on Windows"
   echo "--enable-gfio          Enable building of gtk gfio"
+  echo "--disable-numa         Disable libnuma even if found"
   exit $exit_val
 fi
 
@@ -835,7 +838,7 @@ int main(int argc, char **argv)
   return numa_available();
 }
 EOF
-if compile_prog "" "-lnuma" "libnuma"; then
+if test "$disable_numa" != "yes"  && compile_prog "" "-lnuma" "libnuma"; then
   libnuma="yes"
   LIBS="-lnuma $LIBS"
 fi
