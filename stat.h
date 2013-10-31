@@ -202,7 +202,7 @@ struct jobs_eta {
 extern void stat_init(void);
 extern void stat_exit(void);
 
-extern void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs);
+extern struct json_object * show_thread_status(struct thread_stat *ts, struct group_run_stats *rs);
 extern void show_group_stats(struct group_run_stats *rs);
 extern int calc_thread_status(struct jobs_eta *je, int force);
 extern void display_thread_status(struct jobs_eta *je);

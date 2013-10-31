@@ -104,6 +104,8 @@ extern void wait_for_disk_thread_exit(void);
 #ifdef FIO_HAVE_DISK_UTIL
 extern void print_disk_util(struct disk_util_stat *, struct disk_util_agg *, int terse);
 extern void show_disk_util(int terse, struct json_object *parent);
+extern void json_array_add_disk_util(struct disk_util_stat *dus,
+		struct disk_util_agg *agg, struct json_array *parent);
 extern void init_disk_util(struct thread_data *);
 extern int update_io_ticks(void);
 extern void setup_disk_util(void);
@@ -117,6 +119,8 @@ static inline void print_disk_util(struct disk_util_stat *du,
 #define disk_util_prune_entries()
 #define init_disk_util(td)
 #define setup_disk_util()
+#define json_array_add_disk_util(dus, agg, parent)
+
 static inline int update_io_ticks(void)
 {
 	return disk_util_exit;
@@ -127,5 +131,4 @@ static inline void disk_util_start_exit(void)
 {
 	disk_util_exit = 1;
 }
-
 #endif

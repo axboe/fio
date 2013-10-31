@@ -605,21 +605,19 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 		log_info("\n");
 }
 
-static void print_disk_util_json(struct disk_util *du, struct json_array *array)
+void json_array_add_disk_util(struct disk_util_stat *dus,
+		struct disk_util_agg *agg, struct json_array *array)
 {
-	double util = 0;
-	struct disk_util_stat *dus = &du->dus;
-	struct disk_util_agg *agg = &du->agg;
 	struct json_object *obj;
-
-	obj = json_create_object();
-	json_array_add_value_object(array, obj);
+	double util = 0;
 
 	if (dus->msec)
 		util = (double) 100 * dus->io_ticks / (double) dus->msec;
 	if (util > 100.0)
 		util = 100.0;
 
+	obj = json_create_object();
+	json_array_add_value_object(array, obj);
 
 	json_object_add_value_string(obj, "name", dus->name);
 	json_object_add_value_int(obj, "read_ios", dus->ios[0]);
@@ -654,11 +652,27 @@ static void print_disk_util_json(struct disk_util *du, struct json_array *array)
 	json_object_add_value_float(obj, "aggr_util", agg->max_util.u.f);
 }
 
+void json_object_add_disk_utils(struct json_object *obj,
+		struct flist_head *head)
+{
+	struct json_array *array = json_create_array();
+	struct flist_head *entry;
+	struct disk_util *du;
+
+	json_object_add_value_array(obj, "disk_util", array);
+
+	flist_for_each(entry, head) {
+		du = flist_entry(entry, struct disk_util, list);
+
+		aggregate_slaves_stats(du);
+		json_array_add_disk_util(&du->dus, &du->agg, array);
+	}
+}
+
 void show_disk_util(int terse, struct json_object *parent)
 {
 	struct flist_head *entry;
 	struct disk_util *du;
-	struct json_array *array = NULL;
 
 	fio_mutex_down(disk_util_mutex);
 
@@ -667,23 +681,18 @@ void show_disk_util(int terse, struct json_object *parent)
 		return;
 	}
 
-	if (!terse)
+	if (!terse && !parent)
 		log_info("\nDisk stats (read/write):\n");
 
 	if (output_format == FIO_OUTPUT_JSON) {
-		array = json_create_array();
-		json_object_add_value_array(parent, "disk_util", array);
-	}
+		json_object_add_disk_utils(parent, &disk_list);
+	} else
+		flist_for_each(entry, &disk_list) {
+			du = flist_entry(entry, struct disk_util, list);
 
-	flist_for_each(entry, &disk_list) {
-		du = flist_entry(entry, struct disk_util, list);
-
-		aggregate_slaves_stats(du);
-		if (output_format == FIO_OUTPUT_JSON)
-			print_disk_util_json(du, array);
-		else
+			aggregate_slaves_stats(du);
 			print_disk_util(&du->dus, &du->agg, terse);
-	}
+		}
 
 	fio_mutex_up(disk_util_mutex);
 }

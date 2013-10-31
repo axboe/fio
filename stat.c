@@ -497,7 +497,8 @@ static void show_latencies(struct thread_stat *ts)
 	show_lat_m(io_u_lat_m);
 }
 
-void show_thread_status(struct thread_stat *ts, struct group_run_stats *rs)
+
+void show_thread_status_normal(struct thread_stat *ts, struct group_run_stats *rs)
 {
 	double usr_cpu, sys_cpu;
 	unsigned long runtime;
@@ -883,7 +884,8 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 		log_info(";%3.2f%%", io_u_lat_m[i]);
 
 	/* disk util stats, if any */
-	show_disk_util(1, NULL);
+	if (is_backend)
+		show_disk_util(1, NULL);
 
 	/* Additional output if continue_on_error set - default off*/
 	if (ts->continue_on_error)
@@ -970,7 +972,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	/* Additional output if continue_on_error set - default off*/
 	if (ts->continue_on_error) {
 		json_object_add_value_int(root, "total_err", ts->total_err_count);
-		json_object_add_value_int(root, "total_err", ts->first_error);
+		json_object_add_value_int(root, "first_error", ts->first_error);
 	}
 
 	/* Additional output if description is set */
@@ -989,6 +991,18 @@ static void show_thread_status_terse(struct thread_stat *ts,
 		show_thread_status_terse_v3_v4(ts, rs, terse_version);
 	else
 		log_err("fio: bad terse version!? %d\n", terse_version);
+}
+
+struct json_object *show_thread_status(struct thread_stat *ts,
+				       struct group_run_stats *rs)
+{
+	if (output_format == FIO_OUTPUT_TERSE)
+		show_thread_status_terse(ts, rs);
+	else if (output_format == FIO_OUTPUT_JSON)
+		return(show_thread_status_json(ts, rs));
+	else
+		show_thread_status_normal(ts, rs);
+	return NULL;
 }
 
 static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
@@ -1324,7 +1338,7 @@ static void __show_run_stats(void)
 			struct json_object *tmp = show_thread_status_json(ts, rs);
 			json_array_add_value_object(array, tmp);
 		} else
-			show_thread_status(ts, rs);
+			show_thread_status_normal(ts, rs);
 	}
 	if (output_format == FIO_OUTPUT_JSON) {
 		/* disk util stats, if any */

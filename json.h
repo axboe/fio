@@ -73,5 +73,8 @@ int json_array_add_value_type(struct json_array *array, int type, ...);
 #define json_array_add_value_array(obj, val) \
 	json_array_add_value_type((obj), JSON_TYPE_ARRAY, (val))
 
+#define json_array_last_value_object(obj) \
+	(obj->values[obj->value_cnt - 1]->object)
+
 void json_print_object(struct json_object *obj);
 #endif
