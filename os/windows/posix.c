@@ -19,6 +19,8 @@
 #include <sys/uio.h>
 #include <sys/resource.h>
 #include <sys/poll.h>
+#include <sys/wait.h>
+#include <setjmp.h>
 
 #include "../os-windows.h"
 #include "../../lib/hweight.h"
@@ -707,9 +709,22 @@ ssize_t readv(int fildes, const struct iovec *iov, int iovcnt)
 
 ssize_t writev(int fildes, const struct iovec *iov, int iovcnt)
 {
-	log_err("%s is not implemented\n", __func__);
-	errno = ENOSYS;
-	return -1;
+	int i;
+	DWORD bytes_written = 0;
+	for (i = 0; i < iovcnt; i++)
+	{
+		int len = send((SOCKET)fildes, iov[i].iov_base, iov[i].iov_len, 0);
+		if (len == SOCKET_ERROR)
+		{
+			DWORD err = GetLastError();
+			errno = win_to_posix_error(err);
+			bytes_written = -1;
+			break;
+		}
+		bytes_written += len;
+	}
+
+	return bytes_written;
 }
 
 long long strtoll(const char *restrict str, char **restrict endptr,
@@ -751,7 +766,6 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 
 		FD_SET(fds[i].fd, &exceptfds);
 	}
-
 	rc = select(nfds, &readfds, &writefds, &exceptfds, to);
 
 	if (rc != SOCKET_ERROR) {
@@ -771,7 +785,6 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 				fds[i].revents |= POLLHUP;
 		}
 	}
-
 	return rc;
 }
 
