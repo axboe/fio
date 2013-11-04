@@ -403,13 +403,13 @@ def main(argv):
     if not os.path.isfile(gpm_dir+'math.gpm'):
 	    gpm_dir="/usr/local/share/fio/"
     	    if not os.path.isfile(gpm_dir+'math.gpm'):
-		    print "Looks like fio didn't got installed properly as no gpm files found in '/usr/share/fio' or '/usr/local/share/fio'\n"
+		    print "Looks like fio didn't get installed properly as no gpm files found in '/usr/share/fio' or '/usr/local/share/fio'\n"
 		    sys.exit(3)
 
     try:
 	    opts, args = getopt.getopt(argv[1:],"ghkbivo:d:t:p:G:m:M:",['bandwidth', 'iops', 'pattern', 'outputfile', 'outputdir', 'title', 'min_time', 'max_time', 'gnuplot', 'Global', 'help', 'verbose','keep'])
     except getopt.GetoptError:
-	 print "Error: One of the option passed to the cmdline was not supported"
+	 print "Error: One of the options passed to the cmdline was not supported"
 	 print "Please fix your command line or read the help (-h option)"
          sys.exit(2)
 
