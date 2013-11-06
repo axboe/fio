@@ -183,6 +183,7 @@ elif check_define __OpenBSD__ ; then
   targetos='OpenBSD'
 elif check_define __sun__ ; then
   targetos='SunOS'
+  CFLAGS="$CFLAGS -D_REENTRANT"
 else
   targetos=`uname -s`
 fi
