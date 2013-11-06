@@ -473,13 +473,13 @@ static void fio_server_add_fork_item(pid_t pid, struct flist_head *list)
 
 static void fio_server_add_conn_pid(pid_t pid)
 {
-	dprint(FD_NET, "server: forked off connection job (pid=%u)\n", pid);
+	dprint(FD_NET, "server: forked off connection job (pid=%u)\n", (int) pid);
 	fio_server_add_fork_item(pid, &conn_list);
 }
 
 static void fio_server_add_job_pid(pid_t pid)
 {
-	dprint(FD_NET, "server: forked off job job (pid=%u)\n", pid);
+	dprint(FD_NET, "server: forked off job job (pid=%u)\n", (int) pid);
 	fio_server_add_fork_item(pid, &job_list);
 }
 
@@ -490,7 +490,7 @@ static void fio_server_check_fork_item(struct fio_fork_item *ffi)
 	ret = waitpid(ffi->pid, &status, WNOHANG);
 	if (ret < 0) {
 		if (errno == ECHILD) {
-			log_err("fio: connection pid %u disappeared\n", ffi->pid);
+			log_err("fio: connection pid %u disappeared\n", (int) ffi->pid);
 			ffi->exited = 1;
 		} else
 			log_err("fio: waitpid: %s\n", strerror(errno));
@@ -509,7 +509,7 @@ static void fio_server_check_fork_item(struct fio_fork_item *ffi)
 
 static void fio_server_fork_item_done(struct fio_fork_item *ffi)
 {
-	dprint(FD_NET, "pid %u exited, sig=%u, exitval=%d\n", ffi->pid, ffi->signal, ffi->exitval);
+	dprint(FD_NET, "pid %u exited, sig=%u, exitval=%d\n", (int) ffi->pid, ffi->signal, ffi->exitval);
 
 	/*
 	 * Fold STOP and QUIT...
