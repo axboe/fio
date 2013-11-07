@@ -51,12 +51,6 @@ struct fio_fork_item {
 	pid_t pid;
 };
 
-/* Created on fork on new connection */
-static FLIST_HEAD(conn_list);
-
-/* Created on job fork from connection */
-static FLIST_HEAD(job_list);
-
 static const char *fio_server_ops[FIO_NET_CMD_NR] = {
 	"",
 	"QUIT",
@@ -471,16 +465,16 @@ static void fio_server_add_fork_item(pid_t pid, struct flist_head *list)
 	flist_add_tail(&ffi->list, list);
 }
 
-static void fio_server_add_conn_pid(pid_t pid)
+static void fio_server_add_conn_pid(struct flist_head *conn_list, pid_t pid)
 {
 	dprint(FD_NET, "server: forked off connection job (pid=%u)\n", (int) pid);
-	fio_server_add_fork_item(pid, &conn_list);
+	fio_server_add_fork_item(pid, conn_list);
 }
 
-static void fio_server_add_job_pid(pid_t pid)
+static void fio_server_add_job_pid(struct flist_head *job_list, pid_t pid)
 {
 	dprint(FD_NET, "server: forked off job job (pid=%u)\n", (int) pid);
-	fio_server_add_fork_item(pid, &job_list);
+	fio_server_add_fork_item(pid, job_list);
 }
 
 static void fio_server_check_fork_item(struct fio_fork_item *ffi)
@@ -535,17 +529,17 @@ static void fio_server_check_fork_items(struct flist_head *list)
 	}
 }
 
-static void fio_server_check_jobs(void)
+static void fio_server_check_jobs(struct flist_head *job_list)
 {
-	fio_server_check_fork_items(&job_list);
+	fio_server_check_fork_items(job_list);
 }
 
-static void fio_server_check_conns(void)
+static void fio_server_check_conns(struct flist_head *conn_list)
 {
-	fio_server_check_fork_items(&conn_list);
+	fio_server_check_fork_items(conn_list);
 }
 
-static int handle_run_cmd(struct fio_net_cmd *cmd)
+static int handle_run_cmd(struct flist_head *job_list, struct fio_net_cmd *cmd)
 {
 	pid_t pid;
 	int ret;
@@ -554,7 +548,7 @@ static int handle_run_cmd(struct fio_net_cmd *cmd)
 
 	pid = fork();
 	if (pid) {
-		fio_server_add_job_pid(pid);
+		fio_server_add_job_pid(job_list, pid);
 		return 0;
 	}
 
@@ -734,7 +728,7 @@ static int handle_update_job_cmd(struct fio_net_cmd *cmd)
 	return 0;
 }
 
-static int handle_command(struct fio_net_cmd *cmd)
+static int handle_command(struct flist_head *job_list, struct fio_net_cmd *cmd)
 {
 	int ret;
 
@@ -762,7 +756,7 @@ static int handle_command(struct fio_net_cmd *cmd)
 		ret = handle_send_eta_cmd(cmd);
 		break;
 	case FIO_NET_CMD_RUN:
-		ret = handle_run_cmd(cmd);
+		ret = handle_run_cmd(job_list, cmd);
 		break;
 	case FIO_NET_CMD_UPDATE_JOB:
 		ret = handle_update_job_cmd(cmd);
@@ -778,10 +772,10 @@ static int handle_command(struct fio_net_cmd *cmd)
 static int handle_connection(int sk)
 {
 	struct fio_net_cmd *cmd = NULL;
+	FLIST_HEAD(job_list);
 	int ret = 0;
 
 	reset_fio_state();
-	INIT_FLIST_HEAD(&job_list);
 	server_fd = sk;
 
 	/* read forever */
@@ -805,7 +799,7 @@ static int handle_connection(int sk)
 				log_err("fio: poll: %s\n", strerror(errno));
 				break;
 			} else if (!ret) {
-				fio_server_check_jobs();
+				fio_server_check_jobs(&job_list);
 				continue;
 			}
 
@@ -817,7 +811,7 @@ static int handle_connection(int sk)
 			}
 		} while (!exit_backend);
 
-		fio_server_check_jobs();
+		fio_server_check_jobs(&job_list);
 
 		if (ret < 0)
 			break;
@@ -828,7 +822,7 @@ static int handle_connection(int sk)
 			break;
 		}
 
-		ret = handle_command(cmd);
+		ret = handle_command(&job_list, cmd);
 		if (ret)
 			break;
 
@@ -849,6 +843,7 @@ static int accept_loop(int listen_sk)
 	socklen_t len = sizeof(addr);
 	struct pollfd pfd;
 	int ret = 0, sk, flags, exitval = 0;
+	FLIST_HEAD(conn_list);
 
 	dprint(FD_NET, "server enter accept loop\n");
 
@@ -874,7 +869,7 @@ static int accept_loop(int listen_sk)
 				log_err("fio: poll: %s\n", strerror(errno));
 				break;
 			} else if (!ret) {
-				fio_server_check_conns();
+				fio_server_check_conns(&conn_list);
 				continue;
 			}
 
@@ -882,7 +877,7 @@ static int accept_loop(int listen_sk)
 				break;
 		} while (!exit_backend);
 
-		fio_server_check_conns();
+		fio_server_check_conns(&conn_list);
 
 		if (exit_backend || ret < 0)
 			break;
@@ -898,7 +893,7 @@ static int accept_loop(int listen_sk)
 		pid = fork();
 		if (pid) {
 			close(sk);
-			fio_server_add_conn_pid(pid);
+			fio_server_add_conn_pid(&conn_list, pid);
 			continue;
 		}
 
