@@ -157,7 +157,7 @@ struct thread_options {
 #endif
 	unsigned int iolog;
 	unsigned int rwmixcycle;
-	unsigned int rwmix[2];
+	unsigned int rwmix[DDIR_RWDIR_CNT];
 	unsigned int nice;
 	unsigned int ioprio;
 	unsigned int ioprio_class;
@@ -362,7 +362,7 @@ struct thread_options_pack {
 	uint32_t verify_cpumask_set;
 	uint32_t iolog;
 	uint32_t rwmixcycle;
-	uint32_t rwmix[2];
+	uint32_t rwmix[DDIR_RWDIR_CNT];
 	uint32_t nice;
 	uint32_t ioprio;
 	uint32_t ioprio_class;
