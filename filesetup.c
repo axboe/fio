@@ -519,6 +519,13 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 		goto skip_flags;
 	if (td->o.odirect)
 		flags |= OS_O_DIRECT;
+	if (td->o.oatomic) {
+		if (!FIO_O_ATOMIC) {
+			td_verror(td, EINVAL, "OS does not support atomic IO");
+			return 1;
+		}
+		flags |= OS_O_DIRECT | FIO_O_ATOMIC;
+	}
 	if (td->o.sync_io)
 		flags |= O_SYNC;
 	if (td->o.create_on_open)

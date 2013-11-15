@@ -1893,6 +1893,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_IO_TYPE,
 	},
 	{
+		.name	= "atomic",
+		.lname	= "Atomic I/O",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(oatomic),
+		.help	= "Use Atomic IO with O_DIRECT (implies O_DIRECT)",
+		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_TYPE,
+	},
+	{
 		.name	= "buffered",
 		.lname	= "Buffered I/O",
 		.type	= FIO_OPT_BOOL,

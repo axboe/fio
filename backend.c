@@ -926,7 +926,8 @@ static int init_io_u(struct thread_data *td)
 	 * overflow later. this adjustment may be too much if we get
 	 * lucky and the allocator gives us an aligned address.
 	 */
-	if (td->o.odirect || td->o.mem_align || (td->io_ops->flags & FIO_RAWIO))
+	if (td->o.odirect || td->o.mem_align || td->o.oatomic ||
+	    (td->io_ops->flags & FIO_RAWIO))
 		td->orig_buffer_size += page_mask + td->o.mem_align;
 
 	if (td->o.mem_type == MEM_SHMHUGE || td->o.mem_type == MEM_MMAPHUGE) {
@@ -944,7 +945,7 @@ static int init_io_u(struct thread_data *td)
 	if (data_xfer && allocate_io_mem(td))
 		return 1;
 
-	if (td->o.odirect || td->o.mem_align ||
+	if (td->o.odirect || td->o.mem_align || td->o.oatomic ||
 	    (td->io_ops->flags & FIO_RAWIO))
 		p = PAGE_ALIGN(td->orig_buffer) + td->o.mem_align;
 	else

@@ -90,6 +90,12 @@ typedef unsigned long os_cpu_mask_t;
 #define OS_O_DIRECT			O_DIRECT
 #endif
 
+#ifdef OS_O_ATOMIC
+#define FIO_O_ATOMIC			OS_O_ATOMIC
+#else
+#define FIO_O_ATOMIC			0
+#endif
+
 #ifndef FIO_HAVE_HUGETLB
 #define SHM_HUGETLB			0
 #define MAP_HUGETLB			0

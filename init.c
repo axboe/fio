@@ -629,6 +629,12 @@ static int fixup_options(struct thread_data *td)
 		ret = 1;
 	}
 
+	/*
+	 * O_ATOMIC implies O_DIRECT
+	 */
+	if (td->o.oatomic)
+		td->o.odirect = 1;
+
 	return ret;
 }
 

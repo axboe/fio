@@ -72,6 +72,7 @@ struct thread_options {
 	enum file_lock_mode file_lock_mode;
 
 	unsigned int odirect;
+	unsigned int oatomic;
 	unsigned int invalidate_cache;
 	unsigned int create_serialize;
 	unsigned int create_fsync;
@@ -286,6 +287,7 @@ struct thread_options_pack {
 	uint32_t file_lock_mode;
 
 	uint32_t odirect;
+	uint32_t oatomic;
 	uint32_t invalidate_cache;
 	uint32_t create_serialize;
 	uint32_t create_fsync;

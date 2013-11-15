@@ -695,6 +695,11 @@ direct=bool	If value is true, use non-buffered io. This is usually
 		O_DIRECT. Note that ZFS on Solaris doesn't support direct io.
 		On Windows the synchronous ioengines don't support direct io.
 
+atomic=bool	If value is true, attempt to use atomic direct IO. Atomic
+		writes are guaranteed to be stable once acknowledged by
+		the operating system. Only Linux supports O_ATOMIC right
+		now.
+
 buffered=bool	If value is true, use buffered io. This is the opposite
 		of the 'direct' option. Defaults to true.
 
