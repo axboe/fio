@@ -71,7 +71,7 @@ static int discard_pdu(struct thread_data *td, struct fifo *fifo, int fd,
  * Check if this is a blktrace binary data file. We read a single trace
  * into memory and check for the magic signature.
  */
-int is_blktrace(const char *filename)
+int is_blktrace(const char *filename, int *need_swap)
 {
 	struct blk_io_trace t;
 	int fd, ret;
@@ -91,8 +91,19 @@ int is_blktrace(const char *filename)
 		return 0;
 	}
 
-	if ((t.magic & 0xffffff00) == BLK_IO_TRACE_MAGIC)
+	if ((t.magic & 0xffffff00) == BLK_IO_TRACE_MAGIC) {
+		*need_swap = 0;
 		return 1;
+	}
+
+	/*
+	 * Maybe it needs to be endian swapped...
+	 */
+	t.magic = fio_swap32(t.magic);
+	if ((t.magic & 0xffffff00) == BLK_IO_TRACE_MAGIC) {
+		*need_swap = 1;
+		return 1;
+	}
 
 	return 0;
 }
@@ -245,10 +256,12 @@ static void handle_trace_notify(struct blk_io_trace *t)
 {
 	switch (t->action) {
 	case BLK_TN_PROCESS:
-		printf("got process notify: %x, %d\n", t->action, t->pid);
+		log_info("blktrace: got process notify: %x, %d\n",
+				t->action, t->pid);
 		break;
 	case BLK_TN_TIMESTAMP:
-		printf("got timestamp notify: %x, %d\n", t->action, t->pid);
+		log_info("blktrace: got timestamp notify: %x, %d\n",
+				t->action, t->pid);
 		break;
 	case BLK_TN_MESSAGE:
 		break;
@@ -328,11 +341,26 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 		handle_trace_fs(td, t, ttime, ios, bs);
 }
 
+static void byteswap_trace(struct blk_io_trace *t)
+{
+	t->magic = fio_swap32(t->magic);
+	t->sequence = fio_swap32(t->sequence);
+	t->time = fio_swap64(t->time);
+	t->sector = fio_swap64(t->sector);
+	t->bytes = fio_swap32(t->bytes);
+	t->action = fio_swap32(t->action);
+	t->pid = fio_swap32(t->pid);
+	t->device = fio_swap32(t->device);
+	t->cpu = fio_swap32(t->cpu);
+	t->error = fio_swap16(t->error);
+	t->pdu_len = fio_swap16(t->pdu_len);
+}
+
 /*
  * Load a blktrace file by reading all the blk_io_trace entries, and storing
  * them as io_pieces like the fio text version would do.
  */
-int load_blktrace(struct thread_data *td, const char *filename)
+int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 {
 	unsigned long long ttime, delay;
 	struct blk_io_trace t;
@@ -369,6 +397,9 @@ int load_blktrace(struct thread_data *td, const char *filename)
 			log_err("fio: short fifo get\n");
 			break;
 		}
+
+		if (need_swap)
+			byteswap_trace(&t);
 
 		if ((t.magic & 0xffffff00) != BLK_IO_TRACE_MAGIC) {
 			log_err("fio: bad magic in blktrace data: %x\n",

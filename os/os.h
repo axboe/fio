@@ -220,12 +220,13 @@ static inline uint64_t fio_swap64(uint64_t val)
 })
 
 #ifndef FIO_HAVE_BLKTRACE
-static inline int is_blktrace(const char *fname)
+static inline int is_blktrace(const char *fname, int *need_swap)
 {
 	return 0;
 }
 struct thread_data;
-static inline int load_blktrace(struct thread_data *td, const char *fname)
+static inline int load_blktrace(struct thread_data *td, const char *fname,
+				int need_swap)
 {
 	return 1;
 }

@@ -480,12 +480,14 @@ int init_iolog(struct thread_data *td)
 	int ret = 0;
 
 	if (td->o.read_iolog_file) {
+		int need_swap;
+
 		/*
 		 * Check if it's a blktrace file and load that if possible.
 		 * Otherwise assume it's a normal log file and load that.
 		 */
-		if (is_blktrace(td->o.read_iolog_file))
-			ret = load_blktrace(td, td->o.read_iolog_file);
+		if (is_blktrace(td->o.read_iolog_file, &need_swap))
+			ret = load_blktrace(td, td->o.read_iolog_file, need_swap);
 		else
 			ret = init_iolog_read(td);
 	} else if (td->o.write_iolog_file)

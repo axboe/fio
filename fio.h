@@ -479,8 +479,8 @@ extern void reset_all_stats(struct thread_data *);
  * blktrace support
  */
 #ifdef FIO_HAVE_BLKTRACE
-extern int is_blktrace(const char *);
-extern int load_blktrace(struct thread_data *, const char *);
+extern int is_blktrace(const char *, int *);
+extern int load_blktrace(struct thread_data *, const char *, int);
 #endif
 
 #define for_each_td(td, i)	\
