@@ -220,6 +220,7 @@ static int trace_add_file(struct thread_data *td, __u32 device)
 		trace_add_open_close_event(td, fileno, FIO_LOG_OPEN_FILE);
 		last_fileno = fileno;
 	}
+
 	return last_fileno;
 }
 
@@ -450,12 +451,17 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 	} while (1);
 
 	for (i = 0; i < td->files_index; i++) {
-		f= td->files[i];
+		f = td->files[i];
 		trace_add_open_close_event(td, f->fileno, FIO_LOG_CLOSE_FILE);
 	}
 
 	fifo_free(fifo);
 	close(fd);
+
+	if (!td->files_index) {
+		log_err("fio: did not find replay device(s)\n");
+		return 1;
+	}
 
 	if (skipped_writes)
 		log_err("fio: %s skips replay of %lu writes due to read-only\n",
