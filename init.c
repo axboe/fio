@@ -1146,9 +1146,9 @@ void add_job_opts(const char **o, int client_type)
 			td = get_new_job(0, td_parent, 0);
 		}
 		if (in_global)
-			fio_options_parse(td_parent, (char **) &o[i], 1);
+			fio_options_parse(td_parent, (char **) &o[i], 1, 0);
 		else
-			fio_options_parse(td, (char **) &o[i], 1);
+			fio_options_parse(td, (char **) &o[i], 1, 0);
 		i++;
 	}
 
@@ -1329,14 +1329,10 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 			num_opts++;
 		}
 
-		ret = fio_options_parse(td, opts, num_opts);
-		if (!ret) {
-			if (dump_cmdline)
-				for (i = 0; i < num_opts; i++)
-					log_info("--%s ", opts[i]);
-
+		ret = fio_options_parse(td, opts, num_opts, dump_cmdline);
+		if (!ret)
 			ret = add_job(td, name, 0, 0, type);
-		} else {
+		else {
 			log_err("fio: job %s dropped\n", name);
 			put_job(td);
 		}

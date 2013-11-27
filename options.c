@@ -3550,7 +3550,8 @@ static char **dup_and_sub_options(char **opts, int num_opts)
 	return opts_copy;
 }
 
-int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
+int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
+			int dump_cmdline)
 {
 	int i, ret, unknown;
 	char **opts_copy;
@@ -3561,7 +3562,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 	for (ret = 0, i = 0, unknown = 0; i < num_opts; i++) {
 		struct fio_option *o;
 		int newret = parse_option(opts_copy[i], opts[i], fio_options,
-						&o, td);
+						&o, td, dump_cmdline);
 
 		if (opts_copy[i]) {
 			if (newret && !o) {
@@ -3590,7 +3591,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 			if (td->eo)
 				newret = parse_option(opts_copy[i], opts[i],
 						      td->io_ops->options, &o,
-						      td->eo);
+						      td->eo, dump_cmdline);
 
 			ret |= newret;
 			if (!o)

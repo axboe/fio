@@ -406,7 +406,7 @@ extern int parse_cmd_line(int, char **, int);
 extern int fio_backend(void);
 extern void reset_fio_state(void);
 extern void clear_io_state(struct thread_data *);
-extern int fio_options_parse(struct thread_data *, char **, int);
+extern int fio_options_parse(struct thread_data *, char **, int, int);
 extern void fio_keywords_init(void);
 extern int fio_cmd_option_parse(struct thread_data *, const char *, char *);
 extern int fio_cmd_ioengine_option_parse(struct thread_data *, const char *, char *);
