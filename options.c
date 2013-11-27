@@ -3277,7 +3277,7 @@ static void add_to_lopt(struct option *lopt, struct fio_option *o,
 	lopt->name = (char *) name;
 	lopt->val = val;
 	if (o->type == FIO_OPT_STR_SET)
-		lopt->has_arg = no_argument;
+		lopt->has_arg = optional_argument;
 	else
 		lopt->has_arg = required_argument;
 }
