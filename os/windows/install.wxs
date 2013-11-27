@@ -27,7 +27,7 @@
 							<File Source="..\..\fio.exe"/>
 						</Component>
 						<Component>
-							<File KeyPath="yes" Source="..\..\pthreadGC2.dll"/>
+							<File KeyPath="yes" Source="..\..\libwinpthread-1.dll"/>
 						</Component>
 						<Component>
 							<File Id="README" Name="README.txt" Source="..\..\README"/>
