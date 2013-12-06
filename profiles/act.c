@@ -389,7 +389,7 @@ static void put_act_ref(struct thread_data *td)
 	fio_mutex_down(act_run_data->mutex);
 
 	if (!act_run_data->slices) {
-		act_run_data->slices = calloc(sizeof(struct act_slice), apd->nr_slices);
+		act_run_data->slices = calloc(apd->nr_slices, sizeof(struct act_slice));
 		act_run_data->nr_slices = apd->nr_slices;
 	}
 
@@ -416,9 +416,9 @@ static int act_td_init(struct thread_data *td)
 
 	get_act_ref();
 
-	apd = calloc(sizeof(*apd), 1);
+	apd = calloc(1, sizeof(*apd));
 	nr_slices = (test_duration + SAMPLE_SEC - 1) / SAMPLE_SEC;
-	apd->slices = calloc(sizeof(struct act_slice), nr_slices);
+	apd->slices = calloc(nr_slices, sizeof(struct act_slice));
 	apd->nr_slices = nr_slices;
 	fio_gettime(&apd->sample_tv, NULL);
 	td->prof_data = apd;
@@ -452,7 +452,7 @@ static struct profile_ops act_profile = {
 
 static void fio_init act_register(void)
 {
-	act_run_data = calloc(sizeof(*act_run_data), 1);
+	act_run_data = calloc(1, sizeof(*act_run_data));
 	act_run_data->mutex = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 
 	if (register_profile(&act_profile))

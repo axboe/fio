@@ -3,7 +3,7 @@
 
 int io_u_qinit(struct io_u_queue *q, unsigned int nr)
 {
-	q->io_us = calloc(sizeof(struct io_u *), nr);
+	q->io_us = calloc(nr, sizeof(struct io_u *));
 	if (!q->io_us)
 		return 1;
 
@@ -29,7 +29,7 @@ int io_u_rinit(struct io_u_ring *ring, unsigned int nr)
 		ring->max++;
 	}
 
-	ring->ring = calloc(sizeof(struct io_u *), ring->max);
+	ring->ring = calloc(ring->max, sizeof(struct io_u *));
 	if (!ring->ring)
 		return 1;
 

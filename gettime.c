@@ -327,7 +327,7 @@ void fio_local_clock_init(int is_thread)
 {
 	struct tv_valid *t;
 
-	t = calloc(sizeof(*t), 1);
+	t = calloc(1, sizeof(*t));
 	if (pthread_setspecific(tv_tls_key, t))
 		log_err("fio: can't set TLS key\n");
 }
