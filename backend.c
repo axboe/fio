@@ -649,6 +649,8 @@ static uint64_t do_io(struct thread_data *td)
 	else
 		td_set_runstate(td, TD_RUNNING);
 
+	lat_target_init(td);
+
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
 		(!flist_empty(&td->trim_list)) || !io_bytes_exceeded(td) ||
 		td->o.time_based) {
@@ -680,8 +682,11 @@ static uint64_t do_io(struct thread_data *td)
 			break;
 
 		io_u = get_io_u(td);
-		if (!io_u)
+		if (!io_u) {
+			if (td->o.latency_target)
+				goto reap;
 			break;
+		}
 
 		ddir = io_u->ddir;
 
@@ -776,6 +781,7 @@ sync_done:
 		 * can get BUSY even without IO queued, if the system is
 		 * resource starved.
 		 */
+reap:
 		full = queue_full(td) || (ret == FIO_Q_BUSY && td->cur_depth);
 		if (full || !td->o.iodepth_batch_complete) {
 			min_evts = min(td->o.iodepth_batch_complete,
@@ -812,6 +818,8 @@ sync_done:
 				break;
 			}
 		}
+		if (!in_ramp_time(td) && td->o.latency_target)
+			lat_target_check(td);
 
 		if (td->o.thinktime) {
 			unsigned long long b;

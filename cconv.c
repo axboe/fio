@@ -199,6 +199,9 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->flow_watermark = __le32_to_cpu(top->flow_watermark);
 	o->flow_sleep = le32_to_cpu(top->flow_sleep);
 	o->sync_file_range = le32_to_cpu(top->sync_file_range);
+	o->latency_target = le64_to_cpu(top->latency_target);
+	o->latency_window = le64_to_cpu(top->latency_window);
+	o->latency_percentile.u.f = fio_uint64_to_double(le64_to_cpu(top->latency_percentile.u.i));
 	o->compress_percentage = le32_to_cpu(top->compress_percentage);
 	o->compress_chunk = le32_to_cpu(top->compress_chunk);
 
@@ -348,6 +351,9 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->flow_watermark = __cpu_to_le32(o->flow_watermark);
 	top->flow_sleep = cpu_to_le32(o->flow_sleep);
 	top->sync_file_range = cpu_to_le32(o->sync_file_range);
+	top->latency_target = __cpu_to_le64(o->latency_target);
+	top->latency_window = __cpu_to_le64(o->latency_window);
+	top->latency_percentile.u.i = __cpu_to_le64(fio_double_to_uint64(o->latency_percentile.u.f));
 	top->compress_percentage = cpu_to_le32(o->compress_percentage);
 	top->compress_chunk = cpu_to_le32(o->compress_chunk);
 

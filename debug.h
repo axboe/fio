@@ -19,6 +19,7 @@ enum {
 	FD_PROFILE,
 	FD_TIME,
 	FD_NET,
+	FD_RATE,
 	FD_DEBUG_MAX,
 };
 

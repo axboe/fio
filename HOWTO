@@ -881,6 +881,20 @@ rate_iops_min=int If fio doesn't meet this rate of IO, it will cause
 		the job to exit. The same format as rate is used for read vs
 		write separation.
 
+latency_target=int	If set, fio will attempt to find the max performance
+		point that the given workload will run at while maintaining a
+		latency below this target. The values is given in microseconds.
+		See latency_window and latency_percentile
+
+latency_window=int	Used with latency_target to specify the sample window
+		that the job is run at varying queue depths to test the
+		performance. The value is given in microseconds.
+
+latency_percentile=float	The percentage of IOs that must fall within the
+		criteria specified by latency_target and latency_window. If not
+		set, this defaults to 100.0, meaning that all IOs must be equal
+		or below to the value set by latency_target.
+
 max_latency=int	If set, fio will exit the job if it exceeds this maximum
 		latency. It will exit with an ETIME error.
 

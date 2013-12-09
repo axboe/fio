@@ -547,9 +547,11 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			** Initialize precision to 0 and zero out list
 			** in case specified list is shorter than default
 			*/
-			ul2 = 0;
-			ilp = td_var(data, o->off2);
-			*ilp = ul2;
+			if (o->off2) {
+				ul2 = 0;
+				ilp = td_var(data, o->off2);
+				*ilp = ul2;
+			}
 
 			flp = td_var(data, o->off1);
 			for(i = 0; i < o->maxlen; i++)
@@ -592,9 +594,11 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			while (*++cp2 != '\0' && *cp2 >= '0' && *cp2 <= '9')
 				len++;
 
-			ilp = td_var(data, o->off2);
-			if (len > *ilp)
-				*ilp = len;
+			if (o->off2) {
+				ilp = td_var(data, o->off2);
+				if (len > *ilp)
+					*ilp = len;
+			}
 		}
 
 		break;

@@ -1043,6 +1043,10 @@ struct opt_group *opt_group_from_mask(unsigned int *mask)
 
 static struct opt_group fio_opt_cat_groups[] = {
 	{
+		.name	= "Latency profiling",
+		.mask	= FIO_OPT_G_LATPROF,
+	},
+	{
 		.name	= "Rate",
 		.mask	= FIO_OPT_G_RATE,
 	},
@@ -2623,7 +2627,38 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(max_latency),
 		.help	= "Maximum tolerated IO latency (usec)",
 		.category = FIO_OPT_C_IO,
-		.group = FIO_OPT_G_RATE,
+		.group = FIO_OPT_G_LATPROF,
+	},
+	{
+		.name	= "latency_target",
+		.lname	= "Latency Target (usec)",
+		.type	= FIO_OPT_STR_VAL_TIME,
+		.off1	= td_var_offset(latency_target),
+		.help	= "Ramp to max queue depth supporting this latency",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_LATPROF,
+	},
+	{
+		.name	= "latency_window",
+		.lname	= "Latency Window (usec)",
+		.type	= FIO_OPT_STR_VAL_TIME,
+		.off1	= td_var_offset(latency_window),
+		.help	= "Time to sustain latency_target",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_LATPROF,
+	},
+	{
+		.name	= "latency_percentile",
+		.lname	= "Latency Percentile",
+		.type	= FIO_OPT_FLOAT_LIST,
+		.off1	= td_var_offset(latency_percentile),
+		.help	= "Percentile of IOs must be below latency_target",
+		.def	= "100",
+		.maxlen	= 1,
+		.minfp	= 0.0,
+		.maxfp	= 100.0,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_LATPROF,
 	},
 	{
 		.name	= "invalidate",

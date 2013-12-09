@@ -240,6 +240,10 @@ struct thread_options {
 	unsigned long long number_ios;
 
 	unsigned int sync_file_range;
+
+	unsigned long long latency_target;
+	unsigned long long latency_window;
+	fio_fp64_t latency_percentile;
 };
 
 #define FIO_TOP_STR_MAX		256
@@ -446,6 +450,10 @@ struct thread_options_pack {
 	uint64_t number_ios;
 
 	uint32_t sync_file_range;
+
+	uint64_t latency_target;
+	uint64_t latency_window;
+	fio_fp64_t latency_percentile;
 } __attribute__((packed));
 
 extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);

@@ -497,7 +497,6 @@ static void show_latencies(struct thread_stat *ts)
 	show_lat_m(io_u_lat_m);
 }
 
-
 void show_thread_status_normal(struct thread_stat *ts, struct group_run_stats *rs)
 {
 	double usr_cpu, sys_cpu;
@@ -586,6 +585,13 @@ void show_thread_status_normal(struct thread_stat *ts, struct group_run_stats *r
 					(unsigned long long)ts->total_err_count,
 					ts->first_error,
 					strerror(ts->first_error));
+	}
+	if (ts->latency_depth) {
+		log_info("     latency   : target=%llu, window=%llu, percentile=%.2f%%, depth=%u\n",
+					(unsigned long long)ts->latency_target,
+					(unsigned long long)ts->latency_window,
+					ts->latency_percentile.u.f,
+					ts->latency_depth);
 	}
 }
 
@@ -975,6 +981,13 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		json_object_add_value_int(root, "first_error", ts->first_error);
 	}
 
+	if (ts->latency_depth) {
+		json_object_add_value_int(root, "latency_depth", ts->latency_depth);
+		json_object_add_value_int(root, "latency_target", ts->latency_target);
+		json_object_add_value_float(root, "latency_percentile", ts->latency_percentile.u.f);
+		json_object_add_value_int(root, "latency_window", ts->latency_window);
+	}
+
 	/* Additional output if description is set */
 	if (strlen(ts->description))
 		json_object_add_value_string(root, "desc", ts->description);
@@ -1264,6 +1277,11 @@ static void __show_run_stats(void)
 				strcpy(ts->verror, td->verror);
 			}
 		}
+
+		ts->latency_depth = td->latency_qd;
+		ts->latency_target = td->o.latency_target;
+		ts->latency_percentile = td->o.latency_percentile;
+		ts->latency_window = td->o.latency_window;
 
 		sum_thread_stats(ts, &td->ts, idx);
 	}

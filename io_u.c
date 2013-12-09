@@ -1126,6 +1126,136 @@ static int set_io_u_file(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
+static void lat_fatal(struct thread_data *td, struct io_completion_data *icd,
+		      unsigned long tusec, unsigned long max_usec)
+{
+	if (!td->error)
+		log_err("fio: latency of %lu usec exceeds specified max (%lu usec)\n", tusec, max_usec);
+	td_verror(td, ETIMEDOUT, "max latency exceeded");
+	icd->error = ETIMEDOUT;
+}
+
+static void lat_new_cycle(struct thread_data *td)
+{
+	fio_gettime(&td->latency_ts, NULL);
+	td->latency_ios = ddir_rw_sum(td->io_blocks);
+	td->latency_failed = 0;
+}
+
+/*
+ * We had an IO outside the latency target. Reduce the queue depth. If we
+ * are at QD=1, then it's time to give up.
+ */
+static int __lat_target_failed(struct thread_data *td)
+{
+	if (td->latency_qd == 1)
+		return 1;
+
+	td->latency_qd_high = td->latency_qd;
+	td->latency_qd = (td->latency_qd + td->latency_qd_low) / 2;
+
+	dprint(FD_RATE, "Ramped down: %d %d %d\n", td->latency_qd_low, td->latency_qd, td->latency_qd_high);
+
+	/*
+	 * When we ramp QD down, quiesce existing IO to prevent
+	 * a storm of ramp downs due to pending higher depth.
+	 */
+	io_u_quiesce(td);
+	lat_new_cycle(td);
+	return 0;
+}
+
+static int lat_target_failed(struct thread_data *td)
+{
+	if (td->o.latency_percentile.u.f == 100.0)
+		return __lat_target_failed(td);
+
+	td->latency_failed++;
+	return 0;
+}
+
+void lat_target_init(struct thread_data *td)
+{
+	if (td->o.latency_target) {
+		dprint(FD_RATE, "Latency target=%llu\n", td->o.latency_target);
+		fio_gettime(&td->latency_ts, NULL);
+		td->latency_qd = 1;
+		td->latency_qd_high = td->o.iodepth;
+		td->latency_qd_low = 1;
+		td->latency_ios = ddir_rw_sum(td->io_blocks);
+	} else
+		td->latency_qd = td->o.iodepth;
+}
+
+static void lat_target_success(struct thread_data *td)
+{
+	const unsigned int qd = td->latency_qd;
+
+	td->latency_qd_low = td->latency_qd;
+
+	/*
+	 * If we haven't failed yet, we double up to a failing value instead
+	 * of bisecting from highest possible queue depth. If we have set
+	 * a limit other than td->o.iodepth, bisect between that.
+	 */
+	if (td->latency_qd_high != td->o.iodepth)
+		td->latency_qd = (td->latency_qd + td->latency_qd_high) / 2;
+	else
+		td->latency_qd *= 2;
+
+	if (td->latency_qd > td->o.iodepth)
+		td->latency_qd = td->o.iodepth;
+
+	dprint(FD_RATE, "Ramped up: %d %d %d\n", td->latency_qd_low, td->latency_qd, td->latency_qd_high);
+	/*
+	 * Same as last one, we are done
+	 */
+	if (td->latency_qd == qd)
+		td->done = 1;
+
+	lat_new_cycle(td);
+}
+
+/*
+ * Check if we can bump the queue depth
+ */
+void lat_target_check(struct thread_data *td)
+{
+	uint64_t usec_window;
+	uint64_t ios;
+	double success_ios;
+
+	usec_window = utime_since_now(&td->latency_ts);
+	if (usec_window < td->o.latency_window)
+		return;
+
+	ios = ddir_rw_sum(td->io_blocks) - td->latency_ios;
+	success_ios = (double) (ios - td->latency_failed) / (double) ios;
+	success_ios *= 100.0;
+
+	dprint(FD_RATE, "Success rate: %.2f%% (target %.2f%%)\n", success_ios, td->o.latency_percentile.u.f);
+
+	if (success_ios >= td->o.latency_percentile.u.f)
+		lat_target_success(td);
+	else
+		__lat_target_failed(td);
+}
+
+/*
+ * If latency target is enabled, we might be ramping up or down and not
+ * using the full queue depth available.
+ */
+int queue_full(struct thread_data *td)
+{
+	const int qempty = io_u_qempty(&td->io_u_freelist);
+
+	if (qempty)
+		return 1;
+	if (!td->o.latency_target)
+		return 0;
+
+	return td->cur_depth >= td->latency_qd;
+}
 
 struct io_u *__get_io_u(struct thread_data *td)
 {
@@ -1136,7 +1266,7 @@ struct io_u *__get_io_u(struct thread_data *td)
 again:
 	if (!io_u_rempty(&td->io_u_requeues))
 		io_u = io_u_rpop(&td->io_u_requeues);
-	else if (!io_u_qempty(&td->io_u_freelist)) {
+	else if (!queue_full(td)) {
 		io_u = io_u_qpop(&td->io_u_freelist);
 
 		io_u->buflen = 0;
@@ -1395,11 +1525,11 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 				icd->error = ops->io_u_lat(td, tusec);
 		}
 
-		if (td->o.max_latency && tusec > td->o.max_latency) {
-			if (!td->error)
-				log_err("fio: latency of %lu usec exceeds specified max (%u usec)\n", tusec, td->o.max_latency);
-			td_verror(td, ETIMEDOUT, "max latency exceeded");
-			icd->error = ETIMEDOUT;
+		if (td->o.max_latency && tusec > td->o.max_latency)
+			lat_fatal(td, icd, tusec, td->o.max_latency);
+		if (td->o.latency_target && tusec > td->o.latency_target) {
+			if (lat_target_failed(td))
+				lat_fatal(td, icd, tusec, td->o.latency_target);
 		}
 	}
 

@@ -764,6 +764,23 @@ is used for read vs write separation.
 Average bandwidth for \fBrate\fR and \fBratemin\fR over this number of
 milliseconds.  Default: 1000ms.
 .TP
+.BI latency_target \fR=\fPint
+If set, fio will attempt to find the max performance point that the given
+workload will run at while maintaining a latency below this target. The
+values is given in microseconds. See \fBlatency_window\fR and
+\fBlatency_percentile\fR.
+.TP
+.BI latency_window \fR=\fPint
+Used with \fBlatency_target\fR to specify the sample window that the job
+is run at varying queue depths to test the performance. The value is given
+in microseconds.
+.TP
+.BI latency_percentile \fR=\fPfloat
+The percentage of IOs that must fall within the criteria specified by
+\fBlatency_target\fR and \fBlatency_window\fR. If not set, this defaults
+to 100.0, meaning that all IOs must be equal or below to the value set
+by \fBlatency_target\fR.
+.TP
 .BI max_latency \fR=\fPint
 If set, fio will exit the job if it exceeds this maximum latency. It will exit
 with an ETIME error.

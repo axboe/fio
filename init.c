@@ -1382,7 +1382,7 @@ static void usage(const char *name)
 	printf("%s [options] [job options] <job file(s)>\n", name);
 	printf("  --debug=options\tEnable debug logging. May be one/more of:\n"
 		"\t\t\tprocess,file,io,mem,blktrace,verify,random,parse,\n"
-		"\t\t\tdiskutil,job,mutex,profile,time,net\n");
+		"\t\t\tdiskutil,job,mutex,profile,time,net,rate\n");
 	printf("  --parse-only\t\tParse options only, don't start any IO\n");
 	printf("  --output\t\tWrite output to file\n");
 	printf("  --runtime\t\tRuntime in seconds\n");
@@ -1481,6 +1481,10 @@ struct debug_level debug_levels[] = {
 	{ .name = "net",
 	  .help = "Network logging",
 	  .shift = FD_NET,
+	},
+	{ .name = "rate",
+	  .help = "Rate logging",
+	  .shift = FD_RATE,
 	},
 	{ .name = NULL, },
 };

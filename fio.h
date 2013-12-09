@@ -249,6 +249,16 @@ struct thread_data {
 	unsigned int ramp_time_over;
 
 	/*
+	 * Time since last latency_window was started
+	 */
+	struct timeval latency_ts;
+	unsigned int latency_qd;
+	unsigned int latency_qd_high;
+	unsigned int latency_qd_low;
+	unsigned int latency_failed;
+	uint64_t latency_ios;
+
+	/*
 	 * read/write mixed workload state
 	 */
 	union {
@@ -482,6 +492,12 @@ extern void reset_all_stats(struct thread_data *);
 extern int is_blktrace(const char *, int *);
 extern int load_blktrace(struct thread_data *, const char *, int);
 #endif
+
+/*
+ * Latency target helpers
+ */
+extern void lat_target_check(struct thread_data *);
+extern void lat_target_init(struct thread_data *);
 
 #define for_each_td(td, i)	\
 	for ((i) = 0, (td) = &threads[0]; (i) < (int) thread_number; (i)++, (td)++)

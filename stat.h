@@ -175,6 +175,11 @@ struct thread_stat {
 
 	uint32_t kb_base;
 	uint32_t unit_base;
+
+	uint32_t latency_depth;
+	uint64_t latency_target;
+	fio_fp64_t latency_percentile;
+	uint64_t latency_window;
 };
 
 struct jobs_eta {

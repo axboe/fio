@@ -197,6 +197,8 @@ Currently, additional logging is available for:
 	mutex		Dump info only related to mutex up/down ops
 	profile		Dump info related to profile extensions
 	time		Dump info related to internal time keeping
+	net		Dump info related to networking connections
+	rate		Dump info related to IO rate switching
 	? or help	Show available debug options.
 
 One can specify multiple debug options: e.g. --debug=file,mem will enable

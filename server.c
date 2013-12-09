@@ -1042,6 +1042,11 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.kb_base		= cpu_to_le32(ts->kb_base);
 	p.ts.unit_base		= cpu_to_le32(ts->unit_base);
 
+	p.ts.latency_depth	= cpu_to_le32(ts->latency_depth);
+	p.ts.latency_target	= cpu_to_le64(ts->latency_target);
+	p.ts.latency_window	= cpu_to_le64(ts->latency_window);
+	p.ts.latency_percentile.u.i = __cpu_to_le64(fio_double_to_uint64(ts->latency_percentile.u.f));
+
 	convert_gs(&p.rs, rs);
 
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_TS, &p, sizeof(p), NULL, NULL);
