@@ -571,6 +571,7 @@ echo "rdmacm                        $rdmacm"
 linux_fallocate="no"
 cat > $TMPC << EOF
 #include <stdio.h>
+#include <fcntl.h>
 #include <linux/falloc.h>
 int main(int argc, char **argv)
 {
@@ -887,8 +888,7 @@ cat > $TMPC << EOF
 #include <string.h>
 int main(int argc, char **argv)
 {
-  strcasestr(NULL, NULL);
-  return 0;
+  return strcasestr(argv[0], argv[1]) != NULL;
 }
 EOF
 if compile_prog "" "" "strcasestr"; then
@@ -902,6 +902,7 @@ getopt_long_only="no"
 cat > $TMPC << EOF
 #include <unistd.h>
 #include <stdio.h>
+#include <getopt.h>
 int main(int argc, char **argv)
 {
   int c = getopt_long_only(argc, argv, NULL, NULL, NULL);
@@ -952,7 +953,7 @@ echo "socklen_t                     $socklen_t"
 tls_thread="no"
 cat > $TMPC << EOF
 #include <stdio.h>
-static int __thread ret;
+static __thread int ret;
 int main(int argc, char **argv)
 {
   return ret;
