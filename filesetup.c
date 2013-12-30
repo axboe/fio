@@ -121,8 +121,10 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		dprint(FD_FILE, "truncate file %s, size %llu\n", f->file_name,
 					(unsigned long long) f->real_file_size);
 		if (ftruncate(f->fd, f->real_file_size) == -1) {
-			td_verror(td, errno, "ftruncate");
-			goto err;
+			if (errno != EFBIG) {
+				td_verror(td, errno, "ftruncate");
+				goto err;
+			}
 		}
 	}
 

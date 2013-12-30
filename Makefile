@@ -108,6 +108,10 @@ ifeq ($(CONFIG_TARGET_OS), FreeBSD)
   LIBS	 += -lpthread -lrt
   LDFLAGS += -rdynamic
 endif
+ifeq ($(CONFIG_TARGET_OS), OpenBSD)
+  LIBS	 += -lpthread
+  LDFLAGS += -rdynamic
+endif
 ifeq ($(CONFIG_TARGET_OS), NetBSD)
   LIBS	 += -lpthread -lrt
   LDFLAGS += -rdynamic

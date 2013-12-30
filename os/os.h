@@ -17,6 +17,7 @@ enum {
 	os_hpux,
 	os_mac,
 	os_netbsd,
+	os_openbsd,
 	os_solaris,
 	os_windows,
 	os_android,
@@ -30,6 +31,8 @@ enum {
 #include "os-linux.h"
 #elif defined(__FreeBSD__)
 #include "os-freebsd.h"
+#elif defined(__OpenBSD__)
+#include "os-openbsd.h"
 #elif defined(__NetBSD__)
 #include "os-netbsd.h"
 #elif defined(__sun__)
