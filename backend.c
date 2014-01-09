@@ -1392,6 +1392,9 @@ static void *thread_main(void *data)
 		if (o->lat_log_file) {
 			finish_log_named(td, td->lat_log,
 						o->lat_log_file, "lat");
+		} else if (o->lat_fname_log_file) {
+			finish_log_named(td, td->lat_log,
+						o->lat_fname_log_file, "lat");
 		} else
 			finish_log(td, td->lat_log, "lat");
 	}
@@ -1399,6 +1402,9 @@ static void *thread_main(void *data)
 		if (o->lat_log_file) {
 			finish_log_named(td, td->slat_log,
 						o->lat_log_file, "slat");
+		} else if (o->lat_fname_log_file) {
+			finish_log_named(td, td->slat_log,
+						o->lat_fname_log_file, "slat");
 		} else
 			finish_log(td, td->slat_log, "slat");
 	}
@@ -1406,6 +1412,9 @@ static void *thread_main(void *data)
 		if (o->lat_log_file) {
 			finish_log_named(td, td->clat_log,
 						o->lat_log_file, "clat");
+		} else if (o->lat_fname_log_file) {
+			finish_log_named(td, td->clat_log,
+						o->lat_fname_log_file, "clat");
 		} else
 			finish_log(td, td->clat_log, "clat");
 	}
@@ -1413,6 +1422,9 @@ static void *thread_main(void *data)
 		if (o->iops_log_file) {
 			finish_log_named(td, td->iops_log,
 						o->iops_log_file, "iops");
+		} else if (o->lat_fname_log_file) {
+			finish_log_named(td, td->iops_log,
+						o->lat_fname_log_file, "iops");
 		} else
 			finish_log(td, td->iops_log, "iops");
 	}
@@ -1935,11 +1947,11 @@ int fio_backend(void)
 	if (!fio_abort) {
 		show_run_stats();
 		if (write_bw_log) {
-			__finish_log(agg_io_log[DDIR_READ], "agg-read_bw.log");
+			__finish_log(agg_io_log[DDIR_READ], "agg-read_bw.log", 0);
 			__finish_log(agg_io_log[DDIR_WRITE],
-					"agg-write_bw.log");
+					"agg-write_bw.log", 0);
 			__finish_log(agg_io_log[DDIR_TRIM],
-					"agg-write_bw.log");
+					"agg-write_bw.log", 0);
 		}
 	}
 

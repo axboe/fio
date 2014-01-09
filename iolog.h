@@ -26,10 +26,12 @@ struct io_sample {
 	uint64_t val;
 	uint32_t ddir;
 	uint32_t bs;
+	const char *fname;
 };
 
 enum {
 	IO_LOG_TYPE_LAT = 1,
+	IO_LOG_TYPE_LAT_FNAME,
 	IO_LOG_TYPE_CLAT,
 	IO_LOG_TYPE_SLAT,
 	IO_LOG_TYPE_BW,
@@ -116,21 +118,21 @@ extern void write_iolog_close(struct thread_data *);
  * Logging
  */
 extern void add_lat_sample(struct thread_data *, enum fio_ddir, unsigned long,
-				unsigned int);
+				unsigned int, const char *);
 extern void add_clat_sample(struct thread_data *, enum fio_ddir, unsigned long,
-				unsigned int);
+				unsigned int, const char *);
 extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long,
-				unsigned int);
+				unsigned int, const char *);
 extern void add_bw_sample(struct thread_data *, enum fio_ddir, unsigned int,
-				struct timeval *);
+				struct timeval *, const char *);
 extern void add_iops_sample(struct thread_data *, enum fio_ddir, unsigned int,
-				struct timeval *);
+				struct timeval *, const char *);
 extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
 extern void setup_log(struct io_log **, unsigned long, int);
 extern void finish_log(struct thread_data *, struct io_log *, const char *);
 extern void finish_log_named(struct thread_data *, struct io_log *, const char *, const char *);
-extern void __finish_log(struct io_log *, const char *);
+extern void __finish_log(struct io_log *, const char *, const char);
 extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 extern int write_bw_log;
 extern void add_agg_sample(unsigned long, enum fio_ddir, unsigned int);

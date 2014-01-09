@@ -512,7 +512,7 @@ void setup_log(struct io_log **log, unsigned long avg_msec, int log_type)
 	*log = l;
 }
 
-void __finish_log(struct io_log *log, const char *name)
+void __finish_log(struct io_log *log, const char *name, const char fname_flag)
 {
 	unsigned int i;
 	FILE *f;
@@ -524,10 +524,17 @@ void __finish_log(struct io_log *log, const char *name)
 	}
 
 	for (i = 0; i < log->nr_samples; i++) {
-		fprintf(f, "%lu, %lu, %u, %u\n",
-				(unsigned long) log->log[i].time,
-				(unsigned long) log->log[i].val,
-				log->log[i].ddir, log->log[i].bs);
+		if (fname_flag)
+			fprintf(f, "%lu, %lu, %u, %u, %s\n",
+					(unsigned long) log->log[i].time,
+					(unsigned long) log->log[i].val,
+					log->log[i].ddir, log->log[i].bs,
+					log->log[i].fname);
+		else
+			fprintf(f, "%lu, %lu, %u, %u\n",
+					(unsigned long) log->log[i].time,
+					(unsigned long) log->log[i].val,
+					log->log[i].ddir, log->log[i].bs);
 	}
 
 	fclose(f);
@@ -540,6 +547,7 @@ void finish_log_named(struct thread_data *td, struct io_log *log,
 {
 	char file_name[256], *p;
 
+	printf("Logging to file %s_%s.log\n", prefix, postfix);
 	snprintf(file_name, sizeof(file_name), "%s_%s.log", prefix, postfix);
 	p = basename(file_name);
 
@@ -547,8 +555,12 @@ void finish_log_named(struct thread_data *td, struct io_log *log,
 		fio_send_iolog(td, log, p);
 		free(log->log);
 		free(log);
-	} else
-		__finish_log(log, p);
+	} else {
+		if (log->log_type == IO_LOG_TYPE_LAT_FNAME)
+			__finish_log(log, p, 1);
+		else
+			__finish_log(log, p, 0);
+	}
 }
 
 void finish_log(struct thread_data *td, struct io_log *log, const char *name)
