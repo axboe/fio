@@ -444,6 +444,7 @@ int generic_close_file(struct thread_data fio_unused *td, struct fio_file *f)
 		f->shadow_fd = -1;
 	}
 
+	f->engine_data = 0;
 	return ret;
 }
 
@@ -583,7 +584,7 @@ open_again:
 			 * work-around a "feature" on Linux, where a close of
 			 * an fd that has been opened for write will trigger
 			 * udev to call blkid to check partitions, fs id, etc.
-			 * That polutes the device cache, which can slow down
+			 * That pollutes the device cache, which can slow down
 			 * unbuffered accesses.
 			 */
 			if (f->shadow_fd == -1)

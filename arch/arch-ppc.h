@@ -1,5 +1,5 @@
 #ifndef ARCH_PPC_H
-#define ARCH_PPH_H
+#define ARCH_PPC_H
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -112,8 +112,10 @@ extern int tsc_reliable;
 
 static inline int arch_init(char *envp[])
 {
+#if 0
 	tsc_reliable = 1;
 	atb_clocktest();
+#endif
 	return 0;
 }
 

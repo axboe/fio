@@ -1,6 +1,6 @@
 #################################################
 # Hardcode defragmentation patterns
-# Please be carefull, it can trigger kernel panic
+# Please be careful, it can trigger kernel panic
 #################################################
 [global]
 ioengine=e4defrag

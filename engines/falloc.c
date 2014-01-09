@@ -4,7 +4,7 @@
  * IO engine that does regular fallocate to simulate data transfer 
  * as fio ioengine.
  * DDIR_READ  does fallocate(,mode = FALLOC_FL_KEEP_SIZE,)
- * DDIR_WRITE does fallocate(,mode = 0) : fallocate with size extention 
+ * DDIR_WRITE does fallocate(,mode = 0) : fallocate with size extension
  * DDIR_TRIM  does fallocate(,mode = FALLOC_FL_KEEP_SIZE | FALLOC_FL_PUNCH_HOLE)
  *
  */

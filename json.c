@@ -84,7 +84,7 @@ static char *strdup_escape(const char *str)
 }
 
 /*
- * Valid JSON strings must escape '"' and '/' with a preceeding '/'
+ * Valid JSON strings must escape '"' and '/' with a preceding '/'
  */
 static struct json_value *json_create_value_string(const char *str)
 {

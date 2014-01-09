@@ -1504,13 +1504,23 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 {
 	const int nr_samples = iolog->nr_samples;
 
+	if (iolog->disabled)
+		return;
+
 	if (!iolog->nr_samples)
 		iolog->avg_last = t;
 
 	if (iolog->nr_samples == iolog->max_samples) {
 		int new_size = sizeof(struct io_sample) * iolog->max_samples*2;
+		void *new_log;
 
-		iolog->log = realloc(iolog->log, new_size);
+		new_log = realloc(iolog->log, new_size);
+		if (!new_log) {
+			log_err("fio: failed extending iolog! Will stop logging.\n");
+			iolog->disabled = 1;
+			return;
+		}
+		iolog->log = new_log;
 		iolog->max_samples <<= 1;
 	}
 

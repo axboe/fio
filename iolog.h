@@ -52,6 +52,11 @@ struct io_log {
 	unsigned int log_type;
 
 	/*
+	 * If we fail extending the log, stop collecting more entries.
+	 */
+	unsigned int disabled;
+
+	/*
 	 * Windowed average, for logging single entries average over some
 	 * period of time.
 	 */
