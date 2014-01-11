@@ -100,6 +100,7 @@ struct thread_options {
 	unsigned int do_disk_util;
 	unsigned int override_sync;
 	unsigned int rand_repeatable;
+	unsigned int rand_seed;
 	unsigned int use_os_rand;
 	unsigned int log_avg_msec;
 	unsigned int norandommap;
@@ -319,6 +320,7 @@ struct thread_options_pack {
 	uint32_t do_disk_util;
 	uint32_t override_sync;
 	uint32_t rand_repeatable;
+	uint32_t rand_seed;
 	uint32_t use_os_rand;
 	uint32_t log_avg_msec;
 	uint32_t norandommap;

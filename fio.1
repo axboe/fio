@@ -288,6 +288,11 @@ set, the fio will sum the results and report them as "mixed" instead.
 Seed the random number generator in a predictable way so results are repeatable
 across runs.  Default: true.
 .TP
+.BI randseed \fR=\fPint
+Seed the random number generators based on this seed value, to be able to
+control what sequence of output is being generated. If not set, the random
+sequence depends on the \fBrandrepeat\fR setting.
+.TP
 .BI use_os_rand \fR=\fPbool
 Fio can either use the random generator supplied by the OS to generator random
 offsets, or it can use it's own internal generator (based on Tausworthe).

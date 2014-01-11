@@ -1627,6 +1627,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
+		.name	= "randseed",
+		.lname	= "The random generator seed",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(rand_seed),
+		.help	= "Set the random generator seed value",
+		.parent = "rw",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RANDOM,
+	},
+	{
 		.name	= "use_os_rand",
 		.lname	= "Use OS random",
 		.type	= FIO_OPT_BOOL,

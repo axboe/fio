@@ -635,6 +635,12 @@ static int fixup_options(struct thread_data *td)
 	if (td->o.oatomic)
 		td->o.odirect = 1;
 
+	/*
+	 * If randseed is set, that overrides randrepeat
+	 */
+	if (td->o.rand_seed)
+		td->o.rand_repeatable = 0;
+
 	return ret;
 }
 
@@ -830,10 +836,15 @@ static int setup_random_seeds(struct thread_data *td)
 	unsigned long seed;
 	unsigned int i;
 
-	if (!td->o.rand_repeatable)
+	if (!td->o.rand_repeatable && !td->o.rand_seed)
 		return init_random_state(td, td->rand_seeds, sizeof(td->rand_seeds));
 
-	for (seed = 0x89, i = 0; i < 4; i++)
+	if (!td->o.rand_seed)
+		seed = 0x89;
+	else
+		seed = td->o.rand_seed;
+
+	for (i = 0; i < 4; i++)
 		seed *= 0x9e370001UL;
 
 	for (i = 0; i < FIO_RAND_NR_OFFS; i++) {

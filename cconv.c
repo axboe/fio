@@ -118,6 +118,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->do_disk_util = le32_to_cpu(top->do_disk_util);
 	o->override_sync = le32_to_cpu(top->override_sync);
 	o->rand_repeatable = le32_to_cpu(top->rand_repeatable);
+	o->rand_seed = le32_to_cpu(top->rand_seed);
 	o->use_os_rand = le32_to_cpu(top->use_os_rand);
 	o->log_avg_msec = le32_to_cpu(top->log_avg_msec);
 	o->norandommap = le32_to_cpu(top->norandommap);
@@ -282,6 +283,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->do_disk_util = cpu_to_le32(o->do_disk_util);
 	top->override_sync = cpu_to_le32(o->override_sync);
 	top->rand_repeatable = cpu_to_le32(o->rand_repeatable);
+	top->rand_seed = cpu_to_le32(o->rand_seed);
 	top->use_os_rand = cpu_to_le32(o->use_os_rand);
 	top->log_avg_msec = cpu_to_le32(o->log_avg_msec);
 	top->norandommap = cpu_to_le32(o->norandommap);
