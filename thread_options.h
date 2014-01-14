@@ -170,6 +170,8 @@ struct thread_options {
 	unsigned int zero_buffers;
 	unsigned int refill_buffers;
 	unsigned int scramble_buffers;
+	char buffer_pattern[MAX_PATTERN_SIZE];
+	unsigned int buffer_pattern_bytes;
 	unsigned int compress_percentage;
 	unsigned int compress_chunk;
 	unsigned int time_based;
@@ -381,6 +383,8 @@ struct thread_options_pack {
 	uint32_t zero_buffers;
 	uint32_t refill_buffers;
 	uint32_t scramble_buffers;
+	uint8_t buffer_pattern[MAX_PATTERN_SIZE];
+	uint32_t buffer_pattern_bytes;
 	unsigned int compress_percentage;
 	unsigned int compress_chunk;
 	uint32_t time_based;

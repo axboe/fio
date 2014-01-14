@@ -74,7 +74,8 @@ extern void populate_verify_io_u(struct thread_data *, struct io_u *);
 extern int __must_check get_next_verify(struct thread_data *td, struct io_u *);
 extern int __must_check verify_io_u(struct thread_data *, struct io_u *);
 extern int verify_io_u_async(struct thread_data *, struct io_u *);
-extern void fill_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u *io_u, unsigned long seed, int use_seed);
+extern void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u *io_u, unsigned long seed, int use_seed);
+extern void fill_buffer_pattern(struct thread_data *td, void *p, unsigned int len);
 extern void fio_verify_init(struct thread_data *td);
 
 /*

@@ -547,6 +547,11 @@ buffer_compress_chunk=int	See buffer_compress_percentage. This
 		alternate random and zeroed data throughout the IO
 		buffer.
 
+buffer_pattern=str	If set, fio will fill the io buffers with this pattern.
+		If not set, the contents of io buffers is defined by the other
+		options related to buffer contents. The setting can be any
+		pattern of bytes, and can be prefixed with 0x for hex values.
+
 nrfiles=int	Number of files to use for this job. Defaults to 1.
 
 openfiles=int	Number of files to keep open at the same time. Defaults to

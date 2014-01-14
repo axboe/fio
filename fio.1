@@ -426,6 +426,12 @@ provide \fBbuffer_compress_percentage\fR of blocksize random data, followed by
 the remaining zeroed. With this set to some chunk size smaller than the block
 size, fio can alternate random and zeroed data throughout the IO buffer.
 .TP
+.BI buffer_pattern \fR=\fPstr
+If set, fio will fill the io buffers with this pattern. If not set, the contents
+of io buffers is defined by the other options related to buffer contents. The
+setting can be any pattern of bytes, and can be prefixed with 0x for hex
+values.
+.TP
 .BI nrfiles \fR=\fPint
 Number of files to use for this job.  Default: 1.
 .TP

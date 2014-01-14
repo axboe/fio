@@ -1770,7 +1770,9 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 		    unsigned int max_bs)
 {
-	if (!td->o.zero_buffers) {
+	if (td->o.buffer_pattern_bytes)
+		fill_buffer_pattern(td, buf, max_bs);
+	else if (!td->o.zero_buffers) {
 		unsigned int perc = td->o.compress_percentage;
 
 		if (perc) {

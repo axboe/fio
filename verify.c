@@ -28,49 +28,63 @@ static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 			 struct verify_header *hdr, unsigned int header_num,
 			 unsigned int header_len);
 
-void fill_pattern(struct thread_data *td, void *p, unsigned int len, struct io_u *io_u, unsigned long seed, int use_seed)
+static void fill_pattern(struct thread_data *td, void *p, unsigned int len,
+			 char *pattern, unsigned int pattern_bytes)
 {
-	switch (td->o.verify_pattern_bytes) {
+	switch (pattern_bytes) {
 	case 0:
-		dprint(FD_VERIFY, "fill random bytes len=%u\n", len);
-		if (use_seed)
-			__fill_random_buf(p, len, seed);
-		else
-			io_u->rand_seed = fill_random_buf(&td->buf_state, p, len);
+		assert(0);
 		break;
 	case 1:
-		if (io_u->buf_filled_len >= len) {
-			dprint(FD_VERIFY, "using already filled verify pattern b=0 len=%u\n", len);
-			return;
-		}
 		dprint(FD_VERIFY, "fill verify pattern b=0 len=%u\n", len);
-		memset(p, td->o.verify_pattern[0], len);
-		io_u->buf_filled_len = len;
+		memset(p, pattern[0], len);
 		break;
 	default: {
 		unsigned int i = 0, size = 0;
 		unsigned char *b = p;
 
-		if (io_u->buf_filled_len >= len) {
-			dprint(FD_VERIFY, "using already filled verify pattern b=%d len=%u\n",
-					td->o.verify_pattern_bytes, len);
-			return;
-		}
-
 		dprint(FD_VERIFY, "fill verify pattern b=%d len=%u\n",
-					td->o.verify_pattern_bytes, len);
+					pattern_bytes, len);
 
 		while (i < len) {
-			size = td->o.verify_pattern_bytes;
+			size = pattern_bytes;
 			if (size > (len - i))
 				size = len - i;
-			memcpy(b+i, td->o.verify_pattern, size);
+			memcpy(b+i, pattern, size);
 			i += size;
 		}
-		io_u->buf_filled_len = len;
 		break;
 		}
 	}
+}
+
+void fill_buffer_pattern(struct thread_data *td, void *p, unsigned int len)
+{
+	fill_pattern(td, p, len, td->o.buffer_pattern, td->o.buffer_pattern_bytes);
+}
+
+void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
+			 struct io_u *io_u, unsigned long seed, int use_seed)
+{
+	if (!td->o.verify_pattern_bytes) {
+		dprint(FD_VERIFY, "fill random bytes len=%u\n", len);
+
+		if (use_seed)
+			__fill_random_buf(p, len, seed);
+		else
+			io_u->rand_seed = fill_random_buf(&td->buf_state, p, len);
+		return;
+	}
+	
+	if (io_u->buf_filled_len >= len) {
+		dprint(FD_VERIFY, "using already filled verify pattern b=%d len=%u\n",
+			td->o.verify_pattern_bytes, len);
+		return;
+	}
+
+	fill_pattern(td, p, len, td->o.verify_pattern, td->o.verify_pattern_bytes);
+
+	io_u->buf_filled_len = len;
 }
 
 static unsigned int get_hdr_inc(struct thread_data *td, struct io_u *io_u)
@@ -91,7 +105,7 @@ static void fill_pattern_headers(struct thread_data *td, struct io_u *io_u,
 	struct verify_header *hdr;
 	void *p = io_u->buf;
 
-	fill_pattern(td, p, io_u->buflen, io_u, seed, use_seed);
+	fill_verify_pattern(td, p, io_u->buflen, io_u, seed, use_seed);
 
 	hdr_inc = get_hdr_inc(td, io_u);
 	header_num = 0;
