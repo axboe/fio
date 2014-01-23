@@ -1050,6 +1050,7 @@ void close_and_free_files(struct thread_data *td)
 	td->files_index = 0;
 	td->files = NULL;
 	td->file_locks = NULL;
+	td->o.file_lock_mode = FILE_LOCK_NONE;
 	td->o.nr_files = 0;
 }
 
@@ -1242,6 +1243,8 @@ void unlock_file(struct thread_data *td, struct fio_file *f)
 
 void unlock_file_all(struct thread_data *td, struct fio_file *f)
 {
+	if (td->o.file_lock_mode == FILE_LOCK_NONE)
+		return;
 	if (td->file_locks[f->fileno] != FILE_LOCK_NONE)
 		unlock_file(td, f);
 }
