@@ -857,12 +857,16 @@ static int fio_fill_addr(struct thread_data *td, const char *host, int af,
 		return 0;
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
 
 	if (is_tcp(o))
 		hints.ai_socktype = SOCK_STREAM;
 	else
 		hints.ai_socktype = SOCK_DGRAM;
+
+	if (is_ipv6(o))
+		hints.ai_family = AF_INET6;
+	else
+		hints.ai_family = AF_INET;
 
 	ret = getaddrinfo(host, NULL, &hints, res);
 	if (ret) {
