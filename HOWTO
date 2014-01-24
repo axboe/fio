@@ -1496,7 +1496,9 @@ that defines them is selected.
 [net] proto=str	The network protocol to use. Accepted values are:
 
 			tcp	Transmission control protocol
+			tcpv6	Transmission control protocol V6
 			udp	User datagram protocol
+			udpv6	User datagram protocol V6
 			unix	UNIX domain socket
 
 		When the protocol is TCP or UDP, the port must also be given,

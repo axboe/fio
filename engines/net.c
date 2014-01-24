@@ -27,6 +27,7 @@ struct netio_data {
 	int use_splice;
 	int pipes[2];
 	struct sockaddr_in addr;
+	struct sockaddr_in6 addr6;
 	struct sockaddr_un addr_un;
 };
 
@@ -54,6 +55,8 @@ enum {
 	FIO_TYPE_TCP	= 1,
 	FIO_TYPE_UDP	= 2,
 	FIO_TYPE_UNIX	= 3,
+	FIO_TYPE_TCP_V6	= 4,
+	FIO_TYPE_UDP_V6	= 5,
 };
 
 static int str_hostname_cb(void *data, const char *input);
@@ -91,9 +94,17 @@ static struct fio_option options[] = {
 			    .oval = FIO_TYPE_TCP,
 			    .help = "Transmission Control Protocol",
 			  },
+			  { .ival = "tcpv6",
+			    .oval = FIO_TYPE_TCP_V6,
+			    .help = "Transmission Control Protocol V6",
+			  },
 			  { .ival = "udp",
 			    .oval = FIO_TYPE_UDP,
 			    .help = "User Datagram Protocol",
+			  },
+			  { .ival = "udpv6",
+			    .oval = FIO_TYPE_UDP_V6,
+			    .help = "User Datagram Protocol V6",
 			  },
 			  { .ival = "unix",
 			    .oval = FIO_TYPE_UNIX,
@@ -155,6 +166,21 @@ static struct fio_option options[] = {
 	},
 };
 
+static inline int is_udp(struct netio_options *o)
+{
+	return o->proto == FIO_TYPE_UDP || o->proto == FIO_TYPE_UDP_V6;
+}
+
+static inline int is_tcp(struct netio_options *o)
+{
+	return o->proto == FIO_TYPE_TCP || o->proto == FIO_TYPE_TCP_V6;
+}
+
+static inline int is_ipv6(struct netio_options *o)
+{
+	return o->proto == FIO_TYPE_UDP_V6 || o->proto == FIO_TYPE_TCP_V6;
+}
+
 /*
  * Return -1 for error and 'nr events' for a positive number
  * of events
@@ -207,7 +233,7 @@ static int fio_netio_prep(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * Make sure we don't see spurious reads to a receiver, and vice versa
 	 */
-	if (o->proto == FIO_TYPE_TCP)
+	if (is_tcp(o))
 		return 0;
 
 	if ((o->listen && io_u->ddir == DDIR_WRITE) ||
@@ -361,12 +387,20 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 	int ret, flags = 0;
 
 	do {
-		if (o->proto == FIO_TYPE_UDP) {
-			struct sockaddr *to = (struct sockaddr *) &nd->addr;
+		if (is_udp(o)) {
+			struct sockaddr *to;
+			socklen_t len;
+
+			if (is_ipv6(o)) {
+				to = (struct sockaddr *) &nd->addr6;
+				len = sizeof(nd->addr6);
+			} else {
+				to = (struct sockaddr *) &nd->addr;
+				len = sizeof(nd->addr);
+			}
 
 			ret = sendto(io_u->file->fd, io_u->xfer_buf,
-					io_u->xfer_buflen, flags, to,
-					sizeof(*to));
+					io_u->xfer_buflen, flags, to, len);
 		} else {
 			/*
 			 * if we are going to write more, set MSG_MORE
@@ -413,14 +447,18 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 	int ret, flags = 0;
 
 	do {
-		if (o->proto == FIO_TYPE_UDP) {
-			socklen_t l;
-			socklen_t *len = &l;
+		if (is_udp(o)) {
 			struct sockaddr *from;
+			socklen_t l, *len = &l;
 
 			if (o->listen) {
-				from = (struct sockaddr *) &nd->addr;
-				*len = sizeof(nd->addr);
+				if (!is_ipv6(o)) {
+					from = (struct sockaddr *) &nd->addr;
+					*len = sizeof(nd->addr);
+				} else {
+					from = (struct sockaddr *) &nd->addr6;
+					*len = sizeof(nd->addr6);
+				}
 			} else {
 				from = NULL;
 				len = NULL;
@@ -458,13 +496,13 @@ static int __fio_netio_queue(struct thread_data *td, struct io_u *io_u,
 	int ret;
 
 	if (ddir == DDIR_WRITE) {
-		if (!nd->use_splice || o->proto == FIO_TYPE_UDP ||
+		if (!nd->use_splice || is_udp(o) ||
 		    o->proto == FIO_TYPE_UNIX)
 			ret = fio_netio_send(td, io_u);
 		else
 			ret = fio_netio_splice_out(td, io_u);
 	} else if (ddir == DDIR_READ) {
-		if (!nd->use_splice || o->proto == FIO_TYPE_UDP ||
+		if (!nd->use_splice || is_udp(o) ||
 		    o->proto == FIO_TYPE_UNIX)
 			ret = fio_netio_recv(td, io_u);
 		else
@@ -524,8 +562,14 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 	if (o->proto == FIO_TYPE_TCP) {
 		domain = AF_INET;
 		type = SOCK_STREAM;
+	} else if (o->proto == FIO_TYPE_TCP_V6) {
+		domain = AF_INET6;
+		type = SOCK_STREAM;
 	} else if (o->proto == FIO_TYPE_UDP) {
 		domain = AF_INET;
+		type = SOCK_DGRAM;
+	} else if (o->proto == FIO_TYPE_UDP_V6) {
+		domain = AF_INET6;
 		type = SOCK_DGRAM;
 	} else if (o->proto == FIO_TYPE_UNIX) {
 		domain = AF_UNIX;
@@ -543,7 +587,7 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 	}
 
 #ifdef CONFIG_TCP_NODELAY
-	if (o->nodelay && o->proto == FIO_TYPE_TCP) {
+	if (o->nodelay && is_tcp(o)) {
 		int optval = 1;
 
 		if (setsockopt(f->fd, IPPROTO_TCP, TCP_NODELAY, (void *) &optval, sizeof(int)) < 0) {
@@ -553,12 +597,18 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 	}
 #endif
 
-	if (o->proto == FIO_TYPE_UDP) {
+	if (is_udp(o)) {
 		if (!fio_netio_is_multicast(td->o.filename))
 			return 0;
+		if (is_ipv6(o)) {
+			log_err("fio: multicast not supported on IPv6\n");
+			close(f->fd);
+			return 1;
+		}
 
 		if (o->intfc) {
 			struct in_addr interface_addr;
+
 			if (inet_aton(o->intfc, &interface_addr) == 0) {
 				log_err("fio: interface not valid interface IP\n");
 				close(f->fd);
@@ -584,6 +634,15 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 			close(f->fd);
 			return 1;
 		}
+	} else if (o->proto == FIO_TYPE_TCP_V6) {
+		socklen_t len = sizeof(nd->addr6);
+
+		if (connect(f->fd, (struct sockaddr *) &nd->addr6, len) < 0) {
+			td_verror(td, errno, "connect");
+			close(f->fd);
+			return 1;
+		}
+
 	} else {
 		struct sockaddr_un *addr = &nd->addr_un;
 		socklen_t len;
@@ -604,10 +663,10 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
-	socklen_t socklen = sizeof(nd->addr);
+	socklen_t socklen;
 	int state;
 
-	if (o->proto == FIO_TYPE_UDP) {
+	if (is_udp(o)) {
 		f->fd = nd->listenfd;
 		return 0;
 	}
@@ -620,14 +679,21 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 	if (poll_wait(td, nd->listenfd, POLLIN) < 0)
 		goto err;
 
-	f->fd = accept(nd->listenfd, (struct sockaddr *) &nd->addr, &socklen);
+	if (o->proto == FIO_TYPE_TCP) {
+		socklen = sizeof(nd->addr);
+		f->fd = accept(nd->listenfd, (struct sockaddr *) &nd->addr, &socklen);
+	} else {
+		socklen = sizeof(nd->addr6);
+		f->fd = accept(nd->listenfd, (struct sockaddr *) &nd->addr6, &socklen);
+	}
+
 	if (f->fd < 0) {
 		td_verror(td, errno, "accept");
 		goto err;
 	}
 
 #ifdef CONFIG_TCP_NODELAY
-	if (o->nodelay && o->proto == FIO_TYPE_TCP) {
+	if (o->nodelay && is_tcp(o)) {
 		int optval = 1;
 
 		if (setsockopt(f->fd, IPPROTO_TCP, TCP_NODELAY, (void *) &optval, sizeof(int)) < 0) {
@@ -648,15 +714,24 @@ err:
 static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
+	struct netio_options *o = td->eo;
 	struct udp_close_msg msg;
-	struct sockaddr *to = (struct sockaddr *) &nd->addr;
+	struct sockaddr *to;
+	socklen_t len;
 	int ret;
+
+	if (is_ipv6(o)) {
+		to = (struct sockaddr *) &nd->addr6;
+		len = sizeof(nd->addr6);
+	} else {
+		to = (struct sockaddr *) &nd->addr;
+		len = sizeof(nd->addr);
+	}
 
 	msg.magic = htonl(FIO_LINK_OPEN_CLOSE_MAGIC);
 	msg.cmd = htonl(FIO_LINK_CLOSE);
 
-	ret = sendto(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to,
-			sizeof(nd->addr));
+	ret = sendto(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to, len);
 	if (ret < 0)
 		td_verror(td, errno, "sendto udp link close");
 }
@@ -669,7 +744,7 @@ static int fio_netio_close_file(struct thread_data *td, struct fio_file *f)
 	 * If this is an UDP connection, notify the receiver that we are
 	 * closing down the link
 	 */
-	if (o->proto == FIO_TYPE_UDP)
+	if (is_udp(o))
 		fio_netio_udp_close(td, f);
 
 	return generic_close_file(td, f);
@@ -678,10 +753,19 @@ static int fio_netio_close_file(struct thread_data *td, struct fio_file *f)
 static int fio_netio_udp_recv_open(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
+	struct netio_options *o = td->eo;
 	struct udp_close_msg msg;
-	struct sockaddr *to = (struct sockaddr *) &nd->addr;
-	socklen_t len = sizeof(nd->addr);
+	struct sockaddr *to;
+	socklen_t len;
 	int ret;
+
+	if (is_ipv6(o)) {
+		len = sizeof(nd->addr6);
+		to = (struct sockaddr *) &nd->addr6;
+	} else {
+		len = sizeof(nd->addr);
+		to = (struct sockaddr *) &nd->addr;
+	}
 
 	ret = recvfrom(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to, &len);
 	if (ret < 0) {
@@ -702,15 +786,24 @@ static int fio_netio_udp_recv_open(struct thread_data *td, struct fio_file *f)
 static int fio_netio_udp_send_open(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
+	struct netio_options *o = td->eo;
 	struct udp_close_msg msg;
-	struct sockaddr *to = (struct sockaddr *) &nd->addr;
+	struct sockaddr *to;
+	socklen_t len;
 	int ret;
+
+	if (is_ipv6(o)) {
+		len = sizeof(nd->addr6);
+		to = (struct sockaddr *) &nd->addr6;
+	} else {
+		len = sizeof(nd->addr);
+		to = (struct sockaddr *) &nd->addr;
+	}
 
 	msg.magic = htonl(FIO_LINK_OPEN_CLOSE_MAGIC);
 	msg.cmd = htonl(FIO_LINK_OPEN);
 
-	ret = sendto(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to,
-			sizeof(nd->addr));
+	ret = sendto(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to, len);
 	if (ret < 0) {
 		td_verror(td, errno, "sendto udp link open");
 		return ret;
@@ -734,7 +827,7 @@ static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
 		return ret;
 	}
 
-	if (o->proto == FIO_TYPE_UDP) {
+	if (is_udp(o)) {
 		if (td_write(td))
 			ret = fio_netio_udp_send_open(td, f);
 		else {
@@ -757,6 +850,7 @@ static int fio_netio_setup_connect_inet(struct thread_data *td,
 					const char *host, unsigned short port)
 {
 	struct netio_data *nd = td->io_ops->data;
+	struct netio_options *o = td->eo;
 
 	if (!host) {
 		log_err("fio: connect with no host to connect to.\n");
@@ -767,19 +861,42 @@ static int fio_netio_setup_connect_inet(struct thread_data *td,
 		return 1;
 	}
 
-	nd->addr.sin_family = AF_INET;
-	nd->addr.sin_port = htons(port);
+	if (is_ipv6(o)) {
+		nd->addr6.sin6_family = AF_INET6;
+		nd->addr6.sin6_port = htons(port);
 
-	if (inet_aton(host, &nd->addr.sin_addr) != 1) {
-		struct hostent *hent;
+		if (!inet_pton(AF_INET6, host, &nd->addr6.sin6_addr)) {
+			struct addrinfo hints, *res;
 
-		hent = gethostbyname(host);
-		if (!hent) {
-			td_verror(td, errno, "gethostbyname");
-			return 1;
+			memset(&hints, 0, sizeof(hints));
+			hints.ai_socktype = SOCK_STREAM;
+
+			if (getaddrinfo(host, NULL, &hints, &res)) {
+				td_verror(td, errno, "gethostbyname");
+				return 1;
+			}
+
+			memcpy(&nd->addr6.sin6_addr, &((struct sockaddr_in6 *) res->ai_addr)->sin6_addr, sizeof(nd->addr6.sin6_addr));
+			freeaddrinfo(res);
 		}
+	} else {
+		nd->addr.sin_family = AF_INET;
+		nd->addr.sin_port = htons(port);
 
-		memcpy(&nd->addr.sin_addr, hent->h_addr, 4);
+		if (!inet_pton(AF_INET, host, &nd->addr.sin_addr)) {
+			struct addrinfo hints, *res;
+
+			memset(&hints, 0, sizeof(hints));
+			hints.ai_socktype = SOCK_STREAM;
+
+			if (getaddrinfo(host, NULL, &hints, &res)) {
+				td_verror(td, errno, "gethostbyname");
+				return 1;
+			}
+
+			memcpy(&nd->addr.sin_addr, &((struct sockaddr_in *) res->ai_addr)->sin_addr, sizeof(nd->addr.sin_addr));
+			freeaddrinfo(res);
+		}
 	}
 
 	return 0;
@@ -800,7 +917,7 @@ static int fio_netio_setup_connect(struct thread_data *td)
 {
 	struct netio_options *o = td->eo;
 
-	if (o->proto == FIO_TYPE_UDP || o->proto == FIO_TYPE_TCP)
+	if (is_udp(o) || is_tcp(o))
 		return fio_netio_setup_connect_inet(td, td->o.filename,o->port);
 	else
 		return fio_netio_setup_connect_unix(td, td->o.filename);
@@ -845,15 +962,32 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 	struct netio_options *o = td->eo;
 	struct ip_mreq mr;
 	struct sockaddr_in sin;
-	int fd, opt, type;
+	struct sockaddr_in6 sin6;
+	struct sockaddr *saddr;
+	int fd, opt, type, domain;
+	socklen_t len;
 
 	memset(&sin, 0, sizeof(sin));
-	if (o->proto == FIO_TYPE_TCP)
-		type = SOCK_STREAM;
-	else
-		type = SOCK_DGRAM;
+	memset(&sin6, 0, sizeof(sin6));
 
-	fd = socket(AF_INET, type, 0);
+	if (o->proto == FIO_TYPE_TCP) {
+		type = SOCK_STREAM;
+		domain = AF_INET;
+	} else if (o->proto == FIO_TYPE_TCP_V6) {
+		type = SOCK_STREAM;
+		domain = AF_INET6;
+	} else if (o->proto == FIO_TYPE_UDP) {
+		type = SOCK_DGRAM;
+		domain = AF_INET;
+	} else if (o->proto == FIO_TYPE_UDP_V6) {
+		type = SOCK_DGRAM;
+		domain = AF_INET6;
+	} else {
+		log_err("fio: unknown proto %d\n", o->proto);
+		return 1;
+	}
+
+	fd = socket(domain, type, 0);
 	if (fd < 0) {
 		td_verror(td, errno, "socket");
 		return 1;
@@ -874,8 +1008,7 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 #endif
 
 	if (td->o.filename){
-		if(o->proto != FIO_TYPE_UDP ||
-		   !fio_netio_is_multicast(td->o.filename)) {
+		if (!is_udp(o) || !fio_netio_is_multicast(td->o.filename)) {
 			log_err("fio: hostname not valid for non-multicast inbound network IO\n");
 			close(fd);
 			return 1;
@@ -900,11 +1033,23 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 		}
 	}
 
-	nd->addr.sin_family = AF_INET;
-	nd->addr.sin_addr.s_addr = sin.sin_addr.s_addr ? sin.sin_addr.s_addr : htonl(INADDR_ANY);
-	nd->addr.sin_port = htons(port);
+	if (!is_ipv6(o)) {
+		saddr = (struct sockaddr *) &nd->addr;
+		len = sizeof(nd->addr);
 
-	if (bind(fd, (struct sockaddr *) &nd->addr, sizeof(nd->addr)) < 0) {
+		nd->addr.sin_family = AF_INET;
+		nd->addr.sin_addr.s_addr = sin.sin_addr.s_addr ? sin.sin_addr.s_addr : htonl(INADDR_ANY);
+		nd->addr.sin_port = htons(port);
+	} else {
+		saddr = (struct sockaddr *) &nd->addr6;
+		len = sizeof(nd->addr6);
+
+		nd->addr6.sin6_family = AF_INET6;
+		nd->addr6.sin6_addr = sin6.sin6_addr.s6_addr ? sin6.sin6_addr : in6addr_any;
+		nd->addr6.sin6_port = htons(port);
+	}
+
+	if (bind(fd, saddr, len) < 0) {
 		td_verror(td, errno, "bind");
 		return 1;
 	}
@@ -919,14 +1064,14 @@ static int fio_netio_setup_listen(struct thread_data *td)
 	struct netio_options *o = td->eo;
 	int ret;
 
-	if (o->proto == FIO_TYPE_UDP || o->proto == FIO_TYPE_TCP)
+	if (is_udp(o) || is_tcp(o))
 		ret = fio_netio_setup_listen_inet(td, o->port);
 	else
 		ret = fio_netio_setup_listen_unix(td, td->o.filename);
 
 	if (ret)
 		return ret;
-	if (o->proto == FIO_TYPE_UDP)
+	if (is_udp(o))
 		return 0;
 
 	if (listen(nd->listenfd, 10) < 0) {
@@ -961,7 +1106,7 @@ static int fio_netio_init(struct thread_data *td)
 		return 1;
 	}
 
-	if (o->proto != FIO_TYPE_TCP) {
+	if (!is_tcp(o)) {
 		if (o->listen) {
 			log_err("fio: listen only valid for TCP proto IO\n");
 			return 1;
