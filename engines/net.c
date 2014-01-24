@@ -846,11 +846,48 @@ static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
 	return ret;
 }
 
+static int fio_fill_addr(struct thread_data *td, const char *host, int af,
+			 void *dst, struct addrinfo **res)
+{
+	struct netio_options *o = td->eo;
+	struct addrinfo hints;
+	int ret;
+
+	if (inet_pton(af, host, dst))
+		return 0;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+
+	if (is_tcp(o))
+		hints.ai_socktype = SOCK_STREAM;
+	else
+		hints.ai_socktype = SOCK_DGRAM;
+
+	ret = getaddrinfo(host, NULL, &hints, res);
+	if (ret) {
+		int e = EINVAL;
+		char str[128];
+
+		if (ret == EAI_SYSTEM)
+			e = errno;
+
+		snprintf(str, sizeof(str), "getaddrinfo: %s", gai_strerror(ret));
+		td_verror(td, e, str);
+		return 1;
+	}
+
+	return 0;
+}
+
 static int fio_netio_setup_connect_inet(struct thread_data *td,
 					const char *host, unsigned short port)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
+	struct addrinfo *res = NULL;
+	void *dst, *src;
+	int af, len;
 
 	if (!host) {
 		log_err("fio: connect with no host to connect to.\n");
@@ -861,44 +898,35 @@ static int fio_netio_setup_connect_inet(struct thread_data *td,
 		return 1;
 	}
 
+	nd->addr.sin_family = AF_INET;
+	nd->addr.sin_port = htons(port);
+	nd->addr6.sin6_family = AF_INET6;
+	nd->addr6.sin6_port = htons(port);
+
 	if (is_ipv6(o)) {
-		nd->addr6.sin6_family = AF_INET6;
-		nd->addr6.sin6_port = htons(port);
-
-		if (!inet_pton(AF_INET6, host, &nd->addr6.sin6_addr)) {
-			struct addrinfo hints, *res;
-
-			memset(&hints, 0, sizeof(hints));
-			hints.ai_socktype = SOCK_STREAM;
-
-			if (getaddrinfo(host, NULL, &hints, &res)) {
-				td_verror(td, errno, "gethostbyname");
-				return 1;
-			}
-
-			memcpy(&nd->addr6.sin6_addr, &((struct sockaddr_in6 *) res->ai_addr)->sin6_addr, sizeof(nd->addr6.sin6_addr));
-			freeaddrinfo(res);
-		}
+		af = AF_INET6;
+		dst = &nd->addr6;
 	} else {
-		nd->addr.sin_family = AF_INET;
-		nd->addr.sin_port = htons(port);
-
-		if (!inet_pton(AF_INET, host, &nd->addr.sin_addr)) {
-			struct addrinfo hints, *res;
-
-			memset(&hints, 0, sizeof(hints));
-			hints.ai_socktype = SOCK_STREAM;
-
-			if (getaddrinfo(host, NULL, &hints, &res)) {
-				td_verror(td, errno, "gethostbyname");
-				return 1;
-			}
-
-			memcpy(&nd->addr.sin_addr, &((struct sockaddr_in *) res->ai_addr)->sin_addr, sizeof(nd->addr.sin_addr));
-			freeaddrinfo(res);
-		}
+		af = AF_INET;
+		dst = &nd->addr;
 	}
 
+	if (fio_fill_addr(td, host, af, dst, &res))
+		return 1;
+
+	if (!res)
+		return 0;
+
+	if (is_ipv6(o)) {
+		len = sizeof(nd->addr6.sin6_addr);
+		src = &((struct sockaddr_in6 *) res->ai_addr)->sin6_addr;
+	} else {
+		len = sizeof(nd->addr.sin_addr);
+		src = &((struct sockaddr_in *) res->ai_addr)->sin_addr;
+	}
+
+	memcpy(dst, src, len);
+	freeaddrinfo(res);
 	return 0;
 }
 

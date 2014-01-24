@@ -343,10 +343,10 @@ enum {
 
 #define __td_verror(td, err, msg, func)					\
 	do {								\
-		int e = (err);						\
+		int __e = (err);						\
 		if ((td)->error)					\
 			break;						\
-		(td)->error = e;					\
+		(td)->error = __e;					\
 		if (!(td)->first_error)					\
 			snprintf(td->verror, sizeof(td->verror), "file:%s:%d, func=%s, error=%s", __FILE__, __LINE__, (func), (msg));		\
 	} while (0)

@@ -43,9 +43,10 @@ open_again:
 
 	if (f->fd == -1) {
 		char buf[FIO_VERROR_SIZE];
-		int __e = errno;
+		int e = errno;
+
 		snprintf(buf, sizeof(buf), "open(%s)", f->file_name);
-		td_verror(td, __e, buf);
+		td_verror(td, e, buf);
 	}
 
 	if (!from_hash && f->fd != -1) {
