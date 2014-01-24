@@ -1039,9 +1039,14 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 	}
 #endif
 
-	if (td->o.filename){
+	if (td->o.filename) {
 		if (!is_udp(o) || !fio_netio_is_multicast(td->o.filename)) {
 			log_err("fio: hostname not valid for non-multicast inbound network IO\n");
+			close(fd);
+			return 1;
+		}
+		if (is_ipv6(o)) {
+			log_err("fio: IPv6 not supported for multicast network IO");
 			close(fd);
 			return 1;
 		}
@@ -1058,6 +1063,7 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 		} else {
 			mr.imr_interface.s_addr = htonl(INADDR_ANY);
 		}
+
 		if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char*)&mr, sizeof(mr)) < 0) {
 			td_verror(td, errno, "setsockopt IP_ADD_MEMBERSHIP");
 			close(fd);
