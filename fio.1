@@ -934,6 +934,13 @@ Unlink job files when done.  Default: false.
 Specifies the number of iterations (runs of the same workload) of this job.
 Default: 1.
 .TP
+.BI verify_only \fR=\fPbool
+Do not perform the specified workload, only verify data still matches previous
+invocation of this workload. This option allows one to check data multiple
+times at a later date without overwriting it. This option makes sense only for
+workloads that write data, and does not support workloads with the
+\fBtime_based\fR option set.
+.TP
 .BI do_verify \fR=\fPbool
 Run the verify phase after a write phase.  Only valid if \fBverify\fR is set.
 Default: true.
