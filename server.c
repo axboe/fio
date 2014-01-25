@@ -1392,13 +1392,13 @@ static int fio_init_server_connection(void)
 	return sk;
 }
 
-int fio_server_parse_host(const char *host, int *ipv6, struct in_addr *inp,
+int fio_server_parse_host(const char *host, int ipv6, struct in_addr *inp,
 			  struct in6_addr *inp6)
 
 {
 	int ret = 0;
 
-	if (*ipv6)
+	if (ipv6)
 		ret = inet_pton(AF_INET6, host, inp6);
 	else
 		ret = inet_pton(AF_INET, host, inp);
@@ -1407,7 +1407,7 @@ int fio_server_parse_host(const char *host, int *ipv6, struct in_addr *inp,
 		struct addrinfo hints, *res;
 
 		memset(&hints, 0, sizeof(hints));
-		hints.ai_family = *ipv6 ? AF_INET6 : AF_INET;
+		hints.ai_family = ipv6 ? AF_INET6 : AF_INET;
 		hints.ai_socktype = SOCK_STREAM;
 
 		ret = getaddrinfo(host, NULL, &hints, &res);
@@ -1417,7 +1417,7 @@ int fio_server_parse_host(const char *host, int *ipv6, struct in_addr *inp,
 			return 1;
 		}
 
-		if (*ipv6)
+		if (ipv6)
 			memcpy(inp6, &((struct sockaddr_in6 *) res->ai_addr)->sin6_addr, sizeof(*inp6));
 		else
 			memcpy(inp, &((struct sockaddr_in *) res->ai_addr)->sin_addr, sizeof(*inp));
@@ -1508,7 +1508,7 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 
 	*ptr = strdup(host);
 
-	if (fio_server_parse_host(*ptr, ipv6, inp, inp6)) {
+	if (fio_server_parse_host(*ptr, *ipv6, inp, inp6)) {
 		free(*ptr);
 		*ptr = NULL;
 		return 1;

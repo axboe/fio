@@ -238,7 +238,7 @@ struct fio_client *fio_client_add_explicit(struct client_ops *ops,
 		int ipv6;
 
 		ipv6 = type == Fio_client_ipv6;
-		if (fio_server_parse_host(hostname, &ipv6,
+		if (fio_server_parse_host(hostname, ipv6,
 						&client->addr.sin_addr,
 						&client->addr6.sin6_addr))
 			goto err;
