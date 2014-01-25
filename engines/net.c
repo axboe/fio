@@ -94,18 +94,22 @@ static struct fio_option options[] = {
 			    .oval = FIO_TYPE_TCP,
 			    .help = "Transmission Control Protocol",
 			  },
+#ifdef CONFIG_IPV6
 			  { .ival = "tcpv6",
 			    .oval = FIO_TYPE_TCP_V6,
 			    .help = "Transmission Control Protocol V6",
 			  },
+#endif
 			  { .ival = "udp",
 			    .oval = FIO_TYPE_UDP,
 			    .help = "User Datagram Protocol",
 			  },
+#ifdef CONFIG_IPV6
 			  { .ival = "udpv6",
 			    .oval = FIO_TYPE_UDP_V6,
 			    .help = "User Datagram Protocol V6",
 			  },
+#endif
 			  { .ival = "unix",
 			    .oval = FIO_TYPE_UNIX,
 			    .help = "UNIX domain socket",
