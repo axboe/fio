@@ -1414,7 +1414,7 @@ int fio_server_parse_host(const char *host, int *ipv6, struct in_addr *inp,
 		if (ret) {
 			log_err("fio: failed to resolve <%s> (%s)\n", host,
 					gai_strerror(ret));
-			return 0;
+			return 1;
 		}
 
 		if (*ipv6)
