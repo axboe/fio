@@ -21,6 +21,9 @@
                     <File Source="..\..\examples\netio.fio" />
                 </Component>
                 <Component>
+                    <File Source="..\..\examples\netio_multicast.fio" />
+                </Component>
+                <Component>
                     <File Source="..\..\examples\ssd-test.fio" />
                 </Component>
                 <Component>
@@ -60,6 +63,7 @@
             <ComponentRef Id="fsx.fio" />
             <ComponentRef Id="iometer_file_access_server.fio" />
             <ComponentRef Id="netio.fio" />
+            <ComponentRef Id="netio_multicast.fio" />
             <ComponentRef Id="ssd_test.fio" />
             <ComponentRef Id="surface_scan.fio" />
             <ComponentRef Id="tiobench_example.fio" />

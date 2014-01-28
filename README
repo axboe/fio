@@ -105,24 +105,20 @@ Configure will attempt to determine the target platform automatically.
 Windows
 -------
 
-On Windows Cygwin (http://www.cygwin.com/) is required in order to
-build fio. To create an MSI installer package install WiX 3.7 from
+On Windows, Cygwin (http://www.cygwin.com/) is required in order to
+build fio. To create an MSI installer package install WiX 3.8 from
 http://wixtoolset.org and run dobuild.cmd from the
 os/windows directory.
 
-How to compile FIO on 64-bit Windows:
+How to compile fio on 64-bit Windows:
 
- 1. Install Cygwin (http://www.cygwin.com/setup.exe). Install 'make' and all
+ 1. Install Cygwin (http://www.cygwin.com/). Install 'make' and all
     packages starting with 'mingw64-i686' and 'mingw64-x86_64'.
- 2. Download ftp://sourceware.org/pub/pthreads-win32/prebuilt-dll-2-9-1-release/dll/x64/pthreadGC2.dll
-    and copy to the fio source directory.
- 3. Open the Cygwin Terminal.
- 4. Go to the fio directory (source files).
- 5. Run 'make clean'.
- 6. Run 'make'.
+ 2. Open the Cygwin Terminal.
+ 3. Go to the fio directory (source files).
+ 4. Run 'make clean && make -j'.
 
-To build fio on 32-bit Windows, download x86/pthreadGC2.dll instead and do
-'./configure --build-32bit-win=yes' before 'make'.
+To build fio on 32-bit Windows, run './configure --build-32bit-win' before 'make'.
 
 It's recommended that once built or installed, fio be run in a Command Prompt
 or other 'native' console such as console2, since there are known to be display

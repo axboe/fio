@@ -27,9 +27,6 @@
 							<File Source="..\..\fio.exe"/>
 						</Component>
 						<Component>
-							<File KeyPath="yes" Source="..\..\libwinpthread-1.dll"/>
-						</Component>
-						<Component>
 							<File Id="README" Name="README.txt" Source="..\..\README"/>
 						</Component>
 						<Component>
@@ -52,7 +49,6 @@
 
 	<Feature Id="AlwaysInstall" Absent="disallow" ConfigurableDirectory="INSTALLDIR" Display="hidden" Level="1" Title="Flexible IO Tester">
 		<ComponentRef Id="fio.exe"/>
-		<ComponentRef Id="pthreadGC2.dll"/>
 		<ComponentRef Id="HOWTO"/>
 		<ComponentRef Id="README"/>
 		<ComponentRef Id="REPORTING_BUGS"/>
