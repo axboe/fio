@@ -56,7 +56,7 @@ struct io_u {
 	/*
 	 * Initial seed for generating the buffer contents
 	 */
-	unsigned long rand_seed;
+	uint64_t rand_seed;
 
 	/*
 	 * IO engine state, may be different from above when we get

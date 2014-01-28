@@ -1656,7 +1656,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "randseed",
 		.lname	= "The random generator seed",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(rand_seed),
 		.help	= "Set the random generator seed value",
 		.parent = "rw",
