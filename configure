@@ -244,6 +244,7 @@ CYGWIN*)
   output_sym "CONFIG_SCHED_IDLE"
   output_sym "CONFIG_TCP_NODELAY"
   output_sym "CONFIG_TLS_THREAD"
+  output_sym "CONFIG_IPV6"
   echo "CC=$CC" >> $config_host_mak
   echo "BUILD_CFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
   exit 0
