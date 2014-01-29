@@ -1432,7 +1432,8 @@ static void usage(const char *name)
 		"\t\t\t(option=system,percpu) or run unit work\n"
 		"\t\t\tcalibration only (option=calibrate)\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
-	printf("\n                   Jens Axboe <jaxboe@fusionio.com>\n");
+	printf("\n                   Jens Axboe <jaxboe@fusionio.com>");
+	printf("\n                   Jens Axboe <axboe@fb.com>\n");
 }
 
 #ifdef FIO_INC_DEBUG
