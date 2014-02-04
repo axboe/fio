@@ -1652,6 +1652,12 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			output_format = FIO_OUTPUT_TERSE;
 			break;
 		case 'F':
+			if (!optarg) {
+				log_err("fio: missing --output-format argument\n");
+				exit_val = 1;
+				do_exit++;
+				break;
+			}
 			if (!strcmp(optarg, "minimal") ||
 			    !strcmp(optarg, "terse") ||
 			    !strcmp(optarg, "csv"))
