@@ -100,7 +100,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 	},
 	{
 		.name		= (char *) "minimal",
-		.has_arg	= optional_argument,
+		.has_arg	= no_argument,
 		.val		= 'm' | FIO_CLIENT_FLAG,
 	},
 	{
