@@ -1623,6 +1623,17 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 					 utime_since_now(&td->start));
 		}
 
+		/*
+		 * Verify_backlog enable: We need to log the write job after
+		 * finishing it to prevent verifying before finish writing.
+		 */
+		if (td_write(td) && idx == DDIR_WRITE &&
+		    td->o.do_verify &&
+		    td->o.verify != VERIFY_NONE &&
+		    !td->o.experimental_verify &&
+		    (td->flags & TD_F_VER_BACKLOG))
+			log_io_piece(td, io_u);
+
 		icd->bytes_done[idx] += bytes;
 
 		if (io_u->end_io) {

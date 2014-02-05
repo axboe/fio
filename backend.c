@@ -718,10 +718,15 @@ static uint64_t do_io(struct thread_data *td)
 		else
 			td_set_runstate(td, TD_RUNNING);
 
+		/*
+		 * Verify_backlog disabled: We need to log rand seed before the
+		 * actual IO to be able to replay it correctly in the verify phase.
+		 */
 		if (td_write(td) && io_u->ddir == DDIR_WRITE &&
 		    td->o.do_verify &&
 		    td->o.verify != VERIFY_NONE &&
-		    !td->o.experimental_verify)
+		    !td->o.experimental_verify &&
+		    !(td->flags & TD_F_VER_BACKLOG))
 			log_io_piece(td, io_u);
 
 		ret = td_io_queue(td, io_u);
