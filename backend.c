@@ -642,7 +642,7 @@ static uint64_t do_io(struct thread_data *td)
 	uint64_t bytes_done[DDIR_RWDIR_CNT] = { 0, 0, 0 };
 	unsigned int i;
 	int ret = 0;
-	uint64_t bytes_issued = 0;
+	uint64_t total_bytes, bytes_issued = 0;
 
 	if (in_ramp_time(td))
 		td_set_runstate(td, TD_RAMP);
@@ -650,6 +650,10 @@ static uint64_t do_io(struct thread_data *td)
 		td_set_runstate(td, TD_RUNNING);
 
 	lat_target_init(td);
+
+	total_bytes = td->o.size;
+	if (td->o.verify != VERIFY_NONE && td_write(td))
+		total_bytes += td->o.size;
 
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
 		(!flist_empty(&td->trim_list)) || !io_bytes_exceeded(td) ||
@@ -678,7 +682,7 @@ static uint64_t do_io(struct thread_data *td)
 		if (flow_threshold_exceeded(td))
 			continue;
 
-		if (bytes_issued >= (uint64_t) td->o.size)
+		if (bytes_issued >= total_bytes)
 			break;
 
 		io_u = get_io_u(td);
