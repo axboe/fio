@@ -209,7 +209,7 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	 * drop the old one, which we rely on the rb insert/lookup for
 	 * handling.
 	 */
-	if ((!td_random(td) || !td->o.overwrite) &&
+	if (((!td->o.verifysort) || !td_random(td) || !td->o.overwrite) &&
 	      (file_randommap(td, ipo->file) || td->o.verify == VERIFY_NONE)) {
 		INIT_FLIST_HEAD(&ipo->list);
 		flist_add_tail(&ipo->list, &td->io_hist_list);

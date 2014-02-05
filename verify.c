@@ -72,10 +72,10 @@ void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 		if (use_seed)
 			__fill_random_buf(p, len, seed);
 		else
-			io_u->rand_seed = fill_random_buf(&td->buf_state, p, len);
+			io_u->rand_seed = fill_random_buf(&td->__verify_state, p, len);
 		return;
 	}
-	
+
 	if (io_u->buf_filled_len >= len) {
 		dprint(FD_VERIFY, "using already filled verify pattern b=%d len=%u\n",
 			td->o.verify_pattern_bytes, len);
@@ -718,6 +718,13 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 			memswp(p, p + td->o.verify_offset, header_size);
 		hdr = p;
 
+		/*
+		 * Make rand_seed check pass when have verifysort or
+		 * verify_backlog.
+		 */
+		if (td->o.verifysort || (td->flags & TD_F_VER_BACKLOG))
+			io_u->rand_seed = hdr->rand_seed;
+
 		ret = verify_header(io_u, hdr);
 		switch (ret) {
 		case 0:
@@ -1056,6 +1063,12 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		remove_trim_entry(td, ipo);
 		free(ipo);
 		dprint(FD_VERIFY, "get_next_verify: ret io_u %p\n", io_u);
+
+		if (!td->o.verify_pattern_bytes) {
+			io_u->rand_seed = __rand(&td->__verify_state);
+			if (sizeof(int) != sizeof(long *))
+				io_u->rand_seed *= __rand(&td->__verify_state);
+		}
 		return 0;
 	}
 
