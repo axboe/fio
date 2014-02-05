@@ -651,8 +651,14 @@ static uint64_t do_io(struct thread_data *td)
 
 	lat_target_init(td);
 
+	/*
+	 * If verify_backlog is enabled, we'll run the verify in this
+	 * handler as well. For that case, we may need up to twice the
+	 * amount of bytes.
+	 */
 	total_bytes = td->o.size;
-	if (td->o.verify != VERIFY_NONE && td_write(td))
+	if (td->o.verify != VERIFY_NONE &&
+	   (td_write(td) && td->o.verify_backlog))
 		total_bytes += td->o.size;
 
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
