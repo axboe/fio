@@ -1022,11 +1022,27 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		struct rb_node *n = rb_first(&td->io_hist_tree);
 
 		ipo = rb_entry(n, struct io_piece, rb_node);
+
+		/*
+		 * Ensure that the associated IO has completed
+		 */
+		read_barrier();
+		if (ipo->flags & IP_F_IN_FLIGHT)
+			goto nothing;
+
 		rb_erase(n, &td->io_hist_tree);
 		assert(ipo->flags & IP_F_ONRB);
 		ipo->flags &= ~IP_F_ONRB;
 	} else if (!flist_empty(&td->io_hist_list)) {
 		ipo = flist_entry(td->io_hist_list.next, struct io_piece, list);
+
+		/*
+		 * Ensure that the associated IO has completed
+		 */
+		read_barrier();
+		if (ipo->flags & IP_F_IN_FLIGHT)
+			goto nothing;
+
 		flist_del(&ipo->list);
 		assert(ipo->flags & IP_F_ONLIST);
 		ipo->flags &= ~IP_F_ONLIST;
@@ -1072,6 +1088,7 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		return 0;
 	}
 
+nothing:
 	dprint(FD_VERIFY, "get_next_verify: empty\n");
 	return 1;
 }

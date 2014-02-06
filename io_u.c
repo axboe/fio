@@ -1285,6 +1285,7 @@ again:
 		io_u->acct_ddir = -1;
 		td->cur_depth++;
 		io_u->flags |= IO_U_F_IN_CUR_DEPTH;
+		io_u->ipo = NULL;
 	} else if (td->o.verify_async) {
 		/*
 		 * We ran out, wait for async verify threads to finish and
@@ -1568,6 +1569,15 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	td_io_u_lock(td);
 	assert(io_u->flags & IO_U_F_FLIGHT);
 	io_u->flags &= ~(IO_U_F_FLIGHT | IO_U_F_BUSY_OK);
+
+	/*
+	 * Mark IO ok to verify
+	 */
+	if (io_u->ipo) {
+		io_u->ipo->flags &= ~IP_F_IN_FLIGHT;
+		write_barrier();
+	}
+
 	td_io_u_unlock(td);
 
 	if (ddir_sync(io_u->ddir)) {
@@ -1622,17 +1632,6 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 					(usec_for_io(td, odx) -
 					 utime_since_now(&td->start));
 		}
-
-		/*
-		 * Verify_backlog enable: We need to log the write job after
-		 * finishing it to prevent verifying before finish writing.
-		 */
-		if (td_write(td) && idx == DDIR_WRITE &&
-		    td->o.do_verify &&
-		    td->o.verify != VERIFY_NONE &&
-		    !td->o.experimental_verify &&
-		    (td->flags & TD_F_VER_BACKLOG))
-			log_io_piece(td, io_u);
 
 		icd->bytes_done[idx] += bytes;
 

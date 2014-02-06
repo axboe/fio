@@ -15,7 +15,7 @@
 #include <guasi.h>
 #endif
 
-#define FIO_IOOPS_VERSION	16
+#define FIO_IOOPS_VERSION	17
 
 enum {
 	IO_U_F_FREE		= 1 << 0,
@@ -70,6 +70,8 @@ struct io_u {
 	 * their size to handle variable block sizes.
 	 */
 	unsigned long buf_filled_len;
+
+	struct io_piece *ipo;
 
 	union {
 #ifdef CONFIG_LIBAIO
