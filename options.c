@@ -1227,6 +1227,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(file_lock_mode),
 		.help	= "Lock file when doing IO to it",
+		.prio	= 1,
 		.parent	= "filename",
 		.hide	= 0,
 		.def	= "none",
