@@ -208,6 +208,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'T',
 	},
 	{
+		.name		= (char *) "crctest",
+		.has_arg	= optional_argument,
+		.val		= 'G',
+	},
+	{
 		.name		= (char *) "idle-prof",
 		.has_arg	= required_argument,
 		.val		= 'I',
@@ -1405,6 +1410,7 @@ static void usage(const char *name)
 	printf("  --version\t\tPrint version info and exit\n");
 	printf("  --help\t\tPrint this page\n");
 	printf("  --cpuclock-test\tPerform test/validation of CPU clock\n");
+	printf("  --crctest\t\tTest speed of checksum functions\n");
 	printf("  --cmdhelp=cmd\t\tPrint command help, \"all\" for all of"
 		" them\n");
 	printf("  --enghelp=engine\tPrint ioengine help, or list"
@@ -1603,6 +1609,8 @@ void parse_cmd_client(void *client, char *opt)
 {
 	fio_client_add_cmd_option(client, opt);
 }
+
+extern int fio_crctest(const char *);
 
 int parse_cmd_line(int argc, char *argv[], int client_type)
 {
@@ -1867,6 +1875,10 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		case 'T':
 			do_exit++;
 			exit_val = fio_monotonic_clocktest();
+			break;
+		case 'G':
+			do_exit++;
+			exit_val = fio_crctest(optarg);
 			break;
 		case 'L': {
 			long long val;

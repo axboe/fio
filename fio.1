@@ -41,6 +41,14 @@ Set terse version output format (Current version 3, or older version 2).
 .B \-\-help
 Display usage information and exit.
 .TP
+.B \-\-cpuclock-test
+Perform test and validation of internal CPU clock
+.TP
+.BI \-\-crctest[\fR=\fPtest]
+Test the speed of the builtin checksumming functions. If no argument is given,
+all of them are tested. Or a comma separated list can be passed, in which
+case the given ones are tested.
+.TP
 .BI \-\-cmdhelp \fR=\fPcommand
 Print help information for \fIcommand\fR.  May be `all' for all commands.
 .TP
