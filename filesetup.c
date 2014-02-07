@@ -1343,6 +1343,11 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 			__f->filetype = f->filetype;
 		}
 
+		if (td->o.file_lock_mode == FILE_LOCK_EXCLUSIVE)
+			__f->lock = f->lock;
+		else if (td->o.file_lock_mode == FILE_LOCK_READWRITE)
+			__f->rwlock = f->rwlock;
+
 		td->files[i] = __f;
 	}
 }
