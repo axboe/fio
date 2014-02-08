@@ -142,6 +142,7 @@ $ fio
 	--version		Print version info and exit
 	--help			Print this page
 	--cpuclock-test		Perform test/validation of CPU clock
+	--crctest[=test]	Test speed of checksum functions
 	--cmdhelp=cmd		Print command help, "all" for all of them
 	--enghelp=engine	Print ioengine help, or list available ioengines
 	--enghelp=engine,cmd	Print help for an ioengine cmd
