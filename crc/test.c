@@ -17,8 +17,8 @@
 #include "../crc/sha256.h"
 #include "../crc/sha512.h"
 
-#define CHUNK		131072
-#define NR_CHUNKS	  2048
+#define CHUNK		131072U
+#define NR_CHUNKS	  2048U
 
 struct test_type {
 	const char *name;
@@ -295,7 +295,7 @@ static unsigned int get_test_mask(const char *type)
 	mask = 0;
 	while ((name = strsep(&str, ",")) != NULL) {
 		for (i = 0; t[i].name; i++) {
-			if (!strncmp(t[i].name, name, strlen(t[i].name))) {
+			if (!strcmp(t[i].name, name)) {
 				mask |= t[i].mask;
 				break;
 			}
