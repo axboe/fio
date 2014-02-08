@@ -306,6 +306,16 @@ static unsigned int get_test_mask(const char *type)
 	return mask;
 }
 
+static int list_types(void)
+{
+	int i;
+
+	for (i = 0; t[i].name; i++)
+		printf("%s\n", t[i].name);
+
+	return 0;
+}
+
 int fio_crctest(const char *type)
 {
 	unsigned int test_mask = 0;
@@ -316,6 +326,8 @@ int fio_crctest(const char *type)
 
 	if (!type)
 		test_mask = ~0U;
+	else if (!strcmp(type, "help") || !strcmp(type, "list"))
+		return list_types();
 	else
 		test_mask = get_test_mask(type);
 
@@ -331,5 +343,6 @@ int fio_crctest(const char *type)
 		mb_sec /= (1.024 * 1.024);
 		printf("%s:\t%.2f MB/sec\n", t[i].name, mb_sec);
 	}
+
 	return 0;
 }
