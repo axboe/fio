@@ -1236,13 +1236,6 @@ static void *thread_main(void *data)
 	dprint(FD_MUTEX, "done waiting on td->mutex\n");
 
 	/*
-	 * the ->mutex mutex is now no longer used, close it to avoid
-	 * eating a file descriptor
-	 */
-	fio_mutex_remove(td->mutex);
-	td->mutex = NULL;
-
-	/*
 	 * A new gid requires privilege, so we need to do this before setting
 	 * the uid.
 	 */
@@ -1520,6 +1513,9 @@ err:
 
 	fio_mutex_remove(td->rusage_sem);
 	td->rusage_sem = NULL;
+
+	fio_mutex_remove(td->mutex);
+	td->mutex = NULL;
 
 	td_set_runstate(td, TD_EXITED);
 	return (void *) (uintptr_t) td->error;
