@@ -74,12 +74,25 @@ static unsigned int org_idx;
 
 static int act_add_opt(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
 
+struct act_options {
+	unsigned int pad;
+	char *device_names;
+	unsigned int load;
+	unsigned int prep;
+	unsigned int threads_per_queue;
+	unsigned int num_read_blocks;
+	unsigned int write_size;
+	unsigned long long test_duration;
+};
+
+static struct act_options act_options;
+
 static struct fio_option options[] = {
 	{
 		.name	= "device-names",
 		.lname	= "device-names",
 		.type	= FIO_OPT_STR_STORE,
-		.roff1	= &device_names,
+		.off1	= offsetof(struct act_options, device_names),
 		.help	= "Devices to use",
 		.category = FIO_OPT_C_PROFILE,
 		.group	= FIO_OPT_G_ACT,
@@ -88,7 +101,7 @@ static struct fio_option options[] = {
 		.name	= "load",
 		.lname	= "Load multiplier",
 		.type	= FIO_OPT_INT,
-		.roff1	= &load,
+		.off1	= offsetof(struct act_options, load),
 		.help	= "ACT load multipler (default 1x)",
 		.def	= "1",
 		.category = FIO_OPT_C_PROFILE,
@@ -98,7 +111,7 @@ static struct fio_option options[] = {
 		.name	= "test-duration",
 		.lname	= "Test duration",
 		.type	= FIO_OPT_STR_VAL_TIME,
-		.roff1	= &test_duration,
+		.off1	= offsetof(struct act_options, test_duration),
 		.help	= "How long the entire test takes to run",
 		.def	= "24h",
 		.category = FIO_OPT_C_PROFILE,
@@ -108,7 +121,7 @@ static struct fio_option options[] = {
 		.name	= "threads-per-queue",
 		.lname	= "Number of read IO threads per device",
 		.type	= FIO_OPT_INT,
-		.roff1	= &threads_per_queue,
+		.off1	= offsetof(struct act_options, threads_per_queue),
 		.help	= "Number of read IO threads per device",
 		.def	= "8",
 		.category = FIO_OPT_C_PROFILE,
@@ -118,7 +131,7 @@ static struct fio_option options[] = {
 		.name	= "read-req-num-512-blocks",
 		.lname	= "Number of 512b blocks to read",
 		.type	= FIO_OPT_INT,
-		.roff1	= &num_read_blocks,
+		.off1	= offsetof(struct act_options, num_read_blocks),
 		.help	= "Number of 512b blocks to read at the time",
 		.def	= "3",
 		.category = FIO_OPT_C_PROFILE,
@@ -128,7 +141,7 @@ static struct fio_option options[] = {
 		.name	= "large-block-op-kbytes",
 		.lname	= "Size of large block ops (writes)",
 		.type	= FIO_OPT_INT,
-		.roff1	= &write_size,
+		.off1	= offsetof(struct act_options, write_size),
 		.help	= "Size of large block ops (writes)",
 		.def	= "128k",
 		.category = FIO_OPT_C_PROFILE,
@@ -138,7 +151,7 @@ static struct fio_option options[] = {
 		.name	= "prep",
 		.lname	= "Run ACT prep phase",
 		.type	= FIO_OPT_STR_SET,
-		.roff1	= &prep,
+		.off1	= offsetof(struct act_options, prep),
 		.help	= "Set to run ACT prep phase",
 		.category = FIO_OPT_C_PROFILE,
 		.group	= FIO_OPT_G_ACT,
@@ -445,6 +458,7 @@ static struct profile_ops act_profile = {
 	.name		= "act",
 	.desc		= "ACT Aerospike like benchmark",
 	.options	= options,
+	.opt_data	= &act_options,
 	.prep_cmd	= act_prep_cmdline,
 	.cmdline	= act_opts,
 	.io_ops		= &act_io_ops,

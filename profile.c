@@ -52,6 +52,7 @@ static int add_profile_options(struct profile_ops *ops)
 	o = ops->options;
 	while (o->name) {
 		o->prof_name = ops->name;
+		o->prof_opts = ops->opt_data;
 		if (add_option(o))
 			return 1;
 		o++;

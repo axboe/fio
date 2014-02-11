@@ -3786,7 +3786,13 @@ int add_option(struct fio_option *o)
 		__o++;
 	}
 
+	if (opt_index + 1 == FIO_MAX_OPTS) {
+		log_err("fio: FIO_MAX_OPTS is too small\n");
+		return 1;
+	}
+
 	memcpy(&fio_options[opt_index], o, sizeof(*o));
+	fio_options[opt_index + 1].name = NULL;
 	return 0;
 }
 

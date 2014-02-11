@@ -49,7 +49,6 @@ struct fio_option {
 	unsigned int off4;
 	unsigned int off5;
 	unsigned int off6;
-	void *roff1, *roff2, *roff3, *roff4, *roff5, *roff6;
 	unsigned int maxval;		/* max and min value */
 	int minval;
 	double maxfp;			/* max and min floating value */
@@ -69,6 +68,7 @@ struct fio_option {
 	struct fio_option *inv_opt;	/* cached lookup */
 	int (*verify)(struct fio_option *, void *);
 	const char *prof_name;		/* only valid for specific profile */
+	void *prof_opts;
 	unsigned int category;		/* what type of option */
 	unsigned int group;		/* who to group with */
 	void *gui_data;

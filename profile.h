@@ -27,6 +27,7 @@ struct profile_ops {
 	 * Profile specific options
 	 */
 	struct fio_option *options;
+	void *opt_data;
 
 	/*
 	 * Called after parsing options, to prepare 'cmdline'

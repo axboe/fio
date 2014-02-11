@@ -368,13 +368,16 @@ static int str_match_len(const struct value_pair *vp, const char *str)
 	return max(strlen(vp->ival), opt_len(str));
 }
 
-#define val_store(ptr, val, off, or, data)		\
-	do {						\
-		ptr = td_var((data), (off));		\
-		if ((or))				\
-			*ptr |= (val);			\
-		else					\
-			*ptr = (val);			\
+#define val_store(ptr, val, off, or, data, o)			\
+	do {							\
+		if ((o)->prof_opts)				\
+			ptr = td_var((o)->prof_opts, (off));	\
+		else						\
+			ptr = td_var((data), (off));		\
+		if ((or))					\
+			*ptr |= (val);				\
+		else						\
+			*ptr = (val);				\
 	} while (0)
 
 static int __handle_option(struct fio_option *o, const char *ptr, void *data,
@@ -414,16 +417,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			all_skipped = 0;
 			if (!strncmp(vp->ival, ptr, str_match_len(vp, ptr))) {
 				ret = 0;
-				if (o->roff1) {
-					if (vp->or)
-						*(unsigned int *) o->roff1 |= vp->oval;
-					else
-						*(unsigned int *) o->roff1 = vp->oval;
-				} else {
-					if (!o->off1)
-						continue;
-					val_store(ilp, vp->oval, o->off1, vp->or, data);
-				}
+				if (o->off1)
+					val_store(ilp, vp->oval, o->off1, vp->or, data, o);
 				continue;
 			}
 		}
@@ -490,50 +485,32 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			ret = fn(data, &ull);
 		else {
 			if (o->type == FIO_OPT_INT) {
-				if (first) {
-					if (o->roff1)
-						*(unsigned int *) o->roff1 = ull;
-					else
-						val_store(ilp, ull, o->off1, 0, data);
-				}
+				if (first)
+					val_store(ilp, ull, o->off1, 0, data, o);
 				if (curr == 1) {
-					if (o->roff2)
-						*(unsigned int *) o->roff2 = ull;
-					else if (o->off2)
-						val_store(ilp, ull, o->off2, 0, data);
+					if (o->off2)
+						val_store(ilp, ull, o->off2, 0, data, o);
 				}
 				if (curr == 2) {
-					if (o->roff3)
-						*(unsigned int *) o->roff3 = ull;
-					else if (o->off3)
-						val_store(ilp, ull, o->off3, 0, data);
+					if (o->off3)
+						val_store(ilp, ull, o->off3, 0, data, o);
 				}
 				if (!more) {
 					if (curr < 1) {
-						if (o->roff2)
-							*(unsigned int *) o->roff2 = ull;
-						else if (o->off2)
-							val_store(ilp, ull, o->off2, 0, data);
+						if (o->off2)
+							val_store(ilp, ull, o->off2, 0, data, o);
 					}
 					if (curr < 2) {
-						if (o->roff3)
-							*(unsigned int *) o->roff3 = ull;
-						else if (o->off3)
-							val_store(ilp, ull, o->off3, 0, data);
+						if (o->off3)
+							val_store(ilp, ull, o->off3, 0, data, o);
 					}
 				}
 			} else {
-				if (first) {
-					if (o->roff1)
-						*(unsigned long long *) o->roff1 = ull;
-					else
-						val_store(ullp, ull, o->off1, 0, data);
-				}
+				if (first)
+					val_store(ullp, ull, o->off1, 0, data, o);
 				if (!more) {
-					if (o->roff2)
-						*(unsigned long long *) o->roff2 =  ull;
-					else if (o->off2)
-						val_store(ullp, ull, o->off2, 0, data);
+					if (o->off2)
+						val_store(ullp, ull, o->off2, 0, data, o);
 				}
 			}
 		}
@@ -549,11 +526,17 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			*/
 			if (o->off2) {
 				ul2 = 0;
-				ilp = td_var(data, o->off2);
+				if (o->prof_opts)
+					ilp = td_var(o->prof_opts, o->off2);
+				else
+					ilp = td_var(data, o->off2);
 				*ilp = ul2;
 			}
 
-			flp = td_var(data, o->off1);
+			if (o->prof_opts)
+				flp = td_var(o->prof_opts, o->off1);
+			else
+				flp = td_var(data, o->off1);
 			for(i = 0; i < o->maxlen; i++)
 				flp[i].u.f = 0.0;
 		}
@@ -577,7 +560,10 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			return 1;
 		}
 
-		flp = td_var(data, o->off1);
+		if (o->prof_opts)
+			flp = td_var(o->prof_opts, o->off1);
+		else
+			flp = td_var(data, o->off1);
 		flp[curr].u.f = uf;
 
 		dprint(FD_PARSE, "  out=%f\n", uf);
@@ -595,7 +581,10 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 				len++;
 
 			if (o->off2) {
-				ilp = td_var(data, o->off2);
+				if (o->prof_opts)
+					ilp = td_var(o->prof_opts, o->off2);
+				else
+					ilp = td_var(data, o->off2);
 				if (len > *ilp)
 					*ilp = len;
 			}
@@ -606,10 +595,10 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	case FIO_OPT_STR_STORE: {
 		fio_opt_str_fn *fn = o->cb;
 
-		if (o->roff1 || o->off1) {
-			if (o->roff1)
-				cp = (char **) o->roff1;
-			else if (o->off1)
+		if (o->off1) {
+			if (o->prof_opts)
+				cp = td_var(o->prof_opts, o->off1);
+			else
 				cp = td_var(data, o->off1);
 
 			*cp = strdup(ptr);
@@ -691,50 +680,32 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			}
 
 			if (first) {
-				if (o->roff1)
-					*(unsigned int *) o->roff1 = ul1;
-				else
-					val_store(ilp, ul1, o->off1, 0, data);
-				if (o->roff2)
-					*(unsigned int *) o->roff2 = ul2;
-				else
-					val_store(ilp, ul2, o->off2, 0, data);
+				val_store(ilp, ul1, o->off1, 0, data, o);
+				val_store(ilp, ul2, o->off2, 0, data, o);
 			}
 			if (curr == 1) {
-				if (o->roff3 && o->roff4) {
-					*(unsigned int *) o->roff3 = ul1;
-					*(unsigned int *) o->roff4 = ul2;
-				} else if (o->off3 && o->off4) {
-					val_store(ilp, ul1, o->off3, 0, data);
-					val_store(ilp, ul2, o->off4, 0, data);
+				if (o->off3 && o->off4) {
+					val_store(ilp, ul1, o->off3, 0, data, o);
+					val_store(ilp, ul2, o->off4, 0, data, o);
 				}
 			}
 			if (curr == 2) {
-				if (o->roff5 && o->roff6) {
-					*(unsigned int *) o->roff5 = ul1;
-					*(unsigned int *) o->roff6 = ul2;
-				} else if (o->off5 && o->off6) {
-					val_store(ilp, ul1, o->off5, 0, data);
-					val_store(ilp, ul2, o->off6, 0, data);
+				if (o->off5 && o->off6) {
+					val_store(ilp, ul1, o->off5, 0, data, o);
+					val_store(ilp, ul2, o->off6, 0, data, o);
 				}
 			}
 			if (!more) {
 				if (curr < 1) {
-					if (o->roff3 && o->roff4) {
-						*(unsigned int *) o->roff3 = ul1;
-						*(unsigned int *) o->roff4 = ul2;
-					} else if (o->off3 && o->off4) {
-						val_store(ilp, ul1, o->off3, 0, data);
-						val_store(ilp, ul2, o->off4, 0, data);
+					if (o->off3 && o->off4) {
+						val_store(ilp, ul1, o->off3, 0, data, o);
+						val_store(ilp, ul2, o->off4, 0, data, o);
 					}
 				}
 				if (curr < 2) {
-					if (o->roff5 && o->roff6) {
-						*(unsigned int *) o->roff5 = ul1;
-						*(unsigned int *) o->roff6 = ul2;
-					} else if (o->off5 && o->off6) {
-						val_store(ilp, ul1, o->off5, 0, data);
-						val_store(ilp, ul2, o->off6, 0, data);
+					if (o->off5 && o->off6) {
+						val_store(ilp, ul1, o->off5, 0, data, o);
+						val_store(ilp, ul2, o->off6, 0, data, o);
 					}
 				}
 			}
@@ -775,17 +746,11 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (fn)
 			ret = fn(data, &il);
 		else {
-			if (first) {
-				if (o->roff1)
-					*(unsigned int *)o->roff1 = il;
-				else
-					val_store(ilp, il, o->off1, 0, data);
-			}
+			if (first)
+				val_store(ilp, il, o->off1, 0, data, o);
 			if (!more) {
-				if (o->roff2)
-					*(unsigned int *) o->roff2 = il;
-				else if (o->off2)
-					val_store(ilp, il, o->off2, 0, data);
+				if (o->off2)
+					val_store(ilp, il, o->off2, 0, data, o);
 			}
 		}
 		break;
@@ -1194,7 +1159,7 @@ void option_init(struct fio_option *o)
 		log_err("Option %s: string set option with"
 				" default will always be true\n", o->name);
 	}
-	if (!o->cb && (!o->off1 && !o->roff1))
+	if (!o->cb && !o->off1)
 		log_err("Option %s: neither cb nor offset given\n", o->name);
 	if (!o->category) {
 		log_info("Option %s: no category defined. Setting to misc\n", o->name);
@@ -1204,10 +1169,8 @@ void option_init(struct fio_option *o)
 	if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE ||
 	    o->type == FIO_OPT_STR_MULTI)
 		return;
-	if (o->cb && ((o->off1 || o->off2 || o->off3 || o->off4) ||
-		      (o->roff1 || o->roff2 || o->roff3 || o->roff4))) {
+	if (o->cb && (o->off1 || o->off2 || o->off3 || o->off4))
 		log_err("Option %s: both cb and offset given\n", o->name);
-	}
 }
 
 /*
@@ -1238,7 +1201,10 @@ void options_free(struct fio_option *options, void *data)
 		if (o->type != FIO_OPT_STR_STORE || !o->off1)
 			continue;
 
-		ptr = td_var(data, o->off1);
+		if (o->prof_opts)
+			ptr = td_var(o->prof_opts, o->off1);
+		else
+			ptr = td_var(data, o->off1);
 		if (*ptr) {
 			free(*ptr);
 			*ptr = NULL;
