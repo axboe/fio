@@ -18,6 +18,29 @@ static void string_to_net(uint8_t *dst, const char *src)
 		dst[0] = '\0';
 }
 
+void free_thread_options_to_cpu(struct thread_options *o)
+{
+	free(o->description);
+	free(o->name);
+	free(o->directory);
+	free(o->filename);
+	free(o->filename_format);
+	free(o->opendir);
+	free(o->ioengine);
+	free(o->mmapfile);
+	free(o->read_iolog_file);
+	free(o->write_iolog_file);
+	free(o->bw_log_file);
+	free(o->lat_log_file);
+	free(o->iops_log_file);
+	free(o->replay_redirect);
+	free(o->exec_prerun);
+	free(o->exec_postrun);
+	free(o->ioscheduler);
+	free(o->profile);
+	free(o->cgroup);
+}
+
 void convert_thread_options_to_cpu(struct thread_options *o,
 				   struct thread_options_pack *top)
 {
@@ -437,6 +460,8 @@ int fio_test_cconv(struct thread_options *__o)
 	memset(&o, 0, sizeof(o));
 	convert_thread_options_to_cpu(&o, &top1);
 	convert_thread_options_to_net(&top2, &o);
+
+	free_thread_options_to_cpu(&o);
 
 	return memcmp(&top1, &top2, sizeof(top1));
 }

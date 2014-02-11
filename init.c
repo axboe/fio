@@ -250,6 +250,7 @@ void free_shm(void)
 		free_threads_shm();
 	}
 
+	options_free(fio_options, &def_thread);
 	scleanup();
 }
 
