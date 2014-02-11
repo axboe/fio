@@ -3740,7 +3740,7 @@ void options_mem_dupe(void *data, struct fio_option *options)
 		if (o->type != FIO_OPT_STR_STORE)
 			continue;
 
-		ptr = td_var(data, o->off1);
+		ptr = td_var(data, o, o->off1);
 		if (*ptr)
 			*ptr = strdup(*ptr);
 	}
