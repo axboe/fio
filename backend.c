@@ -52,6 +52,7 @@
 #include "server.h"
 #include "lib/getrusage.h"
 #include "idletime.h"
+#include "err.h"
 
 static pthread_t disk_util_thread;
 static struct fio_mutex *disk_thread_mutex;
@@ -478,6 +479,12 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 				break;
 
 			while ((io_u = get_io_u(td)) != NULL) {
+				if (IS_ERR(io_u)) {
+					io_u = NULL;
+					ret = FIO_Q_BUSY;
+					goto reap;
+				}
+
 				/*
 				 * We are only interested in the places where
 				 * we wrote or trimmed IOs. Turn those into
@@ -574,6 +581,7 @@ sync_done:
 		 * completed io_u's first. Note that we can get BUSY even
 		 * without IO queued, if the system is resource starved.
 		 */
+reap:
 		full = queue_full(td) || (ret == FIO_Q_BUSY && td->cur_depth);
 		if (full || !td->o.iodepth_batch_complete) {
 			min_events = min(td->o.iodepth_batch_complete,
@@ -692,7 +700,14 @@ static uint64_t do_io(struct thread_data *td)
 			break;
 
 		io_u = get_io_u(td);
-		if (!io_u) {
+		if (IS_ERR_OR_NULL(io_u)) {
+			int err = PTR_ERR(io_u);
+
+			io_u = NULL;
+			if (err == -EBUSY) {
+				ret = FIO_Q_BUSY;
+				goto reap;
+			}
 			if (td->o.latency_target)
 				goto reap;
 			break;
@@ -1122,6 +1137,9 @@ static int keep_running(struct thread_data *td)
 		 */
 		diff = td->o.size - ddir_rw_sum(td->io_bytes);
 		if (diff < td_max_bs(td))
+			return 0;
+
+		if (fio_files_done(td))
 			return 0;
 
 		return 1;

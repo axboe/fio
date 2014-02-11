@@ -734,9 +734,11 @@ int setup_files(struct thread_data *td)
 	unsigned long long total_size, extend_size;
 	struct thread_options *o = &td->o;
 	struct fio_file *f;
-	unsigned int i;
+	unsigned int i, nr_fs_extra = 0;
 	int err = 0, need_extend;
 	int old_state;
+	const unsigned int bs = td_min_bs(td);
+	uint64_t fs = 0;
 
 	dprint(FD_FILE, "setup files\n");
 
@@ -786,6 +788,20 @@ int setup_files(struct thread_data *td)
 	}
 
 	/*
+	 * Calculate per-file size and potential extra size for the
+	 * first files, if needed.
+	 */
+	if (!o->file_size_low) {
+		uint64_t all_fs;
+
+		fs = o->size / o->nr_files;
+		all_fs = fs * o->nr_files;
+
+		if (all_fs < o->size)
+			nr_fs_extra = (o->size - all_fs) / bs;
+	}
+
+	/*
 	 * now file sizes are known, so we can set ->io_size. if size= is
 	 * not given, ->io_size is just equal to ->real_file_size. if size
 	 * is given, ->io_size is size / nr_files.
@@ -798,10 +814,17 @@ int setup_files(struct thread_data *td)
 		if (!o->file_size_low) {
 			/*
 			 * no file size range given, file size is equal to
-			 * total size divided by number of files. if that is
-			 * zero, set it to the real file size.
+			 * total size divided by number of files. If that is
+			 * zero, set it to the real file size. If the size
+			 * doesn't divide nicely with the min blocksize,
+			 * make the first files bigger.
 			 */
-			f->io_size = o->size / o->nr_files;
+			f->io_size = fs;
+			if (nr_fs_extra) {
+				nr_fs_extra--;
+				f->io_size += bs;
+			}
+
 			if (!f->io_size)
 				f->io_size = f->real_file_size - f->file_offset;
 		} else if (f->real_file_size < o->file_size_low ||
@@ -1385,4 +1408,16 @@ void fio_file_reset(struct thread_data *td, struct fio_file *f)
 		axmap_reset(f->io_axmap);
 	if (td->o.random_generator == FIO_RAND_GEN_LFSR)
 		lfsr_reset(&f->lfsr, td->rand_seeds[FIO_RAND_BLOCK_OFF]);
+}
+
+int fio_files_done(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	for_each_file(td, f, i)
+		if (!fio_file_done(f))
+			return 0;
+
+	return 1;
 }

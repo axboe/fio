@@ -11,6 +11,7 @@
 #include "trim.h"
 #include "lib/rand.h"
 #include "lib/axmap.h"
+#include "err.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -985,6 +986,9 @@ static struct fio_file *get_next_file_rand(struct thread_data *td,
 		if (!fio_file_open(f)) {
 			int err;
 
+			if (td->nr_open_files >= td->o.open_files)
+				return ERR_PTR(-EBUSY);
+
 			err = td_io_open_file(td, f);
 			if (err)
 				continue;
@@ -1026,6 +1030,9 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 
 		if (!fio_file_open(f)) {
 			int err;
+
+			if (td->nr_open_files >= td->o.open_files)
+				return ERR_PTR(-EBUSY);
 
 			err = td_io_open_file(td, f);
 			if (err) {
@@ -1080,6 +1087,9 @@ static struct fio_file *__get_next_file(struct thread_data *td)
 	else
 		f = get_next_file_rand(td, FIO_FILE_open, FIO_FILE_closing);
 
+	if (IS_ERR(f))
+		return f;
+
 	td->file_service_file = f;
 	td->file_service_left = td->file_service_nr - 1;
 out:
@@ -1099,14 +1109,14 @@ static struct fio_file *get_next_file(struct thread_data *td)
 	return __get_next_file(td);
 }
 
-static int set_io_u_file(struct thread_data *td, struct io_u *io_u)
+static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f;
 
 	do {
 		f = get_next_file(td);
-		if (!f)
-			return 1;
+		if (IS_ERR_OR_NULL(f))
+			return PTR_ERR(f);
 
 		io_u->file = f;
 		get_file(f);
@@ -1400,6 +1410,7 @@ struct io_u *get_io_u(struct thread_data *td)
 	struct fio_file *f;
 	struct io_u *io_u;
 	int do_scramble = 0;
+	long ret = 0;
 
 	io_u = __get_io_u(td);
 	if (!io_u) {
@@ -1425,11 +1436,17 @@ struct io_u *get_io_u(struct thread_data *td)
 		if (read_iolog_get(td, io_u))
 			goto err_put;
 	} else if (set_io_u_file(td, io_u)) {
+		ret = -EBUSY;
 		dprint(FD_IO, "io_u %p, setting file failed\n", io_u);
 		goto err_put;
 	}
 
 	f = io_u->file;
+	if (!f) {
+		dprint(FD_IO, "io_u %p, setting file failed\n", io_u);
+		goto err_put;
+	}
+
 	assert(fio_file_open(f));
 
 	if (ddir_rw(io_u->ddir)) {
@@ -1478,7 +1495,7 @@ out:
 err_put:
 	dprint(FD_IO, "get_io_u failed\n");
 	put_io_u(td, io_u);
-	return NULL;
+	return ERR_PTR(ret);
 }
 
 void io_u_log_error(struct thread_data *td, struct io_u *io_u)

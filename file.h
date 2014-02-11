@@ -176,5 +176,6 @@ extern void dup_files(struct thread_data *, struct thread_data *);
 extern int get_fileno(struct thread_data *, const char *);
 extern void free_release_files(struct thread_data *);
 void fio_file_reset(struct thread_data *, struct fio_file *);
+int fio_files_done(struct thread_data *);
 
 #endif
