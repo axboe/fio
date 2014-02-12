@@ -28,7 +28,7 @@ struct value_pair {
 	const char *ival;		/* string option */
 	unsigned int oval;		/* output value */
 	const char *help;		/* help text for sub option */
-	int or;				/* OR value */
+	int orval;			/* OR value */
 	void *cb;			/* sub-option callback */
 };
 

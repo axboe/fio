@@ -1216,7 +1216,7 @@ static void gopt_handle_str_multi_changed(struct gopt_job_view *gjv,
 			break;
 		set = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(m->checks[i]));
 		if (set) {
-			if (vp->or)
+			if (vp->orval)
 				val |= vp->oval;
 			else
 				val = vp->oval;

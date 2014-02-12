@@ -415,7 +415,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			if (!strncmp(vp->ival, ptr, str_match_len(vp, ptr))) {
 				ret = 0;
 				if (o->off1)
-					val_store(ilp, vp->oval, o->off1, vp->or, data, o);
+					val_store(ilp, vp->oval, o->off1, vp->orval, data, o);
 				continue;
 			}
 		}
