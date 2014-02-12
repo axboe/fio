@@ -11,26 +11,26 @@
  */
 #define MAX_ERRNO	4095
 
-#define IS_ERR_VALUE(x) ((x) >= (unsigned long)-MAX_ERRNO)
+#define IS_ERR_VALUE(x) ((x) >= (uintptr_t)-MAX_ERRNO)
 
-static inline void *ERR_PTR(long error)
+static inline void *ERR_PTR(uintptr_t error)
 {
 	return (void *) error;
 }
 
-static inline long PTR_ERR(const void *ptr)
+static inline uintptr_t PTR_ERR(const void *ptr)
 {
-	return (long) ptr;
+	return (uintptr_t) ptr;
 }
 
-static inline long IS_ERR(const void *ptr)
+static inline uintptr_t IS_ERR(const void *ptr)
 {
-	return IS_ERR_VALUE((unsigned long)ptr);
+	return IS_ERR_VALUE((uintptr_t)ptr);
 }
 
-static inline long IS_ERR_OR_NULL(const void *ptr)
+static inline uintptr_t IS_ERR_OR_NULL(const void *ptr)
 {
-	return !ptr || IS_ERR_VALUE((unsigned long)ptr);
+	return !ptr || IS_ERR_VALUE((uintptr_t)ptr);
 }
 
 static inline int PTR_ERR_OR_ZERO(const void *ptr)
