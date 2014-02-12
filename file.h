@@ -128,11 +128,11 @@ struct fio_file {
 #define FILE_FLAG_FNS(name)						\
 static inline void fio_file_set_##name(struct fio_file *f)		\
 {									\
-	(f)->flags |= FIO_FILE_##name;					\
+	(f)->flags = (enum fio_file_flags) ((f)->flags | FIO_FILE_##name);	\
 }									\
 static inline void fio_file_clear_##name(struct fio_file *f)		\
 {									\
-	(f)->flags &= ~FIO_FILE_##name;					\
+	(f)->flags = (enum fio_file_flags) ((f)->flags & ~FIO_FILE_##name);	\
 }									\
 static inline int fio_file_##name(struct fio_file *f)			\
 {									\
