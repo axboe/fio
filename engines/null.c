@@ -136,8 +136,10 @@ static void fio_exit fio_null_unregister(void)
 
 #ifdef FIO_EXTERNAL_ENGINE
 extern "C" {
-void get_ioengine(struct ioengine_ops **ioengine_ptr) {
+void get_ioengine(struct ioengine_ops **ioengine_ptr)
+{
 	struct ioengine_ops *ioengine;
+
 	*ioengine_ptr = (struct ioengine_ops *) malloc(sizeof(struct ioengine_ops));
 	ioengine = *ioengine_ptr;
 
