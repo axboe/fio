@@ -29,7 +29,7 @@ static inline int io_u_qempty(struct io_u_queue *q)
 }
 
 #define io_u_qiter(q, io_u, i)	\
-	for (i = 0, io_u = (q)->io_us[0]; i < (q)->nr; i++, io_u = (q)->io_us[i])
+	for (i = 0; i < (q)->nr && (io_u = (q)->io_us[i]); i++)
 
 int io_u_qinit(struct io_u_queue *q, unsigned int nr);
 void io_u_qexit(struct io_u_queue *q);
