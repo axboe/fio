@@ -168,6 +168,11 @@ enum fio_ioengine_flags {
 };
 
 /*
+ * External engine defined symbol to fill in the engine ops structure
+ */
+typedef void (*get_ioengine_t)(struct ioengine_ops **);
+
+/*
  * io engine entry points
  */
 extern int __must_check td_io_init(struct thread_data *);
