@@ -60,6 +60,7 @@ static inline int arch_init(char *envp[])
 			 (unsigned int *) &str[8],
 			 (unsigned int *) &str[4]);
 
+	str[11] = '\0';
 	if (!strcmp(str, "GenuineIntel"))
 		tsc_reliable = arch_init_intel(level);
 	else if (!strcmp(str, "AuthenticAMD"))
