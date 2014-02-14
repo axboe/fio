@@ -54,13 +54,13 @@ static inline int arch_init_amd(unsigned int level)
 static inline int arch_init(char *envp[])
 {
 	unsigned int level;
-	char str[12];
+	char str[13];
 
 	cpuid(0, &level, (unsigned int *) &str[0],
 			 (unsigned int *) &str[8],
 			 (unsigned int *) &str[4]);
 
-	str[11] = '\0';
+	str[12] = '\0';
 	if (!strcmp(str, "GenuineIntel"))
 		tsc_reliable = arch_init_intel(level);
 	else if (!strcmp(str, "AuthenticAMD"))
