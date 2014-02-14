@@ -1521,13 +1521,19 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 		td_verror(td, io_u->error, "io_u error");
 }
 
+static inline int gtod_reduce(struct thread_data *td)
+{
+	return !td->o.disable_clat || !td->o.disable_lat ||
+		!td->o.disable_slat || !td->o.disable_bw;
+}
+
 static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 				  struct io_completion_data *icd,
 				  const enum fio_ddir idx, unsigned int bytes)
 {
 	unsigned long lusec = 0;
 
-	if (!td->o.disable_clat || !td->o.disable_bw)
+	if (!gtod_reduce(td))
 		lusec = utime_since(&io_u->issue_time, &icd->time);
 
 	if (!td->o.disable_lat) {
@@ -1559,7 +1565,8 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 	if (!td->o.disable_bw)
 		add_bw_sample(td, idx, bytes, &icd->time);
 
-	add_iops_sample(td, idx, bytes, &icd->time);
+	if (!gtod_reduce(td))
+		add_iops_sample(td, idx, bytes, &icd->time);
 
 	if (td->o.number_ios && !--td->o.number_ios)
 		td->done = 1;
@@ -1680,7 +1687,8 @@ static void init_icd(struct thread_data *td, struct io_completion_data *icd,
 		     int nr)
 {
 	int ddir;
-	if (!td->o.disable_clat || !td->o.disable_bw)
+
+	if (!gtod_reduce(td))
 		fio_gettime(&icd->time, NULL);
 
 	icd->nr = nr;
