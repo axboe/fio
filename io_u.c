@@ -1523,7 +1523,7 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 
 static inline int gtod_reduce(struct thread_data *td)
 {
-	return td->o.disable_clat && td->o.disable_lat && !td->o.disable_slat
+	return td->o.disable_clat && td->o.disable_lat && td->o.disable_slat
 		&& td->o.disable_bw;
 }
 
