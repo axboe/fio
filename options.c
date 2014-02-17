@@ -1388,6 +1388,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Windows native asynchronous IO"
 			  },
 #endif
+#ifdef CONFIG_RBD
+			  { .ival = "rbd",
+			    .help = "Rados Block Device asynchronous IO"
+			  },
+#endif
 			  { .ival = "mmap",
 			    .help = "Memory mapped IO"
 			  },

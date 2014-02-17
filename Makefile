@@ -76,6 +76,9 @@ endif
 ifdef CONFIG_WINDOWSAIO
   SOURCE += engines/windowsaio.c
 endif
+ifdef CONFIG_RBD
+  SOURCE += engines/rbd.c
+endif
 ifndef CONFIG_STRSEP
   SOURCE += lib/strsep.c
 endif

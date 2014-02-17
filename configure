@@ -1119,6 +1119,33 @@ if compile_prog "" "" "ipv6"; then
 fi
 echo "IPv6 helpers                  $ipv6"
 
+##########################################
+# check for rbd
+rbd="no"
+cat > $TMPC << EOF
+#include <rbd/librbd.h>
+
+int main(int argc, char **argv)
+{
+
+  rados_t cluster;
+  rados_ioctx_t io_ctx;
+  const char pool[] = "rbd";
+
+  int major, minor, extra;
+  rbd_version(&major, &minor, &extra);
+
+  rados_ioctx_create(cluster, pool, &io_ctx);
+  return 0;
+}
+EOF
+if compile_prog "" "-lrbd -lrados" "rbd"; then
+  LIBS="-lrbd -lrados $LIBS"
+  rbd="yes"
+fi
+echo "Rados Block Device engine     $rbd"
+
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -1239,6 +1266,9 @@ if test "$pwritev" = "yes" ; then
 fi
 if test "$ipv6" = "yes" ; then
   output_sym "CONFIG_IPV6"
+fi
+if test "$rbd" = "yes" ; then
+  output_sym "CONFIG_RBD"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
