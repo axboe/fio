@@ -1118,10 +1118,21 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		td_new->o.new_group = 0;
 
 		if (file_alloced) {
-			td_new->o.filename = NULL;
 			td_new->files_index = 0;
 			td_new->files_size = 0;
-			td_new->files = NULL;
+			if (td_new->files) {
+				struct fio_file *f;
+				for_each_file(td_new, f, i) {
+					if (f->file_name)
+						free(f->file_name);
+					free(f);
+				}
+				td_new->files = NULL;
+			}
+			if (td_new->o.filename) {
+				free(td_new->o.filename);
+				td_new->o.filename = NULL;
+			}
 		}
 
 		job_add_num = numjobs - 1;
