@@ -2018,6 +2018,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Start delay",
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= td_var_offset(start_delay),
+		.off2	= td_var_offset(start_delay_high),
 		.help	= "Only start job when this period has passed",
 		.def	= "0",
 		.category = FIO_OPT_C_GENERAL,

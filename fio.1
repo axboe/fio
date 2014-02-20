@@ -846,8 +846,12 @@ needed to be specified. For \fBprefer\fR, only one node is
 allowed. For \fBbind\fR and \fBinterleave\fR, \fBnodelist\fR allows
 comma delimited list of numbers, A-B ranges, or 'all'.
 .TP
-.BI startdelay \fR=\fPint
-Delay start of job for the specified number of seconds.
+.BI startdelay \fR=\fPirange
+Delay start of job for the specified number of seconds. Supports all time
+suffixes to allow specification of hours, minutes, seconds and
+milliseconds - seconds are the default if a unit is ommited.
+Can be given as a range which causes each thread to choose randomly out of the
+range.
 .TP
 .BI runtime \fR=\fPint
 Terminate processing after the specified number of seconds.

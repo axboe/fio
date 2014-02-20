@@ -166,6 +166,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 
 	o->verify_backlog = le64_to_cpu(top->verify_backlog);
 	o->start_delay = le64_to_cpu(top->start_delay);
+	o->start_delay_high = le64_to_cpu(top->start_delay_high);
 	o->timeout = le64_to_cpu(top->timeout);
 	o->ramp_time = le64_to_cpu(top->ramp_time);
 	o->zone_range = le64_to_cpu(top->zone_range);
@@ -422,6 +423,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->size = __cpu_to_le64(o->size);
 	top->verify_backlog = __cpu_to_le64(o->verify_backlog);
 	top->start_delay = __cpu_to_le64(o->start_delay);
+	top->start_delay_high = __cpu_to_le64(o->start_delay_high);
 	top->timeout = __cpu_to_le64(o->timeout);
 	top->ramp_time = __cpu_to_le64(o->ramp_time);
 	top->zone_range = __cpu_to_le64(o->zone_range);

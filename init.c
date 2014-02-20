@@ -412,6 +412,26 @@ static int fixed_block_size(struct thread_options *o)
 		o->min_bs[DDIR_READ] == o->min_bs[DDIR_TRIM];
 }
 
+
+static unsigned long long get_rand_start_delay(struct thread_data *td)
+{
+	unsigned long long delayrange;
+	unsigned long r;
+
+	delayrange = td->o.start_delay_high - td->o.start_delay;
+
+	if (td->o.use_os_rand) {
+		r = os_random_long(&td->delay_state);
+		delayrange = (unsigned long long) ((double) delayrange * (r / (OS_RAND_MAX + 1.0)));
+	} else {
+		r = __rand(&td->__delay_state);
+		delayrange = (unsigned long long) ((double) delayrange * (r / (FRAND_MAX + 1.0)));
+	}
+
+	delayrange += td->o.start_delay;
+	return delayrange;
+}
+
 /*
  * Lazy way of fixing up options that depend on each other. We could also
  * define option callback handlers, but this is easier.
@@ -495,6 +515,9 @@ static int fixup_options(struct thread_data *td)
 
 	if (!o->file_size_high)
 		o->file_size_high = o->file_size_low;
+
+	if (o->start_delay_high)
+		o->start_delay = get_rand_start_delay(td);
 
 	if (o->norandommap && o->verify != VERIFY_NONE
 	    && !fixed_block_size(o))  {
@@ -711,6 +734,7 @@ static void td_fill_rand_seeds_os(struct thread_data *td)
 
 	os_random_seed(td->rand_seeds[FIO_RAND_FILE_SIZE_OFF], &td->file_size_state);
 	os_random_seed(td->rand_seeds[FIO_RAND_TRIM_OFF], &td->trim_state);
+	os_random_seed(td->rand_seeds[FIO_RAND_START_DELAY], &td->delay_state);
 
 	if (!td_random(td))
 		return;
@@ -736,6 +760,7 @@ static void td_fill_rand_seeds_internal(struct thread_data *td)
 
 	init_rand_seed(&td->__file_size_state, td->rand_seeds[FIO_RAND_FILE_SIZE_OFF]);
 	init_rand_seed(&td->__trim_state, td->rand_seeds[FIO_RAND_TRIM_OFF]);
+	init_rand_seed(&td->__delay_state, td->rand_seeds[FIO_RAND_START_DELAY]);
 
 	if (!td_random(td))
 		return;

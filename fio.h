@@ -85,6 +85,7 @@ enum {
 	FIO_RAND_SEQ_RAND_READ_OFF,
 	FIO_RAND_SEQ_RAND_WRITE_OFF,
 	FIO_RAND_SEQ_RAND_TRIM_OFF,
+	FIO_RAND_START_DELAY,
 	FIO_RAND_NR_OFFS,
 };
 
@@ -163,6 +164,10 @@ struct thread_data {
 	union {
 		os_random_state_t trim_state;
 		struct frand_state __trim_state;
+	};
+	union {
+		os_random_state_t delay_state;
+		struct frand_state __delay_state;
 	};
 
 	struct frand_state buf_state;
