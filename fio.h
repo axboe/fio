@@ -373,6 +373,7 @@ extern unsigned int stat_number;
 extern int shm_id;
 extern int groupid;
 extern int output_format;
+extern int append_terse_output;
 extern int temp_stall_ts;
 extern uintptr_t page_mask, page_size;
 extern int read_only;

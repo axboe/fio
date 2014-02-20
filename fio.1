@@ -32,6 +32,9 @@ Generate per-job bandwidth logs.
 .B \-\-minimal
 Print statistics in a terse, semicolon-delimited format.
 .TP
+.B \-\-append-terse
+Print statistics in selected mode AND terse, semicolon-delimited format.
+.TP
 .B \-\-version
 Display version information and exit.
 .TP
@@ -1578,9 +1581,10 @@ It is also possible to get fio to dump the current output while it is
 running, without terminating the job. To do that, send fio the \fBUSR1\fR
 signal.
 .SH TERSE OUTPUT
-If the \fB\-\-minimal\fR option is given, the results will be printed in a
-semicolon-delimited format suitable for scripted use - a job description
-(if provided) follows on a new line.  Note that the first
+If the \fB\-\-minimal\fR / \fB\-\-append-terse\fR options are given, the
+results will be printed/appended in a semicolon-delimited format suitable for
+scripted use.
+A job description (if provided) follows on a new line.  Note that the first
 number in the line is the version number. If the output has to be changed
 for some reason, this number will be incremented by 1 to signify that
 change.  The fields are:

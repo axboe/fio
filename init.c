@@ -43,6 +43,7 @@ struct thread_data *threads = NULL;
 
 int exitall_on_terminate = 0;
 int output_format = FIO_OUTPUT_NORMAL;
+int append_terse_output = 0;
 int eta_print = FIO_ETA_AUTO;
 int eta_new_line = 0;
 FILE *f_out = NULL;
@@ -107,6 +108,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "output-format",
 		.has_arg	= optional_argument,
 		.val		= 'F' | FIO_CLIENT_FLAG,
+	},
+	{
+		.name		= (char *) "append-terse",
+		.has_arg	= optional_argument,
+		.val		= 'f',
 	},
 	{
 		.name		= (char *) "version",
@@ -1715,6 +1721,9 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				output_format = FIO_OUTPUT_JSON;
 			else
 				output_format = FIO_OUTPUT_NORMAL;
+			break;
+		case 'f':
+			append_terse_output = 1;
 			break;
 		case 'h':
 			if (!cur_client) {

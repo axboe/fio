@@ -1386,6 +1386,16 @@ static void __show_run_stats(void)
 		show_idle_prof_stats(FIO_OUTPUT_NORMAL, NULL);
 	}
 
+	if ( !(output_format == FIO_OUTPUT_TERSE) && append_terse_output) {
+		log_info("\nAdditional Terse Output:\n");
+
+		for (i = 0; i < nr_ts; i++) {
+			ts = &threadstats[i];
+			rs = &runstats[ts->groupid];
+			show_thread_status_terse(ts, rs);
+		}
+	}
+
 	log_info_flush();
 	free(runstats);
 	free(threadstats);
