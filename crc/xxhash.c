@@ -63,14 +63,8 @@ You can contact the author at :
 // Includes & Memory related functions
 //**************************************
 #include "xxhash.h"
-// Modify the local functions below should you wish to use some other memory related routines
-// for malloc(), free()
 #include <stdlib.h>
-void* XXH_malloc(size_t s) { return malloc(s); }
-void  XXH_free  (void* p)  { free(p); }
-// for memcpy()
 #include <string.h>
-void* XXH_memcpy(void* dest, const void* src, size_t size) { return memcpy(dest,src,size); }
 
 
 #if defined(__GNUC__)  && !defined(XXH_USE_UNALIGNED_ACCESS)
@@ -113,11 +107,13 @@ typedef struct _uint32_t_S { uint32_t v; } _PACKED uint32_t_S;
 #elif GCC_VERSION >= 403
 #  define XXH_swap32 __builtin_bswap32
 #else
-static inline uint32_t XXH_swap32 (uint32_t x) {
+static inline uint32_t XXH_swap32 (uint32_t x)
+{
     return  ((x << 24) & 0xff000000 ) |
         ((x <<  8) & 0x00ff0000 ) |
         ((x >>  8) & 0x0000ff00 ) |
-        ((x >> 24) & 0x000000ff );}
+        ((x >> 24) & 0x000000ff );
+}
 #endif
 
 
@@ -280,7 +276,7 @@ XXH_errorcode XXH32_resetState(void* state_in, uint32_t seed)
 
 void* XXH32_init (uint32_t seed)
 {
-    void* state = XXH_malloc (sizeof(struct XXH_state32_t));
+    void *state = malloc (sizeof(struct XXH_state32_t));
     XXH32_resetState(state, seed);
     return state;
 }
@@ -300,14 +296,14 @@ XXH_errorcode XXH32_update_endian (void* state_in, const void* input, int len, X
 
     if (state->memsize + len < 16)   // fill in tmp buffer
     {
-        XXH_memcpy(state->memory + state->memsize, input, len);
+        memcpy(state->memory + state->memsize, input, len);
         state->memsize +=  len;
         return XXH_OK;
     }
 
     if (state->memsize)   // some data left from previous update
     {
-        XXH_memcpy(state->memory + state->memsize, input, 16-state->memsize);
+        memcpy(state->memory + state->memsize, input, 16-state->memsize);
         {
             const uint32_t* p32 = (const uint32_t*)state->memory;
             state->v1 += XXH_readLE32(p32, endian) * PRIME32_2; state->v1 = XXH_rotl32(state->v1, 13); state->v1 *= PRIME32_1; p32++;
@@ -343,7 +339,7 @@ XXH_errorcode XXH32_update_endian (void* state_in, const void* input, int len, X
 
     if (p < bEnd)
     {
-        XXH_memcpy(state->memory, p, bEnd-p);
+        memcpy(state->memory, p, bEnd-p);
         state->memsize = (int)(bEnd-p);
     }
 
@@ -419,7 +415,7 @@ uint32_t XXH32_digest (void* state_in)
 {
     uint32_t h32 = XXH32_intermediateDigest(state_in);
 
-    XXH_free(state_in);
+    free(state_in);
 
     return h32;
 }
