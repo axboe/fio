@@ -71,7 +71,7 @@ int ramp_time_over(struct thread_data *td)
 		return 1;
 
 	fio_gettime(&tv, NULL);
-	if (mtime_since(&td->epoch, &tv) >= td->o.ramp_time * 1000) {
+	if (mtime_since(&td->epoch, &tv) >= td->o.ramp_time ) {
 		td->ramp_time_over = 1;
 		reset_all_stats(td);
 		td_set_runstate(td, TD_RAMP);

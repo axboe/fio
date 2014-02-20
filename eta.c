@@ -174,7 +174,8 @@ static int thread_eta(struct thread_data *td)
 			perc = 1.0;
 
 		if (td->o.time_based) {
-			perc_t = (double) elapsed / (double) td->o.timeout;
+			perc_t = (double) elapsed /
+					(double) (td->o.timeout / 1000);
 			if (perc_t < perc)
 				perc = perc_t;
 		}
@@ -182,8 +183,9 @@ static int thread_eta(struct thread_data *td)
 		eta_sec = (unsigned long) (elapsed * (1.0 / perc)) - elapsed;
 
 		if (td->o.timeout &&
-		    eta_sec > (td->o.timeout + done_secs - elapsed))
-			eta_sec = td->o.timeout + done_secs - elapsed;
+		    eta_sec > ( (td->o.timeout / 1000) + done_secs - elapsed))
+			eta_sec = (td->o.timeout / 1000)  + done_secs
+			       		- elapsed;
 	} else if (td->runstate == TD_NOT_CREATED || td->runstate == TD_CREATED
 			|| td->runstate == TD_INITIALIZED
 			|| td->runstate == TD_SETTING_UP
@@ -197,8 +199,8 @@ static int thread_eta(struct thread_data *td)
 		 * if given, otherwise assume it'll run at the specified rate.
 		 */
 		if (td->o.timeout) {
-			t_eta = td->o.timeout + td->o.start_delay +
-					td->o.ramp_time;
+			t_eta = (td->o.timeout + td->o.start_delay  +
+					td->o.ramp_time ) / 1000;
 
 			if (in_ramp_time(td)) {
 				unsigned long ramp_left;
@@ -212,7 +214,7 @@ static int thread_eta(struct thread_data *td)
 		rate_bytes = ddir_rw_sum(td->o.rate);
 		if (rate_bytes) {
 			r_eta = (bytes_total / 1024) / rate_bytes;
-			r_eta += td->o.start_delay;
+			r_eta += td->o.start_delay / 1000;
 		}
 
 		if (r_eta && t_eta)

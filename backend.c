@@ -346,7 +346,7 @@ static inline int runtime_exceeded(struct thread_data *td, struct timeval *t)
 		return 0;
 	if (!td->o.timeout)
 		return 0;
-	if (mtime_since(&td->epoch, t) >= td->o.timeout * 1000)
+	if (mtime_since(&td->epoch, t) >= td->o.timeout )
 		return 1;
 
 	return 0;
@@ -1783,7 +1783,7 @@ static void run_threads(void)
 			if (td->o.start_delay) {
 				spent = mtime_since_genesis();
 
-				if (td->o.start_delay * 1000 > spent)
+				if (td->o.start_delay > spent)
 					continue;
 			}
 

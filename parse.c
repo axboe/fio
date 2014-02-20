@@ -122,21 +122,41 @@ static void show_option_help(struct fio_option *o, int is_err)
 	show_option_values(o);
 }
 
-static unsigned long get_mult_time(char c)
+static unsigned long long get_mult_time(const char *str, int len)
 {
-	switch (c) {
-	case 'm':
-	case 'M':
-		return 60;
-	case 'h':
-	case 'H':
-		return 60 * 60;
-	case 'd':
-	case 'D':
-		return 24 * 60 * 60;
-	default:
-		return 1;
+	const char *p = str;
+	char *c;
+	unsigned long long mult = 1000;
+
+	/*
+         * Go forward until we hit a non-digit, or +/- sign
+         */
+	while ((p - str) <= len) {
+		if (!isdigit((int) *p) && (*p != '+') && (*p != '-'))
+			break;
+		p++;
 	}
+
+	if (!isalpha((int) *p))
+		return 1000;
+
+	c = strdup(p);
+	for (int i = 0; i < strlen(c); i++)
+		c[i] = tolower(c[i]);
+
+	if (!strncmp("ms", c, 2))
+		mult = 1;
+	else if (!strcmp("s", c))
+		mult = 1000;
+	else if (!strcmp("m", c))
+		mult = 60 * 1000;
+	else if (!strcmp("h", c))
+		mult = 60 * 60 * 1000;
+	else if (!strcmp("d", c))
+		mult = 24 * 60 * 60 * 1000;
+
+	free(c);
+	return mult;
 }
 
 static int is_separator(char c)
@@ -275,7 +295,7 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data)
 		else
 			*val *= mult;
 	} else
-		*val *= get_mult_time(str[len - 1]);
+		*val *= get_mult_time(str, len);
 
 	return 0;
 }
