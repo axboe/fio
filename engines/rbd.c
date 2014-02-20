@@ -377,7 +377,7 @@ static int fio_rbd_setup(struct thread_data *td)
 	 * The size of the RBD is set instead of a artificial file.
 	 */
 	if (!td->files_index) {
-		add_file(td, td->o.filename ? : "rbd");
+		add_file(td, td->o.filename ? : "rbd", 0);
 		td->o.nr_files = td->o.nr_files ? : 1;
 	}
 	f = td->files[0];

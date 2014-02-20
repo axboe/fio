@@ -324,7 +324,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 			rw = DDIR_INVAL;
 			if (!strcmp(act, "add")) {
 				td->o.nr_files++;
-				fileno = add_file(td, fname);
+				fileno = add_file(td, fname, 0);
 				file_action = FIO_LOG_ADD_FILE;
 				continue;
 			} else if (!strcmp(act, "open")) {

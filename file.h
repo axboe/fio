@@ -125,6 +125,11 @@ struct fio_file {
 	struct disk_util *du;
 };
 
+struct file_name {
+	struct flist_head list;
+	char *filename;
+};
+
 #define FILE_FLAG_FNS(name)						\
 static inline void fio_file_set_##name(struct fio_file *f)		\
 {									\
@@ -162,7 +167,7 @@ extern int __must_check generic_close_file(struct thread_data *, struct fio_file
 extern int __must_check generic_get_file_size(struct thread_data *, struct fio_file *);
 extern int __must_check file_lookup_open(struct fio_file *f, int flags);
 extern int __must_check pre_read_files(struct thread_data *);
-extern int add_file(struct thread_data *, const char *);
+extern int add_file(struct thread_data *, const char *, int);
 extern int add_file_exclusive(struct thread_data *, const char *);
 extern void get_file(struct fio_file *);
 extern int __must_check put_file(struct thread_data *, struct fio_file *);
@@ -175,6 +180,7 @@ extern int init_random_map(struct thread_data *);
 extern void dup_files(struct thread_data *, struct thread_data *);
 extern int get_fileno(struct thread_data *, const char *);
 extern void free_release_files(struct thread_data *);
+extern void filesetup_mem_free(void);
 void fio_file_reset(struct thread_data *, struct fio_file *);
 int fio_files_done(struct thread_data *);
 

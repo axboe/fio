@@ -158,6 +158,12 @@ otherwise has no special purpose.
 .BI directory \fR=\fPstr
 Prefix filenames with this directory.  Used to place files in a location other
 than `./'.
+You can specify a number of directories by separating the names with a ':'
+character. These directories will be assigned equally distributed to job clones
+creates with \fInumjobs\fR as long as they are using generated filenames.
+If specific \fIfilename(s)\fR are set fio will use the first listed directory,
+and thereby matching the  \fIfilename\fR semantic which generates a file each
+clone if not specified, but let all clones use the same if set.
 .TP
 .BI filename \fR=\fPstr
 .B fio

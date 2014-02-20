@@ -1020,10 +1020,10 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		file_alloced = 1;
 
 		if (o->nr_files == 1 && exists_and_not_file(jobname))
-			add_file(td, jobname);
+			add_file(td, jobname, job_add_num);
 		else {
 			for (i = 0; i < o->nr_files; i++)
-				add_file(td, make_filename(fname, o, jobname, td->thread_number, i));
+				add_file(td, make_filename(fname, o, jobname, job_add_num, i), job_add_num);
 		}
 	}
 
@@ -1166,9 +1166,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			}
 		}
 
-		job_add_num = numjobs - 1;
-
-		if (add_job(td_new, jobname, job_add_num, 1, client_type))
+		if (add_job(td_new, jobname, numjobs, 1, client_type))
 			goto err;
 	}
 
@@ -2027,6 +2025,7 @@ int parse_options(int argc, char *argv[])
 
 	free(ini_file);
 	fio_options_free(&def_thread);
+	filesetup_mem_free();
 
 	if (!thread_number) {
 		if (parse_dryrun())

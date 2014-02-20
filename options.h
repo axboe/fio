@@ -17,6 +17,8 @@ void add_opt_posval(const char *, const char *, const char *);
 void del_opt_posval(const char *, const char *);
 struct thread_data;
 void fio_options_free(struct thread_data *);
+char *get_name_idx(char *, int);
+int set_name_idx(char *, char *, int);
 
 extern struct fio_option fio_options[FIO_MAX_OPTS];
 

@@ -729,11 +729,11 @@ static int str_random_distribution_cb(void *data, const char *str)
 }
 
 /*
- * Return next file in the string. Files are separated with ':'. If the ':'
+ * Return next name in the string. Files are separated with ':'. If the ':'
  * is escaped with a '\', then that ':' is part of the filename and does not
  * indicate a new file.
  */
-static char *get_next_file_name(char **ptr)
+static char *get_next_name(char **ptr)
 {
 	char *str = *ptr;
 	char *p, *start;
@@ -774,6 +774,43 @@ static char *get_next_file_name(char **ptr)
 	return start;
 }
 
+
+static int get_max_name_idx(char *input)
+{
+	unsigned int cur_idx;
+	char *str, *p;
+
+	p = str = strdup(input);
+	for (cur_idx = 0; ; cur_idx++)
+		if (get_next_name(&str) == NULL)
+			break;
+
+	free(p);
+	return cur_idx;
+}
+
+/*
+ * Returns the directory at the index, indexes > entires will be
+ * assigned via modulo division of the index
+ */
+int set_name_idx(char *target, char *input, int index)
+{
+	unsigned int cur_idx;
+	int len;
+	char *fname, *str, *p;
+
+	p = str = strdup(input);
+
+	index %= get_max_name_idx(input);
+	for (cur_idx = 0; cur_idx <= index; cur_idx++)
+		fname = get_next_name(&str);
+
+	len = sprintf(target, "%s/", fname);
+	free(p);
+
+	return len;
+}
+
 static int str_filename_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
@@ -787,10 +824,10 @@ static int str_filename_cb(void *data, const char *input)
 	if (!td->files_index)
 		td->o.nr_files = 0;
 
-	while ((fname = get_next_file_name(&str)) != NULL) {
+	while ((fname = get_next_name(&str)) != NULL) {
 		if (!strlen(fname))
 			break;
-		add_file(td, fname);
+		add_file(td, fname, 0);
 		td->o.nr_files++;
 	}
 
@@ -798,27 +835,35 @@ static int str_filename_cb(void *data, const char *input)
 	return 0;
 }
 
-static int str_directory_cb(void *data, const char fio_unused *str)
+static int str_directory_cb(void *data, const char fio_unused *unused)
 {
 	struct thread_data *td = data;
 	struct stat sb;
+	char *dirname, *str, *p;
+	int ret = 0;
 
 	if (parse_dryrun())
 		return 0;
 
-	if (lstat(td->o.directory, &sb) < 0) {
-		int ret = errno;
+	p = str = strdup(td->o.directory);
+	while ((dirname = get_next_name(&str)) != NULL) {
+		if (lstat(dirname, &sb) < 0) {
+			ret = errno;
 
-		log_err("fio: %s is not a directory\n", td->o.directory);
-		td_verror(td, ret, "lstat");
-		return 1;
-	}
-	if (!S_ISDIR(sb.st_mode)) {
-		log_err("fio: %s is not a directory\n", td->o.directory);
-		return 1;
+			log_err("fio: %s is not a directory\n", dirname);
+			td_verror(td, ret, "lstat");
+			goto out;
+		}
+		if (!S_ISDIR(sb.st_mode)) {
+			log_err("fio: %s is not a directory\n", dirname);
+			ret = 1;
+			goto out;
+		}
 	}
 
-	return 0;
+out:
+	free(p);
+	return ret;
 }
 
 static int str_lockfile_cb(void *data, const char fio_unused *str)

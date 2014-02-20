@@ -11,6 +11,7 @@
 #include "fio.h"
 #include "smalloc.h"
 #include "filehash.h"
+#include "options.h"
 #include "os/os.h"
 #include "hash.h"
 #include "lib/axmap.h"
@@ -20,6 +21,8 @@
 #endif
 
 static int root_warn;
+
+static FLIST_HEAD(filename_list);
 
 static inline void clear_error(struct thread_data *td)
 {
@@ -1101,7 +1104,48 @@ static void get_file_type(struct fio_file *f)
 	}
 }
 
-int add_file(struct thread_data *td, const char *fname)
+static void set_already_allocated(const char *fname) {
+	struct file_name *fn;
+
+	fn = malloc(sizeof(struct file_name));
+	fn->filename = strdup(fname);
+	flist_add_tail(&fn->list, &filename_list);
+}
+
+static int is_already_allocated(const char *fname)
+{
+	struct flist_head *entry;
+	char *filename;
+
+	if (!flist_empty(&filename_list))
+	{
+		flist_for_each(entry, &filename_list) {
+			filename = flist_entry(entry, struct file_name, list)->filename;
+
+			if (strcmp(filename, fname) == 0)
+				return 1;
+		}
+	}
+
+	return 0;
+}
+
+static void free_already_allocated() {
+	struct flist_head *entry, *tmp;
+	struct file_name *fn;
+
+	if (!flist_empty(&filename_list))
+	{
+		flist_for_each_safe(entry, tmp, &filename_list) {
+			fn = flist_entry(entry, struct file_name, list);
+			free(fn->filename);
+			flist_del(&fn->list);
+			free(fn);
+		}
+	}
+}
+
+int add_file(struct thread_data *td, const char *fname, int numjob)
 {
 	int cur_files = td->files_index;
 	char file_name[PATH_MAX];
@@ -1109,6 +1153,15 @@ int add_file(struct thread_data *td, const char *fname)
 	int len = 0;
 
 	dprint(FD_FILE, "add file %s\n", fname);
+
+	if (td->o.directory)
+		len = set_name_idx(file_name, td->o.directory, numjob);
+
+	sprintf(file_name + len, "%s", fname);
+
+	/* clean cloned siblings using existing files */
+	if (numjob && is_already_allocated(file_name))
+		return 0;
 
 	f = smalloc(sizeof(*f));
 	if (!f) {
@@ -1149,10 +1202,6 @@ int add_file(struct thread_data *td, const char *fname)
 	if (td->io_ops && (td->io_ops->flags & FIO_DISKLESSIO))
 		f->real_file_size = -1ULL;
 
-	if (td->o.directory)
-		len = sprintf(file_name, "%s/", td->o.directory);
-
-	sprintf(file_name + len, "%s", fname);
 	f->file_name = smalloc_strdup(file_name);
 	if (!f->file_name) {
 		log_err("fio: smalloc OOM\n");
@@ -1179,6 +1228,8 @@ int add_file(struct thread_data *td, const char *fname)
 	if (f->filetype == FIO_TYPE_FILE)
 		td->nr_normal_files++;
 
+	set_already_allocated(file_name);
+
 	dprint(FD_FILE, "file %p \"%s\" added at %d\n", f, f->file_name,
 							cur_files);
 
@@ -1195,7 +1246,7 @@ int add_file_exclusive(struct thread_data *td, const char *fname)
 			return i;
 	}
 
-	return add_file(td, fname);
+	return add_file(td, fname, 0);
 }
 
 void get_file(struct fio_file *f)
@@ -1304,7 +1355,7 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 		}
 
 		if (S_ISREG(sb.st_mode)) {
-			add_file(td, full_path);
+			add_file(td, full_path, 0);
 			td->o.nr_files++;
 			continue;
 		}
@@ -1420,4 +1471,9 @@ int fio_files_done(struct thread_data *td)
 			return 0;
 
 	return 1;
+}
+
+/* free memory used in initialization phase only */
+void filesetup_mem_free() {
+	free_already_allocated();
 }
