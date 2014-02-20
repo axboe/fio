@@ -23,6 +23,7 @@
 #include "crc/sha256.h"
 #include "crc/sha512.h"
 #include "crc/sha1.h"
+#include "crc/xxhash.h"
 
 static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 			 struct verify_header *hdr, unsigned int header_num,
@@ -171,6 +172,9 @@ static inline unsigned int __hdr_size(int verify_type)
 		break;
 	case VERIFY_SHA512:
 		len = sizeof(struct vhdr_sha512);
+		break;
+	case VERIFY_XXHASH:
+		len = sizeof(struct vhdr_xxhash);
 		break;
 	case VERIFY_META:
 		len = sizeof(struct vhdr_meta);
@@ -402,6 +406,30 @@ static int verify_io_u_meta(struct verify_header *hdr, struct vcont *vc)
 	vc->name = "meta";
 	log_verify_failure(hdr, vc);
 	return ret;
+}
+
+static int verify_io_u_xxhash(struct verify_header *hdr, struct vcont *vc)
+{
+	void *p = io_u_verify_off(hdr, vc);
+	struct vhdr_xxhash *vh = hdr_priv(hdr);
+	uint32_t hash;
+	void *state;
+
+	dprint(FD_VERIFY, "xxhash verify io_u %p, len %u\n", vc->io_u, hdr->len);
+
+	state = XXH32_init(1);
+	XXH32_update(state, p, hdr->len - hdr_size(hdr));
+	hash = XXH32_digest(state);
+
+	if (vh->hash == hash)
+		return 0;
+
+	vc->name = "xxhash";
+	vc->good_crc = &vh->hash;
+	vc->bad_crc = &hash;
+	vc->crc_len = sizeof(hash);
+	log_verify_failure(hdr, vc);
+	return EILSEQ;
 }
 
 static int verify_io_u_sha512(struct verify_header *hdr, struct vcont *vc)
@@ -793,6 +821,9 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		case VERIFY_SHA512:
 			ret = verify_io_u_sha512(hdr, &vc);
 			break;
+		case VERIFY_XXHASH:
+			ret = verify_io_u_xxhash(hdr, &vc);
+			break;
 		case VERIFY_META:
 			ret = verify_io_u_meta(hdr, &vc);
 			break;
@@ -832,6 +863,16 @@ static void fill_meta(struct verify_header *hdr, struct thread_data *td,
 	vh->numberio = io_u->numberio;
 
 	vh->offset = io_u->offset + header_num * td->o.verify_interval;
+}
+
+static void fill_xxhash(struct verify_header *hdr, void *p, unsigned int len)
+{
+	struct vhdr_xxhash *vh = hdr_priv(hdr);
+	void *state;
+
+	state = XXH32_init(1);
+	XXH32_update(state, p, len);
+	vh->hash = XXH32_digest(state);
 }
 
 static void fill_sha512(struct verify_header *hdr, void *p, unsigned int len)
@@ -972,6 +1013,11 @@ static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 		dprint(FD_VERIFY, "fill sha512 io_u %p, len %u\n",
 						io_u, hdr->len);
 		fill_sha512(hdr, data, data_len);
+		break;
+	case VERIFY_XXHASH:
+		dprint(FD_VERIFY, "fill xxhash io_u %p, len %u\n",
+						io_u, hdr->len);
+		fill_xxhash(hdr, data, data_len);
 		break;
 	case VERIFY_META:
 		dprint(FD_VERIFY, "fill meta io_u %p, len %u\n",

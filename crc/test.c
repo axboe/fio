@@ -16,6 +16,7 @@
 #include "../crc/sha1.h"
 #include "../crc/sha256.h"
 #include "../crc/sha512.h"
+#include "../crc/xxhash.h"
 
 #define CHUNK		131072U
 #define NR_CHUNKS	  2048U
@@ -36,6 +37,7 @@ enum {
 	T_SHA1		= 1U << 6,
 	T_SHA256	= 1U << 7,
 	T_SHA512	= 1U << 8,
+	T_XXHASH	= 1U << 9,
 };
 
 static void randomize_buf(void *buf, unsigned int size, int seed)
@@ -233,6 +235,29 @@ static uint64_t t_sha512(void)
 	return ret;
 }
 
+static uint64_t t_xxhash(void)
+{
+	void *state;
+	struct timeval s;
+	uint64_t ret;
+	void *buf;
+	int i;
+
+	state = XXH32_init(0x8989);
+
+	buf = malloc(CHUNK);
+	randomize_buf(buf, CHUNK, 0x8989);
+
+	fio_gettime(&s, NULL);
+	for (i = 0; i < NR_CHUNKS; i++)
+		XXH32_update(state, buf, CHUNK);
+
+	XXH32_digest(state);
+	ret = utime_since_now(&s);
+	free(buf);
+	return ret;
+}
+
 static struct test_type t[] = {
 	{
 		.name = "md5",
@@ -278,6 +303,11 @@ static struct test_type t[] = {
 		.name = "sha512",
 		.mask = T_SHA512,
 		.fn = t_sha512,
+	},
+	{
+		.name = "xxhash",
+		.mask = T_XXHASH,
+		.fn = t_xxhash,
 	},
 	{
 		.name = NULL,

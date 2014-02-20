@@ -16,6 +16,7 @@ enum {
 	VERIFY_CRC7,			/* crc7 sum data blocks */
 	VERIFY_SHA256,			/* sha256 sum data blocks */
 	VERIFY_SHA512,			/* sha512 sum data blocks */
+	VERIFY_XXHASH,			/* xxhash sum data blocks */
 	VERIFY_META,			/* block_num, timestamp etc. */
 	VERIFY_SHA1,			/* sha1 sum data blocks */
 	VERIFY_PATTERN,			/* verify specific patterns */
@@ -65,6 +66,9 @@ struct vhdr_meta {
 	unsigned short numberio;
 	unsigned long time_sec;
 	unsigned long time_usec;
+};
+struct vhdr_xxhash {
+	uint32_t hash;
 };
 
 /*
