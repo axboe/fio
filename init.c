@@ -751,6 +751,12 @@ static void td_fill_rand_seeds_internal(struct thread_data *td)
 
 void td_fill_rand_seeds(struct thread_data *td)
 {
+	if (td->o.allrand_repeatable) {
+		for (int i = 0; i < FIO_RAND_NR_OFFS; i++)
+			td->rand_seeds[i] = FIO_RANDSEED * td->thread_number
+			       	+ i;
+	}
+
 	if (td->o.use_os_rand)
 		td_fill_rand_seeds_os(td);
 	else

@@ -293,8 +293,12 @@ read, write, and trim are accounted and reported separately. If this option is
 set, the fio will sum the results and report them as "mixed" instead.
 .TP
 .BI randrepeat \fR=\fPbool
-Seed the random number generator in a predictable way so results are repeatable
-across runs.  Default: true.
+Seed the random number generator used for random I/O patterns in a predictable
+way so the pattern is repeatable across runs.  Default: true.
+.TP
+.BI allrandrepeat \fR=\fPbool
+Seed all random number generators in a predictable way so results are
+repeatable across runs.  Default: false.
 .TP
 .BI randseed \fR=\fPint
 Seed the random number generators based on this seed value, to be able to
