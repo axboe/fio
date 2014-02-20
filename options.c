@@ -1834,6 +1834,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(allrand_repeatable),
 		.help	= "Use repeatable random numbers for everything",
 		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
 		.name	= "nrfiles",
