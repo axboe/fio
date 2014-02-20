@@ -1461,6 +1461,7 @@ static void *thread_main(void *data)
 	fio_unpin_memory(td);
 
 	fio_mutex_down(writeout_mutex);
+	finalize_logs(td);
 	if (td->bw_log) {
 		if (o->bw_log_file) {
 			finish_log_named(td, td->bw_log,

@@ -117,6 +117,7 @@ extern void write_iolog_close(struct thread_data *);
 /*
  * Logging
  */
+extern void finalize_logs(struct thread_data *td);
 extern void add_lat_sample(struct thread_data *, enum fio_ddir, unsigned long,
 				unsigned int);
 extern void add_clat_sample(struct thread_data *, enum fio_ddir, unsigned long,
