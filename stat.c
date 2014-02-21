@@ -1579,6 +1579,41 @@ static inline void reset_io_stat(struct io_stat *ios)
 	ios->mean.u.f = ios->S.u.f = 0;
 }
 
+void reset_io_stats(struct thread_data *td)
+{
+	struct thread_stat *ts = &td->ts;
+	int i, j;
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		reset_io_stat(&ts->clat_stat[i]);
+		reset_io_stat(&ts->slat_stat[i]);
+		reset_io_stat(&ts->lat_stat[i]);
+		reset_io_stat(&ts->bw_stat[i]);
+		reset_io_stat(&ts->iops_stat[i]);
+
+		ts->io_bytes[i] = 0;
+		ts->runtime[i] = 0;
+
+		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
+			ts->io_u_plat[i][j] = 0;
+	}
+
+	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
+		ts->io_u_map[i] = 0;
+		ts->io_u_submit[i] = 0;
+		ts->io_u_complete[i] = 0;
+		ts->io_u_lat_u[i] = 0;
+		ts->io_u_lat_m[i] = 0;
+		ts->total_submit = 0;
+		ts->total_complete = 0;
+	}
+
+	for (i = 0; i < 3; i++) {
+		ts->total_io_u[i] = 0;
+		ts->short_io_u[i] = 0;
+	}
+}
+
 static void _add_stat_to_log(struct io_log *iolog, unsigned long elapsed)
 {
 	/*

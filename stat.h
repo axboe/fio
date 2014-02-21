@@ -224,6 +224,7 @@ extern unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long
 extern void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat);
 extern void stat_calc_lat_u(struct thread_stat *ts, double *io_u_lat);
 extern void stat_calc_dist(unsigned int *map, unsigned long total, double *io_u_dist);
+extern void reset_io_stats(struct thread_data *);
 
 static inline int usec_to_msec(unsigned long *min, unsigned long *max,
 			       double *mean, double *dev)

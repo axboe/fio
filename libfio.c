@@ -135,7 +135,7 @@ void reset_all_stats(struct thread_data *td)
 	memcpy(&td->epoch, &tv, sizeof(tv));
 	memcpy(&td->start, &tv, sizeof(tv));
 
-	lat_target_init(td);
+	lat_target_reset(td);
 }
 
 void reset_fio_state(void)

@@ -1162,6 +1162,10 @@ static int __lat_target_failed(struct thread_data *td)
 		return 1;
 
 	td->latency_qd_high = td->latency_qd;
+
+	if (td->latency_qd == td->latency_qd_low)
+		td->latency_qd_low--;
+
 	td->latency_qd = (td->latency_qd + td->latency_qd_low) / 2;
 
 	dprint(FD_RATE, "Ramped down: %d %d %d\n", td->latency_qd_low, td->latency_qd, td->latency_qd_high);
@@ -1186,6 +1190,8 @@ static int lat_target_failed(struct thread_data *td)
 
 void lat_target_init(struct thread_data *td)
 {
+	td->latency_end_run = 0;
+
 	if (td->o.latency_target) {
 		dprint(FD_RATE, "Latency target=%llu\n", td->o.latency_target);
 		fio_gettime(&td->latency_ts, NULL);
@@ -1197,9 +1203,16 @@ void lat_target_init(struct thread_data *td)
 		td->latency_qd = td->o.iodepth;
 }
 
+void lat_target_reset(struct thread_data *td)
+{
+	if (!td->latency_end_run)
+		lat_target_init(td);
+}
+
 static void lat_target_success(struct thread_data *td)
 {
 	const unsigned int qd = td->latency_qd;
+	struct thread_options *o = &td->o;
 
 	td->latency_qd_low = td->latency_qd;
 
@@ -1208,20 +1221,32 @@ static void lat_target_success(struct thread_data *td)
 	 * of bisecting from highest possible queue depth. If we have set
 	 * a limit other than td->o.iodepth, bisect between that.
 	 */
-	if (td->latency_qd_high != td->o.iodepth)
+	if (td->latency_qd_high != o->iodepth)
 		td->latency_qd = (td->latency_qd + td->latency_qd_high) / 2;
 	else
 		td->latency_qd *= 2;
 
-	if (td->latency_qd > td->o.iodepth)
-		td->latency_qd = td->o.iodepth;
+	if (td->latency_qd > o->iodepth)
+		td->latency_qd = o->iodepth;
 
 	dprint(FD_RATE, "Ramped up: %d %d %d\n", td->latency_qd_low, td->latency_qd, td->latency_qd_high);
+
 	/*
-	 * Same as last one, we are done
+	 * Same as last one, we are done. Let it run a latency cycle, so
+	 * we get only the results from the targeted depth.
 	 */
-	if (td->latency_qd == qd)
-		td->done = 1;
+	if (td->latency_qd == qd) {
+		if (td->latency_end_run) {
+			dprint(FD_RATE, "We are done\n");
+			td->done = 1;
+		} else {
+			dprint(FD_RATE, "Quiesce and final run\n");
+			io_u_quiesce(td);
+			td->latency_end_run = 1;
+			reset_all_stats(td);
+			reset_io_stats(td);
+		}
+	}
 
 	lat_new_cycle(td);
 }
