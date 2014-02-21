@@ -126,7 +126,7 @@ static unsigned long long get_mult_time(const char *str, int len)
 {
 	const char *p = str;
 	char *c;
-	unsigned long long mult = 1000;
+	unsigned long long mult = 1;
 
 	/*
          * Go forward until we hit a non-digit, or +/- sign
@@ -138,22 +138,24 @@ static unsigned long long get_mult_time(const char *str, int len)
 	}
 
 	if (!isalpha((int) *p))
-		return 1000;
+		return mult;
 
 	c = strdup(p);
 	for (int i = 0; i < strlen(c); i++)
 		c[i] = tolower(c[i]);
 
-	if (!strncmp("ms", c, 2))
+	if (!strncmp("us", c, 2) || !strncmp("usec", c, 4))
 		mult = 1;
-	else if (!strcmp("s", c))
+	else if (!strncmp("ms", c, 2) || !strncmp("msec", c, 4))
 		mult = 1000;
+	else if (!strcmp("s", c))
+		mult = 1000000;
 	else if (!strcmp("m", c))
-		mult = 60 * 1000;
+		mult = 60 * 1000000UL;
 	else if (!strcmp("h", c))
-		mult = 60 * 60 * 1000;
+		mult = 60 * 60 * 1000000UL;
 	else if (!strcmp("d", c))
-		mult = 24 * 60 * 60 * 1000;
+		mult = 24 * 60 * 60 * 1000000UL;
 
 	free(c);
 	return mult;
