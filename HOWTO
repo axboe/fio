@@ -223,7 +223,8 @@ a string. The following types are used:
 str	String. This is a sequence of alpha characters.
 time	Integer with possible time suffix. In seconds unless otherwise
 	specified, use eg 10m for 10 minutes. Accepts s/m/h for seconds,
-	minutes, and hours.
+	minutes, and hours, and accepts 'ms' (or 'msec') for milliseconds,
+	and 'us' (or 'usec') for microseconds.
 int	SI integer. A whole number value, which may contain a suffix
 	describing the base of the number. Accepted suffixes are k/m/g/t/p,
 	meaning kilo, mega, giga, tera, and peta. The suffix is not case

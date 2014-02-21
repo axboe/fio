@@ -346,7 +346,7 @@ static inline int runtime_exceeded(struct thread_data *td, struct timeval *t)
 		return 0;
 	if (!td->o.timeout)
 		return 0;
-	if (mtime_since(&td->epoch, t) >= td->o.timeout )
+	if (utime_since(&td->epoch, t) >= td->o.timeout)
 		return 1;
 
 	return 0;
@@ -1683,8 +1683,8 @@ static void do_usleep(unsigned int usecs)
 static void run_threads(void)
 {
 	struct thread_data *td;
-	unsigned long spent;
 	unsigned int i, todo, nr_running, m_rate, t_rate, nr_started;
+	uint64_t spent;
 
 	if (fio_gtod_offload && fio_start_gtod_thread())
 		return;
@@ -1782,7 +1782,7 @@ static void run_threads(void)
 			}
 
 			if (td->o.start_delay) {
-				spent = mtime_since_genesis();
+				spent = utime_since_genesis();
 
 				if (td->o.start_delay > spent)
 					continue;

@@ -102,7 +102,7 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 		} else
 			perc = -1;
 
-		if (str_to_decimal(fname, &val, 1, o)) {
+		if (str_to_decimal(fname, &val, 1, o, 0)) {
 			log_err("fio: bssplit conversion failed\n");
 			free(bssplit);
 			return 1;
@@ -336,7 +336,7 @@ static int str_rw_cb(void *data, const char *str)
 	else {
 		long long val;
 
-		if (str_to_decimal(nr, &val, 1, o)) {
+		if (str_to_decimal(nr, &val, 1, o, 0)) {
 			log_err("fio: rw postfix parsing failed\n");
 			free(nr);
 			return 1;
@@ -2068,6 +2068,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off2	= td_var_offset(start_delay_high),
 		.help	= "Only start job when this period has passed",
 		.def	= "0",
+		.is_seconds = 1,
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_RUNTIME,
 	},
@@ -2079,6 +2080,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(timeout),
 		.help	= "Stop workload when this amount of time has passed",
 		.def	= "0",
+		.is_seconds = 1,
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_RUNTIME,
 	},
@@ -2106,6 +2108,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= td_var_offset(ramp_time),
 		.help	= "Ramp up time before measuring performance",
+		.is_seconds = 1,
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_RUNTIME,
 	},

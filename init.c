@@ -1773,7 +1773,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		case 'E': {
 			long long t = 0;
 
-			if (str_to_decimal(optarg, &t, 0, NULL)) {
+			if (str_to_decimal(optarg, &t, 0, NULL, 1)) {
 				log_err("fio: failed parsing eta time %s\n", optarg);
 				exit_val = 1;
 				do_exit++;
@@ -1933,7 +1933,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		case 'L': {
 			long long val;
 
-			if (check_str_time(optarg, &val)) {
+			if (check_str_time(optarg, &val, 1)) {
 				log_err("fio: failed parsing time %s\n", optarg);
 				do_exit++;
 				exit_val = 1;

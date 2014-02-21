@@ -58,6 +58,11 @@ uint64_t mtime_since_genesis(void)
 	return mtime_since_now(&genesis);
 }
 
+uint64_t utime_since_genesis(void)
+{
+	return utime_since_now(&genesis);
+}
+
 int in_ramp_time(struct thread_data *td)
 {
 	return td->o.ramp_time && !td->ramp_time_over;
@@ -71,7 +76,7 @@ int ramp_time_over(struct thread_data *td)
 		return 1;
 
 	fio_gettime(&tv, NULL);
-	if (mtime_since(&td->epoch, &tv) >= td->o.ramp_time ) {
+	if (utime_since(&td->epoch, &tv) >= td->o.ramp_time) {
 		td->ramp_time_over = 1;
 		reset_all_stats(td);
 		td_set_runstate(td, TD_RAMP);

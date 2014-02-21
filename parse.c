@@ -122,7 +122,8 @@ static void show_option_help(struct fio_option *o, int is_err)
 	show_option_values(o);
 }
 
-static unsigned long long get_mult_time(const char *str, int len)
+static unsigned long long get_mult_time(const char *str, int len,
+					int is_seconds)
 {
 	const char *p = str;
 	char *c;
@@ -137,8 +138,12 @@ static unsigned long long get_mult_time(const char *str, int len)
 		p++;
 	}
 
-	if (!isalpha((int) *p))
-		return mult;
+	if (!isalpha((int) *p)) {
+		if (is_seconds)
+			return 1000000UL;
+		else
+			return 1;
+	}
 
 	c = strdup(p);
 	for (int i = 0; i < strlen(c); i++)
@@ -270,7 +275,8 @@ int str_to_float(const char *str, double *val)
 /*
  * convert string into decimal value, noting any size suffix
  */
-int str_to_decimal(const char *str, long long *val, int kilo, void *data)
+int str_to_decimal(const char *str, long long *val, int kilo, void *data,
+		   int is_seconds)
 {
 	int len, base;
 
@@ -297,19 +303,19 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data)
 		else
 			*val *= mult;
 	} else
-		*val *= get_mult_time(str, len);
+		*val *= get_mult_time(str, len, is_seconds);
 
 	return 0;
 }
 
 int check_str_bytes(const char *p, long long *val, void *data)
 {
-	return str_to_decimal(p, val, 1, data);
+	return str_to_decimal(p, val, 1, data, 0);
 }
 
-int check_str_time(const char *p, long long *val)
+int check_str_time(const char *p, long long *val, int is_seconds)
 {
-	return str_to_decimal(p, val, 0, NULL);
+	return str_to_decimal(p, val, 0, NULL, is_seconds);
 }
 
 void strip_blank_front(char **p)
@@ -351,7 +357,7 @@ static int check_range_bytes(const char *str, long *val, void *data)
 {
 	long long __val;
 
-	if (!str_to_decimal(str, &__val, 1, data)) {
+	if (!str_to_decimal(str, &__val, 1, data, 0)) {
 		*val = __val;
 		return 0;
 	}
@@ -461,7 +467,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			*p = '\0';
 
 		if (is_time)
-			ret = check_str_time(tmp, &ull);
+			ret = check_str_time(tmp, &ull, o->is_seconds);
 		else
 			ret = check_str_bytes(tmp, &ull, data);
 
