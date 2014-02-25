@@ -1093,7 +1093,10 @@ static struct fio_file *__get_next_file(struct thread_data *td)
 	td->file_service_file = f;
 	td->file_service_left = td->file_service_nr - 1;
 out:
-	dprint(FD_FILE, "get_next_file: %p [%s]\n", f, f->file_name);
+	if (f)
+		dprint(FD_FILE, "get_next_file: %p [%s]\n", f, f->file_name);
+	else
+		dprint(FD_FILE, "get_next_file: NULL\n");
 	return f;
 }
 
