@@ -913,10 +913,10 @@ static int fio_netio_setup_connect_inet(struct thread_data *td,
 
 	if (is_ipv6(o)) {
 		af = AF_INET6;
-		dst = &nd->addr6;
+		dst = &nd->addr6.sin6_addr;
 	} else {
 		af = AF_INET;
-		dst = &nd->addr;
+		dst = &nd->addr.sin_addr;
 	}
 
 	if (fio_fill_addr(td, host, af, dst, &res))
