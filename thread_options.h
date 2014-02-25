@@ -28,8 +28,10 @@ struct bssplit {
 	uint32_t perc;
 };
 
+#define OPT_MAGIC	0x4f50544e
+
 struct thread_options {
-	int pad;
+	int magic;
 	char *description;
 	char *name;
 	char *directory;

@@ -3790,6 +3790,7 @@ int fio_cmd_ioengine_option_parse(struct thread_data *td, const char *opt,
 
 void fio_fill_default_options(struct thread_data *td)
 {
+	td->o.magic = OPT_MAGIC;
 	fill_default_options(td, fio_options);
 }
 
@@ -3834,7 +3835,16 @@ unsigned int fio_get_kb_base(void *data)
 	struct thread_options *o = data;
 	unsigned int kb_base = 0;
 
-	if (o)
+	/*
+	 * This is a hack... For private options, *data is not holding
+	 * a pointer to the thread_options, but to private data. This means
+	 * we can't safely dereference it, but magic is first so mem wise
+	 * it is valid. But this also means that if the job first sets
+	 * kb_base and expects that to be honored by private options,
+	 * it will be disappointed. We will return the global default
+	 * for this.
+	 */
+	if (o && o->magic == OPT_MAGIC)
 		kb_base = o->kb_base;
 	if (!kb_base)
 		kb_base = 1024;
