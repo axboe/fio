@@ -1307,9 +1307,9 @@ again:
 	else if (!queue_full(td)) {
 		io_u = io_u_qpop(&td->io_u_freelist);
 
+		io_u->file = NULL;
 		io_u->buflen = 0;
 		io_u->resid = 0;
-		io_u->file = NULL;
 		io_u->end_io = NULL;
 	}
 

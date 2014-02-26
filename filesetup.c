@@ -1010,7 +1010,7 @@ int init_random_map(struct thread_data *td)
 
 			seed = td->rand_seeds[FIO_RAND_BLOCK_OFF];
 			
-			if (!lfsr_init(&f->lfsr, blocks, seed, seed & 0xF))
+			if (!lfsr_init(&f->lfsr, blocks, seed, 0))
 				continue;
 		} else if (!td->o.norandommap) {
 			f->io_axmap = axmap_new(blocks);

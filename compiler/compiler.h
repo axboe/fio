@@ -20,4 +20,6 @@
 #define fio_init	__attribute__((constructor))
 #define fio_exit	__attribute__((destructor))
 
+#define fio_unlikely(x)	__builtin_expect(!!(x), 0)
+
 #endif

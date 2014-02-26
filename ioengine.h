@@ -73,6 +73,25 @@ struct io_u {
 
 	struct io_piece *ipo;
 
+	unsigned int resid;
+	unsigned int error;
+
+	/*
+	 * io engine private data
+	 */
+	union {
+		unsigned int index;
+		unsigned int seen;
+		void *engine_data;
+	};
+
+	struct flist_head verify_list;
+
+	/*
+	 * Callback for io completion
+	 */
+	int (*end_io)(struct thread_data *, struct io_u *);
+
 	union {
 #ifdef CONFIG_LIBAIO
 		struct iocb iocb;
@@ -97,25 +116,6 @@ struct io_u {
 #endif
 		void *mmap_data;
 	};
-
-	unsigned int resid;
-	unsigned int error;
-
-	/*
-	 * io engine private data
-	 */
-	union {
-		unsigned int index;
-		unsigned int seen;
-		void *engine_data;
-	};
-
-	struct flist_head verify_list;
-
-	/*
-	 * Callback for io completion
-	 */
-	int (*end_io)(struct thread_data *, struct io_u *);
 };
 
 /*
