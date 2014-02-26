@@ -217,6 +217,8 @@ static int trace_add_file(struct thread_data *td, __u32 device)
 
 		dprint(FD_BLKTRACE, "add devices %s\n", dev);
 		fileno = add_file_exclusive(td, dev);
+		td->files[fileno]->major = maj;
+		td->files[fileno]->minor = min;
 		trace_add_open_close_event(td, fileno, FIO_LOG_OPEN_FILE);
 		last_fileno = fileno;
 	}
@@ -369,7 +371,7 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 	unsigned int cpu;
 	unsigned int rw_bs[2];
 	struct fifo *fifo;
-	int fd, i;
+	int fd, i, old_state;
 	struct fio_file *f;
 
 	fd = open(filename, O_RDONLY);
@@ -379,6 +381,9 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 	}
 
 	fifo = fifo_alloc(TRACE_FIFO_SIZE);
+
+	old_state = td->runstate;
+	td_set_runstate(td, TD_SETTING_UP);
 
 	td->o.size = 0;
 
@@ -457,6 +462,8 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 
 	fifo_free(fifo);
 	close(fd);
+
+	td_set_runstate(td, old_state);
 
 	if (!td->files_index) {
 		log_err("fio: did not find replay device(s)\n");

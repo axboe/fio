@@ -1145,7 +1145,7 @@ static void free_already_allocated() {
 	}
 }
 
-int add_file(struct thread_data *td, const char *fname, int numjob)
+int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 {
 	int cur_files = td->files_index;
 	char file_name[PATH_MAX];
@@ -1237,6 +1237,9 @@ int add_file(struct thread_data *td, const char *fname, int numjob)
 	if (!td->o.open_files)
 		td->o.open_files = 1;
 
+	if (inc)
+		td->o.nr_files++;
+
 	dprint(FD_FILE, "file %p \"%s\" added at %d\n", f, f->file_name,
 							cur_files);
 
@@ -1253,7 +1256,7 @@ int add_file_exclusive(struct thread_data *td, const char *fname)
 			return i;
 	}
 
-	return add_file(td, fname, 0);
+	return add_file(td, fname, 0, 1);
 }
 
 void get_file(struct fio_file *f)
@@ -1362,8 +1365,7 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 		}
 
 		if (S_ISREG(sb.st_mode)) {
-			add_file(td, full_path, 0);
-			td->o.nr_files++;
+			add_file(td, full_path, 0, 1);
 			continue;
 		}
 		if (!S_ISDIR(sb.st_mode))

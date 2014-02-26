@@ -827,8 +827,7 @@ static int str_filename_cb(void *data, const char *input)
 	while ((fname = get_next_name(&str)) != NULL) {
 		if (!strlen(fname))
 			break;
-		add_file(td, fname, 0);
-		td->o.nr_files++;
+		add_file(td, fname, 0, 1);
 	}
 
 	free(p);

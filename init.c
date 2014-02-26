@@ -1026,10 +1026,10 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		file_alloced = 1;
 
 		if (o->nr_files == 1 && exists_and_not_file(jobname))
-			add_file(td, jobname, job_add_num);
+			add_file(td, jobname, job_add_num, 0);
 		else {
 			for (i = 0; i < o->nr_files; i++)
-				add_file(td, make_filename(fname, o, jobname, job_add_num, i), job_add_num);
+				add_file(td, make_filename(fname, o, jobname, job_add_num, i), job_add_num, 0);
 		}
 	}
 
