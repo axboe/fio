@@ -928,6 +928,17 @@ cpus_allowed=str Controls the same options as cpumask, but it allows a text
 		allows a range of CPUs. Say you wanted a binding to CPUs
 		1, 5, and 8-15, you would set cpus_allowed=1,5,8-15.
 
+cpus_allowed_policy=str Set the policy of how fio distributes the CPUs
+		specified by cpus_allowed or cpumask. Two policies are
+		supported:
+
+		shared	All jobs will share the CPU set specified.
+		split	Each job will get a unique CPU from the CPU set.
+
+		'shared' is the default behaviour, if the option isn't
+		specified. If split is specified, then fio will error out if
+		there are more jobs defined than CPUs given in the set.
+
 numa_cpu_nodes=str Set this job running on spcified NUMA nodes' CPUs. The
 		arguments allow comma delimited list of cpu numbers,
 		A-B ranges, or 'all'. Note, to enable numa options support,

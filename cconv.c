@@ -188,6 +188,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->numjobs = le32_to_cpu(top->numjobs);
 	o->cpumask_set = le32_to_cpu(top->cpumask_set);
 	o->verify_cpumask_set = le32_to_cpu(top->verify_cpumask_set);
+	o->cpus_allowed_policy = le32_to_cpu(top->cpus_allowed_policy);
 	o->iolog = le32_to_cpu(top->iolog);
 	o->rwmixcycle = le32_to_cpu(top->rwmixcycle);
 	o->nice = le32_to_cpu(top->nice);
@@ -343,6 +344,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->numjobs = cpu_to_le32(o->numjobs);
 	top->cpumask_set = cpu_to_le32(o->cpumask_set);
 	top->verify_cpumask_set = cpu_to_le32(o->verify_cpumask_set);
+	top->cpus_allowed_policy = cpu_to_le32(o->cpus_allowed_policy);
 	top->iolog = cpu_to_le32(o->iolog);
 	top->rwmixcycle = cpu_to_le32(o->rwmixcycle);
 	top->nice = cpu_to_le32(o->nice);

@@ -629,4 +629,9 @@ enum {
 	FIO_RAND_GEN_LFSR,
 };
 
+enum {
+	FIO_CPUS_SHARED		= 0,
+	FIO_CPUS_SPLIT,
+};
+
 #endif

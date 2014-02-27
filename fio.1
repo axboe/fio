@@ -833,6 +833,25 @@ may run on.  See \fBsched_setaffinity\fR\|(2).
 .BI cpus_allowed \fR=\fPstr
 Same as \fBcpumask\fR, but allows a comma-delimited list of CPU numbers.
 .TP
+.BI cpus_allowed_policy \fR=\fPstr
+Set the policy of how fio distributes the CPUs specified by \fBcpus_allowed\fR
+or \fBcpumask\fR. Two policies are supported:
+.RS
+.RS
+.TP
+.B shared
+All jobs will share the CPU set specified.
+.TP
+.B split
+Each job will get a unique CPU from the CPU set.
+.RE
+.P
+\fBshared\fR is the default behaviour, if the option isn't specified. If
+\fBsplit\fR is specified, then fio will error out if there are more jobs
+defined than CPUs given in the set.
+.RE
+.P
+.TP
 .BI numa_cpu_nodes \fR=\fPstr
 Set this job running on specified NUMA nodes' CPUs. The arguments allow
 comma delimited list of cpu numbers, A-B ranges, or 'all'.

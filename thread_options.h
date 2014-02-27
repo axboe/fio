@@ -155,6 +155,7 @@ struct thread_options {
 	unsigned int cpumask_set;
 	os_cpu_mask_t verify_cpumask;
 	unsigned int verify_cpumask_set;
+	unsigned int cpus_allowed_policy;
 #ifdef CONFIG_LIBNUMA
 	struct bitmask *numa_cpunodesmask;
 	unsigned int numa_cpumask_set;
@@ -378,6 +379,7 @@ struct thread_options_pack {
 	uint32_t cpumask_set;
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
 	uint32_t verify_cpumask_set;
+	uint32_t cpus_allowed_policy;
 	uint32_t iolog;
 	uint32_t rwmixcycle;
 	uint32_t rwmix[DDIR_RWDIR_CNT];

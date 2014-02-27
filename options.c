@@ -394,6 +394,21 @@ static int str_exitall_cb(void)
 }
 
 #ifdef FIO_HAVE_CPU_AFFINITY
+int fio_cpus_split(os_cpu_mask_t *mask, unsigned int cpu)
+{
+	const long max_cpu = cpus_online();
+	unsigned int i;
+
+	for (i = 0; i < max_cpu; i++) {
+		if (cpu != i) {
+			fio_cpu_clear(mask, i);
+			continue;
+		}
+	}
+
+	return fio_cpu_count(mask);
+}
+
 static int str_cpumask_cb(void *data, unsigned long long *val)
 {
 	struct thread_data *td = data;
@@ -2872,6 +2887,27 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR,
 		.cb	= str_cpus_allowed_cb,
 		.help	= "Set CPUs allowed",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CRED,
+	},
+	{
+		.name	= "cpus_allowed_policy",
+		.lname	= "CPUs allowed distribution policy",
+		.type	= FIO_OPT_STR,
+		.off1	= td_var_offset(cpus_allowed_policy),
+		.help	= "Distribution policy for cpus_allowed",
+		.parent = "cpus_allowed",
+		.prio	= 1,
+		.posval = {
+			  { .ival = "shared",
+			    .oval = FIO_CPUS_SHARED,
+			    .help = "Mask shared between threads",
+			  },
+			  { .ival = "split",
+			    .oval = FIO_CPUS_SPLIT,
+			    .help = "Mask split between threads",
+			  },
+		},
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_CRED,
 	},

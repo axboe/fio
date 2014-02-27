@@ -111,6 +111,16 @@ static inline int fio_cpuset_init(os_cpu_mask_t *mask)
 	return 0;
 }
 
+static inline int fio_cpuset_count(os_cpu_mask_t *mask)
+{
+	unsigned int num_cpus;
+
+	if (pset_info(*mask, NULL, &num_cpus, NULL) < 0)
+		return 0;
+
+	return num_cpus;
+}
+
 static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
 {
 	if (pset_destroy(*mask) < 0)

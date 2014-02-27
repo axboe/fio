@@ -1278,6 +1278,15 @@ static void *thread_main(void *data)
 	 * allocations.
 	 */
 	if (o->cpumask_set) {
+		if (o->cpus_allowed_policy == FIO_CPUS_SPLIT) {
+			ret = fio_cpus_split(&o->cpumask, td->thread_number);
+			if (!ret) {
+				log_err("fio: no CPUs set\n");
+				log_err("fio: Try increasing number of available CPUs\n");
+				td_verror(td, EINVAL, "cpus_split");
+				goto err;
+			}
+		}
 		ret = fio_setaffinity(td->pid, o->cpumask);
 		if (ret == -1) {
 			td_verror(td, errno, "cpu_set_affinity");
