@@ -104,7 +104,7 @@ static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 
 		dprint(FD_RANDOM, "off rand %llu\n", (unsigned long long) r);
 
-		*b = (lastb - 1) * (r / ((uint64_t) rmax + 1.0));
+		*b = lastb * (r / ((uint64_t) rmax + 1.0));
 	} else {
 		uint64_t off = 0;
 
