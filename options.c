@@ -394,16 +394,23 @@ static int str_exitall_cb(void)
 }
 
 #ifdef FIO_HAVE_CPU_AFFINITY
-int fio_cpus_split(os_cpu_mask_t *mask, unsigned int cpu)
+int fio_cpus_split(os_cpu_mask_t *mask, unsigned int cpu_index)
 {
+	unsigned int i, index, cpus_in_mask;
 	const long max_cpu = cpus_online();
-	unsigned int i;
 
+	cpus_in_mask = fio_cpu_count(mask);
+	cpu_index = cpu_index % cpus_in_mask;
+
+	index = 0;
 	for (i = 0; i < max_cpu; i++) {
-		if (cpu != i) {
-			fio_cpu_clear(mask, i);
+		if (!fio_cpu_isset(mask, i))
 			continue;
-		}
+
+		if (cpu_index != index)
+			fio_cpu_clear(mask, i);
+
+		index++;
 	}
 
 	return fio_cpu_count(mask);
