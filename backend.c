@@ -1279,7 +1279,7 @@ static void *thread_main(void *data)
 	 */
 	if (o->cpumask_set) {
 		if (o->cpus_allowed_policy == FIO_CPUS_SPLIT) {
-			ret = fio_cpus_split(&o->cpumask, td->thread_number);
+			ret = fio_cpus_split(&o->cpumask, td->thread_number - 1);
 			if (!ret) {
 				log_err("fio: no CPUs set\n");
 				log_err("fio: Try increasing number of available CPUs\n");
