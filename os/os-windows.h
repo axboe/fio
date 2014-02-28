@@ -215,7 +215,7 @@ static inline void fio_cpu_set(os_cpu_mask_t *mask, int cpu)
 	*mask |= 1 << cpu;
 }
 
-static inline int fio_cpu_count(os_cpu_mask_t *mask, int cpu)
+static inline int fio_cpu_count(os_cpu_mask_t *mask)
 {
 	return hweight64(*mask);
 }
