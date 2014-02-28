@@ -15,6 +15,7 @@
 #include "../smalloc.h"
 #include "../file.h"
 #include "../log.h"
+#include "../lib/hweight.h"
 
 #include "windows/posix.h"
 
