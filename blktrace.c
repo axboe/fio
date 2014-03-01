@@ -382,8 +382,7 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 
 	fifo = fifo_alloc(TRACE_FIFO_SIZE);
 
-	old_state = td->runstate;
-	td_set_runstate(td, TD_SETTING_UP);
+	old_state = td_bump_runstate(td, TD_SETTING_UP);
 
 	td->o.size = 0;
 
@@ -463,7 +462,7 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 	fifo_free(fifo);
 	close(fd);
 
-	td_set_runstate(td, old_state);
+	td_restore_runstate(td, old_state);
 
 	if (!td->files_index) {
 		log_err("fio: did not find replay device(s)\n");

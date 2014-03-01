@@ -209,8 +209,7 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 		did_open = 1;
 	}
 
-	old_runstate = td->runstate;
-	td_set_runstate(td, TD_PRE_READING);
+	old_runstate = td_bump_runstate(td, TD_PRE_READING);
 
 	bs = td->o.max_bs[DDIR_READ];
 	b = malloc(bs);
@@ -234,7 +233,7 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 		}
 	}
 
-	td_set_runstate(td, old_runstate);
+	td_restore_runstate(td, old_runstate);
 
 	if (did_open)
 		td->io_ops->close_file(td, f);
@@ -745,8 +744,7 @@ int setup_files(struct thread_data *td)
 
 	dprint(FD_FILE, "setup files\n");
 
-	old_state = td->runstate;
-	td_set_runstate(td, TD_SETTING_UP);
+	old_state = td_bump_runstate(td, TD_SETTING_UP);
 
 	if (o->read_iolog_file)
 		goto done;
@@ -925,12 +923,12 @@ done:
 	if (o->create_only)
 		td->done = 1;
 
-	td_set_runstate(td, old_state);
+	td_restore_runstate(td, old_state);
 	return 0;
 err_offset:
 	log_err("%s: you need to specify valid offset=\n", o->name);
 err_out:
-	td_set_runstate(td, old_state);
+	td_restore_runstate(td, old_state);
 	return 1;
 }
 
@@ -980,11 +978,12 @@ static int init_rand_distribution(struct thread_data *td)
 	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM)
 		return 0;
 
-	state = td->runstate;
-	td_set_runstate(td, TD_SETTING_UP);
+	state = td_bump_runstate(td, TD_SETTING_UP);
+
 	for_each_file(td, f, i)
 		__init_rand_distribution(td, f);
-	td_set_runstate(td, state);
+
+	td_restore_runstate(td, state);
 
 	return 1;
 }
