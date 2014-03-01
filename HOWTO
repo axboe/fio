@@ -936,8 +936,9 @@ cpus_allowed_policy=str Set the policy of how fio distributes the CPUs
 		split	Each job will get a unique CPU from the CPU set.
 
 		'shared' is the default behaviour, if the option isn't
-		specified. If split is specified, then fio will error out if
-		there are more jobs defined than CPUs given in the set.
+		specified. If split is specified, then fio will will assign
+		one cpu per job. If not enough CPUs are given for the jobs
+		listed, then fio will roundrobin the CPUs in the set.
 
 numa_cpu_nodes=str Set this job running on spcified NUMA nodes' CPUs. The
 		arguments allow comma delimited list of cpu numbers,

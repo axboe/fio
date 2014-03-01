@@ -847,8 +847,9 @@ Each job will get a unique CPU from the CPU set.
 .RE
 .P
 \fBshared\fR is the default behaviour, if the option isn't specified. If
-\fBsplit\fR is specified, then fio will error out if there are more jobs
-defined than CPUs given in the set.
+\fBsplit\fR is specified, then fio will assign one cpu per job. If not enough
+CPUs are given for the jobs listed, then fio will roundrobin the CPUs in
+the set.
 .RE
 .P
 .TP
