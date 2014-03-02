@@ -25,6 +25,7 @@
 					<Directory Id="fio" Name="fio">
 						<Component>
 							<File Source="..\..\fio.exe"/>
+							<Environment Action="set" Part="last" Id="PATH" Name="PATH" Value="[INSTALLDIR]fio\" System="yes"/>
 						</Component>
 						<Component>
 							<File Id="README" Name="README.txt" Source="..\..\README"/>
