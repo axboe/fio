@@ -1196,6 +1196,12 @@ static uint64_t do_dry_run(struct thread_data *td)
 			td->ts.total_io_u[io_u->ddir]++;
 		}
 
+		if (td_write(td) && io_u->ddir == DDIR_WRITE &&
+		    td->o.do_verify &&
+		    td->o.verify != VERIFY_NONE &&
+		    !td->o.experimental_verify)
+			log_io_piece(td, io_u);
+
 		ret = io_u_sync_complete(td, io_u, bytes_done);
 		(void) ret;
 	}
