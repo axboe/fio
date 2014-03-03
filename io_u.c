@@ -1297,7 +1297,7 @@ int queue_full(struct thread_data *td)
 
 struct io_u *__get_io_u(struct thread_data *td)
 {
-	struct io_u *io_u;
+	struct io_u *io_u = NULL;
 
 	td_io_u_lock(td);
 
