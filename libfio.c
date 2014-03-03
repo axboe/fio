@@ -172,6 +172,19 @@ void td_set_runstate(struct thread_data *td, int runstate)
 	td->runstate = runstate;
 }
 
+int td_bump_runstate(struct thread_data *td, int new_state)
+{
+	int old_state = td->runstate;
+
+	td_set_runstate(td, new_state);
+	return old_state;
+}
+
+void td_restore_runstate(struct thread_data *td, int old_state)
+{
+	td_set_runstate(td, old_state);
+}
+
 void fio_terminate_threads(int group_id)
 {
 	struct thread_data *td;

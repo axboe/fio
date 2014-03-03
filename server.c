@@ -1138,7 +1138,7 @@ static int fio_send_cmd_ext_pdu(int sk, uint16_t opcode, const void *buf,
 	struct fio_net_cmd cmd;
 	struct iovec iov[2];
 
-	iov[0].iov_base = &cmd;
+	iov[0].iov_base = (void *) &cmd;
 	iov[0].iov_len = sizeof(cmd);
 	iov[1].iov_base = (void *) buf;
 	iov[1].iov_len = size;
