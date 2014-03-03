@@ -5,6 +5,7 @@
 
 #include <errno.h>
 #include <malloc.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/fcntl.h>
 #include <sys/pset.h>
@@ -105,7 +106,8 @@ static inline int fio_set_odirect(int fd)
 
 static inline int fio_cpu_isset(os_cpu_mask_t *mask, int cpu)
 {
-	const unsigned int max_cpus = cpus_online();
+	const unsigned int max_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+	unsigned int num_cpus;
 	processorid_t *cpus;
 	int i, ret;
 
@@ -117,7 +119,7 @@ static inline int fio_cpu_isset(os_cpu_mask_t *mask, int cpu)
 	}
 
 	ret = 0;
-	for (i = 0; i < max_cpus; i++) {
+	for (i = 0; i < num_cpus; i++) {
 		if (cpus[i] == cpu) {
 			ret = 1;
 			break;
@@ -128,15 +130,7 @@ static inline int fio_cpu_isset(os_cpu_mask_t *mask, int cpu)
 	return ret;
 }
 
-static inline int fio_cpuset_init(os_cpu_mask_t *mask)
-{
-	if (pset_create(mask) < 0)
-		return -1;
-
-	return 0;
-}
-
-static inline int fio_cpuset_count(os_cpu_mask_t *mask)
+static inline int fio_cpu_count(os_cpu_mask_t *mask)
 {
 	unsigned int num_cpus;
 
@@ -144,6 +138,14 @@ static inline int fio_cpuset_count(os_cpu_mask_t *mask)
 		return 0;
 
 	return num_cpus;
+}
+
+static inline int fio_cpuset_init(os_cpu_mask_t *mask)
+{
+	if (pset_create(mask) < 0)
+		return -1;
+
+	return 0;
 }
 
 static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
