@@ -33,7 +33,7 @@ typedef cpuset_t os_cpu_mask_t;
 #define fio_cpu_clear(mask, cpu)        (void) CPU_CLR((cpu), (mask))
 #define fio_cpu_set(mask, cpu)          (void) CPU_SET((cpu), (mask))
 #define fio_cpu_isset(mask, cpu)	CPU_ISSET((cpu), (mask))
-#define fio_cpu_count(maks)		CPU_COUNT((mask))
+#define fio_cpu_count(mask)		CPU_COUNT((mask))
 
 static inline int fio_cpuset_init(os_cpu_mask_t *mask)
 {
