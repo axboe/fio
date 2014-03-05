@@ -327,6 +327,22 @@ static inline unsigned int cpus_online(void)
 }
 #endif
 
+#ifndef CONFIG_CPU_COUNT
+#ifdef FIO_HAVE_CPU_AFFINITY
+static inline int CPU_COUNT(os_cpu_mask_t *mask)
+{
+	int max_cpus = cpus_online();
+	int nr_cpus, i;
+
+	for (i = 0, nr_cpus = 0; i < max_cpus; i++)
+		if (fio_cpu_isset(mask, i))
+			nr_cpus++;
+
+	return nr_cpus;
+}
+#endif
+#endif
+
 #ifndef FIO_HAVE_GETTID
 static inline int gettid(void)
 {
