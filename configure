@@ -184,6 +184,8 @@ elif check_define __OpenBSD__ ; then
 elif check_define __sun__ ; then
   targetos='SunOS'
   CFLAGS="$CFLAGS -D_REENTRANT"
+elif check_define _WIN32 ; then
+  targetos='CYGWIN'
 else
   targetos=`uname -s`
 fi
