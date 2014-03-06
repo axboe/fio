@@ -130,9 +130,6 @@ output_sym() {
 targetos=""
 cpu=""
 
-cross_prefix=${cross_prefix-${CROSS_COMPILE}}
-cc="${CC-${cross_prefix}gcc}"
-
 # default options
 show_help="no"
 exit_val=0
@@ -174,6 +171,9 @@ if test "$show_help" = "yes" ; then
   echo "--disable-numa         Disable libnuma even if found"
   exit $exit_val
 fi
+
+cross_prefix=${cross_prefix-${CROSS_COMPILE}}
+cc="${CC-${cross_prefix}gcc}"
 
 if check_define __ANDROID__ ; then
   targetos="Android"
