@@ -201,28 +201,22 @@ static inline uint64_t fio_swap64(uint64_t val)
 #endif /* FIO_HAVE_BYTEORDER_FUNCS */
 
 #define le16_to_cpu(val) ({			\
-	uint16_t *__val = &(val);		\
-	__le16_to_cpu(*__val);			\
+	__le16_to_cpu(val);			\
 })
 #define le32_to_cpu(val) ({			\
-	uint32_t *__val = &(val);		\
-	__le32_to_cpu(*__val);			\
+	__le32_to_cpu(val);			\
 })
 #define le64_to_cpu(val) ({			\
-	uint64_t *__val = &(val);		\
-	__le64_to_cpu(*__val);			\
+	__le64_to_cpu(val);				\
 })
 #define cpu_to_le16(val) ({			\
-	uint16_t *__val = &(val);		\
-	__cpu_to_le16(*__val);			\
+	__cpu_to_le16(val);			\
 })
 #define cpu_to_le32(val) ({			\
-	uint32_t *__val = &(val);		\
-	__cpu_to_le32(*__val);			\
+	__cpu_to_le32(val);			\
 })
 #define cpu_to_le64(val) ({			\
-	uint64_t *__val = &(val);		\
-	__cpu_to_le64(*__val);			\
+	__cpu_to_le64(val);			\
 })
 
 #ifndef FIO_HAVE_BLKTRACE
