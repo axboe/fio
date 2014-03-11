@@ -625,6 +625,7 @@ reap:
 
 static int io_bytes_exceeded(struct thread_data *td)
 {
+	unsigned long long number_ios = 0;
 	unsigned long long bytes;
 
 	if (td_rw(td))
@@ -636,7 +637,13 @@ static int io_bytes_exceeded(struct thread_data *td)
 	else
 		bytes = td->this_io_bytes[DDIR_TRIM];
 
-	return bytes >= td->o.size;
+	if (td->o.number_ios) {
+		number_ios = ddir_rw_sum(td->this_io_blocks);
+		number_ios += td->io_u_queued + td->io_u_in_flight;
+	}
+
+	return bytes >= td->o.size ||
+		(number_ios && number_ios >= td->o.number_ios);
 }
 
 /*
@@ -1126,6 +1133,14 @@ static int keep_running(struct thread_data *td)
 	if (td->o.loops) {
 		td->o.loops--;
 		return 1;
+	}
+
+	if (td->o.number_ios) {
+		unsigned long long number_ios = ddir_rw_sum(td->this_io_blocks);
+
+		number_ios += td->io_u_queued + td->io_u_in_flight;
+		if (number_ios >= td->o.number_ios)
+			return 0;
 	}
 
 	if (td->o.size != -1ULL && ddir_rw_sum(td->io_bytes) < td->o.size) {

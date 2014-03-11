@@ -1595,9 +1595,6 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 
 	if (!gtod_reduce(td))
 		add_iops_sample(td, idx, bytes, &icd->time);
-
-	if (td->o.number_ios && !--td->o.number_ios)
-		td->done = 1;
 }
 
 static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
