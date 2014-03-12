@@ -162,11 +162,6 @@ static inline unsigned long long os_phys_mem(void)
 	return (unsigned long long) pages * (unsigned long long) pagesize;
 }
 
-static inline void os_get_tmpdir(char *path, int len)
-{
-	GetTempPath(len, path);
-}
-
 static inline int gettid(void)
 {
 	return GetCurrentThreadId();

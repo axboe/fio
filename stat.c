@@ -1480,7 +1480,7 @@ void show_running_run_stats(void)
 static int status_interval_init;
 static struct timeval status_time;
 
-#define FIO_STATUS_FILE		"/tmp/fio-dump-status"
+#define FIO_STATUS_FILE		"fio-dump-status"
 
 static int check_status_file(void)
 {
