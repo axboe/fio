@@ -166,7 +166,9 @@ character. These directories will be assigned equally distributed to job clones
 creates with \fInumjobs\fR as long as they are using generated filenames.
 If specific \fIfilename(s)\fR are set fio will use the first listed directory,
 and thereby matching the  \fIfilename\fR semantic which generates a file each
-clone if not specified, but let all clones use the same if set.
+clone if not specified, but let all clones use the same if set. See
+\fIfilename\fR for considerations regarding escaping certain characters on
+some platforms.
 .TP
 .BI filename \fR=\fPstr
 .B fio
@@ -176,7 +178,12 @@ specify a \fIfilename\fR for each of them to override the default.
 If the I/O engine is file-based, you can specify
 a number of files by separating the names with a `:' character. `\-' is a
 reserved name, meaning stdin or stdout, depending on the read/write direction
-set.
+set. On Windows, disk devices are accessed as \\.\PhysicalDrive0 for the first
+device, \\.\PhysicalDrive1 for the second etc. Note: Windows and FreeBSD
+prevent write access to areas of the disk containing in-use data
+(e.g. filesystems). If the wanted filename does need to include a colon, then
+escape that with a '\' character. For instance, if the filename is
+"/dev/dsk/foo@3,0:c", then you would use filename="/dev/dsk/foo@3,0\:c".
 .TP
 .BI filename_format \fR=\fPstr
 If sharing multiple files between jobs, it is usually necessary to have

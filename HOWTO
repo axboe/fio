@@ -262,7 +262,8 @@ description=str	Text description of the job. Doesn't do anything except
 		not parsed.
 
 directory=str	Prefix filenames with this directory. Used to place files
-		in a different location than "./".
+		in a different location than "./". See the 'filename' option
+		for escaping certain characters.
 
 filename=str	Fio normally makes up a filename based on the job name,
 		thread number, and file number. If you want to share
