@@ -1479,6 +1479,7 @@ void show_running_run_stats(void)
 
 static int status_interval_init;
 static struct timeval status_time;
+static int status_file_disabled;
 
 #define FIO_STATUS_FILE		"fio-dump-status"
 
@@ -1487,6 +1488,9 @@ static int check_status_file(void)
 	struct stat sb;
 	const char *temp_dir;
 	char fio_status_file_path[PATH_MAX];
+
+	if (status_file_disabled)
+		return 0;
 
 	temp_dir = getenv("TMPDIR");
 	if (temp_dir == NULL)
@@ -1499,7 +1503,13 @@ static int check_status_file(void)
 	if (stat(fio_status_file_path, &sb))
 		return 0;
 
-	unlink(fio_status_file_path);
+	if (unlink(fio_status_file_path) < 0) {
+		log_err("fio: failed to unlink %s: %s\n", fio_status_file_path,
+							strerror(errno));
+		log_err("fio: disabling status file updates\n");
+		status_file_disabled = 1;
+	}
+
 	return 1;
 }
 
