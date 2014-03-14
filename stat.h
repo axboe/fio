@@ -114,6 +114,7 @@ struct group_run_stats {
 
 #define MAX_PATTERN_SIZE	512
 #define FIO_JOBNAME_SIZE	128
+#define FIO_JOBDESC_SIZE	256
 #define FIO_VERROR_SIZE		128
 
 struct thread_stat {
@@ -123,7 +124,7 @@ struct thread_stat {
 	uint32_t thread_number;
 	uint32_t groupid;
 	uint32_t pid;
-	char description[FIO_JOBNAME_SIZE];
+	char description[FIO_JOBDESC_SIZE];
 	uint32_t members;
 	uint32_t unified_rw_rep;
 

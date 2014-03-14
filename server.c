@@ -987,9 +987,9 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	memset(&p, 0, sizeof(p));
 
-	strcpy(p.ts.name, ts->name);
-	strcpy(p.ts.verror, ts->verror);
-	strcpy(p.ts.description, ts->description);
+	strncpy(p.ts.name, ts->name, FIO_JOBNAME_SIZE - 1);
+	strncpy(p.ts.verror, ts->verror, FIO_VERROR_SIZE - 1);
+	strncpy(p.ts.description, ts->description, FIO_JOBDESC_SIZE - 1);
 
 	p.ts.error		= cpu_to_le32(ts->error);
 	p.ts.thread_number	= cpu_to_le32(ts->thread_number);

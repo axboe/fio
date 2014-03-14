@@ -1232,12 +1232,12 @@ static void __show_run_stats(void)
 			/*
 			 * These are per-group shared already
 			 */
-			strncpy(ts->name, td->o.name, FIO_JOBNAME_SIZE);
+			strncpy(ts->name, td->o.name, FIO_JOBNAME_SIZE - 1);
 			if (td->o.description)
 				strncpy(ts->description, td->o.description,
-						FIO_JOBNAME_SIZE);
+						FIO_JOBDESC_SIZE - 1);
 			else
-				memset(ts->description, 0, FIO_JOBNAME_SIZE);
+				memset(ts->description, 0, FIO_JOBDESC_SIZE);
 
 			/*
 			 * If multiple entries in this group, this is
