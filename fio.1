@@ -430,6 +430,8 @@ blocksize setting.
 .TP
 .B zero_buffers
 Initialise buffers with all zeros. Default: fill buffers with random data.
+The resulting IO buffers will not be completely zeroed, unless
+\fPscramble_buffers\fR is also turned off.
 .TP
 .B refill_buffers
 If this option is given, fio will refill the IO buffers on every submit. The
