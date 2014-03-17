@@ -722,8 +722,13 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 	return ret;
 }
 
-uint64_t get_start_offset(struct thread_data *td)
+uint64_t get_start_offset(struct thread_data *td, struct fio_file *f)
 {
+	struct thread_options *o = &td->o;
+
+	if (o->file_append && f->filetype == FIO_TYPE_FILE)
+		return f->real_file_size;
+
 	return td->o.start_offset +
 		(td->thread_number - 1) * td->o.offset_increment;
 }
@@ -810,7 +815,7 @@ int setup_files(struct thread_data *td)
 	extend_size = total_size = 0;
 	need_extend = 0;
 	for_each_file(td, f, i) {
-		f->file_offset = get_start_offset(td);
+		f->file_offset = get_start_offset(td, f);
 
 		if (!o->file_size_low) {
 			/*

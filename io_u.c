@@ -273,7 +273,7 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 {
 	assert(ddir_rw(ddir));
 
-	if (f->last_pos >= f->io_size + get_start_offset(td) && td->o.time_based)
+	if (f->last_pos >= f->io_size + get_start_offset(td, f) && td->o.time_based)
 		f->last_pos = f->last_pos - f->io_size;
 
 	if (f->last_pos < f->real_file_size) {
@@ -415,7 +415,7 @@ static inline int io_u_fits(struct thread_data *td, struct io_u *io_u,
 {
 	struct fio_file *f = io_u->file;
 
-	return io_u->offset + buflen <= f->io_size + get_start_offset(td);
+	return io_u->offset + buflen <= f->io_size + get_start_offset(td, f);
 }
 
 static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
@@ -1490,7 +1490,8 @@ struct io_u *get_io_u(struct thread_data *td)
 			if (td->flags & TD_F_REFILL_BUFFERS) {
 				io_u_fill_buffer(td, io_u,
 					io_u->xfer_buflen, io_u->xfer_buflen);
-			} else if (td->flags & TD_F_SCRAMBLE_BUFFERS)
+			} else if ((td->flags & TD_F_SCRAMBLE_BUFFERS) &&
+				   !(td->flags & TD_F_COMPRESS))
 				do_scramble = 1;
 			if (td->flags & TD_F_VER_NONE) {
 				populate_verify_io_u(td, io_u);

@@ -1002,6 +1002,15 @@ static int str_buffer_pattern_cb(void *data, const char *input)
 	return ret;
 }
 
+static int str_buffer_compress_cb(void *data, unsigned long long *il)
+{
+	struct thread_data *td = data;
+
+	td->flags |= TD_F_COMPRESS;
+	td->o.compress_percentage = *il;
+	return 0;
+}
+
 static int str_verify_pattern_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
@@ -1602,6 +1611,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.minval = 1,
 		.help	= "Size of individual files",
 		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "file_append",
+		.lname	= "File append",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(file_append),
+		.help	= "IO will start at the end of the file(s)",
+		.def	= "0",
 		.category = FIO_OPT_C_FILE,
 		.group	= FIO_OPT_G_INVALID,
 	},
@@ -3118,7 +3137,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "buffer_compress_percentage",
 		.lname	= "Buffer compression percentage",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(compress_percentage),
+		.cb	= str_buffer_compress_cb,
 		.maxval	= 100,
 		.minval	= 0,
 		.help	= "How compressible the buffer is (approximately)",

@@ -856,11 +856,6 @@ int ioengine_load(struct thread_data *td)
 	return 0;
 }
 
-static int compression_enabled(struct thread_options *o)
-{
-	return o->compress_percentage || o->compress_chunk;
-}
-
 static void init_flags(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
@@ -873,14 +868,8 @@ static void init_flags(struct thread_data *td)
 		td->flags |= TD_F_READ_IOLOG;
 	if (o->refill_buffers)
 		td->flags |= TD_F_REFILL_BUFFERS;
-
-	/*
-	 * Don't scramble buffers if we set any of the compression
-	 * settings
-	 */
-	if (o->scramble_buffers && !compression_enabled(o))
+	if (o->scramble_buffers)
 		td->flags |= TD_F_SCRAMBLE_BUFFERS;
-
 	if (o->verify != VERIFY_NONE)
 		td->flags |= TD_F_VER_NONE;
 }

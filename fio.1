@@ -386,6 +386,12 @@ for files at random within the given range, limited to \fBsize\fR in total (if
 that is given). If \fBfilesize\fR is not specified, each created file is the
 same size.
 .TP
+.BI file_append \fR=\fPbool
+Perform IO after the end of the file. Normally fio will operate within the
+size of a file. If this option is set, then fio will append to the file
+instead. This has identical behavior to setting \fRoffset\fP to the size
+of a file.
+.TP
 .BI blocksize \fR=\fPint[,int] "\fR,\fB bs" \fR=\fPint[,int]
 Block size for I/O units.  Default: 4k.  Values for reads, writes, and trims
 can be specified separately in the format \fIread\fR,\fIwrite\fR,\fItrim\fR

@@ -435,6 +435,11 @@ filesize=int	Individual file sizes. May be a range, in which case fio
 		and limited to 'size' in total (if that is given). If not
 		given, each created file is the same size.
 
+file_append=bool	Perform IO after the end of the file. Normally fio will
+		operate within the size of a file. If this option is set, then
+		fio will append to the file instead. This has identical
+		behavior to setting offset to the size of a file.
+
 fill_device=bool
 fill_fs=bool	Sets size to something really large and waits for ENOSPC (no
 		space left on device) as the terminating condition. Only makes

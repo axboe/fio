@@ -54,6 +54,7 @@ struct thread_options {
 	unsigned long long size;
 	unsigned int size_percent;
 	unsigned int fill_device;
+	unsigned int file_append;
 	unsigned long long file_size_low;
 	unsigned long long file_size_high;
 	unsigned long long start_offset;
@@ -281,6 +282,7 @@ struct thread_options_pack {
 	uint64_t size;
 	uint32_t size_percent;
 	uint32_t fill_device;
+	uint32_t file_append;
 	uint64_t file_size_low;
 	uint64_t file_size_high;
 	uint64_t start_offset;

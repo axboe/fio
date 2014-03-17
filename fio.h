@@ -71,6 +71,7 @@ enum {
 	TD_F_SCRAMBLE_BUFFERS	= 16,
 	TD_F_VER_NONE		= 32,
 	TD_F_PROFILE_OPS	= 64,
+	TD_F_COMPRESS		= 128,
 };
 
 enum {
