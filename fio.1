@@ -390,7 +390,7 @@ same size.
 Perform IO after the end of the file. Normally fio will operate within the
 size of a file. If this option is set, then fio will append to the file
 instead. This has identical behavior to setting \fRoffset\fP to the size
-of a file.
+of a file. This option is ignored on non-regular files.
 .TP
 .BI blocksize \fR=\fPint[,int] "\fR,\fB bs" \fR=\fPint[,int]
 Block size for I/O units.  Default: 4k.  Values for reads, writes, and trims
