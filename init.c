@@ -676,6 +676,11 @@ static int fixup_options(struct thread_data *td)
 	if (td->o.rand_seed)
 		td->o.rand_repeatable = 0;
 
+	if ((td->io_ops->flags & FIO_NOEXTEND) && td->o.file_append) {
+		log_err("fio: can't append/extent with IO engine %s\n", td->io_ops->name);
+		ret = 1;
+	}
+
 	return ret;
 }
 
