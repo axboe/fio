@@ -1109,7 +1109,8 @@ static void get_file_type(struct fio_file *f)
 	}
 }
 
-static void set_already_allocated(const char *fname) {
+static void set_already_allocated(const char *fname)
+{
 	struct file_name *fn;
 
 	fn = malloc(sizeof(struct file_name));
@@ -1135,7 +1136,8 @@ static int is_already_allocated(const char *fname)
 	return 0;
 }
 
-static void free_already_allocated() {
+static void free_already_allocated(void)
+{
 	struct flist_head *entry, *tmp;
 	struct file_name *fn;
 
@@ -1488,6 +1490,7 @@ int fio_files_done(struct thread_data *td)
 }
 
 /* free memory used in initialization phase only */
-void filesetup_mem_free() {
+void filesetup_mem_free(void)
+{
 	free_already_allocated();
 }
