@@ -1057,15 +1057,15 @@ void close_and_free_files(struct thread_data *td)
 	dprint(FD_FILE, "close files\n");
 
 	for_each_file(td, f, i) {
-		if (td->o.unlink && f->filetype == FIO_TYPE_FILE) {
-			dprint(FD_FILE, "free unlink %s\n", f->file_name);
-			unlink(f->file_name);
-		}
-
 		if (fio_file_open(f))
 			td_io_close_file(td, f);
 
 		remove_file_hash(f);
+
+		if (td->o.unlink && f->filetype == FIO_TYPE_FILE) {
+			dprint(FD_FILE, "free unlink %s\n", f->file_name);
+			unlink(f->file_name);
+		}
 
 		sfree(f->file_name);
 		f->file_name = NULL;
