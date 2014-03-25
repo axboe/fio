@@ -1267,6 +1267,8 @@ static int fio_init_server_ip(void)
 {
 	struct sockaddr *addr;
 	socklen_t socklen;
+	char buf[80];
+	const char *str;
 	int sk, opt;
 
 	if (use_ipv6)
@@ -1294,17 +1296,24 @@ static int fio_init_server_ip(void)
 #endif
 
 	if (use_ipv6) {
+		const void *src = &saddr_in6.sin6_addr;
+
 		addr = (struct sockaddr *) &saddr_in6;
 		socklen = sizeof(saddr_in6);
 		saddr_in6.sin6_family = AF_INET6;
+		str = inet_ntop(AF_INET6, src, buf, sizeof(buf));
 	} else {
+		const void *src = &saddr_in.sin_addr;
+
 		addr = (struct sockaddr *) &saddr_in;
 		socklen = sizeof(saddr_in);
 		saddr_in.sin_family = AF_INET;
+		str = inet_ntop(AF_INET, src, buf, sizeof(buf));
 	}
 
 	if (bind(sk, addr, socklen) < 0) {
 		log_err("fio: bind: %s\n", strerror(errno));
+		log_info("fio: failed with IPv%c %s\n", use_ipv6 ? '6' : '4', str);
 		close(sk);
 		return -1;
 	}
