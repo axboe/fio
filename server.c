@@ -1339,7 +1339,6 @@ static int fio_init_server_sock(void)
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
 	strcpy(addr.sun_path, bind_sock);
-	unlink(bind_sock);
 
 	len = sizeof(addr.sun_family) + strlen(bind_sock) + 1;
 
@@ -1567,6 +1566,22 @@ out:
 	return ret;
 }
 
+static void sig_int(int sig)
+{
+	if (bind_sock)
+		unlink(bind_sock);
+}
+
+static void set_sig_handlers(void)
+{
+	struct sigaction act;
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = sig_int;
+	act.sa_flags = SA_RESTART;
+	sigaction(SIGINT, &act, NULL);
+}
+
 static int fio_server(void)
 {
 	int sk, ret;
@@ -1579,6 +1594,8 @@ static int fio_server(void)
 	sk = fio_init_server_connection();
 	if (sk < 0)
 		return -1;
+
+	set_sig_handlers();
 
 	ret = accept_loop(sk);
 
