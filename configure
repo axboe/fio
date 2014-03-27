@@ -1163,6 +1163,26 @@ if compile_prog "" "-lrbd -lrados" "rbd"; then
 fi
 echo "Rados Block Device engine     $rbd"
 
+##########################################
+# check for gfapi
+gfapi="no"
+cat > $TMPC << EOF
+#include <glusterfs/api/glfs.h>
+
+int main(int argc, char **argv)
+{
+
+  glfs_t *g = glfs_new("foo");
+
+  return 0;
+}
+EOF
+if compile_prog "" "-lgfapi -lglusterfs" "gfapi"; then
+  LIBS="-lgfapi -lglusterfs $LIBS"
+  gfapi="yes"
+fi
+echo "Gluster API engine            $gfapi"
+
 
 #############################################################################
 
@@ -1290,6 +1310,9 @@ if test "$rbd" = "yes" ; then
 fi
 if test "$cpu_count" = "yes" ; then
   output_sym "CONFIG_CPU_COUNT"
+fi
+if test "$gfapi" = "yes" ; then
+  output_sym "CONFIG_GFAPI"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
