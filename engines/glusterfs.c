@@ -107,15 +107,13 @@ static int fio_gf_get_file_size(struct thread_data *td, struct fio_file *f)
     int ret;
     struct gf_data *g = td->io_ops->data;
 
-<<<<<<< HEAD
     dprint(FD_FILE, "get file size %s\n", f->file_name);
 
     if (!g || !g->fs)
     {
 	return 0;
     }
-=======
->>>>>>> parent of 6aa5650... make glfs call per thread based
+
     if (fio_file_size_known(f))
 	return 0;
 
