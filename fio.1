@@ -594,6 +594,11 @@ request to DDIR_WRITE event
 IO engine supporting direct access to Ceph Rados Block Devices (RBD) via librbd 
 without the need to use the kernel rbd driver. This ioengine defines engine specific 
 options.
+.TP
+.B gfapi
+Using Glusterfs libgfapi to direct access to Glusterfs volumes without
+having to go through FUSE. This ioengine defines engine specific
+options.
 .RE
 .P
 .RE

@@ -22,25 +22,25 @@ struct gf_data {
 
 static struct fio_option options[] = {
     {
-	.name     = "volume",
-	.lname    = "Glusterfs volume",
-	.type     = FIO_OPT_STR_STORE,
-	.help     = "Name of the Glusterfs volume",
-	.off1     = offsetof(struct gf_options, gf_vol),
-	.category = FIO_OPT_C_ENGINE,
-	.group    = FIO_OPT_G_GFAPI,
+        .name     = "volume",
+        .lname    = "Glusterfs volume",
+        .type     = FIO_OPT_STR_STORE,
+        .help     = "Name of the Glusterfs volume",
+        .off1     = offsetof(struct gf_options, gf_vol),
+        .category = FIO_OPT_C_ENGINE,
+        .group    = FIO_OPT_G_GFAPI,
     },
     {
-	.name     = "brick",
-	.lname    = "Glusterfs brick name",
-	.type     = FIO_OPT_STR_STORE,
-	.help     = "Name of the Glusterfs brick to connect",
-	.off1     = offsetof(struct gf_options, gf_brick),
-	.category = FIO_OPT_C_ENGINE,
-	.group    = FIO_OPT_G_GFAPI,
+        .name     = "brick",
+        .lname    = "Glusterfs brick name",
+        .type     = FIO_OPT_STR_STORE,
+        .help     = "Name of the Glusterfs brick to connect",
+        .off1     = offsetof(struct gf_options, gf_brick),
+        .category = FIO_OPT_C_ENGINE,
+        .group    = FIO_OPT_G_GFAPI,
     },
     {
-	.name = NULL,
+        .name = NULL,
     },
 };
 
@@ -49,7 +49,7 @@ static int fio_gf_setup(struct thread_data *td)
 	int r = 0;
 	struct gf_data *g = NULL;
 	struct gf_options *opt = td->eo;
-        struct stat sb = {0, };
+    struct stat sb = {0, };
 
 	dprint(FD_IO, "fio setup\n");
 
@@ -91,10 +91,10 @@ static int fio_gf_setup(struct thread_data *td)
 cleanup:
 	if (r){
 	    if (g){
-		if (g->fs){
-		    glfs_fini(g->fs);
-		}
-		free(g);
+            if (g->fs){
+                glfs_fini(g->fs);
+            }
+            free(g);
 	    }
 	}
 	return r;
@@ -114,15 +114,15 @@ static int fio_gf_get_file_size(struct thread_data *td, struct fio_file *f)
 
     if (!g || !g->fs)
     {
-	return 0;
+        return 0;
     }
     if (fio_file_size_known(f))
-	return 0;
+        return 0;
 
     ret = glfs_lstat (g->fs, f->file_name, &buf);
     if (ret < 0){
-	log_err("glfs_lstat failed.\n");
-	return ret;
+        log_err("glfs_lstat failed.\n");
+        return ret;
     }
 
     f->real_file_size = buf.st_size;
@@ -138,22 +138,33 @@ static int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
     int flags = 0;
     int ret = 0;
     struct gf_data *g = td->io_ops->data;
+    struct stat sb = {0, };
 
-    dprint(FD_FILE, "fio open %s\n", f->file_name);
     if (td_write(td)) {
-	if (!read_only)
-	    flags = O_RDWR;
+        if (!read_only)
+            flags = O_RDWR;
     } else if (td_read(td)) {
-	if (!read_only)
-	    flags = O_RDWR;
-	else
-	    flags = O_RDONLY;
+        if (!read_only)
+            flags = O_RDWR;
+        else
+            flags = O_RDONLY;
     }
-    g->fd = glfs_creat(g->fs, f->file_name, flags, 0644);
+    dprint(FD_FILE, "fio file %s open mode %s td rw %s\n", f->file_name,
+           flags == O_RDONLY? "ro":"rw", td_read(td)? "read":"write");
+    g->fd = glfs_creat(g->fs, f->file_name, flags, 0644);    
     if (!g->fd){
-	log_err("glfs_creat failed.\n");
-	ret = errno;
+        log_err("glfs_creat failed.\n");
+        ret = errno;
     }
+    /* file for read doesn't exist, create one */
+    if (td_read(td) && glfs_lstat (g->fs, "f->file_name", &sb)){
+        dprint(FD_FILE, "fio extend file %s to %ld\n", f->file_name, f->real_file_size);
+        ret = glfs_ftruncate (g->fd, f->real_file_size);
+        if (ret){
+            log_err("failed fio extend file %s to %ld\n", f->file_name, f->real_file_size);
+        }
+    }
+
     dprint(FD_FILE, "fio %p created %s\n", g->fs, f->file_name);
     f->fd = -1;
     f->shadow_fd = -1;    
@@ -213,29 +224,29 @@ static int fio_gf_queue(struct thread_data *td, struct io_u *io_u)
     fio_ro_check(td, io_u);
 
     if (io_u->ddir == DDIR_READ)
-	ret = glfs_read(g->fd, io_u->xfer_buf, io_u->xfer_buflen, 0);
+        ret = glfs_read(g->fd, io_u->xfer_buf, io_u->xfer_buflen, 0);
     else if (io_u->ddir == DDIR_WRITE)
-	ret = glfs_write(g->fd, io_u->xfer_buf, io_u->xfer_buflen, 0);
+        ret = glfs_write(g->fd, io_u->xfer_buf, io_u->xfer_buflen, 0);
     else { 	    
-	log_err("unsupported operation.\n");
-	return -EINVAL;
+        log_err("unsupported operation.\n");
+        return -EINVAL;
     }
-    
+    dprint(FD_FILE, "fio len %lu ret %d\n", io_u->xfer_buflen, ret);
     if (io_u->file && ret >= 0 && ddir_rw(io_u->ddir))
-	LAST_POS(io_u->file) = io_u->offset + ret;
+        LAST_POS(io_u->file) = io_u->offset + ret;
 
     if (ret != (int) io_u->xfer_buflen) {
-	if (ret >= 0) {
-	    io_u->resid = io_u->xfer_buflen - ret;
-	    io_u->error = 0;
-	    return FIO_Q_COMPLETED;
-	} else
-	    io_u->error = errno;
+        if (ret >= 0) {
+            io_u->resid = io_u->xfer_buflen - ret;
+            io_u->error = 0;
+            return FIO_Q_COMPLETED;
+        } else
+            io_u->error = errno;
     }
 
     if (io_u->error){
-	log_err("IO failed.\n");
-	td_verror(td, io_u->error, "xfer");
+        log_err("IO failed.\n");
+        td_verror(td, io_u->error, "xfer");
     }
 
     return FIO_Q_COMPLETED;
@@ -245,14 +256,14 @@ static int fio_gf_queue(struct thread_data *td, struct io_u *io_u)
 static struct ioengine_ops ioengine = {
 	.name		    = "gfapi",
 	.version	    = FIO_IOOPS_VERSION,
-	.init               = fio_gf_setup,
-	.cleanup            = fio_gf_cleanup,
+	.init           = fio_gf_setup,
+	.cleanup        = fio_gf_cleanup,
 	.prep		    = fio_gf_prep,
 	.queue		    = fio_gf_queue,
 	.open_file	    = fio_gf_open_file,
 	.close_file	    = fio_gf_close_file,
-	.get_file_size	    = fio_gf_get_file_size,
-	.options            = options,
+	.get_file_size	= fio_gf_get_file_size,
+	.options        = options,
 	.option_struct_size = sizeof(struct gf_options),
 	.flags		    = FIO_SYNCIO | FIO_DISKLESSIO,
 };
