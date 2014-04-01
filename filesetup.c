@@ -1109,47 +1109,72 @@ static void get_file_type(struct fio_file *f)
 	}
 }
 
+static int __is_already_allocated(const char *fname)
+{
+	struct flist_head *entry;
+	char *filename;
+
+	if (flist_empty(&filename_list))
+		return 0;
+
+	flist_for_each(entry, &filename_list) {
+		filename = flist_entry(entry, struct file_name, list)->filename;
+
+		if (strcmp(filename, fname) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+
+static int is_already_allocated(const char *fname)
+{
+	int ret;
+
+	fio_file_hash_lock();
+	ret = __is_already_allocated(fname);
+	fio_file_hash_unlock();
+	return ret;
+}
+
 static void set_already_allocated(const char *fname)
 {
 	struct file_name *fn;
 
 	fn = malloc(sizeof(struct file_name));
 	fn->filename = strdup(fname);
-	flist_add_tail(&fn->list, &filename_list);
-}
 
-static int is_already_allocated(const char *fname)
-{
-	struct flist_head *entry;
-	char *filename;
-
-	if (!flist_empty(&filename_list))
-	{
-		flist_for_each(entry, &filename_list) {
-			filename = flist_entry(entry, struct file_name, list)->filename;
-
-			if (strcmp(filename, fname) == 0)
-				return 1;
-		}
+	fio_file_hash_lock();
+	if (!__is_already_allocated(fname)) {
+		flist_add_tail(&fn->list, &filename_list);
+		fn = NULL;
 	}
+	fio_file_hash_unlock();
 
-	return 0;
+	if (fn) {
+		free(fn->filename);
+		free(fn);
+	}
 }
+
 
 static void free_already_allocated(void)
 {
 	struct flist_head *entry, *tmp;
 	struct file_name *fn;
 
-	if (!flist_empty(&filename_list))
-	{
-		flist_for_each_safe(entry, tmp, &filename_list) {
-			fn = flist_entry(entry, struct file_name, list);
-			free(fn->filename);
-			flist_del(&fn->list);
-			free(fn);
-		}
+	if (flist_empty(&filename_list))
+		return;
+
+	fio_file_hash_lock();
+	flist_for_each_safe(entry, tmp, &filename_list) {
+		fn = flist_entry(entry, struct file_name, list);
+		free(fn->filename);
+		flist_del(&fn->list);
+		free(fn);
 	}
+
+	fio_file_hash_unlock();
 }
 
 int add_file(struct thread_data *td, const char *fname, int numjob, int inc)

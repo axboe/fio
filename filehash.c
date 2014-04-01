@@ -18,6 +18,16 @@ static unsigned short hash(const char *name)
 	return jhash(name, strlen(name), 0) & HASH_MASK;
 }
 
+void fio_file_hash_lock(void)
+{
+	fio_mutex_down(hash_lock);
+}
+
+void fio_file_hash_unlock(void)
+{
+	fio_mutex_up(hash_lock);
+}
+
 void remove_file_hash(struct fio_file *f)
 {
 	fio_mutex_down(hash_lock);
