@@ -194,7 +194,7 @@ err:
 
 static int pre_read_file(struct thread_data *td, struct fio_file *f)
 {
-	int r, did_open = 0, old_runstate;
+	int ret = 0, r, did_open = 0, old_runstate;
 	unsigned long long left;
 	unsigned int bs;
 	char *b;
@@ -216,7 +216,13 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 	b = malloc(bs);
 	memset(b, 0, bs);
 
-	lseek(f->fd, f->file_offset, SEEK_SET);
+	if (lseek(f->fd, f->file_offset, SEEK_SET) < 0) {
+		td_verror(td, errno, "lseek");
+		log_err("fio: failed to lseek pre-read file\n");
+		ret = 1;
+		goto error;
+	}
+
 	left = f->io_size;
 
 	while (left && !td->terminate) {
@@ -234,12 +240,14 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 		}
 	}
 
+error:
 	td_restore_runstate(td, old_runstate);
 
 	if (did_open)
 		td->io_ops->close_file(td, f);
+
 	free(b);
-	return 0;
+	return ret;
 }
 
 static unsigned long long get_rand_file_size(struct thread_data *td)
