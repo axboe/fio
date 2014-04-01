@@ -156,15 +156,73 @@ static int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
         log_err("glfs_creat failed.\n");
         ret = errno;
     }
-    /* file for read doesn't exist, create one */
-    if (td_read(td) && glfs_lstat (g->fs, "f->file_name", &sb)){
-        dprint(FD_FILE, "fio extend file %s to %ld\n", f->file_name, f->real_file_size);
-        ret = glfs_ftruncate (g->fd, f->real_file_size);
-        if (ret){
-            log_err("failed fio extend file %s to %ld\n", f->file_name, f->real_file_size);
+    /* file for read doesn't exist or shorter than required, create/extend it */
+    if (td_read(td)){
+        if (glfs_lstat (g->fs, f->file_name, &sb) || sb.st_size < f->real_file_size){
+            dprint(FD_FILE, "fio extend file %s from %ld to %ld\n", f->file_name, sb.st_size, f->real_file_size);
+            ret = glfs_ftruncate (g->fd, f->real_file_size);
+            if (ret){
+                log_err("failed fio extend file %s to %ld\n", f->file_name, f->real_file_size);
+            }else{
+                unsigned long long left;
+                unsigned int bs;
+                char *b;
+                int r;
+
+                /* fill the file, copied from extend_file */
+                b = malloc(td->o.max_bs[DDIR_WRITE]);
+
+                left = f->real_file_size;
+                while (left && !td->terminate) {
+                    bs = td->o.max_bs[DDIR_WRITE];
+                    if (bs > left)
+                        bs = left;
+
+                    fill_io_buffer(td, b, bs, bs);
+
+                    r = glfs_write(g->fd, b, bs, 0);
+                    dprint(FD_IO, "fio write %d of %ld file %s\n", r, f->real_file_size, f->file_name);
+
+                    if (r > 0) {
+                        left -= r;
+                        continue;
+                    } else {
+                        if (r < 0) {
+                            int __e = errno;
+
+                            if (__e == ENOSPC) {
+                                if (td->o.fill_device)
+                                    break;
+                                log_info("fio: ENOSPC on laying out "
+                                         "file, stopping\n");
+                                break;
+                            }
+                            td_verror(td, errno, "write");
+                        } else
+                            td_verror(td, EIO, "write");
+
+                        break;
+                    }
+                }
+
+                if (b) free(b);
+                glfs_lseek(g->fd, 0, SEEK_SET);
+
+                if (td->terminate) {
+                    dprint(FD_FILE, "terminate unlink %s\n", f->file_name);
+                    unlink(f->file_name);
+                } else if (td->o.create_fsync) {
+                    if (glfs_fsync(g->fd) < 0) {
+                        dprint(FD_FILE, "failed to sync, close %s\n", f->file_name);
+                        td_verror(td, errno, "fsync");
+                        glfs_close(g->fd);
+                        g->fd = NULL;
+                        return 1;
+                    }
+                }
+            }
         }
     }
-
     dprint(FD_FILE, "fio %p created %s\n", g->fs, f->file_name);
     f->fd = -1;
     f->shadow_fd = -1;    
