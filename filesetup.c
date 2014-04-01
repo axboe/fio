@@ -1421,6 +1421,7 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 			assert(0);
 		}
 		__f->fd = -1;
+		__f->shadow_fd = -1;
 		fio_file_reset(td, __f);
 
 		if (f->file_name) {
