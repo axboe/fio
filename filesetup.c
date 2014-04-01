@@ -1177,6 +1177,23 @@ static void free_already_allocated(void)
 	fio_file_hash_unlock();
 }
 
+static struct fio_file *alloc_new_file(struct thread_data *td)
+{
+	struct fio_file *f;
+
+	f = smalloc(sizeof(*f));
+	if (!f) {
+		log_err("fio: smalloc OOM\n");
+		assert(0);
+		return NULL;
+	}
+
+	f->fd = -1;
+	f->shadow_fd = -1;
+	fio_file_reset(td, f);
+	return f;
+}
+
 int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 {
 	int cur_files = td->files_index;
@@ -1195,15 +1212,7 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 	if (numjob && is_already_allocated(file_name))
 		return 0;
 
-	f = smalloc(sizeof(*f));
-	if (!f) {
-		log_err("fio: smalloc OOM\n");
-		assert(0);
-	}
-
-	f->fd = -1;
-	f->shadow_fd = -1;
-	fio_file_reset(td, f);
+	f = alloc_new_file(td);
 
 	if (td->files_size <= td->files_index) {
 		unsigned int new_size = td->o.nr_files + 1;
@@ -1440,14 +1449,7 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 	for_each_file(org, f, i) {
 		struct fio_file *__f;
 
-		__f = smalloc(sizeof(*__f));
-		if (!__f) {
-			log_err("fio: smalloc OOM\n");
-			assert(0);
-		}
-		__f->fd = -1;
-		__f->shadow_fd = -1;
-		fio_file_reset(td, __f);
+		__f = alloc_new_file(td);
 
 		if (f->file_name) {
 			__f->file_name = smalloc_strdup(f->file_name);
