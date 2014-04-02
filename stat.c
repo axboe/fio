@@ -770,7 +770,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	}
 	json_object_add_value_int(dir_object, "bw_min", min);
 	json_object_add_value_int(dir_object, "bw_max", max);
-	json_object_add_value_float(dir_object, "bw_agg", mean);
+	json_object_add_value_float(dir_object, "bw_agg", p_of_agg);
 	json_object_add_value_float(dir_object, "bw_mean", mean);
 	json_object_add_value_float(dir_object, "bw_dev", dev);
 }
