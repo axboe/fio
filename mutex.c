@@ -25,21 +25,11 @@ void fio_mutex_remove(struct fio_mutex *mutex)
 	munmap((void *) mutex, sizeof(*mutex));
 }
 
-struct fio_mutex *fio_mutex_init(int value)
+int __fio_mutex_init(struct fio_mutex *mutex, int value)
 {
-	struct fio_mutex *mutex = NULL;
 	pthread_mutexattr_t attr;
 	pthread_condattr_t cond;
 	int ret;
-
-	mutex = (void *) mmap(NULL, sizeof(struct fio_mutex),
-				PROT_READ | PROT_WRITE,
-				OS_MAP_ANON | MAP_SHARED, -1, 0);
-	if (mutex == MAP_FAILED) {
-		perror("mmap mutex");
-		mutex = NULL;
-		goto err;
-	}
 
 	mutex->value = value;
 	mutex->magic = FIO_MUTEX_MAGIC;
@@ -47,7 +37,7 @@ struct fio_mutex *fio_mutex_init(int value)
 	ret = pthread_mutexattr_init(&attr);
 	if (ret) {
 		log_err("pthread_mutexattr_init: %s\n", strerror(ret));
-		goto err;
+		return ret;
 	}
 
 	/*
@@ -57,7 +47,7 @@ struct fio_mutex *fio_mutex_init(int value)
 	ret = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
 	if (ret) {
 		log_err("pthread_mutexattr_setpshared: %s\n", strerror(ret));
-		goto err;
+		return ret;
 	}
 #endif
 
@@ -70,17 +60,30 @@ struct fio_mutex *fio_mutex_init(int value)
 	ret = pthread_mutex_init(&mutex->lock, &attr);
 	if (ret) {
 		log_err("pthread_mutex_init: %s\n", strerror(ret));
-		goto err;
+		return ret;
 	}
 
 	pthread_condattr_destroy(&cond);
 	pthread_mutexattr_destroy(&attr);
+	return 0;
+}
 
-	return mutex;
-err:
-	if (mutex)
-		fio_mutex_remove(mutex);
+struct fio_mutex *fio_mutex_init(int value)
+{
+	struct fio_mutex *mutex = NULL;
 
+	mutex = (void *) mmap(NULL, sizeof(struct fio_mutex),
+				PROT_READ | PROT_WRITE,
+				OS_MAP_ANON | MAP_SHARED, -1, 0);
+	if (mutex == MAP_FAILED) {
+		perror("mmap mutex");
+		return NULL;
+	}
+
+	if (!__fio_mutex_init(mutex, value))
+		return mutex;
+
+	fio_mutex_remove(mutex);
 	return NULL;
 }
 
@@ -121,6 +124,22 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 		mutex->value--;
 		pthread_mutex_unlock(&mutex->lock);
 	}
+
+	return ret;
+}
+
+int fio_mutex_down_trylock(struct fio_mutex *mutex)
+{
+	int ret = 1;
+
+	assert(mutex->magic == FIO_MUTEX_MAGIC);
+
+	pthread_mutex_lock(&mutex->lock);
+	if (mutex->value) {
+		mutex->value--;
+		ret = 0;
+	}
+	pthread_mutex_unlock(&mutex->lock);
 
 	return ret;
 }

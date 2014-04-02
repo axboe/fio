@@ -24,10 +24,12 @@ enum {
 	FIO_MUTEX_UNLOCKED	= 1,
 };
 
+extern int __fio_mutex_init(struct fio_mutex *, int);
 extern struct fio_mutex *fio_mutex_init(int);
 extern void fio_mutex_remove(struct fio_mutex *);
 extern void fio_mutex_up(struct fio_mutex *);
 extern void fio_mutex_down(struct fio_mutex *);
+extern int fio_mutex_down_trylock(struct fio_mutex *);
 extern int fio_mutex_down_timeout(struct fio_mutex *, unsigned int);
 
 extern void fio_rwlock_read(struct fio_rwlock *);
