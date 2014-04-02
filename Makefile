@@ -93,6 +93,8 @@ ifndef CONFIG_INET_ATON
 endif
 ifdef CONFIG_GFAPI
   SOURCE += engines/glusterfs.c
+  SOURCE += engines/glusterfs_sync.c
+  SOURCE += engines/glusterfs_async.c
 endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)

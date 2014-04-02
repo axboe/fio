@@ -596,7 +596,12 @@ without the need to use the kernel rbd driver. This ioengine defines engine spec
 options.
 .TP
 .B gfapi
-Using Glusterfs libgfapi to direct access to Glusterfs volumes without
+Using Glusterfs libgfapi sync interface to direct access to Glusterfs volumes without
+having to go through FUSE. This ioengine defines engine specific
+options.
+.TP
+.B gfapi_async
+Using Glusterfs libgfapi async interface to direct access to Glusterfs volumes without
 having to go through FUSE. This ioengine defines engine specific
 options.
 .RE

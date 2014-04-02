@@ -1525,7 +1525,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 #endif
 #ifdef CONFIG_GFAPI
 			  { .ival = "gfapi",
-			    .help = "Glusterfs libgfapi based engine"
+			    .help = "Glusterfs libgfapi(sync) based engine"
+			  },
+			  { .ival = "gfapi_async",
+			    .help = "Glusterfs libgfapi(async) based engine"
 			  },
 #endif
 
