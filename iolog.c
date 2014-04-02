@@ -541,17 +541,16 @@ void __finish_log(struct io_log *log, const char *name)
 void finish_log_named(struct thread_data *td, struct io_log *log,
 		       const char *prefix, const char *postfix)
 {
-	char file_name[256], *p;
+	char file_name[256];
 
 	snprintf(file_name, sizeof(file_name), "%s_%s.log", prefix, postfix);
-	p = basename(file_name);
 
 	if (td->client_type == FIO_CLIENT_TYPE_GUI) {
-		fio_send_iolog(td, log, p);
+		fio_send_iolog(td, log, file_name);
 		free(log->log);
 		free(log);
 	} else
-		__finish_log(log, p);
+		__finish_log(log, file_name);
 }
 
 void finish_log(struct thread_data *td, struct io_log *log, const char *name)
