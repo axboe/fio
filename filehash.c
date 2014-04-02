@@ -21,12 +21,14 @@ static unsigned short hash(const char *name)
 
 void fio_file_hash_lock(void)
 {
-	fio_mutex_down(hash_lock);
+	if (hash_lock)
+		fio_mutex_down(hash_lock);
 }
 
 void fio_file_hash_unlock(void)
 {
-	fio_mutex_up(hash_lock);
+	if (hash_lock)
+		fio_mutex_up(hash_lock);
 }
 
 void remove_file_hash(struct fio_file *f)
