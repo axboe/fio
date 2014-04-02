@@ -1963,11 +1963,8 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 	if (do_exit && !(is_backend || nr_clients))
 		exit(exit_val);
 
-	if (nr_clients && fio_clients_connect()) {
-		do_exit++;
-		exit_val = 1;
-		return -1;
-	}
+	if (nr_clients && fio_clients_connect())
+		exit(1);
 
 	if (is_backend && backend)
 		return fio_start_server(pid_file);
