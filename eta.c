@@ -74,6 +74,9 @@ static void check_str_update(struct thread_data *td)
 	case TD_FSYNCING:
 		c = 'F';
 		break;
+	case TD_FINISHING:
+		c = 'f';
+		break;
 	case TD_CREATED:
 		c = 'C';
 		break;
@@ -331,7 +334,8 @@ int calc_thread_status(struct jobs_eta *je, int force)
 			bw_avg_time = td->o.bw_avg_time;
 		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING
 		    || td->runstate == TD_FSYNCING
-		    || td->runstate == TD_PRE_READING) {
+		    || td->runstate == TD_PRE_READING
+		    || td->runstate == TD_FINISHING) {
 			je->nr_running++;
 			if (td_read(td)) {
 				je->t_rate[0] += td->o.rate[DDIR_READ];
