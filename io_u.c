@@ -426,12 +426,10 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 	unsigned int minbs, maxbs;
 	unsigned long r, rand_max;
 
-	assert(ddir_rw(io_u->ddir));
+	assert(ddir_rw(ddir));
 
 	if (td->o.bs_is_seq_rand)
 		ddir = is_random ? DDIR_WRITE: DDIR_READ;
-	else
-		ddir = io_u->ddir;
 
 	minbs = td->o.min_bs[ddir];
 	maxbs = td->o.max_bs[ddir];
