@@ -32,7 +32,7 @@ static pthread_key_t tv_tls_key;
 
 enum fio_cs fio_clock_source = FIO_PREFERRED_CLOCK_SOURCE;
 int fio_clock_source_set = 0;
-enum fio_cs fio_clock_source_inited = CS_INVAL;
+static enum fio_cs fio_clock_source_inited = CS_INVAL;
 
 #ifdef FIO_DEBUG_TIME
 

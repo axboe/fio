@@ -16,6 +16,7 @@
 #include "mutex.h"
 #include "arch/arch.h"
 #include "os/os.h"
+#include "smalloc.h"
 
 #define SMALLOC_REDZONE		/* define to detect memory corruption */
 
@@ -30,7 +31,7 @@
 #define SMALLOC_POST_RED	0x5aa55aa5U
 
 unsigned int smalloc_pool_size = INITIAL_SIZE;
-const int int_mask = sizeof(int) - 1;
+static const int int_mask = sizeof(int) - 1;
 
 struct pool {
 	struct fio_mutex *lock;			/* protects this pool */

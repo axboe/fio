@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../fio.h"
+
 /*
  * Cheesy number->string conversion, complete with carry rounding error.
  */

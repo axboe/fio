@@ -28,6 +28,8 @@
 #include "lib/getopt.h"
 #include "lib/strcasestr.h"
 
+#include "crc/test.h"
+
 const char fio_version_string[] = FIO_VERSION;
 
 #define FIO_RANDSEED		(0xb1899bedUL)
@@ -40,6 +42,8 @@ static int parse_only;
 
 static struct thread_data def_thread;
 struct thread_data *threads = NULL;
+static char **job_sections;
+static int nr_job_sections;
 
 int exitall_on_terminate = 0;
 int output_format = FIO_OUTPUT_NORMAL;
@@ -48,8 +52,6 @@ int eta_print = FIO_ETA_AUTO;
 int eta_new_line = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
-char **job_sections = NULL;
-int nr_job_sections = 0;
 char *exec_profile = NULL;
 int warnings_fatal = 0;
 int terse_version = 3;
@@ -247,7 +249,7 @@ void free_threads_shm(void)
 	}
 }
 
-void free_shm(void)
+static void free_shm(void)
 {
 	if (threads) {
 		file_hash_exit();
@@ -1658,12 +1660,10 @@ static int client_flag_set(char c)
 	return 0;
 }
 
-void parse_cmd_client(void *client, char *opt)
+static void parse_cmd_client(void *client, char *opt)
 {
 	fio_client_add_cmd_option(client, opt);
 }
-
-extern int fio_crctest(const char *);
 
 int parse_cmd_line(int argc, char *argv[], int client_type)
 {

@@ -497,7 +497,8 @@ static void show_latencies(struct thread_stat *ts)
 	show_lat_m(io_u_lat_m);
 }
 
-void show_thread_status_normal(struct thread_stat *ts, struct group_run_stats *rs)
+static void show_thread_status_normal(struct thread_stat *ts,
+				      struct group_run_stats *rs)
 {
 	double usr_cpu, sys_cpu;
 	unsigned long runtime;
@@ -1012,7 +1013,7 @@ struct json_object *show_thread_status(struct thread_stat *ts,
 	if (output_format == FIO_OUTPUT_TERSE)
 		show_thread_status_terse(ts, rs);
 	else if (output_format == FIO_OUTPUT_JSON)
-		return(show_thread_status_json(ts, rs));
+		return show_thread_status_json(ts, rs);
 	else
 		show_thread_status_normal(ts, rs);
 	return NULL;

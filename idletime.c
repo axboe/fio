@@ -379,7 +379,7 @@ static double fio_idle_prof_cpu_stat(int cpu)
 	return p * 100.0;
 }
 
-void fio_idle_prof_cleanup(void)
+static void fio_idle_prof_cleanup(void)
 {
 	if (ipc.ipts) {
 		free(ipc.ipts);

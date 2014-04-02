@@ -4,6 +4,7 @@
 #include "fio.h"
 #include "flist.h"
 #include "hash.h"
+#include "filehash.h"
 
 #define HASH_BUCKETS	512
 #define HASH_MASK	(HASH_BUCKETS - 1)

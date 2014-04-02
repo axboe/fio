@@ -32,6 +32,8 @@
  */
 #include <inttypes.h>
 
+#include "crc32c.h"
+
 /*
  * This is the CRC-32C table
  * Generated with:

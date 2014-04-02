@@ -23,7 +23,7 @@
  * generic_open_file is not appropriate because does not allow to perform
  * TRIM in to file
  */
-int open_file(struct thread_data *td, struct fio_file *f)
+static int open_file(struct thread_data *td, struct fio_file *f)
 {
 	int from_hash = 0;
 

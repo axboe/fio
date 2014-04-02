@@ -392,7 +392,7 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 
 	do {
 		if (is_udp(o)) {
-			struct sockaddr *to;
+			const struct sockaddr *to;
 			socklen_t len;
 
 			if (is_ipv6(o)) {

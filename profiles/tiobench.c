@@ -8,7 +8,7 @@ static unsigned int bs = 4096;
 static unsigned int nthreads = 1;
 static char *dir;
 
-char sz_idx[80], bs_idx[80], loop_idx[80], dir_idx[80], t_idx[80];
+static char sz_idx[80], bs_idx[80], loop_idx[80], dir_idx[80], t_idx[80];
 
 static const char *tb_opts[] = {
 	"buffered=0", sz_idx, bs_idx, loop_idx, dir_idx, t_idx,

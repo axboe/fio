@@ -148,7 +148,7 @@ typedef enum { XXH_bigEndian=0, XXH_littleEndian=1 } XXH_endianess;
 //****************************
 typedef enum { XXH_aligned, XXH_unaligned } XXH_alignment;
 
-uint32_t XXH_readLE32_align(const uint32_t* ptr, XXH_endianess endian, XXH_alignment align)
+static uint32_t XXH_readLE32_align(const uint32_t* ptr, XXH_endianess endian, XXH_alignment align)
 {
     if (align==XXH_unaligned)
         return endian==XXH_littleEndian ? A32(ptr) : XXH_swap32(A32(ptr));
@@ -156,13 +156,13 @@ uint32_t XXH_readLE32_align(const uint32_t* ptr, XXH_endianess endian, XXH_align
         return endian==XXH_littleEndian ? *ptr : XXH_swap32(*ptr);
 }
 
-uint32_t XXH_readLE32(const uint32_t* ptr, XXH_endianess endian) { return XXH_readLE32_align(ptr, endian, XXH_unaligned); }
+static uint32_t XXH_readLE32(const uint32_t* ptr, XXH_endianess endian) { return XXH_readLE32_align(ptr, endian, XXH_unaligned); }
 
 
 //****************************
 // Simple Hash Functions
 //****************************
-uint32_t XXH32_endian_align(const void* input, int len, uint32_t seed, XXH_endianess endian, XXH_alignment align)
+static uint32_t XXH32_endian_align(const void* input, int len, uint32_t seed, XXH_endianess endian, XXH_alignment align)
 {
     const uint8_t *p = (const uint8_t *)input;
     const uint8_t * const bEnd = p + len;
@@ -282,7 +282,7 @@ void* XXH32_init (uint32_t seed)
 }
 
 
-XXH_errorcode XXH32_update_endian (void* state_in, const void* input, int len, XXH_endianess endian)
+static XXH_errorcode XXH32_update_endian (void* state_in, const void* input, int len, XXH_endianess endian)
 {
     struct XXH_state32_t * state = (struct XXH_state32_t *) state_in;
     const uint8_t *p = (const uint8_t *)input;
@@ -358,7 +358,7 @@ XXH_errorcode XXH32_update (void* state_in, const void* input, int len)
 
 
 
-uint32_t XXH32_intermediateDigest_endian (void* state_in, XXH_endianess endian)
+static uint32_t XXH32_intermediateDigest_endian (void* state_in, XXH_endianess endian)
 {
     struct XXH_state32_t * state = (struct XXH_state32_t *) state_in;
     const uint8_t *p = (const uint8_t *)state->memory;

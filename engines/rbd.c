@@ -422,7 +422,7 @@ static int fio_rbd_io_u_init(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-struct ioengine_ops ioengine = {
+static struct ioengine_ops ioengine = {
 	.name               = "rbd",
 	.version            = FIO_IOOPS_VERSION,
 	.setup              = fio_rbd_setup,

@@ -186,7 +186,7 @@ static uint8_t *find_lfsr(uint64_t size)
  * Thus, [1] is equivalent to (y * i) % (spin + 1) == 0;
  * Also, the cycle's length will be (x * i) + (y * i) / (spin + 1)
  */
-int prepare_spin(struct fio_lfsr *fl, unsigned int spin)
+static int prepare_spin(struct fio_lfsr *fl, unsigned int spin)
 {
 	uint64_t max = (fl->cached_bit << 1) - 1;
 	uint64_t x, y;

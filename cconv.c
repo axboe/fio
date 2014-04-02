@@ -18,7 +18,7 @@ static void string_to_net(uint8_t *dst, const char *src)
 		dst[0] = '\0';
 }
 
-void free_thread_options_to_cpu(struct thread_options *o)
+static void free_thread_options_to_cpu(struct thread_options *o)
 {
 	free(o->description);
 	free(o->name);

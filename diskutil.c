@@ -652,8 +652,8 @@ void json_array_add_disk_util(struct disk_util_stat *dus,
 	json_object_add_value_float(obj, "aggr_util", agg->max_util.u.f);
 }
 
-void json_object_add_disk_utils(struct json_object *obj,
-		struct flist_head *head)
+static void json_object_add_disk_utils(struct json_object *obj,
+				       struct flist_head *head)
 {
 	struct json_array *array = json_create_array();
 	struct flist_head *entry;
