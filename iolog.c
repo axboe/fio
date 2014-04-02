@@ -10,6 +10,7 @@
 #include "fio.h"
 #include "verify.h"
 #include "trim.h"
+#include "filelock.h"
 
 static const char iolog_ver2[] = "fio version 2 iolog";
 
@@ -538,12 +539,18 @@ void __finish_log(struct io_log *log, const char *name)
 	free(log);
 }
 
-void finish_log_named(struct thread_data *td, struct io_log *log,
-		       const char *prefix, const char *postfix)
+int finish_log_named(struct thread_data *td, struct io_log *log,
+		     const char *prefix, const char *postfix, int trylock)
 {
 	char file_name[256];
 
 	snprintf(file_name, sizeof(file_name), "%s_%s.log", prefix, postfix);
+
+	if (trylock) {
+		if (fio_trylock_file(file_name))
+			return 1;
+	} else
+		fio_lock_file(file_name);
 
 	if (td->client_type == FIO_CLIENT_TYPE_GUI) {
 		fio_send_iolog(td, log, file_name);
@@ -551,9 +558,13 @@ void finish_log_named(struct thread_data *td, struct io_log *log,
 		free(log);
 	} else
 		__finish_log(log, file_name);
+
+	fio_unlock_file(file_name);
+	return 0;
 }
 
-void finish_log(struct thread_data *td, struct io_log *log, const char *name)
+int finish_log(struct thread_data *td, struct io_log *log, const char *name,
+	       int trylock)
 {
-	finish_log_named(td, log, td->o.name, name);
+	return finish_log_named(td, log, td->o.name, name, trylock);
 }

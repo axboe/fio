@@ -57,7 +57,6 @@
 static pthread_t disk_util_thread;
 static struct fio_mutex *disk_thread_mutex;
 static struct fio_mutex *startup_mutex;
-static struct fio_mutex *writeout_mutex;
 static struct flist_head *cgroup_list;
 static char *cgroup_mnt;
 static int exit_value;
@@ -1224,6 +1223,120 @@ static uint64_t do_dry_run(struct thread_data *td)
 	return bytes_done[DDIR_WRITE] + bytes_done[DDIR_TRIM];
 }
 
+static int write_this_log(struct thread_data *td, struct io_log *log,
+			  const char *log_file, const char *name, int try)
+{
+	int ret;
+
+	if (!log)
+		return 0;
+
+	if (log_file)
+		ret = finish_log_named(td, log, log_file, name, try);
+	else
+		ret = finish_log(td, log, name, try);
+
+	return ret;
+}
+
+static int write_iops_log(struct thread_data *td, struct thread_options *o,
+			  int try)
+{
+	return write_this_log(td, td->iops_log, o->iops_log_file, "iops", try);
+}
+
+static int write_slat_log(struct thread_data *td, struct thread_options *o,
+			  int try)
+{
+	return write_this_log(td, td->slat_log, o->lat_log_file, "slat", try);
+}
+
+static int write_clat_log(struct thread_data *td, struct thread_options *o,
+			  int try)
+{
+	return write_this_log(td, td->clat_log, o->lat_log_file, "clat" , try);
+}
+
+static int write_lat_log(struct thread_data *td, struct thread_options *o,
+			 int try)
+{
+	return write_this_log(td, td->lat_log, o->lat_log_file, "lat", try);
+}
+
+static int write_bandw_log(struct thread_data *td, struct thread_options *o,
+			int try)
+{
+	return write_this_log(td, td->bw_log, o->bw_log_file, "bw", try);
+}
+
+enum {
+	BW_LOG_MASK	= 1,
+	LAT_LOG_MASK	= 2,
+	SLAT_LOG_MASK	= 4,
+	CLAT_LOG_MASK	= 8,
+	IOPS_LOG_MASK	= 16,
+
+	ALL_LOG_MASK	= 31,
+	ALL_LOG_NR	= 5,
+};
+
+static void writeout_logs(struct thread_data *td)
+{
+	struct thread_options *o = &td->o;
+	unsigned int log_mask = ALL_LOG_MASK;
+	unsigned int log_left = ALL_LOG_NR;
+	int old_state;
+
+	old_state = td_bump_runstate(td, TD_FINISHING);
+
+	finalize_logs(td);
+
+	while (log_left) {
+		int ret, prev_log_left = log_left;
+
+		if (log_mask & BW_LOG_MASK) {
+			ret = write_bandw_log(td, o, log_left != 1);
+			if (!ret) {
+				log_left--;
+				log_mask &= ~BW_LOG_MASK;
+			}
+		}
+		if (log_mask & LAT_LOG_MASK) {
+			ret = write_lat_log(td, o, log_left != 1);
+			if (!ret) {
+				log_left--;
+				log_mask &= ~LAT_LOG_MASK;
+			}
+		}
+		if (log_mask & SLAT_LOG_MASK) {
+			ret = write_slat_log(td, o, log_left != 1);
+			if (!ret) {
+				log_left--;
+				log_mask &= ~SLAT_LOG_MASK;
+			}
+		}
+		if (log_mask & CLAT_LOG_MASK) {
+			ret = write_clat_log(td, o, log_left != 1);
+			if (!ret) {
+				log_left--;
+				log_mask &= ~CLAT_LOG_MASK;
+			}
+		}
+		if (log_mask & IOPS_LOG_MASK) {
+			ret = write_iops_log(td, o, log_left != 1);
+			if (!ret) {
+				log_left--;
+				log_mask &= ~IOPS_LOG_MASK;
+			}
+		}
+
+		if (prev_log_left == log_left)
+			usleep(5000);
+	}
+
+	td_restore_runstate(td, old_state);
+}
+
 /*
  * Entry point for the thread based jobs. The process based jobs end up
  * here as well, after a little setup.
@@ -1490,45 +1603,8 @@ static void *thread_main(void *data)
 
 	fio_unpin_memory(td);
 
-	fio_mutex_down(writeout_mutex);
-	finalize_logs(td);
-	if (td->bw_log) {
-		if (o->bw_log_file) {
-			finish_log_named(td, td->bw_log,
-						o->bw_log_file, "bw");
-		} else
-			finish_log(td, td->bw_log, "bw");
-	}
-	if (td->lat_log) {
-		if (o->lat_log_file) {
-			finish_log_named(td, td->lat_log,
-						o->lat_log_file, "lat");
-		} else
-			finish_log(td, td->lat_log, "lat");
-	}
-	if (td->slat_log) {
-		if (o->lat_log_file) {
-			finish_log_named(td, td->slat_log,
-						o->lat_log_file, "slat");
-		} else
-			finish_log(td, td->slat_log, "slat");
-	}
-	if (td->clat_log) {
-		if (o->lat_log_file) {
-			finish_log_named(td, td->clat_log,
-						o->lat_log_file, "clat");
-		} else
-			finish_log(td, td->clat_log, "clat");
-	}
-	if (td->iops_log) {
-		if (o->iops_log_file) {
-			finish_log_named(td, td->iops_log,
-						o->iops_log_file, "iops");
-		} else
-			finish_log(td, td->iops_log, "iops");
-	}
+	writeout_logs(td);
 
-	fio_mutex_up(writeout_mutex);
 	if (o->exec_postrun)
 		exec_string(o, o->exec_postrun, (const char *)"postrun");
 
@@ -2033,9 +2109,6 @@ int fio_backend(void)
 	startup_mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
 	if (startup_mutex == NULL)
 		return 1;
-	writeout_mutex = fio_mutex_init(FIO_MUTEX_UNLOCKED);
-	if (writeout_mutex == NULL)
-		return 1;
 
 	set_genesis_time();
 	stat_init();
@@ -2066,7 +2139,6 @@ int fio_backend(void)
 	sfree(cgroup_mnt);
 
 	fio_mutex_remove(startup_mutex);
-	fio_mutex_remove(writeout_mutex);
 	fio_mutex_remove(disk_thread_mutex);
 	stat_exit();
 	return exit_value;

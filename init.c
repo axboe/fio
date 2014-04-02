@@ -24,6 +24,7 @@
 #include "profile.h"
 #include "server.h"
 #include "idletime.h"
+#include "filelock.h"
 
 #include "lib/getopt.h"
 #include "lib/strcasestr.h"
@@ -259,6 +260,7 @@ static void free_shm(void)
 	}
 
 	options_free(fio_options, &def_thread);
+	fio_filelock_exit();
 	scleanup();
 }
 

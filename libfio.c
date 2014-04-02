@@ -31,6 +31,7 @@
 #include "fio.h"
 #include "smalloc.h"
 #include "os/os.h"
+#include "filelock.h"
 
 /*
  * Just expose an empty list, if the OS does not support disk util stats
@@ -264,6 +265,11 @@ int initialize_fio(char *envp[])
 	arch_init(envp);
 
 	sinit();
+
+	if (fio_filelock_init()) {
+		log_err("fio: failed initializing filelock subsys\n");
+		return 1;
+	}
 
 	/*
 	 * We need locale for number printing, if it isn't set then just
