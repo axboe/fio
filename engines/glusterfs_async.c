@@ -5,7 +5,7 @@
  *
  */
 #include "gfapi.h"
-
+#define NOT_YET 1
 struct fio_gf_iou {
 	struct io_u *io_u;
 	int io_complete;
@@ -39,11 +39,14 @@ static int fio_gf_getevents(struct thread_data *td, unsigned int min,
 				io->io_complete = 0;
 				g->aio_events[events] = io_u;
 				events++;
+
+                if (events >= max) 
+                    break;
 			}
 
 		}
 		if (events < min)
-			usleep(100);
+			usleep(10);
 		else
 			break;
 
@@ -52,49 +55,35 @@ static int fio_gf_getevents(struct thread_data *td, unsigned int min,
 	return events;
 }
 
-#define LAST_POS(f)	((f)->engine_data)
-static int fio_gf_prep(struct thread_data *td, struct io_u *io_u)
+static void fio_gf_io_u_free(struct thread_data *td, struct io_u *io_u)
 {
-	struct fio_file *f = io_u->file;
-	struct gf_data *g = td->io_ops->data;
+	struct fio_gf_iou *io = io_u->engine_data;
+
+	if (io) {
+        if (io->io_complete){
+            log_err("incomplete IO found.\n");
+        }
+		io_u->engine_data = NULL;
+		free(io);
+	}
+}
+
+static int fio_gf_io_u_init(struct thread_data *td, struct io_u *io_u)
+{
 	struct fio_gf_iou *io = NULL;
 
-	dprint(FD_FILE, "fio prep\n");
+	dprint(FD_FILE, "%s\n", __FUNCTION__);
 
-	io = malloc(sizeof(struct fio_gf_iou));
-    if (!io){
-		td_verror(td, errno, "malloc");
-		return 1;
+    if (!io_u->engine_data){
+        io = malloc(sizeof(struct fio_gf_iou));
+        if (!io){
+            td_verror(td, errno, "malloc");
+            return 1;
+        }
+        io->io_complete = 0;
+        io->io_u = io_u;
+        io_u->engine_data = io;
     }
-	io->io_complete = 0;
-	io->io_u = io_u;
-	io_u->engine_data = io;
-
-	g->aio_events = malloc(td->o.iodepth * sizeof(struct io_u *));
-	if (!g->aio_events){
-		td_verror(td, errno, "malloc");
-        free(io);
-        return 1;
-    }
-
-	memset(g->aio_events, 0, td->o.iodepth * sizeof(struct io_u *));
-
-	if (!ddir_rw(io_u->ddir))
-		return 0;
-
-	if (LAST_POS(f) != -1ULL && LAST_POS(f) == io_u->offset)
-		return 0;
-
-	if (glfs_lseek(g->fd, io_u->offset, SEEK_SET) < 0) {
-		td_verror(td, errno, "lseek");
-		return 1;
-	}
-	io = malloc(sizeof(struct fio_gf_iou));
-    if (!io){
-		td_verror(td, errno, "malloc");
-        return 1;
-    }
-
 	return 0;
 }
 
@@ -113,13 +102,16 @@ static int fio_gf_async_queue(struct thread_data fio_unused *td, struct io_u *io
 	struct gf_data *g = td->io_ops->data;
     int r = 0;
 
+    dprint(FD_IO, "%s op %s\n", __FUNCTION__,  
+           io_u->ddir == DDIR_READ? "read": io_u->ddir == DDIR_WRITE? "write":io_u->ddir == DDIR_SYNC? "sync":"unknown");    
+
 	fio_ro_check(td, io_u);
 
 	if (io_u->ddir == DDIR_READ)
 		r = glfs_pread_async(g->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset,
                          0, gf_async_cb, (void *)io_u);
 	else if (io_u->ddir == DDIR_WRITE)
-		r = glfs_pread_async(g->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset,
+		r = glfs_pwrite_async(g->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset,
                          0, gf_async_cb, (void *)io_u);
     else if (io_u->ddir == DDIR_SYNC) {
         r = glfs_fsync_async(g->fd, gf_async_cb, (void *)io_u);
@@ -142,19 +134,55 @@ failed:
 	return FIO_Q_COMPLETED;
 }
 
+int fio_gf_async_setup(struct thread_data *td)
+{
+	int r = 0;
+	struct gf_data *g = NULL;
+#if defined(NOT_YET)
+    fprintf(stderr, "the async interface is still very experimental...\n");
+#endif
+    r = fio_gf_setup(td);
+    if (r){
+        return r;
+    }
+    g = td->io_ops->data;
+    g->aio_events = malloc(td->o.iodepth * sizeof(struct io_u *));
+	if (!g->aio_events){
+        r = -ENOMEM;
+        fio_gf_cleanup(td);
+        return r;
+    }
+
+	memset(g->aio_events, 0, td->o.iodepth * sizeof(struct io_u *));
+
+    return r;
+
+}
+
+static int fio_gf_async_prep(struct thread_data *td, struct io_u *io_u)
+{
+	dprint(FD_FILE, "%s\n", __FUNCTION__);
+
+	if (!ddir_rw(io_u->ddir))
+		return 0;
+
+	return 0;
+}
 
 static struct ioengine_ops ioengine = {
 	.name		    = "gfapi_async",
 	.version	    = FIO_IOOPS_VERSION,
-	.init           = fio_gf_setup,
+	.init           = fio_gf_async_setup,
 	.cleanup        = fio_gf_cleanup,
-    .prep           = fio_gf_prep,
-	.queue		    = fio_gf_async_queue,
+    .prep           = fio_gf_async_prep,
+  	.queue		    = fio_gf_async_queue,
 	.open_file	    = fio_gf_open_file,
 	.close_file	    = fio_gf_close_file,
 	.get_file_size	= fio_gf_get_file_size,
 	.getevents      = fio_gf_getevents,
 	.event          = fio_gf_event,
+	.io_u_init      = fio_gf_io_u_init,
+	.io_u_free      = fio_gf_io_u_free,
 	.options        = gfapi_options,
 	.option_struct_size = sizeof(struct gf_options),
 	.flags		    = FIO_DISKLESSIO,
