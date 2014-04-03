@@ -18,6 +18,8 @@
 #include "../crc/sha512.h"
 #include "../crc/xxhash.h"
 
+#include "test.h"
+
 #define CHUNK		131072U
 #define NR_CHUNKS	  2048U
 
