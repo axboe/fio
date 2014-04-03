@@ -608,6 +608,9 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	case FIO_OPT_STR_STORE: {
 		fio_opt_str_fn *fn = o->cb;
 
+		if (!strlen(ptr))
+			return 1;
+
 		if (o->off1) {
 			cp = td_var(data, o, o->off1);
 			*cp = strdup(ptr);
