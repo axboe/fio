@@ -35,7 +35,7 @@ static struct json_pair *json_create_pair(const char *name, struct json_value *v
 	return pair;
 }
 
-static struct json_value *json_create_value_int(long number)
+static struct json_value *json_create_value_int(long long number)
 {
 	struct json_value *value = malloc(sizeof(struct json_value));
 
@@ -212,7 +212,7 @@ int json_object_add_value_type(struct json_object *obj, const char *name, int ty
 	if (type == JSON_TYPE_STRING)
 		value = json_create_value_string(va_arg(args, char *));
 	else if (type == JSON_TYPE_INTEGER)
-		value = json_create_value_int(va_arg(args, long));
+		value = json_create_value_int(va_arg(args, long long));
 	else if (type == JSON_TYPE_FLOAT)
 		value = json_create_value_float(va_arg(args, double));
 	else if (type == JSON_TYPE_OBJECT)
@@ -248,7 +248,7 @@ int json_array_add_value_type(struct json_array *array, int type, ...)
 	if (type == JSON_TYPE_STRING)
 		value = json_create_value_string(va_arg(args, char *));
 	else if (type == JSON_TYPE_INTEGER)
-		value = json_create_value_int(va_arg(args, long));
+		value = json_create_value_int(va_arg(args, long long));
 	else if (type == JSON_TYPE_FLOAT)
 		value = json_create_value_float(va_arg(args, double));
 	else if (type == JSON_TYPE_OBJECT)
@@ -350,7 +350,7 @@ static void json_print_value(struct json_value *value)
 		log_info("\"%s\"", value->string);
 		break;
 	case JSON_TYPE_INTEGER:
-		log_info("%ld", value->integer_number);
+		log_info("%lld", value->integer_number);
 		break;
 	case JSON_TYPE_FLOAT:
 		log_info("%.2f", value->float_number);

@@ -14,7 +14,7 @@ struct json_pair;
 struct json_value {
 	int type;
 	union {
-		long integer_number;
+		long long integer_number;
 		double float_number;
 		char *string;
 		struct json_object *object;
