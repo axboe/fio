@@ -628,7 +628,6 @@ enum {
 	CLAT_LOG_MASK	= 8,
 	IOPS_LOG_MASK	= 16,
 
-	ALL_LOG_MASK	= 31,
 	ALL_LOG_NR	= 5,
 };
 
@@ -662,7 +661,7 @@ static struct log_type log_types[] = {
 
 void fio_writeout_logs(struct thread_data *td)
 {
-	unsigned int log_mask = ALL_LOG_MASK;
+	unsigned int log_mask = 0;
 	unsigned int log_left = ALL_LOG_NR;
 	int old_state, i;
 
@@ -677,11 +676,11 @@ void fio_writeout_logs(struct thread_data *td)
 			struct log_type *lt = &log_types[i];
 			int ret;
 
-			if (log_mask & lt->mask) {
+			if (!(log_mask & lt->mask)) {
 				ret = lt->fn(td, log_left != 1);
 				if (!ret) {
 					log_left--;
-					log_mask &= ~lt->mask;
+					log_mask |= lt->mask;
 				}
 			}
 		}
