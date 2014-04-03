@@ -131,12 +131,11 @@ extern void add_iops_sample(struct thread_data *, enum fio_ddir, unsigned int,
 extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
 extern void setup_log(struct io_log **, unsigned long, int);
-extern int finish_log(struct thread_data *, struct io_log *, const char *, int);
-extern int finish_log_named(struct thread_data *, struct io_log *, const char *, const char *, int);
 extern void __finish_log(struct io_log *, const char *);
 extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 extern int write_bw_log;
 extern void add_agg_sample(unsigned long, enum fio_ddir, unsigned int);
+extern void fio_writeout_logs(struct thread_data *);
 
 static inline void init_ipo(struct io_piece *ipo)
 {
