@@ -516,9 +516,36 @@ void setup_log(struct io_log **log, unsigned long avg_msec, int log_type)
 	*log = l;
 }
 
+#ifdef CONFIG_SETVBUF
+static void *set_file_buffer(FILE *f)
+{
+	size_t size = 1048576;
+	void *buf;
+
+	buf = malloc(size);
+	setvbuf(f, buf, _IOFBF, size);
+	return buf;
+}
+
+static void clear_file_buffer(void *buf)
+{
+	free(buf);
+}
+#else
+static void *set_file_buffer(FILE *f)
+{
+	return NULL;
+}
+
+static void clear_file_buffer(void *buf)
+{
+}
+#endif
+
 void __finish_log(struct io_log *log, const char *name)
 {
 	unsigned int i;
+	void *buf;
 	FILE *f;
 
 	f = fopen(name, "a");
@@ -526,6 +553,8 @@ void __finish_log(struct io_log *log, const char *name)
 		perror("fopen log");
 		return;
 	}
+
+	buf = set_file_buffer(f);
 
 	for (i = 0; i < log->nr_samples; i++) {
 		fprintf(f, "%lu, %lu, %u, %u\n",
@@ -535,6 +564,7 @@ void __finish_log(struct io_log *log, const char *name)
 	}
 
 	fclose(f);
+	clear_file_buffer(buf);
 	free(log->log);
 	free(log);
 }

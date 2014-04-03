@@ -1163,6 +1163,23 @@ if compile_prog "" "-lrbd -lrados" "rbd"; then
 fi
 echo "Rados Block Device engine     $rbd"
 
+##########################################
+# Check whether we have setvbuf
+setvbuf="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+int main(int argc, char **argv)
+{
+  FILE *f = NULL;
+  char buf[80];
+  setvbuf(f, buf, _IOFBF, sizeof(buf));
+  return 0;
+}
+EOF
+if compile_prog "" "" "setvbuf"; then
+  setvbuf="yes"
+fi
+echo "setvbuf                       $setvbuf"
 
 #############################################################################
 
@@ -1290,6 +1307,9 @@ if test "$rbd" = "yes" ; then
 fi
 if test "$cpu_count" = "yes" ; then
   output_sym "CONFIG_CPU_COUNT"
+fi
+if test "$setvbuf" = "yes" ; then
+  output_sym "CONFIG_SETVBUF"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
