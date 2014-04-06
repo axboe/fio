@@ -806,7 +806,7 @@ int setup_files(struct thread_data *td)
 	 * Calculate per-file size and potential extra size for the
 	 * first files, if needed.
 	 */
-	if (!o->file_size_low) {
+	if (!o->file_size_low && o->nr_files) {
 		uint64_t all_fs;
 
 		fs = o->size / o->nr_files;
