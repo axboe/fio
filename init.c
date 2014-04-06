@@ -2033,7 +2033,7 @@ int parse_options(int argc, char *argv[])
 
 	if (job_files > 0) {
 		for (i = 0; i < job_files; i++) {
-			if (fill_def_thread())
+			if (i && fill_def_thread())
 				return 1;
 			if (nr_clients) {
 				if (fio_clients_send_ini(ini_file[i]))
