@@ -277,13 +277,18 @@ clean: FORCE
 	-rm -f .depend $(FIO_OBJS) $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE *.d config-host.mak config-host.h
 
 distclean: clean FORCE
-	@rm -f cscope.out
+	@rm -f cscope.out fio.pdf fio_generate_plots.pdf fio2gnuplot.pdf
 
 cscope:
 	@cscope -b -R
 
 tools/plot/fio2gnuplot.1:
 	@cat tools/plot/fio2gnuplot.manpage | txt2man -t fio2gnuplot >  tools/plot/fio2gnuplot.1
+
+doc: tools/plot/fio2gnuplot.1
+	@man -t ./fio.1 | ps2pdf - fio.pdf
+	@man -t tools/fio_generate_plots.1 | ps2pdf - fio_generate_plots.pdf
+	@man -t tools/plot/fio2gnuplot.1 | ps2pdf - fio2gnuplot.pdf
 
 install: $(PROGS) $(SCRIPTS) tools/plot/fio2gnuplot.1 FORCE
 	$(INSTALL) -m 755 -d $(DESTDIR)$(bindir)
