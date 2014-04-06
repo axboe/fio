@@ -38,7 +38,7 @@ const char fio_version_string[] = FIO_VERSION;
 static char **ini_file;
 static int max_jobs = FIO_MAX_JOBS;
 static int dump_cmdline;
-static int def_timeout;
+static long long def_timeout;
 static int parse_only;
 
 static struct thread_data def_thread;
@@ -318,6 +318,14 @@ static int setup_thread_area(void)
 	return 0;
 }
 
+static void set_cmd_options(struct thread_data *td)
+{
+	struct thread_options *o = &td->o;
+
+	if (!o->timeout)
+		o->timeout = def_timeout;
+}
+
 /*
  * Return a free job structure.
  */
@@ -326,8 +334,10 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 {
 	struct thread_data *td;
 
-	if (global)
+	if (global) {
+		set_cmd_options(&def_thread);
 		return &def_thread;
+	}
 	if (setup_thread_area()) {
 		log_err("error: failed to setup shm segment\n");
 		return NULL;
@@ -357,6 +367,7 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 	if (!parent || !parent->o.group_reporting)
 		stat_number++;
 
+	set_cmd_options(td);
 	return td;
 }
 
@@ -1440,8 +1451,8 @@ static int fill_def_thread(void)
 	memset(&def_thread, 0, sizeof(def_thread));
 
 	fio_getaffinity(getpid(), &def_thread.o.cpumask);
-	def_thread.o.timeout = def_timeout;
 	def_thread.o.error_dump = 1;
+
 	/*
 	 * fill default options
 	 */
@@ -1695,7 +1706,11 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			smalloc_pool_size = atoi(optarg);
 			break;
 		case 't':
-			def_timeout = atoi(optarg);
+			if (check_str_time(optarg, &def_timeout, 1)) {
+				log_err("fio: failed parsing time %s\n", optarg);
+				do_exit++;
+				exit_val = 1;
+			}
 			break;
 		case 'l':
 			write_lat_log = 1;
