@@ -18,7 +18,7 @@
 #define __NR_sys_vmsplice	309
 #endif
 
-#define nop		asm volatile ("diag 0,0,68" : : : "memory")
+#define nop		asm volatile("nop" : : : "memory")
 #define read_barrier()	asm volatile("bcr 15,0" : : : "memory")
 #define write_barrier()	asm volatile("bcr 15,0" : : : "memory")
 
