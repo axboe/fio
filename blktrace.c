@@ -373,6 +373,7 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 	struct fifo *fifo;
 	int fd, i, old_state;
 	struct fio_file *f;
+	int this_depth, depth;
 
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
@@ -391,6 +392,7 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 	ios[0] = ios[1] = 0;
 	rw_bs[0] = rw_bs[1] = 0;
 	skipped_writes = 0;
+	this_depth = depth = 0;
 	do {
 		int ret = trace_fifo_get(td, fifo, fd, &t, sizeof(t));
 
@@ -425,6 +427,12 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 			goto err;
 		}
 		if ((t.action & BLK_TC_ACT(BLK_TC_NOTIFY)) == 0) {
+			if ((t.action & 0xffff) == __BLK_TA_QUEUE)
+				this_depth++;
+			else if ((t.action & 0xffff) == __BLK_TA_COMPLETE) {
+				depth = max(depth, this_depth);
+				this_depth = 0;
+			}
 			if (!ttime) {
 				ttime = t.time;
 				cpu = t.cpu;
@@ -469,6 +477,13 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 		return 1;
 	}
 
+	/*
+	 * For stacked devices, we don't always get a COMPLETE event so
+	 * the depth grows to insane values. Limit it to something sane(r).
+	 */
+	if (!depth || depth > 1024)
+		depth = 1024;
+
 	if (skipped_writes)
 		log_err("fio: %s skips replay of %lu writes due to read-only\n",
 						td->o.name, skipped_writes);
@@ -493,6 +508,13 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 	 * read-ahead in our way.
 	 */
 	td->o.odirect = 1;
+
+	/*
+	 * we don't know if this option was set or not. it defaults to 1,
+	 * so we'll just guess that we should override it if it's still 1
+	 */
+	if (td->o.iodepth != 1)
+		td->o.iodepth = depth;
 
 	return 0;
 err:
