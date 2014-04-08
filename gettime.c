@@ -13,7 +13,7 @@
 #include "hash.h"
 #include "os/os.h"
 
-#ifdef ARCH_HAVE_CPU_CLOCK
+#if defined(ARCH_HAVE_CPU_CLOCK) && !defined(ARCH_CPU_CLOCK_CYCLES_PER_USEC)
 static unsigned long cycles_per_usec;
 static unsigned long inv_cycles_per_usec;
 #endif
@@ -177,7 +177,11 @@ static void *__fio_gettime(struct timeval *tp)
 		} else if (tv)
 			tv->last_cycles = t;
 
+#ifdef ARCH_CPU_CLOCK_CYCLES_PER_USEC
+		usecs = t / ARCH_CPU_CLOCK_CYCLES_PER_USEC;
+#else
 		usecs = (t * inv_cycles_per_usec) / 16777216UL;
+#endif
 		tp->tv_sec = usecs / 1000000;
 		tp->tv_usec = usecs % 1000000;
 		break;
@@ -229,7 +233,7 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 	}
 }
 
-#ifdef ARCH_HAVE_CPU_CLOCK
+#if defined(ARCH_HAVE_CPU_CLOCK) && !defined(ARCH_CPU_CLOCK_CYCLES_PER_USEC)
 static unsigned long get_cycles_per_usec(void)
 {
 	struct timeval s, e;
@@ -318,9 +322,13 @@ static int calibrate_cpu_clock(void)
 #else
 static int calibrate_cpu_clock(void)
 {
+#ifdef ARCH_CPU_CLOCK_CYCLES_PER_USEC
+	return 0;
+#else
 	return 1;
-}
 #endif
+}
+#endif // ARCH_HAVE_CPU_CLOCK
 
 #ifndef CONFIG_TLS_THREAD
 void fio_local_clock_init(int is_thread)
