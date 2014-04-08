@@ -10,6 +10,7 @@ struct fio_gf_iou {
 	struct io_u *io_u;
 	int io_complete;
 };
+static ulong cb_count = 0, issued = 0;
 
 static struct io_u *fio_gf_event(struct thread_data *td, int event)
 {
@@ -46,7 +47,7 @@ static int fio_gf_getevents(struct thread_data *td, unsigned int min,
 
 		}
 		if (events < min)
-			usleep(10);
+			usleep(100);
 		else
 			break;
 
@@ -66,6 +67,7 @@ static void fio_gf_io_u_free(struct thread_data *td, struct io_u *io_u)
 		io_u->engine_data = NULL;
 		free(io);
 	}
+    fprintf(stderr, "issued %lu finished %lu\n", issued, cb_count);
 }
 
 static int fio_gf_io_u_init(struct thread_data *td, struct io_u *io_u)
@@ -95,6 +97,7 @@ static void gf_async_cb(glfs_fd_t *fd, ssize_t ret, void *data)
 
     dprint(FD_IO, "%s ret %lu\n", __FUNCTION__, ret);    
     iou->io_complete = 1;
+    cb_count ++;
 }
 
 static int fio_gf_async_queue(struct thread_data fio_unused *td, struct io_u *io_u)
@@ -125,7 +128,7 @@ static int fio_gf_async_queue(struct thread_data fio_unused *td, struct io_u *io
         io_u->error = r;
         goto failed;
     }
-
+    issued ++;
 	return FIO_Q_QUEUED;
 
 failed:
@@ -145,6 +148,7 @@ int fio_gf_async_setup(struct thread_data *td)
     if (r){
         return r;
     }
+	td->o.use_thread = 1;
     g = td->io_ops->data;
     g->aio_events = malloc(td->o.iodepth * sizeof(struct io_u *));
 	if (!g->aio_events){

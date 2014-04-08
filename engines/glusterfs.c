@@ -223,6 +223,19 @@ int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
             }
         }
     }
+#if defined(GFAPI_USE_FADVISE)
+    {
+        int r = 0; 
+        if (td_random(td)){
+            r = glfs_fadvise(g->fd, 0, f->real_file_size, POSIX_FADV_RANDOM);
+        }else{
+            r = glfs_fadvise(g->fd, 0, f->real_file_size, POSIX_FADV_SEQUENTIAL);
+        }
+        if (r){
+            dprint(FD_FILE, "fio %p fadvise %s status %d\n", g->fs, f->file_name, r);
+        }
+    }
+#endif
     dprint(FD_FILE, "fio %p created %s\n", g->fs, f->file_name);
     f->fd = -1;
     f->shadow_fd = -1;    

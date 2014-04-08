@@ -95,6 +95,9 @@ ifdef CONFIG_GFAPI
   SOURCE += engines/glusterfs.c
   SOURCE += engines/glusterfs_sync.c
   SOURCE += engines/glusterfs_async.c
+  ifdef CONFIG_GF_FADVISE
+    CFLAGS += "-DGFAPI_USE_FADVISE"
+  endif
 endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
