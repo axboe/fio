@@ -371,7 +371,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 		} else {
 			ipo->offset = offset;
 			ipo->len = bytes;
-			if (bytes > td->o.max_bs[rw])
+			if (rw != DDIR_INVAL && bytes > td->o.max_bs[rw])
 				td->o.max_bs[rw] = bytes;
 			ipo->fileno = fileno;
 			ipo->file_action = file_action;
