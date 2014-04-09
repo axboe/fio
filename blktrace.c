@@ -217,6 +217,7 @@ static int trace_add_file(struct thread_data *td, __u32 device)
 
 		dprint(FD_BLKTRACE, "add devices %s\n", dev);
 		fileno = add_file_exclusive(td, dev);
+		td->o.open_files++;
 		td->files[fileno]->major = maj;
 		td->files[fileno]->minor = min;
 		trace_add_open_close_event(td, fileno, FIO_LOG_OPEN_FILE);

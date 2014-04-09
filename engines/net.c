@@ -1196,6 +1196,7 @@ static int fio_netio_setup(struct thread_data *td)
 	if (!td->files_index) {
 		add_file(td, td->o.filename ?: "net", 0, 0);
 		td->o.nr_files = td->o.nr_files ?: 1;
+		td->o.open_files++;
 	}
 
 	if (!td->io_ops->data) {
