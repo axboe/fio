@@ -1279,13 +1279,6 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 
 	set_already_allocated(file_name);
 
-	/*
-	 * For adding files after the fact - if openfiles= isn't
-	 * given as an option, ensure we allow at least one file open
-	 */
-	if (!td->o.open_files)
-		td->o.open_files = 1;
-
 	if (inc)
 		td->o.nr_files++;
 
