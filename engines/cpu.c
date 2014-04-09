@@ -11,6 +11,7 @@ struct cpu_options {
 	struct thread_data *td;
 	unsigned int cpuload;
 	unsigned int cpucycle;
+	unsigned int exit_io_done;
 };
 
 static struct fio_option options[] = {
@@ -36,6 +37,16 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "exit_on_io_done",
+		.lname	= "Exit when IO threads are done",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct cpu_options, exit_io_done),
+		.help	= "Exit when IO threads finish",
+		.def	= "0",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= NULL,
 	},
 };
@@ -44,6 +55,11 @@ static struct fio_option options[] = {
 static int fio_cpuio_queue(struct thread_data *td, struct io_u fio_unused *io_u)
 {
 	struct cpu_options *co = td->eo;
+
+	if (co->exit_io_done && !fio_running_or_pending_io_threads()) {
+		td->done = 1;
+		return FIO_Q_BUSY;
+	}
 
 	usec_spin(co->cpucycle);
 	return FIO_Q_COMPLETED;

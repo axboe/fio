@@ -72,6 +72,7 @@ enum {
 	TD_F_VER_NONE		= 32,
 	TD_F_PROFILE_OPS	= 64,
 	TD_F_COMPRESS		= 128,
+	TD_F_NOIO		= 256,
 };
 
 enum {
@@ -439,6 +440,7 @@ extern void add_job_opts(const char **, int);
 extern char *num2str(unsigned long, int, int, int, int);
 extern int ioengine_load(struct thread_data *);
 extern int parse_dryrun(void);
+extern int fio_running_or_pending_io_threads(void);
 
 extern uintptr_t page_mask;
 extern uintptr_t page_size;

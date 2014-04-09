@@ -375,6 +375,9 @@ int td_io_init(struct thread_data *td)
 			td->error = ret;
 	}
 
+	if (!ret && (td->io_ops->flags & FIO_NOIO))
+		td->flags |= TD_F_NOIO;
+
 	return ret;
 }
 

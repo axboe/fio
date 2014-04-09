@@ -218,6 +218,21 @@ void fio_terminate_threads(int group_id)
 	}
 }
 
+int fio_running_or_pending_io_threads(void)
+{
+	struct thread_data *td;
+	int i;
+
+	for_each_td(td, i) {
+		if (td->flags & TD_F_NOIO)
+			continue;
+		if (td->runstate < TD_EXITED)
+			return 1;
+	}
+
+	return 0;
+}
+
 static int endian_check(void)
 {
 	union {

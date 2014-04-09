@@ -1226,14 +1226,6 @@ Output is redirected in a file called \fBjobname.postrun.txt\fR
 .BI ioscheduler \fR=\fPstr
 Attempt to switch the device hosting the file to the specified I/O scheduler.
 .TP
-.BI cpuload \fR=\fPint
-If the job is a CPU cycle-eater, attempt to use the specified percentage of
-CPU cycles.
-.TP
-.BI cpuchunks \fR=\fPint
-If the job is a CPU cycle-eater, split the load into cycles of the
-given time in milliseconds.
-.TP
 .BI disk_util \fR=\fPbool
 Generate disk utilization statistics if the platform supports it. Default: true.
 .TP
@@ -1374,6 +1366,9 @@ Attempt to use the specified percentage of CPU cycles.
 .TP
 .BI (cpu)cpuchunks \fR=\fPint
 Split the load into cycles of the given time. In microseconds.
+.TP
+.BI (cpu)exit_on_io_done \fR=\fPbool
+Detect when IO threads are done, then exit.
 .TP
 .BI (libaio)userspace_reap
 Normally, with the libaio engine in use, fio will use

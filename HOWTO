@@ -1505,6 +1505,8 @@ that defines them is selected.
 [cpu] cpuchunks=int Split the load into cycles of the given time. In
 		microseconds.
 
+[cpu] exit_on_io_done=bool Detect when IO threads are done, then exit.
+
 [netsplice] hostname=str
 [net] hostname=str The host name or IP address to use for TCP or UDP based IO.
 		If the job is a TCP listener or UDP reader, the hostname is not
