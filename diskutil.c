@@ -236,7 +236,7 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 		 * are links to the real directories for the slave
 		 * devices?
 		 */
-		linklen = readlink(temppath, slavepath, PATH_MAX - 0);
+		linklen = readlink(temppath, slavepath, PATH_MAX - 1);
 		if (linklen  < 0) {
 			perror("readlink() for slave device.");
 			return;
