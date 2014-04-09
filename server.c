@@ -1394,6 +1394,7 @@ static int fio_init_server_connection(void)
 
 	if (listen(sk, 0) < 0) {
 		log_err("fio: listen: %s\n", strerror(errno));
+		close(sk);
 		return -1;
 	}
 

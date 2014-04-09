@@ -379,6 +379,7 @@ static int fio_rbd_setup(struct thread_data *td)
 	if (!td->files_index) {
 		add_file(td, td->o.filename ? : "rbd", 0, 0);
 		td->o.nr_files = td->o.nr_files ? : 1;
+		td->o.open_files++;
 	}
 	f = td->files[0];
 	f->real_file_size = info.size;
