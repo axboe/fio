@@ -1181,6 +1181,36 @@ if compile_prog "" "" "setvbuf"; then
 fi
 echo "setvbuf                       $setvbuf"
 
+##########################################
+# Check if we support stckf on s390
+s390_z196_facilities="no"
+cat > $TMPC << EOF
+#define STFLE_BITS_Z196 45 /* various z196 facilities ... */
+int main(int argc, char **argv)
+{
+    /* We want just 1 double word to be returned.  */
+    register unsigned long reg0 asm("0") = 0;
+    unsigned long stfle_bits;
+    asm volatile(".machine push"        "\n\t"
+                 ".machine \"z9-109\""  "\n\t"
+                 "stfle %0"             "\n\t"
+                 ".machine pop"         "\n"
+                 : "=QS" (stfle_bits), "+d" (reg0)
+                 : : "cc");
+
+    if ((stfle_bits & (1UL << (63 - STFLE_BITS_Z196))) != 0)
+      return 0;
+    else
+      return -1;
+}
+EOF
+if compile_prog "" "" "s390_z196_facilities"; then
+  $TMPE
+  if [[ $? -eq 0 ]]; then
+  	s390_z196_facilities="yes"
+  fi
+fi
+echo "s390_z196_facilities          $s390_z196_facilities"
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -1310,6 +1340,10 @@ if test "$cpu_count" = "yes" ; then
 fi
 if test "$setvbuf" = "yes" ; then
   output_sym "CONFIG_SETVBUF"
+fi
+if test "$s390_z196_facilities" = "yes" ; then
+  output_sym "CONFIG_S390_Z196_FACILITIES"
+  CFLAGS="$CFLAGS -march=z9-109"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
