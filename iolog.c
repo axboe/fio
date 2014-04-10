@@ -58,6 +58,7 @@ void log_file(struct thread_data *td, struct fio_file *f,
 static void iolog_delay(struct thread_data *td, unsigned long delay)
 {
 	unsigned long usec = utime_since_now(&td->last_issue);
+	unsigned long this_delay;
 
 	if (delay < usec)
 		return;
@@ -70,7 +71,14 @@ static void iolog_delay(struct thread_data *td, unsigned long delay)
 	if (delay < 100)
 		return;
 
-	usec_sleep(td, delay);
+	while (delay && !td->terminate) {
+		this_delay = delay;
+		if (this_delay > 500000)
+			this_delay = 500000;
+
+		usec_sleep(td, this_delay);
+		delay -= this_delay;
+	}
 }
 
 static int ipo_special(struct thread_data *td, struct io_piece *ipo)
