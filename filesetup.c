@@ -395,9 +395,6 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 	dprint(FD_IO, "invalidate cache %s: %llu/%llu\n", f->file_name, off,
 								len);
 
-	/*
-	 * FIXME: add blockdev flushing too
-	 */
 	if (f->mmap_ptr) {
 		ret = posix_madvise(f->mmap_ptr, f->mmap_sz, POSIX_MADV_DONTNEED);
 #ifdef FIO_MADV_FREE
@@ -419,15 +416,18 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 	} else if (f->filetype == FIO_TYPE_CHAR || f->filetype == FIO_TYPE_PIPE)
 		ret = 0;
 
-	if (ret < 0) {
-		td_verror(td, errno, "invalidate_cache");
-		return 1;
-	} else if (ret > 0) {
-		td_verror(td, ret, "invalidate_cache");
-		return 1;
+	/*
+	 * Cache flushing isn't a fatal condition, and we know it will
+	 * happen on some platforms where we don't have the proper
+	 * function to flush eg block device caches. So just warn and
+	 * continue on our way.
+	 */
+	if (ret) {
+		log_info("fio: cache invalidation of %s failed: %s\n", f->file_name, strerror(errno));
+		ret = 0;
 	}
 
-	return ret;
+	return 0;
 
 }
 
