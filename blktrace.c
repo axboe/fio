@@ -150,7 +150,7 @@ static int lookup_device(struct thread_data *td, char *path, unsigned int maj,
 		 */
 		if (td->o.replay_redirect) {
 			dprint(FD_BLKTRACE, "device lookup: %d/%d\n overridden"
-					" with: %s", maj, min,
+					" with: %s\n", maj, min,
 					td->o.replay_redirect);
 			strcpy(path, td->o.replay_redirect);
 			found = 1;
