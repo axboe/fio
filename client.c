@@ -907,15 +907,15 @@ static void convert_dus(struct disk_util_stat *dus)
 	int i;
 
 	for (i = 0; i < 2; i++) {
-		dus->ios[i]	= le32_to_cpu(dus->ios[i]);
-		dus->merges[i]	= le32_to_cpu(dus->merges[i]);
-		dus->sectors[i]	= le64_to_cpu(dus->sectors[i]);
-		dus->ticks[i]	= le32_to_cpu(dus->ticks[i]);
+		dus->s.ios[i]		= le32_to_cpu(dus->s.ios[i]);
+		dus->s.merges[i]	= le32_to_cpu(dus->s.merges[i]);
+		dus->s.sectors[i]	= le64_to_cpu(dus->s.sectors[i]);
+		dus->s.ticks[i]		= le32_to_cpu(dus->s.ticks[i]);
 	}
 
-	dus->io_ticks		= le32_to_cpu(dus->io_ticks);
-	dus->time_in_queue	= le32_to_cpu(dus->time_in_queue);
-	dus->msec		= le64_to_cpu(dus->msec);
+	dus->s.io_ticks		= le32_to_cpu(dus->s.io_ticks);
+	dus->s.time_in_queue	= le32_to_cpu(dus->s.time_in_queue);
+	dus->s.msec		= le64_to_cpu(dus->s.msec);
 }
 
 static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)

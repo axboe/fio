@@ -5,11 +5,7 @@
 
 extern volatile int disk_util_exit;
 
-/*
- * Disk utils as read in /sys/block/<dev>/stat
- */
-struct disk_util_stat {
-	uint8_t name[FIO_DU_NAME_SZ];
+struct disk_util_stats {
 	uint32_t ios[2];
 	uint32_t merges[2];
 	uint64_t sectors[2];
@@ -17,6 +13,14 @@ struct disk_util_stat {
 	uint32_t io_ticks;
 	uint32_t time_in_queue;
 	uint64_t msec;
+};
+
+/*
+ * Disk utils as read in /sys/block/<dev>/stat
+ */
+struct disk_util_stat {
+	uint8_t name[FIO_DU_NAME_SZ];
+	struct disk_util_stats s;
 };
 
 struct disk_util_agg {

@@ -61,16 +61,18 @@ static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 
 	dprint(FD_DISKUTIL, "%s: %s", du->path, p);
 
-	ret = sscanf(p, "%u %u %llu %u %u %u %llu %u %u %u %u\n", &dus->ios[0],
-					&dus->merges[0], &sectors[0],
-					&dus->ticks[0], &dus->ios[1],
-					&dus->merges[1], &sectors[1],
-					&dus->ticks[1], &in_flight,
-					&dus->io_ticks, &dus->time_in_queue);
+	ret = sscanf(p, "%u %u %llu %u %u %u %llu %u %u %u %u\n",
+					&dus->s.ios[0],
+					&dus->s.merges[0], &sectors[0],
+					&dus->s.ticks[0], &dus->s.ios[1],
+					&dus->s.merges[1], &sectors[1],
+					&dus->s.ticks[1], &in_flight,
+					&dus->s.io_ticks,
+					&dus->s.time_in_queue);
 	fclose(f);
 	dprint(FD_DISKUTIL, "%s: stat read ok? %d\n", du->path, ret == 1);
-	dus->sectors[0] = sectors[0];
-	dus->sectors[1] = sectors[1];
+	dus->s.sectors[0] = sectors[0];
+	dus->s.sectors[1] = sectors[1];
 	return ret != 11;
 }
 
@@ -87,21 +89,21 @@ static void update_io_tick_disk(struct disk_util *du)
 	dus = &du->dus;
 	ldus = &du->last_dus;
 
-	dus->sectors[0] += (__dus.sectors[0] - ldus->sectors[0]);
-	dus->sectors[1] += (__dus.sectors[1] - ldus->sectors[1]);
-	dus->ios[0] += (__dus.ios[0] - ldus->ios[0]);
-	dus->ios[1] += (__dus.ios[1] - ldus->ios[1]);
-	dus->merges[0] += (__dus.merges[0] - ldus->merges[0]);
-	dus->merges[1] += (__dus.merges[1] - ldus->merges[1]);
-	dus->ticks[0] += (__dus.ticks[0] - ldus->ticks[0]);
-	dus->ticks[1] += (__dus.ticks[1] - ldus->ticks[1]);
-	dus->io_ticks += (__dus.io_ticks - ldus->io_ticks);
-	dus->time_in_queue += (__dus.time_in_queue - ldus->time_in_queue);
+	dus->s.sectors[0] += (__dus.s.sectors[0] - ldus->s.sectors[0]);
+	dus->s.sectors[1] += (__dus.s.sectors[1] - ldus->s.sectors[1]);
+	dus->s.ios[0] += (__dus.s.ios[0] - ldus->s.ios[0]);
+	dus->s.ios[1] += (__dus.s.ios[1] - ldus->s.ios[1]);
+	dus->s.merges[0] += (__dus.s.merges[0] - ldus->s.merges[0]);
+	dus->s.merges[1] += (__dus.s.merges[1] - ldus->s.merges[1]);
+	dus->s.ticks[0] += (__dus.s.ticks[0] - ldus->s.ticks[0]);
+	dus->s.ticks[1] += (__dus.s.ticks[1] - ldus->s.ticks[1]);
+	dus->s.io_ticks += (__dus.s.io_ticks - ldus->s.io_ticks);
+	dus->s.time_in_queue += (__dus.s.time_in_queue - ldus->s.time_in_queue);
 
 	fio_gettime(&t, NULL);
-	dus->msec += mtime_since(&du->time, &t);
+	dus->s.msec += mtime_since(&du->time, &t);
 	memcpy(&du->time, &t, sizeof(t));
-	memcpy(ldus, &__dus, sizeof(__dus));
+	memcpy(&ldus->s, &__dus.s, sizeof(__dus.s));
 }
 
 int update_io_ticks(void)
@@ -528,18 +530,18 @@ static void aggregate_slaves_stats(struct disk_util *masterdu)
 	flist_for_each(entry, &masterdu->slaves) {
 		slavedu = flist_entry(entry, struct disk_util, slavelist);
 		dus = &slavedu->dus;
-		agg->ios[0] += dus->ios[0];
-		agg->ios[1] += dus->ios[1];
-		agg->merges[0] += dus->merges[0];
-		agg->merges[1] += dus->merges[1];
-		agg->sectors[0] += dus->sectors[0];
-		agg->sectors[1] += dus->sectors[1];
-		agg->ticks[0] += dus->ticks[0];
-		agg->ticks[1] += dus->ticks[1];
-		agg->time_in_queue += dus->time_in_queue;
+		agg->ios[0] += dus->s.ios[0];
+		agg->ios[1] += dus->s.ios[1];
+		agg->merges[0] += dus->s.merges[0];
+		agg->merges[1] += dus->s.merges[1];
+		agg->sectors[0] += dus->s.sectors[0];
+		agg->sectors[1] += dus->s.sectors[1];
+		agg->ticks[0] += dus->s.ticks[0];
+		agg->ticks[1] += dus->s.ticks[1];
+		agg->time_in_queue += dus->s.time_in_queue;
 		agg->slavecount++;
 
-		util = (double) (100 * dus->io_ticks / (double) slavedu->dus.msec);
+		util = (double) (100 * dus->s.io_ticks / (double) slavedu->dus.s.msec);
 		/* System utilization is the utilization of the
 		 * component with the highest utilization.
 		 */
@@ -574,8 +576,8 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 {
 	double util = 0;
 
-	if (dus->msec)
-		util = (double) 100 * dus->io_ticks / (double) dus->msec;
+	if (dus->s.msec)
+		util = (double) 100 * dus->s.io_ticks / (double) dus->s.msec;
 	if (util > 100.0)
 		util = 100.0;
 
@@ -585,16 +587,17 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 
 		log_info("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, "
 			 "in_queue=%u, util=%3.2f%%", dus->name,
-					dus->ios[0], dus->ios[1],
-					dus->merges[0], dus->merges[1],
-					dus->ticks[0], dus->ticks[1],
-					dus->time_in_queue, util);
+					dus->s.ios[0], dus->s.ios[1],
+					dus->s.merges[0], dus->s.merges[1],
+					dus->s.ticks[0], dus->s.ticks[1],
+					dus->s.time_in_queue, util);
 	} else {
 		log_info(";%s;%u;%u;%u;%u;%u;%u;%u;%3.2f%%",
-					dus->name, dus->ios[0], dus->ios[1],
-					dus->merges[0], dus->merges[1],
-					dus->ticks[0], dus->ticks[1],
-					dus->time_in_queue, util);
+					dus->name, dus->s.ios[0],
+					dus->s.ios[1], dus->s.merges[0],
+					dus->s.merges[1], dus->s.ticks[0],
+					dus->s.ticks[1],
+					dus->s.time_in_queue, util);
 	}
 
 	/*
@@ -613,8 +616,8 @@ void json_array_add_disk_util(struct disk_util_stat *dus,
 	struct json_object *obj;
 	double util = 0;
 
-	if (dus->msec)
-		util = (double) 100 * dus->io_ticks / (double) dus->msec;
+	if (dus->s.msec)
+		util = (double) 100 * dus->s.io_ticks / (double) dus->s.msec;
 	if (util > 100.0)
 		util = 100.0;
 
@@ -622,13 +625,13 @@ void json_array_add_disk_util(struct disk_util_stat *dus,
 	json_array_add_value_object(array, obj);
 
 	json_object_add_value_string(obj, "name", dus->name);
-	json_object_add_value_int(obj, "read_ios", dus->ios[0]);
-	json_object_add_value_int(obj, "write_ios", dus->ios[1]);
-	json_object_add_value_int(obj, "read_merges", dus->merges[0]);
-	json_object_add_value_int(obj, "write_merges", dus->merges[1]);
-	json_object_add_value_int(obj, "read_ticks", dus->ticks[0]);
-	json_object_add_value_int(obj, "write_ticks", dus->ticks[1]);
-	json_object_add_value_int(obj, "in_queue", dus->time_in_queue);
+	json_object_add_value_int(obj, "read_ios", dus->s.ios[0]);
+	json_object_add_value_int(obj, "write_ios", dus->s.ios[1]);
+	json_object_add_value_int(obj, "read_merges", dus->s.merges[0]);
+	json_object_add_value_int(obj, "write_merges", dus->s.merges[1]);
+	json_object_add_value_int(obj, "read_ticks", dus->s.ticks[0]);
+	json_object_add_value_int(obj, "write_ticks", dus->s.ticks[1]);
+	json_object_add_value_int(obj, "in_queue", dus->s.time_in_queue);
 	json_object_add_value_float(obj, "util", util);
 
 	/*
