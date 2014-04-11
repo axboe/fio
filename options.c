@@ -322,7 +322,7 @@ static int str_rw_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
 	struct thread_options *o = &td->o;
-	char *nr = get_opt_postfix(str);
+	char *nr;
 
 	if (parse_dryrun())
 		return 0;
@@ -330,6 +330,7 @@ static int str_rw_cb(void *data, const char *str)
 	o->ddir_seq_nr = 1;
 	o->ddir_seq_add = 0;
 
+	nr = get_opt_postfix(str);
 	if (!nr)
 		return 0;
 
