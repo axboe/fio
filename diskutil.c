@@ -239,6 +239,7 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 		linklen = readlink(temppath, slavepath, PATH_MAX - 1);
 		if (linklen  < 0) {
 			perror("readlink() for slave device.");
+			closedir(dirhandle);
 			return;
 		}
 		slavepath[linklen] = '\0';
@@ -246,6 +247,7 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 		sprintf(temppath, "%s/%s/dev", slavesdir, slavepath);
 		if (read_block_dev_entry(temppath, &majdev, &mindev)) {
 			perror("Error getting slave device numbers.");
+			closedir(dirhandle);
 			return;
 		}
 
