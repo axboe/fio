@@ -1985,6 +1985,8 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 
 	if (is_backend && backend)
 		return fio_start_server(pid_file);
+	else if (pid_file)
+		free(pid_file);
 
 	if (td) {
 		if (!ret)

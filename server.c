@@ -1683,6 +1683,7 @@ int fio_start_server(char *pidfile)
 	if (check_existing_pidfile(pidfile)) {
 		log_err("fio: pidfile %s exists and server appears alive\n",
 								pidfile);
+		free(pidfile);
 		return -1;
 	}
 
@@ -1694,6 +1695,7 @@ int fio_start_server(char *pidfile)
 	} else if (pid) {
 		int ret = write_pid(pid, pidfile);
 
+		free(pidfile);
 		exit(ret);
 	}
 
