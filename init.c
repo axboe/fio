@@ -1828,6 +1828,8 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			break;
 			}
 		case 'p':
+			if (exec_profile)
+				free(exec_profile);
 			exec_profile = strdup(optarg);
 			break;
 		case FIO_GETOPT_JOB: {
