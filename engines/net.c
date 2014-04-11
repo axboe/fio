@@ -1092,6 +1092,7 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 	}
 
 	if (bind(fd, saddr, len) < 0) {
+		close(fd);
 		td_verror(td, errno, "bind");
 		return 1;
 	}
