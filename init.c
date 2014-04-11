@@ -364,7 +364,7 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 
 	td->thread_number = thread_number;
 
-	if (!parent || !parent->o.group_reporting)
+	if (!parent->o.group_reporting)
 		stat_number++;
 
 	set_cmd_options(td);
