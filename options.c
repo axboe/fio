@@ -3656,8 +3656,10 @@ static char *bc_calc(char *str)
 		return NULL;
 
 	ret = fread(&buf[tmp - str], 1, 128 - (tmp - str), f);
-	if (ret <= 0)
+	if (ret <= 0) {
+		pclose(f);
 		return NULL;
+	}
 
 	pclose(f);
 	buf[(tmp - str) + ret - 1] = '\0';
