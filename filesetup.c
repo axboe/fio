@@ -1402,7 +1402,8 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 		if (lstat(full_path, &sb) == -1) {
 			if (errno != ENOENT) {
 				td_verror(td, errno, "stat");
-				return 1;
+				ret = 1;
+				break;
 			}
 		}
 
