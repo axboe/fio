@@ -38,7 +38,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	int r, new_layout = 0, unlink_file = 0, flags;
 	unsigned long long left;
 	unsigned int bs;
-	char *b;
+	char *b = NULL;
 
 	if (read_only) {
 		log_err("fio: refusing extend of file due to read-only\n");
@@ -189,6 +189,8 @@ done:
 err:
 	close(f->fd);
 	f->fd = -1;
+	if (b)
+		free(b);
 	return 1;
 }
 
