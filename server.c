@@ -1095,7 +1095,8 @@ static void convert_dus(struct disk_util_stat *dst, struct disk_util_stat *src)
 {
 	int i;
 
-	strcpy((char *) dst->name, (char *) src->name);
+	dst->name[FIO_DU_NAME_SZ - 1] = '\0';
+	strncpy((char *) dst->name, (char *) src->name, FIO_DU_NAME_SZ - 1);
 
 	for (i = 0; i < 2; i++) {
 		dst->s.ios[i]		= cpu_to_le32(src->s.ios[i]);
