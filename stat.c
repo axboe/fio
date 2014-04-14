@@ -1471,7 +1471,12 @@ void show_running_run_stats(void)
 	fio_mutex_down(stat_mutex);
 
 	if (!pthread_create(&thread, NULL, __show_running_run_stats, NULL)) {
-		pthread_detach(thread);
+		int err;
+
+		err = pthread_detach(thread);
+		if (err)
+			log_err("fio: DU thread detach failed: %s\n", strerror(err));
+
 		return;
 	}
 
