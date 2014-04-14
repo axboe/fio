@@ -226,16 +226,32 @@ struct vcont {
 	unsigned int crc_len;
 };
 
+#define DUMP_BUF_SZ	255
+static int dump_buf_warned;
+
 static void dump_buf(char *buf, unsigned int len, unsigned long long offset,
 		     const char *type, struct fio_file *f)
 {
-	char *ptr, fname[256];
+	char *ptr, fname[DUMP_BUF_SZ];
+	size_t buf_left = DUMP_BUF_SZ;
 	int ret, fd;
 
 	ptr = strdup(f->file_name);
-	strcpy(fname, basename(ptr));
 
-	sprintf(fname + strlen(fname), ".%llu.%s", offset, type);
+	fname[DUMP_BUF_SZ - 1] = '\0';
+	strncpy(fname, basename(ptr), DUMP_BUF_SZ - 1);
+
+	buf_left -= strlen(fname);
+	if (buf_left <= 0) {
+		if (!dump_buf_warned) {
+			log_err("fio: verify failure dump buffer too small\n");
+			dump_buf_warned = 1;
+		}
+		free(ptr);
+		return;
+	}
+
+	snprintf(fname + strlen(fname), buf_left, ".%llu.%s", offset, type);
 
 	fd = open(fname, O_CREAT | O_TRUNC | O_WRONLY, 0644);
 	if (fd < 0) {
