@@ -1494,8 +1494,11 @@ static int check_status_file(void)
 		return 0;
 
 	temp_dir = getenv("TMPDIR");
-	if (temp_dir == NULL)
+	if (temp_dir == NULL) {
 		temp_dir = getenv("TEMP");
+		if (temp_dir && strlen(temp_dir) >= PATH_MAX)
+			temp_dir = NULL;
+	}
 	if (temp_dir == NULL)
 		temp_dir = "/tmp";
 
