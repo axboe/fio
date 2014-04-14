@@ -945,7 +945,8 @@ static int fio_netio_setup_connect_unix(struct thread_data *td,
 	struct sockaddr_un *soun = &nd->addr_un;
 
 	soun->sun_family = AF_UNIX;
-	strcpy(soun->sun_path, path);
+	memset(soun->sun_path, 0, sizeof(soun->sun_path));
+	strncpy(soun->sun_path, path, sizeof(soun->sun_path) - 1);
 	return 0;
 }
 
@@ -976,7 +977,7 @@ static int fio_netio_setup_listen_unix(struct thread_data *td, const char *path)
 
 	memset(addr, 0, sizeof(*addr));
 	addr->sun_family = AF_UNIX;
-	strcpy(addr->sun_path, path);
+	strncpy(addr->sun_path, path, sizeof(addr->sun_path) - 1);
 	unlink(path);
 
 	len = sizeof(addr->sun_family) + strlen(path) + 1;
