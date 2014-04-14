@@ -158,9 +158,10 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 	if (td->orig_buffer == MAP_FAILED) {
 		td_verror(td, errno, "mmap");
 		td->orig_buffer = NULL;
-		if (td->mmapfd) {
+		if (td->mmapfd != 1) {
 			close(td->mmapfd);
-			unlink(td->o.mmapfile);
+			if (td->o.mmapfile)
+				unlink(td->o.mmapfile);
 		}
 
 		return 1;
