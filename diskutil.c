@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <math.h>
+#include <assert.h>
 
 #include "fio.h"
 #include "smalloc.h"
@@ -686,12 +687,15 @@ void show_disk_util(int terse, struct json_object *parent)
 		return;
 	}
 
-	if (!terse && !parent)
+	if (output_format == FIO_OUTPUT_JSON)
+		assert(parent);
+
+	if (!terse && output_format != FIO_OUTPUT_JSON)
 		log_info("\nDisk stats (read/write):\n");
 
-	if (output_format == FIO_OUTPUT_JSON) {
+	if (output_format == FIO_OUTPUT_JSON)
 		json_object_add_disk_utils(parent, &disk_list);
-	} else
+	else
 		flist_for_each(entry, &disk_list) {
 			du = flist_entry(entry, struct disk_util, list);
 
