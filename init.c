@@ -1458,9 +1458,6 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 		i++;
 	}
 
-	for (i = 0; i < num_opts; i++)
-		free(opts[i]);
-
 	free(string);
 	free(name);
 	free(opts);
