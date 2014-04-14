@@ -678,7 +678,7 @@ static void set_rw_ddir(struct thread_data *td, struct io_u *io_u)
 
 void put_file_log(struct thread_data *td, struct fio_file *f)
 {
-	int ret = put_file(td, f);
+	unsigned int ret = put_file(td, f);
 
 	if (ret)
 		td_verror(td, ret, "file close");

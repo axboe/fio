@@ -1326,8 +1326,11 @@ int put_file(struct thread_data *td, struct fio_file *f)
 	if (--f->references)
 		return 0;
 
-	if (should_fsync(td) && td->o.fsync_on_close)
+	if (should_fsync(td) && td->o.fsync_on_close) {
 		f_ret = fsync(f->fd);
+		if (f_ret < 0)
+			f_ret = errno;
+	}
 
 	if (td->io_ops->close_file)
 		ret = td->io_ops->close_file(td, f);
