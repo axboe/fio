@@ -624,7 +624,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			ret = 1;
 			for (i = 0; i < PARSE_MAX_VP; i++) {
 				vp = &posval[i];
-				if (!vp->ival || vp->ival[0] == '\0')
+				if (!vp->ival || vp->ival[0] == '\0' || !cp)
 					continue;
 				all_skipped = 0;
 				if (!strncmp(vp->ival, ptr, str_match_len(vp, ptr))) {
