@@ -336,7 +336,10 @@ void fio_idle_prof_stop(void)
 		/* calculate idleness */
 		if (ipc.cali_mean != 0.0) {
 			runt = utime_since(&ipt->tps, &ipt->tpe);
-			ipt->idleness = ipt->loops * ipc.cali_mean / runt;
+			if (runt)
+				ipt->idleness = ipt->loops * ipc.cali_mean / runt;
+			else
+				ipt->idleness = 0.0;
 		} else
 			ipt->idleness = 0.0;
 	}
