@@ -182,7 +182,11 @@ static int __check_min_rate(struct thread_data *td, struct timeval *now,
 								ratemin);
 				return 1;
 			} else {
-				rate = ((bytes - td->rate_bytes[ddir]) * 1000) / spent;
+				if (spent)
+					rate = ((bytes - td->rate_bytes[ddir]) * 1000) / spent;
+				else
+					rate = 0;
+
 				if (rate < ratemin ||
 				    bytes < td->rate_bytes[ddir]) {
 					log_err("%s: min rate %u not met, got"
