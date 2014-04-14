@@ -588,7 +588,7 @@ static inline unsigned int td_min_bs(struct thread_data *td)
 	return min(td->o.min_bs[DDIR_TRIM], min_bs);
 }
 
-static inline int is_power_of_2(unsigned int val)
+static inline int is_power_of_2(unsigned long val)
 {
 	return (val != 0 && ((val & (val - 1)) == 0));
 }
