@@ -942,7 +942,7 @@ static char *make_filename(char *buf, struct thread_options *o,
 {
 	struct fpre_keyword *f;
 	char copy[PATH_MAX];
-	size_t dst_left = PATH_MAX;
+	size_t dst_left = PATH_MAX - 1;
 
 	if (!o->filename_format || !strlen(o->filename_format)) {
 		sprintf(buf, "%s.%d.%d", jobname, jobnum, filenum);
