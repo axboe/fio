@@ -351,7 +351,7 @@ enum {
 
 #define __td_verror(td, err, msg, func)					\
 	do {								\
-		int ____e = (err);						\
+		unsigned int ____e = (err);				\
 		if ((td)->error)					\
 			break;						\
 		(td)->error = ____e;					\
