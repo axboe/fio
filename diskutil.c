@@ -300,7 +300,7 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 		sfree(du);
 		return NULL;
 	}
-	strncpy((char *) du->dus.name, basename(path) - 1, FIO_DU_NAME_SZ);
+	strncpy((char *) du->dus.name, basename(path), FIO_DU_NAME_SZ - 1);
 	du->sysfs_root = path;
 	du->major = majdev;
 	du->minor = mindev;
