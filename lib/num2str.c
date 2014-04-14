@@ -4,6 +4,8 @@
 
 #include "../fio.h"
 
+#define ARRAY_LENGTH(arr)	sizeof(arr) / sizeof((arr)[0])
+
 /*
  * Cheesy number->string conversion, complete with carry rounding error.
  */
@@ -46,6 +48,9 @@ char *num2str(unsigned long num, int maxlen, int base, int pow2, int unit_base)
 
 	if (modulo == -1U) {
 done:
+		if (post_index >= ARRAY_LENGTH(postfix))
+			post_index = 0;
+
 		sprintf(buf, "%lu%s%s", num, postfix[post_index],
 			byte_postfix[byte_post_index]);
 		return buf;
