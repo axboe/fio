@@ -560,7 +560,11 @@ int fio_monotonic_clocktest(void)
 		pthread_mutex_init(&t->lock, NULL);
 		pthread_mutex_init(&t->started, NULL);
 		pthread_mutex_lock(&t->lock);
-		pthread_create(&t->thread, NULL, clock_thread_fn, t);
+		if (pthread_create(&t->thread, NULL, clock_thread_fn, t)) {
+			failed++;
+			nr_cpus = i;
+			break;
+		}
 	}
 
 	for (i = 0; i < nr_cpus; i++) {
