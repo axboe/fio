@@ -27,6 +27,7 @@
 #include <signal.h>
 #include <stdint.h>
 #include <locale.h>
+#include <fcntl.h>
 
 #include "fio.h"
 #include "smalloc.h"
@@ -231,6 +232,21 @@ int fio_running_or_pending_io_threads(void)
 	}
 
 	return 0;
+}
+
+void fio_set_fd_nonblocking(int fd, const char *who)
+{
+	int flags;
+
+	flags = fcntl(fd, F_GETFL);
+	if (flags < 0)
+		log_err("fio: %s failed to get file flags: %s\n", who, strerror(errno));
+	else {
+		flags |= O_NONBLOCK;
+		flags = fcntl(fd, F_SETFL, flags);
+		if (flags < 0)
+			log_err("fio: %s failed to get file flags: %s\n", who, strerror(errno));
+	}
 }
 
 static int endian_check(void)

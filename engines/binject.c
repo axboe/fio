@@ -109,10 +109,9 @@ static int fio_binject_getevents(struct thread_data *td, unsigned int min,
 		/*
 		 * don't block for min events == 0
 		 */
-		if (!min) {
-			bd->fd_flags[i] = fcntl(bf->fd, F_GETFL);
-			fcntl(bf->fd, F_SETFL, bd->fd_flags[i] | O_NONBLOCK);
-		}
+		if (!min)
+			fio_set_fd_nonblocking(bf->fd, "binject");
+
 		bd->pfds[i].fd = bf->fd;
 		bd->pfds[i].events = POLLIN;
 	}

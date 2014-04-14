@@ -441,6 +441,7 @@ extern char *num2str(unsigned long, int, int, int, int);
 extern int ioengine_load(struct thread_data *);
 extern int parse_dryrun(void);
 extern int fio_running_or_pending_io_threads(void);
+extern void fio_set_fd_nonblocking(int, const char *);
 
 extern uintptr_t page_mask;
 extern uintptr_t page_size;

@@ -77,10 +77,9 @@ static int fio_sgio_getevents(struct thread_data *td, unsigned int min,
 		/*
 		 * don't block for min events == 0
 		 */
-		if (!min) {
-			sd->fd_flags[i] = fcntl(f->fd, F_GETFL);
-			fcntl(f->fd, F_SETFL, sd->fd_flags[i] | O_NONBLOCK);
-		}
+		if (!min)
+			fio_set_fd_nonblocking(f->fd, "sg");
+
 		sd->pfds[i].fd = f->fd;
 		sd->pfds[i].events = POLLIN;
 	}

@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <limits.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <sys/poll.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -843,14 +842,12 @@ static int accept_loop(int listen_sk)
 	struct sockaddr_in6 addr6;
 	socklen_t len = use_ipv6 ? sizeof(addr6) : sizeof(addr);
 	struct pollfd pfd;
-	int ret = 0, sk, flags, exitval = 0;
+	int ret = 0, sk, exitval = 0;
 	FLIST_HEAD(conn_list);
 
 	dprint(FD_NET, "server enter accept loop\n");
 
-	flags = fcntl(listen_sk, F_GETFL);
-	flags |= O_NONBLOCK;
-	fcntl(listen_sk, F_SETFL, flags);
+	fio_set_fd_nonblocking(listen_sk, "server");
 
 	while (!exit_backend) {
 		const char *from;
