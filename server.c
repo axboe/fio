@@ -1225,7 +1225,9 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	pdu.nr_samples = __cpu_to_le32(log->nr_samples);
 	pdu.log_type = cpu_to_le32(log->log_type);
 	pdu.compressed = cpu_to_le32(use_zlib);
-	strcpy((char *) pdu.name, name);
+
+	strncpy((char *) pdu.name, name, FIO_NET_NAME_MAX);
+	pdu.name[FIO_NET_NAME_MAX - 1] = '\0';
 
 	for (i = 0; i < log->nr_samples; i++) {
 		struct io_sample *s = &log->log[i];
