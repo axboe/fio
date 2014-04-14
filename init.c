@@ -1938,8 +1938,8 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			backend = 1;
 			break;
 		case 'D':
-			if (optarg)
-				free(optarg);
+			if (pid_file)
+				free(pid_file);
 			pid_file = strdup(optarg);
 			break;
 		case 'I':
