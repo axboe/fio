@@ -942,6 +942,7 @@ static char *make_filename(char *buf, struct thread_options *o,
 {
 	struct fpre_keyword *f;
 	char copy[PATH_MAX];
+	size_t dst_left = PATH_MAX;
 
 	if (!o->filename_format || !strlen(o->filename_format)) {
 		sprintf(buf, "%s.%d.%d", jobname, jobnum, filenum);
@@ -969,25 +970,47 @@ static char *make_filename(char *buf, struct thread_options *o,
 			if (pre_len) {
 				strncpy(dst, buf, pre_len);
 				dst += pre_len;
+				dst_left -= pre_len;
 			}
 
 			switch (f->key) {
-			case FPRE_JOBNAME:
-				dst += sprintf(dst, "%s", jobname);
+			case FPRE_JOBNAME: {
+				int ret;
+
+				ret = snprintf(dst, dst_left, "%s", jobname);
+				if (ret < 0)
+					break;
+				dst += ret;
+				dst_left -= ret;
 				break;
-			case FPRE_JOBNUM:
-				dst += sprintf(dst, "%d", jobnum);
+				}
+			case FPRE_JOBNUM: {
+				int ret;
+
+				ret = snprintf(dst, dst_left, "%d", jobnum);
+				if (ret < 0)
+					break;
+				dst += ret;
+				dst_left -= ret;
 				break;
-			case FPRE_FILENUM:
-				dst += sprintf(dst, "%d", filenum);
+				}
+			case FPRE_FILENUM: {
+				int ret;
+
+				ret = snprintf(dst, dst_left, "%d", filenum);
+				if (ret < 0)
+					break;
+				dst += ret;
+				dst_left -= ret;
 				break;
+				}
 			default:
 				assert(0);
 				break;
 			}
 
 			if (post_start)
-				strcpy(dst, buf + post_start);
+				strncpy(dst, buf + post_start, dst_left);
 
 			strcpy(buf, copy);
 		} while (1);
