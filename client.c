@@ -388,7 +388,7 @@ static int fio_client_connect_sock(struct fio_client *client)
 
 	memset(addr, 0, sizeof(*addr));
 	addr->sun_family = AF_UNIX;
-	strcpy(addr->sun_path, client->hostname);
+	strncpy(addr->sun_path, client->hostname, sizeof(addr->sun_path) - 1);
 
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd < 0) {
