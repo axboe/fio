@@ -831,7 +831,7 @@ static void show_thread_status_terse_v2(struct thread_stat *ts,
 	log_info("\n");
 
 	/* Additional output if description is set */
-	if (ts->description)
+	if (strlen(ts->description))
 		log_info(";%s", ts->description);
 
 	log_info("\n");
