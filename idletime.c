@@ -109,12 +109,16 @@ static void *idle_prof_thread_fn(void *data)
 	pthread_mutex_lock(&ipt->start_lock);
 
 	/* exit if other threads failed to initialize */
-	if (ipc.status == IDLE_PROF_STATUS_ABORT)
+	if (ipc.status == IDLE_PROF_STATUS_ABORT) {
+		pthread_mutex_unlock(&ipt->start_lock);
 		return NULL;
+	}
 
 	/* exit if we are doing calibration only */
-	if (ipc.status == IDLE_PROF_STATUS_CALI_STOP)
+	if (ipc.status == IDLE_PROF_STATUS_CALI_STOP) {
+		pthread_mutex_unlock(&ipt->start_lock);
 		return NULL;
+	}
 
 	fio_gettime(&ipt->tps, NULL);
 	ipt->state = TD_RUNNING;
