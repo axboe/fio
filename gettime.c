@@ -537,7 +537,7 @@ int fio_monotonic_clocktest(void)
 	unsigned long tentries, failed;
 	struct clock_entry *prev, *this;
 	uint32_t seq = 0;
-	int i;
+	unsigned int i;
 
 	log_info("cs: reliable_tsc: %s\n", tsc_reliable ? "yes" : "no");
 
