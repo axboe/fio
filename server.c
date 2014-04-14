@@ -68,7 +68,7 @@ static const char *fio_server_ops[FIO_NET_CMD_NR] = {
 	"DISK_UTIL",
 	"SERVER_START",
 	"ADD_JOB",
-	"CMD_RUN"
+	"CMD_RUN",
 	"CMD_IOLOG",
 };
 
