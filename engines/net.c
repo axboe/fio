@@ -999,13 +999,11 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 	struct netio_options *o = td->eo;
 	struct ip_mreq mr;
 	struct sockaddr_in sin;
-	struct sockaddr_in6 sin6;
 	struct sockaddr *saddr;
 	int fd, opt, type, domain;
 	socklen_t len;
 
 	memset(&sin, 0, sizeof(sin));
-	memset(&sin6, 0, sizeof(sin6));
 
 	if (o->proto == FIO_TYPE_TCP) {
 		type = SOCK_STREAM;
@@ -1088,7 +1086,7 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 		len = sizeof(nd->addr6);
 
 		nd->addr6.sin6_family = AF_INET6;
-		nd->addr6.sin6_addr = sin6.sin6_addr.s6_addr ? sin6.sin6_addr : in6addr_any;
+		nd->addr6.sin6_addr = in6addr_any;
 		nd->addr6.sin6_port = htons(port);
 	}
 
