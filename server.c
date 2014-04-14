@@ -1368,6 +1368,8 @@ static int fio_init_server_connection(void)
 	if (sk < 0)
 		return sk;
 
+	memset(bind_str, 0, sizeof(bind_str));
+
 	if (!bind_sock) {
 		char *p, port[16];
 		const void *src;
@@ -1387,9 +1389,9 @@ static int fio_init_server_connection(void)
 		if (p)
 			strcat(p, port);
 		else
-			strcpy(bind_str, port);
+			strncpy(bind_str, port, sizeof(bind_str) - 1);
 	} else
-		strcpy(bind_str, bind_sock);
+		strncpy(bind_str, bind_sock, sizeof(bind_str) - 1);
 
 	log_info("fio: server listening on %s\n", bind_str);
 
