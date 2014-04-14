@@ -269,7 +269,7 @@ static int ignore_error_type(struct thread_data *td, int etype, char *str)
 		} else {
 			error[i] = atoi(fname);
 			if (error[i] < 0)
-				error[i] = error[i];
+				error[i] = -error[i];
 		}
 		if (!error[i]) {
 			log_err("Unknown error %s, please use number value \n",
