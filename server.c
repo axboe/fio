@@ -1339,7 +1339,7 @@ static int fio_init_server_sock(void)
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, bind_sock);
+	strncpy(addr.sun_path, bind_sock, sizeof(addr.sun_path) - 1);
 
 	len = sizeof(addr.sun_family) + strlen(bind_sock) + 1;
 
