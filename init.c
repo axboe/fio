@@ -1714,8 +1714,6 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 	optind = 1;
 
 	while ((c = getopt_long_only(argc, argv, ostr, l_opts, &lidx)) != -1) {
-		did_arg = 1;
-
 		if ((c & FIO_CLIENT_FLAG) || client_flag_set(c)) {
 			parse_cmd_client(cur_client, argv[optind - 1]);
 			c &= ~FIO_CLIENT_FLAG;
@@ -1772,30 +1770,35 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			append_terse_output = 1;
 			break;
 		case 'h':
+			did_arg = 1;
 			if (!cur_client) {
 				usage(argv[0]);
 				do_exit++;
 			}
 			break;
 		case 'c':
+			did_arg = 1;
 			if (!cur_client) {
 				fio_show_option_help(optarg);
 				do_exit++;
 			}
 			break;
 		case 'i':
+			did_arg = 1;
 			if (!cur_client) {
 				fio_show_ioengine_help(optarg);
 				do_exit++;
 			}
 			break;
 		case 's':
+			did_arg = 1;
 			dump_cmdline = 1;
 			break;
 		case 'r':
 			read_only = 1;
 			break;
 		case 'v':
+			did_arg = 1;
 			if (!cur_client) {
 				log_info("%s\n", fio_version_string);
 				do_exit++;
@@ -1832,6 +1835,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				do_exit++;
 			break;
 		case 'P':
+			did_arg = 1;
 			parse_only = 1;
 			break;
 		case 'x': {
@@ -1851,6 +1855,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			break;
 			}
 		case 'p':
+			did_arg = 1;
 			if (exec_profile)
 				free(exec_profile);
 			exec_profile = strdup(optarg);
@@ -1864,6 +1869,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				if (ret)
 					goto out_free;
 				td = NULL;
+				did_arg = 1;
 			}
 			if (!td) {
 				int is_section = !strncmp(opt, "name", 4);
@@ -1912,6 +1918,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				break;
 
 			ret = fio_cmd_ioengine_option_parse(td, opt, val);
+			did_arg = 1;
 			break;
 		}
 		case 'w':
@@ -1926,6 +1933,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			}
 			break;
 		case 'S':
+			did_arg = 1;
 			if (nr_clients) {
 				log_err("fio: can't be both client and server\n");
 				do_exit++;
@@ -1945,12 +1953,14 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		case 'I':
 			if ((ret = fio_idle_prof_parse_opt(optarg))) {
 				/* exit on error and calibration only */
+				did_arg = 1;
 				do_exit++;
-				if (ret == -1) 
+				if (ret == -1)
 					exit_val = 1;
 			}
 			break;
 		case 'C':
+			did_arg = 1;
 			if (is_backend) {
 				log_err("fio: can't be both client and server\n");
 				do_exit++;
@@ -1977,10 +1987,12 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			}
 			break;
 		case 'T':
+			did_arg = 1;
 			do_exit++;
 			exit_val = fio_monotonic_clocktest();
 			break;
 		case 'G':
+			did_arg = 1;
 			do_exit++;
 			exit_val = fio_crctest(optarg);
 			break;
@@ -2020,8 +2032,11 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		free(pid_file);
 
 	if (td) {
-		if (!ret)
+		if (!ret) {
 			ret = add_job(td, td->o.name ?: "fio", 0, 0, client_type);
+			if (ret)
+				did_arg = 1;
+		}
 	}
 
 	while (!ret && optind < argc) {
