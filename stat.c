@@ -1803,7 +1803,11 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 		if (!delta)
 			continue; /* No entries for interval */
 
-		rate = delta * 1000 / spent / 1024;
+		if (spent)
+			rate = delta * 1000 / spent / 1024;
+		else
+			rate = 0;
+
 		add_stat_sample(&ts->bw_stat[ddir], rate);
 
 		if (td->bw_log)
@@ -1838,7 +1842,11 @@ void add_iops_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs
 		if (!delta)
 			continue; /* No entries for interval */
 
-		iops = (delta * 1000) / spent;
+		if (spent)
+			iops = (delta * 1000) / spent;
+		else
+			iops = 0;
+
 		add_stat_sample(&ts->iops_stat[ddir], iops);
 
 		if (td->iops_log)
