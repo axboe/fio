@@ -534,7 +534,7 @@ int fio_monotonic_clocktest(void)
 	struct clock_thread *threads;
 	unsigned int nr_cpus = cpus_online();
 	struct clock_entry *entries;
-	unsigned long tentries, failed;
+	unsigned long tentries, failed = 0;
 	struct clock_entry *prev, *this;
 	uint32_t seq = 0;
 	unsigned int i;
@@ -579,7 +579,7 @@ int fio_monotonic_clocktest(void)
 		pthread_mutex_unlock(&t->lock);
 	}
 
-	for (failed = i = 0; i < nr_cpus; i++) {
+	for (i = 0; i < nr_cpus; i++) {
 		struct clock_thread *t = &threads[i];
 		void *ret;
 
