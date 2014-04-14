@@ -80,7 +80,7 @@ static int fio_e4defrag_init(struct thread_data *td)
 
 	ed = malloc(sizeof(*ed));
 	if (!ed) {
-		td_verror(td, -ENOMEM, "io_queue_init");
+		td_verror(td, ENOMEM, "io_queue_init");
 		return 1;
 	}
 	memset(ed, 0 ,sizeof(*ed));
@@ -91,7 +91,7 @@ static int fio_e4defrag_init(struct thread_data *td)
 
 	ed->donor_fd = open(donor_name, O_CREAT|O_WRONLY, 0644);
 	if (ed->donor_fd < 0) {
-		td_verror(td, ed->donor_fd, "io_queue_init");
+		td_verror(td, errno, "io_queue_init");
 		log_err("Can't open donor file %s err:%d", donor_name, ed->donor_fd);
 		free(ed);
 		return 1;
