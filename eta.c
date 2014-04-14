@@ -174,14 +174,26 @@ static int thread_eta(struct thread_data *td)
 		double perc, perc_t;
 
 		bytes_done = ddir_rw_sum(td->io_bytes);
-		perc = (double) bytes_done / (double) bytes_total;
-		if (perc > 1.0)
-			perc = 1.0;
+
+		if (bytes_total) {
+			perc = (double) bytes_done / (double) bytes_total;
+			if (perc > 1.0)
+				perc = 1.0;
+		} else
+			perc = 0.0;
 
 		if (td->o.time_based) {
-			perc_t = (double) elapsed / (double) timeout;
-			if (perc_t < perc)
-				perc = perc_t;
+			if (timeout) {
+				perc_t = (double) elapsed / (double) timeout;
+				if (perc_t < perc)
+					perc = perc_t;
+			} else {
+				/*
+				 * Will never hit, we can't have time_based
+				 * without a timeout set.
+				 */
+				perc = 0.0;
+			}
 		}
 
 		eta_sec = (unsigned long) (elapsed * (1.0 / perc)) - elapsed;
