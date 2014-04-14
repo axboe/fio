@@ -208,7 +208,7 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
  */
 struct fio_net_cmd *fio_net_recv_cmd(int sk)
 {
-	struct fio_net_cmd cmd, *cmdret = NULL;
+	struct fio_net_cmd cmd, *tmp, *cmdret = NULL;
 	size_t cmd_size = 0, pdu_offset = 0;
 	uint16_t crc;
 	int ret, first = 1;
@@ -231,7 +231,19 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 		} else
 			cmd_size += cmd.pdu_len;
 
-		cmdret = realloc(cmdret, cmd_size);
+		if (cmd_size / 1024 > FIO_SERVER_MAX_CMD_MB * 1024) {
+			log_err("fio: cmd+pdu too large (%llu)\n", (unsigned long long) cmd_size);
+			ret = 1;
+			break;
+		}
+
+		tmp = realloc(cmdret, cmd_size);
+		if (!tmp) {
+			log_err("fio: server failed allocating cmd\n");
+			ret = 1;
+			break;
+		}
+		cmdret = tmp;
 
 		if (first)
 			memcpy(cmdret, &cmd, sizeof(cmd));
