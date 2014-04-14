@@ -688,7 +688,8 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 		} else if (f->filetype != FIO_TYPE_FILE)
 			continue;
 
-		strcpy(buf, f->file_name);
+		buf[255] = '\0';
+		strncpy(buf, f->file_name, 255);
 
 		if (stat(buf, &sb) < 0) {
 			if (errno != ENOENT)
