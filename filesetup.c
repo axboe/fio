@@ -915,7 +915,13 @@ int setup_files(struct thread_data *td)
 
 			err = __file_invalidate_cache(td, f, old_len,
 								extend_len);
-			close(f->fd);
+
+			/*
+			 * Shut up static checker
+			 */
+			if (f->fd != -1)
+				close(f->fd);
+
 			f->fd = -1;
 			if (err)
 				break;
