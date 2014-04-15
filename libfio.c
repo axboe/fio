@@ -234,7 +234,7 @@ int fio_running_or_pending_io_threads(void)
 	return 0;
 }
 
-void fio_set_fd_nonblocking(int fd, const char *who)
+int fio_set_fd_nonblocking(int fd, const char *who)
 {
 	int flags;
 
@@ -242,11 +242,14 @@ void fio_set_fd_nonblocking(int fd, const char *who)
 	if (flags < 0)
 		log_err("fio: %s failed to get file flags: %s\n", who, strerror(errno));
 	else {
-		flags |= O_NONBLOCK;
-		flags = fcntl(fd, F_SETFL, flags);
-		if (flags < 0)
+		int new_flags = flags | O_NONBLOCK;
+
+		new_flags = fcntl(fd, F_SETFL, new_flags);
+		if (new_flags < 0)
 			log_err("fio: %s failed to get file flags: %s\n", who, strerror(errno));
 	}
+
+	return flags;
 }
 
 static int endian_check(void)
