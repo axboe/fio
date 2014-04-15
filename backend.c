@@ -204,7 +204,11 @@ static int __check_min_rate(struct thread_data *td, struct timeval *now,
 						td->o.name, rate_iops);
 				return 1;
 			} else {
-				rate = ((iops - td->rate_blocks[ddir]) * 1000) / spent;
+				if (spent)
+					rate = ((iops - td->rate_blocks[ddir]) * 1000) / spent;
+				else
+					rate = 0;
+
 				if (rate < rate_iops_min ||
 				    iops < td->rate_blocks[ddir]) {
 					log_err("%s: min iops rate %u not met,"
