@@ -73,8 +73,10 @@ static void *idle_prof_thread_fn(void *data)
 	pthread_mutex_lock(&ipt->init_lock);
 
 	/* exit if any other thread failed to start */
-	if (ipc.status == IDLE_PROF_STATUS_ABORT)
+	if (ipc.status == IDLE_PROF_STATUS_ABORT) {
+		pthread_mutex_unlock(&ipt->init_lock);
 		return NULL;
+	}
 
 	retval = set_cpu_affinity(ipt);
 	if (retval == -1) {
