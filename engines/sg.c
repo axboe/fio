@@ -142,8 +142,10 @@ re_read:
 	}
 
 	if (!min) {
-		for_each_file(td, f, i)
-			fcntl(f->fd, F_SETFL, sd->fd_flags[i]);
+		for_each_file(td, f, i) {
+			if (fcntl(f->fd, F_SETFL, sd->fd_flags[i]) < 0)
+				log_err("fio: sg failed to restore fcntl flags: %s\n", strerror(errno));
+		}
 	}
 
 	return r;
