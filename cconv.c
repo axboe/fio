@@ -10,13 +10,16 @@ static void string_to_cpu(char **dst, const uint8_t *src)
 		*dst = strdup(__src);
 }
 
-static void string_to_net(uint8_t *dst, const char *src)
+static void __string_to_net(uint8_t *dst, const char *src, size_t dst_size)
 {
-	if (src)
-		strcpy((char *) dst, src);
-	else
+	if (src) {
+		dst[dst_size - 1] = '\0';
+		strncpy((char *) dst, src, dst_size - 1);
+	} else
 		dst[0] = '\0';
 }
+
+#define string_to_net(dst, src)	__string_to_net((dst), (src), sizeof(dst))
 
 static void free_thread_options_to_cpu(struct thread_options *o)
 {

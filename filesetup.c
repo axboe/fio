@@ -711,8 +711,8 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 		if (fm)
 			continue;
 
-		fm = malloc(sizeof(*fm));
-		strcpy(fm->__base, buf);
+		fm = calloc(1, sizeof(*fm));
+		strncpy(fm->__base, buf, sizeof(fm->__base) - 1);
 		fm->base = basename(fm->__base);
 		fm->key = sb.st_dev;
 		flist_add(&fm->list, &list);

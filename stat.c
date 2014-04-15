@@ -1272,10 +1272,12 @@ static void __show_run_stats(void)
 			if (!td->error && td->o.continue_on_error &&
 			    td->first_error) {
 				ts->error = td->first_error;
-				strcpy(ts->verror, td->verror);
+				ts->verror[sizeof(ts->verror) - 1] = '\0';
+				strncpy(ts->verror, td->verror, sizeof(ts->verror) - 1);
 			} else  if (td->error) {
 				ts->error = td->error;
-				strcpy(ts->verror, td->verror);
+				ts->verror[sizeof(ts->verror) - 1] = '\0';
+				strncpy(ts->verror, td->verror, sizeof(ts->verror) - 1);
 			}
 		}
 

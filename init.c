@@ -937,7 +937,7 @@ static struct fpre_keyword {
 	{ .keyword = NULL, },
 	};
 
-static char *make_filename(char *buf, struct thread_options *o,
+static char *make_filename(char *buf, size_t buf_size,struct thread_options *o,
 			   const char *jobname, int jobnum, int filenum)
 {
 	struct fpre_keyword *f;
@@ -952,7 +952,9 @@ static char *make_filename(char *buf, struct thread_options *o,
 	for (f = &fpre_keywords[0]; f->keyword; f++)
 		f->strlen = strlen(f->keyword);
 
-	strcpy(buf, o->filename_format);
+	buf[buf_size - 1] = '\0';
+	strncpy(buf, o->filename_format, buf_size - 1);
+
 	memset(copy, 0, sizeof(copy));
 	for (f = &fpre_keywords[0]; f->keyword; f++) {
 		do {
@@ -1012,7 +1014,7 @@ static char *make_filename(char *buf, struct thread_options *o,
 			if (post_start)
 				strncpy(dst, buf + post_start, dst_left);
 
-			strcpy(buf, copy);
+			strncpy(buf, copy, buf_size - 1);
 		} while (1);
 	}
 
@@ -1072,7 +1074,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			add_file(td, jobname, job_add_num, 0);
 		else {
 			for (i = 0; i < o->nr_files; i++)
-				add_file(td, make_filename(fname, o, jobname, job_add_num, i), job_add_num, 0);
+				add_file(td, make_filename(fname, sizeof(fname), o, jobname, job_add_num, i), job_add_num, 0);
 		}
 	}
 
