@@ -1920,7 +1920,6 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				break;
 
 			ret = fio_cmd_ioengine_option_parse(td, opt, val);
-			did_arg = 1;
 			break;
 		}
 		case 'w':
