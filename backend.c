@@ -645,7 +645,7 @@ static unsigned int exceeds_number_ios(struct thread_data *td)
 
 static int io_bytes_exceeded(struct thread_data *td)
 {
-	unsigned long long bytes;
+	unsigned long long bytes, limit;
 
 	if (td_rw(td))
 		bytes = td->this_io_bytes[DDIR_READ] + td->this_io_bytes[DDIR_WRITE];
@@ -656,7 +656,12 @@ static int io_bytes_exceeded(struct thread_data *td)
 	else
 		bytes = td->this_io_bytes[DDIR_TRIM];
 
-	return bytes >= td->o.size || exceeds_number_ios(td);
+	if (td->o.io_limit)
+		limit = td->o.io_limit;
+	else
+		limit = td->o.size;
+
+	return bytes >= limit || exceeds_number_ios(td);
 }
 
 /*
@@ -1141,6 +1146,8 @@ static int switch_ioscheduler(struct thread_data *td)
 
 static int keep_running(struct thread_data *td)
 {
+	unsigned long long limit;
+
 	if (td->done)
 		return 0;
 	if (td->o.time_based)
@@ -1152,14 +1159,19 @@ static int keep_running(struct thread_data *td)
 	if (exceeds_number_ios(td))
 		return 0;
 
-	if (td->o.size != -1ULL && ddir_rw_sum(td->io_bytes) < td->o.size) {
+	if (td->o.io_limit)
+		limit = td->o.io_limit;
+	else
+		limit = td->o.size;
+
+	if (limit != -1ULL && ddir_rw_sum(td->io_bytes) < limit) {
 		uint64_t diff;
 
 		/*
 		 * If the difference is less than the minimum IO size, we
 		 * are done.
 		 */
-		diff = td->o.size - ddir_rw_sum(td->io_bytes);
+		diff = limit - ddir_rw_sum(td->io_bytes);
 		if (diff < td_max_bs(td))
 			return 0;
 

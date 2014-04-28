@@ -944,8 +944,12 @@ int setup_files(struct thread_data *td)
 	 * iolog already set the total io size, if we read back
 	 * stored entries.
 	 */
-	if (!o->read_iolog_file)
-		td->total_io_size = o->size * o->loops;
+	if (!o->read_iolog_file) {
+		if (o->io_limit)
+			td->total_io_size = o->io_limit * o->loops;
+		else
+			td->total_io_size = o->size * o->loops;
+	}
 
 done:
 	if (o->create_only)

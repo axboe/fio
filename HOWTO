@@ -430,6 +430,14 @@ size=int	The total size of file io for this job. Fio will run until
 		is given, fio will use 20% of the full size of the given
 		files or devices.
 
+io_limit=int	Normally fio operates within the region set by 'size', which
+		means that the 'size' option sets both the region and size of
+		IO to be performed. Sometimes that is not what you want. With
+		this option, it is possible to define just the amount of IO
+		that fio should do. For instance, if 'size' is set to 20G and
+		'io_limit' is set to 5G, fio will perform IO within the first
+		20G but exit when 5G have been done.
+
 filesize=int	Individual file sizes. May be a range, in which case fio
 		will select sizes for files at random within the given range
 		and limited to 'size' in total (if that is given). If not

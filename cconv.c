@@ -80,6 +80,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->iodepth_batch = le32_to_cpu(top->iodepth_batch);
 	o->iodepth_batch_complete = le32_to_cpu(top->iodepth_batch_complete);
 	o->size = le64_to_cpu(top->size);
+	o->io_limit = le64_to_cpu(top->io_limit);
 	o->size_percent = le32_to_cpu(top->size_percent);
 	o->fill_device = le32_to_cpu(top->fill_device);
 	o->file_append = le32_to_cpu(top->file_append);
@@ -428,6 +429,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	memcpy(top->buffer_pattern, o->buffer_pattern, MAX_PATTERN_SIZE);
 
 	top->size = __cpu_to_le64(o->size);
+	top->io_limit = __cpu_to_le64(o->io_limit);
 	top->verify_backlog = __cpu_to_le64(o->verify_backlog);
 	top->start_delay = __cpu_to_le64(o->start_delay);
 	top->start_delay_high = __cpu_to_le64(o->start_delay_high);

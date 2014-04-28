@@ -52,6 +52,7 @@ struct thread_options {
 	unsigned int iodepth_batch_complete;
 
 	unsigned long long size;
+	unsigned long long io_limit;
 	unsigned int size_percent;
 	unsigned int fill_device;
 	unsigned int file_append;
@@ -280,6 +281,7 @@ struct thread_options_pack {
 	uint32_t iodepth_batch_complete;
 
 	uint64_t size;
+	uint64_t io_limit;
 	uint32_t size_percent;
 	uint32_t fill_device;
 	uint32_t file_append;

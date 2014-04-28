@@ -1595,6 +1595,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "io_limit",
+		.lname	= "IO Limit",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= td_var_offset(io_limit),
+		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "fill_device",
 		.lname	= "Fill device",
 		.alias	= "fill_fs",

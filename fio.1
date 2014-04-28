@@ -369,8 +369,16 @@ Unless \fBnrfiles\fR and \fBfilesize\fR options are given, this amount will be
 divided between the available files for the job. If not set, fio will use the
 full size of the given files or devices. If the files do not exist, size
 must be given. It is also possible to give size as a percentage between 1 and
-100. If size=20% is given, fio will use 20% of the full size of the given files
-or devices.
+100. If size=20% is given, fio will use 20% of the full size of the given
+files or devices.
+.TP
+.BI io_limit \fR=\fPint
+Normally fio operates within the region set by \fBsize\fR, which means that
+the \fBsize\fR option sets both the region and size of IO to be performed.
+Sometimes that is not what you want. With this option, it is possible to
+define just the amount of IO that fio should do. For instance, if \fBsize\fR
+is set to 20G and \fBio_limit\fR is set to 5G, fio will perform IO within
+the first 20G but exit when 5G have been done.
 .TP
 .BI fill_device \fR=\fPbool "\fR,\fB fill_fs" \fR=\fPbool
 Sets size to something really large and waits for ENOSPC (no space left on
