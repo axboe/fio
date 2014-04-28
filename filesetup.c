@@ -69,6 +69,10 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	if (new_layout)
 		flags |= O_TRUNC;
 
+#ifdef WIN32
+	flags |= _O_BINARY;
+#endif
+
 	dprint(FD_FILE, "open file %s, flags %x\n", f->file_name, flags);
 	f->fd = open(f->file_name, flags, 0644);
 	if (f->fd < 0) {
@@ -480,6 +484,10 @@ int file_lookup_open(struct fio_file *f, int flags)
 		dprint(FD_FILE, "file not found in hash %s\n", f->file_name);
 		from_hash = 0;
 	}
+
+#ifdef WIN32
+	flags |= _O_BINARY;
+#endif
 
 	f->fd = open(f->file_name, flags, 0600);
 	return from_hash;
@@ -1040,7 +1048,7 @@ int init_random_map(struct thread_data *td)
 			unsigned long seed;
 
 			seed = td->rand_seeds[FIO_RAND_BLOCK_OFF];
-			
+
 			if (!lfsr_init(&f->lfsr, blocks, seed, 0))
 				continue;
 		} else if (!td->o.norandommap) {
