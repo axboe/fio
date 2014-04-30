@@ -15,7 +15,7 @@
 #include "arch/arch.h"
 #include "os/os.h"
 #include "helpers.h"
-#include "time.h"
+#include "fio_time.h"
 #include "gettime.h"
 
 void fio_mutex_remove(struct fio_mutex *mutex)

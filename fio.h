@@ -30,7 +30,7 @@
 #include "helpers.h"
 #include "options.h"
 #include "profile.h"
-#include "time.h"
+#include "fio_time.h"
 #include "gettime.h"
 #include "lib/getopt.h"
 #include "lib/rand.h"
