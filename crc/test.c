@@ -4,7 +4,7 @@
 
 #include "../fio.h"
 #include "../gettime.h"
-#include "../time.h"
+#include "../fio_time.h"
 #include "../verify.h"
 
 #include "../crc/md5.h"
