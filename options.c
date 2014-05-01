@@ -554,6 +554,7 @@ static int str_verify_cpus_allowed_cb(void *data, const char *input)
 static int str_numa_cpunodes_cb(void *data, char *input)
 {
 	struct thread_data *td = data;
+	struct bitmask *verify_bitmask;
 
 	if (parse_dryrun())
 		return 0;
@@ -563,13 +564,15 @@ static int str_numa_cpunodes_cb(void *data, char *input)
 	 * numa_allocate_nodemask(), so it should be freed by
 	 * numa_free_nodemask().
 	 */
-	td->o.numa_cpunodesmask = numa_parse_nodestring(input);
-	if (td->o.numa_cpunodesmask == NULL) {
+	verify_bitmask = numa_parse_nodestring(input);
+	if (verify_bitmask == NULL) {
 		log_err("fio: numa_parse_nodestring failed\n");
 		td_verror(td, 1, "str_numa_cpunodes_cb");
 		return 1;
 	}
+	numa_free_nodemask(verify_bitmask);
 
+	td->o.numa_cpunodes = strdup(input);
 	td->o.numa_cpumask_set = 1;
 	return 0;
 }
@@ -581,6 +584,7 @@ static int str_numa_mpol_cb(void *data, char *input)
 		{ "default", "prefer", "bind", "interleave", "local", NULL };
 	int i;
 	char *nodelist;
+	struct bitmask *verify_bitmask;
 
 	if (parse_dryrun())
 		return 0;
@@ -660,12 +664,15 @@ static int str_numa_mpol_cb(void *data, char *input)
 		break;
 	case MPOL_INTERLEAVE:
 	case MPOL_BIND:
-		td->o.numa_memnodesmask = numa_parse_nodestring(nodelist);
-		if (td->o.numa_memnodesmask == NULL) {
+		verify_bitmask = numa_parse_nodestring(nodelist);
+		if (verify_bitmask == NULL) {
 			log_err("fio: numa_parse_nodestring failed\n");
 			td_verror(td, 1, "str_numa_memnodes_cb");
 			return 1;
 		}
+		td->o.numa_memnodes = strdup(nodelist);
+		numa_free_nodemask(verify_bitmask);
+                
 		break;
 	case MPOL_LOCAL:
 	case MPOL_DEFAULT:

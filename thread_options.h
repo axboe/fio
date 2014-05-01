@@ -158,14 +158,12 @@ struct thread_options {
 	os_cpu_mask_t verify_cpumask;
 	unsigned int verify_cpumask_set;
 	unsigned int cpus_allowed_policy;
-#ifdef CONFIG_LIBNUMA
-	struct bitmask *numa_cpunodesmask;
+	char *numa_cpunodes;
 	unsigned int numa_cpumask_set;
 	unsigned short numa_mem_mode;
 	unsigned int numa_mem_prefer_node;
-	struct bitmask *numa_memnodesmask;
+	char *numa_memnodes;
 	unsigned int numa_memmask_set;
-#endif
 	unsigned int iolog;
 	unsigned int rwmixcycle;
 	unsigned int rwmix[DDIR_RWDIR_CNT];

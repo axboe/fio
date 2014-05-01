@@ -1339,6 +1339,7 @@ static void *thread_main(void *data)
 #ifdef CONFIG_LIBNUMA
 	/* numa node setup */
 	if (o->numa_cpumask_set || o->numa_memmask_set) {
+		struct bitmask *mask;
 		int ret;
 
 		if (numa_available() < 0) {
@@ -1347,7 +1348,9 @@ static void *thread_main(void *data)
 		}
 
 		if (o->numa_cpumask_set) {
-			ret = numa_run_on_node_mask(o->numa_cpunodesmask);
+			mask = numa_parse_nodestring(o->numa_cpunodes);
+			ret = numa_run_on_node_mask(mask);
+			numa_free_nodemask(mask);
 			if (ret == -1) {
 				td_verror(td, errno, \
 					"numa_run_on_node_mask failed\n");
@@ -1357,12 +1360,16 @@ static void *thread_main(void *data)
 
 		if (o->numa_memmask_set) {
 
+			mask = NULL;
+			if (o->numa_memnodes)
+				mask = numa_parse_nodestring(o->numa_memnodes);
+
 			switch (o->numa_mem_mode) {
 			case MPOL_INTERLEAVE:
-				numa_set_interleave_mask(o->numa_memnodesmask);
+				numa_set_interleave_mask(mask);
 				break;
 			case MPOL_BIND:
-				numa_set_membind(o->numa_memnodesmask);
+				numa_set_membind(mask);
 				break;
 			case MPOL_LOCAL:
 				numa_set_localalloc();
@@ -1374,6 +1381,9 @@ static void *thread_main(void *data)
 			default:
 				break;
 			}
+
+			if (mask)
+				numa_free_nodemask(mask);
 
 		}
 	}
