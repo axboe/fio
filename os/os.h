@@ -200,6 +200,7 @@ static inline uint64_t fio_swap64(uint64_t val)
 #endif
 #endif /* FIO_HAVE_BYTEORDER_FUNCS */
 
+#ifdef FIO_INTERNAL
 #define le16_to_cpu(val) ({			\
 	__le16_to_cpu(val);			\
 })
@@ -209,6 +210,8 @@ static inline uint64_t fio_swap64(uint64_t val)
 #define le64_to_cpu(val) ({			\
 	__le64_to_cpu(val);				\
 })
+#endif
+
 #define cpu_to_le16(val) ({			\
 	__cpu_to_le16(val);			\
 })
