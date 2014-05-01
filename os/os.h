@@ -321,7 +321,7 @@ static inline unsigned int cpus_online(void)
 }
 #endif
 
-#ifndef CONFIG_CPU_COUNT
+#ifndef CPU_COUNT
 #ifdef FIO_HAVE_CPU_AFFINITY
 static inline int CPU_COUNT(os_cpu_mask_t *mask)
 {

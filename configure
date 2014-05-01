@@ -652,22 +652,6 @@ echo "sched_setaffinity(3 arg)      $linux_3arg_affinity"
 echo "sched_setaffinity(2 arg)      $linux_2arg_affinity"
 
 ##########################################
-# CPU_COUNT test
-cpu_count="no"
-cat > $TMPC << EOF
-#include <sched.h>
-int main(int argc, char **argv)
-{
-  cpu_set_t mask;
-  return CPU_COUNT(&mask);
-}
-EOF
-if compile_prog "" "" "cpu_count"; then
-  cpu_count="yes"
-fi
-echo "CPU_COUNT                     $cpu_count"
-
-##########################################
 # clock_gettime probe
 clock_gettime="no"
 cat > $TMPC << EOF
@@ -1334,9 +1318,6 @@ if test "$ipv6" = "yes" ; then
 fi
 if test "$rbd" = "yes" ; then
   output_sym "CONFIG_RBD"
-fi
-if test "$cpu_count" = "yes" ; then
-  output_sym "CONFIG_CPU_COUNT"
 fi
 if test "$setvbuf" = "yes" ; then
   output_sym "CONFIG_SETVBUF"
