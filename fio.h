@@ -618,7 +618,9 @@ static inline void td_io_u_free_notify(struct thread_data *td)
 extern const char *fio_get_arch_string(int);
 extern const char *fio_get_os_string(int);
 
+#ifdef FIO_INTERNAL
 #define ARRAY_SIZE(x) (sizeof((x)) / (sizeof((x)[0])))
+#endif
 
 enum {
 	FIO_OUTPUT_TERSE	= 0,
