@@ -1622,8 +1622,15 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	 * Mark IO ok to verify
 	 */
 	if (io_u->ipo) {
-		io_u->ipo->flags &= ~IP_F_IN_FLIGHT;
-		write_barrier();
+		/*
+		 * Remove errored entry from the verification list
+		 */
+		if (io_u->error)
+			unlog_io_piece(td, io_u);
+		else {
+			io_u->ipo->flags &= ~IP_F_IN_FLIGHT;
+			write_barrier();
+		}
 	}
 
 	td_io_u_unlock(td);

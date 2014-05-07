@@ -780,16 +780,21 @@ static uint64_t do_io(struct thread_data *td)
 		case FIO_Q_COMPLETED:
 			if (io_u->error) {
 				ret = -io_u->error;
+				unlog_io_piece(td, io_u);
 				clear_io_u(td, io_u);
 			} else if (io_u->resid) {
 				int bytes = io_u->xfer_buflen - io_u->resid;
 				struct fio_file *f = io_u->file;
 
 				bytes_issued += bytes;
+
+				trim_io_piece(td, io_u);
+
 				/*
 				 * zero read, fail
 				 */
 				if (!bytes) {
+					unlog_io_piece(td, io_u);
 					td_verror(td, EIO, "full resid");
 					put_io_u(td, io_u);
 					break;
@@ -830,6 +835,7 @@ sync_done:
 			bytes_issued += io_u->xfer_buflen;
 			break;
 		case FIO_Q_BUSY:
+			unlog_io_piece(td, io_u);
 			requeue_io_u(td, &io_u);
 			ret2 = td_io_commit(td);
 			if (ret2 < 0)

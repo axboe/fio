@@ -268,6 +268,33 @@ restart:
 	td->io_hist_len++;
 }
 
+void unlog_io_piece(struct thread_data *td, struct io_u *io_u)
+{
+	struct io_piece *ipo = io_u->ipo;
+
+	if (!ipo)
+		return;
+
+	if (ipo->flags & IP_F_ONRB)
+		rb_erase(&ipo->rb_node, &td->io_hist_tree);
+	else if (ipo->flags & IP_F_ONLIST)
+		flist_del(&ipo->list);
+
+	free(ipo);
+	io_u->ipo = NULL;
+	td->io_hist_len--;
+}
+
+void trim_io_piece(struct thread_data *td, struct io_u *io_u)
+{
+	struct io_piece *ipo = io_u->ipo;
+
+	if (!ipo)
+		return;
+
+	ipo->len = io_u->xfer_buflen - io_u->resid;
+}
+
 void write_iolog_close(struct thread_data *td)
 {
 	fflush(td->iolog_f);
