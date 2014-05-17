@@ -131,8 +131,10 @@ static int _fio_rbd_connect(struct thread_data *td)
 
 failed_open:
 	rados_ioctx_destroy(rbd_data->io_ctx);
+	rbd_data->io_ctx = NULL;
 failed_shutdown:
 	rados_shutdown(rbd_data->cluster);
+	rbd_data->cluster = NULL;
 failed_early:
 	return 1;
 }
@@ -354,9 +356,8 @@ static int fio_rbd_setup(struct thread_data *td)
 	 */
 	td->o.use_thread = 1;
 
-	/* connect in the main thread to determine to determine
-	 * the size of the given RADOS block device. And disconnect
-	 * later on.
+	/* connect in the main thread to determine the size of the given RADOS
+	 * block device. And disconnect later on.
 	 */
 	r = _fio_rbd_connect(td);
 	if (r) {
