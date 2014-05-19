@@ -75,7 +75,7 @@ Report full output status every `time` period passed.
 Turn on safety read-only checks, preventing any attempted write.
 .TP
 .BI \-\-section \fR=\fPsec
-Only run section \fIsec\fR from job file. Multiple of these options can be given, adding more sections to run.
+Only run section \fIsec\fR from job file. This option can be used multiple times to add more sections to run.
 .TP
 .BI \-\-alloc\-size \fR=\fPkb
 Set the internal smalloc pool size to \fIkb\fP kilobytes.
@@ -225,7 +225,7 @@ The lock modes are:
 No locking. This is the default.
 .TP
 .B exclusive
-Only one thread or process may do IO at the time, excluding all others.
+Only one thread or process may do IO at a time, excluding all others.
 .TP
 .B readwrite
 Read-write locking on the file. Many readers may access the file at the same
@@ -310,7 +310,7 @@ reasons. Allowed values are 1024 or 1000, with 1024 being the default.
 .BI unified_rw_reporting \fR=\fPbool
 Fio normally reports statistics on a per data direction basis, meaning that
 read, write, and trim are accounted and reported separately. If this option is
-set, the fio will sum the results and report them as "mixed" instead.
+set fio sums the results and reports them as "mixed" instead.
 .TP
 .BI randrepeat \fR=\fPbool
 Seed the random number generator used for random I/O patterns in a predictable
@@ -326,8 +326,8 @@ control what sequence of output is being generated. If not set, the random
 sequence depends on the \fBrandrepeat\fR setting.
 .TP
 .BI use_os_rand \fR=\fPbool
-Fio can either use the random generator supplied by the OS to generator random
-offsets, or it can use it's own internal generator (based on Tausworthe).
+Fio can either use the random generator supplied by the OS to generate random
+offsets, or it can use its own internal generator (based on Tausworthe).
 Default is to use the internal generator, which is often of better quality and
 faster. Default: false.
 .TP
@@ -359,7 +359,7 @@ because ZFS doesn't support it. Default: 'posix'.
 .RE
 .TP
 .BI fadvise_hint \fR=\fPbool
-Use of \fBposix_fadvise\fR\|(2) to advise the kernel what I/O patterns
+Use \fBposix_fadvise\fR\|(2) to advise the kernel what I/O patterns
 are likely to be issued. Default: true.
 .TP
 .BI size \fR=\fPint
@@ -443,7 +443,7 @@ blocksize settings, and any sequential read or write will use the READ
 blocksize setting.
 .TP
 .B zero_buffers
-Initialise buffers with all zeros. Default: fill buffers with random data.
+Initialize buffers with all zeros. Default: fill buffers with random data.
 The resulting IO buffers will not be completely zeroed, unless
 \fPscramble_buffers\fR is also turned off.
 .TP
@@ -475,8 +475,8 @@ the remaining zeroed. With this set to some chunk size smaller than the block
 size, fio can alternate random and zeroed data throughout the IO buffer.
 .TP
 .BI buffer_pattern \fR=\fPstr
-If set, fio will fill the io buffers with this pattern. If not set, the contents
-of io buffers is defined by the other options related to buffer contents. The
+If set, fio will fill the IO buffers with this pattern. If not set, the contents
+of IO buffers is defined by the other options related to buffer contents. The
 setting can be any pattern of bytes, and can be prefixed with 0x for hex
 values.
 .TP
@@ -495,13 +495,13 @@ Defines how files to service are selected.  The following types are defined:
 Choose a file at random.
 .TP
 .B roundrobin
-Round robin over open files (default).
+Round robin over opened files (default).
 .TP
 .B sequential
 Do each file in the set sequentially.
 .RE
 .P
-The number of I/Os to issue before switching a new file can be specified by
+The number of I/Os to issue before switching to a new file can be specified by
 appending `:\fIint\fR' to the service type.
 .RE
 .TP
@@ -609,7 +609,7 @@ options.
 .BI iodepth \fR=\fPint
 Number of I/O units to keep in flight against the file. Note that increasing
 iodepth beyond 1 will not affect synchronous ioengines (except for small
-degress when verify_async is in use). Even async engines my impose OS
+degress when verify_async is in use). Even async engines may impose OS
 restrictions causing the desired depth not to be achieved.  This may happen on
 Linux when using libaio and not setting \fBdirect\fR=1, since buffered IO is
 not async on that OS. Keep an eye on the IO depth distribution in the
@@ -1367,7 +1367,7 @@ the observed latencies fell, respectively.
 .SS "Ioengine Parameters List"
 Some parameters are only valid when a specific ioengine is in use. These are
 used identically to normal parameters, with the caveat that when used on the
-command line, the must come after the ioengine that defines them is selected.
+command line, they must come after the ioengine.
 .TP
 .BI (cpu)cpuload \fR=\fPint
 Attempt to use the specified percentage of CPU cycles.
@@ -1438,7 +1438,7 @@ hostname must be omitted if this option is used.
 .TP
 .BI (net, pingpong) \fR=\fPbool
 Normally a network writer will just continue writing data, and a network reader
-will just consume packages. If pingpong=1 is set, a writer will send its normal
+will just consume packets. If pingpong=1 is set, a writer will send its normal
 payload to the reader, then wait for the reader to send the same payload back.
 This allows fio to measure network latencies. The submission and completion
 latencies then measure local time spent sending or receiving, and the
