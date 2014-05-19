@@ -31,63 +31,63 @@ static int fio_gf_prep(struct thread_data *td, struct io_u *io_u)
 
 static int fio_gf_queue(struct thread_data *td, struct io_u *io_u)
 {
-    struct gf_data *g = td->io_ops->data;
-    int ret = 0;
+	struct gf_data *g = td->io_ops->data;
+	int ret = 0;
 
-    dprint(FD_FILE, "fio queue len %lu\n", io_u->xfer_buflen);
-    fio_ro_check(td, io_u);
+	dprint(FD_FILE, "fio queue len %lu\n", io_u->xfer_buflen);
+	fio_ro_check(td, io_u);
 
-    if (io_u->ddir == DDIR_READ)
-        ret = glfs_read(g->fd, io_u->xfer_buf, io_u->xfer_buflen, 0);
-    else if (io_u->ddir == DDIR_WRITE)
-        ret = glfs_write(g->fd, io_u->xfer_buf, io_u->xfer_buflen, 0);
-    else { 	    
-        log_err("unsupported operation.\n");
-        return -EINVAL;
-    }
-    dprint(FD_FILE, "fio len %lu ret %d\n", io_u->xfer_buflen, ret);
-    if (io_u->file && ret >= 0 && ddir_rw(io_u->ddir))
-        LAST_POS(io_u->file) = io_u->offset + ret;
+	if (io_u->ddir == DDIR_READ)
+		ret = glfs_read(g->fd, io_u->xfer_buf, io_u->xfer_buflen, 0);
+	else if (io_u->ddir == DDIR_WRITE)
+		ret = glfs_write(g->fd, io_u->xfer_buf, io_u->xfer_buflen, 0);
+	else {
+		log_err("unsupported operation.\n");
+		return -EINVAL;
+	}
+	dprint(FD_FILE, "fio len %lu ret %d\n", io_u->xfer_buflen, ret);
+	if (io_u->file && ret >= 0 && ddir_rw(io_u->ddir))
+		LAST_POS(io_u->file) = io_u->offset + ret;
 
-    if (ret != (int) io_u->xfer_buflen) {
-        if (ret >= 0) {
-            io_u->resid = io_u->xfer_buflen - ret;
-            io_u->error = 0;
-            return FIO_Q_COMPLETED;
-        } else
-            io_u->error = errno;
-    }
+	if (ret != (int)io_u->xfer_buflen) {
+		if (ret >= 0) {
+			io_u->resid = io_u->xfer_buflen - ret;
+			io_u->error = 0;
+			return FIO_Q_COMPLETED;
+		} else
+			io_u->error = errno;
+	}
 
-    if (io_u->error){
-        log_err("IO failed.\n");
-        td_verror(td, io_u->error, "xfer");
-    }
+	if (io_u->error) {
+		log_err("IO failed.\n");
+		td_verror(td, io_u->error, "xfer");
+	}
 
-    return FIO_Q_COMPLETED;
+	return FIO_Q_COMPLETED;
 
 }
 
 static struct ioengine_ops ioengine = {
-	.name		    = "gfapi",
-	.version	    = FIO_IOOPS_VERSION,
-	.init           = fio_gf_setup,
-	.cleanup        = fio_gf_cleanup,
-	.prep		    = fio_gf_prep,
-	.queue		    = fio_gf_queue,
-	.open_file	    = fio_gf_open_file,
-	.close_file	    = fio_gf_close_file,
-	.get_file_size	= fio_gf_get_file_size,
-	.options        = gfapi_options,
+	.name = "gfapi",
+	.version = FIO_IOOPS_VERSION,
+	.init = fio_gf_setup,
+	.cleanup = fio_gf_cleanup,
+	.prep = fio_gf_prep,
+	.queue = fio_gf_queue,
+	.open_file = fio_gf_open_file,
+	.close_file = fio_gf_close_file,
+	.get_file_size = fio_gf_get_file_size,
+	.options = gfapi_options,
 	.option_struct_size = sizeof(struct gf_options),
-	.flags		    = FIO_SYNCIO | FIO_DISKLESSIO,
+	.flags = FIO_SYNCIO | FIO_DISKLESSIO,
 };
 
 static void fio_init fio_gf_register(void)
 {
-    register_ioengine(&ioengine);
+	register_ioengine(&ioengine);
 }
 
 static void fio_exit fio_gf_unregister(void)
 {
-    unregister_ioengine(&ioengine);
+	unregister_ioengine(&ioengine);
 }
