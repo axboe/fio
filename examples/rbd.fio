@@ -15,7 +15,8 @@ ioengine=rbd
 clientname=admin
 pool=rbd
 rbdname=fio_test
-invalidate=0	# mandatory
+invalidate=0	# not mandatory, but set to 1 with no effect
+fadvise_hint=0	# not mandatory, but set to 1 with no effect 
 rw=randwrite
 bs=4k
 
