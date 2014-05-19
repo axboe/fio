@@ -1165,6 +1165,45 @@ if compile_prog "" "" "setvbuf"; then
 fi
 echo "setvbuf                       $setvbuf"
 
+# check for gfapi
+gfapi="no"
+cat > $TMPC << EOF
+#include <glusterfs/api/glfs.h>
+
+int main(int argc, char **argv)
+{
+
+  glfs_t *g = glfs_new("foo");
+
+  return 0;
+}
+EOF
+if compile_prog "" "-lgfapi -lglusterfs" "gfapi"; then
+  LIBS="-lgfapi -lglusterfs $LIBS"
+  gfapi="yes"
+fi
+ echo "Gluster API engine            $gfapi"
+
+##########################################
+# check for gfapi fadvise support
+gf_fadvise="no"
+cat > $TMPC << EOF
+#include <glusterfs/api/glfs.h>
+
+int main(int argc, char **argv)
+{
+  struct glfs_fd *fd;
+  int ret = glfs_fadvise(fd, 0, 0, 1);
+
+  return 0;
+}
+EOF
+
+if compile_prog "" "-lgfapi -lglusterfs" "gfapi"; then
+  gf_fadvise="yes"
+fi
+echo "Gluster API use fadvise       $gf_fadvise"
+
 ##########################################
 # Check if we support stckf on s390
 s390_z196_facilities="no"
@@ -1325,6 +1364,12 @@ fi
 if test "$s390_z196_facilities" = "yes" ; then
   output_sym "CONFIG_S390_Z196_FACILITIES"
   CFLAGS="$CFLAGS -march=z9-109"
+fi
+if test "$gfapi" = "yes" ; then
+  output_sym "CONFIG_GFAPI"
+fi
+if test "$gf_fadvise" = "yes" ; then
+  output_sym "CONFIG_GF_FADVISE"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
