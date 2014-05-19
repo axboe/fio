@@ -131,8 +131,10 @@ static int _fio_rbd_connect(struct thread_data *td)
 
 failed_open:
 	rados_ioctx_destroy(rbd_data->io_ctx);
+	rbd_data->io_ctx = NULL;
 failed_shutdown:
 	rados_shutdown(rbd_data->cluster);
+	rbd_data->cluster = NULL;
 failed_early:
 	return 1;
 }
