@@ -419,7 +419,8 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 			}
 			ret = 0;
 		}
-	} else if (f->filetype == FIO_TYPE_CHAR || f->filetype == FIO_TYPE_PIPE)
+	} else if (f->filetype == FIO_TYPE_CHAR || f->filetype == FIO_TYPE_PIPE
+				|| f->filetype == FIO_TYPE_SPECIAL)
 		ret = 0;
 
 	/*

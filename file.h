@@ -17,6 +17,7 @@ enum fio_filetype {
 	FIO_TYPE_BD,			/* block device */
 	FIO_TYPE_CHAR,			/* character device */
 	FIO_TYPE_PIPE,			/* pipe */
+	FIO_TYPE_SPECIAL,		/* special file, e.g., artificial file */
 };
 
 enum fio_file_flags {
