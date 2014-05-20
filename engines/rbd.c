@@ -404,6 +404,11 @@ static int fio_rbd_open(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
+static int fio_rbd_invalidate(struct thread_data *td, struct fio_file *f)
+{
+	return 0;
+}
+
 static void fio_rbd_io_u_free(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_rbd_iou *o = io_u->engine_data;
@@ -426,19 +431,20 @@ static int fio_rbd_io_u_init(struct thread_data *td, struct io_u *io_u)
 }
 
 static struct ioengine_ops ioengine = {
-	.name               = "rbd",
-	.version            = FIO_IOOPS_VERSION,
-	.setup              = fio_rbd_setup,
-	.init               = fio_rbd_init,
-	.queue              = fio_rbd_queue,
-	.getevents          = fio_rbd_getevents,
-	.event              = fio_rbd_event,
-	.cleanup            = fio_rbd_cleanup,
-	.open_file          = fio_rbd_open,
-	.options            = options,
-	.io_u_init          = fio_rbd_io_u_init,
-	.io_u_free          = fio_rbd_io_u_free,
-	.option_struct_size = sizeof(struct rbd_options),
+	.name			= "rbd",
+	.version		= FIO_IOOPS_VERSION,
+	.setup			= fio_rbd_setup,
+	.init			= fio_rbd_init,
+	.queue			= fio_rbd_queue,
+	.getevents		= fio_rbd_getevents,
+	.event			= fio_rbd_event,
+	.cleanup		= fio_rbd_cleanup,
+	.open_file		= fio_rbd_open,
+	.invalidate		= fio_rbd_invalidate,
+	.options		= options,
+	.io_u_init		= fio_rbd_io_u_init,
+	.io_u_free		= fio_rbd_io_u_free,
+	.option_struct_size	= sizeof(struct rbd_options),
 };
 
 static void fio_init fio_rbd_register(void)

@@ -401,7 +401,9 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 	dprint(FD_IO, "invalidate cache %s: %llu/%llu\n", f->file_name, off,
 								len);
 
-	if (f->mmap_ptr) {
+	if (td->io_ops->invalidate)
+		ret = td->io_ops->invalidate(td, f);
+	else if (f->mmap_ptr) {
 		ret = posix_madvise(f->mmap_ptr, f->mmap_sz, POSIX_MADV_DONTNEED);
 #ifdef FIO_MADV_FREE
 		if (f->filetype == FIO_TYPE_BD)
