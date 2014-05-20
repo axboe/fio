@@ -3,14 +3,14 @@
 #include "../fio.h"
 
 struct gf_options {
-    struct thread_data *td;
-    char *gf_vol;
-    char *gf_brick;
+	struct thread_data *td;
+	char *gf_vol;
+	char *gf_brick;
 };
 
 struct gf_data {
-    glfs_t *fs;
-    glfs_fd_t *fd;
+	glfs_t *fs;
+	glfs_fd_t *fd;
 	struct io_u **aio_events;
 };
 
