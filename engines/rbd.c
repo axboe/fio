@@ -401,6 +401,16 @@ cleanup:
 
 static int fio_rbd_open(struct thread_data *td, struct fio_file *f)
 {
+	/*
+	 * This is to work-around mandatory setting of "invalidate=0".
+	 *
+	 * As files used in rbd engine is artificial (fd equals -1), with
+	 * "invalidte=1" or "fadvise_hint=1" set, fio will call posix_fadvise(2)
+	 * and -EBADF will be returned.
+	 *
+	 * Set file type to FIO_TYPE_SPECIAL will work-around call of posix_fadvise(2).
+	 */
+	f->filetype = FIO_TYPE_SPECIAL;
 	return 0;
 }
 
