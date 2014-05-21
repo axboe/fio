@@ -195,6 +195,23 @@ static void _fio_rbd_finish_read_aiocb(rbd_completion_t comp, void *data)
 	return;
 }
 
+static void _fio_rbd_finish_sync_aiocb(rbd_completion_t comp, void *data)
+{
+	struct io_u *io_u = (struct io_u *)data;
+	struct fio_rbd_iou *fio_rbd_iou =
+	    (struct fio_rbd_iou *)io_u->engine_data;
+
+	fio_rbd_iou->io_complete = 1;
+
+	/* if sync needs to be verified - we should not release comp here
+	   without fetching the result */
+	rbd_aio_release(comp);
+
+	/* TODO handle error */
+
+	return;
+}
+
 static struct io_u *fio_rbd_event(struct thread_data *td, int event)
 {
 	struct rbd_data *rbd_data = td->io_ops->data;
@@ -281,13 +298,22 @@ static int fio_rbd_queue(struct thread_data *td, struct io_u *io_u)
 		}
 
 	} else if (io_u->ddir == DDIR_SYNC) {
-		r = rbd_flush(rbd_data->image);
+		r = rbd_aio_create_completion(io_u,
+					      (rbd_callback_t)
+					      _fio_rbd_finish_sync_aiocb,
+					      &comp);
+		if (r < 0) {
+			log_err
+			    ("rbd_aio_create_completion for DDIR_SYNC failed.\n");
+			goto failed;
+		}
+
+		r = rbd_aio_flush(rbd_data->image, comp);
 		if (r < 0) {
 			log_err("rbd_flush failed.\n");
 			goto failed;
 		}
 
-		return FIO_Q_COMPLETED;
 	} else {
 		dprint(FD_IO, "%s: Warning: unhandled ddir: %d\n", __func__,
 		       io_u->ddir);
