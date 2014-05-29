@@ -1739,7 +1739,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			write_bw_log = 1;
 			break;
 		case 'o':
-			if (f_out)
+			if (f_out && f_out != stdout)
 				fclose(f_out);
 
 			f_out = fopen(optarg, "w+");
