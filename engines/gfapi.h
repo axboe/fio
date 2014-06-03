@@ -1,5 +1,4 @@
 #include <glusterfs/api/glfs.h>
-#include <glusterfs/api/glfs-handles.h>
 #include "../fio.h"
 
 struct gf_options {
