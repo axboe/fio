@@ -555,6 +555,7 @@ static int handle_run_cmd(struct flist_head *job_list, struct fio_net_cmd *cmd)
 	pid_t pid;
 	int ret;
 
+	fio_time_init();
 	set_genesis_time();
 
 	pid = fork();

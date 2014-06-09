@@ -1270,11 +1270,6 @@ static void *thread_main(void *data)
 	} else
 		td->pid = gettid();
 
-	/*
-	 * fio_time_init() may not have been called yet if running as a server
-	 */
-	fio_time_init();
-
 	fio_local_clock_init(o->use_thread);
 
 	dprint(FD_PROCESS, "jobs pid=%d started\n", (int) td->pid);
