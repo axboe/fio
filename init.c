@@ -1884,8 +1884,14 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 					continue;
 
 				td = get_new_job(global, &def_thread, 1);
-				if (!td || ioengine_load(td))
-					goto out_free;
+				if (!td || ioengine_load(td)) {
+					if (td) {
+						put_job(td);
+						td = NULL;
+					}
+					do_exit++;
+					break;
+				}
 				fio_options_set_ioengine_opts(l_opts, td);
 			}
 
@@ -1906,8 +1912,14 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 
 			if (!ret && !strcmp(opt, "ioengine")) {
 				free_ioengine(td);
-				if (ioengine_load(td))
-					goto out_free;
+				if (ioengine_load(td)) {
+					if (td) {
+						put_job(td);
+						td = NULL;
+					}
+					do_exit++;
+					break;
+				}
 				fio_options_set_ioengine_opts(l_opts, td);
 			}
 			break;
