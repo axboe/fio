@@ -1524,6 +1524,8 @@ int get_fileno(struct thread_data *td, const char *fname)
 void free_release_files(struct thread_data *td)
 {
 	close_files(td);
+	td->o.nr_files = 0;
+	td->o.open_files = 0;
 	td->files_index = 0;
 	td->nr_normal_files = 0;
 }
