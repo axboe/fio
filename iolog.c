@@ -410,6 +410,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 				td->o.max_bs[rw] = bytes;
 			ipo->fileno = fileno;
 			ipo->file_action = file_action;
+			td->o.size += bytes;
 		}
 
 		queue_io_piece(td, ipo);
