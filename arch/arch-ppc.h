@@ -82,6 +82,7 @@ static inline unsigned long long get_cpu_clock(void)
 	return ret;
 }
 
+#if 0
 static void atb_child(void)
 {
 	arch_flags |= ARCH_FLAG_1;
@@ -106,6 +107,7 @@ static void atb_clocktest(void)
 			arch_flags |= ARCH_FLAG_1;
 	}
 }
+#endif
 
 #define ARCH_HAVE_INIT
 extern int tsc_reliable;
