@@ -7,14 +7,54 @@
 
 #include "fio.h"
 
-static char run_str[REAL_MAX_JOBS + 1];
+static char __run_str[REAL_MAX_JOBS + 1];
+
+/*
+ * Worst level condensing would be 1:4, so allow enough room for that
+ */
+static char run_str[(4 * REAL_MAX_JOBS) + 1];
+
+static void update_condensed_str(char *run_str, char *run_str_condensed)
+{
+	int i, ci, last, nr;
+	size_t len;
+
+	len = strlen(run_str);
+	if (!len)
+		return;
+
+	last = 0;
+	nr = 0;
+	ci = 0;
+	for (i = 0; i < len; i++) {
+		if (!last) {
+new:
+			run_str_condensed[ci] = run_str[i];
+			last = run_str[i];
+			nr = 1;
+			ci++;
+		} else if (last == run_str[i]) {
+			nr++;
+		} else {
+			int elen;
+
+			elen = sprintf(&run_str_condensed[ci], "(%u),", nr);
+			ci += elen;
+			goto new;
+		}
+	}
+
+	if (nr)
+		sprintf(&run_str_condensed[ci], "(%u)", nr);
+}
+
 
 /*
  * Sets the status of the 'td' in the printed status map.
  */
 static void check_str_update(struct thread_data *td)
 {
-	char c = run_str[td->thread_number - 1];
+	char c = __run_str[td->thread_number - 1];
 
 	switch (td->runstate) {
 	case TD_REAPED:
@@ -91,7 +131,8 @@ static void check_str_update(struct thread_data *td)
 		log_err("state %d\n", td->runstate);
 	}
 
-	run_str[td->thread_number - 1] = c;
+	__run_str[td->thread_number - 1] = c;
+	update_condensed_str(__run_str, run_str);
 }
 
 /*
@@ -564,5 +605,6 @@ void print_thread_status(void)
 
 void print_status_init(int thr_number)
 {
-	run_str[thr_number] = 'P';
+	__run_str[thr_number] = 'P';
+	update_condensed_str(__run_str, run_str);
 }

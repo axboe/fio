@@ -1607,6 +1607,15 @@ _		Thread reaped, or
 X		Thread reaped, exited with an error.
 K		Thread reaped, exited due to signal.
 
+Fio will condense the thread string as not to take up more space on the
+command line as is needed. For instance, if you have 10 readers and 10
+writers running, the output would look like this:
+
+Jobs: 20 (f=20): [R(10),W(10)] [4.0% done] [2103MB/0KB/0KB /s] [538K/0/0 iops] [eta 57m:36s]
+
+Fio will still maintain the ordering, though. So the above means that jobs
+1..10 are readers, and 11..20 are writers.
+
 The other values are fairly self explanatory - number of threads
 currently running and doing io, rate of io since last check (read speed
 listed first, then write speed), and the estimated completion percentage
