@@ -36,18 +36,16 @@ new:
 		} else if (last == run_str[i]) {
 			nr++;
 		} else {
-			int elen;
-
-			elen = sprintf(&run_str_condensed[ci], "(%u),", nr);
-			ci += elen;
+			ci += sprintf(&run_str_condensed[ci], "(%u),", nr);
 			goto new;
 		}
 	}
 
 	if (nr)
-		sprintf(&run_str_condensed[ci], "(%u)", nr);
-}
+		ci += sprintf(&run_str_condensed[ci], "(%u)", nr);
 
+	run_str_condensed[ci + 1] = '\0';
+}
 
 /*
  * Sets the status of the 'td' in the printed status map.
@@ -487,7 +485,8 @@ int calc_thread_status(struct jobs_eta *je, int force)
 		return 0;
 
 	je->nr_threads = thread_number;
-	memcpy(je->run_str, run_str, thread_number * sizeof(char));
+	update_condensed_str(__run_str, run_str);
+	memcpy(je->run_str, run_str, strlen(run_str));
 	return 1;
 }
 
