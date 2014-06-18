@@ -73,6 +73,7 @@ struct fio_option {
 	unsigned int group;		/* who to group with */
 	void *gui_data;
 	int is_seconds;			/* time value with seconds base */
+	int no_warn_def;
 };
 
 typedef int (str_cb_fn)(void *, char *);

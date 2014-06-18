@@ -390,6 +390,10 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 {
 	int ret = 0;
 
+#ifdef CONFIG_ESX
+	return 0;
+#endif
+
 	if (len == -1ULL)
 		len = f->io_size;
 	if (off == -1ULL)

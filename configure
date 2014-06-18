@@ -141,6 +141,10 @@ for opt do
   case "$opt" in
   --cpu=*) cpu="$optarg"
   ;;
+  #  esx is cross compiled and cannot be detect through simple uname calls
+  --esx)
+  esx="yes"
+  ;;
   --cc=*) CC="$optarg"
   ;;
   --extra-cflags=*) CFLAGS="$CFLAGS $optarg"
@@ -167,6 +171,7 @@ if test "$show_help" = "yes" ; then
   echo "--cc=                  Specify compiler to use"
   echo "--extra-cflags=        Specify extra CFLAGS to pass to compiler"
   echo "--build-32bit-win      Enable 32-bit build on Windows"
+  echo "--esx                  Configure build options for esx"
   echo "--enable-gfio          Enable building of gtk gfio"
   echo "--disable-numa         Disable libnuma even if found"
   exit $exit_val
@@ -1339,6 +1344,10 @@ if test "$rusage_thread" = "yes" ; then
 fi
 if test "$gfio" = "yes" ; then
   echo "CONFIG_GFIO=y" >> $config_host_mak
+fi
+if test "$esx" = "yes" ; then
+  output_sym "CONFIG_ESX"
+  output_sym "CONFIG_NO_SHM"
 fi
 if test "$sched_idle" = "yes" ; then
   output_sym "CONFIG_SCHED_IDLE"

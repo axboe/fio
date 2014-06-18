@@ -238,15 +238,19 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 
 void free_threads_shm(void)
 {
-	struct shmid_ds sbuf;
-
 	if (threads) {
 		void *tp = threads;
+#ifndef CONFIG_NO_SHM
+		struct shmid_ds sbuf;
 
 		threads = NULL;
 		shmdt(tp);
 		shmctl(shm_id, IPC_RMID, &sbuf);
 		shm_id = -1;
+#else
+		threads = NULL;
+		free(tp);
+#endif
 	}
 }
 
@@ -287,6 +291,7 @@ static int setup_thread_area(void)
 		size += file_hash_size;
 		size += sizeof(unsigned int);
 
+#ifndef CONFIG_NO_SHM
 		shm_id = shmget(0, size, IPC_CREAT | 0600);
 		if (shm_id != -1)
 			break;
@@ -294,10 +299,16 @@ static int setup_thread_area(void)
 			perror("shmget");
 			break;
 		}
+#else
+		threads = malloc(size);
+		if (threads)
+			break;
+#endif
 
 		max_jobs >>= 1;
 	} while (max_jobs);
 
+#ifndef CONFIG_NO_SHM
 	if (shm_id == -1)
 		return 1;
 
@@ -306,6 +317,7 @@ static int setup_thread_area(void)
 		perror("shmat");
 		return 1;
 	}
+#endif
 
 	memset(threads, 0, max_jobs * sizeof(struct thread_data));
 	hash = (void *) threads + max_jobs * sizeof(struct thread_data);
@@ -1947,6 +1959,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			break;
 		case 'S':
 			did_arg = 1;
+#ifndef CONFIG_NO_SHM
 			if (nr_clients) {
 				log_err("fio: can't be both client and server\n");
 				do_exit++;
@@ -1957,6 +1970,11 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				fio_server_set_arg(optarg);
 			is_backend = 1;
 			backend = 1;
+#else
+			log_err("fio: client/server requires SHM support\n");
+			do_exit++;
+			exit_val = 1;
+#endif
 			break;
 		case 'D':
 			if (pid_file)

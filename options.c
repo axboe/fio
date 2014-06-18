@@ -2226,6 +2226,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = MEM_MALLOC,
 			    .help = "Use malloc(3) for IO buffers",
 			  },
+#ifndef CONFIG_NO_SHM
 			  { .ival = "shm",
 			    .oval = MEM_SHM,
 			    .help = "Use shared memory segments for IO buffers",
@@ -2235,6 +2236,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = MEM_SHMHUGE,
 			    .help = "Like shm, but use huge pages",
 			  },
+#endif
 #endif
 			  { .ival = "mmap",
 			    .oval = MEM_MMAP,
@@ -3048,6 +3050,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= td_var_offset(use_thread),
 		.help	= "Use threads instead of processes",
+#ifdef CONFIG_NO_SHM
+		.def	= "1",
+		.no_warn_def = 1,
+#endif
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_PROCESS,
 	},

@@ -1575,7 +1575,7 @@ static int fork_main(int shmid, int offset)
 	struct thread_data *td;
 	void *data, *ret;
 
-#ifndef __hpux
+#if !defined(__hpux) && !defined(CONFIG_NO_SHM)
 	data = shmat(shmid, NULL, 0);
 	if (data == (void *) -1) {
 		int __err = errno;

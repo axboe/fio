@@ -1167,7 +1167,7 @@ void option_init(struct fio_option *o)
 		o->minfp = DBL_MIN;
 		o->maxfp = DBL_MAX;
 	}
-	if (o->type == FIO_OPT_STR_SET && o->def) {
+	if (o->type == FIO_OPT_STR_SET && o->def && !o->no_warn_def) {
 		log_err("Option %s: string set option with"
 				" default will always be true\n", o->name);
 	}

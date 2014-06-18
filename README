@@ -101,6 +101,9 @@ To build FIO with a cross-compiler:
  $ make CROSS_COMPILE=/path/to/toolchain/prefix
 Configure will attempt to determine the target platform automatically.
 
+It's possible to build fio for ESX as well, use the --esx switch to
+configure.
+
 
 Windows
 -------

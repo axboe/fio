@@ -180,6 +180,7 @@ static int find_next_zero(int word, int start)
 static int add_pool(struct pool *pool, unsigned int alloc_size)
 {
 	int bitmap_blocks;
+	int mmap_flags;
 	void *ptr;
 
 #ifdef SMALLOC_REDZONE
@@ -198,8 +199,14 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 	pool->nr_blocks = bitmap_blocks;
 	pool->free_blocks = bitmap_blocks * SMALLOC_BPB;
 
-	ptr = mmap(NULL, alloc_size, PROT_READ|PROT_WRITE,
-			MAP_SHARED | OS_MAP_ANON, -1, 0);
+	mmap_flags = OS_MAP_ANON;
+#ifdef CONFIG_ESX
+	mmap_flags |= MAP_PRIVATE;
+#else
+	mmap_flags |= MAP_SHARED;
+#endif
+	ptr = mmap(NULL, alloc_size, PROT_READ|PROT_WRITE, mmap_flags, -1, 0);
+
 	if (ptr == MAP_FAILED)
 		goto out_fail;
 
