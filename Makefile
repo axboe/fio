@@ -221,7 +221,7 @@ FIO-VERSION-FILE: FORCE
 
 override CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 
-.c.o: FORCE FIO-VERSION-FILE
+%.o : %.c
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
 	@$(CC) -MM $(CFLAGS) $(CPPFLAGS) $*.c > $*.d
 	@mv -f $*.d $*.d.tmp
