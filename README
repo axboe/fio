@@ -26,6 +26,17 @@ Snapshots can download from:
 
 	http://brick.kernel.dk/snaps/
 
+There are also two official mirrors. Both of these are synced within
+an hour of commits landing at git.kernel.dk. So if the main repo is
+down for some reason, either one of those is safe to use:
+
+	git://git.kernel.org/pub/scm/linux/kernel/git/axboe/fio.git
+	https://git.kernel.org/pub/scm/linux/kernel/git/axboe/fio.git
+
+or
+
+	https://github.com/axboe/fio.git
+
 
 Binary packages
 ---------------
