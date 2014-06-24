@@ -241,4 +241,7 @@ static inline int usec_to_msec(unsigned long *min, unsigned long *max,
 	return 1;
 }
 
+#define __THREAD_RUNSTR_SZ(nr)	(((nr) * 5) + 1)
+#define THREAD_RUNSTR_SZ	__THREAD_RUNSTR_SZ(thread_number)
+
 #endif

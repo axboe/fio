@@ -673,7 +673,7 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 	if (!thread_number)
 		return 0;
 
-	size = sizeof(*je) + thread_number * sizeof(char) + 1;
+	size = sizeof(*je) + THREAD_RUNSTR_SZ;
 	je = malloc(size);
 	memset(je, 0, size);
 

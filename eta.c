@@ -10,9 +10,9 @@
 static char __run_str[REAL_MAX_JOBS + 1];
 
 /*
- * Worst level condensing would be 1:4, so allow enough room for that
+ * Worst level condensing would be 1:5, so allow enough room for that
  */
-static char run_str[(4 * REAL_MAX_JOBS) + 1];
+static char run_str[__THREAD_RUNSTR_SZ(REAL_MAX_JOBS)];
 
 static void update_condensed_str(char *run_str, char *run_str_condensed)
 {
@@ -592,7 +592,7 @@ void print_thread_status(void)
 	if (!thread_number)
 		return;
 
-	size = sizeof(*je) + thread_number * sizeof(char) + 1;
+	size = sizeof(*je) + THREAD_RUNSTR_SZ;
 	je = malloc(size);
 	memset(je, 0, size);
 
