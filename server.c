@@ -666,21 +666,13 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 {
 	struct jobs_eta *je;
-	size_t size;
 	uint64_t tag = cmd->tag;
+	size_t size;
 	int i;
 
-	if (!thread_number)
+	je = get_jobs_eta(1, &size);
+	if (!je)
 		return 0;
-
-	size = sizeof(*je) + THREAD_RUNSTR_SZ;
-	je = malloc(size);
-	memset(je, 0, size);
-
-	if (!calc_thread_status(je, 1)) {
-		free(je);
-		return 0;
-	}
 
 	dprint(FD_NET, "server sending status\n");
 

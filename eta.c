@@ -8,10 +8,6 @@
 #include "fio.h"
 
 static char __run_str[REAL_MAX_JOBS + 1];
-
-/*
- * Worst level condensing would be 1:5, so allow enough room for that
- */
 static char run_str[__THREAD_RUNSTR_SZ(REAL_MAX_JOBS)];
 
 static void update_condensed_str(char *run_str, char *run_str_condensed)
@@ -584,19 +580,32 @@ void display_thread_status(struct jobs_eta *je)
 	fflush(stdout);
 }
 
+struct jobs_eta *get_jobs_eta(int force, size_t *size)
+{
+	struct jobs_eta *je;
+
+	if (!thread_number)
+		return NULL;
+
+	*size = sizeof(*je) + THREAD_RUNSTR_SZ;
+	je = malloc(*size);
+	memset(je, 0, *size);
+
+	if (!calc_thread_status(je, 0)) {
+		free(je);
+		return NULL;
+	}
+
+	return je;
+}
+
 void print_thread_status(void)
 {
 	struct jobs_eta *je;
 	size_t size;
 
-	if (!thread_number)
-		return;
-
-	size = sizeof(*je) + THREAD_RUNSTR_SZ;
-	je = malloc(size);
-	memset(je, 0, size);
-
-	if (calc_thread_status(je, 0))
+	je = get_jobs_eta(0, &size);
+	if (je)
 		display_thread_status(je);
 
 	free(je);

@@ -205,6 +205,8 @@ struct jobs_eta {
 	uint8_t run_str[];
 };
 
+extern struct jobs_eta *get_jobs_eta(int force, size_t *size);
+
 extern void stat_init(void);
 extern void stat_exit(void);
 
@@ -240,8 +242,10 @@ static inline int usec_to_msec(unsigned long *min, unsigned long *max,
 
 	return 1;
 }
-
-#define __THREAD_RUNSTR_SZ(nr)	(((nr) * 5) + 1)
+/*
+ * Worst level condensing would be 1:5, so allow enough room for that
+ */
+#define __THREAD_RUNSTR_SZ(nr)	((nr) * 5)
 #define THREAD_RUNSTR_SZ	__THREAD_RUNSTR_SZ(thread_number)
 
 #endif
