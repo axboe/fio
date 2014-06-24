@@ -373,7 +373,7 @@ int fio_crctest(const char *type)
 		usec = t[i].fn();
 		mb_sec = (double) mb / (double) usec;
 		mb_sec /= (1.024 * 1.024);
-		printf("%s:\t%.2f MB/sec\n", t[i].name, mb_sec);
+		printf("%s:\t%8.2f MB/sec\n", t[i].name, mb_sec);
 	}
 
 	return 0;
