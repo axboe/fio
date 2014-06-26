@@ -12,35 +12,20 @@ static char run_str[__THREAD_RUNSTR_SZ(REAL_MAX_JOBS)];
 
 static void update_condensed_str(char *run_str, char *run_str_condensed)
 {
-	int i, ci, last, nr;
-	size_t len;
+	if (*run_str) {
+		while (*run_str) {
+			int nr = 1;
 
-	len = strlen(run_str);
-	if (!len)
-		return;
-
-	last = 0;
-	nr = 0;
-	ci = 0;
-	for (i = 0; i < len; i++) {
-		if (!last) {
-new:
-			run_str_condensed[ci] = run_str[i];
-			last = run_str[i];
-			nr = 1;
-			ci++;
-		} else if (last == run_str[i]) {
-			nr++;
-		} else {
-			ci += sprintf(&run_str_condensed[ci], "(%u),", nr);
-			goto new;
+			*run_str_condensed++ = *run_str++;
+			while (*(run_str - 1) == *run_str) {
+				run_str++;
+				nr++;
+			}
+			run_str_condensed += sprintf(run_str_condensed, "(%u),", nr);
 		}
+		run_str_condensed--;
 	}
-
-	if (nr)
-		ci += sprintf(&run_str_condensed[ci], "(%u)", nr);
-
-	run_str_condensed[ci + 1] = '\0';
+	*run_str_condensed = '\0';
 }
 
 /*

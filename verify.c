@@ -709,23 +709,42 @@ static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
 	return ret;
 }
 
-static int verify_header(struct io_u *io_u, struct verify_header *hdr)
+static int verify_header(struct io_u *io_u, struct verify_header *hdr,
+			 unsigned int hdr_num, unsigned int hdr_len)
 {
 	void *p = hdr;
 	uint32_t crc;
 
-	if (hdr->magic != FIO_HDR_MAGIC)
-		return 1;
-	if (hdr->len > io_u->buflen)
-		return 2;
-	if (hdr->rand_seed != io_u->rand_seed)
-		return 3;
+	if (hdr->magic != FIO_HDR_MAGIC) {
+		log_err("verify: bad magic header %x, wanted %x",
+			hdr->magic, FIO_HDR_MAGIC);
+		goto err;
+	}
+	if (hdr->len > io_u->buflen) {
+		log_err("verify: bad header length %u, wanted %u",
+			hdr->len, hdr_len);
+		goto err;
+	}
+	if (hdr->rand_seed != io_u->rand_seed) {
+		log_err("verify: bad header rand_seed %"PRIu64
+			", wanted %"PRIu64,
+			hdr->rand_seed, io_u->rand_seed);
+		goto err;
+	}
 
 	crc = fio_crc32c(p, offsetof(struct verify_header, crc32));
-	if (crc == hdr->crc32)
-		return 0;
-	log_err("fio: verify header crc %x, calculated %x\n", hdr->crc32, crc);
-	return 4;
+	if (crc != hdr->crc32) {
+		log_err("verify: bad header crc %x, calculated %x",
+			hdr->crc32, crc);
+		goto err;
+	}
+	return 0;
+
+err:
+	log_err(" at file %s offset %llu, length %u\n",
+		io_u->file->file_name,
+		io_u->offset + hdr_num * hdr_len, hdr_len);
+	return EILSEQ;
 }
 
 int verify_io_u(struct thread_data *td, struct io_u *io_u)
@@ -769,42 +788,9 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 		if (td->o.verifysort || (td->flags & TD_F_VER_BACKLOG))
 			io_u->rand_seed = hdr->rand_seed;
 
-		ret = verify_header(io_u, hdr);
-		switch (ret) {
-		case 0:
-			break;
-		case 1:
-			log_err("verify: bad magic header %x, wanted %x at "
-				"file %s offset %llu, length %u\n",
-				hdr->magic, FIO_HDR_MAGIC,
-				io_u->file->file_name,
-				io_u->offset + hdr_num * hdr->len, hdr->len);
-			return EILSEQ;
-			break;
-		case 2:
-			log_err("fio: verify header exceeds buffer length (%u "
-				"> %lu)\n", hdr->len, io_u->buflen);
-			return EILSEQ;
-			break;
-		case 3:
-			log_err("verify: bad header rand_seed %"PRIu64
-				", wanted %"PRIu64" at file %s offset %llu, "
-				"length %u\n",
-				hdr->rand_seed, io_u->rand_seed,
-				io_u->file->file_name,
-				io_u->offset + hdr_num * hdr->len, hdr->len);
-			return EILSEQ;
-			break;
-		case 4:
-			return EILSEQ;
-			break;
-		default:
-			log_err("verify: unknown header error at file %s "
-			"offset %llu, length %u\n",
-			io_u->file->file_name,
-			io_u->offset + hdr_num * hdr->len, hdr->len);
-			return EILSEQ;
-		}
+		ret = verify_header(io_u, hdr, hdr_num, hdr_inc);
+		if (ret)
+			return ret;
 
 		if (td->o.verify != VERIFY_NONE)
 			verify_type = td->o.verify;
