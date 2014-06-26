@@ -720,7 +720,7 @@ static int verify_header(struct io_u *io_u, struct verify_header *hdr,
 			hdr->magic, FIO_HDR_MAGIC);
 		goto err;
 	}
-	if (hdr->len > io_u->buflen) {
+	if (hdr->len != hdr_len) {
 		log_err("verify: bad header length %u, wanted %u",
 			hdr->len, hdr_len);
 		goto err;
