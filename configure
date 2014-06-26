@@ -156,6 +156,10 @@ for opt do
   ;;
   --disable-numa) disable_numa="yes"
   ;;
+  --disable-rbd) disable_rbd="yes"
+  ;;
+  --disable-gfapi) disable_gfapi="yes"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -1146,7 +1150,7 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-if compile_prog "" "-lrbd -lrados" "rbd"; then
+if test "$disable_rbd" != "yes"  && compile_prog "" "-lrbd -lrados" "rbd"; then
   LIBS="-lrbd -lrados $LIBS"
   rbd="yes"
 fi
@@ -1183,7 +1187,7 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-if compile_prog "" "-lgfapi -lglusterfs" "gfapi"; then
+if test "$disable_gfapi" != "yes"  && compile_prog "" "-lgfapi -lglusterfs" "gfapi"; then
   LIBS="-lgfapi -lglusterfs $LIBS"
   gfapi="yes"
 fi
