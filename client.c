@@ -987,7 +987,12 @@ void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 		dst->eta_sec = je->eta_sec;
 
 	dst->nr_threads		+= je->nr_threads;
-	/* we need to handle je->run_str too ... */
+
+	/*
+	 * This wont be correct for multiple strings, but at least it
+	 * works for the basic cases.
+	 */
+	strcpy((char *) dst->run_str, (char *) je->run_str);
 }
 
 void fio_client_dec_jobs_eta(struct client_eta *eta, client_eta_op eta_fn)
@@ -1374,8 +1379,7 @@ static void request_client_etas(struct client_ops *ops)
 
 	dprint(FD_NET, "client: request eta (%d)\n", nr_clients);
 
-	eta = malloc(sizeof(*eta));
-	memset(&eta->eta, 0, sizeof(eta->eta));
+	eta = calloc(1, sizeof(*eta) + __THREAD_RUNSTR_SZ(REAL_MAX_JOBS));
 	eta->pending = nr_clients;
 
 	flist_for_each(entry, &client_list) {
