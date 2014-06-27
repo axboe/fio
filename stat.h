@@ -186,9 +186,13 @@ struct thread_stat {
 struct jobs_eta {
 	uint32_t nr_running;
 	uint32_t nr_ramp;
+
 	uint32_t nr_pending;
 	uint32_t nr_setting_up;
+
 	uint32_t files_open;
+	uint32_t pad1;
+
 	uint32_t m_rate[DDIR_RWDIR_CNT], t_rate[DDIR_RWDIR_CNT];
 	uint32_t m_iops[DDIR_RWDIR_CNT], t_iops[DDIR_RWDIR_CNT];
 	uint32_t rate[DDIR_RWDIR_CNT];
@@ -202,6 +206,7 @@ struct jobs_eta {
 	 * Network 'copy' of run_str[]
 	 */
 	uint32_t nr_threads;
+	uint32_t pad2;
 	uint8_t run_str[];
 };
 
