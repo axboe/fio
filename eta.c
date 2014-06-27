@@ -581,6 +581,7 @@ struct jobs_eta *get_jobs_eta(int force, size_t *size)
 		return NULL;
 	}
 
+	*size = sizeof(*je) + strlen((char *) je->run_str) + 1;
 	return je;
 }
 
