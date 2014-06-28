@@ -1100,7 +1100,7 @@ out:
 
 static struct fio_file *get_next_file(struct thread_data *td)
 {
-	if (!(td->flags & TD_F_PROFILE_OPS)) {
+	if (td->flags & TD_F_PROFILE_OPS) {
 		struct prof_io_ops *ops = &td->prof_io_ops;
 
 		if (ops->get_next_file)
