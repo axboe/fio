@@ -12,7 +12,7 @@ struct group_run_stats {
 	uint32_t unit_base;
 	uint32_t groupid;
 	uint32_t unified_rw_rep;
-};
+} __attribute__((packed));
 
 /*
  * How many depth levels to log
@@ -181,7 +181,7 @@ struct thread_stat {
 	uint64_t latency_target;
 	fio_fp64_t latency_percentile;
 	uint64_t latency_window;
-};
+} __attribute__((packed));
 
 struct jobs_eta {
 	uint32_t nr_running;
@@ -191,7 +191,6 @@ struct jobs_eta {
 	uint32_t nr_setting_up;
 
 	uint32_t files_open;
-	uint32_t pad1;
 
 	uint32_t m_rate[DDIR_RWDIR_CNT], t_rate[DDIR_RWDIR_CNT];
 	uint32_t m_iops[DDIR_RWDIR_CNT], t_iops[DDIR_RWDIR_CNT];
@@ -206,9 +205,8 @@ struct jobs_eta {
 	 * Network 'copy' of run_str[]
 	 */
 	uint32_t nr_threads;
-	uint32_t pad2;
 	uint8_t run_str[];
-};
+} __attribute__((packed));
 
 extern struct jobs_eta *get_jobs_eta(int force, size_t *size);
 
