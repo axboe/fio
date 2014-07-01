@@ -1232,7 +1232,7 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 	ret->compressed		= le32_to_cpu(ret->compressed);
 	ret->log_offset		= le32_to_cpu(ret->log_offset);
 
-	samples = &ret->samples[i];
+	samples = &ret->samples[0];
 	for (i = 0; i < ret->nr_samples; i++) {
 		struct io_sample *s;
 
