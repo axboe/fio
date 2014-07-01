@@ -1154,9 +1154,9 @@ static struct cmd_iolog_pdu *convert_iolog_gz(struct fio_net_cmd *cmd,
 	/*
 	 * Get header first, it's not compressed
 	 */
-	nr_samples = le32_to_cpu(pdu->nr_samples);
+	nr_samples = le64_to_cpu(pdu->nr_samples);
 
-	total = nr_samples * __log_entry_sz(pdu->log_offset);
+	total = nr_samples * __log_entry_sz(le32_to_cpu(pdu->log_offset));
 	ret = malloc(total + sizeof(*pdu));
 	ret->nr_samples = nr_samples;
 

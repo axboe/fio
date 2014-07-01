@@ -48,8 +48,8 @@ struct io_log {
 	/*
 	 * Entries already logged
 	 */
-	unsigned long nr_samples;
-	unsigned long max_samples;
+	uint64_t nr_samples;
+	uint64_t max_samples;
 	void *log;
 
 	unsigned int log_type;
