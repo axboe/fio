@@ -64,8 +64,6 @@ int write_bw_log = 0;
 int read_only = 0;
 int status_interval = 0;
 
-static int write_lat_log;
-
 static int prev_group_jobs;
 
 unsigned long fio_debug = 0;
@@ -1056,6 +1054,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	char fname[PATH_MAX];
 	int numjobs, file_alloced;
 	struct thread_options *o = &td->o;
+	char logname[PATH_MAX + 32];
 
 	/*
 	 * the def_thread is just for options, it's not a real job
@@ -1145,20 +1144,27 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (setup_rate(td))
 		goto err;
 
-	if (o->lat_log_file || write_lat_log) {
+	if (o->lat_log_file) {
+		snprintf(logname, sizeof(logname), "%s_lat.log", o->lat_log_file);
 		setup_log(&td->lat_log, o->log_avg_msec, IO_LOG_TYPE_LAT,
-				o->log_offset);
+				o->log_offset, logname);
+		snprintf(logname, sizeof(logname), "%s_slat.log", o->lat_log_file);
 		setup_log(&td->slat_log, o->log_avg_msec, IO_LOG_TYPE_SLAT,
-				o->log_offset);
+				o->log_offset, logname);
+		snprintf(logname, sizeof(logname), "%s_clat.log", o->lat_log_file);
 		setup_log(&td->clat_log, o->log_avg_msec, IO_LOG_TYPE_CLAT,
-				o->log_offset);
+				o->log_offset, logname);
 	}
-	if (o->bw_log_file || write_bw_log)
+	if (o->bw_log_file) {
+		snprintf(logname, sizeof(logname), "%s_bw.log", o->bw_log_file);
 		setup_log(&td->bw_log, o->log_avg_msec, IO_LOG_TYPE_BW,
-				o->log_offset);
-	if (o->iops_log_file)
+				o->log_offset, logname);
+	}
+	if (o->iops_log_file) {
+		snprintf(logname, sizeof(logname), "%s_iops.log", o->iops_log_file);
 		setup_log(&td->iops_log, o->log_avg_msec, IO_LOG_TYPE_IOPS,
-				o->log_offset);
+				o->log_offset, logname);
+	}
 
 	if (!o->name)
 		o->name = strdup(jobname);
@@ -1756,7 +1762,9 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			}
 			break;
 		case 'l':
-			write_lat_log = 1;
+			log_err("fio: --latency-log is deprecated. Use per-job latency log options.\n");
+			do_exit++;
+			exit_val = 1;
 			break;
 		case 'b':
 			write_bw_log = 1;

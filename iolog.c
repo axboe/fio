@@ -540,7 +540,7 @@ int init_iolog(struct thread_data *td)
 }
 
 void setup_log(struct io_log **log, unsigned long avg_msec, int log_type,
-	       int log_offset)
+	       int log_offset, const char *filename)
 {
 	struct io_log *l = malloc(sizeof(*l));
 
@@ -551,6 +551,7 @@ void setup_log(struct io_log **log, unsigned long avg_msec, int log_type,
 	l->log_offset = log_offset;
 	l->log = malloc(l->max_samples * log_entry_sz(l));
 	l->avg_msec = avg_msec;
+	l->filename = strdup(filename);
 	*log = l;
 }
 
@@ -580,13 +581,20 @@ static void clear_file_buffer(void *buf)
 }
 #endif
 
-void __finish_log(struct io_log *log, const char *name)
+static void free_log(struct io_log *log)
+{
+	free(log->log);
+	free(log->filename);
+	free(log);
+}
+
+void __finish_log(struct io_log *log)
 {
 	uint64_t i;
 	void *buf;
 	FILE *f;
 
-	f = fopen(name, "a");
+	f = fopen(log->filename, "a");
 	if (!f) {
 		perror("fopen log");
 		return;
@@ -615,90 +623,75 @@ void __finish_log(struct io_log *log, const char *name)
 
 	fclose(f);
 	clear_file_buffer(buf);
-	free(log->log);
-	free(log);
+	free_log(log);
 }
 
-static int finish_log_named(struct thread_data *td, struct io_log *log,
-			    const char *prefix, const char *postfix,
-			    int trylock)
+static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
 {
-	char file_name[256];
-
-	snprintf(file_name, sizeof(file_name), "%s_%s.log", prefix, postfix);
-
 	if (trylock) {
-		if (fio_trylock_file(file_name))
+		if (fio_trylock_file(log->filename))
 			return 1;
 	} else
-		fio_lock_file(file_name);
+		fio_lock_file(log->filename);
 
 	if (td->client_type == FIO_CLIENT_TYPE_GUI) {
-		fio_send_iolog(td, log, file_name);
-		free(log->log);
-		free(log);
+		fio_send_iolog(td, log, log->filename);
+		free_log(log);
 	} else
-		__finish_log(log, file_name);
+		__finish_log(log);
 
-	fio_unlock_file(file_name);
+	fio_unlock_file(log->filename);
 	return 0;
-}
-
-static int finish_log(struct thread_data *td, struct io_log *log,
-		      const char *name, int trylock)
-{
-	return finish_log_named(td, log, td->o.name, name, trylock);
-}
-
-static int write_this_log(struct thread_data *td, struct io_log *log,
-			  const char *log_file, const char *name, int try)
-{
-	int ret;
-
-	if (!log)
-		return 0;
-
-	if (log_file)
-		ret = finish_log_named(td, log, log_file, name, try);
-	else
-		ret = finish_log(td, log, name, try);
-
-	return ret;
 }
 
 static int write_iops_log(struct thread_data *td, int try)
 {
-	struct thread_options *o = &td->o;
+	struct io_log *log = td->iops_log;
 
-	return write_this_log(td, td->iops_log, o->iops_log_file, "iops", try);
+	if (!log)
+		return 0;
+
+	return finish_log(td, log, try);
 }
 
 static int write_slat_log(struct thread_data *td, int try)
 {
-	struct thread_options *o = &td->o;
+	struct io_log *log = td->slat_log;
 
-	return write_this_log(td, td->slat_log, o->lat_log_file, "slat", try);
+	if (!log)
+		return 0;
+
+	return finish_log(td, log, try);
 }
 
 static int write_clat_log(struct thread_data *td, int try)
 {
-	struct thread_options *o = &td->o;
+	struct io_log *log = td->clat_log;
 
-	return write_this_log(td, td->clat_log, o->lat_log_file, "clat" , try);
+	if (!log)
+		return 0;
+
+	return finish_log(td, log, try);
 }
 
 static int write_lat_log(struct thread_data *td, int try)
 {
-	struct thread_options *o = &td->o;
+	struct io_log *log = td->lat_log;
 
-	return write_this_log(td, td->lat_log, o->lat_log_file, "lat", try);
+	if (!log)
+		return 0;
+
+	return finish_log(td, log, try);
 }
 
 static int write_bandw_log(struct thread_data *td, int try)
 {
-	struct thread_options *o = &td->o;
+	struct io_log *log = td->bw_log;
 
-	return write_this_log(td, td->bw_log, o->bw_log_file, "bw", try);
+	if (!log)
+		return 0;
+
+	return finish_log(td, log, try);
 }
 
 enum {

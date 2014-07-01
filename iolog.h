@@ -52,6 +52,8 @@ struct io_log {
 	uint64_t max_samples;
 	void *log;
 
+	char *filename;
+
 	unsigned int log_type;
 
 	/*
@@ -167,8 +169,8 @@ extern void add_iops_sample(struct thread_data *, enum fio_ddir, unsigned int,
 				struct timeval *);
 extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
-extern void setup_log(struct io_log **, unsigned long, int, int);
-extern void __finish_log(struct io_log *, const char *);
+extern void setup_log(struct io_log **, unsigned long, int, int, const char *);
+extern void __finish_log(struct io_log *);
 extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 extern int write_bw_log;
 extern void add_agg_sample(unsigned long, enum fio_ddir, unsigned int);

@@ -2020,9 +2020,9 @@ int fio_backend(void)
 		return 0;
 
 	if (write_bw_log) {
-		setup_log(&agg_io_log[DDIR_READ], 0, IO_LOG_TYPE_BW, 0);
-		setup_log(&agg_io_log[DDIR_WRITE], 0, IO_LOG_TYPE_BW, 0);
-		setup_log(&agg_io_log[DDIR_TRIM], 0, IO_LOG_TYPE_BW, 0);
+		setup_log(&agg_io_log[DDIR_READ], 0, IO_LOG_TYPE_BW, 0, "agg-read_bw.log");
+		setup_log(&agg_io_log[DDIR_WRITE], 0, IO_LOG_TYPE_BW, 0, "agg-write_bw.log");
+		setup_log(&agg_io_log[DDIR_TRIM], 0, IO_LOG_TYPE_BW, 0, "agg-trim_bw.log");
 	}
 
 	startup_mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
@@ -2041,11 +2041,13 @@ int fio_backend(void)
 	if (!fio_abort) {
 		show_run_stats();
 		if (write_bw_log) {
-			__finish_log(agg_io_log[DDIR_READ], "agg-read_bw.log");
-			__finish_log(agg_io_log[DDIR_WRITE],
-					"agg-write_bw.log");
-			__finish_log(agg_io_log[DDIR_TRIM],
-					"agg-write_bw.log");
+			int i;
+
+			for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+				struct io_log *log = agg_io_log[i];
+
+				__finish_log(log);
+			}
 		}
 	}
 
