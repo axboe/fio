@@ -1567,7 +1567,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 		unsigned long tusec;
 
 		tusec = utime_since(&io_u->start_time, &icd->time);
-		add_lat_sample(td, idx, tusec, bytes);
+		add_lat_sample(td, idx, tusec, bytes, io_u->offset);
 
 		if (td->flags & TD_F_PROFILE_OPS) {
 			struct prof_io_ops *ops = &td->prof_io_ops;
@@ -1585,7 +1585,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 	}
 
 	if (!td->o.disable_clat) {
-		add_clat_sample(td, idx, lusec, bytes);
+		add_clat_sample(td, idx, lusec, bytes, io_u->offset);
 		io_u_mark_latency(td, lusec);
 	}
 
@@ -1823,7 +1823,8 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 		unsigned long slat_time;
 
 		slat_time = utime_since(&io_u->start_time, &io_u->issue_time);
-		add_slat_sample(td, io_u->ddir, slat_time, io_u->xfer_buflen);
+		add_slat_sample(td, io_u->ddir, slat_time, io_u->xfer_buflen,
+				io_u->offset);
 	}
 }
 

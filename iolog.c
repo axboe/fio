@@ -539,7 +539,8 @@ int init_iolog(struct thread_data *td)
 	return ret;
 }
 
-void setup_log(struct io_log **log, unsigned long avg_msec, int log_type)
+void setup_log(struct io_log **log, unsigned long avg_msec, int log_type,
+	       int log_offset)
 {
 	struct io_log *l = malloc(sizeof(*l));
 
@@ -547,7 +548,8 @@ void setup_log(struct io_log **log, unsigned long avg_msec, int log_type)
 	l->nr_samples = 0;
 	l->max_samples = 1024;
 	l->log_type = log_type;
-	l->log = malloc(l->max_samples * sizeof(struct io_sample));
+	l->log_offset = log_offset;
+	l->log = malloc(l->max_samples * log_entry_sz(l));
 	l->avg_msec = avg_msec;
 	*log = l;
 }
@@ -580,7 +582,7 @@ static void clear_file_buffer(void *buf)
 
 void __finish_log(struct io_log *log, const char *name)
 {
-	unsigned int i;
+	uint64_t i;
 	void *buf;
 	FILE *f;
 
@@ -593,10 +595,22 @@ void __finish_log(struct io_log *log, const char *name)
 	buf = set_file_buffer(f);
 
 	for (i = 0; i < log->nr_samples; i++) {
-		fprintf(f, "%lu, %lu, %u, %u\n",
-				(unsigned long) log->log[i].time,
-				(unsigned long) log->log[i].val,
-				log->log[i].ddir, log->log[i].bs);
+		struct io_sample *s = get_sample(log, i);
+
+		if (!log->log_offset) {
+			fprintf(f, "%lu, %lu, %u, %u\n",
+					(unsigned long) s->time,
+					(unsigned long) s->val,
+					s->ddir, s->bs);
+		} else {
+			struct io_sample_offset *so = (void *) s;
+
+			fprintf(f, "%lu, %lu, %u, %u, %llu\n",
+					(unsigned long) s->time,
+					(unsigned long) s->val,
+					s->ddir, s->bs,
+					(unsigned long long) so->offset);
+		}
 	}
 
 	fclose(f);

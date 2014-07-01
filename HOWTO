@@ -1333,6 +1333,9 @@ log_avg_msec=int By default, fio will log an entry in the iops, latency,
 		specified period of time, reducing the resolution of the log.
 		Defaults to 0.
 
+log_offset=int	If this is set, the iolog options will include the byte
+		offset for the IO entry as well as the other data values.
+
 lockmem=int	Pin down the specified amount of memory with mlock(2). Can
 		potentially be used instead of removing memory or booting
 		with less memory to simulate a smaller amount of memory.

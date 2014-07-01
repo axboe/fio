@@ -1210,6 +1210,10 @@ very large size. Setting this option makes fio average the each log entry
 over the specified period of time, reducing the resolution of the log.
 Defaults to 0.
 .TP
+.BI log_offset \fR=\fPbool
+If this is set, the iolog options will include the byte offset for the IO
+entry as well as the other data values.
+.TP
 .BI disable_lat \fR=\fPbool
 Disable measurements of total latency numbers. Useful only for cutting
 back the number of calls to \fBgettimeofday\fR\|(2), as that does impact performance at

@@ -1177,7 +1177,7 @@ static int fio_send_iolog_gz(struct cmd_iolog_pdu *pdu, struct io_log *log)
 	}
 
 	stream.next_in = (void *) log->log;
-	stream.avail_in = log->nr_samples * sizeof(struct io_sample);
+	stream.avail_in = log->nr_samples * log_entry_sz(log);
 
 	do {
 		unsigned int this_len, flags = 0;
@@ -1214,8 +1214,8 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	struct cmd_iolog_pdu pdu;
 	int i, ret = 0;
 
+	pdu.nr_samples = cpu_to_le64(log->nr_samples);
 	pdu.thread_number = cpu_to_le32(td->thread_number);
-	pdu.nr_samples = __cpu_to_le32(log->nr_samples);
 	pdu.log_type = cpu_to_le32(log->log_type);
 	pdu.compressed = cpu_to_le32(use_zlib);
 
@@ -1223,12 +1223,18 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	pdu.name[FIO_NET_NAME_MAX - 1] = '\0';
 
 	for (i = 0; i < log->nr_samples; i++) {
-		struct io_sample *s = &log->log[i];
+		struct io_sample *s = get_sample(log, i);
 
 		s->time	= cpu_to_le64(s->time);
 		s->val	= cpu_to_le64(s->val);
 		s->ddir	= cpu_to_le32(s->ddir);
 		s->bs	= cpu_to_le32(s->bs);
+
+		if (log->log_offset) {
+			struct io_sample_offset *so = (void *) s;
+
+			so->offset = cpu_to_le64(so->offset);
+		}
 	}
 
 	/*
@@ -1246,7 +1252,7 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 		return fio_send_iolog_gz(&pdu, log);
 
 	return fio_send_cmd_ext_pdu(server_fd, FIO_NET_CMD_IOLOG, log->log,
-			log->nr_samples * sizeof(struct io_sample), 0, 0);
+			log->nr_samples * log_entry_sz(log), 0, 0);
 }
 
 void fio_server_send_add_job(struct thread_data *td)

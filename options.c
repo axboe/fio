@@ -3095,6 +3095,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "log_offset",
+		.lname	= "Log offset of IO",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(log_offset),
+		.help	= "Include offset of IO for each log entry",
+		.def	= "0",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "bwavgtime",
 		.lname	= "Bandwidth average time",
 		.type	= FIO_OPT_INT,

@@ -143,10 +143,11 @@ struct cmd_text_pdu {
 };
 
 struct cmd_iolog_pdu {
+	uint64_t nr_samples;
 	uint32_t thread_number;
-	uint32_t nr_samples;
 	uint32_t log_type;
 	uint32_t compressed;
+	uint32_t log_offset;
 	uint8_t name[FIO_NET_NAME_MAX];
 	struct io_sample samples[0];
 };

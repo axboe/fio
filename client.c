@@ -1156,7 +1156,7 @@ static struct cmd_iolog_pdu *convert_iolog_gz(struct fio_net_cmd *cmd,
 	 */
 	nr_samples = le32_to_cpu(pdu->nr_samples);
 
-	total = nr_samples * sizeof(struct io_sample);
+	total = nr_samples * __log_entry_sz(pdu->log_offset);
 	ret = malloc(total + sizeof(*pdu));
 	ret->nr_samples = nr_samples;
 
@@ -1206,7 +1206,8 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 {
 	struct cmd_iolog_pdu *pdu = (struct cmd_iolog_pdu *) cmd->payload;
 	struct cmd_iolog_pdu *ret;
-	int i;
+	uint64_t i;
+	void *samples;
 
 	/*
 	 * Convert if compressed and we support it. If it's not
@@ -1225,18 +1226,27 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 	} else
 		ret = pdu;
 
+	ret->nr_samples		= le64_to_cpu(ret->nr_samples);
 	ret->thread_number	= le32_to_cpu(ret->thread_number);
-	ret->nr_samples		= le32_to_cpu(ret->nr_samples);
 	ret->log_type		= le32_to_cpu(ret->log_type);
 	ret->compressed		= le32_to_cpu(ret->compressed);
+	ret->log_offset		= le32_to_cpu(ret->log_offset);
 
+	samples = &ret->samples[i];
 	for (i = 0; i < ret->nr_samples; i++) {
-		struct io_sample *s = &ret->samples[i];
+		struct io_sample *s;
 
+		s = __get_sample(samples, ret->log_offset, i);
 		s->time	= le64_to_cpu(s->time);
 		s->val	= le64_to_cpu(s->val);
 		s->ddir	= le32_to_cpu(s->ddir);
 		s->bs	= le32_to_cpu(s->bs);
+
+		if (ret->log_offset) {
+			struct io_sample_offset *so = (void *) s;
+
+			so->offset = le64_to_cpu(so->offset);
+		}
 	}
 
 	return ret;

@@ -28,6 +28,11 @@ struct io_sample {
 	uint32_t bs;
 };
 
+struct io_sample_offset {
+	struct io_sample s;
+	uint64_t offset;
+};
+
 enum {
 	IO_LOG_TYPE_LAT = 1,
 	IO_LOG_TYPE_CLAT,
@@ -45,7 +50,7 @@ struct io_log {
 	 */
 	unsigned long nr_samples;
 	unsigned long max_samples;
-	struct io_sample *log;
+	void *log;
 
 	unsigned int log_type;
 
@@ -55,6 +60,11 @@ struct io_log {
 	unsigned int disabled;
 
 	/*
+	 * Log offsets
+	 */
+	unsigned int log_offset;
+
+	/*
 	 * Windowed average, for logging single entries average over some
 	 * period of time.
 	 */
@@ -62,6 +72,31 @@ struct io_log {
 	unsigned long avg_msec;
 	unsigned long avg_last;
 };
+
+static inline size_t __log_entry_sz(int log_offset)
+{
+	if (log_offset)
+		return sizeof(struct io_sample_offset);
+	else
+		return sizeof(struct io_sample);
+}
+
+static inline size_t log_entry_sz(struct io_log *log)
+{
+	return __log_entry_sz(log->log_offset);
+}
+
+static inline struct io_sample *__get_sample(void *samples, int log_offset,
+					     uint64_t sample)
+{
+	return samples + sample * __log_entry_sz(log_offset);
+}
+
+static inline struct io_sample *get_sample(struct io_log *iolog,
+					   uint64_t sample)
+{
+	return __get_sample(iolog->log, iolog->log_offset, sample);
+}
 
 enum {
 	IP_F_ONRB	= 1,
@@ -121,18 +156,18 @@ extern void write_iolog_close(struct thread_data *);
  */
 extern void finalize_logs(struct thread_data *td);
 extern void add_lat_sample(struct thread_data *, enum fio_ddir, unsigned long,
-				unsigned int);
+				unsigned int, uint64_t);
 extern void add_clat_sample(struct thread_data *, enum fio_ddir, unsigned long,
-				unsigned int);
+				unsigned int, uint64_t);
 extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long,
-				unsigned int);
+				unsigned int, uint64_t);
 extern void add_bw_sample(struct thread_data *, enum fio_ddir, unsigned int,
 				struct timeval *);
 extern void add_iops_sample(struct thread_data *, enum fio_ddir, unsigned int,
 				struct timeval *);
 extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
-extern void setup_log(struct io_log **, unsigned long, int);
+extern void setup_log(struct io_log **, unsigned long, int, int);
 extern void __finish_log(struct io_log *, const char *);
 extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 extern int write_bw_log;
