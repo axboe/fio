@@ -2047,6 +2047,7 @@ int fio_backend(void)
 				struct io_log *log = agg_io_log[i];
 
 				__finish_log(log);
+				free_log(log);
 			}
 		}
 	}

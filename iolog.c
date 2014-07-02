@@ -581,7 +581,7 @@ static void clear_file_buffer(void *buf)
 }
 #endif
 
-static void free_log(struct io_log *log)
+void free_log(struct io_log *log)
 {
 	free(log->log);
 	free(log->filename);
@@ -623,7 +623,6 @@ void __finish_log(struct io_log *log)
 
 	fclose(f);
 	clear_file_buffer(buf);
-	free_log(log);
 }
 
 static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
@@ -636,11 +635,11 @@ static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
 
 	if (td->client_type == FIO_CLIENT_TYPE_GUI) {
 		fio_send_iolog(td, log, log->filename);
-		free_log(log);
 	} else
 		__finish_log(log);
 
 	fio_unlock_file(log->filename);
+	free_log(log);
 	return 0;
 }
 

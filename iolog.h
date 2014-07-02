@@ -171,6 +171,7 @@ extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
 extern void setup_log(struct io_log **, unsigned long, int, int, const char *);
 extern void __finish_log(struct io_log *);
+extern void free_log(struct io_log *);
 extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 extern int write_bw_log;
 extern void add_agg_sample(unsigned long, enum fio_ddir, unsigned int);
