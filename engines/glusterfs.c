@@ -77,16 +77,12 @@ int fio_gf_setup(struct thread_data *td)
 	}
 	dprint(FD_FILE, "fio setup %p\n", g->fs);
 	td->io_ops->data = g;
+	return 0;
 cleanup:
-	if (r) {
-		if (g) {
-			if (g->fs) {
-				glfs_fini(g->fs);
-			}
-			free(g);
-			td->io_ops->data = NULL;
-		}
-	}
+	if (g->fs)
+		glfs_fini(g->fs);
+	free(g);
+	td->io_ops->data = NULL;
 	return r;
 }
 
