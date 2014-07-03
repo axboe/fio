@@ -27,8 +27,6 @@ static void *tp_thread(void *data)
 
 	INIT_FLIST_HEAD(&work_list);
 
-	printf("tp_thread running\n");
-
 	while (1) {
 		pthread_mutex_lock(&tdat->lock);
 
@@ -51,7 +49,6 @@ static void *tp_thread(void *data)
 		tp_flush_work(&work_list);
 	}
 
-	printf("outta here\n");
 	return NULL;
 }
 
