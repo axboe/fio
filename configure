@@ -420,7 +420,7 @@ echo "Wordsize                      $wordsize"
 # zlib probe
 zlib="no"
 cat > $TMPC <<EOF
-#include <zlib2.h>
+#include <zlib.h>
 int main(void)
 {
   z_stream stream;
