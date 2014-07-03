@@ -663,7 +663,6 @@ struct iolog_compress {
 	void *buf;
 	size_t len;
 	unsigned int seq;
-	int nofree;
 };
 
 #define GZ_CHUNK	131072
@@ -677,16 +676,13 @@ static struct iolog_compress *get_new_chunk(unsigned int seq)
 	c->buf = malloc(GZ_CHUNK);
 	c->len = 0;
 	c->seq = seq;
-	c->nofree = 0;
 	return c;
 }
 
 static void free_chunk(struct iolog_compress *ic)
 {
-	if (!ic->nofree) {
-		free(ic->buf);
-		free(ic);
-	}
+	free(ic->buf);
+	free(ic);
 }
 
 static int z_stream_init(z_stream *stream, int gz_hdr)
@@ -774,7 +770,6 @@ static int flush_chunk(struct iolog_compress *ic, int gz_hdr, FILE *f,
 			break;
 	}
 
-	free_chunk(ic);
 	return 0;
 }
 
@@ -791,11 +786,12 @@ static void flush_gz_chunks(struct io_log *log, FILE *f)
 		ic = flist_entry(node, struct iolog_compress, list);
 		flist_del(&ic->list);
 
-		if (log->log_gz_store) {
+		if (log->log_gz_store)
 			fwrite(ic->buf, ic->len, 1, f);
-			free_chunk(ic);
-		} else
+		else
 			flush_chunk(ic, log->log_gz_store, f, &stream, &iter);
+
+		free_chunk(ic);
 	}
 
 	if (iter.seq) {
@@ -827,7 +823,6 @@ int iolog_file_inflate(const char *file)
 
 	ic.buf = malloc(sb.st_size);
 	ic.len = sb.st_size;
-	ic.nofree = 1;
 	ic.seq = 1;
 
 	ret = fread(ic.buf, ic.len, 1, f);
