@@ -1385,6 +1385,10 @@ if test "$gf_fadvise" = "yes" ; then
   output_sym "CONFIG_GF_FADVISE"
 fi
 
+if test "$zlib" = "no" ; then
+  echo "Consider installing zlib-dev (zlib-devel), some fio features depend on it."
+fi
+
 echo "LIBS+=$LIBS" >> $config_host_mak
 echo "CFLAGS+=$CFLAGS" >> $config_host_mak
 echo "CC=$cc" >> $config_host_mak
