@@ -53,7 +53,7 @@
 #include "lib/getrusage.h"
 #include "idletime.h"
 #include "err.h"
-#include "tp.h"
+#include "lib/tp.h"
 
 static pthread_t disk_util_thread;
 static struct fio_mutex *disk_thread_mutex;

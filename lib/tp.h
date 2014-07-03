@@ -1,7 +1,7 @@
 #ifndef FIO_TP_H
 #define FIO_TP_H
 
-#include "flist.h"
+#include "../flist.h"
 
 struct tp_work;
 typedef int (tp_work_fn)(struct tp_work *);

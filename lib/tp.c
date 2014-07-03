@@ -5,8 +5,8 @@
 #include <errno.h>
 #include <pthread.h>
 
-#include "smalloc.h"
-#include "log.h"
+#include "../smalloc.h"
+#include "../log.h"
 #include "tp.h"
 
 static void tp_flush_work(struct flist_head *list)

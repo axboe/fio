@@ -18,7 +18,7 @@
 #include "verify.h"
 #include "trim.h"
 #include "filelock.h"
-#include "tp.h"
+#include "lib/tp.h"
 
 static const char iolog_ver2[] = "fio version 2 iolog";
 
