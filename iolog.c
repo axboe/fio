@@ -916,7 +916,7 @@ static int gz_work(struct tp_work *work)
 	unsigned int seq;
 	z_stream stream;
 	size_t total = 0;
-	int ret, wbits;
+	int ret;
 
 	INIT_FLIST_HEAD(&list);
 
@@ -926,19 +926,7 @@ static int gz_work(struct tp_work *work)
 	stream.zfree = Z_NULL;
 	stream.opaque = Z_NULL;
 
-	/*
-	 * Store gz header if storing to a file
-	 */
-#if 0
-	wbits = 15;
-	if (data->log->log_gz_store)
-		wbits += 16;
-
-	ret = deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
-				31, 8, Z_DEFAULT_STRATEGY);
-#else
 	ret = deflateInit(&stream, Z_DEFAULT_COMPRESSION);
-#endif
 	if (ret != Z_OK) {
 		log_err("fio: failed to init gz stream\n");
 		return 0;
