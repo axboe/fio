@@ -2005,10 +2005,8 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			if (!ret && !strcmp(opt, "ioengine")) {
 				free_ioengine(td);
 				if (ioengine_load(td)) {
-					if (td) {
-						put_job(td);
-						td = NULL;
-					}
+					put_job(td);
+					td = NULL;
 					do_exit++;
 					break;
 				}
