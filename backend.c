@@ -53,6 +53,7 @@
 #include "lib/getrusage.h"
 #include "idletime.h"
 #include "err.h"
+#include "tp.h"
 
 static pthread_t disk_util_thread;
 static struct fio_mutex *disk_thread_mutex;
@@ -1443,6 +1444,9 @@ static void *thread_main(void *data)
 			goto err;
 	}
 
+	if (td->flags & TD_F_COMPRESS_LOG)
+		tp_init(&td->tp_data);
+
 	fio_verify_init(td);
 
 	fio_gettime(&td->epoch, NULL);
@@ -1523,6 +1527,9 @@ static void *thread_main(void *data)
 	fio_unpin_memory(td);
 
 	fio_writeout_logs(td);
+
+	if (td->flags & TD_F_COMPRESS_LOG)
+		tp_exit(&td->tp_data);
 
 	if (o->exec_postrun)
 		exec_string(o, o->exec_postrun, (const char *)"postrun");
@@ -2020,9 +2027,13 @@ int fio_backend(void)
 		return 0;
 
 	if (write_bw_log) {
-		setup_log(&agg_io_log[DDIR_READ], 0, IO_LOG_TYPE_BW, 0, "agg-read_bw.log");
-		setup_log(&agg_io_log[DDIR_WRITE], 0, IO_LOG_TYPE_BW, 0, "agg-write_bw.log");
-		setup_log(&agg_io_log[DDIR_TRIM], 0, IO_LOG_TYPE_BW, 0, "agg-trim_bw.log");
+		struct log_params p = {
+			.log_type = IO_LOG_TYPE_BW,
+		};
+
+		setup_log(&agg_io_log[DDIR_READ], &p, "agg-read_bw.log");
+		setup_log(&agg_io_log[DDIR_WRITE], &p, "agg-write_bw.log");
+		setup_log(&agg_io_log[DDIR_TRIM], &p, "agg-trim_bw.log");
 	}
 
 	startup_mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
@@ -2046,7 +2057,7 @@ int fio_backend(void)
 			for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 				struct io_log *log = agg_io_log[i];
 
-				__finish_log(log);
+				flush_log(log);
 				free_log(log);
 			}
 		}

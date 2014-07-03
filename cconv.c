@@ -152,6 +152,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->use_os_rand = le32_to_cpu(top->use_os_rand);
 	o->log_avg_msec = le32_to_cpu(top->log_avg_msec);
 	o->log_offset = le32_to_cpu(top->log_offset);
+	o->log_gz = le32_to_cpu(top->log_gz);
 	o->norandommap = le32_to_cpu(top->norandommap);
 	o->softrandommap = le32_to_cpu(top->softrandommap);
 	o->bs_unaligned = le32_to_cpu(top->bs_unaligned);
@@ -323,6 +324,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->use_os_rand = cpu_to_le32(o->use_os_rand);
 	top->log_avg_msec = cpu_to_le32(o->log_avg_msec);
 	top->log_offset = cpu_to_le32(o->log_offset);
+	top->log_gz = cpu_to_le32(o->log_gz);
 	top->norandommap = cpu_to_le32(o->norandommap);
 	top->softrandommap = cpu_to_le32(o->softrandommap);
 	top->bs_unaligned = cpu_to_le32(o->bs_unaligned);

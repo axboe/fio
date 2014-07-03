@@ -1565,7 +1565,7 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 			     enum fio_ddir ddir, unsigned int bs,
 			     unsigned long t, uint64_t offset)
 {
-	const int nr_samples = iolog->nr_samples;
+	uint64_t nr_samples = iolog->nr_samples;
 	struct io_sample *s;
 
 	if (iolog->disabled)
@@ -1579,14 +1579,24 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 		void *new_log;
 
 		new_size = 2 * iolog->max_samples * log_entry_sz(iolog);
-		new_log = realloc(iolog->log, new_size);
-		if (!new_log) {
-			log_err("fio: failed extending iolog! Will stop logging.\n");
-			iolog->disabled = 1;
-			return;
+
+		if (iolog->log_gz && (new_size > iolog->log_gz)) {
+			if (iolog_flush(iolog, 0)) {
+				log_err("fio: failed flushing iolog! Will stop logging.\n");
+				iolog->disabled = 1;
+				return;
+			}
+			nr_samples = iolog->nr_samples;
+		} else {
+			new_log = realloc(iolog->log, new_size);
+			if (!new_log) {
+				log_err("fio: failed extending iolog! Will stop logging.\n");
+				iolog->disabled = 1;
+				return;
+			}
+			iolog->log = new_log;
+			iolog->max_samples <<= 1;
 		}
-		iolog->log = new_log;
-		iolog->max_samples <<= 1;
 	}
 
 	s = get_sample(iolog, nr_samples);

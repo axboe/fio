@@ -1145,25 +1145,49 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		goto err;
 
 	if (o->lat_log_file) {
-		snprintf(logname, sizeof(logname), "%s_lat.log", o->lat_log_file);
-		setup_log(&td->lat_log, o->log_avg_msec, IO_LOG_TYPE_LAT,
-				o->log_offset, logname);
-		snprintf(logname, sizeof(logname), "%s_slat.log", o->lat_log_file);
-		setup_log(&td->slat_log, o->log_avg_msec, IO_LOG_TYPE_SLAT,
-				o->log_offset, logname);
-		snprintf(logname, sizeof(logname), "%s_clat.log", o->lat_log_file);
-		setup_log(&td->clat_log, o->log_avg_msec, IO_LOG_TYPE_CLAT,
-				o->log_offset, logname);
+		struct log_params p = {
+			.td = td,
+			.avg_msec = o->log_avg_msec,
+			.log_type = IO_LOG_TYPE_LAT,
+			.log_offset = o->log_offset,
+			.log_gz = o->log_gz,
+		};
+
+		snprintf(logname, sizeof(logname), "%s_lat.log",
+				o->lat_log_file);
+		setup_log(&td->lat_log, &p, logname);
+		snprintf(logname, sizeof(logname), "%s_slat.log",
+				o->lat_log_file);
+		setup_log(&td->slat_log, &p, logname);
+		snprintf(logname, sizeof(logname), "%s_clat.log",
+				o->lat_log_file);
+		setup_log(&td->clat_log, &p, logname);
 	}
 	if (o->bw_log_file) {
-		snprintf(logname, sizeof(logname), "%s_bw.log", o->bw_log_file);
-		setup_log(&td->bw_log, o->log_avg_msec, IO_LOG_TYPE_BW,
-				o->log_offset, logname);
+		struct log_params p = {
+			.td = td,
+			.avg_msec = o->log_avg_msec,
+			.log_type = IO_LOG_TYPE_BW,
+			.log_offset = o->log_offset,
+			.log_gz = o->log_gz,
+		};
+
+		snprintf(logname, sizeof(logname), "%s_bw.log",
+				o->bw_log_file);
+		setup_log(&td->bw_log, &p, logname);
 	}
 	if (o->iops_log_file) {
-		snprintf(logname, sizeof(logname), "%s_iops.log", o->iops_log_file);
-		setup_log(&td->iops_log, o->log_avg_msec, IO_LOG_TYPE_IOPS,
-				o->log_offset, logname);
+		struct log_params p = {
+			.td = td,
+			.avg_msec = o->log_avg_msec,
+			.log_type = IO_LOG_TYPE_IOPS,
+			.log_offset = o->log_offset,
+			.log_gz = o->log_gz,
+		};
+
+		snprintf(logname, sizeof(logname), "%s_iops.log",
+				o->iops_log_file);
+		setup_log(&td->iops_log, &p, logname);
 	}
 
 	if (!o->name)

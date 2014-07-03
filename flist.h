@@ -140,6 +140,13 @@ static inline void flist_splice(const struct flist_head *list,
 		__flist_splice(list, head, head->next);
 }
 
+static inline void flist_splice_tail(struct flist_head *list,
+				     struct flist_head *head)
+{
+	if (!flist_empty(list))
+		__flist_splice(list, head->prev, head);
+}
+
 static inline void flist_splice_init(struct flist_head *list,
 				    struct flist_head *head)
 {

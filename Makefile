@@ -35,7 +35,8 @@ SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		cconv.c lib/prio_tree.c json.c lib/zipf.c lib/axmap.c \
 		lib/lfsr.c gettime-thread.c helpers.c lib/flist_sort.c \
 		lib/hweight.c lib/getrusage.c idletime.c td_error.c \
-		profiles/tiobench.c profiles/act.c io_u_queue.c filelock.c
+		profiles/tiobench.c profiles/act.c io_u_queue.c filelock.c \
+		tp.c
 
 ifdef CONFIG_64BIT_LLP64
   CFLAGS += -DBITS_PER_LONG=32

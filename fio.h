@@ -73,6 +73,7 @@ enum {
 	TD_F_PROFILE_OPS	= 64,
 	TD_F_COMPRESS		= 128,
 	TD_F_NOIO		= 256,
+	TD_F_COMPRESS_LOG	= 512,
 };
 
 enum {
@@ -111,6 +112,8 @@ struct thread_data {
 	struct io_log *lat_log;
 	struct io_log *bw_log;
 	struct io_log *iops_log;
+
+	struct tp_data *tp_data;
 
 	uint64_t stat_io_bytes[DDIR_RWDIR_CNT];
 	struct timeval bw_sample_time;

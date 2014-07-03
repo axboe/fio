@@ -1214,6 +1214,17 @@ Defaults to 0.
 If this is set, the iolog options will include the byte offset for the IO
 entry as well as the other data values.
 .TP
+.BI log_compression \fR=\fPint
+If this is set, fio will compress the IO logs as it goes, to keep the memory
+footprint lower. When a log reaches the specified size, that chunk is removed
+and compressed in the background. Given that IO logs are fairly highly
+compressible, this yields a nice memory savings for longer runs. The downside
+is that the compression will consume some background CPU cycles, so it may
+impact the run. This, however, is also true if the logging ends up consuming
+most of the system memory. So pick your poison. The IO logs are saved
+normally at the end of a run, by decompressing the chunks and storing them
+in the specified log file. This feature depends on the availability of zlib.
+.TP
 .BI disable_lat \fR=\fPbool
 Disable measurements of total latency numbers. Useful only for cutting
 back the number of calls to \fBgettimeofday\fR\|(2), as that does impact performance at

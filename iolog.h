@@ -54,6 +54,8 @@ struct io_log {
 
 	char *filename;
 
+	struct thread_data *td;
+
 	unsigned int log_type;
 
 	/*
@@ -67,12 +69,21 @@ struct io_log {
 	unsigned int log_offset;
 
 	/*
+	 * Max size of log entries before a chunk is compressed
+	 */
+	unsigned int log_gz;
+
+	/*
 	 * Windowed average, for logging single entries average over some
 	 * period of time.
 	 */
 	struct io_stat avg_window[DDIR_RWDIR_CNT];
 	unsigned long avg_msec;
 	unsigned long avg_last;
+
+	pthread_mutex_t chunk_lock;
+	unsigned int chunk_seq;
+	struct flist_head chunk_list;
 };
 
 static inline size_t __log_entry_sz(int log_offset)
@@ -156,6 +167,15 @@ extern void write_iolog_close(struct thread_data *);
 /*
  * Logging
  */
+struct log_params {
+	struct thread_data *td;
+	unsigned long avg_msec;
+	int log_type;
+	int log_offset;
+	int log_gz;
+	int log_compress;
+};
+
 extern void finalize_logs(struct thread_data *td);
 extern void add_lat_sample(struct thread_data *, enum fio_ddir, unsigned long,
 				unsigned int, uint64_t);
@@ -169,13 +189,14 @@ extern void add_iops_sample(struct thread_data *, enum fio_ddir, unsigned int,
 				struct timeval *);
 extern void init_disk_util(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
-extern void setup_log(struct io_log **, unsigned long, int, int, const char *);
-extern void __finish_log(struct io_log *);
+extern void setup_log(struct io_log **, struct log_params *, const char *);
+extern void flush_log(struct io_log *);
 extern void free_log(struct io_log *);
 extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 extern int write_bw_log;
 extern void add_agg_sample(unsigned long, enum fio_ddir, unsigned int);
 extern void fio_writeout_logs(struct thread_data *);
+extern int iolog_flush(struct io_log *, int);
 
 static inline void init_ipo(struct io_piece *ipo)
 {

@@ -1336,6 +1336,20 @@ log_avg_msec=int By default, fio will log an entry in the iops, latency,
 log_offset=int	If this is set, the iolog options will include the byte
 		offset for the IO entry as well as the other data values.
 
+log_compression=int	If this is set, fio will compress the IO logs as
+		it goes, to keep the memory footprint lower. When a log
+		reaches the specified size, that chunk is removed and
+		compressed in the background. Given that IO logs are
+		fairly highly compressible, this yields a nice memory
+		savings for longer runs. The downside is that the
+		compression will consume some background CPU cycles, so
+		it may impact the run. This, however, is also true if
+		the logging ends up consuming most of the system memory.
+		So pick your poison. The IO logs are saved normally at the
+		end of a run, by decompressing the chunks and storing them
+		in the specified log file. This feature depends on the
+		availability of zlib.
+
 lockmem=int	Pin down the specified amount of memory with mlock(2). Can
 		potentially be used instead of removing memory or booting
 		with less memory to simulate a smaller amount of memory.
