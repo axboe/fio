@@ -182,8 +182,8 @@ set. On Windows, disk devices are accessed as \\.\PhysicalDrive0 for the first
 device, \\.\PhysicalDrive1 for the second etc. Note: Windows and FreeBSD
 prevent write access to areas of the disk containing in-use data
 (e.g. filesystems). If the wanted filename does need to include a colon, then
-escape that with a '\' character. For instance, if the filename is
-"/dev/dsk/foo@3,0:c", then you would use filename="/dev/dsk/foo@3,0\:c".
+escape that with a '\\' character. For instance, if the filename is
+"/dev/dsk/foo@3,0:c", then you would use filename="/dev/dsk/foo@3,0\\:c".
 .TP
 .BI filename_format \fR=\fPstr
 If sharing multiple files between jobs, it is usually necessary to have
