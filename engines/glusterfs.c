@@ -160,8 +160,9 @@ int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
 	       flags & O_RDONLY ? "ro" : "rw", td_read(td) ? "read" : "write");
 	g->fd = glfs_creat(g->fs, f->file_name, flags, 0644);
 	if (!g->fd) {
-		log_err("glfs_creat failed.\n");
 		ret = errno;
+		log_err("glfs_creat failed.\n");
+		return ret;
 	}
 	/* file for read doesn't exist or shorter than required, create/extend it */
 	if (td_read(td)) {
