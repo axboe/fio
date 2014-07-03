@@ -22,41 +22,6 @@
 
 static const char iolog_ver2[] = "fio version 2 iolog";
 
-#ifdef CONFIG_ZLIB
-
-struct iolog_compress {
-	struct flist_head list;
-	void *buf;
-	size_t len;
-	unsigned int seq;
-	int nofree;
-};
-
-#define GZ_CHUNK	131072
-
-static struct iolog_compress *get_new_chunk(unsigned int seq)
-{
-	struct iolog_compress *c;
-
-	c = malloc(sizeof(*c));
-	INIT_FLIST_HEAD(&c->list);
-	c->buf = malloc(GZ_CHUNK);
-	c->len = 0;
-	c->seq = seq;
-	c->nofree = 0;
-	return c;
-}
-
-static void free_chunk(struct iolog_compress *ic)
-{
-	if (!ic->nofree) {
-		free(ic->buf);
-		free(ic);
-	}
-}
-
-#endif
-
 void queue_io_piece(struct thread_data *td, struct io_piece *ipo)
 {
 	flist_add_tail(&ipo->list, &td->io_log_list);
@@ -685,6 +650,45 @@ static void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 }
 
 #ifdef CONFIG_ZLIB
+
+struct iolog_flush_data {
+	struct tp_work work;
+	struct io_log *log;
+	void *samples;
+	uint64_t nr_samples;
+};
+
+struct iolog_compress {
+	struct flist_head list;
+	void *buf;
+	size_t len;
+	unsigned int seq;
+	int nofree;
+};
+
+#define GZ_CHUNK	131072
+
+static struct iolog_compress *get_new_chunk(unsigned int seq)
+{
+	struct iolog_compress *c;
+
+	c = malloc(sizeof(*c));
+	INIT_FLIST_HEAD(&c->list);
+	c->buf = malloc(GZ_CHUNK);
+	c->len = 0;
+	c->seq = seq;
+	c->nofree = 0;
+	return c;
+}
+
+static void free_chunk(struct iolog_compress *ic)
+{
+	if (!ic->nofree) {
+		free(ic->buf);
+		free(ic);
+	}
+}
+
 static int z_stream_init(z_stream *stream, int gz_hdr)
 {
 	int wbits = 15;
@@ -901,13 +905,6 @@ static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
 }
 
 #ifdef CONFIG_ZLIB
-
-struct iolog_flush_data {
-	struct tp_work work;
-	struct io_log *log;
-	void *samples;
-	uint64_t nr_samples;
-};
 
 static int gz_work(struct tp_work *work)
 {
