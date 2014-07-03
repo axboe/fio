@@ -1225,6 +1225,12 @@ most of the system memory. So pick your poison. The IO logs are saved
 normally at the end of a run, by decompressing the chunks and storing them
 in the specified log file. This feature depends on the availability of zlib.
 .TP
+.BI log_store_compressed \fR=\fPbool
+If set, and \fBlog\fR_compression is also set, fio will store the log files in
+a compressed format. They can be decompressed with fio, using the
+\fB\-\-inflate-log\fR command line parameter. The files will be stored with a
+\fB\.fz\fR suffix.
+.TP
 .BI disable_lat \fR=\fPbool
 Disable measurements of total latency numbers. Useful only for cutting
 back the number of calls to \fBgettimeofday\fR\|(2), as that does impact performance at

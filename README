@@ -176,6 +176,7 @@ $ fio
 	--idle-prof=option	Report cpu idleness on a system or percpu basis
 				(option=system,percpu) or run unit work
 				calibration only (option=calibrate).
+	--inflate-log=log	Inflate and output compressed log
 
 
 Any parameters following the options will be assumed to be job files,

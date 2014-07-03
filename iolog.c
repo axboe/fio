@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <libgen.h>
 #include <assert.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #ifdef CONFIG_ZLIB
 #include <zlib.h>
 #endif
@@ -26,6 +29,7 @@ struct iolog_compress {
 	void *buf;
 	size_t len;
 	unsigned int seq;
+	int nofree;
 };
 
 #define GZ_CHUNK	131072
@@ -39,13 +43,16 @@ static struct iolog_compress *get_new_chunk(unsigned int seq)
 	c->buf = malloc(GZ_CHUNK);
 	c->len = 0;
 	c->seq = seq;
+	c->nofree = 0;
 	return c;
 }
 
 static void free_chunk(struct iolog_compress *ic)
 {
-	free(ic->buf);
-	free(ic);
+	if (!ic->nofree) {
+		free(ic->buf);
+		free(ic);
+	}
 }
 
 #endif
@@ -586,10 +593,14 @@ void setup_log(struct io_log **log, struct log_params *p,
 	l->log_type = p->log_type;
 	l->log_offset = p->log_offset;
 	l->log_gz = p->log_gz;
+	l->log_gz_store = p->log_gz_store;
 	l->log = malloc(l->max_samples * log_entry_sz(l));
 	l->avg_msec = p->avg_msec;
 	l->filename = strdup(filename);
 	l->td = p->td;
+
+	if (l->log_offset)
+		l->log_ddir_mask = 0x80000000;
 
 	INIT_FLIST_HEAD(&l->chunk_list);
 
@@ -636,40 +647,57 @@ void free_log(struct io_log *log)
 	free(log);
 }
 
-static void flush_samples(FILE *f, void *samples, uint64_t nr_samples,
-			  int log_offset)
+static void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 {
-	uint64_t i;
+	struct io_sample *s;
+	int log_offset;
+	uint64_t i, nr_samples;
+
+	if (!sample_size)
+		return;
+
+	s = __get_sample(samples, 0, 0);
+	if (s->__ddir & 0x80000000)
+		log_offset = 1;
+	else
+		log_offset = 0;
+
+	nr_samples = sample_size / __log_entry_sz(log_offset);
 
 	for (i = 0; i < nr_samples; i++) {
-		struct io_sample *s = __get_sample(samples, log_offset, i);
+		s = __get_sample(samples, log_offset, i);
 
 		if (!log_offset) {
 			fprintf(f, "%lu, %lu, %u, %u\n",
 					(unsigned long) s->time,
 					(unsigned long) s->val,
-					s->ddir, s->bs);
+					io_sample_ddir(s), s->bs);
 		} else {
 			struct io_sample_offset *so = (void *) s;
 
 			fprintf(f, "%lu, %lu, %u, %u, %llu\n",
 					(unsigned long) s->time,
 					(unsigned long) s->val,
-					s->ddir, s->bs,
+					io_sample_ddir(s), s->bs,
 					(unsigned long long) so->offset);
 		}
 	}
 }
 
 #ifdef CONFIG_ZLIB
-static int z_stream_init(z_stream *stream)
+static int z_stream_init(z_stream *stream, int gz_hdr)
 {
+	int wbits = 15;
+
 	stream->zalloc = Z_NULL;
 	stream->zfree = Z_NULL;
 	stream->opaque = Z_NULL;
 	stream->next_in = Z_NULL;
 
-	if (inflateInit(stream) != Z_OK)
+	if (gz_hdr)
+		wbits += 32;
+
+	if (inflateInit2(stream, wbits) != Z_OK)
 		return 1;
 
 	return 0;
@@ -683,31 +711,29 @@ struct flush_chunk_iter {
 	size_t chunk_sz;
 };
 
-static void finish_chunk(z_stream *stream, int log_offset, FILE *f,
+static void finish_chunk(z_stream *stream, FILE *f,
 			 struct flush_chunk_iter *iter)
 {
-	uint64_t nr_samples;
 	int ret;
 
 	ret = inflateEnd(stream);
 	if (ret != Z_OK)
 		log_err("fio: failed to end log inflation (%d)\n", ret);
 
-	nr_samples = iter->buf_used / __log_entry_sz(log_offset);
-	flush_samples(f, iter->buf, nr_samples, log_offset);
+	flush_samples(f, iter->buf, iter->buf_used);
 	free(iter->buf);
 	iter->buf = NULL;
 	iter->buf_size = iter->buf_used = 0;
 }
 
-static int flush_chunk(struct iolog_compress *ic, int log_offset, FILE *f,
+static int flush_chunk(struct iolog_compress *ic, int gz_hdr, FILE *f,
 		       z_stream *stream, struct flush_chunk_iter *iter)
 {
 	if (ic->seq != iter->seq) {
 		if (iter->seq)
-			finish_chunk(stream, log_offset, f, iter);
+			finish_chunk(stream, f, iter);
 
-		z_stream_init(stream);
+		z_stream_init(stream, gz_hdr);
 		iter->seq = ic->seq;
 	}
 
@@ -720,9 +746,10 @@ static int flush_chunk(struct iolog_compress *ic, int log_offset, FILE *f,
 	}
 
 	while (stream->avail_in) {
+		size_t this_out = iter->buf_size - iter->buf_used;
 		int err;
 
-		stream->avail_out = iter->buf_size - iter->buf_used;
+		stream->avail_out = this_out;
 		stream->next_out = iter->buf + iter->buf_used;
 
 		err = inflate(stream, Z_NO_FLUSH);
@@ -731,7 +758,16 @@ static int flush_chunk(struct iolog_compress *ic, int log_offset, FILE *f,
 			break;
 		}
 
-		iter->buf_used += iter->buf_size - iter->buf_used - stream->avail_out;
+		iter->buf_used += this_out - stream->avail_out;
+
+		if (!stream->avail_out) {
+			iter->buf_size += iter->chunk_sz;
+			iter->buf = realloc(iter->buf, iter->buf_size);
+			continue;
+		}
+
+		if (err == Z_STREAM_END)
+			break;
 	}
 
 	free_chunk(ic);
@@ -750,13 +786,67 @@ static void flush_gz_chunks(struct io_log *log, FILE *f)
 		node = log->chunk_list.next;
 		ic = flist_entry(node, struct iolog_compress, list);
 		flist_del(&ic->list);
-		flush_chunk(ic, log->log_offset, f, &stream, &iter);
+
+		if (log->log_gz_store) {
+			fwrite(ic->buf, ic->len, 1, f);
+			free_chunk(ic);
+		} else
+			flush_chunk(ic, log->log_gz_store, f, &stream, &iter);
 	}
 
 	if (iter.seq) {
-		finish_chunk(&stream, log->log_offset, f, &iter);
+		finish_chunk(&stream, f, &iter);
 		free(iter.buf);
 	}
+}
+
+int iolog_file_inflate(const char *file)
+{
+	struct flush_chunk_iter iter = { .chunk_sz = 64 * 1024 * 1024, };
+	struct iolog_compress ic;
+	z_stream stream;
+	struct stat sb;
+	size_t ret;
+	FILE *f;
+
+	if (stat(file, &sb) < 0) {
+		perror("stat");
+		return 1;
+	}
+
+	f = fopen(file, "r");
+	if (!f) {
+		perror("fopen");
+		return 1;
+	}
+
+	ic.buf = malloc(sb.st_size);
+	ic.len = sb.st_size;
+	ic.nofree = 1;
+	ic.seq = 1;
+
+	ret = fread(ic.buf, ic.len, 1, f);
+	if (ret < 0) {
+		perror("fread");
+		fclose(f);
+		return 1;
+	} else if (ret != 1) {
+		log_err("fio: short read on reading log\n");
+		fclose(f);
+		return 1;
+	}
+
+	fclose(f);
+
+	flush_chunk(&ic,  1, stdout, &stream, &iter);
+
+	if (iter.seq) {
+		finish_chunk(&stream, stdout, &iter);
+		free(iter.buf);
+	}
+
+	free(ic.buf);
+	return 0;
 }
 
 #else
@@ -782,7 +872,7 @@ void flush_log(struct io_log *log)
 
 	flush_gz_chunks(log, f);
 
-	flush_samples(f, log->log, log->nr_samples, log->log_offset);
+	flush_samples(f, log->log, log->nr_samples * log_entry_sz(log));
 
 	fclose(f);
 	clear_file_buffer(buf);
@@ -826,7 +916,7 @@ static int gz_work(struct tp_work *work)
 	unsigned int seq;
 	z_stream stream;
 	size_t total = 0;
-	int ret;
+	int ret, wbits;
 
 	INIT_FLIST_HEAD(&list);
 
@@ -836,12 +926,26 @@ static int gz_work(struct tp_work *work)
 	stream.zfree = Z_NULL;
 	stream.opaque = Z_NULL;
 
-	if (deflateInit(&stream, Z_DEFAULT_COMPRESSION) != Z_OK) {
+	/*
+	 * Store gz header if storing to a file
+	 */
+#if 0
+	wbits = 15;
+	if (data->log->log_gz_store)
+		wbits += 16;
+
+	ret = deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
+				31, 8, Z_DEFAULT_STRATEGY);
+#else
+	ret = deflateInit(&stream, Z_DEFAULT_COMPRESSION);
+#endif
+	if (ret != Z_OK) {
 		log_err("fio: failed to init gz stream\n");
 		return 0;
 	}
 
 	seq = ++data->log->chunk_seq;
+
 	stream.next_in = (void *) data->samples;
 	stream.avail_in = data->nr_samples * log_entry_sz(data->log);
 
@@ -900,7 +1004,7 @@ static int gz_work(struct tp_work *work)
 
 int iolog_flush(struct io_log *log, int wait)
 {
-	struct thread_data *td = log->td;
+	struct tp_data *tdat = log->td->tp_data;
 	struct iolog_flush_data *data;
 	size_t sample_size;
 
@@ -929,7 +1033,7 @@ int iolog_flush(struct io_log *log, int wait)
 	} else
 		data->work.wait = 0;
 
-	tp_queue_work(td->tp_data, &data->work);
+	tp_queue_work(tdat, &data->work);
 
 	if (wait) {
 		pthread_mutex_lock(&data->work.lock);

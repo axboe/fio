@@ -1237,10 +1237,10 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 		struct io_sample *s;
 
 		s = __get_sample(samples, ret->log_offset, i);
-		s->time	= le64_to_cpu(s->time);
-		s->val	= le64_to_cpu(s->val);
-		s->ddir	= le32_to_cpu(s->ddir);
-		s->bs	= le32_to_cpu(s->bs);
+		s->time		= le64_to_cpu(s->time);
+		s->val		= le64_to_cpu(s->val);
+		s->__ddir	= le32_to_cpu(s->__ddir);
+		s->bs		= le32_to_cpu(s->bs);
 
 		if (ret->log_offset) {
 			struct io_sample_offset *so = (void *) s;

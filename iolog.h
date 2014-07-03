@@ -24,7 +24,7 @@ struct io_stat {
 struct io_sample {
 	uint64_t time;
 	uint64_t val;
-	uint32_t ddir;
+	uint32_t __ddir;
 	uint32_t bs;
 };
 
@@ -52,6 +52,8 @@ struct io_log {
 	uint64_t max_samples;
 	void *log;
 
+	unsigned int log_ddir_mask;
+
 	char *filename;
 
 	struct thread_data *td;
@@ -74,6 +76,11 @@ struct io_log {
 	unsigned int log_gz;
 
 	/*
+	 * Don't deflate for storing, just store the compressed bits
+	 */
+	unsigned int log_gz_store;
+
+	/*
 	 * Windowed average, for logging single entries average over some
 	 * period of time.
 	 */
@@ -85,6 +92,15 @@ struct io_log {
 	unsigned int chunk_seq;
 	struct flist_head chunk_list;
 };
+
+#define io_sample_ddir(io)	((io)->__ddir & ~0x80000000U)
+
+static inline void io_sample_set_ddir(struct io_log *log,
+				      struct io_sample *io,
+				      enum fio_ddir ddir)
+{
+	io->__ddir = ddir | log->log_ddir_mask;
+}
 
 static inline size_t __log_entry_sz(int log_offset)
 {
@@ -164,6 +180,10 @@ extern void queue_io_piece(struct thread_data *, struct io_piece *);
 extern void prune_io_piece_log(struct thread_data *);
 extern void write_iolog_close(struct thread_data *);
 
+#ifdef CONFIG_ZLIB
+extern int iolog_file_inflate(const char *);
+#endif
+
 /*
  * Logging
  */
@@ -173,6 +193,7 @@ struct log_params {
 	int log_type;
 	int log_offset;
 	int log_gz;
+	int log_gz_store;
 	int log_compress;
 };
 

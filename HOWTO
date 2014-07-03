@@ -1350,6 +1350,12 @@ log_compression=int	If this is set, fio will compress the IO logs as
 		in the specified log file. This feature depends on the
 		availability of zlib.
 
+log_store_compressed=bool	If set, and log_compression is also set,
+		fio will store the log files in a compressed format. They
+		can be decompressed with fio, using the --inflate-log
+		command line parameter. The files will be stored with a
+		.fz suffix.
+
 lockmem=int	Pin down the specified amount of memory with mlock(2). Can
 		potentially be used instead of removing memory or booting
 		with less memory to simulate a smaller amount of memory.

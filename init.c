@@ -170,6 +170,13 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.has_arg	= required_argument,
 		.val		= 'x' | FIO_CLIENT_FLAG,
 	},
+#ifdef CONFIG_ZLIB
+	{
+		.name		= (char *) "inflate-log",
+		.has_arg	= required_argument,
+		.val		= 'X' | FIO_CLIENT_FLAG,
+	},
+#endif
 	{
 		.name		= (char *) "alloc-size",
 		.has_arg	= required_argument,
@@ -1151,16 +1158,23 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_type = IO_LOG_TYPE_LAT,
 			.log_offset = o->log_offset,
 			.log_gz = o->log_gz,
+			.log_gz_store = o->log_gz_store,
 		};
+		const char *suf;
 
-		snprintf(logname, sizeof(logname), "%s_lat.log",
-				o->lat_log_file);
+		if (p.log_gz_store)
+			suf = "log.fz";
+		else
+			suf = "log";
+
+		snprintf(logname, sizeof(logname), "%s_lat.%s",
+				o->lat_log_file, suf);
 		setup_log(&td->lat_log, &p, logname);
-		snprintf(logname, sizeof(logname), "%s_slat.log",
-				o->lat_log_file);
+		snprintf(logname, sizeof(logname), "%s_slat.%s",
+				o->lat_log_file, suf);
 		setup_log(&td->slat_log, &p, logname);
-		snprintf(logname, sizeof(logname), "%s_clat.log",
-				o->lat_log_file);
+		snprintf(logname, sizeof(logname), "%s_clat.%s",
+				o->lat_log_file, suf);
 		setup_log(&td->clat_log, &p, logname);
 	}
 	if (o->bw_log_file) {
@@ -1170,10 +1184,17 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_type = IO_LOG_TYPE_BW,
 			.log_offset = o->log_offset,
 			.log_gz = o->log_gz,
+			.log_gz_store = o->log_gz_store,
 		};
+		const char *suf;
 
-		snprintf(logname, sizeof(logname), "%s_bw.log",
-				o->bw_log_file);
+		if (p.log_gz_store)
+			suf = "log.fz";
+		else
+			suf = "log";
+
+		snprintf(logname, sizeof(logname), "%s_bw.%s",
+				o->bw_log_file, suf);
 		setup_log(&td->bw_log, &p, logname);
 	}
 	if (o->iops_log_file) {
@@ -1183,10 +1204,17 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_type = IO_LOG_TYPE_IOPS,
 			.log_offset = o->log_offset,
 			.log_gz = o->log_gz,
+			.log_gz_store = o->log_gz_store,
 		};
+		const char *suf;
 
-		snprintf(logname, sizeof(logname), "%s_iops.log",
-				o->iops_log_file);
+		if (p.log_gz_store)
+			suf = "log.fz";
+		else
+			suf = "log";
+
+		snprintf(logname, sizeof(logname), "%s_iops.%s",
+				o->iops_log_file, suf);
 		setup_log(&td->iops_log, &p, logname);
 	}
 
@@ -1579,6 +1607,9 @@ static void usage(const char *name)
 	printf("  --idle-prof=option\tReport cpu idleness on a system or percpu basis\n"
 		"\t\t\t(option=system,percpu) or run unit work\n"
 		"\t\t\tcalibration only (option=calibrate)\n");
+#ifdef CONFIG_ZLIB
+	printf("  --inflate-log=log\tInflate and output compressed log\n");
+#endif
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
 	printf("\n                   Jens Axboe <jaxboe@fusionio.com>");
 	printf("\n                   Jens Axboe <axboe@fb.com>\n");
@@ -1910,6 +1941,13 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			nr_job_sections++;
 			break;
 			}
+#ifdef CONFIG_ZLIB
+		case 'X':
+			exit_val = iolog_file_inflate(optarg);
+			did_arg++;
+			do_exit++;
+			break;
+#endif
 		case 'p':
 			did_arg = 1;
 			if (exec_profile)

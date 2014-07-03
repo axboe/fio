@@ -110,6 +110,7 @@ struct thread_options {
 	unsigned int log_avg_msec;
 	unsigned int log_offset;
 	unsigned int log_gz;
+	unsigned int log_gz_store;
 	unsigned int norandommap;
 	unsigned int softrandommap;
 	unsigned int bs_unaligned;
@@ -339,6 +340,7 @@ struct thread_options_pack {
 	uint32_t log_avg_msec;
 	uint32_t log_offset;
 	uint32_t log_gz;
+	uint32_t log_gz_store;
 	uint32_t norandommap;
 	uint32_t softrandommap;
 	uint32_t bs_unaligned;

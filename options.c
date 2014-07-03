@@ -3116,6 +3116,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
 	},
+	{
+		.name	= "log_store_compressed",
+		.lname	= "Log store compressed",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(log_gz_store),
+		.help	= "Store logs in a compressed format",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
 #endif
 	{
 		.name	= "bwavgtime",

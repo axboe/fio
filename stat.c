@@ -1603,7 +1603,7 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 
 	s->val = val;
 	s->time = t;
-	s->ddir = ddir;
+	io_sample_set_ddir(iolog, s, ddir);
 	s->bs = bs;
 
 	if (iolog->log_offset) {

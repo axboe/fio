@@ -1225,10 +1225,10 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	for (i = 0; i < log->nr_samples; i++) {
 		struct io_sample *s = get_sample(log, i);
 
-		s->time	= cpu_to_le64(s->time);
-		s->val	= cpu_to_le64(s->val);
-		s->ddir	= cpu_to_le32(s->ddir);
-		s->bs	= cpu_to_le32(s->bs);
+		s->time		= cpu_to_le64(s->time);
+		s->val		= cpu_to_le64(s->val);
+		s->__ddir	= cpu_to_le32(s->__ddir);
+		s->bs		= cpu_to_le32(s->bs);
 
 		if (log->log_offset) {
 			struct io_sample_offset *so = (void *) s;
