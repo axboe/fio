@@ -806,17 +806,18 @@ int iolog_file_inflate(const char *file)
 	struct iolog_compress ic;
 	z_stream stream;
 	struct stat sb;
-	size_t ret;
+	ssize_t ret;
 	FILE *f;
-
-	if (stat(file, &sb) < 0) {
-		perror("stat");
-		return 1;
-	}
 
 	f = fopen(file, "r");
 	if (!f) {
 		perror("fopen");
+		return 1;
+	}
+
+	if (stat(file, &sb) < 0) {
+		fclose(f);
+		perror("stat");
 		return 1;
 	}
 
