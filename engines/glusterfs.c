@@ -150,8 +150,14 @@ int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
 		else
 			flags = O_RDONLY;
 	}
+
+	if (td->o.odirect)
+		flags |= OS_O_DIRECT;
+	if (td->o.sync_io)
+		flags |= O_SYNC;
+
 	dprint(FD_FILE, "fio file %s open mode %s td rw %s\n", f->file_name,
-	       flags == O_RDONLY ? "ro" : "rw", td_read(td) ? "read" : "write");
+	       flags & O_RDONLY ? "ro" : "rw", td_read(td) ? "read" : "write");
 	g->fd = glfs_creat(g->fs, f->file_name, flags, 0644);
 	if (!g->fd) {
 		log_err("glfs_creat failed.\n");
