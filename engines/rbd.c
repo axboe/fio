@@ -86,6 +86,8 @@ static int _fio_setup_rbd_data(struct thread_data *td,
 	return 0;
 
 failed:
+	if (rbd_data)
+		free(rbd_data);
 	return 1;
 
 }
