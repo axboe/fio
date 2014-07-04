@@ -723,8 +723,8 @@ static void finish_chunk(z_stream *stream, FILE *f,
 	iter->buf_size = iter->buf_used = 0;
 }
 
-static int flush_chunk(struct iolog_compress *ic, int gz_hdr, FILE *f,
-		       z_stream *stream, struct flush_chunk_iter *iter)
+static size_t flush_chunk(struct iolog_compress *ic, int gz_hdr, FILE *f,
+			  z_stream *stream, struct flush_chunk_iter *iter)
 {
 	if (ic->seq != iter->seq) {
 		if (iter->seq)
@@ -767,7 +767,7 @@ static int flush_chunk(struct iolog_compress *ic, int gz_hdr, FILE *f,
 			break;
 	}
 
-	return 0;
+	return (void *) stream->next_in - ic->buf;
 }
 
 static void flush_gz_chunks(struct io_log *log, FILE *f)
@@ -802,6 +802,8 @@ int iolog_file_inflate(const char *file)
 	z_stream stream;
 	struct stat sb;
 	ssize_t ret;
+	size_t total;
+	void *buf;
 	FILE *f;
 
 	f = fopen(file, "r");
@@ -816,7 +818,7 @@ int iolog_file_inflate(const char *file)
 		return 1;
 	}
 
-	ic.buf = malloc(sb.st_size);
+	ic.buf = buf = malloc(sb.st_size);
 	ic.len = sb.st_size;
 	ic.seq = 1;
 
@@ -833,14 +835,26 @@ int iolog_file_inflate(const char *file)
 
 	fclose(f);
 
-	flush_chunk(&ic,  1, stdout, &stream, &iter);
+	total = ic.len;
+	do {
+		size_t ret;
+
+		ret = flush_chunk(&ic,  1, stdout, &stream, &iter);
+		total -= ret;
+		if (!total)
+			break;
+
+		ic.seq++;
+		ic.len -= ret;
+		ic.buf += ret;
+	} while (1);
 
 	if (iter.seq) {
 		finish_chunk(&stream, stdout, &iter);
 		free(iter.buf);
 	}
 
-	free(ic.buf);
+	free(buf);
 	return 0;
 }
 
