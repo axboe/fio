@@ -93,7 +93,11 @@ struct io_log {
 	struct flist_head chunk_list;
 };
 
-#define io_sample_ddir(io)	((io)->__ddir & ~0x80000000U)
+/*
+ * If the upper bit is set, then we have the offset as well
+ */
+#define LOG_OFFSET_SAMPLE_BIT	0x80000000U
+#define io_sample_ddir(io)	((io)->__ddir & ~LOG_OFFSET_SAMPLE_BIT)
 
 static inline void io_sample_set_ddir(struct io_log *log,
 				      struct io_sample *io,

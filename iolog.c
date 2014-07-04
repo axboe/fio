@@ -565,7 +565,7 @@ void setup_log(struct io_log **log, struct log_params *p,
 	l->td = p->td;
 
 	if (l->log_offset)
-		l->log_ddir_mask = 0x80000000;
+		l->log_ddir_mask = LOG_OFFSET_SAMPLE_BIT;
 
 	INIT_FLIST_HEAD(&l->chunk_list);
 
@@ -622,10 +622,7 @@ static void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 		return;
 
 	s = __get_sample(samples, 0, 0);
-	if (s->__ddir & 0x80000000)
-		log_offset = 1;
-	else
-		log_offset = 0;
+	log_offset = (s->__ddir & LOG_OFFSET_SAMPLE_BIT) != 0;
 
 	nr_samples = sample_size / __log_entry_sz(log_offset);
 
