@@ -147,6 +147,15 @@ static inline void flist_splice_tail(struct flist_head *list,
 		__flist_splice(list, head->prev, head);
 }
 
+static inline void flist_splice_tail_init(struct flist_head *list,
+					  struct flist_head *head)
+{
+	if (!flist_empty(list)) {
+		__flist_splice(list, head->prev, head);
+		INIT_FLIST_HEAD(list);
+	}
+}
+
 static inline void flist_splice_init(struct flist_head *list,
 				    struct flist_head *head)
 {
@@ -164,6 +173,9 @@ static inline void flist_splice_init(struct flist_head *list,
  */
 #define flist_entry(ptr, type, member) \
 	container_of(ptr, type, member)
+
+#define flist_first_entry(ptr, type, member) \
+	flist_entry((ptr)->next, type, member)
 
 /**
  * flist_for_each	-	iterate over a list

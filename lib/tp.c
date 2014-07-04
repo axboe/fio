@@ -33,10 +33,8 @@ static void *tp_thread(void *data)
 		if (!tdat->thread_exit && flist_empty(&tdat->work))
 			pthread_cond_wait(&tdat->cv, &tdat->lock);
 
-		if (!flist_empty(&tdat->work)) {
-			flist_splice(&tdat->work, &work_list);
-			INIT_FLIST_HEAD(&tdat->work);
-		}
+		if (!flist_empty(&tdat->work))
+			flist_splice_tail_init(&tdat->work, &work_list);
 
 		pthread_mutex_unlock(&tdat->lock);
 

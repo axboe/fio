@@ -24,7 +24,7 @@ int get_next_trim(struct thread_data *td, struct io_u *io_u)
 		return 1;
 
 	assert(td->trim_entries);
-	ipo = flist_entry(td->trim_list.next, struct io_piece, trim_list);
+	ipo = flist_first_entry(&td->trim_list, struct io_piece, trim_list);
 	remove_trim_entry(td, ipo);
 
 	io_u->offset = ipo->offset;

@@ -30,7 +30,7 @@ static void disk_util_free(struct disk_util *du)
 	while (!flist_empty(&du->slaves)) {
 		struct disk_util *slave;
 
-		slave = flist_entry(du->slaves.next, struct disk_util, slavelist);
+		slave = flist_first_entry(&du->slaves, struct disk_util, slavelist);
 		flist_del(&slave->slavelist);
 		slave->users--;
 	}
@@ -562,7 +562,7 @@ void disk_util_prune_entries(void)
 	while (!flist_empty(&disk_list)) {
 		struct disk_util *du;
 
-		du = flist_entry(disk_list.next, struct disk_util, list);
+		du = flist_first_entry(&disk_list, struct disk_util, list);
 		flist_del(&du->list);
 		disk_util_free(du);
 	}

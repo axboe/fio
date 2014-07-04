@@ -131,7 +131,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 	while (!flist_empty(&td->io_log_list)) {
 		int ret;
 
-		ipo = flist_entry(td->io_log_list.next, struct io_piece, list);
+		ipo = flist_first_entry(&td->io_log_list, struct io_piece, list);
 		flist_del(&ipo->list);
 		remove_trim_entry(td, ipo);
 
@@ -184,7 +184,7 @@ void prune_io_piece_log(struct thread_data *td)
 	}
 
 	while (!flist_empty(&td->io_hist_list)) {
-		ipo = flist_entry(td->io_hist_list.next, struct io_piece, list);
+		ipo = flist_entry(&td->io_hist_list, struct io_piece, list);
 		flist_del(&ipo->list);
 		remove_trim_entry(td, ipo);
 		td->io_hist_len--;
@@ -773,14 +773,12 @@ static int flush_chunk(struct iolog_compress *ic, int gz_hdr, FILE *f,
 static void flush_gz_chunks(struct io_log *log, FILE *f)
 {
 	struct flush_chunk_iter iter = { .chunk_sz = log->log_gz, };
-	struct flist_head *node;
 	z_stream stream;
 
 	while (!flist_empty(&log->chunk_list)) {
 		struct iolog_compress *ic;
 
-		node = log->chunk_list.next;
-		ic = flist_entry(node, struct iolog_compress, list);
+		ic = flist_first_entry(&log->chunk_list, struct iolog_compress, list);
 		flist_del(&ic->list);
 
 		if (log->log_gz_store)

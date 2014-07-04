@@ -444,7 +444,7 @@ static int send_job_file(struct gui_entry *ge)
 	while (!flist_empty(&gc->o_list)) {
 		struct gfio_client_options *gco;
 
-		gco = flist_entry(gc->o_list.next, struct gfio_client_options, list);
+		gco = flist_first_entry(&gc->o_list, struct gfio_client_options, list);
 		flist_del(&gco->list);
 		free(gco);
 	}

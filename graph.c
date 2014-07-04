@@ -687,7 +687,7 @@ static void graph_value_drop(struct graph_label *l, struct graph_value *v)
 	 */
 	while (!(v->flags & GV_F_ON_PRIO)) {
 		assert(!flist_empty(&v->alias));
-		v = flist_entry(v->alias.next, struct graph_value, alias);
+		v = flist_first_entry(&v->alias, struct graph_value, alias);
 	}
 
 	prio_tree_remove(&l->prio_tree, &v->node);
@@ -698,7 +698,7 @@ static void graph_value_drop(struct graph_label *l, struct graph_value *v)
 	while (!flist_empty(&v->alias)) {
 		struct graph_value *a;
 
-		a = flist_entry(v->alias.next, struct graph_value, alias);
+		a = flist_first_entry(&v->alias, struct graph_value, alias);
 		flist_del_init(&a->alias);
 
 		__graph_value_drop(l, a);
@@ -773,7 +773,7 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 			to_drop = 2;
 
 		while (to_drop-- && !flist_empty(&i->value_list)) {
-			x = flist_entry(i->value_list.next, struct graph_value, list);
+			x = flist_first_entry(&i->value_list, struct graph_value, list);
 			graph_value_drop(i, x);
 
 			/*
@@ -836,7 +836,7 @@ static void graph_free_values(struct graph_label *l)
 	struct graph_value *i;
 
 	while (!flist_empty(&l->value_list)) {
-		i = flist_entry(l->value_list.next, struct graph_value, list);
+		i = flist_first_entry(&l->value_list, struct graph_value, list);
 		graph_value_drop(l, i);
 	}
 }
@@ -846,7 +846,7 @@ static void graph_free_labels(struct graph *g)
 	struct graph_label *i;
 
 	while (!flist_empty(&g->label_list)) {
-		i = flist_entry(g->label_list.next, struct graph_label, list);
+		i = flist_first_entry(&g->label_list, struct graph_label, list);
 		flist_del(&i->list);
 		graph_free_values(i);
 		free(i);
@@ -1010,7 +1010,7 @@ const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 					}
 				}
 				if (!flist_empty(&v->alias))
-					v = flist_entry(v->alias.next, struct graph_value, alias);
+					v = flist_first_entry(&v->alias, struct graph_value, alias);
 			} while (v != rootv);
 		} while ((n = prio_tree_next(&iter)) != NULL);
 

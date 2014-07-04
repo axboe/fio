@@ -1082,7 +1082,7 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		assert(ipo->flags & IP_F_ONRB);
 		ipo->flags &= ~IP_F_ONRB;
 	} else if (!flist_empty(&td->io_hist_list)) {
-		ipo = flist_entry(td->io_hist_list.next, struct io_piece, list);
+		ipo = flist_first_entry(&td->io_hist_list, struct io_piece, list);
 
 		/*
 		 * Ensure that the associated IO has completed
@@ -1187,7 +1187,7 @@ static void *verify_async_thread(void *data)
 			continue;
 
 		while (!flist_empty(&list)) {
-			io_u = flist_entry(list.next, struct io_u, verify_list);
+			io_u = flist_first_entry(&list, struct io_u, verify_list);
 			flist_del(&io_u->verify_list);
 
 			ret = verify_io_u(td, io_u);

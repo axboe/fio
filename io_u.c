@@ -223,7 +223,7 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	if (!flist_empty(&td->next_rand_list)) {
 		struct rand_off *r;
 fetch:
-		r = flist_entry(td->next_rand_list.next, struct rand_off, list);
+		r = flist_first_entry(&td->next_rand_list, struct rand_off, list);
 		flist_del(&r->list);
 		*b = r->off;
 		free(r);

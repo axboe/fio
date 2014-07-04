@@ -1433,7 +1433,7 @@ static int gopt_handle_changed_options(struct gopt_job_view *gjv)
 		goto done;
 
 	while (!flist_empty(&gjv->changed_list)) {
-		gopt = flist_entry(gjv->changed_list.next, struct gopt, changed_list);
+		gopt = flist_first_entry(&gjv->changed_list, struct gopt, changed_list);
 		flist_del_init(&gopt->changed_list);
 	}
 
@@ -1577,7 +1577,7 @@ void gopt_get_options_window(GtkWidget *window, struct gfio_client *gc)
 
 	gjv = calloc(1, sizeof(*gjv));
 	INIT_FLIST_HEAD(&gjv->changed_list);
-	gco = flist_entry(gc->o_list.next, struct gfio_client_options, list);
+	gco = flist_first_entry(&gc->o_list, struct gfio_client_options, list);
 	gjv->o = &gco->o;
 	gjv->dialog = dialog;
 	gjv->client = gc;
