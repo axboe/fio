@@ -706,6 +706,7 @@ static int z_stream_init(z_stream *stream, int gz_hdr)
 
 struct inflate_chunk_iter {
 	unsigned int seq;
+	int err;
 	void *buf;
 	size_t buf_size;
 	size_t buf_used;
@@ -760,6 +761,7 @@ static size_t inflate_chunk(struct iolog_compress *ic, int gz_hdr, FILE *f,
 		err = inflate(stream, Z_NO_FLUSH);
 		if (err < 0) {
 			log_err("fio: failed inflating log: %d\n", err);
+			iter->err = err;
 			break;
 		}
 
@@ -782,7 +784,7 @@ static size_t inflate_chunk(struct iolog_compress *ic, int gz_hdr, FILE *f,
  * Inflate stored compressed chunks, or write them directly to the log
  * file if so instructed.
  */
-static void inflate_gz_chunks(struct io_log *log, FILE *f)
+static int inflate_gz_chunks(struct io_log *log, FILE *f)
 {
 	struct inflate_chunk_iter iter = { .chunk_sz = log->log_gz, };
 	z_stream stream;
@@ -797,8 +799,10 @@ static void inflate_gz_chunks(struct io_log *log, FILE *f)
 			size_t ret;
 
 			ret = fwrite(ic->buf, ic->len, 1, f);
-			if (ret != 1 || ferror(f))
+			if (ret != 1 || ferror(f)) {
+				iter.err = errno;
 				log_err("fio: error writing compressed log\n");
+			}
 		} else
 			inflate_chunk(ic, log->log_gz_store, f, &stream, &iter);
 
@@ -809,6 +813,8 @@ static void inflate_gz_chunks(struct io_log *log, FILE *f)
 		finish_chunk(&stream, f, &iter);
 		free(iter.buf);
 	}
+
+	return iter.err;
 }
 
 /*
@@ -870,6 +876,8 @@ int iolog_file_inflate(const char *file)
 		total -= ret;
 		if (!total)
 			break;
+		if (iter.err)
+			break;
 
 		ic.seq++;
 		ic.len -= ret;
@@ -882,12 +890,12 @@ int iolog_file_inflate(const char *file)
 	}
 
 	free(buf);
-	return 0;
+	return iter.err;
 }
 
 #else
 
-static void inflate_gz_chunks(struct io_log *log, FILE *f)
+static int inflate_gz_chunks(struct io_log *log, FILE *f)
 {
 }
 
@@ -978,7 +986,8 @@ static int gz_work(struct tp_work *work)
 		ret = deflate(&stream, Z_NO_FLUSH);
 		if (ret < 0) {
 			log_err("fio: deflate log (%d)\n", ret);
-			break;
+			free_chunk(c);
+			goto err;
 		}
 
 		c->len = GZ_CHUNK - stream.avail_out;
@@ -1015,13 +1024,23 @@ static int gz_work(struct tp_work *work)
 		pthread_mutex_unlock(&data->log->chunk_lock);
 	}
 
+	ret = 0;
+done:
 	if (work->wait) {
 		work->done = 1;
 		pthread_cond_signal(&work->cv);
 	} else
 		free(data);
 
-	return 0;
+	return ret;
+err:
+	while (!flist_empty(&list)) {
+		c = flist_first_entry(list.next, struct iolog_compress, list);
+		flist_del(&c->list);
+		free_chunk(c);
+	}
+	ret = 1;
+	goto done;
 }
 
 /*
