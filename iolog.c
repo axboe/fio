@@ -897,6 +897,7 @@ int iolog_file_inflate(const char *file)
 
 static int inflate_gz_chunks(struct io_log *log, FILE *f)
 {
+	return 0;
 }
 
 #endif
