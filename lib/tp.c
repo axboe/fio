@@ -63,8 +63,9 @@ void tp_queue_work(struct tp_data *tdat, struct tp_work *work)
 
 	pthread_mutex_lock(&tdat->lock);
 	flist_add_tail(&work->list, &tdat->work);
-	pthread_cond_signal(&tdat->cv);
 	pthread_mutex_unlock(&tdat->lock);
+
+	pthread_cond_signal(&tdat->cv);
 }
 
 void tp_init(struct tp_data **tdatp)
@@ -94,10 +95,11 @@ void tp_exit(struct tp_data **tdatp)
 	if (!tdat)
 		return;
 
-	tdat->thread_exit = 1;
 	pthread_mutex_lock(&tdat->lock);
-	pthread_cond_signal(&tdat->cv);
+	tdat->thread_exit = 1;
 	pthread_mutex_unlock(&tdat->lock);
+
+	pthread_cond_signal(&tdat->cv);
 
 	pthread_join(tdat->thread, &ret);
 
