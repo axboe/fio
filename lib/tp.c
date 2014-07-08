@@ -1,3 +1,10 @@
+/*
+ * Basic workqueue like code, that sets up a thread and allows async
+ * processing of some sort. Could be extended to allow for multiple
+ * worker threads. But right now fio associates one of this per IO
+ * thread, so should be enough to have just a single thread doing the
+ * work.
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
