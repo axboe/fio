@@ -900,6 +900,12 @@ static int inflate_gz_chunks(struct io_log *log, FILE *f)
 	return 0;
 }
 
+int iolog_file_inflate(const char *file)
+{
+	log_err("fio: log inflation not possible without zlib\n");
+	return 1;
+}
+
 #endif
 
 void flush_log(struct io_log *log)
