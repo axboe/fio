@@ -20,6 +20,7 @@ enum {
 	FD_TIME,
 	FD_NET,
 	FD_RATE,
+	FD_COMPRESS,
 	FD_DEBUG_MAX,
 };
 
