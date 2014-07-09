@@ -1307,7 +1307,9 @@ write_bw_log=str If given, write a bandwidth log of the jobs in this job
 		jobs in their lifetime. The included fio_generate_plots
 		script uses gnuplot to turn these text files into nice
 		graphs. See write_lat_log for behaviour of given
-		filename. For this option, the suffix is _bw.log.
+		filename. For this option, the suffix is _bw.x.log, where
+		x is the index of the job (1..N, where N is the number of
+		jobs).
 
 write_lat_log=str Same as write_bw_log, except that this option stores io
 		submission, completion, and total latencies instead. If no
@@ -1317,14 +1319,16 @@ write_lat_log=str Same as write_bw_log, except that this option stores io
 
 		write_lat_log=foo
 
-		The actual log names will be foo_slat.log, foo_clat.log,
-		and foo_lat.log. This helps fio_generate_plot fine the logs
-		automatically.
+		The actual log names will be foo_slat.x.log, foo_clat.x.log,
+		and foo_lat.x.log, where x is the index of the job (1..N,
+		where N is the number of jobs). This helps fio_generate_plot
+		fine the logs automatically.
 
 write_iops_log=str Same as write_bw_log, but writes IOPS. If no filename is
 		given with this option, the default filename of
-		"jobname_type.log" is used. Even if the filename is given,
-		fio will still append the type of log.
+		"jobname_type.x.log" is used,where x is the index of the job
+		(1..N, where N is the number of jobs). Even if the filename
+		is given, fio will still append the type of log.
 
 log_avg_msec=int By default, fio will log an entry in the iops, latency,
 		or bw log for every IO that completes. When writing to the

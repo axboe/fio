@@ -1191,17 +1191,21 @@ If given, write a bandwidth log of the jobs in this job file. Can be used to
 store data of the bandwidth of the jobs in their lifetime. The included
 fio_generate_plots script uses gnuplot to turn these text files into nice
 graphs. See \fBwrite_lat_log\fR for behaviour of given filename. For this
-option, the postfix is _bw.log.
+option, the postfix is _bw.x.log, where x is the index of the job (1..N,
+where N is the number of jobs)
 .TP
 .BI write_lat_log \fR=\fPstr
 Same as \fBwrite_bw_log\fR, but writes I/O completion latencies.  If no
-filename is given with this option, the default filename of "jobname_type.log"
-is used. Even if the filename is given, fio will still append the type of log.
+filename is given with this option, the default filename of
+"jobname_type.x.log" is used, where x is the index of the job (1..N, where
+N is the number of jobs). Even if the filename is given, fio will still
+append the type of log.
 .TP
 .BI write_iops_log \fR=\fPstr
 Same as \fBwrite_bw_log\fR, but writes IOPS. If no filename is given with this
-option, the default filename of "jobname_type.log" is used. Even if the
-filename is given, fio will still append the type of log.
+option, the default filename of "jobname_type.x.log" is used, where x is the
+index of the job (1..N, where N is the number of jobs). Even if the filename
+is given, fio will still append the type of log.
 .TP
 .BI log_avg_msec \fR=\fPint
 By default, fio will log an entry in the iops, latency, or bw log for every

@@ -1167,14 +1167,14 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		snprintf(logname, sizeof(logname), "%s_lat.%s",
-				o->lat_log_file, suf);
+		snprintf(logname, sizeof(logname), "%s_lat.%d.%s",
+				o->lat_log_file, td->thread_number, suf);
 		setup_log(&td->lat_log, &p, logname);
-		snprintf(logname, sizeof(logname), "%s_slat.%s",
-				o->lat_log_file, suf);
+		snprintf(logname, sizeof(logname), "%s_slat.%d.%s",
+				o->lat_log_file, td->thread_number, suf);
 		setup_log(&td->slat_log, &p, logname);
-		snprintf(logname, sizeof(logname), "%s_clat.%s",
-				o->lat_log_file, suf);
+		snprintf(logname, sizeof(logname), "%s_clat.%d.%s",
+				o->lat_log_file, td->thread_number, suf);
 		setup_log(&td->clat_log, &p, logname);
 	}
 	if (o->bw_log_file) {
@@ -1193,8 +1193,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		snprintf(logname, sizeof(logname), "%s_bw.%s",
-				o->bw_log_file, suf);
+		snprintf(logname, sizeof(logname), "%s_bw.%d.%s",
+				o->bw_log_file, td->thread_number, suf);
 		setup_log(&td->bw_log, &p, logname);
 	}
 	if (o->iops_log_file) {
@@ -1213,8 +1213,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		snprintf(logname, sizeof(logname), "%s_iops.%s",
-				o->iops_log_file, suf);
+		snprintf(logname, sizeof(logname), "%s_iops.%d.%s",
+				o->iops_log_file, td->thread_number, suf);
 		setup_log(&td->iops_log, &p, logname);
 	}
 
