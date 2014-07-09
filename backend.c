@@ -1603,6 +1603,13 @@ static int fork_main(int shmid, int offset)
 	return (int) (uintptr_t) ret;
 }
 
+static void dump_td_info(struct thread_data *td)
+{
+	log_err("fio: job '%s' hasn't exited in %lu seconds, it appears to "
+		"be stuck. Doing forceful exit of this job.\n", td->o.name,
+			(unsigned long) time_since_now(&td->terminate_time));
+}
+
 /*
  * Run over the job map and reap the threads that have exited, if any.
  */
@@ -1678,6 +1685,17 @@ static void reap_threads(unsigned int *nr_running, unsigned int *t_rate,
 				td_set_runstate(td, TD_REAPED);
 				goto reaped;
 			}
+		}
+
+		/*
+		 * If the job is stuck, do a forceful timeout of it and
+		 * move on.
+		 */
+		if (td->terminate &&
+		    time_since_now(&td->terminate_time) >= FIO_REAP_TIMEOUT) {
+			dump_td_info(td);
+			td_set_runstate(td, TD_REAPED);
+			goto reaped;
 		}
 
 		/*

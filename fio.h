@@ -254,6 +254,7 @@ struct thread_data {
 	struct timeval epoch;	/* time job was started */
 	struct timeval last_issue;
 	struct timeval tv_cache;
+	struct timeval terminate_time;
 	unsigned int tv_cache_nr;
 	unsigned int tv_cache_mask;
 	unsigned int ramp_time_over;
@@ -485,6 +486,12 @@ enum {
 extern void td_set_runstate(struct thread_data *, int);
 extern int td_bump_runstate(struct thread_data *, int);
 extern void td_restore_runstate(struct thread_data *, int);
+
+/*
+ * Allow 60 seconds for a job to quit on its own, otherwise reap with
+ * a vengeance.
+ */
+#define FIO_REAP_TIMEOUT	60
 
 #define TERMINATE_ALL		(-1)
 extern void fio_terminate_threads(int);

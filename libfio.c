@@ -199,8 +199,13 @@ void fio_terminate_threads(int group_id)
 		if (group_id == TERMINATE_ALL || groupid == td->groupid) {
 			dprint(FD_PROCESS, "setting terminate on %s/%d\n",
 						td->o.name, (int) td->pid);
+
+			if (td->terminate)
+				continue;
+
 			td->terminate = 1;
 			td->o.start_delay = 0;
+			fio_gettime(&td->terminate_time, NULL);
 
 			/*
 			 * if the thread is running, just let it exit
