@@ -847,7 +847,7 @@ int verify_io_u(struct thread_data *td, struct io_u *io_u)
 
 done:
 	if (ret && td->o.verify_fatal)
-		td->terminate = 1;
+		fio_mark_td_terminate(td);
 
 	return ret;
 }
@@ -1205,7 +1205,7 @@ static void *verify_async_thread(void *data)
 	if (ret) {
 		td_verror(td, ret, "async_verify");
 		if (td->o.verify_fatal)
-			td->terminate = 1;
+			fio_mark_td_terminate(td);
 	}
 
 done:

@@ -391,7 +391,7 @@ static int break_on_this_error(struct thread_data *td, enum fio_ddir ddir,
 			 * fill_device option is set.
 			 */
 			td_clear_error(td);
-			td->terminate = 1;
+			fio_mark_td_terminate(td);
 			return 1;
 		} else {
 			/*
@@ -460,7 +460,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 		if (runtime_exceeded(td, &td->tv_cache)) {
 			__update_tv_cache(td);
 			if (runtime_exceeded(td, &td->tv_cache)) {
-				td->terminate = 1;
+				fio_mark_td_terminate(td);
 				break;
 			}
 		}
@@ -714,7 +714,7 @@ static uint64_t do_io(struct thread_data *td)
 		if (runtime_exceeded(td, &td->tv_cache)) {
 			__update_tv_cache(td);
 			if (runtime_exceeded(td, &td->tv_cache)) {
-				td->terminate = 1;
+				fio_mark_td_terminate(td);
 				break;
 			}
 		}
@@ -922,7 +922,7 @@ reap:
 
 	if (td->o.fill_device && td->error == ENOSPC) {
 		td->error = 0;
-		td->terminate = 1;
+		fio_mark_td_terminate(td);
 	}
 	if (!td->error) {
 		struct fio_file *f;

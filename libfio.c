@@ -187,6 +187,13 @@ void td_restore_runstate(struct thread_data *td, int old_state)
 	td_set_runstate(td, old_state);
 }
 
+void fio_mark_td_terminate(struct thread_data *td)
+{
+	fio_gettime(&td->terminate_time, NULL);
+	write_barrier();
+	td->terminate = 1;
+}
+
 void fio_terminate_threads(int group_id)
 {
 	struct thread_data *td;
@@ -203,9 +210,8 @@ void fio_terminate_threads(int group_id)
 			if (td->terminate)
 				continue;
 
-			td->terminate = 1;
+			fio_mark_td_terminate(td);
 			td->o.start_delay = 0;
-			fio_gettime(&td->terminate_time, NULL);
 
 			/*
 			 * if the thread is running, just let it exit

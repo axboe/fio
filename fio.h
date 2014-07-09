@@ -495,6 +495,7 @@ extern void td_restore_runstate(struct thread_data *, int);
 
 #define TERMINATE_ALL		(-1)
 extern void fio_terminate_threads(int);
+extern void fio_mark_td_terminate(struct thread_data *);
 
 /*
  * Memory helpers
