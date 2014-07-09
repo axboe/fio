@@ -609,6 +609,7 @@ open_again:
 		}
 
 		td_verror(td, __e, buf);
+		return 1;
 	}
 
 	if (!from_hash && f->fd != -1) {
@@ -661,6 +662,7 @@ static int get_file_sizes(struct thread_data *td)
 			if (td->error != ENOENT) {
 				log_err("%s\n", td->verror);
 				err = 1;
+				break;
 			}
 			clear_error(td);
 		}
