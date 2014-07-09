@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "../smalloc.h"
 #include "../log.h"
@@ -21,9 +22,19 @@ static void tp_flush_work(struct flist_head *list)
 	struct tp_work *work;
 
 	while (!flist_empty(list)) {
+		int prio;
+
 		work = flist_entry(list->next, struct tp_work, list);
 		flist_del(&work->list);
+
+		prio = work->prio;
+		if (nice(prio) < 0)
+			log_err("fio: nice %s\n", strerror(errno));
+
 		work->fn(work);
+
+		if (nice(prio) < 0)
+			log_err("fio: nice %s\n", strerror(errno));
 	}
 }
 

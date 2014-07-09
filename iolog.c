@@ -1087,6 +1087,7 @@ int iolog_flush(struct io_log *log, int wait)
 	} else
 		data->work.wait = 0;
 
+	data->work.prio = 1;
 	tp_queue_work(tdat, &data->work);
 
 	if (wait) {

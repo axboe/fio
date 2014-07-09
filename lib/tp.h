@@ -10,6 +10,7 @@ struct tp_work {
 	struct flist_head list;
 	tp_work_fn *fn;
 	int wait;
+	int prio;
 	pthread_cond_t cv;
 	pthread_mutex_t lock;
 	volatile int done;
