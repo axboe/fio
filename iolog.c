@@ -73,12 +73,6 @@ static void iolog_delay(struct thread_data *td, unsigned long delay)
 
 	delay -= usec;
 
-	/*
-	 * less than 100 usec delay, just regard it as noise
-	 */
-	if (delay < 100)
-		return;
-
 	while (delay && !td->terminate) {
 		this_delay = delay;
 		if (this_delay > 500000)
