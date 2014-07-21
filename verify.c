@@ -405,13 +405,13 @@ static int verify_io_u_meta(struct verify_header *hdr, struct vcont *vc)
 
 	/*
 	 * For read-only workloads, the program cannot be certain of the
-	 * last numberio written to a block. Checking of numberio will be done
-	 * only for workloads that write data.
-	 * For verify_only, numberio will be checked in the last iteration when
-	 * the correct state of numberio, that would have been written to each
-	 * block in a previous run of fio, has been reached.
+	 * last numberio written to a block. Checking of numberio will be
+	 * done only for workloads that write data.  For verify_only,
+	 * numberio will be checked in the last iteration when the correct
+	 * state of numberio, that would have been written to each block
+	 * in a previous run of fio, has been reached.
 	 */
-	if (td_write(td) || td_rw(td))
+	if ((td_write(td) || td_rw(td)) && (td_min_bs(td) == td_max_bs(td)))
 		if (!td->o.verify_only || td->o.loops == 0)
 			if (vh->numberio != io_u->numberio)
 				ret = EILSEQ;
