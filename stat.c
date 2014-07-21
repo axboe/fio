@@ -1411,12 +1411,14 @@ void show_run_stats(void)
 	fio_mutex_up(stat_mutex);
 }
 
-static void *__show_running_run_stats(void fio_unused *arg)
+static void *__show_running_run_stats(void *arg)
 {
 	struct thread_data *td;
 	unsigned long long *rt;
 	struct timeval tv;
 	int i;
+
+	fio_mutex_down(stat_mutex);
 
 	rt = malloc(thread_number * sizeof(unsigned long long));
 	fio_gettime(&tv, NULL);
@@ -1458,6 +1460,7 @@ static void *__show_running_run_stats(void fio_unused *arg)
 
 	free(rt);
 	fio_mutex_up(stat_mutex);
+	free(arg);
 	return NULL;
 }
 
@@ -1468,21 +1471,23 @@ static void *__show_running_run_stats(void fio_unused *arg)
  */
 void show_running_run_stats(void)
 {
-	pthread_t thread;
+	pthread_t *thread;
 
-	fio_mutex_down(stat_mutex);
+	thread = calloc(1, sizeof(*thread));
+	if (!thread)
+		return;
 
-	if (!pthread_create(&thread, NULL, __show_running_run_stats, NULL)) {
+	if (!pthread_create(thread, NULL, __show_running_run_stats, thread)) {
 		int err;
 
-		err = pthread_detach(thread);
+		err = pthread_detach(*thread);
 		if (err)
 			log_err("fio: DU thread detach failed: %s\n", strerror(err));
 
 		return;
 	}
 
-	fio_mutex_up(stat_mutex);
+	free(thread);
 }
 
 static int status_interval_init;
