@@ -759,6 +759,13 @@ int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 
 	if (td->o.verify == VERIFY_NULL || io_u->ddir != DDIR_READ)
 		return 0;
+	/*
+	 * If the IO engine is faking IO (like null), then just pretend
+	 * we verified everything.
+	 */
+	if (td->io_ops->flags & FIO_FAKEIO)
+		return 0;
+
 	if (io_u->flags & IO_U_F_TRIMMED) {
 		ret = verify_trimmed_io_u(td, io_u);
 		goto done;
