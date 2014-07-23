@@ -635,6 +635,15 @@ static int fixup_options(struct thread_data *td)
 		if (o->max_bs[DDIR_WRITE] != o->min_bs[DDIR_WRITE] &&
 		    !o->verify_interval)
 			o->verify_interval = o->min_bs[DDIR_WRITE];
+
+		/*
+		 * Verify interval must be smaller or equal to the
+		 * write size.
+		 */
+		if (o->verify_interval > o->min_bs[DDIR_WRITE])
+			o->verify_interval = o->min_bs[DDIR_WRITE];
+		else if (td_read(td) && o->verify_interval > o->min_bs[DDIR_READ])
+			o->verify_interval = o->min_bs[DDIR_READ];
 	}
 
 	if (o->pre_read) {
