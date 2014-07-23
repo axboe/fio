@@ -656,19 +656,21 @@ static int verify_io_u_md5(struct verify_header *hdr, struct vcont *vc)
 /*
  * Push IO verification to a separate thread
  */
-int verify_io_u_async(struct thread_data *td, struct io_u *io_u)
+int verify_io_u_async(struct thread_data *td, struct io_u **io_u_ptr)
 {
-	if (io_u->file)
-		put_file_log(td, io_u->file);
+	struct io_u *io_u = *io_u_ptr;
 
 	pthread_mutex_lock(&td->io_u_lock);
+
+	if (io_u->file)
+		put_file_log(td, io_u->file);
 
 	if (io_u->flags & IO_U_F_IN_CUR_DEPTH) {
 		td->cur_depth--;
 		io_u->flags &= ~IO_U_F_IN_CUR_DEPTH;
 	}
 	flist_add_tail(&io_u->verify_list, &td->verify_list);
-	io_u->flags |= IO_U_F_FREE_DEF;
+	*io_u_ptr = NULL;
 	pthread_mutex_unlock(&td->io_u_lock);
 
 	pthread_cond_signal(&td->verify_cond);
@@ -747,9 +749,10 @@ err:
 	return EILSEQ;
 }
 
-int verify_io_u(struct thread_data *td, struct io_u *io_u)
+int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 {
 	struct verify_header *hdr;
+	struct io_u *io_u = *io_u_ptr;
 	unsigned int header_size, hdr_inc, hdr_num = 0;
 	void *p;
 	int ret;
@@ -1188,9 +1191,11 @@ static void *verify_async_thread(void *data)
 
 		while (!flist_empty(&list)) {
 			io_u = flist_first_entry(&list, struct io_u, verify_list);
-			flist_del(&io_u->verify_list);
+			flist_del_init(&io_u->verify_list);
 
-			ret = verify_io_u(td, io_u);
+			io_u->flags |= IO_U_F_NO_FILE_PUT;
+			ret = verify_io_u(td, &io_u);
+
 			put_io_u(td, io_u);
 			if (!ret)
 				continue;

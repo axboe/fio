@@ -12,8 +12,13 @@ struct io_u_queue {
 
 static inline struct io_u *io_u_qpop(struct io_u_queue *q)
 {
-	if (q->nr)
-		return q->io_us[--q->nr];
+	if (q->nr) {
+		const unsigned int next = --q->nr;
+		struct io_u *io_u = q->io_us[next];
+
+		q->io_us[next] = NULL;
+		return io_u;
+	}
 
 	return NULL;
 }

@@ -20,7 +20,7 @@
 enum {
 	IO_U_F_FREE		= 1 << 0,
 	IO_U_F_FLIGHT		= 1 << 1,
-	IO_U_F_FREE_DEF		= 1 << 2,
+	IO_U_F_NO_FILE_PUT	= 1 << 2,
 	IO_U_F_IN_CUR_DEPTH	= 1 << 3,
 	IO_U_F_BUSY_OK		= 1 << 4,
 	IO_U_F_TRIMMED		= 1 << 5,
@@ -90,7 +90,7 @@ struct io_u {
 	/*
 	 * Callback for io completion
 	 */
-	int (*end_io)(struct thread_data *, struct io_u *);
+	int (*end_io)(struct thread_data *, struct io_u **);
 
 	union {
 #ifdef CONFIG_LIBAIO

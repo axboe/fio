@@ -688,10 +688,10 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	td_io_u_lock(td);
 
-	if (io_u->file && !(io_u->flags & IO_U_F_FREE_DEF))
+	if (io_u->file && !(io_u->flags & IO_U_F_NO_FILE_PUT))
 		put_file_log(td, io_u->file);
+
 	io_u->file = NULL;
-	io_u->flags &= ~IO_U_F_FREE_DEF;
 	io_u->flags |= IO_U_F_FREE;
 
 	if (io_u->flags & IO_U_F_IN_CUR_DEPTH)
@@ -1313,9 +1313,9 @@ again:
 
 	if (io_u) {
 		assert(io_u->flags & IO_U_F_FREE);
-		io_u->flags &= ~(IO_U_F_FREE | IO_U_F_FREE_DEF);
-		io_u->flags &= ~(IO_U_F_TRIMMED | IO_U_F_BARRIER);
-		io_u->flags &= ~IO_U_F_VER_LIST;
+		io_u->flags &= ~(IO_U_F_FREE | IO_U_F_NO_FILE_PUT |
+				 IO_U_F_TRIMMED | IO_U_F_BARRIER |
+				 IO_U_F_VER_LIST);
 
 		io_u->error = 0;
 		io_u->acct_ddir = -1;
@@ -1607,10 +1607,12 @@ static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 	return remainder * 1000000 / bps + secs * 1000000;
 }
 
-static void io_completed(struct thread_data *td, struct io_u *io_u,
+static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 			 struct io_completion_data *icd)
 {
-	struct fio_file *f;
+	struct io_u *io_u = *io_u_ptr;
+	enum fio_ddir ddir = io_u->ddir;
+	struct fio_file *f = io_u->file;
 
 	dprint_io_u(io_u, "io complete");
 
@@ -1635,9 +1637,8 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 
 	td_io_u_unlock(td);
 
-	if (ddir_sync(io_u->ddir)) {
+	if (ddir_sync(ddir)) {
 		td->last_was_sync = 1;
-		f = io_u->file;
 		if (f) {
 			f->first_write = -1ULL;
 			f->last_write = -1ULL;
@@ -1646,52 +1647,51 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 	}
 
 	td->last_was_sync = 0;
-	td->last_ddir = io_u->ddir;
+	td->last_ddir = ddir;
 
-	if (!io_u->error && ddir_rw(io_u->ddir)) {
+	if (!io_u->error && ddir_rw(ddir)) {
 		unsigned int bytes = io_u->buflen - io_u->resid;
-		const enum fio_ddir idx = io_u->ddir;
-		const enum fio_ddir odx = io_u->ddir ^ 1;
+		const enum fio_ddir oddir = ddir ^ 1;
 		int ret;
 
-		td->io_blocks[idx]++;
-		td->this_io_blocks[idx]++;
-		td->io_bytes[idx] += bytes;
+		td->io_blocks[ddir]++;
+		td->this_io_blocks[ddir]++;
+		td->io_bytes[ddir] += bytes;
 
 		if (!(io_u->flags & IO_U_F_VER_LIST))
-			td->this_io_bytes[idx] += bytes;
+			td->this_io_bytes[ddir] += bytes;
 
-		if (idx == DDIR_WRITE) {
-			f = io_u->file;
-			if (f) {
-				if (f->first_write == -1ULL ||
-				    io_u->offset < f->first_write)
-					f->first_write = io_u->offset;
-				if (f->last_write == -1ULL ||
-				    ((io_u->offset + bytes) > f->last_write))
-					f->last_write = io_u->offset + bytes;
-			}
+		if (ddir == DDIR_WRITE && f) {
+			if (f->first_write == -1ULL ||
+			    io_u->offset < f->first_write)
+				f->first_write = io_u->offset;
+			if (f->last_write == -1ULL ||
+			    ((io_u->offset + bytes) > f->last_write))
+				f->last_write = io_u->offset + bytes;
 		}
 
 		if (ramp_time_over(td) && (td->runstate == TD_RUNNING ||
 					   td->runstate == TD_VERIFYING)) {
-			account_io_completion(td, io_u, icd, idx, bytes);
+			account_io_completion(td, io_u, icd, ddir, bytes);
 
-			if (__should_check_rate(td, idx)) {
-				td->rate_pending_usleep[idx] =
-					(usec_for_io(td, idx) -
+			if (__should_check_rate(td, ddir)) {
+				td->rate_pending_usleep[ddir] =
+					(usec_for_io(td, ddir) -
 					 utime_since_now(&td->start));
 			}
-			if (idx != DDIR_TRIM && __should_check_rate(td, odx))
-				td->rate_pending_usleep[odx] =
-					(usec_for_io(td, odx) -
+			if (ddir != DDIR_TRIM &&
+			    __should_check_rate(td, oddir)) {
+				td->rate_pending_usleep[oddir] =
+					(usec_for_io(td, oddir) -
 					 utime_since_now(&td->start));
+			}
 		}
 
-		icd->bytes_done[idx] += bytes;
+		icd->bytes_done[ddir] += bytes;
 
 		if (io_u->end_io) {
-			ret = io_u->end_io(td, io_u);
+			ret = io_u->end_io(td, io_u_ptr);
+			io_u = *io_u_ptr;
 			if (ret && !icd->error)
 				icd->error = ret;
 		}
@@ -1700,9 +1700,11 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		io_u_log_error(td, io_u);
 	}
 	if (icd->error) {
-		enum error_type_bit eb = td_error_type(io_u->ddir, icd->error);
+		enum error_type_bit eb = td_error_type(ddir, icd->error);
+
 		if (!td_non_fatal_error(td, eb, icd->error))
 			return;
+
 		/*
 		 * If there is a non_fatal error, then add to the error count
 		 * and clear all the errors.
@@ -1710,7 +1712,8 @@ static void io_completed(struct thread_data *td, struct io_u *io_u,
 		update_error_count(td, icd->error);
 		td_clear_error(td);
 		icd->error = 0;
-		io_u->error = 0;
+		if (io_u)
+			io_u->error = 0;
 	}
 }
 
@@ -1738,9 +1741,9 @@ static void ios_completed(struct thread_data *td,
 	for (i = 0; i < icd->nr; i++) {
 		io_u = td->io_ops->event(td, i);
 
-		io_completed(td, io_u, icd);
+		io_completed(td, &io_u, icd);
 
-		if (!(io_u->flags & IO_U_F_FREE_DEF))
+		if (io_u)
 			put_io_u(td, io_u);
 	}
 }
@@ -1754,9 +1757,9 @@ int io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
 	struct io_completion_data icd;
 
 	init_icd(td, &icd, 1);
-	io_completed(td, io_u, &icd);
+	io_completed(td, &io_u, &icd);
 
-	if (!(io_u->flags & IO_U_F_FREE_DEF))
+	if (io_u)
 		put_io_u(td, io_u);
 
 	if (icd.error) {
