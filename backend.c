@@ -2068,7 +2068,7 @@ int fio_backend(void)
 	run_threads();
 
 	if (!fio_abort) {
-		show_run_stats();
+		__show_run_stats();
 		if (write_bw_log) {
 			int i;
 

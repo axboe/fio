@@ -1169,7 +1169,7 @@ void init_thread_stat(struct thread_stat *ts)
 	ts->groupid = -1;
 }
 
-static void __show_run_stats(void)
+void __show_run_stats(void)
 {
 	struct group_run_stats *runstats, *rs;
 	struct thread_data *td;
