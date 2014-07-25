@@ -26,7 +26,7 @@
 struct test_type {
 	const char *name;
 	unsigned int mask;
-	uint64_t (*fn)(void);
+	uint64_t (*fn)(void *, size_t);
 };
 
 enum {
@@ -50,213 +50,153 @@ static void randomize_buf(void *buf, unsigned int size, int seed)
 	fill_random_buf(&state, buf, size);
 }
 
-static uint64_t t_md5(void)
+static uint64_t t_md5(void *buf, size_t size)
 {
 	uint32_t digest[4];
 	struct fio_md5_ctx ctx = { .hash = digest };
 	struct timeval s;
-	uint64_t ret;
-	void *buf;
 	int i;
 
 	fio_md5_init(&ctx);
 
-	buf = malloc(CHUNK);
-	randomize_buf(buf, CHUNK, 0x8989);
+	fio_gettime(&s, NULL);
+	for (i = 0; i < NR_CHUNKS; i++)
+		fio_md5_update(&ctx, buf, size);
+
+	return utime_since_now(&s);
+}
+
+static uint64_t t_crc64(void *buf, size_t size)
+{
+	struct timeval s;
+	int i;
 
 	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
-		fio_md5_update(&ctx, buf, CHUNK);
+		fio_crc64(buf, size);
 
-	ret = utime_since_now(&s);
-	free(buf);
-	return ret;
+	return utime_since_now(&s);
 }
 
-static uint64_t t_crc64(void)
+static uint64_t t_crc32(void *buf, size_t size)
+{
+	struct timeval s;
+	int i;
+
+	fio_gettime(&s, NULL);
+	for (i = 0; i < NR_CHUNKS; i++)
+		fio_crc32(buf, size);
+
+	return utime_since_now(&s);
+}
+
+static uint64_t t_crc32c(void *buf, size_t size)
+{
+	struct timeval s;
+	int i;
+
+	fio_gettime(&s, NULL);
+	for (i = 0; i < NR_CHUNKS; i++)
+		fio_crc32c(buf, size);
+
+	return utime_since_now(&s);
+}
+
+static uint64_t t_crc16(void *buf, size_t size)
+{
+	struct timeval s;
+	int i;
+
+	fio_gettime(&s, NULL);
+	for (i = 0; i < NR_CHUNKS; i++)
+		fio_crc16(buf, size);
+
+	return utime_since_now(&s);
+}
+
+static uint64_t t_crc7(void *buf, size_t size)
 {
 	struct timeval s;
 	uint64_t ret;
-	void *buf;
 	int i;
-
-	buf = malloc(CHUNK);
-	randomize_buf(buf, CHUNK, 0x8989);
 
 	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
-		fio_crc64(buf, CHUNK);
+		fio_crc7(buf, size);
 
 	ret = utime_since_now(&s);
-	free(buf);
 	return ret;
 }
 
-static uint64_t t_crc32(void)
-{
-	struct timeval s;
-	uint64_t ret;
-	void *buf;
-	int i;
-
-	buf = malloc(CHUNK);
-	randomize_buf(buf, CHUNK, 0x8989);
-
-	fio_gettime(&s, NULL);
-	for (i = 0; i < NR_CHUNKS; i++)
-		fio_crc32(buf, CHUNK);
-
-	ret = utime_since_now(&s);
-	free(buf);
-	return ret;
-}
-
-static uint64_t t_crc32c(void)
-{
-	struct timeval s;
-	uint64_t ret;
-	void *buf;
-	int i;
-
-	buf = malloc(CHUNK);
-	randomize_buf(buf, CHUNK, 0x8989);
-
-	fio_gettime(&s, NULL);
-	for (i = 0; i < NR_CHUNKS; i++)
-		fio_crc32c(buf, CHUNK);
-
-	ret = utime_since_now(&s);
-	free(buf);
-	return ret;
-}
-
-static uint64_t t_crc16(void)
-{
-	struct timeval s;
-	uint64_t ret;
-	void *buf;
-	int i;
-
-	buf = malloc(CHUNK);
-	randomize_buf(buf, CHUNK, 0x8989);
-
-	fio_gettime(&s, NULL);
-	for (i = 0; i < NR_CHUNKS; i++)
-		fio_crc16(buf, CHUNK);
-
-	ret = utime_since_now(&s);
-	free(buf);
-	return ret;
-}
-
-static uint64_t t_crc7(void)
-{
-	struct timeval s;
-	uint64_t ret;
-	void *buf;
-	int i;
-
-	buf = malloc(CHUNK);
-	randomize_buf(buf, CHUNK, 0x8989);
-
-	fio_gettime(&s, NULL);
-	for (i = 0; i < NR_CHUNKS; i++)
-		fio_crc7(buf, CHUNK);
-
-	ret = utime_since_now(&s);
-	free(buf);
-	return ret;
-}
-
-static uint64_t t_sha1(void)
+static uint64_t t_sha1(void *buf, size_t size)
 {
 	uint32_t sha[5];
 	struct fio_sha1_ctx ctx = { .H = sha };
 	struct timeval s;
 	uint64_t ret;
-	void *buf;
 	int i;
 
 	fio_sha1_init(&ctx);
 
-	buf = malloc(CHUNK);
-	randomize_buf(buf, CHUNK, 0x8989);
-
 	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
-		fio_sha1_update(&ctx, buf, CHUNK);
+		fio_sha1_update(&ctx, buf, size);
 
 	ret = utime_since_now(&s);
-	free(buf);
 	return ret;
 }
 
-static uint64_t t_sha256(void)
+static uint64_t t_sha256(void *buf, size_t size)
 {
 	uint8_t sha[64];
 	struct fio_sha256_ctx ctx = { .buf = sha };
 	struct timeval s;
 	uint64_t ret;
-	void *buf;
 	int i;
 
 	fio_sha256_init(&ctx);
 
-	buf = malloc(CHUNK);
-	randomize_buf(buf, CHUNK, 0x8989);
-
 	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
-		fio_sha256_update(&ctx, buf, CHUNK);
+		fio_sha256_update(&ctx, buf, size);
 
 	ret = utime_since_now(&s);
-	free(buf);
 	return ret;
 }
 
-static uint64_t t_sha512(void)
+static uint64_t t_sha512(void *buf, size_t size)
 {
 	uint8_t sha[128];
 	struct fio_sha512_ctx ctx = { .buf = sha };
 	struct timeval s;
 	uint64_t ret;
-	void *buf;
 	int i;
 
 	fio_sha512_init(&ctx);
 
-	buf = malloc(CHUNK);
-	randomize_buf(buf, CHUNK, 0x8989);
-
 	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
-		fio_sha512_update(&ctx, buf, CHUNK);
+		fio_sha512_update(&ctx, buf, size);
 
 	ret = utime_since_now(&s);
-	free(buf);
 	return ret;
 }
 
-static uint64_t t_xxhash(void)
+static uint64_t t_xxhash(void *buf, size_t size)
 {
 	void *state;
 	struct timeval s;
 	uint64_t ret;
-	void *buf;
 	int i;
 
 	state = XXH32_init(0x8989);
 
-	buf = malloc(CHUNK);
-	randomize_buf(buf, CHUNK, 0x8989);
-
 	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
-		XXH32_update(state, buf, CHUNK);
+		XXH32_update(state, buf, size);
 
 	XXH32_digest(state);
 	ret = utime_since_now(&s);
-	free(buf);
 	return ret;
 }
 
@@ -345,14 +285,15 @@ static int list_types(void)
 	for (i = 0; t[i].name; i++)
 		printf("%s\n", t[i].name);
 
-	return 0;
+	return 1;
 }
 
 int fio_crctest(const char *type)
 {
 	unsigned int test_mask = 0;
 	uint64_t mb = CHUNK * NR_CHUNKS;
-	int i;
+	int i, first = 1;
+	void *buf;
 
 	crc32c_intel_probe();
 
@@ -363,6 +304,14 @@ int fio_crctest(const char *type)
 	else
 		test_mask = get_test_mask(type);
 
+	if (!test_mask) {
+		fprintf(stderr, "fio: unknown hash `%s`. Available:\n", type);
+		return list_types();
+	}
+
+	buf = malloc(CHUNK);
+	randomize_buf(buf, CHUNK, 0x8989);
+
 	for (i = 0; t[i].name; i++) {
 		double mb_sec;
 		uint64_t usec;
@@ -370,11 +319,16 @@ int fio_crctest(const char *type)
 		if (!(t[i].mask & test_mask))
 			continue;
 
-		usec = t[i].fn();
+		usec = t[i].fn(buf, CHUNK);
+		if (first)
+			usec = t[i].fn(buf, CHUNK);
+
 		mb_sec = (double) mb / (double) usec;
 		mb_sec /= (1.024 * 1.024);
 		printf("%s:\t%8.2f MB/sec\n", t[i].name, mb_sec);
+		first = 0;
 	}
 
+	free(buf);
 	return 0;
 }
