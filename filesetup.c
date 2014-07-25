@@ -758,7 +758,7 @@ uint64_t get_start_offset(struct thread_data *td, struct fio_file *f)
 		return f->real_file_size;
 
 	return td->o.start_offset +
-		(td->thread_number - 1) * td->o.offset_increment;
+		td->subjob_number * td->o.offset_increment;
 }
 
 /*

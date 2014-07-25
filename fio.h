@@ -102,6 +102,7 @@ struct thread_data {
 	char verror[FIO_VERROR_SIZE];
 	pthread_t thread;
 	unsigned int thread_number;
+	unsigned int subjob_number;
 	unsigned int groupid;
 	struct thread_stat ts;
 

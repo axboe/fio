@@ -380,6 +380,7 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 	profile_add_hooks(td);
 
 	td->thread_number = thread_number;
+	td->subjob_number = 0;
 
 	if (jobname)
 		td->o.name = strdup(jobname);
@@ -1288,6 +1289,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		td_new->o.numjobs = 1;
 		td_new->o.stonewall = 0;
 		td_new->o.new_group = 0;
+		td_new->subjob_number = numjobs;
 
 		if (file_alloced) {
 			if (td_new->files) {
