@@ -26,7 +26,7 @@
 struct test_type {
 	const char *name;
 	unsigned int mask;
-	uint64_t (*fn)(void *, size_t);
+	void (*fn)(void *, size_t);
 };
 
 enum {
@@ -42,162 +42,105 @@ enum {
 	T_XXHASH	= 1U << 9,
 };
 
-static void randomize_buf(void *buf, unsigned int size, int seed)
-{
-	struct frand_state state;
-
-	init_rand_seed(&state, seed);
-	fill_random_buf(&state, buf, size);
-}
-
-static uint64_t t_md5(void *buf, size_t size)
+static void t_md5(void *buf, size_t size)
 {
 	uint32_t digest[4];
 	struct fio_md5_ctx ctx = { .hash = digest };
-	struct timeval s;
 	int i;
 
 	fio_md5_init(&ctx);
 
-	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
 		fio_md5_update(&ctx, buf, size);
-
-	return utime_since_now(&s);
 }
 
-static uint64_t t_crc64(void *buf, size_t size)
+static void t_crc64(void *buf, size_t size)
 {
-	struct timeval s;
 	int i;
 
-	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
 		fio_crc64(buf, size);
-
-	return utime_since_now(&s);
 }
 
-static uint64_t t_crc32(void *buf, size_t size)
+static void t_crc32(void *buf, size_t size)
 {
-	struct timeval s;
 	int i;
 
-	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
 		fio_crc32(buf, size);
-
-	return utime_since_now(&s);
 }
 
-static uint64_t t_crc32c(void *buf, size_t size)
+static void t_crc32c(void *buf, size_t size)
 {
-	struct timeval s;
 	int i;
 
-	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
 		fio_crc32c(buf, size);
-
-	return utime_since_now(&s);
 }
 
-static uint64_t t_crc16(void *buf, size_t size)
+static void t_crc16(void *buf, size_t size)
 {
-	struct timeval s;
 	int i;
 
-	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
 		fio_crc16(buf, size);
-
-	return utime_since_now(&s);
 }
 
-static uint64_t t_crc7(void *buf, size_t size)
+static void t_crc7(void *buf, size_t size)
 {
-	struct timeval s;
-	uint64_t ret;
 	int i;
 
-	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
 		fio_crc7(buf, size);
-
-	ret = utime_since_now(&s);
-	return ret;
 }
 
-static uint64_t t_sha1(void *buf, size_t size)
+static void t_sha1(void *buf, size_t size)
 {
 	uint32_t sha[5];
 	struct fio_sha1_ctx ctx = { .H = sha };
-	struct timeval s;
-	uint64_t ret;
 	int i;
 
 	fio_sha1_init(&ctx);
 
-	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
 		fio_sha1_update(&ctx, buf, size);
-
-	ret = utime_since_now(&s);
-	return ret;
 }
 
-static uint64_t t_sha256(void *buf, size_t size)
+static void t_sha256(void *buf, size_t size)
 {
 	uint8_t sha[64];
 	struct fio_sha256_ctx ctx = { .buf = sha };
-	struct timeval s;
-	uint64_t ret;
 	int i;
 
 	fio_sha256_init(&ctx);
 
-	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
 		fio_sha256_update(&ctx, buf, size);
-
-	ret = utime_since_now(&s);
-	return ret;
 }
 
-static uint64_t t_sha512(void *buf, size_t size)
+static void t_sha512(void *buf, size_t size)
 {
 	uint8_t sha[128];
 	struct fio_sha512_ctx ctx = { .buf = sha };
-	struct timeval s;
-	uint64_t ret;
 	int i;
 
 	fio_sha512_init(&ctx);
 
-	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
 		fio_sha512_update(&ctx, buf, size);
-
-	ret = utime_since_now(&s);
-	return ret;
 }
 
-static uint64_t t_xxhash(void *buf, size_t size)
+static void t_xxhash(void *buf, size_t size)
 {
 	void *state;
-	struct timeval s;
-	uint64_t ret;
 	int i;
 
 	state = XXH32_init(0x8989);
 
-	fio_gettime(&s, NULL);
 	for (i = 0; i < NR_CHUNKS; i++)
 		XXH32_update(state, buf, size);
 
 	XXH32_digest(state);
-	ret = utime_since_now(&s);
-	return ret;
 }
 
 static struct test_type t[] = {
@@ -292,6 +235,7 @@ int fio_crctest(const char *type)
 {
 	unsigned int test_mask = 0;
 	uint64_t mb = CHUNK * NR_CHUNKS;
+	struct frand_state state;
 	int i, first = 1;
 	void *buf;
 
@@ -310,18 +254,29 @@ int fio_crctest(const char *type)
 	}
 
 	buf = malloc(CHUNK);
-	randomize_buf(buf, CHUNK, 0x8989);
+	init_rand_seed(&state, 0x8989);
+	fill_random_buf(&state, buf, CHUNK);
 
 	for (i = 0; t[i].name; i++) {
+		struct timeval tv;
 		double mb_sec;
 		uint64_t usec;
 
 		if (!(t[i].mask & test_mask))
 			continue;
 
-		usec = t[i].fn(buf, CHUNK);
-		if (first)
-			usec = t[i].fn(buf, CHUNK);
+		/*
+		 * For first run, make sure CPUs are spun up and that
+		 * we've touched the data.
+		 */
+		if (first) {
+			usec_spin(100000);
+			t[i].fn(buf, CHUNK);
+		}
+
+		fio_gettime(&tv, NULL);
+		t[i].fn(buf, CHUNK);
+		usec = utime_since_now(&tv);
 
 		mb_sec = (double) mb / (double) usec;
 		mb_sec /= (1.024 * 1.024);
