@@ -411,7 +411,8 @@ static int verify_io_u_meta(struct verify_header *hdr, struct vcont *vc)
 	 * state of numberio, that would have been written to each block
 	 * in a previous run of fio, has been reached.
 	 */
-	if ((td_write(td) || td_rw(td)) && (td_min_bs(td) == td_max_bs(td)))
+	if ((td_write(td) || td_rw(td)) && (td_min_bs(td) == td_max_bs(td)) &&
+	    !td->o.time_based)
 		if (!td->o.verify_only || td->o.loops == 0)
 			if (vh->numberio != io_u->numberio)
 				ret = EILSEQ;
