@@ -134,6 +134,7 @@ cpu=""
 show_help="no"
 exit_val=0
 gfio="no"
+libhdfs="no"
 
 # parse options
 for opt do
@@ -160,6 +161,8 @@ for opt do
   ;;
   --disable-gfapi) disable_gfapi="yes"
   ;;
+  --enable-libhdfs) libhdfs="yes"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -178,6 +181,7 @@ if test "$show_help" = "yes" ; then
   echo "--esx                  Configure build options for esx"
   echo "--enable-gfio          Enable building of gtk gfio"
   echo "--disable-numa         Disable libnuma even if found"
+  echo "--enable-libhdfs       Enable hdfs support"
   exit $exit_val
 fi
 
@@ -1243,6 +1247,29 @@ if compile_prog "" "" "s390_z196_facilities"; then
   fi
 fi
 echo "s390_z196_facilities          $s390_z196_facilities"
+
+##########################################
+# Check if we have required environment variables configured for libhdfs
+if test "$libhdfs" = "yes" ; then
+  hdfs_conf_error=0
+  if test "$JAVA_HOME" = "" ; then
+    echo "configure: JAVA_HOME should be defined to jdk/jvm path"
+    hdfs_conf_error=1
+  fi
+  if test "$FIO_LIBHDFS_INCLUDE" = "" ; then
+    echo "configure: FIO_LIBHDFS_INCLUDE should be defined to libhdfs inlude path"
+    hdfs_conf_error=1
+  fi
+  if test "$FIO_LIBHDFS_LIB" = "" ; then
+    echo "configure: FIO_LIBHDFS_LIB should be defined to libhdfs library path"
+    hdfs_conf_error=1
+  fi
+  if test "$hdfs_conf_error" = "1" ; then
+    exit 1
+  fi
+fi
+echo "HDFS engine                   $libhdfs"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -1383,6 +1410,9 @@ if test "$gfapi" = "yes" ; then
 fi
 if test "$gf_fadvise" = "yes" ; then
   output_sym "CONFIG_GF_FADVISE"
+fi
+if test "$libhdfs" = "yes" ; then
+  output_sym "CONFIG_LIBHDFS"
 fi
 
 if test "$zlib" = "no" ; then

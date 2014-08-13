@@ -694,6 +694,8 @@ ioengine=str	Defines how the job issues io to the file. The following
 				having to go through FUSE. This ioengine
 				defines engine specific options.
 
+			hdfs	Read and write through Hadoop (HDFS).
+
 			external Prefix to specify loading an external
 				IO engine object file. Append the engine
 				filename, eg ioengine=external:/tmp/foo.o

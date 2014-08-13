@@ -1541,7 +1541,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Glusterfs libgfapi(async) based engine"
 			  },
 #endif
-
+#ifdef CONFIG_LIBHDFS
+			  { .ival = "hdfs",
+			    .help = "Hadoop Distributed Filesystem (HDFS) engine"
+			  },
+#endif
 			  { .ival = "external",
 			    .help = "Load external engine (append name)",
 			  },
