@@ -672,7 +672,7 @@ static int str_numa_mpol_cb(void *data, char *input)
 		}
 		td->o.numa_memnodes = strdup(nodelist);
 		numa_free_nodemask(verify_bitmask);
-                
+
 		break;
 	case MPOL_LOCAL:
 	case MPOL_DEFAULT:
@@ -1542,7 +1542,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  },
 #endif
 #ifdef CONFIG_LIBHDFS
-			  { .ival = "hdfs",
+			  { .ival = "libhdfs",
 			    .help = "Hadoop Distributed Filesystem (HDFS) engine"
 			  },
 #endif
