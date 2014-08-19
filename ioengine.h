@@ -15,7 +15,7 @@
 #include <guasi.h>
 #endif
 
-#define FIO_IOOPS_VERSION	19
+#define FIO_IOOPS_VERSION	20
 
 enum {
 	IO_U_F_FREE		= 1 << 0,
