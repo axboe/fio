@@ -260,7 +260,7 @@ int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
 	dprint(FD_FILE, "fio %p created %s\n", g->fs, f->file_name);
 	f->fd = -1;
 	f->shadow_fd = -1;
-
+	td->o.open_files ++;
 	return ret;
 }
 

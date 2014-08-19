@@ -1,0 +1,16 @@
+# Test opening a file from multiple jobs.
+# Originally authored by Castor Fu
+[global]
+ioengine=gfapi
+volume=vol
+brick=localhost
+create_on_open=1
+rw=write
+
+[reopen_file_test]
+nrfiles=4
+filesize=16k
+size=64k
+openfiles=2
+rw=write
+filename_format=reopen_test.$filenum
