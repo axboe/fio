@@ -186,6 +186,7 @@ static struct ioengine_ops ioengine = {
 	.queue = fio_gf_async_queue,
 	.open_file = fio_gf_open_file,
 	.close_file = fio_gf_close_file,
+	.unlink_file = fio_gf_unlink_file,
 	.get_file_size = fio_gf_get_file_size,
 	.getevents = fio_gf_getevents,
 	.event = fio_gf_event,

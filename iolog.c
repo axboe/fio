@@ -107,7 +107,7 @@ static int ipo_special(struct thread_data *td, struct io_piece *ipo)
 		td_io_close_file(td, f);
 		break;
 	case FIO_LOG_UNLINK_FILE:
-		unlink(f->file_name);
+		td_io_unlink_file(td, f);
 		break;
 	default:
 		log_err("fio: bad file action %d\n", ipo->file_action);

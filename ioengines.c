@@ -506,6 +506,14 @@ int td_io_close_file(struct thread_data *td, struct fio_file *f)
 	return put_file(td, f);
 }
 
+int td_io_unlink_file(struct thread_data *td, struct fio_file *f)
+{
+	if (td->io_ops->unlink_file)
+		return td->io_ops->unlink_file(td, f);
+	else
+		return unlink(f->file_name);
+}
+
 int td_io_get_file_size(struct thread_data *td, struct fio_file *f)
 {
 	if (!td->io_ops->get_file_size)

@@ -223,10 +223,10 @@ int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
 					free(b);
 				glfs_lseek(g->fd, 0, SEEK_SET);
 
-				if (td->terminate) {
+				if (td->terminate && td->o.unlink) {
 					dprint(FD_FILE, "terminate unlink %s\n",
 					       f->file_name);
-					unlink(f->file_name);
+					glfs_unlink(g->fs, f->file_name);
 				} else if (td->o.create_fsync) {
 					if (glfs_fsync(g->fd) < 0) {
 						dprint(FD_FILE,
@@ -274,6 +274,24 @@ int fio_gf_close_file(struct thread_data *td, struct fio_file *f)
 	if (g) {
 		if (g->fd && glfs_close(g->fd) < 0)
 			ret = errno;
+		g->fd = NULL;
+	}
+
+	return ret;
+}
+
+int fio_gf_unlink_file(struct thread_data *td, struct fio_file *f)
+{
+	int ret = 0;
+	struct gf_data *g = td->io_ops->data;
+
+	dprint(FD_FILE, "fd unlink %s\n", f->file_name);
+
+	if (g) {
+		if (g->fd && glfs_close(g->fd) < 0)
+			ret = errno;
+
+		glfs_unlink(g->fs, f->file_name);
 
 		if (g->fs)
 			glfs_fini(g->fs);
@@ -282,7 +300,6 @@ int fio_gf_close_file(struct thread_data *td, struct fio_file *f)
 		free(g);
 	}
 	td->io_ops->data = NULL;
-	f->engine_data = 0;
 
 	return ret;
 }

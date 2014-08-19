@@ -76,6 +76,7 @@ static struct ioengine_ops ioengine = {
 	.queue = fio_gf_queue,
 	.open_file = fio_gf_open_file,
 	.close_file = fio_gf_close_file,
+	.unlink_file = fio_gf_unlink_file,
 	.get_file_size = fio_gf_get_file_size,
 	.options = gfapi_options,
 	.option_struct_size = sizeof(struct gf_options),
