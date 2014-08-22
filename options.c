@@ -930,6 +930,29 @@ static int pattern_cb(char *pattern, unsigned int max_size,
 	uint32_t pattern_length;
 	char *loc1, *loc2;
 
+	/*
+	 * Check if it's a string input
+	 */
+	loc1 = strchr(input, '\"');
+	if (loc1) {
+		do {
+			loc1++;
+			if (*loc1 == '\0' || *loc1 == '\"')
+				break;
+
+			pattern[i] = *loc1;
+			i++;
+		} while (i < max_size);
+
+		if (!i)
+			return 1;
+
+		goto fill;
+	}
+
+	/*
+	 * No string, find out if it's decimal or hexidecimal
+	 */
 	loc1 = strstr(input, "0x");
 	loc2 = strstr(input, "0X");
 	if (loc1 || loc2)
@@ -966,6 +989,7 @@ static int pattern_cb(char *pattern, unsigned int max_size,
 	 * Fill the pattern all the way to the end. This greatly reduces
 	 * the number of memcpy's we have to do when verifying the IO.
 	 */
+fill:
 	pattern_length = i;
 	while (i > 1 && i * 2 <= max_size) {
 		memcpy(&pattern[i], &pattern[0], i);
