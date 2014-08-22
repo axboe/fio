@@ -823,9 +823,11 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 }
 
 static void json_object_add_client_info(struct json_object *obj,
-struct fio_client *client)
+					struct fio_client *client)
 {
-	json_object_add_value_string(obj, "hostname", client->hostname);
+	const char *hostname = client->hostname ? client->hostname : "";
+
+	json_object_add_value_string(obj, "hostname", hostname);
 	json_object_add_value_int(obj, "port", client->port);
 }
 
