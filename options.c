@@ -985,8 +985,8 @@ static int pattern_cb(char *pattern, unsigned int max_size,
 
 	if (i == 1) {
 		/*
-		 * The code in verify_io_u_pattern assumes a single byte pattern
-		 * fills the whole verify pattern buffer.
+		 * The code in verify_io_u_pattern assumes a single byte
+		 * pattern fills the whole verify pattern buffer.
 		 */
 		memset(pattern, pattern[0], max_size);
 	}
@@ -1003,10 +1003,13 @@ static int str_buffer_pattern_cb(void *data, const char *input)
 	ret = pattern_cb(td->o.buffer_pattern, MAX_PATTERN_SIZE, input,
 				&td->o.buffer_pattern_bytes);
 
-	if (!ret) {
+	if (!ret && td->o.buffer_pattern_bytes) {
 		td->o.refill_buffers = 0;
 		td->o.scramble_buffers = 0;
 		td->o.zero_buffers = 0;
+	} else {
+		log_err("fio: failed parsing pattern `%s`\n", input);
+		ret = 1;
 	}
 
 	return ret;
