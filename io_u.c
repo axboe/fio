@@ -1792,6 +1792,8 @@ int io_u_queued_complete(struct thread_data *td, int min_evts,
 
 	if (!min_evts)
 		tvp = &ts;
+	else if (min_evts > td->cur_depth)
+		min_evts = td->cur_depth;
 
 	ret = td_io_getevents(td, min_evts, td->o.iodepth_batch_complete, tvp);
 	if (ret < 0) {
