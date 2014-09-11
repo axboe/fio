@@ -1709,7 +1709,7 @@ int fio_start_server(char *pidfile)
 		int ret = write_pid(pid, pidfile);
 
 		free(pidfile);
-		exit(ret);
+		_exit(ret);
 	}
 
 	setsid();
