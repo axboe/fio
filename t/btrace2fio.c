@@ -73,15 +73,20 @@ struct inflight {
 static struct flist_head pid_hash[PID_HASH_SIZE];
 static FLIST_HEAD(pid_list);
 
-static FLIST_HEAD(inflight_list);
+#define INFLIGHT_HASH_BITS	8
+#define INFLIGHT_HASH_SIZE	(1U << INFLIGHT_HASH_BITS)
+static struct flist_head inflight_hash[INFLIGHT_HASH_SIZE];
 
 static uint64_t first_ttime = -1ULL;
 
 static struct inflight *inflight_find(uint64_t sector)
 {
+	struct flist_head *inflight_list;
 	struct flist_head *e;
 
-	flist_for_each(e, &inflight_list) {
+	inflight_list = &inflight_hash[hash_long(sector, INFLIGHT_HASH_BITS)];
+
+	flist_for_each(e, inflight_list) {
 		struct inflight *i = flist_entry(e, struct inflight, list);
 
 		if (i->end_sector == sector)
@@ -101,11 +106,12 @@ static void inflight_remove(struct inflight *i)
 	free(i);
 }
 
-static void inflight_merge(struct inflight *i, int rw, unsigned int size)
+static void __inflight_add(struct inflight *i)
 {
-	i->p->o.merges[rw]++;
-	if (size)
-		i->end_sector += (size >> 9);
+	struct flist_head *list;
+
+	list = &inflight_hash[hash_long(i->end_sector, INFLIGHT_HASH_BITS)];
+	flist_add_tail(&i->list, list);
 }
 
 static void inflight_add(struct btrace_pid *p, uint64_t sector, uint32_t len)
@@ -118,7 +124,17 @@ static void inflight_add(struct btrace_pid *p, uint64_t sector, uint32_t len)
 	o->inflight++;
 	o->depth = max((int) o->depth, o->inflight);
 	i->end_sector = sector + (len >> 9);
-	flist_add_tail(&i->list, &inflight_list);
+	__inflight_add(i);
+}
+
+static void inflight_merge(struct inflight *i, int rw, unsigned int size)
+{
+	i->p->o.merges[rw]++;
+	if (size) {
+		i->end_sector += (size >> 9);
+		flist_del(&i->list);
+		__inflight_add(i);
+	}
 }
 
 /*
@@ -185,7 +201,7 @@ static void handle_trace_notify(struct blk_io_trace *t)
 	case BLK_TN_MESSAGE:
 		break;
 	default:
-		fprintf(stderr, "unknown trace act %x\n", t->action);
+		log_err("unknown trace act %x\n", t->action);
 		break;
 	}
 }
@@ -434,7 +450,7 @@ static int load_blktrace(const char *filename, int need_swap)
 		else if (!ret)
 			break;
 		else if (ret < (int) sizeof(t)) {
-			fprintf(stderr, "fio: short fifo get\n");
+			log_err("fio: short fifo get\n");
 			break;
 		}
 
@@ -442,21 +458,19 @@ static int load_blktrace(const char *filename, int need_swap)
 			byteswap_trace(&t);
 
 		if ((t.magic & 0xffffff00) != BLK_IO_TRACE_MAGIC) {
-			fprintf(stderr, "fio: bad magic in blktrace data: %x\n",
-								t.magic);
+			log_err("fio: bad magic in blktrace data: %x\n", t.magic);
 			goto err;
 		}
 		if ((t.magic & 0xff) != BLK_IO_TRACE_VERSION) {
-			fprintf(stderr, "fio: bad blktrace version %d\n",
-								t.magic & 0xff);
+			log_err("fio: bad blktrace version %d\n", t.magic & 0xff);
 			goto err;
 		}
 		ret = discard_pdu(fifo, fd, &t);
 		if (ret < 0) {
-			fprintf(stderr, "blktrace lseek\n");
+			log_err("blktrace lseek\n");
 			goto err;
 		} else if (t.pdu_len != ret) {
-			fprintf(stderr, "fio: discarded %d of %d\n", ret, t.pdu_len);
+			log_err("fio: discarded %d of %d\n", ret, t.pdu_len);
 			goto err;
 		}
 
@@ -666,6 +680,25 @@ static int entry_cmp(void *priv, struct flist_head *a, struct flist_head *b)
 	return ddir_rw_sum(pb->o.ios) - ddir_rw_sum(pa->o.ios);
 }
 
+static void free_p(struct btrace_pid *p)
+{
+	struct btrace_out *o = &p->o;
+	int i;
+
+	for (i = 0; i < o->nr_files; i++) {
+		if (o->files[i].name && o->files[i].name != filename)
+			free(o->files[i].name);
+	}
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++)
+		free(o->bs[i]);
+
+	free(o->files);
+	flist_del(&p->pid_list);
+	flist_del(&p->hash_list);
+	free(p);
+}
+
 static int output_p(void)
 {
 	unsigned long ios[DDIR_RWDIR_CNT];
@@ -677,9 +710,7 @@ static int output_p(void)
 
 		p = flist_entry(e, struct btrace_pid, pid_list);
 		if (prune_entry(&p->o)) {
-			flist_del(&p->pid_list);
-			flist_del(&p->hash_list);
-			free(p);
+			free_p(p);
 			continue;
 		}
 		p->o.start_delay = (p->o.first_ttime / 1000ULL) - first_ttime;
@@ -704,19 +735,60 @@ static int output_p(void)
 
 static int usage(char *argv[])
 {
-	fprintf(stderr, "%s: <blktrace bin file>\n", argv[0]);
-	fprintf(stderr, "\t-t\tUsec threshold to ignore task\n");
-	fprintf(stderr, "\t-n\tNumber IOS threshold to ignore task\n");
-	fprintf(stderr, "\t-f\tFio job file output\n");
-	fprintf(stderr, "\t-d\tUse this file/device for replay\n");
+	log_err("%s: <blktrace bin file>\n", argv[0]);
+	log_err("\t-t\tUsec threshold to ignore task\n");
+	log_err("\t-n\tNumber IOS threshold to ignore task\n");
+	log_err("\t-f\tFio job file output\n");
+	log_err("\t-d\tUse this file/device for replay\n");
 	return 1;
+}
+
+static int trace_needs_swap(const char *trace_file, int *swap)
+{
+	struct blk_io_trace t;
+	int fd, ret;
+
+	*swap = -1;
+	
+	fd = open(trace_file, O_RDONLY);
+	if (fd < 0) {
+		perror("open");
+		return 1;
+	}
+
+	ret = read(fd, &t, sizeof(t));
+	if (ret < 0) {
+		perror("read");
+		return 1;
+	} else if (ret != sizeof(t)) {
+		log_err("fio: short read on trace file\n");
+		return 1;
+	}
+
+	close(fd);
+
+	if ((t.magic & 0xffffff00) == BLK_IO_TRACE_MAGIC)
+		*swap = 0;
+	else {
+		/*
+		 * Maybe it needs to be endian swapped...
+		 */
+		t.magic = fio_swap32(t.magic);
+		if ((t.magic & 0xffffff00) == BLK_IO_TRACE_MAGIC)
+			*swap = 1;
+	}
+
+	if (*swap == -1) {
+		log_err("fio: blktrace appears corrupt\n");
+		return 1;
+	}
+
+	return 0;
 }
 
 int main(int argc, char *argv[])
 {
-	int fd, ret, need_swap = -1;
-	struct blk_io_trace t;
-	int i, c;
+	int need_swap, i, c;
 
 	if (argc < 2)
 		return usage(argv);
@@ -744,41 +816,13 @@ int main(int argc, char *argv[])
 	if (argc == optind)
 		return usage(argv);
 
-	fd = open(argv[optind], O_RDONLY);
-	if (fd < 0) {
-		perror("open");
+	if (trace_needs_swap(argv[optind], &need_swap))
 		return 1;
-	}
-
-	ret = read(fd, &t, sizeof(t));
-	if (ret < 0) {
-		perror("read");
-		return 1;
-	} else if (ret != sizeof(t)) {
-		fprintf(stderr, "fio: short read on trace file\n");
-		return 1;
-	}
-
-	close(fd);
-
-	if ((t.magic & 0xffffff00) == BLK_IO_TRACE_MAGIC)
-		need_swap = 0;
-	else {
-		/*
-		 * Maybe it needs to be endian swapped...
-		 */
-		t.magic = fio_swap32(t.magic);
-		if ((t.magic & 0xffffff00) == BLK_IO_TRACE_MAGIC)
-			need_swap = 1;
-	}
-
-	if (need_swap == -1) {
-		fprintf(stderr, "fio: blktrace appears corrupt\n");
-		return 1;
-	}
 
 	for (i = 0; i < PID_HASH_SIZE; i++)
 		INIT_FLIST_HEAD(&pid_hash[i]);
+	for (i = 0; i < INFLIGHT_HASH_SIZE; i++)
+		INIT_FLIST_HEAD(&inflight_hash[i]);
 
 	load_blktrace(argv[optind], need_swap);
 	first_ttime /= 1000ULL;
