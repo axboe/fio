@@ -1532,15 +1532,12 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 	if (td_non_fatal_error(td, eb, io_u->error) && !td->o.error_dump)
 		return;
 
-	log_err("fio: io_u error");
-
-	if (io_u->file)
-		log_err(" on file %s", io_u->file->file_name);
-
-	log_err(": %s\n", strerror(io_u->error));
-
-	log_err("     %s offset=%llu, buflen=%lu\n", io_ddir_name(io_u->ddir),
-					io_u->offset, io_u->xfer_buflen);
+	log_err("fio: io_u error%s%s: %s: %s offset=%llu, buflen=%lu\n",
+		io_u->file ? " on file " : "",
+		io_u->file ? io_u->file->file_name : "",
+		strerror(io_u->error),
+		io_ddir_name(io_u->ddir),
+		io_u->offset, io_u->xfer_buflen);
 
 	if (!td->error)
 		td_verror(td, io_u->error, "io_u error");
