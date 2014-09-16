@@ -18,6 +18,7 @@
 static unsigned int rt_threshold = 1000000;
 static unsigned int ios_threshold = 10;
 static int output_ascii = 1;
+static char *filename;
 
 struct bs {
 	unsigned int bs;
@@ -230,6 +231,8 @@ static void btrace_add_file(struct btrace_out *o, uint32_t devno)
 	unsigned int i;
 	char dev[256];
 
+	if (filename)
+		return;
 	if (o->last_major == maj && o->last_minor == min)
 		return;
 
@@ -561,7 +564,7 @@ static int __output_p_fio(struct btrace_pid *p, unsigned long *ios)
 		printf("rwmixread=%u\n", (int) (perc + 0.99));
 	}
 
-	printf("percentage_sequential=");
+	printf("percentage_random=");
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		if (o->seq[i] && o->ios[i]) {
 			perc = ((float) o->seq[i] * 100.0) / (float) o->ios[i];
@@ -572,6 +575,7 @@ static int __output_p_fio(struct btrace_pid *p, unsigned long *ios)
 
 		if (i)
 			printf(",");
+		perc = 100.0 - perc;
 		printf("%u", (int) perc);
 	}
 	printf("\n");
@@ -624,6 +628,12 @@ static int __output_p(struct btrace_pid *p, unsigned long *ios)
 		if (o->nr_bs[i] <= 1)
 			continue;
 		qsort(o->bs[i], o->nr_bs[i], sizeof(struct bs), bs_cmp);
+	}
+
+	if (filename) {
+		o->files = malloc(sizeof(struct trace_file));
+		o->nr_files++;
+		o->files[0].name = filename;
 	}
 
 	if (output_ascii)
@@ -698,6 +708,7 @@ static int usage(char *argv[])
 	fprintf(stderr, "\t-t\tUsec threshold to ignore task\n");
 	fprintf(stderr, "\t-n\tNumber IOS threshold to ignore task\n");
 	fprintf(stderr, "\t-f\tFio job file output\n");
+	fprintf(stderr, "\t-d\tUse this file/device for replay\n");
 	return 1;
 }
 
@@ -710,7 +721,7 @@ int main(int argc, char *argv[])
 	if (argc < 2)
 		return usage(argv);
 
-	while ((c = getopt(argc, argv, "t:n:f")) != -1) {
+	while ((c = getopt(argc, argv, "t:n:fd:")) != -1) {
 		switch (c) {
 		case 't':
 			rt_threshold = atoi(optarg);
@@ -720,6 +731,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'f':
 			output_ascii = 0;
+			break;
+		case 'd':
+			filename = strdup(optarg);
 			break;
 		case '?':
 		default:
