@@ -532,6 +532,7 @@ static int __output_p_fio(struct btrace_pid *p, unsigned long *ios)
 {
 	struct btrace_out *o = &p->o;
 	unsigned long total;
+	unsigned long long time;
 	float perc;
 	int i, j;
 
@@ -584,6 +585,10 @@ static int __output_p_fio(struct btrace_pid *p, unsigned long *ios)
 	printf("\n");
 
 	printf("startdelay=%llus\n", o->start_delay / 1000000ULL);
+
+	time = o->last_ttime - o->first_ttime;
+	time = (time + 1000000000ULL - 1) / 1000000000ULL;
+	printf("runtime=%llus\n", time);
 
 	printf("bssplit=");
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
