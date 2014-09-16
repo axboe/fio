@@ -110,12 +110,13 @@ endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
-		engines/binject.c
+		engines/binject.c lib/linux-dev-lookup.c
   LIBS += -lpthread -ldl
   LDFLAGS += -rdynamic
 endif
 ifeq ($(CONFIG_TARGET_OS), Android)
-  SOURCE += diskutil.c fifo.c blktrace.c trim.c profiles/tiobench.c
+  SOURCE += diskutil.c fifo.c blktrace.c trim.c profiles/tiobench.c \
+		lib/linux-dev-lookup.c
   LIBS += -ldl
   LDFLAGS += -rdynamic
 endif
@@ -182,17 +183,25 @@ T_LFSR_TEST_OBJS = t/lfsr-test.o
 T_LFSR_TEST_OBJS += lib/lfsr.o
 T_LFSR_TEST_PROGS = t/lfsr-test
 
+ifeq ($(CONFIG_TARGET_OS), Linux)
+T_BTRACE_FIO_OBJS = t/btrace2fio.o
+T_BTRACE_FIO_OBJS += fifo.o lib/flist_sort.o t/log.o lib/linux-dev-lookup.o
+T_BTRACE_FIO_PROGS = t/btrace2fio
+endif
+
 T_OBJS = $(T_SMALLOC_OBJS)
 T_OBJS += $(T_IEEE_OBJS)
 T_OBJS += $(T_ZIPF_OBJS)
 T_OBJS += $(T_AXMAP_OBJS)
 T_OBJS += $(T_LFSR_TEST_OBJS)
+T_OBJS += $(T_BTRACE_FIO_OBJS)
 
 T_PROGS = $(T_SMALLOC_PROGS)
 T_PROGS += $(T_IEEE_PROGS)
 T_PROGS += $(T_ZIPF_PROGS)
 T_PROGS += $(T_AXMAP_PROGS)
 T_PROGS += $(T_LFSR_TEST_PROGS)
+T_PROGS += $(T_BTRACE_FIO_PROGS)
 
 ifneq ($(findstring $(MAKEFLAGS),s),s)
 ifndef V
@@ -288,6 +297,11 @@ t/axmap: $(T_AXMAP_OBJS)
 
 t/lfsr-test: $(T_LFSR_TEST_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_LFSR_TEST_OBJS) $(LIBS)
+
+ifeq ($(CONFIG_TARGET_OS), Linux)
+t/btrace2fio: $(T_BTRACE_FIO_OBJS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_BTRACE_FIO_OBJS) $(LIBS)
+endif
 
 clean: FORCE
 	-rm -f .depend $(FIO_OBJS) $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE *.d lib/*.d crc/*.d engines/*.d profiles/*.d t/*.d config-host.mak config-host.h

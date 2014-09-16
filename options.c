@@ -133,7 +133,7 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 			perc += bsp->perc;
 	}
 
-	if (perc > 100) {
+	if (perc > 100 && perc_missing > 1) {
 		log_err("fio: bssplit percentages add to more than 100%%\n");
 		free(bssplit);
 		return 1;
@@ -143,6 +143,8 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 	 * them.
 	 */
 	if (perc_missing) {
+		if (perc_missing == 1)
+			perc = 100;
 		for (i = 0; i < o->bssplit_nr[ddir]; i++) {
 			struct bssplit *bsp = &bssplit[i];
 

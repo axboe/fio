@@ -9,6 +9,7 @@
 #include "flist.h"
 #include "fio.h"
 #include "blktrace_api.h"
+#include "lib/linux-dev-lookup.h"
 
 #define TRACE_FIFO_SIZE	8192
 
@@ -108,67 +109,6 @@ int is_blktrace(const char *filename, int *need_swap)
 	return 0;
 }
 
-static int lookup_device(struct thread_data *td, char *path, unsigned int maj,
-			 unsigned int min)
-{
-	struct dirent *dir;
-	struct stat st;
-	int found = 0;
-	DIR *D;
-
-	D = opendir(path);
-	if (!D)
-		return 0;
-
-	while ((dir = readdir(D)) != NULL) {
-		char full_path[256];
-
-		if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, ".."))
-			continue;
-
-		sprintf(full_path, "%s%s%s", path, FIO_OS_PATH_SEPARATOR, dir->d_name);
-		if (lstat(full_path, &st) == -1) {
-			perror("lstat");
-			break;
-		}
-
-		if (S_ISDIR(st.st_mode)) {
-			found = lookup_device(td, full_path, maj, min);
-			if (found) {
-				strcpy(path, full_path);
-				break;
-			}
-		}
-
-		if (!S_ISBLK(st.st_mode))
-			continue;
-
-		/*
-		 * If replay_redirect is set then always return this device
-		 * upon lookup which overrides the device lookup based on
-		 * major minor in the actual blktrace
-		 */
-		if (td->o.replay_redirect) {
-			dprint(FD_BLKTRACE, "device lookup: %d/%d\n overridden"
-					" with: %s\n", maj, min,
-					td->o.replay_redirect);
-			strcpy(path, td->o.replay_redirect);
-			found = 1;
-			break;
-		}
-
-		if (maj == major(st.st_rdev) && min == minor(st.st_rdev)) {
-			dprint(FD_BLKTRACE, "device lookup: %d/%d\n", maj, min);
-			strcpy(path, full_path);
-			found = 1;
-			break;
-		}
-	}
-
-	closedir(D);
-	return found;
-}
-
 #define FMINORBITS	20
 #define FMINORMASK	((1U << FMINORBITS) - 1)
 #define FMAJOR(dev)	((unsigned int) ((dev) >> FMINORBITS))
@@ -212,8 +152,15 @@ static int trace_add_file(struct thread_data *td, __u32 device)
 		}
 
 	strcpy(dev, "/dev");
-	if (lookup_device(td, dev, maj, min)) {
+	if (blktrace_lookup_device(td->o.replay_redirect, dev, maj, min)) {
 		int fileno;
+
+		if (td->o.replay_redirect)
+			dprint(FD_BLKTRACE, "device lookup: %d/%d\n overridden"
+					" with: %s\n", maj, min,
+					td->o.replay_redirect);
+		else
+			dprint(FD_BLKTRACE, "device lookup: %d/%d\n", maj, min);
 
 		dprint(FD_BLKTRACE, "add devices %s\n", dev);
 		fileno = add_file_exclusive(td, dev);
