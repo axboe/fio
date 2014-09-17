@@ -10,8 +10,20 @@ enum fio_ddir {
 	DDIR_DATASYNC,
 	DDIR_SYNC_FILE_RANGE,
 	DDIR_WAIT,
+	DDIR_LAST,
 	DDIR_INVAL = -1,
 };
+
+static inline const char *io_ddir_name(enum fio_ddir ddir)
+{
+	const char *name[] = { "read", "write", "trim", "sync", "datasync",
+				"sync_file_range", "write", };
+
+	if (ddir < DDIR_LAST)
+		return name[ddir];
+
+	return "invalid";
+}
 
 enum td_ddir {
 	TD_DDIR_READ		= 1 << 0,

@@ -30,17 +30,12 @@ void queue_io_piece(struct thread_data *td, struct io_piece *ipo)
 
 void log_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	const char *act[] = { "read", "write", "sync", "datasync",
-				"sync_file_range", "wait", "trim" };
-
-	assert(io_u->ddir <= 6);
-
 	if (!td->o.write_iolog_file)
 		return;
 
 	fprintf(td->iolog_f, "%s %s %llu %lu\n", io_u->file->file_name,
-						act[io_u->ddir], io_u->offset,
-						io_u->buflen);
+						io_ddir_name(io_u->ddir),
+						io_u->offset, io_u->buflen);
 }
 
 void log_file(struct thread_data *td, struct fio_file *f,

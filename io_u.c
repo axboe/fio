@@ -1528,8 +1528,6 @@ err_put:
 void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 {
 	enum error_type_bit eb = td_error_type(io_u->ddir, io_u->error);
-	const char *msg[] = { "read", "write", "sync", "datasync",
-				"sync_file_range", "wait", "trim" };
 
 	if (td_non_fatal_error(td, eb, io_u->error) && !td->o.error_dump)
 		return;
@@ -1541,7 +1539,7 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 
 	log_err(": %s\n", strerror(io_u->error));
 
-	log_err("     %s offset=%llu, buflen=%lu\n", msg[io_u->ddir],
+	log_err("     %s offset=%llu, buflen=%lu\n", io_ddir_name(io_u->ddir),
 					io_u->offset, io_u->xfer_buflen);
 
 	if (!td->error)
