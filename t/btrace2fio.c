@@ -47,10 +47,6 @@ struct btrace_out {
 	uint64_t first_ttime;
 	uint64_t last_ttime;
 
-	struct trace_file *files;
-	int nr_files;
-	unsigned int last_major, last_minor;
-
 	uint64_t start_delay;
 };
 
@@ -58,6 +54,11 @@ struct btrace_pid {
 	struct flist_head hash_list;
 	struct flist_head pid_list;
 	pid_t pid;
+
+	struct trace_file *files;
+	int nr_files;
+	unsigned int last_major, last_minor;
+
 	struct btrace_out o;
 };
 
@@ -239,7 +240,7 @@ static void add_bs(struct btrace_out *o, unsigned int len, int rw)
 #define FMAJOR(dev)	((unsigned int) ((dev) >> FMINORBITS))
 #define FMINOR(dev)	((unsigned int) ((dev) & FMINORMASK))
 
-static void btrace_add_file(struct btrace_out *o, uint32_t devno)
+static void btrace_add_file(struct btrace_pid *p, uint32_t devno)
 {
 	unsigned int maj = FMAJOR(devno);
 	unsigned int min = FMINOR(devno);
@@ -249,17 +250,17 @@ static void btrace_add_file(struct btrace_out *o, uint32_t devno)
 
 	if (filename)
 		return;
-	if (o->last_major == maj && o->last_minor == min)
+	if (p->last_major == maj && p->last_minor == min)
 		return;
 
-	o->last_major = maj;
-	o->last_minor = min;
+	p->last_major = maj;
+	p->last_minor = min;
 
 	/*
 	 * check for this file in our list
 	 */
-	for (i = 0; i < o->nr_files; i++) {
-		f = &o->files[i];
+	for (i = 0; i < p->nr_files; i++) {
+		f = &p->files[i];
 
 		if (f->major == maj && f->minor == min)
 			return;
@@ -271,17 +272,19 @@ static void btrace_add_file(struct btrace_out *o, uint32_t devno)
 		return;
 	}
 
-	o->files = realloc(o->files, (o->nr_files + 1) * sizeof(*f));
-	f = &o->files[o->nr_files];
+	p->files = realloc(p->files, (p->nr_files + 1) * sizeof(*f));
+	f = &p->files[p->nr_files];
 	f->name = strdup(dev);
 	f->major = maj;
 	f->minor = min;
-	o->nr_files++;
+	p->nr_files++;
 }
 
-static void handle_trace_discard(struct blk_io_trace *t, struct btrace_out *o)
+static void handle_trace_discard(struct blk_io_trace *t, struct btrace_pid *p)
 {
-	btrace_add_file(o, t->device);
+	struct btrace_out *o = &p->o;
+
+	btrace_add_file(p, t->device);
 
 	if (o->first_ttime == -1ULL)
 		o->first_ttime = t->time;
@@ -290,11 +293,12 @@ static void handle_trace_discard(struct blk_io_trace *t, struct btrace_out *o)
 	add_bs(o, t->bytes, DDIR_TRIM);
 }
 
-static void handle_trace_fs(struct blk_io_trace *t, struct btrace_out *o)
+static void handle_trace_fs(struct blk_io_trace *t, struct btrace_pid *p)
 {
+	struct btrace_out *o = &p->o;
 	int rw;
 
-	btrace_add_file(o, t->device);
+	btrace_add_file(p, t->device);
 
 	first_ttime = min(first_ttime, (uint64_t) t->time);
 
@@ -312,14 +316,14 @@ static void handle_trace_fs(struct blk_io_trace *t, struct btrace_out *o)
 	o->last_end[rw] = t->sector + (t->bytes >> 9);
 }
 
-static void handle_queue_trace(struct blk_io_trace *t, struct btrace_out *o)
+static void handle_queue_trace(struct blk_io_trace *t, struct btrace_pid *p)
 {
 	if (t->action & BLK_TC_ACT(BLK_TC_NOTIFY))
 		handle_trace_notify(t);
 	else if (t->action & BLK_TC_ACT(BLK_TC_DISCARD))
-		handle_trace_discard(t, o);
+		handle_trace_discard(t, p);
 	else
-		handle_trace_fs(t, o);
+		handle_trace_fs(t, p);
 }
 
 static void handle_trace(struct blk_io_trace *t, struct btrace_pid *p)
@@ -328,7 +332,7 @@ static void handle_trace(struct blk_io_trace *t, struct btrace_pid *p)
 
 	if (act == __BLK_TA_QUEUE) {
 		inflight_add(p, t->sector, t->bytes);
-		handle_queue_trace(t, &p->o);
+		handle_queue_trace(t, p);
 	} else if (act == __BLK_TA_REQUEUE) {
 		p->o.inflight--;
 	} else if (act == __BLK_TA_BACKMERGE) {
@@ -538,8 +542,8 @@ static void __output_p_ascii(struct btrace_pid *p, unsigned long *ios)
 	printf("usec:\t%llu (delay=%llu)\n", (o->last_ttime - o->first_ttime) / 1000ULL, (unsigned long long) o->start_delay);
 
 	printf("files:\t");
-	for (i = 0; i < o->nr_files; i++)
-		printf("%s,", o->files[i].name);
+	for (i = 0; i < p->nr_files; i++)
+		printf("%s,", p->files[i].name);
 	printf("\n");
 
 	printf("\n");
@@ -595,10 +599,10 @@ static int __output_p_fio(struct btrace_pid *p, unsigned long *ios)
 	printf("\n");
 
 	printf("filename=");
-	for (i = 0; i < o->nr_files; i++) {
+	for (i = 0; i < p->nr_files; i++) {
 		if (i)
 			printf(":");
-		printf("%s", o->files[i].name);
+		printf("%s", p->files[i].name);
 	}
 	printf("\n");
 
@@ -645,9 +649,9 @@ static int __output_p(struct btrace_pid *p, unsigned long *ios)
 	}
 
 	if (filename) {
-		o->files = malloc(sizeof(struct trace_file));
-		o->nr_files++;
-		o->files[0].name = filename;
+		p->files = malloc(sizeof(struct trace_file));
+		p->nr_files++;
+		p->files[0].name = filename;
 	}
 
 	if (output_ascii)
@@ -685,15 +689,15 @@ static void free_p(struct btrace_pid *p)
 	struct btrace_out *o = &p->o;
 	int i;
 
-	for (i = 0; i < o->nr_files; i++) {
-		if (o->files[i].name && o->files[i].name != filename)
-			free(o->files[i].name);
+	for (i = 0; i < p->nr_files; i++) {
+		if (p->files[i].name && p->files[i].name != filename)
+			free(p->files[i].name);
 	}
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++)
 		free(o->bs[i]);
 
-	free(o->files);
+	free(p->files);
 	flist_del(&p->pid_list);
 	flist_del(&p->hash_list);
 	free(p);
