@@ -46,6 +46,7 @@ struct btrace_out {
 	unsigned int depth;
 	uint64_t first_ttime;
 	uint64_t last_ttime;
+	uint64_t kb;
 
 	uint64_t start_delay;
 };
@@ -365,8 +366,10 @@ static void handle_trace(struct blk_io_trace *t, struct btrace_pid *p)
 		struct inflight *i;
 
 		i = inflight_find(t->sector + (t->bytes >> 9));
-		if (i)
+		if (i) {
+			i->p->o.kb += (t->bytes >> 10);
 			inflight_remove(i);
+		}
 	}
 }
 
@@ -509,7 +512,7 @@ static void __output_p_ascii(struct btrace_pid *p, unsigned long *ios)
 {
 	const char *msg[] = { "reads", "writes", "trims" };
 	struct btrace_out *o = &p->o;
-	unsigned long total;
+	unsigned long total, usec;
 	int i, j;
 
 	printf("[pid:\t%u]\n", p->pid);
@@ -539,7 +542,9 @@ static void __output_p_ascii(struct btrace_pid *p, unsigned long *ios)
 	}
 
 	printf("depth:\t%u\n", o->depth);
-	printf("usec:\t%llu (delay=%llu)\n", (o->last_ttime - o->first_ttime) / 1000ULL, (unsigned long long) o->start_delay);
+	usec = (o->last_ttime - o->first_ttime) / 1000ULL;
+	printf("usec:\t%lu (delay=%llu)\n", usec, (unsigned long long) o->start_delay);
+	printf("rate:\t%.2fKB/sec\n", ((float) o->kb * 1000.0) / ((float) usec / 1000.0));
 
 	printf("files:\t");
 	for (i = 0; i < p->nr_files; i++)
