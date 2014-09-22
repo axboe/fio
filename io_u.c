@@ -1838,6 +1838,8 @@ static struct frand_state *get_buf_state(struct thread_data *td)
 
 	if (!td->o.dedupe_percentage)
 		return &td->buf_state;
+	else if (td->o.dedupe_percentage == 100)
+		return &td->buf_state_prev;
 
 	r = __rand(&td->dedupe_state);
 	v = 1 + (int) (100.0 * (r / (FRAND_MAX + 1.0)));
