@@ -89,6 +89,7 @@ enum {
 	FIO_RAND_SEQ_RAND_WRITE_OFF,
 	FIO_RAND_SEQ_RAND_TRIM_OFF,
 	FIO_RAND_START_DELAY,
+	FIO_DEDUPE_OFF,
 	FIO_RAND_NR_OFFS,
 };
 
@@ -177,6 +178,8 @@ struct thread_data {
 	};
 
 	struct frand_state buf_state;
+	struct frand_state buf_state_prev;
+	struct frand_state dedupe_state;
 
 	unsigned int verify_batch;
 	unsigned int trim_batch;

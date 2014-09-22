@@ -836,7 +836,9 @@ static void td_fill_rand_seeds_internal(struct thread_data *td)
 void td_fill_rand_seeds(struct thread_data *td)
 {
 	if (td->o.allrand_repeatable) {
-		for (int i = 0; i < FIO_RAND_NR_OFFS; i++)
+		unsigned int i;
+
+		for (i = 0; i < FIO_RAND_NR_OFFS; i++)
 			td->rand_seeds[i] = FIO_RANDSEED * td->thread_number
 			       	+ i;
 	}
@@ -847,6 +849,9 @@ void td_fill_rand_seeds(struct thread_data *td)
 		td_fill_rand_seeds_internal(td);
 
 	init_rand_seed(&td->buf_state, td->rand_seeds[FIO_RAND_BUF_OFF]);
+	frand_copy(&td->buf_state_prev, &td->buf_state);
+
+	init_rand_seed(&td->dedupe_state, td->rand_seeds[FIO_DEDUPE_OFF]);
 }
 
 /*

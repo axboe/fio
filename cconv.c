@@ -241,6 +241,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->latency_percentile.u.f = fio_uint64_to_double(le64_to_cpu(top->latency_percentile.u.i));
 	o->compress_percentage = le32_to_cpu(top->compress_percentage);
 	o->compress_chunk = le32_to_cpu(top->compress_chunk);
+	o->dedupe_percentage = le32_to_cpu(top->dedupe_percentage);
 
 	o->trim_backlog = le64_to_cpu(top->trim_backlog);
 
@@ -401,6 +402,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->latency_percentile.u.i = __cpu_to_le64(fio_double_to_uint64(o->latency_percentile.u.f));
 	top->compress_percentage = cpu_to_le32(o->compress_percentage);
 	top->compress_chunk = cpu_to_le32(o->compress_chunk);
+	top->dedupe_percentage = cpu_to_le32(o->dedupe_percentage);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		top->bs[i] = cpu_to_le32(o->bs[i]);

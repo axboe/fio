@@ -1828,6 +1828,32 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 	}
 }
 
+/*
+ * See if we should reuse the last seed, if dedupe is enabled
+ */
+static struct frand_state *get_buf_state(struct thread_data *td)
+{
+	unsigned int v;
+	unsigned long r;
+
+	if (!td->o.dedupe_percentage)
+		return &td->buf_state;
+
+	r = __rand(&td->dedupe_state);
+	v = 1 + (int) (100.0 * (r / (FRAND_MAX + 1.0)));
+
+	if (v <= td->o.dedupe_percentage)
+		return &td->buf_state_prev;
+
+	return &td->buf_state;
+}
+
+static void save_buf_state(struct thread_data *td, struct frand_state *rs)
+{
+	if (rs == &td->buf_state)
+		frand_copy(&td->buf_state_prev, rs);
+}
+
 void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 		    unsigned int max_bs)
 {
@@ -1835,6 +1861,9 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 		fill_buffer_pattern(td, buf, max_bs);
 	else if (!td->o.zero_buffers) {
 		unsigned int perc = td->o.compress_percentage;
+		struct frand_state *rs;
+
+		rs = get_buf_state(td);
 
 		if (perc) {
 			unsigned int seg = min_write;
@@ -1843,10 +1872,12 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 			if (!seg)
 				seg = min_write;
 
-			fill_random_buf_percentage(&td->buf_state, buf,
-						perc, seg, max_bs);
-		} else
-			fill_random_buf(&td->buf_state, buf, max_bs);
+			fill_random_buf_percentage(rs, buf, perc, seg,max_bs);
+			save_buf_state(td, rs);
+		} else {
+			fill_random_buf(rs, buf, max_bs);
+			save_buf_state(td, rs);
+		}
 	} else
 		memset(buf, 0, max_bs);
 }

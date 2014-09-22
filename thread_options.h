@@ -184,6 +184,7 @@ struct thread_options {
 	unsigned int buffer_pattern_bytes;
 	unsigned int compress_percentage;
 	unsigned int compress_chunk;
+	unsigned int dedupe_percentage;
 	unsigned int time_based;
 	unsigned int disable_lat;
 	unsigned int disable_clat;
@@ -403,8 +404,9 @@ struct thread_options_pack {
 	uint32_t scramble_buffers;
 	uint8_t buffer_pattern[MAX_PATTERN_SIZE];
 	uint32_t buffer_pattern_bytes;
-	unsigned int compress_percentage;
-	unsigned int compress_chunk;
+	uint32_t compress_percentage;
+	uint32_t compress_chunk;
+	uint32_t dedupe_percentage;
 	uint32_t time_based;
 	uint32_t disable_lat;
 	uint32_t disable_clat;

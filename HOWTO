@@ -565,12 +565,20 @@ buffer_compress_chunk=int	See buffer_compress_percentage. This
 		alternate random and zeroed data throughout the IO
 		buffer.
 
-buffer_pattern=str	If set, fio will fill the io buffers with this pattern.
-		If not set, the contents of io buffers is defined by the other
-		options related to buffer contents. The setting can be any
-		pattern of bytes, and can be prefixed with 0x for hex values.
-		It may also be a string, where the string must then be
-		wrapped with "".
+buffer_pattern=str	If set, fio will fill the io buffers with this
+		pattern. If not set, the contents of io buffers is defined by
+		the other options related to buffer contents. The setting can
+		be any pattern of bytes, and can be prefixed with 0x for hex
+		values. It may also be a string, where the string must then
+		be wrapped with "".
+
+dedupe_percentage=int	If set, fio will generate this percentage of
+		identical buffers when writing. These buffers will be
+		naturally dedupable. The contents of the buffers depend on
+		what other buffer compression settings have been set. It's
+		possible to have the individual buffers either fully
+		compressible, or not at all. This option only controls the
+		distribution of unique buffers.
 
 nrfiles=int	Number of files to use for this job. Defaults to 1.
 

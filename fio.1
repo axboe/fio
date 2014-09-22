@@ -481,6 +481,13 @@ setting can be any pattern of bytes, and can be prefixed with 0x for hex
 values. It may also be a string, where the string must then be wrapped with
 "".
 .TP
+.BI dedupe_percentage \fR=\fPint
+If set, fio will generate this percentage of identical buffers when writing.
+These buffers will be naturally dedupable. The contents of the buffers depend
+on what other buffer compression settings have been set. It's possible to have
+the individual buffers either fully compressible, or not at all. This option
+only controls the distribution of unique buffers.
+.TP
 .BI nrfiles \fR=\fPint
 Number of files to use for this job.  Default: 1.
 .TP

@@ -7,6 +7,14 @@ struct frand_state {
 	unsigned int s1, s2, s3;
 };
 
+static inline void frand_copy(struct frand_state *dst,
+			      struct frand_state *src)
+{
+	dst->s1 = src->s1;
+	dst->s2 = src->s2;
+	dst->s3 = src->s3;
+}
+
 static inline unsigned int __rand(struct frand_state *state)
 {
 #define TAUSWORTHE(s,a,b,c,d) ((s&c)<<d) ^ (((s <<a) ^ s)>>b)

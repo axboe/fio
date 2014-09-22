@@ -1050,6 +1050,16 @@ static int str_buffer_compress_cb(void *data, unsigned long long *il)
 	return 0;
 }
 
+static int str_dedupe_cb(void *data, unsigned long long *il)
+{
+	struct thread_data *td = data;
+
+	td->flags |= TD_F_COMPRESS;
+	td->o.dedupe_percentage = *il;
+	td->o.refill_buffers = 1;
+	return 0;
+}
+
 static int str_verify_pattern_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
@@ -3253,6 +3263,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.hide	= 1,
 		.help	= "Size of compressible region in buffer",
 		.interval = 256,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BUF,
+	},
+	{
+		.name	= "dedupe_percentage",
+		.lname	= "Dedupe percentage",
+		.type	= FIO_OPT_INT,
+		.cb	= str_dedupe_cb,
+		.maxval	= 100,
+		.minval	= 0,
+		.help	= "Percentage of buffers that are dedupable",
+		.interval = 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_IO_BUF,
 	},
