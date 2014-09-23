@@ -191,7 +191,7 @@ endif
 
 T_DEDUPE_OBJS = t/dedupe.o
 T_DEDUPE_OBJS += lib/rbtree.o t/log.o mutex.o smalloc.o gettime.o crc/md5.o \
-		memalign.o crc/crc32c.o crc/crc32c-intel.o crc/sha256.o
+		memalign.o
 T_DEDUPE_PROGS = t/dedupe
 
 T_OBJS = $(T_SMALLOC_OBJS)
@@ -200,6 +200,7 @@ T_OBJS += $(T_ZIPF_OBJS)
 T_OBJS += $(T_AXMAP_OBJS)
 T_OBJS += $(T_LFSR_TEST_OBJS)
 T_OBJS += $(T_BTRACE_FIO_OBJS)
+T_OBJS += $(T_DEDUPE_OBJS)
 
 T_PROGS = $(T_SMALLOC_PROGS)
 T_PROGS += $(T_IEEE_PROGS)
@@ -207,6 +208,9 @@ T_PROGS += $(T_ZIPF_PROGS)
 T_PROGS += $(T_AXMAP_PROGS)
 T_PROGS += $(T_LFSR_TEST_PROGS)
 T_PROGS += $(T_BTRACE_FIO_PROGS)
+T_PROGS += $(T_DEDUPE_PROGS)
+
+PROGS += $(T_PROGS)
 
 ifneq ($(findstring $(MAKEFLAGS),s),s)
 ifndef V
