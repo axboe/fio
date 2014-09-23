@@ -125,3 +125,23 @@ void fio_md5_update(struct fio_md5_ctx *mctx, const uint8_t *data,
 
 	memcpy(mctx->block, data, len);
 }
+
+void fio_md5_final(struct fio_md5_ctx *mctx)
+{
+	const unsigned int offset = mctx->byte_count & 0x3f;
+	char *p = (char *)mctx->block + offset;
+	int padding = 56 - (offset + 1);
+
+	*p++ = 0x80;
+	if (padding < 0) {
+		memset(p, 0x00, padding + sizeof (uint64_t));
+		md5_transform(mctx->hash, mctx->block);
+		p = (char *)mctx->block;
+		padding = 56;
+	}
+
+	memset(p, 0, padding);
+	mctx->block[14] = mctx->byte_count << 3;
+	mctx->block[15] = mctx->byte_count >> 29;
+	md5_transform(mctx->hash, mctx->block);
+}

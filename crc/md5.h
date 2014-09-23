@@ -23,6 +23,7 @@ struct fio_md5_ctx {
 };
 
 extern void fio_md5_update(struct fio_md5_ctx *, const uint8_t *, unsigned int);
+extern void fio_md5_final(struct fio_md5_ctx *);
 extern void fio_md5_init(struct fio_md5_ctx *);
 
 #endif

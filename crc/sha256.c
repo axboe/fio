@@ -237,37 +237,57 @@ void fio_sha256_init(struct fio_sha256_ctx *sctx)
 	sctx->state[5] = H5;
 	sctx->state[6] = H6;
 	sctx->state[7] = H7;
-	sctx->count[0] = sctx->count[1] = 0;
+	sctx->count = 0;
 }
 
 void fio_sha256_update(struct fio_sha256_ctx *sctx, const uint8_t *data,
 		       unsigned int len)
 {
-	unsigned int i, idx, part_len;
+	unsigned int partial, done;
+	const uint8_t *src;
 
-	/* Compute number of bytes mod 128 */
-	idx = (unsigned int)((sctx->count[0] >> 3) & 0x3f);
+	partial = sctx->count & 0x3f;
+	sctx->count += len;
+	done = 0;
+	src = data;
 
-	/* Update number of bits */
-	if ((sctx->count[0] += (len << 3)) < (len << 3)) {
-		sctx->count[1]++;
-		sctx->count[1] += (len >> 29);
+	if ((partial + len) > 63) {
+		if (partial) {
+			done = -partial;
+			memcpy(sctx->buf + partial, data, done + 64);
+			src = sctx->buf;
+		}
+
+		do {
+			sha256_transform(sctx->state, src);
+			done += 64;
+			src = data + done;
+		} while (done + 63 < len);
+
+		partial = 0;
 	}
+	memcpy(sctx->buf + partial, src, len - done);
+}
 
-	part_len = 64 - idx;
+void fio_sha256_final(struct fio_sha256_ctx *sctx)
+{
+	uint64_t bits;
+	unsigned int index, pad_len;
+	int i;
+	static const uint8_t padding[64] = { 0x80, };
 
-	/* Transform as many times as possible. */
-	if (len >= part_len) {
-		memcpy(&sctx->buf[idx], data, part_len);
-		sha256_transform(sctx->state, sctx->buf);
+	/* Save number of bits */
+	bits = sctx->count << 3;
 
-		for (i = part_len; i + 63 < len; i += 64)
-			sha256_transform(sctx->state, &data[i]);
-		idx = 0;
-	} else {
-		i = 0;
-	}
-	
-	/* Buffer remaining input */
-	memcpy(&sctx->buf[idx], &data[i], len-i);
+	/* Pad out to 56 mod 64. */
+	index = sctx->count & 0x3f;
+	pad_len = (index < 56) ? (56 - index) : ((64+56) - index);
+	fio_sha256_update(sctx, padding, pad_len);
+
+	/* Append length (before padding) */
+	fio_sha256_update(sctx, (const uint8_t *)&bits, sizeof(bits));
+
+	/* Store state in digest */
+	for (i = 0; i < 8; i++)
+		sctx->buf[i] = sctx->state[i];
 }
