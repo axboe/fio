@@ -36,6 +36,8 @@ void __dprint(int type, const char *str, ...)
 struct worker_thread {
 	pthread_t thread;
 
+	volatile int done;
+
 	int fd;
 	uint64_t cur_offset;
 	uint64_t size;
@@ -70,6 +72,7 @@ static unsigned int chunk_size = 1048576;
 static unsigned int dump_output;
 static unsigned int odirect;
 static unsigned int collision_check;
+static unsigned int print_progress = 1;
 
 static uint64_t total_size;
 static uint64_t cur_offset;
@@ -272,6 +275,7 @@ static void *thread_fn(void *data)
 		}
 	} while (1);
 
+	thread->done = 1;
 	fio_memfree(buf, blocksize);
 	return NULL;
 }
@@ -279,10 +283,11 @@ static void *thread_fn(void *data)
 static int __dedupe_check(int fd, uint64_t dev_size)
 {
 	struct worker_thread *threads;
-	unsigned long nitems;
+	unsigned long nitems, total_items;
 	int i, err = 0;
 
 	total_size = dev_size;
+	total_items = dev_size / blocksize;
 	cur_offset = 0;
 	size_lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 
@@ -291,6 +296,7 @@ static int __dedupe_check(int fd, uint64_t dev_size)
 		threads[i].fd = fd;
 		threads[i].items = 0;
 		threads[i].err = 0;
+		threads[i].done = 0;
 
 		err = pthread_create(&threads[i].thread, NULL, thread_fn, &threads[i]);
 		if (err) {
@@ -298,6 +304,28 @@ static int __dedupe_check(int fd, uint64_t dev_size)
 			break;
 		}
 	}
+
+	while (print_progress) {
+		float perc;
+		int some_done;
+
+		nitems = 0;
+		for (i = 0; i < num_threads; i++) {
+			nitems += threads[i].items;
+			some_done = threads[i].done;
+			if (some_done)
+				break;
+		}
+
+		if (some_done)
+			break;
+
+		perc = (float) nitems / (float) total_items;
+		perc *= 100.0;
+		printf("%3.2f%% done\r", perc);
+		fflush(stdout);
+		usleep(200000);
+	};
 
 	nitems = 0;
 	for (i = 0; i < num_threads; i++) {
@@ -399,6 +427,7 @@ static int usage(char *argv[])
 	log_err("\t-d\tFull extent/chunk debug output\n");
 	log_err("\t-o\tUse O_DIRECT\n");
 	log_err("\t-c\tFull collision check\n");
+	log_err("\t-p\tPrint progress indicator\n");
 	return 1;
 }
 
@@ -406,7 +435,7 @@ int main(int argc, char *argv[])
 {
 	int c, ret;
 
-	while ((c = getopt(argc, argv, "b:t:d:o:c:")) != -1) {
+	while ((c = getopt(argc, argv, "b:t:d:o:c:p:")) != -1) {
 		switch (c) {
 		case 'b':
 			blocksize = atoi(optarg);
@@ -422,6 +451,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'c':
 			collision_check = atoi(optarg);
+			break;
+		case 'p':
+			print_progress = atoi(optarg);
 			break;
 		case '?':
 		default:
