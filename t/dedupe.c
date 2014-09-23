@@ -382,12 +382,12 @@ static void iter_rb_tree(void)
 
 	} while ((n = rb_next(n)) != NULL);
 
-	printf("Chunks=%lu, Extents=%lu\n", nchunks, nextents);
+	printf("Extents=%lu, Unique extents=%lu\n", nextents, nchunks);
 	printf("De-dupe factor: %3.2f\n", (double) nextents / (double) nchunks);
 
 	perc = 1.00 - ((double) nchunks / (double) nextents);
 	perc *= 100.0;
-	printf("dedupe_percentage=%u\n", (int) (perc + 0.50));
+	printf("Fio setting: dedupe_percentage=%u\n", (int) (perc + 0.50));
 }
 
 static int usage(char *argv[])
