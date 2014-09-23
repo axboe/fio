@@ -380,7 +380,7 @@ static int check_int(const char *p, int *val)
 	return 1;
 }
 
-static int opt_len(const char *str)
+static size_t opt_len(const char *str)
 {
 	char *postfix;
 

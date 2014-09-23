@@ -11,7 +11,7 @@
 #include "../minmax.h"
 #include "../hash.h"
 
-#define ZIPF_MAX_GEN	10000000
+#define ZIPF_MAX_GEN	10000000UL
 
 static void zipf_update(struct zipf_state *zs)
 {

@@ -33,7 +33,7 @@
 #error "Number of arch bits unknown"
 #endif
 
-#define BLOCKS_PER_UNIT		(1UL << UNIT_SHIFT)
+#define BLOCKS_PER_UNIT		(1U << UNIT_SHIFT)
 #define BLOCKS_PER_UNIT_MASK	(BLOCKS_PER_UNIT - 1)
 
 #define firstfree_valid(b)	((b)->first_free != (uint64_t) -1)
