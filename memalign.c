@@ -20,7 +20,7 @@ void *fio_memalign(size_t alignment, size_t size)
 
 	ptr = malloc(size + alignment + size + sizeof(*f) - 1);
 	if (ptr) {
-		ret = PTR_ALIGN(ptr, alignment);
+		ret = PTR_ALIGN(ptr, alignment - 1);
 		f = ret + size;
 		f->offset = (uintptr_t) ret - (uintptr_t) ptr;
 	}
