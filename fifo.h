@@ -1,3 +1,5 @@
+#ifndef FIO_FIFO_H
+#define FIO_FIFO_H
 /*
  * A simple FIFO implementation.
  *
@@ -18,6 +20,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
+#include "minmax.h"
+
 struct fifo {
 	unsigned char *buffer;	/* the buffer holding the data */
 	unsigned int size;	/* the size of the allocated buffer */
@@ -39,20 +43,5 @@ static inline unsigned int fifo_room(struct fifo *fifo)
 {
 	return fifo->size - fifo->in + fifo->out;
 }
-
-#ifndef min
-#define min(x,y) ({ \
-	typeof(x) _x = (x);	\
-	typeof(y) _y = (y);	\
-	(void) (&_x == &_y);		\
-	_x < _y ? _x : _y; })
-#endif
-
-#ifndef max
-#define max(x,y) ({ \
-	typeof(x) _x = (x);	\
-	typeof(y) _y = (y);	\
-	(void) (&_x == &_y);		\
-	_x > _y ? _x : _y; })
 
 #endif

@@ -2,10 +2,19 @@
 #define FIO_MIN_MAX_H
 
 #ifndef min
-#define min(a, b)	((a) < (b) ? (a) : (b))
+#define min(x,y) ({ \
+	typeof(x) _x = (x);	\
+	typeof(y) _y = (y);	\
+	(void) (&_x == &_y);		\
+	_x < _y ? _x : _y; })
 #endif
+
 #ifndef max
-#define max(a, b)	((a) > (b) ? (a) : (b))
+#define max(x,y) ({ \
+	typeof(x) _x = (x);	\
+	typeof(y) _y = (y);	\
+	(void) (&_x == &_y);		\
+	_x > _y ? _x : _y; })
 #endif
 
 #endif
