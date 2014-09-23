@@ -23,7 +23,7 @@ static void zipf_update(struct zipf_state *zs)
 	 * 10M max, that should be doable in 1-2s on even slow machines.
 	 * Precision will take a slight hit, but nothing major.
 	 */
-	to_gen = min(zs->nranges, ZIPF_MAX_GEN);
+	to_gen = min(zs->nranges, (uint64_t) ZIPF_MAX_GEN);
 
 	for (i = 0; i < to_gen; i++)
 		zs->zetan += pow(1.0 / (double) (i + 1), zs->theta);

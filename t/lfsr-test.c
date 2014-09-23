@@ -65,11 +65,11 @@ int main(int argc, char *argv[])
 	printf("LFSR specs\n");
 	printf("==========================\n");
 	printf("Size is         %u\n", 64 - __builtin_clzl(fl->cached_bit));
-	printf("Max val is      %lu\n", fl->max_val);
-	printf("XOR-mask is     0x%lX\n", fl->xormask);
-	printf("Seed is         %lu\n", fl->last_val);
+	printf("Max val is      %lu\n", (unsigned long) fl->max_val);
+	printf("XOR-mask is     0x%lX\n", (unsigned long) fl->xormask);
+	printf("Seed is         %lu\n", (unsigned long) fl->last_val);
 	printf("Spin is         %u\n", fl->spin);
-	printf("Cycle length is %lu\n", fl->cycle_length);
+	printf("Cycle length is %lu\n", (unsigned long) fl->cycle_length);
 
 	/* Create verification table */
 	if (verify) {
@@ -102,7 +102,8 @@ int main(int argc, char *argv[])
 		for (i = 0; i < numbers; i++) {
 			if (*(uint8_t *)(v + i) != 1) {
 				fprintf(stderr, "failed (%lu = %d).\n",
-						i, *(uint8_t *)(v + i));
+						(unsigned long) i,
+						*(uint8_t *)(v + i));
 				r = 1;
 				break;
 			}

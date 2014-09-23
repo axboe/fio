@@ -368,7 +368,7 @@ static int dedupe_check(const char *filename)
 		return 1;
 	}
 
-	printf("Will check <%s>, size <%lu>\n", filename, dev_size);
+	printf("Will check <%s>, size <%llu>\n", filename, (unsigned long long) dev_size);
 
 	return __dedupe_check(dev_fd, dev_size);
 }
@@ -378,10 +378,10 @@ static void show_chunk(struct chunk *c)
 	struct flist_head *n;
 	struct extent *e;
 
-	printf("c hash %8x %8x %8x %8x, count %lu\n", c->hash[0], c->hash[1], c->hash[2], c->hash[3], c->count);
+	printf("c hash %8x %8x %8x %8x, count %lu\n", c->hash[0], c->hash[1], c->hash[2], c->hash[3], (unsigned long) c->count);
 	flist_for_each(n, &c->extent_list) {
 		e = flist_entry(n, struct extent, list);
-		printf("\toffset %lu\n", e->offset);
+		printf("\toffset %llu\n", (unsigned long long) e->offset);
 	}
 }
 
@@ -410,7 +410,7 @@ static void iter_rb_tree(void)
 
 	} while ((n = rb_next(n)) != NULL);
 
-	printf("Extents=%lu, Unique extents=%lu\n", nextents, nchunks);
+	printf("Extents=%lu, Unique extents=%lu\n", (unsigned long) nextents, (unsigned long) nchunks);
 	printf("De-dupe factor: %3.2f\n", (double) nextents / (double) nchunks);
 
 	perc = 1.00 - ((double) nchunks / (double) nextents);

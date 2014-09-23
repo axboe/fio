@@ -589,7 +589,7 @@ static void __output_p_ascii(struct btrace_pid *p, unsigned long *ios)
 		perc = ((float) o->merges[i] * 100.0) / (float) total;
 		printf("\tmerges: %lu (perc=%3.2f%%)\n", o->merges[i], perc);
 		perc = ((float) o->seq[i] * 100.0) / (float) o->ios[i];
-		printf("\tseq:    %lu (perc=%3.2f%%)\n", o->seq[i], perc);
+		printf("\tseq:    %lu (perc=%3.2f%%)\n", (unsigned long) o->seq[i], perc);
 		printf("\trate:   %lu KB/sec\n", o_to_kb_rate(o, i));
 
 		for (j = 0; j < o->nr_bs[i]; j++) {
