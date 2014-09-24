@@ -24,6 +24,8 @@
 #include "../crc/md5.h"
 #include "../memalign.h"
 #include "../os/os.h"
+#include "../gettime.h"
+#include "../fio_time.h"
 
 FILE *f_err;
 struct timeval *fio_tv = NULL;
@@ -53,9 +55,9 @@ struct extent {
 
 struct chunk {
 	struct rb_node rb_node;
-	struct flist_head extent_list;
 	uint64_t count;
 	uint32_t hash[MD5_HASH_WORDS];
+	struct flist_head extent_list[0];
 };
 
 struct item {
@@ -143,7 +145,7 @@ static void add_item(struct chunk *c, struct item *i)
 
 		e = malloc(sizeof(*e));
 		e->offset = i->offset;
-		flist_add_tail(&e->list, &c->extent_list);
+		flist_add_tail(&e->list, &c->extent_list[0]);
 	}
 
 	c->count++;
@@ -158,7 +160,7 @@ static int col_check(struct chunk *c, struct item *i)
 	cbuf = fio_memalign(blocksize, blocksize);
 	ibuf = fio_memalign(blocksize, blocksize);
 
-	e = flist_entry(c->extent_list.next, struct extent, list);
+	e = flist_entry(c->extent_list[0].next, struct extent, list);
 	if (read_block(dev_fd, cbuf, e->offset))
 		goto out;
 
@@ -170,6 +172,19 @@ out:
 	fio_memfree(cbuf, blocksize);
 	fio_memfree(ibuf, blocksize);
 	return ret;
+}
+
+static struct chunk *alloc_chunk(void)
+{
+	struct chunk *c;
+
+	if (collision_check || dump_output) {
+		c = malloc(sizeof(struct chunk) + sizeof(struct flist_head));
+		INIT_FLIST_HEAD(&c->extent_list[0]);
+	} else
+		c = malloc(sizeof(struct chunk));
+
+	return c;
 }
 
 static void insert_chunk(struct item *i)
@@ -206,9 +221,8 @@ static void insert_chunk(struct item *i)
 		}
 	}
 
-	c = malloc(sizeof(*c));
+	c = alloc_chunk();
 	RB_CLEAR_NODE(&c->rb_node);
-	INIT_FLIST_HEAD(&c->extent_list);
 	c->count = 0;
 	memcpy(c->hash, i->hash, sizeof(i->hash));
 	rb_link_node(&c->rb_node, parent, p);
@@ -287,7 +301,49 @@ static void *thread_fn(void *data)
 	return NULL;
 }
 
-static int __dedupe_check(int fd, uint64_t dev_size)
+static void show_progress(struct worker_thread *threads, unsigned long total)
+{
+	unsigned long last_nitems = 0;
+	struct timeval last_tv;
+
+	fio_gettime(&last_tv, NULL);
+
+	while (print_progress) {
+		unsigned long this_items;
+		unsigned long nitems = 0;
+		uint64_t tdiff;
+		float perc;
+		int some_done;
+		int i;
+
+		for (i = 0; i < num_threads; i++) {
+			nitems += threads[i].items;
+			some_done = threads[i].done;
+			if (some_done)
+				break;
+		}
+
+		if (some_done)
+			break;
+
+		perc = (float) nitems / (float) total;
+		perc *= 100.0;
+		this_items = nitems - last_nitems;
+		this_items *= blocksize;
+		tdiff = mtime_since_now(&last_tv);
+		if (tdiff) {
+			this_items /= tdiff;
+			printf("%3.2f%% done (%luKB/sec)\r", perc, this_items);
+			last_nitems = nitems;
+			fio_gettime(&last_tv, NULL);
+		} else
+			printf("%3.2f%% done\r", perc);
+		fflush(stdout);
+		usleep(250000);
+	};
+}
+
+static int run_dedupe_threads(int fd, uint64_t dev_size)
 {
 	struct worker_thread *threads;
 	unsigned long nitems, total_items;
@@ -312,27 +368,7 @@ static int __dedupe_check(int fd, uint64_t dev_size)
 		}
 	}
 
-	while (print_progress) {
-		float perc;
-		int some_done;
-
-		nitems = 0;
-		for (i = 0; i < num_threads; i++) {
-			nitems += threads[i].items;
-			some_done = threads[i].done;
-			if (some_done)
-				break;
-		}
-
-		if (some_done)
-			break;
-
-		perc = (float) nitems / (float) total_items;
-		perc *= 100.0;
-		printf("%3.2f%% done\r", perc);
-		fflush(stdout);
-		usleep(200000);
-	};
+	show_progress(threads, total_items);
 
 	nitems = 0;
 	for (i = 0; i < num_threads; i++) {
@@ -344,6 +380,7 @@ static int __dedupe_check(int fd, uint64_t dev_size)
 	printf("Threads(%u): %lu items processed\n", num_threads, nitems);
 
 	fio_mutex_remove(size_lock);
+	free(threads);
 	return err;
 }
 
@@ -377,7 +414,7 @@ static int dedupe_check(const char *filename)
 
 	printf("Will check <%s>, size <%llu>\n", filename, (unsigned long long) dev_size);
 
-	return __dedupe_check(dev_fd, dev_size);
+	return run_dedupe_threads(dev_fd, dev_size);
 }
 
 static void show_chunk(struct chunk *c)
@@ -386,7 +423,7 @@ static void show_chunk(struct chunk *c)
 	struct extent *e;
 
 	printf("c hash %8x %8x %8x %8x, count %lu\n", c->hash[0], c->hash[1], c->hash[2], c->hash[3], (unsigned long) c->count);
-	flist_for_each(n, &c->extent_list) {
+	flist_for_each(n, &c->extent_list[0]) {
 		e = flist_entry(n, struct extent, list);
 		printf("\toffset %llu\n", (unsigned long long) e->offset);
 	}
