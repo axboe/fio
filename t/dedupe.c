@@ -412,7 +412,7 @@ static int dedupe_check(const char *filename)
 		return 1;
 	}
 
-	printf("Will check <%s>, size <%llu>\n", filename, (unsigned long long) dev_size);
+	printf("Will check <%s>, size <%llu>, using %u threads\n", filename, (unsigned long long) dev_size, num_threads);
 
 	return run_dedupe_threads(dev_fd, dev_size);
 }
