@@ -134,11 +134,18 @@ static int read_block(int fd, void *buf, off_t offset)
 
 static void add_item(struct chunk *c, struct item *i)
 {
-	struct extent *e;
+	/*	
+	 * Save some memory and don't add extent items, if we don't
+	 * use them.
+	 */
+	if (dump_output || collision_check) {
+		struct extent *e;
 
-	e = malloc(sizeof(*e));
-	e->offset = i->offset;
-	flist_add_tail(&e->list, &c->extent_list);
+		e = malloc(sizeof(*e));
+		e->offset = i->offset;
+		flist_add_tail(&e->list, &c->extent_list);
+	}
+
 	c->count++;
 }
 
