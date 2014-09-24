@@ -520,6 +520,7 @@ int main(int argc, char *argv[])
 
 	iter_rb_tree();
 
+	fio_mutex_remove(rb_lock);
 	scleanup();
 	return ret;
 }
