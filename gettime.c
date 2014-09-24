@@ -541,9 +541,13 @@ int fio_monotonic_clocktest(void)
 
 	log_info("cs: reliable_tsc: %s\n", tsc_reliable ? "yes" : "no");
 
+#ifdef FIO_INC_DEBUG
 	fio_debug |= 1U << FD_TIME;
+#endif
 	calibrate_cpu_clock();
+#ifdef FIO_INC_DEBUG
 	fio_debug &= ~(1U << FD_TIME);
+#endif
 
 	threads = malloc(nr_cpus * sizeof(struct clock_thread));
 	tentries = CLOCK_ENTRIES * nr_cpus;
