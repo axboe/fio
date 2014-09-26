@@ -27,6 +27,8 @@
 #include "../gettime.h"
 #include "../fio_time.h"
 
+#include "../lib/bloom.h"
+
 FILE *f_err;
 struct timeval *fio_tv = NULL;
 unsigned int fio_debug = 0;
@@ -45,6 +47,7 @@ struct worker_thread {
 	uint64_t size;
 
 	unsigned long items;
+	unsigned long dupes;
 	int err;
 };
 
@@ -66,6 +69,7 @@ struct item {
 };
 
 static struct rb_root rb_root;
+static struct bloom *bloom;
 static struct fio_mutex *rb_lock;
 
 static unsigned int blocksize = 4096;
@@ -75,6 +79,7 @@ static unsigned int dump_output;
 static unsigned int odirect;
 static unsigned int collision_check;
 static unsigned int print_progress = 1;
+static unsigned int use_bloom = 1;
 
 static uint64_t total_size;
 static uint64_t cur_offset;
@@ -231,14 +236,24 @@ add:
 	add_item(c, i);
 }
 
-static void insert_chunks(struct item *items, unsigned int nitems)
+static void insert_chunks(struct item *items, unsigned int nitems,
+			  uint64_t *ndupes)
 {
 	int i;
 
 	fio_mutex_down(rb_lock);
 
-	for (i = 0; i < nitems; i++)
-		insert_chunk(&items[i]);
+	for (i = 0; i < nitems; i++) {
+		if (bloom) {
+			unsigned int s;
+			int r;
+
+			s = sizeof(items[i].hash) / sizeof(uint32_t);
+			r = bloom_set(bloom, items[i].hash, s);
+			*ndupes += r;
+		} else
+			insert_chunk(&items[i]);
+	}
 
 	fio_mutex_up(rb_lock);
 }
@@ -257,6 +272,7 @@ static int do_work(struct worker_thread *thread, void *buf)
 	unsigned int nblocks, i;
 	off_t offset;
 	int err = 0, nitems = 0;
+	uint64_t ndupes = 0;
 	struct item *items;
 
 	nblocks = thread->size / blocksize;
@@ -266,15 +282,18 @@ static int do_work(struct worker_thread *thread, void *buf)
 	for (i = 0; i < nblocks; i++) {
 		if (read_block(thread->fd, buf, offset))
 			break;
-		items[i].offset = offset;
+		if (items)
+			items[i].offset = offset;
 		crc_buf(buf, items[i].hash);
 		offset += blocksize;
 		nitems++;
 	}
 
-	insert_chunks(items, nitems);
-	thread->items += nitems;
+	insert_chunks(items, nitems, &ndupes);
+
 	free(items);
+	thread->items += nitems;
+	thread->dupes += ndupes;
 	return err;
 }
 
@@ -343,7 +362,8 @@ static void show_progress(struct worker_thread *threads, unsigned long total)
 	};
 }
 
-static int run_dedupe_threads(int fd, uint64_t dev_size)
+static int run_dedupe_threads(int fd, uint64_t dev_size, uint64_t *nextents,
+				uint64_t *nchunks)
 {
 	struct worker_thread *threads;
 	unsigned long nitems, total_items;
@@ -371,20 +391,27 @@ static int run_dedupe_threads(int fd, uint64_t dev_size)
 	show_progress(threads, total_items);
 
 	nitems = 0;
+	*nextents = 0;
+	*nchunks = 1;
 	for (i = 0; i < num_threads; i++) {
 		void *ret;
 		pthread_join(threads[i].thread, &ret);
 		nitems += threads[i].items;
+		*nchunks += threads[i].dupes;
 	}
 
 	printf("Threads(%u): %lu items processed\n", num_threads, nitems);
+
+	*nextents = nitems;
+	*nchunks = nitems - *nchunks;
 
 	fio_mutex_remove(size_lock);
 	free(threads);
 	return err;
 }
 
-static int dedupe_check(const char *filename)
+static int dedupe_check(const char *filename, uint64_t *nextents,
+			uint64_t *nchunks)
 {
 	uint64_t dev_size;
 	struct stat sb;
@@ -412,9 +439,16 @@ static int dedupe_check(const char *filename)
 		return 1;
 	}
 
+	if (use_bloom) {
+		uint64_t bloom_entries;
+
+		bloom_entries = (3 * dev_size ) / (blocksize * 2);
+		bloom = bloom_new(bloom_entries);
+	}
+
 	printf("Will check <%s>, size <%llu>, using %u threads\n", filename, (unsigned long long) dev_size, num_threads);
 
-	return run_dedupe_threads(dev_fd, dev_size);
+	return run_dedupe_threads(dev_fd, dev_size, nextents, nchunks);
 }
 
 static void show_chunk(struct chunk *c)
@@ -429,14 +463,24 @@ static void show_chunk(struct chunk *c)
 	}
 }
 
-static void iter_rb_tree(void)
+static void show_stat(uint64_t nextents, uint64_t nchunks)
 {
-	struct rb_node *n;
-	uint64_t nchunks;
-	uint64_t nextents;
 	double perc;
 
-	nchunks = nextents = 0;
+	printf("Extents=%lu, Unique extents=%lu\n", (unsigned long) nextents, (unsigned long) nchunks);
+	printf("De-dupe factor: %3.2f\n", (double) nextents / (double) nchunks);
+
+	perc = 1.00 - ((double) nchunks / (double) nextents);
+	perc *= 100.0;
+	printf("Fio setting: dedupe_percentage=%u\n", (int) (perc + 0.50));
+
+}
+
+static void iter_rb_tree(uint64_t *nextents, uint64_t *nchunks)
+{
+	struct rb_node *n;
+
+	*nchunks = *nextents = 0;
 
 	n = rb_first(&rb_root);
 	if (!n)
@@ -446,20 +490,13 @@ static void iter_rb_tree(void)
 		struct chunk *c;
 
 		c = rb_entry(n, struct chunk, rb_node);
-		nchunks++;
-		nextents += c->count;
+		(*nchunks)++;
+		*nextents += c->count;
 
 		if (dump_output)
 			show_chunk(c);
 
 	} while ((n = rb_next(n)) != NULL);
-
-	printf("Extents=%lu, Unique extents=%lu\n", (unsigned long) nextents, (unsigned long) nchunks);
-	printf("De-dupe factor: %3.2f\n", (double) nextents / (double) nchunks);
-
-	perc = 1.00 - ((double) nchunks / (double) nextents);
-	perc *= 100.0;
-	printf("Fio setting: dedupe_percentage=%u\n", (int) (perc + 0.50));
 }
 
 static int usage(char *argv[])
@@ -471,15 +508,17 @@ static int usage(char *argv[])
 	log_err("\t-d\tFull extent/chunk debug output\n");
 	log_err("\t-o\tUse O_DIRECT\n");
 	log_err("\t-c\tFull collision check\n");
+	log_err("\t-B\tUse probabilistic bloom filter\n");
 	log_err("\t-p\tPrint progress indicator\n");
 	return 1;
 }
 
 int main(int argc, char *argv[])
 {
+	uint64_t nextents, nchunks;
 	int c, ret;
 
-	while ((c = getopt(argc, argv, "b:t:d:o:c:p:")) != -1) {
+	while ((c = getopt(argc, argv, "b:t:d:o:c:p:B:")) != -1) {
 		switch (c) {
 		case 'b':
 			blocksize = atoi(optarg);
@@ -499,11 +538,17 @@ int main(int argc, char *argv[])
 		case 'p':
 			print_progress = atoi(optarg);
 			break;
+		case 'B':
+			use_bloom = atoi(optarg);
+			break;
 		case '?':
 		default:
 			return usage(argv);
 		}
 	}
+
+	if (collision_check || dump_output)
+		use_bloom = 0;
 
 	if (!num_threads)
 		num_threads = cpus_online();
@@ -516,11 +561,15 @@ int main(int argc, char *argv[])
 	rb_root = RB_ROOT;
 	rb_lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 
-	ret = dedupe_check(argv[optind]);
+	ret = dedupe_check(argv[optind], &nextents, &nchunks);
 
-	iter_rb_tree();
+	if (!bloom)
+		iter_rb_tree(&nextents, &nchunks);
+
+	show_stat(nextents, nchunks);
 
 	fio_mutex_remove(rb_lock);
+	bloom_free(bloom);
 	scleanup();
 	return ret;
 }
