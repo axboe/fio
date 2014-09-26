@@ -190,7 +190,8 @@ iodepth=4
 
 Settings pulled into a section apply to that section only (except global
 section). Include directives may be nested in that any included file may
-contain further include directive(s).
+contain further include directive(s). Include files may not contain []
+sections.
 
 
 4.1 Environment variables
