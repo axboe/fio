@@ -1487,7 +1487,8 @@ struct io_u *get_io_u(struct thread_data *td)
 		if (io_u->ddir == DDIR_WRITE) {
 			if (td->flags & TD_F_REFILL_BUFFERS) {
 				io_u_fill_buffer(td, io_u,
-					io_u->xfer_buflen, io_u->xfer_buflen);
+					td->o.min_bs[DDIR_WRITE],
+					io_u->xfer_buflen);
 			} else if ((td->flags & TD_F_SCRAMBLE_BUFFERS) &&
 				   !(td->flags & TD_F_COMPRESS))
 				do_scramble = 1;
@@ -1864,22 +1865,29 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 	else if (!td->o.zero_buffers) {
 		unsigned int perc = td->o.compress_percentage;
 		struct frand_state *rs;
+		unsigned int left = max_bs;
 
-		rs = get_buf_state(td);
+		do {
+			rs = get_buf_state(td);
 
-		if (perc) {
-			unsigned int seg = min_write;
+			min_write = min(min_write, left);
 
-			seg = min(min_write, td->o.compress_chunk);
-			if (!seg)
-				seg = min_write;
+			if (perc) {
+				unsigned int seg = min_write;
 
-			fill_random_buf_percentage(rs, buf, perc, seg,max_bs);
+				seg = min(min_write, td->o.compress_chunk);
+				if (!seg)
+					seg = min_write;
+
+				fill_random_buf_percentage(rs, buf, perc, seg,
+								min_write);
+			} else
+				fill_random_buf(rs, buf, min_write);
+
+			buf += min_write;
+			left -= min_write;
 			save_buf_state(td, rs);
-		} else {
-			fill_random_buf(rs, buf, max_bs);
-			save_buf_state(td, rs);
-		}
+		} while (left);
 	} else
 		memset(buf, 0, max_bs);
 }
