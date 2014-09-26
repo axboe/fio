@@ -86,12 +86,12 @@ int main(int argc, char *argv[])
 	 * negligible overhead.
 	 */
 	fprintf(stderr, "\nTest initiated... ");
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+	fio_gettime(&start, NULL);
 	while (!lfsr_next(fl, &i, fl->max_val)) {
 		if (verify)
 			*(uint8_t *)(v + i) += 1;
 	}
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
+	fio_gettime(&end, NULL);
 	fprintf(stderr, "finished.\n");
 
 

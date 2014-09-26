@@ -4,10 +4,7 @@
 
 #include "../smalloc.h"
 #include "../flist.h"
-
-FILE *f_err;
-struct timeval *fio_tv = NULL;
-unsigned int fio_debug = 0;
+#include "debug.h"
 
 #define MAGIC1	0xa9b1c8d2
 #define MAGIC2	0xf0a1e9b3
@@ -72,9 +69,8 @@ static int do_specific_alloc(unsigned long size)
 
 int main(int argc, char *argv[])
 {
-	f_err = stderr;
-
 	sinit();
+	debug_init();
 
 	do_rand_allocs();
 
@@ -83,8 +79,4 @@ int main(int argc, char *argv[])
 
 	scleanup();
 	return 0;
-}
-
-void __dprint(int type, const char *str, ...)
-{
 }

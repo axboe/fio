@@ -164,7 +164,7 @@ GFIO_OBJS = $(OBJS) gfio.o graph.o tickmarks.o ghelpers.o goptions.o gerror.o \
 -include $(OBJS:.o=.d)
 
 T_SMALLOC_OBJS = t/stest.o
-T_SMALLOC_OBJS += gettime.o mutex.o smalloc.o t/log.o
+T_SMALLOC_OBJS += gettime.o mutex.o smalloc.o t/log.o t/debug.o
 T_SMALLOC_PROGS = t/stest
 
 T_IEEE_OBJS = t/ieee754.o
@@ -180,7 +180,7 @@ T_AXMAP_OBJS += lib/lfsr.o lib/axmap.o
 T_AXMAP_PROGS = t/axmap
 
 T_LFSR_TEST_OBJS = t/lfsr-test.o
-T_LFSR_TEST_OBJS += lib/lfsr.o
+T_LFSR_TEST_OBJS += lib/lfsr.o gettime.o t/log.o t/debug.o
 T_LFSR_TEST_PROGS = t/lfsr-test
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
@@ -192,7 +192,7 @@ endif
 ifeq ($(CONFIG_TARGET_OS), Linux)
 T_DEDUPE_OBJS = t/dedupe.o
 T_DEDUPE_OBJS += lib/rbtree.o t/log.o mutex.o smalloc.o gettime.o crc/md5.o \
-		memalign.o lib/bloom.o
+		memalign.o lib/bloom.o t/debug.o
 T_DEDUPE_PROGS = t/dedupe
 endif
 

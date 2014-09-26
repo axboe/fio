@@ -28,14 +28,7 @@
 #include "../fio_time.h"
 
 #include "../lib/bloom.h"
-
-FILE *f_err;
-struct timeval *fio_tv = NULL;
-unsigned int fio_debug = 0;
-
-void __dprint(int type, const char *str, ...)
-{
-}
+#include "debug.h"
 
 struct worker_thread {
 	pthread_t thread;
@@ -517,6 +510,8 @@ int main(int argc, char *argv[])
 {
 	uint64_t nextents, nchunks;
 	int c, ret;
+
+	debug_init();
 
 	while ((c = getopt(argc, argv, "b:t:d:o:c:p:B:")) != -1) {
 		switch (c) {
