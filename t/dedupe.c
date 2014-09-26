@@ -114,22 +114,27 @@ static int get_work(uint64_t *offset, uint64_t *size)
 	return ret;
 }
 
-static int read_block(int fd, void *buf, off_t offset)
+static int __read_block(int fd, void *buf, off_t offset, size_t count)
 {
 	ssize_t ret;
 
-	ret = pread(fd, buf, blocksize, offset);
+	ret = pread(fd, buf, count, offset);
 	if (ret < 0) {
 		perror("pread");
 		return 1;
 	} else if (!ret)
 		return 1;
-	else if (ret != blocksize) {
+	else if (ret != count) {
 		log_err("dedupe: short read on block\n");
 		return 1;
 	}
 
 	return 0;
+}
+
+static int read_block(int fd, void *buf, off_t offset)
+{
+	return __read_block(fd, buf, offset, blocksize);
 }
 
 static void add_item(struct chunk *c, struct item *i)
@@ -260,24 +265,36 @@ static void crc_buf(void *buf, uint32_t *hash)
 	fio_md5_final(&ctx);
 }
 
+static unsigned int read_blocks(int fd, void *buf, off_t offset, size_t size)
+{
+	if (__read_block(fd, buf, offset, size))
+		return 0;
+
+	return size / blocksize;
+}
+
 static int do_work(struct worker_thread *thread, void *buf)
 {
 	unsigned int nblocks, i;
 	off_t offset;
-	int err = 0, nitems = 0;
+	int nitems = 0;
 	uint64_t ndupes = 0;
 	struct item *items;
 
-	nblocks = thread->size / blocksize;
 	offset = thread->cur_offset;
+
+	nblocks = read_blocks(thread->fd, buf, offset, min(thread->size, (uint64_t)chunk_size));
+	if (!nblocks)
+		return 1;
+
 	items = malloc(sizeof(*items) * nblocks);
 
 	for (i = 0; i < nblocks; i++) {
-		if (read_block(thread->fd, buf, offset))
-			break;
+		void *thisptr = buf + (i * blocksize);
+
 		if (items)
 			items[i].offset = offset;
-		crc_buf(buf, items[i].hash);
+		crc_buf(thisptr, items[i].hash);
 		offset += blocksize;
 		nitems++;
 	}
@@ -287,7 +304,7 @@ static int do_work(struct worker_thread *thread, void *buf)
 	free(items);
 	thread->items += nitems;
 	thread->dupes += ndupes;
-	return err;
+	return 0;
 }
 
 static void *thread_fn(void *data)
@@ -295,7 +312,7 @@ static void *thread_fn(void *data)
 	struct worker_thread *thread = data;
 	void *buf;
 
-	buf = fio_memalign(blocksize, blocksize);
+	buf = fio_memalign(blocksize, chunk_size);
 
 	do {
 		if (get_work(&thread->cur_offset, &thread->size)) {
@@ -309,7 +326,7 @@ static void *thread_fn(void *data)
 	} while (1);
 
 	thread->done = 1;
-	fio_memfree(buf, blocksize);
+	fio_memfree(buf, chunk_size);
 	return NULL;
 }
 
