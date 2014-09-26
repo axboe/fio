@@ -3,6 +3,7 @@
 
 #include "bloom.h"
 #include "../hash.h"
+#include "../minmax.h"
 
 struct bloom {
 	uint64_t nentries;
@@ -16,6 +17,8 @@ struct bloom {
 static unsigned int jhash_init[] = { 0, 0x12db635, 0x2a4a53 };
 #define N_HASHES	3
 
+#define MIN_ENTRIES	1073741824UL
+
 struct bloom *bloom_new(uint64_t entries)
 {
 	struct bloom *b;
@@ -24,6 +27,7 @@ struct bloom *bloom_new(uint64_t entries)
 	b = malloc(sizeof(*b));
 	b->nentries = entries;
 	no_uints = (entries + BITS_PER_INDEX - 1) / BITS_PER_INDEX;
+	no_uints = max((unsigned long) no_uints, MIN_ENTRIES);
 	b->map = calloc(no_uints, sizeof(uint32_t));
 	if (!b->map) {
 		free(b);
