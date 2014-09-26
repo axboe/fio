@@ -1397,11 +1397,12 @@ static int is_empty_or_comment(char *line)
 /*
  * This is our [ini] type file parser.
  */
-int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
+int __parse_jobs_ini(struct thread_data *td,
+		char *file, int is_buf, int stonewall_flag, int type,
+		int nested, char *name, char ***popts, int *aopts, int *nopts)
 {
-	unsigned int global;
-	struct thread_data *td;
-	char *string, *name;
+	unsigned int global = 0;
+	char *string;
 	FILE *f;
 	char *p;
 	int ret = 0, stonewall;
@@ -1410,6 +1411,9 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 	int inside_skip = 0;
 	char **opts;
 	int i, alloc_opts, num_opts;
+
+	dprint(FD_PARSE, "Parsing ini file %s\n", file);
+	assert(td || !nested);
 
 	if (is_buf)
 		f = NULL;
@@ -1430,12 +1434,23 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 	/*
 	 * it's really 256 + small bit, 280 should suffice
 	 */
-	name = malloc(280);
-	memset(name, 0, 280);
+	if (!nested) {
+		name = malloc(280);
+		memset(name, 0, 280);
+	}
 
-	alloc_opts = 8;
-	opts = malloc(sizeof(char *) * alloc_opts);
-	num_opts = 0;
+	opts = NULL;
+	if (nested && popts) {
+		opts = *popts;
+		alloc_opts = *aopts;
+		num_opts = *nopts;
+	}
+
+	if (!opts) {
+		alloc_opts = 8;
+		opts = malloc(sizeof(char *) * alloc_opts);
+		num_opts = 0;
+	}
 
 	stonewall = stonewall_flag;
 	do {
@@ -1456,58 +1471,72 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 		strip_blank_front(&p);
 		strip_blank_end(p);
 
+		dprint(FD_PARSE, "%s\n", p);
 		if (is_empty_or_comment(p))
 			continue;
-		if (sscanf(p, "[%255[^\n]]", name) != 1) {
-			if (inside_skip)
+
+		if (!nested) {
+			if (sscanf(p, "[%255[^\n]]", name) != 1) {
+				if (inside_skip)
+					continue;
+
+				log_err("fio: option <%s> outside of "
+					"[] job section\n", p);
+				break;
+			}
+
+			name[strlen(name) - 1] = '\0';
+
+			if (skip_this_section(name)) {
+				inside_skip = 1;
 				continue;
-			log_err("fio: option <%s> outside of [] job section\n",
-									p);
-			break;
+			} else
+				inside_skip = 0;
+
+			dprint(FD_PARSE, "Parsing section [%s]\n", name);
+
+			global = !strncmp(name, "global", 6);
+
+			if (dump_cmdline) {
+				if (first_sect)
+					log_info("fio ");
+				if (!global)
+					log_info("--name=%s ", name);
+				first_sect = 0;
+			}
+
+			td = get_new_job(global, &def_thread, 0, name);
+			if (!td) {
+				ret = 1;
+				break;
+			}
+
+			/*
+			 * Separate multiple job files by a stonewall
+			 */
+			if (!global && stonewall) {
+				td->o.stonewall = stonewall;
+				stonewall = 0;
+			}
+
+			num_opts = 0;
+			memset(opts, 0, alloc_opts * sizeof(char *));
 		}
-
-		name[strlen(name) - 1] = '\0';
-
-		if (skip_this_section(name)) {
-			inside_skip = 1;
-			continue;
-		} else
-			inside_skip = 0;
-
-		global = !strncmp(name, "global", 6);
-
-		if (dump_cmdline) {
-			if (first_sect)
-				log_info("fio ");
-			if (!global)
-				log_info("--name=%s ", name);
-			first_sect = 0;
-		}
-
-		td = get_new_job(global, &def_thread, 0, name);
-		if (!td) {
-			ret = 1;
-			break;
-		}
-
-		/*
-		 * Separate multiple job files by a stonewall
-		 */
-		if (!global && stonewall) {
-			td->o.stonewall = stonewall;
-			stonewall = 0;
-		}
-
-		num_opts = 0;
-		memset(opts, 0, alloc_opts * sizeof(char *));
+		else
+			skip_fgets = 1;
 
 		while (1) {
-			if (is_buf)
-				p = strsep(&file, "\n");
+			if (!skip_fgets) {
+				if (is_buf)
+					p = strsep(&file, "\n");
+				else
+					p = fgets(string, 4096, f);
+				if (!p)
+					break;
+				dprint(FD_PARSE, "%s", p);
+			}
 			else
-				p = fgets(string, 4096, f);
-			if (!p)
-				break;
+				skip_fgets = 0;
 
 			if (is_empty_or_comment(p))
 				continue;
@@ -1519,11 +1548,29 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 			 * fgets() a new line at the top.
 			 */
 			if (p[0] == '[') {
+				if (nested) {
+					log_err("No new sections in included files\n");
+					return 1;
+				}
+
 				skip_fgets = 1;
 				break;
 			}
 
 			strip_blank_end(p);
+
+			if (!strncmp(p, "include", strlen("include"))) {
+				char *filename = p + strlen("include") + 1;
+
+				if ((ret = __parse_jobs_ini(td, filename,
+						is_buf, stonewall_flag, type, 1,
+						name, &opts, &alloc_opts, &num_opts))) {
+					log_err("Error %d while parsing include file %s\n",
+						ret, filename);
+					break;
+				}
+				continue;
+			}
 
 			if (num_opts == alloc_opts) {
 				alloc_opts <<= 1;
@@ -1533,6 +1580,13 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 
 			opts[num_opts] = strdup(p);
 			num_opts++;
+		}
+
+		if (nested) {
+			*popts = opts;
+			*aopts = alloc_opts;
+			*nopts = num_opts;
+			goto out;
 		}
 
 		ret = fio_options_parse(td, opts, num_opts, dump_cmdline);
@@ -1557,12 +1611,20 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 		i++;
 	}
 
-	free(string);
-	free(name);
 	free(opts);
+out:
+	free(string);
+	if (!nested)
+		free(name);
 	if (!is_buf && f != stdin)
 		fclose(f);
 	return ret;
+}
+
+int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
+{
+	return __parse_jobs_ini(NULL, file, is_buf, stonewall_flag, type,
+			0, NULL, NULL, NULL, NULL);
 }
 
 static int fill_def_thread(void)
