@@ -1,6 +1,7 @@
 #ifndef FIO_TIME_H
 #define FIO_TIME_H
 
+struct thread_data;
 extern uint64_t utime_since(struct timeval *, struct timeval *);
 extern uint64_t utime_since_now(struct timeval *);
 extern uint64_t mtime_since(struct timeval *, struct timeval *);

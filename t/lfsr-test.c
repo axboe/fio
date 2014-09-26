@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 
 #include "../lib/lfsr.h"
+#include "../gettime.h"
+#include "../fio_time.h"
 
 void usage()
 {
@@ -25,7 +27,7 @@ void usage()
 int main(int argc, char *argv[])
 {
 	int r;
-	struct timespec start, end;
+	struct timeval start, end;
 	struct fio_lfsr *fl;
 	int verify = 0;
 	unsigned int spin = 0;
@@ -113,8 +115,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Calculate elapsed time and mean time per number */
-	total = (end.tv_sec - start.tv_sec) * pow(10,9) +
-		end.tv_nsec - start.tv_nsec;
+	total = utime_since(&start, &end);
 	mean = total / fl->num_vals;
 
 	printf("\nTime results ");
@@ -122,7 +123,7 @@ int main(int argc, char *argv[])
 		printf("(slower due to verification)");
 	printf("\n==============================\n");
 	printf("Elapsed: %lf s\n", total / pow(10,9));
-	printf("Mean:    %lf ns\n", mean);
+	printf("Mean:    %lf us\n", mean);
 
 	free(v_start);
 	free(fl);
