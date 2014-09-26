@@ -159,6 +159,40 @@ specify:
 
 $ fio --name=random-writers --ioengine=libaio --iodepth=4 --rw=randwrite --bs=32k --direct=0 --size=64m --numjobs=4
 
+When fio is utilized as a basis of any reasonably large test suite, it might be
+desirable to share a set of standardized settings across multiple job files.
+Instead of copy/pasting such settings, any section may pull in an external
+.fio file with 'include filename' directive, as in the following example:
+
+; -- start job file including.fio --
+[global]
+filename=/tmp/test
+filesize=1m
+include glob-include.fio
+
+[test]
+rw=randread
+bs=4k
+time_based=1
+runtime=10
+include test-include.fio
+; -- end job file including.fio --
+
+; -- start job file glob-include.fio --
+thread=1
+group_reporting=1
+; -- end job file glob-include.fio --
+
+; -- start job file test-include.fio --
+ioengine=libaio
+iodepth=4
+; -- end job file test-include.fio --
+
+Settings pulled into a section apply to that section only (except global
+section). Include directives may be nested in that any included file may
+contain further include directive(s).
+
+
 4.1 Environment variables
 -------------------------
 
