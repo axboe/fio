@@ -88,7 +88,7 @@ typedef enum { XXH_OK=0, XXH_ERROR } XXH_errorcode;
 // Simple Hash Functions
 //****************************
 
-unsigned int XXH32 (const void* input, int len, unsigned int seed);
+uint32_t XXH32 (const void* input, uint32_t len, uint32_t seed);
 
 /*
 XXH32() :

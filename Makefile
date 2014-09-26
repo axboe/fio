@@ -192,7 +192,8 @@ endif
 ifeq ($(CONFIG_TARGET_OS), Linux)
 T_DEDUPE_OBJS = t/dedupe.o
 T_DEDUPE_OBJS += lib/rbtree.o t/log.o mutex.o smalloc.o gettime.o crc/md5.o \
-		memalign.o lib/bloom.o t/debug.o
+		memalign.o lib/bloom.o t/debug.o crc/xxhash.o crc/crc32c.o \
+		crc/crc32c-intel.o
 T_DEDUPE_PROGS = t/dedupe
 endif
 

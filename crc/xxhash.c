@@ -221,7 +221,7 @@ static uint32_t XXH32_endian_align(const void* input, int len, uint32_t seed, XX
 }
 
 
-uint32_t XXH32(const void* input, int len, uint32_t seed)
+uint32_t XXH32(const void* input, uint32_t len, uint32_t seed)
 {
 #if 0
     // Simple version, good for code maintenance, but unfortunately slow for small inputs
