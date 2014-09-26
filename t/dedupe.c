@@ -508,7 +508,7 @@ static int usage(char *argv[])
 
 int main(int argc, char *argv[])
 {
-	uint64_t nextents, nchunks;
+	uint64_t nextents = 0, nchunks = 0;
 	int c, ret;
 
 	debug_init();
@@ -564,7 +564,8 @@ int main(int argc, char *argv[])
 	show_stat(nextents, nchunks);
 
 	fio_mutex_remove(rb_lock);
-	bloom_free(bloom);
+	if (bloom)
+		bloom_free(bloom);
 	scleanup();
 	return ret;
 }
