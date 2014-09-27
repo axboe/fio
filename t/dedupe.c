@@ -575,10 +575,12 @@ int main(int argc, char *argv[])
 
 	ret = dedupe_check(argv[optind], &nextents, &nchunks);
 
-	if (!bloom)
-		iter_rb_tree(&nextents, &nchunks);
+	if (!ret) {
+		if (!bloom)
+			iter_rb_tree(&nextents, &nchunks);
 
-	show_stat(nextents, nchunks);
+		show_stat(nextents, nchunks);
+	}
 
 	fio_mutex_remove(rb_lock);
 	if (bloom)
