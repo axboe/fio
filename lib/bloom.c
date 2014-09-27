@@ -5,7 +5,7 @@
 #include "../hash.h"
 #include "../minmax.h"
 #include "../crc/xxhash.h"
-#include "../lib/murmur3.h"
+#include "../crc/murmur3.h"
 
 struct bloom {
 	uint64_t nentries;

@@ -17,7 +17,7 @@
 #include "../crc/sha256.h"
 #include "../crc/sha512.h"
 #include "../crc/xxhash.h"
-#include "../lib/murmur3.h"
+#include "../crc/murmur3.h"
 #include "../hash.h"
 
 #include "test.h"

@@ -36,7 +36,7 @@ SOURCE := gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		lib/lfsr.c gettime-thread.c helpers.c lib/flist_sort.c \
 		lib/hweight.c lib/getrusage.c idletime.c td_error.c \
 		profiles/tiobench.c profiles/act.c io_u_queue.c filelock.c \
-		lib/tp.c lib/bloom.c lib/murmur3.c
+		lib/tp.c lib/bloom.c
 
 ifdef CONFIG_LIBHDFS
   HDFSFLAGS= -I $(JAVA_HOME)/include -I $(JAVA_HOME)/include/linux -I $(FIO_LIBHDFS_INCLUDE)
@@ -192,7 +192,7 @@ endif
 ifeq ($(CONFIG_TARGET_OS), Linux)
 T_DEDUPE_OBJS = t/dedupe.o
 T_DEDUPE_OBJS += lib/rbtree.o t/log.o mutex.o smalloc.o gettime.o crc/md5.o \
-		memalign.o lib/bloom.o t/debug.o crc/xxhash.o
+		memalign.o lib/bloom.o t/debug.o crc/xxhash.o crc/murmur3.o
 T_DEDUPE_PROGS = t/dedupe
 endif
 
