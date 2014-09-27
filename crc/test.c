@@ -18,6 +18,7 @@
 #include "../crc/sha512.h"
 #include "../crc/xxhash.h"
 #include "../lib/murmur3.h"
+#include "../hash.h"
 
 #include "test.h"
 
@@ -27,7 +28,8 @@
 struct test_type {
 	const char *name;
 	unsigned int mask;
-	void (*fn)(void *, size_t);
+	void (*fn)(struct test_type *, void *, size_t);
+	uint32_t output;
 };
 
 enum {
@@ -42,9 +44,10 @@ enum {
 	T_SHA512	= 1U << 8,
 	T_XXHASH	= 1U << 9,
 	T_MURMUR3	= 1U << 10,
+	T_JHASH		= 1U << 11,
 };
 
-static void t_md5(void *buf, size_t size)
+static void t_md5(struct test_type *t, void *buf, size_t size)
 {
 	uint32_t digest[4];
 	struct fio_md5_ctx ctx = { .hash = digest };
@@ -58,7 +61,7 @@ static void t_md5(void *buf, size_t size)
 	fio_md5_final(&ctx);
 }
 
-static void t_crc64(void *buf, size_t size)
+static void t_crc64(struct test_type *t, void *buf, size_t size)
 {
 	int i;
 
@@ -66,7 +69,7 @@ static void t_crc64(void *buf, size_t size)
 		fio_crc64(buf, size);
 }
 
-static void t_crc32(void *buf, size_t size)
+static void t_crc32(struct test_type *t, void *buf, size_t size)
 {
 	int i;
 
@@ -74,7 +77,7 @@ static void t_crc32(void *buf, size_t size)
 		fio_crc32(buf, size);
 }
 
-static void t_crc32c(void *buf, size_t size)
+static void t_crc32c(struct test_type *t, void *buf, size_t size)
 {
 	int i;
 
@@ -82,7 +85,7 @@ static void t_crc32c(void *buf, size_t size)
 		fio_crc32c(buf, size);
 }
 
-static void t_crc16(void *buf, size_t size)
+static void t_crc16(struct test_type *t, void *buf, size_t size)
 {
 	int i;
 
@@ -90,7 +93,7 @@ static void t_crc16(void *buf, size_t size)
 		fio_crc16(buf, size);
 }
 
-static void t_crc7(void *buf, size_t size)
+static void t_crc7(struct test_type *t, void *buf, size_t size)
 {
 	int i;
 
@@ -98,7 +101,7 @@ static void t_crc7(void *buf, size_t size)
 		fio_crc7(buf, size);
 }
 
-static void t_sha1(void *buf, size_t size)
+static void t_sha1(struct test_type *t, void *buf, size_t size)
 {
 	uint32_t sha[5];
 	struct fio_sha1_ctx ctx = { .H = sha };
@@ -110,7 +113,7 @@ static void t_sha1(void *buf, size_t size)
 		fio_sha1_update(&ctx, buf, size);
 }
 
-static void t_sha256(void *buf, size_t size)
+static void t_sha256(struct test_type *t, void *buf, size_t size)
 {
 	uint8_t sha[64];
 	struct fio_sha256_ctx ctx = { .buf = sha };
@@ -124,7 +127,7 @@ static void t_sha256(void *buf, size_t size)
 	fio_sha256_final(&ctx);
 }
 
-static void t_sha512(void *buf, size_t size)
+static void t_sha512(struct test_type *t, void *buf, size_t size)
 {
 	uint8_t sha[128];
 	struct fio_sha512_ctx ctx = { .buf = sha };
@@ -136,7 +139,7 @@ static void t_sha512(void *buf, size_t size)
 		fio_sha512_update(&ctx, buf, size);
 }
 
-static void t_murmur3(void *buf, size_t size)
+static void t_murmur3(struct test_type *t, void *buf, size_t size)
 {
 	int i;
 
@@ -144,7 +147,15 @@ static void t_murmur3(void *buf, size_t size)
 		murmurhash3(buf, size, 0x8989);
 }
 
-static void t_xxhash(void *buf, size_t size)
+static void t_jhash(struct test_type *t, void *buf, size_t size)
+{
+	int i;
+
+	for (i = 0; i < NR_CHUNKS; i++)
+		t->output += jhash(buf, size, 0x8989);
+}
+
+static void t_xxhash(struct test_type *t, void *buf, size_t size)
 {
 	void *state;
 	int i;
@@ -154,7 +165,7 @@ static void t_xxhash(void *buf, size_t size)
 	for (i = 0; i < NR_CHUNKS; i++)
 		XXH32_update(state, buf, size);
 
-	XXH32_digest(state);
+	t->output = XXH32_digest(state);
 }
 
 static struct test_type t[] = {
@@ -212,6 +223,11 @@ static struct test_type t[] = {
 		.name = "murmur3",
 		.mask = T_MURMUR3,
 		.fn = t_murmur3,
+	},
+	{
+		.name = "jhash",
+		.mask = T_JHASH,
+		.fn = t_jhash,
 	},
 	{
 		.name = NULL,
@@ -291,11 +307,11 @@ int fio_crctest(const char *type)
 		 */
 		if (first) {
 			usec_spin(100000);
-			t[i].fn(buf, CHUNK);
+			t[i].fn(&t[i], buf, CHUNK);
 		}
 
 		fio_gettime(&tv, NULL);
-		t[i].fn(buf, CHUNK);
+		t[i].fn(&t[i], buf, CHUNK);
 		usec = utime_since_now(&tv);
 
 		mb_sec = (double) mb / (double) usec;
