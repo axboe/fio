@@ -280,6 +280,7 @@ int fio_crctest(const char *type)
 		struct timeval tv;
 		double mb_sec;
 		uint64_t usec;
+		char pre[3];
 
 		if (!(t[i].mask & test_mask))
 			continue;
@@ -299,7 +300,11 @@ int fio_crctest(const char *type)
 
 		mb_sec = (double) mb / (double) usec;
 		mb_sec /= (1.024 * 1.024);
-		printf("%s:\t%8.2f MB/sec\n", t[i].name, mb_sec);
+		if (strlen(t[i].name) >= 7)
+			sprintf(pre, "\t");
+		else
+			sprintf(pre, "\t\t");
+		printf("%s:%s%8.2f MB/sec\n", t[i].name, pre, mb_sec);
 		first = 0;
 	}
 
