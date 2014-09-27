@@ -17,6 +17,7 @@
 #include "../crc/sha256.h"
 #include "../crc/sha512.h"
 #include "../crc/xxhash.h"
+#include "../lib/murmur3.h"
 
 #include "test.h"
 
@@ -40,6 +41,7 @@ enum {
 	T_SHA256	= 1U << 7,
 	T_SHA512	= 1U << 8,
 	T_XXHASH	= 1U << 9,
+	T_MURMUR3	= 1U << 10,
 };
 
 static void t_md5(void *buf, size_t size)
@@ -134,6 +136,14 @@ static void t_sha512(void *buf, size_t size)
 		fio_sha512_update(&ctx, buf, size);
 }
 
+static void t_murmur3(void *buf, size_t size)
+{
+	int i;
+
+	for (i = 0; i < NR_CHUNKS; i++)
+		murmurhash3(buf, size, 0x8989);
+}
+
 static void t_xxhash(void *buf, size_t size)
 {
 	void *state;
@@ -197,6 +207,11 @@ static struct test_type t[] = {
 		.name = "xxhash",
 		.mask = T_XXHASH,
 		.fn = t_xxhash,
+	},
+	{
+		.name = "murmur3",
+		.mask = T_MURMUR3,
+		.fn = t_murmur3,
 	},
 	{
 		.name = NULL,

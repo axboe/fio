@@ -5,7 +5,7 @@
 #include "../hash.h"
 #include "../minmax.h"
 #include "../crc/xxhash.h"
-#include "../crc/crc32c.h"
+#include "../lib/murmur3.h"
 
 struct bloom {
 	uint64_t nentries;
@@ -21,11 +21,6 @@ struct bloom_hash {
 	uint32_t (*fn)(const void *, uint32_t, uint32_t);
 };
 
-static uint32_t b_crc32c(const void *buf, uint32_t len, uint32_t seed)
-{
-	return fio_crc32c(buf, len);
-}
-
 struct bloom_hash hashes[] = {
 	{
 		.seed = 0x8989,
@@ -36,8 +31,8 @@ struct bloom_hash hashes[] = {
 		.fn = XXH32,
 	},
 	{
-		.seed = 0,
-		.fn = b_crc32c,
+		.seed = 0x8989,
+		.fn = murmurhash3,
 	},
 };
 
@@ -49,8 +44,6 @@ struct bloom *bloom_new(uint64_t entries)
 {
 	struct bloom *b;
 	size_t no_uints;
-
-	crc32c_intel_probe();
 
 	b = malloc(sizeof(*b));
 	b->nentries = entries;
