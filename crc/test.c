@@ -55,10 +55,10 @@ static void t_md5(struct test_type *t, void *buf, size_t size)
 
 	fio_md5_init(&ctx);
 
-	for (i = 0; i < NR_CHUNKS; i++)
+	for (i = 0; i < NR_CHUNKS; i++) {
 		fio_md5_update(&ctx, buf, size);
-
-	fio_md5_final(&ctx);
+		fio_md5_final(&ctx);
+	}
 }
 
 static void t_crc64(struct test_type *t, void *buf, size_t size)
@@ -121,10 +121,10 @@ static void t_sha256(struct test_type *t, void *buf, size_t size)
 
 	fio_sha256_init(&ctx);
 
-	for (i = 0; i < NR_CHUNKS; i++)
+	for (i = 0; i < NR_CHUNKS; i++) {
 		fio_sha256_update(&ctx, buf, size);
-
-	fio_sha256_final(&ctx);
+		fio_sha256_final(&ctx);
+	}
 }
 
 static void t_sha512(struct test_type *t, void *buf, size_t size)
