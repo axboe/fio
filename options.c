@@ -98,9 +98,9 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 			if (perc > 100)
 				perc = 100;
 			else if (!perc)
-				perc = -1;
+				perc = -1U;
 		} else
-			perc = -1;
+			perc = -1U;
 
 		if (str_to_decimal(fname, &val, 1, o, 0)) {
 			log_err("fio: bssplit conversion failed\n");
@@ -127,7 +127,7 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 	for (i = 0; i < o->bssplit_nr[ddir]; i++) {
 		struct bssplit *bsp = &bssplit[i];
 
-		if (bsp->perc == (unsigned char) -1)
+		if (bsp->perc == -1U)
 			perc_missing++;
 		else
 			perc += bsp->perc;
@@ -138,17 +138,18 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 		free(bssplit);
 		return 1;
 	}
+
 	/*
 	 * If values didn't have a percentage set, divide the remains between
 	 * them.
 	 */
 	if (perc_missing) {
-		if (perc_missing == 1)
+		if (perc_missing == 1 && o->bssplit_nr[ddir] == 1)
 			perc = 100;
 		for (i = 0; i < o->bssplit_nr[ddir]; i++) {
 			struct bssplit *bsp = &bssplit[i];
 
-			if (bsp->perc == (unsigned char) -1)
+			if (bsp->perc == -1U)
 				bsp->perc = (100 - perc) / perc_missing;
 		}
 	}
