@@ -475,10 +475,11 @@ static void show_chunk(struct chunk *c)
 
 static void show_stat(uint64_t nextents, uint64_t nchunks)
 {
-	double perc;
+	double perc, ratio;
 
 	printf("Extents=%lu, Unique extents=%lu\n", (unsigned long) nextents, (unsigned long) nchunks);
-	printf("De-dupe factor: %3.2f\n", (double) nextents / (double) nchunks);
+	ratio = (double) nextents / (double) nchunks;
+	printf("De-dupe ratio: 1:%3.2f\n", ratio - 1.0);
 
 	perc = 1.00 - ((double) nchunks / (double) nextents);
 	perc *= 100.0;
