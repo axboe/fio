@@ -6,6 +6,8 @@
 #include "../minmax.h"
 #include "../crc/xxhash.h"
 #include "../crc/murmur3.h"
+#include "../crc/crc32c.h"
+#include "../crc/fnv.h"
 
 struct bloom {
 	uint64_t nentries;
@@ -21,22 +23,42 @@ struct bloom_hash {
 	uint32_t (*fn)(const void *, uint32_t, uint32_t);
 };
 
+static uint32_t bloom_crc32c(const void *buf, uint32_t len, uint32_t seed)
+{
+	return fio_crc32c(buf, len);
+}
+
+static uint32_t bloom_fnv(const void *buf, uint32_t len, uint32_t seed)
+{
+	return fnv(buf, len, seed);
+}
+
+#define BLOOM_SEED	0x8989
+
 struct bloom_hash hashes[] = {
 	{
-		.seed = 0x8989,
+		.seed = BLOOM_SEED,
 		.fn = jhash,
 	},
 	{
-		.seed = 0x8989,
+		.seed = BLOOM_SEED,
 		.fn = XXH32,
 	},
 	{
-		.seed = 0x8989,
+		.seed = BLOOM_SEED,
 		.fn = murmurhash3,
+	},
+	{
+		.seed = BLOOM_SEED,
+		.fn = bloom_crc32c,
+	},
+	{
+		.seed = BLOOM_SEED,
+		.fn = bloom_fnv,
 	},
 };
 
-#define N_HASHES	3
+#define N_HASHES	5
 
 #define MIN_ENTRIES	1073741824UL
 
@@ -44,6 +66,8 @@ struct bloom *bloom_new(uint64_t entries)
 {
 	struct bloom *b;
 	size_t no_uints;
+
+	crc32c_intel_probe();
 
 	b = malloc(sizeof(*b));
 	b->nentries = entries;
