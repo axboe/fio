@@ -823,7 +823,9 @@ number_ios=int	Fio will normally perform IOs until it has exhausted the size
 		time (or hits an error condition). With this setting, the
 		range/size can be set independently of the number of IOs to
 		perform. When fio reaches this number, it will exit normally
-		and report status.
+		and report status. Note that this does not extend the amount
+		of IO that will be done, it will only stop fio if this
+		condition is met before other end-of-job criteria.
 
 fsync=int	If writing to a file, issue a sync of the dirty data
 		for every number of blocks given. For example, if you give
