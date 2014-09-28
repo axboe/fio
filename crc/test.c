@@ -18,6 +18,7 @@
 #include "../crc/sha512.h"
 #include "../crc/xxhash.h"
 #include "../crc/murmur3.h"
+#include "../crc/fnv.h"
 #include "../hash.h"
 
 #include "test.h"
@@ -45,6 +46,7 @@ enum {
 	T_XXHASH	= 1U << 9,
 	T_MURMUR3	= 1U << 10,
 	T_JHASH		= 1U << 11,
+	T_FNV		= 1U << 12,
 };
 
 static void t_md5(struct test_type *t, void *buf, size_t size)
@@ -155,6 +157,14 @@ static void t_jhash(struct test_type *t, void *buf, size_t size)
 		t->output += jhash(buf, size, 0x8989);
 }
 
+static void t_fnv(struct test_type *t, void *buf, size_t size)
+{
+	int i;
+
+	for (i = 0; i < NR_CHUNKS; i++)
+		t->output += fnv(buf, size, 0x8989);
+}
+
 static void t_xxhash(struct test_type *t, void *buf, size_t size)
 {
 	void *state;
@@ -228,6 +238,11 @@ static struct test_type t[] = {
 		.name = "jhash",
 		.mask = T_JHASH,
 		.fn = t_jhash,
+	},
+	{
+		.name = "fnv",
+		.mask = T_FNV,
+		.fn = t_fnv,
 	},
 	{
 		.name = NULL,
