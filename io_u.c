@@ -271,20 +271,32 @@ static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 			       enum fio_ddir ddir, uint64_t *offset)
 {
+	struct thread_options *o = &td->o;
+
 	assert(ddir_rw(ddir));
 
-	if (f->last_pos >= f->io_size + get_start_offset(td, f) && td->o.time_based)
+	if (f->last_pos >= f->io_size + get_start_offset(td, f) &&
+	    o->time_based)
 		f->last_pos = f->last_pos - f->io_size;
 
 	if (f->last_pos < f->real_file_size) {
 		uint64_t pos;
 
-		if (f->last_pos == f->file_offset && td->o.ddir_seq_add < 0)
+		if (f->last_pos == f->file_offset && o->ddir_seq_add < 0)
 			f->last_pos = f->real_file_size;
 
 		pos = f->last_pos - f->file_offset;
-		if (pos)
-			pos += td->o.ddir_seq_add;
+		if (pos && o->ddir_seq_add) {
+			pos += o->ddir_seq_add;
+
+			/*
+			 * If we reach beyond the end of the file
+			 * with holed IO, wrap around to the
+			 * beginning again.
+			 */
+			if (pos >= f->real_file_size)
+				pos = f->file_offset;
+		}
 
 		*offset = pos;
 		return 0;
