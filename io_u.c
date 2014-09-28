@@ -760,9 +760,17 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	 * See if it's time to switch to a new zone
 	 */
 	if (td->zone_bytes >= td->o.zone_size && td->o.zone_skip) {
+		struct fio_file *f = io_u->file;
+
 		td->zone_bytes = 0;
-		io_u->file->file_offset += td->o.zone_range + td->o.zone_skip;
-		io_u->file->last_pos = io_u->file->file_offset;
+		f->file_offset += td->o.zone_range + td->o.zone_skip;
+
+		/*
+		 * Wrap from the beginning, if we exceed the file size
+		 */
+		if (f->file_offset >= f->real_file_size)
+			f->file_offset = f->real_file_size - f->file_offset;
+		f->last_pos = f->file_offset;
 		td->io_skip_bytes += td->o.zone_skip;
 	}
 
