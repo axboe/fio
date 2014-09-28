@@ -452,7 +452,7 @@ static int dedupe_check(const char *filename, uint64_t *nextents,
 	if (use_bloom) {
 		uint64_t bloom_entries;
 
-		bloom_entries = (3 * dev_size ) / (blocksize * 2);
+		bloom_entries = 8 * (dev_size / blocksize);
 		bloom = bloom_new(bloom_entries);
 	}
 
