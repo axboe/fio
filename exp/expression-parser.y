@@ -20,7 +20,7 @@
 
 #include <stdio.h>
 #include <string.h>
-
+#include <math.h>
 struct parser_value_type {
 	double dval;
 	long long ival;
@@ -58,6 +58,7 @@ extern void yyrestart(FILE *file);
 %token <v> SUFFIX 
 %left '-' '+'
 %left '*' '/'
+%right '^'
 %nonassoc UMINUS
 %parse-param { long long *result }
 %parse-param { double *dresult }
@@ -130,6 +131,36 @@ expression:	expression '+' expression {
 			else
 				$$.dval = $1.ival * $2.ival;
 			$$.has_error = $1.has_error || $2.has_error;
+		}
+	|	expression '^' expression {
+			$$.has_error = $1.has_error || $3.has_error;
+			if (!$1.has_dval && !$3.has_dval) {
+				int i;
+
+				if ($3.ival == 0) {
+					$$.ival = 1;
+				} else if ($3.ival > 0) {
+					long long tmp = $1.ival;
+					$$.ival = 1.0;
+					for (i = 0; i < $3.ival; i++)
+						$$.ival *= tmp;
+				}  else {
+					/* integers, 2^-3, ok, we now have doubles */
+					double tmp;
+					if ($1.ival == 0 && $3.ival == 0) {
+						tmp = 1.0;
+						$$.has_error = 1;
+					} else {
+						tmp = pow((double) $1.ival,
+								(double) $3.ival);
+					}
+					$$.ival = (long long) tmp;
+				}
+				$$.dval = pow($1.dval, $3.dval);
+			} else {
+				$$.dval = pow($1.dval, $3.dval);
+				$$.ival = (long long) $$.dval;
+			}
 		}
 	|	NUMBER { $$ = $1; }
 	|	BYE { $$ = $1; *bye = 1; };

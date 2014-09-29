@@ -158,7 +158,8 @@ bye		return BYE;
 		}
 	}
 \n	return 0;
-[+-/*()]	return yytext[0];
+[+-/*()^]	return yytext[0];
+
 .	{
 		yylval.v.has_error = 1;
 		return NUMBER;	
