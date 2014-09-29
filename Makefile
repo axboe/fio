@@ -275,10 +275,15 @@ y.tab.c: exp/expression-parser.y
 	$(QUIET_CC)$(YACC) -d exp/expression-parser.y
 
 y.tab.h: y.tab.c exp/fixup-buggy-yacc-output
-	exp/fixup-buggy-yacc-output $@
+	@exp/fixup-buggy-yacc-output $@
 
 lex.yy.c: exp/expression-parser.l
 	$(QUIET_CC)$(LEX) exp/expression-parser.l
+
+exp/fixup-buggy-yacc-output.o: exp/fixup-buggy-yacc-output.c
+	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
+exp/fixup-buggy-yacc-output: exp/fixup-buggy-yacc-output.o
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) $< -o $@
 
 exp/test-expression-parser.o: exp/test-expression-parser.c
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
