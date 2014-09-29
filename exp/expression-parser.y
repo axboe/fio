@@ -163,8 +163,9 @@ expression:	expression '+' expression {
 						tmp = 1.0;
 						$$.has_error = 1;
 					} else {
-						tmp = pow((double) $1.ival,
-								(double) $3.ival);
+						double x = (double) $1.ival;
+						double y = (double) $3.ival;
+						tmp = pow(x, y);
 					}
 					$$.ival = (long long) tmp;
 				}
