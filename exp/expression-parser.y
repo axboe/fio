@@ -57,6 +57,7 @@ extern void yyrestart(FILE *file);
 %token <v> BYE
 %token <v> SUFFIX 
 %left '-' '+'
+%right SUFFIX
 %left '*' '/'
 %right '^'
 %left '%'
