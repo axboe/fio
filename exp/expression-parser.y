@@ -59,6 +59,7 @@ extern void yyrestart(FILE *file);
 %left '-' '+'
 %left '*' '/'
 %right '^'
+%left '%'
 %nonassoc UMINUS
 %parse-param { long long *result }
 %parse-param { double *dresult }
@@ -131,6 +132,15 @@ expression:	expression '+' expression {
 			else
 				$$.dval = $1.ival * $2.ival;
 			$$.has_error = $1.has_error || $2.has_error;
+		}
+	|	expression '%' expression {
+			if ($1.has_dval || $3.has_dval)
+				yyerror(0, 0, 0, 0, "modulo on floats");
+			if ($3.ival == 0)
+				yyerror(0, 0, 0, 0, "divide by zero");
+			else
+				$$.ival = $1.ival % $3.ival;
+			$$.has_error = $1.has_error || $3.has_error;
 		}
 	|	expression '^' expression {
 			$$.has_error = $1.has_error || $3.has_error;
