@@ -312,8 +312,12 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data,
 #ifdef CONFIG_ARITHMETIC
 	if (str[0] == '(')
 		rc = evaluate_arithmetic_expression(str, &ival, &dval);
-	if (str[0] == '(' && !rc)
-		*val = ival;
+	if (str[0] == '(' && !rc) {
+		if (!kilo && is_seconds)
+			*val = ival / 1000000LL;
+		else
+			*val = ival;
+	}
 #endif
 
 	if (rc == 1) {

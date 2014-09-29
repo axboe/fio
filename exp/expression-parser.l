@@ -36,12 +36,78 @@ extern int yyerror(long long *result, double *dresult,
 static void __attribute__((unused)) yyunput(int c,char *buf_ptr);
 static int __attribute__((unused)) input(void);
 
+#define set_suffix_value(yylval, i_val, d_val, has_d_val) \
+	(yylval).v.dval = (d_val); \
+	(yylval).v.ival = (i_val); \
+	(yylval).v.has_dval = (has_d_val); \
+	(yylval).v.has_error = 0;
+
 %}
 
 %%
 
 
-bye	return BYE;
+bye		return BYE;
+[kK]|[kK][bB] 	{
+			set_suffix_value(yylval, 1024, 1024.0, 0);
+			return SUFFIX;
+		}
+[Mm]|[Mm][bB]	{
+			set_suffix_value(yylval, 1024 * 1024, 1024.0 * 1024.0, 0);
+			return SUFFIX;
+		}
+[mM][sS]	{
+			set_suffix_value(yylval, 1000, 1000.0, 1);
+			return SUFFIX;
+		}
+[uU][sS]	{
+			set_suffix_value(yylval, 1, 1.0, 1);
+			return SUFFIX;
+		}
+[gG]|[Gg][Bb]	{
+			set_suffix_value(yylval, 1024LL * 1024 * 1024, 1024.0 * 1024.0 * 1024, 0);
+			return SUFFIX;
+		}
+[tT]|[tT][bB]	{	
+			set_suffix_value(yylval, 1024LL * 1024 * 1024 * 1024,
+						1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024, 0);
+			return SUFFIX;
+		}
+[pP]|[pP][bB]	{	
+			set_suffix_value(yylval, 1024LL * 1024 * 1024 * 1024 * 1024,
+					1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0, 0);
+			return SUFFIX;
+		}
+[kK][iI][Bb]	{
+			set_suffix_value(yylval, 1000LL, 1000.0, 0);
+			return SUFFIX;
+		}
+[mM][Ii][bB]	{
+			set_suffix_value(yylval, 1000000LL, 1000000.0 , 0);
+			return SUFFIX;
+		}
+[gG][iI][Bb]	{
+			set_suffix_value(yylval, 1000000000LL, 1000000000.0 , 0);
+			return SUFFIX;
+		}
+[pP][iI][Bb]	{	
+			set_suffix_value(yylval, 1000000000000LL, 1000000000000.0 , 0);
+			return SUFFIX;
+		}
+[sS]		{
+			set_suffix_value(yylval, 1000000LL, 1000000.0 , 0);
+			return SUFFIX;
+		}
+[dD]		{
+			set_suffix_value(yylval, 60LL * 60LL * 24LL * 1000000LL,
+						60.0 * 60.0 * 24.0 * 1000000.0, 0);
+			return SUFFIX;
+		}
+[hH]		{	
+			set_suffix_value(yylval, 60LL * 60LL * 1000000LL,
+					60.0 * 60.0 * 1000000.0, 0);
+			return SUFFIX;
+		}
 [ \t] ; /* ignore whitespace */
 #.+ ; /* ignore comments */
 [0-9]*[.][0-9]+ {

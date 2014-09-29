@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 			buffer[rc - 1] = '\0';
 		rc = evaluate_arithmetic_expression(buffer, &result, &dresult);
 		if (!rc) {
-			printf("%lld (%lf)\n", result, dresult);
+			printf("%lld (%20.20lf)\n", result, dresult);
 		} else {
 			result = 0;
 			dresult = 0;

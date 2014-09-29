@@ -117,9 +117,12 @@ may override any parameter set in global sections.
 .SS Types
 Some parameters may take arguments of a specific type.
 Anywhere a numeric value is required, an arithmetic expression may be used,
-provided it is surrounded by parentheses.  Suffixes currently do not
-work with arithmetic expressions.  Supported operators are
+provided it is surrounded by parentheses.
+Supported operators are
 addition, subtraction, multiplication and division.
+For time values in expressions
+units are microseconds by default.  This is different than for time
+values not in expressions (not enclosed in parentheses).
 The types used are:
 .TP
 .I str

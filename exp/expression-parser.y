@@ -55,6 +55,7 @@ extern void yyrestart(FILE *file);
 
 %token <v> NUMBER
 %token <v> BYE
+%token <v> SUFFIX 
 %left '-' '+'
 %left '*' '/'
 %nonassoc UMINUS
@@ -119,6 +120,17 @@ expression:	expression '+' expression {
 			$$.has_error = $2.has_error;
 		}
 	|	'(' expression ')' { $$ = $2; }
+	|	expression SUFFIX {
+			if (!$1.has_dval && !$2.has_dval)
+				$$.ival = $1.ival * $2.ival;
+			else
+				$$.ival = (long long) $1.dval * $2.dval;
+			if ($1.has_dval || $2.has_dval)
+				$$.dval = $1.dval * $2.dval;
+			else
+				$$.dval = $1.ival * $2.ival;
+			$$.has_error = $1.has_error || $2.has_error;
+		}
 	|	NUMBER { $$ = $1; }
 	|	BYE { $$ = $1; *bye = 1; };
 %%
