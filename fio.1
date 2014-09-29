@@ -115,7 +115,12 @@ and there may be any number of global sections.  Specific job definitions
 may override any parameter set in global sections.
 .SH "JOB PARAMETERS"
 .SS Types
-Some parameters may take arguments of a specific type.  The types used are:
+Some parameters may take arguments of a specific type.
+Anywhere a numeric value is required, an arithmetic expression may be used,
+provided it is surrounded by parentheses.  Suffixes currently do not
+work with arithmetic expressions.  Supported operators are
+addition, subtraction, multiplication and division.
+The types used are:
 .TP
 .I str
 String: a sequence of alphanumeric characters.

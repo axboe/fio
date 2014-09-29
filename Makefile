@@ -158,6 +158,11 @@ endif
 OBJS = $(SOURCE:.c=.o)
 
 FIO_OBJS = $(OBJS) fio.o
+
+ifdef CONFIG_ARITHMETIC
+FIO_OBJS += lex.yy.o y.tab.o
+endif
+
 GFIO_OBJS = $(OBJS) gfio.o graph.o tickmarks.o ghelpers.o goptions.o gerror.o \
 			gclient.o gcompat.o cairo_text_helpers.o printing.o
 
@@ -259,6 +264,25 @@ override CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 		sed -e 's/^ *//' -e 's/$$/:/' >> $*.d
 	@rm -f $*.d.tmp
 
+ifdef CONFIG_ARITHMETIC
+lex.yy.o: lex.yy.c y.tab.h
+	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
+
+y.tab.o: y.tab.c y.tab.h
+	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
+
+y.tab.c: exp/expression-parser.y
+	$(QUIET_CC)$(YACC) -d exp/expression-parser.y
+
+y.tab.h: y.tab.c exp/fixup-buggy-yacc-output
+	exp/fixup-buggy-yacc-output $@
+
+lex.yy.c: exp/expression-parser.l
+	$(QUIET_CC)$(LEX) exp/expression-parser.l
+
+parse.o: lex.yy.o y.tab.o
+endif
+
 init.o: FIO-VERSION-FILE init.c
 	$(QUIET_CC)$(CC) -o init.o $(CFLAGS) $(CPPFLAGS) -c init.c
 
@@ -296,10 +320,10 @@ t/ieee754: $(T_IEEE_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_IEEE_OBJS) $(LIBS)
 
 fio: $(FIO_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(FIO_OBJS) $(LIBS) $(HDFSLIB)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(FIO_OBJS) $(PARSER_OBJS) $(LIBS) $(HDFSLIB)
 
 gfio: $(GFIO_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) -o gfio $(GFIO_OBJS) $(LIBS) $(GTK_LDFLAGS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o gfio $(GFIO_OBJS) $(PARSER_OBJS) $(LIBS) $(GTK_LDFLAGS)
 
 t/genzipf: $(T_ZIPF_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_ZIPF_OBJS) $(LIBS)
@@ -319,7 +343,7 @@ t/dedupe: $(T_DEDUPE_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_DEDUPE_OBJS) $(LIBS)
 
 clean: FORCE
-	-rm -f .depend $(FIO_OBJS) $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE *.d lib/*.d crc/*.d engines/*.d profiles/*.d t/*.d config-host.mak config-host.h
+	-rm -f .depend $(FIO_OBJS) $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE *.d lib/*.d crc/*.d engines/*.d profiles/*.d t/*.d config-host.mak config-host.h exp/fixup-buggy-yacc-output y.tab.[ch] lex.y.c exp/*.[do]
 
 distclean: clean FORCE
 	@rm -f cscope.out fio.pdf fio_generate_plots.pdf fio2gnuplot.pdf

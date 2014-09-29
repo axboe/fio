@@ -18,6 +18,10 @@
 #include "minmax.h"
 #include "lib/ieee754.h"
 
+#ifdef CONFIG_ARITHMETIC
+#include "y.tab.h"
+#endif
+
 static struct fio_option *__fio_options;
 
 static int vp_cmp(const void *p1, const void *p2)
@@ -264,12 +268,28 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
 	return __get_mult_bytes(p, data, percent);
 }
 
+extern int evaluate_arithmetic_expression(const char *buffer, long long *ival,
+					  double *dval);
+
 /*
  * Convert string into a floating number. Return 1 for success and 0 otherwise.
  */
 int str_to_float(const char *str, double *val)
 {
-	return (1 == sscanf(str, "%lf", val));
+#ifdef CONFIG_ARITHMETIC
+	int rc;
+	long long ival;
+	double dval;
+
+	if (str[0] == '(') {
+		rc = evaluate_arithmetic_expression(str, &ival, &dval);
+		if (!rc) {
+			*val = dval;
+			return 1;
+		}
+	}
+#endif
+	return 1 == sscanf(str, "%lf", val);
 }
 
 /*
@@ -279,19 +299,33 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data,
 		   int is_seconds)
 {
 	int len, base;
+	int rc = 1;
+#ifdef CONFIG_ARITHMETIC
+	long long ival;
+	double dval;
+#endif
 
 	len = strlen(str);
 	if (!len)
 		return 1;
 
-	if (strstr(str, "0x") || strstr(str, "0X"))
-		base = 16;
-	else
-		base = 10;
+#ifdef CONFIG_ARITHMETIC
+	if (str[0] == '(')
+		rc = evaluate_arithmetic_expression(str, &ival, &dval);
+	if (str[0] == '(' && !rc)
+		*val = ival;
+#endif
 
-	*val = strtoll(str, NULL, base);
-	if (*val == LONG_MAX && errno == ERANGE)
-		return 1;
+	if (rc == 1) {
+		if (strstr(str, "0x") || strstr(str, "0X"))
+			base = 16;
+		else
+			base = 10;
+
+		*val = strtoll(str, NULL, base);
+		if (*val == LONG_MAX && errno == ERANGE)
+			return 1;
+	}
 
 	if (kilo) {
 		unsigned long long mult;
