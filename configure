@@ -1272,15 +1272,22 @@ echo "HDFS engine                   $libhdfs"
 
 # Check if we have lex/yacc available
 yacc="no"
+yacc_is_bison="no"
 lex="no"
 arith="no"
-LEX=$(which lex)
+LEX=$(which lex 2> /dev/null)
 if test -x "$LEX" ; then
   lex="yes"
 fi
-YACC=$(which yacc)
+YACC=$(which yacc 2> /dev/null)
 if test -x "$YACC" ; then
   yacc="yes"
+else
+  YACC=$(which bison 2> /dev/null)
+  if test -x "$YACC" ; then
+    yacc="yes"
+    yacc_is_bison="yes"
+  fi
 fi
 if test "$yacc" = "yes" && test "$lex" = "yes" ; then
   arith="yes"
@@ -1452,6 +1459,11 @@ if test "$libhdfs" = "yes" ; then
 fi
 if test "$arith" = "yes" ; then
   output_sym "CONFIG_ARITHMETIC"
+  if test "$yacc_is_bison" = "yes" ; then
+    echo "YACC=$YACC -y" >> $config_host_mak
+  else
+    echo "YACC=$YACC" >> $config_host_mak
+  fi
 fi
 
 if test "$zlib" = "no" ; then
