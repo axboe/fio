@@ -138,8 +138,10 @@ expression:	expression '+' expression {
 				yyerror(0, 0, 0, 0, "modulo on floats");
 			if ($3.ival == 0)
 				yyerror(0, 0, 0, 0, "divide by zero");
-			else
+			else {
 				$$.ival = $1.ival % $3.ival;
+				$$.dval = $$.ival;
+			}
 			$$.has_error = $1.has_error || $3.has_error;
 		}
 	|	expression '^' expression {
