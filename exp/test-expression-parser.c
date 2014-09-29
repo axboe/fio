@@ -22,11 +22,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "y.tab.h"
+#include "../y.tab.h"
+
+extern int evaluate_arithmetic_expression(const char *buffer, long long *ival,
+					  double *dval);
  
 int main(int argc, char *argv[])
 {
-	int rc, has_error,  bye = 0;
+	int rc, bye = 0;
 	long long result;
 	double dresult;
 	char buffer[100];
