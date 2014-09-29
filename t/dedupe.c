@@ -342,7 +342,7 @@ static void show_progress(struct worker_thread *threads, unsigned long total)
 		unsigned long nitems = 0;
 		uint64_t tdiff;
 		float perc;
-		int some_done;
+		int some_done = 0;
 		int i;
 
 		for (i = 0; i < num_threads; i++) {
