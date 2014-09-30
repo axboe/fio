@@ -271,6 +271,48 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
 extern int evaluate_arithmetic_expression(const char *buffer, long long *ival,
 					  double *dval);
 
+#ifdef CONFIG_ARITHMETIC
+/*
+ * These two verification functions are just to gain confidence that
+ * the arithmetic processing code is always getting the same answer as the
+ * original number parsing code.  Once sufficiently sure that the arithmetic
+ * code is always getting the right answers, these can be removed.
+ */
+static void verify_exp_parser_float(const char *str)
+{
+	long long ival;
+	double dval, tmpval;
+
+	if (sscanf(str, "%lf", &tmpval) != 1)
+		return;
+
+	if (evaluate_arithmetic_expression(str, &ival, &dval) != 0) {
+		log_info("Arithmetic failed on '%s'\n", str);
+		return;
+	}
+	if (dval != tmpval) {
+		log_info("Arithmetic failed on: '%s' got %lf, expected %lf\n",
+				str, dval, tmpval);
+	}
+}
+
+static void verify_exp_parser_decimal(const char *str, long long val, int kilo, int is_seconds)
+{
+	int rc;
+	long long ival;
+	double dval;
+
+	rc = evaluate_arithmetic_expression(str, &ival, &dval);
+	if (!rc) {
+		if (ival != val)
+			log_info("Arithmetic failed on '%s', expected %lld, got %lld\n",
+				str, val, ival);
+	} else {
+		log_info("Arithmetic failed on '%s'\n", str);
+	}
+}
+#endif
+
 /*
  * Convert string into a floating number. Return 1 for success and 0 otherwise.
  */
@@ -287,6 +329,8 @@ int str_to_float(const char *str, double *val)
 			*val = dval;
 			return 1;
 		}
+	} else {
+		verify_exp_parser_float(str);
 	}
 #endif
 	return 1 == sscanf(str, "%lf", val);
@@ -342,7 +386,9 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data,
 			*val *= mult;
 	} else
 		*val *= get_mult_time(str, len, is_seconds);
-
+#ifdef CONFIG_ARITHMETIC
+	verify_exp_parser_decimal(str, *val, kilo, is_seconds);
+#endif
 	return 0;
 }
 
