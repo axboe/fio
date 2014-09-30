@@ -73,7 +73,7 @@ static void wait_for_event(struct timeval *tv)
 }
 
 static int fio_solarisaio_getevents(struct thread_data *td, unsigned int min,
-				    unsigned int max, struct timespec *t)
+				    unsigned int max, const struct timespec *t)
 {
 	struct solarisaio_data *sd = td->io_ops->data;
 	struct timeval tv;

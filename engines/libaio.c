@@ -139,12 +139,18 @@ static int user_io_getevents(io_context_t aio_ctx, unsigned int max,
 }
 
 static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
-				unsigned int max, struct timespec *t)
+				unsigned int max, const struct timespec *t)
 {
 	struct libaio_data *ld = td->io_ops->data;
 	struct libaio_options *o = td->eo;
 	unsigned actual_min = td->o.iodepth_batch_complete == 0 ? 0 : min;
+	struct timespec __lt, *lt = NULL;
 	int r, events = 0;
+
+	if (t) {
+		__lt = *t;
+		lt = &__lt;
+	}
 
 	do {
 		if (o->userspace_reap == 1
@@ -155,7 +161,7 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 				ld->aio_events + events);
 		} else {
 			r = io_getevents(ld->aio_ctx, actual_min,
-				max, ld->aio_events + events, t);
+				max, ld->aio_events + events, lt);
 		}
 		if (r >= 0)
 			events += r;

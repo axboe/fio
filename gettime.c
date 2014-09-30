@@ -377,7 +377,7 @@ void fio_clock_init(void)
 		log_info("fio: clocksource=cpu may not be reliable\n");
 }
 
-uint64_t utime_since(struct timeval *s, struct timeval *e)
+uint64_t utime_since(const struct timeval *s, const struct timeval *e)
 {
 	long sec, usec;
 	uint64_t ret;
@@ -400,7 +400,7 @@ uint64_t utime_since(struct timeval *s, struct timeval *e)
 	return ret;
 }
 
-uint64_t utime_since_now(struct timeval *s)
+uint64_t utime_since_now(const struct timeval *s)
 {
 	struct timeval t;
 
@@ -408,7 +408,7 @@ uint64_t utime_since_now(struct timeval *s)
 	return utime_since(s, &t);
 }
 
-uint64_t mtime_since(struct timeval *s, struct timeval *e)
+uint64_t mtime_since(const struct timeval *s, const struct timeval *e)
 {
 	long sec, usec, ret;
 
@@ -429,7 +429,7 @@ uint64_t mtime_since(struct timeval *s, struct timeval *e)
 	return ret;
 }
 
-uint64_t mtime_since_now(struct timeval *s)
+uint64_t mtime_since_now(const struct timeval *s)
 {
 	struct timeval t;
 	void *p = __builtin_return_address(0);
@@ -438,7 +438,7 @@ uint64_t mtime_since_now(struct timeval *s)
 	return mtime_since(s, &t);
 }
 
-uint64_t time_since_now(struct timeval *s)
+uint64_t time_since_now(const struct timeval *s)
 {
 	return mtime_since_now(s) / 1000;
 }

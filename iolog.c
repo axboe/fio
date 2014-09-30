@@ -28,7 +28,7 @@ void queue_io_piece(struct thread_data *td, struct io_piece *ipo)
 	td->total_io_size += ipo->len;
 }
 
-void log_io_u(struct thread_data *td, struct io_u *io_u)
+void log_io_u(const struct thread_data *td, const struct io_u *io_u)
 {
 	if (!td->o.write_iolog_file)
 		return;
@@ -282,7 +282,7 @@ void unlog_io_piece(struct thread_data *td, struct io_u *io_u)
 	td->io_hist_len--;
 }
 
-void trim_io_piece(struct thread_data *td, struct io_u *io_u)
+void trim_io_piece(struct thread_data *td, const struct io_u *io_u)
 {
 	struct io_piece *ipo = io_u->ipo;
 

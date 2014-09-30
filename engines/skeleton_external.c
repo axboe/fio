@@ -38,7 +38,7 @@ static struct io_u *fio_skeleton_event(struct thread_data *td, int event)
  * numbers. Required.
  */
 static int fio_skeleton_getevents(struct thread_data *td, unsigned int min,
-				  unsigned int max, struct timespec *t)
+				  unsigned int max, const struct timespec *t)
 {
 	return 0;
 }

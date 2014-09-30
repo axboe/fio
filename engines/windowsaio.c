@@ -37,7 +37,7 @@ struct thread_ctx {
 
 static BOOL timeout_expired(DWORD start_count, DWORD end_count);
 static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
-					unsigned int max, struct timespec *t);
+				unsigned int max, const struct timespec *t);
 static struct io_u *fio_windowsaio_event(struct thread_data *td, int event);
 static int fio_windowsaio_queue(struct thread_data *td,
 				  struct io_u *io_u);
@@ -256,7 +256,8 @@ static struct io_u* fio_windowsaio_event(struct thread_data *td, int event)
 }
 
 static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
-					unsigned int max, struct timespec *t)
+				    unsigned int max,
+				    const struct timespec *t)
 {
 	struct windowsaio_data *wd = td->io_ops->data;
 	unsigned int dequeued = 0;

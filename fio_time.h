@@ -2,11 +2,11 @@
 #define FIO_TIME_H
 
 struct thread_data;
-extern uint64_t utime_since(struct timeval *, struct timeval *);
-extern uint64_t utime_since_now(struct timeval *);
-extern uint64_t mtime_since(struct timeval *, struct timeval *);
-extern uint64_t mtime_since_now(struct timeval *);
-extern uint64_t time_since_now(struct timeval *);
+extern uint64_t utime_since(const struct timeval *,const  struct timeval *);
+extern uint64_t utime_since_now(const struct timeval *);
+extern uint64_t mtime_since(const struct timeval *, const struct timeval *);
+extern uint64_t mtime_since_now(const struct timeval *);
+extern uint64_t time_since_now(const struct timeval *);
 extern uint64_t mtime_since_genesis(void);
 extern uint64_t utime_since_genesis(void);
 extern void usec_spin(unsigned int);

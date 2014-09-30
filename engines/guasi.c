@@ -80,7 +80,7 @@ static struct io_u *fio_guasi_event(struct thread_data *td, int event)
 }
 
 static int fio_guasi_getevents(struct thread_data *td, unsigned int min,
-			       unsigned int max, struct timespec *t)
+			       unsigned int max, const struct timespec *t)
 {
 	struct guasi_data *ld = td->io_ops->data;
 	int n, r;

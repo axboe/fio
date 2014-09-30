@@ -32,7 +32,7 @@ static struct io_u *fio_null_event(struct thread_data *td, int event)
 
 static int fio_null_getevents(struct thread_data *td, unsigned int min_events,
 			      unsigned int fio_unused max,
-			      struct timespec fio_unused *t)
+			      const struct timespec fio_unused *t)
 {
 	struct null_data *nd = (struct null_data *) td->io_ops->data;
 	int ret = 0;

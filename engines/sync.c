@@ -138,7 +138,7 @@ static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 
 static int fio_vsyncio_getevents(struct thread_data *td, unsigned int min,
 				 unsigned int max,
-				 struct timespec fio_unused *t)
+				 const struct timespec fio_unused *t)
 {
 	struct syncio_data *sd = td->io_ops->data;
 	int ret;

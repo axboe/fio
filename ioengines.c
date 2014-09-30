@@ -220,7 +220,7 @@ int td_io_prep(struct thread_data *td, struct io_u *io_u)
 }
 
 int td_io_getevents(struct thread_data *td, unsigned int min, unsigned int max,
-		    struct timespec *t)
+		    const struct timespec *t)
 {
 	int r = 0;
 

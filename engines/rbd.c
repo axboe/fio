@@ -222,7 +222,7 @@ static struct io_u *fio_rbd_event(struct thread_data *td, int event)
 }
 
 static int fio_rbd_getevents(struct thread_data *td, unsigned int min,
-			     unsigned int max, struct timespec *t)
+			     unsigned int max, const struct timespec *t)
 {
 	struct rbd_data *rbd_data = td->io_ops->data;
 	unsigned int events = 0;

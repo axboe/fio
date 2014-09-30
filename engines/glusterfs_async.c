@@ -20,7 +20,7 @@ static struct io_u *fio_gf_event(struct thread_data *td, int event)
 }
 
 static int fio_gf_getevents(struct thread_data *td, unsigned int min,
-			    unsigned int max, struct timespec *t)
+			    unsigned int max, const struct timespec *t)
 {
 	struct gf_data *g = td->io_ops->data;
 	unsigned int events = 0;

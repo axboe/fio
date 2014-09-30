@@ -91,7 +91,8 @@ one_more:
 }
 
 static int fio_binject_getevents(struct thread_data *td, unsigned int min,
-			      unsigned int max, struct timespec fio_unused *t)
+				 unsigned int max,
+				 const struct timespec fio_unused *t)
 {
 	struct binject_data *bd = td->io_ops->data;
 	int left = max, ret, r = 0, ev_index = 0;

@@ -524,7 +524,7 @@ static struct io_u *fio_rdmaio_event(struct thread_data *td, int event)
 }
 
 static int fio_rdmaio_getevents(struct thread_data *td, unsigned int min,
-				unsigned int max, struct timespec *t)
+				unsigned int max, const struct timespec *t)
 {
 	struct rdmaio_data *rd = td->io_ops->data;
 	enum ibv_wc_opcode comp_opcode;
