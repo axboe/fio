@@ -898,7 +898,7 @@ int setup_files(struct thread_data *td)
 		}
 	}
 
-	if (!o->size || o->size > total_size)
+	if (!o->size || (total_size && o->size > total_size))
 		o->size = total_size;
 
 	if (o->size < td_min_bs(td)) {
