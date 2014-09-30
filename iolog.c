@@ -539,9 +539,9 @@ int init_iolog(struct thread_data *td)
 void setup_log(struct io_log **log, struct log_params *p,
 	       const char *filename)
 {
-	struct io_log *l = malloc(sizeof(*l));
+	struct io_log *l;
 
-	memset(l, 0, sizeof(*l));
+	l = calloc(1, sizeof(*l));
 	l->nr_samples = 0;
 	l->max_samples = 1024;
 	l->log_type = p->log_type;

@@ -8,18 +8,12 @@
 
 struct json_object *json_create_object(void)
 {
-	struct json_object *obj = malloc(sizeof(struct json_object));
-	if (obj)
-		memset(obj, 0, sizeof(struct json_object));
-	return obj;
+	return calloc(1, sizeof(struct json_object));
 }
 
 struct json_array *json_create_array(void)
 {
-	struct json_array *array = malloc(sizeof(struct json_array));
-	if (array)
-		memset(array, 0, sizeof(struct json_array));
-	return array;
+	return calloc(1, sizeof(struct json_array));
 }
 
 static struct json_pair *json_create_pair(const char *name, struct json_value *value)
