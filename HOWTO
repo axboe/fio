@@ -38,7 +38,7 @@ and sets everything up as described. If we break down a job from top to
 bottom, it contains the following basic parameters:
 
 	IO type		Defines the io pattern issued to the file(s).
-			We may only be reading sequentially froom this
+			We may only be reading sequentially from this
 			file(s), or we may be writing randomly. Or even
 			mixing reads and writes, sequentially or randomly.
 
