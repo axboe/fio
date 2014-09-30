@@ -109,7 +109,7 @@ bye		return BYE;
 			return SUFFIX;
 		}
 [ \t] ; /* ignore whitespace */
-#.+ ; /* ignore comments */
+[#:,].* ; /* ignore comments, and everything after colons and commas */
 [0-9]*[.][0-9]+ {
 			int rc;
 			double dval;
