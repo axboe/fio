@@ -223,8 +223,10 @@ PROGS += $(T_PROGS)
 ifneq ($(findstring $(MAKEFLAGS),s),s)
 ifndef V
 	QUIET_CC	= @echo '   ' CC $@;
-	QUIET_LINK	= @echo '   ' LINK $@;
-	QUIET_DEP	= @echo '   ' DEP $@;
+	QUIET_LINK	= @echo ' ' LINK $@;
+	QUIET_DEP	= @echo '  ' DEP $@;
+	QUIET_YACC	= @echo ' ' YACC $@;
+	QUIET_LEX	= @echo '  ' LEX $@;
 endif
 endif
 
@@ -265,6 +267,9 @@ override CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 	@rm -f $*.d.tmp
 
 ifdef CONFIG_ARITHMETIC
+lex.yy.c: exp/expression-parser.l
+	$(QUIET_LEX)$(LEX) exp/expression-parser.l
+
 lex.yy.o: lex.yy.c y.tab.h
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
 
@@ -272,12 +277,9 @@ y.tab.o: y.tab.c y.tab.h
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
 
 y.tab.c: exp/expression-parser.y
-	$(QUIET_CC)$(YACC) --no-lines -d exp/expression-parser.y
+	$(QUIET_YACC)$(YACC) --no-lines -d exp/expression-parser.y
 
 y.tab.h: y.tab.c
-
-lex.yy.c: exp/expression-parser.l
-	$(QUIET_CC)$(LEX) exp/expression-parser.l
 
 exp/test-expression-parser.o: exp/test-expression-parser.c
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
@@ -347,7 +349,7 @@ t/dedupe: $(T_DEDUPE_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_DEDUPE_OBJS) $(LIBS)
 
 clean: FORCE
-	@rm -f .depend $(FIO_OBJS) $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE *.d lib/*.d crc/*.d engines/*.d profiles/*.d t/*.d config-host.mak config-host.h exp/fixup-buggy-yacc-output y.tab.[ch] lex.y.c exp/*.[do]
+	@rm -f .depend $(FIO_OBJS) $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) core.* core gfio FIO-VERSION-FILE *.d lib/*.d crc/*.d engines/*.d profiles/*.d t/*.d config-host.mak config-host.h exp/fixup-buggy-yacc-output y.tab.[ch] lex.yy.c exp/*.[do]
 
 distclean: clean FORCE
 	@rm -f cscope.out fio.pdf fio_generate_plots.pdf fio2gnuplot.pdf
