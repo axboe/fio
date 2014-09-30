@@ -117,13 +117,27 @@ may override any parameter set in global sections.
 .SS Types
 Some parameters may take arguments of a specific type.
 Anywhere a numeric value is required, an arithmetic expression may be used,
-provided it is surrounded by parentheses.
-Supported operators are
-addition, subtraction, multiplication, division, modulus, and exponentiation.
-For time values in expressions
-units are microseconds by default.  This is different than for time
-values not in expressions (not enclosed in parentheses).
-The types used are:
+provided it is surrounded by parentheses. Supported operators are:
+.RS
+.RS
+.TP
+.B addition (+)
+.TP
+.B subtraction (-)
+.TP
+.B multiplication (*)
+.TP
+.B division (/)
+.TP
+.B modulus (%)
+.TP
+.B exponentiation (^)
+.RE
+.RE
+.P
+For time values in expressions, units are microseconds by default. This is
+different than for time values not in expressions (not enclosed in
+parentheses). The types used are:
 .TP
 .I str
 String: a sequence of alphanumeric characters.
