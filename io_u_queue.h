@@ -28,7 +28,7 @@ static inline void io_u_qpush(struct io_u_queue *q, struct io_u *io_u)
 	q->io_us[q->nr++] = io_u;
 }
 
-static inline int io_u_qempty(struct io_u_queue *q)
+static inline int io_u_qempty(const struct io_u_queue *q)
 {
 	return !q->nr;
 }

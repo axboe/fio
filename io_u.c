@@ -1301,7 +1301,7 @@ void lat_target_check(struct thread_data *td)
  * If latency target is enabled, we might be ramping up or down and not
  * using the full queue depth available.
  */
-int queue_full(struct thread_data *td)
+int queue_full(const struct thread_data *td)
 {
 	const int qempty = io_u_qempty(&td->io_u_freelist);
 

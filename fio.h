@@ -406,7 +406,7 @@ extern const char fio_version_string[];
 
 extern struct thread_data *threads;
 
-static inline void fio_ro_check(struct thread_data *td, struct io_u *io_u)
+static inline void fio_ro_check(const struct thread_data *td, struct io_u *io_u)
 {
 	assert(!(io_u->ddir == DDIR_WRITE && !td_write(td)));
 }

@@ -522,7 +522,8 @@ int td_io_get_file_size(struct thread_data *td, struct fio_file *f)
 	return td->io_ops->get_file_size(td, f);
 }
 
-static int do_sync_file_range(struct thread_data *td, struct fio_file *f)
+static int do_sync_file_range(const struct thread_data *td,
+			      struct fio_file *f)
 {
 	off64_t offset, nbytes;
 
@@ -535,7 +536,7 @@ static int do_sync_file_range(struct thread_data *td, struct fio_file *f)
 	return sync_file_range(f->fd, offset, nbytes, td->o.sync_file_range);
 }
 
-int do_io_u_sync(struct thread_data *td, struct io_u *io_u)
+int do_io_u_sync(const struct thread_data *td, struct io_u *io_u)
 {
 	int ret;
 
@@ -561,7 +562,7 @@ int do_io_u_sync(struct thread_data *td, struct io_u *io_u)
 	return ret;
 }
 
-int do_io_u_trim(struct thread_data *td, struct io_u *io_u)
+int do_io_u_trim(const struct thread_data *td, struct io_u *io_u)
 {
 #ifndef FIO_HAVE_TRIM
 	io_u->error = EINVAL;

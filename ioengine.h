@@ -215,10 +215,10 @@ extern void fill_io_buffer(struct thread_data *, void *, unsigned int, unsigned 
 extern void io_u_fill_buffer(struct thread_data *td, struct io_u *, unsigned int, unsigned int);
 void io_u_mark_complete(struct thread_data *, unsigned int);
 void io_u_mark_submit(struct thread_data *, unsigned int);
-int queue_full(struct thread_data *);
+int queue_full(const struct thread_data *);
 
-int do_io_u_sync(struct thread_data *, struct io_u *);
-int do_io_u_trim(struct thread_data *, struct io_u *);
+int do_io_u_sync(const struct thread_data *, struct io_u *);
+int do_io_u_trim(const struct thread_data *, struct io_u *);
 
 #ifdef FIO_INC_DEBUG
 static inline void dprint_io_u(struct io_u *io_u, const char *p)
