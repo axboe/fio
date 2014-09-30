@@ -31,7 +31,7 @@ extern int lexer_input(char* buffer, int *nbytes, int buffersize);
 		lexer_input((buffer), &(bytes_read), (bytes_requested))
 
 extern int yyerror(long long *result, double *dresult,
-		int *has_error, int *units_specified, int *bye, const char *msg);
+		int *has_error, int *units_specified, const char *msg);
 
 static void __attribute__((unused)) yyunput(int c,char *buf_ptr);
 static int __attribute__((unused)) input(void);
@@ -47,7 +47,6 @@ static int __attribute__((unused)) input(void);
 %%
 
 
-bye		return BYE;
 [kK]|[kK][bB] 	{
 			set_suffix_value(yylval, 1024, 1024.0, 0);
 			return SUFFIX;
@@ -122,7 +121,7 @@ bye		return BYE;
 				yylval.v.has_error = 0;
 				return NUMBER;
 			} else {
-				yyerror(0, 0, 0, 0, 0, "bad number\n");
+				yyerror(0, 0, 0, 0, "bad number\n");
 				yylval.v.has_error = 1;
 				return NUMBER;
 			}
@@ -137,7 +136,7 @@ bye		return BYE;
 			yylval.v.has_error = 0;
 			return NUMBER;
 		} else {
-			yyerror(0, 0, 0, 0, 0, "bad number\n");
+			yyerror(0, 0, 0, 0, "bad number\n");
 			yylval.v.has_error = 1;
 			return NUMBER;
 		}
@@ -152,7 +151,7 @@ bye		return BYE;
 			yylval.v.has_error = 0;
 			return NUMBER;
 		} else {
-			yyerror(0, 0, 0, 0, 0, "bad number\n");
+			yyerror(0, 0, 0, 0, "bad number\n");
 			yylval.v.has_error = 1;
 			return NUMBER;
 		}
