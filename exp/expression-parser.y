@@ -37,6 +37,7 @@ typedef union valtype {
 int yyerror(__attribute__((unused)) long long *result,
 		__attribute__((unused)) double *dresult,
 		__attribute__((unused)) int *has_error,
+		__attribute__((unused)) int *units_specified,
 		__attribute__((unused)) int *bye, const char *msg);
 
 extern int yylex(void);
@@ -65,6 +66,7 @@ extern void yyrestart(FILE *file);
 %parse-param { long long *result }
 %parse-param { double *dresult }
 %parse-param { int *has_error }
+%parse-param { int *units_specified }
 %parse-param { int *bye }
 
 %type <v> expression
@@ -106,11 +108,11 @@ expression:	expression '+' expression {
 		}
 	|	expression '/' expression {
 			if ($3.ival == 0)
-				yyerror(0, 0, 0, 0, "divide by zero");
+				yyerror(0, 0, 0, 0, 0, "divide by zero");
 			else
 				$$.ival = $1.ival / $3.ival;
 			if ($3.dval < 1e-20 && $3.dval > -1e-20)
-				yyerror(0, 0, 0, 0, "divide by zero");
+				yyerror(0, 0, 0, 0, 0, "divide by zero");
 			else
 				$$.dval = $1.dval / $3.dval;
 			if ($3.has_dval || $1.has_dval)
@@ -133,12 +135,13 @@ expression:	expression '+' expression {
 			else
 				$$.dval = $1.ival * $2.ival;
 			$$.has_error = $1.has_error || $2.has_error;
+			*units_specified = 1;
 		}
 	|	expression '%' expression {
 			if ($1.has_dval || $3.has_dval)
-				yyerror(0, 0, 0, 0, "modulo on floats");
+				yyerror(0, 0, 0, 0, 0, "modulo on floats");
 			if ($3.ival == 0)
-				yyerror(0, 0, 0, 0, "divide by zero");
+				yyerror(0, 0, 0, 0, 0, "divide by zero");
 			else {
 				$$.ival = $1.ival % $3.ival;
 				$$.dval = $$.ival;
@@ -211,17 +214,22 @@ static void setup_to_parse_string(const char *string)
 	lexer_read_offset = 0;
 }
 
-int evaluate_arithmetic_expression(const char *buffer, long long *ival, double *dval)
+int evaluate_arithmetic_expression(const char *buffer, long long *ival, double *dval,
+					double implied_units)
 {
-	int rc, bye = 0, has_error = 0;
+	int rc, units_specified = 0, bye = 0, has_error = 0;
 
 	setup_to_parse_string(buffer);
-	rc = yyparse(ival, dval, &has_error, &bye);
+	rc = yyparse(ival, dval, &has_error, &units_specified, &bye);
 	yyrestart(NULL);
 	if (rc || bye || has_error) {
 		*ival = 0;
 		*dval = 0;
 		has_error = 1;
+	}
+	if (!units_specified) {
+		*ival = (int) ((double) *ival * implied_units);
+		*dval = *dval * implied_units;
 	}
 	return has_error;
 }
@@ -229,6 +237,7 @@ int evaluate_arithmetic_expression(const char *buffer, long long *ival, double *
 int yyerror(__attribute__((unused)) long long *result,
 		__attribute__((unused)) double *dresult,
 		__attribute__((unused)) int *has_error,
+		__attribute__((unused)) int *units_specified,
 		__attribute__((unused)) int *bye,
 		__attribute__((unused)) const char *msg)
 {
