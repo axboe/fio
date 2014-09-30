@@ -38,7 +38,7 @@ and sets everything up as described. If we break down a job from top to
 bottom, it contains the following basic parameters:
 
 	IO type		Defines the io pattern issued to the file(s).
-			We may only be reading sequentially from this
+			We may only be reading sequentially froom this
 			file(s), or we may be writing randomly. Or even
 			mixing reads and writes, sequentially or randomly.
 
@@ -379,7 +379,7 @@ rw=str		Type of io pattern. Accepted values are:
 		For certain types of io the result may still be skewed a bit,
 		since the speed may be different. It is possible to specify
 		a number of IO's to do before getting a new offset, this is
-		one by appending a ':<nr>' to the end of the string given.
+		done by appending a ':<nr>' to the end of the string given.
 		For a random read, it would look like 'rw=randread:8' for
 		passing in an offset modifier with a value of 8. If the
 		suffix is used with a sequential IO pattern, then the value
@@ -554,7 +554,7 @@ bssplit=str	Sometimes you want even finer grained control of the
 		while having 90% 4k writes and 10% 8k writes, you would
 		specify:
 
-		bssplit=2k/50:4k/50,4k/90,8k/10
+		bssplit=2k/50:4k/50,4k/90:8k/10
 
 blocksize_unaligned
 bs_unaligned	If this option is given, any byte size value within bsrange
