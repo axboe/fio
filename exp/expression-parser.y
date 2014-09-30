@@ -229,9 +229,10 @@ int evaluate_arithmetic_expression(const char *buffer, long long *ival, double *
 int yyerror(__attribute__((unused)) long long *result,
 		__attribute__((unused)) double *dresult,
 		__attribute__((unused)) int *has_error,
-		__attribute__((unused)) int *bye, const char *msg)
+		__attribute__((unused)) int *bye,
+		__attribute__((unused)) const char *msg)
 {
-	fprintf(stderr, "%s\n", msg);
+	/* We do not need to do anything here. */
 	return 0;
 }
 

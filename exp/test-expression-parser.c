@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
 		if (!rc) {
 			printf("%lld (%20.20lf)\n", result, dresult);
 		} else {
+			fprintf(stderr, "Syntax error\n");
 			result = 0;
 			dresult = 0;
 		}
