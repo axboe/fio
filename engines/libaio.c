@@ -234,7 +234,8 @@ static int fio_libaio_commit(struct thread_data *td)
 	struct libaio_data *ld = td->io_ops->data;
 	struct iocb **iocbs;
 	struct io_u **io_us;
-	int ret;
+	struct timeval tv;
+	int ret, wait_start = 0;
 
 	if (!ld->queued)
 		return 0;
@@ -262,10 +263,24 @@ static int fio_libaio_commit(struct thread_data *td)
 			/*
 			 * If we get EAGAIN, we should break out without
 			 * error and let the upper layer reap some
-			 * events for us.
+			 * events for us. If we have no queued IO, we
+			 * must loop here. If we loop for more than 30s,
+			 * just error out, something must be buggy in the
+			 * IO path.
 			 */
-			ret = 0;
-			break;
+			if (ld->queued) {
+				ret = 0;
+				break;
+			}
+			if (!wait_start) {
+				fio_gettime(&tv, NULL);
+				wait_start = 0;
+			} else if (mtime_since_now(&tv) > 30000) {
+				log_err("fio: aio appears to be stalled, giving up\n");
+				break;
+			}
+			usleep(1);
+			continue;
 		} else
 			break;
 	} while (ld->head != ld->tail);
