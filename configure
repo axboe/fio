@@ -1304,8 +1304,8 @@ int main(int argc, char **argv)
 }
 EOF
 
-if compile_prog "" "-ll -ly" "lex"; then
-  LIBS="-ll -ly $LIBS"
+if compile_prog "" "-ll" "lex"; then
+  LIBS="-ll $LIBS"
 else
   arith="no"
 fi
