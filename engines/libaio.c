@@ -283,7 +283,7 @@ static int fio_libaio_commit(struct thread_data *td)
 			continue;
 		} else
 			break;
-	} while (ld->head != ld->tail);
+	} while (ld->queued);
 
 	return ret;
 }
