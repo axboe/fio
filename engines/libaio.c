@@ -255,9 +255,11 @@ static int fio_libaio_commit(struct thread_data *td)
 			ld->queued -= ret;
 			ring_inc(ld, &ld->tail, ret);
 			ret = 0;
+			wait_start = 0;
 		} else if (ret == -EINTR || !ret) {
 			if (!ret)
 				io_u_mark_submit(td, ret);
+			wait_start = 0;
 			continue;
 		} else if (ret == -EAGAIN) {
 			/*
