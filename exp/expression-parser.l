@@ -109,7 +109,7 @@ static int __attribute__((unused)) input(void);
 		}
 [ \t] ; /* ignore whitespace */
 [#:,].* ; /* ignore comments, and everything after colons and commas */
-[0-9]*[.][0-9]+ {
+[0-9]*[.][0-9]+|[0-9]*[.]?[0-9]+[eE][-+]*[0-9]+ {
 			int rc;
 			double dval;
 
