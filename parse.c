@@ -18,6 +18,10 @@
 #include "minmax.h"
 #include "lib/ieee754.h"
 
+#ifdef CONFIG_ARITHMETIC
+#include "y.tab.h"
+#endif
+
 static struct fio_option *__fio_options;
 
 static int vp_cmp(const void *p1, const void *p2)
@@ -264,12 +268,76 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
 	return __get_mult_bytes(p, data, percent);
 }
 
+extern int evaluate_arithmetic_expression(const char *buffer, long long *ival,
+					  double *dval, double implied_units);
+
+#ifdef CONFIG_ARITHMETIC
+/*
+ * These two verification functions are just to gain confidence that
+ * the arithmetic processing code is always getting the same answer as the
+ * original number parsing code.  Once sufficiently sure that the arithmetic
+ * code is always getting the right answers, these can be removed.
+ */
+static void verify_exp_parser_float(const char *str, double implied_units)
+{
+	long long ival;
+	double dval, tmpval;
+
+	if (sscanf(str, "%lf", &tmpval) != 1)
+		return;
+
+	if (evaluate_arithmetic_expression(str, &ival, &dval, implied_units) != 0) {
+		log_info("Arithmetic failed on '%s'\n", str);
+		return;
+	}
+	if (dval != tmpval) {
+		log_info("Arithmetic failed on: '%s' got %lf, expected %lf\n",
+				str, dval, tmpval);
+	}
+}
+
+static void verify_exp_parser_decimal(const char *str, long long val, int kilo, int is_seconds)
+{
+	int rc;
+	long long ival;
+	double dval;
+	double implied_units = 1.0;
+
+	if (is_seconds)
+		implied_units = 1000000.0;
+
+	rc = evaluate_arithmetic_expression(str, &ival, &dval, implied_units);
+	if (!rc) {
+		if (ival != val)
+			log_info("Arithmetic failed on '%s', expected %lld, got %lld\n",
+				str, val, ival);
+	} else {
+		log_info("Arithmetic failed on '%s'\n", str);
+	}
+}
+#endif
+
 /*
  * Convert string into a floating number. Return 1 for success and 0 otherwise.
  */
 int str_to_float(const char *str, double *val)
 {
-	return (1 == sscanf(str, "%lf", val));
+#ifdef CONFIG_ARITHMETIC
+	int rc;
+	long long ival;
+	double dval;
+
+	if (str[0] == '(') {
+		rc = evaluate_arithmetic_expression(str, &ival, &dval, 1.0);
+		if (!rc) {
+			*val = dval;
+			return 1;
+		}
+	} else {
+		verify_exp_parser_float(str, 1.0);
+	}
+#endif
+	return 1 == sscanf(str, "%lf", val);
 }
 
 /*
@@ -279,19 +347,40 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data,
 		   int is_seconds)
 {
 	int len, base;
+	int rc = 1;
+#ifdef CONFIG_ARITHMETIC
+	long long ival;
+	double dval;
+	double implied_units = 1.0;
+#endif
 
 	len = strlen(str);
 	if (!len)
 		return 1;
 
-	if (strstr(str, "0x") || strstr(str, "0X"))
-		base = 16;
-	else
-		base = 10;
+#ifdef CONFIG_ARITHMETIC
+	if (is_seconds)
+		implied_units = 1000000.0;
+	if (str[0] == '(')
+		rc = evaluate_arithmetic_expression(str, &ival, &dval, implied_units);
+	if (str[0] == '(' && !rc) {
+		if (!kilo && is_seconds)
+			*val = ival / 1000000LL;
+		else
+			*val = ival;
+	}
+#endif
 
-	*val = strtoll(str, NULL, base);
-	if (*val == LONG_MAX && errno == ERANGE)
-		return 1;
+	if (rc == 1) {
+		if (strstr(str, "0x") || strstr(str, "0X"))
+			base = 16;
+		else
+			base = 10;
+
+		*val = strtoll(str, NULL, base);
+		if (*val == LONG_MAX && errno == ERANGE)
+			return 1;
+	}
 
 	if (kilo) {
 		unsigned long long mult;
@@ -304,7 +393,9 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data,
 			*val *= mult;
 	} else
 		*val *= get_mult_time(str, len, is_seconds);
-
+#ifdef CONFIG_ARITHMETIC
+	verify_exp_parser_decimal(str, *val, kilo, is_seconds);
+#endif
 	return 0;
 }
 

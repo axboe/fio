@@ -1270,6 +1270,49 @@ if test "$libhdfs" = "yes" ; then
 fi
 echo "HDFS engine                   $libhdfs"
 
+# Check if we have lex/yacc available
+yacc="no"
+yacc_is_bison="no"
+lex="no"
+arith="no"
+LEX=$(which lex 2> /dev/null)
+if test -x "$LEX" ; then
+  lex="yes"
+fi
+YACC=$(which yacc 2> /dev/null)
+if test -x "$YACC" ; then
+  yacc="yes"
+else
+  YACC=$(which bison 2> /dev/null)
+  if test -x "$YACC" ; then
+    yacc="yes"
+    yacc_is_bison="yes"
+  fi
+fi
+if test "$yacc" = "yes" && test "$lex" = "yes" ; then
+  arith="yes"
+fi
+
+if test "$arith" = "yes" ; then
+cat > $TMPC << EOF
+extern int yywrap(void);
+
+int main(int argc, char **argv)
+{
+  yywrap();
+  return 0;
+}
+EOF
+
+if compile_prog "" "-ll" "lex"; then
+  LIBS="-ll $LIBS"
+else
+  arith="no"
+fi
+fi
+
+echo "lex/yacc for arithmetic       $arith"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -1413,6 +1456,14 @@ if test "$gf_fadvise" = "yes" ; then
 fi
 if test "$libhdfs" = "yes" ; then
   output_sym "CONFIG_LIBHDFS"
+fi
+if test "$arith" = "yes" ; then
+  output_sym "CONFIG_ARITHMETIC"
+  if test "$yacc_is_bison" = "yes" ; then
+    echo "YACC=$YACC -y" >> $config_host_mak
+  else
+    echo "YACC=$YACC" >> $config_host_mak
+  fi
 fi
 
 if test "$zlib" = "no" ; then

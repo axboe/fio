@@ -253,7 +253,20 @@ machine.
 
 This section describes in details each parameter associated with a job.
 Some parameters take an option of a given type, such as an integer or
-a string. The following types are used:
+a string. Anywhere a numeric value is required, an arithmetic expression
+may be used, provided it is surrounded by parentheses. Supported operators
+are:
+
+	addition (+)
+	subtraction (-)
+	multiplication (*)
+	division (/)
+	modulus (%)
+	exponentiation (^)
+
+For time values in expressions, units are microseconds by default. This is
+different than for time values not in expressions (not enclosed in
+parentheses). The following types are used:
 
 str	String. This is a sequence of alpha characters.
 time	Integer with possible time suffix. In seconds unless otherwise
