@@ -167,6 +167,8 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 			events += r;
 		else if (r == -EAGAIN)
 			usleep(100);
+		else
+			break;
 	} while (events < min);
 
 	return r < 0 ? r : events;
@@ -283,6 +285,15 @@ static int fio_libaio_commit(struct thread_data *td)
 			}
 			usleep(1);
 			continue;
+		} else if (ret == -ENOMEM) {
+			/*
+			 * If we get -ENOMEM, reap events if we can. If
+			 * we cannot, treat it as a fatal event since there's
+			 * nothing we can do about it.
+			 */
+			if (ld->queued)
+				ret = 0;
+			break;
 		} else
 			break;
 	} while (ld->queued);
