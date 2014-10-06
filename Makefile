@@ -268,7 +268,7 @@ override CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 
 ifdef CONFIG_ARITHMETIC
 lex.yy.c: exp/expression-parser.l
-	$(QUIET_LEX)$(LEX) exp/expression-parser.l
+	$(QUIET_LEX)$(LEX) --header-file=lexer.h exp/expression-parser.l
 
 lex.yy.o: lex.yy.c y.tab.h
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
@@ -280,6 +280,8 @@ y.tab.c: exp/expression-parser.y
 	$(QUIET_YACC)$(YACC) --no-lines -d exp/expression-parser.y
 
 y.tab.h: y.tab.c
+
+lexer.h: lex.yy.c
 
 exp/test-expression-parser.o: exp/test-expression-parser.c
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<

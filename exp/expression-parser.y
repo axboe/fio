@@ -21,6 +21,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include "lexer.h"
+
 struct parser_value_type {
 	double dval;
 	long long ival;
@@ -186,7 +188,7 @@ expression:	expression '+' expression {
 static int lexer_read_offset = 0;
 static char lexer_input_buffer[1000];
 
-int lexer_input(char* buffer, int *bytes_read, int bytes_requested)
+int lexer_input(char* buffer, yy_size_t *bytes_read, int bytes_requested)
 {
 	int bytes_left = strlen(lexer_input_buffer) - lexer_read_offset;
 
