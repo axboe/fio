@@ -478,8 +478,12 @@ static void show_stat(uint64_t nextents, uint64_t nchunks)
 	double perc, ratio;
 
 	printf("Extents=%lu, Unique extents=%lu\n", (unsigned long) nextents, (unsigned long) nchunks);
-	ratio = (double) nextents / (double) nchunks;
-	printf("De-dupe ratio: 1:%3.2f\n", ratio - 1.0);
+
+	if (nchunks) {
+		ratio = (double) nextents / (double) nchunks;
+		printf("De-dupe ratio: 1:%3.2f\n", ratio - 1.0);
+	} else
+		printf("De-dupe ratio: 1:infinite\n");
 
 	perc = 1.00 - ((double) nchunks / (double) nextents);
 	perc *= 100.0;
