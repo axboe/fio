@@ -431,7 +431,7 @@ static int dedupe_check(const char *filename, uint64_t *nextents,
 
 	flags = O_RDONLY;
 	if (odirect)
-		flags |= O_DIRECT;
+		flags |= OS_O_DIRECT;
 
 	memset(&file, 0, sizeof(file));
 	file.file_name = strdup(filename);
