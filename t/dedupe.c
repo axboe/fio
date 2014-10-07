@@ -11,7 +11,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <linux/fs.h>
 #include <fcntl.h>
 #include <string.h>
 
