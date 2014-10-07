@@ -24,22 +24,22 @@
 
 #define YYSTYPE PARSER_VALUE_TYPE
 
-extern int lexer_input(char* buffer, size_t *nbytes, int buffersize);
+extern int lexer_input(char *buffer, size_t *nbytes, int buffersize);
 
 #undef YY_INPUT
-#define YY_INPUT(buffer, bytes_read, bytes_requested)	\
-({							\
-	int __ret;					\
-	size_t __bread = bytes_read;			\
+#define YY_INPUT(buffer, bytes_read, bytes_requested)			\
+({									\
+	int __ret;							\
+	size_t __bread = bytes_read;					\
 	__ret = lexer_input((buffer), &__bread, (bytes_requested));	\
 	bytes_read = __bread;						\
-	__ret;						\
+	__ret;								\
 })
 
 extern int yyerror(long long *result, double *dresult,
 		int *has_error, int *units_specified, const char *msg);
 
-static void __attribute__((unused)) yyunput(int c,char *buf_ptr);
+static void __attribute__((unused)) yyunput(int c, char *buf_ptr);
 static int __attribute__((unused)) input(void);
 
 #define set_suffix_value(yylval, i_val, d_val, has_d_val) \
