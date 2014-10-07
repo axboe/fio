@@ -78,17 +78,20 @@ static uint64_t total_size;
 static uint64_t cur_offset;
 static struct fio_mutex *size_lock;
 
-static int dev_fd;
+static struct fio_file file;
 
-static uint64_t get_size(int fd, struct stat *sb)
+static uint64_t get_size(struct fio_file *f, struct stat *sb)
 {
 	uint64_t ret;
 
 	if (S_ISBLK(sb->st_mode)) {
-		if (ioctl(fd, BLKGETSIZE64, &ret) < 0) {
-			perror("ioctl");
+		unsigned long long bytes;
+
+		if (blockdev_size(f, &bytes)) {
+			log_err("dedupe: failed getting bdev size\n");
 			return 0;
 		}
+		ret = bytes;
 	} else
 		ret = sb->st_size;
 
@@ -164,10 +167,10 @@ static int col_check(struct chunk *c, struct item *i)
 	ibuf = fio_memalign(blocksize, blocksize);
 
 	e = flist_entry(c->extent_list[0].next, struct extent, list);
-	if (read_block(dev_fd, cbuf, e->offset))
+	if (read_block(file.fd, cbuf, e->offset))
 		goto out;
 
-	if (read_block(dev_fd, ibuf, i->offset))
+	if (read_block(file.fd, ibuf, i->offset))
 		goto out;
 
 	ret = memcmp(ibuf, cbuf, blocksize);
@@ -372,8 +375,8 @@ static void show_progress(struct worker_thread *threads, unsigned long total)
 	};
 }
 
-static int run_dedupe_threads(int fd, uint64_t dev_size, uint64_t *nextents,
-				uint64_t *nchunks)
+static int run_dedupe_threads(struct fio_file *f, uint64_t dev_size,
+			      uint64_t *nextents, uint64_t *nchunks)
 {
 	struct worker_thread *threads;
 	unsigned long nitems, total_items;
@@ -386,7 +389,7 @@ static int run_dedupe_threads(int fd, uint64_t dev_size, uint64_t *nextents,
 
 	threads = malloc(num_threads * sizeof(struct worker_thread));
 	for (i = 0; i < num_threads; i++) {
-		threads[i].fd = fd;
+		threads[i].fd = f->fd;
 		threads[i].items = 0;
 		threads[i].err = 0;
 		threads[i].done = 0;
@@ -431,23 +434,23 @@ static int dedupe_check(const char *filename, uint64_t *nextents,
 	if (odirect)
 		flags |= O_DIRECT;
 
-	dev_fd = open(filename, flags);
-	if (dev_fd == -1) {
+	memset(&file, 0, sizeof(file));
+	file.file_name = strdup(filename);
+
+	file.fd = open(filename, flags);
+	if (file.fd == -1) {
 		perror("open");
-		return 1;
+		goto err;
 	}
 
-	if (fstat(dev_fd, &sb) < 0) {
+	if (fstat(file.fd, &sb) < 0) {
 		perror("fstat");
-		close(dev_fd);
-		return 1;
+		goto err;
 	}
 
-	dev_size = get_size(dev_fd, &sb);
-	if (!dev_size) {
-		close(dev_fd);
-		return 1;
-	}
+	dev_size = get_size(&file, &sb);
+	if (!dev_size)
+		goto err;
 
 	if (use_bloom) {
 		uint64_t bloom_entries;
@@ -458,7 +461,12 @@ static int dedupe_check(const char *filename, uint64_t *nextents,
 
 	printf("Will check <%s>, size <%llu>, using %u threads\n", filename, (unsigned long long) dev_size, num_threads);
 
-	return run_dedupe_threads(dev_fd, dev_size, nextents, nchunks);
+	return run_dedupe_threads(&file, dev_size, nextents, nchunks);
+err:
+	if (file.fd != -1)
+		close(file.fd);
+	free(file.file_name);
+	return 1;
 }
 
 static void show_chunk(struct chunk *c)
