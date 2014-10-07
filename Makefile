@@ -277,7 +277,7 @@ y.tab.o: y.tab.c y.tab.h
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
 
 y.tab.c: exp/expression-parser.y
-	$(QUIET_YACC)$(YACC) --no-lines -d exp/expression-parser.y
+	$(QUIET_YACC)$(YACC) --no-lines -d -b y exp/expression-parser.y
 
 y.tab.h: y.tab.c
 

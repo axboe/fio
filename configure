@@ -1279,14 +1279,14 @@ LEX=$(which lex 2> /dev/null)
 if test -x "$LEX" ; then
   lex="yes"
 fi
-YACC=$(which yacc 2> /dev/null)
+YACC=$(which bison 2> /dev/null)
 if test -x "$YACC" ; then
   yacc="yes"
+  yacc_is_bison="yes"
 else
-  YACC=$(which bison 2> /dev/null)
+  YACC=$(which yacc 2> /dev/null)
   if test -x "$YACC" ; then
     yacc="yes"
-    yacc_is_bison="yes"
   fi
 fi
 if test "$yacc" = "yes" && test "$lex" = "yes" ; then
