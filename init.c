@@ -1482,6 +1482,7 @@ int __parse_jobs_ini(struct thread_data *td,
 
 				log_err("fio: option <%s> outside of "
 					"[] job section\n", p);
+				ret = 1;
 				break;
 			}
 
