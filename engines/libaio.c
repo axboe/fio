@@ -13,6 +13,8 @@
 
 #include "../fio.h"
 
+static int fio_libaio_commit(struct thread_data *td);
+
 struct libaio_data {
 	io_context_t aio_ctx;
 	struct io_event *aio_events;
@@ -165,9 +167,10 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 		}
 		if (r >= 0)
 			events += r;
-		else if (r == -EAGAIN)
+		else if (r == -EAGAIN) {
+			fio_libaio_commit(td);
 			usleep(100);
-		else if (r != -EINTR)
+		} else if (r != -EINTR)
 			break;
 	} while (events < min);
 
