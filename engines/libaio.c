@@ -167,7 +167,7 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 			events += r;
 		else if (r == -EAGAIN)
 			usleep(100);
-		else
+		else if (r != -EINTR)
 			break;
 	} while (events < min);
 
