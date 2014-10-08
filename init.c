@@ -1432,7 +1432,8 @@ int __parse_jobs_ini(struct thread_data *td,
 			int __err = errno;
 
 			log_err("fio: unable to open '%s' job file\n", file);
-			td_verror(td, __err, "job file open");
+			if (td)
+				td_verror(td, __err, "job file open");
 			return 1;
 		}
 	}
