@@ -159,12 +159,13 @@ OBJS = $(SOURCE:.c=.o)
 
 FIO_OBJS = $(OBJS) fio.o
 
-ifdef CONFIG_ARITHMETIC
-FIO_OBJS += lex.yy.o y.tab.o
-endif
-
 GFIO_OBJS = $(OBJS) gfio.o graph.o tickmarks.o ghelpers.o goptions.o gerror.o \
 			gclient.o gcompat.o cairo_text_helpers.o printing.o
+
+ifdef CONFIG_ARITHMETIC
+FIO_OBJS += lex.yy.o y.tab.o
+GFIO_OBJS += lex.yy.o y.tab.o
+endif
 
 -include $(OBJS:.o=.d)
 
