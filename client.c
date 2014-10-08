@@ -620,8 +620,9 @@ static int __fio_client_send_remote_ini(struct fio_client *client,
 
 	dprint(FD_NET, "send remote ini %s to %s\n", filename, client->hostname);
 
-	p_size = sizeof(*pdu) + strlen(filename);
+	p_size = sizeof(*pdu) + strlen(filename) + 1;
 	pdu = malloc(p_size);
+	memset(pdu, 0, p_size);
 	pdu->name_len = strlen(filename);
 	strcpy((char *) pdu->file, filename);
 	pdu->client_type = cpu_to_le16((uint16_t) client->type);
