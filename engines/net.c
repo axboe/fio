@@ -1213,7 +1213,7 @@ static int fio_netio_setup(struct thread_data *td)
 
 static void fio_netio_terminate(struct thread_data *td)
 {
-	kill(td->pid, SIGUSR2);
+	kill(td->pid, SIGTERM);
 }
 
 #ifdef CONFIG_LINUX_SPLICE
