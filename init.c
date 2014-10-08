@@ -217,6 +217,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'C',
 	},
 	{
+		.name		= (char *) "remote-config",
+		.has_arg	= required_argument,
+		.val		= 'R',
+	},
+	{
 		.name		= (char *) "cpuclock-test",
 		.has_arg	= no_argument,
 		.val		= 'T',
@@ -1424,7 +1429,10 @@ int __parse_jobs_ini(struct thread_data *td,
 			f = fopen(file, "r");
 
 		if (!f) {
-			perror("fopen job file");
+			int __err = errno;
+
+			log_err("fio: unable to open '%s' job file\n", file);
+			td_verror(td, __err, "job file open");
 			return 1;
 		}
 	}
@@ -1683,6 +1691,7 @@ static void usage(const char *name)
 	printf("  --server=args\t\tStart a backend fio server\n");
 	printf("  --daemonize=pidfile\tBackground fio server, write pid to file\n");
 	printf("  --client=hostname\tTalk to remote backend fio server at hostname\n");
+	printf("  --remote-config=file\tTell fio server to load this local job file\n");
 	printf("  --idle-prof=option\tReport cpu idleness on a system or percpu basis\n"
 		"\t\t\t(option=system,percpu) or run unit work\n"
 		"\t\t\tcalibration only (option=calibrate)\n");
@@ -2174,8 +2183,16 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				    !strncmp(argv[optind], "-", 1))
 					break;
 
-				fio_client_add_ini_file(cur_client, argv[optind]);
+				if (fio_client_add_ini_file(cur_client, argv[optind], 0))
+					break;
 				optind++;
+			}
+			break;
+		case 'R':
+			did_arg = 1;
+			if (fio_client_add_ini_file(cur_client, optarg, 1)) {
+				do_exit++;
+				exit_val = 1;
 			}
 			break;
 		case 'T':

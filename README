@@ -173,6 +173,7 @@ $ fio
 	--max-jobs		Maximum number of threads/processes to support
 	--server=args		Start backend server. See Client/Server section.
 	--client=host		Connect to specified backend.
+	--remote-config=file	Tell fio server to load this local file
 	--idle-prof=option	Report cpu idleness on a system or percpu basis
 				(option=system,percpu) or run unit work
 				calibration only (option=calibrate).
@@ -304,6 +305,14 @@ does on the server side, to allow IP/hostname/socket and port strings.
 Fio can connect to multiple servers this way:
 
 fio --client=<server1> <job file(s)> --client=<server2> <job file(s)>
+
+If the job file is located on the fio server, then you can tell the server
+to load a local file as well. This is done by using --remote-config:
+
+fio --client=server --remote-config /path/to/file.fio
+
+Then the fio serer will open this local (to the server) job file instead
+of being passed one from the client.
 
 
 Platforms

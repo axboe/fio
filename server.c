@@ -69,6 +69,8 @@ static const char *fio_server_ops[FIO_NET_CMD_NR] = {
 	"ADD_JOB",
 	"CMD_RUN",
 	"CMD_IOLOG",
+	"CMD_UPDATE_JOB",
+	"CMD_LOAD_FILE",
 };
 
 const char *fio_server_op(unsigned int op)
@@ -550,6 +552,28 @@ static void fio_server_check_conns(struct flist_head *conn_list)
 	fio_server_check_fork_items(conn_list);
 }
 
+static int handle_load_file_cmd(struct fio_net_cmd *cmd)
+{
+	struct cmd_load_file_pdu *pdu = (struct cmd_load_file_pdu *) cmd->payload;
+	void *file_name = pdu->file;
+	struct cmd_start_pdu spdu;
+
+	dprint(FD_NET, "server: loading local file %s\n", (char *) file_name);
+
+	pdu->name_len = le16_to_cpu(pdu->name_len);
+	pdu->client_type = le16_to_cpu(pdu->client_type);
+
+	if (parse_jobs_ini(file_name, 0, 0, pdu->client_type)) {
+		fio_net_send_quit(server_fd);
+		return -1;
+	}
+
+	spdu.jobs = cpu_to_le32(thread_number);
+	spdu.stat_outputs = cpu_to_le32(stat_number);
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), NULL, NULL);
+	return 0;
+}
+
 static int handle_run_cmd(struct flist_head *job_list, struct fio_net_cmd *cmd)
 {
 	pid_t pid;
@@ -747,6 +771,9 @@ static int handle_command(struct flist_head *job_list, struct fio_net_cmd *cmd)
 	case FIO_NET_CMD_EXIT:
 		exit_backend = 1;
 		return -1;
+	case FIO_NET_CMD_LOAD_FILE:
+		ret = handle_load_file_cmd(cmd);
+		break;
 	case FIO_NET_CMD_JOB:
 		ret = handle_job_cmd(cmd);
 		break;

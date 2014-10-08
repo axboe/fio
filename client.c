@@ -141,10 +141,13 @@ void fio_put_client(struct fio_client *client)
 		free(client->argv);
 	if (client->name)
 		free(client->name);
-	while (client->nr_ini_file)
-		free(client->ini_file[--client->nr_ini_file]);
-	if (client->ini_file)
-		free(client->ini_file);
+	while (client->nr_files) {
+		struct client_file *cf = &client->files[--client->nr_files];
+
+		free(cf->file);
+	}
+	if (client->files)
+		free(client->files);
 
 	if (!client->did_stat)
 		sum_stat_clients -= client->nr_stat;
@@ -262,17 +265,26 @@ err:
 	return NULL;
 }
 
-void fio_client_add_ini_file(void *cookie, const char *ini_file)
+int fio_client_add_ini_file(void *cookie, const char *ini_file, int remote)
 {
 	struct fio_client *client = cookie;
+	struct client_file *cf;
 	size_t new_size;
+	void *new_files;
 
 	dprint(FD_NET, "client <%s>: add ini %s\n", client->hostname, ini_file);
 
-	new_size = (client->nr_ini_file + 1) * sizeof(char *);
-	client->ini_file = realloc(client->ini_file, new_size);
-	client->ini_file[client->nr_ini_file] = strdup(ini_file);
-	client->nr_ini_file++;
+	new_size = (client->nr_files + 1) * sizeof(struct client_file);
+	new_files = realloc(client->files, new_size);
+	if (!new_files)
+		return 1;
+
+	client->files = new_files;
+	cf = &client->files[client->nr_files];
+	cf->file = strdup(ini_file);
+	cf->remote = remote;
+	client->nr_files++;
+	return 0;
 }
 
 int fio_client_add(struct client_ops *ops, const char *hostname, void **cookie)
@@ -599,11 +611,33 @@ int fio_start_all_clients(void)
 	return flist_empty(&client_list);
 }
 
+static int __fio_client_send_remote_ini(struct fio_client *client,
+					const char *filename)
+{
+	struct cmd_load_file_pdu *pdu;
+	size_t p_size;
+	int ret;
+
+	dprint(FD_NET, "send remote ini %s to %s\n", filename, client->hostname);
+
+	p_size = sizeof(*pdu) + strlen(filename);
+	pdu = malloc(p_size);
+	pdu->name_len = strlen(filename);
+	strcpy((char *) pdu->file, filename);
+	pdu->client_type = cpu_to_le16((uint16_t) client->type);
+
+	client->sent_job = 1;
+	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_LOAD_FILE, pdu, p_size,NULL, NULL);
+	free(pdu);
+	return ret;
+}
+
 /*
  * Send file contents to server backend. We could use sendfile(), but to remain
  * more portable lets just read/write the darn thing.
  */
-static int __fio_client_send_ini(struct fio_client *client, const char *filename)
+static int __fio_client_send_local_ini(struct fio_client *client,
+				       const char *filename)
 {
 	struct cmd_job_pdu *pdu;
 	size_t p_size;
@@ -668,15 +702,26 @@ static int __fio_client_send_ini(struct fio_client *client, const char *filename
 	return ret;
 }
 
-int fio_client_send_ini(struct fio_client *client, const char *filename)
+int fio_client_send_ini(struct fio_client *client, const char *filename,
+			int remote)
 {
 	int ret;
 
-	ret = __fio_client_send_ini(client, filename);
+	if (!remote)
+		ret = __fio_client_send_local_ini(client, filename);
+	else
+		ret = __fio_client_send_remote_ini(client, filename);
+
 	if (!ret)
 		client->sent_job = 1;
 
 	return ret;
+}
+
+static int fio_client_send_cf(struct fio_client *client,
+			      struct client_file *cf)
+{
+	return fio_client_send_ini(client, cf->file, cf->remote);
 }
 
 int fio_clients_send_ini(const char *filename)
@@ -687,18 +732,23 @@ int fio_clients_send_ini(const char *filename)
 	flist_for_each_safe(entry, tmp, &client_list) {
 		client = flist_entry(entry, struct fio_client, list);
 
-		if (client->nr_ini_file) {
+		if (client->nr_files) {
 			int i;
 
-			for (i = 0; i < client->nr_ini_file; i++) {
-				const char *ini = client->ini_file[i];
+			for (i = 0; i < client->nr_files; i++) {
+				struct client_file *cf;
 
-				if (fio_client_send_ini(client, ini)) {
+				cf = &client->files[i];
+
+				if (fio_client_send_cf(client, cf)) {
 					remove_client(client);
 					break;
 				}
 			}
-		} else if (!filename || fio_client_send_ini(client, filename))
+		}
+		if (client->sent_job)
+			continue;
+		if (!filename || fio_client_send_ini(client, filename, 0))
 			remove_client(client);
 	}
 

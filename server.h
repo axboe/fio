@@ -38,7 +38,7 @@ struct fio_net_cmd_reply {
 };
 
 enum {
-	FIO_SERVER_VER			= 36,
+	FIO_SERVER_VER			= 37,
 
 	FIO_SERVER_MAX_FRAGMENT_PDU	= 1024,
 	FIO_SERVER_MAX_CMD_MB		= 2048,
@@ -61,7 +61,8 @@ enum {
 	FIO_NET_CMD_RUN			= 16,
 	FIO_NET_CMD_IOLOG		= 17,
 	FIO_NET_CMD_UPDATE_JOB		= 18,
-	FIO_NET_CMD_NR			= 19,
+	FIO_NET_CMD_LOAD_FILE		= 19,
+	FIO_NET_CMD_NR			= 20,
 
 	FIO_NET_CMD_F_MORE		= 1UL << 0,
 
@@ -74,6 +75,12 @@ enum {
 	FIO_NET_CLIENT_TIMEOUT		= 5000,
 
 	FIO_PROBE_FLAG_ZLIB		= 1UL << 0,
+};
+
+struct cmd_load_file_pdu {
+	uint16_t name_len;
+	uint16_t client_type;
+	uint8_t file[];
 };
 
 struct cmd_ts_pdu {
@@ -168,11 +175,6 @@ extern void fio_server_send_ts(struct thread_stat *, struct group_run_stats *);
 extern void fio_server_send_gs(struct group_run_stats *);
 extern void fio_server_send_du(void);
 extern void fio_server_idle_loop(void);
-
-extern int fio_clients_connect(void);
-extern int fio_clients_send_ini(const char *);
-extern void fio_client_add_cmd_option(void *, const char *);
-extern void fio_client_add_ini_file(void *, const char *);
 
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);

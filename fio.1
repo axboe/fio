@@ -1848,6 +1848,14 @@ does on the server side, to allow IP/hostname/socket and port strings.
 You can connect to multiple clients as well, to do that you could run:
 
 fio \-\-client=server2 \-\-client=server2 <job file(s)>
+
+If the job file is located on the fio server, then you can tell the server
+to load a local file as well. This is done by using \-\-remote-config:
+
+fio \-\-client=server \-\-remote-config /path/to/file.fio
+
+Then the fio serer will open this local (to the server) job file instead
+of being passed one from the client.
 .SH AUTHORS
 
 .B fio
