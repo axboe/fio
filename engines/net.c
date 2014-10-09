@@ -30,7 +30,6 @@ struct netio_data {
 	struct sockaddr_in addr;
 	struct sockaddr_in6 addr6;
 	struct sockaddr_un addr_un;
-	uint64_t udp_lost;
 	uint64_t udp_send_seq;
 	uint64_t udp_recv_seq;
 };
@@ -488,7 +487,8 @@ static void store_udp_seq(struct netio_data *nd, struct io_u *io_u)
 	us->seq = cpu_to_le64(nd->udp_send_seq++);
 }
 
-static void verify_udp_seq(struct netio_data *nd, struct io_u *io_u)
+static void verify_udp_seq(struct thread_data *td, struct netio_data *nd,
+			   struct io_u *io_u)
 {
 	struct udp_seq *us;
 	uint64_t seq;
@@ -500,7 +500,7 @@ static void verify_udp_seq(struct netio_data *nd, struct io_u *io_u)
 	seq = le64_to_cpu(us->seq);
 
 	if (seq != nd->udp_recv_seq)
-		nd->udp_lost += seq - nd->udp_recv_seq;
+		td->ts.drop_io_u[io_u->ddir] += seq - nd->udp_recv_seq;
 
 	nd->udp_recv_seq = seq + 1;
 }
@@ -615,7 +615,7 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 	} while (1);
 
 	if (is_udp(o) && td->o.verify == VERIFY_NONE)
-		verify_udp_seq(nd, io_u);
+		verify_udp_seq(td, nd, io_u);
 
 	return ret;
 }

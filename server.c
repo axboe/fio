@@ -1066,6 +1066,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		p.ts.total_io_u[i]	= cpu_to_le64(ts->total_io_u[i]);
 		p.ts.short_io_u[i]	= cpu_to_le64(ts->short_io_u[i]);
+		p.ts.drop_io_u[i]	= cpu_to_le64(ts->drop_io_u[i]);
 	}
 
 	p.ts.total_submit	= cpu_to_le64(ts->total_submit);

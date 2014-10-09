@@ -574,13 +574,17 @@ static void show_thread_status_normal(struct thread_stat *ts,
 					io_u_dist[3], io_u_dist[4],
 					io_u_dist[5], io_u_dist[6]);
 	log_info("     issued    : total=r=%llu/w=%llu/d=%llu,"
-				 " short=r=%llu/w=%llu/d=%llu\n",
+				 " short=r=%llu/w=%llu/d=%llu,"
+				 " drop=r=%llu/w=%llu/d=%llu\n",
 					(unsigned long long) ts->total_io_u[0],
 					(unsigned long long) ts->total_io_u[1],
 					(unsigned long long) ts->total_io_u[2],
 					(unsigned long long) ts->short_io_u[0],
 					(unsigned long long) ts->short_io_u[1],
-					(unsigned long long) ts->short_io_u[2]);
+					(unsigned long long) ts->short_io_u[2],
+					(unsigned long long) ts->drop_io_u[0],
+					(unsigned long long) ts->drop_io_u[1],
+					(unsigned long long) ts->drop_io_u[2]);
 	if (ts->continue_on_error) {
 		log_info("     errors    : total=%llu, first_error=%d/<%s>\n",
 					(unsigned long long)ts->total_err_count,
@@ -1123,9 +1127,11 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src, int nr)
 		if (!dst->unified_rw_rep) {
 			dst->total_io_u[k] += src->total_io_u[k];
 			dst->short_io_u[k] += src->short_io_u[k];
+			dst->drop_io_u[k] += src->drop_io_u[k];
 		} else {
 			dst->total_io_u[0] += src->total_io_u[k];
 			dst->short_io_u[0] += src->short_io_u[k];
+			dst->drop_io_u[0] += src->drop_io_u[k];
 		}
 	}
 
@@ -1658,6 +1664,7 @@ void reset_io_stats(struct thread_data *td)
 	for (i = 0; i < 3; i++) {
 		ts->total_io_u[i] = 0;
 		ts->short_io_u[i] = 0;
+		ts->drop_io_u[i] = 0;
 	}
 }
 
