@@ -1094,6 +1094,26 @@ fi
 echo "Net engine window_size        $window_size"
 
 ##########################################
+# Check whether we have TCP_MAXSEG
+mss="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+int main(int argc, char **argv)
+{
+  return setsockopt(0, IPPROTO_TCP, TCP_MAXSEG, NULL, 0);
+}
+EOF
+if compile_prog "" "" "TCP_MAXSEG"; then
+  mss="yes"
+fi
+echo "TCP_MAXSEG                    $mss"
+
+##########################################
 # Check whether we have RLIMIT_MEMLOCK
 rlimit_memlock="no"
 cat > $TMPC << EOF
@@ -1450,6 +1470,9 @@ if test "$tcp_nodelay" = "yes" ; then
 fi
 if test "$window_size" = "yes" ; then
   output_sym "CONFIG_NET_WINDOWSIZE"
+fi
+if test "$mss" = "yes" ; then
+  output_sym "CONFIG_NET_MSS"
 fi
 if test "$rlimit_memlock" = "yes" ; then
   output_sym "CONFIG_RLIMIT_MEMLOCK"

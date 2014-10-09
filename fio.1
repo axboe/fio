@@ -1528,6 +1528,9 @@ reader when multiple readers are listening to the same address.
 .BI (net, window_size) \fR=\fPint
 Set the desired socket buffer size for the connection.
 .TP
+.BI (net, mss) \fR=\fPint
+Set the TCP maximum segment size (TCP_MAXSEG).
+.TP
 .BI (e4defrag,donorname) \fR=\fPstr
 File will be used as a block donor (swap extents between files)
 .TP

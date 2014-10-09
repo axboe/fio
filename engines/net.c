@@ -40,6 +40,7 @@ struct netio_options {
 	unsigned int nodelay;
 	unsigned int ttl;
 	unsigned int window_size;
+	unsigned int mss;
 	char *intfc;
 };
 
@@ -178,6 +179,18 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_NETIO,
 	},
 #endif
+#ifdef CONFIG_NET_MSS
+	{
+		.name	= "mss",
+		.lname	= "Maximum segment size",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct netio_options, mss),
+		.minval	= 0,
+		.help	= "Set TCP maximum segment size",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_NETIO,
+	},
+#endif
 	{
 		.name	= NULL,
 	},
@@ -232,6 +245,30 @@ static int set_window_size(struct thread_data *td, int fd)
 	return -1;
 #endif
 }
+
+static int set_mss(struct thread_data *td, int fd)
+{
+#ifdef CONFIG_NET_MSS
+	struct netio_options *o = td->eo;
+	unsigned int mss;
+	int ret;
+
+	if (!o->mss || !is_tcp(o))
+		return 0;
+
+	mss = o->mss;
+	ret = setsockopt(fd, IPPROTO_TCP, TCP_MAXSEG, (void *) &mss,
+				sizeof(mss));
+	if (ret < 0)
+		td_verror(td, errno, "setsockopt TCP_MAXSEG");
+
+	return ret;
+#else
+	td_verror(td, -EINVAL, "setsockopt TCP_MAXSEG");
+	return -1;
+#endif
+}
+
 
 /*
  * Return -1 for error and 'nr events' for a positive number
@@ -652,6 +689,10 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 #endif
 
 	if (set_window_size(td, f->fd)) {
+		close(f->fd);
+		return 1;
+	}
+	if (set_mss(td, f->fd)) {
 		close(f->fd);
 		return 1;
 	}
@@ -1098,6 +1139,10 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 #endif
 
 	if (set_window_size(td, fd)) {
+		close(fd);
+		return 1;
+	}
+	if (set_mss(td, fd)) {
 		close(fd);
 		return 1;
 	}

@@ -1687,6 +1687,8 @@ that defines them is selected.
 
 [net] window_size	Set the desired socket buffer size for the connection.
 
+[net] mss	Set the TCP maximum segment size (TCP_MAXSEG).
+
 [e4defrag] donorname=str
 	        File will be used as a block donor(swap extents between files)
 [e4defrag] inplace=int
