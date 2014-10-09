@@ -39,6 +39,7 @@ struct netio_options {
 	unsigned int pingpong;
 	unsigned int nodelay;
 	unsigned int ttl;
+	unsigned int window_size;
 	char *intfc;
 };
 
@@ -165,6 +166,18 @@ static struct fio_option options[] = {
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_NETIO,
 	},
+#ifdef CONFIG_NET_WINDOWSIZE
+	{
+		.name	= "window_size",
+		.lname	= "Window Size",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct netio_options, window_size),
+		.minval	= 0,
+		.help	= "Set socket buffer window size",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_NETIO,
+	},
+#endif
 	{
 		.name	= NULL,
 	},
@@ -183,6 +196,41 @@ static inline int is_tcp(struct netio_options *o)
 static inline int is_ipv6(struct netio_options *o)
 {
 	return o->proto == FIO_TYPE_UDP_V6 || o->proto == FIO_TYPE_TCP_V6;
+}
+
+static int set_window_size(struct thread_data *td, int fd)
+{
+#ifdef CONFIG_NET_WINDOWSIZE
+	struct netio_options *o = td->eo;
+	unsigned int wss;
+	int snd, rcv, ret;
+
+	if (!o->window_size)
+		return 0;
+
+	rcv = o->listen || o->pingpong;
+	snd = !o->listen || o->pingpong;
+	wss = o->window_size;
+	ret = 0;
+
+	if (rcv) {
+		ret = setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (void *) &wss,
+					sizeof(wss));
+		if (ret < 0)
+			td_verror(td, errno, "rcvbuf window size");
+	}
+	if (snd && !ret) {
+		ret = setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (void *) &wss,
+					sizeof(wss));
+		if (ret < 0)
+			td_verror(td, errno, "sndbuf window size");
+	}
+
+	return ret;
+#else
+	td_verror(td, -EINVAL, "setsockopt window size");
+	return -1;
+#endif
 }
 
 /*
@@ -602,6 +650,11 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 		}
 	}
 #endif
+
+	if (set_window_size(td, f->fd)) {
+		close(f->fd);
+		return 1;
+	}
 
 	if (is_udp(o)) {
 		if (!fio_netio_is_multicast(td->o.filename))
@@ -1043,6 +1096,11 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 		return 1;
 	}
 #endif
+
+	if (set_window_size(td, fd)) {
+		close(fd);
+		return 1;
+	}
 
 	if (td->o.filename) {
 		if (!is_udp(o) || !fio_netio_is_multicast(td->o.filename)) {

@@ -1525,6 +1525,9 @@ completion latency measures how long it took for the other end to receive and
 send back. For UDP multicast traffic pingpong=1 should only be set for a single
 reader when multiple readers are listening to the same address.
 .TP
+.BI (net, window_size) \fR=\fPint
+Set the desired socket buffer size for the connection.
+.TP
 .BI (e4defrag,donorname) \fR=\fPstr
 File will be used as a block donor (swap extents between files)
 .TP

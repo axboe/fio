@@ -1672,6 +1672,7 @@ that defines them is selected.
 [net] listen	For TCP network connections, tell fio to listen for incoming
 		connections rather than initiating an outgoing connection. The
 		hostname must be omitted if this option is used.
+
 [net] pingpong	Normaly a network writer will just continue writing data, and
 		a network reader will just consume packages. If pingpong=1
 		is set, a writer will send its normal payload to the reader,
@@ -1683,6 +1684,8 @@ that defines them is selected.
 		For UDP multicast traffic pingpong=1 should only be set for a
 		single reader when multiple readers are listening to the same
 		address.
+
+[net] window_size	Set the desired socket buffer size for the connection.
 
 [e4defrag] donorname=str
 	        File will be used as a block donor(swap extents between files)

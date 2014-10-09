@@ -1075,6 +1075,25 @@ fi
 echo "TCP_NODELAY                   $tcp_nodelay"
 
 ##########################################
+# Check whether we have SO_SNDBUF
+window_size="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/tcp.h>
+int main(int argc, char **argv)
+{
+  setsockopt(0, SOL_SOCKET, SO_SNDBUF, NULL, 0);
+  setsockopt(0, SOL_SOCKET, SO_RCVBUF, NULL, 0);
+}
+EOF
+if compile_prog "" "" "SO_SNDBUF"; then
+  window_size="yes"
+fi
+echo "Net engine window_size        $window_size"
+
+##########################################
 # Check whether we have RLIMIT_MEMLOCK
 rlimit_memlock="no"
 cat > $TMPC << EOF
@@ -1428,6 +1447,9 @@ if test "$sched_idle" = "yes" ; then
 fi
 if test "$tcp_nodelay" = "yes" ; then
   output_sym "CONFIG_TCP_NODELAY"
+fi
+if test "$window_size" = "yes" ; then
+  output_sym "CONFIG_NET_WINDOWSIZE"
 fi
 if test "$rlimit_memlock" = "yes" ; then
   output_sym "CONFIG_RLIMIT_MEMLOCK"
