@@ -21,6 +21,7 @@
 #include <sys/un.h>
 
 #include "../fio.h"
+#include "../verify.h"
 
 struct netio_data {
 	int listenfd;
@@ -29,6 +30,9 @@ struct netio_data {
 	struct sockaddr_in addr;
 	struct sockaddr_in6 addr6;
 	struct sockaddr_un addr_un;
+	uint64_t udp_lost;
+	uint64_t udp_send_seq;
+	uint64_t udp_recv_seq;
 };
 
 struct netio_options {
@@ -49,10 +53,16 @@ struct udp_close_msg {
 	uint32_t cmd;
 };
 
+struct udp_seq {
+	uint64_t magic;
+	uint64_t seq;
+};
+
 enum {
 	FIO_LINK_CLOSE = 0x89,
 	FIO_LINK_OPEN_CLOSE_MAGIC = 0x6c696e6b,
 	FIO_LINK_OPEN = 0x98,
+	FIO_UDP_SEQ_MAGIC = 0x657375716e556563ULL,
 
 	FIO_TYPE_TCP	= 1,
 	FIO_TYPE_UDP	= 2,
@@ -469,6 +479,32 @@ static int fio_netio_splice_out(struct thread_data *td, struct io_u *io_u)
 }
 #endif
 
+static void store_udp_seq(struct netio_data *nd, struct io_u *io_u)
+{
+	struct udp_seq *us;
+
+	us = io_u->xfer_buf + io_u->xfer_buflen - sizeof(*us);
+	us->magic = cpu_to_le64(FIO_UDP_SEQ_MAGIC);
+	us->seq = cpu_to_le64(nd->udp_send_seq++);
+}
+
+static void verify_udp_seq(struct netio_data *nd, struct io_u *io_u)
+{
+	struct udp_seq *us;
+	uint64_t seq;
+
+	us = io_u->xfer_buf + io_u->xfer_buflen - sizeof(*us);
+	if (le64_to_cpu(us->magic) != FIO_UDP_SEQ_MAGIC)
+		return;
+
+	seq = le64_to_cpu(us->seq);
+
+	if (seq != nd->udp_recv_seq)
+		nd->udp_lost += seq - nd->udp_recv_seq;
+
+	nd->udp_recv_seq = seq + 1;
+}
+
 static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 {
 	struct netio_data *nd = td->io_ops->data;
@@ -487,6 +523,9 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 				to = (struct sockaddr *) &nd->addr;
 				len = sizeof(nd->addr);
 			}
+
+			if (td->o.verify == VERIFY_NONE)
+				store_udp_seq(nd, io_u);
 
 			ret = sendto(io_u->file->fd, io_u->xfer_buf,
 					io_u->xfer_buflen, flags, to, len);
@@ -555,6 +594,7 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 
 			ret = recvfrom(io_u->file->fd, io_u->xfer_buf,
 					io_u->xfer_buflen, flags, from, len);
+
 			if (is_udp_close(io_u, ret)) {
 				td->done = 1;
 				return 0;
@@ -573,6 +613,9 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 			break;
 		flags |= MSG_WAITALL;
 	} while (1);
+
+	if (is_udp(o) && td->o.verify == VERIFY_NONE)
+		verify_udp_seq(nd, io_u);
 
 	return ret;
 }
@@ -880,6 +923,7 @@ static int fio_netio_udp_recv_open(struct thread_data *td, struct fio_file *f)
 		return -1;
 	}
 
+	fio_gettime(&td->start, NULL);
 	return 0;
 }
 
