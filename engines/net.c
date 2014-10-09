@@ -26,6 +26,7 @@
 struct netio_data {
 	int listenfd;
 	int use_splice;
+	int seq_off;
 	int pipes[2];
 	struct sockaddr_in addr;
 	struct sockaddr_in6 addr6;
@@ -55,6 +56,7 @@ struct udp_close_msg {
 struct udp_seq {
 	uint64_t magic;
 	uint64_t seq;
+	uint64_t bs;
 };
 
 enum {
@@ -484,6 +486,7 @@ static void store_udp_seq(struct netio_data *nd, struct io_u *io_u)
 
 	us = io_u->xfer_buf + io_u->xfer_buflen - sizeof(*us);
 	us->magic = cpu_to_le64(FIO_UDP_SEQ_MAGIC);
+	us->bs = cpu_to_le64((uint64_t) io_u->xfer_buflen);
 	us->seq = cpu_to_le64(nd->udp_send_seq++);
 }
 
@@ -493,9 +496,16 @@ static void verify_udp_seq(struct thread_data *td, struct netio_data *nd,
 	struct udp_seq *us;
 	uint64_t seq;
 
+	if (nd->seq_off)
+		return;
+
 	us = io_u->xfer_buf + io_u->xfer_buflen - sizeof(*us);
 	if (le64_to_cpu(us->magic) != FIO_UDP_SEQ_MAGIC)
 		return;
+	if (le64_to_cpu(us->bs) != io_u->xfer_buflen) {
+		nd->seq_off = 1;
+		return;
+	}
 
 	seq = le64_to_cpu(us->seq);
 
