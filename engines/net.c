@@ -562,7 +562,7 @@ static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 	return ret;
 }
 
-static int is_udp_close(struct io_u *io_u, int len)
+static int is_close_msg(struct io_u *io_u, int len)
 {
 	struct udp_close_msg *msg;
 
@@ -570,9 +570,9 @@ static int is_udp_close(struct io_u *io_u, int len)
 		return 0;
 
 	msg = io_u->xfer_buf;
-	if (ntohl(msg->magic) != FIO_LINK_OPEN_CLOSE_MAGIC)
+	if (le32_to_cpu(msg->magic) != FIO_LINK_OPEN_CLOSE_MAGIC)
 		return 0;
-	if (ntohl(msg->cmd) != FIO_LINK_CLOSE)
+	if (le32_to_cpu(msg->cmd) != FIO_LINK_CLOSE)
 		return 0;
 
 	return 1;
@@ -605,13 +605,18 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 			ret = recvfrom(io_u->file->fd, io_u->xfer_buf,
 					io_u->xfer_buflen, flags, from, len);
 
-			if (is_udp_close(io_u, ret)) {
+			if (is_close_msg(io_u, ret)) {
 				td->done = 1;
 				return 0;
 			}
 		} else {
 			ret = recv(io_u->file->fd, io_u->xfer_buf,
 					io_u->xfer_buflen, flags);
+
+			if (is_close_msg(io_u, ret)) {
+				td->done = 1;
+				return 0;
+			}
 		}
 		if (ret > 0)
 			break;
@@ -864,7 +869,7 @@ err:
 	return 1;
 }
 
-static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
+static void fio_netio_send_close(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
@@ -881,8 +886,8 @@ static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
 		len = sizeof(nd->addr);
 	}
 
-	msg.magic = htonl(FIO_LINK_OPEN_CLOSE_MAGIC);
-	msg.cmd = htonl(FIO_LINK_CLOSE);
+	msg.magic = cpu_to_le32((uint32_t) FIO_LINK_OPEN_CLOSE_MAGIC);
+	msg.cmd = cpu_to_le32((uint32_t) FIO_LINK_CLOSE);
 
 	ret = sendto(f->fd, (void *) &msg, sizeof(msg), MSG_WAITALL, to, len);
 	if (ret < 0)
@@ -891,14 +896,10 @@ static void fio_netio_udp_close(struct thread_data *td, struct fio_file *f)
 
 static int fio_netio_close_file(struct thread_data *td, struct fio_file *f)
 {
-	struct netio_options *o = td->eo;
-
 	/*
-	 * If this is an UDP connection, notify the receiver that we are
-	 * closing down the link
+	 * Notify the receiver that we are closing down the link
 	 */
-	if (is_udp(o))
-		fio_netio_udp_close(td, f);
+	fio_netio_send_close(td, f);
 
 	return generic_close_file(td, f);
 }
@@ -937,7 +938,7 @@ static int fio_netio_udp_recv_open(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
-static int fio_netio_udp_send_open(struct thread_data *td, struct fio_file *f)
+static int fio_netio_send_open(struct thread_data *td, struct fio_file *f)
 {
 	struct netio_data *nd = td->io_ops->data;
 	struct netio_options *o = td->eo;
@@ -983,7 +984,7 @@ static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
 
 	if (is_udp(o)) {
 		if (td_write(td))
-			ret = fio_netio_udp_send_open(td, f);
+			ret = fio_netio_send_open(td, f);
 		else {
 			int state;
 
