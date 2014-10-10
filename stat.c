@@ -506,9 +506,7 @@ static void show_thread_status_normal(struct thread_stat *ts,
 	time_t time_p;
 	char time_buf[64];
 
-	if (!(ts->io_bytes[DDIR_READ] + ts->io_bytes[DDIR_WRITE] +
-	    ts->io_bytes[DDIR_TRIM]) && !(ts->total_io_u[DDIR_READ] +
-	    ts->total_io_u[DDIR_WRITE] + ts->total_io_u[DDIR_TRIM]))
+	if (!ddir_rw_sum(ts->io_bytes) && !ddir_rw_sum(ts->total_io_u))
 		return;
 
 	time(&time_p);
@@ -707,6 +705,9 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	json_object_add_value_int(dir_object, "bw", bw);
 	json_object_add_value_int(dir_object, "iops", iops);
 	json_object_add_value_int(dir_object, "runtime", ts->runtime[ddir]);
+	json_object_add_value_int(dir_object, "total_ios", ts->total_io_u[ddir]);
+	json_object_add_value_int(dir_object, "short_ios", ts->short_io_u[ddir]);
+	json_object_add_value_int(dir_object, "drop_ios", ts->drop_io_u[ddir]);
 
 	if (!calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev)) {
 		min = max = 0;
