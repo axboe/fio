@@ -1308,6 +1308,8 @@ static int fio_netio_init(struct thread_data *td)
 		return 1;
 	}
 
+	o->port += td->subjob_number;
+
 	if (!is_tcp(o)) {
 		if (o->listen) {
 			log_err("fio: listen only valid for TCP proto IO\n");
