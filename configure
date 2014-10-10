@@ -133,7 +133,7 @@ cpu=""
 # default options
 show_help="no"
 exit_val=0
-gfio="no"
+gfio_check="no"
 libhdfs="no"
 
 # parse options
@@ -153,7 +153,7 @@ for opt do
   --build-32bit-win) build_32bit_win="yes"
   ;;
   --enable-gfio)
-  gfio="yes"
+  gfio_check="yes"
   ;;
   --disable-numa) disable_numa="yes"
   ;;
@@ -982,7 +982,8 @@ echo "__thread                      $tls_thread"
 
 ##########################################
 # Check if we have required gtk/glib support for gfio
-if test "$gfio" = "yes" ; then
+gfio="no"
+if test "$gfio_check" = "yes" ; then
   cat > $TMPC << EOF
 #include <glib.h>
 #include <cairo.h>
@@ -1021,7 +1022,9 @@ else
 fi
 fi
 
-echo "gtk 2.18 or higher            $gfio"
+if test "$gfio_check" = "yes" ; then
+  echo "gtk 2.18 or higher            $gfio"
+fi
 
 # Check whether we have getrusage(RUSAGE_THREAD)
 rusage_thread="no"
