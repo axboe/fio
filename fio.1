@@ -1471,7 +1471,9 @@ If the job is a TCP listener or UDP reader, the hostname is not
 used and must be omitted unless it is a valid UDP multicast address.
 .TP
 .BI (net,netsplice)port \fR=\fPint
-The TCP or UDP port to bind to or connect to.
+The TCP or UDP port to bind to or connect to. If this is used with
+\fBnumjobs\fR to spawn multiple instances of the same job type, then
+this will be the starting port number since fio will use a range of ports.
 .TP
 .BI (net,netsplice)interface \fR=\fPstr
 The IP address of the network interface used to send or receive UDP multicast

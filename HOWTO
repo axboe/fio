@@ -1640,7 +1640,9 @@ that defines them is selected.
 		address.
 
 [netsplice] port=int
-[net] port=int	The TCP or UDP port to bind to or connect to.
+[net] port=int	The TCP or UDP port to bind to or connect to. If this is used
+with numjobs to spawn multiple instances of the same job type, then this will
+be the starting port number since fio will use a range of ports.
 
 [netsplice] interface=str
 [net] interface=str  The IP address of the network interface used to send or
