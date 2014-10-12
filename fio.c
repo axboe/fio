@@ -43,6 +43,8 @@ int main(int argc, char *argv[], char *envp[])
 	fio_time_init();
 
 	if (nr_clients) {
+		set_genesis_time();
+
 		if (fio_start_all_clients())
 			return 1;
 		return fio_handle_clients(&fio_client_ops);
