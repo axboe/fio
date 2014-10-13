@@ -87,7 +87,7 @@ static int fio_hdfsio_prep(struct thread_data *td, struct io_u *io_u)
 	} else if (io_u->ddir == DDIR_WRITE) {
 		open_flags = O_WRONLY;
 	} else {
-		printf("Invalid I/O Operation\n");
+		log_err("hdfs: Invalid I/O Operation\n");
 	}
 
 	hd->curr_file_id = f_id;
@@ -142,7 +142,7 @@ static int fio_hdfsio_queue(struct thread_data *td, struct io_u *io_u)
 		    hdfsWrite(hd->fs, hd->fp, io_u->xfer_buf,
 			      io_u->xfer_buflen);
 	} else {
-		printf("Invalid I/O Operation\n");
+		log_err("hdfs: Invalid I/O Operation\n");
 	}
 
 	return fio_io_end(td, io_u, ret);
@@ -202,8 +202,7 @@ static int fio_hdfsio_setup(struct thread_data *td)
 			hd->fscount = atol(getenv("FIO_HDFS_FCOUNT"));
 			hd->fsbs = atol(getenv("FIO_HDFS_BS"));
 		} else {
-			fprintf(stderr,
-				"FIO_HDFS_FCOUNT and/or FIO_HDFS_BS not set.\n");
+			log_err("FIO_HDFS_FCOUNT and/or FIO_HDFS_BS not set.\n");
 			return 1;
 		}
 #endif

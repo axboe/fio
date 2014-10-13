@@ -67,7 +67,7 @@ static void fio_gf_io_u_free(struct thread_data *td, struct io_u *io_u)
 		io_u->engine_data = NULL;
 		free(io);
 	}
-	fprintf(stderr, "issued %lu finished %lu\n", issued, cb_count);
+	log_err("issued %lu finished %lu\n", issued, cb_count);
 }
 
 static int fio_gf_io_u_init(struct thread_data *td, struct io_u *io_u)
@@ -145,8 +145,9 @@ int fio_gf_async_setup(struct thread_data *td)
 {
 	int r = 0;
 	struct gf_data *g = NULL;
+
 #if defined(NOT_YET)
-	fprintf(stderr, "the async interface is still very experimental...\n");
+	log_err("the async interface is still very experimental...\n");
 #endif
 	r = fio_gf_setup(td);
 	if (r) {
