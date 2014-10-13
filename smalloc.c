@@ -17,6 +17,7 @@
 #include "arch/arch.h"
 #include "os/os.h"
 #include "smalloc.h"
+#include "log.h"
 
 #define SMALLOC_REDZONE		/* define to detect memory corruption */
 
@@ -221,7 +222,7 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 	nr_pools++;
 	return 0;
 out_fail:
-	fprintf(stderr, "smalloc: failed adding pool\n");
+	log_err("smalloc: failed adding pool\n");
 	if (pool->map)
 		munmap(pool->map, pool->mmap_size);
 	return 1;
@@ -283,14 +284,14 @@ static void sfree_check_redzone(struct block_hdr *hdr)
 	unsigned int *postred = postred_ptr(hdr);
 
 	if (hdr->prered != SMALLOC_PRE_RED) {
-		fprintf(stderr, "smalloc pre redzone destroyed!\n");
-		fprintf(stderr, "  ptr=%p, prered=%x, expected %x\n",
+		log_err("smalloc pre redzone destroyed!\n"
+			" ptr=%p, prered=%x, expected %x\n",
 				hdr, hdr->prered, SMALLOC_PRE_RED);
 		assert(0);
 	}
 	if (*postred != SMALLOC_POST_RED) {
-		fprintf(stderr, "smalloc post redzone destroyed!\n");
-		fprintf(stderr, "  ptr=%p, postred=%x, expected %x\n",
+		log_err("smalloc post redzone destroyed!\n"
+			"  ptr=%p, postred=%x, expected %x\n",
 				hdr, *postred, SMALLOC_POST_RED);
 		assert(0);
 	}
