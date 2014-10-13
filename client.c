@@ -60,7 +60,6 @@ static int sum_stat_nr;
 static struct json_object *root = NULL;
 static struct json_array *clients_array = NULL;
 static struct json_array *du_array = NULL;
-static int do_output_all_clients;
 
 #define FIO_CLIENT_HASH_BITS	7
 #define FIO_CLIENT_HASH_SZ	(1 << FIO_CLIENT_HASH_BITS)
@@ -150,7 +149,7 @@ void fio_put_client(struct fio_client *client)
 		free(client->files);
 
 	if (!client->did_stat)
-		sum_stat_clients -= client->nr_stat;
+		sum_stat_clients--;
 
 	free(client);
 }
@@ -895,7 +894,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 		json_array_add_value_object(clients_array, tsobj);
 	}
 
-	if (!do_output_all_clients)
+	if (sum_stat_clients <= 1)
 		return;
 
 	sum_thread_stats(&client_ts, &p->ts, sum_stat_nr);
@@ -1157,10 +1156,7 @@ static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd)
 	client->jobs = le32_to_cpu(pdu->jobs);
 	client->nr_stat = le32_to_cpu(pdu->stat_outputs);
 
-	if (sum_stat_clients > 1)
-		do_output_all_clients = 1;
-
-	sum_stat_clients += client->nr_stat;
+	sum_stat_clients++;
 }
 
 static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd)
