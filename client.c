@@ -1154,7 +1154,6 @@ static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	client->state = Client_started;
 	client->jobs = le32_to_cpu(pdu->jobs);
-	client->nr_stat = le32_to_cpu(pdu->stat_outputs);
 
 	sum_stat_clients++;
 }
