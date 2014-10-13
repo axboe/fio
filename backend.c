@@ -87,7 +87,7 @@ static void sig_int(int sig)
 			fio_server_got_signal(sig);
 		else {
 			log_info("\nfio: terminating on signal %d\n", sig);
-			fflush(stdout);
+			log_info_flush();
 			exit_value = 128;
 		}
 
@@ -1763,7 +1763,7 @@ static void run_threads(void)
 						nr_process > 1 ? "es" : "");
 		}
 		log_info("\n");
-		fflush(stdout);
+		log_info_flush();
 	}
 
 	todo = thread_number;
