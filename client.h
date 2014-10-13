@@ -47,6 +47,7 @@ struct fio_client {
 	int is_sock;
 	int disk_stats_shown;
 	unsigned int jobs;
+	unsigned int nr_stat;
 	int error;
 	int signal;
 	int ipv6;
