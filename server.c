@@ -980,8 +980,8 @@ static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
 	/*
 	 * Encode to IEEE 754 for network transfer
 	 */
-	dst->mean.u.i	= __cpu_to_le64(fio_double_to_uint64(src->mean.u.f));
-	dst->S.u.i	= __cpu_to_le64(fio_double_to_uint64(src->S.u.f));
+	dst->mean.u.i	= cpu_to_le64(fio_double_to_uint64(src->mean.u.f));
+	dst->S.u.i	= cpu_to_le64(fio_double_to_uint64(src->S.u.f));
 }
 
 static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
@@ -1045,7 +1045,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 		fio_fp64_t *src = &ts->percentile_list[i];
 		fio_fp64_t *dst = &p.ts.percentile_list[i];
 
-		dst->u.i = __cpu_to_le64(fio_double_to_uint64(src->u.f));
+		dst->u.i = cpu_to_le64(fio_double_to_uint64(src->u.f));
 	}
 
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
@@ -1087,7 +1087,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.latency_depth	= cpu_to_le32(ts->latency_depth);
 	p.ts.latency_target	= cpu_to_le64(ts->latency_target);
 	p.ts.latency_window	= cpu_to_le64(ts->latency_window);
-	p.ts.latency_percentile.u.i = __cpu_to_le64(fio_double_to_uint64(ts->latency_percentile.u.f));
+	p.ts.latency_percentile.u.i = cpu_to_le64(fio_double_to_uint64(ts->latency_percentile.u.f));
 
 	convert_gs(&p.rs, rs);
 
@@ -1118,7 +1118,7 @@ static void convert_agg(struct disk_util_agg *dst, struct disk_util_agg *src)
 	dst->io_ticks		= cpu_to_le32(src->io_ticks);
 	dst->time_in_queue	= cpu_to_le32(src->time_in_queue);
 	dst->slavecount		= cpu_to_le32(src->slavecount);
-	dst->max_util.u.i	= __cpu_to_le64(fio_double_to_uint64(src->max_util.u.f));
+	dst->max_util.u.i	= cpu_to_le64(fio_double_to_uint64(src->max_util.u.f));
 }
 
 static void convert_dus(struct disk_util_stat *dst, struct disk_util_stat *src)
