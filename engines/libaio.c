@@ -281,7 +281,7 @@ static int fio_libaio_commit(struct thread_data *td)
 			}
 			if (!wait_start) {
 				fio_gettime(&tv, NULL);
-				wait_start = 0;
+				wait_start = 1;
 			} else if (mtime_since_now(&tv) > 30000) {
 				log_err("fio: aio appears to be stalled, giving up\n");
 				break;
