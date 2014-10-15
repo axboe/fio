@@ -271,6 +271,9 @@ int fio_client_add_ini_file(void *cookie, const char *ini_file, int remote)
 	size_t new_size;
 	void *new_files;
 
+	if (!client)
+		return 1;
+
 	dprint(FD_NET, "client <%s>: add ini %s\n", client->hostname, ini_file);
 
 	new_size = (client->nr_files + 1) * sizeof(struct client_file);
