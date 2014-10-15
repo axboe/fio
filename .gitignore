@@ -9,4 +9,3 @@
 /fio
 y.tab.*
 lex.yy.c
-lexer.h

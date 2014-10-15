@@ -24,13 +24,13 @@
 
 #define YYSTYPE PARSER_VALUE_TYPE
 
-extern int lexer_input(char *buffer, size_t *nbytes, int buffersize);
+extern int lexer_input(char *buffer, unsigned int *nbytes, int buffersize);
 
 #undef YY_INPUT
 #define YY_INPUT(buffer, bytes_read, bytes_requested)			\
 ({									\
 	int __ret;							\
-	size_t __bread = bytes_read;					\
+	unsigned int __bread = bytes_read;				\
 	__ret = lexer_input((buffer), &__bread, (bytes_requested));	\
 	bytes_read = __bread;						\
 	__ret;								\
