@@ -277,7 +277,7 @@ void fio_sha256_final(struct fio_sha256_ctx *sctx)
 	static const uint8_t padding[64] = { 0x80, };
 
 	/* Save number of bits */
-	bits = sctx->count << 3;
+	bits = (uint64_t) sctx->count << 3;
 
 	/* Pad out to 56 mod 64. */
 	index = sctx->count & 0x3f;
