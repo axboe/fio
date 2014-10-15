@@ -294,8 +294,7 @@ static int do_work(struct worker_thread *thread, void *buf)
 	for (i = 0; i < nblocks; i++) {
 		void *thisptr = buf + (i * blocksize);
 
-		if (items)
-			items[i].offset = offset;
+		items[i].offset = offset;
 		crc_buf(thisptr, items[i].hash);
 		offset += blocksize;
 		nitems++;
