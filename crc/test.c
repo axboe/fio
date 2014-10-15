@@ -329,13 +329,16 @@ int fio_crctest(const char *type)
 		t[i].fn(&t[i], buf, CHUNK);
 		usec = utime_since_now(&tv);
 
-		mb_sec = (double) mb / (double) usec;
-		mb_sec /= (1.024 * 1.024);
-		if (strlen(t[i].name) >= 7)
-			sprintf(pre, "\t");
-		else
-			sprintf(pre, "\t\t");
-		printf("%s:%s%8.2f MB/sec\n", t[i].name, pre, mb_sec);
+		if (usec) {
+			mb_sec = (double) mb / (double) usec;
+			mb_sec /= (1.024 * 1.024);
+			if (strlen(t[i].name) >= 7)
+				sprintf(pre, "\t");
+			else
+				sprintf(pre, "\t\t");
+			printf("%s:%s%8.2f MB/sec\n", t[i].name, pre, mb_sec);
+		} else
+			printf("%s:inf MB/sec\n", t[i].name);
 		first = 0;
 	}
 
