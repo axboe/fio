@@ -870,9 +870,11 @@ static int trace_needs_swap(const char *trace_file, int *swap)
 
 	ret = read(fd, &t, sizeof(t));
 	if (ret < 0) {
+		close(fd);
 		perror("read");
 		return 1;
 	} else if (ret != sizeof(t)) {
+		close(fd);
 		log_err("fio: short read on trace file\n");
 		return 1;
 	}
