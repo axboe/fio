@@ -297,6 +297,14 @@ int initialize_fio(char *envp[])
 {
 	long ps;
 
+	/*
+	 * We need these to be properly 64-bit aligned, otherwise we
+	 * can run into problems on archs that fault on unaligned fp
+	 * access (ARM).
+	 */
+	compiletime_assert((offsetof(struct thread_stat, percentile_list) % 8) == 0, "fp align");
+	compiletime_assert((offsetof(struct thread_stat, latency_percentile) % 8) == 0, "fp align");
+
 	if (endian_check()) {
 		log_err("fio: endianness settings appear wrong.\n");
 		log_err("fio: please report this to fio@vger.kernel.org\n");
