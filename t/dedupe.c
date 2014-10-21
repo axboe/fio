@@ -387,10 +387,8 @@ static int run_dedupe_threads(struct fio_file *f, uint64_t dev_size,
 
 	threads = malloc(num_threads * sizeof(struct worker_thread));
 	for (i = 0; i < num_threads; i++) {
+		memset(&threads[i], 0, sizeof(struct worker_thread));
 		threads[i].fd = f->fd;
-		threads[i].items = 0;
-		threads[i].err = 0;
-		threads[i].done = 0;
 
 		err = pthread_create(&threads[i].thread, NULL, thread_fn, &threads[i]);
 		if (err) {
