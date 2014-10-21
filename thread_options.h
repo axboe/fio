@@ -477,6 +477,7 @@ struct thread_options_pack {
 	uint64_t number_ios;
 
 	uint32_t sync_file_range;
+	uint32_t pad2;
 
 	uint64_t latency_target;
 	uint64_t latency_window;

@@ -307,7 +307,7 @@ int initialize_fio(char *envp[])
 	compiletime_assert((offsetof(struct thread_options_pack, zipf_theta) % 8) == 0, "zipf_theta");
 	compiletime_assert((offsetof(struct thread_options_pack, pareto_h) % 8) == 0, "pareto_h");
 	compiletime_assert((offsetof(struct thread_options_pack, percentile_list) % 8) == 0, "percentile_list");
-	compiletime_assert((offsetof(struct thread_options_pack, percentile_list) % 8) == 0, "latency_percentile");
+	compiletime_assert((offsetof(struct thread_options_pack, latency_percentile) % 8) == 0, "latency_percentile");
 
 	if (endian_check()) {
 		log_err("fio: endianness settings appear wrong.\n");
