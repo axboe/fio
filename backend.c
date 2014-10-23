@@ -2073,6 +2073,7 @@ int fio_backend(void)
 	set_genesis_time();
 	stat_init();
 	create_disk_util_thread();
+	create_status_interval_thread();
 
 	cgroup_list = smalloc(sizeof(*cgroup_list));
 	INIT_FLIST_HEAD(cgroup_list);
@@ -2080,6 +2081,7 @@ int fio_backend(void)
 	run_threads();
 
 	wait_for_disk_thread_exit();
+	wait_for_status_interval_thread_exit();
 
 	if (!fio_abort) {
 		__show_run_stats();

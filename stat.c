@@ -1422,7 +1422,7 @@ void show_run_stats(void)
 	fio_mutex_up(stat_mutex);
 }
 
-static void *__show_running_run_stats(void *arg)
+static void __show_running_run_stats(void)
 {
 	struct thread_data *td;
 	unsigned long long *rt;
@@ -1471,34 +1471,6 @@ static void *__show_running_run_stats(void *arg)
 
 	free(rt);
 	fio_mutex_up(stat_mutex);
-	free(arg);
-	return NULL;
-}
-
-/*
- * Called from signal handler. It _should_ be safe to just run this inline
- * in the sig handler, but we should be disturbing the system less by just
- * creating a thread to do it.
- */
-void show_running_run_stats(void)
-{
-	pthread_t *thread;
-
-	thread = calloc(1, sizeof(*thread));
-	if (!thread)
-		return;
-
-	if (!pthread_create(thread, NULL, __show_running_run_stats, thread)) {
-		int err;
-
-		err = pthread_detach(*thread);
-		if (err)
-			log_err("fio: DU thread detach failed: %s\n", strerror(err));
-
-		return;
-	}
-
-	free(thread);
 }
 
 static int status_interval_init;
@@ -1916,4 +1888,54 @@ void stat_exit(void)
 	 */
 	fio_mutex_down(stat_mutex);
 	fio_mutex_remove(stat_mutex);
+}
+
+static pthread_t si_thread;
+static pthread_cond_t si_cond;
+static pthread_mutex_t si_lock;
+static int si_thread_exit;
+
+/*
+ * Called from signal handler. Wake up status thread.
+ */
+void show_running_run_stats(void)
+{
+	pthread_cond_signal(&si_cond);
+}
+
+static void *si_thread_main(void *unused)
+{
+	while (!si_thread_exit) {
+		pthread_cond_wait(&si_cond, &si_lock);
+		if (si_thread_exit)
+			break;
+
+		__show_running_run_stats();
+	}
+
+	return NULL;
+}
+
+void create_status_interval_thread(void)
+{
+	int ret;
+
+	pthread_cond_init(&si_cond, NULL);
+	pthread_mutex_init(&si_lock, NULL);
+
+	ret = pthread_create(&si_thread, NULL, si_thread_main, NULL);
+	if (ret) {
+		log_err("Can't create status thread: %s\n", strerror(ret));
+		return;
+	}
+}
+
+void wait_for_status_interval_thread_exit(void)
+{
+	void *ret;
+
+	si_thread_exit = 1;
+	pthread_cond_signal(&si_cond);
+	pthread_join(si_thread, &ret);
+	pthread_cond_destroy(&si_cond);
 }
