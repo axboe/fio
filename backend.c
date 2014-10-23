@@ -57,6 +57,9 @@
 
 static pthread_t disk_util_thread;
 static struct fio_mutex *disk_thread_mutex;
+static pthread_cond_t du_cond;
+static pthread_mutex_t du_lock;
+
 static struct fio_mutex *startup_mutex;
 static struct flist_head *cgroup_list;
 static char *cgroup_mnt;
@@ -1970,16 +1973,20 @@ static void run_threads(void)
 	update_io_ticks();
 }
 
-void wait_for_disk_thread_exit(void)
+static void wait_for_disk_thread_exit(void)
 {
-	fio_mutex_down(disk_thread_mutex);
+	void *ret;
+
+	disk_util_start_exit();
+	pthread_cond_signal(&du_cond);
+	pthread_join(disk_util_thread, &ret);
 }
 
 static void free_disk_util(void)
 {
-	disk_util_start_exit();
-	wait_for_disk_thread_exit();
 	disk_util_prune_entries();
+
+	pthread_cond_destroy(&du_cond);
 }
 
 static void *disk_thread_main(void *data)
@@ -1988,17 +1995,32 @@ static void *disk_thread_main(void *data)
 
 	fio_mutex_up(startup_mutex);
 
-	while (threads && !ret) {
-		usleep(DISK_UTIL_MSEC * 1000);
-		if (!threads)
+	while (!ret) {
+		uint64_t sec = DISK_UTIL_MSEC / 1000;
+		uint64_t nsec = (DISK_UTIL_MSEC % 1000) * 1000000;
+		struct timespec ts;
+		struct timeval tv;
+
+		gettimeofday(&tv, NULL);
+		ts.tv_sec = tv.tv_sec + sec;
+		ts.tv_nsec = (tv.tv_usec * 1000) + nsec;
+		if (ts.tv_nsec > 1000000000ULL) {
+			ts.tv_nsec -= 1000000000ULL;
+			ts.tv_sec++;
+		}
+
+		ret = pthread_cond_timedwait(&du_cond, &du_lock, &ts);
+		if (ret != ETIMEDOUT) {
+			printf("disk thread should exit %d\n", ret);
 			break;
+		}
+
 		ret = update_io_ticks();
 
 		if (!is_backend)
 			print_thread_status();
 	}
 
-	fio_mutex_up(disk_thread_mutex);
 	return NULL;
 }
 
@@ -2010,17 +2032,13 @@ static int create_disk_util_thread(void)
 
 	disk_thread_mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
 
+	pthread_cond_init(&du_cond, NULL);
+	pthread_mutex_init(&du_lock, NULL);
+
 	ret = pthread_create(&disk_util_thread, NULL, disk_thread_main, NULL);
 	if (ret) {
 		fio_mutex_remove(disk_thread_mutex);
 		log_err("Can't create disk util thread: %s\n", strerror(ret));
-		return 1;
-	}
-
-	ret = pthread_detach(disk_util_thread);
-	if (ret) {
-		fio_mutex_remove(disk_thread_mutex);
-		log_err("Can't detatch disk util thread: %s\n", strerror(ret));
 		return 1;
 	}
 
@@ -2066,6 +2084,8 @@ int fio_backend(void)
 	INIT_FLIST_HEAD(cgroup_list);
 
 	run_threads();
+
+	wait_for_disk_thread_exit();
 
 	if (!fio_abort) {
 		__show_run_stats();

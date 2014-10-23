@@ -100,8 +100,6 @@ static inline void disk_util_dec(struct disk_util *du)
 
 extern struct flist_head disk_list;
 
-extern void wait_for_disk_thread_exit(void);
-
 /*
  * disk util stuff
  */
