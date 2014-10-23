@@ -2009,10 +2009,8 @@ static void *disk_thread_main(void *data)
 		}
 
 		ret = pthread_cond_timedwait(&du_cond, &du_lock, &ts);
-		if (ret != ETIMEDOUT) {
-			printf("disk thread should exit %d\n", ret);
+		if (ret != ETIMEDOUT)
 			break;
-		}
 
 		ret = update_io_ticks();
 
