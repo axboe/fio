@@ -172,6 +172,7 @@ struct thread_stat {
 	 * IO Error related stats
 	 */
 	uint16_t continue_on_error;
+	uint16_t filler[3];
 	uint64_t total_err_count;
 	uint32_t first_error;
 
