@@ -108,8 +108,10 @@ void clear_io_state(struct thread_data *td)
 	reset_io_counters(td);
 
 	close_files(td);
-	for_each_file(td, f, i)
+	for_each_file(td, f, i) {
 		fio_file_clear_done(f);
+		f->file_offset = get_start_offset(td, f);
+	}
 
 	/*
 	 * Set the same seed to get repeatable runs
