@@ -3,7 +3,7 @@
 #include "json.h"
 #define FIO_DU_NAME_SZ		64
 
-extern volatile int disk_util_exit;
+extern volatile int helper_exit;
 
 struct disk_util_stats {
 	uint32_t ios[2];
@@ -125,12 +125,12 @@ static inline void print_disk_util(struct disk_util_stat *du,
 
 static inline int update_io_ticks(void)
 {
-	return disk_util_exit;
+	return helper_exit;
 }
 #endif
 
 static inline void disk_util_start_exit(void)
 {
-	disk_util_exit = 1;
+	helper_exit = 1;
 }
 #endif

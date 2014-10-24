@@ -221,6 +221,7 @@ extern int calc_thread_status(struct jobs_eta *je, int force);
 extern void display_thread_status(struct jobs_eta *je);
 extern void show_run_stats(void);
 extern void __show_run_stats(void);
+extern void __show_running_run_stats(void);
 extern void show_running_run_stats(void);
 extern void check_for_running_stats(void);
 extern void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src, int nr);
@@ -234,8 +235,6 @@ extern void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat);
 extern void stat_calc_lat_u(struct thread_stat *ts, double *io_u_lat);
 extern void stat_calc_dist(unsigned int *map, unsigned long total, double *io_u_dist);
 extern void reset_io_stats(struct thread_data *);
-extern void create_status_interval_thread(void);
-extern void wait_for_status_interval_thread_exit(void);
 
 static inline int usec_to_msec(unsigned long *min, unsigned long *max,
 			       double *mean, double *dev)

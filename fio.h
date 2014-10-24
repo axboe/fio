@@ -403,6 +403,8 @@ extern int nr_clients;
 extern int log_syslog;
 extern int status_interval;
 extern const char fio_version_string[];
+extern int helper_do_stat;
+extern pthread_cond_t helper_cond;
 
 extern struct thread_data *threads;
 

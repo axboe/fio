@@ -1422,7 +1422,7 @@ void show_run_stats(void)
 	fio_mutex_up(stat_mutex);
 }
 
-static void __show_running_run_stats(void)
+void __show_running_run_stats(void)
 {
 	struct thread_data *td;
 	unsigned long long *rt;
@@ -1892,52 +1892,11 @@ void stat_exit(void)
 	fio_mutex_remove(stat_mutex);
 }
 
-static pthread_t si_thread;
-static pthread_cond_t si_cond;
-static pthread_mutex_t si_lock;
-static int si_thread_exit;
-
 /*
  * Called from signal handler. Wake up status thread.
  */
 void show_running_run_stats(void)
 {
-	pthread_cond_signal(&si_cond);
-}
-
-static void *si_thread_main(void *unused)
-{
-	while (!si_thread_exit) {
-		pthread_cond_wait(&si_cond, &si_lock);
-		if (si_thread_exit)
-			break;
-
-		__show_running_run_stats();
-	}
-
-	return NULL;
-}
-
-void create_status_interval_thread(void)
-{
-	int ret;
-
-	pthread_cond_init(&si_cond, NULL);
-	pthread_mutex_init(&si_lock, NULL);
-
-	ret = pthread_create(&si_thread, NULL, si_thread_main, NULL);
-	if (ret) {
-		log_err("Can't create status thread: %s\n", strerror(ret));
-		return;
-	}
-}
-
-void wait_for_status_interval_thread_exit(void)
-{
-	void *ret;
-
-	si_thread_exit = 1;
-	pthread_cond_signal(&si_cond);
-	pthread_join(si_thread, &ret);
-	pthread_cond_destroy(&si_cond);
+	helper_do_stat = 1;
+	pthread_cond_signal(&helper_cond);
 }

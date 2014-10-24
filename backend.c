@@ -55,9 +55,10 @@
 #include "err.h"
 #include "lib/tp.h"
 
-static pthread_t disk_util_thread;
-static pthread_cond_t du_cond;
-static pthread_mutex_t du_lock;
+static pthread_t helper_thread;
+static pthread_mutex_t helper_lock;
+pthread_cond_t helper_cond;
+int helper_do_stat = 0;
 
 static struct fio_mutex *startup_mutex;
 static struct flist_head *cgroup_list;
@@ -75,7 +76,7 @@ unsigned int stat_number = 0;
 int shm_id = 0;
 int temp_stall_ts;
 unsigned long done_secs = 0;
-volatile int disk_util_exit = 0;
+volatile int helper_exit = 0;
 
 #define PAGE_ALIGN(buf)	\
 	(char *) (((uintptr_t) (buf) + page_mask) & ~page_mask)
@@ -1976,23 +1977,23 @@ static void run_threads(void)
 	update_io_ticks();
 }
 
-static void wait_for_disk_thread_exit(void)
+static void wait_for_helper_thread_exit(void)
 {
 	void *ret;
 
 	disk_util_start_exit();
-	pthread_cond_signal(&du_cond);
-	pthread_join(disk_util_thread, &ret);
+	pthread_cond_signal(&helper_cond);
+	pthread_join(helper_thread, &ret);
 }
 
 static void free_disk_util(void)
 {
 	disk_util_prune_entries();
 
-	pthread_cond_destroy(&du_cond);
+	pthread_cond_destroy(&helper_cond);
 }
 
-static void *disk_thread_main(void *data)
+static void *helper_thread_main(void *data)
 {
 	int ret = 0;
 
@@ -2012,11 +2013,14 @@ static void *disk_thread_main(void *data)
 			ts.tv_sec++;
 		}
 
-		ret = pthread_cond_timedwait(&du_cond, &du_lock, &ts);
-		if (ret != ETIMEDOUT)
-			break;
+		pthread_cond_timedwait(&helper_cond, &helper_lock, &ts);
 
 		ret = update_io_ticks();
+
+		if (helper_do_stat) {
+			helper_do_stat = 0;
+			__show_running_run_stats();
+		}
 
 		if (!is_backend)
 			print_thread_status();
@@ -2025,18 +2029,18 @@ static void *disk_thread_main(void *data)
 	return NULL;
 }
 
-static int create_disk_util_thread(void)
+static int create_helper_thread(void)
 {
 	int ret;
 
 	setup_disk_util();
 
-	pthread_cond_init(&du_cond, NULL);
-	pthread_mutex_init(&du_lock, NULL);
+	pthread_cond_init(&helper_cond, NULL);
+	pthread_mutex_init(&helper_lock, NULL);
 
-	ret = pthread_create(&disk_util_thread, NULL, disk_thread_main, NULL);
+	ret = pthread_create(&helper_thread, NULL, helper_thread_main, NULL);
 	if (ret) {
-		log_err("Can't create disk util thread: %s\n", strerror(ret));
+		log_err("Can't create helper thread: %s\n", strerror(ret));
 		return 1;
 	}
 
@@ -2076,16 +2080,14 @@ int fio_backend(void)
 
 	set_genesis_time();
 	stat_init();
-	create_disk_util_thread();
-	create_status_interval_thread();
+	create_helper_thread();
 
 	cgroup_list = smalloc(sizeof(*cgroup_list));
 	INIT_FLIST_HEAD(cgroup_list);
 
 	run_threads();
 
-	wait_for_disk_thread_exit();
-	wait_for_status_interval_thread_exit();
+	wait_for_helper_thread_exit();
 
 	if (!fio_abort) {
 		__show_run_stats();
