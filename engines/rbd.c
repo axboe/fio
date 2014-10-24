@@ -245,7 +245,7 @@ static int fio_rbd_getevents(struct thread_data *td, unsigned int min,
 
 		}
 		if (events < min)
-			usleep(100);
+			;
 		else
 			break;
 
