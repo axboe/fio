@@ -1981,7 +1981,7 @@ static void wait_for_helper_thread_exit(void)
 {
 	void *ret;
 
-	disk_util_start_exit();
+	helper_exit = 1;
 	pthread_cond_signal(&helper_cond);
 	pthread_join(helper_thread, &ret);
 }

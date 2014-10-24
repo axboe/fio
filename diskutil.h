@@ -129,8 +129,4 @@ static inline int update_io_ticks(void)
 }
 #endif
 
-static inline void disk_util_start_exit(void)
-{
-	helper_exit = 1;
-}
 #endif
