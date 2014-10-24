@@ -1564,13 +1564,17 @@ err:
 	if (o->write_iolog_file)
 		write_iolog_close(td);
 
-	fio_mutex_remove(td->rusage_sem);
-	td->rusage_sem = NULL;
-
 	fio_mutex_remove(td->mutex);
 	td->mutex = NULL;
 
 	td_set_runstate(td, TD_EXITED);
+
+	/*
+	 * Do this last after setting our runstate to exited, so we
+	 * know that the stat thread is signaled.
+	 */
+	check_update_rusage(td);
+
 	return (void *) (uintptr_t) td->error;
 }
 
@@ -2097,8 +2101,11 @@ int fio_backend(void)
 		}
 	}
 
-	for_each_td(td, i)
+	for_each_td(td, i) {
 		fio_options_free(td);
+		fio_mutex_remove(td->rusage_sem);
+		td->rusage_sem = NULL;
+	}
 
 	free_disk_util();
 	cgroup_kill(cgroup_list);

@@ -1451,6 +1451,8 @@ static void __show_running_run_stats(void)
 	}
 
 	for_each_td(td, i) {
+		if (td->runstate >= TD_EXITED)
+			continue;
 		if (td->rusage_sem) {
 			td->update_rusage = 1;
 			fio_mutex_down(td->rusage_sem);
