@@ -305,6 +305,8 @@ int initialize_fio(char *envp[])
 	 * access (ARM).
 	 */
 	compiletime_assert((offsetof(struct thread_stat, percentile_list) % 8) == 0, "stat percentile_list");
+	compiletime_assert((offsetof(struct thread_stat, total_run_time) % 8) == 0, "total_run_time");
+	compiletime_assert((offsetof(struct thread_stat, total_err_count) % 8) == 0, "total_err_count");
 	compiletime_assert((offsetof(struct thread_stat, latency_percentile) % 8) == 0, "stat latency_percentile");
 	compiletime_assert((offsetof(struct thread_options_pack, zipf_theta) % 8) == 0, "zipf_theta");
 	compiletime_assert((offsetof(struct thread_options_pack, pareto_h) % 8) == 0, "pareto_h");

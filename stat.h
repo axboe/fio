@@ -158,6 +158,8 @@ struct thread_stat {
 	uint32_t io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	uint32_t io_u_lat_m[FIO_IO_U_LAT_M_NR];
 	uint32_t io_u_plat[DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR];
+	uint32_t pad;
+
 	uint64_t total_io_u[3];
 	uint64_t short_io_u[3];
 	uint64_t drop_io_u[3];
@@ -171,8 +173,10 @@ struct thread_stat {
 	/*
 	 * IO Error related stats
 	 */
-	uint16_t continue_on_error;
-	uint16_t filler[3];
+	union {
+		uint16_t continue_on_error;
+		uint64_t pad2;
+	};
 	uint64_t total_err_count;
 	uint32_t first_error;
 
@@ -181,7 +185,6 @@ struct thread_stat {
 
 	uint32_t latency_depth;
 	uint64_t latency_target;
-	uint32_t pad;
 	fio_fp64_t latency_percentile;
 	uint64_t latency_window;
 } __attribute__((packed));
