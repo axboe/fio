@@ -23,7 +23,6 @@ struct rbd_data {
 };
 
 struct rbd_options {
-	struct thread_data *td;
 	char *rbd_name;
 	char *pool_name;
 	char *client_name;
