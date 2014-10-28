@@ -445,7 +445,13 @@ static int fio_rbd_open(struct thread_data *td, struct fio_file *f)
 
 static int fio_rbd_invalidate(struct thread_data *td, struct fio_file *f)
 {
+#if defined(CONFIG_RBD_INVAL)
+	struct rbd_data *rbd_data = td->io_ops->data;
+
+	return rbd_invalidate_cache(rbd_data->image);
+#else
 	return 0;
+#endif
 }
 
 static void fio_rbd_io_u_free(struct thread_data *td, struct io_u *io_u)
