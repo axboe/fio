@@ -12,7 +12,6 @@
 struct fio_rbd_iou {
 	struct io_u *io_u;
 	rbd_completion_t completion;
-	int io_complete;
 	int io_seen;
 };
 
@@ -100,7 +99,7 @@ static int _fio_rbd_connect(struct thread_data *td)
 	struct rbd_options *o = td->eo;
 	int r;
 
-	r = rados_create(&(rbd_data->cluster), o->client_name);
+	r = rados_create(&rbd_data->cluster, o->client_name);
 	if (r < 0) {
 		log_err("rados_create failed.\n");
 		goto failed_early;
@@ -119,13 +118,13 @@ static int _fio_rbd_connect(struct thread_data *td)
 	}
 
 	r = rados_ioctx_create(rbd_data->cluster, o->pool_name,
-			       &(rbd_data->io_ctx));
+			       &rbd_data->io_ctx);
 	if (r < 0) {
 		log_err("rados_ioctx_create failed.\n");
 		goto failed_shutdown;
 	}
 
-	r = rbd_open(rbd_data->io_ctx, o->rbd_name, &(rbd_data->image),
+	r = rbd_open(rbd_data->io_ctx, o->rbd_name, &rbd_data->image,
 		     NULL /*snap */ );
 	if (r < 0) {
 		log_err("rbd_open failed.\n");
@@ -167,11 +166,9 @@ static void _fio_rbd_disconnect(struct rbd_data *rbd_data)
 
 static void _fio_rbd_finish_aiocb(rbd_completion_t comp, void *data)
 {
-	struct io_u *io_u = data;
-	struct fio_rbd_iou *fri = io_u->engine_data;
+	struct fio_rbd_iou *fri = data;
+	struct io_u *io_u = fri->io_u;
 	ssize_t ret;
-
-	fri->io_complete = 1;
 
 	/*
 	 * Looks like return value is 0 for success, or < 0 for
@@ -199,8 +196,7 @@ static inline int fri_check_complete(struct rbd_data *rbd_data,
 {
 	struct fio_rbd_iou *fri = io_u->engine_data;
 
-	if (fri->io_complete) {
-		fri->io_complete = 0;
+	if (rbd_aio_is_complete(fri->completion)) {
 		fri->io_seen = 1;
 		rbd_data->aio_events[*events] = io_u;
 		(*events)++;
@@ -271,70 +267,55 @@ static int fio_rbd_queue(struct thread_data *td, struct io_u *io_u)
 
 	fio_ro_check(td, io_u);
 
-	fri->io_complete = 0;
 	fri->io_seen = 0;
 
-	if (io_u->ddir == DDIR_WRITE) {
-		r = rbd_aio_create_completion(io_u, _fio_rbd_finish_aiocb,
+	r = rbd_aio_create_completion(fri, _fio_rbd_finish_aiocb,
 						&fri->completion);
-		if (r < 0) {
-			log_err
-			    ("rbd_aio_create_completion for DDIR_WRITE failed.\n");
-			goto failed;
-		}
+	if (r < 0) {
+		log_err("rbd_aio_create_completion failed.\n");
+		goto failed;
+	}
 
+	if (io_u->ddir == DDIR_WRITE) {
 		r = rbd_aio_write(rbd_data->image, io_u->offset,
 				  io_u->xfer_buflen, io_u->xfer_buf,
 				  fri->completion);
 		if (r < 0) {
 			log_err("rbd_aio_write failed.\n");
-			rbd_aio_release(fri->completion);
-			goto failed;
+			goto failed_comp;
 		}
 
 	} else if (io_u->ddir == DDIR_READ) {
-		r = rbd_aio_create_completion(io_u, _fio_rbd_finish_aiocb,
-						&fri->completion);
-		if (r < 0) {
-			log_err
-			    ("rbd_aio_create_completion for DDIR_READ failed.\n");
-			goto failed;
-		}
-
 		r = rbd_aio_read(rbd_data->image, io_u->offset,
 				 io_u->xfer_buflen, io_u->xfer_buf,
 				 fri->completion);
 
 		if (r < 0) {
 			log_err("rbd_aio_read failed.\n");
-			rbd_aio_release(fri->completion);
-			goto failed;
+			goto failed_comp;
 		}
-
-	} else if (io_u->ddir == DDIR_SYNC) {
-		r = rbd_aio_create_completion(io_u, _fio_rbd_finish_aiocb,
-						&fri->completion);
+	} else if (io_u->ddir == DDIR_TRIM) {
+		r = rbd_aio_discard(rbd_data->image, io_u->offset,
+				 io_u->xfer_buflen, fri->completion);
 		if (r < 0) {
-			log_err
-			    ("rbd_aio_create_completion for DDIR_SYNC failed.\n");
-			goto failed;
+			log_err("rbd_aio_discard failed.\n");
+			goto failed_comp;
 		}
-
+	} else if (io_u->ddir == DDIR_SYNC) {
 		r = rbd_aio_flush(rbd_data->image, fri->completion);
 		if (r < 0) {
 			log_err("rbd_flush failed.\n");
-			rbd_aio_release(fri->completion);
-			goto failed;
+			goto failed_comp;
 		}
-
 	} else {
 		dprint(FD_IO, "%s: Warning: unhandled ddir: %d\n", __func__,
 		       io_u->ddir);
-		return FIO_Q_COMPLETED;
+		goto failed_comp;
 	}
 
 	return FIO_Q_QUEUED;
-
+failed_comp:
+	rbd_aio_release(fri->completion);
 failed:
 	io_u->error = r;
 	td_verror(td, io_u->error, "xfer");
