@@ -213,7 +213,7 @@ static inline int fri_check_complete(struct rbd_data *rbd_data,
 }
 
 static int rbd_iter_events(struct thread_data *td, unsigned int *events,
-			   unsigned int min_evts, int wait)
+			   unsigned int min_evts)
 {
 	struct rbd_data *rbd_data = td->io_ops->data;
 	unsigned int this_events = 0;
@@ -230,7 +230,7 @@ static int rbd_iter_events(struct thread_data *td, unsigned int *events,
 
 		if (fri_check_complete(rbd_data, io_u, events))
 			this_events++;
-		else if (wait) {
+		else {
 			rbd_aio_wait_for_complete(fri->completion);
 
 			if (fri_check_complete(rbd_data, io_u, events))
@@ -247,17 +247,14 @@ static int fio_rbd_getevents(struct thread_data *td, unsigned int min,
 			     unsigned int max, const struct timespec *t)
 {
 	unsigned int this_events, events = 0;
-	int wait = 0;
 
 	do {
-		this_events = rbd_iter_events(td, &events, min, wait);
+		this_events = rbd_iter_events(td, &events, min);
 
 		if (events >= min)
 			break;
 		if (this_events)
 			continue;
-
-		wait = 1;
 	} while (1);
 
 	return events;
