@@ -26,6 +26,7 @@ struct rbd_options {
 	char *rbd_name;
 	char *pool_name;
 	char *client_name;
+	int busy_poll;
 };
 
 static struct fio_option options[] = {
@@ -39,22 +40,32 @@ static struct fio_option options[] = {
 		.group		= FIO_OPT_G_RBD,
 	},
 	{
-		.name     = "pool",
-		.lname    = "rbd engine pool",
-		.type     = FIO_OPT_STR_STORE,
-		.help     = "Name of the pool hosting the RBD for the RBD engine",
-		.off1     = offsetof(struct rbd_options, pool_name),
-		.category = FIO_OPT_C_ENGINE,
-		.group    = FIO_OPT_G_RBD,
+		.name		= "pool",
+		.lname		= "rbd engine pool",
+		.type		= FIO_OPT_STR_STORE,
+		.help		= "Name of the pool hosting the RBD for the RBD engine",
+		.off1		= offsetof(struct rbd_options, pool_name),
+		.category	= FIO_OPT_C_ENGINE,
+		.group		= FIO_OPT_G_RBD,
 	},
 	{
-		.name     = "clientname",
-		.lname    = "rbd engine clientname",
-		.type     = FIO_OPT_STR_STORE,
-		.help     = "Name of the ceph client to access the RBD for the RBD engine",
-		.off1     = offsetof(struct rbd_options, client_name),
-		.category = FIO_OPT_C_ENGINE,
-		.group    = FIO_OPT_G_RBD,
+		.name		= "clientname",
+		.lname		= "rbd engine clientname",
+		.type		= FIO_OPT_STR_STORE,
+		.help		= "Name of the ceph client to access the RBD for the RBD engine",
+		.off1		= offsetof(struct rbd_options, client_name),
+		.category	= FIO_OPT_C_ENGINE,
+		.group		= FIO_OPT_G_RBD,
+	},
+	{
+		.name		= "busy_poll",
+		.lname		= "Busy poll",
+		.type		= FIO_OPT_BOOL,
+		.help		= "Busy poll for completions instead of sleeping",
+		.off1		= offsetof(struct rbd_options, client_name),
+		.def		= "0",
+		.category	= FIO_OPT_C_ENGINE,
+		.group		= FIO_OPT_G_RBD,
 	},
 	{
 		.name = NULL,
@@ -242,6 +253,7 @@ static int fio_rbd_getevents(struct thread_data *td, unsigned int min,
 			     unsigned int max, const struct timespec *t)
 {
 	unsigned int this_events, events = 0;
+	struct rbd_options *o = td->eo;
 	int wait = 0;
 
 	do {
@@ -252,7 +264,10 @@ static int fio_rbd_getevents(struct thread_data *td, unsigned int min,
 		if (this_events)
 			continue;
 
-		wait = 1;
+		if (!o->busy_poll)
+			wait = 1;
+		else
+			nop;
 	} while (1);
 
 	return events;
