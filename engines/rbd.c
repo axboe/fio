@@ -23,6 +23,7 @@ struct rbd_data {
 };
 
 struct rbd_options {
+	struct thread_data *td;
 	char *rbd_name;
 	char *pool_name;
 	char *client_name;
@@ -62,7 +63,7 @@ static struct fio_option options[] = {
 		.lname		= "Busy poll",
 		.type		= FIO_OPT_BOOL,
 		.help		= "Busy poll for completions instead of sleeping",
-		.off1		= offsetof(struct rbd_options, client_name),
+		.off1		= offsetof(struct rbd_options, busy_poll),
 		.def		= "0",
 		.category	= FIO_OPT_C_ENGINE,
 		.group		= FIO_OPT_G_RBD,
