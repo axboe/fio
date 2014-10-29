@@ -36,7 +36,7 @@ struct e4defrag_data {
 };
 
 struct e4defrag_options {
-	struct thread_data *td;
+	void *pad;
 	unsigned int inplace;
 	char * donor_name;
 };

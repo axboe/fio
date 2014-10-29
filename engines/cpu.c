@@ -8,7 +8,7 @@
 #include "../fio.h"
 
 struct cpu_options {
-	struct thread_data *td;
+	void *pad;
 	unsigned int cpuload;
 	unsigned int cpucycle;
 	unsigned int exit_io_done;
