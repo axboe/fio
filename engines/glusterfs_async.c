@@ -120,6 +120,11 @@ static int fio_gf_async_queue(struct thread_data fio_unused * td,
 		r = glfs_pwrite_async(g->fd, io_u->xfer_buf, io_u->xfer_buflen,
 				      io_u->offset, 0, gf_async_cb,
 				      (void *)io_u);
+#if defined(CONFIG_GF_TRIM)
+	else if (io_u->ddir == DDIR_TRIM)
+		r = glfs_discard_async(g->fd, io_u->offset, io_u->xfer_buflen,
+				       gf_async_cb, io_u);
+#endif
 	else if (io_u->ddir == DDIR_SYNC) {
 		r = glfs_fsync_async(g->fd, gf_async_cb, (void *)io_u);
 	} else {

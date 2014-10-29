@@ -1261,6 +1261,7 @@ fi
 
 ##########################################
 # check for gfapi fadvise support
+if test "$gfapi" = "yes" ; then
 gf_fadvise="no"
 cat > $TMPC << EOF
 #include <glusterfs/api/glfs.h>
@@ -1273,11 +1274,29 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-
 if compile_prog "" "-lgfapi -lglusterfs" "gfapi"; then
   gf_fadvise="yes"
 fi
 echo "Gluster API use fadvise       $gf_fadvise"
+fi
+
+##########################################
+# check for gfapi trim support
+gf_trim="no"
+if test "$gfapi" = "yes" ; then
+cat > $TMPC << EOF
+#include <glusterfs/api/glfs.h>
+
+int main(int argc, char **argv)
+{
+  return glfs_discard_async(NULL, 0, 0);
+}
+EOF
+if compile_prog "" "-lgfapi -lglusterfs" "gf trim"; then
+  gf_trim="yes"
+fi
+echo "Gluster API trim support      $gf_trim"
+fi
 
 ##########################################
 # Check if we support stckf on s390
@@ -1524,6 +1543,9 @@ if test "$gfapi" = "yes" ; then
 fi
 if test "$gf_fadvise" = "yes" ; then
   output_sym "CONFIG_GF_FADVISE"
+fi
+if test "$gf_trim" = "yes" ; then
+  output_sym "CONFIG_GF_TRIM"
 fi
 if test "$libhdfs" = "yes" ; then
   output_sym "CONFIG_LIBHDFS"
