@@ -159,22 +159,11 @@ int fio_gf_async_setup(struct thread_data *td)
 	return r;
 }
 
-static int fio_gf_async_prep(struct thread_data *td, struct io_u *io_u)
-{
-	dprint(FD_FILE, "%s\n", __FUNCTION__);
-
-	if (!ddir_rw(io_u->ddir))
-		return 0;
-
-	return 0;
-}
-
 static struct ioengine_ops ioengine = {
 	.name = "gfapi_async",
 	.version = FIO_IOOPS_VERSION,
 	.init = fio_gf_async_setup,
 	.cleanup = fio_gf_cleanup,
-	.prep = fio_gf_async_prep,
 	.queue = fio_gf_async_queue,
 	.open_file = fio_gf_open_file,
 	.close_file = fio_gf_close_file,
