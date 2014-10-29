@@ -13,6 +13,7 @@ struct fio_rbd_iou {
 	struct io_u *io_u;
 	rbd_completion_t completion;
 	int io_seen;
+	int io_complete;
 };
 
 struct rbd_data {
@@ -23,6 +24,7 @@ struct rbd_data {
 };
 
 struct rbd_options {
+	struct thread_data *td;
 	char *rbd_name;
 	char *pool_name;
 	char *client_name;
@@ -62,7 +64,7 @@ static struct fio_option options[] = {
 		.lname		= "Busy poll",
 		.type		= FIO_OPT_BOOL,
 		.help		= "Busy poll for completions instead of sleeping",
-		.off1		= offsetof(struct rbd_options, client_name),
+		.off1		= offsetof(struct rbd_options, busy_poll),
 		.def		= "0",
 		.category	= FIO_OPT_C_ENGINE,
 		.group		= FIO_OPT_G_RBD,
@@ -185,6 +187,8 @@ static void _fio_rbd_finish_aiocb(rbd_completion_t comp, void *data)
 	 * a specific error. So we have to assume that it can't do
 	 * partial completions.
 	 */
+	fri->io_complete = 1;
+	
 	ret = rbd_aio_get_return_value(fri->completion);
 	if (ret < 0) {
 		io_u->error = ret;
@@ -206,7 +210,7 @@ static inline int fri_check_complete(struct rbd_data *rbd_data,
 {
 	struct fio_rbd_iou *fri = io_u->engine_data;
 
-	if (rbd_aio_is_complete(fri->completion)) {
+	if (fri->io_complete) {
 		fri->io_seen = 1;
 		rbd_data->aio_events[*events] = io_u;
 		(*events)++;
@@ -282,6 +286,7 @@ static int fio_rbd_queue(struct thread_data *td, struct io_u *io_u)
 	fio_ro_check(td, io_u);
 
 	fri->io_seen = 0;
+	fri->io_complete = 0;
 
 	r = rbd_aio_create_completion(fri, _fio_rbd_finish_aiocb,
 						&fri->completion);
