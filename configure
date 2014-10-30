@@ -1203,6 +1203,26 @@ fi
 echo "Rados Block Device engine     $rbd"
 
 ##########################################
+# check for rbd_invaidate_cache()
+rbd_inval="no"
+if test "$rbd" = "yes"; then
+cat > $TMPC << EOF
+#include <rbd/librbd.h>
+
+int main(int argc, char **argv)
+{
+  rbd_image_t image;
+
+  return rbd_invalidate_cache(image);
+}
+EOF
+if compile_prog "" "-lrbd -lrados" "rbd"; then
+  rbd_inval="yes"
+fi
+echo "rbd_invalidate_cache          $rbd_inval"
+fi
+
+##########################################
 # Check whether we have setvbuf
 setvbuf="no"
 cat > $TMPC << EOF
@@ -1241,6 +1261,7 @@ fi
 
 ##########################################
 # check for gfapi fadvise support
+if test "$gfapi" = "yes" ; then
 gf_fadvise="no"
 cat > $TMPC << EOF
 #include <glusterfs/api/glfs.h>
@@ -1253,11 +1274,29 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-
 if compile_prog "" "-lgfapi -lglusterfs" "gfapi"; then
   gf_fadvise="yes"
 fi
 echo "Gluster API use fadvise       $gf_fadvise"
+fi
+
+##########################################
+# check for gfapi trim support
+gf_trim="no"
+if test "$gfapi" = "yes" ; then
+cat > $TMPC << EOF
+#include <glusterfs/api/glfs.h>
+
+int main(int argc, char **argv)
+{
+  return glfs_discard_async(NULL, 0, 0);
+}
+EOF
+if compile_prog "" "-lgfapi -lglusterfs" "gf trim"; then
+  gf_trim="yes"
+fi
+echo "Gluster API trim support      $gf_trim"
+fi
 
 ##########################################
 # Check if we support stckf on s390
@@ -1490,6 +1529,9 @@ fi
 if test "$rbd" = "yes" ; then
   output_sym "CONFIG_RBD"
 fi
+if test "$rbd_inval" = "yes" ; then
+  output_sym "CONFIG_RBD_INVAL"
+fi
 if test "$setvbuf" = "yes" ; then
   output_sym "CONFIG_SETVBUF"
 fi
@@ -1502,6 +1544,9 @@ if test "$gfapi" = "yes" ; then
 fi
 if test "$gf_fadvise" = "yes" ; then
   output_sym "CONFIG_GF_FADVISE"
+fi
+if test "$gf_trim" = "yes" ; then
+  output_sym "CONFIG_GF_TRIM"
 fi
 if test "$libhdfs" = "yes" ; then
   output_sym "CONFIG_LIBHDFS"

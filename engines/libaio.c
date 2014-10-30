@@ -37,7 +37,7 @@ struct libaio_data {
 };
 
 struct libaio_options {
-	struct thread_data *td;
+	void *pad;
 	unsigned int userspace_reap;
 };
 

@@ -2,7 +2,7 @@
 #include "../fio.h"
 
 struct gf_options {
-	struct thread_data *td;
+	void *pad;
 	char *gf_vol;
 	char *gf_brick;
 };
