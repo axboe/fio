@@ -1356,6 +1356,7 @@ yacc="no"
 yacc_is_bison="no"
 lex="no"
 arith="no"
+if test "$targetos" != "SunOS" ; then
 LEX=$(which lex 2> /dev/null)
 if test -x "$LEX" ; then
   lex="yes"
@@ -1384,11 +1385,11 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-
 if compile_prog "" "-ll" "lex"; then
   LIBS="-ll $LIBS"
 else
   arith="no"
+fi
 fi
 fi
 
