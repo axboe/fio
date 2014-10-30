@@ -119,7 +119,7 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 {
 	int flags = 0;
 
-	td->mmapfd = 1;
+	td->mmapfd = -1;
 
 	if (td->o.mem_type == MEM_MMAPHUGE) {
 		unsigned long mask = td->o.hugepage_size - 1;
@@ -176,7 +176,8 @@ static void free_mem_mmap(struct thread_data *td, size_t total_mem)
 						td->orig_buffer);
 	munmap(td->orig_buffer, td->orig_buffer_size);
 	if (td->o.mmapfile) {
-		close(td->mmapfd);
+		if (td->mmapfd != -1)
+			close(td->mmapfd);
 		unlink(td->o.mmapfile);
 		free(td->o.mmapfile);
 	}
