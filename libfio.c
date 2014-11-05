@@ -58,6 +58,7 @@ static const char *fio_os_strings[os_nr] = {
 	"Solaris",
 	"Windows",
 	"Android",
+	"DragonFly",
 };
 
 static const char *fio_arch_strings[arch_nr] = {

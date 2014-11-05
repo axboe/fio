@@ -136,6 +136,10 @@ ifeq ($(CONFIG_TARGET_OS), NetBSD)
   LIBS	 += -lpthread -lrt
   LDFLAGS += -rdynamic
 endif
+ifeq ($(CONFIG_TARGET_OS), DragonFly)
+  LIBS	 += -lpthread -lrt
+  LDFLAGS += -rdynamic
+endif
 ifeq ($(CONFIG_TARGET_OS), AIX)
   LIBS	 += -lpthread -ldl -lrt
   CPPFLAGS += -D_LARGE_FILES -D__ppc__

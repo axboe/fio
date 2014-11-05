@@ -21,6 +21,7 @@ enum {
 	os_solaris,
 	os_windows,
 	os_android,
+	os_dragonfly,
 
 	os_nr,
 };
@@ -45,6 +46,8 @@ enum {
 #include "os-hpux.h"
 #elif defined(WIN32)
 #include "os-windows.h"
+#elif defined (__DragonFly__)
+#include "os-dragonfly.h"
 #else
 #error "unsupported os"
 #endif
