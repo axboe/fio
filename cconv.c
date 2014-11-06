@@ -149,7 +149,6 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->rand_repeatable = le32_to_cpu(top->rand_repeatable);
 	o->allrand_repeatable = le32_to_cpu(top->allrand_repeatable);
 	o->rand_seed = le64_to_cpu(top->rand_seed);
-	o->use_os_rand = le32_to_cpu(top->use_os_rand);
 	o->log_avg_msec = le32_to_cpu(top->log_avg_msec);
 	o->log_offset = le32_to_cpu(top->log_offset);
 	o->log_gz = le32_to_cpu(top->log_gz);
@@ -323,7 +322,6 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->rand_repeatable = cpu_to_le32(o->rand_repeatable);
 	top->allrand_repeatable = cpu_to_le32(o->allrand_repeatable);
 	top->rand_seed = __cpu_to_le64(o->rand_seed);
-	top->use_os_rand = cpu_to_le32(o->use_os_rand);
 	top->log_avg_msec = cpu_to_le32(o->log_avg_msec);
 	top->log_offset = cpu_to_le32(o->log_offset);
 	top->log_gz = cpu_to_le32(o->log_gz);

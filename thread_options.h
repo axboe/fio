@@ -106,7 +106,7 @@ struct thread_options {
 	unsigned int rand_repeatable;
 	unsigned int allrand_repeatable;
 	unsigned long long rand_seed;
-	unsigned int use_os_rand;
+	unsigned int dep_use_os_rand;
 	unsigned int log_avg_msec;
 	unsigned int log_offset;
 	unsigned int log_gz;
@@ -337,7 +337,7 @@ struct thread_options_pack {
 	uint32_t rand_repeatable;
 	uint32_t allrand_repeatable;
 	uint64_t rand_seed;
-	uint32_t use_os_rand;
+	uint32_t dep_use_os_rand;
 	uint32_t log_avg_msec;
 	uint32_t log_offset;
 	uint32_t log_gz;

@@ -439,12 +439,6 @@ randseed=int	Seed the random number generators based on this seed value, to
 		If not set, the random sequence depends on the randrepeat
 		setting.
 
-use_os_rand=bool Fio can either use the random generator supplied by the OS
-		to generator random offsets, or it can use it's own internal
-		generator (based on Tausworthe). Default is to use the
-		internal generator, which is often of better quality and
-		faster.
-
 fallocate=str	Whether pre-allocation is performed when laying down files.
 		Accepted values are:
 

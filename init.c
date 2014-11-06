@@ -470,13 +470,8 @@ static unsigned long long get_rand_start_delay(struct thread_data *td)
 
 	delayrange = td->o.start_delay_high - td->o.start_delay;
 
-	if (td->o.use_os_rand) {
-		r = os_random_long(&td->delay_state);
-		delayrange = (unsigned long long) ((double) delayrange * (r / (OS_RAND_MAX + 1.0)));
-	} else {
-		r = __rand(&td->__delay_state);
-		delayrange = (unsigned long long) ((double) delayrange * (r / (FRAND_MAX + 1.0)));
-	}
+	r = __rand(&td->__delay_state);
+	delayrange = (unsigned long long) ((double) delayrange * (r / (FRAND_MAX + 1.0)));
 
 	delayrange += td->o.start_delay;
 	return delayrange;
@@ -787,32 +782,6 @@ static int exists_and_not_file(const char *filename)
 	return 1;
 }
 
-static void td_fill_rand_seeds_os(struct thread_data *td)
-{
-	os_random_seed(td->rand_seeds[FIO_RAND_BS_OFF], &td->bsrange_state);
-	os_random_seed(td->rand_seeds[FIO_RAND_VER_OFF], &td->verify_state);
-	os_random_seed(td->rand_seeds[FIO_RAND_MIX_OFF], &td->rwmix_state);
-
-	if (td->o.file_service_type == FIO_FSERVICE_RANDOM)
-		os_random_seed(td->rand_seeds[FIO_RAND_FILE_OFF], &td->next_file_state);
-
-	os_random_seed(td->rand_seeds[FIO_RAND_FILE_SIZE_OFF], &td->file_size_state);
-	os_random_seed(td->rand_seeds[FIO_RAND_TRIM_OFF], &td->trim_state);
-	os_random_seed(td->rand_seeds[FIO_RAND_START_DELAY], &td->delay_state);
-
-	if (!td_random(td))
-		return;
-
-	if (td->o.rand_repeatable)
-		td->rand_seeds[FIO_RAND_BLOCK_OFF] = FIO_RANDSEED * td->thread_number;
-
-	os_random_seed(td->rand_seeds[FIO_RAND_BLOCK_OFF], &td->random_state);
-
-	os_random_seed(td->rand_seeds[FIO_RAND_SEQ_RAND_READ_OFF], &td->seq_rand_state[DDIR_READ]);
-	os_random_seed(td->rand_seeds[FIO_RAND_SEQ_RAND_WRITE_OFF], &td->seq_rand_state[DDIR_WRITE]);
-	os_random_seed(td->rand_seeds[FIO_RAND_SEQ_RAND_TRIM_OFF], &td->seq_rand_state[DDIR_TRIM]);
-}
-
 static void td_fill_rand_seeds_internal(struct thread_data *td)
 {
 	init_rand_seed(&td->__bsrange_state, td->rand_seeds[FIO_RAND_BS_OFF]);
@@ -848,10 +817,7 @@ void td_fill_rand_seeds(struct thread_data *td)
 			       	+ i;
 	}
 
-	if (td->o.use_os_rand)
-		td_fill_rand_seeds_os(td);
-	else
-		td_fill_rand_seeds_internal(td);
+	td_fill_rand_seeds_internal(td);
 
 	init_rand_seed(&td->buf_state, td->rand_seeds[FIO_RAND_BUF_OFF]);
 	frand_copy(&td->buf_state_prev, &td->buf_state);

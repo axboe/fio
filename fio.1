@@ -347,12 +347,6 @@ Seed the random number generators based on this seed value, to be able to
 control what sequence of output is being generated. If not set, the random
 sequence depends on the \fBrandrepeat\fR setting.
 .TP
-.BI use_os_rand \fR=\fPbool
-Fio can either use the random generator supplied by the OS to generate random
-offsets, or it can use its own internal generator (based on Tausworthe).
-Default is to use the internal generator, which is often of better quality and
-faster. Default: false.
-.TP
 .BI fallocate \fR=\fPstr
 Whether pre-allocation is performed when laying down files. Accepted values
 are:
