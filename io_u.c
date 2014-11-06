@@ -90,7 +90,7 @@ static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		return 1;
 
 	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE) {
-		r = __rand(&td->__random_state);
+		r = __rand(&td->random_state);
 
 		dprint(FD_RANDOM, "off rand %llu\n", (unsigned long long) r);
 
@@ -190,7 +190,7 @@ static int should_do_random(struct thread_data *td, enum fio_ddir ddir)
 	if (td->o.perc_rand[ddir] == 100)
 		return 1;
 
-	r = __rand(&td->__seq_rand_state[ddir]);
+	r = __rand(&td->seq_rand_state[ddir]);
 	v = 1 + (int) (100.0 * (r / (FRAND_MAX + 1.0)));
 
 	return v <= td->o.perc_rand[ddir];
@@ -441,7 +441,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 		return 0;
 
 	do {
-		r = __rand(&td->__bsrange_state);
+		r = __rand(&td->bsrange_state);
 
 		if (!td->o.bssplit_nr[ddir]) {
 			buflen = 1 + (unsigned int) ((double) maxbs *
@@ -506,7 +506,7 @@ static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
 	unsigned int v;
 	unsigned long r;
 
-	r = __rand(&td->__rwmix_state);
+	r = __rand(&td->rwmix_state);
 	v = 1 + (int) (100.0 * (r / (FRAND_MAX + 1.0)));
 
 	if (v <= td->o.rwmix[DDIR_READ])
@@ -959,7 +959,7 @@ static struct fio_file *get_next_file_rand(struct thread_data *td,
 		int opened = 0;
 		unsigned long r;
 
-		r = __rand(&td->__next_file_state);
+		r = __rand(&td->next_file_state);
 		fno = (unsigned int) ((double) td->o.nr_files
 				* (r / (FRAND_MAX + 1.0)));
 

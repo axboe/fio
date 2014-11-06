@@ -75,7 +75,7 @@ int io_u_should_trim(struct thread_data *td, struct io_u *io_u)
 	if (!td->o.trim_percentage)
 		return 0;
 
-	r = __rand(&td->__trim_state);
+	r = __rand(&td->trim_state);
 	val = (FRAND_MAX / 100ULL);
 
 	val *= (unsigned long long) td->o.trim_percentage;

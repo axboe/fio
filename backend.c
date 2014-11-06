@@ -753,9 +753,9 @@ static uint64_t do_io(struct thread_data *td)
 		    ((io_u->flags & IO_U_F_VER_LIST) || !td_rw(td))) {
 
 			if (!td->o.verify_pattern_bytes) {
-				io_u->rand_seed = __rand(&td->__verify_state);
+				io_u->rand_seed = __rand(&td->verify_state);
 				if (sizeof(int) != sizeof(long *))
-					io_u->rand_seed *= __rand(&td->__verify_state);
+					io_u->rand_seed *= __rand(&td->verify_state);
 			}
 
 			if (td->o.verify_async)

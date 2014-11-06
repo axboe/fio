@@ -73,7 +73,7 @@ void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 		if (use_seed)
 			__fill_random_buf(p, len, seed);
 		else
-			io_u->rand_seed = fill_random_buf(&td->__verify_state, p, len);
+			io_u->rand_seed = fill_random_buf(&td->verify_state, p, len);
 		return;
 	}
 
@@ -1140,9 +1140,9 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		dprint(FD_VERIFY, "get_next_verify: ret io_u %p\n", io_u);
 
 		if (!td->o.verify_pattern_bytes) {
-			io_u->rand_seed = __rand(&td->__verify_state);
+			io_u->rand_seed = __rand(&td->verify_state);
 			if (sizeof(int) != sizeof(long *))
-				io_u->rand_seed *= __rand(&td->__verify_state);
+				io_u->rand_seed *= __rand(&td->verify_state);
 		}
 		return 0;
 	}

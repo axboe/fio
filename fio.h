@@ -137,7 +137,7 @@ struct thread_data {
 	unsigned int nr_normal_files;
 	union {
 		unsigned int next_file;
-		struct frand_state __next_file_state;
+		struct frand_state next_file_state;
 	};
 	int error;
 	int sig;
@@ -159,10 +159,10 @@ struct thread_data {
 
 	unsigned long rand_seeds[FIO_RAND_NR_OFFS];
 
-	struct frand_state __bsrange_state;
-	struct frand_state __verify_state;
-	struct frand_state __trim_state;
-	struct frand_state __delay_state;
+	struct frand_state bsrange_state;
+	struct frand_state verify_state;
+	struct frand_state trim_state;
+	struct frand_state delay_state;
 
 	struct frand_state buf_state;
 	struct frand_state buf_state_prev;
@@ -236,7 +236,7 @@ struct thread_data {
 	/*
 	 * State for random io, a bitmap of blocks done vs not done
 	 */
-	struct frand_state __random_state;
+	struct frand_state random_state;
 
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
@@ -261,7 +261,7 @@ struct thread_data {
 	/*
 	 * read/write mixed workload state
 	 */
-	struct frand_state __rwmix_state;
+	struct frand_state rwmix_state;
 	unsigned long rwmix_issues;
 	enum fio_ddir rwmix_ddir;
 	unsigned int ddir_seq_nr;
@@ -269,7 +269,7 @@ struct thread_data {
 	/*
 	 * rand/seq mixed workload state
 	 */
-	struct frand_state __seq_rand_state[DDIR_RWDIR_CNT];
+	struct frand_state seq_rand_state[DDIR_RWDIR_CNT];
 
 	/*
 	 * IO history logs for verification. We use a tree for sorting,
@@ -304,7 +304,7 @@ struct thread_data {
 	/*
 	 * For generating file sizes
 	 */
-	struct frand_state __file_size_state;
+	struct frand_state file_size_state;
 
 	/*
 	 * Error counts
