@@ -1345,7 +1345,6 @@ static void *thread_main(void *data)
 	/* numa node setup */
 	if (o->numa_cpumask_set || o->numa_memmask_set) {
 		struct bitmask *mask;
-		int ret;
 
 		if (numa_available() < 0) {
 			td_verror(td, errno, "Does not support NUMA API\n");
@@ -1554,9 +1553,9 @@ err:
 	cgroup_shutdown(td, &cgroup_mnt);
 
 	if (o->cpumask_set) {
-		int ret = fio_cpuset_exit(&o->cpumask);
-
-		td_verror(td, ret, "fio_cpuset_exit");
+		ret = fio_cpuset_exit(&o->cpumask);
+		if (ret)
+			td_verror(td, ret, "fio_cpuset_exit");
 	}
 
 	/*
@@ -2092,8 +2091,6 @@ int fio_backend(void)
 	if (!fio_abort) {
 		__show_run_stats();
 		if (write_bw_log) {
-			int i;
-
 			for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 				struct io_log *log = agg_io_log[i];
 

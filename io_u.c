@@ -206,7 +206,6 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		return get_off_from_method(td, f, ddir, b);
 
 	if (!flist_empty(&td->next_rand_list)) {
-		struct rand_off *r;
 fetch:
 		r = flist_first_entry(&td->next_rand_list, struct rand_off, list);
 		flist_del(&r->list);

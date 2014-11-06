@@ -10,15 +10,15 @@
 static char __run_str[REAL_MAX_JOBS + 1];
 static char run_str[__THREAD_RUNSTR_SZ(REAL_MAX_JOBS)];
 
-static void update_condensed_str(char *run_str, char *run_str_condensed)
+static void update_condensed_str(char *rstr, char *run_str_condensed)
 {
-	if (*run_str) {
-		while (*run_str) {
+	if (*rstr) {
+		while (*rstr) {
 			int nr = 1;
 
-			*run_str_condensed++ = *run_str++;
-			while (*(run_str - 1) == *run_str) {
-				run_str++;
+			*run_str_condensed++ = *rstr++;
+			while (*(rstr - 1) == *rstr) {
+				rstr++;
 				nr++;
 			}
 			run_str_condensed += sprintf(run_str_condensed, "(%u),", nr);
@@ -234,11 +234,11 @@ static int thread_eta(struct thread_data *td)
 		 * if given, otherwise assume it'll run at the specified rate.
 		 */
 		if (td->o.timeout) {
-			uint64_t timeout = td->o.timeout;
+			uint64_t __timeout = td->o.timeout;
 			uint64_t start_delay = td->o.start_delay;
 			uint64_t ramp_time = td->o.ramp_time;
 
-			t_eta = timeout + start_delay + ramp_time;
+			t_eta = __timeout + start_delay + ramp_time;
 			t_eta /= 1000000ULL;
 
 			if (in_ramp_time(td)) {

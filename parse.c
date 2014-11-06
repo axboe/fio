@@ -1081,11 +1081,13 @@ static int string_distance(const char *s1, const char *s2)
 		q[0] = p[0] + 1;
 		for (j = 1; j <= s2_len; j++) {
 			unsigned int sub = p[j - 1];
+			unsigned int pmin;
 
 			if (s1[i - 1] != s2[j - 1])
 				sub++;
 
-			q[j] = min(p[j] + 1, min(q[j - 1] + 1, sub));
+			pmin = min(q[j - 1] + 1, sub);
+			q[j] = min(p[j] + 1, pmin);
 		}
 		r = p;
 		p = q;

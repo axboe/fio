@@ -98,8 +98,8 @@ static int fio_e4defrag_init(struct thread_data *td)
 	}
 
 	if (!o->inplace) {
-		long long len = td->o.file_size_high - td->o.start_offset;
-		r = fallocate(ed->donor_fd, 0, td->o.start_offset, len);
+		long long __len = td->o.file_size_high - td->o.start_offset;
+		r = fallocate(ed->donor_fd, 0, td->o.start_offset, __len);
 		if (r)
 			goto err;
 	}

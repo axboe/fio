@@ -871,18 +871,18 @@ int iolog_file_inflate(const char *file)
 	 */
 	total = ic.len;
 	do {
-		size_t ret;
+		size_t iret;
 
-		ret = inflate_chunk(&ic,  1, stdout, &stream, &iter);
-		total -= ret;
+		iret = inflate_chunk(&ic,  1, stdout, &stream, &iter);
+		total -= iret;
 		if (!total)
 			break;
 		if (iter.err)
 			break;
 
 		ic.seq++;
-		ic.len -= ret;
-		ic.buf += ret;
+		ic.len -= iret;
+		ic.buf += iret;
 	} while (1);
 
 	if (iter.seq) {

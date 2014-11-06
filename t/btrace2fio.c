@@ -450,7 +450,7 @@ static struct btrace_pid *pid_hash_get(pid_t pid)
  * Load a blktrace file by reading all the blk_io_trace entries, and storing
  * them as io_pieces like the fio text version would do.
  */
-static int load_blktrace(const char *filename, int need_swap)
+static int load_blktrace(const char *fname, int need_swap)
 {
 	struct btrace_pid *p;
 	unsigned long traces;
@@ -458,7 +458,7 @@ static int load_blktrace(const char *filename, int need_swap)
 	struct fifo *fifo;
 	int fd, ret = 0;
 
-	fd = open(filename, O_RDONLY);
+	fd = open(fname, O_RDONLY);
 	if (fd < 0) {
 		perror("open trace file\n");
 		return 1;
@@ -468,8 +468,7 @@ static int load_blktrace(const char *filename, int need_swap)
 
 	traces = 0;
 	do {
-		int ret = trace_fifo_get(fifo, fd, &t, sizeof(t));
-
+		ret = trace_fifo_get(fifo, fd, &t, sizeof(t));
 		if (ret < 0)
 			goto err;
 		else if (!ret)

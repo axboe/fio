@@ -11,7 +11,7 @@
  * The memory overhead of the following tap table should be relatively small,
  * no more than 400 bytes.
  */
-static uint8_t taps[64][FIO_MAX_TAPS] =
+static uint8_t lfsr_taps[64][FIO_MAX_TAPS] =
 {
 	{0}, {0}, {0},		//LFSRs with less that 3-bits cannot exist
 	{3, 2},			//Tap position for 3-bit LFSR
@@ -158,12 +158,12 @@ static uint8_t *find_lfsr(uint64_t size)
 
 	/*
 	 * For an LFSR, there is always a prohibited state (all ones).
-	 * Thus, if we need to find the proper LFSR for our size, we must take that
-	 * into account.
+	 * Thus, if we need to find the proper LFSR for our size, we must
+	 * take that into account.
 	 */
 	for (i = 3; i < 64; i++)
 		if ((1UL << i) > size)
-			return taps[i];
+			return lfsr_taps[i];
 
 	return NULL;
 }
@@ -234,15 +234,15 @@ int lfsr_reset(struct fio_lfsr *fl, unsigned long seed)
 int lfsr_init(struct fio_lfsr *fl, uint64_t nums, unsigned long seed,
 		unsigned int spin)
 {
-	uint8_t *lfsr_taps;
+	uint8_t *taps;
 
-	lfsr_taps = find_lfsr(nums);
-	if (!lfsr_taps)
+	taps = find_lfsr(nums);
+	if (!taps)
 		return 1;
 
 	fl->max_val = nums - 1;
-	fl->xormask = lfsr_create_xormask(lfsr_taps);
-	fl->cached_bit = 1UL << (lfsr_taps[0] - 1);
+	fl->xormask = lfsr_create_xormask(taps);
+	fl->cached_bit = 1UL << (taps[0] - 1);
 
 	if (prepare_spin(fl, spin))
 		return 1;

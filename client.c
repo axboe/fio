@@ -654,15 +654,13 @@ static int __fio_client_send_local_ini(struct fio_client *client,
 
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
-		int ret = -errno;
-
+		ret = -errno;
 		log_err("fio: job file <%s> open: %s\n", filename, strerror(errno));
 		return ret;
 	}
 
 	if (fstat(fd, &sb) < 0) {
-		int ret = -errno;
-
+		ret = -errno;
 		log_err("fio: job file stat: %s\n", strerror(errno));
 		close(fd);
 		return ret;

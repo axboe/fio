@@ -287,14 +287,14 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 		/* zero-terminate text input */
 		if (cmdret->pdu_len) {
 			if (cmdret->opcode == FIO_NET_CMD_TEXT) {
-				struct cmd_text_pdu *pdu = (struct cmd_text_pdu *) cmdret->payload;
-				char *buf = (char *) pdu->buf;
+				struct cmd_text_pdu *__pdu = (struct cmd_text_pdu *) cmdret->payload;
+				char *buf = (char *) __pdu->buf;
 
-				buf[pdu->buf_len] = '\0';
+				buf[__pdu->buf_len] = '\0';
 			} else if (cmdret->opcode == FIO_NET_CMD_JOB) {
-				struct cmd_job_pdu *pdu = (struct cmd_job_pdu *) cmdret->payload;
-				char *buf = (char *) pdu->buf;
-				int len = le32_to_cpu(pdu->buf_len);
+				struct cmd_job_pdu *__pdu = (struct cmd_job_pdu *) cmdret->payload;
+				char *buf = (char *) __pdu->buf;
+				int len = le32_to_cpu(__pdu->buf_len);
 
 				buf[len] = '\0';
 			}
@@ -1209,7 +1209,6 @@ static int fio_send_iolog_gz(struct cmd_iolog_pdu *pdu, struct io_log *log)
 
 	do {
 		unsigned int this_len, flags = 0;
-		int ret;
 
 		stream.avail_out = FIO_SERVER_MAX_FRAGMENT_PDU;
 		stream.next_out = out_pdu;
@@ -1734,8 +1733,7 @@ int fio_start_server(char *pidfile)
 		free(pidfile);
 		return -1;
 	} else if (pid) {
-		int ret = write_pid(pid, pidfile);
-
+		ret = write_pid(pid, pidfile);
 		free(pidfile);
 		_exit(ret);
 	}

@@ -531,7 +531,7 @@ static int clock_cmp(const void *p1, const void *p2)
 
 int fio_monotonic_clocktest(void)
 {
-	struct clock_thread *threads;
+	struct clock_thread *cthreads;
 	unsigned int nr_cpus = cpus_online();
 	struct clock_entry *entries;
 	unsigned long tentries, failed = 0;
@@ -549,14 +549,14 @@ int fio_monotonic_clocktest(void)
 	fio_debug &= ~(1U << FD_TIME);
 #endif
 
-	threads = malloc(nr_cpus * sizeof(struct clock_thread));
+	cthreads = malloc(nr_cpus * sizeof(struct clock_thread));
 	tentries = CLOCK_ENTRIES * nr_cpus;
 	entries = malloc(tentries * sizeof(struct clock_entry));
 
 	log_info("cs: Testing %u CPUs\n", nr_cpus);
 
 	for (i = 0; i < nr_cpus; i++) {
-		struct clock_thread *t = &threads[i];
+		struct clock_thread *t = &cthreads[i];
 
 		t->cpu = i;
 		t->seq = &seq;
@@ -572,26 +572,26 @@ int fio_monotonic_clocktest(void)
 	}
 
 	for (i = 0; i < nr_cpus; i++) {
-		struct clock_thread *t = &threads[i];
+		struct clock_thread *t = &cthreads[i];
 
 		pthread_mutex_lock(&t->started);
 	}
 
 	for (i = 0; i < nr_cpus; i++) {
-		struct clock_thread *t = &threads[i];
+		struct clock_thread *t = &cthreads[i];
 
 		pthread_mutex_unlock(&t->lock);
 	}
 
 	for (i = 0; i < nr_cpus; i++) {
-		struct clock_thread *t = &threads[i];
+		struct clock_thread *t = &cthreads[i];
 		void *ret;
 
 		pthread_join(t->thread, &ret);
 		if (ret)
 			failed++;
 	}
-	free(threads);
+	free(cthreads);
 
 	if (failed) {
 		log_err("Clocksource test: %lu threads failed\n", failed);
