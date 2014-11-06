@@ -2,6 +2,7 @@
 #define FIO_SMALLOC_H
 
 extern void *smalloc(size_t);
+extern void *scalloc(size_t, size_t);
 extern void sfree(void *);
 extern char *smalloc_strdup(const char *);
 extern void sinit(void);
