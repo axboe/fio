@@ -173,7 +173,7 @@ void prune_io_piece_log(struct thread_data *td)
 	}
 
 	while (!flist_empty(&td->io_hist_list)) {
-		ipo = flist_entry(&td->io_hist_list, struct io_piece, list);
+		ipo = flist_first_entry(&td->io_hist_list, struct io_piece, list);
 		flist_del(&ipo->list);
 		remove_trim_entry(td, ipo);
 		td->io_hist_len--;
