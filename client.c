@@ -805,6 +805,7 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->minf		= le64_to_cpu(src->minf);
 	dst->majf		= le64_to_cpu(src->majf);
 	dst->clat_percentiles	= le64_to_cpu(src->clat_percentiles);
+	dst->percentile_precision = le64_to_cpu(src->percentile_precision);
 
 	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++) {
 		fio_fp64_t *fps = &src->percentile_list[i];
