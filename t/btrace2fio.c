@@ -19,6 +19,7 @@ static unsigned int rt_threshold = 1000000;
 static unsigned int ios_threshold = 10;
 static unsigned int rate_threshold;
 static unsigned int set_rate;
+static unsigned int max_depth = 256;
 static int output_ascii = 1;
 static char *filename;
 
@@ -45,6 +46,9 @@ struct btrace_out {
 
 	int inflight;
 	unsigned int depth;
+	int depth_disabled;
+	int complete_seen;
+
 	uint64_t first_ttime[DDIR_RWDIR_CNT];
 	uint64_t last_ttime[DDIR_RWDIR_CNT];
 	uint64_t kb[DDIR_RWDIR_CNT];
@@ -125,7 +129,13 @@ static void inflight_add(struct btrace_pid *p, uint64_t sector, uint32_t len)
 	i = calloc(1, sizeof(*i));
 	i->p = p;
 	o->inflight++;
-	o->depth = max((int) o->depth, o->inflight);
+	if (!o->depth_disabled) {
+		o->depth = max((int) o->depth, o->inflight);
+		if (o->depth >= max_depth && !o->complete_seen) {
+			o->depth_disabled = 1;
+			o->depth = max_depth;
+		}
+	}
 	i->end_sector = sector + (len >> 9);
 	__inflight_add(i);
 }
@@ -383,6 +393,7 @@ static int handle_trace(struct blk_io_trace *t, struct btrace_pid *p)
 		i = inflight_find(t->sector + (t->bytes >> 9));
 		if (i) {
 			i->p->o.kb[t_to_rwdir(t)] += (t->bytes >> 10);
+			i->p->o.complete_seen = 1;
 			inflight_remove(i);
 		}
 	}
@@ -810,6 +821,7 @@ static int output_p(void)
 {
 	unsigned long ios[DDIR_RWDIR_CNT];
 	struct flist_head *e, *tmp;
+	int depth_disabled = 0;
 	int ret = 0;
 
 	flist_for_each_safe(e, tmp, &pid_list) {
@@ -821,7 +833,11 @@ static int output_p(void)
 			continue;
 		}
 		p->o.start_delay = (o_first_ttime(&p->o) / 1000ULL) - first_ttime;
+		depth_disabled += p->o.depth_disabled;
 	}
+
+	if (depth_disabled)
+		log_err("fio: missing completion traces, depths capped at %u\n", max_depth);
 
 	memset(ios, 0, sizeof(ios));
 
@@ -851,6 +867,7 @@ static int usage(char *argv[])
 	log_err("\t-d\tUse this file/device for replay\n");
 	log_err("\t-r\tIgnore jobs with less than this KB/sec rate\n");
 	log_err("\t-R\tSet rate in fio job\n");
+	log_err("\t-D\tCap queue depth at this value (def=%u)\n", max_depth);
 	return 1;
 }
 
@@ -906,7 +923,7 @@ int main(int argc, char *argv[])
 	if (argc < 2)
 		return usage(argv);
 
-	while ((c = getopt(argc, argv, "t:n:fd:r:R")) != -1) {
+	while ((c = getopt(argc, argv, "t:n:fd:r:RD:")) != -1) {
 		switch (c) {
 		case 'R':
 			set_rate = 1;
@@ -925,6 +942,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'd':
 			filename = strdup(optarg);
+			break;
+		case 'D':
+			max_depth = atoi(optarg);
 			break;
 		case '?':
 		default:
