@@ -152,6 +152,8 @@ for opt do
   ;;
   --build-32bit-win) build_32bit_win="yes"
   ;;
+  --build-static) build_static="yes"
+  ;;
   --enable-gfio)
   gfio_check="yes"
   ;;
@@ -178,6 +180,7 @@ if test "$show_help" = "yes" ; then
   echo "--cc=                  Specify compiler to use"
   echo "--extra-cflags=        Specify extra CFLAGS to pass to compiler"
   echo "--build-32bit-win      Enable 32-bit build on Windows"
+  echo "--build-static         Build a static fio"
   echo "--esx                  Configure build options for esx"
   echo "--enable-gfio          Enable building of gtk gfio"
   echo "--disable-numa         Disable libnuma even if found"
@@ -398,6 +401,16 @@ echo "Big endian                    $bigendian"
 echo "Compiler                      $cc"
 echo "Cross compile                 $cross_compile"
 echo
+
+##########################################
+# See if we need to build a static build
+if test "$build_static" = "yes" ; then
+  CFLAGS="$CFLAGS -ffunction-sections -fdata-sections"
+  LDFLAGS="$LDFLAGS -static -Wl,--gc-sections"
+else
+  build_static="no"
+fi
+echo "Static build                  $build_static"
 
 ##########################################
 # check for wordsize
@@ -1566,5 +1579,6 @@ fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
 echo "CFLAGS+=$CFLAGS" >> $config_host_mak
+echo "LDFLAGS+=$LDFLAGS" >> $config_host_mak
 echo "CC=$cc" >> $config_host_mak
 echo "BUILD_CFLAGS=$BUILD_CFLAGS $CFLAGS" >> $config_host_mak
