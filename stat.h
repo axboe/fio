@@ -214,6 +214,8 @@ struct jobs_eta {
 	uint8_t run_str[];
 } __attribute__((packed));
 
+extern struct fio_mutex *stat_mutex;
+
 extern struct jobs_eta *get_jobs_eta(int force, size_t *size);
 
 extern void stat_init(void);

@@ -1484,18 +1484,21 @@ static void *thread_main(void *data)
 
 		clear_state = 1;
 
+		fio_mutex_down(stat_mutex);
 		if (td_read(td) && td->io_bytes[DDIR_READ]) {
-			elapsed = utime_since_now(&td->start);
+			elapsed = mtime_since_now(&td->start);
 			td->ts.runtime[DDIR_READ] += elapsed;
 		}
 		if (td_write(td) && td->io_bytes[DDIR_WRITE]) {
-			elapsed = utime_since_now(&td->start);
+			elapsed = mtime_since_now(&td->start);
 			td->ts.runtime[DDIR_WRITE] += elapsed;
 		}
 		if (td_trim(td) && td->io_bytes[DDIR_TRIM]) {
-			elapsed = utime_since_now(&td->start);
+			elapsed = mtime_since_now(&td->start);
 			td->ts.runtime[DDIR_TRIM] += elapsed;
 		}
+		fio_gettime(&td->start, NULL);
+		fio_mutex_up(stat_mutex);
 
 		if (td->error || td->terminate)
 			break;
@@ -1511,16 +1514,16 @@ static void *thread_main(void *data)
 
 		do_verify(td, verify_bytes);
 
-		td->ts.runtime[DDIR_READ] += utime_since_now(&td->start);
+		fio_mutex_down(stat_mutex);
+		td->ts.runtime[DDIR_READ] += mtime_since_now(&td->start);
+		fio_gettime(&td->start, NULL);
+		fio_mutex_up(stat_mutex);
 
 		if (td->error || td->terminate)
 			break;
 	}
 
 	update_rusage_stat(td);
-	td->ts.runtime[DDIR_READ] = (td->ts.runtime[DDIR_READ] + 999) / 1000;
-	td->ts.runtime[DDIR_WRITE] = (td->ts.runtime[DDIR_WRITE] + 999) / 1000;
-	td->ts.runtime[DDIR_TRIM] = (td->ts.runtime[DDIR_TRIM] + 999) / 1000;
 	td->ts.total_run_time = mtime_since_now(&td->epoch);
 	td->ts.io_bytes[DDIR_READ] = td->io_bytes[DDIR_READ];
 	td->ts.io_bytes[DDIR_WRITE] = td->io_bytes[DDIR_WRITE];

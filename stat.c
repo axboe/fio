@@ -14,7 +14,7 @@
 #include "lib/getrusage.h"
 #include "idletime.h"
 
-static struct fio_mutex *stat_mutex;
+struct fio_mutex *stat_mutex;
 
 void update_rusage_stat(struct thread_data *td)
 {
