@@ -2105,8 +2105,10 @@ int fio_backend(void)
 
 	for_each_td(td, i) {
 		fio_options_free(td);
-		fio_mutex_remove(td->rusage_sem);
-		td->rusage_sem = NULL;
+		if (td->rusage_sem) {
+			fio_mutex_remove(td->rusage_sem);
+			td->rusage_sem = NULL;
+		}
 	}
 
 	free_disk_util();
