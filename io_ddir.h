@@ -64,8 +64,6 @@ static inline const char *ddir_str(enum td_ddir ddir)
 	return ddir_str[ddir];
 }
 
-#define ddir_trim(ddir) ((ddir) == DDIR_TRIM)
-
 #define ddir_rw_sum(arr)	\
 	((arr)[DDIR_READ] + (arr)[DDIR_WRITE] + (arr)[DDIR_TRIM])
 

@@ -580,8 +580,8 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	if (td_rw(td) && __should_check_rate(td, odir))
 		td->rate_pending_usleep[odir] -= usec;
 
-	if (ddir_trim(ddir))
-		return ddir;
+	if (ddir == DDIR_TRIM)
+		return DDIR_TRIM;
 
 	return ddir;
 }

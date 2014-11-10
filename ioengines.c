@@ -321,7 +321,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 			 "support direct IO, or iomem_align= is bad.\n");
 	}
 
-	if (!td->io_ops->commit || ddir_trim(io_u->ddir)) {
+	if (!td->io_ops->commit || io_u->ddir == DDIR_TRIM) {
 		io_u_mark_submit(td, 1);
 		io_u_mark_complete(td, 1);
 	}
