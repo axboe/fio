@@ -1316,6 +1316,21 @@ verify_backlog_batch=int	Control how many blocks fio will verify
 		if verify_backlog_batch is larger than verify_backlog, some
 		blocks will be verified more than once.
 
+verify_state_save=bool	When a job exits during the write phase of a verify
+		workload, save its current state. This allows fio to replay
+		up until that point, if the verify state is loaded for the
+		verify read phase. The format of the filename is, roughly,
+		<type>-<jobname>-<jobindex>-verify.state. <type> is "local"
+		for a local run, "sock" for a client/server socket connection,
+		and "ip" (192.168.0.1, for instance) for a networked
+		client/server connection.
+
+verify_state_load=bool	If a verify termination trigger was used, fio stores
+		the current write state of each thread. This can be used at
+		verification time so that fio knows how far it should verify.
+		Without this information, fio will run a full verification
+		pass, according to the settings in the job file used.
+
 stonewall
 wait_for_previous Wait for preceding jobs in the job file to exit, before
 		starting this one. Can be used to insert serialization

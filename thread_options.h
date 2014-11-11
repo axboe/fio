@@ -99,6 +99,8 @@ struct thread_options {
 	unsigned long long verify_backlog;
 	unsigned int verify_batch;
 	unsigned int experimental_verify;
+	unsigned int verify_state;
+	unsigned int verify_state_save;
 	unsigned int use_thread;
 	unsigned int unlink;
 	unsigned int do_disk_util;
@@ -330,6 +332,9 @@ struct thread_options_pack {
 	uint64_t verify_backlog;
 	uint32_t verify_batch;
 	uint32_t experimental_verify;
+	uint32_t verify_state;
+	uint32_t verify_state_save;
+	uint32_t pad;
 	uint32_t use_thread;
 	uint32_t unlink;
 	uint32_t do_disk_util;
@@ -349,7 +354,6 @@ struct thread_options_pack {
 	uint32_t bs_is_seq_rand;
 
 	uint32_t random_distribution;
-	uint32_t pad;
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
 

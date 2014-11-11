@@ -24,6 +24,8 @@
 #include "server.h"
 #include "crc/crc16.h"
 #include "lib/ieee754.h"
+#include "verify.h"
+#include "smalloc.h"
 
 int fio_net_port = FIO_NET_PORT;
 
@@ -41,6 +43,7 @@ static unsigned int has_zlib = 1;
 static unsigned int has_zlib = 0;
 #endif
 static unsigned int use_zlib;
+static char me[128];
 
 struct fio_fork_item {
 	struct flist_head list;
@@ -48,6 +51,13 @@ struct fio_fork_item {
 	int signal;
 	int exited;
 	pid_t pid;
+};
+
+struct cmd_reply {
+	struct fio_mutex lock;
+	void *data;
+	size_t size;
+	int error;
 };
 
 static const char *fio_server_ops[FIO_NET_CMD_NR] = {
@@ -67,10 +77,12 @@ static const char *fio_server_ops[FIO_NET_CMD_NR] = {
 	"DISK_UTIL",
 	"SERVER_START",
 	"ADD_JOB",
-	"CMD_RUN",
-	"CMD_IOLOG",
-	"CMD_UPDATE_JOB",
-	"CMD_LOAD_FILE",
+	"RUN",
+	"IOLOG",
+	"UPDATE_JOB",
+	"LOAD_FILE",
+	"VTRIGGER",
+	"SENDFILE",
 };
 
 const char *fio_server_op(unsigned int op)
@@ -661,6 +673,8 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 
 	dprint(FD_NET, "server: sending probe reply\n");
 
+	strcpy(me, (char *) pdu->server);
+
 	memset(&probe, 0, sizeof(probe));
 	gethostname((char *) probe.hostname, sizeof(probe.hostname));
 #ifdef CONFIG_BIG_ENDIAN
@@ -756,6 +770,31 @@ static int handle_update_job_cmd(struct fio_net_cmd *cmd)
 	return 0;
 }
 
+static int handle_trigger_cmd(struct fio_net_cmd *cmd)
+{
+	struct cmd_vtrigger_pdu *pdu = (struct cmd_vtrigger_pdu *) cmd->payload;
+	char *buf = (char *) pdu->cmd;
+	struct all_io_list *rep;
+	size_t sz;
+
+	pdu->len = le16_to_cpu(pdu->len);
+	buf[pdu->len] = '\0';
+
+	rep = get_all_io_list(IO_LIST_ALL, &sz);
+	if (!rep) {
+		struct all_io_list state;
+
+		state.threads = cpu_to_le64((uint64_t) 0);
+		fio_net_send_cmd(server_fd, FIO_NET_CMD_VTRIGGER, &state, sizeof(state), NULL, NULL);
+	} else {
+		fio_net_send_cmd(server_fd, FIO_NET_CMD_VTRIGGER, rep, sz, NULL, NULL);
+		free(rep);
+	}
+
+	exec_trigger(buf);
+	return 0;
+}
+
 static int handle_command(struct flist_head *job_list, struct fio_net_cmd *cmd)
 {
 	int ret;
@@ -792,6 +831,35 @@ static int handle_command(struct flist_head *job_list, struct fio_net_cmd *cmd)
 	case FIO_NET_CMD_UPDATE_JOB:
 		ret = handle_update_job_cmd(cmd);
 		break;
+	case FIO_NET_CMD_VTRIGGER:
+		ret = handle_trigger_cmd(cmd);
+		break;
+	case FIO_NET_CMD_SENDFILE: {
+		struct cmd_sendfile_reply *in;
+		struct cmd_reply *rep;
+
+		rep = (struct cmd_reply *) (uintptr_t) cmd->tag;
+
+		in = (struct cmd_sendfile_reply *) cmd->payload;
+		in->size = le32_to_cpu(in->size);
+		in->error = le32_to_cpu(in->error);
+		if (in->error) {
+			ret = 1;
+			rep->error = in->error;
+		} else {
+			ret = 0;
+			rep->data = smalloc(in->size);
+			if (!rep->data) {
+				ret = 1;
+				rep->error = ENOMEM;
+			} else {
+				rep->size = in->size;
+				memcpy(rep->data, in->data, in->size);
+			}
+		}
+		fio_mutex_up(&rep->lock);
+		break;
+		}
 	default:
 		log_err("fio: unknown opcode: %s\n", fio_server_op(cmd->opcode));
 		ret = 1;
@@ -1300,6 +1368,70 @@ void fio_server_send_start(struct thread_data *td)
 	assert(server_fd != -1);
 
 	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_SERVER_START, 0, NULL);
+}
+
+int fio_server_get_verify_state(const char *name, int threadnumber,
+				void **datap)
+{
+	struct thread_io_list *s;
+	struct cmd_sendfile out;
+	struct cmd_reply *rep;
+	uint64_t tag;
+	void *data;
+
+	dprint(FD_NET, "server: request verify state\n");
+
+	rep = smalloc(sizeof(*rep));
+	if (!rep) {
+		log_err("fio: smalloc pool too small\n");
+		return 1;
+	}
+
+	__fio_mutex_init(&rep->lock, FIO_MUTEX_LOCKED);
+	rep->data = NULL;
+	rep->error = 0;
+
+	verify_state_gen_name((char *) out.path, name, me, threadnumber);
+	tag = (uint64_t) (uintptr_t) rep;
+	fio_net_send_cmd(server_fd, FIO_NET_CMD_SENDFILE, &out, sizeof(out),
+				&tag, NULL);
+
+	/*
+	 * Wait for the backend to receive the reply
+	 */
+	if (fio_mutex_down_timeout(&rep->lock, 10)) {
+		log_err("fio: timed out waiting for reply\n");
+		goto fail;
+	}
+
+	if (rep->error) {
+		log_err("fio: failure on receiving state file: %s\n", strerror(rep->error));
+fail:
+		*datap = NULL;
+		sfree(rep);
+		fio_net_send_quit(server_fd);
+		return 1;
+	}
+
+	/*
+	 * The format is verify_state_hdr, then thread_io_list. Verify
+	 * the header, and the thread_io_list checksum
+	 */
+	s = rep->data + sizeof(struct verify_state_hdr);
+	if (verify_state_hdr(rep->data, s))
+		goto fail;
+
+	/*
+	 * Don't need the header from now, copy just the thread_io_list
+	 */
+	rep->size -= sizeof(struct verify_state_hdr);
+	data = malloc(rep->size);
+	memcpy(data, s, rep->size);
+	*datap = data;
+
+	sfree(rep->data);
+	sfree(rep);
+	return 0;
 }
 
 static int fio_init_server_ip(void)

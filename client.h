@@ -137,6 +137,7 @@ extern struct fio_client *fio_get_client(struct fio_client *);
 extern void fio_put_client(struct fio_client *);
 extern int fio_client_update_options(struct fio_client *, struct thread_options *, uint64_t *);
 extern int fio_client_wait_for_reply(struct fio_client *, uint64_t);
+extern int fio_clients_send_trigger(const char *);
 
 #define FIO_CLIENT_DEF_ETA_MSEC		900
 

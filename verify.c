@@ -1286,3 +1286,291 @@ void verify_async_exit(struct thread_data *td)
 	free(td->verify_threads);
 	td->verify_threads = NULL;
 }
+
+struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
+{
+	struct all_io_list *rep;
+	struct thread_data *td;
+	size_t depth;
+	void *next;
+	int i, nr;
+
+	compiletime_assert(sizeof(struct all_io_list) == 8, "all_io_list");
+
+	/*
+	 * Calculate reply space needed. We need one 'io_state' per thread,
+	 * and the size will vary depending on depth.
+	 */
+	depth = 0;
+	nr = 0;
+	for_each_td(td, i) {
+		if (save_mask != IO_LIST_ALL && (i + 1) != save_mask)
+			continue;
+		td->stop_io = 1;
+		td->flags |= TD_F_VSTATE_SAVED;
+		depth += td->o.iodepth;
+		nr++;
+	}
+
+	if (!nr)
+		return NULL;
+
+	*sz = sizeof(*rep);
+	*sz += nr * sizeof(struct thread_io_list);
+	*sz += depth * sizeof(uint64_t);
+	rep = malloc(*sz);
+
+	rep->threads = cpu_to_le64((uint64_t) nr);
+
+	next = &rep->state[0];
+	for_each_td(td, i) {
+		struct thread_io_list *s = next;
+		unsigned int comps;
+
+		if (save_mask != IO_LIST_ALL && (i + 1) != save_mask)
+			continue;
+
+		if (td->last_write_comp) {
+			int j, k;
+
+			if (td->io_blocks[DDIR_WRITE] < td->o.iodepth)
+				comps = td->io_blocks[DDIR_WRITE];
+			else
+				comps = td->o.iodepth;
+
+			k = td->last_write_idx - 1;
+			for (j = 0; j < comps; j++) {
+				if (k == -1)
+					k = td->o.iodepth - 1;
+				s->offsets[j] = cpu_to_le64(td->last_write_comp[k]);
+				k--;
+			}
+		} else
+			comps = 0;
+
+		s->no_comps = cpu_to_le64((uint64_t) comps);
+		s->depth = cpu_to_le64((uint64_t) td->o.iodepth);
+		s->numberio = cpu_to_le64((uint64_t) td->io_issues[DDIR_WRITE]);
+		s->index = cpu_to_le64((uint64_t) i);
+		s->rand.s[0] = cpu_to_le32(td->random_state.s1);
+		s->rand.s[1] = cpu_to_le32(td->random_state.s2);
+		s->rand.s[2] = cpu_to_le32(td->random_state.s3);
+		s->rand.s[3] = 0;
+		strncpy((char *) s->name, td->o.name, sizeof(s->name));
+		next = io_list_next(s);
+	}
+
+	return rep;
+}
+
+static int open_state_file(const char *name, const char *prefix, int num,
+			   int for_write)
+{
+	char out[64];
+	int flags;
+	int fd;
+
+	if (for_write)
+		flags = O_CREAT | O_TRUNC | O_WRONLY | O_SYNC;
+	else
+		flags = O_RDONLY;
+
+	verify_state_gen_name(out, name, prefix, num);
+
+	fd = open(out, flags, 0644);
+	if (fd == -1) {
+		perror("fio: open state file");
+		return -1;
+	}
+
+	return fd;
+}
+
+static int write_thread_list_state(struct thread_io_list *s,
+				   const char *prefix)
+{
+	struct verify_state_hdr hdr;
+	uint64_t crc;
+	ssize_t ret;
+	int fd;
+
+	fd = open_state_file((const char *) s->name, prefix, s->index, 1);
+	if (fd == -1)
+		return 1;
+
+	crc = fio_crc32c((void *)s, thread_io_list_sz(s));
+
+	hdr.version = cpu_to_le64((uint64_t) VSTATE_HDR_VERSION);
+	hdr.size = cpu_to_le64((uint64_t) thread_io_list_sz(s));
+	hdr.crc = cpu_to_le64(crc);
+	ret = write(fd, &hdr, sizeof(hdr));
+	if (ret != sizeof(hdr))
+		goto write_fail;
+
+	ret = write(fd, s, thread_io_list_sz(s));
+	if (ret != thread_io_list_sz(s)) {
+write_fail:
+		if (ret < 0)
+			perror("fio: write state file");
+		log_err("fio: failed to write state file\n");
+		ret = 1;
+	} else
+		ret = 0;
+
+	close(fd);
+	return ret;
+}
+
+void __verify_save_state(struct all_io_list *state, const char *prefix)
+{
+	struct thread_io_list *s = &state->state[0];
+	unsigned int i;
+
+	for (i = 0; i < le64_to_cpu(state->threads); i++) {
+		write_thread_list_state(s,  prefix);
+		s = io_list_next(s);
+	}
+}
+
+void verify_save_state(void)
+{
+	struct all_io_list *state;
+	size_t sz;
+
+	state = get_all_io_list(IO_LIST_ALL, &sz);
+	if (state) {
+		__verify_save_state(state, "local");
+		free(state);
+	}
+}
+
+void verify_free_state(struct thread_data *td)
+{
+	if (td->vstate)
+		free(td->vstate);
+}
+
+void verify_convert_assign_state(struct thread_data *td,
+				 struct thread_io_list *s)
+{
+	int i;
+
+	s->no_comps = le64_to_cpu(s->no_comps);
+	s->depth = le64_to_cpu(s->depth);
+	s->numberio = le64_to_cpu(s->numberio);
+	for (i = 0; i < 4; i++)
+		s->rand.s[i] = le32_to_cpu(s->rand.s[i]);
+	for (i = 0; i < s->no_comps; i++)
+		s->offsets[i] = le64_to_cpu(s->offsets[i]);
+
+	td->vstate = s;
+}
+
+int verify_state_hdr(struct verify_state_hdr *hdr, struct thread_io_list *s)
+{
+	uint64_t crc;
+
+	hdr->version = le64_to_cpu(hdr->version);
+	hdr->size = le64_to_cpu(hdr->size);
+	hdr->crc = le64_to_cpu(hdr->crc);
+
+	if (hdr->version != VSTATE_HDR_VERSION)
+		return 1;
+
+	crc = fio_crc32c((void *)s, hdr->size);
+	if (crc != hdr->crc)
+		return 1;
+
+	return 0;
+}
+
+int verify_load_state(struct thread_data *td, const char *prefix)
+{
+	struct thread_io_list *s = NULL;
+	struct verify_state_hdr hdr;
+	uint64_t crc;
+	ssize_t ret;
+	int fd;
+
+	if (!td->o.verify_state)
+		return 0;
+
+	fd = open_state_file(td->o.name, prefix, td->thread_number - 1, 0);
+	if (fd == -1)
+		return 1;
+
+	ret = read(fd, &hdr, sizeof(hdr));
+	if (ret != sizeof(hdr)) {
+		if (ret < 0)
+			td_verror(td, errno, "read verify state hdr");
+		log_err("fio: failed reading verify state header\n");
+		goto err;
+	}
+
+	hdr.version = le64_to_cpu(hdr.version);
+	hdr.size = le64_to_cpu(hdr.size);
+	hdr.crc = le64_to_cpu(hdr.crc);
+
+	if (hdr.version != VSTATE_HDR_VERSION) {
+		log_err("fio: bad version in verify state header\n");
+		goto err;
+	}
+
+	s = malloc(hdr.size);
+	ret = read(fd, s, hdr.size);
+	if (ret != hdr.size) {
+		if (ret < 0)
+			td_verror(td, errno, "read verify state");
+		log_err("fio: failed reading verity state\n");
+		goto err;
+	}
+
+	crc = fio_crc32c((void *)s, hdr.size);
+	if (crc != hdr.crc) {
+		log_err("fio: verify state is corrupt\n");
+		goto err;
+	}
+
+	close(fd);
+
+	verify_convert_assign_state(td, s);
+	return 0;
+err:
+	if (s)
+		free(s);
+	close(fd);
+	return 1;
+}
+
+/*
+ * Use the loaded verify state to know when to stop doing verification
+ */
+int verify_state_should_stop(struct thread_data *td, struct io_u *io_u)
+{
+	struct thread_io_list *s = td->vstate;
+	int i;
+
+	if (!s)
+		return 0;
+
+	/*
+	 * If we're not into the window of issues - depth yet, continue
+	 */
+	if (td->io_blocks[DDIR_READ] < s->depth ||
+	    s->numberio - td->io_blocks[DDIR_READ] > s->depth)
+		return 0;
+
+	/*
+	 * We're in the window of having to check if this io was
+	 * completed or not. If the IO was seen as completed, then
+	 * lets verify it.
+	 */
+	for (i = 0; i < s->no_comps; i++)
+		if (io_u->offset == s->offsets[i])
+			return 0;
+
+	/*
+	 * Not found, we have to stop
+	 */
+	return 1;
+}
