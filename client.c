@@ -89,6 +89,30 @@ static void fio_init fio_client_hash_init(void)
 		INIT_FLIST_HEAD(&client_hash[i]);
 }
 
+static int read_data(int fd, void *data, size_t size)
+{
+	ssize_t ret;
+
+	while (size) {
+		ret = read(fd, data, size);
+		if (ret < 0) {
+			if (errno == EAGAIN || errno == EINTR)
+				continue;
+			break;
+		} else if (!ret)
+			break;
+		else {
+			data += ret;
+			size -= ret;
+		}
+	}
+
+	if (size)
+		return EAGAIN;
+
+	return 0;
+}
+
 static void fio_client_json_init(void)
 {
 	if (output_format != FIO_OUTPUT_JSON)
@@ -691,21 +715,7 @@ static int __fio_client_send_local_ini(struct fio_client *client,
 
 	len = sb.st_size;
 	p = buf;
-	do {
-		ret = read(fd, p, len);
-		if (ret > 0) {
-			len -= ret;
-			if (!len)
-				break;
-			p += ret;
-			continue;
-		} else if (!ret)
-			break;
-		else if (errno == EAGAIN || errno == EINTR)
-			continue;
-	} while (1);
-
-	if (len) {
+	if (read_data(fd, p, len)) {
 		log_err("fio: failed reading job file %s\n", filename);
 		close(fd);
 		free(pdu);
@@ -1328,28 +1338,6 @@ static void sendfile_reply(int fd, struct cmd_sendfile_reply *rep,
 {
 	rep->error = cpu_to_le32(rep->error);
 	fio_net_send_cmd(fd, FIO_NET_CMD_SENDFILE, rep, size, &tag, NULL);
-}
-
-static int read_data(int fd, void *data, size_t size)
-{
-	ssize_t ret;
-
-	while (size) {
-		ret = read(fd, data, size);
-		if (ret < 0)
-			return errno;
-		else if (!ret)
-			break;
-		else {
-			data += ret;
-			size -= ret;
-		}
-	}
-
-	if (size)
-		return EAGAIN;
-
-	return 0;
 }
 
 static int send_file(struct fio_client *client, struct cmd_sendfile *pdu,
