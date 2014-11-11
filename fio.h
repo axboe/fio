@@ -74,6 +74,7 @@ enum {
 	TD_F_COMPRESS		= 128,
 	TD_F_NOIO		= 256,
 	TD_F_COMPRESS_LOG	= 512,
+	TD_F_VSTATE_SAVED	= 1024,
 };
 
 enum {
@@ -123,6 +124,13 @@ struct thread_data {
 	uint64_t stat_io_blocks[DDIR_RWDIR_CNT];
 	struct timeval iops_sample_time;
 
+	/*
+	 * Tracks the last iodepth number of completed writes, if data
+	 * verification is enabled
+	 */
+	uint64_t *last_write_comp;
+	unsigned int last_write_idx;
+
 	volatile int update_rusage;
 	struct fio_mutex *rusage_sem;
 	struct rusage ru_start;
@@ -142,6 +150,7 @@ struct thread_data {
 	int error;
 	int sig;
 	int done;
+	int stop_io;
 	pid_t pid;
 	char *orig_buffer;
 	size_t orig_buffer_size;
@@ -170,6 +179,8 @@ struct thread_data {
 
 	unsigned int verify_batch;
 	unsigned int trim_batch;
+
+	struct thread_io_list *vstate;
 
 	int shm_id;
 
@@ -224,7 +235,7 @@ struct thread_data {
 	uint64_t total_io_size;
 	uint64_t fill_device_size;
 
-	unsigned long io_issues[DDIR_RWDIR_CNT];
+	uint64_t io_issues[DDIR_RWDIR_CNT];
 	uint64_t io_blocks[DDIR_RWDIR_CNT];
 	uint64_t this_io_blocks[DDIR_RWDIR_CNT];
 	uint64_t io_bytes[DDIR_RWDIR_CNT];
@@ -380,6 +391,9 @@ extern int status_interval;
 extern const char fio_version_string[];
 extern int helper_do_stat;
 extern pthread_cond_t helper_cond;
+extern char *trigger_file;
+extern char *trigger_cmd;
+extern long long trigger_timeout;
 
 extern struct thread_data *threads;
 
@@ -422,7 +436,7 @@ extern void fio_options_mem_dupe(struct thread_data *);
 extern void options_mem_dupe(void *data, struct fio_option *options);
 extern void td_fill_rand_seeds(struct thread_data *);
 extern void add_job_opts(const char **, int);
-extern char *num2str(unsigned long, int, int, int, int);
+extern char *num2str(uint64_t, int, int, int, int);
 extern int ioengine_load(struct thread_data *);
 extern int parse_dryrun(void);
 extern int fio_running_or_pending_io_threads(void);
@@ -580,7 +594,7 @@ static inline unsigned int td_min_bs(struct thread_data *td)
 	return min(td->o.min_bs[DDIR_TRIM], min_bs);
 }
 
-static inline int is_power_of_2(unsigned long val)
+static inline int is_power_of_2(uint64_t val)
 {
 	return (val != 0 && ((val & (val - 1)) == 0));
 }
@@ -635,5 +649,8 @@ enum {
 	FIO_CPUS_SHARED		= 0,
 	FIO_CPUS_SPLIT,
 };
+
+extern void exec_trigger(const char *);
+extern void check_trigger_file(void);
 
 #endif

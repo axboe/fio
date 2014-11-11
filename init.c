@@ -64,6 +64,10 @@ int write_bw_log = 0;
 int read_only = 0;
 int status_interval = 0;
 
+char *trigger_file = NULL;
+char *trigger_cmd = NULL;
+long long trigger_timeout = 0;
+
 static int prev_group_jobs;
 
 unsigned long fio_debug = 0;
@@ -240,6 +244,16 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "status-interval",
 		.has_arg	= required_argument,
 		.val		= 'L',
+	},
+	{
+		.name		= (char *) "trigger",
+		.has_arg	= required_argument,
+		.val		= 'W',
+	},
+	{
+		.name		= (char *) "trigger-timeout",
+		.has_arg	= required_argument,
+		.val		= 'B',
 	},
 	{
 		.name		= NULL,
@@ -1665,6 +1679,8 @@ static void usage(const char *name)
 #ifdef CONFIG_ZLIB
 	printf("  --inflate-log=log\tInflate and output compressed log\n");
 #endif
+	printf("  --trigger=file:cmd\tExecute trigger cmd when file exists\n");
+	printf("  --trigger-timeout=t\tExecute trigger af this time\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
 	printf("\n                   Jens Axboe <jaxboe@fusionio.com>");
 	printf("\n                   Jens Axboe <axboe@fb.com>\n");
@@ -2184,6 +2200,39 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			status_interval = val / 1000;
 			break;
 			}
+		case 'W': {
+			char *split, *cmd;
+			size_t sz;
+
+			split = strchr(optarg, ':');
+			if (!split) {
+				log_err("fio: trigger is file:command\n");
+				do_exit++;
+				exit_val = 1;
+			}
+
+			sz = split - optarg;
+			trigger_file = calloc(1, sz + 1);
+			strncpy(trigger_file, optarg, sz);
+
+			split++;
+			cmd = trigger_cmd = strdup(split);
+			strip_blank_front(&trigger_cmd);
+			strip_blank_end(trigger_cmd);
+			if (strlen(trigger_cmd) == 0) {
+				free(cmd);
+				trigger_cmd = NULL;
+			}
+			break;
+			}
+		case 'B':
+			if (check_str_time(optarg, &trigger_timeout, 1)) {
+				log_err("fio: failed parsing time %s\n", optarg);
+				do_exit++;
+				exit_val = 1;
+			}
+			trigger_timeout /= 1000000;
+			break;
 		case '?':
 			log_err("%s: unrecognized option '%s'\n", argv[0],
 							argv[optind - 1]);

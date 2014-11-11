@@ -526,6 +526,11 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 				break;
 		}
 
+		if (verify_state_should_stop(td, io_u)) {
+			put_io_u(td, io_u);
+			break;
+		}
+
 		if (td->o.verify_async)
 			io_u->end_io = verify_io_u_async;
 		else
@@ -758,6 +763,11 @@ static uint64_t do_io(struct thread_data *td)
 					io_u->rand_seed *= __rand(&td->verify_state);
 			}
 
+			if (verify_state_should_stop(td, io_u)) {
+				put_io_u(td, io_u);
+				break;
+			}
+
 			if (td->o.verify_async)
 				io_u->end_io = verify_io_u_async;
 			else
@@ -977,6 +987,9 @@ static void cleanup_io_u(struct thread_data *td)
 	io_u_rexit(&td->io_u_requeues);
 	io_u_qexit(&td->io_u_freelist);
 	io_u_qexit(&td->io_u_all);
+
+	if (td->last_write_comp)
+		sfree(td->last_write_comp);
 }
 
 static int init_io_u(struct thread_data *td)
@@ -1091,6 +1104,14 @@ static int init_io_u(struct thread_data *td)
 		}
 
 		p += max_bs;
+	}
+
+	if (td->o.verify != VERIFY_NONE) {
+		td->last_write_comp = scalloc(max_units, sizeof(uint64_t));
+		if (!td->last_write_comp) {
+			log_err("fio: failed to alloc write comp data\n");
+			return 1;
+		}
 	}
 
 	return 0;
@@ -1529,6 +1550,18 @@ static void *thread_main(void *data)
 	td->ts.io_bytes[DDIR_WRITE] = td->io_bytes[DDIR_WRITE];
 	td->ts.io_bytes[DDIR_TRIM] = td->io_bytes[DDIR_TRIM];
 
+	if (td->o.verify_state_save && !(td->flags & TD_F_VSTATE_SAVED) &&
+	    (td->o.verify != VERIFY_NONE && td_write(td))) {
+		struct all_io_list *state;
+		size_t sz;
+
+		state = get_all_io_list(td->thread_number, &sz);
+		if (state) {
+			__verify_save_state(state, "local");
+			free(state);
+		}
+	}
+
 	fio_unpin_memory(td);
 
 	fio_writeout_logs(td);
@@ -1554,6 +1587,7 @@ err:
 	cleanup_io_u(td);
 	close_ioengine(td);
 	cgroup_shutdown(td, &cgroup_mnt);
+	verify_free_state(td);
 
 	if (o->cpumask_set) {
 		ret = fio_cpuset_exit(&o->cpumask);
@@ -1730,9 +1764,80 @@ reaped:
 		fio_terminate_threads(TERMINATE_ALL);
 }
 
+static int __check_trigger_file(void)
+{
+	struct stat sb;
+
+	if (!trigger_file)
+		return 0;
+
+	if (stat(trigger_file, &sb))
+		return 0;
+
+	if (unlink(trigger_file) < 0)
+		log_err("fio: failed to unlink %s: %s\n", trigger_file,
+							strerror(errno));
+
+	return 1;
+}
+
+static int trigger_timedout(void)
+{
+	if (trigger_timeout)
+		return time_since_genesis() >= trigger_timeout;
+
+	return 0;
+}
+
+void exec_trigger(const char *cmd)
+{
+	int ret;
+
+	if (!cmd)
+		return;
+
+	ret = system(cmd);
+	if (ret == -1)
+		log_err("fio: failed executing %s trigger\n", cmd);
+}
+
+void check_trigger_file(void)
+{
+	if (__check_trigger_file() || trigger_timedout()) {
+		if (nr_clients)
+			fio_clients_send_trigger(trigger_cmd);
+		else {
+			verify_save_state();
+			fio_terminate_threads(TERMINATE_ALL);
+			exec_trigger(trigger_cmd);
+		}
+	}
+}
+
+static int fio_verify_load_state(struct thread_data *td)
+{
+	int ret;
+
+	if (!td->o.verify_state)
+		return 0;
+
+	if (is_backend) {
+		void *data;
+
+		ret = fio_server_get_verify_state(td->o.name,
+					td->thread_number - 1, &data);
+		if (!ret)
+			verify_convert_assign_state(td, data);
+	} else
+		ret = verify_load_state(td, "local");
+
+	return ret;
+}
+
 static void do_usleep(unsigned int usecs)
 {
 	check_for_running_stats();
+	check_trigger_file();
 	usleep(usecs);
 }
 
@@ -1786,12 +1891,16 @@ static void run_threads(void)
 		if (!td->o.create_serialize)
 			continue;
 
+		if (fio_verify_load_state(td))
+			goto reap;
+
 		/*
 		 * do file setup here so it happens sequentially,
 		 * we don't want X number of threads getting their
 		 * client data interspersed on disk
 		 */
 		if (setup_files(td)) {
+reap:
 			exit_value++;
 			if (td->error)
 				log_err("fio: pid=%d, err=%d/%s\n",

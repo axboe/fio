@@ -1282,6 +1282,9 @@ struct io_u *__get_io_u(struct thread_data *td)
 {
 	struct io_u *io_u = NULL;
 
+	if (td->stop_io)
+		return NULL;
+
 	td_io_u_lock(td);
 
 again:
@@ -1642,13 +1645,22 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		if (!(io_u->flags & IO_U_F_VER_LIST))
 			td->this_io_bytes[ddir] += bytes;
 
-		if (ddir == DDIR_WRITE && f) {
-			if (f->first_write == -1ULL ||
-			    io_u->offset < f->first_write)
-				f->first_write = io_u->offset;
-			if (f->last_write == -1ULL ||
-			    ((io_u->offset + bytes) > f->last_write))
-				f->last_write = io_u->offset + bytes;
+		if (ddir == DDIR_WRITE) {
+			if (f) {
+				if (f->first_write == -1ULL ||
+				    io_u->offset < f->first_write)
+					f->first_write = io_u->offset;
+				if (f->last_write == -1ULL ||
+				    ((io_u->offset + bytes) > f->last_write))
+					f->last_write = io_u->offset + bytes;
+			}
+			if (td->last_write_comp) {
+				int idx = td->last_write_idx++;
+
+				td->last_write_comp[idx] = io_u->offset;
+				if (td->last_write_idx == td->o.iodepth)
+					td->last_write_idx = 0;
+			}
 		}
 
 		if (ramp_time_over(td) && (td->runstate == TD_RUNNING ||

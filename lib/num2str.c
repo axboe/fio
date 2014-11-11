@@ -9,7 +9,7 @@
 /*
  * Cheesy number->string conversion, complete with carry rounding error.
  */
-char *num2str(unsigned long num, int maxlen, int base, int pow2, int unit_base)
+char *num2str(uint64_t num, int maxlen, int base, int pow2, int unit_base)
 {
 	const char *postfix[] = { "", "K", "M", "G", "P", "E" };
 	const char *byte_postfix[] = { "", "B", "bit" };
@@ -36,7 +36,7 @@ char *num2str(unsigned long num, int maxlen, int base, int pow2, int unit_base)
 
 	modulo = -1U;
 	while (post_index < sizeof(postfix)) {
-		sprintf(tmp, "%lu", num);
+		sprintf(tmp, "%llu", (unsigned long long) num);
 		if (strlen(tmp) <= maxlen)
 			break;
 
@@ -51,12 +51,12 @@ done:
 		if (post_index >= ARRAY_LENGTH(postfix))
 			post_index = 0;
 
-		sprintf(buf, "%lu%s%s", num, postfix[post_index],
-			byte_postfix[byte_post_index]);
+		sprintf(buf, "%llu%s%s", (unsigned long long) num,
+			postfix[post_index], byte_postfix[byte_post_index]);
 		return buf;
 	}
 
-	sprintf(tmp, "%lu", num);
+	sprintf(tmp, "%llu", (unsigned long long) num);
 	decimals = maxlen - strlen(tmp);
 	if (decimals <= 1) {
 		if (carry)
@@ -72,7 +72,7 @@ done:
 		modulo = (modulo + 9) / 10;
 	} while (1);
 
-	sprintf(buf, "%lu.%u%s%s", num, modulo, postfix[post_index],
-		byte_postfix[byte_post_index]);
+	sprintf(buf, "%llu.%u%s%s", (unsigned long long) num, modulo,
+			postfix[post_index], byte_postfix[byte_post_index]);
 	return buf;
 }

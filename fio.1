@@ -1173,6 +1173,17 @@ Trim this number of IO blocks.
 .BI experimental_verify \fR=\fPbool
 Enable experimental verification.
 .TP
+.BI verify_state_save \fR=\fPbool
+When a job exits during the write phase of a verify workload, save its
+current state. This allows fio to replay up until that point, if the
+verify state is loaded for the verify read phase.
+.TP
+.BI verify_state_load \fR=\fPbool
+If a verify termination trigger was used, fio stores the current write
+state of each thread. This can be used at verification time so that fio
+knows how far it should verify. Without this information, fio will run
+a full verification pass, according to the settings in the job file used.
+.TP
 .B stonewall "\fR,\fP wait_for_previous"
 Wait for preceding jobs in the job file to exit before starting this one.
 \fBstonewall\fR implies \fBnew_group\fR.

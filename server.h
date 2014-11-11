@@ -38,7 +38,7 @@ struct fio_net_cmd_reply {
 };
 
 enum {
-	FIO_SERVER_VER			= 38,
+	FIO_SERVER_VER			= 39,
 
 	FIO_SERVER_MAX_FRAGMENT_PDU	= 1024,
 	FIO_SERVER_MAX_CMD_MB		= 2048,
@@ -62,7 +62,9 @@ enum {
 	FIO_NET_CMD_IOLOG		= 17,
 	FIO_NET_CMD_UPDATE_JOB		= 18,
 	FIO_NET_CMD_LOAD_FILE		= 19,
-	FIO_NET_CMD_NR			= 20,
+	FIO_NET_CMD_VTRIGGER		= 20,
+	FIO_NET_CMD_SENDFILE		= 21,
+	FIO_NET_CMD_NR			= 22,
 
 	FIO_NET_CMD_F_MORE		= 1UL << 0,
 
@@ -75,6 +77,25 @@ enum {
 	FIO_NET_CLIENT_TIMEOUT		= 5000,
 
 	FIO_PROBE_FLAG_ZLIB		= 1UL << 0,
+};
+
+struct cmd_sendfile {
+	uint8_t path[FIO_NET_NAME_MAX];
+};
+
+struct cmd_sendfile_reply {
+	uint32_t size;
+	uint32_t error;
+	uint8_t data[0];
+};
+
+/*
+ * Client sends this to server on VTRIGGER, server sends back a full
+ * all_io_list structure.
+ */
+struct cmd_vtrigger_pdu {
+	uint16_t len;
+	uint8_t cmd[];
 };
 
 struct cmd_load_file_pdu {
@@ -95,6 +116,7 @@ struct cmd_du_pdu {
 
 struct cmd_client_probe_pdu {
 	uint64_t flags;
+	uint8_t server[128];
 };
 
 struct cmd_probe_reply_pdu {
@@ -175,6 +197,7 @@ extern void fio_server_send_ts(struct thread_stat *, struct group_run_stats *);
 extern void fio_server_send_gs(struct group_run_stats *);
 extern void fio_server_send_du(void);
 extern void fio_server_idle_loop(void);
+extern int fio_server_get_verify_state(const char *, int, void **);
 
 extern int fio_recv_data(int sk, void *p, unsigned int len);
 extern int fio_send_data(int sk, const void *p, unsigned int len);

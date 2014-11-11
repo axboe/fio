@@ -23,6 +23,7 @@
 #include "server.h"
 #include "flist.h"
 #include "hash.h"
+#include "verify.h"
 
 static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd);
@@ -337,10 +338,26 @@ int fio_client_add(struct client_ops *ops, const char *hostname, void **cookie)
 	return 0;
 }
 
+static const char *server_name(struct fio_client *client, char *buf,
+			       size_t bufsize)
+{
+	const char *from;
+
+	if (client->ipv6)
+		from = inet_ntop(AF_INET6, (struct sockaddr *) &client->addr6.sin6_addr, buf, bufsize);
+	else if (client->is_sock)
+		from = "sock";
+	else
+		from = inet_ntop(AF_INET, (struct sockaddr *) &client->addr.sin_addr, buf, bufsize);
+
+	return from;
+}
+
 static void probe_client(struct fio_client *client)
 {
 	struct cmd_client_probe_pdu pdu;
 	uint64_t tag;
+	char buf[64];
 
 	dprint(FD_NET, "client: send probe\n");
 
@@ -349,6 +366,8 @@ static void probe_client(struct fio_client *client)
 #else
 	pdu.flags = 0;
 #endif
+
+	strcpy((char *) pdu.server, server_name(client, buf, sizeof(buf)));
 
 	fio_net_send_cmd(client->fd, FIO_NET_CMD_PROBE, &pdu, sizeof(pdu), &tag, &client->cmd_list);
 }
@@ -1304,6 +1323,69 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 	return ret;
 }
 
+static void sendfile_reply(int fd, struct cmd_sendfile_reply *rep,
+			   size_t size, uint64_t tag)
+{
+	rep->error = cpu_to_le32(rep->error);
+	fio_net_send_cmd(fd, FIO_NET_CMD_SENDFILE, rep, size, &tag, NULL);
+}
+
+static int read_data(int fd, void *data, size_t size)
+{
+	ssize_t ret;
+
+	while (size) {
+		ret = read(fd, data, size);
+		if (ret < 0)
+			return errno;
+		else if (!ret)
+			break;
+		else {
+			data += ret;
+			size -= ret;
+		}
+	}
+
+	if (size)
+		return EAGAIN;
+
+	return 0;
+}
+
+static int send_file(struct fio_client *client, struct cmd_sendfile *pdu,
+		     uint64_t tag)
+{
+	struct cmd_sendfile_reply *rep;
+	struct stat sb;
+	size_t size;
+	int fd;
+
+	size = sizeof(*rep);
+	rep = malloc(size);
+
+	if (stat((char *)pdu->path, &sb) < 0) {
+fail:
+		rep->error = errno;
+		sendfile_reply(client->fd, rep, size, tag);
+		free(rep);
+		return 1;
+	}
+
+	size += sb.st_size;
+	rep = realloc(rep, size);
+	rep->size = cpu_to_le32((uint32_t) sb.st_size);
+
+	fd = open((char *)pdu->path, O_RDONLY);
+	if (fd == -1 )
+		goto fail;
+
+	rep->error = read_data(fd, &rep->data, sb.st_size);
+	sendfile_reply(client->fd, rep, size, tag);
+	free(rep);
+	close(fd);
+	return 0;
+}
+
 int fio_handle_client(struct fio_client *client)
 {
 	struct client_ops *ops = client->ops;
@@ -1323,12 +1405,10 @@ int fio_handle_client(struct fio_client *client)
 		if (ops->quit)
 			ops->quit(client, cmd);
 		remove_client(client);
-		free(cmd);
 		break;
 	case FIO_NET_CMD_TEXT:
 		convert_text(cmd);
 		ops->text(client, cmd);
-		free(cmd);
 		break;
 	case FIO_NET_CMD_DU: {
 		struct cmd_du_pdu *du = (struct cmd_du_pdu *) cmd->payload;
@@ -1337,7 +1417,6 @@ int fio_handle_client(struct fio_client *client)
 		convert_agg(&du->agg);
 
 		ops->disk_util(client, cmd);
-		free(cmd);
 		break;
 		}
 	case FIO_NET_CMD_TS: {
@@ -1347,7 +1426,6 @@ int fio_handle_client(struct fio_client *client)
 		convert_gs(&p->rs, &p->rs);
 
 		ops->thread_status(client, cmd);
-		free(cmd);
 		break;
 		}
 	case FIO_NET_CMD_GS: {
@@ -1356,7 +1434,6 @@ int fio_handle_client(struct fio_client *client)
 		convert_gs(gs, gs);
 
 		ops->group_stats(client, cmd);
-		free(cmd);
 		break;
 		}
 	case FIO_NET_CMD_ETA: {
@@ -1365,26 +1442,22 @@ int fio_handle_client(struct fio_client *client)
 		remove_reply_cmd(client, cmd);
 		convert_jobs_eta(je);
 		handle_eta(client, cmd);
-		free(cmd);
 		break;
 		}
 	case FIO_NET_CMD_PROBE:
 		remove_reply_cmd(client, cmd);
 		ops->probe(client, cmd);
-		free(cmd);
 		break;
 	case FIO_NET_CMD_SERVER_START:
 		client->state = Client_running;
 		if (ops->job_start)
 			ops->job_start(client, cmd);
-		free(cmd);
 		break;
 	case FIO_NET_CMD_START: {
 		struct cmd_start_pdu *pdu = (struct cmd_start_pdu *) cmd->payload;
 
 		pdu->jobs = le32_to_cpu(pdu->jobs);
 		ops->start(client, cmd);
-		free(cmd);
 		break;
 		}
 	case FIO_NET_CMD_STOP: {
@@ -1395,7 +1468,6 @@ int fio_handle_client(struct fio_client *client)
 		client->error = le32_to_cpu(pdu->error);
 		client->signal = le32_to_cpu(pdu->signal);
 		ops->stop(client, cmd);
-		free(cmd);
 		break;
 		}
 	case FIO_NET_CMD_ADD_JOB: {
@@ -1406,7 +1478,6 @@ int fio_handle_client(struct fio_client *client)
 
 		if (ops->add_job)
 			ops->add_job(client, cmd);
-		free(cmd);
 		break;
 		}
 	case FIO_NET_CMD_IOLOG:
@@ -1416,20 +1487,60 @@ int fio_handle_client(struct fio_client *client)
 			pdu = convert_iolog(cmd);
 			ops->iolog(client, pdu);
 		}
-		free(cmd);
 		break;
 	case FIO_NET_CMD_UPDATE_JOB:
 		ops->update_job(client, cmd);
 		remove_reply_cmd(client, cmd);
-		free(cmd);
 		break;
+	case FIO_NET_CMD_VTRIGGER: {
+		struct all_io_list *pdu = (struct all_io_list *) cmd->payload;
+		char buf[64];
+
+		__verify_save_state(pdu, server_name(client, buf, sizeof(buf)));
+		break;
+		}
+	case FIO_NET_CMD_SENDFILE: {
+		struct cmd_sendfile *pdu = (struct cmd_sendfile *) cmd->payload;
+		send_file(client, pdu, cmd->tag);
+		break;
+		}
 	default:
 		log_err("fio: unknown client op: %s\n", fio_server_op(cmd->opcode));
-		free(cmd);
 		break;
 	}
 
+	free(cmd);
 	return 1;
+}
+
+int fio_clients_send_trigger(const char *cmd)
+{
+	struct flist_head *entry;
+	struct fio_client *client;
+	size_t slen;
+
+	dprint(FD_NET, "client: send vtrigger: %s\n", cmd);
+
+	if (!cmd)
+		slen = 0;
+	else
+		slen = strlen(cmd);
+
+	flist_for_each(entry, &client_list) {
+		struct cmd_vtrigger_pdu *pdu;
+
+		client = flist_entry(entry, struct fio_client, list);
+
+		pdu = malloc(sizeof(*pdu) + slen);
+		pdu->len = cpu_to_le16((uint16_t) slen);
+		if (slen)
+			memcpy(pdu->cmd, cmd, slen);
+		fio_net_send_cmd(client->fd, FIO_NET_CMD_VTRIGGER, pdu,
+					sizeof(*pdu) + slen, NULL, NULL);
+		free(pdu);
+	}
+
+	return 0;
 }
 
 static void request_client_etas(struct client_ops *ops)
@@ -1558,6 +1669,7 @@ int fio_handle_clients(struct client_ops *ops)
 
 		do {
 			struct timeval tv;
+			int timeout;
 
 			fio_gettime(&tv, NULL);
 			if (mtime_since(&eta_tv, &tv) >= 900) {
@@ -1568,7 +1680,11 @@ int fio_handle_clients(struct client_ops *ops)
 					break;
 			}
 
-			ret = poll(pfds, nr_clients, ops->eta_msec);
+			check_trigger_file();
+
+			timeout = min(100u, ops->eta_msec);
+
+			ret = poll(pfds, nr_clients, timeout);
 			if (ret < 0) {
 				if (errno == EINTR)
 					continue;
