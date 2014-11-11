@@ -365,8 +365,6 @@ static int handle_trace(struct blk_io_trace *t, struct btrace_pid *p)
 	if (act == __BLK_TA_QUEUE) {
 		inflight_add(p, t->sector, t->bytes);
 		ret = handle_queue_trace(t, p);
-	} else if (act == __BLK_TA_REQUEUE) {
-		p->o.inflight--;
 	} else if (act == __BLK_TA_BACKMERGE) {
 		struct inflight *i;
 
