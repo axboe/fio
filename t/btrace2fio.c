@@ -549,8 +549,12 @@ static unsigned long o_to_kb_rate(struct btrace_out *o, int rw)
 	if (!usec)
 		return 0;
 
+	usec /= 1000;
+	if (!usec)
+		return 0;
+
 	val = o->kb[rw] * 1000ULL;
-	return val / (usec / 1000ULL);
+	return val / usec;
 }
 
 static uint64_t o_first_ttime(struct btrace_out *o)
