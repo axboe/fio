@@ -42,6 +42,9 @@ extern int yyerror(long long *result, double *dresult,
 static void __attribute__((unused)) yyunput(int c, char *buf_ptr);
 static int __attribute__((unused)) input(void);
 
+/* set by parser -- this is another thing which makes the parser thread-unsafe :(. */
+int lexer_value_is_time = 0; /* for determining if "m" suffix means mega- or minutes */
+
 #define set_suffix_value(yylval, i_val, d_val, has_d_val) \
 	(yylval).v.dval = (d_val); \
 	(yylval).v.ival = (i_val); \
@@ -57,7 +60,7 @@ static int __attribute__((unused)) input(void);
 			set_suffix_value(yylval, 1024, 1024.0, 0);
 			return SUFFIX;
 		}
-[Mm]|[Mm][bB]	{
+[Mm][bB]	{
 			set_suffix_value(yylval, 1024 * 1024, 1024.0 * 1024.0, 0);
 			return SUFFIX;
 		}
@@ -101,6 +104,14 @@ static int __attribute__((unused)) input(void);
 		}
 [sS]		{
 			set_suffix_value(yylval, 1000000LL, 1000000.0 , 0);
+			return SUFFIX;
+		}
+[mM]		{
+			if (!lexer_value_is_time) {
+				set_suffix_value(yylval, 1024 * 1024, 1024.0 * 1024.0, 0);
+			} else {
+				set_suffix_value(yylval, 60LL * 1000000LL, 60.0 * 1000000.0, 0);
+			}
 			return SUFFIX;
 		}
 [dD]		{

@@ -555,8 +555,7 @@ void display_thread_status(struct jobs_eta *je)
 	if (!eta_new_line_init) {
 		fio_gettime(&disp_eta_new_line, NULL);
 		eta_new_line_init = 1;
-	} else if (eta_new_line &&
-		   mtime_since_now(&disp_eta_new_line) > eta_new_line * 1000) {
+	} else if (eta_new_line && mtime_since_now(&disp_eta_new_line) > eta_new_line) {
 		fio_gettime(&disp_eta_new_line, NULL);
 		eta_new_line_pending = 1;
 	}

@@ -269,7 +269,8 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
 }
 
 extern int evaluate_arithmetic_expression(const char *buffer, long long *ival,
-					  double *dval, double implied_units);
+					  double *dval, double implied_units,
+					  int is_time);
 
 #ifdef CONFIG_ARITHMETIC
 /*
@@ -278,7 +279,7 @@ extern int evaluate_arithmetic_expression(const char *buffer, long long *ival,
  * original number parsing code.  Once sufficiently sure that the arithmetic
  * code is always getting the right answers, these can be removed.
  */
-static void verify_exp_parser_float(const char *str, double implied_units)
+static void verify_exp_parser_float(const char *str, double implied_units, int is_time)
 {
 	long long ival;
 	double dval, tmpval;
@@ -286,7 +287,7 @@ static void verify_exp_parser_float(const char *str, double implied_units)
 	if (sscanf(str, "%lf", &tmpval) != 1)
 		return;
 
-	if (evaluate_arithmetic_expression(str, &ival, &dval, implied_units) != 0) {
+	if (evaluate_arithmetic_expression(str, &ival, &dval, implied_units, is_time) != 0) {
 		log_info("Arithmetic failed on '%s'\n", str);
 		return;
 	}
@@ -296,7 +297,8 @@ static void verify_exp_parser_float(const char *str, double implied_units)
 	}
 }
 
-static void verify_exp_parser_decimal(const char *str, long long val, int kilo, int is_seconds)
+static void verify_exp_parser_decimal(const char *str, long long val, int kilo, int is_seconds,
+				      int is_time)
 {
 	int rc;
 	long long ival;
@@ -306,7 +308,7 @@ static void verify_exp_parser_decimal(const char *str, long long val, int kilo, 
 	if (is_seconds)
 		implied_units = 1000000.0;
 
-	rc = evaluate_arithmetic_expression(str, &ival, &dval, implied_units);
+	rc = evaluate_arithmetic_expression(str, &ival, &dval, implied_units, is_time);
 	if (!rc) {
 		if (ival != val)
 			log_info("Arithmetic failed on '%s', expected %lld, got %lld\n",
@@ -320,7 +322,7 @@ static void verify_exp_parser_decimal(const char *str, long long val, int kilo, 
 /*
  * Convert string into a floating number. Return 1 for success and 0 otherwise.
  */
-int str_to_float(const char *str, double *val)
+int str_to_float(const char *str, double *val, int is_time)
 {
 #ifdef CONFIG_ARITHMETIC
 	int rc;
@@ -328,13 +330,13 @@ int str_to_float(const char *str, double *val)
 	double dval;
 
 	if (str[0] == '(') {
-		rc = evaluate_arithmetic_expression(str, &ival, &dval, 1.0);
+		rc = evaluate_arithmetic_expression(str, &ival, &dval, 1.0, is_time);
 		if (!rc) {
 			*val = dval;
 			return 1;
 		}
 	} else {
-		verify_exp_parser_float(str, 1.0);
+		verify_exp_parser_float(str, 1.0, is_time);
 	}
 #endif
 	return 1 == sscanf(str, "%lf", val);
@@ -344,7 +346,7 @@ int str_to_float(const char *str, double *val)
  * convert string into decimal value, noting any size suffix
  */
 int str_to_decimal(const char *str, long long *val, int kilo, void *data,
-		   int is_seconds)
+		   int is_seconds, int is_time)
 {
 	int len, base;
 	int rc = 1;
@@ -362,7 +364,7 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data,
 	if (is_seconds)
 		implied_units = 1000000.0;
 	if (str[0] == '(')
-		rc = evaluate_arithmetic_expression(str, &ival, &dval, implied_units);
+		rc = evaluate_arithmetic_expression(str, &ival, &dval, implied_units, is_time);
 	if (str[0] == '(' && !rc) {
 		if (!kilo && is_seconds)
 			*val = ival / 1000000LL;
@@ -394,19 +396,19 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data,
 	} else
 		*val *= get_mult_time(str, len, is_seconds);
 #ifdef CONFIG_ARITHMETIC
-	verify_exp_parser_decimal(str, *val, kilo, is_seconds);
+	verify_exp_parser_decimal(str, *val, kilo, is_seconds, is_time);
 #endif
 	return 0;
 }
 
 int check_str_bytes(const char *p, long long *val, void *data)
 {
-	return str_to_decimal(p, val, 1, data, 0);
+	return str_to_decimal(p, val, 1, data, 0, 0);
 }
 
 int check_str_time(const char *p, long long *val, int is_seconds)
 {
-	return str_to_decimal(p, val, 0, NULL, is_seconds);
+	return str_to_decimal(p, val, 0, NULL, is_seconds, 1);
 }
 
 void strip_blank_front(char **p)
@@ -448,7 +450,7 @@ static int check_range_bytes(const char *str, long *val, void *data)
 {
 	long long __val;
 
-	if (!str_to_decimal(str, &__val, 1, data, 0)) {
+	if (!str_to_decimal(str, &__val, 1, data, 0, 0)) {
 		*val = __val;
 		return 0;
 	}
@@ -551,6 +553,9 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	case FIO_OPT_STR_VAL: {
 		fio_opt_str_val_fn *fn = o->cb;
 		char tmp[128], *p;
+
+		if (!is_time && o->is_time)
+			is_time = o->is_time;
 
 		strncpy(tmp, ptr, sizeof(tmp) - 1);
 		p = strchr(tmp, ',');
@@ -655,7 +660,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 					o->maxlen);
 			return 1;
 		}
-		if (!str_to_float(ptr, &uf)) {
+		if (!str_to_float(ptr, &uf, 0)) { /* this breaks if we ever have lists of times */
 			log_err("not a floating point value: %s\n", ptr);
 			return 1;
 		}

@@ -43,6 +43,7 @@ int yyerror(__attribute__((unused)) long long *result,
 
 extern int yylex(void);
 extern void yyrestart(FILE *file);
+extern int lexer_value_is_time;
 
 %}
 
@@ -214,10 +215,11 @@ static void setup_to_parse_string(const char *string)
 }
 
 int evaluate_arithmetic_expression(const char *buffer, long long *ival, double *dval,
-					double implied_units)
+					double implied_units, int is_time)
 {
 	int rc, units_specified = 0, has_error = 0;
 
+	lexer_value_is_time = is_time;
 	setup_to_parse_string(buffer);
 	rc = yyparse(ival, dval, &has_error, &units_specified);
 	yyrestart(NULL);

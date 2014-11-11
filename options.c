@@ -102,7 +102,7 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 		} else
 			perc = -1U;
 
-		if (str_to_decimal(fname, &val, 1, o, 0)) {
+		if (str_to_decimal(fname, &val, 1, o, 0, 0)) {
 			log_err("fio: bssplit conversion failed\n");
 			free(bssplit);
 			return 1;
@@ -342,7 +342,7 @@ static int str_rw_cb(void *data, const char *str)
 	else {
 		long long val;
 
-		if (str_to_decimal(nr, &val, 1, o, 0)) {
+		if (str_to_decimal(nr, &val, 1, o, 0, 0)) {
 			log_err("fio: rw postfix parsing failed\n");
 			free(nr);
 			return 1;
@@ -738,7 +738,7 @@ static int str_random_distribution_cb(void *data, const char *str)
 		return 0;
 
 	nr = get_opt_postfix(str);
-	if (nr && !str_to_float(nr, &val)) {
+	if (nr && !str_to_float(nr, &val, 0)) {
 		log_err("fio: random postfix parsing failed\n");
 		free(nr);
 		return 1;
@@ -2177,6 +2177,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Only start job when this period has passed",
 		.def	= "0",
 		.is_seconds = 1,
+		.is_time = 1,
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_RUNTIME,
 	},
@@ -2189,6 +2190,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Stop workload when this amount of time has passed",
 		.def	= "0",
 		.is_seconds = 1,
+		.is_time = 1,
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_RUNTIME,
 	},
@@ -2217,6 +2219,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(ramp_time),
 		.help	= "Ramp up time before measuring performance",
 		.is_seconds = 1,
+		.is_time = 1,
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_RUNTIME,
 	},
@@ -2770,6 +2773,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(thinktime),
 		.help	= "Idle time between IO buffers (usec)",
 		.def	= "0",
+		.is_time = 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_THINKTIME,
 	},
@@ -2780,6 +2784,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= td_var_offset(thinktime_spin),
 		.help	= "Start think time by spinning this amount (usec)",
 		.def	= "0",
+		.is_time = 1,
 		.parent	= "thinktime",
 		.hide	= 1,
 		.category = FIO_OPT_C_IO,
@@ -2863,6 +2868,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(max_latency),
 		.help	= "Maximum tolerated IO latency (usec)",
+		.is_time = 1,
 		.category = FIO_OPT_C_IO,
 		.group = FIO_OPT_G_LATPROF,
 	},
@@ -2872,6 +2878,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= td_var_offset(latency_target),
 		.help	= "Ramp to max queue depth supporting this latency",
+		.is_time = 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_LATPROF,
 	},
@@ -2881,6 +2888,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= td_var_offset(latency_window),
 		.help	= "Time to sustain latency_target",
+		.is_time = 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_LATPROF,
 	},

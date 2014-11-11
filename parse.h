@@ -73,6 +73,7 @@ struct fio_option {
 	unsigned int group;		/* who to group with */
 	void *gui_data;
 	int is_seconds;			/* time value with seconds base */
+	int is_time;			/* time based value */
 	int no_warn_def;
 };
 
@@ -89,10 +90,10 @@ extern void options_free(struct fio_option *, void *);
 
 extern void strip_blank_front(char **);
 extern void strip_blank_end(char *);
-extern int str_to_decimal(const char *, long long *, int, void *, int);
+extern int str_to_decimal(const char *, long long *, int, void *, int, int);
 extern int check_str_bytes(const char *p, long long *val, void *data);
 extern int check_str_time(const char *p, long long *val, int);
-extern int str_to_float(const char *str, double *val);
+extern int str_to_float(const char *str, double *val, int is_time);
 
 /*
  * Handlers for the options
