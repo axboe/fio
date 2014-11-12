@@ -991,12 +991,12 @@ static int __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 {
 	unsigned int range_size, seed;
 	unsigned long nranges;
-	uint64_t file_size;
+	uint64_t fsize;
 
 	range_size = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
-	file_size = min(f->real_file_size, f->io_size);
+	fsize = min(f->real_file_size, f->io_size);
 
-	nranges = (file_size + range_size - 1) / range_size;
+	nranges = (fsize + range_size - 1) / range_size;
 
 	seed = jhash(f->file_name, strlen(f->file_name), 0) * td->thread_number;
 	if (!td->o.rand_repeatable)
@@ -1041,9 +1041,9 @@ int init_random_map(struct thread_data *td)
 		return 0;
 
 	for_each_file(td, f, i) {
-		uint64_t file_size = min(f->real_file_size, f->io_size);
+		uint64_t fsize = min(f->real_file_size, f->io_size);
 
-		blocks = file_size / (unsigned long long) td->o.rw_min_bs;
+		blocks = fsize / (unsigned long long) td->o.rw_min_bs;
 
 		if (td->o.random_generator == FIO_RAND_GEN_LFSR) {
 			unsigned long seed;

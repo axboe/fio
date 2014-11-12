@@ -263,7 +263,7 @@ int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 void show_group_stats(struct group_run_stats *rs)
 {
 	char *p1, *p2, *p3, *p4;
-	const char *ddir_str[] = { "   READ", "  WRITE" , "   TRIM"};
+	const char *str[] = { "   READ", "  WRITE" , "   TRIM"};
 	int i;
 
 	log_info("\nRun status group %d (all jobs):\n", rs->groupid);
@@ -281,7 +281,7 @@ void show_group_stats(struct group_run_stats *rs)
 
 		log_info("%s: io=%s, aggrb=%s/s, minb=%s/s, maxb=%s/s,"
 			 " mint=%llumsec, maxt=%llumsec\n",
-				rs->unified_rw_rep ? "  MIXED" : ddir_str[i],
+				rs->unified_rw_rep ? "  MIXED" : str[i],
 				p1, p2, p3, p4,
 				(unsigned long long) rs->min_run[i],
 				(unsigned long long) rs->max_run[i]);
@@ -363,7 +363,7 @@ static void display_lat(const char *name, unsigned long min, unsigned long max,
 static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			     int ddir)
 {
-	const char *ddir_str[] = { "read ", "write", "trim" };
+	const char *str[] = { "read ", "write", "trim" };
 	unsigned long min, max, runt;
 	unsigned long long bw, iops;
 	double mean, dev;
@@ -386,7 +386,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	iops_p = num2str(iops, 6, 1, 0, 0);
 
 	log_info("  %s: io=%s, bw=%s/s, iops=%s, runt=%6llumsec\n",
-				rs->unified_rw_rep ? "mixed" : ddir_str[ddir],
+				rs->unified_rw_rep ? "mixed" : str[ddir],
 				io_p, bw_p, iops_p,
 				(unsigned long long) ts->runtime[ddir]);
 

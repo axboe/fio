@@ -57,11 +57,11 @@ static inline int ddir_rw(enum fio_ddir ddir)
 
 static inline const char *ddir_str(enum td_ddir ddir)
 {
-	const char *ddir_str[] = { NULL, "read", "write", "rw", NULL,
-				   "randread", "randwrite", "randrw",
-				   "trim", NULL, NULL, NULL, "randtrim" };
+	const char *__str[] = { NULL, "read", "write", "rw", NULL,
+				"randread", "randwrite", "randrw",
+				"trim", NULL, NULL, NULL, "randtrim" };
 
-	return ddir_str[ddir];
+	return __str[ddir];
 }
 
 #define ddir_rw_sum(arr)	\
