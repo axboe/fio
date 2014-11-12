@@ -138,10 +138,12 @@ static inline struct thread_io_list *io_list_next(struct thread_io_list *s)
 	return (void *) s + thread_io_list_sz(s);
 }
 
-static inline void verify_state_gen_name(char *out, const char *name,
-					 const char *prefix, int num)
+static inline void verify_state_gen_name(char *out, size_t size,
+					 const char *name, const char *prefix,
+					 int num)
 {
-	sprintf(out, "%s-%s-%d-verify.state", prefix, name, num);
+	snprintf(out, size, "%s-%s-%d-verify.state", prefix, name, num);
+	out[size - 1] = '\0';
 }
 
 #endif

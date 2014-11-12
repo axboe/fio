@@ -1391,7 +1391,8 @@ int fio_server_get_verify_state(const char *name, int threadnumber,
 	rep->data = NULL;
 	rep->error = 0;
 
-	verify_state_gen_name((char *) out.path, name, me, threadnumber);
+	verify_state_gen_name((char *) out.path, sizeof(out.path), name, me,
+				threadnumber);
 	tag = (uint64_t) (uintptr_t) rep;
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_SENDFILE, &out, sizeof(out),
 				&tag, NULL);
