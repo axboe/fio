@@ -393,6 +393,7 @@ extern int helper_do_stat;
 extern pthread_cond_t helper_cond;
 extern char *trigger_file;
 extern char *trigger_cmd;
+extern char *trigger_remote_cmd;
 extern long long trigger_timeout;
 
 extern struct thread_data *threads;

@@ -65,8 +65,9 @@ int read_only = 0;
 int status_interval = 0;
 
 char *trigger_file = NULL;
-char *trigger_cmd = NULL;
 long long trigger_timeout = 0;
+char *trigger_cmd = NULL;
+char *trigger_remote_cmd = NULL;
 
 static int prev_group_jobs;
 
@@ -246,7 +247,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'L',
 	},
 	{
-		.name		= (char *) "trigger",
+		.name		= (char *) "trigger-file",
 		.has_arg	= required_argument,
 		.val		= 'W',
 	},
@@ -254,6 +255,16 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "trigger-timeout",
 		.has_arg	= required_argument,
 		.val		= 'B',
+	},
+	{
+		.name		= (char *) "trigger",
+		.has_arg	= required_argument,
+		.val		= 'H',
+	},
+	{
+		.name		= (char *) "trigger-remote",
+		.has_arg	= required_argument,
+		.val		= 'J',
 	},
 	{
 		.name		= NULL,
@@ -286,6 +297,11 @@ static void free_shm(void)
 		fio_debug_jobp = NULL;
 		free_threads_shm();
 	}
+
+	free(trigger_file);
+	free(trigger_cmd);
+	free(trigger_remote_cmd);
+	trigger_file = trigger_cmd = trigger_remote_cmd = NULL;
 
 	options_free(fio_options, &def_thread);
 	fio_filelock_exit();
@@ -1679,8 +1695,10 @@ static void usage(const char *name)
 #ifdef CONFIG_ZLIB
 	printf("  --inflate-log=log\tInflate and output compressed log\n");
 #endif
-	printf("  --trigger=file:cmd\tExecute trigger cmd when file exists\n");
+	printf("  --trigger-file=file\tExecute trigger cmd when file exists\n");
 	printf("  --trigger-timeout=t\tExecute trigger af this time\n");
+	printf("  --trigger=cmd\t\tSet this command as local trigger\n");
+	printf("  --trigger-remote=cmd\tSet this command as remote trigger\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
 	printf("\n                   Jens Axboe <jaxboe@fusionio.com>");
 	printf("\n                   Jens Axboe <axboe@fb.com>\n");
@@ -2200,33 +2218,15 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			status_interval = val / 1000;
 			break;
 			}
-		case 'W': {
-			char *split, *cmd;
-			size_t sz;
-
-			split = strchr(optarg, ':');
-			if (!split) {
-				log_err("fio: trigger is file:command\n");
-				do_exit++;
-				exit_val = 1;
-			}
-
-			sz = split - optarg;
-			if (sz) {
-				trigger_file = calloc(1, sz + 1);
-				strncpy(trigger_file, optarg, sz);
-			}
-
-			split++;
-			cmd = trigger_cmd = strdup(split);
-			strip_blank_front(&trigger_cmd);
-			strip_blank_end(trigger_cmd);
-			if (strlen(trigger_cmd) == 0) {
-				free(cmd);
-				trigger_cmd = NULL;
-			}
+		case 'W':
+			trigger_file = strdup(optarg);
 			break;
-			}
+		case 'H':
+			trigger_cmd = strdup(optarg);
+			break;
+		case 'J':
+			trigger_remote_cmd = strdup(optarg);
+			break;
 		case 'B':
 			if (check_str_time(optarg, &trigger_timeout, 1)) {
 				log_err("fio: failed parsing time %s\n", optarg);

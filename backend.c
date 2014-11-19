@@ -1804,9 +1804,12 @@ void exec_trigger(const char *cmd)
 void check_trigger_file(void)
 {
 	if (__check_trigger_file() || trigger_timedout()) {
-		if (nr_clients)
-			fio_clients_send_trigger(trigger_cmd);
-		else {
+		if (nr_clients) {
+			if (trigger_remote_cmd)
+				fio_clients_send_trigger(trigger_remote_cmd);
+			if (trigger_cmd)
+				exec_trigger(trigger_cmd);
+		} else {
 			verify_save_state();
 			fio_terminate_threads(TERMINATE_ALL);
 			exec_trigger(trigger_cmd);
