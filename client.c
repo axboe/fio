@@ -1485,6 +1485,7 @@ int fio_handle_client(struct fio_client *client)
 		char buf[64];
 
 		__verify_save_state(pdu, server_name(client, buf, sizeof(buf)));
+		exec_trigger(trigger_cmd);
 		break;
 		}
 	case FIO_NET_CMD_SENDFILE: {
