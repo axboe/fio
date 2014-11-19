@@ -2212,8 +2212,10 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			}
 
 			sz = split - optarg;
-			trigger_file = calloc(1, sz + 1);
-			strncpy(trigger_file, optarg, sz);
+			if (sz) {
+				trigger_file = calloc(1, sz + 1);
+				strncpy(trigger_file, optarg, sz);
+			}
 
 			split++;
 			cmd = trigger_cmd = strdup(split);
