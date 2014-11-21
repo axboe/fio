@@ -565,7 +565,6 @@ static int fixup_options(struct thread_data *td)
 	if (!o->max_bs[DDIR_TRIM])
 		o->max_bs[DDIR_TRIM] = o->bs[DDIR_TRIM];
 
-
 	o->rw_min_bs = min(o->min_bs[DDIR_READ], o->min_bs[DDIR_WRITE]);
 	o->rw_min_bs = min(o->min_bs[DDIR_TRIM], o->rw_min_bs);
 

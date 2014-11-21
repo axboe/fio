@@ -459,8 +459,8 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 	 * we don't know if this option was set or not. it defaults to 1,
 	 * so we'll just guess that we should override it if it's still 1
 	 */
-	if (td->o.iodepth != 1)
-		td->o.iodepth = depth;
+	if (td->o.iodepth == 1)
+		td->o.iodepth = td->o.iodepth_low = depth;
 
 	return 0;
 err:
