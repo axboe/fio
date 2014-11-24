@@ -37,7 +37,7 @@ static int test_regular(size_t size, int seed)
 	while (size--) {
 		uint64_t val;
 
-		if (lfsr_next(&lfsr, &val, osize)) {
+		if (lfsr_next(&lfsr, &val)) {
 			printf("lfsr: short loop\n");
 			err = 1;
 			break;

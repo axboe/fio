@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 	 */
 	fprintf(stderr, "\nTest initiated... ");
 	fio_gettime(&start, NULL);
-	while (!lfsr_next(fl, &i, fl->max_val)) {
+	while (!lfsr_next(fl, &i)) {
 		if (verify)
 			*(uint8_t *)(v + i) += 1;
 	}
