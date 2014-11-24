@@ -124,7 +124,7 @@ static inline void __lfsr_next(struct fio_lfsr *fl, unsigned int spin)
  * c. Check if the calculated value exceeds the desirable range. In this case,
  *    go back to b, else return.
  */
-int lfsr_next(struct fio_lfsr *fl, uint64_t *off, uint64_t last)
+int lfsr_next(struct fio_lfsr *fl, uint64_t *off)
 {
 	if (fl->num_vals++ > fl->max_val)
 		return 1;

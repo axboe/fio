@@ -83,13 +83,15 @@ struct rand_off {
 static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				  enum fio_ddir ddir, uint64_t *b)
 {
-	uint64_t r, lastb;
-
-	lastb = last_block(td, f, ddir);
-	if (!lastb)
-		return 1;
+	uint64_t r;
 
 	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE) {
+		uint64_t lastb;
+
+		lastb = last_block(td, f, ddir);
+		if (!lastb)
+			return 1;
+
 		r = __rand(&td->random_state);
 
 		dprint(FD_RANDOM, "off rand %llu\n", (unsigned long long) r);
@@ -98,7 +100,7 @@ static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	} else {
 		uint64_t off = 0;
 
-		if (lfsr_next(&f->lfsr, &off, lastb))
+		if (lfsr_next(&f->lfsr, &off))
 			return 1;
 
 		*b = off;
