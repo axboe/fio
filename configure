@@ -1010,6 +1010,8 @@ int main(void)
 }
 EOF
 GTK_CFLAGS=$(pkg-config --cflags gtk+-2.0 gthread-2.0)
+ORG_LDFLAGS=$LDFLAGS
+LDFLAGS=$(echo $LDFLAGS | sed s/"-static"//g)
 if test "$?" != "0" ; then
   echo "configure: gtk and gthread not found"
   exit 1
@@ -1023,7 +1025,7 @@ if compile_prog "$GTK_CFLAGS" "$GTK_LIBS" "gfio" ; then
   r=$($TMPE)
   if test "$r" != "0" ; then
     gfio="yes"
-    LIBS="$LIBS $GTK_LIBS"
+    GFIO_LIBS="$LIBS $GTK_LIBS"
     CFLAGS="$CFLAGS $GTK_CFLAGS"
   else
     echo "GTK found, but need version 2.18 or higher"
@@ -1033,6 +1035,7 @@ else
   echo "Please install gtk and gdk libraries"
   gfio="no"
 fi
+LDFLAGS=$ORG_LDFLAGS
 fi
 
 if test "$gfio_check" = "yes" ; then
@@ -1578,6 +1581,7 @@ if test "$zlib" = "no" ; then
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
+echo "GFIO_LIBS+=$GFIO_LIBS" >> $config_host_mak
 echo "CFLAGS+=$CFLAGS" >> $config_host_mak
 echo "LDFLAGS+=$LDFLAGS" >> $config_host_mak
 echo "CC=$cc" >> $config_host_mak
