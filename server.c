@@ -1178,14 +1178,14 @@ static void convert_agg(struct disk_util_agg *dst, struct disk_util_agg *src)
 	int i;
 
 	for (i = 0; i < 2; i++) {
-		dst->ios[i]	= cpu_to_le32(src->ios[i]);
-		dst->merges[i]	= cpu_to_le32(src->merges[i]);
+		dst->ios[i]	= cpu_to_le64(src->ios[i]);
+		dst->merges[i]	= cpu_to_le64(src->merges[i]);
 		dst->sectors[i]	= cpu_to_le64(src->sectors[i]);
-		dst->ticks[i]	= cpu_to_le32(src->ticks[i]);
+		dst->ticks[i]	= cpu_to_le64(src->ticks[i]);
 	}
 
-	dst->io_ticks		= cpu_to_le32(src->io_ticks);
-	dst->time_in_queue	= cpu_to_le32(src->time_in_queue);
+	dst->io_ticks		= cpu_to_le64(src->io_ticks);
+	dst->time_in_queue	= cpu_to_le64(src->time_in_queue);
 	dst->slavecount		= cpu_to_le32(src->slavecount);
 	dst->max_util.u.i	= cpu_to_le64(fio_double_to_uint64(src->max_util.u.f));
 }
@@ -1198,14 +1198,14 @@ static void convert_dus(struct disk_util_stat *dst, struct disk_util_stat *src)
 	strncpy((char *) dst->name, (char *) src->name, FIO_DU_NAME_SZ - 1);
 
 	for (i = 0; i < 2; i++) {
-		dst->s.ios[i]		= cpu_to_le32(src->s.ios[i]);
-		dst->s.merges[i]	= cpu_to_le32(src->s.merges[i]);
+		dst->s.ios[i]		= cpu_to_le64(src->s.ios[i]);
+		dst->s.merges[i]	= cpu_to_le64(src->s.merges[i]);
 		dst->s.sectors[i]	= cpu_to_le64(src->s.sectors[i]);
-		dst->s.ticks[i]		= cpu_to_le32(src->s.ticks[i]);
+		dst->s.ticks[i]		= cpu_to_le64(src->s.ticks[i]);
 	}
 
-	dst->s.io_ticks		= cpu_to_le32(src->s.io_ticks);
-	dst->s.time_in_queue	= cpu_to_le32(src->s.time_in_queue);
+	dst->s.io_ticks		= cpu_to_le64(src->s.io_ticks);
+	dst->s.time_in_queue	= cpu_to_le64(src->s.time_in_queue);
 	dst->s.msec		= cpu_to_le64(src->s.msec);
 }
 

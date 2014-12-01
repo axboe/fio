@@ -62,14 +62,18 @@ static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 
 	dprint(FD_DISKUTIL, "%s: %s", du->path, p);
 
-	ret = sscanf(p, "%u %u %llu %u %u %u %llu %u %u %u %u\n",
-					&dus->s.ios[0],
-					&dus->s.merges[0], &sectors[0],
-					&dus->s.ticks[0], &dus->s.ios[1],
-					&dus->s.merges[1], &sectors[1],
-					&dus->s.ticks[1], &in_flight,
-					&dus->s.io_ticks,
-					&dus->s.time_in_queue);
+	ret = sscanf(p, "%llu %llu %llu %llu %llu %llu %llu %llu %u %llu %llu\n",
+				(unsigned long long *) &dus->s.ios[0],
+				(unsigned long long *) &dus->s.merges[0],
+				&sectors[0],
+				(unsigned long long *) &dus->s.ticks[0],
+				(unsigned long long *) &dus->s.ios[1],
+				(unsigned long long *) &dus->s.merges[1],
+				&sectors[1],
+				(unsigned long long *) &dus->s.ticks[1],
+				&in_flight,
+				(unsigned long long *) &dus->s.io_ticks,
+				(unsigned long long *) &dus->s.time_in_queue);
 	fclose(f);
 	dprint(FD_DISKUTIL, "%s: stat read ok? %d\n", du->path, ret == 1);
 	dus->s.sectors[0] = sectors[0];
@@ -497,26 +501,27 @@ static void show_agg_stats(struct disk_util_agg *agg, int terse)
 		return;
 
 	if (!terse) {
-		log_info(", aggrios=%u/%u, aggrmerge=%u/%u, aggrticks=%u/%u,"
-				" aggrin_queue=%u, aggrutil=%3.2f%%",
-				agg->ios[0] / agg->slavecount,
-				agg->ios[1] / agg->slavecount,
-				agg->merges[0] / agg->slavecount,
-				agg->merges[1] / agg->slavecount,
-				agg->ticks[0] / agg->slavecount,
-				agg->ticks[1] / agg->slavecount,
-				agg->time_in_queue / agg->slavecount,
-				agg->max_util.u.f);
+		log_info(", aggrios=%llu/%llu, aggrmerge=%llu/%llu, "
+			 "aggrticks=%llu/%llu, aggrin_queue=%llu, "
+			 "aggrutil=%3.2f%%",
+			(unsigned long long) agg->ios[0] / agg->slavecount,
+			(unsigned long long) agg->ios[1] / agg->slavecount,
+			(unsigned long long) agg->merges[0] / agg->slavecount,
+			(unsigned long long) agg->merges[1] / agg->slavecount,
+			(unsigned long long) agg->ticks[0] / agg->slavecount,
+			(unsigned long long) agg->ticks[1] / agg->slavecount,
+			(unsigned long long) agg->time_in_queue / agg->slavecount,
+			agg->max_util.u.f);
 	} else {
-		log_info(";slaves;%u;%u;%u;%u;%u;%u;%u;%3.2f%%",
-				agg->ios[0] / agg->slavecount,
-				agg->ios[1] / agg->slavecount,
-				agg->merges[0] / agg->slavecount,
-				agg->merges[1] / agg->slavecount,
-				agg->ticks[0] / agg->slavecount,
-				agg->ticks[1] / agg->slavecount,
-				agg->time_in_queue / agg->slavecount,
-				agg->max_util.u.f);
+		log_info(";slaves;%llu;%llu;%llu;%llu;%llu;%llu;%llu;%3.2f%%",
+			(unsigned long long) agg->ios[0] / agg->slavecount,
+			(unsigned long long) agg->ios[1] / agg->slavecount,
+			(unsigned long long) agg->merges[0] / agg->slavecount,
+			(unsigned long long) agg->merges[1] / agg->slavecount,
+			(unsigned long long) agg->ticks[0] / agg->slavecount,
+			(unsigned long long) agg->ticks[1] / agg->slavecount,
+			(unsigned long long) agg->time_in_queue / agg->slavecount,
+			agg->max_util.u.f);
 	}
 }
 
@@ -586,19 +591,28 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 		if (agg->slavecount)
 			log_info("  ");
 
-		log_info("  %s: ios=%u/%u, merge=%u/%u, ticks=%u/%u, "
-			 "in_queue=%u, util=%3.2f%%", dus->name,
-					dus->s.ios[0], dus->s.ios[1],
-					dus->s.merges[0], dus->s.merges[1],
-					dus->s.ticks[0], dus->s.ticks[1],
-					dus->s.time_in_queue, util);
+		log_info("  %s: ios=%llu/%llu, merge=%llu/%llu, "
+			 "ticks=%llu/%llu, in_queue=%llu, util=%3.2f%%",
+				dus->name,
+				(unsigned long long) dus->s.ios[0],
+				(unsigned long long) dus->s.ios[1],
+				(unsigned long long) dus->s.merges[0],
+				(unsigned long long) dus->s.merges[1],
+				(unsigned long long) dus->s.ticks[0],
+				(unsigned long long) dus->s.ticks[1],
+				(unsigned long long) dus->s.time_in_queue,
+				util);
 	} else {
-		log_info(";%s;%u;%u;%u;%u;%u;%u;%u;%3.2f%%",
-					dus->name, dus->s.ios[0],
-					dus->s.ios[1], dus->s.merges[0],
-					dus->s.merges[1], dus->s.ticks[0],
-					dus->s.ticks[1],
-					dus->s.time_in_queue, util);
+		log_info(";%s;%llu;%llu;%llu;%llu;%llu;%llu;%llu;%3.2f%%",
+				dus->name,
+				(unsigned long long) dus->s.ios[0],
+				(unsigned long long) dus->s.ios[1],
+				(unsigned long long) dus->s.merges[0],
+				(unsigned long long) dus->s.merges[1],
+				(unsigned long long) dus->s.ticks[0],
+				(unsigned long long) dus->s.ticks[1],
+				(unsigned long long) dus->s.time_in_queue,
+				util);
 	}
 
 	/*

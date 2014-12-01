@@ -974,14 +974,14 @@ static void convert_agg(struct disk_util_agg *agg)
 	int i;
 
 	for (i = 0; i < 2; i++) {
-		agg->ios[i]	= le32_to_cpu(agg->ios[i]);
-		agg->merges[i]	= le32_to_cpu(agg->merges[i]);
+		agg->ios[i]	= le64_to_cpu(agg->ios[i]);
+		agg->merges[i]	= le64_to_cpu(agg->merges[i]);
 		agg->sectors[i]	= le64_to_cpu(agg->sectors[i]);
-		agg->ticks[i]	= le32_to_cpu(agg->ticks[i]);
+		agg->ticks[i]	= le64_to_cpu(agg->ticks[i]);
 	}
 
-	agg->io_ticks		= le32_to_cpu(agg->io_ticks);
-	agg->time_in_queue	= le32_to_cpu(agg->time_in_queue);
+	agg->io_ticks		= le64_to_cpu(agg->io_ticks);
+	agg->time_in_queue	= le64_to_cpu(agg->time_in_queue);
 	agg->slavecount		= le32_to_cpu(agg->slavecount);
 	agg->max_util.u.f	= fio_uint64_to_double(le64_to_cpu(agg->max_util.u.i));
 }
@@ -991,14 +991,14 @@ static void convert_dus(struct disk_util_stat *dus)
 	int i;
 
 	for (i = 0; i < 2; i++) {
-		dus->s.ios[i]		= le32_to_cpu(dus->s.ios[i]);
-		dus->s.merges[i]	= le32_to_cpu(dus->s.merges[i]);
+		dus->s.ios[i]		= le64_to_cpu(dus->s.ios[i]);
+		dus->s.merges[i]	= le64_to_cpu(dus->s.merges[i]);
 		dus->s.sectors[i]	= le64_to_cpu(dus->s.sectors[i]);
-		dus->s.ticks[i]		= le32_to_cpu(dus->s.ticks[i]);
+		dus->s.ticks[i]		= le64_to_cpu(dus->s.ticks[i]);
 	}
 
-	dus->s.io_ticks		= le32_to_cpu(dus->s.io_ticks);
-	dus->s.time_in_queue	= le32_to_cpu(dus->s.time_in_queue);
+	dus->s.io_ticks		= le64_to_cpu(dus->s.io_ticks);
+	dus->s.time_in_queue	= le64_to_cpu(dus->s.time_in_queue);
 	dus->s.msec		= le64_to_cpu(dus->s.msec);
 }
 
