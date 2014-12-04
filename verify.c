@@ -29,36 +29,6 @@ static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 			 struct verify_header *hdr, unsigned int header_num,
 			 unsigned int header_len);
 
-static void fill_pattern(void *p, unsigned int len, char *pattern,
-			 unsigned int pattern_bytes)
-{
-	switch (pattern_bytes) {
-	case 0:
-		assert(0);
-		break;
-	case 1:
-		dprint(FD_VERIFY, "fill verify pattern b=0 len=%u\n", len);
-		memset(p, pattern[0], len);
-		break;
-	default: {
-		unsigned int i = 0, size = 0;
-		unsigned char *b = p;
-
-		dprint(FD_VERIFY, "fill verify pattern b=%d len=%u\n",
-					pattern_bytes, len);
-
-		while (i < len) {
-			size = pattern_bytes;
-			if (size > (len - i))
-				size = len - i;
-			memcpy(b+i, pattern, size);
-			i += size;
-		}
-		break;
-		}
-	}
-}
-
 void fill_buffer_pattern(struct thread_data *td, void *p, unsigned int len)
 {
 	fill_pattern(p, len, td->o.buffer_pattern, td->o.buffer_pattern_bytes);

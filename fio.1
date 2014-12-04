@@ -476,9 +476,12 @@ of blocks. Default: true.
 .BI buffer_compress_percentage \fR=\fPint
 If this is set, then fio will attempt to provide IO buffer content (on WRITEs)
 that compress to the specified level. Fio does this by providing a mix of
-random data and zeroes. Note that this is per block size unit, for file/disk
-wide compression level that matches this setting, you'll also want to set
-\fBrefill_buffers\fR.
+random data and a fixed pattern. The fixed pattern is either zeroes, or the
+pattern specified by \fBbuffer_pattern\fR. If the pattern option is used, it
+might skew the compression ratio slightly. Note that this is per block size
+unit, for file/disk wide compression level that matches this setting. Note
+that this is per block size unit, for file/disk wide compression level that
+matches this setting, you'll also want to set refill_buffers.
 .TP
 .BI buffer_compress_chunk \fR=\fPint
 See \fBbuffer_compress_percentage\fR. This setting allows fio to manage how

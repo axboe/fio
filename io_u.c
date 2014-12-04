@@ -1859,9 +1859,9 @@ static void save_buf_state(struct thread_data *td, struct frand_state *rs)
 void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 		    unsigned int max_bs)
 {
-	if (td->o.buffer_pattern_bytes)
-		fill_buffer_pattern(td, buf, max_bs);
-	else if (!td->o.zero_buffers) {
+	struct thread_options *o = &td->o;
+
+	if (o->compress_percentage) {
 		unsigned int perc = td->o.compress_percentage;
 		struct frand_state *rs;
 		unsigned int left = max_bs;
@@ -1879,7 +1879,8 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 					seg = min_write;
 
 				fill_random_buf_percentage(rs, buf, perc, seg,
-								min_write);
+					min_write, o->buffer_pattern,
+						   o->buffer_pattern_bytes);
 			} else
 				fill_random_buf(rs, buf, min_write);
 
@@ -1887,7 +1888,9 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 			left -= min_write;
 			save_buf_state(td, rs);
 		} while (left);
-	} else
+	} else if (o->buffer_pattern_bytes)
+		fill_buffer_pattern(td, buf, max_bs);
+	else
 		memset(buf, 0, max_bs);
 }
 

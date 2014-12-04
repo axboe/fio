@@ -34,6 +34,7 @@
 */
 
 #include <string.h>
+#include <assert.h>
 #include "rand.h"
 #include "../hash.h"
 
@@ -90,15 +91,45 @@ unsigned long fill_random_buf(struct frand_state *fs, void *buf,
 	return r;
 }
 
+void fill_pattern(void *p, unsigned int len, char *pattern,
+		  unsigned int pattern_bytes)
+{
+	switch (pattern_bytes) {
+	case 0:
+		assert(0);
+		break;
+	case 1:
+		memset(p, pattern[0], len);
+		break;
+	default: {
+		unsigned int i = 0, size = 0;
+		unsigned char *b = p;
+
+		while (i < len) {
+			size = pattern_bytes;
+			if (size > (len - i))
+				size = len - i;
+			memcpy(b+i, pattern, size);
+			i += size;
+		}
+		break;
+		}
+	}
+}
+
 unsigned long fill_random_buf_percentage(struct frand_state *fs, void *buf,
 					 unsigned int percentage,
-					 unsigned int segment, unsigned int len)
+					 unsigned int segment, unsigned int len,
+					 char *pattern, unsigned int pbytes)
 {
 	unsigned long r = __rand(fs);
 	unsigned int this_len;
 
 	if (percentage == 100) {
-		memset(buf, 0, len);
+		if (pbytes)
+			fill_pattern(buf, len, pattern, pbytes);
+		else
+			memset(buf, 0, len);
 		return 0;
 	}
 
@@ -124,7 +155,10 @@ unsigned long fill_random_buf_percentage(struct frand_state *fs, void *buf,
 		if (this_len > len)
 			this_len = len;
 
-		memset(buf, 0, this_len);
+		if (pbytes)
+			fill_pattern(buf, this_len, pattern, pbytes);
+		else
+			memset(buf, 0, this_len);
 		len -= this_len;
 		buf += this_len;
 	}
