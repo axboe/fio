@@ -34,6 +34,20 @@ void fill_buffer_pattern(struct thread_data *td, void *p, unsigned int len)
 	fill_pattern(p, len, td->o.buffer_pattern, td->o.buffer_pattern_bytes);
 }
 
+void __fill_buffer(struct thread_options *o, unsigned long seed, void *p,
+		   unsigned int len)
+{
+	__fill_random_buf_percentage(seed, p, o->compress_percentage, len, len, o->buffer_pattern, o->buffer_pattern_bytes);
+}
+
+unsigned long fill_buffer(struct thread_data *td, void *p, unsigned int len)
+{
+	struct frand_state *fs = &td->verify_state;
+	struct thread_options *o = &td->o;
+
+	return fill_random_buf_percentage(fs, p, o->compress_percentage, len, len, o->buffer_pattern, o->buffer_pattern_bytes);
+}
+
 void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 			 struct io_u *io_u, unsigned long seed, int use_seed)
 {
@@ -43,12 +57,9 @@ void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 		dprint(FD_VERIFY, "fill random bytes len=%u\n", len);
 
 		if (use_seed)
-			__fill_random_buf_percentage(seed, p, o->compress_percentage, len, len, o->buffer_pattern, o->buffer_pattern_bytes);
-		else {
-			struct frand_state *fs = &td->verify_state;
-
-			io_u->rand_seed = fill_random_buf_percentage(fs, p, o->compress_percentage, len, len, o->buffer_pattern, o->buffer_pattern_bytes);
-		}
+			__fill_buffer(o, seed, p, len);
+		else
+			io_u->rand_seed = fill_buffer(td, p, len);
 		return;
 	}
 
