@@ -30,6 +30,7 @@ extern void init_rand(struct frand_state *);
 extern void init_rand_seed(struct frand_state *, unsigned int seed);
 extern void __fill_random_buf(void *buf, unsigned int len, unsigned long seed);
 extern unsigned long fill_random_buf(struct frand_state *, void *buf, unsigned int len);
+extern void __fill_random_buf_percentage(unsigned long, void *, unsigned int, unsigned int, unsigned int, char *, unsigned int);
 extern unsigned long fill_random_buf_percentage(struct frand_state *, void *, unsigned int, unsigned int, unsigned int, char *, unsigned int);
 extern void fill_pattern(void *p, unsigned int len, char *pattern, unsigned int pattern_bytes);
 

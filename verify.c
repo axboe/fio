@@ -37,24 +37,28 @@ void fill_buffer_pattern(struct thread_data *td, void *p, unsigned int len)
 void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 			 struct io_u *io_u, unsigned long seed, int use_seed)
 {
-	if (!td->o.verify_pattern_bytes) {
+	struct thread_options *o = &td->o;
+
+	if (!o->verify_pattern_bytes) {
 		dprint(FD_VERIFY, "fill random bytes len=%u\n", len);
 
 		if (use_seed)
-			__fill_random_buf(p, len, seed);
-		else
-			io_u->rand_seed = fill_random_buf(&td->verify_state, p, len);
+			__fill_random_buf_percentage(seed, p, o->compress_percentage, len, len, o->buffer_pattern, o->buffer_pattern_bytes);
+		else {
+			struct frand_state *fs = &td->verify_state;
+
+			io_u->rand_seed = fill_random_buf_percentage(fs, p, o->compress_percentage, len, len, o->buffer_pattern, o->buffer_pattern_bytes);
+		}
 		return;
 	}
 
 	if (io_u->buf_filled_len >= len) {
 		dprint(FD_VERIFY, "using already filled verify pattern b=%d len=%u\n",
-			td->o.verify_pattern_bytes, len);
+			o->verify_pattern_bytes, len);
 		return;
 	}
 
-	fill_pattern(p, len, td->o.verify_pattern, td->o.verify_pattern_bytes);
-
+	fill_pattern(p, len, o->verify_pattern, o->verify_pattern_bytes);
 	io_u->buf_filled_len = len;
 }
 
