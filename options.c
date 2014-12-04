@@ -1031,7 +1031,8 @@ static int str_buffer_pattern_cb(void *data, const char *input)
 				&td->o.buffer_pattern_bytes);
 
 	if (!ret && td->o.buffer_pattern_bytes) {
-		td->o.refill_buffers = 0;
+		if (!td->o.compress_percentage)
+			td->o.refill_buffers = 0;
 		td->o.scramble_buffers = 0;
 		td->o.zero_buffers = 0;
 	} else {
