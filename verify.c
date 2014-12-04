@@ -29,8 +29,8 @@ static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 			 struct verify_header *hdr, unsigned int header_num,
 			 unsigned int header_len);
 
-static void fill_pattern(struct thread_data *td, void *p, unsigned int len,
-			 char *pattern, unsigned int pattern_bytes)
+static void fill_pattern(void *p, unsigned int len, char *pattern,
+			 unsigned int pattern_bytes)
 {
 	switch (pattern_bytes) {
 	case 0:
@@ -61,7 +61,7 @@ static void fill_pattern(struct thread_data *td, void *p, unsigned int len,
 
 void fill_buffer_pattern(struct thread_data *td, void *p, unsigned int len)
 {
-	fill_pattern(td, p, len, td->o.buffer_pattern, td->o.buffer_pattern_bytes);
+	fill_pattern(p, len, td->o.buffer_pattern, td->o.buffer_pattern_bytes);
 }
 
 void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
@@ -83,7 +83,7 @@ void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 		return;
 	}
 
-	fill_pattern(td, p, len, td->o.verify_pattern, td->o.verify_pattern_bytes);
+	fill_pattern(p, len, td->o.verify_pattern, td->o.verify_pattern_bytes);
 
 	io_u->buf_filled_len = len;
 }
