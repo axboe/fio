@@ -1875,6 +1875,30 @@ static void parse_cmd_client(void *client, char *opt)
 	fio_client_add_cmd_option(client, opt);
 }
 
+static void show_closest_option(const char *name)
+{
+	int best_option, best_distance;
+	int i, distance;
+
+	while (*name == '-')
+		name++;
+
+	best_option = -1;
+	best_distance = INT_MAX;
+	i = 0;
+	while (l_opts[i].name) {
+		distance = string_distance(name, l_opts[i].name);
+		if (distance < best_distance) {
+			best_distance = distance;
+			best_option = i;
+		}
+		i++;
+	}
+
+	if (best_option != -1)
+		log_err("Did you mean %s?\n", l_opts[best_option].name);
+}
+
 int parse_cmd_line(int argc, char *argv[], int client_type)
 {
 	struct thread_data *td = NULL;
@@ -2237,6 +2261,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		case '?':
 			log_err("%s: unrecognized option '%s'\n", argv[0],
 							argv[optind - 1]);
+			show_closest_option(argv[optind - 1]);
 		default:
 			do_exit++;
 			exit_val = 1;

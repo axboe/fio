@@ -1068,7 +1068,7 @@ int parse_option(char *opt, const char *input,
  * Option match, levenshtein distance. Handy for not quite remembering what
  * the option name is.
  */
-static int string_distance(const char *s1, const char *s2)
+int string_distance(const char *s1, const char *s2)
 {
 	unsigned int s1_len = strlen(s1);
 	unsigned int s2_len = strlen(s2);

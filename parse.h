@@ -95,6 +95,8 @@ extern int check_str_bytes(const char *p, long long *val, void *data);
 extern int check_str_time(const char *p, long long *val, int);
 extern int str_to_float(const char *str, double *val, int is_time);
 
+extern int string_distance(const char *s1, const char *s2);
+
 /*
  * Handlers for the options
  */
