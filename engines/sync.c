@@ -63,8 +63,10 @@ static int fio_io_end(struct thread_data *td, struct io_u *io_u, int ret)
 			io_u->error = errno;
 	}
 
-	if (io_u->error)
+	if (io_u->error) {
+		io_u_log_error(td, io_u);
 		td_verror(td, io_u->error, "xfer");
+	}
 
 	return FIO_Q_COMPLETED;
 }
