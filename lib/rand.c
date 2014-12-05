@@ -69,11 +69,26 @@ void init_rand_seed(struct frand_state *state, unsigned int seed)
 
 void __fill_random_buf(void *buf, unsigned int len, unsigned long seed)
 {
-	long *ptr = buf;
+	void *ptr = buf;
 
-	while ((void *) ptr - buf < len) {
-		*ptr = seed;
-		ptr++;
+	while (len) {
+		if (len >= sizeof(int64_t)) {
+			*((int64_t *) ptr) = seed;
+			ptr += sizeof(int64_t);
+			len -= sizeof(int64_t);
+		} else if (len >= sizeof(int32_t)) {
+			*((int32_t *) ptr) = seed;
+			ptr += sizeof(int32_t);
+			len -= sizeof(int32_t);
+		} else if (len >= sizeof(int16_t)) {
+			*((int16_t *) ptr) = seed;
+			ptr += sizeof(int16_t);
+			len -= sizeof(int16_t);
+		} else {
+			*((int8_t *) ptr) = seed;
+			ptr += sizeof(int8_t);
+			len -= sizeof(int8_t);
+		}
 		seed *= GOLDEN_RATIO_PRIME;
 		seed >>= 3;
 	}
@@ -146,9 +161,13 @@ void __fill_random_buf_percentage(unsigned long seed, void *buf,
 		__fill_random_buf(buf, this_len, seed);
 
 		len -= this_len;
+		if (!len)
+			break;
 		buf += this_len;
 
 		if (this_len > len)
+			this_len = len;
+		else if (len - this_len <= sizeof(long))
 			this_len = len;
 
 		if (pbytes)
