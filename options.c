@@ -3933,10 +3933,20 @@ static char **dup_and_sub_options(char **opts, int num_opts)
 	return opts_copy;
 }
 
-static void show_closest_option(const char *name)
+static void show_closest_option(const char *opt)
 {
 	int best_option, best_distance;
 	int i, distance;
+	char *name;
+
+	if (!strlen(opt))
+		return;
+
+	name = strdup(opt);
+	i = 0;
+	while (name[i] != '\0' && name[i] != '=')
+		i++;
+	name[i] = '\0';
 
 	best_option = -1;
 	best_distance = INT_MAX;
@@ -3952,6 +3962,8 @@ static void show_closest_option(const char *name)
 
 	if (best_option != -1)
 		log_err("Did you mean %s?\n", fio_options[best_option].name);
+
+	free(name);
 }
 
 int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
