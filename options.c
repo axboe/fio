@@ -3933,6 +3933,27 @@ static char **dup_and_sub_options(char **opts, int num_opts)
 	return opts_copy;
 }
 
+static void show_closest_option(const char *name)
+{
+	int best_option, best_distance;
+	int i, distance;
+
+	best_option = -1;
+	best_distance = INT_MAX;
+	i = 0;
+	while (fio_options[i].name) {
+		distance = string_distance(name, fio_options[i].name);
+		if (distance < best_distance) {
+			best_distance = distance;
+			best_option = i;
+		}
+		i++;
+	}
+
+	if (best_option != -1)
+		log_err("Did you mean %s?\n", fio_options[best_option].name);
+}
+
 int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
 			int dump_cmdline)
 {
@@ -3968,6 +3989,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
 		for (i = 0; i < num_opts; i++) {
 			struct fio_option *o = NULL;
 			int newret = 1;
+
 			if (!opts_copy[i])
 				continue;
 
@@ -3977,9 +3999,10 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
 						      td->eo, dump_cmdline);
 
 			ret |= newret;
-			if (!o)
+			if (!o) {
 				log_err("Bad option <%s>\n", opts[i]);
-
+				show_closest_option(opts[i]);
+			}
 			free(opts_copy[i]);
 			opts_copy[i] = NULL;
 		}
