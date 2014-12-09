@@ -453,7 +453,6 @@ static int str_cpumask_cb(void *data, unsigned long long *val)
 		}
 	}
 
-	td->o.cpumask_set = 1;
 	return 0;
 }
 
@@ -520,36 +519,24 @@ static int set_cpus_allowed(struct thread_data *td, os_cpu_mask_t *mask,
 	}
 
 	free(p);
-	if (!ret)
-		td->o.cpumask_set = 1;
 	return ret;
 }
 
 static int str_cpus_allowed_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
-	int ret;
 
 	if (parse_dryrun())
 		return 0;
 
-	ret = set_cpus_allowed(td, &td->o.cpumask, input);
-	if (!ret)
-		td->o.cpumask_set = 1;
-
-	return ret;
+	return set_cpus_allowed(td, &td->o.cpumask, input);
 }
 
 static int str_verify_cpus_allowed_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
-	int ret;
 
-	ret = set_cpus_allowed(td, &td->o.verify_cpumask, input);
-	if (!ret)
-		td->o.verify_cpumask_set = 1;
-
-	return ret;
+	return set_cpus_allowed(td, &td->o.verify_cpumask, input);
 }
 #endif
 
@@ -576,7 +563,6 @@ static int str_numa_cpunodes_cb(void *data, char *input)
 	numa_free_nodemask(verify_bitmask);
 
 	td->o.numa_cpunodes = strdup(input);
-	td->o.numa_cpumask_set = 1;
 	return 0;
 }
 
@@ -683,9 +669,7 @@ static int str_numa_mpol_cb(void *data, char *input)
 		break;
 	}
 
-	td->o.numa_memmask_set = 1;
 	return 0;
-
 out:
 	return 1;
 }
@@ -3052,6 +3036,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "numa_cpu_nodes",
 		.type	= FIO_OPT_STR,
 		.cb	= str_numa_cpunodes_cb,
+		.off1	= td_var_offset(numa_cpunodes),
 		.help	= "NUMA CPU nodes bind",
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_INVALID,
@@ -3060,6 +3045,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "numa_mem_policy",
 		.type	= FIO_OPT_STR,
 		.cb	= str_numa_mpol_cb,
+		.off1	= td_var_offset(numa_memnodes),
 		.help	= "NUMA memory policy setup",
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_INVALID,

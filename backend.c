@@ -1345,7 +1345,7 @@ static void *thread_main(void *data)
 	 * Set affinity first, in case it has an impact on the memory
 	 * allocations.
 	 */
-	if (o->cpumask_set) {
+	if (fio_option_is_set(o, cpumask)) {
 		if (o->cpus_allowed_policy == FIO_CPUS_SPLIT) {
 			ret = fio_cpus_split(&o->cpumask, td->thread_number - 1);
 			if (!ret) {
@@ -1364,7 +1364,8 @@ static void *thread_main(void *data)
 
 #ifdef CONFIG_LIBNUMA
 	/* numa node setup */
-	if (o->numa_cpumask_set || o->numa_memmask_set) {
+	if (fio_option_is_set(o, numa_cpunodes) ||
+	    fio_option_is_set(o, numa_memnodes)) {
 		struct bitmask *mask;
 
 		if (numa_available() < 0) {
@@ -1372,7 +1373,7 @@ static void *thread_main(void *data)
 			goto err;
 		}
 
-		if (o->numa_cpumask_set) {
+		if (fio_option_is_set(o, numa_cpunodes)) {
 			mask = numa_parse_nodestring(o->numa_cpunodes);
 			ret = numa_run_on_node_mask(mask);
 			numa_free_nodemask(mask);
@@ -1383,8 +1384,7 @@ static void *thread_main(void *data)
 			}
 		}
 
-		if (o->numa_memmask_set) {
-
+		if (fio_option_is_set(o, numa_memnodes)) {
 			mask = NULL;
 			if (o->numa_memnodes)
 				mask = numa_parse_nodestring(o->numa_memnodes);
@@ -1589,7 +1589,7 @@ err:
 	cgroup_shutdown(td, &cgroup_mnt);
 	verify_free_state(td);
 
-	if (o->cpumask_set) {
+	if (fio_option_is_set(o, cpumask)) {
 		ret = fio_cpuset_exit(&o->cpumask);
 		if (ret)
 			td_verror(td, ret, "fio_cpuset_exit");

@@ -1151,7 +1151,7 @@ static void *verify_async_thread(void *data)
 	struct io_u *io_u;
 	int ret = 0;
 
-	if (td->o.verify_cpumask_set &&
+	if (fio_option_is_set(&td->o, verify_cpumask) &&
 	    fio_setaffinity(td->pid, td->o.verify_cpumask)) {
 		log_err("fio: failed setting verify thread affinity\n");
 		goto done;

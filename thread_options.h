@@ -163,16 +163,12 @@ struct thread_options {
 	unsigned int new_group;
 	unsigned int numjobs;
 	os_cpu_mask_t cpumask;
-	unsigned int cpumask_set;
 	os_cpu_mask_t verify_cpumask;
-	unsigned int verify_cpumask_set;
 	unsigned int cpus_allowed_policy;
 	char *numa_cpunodes;
-	unsigned int numa_cpumask_set;
 	unsigned short numa_mem_mode;
 	unsigned int numa_mem_prefer_node;
 	char *numa_memnodes;
-	unsigned int numa_memmask_set;
 	unsigned int iolog;
 	unsigned int rwmixcycle;
 	unsigned int rwmix[DDIR_RWDIR_CNT];
@@ -339,7 +335,6 @@ struct thread_options_pack {
 	uint32_t experimental_verify;
 	uint32_t verify_state;
 	uint32_t verify_state_save;
-	uint32_t pad;
 	uint32_t use_thread;
 	uint32_t unlink;
 	uint32_t do_disk_util;
@@ -359,6 +354,7 @@ struct thread_options_pack {
 	uint32_t bs_is_seq_rand;
 
 	uint32_t random_distribution;
+	uint32_t pad;
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
 
@@ -395,9 +391,7 @@ struct thread_options_pack {
 	uint32_t new_group;
 	uint32_t numjobs;
 	uint8_t cpumask[FIO_TOP_STR_MAX];
-	uint32_t cpumask_set;
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
-	uint32_t verify_cpumask_set;
 	uint32_t cpus_allowed_policy;
 	uint32_t iolog;
 	uint32_t rwmixcycle;
