@@ -1430,7 +1430,8 @@ static void *thread_main(void *data)
 	if (o->verify_async && verify_async_init(td))
 		goto err;
 
-	if (o->ioprio) {
+	if (fio_option_is_set(o, ioprio) ||
+	    fio_option_is_set(o, ioprio_class)) {
 		ret = ioprio_set(IOPRIO_WHO_PROCESS, 0, o->ioprio_class, o->ioprio);
 		if (ret == -1) {
 			td_verror(td, errno, "ioprio_set");
