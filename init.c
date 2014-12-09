@@ -926,7 +926,13 @@ static void init_flags(struct thread_data *td)
 		td->flags |= TD_F_READ_IOLOG;
 	if (o->refill_buffers)
 		td->flags |= TD_F_REFILL_BUFFERS;
-	if (o->scramble_buffers)
+	/*
+	 * Scramble by default, but not if zero_buffer is true and has been
+	 * set. But if scramble_buffers has been set, always scramble.
+	 */
+	if (o->scramble_buffers && ((!o->zero_buffers &&
+	    fio_option_is_set(o, zero_buffers)) ||
+	    fio_option_is_set(o, scramble_buffers)))
 		td->flags |= TD_F_SCRAMBLE_BUFFERS;
 	if (o->verify != VERIFY_NONE)
 		td->flags |= TD_F_VER_NONE;
