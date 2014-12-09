@@ -1650,6 +1650,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Size",
 		.type	= FIO_OPT_STR_VAL,
 		.cb	= str_size_cb,
+		.off1	= td_var_offset(size),
 		.help	= "Total size of device or files",
 		.interval = 1024 * 1024,
 		.category = FIO_OPT_C_IO,
@@ -1789,6 +1790,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Block size split",
 		.type	= FIO_OPT_STR,
 		.cb	= str_bssplit_cb,
+		.off1	= td_var_offset(bssplit),
 		.help	= "Set a specific mix of block sizes",
 		.parent	= "rw",
 		.hide	= 1,
@@ -2443,6 +2445,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Verify pattern",
 		.type	= FIO_OPT_STR,
 		.cb	= str_verify_pattern_cb,
+		.off1	= td_var_offset(verify_pattern),
 		.help	= "Fill pattern for IO buffers",
 		.parent	= "verify",
 		.hide	= 1,
@@ -2513,6 +2516,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Async verify CPUs",
 		.type	= FIO_OPT_STR,
 		.cb	= str_verify_cpus_allowed_cb,
+		.off1	= td_var_offset(verify_cpumask),
 		.help	= "Set CPUs allowed for async verify threads",
 		.parent	= "verify_async",
 		.hide	= 1,
@@ -2722,6 +2726,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Read/write mix read",
 		.type	= FIO_OPT_INT,
 		.cb	= str_rwmix_read_cb,
+		.off1	= td_var_offset(rwmix[DDIR_READ]),
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is reads",
 		.def	= "50",
@@ -2735,6 +2740,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Read/write mix write",
 		.type	= FIO_OPT_INT,
 		.cb	= str_rwmix_write_cb,
+		.off1	= td_var_offset(rwmix[DDIR_WRITE]),
 		.maxval	= 100,
 		.help	= "Percentage of mixed workload that is writes",
 		.def	= "50",
@@ -3004,6 +3010,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "CPU mask",
 		.type	= FIO_OPT_INT,
 		.cb	= str_cpumask_cb,
+		.off1	= td_var_offset(cpumask),
 		.help	= "CPU affinity mask",
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_CRED,
@@ -3013,6 +3020,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "CPUs allowed",
 		.type	= FIO_OPT_STR,
 		.cb	= str_cpus_allowed_cb,
+		.off1	= td_var_offset(cpumask),
 		.help	= "Set CPUs allowed",
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_CRED,
@@ -3266,6 +3274,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Buffer pattern",
 		.type	= FIO_OPT_STR,
 		.cb	= str_buffer_pattern_cb,
+		.off1	= td_var_offset(buffer_pattern),
 		.help	= "Fill pattern for IO buffers",
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_IO_BUF,
@@ -3275,6 +3284,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Buffer compression percentage",
 		.type	= FIO_OPT_INT,
 		.cb	= str_buffer_compress_cb,
+		.off1	= td_var_offset(compress_percentage),
 		.maxval	= 100,
 		.minval	= 0,
 		.help	= "How compressible the buffer is (approximately)",
@@ -3299,6 +3309,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Dedupe percentage",
 		.type	= FIO_OPT_INT,
 		.cb	= str_dedupe_cb,
+		.off1	= td_var_offset(dedupe_percentage),
 		.maxval	= 100,
 		.minval	= 0,
 		.help	= "Percentage of buffers that are dedupable",
@@ -3469,6 +3480,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "ignore_error",
 		.type	= FIO_OPT_STR,
 		.cb	= str_ignore_error_cb,
+		.off1	= td_var_offset(ignore_error_nr),
 		.help	= "Set a specific list of errors to ignore",
 		.parent	= "rw",
 		.category = FIO_OPT_C_GENERAL,
@@ -3980,6 +3992,9 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
 		int newret = parse_option(opts_copy[i], opts[i], fio_options,
 						&o, td, dump_cmdline);
 
+		if (!newret && o)
+			fio_option_mark_set(&td->o, o);
+
 		if (opts_copy[i]) {
 			if (newret && !o) {
 				unknown++;
@@ -4026,7 +4041,18 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
 
 int fio_cmd_option_parse(struct thread_data *td, const char *opt, char *val)
 {
-	return parse_cmd_option(opt, val, fio_options, td);
+	int ret;
+
+	ret = parse_cmd_option(opt, val, fio_options, td);
+	if (!ret) {
+		struct fio_option *o;
+
+		o = find_option(fio_options, opt);
+		if (o)
+			fio_option_mark_set(&td->o, o);
+	}
+
+	return ret;
 }
 
 int fio_cmd_ioengine_option_parse(struct thread_data *td, const char *opt,
@@ -4188,3 +4214,36 @@ struct fio_option *fio_option_find(const char *name)
 	return find_option(fio_options, name);
 }
 
+int __fio_option_is_set(struct thread_options *o, unsigned int off1)
+{
+	unsigned int opt_off, index, offset;
+	struct fio_option *opt = NULL;
+	int i;
+
+	for (i = 0; fio_options[i].name; i++) {
+		if (off1 == fio_options[i].off1) {
+			opt = &fio_options[i];
+			break;
+		}
+	}
+
+	if (!opt) {
+		log_err("fio: no option found at offset %u\n", off1);
+		return 0;
+	}
+
+	opt_off = opt - &fio_options[0];
+	index = opt_off / (8 * sizeof(uint64_t));
+	offset = opt_off & ((8 * sizeof(uint64_t)) - 1);
+	return (o->set_options[index] & (1UL << offset)) != 0;
+}
+
+void fio_option_mark_set(struct thread_options *o, struct fio_option *opt)
+{
+	unsigned int opt_off, index, offset;
+
+	opt_off = opt - &fio_options[0];
+	index = opt_off / (8 * sizeof(uint64_t));
+	offset = opt_off & ((8 * sizeof(uint64_t)) - 1);
+	o->set_options[index] |= 1UL << offset;
+}

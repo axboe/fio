@@ -22,6 +22,13 @@ int set_name_idx(char *, char *, int);
 
 extern struct fio_option fio_options[FIO_MAX_OPTS];
 
+extern int __fio_option_is_set(struct thread_options *, unsigned int off);
+
+#define fio_option_is_set(__td, name)	\
+	__fio_option_is_set((__td), td_var_offset(name))
+
+extern void fio_option_mark_set(struct thread_options *, struct fio_option *);
+
 static inline int o_match(struct fio_option *o, const char *opt)
 {
 	if (!strcmp(o->name, opt))

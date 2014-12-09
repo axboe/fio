@@ -1279,8 +1279,6 @@ void option_init(struct fio_option *o)
 	if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE ||
 	    o->type == FIO_OPT_STR_MULTI)
 		return;
-	if (o->cb && (o->off1 || o->off2 || o->off3 || o->off4))
-		log_err("Option %s: both cb and offset given\n", o->name);
 }
 
 /*

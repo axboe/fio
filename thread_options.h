@@ -3,6 +3,7 @@
 
 #include "arch/arch.h"
 #include "os/os.h"
+#include "options.h"
 #include "stat.h"
 #include "gettime.h"
 #include "lib/ieee754.h"
@@ -28,10 +29,13 @@ struct bssplit {
 	uint32_t perc;
 };
 
+#define NR_OPTS_SZ	(FIO_MAX_OPTS / (8 * sizeof(uint64_t)))
+
 #define OPT_MAGIC	0x4f50544e
 
 struct thread_options {
 	int magic;
+	uint64_t set_options[NR_OPTS_SZ];
 	char *description;
 	char *name;
 	char *directory;
@@ -265,6 +269,7 @@ struct thread_options {
 #define FIO_TOP_STR_MAX		256
 
 struct thread_options_pack {
+	uint64_t set_options[NR_OPTS_SZ];
 	uint8_t description[FIO_TOP_STR_MAX];
 	uint8_t name[FIO_TOP_STR_MAX];
 	uint8_t directory[FIO_TOP_STR_MAX];

@@ -49,6 +49,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 {
 	int i, j;
 
+	memcpy(o->set_options, top->set_options, NR_OPTS_SZ * sizeof(uint64_t));
 	string_to_cpu(&o->description, top->description);
 	string_to_cpu(&o->name, top->name);
 	string_to_cpu(&o->directory, top->directory);
@@ -258,6 +259,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 {
 	int i, j;
 
+	memcpy(top->set_options, o->set_options, NR_OPTS_SZ * sizeof(uint64_t));
 	string_to_net(top->description, o->description);
 	string_to_net(top->name, o->name);
 	string_to_net(top->directory, o->directory);
