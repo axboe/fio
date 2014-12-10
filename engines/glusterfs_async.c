@@ -117,6 +117,8 @@ static int fio_gf_async_queue(struct thread_data fio_unused * td,
 		r = glfs_discard_async(g->fd, io_u->offset, io_u->xfer_buflen,
 				       gf_async_cb, io_u);
 #endif
+	else if (io_u->ddir == DDIR_DATASYNC)
+		r = glfs_fdatasync_async(g->fd, gf_async_cb, io_u);
 	else if (io_u->ddir == DDIR_SYNC)
 		r = glfs_fsync_async(g->fd, gf_async_cb, io_u);
 	else

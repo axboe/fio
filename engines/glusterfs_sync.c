@@ -41,6 +41,10 @@ static int fio_gf_queue(struct thread_data *td, struct io_u *io_u)
 		ret = glfs_read(g->fd, io_u->xfer_buf, io_u->xfer_buflen, 0);
 	else if (io_u->ddir == DDIR_WRITE)
 		ret = glfs_write(g->fd, io_u->xfer_buf, io_u->xfer_buflen, 0);
+	else if (io_u->ddir == DDIR_SYNC)
+		ret = glfs_fsync(g->fd);
+	else if (io_u->ddir == DDIR_DATASYNC)
+		ret = glfs_fdatasync(g->fd);
 	else {
 		log_err("unsupported operation.\n");
 		return -EINVAL;
