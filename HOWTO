@@ -462,23 +462,26 @@ fadvise_hint=bool By default, fio will use fadvise() to advise the kernel
 
 size=int	The total size of file io for this job. Fio will run until
 		this many bytes has been transferred, unless runtime is
-		limited by other options (such as 'runtime', for instance).
-		Unless specific nrfiles and filesize options are given,
-		fio will divide this size between the available files
-		specified by the job. If not set, fio will use the full
-		size of the given files or devices. If the files do not
-		exist, size must be given. It is also possible to give
-		size as a percentage between 1 and 100. If size=20% is
-		given, fio will use 20% of the full size of the given
-		files or devices.
+		limited by other options (such as 'runtime', for instance,
+		or increased/decreased by 'io_size'). Unless specific nrfiles
+		and filesize options are given, fio will divide this size
+		between the available files specified by the job. If not set,
+		fio will use the full size of the given files or devices.
+		If the files do not exist, size must be given. It is also
+		possible to give size as a percentage between 1 and 100. If
+		size=20% is given, fio will use 20% of the full size of the
+		given files or devices.
 
+io_size=int
 io_limit=int	Normally fio operates within the region set by 'size', which
 		means that the 'size' option sets both the region and size of
 		IO to be performed. Sometimes that is not what you want. With
 		this option, it is possible to define just the amount of IO
 		that fio should do. For instance, if 'size' is set to 20G and
-		'io_limit' is set to 5G, fio will perform IO within the first
-		20G but exit when 5G have been done.
+		'io_size' is set to 5G, fio will perform IO within the first
+		20G but exit when 5G have been done. The opposite is also
+		possible - if 'size' is set to 20G, and 'io_size' is set to
+		40G, then fio will do 40G of IO within the 0..20G region.
 
 filesize=int	Individual file sizes. May be a range, in which case fio
 		will select sizes for files at random within the given range
