@@ -432,7 +432,7 @@ static int wait_for_completions(struct thread_data *td, struct timeval *time,
 	if (full && !min_evts)
 		min_evts = 1;
 
-	if (time && (should_check_rate(td, DDIR_READ) ||
+	if (time && (__should_check_rate(td, DDIR_READ) ||
 	    __should_check_rate(td, DDIR_WRITE) ||
 	    __should_check_rate(td, DDIR_TRIM)))
 		fio_gettime(time, NULL);
