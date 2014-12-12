@@ -418,6 +418,34 @@ static void check_update_rusage(struct thread_data *td)
 	}
 }
 
+static int wait_for_completions(struct thread_data *td, struct timeval *time,
+				uint64_t *bytes_done)
+{
+	const int full = queue_full(td);
+	int min_evts = 0;
+	int ret;
+
+	/*
+	 * if the queue is full, we MUST reap at least 1 event
+	 */
+	min_evts = min(td->o.iodepth_batch_complete, td->cur_depth);
+	if (full && !min_evts)
+		min_evts = 1;
+
+	if (time && (should_check_rate(td, DDIR_READ) ||
+	    __should_check_rate(td, DDIR_WRITE) ||
+	    __should_check_rate(td, DDIR_TRIM)))
+		fio_gettime(time, NULL);
+
+	do {
+		ret = io_u_queued_complete(td, min_evts, bytes_done);
+		if (ret < 0)
+			break;
+	} while (full && (td->cur_depth > td->o.iodepth_low));
+
+	return ret;
+}
+
 /*
  * The main verify engine. Runs over the writes we previously submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
@@ -599,27 +627,9 @@ sync_done:
 		 */
 reap:
 		full = queue_full(td) || (ret == FIO_Q_BUSY && td->cur_depth);
-		if (full || !td->o.iodepth_batch_complete) {
-			min_events = min(td->o.iodepth_batch_complete,
-					 td->cur_depth);
-			/*
-			 * if the queue is full, we MUST reap at least 1 event
-			 */
-			if (full && !min_events)
-				min_events = 1;
+		if (full || !td->o.iodepth_batch_complete)
+			ret = wait_for_completions(td, NULL, bytes_done);
 
-			do {
-				/*
-				 * Reap required number of io units, if any,
-				 * and do the verification on them through
-				 * the callback handler
-				 */
-				if (io_u_queued_complete(td, min_events, bytes_done) < 0) {
-					ret = -1;
-					break;
-				}
-			} while (full && (td->cur_depth > td->o.iodepth_low));
-		}
 		if (ret < 0)
 			break;
 	}
@@ -707,7 +717,6 @@ static uint64_t do_io(struct thread_data *td)
 		(!flist_empty(&td->trim_list)) || !io_bytes_exceeded(td) ||
 		td->o.time_based) {
 		struct timeval comp_time;
-		int min_evts = 0;
 		struct io_u *io_u;
 		int ret2, full;
 		enum fio_ddir ddir;
@@ -871,28 +880,8 @@ sync_done:
 		 */
 reap:
 		full = queue_full(td) || (ret == FIO_Q_BUSY && td->cur_depth);
-		if (full || !td->o.iodepth_batch_complete) {
-			min_evts = min(td->o.iodepth_batch_complete,
-					td->cur_depth);
-			/*
-			 * if the queue is full, we MUST reap at least 1 event
-			 */
-			if (full && !min_evts)
-				min_evts = 1;
-
-			if (__should_check_rate(td, DDIR_READ) ||
-			    __should_check_rate(td, DDIR_WRITE) ||
-			    __should_check_rate(td, DDIR_TRIM))
-				fio_gettime(&comp_time, NULL);
-
-			do {
-				ret = io_u_queued_complete(td, min_evts, bytes_done);
-				if (ret < 0)
-					break;
-
-			} while (full && (td->cur_depth > td->o.iodepth_low));
-		}
-
+		if (full || !td->o.iodepth_batch_complete)
+			ret = wait_for_completions(td, &comp_time, bytes_done);
 		if (ret < 0)
 			break;
 		if (!ddir_rw_sum(bytes_done) && !(td->io_ops->flags & FIO_NOIO))
