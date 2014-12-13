@@ -572,6 +572,8 @@ struct jobs_eta *get_jobs_eta(int force, size_t *size)
 
 	*size = sizeof(*je) + THREAD_RUNSTR_SZ;
 	je = malloc(*size);
+	if (!je)
+		return NULL;
 	memset(je, 0, *size);
 
 	if (!calc_thread_status(je, force)) {
