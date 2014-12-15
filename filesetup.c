@@ -1536,8 +1536,13 @@ void free_release_files(struct thread_data *td)
 
 void fio_file_reset(struct thread_data *td, struct fio_file *f)
 {
-	f->last_pos = f->file_offset;
-	f->last_start = -1ULL;
+	int i;
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		f->last_pos[i] = f->file_offset;
+		f->last_start[i] = -1ULL;
+	}
+
 	if (f->io_axmap)
 		axmap_reset(f->io_axmap);
 	if (td->o.random_generator == FIO_RAND_GEN_LFSR)

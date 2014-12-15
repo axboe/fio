@@ -249,7 +249,7 @@ static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 	}
 
 	dprint(FD_IO, "%s: rand offset failed, last=%llu, size=%llu\n",
-			f->file_name, (unsigned long long) f->last_pos,
+			f->file_name, (unsigned long long) f->last_pos[ddir],
 			(unsigned long long) f->real_file_size);
 	return 1;
 }
@@ -261,17 +261,17 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 
 	assert(ddir_rw(ddir));
 
-	if (f->last_pos >= f->io_size + get_start_offset(td, f) &&
+	if (f->last_pos[ddir] >= f->io_size + get_start_offset(td, f) &&
 	    o->time_based)
-		f->last_pos = f->last_pos - f->io_size;
+		f->last_pos[ddir] = f->last_pos[ddir] - f->io_size;
 
-	if (f->last_pos < f->real_file_size) {
+	if (f->last_pos[ddir] < f->real_file_size) {
 		uint64_t pos;
 
-		if (f->last_pos == f->file_offset && o->ddir_seq_add < 0)
-			f->last_pos = f->real_file_size;
+		if (f->last_pos[ddir] == f->file_offset && o->ddir_seq_add < 0)
+			f->last_pos[ddir] = f->real_file_size;
 
-		pos = f->last_pos - f->file_offset;
+		pos = f->last_pos[ddir] - f->file_offset;
 		if (pos && o->ddir_seq_add) {
 			pos += o->ddir_seq_add;
 
@@ -330,8 +330,8 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 				*is_random = 0;
 			}
 		} else if (td->o.rw_seq == RW_SEQ_IDENT) {
-			if (f->last_start != -1ULL)
-				offset = f->last_start - f->file_offset;
+			if (f->last_start[ddir] != -1ULL)
+				offset = f->last_start[ddir] - f->file_offset;
 			else
 				offset = 0;
 			ret = 0;
@@ -743,7 +743,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 		 */
 		if (f->file_offset >= f->real_file_size)
 			f->file_offset = f->real_file_size - f->file_offset;
-		f->last_pos = f->file_offset;
+		f->last_pos[io_u->ddir] = f->file_offset;
 		td->io_skip_bytes += td->o.zone_skip;
 	}
 
@@ -1471,8 +1471,8 @@ struct io_u *get_io_u(struct thread_data *td)
 			goto err_put;
 		}
 
-		f->last_start = io_u->offset;
-		f->last_pos = io_u->offset + io_u->buflen;
+		f->last_start[io_u->ddir] = io_u->offset;
+		f->last_pos[io_u->ddir] = io_u->offset + io_u->buflen;
 
 		if (io_u->ddir == DDIR_WRITE) {
 			if (td->flags & TD_F_REFILL_BUFFERS) {

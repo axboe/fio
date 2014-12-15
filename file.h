@@ -88,8 +88,11 @@ struct fio_file {
 	uint64_t file_offset;
 	uint64_t io_size;
 
-	uint64_t last_pos;
-	uint64_t last_start;
+	/*
+	 * Track last end and last start of IO for a given data direction
+	 */
+	uint64_t last_pos[DDIR_RWDIR_CNT];
+	uint64_t last_start[DDIR_RWDIR_CNT];
 
 	uint64_t first_write;
 	uint64_t last_write;
