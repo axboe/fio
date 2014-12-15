@@ -77,10 +77,6 @@ struct fio_file {
 	unsigned int major, minor;
 	int fileno;
 
-	void *mmap_ptr;
-	size_t mmap_sz;
-	off_t mmap_off;
-
 	/*
 	 * size of the file, offset into file, and io size from that offset
 	 */

@@ -400,15 +400,9 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 
 	if (td->io_ops->invalidate)
 		ret = td->io_ops->invalidate(td, f);
-	else if (f->mmap_ptr) {
-		ret = posix_madvise(f->mmap_ptr, f->mmap_sz, POSIX_MADV_DONTNEED);
-#ifdef FIO_MADV_FREE
-		if (f->filetype == FIO_TYPE_BD)
-			(void) posix_madvise(f->mmap_ptr, f->mmap_sz, FIO_MADV_FREE);
-#endif
-	} else if (f->filetype == FIO_TYPE_FILE) {
+	else if (f->filetype == FIO_TYPE_FILE)
 		ret = posix_fadvise(f->fd, off, len, POSIX_FADV_DONTNEED);
-	} else if (f->filetype == FIO_TYPE_BD) {
+	else if (f->filetype == FIO_TYPE_BD) {
 		ret = blockdev_invalidate_cache(f);
 		if (ret < 0 && errno == EACCES && geteuid()) {
 			if (!root_warn) {

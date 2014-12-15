@@ -22,9 +22,16 @@
 static unsigned long mmap_map_size;
 static unsigned long mmap_map_mask;
 
+struct fio_mmap_data {
+	void *mmap_ptr;
+	size_t mmap_sz;
+	off_t mmap_off;
+};
+
 static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 			 size_t length, off_t off)
 {
+	struct fio_mmap_data *fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
 	int flags = 0;
 
 	if (td_rw(td))
@@ -37,28 +44,28 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 	} else
 		flags = PROT_READ;
 
-	f->mmap_ptr = mmap(NULL, length, flags, MAP_SHARED, f->fd, off);
-	if (f->mmap_ptr == MAP_FAILED) {
-		f->mmap_ptr = NULL;
+	fmd->mmap_ptr = mmap(NULL, length, flags, MAP_SHARED, f->fd, off);
+	if (fmd->mmap_ptr == MAP_FAILED) {
+		fmd->mmap_ptr = NULL;
 		td_verror(td, errno, "mmap");
 		goto err;
 	}
 
 	if (!td_random(td)) {
-		if (posix_madvise(f->mmap_ptr, length, POSIX_MADV_SEQUENTIAL) < 0) {
+		if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_SEQUENTIAL) < 0) {
 			td_verror(td, errno, "madvise");
 			goto err;
 		}
 	} else {
-		if (posix_madvise(f->mmap_ptr, length, POSIX_MADV_RANDOM) < 0) {
+		if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_RANDOM) < 0) {
 			td_verror(td, errno, "madvise");
 			goto err;
 		}
 	}
 
 err:
-	if (td->error && f->mmap_ptr)
-		munmap(f->mmap_ptr, length);
+	if (td->error && fmd->mmap_ptr)
+		munmap(fmd->mmap_ptr, length);
 
 	return td->error;
 }
@@ -69,19 +76,20 @@ err:
 static int fio_mmapio_prep_limited(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
+	struct fio_mmap_data *fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
 
 	if (io_u->buflen > mmap_map_size) {
 		log_err("fio: bs too big for mmap engine\n");
 		return EIO;
 	}
 
-	f->mmap_sz = mmap_map_size;
-	if (f->mmap_sz  > f->io_size)
-		f->mmap_sz = f->io_size;
+	fmd->mmap_sz = mmap_map_size;
+	if (fmd->mmap_sz  > f->io_size)
+		fmd->mmap_sz = f->io_size;
 
-	f->mmap_off = io_u->offset;
+	fmd->mmap_off = io_u->offset;
 
-	return fio_mmap_file(td, f, f->mmap_sz, f->mmap_off);
+	return fio_mmap_file(td, f, fmd->mmap_sz, fmd->mmap_off);
 }
 
 /*
@@ -90,15 +98,16 @@ static int fio_mmapio_prep_limited(struct thread_data *td, struct io_u *io_u)
 static int fio_mmapio_prep_full(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
+	struct fio_mmap_data *fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
 	int ret;
 
 	if (fio_file_partial_mmap(f))
 		return EINVAL;
 
-	f->mmap_sz = f->io_size;
-	f->mmap_off = 0;
+	fmd->mmap_sz = f->io_size;
+	fmd->mmap_off = 0;
 
-	ret = fio_mmap_file(td, f, f->mmap_sz, f->mmap_off);
+	ret = fio_mmap_file(td, f, fmd->mmap_sz, fmd->mmap_off);
 	if (ret)
 		fio_file_set_partial_mmap(f);
 
@@ -108,22 +117,23 @@ static int fio_mmapio_prep_full(struct thread_data *td, struct io_u *io_u)
 static int fio_mmapio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
+	struct fio_mmap_data *fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
 	int ret;
 
 	/*
 	 * It fits within existing mapping, use it
 	 */
-	if (io_u->offset >= f->mmap_off &&
-	    io_u->offset + io_u->buflen < f->mmap_off + f->mmap_sz)
+	if (io_u->offset >= fmd->mmap_off &&
+	    io_u->offset + io_u->buflen < fmd->mmap_off + fmd->mmap_sz)
 		goto done;
 
 	/*
 	 * unmap any existing mapping
 	 */
-	if (f->mmap_ptr) {
-		if (munmap(f->mmap_ptr, f->mmap_sz) < 0)
+	if (fmd->mmap_ptr) {
+		if (munmap(fmd->mmap_ptr, fmd->mmap_sz) < 0)
 			return errno;
-		f->mmap_ptr = NULL;
+		fmd->mmap_ptr = NULL;
 	}
 
 	if (fio_mmapio_prep_full(td, io_u)) {
@@ -134,7 +144,7 @@ static int fio_mmapio_prep(struct thread_data *td, struct io_u *io_u)
 	}
 
 done:
-	io_u->mmap_data = f->mmap_ptr + io_u->offset - f->mmap_off -
+	io_u->mmap_data = fmd->mmap_ptr + io_u->offset - fmd->mmap_off -
 				f->file_offset;
 	return 0;
 }
@@ -142,6 +152,7 @@ done:
 static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
+	struct fio_mmap_data *fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
 
 	fio_ro_check(td, io_u);
 
@@ -150,7 +161,7 @@ static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 	else if (io_u->ddir == DDIR_WRITE)
 		memcpy(io_u->mmap_data, io_u->xfer_buf, io_u->xfer_buflen);
 	else if (ddir_sync(io_u->ddir)) {
-		if (msync(f->mmap_ptr, f->mmap_sz, MS_SYNC)) {
+		if (msync(fmd->mmap_ptr, fmd->mmap_sz, MS_SYNC)) {
 			io_u->error = errno;
 			td_verror(td, io_u->error, "msync");
 		}
@@ -205,14 +216,60 @@ static int fio_mmapio_init(struct thread_data *td)
 	return 0;
 }
 
+static int fio_mmapio_open_file(struct thread_data *td, struct fio_file *f)
+{
+	struct fio_mmap_data *fmd;
+	int ret;
+
+	ret = generic_open_file(td, f);
+	if (ret)
+		return ret;
+
+	fmd = calloc(1, sizeof(*fmd));
+	if (!fmd) {
+		int fio_unused ret;
+		ret = generic_close_file(td, f);
+		return 1;
+	}
+
+	f->engine_data = (uintptr_t) fmd;
+	return 0;
+}
+
+static int fio_mmapio_close_file(struct thread_data *td, struct fio_file *f)
+{
+	struct fio_mmap_data *fmd;
+
+	fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
+	f->engine_data = 0;
+	free(fmd);
+
+	return generic_close_file(td, f);
+}
+
+static int fio_mmapio_invalidate(struct thread_data *td, struct fio_file *f)
+{
+	struct fio_mmap_data *fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
+	int ret;
+
+	ret = posix_madvise(fmd->mmap_ptr, fmd->mmap_sz, POSIX_MADV_DONTNEED);
+#ifdef FIO_MADV_FREE
+	if (f->filetype == FIO_TYPE_BD)
+		(void) posix_madvise(fmd->mmap_ptr, fmd->mmap_sz, FIO_MADV_FREE);
+#endif
+
+	return ret;
+}
+
 static struct ioengine_ops ioengine = {
 	.name		= "mmap",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_mmapio_init,
 	.prep		= fio_mmapio_prep,
 	.queue		= fio_mmapio_queue,
-	.open_file	= generic_open_file,
-	.close_file	= generic_close_file,
+	.open_file	= fio_mmapio_open_file,
+	.close_file	= fio_mmapio_close_file,
+	.invalidate	= fio_mmapio_invalidate,
 	.get_file_size	= generic_get_file_size,
 	.flags		= FIO_SYNCIO | FIO_NOEXTEND,
 };
