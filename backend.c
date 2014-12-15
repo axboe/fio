@@ -2109,7 +2109,7 @@ static void *helper_thread_main(void *data)
 		gettimeofday(&tv, NULL);
 		ts.tv_sec = tv.tv_sec + sec;
 		ts.tv_nsec = (tv.tv_usec * 1000) + nsec;
-		if (ts.tv_nsec > 1000000000ULL) {
+		if (ts.tv_nsec >= 1000000000ULL) {
 			ts.tv_nsec -= 1000000000ULL;
 			ts.tv_sec++;
 		}
