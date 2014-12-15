@@ -124,6 +124,10 @@ struct fio_file {
 	struct disk_util *du;
 };
 
+#define FILE_ENG_DATA(f)	((void *) (uintptr_t) (f)->engine_data)
+#define FILE_SET_ENG_DATA(f, data)	\
+	((f)->engine_data = (uintptr_t) (data))
+
 struct file_name {
 	struct flist_head list;
 	char *filename;

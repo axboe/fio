@@ -36,8 +36,8 @@ struct fas_data {
 
 static int queue(struct thread_data *td, struct io_u *io_u)
 {
+	struct fas_data *d = FILE_ENG_DATA(io_u->file);
 	int rc;
-	struct fas_data *d = (struct fas_data *) io_u->file->engine_data;
 
 	if (io_u->ddir != DDIR_WRITE) {
 		td_vmsg(td, EINVAL, "only writes supported", "io_u->ddir");
@@ -94,7 +94,7 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 		goto error;
 	}
 	d->nvm_handle = -1;
-	f->engine_data = (uintptr_t) d;
+	FILE_SET_ENG_DATA(f, d);
 
 	rc = generic_open_file(td, f);
 
@@ -144,19 +144,19 @@ free_engine_data:
 	free(d);
 error:
 	f->fd = -1;
-	f->engine_data = 0;
+	FILE_SET_ENG_DATA(f, NULL);
 	goto out;
 }
 
 static int close_file(struct thread_data *td, struct fio_file *f)
 {
-	struct fas_data *d = (struct fas_data *) f->engine_data;
+	struct fas_data *d = FILE_ENG_DATA(f);
 
 	if (d) {
 		if (d->nvm_handle != -1)
 			nvm_release_handle(d->nvm_handle);
 		free(d);
-		f->engine_data = 0;
+		FILE_SET_ENG_DATA(f, NULL);
 	}
 
 	return generic_close_file(td, f);

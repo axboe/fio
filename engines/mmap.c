@@ -31,7 +31,7 @@ struct fio_mmap_data {
 static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 			 size_t length, off_t off)
 {
-	struct fio_mmap_data *fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
+	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
 	int flags = 0;
 
 	if (td_rw(td))
@@ -76,7 +76,7 @@ err:
 static int fio_mmapio_prep_limited(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
-	struct fio_mmap_data *fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
+	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
 
 	if (io_u->buflen > mmap_map_size) {
 		log_err("fio: bs too big for mmap engine\n");
@@ -98,7 +98,7 @@ static int fio_mmapio_prep_limited(struct thread_data *td, struct io_u *io_u)
 static int fio_mmapio_prep_full(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
-	struct fio_mmap_data *fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
+	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
 	int ret;
 
 	if (fio_file_partial_mmap(f))
@@ -117,7 +117,7 @@ static int fio_mmapio_prep_full(struct thread_data *td, struct io_u *io_u)
 static int fio_mmapio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
-	struct fio_mmap_data *fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
+	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
 	int ret;
 
 	/*
@@ -152,7 +152,7 @@ done:
 static int fio_mmapio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
-	struct fio_mmap_data *fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
+	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
 
 	fio_ro_check(td, io_u);
 
@@ -232,16 +232,15 @@ static int fio_mmapio_open_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	f->engine_data = (uintptr_t) fmd;
+	FILE_SET_ENG_DATA(f, fmd);
 	return 0;
 }
 
 static int fio_mmapio_close_file(struct thread_data *td, struct fio_file *f)
 {
-	struct fio_mmap_data *fmd;
+	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
 
-	fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
-	f->engine_data = 0;
+	FILE_SET_ENG_DATA(f, NULL);
 	free(fmd);
 
 	return generic_close_file(td, f);
@@ -249,7 +248,7 @@ static int fio_mmapio_close_file(struct thread_data *td, struct fio_file *f)
 
 static int fio_mmapio_invalidate(struct thread_data *td, struct fio_file *f)
 {
-	struct fio_mmap_data *fmd = (struct fio_mmap_data *) (uintptr_t) f->engine_data;
+	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
 	int ret;
 
 	ret = posix_madvise(fmd->mmap_ptr, fmd->mmap_sz, POSIX_MADV_DONTNEED);
