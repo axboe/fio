@@ -1044,12 +1044,16 @@ int init_random_map(struct thread_data *td)
 
 			seed = td->rand_seeds[FIO_RAND_BLOCK_OFF];
 
-			if (!lfsr_init(&f->lfsr, blocks, seed, 0))
+			if (!lfsr_init(&f->lfsr, blocks, seed, 0)) {
+				fio_file_set_lfsr(f);
 				continue;
+			}
 		} else if (!td->o.norandommap) {
 			f->io_axmap = axmap_new(blocks);
-			if (f->io_axmap)
+			if (f->io_axmap) {
+				fio_file_set_axmap(f);
 				continue;
+			}
 		} else if (td->o.norandommap)
 			continue;
 
@@ -1104,8 +1108,10 @@ void close_and_free_files(struct thread_data *td)
 
 		sfree(f->file_name);
 		f->file_name = NULL;
-		axmap_free(f->io_axmap);
-		f->io_axmap = NULL;
+		if (fio_file_axmap(f)) {
+			axmap_free(f->io_axmap);
+			f->io_axmap = NULL;
+		}
 		sfree(f);
 	}
 
@@ -1537,9 +1543,9 @@ void fio_file_reset(struct thread_data *td, struct fio_file *f)
 		f->last_start[i] = -1ULL;
 	}
 
-	if (f->io_axmap)
+	if (fio_file_axmap(f))
 		axmap_reset(f->io_axmap);
-	if (td->o.random_generator == FIO_RAND_GEN_LFSR)
+	else if (fio_file_lfsr(f))
 		lfsr_reset(&f->lfsr, td->rand_seeds[FIO_RAND_BLOCK_OFF]);
 }
 

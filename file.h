@@ -27,6 +27,8 @@ enum fio_file_flags {
 	FIO_FILE_size_known	= 1 << 4,	/* size has been set */
 	FIO_FILE_hashed		= 1 << 5,	/* file is on hash */
 	FIO_FILE_partial_mmap	= 1 << 6,	/* can't do full mmap */
+	FIO_FILE_axmap		= 1 << 7,	/* uses axmap */
+	FIO_FILE_lfsr		= 1 << 8,	/* lfsr is used */
 };
 
 enum file_lock_mode {
@@ -107,11 +109,12 @@ struct fio_file {
 	};
 
 	/*
-	 * block map for random io
+	 * block map or LFSR for random io
 	 */
-	struct axmap *io_axmap;
-
-	struct fio_lfsr lfsr;
+	union {
+		struct axmap *io_axmap;
+		struct fio_lfsr lfsr;
+	};
 
 	/*
 	 * Used for zipf random distribution
@@ -154,6 +157,8 @@ FILE_FLAG_FNS(done);
 FILE_FLAG_FNS(size_known);
 FILE_FLAG_FNS(hashed);
 FILE_FLAG_FNS(partial_mmap);
+FILE_FLAG_FNS(axmap);
+FILE_FLAG_FNS(lfsr);
 #undef FILE_FLAG_FNS
 
 /*

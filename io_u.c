@@ -100,6 +100,8 @@ static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	} else {
 		uint64_t off = 0;
 
+		assert(fio_file_lfsr(f));
+
 		if (lfsr_next(&f->lfsr, &off))
 			return 1;
 
