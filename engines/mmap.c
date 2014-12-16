@@ -247,6 +247,7 @@ static int fio_mmapio_close_file(struct thread_data *td, struct fio_file *f)
 
 	FILE_SET_ENG_DATA(f, NULL);
 	free(fmd);
+	fio_file_clear_partial_mmap(f);
 
 	return generic_close_file(td, f);
 }
