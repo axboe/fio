@@ -20,9 +20,8 @@ static unsigned long inv_cycles_per_usec;
 int tsc_reliable = 0;
 
 struct tv_valid {
-	struct timeval last_tv;
 	uint64_t last_cycles;
-	int last_tv_valid;
+	uint64_t last_tv_valid;
 };
 #ifdef CONFIG_TLS_THREAD
 static __thread struct tv_valid static_tv_valid;
@@ -136,7 +135,7 @@ static int fill_clock_gettime(struct timespec *ts)
 }
 #endif
 
-static void *__fio_gettime(struct timeval *tp)
+static void __fio_gettime(struct timeval *tp)
 {
 	struct tv_valid *tv;
 
@@ -171,12 +170,11 @@ static void *__fio_gettime(struct timeval *tp)
 		uint64_t usecs, t;
 
 		t = get_cpu_clock();
-		if (tv && t < tv->last_cycles) {
-			dprint(FD_TIME, "CPU clock going back in time\n");
-			t = tv->last_cycles;
-		} else if (tv)
-			tv->last_cycles = t;
+		if (t < tv->last_cycles && tv->last_tv_valid)
+			log_err("fio: CPU clock going back in time\n");
 
+		tv->last_cycles = t;
+		tv->last_tv_valid = 1;
 #ifdef ARCH_CPU_CLOCK_CYCLES_PER_USEC
 		usecs = t / ARCH_CPU_CLOCK_CYCLES_PER_USEC;
 #else
@@ -191,8 +189,6 @@ static void *__fio_gettime(struct timeval *tp)
 		log_err("fio: invalid clock source %d\n", fio_clock_source);
 		break;
 	}
-
-	return tv;
 }
 
 #ifdef FIO_DEBUG_TIME
@@ -201,8 +197,6 @@ void fio_gettime(struct timeval *tp, void *caller)
 void fio_gettime(struct timeval *tp, void fio_unused *caller)
 #endif
 {
-	struct tv_valid *tv;
-
 #ifdef FIO_DEBUG_TIME
 	if (!caller)
 		caller = __builtin_return_address(0);
@@ -214,23 +208,7 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 		return;
 	}
 
-	tv = __fio_gettime(tp);
-
-	/*
-	 * If Linux is using the tsc clock on non-synced processors,
-	 * sometimes time can appear to drift backwards. Fix that up.
-	 */
-	if (tv) {
-		if (tv->last_tv_valid) {
-			if (tp->tv_sec < tv->last_tv.tv_sec)
-				tp->tv_sec = tv->last_tv.tv_sec;
-			else if (tv->last_tv.tv_sec == tp->tv_sec &&
-				 tp->tv_usec < tv->last_tv.tv_usec)
-				tp->tv_usec = tv->last_tv.tv_usec;
-		}
-		tv->last_tv_valid = 1;
-		memcpy(&tv->last_tv, tp, sizeof(*tp));
-	}
+	__fio_gettime(tp);
 }
 
 #if defined(ARCH_HAVE_CPU_CLOCK) && !defined(ARCH_CPU_CLOCK_CYCLES_PER_USEC)
@@ -336,8 +314,10 @@ void fio_local_clock_init(int is_thread)
 	struct tv_valid *t;
 
 	t = calloc(1, sizeof(*t));
-	if (pthread_setspecific(tv_tls_key, t))
+	if (pthread_setspecific(tv_tls_key, t)) {
 		log_err("fio: can't set TLS key\n");
+		assert(0);
+	}
 }
 
 static void kill_tv_tls_key(void *data)
