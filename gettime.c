@@ -21,7 +21,8 @@ int tsc_reliable = 0;
 
 struct tv_valid {
 	uint64_t last_cycles;
-	uint64_t last_tv_valid;
+	int last_tv_valid;
+	int warned;
 };
 #ifdef CONFIG_TLS_THREAD
 static __thread struct tv_valid static_tv_valid;
@@ -170,8 +171,11 @@ static void __fio_gettime(struct timeval *tp)
 		uint64_t usecs, t;
 
 		t = get_cpu_clock();
-		if (t < tv->last_cycles && tv->last_tv_valid)
+		if (t < tv->last_cycles && tv->last_tv_valid &&
+		    !tv->warned) {
 			log_err("fio: CPU clock going back in time\n");
+			tv->warned = 1;
+		}
 
 		tv->last_cycles = t;
 		tv->last_tv_valid = 1;
