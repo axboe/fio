@@ -207,10 +207,8 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 
 	gtod_log_caller(caller);
 #endif
-	if (fio_unlikely(fio_tv)) {
-		memcpy(tp, fio_tv, sizeof(*tp));
+	if (fio_unlikely(fio_gettime_offload(tp)))
 		return;
-	}
 
 	__fio_gettime(tp);
 }

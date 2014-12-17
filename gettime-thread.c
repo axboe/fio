@@ -20,8 +20,15 @@ void fio_gtod_init(void)
 
 static void fio_gtod_update(void)
 {
-	if (fio_tv)
-		gettimeofday(fio_tv, NULL);
+	if (fio_tv) {
+		struct timeval __tv;
+
+		gettimeofday(&__tv, NULL);
+		fio_tv->tv_sec = __tv.tv_sec;
+		write_barrier();
+		fio_tv->tv_usec = __tv.tv_usec;
+		write_barrier();
+	}
 }
 
 static void *gtod_thread_main(void *data)
