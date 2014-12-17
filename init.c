@@ -758,6 +758,12 @@ static int fixup_options(struct thread_data *td)
 		ret = 1;
 	}
 
+	if (fio_option_is_set(o, gtod_cpu)) {
+		fio_gtod_init();
+		fio_gtod_set_cpu(o->gtod_cpu);
+		fio_gtod_offload = 1;
+	}
+
 	return ret;
 }
 
@@ -2383,12 +2389,6 @@ int parse_options(int argc, char *argv[])
 		}
 
 		return 0;
-	}
-
-	if (def_thread.o.gtod_offload) {
-		fio_gtod_init();
-		fio_gtod_offload = 1;
-		fio_gtod_cpu = def_thread.o.gtod_cpu;
 	}
 
 	if (output_format == FIO_OUTPUT_NORMAL)

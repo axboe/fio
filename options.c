@@ -1079,16 +1079,6 @@ static int str_gtod_reduce_cb(void *data, int *il)
 	return 0;
 }
 
-static int str_gtod_cpu_cb(void *data, long long *il)
-{
-	struct thread_data *td = data;
-	int val = *il;
-
-	td->o.gtod_cpu = val;
-	td->o.gtod_offload = 1;
-	return 0;
-}
-
 static int str_size_cb(void *data, unsigned long long *__val)
 {
 	struct thread_data *td = data;
@@ -3404,7 +3394,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "gtod_cpu",
 		.lname	= "Dedicated gettimeofday() CPU",
 		.type	= FIO_OPT_INT,
-		.cb	= str_gtod_cpu_cb,
+		.off1	= td_var_offset(gtod_cpu),
 		.help	= "Set up dedicated gettimeofday() thread on this CPU",
 		.verify	= gtod_cpu_verify,
 		.category = FIO_OPT_C_GENERAL,

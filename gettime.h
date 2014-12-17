@@ -38,4 +38,6 @@ static inline int fio_gettime_offload(struct timeval *tv)
 	return 1;
 }
 
+extern void fio_gtod_set_cpu(unsigned int cpu);
+
 #endif

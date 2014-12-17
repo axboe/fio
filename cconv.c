@@ -219,7 +219,6 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->unified_rw_rep = le32_to_cpu(top->unified_rw_rep);
 	o->gtod_reduce = le32_to_cpu(top->gtod_reduce);
 	o->gtod_cpu = le32_to_cpu(top->gtod_cpu);
-	o->gtod_offload = le32_to_cpu(top->gtod_offload);
 	o->clocksource = le32_to_cpu(top->clocksource);
 	o->no_stall = le32_to_cpu(top->no_stall);
 	o->trim_percentage = le32_to_cpu(top->trim_percentage);
@@ -381,7 +380,6 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->unified_rw_rep = cpu_to_le32(o->unified_rw_rep);
 	top->gtod_reduce = cpu_to_le32(o->gtod_reduce);
 	top->gtod_cpu = cpu_to_le32(o->gtod_cpu);
-	top->gtod_offload = cpu_to_le32(o->gtod_offload);
 	top->clocksource = cpu_to_le32(o->clocksource);
 	top->no_stall = cpu_to_le32(o->no_stall);
 	top->trim_percentage = cpu_to_le32(o->trim_percentage);

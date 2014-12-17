@@ -8,11 +8,14 @@
 
 struct timeval *fio_tv = NULL;
 int fio_gtod_offload = 0;
-int fio_gtod_cpu = -1;
+static os_cpu_mask_t fio_gtod_cpumask;
 static pthread_t gtod_thread;
 
 void fio_gtod_init(void)
 {
+	if (fio_tv)
+		return;
+
 	fio_tv = smalloc(sizeof(struct timeval));
 	if (!fio_tv)
 		log_err("fio: smalloc pool exhausted\n");
@@ -31,10 +34,16 @@ static void fio_gtod_update(void)
 	}
 }
 
+struct gtod_cpu_data {
+	struct fio_mutex *mutex;
+	unsigned int cpu;
+};
+
 static void *gtod_thread_main(void *data)
 {
 	struct fio_mutex *mutex = data;
 
+	fio_setaffinity(gettid(), fio_gtod_cpumask);
 	fio_mutex_up(mutex);
 
 	/*
@@ -84,4 +93,7 @@ err:
 	return ret;
 }
 
-
+void fio_gtod_set_cpu(unsigned int cpu)
+{
+	fio_cpu_set(&fio_gtod_cpumask, cpu);
+}
