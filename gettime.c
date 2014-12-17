@@ -26,10 +26,12 @@ struct tv_valid {
 	int last_tv_valid;
 	int warned;
 };
+#ifdef ARCH_HAVE_CPU_CLOCK
 #ifdef CONFIG_TLS_THREAD
 static __thread struct tv_valid static_tv_valid;
 #else
 static pthread_key_t tv_tls_key;
+#endif
 #endif
 
 enum fio_cs fio_clock_source = FIO_PREFERRED_CLOCK_SOURCE;
@@ -137,14 +139,6 @@ static int fill_clock_gettime(struct timespec *ts)
 
 static void __fio_gettime(struct timeval *tp)
 {
-	struct tv_valid *tv;
-
-#ifdef CONFIG_TLS_THREAD
-	tv = &static_tv_valid;
-#else
-	tv = pthread_getspecific(tv_tls_key);
-#endif
-
 	switch (fio_clock_source) {
 #ifdef CONFIG_GETTIMEOFDAY
 	case CS_GTOD:
@@ -168,15 +162,20 @@ static void __fio_gettime(struct timeval *tp)
 #ifdef ARCH_HAVE_CPU_CLOCK
 	case CS_CPUCLOCK: {
 		uint64_t usecs, t;
+		struct tv_valid *tv;
+
+#ifdef CONFIG_TLS_THREAD
+		tv = &static_tv_valid;
+#else
+		tv = pthread_getspecific(tv_tls_key);
+#endif
 
 		t = get_cpu_clock();
 		if (t < cycles_start && !cycles_wrap)
 			cycles_wrap = 1;
-		else if (cycles_wrap && t >= cycles_start) {
-			if (!tv->warned) {
-				log_err("fio: double CPU clock wrap\n");
-				tv->warned = 1;
-			}
+		else if (cycles_wrap && t >= cycles_start && !tv->warned) {
+			log_err("fio: double CPU clock wrap\n");
+			tv->warned = 1;
 		}
 
 		t -= cycles_start;
