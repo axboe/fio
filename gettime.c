@@ -16,6 +16,7 @@
 #if defined(ARCH_HAVE_CPU_CLOCK) && !defined(ARCH_CPU_CLOCK_CYCLES_PER_USEC)
 static unsigned long cycles_per_usec;
 static unsigned long inv_cycles_per_usec;
+static uint64_t max_cycles_for_mult;
 #endif
 int tsc_reliable = 0;
 
@@ -182,7 +183,10 @@ static void __fio_gettime(struct timeval *tp)
 #ifdef ARCH_CPU_CLOCK_CYCLES_PER_USEC
 		usecs = t / ARCH_CPU_CLOCK_CYCLES_PER_USEC;
 #else
-		usecs = (t * inv_cycles_per_usec) / 16777216UL;
+		if (t < max_cycles_for_mult)
+			usecs = (t * inv_cycles_per_usec) / 16777216UL;
+		else
+			usecs = t / cycles_per_usec;
 #endif
 		tp->tv_sec = usecs / 1000000;
 		tp->tv_usec = usecs % 1000000;
@@ -296,6 +300,7 @@ static int calibrate_cpu_clock(void)
 
 	cycles_per_usec = avg;
 	inv_cycles_per_usec = 16777216UL / cycles_per_usec;
+	max_cycles_for_mult = ~0ULL / inv_cycles_per_usec;
 	dprint(FD_TIME, "inv_cycles_per_usec=%lu\n", inv_cycles_per_usec);
 	return 0;
 }
