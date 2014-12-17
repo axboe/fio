@@ -896,8 +896,7 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 		log_info(";%3.2f%%", io_u_lat_m[i]);
 
 	/* disk util stats, if any */
-	if (is_backend)
-		show_disk_util(1, NULL);
+	show_disk_util(1, NULL);
 
 	/* Additional output if continue_on_error set - default off*/
 	if (ts->continue_on_error)
