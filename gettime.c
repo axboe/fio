@@ -17,6 +17,7 @@
 static unsigned long cycles_per_usec;
 static unsigned long inv_cycles_per_usec;
 static uint64_t max_cycles_for_mult;
+static unsigned long long cycles_start, cycles_wrap;
 #endif
 int tsc_reliable = 0;
 
@@ -169,12 +170,16 @@ static void __fio_gettime(struct timeval *tp)
 		uint64_t usecs, t;
 
 		t = get_cpu_clock();
-		if (t < tv->last_cycles && tv->last_tv_valid &&
-		    !tv->warned) {
-			log_err("fio: CPU clock going back in time\n");
-			tv->warned = 1;
+		if (t < cycles_start && !cycles_wrap)
+			cycles_wrap = 1;
+		else if (cycles_wrap && t >= cycles_start) {
+			if (!tv->warned) {
+				log_err("fio: double CPU clock wrap\n");
+				tv->warned = 1;
+			}
 		}
 
+		t -= cycles_start;
 		tv->last_cycles = t;
 		tv->last_tv_valid = 1;
 #ifdef ARCH_CPU_CLOCK_CYCLES_PER_USEC
@@ -299,6 +304,8 @@ static int calibrate_cpu_clock(void)
 	inv_cycles_per_usec = 16777216UL / cycles_per_usec;
 	max_cycles_for_mult = ~0ULL / inv_cycles_per_usec;
 	dprint(FD_TIME, "inv_cycles_per_usec=%lu\n", inv_cycles_per_usec);
+	cycles_start = get_cpu_clock();
+	dprint(FD_TIME, "cycles_start=%llu\n", cycles_start);
 	return 0;
 }
 #else
