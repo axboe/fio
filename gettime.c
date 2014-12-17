@@ -65,7 +65,7 @@ static struct gtod_log *find_hash(void *caller)
 	return NULL;
 }
 
-static struct gtod_log *find_log(void *caller)
+static void inc_caller(void *caller)
 {
 	struct gtod_log *log = find_hash(caller);
 
@@ -81,16 +81,13 @@ static struct gtod_log *find_log(void *caller)
 		flist_add_tail(&log->list, &hash[h]);
 	}
 
-	return log;
+	log->calls++;
 }
 
 static void gtod_log_caller(void *caller)
 {
-	if (gtod_inited) {
-		struct gtod_log *log = find_log(caller);
-
-		log->calls++;
-	}
+	if (gtod_inited)
+		inc_caller(caller);
 }
 
 static void fio_exit fio_dump_gtod(void)
