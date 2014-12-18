@@ -24,6 +24,9 @@ static unsigned int max_depth = 256;
 static int output_ascii = 1;
 static char *filename;
 
+static char **add_opts;
+static int n_add_opts;
+
 /*
  * Collapse defaults
  */
@@ -752,6 +755,10 @@ static int __output_p_fio(struct btrace_pid *p, unsigned long *ios)
 		printf("\n");
 	}
 
+	if (n_add_opts)
+		for (i = 0; i < n_add_opts; i++)
+			printf("%s\n", add_opts[i]);
+
 	printf("\n");
 	return 0;
 }
@@ -1020,6 +1027,7 @@ static int usage(char *argv[])
 	log_err("\t-c\tCollapse \"identical\" jobs (def=%u)\n", collapse_entries);
 	log_err("\t-u\tDepth difference for collapse (def=%u)\n", depth_diff);
 	log_err("\t-x\tRandom difference for collapse (def=%u)\n", random_diff);
+	log_err("\t-a\tAdditional fio option to add to job file\n");
 	return 1;
 }
 
@@ -1075,7 +1083,7 @@ int main(int argc, char *argv[])
 	if (argc < 2)
 		return usage(argv);
 
-	while ((c = getopt(argc, argv, "t:n:fd:r:RD:c:u:x:")) != -1) {
+	while ((c = getopt(argc, argv, "t:n:fd:r:RD:c:u:x:a:")) != -1) {
 		switch (c) {
 		case 'R':
 			set_rate = 1;
@@ -1106,6 +1114,11 @@ int main(int argc, char *argv[])
 			break;
 		case 'x':
 			random_diff = atoi(optarg);
+			break;
+		case 'a':
+			add_opts = realloc(add_opts, (n_add_opts + 1) * sizeof(char *));
+			add_opts[n_add_opts] = strdup(optarg);
+			n_add_opts++;
 			break;
 		case '?':
 		default:
