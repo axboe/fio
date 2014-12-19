@@ -95,5 +95,7 @@ err:
 
 void fio_gtod_set_cpu(unsigned int cpu)
 {
+#ifdef FIO_HAVE_CPU_AFFINITY
 	fio_cpu_set(&fio_gtod_cpumask, cpu);
+#endif
 }
