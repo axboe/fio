@@ -8,8 +8,10 @@
 
 struct timeval *fio_tv = NULL;
 int fio_gtod_offload = 0;
-static os_cpu_mask_t fio_gtod_cpumask;
 static pthread_t gtod_thread;
+#ifdef FIO_HAVE_CPU_AFFINITY
+static os_cpu_mask_t fio_gtod_cpumask;
+#endif
 
 void fio_gtod_init(void)
 {
