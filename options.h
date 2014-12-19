@@ -26,9 +26,11 @@ extern int __fio_option_is_set(struct thread_options *, unsigned int off);
 
 #define fio_option_is_set(__td, name)					\
 ({									\
-	int __r = __fio_option_is_set((__td), td_var_offset(name));	\
+	const unsigned int off = td_var_offset(name);			\
+	int __r = __fio_option_is_set((__td), off);			\
 	if (__r == -1) {						\
-		log_err("fio: wanted %s\n", __fio_stringify(name));	\
+		dprint(FD_PARSE, "option %s/%u not found in map\n",	\
+				__fio_stringify(name), off);		\
 		__r = 0;						\
 	}								\
 	__r;								\

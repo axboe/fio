@@ -4204,10 +4204,8 @@ int __fio_option_is_set(struct thread_options *o, unsigned int off1)
 		}
 	}
 
-	if (!opt) {
-		log_err("fio: no option found at offset %u\n", off1);
+	if (!opt)
 		return -1;
-	}
 
 	opt_off = opt - &fio_options[0];
 	index = opt_off / (8 * sizeof(uint64_t));
