@@ -24,8 +24,15 @@ extern struct fio_option fio_options[FIO_MAX_OPTS];
 
 extern int __fio_option_is_set(struct thread_options *, unsigned int off);
 
-#define fio_option_is_set(__td, name)	\
-	__fio_option_is_set((__td), td_var_offset(name))
+#define fio_option_is_set(__td, name)					\
+({									\
+	int __r = __fio_option_is_set((__td), td_var_offset(name));	\
+	if (__r == -1) {						\
+		log_err("fio: wanted %s\n", __fio_stringify(name));	\
+		__r = 0;						\
+	}								\
+	__r;								\
+})
 
 extern void fio_option_mark_set(struct thread_options *, struct fio_option *);
 
