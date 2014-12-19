@@ -18,10 +18,15 @@
 #include "fio_time.h"
 #include "gettime.h"
 
-void fio_mutex_remove(struct fio_mutex *mutex)
+void __fio_mutex_remove(struct fio_mutex *mutex)
 {
 	assert(mutex->magic == FIO_MUTEX_MAGIC);
 	pthread_cond_destroy(&mutex->cond);
+}
+
+void fio_mutex_remove(struct fio_mutex *mutex)
+{
+	__fio_mutex_remove(mutex);
 	munmap((void *) mutex, sizeof(*mutex));
 }
 

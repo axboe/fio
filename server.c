@@ -1431,6 +1431,7 @@ fail:
 	*datap = data;
 
 	sfree(rep->data);
+	__fio_mutex_remove(&rep->lock);
 	sfree(rep);
 	return 0;
 }

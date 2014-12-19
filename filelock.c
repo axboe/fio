@@ -144,10 +144,11 @@ void fio_unlock_file(const char *fname)
 
 	ff = fio_hash_find(hash);
 	if (ff) {
-		ff->references--;
+		int refs = --ff->references;
 		fio_mutex_up(&ff->lock);
-		if (!ff->references) {
+		if (!refs) {
 			flist_del(&ff->list);
+			__fio_mutex_remove(&ff->lock);
 			sfree(ff);
 		}
 	} else
