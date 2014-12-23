@@ -4191,26 +4191,52 @@ struct fio_option *fio_option_find(const char *name)
 	return find_option(fio_options, name);
 }
 
-int __fio_option_is_set(struct thread_options *o, unsigned int off1)
+static struct fio_option *find_next_opt(struct thread_options *o,
+					struct fio_option *from,
+					unsigned int off1)
 {
-	unsigned int opt_off, index, offset;
-	struct fio_option *opt = NULL;
-	int i;
+	struct fio_option *opt;
 
-	for (i = 0; fio_options[i].name; i++) {
-		if (off1 == fio_options[i].off1) {
-			opt = &fio_options[i];
+	if (!from)
+		from = &fio_options[0];
+	else
+		from++;
+
+	opt = NULL;
+	do {
+		if (off1 == from->off1) {
+			opt = from;
 			break;
 		}
-	}
+		from++;
+	} while (from->name);
 
-	if (!opt)
-		return -1;
+	return opt;
+}
+
+static int opt_is_set(struct thread_options *o, struct fio_option *opt)
+{
+	unsigned int opt_off, index, offset;
 
 	opt_off = opt - &fio_options[0];
 	index = opt_off / (8 * sizeof(uint64_t));
 	offset = opt_off & ((8 * sizeof(uint64_t)) - 1);
 	return (o->set_options[index] & (1UL << offset)) != 0;
+}
+
+int __fio_option_is_set(struct thread_options *o, unsigned int off1)
+{
+	struct fio_option *opt, *next;
+
+	next = NULL;
+	while ((opt = find_next_opt(o, next, off1)) != NULL) {
+		if (opt_is_set(o, opt))
+			return 1;
+
+		next = opt;
+	}
+
+	return 0;
 }
 
 void fio_option_mark_set(struct thread_options *o, struct fio_option *opt)
