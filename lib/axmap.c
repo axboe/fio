@@ -369,7 +369,7 @@ static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 	return (uint64_t) -1ULL;
 }
 
-uint64_t axmap_first_free(struct axmap *axmap)
+static uint64_t axmap_first_free(struct axmap *axmap)
 {
 	if (firstfree_valid(axmap))
 		return axmap->first_free;
