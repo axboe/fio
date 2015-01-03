@@ -113,11 +113,6 @@ static int __bloom_check(struct bloom *b, uint32_t *data, unsigned int nwords,
 	return was_set == N_HASHES;
 }
 
-int bloom_check(struct bloom *b, uint32_t *data, unsigned int nwords)
-{
-	return __bloom_check(b, data, nwords, 0);
-}
-
 int bloom_set(struct bloom *b, uint32_t *data, unsigned int nwords)
 {
 	return __bloom_check(b, data, nwords, 1);

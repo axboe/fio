@@ -7,7 +7,6 @@ struct bloom;
 
 struct bloom *bloom_new(uint64_t entries);
 void bloom_free(struct bloom *b);
-int bloom_check(struct bloom *b, uint32_t *data, unsigned int nwords);
 int bloom_set(struct bloom *b, uint32_t *data, unsigned int nwords);
 
 #endif
