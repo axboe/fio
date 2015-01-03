@@ -884,18 +884,6 @@ out:
 	return ret;
 }
 
-static int str_lockfile_cb(void *data, const char fio_unused *str)
-{
-	struct thread_data *td = data;
-
-	if (td->files_index) {
-		log_err("fio: lockfile= option must precede filename=\n");
-		return 1;
-	}
-
-	return 0;
-}
-
 static int str_opendir_cb(void *data, const char fio_unused *str)
 {
 	struct thread_data *td = data;
@@ -1343,7 +1331,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent	= "filename",
 		.hide	= 0,
 		.def	= "none",
-		.cb	= str_lockfile_cb,
 		.category = FIO_OPT_C_FILE,
 		.group	= FIO_OPT_G_FILENAME,
 		.posval = {
