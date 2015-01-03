@@ -23,7 +23,6 @@
 #include "../arch/arch.h"
 #include "axmap.h"
 #include "../smalloc.h"
-#include "../mutex.h"
 #include "../minmax.h"
 
 #if BITS_PER_LONG == 64
@@ -46,7 +45,6 @@ struct axmap_level {
 };
 
 struct axmap {
-	struct fio_mutex lock;
 	unsigned int nr_levels;
 	struct axmap_level *levels;
 	uint64_t first_free;
@@ -65,8 +63,6 @@ void axmap_reset(struct axmap *axmap)
 {
 	int i;
 
-	fio_mutex_down(&axmap->lock);
-
 	for (i = 0; i < axmap->nr_levels; i++) {
 		struct axmap_level *al = &axmap->levels[i];
 
@@ -74,7 +70,6 @@ void axmap_reset(struct axmap *axmap)
 	}
 
 	axmap->first_free = 0;
-	fio_mutex_up(&axmap->lock);
 }
 
 void axmap_free(struct axmap *axmap)
@@ -88,7 +83,6 @@ void axmap_free(struct axmap *axmap)
 		sfree(axmap->levels[i].map);
 
 	sfree(axmap->levels);
-	__fio_mutex_remove(&axmap->lock);
 	sfree(axmap);
 }
 
@@ -100,8 +94,6 @@ struct axmap *axmap_new(unsigned long nr_bits)
 	axmap = smalloc(sizeof(*axmap));
 	if (!axmap)
 		return NULL;
-
-	__fio_mutex_init(&axmap->lock, FIO_MUTEX_UNLOCKED);
 
 	levels = 1;
 	i = (nr_bits + BLOCKS_PER_UNIT - 1) >> UNIT_SHIFT;
@@ -134,8 +126,6 @@ err:
 			sfree(axmap->levels[i].map);
 
 	sfree(axmap->levels);
-	__fio_mutex_remove(&axmap->lock);
-	sfree(axmap);
 	return NULL;
 }
 
@@ -297,9 +287,7 @@ void axmap_set(struct axmap *axmap, uint64_t bit_nr)
 {
 	struct axmap_set_data data = { .nr_bits = 1, };
 
-	fio_mutex_down(&axmap->lock);
 	__axmap_set(axmap, bit_nr, &data);
-	fio_mutex_up(&axmap->lock);
 }
 
 unsigned int axmap_set_nr(struct axmap *axmap, uint64_t bit_nr, unsigned int nr_bits)
@@ -335,14 +323,8 @@ static int axmap_isset_fn(struct axmap_level *al, unsigned long offset,
 
 int axmap_isset(struct axmap *axmap, uint64_t bit_nr)
 {
-	if (bit_nr <= axmap->nr_bits) {
-		int ret;
-
-		fio_mutex_down(&axmap->lock);
-		ret = axmap_handler_topdown(axmap, bit_nr, axmap_isset_fn, NULL);
-		fio_mutex_up(&axmap->lock);
-		return ret;
-	}
+	if (bit_nr <= axmap->nr_bits)
+		return axmap_handler_topdown(axmap, bit_nr, axmap_isset_fn, NULL);
 
 	return 0;
 }
@@ -389,17 +371,11 @@ static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 
 uint64_t axmap_first_free(struct axmap *axmap)
 {
-	uint64_t ret;
-
 	if (firstfree_valid(axmap))
 		return axmap->first_free;
 
-	fio_mutex_down(&axmap->lock);
-	ret = axmap_find_first_free(axmap, axmap->nr_levels - 1, 0);
-	axmap->first_free = ret;
-	fio_mutex_up(&axmap->lock);
-
-	return ret;
+	axmap->first_free = axmap_find_first_free(axmap, axmap->nr_levels - 1, 0);
+	return axmap->first_free;
 }
 
 struct axmap_next_free_data {
@@ -435,17 +411,11 @@ uint64_t axmap_next_free(struct axmap *axmap, uint64_t bit_nr)
 	struct axmap_next_free_data data = { .level = -1U, .bit = bit_nr, };
 	uint64_t ret;
 
-	fio_mutex_down(&axmap->lock);
+	if (firstfree_valid(axmap) && bit_nr < axmap->first_free)
+		return axmap->first_free;
 
-	if (firstfree_valid(axmap) && bit_nr < axmap->first_free) {
-		ret = axmap->first_free;
-		goto done;
-	}
-
-	if (!axmap_handler(axmap, bit_nr, axmap_next_free_fn, &data)) {
-		ret = axmap_first_free(axmap);
-		goto done;
-	}
+	if (!axmap_handler(axmap, bit_nr, axmap_next_free_fn, &data))
+		return axmap_first_free(axmap);
 
 	assert(data.level != -1U);
 
@@ -455,12 +425,8 @@ uint64_t axmap_next_free(struct axmap *axmap, uint64_t bit_nr)
 	 * find the first free one, the map is practically full.
 	 */
 	ret = axmap_find_first_free(axmap, data.level, data.offset);
-	if (ret != -1ULL) {
-done:
-		fio_mutex_up(&axmap->lock);
+	if (ret != -1ULL)
 		return ret;
-	}
 
-	ret = axmap_first_free(axmap);
-	goto done;
+	return axmap_first_free(axmap);
 }

@@ -5,7 +5,6 @@
 #include <unistd.h>
 #include <inttypes.h>
 
-#include "../mutex.h"
 #include "../lib/lfsr.h"
 #include "../lib/axmap.h"
 
