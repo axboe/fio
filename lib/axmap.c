@@ -387,17 +387,15 @@ static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 	return (uint64_t) -1ULL;
 }
 
-uint64_t axmap_first_free(struct axmap *axmap)
+static uint64_t axmap_first_free(struct axmap *axmap)
 {
 	uint64_t ret;
 
 	if (firstfree_valid(axmap))
 		return axmap->first_free;
 
-	fio_mutex_down(&axmap->lock);
 	ret = axmap_find_first_free(axmap, axmap->nr_levels - 1, 0);
 	axmap->first_free = ret;
-	fio_mutex_up(&axmap->lock);
 
 	return ret;
 }
