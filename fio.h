@@ -642,6 +642,9 @@ enum {
 	FIO_RAND_DIST_PARETO,
 };
 
+#define FIO_DEF_ZIPF		1.1
+#define FIO_DEF_PARETO		0.2
+
 enum {
 	FIO_RAND_GEN_TAUSWORTHE = 0,
 	FIO_RAND_GEN_LFSR,

@@ -715,9 +715,9 @@ static int str_random_distribution_cb(void *data, const char *str)
 		return 0;
 
 	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
-		val = 1.1;
+		val = FIO_DEF_ZIPF;
 	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
-		val = 0.2;
+		val = FIO_DEF_PARETO;
 	else
 		return 0;
 
