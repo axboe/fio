@@ -1036,8 +1036,14 @@ static char *make_filename(char *buf, size_t buf_size,struct thread_options *o,
 				ret = snprintf(dst, dst_left, "%s", jobname);
 				if (ret < 0)
 					break;
-				dst += ret;
-				dst_left -= ret;
+				else if (ret > dst_left) {
+					log_err("fio: truncated filename\n");
+					dst += dst_left;
+					dst_left = 0;
+				} else {
+					dst += ret;
+					dst_left -= ret;
+				}
 				break;
 				}
 			case FPRE_JOBNUM: {
@@ -1046,8 +1052,14 @@ static char *make_filename(char *buf, size_t buf_size,struct thread_options *o,
 				ret = snprintf(dst, dst_left, "%d", jobnum);
 				if (ret < 0)
 					break;
-				dst += ret;
-				dst_left -= ret;
+				else if (ret > dst_left) {
+					log_err("fio: truncated filename\n");
+					dst += dst_left;
+					dst_left = 0;
+				} else {
+					dst += ret;
+					dst_left -= ret;
+				}
 				break;
 				}
 			case FPRE_FILENUM: {
@@ -1056,8 +1068,14 @@ static char *make_filename(char *buf, size_t buf_size,struct thread_options *o,
 				ret = snprintf(dst, dst_left, "%d", filenum);
 				if (ret < 0)
 					break;
-				dst += ret;
-				dst_left -= ret;
+				else if (ret > dst_left) {
+					log_err("fio: truncated filename\n");
+					dst += dst_left;
+					dst_left = 0;
+				} else {
+					dst += ret;
+					dst_left -= ret;
+				}
 				break;
 				}
 			default:
