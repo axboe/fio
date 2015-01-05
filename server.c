@@ -333,7 +333,7 @@ static uint64_t alloc_reply(uint64_t tag, uint16_t opcode)
 
 	reply = calloc(1, sizeof(*reply));
 	INIT_FLIST_HEAD(&reply->list);
-	gettimeofday(&reply->tv, NULL);
+	fio_gettime(&reply->tv, NULL);
 	reply->saved_tag = tag;
 	reply->opcode = opcode;
 
