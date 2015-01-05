@@ -380,6 +380,7 @@ static const char *server_name(struct fio_client *client, char *buf,
 static void probe_client(struct fio_client *client)
 {
 	struct cmd_client_probe_pdu pdu;
+	const char *sname;
 	uint64_t tag;
 	char buf[64];
 
@@ -391,7 +392,9 @@ static void probe_client(struct fio_client *client)
 	pdu.flags = 0;
 #endif
 
-	strcpy((char *) pdu.server, server_name(client, buf, sizeof(buf)));
+	sname = server_name(client, buf, sizeof(buf));
+	memset(pdu.server, 0, sizeof(pdu.server));
+	strncpy((char *) pdu.server, sname, sizeof(pdu.server) - 1);
 
 	fio_net_send_cmd(client->fd, FIO_NET_CMD_PROBE, &pdu, sizeof(pdu), &tag, &client->cmd_list);
 }
