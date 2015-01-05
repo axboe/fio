@@ -122,7 +122,7 @@ static int fio_gf_async_queue(struct thread_data fio_unused * td,
 	else if (io_u->ddir == DDIR_SYNC)
 		r = glfs_fsync_async(g->fd, gf_async_cb, io_u);
 	else
-		r = -EINVAL;
+		r = EINVAL;
 
 	if (r) {
 		log_err("glfs queue failed.\n");
