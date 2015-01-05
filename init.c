@@ -2276,12 +2276,18 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			break;
 			}
 		case 'W':
+			if (trigger_file)
+				free(trigger_file);
 			trigger_file = strdup(optarg);
 			break;
 		case 'H':
+			if (trigger_cmd)
+				free(trigger_cmd);
 			trigger_cmd = strdup(optarg);
 			break;
 		case 'J':
+			if (trigger_remote_cmd)
+				free(trigger_remote_cmd);
 			trigger_remote_cmd = strdup(optarg);
 			break;
 		case 'B':
