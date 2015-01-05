@@ -1341,7 +1341,8 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 		s->rand.s[1] = cpu_to_le32(td->random_state.s2);
 		s->rand.s[2] = cpu_to_le32(td->random_state.s3);
 		s->rand.s[3] = 0;
-		strncpy((char *) s->name, td->o.name, sizeof(s->name));
+		s->name[sizeof(s->name) - 1] = '\0';
+		strncpy((char *) s->name, td->o.name, sizeof(s->name) - 1);
 		next = io_list_next(s);
 	}
 
