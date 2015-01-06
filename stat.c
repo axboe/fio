@@ -504,7 +504,7 @@ static void show_thread_status_normal(struct thread_stat *ts,
 	unsigned long runtime;
 	double io_u_dist[FIO_IO_U_MAP_NR];
 	time_t time_p;
-	char time_buf[64];
+	char time_buf[32];
 
 	if (!ddir_rw_sum(ts->io_bytes) && !ddir_rw_sum(ts->total_io_u))
 		return;
@@ -1350,7 +1350,7 @@ void __show_run_stats(void)
 	if (output_format == FIO_OUTPUT_NORMAL)
 		log_info("\n");
 	else if (output_format == FIO_OUTPUT_JSON) {
-		char time_buf[64];
+		char time_buf[32];
 		time_t time_p;
 
 		time(&time_p);
