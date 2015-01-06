@@ -254,7 +254,7 @@ static unsigned long get_cycles_per_usec(void)
 static int calibrate_cpu_clock(void)
 {
 	double delta, mean, S;
-	uint64_t avg, cycles[NR_TIME_ITERS];
+	uint64_t minc, maxc, avg, cycles[NR_TIME_ITERS];
 	int i, samples;
 
 	cycles[0] = get_cycles_per_usec();
@@ -277,9 +277,13 @@ static int calibrate_cpu_clock(void)
 
 	S = sqrt(S / (NR_TIME_ITERS - 1.0));
 
-	samples = avg = 0;
+	minc = -1ULL;
+	maxc = samples = avg = 0;
 	for (i = 0; i < NR_TIME_ITERS; i++) {
 		double this = cycles[i];
+
+		minc = min(cycles[i], minc);
+		maxc = max(cycles[i], maxc);
 
 		if ((fmax(this, mean) - fmin(this, mean)) > S)
 			continue;
@@ -296,8 +300,12 @@ static int calibrate_cpu_clock(void)
 
 	avg /= samples;
 	avg = (avg + 5) / 10;
+	minc /= 10;
+	maxc /= 10;
 	dprint(FD_TIME, "avg: %llu\n", (unsigned long long) avg);
-	dprint(FD_TIME, "mean=%f, S=%f\n", mean, S);
+	dprint(FD_TIME, "min=%llu, max=%llu, mean=%f, S=%f\n",
+			(unsigned long long) minc,
+			(unsigned long long) maxc, mean, S);
 
 	cycles_per_usec = avg;
 	inv_cycles_per_usec = 16777216UL / cycles_per_usec;
