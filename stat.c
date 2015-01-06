@@ -1189,7 +1189,6 @@ void __show_run_stats(void)
 	int unit_base_warned = 0;
 	struct json_object *root = NULL;
 	struct json_array *array = NULL;
-
 	runstats = malloc(sizeof(struct group_run_stats) * (groupid + 1));
 
 	for (i = 0; i < groupid + 1; i++)
@@ -1351,8 +1350,18 @@ void __show_run_stats(void)
 	if (output_format == FIO_OUTPUT_NORMAL)
 		log_info("\n");
 	else if (output_format == FIO_OUTPUT_JSON) {
+		char time_buf[64];
+		time_t time_p;
+
+		time(&time_p);
+		os_ctime_r((const time_t *) &time_p, time_buf,
+				sizeof(time_buf));
+		time_buf[strlen(time_buf) - 1] = '\0';
+
 		root = json_create_object();
 		json_object_add_value_string(root, "fio version", fio_version_string);
+		json_object_add_value_int(root, "timestamp", time_p);
+		json_object_add_value_string(root, "time", time_buf);
 		array = json_create_array();
 		json_object_add_value_array(root, "jobs", array);
 	}
