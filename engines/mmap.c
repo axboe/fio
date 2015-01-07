@@ -62,6 +62,16 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 			goto err;
 		}
 	}
+	if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_DONTNEED) < 0) {
+		td_verror(td, errno, "madvise");
+		goto err;
+	}
+
+#ifdef FIO_MADV_FREE
+	if (f->filetype == FIO_TYPE_BD)
+		(void) posix_madvise(fmd->mmap_ptr, fmd->mmap_sz, FIO_MADV_FREE);
+#endif
+
 
 err:
 	if (td->error && fmd->mmap_ptr)
@@ -252,20 +262,6 @@ static int fio_mmapio_close_file(struct thread_data *td, struct fio_file *f)
 	return generic_close_file(td, f);
 }
 
-static int fio_mmapio_invalidate(struct thread_data *td, struct fio_file *f)
-{
-	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
-	int ret;
-
-	ret = posix_madvise(fmd->mmap_ptr, fmd->mmap_sz, POSIX_MADV_DONTNEED);
-#ifdef FIO_MADV_FREE
-	if (f->filetype == FIO_TYPE_BD)
-		(void) posix_madvise(fmd->mmap_ptr, fmd->mmap_sz, FIO_MADV_FREE);
-#endif
-
-	return ret;
-}
-
 static struct ioengine_ops ioengine = {
 	.name		= "mmap",
 	.version	= FIO_IOOPS_VERSION,
@@ -274,7 +270,6 @@ static struct ioengine_ops ioengine = {
 	.queue		= fio_mmapio_queue,
 	.open_file	= fio_mmapio_open_file,
 	.close_file	= fio_mmapio_close_file,
-	.invalidate	= fio_mmapio_invalidate,
 	.get_file_size	= generic_get_file_size,
 	.flags		= FIO_SYNCIO | FIO_NOEXTEND,
 };
