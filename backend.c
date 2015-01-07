@@ -2104,18 +2104,11 @@ static void *helper_thread_main(void *data)
 		uint64_t sec = DISK_UTIL_MSEC / 1000;
 		uint64_t nsec = (DISK_UTIL_MSEC % 1000) * 1000000;
 		struct timespec ts;
-
-#if defined(CONFIG_CLOCK_MONOTONIC)
-		clock_gettime(CLOCK_MONOTONIC, &ts);
-		ts.tv_sec += sec;
-		ts.tv_nsec += nsec;
-#else
 		struct timeval tv;
 
 		gettimeofday(&tv, NULL);
 		ts.tv_sec = tv.tv_sec + sec;
 		ts.tv_nsec = (tv.tv_usec * 1000) + nsec;
-#endif
 
 		if (ts.tv_nsec >= 1000000000ULL) {
 			ts.tv_nsec -= 1000000000ULL;
