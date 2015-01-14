@@ -15,7 +15,6 @@ ioengine=rbd
 clientname=admin
 pool=rbd
 rbdname=fio_test
-invalidate=0	# mandatory
 rw=randwrite
 bs=4k
 
