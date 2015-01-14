@@ -62,6 +62,8 @@ static struct json_object *root = NULL;
 static struct json_array *clients_array = NULL;
 static struct json_array *du_array = NULL;
 
+static int error_clients;
+
 #define FIO_CLIENT_HASH_BITS	7
 #define FIO_CLIENT_HASH_SZ	(1 << FIO_CLIENT_HASH_BITS)
 #define FIO_CLIENT_HASH_MASK	(FIO_CLIENT_HASH_SZ - 1)
@@ -175,6 +177,9 @@ void fio_put_client(struct fio_client *client)
 
 	if (!client->did_stat)
 		sum_stat_clients--;
+
+	if (client->error)
+		error_clients++;
 
 	free(client);
 }
@@ -1616,6 +1621,7 @@ static int fio_check_clients_timed_out(void)
 		else
 			log_err("fio: client %s timed out\n", client->hostname);
 
+		client->error = ETIMEDOUT;
 		remove_client(client);
 		ret = 1;
 	}
@@ -1709,5 +1715,5 @@ int fio_handle_clients(struct client_ops *ops)
 	fio_client_json_fini();
 
 	free(pfds);
-	return retval;
+	return retval || error_clients;
 }
