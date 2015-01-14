@@ -22,7 +22,6 @@
 
 #include "../arch/arch.h"
 #include "axmap.h"
-#include "../smalloc.h"
 #include "../minmax.h"
 
 #if BITS_PER_LONG == 64
@@ -80,10 +79,10 @@ void axmap_free(struct axmap *axmap)
 		return;
 
 	for (i = 0; i < axmap->nr_levels; i++)
-		sfree(axmap->levels[i].map);
+		free(axmap->levels[i].map);
 
-	sfree(axmap->levels);
-	sfree(axmap);
+	free(axmap->levels);
+	free(axmap);
 }
 
 struct axmap *axmap_new(unsigned long nr_bits)
@@ -91,7 +90,7 @@ struct axmap *axmap_new(unsigned long nr_bits)
 	struct axmap *axmap;
 	unsigned int i, levels;
 
-	axmap = smalloc(sizeof(*axmap));
+	axmap = malloc(sizeof(*axmap));
 	if (!axmap)
 		return NULL;
 
@@ -103,7 +102,7 @@ struct axmap *axmap_new(unsigned long nr_bits)
 	}
 
 	axmap->nr_levels = levels;
-	axmap->levels = smalloc(axmap->nr_levels * sizeof(struct axmap_level));
+	axmap->levels = malloc(axmap->nr_levels * sizeof(struct axmap_level));
 	axmap->nr_bits = nr_bits;
 
 	for (i = 0; i < axmap->nr_levels; i++) {
@@ -111,7 +110,7 @@ struct axmap *axmap_new(unsigned long nr_bits)
 
 		al->level = i;
 		al->map_size = (nr_bits + BLOCKS_PER_UNIT - 1) >> UNIT_SHIFT;
-		al->map = smalloc(al->map_size * sizeof(unsigned long));
+		al->map = malloc(al->map_size * sizeof(unsigned long));
 		if (!al->map)
 			goto err;
 
@@ -123,9 +122,9 @@ struct axmap *axmap_new(unsigned long nr_bits)
 err:
 	for (i = 0; i < axmap->nr_levels; i++)
 		if (axmap->levels[i].map)
-			sfree(axmap->levels[i].map);
+			free(axmap->levels[i].map);
 
-	sfree(axmap->levels);
+	free(axmap->levels);
 	return NULL;
 }
 
