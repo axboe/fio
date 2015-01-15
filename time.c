@@ -9,25 +9,29 @@ static unsigned long ns_granularity;
 /*
  * busy looping version for the last few usec
  */
-void usec_spin(unsigned int usec)
+uint64_t usec_spin(unsigned int usec)
 {
 	struct timeval start;
+	uint64_t t;
 
 	fio_gettime(&start, NULL);
-	while (utime_since_now(&start) < usec)
+	while ((t = utime_since_now(&start)) < usec)
 		nop;
+
+	return t;
 }
 
-void usec_sleep(struct thread_data *td, unsigned long usec)
+uint64_t usec_sleep(struct thread_data *td, unsigned long usec)
 {
 	struct timespec req;
 	struct timeval tv;
+	uint64_t t = 0;
 
 	do {
 		unsigned long ts = usec;
 
 		if (usec < ns_granularity) {
-			usec_spin(usec);
+			t += usec_spin(usec);
 			break;
 		}
 
@@ -46,11 +50,14 @@ void usec_sleep(struct thread_data *td, unsigned long usec)
 			break;
 
 		ts = utime_since_now(&tv);
+		t += ts;
 		if (ts >= usec)
 			break;
 
 		usec -= ts;
 	} while (!td->terminate);
+
+	return t;
 }
 
 uint64_t time_since_genesis(void)

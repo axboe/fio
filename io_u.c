@@ -529,6 +529,12 @@ void io_u_quiesce(struct thread_data *td)
 	 * io's that have been actually submitted to an async engine,
 	 * and cur_depth is meaningless for sync engines.
 	 */
+	if (td->io_u_queued || td->cur_depth) {
+		int fio_unused ret;
+
+		ret = td_io_commit(td);
+	}
+
 	while (td->io_u_in_flight) {
 		int fio_unused ret;
 
@@ -539,7 +545,6 @@ void io_u_quiesce(struct thread_data *td)
 static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 {
 	enum fio_ddir odir = ddir ^ 1;
-	struct timeval t;
 	long usec;
 
 	assert(ddir_rw(ddir));
@@ -574,9 +579,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 
 	io_u_quiesce(td);
 
-	fio_gettime(&t, NULL);
-	usec_sleep(td, usec);
-	usec = utime_since_now(&t);
+	usec = usec_sleep(td, usec);
 
 	td->rate_pending_usleep[ddir] -= usec;
 
