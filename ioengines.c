@@ -303,6 +303,11 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	unlock_file(td, io_u->file);
 
+	if (ret == FIO_Q_BUSY && ddir_rw(acct_ddir(io_u))) {
+		td->io_issues[acct_ddir(io_u)]--;
+		td->io_issue_bytes[acct_ddir(io_u)] -= io_u->xfer_buflen;
+	}
+
 	/*
 	 * If an error was seen and the io engine didn't propagate it
 	 * back to 'td', do so.
