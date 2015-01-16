@@ -472,6 +472,7 @@ static int verify_io_u_sha256(struct verify_header *hdr, struct vcont *vc)
 
 	fio_sha256_init(&sha256_ctx);
 	fio_sha256_update(&sha256_ctx, p, hdr->len - hdr_size(hdr));
+	fio_sha256_final(&sha256_ctx);
 
 	if (!memcmp(vh->sha256, sha256_ctx.buf, sizeof(sha256)))
 		return 0;
@@ -497,6 +498,7 @@ static int verify_io_u_sha1(struct verify_header *hdr, struct vcont *vc)
 
 	fio_sha1_init(&sha1_ctx);
 	fio_sha1_update(&sha1_ctx, p, hdr->len - hdr_size(hdr));
+	fio_sha1_final(&sha1_ctx);
 
 	if (!memcmp(vh->sha1, sha1_ctx.H, sizeof(sha1)))
 		return 0;
@@ -627,6 +629,7 @@ static int verify_io_u_md5(struct verify_header *hdr, struct vcont *vc)
 
 	fio_md5_init(&md5_ctx);
 	fio_md5_update(&md5_ctx, p, hdr->len - hdr_size(hdr));
+	fio_md5_final(&md5_ctx);
 
 	if (!memcmp(vh->md5_digest, md5_ctx.hash, sizeof(hash)))
 		return 0;
@@ -893,6 +896,7 @@ static void fill_sha256(struct verify_header *hdr, void *p, unsigned int len)
 
 	fio_sha256_init(&sha256_ctx);
 	fio_sha256_update(&sha256_ctx, p, len);
+	fio_sha256_final(&sha256_ctx);
 }
 
 static void fill_sha1(struct verify_header *hdr, void *p, unsigned int len)
@@ -904,6 +908,7 @@ static void fill_sha1(struct verify_header *hdr, void *p, unsigned int len)
 
 	fio_sha1_init(&sha1_ctx);
 	fio_sha1_update(&sha1_ctx, p, len);
+	fio_sha1_final(&sha1_ctx);
 }
 
 static void fill_crc7(struct verify_header *hdr, void *p, unsigned int len)
@@ -950,6 +955,7 @@ static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
 
 	fio_md5_init(&md5_ctx);
 	fio_md5_update(&md5_ctx, p, len);
+	fio_md5_final(&md5_ctx);
 }
 
 static void populate_hdr(struct thread_data *td, struct io_u *io_u,
