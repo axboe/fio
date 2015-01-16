@@ -1540,10 +1540,12 @@ int verify_state_should_stop(struct thread_data *td, struct io_u *io_u)
 		return 0;
 
 	/*
-	 * If we're not into the window of issues - depth yet, continue
+	 * If we're not into the window of issues - depth yet, continue. If
+	 * issue is shorter than depth, do check.
 	 */
-	if (td->io_blocks[DDIR_READ] < s->depth ||
-	    s->numberio - td->io_blocks[DDIR_READ] > s->depth)
+	if ((td->io_blocks[DDIR_READ] < s->depth ||
+	    s->numberio - td->io_blocks[DDIR_READ] > s->depth) &&
+	    s->numberio > s->depth)
 		return 0;
 
 	/*
