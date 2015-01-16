@@ -667,13 +667,13 @@ static int io_bytes_exceeded(struct thread_data *td)
 	unsigned long long bytes, limit;
 
 	if (td_rw(td))
-		bytes = td->this_io_bytes[DDIR_READ] + td->this_io_bytes[DDIR_WRITE];
+		bytes = td->io_issue_bytes[DDIR_READ] + td->io_issue_bytes[DDIR_WRITE];
 	else if (td_write(td))
-		bytes = td->this_io_bytes[DDIR_WRITE];
+		bytes = td->io_issue_bytes[DDIR_WRITE];
 	else if (td_read(td))
-		bytes = td->this_io_bytes[DDIR_READ];
+		bytes = td->io_issue_bytes[DDIR_READ];
 	else
-		bytes = td->this_io_bytes[DDIR_TRIM];
+		bytes = td->io_issue_bytes[DDIR_TRIM];
 
 	if (td->o.io_limit)
 		limit = td->o.io_limit;

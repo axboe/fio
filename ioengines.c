@@ -294,8 +294,10 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 					sizeof(struct timeval));
 	}
 
-	if (ddir_rw(acct_ddir(io_u)))
+	if (ddir_rw(acct_ddir(io_u))) {
 		td->io_issues[acct_ddir(io_u)]++;
+		td->io_issue_bytes[acct_ddir(io_u)] += io_u->xfer_buflen;
+	}
 
 	ret = td->io_ops->queue(td, io_u);
 

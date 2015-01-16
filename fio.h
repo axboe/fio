@@ -235,7 +235,15 @@ struct thread_data {
 	uint64_t total_io_size;
 	uint64_t fill_device_size;
 
+	/*
+	 * Issue side
+	 */
 	uint64_t io_issues[DDIR_RWDIR_CNT];
+	uint64_t io_issue_bytes[DDIR_RWDIR_CNT];
+
+	/*
+	 * Completions
+	 */
 	uint64_t io_blocks[DDIR_RWDIR_CNT];
 	uint64_t this_io_blocks[DDIR_RWDIR_CNT];
 	uint64_t io_bytes[DDIR_RWDIR_CNT];
