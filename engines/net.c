@@ -484,6 +484,9 @@ static void store_udp_seq(struct netio_data *nd, struct io_u *io_u)
 {
 	struct udp_seq *us;
 
+	if (io_u->xfer_buflen < sizeof(*us))
+		return;
+
 	us = io_u->xfer_buf + io_u->xfer_buflen - sizeof(*us);
 	us->magic = cpu_to_le64((uint64_t) FIO_UDP_SEQ_MAGIC);
 	us->bs = cpu_to_le64((uint64_t) io_u->xfer_buflen);
@@ -495,6 +498,9 @@ static void verify_udp_seq(struct thread_data *td, struct netio_data *nd,
 {
 	struct udp_seq *us;
 	uint64_t seq;
+
+	if (io_u->xfer_buflen < sizeof(*us))
+		return;
 
 	if (nd->seq_off)
 		return;
