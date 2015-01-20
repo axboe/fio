@@ -165,6 +165,8 @@ for opt do
   ;;
   --enable-libhdfs) libhdfs="yes"
   ;;
+  --disable-shm) output_sym "CONFIG_NO_SHM"
+  ;;
   --help)
     show_help="yes"
     ;;
