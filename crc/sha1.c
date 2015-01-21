@@ -55,7 +55,7 @@ void fio_sha1_update(struct fio_sha1_ctx *ctx, const void *data,
 		memcpy(ctx->W, data, len);
 }
 
-void fio_sha1_final(unsigned char hashout[20], struct fio_sha1_ctx *ctx)
+void fio_sha1_final(struct fio_sha1_ctx *ctx)
 {
 	static const unsigned char pad[64] = { 0x80 };
 	unsigned int padlen[2];
@@ -69,11 +69,6 @@ void fio_sha1_final(unsigned char hashout[20], struct fio_sha1_ctx *ctx)
 	i = ctx->size & 63;
 	fio_sha1_update(ctx, pad, 1+ (63 & (55 - i)));
 	fio_sha1_update(ctx, padlen, 8);
-
-	/* Output hash
-	 */
-	for (i = 0; i < 5; i++)
-		((unsigned int *)hashout)[i] = htonl(ctx->H[i]);
 }
 
 #if defined(__i386__) || defined(__x86_64__)

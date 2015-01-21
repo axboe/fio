@@ -694,6 +694,9 @@ void show_disk_util(int terse, struct json_object *parent)
 	struct flist_head *entry;
 	struct disk_util *du;
 
+	if (!disk_util_mutex)
+		return;
+
 	fio_mutex_down(disk_util_mutex);
 
 	if (flist_empty(&disk_list)) {

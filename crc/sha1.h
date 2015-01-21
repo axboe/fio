@@ -15,6 +15,6 @@ struct fio_sha1_ctx {
 
 void fio_sha1_init(struct fio_sha1_ctx *);
 void fio_sha1_update(struct fio_sha1_ctx *, const void *dataIn, unsigned long len);
-void fio_sha1_final(unsigned char hashout[20], struct fio_sha1_ctx *);
+void fio_sha1_final(struct fio_sha1_ctx *);
 
 #endif

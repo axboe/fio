@@ -111,8 +111,10 @@ static void t_sha1(struct test_type *t, void *buf, size_t size)
 
 	fio_sha1_init(&ctx);
 
-	for (i = 0; i < NR_CHUNKS; i++)
+	for (i = 0; i < NR_CHUNKS; i++) {
 		fio_sha1_update(&ctx, buf, size);
+		fio_sha1_final(&ctx);
+	}
 }
 
 static void t_sha256(struct test_type *t, void *buf, size_t size)
