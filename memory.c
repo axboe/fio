@@ -63,6 +63,7 @@ int fio_pin_memory(struct thread_data *td)
 
 static int alloc_mem_shm(struct thread_data *td, unsigned int total_mem)
 {
+#ifndef CONFIG_NO_SHM
 	int flags = IPC_CREAT | S_IRUSR | S_IWUSR;
 
 	if (td->o.mem_type == MEM_SHMHUGE) {
@@ -104,15 +105,21 @@ static int alloc_mem_shm(struct thread_data *td, unsigned int total_mem)
 	}
 
 	return 0;
+#else
+	log_err("fio: shm not supported\n");
+	return 1;
+#endif
 }
 
 static void free_mem_shm(struct thread_data *td)
 {
+#ifndef CONFIG_NO_SHM
 	struct shmid_ds sbuf;
 
 	dprint(FD_MEM, "shmdt/ctl %d %p\n", td->shm_id, td->orig_buffer);
 	shmdt(td->orig_buffer);
 	shmctl(td->shm_id, IPC_RMID, &sbuf);
+#endif
 }
 
 static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
