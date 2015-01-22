@@ -506,6 +506,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		if (!is_time && o->is_time)
 			is_time = o->is_time;
 
+		tmp[sizeof(tmp) - 1] = '\0';
 		strncpy(tmp, ptr, sizeof(tmp) - 1);
 		p = strchr(tmp, ',');
 		if (p)
@@ -705,6 +706,7 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 		char tmp[128];
 		char *p1, *p2;
 
+		tmp[sizeof(tmp) - 1] = '\0';
 		strncpy(tmp, ptr, sizeof(tmp) - 1);
 
 		/* Handle bsrange with separate read,write values: */
