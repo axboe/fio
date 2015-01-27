@@ -68,6 +68,9 @@ static uint64_t last_block(struct thread_data *td, struct fio_file *f,
 	if (td->o.zone_range)
 		max_size = td->o.zone_range;
 
+	if (td->o.min_bs[ddir] > td->o.ba[ddir])
+		max_size -= td->o.min_bs[ddir] - td->o.ba[ddir];
+
 	max_blocks = max_size / (uint64_t) td->o.ba[ddir];
 	if (!max_blocks)
 		return 0;
