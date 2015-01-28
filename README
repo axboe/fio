@@ -311,7 +311,7 @@ to load a local file as well. This is done by using --remote-config:
 
 fio --client=server --remote-config /path/to/file.fio
 
-Then the fio serer will open this local (to the server) job file instead
+Then the fio server will open this local (to the server) job file instead
 of being passed one from the client.
 
 
