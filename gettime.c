@@ -481,7 +481,9 @@ static void *clock_thread_fn(void *data)
 	fio_cpu_set(&cpu_mask, t->cpu);
 
 	if (fio_setaffinity(gettid(), cpu_mask) == -1) {
-		log_err("clock setaffinity failed\n");
+		int __err = errno;
+
+		log_err("clock setaffinity failed: %s\n", strerror(__err));
 		return (void *) 1;
 	}
 
