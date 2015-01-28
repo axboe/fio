@@ -477,14 +477,20 @@ static void *clock_thread_fn(void *data)
 	uint32_t last_seq;
 	int i;
 
-	memset(&cpu_mask, 0, sizeof(cpu_mask));
+	if (fio_cpuset_init(&cpu_mask)) {
+		int __err;
+
+		log_err("clock cpuset init failed: %s\n", strerror(__err));
+		goto err_out;
+	}
+
 	fio_cpu_set(&cpu_mask, t->cpu);
 
 	if (fio_setaffinity(gettid(), cpu_mask) == -1) {
 		int __err = errno;
 
 		log_err("clock setaffinity failed: %s\n", strerror(__err));
-		return (void *) 1;
+		goto err;
 	}
 
 	pthread_mutex_lock(&t->lock);
@@ -520,9 +526,13 @@ static void *clock_thread_fn(void *data)
 	 * indefinitely. Check for that and return failure.
 	 */
 	if (!t->entries[i - 1].tsc && !t->entries[0].tsc)
-		return (void *) 1;
+		goto err;
 
 	return NULL;
+err:
+	fio_cpuset_exit(&cpu_mask);
+err_out:
+	return (void *) 1;
 }
 
 static int clock_cmp(const void *p1, const void *p2)
