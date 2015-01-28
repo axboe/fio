@@ -662,7 +662,7 @@ static unsigned int exceeds_number_ios(struct thread_data *td)
 	return number_ios >= td->o.number_ios;
 }
 
-static int io_bytes_exceeded(struct thread_data *td)
+static int io_issue_bytes_exceeded(struct thread_data *td)
 {
 	unsigned long long bytes, limit;
 
@@ -674,6 +674,27 @@ static int io_bytes_exceeded(struct thread_data *td)
 		bytes = td->io_issue_bytes[DDIR_READ];
 	else
 		bytes = td->io_issue_bytes[DDIR_TRIM];
+
+	if (td->o.io_limit)
+		limit = td->o.io_limit;
+	else
+		limit = td->o.size;
+
+	return bytes >= limit || exceeds_number_ios(td);
+}
+
+static int io_complete_bytes_exceeded(struct thread_data *td)
+{
+	unsigned long long bytes, limit;
+
+	if (td_rw(td))
+		bytes = td->this_io_bytes[DDIR_READ] + td->this_io_bytes[DDIR_WRITE];
+	else if (td_write(td))
+		bytes = td->this_io_bytes[DDIR_WRITE];
+	else if (td_read(td))
+		bytes = td->this_io_bytes[DDIR_READ];
+	else
+		bytes = td->this_io_bytes[DDIR_TRIM];
 
 	if (td->o.io_limit)
 		limit = td->o.io_limit;
@@ -714,7 +735,7 @@ static uint64_t do_io(struct thread_data *td)
 		total_bytes += td->o.size;
 
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
-		(!flist_empty(&td->trim_list)) || !io_bytes_exceeded(td) ||
+		(!flist_empty(&td->trim_list)) || !io_issue_bytes_exceeded(td) ||
 		td->o.time_based) {
 		struct timeval comp_time;
 		struct io_u *io_u;
@@ -1231,7 +1252,7 @@ static uint64_t do_dry_run(struct thread_data *td)
 	td_set_runstate(td, TD_RUNNING);
 
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
-		(!flist_empty(&td->trim_list)) || !io_bytes_exceeded(td)) {
+		(!flist_empty(&td->trim_list)) || !io_complete_bytes_exceeded(td)) {
 		struct io_u *io_u;
 		int ret;
 
