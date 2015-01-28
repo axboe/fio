@@ -1869,7 +1869,7 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 {
 	struct thread_options *o = &td->o;
 
-	if (o->compress_percentage) {
+	if (o->compress_percentage || o->dedupe_percentage) {
 		unsigned int perc = td->o.compress_percentage;
 		struct frand_state *rs;
 		unsigned int left = max_bs;
