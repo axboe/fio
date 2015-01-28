@@ -34,6 +34,8 @@ struct idle_prof_thread {
 	pthread_cond_t  cond;
 	pthread_mutex_t init_lock;
 	pthread_mutex_t start_lock;
+
+	os_cpu_mask_t cpu_mask;
 };
 
 struct idle_prof_common {

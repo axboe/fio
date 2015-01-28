@@ -43,16 +43,26 @@ static double calibrate_unit(unsigned char *data)
 	return tunit / CALIBRATE_SCALE;
 }
 
+static void free_cpu_affinity(struct idle_prof_thread *ipt)
+{
+#if defined(FIO_HAVE_CPU_AFFINITY)
+	fio_cpuset_exit(&ipt->cpu_mask);
+#endif
+}
+
 static int set_cpu_affinity(struct idle_prof_thread *ipt)
 {
 #if defined(FIO_HAVE_CPU_AFFINITY)
-	os_cpu_mask_t cpu_mask;
+	if (fio_cpuset_init(&ipt->cpu_mask)) {
+		log_err("fio: cpuset init failed\n");
+		return -1;
+	}
 
-	memset(&cpu_mask, 0, sizeof(cpu_mask));
-	fio_cpu_set(&cpu_mask, ipt->cpu);
+	fio_cpu_set(&ipt->cpu_mask, ipt->cpu);
 
-	if (fio_setaffinity(gettid(), cpu_mask)) {
+	if (fio_setaffinity(gettid(), ipt->cpu_mask)) {
 		log_err("fio: fio_setaffinity failed\n");
+		fio_cpuset_exit(&ipt->cpu_mask);
 		return -1;
 	}
 
@@ -98,7 +108,7 @@ static void *idle_prof_thread_fn(void *data)
 	if (retval == -1) {
 		ipt->state = TD_EXITED;
 		pthread_mutex_unlock(&ipt->init_lock);
-		return NULL;
+		goto do_exit;
 	}
 
 	ipt->state = TD_INITIALIZED;
@@ -113,13 +123,13 @@ static void *idle_prof_thread_fn(void *data)
 	/* exit if other threads failed to initialize */
 	if (ipc.status == IDLE_PROF_STATUS_ABORT) {
 		pthread_mutex_unlock(&ipt->start_lock);
-		return NULL;
+		goto do_exit;
 	}
 
 	/* exit if we are doing calibration only */
 	if (ipc.status == IDLE_PROF_STATUS_CALI_STOP) {
 		pthread_mutex_unlock(&ipt->start_lock);
-		return NULL;
+		goto do_exit;
 	}
 
 	fio_gettime(&ipt->tps, NULL);
@@ -143,6 +153,8 @@ idle_prof_done:
 	ipt->state = TD_EXITED;
 	pthread_mutex_unlock(&ipt->start_lock);
 
+do_exit:
+	free_cpu_affinity(ipt);
 	return NULL;
 }
 
