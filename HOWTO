@@ -919,10 +919,10 @@ norandommap	Normally fio will cover every block of the file when doing
 		random IO. If this option is given, fio will just get a
 		new random offset without looking at past io history. This
 		means that some blocks may not be read or written, and that
-		some blocks may be read/written more than once. This option
-		is mutually exclusive with verify= if and only if multiple
-		blocksizes (via bsrange=) are used, since fio only tracks
-		complete rewrites of blocks.
+		some blocks may be read/written more than once. If this option
+		is used with verify= and multiple blocksizes (via bsrange=),
+		only intact blocks are verified, i.e., partially-overwritten
+		blocks are ignored.
 
 softrandommap=bool See norandommap. If fio runs with the random block map
 		enabled and it fails to allocate the map, if this option is

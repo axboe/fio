@@ -596,8 +596,7 @@ static int fixup_options(struct thread_data *td)
 	if (o->norandommap && o->verify != VERIFY_NONE
 	    && !fixed_block_size(o))  {
 		log_err("fio: norandommap given for variable block sizes, "
-			"verify disabled\n");
-		o->verify = VERIFY_NONE;
+			"verify limited\n");
 		ret = warnings_fatal;
 	}
 	if (o->bs_unaligned && (o->odirect || td->io_ops->flags & FIO_RAWIO))
