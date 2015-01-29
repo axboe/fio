@@ -250,6 +250,7 @@ restart:
 	p = &td->io_hist_tree.rb_node;
 	parent = NULL;
 	while (*p) {
+		int overlap = 0;
 		parent = *p;
 
 		__ipo = rb_entry(parent, struct io_piece, rb_node);
@@ -257,11 +258,18 @@ restart:
 			p = &(*p)->rb_left;
 		else if (ipo->file > __ipo->file)
 			p = &(*p)->rb_right;
-		else if (ipo->offset < __ipo->offset)
+		else if (ipo->offset < __ipo->offset) {
 			p = &(*p)->rb_left;
-		else if (ipo->offset > __ipo->offset)
+			overlap = ipo->offset + ipo->len > __ipo->offset;
+		}
+		else if (ipo->offset > __ipo->offset) {
 			p = &(*p)->rb_right;
-		else {
+			overlap = __ipo->offset + __ipo->len > ipo->offset;
+		}
+		else
+			overlap = 1;
+
+		if (overlap) {
 			dprint(FD_IO, "iolog: overlap %llu/%lu, %llu/%lu",
 				__ipo->offset, __ipo->len,
 				ipo->offset, ipo->len);
