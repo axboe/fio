@@ -528,6 +528,7 @@ static void *clock_thread_fn(void *data)
 	if (!t->entries[i - 1].tsc && !t->entries[0].tsc)
 		goto err;
 
+	fio_cpuset_exit(&cpu_mask);
 	return NULL;
 err:
 	fio_cpuset_exit(&cpu_mask);
