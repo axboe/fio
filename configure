@@ -887,7 +887,7 @@ cat > $TMPC << EOF
 int main(int argc, char **argv)
 {
   struct bitmask *mask = numa_parse_nodestring(NULL);
-  return 0;
+  return mask->size == 0;
 }
 EOF
 if compile_prog "" "" "libnuma api"; then
