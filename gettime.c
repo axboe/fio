@@ -478,7 +478,7 @@ static void *clock_thread_fn(void *data)
 	int i;
 
 	if (fio_cpuset_init(&cpu_mask)) {
-		int __err;
+		int __err = errno;
 
 		log_err("clock cpuset init failed: %s\n", strerror(__err));
 		goto err_out;
