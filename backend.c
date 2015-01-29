@@ -726,12 +726,18 @@ static uint64_t do_io(struct thread_data *td)
 
 	lat_target_init(td);
 
+	total_bytes = td->o.size;
+	/*
+	* Allow random overwrite workloads to write up to io_limit
+	* before starting verification phase as 'size' doesn't apply.
+	*/
+	if (td_write(td) && td_random(td) && td->o.norandommap)
+		total_bytes = max(total_bytes, (uint64_t) td->o.io_limit);
 	/*
 	 * If verify_backlog is enabled, we'll run the verify in this
 	 * handler as well. For that case, we may need up to twice the
 	 * amount of bytes.
 	 */
-	total_bytes = td->o.size;
 	if (td->o.verify != VERIFY_NONE &&
 	   (td_write(td) && td->o.verify_backlog))
 		total_bytes += td->o.size;
