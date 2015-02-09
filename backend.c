@@ -565,6 +565,8 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 			io_u->end_io = verify_io_u;
 
 		ddir = io_u->ddir;
+		if (!td->o.disable_slat)
+			fio_gettime(&io_u->start_time, NULL);
 
 		ret = td_io_queue(td, io_u);
 		switch (ret) {
