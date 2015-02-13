@@ -24,7 +24,7 @@ extern struct timeval *fio_tv;
 
 static inline int fio_gettime_offload(struct timeval *tv)
 {
-	size_t last_sec;
+	time_t last_sec;
 
 	if (!fio_tv)
 		return 0;
