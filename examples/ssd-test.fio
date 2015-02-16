@@ -14,7 +14,7 @@
 bs=4k
 ioengine=libaio
 iodepth=4
-size=1g
+size=10g
 direct=1
 runtime=60
 directory=/mount-point-of-ssd
