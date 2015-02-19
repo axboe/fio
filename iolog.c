@@ -876,10 +876,12 @@ int iolog_file_inflate(const char *file)
 	if (ret < 0) {
 		perror("fread");
 		fclose(f);
+                free(buf);
 		return 1;
 	} else if (ret != 1) {
 		log_err("fio: short read on reading log\n");
 		fclose(f);
+                free(buf);
 		return 1;
 	}
 
