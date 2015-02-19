@@ -125,7 +125,7 @@ err:
 			free(axmap->levels[i].map);
 
 	free(axmap->levels);
-        free(axmap);
+	free(axmap);
 	return NULL;
 }
 
