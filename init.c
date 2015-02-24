@@ -763,6 +763,10 @@ static int fixup_options(struct thread_data *td)
 		fio_gtod_offload = 1;
 	}
 
+	td->loops = o->loops;
+	if (!td->loops)
+		td->loops = 1;
+
 	return ret;
 }
 

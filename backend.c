@@ -658,10 +658,10 @@ static unsigned int exceeds_number_ios(struct thread_data *td)
 	if (!td->o.number_ios)
 		return 0;
 
-	number_ios = ddir_rw_sum(td->this_io_blocks);
+	number_ios = ddir_rw_sum(td->io_blocks);
 	number_ios += td->io_u_queued + td->io_u_in_flight;
 
-	return number_ios >= td->o.number_ios;
+	return number_ios >= (td->o.number_ios * td->loops);
 }
 
 static int io_issue_bytes_exceeded(struct thread_data *td)
@@ -682,6 +682,7 @@ static int io_issue_bytes_exceeded(struct thread_data *td)
 	else
 		limit = td->o.size;
 
+	limit *= td->loops;
 	return bytes >= limit || exceeds_number_ios(td);
 }
 
@@ -703,6 +704,7 @@ static int io_complete_bytes_exceeded(struct thread_data *td)
 	else
 		limit = td->o.size;
 
+	limit *= td->loops;
 	return bytes >= limit || exceeds_number_ios(td);
 }
 
