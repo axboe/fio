@@ -4,6 +4,7 @@
 #define	FIO_OS	os_android
 
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/uio.h>
 #include <sys/syscall.h>
 #include <sys/vfs.h>
@@ -37,10 +38,13 @@
 
 #define OS_MAP_ANON		MAP_ANONYMOUS
 
+#ifndef POSIX_MADV_DONTNEED
 #define posix_madvise   madvise
 #define POSIX_MADV_DONTNEED MADV_DONTNEED
 #define POSIX_MADV_SEQUENTIAL	MADV_SEQUENTIAL
 #define POSIX_MADV_RANDOM	MADV_RANDOM
+#endif
+
 #ifdef MADV_REMOVE
 #define FIO_MADV_FREE	MADV_REMOVE
 #endif
@@ -260,5 +264,13 @@ static inline int os_trim(int fd, unsigned long long start,
 
 	return errno;
 }
+
+#ifdef CONFIG_SCHED_IDLE
+static inline int fio_set_sched_idle(void)
+{
+        struct sched_param p = { .sched_priority = 0, };
+        return sched_setscheduler(gettid(), SCHED_IDLE, &p);
+}
+#endif
 
 #endif
