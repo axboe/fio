@@ -101,7 +101,7 @@ void fio_filelock_exit(void)
 		return;
 
 	assert(flist_empty(&fld->list));
-	fio_mutex_remove(&fld->lock);
+	__fio_mutex_remove(&fld->lock);
 
 	while (!flist_empty(&fld->free_list)) {
 		struct fio_filelock *ff;
@@ -109,7 +109,7 @@ void fio_filelock_exit(void)
 		ff = flist_first_entry(&fld->free_list, struct fio_filelock, list);
 
 		flist_del_init(&ff->list);
-		fio_mutex_remove(&ff->lock);
+		__fio_mutex_remove(&ff->lock);
 	}
 
 	sfree(fld);
