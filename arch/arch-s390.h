@@ -40,6 +40,7 @@ static inline unsigned long long get_cpu_clock(void)
 
 #define ARCH_CPU_CLOCK_CYCLES_PER_USEC 1
 #define ARCH_HAVE_CPU_CLOCK
+#undef ARCH_CPU_CLOCK_WRAPS
 
 #define ARCH_HAVE_INIT
 extern int tsc_reliable;

@@ -30,6 +30,8 @@ enum {
 
 extern unsigned long arch_flags;
 
+#define ARCH_CPU_CLOCK_WRAPS
+
 #if defined(__i386__)
 #include "arch-x86.h"
 #elif defined(__x86_64__)
