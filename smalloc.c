@@ -26,7 +26,7 @@
 #define SMALLOC_BPL	(SMALLOC_BPB * SMALLOC_BPI)
 
 #define INITIAL_SIZE	16*1024*1024	/* new pool size */
-#define MAX_POOLS	1		/* maximum number of pools to setup */
+#define MAX_POOLS	8		/* maximum number of pools to setup */
 
 #define SMALLOC_PRE_RED		0xdeadbeefU
 #define SMALLOC_POST_RED	0x5aa55aa5U
@@ -230,11 +230,21 @@ out_fail:
 
 void sinit(void)
 {
-	int ret;
+	int i, ret;
 
 	lock = fio_rwlock_init();
-	ret = add_pool(&mp[0], INITIAL_SIZE);
-	assert(!ret);
+
+	for (i = 0; i < MAX_POOLS; i++) {
+		ret = add_pool(&mp[i], INITIAL_SIZE);
+		if (ret)
+			break;
+	}
+
+	/*
+	 * If we added at least one pool, we should be OK for most
+	 * cases.
+	 */
+	assert(i);
 }
 
 static void cleanup_pool(struct pool *pool)
@@ -442,16 +452,17 @@ static void *smalloc_pool(struct pool *pool, size_t size)
 
 void *smalloc(size_t size)
 {
-	unsigned int i;
+	unsigned int i, end_pool;
 
 	if (size != (unsigned int) size)
 		return NULL;
 
 	global_write_lock();
 	i = last_pool;
+	end_pool = nr_pools;
 
 	do {
-		for (; i < nr_pools; i++) {
+		for (; i < end_pool; i++) {
 			void *ptr = smalloc_pool(&mp[i], size);
 
 			if (ptr) {
@@ -461,20 +472,14 @@ void *smalloc(size_t size)
 			}
 		}
 		if (last_pool) {
-			last_pool = 0;
+			end_pool = last_pool;
+			last_pool = i = 0;
 			continue;
 		}
 
-		if (nr_pools + 1 > MAX_POOLS)
-			break;
-		else {
-			i = nr_pools;
-			if (add_pool(&mp[nr_pools], size))
-				goto out;
-		}
+		break;
 	} while (1);
 
-out:
 	global_write_unlock();
 	return NULL;
 }
