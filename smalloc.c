@@ -492,9 +492,10 @@ void *scalloc(size_t nmemb, size_t size)
 
 char *smalloc_strdup(const char *str)
 {
-	char *ptr;
+	char *ptr = NULL;
 
 	ptr = smalloc(strlen(str) + 1);
-	strcpy(ptr, str);
+	if (ptr)
+		strcpy(ptr, str);
 	return ptr;
 }
