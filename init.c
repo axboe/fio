@@ -2135,6 +2135,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 						td = NULL;
 					}
 					do_exit++;
+					exit_val = 1;
 					break;
 				}
 				fio_options_set_ioengine_opts(l_opts, td);
@@ -2153,6 +2154,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 					td = NULL;
 				}
 				do_exit++;
+				exit_val = 1;
 			}
 
 			if (!ret && !strcmp(opt, "ioengine")) {
@@ -2161,6 +2163,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 					put_job(td);
 					td = NULL;
 					do_exit++;
+					exit_val = 1;
 					break;
 				}
 				fio_options_set_ioengine_opts(l_opts, td);
