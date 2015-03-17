@@ -363,8 +363,12 @@ void sfree(void *ptr)
 
 	global_read_unlock();
 
-	assert(pool);
-	sfree_pool(pool, ptr);
+	if (pool) {
+		sfree_pool(pool, ptr);
+		return;
+	}
+
+	log_err("smalloc: ptr %p not from smalloc pool\n", ptr);
 }
 
 static void *__smalloc_pool(struct pool *pool, size_t size)
