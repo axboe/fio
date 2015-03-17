@@ -1895,8 +1895,10 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 		} while (left);
 	} else if (o->buffer_pattern_bytes)
 		fill_buffer_pattern(td, buf, max_bs);
-	else
+	else if (o->zero_buffers)
 		memset(buf, 0, max_bs);
+	else
+		fill_random_buf(get_buf_state(td), buf, max_bs);
 }
 
 /*
