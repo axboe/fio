@@ -46,11 +46,15 @@ struct io_u {
 	enum fio_ddir acct_ddir;
 
 	/*
+	 * Write generation
+	 */
+	unsigned short numberio;
+
+	/*
 	 * Allocated/set buffer and length
 	 */
 	unsigned long buflen;
 	unsigned long long offset;
-	unsigned short numberio;
 	void *buf;
 
 	/*

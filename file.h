@@ -75,9 +75,9 @@ struct fio_file {
 	/*
 	 * filename and possible memory mapping
 	 */
-	char *file_name;
 	unsigned int major, minor;
 	int fileno;
+	char *file_name;
 
 	/*
 	 * size of the file, offset into file, and io size from that offset
