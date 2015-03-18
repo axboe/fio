@@ -578,8 +578,6 @@ bs_is_seq_rand	If this option is set, fio will use the normal read,write
 
 zero_buffers	If this option is given, fio will init the IO buffers to
 		all zeroes. The default is to fill them with random data.
-		The resulting IO buffers will not be completely zeroed,
-		unless scramble_buffers is also turned off.
 
 refill_buffers	If this option is given, fio will refill the IO buffers
 		on every submit. The default is to only fill it at init
