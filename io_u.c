@@ -1484,8 +1484,7 @@ struct io_u *get_io_u(struct thread_data *td)
 				io_u_fill_buffer(td, io_u,
 					td->o.min_bs[DDIR_WRITE],
 					io_u->xfer_buflen);
-			}
-			if ((td->flags & TD_F_SCRAMBLE_BUFFERS) &&
+			} else if ((td->flags & TD_F_SCRAMBLE_BUFFERS) &&
 				   !(td->flags & TD_F_COMPRESS))
 				do_scramble = 1;
 			if (td->flags & TD_F_VER_NONE) {
