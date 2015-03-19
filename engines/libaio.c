@@ -316,7 +316,14 @@ static void fio_libaio_cleanup(struct thread_data *td)
 	struct libaio_data *ld = td->io_ops->data;
 
 	if (ld) {
-		io_destroy(ld->aio_ctx);
+		/*
+		 * Work-around to avoid huge RCU stalls at exit time. If we
+		 * don't do this here, then it'll be torn down by exit_aio().
+		 * But for that case we can parallellize the freeing, thus
+		 * speeding it up a lot.
+		 */
+		if (!(td->flags & TD_F_CHILD))
+			io_destroy(ld->aio_ctx);
 		free(ld->aio_events);
 		free(ld->iocbs);
 		free(ld->io_us);
