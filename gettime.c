@@ -13,13 +13,15 @@
 #include "hash.h"
 #include "os/os.h"
 
-#if defined(ARCH_HAVE_CPU_CLOCK) && !defined(ARCH_CPU_CLOCK_CYCLES_PER_USEC)
+#if defined(ARCH_HAVE_CPU_CLOCK)
+#ifndef ARCH_CPU_CLOCK_CYCLES_PER_USEC
 static unsigned long cycles_per_usec;
 static unsigned long inv_cycles_per_usec;
 static uint64_t max_cycles_for_mult;
 #endif
 #ifdef ARCH_CPU_CLOCK_WRAPS
 static unsigned long long cycles_start, cycles_wrap;
+#endif
 #endif
 int tsc_reliable = 0;
 
