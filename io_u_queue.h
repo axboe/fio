@@ -8,6 +8,7 @@ struct io_u;
 struct io_u_queue {
 	struct io_u **io_us;
 	unsigned int nr;
+	unsigned int max;
 };
 
 static inline struct io_u *io_u_qpop(struct io_u_queue *q)
@@ -25,7 +26,12 @@ static inline struct io_u *io_u_qpop(struct io_u_queue *q)
 
 static inline void io_u_qpush(struct io_u_queue *q, struct io_u *io_u)
 {
-	q->io_us[q->nr++] = io_u;
+	if (q->nr < q->max) {
+		q->io_us[q->nr++] = io_u;
+		return;
+	}
+
+	assert(0);
 }
 
 static inline int io_u_qempty(const struct io_u_queue *q)

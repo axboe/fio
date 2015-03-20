@@ -8,6 +8,7 @@ int io_u_qinit(struct io_u_queue *q, unsigned int nr)
 		return 1;
 
 	q->nr = 0;
+	q->max = nr;
 	return 0;
 }
 
