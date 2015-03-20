@@ -444,6 +444,93 @@ static int wait_for_completions(struct thread_data *td, struct timeval *time)
 	return ret;
 }
 
+int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
+		   enum fio_ddir ddir, uint64_t *bytes_issued, int from_verify,
+		   struct timeval *comp_time)
+{
+	int ret2;
+
+	switch (*ret) {
+	case FIO_Q_COMPLETED:
+		if (io_u->error) {
+			*ret = -io_u->error;
+			clear_io_u(td, io_u);
+		} else if (io_u->resid) {
+			int bytes = io_u->xfer_buflen - io_u->resid;
+			struct fio_file *f = io_u->file;
+
+			if (bytes_issued)
+				*bytes_issued += bytes;
+
+			if (!from_verify)
+				trim_io_piece(td, io_u);
+
+			/*
+			 * zero read, fail
+			 */
+			if (!bytes) {
+				if (!from_verify)
+					unlog_io_piece(td, io_u);
+				td_verror(td, EIO, "full resid");
+				put_io_u(td, io_u);
+				break;
+			}
+
+			io_u->xfer_buflen = io_u->resid;
+			io_u->xfer_buf += bytes;
+			io_u->offset += bytes;
+
+			if (ddir_rw(io_u->ddir))
+				td->ts.short_io_u[io_u->ddir]++;
+
+			f = io_u->file;
+			if (io_u->offset == f->real_file_size)
+				goto sync_done;
+
+			requeue_io_u(td, &io_u);
+		} else {
+sync_done:
+			if (comp_time && (__should_check_rate(td, DDIR_READ) ||
+			    __should_check_rate(td, DDIR_WRITE) ||
+			    __should_check_rate(td, DDIR_TRIM)))
+				fio_gettime(comp_time, NULL);
+
+			*ret = io_u_sync_complete(td, io_u);
+			if (*ret < 0)
+				break;
+		}
+		return 0;
+	case FIO_Q_QUEUED:
+		/*
+		 * if the engine doesn't have a commit hook,
+		 * the io_u is really queued. if it does have such
+		 * a hook, it has to call io_u_queued() itself.
+		 */
+		if (td->io_ops->commit == NULL)
+			io_u_queued(td, io_u);
+		if (bytes_issued)
+			*bytes_issued += io_u->xfer_buflen;
+		break;
+	case FIO_Q_BUSY:
+		if (!from_verify)
+			unlog_io_piece(td, io_u);
+		requeue_io_u(td, &io_u);
+		ret2 = td_io_commit(td);
+		if (ret2 < 0)
+			*ret = ret2;
+		break;
+	default:
+		assert(ret < 0);
+		td_verror(td, -(*ret), "td_io_queue");
+		break;
+	}
+
+	if (break_on_this_error(td, ddir, ret))
+		return 1;
+
+	return 0;
+}
+
 /*
  * The main verify engine. Runs over the writes we previously submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
@@ -480,7 +567,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 	io_u = NULL;
 	while (!td->terminate) {
 		enum fio_ddir ddir;
-		int ret2, full;
+		int full;
 
 		update_tv_cache(td);
 		check_update_rusage(td);
@@ -566,57 +653,8 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 			fio_gettime(&io_u->start_time, NULL);
 
 		ret = td_io_queue(td, io_u);
-		switch (ret) {
-		case FIO_Q_COMPLETED:
-			if (io_u->error) {
-				ret = -io_u->error;
-				clear_io_u(td, io_u);
-			} else if (io_u->resid) {
-				int bytes = io_u->xfer_buflen - io_u->resid;
 
-				/*
-				 * zero read, fail
-				 */
-				if (!bytes) {
-					td_verror(td, EIO, "full resid");
-					put_io_u(td, io_u);
-					break;
-				}
-
-				io_u->xfer_buflen = io_u->resid;
-				io_u->xfer_buf += bytes;
-				io_u->offset += bytes;
-
-				if (ddir_rw(io_u->ddir))
-					td->ts.short_io_u[io_u->ddir]++;
-
-				f = io_u->file;
-				if (io_u->offset == f->real_file_size)
-					goto sync_done;
-
-				requeue_io_u(td, &io_u);
-			} else {
-sync_done:
-				ret = io_u_sync_complete(td, io_u);
-				if (ret < 0)
-					break;
-			}
-			continue;
-		case FIO_Q_QUEUED:
-			break;
-		case FIO_Q_BUSY:
-			requeue_io_u(td, &io_u);
-			ret2 = td_io_commit(td);
-			if (ret2 < 0)
-				ret = ret2;
-			break;
-		default:
-			assert(ret < 0);
-			td_verror(td, -ret, "td_io_queue");
-			break;
-		}
-
-		if (break_on_this_error(td, ddir, &ret))
+		if (io_queue_event(td, io_u, &ret, ddir, NULL, 1, NULL))
 			break;
 
 		/*
@@ -750,7 +788,7 @@ static uint64_t do_io(struct thread_data *td)
 		td->o.time_based) {
 		struct timeval comp_time;
 		struct io_u *io_u;
-		int ret2, full;
+		int full;
 		enum fio_ddir ddir;
 
 		check_update_rusage(td);
@@ -831,78 +869,8 @@ static uint64_t do_io(struct thread_data *td)
 			log_io_piece(td, io_u);
 
 		ret = td_io_queue(td, io_u);
-		switch (ret) {
-		case FIO_Q_COMPLETED:
-			if (io_u->error) {
-				ret = -io_u->error;
-				unlog_io_piece(td, io_u);
-				clear_io_u(td, io_u);
-			} else if (io_u->resid) {
-				int bytes = io_u->xfer_buflen - io_u->resid;
-				struct fio_file *f = io_u->file;
 
-				bytes_issued += bytes;
-
-				trim_io_piece(td, io_u);
-
-				/*
-				 * zero read, fail
-				 */
-				if (!bytes) {
-					unlog_io_piece(td, io_u);
-					td_verror(td, EIO, "full resid");
-					put_io_u(td, io_u);
-					break;
-				}
-
-				io_u->xfer_buflen = io_u->resid;
-				io_u->xfer_buf += bytes;
-				io_u->offset += bytes;
-
-				if (ddir_rw(io_u->ddir))
-					td->ts.short_io_u[io_u->ddir]++;
-
-				if (io_u->offset == f->real_file_size)
-					goto sync_done;
-
-				requeue_io_u(td, &io_u);
-			} else {
-sync_done:
-				if (__should_check_rate(td, DDIR_READ) ||
-				    __should_check_rate(td, DDIR_WRITE) ||
-				    __should_check_rate(td, DDIR_TRIM))
-					fio_gettime(&comp_time, NULL);
-
-				ret = io_u_sync_complete(td, io_u);
-				if (ret < 0)
-					break;
-				bytes_issued += io_u->xfer_buflen;
-			}
-			break;
-		case FIO_Q_QUEUED:
-			/*
-			 * if the engine doesn't have a commit hook,
-			 * the io_u is really queued. if it does have such
-			 * a hook, it has to call io_u_queued() itself.
-			 */
-			if (td->io_ops->commit == NULL)
-				io_u_queued(td, io_u);
-			bytes_issued += io_u->xfer_buflen;
-			break;
-		case FIO_Q_BUSY:
-			unlog_io_piece(td, io_u);
-			requeue_io_u(td, &io_u);
-			ret2 = td_io_commit(td);
-			if (ret2 < 0)
-				ret = ret2;
-			break;
-		default:
-			assert(ret < 0);
-			put_io_u(td, io_u);
-			break;
-		}
-
-		if (break_on_this_error(td, ddir, &ret))
+		if (io_queue_event(td, io_u, &ret, ddir, &bytes_issued, 1, &comp_time))
 			break;
 
 		/*
@@ -911,7 +879,8 @@ sync_done:
 		 * resource starved.
 		 */
 reap:
-		full = queue_full(td) || (ret == FIO_Q_BUSY && td->cur_depth);
+		full = queue_full(td) ||
+			(ret == FIO_Q_BUSY && td->cur_depth);
 		if (full || !td->o.iodepth_batch_complete)
 			ret = wait_for_completions(td, &comp_time);
 		if (ret < 0)
