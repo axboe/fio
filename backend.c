@@ -229,16 +229,15 @@ static int __check_min_rate(struct thread_data *td, struct timeval *now,
 	return 0;
 }
 
-static int check_min_rate(struct thread_data *td, struct timeval *now,
-			  uint64_t *bytes_done)
+static int check_min_rate(struct thread_data *td, struct timeval *now)
 {
 	int ret = 0;
 
-	if (bytes_done[DDIR_READ])
+	if (td->bytes_done[DDIR_READ])
 		ret |= __check_min_rate(td, now, DDIR_READ);
-	if (bytes_done[DDIR_WRITE])
+	if (td->bytes_done[DDIR_WRITE])
 		ret |= __check_min_rate(td, now, DDIR_WRITE);
-	if (bytes_done[DDIR_TRIM])
+	if (td->bytes_done[DDIR_TRIM])
 		ret |= __check_min_rate(td, now, DDIR_TRIM);
 
 	return ret;
@@ -255,7 +254,7 @@ static void cleanup_pending_aio(struct thread_data *td)
 	/*
 	 * get immediately available events, if any
 	 */
-	r = io_u_queued_complete(td, 0, NULL);
+	r = io_u_queued_complete(td, 0);
 	if (r < 0)
 		return;
 
@@ -276,7 +275,7 @@ static void cleanup_pending_aio(struct thread_data *td)
 	}
 
 	if (td->cur_depth)
-		r = io_u_queued_complete(td, td->cur_depth, NULL);
+		r = io_u_queued_complete(td, td->cur_depth);
 }
 
 /*
@@ -306,7 +305,7 @@ requeue:
 		put_io_u(td, io_u);
 		return 1;
 	} else if (ret == FIO_Q_QUEUED) {
-		if (io_u_queued_complete(td, 1, NULL) < 0)
+		if (io_u_queued_complete(td, 1) < 0)
 			return 1;
 	} else if (ret == FIO_Q_COMPLETED) {
 		if (io_u->error) {
@@ -314,7 +313,7 @@ requeue:
 			return 1;
 		}
 
-		if (io_u_sync_complete(td, io_u, NULL) < 0)
+		if (io_u_sync_complete(td, io_u) < 0)
 			return 1;
 	} else if (ret == FIO_Q_BUSY) {
 		if (td_io_commit(td))
@@ -418,8 +417,7 @@ static void check_update_rusage(struct thread_data *td)
 	}
 }
 
-static int wait_for_completions(struct thread_data *td, struct timeval *time,
-				uint64_t *bytes_done)
+static int wait_for_completions(struct thread_data *td, struct timeval *time)
 {
 	const int full = queue_full(td);
 	int min_evts = 0;
@@ -438,7 +436,7 @@ static int wait_for_completions(struct thread_data *td, struct timeval *time,
 		fio_gettime(time, NULL);
 
 	do {
-		ret = io_u_queued_complete(td, min_evts, bytes_done);
+		ret = io_u_queued_complete(td, min_evts);
 		if (ret < 0)
 			break;
 	} while (full && (td->cur_depth > td->o.iodepth_low));
@@ -452,7 +450,6 @@ static int wait_for_completions(struct thread_data *td, struct timeval *time,
  */
 static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 {
-	uint64_t bytes_done[DDIR_RWDIR_CNT] = { 0, 0, 0 };
 	struct fio_file *f;
 	struct io_u *io_u;
 	int ret, min_events;
@@ -514,7 +511,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 				break;
 			}
 		} else {
-			if (ddir_rw_sum(bytes_done) + td->o.rw_min_bs > verify_bytes)
+			if (ddir_rw_sum(td->bytes_done) + td->o.rw_min_bs > verify_bytes)
 				break;
 
 			while ((io_u = get_io_u(td)) != NULL) {
@@ -600,7 +597,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 				requeue_io_u(td, &io_u);
 			} else {
 sync_done:
-				ret = io_u_sync_complete(td, io_u, bytes_done);
+				ret = io_u_sync_complete(td, io_u);
 				if (ret < 0)
 					break;
 			}
@@ -630,7 +627,7 @@ sync_done:
 reap:
 		full = queue_full(td) || (ret == FIO_Q_BUSY && td->cur_depth);
 		if (full || !td->o.iodepth_batch_complete)
-			ret = wait_for_completions(td, NULL, bytes_done);
+			ret = wait_for_completions(td, NULL);
 
 		if (ret < 0)
 			break;
@@ -642,7 +639,7 @@ reap:
 		min_events = td->cur_depth;
 
 		if (min_events)
-			ret = io_u_queued_complete(td, min_events, NULL);
+			ret = io_u_queued_complete(td, min_events);
 	} else
 		cleanup_pending_aio(td);
 
@@ -716,7 +713,6 @@ static int io_complete_bytes_exceeded(struct thread_data *td)
  */
 static uint64_t do_io(struct thread_data *td)
 {
-	uint64_t bytes_done[DDIR_RWDIR_CNT] = { 0, 0, 0 };
 	unsigned int i;
 	int ret = 0;
 	uint64_t total_bytes, bytes_issued = 0;
@@ -877,7 +873,7 @@ sync_done:
 				    __should_check_rate(td, DDIR_TRIM))
 					fio_gettime(&comp_time, NULL);
 
-				ret = io_u_sync_complete(td, io_u, bytes_done);
+				ret = io_u_sync_complete(td, io_u);
 				if (ret < 0)
 					break;
 				bytes_issued += io_u->xfer_buflen;
@@ -917,14 +913,15 @@ sync_done:
 reap:
 		full = queue_full(td) || (ret == FIO_Q_BUSY && td->cur_depth);
 		if (full || !td->o.iodepth_batch_complete)
-			ret = wait_for_completions(td, &comp_time, bytes_done);
+			ret = wait_for_completions(td, &comp_time);
 		if (ret < 0)
 			break;
-		if (!ddir_rw_sum(bytes_done) && !(td->io_ops->flags & FIO_NOIO))
+		if (!ddir_rw_sum(td->bytes_done) &&
+		    !(td->io_ops->flags & FIO_NOIO))
 			continue;
 
-		if (!in_ramp_time(td) && should_check_rate(td, bytes_done)) {
-			if (check_min_rate(td, &comp_time, bytes_done)) {
+		if (!in_ramp_time(td) && should_check_rate(td)) {
+			if (check_min_rate(td, &comp_time)) {
 				if (exitall_on_terminate)
 					fio_terminate_threads(td->groupid);
 				td_verror(td, EIO, "check_min_rate");
@@ -967,7 +964,7 @@ reap:
 
 		i = td->cur_depth;
 		if (i) {
-			ret = io_u_queued_complete(td, i, bytes_done);
+			ret = io_u_queued_complete(td, i);
 			if (td->o.fill_device && td->error == ENOSPC)
 				td->error = 0;
 		}
@@ -992,7 +989,7 @@ reap:
 	if (!ddir_rw_sum(td->this_io_bytes))
 		td->done = 1;
 
-	return bytes_done[DDIR_WRITE] + bytes_done[DDIR_TRIM];
+	return td->bytes_done[DDIR_WRITE] + td->bytes_done[DDIR_TRIM];
 }
 
 static void cleanup_io_u(struct thread_data *td)
@@ -1262,8 +1259,6 @@ static int exec_string(struct thread_options *o, const char *string, const char 
  */
 static uint64_t do_dry_run(struct thread_data *td)
 {
-	uint64_t bytes_done[DDIR_RWDIR_CNT] = { 0, 0, 0 };
-
 	td_set_runstate(td, TD_RUNNING);
 
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
@@ -1294,11 +1289,11 @@ static uint64_t do_dry_run(struct thread_data *td)
 		    !td->o.experimental_verify)
 			log_io_piece(td, io_u);
 
-		ret = io_u_sync_complete(td, io_u, bytes_done);
+		ret = io_u_sync_complete(td, io_u);
 		(void) ret;
 	}
 
-	return bytes_done[DDIR_WRITE] + bytes_done[DDIR_TRIM];
+	return td->bytes_done[DDIR_WRITE] + td->bytes_done[DDIR_TRIM];
 }
 
 /*

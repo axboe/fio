@@ -552,7 +552,7 @@ void io_u_quiesce(struct thread_data *td)
 	while (td->io_u_in_flight) {
 		int fio_unused ret;
 
-		ret = io_u_queued_complete(td, 1, NULL);
+		ret = io_u_queued_complete(td, 1);
 	}
 }
 
@@ -1785,10 +1785,10 @@ static void ios_completed(struct thread_data *td,
 /*
  * Complete a single io_u for the sync engines.
  */
-int io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
-		       uint64_t *bytes)
+int io_u_sync_complete(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_completion_data icd;
+	int ddir;
 
 	init_icd(td, &icd, 1);
 	io_completed(td, &io_u, &icd);
@@ -1801,12 +1801,8 @@ int io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
 		return -1;
 	}
 
-	if (bytes) {
-		int ddir;
-
-		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++)
-			bytes[ddir] += icd.bytes_done[ddir];
-	}
+	for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++)
+		td->bytes_done[ddir] += icd.bytes_done[ddir];
 
 	return 0;
 }
@@ -1814,12 +1810,11 @@ int io_u_sync_complete(struct thread_data *td, struct io_u *io_u,
 /*
  * Called to complete min_events number of io for the async engines.
  */
-int io_u_queued_complete(struct thread_data *td, int min_evts,
-			 uint64_t *bytes)
+int io_u_queued_complete(struct thread_data *td, int min_evts)
 {
 	struct io_completion_data icd;
 	struct timespec *tvp = NULL;
-	int ret;
+	int ret, ddir;
 	struct timespec ts = { .tv_sec = 0, .tv_nsec = 0, };
 
 	dprint(FD_IO, "io_u_queued_completed: min=%d\n", min_evts);
@@ -1843,12 +1838,8 @@ int io_u_queued_complete(struct thread_data *td, int min_evts,
 		return -1;
 	}
 
-	if (bytes) {
-		int ddir;
-
-		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++)
-			bytes[ddir] += icd.bytes_done[ddir];
-	}
+	for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++)
+		td->bytes_done[ddir] += icd.bytes_done[ddir];
 
 	return 0;
 }
