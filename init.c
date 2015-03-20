@@ -956,6 +956,9 @@ static void init_flags(struct thread_data *td)
 		td->flags |= TD_F_SCRAMBLE_BUFFERS;
 	if (o->verify != VERIFY_NONE)
 		td->flags |= TD_F_VER_NONE;
+
+	if (o->verify_async || o->io_submit_mode == IO_MODE_OFFLOAD)
+		td->flags |= TD_F_NEED_LOCK;
 }
 
 static int setup_random_seeds(struct thread_data *td)

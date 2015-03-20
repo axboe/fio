@@ -264,13 +264,15 @@ out:
 
 int td_io_queue(struct thread_data *td, struct io_u *io_u)
 {
+	const enum fio_ddir ddir = acct_ddir(io_u);
+	unsigned long buflen = io_u->xfer_buflen;
 	int ret;
 
 	dprint_io_u(io_u, "queue");
 	fio_ro_check(td, io_u);
 
 	assert((io_u->flags & IO_U_F_FLIGHT) == 0);
-	io_u->flags |= IO_U_F_FLIGHT;
+	io_u_set(io_u, IO_U_F_FLIGHT);
 
 	assert(fio_file_open(io_u->file));
 
@@ -294,18 +296,18 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 					sizeof(struct timeval));
 	}
 
-	if (ddir_rw(acct_ddir(io_u))) {
-		td->io_issues[acct_ddir(io_u)]++;
-		td->io_issue_bytes[acct_ddir(io_u)] += io_u->xfer_buflen;
+	if (ddir_rw(ddir)) {
+		td->io_issues[ddir]++;
+		td->io_issue_bytes[ddir] += buflen;
 	}
 
 	ret = td->io_ops->queue(td, io_u);
 
 	unlock_file(td, io_u->file);
 
-	if (ret == FIO_Q_BUSY && ddir_rw(acct_ddir(io_u))) {
-		td->io_issues[acct_ddir(io_u)]--;
-		td->io_issue_bytes[acct_ddir(io_u)] -= io_u->xfer_buflen;
+	if (ret == FIO_Q_BUSY && ddir_rw(ddir)) {
+		td->io_issues[ddir]--;
+		td->io_issue_bytes[ddir] -= buflen;
 	}
 
 	/*

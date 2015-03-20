@@ -326,7 +326,7 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 				*is_random = 1;
 			} else {
 				*is_random = 0;
-				io_u->flags |= IO_U_F_BUSY_OK;
+				io_u_set(io_u, IO_U_F_BUSY_OK);
 				ret = get_next_seq_offset(td, f, ddir, &offset);
 				if (ret)
 					ret = get_next_rand_block(td, f, ddir, &b);
@@ -336,7 +336,7 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 			ret = get_next_seq_offset(td, f, ddir, &offset);
 		}
 	} else {
-		io_u->flags |= IO_U_F_BUSY_OK;
+		io_u_set(io_u, IO_U_F_BUSY_OK);
 		*is_random = 0;
 
 		if (td->o.rw_seq == RW_SEQ_SEQ) {
@@ -591,7 +591,8 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	} else
 		usec = td->rate_pending_usleep[ddir];
 
-	io_u_quiesce(td);
+	if (td->o.io_submit_mode == IO_MODE_INLINE)
+		io_u_quiesce(td);
 
 	usec = usec_sleep(td, usec);
 
@@ -684,7 +685,7 @@ static void set_rw_ddir(struct thread_data *td, struct io_u *io_u)
 	    td->o.barrier_blocks &&
 	   !(td->io_issues[DDIR_WRITE] % td->o.barrier_blocks) &&
 	     td->io_issues[DDIR_WRITE])
-		io_u->flags |= IO_U_F_BARRIER;
+		io_u_set(io_u, IO_U_F_BARRIER);
 }
 
 void put_file_log(struct thread_data *td, struct fio_file *f)
@@ -697,16 +698,21 @@ void put_file_log(struct thread_data *td, struct fio_file *f)
 
 void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
+	if (td->parent)
+		td = td->parent;
+
 	td_io_u_lock(td);
 
 	if (io_u->file && !(io_u->flags & IO_U_F_NO_FILE_PUT))
 		put_file_log(td, io_u->file);
 
 	io_u->file = NULL;
-	io_u->flags |= IO_U_F_FREE;
+	io_u_set(io_u, IO_U_F_FREE);
 
-	if (io_u->flags & IO_U_F_IN_CUR_DEPTH)
+	if (io_u->flags & IO_U_F_IN_CUR_DEPTH) {
 		td->cur_depth--;
+		assert(!(td->flags & TD_F_CHILD));
+	}
 	io_u_qpush(&td->io_u_freelist, io_u);
 	td_io_u_unlock(td);
 	td_io_u_free_notify(td);
@@ -714,7 +720,7 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 
 void clear_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	io_u->flags &= ~IO_U_F_FLIGHT;
+	io_u_clear(io_u, IO_U_F_FLIGHT);
 	put_io_u(td, io_u);
 }
 
@@ -725,18 +731,24 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 
 	dprint(FD_IO, "requeue %p\n", __io_u);
 
+	if (td->parent)
+		td = td->parent;
+
 	td_io_u_lock(td);
 
-	__io_u->flags |= IO_U_F_FREE;
+	io_u_set(__io_u, IO_U_F_FREE);
 	if ((__io_u->flags & IO_U_F_FLIGHT) && ddir_rw(ddir))
 		td->io_issues[ddir]--;
 
-	__io_u->flags &= ~IO_U_F_FLIGHT;
-	if (__io_u->flags & IO_U_F_IN_CUR_DEPTH)
+	io_u_clear(__io_u, IO_U_F_FLIGHT);
+	if (__io_u->flags & IO_U_F_IN_CUR_DEPTH) {
 		td->cur_depth--;
+		assert(!(td->flags & TD_F_CHILD));
+	}
 
 	io_u_rpush(&td->io_u_requeues, __io_u);
 	td_io_u_unlock(td);
+	td_io_u_free_notify(td);
 	*io_u = NULL;
 }
 
@@ -1329,21 +1341,23 @@ again:
 
 	if (io_u) {
 		assert(io_u->flags & IO_U_F_FREE);
-		io_u->flags &= ~(IO_U_F_FREE | IO_U_F_NO_FILE_PUT |
+		io_u_clear(io_u, IO_U_F_FREE | IO_U_F_NO_FILE_PUT |
 				 IO_U_F_TRIMMED | IO_U_F_BARRIER |
 				 IO_U_F_VER_LIST);
 
 		io_u->error = 0;
 		io_u->acct_ddir = -1;
 		td->cur_depth++;
-		io_u->flags |= IO_U_F_IN_CUR_DEPTH;
+		assert(!(td->flags & TD_F_CHILD));
+		io_u_set(io_u, IO_U_F_IN_CUR_DEPTH);
 		io_u->ipo = NULL;
-	} else if (td->o.verify_async) {
+	} else if (td_async_processing(td)) {
 		/*
 		 * We ran out, wait for async verify threads to finish and
 		 * return one
 		 */
-		pthread_cond_wait(&td->free_cond, &td->io_u_lock);
+		assert(!(td->flags & TD_F_CHILD));
+		assert(!pthread_cond_wait(&td->free_cond, &td->io_u_lock));
 		goto again;
 	}
 
@@ -1542,7 +1556,7 @@ err_put:
 	return ERR_PTR(ret);
 }
 
-void io_u_log_error(struct thread_data *td, struct io_u *io_u)
+static void __io_u_log_error(struct thread_data *td, struct io_u *io_u)
 {
 	enum error_type_bit eb = td_error_type(io_u->ddir, io_u->error);
 
@@ -1560,6 +1574,13 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 		td_verror(td, io_u->error, "io_u error");
 }
 
+void io_u_log_error(struct thread_data *td, struct io_u *io_u)
+{
+	__io_u_log_error(td, io_u);
+	if (td->parent)
+		__io_u_log_error(td, io_u);
+}
+
 static inline int gtod_reduce(struct thread_data *td)
 {
 	return td->o.disable_clat && td->o.disable_lat && td->o.disable_slat
@@ -1570,9 +1591,10 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 				  struct io_completion_data *icd,
 				  const enum fio_ddir idx, unsigned int bytes)
 {
+	const int no_reduce = !gtod_reduce(td);
 	unsigned long lusec = 0;
 
-	if (!gtod_reduce(td))
+	if (no_reduce)
 		lusec = utime_since(&io_u->issue_time, &icd->time);
 
 	if (!td->o.disable_lat) {
@@ -1601,10 +1623,13 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 		io_u_mark_latency(td, lusec);
 	}
 
+	if (td->parent)
+		td = td->parent;
+
 	if (!td->o.disable_bw)
 		add_bw_sample(td, idx, bytes, &icd->time);
 
-	if (!gtod_reduce(td))
+	if (no_reduce)
 		add_iops_sample(td, idx, bytes, &icd->time);
 
 	if (td->ts.nr_block_infos && io_u->ddir == DDIR_TRIM) {
@@ -1625,6 +1650,7 @@ static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 {
 	uint64_t secs, remainder, bps, bytes;
 
+	assert(!(td->flags & TD_F_CHILD));
 	bytes = td->this_io_bytes[ddir];
 	bps = td->rate_bps[ddir];
 	secs = bytes / bps;
@@ -1641,9 +1667,8 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 
 	dprint_io_u(io_u, "io complete");
 
-	td_io_u_lock(td);
 	assert(io_u->flags & IO_U_F_FLIGHT);
-	io_u->flags &= ~(IO_U_F_FLIGHT | IO_U_F_BUSY_OK);
+	io_u_clear(io_u, IO_U_F_FLIGHT | IO_U_F_BUSY_OK);
 
 	/*
 	 * Mark IO ok to verify
@@ -1659,8 +1684,6 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 			write_barrier();
 		}
 	}
-
-	td_io_u_unlock(td);
 
 	if (ddir_sync(ddir)) {
 		td->last_was_sync = 1;
@@ -1706,18 +1729,23 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 
 		if (ramp_time_over(td) && (td->runstate == TD_RUNNING ||
 					   td->runstate == TD_VERIFYING)) {
+			struct thread_data *__td = td;
+
 			account_io_completion(td, io_u, icd, ddir, bytes);
 
-			if (__should_check_rate(td, ddir)) {
-				td->rate_pending_usleep[ddir] =
-					(usec_for_io(td, ddir) -
-					 utime_since_now(&td->start));
+			if (td->parent)
+				__td = td->parent;
+
+			if (__should_check_rate(__td, ddir)) {
+				__td->rate_pending_usleep[ddir] =
+					(usec_for_io(__td, ddir) -
+					 utime_since_now(&__td->start));
 			}
 			if (ddir != DDIR_TRIM &&
-			    __should_check_rate(td, oddir)) {
-				td->rate_pending_usleep[oddir] =
-					(usec_for_io(td, oddir) -
-					 utime_since_now(&td->start));
+			    __should_check_rate(__td, oddir)) {
+				__td->rate_pending_usleep[oddir] =
+					(usec_for_io(__td, oddir) -
+					 utime_since_now(&__td->start));
 			}
 		}
 

@@ -54,6 +54,7 @@
 #include "idletime.h"
 #include "err.h"
 #include "lib/tp.h"
+#include "workqueue.h"
 
 static pthread_t helper_thread;
 static pthread_mutex_t helper_lock;
@@ -623,7 +624,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 					continue;
 				} else if (io_u->ddir == DDIR_TRIM) {
 					io_u->ddir = DDIR_READ;
-					io_u->flags |= IO_U_F_TRIMMED;
+					io_u_set(io_u, IO_U_F_TRIMMED);
 					break;
 				} else if (io_u->ddir == DDIR_WRITE) {
 					io_u->ddir = DDIR_READ;
@@ -868,21 +869,27 @@ static uint64_t do_io(struct thread_data *td)
 		    !td->o.experimental_verify)
 			log_io_piece(td, io_u);
 
-		ret = td_io_queue(td, io_u);
+		if (td->o.io_submit_mode == IO_MODE_OFFLOAD) {
+			if (td->error)
+				break;
+			ret = workqueue_enqueue(&td->io_wq, io_u);
+		} else {
+			ret = td_io_queue(td, io_u);
 
-		if (io_queue_event(td, io_u, &ret, ddir, &bytes_issued, 1, &comp_time))
-			break;
+			if (io_queue_event(td, io_u, &ret, ddir, &bytes_issued, 1, &comp_time))
+				break;
 
-		/*
-		 * See if we need to complete some commands. Note that we
-		 * can get BUSY even without IO queued, if the system is
-		 * resource starved.
-		 */
+			/*
+			 * See if we need to complete some commands. Note that
+			 * we can get BUSY even without IO queued, if the
+			 * system is resource starved.
+			 */
 reap:
-		full = queue_full(td) ||
-			(ret == FIO_Q_BUSY && td->cur_depth);
-		if (full || !td->o.iodepth_batch_complete)
-			ret = wait_for_completions(td, &comp_time);
+			full = queue_full(td) ||
+				(ret == FIO_Q_BUSY && td->cur_depth);
+			if (full || !td->o.iodepth_batch_complete)
+				ret = wait_for_completions(td, &comp_time);
+		}
 		if (ret < 0)
 			break;
 		if (!ddir_rw_sum(td->bytes_done) &&
@@ -931,7 +938,12 @@ reap:
 	if (!td->error) {
 		struct fio_file *f;
 
-		i = td->cur_depth;
+		if (td->o.io_submit_mode == IO_MODE_OFFLOAD) {
+			workqueue_flush(&td->io_wq);
+			i = 0;
+		} else
+			i = td->cur_depth;
+
 		if (i) {
 			ret = io_u_queued_complete(td, i);
 			if (td->o.fill_device && td->error == ENOSPC)
@@ -1242,7 +1254,7 @@ static uint64_t do_dry_run(struct thread_data *td)
 		if (!io_u)
 			break;
 
-		io_u->flags |= IO_U_F_FLIGHT;
+		io_u_set(io_u, IO_U_F_FLIGHT);
 		io_u->error = 0;
 		io_u->resid = 0;
 		if (ddir_rw(acct_ddir(io_u)))
@@ -1263,6 +1275,29 @@ static uint64_t do_dry_run(struct thread_data *td)
 	}
 
 	return td->bytes_done[DDIR_WRITE] + td->bytes_done[DDIR_TRIM];
+}
+
+static void io_workqueue_fn(struct thread_data *td, struct io_u *io_u)
+{
+	const enum fio_ddir ddir = io_u->ddir;
+	int ret;
+
+	dprint(FD_RATE, "io_u %p queued by %u\n", io_u, gettid());
+
+	io_u_set(io_u, IO_U_F_NO_FILE_PUT);
+
+	td->cur_depth++;
+
+	ret = td_io_queue(td, io_u);
+
+	dprint(FD_RATE, "io_u %p ret %d by %u\n", io_u, ret, gettid());
+
+	io_queue_event(td, io_u, &ret, ddir, NULL, 0, NULL);
+
+	if (ret == FIO_Q_QUEUED)
+		ret = io_u_queued_complete(td, 1);
+
+	td->cur_depth--;
 }
 
 /*
@@ -1462,6 +1497,10 @@ static void *thread_main(void *data)
 
 	fio_verify_init(td);
 
+	if ((o->io_submit_mode == IO_MODE_OFFLOAD) &&
+	    workqueue_init(td, &td->io_wq, io_workqueue_fn, td->o.iodepth))
+		goto err;
+
 	fio_gettime(&td->epoch, NULL);
 	fio_getrusage(&td->ru_start);
 	clear_state = 0;
@@ -1569,6 +1608,9 @@ static void *thread_main(void *data)
 	fio_unpin_memory(td);
 
 	fio_writeout_logs(td);
+
+	if (o->io_submit_mode == IO_MODE_OFFLOAD)
+		workqueue_exit(&td->io_wq);
 
 	if (td->flags & TD_F_COMPRESS_LOG)
 		tp_exit(&td->tp_data);
