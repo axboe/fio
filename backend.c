@@ -1526,6 +1526,15 @@ static void *thread_main(void *data)
 
 		clear_state = 1;
 
+		/*
+		 * Make sure we've successfully updated the rusage stats
+		 * before waiting on the stat mutex. Otherwise we could have
+		 * the stat thread holding stat mutex and waiting for
+		 * the rusage_sem, which would never get upped because
+		 * this thread is waiting for the stat mutex.
+		 */
+		check_update_rusage(td);
+
 		fio_mutex_down(stat_mutex);
 		if (td_read(td) && td->io_bytes[DDIR_READ]) {
 			elapsed = mtime_since_now(&td->start);
@@ -1555,6 +1564,11 @@ static void *thread_main(void *data)
 		fio_gettime(&td->start, NULL);
 
 		do_verify(td, verify_bytes);
+
+		/*
+		 * See comment further up for why this is done here.
+		 */
+		check_update_rusage(td);
 
 		fio_mutex_down(stat_mutex);
 		td->ts.runtime[DDIR_READ] += mtime_since_now(&td->start);
