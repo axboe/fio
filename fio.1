@@ -378,6 +378,11 @@ because ZFS doesn't support it. Default: 'posix'.
 Use \fBposix_fadvise\fR\|(2) to advise the kernel what I/O patterns
 are likely to be issued. Default: true.
 .TP
+.BI fadvise_stream \fR=\fPint
+Use \fBposix_fadvise\fR\|(2) to advise the kernel what stream ID the
+writes issued belong to. Only supported on Linux. Note, this option
+may change going forward.
+.TP
 .BI size \fR=\fPint
 Total size of I/O for this job.  \fBfio\fR will run until this many bytes have
 been transferred, unless limited by other options (\fBruntime\fR, for instance,

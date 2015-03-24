@@ -282,4 +282,10 @@ static inline int fio_set_sched_idle(void)
 }
 #endif
 
+#ifndef POSIX_FADV_STREAMID
+#define POSIX_FADV_STREAMID	8
+#endif
+
+#define FIO_HAVE_STREAMID
+
 #endif

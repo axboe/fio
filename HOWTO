@@ -460,6 +460,10 @@ fadvise_hint=bool By default, fio will use fadvise() to advise the kernel
 		If set, fio will use POSIX_FADV_SEQUENTIAL for sequential
 		IO and POSIX_FADV_RANDOM for random IO.
 
+fadvise_stream=int Notify the kernel what write stream ID to place these
+		writes under. Only supported on Linux. Note, this option
+		may change going forward.
+
 size=int	The total size of file io for this job. Fio will run until
 		this many bytes has been transferred, unless runtime is
 		limited by other options (such as 'runtime', for instance,
