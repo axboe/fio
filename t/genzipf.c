@@ -43,13 +43,18 @@ enum {
 };
 static const char *dist_types[] = { "None", "Zipf", "Pareto", "Normal" };
 
+enum {
+	OUTPUT_NORMAL,
+	OUTPUT_CSV,
+};
+
 static int dist_type = TYPE_ZIPF;
 static unsigned long gb_size = 500;
 static unsigned long block_size = 4096;
 static unsigned long output_nranges = DEF_NR_OUTPUT;
 static double percentage;
 static double dist_val;
-static int output_csv = 0;
+static int output_type = OUTPUT_NORMAL;
 
 #define DEF_ZIPF_VAL	1.2
 #define DEF_PARETO_VAL	0.3
@@ -132,7 +137,7 @@ static int parse_options(int argc, char *argv[])
 			output_nranges = strtoul(optarg, NULL, 10);
 			break;
 		case 'c':
-			output_csv = 1;
+			output_type = OUTPUT_CSV;
 			break;
 		default:
 			printf("bad option %c\n", c);
@@ -172,21 +177,116 @@ static int node_cmp(const void *p1, const void *p2)
 	return n2->hits - n1->hits;
 }
 
+static void output_csv(struct node *nodes, unsigned long nnodes)
+{
+	unsigned long i;
+
+	printf("rank, count\n");
+	for (i = 0; i < nnodes; i++)
+		printf("%lu, %lu\n", i, nodes[i].hits);
+}
+
+static void output_normal(struct node *nodes, unsigned long nnodes,
+			  unsigned long nranges)
+{
+	unsigned long i, j, cur_vals, interval_step, next_interval, total_vals;
+	unsigned long blocks = percentage * nnodes / 100;
+	double hit_percent_sum = 0;
+	unsigned long long hit_sum = 0;
+	double perc, perc_i;
+	struct output_sum *output_sums;
+
+	interval_step = (nnodes - 1) / output_nranges + 1;
+	next_interval = interval_step;
+	output_sums = malloc(output_nranges * sizeof(struct output_sum));
+
+	for (i = 0; i < output_nranges; i++) {
+		output_sums[i].output = 0.0;
+		output_sums[i].nranges = 0;
+	}
+
+	j = total_vals = cur_vals = 0;
+
+	for (i = 0; i < nnodes; i++) {
+		struct output_sum *os = &output_sums[j];
+		struct node *node = &nodes[i];
+		cur_vals += node->hits;
+		total_vals += node->hits;
+		os->nranges += node->hits;
+		if (i == (next_interval) -1 || i == nnodes - 1) {
+			os->output = (double) cur_vals / (double) nranges;
+			os->output *= 100.0;
+			cur_vals = 0;
+			next_interval += interval_step;
+			j++;
+		}
+
+		if (percentage) {
+			if (total_vals >= blocks) {
+				double cs = i * block_size / (1024 * 1024);
+				char p = 'M';
+
+				if (cs > 1024.0) {
+					cs /= 1024.0;
+					p = 'G';
+				}
+				if (cs > 1024.0) {
+					cs /= 1024.0;
+					p = 'T';
+				}
+
+				printf("%.2f%% of hits satisfied in %.3f%cB of cache\n", percentage, cs, p);
+				percentage = 0.0;
+			}
+		}
+	}
+
+	perc_i = 100.0 / (double)output_nranges;
+	perc = 0.0;
+
+	printf("\n   Rows           Hits %%         Sum %%           # Hits          Size\n");
+	printf("-----------------------------------------------------------------------\n");
+	for (i = 0; i < output_nranges; i++) {
+		struct output_sum *os = &output_sums[i];
+		double gb = (double)os->nranges * block_size / 1024.0;
+		char p = 'K';
+
+		if (gb > 1024.0) {
+			p = 'M';
+			gb /= 1024.0;
+		}
+		if (gb > 1024.0) {
+			p = 'G';
+			gb /= 1024.0;
+		}
+
+		perc += perc_i;
+		hit_percent_sum += os->output;
+		hit_sum += os->nranges;
+		printf("%s %6.2f%%\t%6.2f%%\t\t%6.2f%%\t\t%8u\t%6.2f%c\n",
+			i ? "|->" : "Top", perc, os->output, hit_percent_sum,
+			os->nranges, gb, p);
+	}
+
+	printf("-----------------------------------------------------------------------\n");
+	printf("Total\t\t\t\t\t\t%8llu\n", hit_sum);
+	free(output_sums);
+}
+
 int main(int argc, char *argv[])
 {
 	unsigned long offset;
-	unsigned long i, j, k, nr_vals, cur_vals, interval_step, next_interval, total_vals, nnodes;
 	unsigned long long nranges;
-	struct output_sum *output_sums;
+	unsigned long nnodes;
 	struct node *nodes;
-	double perc, perc_i;
 	struct zipf_state zs;
 	struct gauss_state gs;
+	int i, j;
 
 	if (parse_options(argc, argv))
 		return 1;
 
-	if( !output_csv )
+	if (output_type != OUTPUT_CSV)
 		printf("Generating %s distribution with %f input and %lu GB size and %lu block_size.\n", dist_types[dist_type], dist_val, gb_size, block_size);
 
 	nranges = gb_size * 1024 * 1024 * 1024ULL;
@@ -234,91 +334,11 @@ int main(int argc, char *argv[])
 
 	qsort(nodes, j, sizeof(struct node), node_cmp);
 	nnodes = j;
-	nr_vals = nnodes;
 
-	if (output_csv) {
-		printf("rank, count\n");
-		for (k = 0; k < nnodes; k++) {
-			printf("%lu, %lu\n", k, nodes[k].hits);
-		}
-	} else {
-		unsigned long blocks = percentage * nranges / 100;
-		double hit_percent_sum = 0;
-		unsigned long long hit_sum = 0;
-		interval_step = (nr_vals - 1) / output_nranges + 1;
-		next_interval = interval_step;
-		output_sums = malloc(output_nranges * sizeof(struct output_sum));
-		for (i = 0; i < output_nranges; i++) {
-			output_sums[i].output = 0.0;
-			output_sums[i].nranges = 0;
-		}
-
-		j = total_vals = cur_vals = 0;
-
-		for (k = 0; k < nnodes; k++) {
-			struct output_sum *os = &output_sums[j];
-			struct node *node = &nodes[k];
-			cur_vals += node->hits;
-			total_vals += node->hits;
-			os->nranges += node->hits;
-			if (k == (next_interval)  -1 || k == (nnodes - 1)) {
-				os->output = (double)(cur_vals) / (double)nranges;
-				os->output *= 100.0;
-				cur_vals = 0;
-				next_interval += interval_step;
-				j++;
-			}
-
-			if (percentage) {
-				if (total_vals >= blocks) {
-					double cs = k * block_size / (1024 * 1024);
-					char p = 'M';
-
-					if (cs > 1024.0) {
-						cs /= 1024.0;
-						p = 'G';
-					}
-					if (cs > 1024.0) {
-						cs /= 1024.0;
-						p = 'T';
-					}
-
-					printf("%.2f%% of hits satisfied in %.3f%cB of cache\n", percentage, cs, p);
-					percentage = 0.0;
-				}
-			}
-		}
-
-		perc_i = 100.0 / (double)output_nranges;
-		perc = 0.0;
-
-		printf("\n   Rows           Hits %%         Sum %%           # Hits          Size\n");
-		printf("-----------------------------------------------------------------------\n");
-		for (i = 0; i < output_nranges; i++) {
-			struct output_sum *os = &output_sums[i];
-			double gb = (double)os->nranges * block_size / 1024.0;
-			char p = 'K';
-
-			if (gb > 1024.0) {
-				p = 'M';
-				gb /= 1024.0;
-			}
-			if (gb > 1024.0) {
-				p = 'G';
-				gb /= 1024.0;
-			}
-
-			perc += perc_i;
-			hit_percent_sum += os->output;
-			hit_sum += os->nranges;
-			printf("%s %6.2f%%\t%6.2f%%\t\t%6.2f%%\t\t%8u\t%6.2f%c\n",
-			       i ? "|->" : "Top", perc, os->output, hit_percent_sum, os->nranges,
-			       gb, p);
-		}
-		printf("-----------------------------------------------------------------------\n");
-		printf("Total\t\t\t\t\t\t%8llu\n", hit_sum);
-		free(output_sums);
-	}
+	if (output_type == OUTPUT_CSV)
+		output_csv(nodes, nnodes);
+	else
+		output_normal(nodes, nnodes, nranges);
 
 	free(hash);
 	free(nodes);
