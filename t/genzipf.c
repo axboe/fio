@@ -171,7 +171,7 @@ static int node_cmp(const void *p1, const void *p2)
 int main(int argc, char *argv[])
 {
 	unsigned long offset;
-	unsigned long i, j, k, nr_vals, cur_vals, interval, total_vals, nnodes;
+	unsigned long i, j, k, nr_vals, cur_vals, interval_step, next_interval, total_vals, nnodes;
 	unsigned long long nranges;
 	struct output_sum *output_sums;
 	struct node *nodes;
@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 
 	nodes = malloc(nranges * sizeof(struct node));
 
-	for (nr_vals = i = j = 0; i < nranges; i++) {
+	for (i = j = 0; i < nranges; i++) {
 		struct node *n;
 
 		if (dist_type == TYPE_ZIPF)
@@ -221,7 +221,6 @@ int main(int argc, char *argv[])
 			j++;
 		}
 
-		nr_vals++;
 	}
 
 	qsort(nodes, j, sizeof(struct node), node_cmp);
@@ -230,47 +229,41 @@ int main(int argc, char *argv[])
 
 	if (output_csv) {
 		printf("rank, count\n");
-		for (k = 0; k < nnodes; k++)
+        unsigned long sum = 0;
+		for (k = 0; k < nnodes; k++) {
 			printf("%lu, %lu\n", k, nodes[k].hits);
+            sum += nodes[k].hits;
+                
+		}
 	} else {
-		interval = (nr_vals + output_nranges - 1) / output_nranges;
-
+        interval_step = (nr_vals - 1) / output_nranges + 1;
+        next_interval = interval_step;
 		output_sums = malloc(output_nranges * sizeof(struct output_sum));
 		for (i = 0; i < output_nranges; i++) {
 			output_sums[i].output = 0.0;
-			output_sums[i].nranges = 1;
+			output_sums[i].nranges = 0;
 		}
 
-		total_vals = i = j = cur_vals = 0;
+		j = total_vals = cur_vals = 0;
+		unsigned long blocks = percentage * nranges / 100;
 
 		for (k = 0; k < nnodes; k++) {
 			struct output_sum *os = &output_sums[j];
 			struct node *node = &nodes[k];
-
-			if (i >= interval) {
-				os->output =
-				    (double)(cur_vals + 1) / (double)nranges;
+			cur_vals += node->hits;
+			total_vals += node->hits;
+			os->nranges += node->hits;
+			if (k == (next_interval)  -1 || k == (nnodes - 1)) {
+				os->output = (double)(cur_vals) / (double)nranges;
 				os->output *= 100.0;
-				j++;
-				cur_vals = node->hits;
-				interval +=
-				    (nr_vals + output_nranges -
-				     1) / output_nranges;
-			} else {
-				cur_vals += node->hits;
-				os->nranges += node->hits;
+				cur_vals = 0;
+				next_interval += interval_step;
+                j++;
 			}
 
-			i++;
-			total_vals += node->hits;
-
 			if (percentage) {
-				unsigned long blocks =
-				    percentage * nranges / 100;
-
 				if (total_vals >= blocks) {
-					double cs =
-					    i * block_size / (1024 * 1024);
+					double cs = k * block_size / (1024 * 1024);
 					char p = 'M';
 
 					if (cs > 1024.0) {
@@ -291,11 +284,13 @@ int main(int argc, char *argv[])
 		perc_i = 100.0 / (double)output_nranges;
 		perc = 0.0;
 
-		printf("\n   Rows           Hits           No Hits         Size\n");
+        double hit_percent_sum = 0;
+        unsigned long long hit_sum = 0;
+		printf("\n   Rows           Hits %%         No Hits         Size\n");
 		printf("--------------------------------------------------------\n");
-		for (i = 0; i < j; i++) {
+		for (i = 0; i < output_nranges; i++) {
 			struct output_sum *os = &output_sums[i];
-			double gb = (double)os->nranges * block_size / 1024.0;
+			double gb = (double)os->nranges * block_size / 1024.0;            
 			char p = 'K';
 
 			if (gb > 1024.0) {
@@ -308,11 +303,16 @@ int main(int argc, char *argv[])
 			}
 
 			perc += perc_i;
+            hit_percent_sum += os->output;
+            hit_sum += os->nranges;
 			printf("%s %6.2f%%\t%6.2f%%\t\t%8u\t%6.2f%c\n",
 			       i ? "|->" : "Top", perc, os->output, os->nranges,
 			       gb, p);
 		}
-
+		printf("--------------------------------------------------------\n");
+		printf("Total\t\t%6.2f%%\t\t%8llu\n",
+		       hit_percent_sum, hit_sum);
+        
 		free(output_sums);
 	}
 
