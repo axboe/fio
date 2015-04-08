@@ -229,15 +229,15 @@ int main(int argc, char *argv[])
 
 	if (output_csv) {
 		printf("rank, count\n");
-        unsigned long sum = 0;
 		for (k = 0; k < nnodes; k++) {
 			printf("%lu, %lu\n", k, nodes[k].hits);
-            sum += nodes[k].hits;
-                
 		}
 	} else {
-        interval_step = (nr_vals - 1) / output_nranges + 1;
-        next_interval = interval_step;
+		unsigned long blocks = percentage * nranges / 100;
+		double hit_percent_sum = 0;
+		unsigned long long hit_sum = 0;
+		interval_step = (nr_vals - 1) / output_nranges + 1;
+		next_interval = interval_step;
 		output_sums = malloc(output_nranges * sizeof(struct output_sum));
 		for (i = 0; i < output_nranges; i++) {
 			output_sums[i].output = 0.0;
@@ -245,7 +245,6 @@ int main(int argc, char *argv[])
 		}
 
 		j = total_vals = cur_vals = 0;
-		unsigned long blocks = percentage * nranges / 100;
 
 		for (k = 0; k < nnodes; k++) {
 			struct output_sum *os = &output_sums[j];
@@ -258,7 +257,7 @@ int main(int argc, char *argv[])
 				os->output *= 100.0;
 				cur_vals = 0;
 				next_interval += interval_step;
-                j++;
+				j++;
 			}
 
 			if (percentage) {
@@ -284,13 +283,11 @@ int main(int argc, char *argv[])
 		perc_i = 100.0 / (double)output_nranges;
 		perc = 0.0;
 
-        double hit_percent_sum = 0;
-        unsigned long long hit_sum = 0;
 		printf("\n   Rows           Hits %%         No Hits         Size\n");
 		printf("--------------------------------------------------------\n");
 		for (i = 0; i < output_nranges; i++) {
 			struct output_sum *os = &output_sums[i];
-			double gb = (double)os->nranges * block_size / 1024.0;            
+			double gb = (double)os->nranges * block_size / 1024.0;
 			char p = 'K';
 
 			if (gb > 1024.0) {
@@ -303,16 +300,14 @@ int main(int argc, char *argv[])
 			}
 
 			perc += perc_i;
-            hit_percent_sum += os->output;
-            hit_sum += os->nranges;
+			hit_percent_sum += os->output;
+			hit_sum += os->nranges;
 			printf("%s %6.2f%%\t%6.2f%%\t\t%8u\t%6.2f%c\n",
 			       i ? "|->" : "Top", perc, os->output, os->nranges,
 			       gb, p);
 		}
 		printf("--------------------------------------------------------\n");
-		printf("Total\t\t%6.2f%%\t\t%8llu\n",
-		       hit_percent_sum, hit_sum);
-        
+		printf("Total\t\t%6.2f%%\t\t%8llu\n", hit_percent_sum, hit_sum);
 		free(output_sums);
 	}
 
