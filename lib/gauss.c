@@ -47,7 +47,9 @@ void gauss_init(struct gauss_state *gs, unsigned long nranges, unsigned int d,
 	memset(gs, 0, sizeof(*gs));
 	init_rand_seed(&gs->r, seed);
 	gs->nranges = nranges;
-	gs->stddev = d;
-	if (gs->stddev > nranges / 2)
-		gs->stddev = nranges / 2;
+	if (d) {
+		gs->stddev = (nranges * 100) / d;
+		if (gs->stddev > nranges / 2)
+			gs->stddev = nranges / 2;
+	}
 }

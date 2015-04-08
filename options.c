@@ -744,8 +744,13 @@ static int str_random_distribution_cb(void *data, const char *str)
 			return 1;
 		}
 		td->o.pareto_h.u.f = val;
-	} else
+	} else {
+		if (val <= 0.00 || val >= 100.0) {
+			log_err("fio: normal deviation out of range (0 < input < 100.0)\n");
+			return 1;
+		}
 		td->o.gauss_dev = val;
+	}
 
 	return 0;
 }
