@@ -3,10 +3,10 @@
  * what an access pattern would look like.
  *
  * For instance, the following would generate a zipf distribution
- * with theta 1.2, using 100,000 values and split the reporting into
+ * with theta 1.2, using 262144 (1 GB / 4096) values and split the reporting into
  * 20 buckets:
  *
- *	t/genzipf zipf 1.2 100000 20
+ *	./t/fio-genzipf -t zipf -i 1.2 -g 1 -b 4096 -o 20
  *
  * Only the distribution type (zipf or pareto) and spread input need
  * to be given, if not given defaults are used.
