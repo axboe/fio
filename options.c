@@ -718,6 +718,8 @@ static int str_random_distribution_cb(void *data, const char *str)
 		val = FIO_DEF_ZIPF;
 	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
 		val = FIO_DEF_PARETO;
+	else if (td->o.random_distribution == FIO_RAND_DIST_GAUSS)
+		val = 0.0;
 	else
 		return 0;
 
@@ -736,13 +738,14 @@ static int str_random_distribution_cb(void *data, const char *str)
 			return 1;
 		}
 		td->o.zipf_theta.u.f = val;
-	} else {
+	} else if (td->o.random_distribution == FIO_RAND_DIST_PARETO) {
 		if (val <= 0.00 || val >= 1.00) {
 			log_err("fio: pareto input out of range (0 < input < 1.0)\n");
 			return 1;
 		}
 		td->o.pareto_h.u.f = val;
-	}
+	} else
+		td->o.gauss_dev = val;
 
 	return 0;
 }
@@ -1874,6 +1877,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  { .ival = "pareto",
 			    .oval = FIO_RAND_DIST_PARETO,
 			    .help = "Pareto distribution",
+			  },
+			  { .ival = "normal",
+			    .oval = FIO_RAND_DIST_GAUSS,
+			    .help = "Normal (gaussian) distribution",
 			  },
 		},
 		.category = FIO_OPT_C_IO,

@@ -8,6 +8,7 @@
 #include "lib/zipf.h"
 #include "lib/axmap.h"
 #include "lib/lfsr.h"
+#include "lib/gauss.h"
 
 /*
  * The type of object we are working on
@@ -119,7 +120,10 @@ struct fio_file {
 	/*
 	 * Used for zipf random distribution
 	 */
-	struct zipf_state zipf;
+	union {
+		struct zipf_state zipf;
+		struct gauss_state gauss;
+	};
 
 	int references;
 	enum fio_file_flags flags;

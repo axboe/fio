@@ -149,6 +149,15 @@ static int __get_next_rand_offset_pareto(struct thread_data *td,
 	return 0;
 }
 
+static int __get_next_rand_offset_gauss(struct thread_data *td,
+					struct fio_file *f, enum fio_ddir ddir,
+					uint64_t *b)
+{
+	*b = gauss_next(&f->gauss);
+	return 0;
+}
+
+
 static int flist_cmp(void *data, struct flist_head *a, struct flist_head *b)
 {
 	struct rand_off *r1 = flist_entry(a, struct rand_off, list);
@@ -166,6 +175,8 @@ static int get_off_from_method(struct thread_data *td, struct fio_file *f,
 		return __get_next_rand_offset_zipf(td, f, ddir, b);
 	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
 		return __get_next_rand_offset_pareto(td, f, ddir, b);
+	else if (td->o.random_distribution == FIO_RAND_DIST_GAUSS)
+		return __get_next_rand_offset_gauss(td, f, ddir, b);
 
 	log_err("fio: unknown random distribution: %d\n", td->o.random_distribution);
 	return 1;

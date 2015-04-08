@@ -998,8 +998,10 @@ static int __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 
 	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
 		zipf_init(&f->zipf, nranges, td->o.zipf_theta.u.f, seed);
-	else
+	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
 		pareto_init(&f->zipf, nranges, td->o.pareto_h.u.f, seed);
+	else if (td->o.random_distribution == FIO_RAND_DIST_GAUSS)
+		gauss_init(&f->gauss, nranges, td->o.gauss_dev, seed);
 
 	return 1;
 }
