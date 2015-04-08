@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "../lib/zipf.h"
+#include "../lib/gauss.h"
 #include "../flist.h"
 #include "../hash.h"
 
@@ -38,8 +39,9 @@ enum {
 	TYPE_NONE = 0,
 	TYPE_ZIPF,
 	TYPE_PARETO,
+	TYPE_NORMAL,
 };
-static const char *dist_types[] = { "None", "Zipf", "Pareto" };
+static const char *dist_types[] = { "None", "Zipf", "Pareto", "Normal" };
 
 static int dist_type = TYPE_ZIPF;
 static unsigned long gb_size = 500;
@@ -82,8 +84,9 @@ static void usage(void)
 	printf("genzipf: test zipf/pareto values for fio input\n");
 	printf("\t-h\tThis help screen\n");
 	printf("\t-p\tGenerate size of data set that are hit by this percentage\n");
-	printf("\t-t\tDistribution type (zipf or pareto)\n");
-	printf("\t-i\tDistribution algorithm input (zipf theta or pareto power)\n");
+	printf("\t-t\tDistribution type (zipf, pareto, or normal)\n");
+	printf("\t-i\tDistribution algorithm input (zipf theta, pareto power,\n"
+		"\t\tor normal %% deviation)\n");
 	printf("\t-b\tBlock size of a given range (in bytes)\n");
 	printf("\t-g\tSize of data set (in gigabytes)\n");
 	printf("\t-o\tNumber of output rows\n");
@@ -111,6 +114,8 @@ static int parse_options(int argc, char *argv[])
 				dist_type = TYPE_ZIPF;
 			else if (!strncmp(optarg, "pareto", 6))
 				dist_type = TYPE_PARETO;
+			else if (!strncmp(optarg, "normal", 6))
+				dist_type = TYPE_NORMAL;
 			else {
 				printf("wrong dist type: %s\n", optarg);
 				return 1;
@@ -176,6 +181,7 @@ int main(int argc, char *argv[])
 	struct node *nodes;
 	double perc, perc_i;
 	struct zipf_state zs;
+	struct gauss_state gs;
 
 	if (parse_options(argc, argv))
 		return 1;
@@ -188,8 +194,10 @@ int main(int argc, char *argv[])
 
 	if (dist_type == TYPE_ZIPF)
 		zipf_init(&zs, nranges, dist_val, 1);
-	else
+	else if (dist_type == TYPE_PARETO)
 		pareto_init(&zs, nranges, dist_val, 1);
+	else
+		gauss_init(&gs, nranges, dist_val, 1);
 
 	hash_bits = 0;
 	hash_size = nranges;
@@ -209,8 +217,10 @@ int main(int argc, char *argv[])
 
 		if (dist_type == TYPE_ZIPF)
 			offset = zipf_next(&zs);
-		else
+		else if (dist_type == TYPE_PARETO)
 			offset = pareto_next(&zs);
+		else
+			offset = gauss_next(&gs);
 
 		n = hash_lookup(offset);
 		if (n)
