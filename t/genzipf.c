@@ -292,8 +292,8 @@ int main(int argc, char *argv[])
 		perc_i = 100.0 / (double)output_nranges;
 		perc = 0.0;
 
-		printf("\n   Rows           Hits %%         No Hits         Size\n");
-		printf("--------------------------------------------------------\n");
+		printf("\n   Rows           Hits %%         Sum %%           # Hits          Size\n");
+		printf("-----------------------------------------------------------------------\n");
 		for (i = 0; i < output_nranges; i++) {
 			struct output_sum *os = &output_sums[i];
 			double gb = (double)os->nranges * block_size / 1024.0;
@@ -311,12 +311,12 @@ int main(int argc, char *argv[])
 			perc += perc_i;
 			hit_percent_sum += os->output;
 			hit_sum += os->nranges;
-			printf("%s %6.2f%%\t%6.2f%%\t\t%8u\t%6.2f%c\n",
-			       i ? "|->" : "Top", perc, os->output, os->nranges,
+			printf("%s %6.2f%%\t%6.2f%%\t\t%6.2f%%\t\t%8u\t%6.2f%c\n",
+			       i ? "|->" : "Top", perc, os->output, hit_percent_sum, os->nranges,
 			       gb, p);
 		}
-		printf("--------------------------------------------------------\n");
-		printf("Total\t\t%6.2f%%\t\t%8llu\n", hit_percent_sum, hit_sum);
+		printf("-----------------------------------------------------------------------\n");
+		printf("Total\t\t\t\t\t\t%8llu\n", hit_sum);
 		free(output_sums);
 	}
 
