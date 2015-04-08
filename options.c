@@ -749,7 +749,7 @@ static int str_random_distribution_cb(void *data, const char *str)
 			log_err("fio: normal deviation out of range (0 < input < 100.0)\n");
 			return 1;
 		}
-		td->o.gauss_dev = val;
+		td->o.gauss_dev.u.f = val;
 	}
 
 	return 0;

@@ -41,14 +41,15 @@ unsigned long long gauss_next(struct gauss_state *gs)
 	return __hash_u64(sum) % gs->nranges;
 }
 
-void gauss_init(struct gauss_state *gs, unsigned long nranges, unsigned int d,
+void gauss_init(struct gauss_state *gs, unsigned long nranges, double dev,
 		unsigned int seed)
 {
 	memset(gs, 0, sizeof(*gs));
 	init_rand_seed(&gs->r, seed);
 	gs->nranges = nranges;
-	if (d) {
-		gs->stddev = (nranges * 100) / d;
+
+	if (dev != 0.0) {
+		gs->stddev = ceil((double) (nranges * 100.0) / dev);
 		if (gs->stddev > nranges / 2)
 			gs->stddev = nranges / 2;
 	}

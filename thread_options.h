@@ -126,10 +126,10 @@ struct thread_options {
 	unsigned int verify_only;
 
 	unsigned int random_distribution;
-	unsigned int gauss_dev;
 
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
+	fio_fp64_t gauss_dev;
 
 	unsigned int random_generator;
 
@@ -355,9 +355,11 @@ struct thread_options_pack {
 	uint32_t bs_is_seq_rand;
 
 	uint32_t random_distribution;
-	uint32_t gauss_dev;
+	uint32_t pad;
+
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
+	fio_fp64_t gauss_dev;
 
 	uint32_t random_generator;
 

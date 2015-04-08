@@ -10,7 +10,7 @@ struct gauss_state {
 	unsigned int stddev;
 };
 
-void gauss_init(struct gauss_state *gs, unsigned long nranges, unsigned int d,
+void gauss_init(struct gauss_state *gs, unsigned long nranges, double dev,
 		unsigned int seed);
 unsigned long long gauss_next(struct gauss_state *gs);
 

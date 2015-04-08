@@ -1001,7 +1001,7 @@ static int __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
 		pareto_init(&f->zipf, nranges, td->o.pareto_h.u.f, seed);
 	else if (td->o.random_distribution == FIO_RAND_DIST_GAUSS)
-		gauss_init(&f->gauss, nranges, td->o.gauss_dev, seed);
+		gauss_init(&f->gauss, nranges, td->o.gauss_dev.u.f, seed);
 
 	return 1;
 }
