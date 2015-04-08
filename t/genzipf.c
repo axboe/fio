@@ -22,8 +22,7 @@
 #include "../flist.h"
 #include "../hash.h"
 
-#define DEF_NR		1000000
-#define DEF_NR_OUTPUT	23
+#define DEF_NR_OUTPUT	20
 
 struct node {
 	struct flist_head list;
@@ -87,7 +86,7 @@ static void usage(void)
 	printf("\t-i\tDistribution algorithm input (zipf theta or pareto power)\n");
 	printf("\t-b\tBlock size of a given range (in bytes)\n");
 	printf("\t-g\tSize of data set (in gigabytes)\n");
-	printf("\t-o\tNumber of output columns\n");
+	printf("\t-o\tNumber of output rows\n");
 	printf("\t-c\tOutput ranges in CSV format\n");
 }
 
