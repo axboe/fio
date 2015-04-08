@@ -59,9 +59,14 @@ static int output_type = OUTPUT_NORMAL;
 #define DEF_ZIPF_VAL	1.2
 #define DEF_PARETO_VAL	0.3
 
+static unsigned int hashv(unsigned long long val)
+{
+	return jhash(&val, sizeof(val), 0) & (hash_size - 1);
+}
+
 static struct node *hash_lookup(unsigned long long val)
 {
-	struct flist_head *l = &hash[hash_long(val, hash_bits)];
+	struct flist_head *l = &hash[hashv(val)];
 	struct flist_head *entry;
 	struct node *n;
 
@@ -74,14 +79,13 @@ static struct node *hash_lookup(unsigned long long val)
 	return NULL;
 }
 
-static struct node *hash_insert(struct node *n, unsigned long long val)
+static void hash_insert(struct node *n, unsigned long long val)
 {
-	struct flist_head *l = &hash[hash_long(val, hash_bits)];
+	struct flist_head *l = &hash[hashv(val)];
 
 	n->val = val;
 	n->hits = 1;
 	flist_add_tail(&n->list, l);
-	return n;
 }
 
 static void usage(void)
@@ -306,7 +310,7 @@ int main(int argc, char *argv[])
 
 	hash_size = 1 << hash_bits;
 
-	hash = malloc(hash_size * sizeof(struct flist_head));
+	hash = calloc(hash_size, sizeof(struct flist_head));
 	for (i = 0; i < hash_size; i++)
 		INIT_FLIST_HEAD(&hash[i]);
 
@@ -329,7 +333,6 @@ int main(int argc, char *argv[])
 			hash_insert(&nodes[j], offset);
 			j++;
 		}
-
 	}
 
 	qsort(nodes, j, sizeof(struct node), node_cmp);
