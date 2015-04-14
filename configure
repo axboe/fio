@@ -1369,6 +1369,23 @@ if test "$libhdfs" = "yes" ; then
 fi
 echo "HDFS engine                   $libhdfs"
 
+##########################################
+# Check whether we have MTD
+mtd="no"
+cat > $TMPC << EOF
+#include <mtd/mtd-user.h>
+#include <sys/ioctl.h>
+int main(int argc, char **argv)
+{
+  struct mtd_info_user info;
+  return ioctl(0, MEMGETINFO, &info);
+}
+EOF
+if compile_prog "" "" "mtd"; then
+  mtd="yes"
+fi
+echo "MTD                           $mtd"
+
 # Check if we have lex/yacc available
 yacc="no"
 yacc_is_bison="no"
@@ -1572,6 +1589,9 @@ if test "$libhdfs" = "yes" ; then
   echo "FIO_LIBHDFS_INCLUDE=$FIO_LIBHDFS_INCLUDE" >> $config_host_mak
   echo "FIO_LIBHDFS_LIB=$FIO_LIBHDFS_LIB" >> $config_host_mak
  fi
+if test "$mtd" = "yes" ; then
+  output_sym "CONFIG_MTD"
+fi
 if test "$arith" = "yes" ; then
   output_sym "CONFIG_ARITHMETIC"
   if test "$yacc_is_bison" = "yes" ; then
