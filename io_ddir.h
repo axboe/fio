@@ -35,6 +35,7 @@ enum td_ddir {
 	TD_DDIR_RANDWRITE	= TD_DDIR_WRITE | TD_DDIR_RAND,
 	TD_DDIR_RANDRW		= TD_DDIR_RW | TD_DDIR_RAND,
 	TD_DDIR_RANDTRIM	= TD_DDIR_TRIM | TD_DDIR_RAND,
+	TD_DDIR_WRITETRIM	= TD_DDIR_TRIM | TD_DDIR_WRITE,
 };
 
 #define td_read(td)		((td)->o.td_ddir & TD_DDIR_READ)
@@ -43,6 +44,8 @@ enum td_ddir {
 #define td_rw(td)		(((td)->o.td_ddir & TD_DDIR_RW) == TD_DDIR_RW)
 #define td_random(td)		((td)->o.td_ddir & TD_DDIR_RAND)
 #define file_randommap(td, f)	(!(td)->o.norandommap && fio_file_axmap((f)))
+#define td_writetrim(td)	(((td)->o.td_ddir & TD_DDIR_WRITETRIM) \
+					== TD_DDIR_WRITETRIM)
 
 static inline int ddir_sync(enum fio_ddir ddir)
 {

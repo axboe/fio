@@ -1416,6 +1416,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = TD_DDIR_RANDRW,
 			    .help = "Random read and write mix"
 			  },
+			  { .ival = "writetrim",
+			    .oval = TD_DDIR_WRITETRIM,
+			    .help = "Write and trim mix, trims preceding writes"
+			  },
 		},
 	},
 	{

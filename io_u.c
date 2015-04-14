@@ -668,7 +668,17 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 
 static void set_rw_ddir(struct thread_data *td, struct io_u *io_u)
 {
-	io_u->ddir = io_u->acct_ddir = get_rw_ddir(td);
+	enum fio_ddir ddir = get_rw_ddir(td);
+
+	if (td_writetrim(td)) {
+		struct fio_file *f = io_u->file;
+		if (f->last_pos[DDIR_WRITE] == f->last_pos[DDIR_TRIM])
+			ddir = DDIR_TRIM;
+		else
+			ddir = DDIR_WRITE;
+	}
+
+	io_u->ddir = io_u->acct_ddir = ddir;
 
 	if (io_u->ddir == DDIR_WRITE && (td->io_ops->flags & FIO_BARRIER) &&
 	    td->o.barrier_blocks &&

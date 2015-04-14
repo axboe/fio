@@ -744,6 +744,11 @@ static uint64_t do_io(struct thread_data *td)
 	   (td_write(td) && td->o.verify_backlog))
 		total_bytes += td->o.size;
 
+	/* In writetrim mode, each byte is trimmed and then written, so
+	 * allow total_bytes to be twice as big */
+	if (td_writetrim(td))
+		total_bytes += td->total_io_size;
+
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
 		(!flist_empty(&td->trim_list)) || !io_issue_bytes_exceeded(td) ||
 		td->o.time_based) {

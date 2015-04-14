@@ -1296,6 +1296,10 @@ void __show_run_stats(void)
 		ts->latency_percentile = td->o.latency_percentile;
 		ts->latency_window = td->o.latency_window;
 
+		ts->nr_block_infos = td->ts.nr_block_infos;
+		for (i = 0; i < ts->nr_block_infos; i++)
+			ts->block_infos[i] = td->ts.block_infos[i];
+
 		sum_thread_stats(ts, &td->ts, idx);
 	}
 
