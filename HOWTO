@@ -1468,6 +1468,11 @@ log_store_compressed=bool	If set, and log_compression is also set,
 		command line parameter. The files will be stored with a
 		.fz suffix.
 
+block_error_percentiles=bool	If set, record errors in trim block-sized
+		units from writes and trims and output a histogram of
+		how many trims it took to get to errors, and what kind
+		of error was encountered.
+
 lockmem=int	Pin down the specified amount of memory with mlock(2). Can
 		potentially be used instead of removing memory or booting
 		with less memory to simulate a smaller amount of memory.
@@ -1507,13 +1512,13 @@ clat_percentiles=bool Enable the reporting of percentiles of
 		 completion latencies.
 
 percentile_list=float_list Overwrite the default list of percentiles
-		for completion latencies. Each number is a floating
-		number in the range (0,100], and the maximum length of
-		the list is 20. Use ':' to separate the numbers, and
-		list the numbers in ascending order. For example,
-		--percentile_list=99.5:99.9 will cause fio to report
-		the values of completion latency below which 99.5% and
-		99.9% of the observed latencies fell, respectively.
+		for completion latencies and the block error histogram.
+		Each number is a floating number in the range (0,100],
+		and the maximum length of the list is 20. Use ':'
+		to separate the numbers, and list the numbers in ascending
+		order. For example, --percentile_list=99.5:99.9 will cause
+		fio to report the values of completion latency below which
+		99.5% and 99.9% of the observed latencies fell, respectively.
 
 clocksource=str	Use the given clocksource as the base of timing. The
 		supported options are:

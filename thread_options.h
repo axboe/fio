@@ -261,6 +261,8 @@ struct thread_options {
 	unsigned long long latency_target;
 	unsigned long long latency_window;
 	fio_fp64_t latency_percentile;
+
+	unsigned block_error_hist;
 };
 
 #define FIO_TOP_STR_MAX		256
@@ -488,6 +490,8 @@ struct thread_options_pack {
 	uint64_t latency_window;
 	uint32_t pad3;
 	fio_fp64_t latency_percentile;
+
+	uint32_t block_error_hist;
 } __attribute__((packed));
 
 extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);

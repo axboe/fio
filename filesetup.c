@@ -880,6 +880,27 @@ int setup_files(struct thread_data *td)
 		}
 	}
 
+	if (td->o.block_error_hist) {
+		int len;
+
+		assert(td->o.nr_files == 1);	/* checked in fixup_options */
+		f = td->files[0];
+		len = f->io_size / td->o.bs[DDIR_TRIM];
+		if (len > MAX_NR_BLOCK_INFOS || len <= 0) {
+			log_err("fio: cannot calculate block histogram with "
+				"%d trim blocks, maximum %d\n",
+				len, MAX_NR_BLOCK_INFOS);
+			td_verror(td, EINVAL, "block_error_hist");
+			goto err_out;
+		}
+
+		td->ts.nr_block_infos = len;
+		for (int i = 0; i < len; i++)
+			td->ts.block_infos[i] =
+				BLOCK_INFO(0, BLOCK_STATE_UNINIT);
+	} else
+		td->ts.nr_block_infos = 0;
+
 	if (!o->size || (total_size && o->size > total_size))
 		o->size = total_size;
 

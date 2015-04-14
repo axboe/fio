@@ -1606,6 +1606,19 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 
 	if (!gtod_reduce(td))
 		add_iops_sample(td, idx, bytes, &icd->time);
+
+	if (td->ts.nr_block_infos && io_u->ddir == DDIR_TRIM) {
+		uint32_t *info = io_u_block_info(td, io_u);
+		if (BLOCK_INFO_STATE(*info) < BLOCK_STATE_TRIM_FAILURE) {
+			if (io_u->ddir == DDIR_TRIM) {
+				*info = BLOCK_INFO(BLOCK_STATE_TRIMMED,
+						BLOCK_INFO_TRIMS(*info) + 1);
+			} else if (io_u->ddir == DDIR_WRITE) {
+				*info = BLOCK_INFO_SET_STATE(BLOCK_STATE_WRITTEN,
+								*info);
+			}
+		}
+	}
 }
 
 static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)

@@ -497,6 +497,147 @@ static void show_latencies(struct thread_stat *ts)
 	show_lat_m(io_u_lat_m);
 }
 
+static int block_state_category(int block_state)
+{
+	switch (block_state) {
+	case BLOCK_STATE_UNINIT:
+		return 0;
+	case BLOCK_STATE_TRIMMED:
+	case BLOCK_STATE_WRITTEN:
+		return 1;
+	case BLOCK_STATE_WRITE_FAILURE:
+	case BLOCK_STATE_TRIM_FAILURE:
+		return 2;
+	default:
+		assert(0);
+	}
+}
+
+static int compare_block_infos(const void *bs1, const void *bs2)
+{
+	uint32_t block1 = *(uint32_t *)bs1;
+	uint32_t block2 = *(uint32_t *)bs2;
+	int state1 = BLOCK_INFO_STATE(block1);
+	int state2 = BLOCK_INFO_STATE(block2);
+	int bscat1 = block_state_category(state1);
+	int bscat2 = block_state_category(state2);
+	int cycles1 = BLOCK_INFO_TRIMS(block1);
+	int cycles2 = BLOCK_INFO_TRIMS(block2);
+
+	if (bscat1 < bscat2)
+		return -1;
+	if (bscat1 > bscat2)
+		return 1;
+
+	if (cycles1 < cycles2)
+		return -1;
+	if (cycles1 > cycles2)
+		return 1;
+
+	if (state1 < state2)
+		return -1;
+	if (state1 > state2)
+		return 1;
+
+	assert(block1 == block2);
+	return 0;
+}
+
+static int calc_block_percentiles(int nr_block_infos, uint32_t *block_infos,
+				  fio_fp64_t *plist, unsigned int **percentiles,
+				  unsigned int *types)
+{
+	int len = 0;
+	int i, nr_uninit;
+
+	qsort(block_infos, nr_block_infos, sizeof(uint32_t), compare_block_infos);
+
+	while (len < FIO_IO_U_LIST_MAX_LEN && plist[len].u.f != 0.0)
+		len++;
+
+	if (!len)
+		return 0;
+
+	/*
+	 * Sort the percentile list. Note that it may already be sorted if
+	 * we are using the default values, but since it's a short list this
+	 * isn't a worry. Also note that this does not work for NaN values.
+	 */
+	if (len > 1)
+		qsort((void *)plist, len, sizeof(plist[0]), double_cmp);
+
+	nr_uninit = 0;
+	/* Start only after the uninit entries end */
+	for (nr_uninit = 0;
+	     nr_uninit < nr_block_infos
+		&& BLOCK_INFO_STATE(block_infos[nr_uninit]) == BLOCK_STATE_UNINIT;
+	     nr_uninit ++)
+		;
+
+	if (nr_uninit == nr_block_infos)
+		return 0;
+
+	*percentiles = calloc(len, sizeof(**percentiles));
+
+	for (i = 0; i < len; i++) {
+		int idx = (plist[i].u.f * (nr_block_infos - nr_uninit) / 100)
+				+ nr_uninit;
+		(*percentiles)[i] = BLOCK_INFO_TRIMS(block_infos[idx]);
+	}
+
+	memset(types, 0, sizeof(*types) * BLOCK_STATE_COUNT);
+	for (i = 0; i < nr_block_infos; i++)
+		types[BLOCK_INFO_STATE(block_infos[i])]++;
+
+	return len;
+}
+
+static const char *block_state_names[] = {
+	[BLOCK_STATE_UNINIT] = "unwritten",
+	[BLOCK_STATE_TRIMMED] = "trimmed",
+	[BLOCK_STATE_WRITTEN] = "written",
+	[BLOCK_STATE_TRIM_FAILURE] = "trim failure",
+	[BLOCK_STATE_WRITE_FAILURE] = "write failure",
+};
+
+static void show_block_infos(int nr_block_infos, uint32_t *block_infos,
+			     fio_fp64_t *plist)
+{
+	int len, pos, i;
+	unsigned int *percentiles = NULL;
+	unsigned int block_state_counts[BLOCK_STATE_COUNT];
+
+	len = calc_block_percentiles(nr_block_infos, block_infos, plist,
+				     &percentiles, block_state_counts);
+
+	log_info("  block lifetime percentiles :\n   |");
+	pos = 0;
+	for (i = 0; i < len; i++) {
+		uint32_t block_info = percentiles[i];
+#define LINE_LENGTH	75
+		char str[LINE_LENGTH];
+		int strln = snprintf(str, LINE_LENGTH, " %3.2fth=%u%c",
+				     plist[i].u.f, block_info,
+				     i == len - 1 ? '\n' : ',');
+		assert(strln < LINE_LENGTH);
+		if (pos + strln > LINE_LENGTH) {
+			pos = 0;
+			log_info("\n   |");
+		}
+		log_info("%s", str);
+		pos += strln;
+#undef LINE_LENGTH
+	}
+	if (percentiles)
+		free(percentiles);
+
+	log_info("        states               :");
+	for (i = 0; i < BLOCK_STATE_COUNT; i++)
+		log_info(" %s=%u%c",
+			 block_state_names[i], block_state_counts[i],
+			 i == BLOCK_STATE_COUNT - 1 ? '\n' : ',');
+}
+
 static void show_thread_status_normal(struct thread_stat *ts,
 				      struct group_run_stats *rs)
 {
@@ -596,6 +737,10 @@ static void show_thread_status_normal(struct thread_stat *ts,
 					ts->latency_percentile.u.f,
 					ts->latency_depth);
 	}
+
+	if (ts->nr_block_infos)
+		show_block_infos(ts->nr_block_infos, ts->block_infos,
+				  ts->percentile_list);
 }
 
 static void show_ddir_status_terse(struct thread_stat *ts,
@@ -997,6 +1142,45 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	/* Additional output if description is set */
 	if (strlen(ts->description))
 		json_object_add_value_string(root, "desc", ts->description);
+
+	if (ts->nr_block_infos) {
+		/* Block error histogram and types */
+		int len;
+		unsigned int *percentiles = NULL;
+		unsigned int block_state_counts[BLOCK_STATE_COUNT];
+
+		len = calc_block_percentiles(ts->nr_block_infos, ts->block_infos,
+					     ts->percentile_list,
+					     &percentiles, block_state_counts);
+
+		if (len) {
+			struct json_object *block, *percentile_object, *states;
+			int state, i;
+			block = json_create_object();
+			json_object_add_value_object(root, "block", block);
+
+			percentile_object = json_create_object();
+			json_object_add_value_object(block, "percentiles",
+						     percentile_object);
+			for (i = 0; i < len; i++) {
+				char buf[20];
+				snprintf(buf, sizeof(buf), "%f",
+					 ts->percentile_list[i].u.f);
+				json_object_add_value_int(percentile_object,
+							  (const char *)buf,
+							  percentiles[i]);
+			}
+
+			states = json_create_object();
+			json_object_add_value_object(block, "states", states);
+			for (state = 0; state < BLOCK_STATE_COUNT; state++) {
+				json_object_add_value_int(states,
+					block_state_names[state],
+					block_state_counts[state]);
+			}
+			free(percentiles);
+		}
+	}
 
 	return root;
 }
@@ -1912,4 +2096,15 @@ void show_running_run_stats(void)
 {
 	helper_do_stat = 1;
 	pthread_cond_signal(&helper_cond);
+}
+
+uint32_t *io_u_block_info(struct thread_data *td, struct io_u *io_u)
+{
+	/* Ignore io_u's which span multiple blocks--they will just get
+	 * inaccurate counts. */
+	int idx = (io_u->offset - io_u->file->file_offset)
+			/ td->o.bs[DDIR_TRIM];
+	uint32_t *info = &td->ts.block_infos[idx];
+	assert(idx < td->ts.nr_block_infos);
+	return info;
 }

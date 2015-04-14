@@ -3197,6 +3197,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 #endif
 	{
+		.name	= "block_error_percentiles",
+		.lname	= "Block error percentiles",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(block_error_hist),
+		.help	= "Record trim block errors and make a histogram",
+		.def	= "0",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "bwavgtime",
 		.lname	= "Bandwidth average time",
 		.type	= FIO_OPT_INT,
@@ -3320,11 +3330,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "percentile_list",
-		.lname	= "Completion latency percentile list",
+		.lname	= "Percentile list",
 		.type	= FIO_OPT_FLOAT_LIST,
 		.off1	= td_var_offset(percentile_list),
 		.off2	= td_var_offset(percentile_precision),
-		.help	= "Specify a custom list of percentiles to report",
+		.help	= "Specify a custom list of percentiles to report for "
+			  "completion latency and block errors",
 		.def    = "1:5:10:20:30:40:50:60:70:80:90:95:99:99.5:99.9:99.95:99.99",
 		.maxlen	= FIO_IO_U_LIST_MAX_LEN,
 		.minfp	= 0.0,

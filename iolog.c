@@ -291,6 +291,18 @@ void unlog_io_piece(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo = io_u->ipo;
 
+	if (td->ts.nr_block_infos) {
+		uint32_t *info = io_u_block_info(td, io_u);
+		if (BLOCK_INFO_STATE(*info) < BLOCK_STATE_TRIM_FAILURE) {
+			if (io_u->ddir == DDIR_TRIM)
+				*info = BLOCK_INFO_SET_STATE(*info,
+						BLOCK_STATE_TRIM_FAILURE);
+			else if (io_u->ddir == DDIR_WRITE)
+				*info = BLOCK_INFO_SET_STATE(*info,
+						BLOCK_STATE_WRITE_FAILURE);
+		}
+	}
+
 	if (!ipo)
 		return;
 

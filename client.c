@@ -891,6 +891,10 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->latency_target	= le64_to_cpu(src->latency_target);
 	dst->latency_window	= le64_to_cpu(src->latency_window);
 	dst->latency_percentile.u.f = fio_uint64_to_double(le64_to_cpu(src->latency_percentile.u.i));
+
+	dst->nr_block_infos	= le64_to_cpu(src->nr_block_infos);
+	for (i = 0; i < dst->nr_block_infos; i++)
+		dst->block_infos[i] = le32_to_cpu(src->block_infos[i]);
 }
 
 static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
