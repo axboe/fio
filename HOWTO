@@ -770,6 +770,15 @@ ioengine=str	Defines how the job issues io to the file. The following
 				necessary environment variables to work with
 				hdfs/libhdfs properly.
 
+			mtd	Read, write and erase an MTD character device
+				(e.g., /dev/mtd0). Discards are treated as
+				erases. Depending on the underlying device
+				type, the I/O may have to go in a certain
+				pattern, e.g., on NAND, writing sequentially
+				to erase blocks and discarding before
+				overwriting. The writetrim mode works well
+				for this constraint.
+
 			external Prefix to specify loading an external
 				IO engine object file. Append the engine
 				filename, eg ioengine=external:/tmp/foo.o
@@ -1721,6 +1730,7 @@ be the starting port number since fio will use a range of ports.
 		1 	  : allocate space immidietly inside defragment event,
 			    and free right after event
 
+[mtd] skip_bad=bool	Skip operations against known bad blocks.
 
 
 6.0 Interpreting the output

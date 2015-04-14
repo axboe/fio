@@ -107,6 +107,11 @@ ifdef CONFIG_GFAPI
     CFLAGS += "-DGFAPI_USE_FADVISE"
   endif
 endif
+ifdef CONFIG_MTD
+  SOURCE += engines/mtd.c
+  SOURCE += lib/libmtd.c
+  SOURCE += lib/libmtd_legacy.c
+endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
