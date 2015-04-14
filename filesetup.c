@@ -512,11 +512,6 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 
 	dprint(FD_FILE, "fd open %s\n", f->file_name);
 
-	if (td_trim(td) && f->filetype != FIO_TYPE_BD) {
-		log_err("fio: trim only applies to block device\n");
-		return 1;
-	}
-
 	if (!strcmp(f->file_name, "-")) {
 		if (td_rw(td)) {
 			log_err("fio: can't read/write to stdin/out\n");
