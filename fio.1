@@ -286,6 +286,10 @@ Mixed sequential reads and writes.
 .TP
 .B randrw 
 Mixed random reads and writes.
+.TP
+.B trimwrite
+Trim and write mixed workload. Blocks will be trimmed first, then the same
+blocks will be written to.
 .RE
 .P
 For mixed I/O, the default split is 50/50. For certain types of io the result

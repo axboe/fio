@@ -387,6 +387,8 @@ rw=str		Type of io pattern. Accepted values are:
 			randread	Random reads
 			rw,readwrite	Sequential mixed reads and writes
 			randrw		Random mixed reads and writes
+			trimwrite	Mixed trims and writes. Blocks will be
+					trimmed first, then written to.
 
 		For the mixed io types, the default is to split them 50/50.
 		For certain types of io the result may still be skewed a bit,

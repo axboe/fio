@@ -670,7 +670,7 @@ static void set_rw_ddir(struct thread_data *td, struct io_u *io_u)
 {
 	enum fio_ddir ddir = get_rw_ddir(td);
 
-	if (td_writetrim(td)) {
+	if (td_trimwrite(td)) {
 		struct fio_file *f = io_u->file;
 		if (f->last_pos[DDIR_WRITE] == f->last_pos[DDIR_TRIM])
 			ddir = DDIR_TRIM;
