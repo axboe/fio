@@ -694,6 +694,17 @@ cost of more retrieval system calls.
 Low watermark indicating when to start filling the queue again.  Default:
 \fBiodepth\fR. 
 .TP
+.BI io_submit_mode \fR=\fPstr
+This option controls how fio submits the IO to the IO engine. The default is
+\fBinline\fR, which means that the fio job threads submit and reap IO directly.
+If set to \fBoffload\fR, the job threads will offload IO submission to a
+dedicated pool of IO threads. This requires some coordination and thus has a
+bit of extra overhead, especially for lower queue depth IO where it can
+increase latencies. The benefit is that fio can manage submission rates
+independently of the device completion rates. This avoids skewed latency
+reporting if IO gets back up on the device side (the coordinated omission
+problem).
+.TP
 .BI direct \fR=\fPbool
 If true, use non-buffered I/O (usually O_DIRECT).  Default: false.
 .TP
