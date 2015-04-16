@@ -1369,7 +1369,7 @@ void __show_run_stats(void)
 	struct group_run_stats *runstats, *rs;
 	struct thread_data *td;
 	struct thread_stat *threadstats, *ts;
-	int i, j, nr_ts, last_ts, idx;
+	int i, j, k, nr_ts, last_ts, idx;
 	int kb_base_warned = 0;
 	int unit_base_warned = 0;
 	struct json_object *root = NULL;
@@ -1481,8 +1481,8 @@ void __show_run_stats(void)
 		ts->latency_window = td->o.latency_window;
 
 		ts->nr_block_infos = td->ts.nr_block_infos;
-		for (i = 0; i < ts->nr_block_infos; i++)
-			ts->block_infos[i] = td->ts.block_infos[i];
+		for (k = 0; k < ts->nr_block_infos; k++)
+			ts->block_infos[k] = td->ts.block_infos[k];
 
 		sum_thread_stats(ts, &td->ts, idx);
 	}
