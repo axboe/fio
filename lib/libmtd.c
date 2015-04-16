@@ -55,7 +55,7 @@ static char *mkpath(const char *path, const char *name)
 	size_t len1 = strlen(path);
 	size_t len2 = strlen(name);
 
-	n = xmalloc(len1 + len2 + 2);
+	n = xmalloc(len1 + len2 + 6);
 
 	memcpy(n, path, len1);
 	if (n[len1 - 1] != '/')
