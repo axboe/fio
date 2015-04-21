@@ -443,9 +443,9 @@ static int str_cpumask_cb(void *data, unsigned long long *val)
 
 	for (i = 0; i < sizeof(int) * 8; i++) {
 		if ((1 << i) & *val) {
-			if (i > max_cpu) {
+			if (i >= max_cpu) {
 				log_err("fio: CPU %d too large (max=%ld)\n", i,
-								max_cpu);
+								max_cpu - 1);
 				return 1;
 			}
 			dprint(FD_PARSE, "set cpu allowed %d\n", i);
