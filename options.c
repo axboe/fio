@@ -503,9 +503,9 @@ static int set_cpus_allowed(struct thread_data *td, os_cpu_mask_t *mask,
 				ret = 1;
 				break;
 			}
-			if (icpu > max_cpu) {
+			if (icpu >= max_cpu) {
 				log_err("fio: CPU %d too large (max=%ld)\n",
-							icpu, max_cpu);
+							icpu, max_cpu - 1);
 				ret = 1;
 				break;
 			}
