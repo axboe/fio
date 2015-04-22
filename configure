@@ -1378,6 +1378,7 @@ cat > $TMPC << EOF
 int main(int argc, char **argv)
 {
   struct mtd_info_user info;
+  info.type = MTD_MLCNANDFLASH;
   return ioctl(0, MEMGETINFO, &info);
 }
 EOF
