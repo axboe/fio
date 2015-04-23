@@ -456,10 +456,9 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 	td->o.odirect = 1;
 
 	/*
-	 * we don't know if this option was set or not. it defaults to 1,
-	 * so we'll just guess that we should override it if it's still 1
+	 * If depth wasn't manually set, use probed depth
 	 */
-	if (td->o.iodepth == 1)
+	if (!fio_option_is_set(&td->o, iodepth))
 		td->o.iodepth = td->o.iodepth_low = depth;
 
 	return 0;
