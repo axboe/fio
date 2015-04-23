@@ -40,6 +40,7 @@
 #include "stat.h"
 #include "flow.h"
 #include "io_u_queue.h"
+#include "workqueue.h"
 
 #ifdef CONFIG_SOLARISAIO
 #include <sys/asynch.h>
@@ -75,6 +76,8 @@ enum {
 	TD_F_NOIO		= 256,
 	TD_F_COMPRESS_LOG	= 512,
 	TD_F_VSTATE_SAVED	= 1024,
+	TD_F_NEED_LOCK		= 2048,
+	TD_F_CHILD		= 4096,
 };
 
 enum {
@@ -92,6 +95,11 @@ enum {
 	FIO_RAND_START_DELAY,
 	FIO_DEDUPE_OFF,
 	FIO_RAND_NR_OFFS,
+};
+
+enum {
+	IO_MODE_INLINE = 0,
+	IO_MODE_OFFLOAD,
 };
 
 /*
@@ -117,6 +125,8 @@ struct thread_data {
 	struct io_log *iops_log;
 
 	struct tp_data *tp_data;
+
+	struct thread_data *parent;
 
 	uint64_t stat_io_bytes[DDIR_RWDIR_CNT];
 	struct timeval bw_sample_time;
@@ -232,6 +242,11 @@ struct thread_data {
 	unsigned long rate_blocks[DDIR_RWDIR_CNT];
 	struct timeval lastrate[DDIR_RWDIR_CNT];
 
+	/*
+	 * Enforced rate submission/completion workqueue
+	 */
+	struct workqueue io_wq;
+
 	uint64_t total_io_size;
 	uint64_t fill_device_size;
 
@@ -248,10 +263,11 @@ struct thread_data {
 	uint64_t io_blocks[DDIR_RWDIR_CNT];
 	uint64_t this_io_blocks[DDIR_RWDIR_CNT];
 	uint64_t io_bytes[DDIR_RWDIR_CNT];
-	uint64_t io_skip_bytes;
 	uint64_t this_io_bytes[DDIR_RWDIR_CNT];
+	uint64_t io_skip_bytes;
 	uint64_t zone_bytes;
 	struct fio_mutex *mutex;
+	uint64_t bytes_done[DDIR_RWDIR_CNT];
 
 	/*
 	 * State for random io, a bitmap of blocks done vs not done
@@ -364,12 +380,23 @@ enum {
 	} while (0)
 
 
-#define td_clear_error(td)		\
-	(td)->error = 0;
-#define td_verror(td, err, func)	\
-	__td_verror((td), (err), strerror((err)), (func))
-#define td_vmsg(td, err, msg, func)	\
-	__td_verror((td), (err), (msg), (func))
+#define td_clear_error(td)		do {		\
+	(td)->error = 0;				\
+	if ((td)->parent)				\
+		(td)->parent->error = 0;		\
+} while (0)
+
+#define td_verror(td, err, func)	do {			\
+	__td_verror((td), (err), strerror((err)), (func));	\
+	if ((td)->parent)					\
+		__td_verror((td)->parent, (err), strerror((err)), (func)); \
+} while (0)
+
+#define td_vmsg(td, err, msg, func)	do {			\
+	__td_verror((td), (err), (msg), (func));		\
+	if ((td)->parent)					\
+		__td_verror((td)->parent, (err), (msg), (func));	\
+} while (0)
 
 #define __fio_stringify_1(x)	#x
 #define __fio_stringify(x)	__fio_stringify_1(x)
@@ -574,16 +601,15 @@ static inline int __should_check_rate(struct thread_data *td,
 	return 0;
 }
 
-static inline int should_check_rate(struct thread_data *td,
-				    uint64_t *bytes_done)
+static inline int should_check_rate(struct thread_data *td)
 {
 	int ret = 0;
 
-	if (bytes_done[DDIR_READ])
+	if (td->bytes_done[DDIR_READ])
 		ret |= __should_check_rate(td, DDIR_READ);
-	if (bytes_done[DDIR_WRITE])
+	if (td->bytes_done[DDIR_WRITE])
 		ret |= __should_check_rate(td, DDIR_WRITE);
-	if (bytes_done[DDIR_TRIM])
+	if (td->bytes_done[DDIR_TRIM])
 		ret |= __should_check_rate(td, DDIR_TRIM);
 
 	return ret;
@@ -610,25 +636,30 @@ static inline int is_power_of_2(uint64_t val)
 	return (val != 0 && ((val & (val - 1)) == 0));
 }
 
+static inline int td_async_processing(struct thread_data *td)
+{
+	return (td->flags & TD_F_NEED_LOCK) != 0;
+}
+
 /*
  * We currently only need to do locking if we have verifier threads
  * accessing our internal structures too
  */
 static inline void td_io_u_lock(struct thread_data *td)
 {
-	if (td->o.verify_async)
+	if (td_async_processing(td))
 		pthread_mutex_lock(&td->io_u_lock);
 }
 
 static inline void td_io_u_unlock(struct thread_data *td)
 {
-	if (td->o.verify_async)
+	if (td_async_processing(td))
 		pthread_mutex_unlock(&td->io_u_lock);
 }
 
 static inline void td_io_u_free_notify(struct thread_data *td)
 {
-	if (td->o.verify_async)
+	if (td_async_processing(td))
 		pthread_cond_signal(&td->free_cond);
 }
 

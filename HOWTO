@@ -820,6 +820,18 @@ iodepth_low=int	The low water mark indicating when to start filling
 		after fio has filled the queue of 16 requests, it will let
 		the depth drain down to 4 before starting to fill it again.
 
+io_submit_mode=str	This option controls how fio submits the IO to
+		the IO engine. The default is 'inline', which means that the
+		fio job threads submit and reap IO directly. If set to
+		'offload', the job threads will offload IO submission to a
+		dedicated pool of IO threads. This requires some coordination
+		and thus has a bit of extra overhead, especially for lower
+		queue depth IO where it can increase latencies. The benefit
+		is that fio can manage submission rates independently of
+		the device completion rates. This avoids skewed latency
+		reporting if IO gets back up on the device side (the
+		coordinated omission problem).
+
 direct=bool	If value is true, use non-buffered io. This is usually
 		O_DIRECT. Note that ZFS on Solaris doesn't support direct io.
 		On Windows the synchronous ioengines don't support direct io.

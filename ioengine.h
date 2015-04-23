@@ -119,6 +119,7 @@ struct io_u {
 		struct ibv_mr *mr;
 #endif
 		void *mmap_data;
+		uint64_t null;
 	};
 };
 
@@ -209,8 +210,8 @@ extern struct io_u *get_io_u(struct thread_data *);
 extern void put_io_u(struct thread_data *, struct io_u *);
 extern void clear_io_u(struct thread_data *, struct io_u *);
 extern void requeue_io_u(struct thread_data *, struct io_u **);
-extern int __must_check io_u_sync_complete(struct thread_data *, struct io_u *, uint64_t *);
-extern int __must_check io_u_queued_complete(struct thread_data *, int, uint64_t *);
+extern int __must_check io_u_sync_complete(struct thread_data *, struct io_u *);
+extern int __must_check io_u_queued_complete(struct thread_data *, int);
 extern void io_u_queued(struct thread_data *, struct io_u *);
 extern void io_u_quiesce(struct thread_data *);
 extern void io_u_log_error(struct thread_data *, struct io_u *);
@@ -249,6 +250,16 @@ static inline enum fio_ddir acct_ddir(struct io_u *io_u)
 		return io_u->acct_ddir;
 
 	return io_u->ddir;
+}
+
+static inline void io_u_clear(struct io_u *io_u, unsigned int flags)
+{
+	__sync_fetch_and_and(&io_u->flags, ~flags);
+}
+
+static inline void io_u_set(struct io_u *io_u, unsigned int flags)
+{
+	__sync_fetch_and_or(&io_u->flags, flags);
 }
 
 #endif

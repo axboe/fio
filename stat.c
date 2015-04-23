@@ -2009,6 +2009,8 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 	if (spent < td->o.bw_avg_time)
 		return;
 
+	td_io_u_lock(td);
+
 	/*
 	 * Compute both read and write rates for the interval.
 	 */
@@ -2033,6 +2035,7 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 	}
 
 	fio_gettime(&td->bw_sample_time, NULL);
+	td_io_u_unlock(td);
 }
 
 void add_iops_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
@@ -2047,6 +2050,8 @@ void add_iops_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs
 	spent = mtime_since(&td->iops_sample_time, t);
 	if (spent < td->o.iops_avg_time)
 		return;
+
+	td_io_u_lock(td);
 
 	/*
 	 * Compute both read and write rates for the interval.
@@ -2072,6 +2077,7 @@ void add_iops_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs
 	}
 
 	fio_gettime(&td->iops_sample_time, NULL);
+	td_io_u_unlock(td);
 }
 
 void stat_init(void)
