@@ -485,7 +485,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 				~(td->o.verify_interval - 1);
 
 		if (!td->o.bs_unaligned && is_power_of_2(minbs))
-			buflen = (buflen + minbs - 1) & ~(minbs - 1);
+			buflen &= ~(minbs - 1);
 
 	} while (!io_u_fits(td, io_u, buflen));
 
