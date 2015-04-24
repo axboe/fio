@@ -2010,6 +2010,7 @@ before it can be used with this format. The offset and length are given in
 bytes. The action can be one of these:
 
 wait       Wait for 'offset' microseconds. Everything below 100 is discarded.
+	   The time is relative to the previous wait statement.
 read       Read 'length' bytes beginning from 'offset'
 write      Write 'length' bytes beginning from 'offset'
 sync       fsync() the file
