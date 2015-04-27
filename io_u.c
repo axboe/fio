@@ -1889,8 +1889,7 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 /*
  * See if we should reuse the last seed, if dedupe is enabled
  */
-static struct frand_state *get_buf_state(struct thread_data *td,
-					 struct frand_state *save)
+static struct frand_state *get_buf_state(struct thread_data *td)
 {
 	unsigned int v;
 	unsigned long r;
@@ -1898,8 +1897,8 @@ static struct frand_state *get_buf_state(struct thread_data *td,
 	if (!td->o.dedupe_percentage)
 		return &td->buf_state;
 	else if (td->o.dedupe_percentage == 100) {
-		frand_copy(save, &td->buf_state_prev);
-		return &td->buf_state_prev;
+		frand_copy(&td->buf_state_prev, &td->buf_state);
+		return &td->buf_state;
 	}
 
 	r = __rand(&td->dedupe_state);
@@ -1911,20 +1910,18 @@ static struct frand_state *get_buf_state(struct thread_data *td,
 	return &td->buf_state;
 }
 
-static void save_buf_state(struct thread_data *td, struct frand_state *rs,
-			   struct frand_state *save)
+static void save_buf_state(struct thread_data *td, struct frand_state *rs)
 {
-	if (rs == &td->buf_state)
+	if (td->o.dedupe_percentage == 100)
+		frand_copy(rs, &td->buf_state_prev);
+	else if (rs == &td->buf_state)
 		frand_copy(&td->buf_state_prev, rs);
-	else if (rs == &td->buf_state_prev && td->o.dedupe_percentage == 100)
-		frand_copy(rs, save);
 }
 
 void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 		    unsigned int max_bs)
 {
 	struct thread_options *o = &td->o;
-	struct frand_state save = { 0, };
 
 	if (o->compress_percentage || o->dedupe_percentage) {
 		unsigned int perc = td->o.compress_percentage;
@@ -1932,7 +1929,7 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 		unsigned int left = max_bs;
 
 		do {
-			rs = get_buf_state(td, &save);
+			rs = get_buf_state(td);
 
 			min_write = min(min_write, left);
 
@@ -1951,14 +1948,14 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 
 			buf += min_write;
 			left -= min_write;
-			save_buf_state(td, rs, &save);
+			save_buf_state(td, rs);
 		} while (left);
 	} else if (o->buffer_pattern_bytes)
 		fill_buffer_pattern(td, buf, max_bs);
 	else if (o->zero_buffers)
 		memset(buf, 0, max_bs);
 	else
-		fill_random_buf(get_buf_state(td, NULL), buf, max_bs);
+		fill_random_buf(get_buf_state(td), buf, max_bs);
 }
 
 /*
