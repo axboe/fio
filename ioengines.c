@@ -327,7 +327,8 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	    td->o.odirect) {
 
 		log_info("fio: first direct IO errored. File system may not "
-			 "support direct IO, or iomem_align= is bad.\n");
+			 "support direct IO, or iomem_align= is bad. Try "
+			 "setting direct=0.\n");
 	}
 
 	if (!td->io_ops->commit || io_u->ddir == DDIR_TRIM) {
