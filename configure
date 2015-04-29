@@ -135,11 +135,14 @@ show_help="no"
 exit_val=0
 gfio_check="no"
 libhdfs="no"
+prefix=/usr/local
 
 # parse options
 for opt do
   optarg=`expr "x$opt" : 'x[^=]*=\(.*\)'`
   case "$opt" in
+  --prefix=*) prefix="$optarg"
+  ;;
   --cpu=*) cpu="$optarg"
   ;;
   #  esx is cross compiled and cannot be detect through simple uname calls
@@ -178,6 +181,7 @@ for opt do
 done
 
 if test "$show_help" = "yes" ; then
+  echo "--prefix=              Use this directory as installation prefix"
   echo "--cpu=                 Specify target CPU if auto-detect fails"
   echo "--cc=                  Specify compiler to use"
   echo "--extra-cflags=        Specify extra CFLAGS to pass to compiler"
@@ -1612,3 +1616,4 @@ echo "CFLAGS+=$CFLAGS" >> $config_host_mak
 echo "LDFLAGS+=$LDFLAGS" >> $config_host_mak
 echo "CC=$cc" >> $config_host_mak
 echo "BUILD_CFLAGS=$BUILD_CFLAGS $CFLAGS" >> $config_host_mak
+echo "INSTALL_PREFIX=$prefix" >> $config_host_mak

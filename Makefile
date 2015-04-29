@@ -243,7 +243,7 @@ ifeq ($(CONFIG_TARGET_OS), SunOS)
 else
 	INSTALL = install
 endif
-prefix = /usr/local
+prefix = $(INSTALL_PREFIX)
 bindir = $(prefix)/bin
 
 ifeq ($(CONFIG_TARGET_OS), Darwin)
