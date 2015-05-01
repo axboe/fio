@@ -133,7 +133,9 @@ static void fio_init gtod_init(void)
 #ifdef CONFIG_CLOCK_GETTIME
 static int fill_clock_gettime(struct timespec *ts)
 {
-#ifdef CONFIG_CLOCK_MONOTONIC
+#if defined(CONFIG_CLOCK_MONOTONIC_RAW)
+	return clock_gettime(CLOCK_MONOTONIC_RAW, ts);
+#elif defined(CONFIG_CLOCK_MONOTONIC)
 	return clock_gettime(CLOCK_MONOTONIC, ts);
 #else
 	return clock_gettime(CLOCK_REALTIME, ts);

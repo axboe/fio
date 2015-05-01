@@ -721,6 +721,24 @@ fi
 echo "CLOCK_MONOTONIC               $clock_monotonic"
 
 ##########################################
+# CLOCK_MONOTONIC_RAW probe
+clock_monotonic_raw="no"
+if test "$clock_gettime" = "yes" ; then
+  cat > $TMPC << EOF
+#include <stdio.h>
+#include <time.h>
+int main(int argc, char **argv)
+{
+  return clock_gettime(CLOCK_MONOTONIC_RAW, NULL);
+}
+EOF
+  if compile_prog "" "$LIBS" "clock monotonic"; then
+      clock_monotonic_raw="yes"
+  fi
+fi
+echo "CLOCK_MONOTONIC_RAW           $clock_monotonic_raw"
+
+##########################################
 # CLOCK_MONOTONIC_PRECISE probe
 clock_monotonic_precise="no"
 if test "$clock_gettime" = "yes" ; then
@@ -1484,6 +1502,9 @@ if test "$clock_gettime" = "yes" ; then
 fi
 if test "$clock_monotonic" = "yes" ; then
   output_sym "CONFIG_CLOCK_MONOTONIC"
+fi
+if test "$clock_monotonic_raw" = "yes" ; then
+  output_sym "CONFIG_CLOCK_MONOTONIC_RAW"
 fi
 if test "$clock_monotonic_precise" = "yes" ; then
   output_sym "CONFIG_CLOCK_MONOTONIC_PRECISE"
