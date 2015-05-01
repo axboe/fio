@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 	if (verify)
 		printf("(slower due to verification)");
 	printf("\n==============================\n");
-	printf("Elapsed: %lf s\n", total / pow(10,9));
+	printf("Elapsed: %lf s\n", total / pow(10,6));
 	printf("Mean:    %lf us\n", mean);
 
 	free(v_start);
