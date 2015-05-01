@@ -78,6 +78,7 @@ struct fio_file {
 	 */
 	unsigned int major, minor;
 	int fileno;
+	int bs;
 	char *file_name;
 
 	/*
