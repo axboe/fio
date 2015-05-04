@@ -363,6 +363,20 @@ static inline int runtime_exceeded(struct thread_data *td, struct timeval *t)
 	return 0;
 }
 
+/*
+ * We need to update the runtime consistently in ms, but keep a running
+ * tally of the current elapsed time in microseconds for sub millisecond
+ * updates.
+ */
+static inline void update_runtime(struct thread_data *td,
+				  unsigned long long *elapsed_us,
+				  const enum fio_ddir ddir)
+{
+	td->ts.runtime[ddir] -= (elapsed_us[ddir] + 999) / 1000;
+	elapsed_us[ddir] += utime_since_now(&td->start);
+	td->ts.runtime[ddir] += (elapsed_us[ddir] + 999) / 1000;
+}
+
 static int break_on_this_error(struct thread_data *td, enum fio_ddir ddir,
 			       int *retptr)
 {
@@ -1306,7 +1320,7 @@ static void io_workqueue_fn(struct thread_data *td, struct io_u *io_u)
  */
 static void *thread_main(void *data)
 {
-	unsigned long long elapsed;
+	unsigned long long elapsed_us[DDIR_RWDIR_CNT] = { 0, };
 	struct thread_data *td = data;
 	struct thread_options *o = &td->o;
 	pthread_condattr_t attr;
@@ -1544,18 +1558,12 @@ static void *thread_main(void *data)
 		check_update_rusage(td);
 
 		fio_mutex_down(stat_mutex);
-		if (td_read(td) && td->io_bytes[DDIR_READ]) {
-			elapsed = mtime_since_now(&td->start);
-			td->ts.runtime[DDIR_READ] += elapsed;
-		}
-		if (td_write(td) && td->io_bytes[DDIR_WRITE]) {
-			elapsed = mtime_since_now(&td->start);
-			td->ts.runtime[DDIR_WRITE] += elapsed;
-		}
-		if (td_trim(td) && td->io_bytes[DDIR_TRIM]) {
-			elapsed = mtime_since_now(&td->start);
-			td->ts.runtime[DDIR_TRIM] += elapsed;
-		}
+		if (td_read(td) && td->io_bytes[DDIR_READ])
+			update_runtime(td, elapsed_us, DDIR_READ);
+		if (td_write(td) && td->io_bytes[DDIR_WRITE])
+			update_runtime(td, elapsed_us, DDIR_WRITE);
+		if (td_trim(td) && td->io_bytes[DDIR_TRIM])
+			update_runtime(td, elapsed_us, DDIR_TRIM);
 		fio_gettime(&td->start, NULL);
 		fio_mutex_up(stat_mutex);
 
@@ -1579,7 +1587,7 @@ static void *thread_main(void *data)
 		check_update_rusage(td);
 
 		fio_mutex_down(stat_mutex);
-		td->ts.runtime[DDIR_READ] += mtime_since_now(&td->start);
+		update_runtime(td, elapsed_us, DDIR_READ);
 		fio_gettime(&td->start, NULL);
 		fio_mutex_up(stat_mutex);
 
