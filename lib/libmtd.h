@@ -78,8 +78,8 @@ struct mtd_dev_info
 	int major;
 	int minor;
 	int type;
-	const char type_str[MTD_TYPE_MAX + 1];
-	const char name[MTD_NAME_MAX + 1];
+	char type_str[MTD_TYPE_MAX + 1];
+	char name[MTD_NAME_MAX + 1];
 	long long size;
 	int eb_cnt;
 	int eb_size;
