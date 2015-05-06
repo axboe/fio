@@ -442,7 +442,7 @@ static int wait_for_completions(struct thread_data *td, struct timeval *time)
 	 * if the queue is full, we MUST reap at least 1 event
 	 */
 	min_evts = min(td->o.iodepth_batch_complete, td->cur_depth);
-	if (full && !min_evts)
+    if ((full && !min_evts) || !td->o.iodepth_batch_complete)
 		min_evts = 1;
 
 	if (time && (__should_check_rate(td, DDIR_READ) ||
