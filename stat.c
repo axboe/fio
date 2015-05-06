@@ -13,6 +13,7 @@
 #include "json.h"
 #include "lib/getrusage.h"
 #include "idletime.h"
+#include "lib/pow2.h"
 
 struct fio_mutex *stat_mutex;
 

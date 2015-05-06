@@ -12,6 +12,7 @@
 #include "lib/rand.h"
 #include "lib/axmap.h"
 #include "err.h"
+#include "lib/pow2.h"
 
 struct io_completion_data {
 	int nr;				/* input */

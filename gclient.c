@@ -13,6 +13,7 @@
 #include "graph.h"
 #include "gclient.h"
 #include "printing.h"
+#include "lib/pow2.h"
 
 static void gfio_display_ts(struct fio_client *client, struct thread_stat *ts,
 			    struct group_run_stats *rs);

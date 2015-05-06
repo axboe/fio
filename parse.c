@@ -17,6 +17,7 @@
 #include "options.h"
 #include "minmax.h"
 #include "lib/ieee754.h"
+#include "lib/pow2.h"
 
 #ifdef CONFIG_ARITHMETIC
 #include "y.tab.h"
@@ -521,6 +522,10 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 
 		if (ret)
 			break;
+		if (o->pow2 && !is_power_of_2(ull)) {
+			log_err("%s: must be a power-of-2\n", o->name);
+			return 1;
+		}
 
 		if (o->maxval && ull > o->maxval) {
 			log_err("max value out of range: %llu"

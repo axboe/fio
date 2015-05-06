@@ -631,11 +631,6 @@ static inline unsigned int td_min_bs(struct thread_data *td)
 	return min(td->o.min_bs[DDIR_TRIM], min_bs);
 }
 
-static inline int is_power_of_2(uint64_t val)
-{
-	return (val != 0 && ((val & (val - 1)) == 0));
-}
-
 static inline int td_async_processing(struct thread_data *td)
 {
 	return (td->flags & TD_F_NEED_LOCK) != 0;

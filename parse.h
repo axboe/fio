@@ -75,6 +75,7 @@ struct fio_option {
 	int is_seconds;			/* time value with seconds base */
 	int is_time;			/* time based value */
 	int no_warn_def;
+	int pow2;			/* must be a power-of-2 */
 };
 
 typedef int (str_cb_fn)(void *, char *);

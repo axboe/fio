@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "fio.h"
+#include "lib/pow2.h"
 
 static char __run_str[REAL_MAX_JOBS + 1];
 static char run_str[__THREAD_RUNSTR_SZ(REAL_MAX_JOBS)];
