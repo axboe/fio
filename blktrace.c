@@ -208,6 +208,23 @@ out:
 	return last_fileno;
 }
 
+static void t_bytes_align(struct thread_options *o, struct blk_io_trace *t)
+{
+	if (!o->replay_align)
+		return;
+
+	t->bytes = (t->bytes + o->replay_align - 1) & ~(o->replay_align - 1);
+}
+
+static void ipo_bytes_align(struct thread_options *o, struct io_piece *ipo)
+{
+	if (!o->replay_align)
+		return;
+
+	ipo->offset &= ~(o->replay_align - 1);
+}
+
+
 /*
  * Store blk_io_trace data in an ipo for later retrieval.
  */
@@ -220,6 +237,9 @@ static void store_ipo(struct thread_data *td, unsigned long long offset,
 	init_ipo(ipo);
 
 	ipo->offset = offset * bs;
+	if (td->o.replay_scale)
+		ipo->offset = ipo->offset / td->o.replay_scale;
+	ipo_bytes_align(&td->o, ipo);
 	ipo->len = bytes;
 	ipo->delay = ttime / 1000;
 	if (rw)
@@ -275,6 +295,9 @@ static void handle_trace_discard(struct thread_data *td,
 	INIT_FLIST_HEAD(&ipo->list);
 
 	ipo->offset = t->sector * bs;
+	if (td->o.replay_scale)
+		ipo->offset = ipo->offset / td->o.replay_scale;
+	ipo_bytes_align(&td->o, ipo);
 	ipo->len = t->bytes;
 	ipo->delay = ttime / 1000;
 	ipo->ddir = DDIR_TRIM;
@@ -314,7 +337,7 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 			 unsigned long *ios, unsigned int *bs)
 {
 	static unsigned long long last_ttime;
-	unsigned long long delay;
+	unsigned long long delay = 0;
 
 	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
 		return;
@@ -328,6 +351,8 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 			last_ttime = t->time;
 		}
 	}
+
+	t_bytes_align(&td->o, t);
 
 	if (t->action & BLK_TC_ACT(BLK_TC_NOTIFY))
 		handle_trace_notify(t);

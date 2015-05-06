@@ -1433,6 +1433,12 @@ replay_redirect=str While replaying I/O patterns using read_iolog the
 		independent fio invocations.  Unfortuantely this also breaks
 		the strict time ordering between multiple device accesses.
 
+replay_align=int	Force alignment of IO offsets and lengths in a trace
+		to this power of 2 value.
+
+replay_scale=int	Scale sector offsets down by this factor when
+		replaying traces.
+
 write_bw_log=str If given, write a bandwidth log of the jobs in this job
 		file. Can be used to store data of the bandwidth of the
 		jobs in their lifetime. The included fio_generate_plots

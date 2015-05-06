@@ -265,6 +265,9 @@ struct thread_options {
 
 	unsigned block_error_hist;
 	unsigned int skip_bad;
+
+	unsigned int replay_align;
+	unsigned int replay_scale;
 };
 
 #define FIO_TOP_STR_MAX		256
@@ -495,6 +498,9 @@ struct thread_options_pack {
 
 	uint32_t block_error_hist;
 	uint32_t skip_bad;
+
+	uint32_t replay_align;
+	uint32_t replay_scale;
 } __attribute__((packed));
 
 extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);
