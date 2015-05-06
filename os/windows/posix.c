@@ -229,6 +229,30 @@ char *dlerror(void)
 	return dl_error;
 }
 
+/* Copied from http://blogs.msdn.com/b/joshpoley/archive/2007/12/19/date-time-formats-and-conversions.aspx */
+void Time_tToSystemTime(time_t dosTime, SYSTEMTIME *systemTime)
+{
+    LARGE_INTEGER jan1970FT;
+    LARGE_INTEGER utcFT;
+    jan1970FT.QuadPart = 116444736000000000LL; // january 1st 1970
+    utcFT.QuadPart = ((unsigned __int64)dosTime) * 10000000 + jan1970FT.QuadPart;
+
+    FileTimeToSystemTime((FILETIME*)&utcFT, systemTime);
+}
+
+char* ctime_r(const time_t *t, char *buf)
+{
+    SYSTEMTIME systime;
+    const char * const dayOfWeek[] = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+    const char * const monthOfYear[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+    Time_tToSystemTime(*t, &systime);
+    /* We don't know how long `buf` is, but assume it's rounded up from the minimum of 25 to 32 */
+    StringCchPrintfA(buf, 32, "%s %s %d %02d:%02d:%02d %04d", dayOfWeek[systime.wDayOfWeek - 1], monthOfYear[systime.wMonth - 1],
+										 systime.wDay, systime.wHour, systime.wMinute, systime.wSecond, systime.wYear);
+    return buf;
+}
+
 int gettimeofday(struct timeval *restrict tp, void *restrict tzp)
 {
 	FILETIME fileTime;
