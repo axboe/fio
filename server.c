@@ -45,6 +45,7 @@ static unsigned int has_zlib = 0;
 static unsigned int use_zlib;
 static char me[128];
 
+
 struct fio_fork_item {
 	struct flist_head list;
 	int exitval;
@@ -943,6 +944,7 @@ static int accept_loop(int listen_sk)
 	socklen_t len = use_ipv6 ? sizeof(addr6) : sizeof(addr);
 	struct pollfd pfd;
 	int ret = 0, sk, exitval = 0;
+	extern char client_sockaddr_str[INET6_ADDRSTRLEN];
 	FLIST_HEAD(conn_list);
 
 	dprint(FD_NET, "server enter accept loop\n");
@@ -1007,6 +1009,7 @@ static int accept_loop(int listen_sk)
 		}
 
 		/* exits */
+		strncpy(client_sockaddr_str, from, INET6_ADDRSTRLEN);
 		handle_connection(sk);
 	}
 
