@@ -284,14 +284,13 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 
 			if (fov->io_complete) {
 				fov->io_complete = FALSE;
-				ResetEvent(fov->o.hEvent);
 				wd->aio_events[dequeued] = io_u;
 				dequeued++;
 			}
 
-			if (dequeued >= min)
-				break;
 		}
+		if (dequeued >= min)
+			break;
 
 		if (dequeued < min) {
 			status = WaitForSingleObject(wd->iocomplete_event, mswait);
@@ -310,23 +309,22 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_overlapped *o = io_u->engine_data;
 	LPOVERLAPPED lpOvl = &o->o;
-	DWORD iobytes;
 	BOOL success = FALSE;
 	int rc = FIO_Q_COMPLETED;
 
 	fio_ro_check(td, io_u);
 
-	lpOvl->Internal = STATUS_PENDING;
+	lpOvl->Internal = 0;
 	lpOvl->InternalHigh = 0;
 	lpOvl->Offset = io_u->offset & 0xFFFFFFFF;
 	lpOvl->OffsetHigh = io_u->offset >> 32;
 
 	switch (io_u->ddir) {
 	case DDIR_WRITE:
-		success = WriteFile(io_u->file->hFile, io_u->xfer_buf, io_u->xfer_buflen, &iobytes, lpOvl);
+		success = WriteFile(io_u->file->hFile, io_u->xfer_buf, io_u->xfer_buflen, NULL, lpOvl);
 		break;
 	case DDIR_READ:
-		success = ReadFile(io_u->file->hFile, io_u->xfer_buf, io_u->xfer_buflen, &iobytes, lpOvl);
+		success = ReadFile(io_u->file->hFile, io_u->xfer_buf, io_u->xfer_buflen, NULL, lpOvl);
 		break;
 	case DDIR_SYNC:
 	case DDIR_DATASYNC:
@@ -403,7 +401,6 @@ static void fio_windowsaio_io_u_free(struct thread_data *td, struct io_u *io_u)
 	struct fio_overlapped *o = io_u->engine_data;
 
 	if (o) {
-		CloseHandle(o->o.hEvent);
 		io_u->engine_data = NULL;
 		free(o);
 	}
@@ -416,13 +413,7 @@ static int fio_windowsaio_io_u_init(struct thread_data *td, struct io_u *io_u)
 	o = malloc(sizeof(*o));
 	o->io_complete = FALSE;
 	o->io_u = io_u;
-	o->o.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-	if (o->o.hEvent == NULL) {
-		log_err("windowsaio: failed to create event handle\n");
-		free(o);
-		return 1;
-	}
-
+	o->o.hEvent = NULL;
 	io_u->engine_data = o;
 	return 0;
 }
