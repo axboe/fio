@@ -44,6 +44,8 @@ static unsigned int has_zlib = 0;
 #endif
 static unsigned int use_zlib;
 static char me[128];
+char my_addr[INET6_ADDRSTRLEN] = {0};
+
 
 struct fio_fork_item {
 	struct flist_head list;
@@ -1007,6 +1009,7 @@ static int accept_loop(int listen_sk)
 		}
 
 		/* exits */
+		strncpy(my_addr, from, INET6_ADDRSTRLEN);
 		handle_connection(sk);
 	}
 

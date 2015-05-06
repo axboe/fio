@@ -825,6 +825,7 @@ int set_name_idx(char *target, char *input, int index)
 	unsigned int cur_idx;
 	int len;
 	char *fname, *str, *p;
+	extern char my_addr[INET6_ADDRSTRLEN];
 
 	p = str = strdup(input);
 
@@ -832,7 +833,12 @@ int set_name_idx(char *target, char *input, int index)
 	for (cur_idx = 0; cur_idx <= index; cur_idx++)
 		fname = get_next_name(&str);
 
-	len = sprintf(target, "%s/", fname);
+	if (my_addr[0]) {
+		len = sprintf(target, "%s/%s.", fname, my_addr);
+	} else {
+		len = sprintf(target, "%s/", fname);
+	}
+
 	free(p);
 
 	return len;
