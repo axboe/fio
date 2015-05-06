@@ -17,6 +17,8 @@
 
 #include "crc/crc32c.h"
 
+char client_sockaddr_str[INET6_ADDRSTRLEN] = {0};
+
 /*
  * Check if mmap/mmaphuge has a :/foo/bar/file at the end. If so, return that.
  */
@@ -825,7 +827,6 @@ int set_name_idx(char *target, char *input, int index)
 	unsigned int cur_idx;
 	int len;
 	char *fname, *str, *p;
-	extern char my_addr[INET6_ADDRSTRLEN];
 
 	p = str = strdup(input);
 
@@ -833,8 +834,8 @@ int set_name_idx(char *target, char *input, int index)
 	for (cur_idx = 0; cur_idx <= index; cur_idx++)
 		fname = get_next_name(&str);
 
-	if (my_addr[0]) {
-		len = sprintf(target, "%s/%s.", fname, my_addr);
+	if (client_sockaddr_str[0]) {
+		len = sprintf(target, "%s/%s.", fname, client_sockaddr_str);
 	} else {
 		len = sprintf(target, "%s/", fname);
 	}
