@@ -40,7 +40,7 @@
 							<File Id="COPYING" Name="COPYING.txt" Source="..\..\COPYING"/>
 						</Component>
 						<Component>
-							<File Id="LICENSE" Name="LICENSE.txt" Source="..\..\LICENSE"/>
+							<File Id="MORAL_LICENSE" Name="MORAL-LICENSE.txt" Source="..\..\MORAL-LICENSE"/>
 						</Component>
 						<Directory Id="examples" Name="examples"/>
 					</Directory>
@@ -54,7 +54,7 @@
 		<ComponentRef Id="README"/>
 		<ComponentRef Id="REPORTING_BUGS"/>
 		<ComponentRef Id="COPYING"/>
-		<ComponentRef Id="LICENSE"/>
+		<ComponentRef Id="MORAL_LICENSE"/>
 		<ComponentGroupRef Id="examples"/>
 	</Feature>
 
