@@ -218,6 +218,12 @@ T_OBJS += $(T_LFSR_TEST_OBJS)
 T_OBJS += $(T_BTRACE_FIO_OBJS)
 T_OBJS += $(T_DEDUPE_OBJS)
 
+ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
+    T_DEDUPE_OBJS += os/windows/posix.o lib/hweight.o
+    T_SMALLOC_OBJS += os/windows/posix.o lib/hweight.o
+    T_LFSR_TEST_OBJS += os/windows/posix.o lib/hweight.o
+endif
+
 T_TEST_PROGS = $(T_SMALLOC_PROGS)
 T_TEST_PROGS += $(T_IEEE_PROGS)
 T_PROGS += $(T_ZIPF_PROGS)
