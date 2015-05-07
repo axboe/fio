@@ -1007,6 +1007,7 @@ static int accept_loop(int listen_sk)
 		}
 
 		/* exits */
+		strncpy(client_sockaddr_str, from, INET6_ADDRSTRLEN);
 		handle_connection(sk);
 	}
 
