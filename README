@@ -35,6 +35,7 @@ down for some reason, either one of those is safe to use:
 
 or
 
+	git://github.com/axboe/fio.git
 	https://github.com/axboe/fio.git
 
 
