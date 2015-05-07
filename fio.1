@@ -93,7 +93,7 @@ Start a backend server, with \fIargs\fP specifying what to listen to. See client
 Background a fio server, writing the pid to the given pid file.
 .TP
 .BI \-\-client \fR=\fPhost
-Instead of running the jobs locally, send and run them on the given host.
+Instead of running the jobs locally, send and run them on the given host or set of hosts.  See client/server section.
 .TP
 .BI \-\-idle\-prof \fR=\fPoption
 Report cpu idleness on a system or percpu basis (\fIoption\fP=system,percpu) or run unit work calibration only (\fIoption\fP=calibrate).
@@ -1905,8 +1905,35 @@ to load a local file as well. This is done by using \-\-remote-config:
 
 fio \-\-client=server \-\-remote-config /path/to/file.fio
 
-Then the fio serer will open this local (to the server) job file instead
+Then fio will open this local (to the server) job file instead
 of being passed one from the client.
+
+If you have many servers (example: 100 VMs/containers), you can input a pathname 
+of a file containing host IPs/names as the parameter value for the \-\-client option.
+For example, here is an example "host.list" file containing 2 hostnames:
+
+host1.your.dns.domain
+.br
+host2.your.dns.domain
+
+The fio command would then be:
+
+fio \-\-client=host.list <job file>
+
+In this mode, you cannot input server-specific parameters or job files, and all
+servers receive the same job file.
+
+In order to enable fio \-\-client runs utilizing a shared filesystem from multiple hosts,
+fio \-\-client now prepends the IP address of the server to the filename. For example, 
+if fio is using directory /mnt/nfs/fio and is writing filename fileio.tmp, 
+with a \-\-client hostfile
+containing two hostnames h1 and h2 with IP addresses 192.168.10.120 and 192.168.10.121, then
+fio will create two files:
+
+/mnt/nfs/fio/192.168.10.120.fileio.tmp
+.br
+/mnt/nfs/fio/192.168.10.121.fileio.tmp
+
 .SH AUTHORS
 
 .B fio

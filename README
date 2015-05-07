@@ -172,7 +172,7 @@ $ fio
 	--warnings-fatal	Fio parser warnings are fatal
 	--max-jobs		Maximum number of threads/processes to support
 	--server=args		Start backend server. See Client/Server section.
-	--client=host		Connect to specified backend.
+	--client=host		Connect to specified backend(s).
 	--remote-config=file	Tell fio server to load this local file
 	--idle-prof=option	Report cpu idleness on a system or percpu basis
 				(option=system,percpu) or run unit work
@@ -311,8 +311,33 @@ to load a local file as well. This is done by using --remote-config:
 
 fio --client=server --remote-config /path/to/file.fio
 
-Then the fio server will open this local (to the server) job file instead
+Then fio will open this local (to the server) job file instead
 of being passed one from the client.
+
+If you have many servers (example: 100 VMs/containers), 
+you can input a pathname of a file containing host IPs/names as the parameter 
+value for the --client option.  For example, here is an example "host.list" 
+file containing 2 hostnames:
+
+host1.your.dns.domain
+host2.your.dns.domain
+
+The fio command would then be:
+
+fio --client=host.list <job file(s)>
+
+In this mode, you cannot input server-specific parameters or job files -- all
+servers receive the same job file.  
+
+In order to let fio --client runs use a shared filesystem 
+from multiple hosts, fio  --client now prepends the IP address of the 
+server to the filename.  For example, if fio is using directory /mnt/nfs/fio 
+and is writing filename fileio.tmp, with a --client hostfile containing 
+two hostnames h1 and h2 with IP addresses 192.168.10.120 and  192.168.10.121,
+then fio will create two files:
+
+	/mnt/nfs/fio/192.168.10.120.fileio.tmp
+	/mnt/nfs/fio/192.168.10.121.fileio.tmp
 
 
 Platforms
