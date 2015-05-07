@@ -6,6 +6,7 @@
 #include <string.h>
 #include "parse.h"
 #include "flist.h"
+#include "client.h"
 
 #define td_var_offset(var)	((size_t) &((struct thread_options *)0)->var)
 
@@ -19,6 +20,8 @@ struct thread_data;
 void fio_options_free(struct thread_data *);
 char *get_name_idx(char *, int);
 int set_name_idx(char *, char *, int);
+
+extern char client_sockaddr_str[INET6_ADDRSTRLEN];  /* used with --client option */
 
 extern struct fio_option fio_options[FIO_MAX_OPTS];
 

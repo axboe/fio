@@ -17,6 +17,8 @@
 
 #include "crc/crc32c.h"
 
+char client_sockaddr_str[INET6_ADDRSTRLEN] = {0};
+
 /*
  * Check if mmap/mmaphuge has a :/foo/bar/file at the end. If so, return that.
  */
@@ -832,7 +834,12 @@ int set_name_idx(char *target, char *input, int index)
 	for (cur_idx = 0; cur_idx <= index; cur_idx++)
 		fname = get_next_name(&str);
 
-	len = sprintf(target, "%s/", fname);
+	if (client_sockaddr_str[0]) {
+		len = sprintf(target, "%s/%s.", fname, client_sockaddr_str);
+	} else {
+		len = sprintf(target, "%s/", fname);
+	}
+
 	free(p);
 
 	return len;
