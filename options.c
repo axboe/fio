@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <netinet/in.h>
 
 #include "fio.h"
 #include "verify.h"
@@ -17,7 +18,7 @@
 
 #include "crc/crc32c.h"
 
-char client_sockaddr_str[INET6_ADDRSTRLEN] = {0};
+char client_sockaddr_str[INET6_ADDRSTRLEN] = { 0 };
 
 /*
  * Check if mmap/mmaphuge has a :/foo/bar/file at the end. If so, return that.
@@ -822,7 +823,7 @@ static int get_max_name_idx(char *input)
  * Returns the directory at the index, indexes > entires will be
  * assigned via modulo division of the index
  */
-int set_name_idx(char *target, char *input, int index)
+int set_name_idx(char *target, size_t tlen, char *input, int index)
 {
 	unsigned int cur_idx;
 	int len;
@@ -835,11 +836,12 @@ int set_name_idx(char *target, char *input, int index)
 		fname = get_next_name(&str);
 
 	if (client_sockaddr_str[0]) {
-		len = sprintf(target, "%s/%s.", fname, client_sockaddr_str);
-	} else {
-		len = sprintf(target, "%s/", fname);
-	}
+		len = snprintf(target, tlen, "%s/%s.", fname,
+				client_sockaddr_str);
+	} else
+		len = snprintf(target, tlen, "%s/", fname);
 
+	target[tlen - 1] = '\0';
 	free(p);
 
 	return len;
