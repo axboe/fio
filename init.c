@@ -2242,6 +2242,32 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				exit_val = 1;
 				break;
 			}
+			/* if --client parameter contains a pathname */
+			if (0 == access(optarg, R_OK)) {
+				/* file contains a list of host addrs or names */
+				char hostaddr[_POSIX_HOST_NAME_MAX] = {0};
+				char formatstr[8];
+				FILE * hostf = fopen(optarg, "r");
+				if (!hostf) {
+					log_err("fio: could not open client list file %s for read\n", optarg);
+					do_exit++;
+					exit_val = 1;
+					break;
+				}
+				sprintf(formatstr, "%%%ds", _POSIX_HOST_NAME_MAX-1);
+				/* read at most _POSIX_HOST_NAME_MAX-1 chars from each record in this file */
+				while (fscanf(hostf, formatstr, hostaddr) == 1) {
+					/* expect EVERY host in file to be valid */
+					if (fio_client_add(&fio_client_ops, hostaddr, &cur_client)) {
+						log_err("fio: failed adding client %s from file %s\n", hostaddr, optarg);
+						do_exit++;
+						exit_val = 1;
+						break;
+					}
+				}
+				fclose(hostf);
+				break; /* no possibility of job file for "this client only" */
+			}
 			if (fio_client_add(&fio_client_ops, optarg, &cur_client)) {
 				log_err("fio: failed adding client %s\n", optarg);
 				do_exit++;
