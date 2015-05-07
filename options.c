@@ -3822,6 +3822,18 @@ static struct fio_keyword fio_keywords[] = {
 	},
 };
 
+void fio_keywords_exit(void)
+{
+	struct fio_keyword *kw;
+
+	kw = &fio_keywords[0];
+	while (kw->word) {
+		free(kw->replace);
+		kw->replace = NULL;
+		kw++;
+	}
+}
+
 void fio_keywords_init(void)
 {
 	unsigned long long mb_memory;

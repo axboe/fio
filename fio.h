@@ -464,6 +464,7 @@ extern void reset_fio_state(void);
 extern void clear_io_state(struct thread_data *);
 extern int fio_options_parse(struct thread_data *, char **, int, int);
 extern void fio_keywords_init(void);
+extern void fio_keywords_exit(void);
 extern int fio_cmd_option_parse(struct thread_data *, const char *, char *);
 extern int fio_cmd_ioengine_option_parse(struct thread_data *, const char *, char *);
 extern void fio_fill_default_options(struct thread_data *);
@@ -483,6 +484,7 @@ extern int fio_set_fd_nonblocking(int, const char *);
 extern uintptr_t page_mask;
 extern uintptr_t page_size;
 extern int initialize_fio(char *envp[]);
+extern void deinitialize_fio(void);
 
 #define FIO_GETOPT_JOB		0x89000000
 #define FIO_GETOPT_IOENGINE	0x98000000

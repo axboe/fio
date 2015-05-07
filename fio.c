@@ -30,6 +30,8 @@
 
 int main(int argc, char *argv[], char *envp[])
 {
+	int ret = 1;
+
 	if (initialize_fio(envp))
 		return 1;
 
@@ -38,7 +40,7 @@ int main(int argc, char *argv[], char *envp[])
 #endif
 
 	if (parse_options(argc, argv))
-		return 1;
+		goto done;
 
 	fio_time_init();
 
@@ -46,8 +48,12 @@ int main(int argc, char *argv[], char *envp[])
 		set_genesis_time();
 
 		if (fio_start_all_clients())
-			return 1;
-		return fio_handle_clients(&fio_client_ops);
+			goto done;
+		ret = fio_handle_clients(&fio_client_ops);
 	} else
-		return fio_backend();
+		ret = fio_backend();
+
+done:
+	deinitialize_fio();
+	return ret;
 }

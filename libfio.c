@@ -353,3 +353,8 @@ int initialize_fio(char *envp[])
 	fio_keywords_init();
 	return 0;
 }
+
+void deinitialize_fio(void)
+{
+	fio_keywords_exit();
+}
