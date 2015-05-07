@@ -970,14 +970,14 @@ static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct cmd_text_pdu *pdu = (struct cmd_text_pdu *) cmd->payload;
 	const char *buf = (const char *) pdu->buf;
 	const char *name;
-	int fio_unused ret;
+	char formatstr[8];
 
 	name = client->name ? client->name : client->hostname;
 
 	if (!client->skip_newline)
-		fprintf(f_out, "<%s> ", name);
-	ret = fwrite(buf, pdu->buf_len, 1, f_out);
-	fflush(f_out);
+		dprint(FD_NET, "<%s> ", name);
+	sprintf(formatstr, "%%%ds", pdu->buf_len); /* don't count on NULL delimiter */
+	dprint(FD_NET, formatstr, buf);
 	client->skip_newline = strchr(buf, '\n') == NULL;
 }
 
