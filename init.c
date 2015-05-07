@@ -2245,7 +2245,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			/* if --client parameter contains a pathname */
 			if (0 == access(optarg, R_OK)) {
 				/* file contains a list of host addrs or names */
-				char hostaddr[_POSIX_HOST_NAME_MAX] = {0};
+				char hostaddr[PATH_MAX] = {0};
 				char formatstr[8];
 				FILE * hostf = fopen(optarg, "r");
 				if (!hostf) {
@@ -2254,8 +2254,11 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 					exit_val = 1;
 					break;
 				}
-				sprintf(formatstr, "%%%ds", _POSIX_HOST_NAME_MAX-1);
-				/* read at most _POSIX_HOST_NAME_MAX-1 chars from each record in this file */
+				sprintf(formatstr, "%%%ds", PATH_MAX - 1);
+				/*
+				 * read at most PATH_MAX-1 chars from each
+				 * record in this file
+				 */
 				while (fscanf(hostf, formatstr, hostaddr) == 1) {
 					/* expect EVERY host in file to be valid */
 					if (fio_client_add(&fio_client_ops, hostaddr, &cur_client)) {
