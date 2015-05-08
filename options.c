@@ -1845,6 +1845,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= td_var_offset(rand_seed),
 		.help	= "Set the random generator seed value",
+		.def	= "0x89",
 		.parent = "rw",
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_RANDOM,

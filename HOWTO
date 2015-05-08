@@ -435,6 +435,7 @@ unified_rw_reporting=bool	Fio normally reports statistics on a per
 
 randrepeat=bool	For random IO workloads, seed the generator in a predictable
 		way so that results are repeatable across repetitions.
+		Defaults to true.
 
 randseed=int	Seed the random number generators based on this seed value, to
 		be able to control what sequence of output is being generated.

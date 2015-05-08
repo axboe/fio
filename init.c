@@ -749,7 +749,7 @@ static int fixup_options(struct thread_data *td)
 	/*
 	 * If randseed is set, that overrides randrepeat
 	 */
-	if (td->o.rand_seed)
+	if (fio_option_is_set(&td->o, rand_seed))
 		td->o.rand_repeatable = 0;
 
 	if ((td->io_ops->flags & FIO_NOEXTEND) && td->o.file_append) {
@@ -966,14 +966,10 @@ static int setup_random_seeds(struct thread_data *td)
 	unsigned long seed;
 	unsigned int i;
 
-	if (!td->o.rand_repeatable && !td->o.rand_seed)
+	if (!td->o.rand_repeatable && !fio_option_is_set(&td->o, rand_seed))
 		return init_random_state(td, td->rand_seeds, sizeof(td->rand_seeds));
 
-	if (!td->o.rand_seed)
-		seed = 0x89;
-	else
-		seed = td->o.rand_seed;
-
+	seed = td->o.rand_seed;
 	for (i = 0; i < 4; i++)
 		seed *= 0x9e370001UL;
 
