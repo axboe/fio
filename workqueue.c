@@ -401,13 +401,8 @@ int workqueue_init(struct thread_data *td, struct workqueue *wq,
 			break;
 
 	wq->max_workers = i;
-	if (!wq->max_workers) {
-err:
-		log_err("Can't create rate workqueue\n");
-		td_verror(td, ESRCH, "workqueue_init");
-		workqueue_exit(wq);
-		return 1;
-	}
+	if (!wq->max_workers)
+		goto err;
 
 	/*
 	 * Wait for them all to be started and initialized
@@ -437,8 +432,12 @@ err:
 		pthread_mutex_unlock(&wq->flush_lock);
 	} while (1);
 
-	if (error)
-		goto err;
+	if (!error)
+		return 0;
 
-	return 0;
+err:
+	log_err("Can't create rate workqueue\n");
+	td_verror(td, ESRCH, "workqueue_init");
+	workqueue_exit(wq);
+	return 1;
 }
