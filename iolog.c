@@ -945,12 +945,15 @@ int iolog_file_inflate(const char *file)
 
 #endif
 
-void flush_log(struct io_log *log)
+void flush_log(struct io_log *log, int do_append)
 {
 	void *buf;
 	FILE *f;
 
-	f = fopen(log->filename, "w");
+	if (!do_append)
+		f = fopen(log->filename, "w");
+	else
+		f = fopen(log->filename, "a");
 	if (!f) {
 		perror("fopen log");
 		return;
@@ -980,7 +983,7 @@ static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
 	if (td->client_type == FIO_CLIENT_TYPE_GUI)
 		fio_send_iolog(td, log, log->filename);
 	else
-		flush_log(log);
+		flush_log(log, !td->o.per_job_logs);
 
 	fio_unlock_file(log->filename);
 	free_log(log);

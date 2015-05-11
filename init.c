@@ -1107,6 +1107,16 @@ int parse_dryrun(void)
 	return dump_cmdline || parse_only;
 }
 
+static void gen_log_name(char *name, size_t size, const char *logtype,
+			 const char *logname, unsigned int num,
+			 const char *suf, int per_job)
+{
+	if (per_job)
+		snprintf(name, size, "%s_%s.%d.%s", logname, logtype, num, suf);
+	else
+		snprintf(name, size, "%s_%s.%s", logname, logtype, suf);
+}
+
 /*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
@@ -1225,14 +1235,16 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		snprintf(logname, sizeof(logname), "%s_lat.%d.%s",
-				o->lat_log_file, td->thread_number, suf);
+		gen_log_name(logname, sizeof(logname), "lat", o->lat_log_file,
+				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->lat_log, &p, logname);
-		snprintf(logname, sizeof(logname), "%s_slat.%d.%s",
-				o->lat_log_file, td->thread_number, suf);
+
+		gen_log_name(logname, sizeof(logname), "slat", o->lat_log_file,
+				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->slat_log, &p, logname);
-		snprintf(logname, sizeof(logname), "%s_clat.%d.%s",
-				o->lat_log_file, td->thread_number, suf);
+
+		gen_log_name(logname, sizeof(logname), "clat", o->lat_log_file,
+				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->clat_log, &p, logname);
 	}
 	if (o->bw_log_file) {
@@ -1251,8 +1263,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		snprintf(logname, sizeof(logname), "%s_bw.%d.%s",
-				o->bw_log_file, td->thread_number, suf);
+		gen_log_name(logname, sizeof(logname), "bw", o->bw_log_file,
+				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->bw_log, &p, logname);
 	}
 	if (o->iops_log_file) {
@@ -1271,8 +1283,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		snprintf(logname, sizeof(logname), "%s_iops.%d.%s",
-				o->iops_log_file, td->thread_number, suf);
+		gen_log_name(logname, sizeof(logname), "iops", o->iops_log_file,
+				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->iops_log, &p, logname);
 	}
 

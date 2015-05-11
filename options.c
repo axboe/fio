@@ -3184,6 +3184,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_PROCESS,
 	},
 	{
+		.name	= "per_job_logs",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(per_job_logs),
+		.help	= "Include job number in generated log files or not",
+		.def	= "1",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "write_bw_log",
 		.lname	= "Write bandwidth log",
 		.type	= FIO_OPT_STR_STORE,

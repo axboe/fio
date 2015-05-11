@@ -268,6 +268,8 @@ struct thread_options {
 
 	unsigned int replay_align;
 	unsigned int replay_scale;
+
+	unsigned int per_job_logs;
 };
 
 #define FIO_TOP_STR_MAX		256
@@ -501,6 +503,8 @@ struct thread_options_pack {
 
 	uint32_t replay_align;
 	uint32_t replay_scale;
+
+	uint32_t per_job_logs;
 } __attribute__((packed));
 
 extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);

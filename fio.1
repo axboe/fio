@@ -1271,26 +1271,33 @@ Force alignment of IO offsets and lengths in a trace to this power of 2 value.
 .BI replay_scale \fR=\fPint
 Scale sector offsets down by this factor when replaying traces.
 .TP
+.BI per_job_logs \fR=\fPbool
+If set, this generates bw/clat/iops log with per file private filenames. If
+not set, jobs with identical names will share the log filename. Default: true.
+.TP
 .BI write_bw_log \fR=\fPstr
 If given, write a bandwidth log of the jobs in this job file. Can be used to
 store data of the bandwidth of the jobs in their lifetime. The included
 fio_generate_plots script uses gnuplot to turn these text files into nice
 graphs. See \fBwrite_lat_log\fR for behaviour of given filename. For this
 option, the postfix is _bw.x.log, where x is the index of the job (1..N,
-where N is the number of jobs)
+where N is the number of jobs). If \fBper_job_logs\fR is false, then the
+filename will not include the job index.
 .TP
 .BI write_lat_log \fR=\fPstr
 Same as \fBwrite_bw_log\fR, but writes I/O completion latencies.  If no
 filename is given with this option, the default filename of
 "jobname_type.x.log" is used, where x is the index of the job (1..N, where
 N is the number of jobs). Even if the filename is given, fio will still
-append the type of log.
+append the type of log. If \fBper_job_logs\fR is false, then the filename will
+not include the job index.
 .TP
 .BI write_iops_log \fR=\fPstr
 Same as \fBwrite_bw_log\fR, but writes IOPS. If no filename is given with this
 option, the default filename of "jobname_type.x.log" is used, where x is the
 index of the job (1..N, where N is the number of jobs). Even if the filename
-is given, fio will still append the type of log.
+is given, fio will still append the type of log. If \fBper_job_logs\fR is false,
+then the filename will not include the job index.
 .TP
 .BI log_avg_msec \fR=\fPint
 By default, fio will log an entry in the iops, latency, or bw log for every

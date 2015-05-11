@@ -248,6 +248,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->block_error_hist = le32_to_cpu(top->block_error_hist);
 	o->replay_align = le32_to_cpu(top->replay_align);
 	o->replay_scale = le32_to_cpu(top->replay_scale);
+	o->per_job_logs = le32_to_cpu(top->per_job_logs);
 
 	o->trim_backlog = le64_to_cpu(top->trim_backlog);
 
@@ -415,6 +416,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->skip_bad = cpu_to_le32(o->skip_bad);
 	top->replay_align = cpu_to_le32(o->replay_align);
 	top->replay_scale = cpu_to_le32(o->replay_scale);
+	top->per_job_logs = cpu_to_le32(o->per_job_logs);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		top->bs[i] = cpu_to_le32(o->bs[i]);
