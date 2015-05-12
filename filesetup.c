@@ -65,7 +65,9 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		}
 	}
 
-	flags = O_WRONLY | O_CREAT;
+	flags = O_WRONLY;
+	if (td->o.allow_create)
+		flags |= O_CREAT;
 	if (new_layout)
 		flags |= O_TRUNC;
 
@@ -76,7 +78,13 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	dprint(FD_FILE, "open file %s, flags %x\n", f->file_name, flags);
 	f->fd = open(f->file_name, flags, 0644);
 	if (f->fd < 0) {
-		td_verror(td, errno, "open");
+		int err = errno;
+
+		if (err == ENOENT && !td->o.allow_create)
+			log_err("fio: file creation disallowed by "
+					"allow_file_create=0\n");
+		else
+			td_verror(td, err, "open");
 		return 1;
 	}
 
@@ -539,7 +547,7 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	}
 	if (td->o.sync_io)
 		flags |= O_SYNC;
-	if (td->o.create_on_open)
+	if (td->o.create_on_open && td->o.allow_create)
 		flags |= O_CREAT;
 skip_flags:
 	if (f->filetype != FIO_TYPE_FILE)
@@ -550,7 +558,7 @@ open_again:
 		if (!read_only)
 			flags |= O_RDWR;
 
-		if (f->filetype == FIO_TYPE_FILE)
+		if (f->filetype == FIO_TYPE_FILE && td->o.allow_create)
 			flags |= O_CREAT;
 
 		if (is_std)

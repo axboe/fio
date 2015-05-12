@@ -1075,6 +1075,11 @@ If true, fio will only run the setup phase of the job. If files need to be
 laid out or updated on disk, only that will be done. The actual job contents
 are not executed.
 .TP
+.BI allow_file_create \fR=\fPbool
+If true, fio is permitted to create files as part of its workload. This is
+the default behavior. If this option is false, then fio will error out if the
+files it needs to use don't already exist. Default: true.
+.TP
 .BI pre_read \fR=\fPbool
 If this is given, files will be pre-read into memory before starting the given
 IO operation. This will also clear the \fR \fBinvalidate\fR flag, since it is

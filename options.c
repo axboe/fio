@@ -3040,6 +3040,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "0",
 	},
 	{
+		.name	= "allow_file_create",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(allow_create),
+		.help	= "Permit fio to create files, if they don't exist",
+		.def	= "1",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_FILENAME,
+	},
+	{
 		.name	= "pre_read",
 		.lname	= "Pre-read files",
 		.type	= FIO_OPT_BOOL,

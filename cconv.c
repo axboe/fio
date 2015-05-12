@@ -72,6 +72,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	string_to_cpu(&o->profile, top->profile);
 	string_to_cpu(&o->cgroup, top->cgroup);
 
+	o->allow_create = le32_to_cpu(top->allow_create);
 	o->td_ddir = le32_to_cpu(top->td_ddir);
 	o->rw_seq = le32_to_cpu(top->rw_seq);
 	o->kb_base = le32_to_cpu(top->kb_base);
@@ -288,6 +289,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	string_to_net(top->profile, o->profile);
 	string_to_net(top->cgroup, o->cgroup);
 
+	top->allow_create = cpu_to_le32(o->allow_create);
 	top->td_ddir = cpu_to_le32(o->td_ddir);
 	top->rw_seq = cpu_to_le32(o->rw_seq);
 	top->kb_base = cpu_to_le32(o->kb_base);
