@@ -510,6 +510,7 @@ static int block_state_category(int block_state)
 	case BLOCK_STATE_TRIM_FAILURE:
 		return 2;
 	default:
+		/* Silence compile warning on some BSDs and have a return */
 		assert(0);
 		return -1;
 	}
