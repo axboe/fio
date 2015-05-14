@@ -511,6 +511,7 @@ static int block_state_category(int block_state)
 		return 2;
 	default:
 		assert(0);
+		return -1;
 	}
 }
 
