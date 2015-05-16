@@ -5,12 +5,7 @@
 
 #include <errno.h>
 #include <sys/param.h>
-/* XXX hack to avoid confilcts between rbtree.h and <sys/rb.h> */
-#define	rb_node	_rb_node
 #include <sys/sysctl.h>
-#undef rb_node
-#undef rb_left
-#undef rb_right
 
 #include "../file.h"
 
