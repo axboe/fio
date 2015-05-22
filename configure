@@ -1453,6 +1453,25 @@ fi
 
 echo "lex/yacc for arithmetic       $arith"
 
+##########################################
+# Check whether we have setmntent/getmntent
+getmntent="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <mntent.h>
+int main(int argc, char **argv)
+{
+  FILE *mtab = setmntent(NULL, "r");
+  struct mntent *mnt = getmntent(mtab);
+  endmntent(mnt);
+  return 0;
+}
+EOF
+if compile_prog "" "" "getmntent"; then
+  getmntent="yes"
+fi
+echo "getmntent                     $getmntent"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -1625,6 +1644,9 @@ if test "$arith" = "yes" ; then
   else
     echo "YACC=$YACC" >> $config_host_mak
   fi
+fi
+if test "$getmntent" = "yes" ; then
+  output_sym "CONFIG_GETMNTENT"
 fi
 
 if test "$zlib" = "no" ; then
