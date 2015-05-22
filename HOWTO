@@ -1204,6 +1204,12 @@ allow_file_create=bool	If true, fio is permitted to create files as part
 		option is false, then fio will error out if the files it
 		needs to use don't already exist. Default: true.
 
+allow_mounted_write=bool	If this isn't set, fio will abort jobs that
+		are destructive (eg that write) to what appears to be a
+		mounted device or partition. This should help catch creating
+		inadvertently destructive tests, not realizing that the test
+		will destroy data on the mounted file system. Default: false.
+
 pre_read=bool	If this is given, files will be pre-read into memory before
 		starting the given IO operation. This will also clear
 		the 'invalidate' flag, since it is pointless to pre-read

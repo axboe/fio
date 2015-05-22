@@ -55,6 +55,7 @@
 #include "err.h"
 #include "lib/tp.h"
 #include "workqueue.h"
+#include "lib/mountcheck.h"
 
 static pthread_t helper_thread;
 static pthread_mutex_t helper_lock;
@@ -1895,6 +1896,27 @@ static void do_usleep(unsigned int usecs)
 	usleep(usecs);
 }
 
+static int check_mount_writes(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	if (!td_write(td) || td->o.allow_mounted_write)
+		return 0;
+
+	for_each_file(td, f, i) {
+		if (f->filetype != FIO_TYPE_BD)
+			continue;
+		if (device_is_mounted(f->file_name))
+			goto mounted;
+	}
+
+	return 0;
+mounted:
+	log_err("fio: %s appears mounted, and 'allow_mounted_write' isn't set. Aborting.", f->file_name);
+	return 1;
+}
+
 /*
  * Main function for kicking off and reaping jobs, as needed.
  */
@@ -1913,6 +1935,8 @@ static void run_threads(void)
 
 	nr_thread = nr_process = 0;
 	for_each_td(td, i) {
+		if (check_mount_writes(td))
+			return;
 		if (td->o.use_thread)
 			nr_thread++;
 		else

@@ -272,6 +272,7 @@ struct thread_options {
 	unsigned int per_job_logs;
 
 	unsigned int allow_create;
+	unsigned int allow_mounted_write;
 };
 
 #define FIO_TOP_STR_MAX		256
@@ -509,6 +510,7 @@ struct thread_options_pack {
 	uint32_t per_job_logs;
 
 	uint32_t allow_create;
+	uint32_t allow_mounted_write;
 } __attribute__((packed));
 
 extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);
