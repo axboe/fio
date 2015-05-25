@@ -21,6 +21,7 @@
 #endif
 
 #include "fio.h"
+#include "options.h"
 #include "server.h"
 #include "crc/crc16.h"
 #include "lib/ieee754.h"
@@ -936,6 +937,41 @@ static int handle_connection(int sk)
 	_exit(ret);
 }
 
+/* get the address on this host bound by the input socket, 
+ * whether it is ipv6 or ipv4 */
+
+int get_my_addr_str( int sk )
+{
+	int ret; 
+	struct sockaddr * sockaddr_p;
+	struct sockaddr_in myaddr4 = {0};
+	struct sockaddr_in6 myaddr6 = {0};
+	char * net_addr;
+	socklen_t len = use_ipv6 ? sizeof(myaddr6) : sizeof(myaddr4);
+
+	if (use_ipv6)
+		sockaddr_p = (struct sockaddr * )&myaddr6;
+	else
+		sockaddr_p = (struct sockaddr * )&myaddr4;
+	ret = getsockname(sk, sockaddr_p, &len);
+	if (ret) {
+		log_err("fio: getsockaddr: %s\n", strerror(errno));
+		close(sk);
+		return -1;
+	}
+	if (use_ipv6)
+		net_addr = (char * )&myaddr6.sin6_addr;
+	else
+		net_addr = (char * )&myaddr4.sin_addr;
+	if (NULL == inet_ntop(use_ipv6?AF_INET6:AF_INET, net_addr, client_sockaddr_str, INET6_ADDRSTRLEN-1)) {
+		log_err("inet_ntop: failed to convert addr to string\n");
+		close(sk);
+		return -1;
+	}
+	dprint(FD_NET, "fio server bound to addr %s\n", client_sockaddr_str);
+	return 0;
+}
+
 static int accept_loop(int listen_sk)
 {
 	struct sockaddr_in addr;
@@ -1007,7 +1043,8 @@ static int accept_loop(int listen_sk)
 		}
 
 		/* exits */
-		strncpy(client_sockaddr_str, from, INET6_ADDRSTRLEN);
+		if (get_my_addr_str(sk))
+			return -1; /* error already logged and socket closed */
 		handle_connection(sk);
 	}
 
