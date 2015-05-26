@@ -956,7 +956,6 @@ int get_my_addr_str( int sk )
 	ret = getsockname(sk, sockaddr_p, &len);
 	if (ret) {
 		log_err("fio: getsockaddr: %s\n", strerror(errno));
-		close(sk);
 		return -1;
 	}
 	if (use_ipv6)
@@ -965,7 +964,6 @@ int get_my_addr_str( int sk )
 		net_addr = (char * )&myaddr4.sin_addr;
 	if (NULL == inet_ntop(use_ipv6?AF_INET6:AF_INET, net_addr, client_sockaddr_str, INET6_ADDRSTRLEN-1)) {
 		log_err("inet_ntop: failed to convert addr to string\n");
-		close(sk);
 		return -1;
 	}
 	dprint(FD_NET, "fio server bound to addr %s\n", client_sockaddr_str);
@@ -1043,8 +1041,7 @@ static int accept_loop(int listen_sk)
 		}
 
 		/* exits */
-		if (get_my_addr_str(sk))
-			return -1; /* error already logged and socket closed */
+		get_my_addr_str(sk); /* if error, it's already logged, non-fatal */
 		handle_connection(sk);
 	}
 
