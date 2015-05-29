@@ -686,6 +686,7 @@ enum {
 enum {
 	FIO_RAND_GEN_TAUSWORTHE = 0,
 	FIO_RAND_GEN_LFSR,
+	FIO_RAND_GEN_TAUSWORTHE64,
 };
 
 enum {

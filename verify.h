@@ -88,8 +88,20 @@ extern void fio_verify_init(struct thread_data *td);
 extern int verify_async_init(struct thread_data *);
 extern void verify_async_exit(struct thread_data *);
 
-struct thread_rand_state {
+struct thread_rand32_state {
 	uint32_t s[4];
+};
+
+struct thread_rand64_state {
+	uint64_t s[6];
+};
+
+struct thread_rand_state {
+	uint64_t use64;
+	union {
+		struct thread_rand32_state state32;
+		struct thread_rand64_state state64;
+	};
 };
 
 /*
@@ -105,12 +117,23 @@ struct thread_io_list {
 	uint64_t offsets[0];
 };
 
+struct thread_io_list_v1 {
+	uint64_t no_comps;
+	uint64_t depth;
+	uint64_t numberio;
+	uint64_t index;
+	struct thread_rand32_state rand;
+	uint8_t name[64];
+	uint64_t offsets[0];
+};
+
 struct all_io_list {
 	uint64_t threads;
 	struct thread_io_list state[0];
 };
 
-#define VSTATE_HDR_VERSION	0x01
+#define VSTATE_HDR_VERSION_V1	0x01
+#define VSTATE_HDR_VERSION	0x02
 
 struct verify_state_hdr {
 	uint64_t version;
@@ -125,12 +148,18 @@ extern void verify_save_state(void);
 extern int verify_load_state(struct thread_data *, const char *);
 extern void verify_free_state(struct thread_data *);
 extern int verify_state_should_stop(struct thread_data *, struct io_u *);
-extern void verify_convert_assign_state(struct thread_data *, struct thread_io_list *);
-extern int verify_state_hdr(struct verify_state_hdr *, struct thread_io_list *);
+extern void verify_convert_assign_state(struct thread_data *, void *, int);
+extern int verify_state_hdr(struct verify_state_hdr *, struct thread_io_list *,
+				int *);
+
+static inline size_t __thread_io_list_sz(uint64_t depth)
+{
+	return sizeof(struct thread_io_list) + depth * sizeof(uint64_t);
+}
 
 static inline size_t thread_io_list_sz(struct thread_io_list *s)
 {
-	return sizeof(*s) + le64_to_cpu(s->depth) * sizeof(uint64_t);
+	return __thread_io_list_sz(le64_to_cpu(s->depth));
 }
 
 static inline struct thread_io_list *io_list_next(struct thread_io_list *s)

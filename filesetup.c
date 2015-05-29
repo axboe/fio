@@ -267,11 +267,13 @@ error:
 static unsigned long long get_rand_file_size(struct thread_data *td)
 {
 	unsigned long long ret, sized;
+	uint64_t frand_max;
 	unsigned long r;
 
+	frand_max = rand_max(&td->file_size_state);
 	r = __rand(&td->file_size_state);
 	sized = td->o.file_size_high - td->o.file_size_low;
-	ret = (unsigned long long) ((double) sized * (r / (FRAND_MAX + 1.0)));
+	ret = (unsigned long long) ((double) sized * (r / (frand_max + 1.0)));
 	ret += td->o.file_size_low;
 	ret -= (ret % td->o.rw_min_bs);
 	return ret;

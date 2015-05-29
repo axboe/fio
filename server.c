@@ -1410,7 +1410,7 @@ void fio_server_send_start(struct thread_data *td)
 }
 
 int fio_server_get_verify_state(const char *name, int threadnumber,
-				void **datap)
+				void **datap, int *version)
 {
 	struct thread_io_list *s;
 	struct cmd_sendfile out;
@@ -1458,7 +1458,7 @@ fail:
 	 * the header, and the thread_io_list checksum
 	 */
 	s = rep->data + sizeof(struct verify_state_hdr);
-	if (verify_state_hdr(rep->data, s))
+	if (verify_state_hdr(rep->data, s, version))
 		goto fail;
 
 	/*

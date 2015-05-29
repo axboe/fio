@@ -1343,10 +1343,21 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 		s->depth = cpu_to_le64((uint64_t) td->o.iodepth);
 		s->numberio = cpu_to_le64((uint64_t) td->io_issues[DDIR_WRITE]);
 		s->index = cpu_to_le64((uint64_t) i);
-		s->rand.s[0] = cpu_to_le32(td->random_state.s1);
-		s->rand.s[1] = cpu_to_le32(td->random_state.s2);
-		s->rand.s[2] = cpu_to_le32(td->random_state.s3);
-		s->rand.s[3] = 0;
+		if (td->random_state.use64) {
+			s->rand.state64.s[0] = cpu_to_le64(td->random_state.state64.s1);
+			s->rand.state64.s[1] = cpu_to_le64(td->random_state.state64.s2);
+			s->rand.state64.s[2] = cpu_to_le64(td->random_state.state64.s3);
+			s->rand.state64.s[3] = cpu_to_le64(td->random_state.state64.s4);
+			s->rand.state64.s[4] = cpu_to_le64(td->random_state.state64.s5);
+			s->rand.state64.s[5] = 0;
+			s->rand.use64 = cpu_to_le64((uint64_t)1);
+		} else {
+			s->rand.state32.s[0] = cpu_to_le32(td->random_state.state32.s1);
+			s->rand.state32.s[1] = cpu_to_le32(td->random_state.state32.s2);
+			s->rand.state32.s[2] = cpu_to_le32(td->random_state.state32.s3);
+			s->rand.state32.s[3] = 0;
+			s->rand.use64 = 0;
+		}
 		s->name[sizeof(s->name) - 1] = '\0';
 		strncpy((char *) s->name, td->o.name, sizeof(s->name) - 1);
 		next = io_list_next(s);
@@ -1442,23 +1453,72 @@ void verify_free_state(struct thread_data *td)
 		free(td->vstate);
 }
 
-void verify_convert_assign_state(struct thread_data *td,
-				 struct thread_io_list *s)
+static struct thread_io_list *convert_v1_list(struct thread_io_list_v1 *s)
 {
+	struct thread_io_list *til;
 	int i;
 
-	s->no_comps = le64_to_cpu(s->no_comps);
-	s->depth = le64_to_cpu(s->depth);
-	s->numberio = le64_to_cpu(s->numberio);
-	for (i = 0; i < 4; i++)
-		s->rand.s[i] = le32_to_cpu(s->rand.s[i]);
-	for (i = 0; i < s->no_comps; i++)
-		s->offsets[i] = le64_to_cpu(s->offsets[i]);
+	til = malloc(__thread_io_list_sz(s->no_comps));
+	til->no_comps = s->no_comps;
+	til->depth = s->depth;
+	til->numberio = s->numberio;
+	til->index = s->index;
+	memcpy(til->name, s->name, sizeof(til->name));
 
-	td->vstate = s;
+	til->rand.use64 = 0;
+	for (i = 0; i < 4; i++)
+		til->rand.state32.s[i] = s->rand.s[i];
+
+	for (i = 0; i < s->no_comps; i++)
+		til->offsets[i] = s->offsets[i];
+
+	return til;
 }
 
-int verify_state_hdr(struct verify_state_hdr *hdr, struct thread_io_list *s)
+void verify_convert_assign_state(struct thread_data *td, void *p, int version)
+{
+	struct thread_io_list *til;
+	int i;
+
+	if (version == 1) {
+		struct thread_io_list_v1 *s = p;
+
+		s->no_comps = le64_to_cpu(s->no_comps);
+		s->depth = le64_to_cpu(s->depth);
+		s->numberio = le64_to_cpu(s->numberio);
+		for (i = 0; i < 4; i++)
+			s->rand.s[i] = le32_to_cpu(s->rand.s[i]);
+		for (i = 0; i < s->no_comps; i++)
+			s->offsets[i] = le64_to_cpu(s->offsets[i]);
+
+		til = convert_v1_list(s);
+		free(s);
+	} else {
+		struct thread_io_list *s = p;
+
+		s->no_comps = le64_to_cpu(s->no_comps);
+		s->depth = le64_to_cpu(s->depth);
+		s->numberio = le64_to_cpu(s->numberio);
+		s->rand.use64 = le64_to_cpu(s->rand.use64);
+
+		if (s->rand.use64) {
+			for (i = 0; i < 6; i++)
+				s->rand.state64.s[i] = le64_to_cpu(s->rand.state64.s[i]);
+		} else {
+			for (i = 0; i < 4; i++)
+				s->rand.state32.s[i] = le32_to_cpu(s->rand.state32.s[i]);
+		}
+		for (i = 0; i < s->no_comps; i++)
+			s->offsets[i] = le64_to_cpu(s->offsets[i]);
+
+		til = p;
+	}
+
+	td->vstate = til;
+}
+
+int verify_state_hdr(struct verify_state_hdr *hdr, struct thread_io_list *s,
+		     int *version)
 {
 	uint64_t crc;
 
@@ -1466,20 +1526,22 @@ int verify_state_hdr(struct verify_state_hdr *hdr, struct thread_io_list *s)
 	hdr->size = le64_to_cpu(hdr->size);
 	hdr->crc = le64_to_cpu(hdr->crc);
 
-	if (hdr->version != VSTATE_HDR_VERSION)
+	if (hdr->version != VSTATE_HDR_VERSION ||
+	    hdr->version != VSTATE_HDR_VERSION_V1)
 		return 1;
 
 	crc = fio_crc32c((void *)s, hdr->size);
 	if (crc != hdr->crc)
 		return 1;
 
+	*version = hdr->version;
 	return 0;
 }
 
 int verify_load_state(struct thread_data *td, const char *prefix)
 {
-	struct thread_io_list *s = NULL;
 	struct verify_state_hdr hdr;
+	void *s = NULL;
 	uint64_t crc;
 	ssize_t ret;
 	int fd;
@@ -1503,7 +1565,8 @@ int verify_load_state(struct thread_data *td, const char *prefix)
 	hdr.size = le64_to_cpu(hdr.size);
 	hdr.crc = le64_to_cpu(hdr.crc);
 
-	if (hdr.version != VSTATE_HDR_VERSION) {
+	if (hdr.version != VSTATE_HDR_VERSION &&
+	    hdr.version != VSTATE_HDR_VERSION_V1) {
 		log_err("fio: bad version in verify state header\n");
 		goto err;
 	}
@@ -1517,7 +1580,7 @@ int verify_load_state(struct thread_data *td, const char *prefix)
 		goto err;
 	}
 
-	crc = fio_crc32c((void *)s, hdr.size);
+	crc = fio_crc32c(s, hdr.size);
 	if (crc != hdr.crc) {
 		log_err("fio: verify state is corrupt\n");
 		goto err;
@@ -1525,7 +1588,7 @@ int verify_load_state(struct thread_data *td, const char *prefix)
 
 	close(fd);
 
-	verify_convert_assign_state(td, s);
+	verify_convert_assign_state(td, s, hdr.version);
 	return 0;
 err:
 	if (s)

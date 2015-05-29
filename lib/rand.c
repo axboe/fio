@@ -40,12 +40,12 @@
 
 int arch_random;
 
-static inline int __seed(unsigned int x, unsigned int m)
+static inline uint64_t __seed(uint64_t x, uint64_t m)
 {
 	return (x < m) ? x + m : x;
 }
 
-static void __init_rand(struct frand_state *state, unsigned int seed)
+static void __init_rand32(struct taus88_state *state, unsigned int seed)
 {
 	int cranks = 6;
 
@@ -56,17 +56,43 @@ static void __init_rand(struct frand_state *state, unsigned int seed)
 	state->s3 = __seed(LCG(state->s2, seed), 15);
 
 	while (cranks--)
-		__rand(state);
+		__rand32(state);
 }
 
-void init_rand(struct frand_state *state)
+static void __init_rand64(struct taus258_state *state, uint64_t seed)
 {
-	__init_rand(state, 1);
+	int cranks = 6;
+
+#define LCG64(x, seed)  ((x) * 6906969069ULL ^ (seed))
+
+	state->s1 = __seed(LCG64((2^31) + (2^17) + (2^7), seed), 1);
+	state->s2 = __seed(LCG64(state->s1, seed), 7);
+	state->s3 = __seed(LCG64(state->s2, seed), 15);
+	state->s4 = __seed(LCG64(state->s3, seed), 33);
+	state->s5 = __seed(LCG64(state->s4, seed), 49);
+
+	while (cranks--)
+		__rand64(state);
 }
 
-void init_rand_seed(struct frand_state *state, unsigned int seed)
+void init_rand(struct frand_state *state, int use64)
 {
-	__init_rand(state, seed);
+	state->use64 = use64;
+
+	if (!use64)
+		__init_rand32(&state->state32, 1);
+	else
+		__init_rand64(&state->state64, 1);
+}
+
+void init_rand_seed(struct frand_state *state, unsigned int seed, int use64)
+{
+	state->use64 = use64;
+
+	if (!use64)
+		__init_rand32(&state->state32, seed);
+	else
+		__init_rand64(&state->state64, seed);
 }
 
 void __fill_random_buf(void *buf, unsigned int len, unsigned long seed)

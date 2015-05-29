@@ -15,7 +15,7 @@ static int gauss_dev(struct gauss_state *gs)
 		return 0;
 
 	r = __rand(&gs->r);
-	vr = gs->stddev * (r / (FRAND_MAX + 1.0));
+	vr = gs->stddev * (r / (FRAND32_MAX + 1.0));
 
 	return vr - gs->stddev / 2;
 }
@@ -45,7 +45,7 @@ void gauss_init(struct gauss_state *gs, unsigned long nranges, double dev,
 		unsigned int seed)
 {
 	memset(gs, 0, sizeof(*gs));
-	init_rand_seed(&gs->r, seed);
+	init_rand_seed(&gs->r, seed, 0);
 	gs->nranges = nranges;
 
 	if (dev != 0.0) {

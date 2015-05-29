@@ -1897,6 +1897,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = FIO_RAND_GEN_LFSR,
 			    .help = "Variable length LFSR",
 			  },
+			  {
+			    .ival = "tausworthe64",
+			    .oval = FIO_RAND_GEN_TAUSWORTHE64,
+			    .help = "64-bit Tausworthe variant",
+			  },
 		},
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_RANDOM,

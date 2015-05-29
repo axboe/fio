@@ -1878,11 +1878,12 @@ static int fio_verify_load_state(struct thread_data *td)
 
 	if (is_backend) {
 		void *data;
+		int ver;
 
 		ret = fio_server_get_verify_state(td->o.name,
-					td->thread_number - 1, &data);
+					td->thread_number - 1, &data, &ver);
 		if (!ret)
-			verify_convert_assign_state(td, data);
+			verify_convert_assign_state(td, data, ver);
 	} else
 		ret = verify_load_state(td, "local");
 

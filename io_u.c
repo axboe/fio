@@ -89,18 +89,20 @@ static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 {
 	uint64_t r;
 
-	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE) {
-		uint64_t lastb;
+	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE ||
+	    td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE64) {
+		uint64_t frand_max, lastb;
 
 		lastb = last_block(td, f, ddir);
 		if (!lastb)
 			return 1;
 
+		frand_max = rand_max(&td->random_state);
 		r = __rand(&td->random_state);
 
 		dprint(FD_RANDOM, "off rand %llu\n", (unsigned long long) r);
 
-		*b = lastb * (r / ((uint64_t) FRAND_MAX + 1.0));
+		*b = lastb * (r / ((uint64_t) frand_max + 1.0));
 	} else {
 		uint64_t off = 0;
 
@@ -195,7 +197,8 @@ static inline int should_sort_io(struct thread_data *td)
 		return 0;
 	if (td->runstate != TD_VERIFYING)
 		return 0;
-	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE)
+	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE ||
+	    td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE64)
 		return 0;
 
 	return 1;
@@ -203,14 +206,16 @@ static inline int should_sort_io(struct thread_data *td)
 
 static int should_do_random(struct thread_data *td, enum fio_ddir ddir)
 {
+	uint64_t frand_max;
 	unsigned int v;
 	unsigned long r;
 
 	if (td->o.perc_rand[ddir] == 100)
 		return 1;
 
+	frand_max = rand_max(&td->seq_rand_state[ddir]);
 	r = __rand(&td->seq_rand_state[ddir]);
-	v = 1 + (int) (100.0 * (r / (FRAND_MAX + 1.0)));
+	v = 1 + (int) (100.0 * (r / (frand_max + 1.0)));
 
 	return v <= td->o.perc_rand[ddir];
 }
@@ -439,6 +444,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 	int ddir = io_u->ddir;
 	unsigned int buflen = 0;
 	unsigned int minbs, maxbs;
+	uint64_t frand_max;
 	unsigned long r;
 
 	assert(ddir_rw(ddir));
@@ -458,12 +464,13 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 	if (!io_u_fits(td, io_u, minbs))
 		return 0;
 
+	frand_max = rand_max(&td->bsrange_state);
 	do {
 		r = __rand(&td->bsrange_state);
 
 		if (!td->o.bssplit_nr[ddir]) {
 			buflen = 1 + (unsigned int) ((double) maxbs *
-					(r / (FRAND_MAX + 1.0)));
+					(r / (frand_max + 1.0)));
 			if (buflen < minbs)
 				buflen = minbs;
 		} else {
@@ -475,7 +482,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 
 				buflen = bsp->bs;
 				perc += bsp->perc;
-				if ((r <= ((FRAND_MAX / 100L) * perc)) &&
+				if ((r <= ((frand_max / 100L) * perc)) &&
 				    io_u_fits(td, io_u, buflen))
 					break;
 			}
@@ -521,11 +528,12 @@ static void set_rwmix_bytes(struct thread_data *td)
 
 static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
 {
+	uint64_t frand_max = rand_max(&td->rwmix_state);
 	unsigned int v;
 	unsigned long r;
 
 	r = __rand(&td->rwmix_state);
-	v = 1 + (int) (100.0 * (r / (FRAND_MAX + 1.0)));
+	v = 1 + (int) (100.0 * (r / (frand_max + 1.0)));
 
 	if (v <= td->o.rwmix[DDIR_READ])
 		return DDIR_READ;
@@ -992,6 +1000,7 @@ static struct fio_file *get_next_file_rand(struct thread_data *td,
 					   enum fio_file_flags goodf,
 					   enum fio_file_flags badf)
 {
+	uint64_t frand_max = rand_max(&td->next_file_state);
 	struct fio_file *f;
 	int fno;
 
@@ -1001,7 +1010,7 @@ static struct fio_file *get_next_file_rand(struct thread_data *td,
 
 		r = __rand(&td->next_file_state);
 		fno = (unsigned int) ((double) td->o.nr_files
-				* (r / (FRAND_MAX + 1.0)));
+				* (r / (frand_max + 1.0)));
 
 		f = td->files[fno];
 		if (fio_file_done(f))
@@ -1892,6 +1901,7 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
  */
 static struct frand_state *get_buf_state(struct thread_data *td)
 {
+	uint64_t frand_max;
 	unsigned int v;
 	unsigned long r;
 
@@ -1902,8 +1912,9 @@ static struct frand_state *get_buf_state(struct thread_data *td)
 		return &td->buf_state;
 	}
 
+	frand_max = rand_max(&td->dedupe_state);
 	r = __rand(&td->dedupe_state);
-	v = 1 + (int) (100.0 * (r / (FRAND_MAX + 1.0)));
+	v = 1 + (int) (100.0 * (r / (frand_max + 1.0)));
 
 	if (v <= td->o.dedupe_percentage)
 		return &td->buf_state_prev;

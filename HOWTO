@@ -961,6 +961,8 @@ random_generator=str	Fio supports the following engines for generating
 
 		tausworthe	Strong 2^88 cycle random number generator
 		lfsr		Linear feedback shift register generator
+		tausworthe64	Strong 64-bit 2^258 cycle random number
+				generator
 
 		Tausworthe is a strong random number generator, but it
 		requires tracking on the side if we want to ensure that
