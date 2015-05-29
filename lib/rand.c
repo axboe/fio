@@ -38,6 +38,8 @@
 #include "rand.h"
 #include "../hash.h"
 
+int arch_random;
+
 static inline int __seed(unsigned int x, unsigned int m)
 {
 	return (x < m) ? x + m : x;

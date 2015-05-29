@@ -1,6 +1,8 @@
 #ifndef FIO_RAND_H
 #define FIO_RAND_H
 
+#include "../arch/arch.h"
+
 #define FRAND_MAX	(-1U)
 
 struct frand_state {

@@ -15,8 +15,9 @@ static inline void cpuid(unsigned int op,
 #define ARCH_HAVE_INIT
 
 extern int tsc_reliable;
+extern int arch_random;
 
-static inline int arch_init_intel(unsigned int level)
+static inline void arch_init_intel(unsigned int level)
 {
 	unsigned int eax, ebx, ecx = 0, edx;
 
@@ -26,35 +27,41 @@ static inline int arch_init_intel(unsigned int level)
 	eax = 1;
 	do_cpuid(&eax, &ebx, &ecx, &edx);
 	if (!(edx & (1U << 4)))
-		return 0;
+		return;
 
 	/*
 	 * Check for constant rate and synced (across cores) TSC
 	 */
 	eax = 0x80000007;
 	do_cpuid(&eax, &ebx, &ecx, &edx);
-	return edx & (1U << 8);
+	tsc_reliable = (edx & (1U << 8)) != 0;
+
+	/*
+	 * Check for FDRAND
+	 */
+	eax = 0x1;
+	do_cpuid(&eax, &ebx, &ecx, &edx);
+	arch_random = (ecx & (1U << 30)) != 0;
 }
 
-static inline int arch_init_amd(unsigned int level)
+static inline void arch_init_amd(unsigned int level)
 {
 	unsigned int eax, ebx, ecx, edx;
 
 	cpuid(0x80000000, &eax, &ebx, &ecx, &edx);
 	if (eax < 0x80000007)
-		return 0;
+		return;
 
 	cpuid(0x80000007, &eax, &ebx, &ecx, &edx);
-	if (edx & (1 << 8))
-		return 1;
-
-	return 0;
+	tsc_reliable = (edx & (1U << 8)) != 0;
 }
 
-static inline int arch_init(char *envp[])
+static inline void arch_init(char *envp[])
 {
 	unsigned int level;
 	char str[13];
+
+	arch_random = tsc_reliable = 0;
 
 	cpuid(0, &level, (unsigned int *) &str[0],
 			 (unsigned int *) &str[8],
@@ -62,11 +69,9 @@ static inline int arch_init(char *envp[])
 
 	str[12] = '\0';
 	if (!strcmp(str, "GenuineIntel"))
-		tsc_reliable = arch_init_intel(level);
+		arch_init_intel(level);
 	else if (!strcmp(str, "AuthenticAMD"))
-		tsc_reliable = arch_init_amd(level);
-
-	return 0;
+		arch_init_amd(level);
 }
 
 #endif
