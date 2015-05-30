@@ -1067,6 +1067,16 @@ int init_random_map(struct thread_data *td)
 
 		blocks = fsize / (unsigned long long) td->o.rw_min_bs;
 
+		if (blocks > FRAND32_MAX &&
+		    td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE &&
+		    !fio_option_is_set(&td->o, random_generator)) {
+			log_err("fio: file %s exceeds 32-bit tausworthe "
+				 "random generator. Use lfsr or "
+				 "tausworthe64.\n", f->file_name);
+			td_verror(td, EINVAL, "init file random");
+			return 1;
+		}
+
 		if (td->o.random_generator == FIO_RAND_GEN_LFSR) {
 			unsigned long seed;
 
