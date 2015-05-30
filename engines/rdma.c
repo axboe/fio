@@ -1202,7 +1202,7 @@ static int fio_rdmaio_setup(struct thread_data *td)
 		rd = malloc(sizeof(*rd));
 
 		memset(rd, 0, sizeof(*rd));
-		init_rand_seed(&rd->rand_state, (unsigned int) GOLDEN_RATIO_PRIME);
+		init_rand_seed(&rd->rand_state, (unsigned int) GOLDEN_RATIO_PRIME, 0);
 		td->io_ops->data = rd;
 	}
 
