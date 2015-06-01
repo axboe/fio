@@ -317,9 +317,11 @@ static void fio_vsyncio_cleanup(struct thread_data *td)
 {
 	struct syncio_data *sd = td->io_ops->data;
 
-	free(sd->iovecs);
-	free(sd->io_us);
-	free(sd);
+	if (sd) {
+		free(sd->iovecs);
+		free(sd->io_us);
+		free(sd);
+	}
 }
 
 static struct ioengine_ops ioengine_rw = {
