@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-#include <mntent.h>
 
 #ifdef CONFIG_GETMNTENT
+#include <mntent.h>
 
 #define MTAB	"/etc/mtab"
 
