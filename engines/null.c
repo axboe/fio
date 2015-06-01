@@ -86,8 +86,7 @@ static void fio_null_cleanup(struct thread_data *td)
 	struct null_data *nd = (struct null_data *) td->io_ops->data;
 
 	if (nd) {
-		if (nd->io_us)
-			free(nd->io_us);
+		free(nd->io_us);
 		free(nd);
 	}
 }
