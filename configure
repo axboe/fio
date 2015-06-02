@@ -1472,6 +1472,24 @@ if compile_prog "" "" "getmntent"; then
 fi
 echo "getmntent                     $getmntent"
 
+##########################################
+# Check whether we have getmntinfo
+getmntinfo="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <sys/param.h>
+#include <sys/mount.h>
+int main(int argc, char **argv)
+{
+  struct statfs st;
+  return getmntinfo(&st, MNT_NOWAIT);
+}
+EOF
+if compile_prog "" "" "getmntinfo"; then
+  getmntinfo="yes"
+fi
+echo "getmntinfo                    $getmntinfo"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -1647,6 +1665,9 @@ if test "$arith" = "yes" ; then
 fi
 if test "$getmntent" = "yes" ; then
   output_sym "CONFIG_GETMNTENT"
+fi
+if test "$getmntinfo" = "yes" ; then
+  output_sym "CONFIG_GETMNTINFO"
 fi
 
 if test "$zlib" = "no" ; then
