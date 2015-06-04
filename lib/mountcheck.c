@@ -29,10 +29,25 @@ int device_is_mounted(const char *dev)
 	return ret;
 }
 
-#else
+#elif defined(CONFIG_GETMNTINFO)
+/* for BSDs */
+#include <sys/param.h>
+#include <sys/mount.h>
 
 int device_is_mounted(const char *dev)
 {
+	struct statfs *st;
+	int i, ret;
+
+	ret = getmntinfo(&st, MNT_NOWAIT);
+	if (ret <= 0)
+		return 0;
+
+	for (i = 0; i < ret; i++) {
+		if (!strcmp(st[i].f_mntfromname, dev))
+			return 1;
+	}
+
 	return 0;
 }
 
