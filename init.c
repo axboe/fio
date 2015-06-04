@@ -1710,13 +1710,41 @@ static int fill_def_thread(void)
 	return 0;
 }
 
+static void show_debug_categories(void)
+{
+	struct debug_level *dl = &debug_levels[0];
+	int curlen, first = 1;
+
+	curlen = 0;
+	while (dl->name) {
+		int has_next = (dl + 1)->name != NULL;
+
+		if (first || curlen + strlen(dl->name) >= 80) {
+			if (!first) {
+				printf("\n");
+				curlen = 0;
+			}
+			curlen += printf("\t\t\t%s", dl->name);
+			curlen += 3 * (8 - 1);
+			if (has_next)
+				curlen += printf(",");
+		} else {
+			curlen += printf("%s", dl->name);
+			if (has_next)
+				curlen += printf(",");
+		}
+		dl++;
+		first = 0;
+	}
+	printf("\n");
+}
+
 static void usage(const char *name)
 {
 	printf("%s\n", fio_version_string);
 	printf("%s [options] [job options] <job file(s)>\n", name);
-	printf("  --debug=options\tEnable debug logging. May be one/more of:\n"
-		"\t\t\tprocess,file,io,mem,blktrace,verify,random,parse,\n"
-		"\t\t\tdiskutil,job,mutex,profile,time,net,rate,compress\n");
+	printf("  --debug=options\tEnable debug logging. May be one/more of:\n");
+	show_debug_categories();
 	printf("  --parse-only\t\tParse options only, don't start any IO\n");
 	printf("  --output\t\tWrite output to file\n");
 	printf("  --runtime\t\tRuntime in seconds\n");
