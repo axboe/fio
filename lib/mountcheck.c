@@ -51,4 +51,12 @@ int device_is_mounted(const char *dev)
 	return 0;
 }
 
+#else
+/* others */
+
+int device_is_mounted(const char *dev)
+{
+	return 0;
+}
+
 #endif
