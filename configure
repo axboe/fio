@@ -190,7 +190,9 @@ if test "$show_help" = "yes" ; then
   echo "--esx                  Configure build options for esx"
   echo "--enable-gfio          Enable building of gtk gfio"
   echo "--disable-numa         Disable libnuma even if found"
+  echo "--disable-gfapi        Disable gfapi"
   echo "--enable-libhdfs       Enable hdfs support"
+  echo "--disable-shm          Disable SHM support"
   exit $exit_val
 fi
 
