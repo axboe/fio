@@ -1172,13 +1172,17 @@ static int switch_ioscheduler(struct thread_data *td)
 	/*
 	 * Read back and check that the selected scheduler is now the default.
 	 */
+	memset(tmp, 0, sizeof(tmp));
 	ret = fread(tmp, sizeof(tmp), 1, f);
 	if (ferror(f) || ret < 0) {
 		td_verror(td, errno, "fread");
 		fclose(f);
 		return 1;
 	}
-	tmp[sizeof(tmp) - 1] = '\0';
+	/*
+	 * either a list of io schedulers or "none\n" is expected.
+	 */
+	tmp[strlen(tmp) - 1] = '\0';
 
 
 	sprintf(tmp2, "[%s]", td->o.ioscheduler);
