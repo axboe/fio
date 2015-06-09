@@ -1064,7 +1064,7 @@ static int str_verify_pattern_cb(void *data, const char *input)
 	/*
 	 * VERIFY_META could already be set
 	 */
-	if (!ret && td->o.verify == VERIFY_NONE)
+	if (!ret && !fio_option_is_set(&td->o, verify))
 		td->o.verify = VERIFY_PATTERN;
 
 	return ret;
