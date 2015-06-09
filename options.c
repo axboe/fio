@@ -983,6 +983,8 @@ static int pattern_cb(char *pattern, unsigned int max_size,
 	 */
 fill:
 	pattern_length = i;
+	if (!i && !off)
+		i = 1;
 	while (i > 1 && i * 2 <= max_size) {
 		memcpy(&pattern[i], &pattern[0], i);
 		i *= 2;
@@ -2399,6 +2401,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  { .ival = "meta",
 			    .oval = VERIFY_META,
 			    .help = "Use io information",
+			  },
+			  { .ival = "pattern",
+			    .oval = VERIFY_PATTERN_NO_HDR,
+			    .help = "Verify strict pattern",
 			  },
 			  {
 			    .ival = "null",

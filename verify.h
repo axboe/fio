@@ -20,6 +20,7 @@ enum {
 	VERIFY_META,			/* block_num, timestamp etc. */
 	VERIFY_SHA1,			/* sha1 sum data blocks */
 	VERIFY_PATTERN,			/* verify specific patterns */
+	VERIFY_PATTERN_NO_HDR,		/* verify specific patterns, no hdr */
 	VERIFY_NULL,			/* pretend to verify */
 };
 

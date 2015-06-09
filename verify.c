@@ -168,6 +168,7 @@ static inline unsigned int __hdr_size(int verify_type)
 		len = sizeof(struct vhdr_sha1);
 		break;
 	case VERIFY_PATTERN:
+	case VERIFY_PATTERN_NO_HDR:
 		len = 0;
 		break;
 	default:
@@ -787,9 +788,11 @@ int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 		if (td->o.verifysort || (td->flags & TD_F_VER_BACKLOG))
 			io_u->rand_seed = hdr->rand_seed;
 
-		ret = verify_header(io_u, hdr, hdr_num, hdr_inc);
-		if (ret)
-			return ret;
+		if (td->o.verify != VERIFY_PATTERN_NO_HDR) {
+			ret = verify_header(io_u, hdr, hdr_num, hdr_inc);
+			if (ret)
+				return ret;
+		}
 
 		if (td->o.verify != VERIFY_NONE)
 			verify_type = td->o.verify;
@@ -832,6 +835,7 @@ int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 			ret = verify_io_u_sha1(hdr, &vc);
 			break;
 		case VERIFY_PATTERN:
+		case VERIFY_PATTERN_NO_HDR:
 			ret = verify_io_u_pattern(hdr, &vc);
 			break;
 		default:
@@ -964,6 +968,9 @@ static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 {
 	unsigned int data_len;
 	void *data, *p;
+
+	if (td->o.verify == VERIFY_PATTERN_NO_HDR)
+		return;
 
 	p = (void *) hdr;
 

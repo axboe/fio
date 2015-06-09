@@ -1129,6 +1129,11 @@ not supported by the system.
 Write extra information about each I/O (timestamp, block number, etc.). The
 block number is verified. See \fBverify_pattern\fR as well.
 .TP
+.B pattern
+Verify a strict pattern. Normally fio includes a header with some basic
+information and checksumming, but if this option is set, only the
+specific pattern set with \fBverify_pattern\fR is verified.
+.TP
 .B null
 Pretend to verify.  Used for testing internals.
 .RE
@@ -1162,7 +1167,7 @@ pattern for io verification purposes. Depending on the width of the pattern,
 fio will fill 1/2/3/4 bytes of the buffer at the time(it can be either a
 decimal or a hex number). The verify_pattern if larger than a 32-bit quantity
 has to be a hex number that starts with either "0x" or "0X". Use with
-\fBverify\fP=meta.
+\fBverify\fP=meta or \fBverify\fP=pattern.
 .TP
 .BI verify_fatal \fR=\fPbool
 If true, exit the job on the first observed verification failure.  Default:

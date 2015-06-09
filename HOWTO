@@ -1281,6 +1281,12 @@ verify=str	If writing to a file, fio can verify the file contents
 				verified for workloads that write data.
 				See also verify_pattern.
 
+			pattern	Verify a strict pattern. Normally fio includes
+				a header with some basic information and
+				checksumming, but if this option is set, only
+				the specific pattern set with 'verify_pattern'
+				is verified.
+
 			null	Only pretend to verify. Useful for testing
 				internals with ioengine=null, not for much
 				else.
