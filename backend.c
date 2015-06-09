@@ -1242,7 +1242,8 @@ static int keep_running(struct thread_data *td)
 
 static int exec_string(struct thread_options *o, const char *string, const char *mode)
 {
-	int ret, newlen = strlen(string) + strlen(o->name) + strlen(mode) + 9 + 1;
+	size_t newlen = strlen(string) + strlen(o->name) + strlen(mode) + 9 + 1;
+	int ret; /* newlen = strlen(string) + strlen(o->name) + strlen(mode) + 9 + 1; */
 	char *str;
 
 	str = malloc(newlen);
