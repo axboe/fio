@@ -373,6 +373,9 @@ static inline void update_runtime(struct thread_data *td,
 				  unsigned long long *elapsed_us,
 				  const enum fio_ddir ddir)
 {
+	if (ddir == DDIR_WRITE && td_write(td) && td->o.verify_only)
+		return;
+
 	td->ts.runtime[ddir] -= (elapsed_us[ddir] + 999) / 1000;
 	elapsed_us[ddir] += utime_since_now(&td->start);
 	td->ts.runtime[ddir] += (elapsed_us[ddir] + 999) / 1000;
