@@ -28,6 +28,8 @@
 static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 			 struct verify_header *hdr, unsigned int header_num,
 			 unsigned int header_len);
+static void fill_hdr(struct verify_header *hdr, int verify_type, uint32_t len,
+		     uint64_t rand_seed);
 
 void fill_buffer_pattern(struct thread_data *td, void *p, unsigned int len)
 {
@@ -266,7 +268,7 @@ static void dump_buf(char *buf, unsigned int len, unsigned long long offset,
  * Dump the contents of the read block and re-generate the correct data
  * and dump that too.
  */
-static void dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
+static void __dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
 {
 	struct thread_data *td = vc->td;
 	struct io_u *io_u = vc->io_u;
@@ -300,6 +302,19 @@ static void dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
 	dump_buf(buf + hdr_offset, hdr->len, io_u->offset + hdr_offset,
 			"expected", vc->io_u->file);
 	free(buf);
+}
+
+static void dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
+{
+	struct thread_data *td = vc->td;
+	struct verify_header shdr;
+
+	if (td->o.verify == VERIFY_PATTERN_NO_HDR) {
+		fill_hdr(&shdr, td->o.verify, vc->io_u->buflen, 0);
+		hdr = &shdr;
+	}
+
+	__dump_verify_buffers(hdr, vc);
 }
 
 static void log_verify_failure(struct verify_header *hdr, struct vcont *vc)
@@ -962,6 +977,18 @@ static void fill_md5(struct verify_header *hdr, void *p, unsigned int len)
 	fio_md5_final(&md5_ctx);
 }
 
+static void fill_hdr(struct verify_header *hdr, int verify_type, uint32_t len,
+		     uint64_t rand_seed)
+{
+	void *p = hdr;
+
+	hdr->magic = FIO_HDR_MAGIC;
+	hdr->verify_type = verify_type;
+	hdr->len = len;
+	hdr->rand_seed = rand_seed;
+	hdr->crc32 = fio_crc32c(p, offsetof(struct verify_header, crc32));
+}
+
 static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 			 struct verify_header *hdr, unsigned int header_num,
 			 unsigned int header_len)
@@ -974,11 +1001,7 @@ static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 
 	p = (void *) hdr;
 
-	hdr->magic = FIO_HDR_MAGIC;
-	hdr->verify_type = td->o.verify;
-	hdr->len = header_len;
-	hdr->rand_seed = io_u->rand_seed;
-	hdr->crc32 = fio_crc32c(p, offsetof(struct verify_header, crc32));
+	fill_hdr(hdr, td->o.verify, header_len, io_u->rand_seed);
 
 	data_len = header_len - hdr_size(hdr);
 
