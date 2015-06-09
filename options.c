@@ -917,7 +917,7 @@ static int str_opendir_cb(void *data, const char fio_unused *str)
 static int pattern_cb(char *pattern, unsigned int max_size,
 		      const char *input, unsigned int *pattern_bytes)
 {
-	long off;
+	long off = 0;
 	int i = 0, j = 0, len, k, base = 10;
 	uint32_t pattern_length;
 	char *loc1, *loc2;
