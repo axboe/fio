@@ -4,6 +4,7 @@
 #define	FIO_OS	os_dragonfly
 
 #include <errno.h>
+#include <unistd.h>
 #include <sys/param.h>
 #include <sys/sysctl.h>
 
