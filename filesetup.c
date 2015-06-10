@@ -732,7 +732,7 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 		fm = flist_entry(n, struct fio_mount, list);
 		flist_del(&fm->list);
 
-		sz = get_fs_size(fm->base);
+		sz = get_fs_free_size(fm->base);
 		if (sz && sz != -1ULL)
 			ret += sz;
 

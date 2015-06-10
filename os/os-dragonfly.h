@@ -52,7 +52,7 @@ static inline int gettid(void)
 	return (int) lwp_gettid();
 }
 
-static inline unsigned long long get_fs_size(const char *path)
+static inline unsigned long long get_fs_free_size(const char *path)
 {
 	unsigned long long ret;
 	struct statvfs s;
