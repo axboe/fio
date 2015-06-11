@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <sys/param.h>
 #include <sys/cpuset.h>
+#include <sys/statvfs.h>
 
 #include "../file.h"
 
@@ -17,6 +18,7 @@
 #define FIO_USE_GENERIC_RAND
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_CHARDEV_SIZE
+#define FIO_HAVE_FS_STAT
 #define FIO_HAVE_GETTID
 #define FIO_HAVE_CPU_AFFINITY
 
@@ -97,6 +99,19 @@ static inline int gettid(void)
 
 	thr_self(&lwpid);
 	return (int) lwpid;
+}
+
+static inline unsigned long long get_fs_free_size(const char *path)
+{
+	unsigned long long ret;
+	struct statvfs s;
+
+	if (statvfs(path, &s) < 0)
+		return -1ULL;
+
+	ret = s.f_frsize;
+	ret *= (unsigned long long) s.f_bfree;
+	return ret;
 }
 
 #ifdef MADV_FREE

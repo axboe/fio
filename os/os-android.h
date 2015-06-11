@@ -238,7 +238,7 @@ static inline int arch_cache_line_size(void)
 		return atoi(size);
 }
 
-static inline unsigned long long get_fs_size(const char *path)
+static inline unsigned long long get_fs_free_size(const char *path)
 {
 	unsigned long long ret;
 	struct statfs s;

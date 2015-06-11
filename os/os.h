@@ -332,7 +332,7 @@ static inline int init_random_state(struct thread_data *td, unsigned long *rand_
 #endif
 
 #ifndef FIO_HAVE_FS_STAT
-static inline unsigned long long get_fs_size(const char *path)
+static inline unsigned long long get_fs_free_size(const char *path)
 {
 	return 0;
 }
