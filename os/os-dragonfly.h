@@ -8,14 +8,15 @@
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/statvfs.h>
+#include <sys/diskslice.h>
 
 #include "../file.h"
 
 #define FIO_HAVE_ODIRECT
-#define FIO_USE_GENERIC_BDEV_SIZE
 #define FIO_USE_GENERIC_RAND
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_FS_STAT
+#define FIO_HAVE_CHARDEV_SIZE
 #define FIO_HAVE_GETTID
 
 #undef	FIO_HAVE_CPU_AFFINITY	/* XXX notyet */
@@ -31,6 +32,24 @@
 #define fio_swap64(x)	bswap64(x)
 
 typedef off_t off64_t;
+
+static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
+{
+	struct partinfo pi;
+
+	if (!ioctl(f->fd, DIOCGPART, &pi)) {
+		*bytes = (unsigned long long) pi.media_size;
+		return 0;
+	}
+
+	*bytes = 0;
+	return errno;
+}
+
+static inline int chardev_size(struct fio_file *f, unsigned long long *bytes)
+{
+	return blockdev_size(f, bytes);
+}
 
 static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
