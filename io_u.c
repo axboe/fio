@@ -1604,6 +1604,9 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 	const int no_reduce = !gtod_reduce(td);
 	unsigned long lusec = 0;
 
+	if (td->parent)
+		td = td->parent;
+
 	if (no_reduce)
 		lusec = utime_since(&io_u->issue_time, &icd->time);
 
@@ -1632,9 +1635,6 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 		add_clat_sample(td, idx, lusec, bytes, io_u->offset);
 		io_u_mark_latency(td, lusec);
 	}
-
-	if (td->parent)
-		td = td->parent;
 
 	if (!td->o.disable_bw)
 		add_bw_sample(td, idx, bytes, &icd->time);
@@ -1891,6 +1891,10 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 		unsigned long slat_time;
 
 		slat_time = utime_since(&io_u->start_time, &io_u->issue_time);
+
+		if (td->parent)
+			td = td->parent;
+
 		add_slat_sample(td, io_u->ddir, slat_time, io_u->xfer_buflen,
 				io_u->offset);
 	}

@@ -1962,6 +1962,8 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 	if (!ddir_rw(ddir))
 		return;
 
+	td_io_u_lock(td);
+
 	add_stat_sample(&ts->clat_stat[ddir], usec);
 
 	if (td->clat_log)
@@ -1969,6 +1971,8 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	if (ts->clat_percentiles)
 		add_clat_percentile_sample(ts, usec, ddir);
+
+	td_io_u_unlock(td);
 }
 
 void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
@@ -1979,10 +1983,14 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 	if (!ddir_rw(ddir))
 		return;
 
+	td_io_u_lock(td);
+
 	add_stat_sample(&ts->slat_stat[ddir], usec);
 
 	if (td->slat_log)
 		add_log_sample(td, td->slat_log, usec, ddir, bs, offset);
+
+	td_io_u_unlock(td);
 }
 
 void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
@@ -1993,10 +2001,14 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 	if (!ddir_rw(ddir))
 		return;
 
+	td_io_u_lock(td);
+
 	add_stat_sample(&ts->lat_stat[ddir], usec);
 
 	if (td->lat_log)
 		add_log_sample(td, td->lat_log, usec, ddir, bs, offset);
+
+	td_io_u_unlock(td);
 }
 
 void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
