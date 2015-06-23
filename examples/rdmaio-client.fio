@@ -1,7 +1,9 @@
 # Example rdma client job
 [global]
 ioengine=rdma
-filename=[ip_addr]/[port]/[RDMA_WRITE/RDMA_READ/SEND]
+hostname=[hostname]
+port=[port]
+verb=[read/write/send/recv]
 bs=1m
 size=100g
 
