@@ -55,6 +55,77 @@ enum rdma_io_mode {
 	FIO_RDMA_CHA_RECV
 };
 
+struct rdmaio_options {
+	struct thread_data *td;
+	unsigned int port;
+	enum rdma_io_mode verb;
+};
+
+static int str_hostname_cb(void *data, const char *input)
+{
+	struct rdmaio_options *o = data;
+
+	if (o->td->o.filename)
+		free(o->td->o.filename);
+	o->td->o.filename = strdup(input);
+	return 0;
+}
+
+static struct fio_option options[] = {
+	{
+		.name	= "hostname",
+		.lname	= "rdma engine hostname",
+		.type	= FIO_OPT_STR_STORE,
+		.cb	= str_hostname_cb,
+		.help	= "Hostname for RDMA IO engine",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_RDMA,
+	},
+	{
+		.name	= "port",
+		.lname	= "rdma engine port",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct rdmaio_options, port),
+		.minval	= 1,
+		.maxval	= 65535,
+		.help	= "Port to use for RDMA connections",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_RDMA,
+	},
+	{
+		.name	= "verb",
+		.lname	= "RDMA engine verb",
+		.alias	= "proto",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct rdmaio_options, verb),
+		.help	= "RDMA engine verb",
+		.def	= "write",
+		.posval = {
+			  { .ival = "write",
+			    .oval = FIO_RDMA_MEM_WRITE,
+			    .help = "Memory Write",
+			  },
+			  { .ival = "read",
+			    .oval = FIO_RDMA_MEM_READ,
+			    .help = "Memory Read",
+			  },
+			  { .ival = "send",
+			    .oval = FIO_RDMA_CHA_SEND,
+			    .help = "Posted Send",
+			  },
+			  { .ival = "recv",
+			    .oval = FIO_RDMA_CHA_RECV,
+			    .help = "Posted Recieve",
+			  },
+		},
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_RDMA,
+	},
+	{
+		.name	= NULL,
+	},
+};
+
 struct remote_u {
 	uint64_t buf;
 	uint32_t rkey;
@@ -1046,13 +1117,64 @@ static int check_set_rlimits(struct thread_data *td)
 	return 0;
 }
 
+static int compat_options(struct thread_data *td)
+{
+	// The original RDMA engine had an ugly / seperator
+	// on the filename for it's options. This function
+	// retains backwards compatibility with it.100
+
+	struct rdmaio_options *o = td->eo;
+	char *modep, *portp;
+	char *filename = td->o.filename;
+
+	if (!filename)
+		return 0;
+
+	portp = strchr(filename, '/');
+	if (portp == NULL)
+		return 0;
+
+	*portp = '\0';
+	portp++;
+
+	o->port = strtol(portp, NULL, 10);
+	if (!o->port || o->port > 65535)
+		goto bad_host;
+
+	modep = strchr(portp, '/');
+	if (modep != NULL) {
+		*modep = '\0';
+		modep++;
+	}
+
+	if (modep) {
+		if (!strncmp("rdma_write", modep, strlen(modep)) ||
+		    !strncmp("RDMA_WRITE", modep, strlen(modep)))
+			o->verb = FIO_RDMA_MEM_WRITE;
+		else if (!strncmp("rdma_read", modep, strlen(modep)) ||
+			 !strncmp("RDMA_READ", modep, strlen(modep)))
+			o->verb = FIO_RDMA_MEM_READ;
+		else if (!strncmp("send", modep, strlen(modep)) ||
+			 !strncmp("SEND", modep, strlen(modep)))
+			o->verb = FIO_RDMA_CHA_SEND;
+		else
+			goto bad_host;
+	} else
+		o->verb = FIO_RDMA_MEM_WRITE;
+
+
+	return 0;
+
+bad_host:
+	log_err("fio: bad rdma host/port/protocol: %s\n", td->o.filename);
+	return 1;
+}
+
 static int fio_rdmaio_init(struct thread_data *td)
 {
 	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_options *o = td->eo;
 	unsigned int max_bs;
-	unsigned int port;
-	char host[64], buf[128];
-	char *sep, *portp, *modep;
 	int ret, i;
 
 	if (td_rw(td)) {
@@ -1064,48 +1186,19 @@ static int fio_rdmaio_init(struct thread_data *td)
 		return 1;
 	}
 
+	if (compat_options(td))
+		return 1;
+
+	if (!o->port) {
+		log_err("fio: no port has been specified which is required "
+			"for the rdma engine\n");
+		return 1;
+	}
+
 	if (check_set_rlimits(td))
 		return 1;
 
-	strcpy(buf, td->o.filename);
-
-	sep = strchr(buf, '/');
-	if (!sep)
-		goto bad_host;
-
-	*sep = '\0';
-	sep++;
-	strcpy(host, buf);
-	if (!strlen(host))
-		goto bad_host;
-
-	modep = NULL;
-	portp = sep;
-	sep = strchr(portp, '/');
-	if (sep) {
-		*sep = '\0';
-		modep = sep + 1;
-	}
-
-	port = strtol(portp, NULL, 10);
-	if (!port || port > 65535)
-		goto bad_host;
-
-	if (modep) {
-		if (!strncmp("rdma_write", modep, strlen(modep)) ||
-		    !strncmp("RDMA_WRITE", modep, strlen(modep)))
-			rd->rdma_protocol = FIO_RDMA_MEM_WRITE;
-		else if (!strncmp("rdma_read", modep, strlen(modep)) ||
-			 !strncmp("RDMA_READ", modep, strlen(modep)))
-			rd->rdma_protocol = FIO_RDMA_MEM_READ;
-		else if (!strncmp("send", modep, strlen(modep)) ||
-			 !strncmp("SEND", modep, strlen(modep)))
-			rd->rdma_protocol = FIO_RDMA_CHA_SEND;
-		else
-			goto bad_host;
-	} else
-		rd->rdma_protocol = FIO_RDMA_MEM_WRITE;
-
+	rd->rdma_protocol = o->verb;
 	rd->cq_event_num = 0;
 
 	rd->cm_channel = rdma_create_event_channel();
@@ -1144,10 +1237,10 @@ static int fio_rdmaio_init(struct thread_data *td)
 	if (td_read(td)) {	/* READ as the server */
 		rd->is_client = 0;
 		/* server rd->rdma_buf_len will be setup after got request */
-		ret = fio_rdmaio_setup_listen(td, port);
+		ret = fio_rdmaio_setup_listen(td, o->port);
 	} else {		/* WRITE as the client */
 		rd->is_client = 1;
-		ret = fio_rdmaio_setup_connect(td, host, port);
+		ret = fio_rdmaio_setup_connect(td, td->o.filename, o->port);
 	}
 
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
@@ -1181,9 +1274,6 @@ static int fio_rdmaio_init(struct thread_data *td)
 	rd->send_buf.nr = htonl(i);
 
 	return ret;
-bad_host:
-	log_err("fio: bad rdma host/port/protocol: %s\n", td->o.filename);
-	return 1;
 }
 
 static void fio_rdmaio_cleanup(struct thread_data *td)
@@ -1198,6 +1288,12 @@ static int fio_rdmaio_setup(struct thread_data *td)
 {
 	struct rdmaio_data *rd;
 
+	if (!td->files_index) {
+		add_file(td, td->o.filename ?: "rdma", 0, 0);
+		td->o.nr_files = td->o.nr_files ?: 1;
+		td->o.open_files++;
+	}
+
 	if (!td->io_ops->data) {
 		rd = malloc(sizeof(*rd));
 
@@ -1210,19 +1306,21 @@ static int fio_rdmaio_setup(struct thread_data *td)
 }
 
 static struct ioengine_ops ioengine_rw = {
-	.name		= "rdma",
-	.version	= FIO_IOOPS_VERSION,
-	.setup		= fio_rdmaio_setup,
-	.init		= fio_rdmaio_init,
-	.prep		= fio_rdmaio_prep,
-	.queue		= fio_rdmaio_queue,
-	.commit		= fio_rdmaio_commit,
-	.getevents	= fio_rdmaio_getevents,
-	.event		= fio_rdmaio_event,
-	.cleanup	= fio_rdmaio_cleanup,
-	.open_file	= fio_rdmaio_open_file,
-	.close_file	= fio_rdmaio_close_file,
-	.flags		= FIO_DISKLESSIO | FIO_UNIDIR | FIO_PIPEIO,
+	.name			= "rdma",
+	.version		= FIO_IOOPS_VERSION,
+	.setup			= fio_rdmaio_setup,
+	.init			= fio_rdmaio_init,
+	.prep			= fio_rdmaio_prep,
+	.queue			= fio_rdmaio_queue,
+	.commit			= fio_rdmaio_commit,
+	.getevents		= fio_rdmaio_getevents,
+	.event			= fio_rdmaio_event,
+	.cleanup		= fio_rdmaio_cleanup,
+	.open_file		= fio_rdmaio_open_file,
+	.close_file		= fio_rdmaio_close_file,
+	.flags			= FIO_DISKLESSIO | FIO_UNIDIR | FIO_PIPEIO,
+	.options		= options,
+	.option_struct_size	= sizeof(struct rdmaio_options),
 };
 
 static void fio_init fio_rdmaio_register(void)
