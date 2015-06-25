@@ -4365,7 +4365,7 @@ static int opt_is_set(struct thread_options *o, struct fio_option *opt)
 	opt_off = opt - &fio_options[0];
 	index = opt_off / (8 * sizeof(uint64_t));
 	offset = opt_off & ((8 * sizeof(uint64_t)) - 1);
-	return (o->set_options[index] & (1UL << offset)) != 0;
+	return (o->set_options[index] & ((uint64_t)1 << offset)) != 0;
 }
 
 int __fio_option_is_set(struct thread_options *o, unsigned int off1)
@@ -4390,5 +4390,5 @@ void fio_option_mark_set(struct thread_options *o, struct fio_option *opt)
 	opt_off = opt - &fio_options[0];
 	index = opt_off / (8 * sizeof(uint64_t));
 	offset = opt_off & ((8 * sizeof(uint64_t)) - 1);
-	o->set_options[index] |= 1UL << offset;
+	o->set_options[index] |= (uint64_t)1 << offset;
 }
