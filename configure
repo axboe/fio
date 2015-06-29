@@ -1511,6 +1511,21 @@ if compile_prog "" "" "__sync_fetch_and_add"; then
 fi
 echo "__sync_fetch_and_add          $sfa"
 
+##########################################
+# Check whether we have _Static_assert
+static_assert="no"
+cat > $TMPC << EOF
+#include <assert.h>
+int main(int argc, char **argv)
+{
+  _Static_assert( 1 == 1 , "Check");
+  return 0 ;
+}
+EOF
+if compile_prog "" "" "static_assert"; then
+    static_assert="yes"
+fi
+echo "Static Assert                 $static_assert"
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -1692,6 +1707,9 @@ if test "$getmntinfo" = "yes" ; then
 fi
 if test "$sfa" = "yes" ; then
   output_sym "CONFIG_SFA"
+fi
+if test "$static_assert" = "yes" ; then
+  output_sym "CONFIG_STATIC_ASSERT"
 fi
 
 if test "$zlib" = "no" ; then
