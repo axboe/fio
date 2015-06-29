@@ -197,7 +197,7 @@ err:
 	return 1;
 }
 
-#ifdef CONFIG_SFA
+#ifdef CONFIG_SFAA
 static void sum_val(uint64_t *dst, uint64_t *src)
 {
 	if (*src) {
@@ -218,7 +218,7 @@ static void sum_val(uint64_t *dst, uint64_t *src)
 static void sum_ddir(struct thread_data *dst, struct thread_data *src,
 		     enum fio_ddir ddir)
 {
-#ifndef CONFIG_SFA
+#ifndef CONFIG_SFAA
 	pthread_mutex_lock(&dst->io_wq.stat_lock);
 	pthread_mutex_lock(&src->io_wq.stat_lock);
 #endif
@@ -229,7 +229,7 @@ static void sum_ddir(struct thread_data *dst, struct thread_data *src,
 	sum_val(&dst->this_io_bytes[ddir], &src->this_io_bytes[ddir]);
 	sum_val(&dst->bytes_done[ddir], &src->bytes_done[ddir]);
 
-#ifndef CONFIG_SFA
+#ifndef CONFIG_SFAA
 	pthread_mutex_unlock(&src->io_wq.stat_lock);
 	pthread_mutex_unlock(&dst->io_wq.stat_lock);
 #endif
