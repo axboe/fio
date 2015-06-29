@@ -197,6 +197,7 @@ err:
 	return 1;
 }
 
+#ifdef CONFIG_SFA
 static void sum_val(uint64_t *dst, uint64_t *src)
 {
 	if (*src) {
@@ -204,15 +205,34 @@ static void sum_val(uint64_t *dst, uint64_t *src)
 		*src = 0;
 	}
 }
+#else
+static void sum_val(uint64_t *dst, uint64_t *src)
+{
+	if (*src) {
+		*dst += *src;
+		*src = 0;
+	}
+}
+#endif
 
 static void sum_ddir(struct thread_data *dst, struct thread_data *src,
 		     enum fio_ddir ddir)
 {
+#ifndef CONFIG_SFA
+	pthread_mutex_lock(&dst->io_wq.stat_lock);
+	pthread_mutex_lock(&src->io_wq.stat_lock);
+#endif
+
 	sum_val(&dst->io_bytes[ddir], &src->io_bytes[ddir]);
 	sum_val(&dst->io_blocks[ddir], &src->io_blocks[ddir]);
 	sum_val(&dst->this_io_blocks[ddir], &src->this_io_blocks[ddir]);
 	sum_val(&dst->this_io_bytes[ddir], &src->this_io_bytes[ddir]);
 	sum_val(&dst->bytes_done[ddir], &src->bytes_done[ddir]);
+
+#ifndef CONFIG_SFA
+	pthread_mutex_unlock(&src->io_wq.stat_lock);
+	pthread_mutex_unlock(&dst->io_wq.stat_lock);
+#endif
 }
 
 static void update_accounting(struct submit_worker *sw)
@@ -355,6 +375,7 @@ void workqueue_exit(struct workqueue *wq)
 	free(wq->workers);
 	pthread_mutex_destroy(&wq->flush_lock);
 	pthread_cond_destroy(&wq->flush_cond);
+	pthread_mutex_destroy(&wq->stat_lock);
 }
 
 static int start_worker(struct workqueue *wq, unsigned int index)
@@ -393,6 +414,7 @@ int workqueue_init(struct thread_data *td, struct workqueue *wq,
 	wq->next_free_worker = 0;
 	pthread_cond_init(&wq->flush_cond, NULL);
 	pthread_mutex_init(&wq->flush_lock, NULL);
+	pthread_mutex_init(&wq->stat_lock, NULL);
 
 	wq->workers = calloc(wq->max_workers, sizeof(struct submit_worker));
 

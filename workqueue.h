@@ -17,6 +17,7 @@ struct workqueue {
 
 	pthread_cond_t flush_cond;
 	pthread_mutex_t flush_lock;
+	pthread_mutex_t stat_lock;
 	volatile int wake_idle;
 };
 

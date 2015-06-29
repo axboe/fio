@@ -271,6 +271,7 @@ CYGWIN*)
   output_sym "CONFIG_TCP_NODELAY"
   output_sym "CONFIG_TLS_THREAD"
   output_sym "CONFIG_IPV6"
+  output_sym "CONFIG_SFA"
   echo "CC=$CC" >> $config_host_mak
   echo "BUILD_CFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
   exit 0
@@ -1492,6 +1493,24 @@ if compile_prog "" "" "getmntinfo"; then
 fi
 echo "getmntinfo                    $getmntinfo"
 
+##########################################
+# Check whether we have __sync_fetch_and_add()
+sfa=="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <stdlib.h>
+#include <inttypes.h>
+int main(int argc, char **argv)
+{
+  uint64_t dst = 1, src = 3;
+  __sync_fetch_and_add(&dst, src);
+}
+EOF
+if compile_prog "" "" "__sync_fetch_and_add"; then
+  sfa="yes"
+fi
+echo "__sync_fetch_and_add          $sfa"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -1670,6 +1689,9 @@ if test "$getmntent" = "yes" ; then
 fi
 if test "$getmntinfo" = "yes" ; then
   output_sym "CONFIG_GETMNTINFO"
+fi
+if test "$sfa" = "yes" ; then
+  output_sym "CONFIG_SFA"
 fi
 
 if test "$zlib" = "no" ; then
