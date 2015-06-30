@@ -32,7 +32,9 @@
 #define SMALLOC_POST_RED	0x5aa55aa5U
 
 unsigned int smalloc_pool_size = INITIAL_SIZE;
+#ifdef SMALLOC_REDZONE
 static const int int_mask = sizeof(int) - 1;
+#endif
 
 struct pool {
 	struct fio_mutex *lock;			/* protects this pool */
