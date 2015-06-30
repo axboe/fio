@@ -30,7 +30,7 @@ static int do_rand_allocs(void)
 		srand(MAGIC1);
 #endif
 		nr = total = 0;
-		while (total < 128*1024*1024UL) {
+		while (total < 120*1024*1024UL) {
 			size = 8 * sizeof(struct elem) + (int) (999.0 * (rand() / (RAND_MAX + 1.0)));
 			e = smalloc(size);
 			if (!e) {
