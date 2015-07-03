@@ -492,13 +492,7 @@ void *smalloc(size_t size)
 
 void *scalloc(size_t nmemb, size_t size)
 {
-	void *ret;
-
-	ret = smalloc(nmemb * size);
-	if (ret)
-		memset(ret, 0, nmemb * size);
-
-	return ret;
+	return smalloc(nmemb * size);
 }
 
 char *smalloc_strdup(const char *str)
