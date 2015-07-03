@@ -2,7 +2,7 @@
 
 FILE *f_err;
 struct timeval *fio_tv = NULL;
-unsigned int fio_debug = 0;
+unsigned long fio_debug = 0;
 
 void __dprint(int type, const char *str, ...)
 {
