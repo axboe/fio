@@ -1718,7 +1718,7 @@ echo "CC=$cc" >> $config_host_mak
 echo "BUILD_CFLAGS=$BUILD_CFLAGS $CFLAGS" >> $config_host_mak
 echo "INSTALL_PREFIX=$prefix" >> $config_host_mak
 
-if [ `dirname $0` != "." ]; then
+if [ `dirname $0` != "." -a ! -e Makefile ]; then
     cat > Makefile <<EOF
 SRCDIR:=`dirname $0`
 include \$(SRCDIR)/Makefile
