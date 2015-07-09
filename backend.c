@@ -894,7 +894,7 @@ static uint64_t do_io(struct thread_data *td)
 		} else {
 			ret = td_io_queue(td, io_u);
 
-			if (io_queue_event(td, io_u, &ret, ddir, &bytes_issued, 1, &comp_time))
+			if (io_queue_event(td, io_u, &ret, ddir, &bytes_issued, 0, &comp_time))
 				break;
 
 			/*
