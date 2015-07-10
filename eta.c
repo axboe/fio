@@ -123,6 +123,11 @@ void eta_to_str(char *str, unsigned long eta_sec)
 	unsigned int d, h, m, s;
 	int disp_hour = 0;
 
+	if (eta_sec == -1) {
+		sprintf(str, "--");
+		return;
+	}
+
 	s = eta_sec % 60;
 	eta_sec /= 60;
 	m = eta_sec % 60;
@@ -146,7 +151,7 @@ void eta_to_str(char *str, unsigned long eta_sec)
 /*
  * Best effort calculation of the estimated pending runtime of a job.
  */
-static int thread_eta(struct thread_data *td)
+static unsigned long thread_eta(struct thread_data *td)
 {
 	unsigned long long bytes_total, bytes_done;
 	unsigned long eta_sec = 0;
@@ -157,6 +162,9 @@ static int thread_eta(struct thread_data *td)
 	timeout = td->o.timeout / 1000000UL;
 
 	bytes_total = td->total_io_size;
+
+	if (td->flags & TD_F_NO_PROGRESS)
+		return -1;
 
 	if (td->o.fill_device && td->o.size  == -1ULL) {
 		if (!td->fill_device_size || td->fill_device_size == -1ULL)
@@ -513,7 +521,8 @@ void display_thread_status(struct jobs_eta *je)
 		int l;
 		int ddir;
 
-		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running)
+		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running ||
+		    je->eta_sec == -1)
 			strcpy(perc_str, "-.-% done");
 		else {
 			double mult = 100.0;

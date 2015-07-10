@@ -137,6 +137,7 @@ struct rdma_info_blk {
 	uint32_t nr;		/* client: io depth
 				   server: number of records for memory semantic
 				 */
+	uint32_t max_bs;        /* maximum block size */
 	struct remote_u rmt_us[FIO_RDMA_MAX_IO_DEPTH];
 };
 
@@ -190,9 +191,18 @@ struct rdmaio_data {
 static int client_recv(struct thread_data *td, struct ibv_wc *wc)
 {
 	struct rdmaio_data *rd = td->io_ops->data;
+	unsigned int max_bs;
 
 	if (wc->byte_len != sizeof(rd->recv_buf)) {
 		log_err("Received bogus data, size %d\n", wc->byte_len);
+		return 1;
+	}
+
+	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+	if (max_bs > ntohl(rd->recv_buf.max_bs)) {
+		log_err("fio: Server's block size (%d) must be greater than or "
+			"equal to the client's block size (%d)!\n",
+			ntohl(rd->recv_buf.max_bs), max_bs);
 		return 1;
 	}
 
@@ -222,6 +232,7 @@ static int client_recv(struct thread_data *td, struct ibv_wc *wc)
 static int server_recv(struct thread_data *td, struct ibv_wc *wc)
 {
 	struct rdmaio_data *rd = td->io_ops->data;
+	unsigned int max_bs;
 
 	if (wc->wr_id == FIO_RDMA_MAX_IO_DEPTH) {
 		rd->rdma_protocol = ntohl(rd->recv_buf.mode);
@@ -229,6 +240,15 @@ static int server_recv(struct thread_data *td, struct ibv_wc *wc)
 		/* CHANNEL semantic, do nothing */
 		if (rd->rdma_protocol == FIO_RDMA_CHA_SEND)
 			rd->rdma_protocol = FIO_RDMA_CHA_RECV;
+
+		max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+		if (max_bs < ntohl(rd->recv_buf.max_bs)) {
+			log_err("fio: Server's block size (%d) must be greater than or "
+				"equal to the client's block size (%d)!\n",
+				ntohl(rd->recv_buf.max_bs), max_bs);
+			return 1;
+		}
+
 	}
 
 	return 0;
@@ -257,9 +277,12 @@ static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
 
 		case IBV_WC_RECV:
 			if (rd->is_client == 1)
-				client_recv(td, &wc);
+				ret = client_recv(td, &wc);
 			else
-				server_recv(td, &wc);
+				ret = server_recv(td, &wc);
+
+			if (ret)
+				return -1;
 
 			if (wc.wr_id == FIO_RDMA_MAX_IO_DEPTH)
 				break;
@@ -329,6 +352,7 @@ static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
 		}
 		rd->cq_event_num++;
 	}
+
 	if (ret) {
 		log_err("fio: poll error %d\n", ret);
 		return 1;
@@ -368,7 +392,7 @@ again:
 	}
 
 	ret = cq_event_handler(td, opcode);
-	if (ret < 1)
+	if (ret == 0)
 		goto again;
 
 	ibv_ack_cq_events(rd->cq, ret);
@@ -860,10 +884,12 @@ static int fio_rdmaio_connect(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	rdma_poll_wait(td, IBV_WC_SEND);
+	if (rdma_poll_wait(td, IBV_WC_SEND) < 0)
+		return 1;
 
 	/* wait for remote MR info from server side */
-	rdma_poll_wait(td, IBV_WC_RECV);
+	if (rdma_poll_wait(td, IBV_WC_RECV) < 0)
+		return 1;
 
 	/* In SEND/RECV test, it's a good practice to setup the iodepth of
 	 * of the RECV side deeper than that of the SEND side to
@@ -883,6 +909,7 @@ static int fio_rdmaio_accept(struct thread_data *td, struct fio_file *f)
 	struct rdmaio_data *rd = td->io_ops->data;
 	struct rdma_conn_param conn_param;
 	struct ibv_send_wr *bad_wr;
+	int ret = 0;
 
 	/* rdma_accept() - then wait for accept success */
 	memset(&conn_param, 0, sizeof(conn_param));
@@ -901,16 +928,17 @@ static int fio_rdmaio_accept(struct thread_data *td, struct fio_file *f)
 	}
 
 	/* wait for request */
-	rdma_poll_wait(td, IBV_WC_RECV);
+	ret = rdma_poll_wait(td, IBV_WC_RECV) < 0;
 
 	if (ibv_post_send(rd->qp, &rd->sq_wr, &bad_wr) != 0) {
 		log_err("fio: ibv_post_send fail");
 		return 1;
 	}
 
-	rdma_poll_wait(td, IBV_WC_SEND);
+	if (rdma_poll_wait(td, IBV_WC_SEND) < 0)
+		return 1;
 
-	return 0;
+	return ret;
 }
 
 static int fio_rdmaio_open_file(struct thread_data *td, struct fio_file *f)
@@ -1045,6 +1073,9 @@ static int fio_rdmaio_setup_listen(struct thread_data *td, short port)
 {
 	struct rdmaio_data *rd = td->io_ops->data;
 	struct ibv_recv_wr *bad_wr;
+	int state = td->runstate;
+
+	td_set_runstate(td, TD_SETTING_UP);
 
 	rd->addr.sin_family = AF_INET;
 	rd->addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -1060,6 +1091,8 @@ static int fio_rdmaio_setup_listen(struct thread_data *td, short port)
 		log_err("fio: rdma_listen fail\n");
 		return 1;
 	}
+
+	log_info("fio: waiting for connection\n");
 
 	/* wait for CONNECT_REQUEST */
 	if (get_next_channel_event
@@ -1080,6 +1113,7 @@ static int fio_rdmaio_setup_listen(struct thread_data *td, short port)
 		return 1;
 	}
 
+	td_set_runstate(td, state);
 	return 0;
 }
 
@@ -1236,6 +1270,7 @@ static int fio_rdmaio_init(struct thread_data *td)
 
 	if (td_read(td)) {	/* READ as the server */
 		rd->is_client = 0;
+		td->flags |= TD_F_NO_PROGRESS;
 		/* server rd->rdma_buf_len will be setup after got request */
 		ret = fio_rdmaio_setup_listen(td, o->port);
 	} else {		/* WRITE as the client */
@@ -1244,6 +1279,8 @@ static int fio_rdmaio_init(struct thread_data *td)
 	}
 
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+	rd->send_buf.max_bs = htonl(max_bs);
+
 	/* register each io_u in the free list */
 	for (i = 0; i < td->io_u_freelist.nr; i++) {
 		struct io_u *io_u = td->io_u_freelist.io_us[i];

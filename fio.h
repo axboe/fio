@@ -78,6 +78,7 @@ enum {
 	TD_F_VSTATE_SAVED	= 1U << 10,
 	TD_F_NEED_LOCK		= 1U << 11,
 	TD_F_CHILD		= 1U << 12,
+	TD_F_NO_PROGRESS        = 1U << 13,
 };
 
 enum {
