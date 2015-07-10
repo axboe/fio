@@ -662,7 +662,9 @@ static int fixup_options(struct thread_data *td)
 			ret = warnings_fatal;
 		}
 
-		o->refill_buffers = 1;
+		if (!fio_option_is_set(o, refill_buffers))
+			o->refill_buffers = 1;
+
 		if (o->max_bs[DDIR_WRITE] != o->min_bs[DDIR_WRITE] &&
 		    !o->verify_interval)
 			o->verify_interval = o->min_bs[DDIR_WRITE];
