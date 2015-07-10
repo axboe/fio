@@ -1073,6 +1073,9 @@ static int fio_rdmaio_setup_listen(struct thread_data *td, short port)
 {
 	struct rdmaio_data *rd = td->io_ops->data;
 	struct ibv_recv_wr *bad_wr;
+	int state = td->runstate;
+
+	td_set_runstate(td, TD_SETTING_UP);
 
 	rd->addr.sin_family = AF_INET;
 	rd->addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -1088,6 +1091,8 @@ static int fio_rdmaio_setup_listen(struct thread_data *td, short port)
 		log_err("fio: rdma_listen fail\n");
 		return 1;
 	}
+
+	log_info("fio: waiting for connection\n");
 
 	/* wait for CONNECT_REQUEST */
 	if (get_next_channel_event
@@ -1108,6 +1113,7 @@ static int fio_rdmaio_setup_listen(struct thread_data *td, short port)
 		return 1;
 	}
 
+	td_set_runstate(td, state);
 	return 0;
 }
 
@@ -1264,6 +1270,7 @@ static int fio_rdmaio_init(struct thread_data *td)
 
 	if (td_read(td)) {	/* READ as the server */
 		rd->is_client = 0;
+		td->flags |= TD_F_NO_PROGRESS;
 		/* server rd->rdma_buf_len will be setup after got request */
 		ret = fio_rdmaio_setup_listen(td, o->port);
 	} else {		/* WRITE as the client */
