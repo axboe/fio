@@ -875,8 +875,8 @@ fsync=int	If writing to a file, issue a sync of the dirty data
 
 fdatasync=int	Like fsync= but uses fdatasync() to only sync data and not
 		metadata blocks.
-		In FreeBSD and Windows there is no fdatasync(), this falls back to
-		using fsync()
+		In FreeBSD and Windows there is no fdatasync(), this falls back
+		to using fsync()
 
 sync_file_range=str:val	Use sync_file_range() for every 'val' number of
 		write operations. Fio will track range of writes that
