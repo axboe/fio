@@ -198,7 +198,7 @@ sections.
 -------------------------
 
 fio also supports environment variable expansion in job files. Any
-substring of the form "${VARNAME}" as part of an option value (in other
+sub-string of the form "${VARNAME}" as part of an option value (in other
 words, on the right of the `='), will be expanded to the value of the
 environment variable called VARNAME.  If no such environment variable
 is defined, or VARNAME is the empty string, the empty string will be
