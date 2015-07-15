@@ -26,9 +26,9 @@ Snapshots can download from:
 
 	http://brick.kernel.dk/snaps/
 
-There are also two official mirrors. Both of these are synced within
-an hour of commits landing at git.kernel.dk. So if the main repo is
-down for some reason, either one of those is safe to use:
+There are also two official mirrors. Both of these are automatically synced
+with the main repository, when changes are pushed. If the main repo is down
+for some reason, either one of these is safe to use as a backup:
 
 	git://git.kernel.org/pub/scm/linux/kernel/git/axboe/fio.git
 	https://git.kernel.org/pub/scm/linux/kernel/git/axboe/fio.git
