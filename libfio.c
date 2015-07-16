@@ -116,9 +116,11 @@ void clear_io_state(struct thread_data *td)
 	}
 
 	/*
-	 * Set the same seed to get repeatable runs
+	 * Re-Seed random number generator if rand_repeatable is true
 	 */
-	td_fill_rand_seeds(td);
+	 if (td->o.rand_repeatable){
+	 	td_fill_rand_seeds(td);	
+	 }
 }
 
 void reset_all_stats(struct thread_data *td)
