@@ -550,14 +550,15 @@ echo "Solaris AIO support           $solaris_aio"
 # __sync_fetch_and_add test
 sfaa="no"
 cat > $TMPC << EOF
-static int sfaa(int *ptr)
+#include <inttypes.h>
+static int sfaa(uint64_t *ptr)
 {
   return __sync_fetch_and_add(ptr, 0);
 }
 
 int main(int argc, char **argv)
 {
-  int val = 42;
+  uint64_t val = 42;
   sfaa(&val);
   return val;
 }
