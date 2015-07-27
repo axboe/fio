@@ -290,14 +290,19 @@ static void calc_rate(int unified_rw_rep, unsigned long mtime,
 	int i;
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		unsigned long long diff;
+		unsigned long long diff, this_rate;
 
 		diff = io_bytes[i] - prev_io_bytes[i];
+		if (mtime)
+			this_rate = ((1000 * diff) / mtime) / 1024;
+		else
+			this_rate = 0;
+
 		if (unified_rw_rep) {
 			rate[i] = 0;
-			rate[0] += ((1000 * diff) / mtime) / 1024;
+			rate[0] += this_rate;
 		} else
-			rate[i] = ((1000 * diff) / mtime) / 1024;
+			rate[i] = this_rate;
 
 		prev_io_bytes[i] = io_bytes[i];
 	}
