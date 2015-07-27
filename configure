@@ -168,7 +168,9 @@ for opt do
   ;;
   --enable-libhdfs) libhdfs="yes"
   ;;
-  --disable-shm) output_sym "CONFIG_NO_SHM"
+  --disable-shm) no_shm="yes"
+  ;;
+  --disable-optimizations) disable_opt="yes"
   ;;
   --help)
     show_help="yes"
@@ -193,6 +195,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-gfapi        Disable gfapi"
   echo "--enable-libhdfs       Enable hdfs support"
   echo "--disable-shm          Disable SHM support"
+  echo "--disable-optimizations Don't enable compiler optimizations"
   exit $exit_val
 fi
 
@@ -219,6 +222,14 @@ printf "# Configured with:" >> $config_host_mak
 printf " '%s'" "$0" "$@" >> $config_host_mak
 echo >> $config_host_mak
 echo "CONFIG_TARGET_OS=$targetos" >> $config_host_mak
+
+if test "$no_shm" = "yes" ; then
+  output_sym "CONFIG_NO_SHM"
+fi
+
+if test "$disable_opt" = "yes" ; then
+  output_sym "CONFIG_FIO_NO_OPT"
+fi
 
 # Some host OSes need non-standard checks for which CPU to use.
 # Note that these checks are broken for cross-compilation: if you're
