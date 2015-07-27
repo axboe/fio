@@ -315,14 +315,19 @@ static void calc_iops(int unified_rw_rep, unsigned long mtime,
 	int i;
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		unsigned long long diff;
+		unsigned long long diff, this_iops;
 
 		diff = io_iops[i] - prev_io_iops[i];
+		if (mtime)
+			this_iops = (diff * 1000) / mtime;
+		else
+			this_iops = 0;
+
 		if (unified_rw_rep) {
 			iops[i] = 0;
-			iops[0] += (diff * 1000) / mtime;
+			iops[0] += this_iops;
 		} else
-			iops[i] = (diff * 1000) / mtime;
+			iops[i] = this_iops;
 
 		prev_io_iops[i] = io_iops[i];
 	}
