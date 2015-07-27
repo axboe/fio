@@ -517,6 +517,7 @@ enum {
 	TD_FINISHING,
 	TD_EXITED,
 	TD_REAPED,
+	TD_LAST,
 };
 
 extern void td_set_runstate(struct thread_data *, int);
