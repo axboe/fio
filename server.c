@@ -1495,13 +1495,13 @@ static int fio_init_server_ip(void)
 
 	opt = 1;
 	if (setsockopt(sk, SOL_SOCKET, SO_REUSEADDR, (void *)&opt, sizeof(opt)) < 0) {
-		log_err("fio: setsockopt: %s\n", strerror(errno));
+		log_err("fio: setsockopt(REUSEADDR): %s\n", strerror(errno));
 		close(sk);
 		return -1;
 	}
 #ifdef SO_REUSEPORT
 	if (setsockopt(sk, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
-		log_err("fio: setsockopt: %s\n", strerror(errno));
+		log_err("fio: setsockopt(REUSEPORT): %s\n", strerror(errno));
 		close(sk);
 		return -1;
 	}
