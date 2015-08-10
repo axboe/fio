@@ -465,7 +465,7 @@ static int __setup_rate(struct thread_data *td, enum fio_ddir ddir)
 		return -1;
 	}
 
-	td->rate_pending_usleep[ddir] = 0;
+	td->rate_next_io_time[ddir] = 0;
 	return 0;
 }
 
