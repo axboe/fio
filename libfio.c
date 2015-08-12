@@ -89,6 +89,8 @@ static void reset_io_counters(struct thread_data *td)
 		td->rate_bytes[ddir] = 0;
 		td->rate_blocks[ddir] = 0;
 		td->bytes_done[ddir] = 0;
+		td->rate_io_issue_bytes[ddir] = 0;
+		td->rate_next_io_time[ddir] = 0;
 	}
 	td->zone_bytes = 0;
 

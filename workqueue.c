@@ -124,6 +124,7 @@ int workqueue_enqueue(struct workqueue *wq, struct io_u *io_u)
 		if (ddir_rw(ddir)) {
 			parent->io_issues[ddir]++;
 			parent->io_issue_bytes[ddir] += io_u->xfer_buflen;
+			parent->rate_io_issue_bytes[ddir] += io_u->xfer_buflen;
 		}
 
 		pthread_mutex_lock(&sw->lock);

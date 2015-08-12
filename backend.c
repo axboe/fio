@@ -763,6 +763,25 @@ static int io_complete_bytes_exceeded(struct thread_data *td)
 }
 
 /*
+ * used to calculate the next io time for rate control
+ *
+ */
+static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
+{
+	uint64_t secs, remainder, bps, bytes;
+
+	assert(!(td->flags & TD_F_CHILD));
+	bytes = td->rate_io_issue_bytes[ddir];
+	bps = td->rate_bps[ddir];
+	if (bps) {
+		secs = bytes / bps;
+		remainder = bytes % bps;
+		return remainder * 1000000 / bps + secs * 1000000;
+	} else
+		return 0;
+}
+
+/*
  * Main IO worker function. It retrieves io_u's to process and queues
  * and reaps them, checking for rate and errors along the way.
  *
@@ -891,8 +910,15 @@ static uint64_t do_io(struct thread_data *td)
 			if (td->error)
 				break;
 			ret = workqueue_enqueue(&td->io_wq, io_u);
+
+			if (should_check_rate(td))
+				td->rate_next_io_time[ddir] = usec_for_io(td, ddir);
+
 		} else {
 			ret = td_io_queue(td, io_u);
+
+			if (should_check_rate(td))
+				td->rate_next_io_time[ddir] = usec_for_io(td, ddir);
 
 			if (io_queue_event(td, io_u, &ret, ddir, &bytes_issued, 0, &comp_time))
 				break;
@@ -924,7 +950,7 @@ reap:
 		}
 		if (!in_ramp_time(td) && td->o.latency_target)
 			lat_target_check(td);
-
+					
 		if (td->o.thinktime) {
 			unsigned long long b;
 
