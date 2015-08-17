@@ -640,6 +640,8 @@ int fio_monotonic_clocktest(int debug)
 
 	qsort(entries, tentries, sizeof(struct clock_entry), clock_cmp);
 
+	/* silence silly gcc */
+	prev = NULL;
 	for (failed = i = 0; i < tentries; i++) {
 		this = &entries[i];
 
