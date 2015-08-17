@@ -1409,11 +1409,14 @@ echo "HDFS engine                   $libhdfs"
 # Check whether we have MTD
 mtd="no"
 cat > $TMPC << EOF
+#include <string.h>
 #include <mtd/mtd-user.h>
 #include <sys/ioctl.h>
 int main(int argc, char **argv)
 {
+  struct mtd_write_req ops;
   struct mtd_info_user info;
+  memset(&ops, 0, sizeof(ops));
   info.type = MTD_MLCNANDFLASH;
   return ioctl(0, MEMGETINFO, &info);
 }
