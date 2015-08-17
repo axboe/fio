@@ -184,6 +184,17 @@ void fio_put_client(struct fio_client *client)
 	free(client);
 }
 
+static int fio_client_dec_jobs_eta(struct client_eta *eta, client_eta_op eta_fn)
+{
+	if (!--eta->pending) {
+		eta_fn(&eta->eta);
+		free(eta);
+		return 0;
+	}
+
+	return 1;
+}
+
 static void remove_client(struct fio_client *client)
 {
 	assert(client->refs);
@@ -1091,14 +1102,6 @@ void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 	strcpy((char *) dst->run_str, (char *) je->run_str);
 }
 
-void fio_client_dec_jobs_eta(struct client_eta *eta, client_eta_op eta_fn)
-{
-	if (!--eta->pending) {
-		eta_fn(&eta->eta);
-		free(eta);
-	}
-}
-
 static void remove_reply_cmd(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct fio_net_cmd_reply *reply = NULL;
@@ -1573,8 +1576,10 @@ static void request_client_etas(struct client_ops *ops)
 					(uintptr_t) eta, &client->cmd_list);
 	}
 
-	while (skipped--)
-		fio_client_dec_jobs_eta(eta, ops->eta);
+	while (skipped--) {
+		if (!fio_client_dec_jobs_eta(eta, ops->eta))
+			break;
+	}
 
 	dprint(FD_NET, "client: requested eta tag %p\n", eta);
 }

@@ -111,7 +111,6 @@ struct client_eta {
 };
 
 extern int fio_handle_client(struct fio_client *);
-extern void fio_client_dec_jobs_eta(struct client_eta *eta, client_eta_op fn);
 extern void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je);
 
 enum {

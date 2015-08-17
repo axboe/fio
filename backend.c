@@ -950,7 +950,7 @@ reap:
 		}
 		if (!in_ramp_time(td) && td->o.latency_target)
 			lat_target_check(td);
-					
+
 		if (td->o.thinktime) {
 			unsigned long long b;
 

@@ -1051,6 +1051,43 @@ static int init_rand_distribution(struct thread_data *td)
 	return 1;
 }
 
+/*
+ * Check if the number of blocks exceeds the randomness capability of
+ * the selected generator. Tausworthe is 32-bit, the others are fullly
+ * 64-bit capable.
+ */
+static int check_rand_gen_limits(struct thread_data *td, struct fio_file *f,
+				 uint64_t blocks)
+{
+	if (blocks <= FRAND32_MAX)
+		return 0;
+	if (td->o.random_generator != FIO_RAND_GEN_TAUSWORTHE)
+		return 0;
+
+	/*
+	 * If the user hasn't specified a random generator, switch
+	 * to tausworthe64 with informational warning. If the user did
+	 * specify one, just warn.
+	 */
+	log_info("fio: file %s exceeds 32-bit tausworthe random generator.\n",
+			f->file_name);
+
+	if (!fio_option_is_set(&td->o, random_generator)) {
+		log_info("fio: Switching to tausworthe64. Use the "
+			 "random_generator= option to get rid of this "
+			 " warning.\n");
+		td->o.random_generator = FIO_RAND_GEN_TAUSWORTHE64;
+		return 0;
+	}
+
+	/*
+	 * Just make this information to avoid breaking scripts.
+	 */
+	log_info("fio: Use the random_generator= option to switch to lfsr or "
+			 "tausworthe64.\n");
+	return 0;
+}
+
 int init_random_map(struct thread_data *td)
 {
 	unsigned long long blocks;
@@ -1067,15 +1104,8 @@ int init_random_map(struct thread_data *td)
 
 		blocks = fsize / (unsigned long long) td->o.rw_min_bs;
 
-		if (blocks > FRAND32_MAX &&
-		    td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE &&
-		    !fio_option_is_set(&td->o, random_generator)) {
-			log_err("fio: file %s exceeds 32-bit tausworthe "
-				 "random generator. Use lfsr or "
-				 "tausworthe64.\n", f->file_name);
-			td_verror(td, EINVAL, "init file random");
+		if (check_rand_gen_limits(td, f, blocks))
 			return 1;
-		}
 
 		if (td->o.random_generator == FIO_RAND_GEN_LFSR) {
 			unsigned long seed;
