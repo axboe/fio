@@ -1480,7 +1480,7 @@ int main(int argc, char **argv)
 {
   FILE *mtab = setmntent(NULL, "r");
   struct mntent *mnt = getmntent(mtab);
-  endmntent(mnt);
+  endmntent(mtab);
   return 0;
 }
 EOF
