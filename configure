@@ -939,7 +939,8 @@ cat > $TMPC << EOF
 #include <string.h>
 int main(int argc, char **argv)
 {
-  strsep(NULL, NULL);
+  static char *string = "This is a string";
+  strsep(&string, "needle");
   return 0;
 }
 EOF
