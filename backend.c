@@ -179,7 +179,7 @@ static int __check_min_rate(struct thread_data *td, struct timeval *now,
 		if (spent < td->o.ratecycle)
 			return 0;
 
-		if (td->o.rate[ddir]) {
+		if (td->o.rate[ddir] || td->o.ratemin[ddir]) {
 			/*
 			 * check bandwidth specified rate
 			 */
@@ -220,6 +220,7 @@ static int __check_min_rate(struct thread_data *td, struct timeval *now,
 					log_err("%s: min iops rate %u not met,"
 						" got %lu\n", td->o.name,
 							rate_iops_min, rate);
+					return 1;
 				}
 			}
 		}
