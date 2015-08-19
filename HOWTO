@@ -623,7 +623,16 @@ buffer_pattern=str	If set, fio will fill the io buffers with this
 		the other options related to buffer contents. The setting can
 		be any pattern of bytes, and can be prefixed with 0x for hex
 		values. It may also be a string, where the string must then
-		be wrapped with "".
+		be wrapped with "", e.g.:
+
+		buffer_pattern="abcd"
+		  or
+		buffer_pattern=-12
+		  or
+		buffer_pattern=0xdeadface
+
+		Also you can combine everything together in any order:
+		buffer_pattern=0xdeadface"abcd"-12
 
 dedupe_percentage=int	If set, fio will generate this percentage of
 		identical buffers when writing. These buffers will be
@@ -1324,7 +1333,14 @@ verify_pattern=str	If set, fio will fill the io buffers with this
 		buffer at the time(it can be either a decimal or a hex number).
 		The verify_pattern if larger than a 32-bit quantity has to
 		be a hex number that starts with either "0x" or "0X". Use
-		with verify=meta.
+		with verify=meta. Also, verify_pattern supports %o format,
+		which means that for each block offset will be written and
+		then verifyied back, e.g.:
+
+		verify_pattern=%o
+
+		Or use combination of everything:
+		verify_pattern=0xff%o"abcd"-12
 
 verify_fatal=bool	Normally fio will keep checking the entire contents
 		before quitting on a block verification failure. If this

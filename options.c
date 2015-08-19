@@ -14,11 +14,20 @@
 #include "verify.h"
 #include "parse.h"
 #include "lib/fls.h"
+#include "lib/pattern.h"
 #include "options.h"
 
 #include "crc/crc32c.h"
 
 char client_sockaddr_str[INET6_ADDRSTRLEN] = { 0 };
+
+struct pattern_fmt_desc fmt_desc[] = {
+	{
+		.fmt   = "%o",
+		.len   = FIELD_SIZE(struct io_u *, offset),
+		.paste = paste_blockoff
+	}
+};
 
 /*
  * Check if mmap/mmaphuge has a :/foo/bar/file at the end. If so, return that.
@@ -34,26 +43,6 @@ static char *get_opt_postfix(const char *str)
 	strip_blank_front(&p);
 	strip_blank_end(p);
 	return strdup(p);
-}
-
-static int converthexchartoint(char a)
-{
-	int base;
-
-	switch (a) {
-	case '0'...'9':
-		base = '0';
-		break;
-	case 'A'...'F':
-		base = 'A' - 10;
-		break;
-	case 'a'...'f':
-		base = 'a' - 10;
-		break;
-	default:
-		base = 0;
-	}
-	return a - base;
 }
 
 static int bs_cmp(const void *p1, const void *p2)
@@ -914,124 +903,25 @@ static int str_opendir_cb(void *data, const char fio_unused *str)
 	return add_dir_files(td, td->o.opendir);
 }
 
-static int pattern_cb(char *pattern, unsigned int max_size,
-		      const char *input, unsigned int *pattern_bytes)
-{
-	long off = 0;
-	int i = 0, j = 0, len, k, base = 10;
-	uint32_t pattern_length;
-	char *loc1, *loc2;
-
-	/*
-	 * Check if it's a string input
-	 */
-	loc1 = strchr(input, '\"');
-	if (loc1) {
-		do {
-			loc1++;
-			if (*loc1 == '\0' || *loc1 == '\"')
-				break;
-
-			pattern[i] = *loc1;
-			i++;
-		} while (i < max_size);
-
-		if (!i)
-			return 1;
-
-		goto fill;
-	}
-
-	/*
-	 * No string, find out if it's decimal or hexidecimal
-	 */
-	loc1 = strstr(input, "0x");
-	loc2 = strstr(input, "0X");
-	if (loc1 || loc2)
-		base = 16;
-	off = strtol(input, NULL, base);
-	if (off != LONG_MAX || errno != ERANGE) {
-		while (off) {
-			pattern[i] = off & 0xff;
-			off >>= 8;
-			i++;
-		}
-	} else {
-		len = strlen(input);
-		k = len - 1;
-		if (base == 16) {
-			if (loc1)
-				j = loc1 - input + 2;
-			else
-				j = loc2 - input + 2;
-		} else
-			return 1;
-		if (len - j < max_size * 2) {
-			while (k >= j) {
-				off = converthexchartoint(input[k--]);
-				if (k >= j)
-					off += (converthexchartoint(input[k--])
-						* 16);
-				pattern[i++] = (char) off;
-			}
-		}
-	}
-
-	/*
-	 * Fill the pattern all the way to the end. This greatly reduces
-	 * the number of memcpy's we have to do when verifying the IO.
-	 */
-fill:
-	pattern_length = i;
-	if (!i && !off)
-		i = 1;
-	while (i > 1 && i * 2 <= max_size) {
-		memcpy(&pattern[i], &pattern[0], i);
-		i *= 2;
-	}
-
-	/*
-	 * Fill remainder, if the pattern multiple ends up not being
-	 * max_size.
-	 */
-	while (i > 1 && i < max_size) {
-		unsigned int b = min(pattern_length, max_size - i);
-
-		memcpy(&pattern[i], &pattern[0], b);
-		i += b;
-	}
-
-	if (i == 1) {
-		/*
-		 * The code in verify_io_u_pattern assumes a single byte
-		 * pattern fills the whole verify pattern buffer.
-		 */
-		memset(pattern, pattern[0], max_size);
-	}
-
-	*pattern_bytes = i;
-	return 0;
-}
-
 static int str_buffer_pattern_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
 	int ret;
 
-	ret = pattern_cb(td->o.buffer_pattern, MAX_PATTERN_SIZE, input,
-				&td->o.buffer_pattern_bytes);
+	/* FIXME: for now buffer pattern does not support formats */
+	ret = parse_and_fill_pattern(input, strlen(input), td->o.buffer_pattern,
+				     MAX_PATTERN_SIZE, NULL, 0, NULL, NULL);
+	if (ret < 0)
+		return 1;
 
-	if (!ret && td->o.buffer_pattern_bytes) {
-		if (!td->o.compress_percentage)
-			td->o.refill_buffers = 0;
-		td->o.scramble_buffers = 0;
-		td->o.zero_buffers = 0;
-	} else {
-		log_err("fio: failed parsing pattern `%s`\n", input);
-		ret = 1;
-	}
+	assert(ret != 0);
+	td->o.buffer_pattern_bytes = ret;
+	if (!td->o.compress_percentage)
+		td->o.refill_buffers = 0;
+	td->o.scramble_buffers = 0;
+	td->o.zero_buffers = 0;
 
-	return ret;
+	return 0;
 }
 
 static int str_buffer_compress_cb(void *data, unsigned long long *il)
@@ -1058,16 +948,22 @@ static int str_verify_pattern_cb(void *data, const char *input)
 	struct thread_data *td = data;
 	int ret;
 
-	ret = pattern_cb(td->o.verify_pattern, MAX_PATTERN_SIZE, input,
-				&td->o.verify_pattern_bytes);
+	td->o.verify_fmt_sz = ARRAY_SIZE(td->o.verify_fmt);
+	ret = parse_and_fill_pattern(input, strlen(input), td->o.verify_pattern,
+				     MAX_PATTERN_SIZE, fmt_desc, sizeof(fmt_desc),
+				     td->o.verify_fmt, &td->o.verify_fmt_sz);
+	if (ret < 0)
+		return 1;
 
+	assert(ret != 0);
+	td->o.verify_pattern_bytes = ret;
 	/*
 	 * VERIFY_META could already be set
 	 */
-	if (!ret && !fio_option_is_set(&td->o, verify))
+	if (!fio_option_is_set(&td->o, verify))
 		td->o.verify = VERIFY_PATTERN;
 
-	return ret;
+	return 0;
 }
 
 static int str_gtod_reduce_cb(void *data, int *il)

@@ -68,13 +68,17 @@ void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 		return;
 	}
 
-	if (io_u->buf_filled_len >= len) {
+	/* Skip if we were here and we do not need to patch pattern
+	 * with format */
+	if (!td->o.verify_fmt_sz && io_u->buf_filled_len >= len) {
 		dprint(FD_VERIFY, "using already filled verify pattern b=%d len=%u\n",
 			o->verify_pattern_bytes, len);
 		return;
 	}
 
-	(void)cpy_pattern(td->o.verify_pattern, td->o.verify_pattern_bytes, p, len);
+	(void)paste_format(td->o.verify_pattern, td->o.verify_pattern_bytes,
+			   td->o.verify_fmt, td->o.verify_fmt_sz,
+			   p, len, io_u);
 	io_u->buf_filled_len = len;
 }
 
@@ -364,11 +368,14 @@ static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 
 	pattern = td->o.verify_pattern;
 	pattern_size = td->o.verify_pattern_bytes;
-	if (pattern_size <= 1)
-		pattern_size = MAX_PATTERN_SIZE;
+	assert(pattern_size != 0);
+
+	(void)paste_format_inplace(pattern, pattern_size,
+				   td->o.verify_fmt, td->o.verify_fmt_sz, io_u);
+
 	buf = (void *) hdr + header_size;
 	len = get_hdr_inc(td, io_u) - header_size;
-	mod = header_size % pattern_size;
+	mod = (get_hdr_inc(td, io_u) * vc->hdr_num + header_size) % pattern_size;
 
 	rc = cmp_pattern(pattern, pattern_size, mod, buf, len);
 	if (!rc)
@@ -1322,6 +1329,18 @@ void verify_async_exit(struct thread_data *td)
 	pthread_mutex_unlock(&td->io_u_lock);
 	free(td->verify_threads);
 	td->verify_threads = NULL;
+}
+
+int paste_blockoff(char *buf, unsigned int len, void *priv)
+{
+	struct io_u *io = priv;
+	unsigned long long off;
+
+	typecheck(typeof(off), io->offset);
+	off = cpu_to_le64((uint64_t)io->offset);
+	len = min(len, (unsigned int)sizeof(off));
+	memcpy(buf, &off, len);
+	return 0;
 }
 
 struct all_io_list *get_all_io_list(int save_mask, size_t *sz)

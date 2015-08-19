@@ -89,6 +89,11 @@ extern void fio_verify_init(struct thread_data *td);
 extern int verify_async_init(struct thread_data *);
 extern void verify_async_exit(struct thread_data *);
 
+/*
+ * Callbacks for pasting formats in the pattern buffer
+ */
+extern int paste_blockoff(char *buf, unsigned int len, void *priv);
+
 struct thread_rand32_state {
 	uint32_t s[4];
 };

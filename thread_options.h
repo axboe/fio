@@ -7,6 +7,7 @@
 #include "stat.h"
 #include "gettime.h"
 #include "lib/ieee754.h"
+#include "lib/pattern.h"
 #include "td_error.h"
 
 /*
@@ -97,6 +98,8 @@ struct thread_options {
 	unsigned int verify_offset;
 	char verify_pattern[MAX_PATTERN_SIZE];
 	unsigned int verify_pattern_bytes;
+	struct pattern_fmt verify_fmt[8];
+	unsigned int verify_fmt_sz;
 	unsigned int verify_fatal;
 	unsigned int verify_dump;
 	unsigned int verify_async;
