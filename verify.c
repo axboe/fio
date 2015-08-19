@@ -13,6 +13,7 @@
 #include "trim.h"
 #include "lib/rand.h"
 #include "lib/hweight.h"
+#include "lib/pattern.h"
 
 #include "crc/md5.h"
 #include "crc/crc64.h"
@@ -35,7 +36,7 @@ static void __fill_hdr(struct verify_header *hdr, int verify_type, uint32_t len,
 
 void fill_buffer_pattern(struct thread_data *td, void *p, unsigned int len)
 {
-	fill_pattern(p, len, td->o.buffer_pattern, td->o.buffer_pattern_bytes);
+	(void)cpy_pattern(td->o.buffer_pattern, td->o.buffer_pattern_bytes, p, len);
 }
 
 void __fill_buffer(struct thread_options *o, unsigned long seed, void *p,
@@ -73,7 +74,7 @@ void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 		return;
 	}
 
-	fill_pattern(p, len, o->verify_pattern, o->verify_pattern_bytes);
+	(void)cpy_pattern(td->o.verify_pattern, td->o.verify_pattern_bytes, p, len);
 	io_u->buf_filled_len = len;
 }
 
