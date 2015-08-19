@@ -668,7 +668,8 @@ extern const char *fio_get_arch_string(int);
 extern const char *fio_get_os_string(int);
 
 #ifdef FIO_INTERNAL
-#define ARRAY_SIZE(x) (sizeof((x)) / (sizeof((x)[0])))
+#define ARRAY_SIZE(x)    (sizeof((x)) / (sizeof((x)[0])))
+#define FIELD_SIZE(s, f) (sizeof(((typeof(s))0)->f))
 #endif
 
 enum {
