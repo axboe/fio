@@ -39,7 +39,7 @@ endif
 SOURCE :=	gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
 		lib/rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
-		lib/num2str.c lib/ieee754.c engines/cpu.c \
+		lib/num2str.c lib/ieee754.c lib/strntol.c engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
 		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
 		cconv.c lib/prio_tree.c json.c lib/zipf.c lib/axmap.c \
