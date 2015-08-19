@@ -42,8 +42,8 @@ SOURCE :=	gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		lib/num2str.c lib/ieee754.c lib/strntol.c engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
 		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
-		cconv.c lib/prio_tree.c json.c lib/zipf.c lib/axmap.c \
-		lib/lfsr.c gettime-thread.c helpers.c lib/flist_sort.c \
+		cconv.c lib/prio_tree.c lib/zipf.c lib/axmap.c lib/pattern.c \
+		lib/lfsr.c gettime-thread.c helpers.c lib/flist_sort.c json.c \
 		lib/hweight.c lib/getrusage.c idletime.c td_error.c \
 		profiles/tiobench.c profiles/act.c io_u_queue.c filelock.c \
 		lib/tp.c lib/bloom.c lib/gauss.c lib/mountcheck.c workqueue.c \
