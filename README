@@ -179,6 +179,10 @@ $ fio
 				(option=system,percpu) or run unit work
 				calibration only (option=calibrate).
 	--inflate-log=log	Inflate and output compressed log
+	--trigger-file=file	Execute trigger cmd when file exists
+	--trigger-timeout=t	Execute trigger af this time
+	--trigger=cmd		Set this command as local trigger
+	--trigger-remote=cmd	Set this command as remote trigger
 
 
 Any parameters following the options will be assumed to be job files,
