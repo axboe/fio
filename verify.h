@@ -145,7 +145,7 @@ struct verify_state_hdr {
 #define IO_LIST_ALL		0xffffffff
 extern struct all_io_list *get_all_io_list(int, size_t *);
 extern void __verify_save_state(struct all_io_list *, const char *);
-extern void verify_save_state(void);
+extern void verify_save_state(int mask);
 extern int verify_load_state(struct thread_data *, const char *);
 extern void verify_free_state(struct thread_data *);
 extern int verify_state_should_stop(struct thread_data *, struct io_u *);

@@ -1497,9 +1497,15 @@ int fio_handle_client(struct fio_client *client)
 		break;
 	case FIO_NET_CMD_VTRIGGER: {
 		struct all_io_list *pdu = (struct all_io_list *) cmd->payload;
-		char buf[64];
+		char buf[128];
+		int off = 0;
 
-		__verify_save_state(pdu, server_name(client, buf, sizeof(buf)));
+		if (aux_path) {
+			strcpy(buf, aux_path);
+			off = strlen(buf);
+		}
+
+		__verify_save_state(pdu, server_name(client, &buf[off], sizeof(buf) - off));
 		exec_trigger(trigger_cmd);
 		break;
 		}

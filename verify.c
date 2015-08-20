@@ -231,8 +231,11 @@ static void dump_buf(char *buf, unsigned int len, unsigned long long offset,
 
 	ptr = strdup(f->file_name);
 
-	fname[DUMP_BUF_SZ - 1] = '\0';
-	strncpy(fname, basename(ptr), DUMP_BUF_SZ - 1);
+	memset(fname, 0, sizeof(fname));
+	if (aux_path)
+		sprintf(fname, "%s%s", aux_path, FIO_OS_PATH_SEPARATOR);
+
+	strncpy(fname + strlen(fname), basename(ptr), buf_left - 1);
 
 	buf_left -= strlen(fname);
 	if (buf_left <= 0) {
@@ -1477,14 +1480,21 @@ void __verify_save_state(struct all_io_list *state, const char *prefix)
 	}
 }
 
-void verify_save_state(void)
+void verify_save_state(int mask)
 {
 	struct all_io_list *state;
 	size_t sz;
 
-	state = get_all_io_list(IO_LIST_ALL, &sz);
+	state = get_all_io_list(mask, &sz);
 	if (state) {
-		__verify_save_state(state, "local");
+		char prefix[PATH_MAX];
+
+		if (aux_path)
+			sprintf(aux_path, "%s%slocal", aux_path, FIO_OS_PATH_SEPARATOR);
+		else
+			strcpy(aux_path, "local");
+
+		__verify_save_state(state, prefix);
 		free(state);
 	}
 }

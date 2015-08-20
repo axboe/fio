@@ -1638,16 +1638,8 @@ static void *thread_main(void *data)
 	td->ts.io_bytes[DDIR_TRIM] = td->io_bytes[DDIR_TRIM];
 
 	if (td->o.verify_state_save && !(td->flags & TD_F_VSTATE_SAVED) &&
-	    (td->o.verify != VERIFY_NONE && td_write(td))) {
-		struct all_io_list *state;
-		size_t sz;
-
-		state = get_all_io_list(td->thread_number, &sz);
-		if (state) {
-			__verify_save_state(state, "local");
-			free(state);
-		}
-	}
+	    (td->o.verify != VERIFY_NONE && td_write(td)))
+		verify_save_state(td->thread_number);
 
 	fio_unpin_memory(td);
 
@@ -1897,7 +1889,7 @@ void check_trigger_file(void)
 		if (nr_clients)
 			fio_clients_send_trigger(trigger_remote_cmd);
 		else {
-			verify_save_state();
+			verify_save_state(IO_LIST_ALL);
 			fio_terminate_threads(TERMINATE_ALL);
 			exec_trigger(trigger_cmd);
 		}

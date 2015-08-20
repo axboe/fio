@@ -69,6 +69,8 @@ long long trigger_timeout = 0;
 char *trigger_cmd = NULL;
 char *trigger_remote_cmd = NULL;
 
+char *aux_path = NULL;
+
 static int prev_group_jobs;
 
 unsigned long fio_debug = 0;
@@ -265,6 +267,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "trigger-remote",
 		.has_arg	= required_argument,
 		.val		= 'J',
+	},
+	{
+		.name		= (char *) "aux-path",
+		.has_arg	= required_argument,
+		.val		= 'K',
 	},
 	{
 		.name		= NULL,
@@ -1793,6 +1800,7 @@ static void usage(const char *name)
 	printf("  --trigger-timeout=t\tExecute trigger af this time\n");
 	printf("  --trigger=cmd\t\tSet this command as local trigger\n");
 	printf("  --trigger-remote=cmd\tSet this command as remote trigger\n");
+	printf("  --aux-path=path\tUse this path for fio state generated files\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
 	printf("\n                   Jens Axboe <jaxboe@fusionio.com>");
 	printf("\n                   Jens Axboe <axboe@fb.com>\n");
@@ -2382,6 +2390,11 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			if (trigger_remote_cmd)
 				free(trigger_remote_cmd);
 			trigger_remote_cmd = strdup(optarg);
+			break;
+		case 'K':
+			if (aux_path)
+				free(aux_path);
+			aux_path = strdup(optarg);
 			break;
 		case 'B':
 			if (check_str_time(optarg, &trigger_timeout, 1)) {

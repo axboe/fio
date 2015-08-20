@@ -434,6 +434,7 @@ extern char *trigger_file;
 extern char *trigger_cmd;
 extern char *trigger_remote_cmd;
 extern long long trigger_timeout;
+extern char *aux_path;
 
 extern struct thread_data *threads;
 

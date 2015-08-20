@@ -183,6 +183,7 @@ $ fio
 	--trigger-timeout=t	Execute trigger af this time
 	--trigger=cmd		Set this command as local trigger
 	--trigger-remote=cmd	Set this command as remote trigger
+	--aux-path=path		Use this path for fio state generated files
 
 
 Any parameters following the options will be assumed to be job files,
