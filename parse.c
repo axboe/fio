@@ -1061,6 +1061,19 @@ int string_distance(const char *s1, const char *s2)
 	return i;
 }
 
+/*
+ * Make a guess of whether the distance from 's1' is significant enough
+ * to warrant printing the guess. We set this to a 1/2 match.
+ */
+int string_distance_ok(const char *opt, int distance)
+{
+	size_t len;
+
+	len = strlen(opt);
+	len = (len + 1) / 2;
+	return distance <= len;
+}
+
 static struct fio_option *find_child(struct fio_option *options,
 				     struct fio_option *o)
 {

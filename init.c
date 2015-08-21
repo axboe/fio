@@ -1998,7 +1998,7 @@ static void show_closest_option(const char *name)
 		i++;
 	}
 
-	if (best_option != -1)
+	if (best_option != -1 && string_distance_ok(name, best_distance))
 		log_err("Did you mean %s?\n", l_opts[best_option].name);
 }
 
