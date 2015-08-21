@@ -1490,9 +1490,9 @@ void verify_save_state(int mask)
 		char prefix[PATH_MAX];
 
 		if (aux_path)
-			sprintf(aux_path, "%s%slocal", aux_path, FIO_OS_PATH_SEPARATOR);
+			sprintf(prefix, "%s%slocal", aux_path, FIO_OS_PATH_SEPARATOR);
 		else
-			strcpy(aux_path, "local");
+			strcpy(prefix, "local");
 
 		__verify_save_state(state, prefix);
 		free(state);
