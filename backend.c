@@ -540,7 +540,7 @@ sync_done:
 			*ret = ret2;
 		break;
 	default:
-		assert(ret < 0);
+		assert(*ret < 0);
 		td_verror(td, -(*ret), "td_io_queue");
 		break;
 	}
