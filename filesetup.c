@@ -413,7 +413,19 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 	else if (f->filetype == FIO_TYPE_FILE)
 		ret = posix_fadvise(f->fd, off, len, POSIX_FADV_DONTNEED);
 	else if (f->filetype == FIO_TYPE_BD) {
+		int retry_count = 0;
+
 		ret = blockdev_invalidate_cache(f);
+		while (ret < 0 && errno == EAGAIN && retry_count++ < 25) {
+			/*
+			 * Linux multipath devices reject ioctl while
+			 * the maps are being updated. That window can
+			 * last tens of milliseconds; we'll try up to
+			 * a quarter of a second.
+			 */
+			usleep(10000);
+			ret = blockdev_invalidate_cache(f);
+		}
 		if (ret < 0 && errno == EACCES && geteuid()) {
 			if (!root_warn) {
 				log_err("fio: only root may flush block "
