@@ -1134,8 +1134,12 @@ Run the verify phase after a write phase.  Only valid if \fBverify\fR is set.
 Default: true.
 .TP
 .BI verify \fR=\fPstr
-Method of verifying file contents after each iteration of the job.  Allowed
-values are:
+Method of verifying file contents after each iteration of the job. Each
+verification method also implies verification of special header, which is
+written to the beginning of each block. This header also includes meta
+information, like offset of the block, block number, timestamp when block
+was written, etc.  \fBverify\fR=str can be combined with \fBverify_pattern\fR=str
+option.  The allowed values are:
 .RS
 .RS
 .TP
@@ -1145,8 +1149,10 @@ hardware accelerated SSE4.2 driven, falls back to regular crc32c if
 not supported by the system.
 .TP
 .B meta
-Write extra information about each I/O (timestamp, block number, etc.). The
-block number is verified. See \fBverify_pattern\fR as well.
+This option is deprecated, since now meta information is included in generic
+verification header and meta verification happens by default.  For detailed
+information see the description of the \fBverify\fR=str setting. This option
+is kept because of compatibility's sake with old configurations. Do not use it.
 .TP
 .B pattern
 Verify a strict pattern. Normally fio includes a header with some basic
@@ -1186,9 +1192,8 @@ pattern for io verification purposes. Depending on the width of the pattern,
 fio will fill 1/2/3/4 bytes of the buffer at the time(it can be either a
 decimal or a hex number). The verify_pattern if larger than a 32-bit quantity
 has to be a hex number that starts with either "0x" or "0X". Use with
-\fBverify\fP=meta or \fBverify\fP=pattern. Also, verify_pattern supports %o
-format, which means that for each block offset will be written and then
-verifyied back, e.g.:
+\fBverify\fP=str. Also, verify_pattern supports %o format, which means that for
+each block offset will be written and then verifyied back, e.g.:
 .RS
 .RS
 \fBverify_pattern\fR=%o

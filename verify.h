@@ -7,6 +7,9 @@
 
 enum {
 	VERIFY_NONE = 0,		/* no verification */
+	VERIFY_HDR_ONLY,		/* verify header only, kept for sake of
+					 * compatibility with old configurations
+					 * which use 'verify=meta' */
 	VERIFY_MD5,			/* md5 sum data blocks */
 	VERIFY_CRC64,			/* crc64 sum data blocks */
 	VERIFY_CRC32,			/* crc32 sum data blocks */
@@ -17,7 +20,6 @@ enum {
 	VERIFY_SHA256,			/* sha256 sum data blocks */
 	VERIFY_SHA512,			/* sha512 sum data blocks */
 	VERIFY_XXHASH,			/* xxhash sum data blocks */
-	VERIFY_META,			/* block_num, timestamp etc. */
 	VERIFY_SHA1,			/* sha1 sum data blocks */
 	VERIFY_PATTERN,			/* verify specific patterns */
 	VERIFY_PATTERN_NO_HDR,		/* verify specific patterns, no hdr */
@@ -34,6 +36,11 @@ struct verify_header {
 	uint16_t verify_type;
 	uint32_t len;
 	uint64_t rand_seed;
+	uint64_t offset;
+	uint32_t time_sec;
+	uint32_t time_usec;
+	uint16_t thread;
+	uint16_t numberio;
 	uint32_t crc32;
 };
 
@@ -60,13 +67,6 @@ struct vhdr_crc16 {
 };
 struct vhdr_crc7 {
 	uint8_t crc7;
-};
-struct vhdr_meta {
-	uint64_t offset;
-	unsigned char thread;
-	unsigned short numberio;
-	unsigned long time_sec;
-	unsigned long time_usec;
 };
 struct vhdr_xxhash {
 	uint32_t hash;

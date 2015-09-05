@@ -958,7 +958,7 @@ static int str_verify_pattern_cb(void *data, const char *input)
 	assert(ret != 0);
 	td->o.verify_pattern_bytes = ret;
 	/*
-	 * VERIFY_META could already be set
+	 * VERIFY_* could already be set
 	 */
 	if (!fio_option_is_set(&td->o, verify))
 		td->o.verify = VERIFY_PATTERN;
@@ -2294,9 +2294,13 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = VERIFY_XXHASH,
 			    .help = "Use xxhash checksums for verification",
 			  },
+			  /* Meta information was included into verify_header,
+			   * 'meta' verification is implied by default. */
 			  { .ival = "meta",
-			    .oval = VERIFY_META,
-			    .help = "Use io information",
+			    .oval = VERIFY_HDR_ONLY,
+			    .help = "Use io information for verification. "
+				    "Now is implied by default, thus option is obsolete, "
+				    "don't use it",
 			  },
 			  { .ival = "pattern",
 			    .oval = VERIFY_PATTERN_NO_HDR,

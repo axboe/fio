@@ -1248,7 +1248,12 @@ do_verify=bool	Run the verify phase after a write phase. Only makes sense if
 		verify is set. Defaults to 1.
 
 verify=str	If writing to a file, fio can verify the file contents
-		after each iteration of the job. The allowed values are:
+		after each iteration of the job. Each verification method also implies
+		verification of special header, which is written to the beginning of
+		each block. This header also includes meta information, like offset
+		of the block, block number, timestamp when block was written, etc.
+		verify=str can be combined with verify_pattern=str option.
+		The allowed values are:
 
 			md5	Use an md5 sum of the data area and store
 				it in the header of each block.
@@ -1284,11 +1289,11 @@ verify=str	If writing to a file, fio can verify the file contents
 
 			sha1	Use optimized sha1 as the checksum function.
 
-			meta	Write extra information about each io
-				(timestamp, block number etc.). The block
-				number is verified. The io sequence number is
-				verified for workloads that write data.
-				See also verify_pattern.
+			meta	This option is deprecated, since now meta information is
+				included in generic verification header and meta verification
+				happens by default. For detailed information see the description
+				of the verify=str setting. This option is kept because of
+				compatibility's sake with old configurations. Do not use it.
 
 			pattern	Verify a strict pattern. Normally fio includes
 				a header with some basic information and
@@ -1333,7 +1338,7 @@ verify_pattern=str	If set, fio will fill the io buffers with this
 		buffer at the time(it can be either a decimal or a hex number).
 		The verify_pattern if larger than a 32-bit quantity has to
 		be a hex number that starts with either "0x" or "0X". Use
-		with verify=meta. Also, verify_pattern supports %o format,
+		with verify=str. Also, verify_pattern supports %o format,
 		which means that for each block offset will be written and
 		then verifyied back, e.g.:
 
