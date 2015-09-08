@@ -162,6 +162,7 @@ static int init_submit_worker(struct submit_worker *sw)
 	memcpy(&td->ts, &parent->ts, sizeof(td->ts));
 	td->o.uid = td->o.gid = -1U;
 	dup_files(td, parent);
+	td->eo = parent->eo;
 	fio_options_mem_dupe(td);
 
 	if (ioengine_load(td))
