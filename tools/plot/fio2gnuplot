@@ -488,6 +488,8 @@ def main(argv):
 	    # Insure that we don't have any starting or trailing dash to the filename
 	    gnuplot_output_filename = gnuplot_output_filename[:-1] if gnuplot_output_filename.endswith('-') else gnuplot_output_filename
 	    gnuplot_output_filename = gnuplot_output_filename[1:] if gnuplot_output_filename.startswith('-') else gnuplot_output_filename
+	    if (gnuplot_output_filename == ''):
+            	gnuplot_output_filename='default'	
 
     if parse_global==True:
 	parse_global_files(fio_data_file, global_search)
