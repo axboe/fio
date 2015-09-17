@@ -458,7 +458,15 @@ def main(argv):
     fio_data_file=find_file('.',pattern)
     if len(fio_data_file) == 0:
 	    print "No log file found with pattern %s!" % pattern
-	    sys.exit(1)
+	    # Try numjob log file format if per_numjob_logs=1
+            if (pattern == '*_bw.log'):
+                fio_data_file=find_file('.','*_bw.*.log')
+            if (pattern == '*_iops.log'):
+                fio_data_file=find_file('.','*_iops.*.log')
+            if len(fio_data_file) == 0:
+                sys.exit(1)
+            else:
+                print "Using log file per job format instead"
     else:
 	    print "%d files Selected with pattern '%s'" % (len(fio_data_file), pattern)
 
