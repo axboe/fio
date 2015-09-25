@@ -31,6 +31,7 @@
 int main(int argc, char *argv[], char *envp[])
 {
 	int ret = 1;
+	setvbuf (stdout, NULL, _IOLBF, 0);  /* line buffer stdout to avoid output lines from multiple threads getting mixed */
 
 	if (initialize_fio(envp))
 		return 1;
