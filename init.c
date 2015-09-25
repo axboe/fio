@@ -465,7 +465,7 @@ static int __setup_rate(struct thread_data *td, enum fio_ddir ddir)
 	if (td->o.rate[ddir])
 		td->rate_bps[ddir] = td->o.rate[ddir];
 	else
-		td->rate_bps[ddir] = td->o.rate_iops[ddir] * bs;
+		td->rate_bps[ddir] = (uint64_t) td->o.rate_iops[ddir] * bs;
 
 	if (!td->rate_bps[ddir]) {
 		log_err("rate lower than supported\n");
