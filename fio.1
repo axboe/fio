@@ -704,13 +704,45 @@ which means that we submit each IO as soon as it is available, but can
 be raised to submit bigger batches of IO at the time. If it is set to 0
 the \fBiodepth\fR value will be used.
 .TP
-.BI iodepth_batch_complete \fR=\fPint
+.BI iodepth_batch_complete_min \fR=\fPint "\fR,\fP iodepth_batch_complete" \fR=\fPint
 This defines how many pieces of IO to retrieve at once. It defaults to 1 which
  means that we'll ask for a minimum of 1 IO in the retrieval process from the
 kernel. The IO retrieval will go on until we hit the limit set by
 \fBiodepth_low\fR. If this variable is set to 0, then fio will always check for
 completed events before queuing more IO. This helps reduce IO latency, at the
 cost of more retrieval system calls.
+.TP
+.BI iodepth_batch_complete_max \fR=\fPint
+This defines maximum pieces of IO to
+retrieve at once. This variable should be used along with
+\fBiodepth_batch_complete_min\fR=int variable, specifying the range
+of min and max amount of IO which should be retrieved. By default
+it is equal to \fBiodepth_batch_complete_min\fR value.
+
+Example #1:
+.RS
+.RS
+\fBiodepth_batch_complete_min\fR=1
+.LP
+\fBiodepth_batch_complete_max\fR=<iodepth>
+.RE
+
+which means that we will retrieve at leat 1 IO and up to the
+whole submitted queue depth. If none of IO has been completed
+yet, we will wait.
+
+Example #2:
+.RS
+\fBiodepth_batch_complete_min\fR=0
+.LP
+\fBiodepth_batch_complete_max\fR=<iodepth>
+.RE
+
+which means that we can retrieve up to the whole submitted
+queue depth, but if none of IO has been completed yet, we will
+NOT wait and immediately exit the system call. In this example
+we simply do polling.
+.RE
 .TP
 .BI iodepth_low \fR=\fPint
 Low watermark indicating when to start filling the queue again.  Default:

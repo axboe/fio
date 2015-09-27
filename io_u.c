@@ -1836,7 +1836,9 @@ int io_u_queued_complete(struct thread_data *td, int min_evts)
 	else if (min_evts > td->cur_depth)
 		min_evts = td->cur_depth;
 
-	ret = td_io_getevents(td, min_evts, td->o.iodepth_batch_complete, tvp);
+	/* No worries, td_io_getevents fixes min and max if they are
+	 * set incorrectly */
+	ret = td_io_getevents(td, min_evts, td->o.iodepth_batch_complete_max, tvp);
 	if (ret < 0) {
 		td_verror(td, -ret, "td_io_getevents");
 		return ret;

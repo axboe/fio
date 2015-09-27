@@ -446,8 +446,8 @@ static int wait_for_completions(struct thread_data *td, struct timeval *time)
 	/*
 	 * if the queue is full, we MUST reap at least 1 event
 	 */
-	min_evts = min(td->o.iodepth_batch_complete, td->cur_depth);
-    if ((full && !min_evts) || !td->o.iodepth_batch_complete)
+	min_evts = min(td->o.iodepth_batch_complete_min, td->cur_depth);
+    if ((full && !min_evts) || !td->o.iodepth_batch_complete_min)
 		min_evts = 1;
 
 	if (time && (__should_check_rate(td, DDIR_READ) ||
@@ -549,6 +549,12 @@ sync_done:
 		return 1;
 
 	return 0;
+}
+
+static inline int io_in_polling(struct thread_data *td)
+{
+	return !td->o.iodepth_batch_complete_min &&
+		   !td->o.iodepth_batch_complete_max;
 }
 
 /*
@@ -684,7 +690,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 		 */
 reap:
 		full = queue_full(td) || (ret == FIO_Q_BUSY && td->cur_depth);
-		if (full || !td->o.iodepth_batch_complete)
+		if (full || io_in_polling(td))
 			ret = wait_for_completions(td, NULL);
 
 		if (ret < 0)
@@ -932,7 +938,7 @@ static uint64_t do_io(struct thread_data *td)
 reap:
 			full = queue_full(td) ||
 				(ret == FIO_Q_BUSY && td->cur_depth);
-			if (full || !td->o.iodepth_batch_complete)
+			if (full || io_in_polling(td))
 				ret = wait_for_completions(td, &comp_time);
 		}
 		if (ret < 0)

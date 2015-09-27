@@ -54,7 +54,8 @@ struct thread_options {
 	unsigned int iodepth;
 	unsigned int iodepth_low;
 	unsigned int iodepth_batch;
-	unsigned int iodepth_batch_complete;
+	unsigned int iodepth_batch_complete_min;
+	unsigned int iodepth_batch_complete_max;
 
 	unsigned long long size;
 	unsigned long long io_limit;
@@ -299,7 +300,9 @@ struct thread_options_pack {
 	uint32_t iodepth;
 	uint32_t iodepth_low;
 	uint32_t iodepth_batch;
-	uint32_t iodepth_batch_complete;
+	uint32_t iodepth_batch_complete_min;
+	uint32_t iodepth_batch_complete_max;
+	uint32_t __proper_alignment_for_64b;
 
 	uint64_t size;
 	uint64_t io_limit;

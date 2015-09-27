@@ -630,6 +630,13 @@ static int fixup_options(struct thread_data *td)
 	if (o->iodepth_batch > o->iodepth || !o->iodepth_batch)
 		o->iodepth_batch = o->iodepth;
 
+	/*
+	 * If max batch complete number isn't set or set incorrectly,
+	 * default to the same as iodepth_batch_complete_min
+	 */
+	if (o->iodepth_batch_complete_min > o->iodepth_batch_complete_max)
+		o->iodepth_batch_complete_max = o->iodepth_batch_complete_min;
+
 	if (o->nr_files > td->files_index)
 		o->nr_files = td->files_index;
 

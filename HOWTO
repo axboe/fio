@@ -815,6 +815,7 @@ iodepth_batch=int This defines how many pieces of IO to submit at once.
 		bigger batches of IO at the time. If it is set to 0 the iodepth
 		value will be used.
 
+iodepth_batch_complete_min=int
 iodepth_batch_complete=int This defines how many pieces of IO to retrieve
 		at once. It defaults to 1 which means that we'll ask
 		for a minimum of 1 IO in the retrieval process from
@@ -823,6 +824,31 @@ iodepth_batch_complete=int This defines how many pieces of IO to retrieve
 		set to 0, then fio will always check for completed
 		events before queuing more IO. This helps reduce
 		IO latency, at the cost of more retrieval system calls.
+
+iodepth_batch_complete_max=int This defines maximum pieces of IO to
+		retrieve at once. This variable should be used along with
+		iodepth_batch_complete_min=int variable, specifying the range
+		of min and max amount of IO which should be retrieved. By default
+		it is equal to iodepth_batch_complete_min value.
+
+		Example #1:
+
+		iodepth_batch_complete_min=1
+		iodepth_batch_complete_max=<iodepth>
+
+		which means that we will retrieve at leat 1 IO and up to the
+		whole submitted queue depth. If none of IO has been completed
+		yet, we will wait.
+
+		Example #2:
+
+		iodepth_batch_complete_min=0
+		iodepth_batch_complete_max=<iodepth>
+
+		which means that we can retrieve up to the whole submitted
+		queue depth, but if none of IO has been completed yet, we will
+		NOT wait and immediately exit the system call. In this example
+		we simply do polling.
 
 iodepth_low=int	The low water mark indicating when to start filling
 		the queue again. Defaults to the same as iodepth, meaning
