@@ -812,7 +812,8 @@ iodepth_batch_submit=int
 iodepth_batch=int This defines how many pieces of IO to submit at once.
 		It defaults to 1 which means that we submit each IO
 		as soon as it is available, but can be raised to submit
-		bigger batches of IO at the time.
+		bigger batches of IO at the time. If it is set to 0 the iodepth
+		value will be used.
 
 iodepth_batch_complete=int This defines how many pieces of IO to retrieve
 		at once. It defaults to 1 which means that we'll ask

@@ -698,8 +698,11 @@ Linux when using libaio and not setting \fBdirect\fR=1, since buffered IO is
 not async on that OS. Keep an eye on the IO depth distribution in the
 fio output to verify that the achieved depth is as expected. Default: 1.
 .TP
-.BI iodepth_batch \fR=\fPint
-Number of I/Os to submit at once.  Default: \fBiodepth\fR.
+.BI iodepth_batch \fR=\fPint "\fR,\fP iodepth_batch_submit" \fR=\fPint
+This defines how many pieces of IO to submit at once. It defaults to 1
+which means that we submit each IO as soon as it is available, but can
+be raised to submit bigger batches of IO at the time. If it is set to 0
+the \fBiodepth\fR value will be used.
 .TP
 .BI iodepth_batch_complete \fR=\fPint
 This defines how many pieces of IO to retrieve at once. It defaults to 1 which
