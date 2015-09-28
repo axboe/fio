@@ -144,6 +144,7 @@ struct ioengine_ops {
 	int (*commit)(struct thread_data *);
 	int (*getevents)(struct thread_data *, unsigned int, unsigned int, const struct timespec *);
 	struct io_u *(*event)(struct thread_data *, int);
+	const char *(*errdetails)(struct io_u *);  // null when not supported by engine
 	int (*cancel)(struct thread_data *, struct io_u *);
 	void (*cleanup)(struct thread_data *);
 	int (*open_file)(struct thread_data *, struct fio_file *);
