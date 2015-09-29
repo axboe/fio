@@ -885,8 +885,8 @@ int setup_files(struct thread_data *td)
 		if (f->io_size == -1ULL)
 			total_size = -1ULL;
 		else {
-                        if (o->size_percent)
-                                f->io_size = (f->io_size * o->size_percent) / 100;
+            if (o->size_percent)
+            	f->io_size = (f->io_size * o->size_percent) / 100;
 			total_size += f->io_size;
 		}
 

@@ -1578,6 +1578,10 @@ static void __io_u_log_error(struct thread_data *td, struct io_u *io_u)
 		io_ddir_name(io_u->ddir),
 		io_u->offset, io_u->xfer_buflen);
 
+	if (td->io_ops->errdetails) {
+		log_err("fio: %s\n", td->io_ops->errdetails(io_u));
+	}
+
 	if (!td->error)
 		td_verror(td, io_u->error, "io_u error");
 }
