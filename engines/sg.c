@@ -69,6 +69,35 @@ static int pollin_events(struct pollfd *pfds, int fds)
 	return 0;
 }
 
+static int sg_fd_read(int fd, void *data, size_t size)
+{
+	int err = 0;
+
+	while (size) {
+		ssize_t ret;
+
+		ret = read(fd, data, size);
+		if (ret < 0) {
+			if (errno == EAGAIN || errno == EINTR)
+				continue;
+			err = errno;
+			break;
+		} else if (!ret)
+			break;
+		else {
+			data += ret;
+			size -= ret;
+		}
+	}
+
+	if (err)
+		return err;
+	if (size)
+		return EAGAIN;
+
+	return 0;
+}
+
 static int fio_sgio_getevents(struct thread_data *td, unsigned int min,
 			      unsigned int max,
 			      const struct timespec fio_unused *t)
@@ -125,27 +154,20 @@ re_read:
 		events = 0;
 		for_each_file(td, f, i) {
 			for (eventNum = 0; eventNum < left; eventNum++) {
-				ret = read(f->fd, p, sizeof(struct sg_io_hdr));
+				ret = sg_fd_read(f->fd, p, sizeof(struct sg_io_hdr));
 				dprint(FD_IO, "sgio_getevents: ret: %d\n", ret);
-				if (ret < 0) {
-					/*
-					 *  not sure if EINTR is needed,
-					 *  but seems like it should be.
-					 */
-					if (errno == EAGAIN || errno == EINTR)
-						continue;
-					r = -errno;
-					td_verror(td, errno, "read");
+				if (ret) {
+					r = -ret;
+					td_verror(td, r, "sg_read");
 					break;
-				} else if (ret) {
-					p += ret;
-					events += 1;  /* ret / sizeof(struct sg_io_hdr); */
-					dprint(FD_IO, "sgio_getevents: events: %d\n", events);
 				}
+				p += sizeof(struct sg_io_hdr);
+				events++;
+				dprint(FD_IO, "sgio_getevents: events: %d\n", events);
 			}
 		}
 
-		if (r < 0)
+		if (r < 0 && !events)
 			break;
 		if (!events) {
 			usleep(1000);
