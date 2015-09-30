@@ -965,6 +965,25 @@ fi
 echo "strcasestr                    $strcasestr"
 
 ##########################################
+# strlcat() probe
+strlcat="no"
+cat > $TMPC << EOF
+#include <string.h>
+int main(int argc, char **argv)
+{
+  static char dst[64];
+  static char *string = "This is a string";
+  memset(dst, 0, sizeof(dst));
+  strlcat(dst, string, sizeof(dst));
+  return 0;
+}
+EOF
+if compile_prog "" "" "strlcat"; then
+  strlcat="yes"
+fi
+echo "strlcat                       $strlcat"
+
+##########################################
 # getopt_long_only() probe
 getopt_long_only="no"
 cat > $TMPC << EOF
@@ -1611,6 +1630,9 @@ if test "$strsep" = "yes" ; then
 fi
 if test "$strcasestr" = "yes" ; then
   output_sym "CONFIG_STRCASESTR"
+fi
+if test "$strlcat" = "yes" ; then
+  output_sym "CONFIG_STRLCAT"
 fi
 if test "$getopt_long_only" = "yes" ; then
   output_sym "CONFIG_GETOPT_LONG_ONLY"

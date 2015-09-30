@@ -15,7 +15,7 @@
 #include <guasi.h>
 #endif
 
-#define FIO_IOOPS_VERSION	21
+#define FIO_IOOPS_VERSION	22
 
 enum {
 	IO_U_F_FREE		= 1 << 0,
@@ -144,6 +144,7 @@ struct ioengine_ops {
 	int (*commit)(struct thread_data *);
 	int (*getevents)(struct thread_data *, unsigned int, unsigned int, const struct timespec *);
 	struct io_u *(*event)(struct thread_data *, int);
+	char *(*errdetails)(struct io_u *);
 	int (*cancel)(struct thread_data *, struct io_u *);
 	void (*cleanup)(struct thread_data *);
 	int (*open_file)(struct thread_data *, struct fio_file *);

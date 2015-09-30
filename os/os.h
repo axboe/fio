@@ -68,6 +68,10 @@ typedef struct aiocb os_aiocb_t;
 #include "../lib/strsep.h"
 #endif
 
+#ifndef CONFIG_STRLCAT
+#include "../lib/strlcat.h"
+#endif
+
 #ifdef MSG_DONTWAIT
 #define OS_MSG_DONTWAIT	MSG_DONTWAIT
 #endif

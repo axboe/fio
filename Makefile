@@ -104,6 +104,9 @@ endif
 ifndef CONFIG_STRCASESTR
   SOURCE += lib/strcasestr.c
 endif
+ifndef CONFIG_STRLCAT
+  SOURCE += lib/strlcat.c
+endif
 ifndef CONFIG_GETOPT_LONG_ONLY
   SOURCE += lib/getopt_long.c
 endif
