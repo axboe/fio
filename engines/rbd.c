@@ -185,14 +185,14 @@ static void _fio_rbd_finish_aiocb(rbd_completion_t comp, void *data)
 	 * a specific error. So we have to assume that it can't do
 	 * partial completions.
 	 */
-	fri->io_complete = 1;
-	
 	ret = rbd_aio_get_return_value(fri->completion);
 	if (ret < 0) {
 		io_u->error = ret;
 		io_u->resid = io_u->xfer_buflen;
 	} else
 		io_u->error = 0;
+
+	fri->io_complete = 1;
 }
 
 static struct io_u *fio_rbd_event(struct thread_data *td, int event)
