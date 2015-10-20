@@ -534,11 +534,6 @@ static void sig_int(int sig)
 	fio_clients_terminate();
 }
 
-static void sig_show_status(int sig)
-{
-	show_running_run_stats();
-}
-
 static void client_signal_handler(void)
 {
 	struct sigaction act;

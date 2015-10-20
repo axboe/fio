@@ -100,7 +100,7 @@ static void sig_int(int sig)
 	}
 }
 
-static void sig_show_status(int sig)
+void sig_show_status(int sig)
 {
 	show_running_run_stats();
 }
