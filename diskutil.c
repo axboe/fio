@@ -704,21 +704,22 @@ void show_disk_util(int terse, struct json_object *parent)
 		return;
 	}
 
-	if (output_format == FIO_OUTPUT_JSON)
+	if (output_format & FIO_OUTPUT_JSON)
 		assert(parent);
 
-	if (!terse && output_format != FIO_OUTPUT_JSON)
+	if (!terse && !(output_format & FIO_OUTPUT_JSON))
 		log_info("\nDisk stats (read/write):\n");
 
-	if (output_format == FIO_OUTPUT_JSON)
+	if (output_format & FIO_OUTPUT_JSON)
 		json_object_add_disk_utils(parent, &disk_list);
-	else
+	if (output_format & ~(FIO_OUTPUT_JSON)) {
 		flist_for_each(entry, &disk_list) {
 			du = flist_entry(entry, struct disk_util, list);
 
 			aggregate_slaves_stats(du);
 			print_disk_util(&du->dus, &du->agg, terse);
 		}
+	}
 
 	fio_mutex_up(disk_util_mutex);
 }

@@ -674,9 +674,13 @@ extern const char *fio_get_os_string(int);
 #endif
 
 enum {
-	FIO_OUTPUT_TERSE	= 0,
-	FIO_OUTPUT_JSON,
-	FIO_OUTPUT_NORMAL,
+	__FIO_OUTPUT_TERSE	= 0,
+	__FIO_OUTPUT_JSON	= 1,
+	__FIO_OUTPUT_NORMAL	= 2,
+
+	FIO_OUTPUT_TERSE	= 1U << __FIO_OUTPUT_TERSE,
+	FIO_OUTPUT_JSON		= 1U << __FIO_OUTPUT_JSON,
+	FIO_OUTPUT_NORMAL	= 1U << __FIO_OUTPUT_NORMAL,
 };
 
 enum {

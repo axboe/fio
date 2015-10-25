@@ -1317,7 +1317,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (!o->name)
 		o->name = strdup(jobname);
 
-	if (output_format == FIO_OUTPUT_NORMAL) {
+	if (output_format & FIO_OUTPUT_NORMAL) {
 		if (!job_add_num) {
 			if (is_backend && !recursed)
 				fio_server_send_add_job(td);
@@ -2532,7 +2532,7 @@ int parse_options(int argc, char *argv[])
 		return 0;
 	}
 
-	if (output_format == FIO_OUTPUT_NORMAL)
+	if (output_format & FIO_OUTPUT_NORMAL)
 		log_info("%s\n", fio_version_string);
 
 	return 0;

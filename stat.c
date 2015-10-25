@@ -1211,13 +1211,16 @@ static void show_thread_status_terse(struct thread_stat *ts,
 struct json_object *show_thread_status(struct thread_stat *ts,
 				       struct group_run_stats *rs)
 {
-	if (output_format == FIO_OUTPUT_TERSE)
+	struct json_object *ret = NULL;
+
+	if (output_format & FIO_OUTPUT_TERSE)
 		show_thread_status_terse(ts, rs);
-	else if (output_format == FIO_OUTPUT_JSON)
-		return show_thread_status_json(ts, rs);
-	else
+	if (output_format & FIO_OUTPUT_JSON)
+		ret = show_thread_status_json(ts, rs);
+	if (output_format & FIO_OUTPUT_NORMAL)
 		show_thread_status_normal(ts, rs);
-	return NULL;
+
+	return ret;
 }
 
 static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
@@ -1548,9 +1551,9 @@ void __show_run_stats(void)
 	/*
 	 * don't overwrite last signal output
 	 */
-	if (output_format == FIO_OUTPUT_NORMAL)
+	if (output_format & FIO_OUTPUT_NORMAL)
 		log_info("\n");
-	else if (output_format == FIO_OUTPUT_JSON) {
+	if (output_format & FIO_OUTPUT_JSON) {
 		char time_buf[32];
 		time_t time_p;
 
@@ -1573,15 +1576,18 @@ void __show_run_stats(void)
 
 		if (is_backend)
 			fio_server_send_ts(ts, rs);
-		else if (output_format == FIO_OUTPUT_TERSE)
-			show_thread_status_terse(ts, rs);
-		else if (output_format == FIO_OUTPUT_JSON) {
-			struct json_object *tmp = show_thread_status_json(ts, rs);
-			json_array_add_value_object(array, tmp);
-		} else
-			show_thread_status_normal(ts, rs);
+		else {
+			if (output_format & FIO_OUTPUT_TERSE)
+				show_thread_status_terse(ts, rs);
+			if (output_format & FIO_OUTPUT_JSON) {
+				struct json_object *tmp = show_thread_status_json(ts, rs);
+				json_array_add_value_object(array, tmp);
+			}
+			if (output_format & FIO_OUTPUT_NORMAL)
+				show_thread_status_normal(ts, rs);
+		}
 	}
-	if (output_format == FIO_OUTPUT_JSON) {
+	if (output_format & FIO_OUTPUT_JSON) {
 		/* disk util stats, if any */
 		show_disk_util(1, root);
 
@@ -1598,18 +1604,18 @@ void __show_run_stats(void)
 		rs->groupid = i;
 		if (is_backend)
 			fio_server_send_gs(rs);
-		else if (output_format == FIO_OUTPUT_NORMAL)
+		else if (output_format & FIO_OUTPUT_NORMAL)
 			show_group_stats(rs);
 	}
 
 	if (is_backend)
 		fio_server_send_du();
-	else if (output_format == FIO_OUTPUT_NORMAL) {
+	else if (output_format & FIO_OUTPUT_NORMAL) {
 		show_disk_util(0, NULL);
 		show_idle_prof_stats(FIO_OUTPUT_NORMAL, NULL);
 	}
 
-	if ( !(output_format == FIO_OUTPUT_TERSE) && append_terse_output) {
+	if ( !(output_format & FIO_OUTPUT_TERSE) && append_terse_output) {
 		log_info("\nAdditional Terse Output:\n");
 
 		for (i = 0; i < nr_ts; i++) {
