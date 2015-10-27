@@ -39,7 +39,7 @@ size_t buf_output_flush(struct buf_output *out)
 	size_t ret = 0;
 
 	if (out->buflen) {
-		ret = log_local_buf(out->buf, out->buflen);
+		ret = log_info_buf(out->buf, out->buflen);
 		memset(out->buf, 0, out->max_buflen);
 		out->buflen = 0;
 	}
