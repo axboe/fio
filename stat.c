@@ -1627,15 +1627,14 @@ void __show_run_stats(void)
 		show_idle_prof_stats(FIO_OUTPUT_NORMAL, NULL, &output[__FIO_OUTPUT_NORMAL]);
 	}
 
-	for (i = 0; i < FIO_OUTPUT_NR; i++)
+	for (i = 0; i < FIO_OUTPUT_NR; i++) {
 		buf_output_flush(&output[i]);
+		buf_output_free(&output[i]);
+	}
 
 	log_info_flush();
 	free(runstats);
 	free(threadstats);
-
-	for (i = 0; i < FIO_OUTPUT_NR; i++)
-		buf_output_free(&output[i]);
 }
 
 void show_run_stats(void)
