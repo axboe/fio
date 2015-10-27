@@ -6,7 +6,7 @@
 
 #include "fio.h"
 
-int log_valist(const char *str, va_list args)
+size_t log_valist(const char *str, va_list args)
 {
 	char buffer[1024];
 	size_t len;
@@ -24,7 +24,7 @@ int log_valist(const char *str, va_list args)
 	return len;
 }
 
-int log_local_buf(const char *buf, size_t len)
+size_t log_local_buf(const char *buf, size_t len)
 {
 	if (log_syslog)
 		syslog(LOG_INFO, "%s", buf);
@@ -34,7 +34,7 @@ int log_local_buf(const char *buf, size_t len)
 	return len;
 }
 
-int log_info(const char *format, ...)
+size_t log_info(const char *format, ...)
 {
 	char buffer[1024];
 	va_list args;
@@ -54,7 +54,7 @@ int log_info(const char *format, ...)
 		return fwrite(buffer, len, 1, f_out);
 }
 
-int __log_buf(struct buf_output *buf, const char *format, ...)
+size_t __log_buf(struct buf_output *buf, const char *format, ...)
 {
 	char buffer[1024];
 	va_list args;
@@ -65,8 +65,7 @@ int __log_buf(struct buf_output *buf, const char *format, ...)
 	va_end(args);
 	len = min(len, sizeof(buffer) - 1);
 
-	buf_output_add(buf, buffer, len);
-	return 0;
+	return buf_output_add(buf, buffer, len);
 }
 
 int log_info_flush(void)
@@ -77,7 +76,7 @@ int log_info_flush(void)
 	return fflush(f_out);
 }
 
-int log_err(const char *format, ...)
+size_t log_err(const char *format, ...)
 {
 	char buffer[1024];
 	va_list args;

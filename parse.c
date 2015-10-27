@@ -52,7 +52,7 @@ static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
 }
 
 static void show_option_range(struct fio_option *o,
-				int (*logger)(const char *format, ...))
+			      size_t (*logger)(const char *format, ...))
 {
 	if (o->type == FIO_OPT_FLOAT_LIST) {
 		if (o->minfp == DBL_MIN && o->maxfp == DBL_MAX)
@@ -109,7 +109,7 @@ static void show_option_help(struct fio_option *o, int is_err)
 		"no argument (opt)",
 		"deprecated",
 	};
-	int (*logger)(const char *format, ...);
+	size_t (*logger)(const char *format, ...);
 
 	if (is_err)
 		logger = log_err;
