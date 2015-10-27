@@ -7,12 +7,11 @@
 
 #define BUF_INC	1024
 
-void buf_output_init(struct buf_output *out, int index)
+void buf_output_init(struct buf_output *out)
 {
-	out->max_buflen = BUF_INC;
-	out->buf = malloc(out->max_buflen);
-	memset(out->buf, 0, out->max_buflen);
+	out->max_buflen = 0;
 	out->buflen = 0;
+	out->buf = NULL;
 }
 
 void buf_output_free(struct buf_output *out)
@@ -23,11 +22,11 @@ void buf_output_free(struct buf_output *out)
 size_t buf_output_add(struct buf_output *out, const char *buf, size_t len)
 {
 	while (out->max_buflen - out->buflen < len) {
-		size_t newlen = out->max_buflen + BUF_INC - out->buflen;
+		size_t old_max = out->max_buflen;
 
 		out->max_buflen += BUF_INC;
 		out->buf = realloc(out->buf, out->max_buflen);
-		memset(&out->buf[out->buflen], 0, newlen);
+		memset(&out->buf[old_max], 0, BUF_INC);
 	}
 
 	memcpy(&out->buf[out->buflen], buf, len);

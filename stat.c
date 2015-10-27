@@ -1400,8 +1400,6 @@ void __show_run_stats(void)
 
 	runstats = malloc(sizeof(struct group_run_stats) * (groupid + 1));
 
-	memset(output, 0, sizeof(output));
-
 	for (i = 0; i < groupid + 1; i++)
 		init_group_run_stat(&runstats[i]);
 
@@ -1560,7 +1558,7 @@ void __show_run_stats(void)
 	}
 
 	for (i = 0; i < FIO_OUTPUT_NR; i++)
-		buf_output_init(&output[i], i);
+		buf_output_init(&output[i]);
 
 	/*
 	 * don't overwrite last signal output
