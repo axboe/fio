@@ -19,6 +19,7 @@ enum fio_memtype {
 	MEM_SHMHUGE,	/* use shared memory segments with huge pages */
 	MEM_MMAP,	/* use anonynomous mmap */
 	MEM_MMAPHUGE,	/* memory mapped huge file */
+	MEM_MMAPSHARED, /* use mmap with shared flag */
 };
 
 #define ERROR_STR_MAX	128
