@@ -117,7 +117,7 @@ static int read_data(int fd, void *data, size_t size)
 
 static void fio_client_json_init(void)
 {
-	if (output_format != FIO_OUTPUT_JSON)
+	if (!(output_format & FIO_OUTPUT_JSON))
 		return;
 	root = json_create_object();
 	json_object_add_value_string(root, "fio version", fio_version_string);
@@ -129,7 +129,7 @@ static void fio_client_json_init(void)
 
 static void fio_client_json_fini(void)
 {
-	if (output_format != FIO_OUTPUT_JSON)
+	if (!(output_format & FIO_OUTPUT_JSON))
 		return;
 	json_print_object(root, NULL);
 	log_info("\n");
@@ -1029,13 +1029,16 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 		log_info("\nDisk stats (read/write):\n");
 	}
 
-	if (output_format == FIO_OUTPUT_JSON) {
+	if (output_format & FIO_OUTPUT_JSON) {
 		struct json_object *duobj;
 		json_array_add_disk_util(&du->dus, &du->agg, du_array);
 		duobj = json_array_last_value_object(du_array);
 		json_object_add_client_info(duobj, client);
-	} else
-		print_disk_util(&du->dus, &du->agg, output_format == FIO_OUTPUT_TERSE, NULL);
+	}
+	if (output_format & FIO_OUTPUT_TERSE)
+		print_disk_util(&du->dus, &du->agg, 1, NULL);
+	if (output_format & FIO_OUTPUT_NORMAL)
+		print_disk_util(&du->dus, &du->agg, 0, NULL);
 }
 
 static void convert_jobs_eta(struct jobs_eta *je)
