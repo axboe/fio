@@ -1083,9 +1083,10 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 
 	/* ETA Info */
 	je = get_jobs_eta(1, &size);
-	json_object_add_value_int(root, "eta", je->eta_sec);
-	json_object_add_value_int(root, "elapsed", je->elapsed_sec);
-
+	if (je) {
+		json_object_add_value_int(root, "eta", je->eta_sec);
+		json_object_add_value_int(root, "elapsed", je->elapsed_sec);
+	}
 
 	add_ddir_status_json(ts, rs, DDIR_READ, root);
 	add_ddir_status_json(ts, rs, DDIR_WRITE, root);
