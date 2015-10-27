@@ -917,7 +917,7 @@ int setup_files(struct thread_data *td)
 		}
 
 		td->ts.nr_block_infos = len;
-		for (int i = 0; i < len; i++)
+		for (i = 0; i < len; i++)
 			td->ts.block_infos[i] =
 				BLOCK_INFO(0, BLOCK_STATE_UNINIT);
 	} else

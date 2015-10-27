@@ -1173,7 +1173,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 
 		if (len) {
 			struct json_object *block, *percentile_object, *states;
-			int state, i;
+			int state;
 			block = json_create_object();
 			json_object_add_value_object(root, "block", block);
 
