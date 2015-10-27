@@ -131,7 +131,7 @@ static void fio_client_json_fini(void)
 {
 	if (output_format != FIO_OUTPUT_JSON)
 		return;
-	json_print_object(root);
+	json_print_object(root, NULL);
 	log_info("\n");
 	json_free_object(root);
 	root = NULL;
@@ -936,7 +936,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct cmd_ts_pdu *p = (struct cmd_ts_pdu *) cmd->payload;
 	struct json_object *tsobj;
 
-	tsobj = show_thread_status(&p->ts, &p->rs);
+	tsobj = show_thread_status(&p->ts, &p->rs, NULL);
 	client->did_stat = 1;
 	if (tsobj) {
 		json_object_add_client_info(tsobj, client);
@@ -956,7 +956,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	if (++sum_stat_nr == sum_stat_clients) {
 		strcpy(client_ts.name, "All clients");
-		tsobj = show_thread_status(&client_ts, &client_gs);
+		tsobj = show_thread_status(&client_ts, &client_gs, NULL);
 		if (tsobj) {
 			json_object_add_client_info(tsobj, client);
 			json_array_add_value_object(clients_array, tsobj);
@@ -968,7 +968,7 @@ static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct group_run_stats *gs = (struct group_run_stats *) cmd->payload;
 
-	show_group_stats(gs);
+	show_group_stats(gs, NULL);
 }
 
 static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -1035,7 +1035,7 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 		duobj = json_array_last_value_object(du_array);
 		json_object_add_client_info(duobj, client);
 	} else
-		print_disk_util(&du->dus, &du->agg, output_format == FIO_OUTPUT_TERSE);
+		print_disk_util(&du->dus, &du->agg, output_format == FIO_OUTPUT_TERSE, NULL);
 }
 
 static void convert_jobs_eta(struct jobs_eta *je)

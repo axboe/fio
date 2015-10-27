@@ -231,7 +231,7 @@ int json_object_add_value_type(struct json_object *obj, const char *name, int ty
 	return 0;
 }
 
-static void json_print_array(struct json_array *array);
+static void json_print_array(struct json_array *array, struct buf_output *);
 int json_array_add_value_type(struct json_array *array, int type, ...)
 {
 	struct json_value *value;
@@ -290,70 +290,70 @@ static int json_value_level(struct json_value *value)
 		return json_array_level(value->parent_array) + 1;
 }
 
-static void json_print_level(int level)
+static void json_print_level(int level, struct buf_output *out)
 {
 	while (level-- > 0)
-		log_info("  ");
+		log_buf(out, "  ");
 }
 
-static void json_print_pair(struct json_pair *pair);
-static void json_print_array(struct json_array *array);
-static void json_print_value(struct json_value *value);
-void json_print_object(struct json_object *obj)
+static void json_print_pair(struct json_pair *pair, struct buf_output *);
+static void json_print_array(struct json_array *array, struct buf_output *);
+static void json_print_value(struct json_value *value, struct buf_output *);
+void json_print_object(struct json_object *obj, struct buf_output *out)
 {
 	int i;
 
-	log_info("{\n");
+	log_buf(out, "{\n");
 	for (i = 0; i < obj->pair_cnt; i++) {
 		if (i > 0)
-			log_info(",\n");
-		json_print_pair(obj->pairs[i]);
+			log_buf(out, ",\n");
+		json_print_pair(obj->pairs[i], out);
 	}
-	log_info("\n");
-	json_print_level(json_object_level(obj));
-	log_info("}");
+	log_buf(out, "\n");
+	json_print_level(json_object_level(obj), out);
+	log_buf(out, "}");
 }
 
-static void json_print_pair(struct json_pair *pair)
+static void json_print_pair(struct json_pair *pair, struct buf_output *out)
 {
-	json_print_level(json_pair_level(pair));
-	log_info("\"%s\" : ", pair->name);
-	json_print_value(pair->value);
+	json_print_level(json_pair_level(pair), out);
+	log_buf(out, "\"%s\" : ", pair->name);
+	json_print_value(pair->value, out);
 }
 
-static void json_print_array(struct json_array *array)
+static void json_print_array(struct json_array *array, struct buf_output *out)
 {
 	int i;
 
-	log_info("[\n");
+	log_buf(out, "[\n");
 	for (i = 0; i < array->value_cnt; i++) {
 		if (i > 0)
-			log_info(",\n");
-		json_print_level(json_value_level(array->values[i]));
-		json_print_value(array->values[i]);
+			log_buf(out, ",\n");
+		json_print_level(json_value_level(array->values[i]), out);
+		json_print_value(array->values[i], out);
 	}
-	log_info("\n");
-	json_print_level(json_array_level(array));
-	log_info("]");
+	log_buf(out, "\n");
+	json_print_level(json_array_level(array), out);
+	log_buf(out, "]");
 }
 
-static void json_print_value(struct json_value *value)
+static void json_print_value(struct json_value *value, struct buf_output *out)
 {
 	switch (value->type) {
 	case JSON_TYPE_STRING:
-		log_info("\"%s\"", value->string);
+		log_buf(out, "\"%s\"", value->string);
 		break;
 	case JSON_TYPE_INTEGER:
-		log_info("%lld", value->integer_number);
+		log_buf(out, "%lld", value->integer_number);
 		break;
 	case JSON_TYPE_FLOAT:
-		log_info("%.2f", value->float_number);
+		log_buf(out, "%.2f", value->float_number);
 		break;
 	case JSON_TYPE_OBJECT:
-		json_print_object(value->object);
+		json_print_object(value->object, out);
 		break;
 	case JSON_TYPE_ARRAY:
-		json_print_array(value->array);
+		json_print_array(value->array, out);
 		break;
 	}
 }

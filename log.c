@@ -54,6 +54,21 @@ int log_info(const char *format, ...)
 		return fwrite(buffer, len, 1, f_out);
 }
 
+int __log_buf(struct buf_output *buf, const char *format, ...)
+{
+	char buffer[1024];
+	va_list args;
+	size_t len;
+
+	va_start(args, format);
+	len = vsnprintf(buffer, sizeof(buffer), format, args);
+	va_end(args);
+	len = min(len, sizeof(buffer) - 1);
+
+	buf_output_add(buf, buffer, len);
+	return 0;
+}
+
 int log_info_flush(void)
 {
 	if (is_backend || log_syslog)

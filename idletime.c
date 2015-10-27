@@ -428,7 +428,7 @@ int fio_idle_prof_parse_opt(const char *args)
 		fio_idle_prof_init();
 		fio_idle_prof_start();
 		fio_idle_prof_stop();
-		show_idle_prof_stats(FIO_OUTPUT_NORMAL, NULL);
+		show_idle_prof_stats(FIO_OUTPUT_NORMAL, NULL, NULL);
 		return 1;
 	} else if (strcmp("system", args) == 0) {
 		ipc.opt = IDLE_PROF_OPT_SYSTEM;
@@ -446,7 +446,8 @@ int fio_idle_prof_parse_opt(const char *args)
 #endif
 }
 
-void show_idle_prof_stats(int output, struct json_object *parent)
+void show_idle_prof_stats(int output, struct json_object *parent,
+			  struct buf_output *out)
 {
 	int i, nr_cpus = ipc.nr_cpus;
 	struct json_object *tmp;
@@ -454,23 +455,23 @@ void show_idle_prof_stats(int output, struct json_object *parent)
 
 	if (output == FIO_OUTPUT_NORMAL) {
 		if (ipc.opt > IDLE_PROF_OPT_CALI)
-			log_info("\nCPU idleness:\n");
+			log_buf(out, "\nCPU idleness:\n");
 		else if (ipc.opt == IDLE_PROF_OPT_CALI)
-			log_info("CPU idleness:\n");
+			log_buf(out, "CPU idleness:\n");
 
 		if (ipc.opt >= IDLE_PROF_OPT_SYSTEM)
-			log_info("  system: %3.2f%%\n", fio_idle_prof_cpu_stat(-1));
+			log_buf(out, "  system: %3.2f%%\n", fio_idle_prof_cpu_stat(-1));
 
 		if (ipc.opt == IDLE_PROF_OPT_PERCPU) {
-			log_info("  percpu: %3.2f%%", fio_idle_prof_cpu_stat(0));
+			log_buf(out, "  percpu: %3.2f%%", fio_idle_prof_cpu_stat(0));
 			for (i = 1; i < nr_cpus; i++)
-				log_info(", %3.2f%%", fio_idle_prof_cpu_stat(i));
-			log_info("\n");
+				log_buf(out, ", %3.2f%%", fio_idle_prof_cpu_stat(i));
+			log_buf(out, "\n");
 		}
 
 		if (ipc.opt >= IDLE_PROF_OPT_CALI) {
-			log_info("  unit work: mean=%3.2fus,", ipc.cali_mean);
-			log_info(" stddev=%3.2f\n", ipc.cali_stddev);
+			log_buf(out, "  unit work: mean=%3.2fus,", ipc.cali_mean);
+			log_buf(out, " stddev=%3.2f\n", ipc.cali_stddev);
 		}
 
 		/* dynamic mem allocations can now be freed */

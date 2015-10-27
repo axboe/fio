@@ -2,6 +2,7 @@
 #define FIO_STAT_H
 
 #include "iolog.h"
+#include "lib/output_buffer.h"
 
 struct group_run_stats {
 	uint64_t max_run[DDIR_RWDIR_CNT], min_run[DDIR_RWDIR_CNT];
@@ -246,8 +247,8 @@ extern struct jobs_eta *get_jobs_eta(int force, size_t *size);
 extern void stat_init(void);
 extern void stat_exit(void);
 
-extern struct json_object * show_thread_status(struct thread_stat *ts, struct group_run_stats *rs);
-extern void show_group_stats(struct group_run_stats *rs);
+extern struct json_object * show_thread_status(struct thread_stat *ts, struct group_run_stats *rs, struct buf_output *);
+extern void show_group_stats(struct group_run_stats *rs, struct buf_output *);
 extern int calc_thread_status(struct jobs_eta *je, int force);
 extern void display_thread_status(struct jobs_eta *je);
 extern void show_run_stats(void);

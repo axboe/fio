@@ -1,5 +1,8 @@
 #ifndef __JSON__H
 #define __JSON__H
+
+#include "lib/output_buffer.h"
+
 struct json_object;
 struct json_array;
 struct json_pair;
@@ -76,5 +79,5 @@ int json_array_add_value_type(struct json_array *array, int type, ...);
 #define json_array_last_value_object(obj) \
 	(obj->values[obj->value_cnt - 1]->object)
 
-void json_print_object(struct json_object *obj);
+void json_print_object(struct json_object *obj, struct buf_output *out);
 #endif

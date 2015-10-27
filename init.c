@@ -48,7 +48,6 @@ static int nr_job_sections;
 
 int exitall_on_terminate = 0;
 int output_format = FIO_OUTPUT_NORMAL;
-int append_terse_output = 0;
 int eta_print = FIO_ETA_AUTO;
 int eta_new_line = 0;
 FILE *f_out = NULL;
@@ -116,11 +115,6 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "output-format",
 		.has_arg	= optional_argument,
 		.val		= 'F' | FIO_CLIENT_FLAG,
-	},
-	{
-		.name		= (char *) "append-terse",
-		.has_arg	= optional_argument,
-		.val		= 'f',
 	},
 	{
 		.name		= (char *) "version",
@@ -2009,6 +2003,35 @@ static void show_closest_option(const char *name)
 		log_err("Did you mean %s?\n", l_opts[best_option].name);
 }
 
+static int parse_output_format(const char *optarg)
+{
+	char *p, *orig, *opt;
+	int ret = 0;
+
+	p = orig = strdup(optarg);
+
+	output_format = 0;
+
+	while ((opt = strsep(&p, ",")) != NULL) {
+		if (!strcmp(opt, "minimal") ||
+		    !strcmp(opt, "terse") ||
+		    !strcmp(opt, "csv"))
+			output_format |= FIO_OUTPUT_TERSE;
+		else if (!strcmp(opt, "json"))
+			output_format |= FIO_OUTPUT_JSON;
+		else if (!strcmp(opt, "normal"))
+			output_format |= FIO_OUTPUT_NORMAL;
+		else {
+			log_err("fio: invalid output format %s\n", opt);
+			ret = 1;
+			break;
+		}
+	}
+
+	free(orig);
+	return ret;
+}
+
 int parse_cmd_line(int argc, char *argv[], int client_type)
 {
 	struct thread_data *td = NULL;
@@ -2070,17 +2093,12 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				do_exit++;
 				break;
 			}
-			if (!strcmp(optarg, "minimal") ||
-			    !strcmp(optarg, "terse") ||
-			    !strcmp(optarg, "csv"))
-				output_format = FIO_OUTPUT_TERSE;
-			else if (!strcmp(optarg, "json"))
-				output_format = FIO_OUTPUT_JSON;
-			else
-				output_format = FIO_OUTPUT_NORMAL;
-			break;
-		case 'f':
-			append_terse_output = 1;
+			if (parse_output_format(optarg)) {
+				log_err("fio: failed parsing output-format\n");
+				exit_val = 1;
+				do_exit++;
+				break;
+			}
 			break;
 		case 'h':
 			did_arg = 1;
