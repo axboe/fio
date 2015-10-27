@@ -146,12 +146,14 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 			return 1;
 		}
 		if (td->o.mem_type != MEM_MMAPHUGE &&
+		    td->o.mem_type != MEM_MMAPSHARED &&
 		    ftruncate(td->mmapfd, total_mem) < 0) {
 			td_verror(td, errno, "truncate mmap file");
 			td->orig_buffer = NULL;
 			return 1;
 		}
-		if (td->o.mem_type == MEM_MMAPHUGE)
+		if (td->o.mem_type == MEM_MMAPHUGE ||
+		    td->o.mem_type == MEM_MMAPSHARED)
 			flags |= MAP_SHARED;
 		else
 			flags |= MAP_PRIVATE;
@@ -231,7 +233,8 @@ int allocate_io_mem(struct thread_data *td)
 		ret = alloc_mem_malloc(td, total_mem);
 	else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE)
 		ret = alloc_mem_shm(td, total_mem);
-	else if (td->o.mem_type == MEM_MMAP || td->o.mem_type == MEM_MMAPHUGE)
+	else if (td->o.mem_type == MEM_MMAP || td->o.mem_type == MEM_MMAPHUGE ||
+		 td->o.mem_type == MEM_MMAPSHARED)
 		ret = alloc_mem_mmap(td, total_mem);
 	else {
 		log_err("fio: bad mem type: %d\n", td->o.mem_type);
@@ -256,7 +259,8 @@ void free_io_mem(struct thread_data *td)
 		free_mem_malloc(td);
 	else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE)
 		free_mem_shm(td);
-	else if (td->o.mem_type == MEM_MMAP || td->o.mem_type == MEM_MMAPHUGE)
+	else if (td->o.mem_type == MEM_MMAP || td->o.mem_type == MEM_MMAPHUGE ||
+		 td->o.mem_type == MEM_MMAPSHARED)
 		free_mem_mmap(td, total_mem);
 	else
 		log_err("Bad memory type %u\n", td->o.mem_type);
