@@ -117,6 +117,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'F' | FIO_CLIENT_FLAG,
 	},
 	{
+		.name		= (char *) "append-terse",
+		.has_arg	= optional_argument,
+		.val		= 'f',
+	},
+	{
 		.name		= (char *) "version",
 		.has_arg	= no_argument,
 		.val		= 'v' | FIO_CLIENT_FLAG,
@@ -2099,6 +2104,9 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				do_exit++;
 				break;
 			}
+			break;
+		case 'f':
+			output_format |= FIO_OUTPUT_TERSE;
 			break;
 		case 'h':
 			did_arg = 1;
