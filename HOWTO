@@ -1177,6 +1177,9 @@ mem=str		Fio can use various types of memory as the io unit buffer.
 				backing. Append filename after mmaphuge, ala
 				mem=mmaphuge:/hugetlbfs/file
 
+			mmapshared	Same as mmap, but use a MMAP_SHARED
+				mapping.
+
 		The area allocated is a function of the maximum allowed
 		bs size for the job, multiplied by the io depth given. Note
 		that for shmhuge and mmaphuge to work, the system must have
