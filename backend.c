@@ -1559,27 +1559,28 @@ static void *thread_main(void *data)
 
 	fio_gettime(&td->epoch, NULL);
 	fio_getrusage(&td->ru_start);
+	memcpy(&td->bw_sample_time, &td->epoch, sizeof(td->epoch));
+	memcpy(&td->iops_sample_time, &td->epoch, sizeof(td->epoch));
+
+	if (o->ratemin[DDIR_READ] || o->ratemin[DDIR_WRITE] ||
+			o->ratemin[DDIR_TRIM]) {
+	        memcpy(&td->lastrate[DDIR_READ], &td->bw_sample_time,
+					sizeof(td->bw_sample_time));
+	        memcpy(&td->lastrate[DDIR_WRITE], &td->bw_sample_time,
+					sizeof(td->bw_sample_time));
+	        memcpy(&td->lastrate[DDIR_TRIM], &td->bw_sample_time,
+					sizeof(td->bw_sample_time));
+	}
+
 	clear_state = 0;
 	while (keep_running(td)) {
 		uint64_t verify_bytes;
 
 		fio_gettime(&td->start, NULL);
-		memcpy(&td->bw_sample_time, &td->start, sizeof(td->start));
-		memcpy(&td->iops_sample_time, &td->start, sizeof(td->start));
 		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
 
-		if (o->ratemin[DDIR_READ] || o->ratemin[DDIR_WRITE] ||
-				o->ratemin[DDIR_TRIM]) {
-		        memcpy(&td->lastrate[DDIR_READ], &td->bw_sample_time,
-						sizeof(td->bw_sample_time));
-		        memcpy(&td->lastrate[DDIR_WRITE], &td->bw_sample_time,
-						sizeof(td->bw_sample_time));
-		        memcpy(&td->lastrate[DDIR_TRIM], &td->bw_sample_time,
-						sizeof(td->bw_sample_time));
-		}
-
 		if (clear_state)
-			clear_io_state(td);
+			clear_io_state(td, 0);
 
 		prune_io_piece_log(td);
 
@@ -1617,7 +1618,7 @@ static void *thread_main(void *data)
 		    (td->io_ops->flags & FIO_UNIDIR))
 			continue;
 
-		clear_io_state(td);
+		clear_io_state(td, 0);
 
 		fio_gettime(&td->start, NULL);
 

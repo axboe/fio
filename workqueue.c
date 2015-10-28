@@ -186,7 +186,7 @@ static int init_submit_worker(struct submit_worker *sw)
 
 	fio_gettime(&td->epoch, NULL);
 	fio_getrusage(&td->ru_start);
-	clear_io_state(td);
+	clear_io_state(td, 1);
 
 	td_set_runstate(td, TD_RUNNING);
 	td->flags |= TD_F_CHILD;
