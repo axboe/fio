@@ -122,7 +122,8 @@ static inline size_t log_entry_sz(struct io_log *log)
 static inline struct io_sample *__get_sample(void *samples, int log_offset,
 					     uint64_t sample)
 {
-	return samples + sample * __log_entry_sz(log_offset);
+	uint64_t sample_offset = sample * __log_entry_sz(log_offset);
+	return (struct io_sample *) ((char *) samples + sample_offset);
 }
 
 static inline struct io_sample *get_sample(struct io_log *iolog,
