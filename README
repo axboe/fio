@@ -151,7 +151,7 @@ $ fio
 	--runtime		Runtime in seconds
 	--bandwidth-log		Generate per-job bandwidth logs
 	--minimal		Minimal (terse) output
-	--output-format=type	Output format (terse,json,normal)
+	--output-format=type	Output format (terse,json,json+,normal)
 	--terse-version=type	Terse version output format (default 3, or 2 or 4).
 	--version		Print version info and exit
 	--help			Print this page

@@ -21,8 +21,10 @@ list all available tracing options.
 Write output to \fIfilename\fR.
 .TP
 .BI \-\-output-format \fR=\fPformat
-Set the reporting format to \fInormal\fR, \fIterse\fR, or \fIjson\fR.
-Multiple formats can be selected, separate by a comma.
+Set the reporting format to \fInormal\fR, \fIterse\fR, \fIjson\fR, or
+\fIjson+\fR. Multiple formats can be selected, separate by a comma. \fIterse\fR
+is a CSV based format. \fIjson+\fR is like \fIjson\fR, except it adds a full
+dump of the latency buckets.
 .TP
 .BI \-\-runtime \fR=\fPruntime
 Limit run time to \fIruntime\fR seconds.

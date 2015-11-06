@@ -832,7 +832,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	unsigned int len, minv, maxv;
 	int i;
 	const char *ddirname[] = {"read", "write", "trim"};
-	struct json_object *dir_object, *tmp_object, *percentile_object;
+	struct json_object *dir_object, *tmp_object, *percentile_object, *clat_bins_object;
 	char buf[120];
 	double p_of_agg = 100.0;
 
@@ -901,6 +901,18 @@ static void add_ddir_status_json(struct thread_stat *ts,
 		}
 		snprintf(buf, sizeof(buf), "%f", ts->percentile_list[i].u.f);
 		json_object_add_value_int(percentile_object, (const char *)buf, ovals[i]);
+	}
+
+	if (output_format & FIO_OUTPUT_JSON_PLUS) {
+		clat_bins_object = json_create_object();
+		json_object_add_value_object(tmp_object, "bins", clat_bins_object);
+		for(i = 0; i < FIO_IO_U_PLAT_NR; i++) {
+			snprintf(buf, sizeof(buf), "%d", i);
+			json_object_add_value_int(clat_bins_object, (const char *)buf, ts->io_u_plat[ddir][i]);
+		}
+		json_object_add_value_int(clat_bins_object, "FIO_IO_U_PLAT_BITS", FIO_IO_U_PLAT_BITS);
+		json_object_add_value_int(clat_bins_object, "FIO_IO_U_PLAT_VAL", FIO_IO_U_PLAT_VAL);
+		json_object_add_value_int(clat_bins_object, "FIO_IO_U_PLAT_NR", FIO_IO_U_PLAT_NR);
 	}
 
 	if (!calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev)) {

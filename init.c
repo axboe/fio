@@ -1766,7 +1766,7 @@ static void usage(const char *name)
 	printf("  --runtime\t\tRuntime in seconds\n");
 	printf("  --bandwidth-log\tGenerate per-job bandwidth logs\n");
 	printf("  --minimal\t\tMinimal (terse) output\n");
-	printf("  --output-format=x\tOutput format (terse,json,normal)\n");
+	printf("  --output-format=x\tOutput format (terse,json,json+,normal)\n");
 	printf("  --terse-version=x\tSet terse version output format to 'x'\n");
 	printf("  --version\t\tPrint version info and exit\n");
 	printf("  --help\t\tPrint this page\n");
@@ -2024,6 +2024,8 @@ static int parse_output_format(const char *optarg)
 			output_format |= FIO_OUTPUT_TERSE;
 		else if (!strcmp(opt, "json"))
 			output_format |= FIO_OUTPUT_JSON;
+		else if (!strcmp(opt, "json+"))
+			output_format |= (FIO_OUTPUT_JSON | FIO_OUTPUT_JSON_PLUS);
 		else if (!strcmp(opt, "normal"))
 			output_format |= FIO_OUTPUT_NORMAL;
 		else {
