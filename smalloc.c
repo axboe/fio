@@ -213,9 +213,9 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 	if (ptr == MAP_FAILED)
 		goto out_fail;
 
-	memset(ptr, 0, alloc_size);
 	pool->map = ptr;
 	pool->bitmap = (void *) ptr + (pool->nr_blocks * SMALLOC_BPL);
+	memset(pool->bitmap, 0, bitmap_blocks * sizeof(unsigned int));
 
 	pool->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 	if (!pool->lock)
