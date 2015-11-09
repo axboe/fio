@@ -2856,6 +2856,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RATE,
 	},
 	{
+		.name	= "poisson",
+		.lname	= "simulate requests under Poisson process",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(poisson_request),
+		.help	= "with rate limit, try simulate requests that follow Poisson process",
+		.def	= "0",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RATE,
+	},
+	{
 		.name	= "ratecycle",
 		.lname	= "I/O rate cycle",
 		.type	= FIO_OPT_INT,

@@ -35,6 +35,7 @@
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/mman.h>
+#include <math.h>
 
 #include "fio.h"
 #ifndef FIO_NO_HAVE_SHM_H
@@ -775,12 +776,18 @@ static int io_complete_bytes_exceeded(struct thread_data *td)
  */
 static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 {
-	uint64_t secs, remainder, bps, bytes;
+	uint64_t secs, remainder, bps, bytes, iops;
 
 	assert(!(td->flags & TD_F_CHILD));
 	bytes = td->rate_io_issue_bytes[ddir];
 	bps = td->rate_bps[ddir];
-	if (bps) {
+
+	if (td->o.poisson_request) {
+		iops = bps / td->o.bs[ddir];
+		td->last_usec += (long long)(1000000 / iops) *
+			(-logf(((float)rand() + 1) / ((float)RAND_MAX + 1)));
+		return td->last_usec;
+	} else if (bps) {
 		secs = bytes / bps;
 		remainder = bytes % bps;
 		return remainder * 1000000 / bps + secs * 1000000;

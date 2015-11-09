@@ -243,6 +243,7 @@ struct thread_data {
 	unsigned long rate_blocks[DDIR_RWDIR_CNT];
 	unsigned long rate_io_issue_bytes[DDIR_RWDIR_CNT];
 	struct timeval lastrate[DDIR_RWDIR_CNT];
+	unsigned long long last_usec;
 
 	/*
 	 * Enforced rate submission/completion workqueue

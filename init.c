@@ -473,6 +473,7 @@ static int __setup_rate(struct thread_data *td, enum fio_ddir ddir)
 
 	td->rate_next_io_time[ddir] = 0;
 	td->rate_io_issue_bytes[ddir] = 0;
+	td->last_usec = 0;
 	return 0;
 }
 
