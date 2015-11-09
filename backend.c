@@ -783,9 +783,15 @@ static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 	bps = td->rate_bps[ddir];
 
 	if (td->o.poisson_rate) {
+		uint64_t val;
 		iops = bps / td->o.bs[ddir];
-		td->last_usec += (int64_t) (1000000 / iops) *
-					-logf(__rand_0_1(&td->poisson_state));
+		val = (int64_t) (1000000 / iops) *
+				-logf(__rand_0_1(&td->poisson_state));
+		if (val) {
+			dprint(FD_RATE, "poisson rate iops=%llu\n",
+					(unsigned long long) 1000000 / val);
+		}
+		td->last_usec += val;
 		return td->last_usec;
 	} else if (bps) {
 		secs = bytes / bps;
