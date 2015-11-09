@@ -231,7 +231,7 @@ struct thread_options {
 	unsigned int io_submit_mode;
 	unsigned int rate_iops[DDIR_RWDIR_CNT];
 	unsigned int rate_iops_min[DDIR_RWDIR_CNT];
-	unsigned int poisson_request;
+	unsigned int poisson_rate;
 
 	char *ioscheduler;
 
@@ -472,7 +472,7 @@ struct thread_options_pack {
 	uint32_t io_submit_mode;
 	uint32_t rate_iops[DDIR_RWDIR_CNT];
 	uint32_t rate_iops_min[DDIR_RWDIR_CNT];
-	uint32_t poisson_request;
+	uint32_t poisson_rate;
 	uint32_t padding_0;   /* for alignment assert */
 
 	uint8_t ioscheduler[FIO_TOP_STR_MAX];

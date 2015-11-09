@@ -1064,6 +1064,9 @@ rate_iops_min=int If fio doesn't meet this rate of IO, it will cause
 		the job to exit. The same format as rate is used for read vs
 		write separation.
 
+rate_poisson=bool	When rate limited, try to simulate request flow under
+		Poisson process (instead of even distribution). Default: false.
+
 latency_target=int	If set, fio will attempt to find the max performance
 		point that the given workload will run at while maintaining a
 		latency below this target. The values is given in microseconds.

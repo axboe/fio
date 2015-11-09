@@ -104,6 +104,19 @@ static inline uint64_t __rand(struct frand_state *state)
 		return __rand32(&state->state32);
 }
 
+static inline double __rand_0_1(struct frand_state *state)
+{
+	if (state->use64) {
+		uint64_t val = __rand64(&state->state64);
+
+		return (double) val / (FRAND64_MAX + 1.0);
+	} else {
+		uint32_t val = __rand32(&state->state32);
+
+		return (double) val / (FRAND32_MAX + 1.0);
+	}
+}
+
 extern void init_rand(struct frand_state *, int);
 extern void init_rand_seed(struct frand_state *, unsigned int seed, int);
 extern void __fill_random_buf(void *buf, unsigned int len, unsigned long seed);
