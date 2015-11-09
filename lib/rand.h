@@ -109,11 +109,11 @@ static inline double __rand_0_1(struct frand_state *state)
 	if (state->use64) {
 		uint64_t val = __rand64(&state->state64);
 
-		return (double) val / (FRAND64_MAX + 1.0);
+		return (val + 1.0) / (FRAND64_MAX + 1.0);
 	} else {
 		uint32_t val = __rand32(&state->state32);
 
-		return (double) val / (FRAND32_MAX + 1.0);
+		return (val + 1.0) / (FRAND32_MAX + 1.0);
 	}
 }
 
