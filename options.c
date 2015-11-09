@@ -2818,7 +2818,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RATE,
 	},
 	{
-		.name	= "ratemin",
+		.name	= "rate_min",
+		.alias	= "ratemin",
 		.lname	= "I/O min rate",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratemin[DDIR_READ]),
@@ -2868,7 +2869,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RATE,
 	},
 	{
-		.name	= "ratecycle",
+		.name	= "rate_cycle",
+		.alias	= "ratecycle",
 		.lname	= "I/O rate cycle",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratecycle),

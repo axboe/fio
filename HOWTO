@@ -1049,7 +1049,7 @@ rate=int	Cap the bandwidth used by this job. The number is in bytes/sec,
 		will only limit writes (to 500KB/sec), the latter will only
 		limit reads.
 
-ratemin=int	Tell fio to do whatever it can to maintain at least this
+rate_min=int	Tell fio to do whatever it can to maintain at least this
 		bandwidth. Failing to meet this requirement, will cause
 		the job to exit. The same format as rate is used for
 		read vs write separation.
@@ -1087,7 +1087,7 @@ latency_percentile=float	The percentage of IOs that must fall within the
 max_latency=int	If set, fio will exit the job if it exceeds this maximum
 		latency. It will exit with an ETIME error.
 
-ratecycle=int	Average bandwidth for 'rate' and 'ratemin' over this number
+rate_cycle=int	Average bandwidth for 'rate' and 'rate_min' over this number
 		of milliseconds.
 
 cpumask=int	Set the CPU affinity of this job. The parameter given is a

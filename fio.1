@@ -948,7 +948,7 @@ limit reads to 1MB/sec and writes to 500KB/sec. Capping only reads or writes
 can be done with \fBrate\fR=,500k or \fBrate\fR=500k,. The former will only
 limit writes (to 500KB/sec), the latter will only limit reads.
 .TP
-.BI ratemin \fR=\fPint
+.BI rate_min \fR=\fPint
 Tell \fBfio\fR to do whatever it can to maintain at least the given bandwidth.
 Failing to meet this requirement will cause the job to exit. The same format
 as \fBrate\fR is used for read vs write separation.
@@ -969,8 +969,8 @@ Real world random request flow follows Poisson process
 tries to simulate request flow under Poisson process (instead of even
 distribution, which is the default). Default: false.
 .TP
-.BI ratecycle \fR=\fPint
-Average bandwidth for \fBrate\fR and \fBratemin\fR over this number of
+.BI rate_cycle \fR=\fPint
+Average bandwidth for \fBrate\fR and \fBrate_min\fR over this number of
 milliseconds.  Default: 1000ms.
 .TP
 .BI latency_target \fR=\fPint
