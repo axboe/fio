@@ -1064,11 +1064,13 @@ rate_iops_min=int If fio doesn't meet this rate of IO, it will cause
 		the job to exit. The same format as rate is used for read vs
 		write separation.
 
-rate_poisson=bool	Real world random request flow follows Poisson process
-		(https://en.wikipedia.org/wiki/Poisson_process). With
-		rate_poisson=1, fio tries to simulate request flow under Poisson
-		process (instead of even distribution, which is the default).
-		Default: false.
+rate_process=str	This option controls how fio manages rated IO
+		submissions. The default is 'linear', which submits IO in a
+		linear fashion with fixed delays between IOs that gets
+		adjusted based on IO completion rates. If this is set to
+		'poisson', fio will submit IO based on a more real world
+		random request flow, known as the Poisson process
+		(https://en.wikipedia.org/wiki/Poisson_process).
 
 latency_target=int	If set, fio will attempt to find the max performance
 		point that the given workload will run at while maintaining a

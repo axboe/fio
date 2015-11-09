@@ -254,7 +254,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->per_job_logs = le32_to_cpu(top->per_job_logs);
 
 	o->trim_backlog = le64_to_cpu(top->trim_backlog);
-	o->poisson_rate = le32_to_cpu(top->poisson_rate);
+	o->rate_process = le32_to_cpu(top->rate_process);
 
 	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++)
 		o->percentile_list[i].u.f = fio_uint64_to_double(le64_to_cpu(top->percentile_list[i].u.i));
@@ -475,7 +475,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->trim_backlog = __cpu_to_le64(o->trim_backlog);
 	top->offset_increment = __cpu_to_le64(o->offset_increment);
 	top->number_ios = __cpu_to_le64(o->number_ios);
-	top->poisson_rate = cpu_to_le32(o->poisson_rate);
+	top->rate_process = cpu_to_le32(o->rate_process);
 
 	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++)
 		top->percentile_list[i].u.i = __cpu_to_le64(fio_double_to_uint64(o->percentile_list[i].u.f));

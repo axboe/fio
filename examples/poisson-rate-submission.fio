@@ -11,4 +11,4 @@ rate_iops=50
 # Real world random request flow follows Poisson process. To give better
 # insight on latency distribution, we simulate request flow under Poisson
 # process.
-rate_poisson=1
+rate_process=poisson

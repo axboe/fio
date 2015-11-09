@@ -963,11 +963,13 @@ size is used as the metric.
 If this rate of I/O is not met, the job will exit. The same format as \fBrate\fR
 is used for read vs write separation.
 .TP
-.BI rate_poisson \fR=\fPbool
-Real world random request flow follows Poisson process
-(https://en.wikipedia.org/wiki/Poisson_process). With \fBrate_poisson\fR=1, fio
-tries to simulate request flow under Poisson process (instead of even
-distribution, which is the default). Default: false.
+.BI rate_process \fR=\fPstr
+This option controls how fio manages rated IO submissions. The default is
+\fBlinear\fR, which submits IO in a linear fashion with fixed delays between
+IOs that gets adjusted based on IO completion rates. If this is set to
+\fBpoisson\fR, fio will submit IO based on a more real world random request
+flow, known as the Poisson process
+(https://en.wikipedia.org/wiki/Poisson_process).
 .TP
 .BI rate_cycle \fR=\fPint
 Average bandwidth for \fBrate\fR and \fBrate_min\fR over this number of

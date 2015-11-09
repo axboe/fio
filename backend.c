@@ -782,7 +782,7 @@ static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 	bytes = td->rate_io_issue_bytes[ddir];
 	bps = td->rate_bps[ddir];
 
-	if (td->o.poisson_rate) {
+	if (td->o.rate_process == RATE_PROCESS_POISSON) {
 		uint64_t val;
 		iops = bps / td->o.bs[ddir];
 		val = (int64_t) (1000000 / iops) *
