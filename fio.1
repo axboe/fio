@@ -969,7 +969,8 @@ This option controls how fio manages rated IO submissions. The default is
 IOs that gets adjusted based on IO completion rates. If this is set to
 \fBpoisson\fR, fio will submit IO based on a more real world random request
 flow, known as the Poisson process
-(https://en.wikipedia.org/wiki/Poisson_process).
+(https://en.wikipedia.org/wiki/Poisson_process). The lambda will be
+10^6 / IOPS for the given workload.
 .TP
 .BI rate_cycle \fR=\fPint
 Average bandwidth for \fBrate\fR and \fBrate_min\fR over this number of

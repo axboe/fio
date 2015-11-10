@@ -1070,7 +1070,8 @@ rate_process=str	This option controls how fio manages rated IO
 		adjusted based on IO completion rates. If this is set to
 		'poisson', fio will submit IO based on a more real world
 		random request flow, known as the Poisson process
-		(https://en.wikipedia.org/wiki/Poisson_process).
+		(https://en.wikipedia.org/wiki/Poisson_process). The lambda
+		will be 10^6 / IOPS for the given workload.
 
 latency_target=int	If set, fio will attempt to find the max performance
 		point that the given workload will run at while maintaining a
