@@ -488,7 +488,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 			}
 		}
 
-		if (td->o.do_verify && td->o.verify != VERIFY_NONE)
+		if (td->o.verify != VERIFY_NONE)
 			buflen = (buflen + td->o.verify_interval - 1) &
 				~(td->o.verify_interval - 1);
 
