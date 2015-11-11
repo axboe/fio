@@ -481,7 +481,7 @@ void show_idle_prof_stats(int output, struct json_object *parent,
 		return;
 	}
 
-	if ((ipc.opt != IDLE_PROF_OPT_NONE) && (output == FIO_OUTPUT_JSON)) {
+	if ((ipc.opt != IDLE_PROF_OPT_NONE) && (output & FIO_OUTPUT_JSON)) {
 		if (!parent)
 			return;
 

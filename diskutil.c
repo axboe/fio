@@ -714,7 +714,7 @@ void show_disk_util(int terse, struct json_object *parent,
 
 	if (output_format & FIO_OUTPUT_JSON)
 		json_object_add_disk_utils(parent, &disk_list);
-	if (output_format & ~(FIO_OUTPUT_JSON)) {
+	if (output_format & ~(FIO_OUTPUT_JSON | FIO_OUTPUT_JSON_PLUS)) {
 		flist_for_each(entry, &disk_list) {
 			du = flist_entry(entry, struct disk_util, list);
 
