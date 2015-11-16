@@ -1233,6 +1233,10 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if ((o->stonewall || o->new_group) && prev_group_jobs) {
 		prev_group_jobs = 0;
 		groupid++;
+		if (groupid == INT_MAX) {
+			log_err("fio: too many groups defined\n");
+			goto err;
+		}
 	}
 
 	td->groupid = groupid;

@@ -539,8 +539,8 @@ extern void td_restore_runstate(struct thread_data *, int);
  */
 #define FIO_REAP_TIMEOUT	60
 
-#define TERMINATE_ALL		(-1)
-extern void fio_terminate_threads(int);
+#define TERMINATE_ALL		(-1U)
+extern void fio_terminate_threads(unsigned int);
 extern void fio_mark_td_terminate(struct thread_data *);
 
 /*
