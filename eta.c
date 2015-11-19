@@ -214,7 +214,7 @@ static unsigned long thread_eta(struct thread_data *td)
 		if (td->o.time_based) {
 			if (timeout) {
 				perc_t = (double) elapsed / (double) timeout;
-				if (perc_t < perc)
+				if (perc_t > perc)
 					perc = perc_t;
 			} else {
 				/*
@@ -250,7 +250,7 @@ static unsigned long thread_eta(struct thread_data *td)
 			t_eta = __timeout + start_delay + ramp_time;
 			t_eta /= 1000000ULL;
 
-			if (in_ramp_time(td)) {
+			if ((td->runstate == TD_RAMP) && in_ramp_time(td)) {
 				unsigned long ramp_left;
 
 				ramp_left = mtime_since_now(&td->epoch);
@@ -438,19 +438,25 @@ int calc_thread_status(struct jobs_eta *je, int force)
 		}
 	}
 
-	if (exitall_on_terminate)
+	if (exitall_on_terminate) {
 		je->eta_sec = INT_MAX;
-	else
-		je->eta_sec = 0;
-
-	for_each_td(td, i) {
-		if (exitall_on_terminate) {
+		for_each_td(td, i) {
 			if (eta_secs[i] < je->eta_sec)
 				je->eta_sec = eta_secs[i];
-		} else {
-			if (eta_secs[i] > je->eta_sec)
-				je->eta_sec = eta_secs[i];
 		}
+	} else {
+		unsigned long eta_stone = 0;
+
+		je->eta_sec = 0;
+		for_each_td(td, i) {
+			if ((td->runstate == TD_NOT_CREATED) && td->o.stonewall)
+				eta_stone += eta_secs[i];
+			else {
+				if (eta_secs[i] > je->eta_sec)
+					je->eta_sec = eta_secs[i];
+			}
+		}
+		je->eta_sec += eta_stone;
 	}
 
 	free(eta_secs);
