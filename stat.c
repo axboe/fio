@@ -1612,7 +1612,7 @@ void __show_run_stats(void)
 				show_thread_status_normal(ts, rs, &output[__FIO_OUTPUT_NORMAL]);
 		}
 	}
-	if (output_format & FIO_OUTPUT_JSON) {
+	if (!is_backend && (output_format & FIO_OUTPUT_JSON)) {
 		/* disk util stats, if any */
 		show_disk_util(1, root, &output[__FIO_OUTPUT_JSON]);
 
