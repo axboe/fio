@@ -232,6 +232,7 @@ static unsigned long get_cycles_per_usec(void)
 	struct timeval s, e;
 	uint64_t c_s, c_e;
 	enum fio_cs old_cs = fio_clock_source;
+	uint64_t elapsed;
 
 #ifdef CONFIG_CLOCK_GETTIME
 	fio_clock_source = CS_CGETTIME;
@@ -242,8 +243,6 @@ static unsigned long get_cycles_per_usec(void)
 
 	c_s = get_cpu_clock();
 	do {
-		uint64_t elapsed;
-
 		__fio_gettime(&e);
 
 		elapsed = utime_since(&s, &e);
@@ -254,7 +253,7 @@ static unsigned long get_cycles_per_usec(void)
 	} while (1);
 
 	fio_clock_source = old_cs;
-	return (c_e - c_s + 127) >> 7;
+	return ((c_e - c_s) * 10) / elapsed;
 }
 
 #define NR_TIME_ITERS	50
