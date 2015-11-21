@@ -485,6 +485,7 @@ static void *clock_thread_fn(void *data)
 	struct clock_entry *c;
 	os_cpu_mask_t cpu_mask;
 	uint32_t last_seq;
+	unsigned long long first;
 	int i;
 
 	if (fio_cpuset_init(&cpu_mask)) {
@@ -506,6 +507,7 @@ static void *clock_thread_fn(void *data)
 	pthread_mutex_lock(&t->lock);
 	pthread_mutex_unlock(&t->started);
 
+	first = get_cpu_clock();
 	last_seq = 0;
 	c = &t->entries[0];
 	for (i = 0; i < t->nr_entries; i++, c++) {
@@ -528,7 +530,8 @@ static void *clock_thread_fn(void *data)
 		unsigned long long clocks;
 
 		clocks = t->entries[i - 1].tsc - t->entries[0].tsc;
-		log_info("cs: cpu%3d: %llu clocks seen\n", t->cpu, clocks);
+		log_info("cs: cpu%3d: %llu clocks seen, first %llu\n", t->cpu,
+							clocks, first);
 	}
 
 	/*
