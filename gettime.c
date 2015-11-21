@@ -253,7 +253,7 @@ static unsigned long get_cycles_per_usec(void)
 	} while (1);
 
 	fio_clock_source = old_cs;
-	return ((c_e - c_s) * 10) / elapsed;
+	return (c_e - c_s) / elapsed;
 }
 
 #define NR_TIME_ITERS	50
@@ -299,16 +299,11 @@ static int calibrate_cpu_clock(void)
 	}
 
 	S /= (double) NR_TIME_ITERS;
-	mean /= 10.0;
 
 	for (i = 0; i < NR_TIME_ITERS; i++)
-		dprint(FD_TIME, "cycles[%d]=%llu\n", i,
-					(unsigned long long) cycles[i] / 10);
+		dprint(FD_TIME, "cycles[%d]=%llu\n", i, (unsigned long long) cycles[i]);
 
 	avg /= samples;
-	avg = (avg + 5) / 10;
-	minc /= 10;
-	maxc /= 10;
 	dprint(FD_TIME, "avg: %llu\n", (unsigned long long) avg);
 	dprint(FD_TIME, "min=%llu, max=%llu, mean=%f, S=%f\n",
 			(unsigned long long) minc,
