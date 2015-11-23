@@ -13,6 +13,7 @@
 #include "lib/axmap.h"
 #include "err.h"
 #include "lib/pow2.h"
+#include "minmax.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -1927,9 +1928,8 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 			min_write = min(min_write, left);
 
 			if (perc) {
-				this_write = min(min_write, td->o.compress_chunk);
-				if (!this_write)
-					this_write = min_write;
+				this_write = min_not_zero(min_write,
+							td->o.compress_chunk);
 
 				fill_random_buf_percentage(rs, buf, perc,
 					this_write, this_write,

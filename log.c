@@ -59,9 +59,8 @@ size_t __log_buf(struct buf_output *buf, const char *format, ...)
 	va_start(args, format);
 	len = vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
-	len = min(len, sizeof(buffer) - 1);
 
-	return buf_output_add(buf, buffer, len);
+	return buf_output_add(buf, buffer, min(len, sizeof(buffer) - 1));
 }
 
 int log_info_flush(void)
