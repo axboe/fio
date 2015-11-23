@@ -1919,6 +1919,7 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 		unsigned int perc = td->o.compress_percentage;
 		struct frand_state *rs;
 		unsigned int left = max_bs;
+		unsigned int this_write;
 
 		do {
 			rs = get_buf_state(td);
@@ -1926,20 +1927,21 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 			min_write = min(min_write, left);
 
 			if (perc) {
-				unsigned int seg = min_write;
+				this_write = min(min_write, td->o.compress_chunk);
+				if (!this_write)
+					this_write = min_write;
 
-				seg = min(min_write, td->o.compress_chunk);
-				if (!seg)
-					seg = min_write;
-
-				fill_random_buf_percentage(rs, buf, perc, seg,
-					min_write, o->buffer_pattern,
-						   o->buffer_pattern_bytes);
-			} else
+				fill_random_buf_percentage(rs, buf, perc,
+					this_write, this_write,
+					o->buffer_pattern,
+					o->buffer_pattern_bytes);
+			} else {
 				fill_random_buf(rs, buf, min_write);
+				this_write = min_write;
+			}
 
-			buf += min_write;
-			left -= min_write;
+			buf += this_write;
+			left -= this_write;
 			save_buf_state(td, rs);
 		} while (left);
 	} else if (o->buffer_pattern_bytes)
