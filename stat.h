@@ -183,9 +183,9 @@ struct thread_stat {
 	uint32_t io_u_plat[DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR];
 	uint32_t pad;
 
-	uint64_t total_io_u[3];
-	uint64_t short_io_u[3];
-	uint64_t drop_io_u[3];
+	uint64_t total_io_u[DDIR_RWDIR_CNT];
+	uint64_t short_io_u[DDIR_RWDIR_CNT];
+	uint64_t drop_io_u[DDIR_RWDIR_CNT];
 	uint64_t total_submit;
 	uint64_t total_complete;
 
