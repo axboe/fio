@@ -148,6 +148,7 @@ void reset_all_stats(struct thread_data *td)
 	memcpy(&td->start, &tv, sizeof(tv));
 
 	lat_target_reset(td);
+	clear_rusage_stat(td);
 }
 
 void reset_fio_state(void)

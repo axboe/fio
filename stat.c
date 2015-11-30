@@ -18,6 +18,16 @@
 
 struct fio_mutex *stat_mutex;
 
+void clear_rusage_stat(struct thread_data *td)
+{
+	struct thread_stat *ts = &td->ts;
+
+	fio_getrusage(&td->ru_start);
+	ts->usr_time = ts->sys_time = 0;
+	ts->ctx = 0;
+	ts->minf = ts->majf = 0;
+}
+
 void update_rusage_stat(struct thread_data *td)
 {
 	struct thread_stat *ts = &td->ts;
