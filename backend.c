@@ -868,7 +868,7 @@ static uint64_t do_io(struct thread_data *td)
 		if (flow_threshold_exceeded(td))
 			continue;
 
-		if (bytes_issued >= total_bytes)
+		if (!td->o.time_based && bytes_issued >= total_bytes)
 			break;
 
 		io_u = get_io_u(td);
