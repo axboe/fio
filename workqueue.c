@@ -79,7 +79,7 @@ static struct submit_worker *get_submit_worker(struct workqueue *wq)
 	return sw;
 }
 
-static int all_sw_idle(struct workqueue *wq)
+static bool all_sw_idle(struct workqueue *wq)
 {
 	int i;
 
@@ -87,10 +87,10 @@ static int all_sw_idle(struct workqueue *wq)
 		struct submit_worker *sw = &wq->workers[i];
 
 		if (!(sw->flags & SW_F_IDLE))
-			return 0;
+			return false;
 	}
 
-	return 1;
+	return true;
 }
 
 /*
