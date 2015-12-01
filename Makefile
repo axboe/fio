@@ -36,18 +36,19 @@ ifdef CONFIG_GFIO
   PROGS += gfio
 endif
 
-SOURCE :=	gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
+SOURCE :=	lib/rbtree.c lib/rand.c lib/num2str.c lib/ieee754.c \
+		lib/strntol.c lib/prio_tree.c lib/zipf.c lib/axmap.c \
+		lib/pattern.c lib/lfsr.c lib/flist_sort.c lib/hweight.c \
+		lib/getrusage.c lib/tp.c lib/bloom.c lib/gauss.c \
+		lib/mountcheck.c lib/output_buffer.c lib/memalign.c \
+		gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
-		lib/rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
-		lib/num2str.c lib/ieee754.c lib/strntol.c engines/cpu.c \
+		smalloc.c filehash.c profile.c debug.c engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
-		server.c client.c iolog.c backend.c libfio.c flow.c \
-		cconv.c lib/prio_tree.c lib/zipf.c lib/axmap.c lib/pattern.c \
-		lib/lfsr.c gettime-thread.c helpers.c lib/flist_sort.c json.c \
-		lib/hweight.c lib/getrusage.c idletime.c td_error.c \
+		server.c client.c iolog.c backend.c libfio.c flow.c cconv.c \
+		gettime-thread.c helpers.c json.c idletime.c td_error.c \
 		profiles/tiobench.c profiles/act.c io_u_queue.c filelock.c \
-		lib/tp.c lib/bloom.c lib/gauss.c lib/mountcheck.c workqueue.c \
-		lib/output_buffer.c lib/memalign.c \
+		workqueue.c \
 		$(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/crc/*.c))
 
 ifdef CONFIG_LIBHDFS
