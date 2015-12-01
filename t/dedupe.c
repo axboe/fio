@@ -21,7 +21,7 @@
 #include "../smalloc.h"
 #include "../minmax.h"
 #include "../crc/md5.h"
-#include "../memalign.h"
+#include "../lib/memalign.h"
 #include "../os/os.h"
 #include "../gettime.h"
 #include "../fio_time.h"

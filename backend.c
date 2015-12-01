@@ -49,7 +49,7 @@
 #include "cgroup.h"
 #include "profile.h"
 #include "lib/rand.h"
-#include "memalign.h"
+#include "lib/memalign.h"
 #include "server.h"
 #include "lib/getrusage.h"
 #include "idletime.h"

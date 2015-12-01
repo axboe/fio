@@ -41,13 +41,13 @@ SOURCE :=	gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		lib/rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
 		lib/num2str.c lib/ieee754.c lib/strntol.c engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
-		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
+		server.c client.c iolog.c backend.c libfio.c flow.c \
 		cconv.c lib/prio_tree.c lib/zipf.c lib/axmap.c lib/pattern.c \
 		lib/lfsr.c gettime-thread.c helpers.c lib/flist_sort.c json.c \
 		lib/hweight.c lib/getrusage.c idletime.c td_error.c \
 		profiles/tiobench.c profiles/act.c io_u_queue.c filelock.c \
 		lib/tp.c lib/bloom.c lib/gauss.c lib/mountcheck.c workqueue.c \
-		lib/output_buffer.c \
+		lib/output_buffer.c lib/memalign.c \
 		$(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/crc/*.c))
 
 ifdef CONFIG_LIBHDFS
@@ -222,8 +222,8 @@ endif
 
 T_DEDUPE_OBJS = t/dedupe.o
 T_DEDUPE_OBJS += lib/rbtree.o t/log.o mutex.o smalloc.o gettime.o crc/md5.o \
-		memalign.o lib/bloom.o t/debug.o crc/xxhash.o crc/murmur3.o \
-		crc/crc32c.o crc/crc32c-intel.o crc/fnv.o
+		lib/memalign.o lib/bloom.o t/debug.o crc/xxhash.o \
+		crc/murmur3.o crc/crc32c.o crc/crc32c-intel.o crc/fnv.o
 T_DEDUPE_PROGS = t/fio-dedupe
 
 T_OBJS = $(T_SMALLOC_OBJS)
