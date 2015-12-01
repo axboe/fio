@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #include "../arch/arch.h"
+#include "../lib/types.h"
 
 enum {
 	os_linux = 1,

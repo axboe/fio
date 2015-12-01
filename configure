@@ -1558,6 +1558,23 @@ if compile_prog "" "" "static_assert"; then
     static_assert="yes"
 fi
 echo "Static Assert                 $static_assert"
+
+##########################################
+# Check whether we have bool / stdbool.h
+have_bool="no"
+cat > $TMPC << EOF
+#include <stdbool.h>
+int main(int argc, char **argv)
+{
+  bool var = true;
+  return var != false;
+}
+EOF
+if compile_prog "" "" "bool"; then
+  have_bool="yes"
+fi
+echo "bool                          $have_bool"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -1742,6 +1759,9 @@ if test "$getmntinfo" = "yes" ; then
 fi
 if test "$static_assert" = "yes" ; then
   output_sym "CONFIG_STATIC_ASSERT"
+fi
+if test "$have_bool" = "yes" ; then
+  output_sym "CONFIG_HAVE_BOOL"
 fi
 
 if test "$zlib" = "no" ; then

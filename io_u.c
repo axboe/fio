@@ -27,7 +27,7 @@ struct io_completion_data {
  * The ->io_axmap contains a map of blocks we have or have not done io
  * to yet. Used to make sure we cover the entire range in a fair fashion.
  */
-static int random_map_free(struct fio_file *f, const uint64_t block)
+static bool random_map_free(struct fio_file *f, const uint64_t block)
 {
 	return !axmap_isset(f->io_axmap, block);
 }
@@ -190,29 +190,29 @@ static int get_off_from_method(struct thread_data *td, struct fio_file *f,
  * Sort the reads for a verify phase in batches of verifysort_nr, if
  * specified.
  */
-static inline int should_sort_io(struct thread_data *td)
+static inline bool should_sort_io(struct thread_data *td)
 {
 	if (!td->o.verifysort_nr || !td->o.do_verify)
-		return 0;
+		return false;
 	if (!td_random(td))
-		return 0;
+		return false;
 	if (td->runstate != TD_VERIFYING)
-		return 0;
+		return false;
 	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE ||
 	    td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE64)
-		return 0;
+		return false;
 
-	return 1;
+	return true;
 }
 
-static int should_do_random(struct thread_data *td, enum fio_ddir ddir)
+static bool should_do_random(struct thread_data *td, enum fio_ddir ddir)
 {
 	uint64_t frand_max;
 	unsigned int v;
 	unsigned long r;
 
 	if (td->o.perc_rand[ddir] == 100)
-		return 1;
+		return true;
 
 	frand_max = rand_max(&td->seq_rand_state[ddir]);
 	r = __rand(&td->seq_rand_state[ddir]);
@@ -431,8 +431,8 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u,
 	return __get_next_offset(td, io_u, is_random);
 }
 
-static inline int io_u_fits(struct thread_data *td, struct io_u *io_u,
-			    unsigned int buflen)
+static inline bool io_u_fits(struct thread_data *td, struct io_u *io_u,
+			     unsigned int buflen)
 {
 	struct fio_file *f = io_u->file;
 
@@ -1191,10 +1191,10 @@ static void lat_new_cycle(struct thread_data *td)
  * We had an IO outside the latency target. Reduce the queue depth. If we
  * are at QD=1, then it's time to give up.
  */
-static int __lat_target_failed(struct thread_data *td)
+static bool __lat_target_failed(struct thread_data *td)
 {
 	if (td->latency_qd == 1)
-		return 1;
+		return true;
 
 	td->latency_qd_high = td->latency_qd;
 
@@ -1211,16 +1211,16 @@ static int __lat_target_failed(struct thread_data *td)
 	 */
 	io_u_quiesce(td);
 	lat_new_cycle(td);
-	return 0;
+	return false;
 }
 
-static int lat_target_failed(struct thread_data *td)
+static bool lat_target_failed(struct thread_data *td)
 {
 	if (td->o.latency_percentile.u.f == 100.0)
 		return __lat_target_failed(td);
 
 	td->latency_failed++;
-	return 0;
+	return false;
 }
 
 void lat_target_init(struct thread_data *td)
@@ -1315,14 +1315,14 @@ void lat_target_check(struct thread_data *td)
  * If latency target is enabled, we might be ramping up or down and not
  * using the full queue depth available.
  */
-int queue_full(const struct thread_data *td)
+bool queue_full(const struct thread_data *td)
 {
 	const int qempty = io_u_qempty(&td->io_u_freelist);
 
 	if (qempty)
-		return 1;
+		return true;
 	if (!td->o.latency_target)
-		return 0;
+		return false;
 
 	return td->cur_depth >= td->latency_qd;
 }
@@ -1374,10 +1374,10 @@ again:
 	return io_u;
 }
 
-static int check_get_trim(struct thread_data *td, struct io_u *io_u)
+static bool check_get_trim(struct thread_data *td, struct io_u *io_u)
 {
 	if (!(td->flags & TD_F_TRIM_BACKLOG))
-		return 0;
+		return false;
 
 	if (td->trim_entries) {
 		int get_trim = 0;
@@ -1394,16 +1394,16 @@ static int check_get_trim(struct thread_data *td, struct io_u *io_u)
 		}
 
 		if (get_trim && !get_next_trim(td, io_u))
-			return 1;
+			return true;
 	}
 
-	return 0;
+	return false;
 }
 
-static int check_get_verify(struct thread_data *td, struct io_u *io_u)
+static bool check_get_verify(struct thread_data *td, struct io_u *io_u)
 {
 	if (!(td->flags & TD_F_VER_BACKLOG))
-		return 0;
+		return false;
 
 	if (td->io_hist_len) {
 		int get_verify = 0;
@@ -1420,11 +1420,11 @@ static int check_get_verify(struct thread_data *td, struct io_u *io_u)
 
 		if (get_verify && !get_next_verify(td, io_u)) {
 			td->verify_batch--;
-			return 1;
+			return true;
 		}
 	}
 
-	return 0;
+	return false;
 }
 
 /*
@@ -1597,7 +1597,7 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 		__io_u_log_error(td, io_u);
 }
 
-static inline int gtod_reduce(struct thread_data *td)
+static inline bool gtod_reduce(struct thread_data *td)
 {
 	return td->o.disable_clat && td->o.disable_lat && td->o.disable_slat
 		&& td->o.disable_bw;
