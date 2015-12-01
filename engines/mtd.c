@@ -14,7 +14,7 @@
 
 #include "../fio.h"
 #include "../verify.h"
-#include "../lib/libmtd.h"
+#include "../oslib/libmtd.h"
 
 libmtd_t desc;
 

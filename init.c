@@ -27,7 +27,7 @@
 #include "filelock.h"
 
 #include "lib/getopt.h"
-#include "lib/strcasestr.h"
+#include "oslib/strcasestr.h"
 
 #include "crc/test.h"
 

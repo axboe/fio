@@ -65,11 +65,11 @@ typedef struct aiocb os_aiocb_t;
 #endif
 
 #ifndef CONFIG_STRSEP
-#include "../lib/strsep.h"
+#include "../oslib/strsep.h"
 #endif
 
 #ifndef CONFIG_STRLCAT
-#include "../lib/strlcat.h"
+#include "../oslib/strlcat.h"
 #endif
 
 #ifdef MSG_DONTWAIT

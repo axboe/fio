@@ -36,11 +36,8 @@ ifdef CONFIG_GFIO
   PROGS += gfio
 endif
 
-SOURCE :=	lib/rbtree.c lib/rand.c lib/num2str.c lib/ieee754.c \
-		lib/strntol.c lib/prio_tree.c lib/zipf.c lib/axmap.c \
-		lib/pattern.c lib/lfsr.c lib/flist_sort.c lib/hweight.c \
-		lib/getrusage.c lib/tp.c lib/bloom.c lib/gauss.c \
-		lib/mountcheck.c lib/output_buffer.c lib/memalign.c \
+SOURCE :=	$(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/crc/*.c)) \
+		$(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/lib/*.c)) \
 		gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
 		smalloc.c filehash.c profile.c debug.c engines/cpu.c \
@@ -48,8 +45,7 @@ SOURCE :=	lib/rbtree.c lib/rand.c lib/num2str.c lib/ieee754.c \
 		server.c client.c iolog.c backend.c libfio.c flow.c cconv.c \
 		gettime-thread.c helpers.c json.c idletime.c td_error.c \
 		profiles/tiobench.c profiles/act.c io_u_queue.c filelock.c \
-		workqueue.c \
-		$(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/crc/*.c))
+		workqueue.c
 
 ifdef CONFIG_LIBHDFS
   HDFSFLAGS= -I $(JAVA_HOME)/include -I $(JAVA_HOME)/include/linux -I $(FIO_LIBHDFS_INCLUDE)
@@ -101,19 +97,19 @@ ifdef CONFIG_RBD
   SOURCE += engines/rbd.c
 endif
 ifndef CONFIG_STRSEP
-  SOURCE += lib/strsep.c
+  SOURCE += oslib/strsep.c
 endif
 ifndef CONFIG_STRCASESTR
-  SOURCE += lib/strcasestr.c
+  SOURCE += oslib/strcasestr.c
 endif
 ifndef CONFIG_STRLCAT
-  SOURCE += lib/strlcat.c
+  SOURCE += oslib/strlcat.c
 endif
 ifndef CONFIG_GETOPT_LONG_ONLY
-  SOURCE += lib/getopt_long.c
+  SOURCE += oslib/getopt_long.c
 endif
 ifndef CONFIG_INET_ATON
-  SOURCE += lib/inet_aton.c
+  SOURCE += oslib/inet_aton.c
 endif
 ifdef CONFIG_GFAPI
   SOURCE += engines/glusterfs.c
@@ -125,19 +121,19 @@ ifdef CONFIG_GFAPI
 endif
 ifdef CONFIG_MTD
   SOURCE += engines/mtd.c
-  SOURCE += lib/libmtd.c
-  SOURCE += lib/libmtd_legacy.c
+  SOURCE += oslib/libmtd.c
+  SOURCE += oslib/libmtd_legacy.c
 endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
-		engines/binject.c lib/linux-dev-lookup.c
+		engines/binject.c oslib/linux-dev-lookup.c
   LIBS += -lpthread -ldl
   LDFLAGS += -rdynamic
 endif
 ifeq ($(CONFIG_TARGET_OS), Android)
   SOURCE += diskutil.c fifo.c blktrace.c trim.c profiles/tiobench.c \
-		lib/linux-dev-lookup.c
+		oslib/linux-dev-lookup.c
   LIBS += -ldl
   LDFLAGS += -rdynamic
 endif
@@ -217,7 +213,7 @@ T_LFSR_TEST_PROGS = t/lfsr-test
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
 T_BTRACE_FIO_OBJS = t/btrace2fio.o
-T_BTRACE_FIO_OBJS += fifo.o lib/flist_sort.o t/log.o lib/linux-dev-lookup.o
+T_BTRACE_FIO_OBJS += fifo.o lib/flist_sort.o t/log.o oslib/linux-dev-lookup.o
 T_BTRACE_FIO_PROGS = t/fio-btrace2fio
 endif
 

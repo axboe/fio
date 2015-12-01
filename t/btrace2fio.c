@@ -12,7 +12,7 @@
 #include "../blktrace_api.h"
 #include "../os/os.h"
 #include "../log.h"
-#include "../lib/linux-dev-lookup.h"
+#include "../oslib/linux-dev-lookup.h"
 
 #define TRACE_FIFO_SIZE	8192
 

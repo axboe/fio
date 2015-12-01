@@ -11,7 +11,7 @@
 #include "flist.h"
 #include "fio.h"
 #include "blktrace_api.h"
-#include "lib/linux-dev-lookup.h"
+#include "oslib/linux-dev-lookup.h"
 
 #define TRACE_FIFO_SIZE	8192
 
