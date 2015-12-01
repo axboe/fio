@@ -135,6 +135,7 @@ show_help="no"
 exit_val=0
 gfio_check="no"
 libhdfs="no"
+disable_lex="no"
 prefix=/usr/local
 
 # parse options
@@ -168,6 +169,8 @@ for opt do
   ;;
   --enable-libhdfs) libhdfs="yes"
   ;;
+  --disable-lex) disable_lex="yes"
+  ;;
   --disable-shm) no_shm="yes"
   ;;
   --disable-optimizations) disable_opt="yes"
@@ -194,6 +197,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-numa         Disable libnuma even if found"
   echo "--disable-gfapi        Disable gfapi"
   echo "--enable-libhdfs       Enable hdfs support"
+  echo "--disable-lex          Disable use of lex/yacc for math"
   echo "--disable-shm          Disable SHM support"
   echo "--disable-optimizations Don't enable compiler optimizations"
   exit $exit_val
@@ -1451,6 +1455,7 @@ yacc="no"
 yacc_is_bison="no"
 lex="no"
 arith="no"
+if test "$disable_lex" = "no"; then
 if test "$targetos" != "SunOS" ; then
 LEX=$(which lex 2> /dev/null)
 if test -x "$LEX" ; then
@@ -1484,6 +1489,7 @@ if compile_prog "" "-ll" "lex"; then
   LIBS="-ll $LIBS"
 else
   arith="no"
+fi
 fi
 fi
 fi
