@@ -92,7 +92,7 @@ struct fio_mutex *fio_mutex_init(int value)
 	return NULL;
 }
 
-static int mutex_timed_out(struct timeval *t, unsigned int seconds)
+static bool mutex_timed_out(struct timeval *t, unsigned int seconds)
 {
 	return mtime_since_now(t) >= seconds * 1000;
 }
@@ -133,16 +133,16 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 	return ret;
 }
 
-int fio_mutex_down_trylock(struct fio_mutex *mutex)
+bool fio_mutex_down_trylock(struct fio_mutex *mutex)
 {
-	int ret = 1;
+	bool ret = true;
 
 	assert(mutex->magic == FIO_MUTEX_MAGIC);
 
 	pthread_mutex_lock(&mutex->lock);
 	if (mutex->value) {
 		mutex->value--;
-		ret = 0;
+		ret = false;
 	}
 	pthread_mutex_unlock(&mutex->lock);
 
