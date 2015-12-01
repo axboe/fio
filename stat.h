@@ -270,6 +270,21 @@ extern void reset_io_stats(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
 extern void clear_rusage_stat(struct thread_data *);
 
+extern void add_lat_sample(struct thread_data *, enum fio_ddir, unsigned long,
+				unsigned int, uint64_t);
+extern void add_clat_sample(struct thread_data *, enum fio_ddir, unsigned long,
+				unsigned int, uint64_t);
+extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long,
+				unsigned int, uint64_t);
+extern void add_bw_sample(struct thread_data *, enum fio_ddir, unsigned int,
+				struct timeval *);
+extern void add_iops_sample(struct thread_data *, enum fio_ddir, unsigned int,
+				struct timeval *);
+extern void add_agg_sample(unsigned long, enum fio_ddir, unsigned int);
+
+extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
+extern int write_bw_log;
+
 static inline int usec_to_msec(unsigned long *min, unsigned long *max,
 			       double *mean, double *dev)
 {
