@@ -414,7 +414,7 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 			errval = ret;
 	} else if (f->filetype == FIO_TYPE_FILE) {
 		ret = posix_fadvise(f->fd, off, len, POSIX_FADV_DONTNEED);
-		if (ret < 0)
+		if (ret)
 			errval = ret;
 	} else if (f->filetype == FIO_TYPE_BD) {
 		int retry_count = 0;
