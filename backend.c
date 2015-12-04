@@ -1358,16 +1358,38 @@ static void io_workqueue_fn(struct thread_data *td, struct io_u *io_u)
 
 	td->cur_depth++;
 
-	ret = td_io_queue(td, io_u);
+	do {
+		ret = td_io_queue(td, io_u);
+		if (ret != FIO_Q_BUSY)
+			break;
+		ret = io_u_queued_complete(td, 1);
+		if (ret > 0)
+			td->cur_depth -= ret;
+		io_u_clear(io_u, IO_U_F_FLIGHT);
+	} while (1);
 
 	dprint(FD_RATE, "io_u %p ret %d by %u\n", io_u, ret, gettid());
 
 	io_queue_event(td, io_u, &ret, ddir, NULL, 0, NULL);
 
-	if (ret == FIO_Q_QUEUED)
-		ret = io_u_queued_complete(td, 1);
+	if (ret == FIO_Q_COMPLETED)
+		td->cur_depth--;
+	else if (ret == FIO_Q_QUEUED) {
+		unsigned int min_evts;
 
-	td->cur_depth--;
+		if (td->o.iodepth == 1)
+			min_evts = 1;
+		else
+			min_evts = 0;
+
+		ret = io_u_queued_complete(td, min_evts);
+		if (ret > 0)
+			td->cur_depth -= ret;
+	} else if (ret == FIO_Q_BUSY) {
+		ret = io_u_queued_complete(td, td->cur_depth);
+		if (ret > 0)
+			td->cur_depth -= ret;
+	}
 }
 
 /*

@@ -283,8 +283,12 @@ static void *worker_thread(void *data)
 
 			if (td->io_u_queued || td->cur_depth ||
 			    td->io_u_in_flight) {
+				int ret;
+
 				pthread_mutex_unlock(&sw->lock);
-				io_u_quiesce(td);
+				ret = io_u_quiesce(td);
+				if (ret > 0)
+					td->cur_depth -= ret;
 				pthread_mutex_lock(&sw->lock);
 			}
 
