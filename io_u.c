@@ -542,8 +542,10 @@ static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
 	return DDIR_WRITE;
 }
 
-void io_u_quiesce(struct thread_data *td)
+int io_u_quiesce(struct thread_data *td)
 {
+	int completed = 0;
+
 	/*
 	 * We are going to sleep, ensure that we flush anything pending as
 	 * not to skew our latency numbers.
@@ -563,7 +565,11 @@ void io_u_quiesce(struct thread_data *td)
 		int fio_unused ret;
 
 		ret = io_u_queued_complete(td, 1);
+		if (ret > 0)
+			completed += ret;
 	}
+
+	return completed;
 }
 
 static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
@@ -1856,7 +1862,7 @@ int io_u_queued_complete(struct thread_data *td, int min_evts)
 	for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++)
 		td->bytes_done[ddir] += icd.bytes_done[ddir];
 
-	return 0;
+	return ret;
 }
 
 /*
