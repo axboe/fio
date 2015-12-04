@@ -67,6 +67,21 @@ static inline unsigned int mfspr(unsigned int reg)
 #define SPRN_ATBL  0x20E /* Alternate Time Base Lower */
 #define SPRN_ATBU  0x20F /* Alternate Time Base Upper */
 
+#ifdef __powerpc64__
+static inline unsigned long long get_cpu_clock(void)
+{
+	unsigned long long rval;
+
+	asm volatile(
+		"90:	mfspr %0, %1;\n"
+		"	cmpwi %0,0;\n"
+		"	beq-  90b;\n"
+	: "=r" (rval)
+	: "i" (SPRN_TBRL));
+
+	return rval;
+}
+#else
 static inline unsigned long long get_cpu_clock(void)
 {
 	unsigned int tbl, tbu0, tbu1;
@@ -87,6 +102,7 @@ static inline unsigned long long get_cpu_clock(void)
 	ret = (((unsigned long long)tbu0) << 32) | tbl;
 	return ret;
 }
+#endif
 
 #if 0
 static void atb_child(void)
@@ -135,5 +151,13 @@ static inline int arch_init(char *envp[])
  *
  * #define ARCH_HAVE_CPU_CLOCK
  */
+
+/*
+ * Let's have it defined for ppc64
+ */
+
+#ifdef __powerpc64__
+#define ARCH_HAVE_CPU_CLOCK
+#endif
 
 #endif
