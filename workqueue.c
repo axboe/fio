@@ -217,13 +217,32 @@ static void sum_val(uint64_t *dst, uint64_t *src)
 }
 #endif
 
+static void pthread_double_unlock(pthread_mutex_t *lock1,
+				  pthread_mutex_t *lock2)
+{
+#ifndef CONFIG_SFAA
+	pthread_mutex_unlock(lock1);
+	pthread_mutex_unlock(lock2);
+#endif
+}
+
+static void pthread_double_lock(pthread_mutex_t *lock1, pthread_mutex_t *lock2)
+{
+#ifndef CONFIG_SFAA
+	if (lock1 < lock2) {
+		pthread_mutex_lock(lock1);
+		pthread_mutex_lock(lock2);
+	} else {
+		pthread_mutex_lock(lock2);
+		pthread_mutex_lock(lock1);
+	}
+#endif
+}
+
 static void sum_ddir(struct thread_data *dst, struct thread_data *src,
 		     enum fio_ddir ddir)
 {
-#ifndef CONFIG_SFAA
-	pthread_mutex_lock(&dst->io_wq.stat_lock);
-	pthread_mutex_lock(&src->io_wq.stat_lock);
-#endif
+	pthread_double_lock(&dst->io_wq.stat_lock, &src->io_wq.stat_lock);
 
 	sum_val(&dst->io_bytes[ddir], &src->io_bytes[ddir]);
 	sum_val(&dst->io_blocks[ddir], &src->io_blocks[ddir]);
@@ -231,10 +250,7 @@ static void sum_ddir(struct thread_data *dst, struct thread_data *src,
 	sum_val(&dst->this_io_bytes[ddir], &src->this_io_bytes[ddir]);
 	sum_val(&dst->bytes_done[ddir], &src->bytes_done[ddir]);
 
-#ifndef CONFIG_SFAA
-	pthread_mutex_unlock(&src->io_wq.stat_lock);
-	pthread_mutex_unlock(&dst->io_wq.stat_lock);
-#endif
+	pthread_double_unlock(&dst->io_wq.stat_lock, &src->io_wq.stat_lock);
 }
 
 static void update_accounting(struct submit_worker *sw)
