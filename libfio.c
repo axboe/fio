@@ -77,19 +77,24 @@ static const char *fio_arch_strings[arch_nr] = {
 	"generic"
 };
 
-static void reset_io_counters(struct thread_data *td)
+static void reset_io_counters(struct thread_data *td, int all)
 {
 	int ddir;
 
-	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
-		td->stat_io_bytes[ddir] = 0;
-		td->this_io_bytes[ddir] = 0;
-		td->stat_io_blocks[ddir] = 0;
-		td->this_io_blocks[ddir] = 0;
-		td->rate_bytes[ddir] = 0;
-		td->rate_blocks[ddir] = 0;
-		td->bytes_done[ddir] = 0;
+	if (all) {
+		for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
+			td->stat_io_bytes[ddir] = 0;
+			td->this_io_bytes[ddir] = 0;
+			td->stat_io_blocks[ddir] = 0;
+			td->this_io_blocks[ddir] = 0;
+			td->rate_bytes[ddir] = 0;
+			td->rate_blocks[ddir] = 0;
+			td->bytes_done[ddir] = 0;
+			td->rate_io_issue_bytes[ddir] = 0;
+			td->rate_next_io_time[ddir] = 0;
+		}
 	}
+
 	td->zone_bytes = 0;
 
 	td->last_was_sync = 0;
@@ -102,12 +107,12 @@ static void reset_io_counters(struct thread_data *td)
 		td->nr_done_files = 0;
 }
 
-void clear_io_state(struct thread_data *td)
+void clear_io_state(struct thread_data *td, int all)
 {
 	struct fio_file *f;
 	unsigned int i;
 
-	reset_io_counters(td);
+	reset_io_counters(td, all);
 
 	close_files(td);
 	for_each_file(td, f, i) {
@@ -127,7 +132,7 @@ void reset_all_stats(struct thread_data *td)
 	struct timeval tv;
 	int i;
 
-	reset_io_counters(td);
+	reset_io_counters(td, 1);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		td->io_bytes[i] = 0;
@@ -143,6 +148,7 @@ void reset_all_stats(struct thread_data *td)
 	memcpy(&td->start, &tv, sizeof(tv));
 
 	lat_target_reset(td);
+	clear_rusage_stat(td);
 }
 
 void reset_fio_state(void)
@@ -224,7 +230,7 @@ void fio_mark_td_terminate(struct thread_data *td)
 	td->terminate = 1;
 }
 
-void fio_terminate_threads(int group_id)
+void fio_terminate_threads(unsigned int group_id)
 {
 	struct thread_data *td;
 	pid_t pid = getpid();
@@ -233,7 +239,7 @@ void fio_terminate_threads(int group_id)
 	dprint(FD_PROCESS, "terminate group_id=%d\n", group_id);
 
 	for_each_td(td, i) {
-		if (group_id == TERMINATE_ALL || groupid == td->groupid) {
+		if (group_id == TERMINATE_ALL || group_id == td->groupid) {
 			dprint(FD_PROCESS, "setting terminate on %s/%d\n",
 						td->o.name, (int) td->pid);
 

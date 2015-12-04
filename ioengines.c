@@ -299,6 +299,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	if (ddir_rw(ddir)) {
 		td->io_issues[ddir]++;
 		td->io_issue_bytes[ddir] += buflen;
+		td->rate_io_issue_bytes[ddir] += buflen;
 	}
 
 	ret = td->io_ops->queue(td, io_u);
@@ -308,6 +309,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	if (ret == FIO_Q_BUSY && ddir_rw(ddir)) {
 		td->io_issues[ddir]--;
 		td->io_issue_bytes[ddir] -= buflen;
+		td->rate_io_issue_bytes[ddir] -= buflen;
 	}
 
 	/*

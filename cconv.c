@@ -83,7 +83,8 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->iodepth = le32_to_cpu(top->iodepth);
 	o->iodepth_low = le32_to_cpu(top->iodepth_low);
 	o->iodepth_batch = le32_to_cpu(top->iodepth_batch);
-	o->iodepth_batch_complete = le32_to_cpu(top->iodepth_batch_complete);
+	o->iodepth_batch_complete_min = le32_to_cpu(top->iodepth_batch_complete_min);
+	o->iodepth_batch_complete_max = le32_to_cpu(top->iodepth_batch_complete_max);
 	o->size = le64_to_cpu(top->size);
 	o->io_limit = le64_to_cpu(top->io_limit);
 	o->size_percent = le32_to_cpu(top->size_percent);
@@ -253,6 +254,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->per_job_logs = le32_to_cpu(top->per_job_logs);
 
 	o->trim_backlog = le64_to_cpu(top->trim_backlog);
+	o->rate_process = le32_to_cpu(top->rate_process);
 
 	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++)
 		o->percentile_list[i].u.f = fio_uint64_to_double(le64_to_cpu(top->percentile_list[i].u.i));
@@ -300,7 +302,8 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->iodepth = cpu_to_le32(o->iodepth);
 	top->iodepth_low = cpu_to_le32(o->iodepth_low);
 	top->iodepth_batch = cpu_to_le32(o->iodepth_batch);
-	top->iodepth_batch_complete = cpu_to_le32(o->iodepth_batch_complete);
+	top->iodepth_batch_complete_min = cpu_to_le32(o->iodepth_batch_complete_min);
+	top->iodepth_batch_complete_max = cpu_to_le32(o->iodepth_batch_complete_max);
 	top->size_percent = cpu_to_le32(o->size_percent);
 	top->fill_device = cpu_to_le32(o->fill_device);
 	top->file_append = cpu_to_le32(o->file_append);
@@ -472,6 +475,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->trim_backlog = __cpu_to_le64(o->trim_backlog);
 	top->offset_increment = __cpu_to_le64(o->offset_increment);
 	top->number_ios = __cpu_to_le64(o->number_ios);
+	top->rate_process = cpu_to_le32(o->rate_process);
 
 	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++)
 		top->percentile_list[i].u.i = __cpu_to_le64(fio_double_to_uint64(o->percentile_list[i].u.f));

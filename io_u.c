@@ -13,6 +13,7 @@
 #include "lib/axmap.h"
 #include "err.h"
 #include "lib/pow2.h"
+#include "minmax.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -26,7 +27,7 @@ struct io_completion_data {
  * The ->io_axmap contains a map of blocks we have or have not done io
  * to yet. Used to make sure we cover the entire range in a fair fashion.
  */
-static int random_map_free(struct fio_file *f, const uint64_t block)
+static bool random_map_free(struct fio_file *f, const uint64_t block)
 {
 	return !axmap_isset(f->io_axmap, block);
 }
@@ -189,29 +190,29 @@ static int get_off_from_method(struct thread_data *td, struct fio_file *f,
  * Sort the reads for a verify phase in batches of verifysort_nr, if
  * specified.
  */
-static inline int should_sort_io(struct thread_data *td)
+static inline bool should_sort_io(struct thread_data *td)
 {
 	if (!td->o.verifysort_nr || !td->o.do_verify)
-		return 0;
+		return false;
 	if (!td_random(td))
-		return 0;
+		return false;
 	if (td->runstate != TD_VERIFYING)
-		return 0;
+		return false;
 	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE ||
 	    td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE64)
-		return 0;
+		return false;
 
-	return 1;
+	return true;
 }
 
-static int should_do_random(struct thread_data *td, enum fio_ddir ddir)
+static bool should_do_random(struct thread_data *td, enum fio_ddir ddir)
 {
 	uint64_t frand_max;
 	unsigned int v;
 	unsigned long r;
 
 	if (td->o.perc_rand[ddir] == 100)
-		return 1;
+		return true;
 
 	frand_max = rand_max(&td->seq_rand_state[ddir]);
 	r = __rand(&td->seq_rand_state[ddir]);
@@ -430,8 +431,8 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u,
 	return __get_next_offset(td, io_u, is_random);
 }
 
-static inline int io_u_fits(struct thread_data *td, struct io_u *io_u,
-			    unsigned int buflen)
+static inline bool io_u_fits(struct thread_data *td, struct io_u *io_u,
+			     unsigned int buflen)
 {
 	struct fio_file *f = io_u->file;
 
@@ -488,7 +489,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 			}
 		}
 
-		if (td->o.do_verify && td->o.verify != VERIFY_NONE)
+		if (td->o.verify != VERIFY_NONE)
 			buflen = (buflen + td->o.verify_interval - 1) &
 				~(td->o.verify_interval - 1);
 
@@ -568,48 +569,46 @@ void io_u_quiesce(struct thread_data *td)
 static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 {
 	enum fio_ddir odir = ddir ^ 1;
-	long usec;
+	long usec, now;
 
 	assert(ddir_rw(ddir));
+	now = utime_since_now(&td->start);
 
-	if (td->rate_pending_usleep[ddir] <= 0)
+	/*
+	 * if rate_next_io_time is in the past, need to catch up to rate
+	 */
+	if (td->rate_next_io_time[ddir] <= now)
 		return ddir;
 
 	/*
-	 * We have too much pending sleep in this direction. See if we
+	 * We are ahead of rate in this direction. See if we
 	 * should switch.
 	 */
 	if (td_rw(td) && td->o.rwmix[odir]) {
 		/*
-		 * Other direction does not have too much pending, switch
+		 * Other direction is behind rate, switch
 		 */
-		if (td->rate_pending_usleep[odir] < 100000)
+		if (td->rate_next_io_time[odir] <= now)
 			return odir;
 
 		/*
-		 * Both directions have pending sleep. Sleep the minimum time
-		 * and deduct from both.
+		 * Both directions are ahead of rate. sleep the min
+		 * switch if necissary
 		 */
-		if (td->rate_pending_usleep[ddir] <=
-			td->rate_pending_usleep[odir]) {
-			usec = td->rate_pending_usleep[ddir];
+		if (td->rate_next_io_time[ddir] <=
+			td->rate_next_io_time[odir]) {
+			usec = td->rate_next_io_time[ddir] - now;
 		} else {
-			usec = td->rate_pending_usleep[odir];
+			usec = td->rate_next_io_time[odir] - now;
 			ddir = odir;
 		}
 	} else
-		usec = td->rate_pending_usleep[ddir];
+		usec = td->rate_next_io_time[ddir] - now;
 
 	if (td->o.io_submit_mode == IO_MODE_INLINE)
 		io_u_quiesce(td);
 
 	usec = usec_sleep(td, usec);
-
-	td->rate_pending_usleep[ddir] -= usec;
-
-	odir = ddir ^ 1;
-	if (td_rw(td) && __should_check_rate(td, odir))
-		td->rate_pending_usleep[odir] -= usec;
 
 	return ddir;
 }
@@ -1192,10 +1191,10 @@ static void lat_new_cycle(struct thread_data *td)
  * We had an IO outside the latency target. Reduce the queue depth. If we
  * are at QD=1, then it's time to give up.
  */
-static int __lat_target_failed(struct thread_data *td)
+static bool __lat_target_failed(struct thread_data *td)
 {
 	if (td->latency_qd == 1)
-		return 1;
+		return true;
 
 	td->latency_qd_high = td->latency_qd;
 
@@ -1212,16 +1211,16 @@ static int __lat_target_failed(struct thread_data *td)
 	 */
 	io_u_quiesce(td);
 	lat_new_cycle(td);
-	return 0;
+	return false;
 }
 
-static int lat_target_failed(struct thread_data *td)
+static bool lat_target_failed(struct thread_data *td)
 {
 	if (td->o.latency_percentile.u.f == 100.0)
 		return __lat_target_failed(td);
 
 	td->latency_failed++;
-	return 0;
+	return false;
 }
 
 void lat_target_init(struct thread_data *td)
@@ -1316,14 +1315,14 @@ void lat_target_check(struct thread_data *td)
  * If latency target is enabled, we might be ramping up or down and not
  * using the full queue depth available.
  */
-int queue_full(const struct thread_data *td)
+bool queue_full(const struct thread_data *td)
 {
 	const int qempty = io_u_qempty(&td->io_u_freelist);
 
 	if (qempty)
-		return 1;
+		return true;
 	if (!td->o.latency_target)
-		return 0;
+		return false;
 
 	return td->cur_depth >= td->latency_qd;
 }
@@ -1375,10 +1374,10 @@ again:
 	return io_u;
 }
 
-static int check_get_trim(struct thread_data *td, struct io_u *io_u)
+static bool check_get_trim(struct thread_data *td, struct io_u *io_u)
 {
 	if (!(td->flags & TD_F_TRIM_BACKLOG))
-		return 0;
+		return false;
 
 	if (td->trim_entries) {
 		int get_trim = 0;
@@ -1395,16 +1394,16 @@ static int check_get_trim(struct thread_data *td, struct io_u *io_u)
 		}
 
 		if (get_trim && !get_next_trim(td, io_u))
-			return 1;
+			return true;
 	}
 
-	return 0;
+	return false;
 }
 
-static int check_get_verify(struct thread_data *td, struct io_u *io_u)
+static bool check_get_verify(struct thread_data *td, struct io_u *io_u)
 {
 	if (!(td->flags & TD_F_VER_BACKLOG))
-		return 0;
+		return false;
 
 	if (td->io_hist_len) {
 		int get_verify = 0;
@@ -1421,11 +1420,11 @@ static int check_get_verify(struct thread_data *td, struct io_u *io_u)
 
 		if (get_verify && !get_next_verify(td, io_u)) {
 			td->verify_batch--;
-			return 1;
+			return true;
 		}
 	}
 
-	return 0;
+	return false;
 }
 
 /*
@@ -1528,7 +1527,7 @@ struct io_u *get_io_u(struct thread_data *td)
 			if (td->flags & TD_F_REFILL_BUFFERS) {
 				io_u_fill_buffer(td, io_u,
 					td->o.min_bs[DDIR_WRITE],
-					io_u->xfer_buflen);
+					io_u->buflen);
 			} else if ((td->flags & TD_F_SCRAMBLE_BUFFERS) &&
 				   !(td->flags & TD_F_COMPRESS))
 				do_scramble = 1;
@@ -1580,6 +1579,13 @@ static void __io_u_log_error(struct thread_data *td, struct io_u *io_u)
 		io_ddir_name(io_u->ddir),
 		io_u->offset, io_u->xfer_buflen);
 
+	if (td->io_ops->errdetails) {
+		char *err = td->io_ops->errdetails(io_u);
+
+		log_err("fio: %s\n", err);
+		free(err);
+	}
+
 	if (!td->error)
 		td_verror(td, io_u->error, "io_u error");
 }
@@ -1591,7 +1597,7 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 		__io_u_log_error(td, io_u);
 }
 
-static inline int gtod_reduce(struct thread_data *td)
+static inline bool gtod_reduce(struct thread_data *td)
 {
 	return td->o.disable_clat && td->o.disable_lat && td->o.disable_slat
 		&& td->o.disable_bw;
@@ -1656,18 +1662,6 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 	}
 }
 
-static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
-{
-	uint64_t secs, remainder, bps, bytes;
-
-	assert(!(td->flags & TD_F_CHILD));
-	bytes = td->this_io_bytes[ddir];
-	bps = td->rate_bps[ddir];
-	secs = bytes / bps;
-	remainder = bytes % bps;
-	return remainder * 1000000 / bps + secs * 1000000;
-}
-
 static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 			 struct io_completion_data *icd)
 {
@@ -1709,7 +1703,6 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 
 	if (!io_u->error && ddir_rw(ddir)) {
 		unsigned int bytes = io_u->buflen - io_u->resid;
-		const enum fio_ddir oddir = ddir ^ 1;
 		int ret;
 
 		td->io_blocks[ddir]++;
@@ -1738,26 +1731,8 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		}
 
 		if (ramp_time_over(td) && (td->runstate == TD_RUNNING ||
-					   td->runstate == TD_VERIFYING)) {
-			struct thread_data *__td = td;
-
+					   td->runstate == TD_VERIFYING))
 			account_io_completion(td, io_u, icd, ddir, bytes);
-
-			if (td->parent)
-				__td = td->parent;
-
-			if (__should_check_rate(__td, ddir)) {
-				__td->rate_pending_usleep[ddir] =
-					(usec_for_io(__td, ddir) -
-					 utime_since_now(&__td->start));
-			}
-			if (ddir != DDIR_TRIM &&
-			    __should_check_rate(__td, oddir)) {
-				__td->rate_pending_usleep[oddir] =
-					(usec_for_io(__td, oddir) -
-					 utime_since_now(&__td->start));
-			}
-		}
 
 		icd->bytes_done[ddir] += bytes;
 
@@ -1862,7 +1837,9 @@ int io_u_queued_complete(struct thread_data *td, int min_evts)
 	else if (min_evts > td->cur_depth)
 		min_evts = td->cur_depth;
 
-	ret = td_io_getevents(td, min_evts, td->o.iodepth_batch_complete, tvp);
+	/* No worries, td_io_getevents fixes min and max if they are
+	 * set incorrectly */
+	ret = td_io_getevents(td, min_evts, td->o.iodepth_batch_complete_max, tvp);
 	if (ret < 0) {
 		td_verror(td, -ret, "td_io_getevents");
 		return ret;
@@ -1943,6 +1920,7 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 		unsigned int perc = td->o.compress_percentage;
 		struct frand_state *rs;
 		unsigned int left = max_bs;
+		unsigned int this_write;
 
 		do {
 			rs = get_buf_state(td);
@@ -1950,20 +1928,20 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 			min_write = min(min_write, left);
 
 			if (perc) {
-				unsigned int seg = min_write;
+				this_write = min_not_zero(min_write,
+							td->o.compress_chunk);
 
-				seg = min(min_write, td->o.compress_chunk);
-				if (!seg)
-					seg = min_write;
-
-				fill_random_buf_percentage(rs, buf, perc, seg,
-					min_write, o->buffer_pattern,
-						   o->buffer_pattern_bytes);
-			} else
+				fill_random_buf_percentage(rs, buf, perc,
+					this_write, this_write,
+					o->buffer_pattern,
+					o->buffer_pattern_bytes);
+			} else {
 				fill_random_buf(rs, buf, min_write);
+				this_write = min_write;
+			}
 
-			buf += min_write;
-			left -= min_write;
+			buf += this_write;
+			left -= this_write;
 			save_buf_state(td, rs);
 		} while (left);
 	} else if (o->buffer_pattern_bytes)

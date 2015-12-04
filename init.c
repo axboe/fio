@@ -27,7 +27,7 @@
 #include "filelock.h"
 
 #include "lib/getopt.h"
-#include "lib/strcasestr.h"
+#include "oslib/strcasestr.h"
 
 #include "crc/test.h"
 
@@ -48,7 +48,6 @@ static int nr_job_sections;
 
 int exitall_on_terminate = 0;
 int output_format = FIO_OUTPUT_NORMAL;
-int append_terse_output = 0;
 int eta_print = FIO_ETA_AUTO;
 int eta_new_line = 0;
 FILE *f_out = NULL;
@@ -68,6 +67,8 @@ char *trigger_file = NULL;
 long long trigger_timeout = 0;
 char *trigger_cmd = NULL;
 char *trigger_remote_cmd = NULL;
+
+char *aux_path = NULL;
 
 static int prev_group_jobs;
 
@@ -267,6 +268,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'J',
 	},
 	{
+		.name		= (char *) "aux-path",
+		.has_arg	= required_argument,
+		.val		= 'K',
+	},
+	{
 		.name		= NULL,
 	},
 };
@@ -458,14 +464,16 @@ static int __setup_rate(struct thread_data *td, enum fio_ddir ddir)
 	if (td->o.rate[ddir])
 		td->rate_bps[ddir] = td->o.rate[ddir];
 	else
-		td->rate_bps[ddir] = td->o.rate_iops[ddir] * bs;
+		td->rate_bps[ddir] = (uint64_t) td->o.rate_iops[ddir] * bs;
 
 	if (!td->rate_bps[ddir]) {
 		log_err("rate lower than supported\n");
 		return -1;
 	}
 
-	td->rate_pending_usleep[ddir] = 0;
+	td->rate_next_io_time[ddir] = 0;
+	td->rate_io_issue_bytes[ddir] = 0;
+	td->last_usec = 0;
 	return 0;
 }
 
@@ -622,6 +630,13 @@ static int fixup_options(struct thread_data *td)
 	if (o->iodepth_batch > o->iodepth || !o->iodepth_batch)
 		o->iodepth_batch = o->iodepth;
 
+	/*
+	 * If max batch complete number isn't set or set incorrectly,
+	 * default to the same as iodepth_batch_complete_min
+	 */
+	if (o->iodepth_batch_complete_min > o->iodepth_batch_complete_max)
+		o->iodepth_batch_complete_max = o->iodepth_batch_complete_min;
+
 	if (o->nr_files > td->files_index)
 		o->nr_files = td->files_index;
 
@@ -635,12 +650,12 @@ static int fixup_options(struct thread_data *td)
 		log_err("fio: rate and rate_iops are mutually exclusive\n");
 		ret = 1;
 	}
-	if ((o->rate[DDIR_READ] < o->ratemin[DDIR_READ]) ||
-	    (o->rate[DDIR_WRITE] < o->ratemin[DDIR_WRITE]) ||
-	    (o->rate[DDIR_TRIM] < o->ratemin[DDIR_TRIM]) ||
-	    (o->rate_iops[DDIR_READ] < o->rate_iops_min[DDIR_READ]) ||
-	    (o->rate_iops[DDIR_WRITE] < o->rate_iops_min[DDIR_WRITE]) ||
-	    (o->rate_iops[DDIR_TRIM] < o->rate_iops_min[DDIR_TRIM])) {
+	if ((o->rate[DDIR_READ] && (o->rate[DDIR_READ] < o->ratemin[DDIR_READ])) ||
+	    (o->rate[DDIR_WRITE] && (o->rate[DDIR_WRITE] < o->ratemin[DDIR_WRITE])) ||
+	    (o->rate[DDIR_TRIM] && (o->rate[DDIR_TRIM] < o->ratemin[DDIR_TRIM])) ||
+	    (o->rate_iops[DDIR_READ] && (o->rate_iops[DDIR_READ] < o->rate_iops_min[DDIR_READ])) ||
+	    (o->rate_iops[DDIR_WRITE] && (o->rate_iops[DDIR_WRITE] < o->rate_iops_min[DDIR_WRITE])) ||
+	    (o->rate_iops[DDIR_TRIM] && (o->rate_iops[DDIR_TRIM] < o->rate_iops_min[DDIR_TRIM]))) {
 		log_err("fio: minimum rate exceeds rate\n");
 		ret = 1;
 	}
@@ -722,11 +737,16 @@ static int fixup_options(struct thread_data *td)
 
 	/*
 	 * For fully compressible data, just zero them at init time.
-	 * It's faster than repeatedly filling it.
+	 * It's faster than repeatedly filling it. For non-zero
+	 * compression, we should have refill_buffers set. Set it, unless
+	 * the job file already changed it.
 	 */
-	if (td->o.compress_percentage == 100) {
-		td->o.zero_buffers = 1;
-		td->o.compress_percentage = 0;
+	if (o->compress_percentage) {
+		if (o->compress_percentage == 100) {
+			o->zero_buffers = 1;
+			o->compress_percentage = 0;
+		} else if (!fio_option_is_set(o, refill_buffers))
+			o->refill_buffers = 1;
 	}
 
 	/*
@@ -843,6 +863,7 @@ static void td_fill_rand_seeds_internal(struct thread_data *td, int use64)
 	init_rand_seed(&td->file_size_state, td->rand_seeds[FIO_RAND_FILE_SIZE_OFF], use64);
 	init_rand_seed(&td->trim_state, td->rand_seeds[FIO_RAND_TRIM_OFF], use64);
 	init_rand_seed(&td->delay_state, td->rand_seeds[FIO_RAND_START_DELAY], use64);
+	init_rand_seed(&td->poisson_state, td->rand_seeds[FIO_RAND_POISSON_OFF], 0);
 
 	if (!td_random(td))
 		return;
@@ -1217,6 +1238,10 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if ((o->stonewall || o->new_group) && prev_group_jobs) {
 		prev_group_jobs = 0;
 		groupid++;
+		if (groupid == INT_MAX) {
+			log_err("fio: too many groups defined\n");
+			goto err;
+		}
 	}
 
 	td->groupid = groupid;
@@ -1302,7 +1327,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (!o->name)
 		o->name = strdup(jobname);
 
-	if (output_format == FIO_OUTPUT_NORMAL) {
+	if (output_format & FIO_OUTPUT_NORMAL) {
 		if (!job_add_num) {
 			if (is_backend && !recursed)
 				fio_server_send_add_job(td);
@@ -1752,7 +1777,7 @@ static void usage(const char *name)
 	printf("  --runtime\t\tRuntime in seconds\n");
 	printf("  --bandwidth-log\tGenerate per-job bandwidth logs\n");
 	printf("  --minimal\t\tMinimal (terse) output\n");
-	printf("  --output-format=x\tOutput format (terse,json,normal)\n");
+	printf("  --output-format=x\tOutput format (terse,json,json+,normal)\n");
 	printf("  --terse-version=x\tSet terse version output format to 'x'\n");
 	printf("  --version\t\tPrint version info and exit\n");
 	printf("  --help\t\tPrint this page\n");
@@ -1792,6 +1817,7 @@ static void usage(const char *name)
 	printf("  --trigger-timeout=t\tExecute trigger af this time\n");
 	printf("  --trigger=cmd\t\tSet this command as local trigger\n");
 	printf("  --trigger-remote=cmd\tSet this command as remote trigger\n");
+	printf("  --aux-path=path\tUse this path for fio state generated files\n");
 	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
 	printf("\n                   Jens Axboe <jaxboe@fusionio.com>");
 	printf("\n                   Jens Axboe <axboe@fb.com>\n");
@@ -1989,8 +2015,39 @@ static void show_closest_option(const char *name)
 		i++;
 	}
 
-	if (best_option != -1)
+	if (best_option != -1 && string_distance_ok(name, best_distance))
 		log_err("Did you mean %s?\n", l_opts[best_option].name);
+}
+
+static int parse_output_format(const char *optarg)
+{
+	char *p, *orig, *opt;
+	int ret = 0;
+
+	p = orig = strdup(optarg);
+
+	output_format = 0;
+
+	while ((opt = strsep(&p, ",")) != NULL) {
+		if (!strcmp(opt, "minimal") ||
+		    !strcmp(opt, "terse") ||
+		    !strcmp(opt, "csv"))
+			output_format |= FIO_OUTPUT_TERSE;
+		else if (!strcmp(opt, "json"))
+			output_format |= FIO_OUTPUT_JSON;
+		else if (!strcmp(opt, "json+"))
+			output_format |= (FIO_OUTPUT_JSON | FIO_OUTPUT_JSON_PLUS);
+		else if (!strcmp(opt, "normal"))
+			output_format |= FIO_OUTPUT_NORMAL;
+		else {
+			log_err("fio: invalid output format %s\n", opt);
+			ret = 1;
+			break;
+		}
+	}
+
+	free(orig);
+	return ret;
 }
 
 int parse_cmd_line(int argc, char *argv[], int client_type)
@@ -2054,17 +2111,15 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				do_exit++;
 				break;
 			}
-			if (!strcmp(optarg, "minimal") ||
-			    !strcmp(optarg, "terse") ||
-			    !strcmp(optarg, "csv"))
-				output_format = FIO_OUTPUT_TERSE;
-			else if (!strcmp(optarg, "json"))
-				output_format = FIO_OUTPUT_JSON;
-			else
-				output_format = FIO_OUTPUT_NORMAL;
+			if (parse_output_format(optarg)) {
+				log_err("fio: failed parsing output-format\n");
+				exit_val = 1;
+				do_exit++;
+				break;
+			}
 			break;
 		case 'f':
-			append_terse_output = 1;
+			output_format |= FIO_OUTPUT_TERSE;
 			break;
 		case 'h':
 			did_arg = 1;
@@ -2382,6 +2437,11 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				free(trigger_remote_cmd);
 			trigger_remote_cmd = strdup(optarg);
 			break;
+		case 'K':
+			if (aux_path)
+				free(aux_path);
+			aux_path = strdup(optarg);
+			break;
 		case 'B':
 			if (check_str_time(optarg, &trigger_timeout, 1)) {
 				log_err("fio: failed parsing time %s\n", optarg);
@@ -2511,7 +2571,7 @@ int parse_options(int argc, char *argv[])
 		return 0;
 	}
 
-	if (output_format == FIO_OUTPUT_NORMAL)
+	if (output_format & FIO_OUTPUT_NORMAL)
 		log_info("%s\n", fio_version_string);
 
 	return 0;

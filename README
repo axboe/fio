@@ -151,7 +151,7 @@ $ fio
 	--runtime		Runtime in seconds
 	--bandwidth-log		Generate per-job bandwidth logs
 	--minimal		Minimal (terse) output
-	--output-format=type	Output format (terse,json,normal)
+	--output-format=type	Output format (terse,json,json+,normal)
 	--terse-version=type	Terse version output format (default 3, or 2 or 4).
 	--version		Print version info and exit
 	--help			Print this page
@@ -179,6 +179,11 @@ $ fio
 				(option=system,percpu) or run unit work
 				calibration only (option=calibrate).
 	--inflate-log=log	Inflate and output compressed log
+	--trigger-file=file	Execute trigger cmd when file exists
+	--trigger-timeout=t	Execute trigger af this time
+	--trigger=cmd		Set this command as local trigger
+	--trigger-remote=cmd	Set this command as remote trigger
+	--aux-path=path		Use this path for fio state generated files
 
 
 Any parameters following the options will be assumed to be job files,

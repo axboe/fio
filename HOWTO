@@ -623,7 +623,16 @@ buffer_pattern=str	If set, fio will fill the io buffers with this
 		the other options related to buffer contents. The setting can
 		be any pattern of bytes, and can be prefixed with 0x for hex
 		values. It may also be a string, where the string must then
-		be wrapped with "".
+		be wrapped with "", e.g.:
+
+		buffer_pattern="abcd"
+		  or
+		buffer_pattern=-12
+		  or
+		buffer_pattern=0xdeadface
+
+		Also you can combine everything together in any order:
+		buffer_pattern=0xdeadface"abcd"-12
 
 dedupe_percentage=int	If set, fio will generate this percentage of
 		identical buffers when writing. These buffers will be
@@ -803,8 +812,10 @@ iodepth_batch_submit=int
 iodepth_batch=int This defines how many pieces of IO to submit at once.
 		It defaults to 1 which means that we submit each IO
 		as soon as it is available, but can be raised to submit
-		bigger batches of IO at the time.
+		bigger batches of IO at the time. If it is set to 0 the iodepth
+		value will be used.
 
+iodepth_batch_complete_min=int
 iodepth_batch_complete=int This defines how many pieces of IO to retrieve
 		at once. It defaults to 1 which means that we'll ask
 		for a minimum of 1 IO in the retrieval process from
@@ -813,6 +824,31 @@ iodepth_batch_complete=int This defines how many pieces of IO to retrieve
 		set to 0, then fio will always check for completed
 		events before queuing more IO. This helps reduce
 		IO latency, at the cost of more retrieval system calls.
+
+iodepth_batch_complete_max=int This defines maximum pieces of IO to
+		retrieve at once. This variable should be used along with
+		iodepth_batch_complete_min=int variable, specifying the range
+		of min and max amount of IO which should be retrieved. By default
+		it is equal to iodepth_batch_complete_min value.
+
+		Example #1:
+
+		iodepth_batch_complete_min=1
+		iodepth_batch_complete_max=<iodepth>
+
+		which means that we will retrieve at leat 1 IO and up to the
+		whole submitted queue depth. If none of IO has been completed
+		yet, we will wait.
+
+		Example #2:
+
+		iodepth_batch_complete_min=0
+		iodepth_batch_complete_max=<iodepth>
+
+		which means that we can retrieve up to the whole submitted
+		queue depth, but if none of IO has been completed yet, we will
+		NOT wait and immediately exit the system call. In this example
+		we simply do polling.
 
 iodepth_low=int	The low water mark indicating when to start filling
 		the queue again. Defaults to the same as iodepth, meaning
@@ -1013,7 +1049,7 @@ rate=int	Cap the bandwidth used by this job. The number is in bytes/sec,
 		will only limit writes (to 500KB/sec), the latter will only
 		limit reads.
 
-ratemin=int	Tell fio to do whatever it can to maintain at least this
+rate_min=int	Tell fio to do whatever it can to maintain at least this
 		bandwidth. Failing to meet this requirement, will cause
 		the job to exit. The same format as rate is used for
 		read vs write separation.
@@ -1027,6 +1063,15 @@ rate_iops=int	Cap the bandwidth to this number of IOPS. Basically the same
 rate_iops_min=int If fio doesn't meet this rate of IO, it will cause
 		the job to exit. The same format as rate is used for read vs
 		write separation.
+
+rate_process=str	This option controls how fio manages rated IO
+		submissions. The default is 'linear', which submits IO in a
+		linear fashion with fixed delays between IOs that gets
+		adjusted based on IO completion rates. If this is set to
+		'poisson', fio will submit IO based on a more real world
+		random request flow, known as the Poisson process
+		(https://en.wikipedia.org/wiki/Poisson_process). The lambda
+		will be 10^6 / IOPS for the given workload.
 
 latency_target=int	If set, fio will attempt to find the max performance
 		point that the given workload will run at while maintaining a
@@ -1045,7 +1090,7 @@ latency_percentile=float	The percentage of IOs that must fall within the
 max_latency=int	If set, fio will exit the job if it exceeds this maximum
 		latency. It will exit with an ETIME error.
 
-ratecycle=int	Average bandwidth for 'rate' and 'ratemin' over this number
+rate_cycle=int	Average bandwidth for 'rate' and 'rate_min' over this number
 		of milliseconds.
 
 cpumask=int	Set the CPU affinity of this job. The parameter given is a
@@ -1140,6 +1185,9 @@ mem=str		Fio can use various types of memory as the io unit buffer.
 			mmaphuge Use a memory mapped huge file as the buffer
 				backing. Append filename after mmaphuge, ala
 				mem=mmaphuge:/hugetlbfs/file
+
+			mmapshared	Same as mmap, but use a MMAP_SHARED
+				mapping.
 
 		The area allocated is a function of the maximum allowed
 		bs size for the job, multiplied by the io depth given. Note
@@ -1239,7 +1287,12 @@ do_verify=bool	Run the verify phase after a write phase. Only makes sense if
 		verify is set. Defaults to 1.
 
 verify=str	If writing to a file, fio can verify the file contents
-		after each iteration of the job. The allowed values are:
+		after each iteration of the job. Each verification method also implies
+		verification of special header, which is written to the beginning of
+		each block. This header also includes meta information, like offset
+		of the block, block number, timestamp when block was written, etc.
+		verify=str can be combined with verify_pattern=str option.
+		The allowed values are:
 
 			md5	Use an md5 sum of the data area and store
 				it in the header of each block.
@@ -1275,11 +1328,11 @@ verify=str	If writing to a file, fio can verify the file contents
 
 			sha1	Use optimized sha1 as the checksum function.
 
-			meta	Write extra information about each io
-				(timestamp, block number etc.). The block
-				number is verified. The io sequence number is
-				verified for workloads that write data.
-				See also verify_pattern.
+			meta	This option is deprecated, since now meta information is
+				included in generic verification header and meta verification
+				happens by default. For detailed information see the description
+				of the verify=str setting. This option is kept because of
+				compatibility's sake with old configurations. Do not use it.
 
 			pattern	Verify a strict pattern. Normally fio includes
 				a header with some basic information and
@@ -1324,7 +1377,14 @@ verify_pattern=str	If set, fio will fill the io buffers with this
 		buffer at the time(it can be either a decimal or a hex number).
 		The verify_pattern if larger than a 32-bit quantity has to
 		be a hex number that starts with either "0x" or "0X". Use
-		with verify=meta.
+		with verify=str. Also, verify_pattern supports %o format,
+		which means that for each block offset will be written and
+		then verifyied back, e.g.:
+
+		verify_pattern=%o
+
+		Or use combination of everything:
+		verify_pattern=0xff%o"abcd"-12
 
 verify_fatal=bool	Normally fio will keep checking the entire contents
 		before quitting on a block verification failure. If this

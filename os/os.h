@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #include "../arch/arch.h"
+#include "../lib/types.h"
 
 enum {
 	os_linux = 1,
@@ -65,7 +66,11 @@ typedef struct aiocb os_aiocb_t;
 #endif
 
 #ifndef CONFIG_STRSEP
-#include "../lib/strsep.h"
+#include "../oslib/strsep.h"
+#endif
+
+#ifndef CONFIG_STRLCAT
+#include "../oslib/strlcat.h"
 #endif
 
 #ifdef MSG_DONTWAIT

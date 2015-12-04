@@ -16,6 +16,7 @@
 #include "../file.h"
 #include "../log.h"
 #include "../lib/hweight.h"
+#include "../oslib/strcasestr.h"
 
 #include "windows/posix.h"
 

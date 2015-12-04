@@ -129,8 +129,8 @@ err:
 	return NULL;
 }
 
-static int axmap_handler(struct axmap *axmap, uint64_t bit_nr,
-			  int (*func)(struct axmap_level *, unsigned long, unsigned int,
+static bool axmap_handler(struct axmap *axmap, uint64_t bit_nr,
+			  bool (*func)(struct axmap_level *, unsigned long, unsigned int,
 			  void *), void *data)
 {
 	struct axmap_level *al;
@@ -144,14 +144,14 @@ static int axmap_handler(struct axmap *axmap, uint64_t bit_nr,
 		al = &axmap->levels[i];
 
 		if (func(al, offset, bit, data))
-			return 1;
+			return true;
 	}
 
-	return 0;
+	return false;
 }
 
-static int axmap_handler_topdown(struct axmap *axmap, uint64_t bit_nr,
-	int (*func)(struct axmap_level *, unsigned long, unsigned int, void *),
+static bool axmap_handler_topdown(struct axmap *axmap, uint64_t bit_nr,
+	bool (*func)(struct axmap_level *, unsigned long, unsigned int, void *),
 	void *data)
 {
 	struct axmap_level *al;
@@ -165,20 +165,20 @@ static int axmap_handler_topdown(struct axmap *axmap, uint64_t bit_nr,
 		al = &axmap->levels[i];
 
 		if (func(al, offset, bit, data))
-			return 1;
+			return true;
 	}
 
-	return 0;
+	return false;
 }
 
-static int axmap_clear_fn(struct axmap_level *al, unsigned long offset,
+static bool axmap_clear_fn(struct axmap_level *al, unsigned long offset,
 			   unsigned int bit, void *unused)
 {
 	if (!(al->map[offset] & (1UL << bit)))
-		return 1;
+		return true;
 
 	al->map[offset] &= ~(1UL << bit);
-	return 0;
+	return false;
 }
 
 void axmap_clear(struct axmap *axmap, uint64_t bit_nr)
@@ -213,7 +213,7 @@ static unsigned long bit_masks[] = {
 #endif
 };
 
-static int axmap_set_fn(struct axmap_level *al, unsigned long offset,
+static bool axmap_set_fn(struct axmap_level *al, unsigned long offset,
 			 unsigned int bit, void *__data)
 {
 	struct axmap_set_data *data = __data;
@@ -229,7 +229,7 @@ static int axmap_set_fn(struct axmap_level *al, unsigned long offset,
 	 */
 	overlap = al->map[offset] & mask;
 	if (overlap == mask)
-		return 1;
+		return true;
 
 	while (overlap) {
 		unsigned long clear_mask = ~(1UL << ffz(~overlap));
@@ -290,7 +290,8 @@ void axmap_set(struct axmap *axmap, uint64_t bit_nr)
 	__axmap_set(axmap, bit_nr, &data);
 }
 
-unsigned int axmap_set_nr(struct axmap *axmap, uint64_t bit_nr, unsigned int nr_bits)
+unsigned int axmap_set_nr(struct axmap *axmap, uint64_t bit_nr,
+			  unsigned int nr_bits)
 {
 	unsigned int set_bits = 0;
 
@@ -315,18 +316,18 @@ unsigned int axmap_set_nr(struct axmap *axmap, uint64_t bit_nr, unsigned int nr_
 	return set_bits;
 }
 
-static int axmap_isset_fn(struct axmap_level *al, unsigned long offset,
-			    unsigned int bit, void *unused)
+static bool axmap_isset_fn(struct axmap_level *al, unsigned long offset,
+			   unsigned int bit, void *unused)
 {
 	return (al->map[offset] & (1UL << bit)) != 0;
 }
 
-int axmap_isset(struct axmap *axmap, uint64_t bit_nr)
+bool axmap_isset(struct axmap *axmap, uint64_t bit_nr)
 {
 	if (bit_nr <= axmap->nr_bits)
 		return axmap_handler_topdown(axmap, bit_nr, axmap_isset_fn, NULL);
 
-	return 0;
+	return false;
 }
 
 static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
@@ -384,23 +385,23 @@ struct axmap_next_free_data {
 	uint64_t bit;
 };
 
-static int axmap_next_free_fn(struct axmap_level *al, unsigned long offset,
+static bool axmap_next_free_fn(struct axmap_level *al, unsigned long offset,
 			       unsigned int bit, void *__data)
 {
 	struct axmap_next_free_data *data = __data;
 	uint64_t mask = ~bit_masks[(data->bit + 1) & BLOCKS_PER_UNIT_MASK];
 
 	if (!(mask & ~al->map[offset]))
-		return 0;
+		return false;
 
 	if (al->map[offset] != -1UL) {
 		data->level = al->level;
 		data->offset = offset;
-		return 1;
+		return true;
 	}
 
 	data->bit = (data->bit + BLOCKS_PER_UNIT - 1) / BLOCKS_PER_UNIT;
-	return 0;
+	return false;
 }
 
 /*

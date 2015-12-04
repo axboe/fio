@@ -115,7 +115,7 @@ static struct fio_option options[] = {
 			  },
 			  { .ival = "recv",
 			    .oval = FIO_RDMA_CHA_RECV,
-			    .help = "Posted Recieve",
+			    .help = "Posted Receive",
 			  },
 		},
 		.category = FIO_OPT_C_ENGINE,

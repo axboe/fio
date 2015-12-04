@@ -495,13 +495,14 @@ void init_disk_util(struct thread_data *td)
 		f->du = __init_disk_util(td, f);
 }
 
-static void show_agg_stats(struct disk_util_agg *agg, int terse)
+static void show_agg_stats(struct disk_util_agg *agg, int terse,
+			   struct buf_output *out)
 {
 	if (!agg->slavecount)
 		return;
 
 	if (!terse) {
-		log_info(", aggrios=%llu/%llu, aggrmerge=%llu/%llu, "
+		log_buf(out, ", aggrios=%llu/%llu, aggrmerge=%llu/%llu, "
 			 "aggrticks=%llu/%llu, aggrin_queue=%llu, "
 			 "aggrutil=%3.2f%%",
 			(unsigned long long) agg->ios[0] / agg->slavecount,
@@ -513,7 +514,7 @@ static void show_agg_stats(struct disk_util_agg *agg, int terse)
 			(unsigned long long) agg->time_in_queue / agg->slavecount,
 			agg->max_util.u.f);
 	} else {
-		log_info(";slaves;%llu;%llu;%llu;%llu;%llu;%llu;%llu;%3.2f%%",
+		log_buf(out, ";slaves;%llu;%llu;%llu;%llu;%llu;%llu;%llu;%3.2f%%",
 			(unsigned long long) agg->ios[0] / agg->slavecount,
 			(unsigned long long) agg->ios[1] / agg->slavecount,
 			(unsigned long long) agg->merges[0] / agg->slavecount,
@@ -578,7 +579,7 @@ void disk_util_prune_entries(void)
 }
 
 void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
-		     int terse)
+		     int terse, struct buf_output *out)
 {
 	double util = 0;
 
@@ -589,9 +590,9 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 
 	if (!terse) {
 		if (agg->slavecount)
-			log_info("  ");
+			log_buf(out, "  ");
 
-		log_info("  %s: ios=%llu/%llu, merge=%llu/%llu, "
+		log_buf(out, "  %s: ios=%llu/%llu, merge=%llu/%llu, "
 			 "ticks=%llu/%llu, in_queue=%llu, util=%3.2f%%",
 				dus->name,
 				(unsigned long long) dus->s.ios[0],
@@ -603,7 +604,7 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 				(unsigned long long) dus->s.time_in_queue,
 				util);
 	} else {
-		log_info(";%s;%llu;%llu;%llu;%llu;%llu;%llu;%llu;%3.2f%%",
+		log_buf(out, ";%s;%llu;%llu;%llu;%llu;%llu;%llu;%llu;%3.2f%%",
 				dus->name,
 				(unsigned long long) dus->s.ios[0],
 				(unsigned long long) dus->s.ios[1],
@@ -619,10 +620,10 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 	 * If the device has slaves, aggregate the stats for
 	 * those slave devices also.
 	 */
-	show_agg_stats(agg, terse);
+	show_agg_stats(agg, terse, out);
 
 	if (!terse)
-		log_info("\n");
+		log_buf(out, "\n");
 }
 
 void json_array_add_disk_util(struct disk_util_stat *dus,
@@ -689,7 +690,8 @@ static void json_object_add_disk_utils(struct json_object *obj,
 	}
 }
 
-void show_disk_util(int terse, struct json_object *parent)
+void show_disk_util(int terse, struct json_object *parent,
+		    struct buf_output *out)
 {
 	struct flist_head *entry;
 	struct disk_util *du;
@@ -704,21 +706,22 @@ void show_disk_util(int terse, struct json_object *parent)
 		return;
 	}
 
-	if (output_format == FIO_OUTPUT_JSON)
+	if (output_format & FIO_OUTPUT_JSON)
 		assert(parent);
 
-	if (!terse && output_format != FIO_OUTPUT_JSON)
-		log_info("\nDisk stats (read/write):\n");
+	if (!terse && !(output_format & FIO_OUTPUT_JSON))
+		log_buf(out, "\nDisk stats (read/write):\n");
 
-	if (output_format == FIO_OUTPUT_JSON)
+	if (output_format & FIO_OUTPUT_JSON)
 		json_object_add_disk_utils(parent, &disk_list);
-	else
+	if (output_format & ~(FIO_OUTPUT_JSON | FIO_OUTPUT_JSON_PLUS)) {
 		flist_for_each(entry, &disk_list) {
 			du = flist_entry(entry, struct disk_util, list);
 
 			aggregate_slaves_stats(du);
-			print_disk_util(&du->dus, &du->agg, terse);
+			print_disk_util(&du->dus, &du->agg, terse, out);
 		}
+	}
 
 	fio_mutex_up(disk_util_mutex);
 }

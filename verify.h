@@ -7,6 +7,9 @@
 
 enum {
 	VERIFY_NONE = 0,		/* no verification */
+	VERIFY_HDR_ONLY,		/* verify header only, kept for sake of
+					 * compatibility with old configurations
+					 * which use 'verify=meta' */
 	VERIFY_MD5,			/* md5 sum data blocks */
 	VERIFY_CRC64,			/* crc64 sum data blocks */
 	VERIFY_CRC32,			/* crc32 sum data blocks */
@@ -17,7 +20,6 @@ enum {
 	VERIFY_SHA256,			/* sha256 sum data blocks */
 	VERIFY_SHA512,			/* sha512 sum data blocks */
 	VERIFY_XXHASH,			/* xxhash sum data blocks */
-	VERIFY_META,			/* block_num, timestamp etc. */
 	VERIFY_SHA1,			/* sha1 sum data blocks */
 	VERIFY_PATTERN,			/* verify specific patterns */
 	VERIFY_PATTERN_NO_HDR,		/* verify specific patterns, no hdr */
@@ -34,6 +36,11 @@ struct verify_header {
 	uint16_t verify_type;
 	uint32_t len;
 	uint64_t rand_seed;
+	uint64_t offset;
+	uint32_t time_sec;
+	uint32_t time_usec;
+	uint16_t thread;
+	uint16_t numberio;
 	uint32_t crc32;
 };
 
@@ -61,13 +68,6 @@ struct vhdr_crc16 {
 struct vhdr_crc7 {
 	uint8_t crc7;
 };
-struct vhdr_meta {
-	uint64_t offset;
-	unsigned char thread;
-	unsigned short numberio;
-	unsigned long time_sec;
-	unsigned long time_usec;
-};
 struct vhdr_xxhash {
 	uint32_t hash;
 };
@@ -88,6 +88,11 @@ extern void fio_verify_init(struct thread_data *td);
  */
 extern int verify_async_init(struct thread_data *);
 extern void verify_async_exit(struct thread_data *);
+
+/*
+ * Callbacks for pasting formats in the pattern buffer
+ */
+extern int paste_blockoff(char *buf, unsigned int len, void *priv);
 
 struct thread_rand32_state {
 	uint32_t s[4];
@@ -145,7 +150,7 @@ struct verify_state_hdr {
 #define IO_LIST_ALL		0xffffffff
 extern struct all_io_list *get_all_io_list(int, size_t *);
 extern void __verify_save_state(struct all_io_list *, const char *);
-extern void verify_save_state(void);
+extern void verify_save_state(int mask);
 extern int verify_load_state(struct thread_data *, const char *);
 extern void verify_free_state(struct thread_data *);
 extern int verify_state_should_stop(struct thread_data *, struct io_u *);

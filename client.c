@@ -117,7 +117,7 @@ static int read_data(int fd, void *data, size_t size)
 
 static void fio_client_json_init(void)
 {
-	if (output_format != FIO_OUTPUT_JSON)
+	if (!(output_format & FIO_OUTPUT_JSON))
 		return;
 	root = json_create_object();
 	json_object_add_value_string(root, "fio version", fio_version_string);
@@ -129,9 +129,9 @@ static void fio_client_json_init(void)
 
 static void fio_client_json_fini(void)
 {
-	if (output_format != FIO_OUTPUT_JSON)
+	if (!(output_format & FIO_OUTPUT_JSON))
 		return;
-	json_print_object(root);
+	json_print_object(root, NULL);
 	log_info("\n");
 	json_free_object(root);
 	root = NULL;
@@ -182,6 +182,17 @@ void fio_put_client(struct fio_client *client)
 		error_clients++;
 
 	free(client);
+}
+
+static int fio_client_dec_jobs_eta(struct client_eta *eta, client_eta_op eta_fn)
+{
+	if (!--eta->pending) {
+		eta_fn(&eta->eta);
+		free(eta);
+		return 0;
+	}
+
+	return 1;
 }
 
 static void remove_client(struct fio_client *client)
@@ -521,11 +532,6 @@ static void sig_int(int sig)
 {
 	dprint(FD_NET, "client: got signal %d\n", sig);
 	fio_clients_terminate();
-}
-
-static void sig_show_status(int sig)
-{
-	show_running_run_stats();
 }
 
 static void client_signal_handler(void)
@@ -930,7 +936,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct cmd_ts_pdu *p = (struct cmd_ts_pdu *) cmd->payload;
 	struct json_object *tsobj;
 
-	tsobj = show_thread_status(&p->ts, &p->rs);
+	tsobj = show_thread_status(&p->ts, &p->rs, NULL);
 	client->did_stat = 1;
 	if (tsobj) {
 		json_object_add_client_info(tsobj, client);
@@ -950,7 +956,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	if (++sum_stat_nr == sum_stat_clients) {
 		strcpy(client_ts.name, "All clients");
-		tsobj = show_thread_status(&client_ts, &client_gs);
+		tsobj = show_thread_status(&client_ts, &client_gs, NULL);
 		if (tsobj) {
 			json_object_add_client_info(tsobj, client);
 			json_array_add_value_object(clients_array, tsobj);
@@ -962,7 +968,7 @@ static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct group_run_stats *gs = (struct group_run_stats *) cmd->payload;
 
-	show_group_stats(gs);
+	show_group_stats(gs, NULL);
 }
 
 static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -1023,13 +1029,16 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 		log_info("\nDisk stats (read/write):\n");
 	}
 
-	if (output_format == FIO_OUTPUT_JSON) {
+	if (output_format & FIO_OUTPUT_JSON) {
 		struct json_object *duobj;
 		json_array_add_disk_util(&du->dus, &du->agg, du_array);
 		duobj = json_array_last_value_object(du_array);
 		json_object_add_client_info(duobj, client);
-	} else
-		print_disk_util(&du->dus, &du->agg, output_format == FIO_OUTPUT_TERSE);
+	}
+	if (output_format & FIO_OUTPUT_TERSE)
+		print_disk_util(&du->dus, &du->agg, 1, NULL);
+	if (output_format & FIO_OUTPUT_NORMAL)
+		print_disk_util(&du->dus, &du->agg, 0, NULL);
 }
 
 static void convert_jobs_eta(struct jobs_eta *je)
@@ -1089,14 +1098,6 @@ void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 	 * works for the basic cases.
 	 */
 	strcpy((char *) dst->run_str, (char *) je->run_str);
-}
-
-void fio_client_dec_jobs_eta(struct client_eta *eta, client_eta_op eta_fn)
-{
-	if (!--eta->pending) {
-		eta_fn(&eta->eta);
-		free(eta);
-	}
 }
 
 static void remove_reply_cmd(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -1494,9 +1495,15 @@ int fio_handle_client(struct fio_client *client)
 		break;
 	case FIO_NET_CMD_VTRIGGER: {
 		struct all_io_list *pdu = (struct all_io_list *) cmd->payload;
-		char buf[64];
+		char buf[128];
+		int off = 0;
 
-		__verify_save_state(pdu, server_name(client, buf, sizeof(buf)));
+		if (aux_path) {
+			strcpy(buf, aux_path);
+			off = strlen(buf);
+		}
+
+		__verify_save_state(pdu, server_name(client, &buf[off], sizeof(buf) - off));
 		exec_trigger(trigger_cmd);
 		break;
 		}
@@ -1573,8 +1580,10 @@ static void request_client_etas(struct client_ops *ops)
 					(uintptr_t) eta, &client->cmd_list);
 	}
 
-	while (skipped--)
-		fio_client_dec_jobs_eta(eta, ops->eta);
+	while (skipped--) {
+		if (!fio_client_dec_jobs_eta(eta, ops->eta))
+			break;
+	}
 
 	dprint(FD_NET, "client: requested eta tag %p\n", eta);
 }

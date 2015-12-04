@@ -21,7 +21,10 @@ list all available tracing options.
 Write output to \fIfilename\fR.
 .TP
 .BI \-\-output-format \fR=\fPformat
-Set the reporting format to \fInormal\fR, \fIterse\fR, or \fIjson\fR.
+Set the reporting format to \fInormal\fR, \fIterse\fR, \fIjson\fR, or
+\fIjson+\fR. Multiple formats can be selected, separate by a comma. \fIterse\fR
+is a CSV based format. \fIjson+\fR is like \fIjson\fR, except it adds a full
+dump of the latency buckets.
 .TP
 .BI \-\-runtime \fR=\fPruntime
 Limit run time to \fIruntime\fR seconds.
@@ -34,6 +37,7 @@ Print statistics in a terse, semicolon-delimited format.
 .TP
 .B \-\-append-terse
 Print statistics in selected mode AND terse, semicolon-delimited format.
+Deprecated, use \-\-output-format instead to select multiple formats.
 .TP
 .B \-\-version
 Display version information and exit.
@@ -284,7 +288,7 @@ Random trim (Linux block devices only).
 .B rw, readwrite
 Mixed sequential reads and writes.
 .TP
-.B randrw 
+.B randrw
 Mixed random reads and writes.
 .TP
 .B trimwrite
@@ -507,7 +511,26 @@ If set, fio will fill the IO buffers with this pattern. If not set, the contents
 of IO buffers is defined by the other options related to buffer contents. The
 setting can be any pattern of bytes, and can be prefixed with 0x for hex
 values. It may also be a string, where the string must then be wrapped with
-"".
+"", e.g.:
+.RS
+.RS
+\fBbuffer_pattern\fR="abcd"
+.RS
+or
+.RE
+\fBbuffer_pattern\fR=-12
+.RS
+or
+.RE
+\fBbuffer_pattern\fR=0xdeadface
+.RE
+.LP
+Also you can combine everything together in any order:
+.LP
+.RS
+\fBbuffer_pattern\fR=0xdeadface"abcd"-12
+.RE
+.RE
 .TP
 .BI dedupe_percentage \fR=\fPint
 If set, fio will generate this percentage of identical buffers when writing.
@@ -635,8 +658,8 @@ IO engine that does regular EXT4_IOC_MOVE_EXT ioctls to simulate defragment acti
 request to DDIR_WRITE event
 .TP
 .B rbd
-IO engine supporting direct access to Ceph Rados Block Devices (RBD) via librbd 
-without the need to use the kernel rbd driver. This ioengine defines engine specific 
+IO engine supporting direct access to Ceph Rados Block Devices (RBD) via librbd
+without the need to use the kernel rbd driver. This ioengine defines engine specific
 options.
 .TP
 .B gfapi
@@ -679,10 +702,13 @@ Linux when using libaio and not setting \fBdirect\fR=1, since buffered IO is
 not async on that OS. Keep an eye on the IO depth distribution in the
 fio output to verify that the achieved depth is as expected. Default: 1.
 .TP
-.BI iodepth_batch \fR=\fPint
-Number of I/Os to submit at once.  Default: \fBiodepth\fR.
+.BI iodepth_batch \fR=\fPint "\fR,\fP iodepth_batch_submit" \fR=\fPint
+This defines how many pieces of IO to submit at once. It defaults to 1
+which means that we submit each IO as soon as it is available, but can
+be raised to submit bigger batches of IO at the time. If it is set to 0
+the \fBiodepth\fR value will be used.
 .TP
-.BI iodepth_batch_complete \fR=\fPint
+.BI iodepth_batch_complete_min \fR=\fPint "\fR,\fP iodepth_batch_complete" \fR=\fPint
 This defines how many pieces of IO to retrieve at once. It defaults to 1 which
  means that we'll ask for a minimum of 1 IO in the retrieval process from the
 kernel. The IO retrieval will go on until we hit the limit set by
@@ -690,9 +716,41 @@ kernel. The IO retrieval will go on until we hit the limit set by
 completed events before queuing more IO. This helps reduce IO latency, at the
 cost of more retrieval system calls.
 .TP
+.BI iodepth_batch_complete_max \fR=\fPint
+This defines maximum pieces of IO to
+retrieve at once. This variable should be used along with
+\fBiodepth_batch_complete_min\fR=int variable, specifying the range
+of min and max amount of IO which should be retrieved. By default
+it is equal to \fBiodepth_batch_complete_min\fR value.
+
+Example #1:
+.RS
+.RS
+\fBiodepth_batch_complete_min\fR=1
+.LP
+\fBiodepth_batch_complete_max\fR=<iodepth>
+.RE
+
+which means that we will retrieve at leat 1 IO and up to the
+whole submitted queue depth. If none of IO has been completed
+yet, we will wait.
+
+Example #2:
+.RS
+\fBiodepth_batch_complete_min\fR=0
+.LP
+\fBiodepth_batch_complete_max\fR=<iodepth>
+.RE
+
+which means that we can retrieve up to the whole submitted
+queue depth, but if none of IO has been completed yet, we will
+NOT wait and immediately exit the system call. In this example
+we simply do polling.
+.RE
+.TP
 .BI iodepth_low \fR=\fPint
 Low watermark indicating when to start filling the queue again.  Default:
-\fBiodepth\fR. 
+\fBiodepth\fR.
 .TP
 .BI io_submit_mode \fR=\fPstr
 This option controls how fio submits the IO to the IO engine. The default is
@@ -890,7 +948,7 @@ limit reads to 1MB/sec and writes to 500KB/sec. Capping only reads or writes
 can be done with \fBrate\fR=,500k or \fBrate\fR=500k,. The former will only
 limit writes (to 500KB/sec), the latter will only limit reads.
 .TP
-.BI ratemin \fR=\fPint
+.BI rate_min \fR=\fPint
 Tell \fBfio\fR to do whatever it can to maintain at least the given bandwidth.
 Failing to meet this requirement will cause the job to exit. The same format
 as \fBrate\fR is used for read vs write separation.
@@ -905,8 +963,17 @@ size is used as the metric.
 If this rate of I/O is not met, the job will exit. The same format as \fBrate\fR
 is used for read vs write separation.
 .TP
-.BI ratecycle \fR=\fPint
-Average bandwidth for \fBrate\fR and \fBratemin\fR over this number of
+.BI rate_process \fR=\fPstr
+This option controls how fio manages rated IO submissions. The default is
+\fBlinear\fR, which submits IO in a linear fashion with fixed delays between
+IOs that gets adjusted based on IO completion rates. If this is set to
+\fBpoisson\fR, fio will submit IO based on a more real world random request
+flow, known as the Poisson process
+(https://en.wikipedia.org/wiki/Poisson_process). The lambda will be
+10^6 / IOPS for the given workload.
+.TP
+.BI rate_cycle \fR=\fPint
+Average bandwidth for \fBrate\fR and \fBrate_min\fR over this number of
 milliseconds.  Default: 1000ms.
 .TP
 .BI latency_target \fR=\fPint
@@ -1028,6 +1095,9 @@ is given after the option in the format `:\fIfile\fR'.
 .TP
 .B mmaphuge
 Same as \fBmmap\fR, but use huge files as backing.
+.TP
+.B mmapshared
+Same as \fBmmap\fR, but use a MMAP_SHARED mapping.
 .RE
 .P
 The amount of memory allocated is the maximum allowed \fBblocksize\fR for the
@@ -1115,8 +1185,12 @@ Run the verify phase after a write phase.  Only valid if \fBverify\fR is set.
 Default: true.
 .TP
 .BI verify \fR=\fPstr
-Method of verifying file contents after each iteration of the job.  Allowed
-values are:
+Method of verifying file contents after each iteration of the job. Each
+verification method also implies verification of special header, which is
+written to the beginning of each block. This header also includes meta
+information, like offset of the block, block number, timestamp when block
+was written, etc.  \fBverify\fR=str can be combined with \fBverify_pattern\fR=str
+option.  The allowed values are:
 .RS
 .RS
 .TP
@@ -1126,8 +1200,10 @@ hardware accelerated SSE4.2 driven, falls back to regular crc32c if
 not supported by the system.
 .TP
 .B meta
-Write extra information about each I/O (timestamp, block number, etc.). The
-block number is verified. See \fBverify_pattern\fR as well.
+This option is deprecated, since now meta information is included in generic
+verification header and meta verification happens by default.  For detailed
+information see the description of the \fBverify\fR=str setting. This option
+is kept because of compatibility's sake with old configurations. Do not use it.
 .TP
 .B pattern
 Verify a strict pattern. Normally fio includes a header with some basic
@@ -1167,7 +1243,18 @@ pattern for io verification purposes. Depending on the width of the pattern,
 fio will fill 1/2/3/4 bytes of the buffer at the time(it can be either a
 decimal or a hex number). The verify_pattern if larger than a 32-bit quantity
 has to be a hex number that starts with either "0x" or "0X". Use with
-\fBverify\fP=meta or \fBverify\fP=pattern.
+\fBverify\fP=str. Also, verify_pattern supports %o format, which means that for
+each block offset will be written and then verifyied back, e.g.:
+.RS
+.RS
+\fBverify_pattern\fR=%o
+.RE
+Or use combination of everything:
+.LP
+.RS
+\fBverify_pattern\fR=0xff%o"abcd"-21
+.RE
+.RE
 .TP
 .BI verify_fatal \fR=\fPbool
 If true, exit the job on the first observed verification failure.  Default:
@@ -1202,8 +1289,8 @@ only N blocks before verifying these blocks.
 .BI verify_backlog_batch \fR=\fPint
 Control how many blocks fio will verify if verify_backlog is set. If not set,
 will default to the value of \fBverify_backlog\fR (meaning the entire queue is
-read back and verified).  If \fBverify_backlog_batch\fR is less than 
-\fBverify_backlog\fR then not all blocks will be verified,  if 
+read back and verified).  If \fBverify_backlog_batch\fR is less than
+\fBverify_backlog\fR then not all blocks will be verified,  if
 \fBverify_backlog_batch\fR is larger than \fBverify_backlog\fR,  some blocks
 will be verified more than once.
 .TP
@@ -1242,7 +1329,7 @@ Start a new reporting group.  If not given, all jobs in a file will be part
 of the same reporting group, unless separated by a stonewall.
 .TP
 .BI numjobs \fR=\fPint
-Number of clones (processes/threads performing the same workload) of this job.  
+Number of clones (processes/threads performing the same workload) of this job.
 Default: 1.
 .TP
 .B group_reporting
@@ -1435,8 +1522,8 @@ errors for given error type is separated with ':'.
 Error may be symbol ('ENOSPC', 'ENOMEM') or an integer.
 .br
 Example: ignore_error=EAGAIN,ENOSPC:122 .
-.br	
-This option will ignore EAGAIN from READ, and ENOSPC and 122(EDQUOT) from WRITE. 
+.br
+This option will ignore EAGAIN from READ, and ENOSPC and 122(EDQUOT) from WRITE.
 .TP
 .BI error_dump \fR=\fPbool
 If set dump every error even if it is non fatal, true by default. If disabled
@@ -1609,7 +1696,7 @@ Set the TCP maximum segment size (TCP_MAXSEG).
 File will be used as a block donor (swap extents between files)
 .TP
 .BI (e4defrag,inplace) \fR=\fPint
-Configure donor file block allocation strategy		
+Configure donor file block allocation strategy
 .RS
 .BI 0(default) :
 Preallocate donor's file on init
@@ -1873,7 +1960,7 @@ Disk utilization (1 for each disk used):
 .P
 Error Info (dependent on continue_on_error, default off):
 .RS
-.B total # errors, first error code 
+.B total # errors, first error code
 .RE
 .P
 .B text description (if provided in config - appears on newline)
@@ -1940,7 +2027,7 @@ fio \-\-client=server \-\-remote-config /path/to/file.fio
 Then fio will open this local (to the server) job file instead
 of being passed one from the client.
 
-If you have many servers (example: 100 VMs/containers), you can input a pathname 
+If you have many servers (example: 100 VMs/containers), you can input a pathname
 of a file containing host IPs/names as the parameter value for the \-\-client option.
 For example, here is an example "host.list" file containing 2 hostnames:
 
@@ -1956,8 +2043,8 @@ In this mode, you cannot input server-specific parameters or job files, and all
 servers receive the same job file.
 
 In order to enable fio \-\-client runs utilizing a shared filesystem from multiple hosts,
-fio \-\-client now prepends the IP address of the server to the filename. For example, 
-if fio is using directory /mnt/nfs/fio and is writing filename fileio.tmp, 
+fio \-\-client now prepends the IP address of the server to the filename. For example,
+if fio is using directory /mnt/nfs/fio and is writing filename fileio.tmp,
 with a \-\-client hostfile
 containing two hostnames h1 and h2 with IP addresses 192.168.10.120 and 192.168.10.121, then
 fio will create two files:
@@ -1981,4 +2068,3 @@ See \fBREADME\fR.
 For further documentation see \fBHOWTO\fR and \fBREADME\fR.
 .br
 Sample jobfiles are available in the \fBexamples\fR directory.
-

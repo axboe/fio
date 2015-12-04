@@ -17,4 +17,9 @@
 	_x > _y ? _x : _y; })
 #endif
 
+#define min_not_zero(x, y) ({		\
+	typeof(x) __x = (x);		\
+	typeof(y) __y = (y);		\
+	__x == 0 ? __y : ((__y == 0) ? __x : min(__x, __y)); })
+
 #endif

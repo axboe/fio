@@ -7,6 +7,7 @@
 #include "stat.h"
 #include "gettime.h"
 #include "lib/ieee754.h"
+#include "lib/pattern.h"
 #include "td_error.h"
 
 /*
@@ -18,6 +19,7 @@ enum fio_memtype {
 	MEM_SHMHUGE,	/* use shared memory segments with huge pages */
 	MEM_MMAP,	/* use anonynomous mmap */
 	MEM_MMAPHUGE,	/* memory mapped huge file */
+	MEM_MMAPSHARED, /* use mmap with shared flag */
 };
 
 #define ERROR_STR_MAX	128
@@ -53,7 +55,8 @@ struct thread_options {
 	unsigned int iodepth;
 	unsigned int iodepth_low;
 	unsigned int iodepth_batch;
-	unsigned int iodepth_batch_complete;
+	unsigned int iodepth_batch_complete_min;
+	unsigned int iodepth_batch_complete_max;
 
 	unsigned long long size;
 	unsigned long long io_limit;
@@ -97,6 +100,8 @@ struct thread_options {
 	unsigned int verify_offset;
 	char verify_pattern[MAX_PATTERN_SIZE];
 	unsigned int verify_pattern_bytes;
+	struct pattern_fmt verify_fmt[8];
+	unsigned int verify_fmt_sz;
 	unsigned int verify_fatal;
 	unsigned int verify_dump;
 	unsigned int verify_async;
@@ -226,6 +231,7 @@ struct thread_options {
 	unsigned int io_submit_mode;
 	unsigned int rate_iops[DDIR_RWDIR_CNT];
 	unsigned int rate_iops_min[DDIR_RWDIR_CNT];
+	unsigned int rate_process;
 
 	char *ioscheduler;
 
@@ -296,7 +302,9 @@ struct thread_options_pack {
 	uint32_t iodepth;
 	uint32_t iodepth_low;
 	uint32_t iodepth_batch;
-	uint32_t iodepth_batch_complete;
+	uint32_t iodepth_batch_complete_min;
+	uint32_t iodepth_batch_complete_max;
+	uint32_t __proper_alignment_for_64b;
 
 	uint64_t size;
 	uint64_t io_limit;
@@ -464,6 +472,8 @@ struct thread_options_pack {
 	uint32_t io_submit_mode;
 	uint32_t rate_iops[DDIR_RWDIR_CNT];
 	uint32_t rate_iops_min[DDIR_RWDIR_CNT];
+	uint32_t rate_process;
+	uint32_t padding_0;   /* for alignment assert */
 
 	uint8_t ioscheduler[FIO_TOP_STR_MAX];
 

@@ -36,18 +36,16 @@ ifdef CONFIG_GFIO
   PROGS += gfio
 endif
 
-SOURCE :=	gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
+SOURCE :=	$(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/crc/*.c)) \
+		$(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/lib/*.c)) \
+		gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
 		eta.c verify.c memory.c io_u.c parse.c mutex.c options.c \
-		lib/rbtree.c smalloc.c filehash.c profile.c debug.c lib/rand.c \
-		lib/num2str.c lib/ieee754.c engines/cpu.c \
+		smalloc.c filehash.c profile.c debug.c engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
-		memalign.c server.c client.c iolog.c backend.c libfio.c flow.c \
-		cconv.c lib/prio_tree.c json.c lib/zipf.c lib/axmap.c \
-		lib/lfsr.c gettime-thread.c helpers.c lib/flist_sort.c \
-		lib/hweight.c lib/getrusage.c idletime.c td_error.c \
+		server.c client.c iolog.c backend.c libfio.c flow.c cconv.c \
+		gettime-thread.c helpers.c json.c idletime.c td_error.c \
 		profiles/tiobench.c profiles/act.c io_u_queue.c filelock.c \
-		lib/tp.c lib/bloom.c lib/gauss.c lib/mountcheck.c workqueue.c \
-		$(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/crc/*.c))
+		workqueue.c
 
 ifdef CONFIG_LIBHDFS
   HDFSFLAGS= -I $(JAVA_HOME)/include -I $(JAVA_HOME)/include/linux -I $(FIO_LIBHDFS_INCLUDE)
@@ -99,16 +97,19 @@ ifdef CONFIG_RBD
   SOURCE += engines/rbd.c
 endif
 ifndef CONFIG_STRSEP
-  SOURCE += lib/strsep.c
+  SOURCE += oslib/strsep.c
 endif
 ifndef CONFIG_STRCASESTR
-  SOURCE += lib/strcasestr.c
+  SOURCE += oslib/strcasestr.c
+endif
+ifndef CONFIG_STRLCAT
+  SOURCE += oslib/strlcat.c
 endif
 ifndef CONFIG_GETOPT_LONG_ONLY
-  SOURCE += lib/getopt_long.c
+  SOURCE += oslib/getopt_long.c
 endif
 ifndef CONFIG_INET_ATON
-  SOURCE += lib/inet_aton.c
+  SOURCE += oslib/inet_aton.c
 endif
 ifdef CONFIG_GFAPI
   SOURCE += engines/glusterfs.c
@@ -120,19 +121,19 @@ ifdef CONFIG_GFAPI
 endif
 ifdef CONFIG_MTD
   SOURCE += engines/mtd.c
-  SOURCE += lib/libmtd.c
-  SOURCE += lib/libmtd_legacy.c
+  SOURCE += oslib/libmtd.c
+  SOURCE += oslib/libmtd_legacy.c
 endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
-		engines/binject.c lib/linux-dev-lookup.c
+		engines/binject.c oslib/linux-dev-lookup.c
   LIBS += -lpthread -ldl
   LDFLAGS += -rdynamic
 endif
 ifeq ($(CONFIG_TARGET_OS), Android)
   SOURCE += diskutil.c fifo.c blktrace.c trim.c profiles/tiobench.c \
-		lib/linux-dev-lookup.c
+		oslib/linux-dev-lookup.c
   LIBS += -ldl
   LDFLAGS += -rdynamic
 endif
@@ -198,7 +199,8 @@ T_IEEE_OBJS += lib/ieee754.o
 T_IEEE_PROGS = t/ieee754
 
 T_ZIPF_OBS = t/genzipf.o
-T_ZIPF_OBJS += t/log.o lib/ieee754.o lib/rand.o lib/zipf.o lib/gauss.o t/genzipf.o
+T_ZIPF_OBJS += t/log.o lib/ieee754.o lib/rand.o lib/pattern.o lib/zipf.o \
+		lib/strntol.o lib/gauss.o t/genzipf.o
 T_ZIPF_PROGS = t/fio-genzipf
 
 T_AXMAP_OBJS = t/axmap.o
@@ -211,14 +213,14 @@ T_LFSR_TEST_PROGS = t/lfsr-test
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
 T_BTRACE_FIO_OBJS = t/btrace2fio.o
-T_BTRACE_FIO_OBJS += fifo.o lib/flist_sort.o t/log.o lib/linux-dev-lookup.o
+T_BTRACE_FIO_OBJS += fifo.o lib/flist_sort.o t/log.o oslib/linux-dev-lookup.o
 T_BTRACE_FIO_PROGS = t/fio-btrace2fio
 endif
 
 T_DEDUPE_OBJS = t/dedupe.o
 T_DEDUPE_OBJS += lib/rbtree.o t/log.o mutex.o smalloc.o gettime.o crc/md5.o \
-		memalign.o lib/bloom.o t/debug.o crc/xxhash.o crc/murmur3.o \
-		crc/crc32c.o crc/crc32c-intel.o crc/fnv.o
+		lib/memalign.o lib/bloom.o t/debug.o crc/xxhash.o \
+		crc/murmur3.o crc/crc32c.o crc/crc32c-intel.o crc/fnv.o
 T_DEDUPE_PROGS = t/fio-dedupe
 
 T_OBJS = $(T_SMALLOC_OBJS)
@@ -233,6 +235,7 @@ ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
     T_DEDUPE_OBJS += os/windows/posix.o lib/hweight.o
     T_SMALLOC_OBJS += os/windows/posix.o lib/hweight.o
     T_LFSR_TEST_OBJS += os/windows/posix.o lib/hweight.o
+    T_ZIPF_OBJS += oslib/strcasestr.o
 endif
 
 T_TEST_PROGS = $(T_SMALLOC_PROGS)
@@ -318,7 +321,14 @@ parse.o: lex.yy.o y.tab.o
 endif
 
 init.o: init.c FIO-VERSION-FILE
+	@mkdir -p $(dir $@)
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
+	@$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SRCDIR)/$*.c > $*.d
+	@mv -f $*.d $*.d.tmp
+	@sed -e 's|.*:|$*.o:|' < $*.d.tmp > $*.d
+	@sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | fmt -1 | \
+		sed -e 's/^ *//' -e 's/$$/:/' >> $*.d
+	@rm -f $*.d.tmp
 
 gcompat.o: gcompat.c gcompat.h
 	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c $<
@@ -377,7 +387,7 @@ t/fio-dedupe: $(T_DEDUPE_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_DEDUPE_OBJS) $(LIBS)
 
 clean: FORCE
-	@rm -f .depend $(FIO_OBJS) $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) $(T_TEST_PROGS) core.* core gfio FIO-VERSION-FILE *.d lib/*.d crc/*.d engines/*.d profiles/*.d t/*.d config-host.mak config-host.h y.tab.[ch] lex.yy.c exp/*.[do] lexer.h
+	@rm -f .depend $(FIO_OBJS) $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) $(T_TEST_PROGS) core.* core gfio FIO-VERSION-FILE *.d lib/*.d oslib/*.d crc/*.d engines/*.d profiles/*.d t/*.d config-host.mak config-host.h y.tab.[ch] lex.yy.c exp/*.[do] lexer.h
 
 distclean: clean FORCE
 	@rm -f cscope.out fio.pdf fio_generate_plots.pdf fio2gnuplot.pdf

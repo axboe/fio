@@ -12,7 +12,7 @@
 #include "../blktrace_api.h"
 #include "../os/os.h"
 #include "../log.h"
-#include "../lib/linux-dev-lookup.h"
+#include "../oslib/linux-dev-lookup.h"
 
 #define TRACE_FIFO_SIZE	8192
 
@@ -937,14 +937,14 @@ static int merge_entries(struct btrace_pid *pida, struct btrace_pid *pidb)
 	return 1;
 }
 
-static void check_merges(struct btrace_pid *p, struct flist_head *pid_list)
+static void check_merges(struct btrace_pid *p, struct flist_head *pidlist)
 {
 	struct flist_head *e, *tmp;
 
 	if (p->ignore)
 		return;
 
-	flist_for_each_safe(e, tmp, pid_list) {
+	flist_for_each_safe(e, tmp, pidlist) {
 		struct btrace_pid *pidb;
 
 		pidb = flist_entry(e, struct btrace_pid, pid_list);

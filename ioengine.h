@@ -15,7 +15,7 @@
 #include <guasi.h>
 #endif
 
-#define FIO_IOOPS_VERSION	21
+#define FIO_IOOPS_VERSION	22
 
 enum {
 	IO_U_F_FREE		= 1 << 0,
@@ -144,6 +144,7 @@ struct ioengine_ops {
 	int (*commit)(struct thread_data *);
 	int (*getevents)(struct thread_data *, unsigned int, unsigned int, const struct timespec *);
 	struct io_u *(*event)(struct thread_data *, int);
+	char *(*errdetails)(struct io_u *);
 	int (*cancel)(struct thread_data *, struct io_u *);
 	void (*cleanup)(struct thread_data *);
 	int (*open_file)(struct thread_data *, struct fio_file *);
@@ -220,7 +221,7 @@ extern void fill_io_buffer(struct thread_data *, void *, unsigned int, unsigned 
 extern void io_u_fill_buffer(struct thread_data *td, struct io_u *, unsigned int, unsigned int);
 void io_u_mark_complete(struct thread_data *, unsigned int);
 void io_u_mark_submit(struct thread_data *, unsigned int);
-int queue_full(const struct thread_data *);
+bool queue_full(const struct thread_data *);
 
 int do_io_u_sync(const struct thread_data *, struct io_u *);
 int do_io_u_trim(const struct thread_data *, struct io_u *);

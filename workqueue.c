@@ -79,7 +79,7 @@ static struct submit_worker *get_submit_worker(struct workqueue *wq)
 	return sw;
 }
 
-static int all_sw_idle(struct workqueue *wq)
+static bool all_sw_idle(struct workqueue *wq)
 {
 	int i;
 
@@ -87,10 +87,10 @@ static int all_sw_idle(struct workqueue *wq)
 		struct submit_worker *sw = &wq->workers[i];
 
 		if (!(sw->flags & SW_F_IDLE))
-			return 0;
+			return false;
 	}
 
-	return 1;
+	return true;
 }
 
 /*
@@ -124,6 +124,7 @@ int workqueue_enqueue(struct workqueue *wq, struct io_u *io_u)
 		if (ddir_rw(ddir)) {
 			parent->io_issues[ddir]++;
 			parent->io_issue_bytes[ddir] += io_u->xfer_buflen;
+			parent->rate_io_issue_bytes[ddir] += io_u->xfer_buflen;
 		}
 
 		pthread_mutex_lock(&sw->lock);
@@ -161,6 +162,7 @@ static int init_submit_worker(struct submit_worker *sw)
 	memcpy(&td->ts, &parent->ts, sizeof(td->ts));
 	td->o.uid = td->o.gid = -1U;
 	dup_files(td, parent);
+	td->eo = parent->eo;
 	fio_options_mem_dupe(td);
 
 	if (ioengine_load(td))
@@ -184,7 +186,7 @@ static int init_submit_worker(struct submit_worker *sw)
 
 	fio_gettime(&td->epoch, NULL);
 	fio_getrusage(&td->ru_start);
-	clear_io_state(td);
+	clear_io_state(td, 1);
 
 	td_set_runstate(td, TD_RUNNING);
 	td->flags |= TD_F_CHILD;

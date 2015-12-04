@@ -242,8 +242,8 @@ static int fio_mmapio_open_file(struct thread_data *td, struct fio_file *f)
 
 	fmd = calloc(1, sizeof(*fmd));
 	if (!fmd) {
-		int fio_unused ret;
-		ret = generic_close_file(td, f);
+		int fio_unused __ret;
+		__ret = generic_close_file(td, f);
 		return 1;
 	}
 

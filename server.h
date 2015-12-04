@@ -38,7 +38,7 @@ struct fio_net_cmd_reply {
 };
 
 enum {
-	FIO_SERVER_VER			= 46,
+	FIO_SERVER_VER			= 48,
 
 	FIO_SERVER_MAX_FRAGMENT_PDU	= 1024,
 	FIO_SERVER_MAX_CMD_MB		= 2048,
@@ -74,7 +74,7 @@ enum {
 
 	FIO_NET_NAME_MAX		= 256,
 
-	FIO_NET_CLIENT_TIMEOUT		= 5000,
+	FIO_NET_CLIENT_TIMEOUT		= 30000,
 
 	FIO_PROBE_FLAG_ZLIB		= 1UL << 0,
 };

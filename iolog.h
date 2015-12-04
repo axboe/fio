@@ -122,7 +122,8 @@ static inline size_t log_entry_sz(struct io_log *log)
 static inline struct io_sample *__get_sample(void *samples, int log_offset,
 					     uint64_t sample)
 {
-	return samples + sample * __log_entry_sz(log_offset);
+	uint64_t sample_offset = sample * __log_entry_sz(log_offset);
+	return (struct io_sample *) ((char *) samples + sample_offset);
 }
 
 static inline struct io_sample *get_sample(struct io_log *iolog,
@@ -202,24 +203,9 @@ struct log_params {
 };
 
 extern void finalize_logs(struct thread_data *td);
-extern void add_lat_sample(struct thread_data *, enum fio_ddir, unsigned long,
-				unsigned int, uint64_t);
-extern void add_clat_sample(struct thread_data *, enum fio_ddir, unsigned long,
-				unsigned int, uint64_t);
-extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long,
-				unsigned int, uint64_t);
-extern void add_bw_sample(struct thread_data *, enum fio_ddir, unsigned int,
-				struct timeval *);
-extern void add_iops_sample(struct thread_data *, enum fio_ddir, unsigned int,
-				struct timeval *);
-extern void init_disk_util(struct thread_data *);
-extern void update_rusage_stat(struct thread_data *);
 extern void setup_log(struct io_log **, struct log_params *, const char *);
 extern void flush_log(struct io_log *, int);
 extern void free_log(struct io_log *);
-extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
-extern int write_bw_log;
-extern void add_agg_sample(unsigned long, enum fio_ddir, unsigned int);
 extern void fio_writeout_logs(struct thread_data *);
 extern int iolog_flush(struct io_log *, int);
 

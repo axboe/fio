@@ -391,7 +391,7 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 				   unsigned long long off,
 				   unsigned long long len)
 {
-	int ret = 0;
+	int errval = 0, ret = 0;
 
 #ifdef CONFIG_ESX
 	return 0;
@@ -408,12 +408,28 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 	dprint(FD_IO, "invalidate cache %s: %llu/%llu\n", f->file_name, off,
 								len);
 
-	if (td->io_ops->invalidate)
+	if (td->io_ops->invalidate) {
 		ret = td->io_ops->invalidate(td, f);
-	else if (f->filetype == FIO_TYPE_FILE)
+		if (ret < 0)
+			errval = ret;
+	} else if (f->filetype == FIO_TYPE_FILE) {
 		ret = posix_fadvise(f->fd, off, len, POSIX_FADV_DONTNEED);
-	else if (f->filetype == FIO_TYPE_BD) {
+		if (ret)
+			errval = ret;
+	} else if (f->filetype == FIO_TYPE_BD) {
+		int retry_count = 0;
+
 		ret = blockdev_invalidate_cache(f);
+		while (ret < 0 && errno == EAGAIN && retry_count++ < 25) {
+			/*
+			 * Linux multipath devices reject ioctl while
+			 * the maps are being updated. That window can
+			 * last tens of milliseconds; we'll try up to
+			 * a quarter of a second.
+			 */
+			usleep(10000);
+			ret = blockdev_invalidate_cache(f);
+		}
 		if (ret < 0 && errno == EACCES && geteuid()) {
 			if (!root_warn) {
 				log_err("fio: only root may flush block "
@@ -422,6 +438,8 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 			}
 			ret = 0;
 		}
+		if (ret < 0)
+			errval = errno;
 	} else if (f->filetype == FIO_TYPE_CHAR || f->filetype == FIO_TYPE_PIPE)
 		ret = 0;
 
@@ -431,10 +449,8 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 	 * function to flush eg block device caches. So just warn and
 	 * continue on our way.
 	 */
-	if (ret) {
-		log_info("fio: cache invalidation of %s failed: %s\n", f->file_name, strerror(errno));
-		ret = 0;
-	}
+	if (errval)
+		log_info("fio: cache invalidation of %s failed: %s\n", f->file_name, strerror(errval));
 
 	return 0;
 
@@ -905,7 +921,7 @@ int setup_files(struct thread_data *td)
 		}
 
 		td->ts.nr_block_infos = len;
-		for (int i = 0; i < len; i++)
+		for (i = 0; i < len; i++)
 			td->ts.block_infos[i] =
 				BLOCK_INFO(0, BLOCK_STATE_UNINIT);
 	} else
@@ -924,7 +940,7 @@ int setup_files(struct thread_data *td)
 	 */
 	if (need_extend) {
 		temp_stall_ts = 1;
-		if (output_format == FIO_OUTPUT_NORMAL)
+		if (output_format & FIO_OUTPUT_NORMAL)
 			log_info("%s: Laying out IO file(s) (%u file(s) /"
 				 " %lluMB)\n", o->name, need_extend,
 					extend_size >> 20);
@@ -1051,6 +1067,43 @@ static int init_rand_distribution(struct thread_data *td)
 	return 1;
 }
 
+/*
+ * Check if the number of blocks exceeds the randomness capability of
+ * the selected generator. Tausworthe is 32-bit, the others are fullly
+ * 64-bit capable.
+ */
+static int check_rand_gen_limits(struct thread_data *td, struct fio_file *f,
+				 uint64_t blocks)
+{
+	if (blocks <= FRAND32_MAX)
+		return 0;
+	if (td->o.random_generator != FIO_RAND_GEN_TAUSWORTHE)
+		return 0;
+
+	/*
+	 * If the user hasn't specified a random generator, switch
+	 * to tausworthe64 with informational warning. If the user did
+	 * specify one, just warn.
+	 */
+	log_info("fio: file %s exceeds 32-bit tausworthe random generator.\n",
+			f->file_name);
+
+	if (!fio_option_is_set(&td->o, random_generator)) {
+		log_info("fio: Switching to tausworthe64. Use the "
+			 "random_generator= option to get rid of this "
+			 " warning.\n");
+		td->o.random_generator = FIO_RAND_GEN_TAUSWORTHE64;
+		return 0;
+	}
+
+	/*
+	 * Just make this information to avoid breaking scripts.
+	 */
+	log_info("fio: Use the random_generator= option to switch to lfsr or "
+			 "tausworthe64.\n");
+	return 0;
+}
+
 int init_random_map(struct thread_data *td)
 {
 	unsigned long long blocks;
@@ -1067,15 +1120,8 @@ int init_random_map(struct thread_data *td)
 
 		blocks = fsize / (unsigned long long) td->o.rw_min_bs;
 
-		if (blocks > FRAND32_MAX &&
-		    td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE &&
-		    !fio_option_is_set(&td->o, random_generator)) {
-			log_err("fio: file %s exceeds 32-bit tausworthe "
-				 "random generator. Use lfsr or "
-				 "tausworthe64.\n", f->file_name);
-			td_verror(td, EINVAL, "init file random");
+		if (check_rand_gen_limits(td, f, blocks))
 			return 1;
-		}
 
 		if (td->o.random_generator == FIO_RAND_GEN_LFSR) {
 			unsigned long seed;

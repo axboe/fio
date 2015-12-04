@@ -56,37 +56,6 @@ struct block_hdr {
 static struct pool mp[MAX_POOLS];
 static unsigned int nr_pools;
 static unsigned int last_pool;
-static struct fio_rwlock *lock;
-
-static inline void pool_lock(struct pool *pool)
-{
-	fio_mutex_down(pool->lock);
-}
-
-static inline void pool_unlock(struct pool *pool)
-{
-	fio_mutex_up(pool->lock);
-}
-
-static inline void global_read_lock(void)
-{
-	fio_rwlock_read(lock);
-}
-
-static inline void global_read_unlock(void)
-{
-	fio_rwlock_unlock(lock);
-}
-
-static inline void global_write_lock(void)
-{
-	fio_rwlock_write(lock);
-}
-
-static inline void global_write_unlock(void)
-{
-	fio_rwlock_unlock(lock);
-}
 
 static inline int ptr_valid(struct pool *pool, void *ptr)
 {
@@ -213,9 +182,9 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 	if (ptr == MAP_FAILED)
 		goto out_fail;
 
-	memset(ptr, 0, alloc_size);
 	pool->map = ptr;
 	pool->bitmap = (void *) ptr + (pool->nr_blocks * SMALLOC_BPL);
+	memset(pool->bitmap, 0, bitmap_blocks * sizeof(unsigned int));
 
 	pool->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
 	if (!pool->lock)
@@ -233,8 +202,6 @@ out_fail:
 void sinit(void)
 {
 	int i, ret;
-
-	lock = fio_rwlock_init();
 
 	for (i = 0; i < MAX_POOLS; i++) {
 		ret = add_pool(&mp[i], INITIAL_SIZE);
@@ -267,9 +234,6 @@ void scleanup(void)
 
 	for (i = 0; i < nr_pools; i++)
 		cleanup_pool(&mp[i]);
-
-	if (lock)
-		fio_rwlock_remove(lock);
 }
 
 #ifdef SMALLOC_REDZONE
@@ -338,12 +302,12 @@ static void sfree_pool(struct pool *pool, void *ptr)
 	i = offset / SMALLOC_BPL;
 	idx = (offset % SMALLOC_BPL) / SMALLOC_BPB;
 
-	pool_lock(pool);
+	fio_mutex_down(pool->lock);
 	clear_blocks(pool, i, idx, size_to_blocks(hdr->size));
 	if (i < pool->next_non_full)
 		pool->next_non_full = i;
 	pool->free_blocks += size_to_blocks(hdr->size);
-	pool_unlock(pool);
+	fio_mutex_up(pool->lock);
 }
 
 void sfree(void *ptr)
@@ -354,16 +318,12 @@ void sfree(void *ptr)
 	if (!ptr)
 		return;
 
-	global_read_lock();
-
 	for (i = 0; i < nr_pools; i++) {
 		if (ptr_valid(&mp[i], ptr)) {
 			pool = &mp[i];
 			break;
 		}
 	}
-
-	global_read_unlock();
 
 	if (pool) {
 		sfree_pool(pool, ptr);
@@ -381,7 +341,7 @@ static void *__smalloc_pool(struct pool *pool, size_t size)
 	unsigned int last_idx;
 	void *ret = NULL;
 
-	pool_lock(pool);
+	fio_mutex_down(pool->lock);
 
 	nr_blocks = size_to_blocks(size);
 	if (nr_blocks > pool->free_blocks)
@@ -424,7 +384,7 @@ static void *__smalloc_pool(struct pool *pool, size_t size)
 		ret = pool->map + offset;
 	}
 fail:
-	pool_unlock(pool);
+	fio_mutex_up(pool->lock);
 	return ret;
 }
 
@@ -463,7 +423,6 @@ void *smalloc(size_t size)
 	if (size != (unsigned int) size)
 		return NULL;
 
-	global_write_lock();
 	i = last_pool;
 	end_pool = nr_pools;
 
@@ -473,7 +432,6 @@ void *smalloc(size_t size)
 
 			if (ptr) {
 				last_pool = i;
-				global_write_unlock();
 				return ptr;
 			}
 		}
@@ -486,7 +444,6 @@ void *smalloc(size_t size)
 		break;
 	} while (1);
 
-	global_write_unlock();
 	return NULL;
 }
 

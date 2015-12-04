@@ -146,7 +146,7 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 {
 	struct libaio_data *ld = td->io_ops->data;
 	struct libaio_options *o = td->eo;
-	unsigned actual_min = td->o.iodepth_batch_complete == 0 ? 0 : min;
+	unsigned actual_min = td->o.iodepth_batch_complete_min == 0 ? 0 : min;
 	struct timespec __lt, *lt = NULL;
 	int r, events = 0;
 

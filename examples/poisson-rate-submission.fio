@@ -1,0 +1,14 @@
+[poisson-rate-submit]
+size=128m
+rw=randread
+ioengine=libaio
+iodepth=32
+direct=1
+# by setting the submit mode to offload, we can guarantee a fixed rate of
+# submission regardless of what the device completion rate is.
+io_submit_mode=offload
+rate_iops=50
+# Real world random request flow follows Poisson process. To give better
+# insight on latency distribution, we simulate request flow under Poisson
+# process.
+rate_process=poisson

@@ -52,7 +52,7 @@ static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
 }
 
 static void show_option_range(struct fio_option *o,
-				int (*logger)(const char *format, ...))
+			      size_t (*logger)(const char *format, ...))
 {
 	if (o->type == FIO_OPT_FLOAT_LIST) {
 		if (o->minfp == DBL_MIN && o->maxfp == DBL_MAX)
@@ -109,7 +109,7 @@ static void show_option_help(struct fio_option *o, int is_err)
 		"no argument (opt)",
 		"deprecated",
 	};
-	int (*logger)(const char *format, ...);
+	size_t (*logger)(const char *format, ...);
 
 	if (is_err)
 		logger = log_err;
@@ -1059,6 +1059,19 @@ int string_distance(const char *s1, const char *s2)
 	free(p);
 	free(q);
 	return i;
+}
+
+/*
+ * Make a guess of whether the distance from 's1' is significant enough
+ * to warrant printing the guess. We set this to a 1/2 match.
+ */
+int string_distance_ok(const char *opt, int distance)
+{
+	size_t len;
+
+	len = strlen(opt);
+	len = (len + 1) / 2;
+	return distance <= len;
 }
 
 static struct fio_option *find_child(struct fio_option *options,

@@ -14,7 +14,7 @@
 
 #include "../fio.h"
 #include "../verify.h"
-#include "../lib/libmtd.h"
+#include "../oslib/libmtd.h"
 
 libmtd_t desc;
 
@@ -152,8 +152,8 @@ err_free:
 	free(fmd);
 err_close:
 	{
-		int fio_unused ret;
-		ret = generic_close_file(td, f);
+		int fio_unused __ret;
+		__ret = generic_close_file(td, f);
 		return 1;
 	}
 }

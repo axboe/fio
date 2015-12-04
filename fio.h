@@ -95,12 +95,16 @@ enum {
 	FIO_RAND_SEQ_RAND_TRIM_OFF,
 	FIO_RAND_START_DELAY,
 	FIO_DEDUPE_OFF,
+	FIO_RAND_POISSON_OFF,
 	FIO_RAND_NR_OFFS,
 };
 
 enum {
 	IO_MODE_INLINE = 0,
-	IO_MODE_OFFLOAD,
+	IO_MODE_OFFLOAD = 1,
+
+	RATE_PROCESS_LINEAR = 0,
+	RATE_PROCESS_POISSON = 1,
 };
 
 /*
@@ -238,10 +242,13 @@ struct thread_data {
 	 * Rate state
 	 */
 	uint64_t rate_bps[DDIR_RWDIR_CNT];
-	long rate_pending_usleep[DDIR_RWDIR_CNT];
+	unsigned long rate_next_io_time[DDIR_RWDIR_CNT];
 	unsigned long rate_bytes[DDIR_RWDIR_CNT];
 	unsigned long rate_blocks[DDIR_RWDIR_CNT];
+	unsigned long rate_io_issue_bytes[DDIR_RWDIR_CNT];
 	struct timeval lastrate[DDIR_RWDIR_CNT];
+	int64_t last_usec;
+	struct frand_state poisson_state;
 
 	/*
 	 * Enforced rate submission/completion workqueue
@@ -433,6 +440,7 @@ extern char *trigger_file;
 extern char *trigger_cmd;
 extern char *trigger_remote_cmd;
 extern long long trigger_timeout;
+extern char *aux_path;
 
 extern struct thread_data *threads;
 
@@ -462,7 +470,7 @@ extern int parse_jobs_ini(char *, int, int, int);
 extern int parse_cmd_line(int, char **, int);
 extern int fio_backend(void);
 extern void reset_fio_state(void);
-extern void clear_io_state(struct thread_data *);
+extern void clear_io_state(struct thread_data *, int);
 extern int fio_options_parse(struct thread_data *, char **, int, int);
 extern void fio_keywords_init(void);
 extern void fio_keywords_exit(void);
@@ -481,6 +489,7 @@ extern int ioengine_load(struct thread_data *);
 extern int parse_dryrun(void);
 extern int fio_running_or_pending_io_threads(void);
 extern int fio_set_fd_nonblocking(int, const char *);
+extern void sig_show_status(int sig);
 
 extern uintptr_t page_mask;
 extern uintptr_t page_size;
@@ -530,8 +539,8 @@ extern void td_restore_runstate(struct thread_data *, int);
  */
 #define FIO_REAP_TIMEOUT	60
 
-#define TERMINATE_ALL		(-1)
-extern void fio_terminate_threads(int);
+#define TERMINATE_ALL		(-1U)
+extern void fio_terminate_threads(unsigned int);
 extern void fio_mark_td_terminate(struct thread_data *);
 
 /*
@@ -666,13 +675,21 @@ extern const char *fio_get_arch_string(int);
 extern const char *fio_get_os_string(int);
 
 #ifdef FIO_INTERNAL
-#define ARRAY_SIZE(x) (sizeof((x)) / (sizeof((x)[0])))
+#define ARRAY_SIZE(x)    (sizeof((x)) / (sizeof((x)[0])))
+#define FIELD_SIZE(s, f) (sizeof(((typeof(s))0)->f))
 #endif
 
 enum {
-	FIO_OUTPUT_TERSE	= 0,
-	FIO_OUTPUT_JSON,
-	FIO_OUTPUT_NORMAL,
+	__FIO_OUTPUT_TERSE	= 0,
+	__FIO_OUTPUT_JSON	= 1,
+	__FIO_OUTPUT_NORMAL	= 2,
+        __FIO_OUTPUT_JSON_PLUS  = 3,
+	FIO_OUTPUT_NR		= 4,
+
+	FIO_OUTPUT_TERSE	= 1U << __FIO_OUTPUT_TERSE,
+	FIO_OUTPUT_JSON		= 1U << __FIO_OUTPUT_JSON,
+	FIO_OUTPUT_NORMAL	= 1U << __FIO_OUTPUT_NORMAL,
+	FIO_OUTPUT_JSON_PLUS    = 1U << __FIO_OUTPUT_JSON_PLUS,
 };
 
 enum {

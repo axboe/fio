@@ -2,6 +2,7 @@
 #define FIO_IDLETIME_H
 
 #include "fio.h"
+#include "lib/output_buffer.h"
 
 #define CALIBRATE_RUNS  10
 #define CALIBRATE_SCALE 1000
@@ -54,6 +55,6 @@ extern void fio_idle_prof_init(void);
 extern void fio_idle_prof_start(void);
 extern void fio_idle_prof_stop(void);
 
-extern void show_idle_prof_stats(int, struct json_object *);
+extern void show_idle_prof_stats(int, struct json_object *, struct buf_output *);
 
 #endif

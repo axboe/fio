@@ -4,14 +4,26 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "lib/output_buffer.h"
+
 extern FILE *f_out;
 extern FILE *f_err;
 
-extern int log_err(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
-extern int log_info(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
-extern int log_valist(const char *str, va_list);
-extern int log_local_buf(const char *buf, size_t);
+extern size_t log_err(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
+extern size_t log_info(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
+extern size_t __log_buf(struct buf_output *, const char *format, ...) __attribute__ ((__format__ (__printf__, 2, 3)));
+extern size_t log_valist(const char *str, va_list);
+extern size_t log_local_buf(const char *buf, size_t);
+extern size_t log_info_buf(const char *buf, size_t len);
 extern int log_info_flush(void);
+
+#define log_buf(buf, format, args...)		\
+do {						\
+	if ((buf) != NULL)			\
+		__log_buf(buf, format, ##args);	\
+	else					\
+		log_info(format, ##args);	\
+} while (0)
 
 enum {
 	FIO_LOG_DEBUG	= 1,

@@ -14,11 +14,20 @@
 #include "verify.h"
 #include "parse.h"
 #include "lib/fls.h"
+#include "lib/pattern.h"
 #include "options.h"
 
 #include "crc/crc32c.h"
 
 char client_sockaddr_str[INET6_ADDRSTRLEN] = { 0 };
+
+struct pattern_fmt_desc fmt_desc[] = {
+	{
+		.fmt   = "%o",
+		.len   = FIELD_SIZE(struct io_u *, offset),
+		.paste = paste_blockoff
+	}
+};
 
 /*
  * Check if mmap/mmaphuge has a :/foo/bar/file at the end. If so, return that.
@@ -34,26 +43,6 @@ static char *get_opt_postfix(const char *str)
 	strip_blank_front(&p);
 	strip_blank_end(p);
 	return strdup(p);
-}
-
-static int converthexchartoint(char a)
-{
-	int base;
-
-	switch (a) {
-	case '0'...'9':
-		base = '0';
-		break;
-	case 'A'...'F':
-		base = 'A' - 10;
-		break;
-	case 'a'...'f':
-		base = 'a' - 10;
-		break;
-	default:
-		base = 0;
-	}
-	return a - base;
 }
 
 static int bs_cmp(const void *p1, const void *p2)
@@ -362,7 +351,8 @@ static int str_mem_cb(void *data, const char *mem)
 {
 	struct thread_data *td = data;
 
-	if (td->o.mem_type == MEM_MMAPHUGE || td->o.mem_type == MEM_MMAP)
+	if (td->o.mem_type == MEM_MMAPHUGE || td->o.mem_type == MEM_MMAP ||
+	    td->o.mem_type == MEM_MMAPSHARED)
 		td->o.mmapfile = get_opt_postfix(mem);
 
 	return 0;
@@ -914,124 +904,25 @@ static int str_opendir_cb(void *data, const char fio_unused *str)
 	return add_dir_files(td, td->o.opendir);
 }
 
-static int pattern_cb(char *pattern, unsigned int max_size,
-		      const char *input, unsigned int *pattern_bytes)
-{
-	long off = 0;
-	int i = 0, j = 0, len, k, base = 10;
-	uint32_t pattern_length;
-	char *loc1, *loc2;
-
-	/*
-	 * Check if it's a string input
-	 */
-	loc1 = strchr(input, '\"');
-	if (loc1) {
-		do {
-			loc1++;
-			if (*loc1 == '\0' || *loc1 == '\"')
-				break;
-
-			pattern[i] = *loc1;
-			i++;
-		} while (i < max_size);
-
-		if (!i)
-			return 1;
-
-		goto fill;
-	}
-
-	/*
-	 * No string, find out if it's decimal or hexidecimal
-	 */
-	loc1 = strstr(input, "0x");
-	loc2 = strstr(input, "0X");
-	if (loc1 || loc2)
-		base = 16;
-	off = strtol(input, NULL, base);
-	if (off != LONG_MAX || errno != ERANGE) {
-		while (off) {
-			pattern[i] = off & 0xff;
-			off >>= 8;
-			i++;
-		}
-	} else {
-		len = strlen(input);
-		k = len - 1;
-		if (base == 16) {
-			if (loc1)
-				j = loc1 - input + 2;
-			else
-				j = loc2 - input + 2;
-		} else
-			return 1;
-		if (len - j < max_size * 2) {
-			while (k >= j) {
-				off = converthexchartoint(input[k--]);
-				if (k >= j)
-					off += (converthexchartoint(input[k--])
-						* 16);
-				pattern[i++] = (char) off;
-			}
-		}
-	}
-
-	/*
-	 * Fill the pattern all the way to the end. This greatly reduces
-	 * the number of memcpy's we have to do when verifying the IO.
-	 */
-fill:
-	pattern_length = i;
-	if (!i && !off)
-		i = 1;
-	while (i > 1 && i * 2 <= max_size) {
-		memcpy(&pattern[i], &pattern[0], i);
-		i *= 2;
-	}
-
-	/*
-	 * Fill remainder, if the pattern multiple ends up not being
-	 * max_size.
-	 */
-	while (i > 1 && i < max_size) {
-		unsigned int b = min(pattern_length, max_size - i);
-
-		memcpy(&pattern[i], &pattern[0], b);
-		i += b;
-	}
-
-	if (i == 1) {
-		/*
-		 * The code in verify_io_u_pattern assumes a single byte
-		 * pattern fills the whole verify pattern buffer.
-		 */
-		memset(pattern, pattern[0], max_size);
-	}
-
-	*pattern_bytes = i;
-	return 0;
-}
-
 static int str_buffer_pattern_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
 	int ret;
 
-	ret = pattern_cb(td->o.buffer_pattern, MAX_PATTERN_SIZE, input,
-				&td->o.buffer_pattern_bytes);
+	/* FIXME: for now buffer pattern does not support formats */
+	ret = parse_and_fill_pattern(input, strlen(input), td->o.buffer_pattern,
+				     MAX_PATTERN_SIZE, NULL, 0, NULL, NULL);
+	if (ret < 0)
+		return 1;
 
-	if (!ret && td->o.buffer_pattern_bytes) {
-		if (!td->o.compress_percentage)
-			td->o.refill_buffers = 0;
-		td->o.scramble_buffers = 0;
-		td->o.zero_buffers = 0;
-	} else {
-		log_err("fio: failed parsing pattern `%s`\n", input);
-		ret = 1;
-	}
+	assert(ret != 0);
+	td->o.buffer_pattern_bytes = ret;
+	if (!td->o.compress_percentage)
+		td->o.refill_buffers = 0;
+	td->o.scramble_buffers = 0;
+	td->o.zero_buffers = 0;
 
-	return ret;
+	return 0;
 }
 
 static int str_buffer_compress_cb(void *data, unsigned long long *il)
@@ -1058,16 +949,22 @@ static int str_verify_pattern_cb(void *data, const char *input)
 	struct thread_data *td = data;
 	int ret;
 
-	ret = pattern_cb(td->o.verify_pattern, MAX_PATTERN_SIZE, input,
-				&td->o.verify_pattern_bytes);
+	td->o.verify_fmt_sz = ARRAY_SIZE(td->o.verify_fmt);
+	ret = parse_and_fill_pattern(input, strlen(input), td->o.verify_pattern,
+				     MAX_PATTERN_SIZE, fmt_desc, sizeof(fmt_desc),
+				     td->o.verify_fmt, &td->o.verify_fmt_sz);
+	if (ret < 0)
+		return 1;
 
+	assert(ret != 0);
+	td->o.verify_pattern_bytes = ret;
 	/*
-	 * VERIFY_META could already be set
+	 * VERIFY_* could already be set
 	 */
-	if (!ret && !fio_option_is_set(&td->o, verify))
+	if (!fio_option_is_set(&td->o, verify))
 		td->o.verify = VERIFY_PATTERN;
 
-	return ret;
+	return 0;
 }
 
 static int str_gtod_reduce_cb(void *data, int *il)
@@ -1608,16 +1505,30 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_IO_BASIC,
 	},
 	{
-		.name	= "iodepth_batch_complete",
-		.lname	= "IO Depth batch complete",
+		.name	= "iodepth_batch_complete_min",
+		.lname	= "Min IO depth batch complete",
+		.alias	= "iodepth_batch_complete",
 		.type	= FIO_OPT_INT,
-		.off1	= td_var_offset(iodepth_batch_complete),
-		.help	= "Number of IO buffers to retrieve in one go",
+		.off1	= td_var_offset(iodepth_batch_complete_min),
+		.help	= "Min number of IO buffers to retrieve in one go",
 		.parent	= "iodepth",
 		.hide	= 1,
 		.minval	= 0,
 		.interval = 1,
 		.def	= "1",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
+	},
+	{
+		.name	= "iodepth_batch_complete_max",
+		.lname	= "Max IO depth batch complete",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(iodepth_batch_complete_max),
+		.help	= "Max number of IO buffers to retrieve in one go",
+		.parent	= "iodepth",
+		.hide	= 1,
+		.minval	= 0,
+		.interval = 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_IO_BASIC,
 	},
@@ -2318,6 +2229,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = MEM_MMAP,
 			    .help = "Use mmap(2) (file or anon) for IO buffers",
 			  },
+			  { .ival = "mmapshared",
+			    .oval = MEM_MMAPSHARED,
+			    .help = "Like mmap, but use the shared flag",
+			  },
 #ifdef FIO_HAVE_HUGETLB
 			  { .ival = "mmaphuge",
 			    .oval = MEM_MMAPHUGE,
@@ -2398,9 +2313,13 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = VERIFY_XXHASH,
 			    .help = "Use xxhash checksums for verification",
 			  },
+			  /* Meta information was included into verify_header,
+			   * 'meta' verification is implied by default. */
 			  { .ival = "meta",
-			    .oval = VERIFY_META,
-			    .help = "Use io information",
+			    .oval = VERIFY_HDR_ONLY,
+			    .help = "Use io information for verification. "
+				    "Now is implied by default, thus option is obsolete, "
+				    "don't use it",
 			  },
 			  { .ival = "pattern",
 			    .oval = VERIFY_PATTERN_NO_HDR,
@@ -2899,7 +2818,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RATE,
 	},
 	{
-		.name	= "ratemin",
+		.name	= "rate_min",
+		.alias	= "ratemin",
 		.lname	= "I/O min rate",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratemin[DDIR_READ]),
@@ -2937,7 +2857,30 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RATE,
 	},
 	{
-		.name	= "ratecycle",
+		.name	= "rate_process",
+		.lname	= "Rate Process",
+		.type	= FIO_OPT_STR,
+		.off1	= td_var_offset(rate_process),
+		.help	= "What process controls how rated IO is managed",
+		.def	= "linear",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RATE,
+		.posval = {
+			  { .ival = "linear",
+			    .oval = RATE_PROCESS_LINEAR,
+			    .help = "Linear rate of IO",
+			  },
+			  {
+			    .ival = "poisson",
+			    .oval = RATE_PROCESS_POISSON,
+			    .help = "Rate follows Poisson process",
+			  },
+		},
+		.parent = "rate",
+	},
+	{
+		.name	= "rate_cycle",
+		.alias	= "ratecycle",
 		.lname	= "I/O rate cycle",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(ratecycle),
@@ -3277,7 +3220,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(log_gz),
 		.help	= "Log in compressed chunks of this size",
-		.minval	= 32 * 1024 * 1024ULL,
+		.minval	= 1024ULL,
 		.maxval	= 512 * 1024 * 1024ULL,
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
@@ -4093,7 +4036,7 @@ static void show_closest_option(const char *opt)
 		i++;
 	}
 
-	if (best_option != -1)
+	if (best_option != -1 && string_distance_ok(name, best_distance))
 		log_err("Did you mean %s?\n", fio_options[best_option].name);
 
 	free(name);

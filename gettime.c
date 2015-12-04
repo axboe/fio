@@ -232,6 +232,7 @@ static unsigned long get_cycles_per_usec(void)
 	struct timeval s, e;
 	uint64_t c_s, c_e;
 	enum fio_cs old_cs = fio_clock_source;
+	uint64_t elapsed;
 
 #ifdef CONFIG_CLOCK_GETTIME
 	fio_clock_source = CS_CGETTIME;
@@ -242,8 +243,6 @@ static unsigned long get_cycles_per_usec(void)
 
 	c_s = get_cpu_clock();
 	do {
-		uint64_t elapsed;
-
 		__fio_gettime(&e);
 
 		elapsed = utime_since(&s, &e);
@@ -254,7 +253,7 @@ static unsigned long get_cycles_per_usec(void)
 	} while (1);
 
 	fio_clock_source = old_cs;
-	return (c_e - c_s + 127) >> 7;
+	return (c_e - c_s) / elapsed;
 }
 
 #define NR_TIME_ITERS	50
@@ -300,16 +299,11 @@ static int calibrate_cpu_clock(void)
 	}
 
 	S /= (double) NR_TIME_ITERS;
-	mean /= 10.0;
 
 	for (i = 0; i < NR_TIME_ITERS; i++)
-		dprint(FD_TIME, "cycles[%d]=%llu\n", i,
-					(unsigned long long) cycles[i] / 10);
+		dprint(FD_TIME, "cycles[%d]=%llu\n", i, (unsigned long long) cycles[i]);
 
 	avg /= samples;
-	avg = (avg + 5) / 10;
-	minc /= 10;
-	maxc /= 10;
 	dprint(FD_TIME, "avg: %llu\n", (unsigned long long) avg);
 	dprint(FD_TIME, "min=%llu, max=%llu, mean=%f, S=%f\n",
 			(unsigned long long) minc,
@@ -485,6 +479,7 @@ static void *clock_thread_fn(void *data)
 	struct clock_entry *c;
 	os_cpu_mask_t cpu_mask;
 	uint32_t last_seq;
+	unsigned long long first;
 	int i;
 
 	if (fio_cpuset_init(&cpu_mask)) {
@@ -506,6 +501,7 @@ static void *clock_thread_fn(void *data)
 	pthread_mutex_lock(&t->lock);
 	pthread_mutex_unlock(&t->started);
 
+	first = get_cpu_clock();
 	last_seq = 0;
 	c = &t->entries[0];
 	for (i = 0; i < t->nr_entries; i++, c++) {
@@ -528,7 +524,8 @@ static void *clock_thread_fn(void *data)
 		unsigned long long clocks;
 
 		clocks = t->entries[i - 1].tsc - t->entries[0].tsc;
-		log_info("cs: cpu%3d: %llu clocks seen\n", t->cpu, clocks);
+		log_info("cs: cpu%3d: %llu clocks seen, first %llu\n", t->cpu,
+							clocks, first);
 	}
 
 	/*
@@ -640,6 +637,8 @@ int fio_monotonic_clocktest(int debug)
 
 	qsort(entries, tentries, sizeof(struct clock_entry), clock_cmp);
 
+	/* silence silly gcc */
+	prev = NULL;
 	for (failed = i = 0; i < tentries; i++) {
 		this = &entries[i];
 
