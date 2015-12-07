@@ -1899,6 +1899,9 @@ static int set_debug(const char *string)
 	char *opt;
 	int i;
 
+	if (!string)
+		return 0;
+
 	if (!strcmp(string, "?") || !strcmp(string, "help")) {
 		log_info("fio: dumping debug options:");
 		for (i = 0; debug_levels[i].name; i++) {
