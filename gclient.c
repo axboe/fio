@@ -296,7 +296,7 @@ static void gfio_thread_status_op(struct fio_client *client,
 	if (sum_stat_clients == 1)
 		return;
 
-	sum_thread_stats(&client_ts, &p->ts, sum_stat_nr);
+	sum_thread_stats(&client_ts, &p->ts, sum_stat_nr == 1);
 	sum_group_stats(&client_gs, &p->rs);
 
 	client_ts.members++;

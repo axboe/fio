@@ -1253,7 +1253,7 @@ struct json_object *show_thread_status(struct thread_stat *ts,
 	return ret;
 }
 
-static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
+static void sum_stat(struct io_stat *dst, struct io_stat *src, bool first)
 {
 	double mean, S;
 
@@ -1268,7 +1268,7 @@ static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
 	 * <http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
 	 *  #Parallel_algorithm>
 	 */
-	if (nr == 1) {
+	if (first) {
 		mean = src->mean.u.f;
 		S = src->S.u.f;
 	} else {
@@ -1312,31 +1312,38 @@ void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src)
 		dst->unit_base = src->unit_base;
 }
 
-void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src, int nr)
+void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
+		      bool first)
 {
 	int l, k;
 
 	for (l = 0; l < DDIR_RWDIR_CNT; l++) {
 		if (!dst->unified_rw_rep) {
-			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], nr);
-			sum_stat(&dst->slat_stat[l], &src->slat_stat[l], nr);
-			sum_stat(&dst->lat_stat[l], &src->lat_stat[l], nr);
-			sum_stat(&dst->bw_stat[l], &src->bw_stat[l], nr);
+			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], first);
+			sum_stat(&dst->slat_stat[l], &src->slat_stat[l], first);
+			sum_stat(&dst->lat_stat[l], &src->lat_stat[l], first);
+			sum_stat(&dst->bw_stat[l], &src->bw_stat[l], first);
 
 			dst->io_bytes[l] += src->io_bytes[l];
 
 			if (dst->runtime[l] < src->runtime[l])
 				dst->runtime[l] = src->runtime[l];
 		} else {
-			sum_stat(&dst->clat_stat[0], &src->clat_stat[l], nr);
-			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], nr);
-			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], nr);
-			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], nr);
+			sum_stat(&dst->clat_stat[0], &src->clat_stat[l], first);
+			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], first);
+			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], first);
+			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], first);
 
 			dst->io_bytes[0] += src->io_bytes[l];
 
 			if (dst->runtime[0] < src->runtime[l])
 				dst->runtime[0] = src->runtime[l];
+
+			/*
+			 * We're summing to the same destination, so override
+			 * 'first' after the first iteration of the loop
+			 */
+			first = false;
 		}
 	}
 
@@ -1531,7 +1538,7 @@ void __show_run_stats(void)
 		for (k = 0; k < ts->nr_block_infos; k++)
 			ts->block_infos[k] = td->ts.block_infos[k];
 
-		sum_thread_stats(ts, &td->ts, idx);
+		sum_thread_stats(ts, &td->ts, idx == 1);
 	}
 
 	for (i = 0; i < nr_ts; i++) {

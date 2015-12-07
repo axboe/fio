@@ -363,7 +363,7 @@ static void shutdown_worker(struct submit_worker *sw, unsigned int *sum_cnt)
 
 	pthread_join(sw->thread, NULL);
 	(*sum_cnt)++;
-	sum_thread_stats(&parent->ts, &sw->td.ts, *sum_cnt);
+	sum_thread_stats(&parent->ts, &sw->td.ts, *sum_cnt == 1);
 	free_worker(sw);
 }
 

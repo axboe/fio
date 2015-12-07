@@ -946,7 +946,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 	if (sum_stat_clients <= 1)
 		return;
 
-	sum_thread_stats(&client_ts, &p->ts, sum_stat_nr);
+	sum_thread_stats(&client_ts, &p->ts, sum_stat_nr == 1);
 	sum_group_stats(&client_gs, &p->rs);
 
 	client_ts.members++;
