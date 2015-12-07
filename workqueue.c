@@ -388,7 +388,9 @@ void workqueue_exit(struct workqueue *wq)
 			sw = &wq->workers[i];
 			if (sw->flags & SW_F_ACCOUNTED)
 				continue;
+			pthread_mutex_lock(&sw->lock);
 			sw->flags |= SW_F_ACCOUNTED;
+			pthread_mutex_unlock(&sw->lock);
 			shutdown_worker(sw, &sum_cnt);
 			shutdown++;
 		}
