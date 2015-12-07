@@ -204,7 +204,8 @@ static int str_bssplit_cb(void *data, const char *input)
 			ret = bssplit_ddir(&td->o, DDIR_TRIM, op);
 			free(op);
 		}
-		ret = bssplit_ddir(&td->o, DDIR_READ, str);
+		if (!ret)
+			ret = bssplit_ddir(&td->o, DDIR_READ, str);
 	}
 
 	free(p);
