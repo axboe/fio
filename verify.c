@@ -1603,7 +1603,7 @@ int verify_state_hdr(struct verify_state_hdr *hdr, struct thread_io_list *s,
 	hdr->size = le64_to_cpu(hdr->size);
 	hdr->crc = le64_to_cpu(hdr->crc);
 
-	if (hdr->version != VSTATE_HDR_VERSION ||
+	if (hdr->version != VSTATE_HDR_VERSION &&
 	    hdr->version != VSTATE_HDR_VERSION_V1)
 		return 1;
 
