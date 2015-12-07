@@ -68,7 +68,7 @@ static void t_crc64(struct test_type *t, void *buf, size_t size)
 	int i;
 
 	for (i = 0; i < NR_CHUNKS; i++)
-		fio_crc64(buf, size);
+		t->output += fio_crc64(buf, size);
 }
 
 static void t_crc32(struct test_type *t, void *buf, size_t size)
@@ -76,7 +76,7 @@ static void t_crc32(struct test_type *t, void *buf, size_t size)
 	int i;
 
 	for (i = 0; i < NR_CHUNKS; i++)
-		fio_crc32(buf, size);
+		t->output += fio_crc32(buf, size);
 }
 
 static void t_crc32c(struct test_type *t, void *buf, size_t size)
@@ -84,7 +84,7 @@ static void t_crc32c(struct test_type *t, void *buf, size_t size)
 	int i;
 
 	for (i = 0; i < NR_CHUNKS; i++)
-		fio_crc32c(buf, size);
+		t->output += fio_crc32c(buf, size);
 }
 
 static void t_crc16(struct test_type *t, void *buf, size_t size)
@@ -92,7 +92,7 @@ static void t_crc16(struct test_type *t, void *buf, size_t size)
 	int i;
 
 	for (i = 0; i < NR_CHUNKS; i++)
-		fio_crc16(buf, size);
+		t->output += fio_crc16(buf, size);
 }
 
 static void t_crc7(struct test_type *t, void *buf, size_t size)
@@ -100,7 +100,7 @@ static void t_crc7(struct test_type *t, void *buf, size_t size)
 	int i;
 
 	for (i = 0; i < NR_CHUNKS; i++)
-		fio_crc7(buf, size);
+		t->output += fio_crc7(buf, size);
 }
 
 static void t_sha1(struct test_type *t, void *buf, size_t size)
@@ -148,7 +148,7 @@ static void t_murmur3(struct test_type *t, void *buf, size_t size)
 	int i;
 
 	for (i = 0; i < NR_CHUNKS; i++)
-		murmurhash3(buf, size, 0x8989);
+		t->output += murmurhash3(buf, size, 0x8989);
 }
 
 static void t_jhash(struct test_type *t, void *buf, size_t size)
