@@ -594,7 +594,7 @@ void setup_log(struct io_log **log, struct log_params *p,
 
 	if (l->log_gz && !p->td)
 		l->log_gz = 0;
-	else if (l->log_gz) {
+	else if (l->log_gz || l->log_gz_store) {
 		pthread_mutex_init(&l->chunk_lock, NULL);
 		p->td->flags |= TD_F_COMPRESS_LOG;
 	}
