@@ -565,6 +565,10 @@ extern int is_blktrace(const char *, int *);
 extern int load_blktrace(struct thread_data *, const char *, int);
 #endif
 
+extern int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
+		   enum fio_ddir ddir, uint64_t *bytes_issued, int from_verify,
+		   struct timeval *comp_time);
+
 /*
  * Latency target helpers
  */
