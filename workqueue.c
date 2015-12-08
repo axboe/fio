@@ -138,7 +138,7 @@ static void handle_list(struct submit_worker *sw, struct flist_head *list)
 	while (!flist_empty(list)) {
 		work = flist_first_entry(list, struct workqueue_work, list);
 		flist_del_init(&work->list);
-		wq->fn(&sw->td, work);
+		wq->ops.fn(&sw->td, work);
 	}
 }
 
@@ -260,7 +260,6 @@ static void *worker_thread(void *data)
 {
 	struct submit_worker *sw = data;
 	struct workqueue *wq = sw->wq;
-	struct thread_data *td = &sw->td;
 	unsigned int eflags = 0, ret;
 	FLIST_HEAD(local_list);
 
@@ -287,14 +286,9 @@ static void *worker_thread(void *data)
 				break;
 			}
 
-			if (td->io_u_queued || td->cur_depth ||
-			    td->io_u_in_flight) {
-				int ret;
-
+			if (workqueue_pre_sleep_check(wq)) {
 				pthread_mutex_unlock(&sw->lock);
-				ret = io_u_quiesce(td);
-				if (ret > 0)
-					td->cur_depth -= ret;
+				workqueue_pre_sleep(wq);
 				pthread_mutex_lock(&sw->lock);
 			}
 
@@ -416,14 +410,14 @@ static int start_worker(struct workqueue *wq, unsigned int index)
 }
 
 int workqueue_init(struct thread_data *td, struct workqueue *wq,
-		   workqueue_fn *fn, unsigned max_pending)
+		   struct workqueue_ops *ops, unsigned max_pending)
 {
 	unsigned int running;
 	int i, error;
 
 	wq->max_workers = max_pending;
 	wq->td = td;
-	wq->fn = fn;
+	wq->ops = *ops;
 	wq->work_seq = 0;
 	wq->next_free_worker = 0;
 	pthread_cond_init(&wq->flush_cond, NULL);

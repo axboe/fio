@@ -1407,6 +1407,29 @@ static void io_workqueue_fn(struct thread_data *td, struct workqueue_work *work)
 	}
 }
 
+static bool io_workqueue_pre_sleep_flush_fn(struct thread_data *td)
+{
+	if (td->io_u_queued || td->cur_depth || td->io_u_in_flight)
+		return true;
+
+	return false;
+}
+
+static void io_workqueue_pre_sleep_fn(struct thread_data *td)
+{
+	int ret;
+
+	ret = io_u_quiesce(td);
+	if (ret > 0)
+		td->cur_depth -= ret;
+}
+
+struct workqueue_ops rated_wq_ops = {
+	.fn			= io_workqueue_fn,
+	.pre_sleep_flush_fn	= io_workqueue_pre_sleep_flush_fn,
+	.pre_sleep_fn		= io_workqueue_pre_sleep_fn,
+};
+
 /*
  * Entry point for the thread based jobs. The process based jobs end up
  * here as well, after a little setup.
@@ -1605,7 +1628,7 @@ static void *thread_main(void *data)
 	fio_verify_init(td);
 
 	if ((o->io_submit_mode == IO_MODE_OFFLOAD) &&
-	    workqueue_init(td, &td->io_wq, io_workqueue_fn, td->o.iodepth))
+	    workqueue_init(td, &td->io_wq, &rated_wq_ops, td->o.iodepth))
 		goto err;
 
 	fio_gettime(&td->epoch, NULL);
