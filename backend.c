@@ -934,13 +934,10 @@ static uint64_t do_io(struct thread_data *td)
 			if (td->error)
 				break;
 
-			ret = workqueue_enqueue(&td->io_wq, &io_u->work);
-			if (ret)
-				ret = FIO_Q_QUEUED;
-			else
-				ret = FIO_Q_BUSY;
+			workqueue_enqueue(&td->io_wq, &io_u->work);
+			ret = FIO_Q_QUEUED;
 
-			if (ret == FIO_Q_QUEUED && ddir_rw(ddir)) {
+			if (ddir_rw(ddir)) {
 				td->io_issues[ddir]++;
 				td->io_issue_bytes[ddir] += blen;
 				td->rate_io_issue_bytes[ddir] += blen;

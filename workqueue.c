@@ -99,23 +99,20 @@ void workqueue_flush(struct workqueue *wq)
 /*
  * Must be serialized by caller. Returns true for queued, false for busy.
  */
-bool workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work)
+void workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work)
 {
 	struct submit_worker *sw;
 
 	sw = get_submit_worker(wq);
-	if (sw) {
-		pthread_mutex_lock(&sw->lock);
-		flist_add_tail(&work->list, &sw->work_list);
-		sw->seq = ++wq->work_seq;
-		sw->flags &= ~SW_F_IDLE;
-		pthread_mutex_unlock(&sw->lock);
+	assert(sw);
 
-		pthread_cond_signal(&sw->cond);
-		return true;
-	}
+	pthread_mutex_lock(&sw->lock);
+	flist_add_tail(&work->list, &sw->work_list);
+	sw->seq = ++wq->work_seq;
+	sw->flags &= ~SW_F_IDLE;
+	pthread_mutex_unlock(&sw->lock);
 
-	return false;
+	pthread_cond_signal(&sw->cond);
 }
 
 static void handle_list(struct submit_worker *sw, struct flist_head *list)
