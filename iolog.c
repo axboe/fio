@@ -1316,3 +1316,12 @@ void fio_writeout_logs(struct thread_data *td)
 
 	td_restore_runstate(td, old_state);
 }
+
+int iolog_compress_init(struct thread_data *td)
+{
+	return 0;
+}
+
+void iolog_compress_exit(struct thread_data *td)
+{
+}
