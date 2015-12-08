@@ -129,7 +129,7 @@ struct thread_data {
 	struct io_log *bw_log;
 	struct io_log *iops_log;
 
-	struct tp_data *tp_data;
+	struct workqueue log_compress_wq;
 
 	struct thread_data *parent;
 

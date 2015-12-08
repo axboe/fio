@@ -19,7 +19,7 @@ struct submit_worker {
 	void *private;
 };
 
-typedef void (workqueue_work_fn)(struct submit_worker *, struct workqueue_work *);
+typedef int (workqueue_work_fn)(struct submit_worker *, struct workqueue_work *);
 typedef bool (workqueue_pre_sleep_flush_fn)(struct submit_worker *);
 typedef void (workqueue_pre_sleep_fn)(struct submit_worker *);
 typedef int (workqueue_alloc_worker_fn)(struct submit_worker *);

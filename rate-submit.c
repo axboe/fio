@@ -2,8 +2,8 @@
 #include "ioengine.h"
 #include "lib/getrusage.h"
 
-static void io_workqueue_fn(struct submit_worker *sw,
-			    struct workqueue_work *work)
+static int io_workqueue_fn(struct submit_worker *sw,
+			   struct workqueue_work *work)
 {
 	struct io_u *io_u = container_of(work, struct io_u, work);
 	const enum fio_ddir ddir = io_u->ddir;
@@ -48,6 +48,8 @@ static void io_workqueue_fn(struct submit_worker *sw,
 		if (ret > 0)
 			td->cur_depth -= ret;
 	}
+
+	return 0;
 }
 
 static bool io_workqueue_pre_sleep_flush_fn(struct submit_worker *sw)

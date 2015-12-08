@@ -54,7 +54,6 @@
 #include "lib/getrusage.h"
 #include "idletime.h"
 #include "err.h"
-#include "lib/tp.h"
 #include "workqueue.h"
 #include "lib/mountcheck.h"
 #include "rate-submit.h"
@@ -1554,8 +1553,8 @@ static void *thread_main(void *data)
 			goto err;
 	}
 
-	if (td->flags & TD_F_COMPRESS_LOG)
-		tp_init(&td->tp_data);
+	if (iolog_compress_init(td))
+		goto err;
 
 	fio_verify_init(td);
 
@@ -1661,8 +1660,7 @@ static void *thread_main(void *data)
 	if (o->io_submit_mode == IO_MODE_OFFLOAD)
 		workqueue_exit(&td->io_wq);
 
-	if (td->flags & TD_F_COMPRESS_LOG)
-		tp_exit(&td->tp_data);
+	iolog_compress_exit(td);
 
 	if (o->exec_postrun)
 		exec_string(o, o->exec_postrun, (const char *)"postrun");

@@ -18,7 +18,6 @@
 #include "verify.h"
 #include "trim.h"
 #include "filelock.h"
-#include "lib/tp.h"
 
 static const char iolog_ver2[] = "fio version 2 iolog";
 
@@ -672,7 +671,12 @@ static void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 #ifdef CONFIG_ZLIB
 
 struct iolog_flush_data {
-	struct tp_work work;
+	struct workqueue_work work;
+	pthread_mutex_t lock;
+	pthread_cond_t cv;
+	int wait;
+	volatile int done;
+	volatile int refs;
 	struct io_log *log;
 	void *samples;
 	uint64_t nr_samples;
@@ -971,7 +975,7 @@ void flush_log(struct io_log *log, int do_append)
 
 static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
 {
-	if (td->tp_data)
+	if (td->flags & TD_F_COMPRESS_LOG)
 		iolog_flush(log, 1);
 
 	if (trylock) {
@@ -997,7 +1001,7 @@ static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
  * the specified memory limitation. Compresses the previously stored
  * entries.
  */
-static int gz_work(struct tp_work *work)
+static int gz_work(struct submit_worker *sw, struct workqueue_work *work)
 {
 	struct iolog_flush_data *data;
 	struct iolog_compress *c;
@@ -1078,12 +1082,18 @@ static int gz_work(struct tp_work *work)
 
 	ret = 0;
 done:
-	if (work->wait) {
-		work->done = 1;
-		pthread_cond_signal(&work->cv);
+	if (data->wait) {
+		int refs;
+
+		pthread_mutex_lock(&data->lock);
+		data->done = 1;
+		pthread_cond_signal(&data->cv);
+		refs = --data->refs;
+		pthread_mutex_unlock(&data->lock);
+		if (!refs)
+			free(data);
 	} else
 		free(data);
-
 	return ret;
 err:
 	while (!flist_empty(&list)) {
@@ -1095,6 +1105,27 @@ err:
 	goto done;
 }
 
+static struct workqueue_ops log_compress_wq_ops = {
+	.fn	= gz_work,
+};
+
+int iolog_compress_init(struct thread_data *td)
+{
+	if (!(td->flags & TD_F_COMPRESS_LOG))
+		return 0;
+
+	workqueue_init(td, &td->log_compress_wq, &log_compress_wq_ops, 1);
+	return 0;
+}
+
+void iolog_compress_exit(struct thread_data *td)
+{
+	if (!(td->flags & TD_F_COMPRESS_LOG))
+		return;
+
+	workqueue_exit(&td->log_compress_wq);
+}
+
 /*
  * Queue work item to compress the existing log entries. We copy the
  * samples, and reset the log sample count to 0 (so the logging will
@@ -1103,7 +1134,6 @@ err:
  */
 int iolog_flush(struct io_log *log, int wait)
 {
-	struct tp_data *tdat = log->td->tp_data;
 	struct iolog_flush_data *data;
 	size_t sample_size;
 
@@ -1122,25 +1152,29 @@ int iolog_flush(struct io_log *log, int wait)
 
 	memcpy(data->samples, log->log, sample_size);
 	data->nr_samples = log->nr_samples;
-	data->work.fn = gz_work;
 	log->nr_samples = 0;
 
 	if (wait) {
-		pthread_mutex_init(&data->work.lock, NULL);
-		pthread_cond_init(&data->work.cv, NULL);
-		data->work.wait = 1;
+		pthread_mutex_init(&data->lock, NULL);
+		pthread_cond_init(&data->cv, NULL);
+		data->done = 0;
+		data->wait = 1;
+		data->refs = 2;
 	} else
-		data->work.wait = 0;
+		data->wait = 0;
 
-	data->work.prio = 1;
-	tp_queue_work(tdat, &data->work);
+	workqueue_enqueue(&log->td->log_compress_wq, &data->work);
 
 	if (wait) {
-		pthread_mutex_lock(&data->work.lock);
-		while (!data->work.done)
-			pthread_cond_wait(&data->work.cv, &data->work.lock);
-		pthread_mutex_unlock(&data->work.lock);
-		free(data);
+		int refs;
+
+		pthread_mutex_lock(&data->lock);
+		while (!data->done)
+			pthread_cond_wait(&data->cv, &data->lock);
+		refs = --data->refs;
+		pthread_mutex_unlock(&data->lock);
+		if (!refs)
+			free(data);
 	}
 
 	return 0;
