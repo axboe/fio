@@ -234,6 +234,9 @@ void workqueue_exit(struct workqueue *wq)
 	struct submit_worker *sw;
 	int i;
 
+	if (!wq->workers)
+		return;
+
 	for (i = 0; i < wq->max_workers; i++) {
 		sw = &wq->workers[i];
 
@@ -258,6 +261,7 @@ void workqueue_exit(struct workqueue *wq)
 	} while (shutdown && shutdown != wq->max_workers);
 
 	free(wq->workers);
+	wq->workers = NULL;
 	pthread_mutex_destroy(&wq->flush_lock);
 	pthread_cond_destroy(&wq->flush_cond);
 	pthread_mutex_destroy(&wq->stat_lock);
