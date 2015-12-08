@@ -270,14 +270,9 @@ done:
 
 static void free_worker(struct submit_worker *sw)
 {
-	struct thread_data *td = sw->private;
 	struct workqueue *wq = sw->wq;
 
-	fio_options_free(td);
-	close_and_free_files(td);
-	if (td->io_ops)
-		close_ioengine(td);
-	td_set_runstate(td, TD_EXITED);
+	workqueue_exit_worker(sw);
 
 	pthread_cond_destroy(&sw->cond);
 	pthread_mutex_destroy(&sw->lock);

@@ -25,14 +25,18 @@ typedef void (workqueue_pre_sleep_fn)(struct submit_worker *);
 typedef int (workqueue_alloc_worker_fn)(struct submit_worker *);
 typedef void (workqueue_free_worker_fn)(struct submit_worker *);
 typedef int (workqueue_init_worker_fn)(struct submit_worker *);
+typedef void (workqueue_exit_worker_fn)(struct submit_worker *);
 
 struct workqueue_ops {
 	workqueue_work_fn *fn;
 	workqueue_pre_sleep_flush_fn *pre_sleep_flush_fn;
 	workqueue_pre_sleep_fn *pre_sleep_fn;
+
 	workqueue_alloc_worker_fn *alloc_worker_fn;
 	workqueue_free_worker_fn *free_worker_fn;
+
 	workqueue_init_worker_fn *init_worker_fn;
+	workqueue_exit_worker_fn *exit_worker_fn;
 };
 
 struct workqueue {
@@ -85,4 +89,13 @@ static inline int workqueue_init_worker(struct submit_worker *sw)
 	return wq->ops.init_worker_fn(sw);
 }
 
+static inline void workqueue_exit_worker(struct submit_worker *sw)
+{
+	struct workqueue *wq = sw->wq;
+
+	if (!wq->ops.exit_worker_fn)
+		return;
+
+	wq->ops.exit_worker_fn(sw);
+}
 #endif

@@ -1492,6 +1492,17 @@ err:
 
 }
 
+static void io_workqueue_exit_worker_fn(struct submit_worker *sw)
+{
+	struct thread_data *td = sw->private;
+
+	fio_options_free(td);
+	close_and_free_files(td);
+	if (td->io_ops)
+		close_ioengine(td);
+	td_set_runstate(td, TD_EXITED);
+}
+
 struct workqueue_ops rated_wq_ops = {
 	.fn			= io_workqueue_fn,
 	.pre_sleep_flush_fn	= io_workqueue_pre_sleep_flush_fn,
@@ -1499,6 +1510,7 @@ struct workqueue_ops rated_wq_ops = {
 	.alloc_worker_fn	= io_workqueue_alloc_fn,
 	.free_worker_fn		= io_workqueue_free_fn,
 	.init_worker_fn		= io_workqueue_init_worker_fn,
+	.exit_worker_fn		= io_workqueue_exit_worker_fn,
 };
 
 /*
