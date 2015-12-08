@@ -170,6 +170,7 @@ struct thread_options {
 	unsigned int numjobs;
 	os_cpu_mask_t cpumask;
 	os_cpu_mask_t verify_cpumask;
+	os_cpu_mask_t log_gz_cpumask;
 	unsigned int cpus_allowed_policy;
 	char *numa_cpunodes;
 	unsigned short numa_mem_mode;
@@ -415,6 +416,7 @@ struct thread_options_pack {
 	uint32_t numjobs;
 	uint8_t cpumask[FIO_TOP_STR_MAX];
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
+	uint8_t log_gz_cpumask[FIO_TOP_STR_MAX];
 	uint32_t cpus_allowed_policy;
 	uint32_t iolog;
 	uint32_t rwmixcycle;

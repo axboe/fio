@@ -261,6 +261,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 #if 0
 	uint8_t cpumask[FIO_TOP_STR_MAX];
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
+	uint8_t log_gz_cpumask[FIO_TOP_STR_MAX];
 #endif
 }
 
@@ -482,6 +483,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 #if 0
 	uint8_t cpumask[FIO_TOP_STR_MAX];
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
+	uint8_t log_gz_cpumask[FIO_TOP_STR_MAX];
 #endif
 
 }

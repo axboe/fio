@@ -1115,8 +1115,24 @@ err:
 	goto done;
 }
 
+static int gz_init_worker(struct submit_worker *sw)
+{
+	struct thread_data *td = sw->wq->td;
+
+	if (!fio_option_is_set(&td->o, log_gz_cpumask))
+		return 0;
+
+	if (fio_setaffinity(gettid(), td->o.log_gz_cpumask) == -1) {
+		log_err("gz: failed to set CPU affinity\n");
+		return 1;
+	}
+
+	return 0;
+}
+
 static struct workqueue_ops log_compress_wq_ops = {
-	.fn	= gz_work,
+	.fn		= gz_work,
+	.init_worker_fn	= gz_init_worker,
 	.nice	= 1,
 };
 

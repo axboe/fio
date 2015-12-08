@@ -535,6 +535,17 @@ static int str_verify_cpus_allowed_cb(void *data, const char *input)
 
 	return set_cpus_allowed(td, &td->o.verify_cpumask, input);
 }
+
+static int str_log_cpus_allowed_cb(void *data, const char *input)
+{
+	struct thread_data *td = data;
+
+	if (parse_dryrun())
+		return 0;
+
+	return set_cpus_allowed(td, &td->o.log_gz_cpumask, input);
+}
+
 #endif
 
 #ifdef CONFIG_LIBNUMA
@@ -3229,6 +3240,19 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
 	},
+#ifdef FIO_HAVE_CPU_AFFINITY
+	{
+		.name	= "log_compression_cpus",
+		.lname	= "Log Compression CPUs",
+		.type	= FIO_OPT_STR,
+		.cb	= str_log_cpus_allowed_cb,
+		.off1	= td_var_offset(log_gz_cpumask),
+		.parent = "log_compression",
+		.help	= "Limit log compression to these CPUs",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+#endif
 	{
 		.name	= "log_store_compressed",
 		.lname	= "Log store compressed",

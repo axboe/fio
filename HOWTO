@@ -1580,11 +1580,15 @@ log_compression=int	If this is set, fio will compress the IO logs as
 		in the specified log file. This feature depends on the
 		availability of zlib.
 
-log_store_compressed=bool	If set, and log_compression is also set,
-		fio will store the log files in a compressed format. They
-		can be decompressed with fio, using the --inflate-log
-		command line parameter. The files will be stored with a
-		.fz suffix.
+log_compression_cpus=str	Define the set of CPUs that are allowed to
+		handle online log compression for the IO jobs. This can
+		provide better isolation between performance sensitive jobs,
+		and background compression work.
+
+log_store_compressed=bool	If set, fio will store the log files in a
+		compressed format. They can be decompressed with fio, using
+		the --inflate-log command line parameter. The files will be
+		stored with a .fz suffix.
 
 block_error_percentiles=bool	If set, record errors in trim block-sized
 		units from writes and trims and output a histogram of
