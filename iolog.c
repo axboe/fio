@@ -1163,14 +1163,13 @@ int iolog_flush(struct io_log *log, int wait)
 	data->nr_samples = log->nr_samples;
 	log->nr_samples = 0;
 
-	if (wait) {
+	data->wait = wait;
+	if (data->wait) {
 		pthread_mutex_init(&data->lock, NULL);
 		pthread_cond_init(&data->cv, NULL);
 		data->done = 0;
-		data->wait = 1;
 		data->refs = 2;
-	} else
-		data->wait = 0;
+	}
 
 	workqueue_enqueue(&log->td->log_compress_wq, &data->work);
 
