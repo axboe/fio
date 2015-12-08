@@ -934,7 +934,7 @@ static uint64_t do_io(struct thread_data *td)
 			if (td->error)
 				break;
 
-			ret = workqueue_enqueue(&td->io_wq, io_u);
+			ret = workqueue_enqueue(&td->io_wq, &io_u->work);
 			if (ret)
 				ret = FIO_Q_QUEUED;
 			else
@@ -1361,8 +1361,9 @@ static uint64_t do_dry_run(struct thread_data *td)
 	return td->bytes_done[DDIR_WRITE] + td->bytes_done[DDIR_TRIM];
 }
 
-static void io_workqueue_fn(struct thread_data *td, struct io_u *io_u)
+static void io_workqueue_fn(struct thread_data *td, struct workqueue_work *work)
 {
+	struct io_u *io_u = container_of(work, struct io_u, work);
 	const enum fio_ddir ddir = io_u->ddir;
 	int ret;
 

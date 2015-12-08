@@ -3,7 +3,11 @@
 
 #include "flist.h"
 
-typedef void (workqueue_fn)(struct thread_data *, struct io_u *);
+struct workqueue_work {
+	struct flist_head list;
+};
+
+typedef void (workqueue_fn)(struct thread_data *, struct workqueue_work *);
 
 struct workqueue {
 	unsigned int max_workers;
@@ -24,7 +28,7 @@ struct workqueue {
 int workqueue_init(struct thread_data *td, struct workqueue *wq, workqueue_fn *fn, unsigned int max_workers);
 void workqueue_exit(struct workqueue *wq);
 
-bool workqueue_enqueue(struct workqueue *wq, struct io_u *io_u);
+bool workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work);
 void workqueue_flush(struct workqueue *wq);
 
 #endif

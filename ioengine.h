@@ -7,6 +7,7 @@
 #include "io_ddir.h"
 #include "debug.h"
 #include "file.h"
+#include "workqueue.h"
 
 #ifdef CONFIG_LIBAIO
 #include <libaio.h>
@@ -89,7 +90,10 @@ struct io_u {
 		void *engine_data;
 	};
 
-	struct flist_head verify_list;
+	union {
+		struct flist_head verify_list;
+		struct workqueue_work work;
+	};
 
 	/*
 	 * Callback for io completion

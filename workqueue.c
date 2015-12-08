@@ -7,7 +7,6 @@
 #include <unistd.h>
 
 #include "fio.h"
-#include "ioengine.h"
 #include "flist.h"
 #include "workqueue.h"
 #include "lib/getrusage.h"
@@ -112,14 +111,14 @@ void workqueue_flush(struct workqueue *wq)
 /*
  * Must be serialized by caller. Returns true for queued, false for busy.
  */
-bool workqueue_enqueue(struct workqueue *wq, struct io_u *io_u)
+bool workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work)
 {
 	struct submit_worker *sw;
 
 	sw = get_submit_worker(wq);
 	if (sw) {
 		pthread_mutex_lock(&sw->lock);
-		flist_add_tail(&io_u->verify_list, &sw->work_list);
+		flist_add_tail(&work->list, &sw->work_list);
 		sw->seq = ++wq->work_seq;
 		sw->flags &= ~SW_F_IDLE;
 		pthread_mutex_unlock(&sw->lock);
@@ -134,12 +133,12 @@ bool workqueue_enqueue(struct workqueue *wq, struct io_u *io_u)
 static void handle_list(struct submit_worker *sw, struct flist_head *list)
 {
 	struct workqueue *wq = sw->wq;
-	struct io_u *io_u;
+	struct workqueue_work *work;
 
 	while (!flist_empty(list)) {
-		io_u = flist_first_entry(list, struct io_u, verify_list);
-		flist_del_init(&io_u->verify_list);
-		wq->fn(&sw->td, io_u);
+		work = flist_first_entry(list, struct workqueue_work, list);
+		flist_del_init(&work->list);
+		wq->fn(&sw->td, work);
 	}
 }
 
