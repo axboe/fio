@@ -1361,10 +1361,12 @@ static uint64_t do_dry_run(struct thread_data *td)
 	return td->bytes_done[DDIR_WRITE] + td->bytes_done[DDIR_TRIM];
 }
 
-static void io_workqueue_fn(struct thread_data *td, struct workqueue_work *work)
+static void io_workqueue_fn(struct submit_worker *sw,
+			    struct workqueue_work *work)
 {
 	struct io_u *io_u = container_of(work, struct io_u, work);
 	const enum fio_ddir ddir = io_u->ddir;
+	struct thread_data *td = sw->private;
 	int ret;
 
 	dprint(FD_RATE, "io_u %p queued by %u\n", io_u, gettid());
@@ -1407,16 +1409,19 @@ static void io_workqueue_fn(struct thread_data *td, struct workqueue_work *work)
 	}
 }
 
-static bool io_workqueue_pre_sleep_flush_fn(struct thread_data *td)
+static bool io_workqueue_pre_sleep_flush_fn(struct submit_worker *sw)
 {
+	struct thread_data *td = sw->private;
+
 	if (td->io_u_queued || td->cur_depth || td->io_u_in_flight)
 		return true;
 
 	return false;
 }
 
-static void io_workqueue_pre_sleep_fn(struct thread_data *td)
+static void io_workqueue_pre_sleep_fn(struct submit_worker *sw)
 {
+	struct thread_data *td = sw->private;
 	int ret;
 
 	ret = io_u_quiesce(td);
@@ -1424,10 +1429,27 @@ static void io_workqueue_pre_sleep_fn(struct thread_data *td)
 		td->cur_depth -= ret;
 }
 
+static int io_workqueue_alloc_fn(struct submit_worker *sw)
+{
+	struct thread_data *td;
+
+	td = calloc(1, sizeof(*td));
+	sw->private = td;
+	return 0;
+}
+
+static void io_workqueue_free_fn(struct submit_worker *sw)
+{
+	free(sw->private);
+	sw->private = NULL;
+}
+
 struct workqueue_ops rated_wq_ops = {
 	.fn			= io_workqueue_fn,
 	.pre_sleep_flush_fn	= io_workqueue_pre_sleep_flush_fn,
 	.pre_sleep_fn		= io_workqueue_pre_sleep_fn,
+	.alloc_worker_fn	= io_workqueue_alloc_fn,
+	.free_worker_fn		= io_workqueue_free_fn,
 };
 
 /*

@@ -7,14 +7,30 @@ struct workqueue_work {
 	struct flist_head list;
 };
 
-typedef void (workqueue_work_fn)(struct thread_data *, struct workqueue_work *);
-typedef bool (workqueue_pre_sleep_flush_fn)(struct thread_data *);
-typedef void (workqueue_pre_sleep_fn)(struct thread_data *);
+struct submit_worker {
+	pthread_t thread;
+	pthread_mutex_t lock;
+	pthread_cond_t cond;
+	struct flist_head work_list;
+	unsigned int flags;
+	unsigned int index;
+	uint64_t seq;
+	struct workqueue *wq;
+	void *private;
+};
+
+typedef void (workqueue_work_fn)(struct submit_worker *, struct workqueue_work *);
+typedef bool (workqueue_pre_sleep_flush_fn)(struct submit_worker *);
+typedef void (workqueue_pre_sleep_fn)(struct submit_worker *);
+typedef int (workqueue_alloc_worker_fn)(struct submit_worker *);
+typedef void (workqueue_free_worker_fn)(struct submit_worker *);
 
 struct workqueue_ops {
 	workqueue_work_fn *fn;
 	workqueue_pre_sleep_flush_fn *pre_sleep_flush_fn;
 	workqueue_pre_sleep_fn *pre_sleep_fn;
+	workqueue_alloc_worker_fn *alloc_worker_fn;
+	workqueue_free_worker_fn *free_worker_fn;
 };
 
 struct workqueue {
@@ -39,18 +55,22 @@ void workqueue_exit(struct workqueue *wq);
 bool workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work);
 void workqueue_flush(struct workqueue *wq);
 
-static inline bool workqueue_pre_sleep_check(struct workqueue *wq)
+static inline bool workqueue_pre_sleep_check(struct submit_worker *sw)
 {
+	struct workqueue *wq = sw->wq;
+
 	if (!wq->ops.pre_sleep_flush_fn)
 		return false;
 
-	return wq->ops.pre_sleep_flush_fn(wq->td);
+	return wq->ops.pre_sleep_flush_fn(sw);
 }
 
-static inline void workqueue_pre_sleep(struct workqueue *wq)
+static inline void workqueue_pre_sleep(struct submit_worker *sw)
 {
+	struct workqueue *wq = sw->wq;
+
 	if (wq->ops.pre_sleep_fn)
-		wq->ops.pre_sleep_fn(wq->td);
+		wq->ops.pre_sleep_fn(sw);
 }
 
 #endif
