@@ -996,8 +996,13 @@ static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
 
 #ifdef CONFIG_ZLIB
 
-static void drop_data(struct iolog_flush_data *data, int refs)
+static void drop_data_unlock(struct iolog_flush_data *data)
 {
+	int refs;
+
+	refs = --data->refs;
+	pthread_mutex_unlock(&data->lock);
+
 	if (!refs) {
 		free(data);
 		pthread_mutex_destroy(&data->lock);
@@ -1092,14 +1097,11 @@ static int gz_work(struct submit_worker *sw, struct workqueue_work *work)
 	ret = 0;
 done:
 	if (data->wait) {
-		int refs;
-
 		pthread_mutex_lock(&data->lock);
 		data->done = 1;
 		pthread_cond_signal(&data->cv);
-		refs = --data->refs;
-		pthread_mutex_unlock(&data->lock);
-		drop_data(data, refs);
+
+		drop_data_unlock(data);
 	} else
 		free(data);
 	return ret;
@@ -1174,14 +1176,11 @@ int iolog_flush(struct io_log *log, int wait)
 	workqueue_enqueue(&log->td->log_compress_wq, &data->work);
 
 	if (wait) {
-		int refs;
-
 		pthread_mutex_lock(&data->lock);
 		while (!data->done)
 			pthread_cond_wait(&data->cv, &data->lock);
-		refs = --data->refs;
-		pthread_mutex_unlock(&data->lock);
-		drop_data(data, refs);
+
+		drop_data_unlock(data);
 	}
 
 	return 0;
