@@ -1444,12 +1444,61 @@ static void io_workqueue_free_fn(struct submit_worker *sw)
 	sw->private = NULL;
 }
 
+static int io_workqueue_init_worker_fn(struct submit_worker *sw)
+{
+	struct thread_data *parent = sw->wq->td;
+	struct thread_data *td = sw->private;
+	int fio_unused ret;
+
+	memcpy(&td->o, &parent->o, sizeof(td->o));
+	memcpy(&td->ts, &parent->ts, sizeof(td->ts));
+	td->o.uid = td->o.gid = -1U;
+	dup_files(td, parent);
+	td->eo = parent->eo;
+	fio_options_mem_dupe(td);
+
+	if (ioengine_load(td))
+		goto err;
+
+	if (td->o.odirect)
+		td->io_ops->flags |= FIO_RAWIO;
+
+	td->pid = gettid();
+
+	INIT_FLIST_HEAD(&td->io_log_list);
+	INIT_FLIST_HEAD(&td->io_hist_list);
+	INIT_FLIST_HEAD(&td->verify_list);
+	INIT_FLIST_HEAD(&td->trim_list);
+	INIT_FLIST_HEAD(&td->next_rand_list);
+	td->io_hist_tree = RB_ROOT;
+
+	td->o.iodepth = 1;
+	if (td_io_init(td))
+		goto err_io_init;
+
+	fio_gettime(&td->epoch, NULL);
+	fio_getrusage(&td->ru_start);
+	clear_io_state(td, 1);
+
+	td_set_runstate(td, TD_RUNNING);
+	td->flags |= TD_F_CHILD;
+	td->parent = parent;
+	return 0;
+
+err_io_init:
+	close_ioengine(td);
+err:
+	return 1;
+
+}
+
 struct workqueue_ops rated_wq_ops = {
 	.fn			= io_workqueue_fn,
 	.pre_sleep_flush_fn	= io_workqueue_pre_sleep_flush_fn,
 	.pre_sleep_fn		= io_workqueue_pre_sleep_fn,
 	.alloc_worker_fn	= io_workqueue_alloc_fn,
 	.free_worker_fn		= io_workqueue_free_fn,
+	.init_worker_fn		= io_workqueue_init_worker_fn,
 };
 
 /*

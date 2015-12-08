@@ -130,53 +130,6 @@ static void handle_list(struct submit_worker *sw, struct flist_head *list)
 	}
 }
 
-static int init_submit_worker(struct submit_worker *sw)
-{
-	struct thread_data *parent = sw->wq->td;
-	struct thread_data *td = sw->private;
-	int fio_unused ret;
-
-	memcpy(&td->o, &parent->o, sizeof(td->o));
-	memcpy(&td->ts, &parent->ts, sizeof(td->ts));
-	td->o.uid = td->o.gid = -1U;
-	dup_files(td, parent);
-	td->eo = parent->eo;
-	fio_options_mem_dupe(td);
-
-	if (ioengine_load(td))
-		goto err;
-
-	if (td->o.odirect)
-		td->io_ops->flags |= FIO_RAWIO;
-
-	td->pid = gettid();
-
-	INIT_FLIST_HEAD(&td->io_log_list);
-	INIT_FLIST_HEAD(&td->io_hist_list);
-	INIT_FLIST_HEAD(&td->verify_list);
-	INIT_FLIST_HEAD(&td->trim_list);
-	INIT_FLIST_HEAD(&td->next_rand_list);
-	td->io_hist_tree = RB_ROOT;
-
-	td->o.iodepth = 1;
-	if (td_io_init(td))
-		goto err_io_init;
-
-	fio_gettime(&td->epoch, NULL);
-	fio_getrusage(&td->ru_start);
-	clear_io_state(td, 1);
-
-	td_set_runstate(td, TD_RUNNING);
-	td->flags |= TD_F_CHILD;
-	td->parent = parent;
-	return 0;
-
-err_io_init:
-	close_ioengine(td);
-err:
-	return 1;
-}
-
 #ifdef CONFIG_SFAA
 static void sum_val(uint64_t *dst, uint64_t *src)
 {
@@ -251,7 +204,7 @@ static void *worker_thread(void *data)
 	unsigned int eflags = 0, ret;
 	FLIST_HEAD(local_list);
 
-	ret = init_submit_worker(sw);
+	ret = workqueue_init_worker(sw);
 	pthread_mutex_lock(&sw->lock);
 	sw->flags |= SW_F_RUNNING;
 	if (ret)
