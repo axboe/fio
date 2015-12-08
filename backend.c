@@ -1503,10 +1503,79 @@ static void io_workqueue_exit_worker_fn(struct submit_worker *sw)
 	td_set_runstate(td, TD_EXITED);
 }
 
+#ifdef CONFIG_SFAA
+static void sum_val(uint64_t *dst, uint64_t *src)
+{
+	if (*src) {
+		__sync_fetch_and_add(dst, *src);
+		*src = 0;
+	}
+}
+#else
+static void sum_val(uint64_t *dst, uint64_t *src)
+{
+	if (*src) {
+		*dst += *src;
+		*src = 0;
+	}
+}
+#endif
+
+static void pthread_double_unlock(pthread_mutex_t *lock1,
+				  pthread_mutex_t *lock2)
+{
+#ifndef CONFIG_SFAA
+	pthread_mutex_unlock(lock1);
+	pthread_mutex_unlock(lock2);
+#endif
+}
+
+static void pthread_double_lock(pthread_mutex_t *lock1, pthread_mutex_t *lock2)
+{
+#ifndef CONFIG_SFAA
+	if (lock1 < lock2) {
+		pthread_mutex_lock(lock1);
+		pthread_mutex_lock(lock2);
+	} else {
+		pthread_mutex_lock(lock2);
+		pthread_mutex_lock(lock1);
+	}
+#endif
+}
+
+static void sum_ddir(struct thread_data *dst, struct thread_data *src,
+		     enum fio_ddir ddir)
+{
+	pthread_double_lock(&dst->io_wq.stat_lock, &src->io_wq.stat_lock);
+
+	sum_val(&dst->io_bytes[ddir], &src->io_bytes[ddir]);
+	sum_val(&dst->io_blocks[ddir], &src->io_blocks[ddir]);
+	sum_val(&dst->this_io_blocks[ddir], &src->this_io_blocks[ddir]);
+	sum_val(&dst->this_io_bytes[ddir], &src->this_io_bytes[ddir]);
+	sum_val(&dst->bytes_done[ddir], &src->bytes_done[ddir]);
+
+	pthread_double_unlock(&dst->io_wq.stat_lock, &src->io_wq.stat_lock);
+}
+
+static void io_workqueue_update_acct_fn(struct submit_worker *sw)
+{
+	struct thread_data *src = sw->private;
+	struct thread_data *dst = sw->wq->td;
+
+	if (td_read(src))
+		sum_ddir(dst, src, DDIR_READ);
+	if (td_write(src))
+		sum_ddir(dst, src, DDIR_WRITE);
+	if (td_trim(src))
+		sum_ddir(dst, src, DDIR_TRIM);
+
+}
+
 struct workqueue_ops rated_wq_ops = {
 	.fn			= io_workqueue_fn,
 	.pre_sleep_flush_fn	= io_workqueue_pre_sleep_flush_fn,
 	.pre_sleep_fn		= io_workqueue_pre_sleep_fn,
+	.update_acct_fn		= io_workqueue_update_acct_fn,
 	.alloc_worker_fn	= io_workqueue_alloc_fn,
 	.free_worker_fn		= io_workqueue_free_fn,
 	.init_worker_fn		= io_workqueue_init_worker_fn,

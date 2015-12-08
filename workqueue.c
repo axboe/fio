@@ -130,73 +130,6 @@ static void handle_list(struct submit_worker *sw, struct flist_head *list)
 	}
 }
 
-#ifdef CONFIG_SFAA
-static void sum_val(uint64_t *dst, uint64_t *src)
-{
-	if (*src) {
-		__sync_fetch_and_add(dst, *src);
-		*src = 0;
-	}
-}
-#else
-static void sum_val(uint64_t *dst, uint64_t *src)
-{
-	if (*src) {
-		*dst += *src;
-		*src = 0;
-	}
-}
-#endif
-
-static void pthread_double_unlock(pthread_mutex_t *lock1,
-				  pthread_mutex_t *lock2)
-{
-#ifndef CONFIG_SFAA
-	pthread_mutex_unlock(lock1);
-	pthread_mutex_unlock(lock2);
-#endif
-}
-
-static void pthread_double_lock(pthread_mutex_t *lock1, pthread_mutex_t *lock2)
-{
-#ifndef CONFIG_SFAA
-	if (lock1 < lock2) {
-		pthread_mutex_lock(lock1);
-		pthread_mutex_lock(lock2);
-	} else {
-		pthread_mutex_lock(lock2);
-		pthread_mutex_lock(lock1);
-	}
-#endif
-}
-
-static void sum_ddir(struct thread_data *dst, struct thread_data *src,
-		     enum fio_ddir ddir)
-{
-	pthread_double_lock(&dst->io_wq.stat_lock, &src->io_wq.stat_lock);
-
-	sum_val(&dst->io_bytes[ddir], &src->io_bytes[ddir]);
-	sum_val(&dst->io_blocks[ddir], &src->io_blocks[ddir]);
-	sum_val(&dst->this_io_blocks[ddir], &src->this_io_blocks[ddir]);
-	sum_val(&dst->this_io_bytes[ddir], &src->this_io_bytes[ddir]);
-	sum_val(&dst->bytes_done[ddir], &src->bytes_done[ddir]);
-
-	pthread_double_unlock(&dst->io_wq.stat_lock, &src->io_wq.stat_lock);
-}
-
-static void update_accounting(struct submit_worker *sw)
-{
-	struct thread_data *src = sw->private;
-	struct thread_data *dst = sw->wq->td;
-
-	if (td_read(src))
-		sum_ddir(dst, src, DDIR_READ);
-	if (td_write(src))
-		sum_ddir(dst, src, DDIR_WRITE);
-	if (td_trim(src))
-		sum_ddir(dst, src, DDIR_TRIM);
-}
-
 static void *worker_thread(void *data)
 {
 	struct submit_worker *sw = data;
@@ -249,7 +182,9 @@ static void *worker_thread(void *data)
 				if (wq->wake_idle)
 					pthread_cond_signal(&wq->flush_cond);
 			}
-			update_accounting(sw);
+			if (wq->ops.update_acct_fn)
+				wq->ops.update_acct_fn(sw);
+
 			pthread_cond_wait(&sw->cond, &sw->lock);
 		} else {
 handle_work:
@@ -259,7 +194,8 @@ handle_work:
 		handle_list(sw, &local_list);
 	}
 
-	update_accounting(sw);
+	if (wq->ops.update_acct_fn)
+		wq->ops.update_acct_fn(sw);
 
 done:
 	pthread_mutex_lock(&sw->lock);

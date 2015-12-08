@@ -26,11 +26,14 @@ typedef int (workqueue_alloc_worker_fn)(struct submit_worker *);
 typedef void (workqueue_free_worker_fn)(struct submit_worker *);
 typedef int (workqueue_init_worker_fn)(struct submit_worker *);
 typedef void (workqueue_exit_worker_fn)(struct submit_worker *);
+typedef void (workqueue_update_acct_fn)(struct submit_worker *);
 
 struct workqueue_ops {
 	workqueue_work_fn *fn;
 	workqueue_pre_sleep_flush_fn *pre_sleep_flush_fn;
 	workqueue_pre_sleep_fn *pre_sleep_fn;
+
+	workqueue_update_acct_fn *update_acct_fn;
 
 	workqueue_alloc_worker_fn *alloc_worker_fn;
 	workqueue_free_worker_fn *free_worker_fn;
