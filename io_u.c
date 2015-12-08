@@ -1559,7 +1559,7 @@ struct io_u *get_io_u(struct thread_data *td)
 out:
 	assert(io_u->file);
 	if (!td_io_prep(td, io_u)) {
-		if (!td->o.disable_slat)
+		if (!td->o.disable_lat)
 			fio_gettime(&io_u->start_time, NULL);
 		if (do_scramble)
 			small_content_scramble(io_u);
@@ -1605,8 +1605,8 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 
 static inline bool gtod_reduce(struct thread_data *td)
 {
-	return td->o.disable_clat && td->o.disable_lat && td->o.disable_slat
-		&& td->o.disable_bw;
+	return (td->o.disable_clat && td->o.disable_slat && td->o.disable_bw)
+			|| td->o.gtod_reduce;
 }
 
 static void account_io_completion(struct thread_data *td, struct io_u *io_u,
