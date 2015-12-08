@@ -1205,54 +1205,37 @@ void iolog_compress_exit(struct thread_data *td)
 
 #endif
 
+static int __write_log(struct thread_data *td, struct io_log *log, int try)
+{
+	if (log)
+		return finish_log(td, log, try);
+
+	return 0;
+}
+
 static int write_iops_log(struct thread_data *td, int try)
 {
-	struct io_log *log = td->iops_log;
-
-	if (!log)
-		return 0;
-
-	return finish_log(td, log, try);
+	return __write_log(td, td->iops_log, try);
 }
 
 static int write_slat_log(struct thread_data *td, int try)
 {
-	struct io_log *log = td->slat_log;
-
-	if (!log)
-		return 0;
-
-	return finish_log(td, log, try);
+	return __write_log(td, td->slat_log, try);
 }
 
 static int write_clat_log(struct thread_data *td, int try)
 {
-	struct io_log *log = td->clat_log;
-
-	if (!log)
-		return 0;
-
-	return finish_log(td, log, try);
+	return __write_log(td, td->clat_log, try);
 }
 
 static int write_lat_log(struct thread_data *td, int try)
 {
-	struct io_log *log = td->lat_log;
-
-	if (!log)
-		return 0;
-
-	return finish_log(td, log, try);
+	return __write_log(td, td->lat_log, try);
 }
 
 static int write_bandw_log(struct thread_data *td, int try)
 {
-	struct io_log *log = td->bw_log;
-
-	if (!log)
-		return 0;
-
-	return finish_log(td, log, try);
+	return __write_log(td, td->bw_log, try);
 }
 
 enum {
