@@ -1,8 +1,7 @@
 #ifndef FIO_RATE_SUBMIT
 #define FIO_RATE_SUBMIT
 
-#include "workqueue.h"
-
-extern struct workqueue_ops rated_wq_ops;
+int rate_submit_init(struct thread_data *);
+void rate_submit_exit(struct thread_data *);
 
 #endif

@@ -1555,8 +1555,7 @@ static void *thread_main(void *data)
 
 	fio_verify_init(td);
 
-	if ((o->io_submit_mode == IO_MODE_OFFLOAD) &&
-	    workqueue_init(td, &td->io_wq, &rated_wq_ops, td->o.iodepth))
+	if (rate_submit_init(td))
 		goto err;
 
 	fio_gettime(&td->epoch, NULL);
@@ -1654,10 +1653,8 @@ static void *thread_main(void *data)
 
 	fio_writeout_logs(td);
 
-	if (o->io_submit_mode == IO_MODE_OFFLOAD)
-		workqueue_exit(&td->io_wq);
-
 	iolog_compress_exit(td);
+	rate_submit_exit(td);
 
 	if (o->exec_postrun)
 		exec_string(o, o->exec_postrun, (const char *)"postrun");

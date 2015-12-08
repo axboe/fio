@@ -224,7 +224,7 @@ static void io_workqueue_update_acct_fn(struct submit_worker *sw)
 
 }
 
-struct workqueue_ops rated_wq_ops = {
+static struct workqueue_ops rated_wq_ops = {
 	.fn			= io_workqueue_fn,
 	.pre_sleep_flush_fn	= io_workqueue_pre_sleep_flush_fn,
 	.pre_sleep_fn		= io_workqueue_pre_sleep_fn,
@@ -234,3 +234,19 @@ struct workqueue_ops rated_wq_ops = {
 	.init_worker_fn		= io_workqueue_init_worker_fn,
 	.exit_worker_fn		= io_workqueue_exit_worker_fn,
 };
+
+int rate_submit_init(struct thread_data *td)
+{
+	if (td->o.io_submit_mode != IO_MODE_OFFLOAD)
+		return 0;
+
+	return workqueue_init(td, &td->io_wq, &rated_wq_ops, td->o.iodepth);
+}
+
+void rate_submit_exit(struct thread_data *td)
+{
+	if (td->o.io_submit_mode != IO_MODE_OFFLOAD)
+		return;
+
+	workqueue_exit(&td->io_wq);
+}
