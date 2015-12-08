@@ -40,6 +40,8 @@ struct workqueue_ops {
 
 	workqueue_init_worker_fn *init_worker_fn;
 	workqueue_exit_worker_fn *exit_worker_fn;
+
+	unsigned int nice;
 };
 
 struct workqueue {

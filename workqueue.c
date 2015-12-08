@@ -134,10 +134,19 @@ static void *worker_thread(void *data)
 {
 	struct submit_worker *sw = data;
 	struct workqueue *wq = sw->wq;
-	unsigned int eflags = 0, ret;
+	unsigned int eflags = 0, ret = 0;
 	FLIST_HEAD(local_list);
 
-	ret = workqueue_init_worker(sw);
+	if (wq->ops.nice) {
+		if (nice(wq->ops.nice) < 0) {
+			log_err("workqueue: nice %s\n", strerror(errno));
+			ret = 1;
+		}
+	}
+
+	if (!ret)
+		ret = workqueue_init_worker(sw);
+
 	pthread_mutex_lock(&sw->lock);
 	sw->flags |= SW_F_RUNNING;
 	if (ret)
