@@ -204,11 +204,11 @@ done:
 	return NULL;
 }
 
-static void free_worker(struct submit_worker *sw)
+static void free_worker(struct submit_worker *sw, unsigned int *sum_cnt)
 {
 	struct workqueue *wq = sw->wq;
 
-	workqueue_exit_worker(sw);
+	workqueue_exit_worker(sw, sum_cnt);
 
 	pthread_cond_destroy(&sw->cond);
 	pthread_mutex_destroy(&sw->lock);
@@ -219,13 +219,8 @@ static void free_worker(struct submit_worker *sw)
 
 static void shutdown_worker(struct submit_worker *sw, unsigned int *sum_cnt)
 {
-	struct thread_data *parent = sw->wq->td;
-	struct thread_data *td = sw->private;
-
 	pthread_join(sw->thread, NULL);
-	(*sum_cnt)++;
-	sum_thread_stats(&parent->ts, &td->ts, *sum_cnt == 1);
-	free_worker(sw);
+	free_worker(sw, sum_cnt);
 }
 
 void workqueue_exit(struct workqueue *wq)
@@ -288,7 +283,7 @@ static int start_worker(struct workqueue *wq, unsigned int index)
 		return 0;
 	}
 
-	free_worker(sw);
+	free_worker(sw, NULL);
 	return 1;
 }
 

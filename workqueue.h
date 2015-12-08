@@ -25,7 +25,7 @@ typedef void (workqueue_pre_sleep_fn)(struct submit_worker *);
 typedef int (workqueue_alloc_worker_fn)(struct submit_worker *);
 typedef void (workqueue_free_worker_fn)(struct submit_worker *);
 typedef int (workqueue_init_worker_fn)(struct submit_worker *);
-typedef void (workqueue_exit_worker_fn)(struct submit_worker *);
+typedef void (workqueue_exit_worker_fn)(struct submit_worker *, unsigned int *);
 typedef void (workqueue_update_acct_fn)(struct submit_worker *);
 
 struct workqueue_ops {
@@ -92,13 +92,18 @@ static inline int workqueue_init_worker(struct submit_worker *sw)
 	return wq->ops.init_worker_fn(sw);
 }
 
-static inline void workqueue_exit_worker(struct submit_worker *sw)
+static inline void workqueue_exit_worker(struct submit_worker *sw,
+					 unsigned int *sum_cnt)
 {
 	struct workqueue *wq = sw->wq;
+	unsigned int tmp = 1;
 
 	if (!wq->ops.exit_worker_fn)
 		return;
 
-	wq->ops.exit_worker_fn(sw);
+	if (!sum_cnt)
+		sum_cnt = &tmp;
+
+	wq->ops.exit_worker_fn(sw, sum_cnt);
 }
 #endif
