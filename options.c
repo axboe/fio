@@ -530,6 +530,9 @@ static int str_verify_cpus_allowed_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
 
+	if (parse_dryrun())
+		return 0;
+
 	return set_cpus_allowed(td, &td->o.verify_cpumask, input);
 }
 #endif
