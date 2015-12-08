@@ -928,9 +928,19 @@ static uint64_t do_io(struct thread_data *td)
 			log_io_piece(td, io_u);
 
 		if (td->o.io_submit_mode == IO_MODE_OFFLOAD) {
+			const unsigned long blen = io_u->xfer_buflen;
+			const enum fio_ddir ddir = acct_ddir(io_u);
+
 			if (td->error)
 				break;
+
 			ret = workqueue_enqueue(&td->io_wq, io_u);
+
+			if (ret == FIO_Q_QUEUED && ddir_rw(ddir)) {
+				td->io_issues[ddir]++;
+				td->io_issue_bytes[ddir] += blen;
+				td->rate_io_issue_bytes[ddir] += blen;
+			}
 
 			if (should_check_rate(td))
 				td->rate_next_io_time[ddir] = usec_for_io(td, ddir);

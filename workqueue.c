@@ -118,15 +118,6 @@ int workqueue_enqueue(struct workqueue *wq, struct io_u *io_u)
 
 	sw = get_submit_worker(wq);
 	if (sw) {
-		const enum fio_ddir ddir = acct_ddir(io_u);
-		struct thread_data *parent = wq->td;
-
-		if (ddir_rw(ddir)) {
-			parent->io_issues[ddir]++;
-			parent->io_issue_bytes[ddir] += io_u->xfer_buflen;
-			parent->rate_io_issue_bytes[ddir] += io_u->xfer_buflen;
-		}
-
 		pthread_mutex_lock(&sw->lock);
 		flist_add_tail(&io_u->verify_list, &sw->work_list);
 		sw->seq = ++wq->work_seq;
