@@ -1194,6 +1194,15 @@ int iolog_flush(struct io_log *log, int wait)
 	return 1;
 }
 
+int iolog_compress_init(struct thread_data *td)
+{
+	return 0;
+}
+
+void iolog_compress_exit(struct thread_data *td)
+{
+}
+
 #endif
 
 static int write_iops_log(struct thread_data *td, int try)
@@ -1315,13 +1324,4 @@ void fio_writeout_logs(struct thread_data *td)
 	}
 
 	td_restore_runstate(td, old_state);
-}
-
-int iolog_compress_init(struct thread_data *td)
-{
-	return 0;
-}
-
-void iolog_compress_exit(struct thread_data *td)
-{
 }
