@@ -1107,6 +1107,7 @@ err:
 
 static struct workqueue_ops log_compress_wq_ops = {
 	.fn	= gz_work,
+	.nice	= 1,
 };
 
 int iolog_compress_init(struct thread_data *td)
