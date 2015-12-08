@@ -1,5 +1,5 @@
 /*
- * Rated submission helpers
+ * Generic workqueue offload mechanism
  *
  * Copyright (C) 2015 Jens Axboe <axboe@kernel.dk>
  *
@@ -9,7 +9,6 @@
 #include "fio.h"
 #include "flist.h"
 #include "workqueue.h"
-#include "lib/getrusage.h"
 
 enum {
 	SW_F_IDLE	= 1 << 0,
