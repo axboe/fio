@@ -996,6 +996,15 @@ static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
 
 #ifdef CONFIG_ZLIB
 
+static void drop_data(struct iolog_flush_data *data, int refs)
+{
+	if (!refs) {
+		free(data);
+		pthread_mutex_destroy(&data->lock);
+		pthread_cond_destroy(&data->cv);
+	}
+}
+
 /*
  * Invoked from our compress helper thread, when logging would have exceeded
  * the specified memory limitation. Compresses the previously stored
@@ -1090,8 +1099,7 @@ done:
 		pthread_cond_signal(&data->cv);
 		refs = --data->refs;
 		pthread_mutex_unlock(&data->lock);
-		if (!refs)
-			free(data);
+		drop_data(data, refs);
 	} else
 		free(data);
 	return ret;
@@ -1174,8 +1182,7 @@ int iolog_flush(struct io_log *log, int wait)
 			pthread_cond_wait(&data->cv, &data->lock);
 		refs = --data->refs;
 		pthread_mutex_unlock(&data->lock);
-		if (!refs)
-			free(data);
+		drop_data(data, refs);
 	}
 
 	return 0;
