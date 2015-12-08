@@ -110,9 +110,9 @@ void workqueue_flush(struct workqueue *wq)
 }
 
 /*
- * Must be serialized by caller.
+ * Must be serialized by caller. Returns true for queued, false for busy.
  */
-int workqueue_enqueue(struct workqueue *wq, struct io_u *io_u)
+bool workqueue_enqueue(struct workqueue *wq, struct io_u *io_u)
 {
 	struct submit_worker *sw;
 
@@ -125,10 +125,10 @@ int workqueue_enqueue(struct workqueue *wq, struct io_u *io_u)
 		pthread_mutex_unlock(&sw->lock);
 
 		pthread_cond_signal(&sw->cond);
-		return FIO_Q_QUEUED;
+		return true;
 	}
 
-	return FIO_Q_BUSY;
+	return false;
 }
 
 static void handle_list(struct submit_worker *sw, struct flist_head *list)

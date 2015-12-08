@@ -24,7 +24,7 @@ struct workqueue {
 int workqueue_init(struct thread_data *td, struct workqueue *wq, workqueue_fn *fn, unsigned int max_workers);
 void workqueue_exit(struct workqueue *wq);
 
-int workqueue_enqueue(struct workqueue *wq, struct io_u *io_u);
+bool workqueue_enqueue(struct workqueue *wq, struct io_u *io_u);
 void workqueue_flush(struct workqueue *wq);
 
 #endif
