@@ -709,32 +709,37 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 	size_t size;
 	int i;
 
-	je = get_jobs_eta(1, &size);
-	if (!je)
-		return 0;
-
 	dprint(FD_NET, "server sending status\n");
 
-	je->nr_running		= cpu_to_le32(je->nr_running);
-	je->nr_ramp		= cpu_to_le32(je->nr_ramp);
-	je->nr_pending		= cpu_to_le32(je->nr_pending);
-	je->nr_setting_up	= cpu_to_le32(je->nr_setting_up);
-	je->files_open		= cpu_to_le32(je->files_open);
+	/*
+	 * Fake ETA return if we don't have a local one, otherwise the client
+	 * will end up timing out waiting for a response to the ETA request
+	 */
+	je = get_jobs_eta(1, &size);
+	if (!je)
+		je = calloc(1, sizeof(*je));
+	else {
+		je->nr_running		= cpu_to_le32(je->nr_running);
+		je->nr_ramp		= cpu_to_le32(je->nr_ramp);
+		je->nr_pending		= cpu_to_le32(je->nr_pending);
+		je->nr_setting_up	= cpu_to_le32(je->nr_setting_up);
+		je->files_open		= cpu_to_le32(je->files_open);
 
-	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		je->m_rate[i]	= cpu_to_le32(je->m_rate[i]);
-		je->t_rate[i]	= cpu_to_le32(je->t_rate[i]);
-		je->m_iops[i]	= cpu_to_le32(je->m_iops[i]);
-		je->t_iops[i]	= cpu_to_le32(je->t_iops[i]);
-		je->rate[i]	= cpu_to_le32(je->rate[i]);
-		je->iops[i]	= cpu_to_le32(je->iops[i]);
+		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+			je->m_rate[i]	= cpu_to_le32(je->m_rate[i]);
+			je->t_rate[i]	= cpu_to_le32(je->t_rate[i]);
+			je->m_iops[i]	= cpu_to_le32(je->m_iops[i]);
+			je->t_iops[i]	= cpu_to_le32(je->t_iops[i]);
+			je->rate[i]	= cpu_to_le32(je->rate[i]);
+			je->iops[i]	= cpu_to_le32(je->iops[i]);
+		}
+
+		je->elapsed_sec		= cpu_to_le64(je->elapsed_sec);
+		je->eta_sec		= cpu_to_le64(je->eta_sec);
+		je->nr_threads		= cpu_to_le32(je->nr_threads);
+		je->is_pow2		= cpu_to_le32(je->is_pow2);
+		je->unit_base		= cpu_to_le32(je->unit_base);
 	}
-
-	je->elapsed_sec		= cpu_to_le64(je->elapsed_sec);
-	je->eta_sec		= cpu_to_le64(je->eta_sec);
-	je->nr_threads		= cpu_to_le32(je->nr_threads);
-	je->is_pow2		= cpu_to_le32(je->is_pow2);
-	je->unit_base		= cpu_to_le32(je->unit_base);
 
 	fio_net_send_cmd(server_fd, FIO_NET_CMD_ETA, je, size, &tag, NULL);
 	free(je);
