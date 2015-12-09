@@ -214,7 +214,7 @@ static unsigned long thread_eta(struct thread_data *td)
 		if (td->o.time_based) {
 			if (timeout) {
 				perc_t = (double) elapsed / (double) timeout;
-				if (perc_t > perc)
+				if (perc_t < perc)
 					perc = perc_t;
 			} else {
 				/*
