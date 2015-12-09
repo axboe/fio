@@ -80,6 +80,18 @@ int in_ramp_time(struct thread_data *td)
 	return td->o.ramp_time && !td->ramp_time_over;
 }
 
+static void parent_update_ramp(struct thread_data *td)
+{
+	struct thread_data *parent = td->parent;
+
+	if (!parent || parent->ramp_time_over)
+		return;
+
+	reset_all_stats(parent);
+	parent->ramp_time_over = 1;
+	td_set_runstate(parent, TD_RAMP);
+}
+
 int ramp_time_over(struct thread_data *td)
 {
 	struct timeval tv;
@@ -92,6 +104,7 @@ int ramp_time_over(struct thread_data *td)
 		td->ramp_time_over = 1;
 		reset_all_stats(td);
 		td_set_runstate(td, TD_RAMP);
+		parent_update_ramp(td);
 		return 1;
 	}
 
