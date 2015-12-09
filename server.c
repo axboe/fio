@@ -716,9 +716,10 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 	 * will end up timing out waiting for a response to the ETA request
 	 */
 	je = get_jobs_eta(1, &size);
-	if (!je)
-		je = calloc(1, sizeof(*je));
-	else {
+	if (!je) {
+		size = sizeof(*je);
+		je = calloc(1, size);
+	} else {
 		je->nr_running		= cpu_to_le32(je->nr_running);
 		je->nr_ramp		= cpu_to_le32(je->nr_ramp);
 		je->nr_pending		= cpu_to_le32(je->nr_pending);
