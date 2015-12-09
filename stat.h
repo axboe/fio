@@ -242,7 +242,7 @@ struct jobs_eta {
 
 extern struct fio_mutex *stat_mutex;
 
-extern struct jobs_eta *get_jobs_eta(int force, size_t *size);
+extern struct jobs_eta *get_jobs_eta(bool force, size_t *size);
 
 extern void stat_init(void);
 extern void stat_exit(void);

@@ -715,7 +715,7 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 	 * Fake ETA return if we don't have a local one, otherwise the client
 	 * will end up timing out waiting for a response to the ETA request
 	 */
-	je = get_jobs_eta(1, &size);
+	je = get_jobs_eta(true, &size);
 	if (!je) {
 		size = sizeof(*je);
 		je = calloc(1, size);
