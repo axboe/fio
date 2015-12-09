@@ -1587,8 +1587,11 @@ static void *thread_main(void *data)
 
 		if (td->o.verify_only && (td_write(td) || td_rw(td)))
 			verify_bytes = do_dry_run(td);
-		else
+		else {
 			verify_bytes = do_io(td);
+			if (!verify_bytes)
+				fio_mark_td_terminate(td);
+		}
 
 		clear_state = 1;
 
