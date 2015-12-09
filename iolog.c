@@ -1154,15 +1154,15 @@ void iolog_compress_exit(struct thread_data *td)
 }
 
 /*
- * Queue work item to compress the existing log entries. We copy the
- * samples, and reset the log sample count to 0 (so the logging will
- * continue to use the memory associated with the log). If called with
- * wait == 1, will not return until the log compression has completed.
+ * Queue work item to compress the existing log entries. We reset the
+ * current log to a small size, and reference the existing log in the
+ * data that we queue for compression. Once compression has been done,
+ * this old log is freed. If called with wait == 1, will not return until
+ * the log compression has completed.
  */
 int iolog_flush(struct io_log *log, int wait)
 {
 	struct iolog_flush_data *data;
-	size_t sample_size;
 
 	data = malloc(sizeof(*data));
 	if (!data)
@@ -1170,16 +1170,12 @@ int iolog_flush(struct io_log *log, int wait)
 
 	data->log = log;
 
-	sample_size = log->nr_samples * log_entry_sz(log);
-	data->samples = malloc(sample_size);
-	if (!data->samples) {
-		free(data);
-		return 1;
-	}
-
-	memcpy(data->samples, log->log, sample_size);
+	data->samples = log->log;
 	data->nr_samples = log->nr_samples;
+
 	log->nr_samples = 0;
+	log->max_samples = 128;
+	log->log = malloc(log->max_samples * log_entry_sz(log));
 
 	data->wait = wait;
 	if (data->wait) {
