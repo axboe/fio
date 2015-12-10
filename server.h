@@ -208,7 +208,6 @@ extern struct fio_net_cmd *fio_net_recv_cmd(int sk);
 extern int fio_send_iolog(struct thread_data *, struct io_log *, const char *);
 extern void fio_server_send_add_job(struct thread_data *);
 extern void fio_server_send_start(struct thread_data *);
-extern int fio_net_send_stop(int sk, int error, int signal);
 extern int fio_net_send_quit(int sk);
 
 extern int exit_backend;

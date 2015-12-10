@@ -1164,6 +1164,8 @@ int iolog_flush(struct io_log *log, int wait)
 {
 	struct iolog_flush_data *data;
 
+	io_u_quiesce(log->td);
+
 	data = malloc(sizeof(*data));
 	if (!data)
 		return 1;
