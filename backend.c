@@ -2220,7 +2220,11 @@ static void free_disk_util(void)
 
 static void *helper_thread_main(void *data)
 {
+	struct backend_data *d = data;
 	int ret = 0;
+
+	if (d)
+		pthread_setspecific(d->key, d->ptr);
 
 	fio_mutex_up(startup_mutex);
 
@@ -2255,7 +2259,7 @@ static void *helper_thread_main(void *data)
 	return NULL;
 }
 
-static int create_helper_thread(void)
+static int create_helper_thread(struct backend_data *data)
 {
 	int ret;
 
@@ -2264,7 +2268,7 @@ static int create_helper_thread(void)
 	pthread_cond_init(&helper_cond, NULL);
 	pthread_mutex_init(&helper_lock, NULL);
 
-	ret = pthread_create(&helper_thread, NULL, helper_thread_main, NULL);
+	ret = pthread_create(&helper_thread, NULL, helper_thread_main, data);
 	if (ret) {
 		log_err("Can't create helper thread: %s\n", strerror(ret));
 		return 1;
@@ -2276,7 +2280,7 @@ static int create_helper_thread(void)
 	return 0;
 }
 
-int fio_backend(void)
+int fio_backend(struct backend_data *data)
 {
 	struct thread_data *td;
 	int i;
@@ -2306,7 +2310,7 @@ int fio_backend(void)
 
 	set_genesis_time();
 	stat_init();
-	create_helper_thread();
+	create_helper_thread(data);
 
 	cgroup_list = smalloc(sizeof(*cgroup_list));
 	INIT_FLIST_HEAD(cgroup_list);

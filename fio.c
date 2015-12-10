@@ -57,7 +57,7 @@ int main(int argc, char *argv[], char *envp[])
 			goto done;
 		ret = fio_handle_clients(&fio_client_ops);
 	} else
-		ret = fio_backend();
+		ret = fio_backend(NULL);
 
 done:
 	deinitialize_fio();

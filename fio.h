@@ -108,6 +108,15 @@ enum {
 };
 
 /*
+ * Per-thread/process specific data. Only used for the network client
+ * for now.
+ */
+struct backend_data {
+	pthread_key_t key;
+	void *ptr;
+};
+
+/*
  * This describes a single thread/process executing a fio job.
  */
 struct thread_data {
@@ -468,7 +477,7 @@ extern int __must_check fio_init_options(void);
 extern int __must_check parse_options(int, char **);
 extern int parse_jobs_ini(char *, int, int, int);
 extern int parse_cmd_line(int, char **, int);
-extern int fio_backend(void);
+extern int fio_backend(struct backend_data *);
 extern void reset_fio_state(void);
 extern void clear_io_state(struct thread_data *, int);
 extern int fio_options_parse(struct thread_data *, char **, int, int);

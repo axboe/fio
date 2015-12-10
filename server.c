@@ -601,7 +601,7 @@ static int handle_run_cmd(struct flist_head *job_list, struct fio_net_cmd *cmd)
 		return 0;
 	}
 
-	ret = fio_backend();
+	ret = fio_backend(NULL);
 	free_threads_shm();
 	_exit(ret);
 }
