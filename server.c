@@ -1061,7 +1061,7 @@ int fio_server_text_output(int level, const char *buf, size_t len)
 	struct timeval tv;
 
 	if (server_fd == -1)
-		return log_local_buf(buf, len);
+		return -1;
 
 	tlen = sizeof(*pdu) + len;
 	pdu = malloc(tlen);

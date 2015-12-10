@@ -8,9 +8,13 @@
 
 size_t log_info_buf(const char *buf, size_t len)
 {
-	if (is_backend)
-		return fio_server_text_output(FIO_LOG_INFO, buf, len);
-	else if (log_syslog) {
+	if (is_backend) {
+		size_t ret = fio_server_text_output(FIO_LOG_INFO, buf, len);
+		if (ret != -1)
+			return ret;
+	}
+
+	if (log_syslog) {
 		syslog(LOG_INFO, "%s", buf);
 		return len;
 	} else
@@ -25,16 +29,6 @@ size_t log_valist(const char *str, va_list args)
 	len = vsnprintf(buffer, sizeof(buffer), str, args);
 
 	return log_info_buf(buffer, min(len, sizeof(buffer) - 1));
-}
-
-size_t log_local_buf(const char *buf, size_t len)
-{
-	if (log_syslog)
-		syslog(LOG_INFO, "%s", buf);
-	else
-		len = fwrite(buf, len, 1, f_out);
-
-	return len;
 }
 
 size_t log_info(const char *format, ...)
@@ -82,9 +76,13 @@ size_t log_err(const char *format, ...)
 	va_end(args);
 	len = min(len, sizeof(buffer) - 1);
 
-	if (is_backend)
-		return fio_server_text_output(FIO_LOG_ERR, buffer, len);
-	else if (log_syslog) {
+	if (is_backend) {
+		size_t ret = fio_server_text_output(FIO_LOG_ERR, buffer, len);
+		if (ret != -1)
+			return ret;
+	}
+
+	if (log_syslog) {
 		syslog(LOG_INFO, "%s", buffer);
 		return len;
 	} else {
