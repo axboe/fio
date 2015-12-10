@@ -1227,6 +1227,9 @@ exitall		When one job finishes, terminate the rest. The default is
 		to wait for each job to finish, sometimes that is not the
 		desired action.
 
+exitall_on_error	When one job finishes in error, terminate the rest. The
+		default is to wait for each job to finish.
+
 bwavgtime=int	Average the calculated bandwidth over the given time. Value
 		is specified in milliseconds.
 

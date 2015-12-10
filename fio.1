@@ -1126,6 +1126,10 @@ Should be a multiple of 1MB. Default: 4MB.
 .B exitall
 Terminate all jobs when one finishes.  Default: wait for each job to finish.
 .TP
+.B exitall_on_error \fR=\fPbool
+Terminate all jobs if one job finishes in error.  Default: wait for each job
+to finish.
+.TP
 .BI bwavgtime \fR=\fPint
 Average bandwidth calculations over the given time in milliseconds.  Default:
 500ms.

@@ -974,7 +974,7 @@ reap:
 
 		if (!in_ramp_time(td) && should_check_rate(td)) {
 			if (check_min_rate(td, &comp_time)) {
-				if (exitall_on_terminate)
+				if (exitall_on_terminate || td->o.exitall_error)
 					fio_terminate_threads(td->groupid);
 				td_verror(td, EIO, "check_min_rate");
 				break;
@@ -1662,7 +1662,7 @@ static void *thread_main(void *data)
 	if (o->exec_postrun)
 		exec_string(o, o->exec_postrun, (const char *)"postrun");
 
-	if (exitall_on_terminate)
+	if (exitall_on_terminate || (o->exitall_error && td->error))
 		fio_terminate_threads(td->groupid);
 
 err:

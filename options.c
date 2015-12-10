@@ -3141,6 +3141,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_PROCESS,
 	},
 	{
+		.name	= "exitall_on_error",
+		.lname	= "Exit-all on terminate in error",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(unlink),
+		.help	= "Terminate all jobs when one exits in error",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_PROCESS,
+	},
+	{
 		.name	= "stonewall",
 		.lname	= "Wait for previous",
 		.alias	= "wait_for_previous",
