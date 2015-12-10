@@ -1445,7 +1445,7 @@ int fio_server_get_verify_state(const char *name, int threadnumber,
 	/*
 	 * Wait for the backend to receive the reply
 	 */
-	if (fio_mutex_down_timeout(&rep->lock, 10)) {
+	if (fio_mutex_down_timeout(&rep->lock, 10000)) {
 		log_err("fio: timed out waiting for reply\n");
 		goto fail;
 	}

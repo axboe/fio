@@ -2117,7 +2117,7 @@ reap:
 					*fio_debug_jobp = pid;
 			}
 			dprint(FD_MUTEX, "wait on startup_mutex\n");
-			if (fio_mutex_down_timeout(startup_mutex, 10)) {
+			if (fio_mutex_down_timeout(startup_mutex, 10000)) {
 				log_err("fio: job startup hung? exiting.\n");
 				fio_terminate_threads(TERMINATE_ALL);
 				fio_abort = 1;
