@@ -177,9 +177,6 @@ static int fio_sendv_data(int sk, struct iovec *iov, int count)
 	if (!total_len)
 		return 0;
 
-	if (errno)
-		return -errno;
-
 	return 1;
 }
 
@@ -997,67 +994,78 @@ static void finish_entry(struct sk_entry *entry)
 	sfree(entry);
 }
 
-static void send_vec_entry(struct sk_out *sk_out, struct sk_entry *first)
+static void entry_set_flags_tag(struct sk_entry *entry, struct flist_head *list,
+				unsigned int *flags, uint64_t *tag)
 {
+	if (!flist_empty(list))
+		*flags = FIO_NET_CMD_F_MORE;
+	else
+		*flags = 0;
+
+	if (entry->tagptr)
+		*tag = *entry->tagptr;
+	else
+		*tag = 0;
+}
+
+static int send_vec_entry(struct sk_out *sk_out, struct sk_entry *first)
+{
+	unsigned int flags;
 	uint64_t tag;
-	int flags;
+	int ret;
 
-	if (!flist_empty(&first->next))
-		flags = FIO_NET_CMD_F_MORE;
-	else
-		flags = 0;
+	entry_set_flags_tag(first, &first->next, &flags, &tag);
 
-	if (first->tagptr)
-		tag = *first->tagptr;
-	else
-		tag = 0;
-
-	fio_send_cmd_ext_pdu(sk_out->sk, first->opcode, first->buf, first->size, tag, flags);
+	ret = fio_send_cmd_ext_pdu(sk_out->sk, first->opcode, first->buf, first->size, tag, flags);
 
 	while (!flist_empty(&first->next)) {
 		struct sk_entry *next;
 
 		next = flist_first_entry(&first->next, struct sk_entry, list);
 		flist_del_init(&next->list);
-		if (flist_empty(&first->next))
-			flags = 0;
 
-		if (next->tagptr)
-			tag = *next->tagptr;
-		else
-			tag = 0;
+		entry_set_flags_tag(next, &first->next, &flags, &tag);
 
-		fio_send_cmd_ext_pdu(sk_out->sk, next->opcode, next->buf, next->size, tag, flags);
+		ret += fio_send_cmd_ext_pdu(sk_out->sk, next->opcode, next->buf, next->size, tag, flags);
 		finish_entry(next);
 	}
+
+	return ret;
 }
 
-static void handle_sk_entry(struct sk_out *sk_out, struct sk_entry *entry)
+static int handle_sk_entry(struct sk_out *sk_out, struct sk_entry *entry)
 {
+	int ret;
+
 	if (entry->flags & SK_F_VEC)
-		send_vec_entry(sk_out, entry);
+		ret = send_vec_entry(sk_out, entry);
 	if (entry->flags & SK_F_SIMPLE) {
 		uint64_t tag = 0;
 
 		if (entry->tagptr)
 			tag = *entry->tagptr;
 
-		fio_net_send_simple_cmd(sk_out->sk, entry->opcode, tag, NULL);
+		ret = fio_net_send_simple_cmd(sk_out->sk, entry->opcode, tag, NULL);
 	} else
-		fio_net_send_cmd(sk_out->sk, entry->opcode, entry->buf, entry->size, entry->tagptr, NULL);
+		ret = fio_net_send_cmd(sk_out->sk, entry->opcode, entry->buf, entry->size, entry->tagptr, NULL);
+
+	if (ret)
+		log_err("fio: failed handling cmd %s\n", fio_server_op(entry->opcode));
 
 	finish_entry(entry);
+	return ret;
 }
 
-static void handle_xmits(struct sk_out *sk_out)
+static int handle_xmits(struct sk_out *sk_out)
 {
 	struct sk_entry *entry;
 	FLIST_HEAD(list);
+	int ret = 0;
 
 	sk_lock(sk_out);
 	if (flist_empty(&sk_out->list)) {
 		sk_unlock(sk_out);
-		return;
+		return 0;
 	}
 
 	flist_splice_init(&sk_out->list, &list);
@@ -1066,8 +1074,10 @@ static void handle_xmits(struct sk_out *sk_out)
 	while (!flist_empty(&list)) {
 		entry = flist_entry(list.next, struct sk_entry, list);
 		flist_del(&entry->list);
-		handle_sk_entry(sk_out, entry);
+		ret += handle_sk_entry(sk_out, entry);
 	}
+
+	return ret;
 }
 
 static int handle_connection(struct sk_out *sk_out)
