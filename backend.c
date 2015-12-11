@@ -1358,18 +1358,28 @@ static uint64_t do_dry_run(struct thread_data *td)
 	return td->bytes_done[DDIR_WRITE] + td->bytes_done[DDIR_TRIM];
 }
 
+struct fork_data {
+	struct thread_data *td;
+	struct sk_out *sk_out;
+};
+
 /*
  * Entry point for the thread based jobs. The process based jobs end up
  * here as well, after a little setup.
  */
 static void *thread_main(void *data)
 {
+	struct fork_data *fd = data;
 	unsigned long long elapsed_us[DDIR_RWDIR_CNT] = { 0, };
-	struct thread_data *td = data;
+	struct thread_data *td = fd->td;
 	struct thread_options *o = &td->o;
+	struct sk_out *sk_out = fd->sk_out;
 	pthread_condattr_t attr;
 	int clear_state;
 	int ret;
+
+	sk_out_assign(sk_out);
+	free(fd);
 
 	if (!o->use_thread) {
 		setsid();
@@ -1550,12 +1560,12 @@ static void *thread_main(void *data)
 			goto err;
 	}
 
-	if (iolog_compress_init(td))
+	if (iolog_compress_init(td, sk_out))
 		goto err;
 
 	fio_verify_init(td);
 
-	if (rate_submit_init(td))
+	if (rate_submit_init(td, sk_out))
 		goto err;
 
 	fio_gettime(&td->epoch, NULL);
@@ -1702,6 +1712,7 @@ err:
 	 */
 	check_update_rusage(td);
 
+	sk_out_drop();
 	return (void *) (uintptr_t) td->error;
 }
 
@@ -1710,9 +1721,9 @@ err:
  * We cannot pass the td data into a forked process, so attach the td and
  * pass it to the thread worker.
  */
-static int fork_main(int shmid, int offset)
+static int fork_main(struct sk_out *sk_out, int shmid, int offset)
 {
-	struct thread_data *td;
+	struct fork_data *fd;
 	void *data, *ret;
 
 #if !defined(__hpux) && !defined(CONFIG_NO_SHM)
@@ -1730,8 +1741,10 @@ static int fork_main(int shmid, int offset)
 	data = threads;
 #endif
 
-	td = data + offset * sizeof(struct thread_data);
-	ret = thread_main(td);
+	fd = calloc(1, sizeof(*fd));
+	fd->td = data + offset * sizeof(struct thread_data);
+	fd->sk_out = sk_out;
+	ret = thread_main(fd);
 	shmdt(data);
 	return (int) (uintptr_t) ret;
 }
@@ -1956,7 +1969,7 @@ mounted:
 /*
  * Main function for kicking off and reaping jobs, as needed.
  */
-static void run_threads(void)
+static void run_threads(struct sk_out *sk_out)
 {
 	struct thread_data *td;
 	unsigned int i, todo, nr_running, m_rate, t_rate, nr_started;
@@ -2090,14 +2103,20 @@ reap:
 			nr_started++;
 
 			if (td->o.use_thread) {
+				struct fork_data *fd;
 				int ret;
+
+				fd = calloc(1, sizeof(*fd));
+				fd->td = td;
+				fd->sk_out = sk_out;
 
 				dprint(FD_PROCESS, "will pthread_create\n");
 				ret = pthread_create(&td->thread, NULL,
-							thread_main, td);
+							thread_main, fd);
 				if (ret) {
 					log_err("pthread_create: %s\n",
 							strerror(ret));
+					free(fd);
 					nr_started--;
 					break;
 				}
@@ -2110,7 +2129,7 @@ reap:
 				dprint(FD_PROCESS, "will fork\n");
 				pid = fork();
 				if (!pid) {
-					int ret = fork_main(shm_id, i);
+					int ret = fork_main(sk_out, shm_id, i);
 
 					_exit(ret);
 				} else if (i == fio_debug_jobno)
@@ -2220,11 +2239,10 @@ static void free_disk_util(void)
 
 static void *helper_thread_main(void *data)
 {
-	struct backend_data *d = data;
+	struct sk_out *sk_out = data;
 	int ret = 0;
 
-	if (d)
-		pthread_setspecific(d->key, d->ptr);
+	sk_out_assign(sk_out);
 
 	fio_mutex_up(startup_mutex);
 
@@ -2256,10 +2274,11 @@ static void *helper_thread_main(void *data)
 			print_thread_status();
 	}
 
+	sk_out_drop();
 	return NULL;
 }
 
-static int create_helper_thread(struct backend_data *data)
+static int create_helper_thread(struct sk_out *sk_out)
 {
 	int ret;
 
@@ -2268,7 +2287,7 @@ static int create_helper_thread(struct backend_data *data)
 	pthread_cond_init(&helper_cond, NULL);
 	pthread_mutex_init(&helper_lock, NULL);
 
-	ret = pthread_create(&helper_thread, NULL, helper_thread_main, data);
+	ret = pthread_create(&helper_thread, NULL, helper_thread_main, sk_out);
 	if (ret) {
 		log_err("Can't create helper thread: %s\n", strerror(ret));
 		return 1;
@@ -2280,7 +2299,7 @@ static int create_helper_thread(struct backend_data *data)
 	return 0;
 }
 
-int fio_backend(struct backend_data *data)
+int fio_backend(struct sk_out *sk_out)
 {
 	struct thread_data *td;
 	int i;
@@ -2310,12 +2329,12 @@ int fio_backend(struct backend_data *data)
 
 	set_genesis_time();
 	stat_init();
-	create_helper_thread(data);
+	create_helper_thread(sk_out);
 
 	cgroup_list = smalloc(sizeof(*cgroup_list));
 	INIT_FLIST_HEAD(cgroup_list);
 
-	run_threads();
+	run_threads(sk_out);
 
 	wait_for_helper_thread_exit();
 

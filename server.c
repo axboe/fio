@@ -50,6 +50,8 @@ struct sk_entry {
 };
 
 struct sk_out {
+	unsigned int refs;
+
 	int sk;
 	struct fio_mutex *lock;
 	struct flist_head list;
@@ -119,6 +121,42 @@ static void sk_lock(struct sk_out *sk_out)
 static void sk_unlock(struct sk_out *sk_out)
 {
 	fio_mutex_up(sk_out->lock);
+}
+
+void sk_out_assign(struct sk_out *sk_out)
+{
+	if (!sk_out)
+		return;
+
+	sk_lock(sk_out);
+	sk_out->refs++;
+	sk_unlock(sk_out);
+	pthread_setspecific(sk_out_key, sk_out);
+}
+
+static void __sk_out_drop(struct sk_out *sk_out)
+{
+	fio_mutex_remove(sk_out->lock);
+	fio_mutex_remove(sk_out->wait);
+	sfree(sk_out);
+}
+
+void sk_out_drop(void)
+{
+	struct sk_out *sk_out = pthread_getspecific(sk_out_key);
+
+	if (sk_out) {
+		int refs;
+
+		sk_lock(sk_out);
+		refs = --sk_out->refs;
+		sk_unlock(sk_out);
+
+		if (!refs)
+			__sk_out_drop(sk_out);
+
+		pthread_setspecific(sk_out_key, NULL);
+	}
 }
 
 const char *fio_server_op(unsigned int op)
@@ -672,7 +710,6 @@ static int handle_load_file_cmd(struct fio_net_cmd *cmd)
 static int handle_run_cmd(struct sk_out *sk_out, struct flist_head *job_list,
 			  struct fio_net_cmd *cmd)
 {
-	struct backend_data data;
 	pid_t pid;
 	int ret;
 
@@ -685,10 +722,7 @@ static int handle_run_cmd(struct sk_out *sk_out, struct flist_head *job_list,
 		return 0;
 	}
 
-	data.key = sk_out_key;
-	data.ptr = sk_out;
-	//pthread_setspecific(sk_out_key, sk_out);
-	ret = fio_backend(&data);
+	ret = fio_backend(sk_out);
 	free_threads_shm();
 	_exit(ret);
 }
@@ -1189,26 +1223,18 @@ int get_my_addr_str(int sk)
 	return 0;
 }
 
-static int accept_loop(int listen_sk)
+static int accept_loop(struct sk_out *sk_out, int listen_sk)
 {
 	struct sockaddr_in addr;
 	struct sockaddr_in6 addr6;
 	socklen_t len = use_ipv6 ? sizeof(addr6) : sizeof(addr);
 	struct pollfd pfd;
 	int ret = 0, sk, exitval = 0;
-	struct sk_out *sk_out;
 	FLIST_HEAD(conn_list);
 
 	dprint(FD_NET, "server enter accept loop\n");
 
 	fio_set_fd_nonblocking(listen_sk, "server");
-
-	sk_out = smalloc(sizeof(*sk_out));
-	INIT_FLIST_HEAD(&sk_out->list);
-	sk_out->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
-	sk_out->wait = fio_mutex_init(FIO_MUTEX_LOCKED);
-
-	pthread_setspecific(sk_out_key, sk_out);
 
 	while (!exit_backend) {
 		const char *from;
@@ -1274,13 +1300,6 @@ static int accept_loop(int listen_sk)
 		get_my_addr_str(sk); /* if error, it's already logged, non-fatal */
 		handle_connection(sk_out);
 	}
-
-#if 0
-	fio_mutex_remove(sk_out->lock);
-	fio_mutex_remove(sk_out->wait);
-	sfree(sk_out);
-	pthread_setspecific(sk_out_key, NULL);
-#endif
 
 	return exitval;
 }
@@ -2020,6 +2039,7 @@ static void set_sig_handlers(void)
 
 static int fio_server(void)
 {
+	struct sk_out *sk_out;
 	int sk, ret;
 
 	dprint(FD_NET, "starting server\n");
@@ -2036,7 +2056,14 @@ static int fio_server(void)
 	if (pthread_key_create(&sk_out_key, NULL))
 		log_err("fio: can't create sk_out backend key\n");
 
-	ret = accept_loop(sk);
+	sk_out = smalloc(sizeof(*sk_out));
+	INIT_FLIST_HEAD(&sk_out->list);
+	sk_out->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+	sk_out->wait = fio_mutex_init(FIO_MUTEX_LOCKED);
+
+	sk_out_assign(sk_out);
+
+	ret = accept_loop(sk_out, sk);
 
 	close(sk);
 
@@ -2046,6 +2073,8 @@ static int fio_server(void)
 	}
 	if (bind_sock)
 		free(bind_sock);
+
+	sk_out_drop();
 
 	return ret;
 }
