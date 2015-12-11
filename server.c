@@ -40,13 +40,13 @@ enum {
 };
 
 struct sk_entry {
-	struct flist_head list;
-	int opcode;
+	struct flist_head list;	/* link on sk_out->list */
+	int flags;		/* SK_F_* */
+	int opcode;		/* Actual command fields */
 	void *buf;
 	off_t size;
 	uint64_t *tagptr;
-	int flags;
-	struct flist_head next;
+	struct flist_head next;	/* Other sk_entry's, if linked command */
 };
 
 struct sk_out {
