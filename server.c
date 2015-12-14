@@ -50,12 +50,13 @@ struct sk_entry {
 };
 
 struct sk_out {
-	unsigned int refs;
+	unsigned int refs;	/* frees sk_out when it drops to zero.
+				 * protected by below ->lock */
 
-	int sk;
-	struct fio_mutex *lock;
-	struct flist_head list;
-	struct fio_mutex *wait;
+	int sk;			/* socket fd to talk to client */
+	struct fio_mutex *lock;	/* protects ref and below list */
+	struct flist_head list;	/* list of pending transmit work */
+	struct fio_mutex *wait;	/* wake backend when items added to list */
 };
 
 static char *fio_server_arg;
@@ -1192,6 +1193,7 @@ static int handle_connection(struct sk_out *sk_out)
 	handle_xmits(sk_out);
 
 	close(sk_out->sk);
+	sk_out->sk = -1;
 	__sk_out_drop(sk_out);
 	_exit(ret);
 }
@@ -1309,8 +1311,13 @@ static int accept_loop(struct sk_out *sk_out, int listen_sk)
 			continue;
 		}
 
-		/* exits */
-		get_my_addr_str(sk); /* if error, it's already logged, non-fatal */
+		/* if error, it's already logged, non-fatal */
+		get_my_addr_str(sk);
+
+		/*
+		 * Assign sk_out here, it'll be dropped in handle_connection()
+		 * since that function calls _exit() when done
+		 */
 		sk_out_assign(sk_out);
 		handle_connection(sk_out);
 	}
