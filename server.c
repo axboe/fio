@@ -134,17 +134,15 @@ void sk_out_assign(struct sk_out *sk_out)
 	pthread_setspecific(sk_out_key, sk_out);
 }
 
-static void __sk_out_drop(struct sk_out *sk_out)
+static void sk_out_free(struct sk_out *sk_out)
 {
 	fio_mutex_remove(sk_out->lock);
 	fio_mutex_remove(sk_out->wait);
 	sfree(sk_out);
 }
 
-void sk_out_drop(void)
+static int __sk_out_drop(struct sk_out *sk_out)
 {
-	struct sk_out *sk_out = pthread_getspecific(sk_out_key);
-
 	if (sk_out) {
 		int refs;
 
@@ -152,11 +150,22 @@ void sk_out_drop(void)
 		refs = --sk_out->refs;
 		sk_unlock(sk_out);
 
-		if (!refs)
-			__sk_out_drop(sk_out);
-
-		pthread_setspecific(sk_out_key, NULL);
+		if (!refs) {
+			sk_out_free(sk_out);
+			return 0;
+		}
 	}
+
+	return 1;
+}
+
+void sk_out_drop(void)
+{
+	struct sk_out *sk_out;
+
+	sk_out = pthread_getspecific(sk_out_key);
+	if (!__sk_out_drop(sk_out))
+		pthread_setspecific(sk_out_key, NULL);
 }
 
 const char *fio_server_op(unsigned int op)
@@ -1183,6 +1192,7 @@ static int handle_connection(struct sk_out *sk_out)
 	handle_xmits(sk_out);
 
 	close(sk_out->sk);
+	__sk_out_drop(sk_out);
 	_exit(ret);
 }
 
@@ -1286,18 +1296,22 @@ static int accept_loop(struct sk_out *sk_out, int listen_sk)
 
 		dprint(FD_NET, "server: connect from %s\n", from);
 
+		sk_out = smalloc(sizeof(*sk_out));
 		sk_out->sk = sk;
+		INIT_FLIST_HEAD(&sk_out->list);
+		sk_out->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+		sk_out->wait = fio_mutex_init(FIO_MUTEX_LOCKED);
 
 		pid = fork();
 		if (pid) {
 			close(sk);
 			fio_server_add_conn_pid(&conn_list, pid);
-			pthread_setspecific(sk_out_key, sk_out);
 			continue;
 		}
 
 		/* exits */
 		get_my_addr_str(sk); /* if error, it's already logged, non-fatal */
+		sk_out_assign(sk_out);
 		handle_connection(sk_out);
 	}
 
@@ -2056,13 +2070,6 @@ static int fio_server(void)
 	if (pthread_key_create(&sk_out_key, NULL))
 		log_err("fio: can't create sk_out backend key\n");
 
-	sk_out = smalloc(sizeof(*sk_out));
-	INIT_FLIST_HEAD(&sk_out->list);
-	sk_out->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
-	sk_out->wait = fio_mutex_init(FIO_MUTEX_LOCKED);
-
-	sk_out_assign(sk_out);
-
 	ret = accept_loop(sk_out, sk);
 
 	close(sk);
@@ -2073,8 +2080,6 @@ static int fio_server(void)
 	}
 	if (bind_sock)
 		free(bind_sock);
-
-	sk_out_drop();
 
 	return ret;
 }
