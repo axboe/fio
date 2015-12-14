@@ -169,6 +169,27 @@ void sk_out_drop(void)
 		pthread_setspecific(sk_out_key, NULL);
 }
 
+static void __fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
+			       uint32_t pdu_len, uint64_t tag)
+{
+	memset(cmd, 0, sizeof(*cmd));
+
+	cmd->version	= __cpu_to_le16(FIO_SERVER_VER);
+	cmd->opcode	= cpu_to_le16(opcode);
+	cmd->tag	= cpu_to_le64(tag);
+	cmd->pdu_len	= cpu_to_le32(pdu_len);
+}
+
+
+static void fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
+			     const void *pdu, uint32_t pdu_len, uint64_t tag)
+{
+	__fio_init_net_cmd(cmd, opcode, pdu_len, tag);
+
+	if (pdu)
+		memcpy(&cmd->payload, pdu, pdu_len);
+}
+
 const char *fio_server_op(unsigned int op)
 {
 	static char buf[32];
@@ -228,7 +249,7 @@ static int fio_sendv_data(int sk, struct iovec *iov, int count)
 	return 1;
 }
 
-int fio_send_data(int sk, const void *p, unsigned int len)
+static int fio_send_data(int sk, const void *p, unsigned int len)
 {
 	struct iovec iov = { .iov_base = (void *) p, .iov_len = len };
 
@@ -237,7 +258,7 @@ int fio_send_data(int sk, const void *p, unsigned int len)
 	return fio_sendv_data(sk, &iov, 1);
 }
 
-int fio_recv_data(int sk, void *p, unsigned int len)
+static int fio_recv_data(int sk, void *p, unsigned int len)
 {
 	do {
 		int ret = recv(sk, p, len, MSG_WAITALL);
@@ -429,7 +450,7 @@ static void free_reply(uint64_t tag)
 	free(reply);
 }
 
-void fio_net_cmd_crc_pdu(struct fio_net_cmd *cmd, const void *pdu)
+static void fio_net_cmd_crc_pdu(struct fio_net_cmd *cmd, const void *pdu)
 {
 	uint32_t pdu_len;
 
@@ -439,7 +460,7 @@ void fio_net_cmd_crc_pdu(struct fio_net_cmd *cmd, const void *pdu)
 	cmd->pdu_crc16 = __cpu_to_le16(fio_crc16(pdu, pdu_len));
 }
 
-void fio_net_cmd_crc(struct fio_net_cmd *cmd)
+static void fio_net_cmd_crc(struct fio_net_cmd *cmd)
 {
 	fio_net_cmd_crc_pdu(cmd, cmd->payload);
 }
@@ -496,8 +517,8 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size,
 	return ret;
 }
 
-struct sk_entry *fio_net_prep_cmd(uint16_t opcode, void *buf, off_t size,
-				  uint64_t *tagptr, int flags)
+static struct sk_entry *fio_net_prep_cmd(uint16_t opcode, void *buf, off_t size,
+					 uint64_t *tagptr, int flags)
 {
 	struct sk_entry *entry;
 
@@ -1201,7 +1222,7 @@ static int handle_connection(struct sk_out *sk_out)
 /* get the address on this host bound by the input socket, 
  * whether it is ipv6 or ipv4 */
 
-int get_my_addr_str(int sk)
+static int get_my_addr_str(int sk)
 {
 	struct sockaddr_in6 myaddr6 = { 0, };
 	struct sockaddr_in myaddr4 = { 0, };
