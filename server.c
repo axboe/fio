@@ -2084,6 +2084,13 @@ static int fio_server(void)
 {
 	int sk, ret;
 
+	if (pthread_key_create(&sk_out_key, NULL)) {
+		log_err("fio: can't create sk_out backend key\n");
+		return -1;
+	}
+
+	pthread_setspecific(sk_out_key, NULL);
+
 	dprint(FD_NET, "starting server\n");
 
 	if (fio_handle_server_arg())
@@ -2094,9 +2101,6 @@ static int fio_server(void)
 		return -1;
 
 	set_sig_handlers();
-
-	if (pthread_key_create(&sk_out_key, NULL))
-		log_err("fio: can't create sk_out backend key\n");
 
 	ret = accept_loop(sk);
 
