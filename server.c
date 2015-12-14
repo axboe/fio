@@ -1256,7 +1256,7 @@ static int get_my_addr_str(int sk)
 	return 0;
 }
 
-static int accept_loop(struct sk_out *sk_out, int listen_sk)
+static int accept_loop(int listen_sk)
 {
 	struct sockaddr_in addr;
 	struct sockaddr_in6 addr6;
@@ -1270,6 +1270,7 @@ static int accept_loop(struct sk_out *sk_out, int listen_sk)
 	fio_set_fd_nonblocking(listen_sk, "server");
 
 	while (!exit_backend) {
+		struct sk_out *sk_out;
 		const char *from;
 		char buf[64];
 		pid_t pid;
@@ -2081,7 +2082,6 @@ static void set_sig_handlers(void)
 
 static int fio_server(void)
 {
-	struct sk_out *sk_out;
 	int sk, ret;
 
 	dprint(FD_NET, "starting server\n");
@@ -2098,7 +2098,7 @@ static int fio_server(void)
 	if (pthread_key_create(&sk_out_key, NULL))
 		log_err("fio: can't create sk_out backend key\n");
 
-	ret = accept_loop(sk_out, sk);
+	ret = accept_loop(sk);
 
 	close(sk);
 
