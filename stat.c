@@ -1086,8 +1086,32 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 	log_buf(out, "\n");
 }
 
+static void json_add_job_opts(struct json_object *root, const char *name,
+			      struct flist_head *opt_list)
+{
+	struct json_object *dir_object;
+	struct flist_head *entry;
+	struct print_option *p;
+
+	if (flist_empty(opt_list))
+		return;
+
+	dir_object = json_create_object();
+	json_object_add_value_object(root, name, dir_object);
+
+	flist_for_each(entry, opt_list) {
+		const char *pos = "";
+
+		p = flist_entry(entry, struct print_option, list);
+		if (p->value)
+			pos = p->value;
+		json_object_add_value_string(dir_object, p->name, pos);
+	}
+}
+
 static struct json_object *show_thread_status_json(struct thread_stat *ts,
-				    struct group_run_stats *rs)
+						   struct group_run_stats *rs,
+						   struct flist_head *opt_list)
 {
 	struct json_object *root, *tmp;
 	struct jobs_eta *je;
@@ -1109,6 +1133,9 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		json_object_add_value_int(root, "eta", je->eta_sec);
 		json_object_add_value_int(root, "elapsed", je->elapsed_sec);
 	}
+
+	if (opt_list)
+		json_add_job_opts(root, "job options", opt_list);
 
 	add_ddir_status_json(ts, rs, DDIR_READ, root);
 	add_ddir_status_json(ts, rs, DDIR_WRITE, root);
@@ -1246,7 +1273,7 @@ struct json_object *show_thread_status(struct thread_stat *ts,
 	if (output_format & FIO_OUTPUT_TERSE)
 		show_thread_status_terse(ts, rs,  out);
 	if (output_format & FIO_OUTPUT_JSON)
-		ret = show_thread_status_json(ts, rs);
+		ret = show_thread_status_json(ts, rs, NULL);
 	if (output_format & FIO_OUTPUT_NORMAL)
 		show_thread_status_normal(ts, rs,  out);
 
@@ -1427,6 +1454,7 @@ void __show_run_stats(void)
 	struct json_object *root = NULL;
 	struct json_array *array = NULL;
 	struct buf_output output[FIO_OUTPUT_NR];
+	struct flist_head **opt_lists;
 
 	runstats = malloc(sizeof(struct group_run_stats) * (groupid + 1));
 
@@ -1452,9 +1480,12 @@ void __show_run_stats(void)
 	}
 
 	threadstats = malloc(nr_ts * sizeof(struct thread_stat));
+	opt_lists = malloc(nr_ts * sizeof(struct flist_head *));
 
-	for (i = 0; i < nr_ts; i++)
+	for (i = 0; i < nr_ts; i++) {
 		init_thread_stat(&threadstats[i]);
+		opt_lists[i] = NULL;
+	}
 
 	j = 0;
 	last_ts = -1;
@@ -1473,6 +1504,7 @@ void __show_run_stats(void)
 		ts->clat_percentiles = td->o.clat_percentiles;
 		ts->percentile_precision = td->o.percentile_precision;
 		memcpy(ts->percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
+		opt_lists[j] = &td->opt_list;
 
 		idx++;
 		ts->members++;
@@ -1596,6 +1628,7 @@ void __show_run_stats(void)
 	if (output_format & FIO_OUTPUT_NORMAL)
 		log_buf(&output[__FIO_OUTPUT_NORMAL], "\n");
 	if (output_format & FIO_OUTPUT_JSON) {
+		struct thread_data *global;
 		char time_buf[32];
 		time_t time_p;
 
@@ -1608,6 +1641,8 @@ void __show_run_stats(void)
 		json_object_add_value_string(root, "fio version", fio_version_string);
 		json_object_add_value_int(root, "timestamp", time_p);
 		json_object_add_value_string(root, "time", time_buf);
+		global = get_global_options();
+		json_add_job_opts(root, "global options", &global->opt_list);
 		array = json_create_array();
 		json_object_add_value_array(root, "jobs", array);
 	}
@@ -1622,7 +1657,7 @@ void __show_run_stats(void)
 			if (output_format & FIO_OUTPUT_TERSE)
 				show_thread_status_terse(ts, rs, &output[__FIO_OUTPUT_TERSE]);
 			if (output_format & FIO_OUTPUT_JSON) {
-				struct json_object *tmp = show_thread_status_json(ts, rs);
+				struct json_object *tmp = show_thread_status_json(ts, rs, opt_lists[i]);
 				json_array_add_value_object(array, tmp);
 			}
 			if (output_format & FIO_OUTPUT_NORMAL)
@@ -1665,6 +1700,7 @@ void __show_run_stats(void)
 	log_info_flush();
 	free(runstats);
 	free(threadstats);
+	free(opt_lists);
 }
 
 void show_run_stats(void)

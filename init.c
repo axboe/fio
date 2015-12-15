@@ -1774,6 +1774,7 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 static int fill_def_thread(void)
 {
 	memset(&def_thread, 0, sizeof(def_thread));
+	INIT_FLIST_HEAD(&def_thread.opt_list);
 
 	fio_getaffinity(getpid(), &def_thread.o.cpumask);
 	def_thread.o.error_dump = 1;
@@ -2633,7 +2634,7 @@ void options_default_fill(struct thread_options *o)
 	memcpy(o, &def_thread.o, sizeof(*o));
 }
 
-bool is_def_thread(struct thread_data *td)
+struct thread_data *get_global_options(void)
 {
-	return td == &def_thread;
+	return &def_thread;
 }

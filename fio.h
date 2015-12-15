@@ -499,7 +499,7 @@ extern int parse_dryrun(void);
 extern int fio_running_or_pending_io_threads(void);
 extern int fio_set_fd_nonblocking(int, const char *);
 extern void sig_show_status(int sig);
-extern bool is_def_thread(struct thread_data *);
+extern struct thread_data *get_global_options(void);
 
 extern uintptr_t page_mask;
 extern uintptr_t page_size;
