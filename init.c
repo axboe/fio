@@ -385,6 +385,47 @@ static void set_cmd_options(struct thread_data *td)
 		o->timeout = def_timeout;
 }
 
+static void dump_print_option(struct print_option *p)
+{
+	const char *delim;
+
+	if (!strcmp("description", p->name))
+		delim = "\"";
+	else
+		delim = "";
+
+	log_info("--%s%s", p->name, p->value ? "" : " ");
+	if (p->value)
+		log_info("=%s%s%s ", delim, p->value, delim);
+}
+
+static void dump_opt_list(struct thread_data *td)
+{
+	struct flist_head *entry;
+	struct print_option *p;
+
+	if (flist_empty(&td->opt_list))
+		return;
+
+	flist_for_each(entry, &td->opt_list) {
+		p = flist_entry(entry, struct print_option, list);
+		dump_print_option(p);
+	}
+}
+
+static void fio_dump_options_free(struct thread_data *td)
+{
+	while (!flist_empty(&td->opt_list)) {
+		struct print_option *p;
+
+		p = flist_first_entry(&td->opt_list, struct print_option, list);
+		flist_del_init(&p->list);
+		free(p->name);
+		free(p->value);
+		free(p);
+	}
+}
+
 /*
  * Return a free job structure.
  */
@@ -409,6 +450,8 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 
 	td = &threads[thread_number++];
 	*td = *parent;
+
+	INIT_FLIST_HEAD(&td->opt_list);
 
 	td->io_ops = NULL;
 	if (!preserve_eo)
@@ -446,6 +489,7 @@ static void put_job(struct thread_data *td)
 		log_info("fio: %s\n", td->verror);
 
 	fio_options_free(td);
+	fio_dump_options_free(td);
 	if (td->io_ops)
 		free_ioengine(td);
 
@@ -1444,9 +1488,9 @@ void add_job_opts(const char **o, int client_type)
 			td = get_new_job(0, td_parent, 0, jobname);
 		}
 		if (in_global)
-			fio_options_parse(td_parent, (char **) &o[i], 1, 0);
+			fio_options_parse(td_parent, (char **) &o[i], 1);
 		else
-			fio_options_parse(td, (char **) &o[i], 1, 0);
+			fio_options_parse(td, (char **) &o[i], 1);
 		i++;
 	}
 
@@ -1686,10 +1730,13 @@ int __parse_jobs_ini(struct thread_data *td,
 			goto out;
 		}
 
-		ret = fio_options_parse(td, opts, num_opts, dump_cmdline);
-		if (!ret)
+		ret = fio_options_parse(td, opts, num_opts);
+		if (!ret) {
+			if (dump_cmdline)
+				dump_opt_list(td);
+
 			ret = add_job(td, name, 0, 0, type);
-		else {
+		} else {
 			log_err("fio: job %s dropped\n", name);
 			put_job(td);
 		}
@@ -2584,4 +2631,9 @@ int parse_options(int argc, char *argv[])
 void options_default_fill(struct thread_options *o)
 {
 	memcpy(o, &def_thread.o, sizeof(*o));
+}
+
+bool is_def_thread(struct thread_data *td)
+{
+	return td == &def_thread;
 }

@@ -978,7 +978,7 @@ int parse_cmd_option(const char *opt, const char *val,
 
 int parse_option(char *opt, const char *input,
 		 struct fio_option *options, struct fio_option **o, void *data,
-		 int dump_cmdline)
+		 struct flist_head *dump_list)
 {
 	char *post;
 
@@ -1004,17 +1004,16 @@ int parse_option(char *opt, const char *input,
 		return 1;
 	}
 
-	if (dump_cmdline) {
-		const char *delim;
+	if (dump_list) {
+		struct print_option *p = malloc(sizeof(*p));
 
-		if (!strcmp("description", (*o)->name))
-			delim = "\"";
-		else
-			delim = "";
-
-		log_info("--%s%s", (*o)->name, post ? "" : " ");
+		p->name = strdup((*o)->name);
 		if (post)
-			log_info("=%s%s%s ", delim, post, delim);
+			p->value = strdup(post);
+		else
+			p->value = NULL;
+
+		flist_add_tail(&p->list, dump_list);
 	}
 
 	return 0;

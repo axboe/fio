@@ -4079,11 +4079,14 @@ static void show_closest_option(const char *opt)
 	free(name);
 }
 
-int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
-			int dump_cmdline)
+int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 {
+	struct flist_head *opt_list = NULL;
 	int i, ret, unknown;
 	char **opts_copy;
+
+	if (!is_def_thread(td))
+		opt_list = &td->opt_list;
 
 	sort_options(opts, fio_options, num_opts);
 	opts_copy = dup_and_sub_options(opts, num_opts);
@@ -4091,7 +4094,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
 	for (ret = 0, i = 0, unknown = 0; i < num_opts; i++) {
 		struct fio_option *o;
 		int newret = parse_option(opts_copy[i], opts[i], fio_options,
-						&o, td, dump_cmdline);
+						&o, td, opt_list);
 
 		if (!newret && o)
 			fio_option_mark_set(&td->o, o);
@@ -4124,7 +4127,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
 			if (td->eo)
 				newret = parse_option(opts_copy[i], opts[i],
 						      td->io_ops->options, &o,
-						      td->eo, dump_cmdline);
+						      td->eo, opt_list);
 
 			ret |= newret;
 			if (!o) {

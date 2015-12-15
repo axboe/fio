@@ -120,6 +120,7 @@ void sk_out_drop(void);
  */
 struct thread_data {
 	struct thread_options o;
+	struct flist_head opt_list;
 	unsigned long flags;
 	void *eo;
 	char verror[FIO_VERROR_SIZE];
@@ -479,7 +480,7 @@ extern int parse_cmd_line(int, char **, int);
 extern int fio_backend(struct sk_out *);
 extern void reset_fio_state(void);
 extern void clear_io_state(struct thread_data *, int);
-extern int fio_options_parse(struct thread_data *, char **, int, int);
+extern int fio_options_parse(struct thread_data *, char **, int);
 extern void fio_keywords_init(void);
 extern void fio_keywords_exit(void);
 extern int fio_cmd_option_parse(struct thread_data *, const char *, char *);
@@ -498,6 +499,7 @@ extern int parse_dryrun(void);
 extern int fio_running_or_pending_io_threads(void);
 extern int fio_set_fd_nonblocking(int, const char *);
 extern void sig_show_status(int sig);
+extern bool is_def_thread(struct thread_data *);
 
 extern uintptr_t page_mask;
 extern uintptr_t page_size;

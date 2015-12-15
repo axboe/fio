@@ -80,7 +80,7 @@ struct fio_option {
 
 typedef int (str_cb_fn)(void *, char *);
 
-extern int parse_option(char *, const char *, struct fio_option *, struct fio_option **, void *, int);
+extern int parse_option(char *, const char *, struct fio_option *, struct fio_option **, void *, struct flist_head *);
 extern void sort_options(char **, struct fio_option *, int);
 extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, void *);
 extern int show_cmd_help(struct fio_option *, const char *);
@@ -123,5 +123,11 @@ static inline int parse_is_percent(unsigned long long val)
 {
 	return val <= -1ULL && val >= (-1ULL - 100ULL);
 }
+
+struct print_option {
+	struct flist_head list;
+	char *name;
+	char *value;
+};
 
 #endif
