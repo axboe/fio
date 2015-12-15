@@ -1159,6 +1159,7 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	client->eta_in_flight = NULL;
 	flist_del_init(&client->eta_list);
+	client->eta_timeouts = 0;
 
 	if (client->ops->jobs_eta)
 		client->ops->jobs_eta(client, je);
@@ -1588,6 +1589,34 @@ static void request_client_etas(struct client_ops *ops)
 	dprint(FD_NET, "client: requested eta tag %p\n", eta);
 }
 
+/*
+ * A single SEND_ETA timeout isn't fatal. Attempt to recover.
+ */
+static int handle_cmd_timeout(struct fio_client *client,
+			      struct fio_net_cmd_reply *reply)
+{
+	if (reply->opcode != FIO_NET_CMD_SEND_ETA)
+		return 1;
+
+	log_info("client <%s>: timeout on SEND_ETA\n", client->hostname);
+	flist_del(&reply->list);
+	free(reply);
+
+	flist_del_init(&client->eta_list);
+	if (client->eta_in_flight) {
+		fio_client_dec_jobs_eta(client->eta_in_flight, client->ops->eta);
+		client->eta_in_flight = NULL;
+	}
+
+	/*
+	 * If we fail 5 in a row, give up...
+	 */
+	if (client->eta_timeouts++ > 5)
+		return 1;
+
+	return 0;
+}
+
 static int client_check_cmd_timeout(struct fio_client *client,
 				    struct timeval *now)
 {
@@ -1599,6 +1628,9 @@ static int client_check_cmd_timeout(struct fio_client *client,
 		reply = flist_entry(entry, struct fio_net_cmd_reply, list);
 
 		if (mtime_since(&reply->tv, now) < FIO_NET_CLIENT_TIMEOUT)
+			continue;
+
+		if (!handle_cmd_timeout(client, reply))
 			continue;
 
 		log_err("fio: client %s, timeout on cmd %s\n", client->hostname,

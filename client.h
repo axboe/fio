@@ -60,6 +60,7 @@ struct fio_client {
 
 	struct flist_head eta_list;
 	struct client_eta *eta_in_flight;
+	unsigned int eta_timeouts;
 
 	struct flist_head cmd_list;
 
