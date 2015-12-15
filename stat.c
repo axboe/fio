@@ -1087,7 +1087,7 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 }
 
 static void json_add_job_opts(struct json_object *root, const char *name,
-			      struct flist_head *opt_list)
+			      struct flist_head *opt_list, bool num_jobs)
 {
 	struct json_object *dir_object;
 	struct flist_head *entry;
@@ -1103,6 +1103,8 @@ static void json_add_job_opts(struct json_object *root, const char *name,
 		const char *pos = "";
 
 		p = flist_entry(entry, struct print_option, list);
+		if (!num_jobs && !strcmp(p->name, "numjobs"))
+			continue;
 		if (p->value)
 			pos = p->value;
 		json_object_add_value_string(dir_object, p->name, pos);
@@ -1135,7 +1137,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	}
 
 	if (opt_list)
-		json_add_job_opts(root, "job options", opt_list);
+		json_add_job_opts(root, "job options", opt_list, true);
 
 	add_ddir_status_json(ts, rs, DDIR_READ, root);
 	add_ddir_status_json(ts, rs, DDIR_WRITE, root);
@@ -1642,7 +1644,7 @@ void __show_run_stats(void)
 		json_object_add_value_int(root, "timestamp", time_p);
 		json_object_add_value_string(root, "time", time_buf);
 		global = get_global_options();
-		json_add_job_opts(root, "global options", &global->opt_list);
+		json_add_job_opts(root, "global options", &global->opt_list, false);
 		array = json_create_array();
 		json_object_add_value_array(root, "jobs", array);
 	}

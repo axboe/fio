@@ -426,6 +426,27 @@ static void fio_dump_options_free(struct thread_data *td)
 	}
 }
 
+static void copy_opt_list(struct thread_data *dst, struct thread_data *src)
+{
+	struct flist_head *entry;
+
+	if (flist_empty(&src->opt_list))
+		return;
+
+	flist_for_each(entry, &src->opt_list) {
+		struct print_option *srcp, *dstp;
+
+		srcp = flist_entry(entry, struct print_option, list);
+		dstp = malloc(sizeof(*dstp));
+		dstp->name = strdup(srcp->name);
+		if (srcp->value)
+			dstp->value = strdup(srcp->value);
+		else
+			dstp->value = NULL;
+		flist_add_tail(&dstp->list, &dst->opt_list);
+	}
+}
+
 /*
  * Return a free job structure.
  */
@@ -452,6 +473,8 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 	*td = *parent;
 
 	INIT_FLIST_HEAD(&td->opt_list);
+	if (parent != &def_thread)
+		copy_opt_list(td, parent);
 
 	td->io_ops = NULL;
 	if (!preserve_eo)
