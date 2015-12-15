@@ -119,6 +119,7 @@ static void fio_client_json_init(void)
 {
 	if (!(output_format & FIO_OUTPUT_JSON))
 		return;
+
 	root = json_create_object();
 	json_object_add_value_string(root, "fio version", fio_version_string);
 	clients_array = json_create_array();
@@ -131,6 +132,7 @@ static void fio_client_json_fini(void)
 {
 	if (!(output_format & FIO_OUTPUT_JSON))
 		return;
+	log_info("\n");
 	json_print_object(root, NULL);
 	log_info("\n");
 	json_free_object(root);
@@ -968,7 +970,8 @@ static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct group_run_stats *gs = (struct group_run_stats *) cmd->payload;
 
-	show_group_stats(gs, NULL);
+	if (output_format & FIO_OUTPUT_NORMAL)
+		show_group_stats(gs, NULL);
 }
 
 static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)
