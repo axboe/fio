@@ -133,6 +133,8 @@ static void *worker_thread(void *data)
 	unsigned int eflags = 0, ret = 0;
 	FLIST_HEAD(local_list);
 
+	sk_out_assign(sw->sk_out);
+
 	if (wq->ops.nice) {
 		if (nice(wq->ops.nice) < 0) {
 			log_err("workqueue: nice %s\n", strerror(errno));
@@ -206,6 +208,7 @@ done:
 	pthread_mutex_lock(&sw->lock);
 	sw->flags |= (SW_F_EXITED | eflags);
 	pthread_mutex_unlock(&sw->lock);
+	sk_out_drop();
 	return NULL;
 }
 
@@ -267,7 +270,8 @@ void workqueue_exit(struct workqueue *wq)
 	pthread_mutex_destroy(&wq->stat_lock);
 }
 
-static int start_worker(struct workqueue *wq, unsigned int index)
+static int start_worker(struct workqueue *wq, unsigned int index,
+			struct sk_out *sk_out)
 {
 	struct submit_worker *sw = &wq->workers[index];
 	int ret;
@@ -277,6 +281,7 @@ static int start_worker(struct workqueue *wq, unsigned int index)
 	pthread_mutex_init(&sw->lock, NULL);
 	sw->wq = wq;
 	sw->index = index;
+	sw->sk_out = sk_out;
 
 	if (wq->ops.alloc_worker_fn) {
 		ret = wq->ops.alloc_worker_fn(sw);
@@ -297,12 +302,13 @@ static int start_worker(struct workqueue *wq, unsigned int index)
 }
 
 int workqueue_init(struct thread_data *td, struct workqueue *wq,
-		   struct workqueue_ops *ops, unsigned max_pending)
+		   struct workqueue_ops *ops, unsigned int max_workers,
+		   struct sk_out *sk_out)
 {
 	unsigned int running;
 	int i, error;
 
-	wq->max_workers = max_pending;
+	wq->max_workers = max_workers;
 	wq->td = td;
 	wq->ops = *ops;
 	wq->work_seq = 0;
@@ -314,7 +320,7 @@ int workqueue_init(struct thread_data *td, struct workqueue *wq,
 	wq->workers = calloc(wq->max_workers, sizeof(struct submit_worker));
 
 	for (i = 0; i < wq->max_workers; i++)
-		if (start_worker(wq, i))
+		if (start_worker(wq, i, sk_out))
 			break;
 
 	wq->max_workers = i;

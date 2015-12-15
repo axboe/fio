@@ -1133,15 +1133,15 @@ static int gz_init_worker(struct submit_worker *sw)
 static struct workqueue_ops log_compress_wq_ops = {
 	.fn		= gz_work,
 	.init_worker_fn	= gz_init_worker,
-	.nice	= 1,
+	.nice		= 1,
 };
 
-int iolog_compress_init(struct thread_data *td)
+int iolog_compress_init(struct thread_data *td, struct sk_out *sk_out)
 {
 	if (!(td->flags & TD_F_COMPRESS_LOG))
 		return 0;
 
-	workqueue_init(td, &td->log_compress_wq, &log_compress_wq_ops, 1);
+	workqueue_init(td, &td->log_compress_wq, &log_compress_wq_ops, 1, sk_out);
 	return 0;
 }
 
@@ -1163,6 +1163,8 @@ void iolog_compress_exit(struct thread_data *td)
 int iolog_flush(struct io_log *log, int wait)
 {
 	struct iolog_flush_data *data;
+
+	io_u_quiesce(log->td);
 
 	data = malloc(sizeof(*data));
 	if (!data)
@@ -1205,7 +1207,7 @@ int iolog_flush(struct io_log *log, int wait)
 	return 1;
 }
 
-int iolog_compress_init(struct thread_data *td)
+int iolog_compress_init(struct thread_data *td, struct sk_out *sk_out)
 {
 	return 0;
 }

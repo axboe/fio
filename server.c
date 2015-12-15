@@ -32,7 +32,33 @@ int fio_net_port = FIO_NET_PORT;
 
 int exit_backend = 0;
 
-static int server_fd = -1;
+enum {
+	SK_F_FREE	= 1,
+	SK_F_COPY	= 2,
+	SK_F_SIMPLE	= 4,
+	SK_F_VEC	= 8,
+};
+
+struct sk_entry {
+	struct flist_head list;	/* link on sk_out->list */
+	int flags;		/* SK_F_* */
+	int opcode;		/* Actual command fields */
+	void *buf;
+	off_t size;
+	uint64_t *tagptr;
+	struct flist_head next;	/* Other sk_entry's, if linked command */
+};
+
+struct sk_out {
+	unsigned int refs;	/* frees sk_out when it drops to zero.
+				 * protected by below ->lock */
+
+	int sk;			/* socket fd to talk to client */
+	struct fio_mutex *lock;	/* protects ref and below list */
+	struct flist_head list;	/* list of pending transmit work */
+	struct fio_mutex *wait;	/* wake backend when items added to list */
+};
+
 static char *fio_server_arg;
 static char *bind_sock;
 static struct sockaddr_in saddr_in;
@@ -45,6 +71,8 @@ static unsigned int has_zlib = 0;
 #endif
 static unsigned int use_zlib;
 static char me[128];
+
+static pthread_key_t sk_out_key;
 
 struct fio_fork_item {
 	struct flist_head list;
@@ -85,6 +113,82 @@ static const char *fio_server_ops[FIO_NET_CMD_NR] = {
 	"VTRIGGER",
 	"SENDFILE",
 };
+
+static void sk_lock(struct sk_out *sk_out)
+{
+	fio_mutex_down(sk_out->lock);
+}
+
+static void sk_unlock(struct sk_out *sk_out)
+{
+	fio_mutex_up(sk_out->lock);
+}
+
+void sk_out_assign(struct sk_out *sk_out)
+{
+	if (!sk_out)
+		return;
+
+	sk_lock(sk_out);
+	sk_out->refs++;
+	sk_unlock(sk_out);
+	pthread_setspecific(sk_out_key, sk_out);
+}
+
+static void sk_out_free(struct sk_out *sk_out)
+{
+	fio_mutex_remove(sk_out->lock);
+	fio_mutex_remove(sk_out->wait);
+	sfree(sk_out);
+}
+
+static int __sk_out_drop(struct sk_out *sk_out)
+{
+	if (sk_out) {
+		int refs;
+
+		sk_lock(sk_out);
+		refs = --sk_out->refs;
+		sk_unlock(sk_out);
+
+		if (!refs) {
+			sk_out_free(sk_out);
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+void sk_out_drop(void)
+{
+	struct sk_out *sk_out;
+
+	sk_out = pthread_getspecific(sk_out_key);
+	if (!__sk_out_drop(sk_out))
+		pthread_setspecific(sk_out_key, NULL);
+}
+
+static void __fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
+			       uint32_t pdu_len, uint64_t tag)
+{
+	memset(cmd, 0, sizeof(*cmd));
+
+	cmd->version	= __cpu_to_le16(FIO_SERVER_VER);
+	cmd->opcode	= cpu_to_le16(opcode);
+	cmd->tag	= cpu_to_le64(tag);
+	cmd->pdu_len	= cpu_to_le32(pdu_len);
+}
+
+
+static void fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
+			     const void *pdu, uint32_t pdu_len, uint64_t tag)
+{
+	__fio_init_net_cmd(cmd, opcode, pdu_len, tag);
+
+	if (pdu)
+		memcpy(&cmd->payload, pdu, pdu_len);
+}
 
 const char *fio_server_op(unsigned int op)
 {
@@ -142,13 +246,10 @@ static int fio_sendv_data(int sk, struct iovec *iov, int count)
 	if (!total_len)
 		return 0;
 
-	if (errno)
-		return -errno;
-
 	return 1;
 }
 
-int fio_send_data(int sk, const void *p, unsigned int len)
+static int fio_send_data(int sk, const void *p, unsigned int len)
 {
 	struct iovec iov = { .iov_base = (void *) p, .iov_len = len };
 
@@ -157,7 +258,7 @@ int fio_send_data(int sk, const void *p, unsigned int len)
 	return fio_sendv_data(sk, &iov, 1);
 }
 
-int fio_recv_data(int sk, void *p, unsigned int len)
+static int fio_recv_data(int sk, void *p, unsigned int len)
 {
 	do {
 		int ret = recv(sk, p, len, MSG_WAITALL);
@@ -349,7 +450,7 @@ static void free_reply(uint64_t tag)
 	free(reply);
 }
 
-void fio_net_cmd_crc_pdu(struct fio_net_cmd *cmd, const void *pdu)
+static void fio_net_cmd_crc_pdu(struct fio_net_cmd *cmd, const void *pdu)
 {
 	uint32_t pdu_len;
 
@@ -359,7 +460,7 @@ void fio_net_cmd_crc_pdu(struct fio_net_cmd *cmd, const void *pdu)
 	cmd->pdu_crc16 = __cpu_to_le16(fio_crc16(pdu, pdu_len));
 }
 
-void fio_net_cmd_crc(struct fio_net_cmd *cmd)
+static void fio_net_cmd_crc(struct fio_net_cmd *cmd)
 {
 	fio_net_cmd_crc_pdu(cmd, cmd->payload);
 }
@@ -416,6 +517,47 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size,
 	return ret;
 }
 
+static struct sk_entry *fio_net_prep_cmd(uint16_t opcode, void *buf, off_t size,
+					 uint64_t *tagptr, int flags)
+{
+	struct sk_entry *entry;
+
+	entry = smalloc(sizeof(*entry));
+	INIT_FLIST_HEAD(&entry->next);
+	entry->opcode = opcode;
+	if (flags & SK_F_COPY) {
+		entry->buf = smalloc(size);
+		memcpy(entry->buf, buf, size);
+	} else
+		entry->buf = buf;
+	entry->size = size;
+	entry->tagptr = tagptr;
+	entry->flags = flags;
+
+	return entry;
+}
+
+static void fio_net_queue_entry(struct sk_entry *entry)
+{
+	struct sk_out *sk_out = pthread_getspecific(sk_out_key);
+
+	sk_lock(sk_out);
+	flist_add_tail(&entry->list, &sk_out->list);
+	sk_unlock(sk_out);
+
+	fio_mutex_up(sk_out->wait);
+}
+
+static int fio_net_queue_cmd(uint16_t opcode, void *buf, off_t size,
+			     uint64_t *tagptr, int flags)
+{
+	struct sk_entry *entry;
+
+	entry = fio_net_prep_cmd(opcode, buf, size, tagptr, flags);
+	fio_net_queue_entry(entry);
+	return 0;
+}
+
 static int fio_net_send_simple_stack_cmd(int sk, uint16_t opcode, uint64_t tag)
 {
 	struct fio_net_cmd cmd;
@@ -452,6 +594,13 @@ int fio_net_send_simple_cmd(int sk, uint16_t opcode, uint64_t tag,
 	return 0;
 }
 
+static int fio_net_queue_quit(void)
+{
+	dprint(FD_NET, "server: sending quit\n");
+
+	return fio_net_queue_cmd(FIO_NET_CMD_QUIT, NULL, 0, 0, SK_F_SIMPLE);
+}
+
 int fio_net_send_quit(int sk)
 {
 	dprint(FD_NET, "server: sending quit\n");
@@ -459,8 +608,7 @@ int fio_net_send_quit(int sk)
 	return fio_net_send_simple_cmd(sk, FIO_NET_CMD_QUIT, 0, NULL);
 }
 
-static int fio_net_send_ack(int sk, struct fio_net_cmd *cmd, int error,
-			    int signal)
+static int fio_net_send_ack(struct fio_net_cmd *cmd, int error, int signal)
 {
 	struct cmd_end_pdu epdu;
 	uint64_t tag = 0;
@@ -470,13 +618,13 @@ static int fio_net_send_ack(int sk, struct fio_net_cmd *cmd, int error,
 
 	epdu.error = __cpu_to_le32(error);
 	epdu.signal = __cpu_to_le32(signal);
-	return fio_net_send_cmd(sk, FIO_NET_CMD_STOP, &epdu, sizeof(epdu), &tag, NULL);
+	return fio_net_queue_cmd(FIO_NET_CMD_STOP, &epdu, sizeof(epdu), &tag, SK_F_COPY);
 }
 
-int fio_net_send_stop(int sk, int error, int signal)
+static int fio_net_queue_stop(int error, int signal)
 {
 	dprint(FD_NET, "server: sending stop (%d, %d)\n", error, signal);
-	return fio_net_send_ack(sk, NULL, error, signal);
+	return fio_net_send_ack(NULL, error, signal);
 }
 
 static void fio_server_add_fork_item(pid_t pid, struct flist_head *list)
@@ -527,20 +675,23 @@ static void fio_server_check_fork_item(struct fio_fork_item *ffi)
 	}
 }
 
-static void fio_server_fork_item_done(struct fio_fork_item *ffi)
+static void fio_server_fork_item_done(struct fio_fork_item *ffi, bool stop)
 {
 	dprint(FD_NET, "pid %u exited, sig=%u, exitval=%d\n", (int) ffi->pid, ffi->signal, ffi->exitval);
 
 	/*
 	 * Fold STOP and QUIT...
 	 */
-	fio_net_send_stop(server_fd, ffi->exitval, ffi->signal);
-	fio_net_send_quit(server_fd);
+	if (stop) {
+		fio_net_queue_stop(ffi->exitval, ffi->signal);
+		fio_net_queue_quit();
+	}
+
 	flist_del(&ffi->list);
 	free(ffi);
 }
 
-static void fio_server_check_fork_items(struct flist_head *list)
+static void fio_server_check_fork_items(struct flist_head *list, bool stop)
 {
 	struct flist_head *entry, *tmp;
 	struct fio_fork_item *ffi;
@@ -551,18 +702,18 @@ static void fio_server_check_fork_items(struct flist_head *list)
 		fio_server_check_fork_item(ffi);
 
 		if (ffi->exited)
-			fio_server_fork_item_done(ffi);
+			fio_server_fork_item_done(ffi, stop);
 	}
 }
 
 static void fio_server_check_jobs(struct flist_head *job_list)
 {
-	fio_server_check_fork_items(job_list);
+	fio_server_check_fork_items(job_list, true);
 }
 
 static void fio_server_check_conns(struct flist_head *conn_list)
 {
-	fio_server_check_fork_items(conn_list);
+	fio_server_check_fork_items(conn_list, false);
 }
 
 static int handle_load_file_cmd(struct fio_net_cmd *cmd)
@@ -577,17 +728,18 @@ static int handle_load_file_cmd(struct fio_net_cmd *cmd)
 	pdu->client_type = le16_to_cpu(pdu->client_type);
 
 	if (parse_jobs_ini(file_name, 0, 0, pdu->client_type)) {
-		fio_net_send_quit(server_fd);
+		fio_net_queue_quit();
 		return -1;
 	}
 
 	spdu.jobs = cpu_to_le32(thread_number);
 	spdu.stat_outputs = cpu_to_le32(stat_number);
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), NULL, NULL);
+	fio_net_queue_cmd(FIO_NET_CMD_START, &spdu, sizeof(spdu), NULL, SK_F_COPY);
 	return 0;
 }
 
-static int handle_run_cmd(struct flist_head *job_list, struct fio_net_cmd *cmd)
+static int handle_run_cmd(struct sk_out *sk_out, struct flist_head *job_list,
+			  struct fio_net_cmd *cmd)
 {
 	pid_t pid;
 	int ret;
@@ -601,7 +753,7 @@ static int handle_run_cmd(struct flist_head *job_list, struct fio_net_cmd *cmd)
 		return 0;
 	}
 
-	ret = fio_backend(NULL);
+	ret = fio_backend(sk_out);
 	free_threads_shm();
 	_exit(ret);
 }
@@ -616,13 +768,14 @@ static int handle_job_cmd(struct fio_net_cmd *cmd)
 	pdu->client_type = le32_to_cpu(pdu->client_type);
 
 	if (parse_jobs_ini(buf, 1, 0, pdu->client_type)) {
-		fio_net_send_quit(server_fd);
+		fio_net_queue_quit();
 		return -1;
 	}
 
 	spdu.jobs = cpu_to_le32(thread_number);
 	spdu.stat_outputs = cpu_to_le32(stat_number);
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), NULL, NULL);
+
+	fio_net_queue_cmd(FIO_NET_CMD_START, &spdu, sizeof(spdu), NULL, SK_F_COPY);
 	return 0;
 }
 
@@ -653,7 +806,7 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 	}
 
 	if (parse_cmd_line(clp->lines, argv, clp->client_type)) {
-		fio_net_send_quit(server_fd);
+		fio_net_queue_quit();
 		free(argv);
 		return -1;
 	}
@@ -662,7 +815,8 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 
 	spdu.jobs = cpu_to_le32(thread_number);
 	spdu.stat_outputs = cpu_to_le32(stat_number);
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_START, &spdu, sizeof(spdu), NULL, NULL);
+
+	fio_net_queue_cmd(FIO_NET_CMD_START, &spdu, sizeof(spdu), NULL, SK_F_COPY);
 	return 0;
 }
 
@@ -699,7 +853,7 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 		use_zlib = 0;
 	}
 
-	return fio_net_send_cmd(server_fd, FIO_NET_CMD_PROBE, &probe, sizeof(probe), &tag, NULL);
+	return fio_net_queue_cmd(FIO_NET_CMD_PROBE, &probe, sizeof(probe), &tag, SK_F_COPY);
 }
 
 static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
@@ -742,18 +896,17 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 		je->unit_base		= cpu_to_le32(je->unit_base);
 	}
 
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_ETA, je, size, &tag, NULL);
-	free(je);
+	fio_net_queue_cmd(FIO_NET_CMD_ETA, je, size, &tag, SK_F_FREE);
 	return 0;
 }
 
-static int send_update_job_reply(int fd, uint64_t __tag, int error)
+static int send_update_job_reply(uint64_t __tag, int error)
 {
 	uint64_t tag = __tag;
 	uint32_t pdu_error;
 
 	pdu_error = __cpu_to_le32(error);
-	return fio_net_send_cmd(fd, FIO_NET_CMD_UPDATE_JOB, &pdu_error, sizeof(pdu_error), &tag, NULL);
+	return fio_net_queue_cmd(FIO_NET_CMD_UPDATE_JOB, &pdu_error, sizeof(pdu_error), &tag, SK_F_COPY);
 }
 
 static int handle_update_job_cmd(struct fio_net_cmd *cmd)
@@ -767,13 +920,13 @@ static int handle_update_job_cmd(struct fio_net_cmd *cmd)
 	dprint(FD_NET, "server: updating options for job %u\n", tnumber);
 
 	if (!tnumber || tnumber > thread_number) {
-		send_update_job_reply(server_fd, cmd->tag, ENODEV);
+		send_update_job_reply(cmd->tag, ENODEV);
 		return 0;
 	}
 
 	td = &threads[tnumber - 1];
 	convert_thread_options_to_cpu(&td->o, &pdu->top);
-	send_update_job_reply(server_fd, cmd->tag, 0);
+	send_update_job_reply(cmd->tag, 0);
 	return 0;
 }
 
@@ -792,17 +945,16 @@ static int handle_trigger_cmd(struct fio_net_cmd *cmd)
 		struct all_io_list state;
 
 		state.threads = cpu_to_le64((uint64_t) 0);
-		fio_net_send_cmd(server_fd, FIO_NET_CMD_VTRIGGER, &state, sizeof(state), NULL, NULL);
-	} else {
-		fio_net_send_cmd(server_fd, FIO_NET_CMD_VTRIGGER, rep, sz, NULL, NULL);
-		free(rep);
-	}
+		fio_net_queue_cmd(FIO_NET_CMD_VTRIGGER, &state, sizeof(state), NULL, SK_F_COPY);
+	} else
+		fio_net_queue_cmd(FIO_NET_CMD_VTRIGGER, rep, sz, NULL, SK_F_FREE);
 
 	exec_trigger(buf);
 	return 0;
 }
 
-static int handle_command(struct flist_head *job_list, struct fio_net_cmd *cmd)
+static int handle_command(struct sk_out *sk_out, struct flist_head *job_list,
+			  struct fio_net_cmd *cmd)
 {
 	int ret;
 
@@ -813,7 +965,8 @@ static int handle_command(struct flist_head *job_list, struct fio_net_cmd *cmd)
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
 		fio_terminate_threads(TERMINATE_ALL);
-		return -1;
+		ret = 0;
+		break;
 	case FIO_NET_CMD_EXIT:
 		exit_backend = 1;
 		return -1;
@@ -833,7 +986,7 @@ static int handle_command(struct flist_head *job_list, struct fio_net_cmd *cmd)
 		ret = handle_send_eta_cmd(cmd);
 		break;
 	case FIO_NET_CMD_RUN:
-		ret = handle_run_cmd(job_list, cmd);
+		ret = handle_run_cmd(sk_out, job_list, cmd);
 		break;
 	case FIO_NET_CMD_UPDATE_JOB:
 		ret = handle_update_job_cmd(cmd);
@@ -875,19 +1028,135 @@ static int handle_command(struct flist_head *job_list, struct fio_net_cmd *cmd)
 	return ret;
 }
 
-static int handle_connection(int sk)
+/*
+ * Send a command with a separate PDU, not inlined in the command
+ */
+static int fio_send_cmd_ext_pdu(int sk, uint16_t opcode, const void *buf,
+				off_t size, uint64_t tag, uint32_t flags)
+{
+	struct fio_net_cmd cmd;
+	struct iovec iov[2];
+
+	iov[0].iov_base = (void *) &cmd;
+	iov[0].iov_len = sizeof(cmd);
+	iov[1].iov_base = (void *) buf;
+	iov[1].iov_len = size;
+
+	__fio_init_net_cmd(&cmd, opcode, size, tag);
+	cmd.flags = __cpu_to_le32(flags);
+	fio_net_cmd_crc_pdu(&cmd, buf);
+
+	return fio_sendv_data(sk, iov, 2);
+}
+
+static void finish_entry(struct sk_entry *entry)
+{
+	if (entry->flags & SK_F_FREE)
+		free(entry->buf);
+	else if (entry->flags & SK_F_COPY)
+		sfree(entry->buf);
+
+	sfree(entry);
+}
+
+static void entry_set_flags_tag(struct sk_entry *entry, struct flist_head *list,
+				unsigned int *flags, uint64_t *tag)
+{
+	if (!flist_empty(list))
+		*flags = FIO_NET_CMD_F_MORE;
+	else
+		*flags = 0;
+
+	if (entry->tagptr)
+		*tag = *entry->tagptr;
+	else
+		*tag = 0;
+}
+
+static int send_vec_entry(struct sk_out *sk_out, struct sk_entry *first)
+{
+	unsigned int flags;
+	uint64_t tag;
+	int ret;
+
+	entry_set_flags_tag(first, &first->next, &flags, &tag);
+
+	ret = fio_send_cmd_ext_pdu(sk_out->sk, first->opcode, first->buf, first->size, tag, flags);
+
+	while (!flist_empty(&first->next)) {
+		struct sk_entry *next;
+
+		next = flist_first_entry(&first->next, struct sk_entry, list);
+		flist_del_init(&next->list);
+
+		entry_set_flags_tag(next, &first->next, &flags, &tag);
+
+		ret += fio_send_cmd_ext_pdu(sk_out->sk, next->opcode, next->buf, next->size, tag, flags);
+		finish_entry(next);
+	}
+
+	return ret;
+}
+
+static int handle_sk_entry(struct sk_out *sk_out, struct sk_entry *entry)
+{
+	int ret;
+
+	if (entry->flags & SK_F_VEC)
+		ret = send_vec_entry(sk_out, entry);
+	if (entry->flags & SK_F_SIMPLE) {
+		uint64_t tag = 0;
+
+		if (entry->tagptr)
+			tag = *entry->tagptr;
+
+		ret = fio_net_send_simple_cmd(sk_out->sk, entry->opcode, tag, NULL);
+	} else
+		ret = fio_net_send_cmd(sk_out->sk, entry->opcode, entry->buf, entry->size, entry->tagptr, NULL);
+
+	if (ret)
+		log_err("fio: failed handling cmd %s\n", fio_server_op(entry->opcode));
+
+	finish_entry(entry);
+	return ret;
+}
+
+static int handle_xmits(struct sk_out *sk_out)
+{
+	struct sk_entry *entry;
+	FLIST_HEAD(list);
+	int ret = 0;
+
+	sk_lock(sk_out);
+	if (flist_empty(&sk_out->list)) {
+		sk_unlock(sk_out);
+		return 0;
+	}
+
+	flist_splice_init(&sk_out->list, &list);
+	sk_unlock(sk_out);
+
+	while (!flist_empty(&list)) {
+		entry = flist_entry(list.next, struct sk_entry, list);
+		flist_del(&entry->list);
+		ret += handle_sk_entry(sk_out, entry);
+	}
+
+	return ret;
+}
+
+static int handle_connection(struct sk_out *sk_out)
 {
 	struct fio_net_cmd *cmd = NULL;
 	FLIST_HEAD(job_list);
 	int ret = 0;
 
 	reset_fio_state();
-	server_fd = sk;
 
 	/* read forever */
 	while (!exit_backend) {
 		struct pollfd pfd = {
-			.fd	= sk,
+			.fd	= sk_out->sk,
 			.events	= POLLIN,
 		};
 
@@ -898,7 +1167,9 @@ static int handle_connection(int sk)
 			if (!flist_empty(&job_list))
 				timeout = 100;
 
-			ret = poll(&pfd, 1, timeout);
+			handle_xmits(sk_out);
+
+			ret = poll(&pfd, 1, 0);
 			if (ret < 0) {
 				if (errno == EINTR)
 					break;
@@ -906,6 +1177,7 @@ static int handle_connection(int sk)
 				break;
 			} else if (!ret) {
 				fio_server_check_jobs(&job_list);
+				fio_mutex_down_timeout(sk_out->wait, timeout);
 				continue;
 			}
 
@@ -922,13 +1194,13 @@ static int handle_connection(int sk)
 		if (ret < 0)
 			break;
 
-		cmd = fio_net_recv_cmd(sk);
+		cmd = fio_net_recv_cmd(sk_out->sk);
 		if (!cmd) {
 			ret = -1;
 			break;
 		}
 
-		ret = handle_command(&job_list, cmd);
+		ret = handle_command(sk_out, &job_list, cmd);
 		if (ret)
 			break;
 
@@ -939,39 +1211,47 @@ static int handle_connection(int sk)
 	if (cmd)
 		free(cmd);
 
-	close(sk);
+	handle_xmits(sk_out);
+
+	close(sk_out->sk);
+	sk_out->sk = -1;
+	__sk_out_drop(sk_out);
 	_exit(ret);
 }
 
 /* get the address on this host bound by the input socket, 
  * whether it is ipv6 or ipv4 */
 
-int get_my_addr_str( int sk )
+static int get_my_addr_str(int sk)
 {
-	int ret; 
-	struct sockaddr * sockaddr_p;
-	struct sockaddr_in myaddr4 = {0};
-	struct sockaddr_in6 myaddr6 = {0};
-	char * net_addr;
-	socklen_t len = use_ipv6 ? sizeof(myaddr6) : sizeof(myaddr4);
+	struct sockaddr_in6 myaddr6 = { 0, };
+	struct sockaddr_in myaddr4 = { 0, };
+	struct sockaddr *sockaddr_p;
+	char *net_addr;
+	socklen_t len;
+	int ret;
 
-	if (use_ipv6)
+	if (use_ipv6) {
+		len = sizeof(myaddr6);
 		sockaddr_p = (struct sockaddr * )&myaddr6;
-	else
+		net_addr = (char * )&myaddr6.sin6_addr;
+	} else {
+		len = sizeof(myaddr4);
 		sockaddr_p = (struct sockaddr * )&myaddr4;
+		net_addr = (char * )&myaddr4.sin_addr;
+	}
+
 	ret = getsockname(sk, sockaddr_p, &len);
 	if (ret) {
 		log_err("fio: getsockaddr: %s\n", strerror(errno));
 		return -1;
 	}
-	if (use_ipv6)
-		net_addr = (char * )&myaddr6.sin6_addr;
-	else
-		net_addr = (char * )&myaddr4.sin_addr;
-	if (NULL == inet_ntop(use_ipv6?AF_INET6:AF_INET, net_addr, client_sockaddr_str, INET6_ADDRSTRLEN-1)) {
+
+	if (!inet_ntop(use_ipv6?AF_INET6:AF_INET, net_addr, client_sockaddr_str, INET6_ADDRSTRLEN - 1)) {
 		log_err("inet_ntop: failed to convert addr to string\n");
 		return -1;
 	}
+
 	dprint(FD_NET, "fio server bound to addr %s\n", client_sockaddr_str);
 	return 0;
 }
@@ -990,6 +1270,7 @@ static int accept_loop(int listen_sk)
 	fio_set_fd_nonblocking(listen_sk, "server");
 
 	while (!exit_backend) {
+		struct sk_out *sk_out;
 		const char *from;
 		char buf[64];
 		pid_t pid;
@@ -1039,6 +1320,12 @@ static int accept_loop(int listen_sk)
 
 		dprint(FD_NET, "server: connect from %s\n", from);
 
+		sk_out = smalloc(sizeof(*sk_out));
+		sk_out->sk = sk;
+		INIT_FLIST_HEAD(&sk_out->list);
+		sk_out->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+		sk_out->wait = fio_mutex_init(FIO_MUTEX_LOCKED);
+
 		pid = fork();
 		if (pid) {
 			close(sk);
@@ -1046,9 +1333,15 @@ static int accept_loop(int listen_sk)
 			continue;
 		}
 
-		/* exits */
-		get_my_addr_str(sk); /* if error, it's already logged, non-fatal */
-		handle_connection(sk);
+		/* if error, it's already logged, non-fatal */
+		get_my_addr_str(sk);
+
+		/*
+		 * Assign sk_out here, it'll be dropped in handle_connection()
+		 * since that function calls _exit() when done
+		 */
+		sk_out_assign(sk_out);
+		handle_connection(sk_out);
 	}
 
 	return exitval;
@@ -1056,11 +1349,12 @@ static int accept_loop(int listen_sk)
 
 int fio_server_text_output(int level, const char *buf, size_t len)
 {
+	struct sk_out *sk_out = pthread_getspecific(sk_out_key);
 	struct cmd_text_pdu *pdu;
 	unsigned int tlen;
 	struct timeval tv;
 
-	if (server_fd == -1)
+	if (!sk_out || sk_out->sk == -1)
 		return -1;
 
 	tlen = sizeof(*pdu) + len;
@@ -1075,7 +1369,7 @@ int fio_server_text_output(int level, const char *buf, size_t len)
 
 	memcpy(pdu->buf, buf, len);
 
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_TEXT, pdu, tlen, NULL, NULL);
+	fio_net_queue_cmd(FIO_NET_CMD_TEXT, pdu, tlen, NULL, SK_F_COPY);
 	free(pdu);
 	return len;
 }
@@ -1205,7 +1499,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	convert_gs(&p.rs, rs);
 
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_TS, &p, sizeof(p), NULL, NULL);
+	fio_net_queue_cmd(FIO_NET_CMD_TS, &p, sizeof(p), NULL, SK_F_COPY);
 }
 
 void fio_server_send_gs(struct group_run_stats *rs)
@@ -1215,7 +1509,7 @@ void fio_server_send_gs(struct group_run_stats *rs)
 	dprint(FD_NET, "server sending group run stats\n");
 
 	convert_gs(&gs, rs);
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_GS, &gs, sizeof(gs), NULL, NULL);
+	fio_net_queue_cmd(FIO_NET_CMD_GS, &gs, sizeof(gs), NULL, SK_F_COPY);
 }
 
 static void convert_agg(struct disk_util_agg *dst, struct disk_util_agg *src)
@@ -1270,35 +1564,15 @@ void fio_server_send_du(void)
 		convert_dus(&pdu.dus, &du->dus);
 		convert_agg(&pdu.agg, &du->agg);
 
-		fio_net_send_cmd(server_fd, FIO_NET_CMD_DU, &pdu, sizeof(pdu), NULL, NULL);
+		fio_net_queue_cmd(FIO_NET_CMD_DU, &pdu, sizeof(pdu), NULL, SK_F_COPY);
 	}
 }
 
-/*
- * Send a command with a separate PDU, not inlined in the command
- */
-static int fio_send_cmd_ext_pdu(int sk, uint16_t opcode, const void *buf,
-				off_t size, uint64_t tag, uint32_t flags)
-{
-	struct fio_net_cmd cmd;
-	struct iovec iov[2];
-
-	iov[0].iov_base = (void *) &cmd;
-	iov[0].iov_len = sizeof(cmd);
-	iov[1].iov_base = (void *) buf;
-	iov[1].iov_len = size;
-
-	__fio_init_net_cmd(&cmd, opcode, size, tag);
-	cmd.flags = __cpu_to_le32(flags);
-	fio_net_cmd_crc_pdu(&cmd, buf);
-
-	return fio_sendv_data(sk, iov, 2);
-}
-
-static int fio_send_iolog_gz(struct cmd_iolog_pdu *pdu, struct io_log *log)
+static int fio_send_iolog_gz(struct sk_entry *first, struct io_log *log)
 {
 	int ret = 0;
 #ifdef CONFIG_ZLIB
+	struct sk_entry *entry;
 	z_stream stream;
 	void *out_pdu;
 
@@ -1322,7 +1596,7 @@ static int fio_send_iolog_gz(struct cmd_iolog_pdu *pdu, struct io_log *log)
 	stream.avail_in = log->nr_samples * log_entry_sz(log);
 
 	do {
-		unsigned int this_len, flags = 0;
+		unsigned int this_len;
 
 		stream.avail_out = FIO_SERVER_MAX_FRAGMENT_PDU;
 		stream.next_out = out_pdu;
@@ -1333,13 +1607,9 @@ static int fio_send_iolog_gz(struct cmd_iolog_pdu *pdu, struct io_log *log)
 
 		this_len = FIO_SERVER_MAX_FRAGMENT_PDU - stream.avail_out;
 
-		if (stream.avail_in)
-			flags = FIO_NET_CMD_F_MORE;
-
-		ret = fio_send_cmd_ext_pdu(server_fd, FIO_NET_CMD_IOLOG,
-					   out_pdu, this_len, 0, flags);
-		if (ret)
-			goto err_zlib;
+		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, out_pdu, this_len,
+						NULL, SK_F_FREE | SK_F_VEC);
+		flist_add_tail(&entry->list, &first->next);
 	} while (stream.avail_in);
 
 err_zlib:
@@ -1353,6 +1623,7 @@ err:
 int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 {
 	struct cmd_iolog_pdu pdu;
+	struct sk_entry *first;
 	int i, ret = 0;
 
 	pdu.nr_samples = cpu_to_le64(log->nr_samples);
@@ -1379,21 +1650,26 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	}
 
 	/*
-	 * Send header first, it's not compressed.
+	 * Assemble header entry first
 	 */
-	ret = fio_send_cmd_ext_pdu(server_fd, FIO_NET_CMD_IOLOG, &pdu,
-					sizeof(pdu), 0, FIO_NET_CMD_F_MORE);
-	if (ret)
-		return ret;
+	first = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, &pdu, sizeof(pdu), NULL, SK_F_COPY | SK_F_VEC);
 
 	/*
-	 * Now send actual log, compress if we can, otherwise just plain
+	 * Now append actual log entries. Compress if we can, otherwise just
+	 * plain text output.
 	 */
 	if (use_zlib)
-		return fio_send_iolog_gz(&pdu, log);
+		ret = fio_send_iolog_gz(first, log);
+	else {
+		struct sk_entry *entry;
 
-	return fio_send_cmd_ext_pdu(server_fd, FIO_NET_CMD_IOLOG, log->log,
-			log->nr_samples * log_entry_sz(log), 0, 0);
+		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, log->log,
+					log->nr_samples * log_entry_sz(log),
+					NULL, SK_F_FREE | SK_F_VEC);
+		flist_add_tail(&entry->list, &first->next);
+	}
+
+	return ret;
 }
 
 void fio_server_send_add_job(struct thread_data *td)
@@ -1405,14 +1681,16 @@ void fio_server_send_add_job(struct thread_data *td)
 	pdu.groupid = cpu_to_le32(td->groupid);
 	convert_thread_options_to_net(&pdu.top, &td->o);
 
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_ADD_JOB, &pdu, sizeof(pdu), NULL, NULL);
+	fio_net_queue_cmd(FIO_NET_CMD_ADD_JOB, &pdu, sizeof(pdu), NULL, SK_F_COPY);
 }
 
 void fio_server_send_start(struct thread_data *td)
 {
-	assert(server_fd != -1);
+	struct sk_out *sk_out = pthread_getspecific(sk_out_key);
 
-	fio_net_send_simple_cmd(server_fd, FIO_NET_CMD_SERVER_START, 0, NULL);
+	assert(sk_out->sk != -1);
+
+	fio_net_queue_cmd(FIO_NET_CMD_SERVER_START, NULL, 0, 0, SK_F_SIMPLE);
 }
 
 int fio_server_get_verify_state(const char *name, int threadnumber,
@@ -1439,8 +1717,7 @@ int fio_server_get_verify_state(const char *name, int threadnumber,
 	verify_state_gen_name((char *) out.path, sizeof(out.path), name, me,
 				threadnumber);
 	tag = (uint64_t) (uintptr_t) rep;
-	fio_net_send_cmd(server_fd, FIO_NET_CMD_SENDFILE, &out, sizeof(out),
-				&tag, NULL);
+	fio_net_queue_cmd(FIO_NET_CMD_SENDFILE, &out, sizeof(out), &tag, SK_F_COPY);
 
 	/*
 	 * Wait for the backend to receive the reply
@@ -1455,7 +1732,7 @@ int fio_server_get_verify_state(const char *name, int threadnumber,
 fail:
 		*datap = NULL;
 		sfree(rep);
-		fio_net_send_quit(server_fd);
+		fio_net_queue_quit();
 		return 1;
 	}
 
@@ -1612,7 +1889,7 @@ static int fio_init_server_connection(void)
 
 	log_info("fio: server listening on %s\n", bind_str);
 
-	if (listen(sk, 0) < 0) {
+	if (listen(sk, 4) < 0) {
 		log_err("fio: listen: %s\n", strerror(errno));
 		close(sk);
 		return -1;
@@ -1807,6 +2084,13 @@ static int fio_server(void)
 {
 	int sk, ret;
 
+	if (pthread_key_create(&sk_out_key, NULL)) {
+		log_err("fio: can't create sk_out backend key\n");
+		return -1;
+	}
+
+	pthread_setspecific(sk_out_key, NULL);
+
 	dprint(FD_NET, "starting server\n");
 
 	if (fio_handle_server_arg())
@@ -1834,8 +2118,12 @@ static int fio_server(void)
 
 void fio_server_got_signal(int signal)
 {
+	struct sk_out *sk_out = pthread_getspecific(sk_out_key);
+
+	assert(sk_out);
+
 	if (signal == SIGPIPE)
-		server_fd = -1;
+		sk_out->sk = -1;
 	else {
 		log_info("\nfio: terminating on signal %d\n", signal);
 		exit_backend = 1;

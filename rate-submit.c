@@ -7,6 +7,7 @@
 #include "fio.h"
 #include "ioengine.h"
 #include "lib/getrusage.h"
+#include "rate-submit.h"
 
 static int io_workqueue_fn(struct submit_worker *sw,
 			   struct workqueue_work *work)
@@ -235,12 +236,12 @@ static struct workqueue_ops rated_wq_ops = {
 	.exit_worker_fn		= io_workqueue_exit_worker_fn,
 };
 
-int rate_submit_init(struct thread_data *td)
+int rate_submit_init(struct thread_data *td, struct sk_out *sk_out)
 {
 	if (td->o.io_submit_mode != IO_MODE_OFFLOAD)
 		return 0;
 
-	return workqueue_init(td, &td->io_wq, &rated_wq_ops, td->o.iodepth);
+	return workqueue_init(td, &td->io_wq, &rated_wq_ops, td->o.iodepth, sk_out);
 }
 
 void rate_submit_exit(struct thread_data *td)

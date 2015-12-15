@@ -17,6 +17,7 @@ struct submit_worker {
 	uint64_t seq;
 	struct workqueue *wq;
 	void *private;
+	struct sk_out *sk_out;
 };
 
 typedef int (workqueue_work_fn)(struct submit_worker *, struct workqueue_work *);
@@ -60,7 +61,7 @@ struct workqueue {
 	volatile int wake_idle;
 };
 
-int workqueue_init(struct thread_data *td, struct workqueue *wq, struct workqueue_ops *ops, unsigned int max_workers);
+int workqueue_init(struct thread_data *td, struct workqueue *wq, struct workqueue_ops *ops, unsigned int max_workers, struct sk_out *sk_out);
 void workqueue_exit(struct workqueue *wq);
 
 void workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work);
