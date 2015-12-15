@@ -1889,7 +1889,7 @@ static int fio_init_server_connection(void)
 
 	log_info("fio: server listening on %s\n", bind_str);
 
-	if (listen(sk, 0) < 0) {
+	if (listen(sk, 4) < 0) {
 		log_err("fio: listen: %s\n", strerror(errno));
 		close(sk);
 		return -1;
