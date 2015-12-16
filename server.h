@@ -184,7 +184,8 @@ struct cmd_iolog_pdu {
 
 struct cmd_job_option {
 	uint16_t global;
-	uint16_t groupid;
+	uint16_t truncated;
+	uint32_t groupid;
 	uint8_t name[64];
 	uint8_t value[128];
 };

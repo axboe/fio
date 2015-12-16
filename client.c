@@ -1003,7 +1003,8 @@ static void handle_job_opt(struct fio_client *client, struct fio_net_cmd *cmd)
 		return;
 
 	pdu->global = le16_to_cpu(pdu->global);
-	pdu->groupid = le16_to_cpu(pdu->groupid);
+	pdu->truncated = le16_to_cpu(pdu->truncated);
+	pdu->groupid = le32_to_cpu(pdu->groupid);
 
 	p = malloc(sizeof(*p));
 	p->name = strdup((char *) pdu->name);

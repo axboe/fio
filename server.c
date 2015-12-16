@@ -1523,19 +1523,32 @@ void fio_server_send_job_options(struct flist_head *opt_list,
 
 	flist_for_each(entry, opt_list) {
 		struct print_option *p;
+		size_t len;
 
 		p = flist_entry(entry, struct print_option, list);
 		memset(&pdu, 0, sizeof(pdu));
+
 		if (groupid == -1U) {
 			pdu.global = __cpu_to_le16(1);
 			pdu.groupid = 0;
 		} else {
 			pdu.global = 0;
-			pdu.groupid = __cpu_to_le16(groupid);
+			pdu.groupid = cpu_to_le32(groupid);
 		}
-		memcpy(pdu.name, p->name, strlen(p->name));
-		if (p->value)
-			memcpy(pdu.value, p->value, strlen(p->value));
+		len = strlen(p->name);
+		if (len >= sizeof(pdu.name)) {
+			len = sizeof(pdu.name) - 1;
+			pdu.truncated = __cpu_to_le16(1);
+		}
+		memcpy(pdu.name, p->name, len);
+		if (p->value) {
+			len = strlen(p->value);
+			if (len >= sizeof(pdu.value)) {
+				len = sizeof(pdu.value) - 1;
+				pdu.truncated = __cpu_to_le16(1);
+			}
+			memcpy(pdu.value, p->value, len);
+		}
 		fio_net_queue_cmd(FIO_NET_CMD_JOB_OPT, &pdu, sizeof(pdu), NULL, SK_F_COPY);
 	}
 }
