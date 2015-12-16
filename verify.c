@@ -780,6 +780,11 @@ err:
 	log_err(" at file %s offset %llu, length %u\n",
 		io_u->file->file_name,
 		io_u->offset + hdr_num * hdr_len, hdr_len);
+
+	if (td->o.verify_dump)
+		dump_buf(p, hdr_len, io_u->offset + hdr_num * hdr_len,
+				"hdr_fail", io_u->file);
+
 	return EILSEQ;
 }
 
