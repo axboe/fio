@@ -1512,6 +1512,34 @@ void fio_server_send_gs(struct group_run_stats *rs)
 	fio_net_queue_cmd(FIO_NET_CMD_GS, &gs, sizeof(gs), NULL, SK_F_COPY);
 }
 
+void fio_server_send_job_options(struct flist_head *opt_list,
+				 unsigned int groupid)
+{
+	struct cmd_job_option pdu;
+	struct flist_head *entry;
+
+	if (flist_empty(opt_list))
+		return;
+
+	flist_for_each(entry, opt_list) {
+		struct print_option *p;
+
+		p = flist_entry(entry, struct print_option, list);
+		memset(&pdu, 0, sizeof(pdu));
+		if (groupid == -1U) {
+			pdu.global = __cpu_to_le16(1);
+			pdu.groupid = 0;
+		} else {
+			pdu.global = 0;
+			pdu.groupid = __cpu_to_le16(groupid);
+		}
+		memcpy(pdu.name, p->name, strlen(p->name));
+		if (p->value)
+			memcpy(pdu.value, p->value, strlen(p->value));
+		fio_net_queue_cmd(FIO_NET_CMD_JOB_OPT, &pdu, sizeof(pdu), NULL, SK_F_COPY);
+	}
+}
+
 static void convert_agg(struct disk_util_agg *dst, struct disk_util_agg *src)
 {
 	int i;

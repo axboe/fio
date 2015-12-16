@@ -41,6 +41,8 @@ struct fio_client {
 
 	char *name;
 
+	struct flist_head *opt_lists;
+
 	int state;
 
 	int skip_newline;

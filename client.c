@@ -59,6 +59,7 @@ int sum_stat_clients;
 
 static int sum_stat_nr;
 static struct json_object *root = NULL;
+static struct json_object *job_opt_object = NULL;
 static struct json_array *clients_array = NULL;
 static struct json_array *du_array = NULL;
 
@@ -117,11 +118,23 @@ static int read_data(int fd, void *data, size_t size)
 
 static void fio_client_json_init(void)
 {
+	char time_buf[32];
+	time_t time_p;
+
 	if (!(output_format & FIO_OUTPUT_JSON))
 		return;
 
+	time(&time_p);
+	os_ctime_r((const time_t *) &time_p, time_buf, sizeof(time_buf));
+	time_buf[strlen(time_buf) - 1] = '\0';
+
 	root = json_create_object();
 	json_object_add_value_string(root, "fio version", fio_version_string);
+	json_object_add_value_int(root, "timestamp", time_p);
+	json_object_add_value_string(root, "time", time_buf);
+
+	job_opt_object = json_create_object();
+	json_object_add_value_object(root, "global options", job_opt_object);
 	clients_array = json_create_array();
 	json_object_add_value_array(root, "client_stats", clients_array);
 	du_array = json_create_array();
@@ -132,6 +145,7 @@ static void fio_client_json_fini(void)
 {
 	if (!(output_format & FIO_OUTPUT_JSON))
 		return;
+
 	log_info("\n");
 	json_print_object(root, NULL);
 	log_info("\n");
@@ -176,6 +190,8 @@ void fio_put_client(struct fio_client *client)
 	}
 	if (client->files)
 		free(client->files);
+	if (client->opt_lists)
+		free(client->opt_lists);
 
 	if (!client->did_stat)
 		sum_stat_clients--;
@@ -936,9 +952,13 @@ static void json_object_add_client_info(struct json_object *obj,
 static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_ts_pdu *p = (struct cmd_ts_pdu *) cmd->payload;
+	struct flist_head *opt_list = NULL;
 	struct json_object *tsobj;
 
-	tsobj = show_thread_status(&p->ts, &p->rs, NULL);
+	if (client->opt_lists && p->ts.thread_number <= client->jobs)
+		opt_list = &client->opt_lists[p->ts.thread_number - 1];
+
+	tsobj = show_thread_status(&p->ts, &p->rs, opt_list, NULL);
 	client->did_stat = 1;
 	if (tsobj) {
 		json_object_add_client_info(tsobj, client);
@@ -958,7 +978,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	if (++sum_stat_nr == sum_stat_clients) {
 		strcpy(client_ts.name, "All clients");
-		tsobj = show_thread_status(&client_ts, &client_gs, NULL);
+		tsobj = show_thread_status(&client_ts, &client_gs, NULL, NULL);
 		if (tsobj) {
 			json_object_add_client_info(tsobj, client);
 			json_array_add_value_object(clients_array, tsobj);
@@ -972,6 +992,35 @@ static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	if (output_format & FIO_OUTPUT_NORMAL)
 		show_group_stats(gs, NULL);
+}
+
+static void handle_job_opt(struct fio_client *client, struct fio_net_cmd *cmd)
+{
+	struct cmd_job_option *pdu = (struct cmd_job_option *) cmd->payload;
+	struct print_option *p;
+
+	pdu->global = le16_to_cpu(pdu->global);
+	pdu->groupid = le16_to_cpu(pdu->groupid);
+
+	p = malloc(sizeof(*p));
+	p->name = strdup((char *) pdu->name);
+	if (pdu->value[0] != '\0')
+		p->value = strdup((char *) pdu->value);
+	else
+		p->value = NULL;
+
+	if (pdu->global) {
+		const char *pos = "";
+
+		if (p->value)
+			pos = p->value;
+
+		json_object_add_value_string(job_opt_object, p->name, pos);
+	} else if (client->opt_lists) {
+		struct flist_head *opt_list = &client->opt_lists[pdu->groupid];
+
+		flist_add_tail(&p->list, opt_list);
+	}
 }
 
 static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -1203,6 +1252,17 @@ static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd)
 	client->state = Client_started;
 	client->jobs = le32_to_cpu(pdu->jobs);
 	client->nr_stat = le32_to_cpu(pdu->stat_outputs);
+
+	if (client->jobs) {
+		int i;
+
+		if (client->opt_lists)
+			free(client->opt_lists);
+
+		client->opt_lists = malloc(client->jobs * sizeof(struct flist_head));
+		for (i = 0; i < client->jobs; i++)
+			INIT_FLIST_HEAD(&client->opt_lists[i]);
+	}
 
 	sum_stat_clients += client->nr_stat;
 }
@@ -1516,6 +1576,10 @@ int fio_handle_client(struct fio_client *client)
 		send_file(client, pdu, cmd->tag);
 		break;
 		}
+	case FIO_NET_CMD_JOB_OPT: {
+		handle_job_opt(client, cmd);
+		break;
+	}
 	default:
 		log_err("fio: unknown client op: %s\n", fio_server_op(cmd->opcode));
 		break;

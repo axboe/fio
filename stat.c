@@ -1086,8 +1086,8 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 	log_buf(out, "\n");
 }
 
-static void json_add_job_opts(struct json_object *root, const char *name,
-			      struct flist_head *opt_list, bool num_jobs)
+void json_add_job_opts(struct json_object *root, const char *name,
+		       struct flist_head *opt_list, bool num_jobs)
 {
 	struct json_object *dir_object;
 	struct flist_head *entry;
@@ -1268,6 +1268,7 @@ static void show_thread_status_terse(struct thread_stat *ts,
 
 struct json_object *show_thread_status(struct thread_stat *ts,
 				       struct group_run_stats *rs,
+				       struct flist_head *opt_list,
 				       struct buf_output *out)
 {
 	struct json_object *ret = NULL;
@@ -1275,7 +1276,7 @@ struct json_object *show_thread_status(struct thread_stat *ts,
 	if (output_format & FIO_OUTPUT_TERSE)
 		show_thread_status_terse(ts, rs,  out);
 	if (output_format & FIO_OUTPUT_JSON)
-		ret = show_thread_status_json(ts, rs, NULL);
+		ret = show_thread_status_json(ts, rs, opt_list);
 	if (output_format & FIO_OUTPUT_NORMAL)
 		show_thread_status_normal(ts, rs,  out);
 
@@ -1649,13 +1650,17 @@ void __show_run_stats(void)
 		json_object_add_value_array(root, "jobs", array);
 	}
 
+	if (is_backend)
+		fio_server_send_job_options(&get_global_options()->opt_list, -1U);
+
 	for (i = 0; i < nr_ts; i++) {
 		ts = &threadstats[i];
 		rs = &runstats[ts->groupid];
 
-		if (is_backend)
+		if (is_backend) {
+			fio_server_send_job_options(opt_lists[i], i);
 			fio_server_send_ts(ts, rs);
-		else {
+		} else {
 			if (output_format & FIO_OUTPUT_TERSE)
 				show_thread_status_terse(ts, rs, &output[__FIO_OUTPUT_TERSE]);
 			if (output_format & FIO_OUTPUT_JSON) {

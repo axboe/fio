@@ -38,7 +38,7 @@ struct fio_net_cmd_reply {
 };
 
 enum {
-	FIO_SERVER_VER			= 49,
+	FIO_SERVER_VER			= 50,
 
 	FIO_SERVER_MAX_FRAGMENT_PDU	= 1024,
 	FIO_SERVER_MAX_CMD_MB		= 2048,
@@ -64,7 +64,8 @@ enum {
 	FIO_NET_CMD_LOAD_FILE		= 19,
 	FIO_NET_CMD_VTRIGGER		= 20,
 	FIO_NET_CMD_SENDFILE		= 21,
-	FIO_NET_CMD_NR			= 22,
+	FIO_NET_CMD_JOB_OPT		= 22,
+	FIO_NET_CMD_NR			= 23,
 
 	FIO_NET_CMD_F_MORE		= 1UL << 0,
 
@@ -181,6 +182,13 @@ struct cmd_iolog_pdu {
 	struct io_sample samples[0];
 };
 
+struct cmd_job_option {
+	uint16_t global;
+	uint16_t groupid;
+	uint8_t name[64];
+	uint8_t value[128];
+};
+
 extern int fio_start_server(char *);
 extern int fio_server_text_output(int, const char *, size_t);
 extern int fio_net_send_cmd(int, uint16_t, const void *, off_t, uint64_t *, struct flist_head *);
@@ -196,6 +204,7 @@ struct group_run_stats;
 extern void fio_server_send_ts(struct thread_stat *, struct group_run_stats *);
 extern void fio_server_send_gs(struct group_run_stats *);
 extern void fio_server_send_du(void);
+extern void fio_server_send_job_options(struct flist_head *, unsigned int);
 extern int fio_server_get_verify_state(const char *, int, void **, int *);
 
 extern struct fio_net_cmd *fio_net_recv_cmd(int sk);
