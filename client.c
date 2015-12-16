@@ -999,6 +999,9 @@ static void handle_job_opt(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct cmd_job_option *pdu = (struct cmd_job_option *) cmd->payload;
 	struct print_option *p;
 
+	if (!job_opt_object)
+		return;
+
 	pdu->global = le16_to_cpu(pdu->global);
 	pdu->groupid = le16_to_cpu(pdu->groupid);
 
