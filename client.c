@@ -1666,12 +1666,13 @@ static void request_client_etas(struct client_ops *ops)
 static int handle_cmd_timeout(struct fio_client *client,
 			      struct fio_net_cmd_reply *reply)
 {
+	flist_del(&reply->list);
+	free(reply);
+
 	if (reply->opcode != FIO_NET_CMD_SEND_ETA)
 		return 1;
 
 	log_info("client <%s>: timeout on SEND_ETA\n", client->hostname);
-	flist_del(&reply->list);
-	free(reply);
 
 	flist_del_init(&client->eta_list);
 	if (client->eta_in_flight) {
@@ -1706,8 +1707,6 @@ static int client_check_cmd_timeout(struct fio_client *client,
 
 		log_err("fio: client %s, timeout on cmd %s\n", client->hostname,
 						fio_server_op(reply->opcode));
-		flist_del(&reply->list);
-		free(reply);
 		ret = 1;
 	}
 
