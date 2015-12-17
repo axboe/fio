@@ -536,6 +536,7 @@ static int str_verify_cpus_allowed_cb(void *data, const char *input)
 	return set_cpus_allowed(td, &td->o.verify_cpumask, input);
 }
 
+#ifdef CONFIG_ZLIB
 static int str_log_cpus_allowed_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
@@ -545,8 +546,9 @@ static int str_log_cpus_allowed_cb(void *data, const char *input)
 
 	return set_cpus_allowed(td, &td->o.log_gz_cpumask, input);
 }
+#endif /* CONFIG_ZLIB */
 
-#endif
+#endif /* FIO_HAVE_CPU_AFFINITY */
 
 #ifdef CONFIG_LIBNUMA
 static int str_numa_cpunodes_cb(void *data, char *input)
