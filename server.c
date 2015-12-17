@@ -1702,9 +1702,6 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	struct sk_entry *first;
 	int i, ret = 0;
 
-	if (!flist_empty(&log->chunk_list))
-		printf("log has chunks\n");
-
 	pdu.nr_samples = cpu_to_le64(log->nr_samples);
 	pdu.thread_number = cpu_to_le32(td->thread_number);
 	pdu.log_type = cpu_to_le32(log->log_type);
