@@ -634,7 +634,7 @@ void free_log(struct io_log *log)
 	free(log);
 }
 
-static void flush_samples(FILE *f, void *samples, uint64_t sample_size)
+void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 {
 	struct io_sample *s;
 	int log_offset;
@@ -984,6 +984,12 @@ static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
 	} else
 		fio_lock_file(log->filename);
 
+	/*
+	 * We should do this for any networked client. Will enable when
+	 * the kinks are ironed out.
+	 *
+	 * if (td->client_type == FIO_CLIENT_TYPE_GUI || is_backed)
+	 */
 	if (td->client_type == FIO_CLIENT_TYPE_GUI)
 		fio_send_iolog(td, log, log->filename);
 	else

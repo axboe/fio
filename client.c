@@ -32,6 +32,7 @@ static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd);
+static void handle_iolog(struct fio_client *client, struct cmd_iolog_pdu *pdu);
 
 struct client_ops fio_client_ops = {
 	.text		= handle_text,
@@ -42,6 +43,7 @@ struct client_ops fio_client_ops = {
 	.start		= handle_start,
 	.eta		= display_thread_status,
 	.probe		= handle_probe,
+	.iolog		= handle_iolog,
 	.eta_msec	= FIO_CLIENT_DEF_ETA_MSEC,
 	.client_type	= FIO_CLIENT_TYPE_CLI,
 };
@@ -1222,6 +1224,23 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	fio_client_sum_jobs_eta(&eta->eta, je);
 	fio_client_dec_jobs_eta(eta, client->ops->eta);
+}
+
+static void handle_iolog(struct fio_client *client, struct cmd_iolog_pdu *pdu)
+{
+	FILE *f;
+
+	printf("got log compressed; %d\n", pdu->compressed);
+
+	f = fopen((const char *) pdu->name, "w");
+	if (!f) {
+		perror("fopen log");
+		return;
+	}
+
+	flush_samples(f, pdu->samples,
+			pdu->nr_samples * sizeof(struct io_sample));
+	fclose(f);
 }
 
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
