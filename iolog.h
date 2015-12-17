@@ -186,6 +186,7 @@ extern void prune_io_piece_log(struct thread_data *);
 extern void write_iolog_close(struct thread_data *);
 extern int iolog_compress_init(struct thread_data *, struct sk_out *);
 extern void iolog_compress_exit(struct thread_data *);
+extern size_t log_chunk_sizes(struct io_log *);
 
 #ifdef CONFIG_ZLIB
 extern int iolog_file_inflate(const char *);
@@ -217,5 +218,12 @@ static inline void init_ipo(struct io_piece *ipo)
 	memset(ipo, 0, sizeof(*ipo));
 	INIT_FLIST_HEAD(&ipo->trim_list);
 }
+
+struct iolog_compress {
+	struct flist_head list;
+	void *buf;
+	size_t len;
+	unsigned int seq;
+};
 
 #endif

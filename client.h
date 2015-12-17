@@ -76,12 +76,10 @@ struct fio_client {
 	unsigned int nr_files;
 };
 
-struct cmd_iolog_pdu;
 typedef void (client_cmd_op)(struct fio_client *, struct fio_net_cmd *);
 typedef void (client_eta_op)(struct jobs_eta *je);
 typedef void (client_timed_out_op)(struct fio_client *);
 typedef void (client_jobs_eta_op)(struct fio_client *client, struct jobs_eta *je);
-typedef void (client_iolog_op)(struct fio_client *client, struct cmd_iolog_pdu *);
 
 struct client_ops {
 	client_cmd_op		*text;
@@ -98,7 +96,6 @@ struct client_ops {
 	client_cmd_op		*stop;
 	client_cmd_op		*start;
 	client_cmd_op		*job_start;
-	client_iolog_op		*iolog;
 	client_timed_out_op	*removed;
 
 	unsigned int eta_msec;

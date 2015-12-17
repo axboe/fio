@@ -520,8 +520,9 @@ int fio_net_send_cmd(int fd, uint16_t opcode, const void *buf, off_t size,
 	return ret;
 }
 
-static struct sk_entry *fio_net_prep_cmd(uint16_t opcode, void *buf, off_t size,
-					 uint64_t *tagptr, int flags)
+static struct sk_entry *fio_net_prep_cmd(uint16_t opcode, void *buf,
+					 size_t size, uint64_t *tagptr,
+					 int flags)
 {
 	struct sk_entry *entry;
 
@@ -1676,20 +1677,52 @@ err:
 	return ret;
 }
 
+static int fio_send_gz_chunks(struct sk_entry *first, struct io_log *log)
+{
+	struct sk_entry *entry;
+	struct flist_head *node;
+
+	pthread_mutex_lock(&log->chunk_lock);
+	flist_for_each(node, &log->chunk_list) {
+		struct iolog_compress *c;
+
+		c = flist_entry(node, struct iolog_compress, list);
+		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, c->buf, c->len,
+						NULL, SK_F_VEC | SK_F_INLINE);
+		flist_add_tail(&entry->list, &first->next);
+	}
+	pthread_mutex_unlock(&log->chunk_lock);
+
+	return 0;
+}
+
 int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 {
 	struct cmd_iolog_pdu pdu;
 	struct sk_entry *first;
 	int i, ret = 0;
 
+	if (!flist_empty(&log->chunk_list))
+		printf("log has chunks\n");
+
 	pdu.nr_samples = cpu_to_le64(log->nr_samples);
 	pdu.thread_number = cpu_to_le32(td->thread_number);
 	pdu.log_type = cpu_to_le32(log->log_type);
-	pdu.compressed = cpu_to_le32(use_zlib);
+
+	if (!flist_empty(&log->chunk_list))
+		pdu.compressed = __cpu_to_le32(STORE_COMPRESSED);
+	else if (use_zlib)
+		pdu.compressed = __cpu_to_le32(XMIT_COMPRESSED);
+	else
+		pdu.compressed = 0;
 
 	strncpy((char *) pdu.name, name, FIO_NET_NAME_MAX);
 	pdu.name[FIO_NET_NAME_MAX - 1] = '\0';
 
+	/*
+	 * We can't do this for a pre-compressed log, but for that case,
+	 * log->nr_samples is zero anyway.
+	 */
 	for (i = 0; i < log->nr_samples; i++) {
 		struct io_sample *s = get_sample(log, i);
 
@@ -1714,14 +1747,16 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	 * Now append actual log entries. Compress if we can, otherwise just
 	 * plain text output.
 	 */
-	if (use_zlib)
+	if (!flist_empty(&log->chunk_list))
+		ret = fio_send_gz_chunks(first, log);
+	else if (use_zlib)
 		ret = fio_send_iolog_gz(first, log);
 	else {
 		struct sk_entry *entry;
+		size_t size = log->nr_samples * log_entry_sz(log);
 
-		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, log->log,
-					log->nr_samples * log_entry_sz(log),
-					NULL, SK_F_VEC | SK_F_INLINE);
+		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, log->log, size,
+						NULL, SK_F_VEC | SK_F_INLINE);
 		flist_add_tail(&entry->list, &first->next);
 	}
 

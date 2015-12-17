@@ -682,13 +682,6 @@ struct iolog_flush_data {
 	uint64_t nr_samples;
 };
 
-struct iolog_compress {
-	struct flist_head list;
-	void *buf;
-	size_t len;
-	unsigned int seq;
-};
-
 #define GZ_CHUNK	131072
 
 static struct iolog_compress *get_new_chunk(unsigned int seq)
@@ -984,13 +977,7 @@ static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
 	} else
 		fio_lock_file(log->filename);
 
-	/*
-	 * We should do this for any networked client. Will enable when
-	 * the kinks are ironed out.
-	 *
-	 * if (td->client_type == FIO_CLIENT_TYPE_GUI || is_backed)
-	 */
-	if (td->client_type == FIO_CLIENT_TYPE_GUI)
+	if (td->client_type == FIO_CLIENT_TYPE_GUI || is_backend)
 		fio_send_iolog(td, log, log->filename);
 	else
 		flush_log(log, !td->o.per_job_logs);
@@ -998,6 +985,26 @@ static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
 	fio_unlock_file(log->filename);
 	free_log(log);
 	return 0;
+}
+
+size_t log_chunk_sizes(struct io_log *log)
+{
+	struct flist_head *entry;
+	size_t ret;
+
+	if (flist_empty(&log->chunk_list))
+		return 0;
+
+	ret = 0;
+	pthread_mutex_lock(&log->chunk_lock);
+	flist_for_each(entry, &log->chunk_list) {
+		struct iolog_compress *c;
+
+		c = flist_entry(entry, struct iolog_compress, list);
+		ret += c->len;
+	}
+	pthread_mutex_unlock(&log->chunk_lock);
+	return ret;
 }
 
 #ifdef CONFIG_ZLIB

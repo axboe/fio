@@ -32,7 +32,6 @@ static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd);
-static void handle_iolog(struct fio_client *client, struct cmd_iolog_pdu *pdu);
 
 struct client_ops fio_client_ops = {
 	.text		= handle_text,
@@ -43,7 +42,6 @@ struct client_ops fio_client_ops = {
 	.start		= handle_start,
 	.eta		= display_thread_status,
 	.probe		= handle_probe,
-	.iolog		= handle_iolog,
 	.eta_msec	= FIO_CLIENT_DEF_ETA_MSEC,
 	.client_type	= FIO_CLIENT_TYPE_CLI,
 };
@@ -71,6 +69,8 @@ static int error_clients;
 #define FIO_CLIENT_HASH_SZ	(1 << FIO_CLIENT_HASH_BITS)
 #define FIO_CLIENT_HASH_MASK	(FIO_CLIENT_HASH_SZ - 1)
 static struct flist_head client_hash[FIO_CLIENT_HASH_SZ];
+
+static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *, bool *);
 
 static void fio_client_add_hash(struct fio_client *client)
 {
@@ -1226,21 +1226,44 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 	fio_client_dec_jobs_eta(eta, client->ops->eta);
 }
 
-static void handle_iolog(struct fio_client *client, struct cmd_iolog_pdu *pdu)
+void fio_client_handle_iolog(struct fio_client *client, struct fio_net_cmd *cmd)
 {
-	FILE *f;
+	struct cmd_iolog_pdu *pdu;
+	bool store_direct;
 
-	printf("got log compressed; %d\n", pdu->compressed);
-
-	f = fopen((const char *) pdu->name, "w");
-	if (!f) {
-		perror("fopen log");
+	pdu = convert_iolog(cmd, &store_direct);
+	if (!pdu)
 		return;
-	}
 
-	flush_samples(f, pdu->samples,
-			pdu->nr_samples * sizeof(struct io_sample));
-	fclose(f);
+	if (store_direct) {
+		ssize_t ret;
+		size_t sz;
+		int fd;
+
+		fd = open((const char *) pdu->name,
+				O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		if (fd < 0) {
+			perror("open log");
+			return;
+		}
+		sz = cmd->pdu_len - sizeof(*pdu);
+		ret = write(fd, pdu->samples, sz);
+		if (ret != sz)
+			log_err("fio: short write on compressed log\n");
+		close(fd);
+	} else {
+		FILE *f;
+
+		f = fopen((const char *) pdu->name, "w");
+		if (!f) {
+			perror("fopen log");
+			return;
+		}
+
+		flush_samples(f, pdu->samples,
+				pdu->nr_samples * sizeof(struct io_sample));
+		fclose(f);
+	}
 }
 
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -1383,27 +1406,36 @@ err:
  * This has been compressed on the server side, since it can be big.
  * Uncompress here.
  */
-static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
+static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
+					   bool *store_direct)
 {
 	struct cmd_iolog_pdu *pdu = (struct cmd_iolog_pdu *) cmd->payload;
 	struct cmd_iolog_pdu *ret;
 	uint64_t i;
+	int compressed;
 	void *samples;
+
+	*store_direct = false;
 
 	/*
 	 * Convert if compressed and we support it. If it's not
 	 * compressed, we need not do anything.
 	 */
-	if (le32_to_cpu(pdu->compressed)) {
+	compressed = le32_to_cpu(pdu->compressed);
+	if (compressed == XMIT_COMPRESSED) {
 #ifndef CONFIG_ZLIB
 		log_err("fio: server sent compressed data by mistake\n");
 		return NULL;
 #endif
 		ret = convert_iolog_gz(cmd, pdu);
+		printf("compressed iolog, %p\n", ret);
 		if (!ret) {
 			log_err("fio: failed decompressing log\n");
 			return NULL;
 		}
+	} else if (compressed == STORE_COMPRESSED) {
+		*store_direct = true;
+		ret = pdu;
 	} else
 		ret = pdu;
 
@@ -1412,6 +1444,9 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd)
 	ret->log_type		= le32_to_cpu(ret->log_type);
 	ret->compressed		= le32_to_cpu(ret->compressed);
 	ret->log_offset		= le32_to_cpu(ret->log_offset);
+
+	if (*store_direct)
+		return ret;
 
 	samples = &ret->samples[0];
 	for (i = 0; i < ret->nr_samples; i++) {
@@ -1569,12 +1604,7 @@ int fio_handle_client(struct fio_client *client)
 		break;
 		}
 	case FIO_NET_CMD_IOLOG:
-		if (ops->iolog) {
-			struct cmd_iolog_pdu *pdu;
-
-			pdu = convert_iolog(cmd);
-			ops->iolog(client, pdu);
-		}
+		fio_client_handle_iolog(client, cmd);
 		break;
 	case FIO_NET_CMD_UPDATE_JOB:
 		ops->update_job(client, cmd);

@@ -172,6 +172,11 @@ struct cmd_text_pdu {
 	uint8_t buf[0];
 };
 
+enum {
+	XMIT_COMPRESSED		= 1U,
+	STORE_COMPRESSED	= 2U,
+};
+
 struct cmd_iolog_pdu {
 	uint64_t nr_samples;
 	uint32_t thread_number;

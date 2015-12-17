@@ -693,11 +693,6 @@ static void gfio_client_job_start(struct fio_client *client, struct fio_net_cmd 
 	gdk_threads_leave();
 }
 
-static void gfio_client_iolog(struct fio_client *client, struct cmd_iolog_pdu *pdu)
-{
-	printf("got iolog: name=%s, type=%u, entries=%lu\n", pdu->name, pdu->log_type, (unsigned long) pdu->nr_samples);
-}
-
 static void gfio_add_total_depths_tree(GtkListStore *model,
 				       struct thread_stat *ts, unsigned int len)
 {
@@ -1393,7 +1388,6 @@ struct client_ops gfio_client_ops = {
 	.stop			= gfio_client_stop,
 	.start			= gfio_client_start,
 	.job_start		= gfio_client_job_start,
-	.iolog			= gfio_client_iolog,
 	.removed		= gfio_client_removed,
 	.eta_msec		= FIO_CLIENT_DEF_ETA_MSEC,
 	.stay_connected		= 1,
