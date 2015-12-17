@@ -1122,9 +1122,12 @@ static int handle_sk_entry(struct sk_out *sk_out, struct sk_entry *entry)
 		if (entry->tagptr)
 			tag = *entry->tagptr;
 
-		ret = fio_net_send_simple_cmd(sk_out->sk, entry->opcode, tag, NULL);
-	} else
-		ret = fio_net_send_cmd(sk_out->sk, entry->opcode, entry->buf, entry->size, entry->tagptr, NULL);
+		ret = fio_net_send_simple_cmd(sk_out->sk, entry->opcode, tag,
+						NULL);
+	} else {
+		ret = fio_net_send_cmd(sk_out->sk, entry->opcode, entry->buf,
+					entry->size, entry->tagptr, NULL);
+	}
 
 	fio_mutex_up(&sk_out->xmit);
 
@@ -1624,7 +1627,7 @@ void fio_server_send_du(void)
 	}
 }
 
-static int fio_send_iolog_gz(struct sk_entry *first, struct io_log *log)
+static int fio_append_iolog_gz(struct sk_entry *first, struct io_log *log)
 {
 	int ret = 0;
 #ifdef CONFIG_ZLIB
@@ -1677,7 +1680,7 @@ err:
 	return ret;
 }
 
-static int fio_send_gz_chunks(struct sk_entry *first, struct io_log *log)
+static int fio_append_gz_chunks(struct sk_entry *first, struct io_log *log)
 {
 	struct sk_entry *entry;
 	struct flist_head *node;
@@ -1693,6 +1696,17 @@ static int fio_send_gz_chunks(struct sk_entry *first, struct io_log *log)
 	}
 	pthread_mutex_unlock(&log->chunk_lock);
 
+	return 0;
+}
+
+static int fio_append_text_log(struct sk_entry *first, struct io_log *log)
+{
+	struct sk_entry *entry;
+	size_t size = log->nr_samples * log_entry_sz(log);
+
+	entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, log->log, size,
+					NULL, SK_F_VEC | SK_F_INLINE);
+	flist_add_tail(&entry->list, &first->next);
 	return 0;
 }
 
@@ -1741,21 +1755,17 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	first = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, &pdu, sizeof(pdu), NULL, SK_F_VEC | SK_F_INLINE | SK_F_COPY);
 
 	/*
-	 * Now append actual log entries. Compress if we can, otherwise just
-	 * plain text output.
+	 * Now append actual log entries. If log compression was enabled on
+	 * the job, just send out the compressed chunks directly. If we
+	 * have a plain log, compress if we can, then send. Otherwise, send
+	 * the plain text output.
 	 */
 	if (!flist_empty(&log->chunk_list))
-		ret = fio_send_gz_chunks(first, log);
+		ret = fio_append_gz_chunks(first, log);
 	else if (use_zlib)
-		ret = fio_send_iolog_gz(first, log);
-	else {
-		struct sk_entry *entry;
-		size_t size = log->nr_samples * log_entry_sz(log);
-
-		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, log->log, size,
-						NULL, SK_F_VEC | SK_F_INLINE);
-		flist_add_tail(&entry->list, &first->next);
-	}
+		ret = fio_append_iolog_gz(first, log);
+	else
+		ret = fio_append_text_log(first, log);
 
 	fio_net_queue_entry(first);
 	return ret;
@@ -1770,7 +1780,8 @@ void fio_server_send_add_job(struct thread_data *td)
 	pdu.groupid = cpu_to_le32(td->groupid);
 	convert_thread_options_to_net(&pdu.top, &td->o);
 
-	fio_net_queue_cmd(FIO_NET_CMD_ADD_JOB, &pdu, sizeof(pdu), NULL, SK_F_COPY);
+	fio_net_queue_cmd(FIO_NET_CMD_ADD_JOB, &pdu, sizeof(pdu), NULL,
+				SK_F_COPY);
 }
 
 void fio_server_send_start(struct thread_data *td)
@@ -1806,7 +1817,8 @@ int fio_server_get_verify_state(const char *name, int threadnumber,
 	verify_state_gen_name((char *) out.path, sizeof(out.path), name, me,
 				threadnumber);
 	tag = (uint64_t) (uintptr_t) rep;
-	fio_net_queue_cmd(FIO_NET_CMD_SENDFILE, &out, sizeof(out), &tag, SK_F_COPY);
+	fio_net_queue_cmd(FIO_NET_CMD_SENDFILE, &out, sizeof(out), &tag,
+				SK_F_COPY);
 
 	/*
 	 * Wait for the backend to receive the reply
@@ -1817,7 +1829,8 @@ int fio_server_get_verify_state(const char *name, int threadnumber,
 	}
 
 	if (rep->error) {
-		log_err("fio: failure on receiving state file: %s\n", strerror(rep->error));
+		log_err("fio: failure on receiving state file: %s\n",
+				strerror(rep->error));
 fail:
 		*datap = NULL;
 		sfree(rep);
