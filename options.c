@@ -4143,7 +4143,7 @@ int fio_cmd_option_parse(struct thread_data *td, const char *opt, char *val)
 {
 	int ret;
 
-	ret = parse_cmd_option(opt, val, fio_options, td);
+	ret = parse_cmd_option(opt, val, fio_options, td, &td->opt_list);
 	if (!ret) {
 		struct fio_option *o;
 
@@ -4158,7 +4158,8 @@ int fio_cmd_option_parse(struct thread_data *td, const char *opt, char *val)
 int fio_cmd_ioengine_option_parse(struct thread_data *td, const char *opt,
 				char *val)
 {
-	return parse_cmd_option(opt, val, td->io_ops->options, td->eo);
+	return parse_cmd_option(opt, val, td->io_ops->options, td->eo,
+					&td->opt_list);
 }
 
 void fio_fill_default_options(struct thread_data *td)
