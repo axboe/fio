@@ -46,7 +46,7 @@ struct sk_entry {
 	int opcode;		/* Actual command fields */
 	void *buf;
 	off_t size;
-	uint64_t *tagptr;
+	uint64_t tag;
 	struct flist_head next;	/* Other sk_entry's, if linked command */
 };
 
@@ -536,7 +536,10 @@ static struct sk_entry *fio_net_prep_cmd(uint16_t opcode, void *buf,
 		entry->buf = buf;
 
 	entry->size = size;
-	entry->tagptr = tagptr;
+	if (tagptr)
+		entry->tag = *tagptr;
+	else
+		entry->tag = 0;
 	entry->flags = flags;
 	return entry;
 }
@@ -1077,10 +1080,7 @@ static void entry_set_flags_tag(struct sk_entry *entry, struct flist_head *list,
 	else
 		*flags = 0;
 
-	if (entry->tagptr)
-		*tag = *entry->tagptr;
-	else
-		*tag = 0;
+	*tag = entry->tag;
 }
 
 static int send_vec_entry(struct sk_out *sk_out, struct sk_entry *first)
@@ -1117,16 +1117,13 @@ static int handle_sk_entry(struct sk_out *sk_out, struct sk_entry *entry)
 	if (entry->flags & SK_F_VEC)
 		ret = send_vec_entry(sk_out, entry);
 	else if (entry->flags & SK_F_SIMPLE) {
-		uint64_t tag = 0;
-
-		if (entry->tagptr)
-			tag = *entry->tagptr;
+		uint64_t tag = entry->tag;
 
 		ret = fio_net_send_simple_cmd(sk_out->sk, entry->opcode, tag,
 						NULL);
 	} else {
 		ret = fio_net_send_cmd(sk_out->sk, entry->opcode, entry->buf,
-					entry->size, entry->tagptr, NULL);
+					entry->size, &entry->tag, NULL);
 	}
 
 	fio_mutex_up(&sk_out->xmit);
