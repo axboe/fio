@@ -1226,14 +1226,17 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 	fio_client_dec_jobs_eta(eta, client->ops->eta);
 }
 
-void fio_client_handle_iolog(struct fio_client *client, struct fio_net_cmd *cmd)
+static int fio_client_handle_iolog(struct fio_client *client,
+				   struct fio_net_cmd *cmd)
 {
 	struct cmd_iolog_pdu *pdu;
 	bool store_direct;
 
 	pdu = convert_iolog(cmd, &store_direct);
-	if (!pdu)
-		return;
+	if (!pdu) {
+		log_err("fio: failed converting IO log\n");
+		return 1;
+	}
 
 	if (store_direct) {
 		ssize_t ret;
@@ -1243,26 +1246,33 @@ void fio_client_handle_iolog(struct fio_client *client, struct fio_net_cmd *cmd)
 		fd = open((const char *) pdu->name,
 				O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (fd < 0) {
-			perror("open log");
-			return;
+			log_err("fio: open log: %s\n", strerror(errno));
+			return 1;
 		}
+
 		sz = cmd->pdu_len - sizeof(*pdu);
 		ret = write(fd, pdu->samples, sz);
-		if (ret != sz)
-			log_err("fio: short write on compressed log\n");
 		close(fd);
+
+		if (ret != sz) {
+			log_err("fio: short write on compressed log\n");
+			return 1;
+		}
+
+		return 0;
 	} else {
 		FILE *f;
 
 		f = fopen((const char *) pdu->name, "w");
 		if (!f) {
-			perror("fopen log");
-			return;
+			log_err("fio: fopen log: %s\n", strerror(errno));
+			return 1;
 		}
 
 		flush_samples(f, pdu->samples,
 				pdu->nr_samples * sizeof(struct io_sample));
 		fclose(f);
+		return 0;
 	}
 }
 
