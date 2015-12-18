@@ -1072,26 +1072,24 @@ static void finish_entry(struct sk_entry *entry)
 	sfree(entry);
 }
 
-static void entry_set_flags_tag(struct sk_entry *entry, struct flist_head *list,
-				unsigned int *flags, uint64_t *tag)
+static void entry_set_flags(struct sk_entry *entry, struct flist_head *list,
+			    unsigned int *flags)
 {
 	if (!flist_empty(list))
 		*flags = FIO_NET_CMD_F_MORE;
 	else
 		*flags = 0;
-
-	*tag = entry->tag;
 }
 
 static int send_vec_entry(struct sk_out *sk_out, struct sk_entry *first)
 {
 	unsigned int flags;
-	uint64_t tag;
 	int ret;
 
-	entry_set_flags_tag(first, &first->next, &flags, &tag);
+	entry_set_flags(first, &first->next, &flags);
 
-	ret = fio_send_cmd_ext_pdu(sk_out->sk, first->opcode, first->buf, first->size, tag, flags);
+	ret = fio_send_cmd_ext_pdu(sk_out->sk, first->opcode, first->buf,
+					first->size, first->tag, flags);
 
 	while (!flist_empty(&first->next)) {
 		struct sk_entry *next;
@@ -1099,9 +1097,10 @@ static int send_vec_entry(struct sk_out *sk_out, struct sk_entry *first)
 		next = flist_first_entry(&first->next, struct sk_entry, list);
 		flist_del_init(&next->list);
 
-		entry_set_flags_tag(next, &first->next, &flags, &tag);
+		entry_set_flags(next, &first->next, &flags);
 
-		ret += fio_send_cmd_ext_pdu(sk_out->sk, next->opcode, next->buf, next->size, tag, flags);
+		ret += fio_send_cmd_ext_pdu(sk_out->sk, next->opcode, next->buf,
+						next->size, next->tag, flags);
 		finish_entry(next);
 	}
 
@@ -1117,10 +1116,8 @@ static int handle_sk_entry(struct sk_out *sk_out, struct sk_entry *entry)
 	if (entry->flags & SK_F_VEC)
 		ret = send_vec_entry(sk_out, entry);
 	else if (entry->flags & SK_F_SIMPLE) {
-		uint64_t tag = entry->tag;
-
-		ret = fio_net_send_simple_cmd(sk_out->sk, entry->opcode, tag,
-						NULL);
+		ret = fio_net_send_simple_cmd(sk_out->sk, entry->opcode,
+						entry->tag, NULL);
 	} else {
 		ret = fio_net_send_cmd(sk_out->sk, entry->opcode, entry->buf,
 					entry->size, &entry->tag, NULL);
