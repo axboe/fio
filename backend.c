@@ -813,6 +813,10 @@ static uint64_t do_io(struct thread_data *td)
 	unsigned int i;
 	int ret = 0;
 	uint64_t total_bytes, bytes_issued = 0;
+	uint64_t this_bytes[2];
+
+	this_bytes[0] = td->bytes_done[DDIR_WRITE];
+	this_bytes[1] = td->bytes_done[DDIR_TRIM];
 
 	if (in_ramp_time(td))
 		td_set_runstate(td, TD_RAMP);
@@ -1046,7 +1050,8 @@ reap:
 	if (!ddir_rw_sum(td->this_io_bytes))
 		td->done = 1;
 
-	return td->bytes_done[DDIR_WRITE] + td->bytes_done[DDIR_TRIM];
+	return (td->bytes_done[DDIR_WRITE] - this_bytes[0]) +
+		(td->bytes_done[DDIR_TRIM] - this_bytes[1]);
 }
 
 static void cleanup_io_u(struct thread_data *td)
