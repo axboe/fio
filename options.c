@@ -1075,8 +1075,9 @@ static struct opt_group fio_opt_groups[] = {
 	},
 };
 
-static struct opt_group *__opt_group_from_mask(struct opt_group *ogs, unsigned int *mask,
-					       unsigned int inv_mask)
+static struct opt_group *__opt_group_from_mask(struct opt_group *ogs,
+					       uint64_t *mask,
+					       uint64_t inv_mask)
 {
 	struct opt_group *og;
 	int i;
@@ -1096,7 +1097,7 @@ static struct opt_group *__opt_group_from_mask(struct opt_group *ogs, unsigned i
 	return NULL;
 }
 
-struct opt_group *opt_group_from_mask(unsigned int *mask)
+struct opt_group *opt_group_from_mask(uint64_t *mask)
 {
 	return __opt_group_from_mask(fio_opt_groups, mask, FIO_OPT_C_INVALID);
 }
@@ -1200,7 +1201,7 @@ static struct opt_group fio_opt_cat_groups[] = {
 	}
 };
 
-struct opt_group *opt_group_cat_from_mask(unsigned int *mask)
+struct opt_group *opt_group_cat_from_mask(uint64_t *mask)
 {
 	return __opt_group_from_mask(fio_opt_cat_groups, mask, FIO_OPT_G_INVALID);
 }
@@ -4350,19 +4351,19 @@ static int opt_is_set(struct thread_options *o, struct fio_option *opt)
 	return (o->set_options[index] & ((uint64_t)1 << offset)) != 0;
 }
 
-int __fio_option_is_set(struct thread_options *o, unsigned int off1)
+bool __fio_option_is_set(struct thread_options *o, unsigned int off1)
 {
 	struct fio_option *opt, *next;
 
 	next = NULL;
 	while ((opt = find_next_opt(o, next, off1)) != NULL) {
 		if (opt_is_set(o, opt))
-			return 1;
+			return true;
 
 		next = opt;
 	}
 
-	return 0;
+	return false;
 }
 
 void fio_option_mark_set(struct thread_options *o, struct fio_option *opt)
