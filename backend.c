@@ -808,15 +808,14 @@ static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
  *
  * Returns number of bytes written and trimmed.
  */
-static uint64_t do_io(struct thread_data *td)
+static void do_io(struct thread_data *td, uint64_t *bytes_done)
 {
 	unsigned int i;
 	int ret = 0;
 	uint64_t total_bytes, bytes_issued = 0;
-	uint64_t this_bytes[2];
 
-	this_bytes[0] = td->bytes_done[DDIR_WRITE];
-	this_bytes[1] = td->bytes_done[DDIR_TRIM];
+	for (i = 0; i < DDIR_RWDIR_CNT; i++)
+		bytes_done[i] = td->bytes_done[i];
 
 	if (in_ramp_time(td))
 		td_set_runstate(td, TD_RAMP);
@@ -1050,8 +1049,8 @@ reap:
 	if (!ddir_rw_sum(td->this_io_bytes))
 		td->done = 1;
 
-	return (td->bytes_done[DDIR_WRITE] - this_bytes[0]) +
-		(td->bytes_done[DDIR_TRIM] - this_bytes[1]);
+	for (i = 0; i < DDIR_RWDIR_CNT; i++)
+		bytes_done[i] = td->bytes_done[i] - bytes_done[i];
 }
 
 static void cleanup_io_u(struct thread_data *td)
@@ -1603,9 +1602,17 @@ static void *thread_main(void *data)
 		if (td->o.verify_only && (td_write(td) || td_rw(td)))
 			verify_bytes = do_dry_run(td);
 		else {
-			verify_bytes = do_io(td);
-			if (!verify_bytes)
+			uint64_t bytes_done[DDIR_RWDIR_CNT];
+
+			do_io(td, bytes_done);
+
+			if (!ddir_rw_sum(bytes_done)) {
 				fio_mark_td_terminate(td);
+				verify_bytes = 0;
+			} else {
+				verify_bytes = bytes_done[DDIR_WRITE] +
+						bytes_done[DDIR_TRIM];
+			}
 		}
 
 		clear_state = 1;
