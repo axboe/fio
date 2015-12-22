@@ -1,6 +1,7 @@
 #ifndef FIO_PARSE_H
 #define FIO_PARSE_H
 
+#include <inttypes.h>
 #include "flist.h"
 
 /*
@@ -69,8 +70,8 @@ struct fio_option {
 	int (*verify)(struct fio_option *, void *);
 	const char *prof_name;		/* only valid for specific profile */
 	void *prof_opts;
-	unsigned int category;		/* what type of option */
-	unsigned int group;		/* who to group with */
+	uint64_t category;		/* what type of option */
+	uint64_t group;			/* who to group with */
 	void *gui_data;
 	int is_seconds;			/* time value with seconds base */
 	int is_time;			/* time based value */
