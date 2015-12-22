@@ -2130,7 +2130,7 @@ reap:
 			if (waitee_running(td)) {
 				dprint(FD_PROCESS, "%s: waiting for %s\n",
 						td->o.name, td->o.wait_for);
-				break;
+				continue;
 			}
 
 			init_disk_util(td);
