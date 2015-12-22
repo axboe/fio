@@ -190,7 +190,7 @@ static const char *td_runstates[] = {
 	"REAPED",
 };
 
-static const char *runstate_to_name(int runstate)
+const char *runstate_to_name(int runstate)
 {
 	compiletime_assert(TD_LAST == 12, "td runstate list");
 	if (runstate >= 0 && runstate < TD_LAST)

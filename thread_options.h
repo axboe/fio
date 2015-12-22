@@ -40,6 +40,7 @@ struct thread_options {
 	uint64_t set_options[NR_OPTS_SZ];
 	char *description;
 	char *name;
+	char *wait_for;
 	char *directory;
 	char *filename;
 	char *filename_format;
@@ -289,6 +290,7 @@ struct thread_options_pack {
 	uint64_t set_options[NR_OPTS_SZ];
 	uint8_t description[FIO_TOP_STR_MAX];
 	uint8_t name[FIO_TOP_STR_MAX];
+	uint8_t wait_for[FIO_TOP_STR_MAX];
 	uint8_t directory[FIO_TOP_STR_MAX];
 	uint8_t filename[FIO_TOP_STR_MAX];
 	uint8_t filename_format[FIO_TOP_STR_MAX];

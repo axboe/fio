@@ -542,6 +542,7 @@ enum {
 extern void td_set_runstate(struct thread_data *, int);
 extern int td_bump_runstate(struct thread_data *, int);
 extern void td_restore_runstate(struct thread_data *, int);
+extern const char *runstate_to_name(int runstate);
 
 /*
  * Allow 60 seconds for a job to quit on its own, otherwise reap with

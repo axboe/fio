@@ -1217,6 +1217,49 @@ static void gen_log_name(char *name, size_t size, const char *logtype,
 		snprintf(name, size, "%s_%s.%s", logname, logtype, suf);
 }
 
+static int check_waitees(char *waitee)
+{
+	struct thread_data *td;
+	int i, ret = 0;
+
+	for_each_td(td, i) {
+		if (td->subjob_number)
+			continue;
+
+		ret += !strcmp(td->o.name, waitee);
+	}
+
+	return ret;
+}
+
+static bool wait_for_ok(const char *jobname, struct thread_options *o)
+{
+	int nw;
+
+	if (!o->wait_for)
+		return true;
+
+	if (!strcmp(jobname, o->wait_for)) {
+		log_err("%s: a job cannot wait for itself (wait_for=%s).\n",
+				jobname, o->wait_for);
+		return false;
+	}
+
+	if (!(nw = check_waitees(o->wait_for))) {
+		log_err("%s: waitee job %s unknown.\n", jobname, o->wait_for);
+		return false;
+	}
+
+	if (nw > 1) {
+		log_err("%s: multiple waitees %s found,\n"
+			"please avoid duplicates when using wait_for option.\n",
+				jobname, o->wait_for);
+		return false;
+	}
+
+	return true;
+}
+
 /*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
@@ -1271,6 +1314,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	}
 
 	if (fixup_options(td))
+		goto err;
+
+	/*
+	 * Belongs to fixup_options, but o->name is not necessarily set as yet
+	 */
+	if (!wait_for_ok(jobname, o))
 		goto err;
 
 	flow_init_job(td);

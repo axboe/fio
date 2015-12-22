@@ -1229,6 +1229,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_DESC,
 	},
 	{
+		.name	= "wait_for",
+		.lname	= "Waitee name",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(wait_for),
+		.help	= "Name of the job this one wants to wait for before starting",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_DESC,
+	},
+	{
 		.name	= "filename",
 		.lname	= "Filename(s)",
 		.type	= FIO_OPT_STR_STORE,

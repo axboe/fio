@@ -1978,6 +1978,32 @@ mounted:
 	return true;
 }
 
+static bool waitee_running(struct thread_data *me)
+{
+	const char *waitee = me->o.wait_for;
+	const char *self = me->o.name;
+	struct thread_data *td;
+	int i;
+
+	if (!waitee)
+		return false;
+
+	for_each_td(td, i) {
+		if (!strcmp(td->o.name, self) || strcmp(td->o.name, waitee))
+			continue;
+
+		if (td->runstate < TD_EXITED) {
+			dprint(FD_PROCESS, "%s fenced by %s(%s)\n",
+					self, td->o.name,
+					runstate_to_name(td->runstate));
+			return true;
+		}
+	}
+
+	dprint(FD_PROCESS, "%s: %s completed, can run\n", self, waitee);
+	return false;
+}
+
 /*
  * Main function for kicking off and reaping jobs, as needed.
  */
@@ -2098,6 +2124,12 @@ reap:
 			if (td->o.stonewall && (nr_started || nr_running)) {
 				dprint(FD_PROCESS, "%s: stonewall wait\n",
 							td->o.name);
+				break;
+			}
+
+			if (waitee_running(td)) {
+				dprint(FD_PROCESS, "%s: waiting for %s\n",
+						td->o.name, td->o.wait_for);
 				break;
 			}
 

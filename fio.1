@@ -180,6 +180,14 @@ a ':' character.
 May be used to override the job name.  On the command line, this parameter
 has the special purpose of signalling the start of a new job.
 .TP
+.BI wait_for \fR=\fPstr
+Specifies the name of the already defined job to wait for. Single waitee name
+only may be specified. If set, the job won't be started until all workers of
+the waitee job are done.  Wait_for operates on the job name basis, so there are
+a few limitations. First, the waitee must be defined prior to the waiter job
+(meaning no forward references). Second, if a job is being referenced as a
+waitee, it must have a unique name (no duplicate waitees).
+.TP
 .BI description \fR=\fPstr
 Human-readable description of the job. It is printed when the job is run, but
 otherwise has no special purpose.

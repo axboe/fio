@@ -25,6 +25,7 @@ static void free_thread_options_to_cpu(struct thread_options *o)
 {
 	free(o->description);
 	free(o->name);
+	free(o->wait_for);
 	free(o->directory);
 	free(o->filename);
 	free(o->filename_format);
@@ -54,6 +55,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 
 	string_to_cpu(&o->description, top->description);
 	string_to_cpu(&o->name, top->name);
+	string_to_cpu(&o->wait_for, top->wait_for);
 	string_to_cpu(&o->directory, top->directory);
 	string_to_cpu(&o->filename, top->filename);
 	string_to_cpu(&o->filename_format, top->filename_format);
@@ -276,6 +278,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 
 	string_to_net(top->description, o->description);
 	string_to_net(top->name, o->name);
+	string_to_net(top->wait_for, o->wait_for);
 	string_to_net(top->directory, o->directory);
 	string_to_net(top->filename, o->filename);
 	string_to_net(top->filename_format, o->filename_format);
