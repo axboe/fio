@@ -92,9 +92,9 @@ struct gopt_job_view {
 static GNode *gopt_dep_tree;
 
 static GtkWidget *gopt_get_group_frame(struct gopt_job_view *gjv,
-				       GtkWidget *box, unsigned int groupmask)
+				       GtkWidget *box, uint64_t groupmask)
 {
-	unsigned int mask, group;
+	uint64_t mask, group;
 	struct opt_group *og;
 	GtkWidget *frame, *hbox;
 	struct gopt_frame_widget *gfw;
@@ -1135,7 +1135,7 @@ static void gopt_add_options(struct gopt_job_view *gjv,
 	 */
 	for (i = 0; fio_options[i].name; i++) {
 		struct fio_option *o = &fio_options[i];
-		unsigned int mask = o->category;
+		uint64_t mask = o->category;
 		struct opt_group *og;
 
 		while ((og = opt_group_from_mask(&mask)) != NULL) {
@@ -1189,7 +1189,7 @@ static void gopt_add_group_tabs(GtkWidget *notebook, struct gopt_job_view *gjv)
 
 	i = 0;
 	do {
-		unsigned int mask = (1U << i);
+		uint64_t mask = (1ULL << i);
 
 		og = opt_group_from_mask(&mask);
 		if (!og)
