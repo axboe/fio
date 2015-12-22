@@ -264,7 +264,7 @@ error:
 	return ret;
 }
 
-static unsigned long long get_rand_file_size(struct thread_data *td)
+unsigned long long get_rand_file_size(struct thread_data *td)
 {
 	unsigned long long ret, sized;
 	uint64_t frand_max;
