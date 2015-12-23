@@ -107,7 +107,7 @@ static GtkWidget *gopt_get_group_frame(struct gopt_job_view *gjv,
 	if (!og)
 		return NULL;
 
-	group = ffz(~groupmask);
+	group = ffz64(~groupmask);
 	gfw = &gjv->g_widgets[group];
 	if (!gfw->vbox[0]) {
 		frame = gtk_frame_new(og->name);
@@ -1139,7 +1139,7 @@ static void gopt_add_options(struct gopt_job_view *gjv,
 		struct opt_group *og;
 
 		while ((og = opt_group_from_mask(&mask)) != NULL) {
-			GtkWidget *vbox = gjv->vboxes[ffz(~og->mask)];
+			GtkWidget *vbox = gjv->vboxes[ffz64(~og->mask)];
 
 			hbox = gtk_hbox_new(FALSE, 3);
 			gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 5);
