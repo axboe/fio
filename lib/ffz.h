@@ -1,16 +1,16 @@
 #ifndef FIO_FFZ_H
 #define FIO_FFZ_H
 
-static inline int __ffs(unsigned long word)
+#include <inttypes.h>
+
+static inline int ffs64(uint64_t word)
 {
 	int r = 0;
 
-#if BITS_PER_LONG == 64
 	if ((word & 0xffffffff) == 0) {
 		r += 32;
 		word >>= 32;
 	}
-#endif
 	if (!(word & 0xffff)) {
 		word >>= 16;
 		r += 16;
@@ -35,9 +35,20 @@ static inline int __ffs(unsigned long word)
 	return r;
 }
 
+#ifndef ARCH_HAVE_FFZ
+
 static inline int ffz(unsigned long bitmask)
 {
-	return __ffs(~bitmask);
+	return ffs64(~bitmask);
+}
+
+#else
+#define ffz(bitmask)	arch_ffz(bitmask)
+#endif
+
+static inline int ffz64(uint64_t bitmask)
+{
+	return ffs64(~bitmask);
 }
 
 #endif
