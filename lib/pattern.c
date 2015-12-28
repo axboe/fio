@@ -1,6 +1,7 @@
 #include "fio.h"
 #include "strntol.h"
 #include "pattern.h"
+#include "../oslib/strcasestr.h"
 
 /**
  * parse_string() - parses string in double quotes, like "abc"
