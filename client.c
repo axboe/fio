@@ -1485,8 +1485,8 @@ static void sendfile_reply(int fd, struct cmd_sendfile_reply *rep,
 	fio_net_send_cmd(fd, FIO_NET_CMD_SENDFILE, rep, size, &tag, NULL);
 }
 
-static int send_file(struct fio_client *client, struct cmd_sendfile *pdu,
-		     uint64_t tag)
+static int fio_send_file(struct fio_client *client, struct cmd_sendfile *pdu,
+			 uint64_t tag)
 {
 	struct cmd_sendfile_reply *rep;
 	struct stat sb;
@@ -1636,7 +1636,7 @@ int fio_handle_client(struct fio_client *client)
 		}
 	case FIO_NET_CMD_SENDFILE: {
 		struct cmd_sendfile *pdu = (struct cmd_sendfile *) cmd->payload;
-		send_file(client, pdu, cmd->tag);
+		fio_send_file(client, pdu, cmd->tag);
 		break;
 		}
 	case FIO_NET_CMD_JOB_OPT: {
