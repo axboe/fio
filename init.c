@@ -26,7 +26,7 @@
 #include "idletime.h"
 #include "filelock.h"
 
-#include "lib/getopt.h"
+#include "oslib/getopt.h"
 #include "oslib/strcasestr.h"
 
 #include "crc/test.h"

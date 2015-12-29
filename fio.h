@@ -32,7 +32,7 @@
 #include "profile.h"
 #include "fio_time.h"
 #include "gettime.h"
-#include "lib/getopt.h"
+#include "oslib/getopt.h"
 #include "lib/rand.h"
 #include "lib/rbtree.h"
 #include "client.h"
