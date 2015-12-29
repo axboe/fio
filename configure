@@ -1494,6 +1494,16 @@ fi
 fi
 fi
 
+# Check if lex fails using -o
+if test "$arith" = "yes" ; then
+$LEX -o lex.yy.c exp/expression-parser.l 2> /dev/null
+if test "$?" = "0" ; then
+  lex_use_o="yes"
+else
+  lex_use_o="no"
+fi
+fi
+
 echo "lex/yacc for arithmetic       $arith"
 
 ##########################################
@@ -1755,6 +1765,9 @@ if test "$arith" = "yes" ; then
     echo "YACC=$YACC -y" >> $config_host_mak
   else
     echo "YACC=$YACC" >> $config_host_mak
+  fi
+  if test "$lex_use_o" = "yes" ; then
+    echo "CONFIG_LEX_USE_O=y" >> $config_host_mak
   fi
 fi
 if test "$getmntent" = "yes" ; then

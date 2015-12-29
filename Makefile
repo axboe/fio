@@ -297,7 +297,11 @@ override CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 
 ifdef CONFIG_ARITHMETIC
 lex.yy.c: exp/expression-parser.l
+ifdef CONFIG_LEX_USE_O
 	$(QUIET_LEX)$(LEX) -o $@ $<
+else
+	$(QUIET_LEX)$(LEX) $<
+endif
 
 lex.yy.o: lex.yy.c y.tab.h
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
