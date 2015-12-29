@@ -84,7 +84,7 @@ static uint64_t get_size(struct fio_file *f, struct stat *sb)
 	uint64_t ret;
 
 	if (S_ISBLK(sb->st_mode)) {
-		unsigned long long bytes;
+		unsigned long long bytes = 0;
 
 		if (blockdev_size(f, &bytes)) {
 			log_err("dedupe: failed getting bdev size\n");
