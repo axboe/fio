@@ -18,8 +18,6 @@
 #include "options.h"
 #include "optgroup.h"
 
-#include "crc/crc32c.h"
-
 char client_sockaddr_str[INET6_ADDRSTRLEN] = { 0 };
 
 struct pattern_fmt_desc fmt_desc[] = {
