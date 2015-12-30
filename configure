@@ -135,7 +135,7 @@ show_help="no"
 exit_val=0
 gfio_check="no"
 libhdfs="no"
-disable_lex="no"
+disable_lex=""
 prefix=/usr/local
 
 # parse options
@@ -171,6 +171,8 @@ for opt do
   ;;
   --disable-lex) disable_lex="yes"
   ;;
+  --enable-lex) disable_lex="no"
+  ;;
   --disable-shm) no_shm="yes"
   ;;
   --disable-optimizations) disable_opt="yes"
@@ -198,6 +200,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-gfapi        Disable gfapi"
   echo "--enable-libhdfs       Enable hdfs support"
   echo "--disable-lex          Disable use of lex/yacc for math"
+  echo "--enable-lex           Enable use of lex/yacc for math"
   echo "--disable-shm          Disable SHM support"
   echo "--disable-optimizations Don't enable compiler optimizations"
   exit $exit_val
@@ -240,6 +243,12 @@ fi
 # cross-compiling to one of these OSes then you'll need to specify
 # the correct CPU with the --cpu option.
 case $targetos in
+AIX)
+  # Unless explicitly enabled, turn off lex.
+  if test -z "$disable_lex" ; then
+    disable_lex="yes"
+  fi
+  ;;
 Darwin)
   # on Leopard most of the system is 32-bit, so we have to ask the kernel if
   # we can run 64-bit userspace code.
@@ -1455,7 +1464,7 @@ yacc="no"
 yacc_is_bison="no"
 lex="no"
 arith="no"
-if test "$disable_lex" = "no"; then
+if test "$disable_lex" = "no" || test -z "$disable_lex" ; then
 if test "$targetos" != "SunOS" ; then
 LEX=$(which lex 2> /dev/null)
 if test -x "$LEX" ; then
