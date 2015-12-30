@@ -154,8 +154,8 @@ enum opt_category_group {
 	FIO_OPT_G_INVALID	= (1ULL << __FIO_OPT_G_NR),
 };
 
-extern struct opt_group *opt_group_from_mask(uint64_t *mask);
-extern struct opt_group *opt_group_cat_from_mask(uint64_t *mask);
+extern const struct opt_group *opt_group_from_mask(uint64_t *mask);
+extern const struct opt_group *opt_group_cat_from_mask(uint64_t *mask);
 extern struct fio_option *fio_option_find(const char *name);
 extern unsigned int fio_get_kb_base(void *);
 

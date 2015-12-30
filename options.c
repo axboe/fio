@@ -1045,7 +1045,7 @@ static int gtod_cpu_verify(struct fio_option *o, void *data)
 /*
  * Option grouping
  */
-static struct opt_group fio_opt_groups[] = {
+static const struct opt_group fio_opt_groups[] = {
 	{
 		.name	= "General",
 		.mask	= FIO_OPT_C_GENERAL,
@@ -1075,18 +1075,17 @@ static struct opt_group fio_opt_groups[] = {
 	},
 };
 
-static struct opt_group *__opt_group_from_mask(struct opt_group *ogs,
+static const struct opt_group *group_from_mask(const struct opt_group *ogs,
 					       uint64_t *mask,
 					       uint64_t inv_mask)
 {
-	struct opt_group *og;
 	int i;
 
 	if (*mask == inv_mask || !*mask)
 		return NULL;
 
 	for (i = 0; ogs[i].name; i++) {
-		og = &ogs[i];
+		const struct opt_group *og = &ogs[i];
 
 		if (*mask & og->mask) {
 			*mask &= ~(og->mask);
@@ -1097,12 +1096,12 @@ static struct opt_group *__opt_group_from_mask(struct opt_group *ogs,
 	return NULL;
 }
 
-struct opt_group *opt_group_from_mask(uint64_t *mask)
+const struct opt_group *opt_group_from_mask(uint64_t *mask)
 {
-	return __opt_group_from_mask(fio_opt_groups, mask, FIO_OPT_C_INVALID);
+	return group_from_mask(fio_opt_groups, mask, FIO_OPT_C_INVALID);
 }
 
-static struct opt_group fio_opt_cat_groups[] = {
+static const struct opt_group fio_opt_cat_groups[] = {
 	{
 		.name	= "Latency profiling",
 		.mask	= FIO_OPT_G_LATPROF,
@@ -1201,9 +1200,9 @@ static struct opt_group fio_opt_cat_groups[] = {
 	}
 };
 
-struct opt_group *opt_group_cat_from_mask(uint64_t *mask)
+const struct opt_group *opt_group_cat_from_mask(uint64_t *mask)
 {
-	return __opt_group_from_mask(fio_opt_cat_groups, mask, FIO_OPT_G_INVALID);
+	return group_from_mask(fio_opt_cat_groups, mask, FIO_OPT_G_INVALID);
 }
 
 /*
