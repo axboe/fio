@@ -8,6 +8,7 @@
 #include <rbd/librbd.h>
 
 #include "../fio.h"
+#include "../optgroup.h"
 
 struct fio_rbd_iou {
 	struct io_u *io_u;

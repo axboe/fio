@@ -41,6 +41,7 @@
 
 #include "../fio.h"
 #include "../hash.h"
+#include "../optgroup.h"
 
 #include <rdma/rdma_cma.h>
 #include <infiniband/arch.h>

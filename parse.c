@@ -15,6 +15,7 @@
 #include "parse.h"
 #include "debug.h"
 #include "options.h"
+#include "optgroup.h"
 #include "minmax.h"
 #include "lib/ieee754.h"
 #include "lib/pow2.h"

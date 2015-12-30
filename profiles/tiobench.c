@@ -1,6 +1,7 @@
 #include "../fio.h"
 #include "../profile.h"
 #include "../parse.h"
+#include "../optgroup.h"
 
 static unsigned long long size;
 static unsigned int loops = 1;

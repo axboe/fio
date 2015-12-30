@@ -13,6 +13,7 @@
 
 #include "../fio.h"
 #include "../lib/pow2.h"
+#include "../optgroup.h"
 
 static int fio_libaio_commit(struct thread_data *td);
 

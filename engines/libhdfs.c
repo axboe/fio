@@ -15,7 +15,7 @@
 #include <hdfs.h>
 
 #include "../fio.h"
-
+#include "../optgroup.h"
 
 #define CHUNCK_NAME_LENGTH_MAX 80
 #define CHUNCK_CREATION_BUFFER_SIZE 65536

@@ -11,6 +11,7 @@
 #include "ghelpers.h"
 #include "gerror.h"
 #include "parse.h"
+#include "optgroup.h"
 
 struct gopt {
 	GtkWidget *box;
@@ -95,7 +96,7 @@ static GtkWidget *gopt_get_group_frame(struct gopt_job_view *gjv,
 				       GtkWidget *box, uint64_t groupmask)
 {
 	uint64_t mask, group;
-	struct opt_group *og;
+	const struct opt_group *og;
 	GtkWidget *frame, *hbox;
 	struct gopt_frame_widget *gfw;
 
@@ -1136,7 +1137,7 @@ static void gopt_add_options(struct gopt_job_view *gjv,
 	for (i = 0; fio_options[i].name; i++) {
 		struct fio_option *o = &fio_options[i];
 		uint64_t mask = o->category;
-		struct opt_group *og;
+		const struct opt_group *og;
 
 		while ((og = opt_group_from_mask(&mask)) != NULL) {
 			GtkWidget *vbox = gjv->vboxes[ffz64(~og->mask)];
@@ -1177,14 +1178,15 @@ static GtkWidget *gopt_add_tab(GtkWidget *notebook, const char *name)
 	return vbox;
 }
 
-static GtkWidget *gopt_add_group_tab(GtkWidget *notebook, struct opt_group *og)
+static GtkWidget *gopt_add_group_tab(GtkWidget *notebook,
+				     const struct opt_group *og)
 {
 	return gopt_add_tab(notebook, og->name);
 }
 
 static void gopt_add_group_tabs(GtkWidget *notebook, struct gopt_job_view *gjv)
 {
-	struct opt_group *og;
+	const struct opt_group *og;
 	unsigned int i;
 
 	i = 0;

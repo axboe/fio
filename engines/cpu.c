@@ -6,6 +6,7 @@
  *
  */
 #include "../fio.h"
+#include "../optgroup.h"
 
 struct cpu_options {
 	void *pad;
