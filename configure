@@ -499,8 +499,10 @@ int main(void)
 }
 EOF
 if compile_prog "" "-laio" "libaio" ; then
-  libaio=yes
-  LIBS="-laio $LIBS"
+  if test "$esx" != "yes" ; then
+    libaio=yes
+    LIBS="-laio $LIBS"
+  fi
 else
   if test "$libaio" = "yes" ; then
     feature_not_found "linux AIO" "libaio-dev or libaio-devel"
