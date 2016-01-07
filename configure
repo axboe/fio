@@ -247,6 +247,8 @@ AIX)
   # Unless explicitly enabled, turn off lex.
   if test -z "$disable_lex" ; then
     disable_lex="yes"
+  else
+    force_no_lex_o="yes"
   fi
   ;;
 Darwin)
@@ -1505,11 +1507,15 @@ fi
 
 # Check if lex fails using -o
 if test "$arith" = "yes" ; then
+if test "$force_no_lex_o" = "yes" ; then
+  lex_use_o="no"
+else
 $LEX -o lex.yy.c exp/expression-parser.l 2> /dev/null
 if test "$?" = "0" ; then
   lex_use_o="yes"
 else
   lex_use_o="no"
+fi
 fi
 fi
 
