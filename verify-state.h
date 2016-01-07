@@ -58,6 +58,7 @@ struct verify_state_hdr {
 
 #define IO_LIST_ALL		0xffffffff
 
+struct io_u;
 extern struct all_io_list *get_all_io_list(int, size_t *);
 extern void __verify_save_state(struct all_io_list *, const char *);
 extern void verify_save_state(int mask);
