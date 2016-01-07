@@ -489,7 +489,8 @@ echo "zlib                          $zlib"
 ##########################################
 # linux-aio probe
 libaio="no"
-cat > $TMPC <<EOF
+if test "$esx" != "yes" ; then
+  cat > $TMPC <<EOF
 #include <libaio.h>
 #include <stddef.h>
 int main(void)
@@ -498,14 +499,15 @@ int main(void)
   return 0;
 }
 EOF
-if compile_prog "" "-laio" "libaio" ; then
-  libaio=yes
-  LIBS="-laio $LIBS"
-else
-  if test "$libaio" = "yes" ; then
-    feature_not_found "linux AIO" "libaio-dev or libaio-devel"
+  if compile_prog "" "-laio" "libaio" ; then
+    libaio=yes
+    LIBS="-laio $LIBS"
+  else
+    if test "$libaio" = "yes" ; then
+      feature_not_found "linux AIO" "libaio-dev or libaio-devel"
+    fi
+    libaio=no
   fi
-  libaio=no
 fi
 echo "Linux AIO support             $libaio"
 
