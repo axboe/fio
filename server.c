@@ -1823,8 +1823,8 @@ int fio_server_get_verify_state(const char *name, int threadnumber,
 	}
 
 	if (rep->error) {
-		log_err("fio: failure on receiving state file: %s\n",
-				strerror(rep->error));
+		log_err("fio: failure on receiving state file %s: %s\n",
+				out.path, strerror(rep->error));
 fail:
 		*datap = NULL;
 		sfree(rep);
