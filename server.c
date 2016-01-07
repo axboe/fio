@@ -151,11 +151,13 @@ static int __sk_out_drop(struct sk_out *sk_out)
 		int refs;
 
 		sk_lock(sk_out);
+		assert(sk_out->refs != 0);
 		refs = --sk_out->refs;
 		sk_unlock(sk_out);
 
 		if (!refs) {
 			sk_out_free(sk_out);
+			pthread_setspecific(sk_out_key, NULL);
 			return 0;
 		}
 	}
@@ -168,8 +170,7 @@ void sk_out_drop(void)
 	struct sk_out *sk_out;
 
 	sk_out = pthread_getspecific(sk_out_key);
-	if (!__sk_out_drop(sk_out))
-		pthread_setspecific(sk_out_key, NULL);
+	__sk_out_drop(sk_out);
 }
 
 static void __fio_init_net_cmd(struct fio_net_cmd *cmd, uint16_t opcode,
@@ -757,6 +758,8 @@ static int handle_run_cmd(struct sk_out *sk_out, struct flist_head *job_list,
 	pid_t pid;
 	int ret;
 
+	sk_out_assign(sk_out);
+
 	fio_time_init();
 	set_genesis_time();
 
@@ -768,6 +771,7 @@ static int handle_run_cmd(struct sk_out *sk_out, struct flist_head *job_list,
 
 	ret = fio_backend(sk_out);
 	free_threads_shm();
+	sk_out_drop();
 	_exit(ret);
 }
 
@@ -1795,13 +1799,14 @@ int fio_server_get_verify_state(const char *name, int threadnumber,
 	struct cmd_reply *rep;
 	uint64_t tag;
 	void *data;
+	int ret;
 
 	dprint(FD_NET, "server: request verify state\n");
 
 	rep = smalloc(sizeof(*rep));
 	if (!rep) {
 		log_err("fio: smalloc pool too small\n");
-		return 1;
+		return ENOMEM;
 	}
 
 	__fio_mutex_init(&rep->lock, FIO_MUTEX_LOCKED);
@@ -1819,17 +1824,19 @@ int fio_server_get_verify_state(const char *name, int threadnumber,
 	 */
 	if (fio_mutex_down_timeout(&rep->lock, 10000)) {
 		log_err("fio: timed out waiting for reply\n");
+		ret = ETIMEDOUT;
 		goto fail;
 	}
 
 	if (rep->error) {
 		log_err("fio: failure on receiving state file %s: %s\n",
 				out.path, strerror(rep->error));
+		ret = rep->error;
 fail:
 		*datap = NULL;
 		sfree(rep);
 		fio_net_queue_quit();
-		return 1;
+		return ret;
 	}
 
 	/*
@@ -1837,12 +1844,15 @@ fail:
 	 * the header, and the thread_io_list checksum
 	 */
 	s = rep->data + sizeof(struct verify_state_hdr);
-	if (verify_state_hdr(rep->data, s, version))
+	if (verify_state_hdr(rep->data, s, version)) {
+		ret = EILSEQ;
 		goto fail;
+	}
 
 	/*
 	 * Don't need the header from now, copy just the thread_io_list
 	 */
+	ret = 0;
 	rep->size -= sizeof(struct verify_state_hdr);
 	data = malloc(rep->size);
 	memcpy(data, s, rep->size);
@@ -1851,7 +1861,7 @@ fail:
 	sfree(rep->data);
 	__fio_mutex_remove(&rep->lock);
 	sfree(rep);
-	return 0;
+	return ret;
 }
 
 static int fio_init_server_ip(void)
