@@ -41,7 +41,7 @@ static int bs_cmp(const void *p1, const void *p2)
 	const struct bssplit *bsp1 = p1;
 	const struct bssplit *bsp2 = p2;
 
-	return bsp1->perc < bsp2->perc;
+	return (int) bsp1->perc - (int) bsp2->perc;
 }
 
 static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
