@@ -2186,6 +2186,11 @@ static void set_sig_handlers(void)
 	sigaction(SIGINT, &act, NULL);
 }
 
+void fio_server_destroy_sk_key(void)
+{
+	pthread_key_delete(sk_out_key);
+}
+
 int fio_server_create_sk_key(void)
 {
 	if (pthread_key_create(&sk_out_key, NULL)) {
