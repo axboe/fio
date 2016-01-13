@@ -27,7 +27,7 @@ static void show_s(struct thread_io_list *s, unsigned int no_s)
 
 	printf("Completions:\n");
 	for (i = 0; i < s->no_comps; i++)
-		printf("\t%lu\n", s->offsets[i]);
+		printf("\t%llu\n", (unsigned long long) s->offsets[i]);
 }
 
 static void show_verify_state(void *buf, size_t size)
