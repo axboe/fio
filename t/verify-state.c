@@ -20,10 +20,10 @@ static void show_s(struct thread_io_list *s, unsigned int no_s)
 	int i;
 
 	printf("Thread %u, %s\n", no_s, s->name);
-	printf("Completions: %lu\n", s->no_comps);
-	printf("Depth: %lu\n", s->depth);
-	printf("Number IOs: %lu\n", s->numberio);
-	printf("Index: %lu\n", s->index);
+	printf("Completions: %llu\n", (unsigned long long) s->no_comps);
+	printf("Depth: %llu\n", (unsigned long long) s->depth);
+	printf("Number IOs: %llu\n", (unsigned long long) s->numberio);
+	printf("Index: %llu\n", (unsigned long long) s->index);
 
 	printf("Completions:\n");
 	for (i = 0; i < s->no_comps; i++)
