@@ -39,6 +39,9 @@ int main(int argc, char *argv[], char *envp[])
 #error "No available clock source!"
 #endif
 
+	if (fio_server_create_sk_key())
+		goto done;
+
 	if (parse_options(argc, argv))
 		goto done;
 

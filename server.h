@@ -220,6 +220,8 @@ extern void fio_server_send_add_job(struct thread_data *);
 extern void fio_server_send_start(struct thread_data *);
 extern int fio_net_send_quit(int sk);
 
+extern int fio_server_create_sk_key(void);
+
 extern int exit_backend;
 extern int fio_net_port;
 

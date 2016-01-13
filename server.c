@@ -2186,16 +2186,20 @@ static void set_sig_handlers(void)
 	sigaction(SIGINT, &act, NULL);
 }
 
-static int fio_server(void)
+int fio_server_create_sk_key(void)
 {
-	int sk, ret;
-
 	if (pthread_key_create(&sk_out_key, NULL)) {
 		log_err("fio: can't create sk_out backend key\n");
-		return -1;
+		return 1;
 	}
 
 	pthread_setspecific(sk_out_key, NULL);
+	return 0;
+}
+
+static int fio_server(void)
+{
+	int sk, ret;
 
 	dprint(FD_NET, "starting server\n");
 
