@@ -1293,7 +1293,7 @@ static bool keep_running(struct thread_data *td)
 		if (diff < td_max_bs(td))
 			return false;
 
-		if (fio_files_done(td))
+		if (fio_files_done(td) && !td->o.io_limit)
 			return false;
 
 		return true;
