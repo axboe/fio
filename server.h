@@ -213,7 +213,7 @@ extern void fio_server_send_du(void);
 extern void fio_server_send_job_options(struct flist_head *, unsigned int);
 extern int fio_server_get_verify_state(const char *, int, void **, int *);
 
-extern struct fio_net_cmd *fio_net_recv_cmd(int sk);
+extern struct fio_net_cmd *fio_net_recv_cmd(int sk, bool wait);
 
 extern int fio_send_iolog(struct thread_data *, struct io_log *, const char *);
 extern void fio_server_send_add_job(struct thread_data *);

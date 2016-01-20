@@ -262,10 +262,17 @@ static int fio_send_data(int sk, const void *p, unsigned int len)
 	return fio_sendv_data(sk, &iov, 1);
 }
 
-static int fio_recv_data(int sk, void *p, unsigned int len)
+static int fio_recv_data(int sk, void *p, unsigned int len, bool wait)
 {
+	int flags;
+
+	if (wait)
+		flags = MSG_WAITALL;
+	else
+		flags = MSG_DONTWAIT;
+
 	do {
-		int ret = recv(sk, p, len, MSG_WAITALL);
+		int ret = recv(sk, p, len, flags);
 
 		if (ret > 0) {
 			len -= ret;
@@ -275,9 +282,11 @@ static int fio_recv_data(int sk, void *p, unsigned int len)
 			continue;
 		} else if (!ret)
 			break;
-		else if (errno == EAGAIN || errno == EINTR)
-			continue;
-		else
+		else if (errno == EAGAIN || errno == EINTR) {
+			if (wait)
+				continue;
+			break;
+		} else
 			break;
 	} while (!exit_backend);
 
@@ -326,7 +335,7 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 /*
  * Read (and defragment, if necessary) incoming commands
  */
-struct fio_net_cmd *fio_net_recv_cmd(int sk)
+struct fio_net_cmd *fio_net_recv_cmd(int sk, bool wait)
 {
 	struct fio_net_cmd cmd, *tmp, *cmdret = NULL;
 	size_t cmd_size = 0, pdu_offset = 0;
@@ -335,7 +344,7 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 	void *pdu = NULL;
 
 	do {
-		ret = fio_recv_data(sk, &cmd, sizeof(cmd));
+		ret = fio_recv_data(sk, &cmd, sizeof(cmd), wait);
 		if (ret)
 			break;
 
@@ -379,7 +388,7 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk)
 
 		/* There's payload, get it */
 		pdu = (void *) cmdret->payload + pdu_offset;
-		ret = fio_recv_data(sk, pdu, cmd.pdu_len);
+		ret = fio_recv_data(sk, pdu, cmd.pdu_len, wait);
 		if (ret)
 			break;
 
@@ -1209,7 +1218,7 @@ static int handle_connection(struct sk_out *sk_out)
 		if (ret < 0)
 			break;
 
-		cmd = fio_net_recv_cmd(sk_out->sk);
+		cmd = fio_net_recv_cmd(sk_out->sk, true);
 		if (!cmd) {
 			ret = -1;
 			break;

@@ -33,6 +33,8 @@ static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_stop(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd);
 
+static void convert_text(struct fio_net_cmd *cmd);
+
 struct client_ops fio_client_ops = {
 	.text		= handle_text,
 	.disk_util	= handle_du,
@@ -215,11 +217,32 @@ static int fio_client_dec_jobs_eta(struct client_eta *eta, client_eta_op eta_fn)
 	return 1;
 }
 
+static void fio_drain_client_text(struct fio_client *client)
+{
+	do {
+		struct fio_net_cmd *cmd;
+
+		cmd = fio_net_recv_cmd(client->fd, false);
+		if (!cmd)
+			break;
+
+		if (cmd->opcode != FIO_NET_CMD_TEXT) {
+			free(cmd);
+			continue;
+		}
+
+		convert_text(cmd);
+		client->ops->text(client, cmd);
+	} while (1);
+}
+
 static void remove_client(struct fio_client *client)
 {
 	assert(client->refs);
 
 	dprint(FD_NET, "client: removed <%s>\n", client->hostname);
+
+	fio_drain_client_text(client);
 
 	if (!flist_empty(&client->list))
 		flist_del_init(&client->list);
@@ -1526,7 +1549,7 @@ int fio_handle_client(struct fio_client *client)
 
 	dprint(FD_NET, "client: handle %s\n", client->hostname);
 
-	cmd = fio_net_recv_cmd(client->fd);
+	cmd = fio_net_recv_cmd(client->fd, true);
 	if (!cmd)
 		return 0;
 
