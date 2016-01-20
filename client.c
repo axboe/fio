@@ -226,13 +226,12 @@ static void fio_drain_client_text(struct fio_client *client)
 		if (!cmd)
 			break;
 
-		if (cmd->opcode != FIO_NET_CMD_TEXT) {
-			free(cmd);
-			continue;
+		if (cmd->opcode == FIO_NET_CMD_TEXT) {
+			convert_text(cmd);
+			client->ops->text(client, cmd);
 		}
 
-		convert_text(cmd);
-		client->ops->text(client, cmd);
+		free(cmd);
 	} while (1);
 }
 
