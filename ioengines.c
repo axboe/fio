@@ -49,10 +49,6 @@ static int check_engine_ops(struct ioengine_ops *ops)
 		log_err("%s: no getevents handler\n", ops->name);
 		return 1;
 	}
-	if (!ops->queue) {
-		log_err("%s: no queue handler\n", ops->name);
-		return 1;
-	}
 
 	return 0;
 }
