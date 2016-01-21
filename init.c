@@ -1860,6 +1860,7 @@ static int fill_def_thread(void)
 
 static void show_debug_categories(void)
 {
+#ifdef FIO_INC_DEBUG
 	struct debug_level *dl = &debug_levels[0];
 	int curlen, first = 1;
 
@@ -1885,6 +1886,7 @@ static void show_debug_categories(void)
 		first = 0;
 	}
 	printf("\n");
+#endif
 }
 
 static void usage(const char *name)
