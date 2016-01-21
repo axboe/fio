@@ -493,7 +493,7 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 	if (jobname)
 		td->o.name = strdup(jobname);
 
-	if (!parent->o.group_reporting)
+	if (!parent->o.group_reporting || parent == &def_thread)
 		stat_number++;
 
 	set_cmd_options(td);
