@@ -136,6 +136,7 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int msecs)
 	if (!ret) {
 		mutex->value--;
 		pthread_mutex_unlock(&mutex->lock);
+		return 0;
 	}
 
 	pthread_mutex_unlock(&mutex->lock);
