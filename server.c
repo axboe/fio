@@ -269,7 +269,7 @@ static int fio_recv_data(int sk, void *p, unsigned int len, bool wait)
 	if (wait)
 		flags = MSG_WAITALL;
 	else
-		flags = MSG_DONTWAIT;
+		flags = OS_MSG_DONTWAIT;
 
 	do {
 		int ret = recv(sk, p, len, flags);
