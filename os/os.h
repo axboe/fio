@@ -343,6 +343,14 @@ static inline unsigned long long get_fs_free_size(const char *path)
 }
 #endif
 
+#ifdef __powerpc64__
+#define FIO_HAVE_CPU_ONLINE_SYSCONF
+static inline unsigned int cpus_online(void)
+{
+        return sysconf(_SC_NPROCESSORS_CONF);
+}
+#endif
+
 #ifndef FIO_HAVE_CPU_ONLINE_SYSCONF
 static inline unsigned int cpus_online(void)
 {
