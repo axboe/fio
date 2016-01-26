@@ -1460,7 +1460,6 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
 		return NULL;
 #endif
 		ret = convert_iolog_gz(cmd, pdu);
-		printf("compressed iolog, %p\n", ret);
 		if (!ret) {
 			log_err("fio: failed decompressing log\n");
 			return NULL;
