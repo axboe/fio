@@ -324,11 +324,6 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 		return 1;
 	}
 
-	if (cmd->pdu_len > FIO_SERVER_MAX_FRAGMENT_PDU) {
-		log_err("fio: command payload too large: %u\n", cmd->pdu_len);
-		return 1;
-	}
-
 	return 0;
 }
 
