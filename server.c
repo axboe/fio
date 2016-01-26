@@ -324,6 +324,11 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 		return 1;
 	}
 
+	if (cmd->pdu_len > FIO_SERVER_MAX_FRAGMENT_PDU) {
+		log_err("fio: command payload too large: %u\n", cmd->pdu_len);
+		return 1;
+	}
+
 	return 0;
 }
 
@@ -1057,17 +1062,35 @@ static int fio_send_cmd_ext_pdu(int sk, uint16_t opcode, const void *buf,
 {
 	struct fio_net_cmd cmd;
 	struct iovec iov[2];
+	size_t this_len;
+	int ret;
 
 	iov[0].iov_base = (void *) &cmd;
 	iov[0].iov_len = sizeof(cmd);
-	iov[1].iov_base = (void *) buf;
-	iov[1].iov_len = size;
 
-	__fio_init_net_cmd(&cmd, opcode, size, tag);
-	cmd.flags = __cpu_to_le32(flags);
-	fio_net_cmd_crc_pdu(&cmd, buf);
+	do {
+		uint32_t this_flags = flags;
 
-	return fio_sendv_data(sk, iov, 2);
+		this_len = size;
+		if (this_len > FIO_SERVER_MAX_FRAGMENT_PDU)
+			this_len = FIO_SERVER_MAX_FRAGMENT_PDU;
+
+		if (this_len < size)
+			this_flags |= FIO_NET_CMD_F_MORE;
+
+		__fio_init_net_cmd(&cmd, opcode, this_len, tag);
+		cmd.flags = __cpu_to_le32(this_flags);
+		fio_net_cmd_crc_pdu(&cmd, buf);
+
+		iov[1].iov_base = (void *) buf;
+		iov[1].iov_len = this_len;
+
+		ret = fio_sendv_data(sk, iov, 2);
+		size -= this_len;
+		buf += this_len;
+	} while (!ret && size);
+
+	return ret;
 }
 
 static void finish_entry(struct sk_entry *entry)
