@@ -971,9 +971,9 @@ static int handle_trigger_cmd(struct fio_net_cmd *cmd)
 		struct all_io_list state;
 
 		state.threads = cpu_to_le64((uint64_t) 0);
-		fio_net_queue_cmd(FIO_NET_CMD_VTRIGGER, &state, sizeof(state), NULL, SK_F_COPY);
+		fio_net_queue_cmd(FIO_NET_CMD_VTRIGGER, &state, sizeof(state), NULL, SK_F_COPY | SK_F_INLINE);
 	} else
-		fio_net_queue_cmd(FIO_NET_CMD_VTRIGGER, rep, sz, NULL, SK_F_FREE);
+		fio_net_queue_cmd(FIO_NET_CMD_VTRIGGER, rep, sz, NULL, SK_F_FREE | SK_F_INLINE);
 
 	exec_trigger(buf);
 	return 0;
