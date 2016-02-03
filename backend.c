@@ -520,6 +520,14 @@ sync_done:
 			if (*ret < 0)
 				break;
 		}
+
+		/*
+		 * when doing I/O (not when verifying),
+		 * check for any errors that are to be ignored
+		 */
+		if (!from_verify)
+			break;
+
 		return 0;
 	case FIO_Q_QUEUED:
 		/*
