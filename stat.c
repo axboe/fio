@@ -1942,35 +1942,30 @@ void reset_io_stats(struct thread_data *td)
 	}
 }
 
-static void _add_stat_to_log(struct io_log *iolog, unsigned long elapsed)
+static void __add_stat_to_log(struct io_log *iolog, enum fio_ddir ddir,
+			      unsigned long elapsed)
 {
 	/*
 	 * Note an entry in the log. Use the mean from the logged samples,
 	 * making sure to properly round up. Only write a log entry if we
 	 * had actual samples done.
 	 */
-	if (iolog->avg_window[DDIR_READ].samples) {
-		unsigned long mr;
+	if (iolog->avg_window[ddir].samples) {
+		unsigned long val;
 
-		mr = iolog->avg_window[DDIR_READ].mean.u.f + 0.50;
-		__add_log_sample(iolog, mr, DDIR_READ, 0, elapsed, 0);
-	}
-	if (iolog->avg_window[DDIR_WRITE].samples) {
-		unsigned long mw;
-
-		mw = iolog->avg_window[DDIR_WRITE].mean.u.f + 0.50;
-		__add_log_sample(iolog, mw, DDIR_WRITE, 0, elapsed, 0);
-	}
-	if (iolog->avg_window[DDIR_TRIM].samples) {
-		unsigned long mw;
-
-		mw = iolog->avg_window[DDIR_TRIM].mean.u.f + 0.50;
-		__add_log_sample(iolog, mw, DDIR_TRIM, 0, elapsed, 0);
+		val = iolog->avg_window[ddir].mean.u.f + 0.50;
+		__add_log_sample(iolog, val, ddir, 0, elapsed, 0);
 	}
 
-	reset_io_stat(&iolog->avg_window[DDIR_READ]);
-	reset_io_stat(&iolog->avg_window[DDIR_WRITE]);
-	reset_io_stat(&iolog->avg_window[DDIR_TRIM]);
+	reset_io_stat(&iolog->avg_window[ddir]);
+}
+
+static void _add_stat_to_log(struct io_log *iolog, unsigned long elapsed)
+{
+	int ddir;
+
+	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
+		__add_stat_to_log(iolog, ddir, elapsed);
 }
 
 static void add_log_sample(struct thread_data *td, struct io_log *iolog,
