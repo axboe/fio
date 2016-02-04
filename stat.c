@@ -1943,7 +1943,7 @@ void reset_io_stats(struct thread_data *td)
 }
 
 static void __add_stat_to_log(struct io_log *iolog, enum fio_ddir ddir,
-			      unsigned long elapsed)
+			      unsigned long elapsed, bool log_max)
 {
 	/*
 	 * Note an entry in the log. Use the mean from the logged samples,
@@ -1953,19 +1953,24 @@ static void __add_stat_to_log(struct io_log *iolog, enum fio_ddir ddir,
 	if (iolog->avg_window[ddir].samples) {
 		unsigned long val;
 
-		val = iolog->avg_window[ddir].mean.u.f + 0.50;
+		if (log_max)
+			val = iolog->avg_window[ddir].max_val;
+		else
+			val = iolog->avg_window[ddir].mean.u.f + 0.50;
+
 		__add_log_sample(iolog, val, ddir, 0, elapsed, 0);
 	}
 
 	reset_io_stat(&iolog->avg_window[ddir]);
 }
 
-static void _add_stat_to_log(struct io_log *iolog, unsigned long elapsed)
+static void _add_stat_to_log(struct io_log *iolog, unsigned long elapsed,
+			     bool log_max)
 {
 	int ddir;
 
 	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
-		__add_stat_to_log(iolog, ddir, elapsed);
+		__add_stat_to_log(iolog, ddir, elapsed, log_max);
 }
 
 static void add_log_sample(struct thread_data *td, struct io_log *iolog,
@@ -2001,7 +2006,7 @@ static void add_log_sample(struct thread_data *td, struct io_log *iolog,
 	if (this_window < iolog->avg_msec)
 		return;
 
-	_add_stat_to_log(iolog, elapsed);
+	_add_stat_to_log(iolog, elapsed, td->o.log_max != 0);
 
 	iolog->avg_last = elapsed;
 }
@@ -2013,15 +2018,15 @@ void finalize_logs(struct thread_data *td)
 	elapsed = mtime_since_now(&td->epoch);
 
 	if (td->clat_log)
-		_add_stat_to_log(td->clat_log, elapsed);
+		_add_stat_to_log(td->clat_log, elapsed, td->o.log_max != 0);
 	if (td->slat_log)
-		_add_stat_to_log(td->slat_log, elapsed);
+		_add_stat_to_log(td->slat_log, elapsed, td->o.log_max != 0);
 	if (td->lat_log)
-		_add_stat_to_log(td->lat_log, elapsed);
+		_add_stat_to_log(td->lat_log, elapsed, td->o.log_max != 0);
 	if (td->bw_log)
-		_add_stat_to_log(td->bw_log, elapsed);
+		_add_stat_to_log(td->bw_log, elapsed, td->o.log_max != 0);
 	if (td->iops_log)
-		_add_stat_to_log(td->iops_log, elapsed);
+		_add_stat_to_log(td->iops_log, elapsed, td->o.log_max != 0);
 }
 
 void add_agg_sample(unsigned long val, enum fio_ddir ddir, unsigned int bs)

@@ -3074,6 +3074,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "log_max_value",
+		.lname	= "Log maximum instead of average",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(log_max),
+		.help	= "Log max sample in a window instead of average",
+		.def	= "0",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "log_offset",
 		.lname	= "Log offset of IO",
 		.type	= FIO_OPT_BOOL,
