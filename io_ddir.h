@@ -16,8 +16,9 @@ enum fio_ddir {
 
 static inline const char *io_ddir_name(enum fio_ddir ddir)
 {
-	const char *name[] = { "read", "write", "trim", "sync", "datasync",
-				"sync_file_range", "wait", };
+	static const char *name[] = { "read", "write", "trim", "sync",
+					"datasync", "sync_file_range",
+					"wait", };
 
 	if (ddir < DDIR_LAST)
 		return name[ddir];
