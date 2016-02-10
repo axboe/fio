@@ -1916,11 +1916,10 @@ static int fio_init_server_ip(void)
 		return -1;
 	}
 #ifdef SO_REUSEPORT
-	if (setsockopt(sk, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
-		log_err("fio: setsockopt(REUSEPORT): %s\n", strerror(errno));
-		close(sk);
-		return -1;
-	}
+	/*
+	 * Not fatal if fails, so just ignore it if that happens
+	 */
+	setsockopt(sk, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
 #endif
 
 	if (use_ipv6) {
