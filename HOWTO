@@ -10,6 +10,7 @@ Table of contents
 7. Terse output
 8. Trace file format
 9. CPU idleness profiling
+10. Verification and triggers
 
 1.0 Overview and history
 ------------------------
@@ -2219,7 +2220,7 @@ localbox$ fio --client=server --trigger-file=/tmp/my-trigger --trigger="ipmi-reb
 For this case, fio would wait for the server to send us the write state,
 then execute 'ipmi-reboot server' when that happened.
 
-10.1 Loading verify state
+10.2 Loading verify state
 -------------------------
 To load store write state, read verification job file must contain
 the verify_state_load option. If that is set, fio will load the previously
