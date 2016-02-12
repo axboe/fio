@@ -2145,7 +2145,7 @@ server# \fBfio \-\-server\fR
 
 and on the client, we'll fire off the workload:
 
-localbox$ \fBfio \-\-client=server \-\-trigger\-file=/tmp/my\-trigger \-\-trigger-remote="bash \-c \\"echo b > /proc/sysrq-triger\\""\fR
+localbox$ \fBfio \-\-client=server \-\-trigger\-file=/tmp/my\-trigger \-\-trigger-remote="bash \-c "echo b > /proc/sysrq-triger""\fR
 
 We set \fB/tmp/my-trigger\fR as the trigger file, and we tell fio to execute
 
@@ -2193,34 +2193,34 @@ for TCP/IP v4, 'ip6' for TCP/IP v6, or 'sock' for a local unix domain
 socket. 'hostname' is either a hostname or IP address, and 'port' is the port to
 listen to (only valid for TCP/IP, not a local socket). Some examples:
 
-1) fio \-\-server
+1) \fBfio \-\-server\fR
 
    Start a fio server, listening on all interfaces on the default port (8765).
 
-2) fio \-\-server=ip:hostname,4444
+2) \fBfio \-\-server=ip:hostname,4444\fR
 
    Start a fio server, listening on IP belonging to hostname and on port 4444.
 
-3) fio \-\-server=ip6:::1,4444
+3) \fBfio \-\-server=ip6:::1,4444\fR
 
    Start a fio server, listening on IPv6 localhost ::1 and on port 4444.
 
-4) fio \-\-server=,4444
+4) \fBfio \-\-server=,4444\fR
 
    Start a fio server, listening on all interfaces on port 4444.
 
-5) fio \-\-server=1.2.3.4
+5) \fBfio \-\-server=1.2.3.4\fR
 
    Start a fio server, listening on IP 1.2.3.4 on the default port.
 
-6) fio \-\-server=sock:/tmp/fio.sock
+6) \fBfio \-\-server=sock:/tmp/fio.sock\fR
 
    Start a fio server, listening on the local socket /tmp/fio.sock.
 
 When a server is running, you can connect to it from a client. The client
 is run with:
 
-fio \-\-local-args \-\-client=server \-\-remote-args <job file(s)>
+\fBfio \-\-local-args \-\-client=server \-\-remote-args <job file(s)>\fR
 
 where \-\-local-args are arguments that are local to the client where it is
 running, 'server' is the connect string, and \-\-remote-args and <job file(s)>
@@ -2228,12 +2228,12 @@ are sent to the server. The 'server' string follows the same format as it
 does on the server side, to allow IP/hostname/socket and port strings.
 You can connect to multiple clients as well, to do that you could run:
 
-fio \-\-client=server2 \-\-client=server2 <job file(s)>
+\fBfio \-\-client=server2 \-\-client=server2 <job file(s)>\fR
 
 If the job file is located on the fio server, then you can tell the server
 to load a local file as well. This is done by using \-\-remote-config:
 
-fio \-\-client=server \-\-remote-config /path/to/file.fio
+\fBfio \-\-client=server \-\-remote-config /path/to/file.fio\fR
 
 Then fio will open this local (to the server) job file instead
 of being passed one from the client.
@@ -2248,7 +2248,7 @@ host2.your.dns.domain
 
 The fio command would then be:
 
-fio \-\-client=host.list <job file>
+\fBfio \-\-client=host.list <job file>\fR
 
 In this mode, you cannot input server-specific parameters or job files, and all
 servers receive the same job file.
