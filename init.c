@@ -1773,15 +1773,48 @@ int __parse_jobs_ini(struct thread_data *td,
 			strip_blank_end(p);
 
 			if (!strncmp(p, "include", strlen("include"))) {
-				char *filename = p + strlen("include") + 1;
+				char *filename = p + strlen("include") + 1,
+					*ts, *full_fn = NULL;
 
-				if ((ret = __parse_jobs_ini(td, filename,
-						is_buf, stonewall_flag, type, 1,
-						name, &opts, &alloc_opts, &num_opts))) {
-					log_err("Error %d while parsing include file %s\n",
-						ret, filename);
-					break;
+				/*
+				 * Allow for the include filename
+				 * specification to be relative.
+				 */
+				if (access(filename, F_OK) &&
+				    (ts = strrchr(file, '/'))) {
+					int len = ts - file +
+						strlen(filename) + 2;
+
+					if (!(full_fn = calloc(1, len))) {
+						ret = ENOMEM;
+						break;
+					}
+
+					strncpy(full_fn,
+						file, (ts - file) + 1);
+					strncpy(full_fn + (ts - file) + 1,
+						filename, strlen(filename));
+					full_fn[len - 1] = 0;
+					filename = full_fn;
 				}
+
+				ret = __parse_jobs_ini(td, filename, is_buf,
+						       stonewall_flag, type, 1,
+						       name, &opts,
+						       &alloc_opts, &num_opts);
+
+				if (ret) {
+					log_err("Error %d while parsing "
+						"include file %s\n",
+						ret, filename);
+				}
+
+				if (full_fn)
+					free(full_fn);
+
+				if (ret)
+					break;
+
 				continue;
 			}
 
