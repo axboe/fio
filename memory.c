@@ -229,7 +229,17 @@ int allocate_io_mem(struct thread_data *td)
 
 	dprint(FD_MEM, "Alloc %llu for buffers\n", (unsigned long long) total_mem);
 
-	if (td->o.mem_type == MEM_MALLOC)
+	/*
+	 * If the IO engine has hooks to allocate/free memory, use those. But
+	 * error out if the user explicitly asked for something else.
+	 */
+	if (td->io_ops->iomem_alloc) {
+		if (fio_option_is_set(&td->o, mem_type)) {
+			log_err("fio: option 'mem/iomem' conflicts with specified IO engine\n");
+			ret = 1;
+		} else
+			ret = td->io_ops->iomem_alloc(td, total_mem);
+	} else if (td->o.mem_type == MEM_MALLOC)
 		ret = alloc_mem_malloc(td, total_mem);
 	else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE)
 		ret = alloc_mem_shm(td, total_mem);
@@ -255,7 +265,10 @@ void free_io_mem(struct thread_data *td)
 	if (td->o.odirect || td->o.oatomic)
 		total_mem += page_mask;
 
-	if (td->o.mem_type == MEM_MALLOC)
+	if (td->io_ops->iomem_alloc) {
+		if (td->io_ops->iomem_free)
+			td->io_ops->iomem_free(td);
+	} else if (td->o.mem_type == MEM_MALLOC)
 		free_mem_malloc(td);
 	else if (td->o.mem_type == MEM_SHM || td->o.mem_type == MEM_SHMHUGE)
 		free_mem_shm(td);

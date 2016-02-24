@@ -16,7 +16,7 @@
 #include <guasi.h>
 #endif
 
-#define FIO_IOOPS_VERSION	22
+#define FIO_IOOPS_VERSION	23
 
 enum {
 	IO_U_F_FREE		= 1 << 0,
@@ -157,6 +157,8 @@ struct ioengine_ops {
 	int (*unlink_file)(struct thread_data *, struct fio_file *);
 	int (*get_file_size)(struct thread_data *, struct fio_file *);
 	void (*terminate)(struct thread_data *);
+	int (*iomem_alloc)(struct thread_data *, size_t);
+	void (*iomem_free)(struct thread_data *);
 	int (*io_u_init)(struct thread_data *, struct io_u *);
 	void (*io_u_free)(struct thread_data *, struct io_u *);
 	int option_struct_size;
