@@ -309,6 +309,8 @@ requeue:
 		put_io_u(td, io_u);
 		return true;
 	} else if (ret == FIO_Q_QUEUED) {
+		if (td_io_commit(td))
+			return true;
 		if (io_u_queued_complete(td, 1) < 0)
 			return true;
 	} else if (ret == FIO_Q_COMPLETED) {
