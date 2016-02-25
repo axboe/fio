@@ -342,10 +342,10 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	} else if (ret == FIO_Q_QUEUED) {
 		int r;
 
-		if (ddir_rw(io_u->ddir)) {
-			td->io_u_queued++;
+		td->io_u_queued++;
+
+		if (ddir_rw(io_u->ddir))
 			td->ts.total_io_u[io_u->ddir]++;
-		}
 
 		if (td->io_u_queued >= td->o.iodepth_batch) {
 			r = td_io_commit(td);
