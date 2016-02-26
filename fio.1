@@ -591,6 +591,9 @@ coalescing adjacent IOs into a single submission.
 .B pvsync
 Basic \fBpreadv\fR\|(2) or \fBpwritev\fR\|(2) I/O.
 .TP
+.B pvsync2
+Basic \fBpreadv2\fR\|(2) or \fBpwritev2\fR\|(2) I/O.
+.TP
 .B libaio
 Linux native asynchronous I/O. This ioengine defines engine specific options.
 .TP
@@ -1646,6 +1649,10 @@ With this flag turned on, the AIO ring will be read directly
 from user-space to reap events. The reaping mode is only
 enabled when polling for a minimum of 0 events (eg when
 iodepth_batch_complete=0).
+.TP
+.BI (psyncv2)hipri
+Set RWF_HIPRI on IO, indicating to the kernel that it's of
+higher priority than normal.
 .TP
 .BI (net,netsplice)hostname \fR=\fPstr
 The host name or IP address to use for TCP or UDP based IO.

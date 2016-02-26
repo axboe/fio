@@ -1241,6 +1241,22 @@ fi
 echo "pwritev/preadv                $pwritev"
 
 ##########################################
+# Check whether we have pwritev2/preadv2
+pwritev2="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <sys/uio.h>
+int main(int argc, char **argv)
+{
+  return pwritev2(0, NULL, 1, 0, 0) + preadv2(0, NULL, 1, 0, 0);
+}
+EOF
+if compile_prog "" "" "pwritev2"; then
+  pwritev2="yes"
+fi
+echo "pwritev2/preadv2              $pwritev2"
+
+##########################################
 # Check whether we have the required functions for ipv6
 ipv6="no"
 cat > $TMPC << EOF
@@ -1741,6 +1757,9 @@ if test "$rlimit_memlock" = "yes" ; then
 fi
 if test "$pwritev" = "yes" ; then
   output_sym "CONFIG_PWRITEV"
+fi
+if test "$pwritev2" = "yes" ; then
+  output_sym "CONFIG_PWRITEV2"
 fi
 if test "$ipv6" = "yes" ; then
   output_sym "CONFIG_IPV6"

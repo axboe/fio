@@ -13,6 +13,7 @@
 #include <assert.h>
 
 #include "../fio.h"
+#include "../optgroup.h"
 
 /*
  * Sync engine uses engine_data to store last offset
@@ -30,6 +31,28 @@ struct syncio_data {
 	struct fio_file *last_file;
 	enum fio_ddir last_ddir;
 };
+
+#ifdef CONFIG_PWRITEV2
+struct psyncv2_options {
+	void *pad;
+	unsigned int hipri;
+};
+
+static struct fio_option options[] = {
+	{
+		.name	= "hipri",
+		.lname	= "RWF_HIPRI",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct psyncv2_options, hipri),
+		.help	= "Set RWF_HIPRI for pwritev2/preadv2",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= NULL,
+	},
+};
+#endif
 
 static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 {
@@ -97,6 +120,38 @@ static int fio_pvsyncio_queue(struct thread_data *td, struct io_u *io_u)
 	return fio_io_end(td, io_u, ret);
 }
 #endif
+
+#ifdef CONFIG_PWRITEV2
+static int fio_pvsyncio2_queue(struct thread_data *td, struct io_u *io_u)
+{
+	struct syncio_data *sd = td->io_ops->data;
+	struct psyncv2_options *o = td->eo;
+	struct iovec *iov = &sd->iovecs[0];
+	struct fio_file *f = io_u->file;
+	int ret, flags = 0;
+
+	fio_ro_check(td, io_u);
+
+	if (o->hipri)
+		flags |= RWF_HIPRI;
+
+	iov->iov_base = io_u->xfer_buf;
+	iov->iov_len = io_u->xfer_buflen;
+
+	if (io_u->ddir == DDIR_READ)
+		ret = preadv2(f->fd, iov, 1, io_u->offset, flags);
+	else if (io_u->ddir == DDIR_WRITE)
+		ret = pwritev2(f->fd, iov, 1, io_u->offset, flags);
+	else if (io_u->ddir == DDIR_TRIM) {
+		do_io_u_trim(td, io_u);
+		return FIO_Q_COMPLETED;
+	} else
+		ret = do_io_u_sync(td, io_u);
+
+	return fio_io_end(td, io_u, ret);
+}
+#endif
+
 
 static int fio_psyncio_queue(struct thread_data *td, struct io_u *io_u)
 {
@@ -371,6 +426,22 @@ static struct ioengine_ops ioengine_pvrw = {
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
 	.flags		= FIO_SYNCIO,
+};
+#endif
+
+#ifdef CONFIG_PWRITEV2
+static struct ioengine_ops ioengine_pvrw2 = {
+	.name		= "pvsync2",
+	.version	= FIO_IOOPS_VERSION,
+	.init		= fio_vsyncio_init,
+	.cleanup	= fio_vsyncio_cleanup,
+	.queue		= fio_pvsyncio2_queue,
+	.open_file	= generic_open_file,
+	.close_file	= generic_close_file,
+	.get_file_size	= generic_get_file_size,
+	.flags		= FIO_SYNCIO,
+	.options	= options,
+	.option_struct_size	= sizeof(struct psyncv2_options),
 };
 #endif
 

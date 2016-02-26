@@ -1784,6 +1784,9 @@ that defines them is selected.
 		enabled when polling for a minimum of 0 events (eg when
 		iodepth_batch_complete=0).
 
+[psyncv2] hipri		Set RWF_HIPRI on IO, indicating to the kernel that
+			it's of higher priority than normal.
+
 [cpu] cpuload=int Attempt to use the specified percentage of CPU cycles.
 
 [cpu] cpuchunks=int Split the load into cycles of the given time. In
