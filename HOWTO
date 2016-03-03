@@ -963,6 +963,7 @@ random_distribution=str:float	By default, fio will use a completely uniform
 		random		Uniform random distribution
 		zipf		Zipf distribution
 		pareto		Pareto distribution
+		gauss		Normal (guassian) distribution
 
 		When using a zipf or pareto distribution, an input value
 		is also needed to define the access pattern. For zipf, this
@@ -971,7 +972,9 @@ random_distribution=str:float	By default, fio will use a completely uniform
 		what the given input values will yield in terms of hit rates.
 		If you wanted to use zipf with a theta of 1.2, you would use
 		random_distribution=zipf:1.2 as the option. If a non-uniform
-		model is used, fio will disable use of the random map.
+		model is used, fio will disable use of the random map. For
+		the gauss distribution, a normal deviation is supplied as
+		a value between 0 and 100.
 
 percentage_random=int	For a random workload, set how big a percentage should
 		be random. This defaults to 100%, in which case the workload

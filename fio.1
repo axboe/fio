@@ -874,15 +874,19 @@ Zipf distribution
 .B pareto
 Pareto distribution
 .TP
+.B gauss
+Normal (gaussian) distribution
+.TP
 .RE
 .P
-When using a zipf or pareto distribution, an input value is also needed to
-define the access pattern. For zipf, this is the zipf theta. For pareto,
-it's the pareto power. Fio includes a test program, genzipf, that can be
-used visualize what the given input values will yield in terms of hit rates.
-If you wanted to use zipf with a theta of 1.2, you would use
+When using a \fBzipf\fR or \fBpareto\fR distribution, an input value is also
+needed to define the access pattern. For \fBzipf\fR, this is the zipf theta.
+For \fBpareto\fR, it's the pareto power. Fio includes a test program, genzipf,
+that can be used visualize what the given input values will yield in terms of
+hit rates. If you wanted to use \fBzipf\fR with a theta of 1.2, you would use
 random_distribution=zipf:1.2 as the option. If a non-uniform model is used,
-fio will disable use of the random map.
+fio will disable use of the random map. For the \fBgauss\fR distribution, a
+normal deviation is supplied as a value between 0 and 100.
 .TP
 .BI percentage_random \fR=\fPint
 For a random workload, set how big a percentage should be random. This defaults
