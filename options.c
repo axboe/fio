@@ -706,6 +706,244 @@ static int str_sfr_cb(void *data, const char *str)
 }
 #endif
 
+static int zone_cmp(const void *p1, const void *p2)
+{
+	const struct zone_split *zsp1 = p1;
+	const struct zone_split *zsp2 = p2;
+
+	return (int) zsp2->access_perc - (int) zsp1->access_perc;
+}
+
+static int zone_split_ddir(struct thread_options *o, int ddir, char *str)
+{
+	struct zone_split *zsplit;
+	unsigned int i, perc, perc_missing, sperc, sperc_missing;
+	long long val;
+	char *fname;
+
+	o->zone_split_nr[ddir] = 4;
+	zsplit = malloc(4 * sizeof(struct zone_split));
+
+	i = 0;
+	while ((fname = strsep(&str, ":")) != NULL) {
+		char *perc_str;
+
+		if (!strlen(fname))
+			break;
+
+		/*
+		 * grow struct buffer, if needed
+		 */
+		if (i == o->zone_split_nr[ddir]) {
+			o->zone_split_nr[ddir] <<= 1;
+			zsplit = realloc(zsplit, o->zone_split_nr[ddir]
+						  * sizeof(struct zone_split));
+		}
+
+		perc_str = strstr(fname, "/");
+		if (perc_str) {
+			*perc_str = '\0';
+			perc_str++;
+			perc = atoi(perc_str);
+			if (perc > 100)
+				perc = 100;
+			else if (!perc)
+				perc = -1U;
+		} else
+			perc = -1U;
+
+		if (str_to_decimal(fname, &val, 1, o, 0, 0)) {
+			log_err("fio: zone_split conversion failed\n");
+			free(zsplit);
+			return 1;
+		}
+
+		zsplit[i].access_perc = val;
+		zsplit[i].size_perc = perc;
+		i++;
+	}
+
+	o->zone_split_nr[ddir] = i;
+
+	/*
+	 * Now check if the percentages add up, and how much is missing
+	 */
+	perc = perc_missing = 0;
+	sperc = sperc_missing = 0;
+	for (i = 0; i < o->zone_split_nr[ddir]; i++) {
+		struct zone_split *zsp = &zsplit[i];
+
+		if (zsp->access_perc == (uint8_t) -1U)
+			perc_missing++;
+		else
+			perc += zsp->access_perc;
+
+		if (zsp->size_perc == (uint8_t) -1U)
+			sperc_missing++;
+		else
+			sperc += zsp->size_perc;
+
+	}
+
+	if (perc > 100 || sperc > 100) {
+		log_err("fio: zone_split percentages add to more than 100%%\n");
+		free(zsplit);
+		return 1;
+	}
+	if (perc < 100) {
+		log_err("fio: access percentage don't add up to 100 for zoned "
+			"random distribution (got=%u)\n", perc);
+		free(zsplit);
+		return 1;
+	}
+
+	/*
+	 * If values didn't have a percentage set, divide the remains between
+	 * them.
+	 */
+	if (perc_missing) {
+		if (perc_missing == 1 && o->zone_split_nr[ddir] == 1)
+			perc = 100;
+		for (i = 0; i < o->zone_split_nr[ddir]; i++) {
+			struct zone_split *zsp = &zsplit[i];
+
+			if (zsp->access_perc == (uint8_t) -1U)
+				zsp->access_perc = (100 - perc) / perc_missing;
+		}
+	}
+	if (sperc_missing) {
+		if (sperc_missing == 1 && o->zone_split_nr[ddir] == 1)
+			sperc = 100;
+		for (i = 0; i < o->zone_split_nr[ddir]; i++) {
+			struct zone_split *zsp = &zsplit[i];
+
+			if (zsp->size_perc == (uint8_t) -1U)
+				zsp->size_perc = (100 - sperc) / sperc_missing;
+		}
+	}
+
+	/*
+	 * now sort based on percentages, for ease of lookup
+	 */
+	qsort(zsplit, o->zone_split_nr[ddir], sizeof(struct zone_split), zone_cmp);
+	o->zone_split[ddir] = zsplit;
+	return 0;
+}
+
+static void __td_zone_gen_index(struct thread_data *td, enum fio_ddir ddir)
+{
+	unsigned int i, j, sprev, aprev;
+
+	td->zone_state_index[ddir] = malloc(sizeof(struct zone_split_index) * 100);
+
+	sprev = aprev = 0;
+	for (i = 0; i < td->o.zone_split_nr[ddir]; i++) {
+		struct zone_split *zsp = &td->o.zone_split[ddir][i];
+
+		for (j = aprev; j < aprev + zsp->access_perc; j++) {
+			struct zone_split_index *zsi = &td->zone_state_index[ddir][j];
+
+			zsi->size_perc = sprev + zsp->size_perc;
+			zsi->size_perc_prev = sprev;
+		}
+
+		aprev += zsp->access_perc;
+		sprev += zsp->size_perc;
+	}
+}
+
+/*
+ * Generate state table for indexes, so we don't have to do it inline from
+ * the hot IO path
+ */
+static void td_zone_gen_index(struct thread_data *td)
+{
+	int i;
+
+	td->zone_state_index = malloc(DDIR_RWDIR_CNT *
+					sizeof(struct zone_split_index *));
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++)
+		__td_zone_gen_index(td, i);
+}
+
+
+static int parse_zoned_distribution(struct thread_data *td, const char *input)
+{
+	char *str, *p, *odir, *ddir;
+	int i, ret = 0;
+
+	p = str = strdup(input);
+
+	strip_blank_front(&str);
+	strip_blank_end(str);
+
+	/* We expect it to start like that, bail if not */
+	if (strncmp(str, "zoned:", 6)) {
+		log_err("fio: mismatch in zoned input <%s>\n", str);
+		free(p);
+		return 1;
+	}
+	str += strlen("zoned:");
+
+	odir = strchr(str, ',');
+	if (odir) {
+		ddir = strchr(odir + 1, ',');
+		if (ddir) {
+			ret = zone_split_ddir(&td->o, DDIR_TRIM, ddir + 1);
+			if (!ret)
+				*ddir = '\0';
+		} else {
+			char *op;
+
+			op = strdup(odir + 1);
+			ret = zone_split_ddir(&td->o, DDIR_TRIM, op);
+
+			free(op);
+		}
+		if (!ret)
+			ret = zone_split_ddir(&td->o, DDIR_WRITE, odir + 1);
+		if (!ret) {
+			*odir = '\0';
+			ret = zone_split_ddir(&td->o, DDIR_READ, str);
+		}
+	} else {
+		char *op;
+
+		op = strdup(str);
+		ret = zone_split_ddir(&td->o, DDIR_WRITE, op);
+		free(op);
+
+		if (!ret) {
+			op = strdup(str);
+			ret = zone_split_ddir(&td->o, DDIR_TRIM, op);
+			free(op);
+		}
+		if (!ret)
+			ret = zone_split_ddir(&td->o, DDIR_READ, str);
+	}
+
+	free(p);
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		int j;
+
+		dprint(FD_PARSE, "zone ddir %d (nr=%u): \n", i, td->o.zone_split_nr[i]);
+
+		for (j = 0; j < td->o.zone_split_nr[i]; j++) {
+			struct zone_split *zsp = &td->o.zone_split[i][j];
+
+			dprint(FD_PARSE, "\t%d: %u/%u\n", j, zsp->access_perc,
+								zsp->size_perc);
+		}
+	}
+
+	if (!ret)
+		td_zone_gen_index(td);
+
+	return ret;
+}
+
 static int str_random_distribution_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
@@ -721,6 +959,8 @@ static int str_random_distribution_cb(void *data, const char *str)
 		val = FIO_DEF_PARETO;
 	else if (td->o.random_distribution == FIO_RAND_DIST_GAUSS)
 		val = 0.0;
+	else if (td->o.random_distribution == FIO_RAND_DIST_ZONED)
+		return parse_zoned_distribution(td, str);
 	else
 		return 0;
 
@@ -1709,6 +1949,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = FIO_RAND_DIST_GAUSS,
 			    .help = "Normal (gaussian) distribution",
 			  },
+			  { .ival = "zoned",
+			    .oval = FIO_RAND_DIST_ZONED,
+			    .help = "Zoned random distribution",
+			  },
+
 		},
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_RANDOM,
@@ -4168,6 +4413,14 @@ void fio_options_free(struct thread_data *td)
 		options_free(td->io_ops->options, td->eo);
 		free(td->eo);
 		td->eo = NULL;
+	}
+	if (td->zone_state_index) {
+		int i;
+
+		for (i = 0; i < DDIR_RWDIR_CNT; i++)
+			free(td->zone_state_index[i]);
+		free(td->zone_state_index);
+		td->zone_state_index = NULL;
 	}
 }
 

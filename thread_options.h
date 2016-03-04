@@ -25,10 +25,16 @@ enum fio_memtype {
 #define ERROR_STR_MAX	128
 
 #define BSSPLIT_MAX	64
+#define ZONESPLIT_MAX	64
 
 struct bssplit {
 	uint32_t bs;
 	uint32_t perc;
+};
+
+struct zone_split {
+	uint8_t access_perc;
+	uint8_t size_perc;
 };
 
 #define NR_OPTS_SZ	(FIO_MAX_OPTS / (8 * sizeof(uint64_t)))
@@ -134,6 +140,9 @@ struct thread_options {
 
 	unsigned int random_distribution;
 	unsigned int exitall_error;
+
+	struct zone_split *zone_split[DDIR_RWDIR_CNT];
+	unsigned int zone_split_nr[DDIR_RWDIR_CNT];
 
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
@@ -382,7 +391,9 @@ struct thread_options_pack {
 
 	uint32_t random_distribution;
 	uint32_t exitall_error;
-	uint32_t pad0;
+
+	struct zone_split zone_split[DDIR_RWDIR_CNT][ZONESPLIT_MAX];
+	uint32_t zone_split_nr[DDIR_RWDIR_CNT];
 
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;

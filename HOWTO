@@ -964,6 +964,7 @@ random_distribution=str:float	By default, fio will use a completely uniform
 		zipf		Zipf distribution
 		pareto		Pareto distribution
 		gauss		Normal (guassian) distribution
+		zoned		Zoned random distribution
 
 		When using a zipf or pareto distribution, an input value
 		is also needed to define the access pattern. For zipf, this
@@ -975,6 +976,25 @@ random_distribution=str:float	By default, fio will use a completely uniform
 		model is used, fio will disable use of the random map. For
 		the gauss distribution, a normal deviation is supplied as
 		a value between 0 and 100.
+
+		For a zoned distribution, fio supports specifying percentages
+		of IO access that should fall within what range of the file or
+		device. For example, given a criteria of:
+
+			60% of accesses should be to the first 10%
+			30% of accesses should be to the next 20%
+			8% of accesses should be to to the next 30%
+			2% of accesses should be to the next 40%
+
+		we can define that through zoning of the random accesses. For
+		the above example, the user would do:
+
+			random_distribution=zoned:60/10:30/20:8/30:2/40
+
+		similarly to how bssplit works for setting ranges and
+		percentages of block sizes. Like bssplit, it's possible to
+		specify separate zones for reads, writes, and trims. If just
+		one set is given, it'll apply to all of them.
 
 percentage_random=int	For a random workload, set how big a percentage should
 		be random. This defaults to 100%, in which case the workload

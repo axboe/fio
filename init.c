@@ -968,6 +968,7 @@ void td_fill_rand_seeds(struct thread_data *td)
 	frand_copy(&td->buf_state_prev, &td->buf_state);
 
 	init_rand_seed(&td->dedupe_state, td->rand_seeds[FIO_DEDUPE_OFF], use64);
+	init_rand_seed(&td->zone_state, td->rand_seeds[FIO_RAND_ZONE_OFF], use64);
 }
 
 /*

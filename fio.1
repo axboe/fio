@@ -877,8 +877,10 @@ Pareto distribution
 .B gauss
 Normal (gaussian) distribution
 .TP
+.B zoned
+Zoned random distribution
+.TP
 .RE
-.P
 When using a \fBzipf\fR or \fBpareto\fR distribution, an input value is also
 needed to define the access pattern. For \fBzipf\fR, this is the zipf theta.
 For \fBpareto\fR, it's the pareto power. Fio includes a test program, genzipf,
@@ -887,6 +889,36 @@ hit rates. If you wanted to use \fBzipf\fR with a theta of 1.2, you would use
 random_distribution=zipf:1.2 as the option. If a non-uniform model is used,
 fio will disable use of the random map. For the \fBgauss\fR distribution, a
 normal deviation is supplied as a value between 0 and 100.
+.P
+.RS
+For a \fBzoned\fR distribution, fio supports specifying percentages of IO
+access that should fall within what range of the file or device. For example,
+given a criteria of:
+.P
+.RS
+60% of accesses should be to the first 10%
+.RE
+.RS
+30% of accesses should be to the next 20%
+.RE
+.RS
+8% of accesses should be to to the next 30%
+.RE
+.RS
+2% of accesses should be to the next 40%
+.RE
+.P
+we can define that through zoning of the random accesses. For the above
+example, the user would do:
+.P
+.RS
+.B random_distribution=zoned:60/10:30/20:8/30:2/40
+.RE
+.P
+similarly to how \fBbssplit\fR works for setting ranges and percentages of block
+sizes. Like \fBbssplit\fR, it's possible to specify separate zones for reads,
+writes, and trims. If just one set is given, it'll apply to all of them.
+.RE
 .TP
 .BI percentage_random \fR=\fPint
 For a random workload, set how big a percentage should be random. This defaults

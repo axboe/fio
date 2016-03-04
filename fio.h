@@ -96,6 +96,7 @@ enum {
 	FIO_RAND_START_DELAY,
 	FIO_DEDUPE_OFF,
 	FIO_RAND_POISSON_OFF,
+	FIO_RAND_ZONE_OFF,
 	FIO_RAND_NR_OFFS,
 };
 
@@ -114,6 +115,11 @@ enum {
 struct sk_out;
 void sk_out_assign(struct sk_out *);
 void sk_out_drop(void);
+
+struct zone_split_index {
+	uint8_t size_perc;
+	uint8_t size_perc_prev;
+};
 
 /*
  * This describes a single thread/process executing a fio job.
@@ -200,6 +206,9 @@ struct thread_data {
 	struct frand_state buf_state;
 	struct frand_state buf_state_prev;
 	struct frand_state dedupe_state;
+	struct frand_state zone_state;
+
+	struct zone_split_index **zone_state_index;
 
 	unsigned int verify_batch;
 	unsigned int trim_batch;
@@ -712,6 +721,7 @@ enum {
 	FIO_RAND_DIST_ZIPF,
 	FIO_RAND_DIST_PARETO,
 	FIO_RAND_DIST_GAUSS,
+	FIO_RAND_DIST_ZONED,
 };
 
 #define FIO_DEF_ZIPF		1.1

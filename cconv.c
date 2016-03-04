@@ -23,6 +23,8 @@ static void __string_to_net(uint8_t *dst, const char *src, size_t dst_size)
 
 static void free_thread_options_to_cpu(struct thread_options *o)
 {
+	int i;
+
 	free(o->description);
 	free(o->name);
 	free(o->wait_for);
@@ -43,6 +45,11 @@ static void free_thread_options_to_cpu(struct thread_options *o)
 	free(o->ioscheduler);
 	free(o->profile);
 	free(o->cgroup);
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		free(o->bssplit[i]);
+		free(o->zone_split[i]);
+	}
 }
 
 void convert_thread_options_to_cpu(struct thread_options *o,
@@ -108,6 +115,16 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 			for (j = 0; j < o->bssplit_nr[i]; j++) {
 				o->bssplit[i][j].bs = le32_to_cpu(top->bssplit[i][j].bs);
 				o->bssplit[i][j].perc = le32_to_cpu(top->bssplit[i][j].perc);
+			}
+		}
+
+		o->zone_split_nr[i] = le32_to_cpu(top->zone_split_nr[i]);
+
+		if (o->zone_split_nr[i]) {
+			o->zone_split[i] = malloc(o->zone_split_nr[i] * sizeof(struct zone_split));
+			for (j = 0; j < o->zone_split_nr[i]; j++) {
+				o->zone_split[i][j].access_perc = top->zone_split[i][j].access_perc;
+				o->zone_split[i][j].size_perc = top->zone_split[i][j].size_perc;
 			}
 		}
 
@@ -450,6 +467,21 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 			for (j = 0; j < bssplit_nr; j++) {
 				top->bssplit[i][j].bs = cpu_to_le32(o->bssplit[i][j].bs);
 				top->bssplit[i][j].perc = cpu_to_le32(o->bssplit[i][j].perc);
+			}
+		}
+
+		top->zone_split_nr[i] = cpu_to_le32(o->zone_split_nr[i]);
+
+		if (o->zone_split_nr[i]) {
+			unsigned int zone_split_nr = o->zone_split_nr[i];
+
+			if (zone_split_nr > ZONESPLIT_MAX) {
+				log_err("fio: ZONESPLIT_MAX is too small\n");
+				zone_split_nr = ZONESPLIT_MAX;
+			}
+			for (j = 0; j < zone_split_nr; j++) {
+				top->zone_split[i][j].access_perc = o->zone_split[i][j].access_perc;
+				top->zone_split[i][j].size_perc = o->zone_split[i][j].size_perc;
 			}
 		}
 

@@ -86,24 +86,19 @@ struct rand_off {
 };
 
 static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
-				  enum fio_ddir ddir, uint64_t *b)
+				  enum fio_ddir ddir, uint64_t *b,
+				  uint64_t lastb)
 {
 	uint64_t r;
 
 	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE ||
 	    td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE64) {
-		uint64_t frand_max, lastb;
 
-		lastb = last_block(td, f, ddir);
-		if (!lastb)
-			return 1;
-
-		frand_max = rand_max(&td->random_state);
 		r = __rand(&td->random_state);
 
 		dprint(FD_RANDOM, "off rand %llu\n", (unsigned long long) r);
 
-		*b = lastb * (r / ((uint64_t) frand_max + 1.0));
+		*b = lastb * (r / (rand_max(&td->random_state) + 1.0));
 	} else {
 		uint64_t off = 0;
 
@@ -161,6 +156,70 @@ static int __get_next_rand_offset_gauss(struct thread_data *td,
 	return 0;
 }
 
+static int __get_next_rand_offset_zoned(struct thread_data *td,
+					struct fio_file *f, enum fio_ddir ddir,
+					uint64_t *b)
+{
+	unsigned int v, send, stotal;
+	uint64_t offset, lastb;
+	static int warned;
+	struct zone_split_index *zsi;
+
+	lastb = last_block(td, f, ddir);
+	if (!lastb)
+		return 1;
+
+	if (!td->o.zone_split_nr[ddir]) {
+bail:
+		return __get_next_rand_offset(td, f, ddir, b, lastb);
+	}
+
+	/*
+	 * Generate a value, v, between 1 and 100, both inclusive
+	 */
+	v = rand_between(&td->zone_state, 1, 100);
+
+	zsi = &td->zone_state_index[ddir][v - 1];
+	stotal = zsi->size_perc_prev;
+	send = zsi->size_perc;
+
+	/*
+	 * Should never happen
+	 */
+	if (send == -1U) {
+		if (!warned) {
+			log_err("fio: bug in zoned generation\n");
+			warned = 1;
+		}
+		goto bail;
+	}
+
+	/*
+	 * 'send' is some percentage below or equal to 100 that
+	 * marks the end of the current IO range. 'stotal' marks
+	 * the start, in percent.
+	 */
+	if (stotal)
+		offset = stotal * lastb / 100ULL;
+	else
+		offset = 0;
+
+	lastb = lastb * (send - stotal) / 100ULL;
+
+	/*
+	 * Generate index from 0..send-of-lastb
+	 */
+	if (__get_next_rand_offset(td, f, ddir, b, lastb) == 1)
+		return 1;
+
+	/*
+	 * Add our start offset, if any
+	 */
+	if (offset)
+		*b += offset;
+
+	return 0;
+}
 
 static int flist_cmp(void *data, struct flist_head *a, struct flist_head *b)
 {
@@ -173,14 +232,22 @@ static int flist_cmp(void *data, struct flist_head *a, struct flist_head *b)
 static int get_off_from_method(struct thread_data *td, struct fio_file *f,
 			       enum fio_ddir ddir, uint64_t *b)
 {
-	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM)
-		return __get_next_rand_offset(td, f, ddir, b);
-	else if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
+	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM) {
+		uint64_t lastb;
+
+		lastb = last_block(td, f, ddir);
+		if (!lastb)
+			return 1;
+
+		return __get_next_rand_offset(td, f, ddir, b, lastb);
+	} else if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
 		return __get_next_rand_offset_zipf(td, f, ddir, b);
 	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
 		return __get_next_rand_offset_pareto(td, f, ddir, b);
 	else if (td->o.random_distribution == FIO_RAND_DIST_GAUSS)
 		return __get_next_rand_offset_gauss(td, f, ddir, b);
+	else if (td->o.random_distribution == FIO_RAND_DIST_ZONED)
+		return __get_next_rand_offset_zoned(td, f, ddir, b);
 
 	log_err("fio: unknown random distribution: %d\n", td->o.random_distribution);
 	return 1;
@@ -207,16 +274,12 @@ static inline bool should_sort_io(struct thread_data *td)
 
 static bool should_do_random(struct thread_data *td, enum fio_ddir ddir)
 {
-	uint64_t frand_max;
 	unsigned int v;
-	unsigned long r;
 
 	if (td->o.perc_rand[ddir] == 100)
 		return true;
 
-	frand_max = rand_max(&td->seq_rand_state[ddir]);
-	r = __rand(&td->seq_rand_state[ddir]);
-	v = 1 + (int) (100.0 * (r / (frand_max + 1.0)));
+	v = rand_between(&td->seq_rand_state[ddir], 1, 100);
 
 	return v <= td->o.perc_rand[ddir];
 }
@@ -536,12 +599,9 @@ static void set_rwmix_bytes(struct thread_data *td)
 
 static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
 {
-	uint64_t frand_max = rand_max(&td->rwmix_state);
 	unsigned int v;
-	unsigned long r;
 
-	r = __rand(&td->rwmix_state);
-	v = 1 + (int) (100.0 * (r / (frand_max + 1.0)));
+	v = rand_between(&td->rwmix_state, 1, 100);
 
 	if (v <= td->o.rwmix[DDIR_READ])
 		return DDIR_READ;
@@ -1895,9 +1955,7 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
  */
 static struct frand_state *get_buf_state(struct thread_data *td)
 {
-	uint64_t frand_max;
 	unsigned int v;
-	unsigned long r;
 
 	if (!td->o.dedupe_percentage)
 		return &td->buf_state;
@@ -1906,9 +1964,7 @@ static struct frand_state *get_buf_state(struct thread_data *td)
 		return &td->buf_state;
 	}
 
-	frand_max = rand_max(&td->dedupe_state);
-	r = __rand(&td->dedupe_state);
-	v = 1 + (int) (100.0 * (r / (frand_max + 1.0)));
+	v = rand_between(&td->dedupe_state, 1, 100);
 
 	if (v <= td->o.dedupe_percentage)
 		return &td->buf_state_prev;
