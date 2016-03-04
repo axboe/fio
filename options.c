@@ -867,7 +867,6 @@ static void td_zone_gen_index(struct thread_data *td)
 		__td_zone_gen_index(td, i);
 }
 
-
 static int parse_zoned_distribution(struct thread_data *td, const char *input)
 {
 	char *str, *p, *odir, *ddir;
@@ -940,6 +939,10 @@ static int parse_zoned_distribution(struct thread_data *td, const char *input)
 
 	if (!ret)
 		td_zone_gen_index(td);
+	else {
+		for (i = 0; i < DDIR_RWDIR_CNT; i++)
+			td->o.zone_split_nr[i] = 0;
+	}
 
 	return ret;
 }
