@@ -1711,6 +1711,15 @@ err:
 	cgroup_shutdown(td, &cgroup_mnt);
 	verify_free_state(td);
 
+	if (td->zone_state_index) {
+		int i;
+
+		for (i = 0; i < DDIR_RWDIR_CNT; i++)
+			free(td->zone_state_index[i]);
+		free(td->zone_state_index);
+		td->zone_state_index = NULL;
+	}
+
 	if (fio_option_is_set(o, cpumask)) {
 		ret = fio_cpuset_exit(&o->cpumask);
 		if (ret)

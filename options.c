@@ -4417,14 +4417,6 @@ void fio_options_free(struct thread_data *td)
 		free(td->eo);
 		td->eo = NULL;
 	}
-	if (td->zone_state_index) {
-		int i;
-
-		for (i = 0; i < DDIR_RWDIR_CNT; i++)
-			free(td->zone_state_index[i]);
-		free(td->zone_state_index);
-		td->zone_state_index = NULL;
-	}
 }
 
 struct fio_option *fio_option_find(const char *name)
