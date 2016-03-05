@@ -1667,7 +1667,7 @@ void io_u_log_error(struct thread_data *td, struct io_u *io_u)
 {
 	__io_u_log_error(td, io_u);
 	if (td->parent)
-		__io_u_log_error(td, io_u);
+		__io_u_log_error(td->parent, io_u);
 }
 
 static inline bool gtod_reduce(struct thread_data *td)
