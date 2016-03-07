@@ -553,7 +553,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 
 				buflen = bsp->bs;
 				perc += bsp->perc;
-				if ((r <= ((frand_max / 100L) * perc)) &&
+				if ((r * 100UL <= frand_max * perc) &&
 				    io_u_fits(td, io_u, buflen))
 					break;
 			}
