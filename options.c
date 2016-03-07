@@ -44,7 +44,7 @@ static int bs_cmp(const void *p1, const void *p2)
 	return (int) bsp1->perc - (int) bsp2->perc;
 }
 
-static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
+static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str)
 {
 	struct bssplit *bssplit;
 	unsigned int i, perc, perc_missing;
@@ -148,10 +148,57 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 	return 0;
 }
 
+typedef int (split_parse_fn)(struct thread_options *, enum fio_ddir, char *);
+
+static int str_split_parse(struct thread_data *td, char *str, split_parse_fn *fn)
+{
+	char *odir, *ddir;
+	int ret = 0;
+
+	odir = strchr(str, ',');
+	if (odir) {
+		ddir = strchr(odir + 1, ',');
+		if (ddir) {
+			ret = fn(&td->o, DDIR_TRIM, ddir + 1);
+			if (!ret)
+				*ddir = '\0';
+		} else {
+			char *op;
+
+			op = strdup(odir + 1);
+			ret = fn(&td->o, DDIR_TRIM, op);
+
+			free(op);
+		}
+		if (!ret)
+			ret = fn(&td->o, DDIR_WRITE, odir + 1);
+		if (!ret) {
+			*odir = '\0';
+			ret = fn(&td->o, DDIR_READ, str);
+		}
+	} else {
+		char *op;
+
+		op = strdup(str);
+		ret = fn(&td->o, DDIR_WRITE, op);
+		free(op);
+
+		if (!ret) {
+			op = strdup(str);
+			ret = fn(&td->o, DDIR_TRIM, op);
+			free(op);
+		}
+		if (!ret)
+			ret = fn(&td->o, DDIR_READ, str);
+	}
+
+	return ret;
+}
+
 static int str_bssplit_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
-	char *str, *p, *odir, *ddir;
+	char *str, *p;
 	int ret = 0;
 
 	if (parse_dryrun())
@@ -162,42 +209,7 @@ static int str_bssplit_cb(void *data, const char *input)
 	strip_blank_front(&str);
 	strip_blank_end(str);
 
-	odir = strchr(str, ',');
-	if (odir) {
-		ddir = strchr(odir + 1, ',');
-		if (ddir) {
-			ret = bssplit_ddir(&td->o, DDIR_TRIM, ddir + 1);
-			if (!ret)
-				*ddir = '\0';
-		} else {
-			char *op;
-
-			op = strdup(odir + 1);
-			ret = bssplit_ddir(&td->o, DDIR_TRIM, op);
-
-			free(op);
-		}
-		if (!ret)
-			ret = bssplit_ddir(&td->o, DDIR_WRITE, odir + 1);
-		if (!ret) {
-			*odir = '\0';
-			ret = bssplit_ddir(&td->o, DDIR_READ, str);
-		}
-	} else {
-		char *op;
-
-		op = strdup(str);
-		ret = bssplit_ddir(&td->o, DDIR_WRITE, op);
-		free(op);
-
-		if (!ret) {
-			op = strdup(str);
-			ret = bssplit_ddir(&td->o, DDIR_TRIM, op);
-			free(op);
-		}
-		if (!ret)
-			ret = bssplit_ddir(&td->o, DDIR_READ, str);
-	}
+	ret = str_split_parse(td, str, bssplit_ddir);
 
 	free(p);
 	return ret;
@@ -714,7 +726,8 @@ static int zone_cmp(const void *p1, const void *p2)
 	return (int) zsp2->access_perc - (int) zsp1->access_perc;
 }
 
-static int zone_split_ddir(struct thread_options *o, int ddir, char *str)
+static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
+			   char *str)
 {
 	struct zone_split *zsplit;
 	unsigned int i, perc, perc_missing, sperc, sperc_missing;
@@ -869,7 +882,7 @@ static void td_zone_gen_index(struct thread_data *td)
 
 static int parse_zoned_distribution(struct thread_data *td, const char *input)
 {
-	char *str, *p, *odir, *ddir;
+	char *str, *p;
 	int i, ret = 0;
 
 	p = str = strdup(input);
@@ -885,42 +898,7 @@ static int parse_zoned_distribution(struct thread_data *td, const char *input)
 	}
 	str += strlen("zoned:");
 
-	odir = strchr(str, ',');
-	if (odir) {
-		ddir = strchr(odir + 1, ',');
-		if (ddir) {
-			ret = zone_split_ddir(&td->o, DDIR_TRIM, ddir + 1);
-			if (!ret)
-				*ddir = '\0';
-		} else {
-			char *op;
-
-			op = strdup(odir + 1);
-			ret = zone_split_ddir(&td->o, DDIR_TRIM, op);
-
-			free(op);
-		}
-		if (!ret)
-			ret = zone_split_ddir(&td->o, DDIR_WRITE, odir + 1);
-		if (!ret) {
-			*odir = '\0';
-			ret = zone_split_ddir(&td->o, DDIR_READ, str);
-		}
-	} else {
-		char *op;
-
-		op = strdup(str);
-		ret = zone_split_ddir(&td->o, DDIR_WRITE, op);
-		free(op);
-
-		if (!ret) {
-			op = strdup(str);
-			ret = zone_split_ddir(&td->o, DDIR_TRIM, op);
-			free(op);
-		}
-		if (!ret)
-			ret = zone_split_ddir(&td->o, DDIR_READ, str);
-	}
+	ret = str_split_parse(td, str, zone_split_ddir);
 
 	free(p);
 
