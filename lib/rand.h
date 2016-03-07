@@ -2,6 +2,7 @@
 #define FIO_RAND_H
 
 #include <inttypes.h>
+#include "types.h"
 #include "../arch/arch.h"
 
 #define FRAND32_MAX	(-1U)
@@ -128,8 +129,8 @@ static inline int rand_between(struct frand_state *state, int start, int end)
 	return start + (int) ((double)end * (r / (rand_max(state) + 1.0)));
 }
 
-extern void init_rand(struct frand_state *, int);
-extern void init_rand_seed(struct frand_state *, unsigned int seed, int);
+extern void init_rand(struct frand_state *, bool);
+extern void init_rand_seed(struct frand_state *, unsigned int seed, bool);
 extern void __fill_random_buf(void *buf, unsigned int len, unsigned long seed);
 extern unsigned long fill_random_buf(struct frand_state *, void *buf, unsigned int len);
 extern void __fill_random_buf_percentage(unsigned long, void *, unsigned int, unsigned int, unsigned int, char *, unsigned int);
