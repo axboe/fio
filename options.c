@@ -219,15 +219,22 @@ static int str_bssplit_cb(void *data, const char *input)
 	char *str, *p;
 	int ret = 0;
 
-	if (parse_dryrun())
-		return 0;
-
 	p = str = strdup(input);
 
 	strip_blank_front(&str);
 	strip_blank_end(str);
 
 	ret = str_split_parse(td, str, bssplit_ddir);
+
+	if (parse_dryrun()) {
+		int i;
+
+		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+			free(td->o.bssplit[i]);
+			td->o.bssplit[i] = NULL;
+			td->o.bssplit_nr[i] = 0;
+		}
+	}
 
 	free(p);
 	return ret;
@@ -902,6 +909,18 @@ static int parse_zoned_distribution(struct thread_data *td, const char *input)
 		}
 	}
 
+	if (parse_dryrun()) {
+		int i;
+
+		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+			free(td->o.zone_split[i]);
+			td->o.zone_split[i] = NULL;
+			td->o.zone_split_nr[i] = 0;
+		}
+
+		return ret;
+	}
+
 	if (!ret)
 		td_zone_gen_index(td);
 	else {
@@ -917,9 +936,6 @@ static int str_random_distribution_cb(void *data, const char *str)
 	struct thread_data *td = data;
 	double val;
 	char *nr;
-
-	if (parse_dryrun())
-		return 0;
 
 	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
 		val = FIO_DEF_ZIPF;
@@ -946,18 +962,24 @@ static int str_random_distribution_cb(void *data, const char *str)
 			log_err("fio: zipf theta must different than 1.0\n");
 			return 1;
 		}
+		if (parse_dryrun())
+			return 0;
 		td->o.zipf_theta.u.f = val;
 	} else if (td->o.random_distribution == FIO_RAND_DIST_PARETO) {
 		if (val <= 0.00 || val >= 1.00) {
 			log_err("fio: pareto input out of range (0 < input < 1.0)\n");
 			return 1;
 		}
+		if (parse_dryrun())
+			return 0;
 		td->o.pareto_h.u.f = val;
 	} else {
 		if (val <= 0.00 || val >= 100.0) {
 			log_err("fio: normal deviation out of range (0 < input < 100.0)\n");
 			return 1;
 		}
+		if (parse_dryrun())
+			return 0;
 		td->o.gauss_dev.u.f = val;
 	}
 
