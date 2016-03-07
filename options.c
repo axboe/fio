@@ -44,34 +44,27 @@ static int bs_cmp(const void *p1, const void *p2)
 	return (int) bsp1->perc - (int) bsp2->perc;
 }
 
-static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str)
+struct split {
+	unsigned int nr;
+	unsigned int val1[100];
+	unsigned int val2[100];
+};
+
+static int split_parse_ddir(struct thread_options *o, struct split *split,
+			    enum fio_ddir ddir, char *str)
 {
-	struct bssplit *bssplit;
-	unsigned int i, perc, perc_missing;
-	unsigned int max_bs, min_bs;
+	unsigned int i, perc;
 	long long val;
 	char *fname;
 
-	o->bssplit_nr[ddir] = 4;
-	bssplit = malloc(4 * sizeof(struct bssplit));
+	split->nr = 0;
 
 	i = 0;
-	max_bs = 0;
-	min_bs = -1;
 	while ((fname = strsep(&str, ":")) != NULL) {
 		char *perc_str;
 
 		if (!strlen(fname))
 			break;
-
-		/*
-		 * grow struct buffer, if needed
-		 */
-		if (i == o->bssplit_nr[ddir]) {
-			o->bssplit_nr[ddir] <<= 1;
-			bssplit = realloc(bssplit, o->bssplit_nr[ddir]
-						  * sizeof(struct bssplit));
-		}
 
 		perc_str = strstr(fname, "/");
 		if (perc_str) {
@@ -87,28 +80,53 @@ static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str)
 
 		if (str_to_decimal(fname, &val, 1, o, 0, 0)) {
 			log_err("fio: bssplit conversion failed\n");
-			free(bssplit);
 			return 1;
 		}
 
-		if (val > max_bs)
-			max_bs = val;
-		if (val < min_bs)
-			min_bs = val;
-
-		bssplit[i].bs = val;
-		bssplit[i].perc = perc;
+		split->val1[i] = val;
+		split->val2[i] = perc;
 		i++;
+		if (i == 100)
+			break;
 	}
 
-	o->bssplit_nr[ddir] = i;
+	split->nr = i;
+	return 0;
+}
+
+static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str)
+{
+	unsigned int i, perc, perc_missing;
+	unsigned int max_bs, min_bs;
+	struct split split;
+
+	memset(&split, 0, sizeof(split));
+
+	if (split_parse_ddir(o, &split, ddir, str))
+		return 1;
+	if (!split.nr)
+		return 0;
+
+	max_bs = 0;
+	min_bs = -1;
+	o->bssplit[ddir] = malloc(split.nr * sizeof(struct bssplit));
+	o->bssplit_nr[ddir] = split.nr;
+	for (i = 0; i < split.nr; i++) {
+		if (split.val1[i] > max_bs)
+			max_bs = split.val1[i];
+		if (split.val1[i] < min_bs)
+			min_bs = split.val1[i];
+
+		o->bssplit[ddir][i].bs = split.val1[i];
+		o->bssplit[ddir][i].perc =split.val2[i];
+	}
 
 	/*
 	 * Now check if the percentages add up, and how much is missing
 	 */
 	perc = perc_missing = 0;
 	for (i = 0; i < o->bssplit_nr[ddir]; i++) {
-		struct bssplit *bsp = &bssplit[i];
+		struct bssplit *bsp = &o->bssplit[ddir][i];
 
 		if (bsp->perc == -1U)
 			perc_missing++;
@@ -118,7 +136,8 @@ static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str)
 
 	if (perc > 100 && perc_missing > 1) {
 		log_err("fio: bssplit percentages add to more than 100%%\n");
-		free(bssplit);
+		free(o->bssplit[ddir]);
+		o->bssplit[ddir] = NULL;
 		return 1;
 	}
 
@@ -130,7 +149,7 @@ static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str)
 		if (perc_missing == 1 && o->bssplit_nr[ddir] == 1)
 			perc = 100;
 		for (i = 0; i < o->bssplit_nr[ddir]; i++) {
-			struct bssplit *bsp = &bssplit[i];
+			struct bssplit *bsp = &o->bssplit[ddir][i];
 
 			if (bsp->perc == -1U)
 				bsp->perc = (100 - perc) / perc_missing;
@@ -143,8 +162,7 @@ static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str)
 	/*
 	 * now sort based on percentages, for ease of lookup
 	 */
-	qsort(bssplit, o->bssplit_nr[ddir], sizeof(struct bssplit), bs_cmp);
-	o->bssplit[ddir] = bssplit;
+	qsort(o->bssplit[ddir], o->bssplit_nr[ddir], sizeof(struct bssplit), bs_cmp);
 	return 0;
 }
 
@@ -729,54 +747,22 @@ static int zone_cmp(const void *p1, const void *p2)
 static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 			   char *str)
 {
-	struct zone_split *zsplit;
 	unsigned int i, perc, perc_missing, sperc, sperc_missing;
-	long long val;
-	char *fname;
+	struct split split;
 
-	o->zone_split_nr[ddir] = 4;
-	zsplit = malloc(4 * sizeof(struct zone_split));
+	memset(&split, 0, sizeof(split));
 
-	i = 0;
-	while ((fname = strsep(&str, ":")) != NULL) {
-		char *perc_str;
+	if (split_parse_ddir(o, &split, ddir, str))
+		return 1;
+	if (!split.nr)
+		return 0;
 
-		if (!strlen(fname))
-			break;
-
-		/*
-		 * grow struct buffer, if needed
-		 */
-		if (i == o->zone_split_nr[ddir]) {
-			o->zone_split_nr[ddir] <<= 1;
-			zsplit = realloc(zsplit, o->zone_split_nr[ddir]
-						  * sizeof(struct zone_split));
-		}
-
-		perc_str = strstr(fname, "/");
-		if (perc_str) {
-			*perc_str = '\0';
-			perc_str++;
-			perc = atoi(perc_str);
-			if (perc > 100)
-				perc = 100;
-			else if (!perc)
-				perc = -1U;
-		} else
-			perc = -1U;
-
-		if (str_to_decimal(fname, &val, 1, o, 0, 0)) {
-			log_err("fio: zone_split conversion failed\n");
-			free(zsplit);
-			return 1;
-		}
-
-		zsplit[i].access_perc = val;
-		zsplit[i].size_perc = perc;
-		i++;
+	o->zone_split[ddir] = malloc(split.nr * sizeof(struct zone_split));
+	o->zone_split_nr[ddir] = split.nr;
+	for (i = 0; i < split.nr; i++) {
+		o->zone_split[ddir][i].access_perc = split.val1[i];
+		o->zone_split[ddir][i].size_perc = split.val2[i];
 	}
-
-	o->zone_split_nr[ddir] = i;
 
 	/*
 	 * Now check if the percentages add up, and how much is missing
@@ -784,7 +770,7 @@ static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 	perc = perc_missing = 0;
 	sperc = sperc_missing = 0;
 	for (i = 0; i < o->zone_split_nr[ddir]; i++) {
-		struct zone_split *zsp = &zsplit[i];
+		struct zone_split *zsp = &o->zone_split[ddir][i];
 
 		if (zsp->access_perc == (uint8_t) -1U)
 			perc_missing++;
@@ -800,13 +786,15 @@ static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 
 	if (perc > 100 || sperc > 100) {
 		log_err("fio: zone_split percentages add to more than 100%%\n");
-		free(zsplit);
+		free(o->zone_split[ddir]);
+		o->zone_split[ddir] = NULL;
 		return 1;
 	}
 	if (perc < 100) {
 		log_err("fio: access percentage don't add up to 100 for zoned "
 			"random distribution (got=%u)\n", perc);
-		free(zsplit);
+		free(o->zone_split[ddir]);
+		o->zone_split[ddir] = NULL;
 		return 1;
 	}
 
@@ -818,7 +806,7 @@ static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 		if (perc_missing == 1 && o->zone_split_nr[ddir] == 1)
 			perc = 100;
 		for (i = 0; i < o->zone_split_nr[ddir]; i++) {
-			struct zone_split *zsp = &zsplit[i];
+			struct zone_split *zsp = &o->zone_split[ddir][i];
 
 			if (zsp->access_perc == (uint8_t) -1U)
 				zsp->access_perc = (100 - perc) / perc_missing;
@@ -828,7 +816,7 @@ static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 		if (sperc_missing == 1 && o->zone_split_nr[ddir] == 1)
 			sperc = 100;
 		for (i = 0; i < o->zone_split_nr[ddir]; i++) {
-			struct zone_split *zsp = &zsplit[i];
+			struct zone_split *zsp = &o->zone_split[ddir][i];
 
 			if (zsp->size_perc == (uint8_t) -1U)
 				zsp->size_perc = (100 - sperc) / sperc_missing;
@@ -838,8 +826,7 @@ static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 	/*
 	 * now sort based on percentages, for ease of lookup
 	 */
-	qsort(zsplit, o->zone_split_nr[ddir], sizeof(struct zone_split), zone_cmp);
-	o->zone_split[ddir] = zsplit;
+	qsort(o->zone_split[ddir], o->zone_split_nr[ddir], sizeof(struct zone_split), zone_cmp);
 	return 0;
 }
 
