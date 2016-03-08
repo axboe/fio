@@ -11,6 +11,8 @@ Table of contents
 8. Trace file format
 9. CPU idleness profiling
 10. Verification and triggers
+11. Log File Formats
+
 
 1.0 Overview and history
 ------------------------
@@ -1564,7 +1566,7 @@ write_bw_log=str If given, write a bandwidth log of the jobs in this job
 		filename. For this option, the suffix is _bw.x.log, where
 		x is the index of the job (1..N, where N is the number of
 		jobs). If 'per_job_logs' is false, then the filename will not
-		include the job index.
+		include the job index. See 'Log File Formats'.
 
 write_lat_log=str Same as write_bw_log, except that this option stores io
 		submission, completion, and total latencies instead. If no
@@ -1578,8 +1580,8 @@ write_lat_log=str Same as write_bw_log, except that this option stores io
 		and foo_lat.x.log, where x is the index of the job (1..N,
 		where N is the number of jobs). This helps fio_generate_plot
 		fine the logs automatically. If 'per_job_logs' is false, then
-		the filename will not include the job index.
-
+		the filename will not include the job index. See 'Log File
+		Formats'.
 
 write_iops_log=str Same as write_bw_log, but writes IOPS. If no filename is
 		given with this option, the default filename of
@@ -1587,7 +1589,7 @@ write_iops_log=str Same as write_bw_log, but writes IOPS. If no filename is
 		(1..N, where N is the number of jobs). Even if the filename
 		is given, fio will still append the type of log. If
 		'per_job_logs' is false, then the filename will not include
-		the job index.
+		the job index. See 'Log File Formats'.
 
 log_avg_msec=int By default, fio will log an entry in the iops, latency,
 		or bw log for every IO that completes. When writing to the
@@ -2253,3 +2255,36 @@ the verify_state_load option. If that is set, fio will load the previously
 stored state. For a local fio run this is done by loading the files directly,
 and on a client/server run, the server backend will ask the client to send
 the files over and load them from there.
+
+
+11.0 Log File Formats
+---------------------
+
+Fio supports a variety of log file formats, for logging latencies, bandwidth,
+and IOPS. The logs share a common format, which looks like this:
+
+time (msec), value, data direction, offset
+
+Time for the log entry is always in milliseconds. The value logged depends
+on the type of log, it will be one of the following:
+
+	Latency log		Value is latency in usecs
+	Bandwidth log		Value is in KB/sec
+	IOPS log		Value is IOPS
+
+Data direction is one of the following:
+
+	0			IO is a READ
+	1			IO is a WRITE
+	2			IO is a TRIM
+
+The offset is the offset, in bytes, from the start of the file, for that
+particular IO. The logging of the offset can be toggled with 'log_offset'.
+
+If windowed logging is enabled though 'log_avg_msec', then fio doesn't log
+individual IOs. Instead of logs the average values over the specified
+period of time. Since 'data direction' and 'offset' are per-IO values,
+they aren't applicable if windowed logging is enabled. If windowed logging
+is enabled and 'log_max_value' is set, then fio logs maximum values in
+that window instead of averages.
+

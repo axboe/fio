@@ -1441,7 +1441,8 @@ fio_generate_plots script uses gnuplot to turn these text files into nice
 graphs. See \fBwrite_lat_log\fR for behaviour of given filename. For this
 option, the postfix is _bw.x.log, where x is the index of the job (1..N,
 where N is the number of jobs). If \fBper_job_logs\fR is false, then the
-filename will not include the job index.
+filename will not include the job index. See the \fBLOG FILE FORMATS\fR
+section.
 .TP
 .BI write_lat_log \fR=\fPstr
 Same as \fBwrite_bw_log\fR, but writes I/O completion latencies.  If no
@@ -1449,14 +1450,15 @@ filename is given with this option, the default filename of
 "jobname_type.x.log" is used, where x is the index of the job (1..N, where
 N is the number of jobs). Even if the filename is given, fio will still
 append the type of log. If \fBper_job_logs\fR is false, then the filename will
-not include the job index.
+not include the job index. See the \fBLOG FILE FORMATS\fR section.
 .TP
 .BI write_iops_log \fR=\fPstr
 Same as \fBwrite_bw_log\fR, but writes IOPS. If no filename is given with this
 option, the default filename of "jobname_type.x.log" is used, where x is the
 index of the job (1..N, where N is the number of jobs). Even if the filename
 is given, fio will still append the type of log. If \fBper_job_logs\fR is false,
-then the filename will not include the job index.
+then the filename will not include the job index. See the \fBLOG FILE FORMATS\fR
+section.
 .TP
 .BI log_avg_msec \fR=\fPint
 By default, fio will log an entry in the iops, latency, or bw log for every
@@ -2216,6 +2218,58 @@ the verify_state_load option. If that is set, fio will load the previously
 stored state. For a local fio run this is done by loading the files directly,
 and on a client/server run, the server backend will ask the client to send
 the files over and load them from there.
+
+.RE
+
+.SH LOG FILE FORMATS
+
+Fio supports a variety of log file formats, for logging latencies, bandwidth,
+and IOPS. The logs share a common format, which looks like this:
+
+.B time (msec), value, data direction, offset
+
+Time for the log entry is always in milliseconds. The value logged depends
+on the type of log, it will be one of the following:
+
+.P
+.PD 0
+.TP
+.B Latency log
+Value is in latency in usecs
+.TP
+.B Bandwidth log
+Value is in KB/sec
+.TP
+.B IOPS log
+Value is in IOPS
+.PD
+.P
+
+Data direction is one of the following:
+
+.P
+.PD 0
+.TP
+.B 0
+IO is a READ
+.TP
+.B 1
+IO is a WRITE
+.TP
+.B 2
+IO is a TRIM
+.PD
+.P
+
+The \fIoffset\fR is the offset, in bytes, from the start of the file, for that
+particular IO. The logging of the offset can be toggled with \fBlog_offset\fR.
+
+If windowed logging is enabled though \fBlog_avg_msec\fR, then fio doesn't log
+individual IOs. Instead of logs the average values over the specified
+period of time. Since \fIdata direction\fR and \fIoffset\fR are per-IO values,
+they aren't applicable if windowed logging is enabled. If windowed logging
+is enabled and \fBlog_max_value\fR is set, then fio logs maximum values in
+that window instead of averages.
 
 .RE
 
