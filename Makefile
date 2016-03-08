@@ -211,6 +211,10 @@ T_LFSR_TEST_OBJS = t/lfsr-test.o
 T_LFSR_TEST_OBJS += lib/lfsr.o gettime.o t/log.o t/debug.o
 T_LFSR_TEST_PROGS = t/lfsr-test
 
+T_GEN_RAND_OBJS = t/gen-rand.o
+T_GEN_RAND_OBJS += t/log.o t/debug.o lib/rand.o lib/pattern.o lib/strntol.o
+T_GEN_RAND_PROGS = t/gen-rand
+
 ifeq ($(CONFIG_TARGET_OS), Linux)
 T_BTRACE_FIO_OBJS = t/btrace2fio.o
 T_BTRACE_FIO_OBJS += fifo.o lib/flist_sort.o t/log.o oslib/linux-dev-lookup.o
@@ -231,6 +235,7 @@ T_OBJS += $(T_IEEE_OBJS)
 T_OBJS += $(T_ZIPF_OBJS)
 T_OBJS += $(T_AXMAP_OBJS)
 T_OBJS += $(T_LFSR_TEST_OBJS)
+T_OBJS += $(T_GEN_RAND_OBJS)
 T_OBJS += $(T_BTRACE_FIO_OBJS)
 T_OBJS += $(T_DEDUPE_OBJS)
 T_OBJS += $(T_VS_OBJS)
@@ -246,6 +251,7 @@ T_TEST_PROGS += $(T_IEEE_PROGS)
 T_PROGS += $(T_ZIPF_PROGS)
 T_TEST_PROGS += $(T_AXMAP_PROGS)
 T_TEST_PROGS += $(T_LFSR_TEST_PROGS)
+T_TEST_PROGS += $(T_GEN_RAND_PROGS)
 T_PROGS += $(T_BTRACE_FIO_PROGS)
 T_PROGS += $(T_DEDUPE_PROGS)
 T_PROGS += $(T_VS_PROGS)
@@ -385,6 +391,9 @@ t/axmap: $(T_AXMAP_OBJS)
 
 t/lfsr-test: $(T_LFSR_TEST_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_LFSR_TEST_OBJS) $(LIBS)
+
+t/gen-rand: $(T_GEN_RAND_OBJS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_GEN_RAND_OBJS) $(LIBS)
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
 t/fio-btrace2fio: $(T_BTRACE_FIO_OBJS)
