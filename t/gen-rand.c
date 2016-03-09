@@ -54,10 +54,10 @@ int main(int argc, char *argv[])
 	pass = fail = 0;
 	for (i = 0; i < index; i++) {
 		if (buckets[i] < vmin || buckets[i] > vmax) {
-			printf("FAIL bucket%4lu: val=%8lu (%.1f < %.1f > %.1f)\n", i + 1, buckets[i], vmin, mean, vmax);
+			printf("FAIL bucket%4lu: val=%8lu (%.1f < %.1f > %.1f)\n", (unsigned long) i + 1, buckets[i], vmin, mean, vmax);
 			fail++;
 		} else {
-			printf("PASS bucket%4lu: val=%8lu (%.1f < %.1f > %.1f)\n", i + 1, buckets[i], vmin, mean, vmax);
+			printf("PASS bucket%4lu: val=%8lu (%.1f < %.1f > %.1f)\n", (unsigned long) i + 1, buckets[i], vmin, mean, vmax);
 			pass++;
 		}
 	}
