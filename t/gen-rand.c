@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 
 	nvalues = strtoul(argv[3], NULL, 10);
 
-	init_rand(&s, true);
+	init_rand(&s, false);
 
 	for (i = 0; i < nvalues; i++) {
 		int v = rand_between(&s, start, end);
