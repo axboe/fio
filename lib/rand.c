@@ -46,7 +46,7 @@ static inline uint64_t __seed(uint64_t x, uint64_t m)
 	return (x < m) ? x + m : x;
 }
 
-static void __init_rand32(struct taus88_state *state, unsigned int seed)
+void __init_rand32(struct taus88_state *state, unsigned int seed)
 {
 	int cranks = 6;
 
@@ -60,7 +60,7 @@ static void __init_rand32(struct taus88_state *state, unsigned int seed)
 		__rand32(state);
 }
 
-static void __init_rand64(struct taus258_state *state, uint64_t seed)
+void __init_rand64(struct taus258_state *state, uint64_t seed)
 {
 	int cranks = 6;
 

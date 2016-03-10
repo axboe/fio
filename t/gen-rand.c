@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 	init_rand(&s, false);
 
 	for (i = 0; i < nvalues; i++) {
-		int v = rand_between(&s, start, end);
+		int v = rand32_between(&s, start, end);
 
 		buckets[v - start]++;
 	}

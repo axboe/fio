@@ -2,6 +2,7 @@
 #define FIO_RAND_H
 
 #include <inttypes.h>
+#include <assert.h>
 #include "types.h"
 #include "../arch/arch.h"
 
@@ -22,10 +23,6 @@ struct frand_state {
 		struct taus88_state state32;
 		struct taus258_state state64;
 	};
-};
-
-struct frand64_state {
-	uint64_t s1, s2, s3, s4, s5;
 };
 
 static inline uint64_t rand_max(struct frand_state *state)
@@ -121,12 +118,14 @@ static inline double __rand_0_1(struct frand_state *state)
 /*
  * Generate a random value between 'start' and 'end', both inclusive
  */
-static inline int rand_between(struct frand_state *state, int start, int end)
+static inline int rand32_between(struct frand_state *state, int start, int end)
 {
-	uint64_t r;
+	uint32_t r;
 
-	r = __rand(state);
-	return start + (int) ((double)end * (r / (rand_max(state) + 1.0)));
+	assert(!state->use64);
+
+	r = __rand32(&state->state32);
+	return start + (int) ((double)end * (r / (FRAND32_MAX + 1.0)));
 }
 
 extern void init_rand(struct frand_state *, bool);
