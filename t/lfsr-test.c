@@ -38,6 +38,8 @@ int main(int argc, char *argv[])
 	void *v = NULL, *v_start;
 	double total, mean;
 
+	arch_init(argv);
+
 	/* Read arguments */
 	switch (argc) {
 		case 5: if (strncmp(argv[4], "verify", 7) == 0)

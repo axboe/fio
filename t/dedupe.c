@@ -537,6 +537,7 @@ int main(int argc, char *argv[])
 	uint64_t nextents = 0, nchunks = 0;
 	int c, ret;
 
+	arch_init(argv);
 	debug_init();
 
 	while ((c = getopt(argc, argv, "b:t:d:o:c:p:B:")) != -1) {
