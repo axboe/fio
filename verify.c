@@ -1385,6 +1385,7 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 	*sz += nr * sizeof(struct thread_io_list);
 	*sz += depth * sizeof(uint64_t);
 	rep = malloc(*sz);
+	memset(rep, 0, *sz);
 
 	rep->threads = cpu_to_le64((uint64_t) nr);
 
