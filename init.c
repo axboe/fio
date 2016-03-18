@@ -1079,7 +1079,7 @@ static int setup_random_seeds(struct thread_data *td)
 		seed *= 0x9e370001UL;
 
 	for (i = 0; i < FIO_RAND_NR_OFFS; i++) {
-		td->rand_seeds[i] = seed;
+		td->rand_seeds[i] = seed * td->thread_number + i;
 		seed *= 0x9e370001UL;
 	}
 
