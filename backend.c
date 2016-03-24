@@ -881,7 +881,14 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		if (flow_threshold_exceeded(td))
 			continue;
 
-		if (!td->o.time_based && bytes_issued >= total_bytes)
+		/*
+		 * Break if we exceeded the bytes. The exception is time
+		 * based runs, but we still need to break out of the loop
+		 * for those to run verification, if enabled.
+		 */
+		if (bytes_issued >= total_bytes &&
+		    (!td->o.time_based ||
+		     (td->o.time_based && td->o.verify != VERIFY_NONE)))
 			break;
 
 		io_u = get_io_u(td);
