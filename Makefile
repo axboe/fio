@@ -231,6 +231,9 @@ T_DEDUPE_PROGS = t/fio-dedupe
 T_VS_OBJS = t/verify-state.o t/log.o crc/crc32c.o crc/crc32c-intel.o t/debug.o
 T_VS_PROGS = t/fio-verify-state
 
+T_PIPE_ASYNC_OBJS = t/read-to-pipe-async.o
+T_PIPE_ASYNC_PROGS = t/read-to-pipe-async
+
 T_OBJS = $(T_SMALLOC_OBJS)
 T_OBJS += $(T_IEEE_OBJS)
 T_OBJS += $(T_ZIPF_OBJS)
@@ -240,6 +243,7 @@ T_OBJS += $(T_GEN_RAND_OBJS)
 T_OBJS += $(T_BTRACE_FIO_OBJS)
 T_OBJS += $(T_DEDUPE_OBJS)
 T_OBJS += $(T_VS_OBJS)
+T_OBJS += $(T_PIPE_ASYNC_OBJS)
 
 ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
     T_DEDUPE_OBJS += os/windows/posix.o lib/hweight.o
@@ -256,6 +260,7 @@ T_TEST_PROGS += $(T_GEN_RAND_PROGS)
 T_PROGS += $(T_BTRACE_FIO_PROGS)
 T_PROGS += $(T_DEDUPE_PROGS)
 T_PROGS += $(T_VS_PROGS)
+T_TEST_PROGS += $(T_PIPE_ASYNC_PROGS)
 
 PROGS += $(T_PROGS)
 
@@ -371,6 +376,9 @@ cairo_text_helpers.o: cairo_text_helpers.c cairo_text_helpers.h
 
 printing.o: printing.c printing.h
 	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c $<
+
+t/read-to-pipe-async: $(T_PIPE_ASYNC_OBJS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_PIPE_ASYNC_OBJS) $(LIBS)
 
 t/stest: $(T_SMALLOC_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_SMALLOC_OBJS) $(LIBS)
