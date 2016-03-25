@@ -32,7 +32,6 @@
 #include <pthread.h>
 #include <errno.h>
 #include <assert.h>
-#include <time.h>
 
 #include "../flist.h"
 
@@ -480,13 +479,14 @@ static void exit_thread(struct thread_data *thread,
 		pthread_mutex_lock(&thread->done_lock);
 
 		if (fn) {
-			struct timespec t;
+			struct timeval tv;
+			struct timespec ts;
 
-			clock_gettime(CLOCK_REALTIME, &t);
-			t.tv_sec++;
+			gettimeofday(&tv, NULL);
+			ts.tv_sec = tv.tv_sec + 1;
+			ts.tv_nsec = tv.tv_usec * 1000ULL;
 
-
-			pthread_cond_timedwait(&thread->done_cond, &thread->done_lock, &t);
+			pthread_cond_timedwait(&thread->done_cond, &thread->done_lock, &ts);
 			fn(wt);
 		} else
 			pthread_cond_wait(&thread->done_cond, &thread->done_lock);
@@ -610,7 +610,8 @@ int main(int argc, char *argv[])
 	while (sb.st_size) {
 		struct work_item *work;
 		size_t this_len;
-		struct timespec t;
+		struct timespec ts;
+		struct timeval tv;
 
 		prune_done_entries(wt);
 
@@ -631,15 +632,17 @@ int main(int argc, char *argv[])
 
 		queue_work(rt, work);
 
-		clock_gettime(CLOCK_REALTIME, &t);
-		t.tv_nsec += max_us * 1000ULL;
-		if (t.tv_nsec >= 1000000000ULL) {
-			t.tv_nsec -= 1000000000ULL;
-			t.tv_sec++;
+		gettimeofday(&tv, NULL);
+		ts.tv_sec = tv.tv_sec;
+		ts.tv_nsec = tv.tv_usec * 1000ULL;
+		ts.tv_nsec += max_us * 1000ULL;
+		if (ts.tv_nsec >= 1000000000ULL) {
+			ts.tv_nsec -= 1000000000ULL;
+			ts.tv_sec++;
 		}
 
 		pthread_mutex_lock(&work->lock);
-		pthread_cond_timedwait(&work->cond, &work->lock, &t);
+		pthread_cond_timedwait(&work->cond, &work->lock, &ts);
 		pthread_mutex_unlock(&work->lock);
 
 		off += this_len;
