@@ -231,6 +231,12 @@ static int write_work(struct work_item *work)
 	return work->seq + 1;
 }
 
+static void thread_exiting(struct thread_data *thread)
+{
+	__sync_fetch_and_add(&thread->done, 1);
+	pthread_cond_signal(&thread->done_cond);
+}
+
 static void *writer_fn(void *data)
 {
 	struct writer_thread *wt = data;
@@ -258,8 +264,7 @@ static void *writer_fn(void *data)
 			seq = write_work(work);
 	}
 
-	wt->thread.done = 1;
-	pthread_cond_signal(&wt->thread.done_cond);
+	thread_exiting(&wt->thread);
 	return NULL;
 }
 
@@ -361,14 +366,13 @@ static void *reader_fn(void *data)
 		pthread_mutex_unlock(&rt->thread.lock);
 
 		if (work) {
-			rt->busy = 1;
+			__sync_fetch_and_add(&rt->busy, 1);
 			reader_work(work);
-			rt->busy = 0;
+			__sync_fetch_and_sub(&rt->busy, 1);
 		}
 	}
 
-	rt->thread.done = 1;
-	pthread_cond_signal(&rt->thread.done_cond);
+	thread_exiting(&rt->thread);
 	return NULL;
 }
 
@@ -469,7 +473,7 @@ static void exit_thread(struct thread_data *thread,
 			void fn(struct writer_thread *),
 			struct writer_thread *wt)
 {
-	thread->exit = 1;
+	__sync_fetch_and_add(&thread->exit, 1);
 	pthread_cond_signal(&thread->cond);
 
 	while (!thread->done) {
