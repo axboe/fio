@@ -1987,7 +1987,9 @@ runt=		The runtime of that thread
 cpu=		CPU usage. User and system time, along with the number
 		of context switches this thread went through, usage of
 		system and user time, and finally the number of major
-		and minor page faults.
+		and minor page faults. The CPU utilization numbers are
+		averages for the jobs in that reporting group, while the
+		context and fault counters are summed.
 IO depths=	The distribution of io depths over the job life time. The
 		numbers are divided into powers of 2, so for example the
 		16= entries includes depths up to that value but higher

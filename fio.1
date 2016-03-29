@@ -1873,7 +1873,9 @@ and standard deviation.
 .TP
 .B cpu
 CPU usage statistics. Includes user and system time, number of context switches
-this thread went through and number of major and minor page faults.
+this thread went through and number of major and minor page faults. The CPU
+utilization numbers are averages for the jobs in that reporting group, while
+the context and fault counters are summed.
 .TP
 .B IO depths
 Distribution of I/O depths.  Each depth includes everything less than (or equal)
