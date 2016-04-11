@@ -78,13 +78,13 @@
 struct PMEMblkpool_s;
 typedef struct PMEMblkpool_s PMEMblkpool;
 
-PMEMblkpool* (*pmemblk_create_ptr)(const char*, size_t, size_t, mode_t) = NULL;
-PMEMblkpool* (*pmemblk_open_ptr)(const char*, size_t) = NULL;
-void (*pmemblk_close_ptr)(PMEMblkpool*) = NULL;
-size_t (*pmemblk_nblock_ptr)(PMEMblkpool*) = NULL;
-size_t (*pmemblk_bsize_ptr)(PMEMblkpool*) = NULL;
-int (*pmemblk_read_ptr)(PMEMblkpool*, void*, off_t) = NULL;
-int (*pmemblk_write_ptr)(PMEMblkpool*, const void*, off_t) = NULL;
+PMEMblkpool* (*pmemblk_create)(const char*, size_t, size_t, mode_t) = NULL;
+PMEMblkpool* (*pmemblk_open)(const char*, size_t) = NULL;
+void (*pmemblk_close)(PMEMblkpool*) = NULL;
+size_t (*pmemblk_nblock)(PMEMblkpool*) = NULL;
+size_t (*pmemblk_bsize)(PMEMblkpool*) = NULL;
+int (*pmemblk_read)(PMEMblkpool*, void*, off_t) = NULL;
+int (*pmemblk_write)(PMEMblkpool*, const void*, off_t) = NULL;
 
 int
 load_libpmemblk(
@@ -100,19 +100,19 @@ load_libpmemblk(
 	if (NULL == dl)
 		goto errorout;
 
-	if (NULL == (pmemblk_create_ptr = dlsym(dl, "pmemblk_create")))
+	if (NULL == (pmemblk_create = dlsym(dl, "pmemblk_create")))
 		goto errorout;
-	if (NULL == (pmemblk_open_ptr = dlsym(dl, "pmemblk_open")))
+	if (NULL == (pmemblk_open = dlsym(dl, "pmemblk_open")))
 		goto errorout;
-	if (NULL == (pmemblk_close_ptr = dlsym(dl, "pmemblk_close")))
+	if (NULL == (pmemblk_close = dlsym(dl, "pmemblk_close")))
 		goto errorout;
-	if (NULL == (pmemblk_nblock_ptr = dlsym(dl, "pmemblk_nblock")))
+	if (NULL == (pmemblk_nblock = dlsym(dl, "pmemblk_nblock")))
 		goto errorout;
-	if (NULL == (pmemblk_bsize_ptr = dlsym(dl, "pmemblk_bsize")))
+	if (NULL == (pmemblk_bsize = dlsym(dl, "pmemblk_bsize")))
 		goto errorout;
-	if (NULL == (pmemblk_read_ptr = dlsym(dl, "pmemblk_read")))
+	if (NULL == (pmemblk_read = dlsym(dl, "pmemblk_read")))
 		goto errorout;
-	if (NULL == (pmemblk_write_ptr = dlsym(dl, "pmemblk_write")))
+	if (NULL == (pmemblk_write = dlsym(dl, "pmemblk_write")))
 		goto errorout;
 	
 	return 0;
@@ -125,14 +125,6 @@ errorout:
 	return (-1);
 	
 }  /* load_libpmemblk() */
-
-#define pmemblk_create   pmemblk_create_ptr
-#define pmemblk_open     pmemblk_open_ptr
-#define pmemblk_close    pmemblk_close_ptr
-#define pmemblk_nblock   pmemblk_nblock_ptr
-#define pmemblk_bsize    pmemblk_bsize_ptr
-#define pmemblk_read     pmemblk_read_ptr
-#define pmemblk_write    pmemblk_write_ptr
 
 
 typedef struct fio_pmemblk_file*   fio_pmemblk_file_t;
