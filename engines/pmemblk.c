@@ -24,13 +24,8 @@
  *
  * IO engine that uses libpmemblk to read and write data
  *
- * To build as an external engine:
- *   Copy pmemblk.c to the engines/ directory of the fio source code, then:
- *   cd .../engines/
- *   gcc -Wall -shared -rdynamic -fPIC -o pmemblk.o -D_GNU_SOURCE pmemblk.c
- *
- * To use as an external engine:
- *   ioengine=/full/path/to/pmemblk.o
+ * To use:
+ *   ioengine=pmemblk
  *
  * Other relevant settings:
  *   iodepth=1
@@ -53,6 +48,8 @@
  *   exist, then the pmemblk engine can create the pool file if you specify
  *   the block and file sizes.  BSIZE is the block size in bytes.
  *   FSIZEMB is the pool file size in MB.
+ *
+ *   See examples/pmemblk.fio for more.
  *
  * libpmemblk.so
  *   By default, the pmemblk engine will let the system find the libpmemblk.so
