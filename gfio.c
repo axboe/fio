@@ -449,7 +449,7 @@ static int send_job_file(struct gui_entry *ge)
 		free(gco);
 	}
 
-	ret = fio_client_send_ini(gc->client, ge->job_file, 0);
+	ret = fio_client_send_ini(gc->client, ge->job_file, false);
 	if (!ret)
 		return 0;
 

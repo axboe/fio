@@ -2552,14 +2552,14 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				    !strncmp(argv[optind], "-", 1))
 					break;
 
-				if (fio_client_add_ini_file(cur_client, argv[optind], 0))
+				if (fio_client_add_ini_file(cur_client, argv[optind], false))
 					break;
 				optind++;
 			}
 			break;
 		case 'R':
 			did_arg = 1;
-			if (fio_client_add_ini_file(cur_client, optarg, 1)) {
+			if (fio_client_add_ini_file(cur_client, optarg, true)) {
 				do_exit++;
 				exit_val = 1;
 			}

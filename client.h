@@ -22,7 +22,7 @@ enum {
 
 struct client_file {
 	char *file;
-	int remote;
+	bool remote;
 };
 
 struct fio_client {
@@ -124,12 +124,12 @@ extern int fio_clients_connect(void);
 extern int fio_start_client(struct fio_client *);
 extern int fio_start_all_clients(void);
 extern int fio_clients_send_ini(const char *);
-extern int fio_client_send_ini(struct fio_client *, const char *, int);
+extern int fio_client_send_ini(struct fio_client *, const char *, bool);
 extern int fio_handle_clients(struct client_ops *);
 extern int fio_client_add(struct client_ops *, const char *, void **);
 extern struct fio_client *fio_client_add_explicit(struct client_ops *, const char *, int, int);
 extern void fio_client_add_cmd_option(void *, const char *);
-extern int fio_client_add_ini_file(void *, const char *, int);
+extern int fio_client_add_ini_file(void *, const char *, bool);
 extern int fio_client_terminate(struct fio_client *);
 extern void fio_clients_terminate(void);
 extern struct fio_client *fio_get_client(struct fio_client *);

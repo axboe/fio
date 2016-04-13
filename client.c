@@ -347,7 +347,7 @@ err:
 	return NULL;
 }
 
-int fio_client_add_ini_file(void *cookie, const char *ini_file, int remote)
+int fio_client_add_ini_file(void *cookie, const char *ini_file, bool remote)
 {
 	struct fio_client *client = cookie;
 	struct client_file *cf;
@@ -789,7 +789,7 @@ static int __fio_client_send_local_ini(struct fio_client *client,
 }
 
 int fio_client_send_ini(struct fio_client *client, const char *filename,
-			int remote)
+			bool remote)
 {
 	int ret;
 
