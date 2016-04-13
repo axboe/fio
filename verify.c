@@ -1353,6 +1353,47 @@ int paste_blockoff(char *buf, unsigned int len, void *priv)
 	return 0;
 }
 
+static int __fill_file_completions(struct thread_data *td,
+				   struct thread_io_list *s,
+				   struct fio_file *f, unsigned int *index)
+{
+	unsigned int comps;
+	int i, j;
+
+	if (!f->last_write_comp)
+		return 0;
+
+	if (td->io_blocks[DDIR_WRITE] < td->o.iodepth)
+		comps = td->io_blocks[DDIR_WRITE];
+	else
+		comps = td->o.iodepth;
+
+	j = f->last_write_idx - 1;
+	for (i = 0; i < comps; i++) {
+		if (j == -1)
+			j = td->o.iodepth - 1;
+		s->comps[*index].fileno = __cpu_to_le64(f->fileno);
+		s->comps[*index].offset = cpu_to_le64(f->last_write_comp[j]);
+		(*index)++;
+		j--;
+	}
+
+	return comps;
+}
+
+static int fill_file_completions(struct thread_data *td,
+				 struct thread_io_list *s, unsigned int *index)
+{
+	struct fio_file *f;
+	unsigned int i;
+	int comps = 0;
+
+	for_each_file(td, f, i)
+		comps += __fill_file_completions(td, s, f, index);
+
+	return comps;
+}
+
 struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 {
 	struct all_io_list *rep;
@@ -1374,7 +1415,7 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 			continue;
 		td->stop_io = 1;
 		td->flags |= TD_F_VSTATE_SAVED;
-		depth += td->o.iodepth;
+		depth += (td->o.iodepth * td->o.nr_files);
 		nr++;
 	}
 
@@ -1383,7 +1424,7 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 
 	*sz = sizeof(*rep);
 	*sz += nr * sizeof(struct thread_io_list);
-	*sz += depth * sizeof(uint64_t);
+	*sz += depth * sizeof(struct file_comp);
 	rep = malloc(*sz);
 	memset(rep, 0, *sz);
 
@@ -1392,31 +1433,16 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 	next = &rep->state[0];
 	for_each_td(td, i) {
 		struct thread_io_list *s = next;
-		unsigned int comps;
+		unsigned int comps, index = 0;
 
 		if (save_mask != IO_LIST_ALL && (i + 1) != save_mask)
 			continue;
 
-		if (td->last_write_comp) {
-			int j, k;
-
-			if (td->io_blocks[DDIR_WRITE] < td->o.iodepth)
-				comps = td->io_blocks[DDIR_WRITE];
-			else
-				comps = td->o.iodepth;
-
-			k = td->last_write_idx - 1;
-			for (j = 0; j < comps; j++) {
-				if (k == -1)
-					k = td->o.iodepth - 1;
-				s->offsets[j] = cpu_to_le64(td->last_write_comp[k]);
-				k--;
-			}
-		} else
-			comps = 0;
+		comps = fill_file_completions(td, s, &index);
 
 		s->no_comps = cpu_to_le64((uint64_t) comps);
 		s->depth = cpu_to_le64((uint64_t) td->o.iodepth);
+		s->nofiles = cpu_to_le64((uint64_t) td->o.nr_files);
 		s->numberio = cpu_to_le64((uint64_t) td->io_issues[DDIR_WRITE]);
 		s->index = cpu_to_le64((uint64_t) i);
 		if (td->random_state.use64) {
@@ -1536,72 +1562,34 @@ void verify_free_state(struct thread_data *td)
 		free(td->vstate);
 }
 
-static struct thread_io_list *convert_v1_list(struct thread_io_list_v1 *s)
+void verify_assign_state(struct thread_data *td, void *p)
 {
-	struct thread_io_list *til;
+	struct thread_io_list *s = p;
 	int i;
 
-	til = malloc(__thread_io_list_sz(s->no_comps));
-	til->no_comps = s->no_comps;
-	til->depth = s->depth;
-	til->numberio = s->numberio;
-	til->index = s->index;
-	memcpy(til->name, s->name, sizeof(til->name));
+	s->no_comps = le64_to_cpu(s->no_comps);
+	s->depth = le32_to_cpu(s->depth);
+	s->nofiles = le32_to_cpu(s->nofiles);
+	s->numberio = le64_to_cpu(s->numberio);
+	s->rand.use64 = le64_to_cpu(s->rand.use64);
 
-	til->rand.use64 = 0;
-	for (i = 0; i < 4; i++)
-		til->rand.state32.s[i] = s->rand.s[i];
-
-	for (i = 0; i < s->no_comps; i++)
-		til->offsets[i] = s->offsets[i];
-
-	return til;
-}
-
-void verify_convert_assign_state(struct thread_data *td, void *p, int version)
-{
-	struct thread_io_list *til;
-	int i;
-
-	if (version == 1) {
-		struct thread_io_list_v1 *s = p;
-
-		s->no_comps = le64_to_cpu(s->no_comps);
-		s->depth = le64_to_cpu(s->depth);
-		s->numberio = le64_to_cpu(s->numberio);
-		for (i = 0; i < 4; i++)
-			s->rand.s[i] = le32_to_cpu(s->rand.s[i]);
-		for (i = 0; i < s->no_comps; i++)
-			s->offsets[i] = le64_to_cpu(s->offsets[i]);
-
-		til = convert_v1_list(s);
-		free(s);
+	if (s->rand.use64) {
+		for (i = 0; i < 6; i++)
+			s->rand.state64.s[i] = le64_to_cpu(s->rand.state64.s[i]);
 	} else {
-		struct thread_io_list *s = p;
-
-		s->no_comps = le64_to_cpu(s->no_comps);
-		s->depth = le64_to_cpu(s->depth);
-		s->numberio = le64_to_cpu(s->numberio);
-		s->rand.use64 = le64_to_cpu(s->rand.use64);
-
-		if (s->rand.use64) {
-			for (i = 0; i < 6; i++)
-				s->rand.state64.s[i] = le64_to_cpu(s->rand.state64.s[i]);
-		} else {
-			for (i = 0; i < 4; i++)
-				s->rand.state32.s[i] = le32_to_cpu(s->rand.state32.s[i]);
-		}
-		for (i = 0; i < s->no_comps; i++)
-			s->offsets[i] = le64_to_cpu(s->offsets[i]);
-
-		til = p;
+		for (i = 0; i < 4; i++)
+			s->rand.state32.s[i] = le32_to_cpu(s->rand.state32.s[i]);
 	}
 
-	td->vstate = til;
+	for (i = 0; i < s->no_comps; i++) {
+		s->comps[i].fileno = le64_to_cpu(s->comps[i].fileno);
+		s->comps[i].offset = le64_to_cpu(s->comps[i].offset);
+	}
+
+	td->vstate = p;
 }
 
-int verify_state_hdr(struct verify_state_hdr *hdr, struct thread_io_list *s,
-		     int *version)
+int verify_state_hdr(struct verify_state_hdr *hdr, struct thread_io_list *s)
 {
 	uint64_t crc;
 
@@ -1609,15 +1597,13 @@ int verify_state_hdr(struct verify_state_hdr *hdr, struct thread_io_list *s,
 	hdr->size = le64_to_cpu(hdr->size);
 	hdr->crc = le64_to_cpu(hdr->crc);
 
-	if (hdr->version != VSTATE_HDR_VERSION &&
-	    hdr->version != VSTATE_HDR_VERSION_V1)
+	if (hdr->version != VSTATE_HDR_VERSION)
 		return 1;
 
 	crc = fio_crc32c((void *)s, hdr->size);
 	if (crc != hdr->crc)
 		return 1;
 
-	*version = hdr->version;
 	return 0;
 }
 
@@ -1648,9 +1634,9 @@ int verify_load_state(struct thread_data *td, const char *prefix)
 	hdr.size = le64_to_cpu(hdr.size);
 	hdr.crc = le64_to_cpu(hdr.crc);
 
-	if (hdr.version != VSTATE_HDR_VERSION &&
-	    hdr.version != VSTATE_HDR_VERSION_V1) {
-		log_err("fio: bad version in verify state header\n");
+	if (hdr.version != VSTATE_HDR_VERSION) {
+		log_err("fio: unsupported (%d) version in verify state header\n",
+				(unsigned int) hdr.version);
 		goto err;
 	}
 
@@ -1671,7 +1657,7 @@ int verify_load_state(struct thread_data *td, const char *prefix)
 
 	close(fd);
 
-	verify_convert_assign_state(td, s, hdr.version);
+	verify_assign_state(td, s);
 	return 0;
 err:
 	if (s)
@@ -1686,9 +1672,10 @@ err:
 int verify_state_should_stop(struct thread_data *td, struct io_u *io_u)
 {
 	struct thread_io_list *s = td->vstate;
+	struct fio_file *f = io_u->file;
 	int i;
 
-	if (!s)
+	if (!s || !f)
 		return 0;
 
 	/*
@@ -1705,9 +1692,12 @@ int verify_state_should_stop(struct thread_data *td, struct io_u *io_u)
 	 * completed or not. If the IO was seen as completed, then
 	 * lets verify it.
 	 */
-	for (i = 0; i < s->no_comps; i++)
-		if (io_u->offset == s->offsets[i])
+	for (i = 0; i < s->no_comps; i++) {
+		if (s->comps[i].fileno != f->fileno)
+			continue;
+		if (io_u->offset == s->comps[i].offset)
 			return 0;
+	}
 
 	/*
 	 * Not found, we have to stop

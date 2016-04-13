@@ -1735,6 +1735,25 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 	}
 }
 
+static void file_log_write_comp(const struct thread_data *td, struct fio_file *f,
+				uint64_t offset, unsigned int bytes)
+{
+	int idx;
+
+	if (f->first_write == -1ULL || offset < f->first_write)
+		f->first_write = offset;
+	if (f->last_write == -1ULL || ((offset + bytes) > f->last_write))
+		f->last_write = offset + bytes;
+
+	if (!f->last_write_comp)
+		return;
+
+	idx = f->last_write_idx++;
+	f->last_write_comp[idx] = offset;
+	if (f->last_write_idx == td->o.iodepth)
+		f->last_write_idx = 0;
+}
+
 static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 			 struct io_completion_data *icd)
 {
@@ -1785,23 +1804,8 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		if (!(io_u->flags & IO_U_F_VER_LIST))
 			td->this_io_bytes[ddir] += bytes;
 
-		if (ddir == DDIR_WRITE) {
-			if (f) {
-				if (f->first_write == -1ULL ||
-				    io_u->offset < f->first_write)
-					f->first_write = io_u->offset;
-				if (f->last_write == -1ULL ||
-				    ((io_u->offset + bytes) > f->last_write))
-					f->last_write = io_u->offset + bytes;
-			}
-			if (td->last_write_comp) {
-				int idx = td->last_write_idx++;
-
-				td->last_write_comp[idx] = io_u->offset;
-				if (td->last_write_idx == td->o.iodepth)
-					td->last_write_idx = 0;
-			}
-		}
+		if (ddir == DDIR_WRITE && f)
+			file_log_write_comp(td, f, io_u->offset, bytes);
 
 		if (ramp_time_over(td) && (td->runstate == TD_RUNNING ||
 					   td->runstate == TD_VERIFYING))

@@ -1070,6 +1070,41 @@ reap:
 		bytes_done[i] = td->bytes_done[i] - bytes_done[i];
 }
 
+static void free_file_completion_logging(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	for_each_file(td, f, i) {
+		if (!f->last_write_comp)
+			break;
+		sfree(f->last_write_comp);
+	}
+}
+
+static int init_file_completion_logging(struct thread_data *td,
+					unsigned int depth)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	if (td->o.verify == VERIFY_NONE || !td->o.verify_state_save)
+		return 0;
+
+	for_each_file(td, f, i) {
+		f->last_write_comp = scalloc(depth, sizeof(uint64_t));
+		if (!f->last_write_comp)
+			goto cleanup;
+	}
+
+	return 0;
+
+cleanup:
+	free_file_completion_logging(td);
+	log_err("fio: failed to alloc write comp data\n");
+	return 1;
+}
+
 static void cleanup_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
@@ -1088,8 +1123,7 @@ static void cleanup_io_u(struct thread_data *td)
 	io_u_qexit(&td->io_u_freelist);
 	io_u_qexit(&td->io_u_all);
 
-	if (td->last_write_comp)
-		sfree(td->last_write_comp);
+	free_file_completion_logging(td);
 }
 
 static int init_io_u(struct thread_data *td)
@@ -1206,13 +1240,8 @@ static int init_io_u(struct thread_data *td)
 		p += max_bs;
 	}
 
-	if (td->o.verify != VERIFY_NONE) {
-		td->last_write_comp = scalloc(max_units, sizeof(uint64_t));
-		if (!td->last_write_comp) {
-			log_err("fio: failed to alloc write comp data\n");
-			return 1;
-		}
-	}
+	if (init_file_completion_logging(td, max_units))
+		return 1;
 
 	return 0;
 }
@@ -1964,12 +1993,11 @@ static int fio_verify_load_state(struct thread_data *td)
 
 	if (is_backend) {
 		void *data;
-		int ver;
 
 		ret = fio_server_get_verify_state(td->o.name,
-					td->thread_number - 1, &data, &ver);
+					td->thread_number - 1, &data);
 		if (!ret)
-			verify_convert_assign_state(td, data, ver);
+			verify_assign_state(td, data);
 	} else
 		ret = verify_load_state(td, "local");
 

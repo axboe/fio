@@ -26,8 +26,37 @@ static void show_s(struct thread_io_list *s, unsigned int no_s)
 	printf("Index: %llu\n", (unsigned long long) s->index);
 
 	printf("Completions:\n");
-	for (i = 0; i < s->no_comps; i++)
-		printf("\t%llu\n", (unsigned long long) s->offsets[i]);
+	for (i = 0; i < s->no_comps; i++) {
+		printf("\t(file=%2llu) %llu\n",
+				(unsigned long long) s->comps[i].fileno,
+				(unsigned long long) s->comps[i].offset);
+	}
+}
+
+static void show(struct thread_io_list *s, size_t size)
+{
+	int no_s;
+
+	no_s = 0;
+	do {
+		int i;
+
+		s->no_comps = le64_to_cpu(s->no_comps);
+		s->depth = le32_to_cpu(s->depth);
+		s->nofiles = le32_to_cpu(s->nofiles);
+		s->numberio = le64_to_cpu(s->numberio);
+		s->index = le64_to_cpu(s->index);
+
+		for (i = 0; i < s->no_comps; i++) {
+			s->comps[i].fileno = le64_to_cpu(s->comps[i].fileno);
+			s->comps[i].offset = le64_to_cpu(s->comps[i].offset);
+		}
+
+		show_s(s, no_s);
+		no_s++;
+		size -= __thread_io_list_sz(s->depth, s->nofiles);
+		s = (void *) s + __thread_io_list_sz(s->depth, s->nofiles);
+	} while (size != 0);
 }
 
 static void show_verify_state(void *buf, size_t size)
@@ -35,7 +64,6 @@ static void show_verify_state(void *buf, size_t size)
 	struct verify_state_hdr *hdr = buf;
 	struct thread_io_list *s;
 	uint32_t crc;
-	int no_s;
 
 	hdr->version = le64_to_cpu(hdr->version);
 	hdr->size = le64_to_cpu(hdr->size);
@@ -58,28 +86,10 @@ static void show_verify_state(void *buf, size_t size)
 		return;
 	}
 
-	if (hdr->version != 0x02) {
-		log_err("Can only handle version 2 headers\n");
-		return;
-	}
-
-	no_s = 0;
-	do {
-		int i;
-
-		s->no_comps = le64_to_cpu(s->no_comps);
-		s->depth = le64_to_cpu(s->depth);
-		s->numberio = le64_to_cpu(s->numberio);
-		s->index = le64_to_cpu(s->index);
-
-		for (i = 0; i < s->no_comps; i++)
-			s->offsets[i] = le64_to_cpu(s->offsets[i]);
-
-		show_s(s, no_s);
-		no_s++;
-		size -= __thread_io_list_sz(s->depth);
-		s = (void *) s + __thread_io_list_sz(s->depth);
-	} while (size != 0);
+	if (hdr->version == 0x03)
+		show(s, size);
+	else
+		log_err("Unsupported version %d\n", (int) hdr->version);
 }
 
 int main(int argc, char *argv[])

@@ -22,24 +22,20 @@ struct thread_rand_state {
 /*
  * For dumping current write state
  */
+struct file_comp {
+	uint64_t fileno;
+	uint64_t offset;
+};
+
 struct thread_io_list {
 	uint64_t no_comps;
-	uint64_t depth;
+	uint32_t depth;
+	uint32_t nofiles;
 	uint64_t numberio;
 	uint64_t index;
 	struct thread_rand_state rand;
 	uint8_t name[64];
-	uint64_t offsets[0];
-};
-
-struct thread_io_list_v1 {
-	uint64_t no_comps;
-	uint64_t depth;
-	uint64_t numberio;
-	uint64_t index;
-	struct thread_rand32_state rand;
-	uint8_t name[64];
-	uint64_t offsets[0];
+	struct file_comp comps[0];
 };
 
 struct all_io_list {
@@ -47,8 +43,7 @@ struct all_io_list {
 	struct thread_io_list state[0];
 };
 
-#define VSTATE_HDR_VERSION_V1	0x01
-#define VSTATE_HDR_VERSION	0x02
+#define VSTATE_HDR_VERSION	0x03
 
 struct verify_state_hdr {
 	uint64_t version;
@@ -65,18 +60,17 @@ extern void verify_save_state(int mask);
 extern int verify_load_state(struct thread_data *, const char *);
 extern void verify_free_state(struct thread_data *);
 extern int verify_state_should_stop(struct thread_data *, struct io_u *);
-extern void verify_convert_assign_state(struct thread_data *, void *, int);
-extern int verify_state_hdr(struct verify_state_hdr *, struct thread_io_list *,
-				int *);
+extern void verify_assign_state(struct thread_data *, void *);
+extern int verify_state_hdr(struct verify_state_hdr *, struct thread_io_list *);
 
-static inline size_t __thread_io_list_sz(uint64_t depth)
+static inline size_t __thread_io_list_sz(uint32_t depth, uint32_t nofiles)
 {
-	return sizeof(struct thread_io_list) + depth * sizeof(uint64_t);
+	return sizeof(struct thread_io_list) + depth * nofiles * sizeof(struct file_comp);
 }
 
 static inline size_t thread_io_list_sz(struct thread_io_list *s)
 {
-	return __thread_io_list_sz(le64_to_cpu(s->depth));
+	return __thread_io_list_sz(le32_to_cpu(s->depth), le32_to_cpu(s->nofiles));
 }
 
 static inline struct thread_io_list *io_list_next(struct thread_io_list *s)

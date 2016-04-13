@@ -211,7 +211,7 @@ extern void fio_server_send_ts(struct thread_stat *, struct group_run_stats *);
 extern void fio_server_send_gs(struct group_run_stats *);
 extern void fio_server_send_du(void);
 extern void fio_server_send_job_options(struct flist_head *, unsigned int);
-extern int fio_server_get_verify_state(const char *, int, void **, int *);
+extern int fio_server_get_verify_state(const char *, int, void **);
 
 extern struct fio_net_cmd *fio_net_recv_cmd(int sk, bool wait);
 
