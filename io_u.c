@@ -1740,6 +1740,9 @@ static void file_log_write_comp(const struct thread_data *td, struct fio_file *f
 {
 	int idx;
 
+	if (!f)
+		return;
+
 	if (f->first_write == -1ULL || offset < f->first_write)
 		f->first_write = offset;
 	if (f->last_write == -1ULL || ((offset + bytes) > f->last_write))
@@ -1804,7 +1807,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		if (!(io_u->flags & IO_U_F_VER_LIST))
 			td->this_io_bytes[ddir] += bytes;
 
-		if (ddir == DDIR_WRITE && f)
+		if (ddir == DDIR_WRITE)
 			file_log_write_comp(td, f, io_u->offset, bytes);
 
 		if (ramp_time_over(td) && (td->runstate == TD_RUNNING ||
