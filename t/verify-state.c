@@ -19,11 +19,12 @@ static void show_s(struct thread_io_list *s, unsigned int no_s)
 {
 	int i;
 
-	printf("Thread %u, %s\n", no_s, s->name);
-	printf("Completions: %llu\n", (unsigned long long) s->no_comps);
-	printf("Depth: %llu\n", (unsigned long long) s->depth);
-	printf("Number IOs: %llu\n", (unsigned long long) s->numberio);
-	printf("Index: %llu\n", (unsigned long long) s->index);
+	printf("Thread:\t\t%u\n", no_s);
+	printf("Name:\t\t%s\n", s->name);
+	printf("Completions:\t%llu\n", (unsigned long long) s->no_comps);
+	printf("Depth:\t\t%llu\n", (unsigned long long) s->depth);
+	printf("Number IOs:\t%llu\n", (unsigned long long) s->numberio);
+	printf("Index:\t\t%llu\n", (unsigned long long) s->index);
 
 	printf("Completions:\n");
 	for (i = 0; i < s->no_comps; i++) {
@@ -69,9 +70,9 @@ static void show_verify_state(void *buf, size_t size)
 	hdr->size = le64_to_cpu(hdr->size);
 	hdr->crc = le64_to_cpu(hdr->crc);
 
-	printf("Version: %x, Size %u, crc %x\n", (unsigned int) hdr->version,
-						(unsigned int) hdr->size,
-						(unsigned int) hdr->crc);
+	printf("Version:\t0x%x\n", (unsigned int) hdr->version);
+	printf("Size:\t\t%u\n", (unsigned int) hdr->size);
+	printf("CRC:\t\t0x%x\n", (unsigned int) hdr->crc);
 
 	size -= sizeof(*hdr);
 	if (hdr->size != size) {
