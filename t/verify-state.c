@@ -93,22 +93,15 @@ static void show_verify_state(void *buf, size_t size)
 		log_err("Unsupported version %d\n", (int) hdr->version);
 }
 
-int main(int argc, char *argv[])
+static int show_file(const char *file)
 {
 	struct stat sb;
 	void *buf;
 	int ret, fd;
 
-	debug_init();
-
-	if (argc < 2) {
-		log_err("Usage: %s <state file>\n", argv[0]);
-		return 1;
-	}
-
-	fd = open(argv[1], O_RDONLY);
+	fd = open(file, O_RDONLY);
 	if (fd < 0) {
-		log_err("open %s: %s\n", argv[1], strerror(errno));
+		log_err("open %s: %s\n", file, strerror(errno));
 		return 1;
 	}
 
@@ -135,4 +128,25 @@ int main(int argc, char *argv[])
 
 	free(buf);
 	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+	int i, ret;
+
+	debug_init();
+
+	if (argc < 2) {
+		log_err("Usage: %s <state file>\n", argv[0]);
+		return 1;
+	}
+
+	ret = 0;
+	for (i = 1; i < argc; i++) {
+		ret = show_file(argv[i]);
+		if (ret)
+			break;
+	}
+
+	return ret;
 }
