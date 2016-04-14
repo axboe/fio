@@ -809,6 +809,7 @@ int setup_files(struct thread_data *td)
 	 */
 	total_size = 0;
 	for_each_file(td, f, i) {
+		f->fileno = i;
 		if (f->real_file_size == -1ULL)
 			total_size = -1ULL;
 		else
