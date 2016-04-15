@@ -27,7 +27,9 @@ static void show_s(struct thread_io_list *s, unsigned int no_s)
 	printf("Index:\t\t%llu\n", (unsigned long long) s->index);
 
 	printf("Completions:\n");
-	for (i = 0; i < s->no_comps; i++) {
+	if (!s->no_comps)
+		return;
+	for (i = s->no_comps - 1; i >= 0; i--) {
 		printf("\t(file=%2llu) %llu\n",
 				(unsigned long long) s->comps[i].fileno,
 				(unsigned long long) s->comps[i].offset);
