@@ -1465,9 +1465,9 @@ By default, fio will log an entry in the iops, latency, or bw log for every
 IO that completes. When writing to the disk log, that can quickly grow to a
 very large size. Setting this option makes fio average the each log entry
 over the specified period of time, reducing the resolution of the log. See
-\fBlog_max\fR as well.  Defaults to 0, logging all entries.
+\fBlog_max_value\fR as well.  Defaults to 0, logging all entries.
 .TP
-.BI log_max \fR=\fPbool
+.BI log_max_value \fR=\fPbool
 If \fBlog_avg_msec\fR is set, fio logs the average over that window. If you
 instead want to log the maximum value, set this option to 1.  Defaults to
 0, meaning that averaged values are logged.

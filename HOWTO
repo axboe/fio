@@ -1596,12 +1596,13 @@ log_avg_msec=int By default, fio will log an entry in the iops, latency,
 		disk log, that can quickly grow to a very large size. Setting
 		this option makes fio average the each log entry over the
 		specified period of time, reducing the resolution of the log.
-		See log_max as well. Defaults to 0, logging all entries.
+		See log_max_value as well. Defaults to 0, logging all entries.
 
-log_max=bool	If log_avg_msec is set, fio logs the average over that window.
-		If you instead want to log the maximum value, set this option
-		to 1. Defaults to 0, meaning that averaged values are logged.
-.
+log_max_value=bool	If log_avg_msec is set, fio logs the average over that
+		window. If you instead want to log the maximum value, set this
+		option to 1. Defaults to 0, meaning that averaged values are
+		logged.
+
 log_offset=int	If this is set, the iolog options will include the byte
 		offset for the IO entry as well as the other data values.
 
