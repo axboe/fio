@@ -6,6 +6,7 @@
 #include <sys/ioctl.h>
 #include <sys/uio.h>
 #include <sys/syscall.h>
+#include <sys/sysmacros.h>
 #include <sys/vfs.h>
 #include <sys/mman.h>
 #include <unistd.h>
