@@ -26,14 +26,14 @@ static struct getopt_private_state {
 } pvt;
 
 static inline const char *option_matches(const char *arg_str,
-					 const char *opt_name)
+					 const char *opt_name, int smatch)
 {
 	while (*arg_str != '\0' && *arg_str != '=') {
 		if (*arg_str++ != *opt_name++)
 			return NULL;
 	}
 
-	if (*opt_name)
+	if (*opt_name && !smatch)
 		return NULL;
 
 	return arg_str;
@@ -84,11 +84,37 @@ int getopt_long_only(int argc, char *const *argv, const char *optstring,
 		}
 
 		for (lo = longopts; lo->name; lo++) {
-			if ((opt_end = option_matches(carg+2, lo->name)))
+			opt_end = option_matches(carg+2, lo->name, 0);
+			if (opt_end)
 			    break;
 		}
-		if (!opt_end)
-			return '?';
+		/*
+		 * The GNU getopt_long_only() apparently allows a short match,
+		 * if it's unique and if we don't have a full match. Let's
+		 * do the same here, search and see if there is one (and only
+		 * one) short match.
+		 */
+		if (!opt_end) {
+			const struct option *lo_match = NULL;
+
+			for (lo = longopts; lo->name; lo++) {
+				const char *ret;
+
+				ret = option_matches(carg+2, lo->name, 1);
+				if (!ret)
+					continue;
+				if (!opt_end) {
+					opt_end = ret;
+					lo_match = lo;
+				} else {
+					opt_end = NULL;
+					break;
+				}
+			}
+			if (!opt_end)
+				return '?';
+			lo = lo_match;
+		}
 
 		if (longindex)
 			*longindex = lo-longopts;
