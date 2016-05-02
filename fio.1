@@ -1772,6 +1772,9 @@ Preallocate donor's file on init
 .BI 1:
 allocate space immediately inside defragment event, and free right after event
 .RE
+.TP 
+.BI (rbd)clustername \fR=\fPstr
+Specifies the name of the ceph cluster.
 .TP
 .BI (rbd)rbdname \fR=\fPstr
 Specifies the name of the RBD.
@@ -1780,7 +1783,9 @@ Specifies the name of the RBD.
 Specifies the name of the Ceph pool containing the RBD.
 .TP
 .BI (rbd)clientname \fR=\fPstr
-Specifies the username (without the 'client.' prefix) used to access the Ceph cluster.
+Specifies the username (without the 'client.' prefix) used to access the Ceph
+cluster. If the clustername is specified, the clientname should be full type.id
+string. If no type. prefix, fio will add 'client.' by default for you.
 .TP
 .BI (mtd)skipbad \fR=\fPbool
 Skip operations against known bad blocks.
