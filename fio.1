@@ -1784,8 +1784,8 @@ Specifies the name of the Ceph pool containing the RBD.
 .TP
 .BI (rbd)clientname \fR=\fPstr
 Specifies the username (without the 'client.' prefix) used to access the Ceph
-cluster. If the clustername is specified, the clientname should be full type.id
-string. If no type. prefix, fio will add 'client.' by default for you.
+cluster. If the clustername is specified, the clientname shall be the full
+type.id string. If no type. prefix is given, fio will add 'client.' by default.
 .TP
 .BI (mtd)skipbad \fR=\fPbool
 Skip operations against known bad blocks.

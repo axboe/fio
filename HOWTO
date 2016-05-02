@@ -1888,6 +1888,15 @@ be the starting port number since fio will use a range of ports.
 		1 	  : allocate space immidietly inside defragment event,
 			    and free right after event
 
+[rbd] clustername=str	Specifies the name of the Ceph cluster.
+[rbd] rbdname=str	Specifies the name of the RBD.
+[rbd] pool=str		Specifies the naem of the Ceph pool containing RBD.
+[rbd] clientname=str	Specifies the username (without the 'client.' prefix)
+			used to access the Ceph cluster. If the clustername is
+			specified, the clientmae shall be the full type.id
+			string. If no type. prefix is given, fio will add
+			'client.' by default.
+
 [mtd] skip_bad=bool	Skip operations against known bad blocks.
 
 [libhdfs] hdfsdirectory	libhdfs will create chunk in this HDFS directory
