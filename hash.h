@@ -28,13 +28,29 @@
 #error Define GOLDEN_RATIO_PRIME for your wordsize.
 #endif
 
-#define GR_PRIME_64	0x9e37fffffffc0001ULL
+/*
+ * The above primes are actively bad for hashing, since they are
+ * too sparse. The 32-bit one is mostly ok, the 64-bit one causes
+ * real problems. Besides, the "prime" part is pointless for the
+ * multiplicative hash.
+ *
+ * Although a random odd number will do, it turns out that the golden
+ * ratio phi = (sqrt(5)-1)/2, or its negative, has particularly nice
+ * properties.
+ *
+ * These are the negative, (1 - phi) = (phi^2) = (3 - sqrt(5))/2.
+ * (See Knuth vol 3, section 6.4, exercise 9.)
+ */
+#define GOLDEN_RATIO_32 0x61C88647
+#define GOLDEN_RATIO_64 0x61C8864680B583EBull
 
 static inline unsigned long __hash_long(unsigned long val)
 {
 	unsigned long hash = val;
 
 #if BITS_PER_LONG == 64
+	hash *= GOLDEN_RATIO_64;
+#else
 	/*  Sigh, gcc can't optimise this alone like it does for 32 bits. */
 	unsigned long n = hash;
 	n <<= 18;
@@ -49,9 +65,6 @@ static inline unsigned long __hash_long(unsigned long val)
 	hash += n;
 	n <<= 2;
 	hash += n;
-#else
-	/* On some cpus multiply is faster, on others gcc will do shifts */
-	hash *= GOLDEN_RATIO_PRIME;
 #endif
 
 	return hash;
@@ -65,7 +78,7 @@ static inline unsigned long hash_long(unsigned long val, unsigned int bits)
 
 static inline uint64_t __hash_u64(uint64_t val)
 {
-	return val * GR_PRIME_64;
+	return val * GOLDEN_RATIO_64;
 }
 	
 static inline unsigned long hash_ptr(void *ptr, unsigned int bits)
@@ -77,7 +90,7 @@ static inline unsigned long hash_ptr(void *ptr, unsigned int bits)
  * Bob Jenkins jhash
  */
 
-#define JHASH_INITVAL	GOLDEN_RATIO_PRIME
+#define JHASH_INITVAL	GOLDEN_RATIO_32
 
 static inline uint32_t rol32(uint32_t word, uint32_t shift)
 {
