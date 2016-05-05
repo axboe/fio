@@ -1017,9 +1017,9 @@ static void drop_data_unlock(struct iolog_flush_data *data)
 	pthread_mutex_unlock(&data->lock);
 
 	if (!refs) {
-		free(data);
 		pthread_mutex_destroy(&data->lock);
 		pthread_cond_destroy(&data->cv);
+		free(data);
 	}
 }
 
