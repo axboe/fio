@@ -576,7 +576,7 @@ void setup_log(struct io_log **log, struct log_params *p,
 
 	l = calloc(1, sizeof(*l));
 	l->nr_samples = 0;
-	l->max_samples = 1024;
+	l->max_samples = DEF_LOG_ENTRIES;
 	l->log_type = p->log_type;
 	l->log_offset = p->log_offset;
 	l->log_gz = p->log_gz;
@@ -1165,7 +1165,7 @@ int iolog_flush(struct io_log *log, int wait)
 	data->nr_samples = log->nr_samples;
 
 	log->nr_samples = 0;
-	log->max_samples = 128;
+	log->max_samples = DEF_LOG_ENTRIES;
 	log->log = malloc(log->max_samples * log_entry_sz(log));
 
 	if (!wait)

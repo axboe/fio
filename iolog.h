@@ -41,6 +41,8 @@ enum {
 	IO_LOG_TYPE_IOPS,
 };
 
+#define DEF_LOG_ENTRIES		1024
+
 /*
  * Dynamically growing data sample log
  */
