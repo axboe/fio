@@ -1022,7 +1022,7 @@ static int gz_work(struct iolog_flush_data *data)
 	ret = deflateInit(&stream, Z_DEFAULT_COMPRESSION);
 	if (ret != Z_OK) {
 		log_err("fio: failed to init gz stream\n");
-		return 0;
+		goto err;
 	}
 
 	seq = ++data->log->chunk_seq;
