@@ -672,11 +672,6 @@ void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 
 struct iolog_flush_data {
 	struct workqueue_work work;
-	pthread_mutex_t lock;
-	pthread_cond_t cv;
-	int wait;
-	volatile int done;
-	volatile int refs;
 	struct io_log *log;
 	void *samples;
 	uint64_t nr_samples;
@@ -1009,28 +1004,8 @@ size_t log_chunk_sizes(struct io_log *log)
 
 #ifdef CONFIG_ZLIB
 
-static void drop_data_unlock(struct iolog_flush_data *data)
+static int gz_work(struct iolog_flush_data *data)
 {
-	int refs;
-
-	refs = --data->refs;
-	pthread_mutex_unlock(&data->lock);
-
-	if (!refs) {
-		pthread_mutex_destroy(&data->lock);
-		pthread_cond_destroy(&data->cv);
-		free(data);
-	}
-}
-
-/*
- * Invoked from our compress helper thread, when logging would have exceeded
- * the specified memory limitation. Compresses the previously stored
- * entries.
- */
-static int gz_work(struct submit_worker *sw, struct workqueue_work *work)
-{
-	struct iolog_flush_data *data;
 	struct iolog_compress *c;
 	struct flist_head list;
 	unsigned int seq;
@@ -1039,8 +1014,6 @@ static int gz_work(struct submit_worker *sw, struct workqueue_work *work)
 	int ret;
 
 	INIT_FLIST_HEAD(&list);
-
-	data = container_of(work, struct iolog_flush_data, work);
 
 	stream.zalloc = Z_NULL;
 	stream.zfree = Z_NULL;
@@ -1109,14 +1082,7 @@ static int gz_work(struct submit_worker *sw, struct workqueue_work *work)
 
 	ret = 0;
 done:
-	if (data->wait) {
-		pthread_mutex_lock(&data->lock);
-		data->done = 1;
-		pthread_cond_signal(&data->cv);
-
-		drop_data_unlock(data);
-	} else
-		free(data);
+	free(data);
 	return ret;
 err:
 	while (!flist_empty(&list)) {
@@ -1126,6 +1092,16 @@ err:
 	}
 	ret = 1;
 	goto done;
+}
+
+/*
+ * Invoked from our compress helper thread, when logging would have exceeded
+ * the specified memory limitation. Compresses the previously stored
+ * entries.
+ */
+static int gz_work_async(struct submit_worker *sw, struct workqueue_work *work)
+{
+	return gz_work(container_of(work, struct iolog_flush_data, work));
 }
 
 static int gz_init_worker(struct submit_worker *sw)
@@ -1144,7 +1120,7 @@ static int gz_init_worker(struct submit_worker *sw)
 }
 
 static struct workqueue_ops log_compress_wq_ops = {
-	.fn		= gz_work,
+	.fn		= gz_work_async,
 	.init_worker_fn	= gz_init_worker,
 	.nice		= 1,
 };
@@ -1192,23 +1168,10 @@ int iolog_flush(struct io_log *log, int wait)
 	log->max_samples = 128;
 	log->log = malloc(log->max_samples * log_entry_sz(log));
 
-	data->wait = wait;
-	if (data->wait) {
-		pthread_mutex_init(&data->lock, NULL);
-		pthread_cond_init(&data->cv, NULL);
-		data->done = 0;
-		data->refs = 2;
-	}
-
-	workqueue_enqueue(&log->td->log_compress_wq, &data->work);
-
-	if (wait) {
-		pthread_mutex_lock(&data->lock);
-		while (!data->done)
-			pthread_cond_wait(&data->cv, &data->lock);
-
-		drop_data_unlock(data);
-	}
+	if (!wait)
+		workqueue_enqueue(&log->td->log_compress_wq, &data->work);
+	else
+		gz_work(data);
 
 	return 0;
 }
