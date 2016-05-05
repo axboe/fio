@@ -146,6 +146,8 @@ void reset_all_stats(struct thread_data *td)
 	fio_gettime(&tv, NULL);
 	memcpy(&td->epoch, &tv, sizeof(tv));
 	memcpy(&td->start, &tv, sizeof(tv));
+	memcpy(&td->iops_sample_time, &tv, sizeof(tv));
+	memcpy(&td->bw_sample_time, &tv, sizeof(tv));
 
 	lat_target_reset(td);
 	clear_rusage_stat(td);
