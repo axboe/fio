@@ -33,6 +33,7 @@
 #include "smalloc.h"
 #include "os/os.h"
 #include "filelock.h"
+#include "helper_thread.h"
 
 /*
  * Just expose an empty list, if the OS does not support disk util stats

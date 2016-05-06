@@ -732,8 +732,4 @@ enum {
 extern void exec_trigger(const char *);
 extern void check_trigger_file(void);
 
-extern void helper_reset(void);
-extern void helper_do_stat(void);
-extern bool helper_should_exit(void);
-
 #endif

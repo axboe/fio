@@ -11,6 +11,7 @@
 #include "fio.h"
 #include "smalloc.h"
 #include "diskutil.h"
+#include "helper_thread.h"
 
 static int last_majdev, last_mindev;
 static struct disk_util *last_du;

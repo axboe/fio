@@ -15,6 +15,7 @@
 #include "idletime.h"
 #include "lib/pow2.h"
 #include "lib/output_buffer.h"
+#include "helper_thread.h"
 
 struct fio_mutex *stat_mutex;
 
