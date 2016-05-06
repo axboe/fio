@@ -4,8 +4,7 @@
 #define FIO_DU_NAME_SZ		64
 
 #include "lib/output_buffer.h"
-
-extern volatile int helper_exit;
+#include "helper_thread.h"
 
 struct disk_util_stats {
 	uint64_t ios[2];
@@ -129,7 +128,7 @@ static inline void print_disk_util(struct disk_util_stat *du,
 
 static inline int update_io_ticks(void)
 {
-	return helper_exit;
+	return helper_should_exit();
 }
 #endif
 
