@@ -2246,7 +2246,6 @@ static int add_iops_samples(struct thread_data *td, struct timeval *t)
 	if (spent <= td->o.iops_avg_time)
 		return td->o.iops_avg_time;
 
-	printf("%lu over\n", spent - td->o.iops_avg_time);
 	return td->o.iops_avg_time - (1 + spent - td->o.iops_avg_time);
 }
 
