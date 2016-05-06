@@ -9,6 +9,7 @@
 #include "fio.h"
 #include "flist.h"
 #include "workqueue.h"
+#include "smalloc.h"
 
 enum {
 	SW_F_IDLE	= 1 << 0,
@@ -263,7 +264,7 @@ void workqueue_exit(struct workqueue *wq)
 		}
 	} while (shutdown && shutdown != wq->max_workers);
 
-	free(wq->workers);
+	sfree(wq->workers);
 	wq->workers = NULL;
 	pthread_mutex_destroy(&wq->flush_lock);
 	pthread_cond_destroy(&wq->flush_cond);
@@ -317,7 +318,7 @@ int workqueue_init(struct thread_data *td, struct workqueue *wq,
 	pthread_mutex_init(&wq->flush_lock, NULL);
 	pthread_mutex_init(&wq->stat_lock, NULL);
 
-	wq->workers = calloc(wq->max_workers, sizeof(struct submit_worker));
+	wq->workers = smalloc(wq->max_workers * sizeof(struct submit_worker));
 
 	for (i = 0; i < wq->max_workers; i++)
 		if (start_worker(wq, i, sk_out))

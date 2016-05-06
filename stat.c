@@ -1862,13 +1862,21 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 		iolog->avg_last = t;
 
 	if (iolog->nr_samples == iolog->max_samples) {
-		size_t new_size;
+		size_t new_size, new_samples;
 		void *new_log;
 
-		new_size = 2 * iolog->max_samples * log_entry_sz(iolog);
+		if (!iolog->max_samples)
+			new_samples = DEF_LOG_ENTRIES;
+		else
+			new_samples = iolog->max_samples * 2;
+
+		new_size = new_samples * log_entry_sz(iolog);
 
 		if (iolog->log_gz && (new_size > iolog->log_gz)) {
-			if (iolog_flush(iolog, 0)) {
+			if (!iolog->log) {
+				iolog->log = malloc(new_size);
+				iolog->max_samples = new_samples;
+			} else if (iolog_flush(iolog, 0)) {
 				log_err("fio: failed flushing iolog! Will stop logging.\n");
 				iolog->disabled = 1;
 				return;
@@ -1882,7 +1890,7 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 				return;
 			}
 			iolog->log = new_log;
-			iolog->max_samples <<= 1;
+			iolog->max_samples = new_samples;
 		}
 	}
 
@@ -2013,21 +2021,21 @@ static void add_log_sample(struct thread_data *td, struct io_log *iolog,
 	iolog->avg_last = elapsed;
 }
 
-void finalize_logs(struct thread_data *td)
+void finalize_logs(struct thread_data *td, bool unit_logs)
 {
 	unsigned long elapsed;
 
 	elapsed = mtime_since_now(&td->epoch);
 
-	if (td->clat_log)
+	if (td->clat_log && unit_logs)
 		_add_stat_to_log(td->clat_log, elapsed, td->o.log_max != 0);
-	if (td->slat_log)
+	if (td->slat_log && unit_logs)
 		_add_stat_to_log(td->slat_log, elapsed, td->o.log_max != 0);
-	if (td->lat_log)
+	if (td->lat_log && unit_logs)
 		_add_stat_to_log(td->lat_log, elapsed, td->o.log_max != 0);
-	if (td->bw_log)
+	if (td->bw_log && (unit_logs == per_unit_log(td->bw_log)))
 		_add_stat_to_log(td->bw_log, elapsed, td->o.log_max != 0);
-	if (td->iops_log)
+	if (td->iops_log && (unit_logs == per_unit_log(td->iops_log)))
 		_add_stat_to_log(td->iops_log, elapsed, td->o.log_max != 0);
 }
 
@@ -2055,9 +2063,6 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long usec, unsigned int bs, uint64_t offset)
 {
 	struct thread_stat *ts = &td->ts;
-
-	if (!ddir_rw(ddir))
-		return;
 
 	td_io_u_lock(td);
 
@@ -2108,18 +2113,41 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 	td_io_u_unlock(td);
 }
 
-void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
-		   struct timeval *t)
+void add_bw_sample(struct thread_data *td, struct io_u *io_u,
+		   unsigned int bytes, unsigned long spent)
+{
+	struct thread_stat *ts = &td->ts;
+	unsigned long rate;
+
+	if (spent)
+		rate = bytes * 1000 / spent;
+	else
+		rate = 0;
+
+	td_io_u_lock(td);
+
+	add_stat_sample(&ts->bw_stat[io_u->ddir], rate);
+
+	if (td->bw_log)
+		add_log_sample(td, td->bw_log, rate, io_u->ddir, bytes, io_u->offset);
+
+	td->stat_io_bytes[io_u->ddir] = td->this_io_bytes[io_u->ddir];
+	td_io_u_unlock(td);
+}
+
+static int add_bw_samples(struct thread_data *td, struct timeval *t)
 {
 	struct thread_stat *ts = &td->ts;
 	unsigned long spent, rate;
+	enum fio_ddir ddir;
 
-	if (!ddir_rw(ddir))
-		return;
+	if (per_unit_log(td->bw_log))
+		return 0;
 
 	spent = mtime_since(&td->bw_sample_time, t);
-	if (spent < td->o.bw_avg_time)
-		return;
+	if (spent < td->o.bw_avg_time &&
+	    td->o.bw_avg_time - spent >= 10)
+		return td->o.bw_avg_time - spent;
 
 	td_io_u_lock(td);
 
@@ -2141,27 +2169,50 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 		add_stat_sample(&ts->bw_stat[ddir], rate);
 
 		if (td->bw_log)
-			add_log_sample(td, td->bw_log, rate, ddir, bs, 0);
+			add_log_sample(td, td->bw_log, rate, ddir, 0, 0);
 
 		td->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
 	}
 
-	fio_gettime(&td->bw_sample_time, NULL);
+	timeval_add_msec(&td->bw_sample_time, td->o.bw_avg_time);
+
+	td_io_u_unlock(td);
+
+	if (spent <= td->o.bw_avg_time)
+		return td->o.bw_avg_time;
+
+	return td->o.bw_avg_time - (1 + spent - td->o.bw_avg_time);
+}
+
+void add_iops_sample(struct thread_data *td, struct io_u *io_u,
+		     unsigned int bytes)
+{
+	struct thread_stat *ts = &td->ts;
+
+	td_io_u_lock(td);
+
+	add_stat_sample(&ts->iops_stat[io_u->ddir], 1);
+
+	if (td->iops_log)
+		add_log_sample(td, td->iops_log, 1, io_u->ddir, bytes, io_u->offset);
+
+	td->stat_io_blocks[io_u->ddir] = td->this_io_blocks[io_u->ddir];
 	td_io_u_unlock(td);
 }
 
-void add_iops_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
-		     struct timeval *t)
+static int add_iops_samples(struct thread_data *td, struct timeval *t)
 {
 	struct thread_stat *ts = &td->ts;
 	unsigned long spent, iops;
+	enum fio_ddir ddir;
 
-	if (!ddir_rw(ddir))
-		return;
+	if (per_unit_log(td->iops_log))
+		return 0;
 
 	spent = mtime_since(&td->iops_sample_time, t);
-	if (spent < td->o.iops_avg_time)
-		return;
+	if (spent < td->o.iops_avg_time &&
+	    td->o.iops_avg_time - spent >= 10)
+		return td->o.iops_avg_time - spent;
 
 	td_io_u_lock(td);
 
@@ -2183,13 +2234,53 @@ void add_iops_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs
 		add_stat_sample(&ts->iops_stat[ddir], iops);
 
 		if (td->iops_log)
-			add_log_sample(td, td->iops_log, iops, ddir, bs, 0);
+			add_log_sample(td, td->iops_log, iops, ddir, 0, 0);
 
 		td->stat_io_blocks[ddir] = td->this_io_blocks[ddir];
 	}
 
-	fio_gettime(&td->iops_sample_time, NULL);
+	timeval_add_msec(&td->iops_sample_time, td->o.iops_avg_time);
+
 	td_io_u_unlock(td);
+
+	if (spent <= td->o.iops_avg_time)
+		return td->o.iops_avg_time;
+
+	printf("%lu over\n", spent - td->o.iops_avg_time);
+	return td->o.iops_avg_time - (1 + spent - td->o.iops_avg_time);
+}
+
+/*
+ * Returns msecs to next event
+ */
+int calc_log_samples(void)
+{
+	struct thread_data *td;
+	unsigned int next = ~0U, tmp;
+	struct timeval now;
+	int i;
+
+	fio_gettime(&now, NULL);
+
+	for_each_td(td, i) {
+		if (!ramp_time_over(td) ||
+		    !(td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING)) {
+			next = min(td->o.iops_avg_time, td->o.bw_avg_time);
+			continue;
+		}
+		if (!per_unit_log(td->bw_log)) {
+			tmp = add_bw_samples(td, &now);
+			if (tmp < next)
+				next = tmp;
+		}
+		if (!per_unit_log(td->iops_log)) {
+			tmp = add_iops_samples(td, &now);
+			if (tmp < next)
+				next = tmp;
+		}
+	}
+
+	return next == ~0U ? 0 : next;
 }
 
 void stat_init(void)
@@ -2212,8 +2303,7 @@ void stat_exit(void)
  */
 void show_running_run_stats(void)
 {
-	helper_do_stat = 1;
-	pthread_cond_signal(&helper_cond);
+	helper_do_stat();
 }
 
 uint32_t *io_u_block_info(struct thread_data *td, struct io_u *io_u)

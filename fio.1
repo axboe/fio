@@ -1180,12 +1180,14 @@ Terminate all jobs if one job finishes in error.  Default: wait for each job
 to finish.
 .TP
 .BI bwavgtime \fR=\fPint
-Average bandwidth calculations over the given time in milliseconds.  Default:
-500ms.
+Average bandwidth calculations over the given time in milliseconds. If the job
+also does bandwidth logging through \fBwrite_bw_log\fR, then the minimum of
+this option and \fBlog_avg_msec\fR will be used.  Default: 500ms.
 .TP
 .BI iopsavgtime \fR=\fPint
-Average IOPS calculations over the given time in milliseconds.  Default:
-500ms.
+Average IOPS calculations over the given time in milliseconds. If the job
+also does IOPS logging through \fBwrite_iops_log\fR, then the minimum of
+this option and \fBlog_avg_msec\fR will be used.  Default: 500ms.
 .TP
 .BI create_serialize \fR=\fPbool
 If true, serialize file creation for the jobs.  Default: true.

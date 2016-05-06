@@ -18,6 +18,7 @@
 #include "verify.h"
 #include "trim.h"
 #include "filelock.h"
+#include "smalloc.h"
 
 static const char iolog_ver2[] = "fio version 2 iolog";
 
@@ -574,14 +575,12 @@ void setup_log(struct io_log **log, struct log_params *p,
 {
 	struct io_log *l;
 
-	l = calloc(1, sizeof(*l));
+	l = smalloc(sizeof(*l));
 	l->nr_samples = 0;
-	l->max_samples = DEF_LOG_ENTRIES;
 	l->log_type = p->log_type;
 	l->log_offset = p->log_offset;
 	l->log_gz = p->log_gz;
 	l->log_gz_store = p->log_gz_store;
-	l->log = malloc(l->max_samples * log_entry_sz(l));
 	l->avg_msec = p->avg_msec;
 	l->filename = strdup(filename);
 	l->td = p->td;
@@ -631,7 +630,7 @@ void free_log(struct io_log *log)
 {
 	free(log->log);
 	free(log->filename);
-	free(log);
+	sfree(log);
 }
 
 void flush_samples(FILE *f, void *samples, uint64_t sample_size)
@@ -1202,29 +1201,74 @@ static int __write_log(struct thread_data *td, struct io_log *log, int try)
 	return 0;
 }
 
-static int write_iops_log(struct thread_data *td, int try)
+static int write_iops_log(struct thread_data *td, int try, bool unit_log)
 {
-	return __write_log(td, td->iops_log, try);
+	int ret;
+
+	if (per_unit_log(td->iops_log) != unit_log)
+		return 0;
+
+	ret = __write_log(td, td->iops_log, try);
+	if (!ret)
+		td->iops_log = NULL;
+
+	return ret;
 }
 
-static int write_slat_log(struct thread_data *td, int try)
+static int write_slat_log(struct thread_data *td, int try, bool unit_log)
 {
-	return __write_log(td, td->slat_log, try);
+	int ret;
+
+	if (!unit_log)
+		return 0;
+
+	ret = __write_log(td, td->slat_log, try);
+	if (!ret)
+		td->slat_log = NULL;
+
+	return ret;
 }
 
-static int write_clat_log(struct thread_data *td, int try)
+static int write_clat_log(struct thread_data *td, int try, bool unit_log)
 {
-	return __write_log(td, td->clat_log, try);
+	int ret;
+
+	if (!unit_log)
+		return 0;
+
+	ret = __write_log(td, td->clat_log, try);
+	if (!ret)
+		td->clat_log = NULL;
+
+	return ret;
 }
 
-static int write_lat_log(struct thread_data *td, int try)
+static int write_lat_log(struct thread_data *td, int try, bool unit_log)
 {
-	return __write_log(td, td->lat_log, try);
+	int ret;
+
+	if (!unit_log)
+		return 0;
+
+	ret = __write_log(td, td->lat_log, try);
+	if (!ret)
+		td->lat_log = NULL;
+
+	return ret;
 }
 
-static int write_bandw_log(struct thread_data *td, int try)
+static int write_bandw_log(struct thread_data *td, int try, bool unit_log)
 {
-	return __write_log(td, td->bw_log, try);
+	int ret;
+
+	if (per_unit_log(td->bw_log) != unit_log)
+		return 0;
+
+	ret = __write_log(td, td->bw_log, try);
+	if (!ret)
+		td->bw_log = NULL;
+
+	return ret;
 }
 
 enum {
@@ -1239,7 +1283,7 @@ enum {
 
 struct log_type {
 	unsigned int mask;
-	int (*fn)(struct thread_data *, int);
+	int (*fn)(struct thread_data *, int, bool);
 };
 
 static struct log_type log_types[] = {
@@ -1265,7 +1309,7 @@ static struct log_type log_types[] = {
 	},
 };
 
-void fio_writeout_logs(struct thread_data *td)
+void td_writeout_logs(struct thread_data *td, bool unit_logs)
 {
 	unsigned int log_mask = 0;
 	unsigned int log_left = ALL_LOG_NR;
@@ -1273,7 +1317,7 @@ void fio_writeout_logs(struct thread_data *td)
 
 	old_state = td_bump_runstate(td, TD_FINISHING);
 
-	finalize_logs(td);
+	finalize_logs(td, unit_logs);
 
 	while (log_left) {
 		int prev_log_left = log_left;
@@ -1283,7 +1327,7 @@ void fio_writeout_logs(struct thread_data *td)
 			int ret;
 
 			if (!(log_mask & lt->mask)) {
-				ret = lt->fn(td, log_left != 1);
+				ret = lt->fn(td, log_left != 1, unit_logs);
 				if (!ret) {
 					log_left--;
 					log_mask |= lt->mask;
@@ -1296,4 +1340,13 @@ void fio_writeout_logs(struct thread_data *td)
 	}
 
 	td_restore_runstate(td, old_state);
+}
+
+void fio_writeout_logs(bool unit_logs)
+{
+	struct thread_data *td;
+	int i;
+
+	for_each_td(td, i)
+		td_writeout_logs(td, unit_logs);
 }

@@ -58,11 +58,6 @@
 #include "lib/mountcheck.h"
 #include "rate-submit.h"
 
-static pthread_t helper_thread;
-static pthread_mutex_t helper_lock;
-pthread_cond_t helper_cond;
-int helper_do_stat = 0;
-
 static struct fio_mutex *startup_mutex;
 static struct flist_head *cgroup_list;
 static char *cgroup_mnt;
@@ -79,7 +74,16 @@ unsigned int stat_number = 0;
 int shm_id = 0;
 int temp_stall_ts;
 unsigned long done_secs = 0;
-volatile int helper_exit = 0;
+
+static struct helper_data {
+	volatile int exit;
+	volatile int reset;
+	volatile int do_stat;
+	struct sk_out *sk_out;
+	pthread_t thread;
+	pthread_mutex_t lock;
+	pthread_cond_t cond;
+} *helper_data;
 
 #define PAGE_ALIGN(buf)	\
 	(char *) (((uintptr_t) (buf) + page_mask) & ~page_mask)
@@ -1722,7 +1726,7 @@ static void *thread_main(void *data)
 
 	fio_unpin_memory(td);
 
-	fio_writeout_logs(td);
+	td_writeout_logs(td, true);
 
 	iolog_compress_exit(td);
 	rate_submit_exit(td);
@@ -2319,58 +2323,128 @@ reap:
 	update_io_ticks();
 }
 
+void helper_reset(void)
+{
+	if (!helper_data)
+		return;
+
+	pthread_mutex_lock(&helper_data->lock);
+
+	if (!helper_data->reset) {
+		helper_data->reset = 1;
+		pthread_cond_signal(&helper_data->cond);
+	}
+
+	pthread_mutex_unlock(&helper_data->lock);
+}
+
+void helper_do_stat(void)
+{
+	if (!helper_data)
+		return;
+
+	pthread_mutex_lock(&helper_data->lock);
+	helper_data->do_stat = 1;
+	pthread_cond_signal(&helper_data->cond);
+	pthread_mutex_unlock(&helper_data->lock);
+}
+
+bool helper_should_exit(void)
+{
+	if (!helper_data)
+		return true;
+
+	return helper_data->exit;
+}
+
 static void wait_for_helper_thread_exit(void)
 {
 	void *ret;
 
-	helper_exit = 1;
-	pthread_cond_signal(&helper_cond);
-	pthread_join(helper_thread, &ret);
+	pthread_mutex_lock(&helper_data->lock);
+	helper_data->exit = 1;
+	pthread_cond_signal(&helper_data->cond);
+	pthread_mutex_unlock(&helper_data->lock);
+
+	pthread_join(helper_data->thread, &ret);
 }
 
 static void free_disk_util(void)
 {
 	disk_util_prune_entries();
 
-	pthread_cond_destroy(&helper_cond);
+	pthread_cond_destroy(&helper_data->cond);
+	pthread_mutex_destroy(&helper_data->lock);
+	sfree(helper_data);
 }
 
 static void *helper_thread_main(void *data)
 {
-	struct sk_out *sk_out = data;
+	struct helper_data *hd = data;
+	unsigned int msec_to_next_event, next_log;
+	struct timeval tv, last_du;
 	int ret = 0;
 
-	sk_out_assign(sk_out);
+	sk_out_assign(hd->sk_out);
+
+	gettimeofday(&tv, NULL);
+	memcpy(&last_du, &tv, sizeof(tv));
 
 	fio_mutex_up(startup_mutex);
 
-	while (!ret) {
-		uint64_t sec = DISK_UTIL_MSEC / 1000;
-		uint64_t nsec = (DISK_UTIL_MSEC % 1000) * 1000000;
+	msec_to_next_event = DISK_UTIL_MSEC;
+	while (!ret && !hd->exit) {
 		struct timespec ts;
-		struct timeval tv;
+		struct timeval now;
+		uint64_t since_du;
 
-		gettimeofday(&tv, NULL);
-		ts.tv_sec = tv.tv_sec + sec;
-		ts.tv_nsec = (tv.tv_usec * 1000) + nsec;
+		timeval_add_msec(&tv, msec_to_next_event);
+		ts.tv_sec = tv.tv_sec;
+		ts.tv_nsec = tv.tv_usec * 1000;
 
-		if (ts.tv_nsec >= 1000000000ULL) {
-			ts.tv_nsec -= 1000000000ULL;
-			ts.tv_sec++;
+		pthread_mutex_lock(&hd->lock);
+		pthread_cond_timedwait(&hd->cond, &hd->lock, &ts);
+
+		gettimeofday(&now, NULL);
+
+		if (hd->reset) {
+			memcpy(&tv, &now, sizeof(tv));
+			memcpy(&last_du, &now, sizeof(last_du));
+			hd->reset = 0;
 		}
 
-		pthread_cond_timedwait(&helper_cond, &helper_lock, &ts);
+		pthread_mutex_unlock(&hd->lock);
 
-		ret = update_io_ticks();
+		since_du = mtime_since(&last_du, &now);
+		if (since_du >= DISK_UTIL_MSEC || DISK_UTIL_MSEC - since_du < 10) {
+			ret = update_io_ticks();
+			timeval_add_msec(&last_du, DISK_UTIL_MSEC);
+			msec_to_next_event = DISK_UTIL_MSEC;
+			if (since_du >= DISK_UTIL_MSEC)
+				msec_to_next_event -= (since_du - DISK_UTIL_MSEC);
+		} else {
+			if (since_du >= DISK_UTIL_MSEC)
+				msec_to_next_event = DISK_UTIL_MSEC - (DISK_UTIL_MSEC - since_du);
+			else
+				msec_to_next_event = DISK_UTIL_MSEC;
+		}
 
-		if (helper_do_stat) {
-			helper_do_stat = 0;
+		if (hd->do_stat) {
+			hd->do_stat = 0;
 			__show_running_run_stats();
 		}
+
+		next_log = calc_log_samples();
+		if (!next_log)
+			next_log = DISK_UTIL_MSEC;
+
+		msec_to_next_event = min(next_log, msec_to_next_event);
 
 		if (!is_backend)
 			print_thread_status();
 	}
+
+	fio_writeout_logs(false);
 
 	sk_out_drop();
 	return NULL;
@@ -2378,18 +2452,24 @@ static void *helper_thread_main(void *data)
 
 static int create_helper_thread(struct sk_out *sk_out)
 {
+	struct helper_data *hd;
 	int ret;
+
+	hd = smalloc(sizeof(*hd));
 
 	setup_disk_util();
 
-	pthread_cond_init(&helper_cond, NULL);
-	pthread_mutex_init(&helper_lock, NULL);
+	hd->sk_out = sk_out;
+	pthread_cond_init(&hd->cond, NULL);
+	pthread_mutex_init(&hd->lock, NULL);
 
-	ret = pthread_create(&helper_thread, NULL, helper_thread_main, sk_out);
+	ret = pthread_create(&hd->thread, NULL, helper_thread_main, hd);
 	if (ret) {
 		log_err("Can't create helper thread: %s\n", strerror(ret));
 		return 1;
 	}
+
+	helper_data = hd;
 
 	dprint(FD_MUTEX, "wait on startup_mutex\n");
 	fio_mutex_down(startup_mutex);

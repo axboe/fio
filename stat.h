@@ -276,11 +276,12 @@ extern void add_clat_sample(struct thread_data *, enum fio_ddir, unsigned long,
 				unsigned int, uint64_t);
 extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long,
 				unsigned int, uint64_t);
-extern void add_bw_sample(struct thread_data *, enum fio_ddir, unsigned int,
-				struct timeval *);
-extern void add_iops_sample(struct thread_data *, enum fio_ddir, unsigned int,
-				struct timeval *);
 extern void add_agg_sample(unsigned long, enum fio_ddir, unsigned int);
+extern void add_iops_sample(struct thread_data *, struct io_u *,
+				unsigned int);
+extern void add_bw_sample(struct thread_data *, struct io_u *,
+				unsigned int, unsigned long);
+extern int calc_log_samples(void);
 
 extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 extern int write_bw_log;

@@ -6,6 +6,15 @@
 static struct timeval genesis;
 static unsigned long ns_granularity;
 
+void timeval_add_msec(struct timeval *tv, unsigned int msec)
+{
+	tv->tv_usec += 1000 * msec;
+	if (tv->tv_usec >= 1000000) {
+		tv->tv_usec -= 1000000;
+		tv->tv_sec++;
+	}
+}
+
 /*
  * busy looping version for the last few usec
  */
