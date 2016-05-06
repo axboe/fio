@@ -137,10 +137,6 @@ struct fio_pmemblk_file {
 static fio_pmemblk_file_t Cache = NULL;
 
 static pthread_mutex_t CacheLock = PTHREAD_MUTEX_INITIALIZER;
-#define CACHE_LOCK()  \
-	(void)pthread_mutex_lock(&CacheLock)
-#define CACHE_UNLOCK()  \
-	(void)pthread_mutex_unlock(&CacheLock)
 
 #define PMB_CREATE   (0x0001)	/* should create file */
 
@@ -254,7 +250,7 @@ static
 	if (NULL == path)
 		return NULL;
 
-	CACHE_LOCK();
+	pthread_mutex_lock(&CacheLock);
 
 	pmb = fio_pmemblk_cache_lookup(path);
 
@@ -294,7 +290,7 @@ static
 
 	pmb->pmb_refcnt += 1;
 
-	CACHE_UNLOCK();
+	pthread_mutex_unlock(&CacheLock);
 
 	return pmb;
 
@@ -308,14 +304,15 @@ error:
 	}
 	if (NULL != path)
 		free(path);
-	CACHE_UNLOCK();
+
+	pthread_mutex_unlock(&CacheLock);
 	return NULL;
 
 }				/* pmb_open() */
 
 static void pmb_close(fio_pmemblk_file_t pmb, const int keep)
 {
-	CACHE_LOCK();
+	pthread_mutex_lock(&CacheLock);
 
 	pmb->pmb_refcnt--;
 
@@ -328,7 +325,7 @@ static void pmb_close(fio_pmemblk_file_t pmb, const int keep)
 		free(pmb);
 	}
 
-	CACHE_UNLOCK();
+	pthread_mutex_unlock(&CacheLock);
 
 }				/* pmb_close() */
 
