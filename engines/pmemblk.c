@@ -18,7 +18,6 @@
  * Boston, MA 02111-1307 USA
  */
 
-
 /*
  * pmemblk engine
  *
@@ -70,28 +69,23 @@
 
 #include "../fio.h"
 
-
-
 /*
  * libpmemblk
  */
 struct PMEMblkpool_s;
 typedef struct PMEMblkpool_s PMEMblkpool;
 
-PMEMblkpool* (*pmemblk_create)(const char*, size_t, size_t, mode_t) = NULL;
-PMEMblkpool* (*pmemblk_open)(const char*, size_t) = NULL;
-void (*pmemblk_close)(PMEMblkpool*) = NULL;
-size_t (*pmemblk_nblock)(PMEMblkpool*) = NULL;
-size_t (*pmemblk_bsize)(PMEMblkpool*) = NULL;
-int (*pmemblk_read)(PMEMblkpool*, void*, off_t) = NULL;
-int (*pmemblk_write)(PMEMblkpool*, const void*, off_t) = NULL;
+PMEMblkpool *(*pmemblk_create) (const char *, size_t, size_t, mode_t) = NULL;
+PMEMblkpool *(*pmemblk_open) (const char *, size_t) = NULL;
+void (*pmemblk_close) (PMEMblkpool *) = NULL;
+size_t(*pmemblk_nblock) (PMEMblkpool *) = NULL;
+size_t(*pmemblk_bsize) (PMEMblkpool *) = NULL;
+int (*pmemblk_read) (PMEMblkpool *, void *, off_t) = NULL;
+int (*pmemblk_write) (PMEMblkpool *, const void *, off_t) = NULL;
 
-int
-load_libpmemblk(
-	const char* path
-)
+int load_libpmemblk(const char *path)
 {
-	void*   dl;
+	void *dl;
 
 	if (NULL == path)
 		path = "libpmemblk.so";
@@ -114,7 +108,7 @@ load_libpmemblk(
 		goto errorout;
 	if (NULL == (pmemblk_write = dlsym(dl, "pmemblk_write")))
 		goto errorout;
-	
+
 	return 0;
 
 errorout:
@@ -123,41 +117,36 @@ errorout:
 		dlclose(dl);
 
 	return (-1);
-	
-}  /* load_libpmemblk() */
 
+}				/* load_libpmemblk() */
 
-typedef struct fio_pmemblk_file*   fio_pmemblk_file_t;
+typedef struct fio_pmemblk_file *fio_pmemblk_file_t;
 struct fio_pmemblk_file {
-	fio_pmemblk_file_t   pmb_next;
-	char*                pmb_filename;
-	uint64_t             pmb_refcnt;
-	PMEMblkpool*         pmb_pool;
-	size_t               pmb_bsize;
-	size_t               pmb_nblocks;
+	fio_pmemblk_file_t pmb_next;
+	char *pmb_filename;
+	uint64_t pmb_refcnt;
+	PMEMblkpool *pmb_pool;
+	size_t pmb_bsize;
+	size_t pmb_nblocks;
 };
 #define FIOFILEPMBSET(_f, _v)  do {                 \
 	(_f)->engine_data = (uint64_t)(uintptr_t)(_v);  \
 } while(0)
 #define FIOFILEPMBGET(_f)  ((fio_pmemblk_file_t)((_f)->engine_data))
 
-static fio_pmemblk_file_t   Cache = NULL;
+static fio_pmemblk_file_t Cache = NULL;
 
-static pthread_mutex_t      CacheLock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t CacheLock = PTHREAD_MUTEX_INITIALIZER;
 #define CACHE_LOCK()  \
 	(void)pthread_mutex_lock(&CacheLock)
 #define CACHE_UNLOCK()  \
 	(void)pthread_mutex_unlock(&CacheLock)
 
-#define PMB_CREATE   (0x0001)  /* should create file */
+#define PMB_CREATE   (0x0001)	/* should create file */
 
-
-fio_pmemblk_file_t
-fio_pmemblk_cache_lookup(
-	const char* filename
-)
+fio_pmemblk_file_t fio_pmemblk_cache_lookup(const char *filename)
 {
-	fio_pmemblk_file_t   i;
+	fio_pmemblk_file_t i;
 
 	for (i = Cache; i != NULL; i = i->pmb_next)
 		if (0 == strcmp(filename, i->pmb_filename))
@@ -165,28 +154,20 @@ fio_pmemblk_cache_lookup(
 
 	return NULL;
 
-}  /* fio_pmemblk_cache_lookup() */
+}				/* fio_pmemblk_cache_lookup() */
 
-
-static void
-fio_pmemblk_cache_insert(
-	fio_pmemblk_file_t pmb
-)
+static void fio_pmemblk_cache_insert(fio_pmemblk_file_t pmb)
 {
 	pmb->pmb_next = Cache;
 	Cache = pmb;
 
 	return;
 
-}  /* fio_pmemblk_cache_insert() */
+}				/* fio_pmemblk_cache_insert() */
 
-
-static void
-fio_pmemblk_cache_remove(
-	fio_pmemblk_file_t pmb
-)
+static void fio_pmemblk_cache_remove(fio_pmemblk_file_t pmb)
 {
-	fio_pmemblk_file_t   i;
+	fio_pmemblk_file_t i;
 
 	if (pmb == Cache) {
 		Cache = Cache->pmb_next;
@@ -203,8 +184,7 @@ fio_pmemblk_cache_remove(
 
 	return;
 
-}  /* fio_pmemblk_cache_remove() */
-
+}				/* fio_pmemblk_cache_remove() */
 
 /*
  * to control block size and gross file size at the libpmemblk
@@ -225,17 +205,13 @@ fio_pmemblk_cache_remove(
  * we return bytes from here.
  */
 static void
-pmb_parse_path(
-	const char* pathspec,
-	char**      ppath,
-	uint64_t*   pbsize,
-	uint64_t*   pfsize
-)
+pmb_parse_path(const char *pathspec,
+	       char **ppath, uint64_t * pbsize, uint64_t * pfsize)
 {
-	char*      path;
-	char*      s;
-	uint64_t   bsize;
-	uint64_t   fsizemb;
+	char *path;
+	char *s;
+	uint64_t bsize;
+	uint64_t fsizemb;
 
 	path = strdup(pathspec);
 	if (NULL == path) {
@@ -245,12 +221,12 @@ pmb_parse_path(
 
 	/* extract sizes, if given */
 	s = strrchr(path, ',');
-	if (s && (fsizemb = strtoull(s+1, NULL, 10))) {
+	if (s && (fsizemb = strtoull(s + 1, NULL, 10))) {
 		*s = 0;
 		s = strrchr(path, ',');
-		if (s && (bsize = strtoull(s+1, NULL, 10))) {
+		if (s && (bsize = strtoull(s + 1, NULL, 10))) {
 			*s = 0;
-			*ppath  = path;
+			*ppath = path;
 			*pbsize = bsize;
 			*pfsize = fsizemb << 20;
 			return;
@@ -259,25 +235,20 @@ pmb_parse_path(
 
 	/* size specs not found */
 	strcpy(path, pathspec);
-	*ppath  = path;
+	*ppath = path;
 	*pbsize = 0;
 	*pfsize = 0;
 	return;
 
-}  /* pmb_parse_path() */
-
+}				/* pmb_parse_path() */
 
 static
-fio_pmemblk_file_t
-pmb_open(
-	const char* pathspec,
-	int         flags
-)
+ fio_pmemblk_file_t pmb_open(const char *pathspec, int flags)
 {
-	fio_pmemblk_file_t   pmb;
-	char*                path  = NULL;
-	uint64_t             bsize = 0;
-	uint64_t             fsize = 0;
+	fio_pmemblk_file_t pmb;
+	char *path = NULL;
+	uint64_t bsize = 0;
+	uint64_t fsize = 0;
 
 	pmb_parse_path(pathspec, &path, &bsize, &fsize);
 	if (NULL == path)
@@ -301,22 +272,22 @@ pmb_open(
 		pmb->pmb_pool = pmemblk_open(path, bsize);
 		if ((NULL == pmb->pmb_pool) &&
 		    (ENOENT == errno) &&
-		    (flags & PMB_CREATE) &&
-		    (0 < fsize) &&
-		    (0 < bsize)) {
-			pmb->pmb_pool = pmemblk_create(path, bsize, fsize, 0644);
+		    (flags & PMB_CREATE) && (0 < fsize) && (0 < bsize)) {
+			pmb->pmb_pool =
+			    pmemblk_create(path, bsize, fsize, 0644);
 		}
 		if (NULL == pmb->pmb_pool) {
-			log_err("fio: enable to open pmemblk pool file (errno %d)\n",
-			        errno);
+			log_err
+			    ("fio: enable to open pmemblk pool file (errno %d)\n",
+			     errno);
 			goto error;
 		}
 
 		pmb->pmb_filename = path;
-		pmb->pmb_next     = NULL;
-		pmb->pmb_refcnt   = 0;
-		pmb->pmb_bsize    = pmemblk_bsize(pmb->pmb_pool);
-		pmb->pmb_nblocks  = pmemblk_nblock(pmb->pmb_pool);
+		pmb->pmb_next = NULL;
+		pmb->pmb_refcnt = 0;
+		pmb->pmb_bsize = pmemblk_bsize(pmb->pmb_pool);
+		pmb->pmb_nblocks = pmemblk_nblock(pmb->pmb_pool);
 
 		fio_pmemblk_cache_insert(pmb);
 	}
@@ -324,14 +295,14 @@ pmb_open(
 	pmb->pmb_refcnt += 1;
 
 	CACHE_UNLOCK();
-	
+
 	return pmb;
 
 error:
 	if (NULL != pmb) {
 		if (NULL != pmb->pmb_pool)
 			pmemblk_close(pmb->pmb_pool);
-		pmb->pmb_pool     = NULL;
+		pmb->pmb_pool = NULL;
 		pmb->pmb_filename = NULL;
 		free(pmb);
 	}
@@ -340,14 +311,9 @@ error:
 	CACHE_UNLOCK();
 	return NULL;
 
-}  /* pmb_open() */
+}				/* pmb_open() */
 
-
-static void
-pmb_close(
-	fio_pmemblk_file_t pmb,
-	const int          keep
-)
+static void pmb_close(fio_pmemblk_file_t pmb, const int keep)
 {
 	CACHE_LOCK();
 
@@ -364,19 +330,14 @@ pmb_close(
 
 	CACHE_UNLOCK();
 
-}  /* pmb_close() */
+}				/* pmb_close() */
 
-
-static int
-pmb_get_flags(
-	struct thread_data* td,
-	uint64_t*           pflags
-)
+static int pmb_get_flags(struct thread_data *td, uint64_t * pflags)
 {
-	static int thread_warned  = 0;
+	static int thread_warned = 0;
 	static int odirect_warned = 0;
 
-	uint64_t   flags          = 0;
+	uint64_t flags = 0;
 
 	if (!td->o.use_thread) {
 		if (!thread_warned) {
@@ -397,16 +358,12 @@ pmb_get_flags(
 	(*pflags) = flags;
 	return 0;
 
-}  /* pmb_get_flags() */
+}				/* pmb_get_flags() */
 
-
-static int
-fio_pmemblk_open_file(
-	struct thread_data* td,
-	struct fio_file*    f)
+static int fio_pmemblk_open_file(struct thread_data *td, struct fio_file *f)
 {
-	uint64_t             flags = 0;
-	fio_pmemblk_file_t   pmb;
+	uint64_t flags = 0;
+	fio_pmemblk_file_t pmb;
 
 	if (0 != pmb_get_flags(td, &flags))
 		return 1;
@@ -419,16 +376,12 @@ fio_pmemblk_open_file(
 
 	return 0;
 
-}  /* fio_pmemblk_open_file() */
-
+}				/* fio_pmemblk_open_file() */
 
 static int
-fio_pmemblk_close_file(
-	struct thread_data fio_unused* td,
-	struct fio_file*               f
-)
+fio_pmemblk_close_file(struct thread_data fio_unused * td, struct fio_file *f)
 {
-	fio_pmemblk_file_t   pmb = FIOFILEPMBGET(f);
+	fio_pmemblk_file_t pmb = FIOFILEPMBGET(f);
 
 	if (pmb)
 		pmb_close(pmb, 0);
@@ -437,17 +390,12 @@ fio_pmemblk_close_file(
 
 	return 0;
 
-}  /* fio_pmemblk_close_file() */
+}				/* fio_pmemblk_close_file() */
 
-
-static int
-fio_pmemblk_get_file_size(
-	struct thread_data* td,
-	struct fio_file*    f
-)
+static int fio_pmemblk_get_file_size(struct thread_data *td, struct fio_file *f)
 {
-	uint64_t             flags = 0;
-	fio_pmemblk_file_t   pmb   = FIOFILEPMBGET(f);
+	uint64_t flags = 0;
+	fio_pmemblk_file_t pmb = FIOFILEPMBGET(f);
 
 	if (fio_file_size_known(f))
 		return 0;
@@ -469,21 +417,17 @@ fio_pmemblk_get_file_size(
 
 	return 0;
 
-}  /* fio_pmemblk_get_file_size() */
+}				/* fio_pmemblk_get_file_size() */
 
-
-static int
-fio_pmemblk_queue(
-	struct thread_data* td,
-	struct io_u*        io_u)
+static int fio_pmemblk_queue(struct thread_data *td, struct io_u *io_u)
 {
-	struct fio_file*     f   = io_u->file;
-	fio_pmemblk_file_t   pmb = FIOFILEPMBGET(f);
+	struct fio_file *f = io_u->file;
+	fio_pmemblk_file_t pmb = FIOFILEPMBGET(f);
 
-	unsigned long long   off;
-	unsigned long        len;
-	void*                buf;
-	int (*blkop)(PMEMblkpool*, void*, off_t) = (void*)pmemblk_write;
+	unsigned long long off;
+	unsigned long len;
+	void *buf;
+	int (*blkop) (PMEMblkpool *, void *, off_t) = (void *)pmemblk_write;
 
 	fio_ro_check(td, io_u);
 
@@ -533,18 +477,13 @@ fio_pmemblk_queue(
 
 	return FIO_Q_COMPLETED;
 
-}  /* fio_pmemblk_queue() */
+}				/* fio_pmemblk_queue() */
 
-
-static int
-fio_pmemblk_unlink_file(
-	struct thread_data* td,
-	struct fio_file*    f
-)
+static int fio_pmemblk_unlink_file(struct thread_data *td, struct fio_file *f)
 {
-	char*      path  = NULL;
-	uint64_t   bsize = 0;
-	uint64_t   fsize = 0;
+	char *path = NULL;
+	uint64_t bsize = 0;
+	uint64_t fsize = 0;
 
 	/*
 	 * we need our own unlink in case the user has specified
@@ -561,20 +500,18 @@ fio_pmemblk_unlink_file(
 
 	return 0;
 
-}  /* fio_pmemblk_unlink_file() */
-
+}				/* fio_pmemblk_unlink_file() */
 
 struct ioengine_ops ioengine = {
-	.name	    	= "pmemblk",
-	.version    	= FIO_IOOPS_VERSION,
-	.queue	    	= fio_pmemblk_queue,
-	.open_file      = fio_pmemblk_open_file,
-	.close_file     = fio_pmemblk_close_file,
-	.get_file_size	= fio_pmemblk_get_file_size,
-	.unlink_file    = fio_pmemblk_unlink_file,
-	.flags	    	= FIO_SYNCIO | FIO_DISKLESSIO | FIO_NOEXTEND | FIO_NODISKUTIL,
+	.name = "pmemblk",
+	.version = FIO_IOOPS_VERSION,
+	.queue = fio_pmemblk_queue,
+	.open_file = fio_pmemblk_open_file,
+	.close_file = fio_pmemblk_close_file,
+	.get_file_size = fio_pmemblk_get_file_size,
+	.unlink_file = fio_pmemblk_unlink_file,
+	.flags = FIO_SYNCIO | FIO_DISKLESSIO | FIO_NOEXTEND | FIO_NODISKUTIL,
 };
-
 
 static void
 fio_init fio_pmemblk_register(void)
@@ -582,10 +519,8 @@ fio_init fio_pmemblk_register(void)
 	register_ioengine(&ioengine);
 }
 
-
 static void
 fio_exit fio_pmemblk_unregister(void)
 {
 	unregister_ioengine(&ioengine);
 }
-
