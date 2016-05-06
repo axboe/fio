@@ -700,6 +700,9 @@ treated as erases. Depending on the underlying device type, the I/O may have
 to go in a certain pattern, e.g., on NAND, writing sequentially to erase blocks
 and discarding before overwriting. The writetrim mode works well for this
 constraint.
+.TP
+.B pmemblk
+Read and write through the NVML libpmemblk interface.
 .RE
 .P
 .RE

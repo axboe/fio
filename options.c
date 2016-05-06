@@ -1569,6 +1569,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Hadoop Distributed Filesystem (HDFS) engine"
 			  },
 #endif
+#ifdef CONFIG_PMEMBLK
+			  { .ival = "pmemblk",
+			    .help = "NVML libpmemblk based IO engine",
+			  },
+
+#endif
 			  { .ival = "external",
 			    .help = "Load external engine (append name)",
 			  },
