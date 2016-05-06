@@ -1,0 +1,71 @@
+[global]
+bs=1m
+ioengine=pmemblk
+norandommap
+time_based=1
+runtime=30
+group_reporting
+disable_lat=1
+disable_slat=1
+disable_clat=1
+clat_percentiles=0
+cpus_allowed_policy=split
+
+# For the pmemblk engine:
+#
+#   IOs always complete immediately
+#   IOs are always direct
+#   Must use threads
+#
+iodepth=1
+direct=1
+thread=1
+numjobs=16
+#
+# Unlink can be used to remove the files when done, but if you are
+# using serial runs with stonewall, and you want the files to be created
+# only once and unlinked only at the very end, then put the unlink=1
+# in the last group.  This is the method demonstrated here.
+#
+# Note that if you have a read-only group and if the files will be
+# newly created, then all of the data will read back as zero and the
+# read will be optimized, yielding performance that is different from
+# that of reading non-zero blocks (or unoptimized zero blocks).
+#
+unlink=0
+#
+# The pmemblk engine does IO to files in a DAX-mounted filesystem.
+# The filesystem should be created on an NVDIMM (e.g /dev/pmem0)
+# and then mounted with the '-o dax' option.  Note that the engine
+# accesses the underlying NVDIMM directly, bypassing the kernel block
+# layer, so the usual filesystem/disk performance monitoring tools such
+# as iostat will not provide useful data.
+#
+# Here we specify a test file on each of two NVDIMMs.  The first
+# number after the file name is the block size in bytes (4096 bytes
+# in this example).  The second number is the size of the file to
+# create in MiB (1 GiB in this example); note that the actual usable
+# space available to fio will be less than this as libpmemblk requires
+# some space for metadata.
+#
+# Currently, the minimum block size is 512 bytes and the minimum file
+# size is about 17 MiB (these are libpmemblk requirements).
+#
+# While both files in this example have the same block size and file
+# size, this is not required.
+#
+filename=/pmem0/fio-test,4096,1024
+filename=/pmem1/fio-test,4096,1024
+
+[pmemblk-write]
+rw=randwrite
+stonewall
+
+[pmemblk-read]
+rw=randread
+stonewall
+#
+# We're done, so unlink the file:
+#
+unlink=1
+

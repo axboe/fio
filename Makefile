@@ -124,6 +124,9 @@ ifdef CONFIG_MTD
   SOURCE += oslib/libmtd.c
   SOURCE += oslib/libmtd_legacy.c
 endif
+ifdef CONFIG_PMEMBLK
+  SOURCE += engines/pmemblk.c
+endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
