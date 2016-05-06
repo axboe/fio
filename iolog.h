@@ -207,12 +207,18 @@ struct log_params {
 	int log_compress;
 };
 
-extern void finalize_logs(struct thread_data *td);
+static inline bool per_unit_log(struct io_log *log)
+{
+	return log && !log->avg_msec;
+}
+
+extern void finalize_logs(struct thread_data *td, bool);
 extern void setup_log(struct io_log **, struct log_params *, const char *);
 extern void flush_log(struct io_log *, int);
 extern void flush_samples(FILE *, void *, uint64_t);
 extern void free_log(struct io_log *);
-extern void fio_writeout_logs(struct thread_data *);
+extern void fio_writeout_logs(bool);
+extern void td_writeout_logs(struct thread_data *, bool);
 extern int iolog_flush(struct io_log *, int);
 
 static inline void init_ipo(struct io_piece *ipo)

@@ -1416,6 +1416,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		};
 		const char *suf;
 
+		if (fio_option_is_set(o, bw_avg_time))
+			p.avg_msec = min(o->log_avg_msec, o->bw_avg_time);
+		else
+			o->bw_avg_time = p.avg_msec;
+
 		if (p.log_gz_store)
 			suf = "log.fz";
 		else
@@ -1435,6 +1440,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz_store = o->log_gz_store,
 		};
 		const char *suf;
+
+		if (fio_option_is_set(o, iops_avg_time))
+			p.avg_msec = min(o->log_avg_msec, o->iops_avg_time);
+		else
+			o->iops_avg_time = p.avg_msec;
 
 		if (p.log_gz_store)
 			suf = "log.fz";

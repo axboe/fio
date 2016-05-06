@@ -151,6 +151,7 @@ void reset_all_stats(struct thread_data *td)
 
 	lat_target_reset(td);
 	clear_rusage_stat(td);
+	helper_reset();
 }
 
 void reset_fio_state(void)

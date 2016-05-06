@@ -445,8 +445,6 @@ extern int nr_clients;
 extern int log_syslog;
 extern int status_interval;
 extern const char fio_version_string[];
-extern int helper_do_stat;
-extern pthread_cond_t helper_cond;
 extern char *trigger_file;
 extern char *trigger_cmd;
 extern char *trigger_remote_cmd;
@@ -733,5 +731,9 @@ enum {
 
 extern void exec_trigger(const char *);
 extern void check_trigger_file(void);
+
+extern void helper_reset(void);
+extern void helper_do_stat(void);
+extern bool helper_should_exit(void);
 
 #endif

@@ -1266,10 +1266,14 @@ exitall_on_error	When one job finishes in error, terminate the rest. The
 		default is to wait for each job to finish.
 
 bwavgtime=int	Average the calculated bandwidth over the given time. Value
-		is specified in milliseconds.
+		is specified in milliseconds. If the job also does bandwidth
+		logging through 'write_bw_log', then the minimum of this option
+		and 'log_avg_msec' will be used.  Default: 500ms.
 
 iopsavgtime=int	Average the calculated IOPS over the given time. Value
-		is specified in milliseconds.
+		is specified in milliseconds. If the job also does IOPS logging
+		through 'write_iops_log', then the minimum of this option and
+		'log_avg_msec' will be used.  Default: 500ms.
 
 create_serialize=bool	If true, serialize the file creating for the jobs.
 			This may be handy to avoid interleaving of data

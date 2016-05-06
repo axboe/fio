@@ -1710,16 +1710,18 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 		}
 	}
 
-	if (!td->o.disable_clat) {
-		add_clat_sample(td, idx, lusec, bytes, io_u->offset);
-		io_u_mark_latency(td, lusec);
+	if (ddir_rw(idx)) {
+		if (!td->o.disable_clat) {
+			add_clat_sample(td, idx, lusec, bytes, io_u->offset);
+			io_u_mark_latency(td, lusec);
+		}
+
+		if (!td->o.disable_bw && per_unit_log(td->bw_log))
+			add_bw_sample(td, io_u, bytes, lusec);
+
+		if (no_reduce && per_unit_log(td->iops_log))
+			add_iops_sample(td, io_u, bytes);
 	}
-
-	if (!td->o.disable_bw)
-		add_bw_sample(td, idx, bytes, &icd->time);
-
-	if (no_reduce)
-		add_iops_sample(td, idx, bytes, &icd->time);
 
 	if (td->ts.nr_block_infos && io_u->ddir == DDIR_TRIM) {
 		uint32_t *info = io_u_block_info(td, io_u);
