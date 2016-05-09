@@ -151,7 +151,7 @@ extern int fio_cpus_split(os_cpu_mask_t *mask, unsigned int cpu);
 #endif
 
 #ifndef FIO_PREFERRED_ENGINE
-#define FIO_PREFERRED_ENGINE	"sync"
+#define FIO_PREFERRED_ENGINE	"psync"
 #endif
 
 #ifndef FIO_OS_PATH_SEPARATOR
