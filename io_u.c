@@ -371,10 +371,15 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 			/*
 			 * If we reach beyond the end of the file
 			 * with holed IO, wrap around to the
-			 * beginning again.
+			 * beginning again. If we're doing backwards IO,
+			 * wrap to the end.
 			 */
-			if (pos >= f->real_file_size)
-				pos = f->file_offset;
+			if (pos >= f->real_file_size) {
+				if (o->ddir_seq_add > 0)
+					pos = f->file_offset;
+				else
+					pos = f->real_file_size + o->ddir_seq_add;
+			}
 		}
 
 		*offset = pos;
