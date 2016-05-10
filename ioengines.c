@@ -22,35 +22,31 @@
 
 static FLIST_HEAD(engine_list);
 
-static int check_engine_ops(struct ioengine_ops *ops)
+static bool check_engine_ops(struct ioengine_ops *ops)
 {
 	if (ops->version != FIO_IOOPS_VERSION) {
 		log_err("bad ioops version %d (want %d)\n", ops->version,
 							FIO_IOOPS_VERSION);
-		return 1;
+		return true;
 	}
 
 	if (!ops->queue) {
 		log_err("%s: no queue handler\n", ops->name);
-		return 1;
+		return true;
 	}
 
 	/*
 	 * sync engines only need a ->queue()
 	 */
 	if (ops->flags & FIO_SYNCIO)
-		return 0;
+		return false;
 
-	if (!ops->event) {
-		log_err("%s: no event handler\n", ops->name);
-		return 1;
-	}
-	if (!ops->getevents) {
-		log_err("%s: no getevents handler\n", ops->name);
-		return 1;
+	if (!ops->event || !ops->getevents) {
+		log_err("%s: no event/getevents handler\n", ops->name);
+		return true;
 	}
 
-	return 0;
+	return false;
 }
 
 void unregister_ioengine(struct ioengine_ops *ops)
