@@ -89,18 +89,19 @@ static inline void verify_state_gen_name(char *out, size_t size,
 	/*
 	 * Escape '/', just turn them into '.'
 	 */
-	strcpy(ename, name);
 	ptr = ename;
-	while ((ptr = strchr(ptr, '/')) != NULL) {
-		*ptr = '.';
-		ptr++;
+	do {
+		*ptr = *name;
 		if (*ptr == '\0')
 			break;
-	}
+		else if (*ptr == '/')
+			*ptr = '.';
+		ptr++;
+		name++;
+	} while (1);
 
 	snprintf(out, size, "%s-%s-%d-verify.state", prefix, ename, num);
 	out[size - 1] = '\0';
-
 }
 
 #endif
