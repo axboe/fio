@@ -83,21 +83,24 @@ static inline void verify_state_gen_name(char *out, size_t size,
 					 const char *name, const char *prefix,
 					 int num)
 {
+	char ename[PATH_MAX];
 	char *ptr;
-
-	snprintf(out, size, "%s-%s-%d-verify.state", prefix, name, num);
-	out[size - 1] = '\0';
 
 	/*
 	 * Escape '/', just turn them into '.'
 	 */
-	ptr = out;
+	strcpy(ename, name);
+	ptr = ename;
 	while ((ptr = strchr(ptr, '/')) != NULL) {
 		*ptr = '.';
 		ptr++;
 		if (*ptr == '\0')
 			break;
 	}
+
+	snprintf(out, size, "%s-%s-%d-verify.state", prefix, ename, num);
+	out[size - 1] = '\0';
+
 }
 
 #endif
