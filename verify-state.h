@@ -2,6 +2,7 @@
 #define FIO_VERIFY_STATE_H
 
 #include <stdint.h>
+#include <string.h>
 
 struct thread_rand32_state {
 	uint32_t s[4];
@@ -82,8 +83,21 @@ static inline void verify_state_gen_name(char *out, size_t size,
 					 const char *name, const char *prefix,
 					 int num)
 {
+	char *ptr;
+
 	snprintf(out, size, "%s-%s-%d-verify.state", prefix, name, num);
 	out[size - 1] = '\0';
+
+	/*
+	 * Escape '/', just turn them into '.'
+	 */
+	ptr = out;
+	while ((ptr = strchr(ptr, '/')) != NULL) {
+		*ptr = '.';
+		ptr++;
+		if (*ptr == '\0')
+			break;
+	}
 }
 
 #endif
