@@ -1471,7 +1471,7 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 static int open_state_file(const char *name, const char *prefix, int num,
 			   int for_write)
 {
-	char out[64];
+	char out[PATH_MAX];
 	int flags;
 	int fd;
 
@@ -1485,6 +1485,7 @@ static int open_state_file(const char *name, const char *prefix, int num,
 	fd = open(out, flags, 0644);
 	if (fd == -1) {
 		perror("fio: open state file");
+		log_err("fio: state file: %s (for_write=%d)\n", out, for_write);
 		return -1;
 	}
 
