@@ -2169,8 +2169,14 @@ static int add_bw_samples(struct thread_data *td, struct timeval *t)
 
 		add_stat_sample(&ts->bw_stat[ddir], rate);
 
-		if (td->bw_log)
-			add_log_sample(td, td->bw_log, rate, ddir, 0, 0);
+		if (td->bw_log) {
+			unsigned int bs = 0;
+
+			if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
+				bs = td->o.min_bs[ddir];
+
+			add_log_sample(td, td->bw_log, rate, ddir, bs, 0);
+		}
 
 		td->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
 	}
@@ -2234,8 +2240,14 @@ static int add_iops_samples(struct thread_data *td, struct timeval *t)
 
 		add_stat_sample(&ts->iops_stat[ddir], iops);
 
-		if (td->iops_log)
-			add_log_sample(td, td->iops_log, iops, ddir, 0, 0);
+		if (td->iops_log) {
+			unsigned int bs = 0;
+
+			if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
+				bs = td->o.min_bs[ddir];
+
+			add_log_sample(td, td->iops_log, iops, ddir, bs, 0);
+		}
 
 		td->stat_io_blocks[ddir] = td->this_io_blocks[ddir];
 	}
