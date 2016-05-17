@@ -788,7 +788,7 @@ static int str_fst_cb(void *data, const char *str)
 		break;
 	case FIO_FSERVICE_GAUSS:
 		if (val < 0.00 || val >= 100.00) {
-                          log_err("fio: normal deviation out of range (0 < input < 100.0  )\n");
+                          log_err("fio: normal deviation out of range (0 <= input < 100.0)\n");
                           return 1;
 		}
 		if (parse_dryrun())
@@ -1048,7 +1048,7 @@ static int str_random_distribution_cb(void *data, const char *str)
 		td->o.pareto_h.u.f = val;
 	} else {
 		if (val < 0.00 || val >= 100.0) {
-			log_err("fio: normal deviation out of range (0 < input < 100.0)\n");
+			log_err("fio: normal deviation out of range (0 <= input < 100.0)\n");
 			return 1;
 		}
 		if (parse_dryrun())
