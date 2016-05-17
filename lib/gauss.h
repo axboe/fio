@@ -8,10 +8,12 @@ struct gauss_state {
 	struct frand_state r;
 	uint64_t nranges;
 	unsigned int stddev;
+	bool disable_hash;
 };
 
 void gauss_init(struct gauss_state *gs, unsigned long nranges, double dev,
 		unsigned int seed);
 unsigned long long gauss_next(struct gauss_state *gs);
+void gauss_disable_hash(struct gauss_state *gs);
 
 #endif

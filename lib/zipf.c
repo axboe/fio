@@ -69,7 +69,10 @@ unsigned long long zipf_next(struct zipf_state *zs)
 	else
 		val = 1 + (unsigned long long)(n * pow(eta*rand_uni - eta + 1.0, alpha));
 
-	return (__hash_u64(val - 1) + zs->rand_off) % zs->nranges;
+	if (!zs->disable_hash)
+		return (__hash_u64(val - 1) + zs->rand_off) % zs->nranges;
+
+	return (val - 1 + zs->rand_off) % zs->nranges;
 }
 
 void pareto_init(struct zipf_state *zs, unsigned long nranges, double h,
@@ -84,5 +87,13 @@ unsigned long long pareto_next(struct zipf_state *zs)
 	double rand = (double) __rand(&zs->rand) / (double) FRAND32_MAX;
 	unsigned long long n = zs->nranges - 1;
 
-	return (__hash_u64(n * pow(rand, zs->pareto_pow)) + zs->rand_off) % zs->nranges;
+	if (!zs->disable_hash)
+		return (__hash_u64(n * pow(rand, zs->pareto_pow)) + zs->rand_off) % zs->nranges;
+
+	return (unsigned long long) (n * pow(rand, zs->pareto_pow) + zs->rand_off) % zs->nranges;
+}
+
+void zipf_disable_hash(struct zipf_state *zs)
+{
+	zs->disable_hash = true;
 }

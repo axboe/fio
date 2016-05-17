@@ -12,6 +12,7 @@ struct zipf_state {
 	double pareto_pow;
 	struct frand_state rand;
 	uint64_t rand_off;
+	bool disable_hash;
 };
 
 void zipf_init(struct zipf_state *zs, unsigned long nranges, double theta, unsigned int seed);
@@ -19,5 +20,6 @@ unsigned long long zipf_next(struct zipf_state *zs);
 
 void pareto_init(struct zipf_state *zs, unsigned long nranges, double h, unsigned int seed);
 unsigned long long pareto_next(struct zipf_state *zs);
+void zipf_disable_hash(struct zipf_state *zs);
 
 #endif
