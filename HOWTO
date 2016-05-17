@@ -673,10 +673,23 @@ file_service_type=str  Defines how fio decides which file from a job to
 				the next. Multiple files can still be
 				open depending on 'openfiles'.
 
-		The string can have a number appended, indicating how
-		often to switch to a new file. So if option random:4 is
-		given, fio will switch to a new random file after 4 ios
-		have been issued.
+			zipf	Use a zipfian distribution to decide what file
+				to access.
+
+			pareto	Use a pareto distribution to decide what file
+				to access.
+
+			gauss	Use a gaussian (normal) distribution to decide
+				what file to access.
+
+		For random, roundrobin, and sequential, a postfix can be
+		appended to tell fio how many I/Os to issue before switching
+		to a new file. For example, specifying
+		'file_service_type=random:8' would cause fio to issue 8 I/Os
+		before selecting a new file at random. For the non-uniform
+		distributions, a floating point postfix can be given to
+		influence how the distribution is skewed. See
+		'random_distribution' for a description of how that would work.
 
 ioengine=str	Defines how the job issues io to the file. The following
 		types are defined:

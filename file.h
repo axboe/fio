@@ -39,13 +39,20 @@ enum file_lock_mode {
 };
 
 /*
- * roundrobin available files, or choose one at random, or do each one
- * serially.
+ * How fio chooses what file to service next. Choice of uniformly random, or
+ * some skewed random variants, or just sequentially go through them or
+ * roundrobing.
  */
 enum {
-	FIO_FSERVICE_RANDOM	= 1,
-	FIO_FSERVICE_RR		= 2,
-	FIO_FSERVICE_SEQ	= 3,
+	FIO_FSERVICE_RANDOM		= 1,
+	FIO_FSERVICE_RR			= 2,
+	FIO_FSERVICE_SEQ		= 3,
+	__FIO_FSERVICE_NONUNIFORM	= 0x100,
+	FIO_FSERVICE_ZIPF		= __FIO_FSERVICE_NONUNIFORM | 4,
+	FIO_FSERVICE_PARETO		= __FIO_FSERVICE_NONUNIFORM | 5,
+	FIO_FSERVICE_GAUSS		= __FIO_FSERVICE_NONUNIFORM | 6,
+
+	FIO_FSERVICE_SHIFT		= 10,
 };
 
 /*

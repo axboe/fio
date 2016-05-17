@@ -724,12 +724,77 @@ out:
 static int str_fst_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
-	char *nr = get_opt_postfix(str);
+	double val;
+	bool done = false;
+	char *nr;
 
 	td->file_service_nr = 1;
-	if (nr) {
-		td->file_service_nr = atoi(nr);
+
+	switch (td->o.file_service_type) {
+	case FIO_FSERVICE_RANDOM:
+	case FIO_FSERVICE_RR:
+	case FIO_FSERVICE_SEQ:
+		nr = get_opt_postfix(str);
+		if (nr) {
+			td->file_service_nr = atoi(nr);
+			free(nr);
+		}
+		done = true;
+		break;
+	case FIO_FSERVICE_ZIPF:
+		val = FIO_DEF_ZIPF;
+		break;
+	case FIO_FSERVICE_PARETO:
+		val = FIO_DEF_PARETO;
+		break;
+	case FIO_FSERVICE_GAUSS:
+		val = 0.0;
+		break;
+	default:
+		log_err("fio: bad file service type: %d\n", td->o.file_service_type);
+		return 1;
+	}
+
+	if (done)
+		return 0;
+
+	nr = get_opt_postfix(str);
+	if (nr && !str_to_float(nr, &val, 0)) {
+		log_err("fio: file service type random postfix parsing failed\n");
 		free(nr);
+		return 1;
+	}
+
+	free(nr);
+
+	switch (td->o.file_service_type) {
+	case FIO_FSERVICE_ZIPF:
+		if (val == 1.00) {
+			log_err("fio: zipf theta must be different than 1.0\n");
+			return 1;
+		}
+		if (parse_dryrun())
+			return 0;
+		td->zipf_theta = val;
+		break;
+	case FIO_FSERVICE_PARETO:
+		if (val <= 0.00 || val >= 1.00) {
+                          log_err("fio: pareto input out of range (0 < input < 1.0)\n");
+                          return 1;
+		}
+		if (parse_dryrun())
+			return 0;
+		td->pareto_h = val;
+		break;
+	case FIO_FSERVICE_GAUSS:
+		if (val < 0.00 || val >= 100.00) {
+                          log_err("fio: normal deviation out of range (0 < input < 100.0  )\n");
+                          return 1;
+		}
+		if (parse_dryrun())
+			return 0;
+		td->gauss_dev = val;
+		break;
 	}
 
 	return 0;
@@ -2020,7 +2085,19 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.posval	= {
 			  { .ival = "random",
 			    .oval = FIO_FSERVICE_RANDOM,
-			    .help = "Choose a file at random",
+			    .help = "Choose a file at random (uniform)",
+			  },
+			  { .ival = "zipf",
+			    .oval = FIO_FSERVICE_ZIPF,
+			    .help = "Zipf randomized",
+			  },
+			  { .ival = "pareto",
+			    .oval = FIO_FSERVICE_PARETO,
+			    .help = "Pareto randomized",
+			  },
+			  { .ival = "gauss",
+			    .oval = FIO_FSERVICE_GAUSS,
+			    .help = "Normal (guassian) distribution",
 			  },
 			  { .ival = "roundrobin",
 			    .oval = FIO_FSERVICE_RR,

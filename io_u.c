@@ -328,7 +328,8 @@ static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 	if (!get_next_rand_offset(td, f, ddir, b))
 		return 0;
 
-	if (td->o.time_based) {
+	if (td->o.time_based ||
+	    (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)) {
 		fio_file_reset(td, f);
 		if (!get_next_rand_offset(td, f, ddir, b))
 			return 0;
@@ -1070,6 +1071,34 @@ static void io_u_mark_latency(struct thread_data *td, unsigned long usec)
 		io_u_mark_lat_msec(td, usec / 1000);
 }
 
+static unsigned int __get_next_fileno_rand(struct thread_data *td)
+{
+	unsigned long fileno;
+
+	if (td->o.file_service_type == FIO_FSERVICE_RANDOM) {
+		uint64_t frand_max = rand_max(&td->next_file_state);
+		unsigned long r;
+
+		r = __rand(&td->next_file_state);
+		return (unsigned int) ((double) td->o.nr_files
+				* (r / (frand_max + 1.0)));
+	}
+
+	if (td->o.file_service_type == FIO_FSERVICE_ZIPF)
+		fileno = zipf_next(&td->next_file_zipf);
+	else if (td->o.file_service_type == FIO_FSERVICE_PARETO)
+		fileno = pareto_next(&td->next_file_zipf);
+	else if (td->o.file_service_type == FIO_FSERVICE_GAUSS)
+		fileno = gauss_next(&td->next_file_gauss);
+	else {
+		log_err("fio: bad file service type: %d\n", td->o.file_service_type);
+		assert(0);
+		return 0;
+	}
+
+	return fileno >> FIO_FSERVICE_SHIFT;
+}
+
 /*
  * Get next file to service by choosing one at random
  */
@@ -1077,17 +1106,13 @@ static struct fio_file *get_next_file_rand(struct thread_data *td,
 					   enum fio_file_flags goodf,
 					   enum fio_file_flags badf)
 {
-	uint64_t frand_max = rand_max(&td->next_file_state);
 	struct fio_file *f;
 	int fno;
 
 	do {
 		int opened = 0;
-		unsigned long r;
 
-		r = __rand(&td->next_file_state);
-		fno = (unsigned int) ((double) td->o.nr_files
-				* (r / (frand_max + 1.0)));
+		fno = __get_next_fileno_rand(td);
 
 		f = td->files[fno];
 		if (fio_file_done(f))
@@ -1240,10 +1265,14 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 		put_file_log(td, f);
 		td_io_close_file(td, f);
 		io_u->file = NULL;
-		fio_file_set_done(f);
-		td->nr_done_files++;
-		dprint(FD_FILE, "%s: is done (%d of %d)\n", f->file_name,
+		if (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)
+			fio_file_reset(td, f);
+		else {
+			fio_file_set_done(f);
+			td->nr_done_files++;
+			dprint(FD_FILE, "%s: is done (%d of %d)\n", f->file_name,
 					td->nr_done_files, td->o.nr_files);
+		}
 	} while (1);
 
 	return 0;

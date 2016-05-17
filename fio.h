@@ -170,6 +170,15 @@ struct thread_data {
 		unsigned int next_file;
 		struct frand_state next_file_state;
 	};
+	union {
+		struct zipf_state next_file_zipf;
+		struct gauss_state next_file_gauss;
+	};
+	union {
+		double zipf_theta;
+		double pareto_h;
+		double gauss_dev;
+	};
 	int error;
 	int sig;
 	int done;
