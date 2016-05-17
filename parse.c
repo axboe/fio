@@ -15,6 +15,7 @@
 #include "parse.h"
 #include "debug.h"
 #include "options.h"
+#include "optgroup.h"
 #include "minmax.h"
 #include "lib/ieee754.h"
 #include "lib/pow2.h"
@@ -483,6 +484,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			if (!vp->ival || vp->ival[0] == '\0')
 				continue;
 			all_skipped = 0;
+			if (!ptr)
+				break;
 			if (!strncmp(vp->ival, ptr, str_match_len(vp, ptr))) {
 				ret = 0;
 				if (o->off1)
@@ -958,8 +961,27 @@ void sort_options(char **opts, struct fio_option *options, int num_opts)
 	__fio_options = NULL;
 }
 
+static void add_to_dump_list(struct fio_option *o, struct flist_head *dump_list,
+			     const char *post)
+{
+	struct print_option *p;
+
+	if (!dump_list)
+		return;
+
+	p = malloc(sizeof(*p));
+	p->name = strdup(o->name);
+	if (post)
+		p->value = strdup(post);
+	else
+		p->value = NULL;
+
+	flist_add_tail(&p->list, dump_list);
+}
+
 int parse_cmd_option(const char *opt, const char *val,
-		     struct fio_option *options, void *data)
+		     struct fio_option *options, void *data,
+		     struct flist_head *dump_list)
 {
 	struct fio_option *o;
 
@@ -969,16 +991,18 @@ int parse_cmd_option(const char *opt, const char *val,
 		return 1;
 	}
 
-	if (!handle_option(o, val, data))
-		return 0;
+	if (handle_option(o, val, data)) {
+		log_err("fio: failed parsing %s=%s\n", opt, val);
+		return 1;
+	}
 
-	log_err("fio: failed parsing %s=%s\n", opt, val);
-	return 1;
+	add_to_dump_list(o, dump_list, val);
+	return 0;
 }
 
 int parse_option(char *opt, const char *input,
 		 struct fio_option *options, struct fio_option **o, void *data,
-		 int dump_cmdline)
+		 struct flist_head *dump_list)
 {
 	char *post;
 
@@ -1004,19 +1028,7 @@ int parse_option(char *opt, const char *input,
 		return 1;
 	}
 
-	if (dump_cmdline) {
-		const char *delim;
-
-		if (!strcmp("description", (*o)->name))
-			delim = "\"";
-		else
-			delim = "";
-
-		log_info("--%s%s", (*o)->name, post ? "" : " ");
-		if (post)
-			log_info("=%s%s%s ", delim, post, delim);
-	}
-
+	add_to_dump_list(*o, dump_list, post);
 	return 0;
 }
 

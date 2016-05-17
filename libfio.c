@@ -33,6 +33,7 @@
 #include "smalloc.h"
 #include "os/os.h"
 #include "filelock.h"
+#include "helper_thread.h"
 
 /*
  * Just expose an empty list, if the OS does not support disk util stats
@@ -146,9 +147,12 @@ void reset_all_stats(struct thread_data *td)
 	fio_gettime(&tv, NULL);
 	memcpy(&td->epoch, &tv, sizeof(tv));
 	memcpy(&td->start, &tv, sizeof(tv));
+	memcpy(&td->iops_sample_time, &tv, sizeof(tv));
+	memcpy(&td->bw_sample_time, &tv, sizeof(tv));
 
 	lat_target_reset(td);
 	clear_rusage_stat(td);
+	helper_reset();
 }
 
 void reset_fio_state(void)
@@ -190,7 +194,7 @@ static const char *td_runstates[] = {
 	"REAPED",
 };
 
-static const char *runstate_to_name(int runstate)
+const char *runstate_to_name(int runstate)
 {
 	compiletime_assert(TD_LAST == 12, "td runstate list");
 	if (runstate >= 0 && runstate < TD_LAST)

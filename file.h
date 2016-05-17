@@ -39,13 +39,20 @@ enum file_lock_mode {
 };
 
 /*
- * roundrobin available files, or choose one at random, or do each one
- * serially.
+ * How fio chooses what file to service next. Choice of uniformly random, or
+ * some skewed random variants, or just sequentially go through them or
+ * roundrobing.
  */
 enum {
-	FIO_FSERVICE_RANDOM	= 1,
-	FIO_FSERVICE_RR		= 2,
-	FIO_FSERVICE_SEQ	= 3,
+	FIO_FSERVICE_RANDOM		= 1,
+	FIO_FSERVICE_RR			= 2,
+	FIO_FSERVICE_SEQ		= 3,
+	__FIO_FSERVICE_NONUNIFORM	= 0x100,
+	FIO_FSERVICE_ZIPF		= __FIO_FSERVICE_NONUNIFORM | 4,
+	FIO_FSERVICE_PARETO		= __FIO_FSERVICE_NONUNIFORM | 5,
+	FIO_FSERVICE_GAUSS		= __FIO_FSERVICE_NONUNIFORM | 6,
+
+	FIO_FSERVICE_SHIFT		= 10,
 };
 
 /*
@@ -96,6 +103,13 @@ struct fio_file {
 
 	uint64_t first_write;
 	uint64_t last_write;
+
+	/*
+	 * Tracks the last iodepth number of completed writes, if data
+	 * verification is enabled
+	 */
+	uint64_t *last_write_comp;
+	unsigned int last_write_idx;
 
 	/*
 	 * For use by the io engine
@@ -180,6 +194,7 @@ extern int __must_check generic_close_file(struct thread_data *, struct fio_file
 extern int __must_check generic_get_file_size(struct thread_data *, struct fio_file *);
 extern int __must_check file_lookup_open(struct fio_file *f, int flags);
 extern int __must_check pre_read_files(struct thread_data *);
+extern unsigned long long get_rand_file_size(struct thread_data *td);
 extern int add_file(struct thread_data *, const char *, int, int);
 extern int add_file_exclusive(struct thread_data *, const char *);
 extern void get_file(struct fio_file *);

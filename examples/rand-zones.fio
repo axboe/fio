@@ -1,0 +1,18 @@
+# Sample job file demonstrating how to use zoned random distributionss
+# to have skewed random accesses. This example has 50% of the accesses
+# to the first 5% of the file (50/5), 30% to the next 15% (30/15), and
+# finally 20% of the IO will end up in the remaining 80%.
+[zones]
+size=2g
+direct=1
+bs=4k
+rw=randread
+norandommap
+random_distribution=zoned:50/5:30/15:20/
+
+# The above applies to all of reads/writes/trims. If we wanted to do
+# something differently for writes, let's say 50% for the first 10%
+# and 50% for the remaining 90%, we could do it by adding a new section
+# after a a comma.
+
+# random_distribution=zoned:50/5:30/15:20/,50/10:50/90

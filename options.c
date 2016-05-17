@@ -16,8 +16,7 @@
 #include "lib/fls.h"
 #include "lib/pattern.h"
 #include "options.h"
-
-#include "crc/crc32c.h"
+#include "optgroup.h"
 
 char client_sockaddr_str[INET6_ADDRSTRLEN] = { 0 };
 
@@ -50,37 +49,30 @@ static int bs_cmp(const void *p1, const void *p2)
 	const struct bssplit *bsp1 = p1;
 	const struct bssplit *bsp2 = p2;
 
-	return bsp1->perc < bsp2->perc;
+	return (int) bsp1->perc - (int) bsp2->perc;
 }
 
-static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
+struct split {
+	unsigned int nr;
+	unsigned int val1[100];
+	unsigned int val2[100];
+};
+
+static int split_parse_ddir(struct thread_options *o, struct split *split,
+			    enum fio_ddir ddir, char *str)
 {
-	struct bssplit *bssplit;
-	unsigned int i, perc, perc_missing;
-	unsigned int max_bs, min_bs;
+	unsigned int i, perc;
 	long long val;
 	char *fname;
 
-	o->bssplit_nr[ddir] = 4;
-	bssplit = malloc(4 * sizeof(struct bssplit));
+	split->nr = 0;
 
 	i = 0;
-	max_bs = 0;
-	min_bs = -1;
 	while ((fname = strsep(&str, ":")) != NULL) {
 		char *perc_str;
 
 		if (!strlen(fname))
 			break;
-
-		/*
-		 * grow struct buffer, if needed
-		 */
-		if (i == o->bssplit_nr[ddir]) {
-			o->bssplit_nr[ddir] <<= 1;
-			bssplit = realloc(bssplit, o->bssplit_nr[ddir]
-						  * sizeof(struct bssplit));
-		}
 
 		perc_str = strstr(fname, "/");
 		if (perc_str) {
@@ -96,28 +88,53 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 
 		if (str_to_decimal(fname, &val, 1, o, 0, 0)) {
 			log_err("fio: bssplit conversion failed\n");
-			free(bssplit);
 			return 1;
 		}
 
-		if (val > max_bs)
-			max_bs = val;
-		if (val < min_bs)
-			min_bs = val;
-
-		bssplit[i].bs = val;
-		bssplit[i].perc = perc;
+		split->val1[i] = val;
+		split->val2[i] = perc;
 		i++;
+		if (i == 100)
+			break;
 	}
 
-	o->bssplit_nr[ddir] = i;
+	split->nr = i;
+	return 0;
+}
+
+static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str)
+{
+	unsigned int i, perc, perc_missing;
+	unsigned int max_bs, min_bs;
+	struct split split;
+
+	memset(&split, 0, sizeof(split));
+
+	if (split_parse_ddir(o, &split, ddir, str))
+		return 1;
+	if (!split.nr)
+		return 0;
+
+	max_bs = 0;
+	min_bs = -1;
+	o->bssplit[ddir] = malloc(split.nr * sizeof(struct bssplit));
+	o->bssplit_nr[ddir] = split.nr;
+	for (i = 0; i < split.nr; i++) {
+		if (split.val1[i] > max_bs)
+			max_bs = split.val1[i];
+		if (split.val1[i] < min_bs)
+			min_bs = split.val1[i];
+
+		o->bssplit[ddir][i].bs = split.val1[i];
+		o->bssplit[ddir][i].perc =split.val2[i];
+	}
 
 	/*
 	 * Now check if the percentages add up, and how much is missing
 	 */
 	perc = perc_missing = 0;
 	for (i = 0; i < o->bssplit_nr[ddir]; i++) {
-		struct bssplit *bsp = &bssplit[i];
+		struct bssplit *bsp = &o->bssplit[ddir][i];
 
 		if (bsp->perc == -1U)
 			perc_missing++;
@@ -127,7 +144,8 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 
 	if (perc > 100 && perc_missing > 1) {
 		log_err("fio: bssplit percentages add to more than 100%%\n");
-		free(bssplit);
+		free(o->bssplit[ddir]);
+		o->bssplit[ddir] = NULL;
 		return 1;
 	}
 
@@ -139,7 +157,7 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 		if (perc_missing == 1 && o->bssplit_nr[ddir] == 1)
 			perc = 100;
 		for (i = 0; i < o->bssplit_nr[ddir]; i++) {
-			struct bssplit *bsp = &bssplit[i];
+			struct bssplit *bsp = &o->bssplit[ddir][i];
 
 			if (bsp->perc == -1U)
 				bsp->perc = (100 - perc) / perc_missing;
@@ -152,59 +170,78 @@ static int bssplit_ddir(struct thread_options *o, int ddir, char *str)
 	/*
 	 * now sort based on percentages, for ease of lookup
 	 */
-	qsort(bssplit, o->bssplit_nr[ddir], sizeof(struct bssplit), bs_cmp);
-	o->bssplit[ddir] = bssplit;
+	qsort(o->bssplit[ddir], o->bssplit_nr[ddir], sizeof(struct bssplit), bs_cmp);
 	return 0;
 }
 
-static int str_bssplit_cb(void *data, const char *input)
+typedef int (split_parse_fn)(struct thread_options *, enum fio_ddir, char *);
+
+static int str_split_parse(struct thread_data *td, char *str, split_parse_fn *fn)
 {
-	struct thread_data *td = data;
-	char *str, *p, *odir, *ddir;
+	char *odir, *ddir;
 	int ret = 0;
-
-	if (parse_dryrun())
-		return 0;
-
-	p = str = strdup(input);
-
-	strip_blank_front(&str);
-	strip_blank_end(str);
 
 	odir = strchr(str, ',');
 	if (odir) {
 		ddir = strchr(odir + 1, ',');
 		if (ddir) {
-			ret = bssplit_ddir(&td->o, DDIR_TRIM, ddir + 1);
+			ret = fn(&td->o, DDIR_TRIM, ddir + 1);
 			if (!ret)
 				*ddir = '\0';
 		} else {
 			char *op;
 
 			op = strdup(odir + 1);
-			ret = bssplit_ddir(&td->o, DDIR_TRIM, op);
+			ret = fn(&td->o, DDIR_TRIM, op);
 
 			free(op);
 		}
 		if (!ret)
-			ret = bssplit_ddir(&td->o, DDIR_WRITE, odir + 1);
+			ret = fn(&td->o, DDIR_WRITE, odir + 1);
 		if (!ret) {
 			*odir = '\0';
-			ret = bssplit_ddir(&td->o, DDIR_READ, str);
+			ret = fn(&td->o, DDIR_READ, str);
 		}
 	} else {
 		char *op;
 
 		op = strdup(str);
-		ret = bssplit_ddir(&td->o, DDIR_WRITE, op);
+		ret = fn(&td->o, DDIR_WRITE, op);
 		free(op);
 
 		if (!ret) {
 			op = strdup(str);
-			ret = bssplit_ddir(&td->o, DDIR_TRIM, op);
+			ret = fn(&td->o, DDIR_TRIM, op);
 			free(op);
 		}
-		ret = bssplit_ddir(&td->o, DDIR_READ, str);
+		if (!ret)
+			ret = fn(&td->o, DDIR_READ, str);
+	}
+
+	return ret;
+}
+
+static int str_bssplit_cb(void *data, const char *input)
+{
+	struct thread_data *td = data;
+	char *str, *p;
+	int ret = 0;
+
+	p = str = strdup(input);
+
+	strip_blank_front(&str);
+	strip_blank_end(str);
+
+	ret = str_split_parse(td, str, bssplit_ddir);
+
+	if (parse_dryrun()) {
+		int i;
+
+		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+			free(td->o.bssplit[i]);
+			td->o.bssplit[i] = NULL;
+			td->o.bssplit_nr[i] = 0;
+		}
 	}
 
 	free(p);
@@ -529,9 +566,25 @@ static int str_verify_cpus_allowed_cb(void *data, const char *input)
 {
 	struct thread_data *td = data;
 
+	if (parse_dryrun())
+		return 0;
+
 	return set_cpus_allowed(td, &td->o.verify_cpumask, input);
 }
-#endif
+
+#ifdef CONFIG_ZLIB
+static int str_log_cpus_allowed_cb(void *data, const char *input)
+{
+	struct thread_data *td = data;
+
+	if (parse_dryrun())
+		return 0;
+
+	return set_cpus_allowed(td, &td->o.log_gz_cpumask, input);
+}
+#endif /* CONFIG_ZLIB */
+
+#endif /* FIO_HAVE_CPU_AFFINITY */
 
 #ifdef CONFIG_LIBNUMA
 static int str_numa_cpunodes_cb(void *data, char *input)
@@ -671,12 +724,77 @@ out:
 static int str_fst_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
-	char *nr = get_opt_postfix(str);
+	double val;
+	bool done = false;
+	char *nr;
 
 	td->file_service_nr = 1;
-	if (nr) {
-		td->file_service_nr = atoi(nr);
+
+	switch (td->o.file_service_type) {
+	case FIO_FSERVICE_RANDOM:
+	case FIO_FSERVICE_RR:
+	case FIO_FSERVICE_SEQ:
+		nr = get_opt_postfix(str);
+		if (nr) {
+			td->file_service_nr = atoi(nr);
+			free(nr);
+		}
+		done = true;
+		break;
+	case FIO_FSERVICE_ZIPF:
+		val = FIO_DEF_ZIPF;
+		break;
+	case FIO_FSERVICE_PARETO:
+		val = FIO_DEF_PARETO;
+		break;
+	case FIO_FSERVICE_GAUSS:
+		val = 0.0;
+		break;
+	default:
+		log_err("fio: bad file service type: %d\n", td->o.file_service_type);
+		return 1;
+	}
+
+	if (done)
+		return 0;
+
+	nr = get_opt_postfix(str);
+	if (nr && !str_to_float(nr, &val, 0)) {
+		log_err("fio: file service type random postfix parsing failed\n");
 		free(nr);
+		return 1;
+	}
+
+	free(nr);
+
+	switch (td->o.file_service_type) {
+	case FIO_FSERVICE_ZIPF:
+		if (val == 1.00) {
+			log_err("fio: zipf theta must be different than 1.0\n");
+			return 1;
+		}
+		if (parse_dryrun())
+			return 0;
+		td->zipf_theta = val;
+		break;
+	case FIO_FSERVICE_PARETO:
+		if (val <= 0.00 || val >= 1.00) {
+                          log_err("fio: pareto input out of range (0 < input < 1.0)\n");
+                          return 1;
+		}
+		if (parse_dryrun())
+			return 0;
+		td->pareto_h = val;
+		break;
+	case FIO_FSERVICE_GAUSS:
+		if (val < 0.00 || val >= 100.00) {
+                          log_err("fio: normal deviation out of range (0 <= input < 100.0)\n");
+                          return 1;
+		}
+		if (parse_dryrun())
+			return 0;
+		td->gauss_dev = val;
+		break;
 	}
 
 	return 0;
@@ -698,14 +816,199 @@ static int str_sfr_cb(void *data, const char *str)
 }
 #endif
 
+static int zone_cmp(const void *p1, const void *p2)
+{
+	const struct zone_split *zsp1 = p1;
+	const struct zone_split *zsp2 = p2;
+
+	return (int) zsp2->access_perc - (int) zsp1->access_perc;
+}
+
+static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
+			   char *str)
+{
+	unsigned int i, perc, perc_missing, sperc, sperc_missing;
+	struct split split;
+
+	memset(&split, 0, sizeof(split));
+
+	if (split_parse_ddir(o, &split, ddir, str))
+		return 1;
+	if (!split.nr)
+		return 0;
+
+	o->zone_split[ddir] = malloc(split.nr * sizeof(struct zone_split));
+	o->zone_split_nr[ddir] = split.nr;
+	for (i = 0; i < split.nr; i++) {
+		o->zone_split[ddir][i].access_perc = split.val1[i];
+		o->zone_split[ddir][i].size_perc = split.val2[i];
+	}
+
+	/*
+	 * Now check if the percentages add up, and how much is missing
+	 */
+	perc = perc_missing = 0;
+	sperc = sperc_missing = 0;
+	for (i = 0; i < o->zone_split_nr[ddir]; i++) {
+		struct zone_split *zsp = &o->zone_split[ddir][i];
+
+		if (zsp->access_perc == (uint8_t) -1U)
+			perc_missing++;
+		else
+			perc += zsp->access_perc;
+
+		if (zsp->size_perc == (uint8_t) -1U)
+			sperc_missing++;
+		else
+			sperc += zsp->size_perc;
+
+	}
+
+	if (perc > 100 || sperc > 100) {
+		log_err("fio: zone_split percentages add to more than 100%%\n");
+		free(o->zone_split[ddir]);
+		o->zone_split[ddir] = NULL;
+		return 1;
+	}
+	if (perc < 100) {
+		log_err("fio: access percentage don't add up to 100 for zoned "
+			"random distribution (got=%u)\n", perc);
+		free(o->zone_split[ddir]);
+		o->zone_split[ddir] = NULL;
+		return 1;
+	}
+
+	/*
+	 * If values didn't have a percentage set, divide the remains between
+	 * them.
+	 */
+	if (perc_missing) {
+		if (perc_missing == 1 && o->zone_split_nr[ddir] == 1)
+			perc = 100;
+		for (i = 0; i < o->zone_split_nr[ddir]; i++) {
+			struct zone_split *zsp = &o->zone_split[ddir][i];
+
+			if (zsp->access_perc == (uint8_t) -1U)
+				zsp->access_perc = (100 - perc) / perc_missing;
+		}
+	}
+	if (sperc_missing) {
+		if (sperc_missing == 1 && o->zone_split_nr[ddir] == 1)
+			sperc = 100;
+		for (i = 0; i < o->zone_split_nr[ddir]; i++) {
+			struct zone_split *zsp = &o->zone_split[ddir][i];
+
+			if (zsp->size_perc == (uint8_t) -1U)
+				zsp->size_perc = (100 - sperc) / sperc_missing;
+		}
+	}
+
+	/*
+	 * now sort based on percentages, for ease of lookup
+	 */
+	qsort(o->zone_split[ddir], o->zone_split_nr[ddir], sizeof(struct zone_split), zone_cmp);
+	return 0;
+}
+
+static void __td_zone_gen_index(struct thread_data *td, enum fio_ddir ddir)
+{
+	unsigned int i, j, sprev, aprev;
+
+	td->zone_state_index[ddir] = malloc(sizeof(struct zone_split_index) * 100);
+
+	sprev = aprev = 0;
+	for (i = 0; i < td->o.zone_split_nr[ddir]; i++) {
+		struct zone_split *zsp = &td->o.zone_split[ddir][i];
+
+		for (j = aprev; j < aprev + zsp->access_perc; j++) {
+			struct zone_split_index *zsi = &td->zone_state_index[ddir][j];
+
+			zsi->size_perc = sprev + zsp->size_perc;
+			zsi->size_perc_prev = sprev;
+		}
+
+		aprev += zsp->access_perc;
+		sprev += zsp->size_perc;
+	}
+}
+
+/*
+ * Generate state table for indexes, so we don't have to do it inline from
+ * the hot IO path
+ */
+static void td_zone_gen_index(struct thread_data *td)
+{
+	int i;
+
+	td->zone_state_index = malloc(DDIR_RWDIR_CNT *
+					sizeof(struct zone_split_index *));
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++)
+		__td_zone_gen_index(td, i);
+}
+
+static int parse_zoned_distribution(struct thread_data *td, const char *input)
+{
+	char *str, *p;
+	int i, ret = 0;
+
+	p = str = strdup(input);
+
+	strip_blank_front(&str);
+	strip_blank_end(str);
+
+	/* We expect it to start like that, bail if not */
+	if (strncmp(str, "zoned:", 6)) {
+		log_err("fio: mismatch in zoned input <%s>\n", str);
+		free(p);
+		return 1;
+	}
+	str += strlen("zoned:");
+
+	ret = str_split_parse(td, str, zone_split_ddir);
+
+	free(p);
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		int j;
+
+		dprint(FD_PARSE, "zone ddir %d (nr=%u): \n", i, td->o.zone_split_nr[i]);
+
+		for (j = 0; j < td->o.zone_split_nr[i]; j++) {
+			struct zone_split *zsp = &td->o.zone_split[i][j];
+
+			dprint(FD_PARSE, "\t%d: %u/%u\n", j, zsp->access_perc,
+								zsp->size_perc);
+		}
+	}
+
+	if (parse_dryrun()) {
+		int i;
+
+		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+			free(td->o.zone_split[i]);
+			td->o.zone_split[i] = NULL;
+			td->o.zone_split_nr[i] = 0;
+		}
+
+		return ret;
+	}
+
+	if (!ret)
+		td_zone_gen_index(td);
+	else {
+		for (i = 0; i < DDIR_RWDIR_CNT; i++)
+			td->o.zone_split_nr[i] = 0;
+	}
+
+	return ret;
+}
+
 static int str_random_distribution_cb(void *data, const char *str)
 {
 	struct thread_data *td = data;
 	double val;
 	char *nr;
-
-	if (parse_dryrun())
-		return 0;
 
 	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
 		val = FIO_DEF_ZIPF;
@@ -713,6 +1016,8 @@ static int str_random_distribution_cb(void *data, const char *str)
 		val = FIO_DEF_PARETO;
 	else if (td->o.random_distribution == FIO_RAND_DIST_GAUSS)
 		val = 0.0;
+	else if (td->o.random_distribution == FIO_RAND_DIST_ZONED)
+		return parse_zoned_distribution(td, str);
 	else
 		return 0;
 
@@ -730,18 +1035,24 @@ static int str_random_distribution_cb(void *data, const char *str)
 			log_err("fio: zipf theta must different than 1.0\n");
 			return 1;
 		}
+		if (parse_dryrun())
+			return 0;
 		td->o.zipf_theta.u.f = val;
 	} else if (td->o.random_distribution == FIO_RAND_DIST_PARETO) {
 		if (val <= 0.00 || val >= 1.00) {
 			log_err("fio: pareto input out of range (0 < input < 1.0)\n");
 			return 1;
 		}
+		if (parse_dryrun())
+			return 0;
 		td->o.pareto_h.u.f = val;
 	} else {
-		if (val <= 0.00 || val >= 100.0) {
-			log_err("fio: normal deviation out of range (0 < input < 100.0)\n");
+		if (val < 0.00 || val >= 100.0) {
+			log_err("fio: normal deviation out of range (0 <= input < 100.0)\n");
 			return 1;
 		}
+		if (parse_dryrun())
+			return 0;
 		td->o.gauss_dev.u.f = val;
 	}
 
@@ -1026,169 +1337,6 @@ static int gtod_cpu_verify(struct fio_option *o, void *data)
 }
 
 /*
- * Option grouping
- */
-static struct opt_group fio_opt_groups[] = {
-	{
-		.name	= "General",
-		.mask	= FIO_OPT_C_GENERAL,
-	},
-	{
-		.name	= "I/O",
-		.mask	= FIO_OPT_C_IO,
-	},
-	{
-		.name	= "File",
-		.mask	= FIO_OPT_C_FILE,
-	},
-	{
-		.name	= "Statistics",
-		.mask	= FIO_OPT_C_STAT,
-	},
-	{
-		.name	= "Logging",
-		.mask	= FIO_OPT_C_LOG,
-	},
-	{
-		.name	= "Profiles",
-		.mask	= FIO_OPT_C_PROFILE,
-	},
-	{
-		.name	= NULL,
-	},
-};
-
-static struct opt_group *__opt_group_from_mask(struct opt_group *ogs, unsigned int *mask,
-					       unsigned int inv_mask)
-{
-	struct opt_group *og;
-	int i;
-
-	if (*mask == inv_mask || !*mask)
-		return NULL;
-
-	for (i = 0; ogs[i].name; i++) {
-		og = &ogs[i];
-
-		if (*mask & og->mask) {
-			*mask &= ~(og->mask);
-			return og;
-		}
-	}
-
-	return NULL;
-}
-
-struct opt_group *opt_group_from_mask(unsigned int *mask)
-{
-	return __opt_group_from_mask(fio_opt_groups, mask, FIO_OPT_C_INVALID);
-}
-
-static struct opt_group fio_opt_cat_groups[] = {
-	{
-		.name	= "Latency profiling",
-		.mask	= FIO_OPT_G_LATPROF,
-	},
-	{
-		.name	= "Rate",
-		.mask	= FIO_OPT_G_RATE,
-	},
-	{
-		.name	= "Zone",
-		.mask	= FIO_OPT_G_ZONE,
-	},
-	{
-		.name	= "Read/write mix",
-		.mask	= FIO_OPT_G_RWMIX,
-	},
-	{
-		.name	= "Verify",
-		.mask	= FIO_OPT_G_VERIFY,
-	},
-	{
-		.name	= "Trim",
-		.mask	= FIO_OPT_G_TRIM,
-	},
-	{
-		.name	= "I/O Logging",
-		.mask	= FIO_OPT_G_IOLOG,
-	},
-	{
-		.name	= "I/O Depth",
-		.mask	= FIO_OPT_G_IO_DEPTH,
-	},
-	{
-		.name	= "I/O Flow",
-		.mask	= FIO_OPT_G_IO_FLOW,
-	},
-	{
-		.name	= "Description",
-		.mask	= FIO_OPT_G_DESC,
-	},
-	{
-		.name	= "Filename",
-		.mask	= FIO_OPT_G_FILENAME,
-	},
-	{
-		.name	= "General I/O",
-		.mask	= FIO_OPT_G_IO_BASIC,
-	},
-	{
-		.name	= "Cgroups",
-		.mask	= FIO_OPT_G_CGROUP,
-	},
-	{
-		.name	= "Runtime",
-		.mask	= FIO_OPT_G_RUNTIME,
-	},
-	{
-		.name	= "Process",
-		.mask	= FIO_OPT_G_PROCESS,
-	},
-	{
-		.name	= "Job credentials / priority",
-		.mask	= FIO_OPT_G_CRED,
-	},
-	{
-		.name	= "Clock settings",
-		.mask	= FIO_OPT_G_CLOCK,
-	},
-	{
-		.name	= "I/O Type",
-		.mask	= FIO_OPT_G_IO_TYPE,
-	},
-	{
-		.name	= "I/O Thinktime",
-		.mask	= FIO_OPT_G_THINKTIME,
-	},
-	{
-		.name	= "Randomizations",
-		.mask	= FIO_OPT_G_RANDOM,
-	},
-	{
-		.name	= "I/O buffers",
-		.mask	= FIO_OPT_G_IO_BUF,
-	},
-	{
-		.name	= "Tiobench profile",
-		.mask	= FIO_OPT_G_TIOBENCH,
-	},
-	{
-		.name	= "MTD",
-		.mask	= FIO_OPT_G_MTD,
-	},
-
-	{
-		.name	= NULL,
-	}
-};
-
-struct opt_group *opt_group_cat_from_mask(unsigned int *mask)
-{
-	return __opt_group_from_mask(fio_opt_cat_groups, mask, FIO_OPT_G_INVALID);
-}
-
-/*
  * Map of job/command line options
  */
 struct fio_option fio_options[FIO_MAX_OPTS] = {
@@ -1207,6 +1355,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(name),
 		.help	= "Name of this job",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_DESC,
+	},
+	{
+		.name	= "wait_for",
+		.lname	= "Waitee name",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(wait_for),
+		.help	= "Name of the job this one wants to wait for before starting",
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_DESC,
 	},
@@ -1379,6 +1536,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Use preadv/pwritev",
 			  },
 #endif
+#ifdef CONFIG_PWRITEV2
+			  { .ival = "pvsync2",
+			    .help = "Use preadv2/pwritev2",
+			  },
+#endif
 #ifdef CONFIG_LIBAIO
 			  { .ival = "libaio",
 			    .help = "Linux native asynchronous IO",
@@ -1471,6 +1633,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  { .ival = "libhdfs",
 			    .help = "Hadoop Distributed Filesystem (HDFS) engine"
 			  },
+#endif
+#ifdef CONFIG_PMEMBLK
+			  { .ival = "pmemblk",
+			    .help = "NVML libpmemblk based IO engine",
+			  },
+
 #endif
 			  { .ival = "external",
 			    .help = "Load external engine (append name)",
@@ -1843,6 +2011,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = FIO_RAND_DIST_GAUSS,
 			    .help = "Normal (gaussian) distribution",
 			  },
+			  { .ival = "zoned",
+			    .oval = FIO_RAND_DIST_ZONED,
+			    .help = "Zoned random distribution",
+			  },
+
 		},
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_RANDOM,
@@ -1912,7 +2085,19 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.posval	= {
 			  { .ival = "random",
 			    .oval = FIO_FSERVICE_RANDOM,
-			    .help = "Choose a file at random",
+			    .help = "Choose a file at random (uniform)",
+			  },
+			  { .ival = "zipf",
+			    .oval = FIO_FSERVICE_ZIPF,
+			    .help = "Zipf randomized",
+			  },
+			  { .ival = "pareto",
+			    .oval = FIO_FSERVICE_PARETO,
+			    .help = "Pareto randomized",
+			  },
+			  { .ival = "gauss",
+			    .oval = FIO_FSERVICE_GAUSS,
+			    .help = "Normal (guassian) distribution",
 			  },
 			  { .ival = "roundrobin",
 			    .oval = FIO_FSERVICE_RR,
@@ -3126,6 +3311,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_PROCESS,
 	},
 	{
+		.name	= "exitall_on_error",
+		.lname	= "Exit-all on terminate in error",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(unlink),
+		.help	= "Terminate all jobs when one exits in error",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_PROCESS,
+	},
+	{
 		.name	= "stonewall",
 		.lname	= "Wait for previous",
 		.alias	= "wait_for_previous",
@@ -3204,6 +3398,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "log_max_value",
+		.lname	= "Log maximum instead of average",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(log_max),
+		.help	= "Log max sample in a window instead of average",
+		.def	= "0",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "log_offset",
 		.lname	= "Log offset of IO",
 		.type	= FIO_OPT_BOOL,
@@ -3225,6 +3429,19 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
 	},
+#ifdef FIO_HAVE_CPU_AFFINITY
+	{
+		.name	= "log_compression_cpus",
+		.lname	= "Log Compression CPUs",
+		.type	= FIO_OPT_STR,
+		.cb	= str_log_cpus_allowed_cb,
+		.off1	= td_var_offset(log_gz_cpumask),
+		.parent = "log_compression",
+		.help	= "Limit log compression to these CPUs",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+#endif
 	{
 		.name	= "log_store_compressed",
 		.lname	= "Log store compressed",
@@ -4042,8 +4259,7 @@ static void show_closest_option(const char *opt)
 	free(name);
 }
 
-int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
-			int dump_cmdline)
+int fio_options_parse(struct thread_data *td, char **opts, int num_opts)
 {
 	int i, ret, unknown;
 	char **opts_copy;
@@ -4054,7 +4270,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
 	for (ret = 0, i = 0, unknown = 0; i < num_opts; i++) {
 		struct fio_option *o;
 		int newret = parse_option(opts_copy[i], opts[i], fio_options,
-						&o, td, dump_cmdline);
+						&o, td, &td->opt_list);
 
 		if (!newret && o)
 			fio_option_mark_set(&td->o, o);
@@ -4087,7 +4303,7 @@ int fio_options_parse(struct thread_data *td, char **opts, int num_opts,
 			if (td->eo)
 				newret = parse_option(opts_copy[i], opts[i],
 						      td->io_ops->options, &o,
-						      td->eo, dump_cmdline);
+						      td->eo, &td->opt_list);
 
 			ret |= newret;
 			if (!o) {
@@ -4107,7 +4323,7 @@ int fio_cmd_option_parse(struct thread_data *td, const char *opt, char *val)
 {
 	int ret;
 
-	ret = parse_cmd_option(opt, val, fio_options, td);
+	ret = parse_cmd_option(opt, val, fio_options, td, &td->opt_list);
 	if (!ret) {
 		struct fio_option *o;
 
@@ -4122,7 +4338,8 @@ int fio_cmd_option_parse(struct thread_data *td, const char *opt, char *val)
 int fio_cmd_ioengine_option_parse(struct thread_data *td, const char *opt,
 				char *val)
 {
-	return parse_cmd_option(opt, val, td->io_ops->options, td->eo);
+	return parse_cmd_option(opt, val, td->io_ops->options, td->eo,
+					&td->opt_list);
 }
 
 void fio_fill_default_options(struct thread_data *td)
@@ -4311,19 +4528,19 @@ static int opt_is_set(struct thread_options *o, struct fio_option *opt)
 	return (o->set_options[index] & ((uint64_t)1 << offset)) != 0;
 }
 
-int __fio_option_is_set(struct thread_options *o, unsigned int off1)
+bool __fio_option_is_set(struct thread_options *o, unsigned int off1)
 {
 	struct fio_option *opt, *next;
 
 	next = NULL;
 	while ((opt = find_next_opt(o, next, off1)) != NULL) {
 		if (opt_is_set(o, opt))
-			return 1;
+			return true;
 
 		next = opt;
 	}
 
-	return 0;
+	return false;
 }
 
 void fio_option_mark_set(struct thread_options *o, struct fio_option *opt)

@@ -11,6 +11,7 @@
 #include "ghelpers.h"
 #include "gerror.h"
 #include "parse.h"
+#include "optgroup.h"
 
 struct gopt {
 	GtkWidget *box;
@@ -92,10 +93,10 @@ struct gopt_job_view {
 static GNode *gopt_dep_tree;
 
 static GtkWidget *gopt_get_group_frame(struct gopt_job_view *gjv,
-				       GtkWidget *box, unsigned int groupmask)
+				       GtkWidget *box, uint64_t groupmask)
 {
-	unsigned int mask, group;
-	struct opt_group *og;
+	uint64_t mask, group;
+	const struct opt_group *og;
 	GtkWidget *frame, *hbox;
 	struct gopt_frame_widget *gfw;
 
@@ -107,7 +108,7 @@ static GtkWidget *gopt_get_group_frame(struct gopt_job_view *gjv,
 	if (!og)
 		return NULL;
 
-	group = ffz(~groupmask);
+	group = ffz64(~groupmask);
 	gfw = &gjv->g_widgets[group];
 	if (!gfw->vbox[0]) {
 		frame = gtk_frame_new(og->name);
@@ -1135,11 +1136,11 @@ static void gopt_add_options(struct gopt_job_view *gjv,
 	 */
 	for (i = 0; fio_options[i].name; i++) {
 		struct fio_option *o = &fio_options[i];
-		unsigned int mask = o->category;
-		struct opt_group *og;
+		uint64_t mask = o->category;
+		const struct opt_group *og;
 
 		while ((og = opt_group_from_mask(&mask)) != NULL) {
-			GtkWidget *vbox = gjv->vboxes[ffz(~og->mask)];
+			GtkWidget *vbox = gjv->vboxes[ffz64(~og->mask)];
 
 			hbox = gtk_hbox_new(FALSE, 3);
 			gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 5);
@@ -1177,19 +1178,20 @@ static GtkWidget *gopt_add_tab(GtkWidget *notebook, const char *name)
 	return vbox;
 }
 
-static GtkWidget *gopt_add_group_tab(GtkWidget *notebook, struct opt_group *og)
+static GtkWidget *gopt_add_group_tab(GtkWidget *notebook,
+				     const struct opt_group *og)
 {
 	return gopt_add_tab(notebook, og->name);
 }
 
 static void gopt_add_group_tabs(GtkWidget *notebook, struct gopt_job_view *gjv)
 {
-	struct opt_group *og;
+	const struct opt_group *og;
 	unsigned int i;
 
 	i = 0;
 	do {
-		unsigned int mask = (1U << i);
+		uint64_t mask = (1ULL << i);
 
 		og = opt_group_from_mask(&mask);
 		if (!og)

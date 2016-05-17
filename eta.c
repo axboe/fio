@@ -214,7 +214,7 @@ static unsigned long thread_eta(struct thread_data *td)
 		if (td->o.time_based) {
 			if (timeout) {
 				perc_t = (double) elapsed / (double) timeout;
-				if (perc_t > perc)
+				if (perc_t < perc)
 					perc = perc_t;
 			} else {
 				/*
@@ -589,7 +589,7 @@ void display_thread_status(struct jobs_eta *je)
 	fflush(stdout);
 }
 
-struct jobs_eta *get_jobs_eta(int force, size_t *size)
+struct jobs_eta *get_jobs_eta(bool force, size_t *size)
 {
 	struct jobs_eta *je;
 
@@ -616,7 +616,7 @@ void print_thread_status(void)
 	struct jobs_eta *je;
 	size_t size;
 
-	je = get_jobs_eta(0, &size);
+	je = get_jobs_eta(false, &size);
 	if (je)
 		display_thread_status(je);
 

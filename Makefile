@@ -20,13 +20,13 @@ all:
 include config-host.mak
 endif
 
-DEBUGFLAGS = -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
+DEBUGFLAGS = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -DFIO_INC_DEBUG
 CPPFLAGS= -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DFIO_INTERNAL $(DEBUGFLAGS)
 OPTFLAGS= -g -ffast-math
 CFLAGS	= -std=gnu99 -Wwrite-strings -Wall -Wdeclaration-after-statement $(OPTFLAGS) $(EXTFLAGS) $(BUILD_CFLAGS) -I. -I$(SRCDIR)
 LIBS	+= -lm $(EXTLIBS)
 PROGS	= fio
-SCRIPTS = $(addprefix $(SRCDIR)/,tools/fio_generate_plots tools/plot/fio2gnuplot tools/genfio)
+SCRIPTS = $(addprefix $(SRCDIR)/,tools/fio_generate_plots tools/plot/fio2gnuplot tools/genfio tools/fiologparser.py)
 
 ifndef CONFIG_FIO_NO_OPT
   CFLAGS += -O3
@@ -45,7 +45,7 @@ SOURCE :=	$(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/crc/*.c)) \
 		server.c client.c iolog.c backend.c libfio.c flow.c cconv.c \
 		gettime-thread.c helpers.c json.c idletime.c td_error.c \
 		profiles/tiobench.c profiles/act.c io_u_queue.c filelock.c \
-		workqueue.c
+		workqueue.c rate-submit.c optgroup.c helper_thread.c
 
 ifdef CONFIG_LIBHDFS
   HDFSFLAGS= -I $(JAVA_HOME)/include -I $(JAVA_HOME)/include/linux -I $(FIO_LIBHDFS_INCLUDE)
@@ -124,6 +124,9 @@ ifdef CONFIG_MTD
   SOURCE += oslib/libmtd.c
   SOURCE += oslib/libmtd_legacy.c
 endif
+ifdef CONFIG_PMEMBLK
+  SOURCE += engines/pmemblk.c
+endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
@@ -191,7 +194,7 @@ endif
 -include $(OBJS:.o=.d)
 
 T_SMALLOC_OBJS = t/stest.o
-T_SMALLOC_OBJS += gettime.o mutex.o smalloc.o t/log.o t/debug.o
+T_SMALLOC_OBJS += gettime.o mutex.o smalloc.o t/log.o t/debug.o t/arch.o
 T_SMALLOC_PROGS = t/stest
 
 T_IEEE_OBJS = t/ieee754.o
@@ -200,7 +203,7 @@ T_IEEE_PROGS = t/ieee754
 
 T_ZIPF_OBS = t/genzipf.o
 T_ZIPF_OBJS += t/log.o lib/ieee754.o lib/rand.o lib/pattern.o lib/zipf.o \
-		lib/strntol.o lib/gauss.o t/genzipf.o
+		lib/strntol.o lib/gauss.o t/genzipf.o oslib/strcasestr.o
 T_ZIPF_PROGS = t/fio-genzipf
 
 T_AXMAP_OBJS = t/axmap.o
@@ -208,8 +211,13 @@ T_AXMAP_OBJS += lib/lfsr.o lib/axmap.o
 T_AXMAP_PROGS = t/axmap
 
 T_LFSR_TEST_OBJS = t/lfsr-test.o
-T_LFSR_TEST_OBJS += lib/lfsr.o gettime.o t/log.o t/debug.o
+T_LFSR_TEST_OBJS += lib/lfsr.o gettime.o t/log.o t/debug.o t/arch.o
 T_LFSR_TEST_PROGS = t/lfsr-test
+
+T_GEN_RAND_OBJS = t/gen-rand.o
+T_GEN_RAND_OBJS += t/log.o t/debug.o lib/rand.o lib/pattern.o lib/strntol.o \
+			oslib/strcasestr.o
+T_GEN_RAND_PROGS = t/gen-rand
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
 T_BTRACE_FIO_OBJS = t/btrace2fio.o
@@ -219,23 +227,35 @@ endif
 
 T_DEDUPE_OBJS = t/dedupe.o
 T_DEDUPE_OBJS += lib/rbtree.o t/log.o mutex.o smalloc.o gettime.o crc/md5.o \
-		lib/memalign.o lib/bloom.o t/debug.o crc/xxhash.o \
+		lib/memalign.o lib/bloom.o t/debug.o crc/xxhash.o t/arch.o \
 		crc/murmur3.o crc/crc32c.o crc/crc32c-intel.o crc/fnv.o
 T_DEDUPE_PROGS = t/fio-dedupe
+
+T_VS_OBJS = t/verify-state.o t/log.o crc/crc32c.o crc/crc32c-intel.o t/debug.o
+T_VS_PROGS = t/fio-verify-state
+
+T_PIPE_ASYNC_OBJS = t/read-to-pipe-async.o
+T_PIPE_ASYNC_PROGS = t/read-to-pipe-async
+
+T_MEMLOCK_OBJS = t/memlock.o
+T_MEMLOCK_PROGS = t/memlock
 
 T_OBJS = $(T_SMALLOC_OBJS)
 T_OBJS += $(T_IEEE_OBJS)
 T_OBJS += $(T_ZIPF_OBJS)
 T_OBJS += $(T_AXMAP_OBJS)
 T_OBJS += $(T_LFSR_TEST_OBJS)
+T_OBJS += $(T_GEN_RAND_OBJS)
 T_OBJS += $(T_BTRACE_FIO_OBJS)
 T_OBJS += $(T_DEDUPE_OBJS)
+T_OBJS += $(T_VS_OBJS)
+T_OBJS += $(T_PIPE_ASYNC_OBJS)
+T_OBJS += $(T_MEMLOCK_OBJS)
 
 ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
     T_DEDUPE_OBJS += os/windows/posix.o lib/hweight.o
     T_SMALLOC_OBJS += os/windows/posix.o lib/hweight.o
     T_LFSR_TEST_OBJS += os/windows/posix.o lib/hweight.o
-    T_ZIPF_OBJS += oslib/strcasestr.o
 endif
 
 T_TEST_PROGS = $(T_SMALLOC_PROGS)
@@ -243,8 +263,10 @@ T_TEST_PROGS += $(T_IEEE_PROGS)
 T_PROGS += $(T_ZIPF_PROGS)
 T_TEST_PROGS += $(T_AXMAP_PROGS)
 T_TEST_PROGS += $(T_LFSR_TEST_PROGS)
+T_TEST_PROGS += $(T_GEN_RAND_PROGS)
 T_PROGS += $(T_BTRACE_FIO_PROGS)
 T_PROGS += $(T_DEDUPE_PROGS)
+T_PROGS += $(T_VS_PROGS)
 
 PROGS += $(T_PROGS)
 
@@ -297,7 +319,11 @@ override CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 
 ifdef CONFIG_ARITHMETIC
 lex.yy.c: exp/expression-parser.l
+ifdef CONFIG_LEX_USE_O
 	$(QUIET_LEX)$(LEX) -o $@ $<
+else
+	$(QUIET_LEX)$(LEX) $<
+endif
 
 lex.yy.o: lex.yy.c y.tab.h
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
@@ -357,6 +383,12 @@ cairo_text_helpers.o: cairo_text_helpers.c cairo_text_helpers.h
 printing.o: printing.c printing.h
 	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c $<
 
+t/read-to-pipe-async: $(T_PIPE_ASYNC_OBJS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_PIPE_ASYNC_OBJS) $(LIBS)
+
+t/memlock: $(T_MEMLOCK_OBJS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_MEMLOCK_OBJS) $(LIBS)
+
 t/stest: $(T_SMALLOC_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_SMALLOC_OBJS) $(LIBS)
 
@@ -378,6 +410,9 @@ t/axmap: $(T_AXMAP_OBJS)
 t/lfsr-test: $(T_LFSR_TEST_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_LFSR_TEST_OBJS) $(LIBS)
 
+t/gen-rand: $(T_GEN_RAND_OBJS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_GEN_RAND_OBJS) $(LIBS)
+
 ifeq ($(CONFIG_TARGET_OS), Linux)
 t/fio-btrace2fio: $(T_BTRACE_FIO_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_BTRACE_FIO_OBJS) $(LIBS)
@@ -385,6 +420,9 @@ endif
 
 t/fio-dedupe: $(T_DEDUPE_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_DEDUPE_OBJS) $(LIBS)
+
+t/fio-verify-state: $(T_VS_OBJS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_VS_OBJS) $(LIBS)
 
 clean: FORCE
 	@rm -f .depend $(FIO_OBJS) $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(PROGS) $(T_PROGS) $(T_TEST_PROGS) core.* core gfio FIO-VERSION-FILE *.d lib/*.d oslib/*.d crc/*.d engines/*.d profiles/*.d t/*.d config-host.mak config-host.h y.tab.[ch] lex.yy.c exp/*.[do] lexer.h
@@ -402,6 +440,8 @@ doc: tools/plot/fio2gnuplot.1
 	@man -t ./fio.1 | ps2pdf - fio.pdf
 	@man -t tools/fio_generate_plots.1 | ps2pdf - fio_generate_plots.pdf
 	@man -t tools/plot/fio2gnuplot.1 | ps2pdf - fio2gnuplot.pdf
+
+test:
 
 install: $(PROGS) $(SCRIPTS) tools/plot/fio2gnuplot.1 FORCE
 	$(INSTALL) -m 755 -d $(DESTDIR)$(bindir)

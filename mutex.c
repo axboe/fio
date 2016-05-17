@@ -92,12 +92,15 @@ struct fio_mutex *fio_mutex_init(int value)
 	return NULL;
 }
 
-static bool mutex_timed_out(struct timeval *t, unsigned int seconds)
+static bool mutex_timed_out(struct timeval *t, unsigned int msecs)
 {
-	return mtime_since_now(t) >= seconds * 1000;
+	struct timeval now;
+
+	gettimeofday(&now, NULL);
+	return mtime_since(t, &now) >= msecs;
 }
 
-int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
+int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int msecs)
 {
 	struct timeval tv_s;
 	struct timespec t;
@@ -106,30 +109,37 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int seconds)
 	assert(mutex->magic == FIO_MUTEX_MAGIC);
 
 	gettimeofday(&tv_s, NULL);
-	t.tv_sec = tv_s.tv_sec + seconds;
+	t.tv_sec = tv_s.tv_sec;
 	t.tv_nsec = tv_s.tv_usec * 1000;
+
+	t.tv_sec += msecs / 1000;
+	t.tv_nsec += ((msecs * 1000000) % 1000000000);
+	if (t.tv_nsec >= 1000000000) {
+		t.tv_nsec -= 1000000000;
+		t.tv_sec++;
+	}
 
 	pthread_mutex_lock(&mutex->lock);
 
+	mutex->waiters++;
 	while (!mutex->value && !ret) {
-		mutex->waiters++;
-
 		/*
 		 * Some platforms (FreeBSD 9?) seems to return timed out
 		 * way too early, double check.
 		 */
 		ret = pthread_cond_timedwait(&mutex->cond, &mutex->lock, &t);
-		if (ret == ETIMEDOUT && !mutex_timed_out(&tv_s, seconds))
+		if (ret == ETIMEDOUT && !mutex_timed_out(&tv_s, msecs))
 			ret = 0;
-
-		mutex->waiters--;
 	}
+	mutex->waiters--;
 
 	if (!ret) {
 		mutex->value--;
 		pthread_mutex_unlock(&mutex->lock);
+		return 0;
 	}
 
+	pthread_mutex_unlock(&mutex->lock);
 	return ret;
 }
 

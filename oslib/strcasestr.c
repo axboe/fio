@@ -1,6 +1,8 @@
 #include <ctype.h>
 #include <stddef.h>
 
+#ifndef CONFIG_STRCASESTR
+
 char *strcasestr(const char *s1, const char *s2)
 {
 	const char *s = s1;
@@ -23,3 +25,5 @@ char *strcasestr(const char *s1, const char *s2)
 
 	return *p ? NULL : (char *) s1;
 }
+
+#endif

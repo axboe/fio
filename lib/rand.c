@@ -76,7 +76,7 @@ static void __init_rand64(struct taus258_state *state, uint64_t seed)
 		__rand64(state);
 }
 
-void init_rand(struct frand_state *state, int use64)
+void init_rand(struct frand_state *state, bool use64)
 {
 	state->use64 = use64;
 
@@ -86,7 +86,7 @@ void init_rand(struct frand_state *state, int use64)
 		__init_rand64(&state->state64, 1);
 }
 
-void init_rand_seed(struct frand_state *state, unsigned int seed, int use64)
+void init_rand_seed(struct frand_state *state, unsigned int seed, bool use64)
 {
 	state->use64 = use64;
 

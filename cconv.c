@@ -23,8 +23,11 @@ static void __string_to_net(uint8_t *dst, const char *src, size_t dst_size)
 
 static void free_thread_options_to_cpu(struct thread_options *o)
 {
+	int i;
+
 	free(o->description);
 	free(o->name);
+	free(o->wait_for);
 	free(o->directory);
 	free(o->filename);
 	free(o->filename_format);
@@ -42,6 +45,11 @@ static void free_thread_options_to_cpu(struct thread_options *o)
 	free(o->ioscheduler);
 	free(o->profile);
 	free(o->cgroup);
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		free(o->bssplit[i]);
+		free(o->zone_split[i]);
+	}
 }
 
 void convert_thread_options_to_cpu(struct thread_options *o,
@@ -54,6 +62,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 
 	string_to_cpu(&o->description, top->description);
 	string_to_cpu(&o->name, top->name);
+	string_to_cpu(&o->wait_for, top->wait_for);
 	string_to_cpu(&o->directory, top->directory);
 	string_to_cpu(&o->filename, top->filename);
 	string_to_cpu(&o->filename_format, top->filename_format);
@@ -109,6 +118,16 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 			}
 		}
 
+		o->zone_split_nr[i] = le32_to_cpu(top->zone_split_nr[i]);
+
+		if (o->zone_split_nr[i]) {
+			o->zone_split[i] = malloc(o->zone_split_nr[i] * sizeof(struct zone_split));
+			for (j = 0; j < o->zone_split_nr[i]; j++) {
+				o->zone_split[i][j].access_perc = top->zone_split[i][j].access_perc;
+				o->zone_split[i][j].size_perc = top->zone_split[i][j].size_perc;
+			}
+		}
+
 		o->rwmix[i] = le32_to_cpu(top->rwmix[i]);
 		o->rate[i] = le32_to_cpu(top->rate[i]);
 		o->ratemin[i] = le32_to_cpu(top->ratemin[i]);
@@ -158,6 +177,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->allrand_repeatable = le32_to_cpu(top->allrand_repeatable);
 	o->rand_seed = le64_to_cpu(top->rand_seed);
 	o->log_avg_msec = le32_to_cpu(top->log_avg_msec);
+	o->log_max = le32_to_cpu(top->log_max);
 	o->log_offset = le32_to_cpu(top->log_offset);
 	o->log_gz = le32_to_cpu(top->log_gz);
 	o->log_gz_store = le32_to_cpu(top->log_gz_store);
@@ -167,6 +187,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->fsync_on_close = le32_to_cpu(top->fsync_on_close);
 	o->bs_is_seq_rand = le32_to_cpu(top->bs_is_seq_rand);
 	o->random_distribution = le32_to_cpu(top->random_distribution);
+	o->exitall_error = le32_to_cpu(top->exitall_error);
 	o->zipf_theta.u.f = fio_uint64_to_double(le64_to_cpu(top->zipf_theta.u.i));
 	o->pareto_h.u.f = fio_uint64_to_double(le64_to_cpu(top->pareto_h.u.i));
 	o->gauss_dev.u.f = fio_uint64_to_double(le64_to_cpu(top->gauss_dev.u.i));
@@ -261,6 +282,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 #if 0
 	uint8_t cpumask[FIO_TOP_STR_MAX];
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
+	uint8_t log_gz_cpumask[FIO_TOP_STR_MAX];
 #endif
 }
 
@@ -274,6 +296,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 
 	string_to_net(top->description, o->description);
 	string_to_net(top->name, o->name);
+	string_to_net(top->wait_for, o->wait_for);
 	string_to_net(top->directory, o->directory);
 	string_to_net(top->filename, o->filename);
 	string_to_net(top->filename_format, o->filename_format);
@@ -343,6 +366,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->allrand_repeatable = cpu_to_le32(o->allrand_repeatable);
 	top->rand_seed = __cpu_to_le64(o->rand_seed);
 	top->log_avg_msec = cpu_to_le32(o->log_avg_msec);
+	top->log_max = cpu_to_le32(o->log_max);
 	top->log_offset = cpu_to_le32(o->log_offset);
 	top->log_gz = cpu_to_le32(o->log_gz);
 	top->log_gz_store = cpu_to_le32(o->log_gz_store);
@@ -352,6 +376,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->fsync_on_close = cpu_to_le32(o->fsync_on_close);
 	top->bs_is_seq_rand = cpu_to_le32(o->bs_is_seq_rand);
 	top->random_distribution = cpu_to_le32(o->random_distribution);
+	top->exitall_error = cpu_to_le32(o->exitall_error);
 	top->zipf_theta.u.i = __cpu_to_le64(fio_double_to_uint64(o->zipf_theta.u.f));
 	top->pareto_h.u.i = __cpu_to_le64(fio_double_to_uint64(o->pareto_h.u.f));
 	top->gauss_dev.u.i = __cpu_to_le64(fio_double_to_uint64(o->gauss_dev.u.f));
@@ -445,6 +470,21 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 			}
 		}
 
+		top->zone_split_nr[i] = cpu_to_le32(o->zone_split_nr[i]);
+
+		if (o->zone_split_nr[i]) {
+			unsigned int zone_split_nr = o->zone_split_nr[i];
+
+			if (zone_split_nr > ZONESPLIT_MAX) {
+				log_err("fio: ZONESPLIT_MAX is too small\n");
+				zone_split_nr = ZONESPLIT_MAX;
+			}
+			for (j = 0; j < zone_split_nr; j++) {
+				top->zone_split[i][j].access_perc = o->zone_split[i][j].access_perc;
+				top->zone_split[i][j].size_perc = o->zone_split[i][j].size_perc;
+			}
+		}
+
 		top->rwmix[i] = cpu_to_le32(o->rwmix[i]);
 		top->rate[i] = cpu_to_le32(o->rate[i]);
 		top->ratemin[i] = cpu_to_le32(o->ratemin[i]);
@@ -482,6 +522,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 #if 0
 	uint8_t cpumask[FIO_TOP_STR_MAX];
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
+	uint8_t log_gz_cpumask[FIO_TOP_STR_MAX];
 #endif
 
 }

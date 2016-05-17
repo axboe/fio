@@ -1,6 +1,7 @@
 #ifndef FIO_PARSE_H
 #define FIO_PARSE_H
 
+#include <inttypes.h>
 #include "flist.h"
 
 /*
@@ -69,8 +70,8 @@ struct fio_option {
 	int (*verify)(struct fio_option *, void *);
 	const char *prof_name;		/* only valid for specific profile */
 	void *prof_opts;
-	unsigned int category;		/* what type of option */
-	unsigned int group;		/* who to group with */
+	uint64_t category;		/* what type of option */
+	uint64_t group;			/* who to group with */
 	void *gui_data;
 	int is_seconds;			/* time value with seconds base */
 	int is_time;			/* time based value */
@@ -80,9 +81,9 @@ struct fio_option {
 
 typedef int (str_cb_fn)(void *, char *);
 
-extern int parse_option(char *, const char *, struct fio_option *, struct fio_option **, void *, int);
+extern int parse_option(char *, const char *, struct fio_option *, struct fio_option **, void *, struct flist_head *);
 extern void sort_options(char **, struct fio_option *, int);
-extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, void *);
+extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, void *, struct flist_head *);
 extern int show_cmd_help(struct fio_option *, const char *);
 extern void fill_default_options(void *, struct fio_option *);
 extern void option_init(struct fio_option *);
@@ -123,5 +124,11 @@ static inline int parse_is_percent(unsigned long long val)
 {
 	return val <= -1ULL && val >= (-1ULL - 100ULL);
 }
+
+struct print_option {
+	struct flist_head list;
+	char *name;
+	char *value;
+};
 
 #endif

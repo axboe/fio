@@ -17,5 +17,6 @@ extern void set_genesis_time(void);
 extern int ramp_time_over(struct thread_data *);
 extern int in_ramp_time(struct thread_data *);
 extern void fio_time_init(void);
+extern void timeval_add_msec(struct timeval *, unsigned int);
 
 #endif

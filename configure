@@ -135,7 +135,8 @@ show_help="no"
 exit_val=0
 gfio_check="no"
 libhdfs="no"
-disable_lex="no"
+pmemblk="no"
+disable_lex=""
 prefix=/usr/local
 
 # parse options
@@ -169,7 +170,11 @@ for opt do
   ;;
   --enable-libhdfs) libhdfs="yes"
   ;;
+  --enable-pmemblk) pmemblk="yes"
+  ;;
   --disable-lex) disable_lex="yes"
+  ;;
+  --enable-lex) disable_lex="no"
   ;;
   --disable-shm) no_shm="yes"
   ;;
@@ -197,7 +202,9 @@ if test "$show_help" = "yes" ; then
   echo "--disable-numa         Disable libnuma even if found"
   echo "--disable-gfapi        Disable gfapi"
   echo "--enable-libhdfs       Enable hdfs support"
+  echo "--enable-pmemblk       Enable NVML libpmemblk support"
   echo "--disable-lex          Disable use of lex/yacc for math"
+  echo "--enable-lex           Enable use of lex/yacc for math"
   echo "--disable-shm          Disable SHM support"
   echo "--disable-optimizations Don't enable compiler optimizations"
   exit $exit_val
@@ -240,6 +247,14 @@ fi
 # cross-compiling to one of these OSes then you'll need to specify
 # the correct CPU with the --cpu option.
 case $targetos in
+AIX)
+  # Unless explicitly enabled, turn off lex.
+  if test -z "$disable_lex" ; then
+    disable_lex="yes"
+  else
+    force_no_lex_o="yes"
+  fi
+  ;;
 Darwin)
   # on Leopard most of the system is 32-bit, so we have to ask the kernel if
   # we can run 64-bit userspace code.
@@ -478,7 +493,8 @@ echo "zlib                          $zlib"
 ##########################################
 # linux-aio probe
 libaio="no"
-cat > $TMPC <<EOF
+if test "$esx" != "yes" ; then
+  cat > $TMPC <<EOF
 #include <libaio.h>
 #include <stddef.h>
 int main(void)
@@ -487,14 +503,15 @@ int main(void)
   return 0;
 }
 EOF
-if compile_prog "" "-laio" "libaio" ; then
-  libaio=yes
-  LIBS="-laio $LIBS"
-else
-  if test "$libaio" = "yes" ; then
-    feature_not_found "linux AIO" "libaio-dev or libaio-devel"
+  if compile_prog "" "-laio" "libaio" ; then
+    libaio=yes
+    LIBS="-laio $LIBS"
+  else
+    if test "$libaio" = "yes" ; then
+      feature_not_found "linux AIO" "libaio-dev or libaio-devel"
+    fi
+    libaio=no
   fi
-  libaio=no
 fi
 echo "Linux AIO support             $libaio"
 
@@ -1228,6 +1245,22 @@ fi
 echo "pwritev/preadv                $pwritev"
 
 ##########################################
+# Check whether we have pwritev2/preadv2
+pwritev2="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <sys/uio.h>
+int main(int argc, char **argv)
+{
+  return pwritev2(0, NULL, 1, 0, 0) + preadv2(0, NULL, 1, 0, 0);
+}
+EOF
+if compile_prog "" "" "pwritev2"; then
+  pwritev2="yes"
+fi
+echo "pwritev2/preadv2              $pwritev2"
+
+##########################################
 # Check whether we have the required functions for ipv6
 ipv6="no"
 cat > $TMPC << EOF
@@ -1450,12 +1483,16 @@ if compile_prog "" "" "mtd"; then
 fi
 echo "MTD                           $mtd"
 
+##########################################
+# Report whether pmemblk engine is enabled
+echo "NVML libpmemblk engine        $pmemblk"
+
 # Check if we have lex/yacc available
 yacc="no"
 yacc_is_bison="no"
 lex="no"
 arith="no"
-if test "$disable_lex" = "no"; then
+if test "$disable_lex" = "no" || test -z "$disable_lex" ; then
 if test "$targetos" != "SunOS" ; then
 LEX=$(which lex 2> /dev/null)
 if test -x "$LEX" ; then
@@ -1490,6 +1527,20 @@ if compile_prog "" "-ll" "lex"; then
 else
   arith="no"
 fi
+fi
+fi
+fi
+
+# Check if lex fails using -o
+if test "$arith" = "yes" ; then
+if test "$force_no_lex_o" = "yes" ; then
+  lex_use_o="no"
+else
+$LEX -o lex.yy.c exp/expression-parser.l 2> /dev/null
+if test "$?" = "0" ; then
+  lex_use_o="yes"
+else
+  lex_use_o="no"
 fi
 fi
 fi
@@ -1715,6 +1766,9 @@ fi
 if test "$pwritev" = "yes" ; then
   output_sym "CONFIG_PWRITEV"
 fi
+if test "$pwritev2" = "yes" ; then
+  output_sym "CONFIG_PWRITEV2"
+fi
 if test "$ipv6" = "yes" ; then
   output_sym "CONFIG_IPV6"
 fi
@@ -1749,12 +1803,18 @@ if test "$libhdfs" = "yes" ; then
 if test "$mtd" = "yes" ; then
   output_sym "CONFIG_MTD"
 fi
+if test "$pmemblk" = "yes" ; then
+  output_sym "CONFIG_PMEMBLK"
+fi
 if test "$arith" = "yes" ; then
   output_sym "CONFIG_ARITHMETIC"
   if test "$yacc_is_bison" = "yes" ; then
     echo "YACC=$YACC -y" >> $config_host_mak
   else
     echo "YACC=$YACC" >> $config_host_mak
+  fi
+  if test "$lex_use_o" = "yes" ; then
+    echo "CONFIG_LEX_USE_O=y" >> $config_host_mak
   fi
 fi
 if test "$getmntent" = "yes" ; then

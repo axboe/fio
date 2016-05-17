@@ -4,6 +4,7 @@
 
 #include "../smalloc.h"
 #include "../flist.h"
+#include "../arch/arch.h"
 #include "debug.h"
 
 #define MAGIC1	0xa9b1c8d2
@@ -69,6 +70,7 @@ static int do_specific_alloc(unsigned long size)
 
 int main(int argc, char *argv[])
 {
+	arch_init(argv);
 	sinit();
 	debug_init();
 

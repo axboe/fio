@@ -41,6 +41,8 @@ enum {
 	IO_LOG_TYPE_IOPS,
 };
 
+#define DEF_LOG_ENTRIES		1024
+
 /*
  * Dynamically growing data sample log
  */
@@ -184,6 +186,9 @@ extern void trim_io_piece(struct thread_data *, const struct io_u *);
 extern void queue_io_piece(struct thread_data *, struct io_piece *);
 extern void prune_io_piece_log(struct thread_data *);
 extern void write_iolog_close(struct thread_data *);
+extern int iolog_compress_init(struct thread_data *, struct sk_out *);
+extern void iolog_compress_exit(struct thread_data *);
+extern size_t log_chunk_sizes(struct io_log *);
 
 #ifdef CONFIG_ZLIB
 extern int iolog_file_inflate(const char *);
@@ -202,11 +207,18 @@ struct log_params {
 	int log_compress;
 };
 
-extern void finalize_logs(struct thread_data *td);
+static inline bool per_unit_log(struct io_log *log)
+{
+	return log && !log->avg_msec;
+}
+
+extern void finalize_logs(struct thread_data *td, bool);
 extern void setup_log(struct io_log **, struct log_params *, const char *);
 extern void flush_log(struct io_log *, int);
+extern void flush_samples(FILE *, void *, uint64_t);
 extern void free_log(struct io_log *);
-extern void fio_writeout_logs(struct thread_data *);
+extern void fio_writeout_logs(bool);
+extern void td_writeout_logs(struct thread_data *, bool);
 extern int iolog_flush(struct io_log *, int);
 
 static inline void init_ipo(struct io_piece *ipo)
@@ -214,5 +226,12 @@ static inline void init_ipo(struct io_piece *ipo)
 	memset(ipo, 0, sizeof(*ipo));
 	INIT_FLIST_HEAD(&ipo->trim_list);
 }
+
+struct iolog_compress {
+	struct flist_head list;
+	void *buf;
+	size_t len;
+	unsigned int seq;
+};
 
 #endif

@@ -204,7 +204,7 @@ void sinit(void)
 	int i, ret;
 
 	for (i = 0; i < MAX_POOLS; i++) {
-		ret = add_pool(&mp[i], INITIAL_SIZE);
+		ret = add_pool(&mp[i], smalloc_pool_size);
 		if (ret)
 			break;
 	}

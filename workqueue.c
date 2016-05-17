@@ -1,5 +1,5 @@
 /*
- * Rated submission helpers
+ * Generic workqueue offload mechanism
  *
  * Copyright (C) 2015 Jens Axboe <axboe@kernel.dk>
  *
@@ -7,22 +7,9 @@
 #include <unistd.h>
 
 #include "fio.h"
-#include "ioengine.h"
 #include "flist.h"
 #include "workqueue.h"
-#include "lib/getrusage.h"
-
-struct submit_worker {
-	pthread_t thread;
-	pthread_mutex_t lock;
-	pthread_cond_t cond;
-	struct flist_head work_list;
-	unsigned int flags;
-	unsigned int index;
-	uint64_t seq;
-	struct workqueue *wq;
-	struct thread_data td;
-};
+#include "smalloc.h"
 
 enum {
 	SW_F_IDLE	= 1 << 0,
@@ -110,155 +97,55 @@ void workqueue_flush(struct workqueue *wq)
 }
 
 /*
- * Must be serialized by caller.
+ * Must be serialized by caller. Returns true for queued, false for busy.
  */
-int workqueue_enqueue(struct workqueue *wq, struct io_u *io_u)
+void workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work)
 {
 	struct submit_worker *sw;
 
 	sw = get_submit_worker(wq);
-	if (sw) {
-		const enum fio_ddir ddir = acct_ddir(io_u);
-		struct thread_data *parent = wq->td;
+	assert(sw);
 
-		if (ddir_rw(ddir)) {
-			parent->io_issues[ddir]++;
-			parent->io_issue_bytes[ddir] += io_u->xfer_buflen;
-			parent->rate_io_issue_bytes[ddir] += io_u->xfer_buflen;
-		}
+	pthread_mutex_lock(&sw->lock);
+	flist_add_tail(&work->list, &sw->work_list);
+	sw->seq = ++wq->work_seq;
+	sw->flags &= ~SW_F_IDLE;
+	pthread_mutex_unlock(&sw->lock);
 
-		pthread_mutex_lock(&sw->lock);
-		flist_add_tail(&io_u->verify_list, &sw->work_list);
-		sw->seq = ++wq->work_seq;
-		sw->flags &= ~SW_F_IDLE;
-		pthread_mutex_unlock(&sw->lock);
-
-		pthread_cond_signal(&sw->cond);
-		return FIO_Q_QUEUED;
-	}
-
-	return FIO_Q_BUSY;
+	pthread_cond_signal(&sw->cond);
 }
 
 static void handle_list(struct submit_worker *sw, struct flist_head *list)
 {
 	struct workqueue *wq = sw->wq;
-	struct io_u *io_u;
+	struct workqueue_work *work;
 
 	while (!flist_empty(list)) {
-		io_u = flist_first_entry(list, struct io_u, verify_list);
-		flist_del_init(&io_u->verify_list);
-		wq->fn(&sw->td, io_u);
+		work = flist_first_entry(list, struct workqueue_work, list);
+		flist_del_init(&work->list);
+		wq->ops.fn(sw, work);
 	}
-}
-
-static int init_submit_worker(struct submit_worker *sw)
-{
-	struct thread_data *parent = sw->wq->td;
-	struct thread_data *td = &sw->td;
-	int fio_unused ret;
-
-	memcpy(&td->o, &parent->o, sizeof(td->o));
-	memcpy(&td->ts, &parent->ts, sizeof(td->ts));
-	td->o.uid = td->o.gid = -1U;
-	dup_files(td, parent);
-	td->eo = parent->eo;
-	fio_options_mem_dupe(td);
-
-	if (ioengine_load(td))
-		goto err;
-
-	if (td->o.odirect)
-		td->io_ops->flags |= FIO_RAWIO;
-
-	td->pid = gettid();
-
-	INIT_FLIST_HEAD(&td->io_log_list);
-	INIT_FLIST_HEAD(&td->io_hist_list);
-	INIT_FLIST_HEAD(&td->verify_list);
-	INIT_FLIST_HEAD(&td->trim_list);
-	INIT_FLIST_HEAD(&td->next_rand_list);
-	td->io_hist_tree = RB_ROOT;
-
-	td->o.iodepth = 1;
-	if (td_io_init(td))
-		goto err_io_init;
-
-	fio_gettime(&td->epoch, NULL);
-	fio_getrusage(&td->ru_start);
-	clear_io_state(td, 1);
-
-	td_set_runstate(td, TD_RUNNING);
-	td->flags |= TD_F_CHILD;
-	td->parent = parent;
-	return 0;
-
-err_io_init:
-	close_ioengine(td);
-err:
-	return 1;
-}
-
-#ifdef CONFIG_SFAA
-static void sum_val(uint64_t *dst, uint64_t *src)
-{
-	if (*src) {
-		__sync_fetch_and_add(dst, *src);
-		*src = 0;
-	}
-}
-#else
-static void sum_val(uint64_t *dst, uint64_t *src)
-{
-	if (*src) {
-		*dst += *src;
-		*src = 0;
-	}
-}
-#endif
-
-static void sum_ddir(struct thread_data *dst, struct thread_data *src,
-		     enum fio_ddir ddir)
-{
-#ifndef CONFIG_SFAA
-	pthread_mutex_lock(&dst->io_wq.stat_lock);
-	pthread_mutex_lock(&src->io_wq.stat_lock);
-#endif
-
-	sum_val(&dst->io_bytes[ddir], &src->io_bytes[ddir]);
-	sum_val(&dst->io_blocks[ddir], &src->io_blocks[ddir]);
-	sum_val(&dst->this_io_blocks[ddir], &src->this_io_blocks[ddir]);
-	sum_val(&dst->this_io_bytes[ddir], &src->this_io_bytes[ddir]);
-	sum_val(&dst->bytes_done[ddir], &src->bytes_done[ddir]);
-
-#ifndef CONFIG_SFAA
-	pthread_mutex_unlock(&src->io_wq.stat_lock);
-	pthread_mutex_unlock(&dst->io_wq.stat_lock);
-#endif
-}
-
-static void update_accounting(struct submit_worker *sw)
-{
-	struct thread_data *src = &sw->td;
-	struct thread_data *dst = sw->wq->td;
-
-	if (td_read(src))
-		sum_ddir(dst, src, DDIR_READ);
-	if (td_write(src))
-		sum_ddir(dst, src, DDIR_WRITE);
-	if (td_trim(src))
-		sum_ddir(dst, src, DDIR_TRIM);
 }
 
 static void *worker_thread(void *data)
 {
 	struct submit_worker *sw = data;
 	struct workqueue *wq = sw->wq;
-	struct thread_data *td = &sw->td;
-	unsigned int eflags = 0, ret;
+	unsigned int eflags = 0, ret = 0;
 	FLIST_HEAD(local_list);
 
-	ret = init_submit_worker(sw);
+	sk_out_assign(sw->sk_out);
+
+	if (wq->ops.nice) {
+		if (nice(wq->ops.nice) < 0) {
+			log_err("workqueue: nice %s\n", strerror(errno));
+			ret = 1;
+		}
+	}
+
+	if (!ret)
+		ret = workqueue_init_worker(sw);
+
 	pthread_mutex_lock(&sw->lock);
 	sw->flags |= SW_F_RUNNING;
 	if (ret)
@@ -281,10 +168,9 @@ static void *worker_thread(void *data)
 				break;
 			}
 
-			if (td->io_u_queued || td->cur_depth ||
-			    td->io_u_in_flight) {
+			if (workqueue_pre_sleep_check(sw)) {
 				pthread_mutex_unlock(&sw->lock);
-				io_u_quiesce(td);
+				workqueue_pre_sleep(sw);
 				pthread_mutex_lock(&sw->lock);
 			}
 
@@ -304,7 +190,9 @@ static void *worker_thread(void *data)
 				if (wq->wake_idle)
 					pthread_cond_signal(&wq->flush_cond);
 			}
-			update_accounting(sw);
+			if (wq->ops.update_acct_fn)
+				wq->ops.update_acct_fn(sw);
+
 			pthread_cond_wait(&sw->cond, &sw->lock);
 		} else {
 handle_work:
@@ -314,37 +202,34 @@ handle_work:
 		handle_list(sw, &local_list);
 	}
 
-	update_accounting(sw);
+	if (wq->ops.update_acct_fn)
+		wq->ops.update_acct_fn(sw);
 
 done:
 	pthread_mutex_lock(&sw->lock);
 	sw->flags |= (SW_F_EXITED | eflags);
 	pthread_mutex_unlock(&sw->lock);
+	sk_out_drop();
 	return NULL;
 }
 
-static void free_worker(struct submit_worker *sw)
+static void free_worker(struct submit_worker *sw, unsigned int *sum_cnt)
 {
-	struct thread_data *td = &sw->td;
+	struct workqueue *wq = sw->wq;
 
-	fio_options_free(td);
-	close_and_free_files(td);
-	if (td->io_ops)
-		close_ioengine(td);
-	td_set_runstate(td, TD_EXITED);
+	workqueue_exit_worker(sw, sum_cnt);
 
 	pthread_cond_destroy(&sw->cond);
 	pthread_mutex_destroy(&sw->lock);
+
+	if (wq->ops.free_worker_fn)
+		wq->ops.free_worker_fn(sw);
 }
 
 static void shutdown_worker(struct submit_worker *sw, unsigned int *sum_cnt)
 {
-	struct thread_data *parent = sw->wq->td;
-
 	pthread_join(sw->thread, NULL);
-	(*sum_cnt)++;
-	sum_thread_stats(&parent->ts, &sw->td.ts, *sum_cnt);
-	free_worker(sw);
+	free_worker(sw, sum_cnt);
 }
 
 void workqueue_exit(struct workqueue *wq)
@@ -352,6 +237,9 @@ void workqueue_exit(struct workqueue *wq)
 	unsigned int shutdown, sum_cnt = 0;
 	struct submit_worker *sw;
 	int i;
+
+	if (!wq->workers)
+		return;
 
 	for (i = 0; i < wq->max_workers; i++) {
 		sw = &wq->workers[i];
@@ -368,19 +256,23 @@ void workqueue_exit(struct workqueue *wq)
 			sw = &wq->workers[i];
 			if (sw->flags & SW_F_ACCOUNTED)
 				continue;
+			pthread_mutex_lock(&sw->lock);
 			sw->flags |= SW_F_ACCOUNTED;
+			pthread_mutex_unlock(&sw->lock);
 			shutdown_worker(sw, &sum_cnt);
 			shutdown++;
 		}
 	} while (shutdown && shutdown != wq->max_workers);
 
-	free(wq->workers);
+	sfree(wq->workers);
+	wq->workers = NULL;
 	pthread_mutex_destroy(&wq->flush_lock);
 	pthread_cond_destroy(&wq->flush_cond);
 	pthread_mutex_destroy(&wq->stat_lock);
 }
 
-static int start_worker(struct workqueue *wq, unsigned int index)
+static int start_worker(struct workqueue *wq, unsigned int index,
+			struct sk_out *sk_out)
 {
 	struct submit_worker *sw = &wq->workers[index];
 	int ret;
@@ -390,6 +282,13 @@ static int start_worker(struct workqueue *wq, unsigned int index)
 	pthread_mutex_init(&sw->lock, NULL);
 	sw->wq = wq;
 	sw->index = index;
+	sw->sk_out = sk_out;
+
+	if (wq->ops.alloc_worker_fn) {
+		ret = wq->ops.alloc_worker_fn(sw);
+		if (ret)
+			return ret;
+	}
 
 	ret = pthread_create(&sw->thread, NULL, worker_thread, sw);
 	if (!ret) {
@@ -399,29 +298,30 @@ static int start_worker(struct workqueue *wq, unsigned int index)
 		return 0;
 	}
 
-	free_worker(sw);
+	free_worker(sw, NULL);
 	return 1;
 }
 
 int workqueue_init(struct thread_data *td, struct workqueue *wq,
-		   workqueue_fn *fn, unsigned max_pending)
+		   struct workqueue_ops *ops, unsigned int max_workers,
+		   struct sk_out *sk_out)
 {
 	unsigned int running;
 	int i, error;
 
-	wq->max_workers = max_pending;
+	wq->max_workers = max_workers;
 	wq->td = td;
-	wq->fn = fn;
+	wq->ops = *ops;
 	wq->work_seq = 0;
 	wq->next_free_worker = 0;
 	pthread_cond_init(&wq->flush_cond, NULL);
 	pthread_mutex_init(&wq->flush_lock, NULL);
 	pthread_mutex_init(&wq->stat_lock, NULL);
 
-	wq->workers = calloc(wq->max_workers, sizeof(struct submit_worker));
+	wq->workers = smalloc(wq->max_workers * sizeof(struct submit_worker));
 
 	for (i = 0; i < wq->max_workers; i++)
-		if (start_worker(wq, i))
+		if (start_worker(wq, i, sk_out))
 			break;
 
 	wq->max_workers = i;

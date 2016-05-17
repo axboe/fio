@@ -11,6 +11,7 @@
 #include "fio.h"
 #include "smalloc.h"
 #include "diskutil.h"
+#include "helper_thread.h"
 
 static int last_majdev, last_mindev;
 static struct disk_util *last_du;
@@ -121,7 +122,7 @@ int update_io_ticks(void)
 
 	fio_mutex_down(disk_util_mutex);
 
-	if (!helper_exit) {
+	if (!helper_should_exit()) {
 		flist_for_each(entry, &disk_list) {
 			du = flist_entry(entry, struct disk_util, list);
 			update_io_tick_disk(du);
@@ -695,6 +696,7 @@ void show_disk_util(int terse, struct json_object *parent,
 {
 	struct flist_head *entry;
 	struct disk_util *du;
+	bool do_json;
 
 	if (!disk_util_mutex)
 		return;
@@ -706,15 +708,17 @@ void show_disk_util(int terse, struct json_object *parent,
 		return;
 	}
 
-	if (output_format & FIO_OUTPUT_JSON)
-		assert(parent);
+	if ((output_format & FIO_OUTPUT_JSON) && parent)
+		do_json = true;
+	else
+		do_json = false;
 
-	if (!terse && !(output_format & FIO_OUTPUT_JSON))
+	if (!terse && !do_json)
 		log_buf(out, "\nDisk stats (read/write):\n");
 
-	if (output_format & FIO_OUTPUT_JSON)
+	if (do_json)
 		json_object_add_disk_utils(parent, &disk_list);
-	if (output_format & ~(FIO_OUTPUT_JSON | FIO_OUTPUT_JSON_PLUS)) {
+	else if (output_format & ~(FIO_OUTPUT_JSON | FIO_OUTPUT_JSON_PLUS)) {
 		flist_for_each(entry, &disk_list) {
 			du = flist_entry(entry, struct disk_util, list);
 

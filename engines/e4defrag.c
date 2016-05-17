@@ -17,6 +17,7 @@
 #include <fcntl.h>
 
 #include "../fio.h"
+#include "../optgroup.h"
 
 #ifndef EXT4_IOC_MOVE_EXT
 #define EXT4_IOC_MOVE_EXT               _IOWR('f', 15, struct move_extent)

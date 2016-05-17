@@ -26,7 +26,7 @@
 #include "idletime.h"
 #include "filelock.h"
 
-#include "lib/getopt.h"
+#include "oslib/getopt.h"
 #include "oslib/strcasestr.h"
 
 #include "crc/test.h"
@@ -47,6 +47,7 @@ static char **job_sections;
 static int nr_job_sections;
 
 int exitall_on_terminate = 0;
+int exitall_on_terminate_error = 0;
 int output_format = FIO_OUTPUT_NORMAL;
 int eta_print = FIO_ETA_AUTO;
 int eta_new_line = 0;
@@ -384,6 +385,68 @@ static void set_cmd_options(struct thread_data *td)
 		o->timeout = def_timeout;
 }
 
+static void dump_print_option(struct print_option *p)
+{
+	const char *delim;
+
+	if (!strcmp("description", p->name))
+		delim = "\"";
+	else
+		delim = "";
+
+	log_info("--%s%s", p->name, p->value ? "" : " ");
+	if (p->value)
+		log_info("=%s%s%s ", delim, p->value, delim);
+}
+
+static void dump_opt_list(struct thread_data *td)
+{
+	struct flist_head *entry;
+	struct print_option *p;
+
+	if (flist_empty(&td->opt_list))
+		return;
+
+	flist_for_each(entry, &td->opt_list) {
+		p = flist_entry(entry, struct print_option, list);
+		dump_print_option(p);
+	}
+}
+
+static void fio_dump_options_free(struct thread_data *td)
+{
+	while (!flist_empty(&td->opt_list)) {
+		struct print_option *p;
+
+		p = flist_first_entry(&td->opt_list, struct print_option, list);
+		flist_del_init(&p->list);
+		free(p->name);
+		free(p->value);
+		free(p);
+	}
+}
+
+static void copy_opt_list(struct thread_data *dst, struct thread_data *src)
+{
+	struct flist_head *entry;
+
+	if (flist_empty(&src->opt_list))
+		return;
+
+	flist_for_each(entry, &src->opt_list) {
+		struct print_option *srcp, *dstp;
+
+		srcp = flist_entry(entry, struct print_option, list);
+		dstp = malloc(sizeof(*dstp));
+		dstp->name = strdup(srcp->name);
+		if (srcp->value)
+			dstp->value = strdup(srcp->value);
+		else
+			dstp->value = NULL;
+		flist_add_tail(&dstp->list, &dst->opt_list);
+	}
+}
+
 /*
  * Return a free job structure.
  */
@@ -409,6 +472,10 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 	td = &threads[thread_number++];
 	*td = *parent;
 
+	INIT_FLIST_HEAD(&td->opt_list);
+	if (parent != &def_thread)
+		copy_opt_list(td, parent);
+
 	td->io_ops = NULL;
 	if (!preserve_eo)
 		td->eo = NULL;
@@ -426,7 +493,7 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 	if (jobname)
 		td->o.name = strdup(jobname);
 
-	if (!parent->o.group_reporting)
+	if (!parent->o.group_reporting || parent == &def_thread)
 		stat_number++;
 
 	set_cmd_options(td);
@@ -445,6 +512,7 @@ static void put_job(struct thread_data *td)
 		log_info("fio: %s\n", td->verror);
 
 	fio_options_free(td);
+	fio_dump_options_free(td);
 	if (td->io_ops)
 		free_ioengine(td);
 
@@ -851,19 +919,42 @@ static int exists_and_not_file(const char *filename)
 	return 1;
 }
 
-static void td_fill_rand_seeds_internal(struct thread_data *td, int use64)
+static void init_rand_file_service(struct thread_data *td)
 {
+	unsigned long nranges = td->o.nr_files << FIO_FSERVICE_SHIFT;
+	const unsigned int seed = td->rand_seeds[FIO_RAND_FILE_OFF];
+
+	if (td->o.file_service_type == FIO_FSERVICE_ZIPF) {
+		zipf_init(&td->next_file_zipf, nranges, td->zipf_theta, seed);
+		zipf_disable_hash(&td->next_file_zipf);
+	} else if (td->o.file_service_type == FIO_FSERVICE_PARETO) {
+		pareto_init(&td->next_file_zipf, nranges, td->pareto_h, seed);
+		zipf_disable_hash(&td->next_file_zipf);
+	} else if (td->o.file_service_type == FIO_FSERVICE_GAUSS) {
+		gauss_init(&td->next_file_gauss, nranges, td->gauss_dev, seed);
+		gauss_disable_hash(&td->next_file_gauss);
+	}
+}
+
+static void td_fill_rand_seeds_internal(struct thread_data *td, bool use64)
+{
+	int i;
+
 	init_rand_seed(&td->bsrange_state, td->rand_seeds[FIO_RAND_BS_OFF], use64);
 	init_rand_seed(&td->verify_state, td->rand_seeds[FIO_RAND_VER_OFF], use64);
-	init_rand_seed(&td->rwmix_state, td->rand_seeds[FIO_RAND_MIX_OFF], use64);
+	init_rand_seed(&td->rwmix_state, td->rand_seeds[FIO_RAND_MIX_OFF], false);
 
 	if (td->o.file_service_type == FIO_FSERVICE_RANDOM)
 		init_rand_seed(&td->next_file_state, td->rand_seeds[FIO_RAND_FILE_OFF], use64);
+	else if (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)
+		init_rand_file_service(td);
 
 	init_rand_seed(&td->file_size_state, td->rand_seeds[FIO_RAND_FILE_SIZE_OFF], use64);
 	init_rand_seed(&td->trim_state, td->rand_seeds[FIO_RAND_TRIM_OFF], use64);
 	init_rand_seed(&td->delay_state, td->rand_seeds[FIO_RAND_START_DELAY], use64);
 	init_rand_seed(&td->poisson_state, td->rand_seeds[FIO_RAND_POISSON_OFF], 0);
+	init_rand_seed(&td->dedupe_state, td->rand_seeds[FIO_DEDUPE_OFF], false);
+	init_rand_seed(&td->zone_state, td->rand_seeds[FIO_RAND_ZONE_OFF], false);
 
 	if (!td_random(td))
 		return;
@@ -872,14 +963,17 @@ static void td_fill_rand_seeds_internal(struct thread_data *td, int use64)
 		td->rand_seeds[FIO_RAND_BLOCK_OFF] = FIO_RANDSEED * td->thread_number;
 
 	init_rand_seed(&td->random_state, td->rand_seeds[FIO_RAND_BLOCK_OFF], use64);
-	init_rand_seed(&td->seq_rand_state[DDIR_READ], td->rand_seeds[FIO_RAND_SEQ_RAND_READ_OFF], use64);
-	init_rand_seed(&td->seq_rand_state[DDIR_WRITE], td->rand_seeds[FIO_RAND_SEQ_RAND_WRITE_OFF], use64);
-	init_rand_seed(&td->seq_rand_state[DDIR_TRIM], td->rand_seeds[FIO_RAND_SEQ_RAND_TRIM_OFF], use64);
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		struct frand_state *s = &td->seq_rand_state[i];
+
+		init_rand_seed(s, td->rand_seeds[FIO_RAND_SEQ_RAND_READ_OFF], false);
+	}
 }
 
 void td_fill_rand_seeds(struct thread_data *td)
 {
-	int use64;
+	bool use64;
 
 	if (td->o.allrand_repeatable) {
 		unsigned int i;
@@ -898,8 +992,6 @@ void td_fill_rand_seeds(struct thread_data *td)
 
 	init_rand_seed(&td->buf_state, td->rand_seeds[FIO_RAND_BUF_OFF], use64);
 	frand_copy(&td->buf_state_prev, &td->buf_state);
-
-	init_rand_seed(&td->dedupe_state, td->rand_seeds[FIO_DEDUPE_OFF], use64);
 }
 
 /*
@@ -1006,7 +1098,7 @@ static int setup_random_seeds(struct thread_data *td)
 		seed *= 0x9e370001UL;
 
 	for (i = 0; i < FIO_RAND_NR_OFFS; i++) {
-		td->rand_seeds[i] = seed;
+		td->rand_seeds[i] = seed * td->thread_number + i;
 		seed *= 0x9e370001UL;
 	}
 
@@ -1149,6 +1241,49 @@ static void gen_log_name(char *name, size_t size, const char *logtype,
 		snprintf(name, size, "%s_%s.%s", logname, logtype, suf);
 }
 
+static int check_waitees(char *waitee)
+{
+	struct thread_data *td;
+	int i, ret = 0;
+
+	for_each_td(td, i) {
+		if (td->subjob_number)
+			continue;
+
+		ret += !strcmp(td->o.name, waitee);
+	}
+
+	return ret;
+}
+
+static bool wait_for_ok(const char *jobname, struct thread_options *o)
+{
+	int nw;
+
+	if (!o->wait_for)
+		return true;
+
+	if (!strcmp(jobname, o->wait_for)) {
+		log_err("%s: a job cannot wait for itself (wait_for=%s).\n",
+				jobname, o->wait_for);
+		return false;
+	}
+
+	if (!(nw = check_waitees(o->wait_for))) {
+		log_err("%s: waitee job %s unknown.\n", jobname, o->wait_for);
+		return false;
+	}
+
+	if (nw > 1) {
+		log_err("%s: multiple waitees %s found,\n"
+			"please avoid duplicates when using wait_for option.\n",
+				jobname, o->wait_for);
+		return false;
+	}
+
+	return true;
+}
+
 /*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
@@ -1203,6 +1338,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	}
 
 	if (fixup_options(td))
+		goto err;
+
+	/*
+	 * Belongs to fixup_options, but o->name is not necessarily set as yet
+	 */
+	if (!wait_for_ok(jobname, o))
 		goto err;
 
 	flow_init_job(td);
@@ -1294,6 +1435,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		};
 		const char *suf;
 
+		if (fio_option_is_set(o, bw_avg_time))
+			p.avg_msec = min(o->log_avg_msec, o->bw_avg_time);
+		else
+			o->bw_avg_time = p.avg_msec;
+
 		if (p.log_gz_store)
 			suf = "log.fz";
 		else
@@ -1313,6 +1459,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz_store = o->log_gz_store,
 		};
 		const char *suf;
+
+		if (fio_option_is_set(o, iops_avg_time))
+			p.avg_msec = min(o->log_avg_msec, o->iops_avg_time);
+		else
+			o->iops_avg_time = p.avg_msec;
 
 		if (p.log_gz_store)
 			suf = "log.fz";
@@ -1443,9 +1594,9 @@ void add_job_opts(const char **o, int client_type)
 			td = get_new_job(0, td_parent, 0, jobname);
 		}
 		if (in_global)
-			fio_options_parse(td_parent, (char **) &o[i], 1, 0);
+			fio_options_parse(td_parent, (char **) &o[i], 1);
 		else
-			fio_options_parse(td, (char **) &o[i], 1, 0);
+			fio_options_parse(td, (char **) &o[i], 1);
 		i++;
 	}
 
@@ -1656,15 +1807,48 @@ int __parse_jobs_ini(struct thread_data *td,
 			strip_blank_end(p);
 
 			if (!strncmp(p, "include", strlen("include"))) {
-				char *filename = p + strlen("include") + 1;
+				char *filename = p + strlen("include") + 1,
+					*ts, *full_fn = NULL;
 
-				if ((ret = __parse_jobs_ini(td, filename,
-						is_buf, stonewall_flag, type, 1,
-						name, &opts, &alloc_opts, &num_opts))) {
-					log_err("Error %d while parsing include file %s\n",
-						ret, filename);
-					break;
+				/*
+				 * Allow for the include filename
+				 * specification to be relative.
+				 */
+				if (access(filename, F_OK) &&
+				    (ts = strrchr(file, '/'))) {
+					int len = ts - file +
+						strlen(filename) + 2;
+
+					if (!(full_fn = calloc(1, len))) {
+						ret = ENOMEM;
+						break;
+					}
+
+					strncpy(full_fn,
+						file, (ts - file) + 1);
+					strncpy(full_fn + (ts - file) + 1,
+						filename, strlen(filename));
+					full_fn[len - 1] = 0;
+					filename = full_fn;
 				}
+
+				ret = __parse_jobs_ini(td, filename, is_buf,
+						       stonewall_flag, type, 1,
+						       name, &opts,
+						       &alloc_opts, &num_opts);
+
+				if (ret) {
+					log_err("Error %d while parsing "
+						"include file %s\n",
+						ret, filename);
+				}
+
+				if (full_fn)
+					free(full_fn);
+
+				if (ret)
+					break;
+
 				continue;
 			}
 
@@ -1685,10 +1869,13 @@ int __parse_jobs_ini(struct thread_data *td,
 			goto out;
 		}
 
-		ret = fio_options_parse(td, opts, num_opts, dump_cmdline);
-		if (!ret)
+		ret = fio_options_parse(td, opts, num_opts);
+		if (!ret) {
+			if (dump_cmdline)
+				dump_opt_list(td);
+
 			ret = add_job(td, name, 0, 0, type);
-		else {
+		} else {
 			log_err("fio: job %s dropped\n", name);
 			put_job(td);
 		}
@@ -1726,6 +1913,7 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 static int fill_def_thread(void)
 {
 	memset(&def_thread, 0, sizeof(def_thread));
+	INIT_FLIST_HEAD(&def_thread.opt_list);
 
 	fio_getaffinity(getpid(), &def_thread.o.cpumask);
 	def_thread.o.error_dump = 1;
@@ -1739,6 +1927,7 @@ static int fill_def_thread(void)
 
 static void show_debug_categories(void)
 {
+#ifdef FIO_INC_DEBUG
 	struct debug_level *dl = &debug_levels[0];
 	int curlen, first = 1;
 
@@ -1764,6 +1953,7 @@ static void show_debug_categories(void)
 		first = 0;
 	}
 	printf("\n");
+#endif
 }
 
 static void usage(const char *name)
@@ -1898,6 +2088,9 @@ static int set_debug(const char *string)
 	char *p = (char *) string;
 	char *opt;
 	int i;
+
+	if (!string)
+		return 0;
 
 	if (!strcmp(string, "?") || !strcmp(string, "help")) {
 		log_info("fio: dumping debug options:");
@@ -2388,14 +2581,14 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				    !strncmp(argv[optind], "-", 1))
 					break;
 
-				if (fio_client_add_ini_file(cur_client, argv[optind], 0))
+				if (fio_client_add_ini_file(cur_client, argv[optind], false))
 					break;
 				optind++;
 			}
 			break;
 		case 'R':
 			did_arg = 1;
-			if (fio_client_add_ini_file(cur_client, optarg, 1)) {
+			if (fio_client_add_ini_file(cur_client, optarg, true)) {
 				do_exit++;
 				exit_val = 1;
 			}
@@ -2580,4 +2773,9 @@ int parse_options(int argc, char *argv[])
 void options_default_fill(struct thread_options *o)
 {
 	memcpy(o, &def_thread.o, sizeof(*o));
+}
+
+struct thread_data *get_global_options(void)
+{
+	return &def_thread;
 }

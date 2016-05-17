@@ -15,6 +15,7 @@
 #include "idletime.h"
 #include "lib/pow2.h"
 #include "lib/output_buffer.h"
+#include "helper_thread.h"
 
 struct fio_mutex *stat_mutex;
 
@@ -1086,8 +1087,34 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 	log_buf(out, "\n");
 }
 
+void json_add_job_opts(struct json_object *root, const char *name,
+		       struct flist_head *opt_list, bool num_jobs)
+{
+	struct json_object *dir_object;
+	struct flist_head *entry;
+	struct print_option *p;
+
+	if (flist_empty(opt_list))
+		return;
+
+	dir_object = json_create_object();
+	json_object_add_value_object(root, name, dir_object);
+
+	flist_for_each(entry, opt_list) {
+		const char *pos = "";
+
+		p = flist_entry(entry, struct print_option, list);
+		if (!num_jobs && !strcmp(p->name, "numjobs"))
+			continue;
+		if (p->value)
+			pos = p->value;
+		json_object_add_value_string(dir_object, p->name, pos);
+	}
+}
+
 static struct json_object *show_thread_status_json(struct thread_stat *ts,
-				    struct group_run_stats *rs)
+						   struct group_run_stats *rs,
+						   struct flist_head *opt_list)
 {
 	struct json_object *root, *tmp;
 	struct jobs_eta *je;
@@ -1104,11 +1131,14 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	json_object_add_value_int(root, "error", ts->error);
 
 	/* ETA Info */
-	je = get_jobs_eta(1, &size);
+	je = get_jobs_eta(true, &size);
 	if (je) {
 		json_object_add_value_int(root, "eta", je->eta_sec);
 		json_object_add_value_int(root, "elapsed", je->elapsed_sec);
 	}
+
+	if (opt_list)
+		json_add_job_opts(root, "job options", opt_list, true);
 
 	add_ddir_status_json(ts, rs, DDIR_READ, root);
 	add_ddir_status_json(ts, rs, DDIR_WRITE, root);
@@ -1239,6 +1269,7 @@ static void show_thread_status_terse(struct thread_stat *ts,
 
 struct json_object *show_thread_status(struct thread_stat *ts,
 				       struct group_run_stats *rs,
+				       struct flist_head *opt_list,
 				       struct buf_output *out)
 {
 	struct json_object *ret = NULL;
@@ -1246,14 +1277,14 @@ struct json_object *show_thread_status(struct thread_stat *ts,
 	if (output_format & FIO_OUTPUT_TERSE)
 		show_thread_status_terse(ts, rs,  out);
 	if (output_format & FIO_OUTPUT_JSON)
-		ret = show_thread_status_json(ts, rs);
+		ret = show_thread_status_json(ts, rs, opt_list);
 	if (output_format & FIO_OUTPUT_NORMAL)
 		show_thread_status_normal(ts, rs,  out);
 
 	return ret;
 }
 
-static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
+static void sum_stat(struct io_stat *dst, struct io_stat *src, bool first)
 {
 	double mean, S;
 
@@ -1268,7 +1299,7 @@ static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
 	 * <http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
 	 *  #Parallel_algorithm>
 	 */
-	if (nr == 1) {
+	if (first) {
 		mean = src->mean.u.f;
 		S = src->S.u.f;
 	} else {
@@ -1312,31 +1343,38 @@ void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src)
 		dst->unit_base = src->unit_base;
 }
 
-void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src, int nr)
+void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
+		      bool first)
 {
 	int l, k;
 
 	for (l = 0; l < DDIR_RWDIR_CNT; l++) {
 		if (!dst->unified_rw_rep) {
-			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], nr);
-			sum_stat(&dst->slat_stat[l], &src->slat_stat[l], nr);
-			sum_stat(&dst->lat_stat[l], &src->lat_stat[l], nr);
-			sum_stat(&dst->bw_stat[l], &src->bw_stat[l], nr);
+			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], first);
+			sum_stat(&dst->slat_stat[l], &src->slat_stat[l], first);
+			sum_stat(&dst->lat_stat[l], &src->lat_stat[l], first);
+			sum_stat(&dst->bw_stat[l], &src->bw_stat[l], first);
 
 			dst->io_bytes[l] += src->io_bytes[l];
 
 			if (dst->runtime[l] < src->runtime[l])
 				dst->runtime[l] = src->runtime[l];
 		} else {
-			sum_stat(&dst->clat_stat[0], &src->clat_stat[l], nr);
-			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], nr);
-			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], nr);
-			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], nr);
+			sum_stat(&dst->clat_stat[0], &src->clat_stat[l], first);
+			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], first);
+			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], first);
+			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], first);
 
 			dst->io_bytes[0] += src->io_bytes[l];
 
 			if (dst->runtime[0] < src->runtime[l])
 				dst->runtime[0] = src->runtime[l];
+
+			/*
+			 * We're summing to the same destination, so override
+			 * 'first' after the first iteration of the loop
+			 */
+			first = false;
 		}
 	}
 
@@ -1420,6 +1458,7 @@ void __show_run_stats(void)
 	struct json_object *root = NULL;
 	struct json_array *array = NULL;
 	struct buf_output output[FIO_OUTPUT_NR];
+	struct flist_head **opt_lists;
 
 	runstats = malloc(sizeof(struct group_run_stats) * (groupid + 1));
 
@@ -1445,9 +1484,12 @@ void __show_run_stats(void)
 	}
 
 	threadstats = malloc(nr_ts * sizeof(struct thread_stat));
+	opt_lists = malloc(nr_ts * sizeof(struct flist_head *));
 
-	for (i = 0; i < nr_ts; i++)
+	for (i = 0; i < nr_ts; i++) {
 		init_thread_stat(&threadstats[i]);
+		opt_lists[i] = NULL;
+	}
 
 	j = 0;
 	last_ts = -1;
@@ -1466,6 +1508,7 @@ void __show_run_stats(void)
 		ts->clat_percentiles = td->o.clat_percentiles;
 		ts->percentile_precision = td->o.percentile_precision;
 		memcpy(ts->percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
+		opt_lists[j] = &td->opt_list;
 
 		idx++;
 		ts->members++;
@@ -1531,13 +1574,15 @@ void __show_run_stats(void)
 		for (k = 0; k < ts->nr_block_infos; k++)
 			ts->block_infos[k] = td->ts.block_infos[k];
 
-		sum_thread_stats(ts, &td->ts, idx);
+		sum_thread_stats(ts, &td->ts, idx == 1);
 	}
 
 	for (i = 0; i < nr_ts; i++) {
 		unsigned long long bw;
 
 		ts = &threadstats[i];
+		if (ts->groupid == -1)
+			continue;
 		rs = &runstats[ts->groupid];
 		rs->kb_base = ts->kb_base;
 		rs->unit_base = ts->unit_base;
@@ -1589,6 +1634,7 @@ void __show_run_stats(void)
 	if (output_format & FIO_OUTPUT_NORMAL)
 		log_buf(&output[__FIO_OUTPUT_NORMAL], "\n");
 	if (output_format & FIO_OUTPUT_JSON) {
+		struct thread_data *global;
 		char time_buf[32];
 		time_t time_p;
 
@@ -1601,21 +1647,27 @@ void __show_run_stats(void)
 		json_object_add_value_string(root, "fio version", fio_version_string);
 		json_object_add_value_int(root, "timestamp", time_p);
 		json_object_add_value_string(root, "time", time_buf);
+		global = get_global_options();
+		json_add_job_opts(root, "global options", &global->opt_list, false);
 		array = json_create_array();
 		json_object_add_value_array(root, "jobs", array);
 	}
+
+	if (is_backend)
+		fio_server_send_job_options(&get_global_options()->opt_list, -1U);
 
 	for (i = 0; i < nr_ts; i++) {
 		ts = &threadstats[i];
 		rs = &runstats[ts->groupid];
 
-		if (is_backend)
+		if (is_backend) {
+			fio_server_send_job_options(opt_lists[i], i);
 			fio_server_send_ts(ts, rs);
-		else {
+		} else {
 			if (output_format & FIO_OUTPUT_TERSE)
 				show_thread_status_terse(ts, rs, &output[__FIO_OUTPUT_TERSE]);
 			if (output_format & FIO_OUTPUT_JSON) {
-				struct json_object *tmp = show_thread_status_json(ts, rs);
+				struct json_object *tmp = show_thread_status_json(ts, rs, opt_lists[i]);
 				json_array_add_value_object(array, tmp);
 			}
 			if (output_format & FIO_OUTPUT_NORMAL)
@@ -1658,6 +1710,7 @@ void __show_run_stats(void)
 	log_info_flush();
 	free(runstats);
 	free(threadstats);
+	free(opt_lists);
 }
 
 void show_run_stats(void)
@@ -1680,19 +1733,19 @@ void __show_running_run_stats(void)
 	fio_gettime(&tv, NULL);
 
 	for_each_td(td, i) {
-		rt[i] = mtime_since(&td->start, &tv);
-		if (td_read(td) && td->io_bytes[DDIR_READ])
-			td->ts.runtime[DDIR_READ] += rt[i];
-		if (td_write(td) && td->io_bytes[DDIR_WRITE])
-			td->ts.runtime[DDIR_WRITE] += rt[i];
-		if (td_trim(td) && td->io_bytes[DDIR_TRIM])
-			td->ts.runtime[DDIR_TRIM] += rt[i];
-
 		td->update_rusage = 1;
 		td->ts.io_bytes[DDIR_READ] = td->io_bytes[DDIR_READ];
 		td->ts.io_bytes[DDIR_WRITE] = td->io_bytes[DDIR_WRITE];
 		td->ts.io_bytes[DDIR_TRIM] = td->io_bytes[DDIR_TRIM];
 		td->ts.total_run_time = mtime_since(&td->epoch, &tv);
+
+		rt[i] = mtime_since(&td->start, &tv);
+		if (td_read(td) && td->ts.io_bytes[DDIR_READ])
+			td->ts.runtime[DDIR_READ] += rt[i];
+		if (td_write(td) && td->ts.io_bytes[DDIR_WRITE])
+			td->ts.runtime[DDIR_WRITE] += rt[i];
+		if (td_trim(td) && td->ts.io_bytes[DDIR_TRIM])
+			td->ts.runtime[DDIR_TRIM] += rt[i];
 	}
 
 	for_each_td(td, i) {
@@ -1708,11 +1761,11 @@ void __show_running_run_stats(void)
 	__show_run_stats();
 
 	for_each_td(td, i) {
-		if (td_read(td) && td->io_bytes[DDIR_READ])
+		if (td_read(td) && td->ts.io_bytes[DDIR_READ])
 			td->ts.runtime[DDIR_READ] -= rt[i];
-		if (td_write(td) && td->io_bytes[DDIR_WRITE])
+		if (td_write(td) && td->ts.io_bytes[DDIR_WRITE])
 			td->ts.runtime[DDIR_WRITE] -= rt[i];
-		if (td_trim(td) && td->io_bytes[DDIR_TRIM])
+		if (td_trim(td) && td->ts.io_bytes[DDIR_TRIM])
 			td->ts.runtime[DDIR_TRIM] -= rt[i];
 	}
 
@@ -1810,13 +1863,21 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 		iolog->avg_last = t;
 
 	if (iolog->nr_samples == iolog->max_samples) {
-		size_t new_size;
+		size_t new_size, new_samples;
 		void *new_log;
 
-		new_size = 2 * iolog->max_samples * log_entry_sz(iolog);
+		if (!iolog->max_samples)
+			new_samples = DEF_LOG_ENTRIES;
+		else
+			new_samples = iolog->max_samples * 2;
+
+		new_size = new_samples * log_entry_sz(iolog);
 
 		if (iolog->log_gz && (new_size > iolog->log_gz)) {
-			if (iolog_flush(iolog, 0)) {
+			if (!iolog->log) {
+				iolog->log = malloc(new_size);
+				iolog->max_samples = new_samples;
+			} else if (iolog_flush(iolog, 0)) {
 				log_err("fio: failed flushing iolog! Will stop logging.\n");
 				iolog->disabled = 1;
 				return;
@@ -1830,7 +1891,7 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 				return;
 			}
 			iolog->log = new_log;
-			iolog->max_samples <<= 1;
+			iolog->max_samples = new_samples;
 		}
 	}
 
@@ -1892,35 +1953,35 @@ void reset_io_stats(struct thread_data *td)
 	}
 }
 
-static void _add_stat_to_log(struct io_log *iolog, unsigned long elapsed)
+static void __add_stat_to_log(struct io_log *iolog, enum fio_ddir ddir,
+			      unsigned long elapsed, bool log_max)
 {
 	/*
 	 * Note an entry in the log. Use the mean from the logged samples,
 	 * making sure to properly round up. Only write a log entry if we
 	 * had actual samples done.
 	 */
-	if (iolog->avg_window[DDIR_READ].samples) {
-		unsigned long mr;
+	if (iolog->avg_window[ddir].samples) {
+		unsigned long val;
 
-		mr = iolog->avg_window[DDIR_READ].mean.u.f + 0.50;
-		__add_log_sample(iolog, mr, DDIR_READ, 0, elapsed, 0);
-	}
-	if (iolog->avg_window[DDIR_WRITE].samples) {
-		unsigned long mw;
+		if (log_max)
+			val = iolog->avg_window[ddir].max_val;
+		else
+			val = iolog->avg_window[ddir].mean.u.f + 0.50;
 
-		mw = iolog->avg_window[DDIR_WRITE].mean.u.f + 0.50;
-		__add_log_sample(iolog, mw, DDIR_WRITE, 0, elapsed, 0);
-	}
-	if (iolog->avg_window[DDIR_TRIM].samples) {
-		unsigned long mw;
-
-		mw = iolog->avg_window[DDIR_TRIM].mean.u.f + 0.50;
-		__add_log_sample(iolog, mw, DDIR_TRIM, 0, elapsed, 0);
+		__add_log_sample(iolog, val, ddir, 0, elapsed, 0);
 	}
 
-	reset_io_stat(&iolog->avg_window[DDIR_READ]);
-	reset_io_stat(&iolog->avg_window[DDIR_WRITE]);
-	reset_io_stat(&iolog->avg_window[DDIR_TRIM]);
+	reset_io_stat(&iolog->avg_window[ddir]);
+}
+
+static void _add_stat_to_log(struct io_log *iolog, unsigned long elapsed,
+			     bool log_max)
+{
+	int ddir;
+
+	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
+		__add_stat_to_log(iolog, ddir, elapsed, log_max);
 }
 
 static void add_log_sample(struct thread_data *td, struct io_log *iolog,
@@ -1956,27 +2017,27 @@ static void add_log_sample(struct thread_data *td, struct io_log *iolog,
 	if (this_window < iolog->avg_msec)
 		return;
 
-	_add_stat_to_log(iolog, elapsed);
+	_add_stat_to_log(iolog, elapsed, td->o.log_max != 0);
 
 	iolog->avg_last = elapsed;
 }
 
-void finalize_logs(struct thread_data *td)
+void finalize_logs(struct thread_data *td, bool unit_logs)
 {
 	unsigned long elapsed;
 
 	elapsed = mtime_since_now(&td->epoch);
 
-	if (td->clat_log)
-		_add_stat_to_log(td->clat_log, elapsed);
-	if (td->slat_log)
-		_add_stat_to_log(td->slat_log, elapsed);
-	if (td->lat_log)
-		_add_stat_to_log(td->lat_log, elapsed);
-	if (td->bw_log)
-		_add_stat_to_log(td->bw_log, elapsed);
-	if (td->iops_log)
-		_add_stat_to_log(td->iops_log, elapsed);
+	if (td->clat_log && unit_logs)
+		_add_stat_to_log(td->clat_log, elapsed, td->o.log_max != 0);
+	if (td->slat_log && unit_logs)
+		_add_stat_to_log(td->slat_log, elapsed, td->o.log_max != 0);
+	if (td->lat_log && unit_logs)
+		_add_stat_to_log(td->lat_log, elapsed, td->o.log_max != 0);
+	if (td->bw_log && (unit_logs == per_unit_log(td->bw_log)))
+		_add_stat_to_log(td->bw_log, elapsed, td->o.log_max != 0);
+	if (td->iops_log && (unit_logs == per_unit_log(td->iops_log)))
+		_add_stat_to_log(td->iops_log, elapsed, td->o.log_max != 0);
 }
 
 void add_agg_sample(unsigned long val, enum fio_ddir ddir, unsigned int bs)
@@ -2003,9 +2064,6 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long usec, unsigned int bs, uint64_t offset)
 {
 	struct thread_stat *ts = &td->ts;
-
-	if (!ddir_rw(ddir))
-		return;
 
 	td_io_u_lock(td);
 
@@ -2056,18 +2114,41 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 	td_io_u_unlock(td);
 }
 
-void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
-		   struct timeval *t)
+void add_bw_sample(struct thread_data *td, struct io_u *io_u,
+		   unsigned int bytes, unsigned long spent)
+{
+	struct thread_stat *ts = &td->ts;
+	unsigned long rate;
+
+	if (spent)
+		rate = bytes * 1000 / spent;
+	else
+		rate = 0;
+
+	td_io_u_lock(td);
+
+	add_stat_sample(&ts->bw_stat[io_u->ddir], rate);
+
+	if (td->bw_log)
+		add_log_sample(td, td->bw_log, rate, io_u->ddir, bytes, io_u->offset);
+
+	td->stat_io_bytes[io_u->ddir] = td->this_io_bytes[io_u->ddir];
+	td_io_u_unlock(td);
+}
+
+static int add_bw_samples(struct thread_data *td, struct timeval *t)
 {
 	struct thread_stat *ts = &td->ts;
 	unsigned long spent, rate;
+	enum fio_ddir ddir;
 
-	if (!ddir_rw(ddir))
-		return;
+	if (per_unit_log(td->bw_log))
+		return 0;
 
 	spent = mtime_since(&td->bw_sample_time, t);
-	if (spent < td->o.bw_avg_time)
-		return;
+	if (spent < td->o.bw_avg_time &&
+	    td->o.bw_avg_time - spent >= 10)
+		return td->o.bw_avg_time - spent;
 
 	td_io_u_lock(td);
 
@@ -2088,28 +2169,57 @@ void add_bw_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
 
 		add_stat_sample(&ts->bw_stat[ddir], rate);
 
-		if (td->bw_log)
+		if (td->bw_log) {
+			unsigned int bs = 0;
+
+			if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
+				bs = td->o.min_bs[ddir];
+
 			add_log_sample(td, td->bw_log, rate, ddir, bs, 0);
+		}
 
 		td->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
 	}
 
-	fio_gettime(&td->bw_sample_time, NULL);
+	timeval_add_msec(&td->bw_sample_time, td->o.bw_avg_time);
+
+	td_io_u_unlock(td);
+
+	if (spent <= td->o.bw_avg_time)
+		return td->o.bw_avg_time;
+
+	return td->o.bw_avg_time - (1 + spent - td->o.bw_avg_time);
+}
+
+void add_iops_sample(struct thread_data *td, struct io_u *io_u,
+		     unsigned int bytes)
+{
+	struct thread_stat *ts = &td->ts;
+
+	td_io_u_lock(td);
+
+	add_stat_sample(&ts->iops_stat[io_u->ddir], 1);
+
+	if (td->iops_log)
+		add_log_sample(td, td->iops_log, 1, io_u->ddir, bytes, io_u->offset);
+
+	td->stat_io_blocks[io_u->ddir] = td->this_io_blocks[io_u->ddir];
 	td_io_u_unlock(td);
 }
 
-void add_iops_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs,
-		     struct timeval *t)
+static int add_iops_samples(struct thread_data *td, struct timeval *t)
 {
 	struct thread_stat *ts = &td->ts;
 	unsigned long spent, iops;
+	enum fio_ddir ddir;
 
-	if (!ddir_rw(ddir))
-		return;
+	if (per_unit_log(td->iops_log))
+		return 0;
 
 	spent = mtime_since(&td->iops_sample_time, t);
-	if (spent < td->o.iops_avg_time)
-		return;
+	if (spent < td->o.iops_avg_time &&
+	    td->o.iops_avg_time - spent >= 10)
+		return td->o.iops_avg_time - spent;
 
 	td_io_u_lock(td);
 
@@ -2130,14 +2240,59 @@ void add_iops_sample(struct thread_data *td, enum fio_ddir ddir, unsigned int bs
 
 		add_stat_sample(&ts->iops_stat[ddir], iops);
 
-		if (td->iops_log)
+		if (td->iops_log) {
+			unsigned int bs = 0;
+
+			if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
+				bs = td->o.min_bs[ddir];
+
 			add_log_sample(td, td->iops_log, iops, ddir, bs, 0);
+		}
 
 		td->stat_io_blocks[ddir] = td->this_io_blocks[ddir];
 	}
 
-	fio_gettime(&td->iops_sample_time, NULL);
+	timeval_add_msec(&td->iops_sample_time, td->o.iops_avg_time);
+
 	td_io_u_unlock(td);
+
+	if (spent <= td->o.iops_avg_time)
+		return td->o.iops_avg_time;
+
+	return td->o.iops_avg_time - (1 + spent - td->o.iops_avg_time);
+}
+
+/*
+ * Returns msecs to next event
+ */
+int calc_log_samples(void)
+{
+	struct thread_data *td;
+	unsigned int next = ~0U, tmp;
+	struct timeval now;
+	int i;
+
+	fio_gettime(&now, NULL);
+
+	for_each_td(td, i) {
+		if (!ramp_time_over(td) ||
+		    !(td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING)) {
+			next = min(td->o.iops_avg_time, td->o.bw_avg_time);
+			continue;
+		}
+		if (!per_unit_log(td->bw_log)) {
+			tmp = add_bw_samples(td, &now);
+			if (tmp < next)
+				next = tmp;
+		}
+		if (!per_unit_log(td->iops_log)) {
+			tmp = add_iops_samples(td, &now);
+			if (tmp < next)
+				next = tmp;
+		}
+	}
+
+	return next == ~0U ? 0 : next;
 }
 
 void stat_init(void)
@@ -2160,8 +2315,7 @@ void stat_exit(void)
  */
 void show_running_run_stats(void)
 {
-	helper_do_stat = 1;
-	pthread_cond_signal(&helper_cond);
+	helper_do_stat();
 }
 
 uint32_t *io_u_block_info(struct thread_data *td, struct io_u *io_u)

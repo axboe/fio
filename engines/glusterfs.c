@@ -6,6 +6,7 @@
  */
 
 #include "gfapi.h"
+#include "../optgroup.h"
 
 struct fio_option gfapi_options[] = {
 	{

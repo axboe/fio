@@ -22,6 +22,7 @@
 
 #include "../fio.h"
 #include "../verify.h"
+#include "../optgroup.h"
 
 struct netio_data {
 	int listenfd;

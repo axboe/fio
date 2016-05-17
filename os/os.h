@@ -151,7 +151,7 @@ extern int fio_cpus_split(os_cpu_mask_t *mask, unsigned int cpu);
 #endif
 
 #ifndef FIO_PREFERRED_ENGINE
-#define FIO_PREFERRED_ENGINE	"sync"
+#define FIO_PREFERRED_ENGINE	"psync"
 #endif
 
 #ifndef FIO_OS_PATH_SEPARATOR
@@ -340,6 +340,14 @@ static inline int init_random_state(struct thread_data *td, unsigned long *rand_
 static inline unsigned long long get_fs_free_size(const char *path)
 {
 	return 0;
+}
+#endif
+
+#ifdef __powerpc64__
+#define FIO_HAVE_CPU_ONLINE_SYSCONF
+static inline unsigned int cpus_online(void)
+{
+        return sysconf(_SC_NPROCESSORS_CONF);
 }
 #endif
 

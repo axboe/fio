@@ -32,7 +32,7 @@
 #include "profile.h"
 #include "fio_time.h"
 #include "gettime.h"
-#include "lib/getopt.h"
+#include "oslib/getopt.h"
 #include "lib/rand.h"
 #include "lib/rbtree.h"
 #include "client.h"
@@ -96,6 +96,7 @@ enum {
 	FIO_RAND_START_DELAY,
 	FIO_DEDUPE_OFF,
 	FIO_RAND_POISSON_OFF,
+	FIO_RAND_ZONE_OFF,
 	FIO_RAND_NR_OFFS,
 };
 
@@ -108,10 +109,24 @@ enum {
 };
 
 /*
+ * Per-thread/process specific data. Only used for the network client
+ * for now.
+ */
+struct sk_out;
+void sk_out_assign(struct sk_out *);
+void sk_out_drop(void);
+
+struct zone_split_index {
+	uint8_t size_perc;
+	uint8_t size_perc_prev;
+};
+
+/*
  * This describes a single thread/process executing a fio job.
  */
 struct thread_data {
 	struct thread_options o;
+	struct flist_head opt_list;
 	unsigned long flags;
 	void *eo;
 	char verror[FIO_VERROR_SIZE];
@@ -129,7 +144,7 @@ struct thread_data {
 	struct io_log *bw_log;
 	struct io_log *iops_log;
 
-	struct tp_data *tp_data;
+	struct workqueue log_compress_wq;
 
 	struct thread_data *parent;
 
@@ -138,13 +153,6 @@ struct thread_data {
 
 	uint64_t stat_io_blocks[DDIR_RWDIR_CNT];
 	struct timeval iops_sample_time;
-
-	/*
-	 * Tracks the last iodepth number of completed writes, if data
-	 * verification is enabled
-	 */
-	uint64_t *last_write_comp;
-	unsigned int last_write_idx;
 
 	volatile int update_rusage;
 	struct fio_mutex *rusage_sem;
@@ -161,6 +169,15 @@ struct thread_data {
 	union {
 		unsigned int next_file;
 		struct frand_state next_file_state;
+	};
+	union {
+		struct zipf_state next_file_zipf;
+		struct gauss_state next_file_gauss;
+	};
+	union {
+		double zipf_theta;
+		double pareto_h;
+		double gauss_dev;
 	};
 	int error;
 	int sig;
@@ -191,6 +208,9 @@ struct thread_data {
 	struct frand_state buf_state;
 	struct frand_state buf_state_prev;
 	struct frand_state dedupe_state;
+	struct frand_state zone_state;
+
+	struct zone_split_index **zone_state_index;
 
 	unsigned int verify_batch;
 	unsigned int trim_batch;
@@ -434,8 +454,6 @@ extern int nr_clients;
 extern int log_syslog;
 extern int status_interval;
 extern const char fio_version_string[];
-extern int helper_do_stat;
-extern pthread_cond_t helper_cond;
 extern char *trigger_file;
 extern char *trigger_cmd;
 extern char *trigger_remote_cmd;
@@ -468,10 +486,10 @@ extern int __must_check fio_init_options(void);
 extern int __must_check parse_options(int, char **);
 extern int parse_jobs_ini(char *, int, int, int);
 extern int parse_cmd_line(int, char **, int);
-extern int fio_backend(void);
+extern int fio_backend(struct sk_out *);
 extern void reset_fio_state(void);
 extern void clear_io_state(struct thread_data *, int);
-extern int fio_options_parse(struct thread_data *, char **, int, int);
+extern int fio_options_parse(struct thread_data *, char **, int);
 extern void fio_keywords_init(void);
 extern void fio_keywords_exit(void);
 extern int fio_cmd_option_parse(struct thread_data *, const char *, char *);
@@ -490,6 +508,7 @@ extern int parse_dryrun(void);
 extern int fio_running_or_pending_io_threads(void);
 extern int fio_set_fd_nonblocking(int, const char *);
 extern void sig_show_status(int sig);
+extern struct thread_data *get_global_options(void);
 
 extern uintptr_t page_mask;
 extern uintptr_t page_size;
@@ -532,6 +551,7 @@ enum {
 extern void td_set_runstate(struct thread_data *, int);
 extern int td_bump_runstate(struct thread_data *, int);
 extern void td_restore_runstate(struct thread_data *, int);
+extern const char *runstate_to_name(int runstate);
 
 /*
  * Allow 60 seconds for a job to quit on its own, otherwise reap with
@@ -564,6 +584,10 @@ extern void reset_all_stats(struct thread_data *);
 extern int is_blktrace(const char *, int *);
 extern int load_blktrace(struct thread_data *, const char *, int);
 #endif
+
+extern int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
+		   enum fio_ddir ddir, uint64_t *bytes_issued, int from_verify,
+		   struct timeval *comp_time);
 
 /*
  * Latency target helpers
@@ -697,6 +721,7 @@ enum {
 	FIO_RAND_DIST_ZIPF,
 	FIO_RAND_DIST_PARETO,
 	FIO_RAND_DIST_GAUSS,
+	FIO_RAND_DIST_ZONED,
 };
 
 #define FIO_DEF_ZIPF		1.1

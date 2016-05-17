@@ -39,8 +39,11 @@ int main(int argc, char *argv[], char *envp[])
 #error "No available clock source!"
 #endif
 
-	if (parse_options(argc, argv))
+	if (fio_server_create_sk_key())
 		goto done;
+
+	if (parse_options(argc, argv))
+		goto done_key;
 
 	/*
 	 * line buffer stdout to avoid output lines from multiple
@@ -54,11 +57,13 @@ int main(int argc, char *argv[], char *envp[])
 		set_genesis_time();
 
 		if (fio_start_all_clients())
-			goto done;
+			goto done_key;
 		ret = fio_handle_clients(&fio_client_ops);
 	} else
-		ret = fio_backend();
+		ret = fio_backend(NULL);
 
+done_key:
+	fio_server_destroy_sk_key();
 done:
 	deinitialize_fio();
 	return ret;

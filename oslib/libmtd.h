@@ -29,6 +29,9 @@
 extern "C" {
 #endif
 
+// Needed for uint8_t, uint64_t
+#include <stdint.h>
+
 /* Maximum MTD device name length */
 #define MTD_NAME_MAX 127
 /* Maximum MTD device type string length */

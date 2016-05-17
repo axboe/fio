@@ -227,7 +227,7 @@ static void output_normal(struct node *nodes, unsigned long nnodes,
 
 		if (percentage) {
 			if (total_vals >= blocks) {
-				double cs = i * block_size / (1024 * 1024);
+				double cs = (double) i * block_size / (1024.0 * 1024.0);
 				char p = 'M';
 
 				if (cs > 1024.0) {

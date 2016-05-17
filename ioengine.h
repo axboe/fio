@@ -7,6 +7,7 @@
 #include "io_ddir.h"
 #include "debug.h"
 #include "file.h"
+#include "workqueue.h"
 
 #ifdef CONFIG_LIBAIO
 #include <libaio.h>
@@ -15,7 +16,7 @@
 #include <guasi.h>
 #endif
 
-#define FIO_IOOPS_VERSION	22
+#define FIO_IOOPS_VERSION	23
 
 enum {
 	IO_U_F_FREE		= 1 << 0,
@@ -89,7 +90,10 @@ struct io_u {
 		void *engine_data;
 	};
 
-	struct flist_head verify_list;
+	union {
+		struct flist_head verify_list;
+		struct workqueue_work work;
+	};
 
 	/*
 	 * Callback for io completion
@@ -153,6 +157,8 @@ struct ioengine_ops {
 	int (*unlink_file)(struct thread_data *, struct fio_file *);
 	int (*get_file_size)(struct thread_data *, struct fio_file *);
 	void (*terminate)(struct thread_data *);
+	int (*iomem_alloc)(struct thread_data *, size_t);
+	void (*iomem_free)(struct thread_data *);
 	int (*io_u_init)(struct thread_data *, struct io_u *);
 	void (*io_u_free)(struct thread_data *, struct io_u *);
 	int option_struct_size;
@@ -214,7 +220,7 @@ extern void requeue_io_u(struct thread_data *, struct io_u **);
 extern int __must_check io_u_sync_complete(struct thread_data *, struct io_u *);
 extern int __must_check io_u_queued_complete(struct thread_data *, int);
 extern void io_u_queued(struct thread_data *, struct io_u *);
-extern void io_u_quiesce(struct thread_data *);
+extern int io_u_quiesce(struct thread_data *);
 extern void io_u_log_error(struct thread_data *, struct io_u *);
 extern void io_u_mark_depth(struct thread_data *, unsigned int);
 extern void fill_io_buffer(struct thread_data *, void *, unsigned int, unsigned int);

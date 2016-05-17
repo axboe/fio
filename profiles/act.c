@@ -1,6 +1,7 @@
 #include "../fio.h"
 #include "../profile.h"
 #include "../parse.h"
+#include "../optgroup.h"
 
 /*
  * 1x loads
