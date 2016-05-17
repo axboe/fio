@@ -39,7 +39,7 @@ unsigned long long gauss_next(struct gauss_state *gs)
 	}
 
 	if (!gs->disable_hash)
-		return __hash_u64(sum) % gs->nranges;
+		sum = __hash_u64(sum);
 
 	return sum % gs->nranges;
 }
