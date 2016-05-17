@@ -14,12 +14,16 @@
 # to see per-interval average completion latency.
 
 import argparse
+import numpy
+import scipy
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--interval', required=False, type=int, default=1000, help='interval of time in seconds.')
     parser.add_argument('-d', '--divisor', required=False, type=int, default=1, help='divide the results by this value.')
     parser.add_argument('-f', '--full', dest='full', action='store_true', default=False, help='print full output.')
+    parser.add_argument('-A', '--all', dest='allstats', action='store_true', default=False, 
+                        help='print all stats for each interval.')
     parser.add_argument('-a', '--average', dest='average', action='store_true', default=False, help='print the average for each interval.')
     parser.add_argument('-s', '--sum', dest='sum', action='store_true', default=False, help='print the sum for each interval.')
     parser.add_argument("FILE", help="collectl log output files to parse", nargs="+")
@@ -70,6 +74,57 @@ def print_averages(ctx, series):
         start += ctx.interval
         end += ctx.interval
 
+# FIXME: this routine is computationally inefficient
+# and has O(N^2) behavior
+# it would be better to make one pass through samples
+# to segment them into a series of time intervals, and
+# then compute stats on each time interval instead.
+# to debug this routine, use
+#   # sort -n -t ',' -k 2 small.log
+# on your input.
+# Sometimes scipy interpolates between two values to get a percentile
+
+def my_extend( vlist, val ):
+    vlist.extend(val)
+    return vlist
+
+array_collapser = lambda vlist, val:  my_extend(vlist, val) 
+
+def print_all_stats(ctx, series):
+    ftime = get_ftime(series)
+    start = 0 
+    end = ctx.interval
+    print('start-time, samples, min, avg, median, 90%, 95%, 99%, max')
+    while (start < ftime):  # for each time interval
+        end = ftime if ftime < end else end
+        sample_arrays = [ s.get_samples(start, end) for s in series ]
+        samplevalue_arrays = []
+        for sample_array in sample_arrays:
+            samplevalue_arrays.append( 
+                [ sample.value for sample in sample_array ] )
+        #print('samplevalue_arrays len: %d' % len(samplevalue_arrays))
+        #print('samplevalue_arrays elements len: ' + \
+               #str(map( lambda l: len(l), samplevalue_arrays)))
+        # collapse list of lists of sample values into list of sample values
+        samplevalues = reduce( array_collapser, samplevalue_arrays, [] )
+        #print('samplevalues: ' + str(sorted(samplevalues)))
+        # compute all stats and print them
+        myarray = scipy.fromiter(samplevalues, float)
+        mymin = scipy.amin(myarray)
+        myavg = scipy.average(myarray)
+        mymedian = scipy.median(myarray)
+        my90th = scipy.percentile(myarray, 90)
+        my95th = scipy.percentile(myarray, 95)
+        my99th = scipy.percentile(myarray, 99)
+        mymax = scipy.amax(myarray)
+        print( '%f, %d, %f, %f, %f, %f, %f, %f, %f' % (
+            start, len(samplevalues), 
+            mymin, myavg, mymedian, my90th, my95th, my99th, mymax))
+
+        # advance to next interval
+        start += ctx.interval
+        end += ctx.interval
+
 
 def print_default(ctx, series):
     ftime = get_ftime(series)
@@ -112,6 +167,13 @@ class TimeSeries():
             self.last = sample
         self.samples.append(sample)
 
+    def get_samples(self, start, end):
+        sample_list = []
+        for s in self.samples:
+            if s.start >= start and s.end <= end:
+                sample_list.append(s)
+        return sample_list
+
     def get_value(self, start, end):
         value = 0
         for sample in self.samples:
@@ -147,6 +209,8 @@ if __name__ == '__main__':
         print_averages(ctx, series)
     elif ctx.full:
         print_full(ctx, series)
+    elif ctx.allstats:
+        print_all_stats(ctx, series)
     else:
         print_default(ctx, series)
 
