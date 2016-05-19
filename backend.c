@@ -1815,8 +1815,9 @@ static int fork_main(struct sk_out *sk_out, int shmid, int offset)
 
 static void dump_td_info(struct thread_data *td)
 {
-	log_err("fio: job '%s' hasn't exited in %lu seconds, it appears to "
-		"be stuck. Doing forceful exit of this job.\n", td->o.name,
+	log_err("fio: job '%s' (state=%d) hasn't exited in %lu seconds, it "
+		"appears to be stuck. Doing forceful exit of this job.\n",
+			td->o.name, td->runstate,
 			(unsigned long) time_since_now(&td->terminate_time));
 }
 
