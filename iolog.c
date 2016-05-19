@@ -761,7 +761,7 @@ static size_t inflate_chunk(struct iolog_compress *ic, int gz_hdr, FILE *f,
 {
 	size_t ret;
 
-	dprint(FD_COMPRESS, "inflate chunk size=%lu, seq=%u",
+	dprint(FD_COMPRESS, "inflate chunk size=%lu, seq=%u\n",
 				(unsigned long) ic->len, ic->seq);
 
 	if (ic->seq != iter->seq) {
