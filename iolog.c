@@ -810,7 +810,7 @@ static size_t inflate_chunk(struct iolog_compress *ic, int gz_hdr, FILE *f,
 
 	ret = (void *) stream->next_in - ic->buf;
 
-	dprint(FD_COMPRESS, "inflated to size=%lu\n", (unsigned long) ret);
+	dprint(FD_COMPRESS, "inflated to size=%lu\n", (unsigned long) iter->buf_size);
 
 	return ret;
 }
@@ -1048,8 +1048,9 @@ static int gz_work(struct iolog_flush_data *data)
 	stream.next_in = (void *) data->samples;
 	stream.avail_in = data->nr_samples * log_entry_sz(data->log);
 
-	dprint(FD_COMPRESS, "deflate input size=%lu, seq=%u\n",
-				(unsigned long) stream.avail_in, seq);
+	dprint(FD_COMPRESS, "deflate input size=%lu, seq=%u, log=%s\n",
+				(unsigned long) stream.avail_in, seq,
+				data->log->filename);
 	do {
 		c = get_new_chunk(seq);
 		stream.avail_out = GZ_CHUNK;
@@ -1071,8 +1072,10 @@ static int gz_work(struct iolog_flush_data *data)
 
 	ret = deflate(&stream, Z_FINISH);
 	if (ret == Z_STREAM_END) {
+		total -= c->len;
 		c->len = GZ_CHUNK - stream.avail_out;
 		total += c->len;
+		dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq, c->len);
 	} else {
 		do {
 			c = get_new_chunk(seq);
@@ -1082,6 +1085,7 @@ static int gz_work(struct iolog_flush_data *data)
 			c->len = GZ_CHUNK - stream.avail_out;
 			total += c->len;
 			flist_add_tail(&c->list, &list);
+			dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq, c->len);
 		} while (ret != Z_STREAM_END);
 	}
 
