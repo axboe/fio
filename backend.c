@@ -1705,6 +1705,8 @@ static void *thread_main(void *data)
 			break;
 	}
 
+	td_set_runstate(td, TD_FINISHING);
+
 	update_rusage_stat(td);
 	td->ts.total_run_time = mtime_since_now(&td->epoch);
 	td->ts.io_bytes[DDIR_READ] = td->io_bytes[DDIR_READ];
