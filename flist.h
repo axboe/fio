@@ -177,6 +177,9 @@ static inline void flist_splice_init(struct flist_head *list,
 #define flist_first_entry(ptr, type, member) \
 	flist_entry((ptr)->next, type, member)
 
+#define flist_last_entry(ptr, type, member) \
+	flist_entry((ptr)->prev, type, member)
+
 /**
  * flist_for_each	-	iterate over a list
  * @pos:	the &struct flist_head to use as a loop counter.
