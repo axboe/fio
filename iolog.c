@@ -745,7 +745,8 @@ static void finish_chunk(z_stream *stream, FILE *f,
 
 	ret = inflateEnd(stream);
 	if (ret != Z_OK)
-		log_err("fio: failed to end log inflation (%d)\n", ret);
+		log_err("fio: failed to end log inflation seq %d (%d)\n",
+				iter->seq, ret);
 
 	flush_samples(f, iter->buf, iter->buf_used);
 	free(iter->buf);
@@ -1069,9 +1070,10 @@ static int gz_work(struct iolog_flush_data *data)
 	stream.avail_out = GZ_CHUNK - c->len;
 
 	ret = deflate(&stream, Z_FINISH);
-	if (ret == Z_STREAM_END)
+	if (ret == Z_STREAM_END) {
 		c->len = GZ_CHUNK - stream.avail_out;
-	else {
+		total += c->len;
+	} else {
 		do {
 			c = get_new_chunk(seq);
 			stream.avail_out = GZ_CHUNK;
