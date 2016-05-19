@@ -1472,6 +1472,14 @@ static void *thread_main(void *data)
 	}
 
 	/*
+	 * Do this early, we don't want the compress threads to be limited
+	 * to the same CPUs as the IO workers. So do this before we set
+	 * any potential CPU affinity
+	 */
+	if (iolog_compress_init(td, sk_out))
+		goto err;
+
+	/*
 	 * If we have a gettimeofday() thread, make sure we exclude that
 	 * thread from this job
 	 */
@@ -1604,9 +1612,6 @@ static void *thread_main(void *data)
 		if (pre_read_files(td) < 0)
 			goto err;
 	}
-
-	if (iolog_compress_init(td, sk_out))
-		goto err;
 
 	fio_verify_init(td);
 
