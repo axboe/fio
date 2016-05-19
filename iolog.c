@@ -710,6 +710,7 @@ static int z_stream_init(z_stream *stream, int gz_hdr)
 {
 	int wbits = 15;
 
+	memset(stream, 0, sizeof(*stream));
 	stream->zalloc = Z_NULL;
 	stream->zfree = Z_NULL;
 	stream->opaque = Z_NULL;
