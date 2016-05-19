@@ -1870,15 +1870,7 @@ static struct io_logs *get_new_log(struct io_log *iolog)
 			new_samples = MAX_LOG_ENTRIES;
 	}
 
-	/*
-	 * If the alloc size is sufficiently large, quiesce pending IO before
-	 * attempting it. This is to avoid spending a long time in alloc with
-	 * IO pending, which will unfairly skew the completion latencies of
-	 * inflight IO.
-	 */
 	new_size = new_samples * log_entry_sz(iolog);
-	if (new_size >= LOG_QUIESCE_SZ)
-		io_u_quiesce(iolog->td);
 
 	cur_log = malloc(sizeof(*cur_log));
 	if (cur_log) {
@@ -1926,12 +1918,11 @@ static struct io_logs *get_cur_log(struct io_log *iolog)
 	 * Get a new log array, and add to our list
 	 */
 	cur_log = get_new_log(iolog);
-	if (!cur_log) {
-		log_err("fio: failed extending iolog! Will stop logging.\n");
-		return NULL;
-	}
+	if (cur_log)
+		return cur_log;
 
-	return cur_log;
+	log_err("fio: failed extending iolog! Will stop logging.\n");
+	return NULL;
 }
 
 static void __add_log_sample(struct io_log *iolog, unsigned long val,
