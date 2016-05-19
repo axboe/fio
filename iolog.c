@@ -1023,7 +1023,7 @@ size_t log_chunk_sizes(struct io_log *log)
 
 static int gz_work(struct iolog_flush_data *data)
 {
-	struct iolog_compress *c;
+	struct iolog_compress *c = NULL;
 	struct flist_head list;
 	unsigned int seq;
 	z_stream stream;
@@ -1052,6 +1052,8 @@ static int gz_work(struct iolog_flush_data *data)
 				(unsigned long) stream.avail_in, seq,
 				data->log->filename);
 	do {
+		if (c)
+			dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq, c->len);
 		c = get_new_chunk(seq);
 		stream.avail_out = GZ_CHUNK;
 		stream.next_out = c->buf;
@@ -1077,6 +1079,11 @@ static int gz_work(struct iolog_flush_data *data)
 		total += c->len;
 		dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq, c->len);
 	} else {
+		total -= c->len;
+		c->len = GZ_CHUNK - stream.avail_out;
+		total += c->len;
+		dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq, c->len);
+
 		do {
 			c = get_new_chunk(seq);
 			stream.avail_out = GZ_CHUNK;
