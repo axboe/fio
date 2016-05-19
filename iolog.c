@@ -1073,17 +1073,26 @@ static int gz_work(struct iolog_flush_data *data)
 	stream.avail_out = GZ_CHUNK - c->len;
 
 	ret = deflate(&stream, Z_FINISH);
-	if (ret == Z_STREAM_END) {
-		total -= c->len;
-		c->len = GZ_CHUNK - stream.avail_out;
-		total += c->len;
-		dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq, c->len);
-	} else {
-		total -= c->len;
-		c->len = GZ_CHUNK - stream.avail_out;
-		total += c->len;
-		dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq, c->len);
+	if (ret < 0) {
+		/*
+		 * Z_BUF_ERROR is special, it just means we need more
+		 * output space. We'll handle that below. Treat any other
+		 * error as fatal.
+		 */
+		if (ret != Z_BUF_ERROR) {
+			log_err("fio: deflate log (%d)\n", ret);
+			flist_del(&c->list);
+			free_chunk(c);
+			goto err;
+		}
+	}
 
+	total -= c->len;
+	c->len = GZ_CHUNK - stream.avail_out;
+	total += c->len;
+	dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq, c->len);
+
+	if (ret != Z_STREAM_END) {
 		do {
 			c = get_new_chunk(seq);
 			stream.avail_out = GZ_CHUNK;
