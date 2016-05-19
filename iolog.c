@@ -20,6 +20,8 @@
 #include "filelock.h"
 #include "smalloc.h"
 
+static int iolog_flush(struct io_log *log);
+
 static const char iolog_ver2[] = "fio version 2 iolog";
 
 void queue_io_piece(struct thread_data *td, struct io_piece *ipo)
@@ -575,8 +577,8 @@ void setup_log(struct io_log **log, struct log_params *p,
 {
 	struct io_log *l;
 
-	l = smalloc(sizeof(*l));
-	l->nr_samples = 0;
+	l = scalloc(1, sizeof(*l));
+	INIT_FLIST_HEAD(&l->io_logs);
 	l->log_type = p->log_type;
 	l->log_offset = p->log_offset;
 	l->log_gz = p->log_gz;
@@ -628,7 +630,14 @@ static void clear_file_buffer(void *buf)
 
 void free_log(struct io_log *log)
 {
-	free(log->log);
+	while (!flist_empty(&log->io_logs)) {
+		struct io_logs *cur_log;
+
+		cur_log = flist_first_entry(&log->io_logs, struct io_logs, list);
+		flist_del_init(&cur_log->list);
+		free(cur_log->log);
+	}
+
 	free(log->filename);
 	sfree(log);
 }
@@ -673,7 +682,8 @@ struct iolog_flush_data {
 	struct workqueue_work work;
 	struct io_log *log;
 	void *samples;
-	uint64_t nr_samples;
+	uint32_t nr_samples;
+	bool free;
 };
 
 #define GZ_CHUNK	131072
@@ -954,7 +964,13 @@ void flush_log(struct io_log *log, int do_append)
 
 	inflate_gz_chunks(log, f);
 
-	flush_samples(f, log->log, log->nr_samples * log_entry_sz(log));
+	while (!flist_empty(&log->io_logs)) {
+		struct io_logs *cur_log;
+
+		cur_log = flist_first_entry(&log->io_logs, struct io_logs, list);
+		flist_del_init(&cur_log->list);
+		flush_samples(f, cur_log->log, cur_log->nr_samples * log_entry_sz(log));
+	}
 
 	fclose(f);
 	clear_file_buffer(buf);
@@ -963,7 +979,7 @@ void flush_log(struct io_log *log, int do_append)
 static int finish_log(struct thread_data *td, struct io_log *log, int trylock)
 {
 	if (td->flags & TD_F_COMPRESS_LOG)
-		iolog_flush(log, 1);
+		iolog_flush(log);
 
 	if (trylock) {
 		if (fio_trylock_file(log->filename))
@@ -1014,6 +1030,7 @@ static int gz_work(struct iolog_flush_data *data)
 
 	INIT_FLIST_HEAD(&list);
 
+	memset(&stream, 0, sizeof(stream));
 	stream.zalloc = Z_NULL;
 	stream.zfree = Z_NULL;
 	stream.opaque = Z_NULL;
@@ -1081,7 +1098,8 @@ static int gz_work(struct iolog_flush_data *data)
 
 	ret = 0;
 done:
-	free(data);
+	if (data->free)
+		free(data);
 	return ret;
 err:
 	while (!flist_empty(&list)) {
@@ -1145,10 +1163,42 @@ void iolog_compress_exit(struct thread_data *td)
  * Queue work item to compress the existing log entries. We reset the
  * current log to a small size, and reference the existing log in the
  * data that we queue for compression. Once compression has been done,
- * this old log is freed. If called with wait == 1, will not return until
- * the log compression has completed.
+ * this old log is freed. If called with finish == true, will not return
+ * until the log compression has completed, and will flush all previous
+ * logs too
  */
-int iolog_flush(struct io_log *log, int wait)
+static int iolog_flush(struct io_log *log)
+{
+	struct iolog_flush_data *data;
+
+	data = malloc(sizeof(*data));
+	if (!data)
+		return 1;
+
+	data->log = log;
+	data->free = false;
+
+	while (!flist_empty(&log->io_logs)) {
+		struct io_logs *cur_log;
+
+		cur_log = flist_first_entry(&log->io_logs, struct io_logs, list);
+		flist_del_init(&cur_log->list);
+
+		data->samples = cur_log->log;
+		data->nr_samples = cur_log->nr_samples;
+
+		cur_log->nr_samples = 0;
+		cur_log->max_samples = 0;
+		cur_log->log = NULL;
+
+		gz_work(data);
+	}
+
+	free(data);
+	return 0;
+}
+
+int iolog_cur_flush(struct io_log *log, struct io_logs *cur_log)
 {
 	struct iolog_flush_data *data;
 
@@ -1160,24 +1210,24 @@ int iolog_flush(struct io_log *log, int wait)
 
 	data->log = log;
 
-	data->samples = log->log;
-	data->nr_samples = log->nr_samples;
+	data->samples = cur_log->log;
+	data->nr_samples = cur_log->nr_samples;
+	data->free = true;
 
-	log->nr_samples = 0;
-	log->max_samples = DEF_LOG_ENTRIES;
-	log->log = malloc(log->max_samples * log_entry_sz(log));
+	cur_log->nr_samples = cur_log->max_samples = 0;
+	cur_log->log = NULL;
 
-	if (!wait)
-		workqueue_enqueue(&log->td->log_compress_wq, &data->work);
-	else
-		gz_work(data);
-
+	workqueue_enqueue(&log->td->log_compress_wq, &data->work);
 	return 0;
 }
-
 #else
 
-int iolog_flush(struct io_log *log, int wait)
+static int iolog_flush(struct io_log *log)
+{
+	return 1;
+}
+
+int iolog_cur_flush(struct io_log *log, struct io_logs *cur_log)
 {
 	return 1;
 }
@@ -1192,6 +1242,29 @@ void iolog_compress_exit(struct thread_data *td)
 }
 
 #endif
+
+struct io_logs *iolog_cur_log(struct io_log *log)
+{
+	if (flist_empty(&log->io_logs))
+		return NULL;
+
+	return flist_last_entry(&log->io_logs, struct io_logs, list);
+}
+
+uint64_t iolog_nr_samples(struct io_log *iolog)
+{
+	struct flist_head *entry;
+	uint64_t ret = 0;
+
+	flist_for_each(entry, &iolog->io_logs) {
+		struct io_logs *cur_log;
+
+		cur_log = flist_entry(entry, struct io_logs, list);
+		ret += cur_log->nr_samples;
+	}
+
+	return ret;
+}
 
 static int __write_log(struct thread_data *td, struct io_log *log, int try)
 {

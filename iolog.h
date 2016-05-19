@@ -42,6 +42,16 @@ enum {
 };
 
 #define DEF_LOG_ENTRIES		1024
+#define MAX_LOG_ENTRIES		(1024 * DEF_LOG_ENTRIES)
+
+#define LOG_QUIESCE_SZ		(64 * 1024 * 1024)
+
+struct io_logs {
+	struct flist_head list;
+	uint64_t nr_samples;
+	uint64_t max_samples;
+	void *log;
+};
 
 /*
  * Dynamically growing data sample log
@@ -50,9 +60,8 @@ struct io_log {
 	/*
 	 * Entries already logged
 	 */
-	uint64_t nr_samples;
-	uint64_t max_samples;
-	void *log;
+	struct flist_head io_logs;
+	uint32_t cur_log_max;
 
 	unsigned int log_ddir_mask;
 
@@ -65,7 +74,7 @@ struct io_log {
 	/*
 	 * If we fail extending the log, stop collecting more entries.
 	 */
-	unsigned int disabled;
+	bool disabled;
 
 	/*
 	 * Log offsets
@@ -128,10 +137,14 @@ static inline struct io_sample *__get_sample(void *samples, int log_offset,
 	return (struct io_sample *) ((char *) samples + sample_offset);
 }
 
+struct io_logs *iolog_cur_log(struct io_log *);
+uint64_t iolog_nr_samples(struct io_log *);
+
 static inline struct io_sample *get_sample(struct io_log *iolog,
+					   struct io_logs *cur_log,
 					   uint64_t sample)
 {
-	return __get_sample(iolog->log, iolog->log_offset, sample);
+	return __get_sample(cur_log->log, iolog->log_offset, sample);
 }
 
 enum {
@@ -219,7 +232,7 @@ extern void flush_samples(FILE *, void *, uint64_t);
 extern void free_log(struct io_log *);
 extern void fio_writeout_logs(bool);
 extern void td_writeout_logs(struct thread_data *, bool);
-extern int iolog_flush(struct io_log *, int);
+extern int iolog_cur_flush(struct io_log *, struct io_logs *);
 
 static inline void init_ipo(struct io_piece *ipo)
 {

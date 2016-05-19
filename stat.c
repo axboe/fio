@@ -1849,66 +1849,124 @@ static inline void add_stat_sample(struct io_stat *is, unsigned long data)
 	is->samples++;
 }
 
+/*
+ * Return a struct io_logs, which is added to the tail of the log
+ * list for 'iolog'.
+ */
+static struct io_logs *get_new_log(struct io_log *iolog)
+{
+	size_t new_size, new_samples;
+	struct io_logs *cur_log;
+
+	/*
+	 * Cap the size at MAX_LOG_ENTRIES, so we don't keep doubling
+	 * forever
+	 */
+	if (!iolog->cur_log_max)
+		new_samples = DEF_LOG_ENTRIES;
+	else {
+		new_samples = iolog->cur_log_max * 2;
+		if (new_samples > MAX_LOG_ENTRIES)
+			new_samples = MAX_LOG_ENTRIES;
+	}
+
+	/*
+	 * If the alloc size is sufficiently large, quiesce pending IO before
+	 * attempting it. This is to avoid spending a long time in alloc with
+	 * IO pending, which will unfairly skew the completion latencies of
+	 * inflight IO.
+	 */
+	new_size = new_samples * log_entry_sz(iolog);
+	if (new_size >= LOG_QUIESCE_SZ)
+		io_u_quiesce(iolog->td);
+
+	cur_log = malloc(sizeof(*cur_log));
+	if (cur_log) {
+		INIT_FLIST_HEAD(&cur_log->list);
+		cur_log->log = malloc(new_size);
+		if (cur_log->log) {
+			cur_log->nr_samples = 0;
+			cur_log->max_samples = new_samples;
+			flist_add_tail(&cur_log->list, &iolog->io_logs);
+			iolog->cur_log_max = new_samples;
+			return cur_log;
+		}
+		free(cur_log);
+	}
+
+	return NULL;
+}
+
+static struct io_logs *get_cur_log(struct io_log *iolog)
+{
+	struct io_logs *cur_log;
+
+	cur_log = iolog_cur_log(iolog);
+	if (!cur_log) {
+		cur_log = get_new_log(iolog);
+		if (!cur_log)
+			return NULL;
+	}
+
+	if (cur_log->nr_samples < cur_log->max_samples)
+		return cur_log;
+
+	/*
+	 * No room for a new sample. If we're compressing on the fly, flush
+	 * out the current chunk
+	 */
+	if (iolog->log_gz) {
+		if (iolog_cur_flush(iolog, cur_log)) {
+			log_err("fio: failed flushing iolog! Will stop logging.\n");
+			return NULL;
+		}
+	}
+
+	/*
+	 * Get a new log array, and add to our list
+	 */
+	cur_log = get_new_log(iolog);
+	if (!cur_log) {
+		log_err("fio: failed extending iolog! Will stop logging.\n");
+		return NULL;
+	}
+
+	return cur_log;
+}
+
 static void __add_log_sample(struct io_log *iolog, unsigned long val,
 			     enum fio_ddir ddir, unsigned int bs,
 			     unsigned long t, uint64_t offset)
 {
-	uint64_t nr_samples = iolog->nr_samples;
-	struct io_sample *s;
+	struct io_logs *cur_log;
 
 	if (iolog->disabled)
 		return;
-
-	if (!iolog->nr_samples)
+	if (flist_empty(&iolog->io_logs))
 		iolog->avg_last = t;
 
-	if (iolog->nr_samples == iolog->max_samples) {
-		size_t new_size, new_samples;
-		void *new_log;
+	cur_log = get_cur_log(iolog);
+	if (cur_log) {
+		struct io_sample *s;
 
-		if (!iolog->max_samples)
-			new_samples = DEF_LOG_ENTRIES;
-		else
-			new_samples = iolog->max_samples * 2;
+		s = get_sample(iolog, cur_log, cur_log->nr_samples);
 
-		new_size = new_samples * log_entry_sz(iolog);
+		s->val = val;
+		s->time = t;
+		io_sample_set_ddir(iolog, s, ddir);
+		s->bs = bs;
 
-		if (iolog->log_gz && (new_size > iolog->log_gz)) {
-			if (!iolog->log) {
-				iolog->log = malloc(new_size);
-				iolog->max_samples = new_samples;
-			} else if (iolog_flush(iolog, 0)) {
-				log_err("fio: failed flushing iolog! Will stop logging.\n");
-				iolog->disabled = 1;
-				return;
-			}
-			nr_samples = iolog->nr_samples;
-		} else {
-			new_log = realloc(iolog->log, new_size);
-			if (!new_log) {
-				log_err("fio: failed extending iolog! Will stop logging.\n");
-				iolog->disabled = 1;
-				return;
-			}
-			iolog->log = new_log;
-			iolog->max_samples = new_samples;
+		if (iolog->log_offset) {
+			struct io_sample_offset *so = (void *) s;
+
+			so->offset = offset;
 		}
+
+		cur_log->nr_samples++;
+		return;
 	}
 
-	s = get_sample(iolog, nr_samples);
-
-	s->val = val;
-	s->time = t;
-	io_sample_set_ddir(iolog, s, ddir);
-	s->bs = bs;
-
-	if (iolog->log_offset) {
-		struct io_sample_offset *so = (void *) s;
-
-		so->offset = offset;
-	}
-
-	iolog->nr_samples++;
+	iolog->disabled = true;
 }
 
 static inline void reset_io_stat(struct io_stat *ios)

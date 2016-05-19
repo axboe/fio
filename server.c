@@ -1652,58 +1652,79 @@ void fio_server_send_du(void)
 	}
 }
 
-static int fio_append_iolog_gz(struct sk_entry *first, struct io_log *log)
-{
-	int ret = 0;
 #ifdef CONFIG_ZLIB
+static int __fio_append_iolog_gz(struct sk_entry *first, struct io_log *log,
+				 struct io_logs *cur_log, z_stream *stream)
+{
 	struct sk_entry *entry;
-	z_stream stream;
 	void *out_pdu;
+	int ret;
 
-	/*
-	 * Dirty - since the log is potentially huge, compress it into
-	 * FIO_SERVER_MAX_FRAGMENT_PDU chunks and let the receiving
-	 * side defragment it.
-	 */
-	out_pdu = malloc(FIO_SERVER_MAX_FRAGMENT_PDU);
-
-	stream.zalloc = Z_NULL;
-	stream.zfree = Z_NULL;
-	stream.opaque = Z_NULL;
-
-	if (deflateInit(&stream, Z_DEFAULT_COMPRESSION) != Z_OK) {
-		ret = 1;
-		goto err;
-	}
-
-	stream.next_in = (void *) log->log;
-	stream.avail_in = log->nr_samples * log_entry_sz(log);
+	stream->next_in = (void *) cur_log->log;
+	stream->avail_in = cur_log->nr_samples * log_entry_sz(log);
 
 	do {
 		unsigned int this_len;
 
-		stream.avail_out = FIO_SERVER_MAX_FRAGMENT_PDU;
-		stream.next_out = out_pdu;
-		ret = deflate(&stream, Z_FINISH);
-		/* may be Z_OK, or Z_STREAM_END */
-		if (ret < 0)
-			goto err_zlib;
+		/*
+		 * Dirty - since the log is potentially huge, compress it into
+		 * FIO_SERVER_MAX_FRAGMENT_PDU chunks and let the receiving
+		 * side defragment it.
+		 */
+		out_pdu = malloc(FIO_SERVER_MAX_FRAGMENT_PDU);
 
-		this_len = FIO_SERVER_MAX_FRAGMENT_PDU - stream.avail_out;
+		stream->avail_out = FIO_SERVER_MAX_FRAGMENT_PDU;
+		stream->next_out = out_pdu;
+		ret = deflate(stream, Z_FINISH);
+		/* may be Z_OK, or Z_STREAM_END */
+		if (ret < 0) {
+			free(out_pdu);
+			return 1;
+		}
+
+		this_len = FIO_SERVER_MAX_FRAGMENT_PDU - stream->avail_out;
 
 		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, out_pdu, this_len,
-						NULL, SK_F_VEC | SK_F_INLINE | SK_F_FREE);
-		out_pdu = NULL;
+					 NULL, SK_F_VEC | SK_F_INLINE | SK_F_FREE);
 		flist_add_tail(&entry->list, &first->next);
-	} while (stream.avail_in);
+	} while (stream->avail_in);
 
-err_zlib:
+	return 0;
+}
+
+static int fio_append_iolog_gz(struct sk_entry *first, struct io_log *log)
+{
+	int ret = 0;
+	z_stream stream;
+
+	memset(&stream, 0, sizeof(stream));
+	stream.zalloc = Z_NULL;
+	stream.zfree = Z_NULL;
+	stream.opaque = Z_NULL;
+
+	if (deflateInit(&stream, Z_DEFAULT_COMPRESSION) != Z_OK)
+		return 1;
+
+	while (!flist_empty(&log->io_logs)) {
+		struct io_logs *cur_log;
+
+		cur_log = flist_first_entry(&log->io_logs, struct io_logs, list);
+		flist_del_init(&cur_log->list);
+
+		ret = __fio_append_iolog_gz(first, log, cur_log, &stream);
+		if (ret)
+			break;
+	}
+
 	deflateEnd(&stream);
-err:
-	free(out_pdu);
-#endif
 	return ret;
 }
+#else
+static int fio_append_iolog_gz(struct sk_entry *first, struct io_log *log)
+{
+	return 1;
+}
+#endif
 
 static int fio_append_gz_chunks(struct sk_entry *first, struct io_log *log)
 {
@@ -1727,11 +1748,21 @@ static int fio_append_gz_chunks(struct sk_entry *first, struct io_log *log)
 static int fio_append_text_log(struct sk_entry *first, struct io_log *log)
 {
 	struct sk_entry *entry;
-	size_t size = log->nr_samples * log_entry_sz(log);
 
-	entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, log->log, size,
-					NULL, SK_F_VEC | SK_F_INLINE);
-	flist_add_tail(&entry->list, &first->next);
+	while (!flist_empty(&log->io_logs)) {
+		struct io_logs *cur_log;
+		size_t size;
+
+		cur_log = flist_first_entry(&log->io_logs, struct io_logs, list);
+		flist_del_init(&cur_log->list);
+
+		size = cur_log->nr_samples * log_entry_sz(log);
+
+		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, cur_log->log, size,
+						NULL, SK_F_VEC | SK_F_INLINE);
+		flist_add_tail(&entry->list, &first->next);
+	}
+
 	return 0;
 }
 
@@ -1739,9 +1770,10 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 {
 	struct cmd_iolog_pdu pdu;
 	struct sk_entry *first;
-	int i, ret = 0;
+	struct flist_head *entry;
+	int ret = 0;
 
-	pdu.nr_samples = cpu_to_le64(log->nr_samples);
+	pdu.nr_samples = cpu_to_le64(iolog_nr_samples(log));
 	pdu.thread_number = cpu_to_le32(td->thread_number);
 	pdu.log_type = cpu_to_le32(log->log_type);
 
@@ -1759,18 +1791,25 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	 * We can't do this for a pre-compressed log, but for that case,
 	 * log->nr_samples is zero anyway.
 	 */
-	for (i = 0; i < log->nr_samples; i++) {
-		struct io_sample *s = get_sample(log, i);
+	flist_for_each(entry, &log->io_logs) {
+		struct io_logs *cur_log;
+		int i;
 
-		s->time		= cpu_to_le64(s->time);
-		s->val		= cpu_to_le64(s->val);
-		s->__ddir	= cpu_to_le32(s->__ddir);
-		s->bs		= cpu_to_le32(s->bs);
+		cur_log = flist_entry(entry, struct io_logs, list);
 
-		if (log->log_offset) {
-			struct io_sample_offset *so = (void *) s;
+		for (i = 0; i < cur_log->nr_samples; i++) {
+			struct io_sample *s = get_sample(log, cur_log, i);
 
-			so->offset = cpu_to_le64(so->offset);
+			s->time		= cpu_to_le64(s->time);
+			s->val		= cpu_to_le64(s->val);
+			s->__ddir	= cpu_to_le32(s->__ddir);
+			s->bs		= cpu_to_le32(s->bs);
+
+			if (log->log_offset) {
+				struct io_sample_offset *so = (void *) s;
+
+				so->offset = cpu_to_le64(so->offset);
+			}
 		}
 	}
 
