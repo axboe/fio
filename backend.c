@@ -1900,6 +1900,7 @@ static void reap_threads(unsigned int *nr_running, unsigned int *t_rate,
 		 * move on.
 		 */
 		if (td->terminate &&
+		    td->runstate < TD_FSYNCING &&
 		    time_since_now(&td->terminate_time) >= FIO_REAP_TIMEOUT) {
 			dump_td_info(td);
 			td_set_runstate(td, TD_REAPED);
