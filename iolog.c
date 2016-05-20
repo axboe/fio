@@ -587,6 +587,15 @@ void setup_log(struct io_log **log, struct log_params *p,
 	l->filename = strdup(filename);
 	l->td = p->td;
 
+	if (l->td && l->td->o.io_submit_mode != IO_MODE_OFFLOAD) {
+		struct io_logs *p;
+
+		p = calloc(1, sizeof(*l->pending));
+		p->max_samples = l->td->o.iodepth;
+		p->log = calloc(p->max_samples, log_entry_sz(l));
+		l->pending = p;
+	}
+
 	if (l->log_offset)
 		l->log_ddir_mask = LOG_OFFSET_SAMPLE_BIT;
 
@@ -638,6 +647,13 @@ void free_log(struct io_log *log)
 		free(cur_log->log);
 	}
 
+	if (log->pending) {
+		free(log->pending->log);
+		free(log->pending);
+		log->pending = NULL;
+	}
+
+	free(log->pending);
 	free(log->filename);
 	sfree(log);
 }

@@ -1889,17 +1889,18 @@ static struct io_logs *get_new_log(struct io_log *iolog)
 	return NULL;
 }
 
-static struct io_logs *get_cur_log(struct io_log *iolog)
+/*
+ * Add and return a new log chunk, or return current log if big enough
+ */
+static struct io_logs *regrow_log(struct io_log *iolog)
 {
 	struct io_logs *cur_log;
+	int i;
+
+	if (!iolog || iolog->disabled)
+		return NULL;
 
 	cur_log = iolog_cur_log(iolog);
-	if (!cur_log) {
-		cur_log = get_new_log(iolog);
-		if (!cur_log)
-			return NULL;
-	}
-
 	if (cur_log->nr_samples < cur_log->max_samples)
 		return cur_log;
 
@@ -1918,11 +1919,70 @@ static struct io_logs *get_cur_log(struct io_log *iolog)
 	 * Get a new log array, and add to our list
 	 */
 	cur_log = get_new_log(iolog);
-	if (cur_log)
+	if (!cur_log) {
+		log_err("fio: failed extending iolog! Will stop logging.\n");
+		return NULL;
+	}
+
+	if (!iolog->pending || !iolog->pending->nr_samples)
 		return cur_log;
 
-	log_err("fio: failed extending iolog! Will stop logging.\n");
-	return NULL;
+	/*
+	 * Flush pending items to new log
+	 */
+	for (i = 0; i < iolog->pending->nr_samples; i++) {
+		struct io_sample *src, *dst;
+
+		src = get_sample(iolog, iolog->pending, i);
+		dst = get_sample(iolog, cur_log, i);
+		memcpy(dst, src, log_entry_sz(iolog));
+	}
+
+	iolog->pending->nr_samples = 0;
+	return cur_log;
+}
+
+void regrow_logs(struct thread_data *td)
+{
+	if (!regrow_log(td->slat_log))
+		td->slat_log->disabled = true;
+	if (!regrow_log(td->clat_log))
+		td->clat_log->disabled = true;
+	if (!regrow_log(td->lat_log))
+		td->lat_log->disabled = true;
+	if (!regrow_log(td->bw_log))
+		td->bw_log->disabled = true;
+	if (!regrow_log(td->iops_log))
+		td->iops_log->disabled = true;
+
+	td->flags &= ~TD_F_REGROW_LOGS;
+}
+
+static struct io_logs *get_cur_log(struct io_log *iolog)
+{
+	struct io_logs *cur_log;
+
+	cur_log = iolog_cur_log(iolog);
+	if (!cur_log) {
+		cur_log = get_new_log(iolog);
+		if (!cur_log)
+			return NULL;
+	}
+
+	if (cur_log->nr_samples < cur_log->max_samples)
+		return cur_log;
+
+	/*
+	 * Out of space. If we're in IO offload mode, add a new log chunk
+	 * inline. If we're doing inline submissions, flag 'td' as needing
+	 * a log regrow and we'll take care of it on the submission side.
+	 */
+	if (iolog->td->o.io_submit_mode == IO_MODE_OFFLOAD)
+		return regrow_log(iolog);
+
+	iolog->td->flags |= TD_F_REGROW_LOGS;
+	assert(iolog->pending->nr_samples < iolog->pending->max_samples);
+	return iolog->pending;
 }
 
 static void __add_log_sample(struct io_log *iolog, unsigned long val,

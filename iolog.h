@@ -63,6 +63,12 @@ struct io_log {
 	struct flist_head io_logs;
 	uint32_t cur_log_max;
 
+	/*
+	 * When the current log runs out of space, store events here until
+	 * we have a chance to regrow
+	 */
+	struct io_logs *pending;
+
 	unsigned int log_ddir_mask;
 
 	char *filename;
@@ -139,6 +145,7 @@ static inline struct io_sample *__get_sample(void *samples, int log_offset,
 
 struct io_logs *iolog_cur_log(struct io_log *);
 uint64_t iolog_nr_samples(struct io_log *);
+void regrow_logs(struct thread_data *);
 
 static inline struct io_sample *get_sample(struct io_log *iolog,
 					   struct io_logs *cur_log,
