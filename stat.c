@@ -1901,6 +1901,12 @@ static struct io_logs *regrow_log(struct io_log *iolog)
 		return NULL;
 
 	cur_log = iolog_cur_log(iolog);
+	if (!cur_log) {
+		cur_log = get_new_log(iolog);
+		if (!cur_log)
+			return NULL;
+	}
+
 	if (cur_log->nr_samples < cur_log->max_samples)
 		return cur_log;
 

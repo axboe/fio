@@ -591,7 +591,7 @@ void setup_log(struct io_log **log, struct log_params *p,
 		struct io_logs *p;
 
 		p = calloc(1, sizeof(*l->pending));
-		p->max_samples = l->td->o.iodepth;
+		p->max_samples = DEF_LOG_ENTRIES;
 		p->log = calloc(p->max_samples, log_entry_sz(l));
 		l->pending = p;
 	}
