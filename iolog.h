@@ -44,8 +44,6 @@ enum {
 #define DEF_LOG_ENTRIES		1024
 #define MAX_LOG_ENTRIES		(1024 * DEF_LOG_ENTRIES)
 
-#define LOG_QUIESCE_SZ		(64 * 1024 * 1024)
-
 struct io_logs {
 	struct flist_head list;
 	uint64_t nr_samples;
