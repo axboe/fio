@@ -1898,7 +1898,7 @@ static struct io_logs *regrow_log(struct io_log *iolog)
 	int i;
 
 	if (!iolog || iolog->disabled)
-		return NULL;
+		goto disable;
 
 	cur_log = iolog_cur_log(iolog);
 	if (!cur_log) {
@@ -1946,21 +1946,19 @@ static struct io_logs *regrow_log(struct io_log *iolog)
 
 	iolog->pending->nr_samples = 0;
 	return cur_log;
+disable:
+	if (iolog)
+		iolog->disabled = true;
+	return NULL;
 }
 
 void regrow_logs(struct thread_data *td)
 {
-	if (!regrow_log(td->slat_log))
-		td->slat_log->disabled = true;
-	if (!regrow_log(td->clat_log))
-		td->clat_log->disabled = true;
-	if (!regrow_log(td->lat_log))
-		td->lat_log->disabled = true;
-	if (!regrow_log(td->bw_log))
-		td->bw_log->disabled = true;
-	if (!regrow_log(td->iops_log))
-		td->iops_log->disabled = true;
-
+	regrow_log(td->slat_log);
+	regrow_log(td->clat_log);
+	regrow_log(td->lat_log);
+	regrow_log(td->bw_log);
+	regrow_log(td->iops_log);
 	td->flags &= ~TD_F_REGROW_LOGS;
 }
 
