@@ -247,6 +247,11 @@ will be used if no other format specifier is given.
 .RE
 .P
 .TP
+.BI unique_filename \fR=\fPbool
+To avoid collisions between networked clients, fio defaults to prefixing
+any generated filenames (with a directory specified) with the source of
+the client connecting. To disable this behavior, set this option to 0.
+.TP
 .BI lockfile \fR=\fPstr
 Fio defaults to not locking any files before it does IO to them. If a file or
 file descriptor is shared, fio can serialize IO to that file to make the end

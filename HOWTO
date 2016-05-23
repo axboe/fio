@@ -374,6 +374,11 @@ filename_format=str
 		default of $jobname.$jobnum.$filenum will be used if
 		no other format specifier is given.
 
+unique_filename=bool	To avoid collisions between networked clients, fio
+		defaults to prefixing any generated filenames (with a directory
+		specified) with the source of the client connecting. To disable
+		this behavior, set this option to 0.
+
 opendir=str	Tell fio to recursively add any file it can find in this
 		directory and down the file system tree.
 

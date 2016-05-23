@@ -1124,7 +1124,8 @@ static int get_max_name_idx(char *input)
  * Returns the directory at the index, indexes > entires will be
  * assigned via modulo division of the index
  */
-int set_name_idx(char *target, size_t tlen, char *input, int index)
+int set_name_idx(char *target, size_t tlen, char *input, int index,
+		 bool unique_filename)
 {
 	unsigned int cur_idx;
 	int len;
@@ -1136,7 +1137,7 @@ int set_name_idx(char *target, size_t tlen, char *input, int index)
 	for (cur_idx = 0; cur_idx <= index; cur_idx++)
 		fname = get_next_name(&str);
 
-	if (client_sockaddr_str[0]) {
+	if (client_sockaddr_str[0] && unique_filename) {
 		len = snprintf(target, tlen, "%s/%s.", fname,
 				client_sockaddr_str);
 	} else
@@ -1390,11 +1391,22 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "filename_format",
+		.lname	= "Filename Format",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= td_var_offset(filename_format),
 		.prio	= -1, /* must come after "directory" */
 		.help	= "Override default $jobname.$jobnum.$filenum naming",
 		.def	= "$jobname.$jobnum.$filenum",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_FILENAME,
+	},
+	{
+		.name	= "unique_filename",
+		.lname	= "Unique Filename",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(unique_filename),
+		.help	= "For network clients, prefix file with source IP",
+		.def	= "1",
 		.category = FIO_OPT_C_FILE,
 		.group	= FIO_OPT_G_FILENAME,
 	},

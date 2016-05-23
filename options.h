@@ -20,7 +20,7 @@ void del_opt_posval(const char *, const char *);
 struct thread_data;
 void fio_options_free(struct thread_data *);
 char *get_name_idx(char *, int);
-int set_name_idx(char *, size_t, char *, int);
+int set_name_idx(char *, size_t, char *, int, bool);
 
 extern char client_sockaddr_str[];  /* used with --client option */
 

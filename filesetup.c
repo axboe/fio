@@ -1335,7 +1335,8 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 	dprint(FD_FILE, "add file %s\n", fname);
 
 	if (td->o.directory)
-		len = set_name_idx(file_name, PATH_MAX, td->o.directory, numjob);
+		len = set_name_idx(file_name, PATH_MAX, td->o.directory, numjob,
+					td->o.unique_filename);
 
 	sprintf(file_name + len, "%s", fname);
 
