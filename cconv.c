@@ -139,6 +139,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 
 	o->ratecycle = le32_to_cpu(top->ratecycle);
 	o->io_submit_mode = le32_to_cpu(top->io_submit_mode);
+	o->unique_filename = le32_to_cpu(top->unique_filename);
 	o->nr_files = le32_to_cpu(top->nr_files);
 	o->open_files = le32_to_cpu(top->open_files);
 	o->file_lock_mode = le32_to_cpu(top->file_lock_mode);
@@ -333,6 +334,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->ratecycle = cpu_to_le32(o->ratecycle);
 	top->io_submit_mode = cpu_to_le32(o->io_submit_mode);
 	top->nr_files = cpu_to_le32(o->nr_files);
+	top->unique_filename = cpu_to_le32(o->unique_filename);
 	top->open_files = cpu_to_le32(o->open_files);
 	top->file_lock_mode = cpu_to_le32(o->file_lock_mode);
 	top->odirect = cpu_to_le32(o->odirect);
