@@ -1234,6 +1234,8 @@ void option_init(struct fio_option *o)
 {
 	if (o->type == FIO_OPT_DEPRECATED)
 		return;
+	if (o->name && !o->lname)
+		log_err("Option %s: missing long option name\n", o->name);
 	if (o->type == FIO_OPT_BOOL) {
 		o->minval = 0;
 		o->maxval = 1;
