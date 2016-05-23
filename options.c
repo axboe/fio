@@ -1977,6 +1977,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "random_generator",
+		.lname	= "Random Generator",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(random_generator),
 		.help	= "Type of random number generator to use",
@@ -2001,6 +2002,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "random_distribution",
+		.lname	= "Random Distribution",
 		.type	= FIO_OPT_STR,
 		.off1	= td_var_offset(random_distribution),
 		.cb	= str_random_distribution_cb,
@@ -2056,6 +2058,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "allrandrepeat",
+		.lname	= "All Random Repeat",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(allrand_repeatable),
 		.help	= "Use repeatable random numbers for everything",
@@ -2555,6 +2558,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "verifysort_nr",
+		.lname	= "Verify Sort Nr",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(verifysort_nr),
 		.help	= "Pre-load and sort verify blocks for a read workload",
@@ -2676,6 +2680,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 #endif
 	{
 		.name	= "experimental_verify",
+		.lname	= "Experimental Verify",
 		.off1	= td_var_offset(experimental_verify),
 		.type	= FIO_OPT_BOOL,
 		.help	= "Enable experimental verification",
@@ -3090,6 +3095,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "max_latency",
+		.lname	= "Max Latency",
 		.type	= FIO_OPT_INT,
 		.off1	= td_var_offset(max_latency),
 		.help	= "Maximum tolerated IO latency (usec)",
@@ -3184,6 +3190,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "create_only",
+		.lname	= "Create Only",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(create_only),
 		.help	= "Only perform file creation phase",
@@ -3266,6 +3273,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 #ifdef CONFIG_LIBNUMA
 	{
 		.name	= "numa_cpu_nodes",
+		.lname	= "NUMA CPU Nodes",
 		.type	= FIO_OPT_STR,
 		.cb	= str_numa_cpunodes_cb,
 		.off1	= td_var_offset(numa_cpunodes),
@@ -3275,6 +3283,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "numa_mem_policy",
+		.lname	= "NUMA Memory Policy",
 		.type	= FIO_OPT_STR,
 		.cb	= str_numa_mpol_cb,
 		.off1	= td_var_offset(numa_memnodes),
@@ -3365,6 +3374,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "per_job_logs",
+		.lname	= "Per Job Logs",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(per_job_logs),
 		.help	= "Include job number in generated log files or not",
@@ -3695,6 +3705,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "unified_rw_reporting",
+		.lname	= "Unified RW Reporting",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(unified_rw_rep),
 		.help	= "Unify reporting across data direction",
@@ -3748,6 +3759,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "ignore_error",
+		.lname	= "Ignore Error",
 		.type	= FIO_OPT_STR,
 		.cb	= str_ignore_error_cb,
 		.off1	= td_var_offset(ignore_error_nr),
@@ -3758,6 +3770,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "error_dump",
+		.lname	= "Error Dump",
 		.type	= FIO_OPT_BOOL,
 		.off1	= td_var_offset(error_dump),
 		.def	= "0",
