@@ -2023,7 +2023,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  },
 			  { .ival = "normal",
 			    .oval = FIO_RAND_DIST_GAUSS,
-			    .help = "Normal (gaussian) distribution",
+			    .help = "Normal (Gaussian) distribution",
 			  },
 			  { .ival = "zoned",
 			    .oval = FIO_RAND_DIST_ZONED,
