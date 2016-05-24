@@ -89,7 +89,7 @@ static int alloc_mem_shm(struct thread_data *td, unsigned int total_mem)
 					" support huge pages.\n");
 			} else if (errno == ENOMEM) {
 				log_err("fio: no huge pages available, do you"
-					" need to alocate some? See HOWTO.\n");
+					" need to allocate some? See HOWTO.\n");
 			}
 		}
 
