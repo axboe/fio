@@ -81,7 +81,7 @@ int fio_start_gtod_thread(void)
 
 	ret = pthread_detach(gtod_thread);
 	if (ret) {
-		log_err("Can't detatch gtod thread: %s\n", strerror(ret));
+		log_err("Can't detach gtod thread: %s\n", strerror(ret));
 		goto err;
 	}
 
