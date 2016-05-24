@@ -260,7 +260,7 @@ void fio_idle_prof_init(void)
 
 		if ((ret = pthread_detach(ipt->thread))) {
 			/* log error and let the thread spin */
-			log_err("fio: pthread_detatch %s\n", strerror(ret));
+			log_err("fio: pthread_detach %s\n", strerror(ret));
 		}
 	}
 
