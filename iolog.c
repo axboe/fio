@@ -576,6 +576,7 @@ void setup_log(struct io_log **log, struct log_params *p,
 	       const char *filename)
 {
 	struct io_log *l;
+	pthread_mutexattr_t mattr;
 
 	l = scalloc(1, sizeof(*l));
 	INIT_FLIST_HEAD(&l->io_logs);
@@ -604,7 +605,11 @@ void setup_log(struct io_log **log, struct log_params *p,
 	if (l->log_gz && !p->td)
 		l->log_gz = 0;
 	else if (l->log_gz || l->log_gz_store) {
-		pthread_mutex_init(&l->chunk_lock, NULL);
+		pthread_mutexattr_init(&mattr);
+#ifdef FIO_HAVE_PSHARED_MUTEX
+		pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
+#endif
+		pthread_mutex_init(&l->chunk_lock, &mattr);
 		p->td->flags |= TD_F_COMPRESS_LOG;
 	}
 

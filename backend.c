@@ -1429,6 +1429,7 @@ static void *thread_main(void *data)
 	struct thread_options *o = &td->o;
 	struct sk_out *sk_out = fd->sk_out;
 	pthread_condattr_t attr;
+	pthread_mutexattr_t mattr;
 	int clear_state;
 	int ret;
 
@@ -1453,10 +1454,34 @@ static void *thread_main(void *data)
 	INIT_FLIST_HEAD(&td->verify_list);
 	INIT_FLIST_HEAD(&td->trim_list);
 	INIT_FLIST_HEAD(&td->next_rand_list);
-	pthread_mutex_init(&td->io_u_lock, NULL);
 	td->io_hist_tree = RB_ROOT;
 
-	pthread_condattr_init(&attr);
+	ret = pthread_mutexattr_init(&mattr);
+	if (ret) {
+		td_verror(td, ret, "pthread_mutexattr_init");
+		goto err;
+	}
+#ifdef FIO_HAVE_PSHARED_MUTEX
+	ret = pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
+	if (ret) {
+		td_verror(td, ret, "pthread_mutexattr_setpshared");
+		goto err;
+	}
+#endif
+	pthread_mutex_init(&td->io_u_lock, &mattr);
+
+	ret = pthread_condattr_init(&attr);
+	if (ret) {
+		td_verror(td, ret, "pthread_condattr_init");
+		goto err;
+	}
+#ifdef FIO_HAVE_PSHARED_MUTEX
+	ret = pthread_condattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	if (ret) {
+		td_verror(td, ret, "pthread_condattr_setpshared");
+		goto err;
+	}
+#endif
 	pthread_cond_init(&td->verify_cond, &attr);
 	pthread_cond_init(&td->free_cond, &attr);
 

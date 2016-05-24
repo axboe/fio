@@ -142,14 +142,38 @@ int helper_thread_create(struct fio_mutex *startup_mutex, struct sk_out *sk_out)
 {
 	struct helper_data *hd;
 	int ret;
+	pthread_condattr_t cattr;
+	pthread_mutexattr_t mattr;
 
 	hd = smalloc(sizeof(*hd));
 
 	setup_disk_util();
 
 	hd->sk_out = sk_out;
-	pthread_cond_init(&hd->cond, NULL);
-	pthread_mutex_init(&hd->lock, NULL);
+	ret = pthread_mutexattr_init(&mattr);
+	if (ret) {
+		log_err("pthread_mutexattr_init: %s\n", strerror(ret));
+		return 1;
+	}
+	ret = pthread_condattr_init(&cattr);
+	if (ret) {
+		log_err("pthread_condattr_init: %s\n", strerror(ret));
+		return 1;
+	}
+#ifdef FIO_HAVE_PSHARED_MUTEX
+	ret = pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
+	if (ret) {
+		log_err("pthread_mutexattr_setpshared: %s\n", strerror(ret));
+		return 1;
+	}
+	ret = pthread_condattr_setpshared(&cattr, PTHREAD_PROCESS_SHARED);
+	if (ret) {
+		log_err("pthread_mutexattr_setpshared: %s\n", strerror(ret));
+		return 1;
+	}
+#endif
+	pthread_cond_init(&hd->cond, &cattr);
+	pthread_mutex_init(&hd->lock, &mattr);
 	hd->startup_mutex = startup_mutex;
 
 	ret = pthread_create(&hd->thread, NULL, helper_thread_main, hd);
