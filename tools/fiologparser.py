@@ -14,8 +14,7 @@
 # to see per-interval average completion latency.
 
 import argparse
-import numpy
-import scipy
+import math
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -82,7 +81,6 @@ def print_averages(ctx, series):
 # to debug this routine, use
 #   # sort -n -t ',' -k 2 small.log
 # on your input.
-# Sometimes scipy interpolates between two values to get a percentile
 
 def my_extend( vlist, val ):
     vlist.extend(val)
@@ -102,21 +100,16 @@ def print_all_stats(ctx, series):
         for sample_array in sample_arrays:
             samplevalue_arrays.append( 
                 [ sample.value for sample in sample_array ] )
-        #print('samplevalue_arrays len: %d' % len(samplevalue_arrays))
-        #print('samplevalue_arrays elements len: ' + \
-               #str(map( lambda l: len(l), samplevalue_arrays)))
         # collapse list of lists of sample values into list of sample values
         samplevalues = reduce( array_collapser, samplevalue_arrays, [] )
-        #print('samplevalues: ' + str(sorted(samplevalues)))
         # compute all stats and print them
-        myarray = scipy.fromiter(samplevalues, float)
-        mymin = scipy.amin(myarray)
-        myavg = scipy.average(myarray)
-        mymedian = scipy.median(myarray)
-        my90th = scipy.percentile(myarray, 90)
-        my95th = scipy.percentile(myarray, 95)
-        my99th = scipy.percentile(myarray, 99)
-        mymax = scipy.amax(myarray)
+        mymin = min(samplevalues)
+        myavg = sum(samplevalues) / float(len(samplevalues))
+        mymedian = median(samplevalues)
+        my90th = percentile(samplevalues, 0.90) 
+        my95th = percentile(samplevalues, 0.95)
+        my99th = percentile(samplevalues, 0.99)
+        mymax = max(samplevalues)
         print( '%f, %d, %f, %f, %f, %f, %f, %f, %f' % (
             start, len(samplevalues), 
             mymin, myavg, mymedian, my90th, my95th, my99th, mymax))
@@ -125,6 +118,18 @@ def print_all_stats(ctx, series):
         start += ctx.interval
         end += ctx.interval
 
+def median(values):
+    s=sorted(values)
+    return float(s[(len(s)-1)/2]+s[(len(s)/2)])/2
+
+def percentile(values, p):
+    s = sorted(values)
+    k = (len(s)-1) * p
+    f = math.floor(k)
+    c = math.ceil(k)
+    if f == c:
+        return s[int(k)]
+    return (s[int(f)] * (c-k)) + (s[int(c)] * (k-f))
 
 def print_default(ctx, series):
     ftime = get_ftime(series)
