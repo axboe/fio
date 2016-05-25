@@ -524,6 +524,9 @@ sync_done:
 				break;
 		}
 
+		if (td->flags & TD_F_REGROW_LOGS)
+			regrow_logs(td);
+
 		/*
 		 * when doing I/O (not when verifying),
 		 * check for any errors that are to be ignored
