@@ -40,4 +40,8 @@ extern void fio_rwlock_unlock(struct fio_rwlock *);
 extern struct fio_rwlock *fio_rwlock_init(void);
 extern void fio_rwlock_remove(struct fio_rwlock *);
 
+extern int mutex_init_pshared(pthread_mutex_t *);
+extern int cond_init_pshared(pthread_cond_t *);
+extern int mutex_cond_init_pshared(pthread_mutex_t *, pthread_cond_t *);
+
 #endif

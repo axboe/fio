@@ -30,16 +30,39 @@ void fio_mutex_remove(struct fio_mutex *mutex)
 	munmap((void *) mutex, sizeof(*mutex));
 }
 
-int __fio_mutex_init(struct fio_mutex *mutex, int value)
+int cond_init_pshared(pthread_cond_t *cond)
 {
-	pthread_mutexattr_t attr;
-	pthread_condattr_t cond;
+	pthread_condattr_t cattr;
 	int ret;
 
-	mutex->value = value;
-	mutex->magic = FIO_MUTEX_MAGIC;
+	ret = pthread_condattr_init(&cattr);
+	if (ret) {
+		log_err("pthread_condattr_init: %s\n", strerror(ret));
+		return ret;
+	}
 
-	ret = pthread_mutexattr_init(&attr);
+#ifdef FIO_HAVE_PSHARED_MUTEX
+	ret = pthread_condattr_setpshared(&cattr, PTHREAD_PROCESS_SHARED);
+	if (ret) {
+		log_err("pthread_condattr_setpshared: %s\n", strerror(ret));
+		return ret;
+	}
+#endif
+	ret = pthread_cond_init(cond, &cattr);
+	if (ret) {
+		log_err("pthread_cond_init: %s\n", strerror(ret));
+		return ret;
+	}
+
+	return 0;
+}
+
+int mutex_init_pshared(pthread_mutex_t *mutex)
+{
+	pthread_mutexattr_t mattr;
+	int ret;
+
+	ret = pthread_mutexattr_init(&mattr);
 	if (ret) {
 		log_err("pthread_mutexattr_init: %s\n", strerror(ret));
 		return ret;
@@ -49,27 +72,47 @@ int __fio_mutex_init(struct fio_mutex *mutex, int value)
 	 * Not all platforms support process shared mutexes (FreeBSD)
 	 */
 #ifdef FIO_HAVE_PSHARED_MUTEX
-	ret = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	ret = pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
 	if (ret) {
 		log_err("pthread_mutexattr_setpshared: %s\n", strerror(ret));
 		return ret;
 	}
 #endif
-
-	pthread_condattr_init(&cond);
-#ifdef FIO_HAVE_PSHARED_MUTEX
-	pthread_condattr_setpshared(&cond, PTHREAD_PROCESS_SHARED);
-#endif
-	pthread_cond_init(&mutex->cond, &cond);
-
-	ret = pthread_mutex_init(&mutex->lock, &attr);
+	ret = pthread_mutex_init(mutex, &mattr);
 	if (ret) {
 		log_err("pthread_mutex_init: %s\n", strerror(ret));
 		return ret;
 	}
 
-	pthread_condattr_destroy(&cond);
-	pthread_mutexattr_destroy(&attr);
+	return 0;
+}
+
+int mutex_cond_init_pshared(pthread_mutex_t *mutex, pthread_cond_t *cond)
+{
+	int ret;
+
+	ret = mutex_init_pshared(mutex);
+	if (ret)
+		return ret;
+
+	ret = cond_init_pshared(cond);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+int __fio_mutex_init(struct fio_mutex *mutex, int value)
+{
+	int ret;
+
+	mutex->value = value;
+	mutex->magic = FIO_MUTEX_MAGIC;
+
+	ret = mutex_cond_init_pshared(&mutex->lock, &mutex->cond);
+	if (ret)
+		return ret;
+
 	return 0;
 }
 

@@ -276,26 +276,13 @@ static int start_worker(struct workqueue *wq, unsigned int index,
 {
 	struct submit_worker *sw = &wq->workers[index];
 	int ret;
-	pthread_condattr_t cattr;
-	pthread_mutexattr_t mattr;
 
 	INIT_FLIST_HEAD(&sw->work_list);
-	ret = pthread_condattr_init(&cattr);
+
+	ret = mutex_cond_init_pshared(&sw->lock, &sw->cond);
 	if (ret)
 		return ret;
-	ret = pthread_mutexattr_init(&mattr);
-	if (ret)
-		return ret;
-#ifdef FIO_HAVE_PSHARED_MUTEX
-	ret = pthread_condattr_setpshared(&cattr, PTHREAD_PROCESS_SHARED);
-	if (ret)
-		return ret;
-	ret = pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
-	if (ret)
-		return ret;
-#endif
-	pthread_cond_init(&sw->cond, &cattr);
-	pthread_mutex_init(&sw->lock, &mattr);
+
 	sw->wq = wq;
 	sw->index = index;
 	sw->sk_out = sk_out;
@@ -325,8 +312,6 @@ int workqueue_init(struct thread_data *td, struct workqueue *wq,
 	unsigned int running;
 	int i, error;
 	int ret;
-	pthread_condattr_t cattr;
-	pthread_mutexattr_t mattr;
 
 	wq->max_workers = max_workers;
 	wq->td = td;
@@ -334,31 +319,12 @@ int workqueue_init(struct thread_data *td, struct workqueue *wq,
 	wq->work_seq = 0;
 	wq->next_free_worker = 0;
 
-	ret = pthread_condattr_init(&cattr);
-	if (ret) {
-		td_verror(td, ret, "pthread_condattr_init");
+	ret = mutex_cond_init_pshared(&wq->flush_lock, &wq->flush_cond);
+	if (ret)
 		goto err;
-	}
-	ret = pthread_mutexattr_init(&mattr);
-	if (ret) {
-		td_verror(td, ret, "pthread_mutexattr_init");
+	ret = mutex_init_pshared(&wq->stat_lock);
+	if (ret)
 		goto err;
-	}
-#ifdef FIO_HAVE_PSHARED_MUTEX
-	ret = pthread_condattr_setpshared(&cattr, PTHREAD_PROCESS_SHARED);
-	if (ret) {
-		td_verror(td, ret, "pthread_condattr_setpshared");
-		goto err;
-	}
-	ret = pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
-	if (ret) {
-		td_verror(td, ret, "pthread_mutexattr_setpshared");
-		goto err;
-	}
-#endif
-	pthread_cond_init(&wq->flush_cond, &cattr);
-	pthread_mutex_init(&wq->flush_lock, &mattr);
-	pthread_mutex_init(&wq->stat_lock, &mattr);
 
 	wq->workers = smalloc(wq->max_workers * sizeof(struct submit_worker));
 
