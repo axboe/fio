@@ -44,15 +44,15 @@
 #define GOLDEN_RATIO_32 0x61C88647
 #define GOLDEN_RATIO_64 0x61C8864680B583EBull
 
-static inline unsigned long __hash_long(unsigned long val)
+static inline unsigned long __hash_long(uint64_t val)
 {
-	unsigned long hash = val;
+	uint64_t hash = val;
 
 #if BITS_PER_LONG == 64
 	hash *= GOLDEN_RATIO_64;
 #else
 	/*  Sigh, gcc can't optimise this alone like it does for 32 bits. */
-	unsigned long n = hash;
+	uint64_t n = hash;
 	n <<= 18;
 	hash -= n;
 	n <<= 33;
