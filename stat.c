@@ -1636,16 +1636,21 @@ void __show_run_stats(void)
 	if (output_format & FIO_OUTPUT_JSON) {
 		struct thread_data *global;
 		char time_buf[32];
-		time_t time_p;
+		struct timeval now;
+		unsigned long long ms_since_epoch;
 
-		time(&time_p);
-		os_ctime_r((const time_t *) &time_p, time_buf,
+		gettimeofday(&now, NULL);
+		ms_since_epoch = (unsigned long long)(now.tv_sec) * 1000 +
+		                 (unsigned long long)(now.tv_usec) / 1000;
+
+		os_ctime_r((const time_t *) &now.tv_sec, time_buf,
 				sizeof(time_buf));
 		time_buf[strlen(time_buf) - 1] = '\0';
 
 		root = json_create_object();
 		json_object_add_value_string(root, "fio version", fio_version_string);
-		json_object_add_value_int(root, "timestamp", time_p);
+		json_object_add_value_int(root, "timestamp", now.tv_sec);
+		json_object_add_value_int(root, "timestamp_ms", ms_since_epoch);
 		json_object_add_value_string(root, "time", time_buf);
 		global = get_global_options();
 		json_add_job_opts(root, "global options", &global->opt_list, false);
