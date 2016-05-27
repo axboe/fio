@@ -1656,7 +1656,7 @@ void fio_server_send_du(void)
 static int __fio_append_iolog_gz(struct sk_entry *first, struct io_log *log,
 				 struct io_logs *cur_log, z_stream *stream)
 {
-	struct sk_entry *entry;
+	unsigned int this_len;
 	void *out_pdu;
 	int ret;
 
@@ -1664,7 +1664,7 @@ static int __fio_append_iolog_gz(struct sk_entry *first, struct io_log *log,
 	stream->avail_in = cur_log->nr_samples * log_entry_sz(log);
 
 	do {
-		unsigned int this_len;
+		struct sk_entry *entry;
 
 		/*
 		 * Dirty - since the log is potentially huge, compress it into
@@ -1675,7 +1675,7 @@ static int __fio_append_iolog_gz(struct sk_entry *first, struct io_log *log,
 
 		stream->avail_out = FIO_SERVER_MAX_FRAGMENT_PDU;
 		stream->next_out = out_pdu;
-		ret = deflate(stream, Z_FINISH);
+		ret = deflate(stream, Z_BLOCK);
 		/* may be Z_OK, or Z_STREAM_END */
 		if (ret < 0) {
 			free(out_pdu);
@@ -1716,8 +1716,36 @@ static int fio_append_iolog_gz(struct sk_entry *first, struct io_log *log)
 			break;
 	}
 
-	deflateEnd(&stream);
-	return ret;
+	ret = deflate(&stream, Z_FINISH);
+
+	while (ret != Z_STREAM_END) {
+		struct sk_entry *entry;
+		unsigned int this_len;
+		void *out_pdu;
+
+		out_pdu = malloc(FIO_SERVER_MAX_FRAGMENT_PDU);
+		stream.avail_out = FIO_SERVER_MAX_FRAGMENT_PDU;
+		stream.next_out = out_pdu;
+
+		ret = deflate(&stream, Z_FINISH);
+		/* may be Z_OK, or Z_STREAM_END */
+		if (ret < 0) {
+			free(out_pdu);
+			break;
+		}
+
+		this_len = FIO_SERVER_MAX_FRAGMENT_PDU - stream.avail_out;
+
+		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, out_pdu, this_len,
+					 NULL, SK_F_VEC | SK_F_INLINE | SK_F_FREE);
+		flist_add_tail(&entry->list, &first->next);
+	} while (ret != Z_STREAM_END);
+
+	ret = deflateEnd(&stream);
+	if (ret == Z_OK)
+		return 0;
+
+	return 1;
 }
 #else
 static int fio_append_iolog_gz(struct sk_entry *first, struct io_log *log)
