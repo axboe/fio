@@ -1678,7 +1678,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Number of IO buffers to submit in one go",
 		.parent	= "iodepth",
 		.hide	= 1,
-		.minval	= 1,
 		.interval = 1,
 		.def	= "1",
 		.category = FIO_OPT_C_IO,
