@@ -1548,7 +1548,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Use preadv/pwritev",
 			  },
 #endif
-#ifdef CONFIG_PWRITEV2
+#ifdef FIO_HAVE_PWRITEV2
 			  { .ival = "pvsync2",
 			    .help = "Use preadv2/pwritev2",
 			  },

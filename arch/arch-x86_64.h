@@ -36,6 +36,14 @@ static inline void do_cpuid(unsigned int *eax, unsigned int *ebx,
 #define __NR_shmdt		 67
 #endif
 
+#ifndef __NR_preadv2
+#define __NR_preadv2		327
+#endif
+#ifndef __NR_pwritev2
+#define __NR_pwritev2		328
+#endif
+
+
 #define	FIO_HUGE_PAGE		2097152
 
 #define nop		__asm__ __volatile__("rep;nop": : :"memory")

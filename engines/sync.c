@@ -32,7 +32,7 @@ struct syncio_data {
 	enum fio_ddir last_ddir;
 };
 
-#ifdef CONFIG_PWRITEV2
+#ifdef FIO_HAVE_PWRITEV2
 struct psyncv2_options {
 	void *pad;
 	unsigned int hipri;
@@ -121,7 +121,7 @@ static int fio_pvsyncio_queue(struct thread_data *td, struct io_u *io_u)
 }
 #endif
 
-#ifdef CONFIG_PWRITEV2
+#ifdef FIO_HAVE_PWRITEV2
 static int fio_pvsyncio2_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct syncio_data *sd = td->io_ops->data;
@@ -429,7 +429,7 @@ static struct ioengine_ops ioengine_pvrw = {
 };
 #endif
 
-#ifdef CONFIG_PWRITEV2
+#ifdef FIO_HAVE_PWRITEV2
 static struct ioengine_ops ioengine_pvrw2 = {
 	.name		= "pvsync2",
 	.version	= FIO_IOOPS_VERSION,
@@ -453,7 +453,7 @@ static void fio_init fio_syncio_register(void)
 #ifdef CONFIG_PWRITEV
 	register_ioengine(&ioengine_pvrw);
 #endif
-#ifdef CONFIG_PWRITEV2
+#ifdef FIO_HAVE_PWRITEV2
 	register_ioengine(&ioengine_pvrw2);
 #endif
 }
@@ -466,7 +466,7 @@ static void fio_exit fio_syncio_unregister(void)
 #ifdef CONFIG_PWRITEV
 	unregister_ioengine(&ioengine_pvrw);
 #endif
-#ifdef CONFIG_PWRITEV2
+#ifdef FIO_HAVE_PWRITEV2
 	unregister_ioengine(&ioengine_pvrw2);
 #endif
 }
