@@ -18,6 +18,13 @@
 #define __NR_sys_vmsplice	343
 #endif
 
+#ifndef __NR_preadv2
+#define __NR_preadv2		392
+#endif
+#ifndef __NR_pwritev2
+#define __NR_pwritev2		393
+#endif
+
 #if defined (__ARM_ARCH_4__) || defined (__ARM_ARCH_4T__) \
 	|| defined (__ARM_ARCH_5__) || defined (__ARM_ARCH_5T__) || defined (__ARM_ARCH_5E__)\
 	|| defined (__ARM_ARCH_5TE__) || defined (__ARM_ARCH_5TEJ__) \

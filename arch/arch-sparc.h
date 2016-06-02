@@ -18,6 +18,13 @@
 #define __NR_sys_vmsplice	25
 #endif
 
+#ifndef __NR_preadv2
+#define __NR_preadv2		358
+#endif
+#ifndef __NR_pwritev2
+#define __NR_pwritev2		359
+#endif
+
 #define nop	do { } while (0)
 
 #define read_barrier()	__asm__ __volatile__ ("" : : : "memory")

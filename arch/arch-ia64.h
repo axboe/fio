@@ -18,6 +18,13 @@
 #define __NR_sys_vmsplice	1302
 #endif
 
+#ifndef __NR_preadv2
+#define __NR_preadv2		1348
+#endif
+#ifndef __NR_pwritev2
+#define __NR_pwritev2		1349
+#endif
+
 #define nop		asm volatile ("hint @pause" ::: "memory");
 #define read_barrier()	asm volatile ("mf" ::: "memory")
 #define write_barrier()	asm volatile ("mf" ::: "memory")

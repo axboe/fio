@@ -18,6 +18,13 @@
 #define __NR_sys_vmsplice	309
 #endif
 
+#ifndef __NR_preadv2
+#define __NR_preadv2		376
+#endif
+#ifndef __NR_pwritev2
+#define __NR_pwritev2		377
+#endif
+
 #define nop		asm volatile("nop" : : : "memory")
 #define read_barrier()	asm volatile("bcr 15,0" : : : "memory")
 #define write_barrier()	asm volatile("bcr 15,0" : : : "memory")
