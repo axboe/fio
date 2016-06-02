@@ -633,9 +633,6 @@ File is memory mapped with \fBmmap\fR\|(2) and data copied using
 \fBsplice\fR\|(2) is used to transfer the data and \fBvmsplice\fR\|(2) to
 transfer data from user-space to the kernel.
 .TP
-.B syslet-rw
-Use the syslet system calls to make regular read/write asynchronous.
-.TP
 .B sg
 SCSI generic sg v3 I/O. May be either synchronous using the SG_IO ioctl, or if
 the target is an sg character device, we use \fBread\fR\|(2) and

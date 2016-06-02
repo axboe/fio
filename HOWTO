@@ -53,8 +53,8 @@ bottom, it contains the following basic parameters:
 
 	IO engine	How do we issue io? We could be memory mapping the
 			file, we could be using regular read/write, we
-			could be using splice, async io, syslet, or even
-			SG (SCSI generic sg).
+			could be using splice, async io, or even SG
+			(SCSI generic sg).
 
 	IO depth	If the io engine is async, how large a queuing
 			depth do we want to maintain?
@@ -706,7 +706,9 @@ ioengine=str	Defines how the job issues io to the file. The following
 
 			vsync	Basic readv(2) or writev(2) IO.
 
-			psyncv	Basic preadv(2) or pwritev(2) IO.
+			pvsync	Basic preadv(2) or pwritev(2) IO.
+
+			psync2	Basic preadv2(2) or pwritev2(2) IO.
 
 			libaio	Linux native asynchronous io. Note that Linux
 				may only support queued behaviour with
@@ -725,9 +727,6 @@ ioengine=str	Defines how the job issues io to the file. The following
 			splice	splice(2) is used to transfer the data and
 				vmsplice(2) to transfer data from user
 				space to the kernel.
-
-			syslet-rw Use the syslet system calls to make
-				regular read/write async.
 
 			sg	SCSI generic sg v3 io. May either be
 				synchronous using the SG_IO ioctl, or if
