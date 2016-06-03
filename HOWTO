@@ -708,7 +708,7 @@ ioengine=str	Defines how the job issues io to the file. The following
 
 			pvsync	Basic preadv(2) or pwritev(2) IO.
 
-			psync2	Basic preadv2(2) or pwritev2(2) IO.
+			pvsync2	Basic preadv2(2) or pwritev2(2) IO.
 
 			libaio	Linux native asynchronous io. Note that Linux
 				may only support queued behaviour with
