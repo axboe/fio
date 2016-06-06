@@ -2260,9 +2260,6 @@ static int add_bw_samples(struct thread_data *td, struct timeval *t)
 	unsigned long spent, rate;
 	enum fio_ddir ddir;
 
-	if (per_unit_log(td->bw_log))
-		return 0;
-
 	spent = mtime_since(&td->bw_sample_time, t);
 	if (spent < td->o.bw_avg_time &&
 	    td->o.bw_avg_time - spent >= 10)
@@ -2330,9 +2327,6 @@ static int add_iops_samples(struct thread_data *td, struct timeval *t)
 	struct thread_stat *ts = &td->ts;
 	unsigned long spent, iops;
 	enum fio_ddir ddir;
-
-	if (per_unit_log(td->iops_log))
-		return 0;
 
 	spent = mtime_since(&td->iops_sample_time, t);
 	if (spent < td->o.iops_avg_time &&
