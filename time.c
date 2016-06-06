@@ -84,7 +84,7 @@ uint64_t utime_since_genesis(void)
 	return utime_since_now(&genesis);
 }
 
-int in_ramp_time(struct thread_data *td)
+bool in_ramp_time(struct thread_data *td)
 {
 	return td->o.ramp_time && !td->ramp_time_over;
 }
@@ -101,12 +101,12 @@ static void parent_update_ramp(struct thread_data *td)
 	td_set_runstate(parent, TD_RAMP);
 }
 
-int ramp_time_over(struct thread_data *td)
+bool ramp_time_over(struct thread_data *td)
 {
 	struct timeval tv;
 
 	if (!td->o.ramp_time || td->ramp_time_over)
-		return 1;
+		return true;
 
 	fio_gettime(&tv, NULL);
 	if (utime_since(&td->epoch, &tv) >= td->o.ramp_time) {
@@ -114,10 +114,10 @@ int ramp_time_over(struct thread_data *td)
 		reset_all_stats(td);
 		td_set_runstate(td, TD_RAMP);
 		parent_update_ramp(td);
-		return 1;
+		return true;
 	}
 
-	return 0;
+	return false;
 }
 
 void fio_time_init(void)

@@ -2393,7 +2393,7 @@ int calc_log_samples(void)
 	fio_gettime(&now, NULL);
 
 	for_each_td(td, i) {
-		if (!ramp_time_over(td) ||
+		if (!in_ramp_time(td) ||
 		    !(td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING)) {
 			next = min(td->o.iops_avg_time, td->o.bw_avg_time);
 			continue;
