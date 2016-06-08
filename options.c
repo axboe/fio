@@ -2161,7 +2161,14 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  },
 		},
 	},
-#endif	/* CONFIG_POSIX_FALLOCATE */
+#else	/* CONFIG_POSIX_FALLOCATE */
+	{
+		.name	= "fallocate",
+		.lname	= "Fallocate",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support fallocate",
+	},
+#endif /* CONFIG_POSIX_FALLOCATE */
 	{
 		.name	= "fadvise_hint",
 		.lname	= "Fadvise hint",
@@ -2181,6 +2188,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Use fadvise() to set stream ID",
 		.category = FIO_OPT_C_FILE,
 		.group	= FIO_OPT_G_INVALID,
+	},
+#else
+		.name	= "fadvise_stream",
+		.lname	= "Fadvise stream",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support fadvise stream ID",
 	},
 #endif
 	{
@@ -2244,6 +2257,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Use sync_file_range()",
 		.category = FIO_OPT_C_FILE,
 		.group	= FIO_OPT_G_INVALID,
+	},
+#else
+		.name	= "sync_file_range",
+		.lname	= "Sync file range",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support sync_file_range",
 	},
 #endif
 	{
@@ -2676,6 +2695,13 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_VERIFY,
 	},
+#else
+	{
+		.name	= "verify_async_cpus",
+		.lname	= "Async verify CPUs",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	"Your platform does not support CPU affinities",
+	},
 #endif
 	{
 		.name	= "experimental_verify",
@@ -2759,6 +2785,31 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.interval = 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_TRIM,
+	},
+#else
+	{
+		.name	= "trim_percentage",
+		.lname	= "Trim percentage",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Fio does not support TRIM on your platform",
+	},
+	{
+		.name	= "trim_verify_zero",
+		.lname	= "Verify trim zero",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Fio does not support TRIM on your platform",
+	},
+	{
+		.name	= "trim_backlog",
+		.lname	= "Trim backlog",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Fio does not support TRIM on your platform",
+	},
+	{
+		.name	= "trim_backlog_batch",
+		.lname	= "Trim backlog batch",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Fio does not support TRIM on your platform",
 	},
 #endif
 	{
@@ -2851,6 +2902,13 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Use this IO scheduler on the backing device",
 		.category = FIO_OPT_C_FILE,
 		.group	= FIO_OPT_G_INVALID,
+	},
+#else
+	{
+		.name	= "ioscheduler",
+		.lname	= "I/O scheduler",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support IO scheduler switching",
 	},
 #endif
 	{
@@ -2969,6 +3027,19 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.interval = 1,
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_CRED,
+	},
+#else
+	{
+		.name	= "prio",
+		.lname	= "I/O nice priority",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support IO priorities",
+	},
+	{
+		.name	= "prioclass",
+		.lname	= "I/O nice priority class",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support IO priorities",
 	},
 #endif
 	{
@@ -3268,6 +3339,25 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_CRED,
 	},
+#else
+	{
+		.name	= "cpumask",
+		.lname	= "CPU mask",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support CPU affinities",
+	},
+	{
+		.name	= "cpus_allowed",
+		.lname	= "CPUs allowed",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support CPU affinities",
+	},
+	{
+		.name	= "cpus_allowed_policy",
+		.lname	= "CPUs allowed distribution policy",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support CPU affinities",
+	},
 #endif
 #ifdef CONFIG_LIBNUMA
 	{
@@ -3289,6 +3379,19 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "NUMA memory policy setup",
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_INVALID,
+	},
+#else
+	{
+		.name	= "numa_cpu_nodes",
+		.lname	= "NUMA CPU Nodes",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Build fio with libnuma-dev(el) to enable this option",
+	},
+	{
+		.name	= "numa_mem_policy",
+		.lname	= "NUMA Memory Policy",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Build fio with libnuma-dev(el) to enable this option",
 	},
 #endif
 	{
@@ -3462,6 +3565,13 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
 	},
+#else
+	{
+		.name	= "log_compression_cpus",
+		.lname	= "Log Compression CPUs",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support CPU affinities",
+	},
 #endif
 	{
 		.name	= "log_store_compressed",
@@ -3471,6 +3581,19 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.help	= "Store logs in a compressed format",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
+	},
+#else
+	{
+		.name	= "log_compression",
+		.lname	= "Log compression",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Install libz-dev(el) to get compression support",
+	},
+	{
+		.name	= "log_store_compressed",
+		.lname	= "Log store compressed",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Install libz-dev(el) to get compression support",
 	},
 #endif
 	{
@@ -3631,6 +3754,13 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "1",
 		.category = FIO_OPT_C_STAT,
 		.group	= FIO_OPT_G_INVALID,
+	},
+#else
+	{
+		.name	= "disk_util",
+		.lname	= "Disk utilization",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support disk utilization",
 	},
 #endif
 	{
