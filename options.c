@@ -4277,7 +4277,8 @@ static void show_closest_option(const char *opt)
 		i++;
 	}
 
-	if (best_option != -1 && string_distance_ok(name, best_distance))
+	if (best_option != -1 && string_distance_ok(name, best_distance) &&
+	    fio_options[best_option].type != FIO_OPT_UNSUPPORTED)
 		log_err("Did you mean %s?\n", fio_options[best_option].name);
 
 	free(name);

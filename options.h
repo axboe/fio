@@ -47,19 +47,8 @@ static inline bool o_match(struct fio_option *o, const char *opt)
 	return false;
 }
 
-static inline struct fio_option *find_option(struct fio_option *options,
-					     const char *opt)
-{
-	struct fio_option *o;
-
-	for (o = &options[0]; o->name; o++)
-		if (o_match(o, opt))
-			return o;
-
-	return NULL;
-}
-
-extern struct fio_option *fio_option_find(const char *name);
+extern struct fio_option *find_option(struct fio_option *, const char *);
+extern struct fio_option *fio_option_find(const char *);
 extern unsigned int fio_get_kb_base(void *);
 
 #endif

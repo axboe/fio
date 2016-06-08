@@ -20,6 +20,7 @@ enum fio_opt_type {
 	FIO_OPT_FLOAT_LIST,
 	FIO_OPT_STR_SET,
 	FIO_OPT_DEPRECATED,
+	FIO_OPT_UNSUPPORTED,
 };
 
 /*

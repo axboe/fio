@@ -906,6 +906,25 @@ static int handle_option(struct fio_option *o, const char *__ptr, void *data)
 	return ret;
 }
 
+struct fio_option *find_option(struct fio_option *options, const char *opt)
+{
+	struct fio_option *o;
+
+	for (o = &options[0]; o->name; o++) {
+		if (!o_match(o, opt))
+			continue;
+		if (o->type == FIO_OPT_UNSUPPORTED) {
+			log_err("Option <%s>: %s\n", o->name, o->help);
+			continue;
+		}
+
+		return o;
+	}
+
+	return NULL;
+}
+
+
 static struct fio_option *get_option(char *opt,
 				     struct fio_option *options, char **post)
 {
@@ -1232,7 +1251,7 @@ void fill_default_options(void *data, struct fio_option *options)
 
 void option_init(struct fio_option *o)
 {
-	if (o->type == FIO_OPT_DEPRECATED)
+	if (o->type == FIO_OPT_DEPRECATED || o->type == FIO_OPT_UNSUPPORTED)
 		return;
 	if (o->name && !o->lname)
 		log_err("Option %s: missing long option name\n", o->name);
