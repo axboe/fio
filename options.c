@@ -2190,6 +2190,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 #else
+	{
 		.name	= "fadvise_stream",
 		.lname	= "Fadvise stream",
 		.type	= FIO_OPT_UNSUPPORTED,
@@ -2259,6 +2260,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 #else
+	{
 		.name	= "sync_file_range",
 		.lname	= "Sync file range",
 		.type	= FIO_OPT_UNSUPPORTED,
@@ -2700,7 +2702,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "verify_async_cpus",
 		.lname	= "Async verify CPUs",
 		.type	= FIO_OPT_UNSUPPORTED,
-		.help	"Your platform does not support CPU affinities",
+		.help	= "Your platform does not support CPU affinities",
 	},
 #endif
 	{
