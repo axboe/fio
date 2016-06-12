@@ -645,6 +645,7 @@ void free_log(struct io_log *log)
 		cur_log = flist_first_entry(&log->io_logs, struct io_logs, list);
 		flist_del_init(&cur_log->list);
 		free(cur_log->log);
+		sfree(cur_log);
 	}
 
 	if (log->pending) {
@@ -1227,9 +1228,7 @@ static int iolog_flush(struct io_log *log)
 		data->samples = cur_log->log;
 		data->nr_samples = cur_log->nr_samples;
 
-		cur_log->nr_samples = 0;
-		cur_log->max_samples = 0;
-		cur_log->log = NULL;
+		sfree(cur_log);
 
 		gz_work(data);
 	}
