@@ -988,6 +988,7 @@ void flush_log(struct io_log *log, int do_append)
 		cur_log = flist_first_entry(&log->io_logs, struct io_logs, list);
 		flist_del_init(&cur_log->list);
 		flush_samples(f, cur_log->log, cur_log->nr_samples * log_entry_sz(log));
+		sfree(cur_log);
 	}
 
 	fclose(f);

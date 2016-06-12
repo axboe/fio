@@ -16,6 +16,7 @@
 #include "lib/pow2.h"
 #include "lib/output_buffer.h"
 #include "helper_thread.h"
+#include "smalloc.h"
 
 struct fio_mutex *stat_mutex;
 
@@ -1877,7 +1878,7 @@ static struct io_logs *get_new_log(struct io_log *iolog)
 
 	new_size = new_samples * log_entry_sz(iolog);
 
-	cur_log = malloc(sizeof(*cur_log));
+	cur_log = smalloc(sizeof(*cur_log));
 	if (cur_log) {
 		INIT_FLIST_HEAD(&cur_log->list);
 		cur_log->log = malloc(new_size);
@@ -1888,7 +1889,7 @@ static struct io_logs *get_new_log(struct io_log *iolog)
 			iolog->cur_log_max = new_samples;
 			return cur_log;
 		}
-		free(cur_log);
+		sfree(cur_log);
 	}
 
 	return NULL;
