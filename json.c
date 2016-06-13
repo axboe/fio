@@ -347,7 +347,7 @@ static void json_print_value(struct json_value *value, struct buf_output *out)
 		log_buf(out, "%lld", value->integer_number);
 		break;
 	case JSON_TYPE_FLOAT:
-		log_buf(out, "%.2f", value->float_number);
+		log_buf(out, "%f", value->float_number);
 		break;
 	case JSON_TYPE_OBJECT:
 		json_print_object(value->object, out);
