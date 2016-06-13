@@ -1983,11 +1983,14 @@ static struct io_logs *get_cur_log(struct io_log *iolog)
 		return cur_log;
 
 	/*
-	 * Out of space. If we're in IO offload mode, add a new log chunk
-	 * inline. If we're doing inline submissions, flag 'td' as needing
-	 * a log regrow and we'll take care of it on the submission side.
+	 * Out of space. If we're in IO offload mode, or we're not doing
+	 * per unit logging (hence logging happens outside of the IO thread
+	 * as well), add a new log chunk inline. If we're doing inline
+	 * submissions, flag 'td' as needing a log regrow and we'll take
+	 * care of it on the submission side.
 	 */
-	if (iolog->td->o.io_submit_mode == IO_MODE_OFFLOAD)
+	if (iolog->td->o.io_submit_mode == IO_MODE_OFFLOAD ||
+	    !per_unit_log(iolog))
 		return regrow_log(iolog);
 
 	iolog->td->flags |= TD_F_REGROW_LOGS;
