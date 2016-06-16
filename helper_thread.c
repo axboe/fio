@@ -110,12 +110,8 @@ static void *helper_thread_main(void *data)
 			msec_to_next_event = DISK_UTIL_MSEC;
 			if (since_du >= DISK_UTIL_MSEC)
 				msec_to_next_event -= (since_du - DISK_UTIL_MSEC);
-		} else {
-			if (since_du >= DISK_UTIL_MSEC)
-				msec_to_next_event = DISK_UTIL_MSEC - (DISK_UTIL_MSEC - since_du);
-			else
-				msec_to_next_event = DISK_UTIL_MSEC;
-		}
+		} else
+			msec_to_next_event = DISK_UTIL_MSEC - since_du;
 
 		if (hd->do_stat) {
 			hd->do_stat = 0;
