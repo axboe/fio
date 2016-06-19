@@ -1256,6 +1256,9 @@ ss_ramp=time	Allow the job to run for the specified duration before
 		beginning data collection for checking the steady state job
 		termination criterion. The default is 0.
 
+invalidate=bool	Invalidate the buffer/page cache parts for this file prior
+		to starting io. Defaults to true.
+
 sync=bool	Use sync io for buffered writes. For the majority of the
 		io engines, this means using O_SYNC.
 

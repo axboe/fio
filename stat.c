@@ -1255,7 +1255,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		}
 	}
 
-	/* s}teady state detection; move this behind json+? */
+	/* steady state detection; move this behind json+? */
 	if (ts->ss) {
 		struct json_array *cache;
 		struct steadystate_data *ss = ts->ss;
