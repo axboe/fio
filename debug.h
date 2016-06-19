@@ -21,6 +21,7 @@ enum {
 	FD_NET,
 	FD_RATE,
 	FD_COMPRESS,
+	FD_STEADYSTATE,
 	FD_DEBUG_MAX,
 };
 

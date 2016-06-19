@@ -123,6 +123,40 @@ struct zone_split_index {
 };
 
 /*
+ * For steady state detection
+ */
+struct steadystate_data {
+	double limit;
+	unsigned long long dur;
+	unsigned long long ramp_time;
+	bool (*evaluate)(unsigned long, unsigned long, struct thread_data *);
+	bool check_iops;
+	bool check_slope;
+	bool pct;
+
+	int attained;
+	int last_in_group;
+	int ramp_time_over;
+
+	unsigned int head;
+	unsigned int tail;
+	unsigned long *cache;
+
+	double criterion;
+
+	unsigned long long sum_y;
+	unsigned long long sum_x;
+	unsigned long long sum_x_sq;
+	unsigned long long sum_xy;
+	unsigned long long oldest_y;
+
+	struct timeval prev_time;
+	unsigned long long prev_iops;
+	unsigned long long prev_bytes;
+};
+
+
+/*
  * This describes a single thread/process executing a fio job.
  */
 struct thread_data {
@@ -394,6 +428,8 @@ struct thread_data {
 
 	void *pinned_mem;
 
+	struct steadystate_data ss;
+
 	char verror[FIO_VERROR_SIZE];
 };
 
@@ -468,6 +504,9 @@ extern char *trigger_cmd;
 extern char *trigger_remote_cmd;
 extern long long trigger_timeout;
 extern char *aux_path;
+
+extern bool steadystate;
+#define STEADYSTATE_MSEC (1000)
 
 extern struct thread_data *threads;
 
@@ -784,6 +823,14 @@ enum {
 	FIO_CPUS_SHARED		= 0,
 	FIO_CPUS_SPLIT,
 };
+
+enum {
+	FIO_STEADYSTATE_IOPS	= 0,
+	FIO_STEADYSTATE_IOPS_SLOPE,
+	FIO_STEADYSTATE_BW,
+	FIO_STEADYSTATE_BW_SLOPE,
+};
+
 
 extern void exec_trigger(const char *);
 extern void check_trigger_file(void);

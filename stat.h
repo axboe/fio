@@ -213,6 +213,8 @@ struct thread_stat {
 	uint64_t latency_target;
 	fio_fp64_t latency_percentile;
 	uint64_t latency_window;
+
+	struct steadystate_data *ss;
 } __attribute__((packed));
 
 struct jobs_eta {

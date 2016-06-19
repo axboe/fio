@@ -153,6 +153,7 @@ void reset_all_stats(struct thread_data *td)
 	memcpy(&td->start, &tv, sizeof(tv));
 	memcpy(&td->iops_sample_time, &tv, sizeof(tv));
 	memcpy(&td->bw_sample_time, &tv, sizeof(tv));
+	memcpy(&td->ss.prev_time, &tv, sizeof(tv));
 
 	lat_target_reset(td);
 	clear_rusage_stat(td);

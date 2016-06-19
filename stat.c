@@ -1255,6 +1255,36 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		}
 	}
 
+	/* s}teady state detection; move this behind json+? */
+	if (ts->ss) {
+		struct json_array *cache;
+		struct steadystate_data *ss = ts->ss;
+		int i, x;
+		char ss_option[64];
+
+		snprintf(ss_option, sizeof(ss_option), "%s%s:%f%s", 
+			ss->check_iops ? "iops" : "bw",
+			ss->check_slope ? "_slope" : "",
+			(float) ss->limit,
+			ss->pct ? "%" : "");
+
+		tmp = json_create_object();
+		json_object_add_value_object(root, "steadystate", tmp);
+		json_object_add_value_string(tmp, "ss", ss_option);
+		json_object_add_value_float(tmp, "limit", (float)ss->limit);
+		json_object_add_value_int(tmp, "duration", (int)ss->dur);
+		json_object_add_value_int(tmp, "steadystate_ramptime", ss->ramp_time / 1000000L);
+		json_object_add_value_int(tmp, "attained", ss->attained);
+		json_object_add_value_float(tmp, "criterion", ss->criterion);
+
+		cache = json_create_array();
+		json_object_add_value_array(tmp, "data", cache);
+		for (i = 0; i < ss->dur; i++) {
+			x = (ss->head + i) % ss->dur;
+			json_array_add_value_int(cache, ss->cache[x]);
+		}
+	}
+
 	return root;
 }
 
@@ -1578,6 +1608,11 @@ void __show_run_stats(void)
 			ts->block_infos[k] = td->ts.block_infos[k];
 
 		sum_thread_stats(ts, &td->ts, idx == 1);
+
+		if (td->o.ss_dur)
+			ts->ss = &td->ss;
+		else
+			ts->ss = NULL;
 	}
 
 	for (i = 0; i < nr_ts; i++) {

@@ -169,6 +169,11 @@ struct thread_options {
 	unsigned long long start_delay_high;
 	unsigned long long timeout;
 	unsigned long long ramp_time;
+	unsigned int ss;		/* TODO add to thread_options_pack */
+	bool ss_pct;
+	fio_fp64_t ss_limit;
+	unsigned long long ss_dur;
+	unsigned long long ss_ramp_time;
 	unsigned int overwrite;
 	unsigned int bw_avg_time;
 	unsigned int iops_avg_time;
