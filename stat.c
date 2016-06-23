@@ -1271,11 +1271,10 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		tmp = json_create_object();
 		json_object_add_value_object(root, "steadystate", tmp);
 		json_object_add_value_string(tmp, "ss", ss_option);
-		json_object_add_value_float(tmp, "limit", (float)ss->limit);
 		json_object_add_value_int(tmp, "duration", (int)ss->dur);
 		json_object_add_value_int(tmp, "steadystate_ramptime", ss->ramp_time / 1000000L);
 		json_object_add_value_int(tmp, "attained", ss->attained);
-		json_object_add_value_float(tmp, "criterion", ss->criterion);
+		json_object_add_value_float(tmp, "criterion", ss->pct ? ss->criterion / 100 : ss->criterion);
 
 		cache = json_create_array();
 		json_object_add_value_array(tmp, "data", cache);
