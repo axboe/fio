@@ -69,10 +69,12 @@ void steadystate_check()
 			if (utime_since(&td->epoch, &now) >= (ss->ramp_time + 1000000L))
 				ss->ramp_time_over = 1;
 
+		td_io_u_lock(td);
 		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
 			td_iops += td->io_blocks[ddir];
 			td_bytes += td->io_bytes[ddir];
 		}
+		td_io_u_unlock(td);
 
 		rate_time = mtime_since(&ss->prev_time, &now);
 		memcpy(&ss->prev_time, &now, sizeof(now));
