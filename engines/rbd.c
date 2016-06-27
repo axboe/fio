@@ -9,12 +9,16 @@
 
 #include "../fio.h"
 #include "../optgroup.h"
+#ifdef CONFIG_RBD_BLKIN
+#include <zipkin_c.h>
+#endif
 
 struct fio_rbd_iou {
 	struct io_u *io_u;
 	rbd_completion_t completion;
 	int io_seen;
 	int io_complete;
+	struct blkin_trace_info info;
 };
 
 struct rbd_data {
@@ -378,16 +382,28 @@ static int fio_rbd_queue(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (io_u->ddir == DDIR_WRITE) {
+#ifdef CONFIG_RBD_BLKIN
+		blkin_init_trace_info(&fri->info);
+		r = rbd_aio_write_traced(rbd->image, io_u->offset, io_u->xfer_buflen,
+					 io_u->xfer_buf, fri->completion, &fri->info);
+#else
 		r = rbd_aio_write(rbd->image, io_u->offset, io_u->xfer_buflen,
 					 io_u->xfer_buf, fri->completion);
+#endif
 		if (r < 0) {
 			log_err("rbd_aio_write failed.\n");
 			goto failed_comp;
 		}
 
 	} else if (io_u->ddir == DDIR_READ) {
+#ifdef CONFIG_RBD_BLKIN
+		blkin_init_trace_info(&fri->info);
+		r = rbd_aio_read_traced(rbd->image, io_u->offset, io_u->xfer_buflen,
+					io_u->xfer_buf, fri->completion, &fri->info);
+#else
 		r = rbd_aio_read(rbd->image, io_u->offset, io_u->xfer_buflen,
 					io_u->xfer_buf, fri->completion);
+#endif
 
 		if (r < 0) {
 			log_err("rbd_aio_read failed.\n");

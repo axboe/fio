@@ -166,6 +166,8 @@ for opt do
   ;;
   --disable-rbd) disable_rbd="yes"
   ;;
+  --disable-rbd-blkin) disable_rbd_blkin="yes"
+  ;;
   --disable-gfapi) disable_gfapi="yes"
   ;;
   --enable-libhdfs) libhdfs="yes"
@@ -1334,6 +1336,34 @@ echo "rbd_invalidate_cache          $rbd_inval"
 fi
 
 ##########################################
+# check for blkin
+rbd_blkin="no"
+cat > $TMPC << EOF
+#include <rbd/librbd.h>
+#include <zipkin_c.h>
+
+int main(int argc, char **argv)
+{
+  int r;
+  struct blkin_trace_info t_info;
+  blkin_init_trace_info(&t_info);
+  rbd_completion_t completion;
+  rbd_image_t image;
+  uint64_t off;
+  size_t len;
+  const char *buf;
+  r = rbd_aio_write_traced(image, off, len, buf, completion, &t_info);
+  return 0;
+}
+EOF
+if test "$disable_rbd" != "yes" && test "$disable_rbd_blkin" != "yes" \
+ && compile_prog "" "-lrbd -lrados -lblkin" "rbd_blkin"; then
+  LIBS="-lblkin $LIBS"
+  rbd_blkin="yes"
+fi
+echo "rbd blkin tracing             $rbd_blkin"
+
+##########################################
 # Check whether we have setvbuf
 setvbuf="no"
 cat > $TMPC << EOF
@@ -1777,6 +1807,9 @@ if test "$rbd" = "yes" ; then
 fi
 if test "$rbd_inval" = "yes" ; then
   output_sym "CONFIG_RBD_INVAL"
+fi
+if test "$rbd_blkin" = "yes" ; then
+  output_sym "CONFIG_RBD_BLKIN"
 fi
 if test "$setvbuf" = "yes" ; then
   output_sym "CONFIG_SETVBUF"
