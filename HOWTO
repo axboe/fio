@@ -329,18 +329,15 @@ directory=str	Prefix filenames with this directory. Used to place files
 filename=str	Fio normally makes up a filename based on the job name,
 		thread number, and file number. If you want to share
 		files between threads in a job or several jobs, specify
-		a filename for each of them to override the default. If
-		the ioengine used is 'net', the filename is the host, port,
-		and protocol to use in the format of =host,port,protocol.
-		See ioengine=net for more. If the ioengine is file based, you
-		can specify a number of files by separating the names with a
-		':' colon. So if you wanted a job to open /dev/sda and /dev/sdb
-		as the two working files, you would use
-		filename=/dev/sda:/dev/sdb. On Windows, disk devices are
-		accessed as \\.\PhysicalDrive0 for the first device,
-		\\.\PhysicalDrive1 for the second etc. Note: Windows and
-		FreeBSD prevent write access to areas of the disk containing
-		in-use data (e.g. filesystems).
+		a filename for each of them to override the default.
+		If the ioengine is file based, you can specify a number of
+		files by separating the names with a ':' colon. So if you
+		wanted a job to open /dev/sda and /dev/sdb as the two working
+		files, you would use filename=/dev/sda:/dev/sdb. On Windows,
+		disk devices are accessed as \\.\PhysicalDrive0 for the first
+		device, \\.\PhysicalDrive1 for the second etc. Note: Windows
+		and FreeBSD prevent write access to areas of the disk
+		containing in-use data (e.g. filesystems).
 		If the wanted filename does need to include a colon, then
 		escape that with a '\' character. For instance, if the filename
 		is "/dev/dsk/foo@3,0:c", then you would use
