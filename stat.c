@@ -1257,8 +1257,10 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 
 	/* steady state detection; move this behind json+? */
 	if (ts->ss) {
-		struct json_array *cache;
+		struct json_object *data;
+		struct json_array *iops, *bw;
 		struct steadystate_data *ss = ts->ss;
+		double mean_iops = 0.0, mean_bw = 0.0;
 		int i, x;
 		char ss_option[64];
 
@@ -1275,13 +1277,26 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		json_object_add_value_int(tmp, "steadystate_ramptime", ss->ramp_time / 1000000L);
 		json_object_add_value_int(tmp, "attained", ss->attained);
 		json_object_add_value_float(tmp, "criterion", ss->pct ? ss->criterion / 100 : ss->criterion);
+		json_object_add_value_float(tmp, "max_deviation", ss->deviation);
+		json_object_add_value_float(tmp, "slope", ss->slope);
 
-		cache = json_create_array();
-		json_object_add_value_array(tmp, "data", cache);
+		data = json_create_object();
+		json_object_add_value_object(tmp, "data", data);
+		bw = json_create_array();
+		iops = json_create_array();
+		json_object_add_value_array(data, "iops", iops);
+		json_object_add_value_array(data, "bw", bw);
 		for (i = 0; i < ss->dur; i++) {
 			x = (ss->head + i) % ss->dur;
-			json_array_add_value_int(cache, ss->cache[x]);
+			mean_bw += (double) ss->bw_data[x];
+			mean_iops += (double) ss->iops_data[x];
+			json_array_add_value_int(bw, ss->bw_data[x]);
+			json_array_add_value_int(iops, ss->iops_data[x]);
 		}
+		mean_bw /= ss->dur;
+		mean_iops /= ss->dur;
+		json_object_add_value_float(data, "bw_mean", mean_bw);
+		json_object_add_value_float(data, "iops_mean", mean_iops);
 	}
 
 	return root;

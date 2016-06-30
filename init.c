@@ -1603,18 +1603,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			td->ss.check_iops = false;
 
-
-		/* when group reporting is enabled only the cache allocated for the final td is actually used */
-		td->ss.cache = malloc(o->ss_dur * sizeof(*(td->ss.cache)));
-		if (td->ss.cache == NULL)
-		{
-			log_err("fio: unable to allocate memory for steadystate cache\n");
-			goto err;
-		}
-		for (i = 0; i < td->ss.dur; i++)
-			td->ss.cache[i] = 0;
-		/* initialize so that it is obvious if the cache is not full in the output */
-
+		td->ss.bw_data = NULL;
+		td->ss.iops_data = NULL;
 		td->ss.ramp_time_over = (td->ss.ramp_time == 0);
 		td->ss.attained = 0;
 		td->ss.last_in_group = 0;
@@ -1627,6 +1617,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		td->ss.sum_y = 0;
 		td->ss.oldest_y = 0;
 		td->ss.criterion = 0.0;
+		td->ss.slope = 0.0;
+		td->ss.deviation = 0.0;
 		td->ts.ss = &td->ss;
 	}
 	else

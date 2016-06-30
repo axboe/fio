@@ -140,9 +140,12 @@ struct steadystate_data {
 
 	unsigned int head;
 	unsigned int tail;
-	unsigned long *cache;
+	unsigned long *iops_data;
+	unsigned long *bw_data;
 
+	double slope;
 	double criterion;
+	double deviation;
 
 	unsigned long long sum_y;
 	unsigned long long sum_x;

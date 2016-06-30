@@ -39,13 +39,15 @@ def parse_args():
 
 
 def check(data, iops, slope, pct, limit, dur, criterion):
+    measurement = 'iops' if iops else 'bw'
+    data = data[measurement]
     mean = sum(data) / len(data)
     if slope:
         x = range(len(data))
         m, intercept, r_value, p_value, std_err = stats.linregress(x,data)
         m = abs(m)
         if pct:
-            target = m / mean * 100
+            target = m / mean
         else:
             target = m
     else:
@@ -53,11 +55,11 @@ def check(data, iops, slope, pct, limit, dur, criterion):
         for x in data:
             maxdev = max(abs(mean-x), maxdev)
         if pct:
-            target = maxdev / mean * 100
+            target = maxdev / mean
         else:
             target = maxdev
 
-    return (abs(target - criterion) / criterion < 0.001), target < limit, mean, target
+    return (abs(target - criterion) / criterion < 0.005), target < limit, mean, target
 
 
 if __name__ == '__main__':
@@ -158,12 +160,12 @@ if __name__ == '__main__':
                             dur=suite[jobnum]['ss_dur'],
                             criterion=job['steadystate']['criterion'])
                         if not objsame:
-                            line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1}, data: {2} '.format(job['steadystate']['criterion'], target, job['steadystate']['data'])
+                            line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1}, data: {2} '.format(job['steadystate']['criterion'], target, job['steadystate'])
                         else:
                             if met:
-                                line = 'PASSED ' + line + ' target {0} < limit {1}, data {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate']['data'])
+                                line = 'PASSED ' + line + ' target {0} < limit {1}, data {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate'])
                             else:
-                                line = 'FAILED ' + line + ' target {0} < limit {1} but fio reports ss not attained, data: {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate']['data'])
+                                line = 'FAILED ' + line + ' target {0} < limit {1} but fio reports ss not attained, data: {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate'])
                     
                 else:
                     # check runtime, confirm criterion calculation, and confirm that criterion was not met
@@ -182,14 +184,14 @@ if __name__ == '__main__':
                             criterion=job['steadystate']['criterion'])
                         if not objsame:
                             if actual > (suite[jobnum]['ss_dur'] + suite[jobnum]['ss_ramp'])*1000:
-                                line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1}, data: {2} '.format(job['steadystate']['criterion'], target, job['steadystate']['data'])
+                                line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1}, data: {2} '.format(job['steadystate']['criterion'], target, job['steadystate'])
                             else:
-                                line = 'PASSED ' + line + ' fio criterion {0} == 0.0 since ss_dur + ss_ramp has not elapsed, data: {1} '.format(job['steadystate']['criterion'], job['steadystate']['data'])
+                                line = 'PASSED ' + line + ' fio criterion {0} == 0.0 since ss_dur + ss_ramp has not elapsed, data: {1} '.format(job['steadystate']['criterion'], job['steadystate'])
                         else:
                             if met:
-                                line = 'FAILED ' + line + ' target {0} < threshold {1} but fio reports ss not attained, data: {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate']['data'])
+                                line = 'FAILED ' + line + ' target {0} < threshold {1} but fio reports ss not attained, data: {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate'])
                             else:
-                                line = 'PASSED ' + line + ' criterion {0} > threshold {1}, data {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate']['data'])
+                                line = 'PASSED ' + line + ' criterion {0} > threshold {1}, data {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate'])
             else:
                 expected = suite[jobnum]['timeout'] * 1000
                 actual = job['read']['runtime']

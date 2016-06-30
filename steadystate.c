@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "fio.h"
 #include "steadystate.h"
 #include "helper_thread.h"
@@ -18,19 +20,39 @@ void steadystate_setup()
 	prev_groupid = -1;
 	prev_td = NULL;
 	for_each_td(td, i) {
-		if (!td->o.group_reporting)
+		if (td->ts.ss == NULL)
 			continue;
 
+		if (!td->o.group_reporting) {
+			steadystate_alloc(td);
+			continue;
+		}
+
 		if (prev_groupid != td->groupid) {
-			if (prev_td != NULL)
+			if (prev_td != NULL) {
 				prev_td->ss.last_in_group = 1;
+				steadystate_alloc(prev_td);
+			}
 			prev_groupid = td->groupid;
 		}
 		prev_td = td;
 	}
 
-	if (prev_td != NULL && prev_td->o.group_reporting)
+	if (prev_td != NULL && prev_td->o.group_reporting) {
 		prev_td->ss.last_in_group = 1;
+		steadystate_alloc(prev_td);
+	}
+}
+
+void steadystate_alloc(struct thread_data *td)
+{
+	int i;
+
+	td->ss.bw_data = malloc(td->ss.dur * sizeof(unsigned long));
+	td->ss.iops_data = malloc(td->ss.dur * sizeof(unsigned long));
+	/* initialize so that it is obvious if the cache is not full in the output */
+	for (i = 0; i < td->ss.dur; i++)
+		td->ss.iops_data[i] = td->ss.bw_data[i] = 0;
 }
 
 void steadystate_check()
@@ -123,12 +145,13 @@ void steadystate_check()
 
 bool steadystate_slope(unsigned long iops, unsigned long bw, struct thread_data *td)
 {
-	int i, x;
+	int i, j;
 	double result;
-	double slope;
 	struct steadystate_data *ss = &td->ss;
+	unsigned long new_val = ss->check_iops ? iops : bw;
 
-	ss->cache[ss->tail] = ss->check_iops ? iops : bw;
+	ss->bw_data[ss->tail] = bw;
+	ss->iops_data[ss->tail] = iops;
 
 	if (ss->tail < ss->head || (ss->tail - ss->head == ss->dur - 1))
 	{
@@ -136,19 +159,19 @@ bool steadystate_slope(unsigned long iops, unsigned long bw, struct thread_data 
 		{
 			for(i = 0; i < ss->dur; i++)
 			{
-				ss->sum_y += ss->cache[i];
-				x = ss->head + i;
-				if (x >= ss->dur)
-					x -= ss->dur;
-				ss->sum_xy += ss->cache[x] * i;
+				ss->sum_y += ss->check_iops ? ss->iops_data[i] : ss->bw_data[i];
+				j = ss->head + i;
+				if (j >= ss->dur)
+					j -= ss->dur;
+				ss->sum_xy += (ss->check_iops ? ss->iops_data[j] : ss->bw_data[j]) * i;
 			}
 		} else {		/* easy to update the sums */
 			ss->sum_y -= ss->oldest_y;
-			ss->sum_y += ss->cache[ss->tail];
-			ss->sum_xy = ss->sum_xy - ss->sum_y + ss->dur * ss->cache[ss->tail];
+			ss->sum_y += new_val;
+			ss->sum_xy = ss->sum_xy - ss->sum_y + ss->dur * new_val;
 		}
 
-		ss->oldest_y = ss->cache[ss->head];
+		ss->oldest_y = ss->check_iops ? ss->iops_data[ss->head] : ss->bw_data[ss->head];
 
 		/*
 		 * calculate slope as (sum_xy - sum_x * sum_y / n) / (sum_(x^2) - (sum_x)^2 / n)
@@ -156,11 +179,11 @@ bool steadystate_slope(unsigned long iops, unsigned long bw, struct thread_data 
 		 * off by a few milliseconds. This assumption greatly simplifies the
 		 * calculations.
 		 */
-		slope = (ss->sum_xy - (double) ss->sum_x * ss->sum_y / ss->dur) / (ss->sum_x_sq - (double) ss->sum_x * ss->sum_x / ss->dur);
-		ss->criterion = ss->pct ? slope / (ss->sum_y / ss->dur) * 100.0: slope;
+		ss->slope = (ss->sum_xy - (double) ss->sum_x * ss->sum_y / ss->dur) / (ss->sum_x_sq - (double) ss->sum_x * ss->sum_x / ss->dur);
+		ss->criterion = ss->pct ? ss->slope / (ss->sum_y / ss->dur) * 100.0: ss->slope;
 
 		dprint(FD_STEADYSTATE, "sum_y: %llu, sum_xy: %llu, slope: %f, criterion: %f, limit: %f\n",
-			ss->sum_y, ss->sum_xy, slope, ss->criterion, ss->limit);
+			ss->sum_y, ss->sum_xy, ss->slope, ss->criterion, ss->limit);
 
 		result = ss->criterion * (ss->criterion < 0.0 ? -1 : 1);
 		if (result < ss->limit)
@@ -178,36 +201,36 @@ bool steadystate_deviation(unsigned long iops, unsigned long bw, struct thread_d
 	int i;
 	double diff;
 	double mean;
-	double deviation;
 
 	struct steadystate_data *ss = &td->ss;
 
-	ss->cache[ss->tail] = ss->check_iops ? iops : bw;
+	ss->bw_data[ss->tail] = bw;
+	ss->iops_data[ss->tail] = iops;
 
 	if (ss->tail < ss->head || (ss->tail - ss->head == ss->dur - 1))
 	{
 		if (ss->sum_y == 0)	/* first time through */
 		{
 			for(i = 0; i < ss->dur; i++)
-				ss->sum_y += ss->cache[i];
+				ss->sum_y += ss->check_iops ? ss->iops_data[i] : ss->bw_data[i];
 		} else {		/* easy to update the sum */
 			ss->sum_y -= ss->oldest_y;
-			ss->sum_y += ss->cache[ss->tail];
+			ss->sum_y += ss->check_iops ? ss->iops_data[ss->tail] : ss->bw_data[ss->tail];
 		}
 
-		ss->oldest_y = ss->cache[ss->head];
+		ss->oldest_y = ss->check_iops ? ss->iops_data[ss->head] : ss->bw_data[ss->head];
 		mean = (double) ss->sum_y / ss->dur;
-		deviation = 0.0;
+		ss->deviation = 0.0;
 
 		for (i = 0; i < ss->dur; i++)
 		{	
-			diff = (double) ss->cache[i] - mean;
-			deviation = max(deviation, diff * (diff < 0.0 ? -1 : 1));
+			diff = (double) (ss->check_iops ? ss->iops_data[i] : ss->bw_data[i]) - mean;
+			ss->deviation = max(ss->deviation, diff * (diff < 0.0 ? -1 : 1));
 		}
 
-		ss->criterion = ss->pct ? deviation / mean * 100.0 : deviation;
+		ss->criterion = ss->pct ? ss->deviation / mean * 100.0 : ss->deviation;
 
-		dprint(FD_STEADYSTATE, "sum_y: %llu, mean: %f, max diff: %f, objective: %f, limit: %f\n", ss->sum_y, mean, deviation, ss->criterion, ss->limit);
+		dprint(FD_STEADYSTATE, "sum_y: %llu, mean: %f, max diff: %f, objective: %f, limit: %f\n", ss->sum_y, mean, ss->deviation, ss->criterion, ss->limit);
 
 		if (ss->criterion < ss->limit)
 			return true;
