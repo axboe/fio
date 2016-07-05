@@ -1677,7 +1677,7 @@ static void init_ui(int *argc, char **argv[], struct gui *ui)
 	 * Without it, the update that happens in gfio_update_thread_status
 	 * doesn't really happen in a timely fashion, you need expose events
 	 */
-#if !GTK_CHECK_VERSION(2, 24, 0)
+#if !GLIB_CHECK_VERSION(2, 31, 0)
 	if (!g_thread_supported())
 		g_thread_init(NULL);
 #endif
