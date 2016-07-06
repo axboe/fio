@@ -1949,6 +1949,7 @@ static struct io_logs *regrow_log(struct io_log *iolog)
 		dst = get_sample(iolog, cur_log, i);
 		memcpy(dst, src, log_entry_sz(iolog));
 	}
+	cur_log->nr_samples = iolog->pending->nr_samples;
 
 	iolog->pending->nr_samples = 0;
 	return cur_log;
