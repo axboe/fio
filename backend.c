@@ -603,6 +603,15 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 	if (td->error)
 		return;
 
+	/*
+	 * verify_state needs to be reset before verification
+	 * proceeds so that expected random seeds match actual
+	 * random seeds in headers. The main loop will reset
+	 * all random number generators if randrepeat is set.
+	 */
+	if (!td->o.rand_repeatable)
+		td_fill_verify_state_seed(td);
+
 	td_set_runstate(td, TD_VERIFYING);
 
 	io_u = NULL;
