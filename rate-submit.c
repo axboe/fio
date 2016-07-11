@@ -14,7 +14,7 @@ static int io_workqueue_fn(struct submit_worker *sw,
 {
 	struct io_u *io_u = container_of(work, struct io_u, work);
 	const enum fio_ddir ddir = io_u->ddir;
-	struct thread_data *td = sw->private;
+	struct thread_data *td = sw->priv;
 	int ret;
 
 	dprint(FD_RATE, "io_u %p queued by %u\n", io_u, gettid());
@@ -61,7 +61,7 @@ static int io_workqueue_fn(struct submit_worker *sw,
 
 static bool io_workqueue_pre_sleep_flush_fn(struct submit_worker *sw)
 {
-	struct thread_data *td = sw->private;
+	struct thread_data *td = sw->priv;
 
 	if (td->io_u_queued || td->cur_depth || td->io_u_in_flight)
 		return true;
@@ -71,7 +71,7 @@ static bool io_workqueue_pre_sleep_flush_fn(struct submit_worker *sw)
 
 static void io_workqueue_pre_sleep_fn(struct submit_worker *sw)
 {
-	struct thread_data *td = sw->private;
+	struct thread_data *td = sw->priv;
 	int ret;
 
 	ret = io_u_quiesce(td);
@@ -84,20 +84,20 @@ static int io_workqueue_alloc_fn(struct submit_worker *sw)
 	struct thread_data *td;
 
 	td = calloc(1, sizeof(*td));
-	sw->private = td;
+	sw->priv = td;
 	return 0;
 }
 
 static void io_workqueue_free_fn(struct submit_worker *sw)
 {
-	free(sw->private);
-	sw->private = NULL;
+	free(sw->priv);
+	sw->priv = NULL;
 }
 
 static int io_workqueue_init_worker_fn(struct submit_worker *sw)
 {
 	struct thread_data *parent = sw->wq->td;
-	struct thread_data *td = sw->private;
+	struct thread_data *td = sw->priv;
 	int fio_unused ret;
 
 	memcpy(&td->o, &parent->o, sizeof(td->o));
@@ -145,7 +145,7 @@ err:
 static void io_workqueue_exit_worker_fn(struct submit_worker *sw,
 					unsigned int *sum_cnt)
 {
-	struct thread_data *td = sw->private;
+	struct thread_data *td = sw->priv;
 
 	(*sum_cnt)++;
 	sum_thread_stats(&sw->wq->td->ts, &td->ts, *sum_cnt == 1);
@@ -213,7 +213,7 @@ static void sum_ddir(struct thread_data *dst, struct thread_data *src,
 
 static void io_workqueue_update_acct_fn(struct submit_worker *sw)
 {
-	struct thread_data *src = sw->private;
+	struct thread_data *src = sw->priv;
 	struct thread_data *dst = sw->wq->td;
 
 	if (td_read(src))
