@@ -965,7 +965,7 @@ int iolog_file_inflate(const char *file)
 
 #endif
 
-void flush_log(struct io_log *log, int do_append)
+void flush_log(struct io_log *log, bool do_append)
 {
 	void *buf;
 	FILE *f;

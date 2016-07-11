@@ -2388,7 +2388,7 @@ int fio_backend(struct sk_out *sk_out)
 			for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 				struct io_log *log = agg_io_log[i];
 
-				flush_log(log, 0);
+				flush_log(log, false);
 				free_log(log);
 			}
 		}
