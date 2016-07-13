@@ -1262,7 +1262,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		struct steadystate_data *ss = ts->ss;
 		unsigned long long sum_iops, sum_bw;
 		double mean_iops, mean_bw;
-		int i, x;
+		int i, j, k;
 		char ss_buf[64];
 
 		snprintf(ss_buf, sizeof(ss_buf), "%s%s:%f%s",
@@ -1287,12 +1287,23 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		json_object_add_value_object(tmp, "data", data);
 		bw = json_create_array();
 		iops = json_create_array();
+
+		/*
+		** if ss was attained or the buffer is not full,
+		** ss->head points to the first element in the list.
+		** otherwise it actually points to the second element
+		** in the list
+		*/
+		if (ss->attained || ss->sum_y == 0)
+			j = ss->head;
+		else
+			j = ss->head == 0 ? ss->dur - 1 : ss->head - 1;
 		for (i = 0, sum_iops = 0, sum_bw = 0; i < ss->dur; i++) {
-			x = (ss->head + i) % ss->dur;
-			sum_bw += ss->bw_data[x];
-			sum_iops += ss->iops_data[x];
-			json_array_add_value_int(bw, ss->bw_data[x]);
-			json_array_add_value_int(iops, ss->iops_data[x]);
+			k = (j + i) % ss->dur;
+			sum_bw += ss->bw_data[k];
+			sum_iops += ss->iops_data[k];
+			json_array_add_value_int(bw, ss->bw_data[k]);
+			json_array_add_value_int(iops, ss->iops_data[k]);
 		}
 		mean_bw = (double) sum_bw / ss->dur;
 		mean_iops = (double) sum_iops / ss->dur;
