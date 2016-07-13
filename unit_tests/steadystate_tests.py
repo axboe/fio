@@ -47,7 +47,8 @@ def check(data, iops, slope, pct, limit, dur, criterion):
         m, intercept, r_value, p_value, std_err = stats.linregress(x,data)
         m = abs(m)
         if pct:
-            target = m / mean
+            target = m / mean * 100
+            criterion = criterion[:-1]
         else:
             target = m
     else:
@@ -55,10 +56,12 @@ def check(data, iops, slope, pct, limit, dur, criterion):
         for x in data:
             maxdev = max(abs(mean-x), maxdev)
         if pct:
-            target = maxdev / mean
+            target = maxdev / mean * 100
+            criterion = criterion[:-1]
         else:
             target = maxdev
 
+    criterion = float(criterion)
     return (abs(target - criterion) / criterion < 0.005), target < limit, mean, target
 
 
