@@ -1260,11 +1260,12 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		struct json_object *data;
 		struct json_array *iops, *bw;
 		struct steadystate_data *ss = ts->ss;
-		double mean_iops = 0.0, mean_bw = 0.0;
+		unsigned long long sum_iops, sum_bw;
+		double mean_iops, mean_bw;
 		int i, x;
-		char ss_option[64];
+		char ss_buf[64];
 
-		snprintf(ss_option, sizeof(ss_option), "%s%s:%f%s", 
+		snprintf(ss_buf, sizeof(ss_buf), "%s%s:%f%s",
 			ss->check_iops ? "iops" : "bw",
 			ss->check_slope ? "_slope" : "",
 			(float) ss->limit,
@@ -1272,11 +1273,13 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 
 		tmp = json_create_object();
 		json_object_add_value_object(root, "steadystate", tmp);
-		json_object_add_value_string(tmp, "ss", ss_option);
+		json_object_add_value_string(tmp, "ss", ss_buf);
 		json_object_add_value_int(tmp, "duration", (int)ss->dur);
 		json_object_add_value_int(tmp, "steadystate_ramptime", ss->ramp_time / 1000000L);
 		json_object_add_value_int(tmp, "attained", ss->attained);
-		json_object_add_value_float(tmp, "criterion", ss->pct ? ss->criterion / 100 : ss->criterion);
+
+		snprintf(ss_buf, sizeof(ss_buf), "%f%s", (float) ss->criterion, ss->pct ? "%" : "");
+		json_object_add_value_string(tmp, "criterion", ss_buf);
 		json_object_add_value_float(tmp, "max_deviation", ss->deviation);
 		json_object_add_value_float(tmp, "slope", ss->slope);
 
@@ -1284,19 +1287,19 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		json_object_add_value_object(tmp, "data", data);
 		bw = json_create_array();
 		iops = json_create_array();
-		json_object_add_value_array(data, "iops", iops);
-		json_object_add_value_array(data, "bw", bw);
-		for (i = 0; i < ss->dur; i++) {
+		for (i = 0, sum_iops = 0, sum_bw = 0; i < ss->dur; i++) {
 			x = (ss->head + i) % ss->dur;
-			mean_bw += (double) ss->bw_data[x];
-			mean_iops += (double) ss->iops_data[x];
+			sum_bw += ss->bw_data[x];
+			sum_iops += ss->iops_data[x];
 			json_array_add_value_int(bw, ss->bw_data[x]);
 			json_array_add_value_int(iops, ss->iops_data[x]);
 		}
-		mean_bw /= ss->dur;
-		mean_iops /= ss->dur;
+		mean_bw = (double) sum_bw / ss->dur;
+		mean_iops = (double) sum_iops / ss->dur;
 		json_object_add_value_float(data, "bw_mean", mean_bw);
 		json_object_add_value_float(data, "iops_mean", mean_iops);
+		json_object_add_value_array(data, "iops", iops);
+		json_object_add_value_array(data, "bw", bw);
 	}
 
 	return root;

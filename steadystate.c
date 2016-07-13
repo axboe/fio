@@ -180,12 +180,12 @@ bool steadystate_slope(unsigned long iops, unsigned long bw, struct thread_data 
 		 * calculations.
 		 */
 		ss->slope = (ss->sum_xy - (double) ss->sum_x * ss->sum_y / ss->dur) / (ss->sum_x_sq - (double) ss->sum_x * ss->sum_x / ss->dur);
-		ss->criterion = ss->pct ? ss->slope / (ss->sum_y / ss->dur) * 100.0: ss->slope;
+		ss->criterion = ss->pct ? 100.0 * ss->slope / (ss->sum_y / ss->dur) : ss->slope;
 
 		dprint(FD_STEADYSTATE, "sum_y: %llu, sum_xy: %llu, slope: %f, criterion: %f, limit: %f\n",
 			ss->sum_y, ss->sum_xy, ss->slope, ss->criterion, ss->limit);
 
-		result = ss->criterion * (ss->criterion < 0.0 ? -1 : 1);
+		result = ss->criterion * (ss->criterion < 0.0 ? -1.0 : 1.0);
 		if (result < ss->limit)
 			return true;
 	}
@@ -225,10 +225,10 @@ bool steadystate_deviation(unsigned long iops, unsigned long bw, struct thread_d
 		for (i = 0; i < ss->dur; i++)
 		{	
 			diff = (double) (ss->check_iops ? ss->iops_data[i] : ss->bw_data[i]) - mean;
-			ss->deviation = max(ss->deviation, diff * (diff < 0.0 ? -1 : 1));
+			ss->deviation = max(ss->deviation, diff * (diff < 0.0 ? -1.0 : 1.0));
 		}
 
-		ss->criterion = ss->pct ? ss->deviation / mean * 100.0 : ss->deviation;
+		ss->criterion = ss->pct ? 100.0 * ss->deviation / mean : ss->deviation;
 
 		dprint(FD_STEADYSTATE, "sum_y: %llu, mean: %f, max diff: %f, objective: %f, limit: %f\n", ss->sum_y, mean, ss->deviation, ss->criterion, ss->limit);
 
