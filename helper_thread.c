@@ -140,7 +140,7 @@ static void *helper_thread_main(void *data)
                 }
 
 		msec_to_next_event = min(min(next_log, msec_to_next_event), next_ss);
-		dprint(FD_STEADYSTATE, "since_ss: %llu, next_ss: %u, next_log: %u, msec_to_next_event: %u\n", (unsigned long long)since_ss, next_ss, next_log, msec_to_next_event);
+		dprint(FD_HELPERTHREAD, "since_ss: %llu, next_ss: %u, next_log: %u, msec_to_next_event: %u\n", (unsigned long long)since_ss, next_ss, next_log, msec_to_next_event);
 
 		if (!is_backend)
 			print_thread_status();
