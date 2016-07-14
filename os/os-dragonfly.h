@@ -9,6 +9,7 @@
 #include <sys/sysctl.h>
 #include <sys/statvfs.h>
 #include <sys/diskslice.h>
+#include <sys/ioctl_compat.h>
 
 #include "../file.h"
 
@@ -16,6 +17,7 @@
 #define FIO_USE_GENERIC_RAND
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_FS_STAT
+#define FIO_HAVE_TRIM
 #define FIO_HAVE_CHARDEV_SIZE
 #define FIO_HAVE_GETTID
 
@@ -82,6 +84,20 @@ static inline unsigned long long get_fs_free_size(const char *path)
 	ret = s.f_frsize;
 	ret *= (unsigned long long) s.f_bfree;
 	return ret;
+}
+
+static inline int os_trim(int fd, unsigned long long start,
+			  unsigned long long len)
+{
+	off_t range[2];
+
+	range[0] = start;
+	range[1] = len;
+
+	if (!ioctl(fd, IOCTLTRIM, range))
+		return 0;
+
+	return errno;
 }
 
 #ifdef MADV_FREE
