@@ -145,6 +145,7 @@ ifeq ($(CONFIG_TARGET_OS), SunOS)
   CPPFLAGS += -D__EXTENSIONS__
 endif
 ifeq ($(CONFIG_TARGET_OS), FreeBSD)
+  SOURCE += trim.c
   LIBS	 += -lpthread -lrt
   LDFLAGS += -rdynamic
 endif
