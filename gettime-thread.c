@@ -71,7 +71,7 @@ int fio_start_gtod_thread(void)
 		return 1;
 
 	pthread_attr_init(&attr);
-	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
+	pthread_attr_setstacksize(&attr, 2 * PTHREAD_STACK_MIN);
 	ret = pthread_create(&gtod_thread, &attr, gtod_thread_main, mutex);
 	pthread_attr_destroy(&attr);
 	if (ret) {
