@@ -31,7 +31,7 @@ def find_file(path, pattern):
 	fio_data_file=[]
 	# For all the local files
 	for file in os.listdir(path):
-	    # If the file math the regexp
+	    # If the file matches the glob
 	    if fnmatch.fnmatch(file, pattern):
 		# Let's consider this file
 		fio_data_file.append(file)
@@ -361,7 +361,7 @@ def print_help():
     print 'fio2gnuplot -ghbiodvk -t <title> -o <outputfile> -p <pattern> -G <type> -m <time> -M <time>'
     print
     print '-h --help                           : Print this help'
-    print '-p <pattern> or --pattern <pattern> : A pattern in regexp to select fio input files'
+    print '-p <pattern> or --pattern <pattern> : A glob pattern to select fio input files'
     print '-b           or --bandwidth         : A predefined pattern for selecting *_bw.log files'
     print '-i           or --iops              : A predefined pattern for selecting *_iops.log files'
     print '-g           or --gnuplot           : Render gnuplot traces before exiting'
@@ -487,7 +487,7 @@ def main(argv):
     #We need to adjust the output filename regarding the pattern required by the user
     if (pattern_set_by_user == True):
 	    gnuplot_output_filename=pattern
-	    # As we do have some regexp in the pattern, let's make this simpliest
+	    # As we do have some glob in the pattern, let's make this simpliest
 	    # We do remove the simpliest parts of the expression to get a clear file name
 	    gnuplot_output_filename=gnuplot_output_filename.replace('-*-','-')
 	    gnuplot_output_filename=gnuplot_output_filename.replace('*','-')
