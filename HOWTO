@@ -749,7 +749,7 @@ ioengine=str	Defines how the job issues io to the file. The following
 
 			cpuio	Doesn't transfer any data, but burns CPU
 				cycles according to the cpuload= and
-				cpucycle= options. Setting cpuload=85
+				cpuchunks= options. Setting cpuload=85
 				will cause that job to do nothing but burn
 				85% of the CPU. In case of SMP machines,
 				use numjobs=<no_of_cpu> to get desired CPU
