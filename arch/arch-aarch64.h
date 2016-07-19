@@ -8,11 +8,6 @@
 
 #define FIO_ARCH	(arch_aarch64)
 
-#ifndef __NR_ioprio_set
-#define __NR_ioprio_set		30
-#define __NR_ioprio_get		31
-#endif
-
 #define nop		do { __asm__ __volatile__ ("yield"); } while (0)
 #define read_barrier()	do { __sync_synchronize(); } while (0)
 #define write_barrier()	do { __sync_synchronize(); } while (0)

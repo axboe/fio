@@ -18,6 +18,7 @@
 #include <linux/major.h>
 #include <byteswap.h>
 
+#include "./os-linux-syscall.h"
 #include "binject.h"
 #include "../file.h"
 

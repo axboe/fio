@@ -14,36 +14,6 @@ static inline void do_cpuid(unsigned int *eax, unsigned int *ebx,
 
 #define FIO_ARCH	(arch_x86_64)
 
-#ifndef __NR_ioprio_set
-#define __NR_ioprio_set		251
-#define __NR_ioprio_get		252
-#endif
-
-#ifndef __NR_fadvise64
-#define __NR_fadvise64		221
-#endif
-
-#ifndef __NR_sys_splice
-#define __NR_sys_splice		275
-#define __NR_sys_tee		276
-#define __NR_sys_vmsplice	278
-#endif
-
-#ifndef __NR_shmget
-#define __NR_shmget		 29
-#define __NR_shmat		 30
-#define __NR_shmctl		 31
-#define __NR_shmdt		 67
-#endif
-
-#ifndef __NR_preadv2
-#define __NR_preadv2		327
-#endif
-#ifndef __NR_pwritev2
-#define __NR_pwritev2		328
-#endif
-
-
 #define	FIO_HUGE_PAGE		2097152
 
 #define nop		__asm__ __volatile__("rep;nop": : :"memory")

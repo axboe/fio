@@ -3,28 +3,6 @@
 
 #define FIO_ARCH	(arch_s390)
 
-#ifndef __NR_ioprio_set
-#define __NR_ioprio_set		282
-#define __NR_ioprio_get		283
-#endif
-
-#ifndef __NR_fadvise64
-#define __NR_fadvise64		253
-#endif
-
-#ifndef __NR_sys_splice
-#define __NR_sys_splice		306
-#define __NR_sys_tee		308
-#define __NR_sys_vmsplice	309
-#endif
-
-#ifndef __NR_preadv2
-#define __NR_preadv2		376
-#endif
-#ifndef __NR_pwritev2
-#define __NR_pwritev2		377
-#endif
-
 #define nop		asm volatile("nop" : : : "memory")
 #define read_barrier()	asm volatile("bcr 15,0" : : : "memory")
 #define write_barrier()	asm volatile("bcr 15,0" : : : "memory")
