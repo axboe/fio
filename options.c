@@ -3018,6 +3018,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_CRED,
 	},
+#else
+	{
+		.name	= "prio",
+		.lname	= "I/O nice priority",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support IO priorities",
+	},
+#endif
+#ifdef FIO_HAVE_IOPRIO_CLASS
+#ifndef FIO_HAVE_IOPRIO
+#error "FIO_HAVE_IOPRIO_CLASS requires FIO_HAVE_IOPRIO"
+#endif
 	{
 		.name	= "prioclass",
 		.lname	= "I/O nice priority class",
@@ -3032,16 +3044,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 #else
 	{
-		.name	= "prio",
-		.lname	= "I/O nice priority",
-		.type	= FIO_OPT_UNSUPPORTED,
-		.help	= "Your platform does not support IO priorities",
-	},
-	{
 		.name	= "prioclass",
 		.lname	= "I/O nice priority class",
 		.type	= FIO_OPT_UNSUPPORTED,
-		.help	= "Your platform does not support IO priorities",
+		.help	= "Your platform does not support IO priority classes",
 	},
 #endif
 	{
