@@ -16,6 +16,7 @@
 #include <linux/major.h>
 #include <asm/byteorder.h>
 
+#include "./os-linux-syscall.h"
 #include "binject.h"
 #include "../file.h"
 
