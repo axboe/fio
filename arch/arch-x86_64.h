@@ -1,5 +1,5 @@
-#ifndef ARCH_X86_64_h
-#define ARCH_X86_64_h
+#ifndef ARCH_X86_64_H
+#define ARCH_X86_64_H
 
 static inline void do_cpuid(unsigned int *eax, unsigned int *ebx,
 			    unsigned int *ecx, unsigned int *edx)
