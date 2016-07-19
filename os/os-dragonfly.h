@@ -11,6 +11,7 @@
 #include <sys/diskslice.h>
 #include <sys/ioctl_compat.h>
 #include <sys/usched.h>
+#include <sys/resource.h>
 
 #include "../file.h"
 
@@ -22,6 +23,7 @@
 #define FIO_HAVE_CHARDEV_SIZE
 #define FIO_HAVE_GETTID
 #define FIO_HAVE_CPU_AFFINITY
+#define FIO_HAVE_IOPRIO
 
 #define OS_MAP_ANON		MAP_ANON
 
@@ -150,6 +152,22 @@ static inline void fio_getaffinity(int pid, os_cpu_mask_t *mask)
 
 	usched_set(pid, USCHED_GET_CPUMASK, mask, sizeof(*mask));
 }
+
+/* fio code is Linux based, so rename macros to Linux style */
+#define IOPRIO_WHO_PROCESS	PRIO_PROCESS
+#define IOPRIO_WHO_PGRP		PRIO_PGRP
+#define IOPRIO_WHO_USER		PRIO_USER
+
+#define IOPRIO_MIN_PRIO		1	/* lowest priority */
+#define IOPRIO_MAX_PRIO		10	/* highest priority */
+
+/*
+ * Prototypes declared in sys/sys/resource.h are preventing from defining
+ * ioprio_set() with 4 arguments, so define fio's ioprio_set() as a macro.
+ * Note that there is no idea of class within ioprio_set(2) unlike Linux.
+ */
+#define ioprio_set(which, who, ioprio_class, ioprio)	\
+	ioprio_set(which, who, ioprio)
 
 static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {

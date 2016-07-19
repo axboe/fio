@@ -1064,7 +1064,8 @@ nice=int	Run the job with the given nice value. See man nice(2).
 
 prio=int	Set the io priority value of this job. Linux limits us to
 		a positive value between 0 and 7, with 0 being the highest.
-		See man ionice(1).
+		See man ionice(1). Refer to an appropriate manpage for
+		other operating systems since meaning of priority may differ.
 
 prioclass=int	Set the io priority class. See man ionice(1).
 
