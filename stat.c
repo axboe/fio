@@ -2142,7 +2142,7 @@ static void add_log_sample(struct thread_data *td, struct io_log *iolog,
 
 	_add_stat_to_log(iolog, elapsed, td->o.log_max != 0);
 
-	iolog->avg_last = elapsed;
+	iolog->avg_last = elapsed - (this_window - iolog->avg_msec);
 }
 
 void finalize_logs(struct thread_data *td, bool unit_logs)
