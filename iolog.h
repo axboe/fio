@@ -230,6 +230,13 @@ static inline bool per_unit_log(struct io_log *log)
 	return log && !log->avg_msec;
 }
 
+static inline bool inline_log(struct io_log *log)
+{
+	return log->log_type == IO_LOG_TYPE_LAT ||
+		log->log_type == IO_LOG_TYPE_CLAT ||
+		log->log_type == IO_LOG_TYPE_SLAT;
+}
+
 extern void finalize_logs(struct thread_data *td, bool);
 extern void setup_log(struct io_log **, struct log_params *, const char *);
 extern void flush_log(struct io_log *, bool);

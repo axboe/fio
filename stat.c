@@ -2142,7 +2142,7 @@ static long add_log_sample(struct thread_data *td, struct io_log *iolog,
 	if (this_window < iolog->avg_msec) {
 		int diff = iolog->avg_msec - this_window;
 
-		if (diff > LOG_MSEC_SLACK)
+		if (inline_log(iolog) || diff > LOG_MSEC_SLACK)
 			return diff;
 	}
 
