@@ -3444,8 +3444,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "exitall_on_error",
 		.lname	= "Exit-all on terminate in error",
-		.type	= FIO_OPT_BOOL,
-		.off1	= td_var_offset(unlink),
+		.type	= FIO_OPT_STR_SET,
+		.off1	= td_var_offset(exitall_error),
 		.help	= "Terminate all jobs when one exits in error",
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_PROCESS,
