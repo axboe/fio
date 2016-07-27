@@ -88,8 +88,8 @@ static int fio_cpuio_init(struct thread_data *td)
 
 	o->nr_files = o->open_files = 1;
 
-	log_info("%s: ioengine=cpu, cpuload=%u, cpucycle=%u\n", td->o.name,
-						co->cpuload, co->cpucycle);
+	log_info("%s: ioengine=%s, cpuload=%u, cpucycle=%u\n",
+		td->o.name, td->io_ops->name, co->cpuload, co->cpucycle);
 
 	return 0;
 }

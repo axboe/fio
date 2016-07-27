@@ -1695,13 +1695,13 @@ Some parameters are only valid when a specific ioengine is in use. These are
 used identically to normal parameters, with the caveat that when used on the
 command line, they must come after the ioengine.
 .TP
-.BI (cpu)cpuload \fR=\fPint
+.BI (cpuio)cpuload \fR=\fPint
 Attempt to use the specified percentage of CPU cycles.
 .TP
-.BI (cpu)cpuchunks \fR=\fPint
+.BI (cpuio)cpuchunks \fR=\fPint
 Split the load into cycles of the given time. In microseconds.
 .TP
-.BI (cpu)exit_on_io_done \fR=\fPbool
+.BI (cpuio)exit_on_io_done \fR=\fPbool
 Detect when IO threads are done, then exit.
 .TP
 .BI (libaio)userspace_reap

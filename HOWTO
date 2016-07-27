@@ -1840,12 +1840,12 @@ that defines them is selected.
 [psyncv2] hipri		Set RWF_HIPRI on IO, indicating to the kernel that
 			it's of higher priority than normal.
 
-[cpu] cpuload=int Attempt to use the specified percentage of CPU cycles.
+[cpuio] cpuload=int Attempt to use the specified percentage of CPU cycles.
 
-[cpu] cpuchunks=int Split the load into cycles of the given time. In
+[cpuio] cpuchunks=int Split the load into cycles of the given time. In
 		microseconds.
 
-[cpu] exit_on_io_done=bool Detect when IO threads are done, then exit.
+[cpuio] exit_on_io_done=bool Detect when IO threads are done, then exit.
 
 [netsplice] hostname=str
 [net] hostname=str The host name or IP address to use for TCP or UDP based IO.
