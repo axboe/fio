@@ -911,10 +911,15 @@ static int exists_and_not_file(const char *filename)
 	if (lstat(filename, &sb) == -1)
 		return 0;
 
+#ifndef WIN32 /* NOT Windows */
+	if (S_ISREG(sb.st_mode))
+		return 0;
+#else
 	/* \\.\ is the device namespace in Windows, where every file
 	 * is a device node */
 	if (S_ISREG(sb.st_mode) && strncmp(filename, "\\\\.\\", 4) != 0)
 		return 0;
+#endif
 
 	return 1;
 }

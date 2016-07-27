@@ -1225,10 +1225,12 @@ static void get_file_type(struct fio_file *f)
 	else
 		f->filetype = FIO_TYPE_FILE;
 
+#ifdef WIN32
 	/* \\.\ is the device namespace in Windows, where every file is
 	 * a block device */
 	if (strncmp(f->file_name, "\\\\.\\", 4) == 0)
 		f->filetype = FIO_TYPE_BD;
+#endif
 
 	if (!stat(f->file_name, &sb)) {
 		if (S_ISBLK(sb.st_mode))
