@@ -258,7 +258,7 @@ static int str2error(char *str)
 			    "EINVAL", "ENFILE", "EMFILE", "ENOTTY",
 			    "ETXTBSY","EFBIG", "ENOSPC", "ESPIPE",
 			    "EROFS","EMLINK", "EPIPE", "EDOM", "ERANGE" };
-	int i = 0, num = sizeof(err) / sizeof(void *);
+	int i = 0, num = sizeof(err) / sizeof(char *);
 
 	while (i < num) {
 		if (!strcmp(err[i], str))
