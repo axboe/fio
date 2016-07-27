@@ -329,7 +329,7 @@ static int char_size(struct thread_data *td, struct fio_file *f)
 	int r;
 
 	if (td->io_ops->open_file(td, f)) {
-		log_err("fio: failed opening blockdev %s for size check\n",
+		log_err("fio: failed opening chardev %s for size check\n",
 			f->file_name);
 		return 1;
 	}

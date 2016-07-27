@@ -860,7 +860,7 @@ static int fixup_options(struct thread_data *td)
 		td->loops = 1;
 
 	if (td->o.block_error_hist && td->o.nr_files != 1) {
-		log_err("fio: block error histogram only available with "
+		log_err("fio: block error histogram only available "
 			"with a single file per job, but %d files "
 			"provided\n", td->o.nr_files);
 		ret = 1;
