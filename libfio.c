@@ -274,14 +274,18 @@ int fio_running_or_pending_io_threads(void)
 {
 	struct thread_data *td;
 	int i;
+	int nr_io_threads = 0;
 
 	for_each_td(td, i) {
 		if (td->flags & TD_F_NOIO)
 			continue;
+		nr_io_threads++;
 		if (td->runstate < TD_EXITED)
 			return 1;
 	}
 
+	if (!nr_io_threads)
+		return -1; /* we only had cpuio threads to begin with */
 	return 0;
 }
 
