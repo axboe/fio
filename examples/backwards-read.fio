@@ -5,3 +5,4 @@ bs=4k
 # seek -8k back for every IO
 rw=read:-8k
 filename=128m
+size=128m
