@@ -84,13 +84,17 @@ typedef struct aiocb os_aiocb_t;
 #endif
 
 #ifndef FIO_HAVE_CPU_AFFINITY
-#define fio_getaffinity(pid, mask)	do { } while (0)
 #define fio_cpu_clear(mask, cpu)	do { } while (0)
 typedef unsigned long os_cpu_mask_t;
 
 static inline int fio_setaffinity(int pid, os_cpu_mask_t cpumask)
 {
 	return 0;
+}
+
+static inline int fio_getaffinity(int pid, os_cpu_mask_t *cpumask)
+{
+	return -1;
 }
 
 static inline int fio_cpuset_exit(os_cpu_mask_t *mask)

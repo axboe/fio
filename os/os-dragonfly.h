@@ -70,8 +70,7 @@ typedef cpumask_t os_cpu_mask_t;
 
 /*
  * Define USCHED_GET_CPUMASK as the macro didn't exist until release 4.5.
- * usched_set(2) returns EINVAL if the kernel doesn't support it, though
- * fio_getaffinity() returns void.
+ * usched_set(2) returns EINVAL if the kernel doesn't support it.
  *
  * Also note usched_set(2) works only for the current thread regardless of
  * the command type. It doesn't work against another thread regardless of
@@ -145,12 +144,15 @@ static inline int fio_setaffinity(int pid, os_cpu_mask_t mask)
 	return 0;
 }
 
-static inline void fio_getaffinity(int pid, os_cpu_mask_t *mask)
+static inline int fio_getaffinity(int pid, os_cpu_mask_t *mask)
 {
 	/* 0 for the current thread, see BUGS in usched_set(2) */
 	pid = 0;
 
-	usched_set(pid, USCHED_GET_CPUMASK, mask, sizeof(*mask));
+	if (usched_set(pid, USCHED_GET_CPUMASK, mask, sizeof(*mask)))
+		return -1;
+
+	return 0;
 }
 
 /* fio code is Linux based, so rename macros to Linux style */

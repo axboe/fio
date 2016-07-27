@@ -193,7 +193,7 @@ static inline int fio_setaffinity(int pid, os_cpu_mask_t cpumask)
 	return (bSuccess)? 0 : -1;
 }
 
-static inline void fio_getaffinity(int pid, os_cpu_mask_t *mask)
+static inline int fio_getaffinity(int pid, os_cpu_mask_t *mask)
 {
 	os_cpu_mask_t systemMask;
 
@@ -204,7 +204,10 @@ static inline void fio_getaffinity(int pid, os_cpu_mask_t *mask)
 		CloseHandle(h);
 	} else {
 		log_err("fio_getaffinity failed: failed to get handle for pid %d\n", pid);
+		return -1;
 	}
+
+	return 0;
 }
 
 static inline void fio_cpu_clear(os_cpu_mask_t *mask, int cpu)
