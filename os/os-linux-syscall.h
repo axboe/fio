@@ -3,7 +3,7 @@
 
 #include "../arch/arch.h"
 
-/* Linux syscalls for i386 */
+/* Linux syscalls for x86 */
 #if defined(ARCH_X86_H)
 #ifndef __NR_ioprio_set
 #define __NR_ioprio_set		289

@@ -3,7 +3,7 @@
 
 enum {
 	arch_x86_64 = 1,
-	arch_i386,
+	arch_x86,
 	arch_ppc,
 	arch_ia64,
 	arch_s390,
