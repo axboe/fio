@@ -81,6 +81,9 @@ typedef cpumask_t os_cpu_mask_t;
 #define USCHED_GET_CPUMASK	5
 #endif
 
+/* No CPU_COUNT(), but use the default function defined in os/os.h */
+#define fio_cpu_count(mask)             CPU_COUNT((mask))
+
 static inline int fio_cpuset_init(os_cpu_mask_t *mask)
 {
 	CPUMASK_ASSZERO(*mask);
@@ -108,17 +111,6 @@ static inline int fio_cpu_isset(os_cpu_mask_t *mask, int cpu)
 		return 1;
 
 	return 0;
-}
-
-static inline int fio_cpu_count(os_cpu_mask_t *mask)
-{
-	int i, n = 0;
-
-	for (i = 0; i < FIO_MAX_CPUS; i++)
-		if (CPUMASK_TESTBIT(*mask, i))
-			n++;
-
-	return n;
 }
 
 static inline int fio_setaffinity(int pid, os_cpu_mask_t mask)
