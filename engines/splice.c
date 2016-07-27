@@ -28,7 +28,7 @@ struct spliceio_data {
  */
 static int fio_splice_read_old(struct thread_data *td, struct io_u *io_u)
 {
-	struct spliceio_data *sd = td->io_ops->data;
+	struct spliceio_data *sd = td->io_ops_data;
 	struct fio_file *f = io_u->file;
 	int ret, ret2, buflen;
 	off_t offset;
@@ -72,7 +72,7 @@ static int fio_splice_read_old(struct thread_data *td, struct io_u *io_u)
  */
 static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 {
-	struct spliceio_data *sd = td->io_ops->data;
+	struct spliceio_data *sd = td->io_ops_data;
 	struct fio_file *f = io_u->file;
 	struct iovec iov;
 	int ret , buflen, mmap_len;
@@ -166,7 +166,7 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
  */
 static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 {
-	struct spliceio_data *sd = td->io_ops->data;
+	struct spliceio_data *sd = td->io_ops_data;
 	struct iovec iov = {
 		.iov_base = io_u->xfer_buf,
 		.iov_len = io_u->xfer_buflen,
@@ -201,7 +201,7 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 
 static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 {
-	struct spliceio_data *sd = td->io_ops->data;
+	struct spliceio_data *sd = td->io_ops_data;
 	int ret = 0;
 
 	fio_ro_check(td, io_u);
@@ -247,7 +247,7 @@ static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 
 static void fio_spliceio_cleanup(struct thread_data *td)
 {
-	struct spliceio_data *sd = td->io_ops->data;
+	struct spliceio_data *sd = td->io_ops_data;
 
 	if (sd) {
 		close(sd->pipe[0]);
@@ -284,7 +284,7 @@ static int fio_spliceio_init(struct thread_data *td)
 	if (td_read(td))
 		td->o.mem_align = 1;
 
-	td->io_ops->data = sd;
+	td->io_ops_data = sd;
 	return 0;
 }
 

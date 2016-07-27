@@ -28,7 +28,7 @@ static int fio_solarisaio_cancel(struct thread_data fio_unused *td,
 static int fio_solarisaio_prep(struct thread_data fio_unused *td,
 			    struct io_u *io_u)
 {
-	struct solarisaio_data *sd = td->io_ops->data;
+	struct solarisaio_data *sd = td->io_ops_data;
 
 	io_u->resultp.aio_return = AIO_INPROGRESS;
 	io_u->engine_data = sd;
@@ -75,7 +75,7 @@ static void wait_for_event(struct timeval *tv)
 static int fio_solarisaio_getevents(struct thread_data *td, unsigned int min,
 				    unsigned int max, const struct timespec *t)
 {
-	struct solarisaio_data *sd = td->io_ops->data;
+	struct solarisaio_data *sd = td->io_ops_data;
 	struct timeval tv;
 	int ret;
 
@@ -100,7 +100,7 @@ static int fio_solarisaio_getevents(struct thread_data *td, unsigned int min,
 
 static struct io_u *fio_solarisaio_event(struct thread_data *td, int event)
 {
-	struct solarisaio_data *sd = td->io_ops->data;
+	struct solarisaio_data *sd = td->io_ops_data;
 
 	return sd->aio_events[event];
 }
@@ -108,7 +108,7 @@ static struct io_u *fio_solarisaio_event(struct thread_data *td, int event)
 static int fio_solarisaio_queue(struct thread_data fio_unused *td,
 			      struct io_u *io_u)
 {
-	struct solarisaio_data *sd = td->io_ops->data;
+	struct solarisaio_data *sd = td->io_ops_data;
 	struct fio_file *f = io_u->file;
 	off_t off;
 	int ret;
@@ -155,7 +155,7 @@ static int fio_solarisaio_queue(struct thread_data fio_unused *td,
 
 static void fio_solarisaio_cleanup(struct thread_data *td)
 {
-	struct solarisaio_data *sd = td->io_ops->data;
+	struct solarisaio_data *sd = td->io_ops_data;
 
 	if (sd) {
 		free(sd->aio_events);
@@ -204,7 +204,7 @@ static int fio_solarisaio_init(struct thread_data *td)
 	fio_solarisaio_init_sigio();
 #endif
 
-	td->io_ops->data = sd;
+	td->io_ops_data = sd;
 	return 0;
 }
 

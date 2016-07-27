@@ -374,7 +374,7 @@ static int splice_io_u(int fdin, int fdout, unsigned int len)
  */
 static int splice_in(struct thread_data *td, struct io_u *io_u)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 
 	return splice_io_u(io_u->file->fd, nd->pipes[1], io_u->xfer_buflen);
 }
@@ -385,7 +385,7 @@ static int splice_in(struct thread_data *td, struct io_u *io_u)
 static int splice_out(struct thread_data *td, struct io_u *io_u,
 		      unsigned int len)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 
 	return splice_io_u(nd->pipes[0], io_u->file->fd, len);
 }
@@ -423,7 +423,7 @@ static int vmsplice_io_u(struct io_u *io_u, int fd, unsigned int len)
 static int vmsplice_io_u_out(struct thread_data *td, struct io_u *io_u,
 			     unsigned int len)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 
 	return vmsplice_io_u(io_u, nd->pipes[0], len);
 }
@@ -433,7 +433,7 @@ static int vmsplice_io_u_out(struct thread_data *td, struct io_u *io_u,
  */
 static int vmsplice_io_u_in(struct thread_data *td, struct io_u *io_u)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 
 	return vmsplice_io_u(io_u, nd->pipes[1], io_u->xfer_buflen);
 }
@@ -524,7 +524,7 @@ static void verify_udp_seq(struct thread_data *td, struct netio_data *nd,
 
 static int fio_netio_send(struct thread_data *td, struct io_u *io_u)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct netio_options *o = td->eo;
 	int ret, flags = 0;
 
@@ -587,7 +587,7 @@ static int is_close_msg(struct io_u *io_u, int len)
 
 static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct netio_options *o = td->eo;
 	int ret, flags = 0;
 
@@ -645,7 +645,7 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 static int __fio_netio_queue(struct thread_data *td, struct io_u *io_u,
 			     enum fio_ddir ddir)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct netio_options *o = td->eo;
 	int ret;
 
@@ -711,7 +711,7 @@ static int fio_netio_queue(struct thread_data *td, struct io_u *io_u)
 
 static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct netio_options *o = td->eo;
 	int type, domain;
 
@@ -826,7 +826,7 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 
 static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct netio_options *o = td->eo;
 	socklen_t socklen;
 	int state;
@@ -878,7 +878,7 @@ err:
 
 static void fio_netio_send_close(struct thread_data *td, struct fio_file *f)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct netio_options *o = td->eo;
 	struct udp_close_msg msg;
 	struct sockaddr *to;
@@ -913,7 +913,7 @@ static int fio_netio_close_file(struct thread_data *td, struct fio_file *f)
 
 static int fio_netio_udp_recv_open(struct thread_data *td, struct fio_file *f)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct netio_options *o = td->eo;
 	struct udp_close_msg msg;
 	struct sockaddr *to;
@@ -947,7 +947,7 @@ static int fio_netio_udp_recv_open(struct thread_data *td, struct fio_file *f)
 
 static int fio_netio_send_open(struct thread_data *td, struct fio_file *f)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct netio_options *o = td->eo;
 	struct udp_close_msg msg;
 	struct sockaddr *to;
@@ -1049,7 +1049,7 @@ static int fio_fill_addr(struct thread_data *td, const char *host, int af,
 static int fio_netio_setup_connect_inet(struct thread_data *td,
 					const char *host, unsigned short port)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct netio_options *o = td->eo;
 	struct addrinfo *res = NULL;
 	void *dst, *src;
@@ -1099,7 +1099,7 @@ static int fio_netio_setup_connect_inet(struct thread_data *td,
 static int fio_netio_setup_connect_unix(struct thread_data *td,
 					const char *path)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct sockaddr_un *soun = &nd->addr_un;
 
 	soun->sun_family = AF_UNIX;
@@ -1120,7 +1120,7 @@ static int fio_netio_setup_connect(struct thread_data *td)
 
 static int fio_netio_setup_listen_unix(struct thread_data *td, const char *path)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct sockaddr_un *addr = &nd->addr_un;
 	mode_t mode;
 	int len, fd;
@@ -1153,7 +1153,7 @@ static int fio_netio_setup_listen_unix(struct thread_data *td, const char *path)
 
 static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct netio_options *o = td->eo;
 	struct ip_mreq mr;
 	struct sockaddr_in sin;
@@ -1269,7 +1269,7 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 
 static int fio_netio_setup_listen(struct thread_data *td)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 	struct netio_options *o = td->eo;
 	int ret;
 
@@ -1344,7 +1344,7 @@ static int fio_netio_init(struct thread_data *td)
 
 static void fio_netio_cleanup(struct thread_data *td)
 {
-	struct netio_data *nd = td->io_ops->data;
+	struct netio_data *nd = td->io_ops_data;
 
 	if (nd) {
 		if (nd->listenfd != -1)
@@ -1368,13 +1368,13 @@ static int fio_netio_setup(struct thread_data *td)
 		td->o.open_files++;
 	}
 
-	if (!td->io_ops->data) {
+	if (!td->io_ops_data) {
 		nd = malloc(sizeof(*nd));;
 
 		memset(nd, 0, sizeof(*nd));
 		nd->listenfd = -1;
 		nd->pipes[0] = nd->pipes[1] = -1;
-		td->io_ops->data = nd;
+		td->io_ops_data = nd;
 	}
 
 	return 0;
@@ -1392,7 +1392,7 @@ static int fio_netio_setup_splice(struct thread_data *td)
 
 	fio_netio_setup(td);
 
-	nd = td->io_ops->data;
+	nd = td->io_ops_data;
 	if (nd) {
 		if (pipe(nd->pipes) < 0)
 			return 1;

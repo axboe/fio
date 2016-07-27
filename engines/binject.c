@@ -94,7 +94,7 @@ static int fio_binject_getevents(struct thread_data *td, unsigned int min,
 				 unsigned int max,
 				 const struct timespec fio_unused *t)
 {
-	struct binject_data *bd = td->io_ops->data;
+	struct binject_data *bd = td->io_ops_data;
 	int left = max, ret, r = 0, ev_index = 0;
 	void *buf = bd->cmds;
 	unsigned int i, events;
@@ -185,7 +185,7 @@ static int fio_binject_doio(struct thread_data *td, struct io_u *io_u)
 
 static int fio_binject_prep(struct thread_data *td, struct io_u *io_u)
 {
-	struct binject_data *bd = td->io_ops->data;
+	struct binject_data *bd = td->io_ops_data;
 	struct b_user_cmd *buc = &io_u->buc;
 	struct binject_file *bf = FILE_ENG_DATA(io_u->file);
 
@@ -234,7 +234,7 @@ static int fio_binject_queue(struct thread_data *td, struct io_u *io_u)
 
 static struct io_u *fio_binject_event(struct thread_data *td, int event)
 {
-	struct binject_data *bd = td->io_ops->data;
+	struct binject_data *bd = td->io_ops_data;
 
 	return bd->events[event];
 }
@@ -376,7 +376,7 @@ err_close:
 
 static void fio_binject_cleanup(struct thread_data *td)
 {
-	struct binject_data *bd = td->io_ops->data;
+	struct binject_data *bd = td->io_ops_data;
 
 	if (bd) {
 		free(bd->events);
@@ -406,7 +406,7 @@ static int fio_binject_init(struct thread_data *td)
 	bd->fd_flags = malloc(sizeof(int) * td->o.nr_files);
 	memset(bd->fd_flags, 0, sizeof(int) * td->o.nr_files);
 
-	td->io_ops->data = bd;
+	td->io_ops_data = bd;
 	return 0;
 }
 

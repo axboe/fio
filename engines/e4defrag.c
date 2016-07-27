@@ -109,7 +109,7 @@ static int fio_e4defrag_init(struct thread_data *td)
 		goto err;
 
 	ed->bsz = stub.st_blksize;
-	td->io_ops->data = ed;
+	td->io_ops_data = ed;
 	return 0;
 err:
 	td_verror(td, errno, "io_queue_init");
@@ -120,7 +120,7 @@ err:
 
 static void fio_e4defrag_cleanup(struct thread_data *td)
 {
-	struct e4defrag_data *ed = td->io_ops->data;
+	struct e4defrag_data *ed = td->io_ops_data;
 	if (ed) {
 		if (ed->donor_fd >= 0)
 			close(ed->donor_fd);
@@ -136,7 +136,7 @@ static int fio_e4defrag_queue(struct thread_data *td, struct io_u *io_u)
 	unsigned long long len;
 	struct move_extent me;
 	struct fio_file *f = io_u->file;
-	struct e4defrag_data *ed = td->io_ops->data;
+	struct e4defrag_data *ed = td->io_ops_data;
 	struct e4defrag_options *o = td->eo;
 
 	fio_ro_check(td, io_u);

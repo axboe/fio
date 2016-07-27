@@ -102,7 +102,7 @@ static int fio_sgio_getevents(struct thread_data *td, unsigned int min,
 			      unsigned int max,
 			      const struct timespec fio_unused *t)
 {
-	struct sgio_data *sd = td->io_ops->data;
+	struct sgio_data *sd = td->io_ops_data;
 	int left = max, eventNum, ret, r = 0;
 	void *buf = sd->sgbuf;
 	unsigned int i, events;
@@ -207,7 +207,7 @@ re_read:
 static int fio_sgio_ioctl_doio(struct thread_data *td,
 			       struct fio_file *f, struct io_u *io_u)
 {
-	struct sgio_data *sd = td->io_ops->data;
+	struct sgio_data *sd = td->io_ops_data;
 	struct sg_io_hdr *hdr = &io_u->hdr;
 	int ret;
 
@@ -268,7 +268,7 @@ static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int do_sync)
 static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct sg_io_hdr *hdr = &io_u->hdr;
-	struct sgio_data *sd = td->io_ops->data;
+	struct sgio_data *sd = td->io_ops_data;
 	long long nr_blocks, lba;
 
 	if (io_u->xfer_buflen & (sd->bs - 1)) {
@@ -366,7 +366,7 @@ static int fio_sgio_queue(struct thread_data *td, struct io_u *io_u)
 
 static struct io_u *fio_sgio_event(struct thread_data *td, int event)
 {
-	struct sgio_data *sd = td->io_ops->data;
+	struct sgio_data *sd = td->io_ops_data;
 
 	return sd->events[event];
 }
@@ -463,7 +463,7 @@ static int fio_sgio_read_capacity(struct thread_data *td, unsigned int *bs,
 
 static void fio_sgio_cleanup(struct thread_data *td)
 {
-	struct sgio_data *sd = td->io_ops->data;
+	struct sgio_data *sd = td->io_ops_data;
 
 	if (sd) {
 		free(sd->events);
@@ -492,7 +492,7 @@ static int fio_sgio_init(struct thread_data *td)
 	sd->sgbuf = malloc(sizeof(struct sg_io_hdr) * td->o.iodepth);
 	memset(sd->sgbuf, 0, sizeof(struct sg_io_hdr) * td->o.iodepth);
 	sd->type_checked = 0;
-	td->io_ops->data = sd;
+	td->io_ops_data = sd;
 
 	/*
 	 * we want to do it, regardless of whether odirect is set or not
@@ -503,7 +503,7 @@ static int fio_sgio_init(struct thread_data *td)
 
 static int fio_sgio_type_check(struct thread_data *td, struct fio_file *f)
 {
-	struct sgio_data *sd = td->io_ops->data;
+	struct sgio_data *sd = td->io_ops_data;
 	unsigned int bs = 0;
 	unsigned long long max_lba = 0;
 
@@ -552,7 +552,7 @@ static int fio_sgio_type_check(struct thread_data *td, struct fio_file *f)
 
 static int fio_sgio_open(struct thread_data *td, struct fio_file *f)
 {
-	struct sgio_data *sd = td->io_ops->data;
+	struct sgio_data *sd = td->io_ops_data;
 	int ret;
 
 	ret = generic_open_file(td, f);

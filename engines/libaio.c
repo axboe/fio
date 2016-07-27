@@ -83,7 +83,7 @@ static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 
 static struct io_u *fio_libaio_event(struct thread_data *td, int event)
 {
-	struct libaio_data *ld = td->io_ops->data;
+	struct libaio_data *ld = td->io_ops_data;
 	struct io_event *ev;
 	struct io_u *io_u;
 
@@ -145,7 +145,7 @@ static int user_io_getevents(io_context_t aio_ctx, unsigned int max,
 static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 				unsigned int max, const struct timespec *t)
 {
-	struct libaio_data *ld = td->io_ops->data;
+	struct libaio_data *ld = td->io_ops_data;
 	struct libaio_options *o = td->eo;
 	unsigned actual_min = td->o.iodepth_batch_complete_min == 0 ? 0 : min;
 	struct timespec __lt, *lt = NULL;
@@ -181,7 +181,7 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 
 static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 {
-	struct libaio_data *ld = td->io_ops->data;
+	struct libaio_data *ld = td->io_ops_data;
 
 	fio_ro_check(td, io_u);
 
@@ -238,7 +238,7 @@ static void fio_libaio_queued(struct thread_data *td, struct io_u **io_us,
 
 static int fio_libaio_commit(struct thread_data *td)
 {
-	struct libaio_data *ld = td->io_ops->data;
+	struct libaio_data *ld = td->io_ops_data;
 	struct iocb **iocbs;
 	struct io_u **io_us;
 	struct timeval tv;
@@ -308,14 +308,14 @@ static int fio_libaio_commit(struct thread_data *td)
 
 static int fio_libaio_cancel(struct thread_data *td, struct io_u *io_u)
 {
-	struct libaio_data *ld = td->io_ops->data;
+	struct libaio_data *ld = td->io_ops_data;
 
 	return io_cancel(ld->aio_ctx, &io_u->iocb, ld->aio_events);
 }
 
 static void fio_libaio_cleanup(struct thread_data *td)
 {
-	struct libaio_data *ld = td->io_ops->data;
+	struct libaio_data *ld = td->io_ops_data;
 
 	if (ld) {
 		/*
@@ -363,7 +363,7 @@ static int fio_libaio_init(struct thread_data *td)
 	ld->iocbs = calloc(ld->entries, sizeof(struct iocb *));
 	ld->io_us = calloc(ld->entries, sizeof(struct io_u *));
 
-	td->io_ops->data = ld;
+	td->io_ops_data = ld;
 	return 0;
 }
 

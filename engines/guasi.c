@@ -50,7 +50,7 @@ static int fio_guasi_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 
 static struct io_u *fio_guasi_event(struct thread_data *td, int event)
 {
-	struct guasi_data *ld = td->io_ops->data;
+	struct guasi_data *ld = td->io_ops_data;
 	struct io_u *io_u;
 	struct guasi_reqinfo rinf;
 
@@ -82,7 +82,7 @@ static struct io_u *fio_guasi_event(struct thread_data *td, int event)
 static int fio_guasi_getevents(struct thread_data *td, unsigned int min,
 			       unsigned int max, const struct timespec *t)
 {
-	struct guasi_data *ld = td->io_ops->data;
+	struct guasi_data *ld = td->io_ops_data;
 	int n, r;
 	long timeo = -1;
 
@@ -115,7 +115,7 @@ static int fio_guasi_getevents(struct thread_data *td, unsigned int min,
 
 static int fio_guasi_queue(struct thread_data *td, struct io_u *io_u)
 {
-	struct guasi_data *ld = td->io_ops->data;
+	struct guasi_data *ld = td->io_ops_data;
 
 	fio_ro_check(td, io_u);
 
@@ -148,7 +148,7 @@ static void fio_guasi_queued(struct thread_data *td, struct io_u **io_us, int nr
 
 static int fio_guasi_commit(struct thread_data *td)
 {
-	struct guasi_data *ld = td->io_ops->data;
+	struct guasi_data *ld = td->io_ops_data;
 	int i;
 	struct io_u *io_u;
 	struct fio_file *f;
@@ -198,7 +198,7 @@ static int fio_guasi_cancel(struct thread_data fio_unused *td,
 
 static void fio_guasi_cleanup(struct thread_data *td)
 {
-	struct guasi_data *ld = td->io_ops->data;
+	struct guasi_data *ld = td->io_ops_data;
 	int n;
 
 	GDBG_PRINT(("fio_guasi_cleanup(%p)\n", ld));
@@ -235,7 +235,7 @@ static int fio_guasi_init(struct thread_data *td)
 	ld->queued_nr = 0;
 	ld->reqs_nr = 0;
 
-	td->io_ops->data = ld;
+	td->io_ops_data = ld;
 	GDBG_PRINT(("fio_guasi_init(): depth=%d -> %p\n", td->o.iodepth, ld));
 
 	return 0;

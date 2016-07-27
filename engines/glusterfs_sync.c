@@ -11,7 +11,7 @@
 static int fio_gf_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
-	struct gf_data *g = td->io_ops->data;
+	struct gf_data *g = td->io_ops_data;
 
 	dprint(FD_FILE, "fio prep\n");
 
@@ -31,7 +31,7 @@ static int fio_gf_prep(struct thread_data *td, struct io_u *io_u)
 
 static int fio_gf_queue(struct thread_data *td, struct io_u *io_u)
 {
-	struct gf_data *g = td->io_ops->data;
+	struct gf_data *g = td->io_ops_data;
 	int ret = 0;
 
 	dprint(FD_FILE, "fio queue len %lu\n", io_u->xfer_buflen);

@@ -119,13 +119,13 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 		return NULL;
 	}
 
-	ops->dlhandle = dlhandle;
+	td->io_ops_dlhandle = dlhandle;
 	return ops;
 }
 
 struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
 {
-	struct ioengine_ops *ops, *ret;
+	struct ioengine_ops *ops;
 	char engine[16];
 
 	dprint(FD_IO, "load ioengine %s\n", name);
@@ -153,11 +153,7 @@ struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
 	if (check_engine_ops(ops))
 		return NULL;
 
-	ret = malloc(sizeof(*ret));
-	memcpy(ret, ops, sizeof(*ret));
-	ret->data = NULL;
-
-	return ret;
+	return ops;
 }
 
 /*
@@ -173,10 +169,9 @@ void free_ioengine(struct thread_data *td)
 		td->eo = NULL;
 	}
 
-	if (td->io_ops->dlhandle)
-		dlclose(td->io_ops->dlhandle);
+	if (td->io_ops_dlhandle)
+		dlclose(td->io_ops_dlhandle);
 
-	free(td->io_ops);
 	td->io_ops = NULL;
 }
 
@@ -186,7 +181,7 @@ void close_ioengine(struct thread_data *td)
 
 	if (td->io_ops->cleanup) {
 		td->io_ops->cleanup(td);
-		td->io_ops->data = NULL;
+		td->io_ops_data = NULL;
 	}
 
 	free_ioengine(td);

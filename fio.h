@@ -227,6 +227,12 @@ struct thread_data {
 	struct ioengine_ops *io_ops;
 
 	/*
+	 * IO engine private data and dlhandle.
+	 */
+	void *io_ops_data;
+	void *io_ops_dlhandle;
+
+	/*
 	 * Queue depth of io_u's that fio MIGHT do
 	 */
 	unsigned int cur_depth;

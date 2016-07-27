@@ -25,7 +25,7 @@ struct null_data {
 
 static struct io_u *fio_null_event(struct thread_data *td, int event)
 {
-	struct null_data *nd = (struct null_data *) td->io_ops->data;
+	struct null_data *nd = (struct null_data *) td->io_ops_data;
 
 	return nd->io_us[event];
 }
@@ -34,7 +34,7 @@ static int fio_null_getevents(struct thread_data *td, unsigned int min_events,
 			      unsigned int fio_unused max,
 			      const struct timespec fio_unused *t)
 {
-	struct null_data *nd = (struct null_data *) td->io_ops->data;
+	struct null_data *nd = (struct null_data *) td->io_ops_data;
 	int ret = 0;
 	
 	if (min_events) {
@@ -47,7 +47,7 @@ static int fio_null_getevents(struct thread_data *td, unsigned int min_events,
 
 static int fio_null_commit(struct thread_data *td)
 {
-	struct null_data *nd = (struct null_data *) td->io_ops->data;
+	struct null_data *nd = (struct null_data *) td->io_ops_data;
 
 	if (!nd->events) {
 #ifndef FIO_EXTERNAL_ENGINE
@@ -62,7 +62,7 @@ static int fio_null_commit(struct thread_data *td)
 
 static int fio_null_queue(struct thread_data *td, struct io_u *io_u)
 {
-	struct null_data *nd = (struct null_data *) td->io_ops->data;
+	struct null_data *nd = (struct null_data *) td->io_ops_data;
 
 	fio_ro_check(td, io_u);
 
@@ -83,7 +83,7 @@ static int fio_null_open(struct thread_data fio_unused *td,
 
 static void fio_null_cleanup(struct thread_data *td)
 {
-	struct null_data *nd = (struct null_data *) td->io_ops->data;
+	struct null_data *nd = (struct null_data *) td->io_ops_data;
 
 	if (nd) {
 		free(nd->io_us);
@@ -103,7 +103,7 @@ static int fio_null_init(struct thread_data *td)
 	} else
 		td->io_ops->flags |= FIO_SYNCIO;
 
-	td->io_ops->data = nd;
+	td->io_ops_data = nd;
 	return 0;
 }
 

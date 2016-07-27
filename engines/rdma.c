@@ -191,7 +191,7 @@ struct rdmaio_data {
 
 static int client_recv(struct thread_data *td, struct ibv_wc *wc)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	unsigned int max_bs;
 
 	if (wc->byte_len != sizeof(rd->recv_buf)) {
@@ -232,7 +232,7 @@ static int client_recv(struct thread_data *td, struct ibv_wc *wc)
 
 static int server_recv(struct thread_data *td, struct ibv_wc *wc)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	unsigned int max_bs;
 
 	if (wc->wr_id == FIO_RDMA_MAX_IO_DEPTH) {
@@ -257,7 +257,7 @@ static int server_recv(struct thread_data *td, struct ibv_wc *wc)
 
 static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct ibv_wc wc;
 	struct rdma_io_u_data *r_io_u_d;
 	int ret;
@@ -368,7 +368,7 @@ static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
  */
 static int rdma_poll_wait(struct thread_data *td, enum ibv_wc_opcode opcode)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct ibv_cq *ev_cq;
 	void *ev_ctx;
 	int ret;
@@ -405,7 +405,7 @@ again:
 
 static int fio_rdmaio_setup_qp(struct thread_data *td)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct ibv_qp_init_attr init_attr;
 	int qp_depth = td->o.iodepth * 2;	/* 2 times of io depth */
 
@@ -485,7 +485,7 @@ err1:
 
 static int fio_rdmaio_setup_control_msg_buffers(struct thread_data *td)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 
 	rd->recv_mr = ibv_reg_mr(rd->pd, &rd->recv_buf, sizeof(rd->recv_buf),
 				 IBV_ACCESS_LOCAL_WRITE);
@@ -529,7 +529,7 @@ static int get_next_channel_event(struct thread_data *td,
 				  struct rdma_event_channel *channel,
 				  enum rdma_cm_event_type wait_event)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct rdma_cm_event *event;
 	int ret;
 
@@ -561,7 +561,7 @@ static int get_next_channel_event(struct thread_data *td,
 
 static int fio_rdmaio_prep(struct thread_data *td, struct io_u *io_u)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct rdma_io_u_data *r_io_u_d;
 
 	r_io_u_d = io_u->engine_data;
@@ -604,7 +604,7 @@ static int fio_rdmaio_prep(struct thread_data *td, struct io_u *io_u)
 
 static struct io_u *fio_rdmaio_event(struct thread_data *td, int event)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct io_u *io_u;
 	int i;
 
@@ -622,7 +622,7 @@ static struct io_u *fio_rdmaio_event(struct thread_data *td, int event)
 static int fio_rdmaio_getevents(struct thread_data *td, unsigned int min,
 				unsigned int max, const struct timespec *t)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	enum ibv_wc_opcode comp_opcode;
 	struct ibv_cq *ev_cq;
 	void *ev_ctx;
@@ -684,7 +684,7 @@ again:
 static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 			   unsigned int nr)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct ibv_send_wr *bad_wr;
 #if 0
 	enum ibv_wc_opcode comp_opcode;
@@ -747,7 +747,7 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 static int fio_rdmaio_recv(struct thread_data *td, struct io_u **io_us,
 			   unsigned int nr)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct ibv_recv_wr *bad_wr;
 	struct rdma_io_u_data *r_io_u_d;
 	int i;
@@ -783,7 +783,7 @@ static int fio_rdmaio_recv(struct thread_data *td, struct io_u **io_us,
 
 static int fio_rdmaio_queue(struct thread_data *td, struct io_u *io_u)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 
 	fio_ro_check(td, io_u);
 
@@ -801,7 +801,7 @@ static int fio_rdmaio_queue(struct thread_data *td, struct io_u *io_u)
 static void fio_rdmaio_queued(struct thread_data *td, struct io_u **io_us,
 			      unsigned int nr)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct timeval now;
 	unsigned int i;
 
@@ -824,7 +824,7 @@ static void fio_rdmaio_queued(struct thread_data *td, struct io_u **io_us,
 
 static int fio_rdmaio_commit(struct thread_data *td)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct io_u **io_us;
 	int ret;
 
@@ -856,7 +856,7 @@ static int fio_rdmaio_commit(struct thread_data *td)
 
 static int fio_rdmaio_connect(struct thread_data *td, struct fio_file *f)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct rdma_conn_param conn_param;
 	struct ibv_send_wr *bad_wr;
 
@@ -907,7 +907,7 @@ static int fio_rdmaio_connect(struct thread_data *td, struct fio_file *f)
 
 static int fio_rdmaio_accept(struct thread_data *td, struct fio_file *f)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct rdma_conn_param conn_param;
 	struct ibv_send_wr *bad_wr;
 	int ret = 0;
@@ -952,7 +952,7 @@ static int fio_rdmaio_open_file(struct thread_data *td, struct fio_file *f)
 
 static int fio_rdmaio_close_file(struct thread_data *td, struct fio_file *f)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct ibv_send_wr *bad_wr;
 
 	/* unregister rdma buffer */
@@ -1008,7 +1008,7 @@ static int fio_rdmaio_close_file(struct thread_data *td, struct fio_file *f)
 static int fio_rdmaio_setup_connect(struct thread_data *td, const char *host,
 				    unsigned short port)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct ibv_recv_wr *bad_wr;
 	int err;
 
@@ -1072,7 +1072,7 @@ static int fio_rdmaio_setup_connect(struct thread_data *td, const char *host,
 
 static int fio_rdmaio_setup_listen(struct thread_data *td, short port)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct ibv_recv_wr *bad_wr;
 	int state = td->runstate;
 
@@ -1207,7 +1207,7 @@ bad_host:
 
 static int fio_rdmaio_init(struct thread_data *td)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 	struct rdmaio_options *o = td->eo;
 	unsigned int max_bs;
 	int ret, i;
@@ -1316,7 +1316,7 @@ static int fio_rdmaio_init(struct thread_data *td)
 
 static void fio_rdmaio_cleanup(struct thread_data *td)
 {
-	struct rdmaio_data *rd = td->io_ops->data;
+	struct rdmaio_data *rd = td->io_ops_data;
 
 	if (rd)
 		free(rd);
@@ -1332,12 +1332,12 @@ static int fio_rdmaio_setup(struct thread_data *td)
 		td->o.open_files++;
 	}
 
-	if (!td->io_ops->data) {
+	if (!td->io_ops_data) {
 		rd = malloc(sizeof(*rd));
 
 		memset(rd, 0, sizeof(*rd));
 		init_rand_seed(&rd->rand_state, (unsigned int) GOLDEN_RATIO_PRIME, 0);
-		td->io_ops->data = rd;
+		td->io_ops_data = rd;
 	}
 
 	return 0;

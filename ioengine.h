@@ -163,8 +163,6 @@ struct ioengine_ops {
 	void (*io_u_free)(struct thread_data *, struct io_u *);
 	int option_struct_size;
 	struct fio_option *options;
-	void *data;
-	void *dlhandle;
 };
 
 enum fio_ioengine_flags {

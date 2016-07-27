@@ -119,7 +119,7 @@ static int get_chunck_name(char *dest, char *file_name, uint64_t chunk_id) {
 static int fio_hdfsio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct hdfsio_options *options = td->eo;
-	struct hdfsio_data *hd = td->io_ops->data;
+	struct hdfsio_data *hd = td->io_ops_data;
 	unsigned long f_id;
 	char fname[CHUNCK_NAME_LENGTH_MAX];
 	int open_flags;
@@ -163,7 +163,7 @@ static int fio_hdfsio_prep(struct thread_data *td, struct io_u *io_u)
 
 static int fio_hdfsio_queue(struct thread_data *td, struct io_u *io_u)
 {
-	struct hdfsio_data *hd = td->io_ops->data;
+	struct hdfsio_data *hd = td->io_ops_data;
 	struct hdfsio_options *options = td->eo;
 	int ret;
 	unsigned long offset;
@@ -223,7 +223,7 @@ int fio_hdfsio_open_file(struct thread_data *td, struct fio_file *f)
 
 int fio_hdfsio_close_file(struct thread_data *td, struct fio_file *f)
 {
-	struct hdfsio_data *hd = td->io_ops->data;
+	struct hdfsio_data *hd = td->io_ops_data;
 
 	if (hd->curr_file_id != -1) {
 		if ( hdfsCloseFile(hd->fs, hd->fp) == -1) {
@@ -238,7 +238,7 @@ int fio_hdfsio_close_file(struct thread_data *td, struct fio_file *f)
 static int fio_hdfsio_init(struct thread_data *td)
 {
 	struct hdfsio_options *options = td->eo;
-	struct hdfsio_data *hd = td->io_ops->data;
+	struct hdfsio_data *hd = td->io_ops_data;
 	struct fio_file *f;
 	uint64_t j,k;
 	int i, failure = 0;
@@ -309,13 +309,13 @@ static int fio_hdfsio_setup(struct thread_data *td)
 	int i;
 	uint64_t file_size, total_file_size;
 
-	if (!td->io_ops->data) {
+	if (!td->io_ops_data) {
 		hd = malloc(sizeof(*hd));
 		memset(hd, 0, sizeof(*hd));
 		
 		hd->curr_file_id = -1;
 
-		td->io_ops->data = hd;
+		td->io_ops_data = hd;
 	}
 	
 	total_file_size = 0;
@@ -346,7 +346,7 @@ static int fio_hdfsio_setup(struct thread_data *td)
 
 static int fio_hdfsio_io_u_init(struct thread_data *td, struct io_u *io_u)
 {
-	struct hdfsio_data *hd = td->io_ops->data;
+	struct hdfsio_data *hd = td->io_ops_data;
 	struct hdfsio_options *options = td->eo;
 	int failure;
 	struct hdfsBuilder *bld;
@@ -381,7 +381,7 @@ static int fio_hdfsio_io_u_init(struct thread_data *td, struct io_u *io_u)
 
 static void fio_hdfsio_io_u_free(struct thread_data *td, struct io_u *io_u)
 {
-	struct hdfsio_data *hd = td->io_ops->data;
+	struct hdfsio_data *hd = td->io_ops_data;
 
 	if (hd->fs && hdfsDisconnect(hd->fs) < 0) {
 		log_err("hdfs: disconnect failed: %d\n", errno);

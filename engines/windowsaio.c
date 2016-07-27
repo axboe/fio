@@ -84,7 +84,7 @@ static int fio_windowsaio_init(struct thread_data *td)
 		}
 	}
 
-	td->io_ops->data = wd;
+	td->io_ops_data = wd;
 
 	if (!rc) {
 		struct thread_ctx *ctx;
@@ -97,7 +97,7 @@ static int fio_windowsaio_init(struct thread_data *td)
 			rc = 1;
 		}
 
-		wd = td->io_ops->data;
+		wd = td->io_ops_data;
 		wd->iothread_running = TRUE;
 		wd->iocp = hFile;
 
@@ -131,7 +131,7 @@ static void fio_windowsaio_cleanup(struct thread_data *td)
 {
 	struct windowsaio_data *wd;
 
-	wd = td->io_ops->data;
+	wd = td->io_ops_data;
 
 	if (wd != NULL) {
 		wd->iothread_running = FALSE;
@@ -143,7 +143,7 @@ static void fio_windowsaio_cleanup(struct thread_data *td)
 		free(wd->aio_events);
 		free(wd);
 
-		td->io_ops->data = NULL;
+		td->io_ops_data = NULL;
 	}
 }
 
@@ -203,10 +203,10 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 
 	/* Only set up the completion port and thread if we're not just
 	 * querying the device size */
-	if (!rc && td->io_ops->data != NULL) {
+	if (!rc && td->io_ops_data != NULL) {
 		struct windowsaio_data *wd;
 
-		wd = td->io_ops->data;
+		wd = td->io_ops_data;
 
 		if (CreateIoCompletionPort(f->hFile, wd->iocp, 0, 0) == NULL) {
 			log_err("windowsaio: failed to create io completion port\n");
@@ -251,7 +251,7 @@ static BOOL timeout_expired(DWORD start_count, DWORD end_count)
 
 static struct io_u* fio_windowsaio_event(struct thread_data *td, int event)
 {
-	struct windowsaio_data *wd = td->io_ops->data;
+	struct windowsaio_data *wd = td->io_ops_data;
 	return wd->aio_events[event];
 }
 
@@ -259,7 +259,7 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 				    unsigned int max,
 				    const struct timespec *t)
 {
-	struct windowsaio_data *wd = td->io_ops->data;
+	struct windowsaio_data *wd = td->io_ops_data;
 	unsigned int dequeued = 0;
 	struct io_u *io_u;
 	int i;

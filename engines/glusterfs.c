@@ -41,7 +41,7 @@ int fio_gf_setup(struct thread_data *td)
 
 	dprint(FD_IO, "fio setup\n");
 
-	if (td->io_ops->data)
+	if (td->io_ops_data)
 		return 0;
 
 	g = malloc(sizeof(struct gf_data));
@@ -77,19 +77,19 @@ int fio_gf_setup(struct thread_data *td)
 		goto cleanup;
 	}
 	dprint(FD_FILE, "fio setup %p\n", g->fs);
-	td->io_ops->data = g;
+	td->io_ops_data = g;
 	return 0;
 cleanup:
 	if (g->fs)
 		glfs_fini(g->fs);
 	free(g);
-	td->io_ops->data = NULL;
+	td->io_ops_data = NULL;
 	return r;
 }
 
 void fio_gf_cleanup(struct thread_data *td)
 {
-	struct gf_data *g = td->io_ops->data;
+	struct gf_data *g = td->io_ops_data;
 
 	if (g) {
 		if (g->aio_events)
@@ -99,7 +99,7 @@ void fio_gf_cleanup(struct thread_data *td)
 		if (g->fs)
 			glfs_fini(g->fs);
 		free(g);
-		td->io_ops->data = NULL;
+		td->io_ops_data = NULL;
 	}
 }
 
@@ -107,7 +107,7 @@ int fio_gf_get_file_size(struct thread_data *td, struct fio_file *f)
 {
 	struct stat buf;
 	int ret;
-	struct gf_data *g = td->io_ops->data;
+	struct gf_data *g = td->io_ops_data;
 
 	dprint(FD_FILE, "get file size %s\n", f->file_name);
 
@@ -135,7 +135,7 @@ int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
 
 	int flags = 0;
 	int ret = 0;
-	struct gf_data *g = td->io_ops->data;
+	struct gf_data *g = td->io_ops_data;
 	struct stat sb = { 0, };
 
 	if (td_write(td)) {
@@ -268,7 +268,7 @@ int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
 int fio_gf_close_file(struct thread_data *td, struct fio_file *f)
 {
 	int ret = 0;
-	struct gf_data *g = td->io_ops->data;
+	struct gf_data *g = td->io_ops_data;
 
 	dprint(FD_FILE, "fd close %s\n", f->file_name);
 
@@ -284,7 +284,7 @@ int fio_gf_close_file(struct thread_data *td, struct fio_file *f)
 int fio_gf_unlink_file(struct thread_data *td, struct fio_file *f)
 {
 	int ret = 0;
-	struct gf_data *g = td->io_ops->data;
+	struct gf_data *g = td->io_ops_data;
 
 	dprint(FD_FILE, "fd unlink %s\n", f->file_name);
 
@@ -300,7 +300,7 @@ int fio_gf_unlink_file(struct thread_data *td, struct fio_file *f)
 		g->fd = NULL;
 		free(g);
 	}
-	td->io_ops->data = NULL;
+	td->io_ops_data = NULL;
 
 	return ret;
 }

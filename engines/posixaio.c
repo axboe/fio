@@ -93,7 +93,7 @@ static int fio_posixaio_prep(struct thread_data fio_unused *td,
 static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 				  unsigned int max, const struct timespec *t)
 {
-	struct posixaio_data *pd = td->io_ops->data;
+	struct posixaio_data *pd = td->io_ops_data;
 	os_aiocb_t *suspend_list[SUSPEND_ENTRIES];
 	struct timespec start;
 	int have_timeout = 0;
@@ -161,7 +161,7 @@ restart:
 
 static struct io_u *fio_posixaio_event(struct thread_data *td, int event)
 {
-	struct posixaio_data *pd = td->io_ops->data;
+	struct posixaio_data *pd = td->io_ops_data;
 
 	return pd->aio_events[event];
 }
@@ -169,7 +169,7 @@ static struct io_u *fio_posixaio_event(struct thread_data *td, int event)
 static int fio_posixaio_queue(struct thread_data *td,
 			      struct io_u *io_u)
 {
-	struct posixaio_data *pd = td->io_ops->data;
+	struct posixaio_data *pd = td->io_ops_data;
 	os_aiocb_t *aiocb = &io_u->aiocb;
 	int ret;
 
@@ -220,7 +220,7 @@ static int fio_posixaio_queue(struct thread_data *td,
 
 static void fio_posixaio_cleanup(struct thread_data *td)
 {
-	struct posixaio_data *pd = td->io_ops->data;
+	struct posixaio_data *pd = td->io_ops_data;
 
 	if (pd) {
 		free(pd->aio_events);
@@ -236,7 +236,7 @@ static int fio_posixaio_init(struct thread_data *td)
 	pd->aio_events = malloc(td->o.iodepth * sizeof(struct io_u *));
 	memset(pd->aio_events, 0, td->o.iodepth * sizeof(struct io_u *));
 
-	td->io_ops->data = pd;
+	td->io_ops_data = pd;
 	return 0;
 }
 

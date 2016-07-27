@@ -13,7 +13,7 @@ struct fio_gf_iou {
 
 static struct io_u *fio_gf_event(struct thread_data *td, int event)
 {
-	struct gf_data *gf_data = td->io_ops->data;
+	struct gf_data *gf_data = td->io_ops_data;
 
 	dprint(FD_IO, "%s\n", __FUNCTION__);
 	return gf_data->aio_events[event];
@@ -22,7 +22,7 @@ static struct io_u *fio_gf_event(struct thread_data *td, int event)
 static int fio_gf_getevents(struct thread_data *td, unsigned int min,
 			    unsigned int max, const struct timespec *t)
 {
-	struct gf_data *g = td->io_ops->data;
+	struct gf_data *g = td->io_ops_data;
 	unsigned int events = 0;
 	struct io_u *io_u;
 	int i;
@@ -99,7 +99,7 @@ static void gf_async_cb(glfs_fd_t * fd, ssize_t ret, void *data)
 static int fio_gf_async_queue(struct thread_data fio_unused * td,
 			      struct io_u *io_u)
 {
-	struct gf_data *g = td->io_ops->data;
+	struct gf_data *g = td->io_ops_data;
 	int r;
 
 	dprint(FD_IO, "%s op %s\n", __FUNCTION__, io_ddir_name(io_u->ddir));
@@ -150,7 +150,7 @@ int fio_gf_async_setup(struct thread_data *td)
 		return r;
 
 	td->o.use_thread = 1;
-	g = td->io_ops->data;
+	g = td->io_ops_data;
 	g->aio_events = calloc(td->o.iodepth, sizeof(struct io_u *));
 	if (!g->aio_events) {
 		r = -ENOMEM;
