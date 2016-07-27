@@ -110,8 +110,13 @@ static int _fio_setup_rbd_data(struct thread_data *td,
 	return 0;
 
 failed:
-	if (rbd)
+	if (rbd) {
+		if (rbd->aio_events) 
+			free(rbd->aio_events);
+		if (rbd->sort_events)
+			free(rbd->sort_events);
 		free(rbd);
+	}
 	return 1;
 
 }
