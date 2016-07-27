@@ -109,6 +109,7 @@ static void show_option_help(struct fio_option *o, int is_err)
 		"list of floating point values separated by ':' (opt=5.9:7.8)",
 		"no argument (opt)",
 		"deprecated",
+		"unsupported",
 	};
 	size_t (*logger)(const char *format, ...);
 
