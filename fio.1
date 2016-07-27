@@ -656,7 +656,8 @@ and send/receive. This ioengine defines engine specific options.
 .TP
 .B cpuio
 Doesn't transfer any data, but burns CPU cycles according to \fBcpuload\fR and
-\fBcpuchunks\fR parameters.
+\fBcpuchunks\fR parameters. A job never finishes unless there is at least one
+non-cpuio job.
 .TP
 .B guasi
 The GUASI I/O engine is the Generic Userspace Asynchronous Syscall Interface

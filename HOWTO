@@ -757,7 +757,8 @@ ioengine=str	Defines how the job issues io to the file. The following
 				85% of the CPU. In case of SMP machines,
 				use numjobs=<no_of_cpu> to get desired CPU
 				usage, as the cpuload only loads a single
-				CPU at the desired rate.
+				CPU at the desired rate. A job never finishes
+				unless there is at least one non-cpuio job.
 
 			guasi	The GUASI IO engine is the Generic Userspace
 				Asyncronous Syscall Interface approach
