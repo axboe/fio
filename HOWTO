@@ -405,6 +405,7 @@ rw=str		Type of io pattern. Accepted values are:
 			trimwrite	Mixed trims and writes. Blocks will be
 					trimmed first, then written to.
 
+		Fio defaults to read if the option is not specified.
 		For the mixed io types, the default is to split them 50/50.
 		For certain types of io the result may still be skewed a bit,
 		since the speed may be different. It is possible to specify
@@ -699,7 +700,8 @@ ioengine=str	Defines how the job issues io to the file. The following
 			sync	Basic read(2) or write(2) io. lseek(2) is
 				used to position the io location.
 
-			psync 	Basic pread(2) or pwrite(2) io.
+			psync 	Basic pread(2) or pwrite(2) io. Default on all
+				supported operating systems except for Windows.
 
 			vsync	Basic readv(2) or writev(2) IO.
 
@@ -717,6 +719,7 @@ ioengine=str	Defines how the job issues io to the file. The following
 			solarisaio Solaris native asynchronous io.
 
 			windowsaio Windows native asynchronous io.
+				Default on Windows.
 
 			mmap	File is memory mapped and data copied
 				to/from using memcpy(3).
@@ -1221,6 +1224,7 @@ mem=str		Fio can use various types of memory as the io unit buffer.
 		The allowed values are:
 
 			malloc	Use memory from malloc(3) as the buffers.
+				Default memory type.
 
 			shm	Use shared memory as the buffers. Allocated
 				through shmget(2).
