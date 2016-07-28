@@ -134,15 +134,22 @@ static int _fio_rbd_connect(struct thread_data *td)
 		 * as a full type.id namestr
 		 */
 		if (o->client_name) {
+			char *client_name = NULL;
+
 			if (!index(o->client_name, '.')) {
-				char *client_name = calloc(1, strlen("client.") +
-							strlen(o->client_name) + 1);
+				client_name = calloc(1, strlen("client.") +
+						    strlen(o->client_name) + 1);
 				strcat(client_name, "client.");
-				o->client_name = strcat(client_name, o->client_name);
+				strcat(client_name, o->client_name);
+			} else {
+				client_name = o->client_name;
 			}
 
 			r = rados_create2(&rbd->cluster, o->cluster_name,
-					o->client_name, 0);
+					client_name, 0);
+
+			if (!index(o->client_name, '.'))
+				free(client_name);
 		} else {
 			log_err("clientname is missing.\n");
 			goto failed_early;
