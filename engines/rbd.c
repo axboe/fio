@@ -131,15 +131,18 @@ static int _fio_rbd_connect(struct thread_data *td)
 		char *client_name = NULL; 
 
 		/*
-		 * If we specify cluser name, the rados_creat2
+		 * If we specify cluser name, the rados_create2
 		 * will not assume 'client.'. name is considered
 		 * as a full type.id namestr
 		 */
-		if (!index(o->client_name, '.')) {
-			client_name = calloc(1, strlen("client.") +
-						strlen(o->client_name) + 1);
-			strcat(client_name, "client.");
-			o->client_name = strcat(client_name, o->client_name);
+		if (o->client_name) {
+			if (!index(o->client_name, '.')) {
+				client_name = calloc(1, strlen("client.") +
+						    strlen(o->client_name) + 1);
+				strcat(client_name, "client.");
+				o->client_name = strcat(client_name,
+							o->client_name);
+			}
 		}
 		r = rados_create2(&rbd->cluster, o->cluster_name,
 					o->client_name, 0);
