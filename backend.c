@@ -1399,7 +1399,7 @@ static uint64_t do_dry_run(struct thread_data *td)
 			break;
 
 		io_u = get_io_u(td);
-		if (!io_u)
+		if (IS_ERR_OR_NULL(io_u))
 			break;
 
 		io_u_set(io_u, IO_U_F_FLIGHT);
