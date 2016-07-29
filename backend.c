@@ -1261,6 +1261,7 @@ static int init_io_u(struct thread_data *td)
 
 static int switch_ioscheduler(struct thread_data *td)
 {
+#ifdef FIO_HAVE_IOSCHED_SWITCH
 	char tmp[256], tmp2[128];
 	FILE *f;
 	int ret;
@@ -1319,6 +1320,9 @@ static int switch_ioscheduler(struct thread_data *td)
 
 	fclose(f);
 	return 0;
+#else
+	return 0;
+#endif
 }
 
 static bool keep_running(struct thread_data *td)
