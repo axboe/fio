@@ -71,17 +71,17 @@ if __name__ == '__main__':
 #
 # test option parsing
 #
-    parsing = [ { 'args': ["--parse-only", "--debug=parse", "--ss_dur=10s", "--ss=iops:10", "--ss_ramp=5"], 
+    parsing = [ { 'args': ["--parse-only", "--debug=parse", "--ss_dur=10s", "--ss=iops:10", "--ss_ramp=5"],
                   'output': "set steady state IOPS threshold to 10.000000" },
-                { 'args': ["--parse-only", "--debug=parse", "--ss_dur=10s", "--ss=iops:10%", "--ss_ramp=5"], 
+                { 'args': ["--parse-only", "--debug=parse", "--ss_dur=10s", "--ss=iops:10%", "--ss_ramp=5"],
                   'output': "set steady state threshold to 10.000000%" },
-                { 'args': ["--parse-only", "--debug=parse", "--ss_dur=10s", "--ss=iops:.1%", "--ss_ramp=5"], 
+                { 'args': ["--parse-only", "--debug=parse", "--ss_dur=10s", "--ss=iops:.1%", "--ss_ramp=5"],
                   'output': "set steady state threshold to 0.100000%" },
-                { 'args': ["--parse-only", "--debug=parse", "--ss_dur=10s", "--ss=bw:10%", "--ss_ramp=5"], 
+                { 'args': ["--parse-only", "--debug=parse", "--ss_dur=10s", "--ss=bw:10%", "--ss_ramp=5"],
                   'output': "set steady state threshold to 10.000000%" },
-                { 'args': ["--parse-only", "--debug=parse", "--ss_dur=10s", "--ss=bw:.1%", "--ss_ramp=5"], 
+                { 'args': ["--parse-only", "--debug=parse", "--ss_dur=10s", "--ss=bw:.1%", "--ss_ramp=5"],
                   'output': "set steady state threshold to 0.100000%" },
-                { 'args': ["--parse-only", "--debug=parse", "--ss_dur=10s", "--ss=bw:12", "--ss_ramp=5"], 
+                { 'args': ["--parse-only", "--debug=parse", "--ss_dur=10s", "--ss=bw:12", "--ss_ramp=5"],
                   'output': "set steady state BW threshold to 12" },
               ]
     for test in parsing:
@@ -137,8 +137,8 @@ if __name__ == '__main__':
 
         tf = tempfile.NamedTemporaryFile(delete=False)
 	tf.close()
-        output = subprocess.check_output([args.fio, 
-                                          "--output-format=json", 
+        output = subprocess.check_output([args.fio,
+                                          "--output-format=json",
                                           "--output={0}".format(tf.name)] + accum)
         with open(tf.name, 'r') as source:
             jsondata = json.loads(source.read())
@@ -169,7 +169,6 @@ if __name__ == '__main__':
                                 line = 'PASSED ' + line + ' target {0} < limit {1}, data {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate'])
                             else:
                                 line = 'FAILED ' + line + ' target {0} < limit {1} but fio reports ss not attained, data: {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate'])
-                    
                 else:
                     # check runtime, confirm criterion calculation, and confirm that criterion was not met
                     expected = suite[jobnum]['timeout'] * 1000

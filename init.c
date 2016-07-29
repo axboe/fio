@@ -1586,7 +1586,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 
 		/* put all steady state info in one place */
 		td->ss.dur = o->ss_dur;
-		td->ss.limit = o->ss_limit.u.f;	
+		td->ss.limit = o->ss_limit.u.f;
 		td->ss.ramp_time = o->ss_ramp_time;
 		td->ss.pct = o->ss_pct;
 

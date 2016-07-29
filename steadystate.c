@@ -84,7 +84,7 @@ void steadystate_check()
 
 		fio_gettime(&now, NULL);
 		if (ss->ramp_time && !ss->ramp_time_over)
-			/* 
+			/*
 			 * Begin recording data one second after ss->ramp_time
 			 * has elapsed
 			 */
@@ -101,7 +101,7 @@ void steadystate_check()
 		rate_time = mtime_since(&ss->prev_time, &now);
 		memcpy(&ss->prev_time, &now, sizeof(now));
 
-		/* 
+		/*
 		 * Begin monitoring when job starts but don't actually use
 		 * data in checking stopping criterion until ss->ramp_time is
 		 * over. This ensures that we will have a sane value in
@@ -110,7 +110,7 @@ void steadystate_check()
 		 */
 		if (ss->ramp_time_over) {
 			group_bw += 1000 * (td_bytes - ss->prev_bytes) / rate_time;
-	        	group_iops += 1000 * (td_iops - ss->prev_iops) / rate_time;
+			group_iops += 1000 * (td_iops - ss->prev_iops) / rate_time;
 			++group_ramp_time_over;
 		}
 		ss->prev_iops = td_iops;
@@ -123,7 +123,7 @@ void steadystate_check()
 		if (!group_ramp_time_over)
 			continue;
 
-		dprint(FD_STEADYSTATE, "steadystate_check() thread: %d, groupid: %u, rate_msec: %ld, iops: %lu, bw: %lu, head: %d, tail: %d\n", 
+		dprint(FD_STEADYSTATE, "steadystate_check() thread: %d, groupid: %u, rate_msec: %ld, iops: %lu, bw: %lu, head: %d, tail: %d\n",
 			i, td->groupid, rate_time, group_iops, group_bw, ss->head, ss->tail);
 
 		if (ss->evaluate(group_iops, group_bw, td))
@@ -223,7 +223,7 @@ bool steadystate_deviation(unsigned long iops, unsigned long bw, struct thread_d
 		ss->deviation = 0.0;
 
 		for (i = 0; i < ss->dur; i++)
-		{	
+		{
 			diff = (double) (ss->check_iops ? ss->iops_data[i] : ss->bw_data[i]) - mean;
 			ss->deviation = max(ss->deviation, diff * (diff < 0.0 ? -1.0 : 1.0));
 		}
