@@ -424,8 +424,8 @@ uint64_t mtime_since(const struct timeval *s, const struct timeval *e)
 	if (sec < 0 || (sec == 0 && usec < 0))
 		return 0;
 
-	sec *= 1000UL;
-	usec /= 1000UL;
+	sec *= 1000;
+	usec /= 1000;
 	ret = sec + usec;
 
 	return ret;
