@@ -382,7 +382,6 @@ void fio_clock_init(void)
 uint64_t utime_since(const struct timeval *s, const struct timeval *e)
 {
 	long sec, usec;
-	uint64_t ret;
 
 	sec = e->tv_sec - s->tv_sec;
 	usec = e->tv_usec - s->tv_usec;
@@ -397,9 +396,7 @@ uint64_t utime_since(const struct timeval *s, const struct timeval *e)
 	if (sec < 0 || (sec == 0 && usec < 0))
 		return 0;
 
-	ret = sec * 1000000ULL + usec;
-
-	return ret;
+	return usec + (sec * 1000000);
 }
 
 uint64_t utime_since_now(const struct timeval *s)
@@ -412,7 +409,7 @@ uint64_t utime_since_now(const struct timeval *s)
 
 uint64_t mtime_since(const struct timeval *s, const struct timeval *e)
 {
-	long sec, usec, ret;
+	long sec, usec;
 
 	sec = e->tv_sec - s->tv_sec;
 	usec = e->tv_usec - s->tv_usec;
@@ -426,9 +423,7 @@ uint64_t mtime_since(const struct timeval *s, const struct timeval *e)
 
 	sec *= 1000;
 	usec /= 1000;
-	ret = sec + usec;
-
-	return ret;
+	return sec + usec;
 }
 
 uint64_t mtime_since_now(const struct timeval *s)
