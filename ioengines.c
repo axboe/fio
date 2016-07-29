@@ -130,6 +130,7 @@ struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
 
 	dprint(FD_IO, "load ioengine %s\n", name);
 
+	engine[sizeof(engine) - 1] = '\0';
 	strncpy(engine, name, sizeof(engine) - 1);
 
 	/*

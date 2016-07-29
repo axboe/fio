@@ -179,6 +179,7 @@ static int get_device_numbers(char *file_name, int *maj, int *min)
 		/*
 		 * must be a file, open "." in that path
 		 */
+		tempname[PATH_MAX - 1] = '\0';
 		strncpy(tempname, file_name, PATH_MAX - 1);
 		p = dirname(tempname);
 		if (stat(p, &st)) {
@@ -426,6 +427,7 @@ static struct disk_util *__init_per_file_disk_util(struct thread_data *td,
 			log_err("unknown sysfs layout\n");
 			return NULL;
 		}
+		tmp[PATH_MAX - 1] = '\0';
 		strncpy(tmp, p, PATH_MAX - 1);
 		sprintf(path, "%s", tmp);
 	}
