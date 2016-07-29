@@ -126,7 +126,7 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
 {
 	struct ioengine_ops *ops;
-	char engine[16];
+	char engine[64];
 
 	dprint(FD_IO, "load ioengine %s\n", name);
 
