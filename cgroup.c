@@ -102,9 +102,9 @@ static char *get_cgroup_root(struct thread_data *td, char *mnt)
 	char *str = malloc(64);
 
 	if (td->o.cgroup)
-		sprintf(str, "%s%s%s", mnt, FIO_OS_PATH_SEPARATOR, td->o.cgroup);
+		sprintf(str, "%s/%s", mnt, td->o.cgroup);
 	else
-		sprintf(str, "%s%s%s", mnt, FIO_OS_PATH_SEPARATOR, td->o.name);
+		sprintf(str, "%s/%s", mnt, td->o.name);
 
 	return str;
 }
@@ -116,7 +116,7 @@ static int write_int_to_file(struct thread_data *td, const char *path,
 	char tmp[256];
 	FILE *f;
 
-	sprintf(tmp, "%s%s%s", path, FIO_OS_PATH_SEPARATOR, filename);
+	sprintf(tmp, "%s/%s", path, filename);
 	f = fopen(tmp, "w");
 	if (!f) {
 		td_verror(td, errno, onerr);
