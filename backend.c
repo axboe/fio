@@ -652,7 +652,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 				break;
 
 			while ((io_u = get_io_u(td)) != NULL) {
-				if (IS_ERR(io_u)) {
+				if (IS_ERR_OR_NULL(io_u)) {
 					io_u = NULL;
 					ret = FIO_Q_BUSY;
 					goto reap;
