@@ -18,7 +18,9 @@ struct fio_rbd_iou {
 	rbd_completion_t completion;
 	int io_seen;
 	int io_complete;
+#ifdef CONFIG_RBD_BLKIN
 	struct blkin_trace_info info;
+#endif
 };
 
 struct rbd_data {
