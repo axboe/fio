@@ -1606,7 +1606,7 @@ write_lat_log=str Same as write_bw_log, except that this option stores io
 		The actual log names will be foo_slat.x.log, foo_clat.x.log,
 		and foo_lat.x.log, where x is the index of the job (1..N,
 		where N is the number of jobs). This helps fio_generate_plot
-		fine the logs automatically. If 'per_job_logs' is false, then
+		find the logs automatically. If 'per_job_logs' is false, then
 		the filename will not include the job index. See 'Log File
 		Formats'.
 
