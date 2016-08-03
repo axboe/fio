@@ -900,11 +900,12 @@ int setup_files(struct thread_data *td)
 		if (f->filetype == FIO_TYPE_FILE &&
 		    (f->io_size + f->file_offset) > f->real_file_size &&
 		    !(td->io_ops->flags & FIO_DISKLESSIO)) {
-			if (!o->create_on_open) {
-				need_extend++;
+			if (!o->create_on_open)
 				extend_size += (f->io_size + f->file_offset);
-			} else
+			else
 				f->real_file_size = f->io_size + f->file_offset;
+
+			need_extend++;
 			fio_file_set_extend(f);
 		}
 	}
