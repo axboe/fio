@@ -1175,7 +1175,7 @@ cpus_allowed_policy=str Set the policy of how fio distributes the CPUs
 		one cpu per job. If not enough CPUs are given for the jobs
 		listed, then fio will roundrobin the CPUs in the set.
 
-numa_cpu_nodes=str Set this job running on spcified NUMA nodes' CPUs. The
+numa_cpu_nodes=str Set this job running on specified NUMA nodes' CPUs. The
 		arguments allow comma delimited list of cpu numbers,
 		A-B ranges, or 'all'. Note, to enable numa options support,
 		fio must be built on a system with libnuma-dev(el) installed.
