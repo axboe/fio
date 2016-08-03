@@ -4,4 +4,4 @@ compiler:
   - gcc
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y libaio-dev libnuma-dev
+  - sudo apt-get install -qq -y libaio-dev libnuma-dev libz-dev librbd-dev
