@@ -1418,6 +1418,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		struct log_params p = {
 			.td = td,
 			.avg_msec = o->log_avg_msec,
+			.hist_msec = o->log_hist_msec,
+			.hist_coarseness = o->log_hist_coarseness,
 			.log_type = IO_LOG_TYPE_LAT,
 			.log_offset = o->log_offset,
 			.log_gz = o->log_gz,
@@ -1442,10 +1444,36 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->clat_log, &p, logname);
 	}
+
+	if (o->hist_log_file) {
+		struct log_params p = {
+			.td = td,
+			.avg_msec = o->log_avg_msec,
+			.hist_msec = o->log_hist_msec,
+			.hist_coarseness = o->log_hist_coarseness,
+			.log_type = IO_LOG_TYPE_HIST,
+			.log_offset = o->log_offset,
+			.log_gz = o->log_gz,
+			.log_gz_store = o->log_gz_store,
+		};
+		const char *suf;
+
+		if (p.log_gz_store)
+			suf = "log.fz";
+		else
+			suf = "log";
+
+		gen_log_name(logname, sizeof(logname), "clat_hist", o->hist_log_file,
+				td->thread_number, suf, o->per_job_logs);
+		setup_log(&td->clat_hist_log, &p, logname);
+	}
+
 	if (o->bw_log_file) {
 		struct log_params p = {
 			.td = td,
 			.avg_msec = o->log_avg_msec,
+			.hist_msec = o->log_hist_msec,
+			.hist_coarseness = o->log_hist_coarseness,
 			.log_type = IO_LOG_TYPE_BW,
 			.log_offset = o->log_offset,
 			.log_gz = o->log_gz,
@@ -1457,6 +1485,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			p.avg_msec = min(o->log_avg_msec, o->bw_avg_time);
 		else
 			o->bw_avg_time = p.avg_msec;
+	
+		p.hist_msec = o->log_hist_msec;
+		p.hist_coarseness = o->log_hist_coarseness;
 
 		if (p.log_gz_store)
 			suf = "log.fz";
@@ -1471,6 +1502,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		struct log_params p = {
 			.td = td,
 			.avg_msec = o->log_avg_msec,
+			.hist_msec = o->log_hist_msec,
+			.hist_coarseness = o->log_hist_coarseness,
 			.log_type = IO_LOG_TYPE_IOPS,
 			.log_offset = o->log_offset,
 			.log_gz = o->log_gz,
@@ -1482,6 +1515,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			p.avg_msec = min(o->log_avg_msec, o->iops_avg_time);
 		else
 			o->iops_avg_time = p.avg_msec;
+	
+		p.hist_msec = o->log_hist_msec;
+		p.hist_coarseness = o->log_hist_coarseness;
 
 		if (p.log_gz_store)
 			suf = "log.fz";

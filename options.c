@@ -3530,6 +3530,37 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "log_hist_msec",
+		.lname	= "Log histograms (msec)",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(log_hist_msec),
+		.help	= "Dump completion latency histograms at frequency of this time value",
+		.def	= "0",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "log_hist_coarseness",
+		.lname	= "Histogram logs coarseness",
+		.type	= FIO_OPT_INT,
+		.off1	= td_var_offset(log_hist_coarseness),
+		.help	= "Integer in range [0,6]. Higher coarseness outputs"
+			" fewer histogram bins per sample. The number of bins for"
+			" these are [1216, 608, 304, 152, 76, 38, 19] respectively.",
+		.def	= "0",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "write_hist_log",
+		.lname	= "Write latency histogram logs",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= td_var_offset(hist_log_file),
+		.help	= "Write log of latency histograms during run",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "log_max_value",
 		.lname	= "Log maximum instead of average",
 		.type	= FIO_OPT_BOOL,

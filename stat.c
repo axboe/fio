@@ -1965,6 +1965,7 @@ void regrow_logs(struct thread_data *td)
 {
 	regrow_log(td->slat_log);
 	regrow_log(td->clat_log);
+	regrow_log(td->clat_hist_log);
 	regrow_log(td->lat_log);
 	regrow_log(td->bw_log);
 	regrow_log(td->iops_log);
@@ -2193,7 +2194,9 @@ static void add_clat_percentile_sample(struct thread_stat *ts,
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long usec, unsigned int bs, uint64_t offset)
 {
+	unsigned long elapsed, this_window;
 	struct thread_stat *ts = &td->ts;
+	struct io_log *iolog = td->clat_hist_log;
 
 	td_io_u_lock(td);
 
@@ -2204,6 +2207,35 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	if (ts->clat_percentiles)
 		add_clat_percentile_sample(ts, usec, ddir);
+
+	if (iolog && iolog->hist_msec) {
+		struct io_hist *hw = &(iolog->hist_window[ddir]);
+		(hw->samples)++;
+		elapsed = mtime_since_now(&td->epoch);
+		if (! hw->hist_last)
+			hw->hist_last = elapsed;
+		this_window = elapsed - hw->hist_last;
+		
+		if (this_window >= iolog->hist_msec) {
+			/*
+			 * Make a byte-for-byte copy of the latency histogram stored in
+			 * td->ts.io_u_plat[ddir], recording it in a log sample. Note that
+			 * the matching call to free() is located in iolog.c after printing
+			 * this sample to the log file.
+			 */
+			unsigned int *io_u_plat = (unsigned int *)(td->ts.io_u_plat[ddir]);
+			unsigned int *dst = malloc(FIO_IO_U_PLAT_NR * sizeof(unsigned int));
+			memcpy(dst, io_u_plat, FIO_IO_U_PLAT_NR * sizeof(unsigned int));
+			__add_log_sample(iolog, (uint64_t)dst, ddir, bs, elapsed, offset);
+
+			/*
+			 * Update the last time we recorded as being now, minus any drift
+			 * in time we encountered before actually making the record.
+			 */
+			hw->hist_last = elapsed - (this_window - iolog->hist_msec);
+			hw->samples = 0;
+		}
+	}
 
 	td_io_u_unlock(td);
 }
