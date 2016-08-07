@@ -18,6 +18,11 @@ struct io_stat {
 	fio_fp64_t S;
 };
 
+struct io_hist {
+	uint64_t samples;
+	unsigned long hist_last;
+};
+
 /*
  * A single data sample
  */
@@ -39,6 +44,7 @@ enum {
 	IO_LOG_TYPE_SLAT,
 	IO_LOG_TYPE_BW,
 	IO_LOG_TYPE_IOPS,
+	IO_LOG_TYPE_HIST,
 };
 
 #define DEF_LOG_ENTRIES		1024
@@ -102,6 +108,14 @@ struct io_log {
 	struct io_stat avg_window[DDIR_RWDIR_CNT];
 	unsigned long avg_msec;
 	unsigned long avg_last;
+
+  /*
+   * Windowed latency histograms, for keeping track of when we need to
+   * save a copy of the histogram every approximately hist_msec milliseconds.
+   */
+	struct io_hist hist_window[DDIR_RWDIR_CNT];
+	unsigned long hist_msec;
+	int hist_coarseness;
 
 	pthread_mutex_t chunk_lock;
 	unsigned int chunk_seq;
@@ -218,6 +232,8 @@ extern int iolog_file_inflate(const char *);
 struct log_params {
 	struct thread_data *td;
 	unsigned long avg_msec;
+	unsigned long hist_msec;
+	int hist_coarseness;
 	int log_type;
 	int log_offset;
 	int log_gz;

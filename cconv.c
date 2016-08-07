@@ -178,6 +178,8 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->allrand_repeatable = le32_to_cpu(top->allrand_repeatable);
 	o->rand_seed = le64_to_cpu(top->rand_seed);
 	o->log_avg_msec = le32_to_cpu(top->log_avg_msec);
+	o->log_hist_msec = le32_to_cpu(top->log_hist_msec);
+	o->log_hist_coarseness = le32_to_cpu(top->log_hist_coarseness);
 	o->log_max = le32_to_cpu(top->log_max);
 	o->log_offset = le32_to_cpu(top->log_offset);
 	o->log_gz = le32_to_cpu(top->log_gz);

@@ -1610,6 +1610,14 @@ write_lat_log=str Same as write_bw_log, except that this option stores io
 		the filename will not include the job index. See 'Log File
 		Formats'.
 
+write_hist_log=str Same as write_lat_log, but writes I/O completion
+		latency histograms. If no filename is given with this option, the
+		default filename of "jobname_clat_hist.x.log" is used, where x is
+		the index of the job (1..N, where N is the number of jobs). Even
+		if the filename is given, fio will still append the type of log.
+		If per_job_logs is false, then the filename will not include the
+		job index. See 'Log File Formats'.
+
 write_iops_log=str Same as write_bw_log, but writes IOPS. If no filename is
 		given with this option, the default filename of
 		"jobname_type.x.log" is used,where x is the index of the job
@@ -1624,6 +1632,20 @@ log_avg_msec=int By default, fio will log an entry in the iops, latency,
 		this option makes fio average the each log entry over the
 		specified period of time, reducing the resolution of the log.
 		See log_max_value as well. Defaults to 0, logging all entries.
+
+log_hist_msec=int Same as log_avg_msec, but logs entries for completion
+		latency histograms. Computing latency percentiles from averages of
+		intervals using log_avg_msec is innacurate. Setting this option makes
+		fio log histogram entries over the specified period of time, reducing
+		log sizes for high IOPS devices while retaining percentile accuracy.
+		See log_hist_coarseness as well. Defaults to 0, meaning histogram
+		logging is disabled.
+
+log_hist_coarseness=int Integer ranging from 0 to 6, defining the coarseness
+		of the resolution of the histogram logs enabled with log_hist_msec. For
+		each increment in coarseness, fio outputs half as many bins. Defaults to
+		0, for which histogram logs contain 1216 latency bins. See
+		'Log File Formats'.
 
 log_max_value=bool	If log_avg_msec is set, fio logs the average over that
 		window. If you instead want to log the maximum value, set this

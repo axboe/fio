@@ -584,6 +584,8 @@ void setup_log(struct io_log **log, struct log_params *p,
 	l->log_gz = p->log_gz;
 	l->log_gz_store = p->log_gz_store;
 	l->avg_msec = p->avg_msec;
+	l->hist_msec = p->hist_msec;
+	l->hist_coarseness = p->hist_coarseness;
 	l->filename = strdup(filename);
 	l->td = p->td;
 
@@ -657,6 +659,46 @@ void free_log(struct io_log *log)
 	free(log->pending);
 	free(log->filename);
 	sfree(log);
+}
+
+static inline int hist_sum(int j, int stride, unsigned int *io_u_plat) {
+	int sum = 0;
+	for (int k = 0; k < stride; k++) {
+		sum += io_u_plat[j + k];
+	}
+	return sum;
+}
+
+void flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
+	uint64_t sample_size)
+{
+	struct io_sample *s;
+	int log_offset;
+	uint64_t i, j, nr_samples;
+	unsigned int *io_u_plat;
+
+	int stride = 1 << hist_coarseness;
+	
+	if (!sample_size)
+		return;
+
+	s = __get_sample(samples, 0, 0);
+	log_offset = (s->__ddir & LOG_OFFSET_SAMPLE_BIT) != 0;
+
+	nr_samples = sample_size / __log_entry_sz(log_offset);
+
+	for (i = 0; i < nr_samples; i++) {
+		s = __get_sample(samples, log_offset, i);
+		io_u_plat = (unsigned int *)(s->val);
+		fprintf(f, "%lu, %u, %u, ", (unsigned long)s->time,
+		        io_sample_ddir(s), s->bs);
+		for (j = 0; j < FIO_IO_U_PLAT_NR - stride; j += stride) {
+			fprintf(f, "%lu, ", (unsigned long) hist_sum(j, stride, io_u_plat)); 
+		}
+		fprintf(f, "%lu\n", (unsigned long) 
+		        hist_sum(FIO_IO_U_PLAT_NR - stride, stride, io_u_plat));
+		free(io_u_plat);
+	}
 }
 
 void flush_samples(FILE *f, void *samples, uint64_t sample_size)
@@ -988,7 +1030,13 @@ void flush_log(struct io_log *log, bool do_append)
 
 		cur_log = flist_first_entry(&log->io_logs, struct io_logs, list);
 		flist_del_init(&cur_log->list);
-		flush_samples(f, cur_log->log, cur_log->nr_samples * log_entry_sz(log));
+		
+		if (log == log->td->clat_hist_log)
+			flush_hist_samples(f, log->hist_coarseness, cur_log->log,
+			                   cur_log->nr_samples * log_entry_sz(log));
+		else
+			flush_samples(f, cur_log->log, cur_log->nr_samples * log_entry_sz(log));
+		
 		sfree(cur_log);
 	}
 
@@ -1353,6 +1401,20 @@ static int write_clat_log(struct thread_data *td, int try, bool unit_log)
 	return ret;
 }
 
+static int write_clat_hist_log(struct thread_data *td, int try, bool unit_log)
+{
+	int ret;
+
+	if (!unit_log)
+		return 0;
+
+	ret = __write_log(td, td->clat_hist_log, try);
+	if (!ret)
+		td->clat_hist_log = NULL;
+
+	return ret;
+}
+
 static int write_lat_log(struct thread_data *td, int try, bool unit_log)
 {
 	int ret;
@@ -1387,8 +1449,9 @@ enum {
 	SLAT_LOG_MASK	= 4,
 	CLAT_LOG_MASK	= 8,
 	IOPS_LOG_MASK	= 16,
+	CLAT_HIST_LOG_MASK = 32,
 
-	ALL_LOG_NR	= 5,
+	ALL_LOG_NR	= 6,
 };
 
 struct log_type {
@@ -1417,6 +1480,10 @@ static struct log_type log_types[] = {
 		.mask	= IOPS_LOG_MASK,
 		.fn	= write_iops_log,
 	},
+	{
+		.mask	= CLAT_HIST_LOG_MASK,
+		.fn	= write_clat_hist_log,
+	}
 };
 
 void td_writeout_logs(struct thread_data *td, bool unit_logs)

@@ -1476,6 +1476,14 @@ N is the number of jobs). Even if the filename is given, fio will still
 append the type of log. If \fBper_job_logs\fR is false, then the filename will
 not include the job index. See the \fBLOG FILE FORMATS\fR section.
 .TP
+.BI write_hist_log \fR=\fPstr
+Same as \fBwrite_lat_log\fR, but writes I/O completion latency histograms. If
+no filename is given with this option, the default filename of
+"jobname_clat_hist.x.log" is used, where x is the index of the job (1..N, where
+N is the number of jobs). Even if the filename is given, fio will still append
+the type of log. If \fBper_job_logs\fR is false, then the filename will not
+include the job index. See the \fBLOG FILE FORMATS\fR section.
+.TP
 .BI write_iops_log \fR=\fPstr
 Same as \fBwrite_bw_log\fR, but writes IOPS. If no filename is given with this
 option, the default filename of "jobname_type.x.log" is used, where x is the
@@ -1495,6 +1503,20 @@ over the specified period of time, reducing the resolution of the log. See
 If \fBlog_avg_msec\fR is set, fio logs the average over that window. If you
 instead want to log the maximum value, set this option to 1.  Defaults to
 0, meaning that averaged values are logged.
+.TP
+.BI log_hist_msec \fR=\fPint
+Same as \fBlog_avg_msec\fR, but logs entries for completion latency histograms.
+Computing latency percentiles from averages of intervals using \fBlog_avg_msec\fR
+is innacurate. Setting this option makes fio log histogram entries over the
+specified period of time, reducing log sizes for high IOPS devices while
+retaining percentile accuracy. See \fBlog_hist_coarseness\fR as well. Defaults
+to 0, meaning histogram logging is disabled.
+.TP
+.BI log_hist_coarseness \fR=\fPint
+Integer ranging from 0 to 6, defining the coarseness of the resolution of the
+histogram logs enabled with \fBlog_hist_msec\fR. For each increment in
+coarseness, fio outputs half as many bins. Defaults to 0, for which histogram
+logs contain 1216 latency bins. See the \fBLOG FILE FORMATS\fR section.
 .TP
 .BI log_offset \fR=\fPbool
 If this is set, the iolog options will include the byte offset for the IO
@@ -2301,6 +2323,13 @@ period of time. Since \fIdata direction\fR and \fIoffset\fR are per-IO values,
 they aren't applicable if windowed logging is enabled. If windowed logging
 is enabled and \fBlog_max_value\fR is set, then fio logs maximum values in
 that window instead of averages.
+
+For histogram logging the logs look like this:
+
+.B time (msec), data direction, block-size, bin 0, bin 1, ..., bin 1215
+
+Where 'bin i' gives the frequency of IO requests with a latency falling in
+the i-th bin. See \fBlog_hist_coarseness\fR for logging fewer bins.
 
 .RE
 
