@@ -491,6 +491,7 @@ struct thread_options_pack {
 	uint8_t bw_log_file[FIO_TOP_STR_MAX];
 	uint8_t lat_log_file[FIO_TOP_STR_MAX];
 	uint8_t iops_log_file[FIO_TOP_STR_MAX];
+	uint8_t hist_log_file[FIO_TOP_STR_MAX];
 	uint8_t replay_redirect[FIO_TOP_STR_MAX];
 
 	/*
