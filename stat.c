@@ -2211,28 +2211,36 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		add_clat_percentile_sample(ts, usec, ddir);
 
 	if (iolog && iolog->hist_msec) {
-		struct io_hist *hw = &(iolog->hist_window[ddir]);
-		(hw->samples)++;
+		struct io_hist *hw = &iolog->hist_window[ddir];
+
+		hw->samples++;
 		elapsed = mtime_since_now(&td->epoch);
-		if (! hw->hist_last)
+		if (!hw->hist_last)
 			hw->hist_last = elapsed;
 		this_window = elapsed - hw->hist_last;
 		
 		if (this_window >= iolog->hist_msec) {
-			/*
-			 * Make a byte-for-byte copy of the latency histogram stored in
-			 * td->ts.io_u_plat[ddir], recording it in a log sample. Note that
-			 * the matching call to free() is located in iolog.c after printing
-			 * this sample to the log file.
-			 */
-			unsigned int *io_u_plat = (unsigned int *)(td->ts.io_u_plat[ddir]);
-			unsigned int *dst = malloc(FIO_IO_U_PLAT_NR * sizeof(unsigned int));
-			memcpy(dst, io_u_plat, FIO_IO_U_PLAT_NR * sizeof(unsigned int));
-			__add_log_sample(iolog, (uint64_t)dst, ddir, bs, elapsed, offset);
+			unsigned int *io_u_plat;
+			unsigned int *dst;
 
 			/*
-			 * Update the last time we recorded as being now, minus any drift
-			 * in time we encountered before actually making the record.
+			 * Make a byte-for-byte copy of the latency histogram
+			 * stored in td->ts.io_u_plat[ddir], recording it in a
+			 * log sample. Note that the matching call to free() is
+			 * located in iolog.c after printing this sample to the
+			 * log file.
+			 */
+			io_u_plat = (unsigned int *) td->ts.io_u_plat[ddir];
+			dst = malloc(FIO_IO_U_PLAT_NR * sizeof(unsigned int));
+			memcpy(dst, io_u_plat,
+				FIO_IO_U_PLAT_NR * sizeof(unsigned int));
+			__add_log_sample(iolog, (unsigned long )dst, ddir, bs,
+						elapsed, offset);
+
+			/*
+			 * Update the last time we recorded as being now, minus
+			 * any drift in time we encountered before actually
+			 * making the record.
 			 */
 			hw->hist_last = elapsed - (this_window - iolog->hist_msec);
 			hw->samples = 0;
