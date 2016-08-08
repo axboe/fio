@@ -661,9 +661,10 @@ void free_log(struct io_log *log)
 	sfree(log);
 }
 
-static inline int hist_sum(int j, int stride, unsigned int *io_u_plat)
+static inline unsigned long hist_sum(int j, int stride, unsigned int *io_u_plat)
 {
-	int k, sum;
+	unsigned long sum;
+	int k;
 
 	for (k = sum = 0; k < stride; k++)
 		sum += io_u_plat[j + k];
@@ -695,7 +696,7 @@ void flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
 		fprintf(f, "%lu, %u, %u, ", (unsigned long)s->time,
 		        io_sample_ddir(s), s->bs);
 		for (j = 0; j < FIO_IO_U_PLAT_NR - stride; j += stride) {
-			fprintf(f, "%lu, ", (unsigned long) hist_sum(j, stride, io_u_plat)); 
+			fprintf(f, "%lu, ", hist_sum(j, stride, io_u_plat));
 		}
 		fprintf(f, "%lu\n", (unsigned long) 
 		        hist_sum(FIO_IO_U_PLAT_NR - stride, stride, io_u_plat));
