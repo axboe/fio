@@ -1331,6 +1331,14 @@ static int switch_ioscheduler(struct thread_data *td)
 	 */
 	tmp[strlen(tmp) - 1] = '\0';
 
+	/*
+	 * Write to "none" entry doesn't fail, so check the result here.
+	 */
+	if (!strcmp(tmp, "none")) {
+		log_err("fio: io scheduler is not tunable\n");
+		fclose(f);
+		return 0;
+	}
 
 	sprintf(tmp2, "[%s]", td->o.ioscheduler);
 	if (!strstr(tmp, tmp2)) {
