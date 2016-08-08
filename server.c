@@ -114,6 +114,7 @@ static const char *fio_server_ops[FIO_NET_CMD_NR] = {
 	"LOAD_FILE",
 	"VTRIGGER",
 	"SENDFILE",
+	"JOB_OPT",
 };
 
 static void sk_lock(struct sk_out *sk_out)
