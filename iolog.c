@@ -692,7 +692,7 @@ void flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
 
 	for (i = 0; i < nr_samples; i++) {
 		s = __get_sample(samples, log_offset, i);
-		io_u_plat = (unsigned int *) s->val;
+		io_u_plat = (unsigned int *) (uintptr_t) s->val;
 		fprintf(f, "%lu, %u, %u, ", (unsigned long)s->time,
 		        io_sample_ddir(s), s->bs);
 		for (j = 0; j < FIO_IO_U_PLAT_NR - stride; j += stride) {
