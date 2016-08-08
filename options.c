@@ -3433,6 +3433,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "unlink_each_loop",
+		.lname	= "Unlink file after each loop of a job",
+		.type	= FIO_OPT_BOOL,
+		.off1	= td_var_offset(unlink_each_loop),
+		.help	= "Unlink created files after each loop in a job has completed",
+		.def	= "0",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "exitall",
 		.lname	= "Exit-all on terminate",
 		.type	= FIO_OPT_STR_SET,

@@ -571,6 +571,28 @@ static inline bool io_in_polling(struct thread_data *td)
 	return !td->o.iodepth_batch_complete_min &&
 		   !td->o.iodepth_batch_complete_max;
 }
+/*
+ * Unlinks files from thread data fio_file structure
+ */
+static int unlink_all_files(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+	int ret = 0;
+
+	for_each_file(td, f, i) {
+		if (f->filetype != FIO_TYPE_FILE)
+			continue;
+		ret = td_io_unlink_file(td, f);
+		if (ret)
+			break;
+	}
+
+	if (ret)
+		td_verror(td, ret, "unlink_all_files");
+
+	return ret;
+}
 
 /*
  * The main verify engine. Runs over the writes we previously submitted,
@@ -1667,8 +1689,12 @@ static void *thread_main(void *data)
 		fio_gettime(&td->start, NULL);
 		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
 
-		if (clear_state)
+		if (clear_state) {
 			clear_io_state(td, 0);
+
+			if (o->unlink_each_loop && unlink_all_files(td))
+				break;
+		}
 
 		prune_io_piece_log(td);
 

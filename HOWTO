@@ -1334,6 +1334,8 @@ unlink=bool	Unlink the job files when done. Not the default, as repeated
 		runs of that job would then waste time recreating the file
 		set again and again.
 
+unlink_each_loop=bool	Unlink job files after each iteration or loop.
+
 loops=int	Run the specified number of iterations of this job. Used
 		to repeat the same workload a given number of times. Defaults
 		to 1.

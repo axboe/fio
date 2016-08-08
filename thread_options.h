@@ -121,6 +121,7 @@ struct thread_options {
 	unsigned int verify_state_save;
 	unsigned int use_thread;
 	unsigned int unlink;
+	unsigned int unlink_each_loop;
 	unsigned int do_disk_util;
 	unsigned int override_sync;
 	unsigned int rand_repeatable;
@@ -378,6 +379,7 @@ struct thread_options_pack {
 	uint32_t verify_state_save;
 	uint32_t use_thread;
 	uint32_t unlink;
+	uint32_t unlink_each_loop;
 	uint32_t do_disk_util;
 	uint32_t override_sync;
 	uint32_t rand_repeatable;
@@ -396,7 +398,6 @@ struct thread_options_pack {
 	uint32_t bs_unaligned;
 	uint32_t fsync_on_close;
 	uint32_t bs_is_seq_rand;
-	uint32_t pad1;
 
 	uint32_t random_distribution;
 	uint32_t exitall_error;

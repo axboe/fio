@@ -174,6 +174,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->verify_batch = le32_to_cpu(top->verify_batch);
 	o->use_thread = le32_to_cpu(top->use_thread);
 	o->unlink = le32_to_cpu(top->unlink);
+	o->unlink_each_loop = le32_to_cpu(top->unlink_each_loop);
 	o->do_disk_util = le32_to_cpu(top->do_disk_util);
 	o->override_sync = le32_to_cpu(top->override_sync);
 	o->rand_repeatable = le32_to_cpu(top->rand_repeatable);
@@ -367,6 +368,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->verify_batch = cpu_to_le32(o->verify_batch);
 	top->use_thread = cpu_to_le32(o->use_thread);
 	top->unlink = cpu_to_le32(o->unlink);
+	top->unlink_each_loop = cpu_to_le32(o->unlink_each_loop);
 	top->do_disk_util = cpu_to_le32(o->do_disk_util);
 	top->override_sync = cpu_to_le32(o->override_sync);
 	top->rand_repeatable = cpu_to_le32(o->rand_repeatable);
