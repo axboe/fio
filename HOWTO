@@ -1295,7 +1295,7 @@ iopsavgtime=int	Average the calculated IOPS over the given time. Value
 		through 'write_iops_log', then the minimum of this option and
 		'log_avg_msec' will be used.  Default: 500ms.
 
-create_serialize=bool	If true, serialize the file creating for the jobs.
+create_serialize=bool	If true, serialize the file creation for the jobs.
 			This may be handy to avoid interleaving of data
 			files, which may greatly depend on the filesystem
 			used and even the number of processors in the system.
