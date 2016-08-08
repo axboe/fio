@@ -61,7 +61,7 @@ static inline int ddir_rw(enum fio_ddir ddir)
 
 static inline const char *ddir_str(enum td_ddir ddir)
 {
-	const char *__str[] = { NULL, "read", "write", "rw", NULL,
+	static const char *__str[] = { NULL, "read", "write", "rw", NULL,
 				"randread", "randwrite", "randrw",
 				"trim", NULL, NULL, NULL, "randtrim" };
 
