@@ -138,7 +138,7 @@ enum {
 
 struct ioengine_ops {
 	struct flist_head list;
-	char name[16];
+	const char *name;
 	int version;
 	int flags;
 	int (*setup)(struct thread_data *);
