@@ -475,7 +475,7 @@ static int fio_pmemblk_unlink_file(struct thread_data *td, struct fio_file *f)
 
 	pmb_parse_path(f->file_name, &path, &bsize, &fsize);
 	if (!path)
-		return 1;
+		return ENOENT;
 
 	unlink(path);
 	free(path);

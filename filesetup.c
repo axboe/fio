@@ -58,8 +58,12 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		unlink_file = 1;
 
 	if (unlink_file || new_layout) {
+		int ret;
+
 		dprint(FD_FILE, "layout unlink %s\n", f->file_name);
-		if ((td_io_unlink_file(td, f) < 0) && (errno != ENOENT)) {
+
+		ret = td_io_unlink_file(td, f);
+		if (ret != 0 && ret != ENOENT) {
 			td_verror(td, errno, "unlink");
 			return 1;
 		}
