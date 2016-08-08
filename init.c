@@ -114,7 +114,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 	},
 	{
 		.name		= (char *) "output-format",
-		.has_arg	= optional_argument,
+		.has_arg	= required_argument,
 		.val		= 'F' | FIO_CLIENT_FLAG,
 	},
 	{
@@ -2352,12 +2352,6 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			output_format = FIO_OUTPUT_TERSE;
 			break;
 		case 'F':
-			if (!optarg) {
-				log_err("fio: missing --output-format argument\n");
-				exit_val = 1;
-				do_exit++;
-				break;
-			}
 			if (parse_output_format(optarg)) {
 				log_err("fio: failed parsing output-format\n");
 				exit_val = 1;
