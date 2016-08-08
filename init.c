@@ -2302,7 +2302,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 	struct thread_data *td = NULL;
 	int c, ini_idx = 0, lidx, ret = 0, do_exit = 0, exit_val = 0;
 	char *ostr = cmd_optstr;
-	void *pid_file = NULL;
+	char *pid_file = NULL;
 	void *cur_client = NULL;
 	int backend = 0;
 
