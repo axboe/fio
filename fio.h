@@ -41,6 +41,7 @@
 #include "flow.h"
 #include "io_u_queue.h"
 #include "workqueue.h"
+#include "steadystate.h"
 
 #ifdef CONFIG_SOLARISAIO
 #include <sys/asynch.h>
@@ -121,43 +122,6 @@ struct zone_split_index {
 	uint8_t size_perc;
 	uint8_t size_perc_prev;
 };
-
-/*
- * For steady state detection
- */
-struct steadystate_data {
-	double limit;
-	unsigned long long dur;
-	unsigned long long ramp_time;
-	bool (*evaluate)(unsigned long, unsigned long, struct thread_data *);
-	bool check_iops;
-	bool check_slope;
-	bool pct;
-
-	int attained;
-	int last_in_group;
-	int ramp_time_over;
-
-	unsigned int head;
-	unsigned int tail;
-	unsigned long *iops_data;
-	unsigned long *bw_data;
-
-	double slope;
-	double criterion;
-	double deviation;
-
-	unsigned long long sum_y;
-	unsigned long long sum_x;
-	unsigned long long sum_x_sq;
-	unsigned long long sum_xy;
-	unsigned long long oldest_y;
-
-	struct timeval prev_time;
-	unsigned long long prev_iops;
-	unsigned long long prev_bytes;
-};
-
 
 /*
  * This describes a single thread/process executing a fio job.
