@@ -63,19 +63,30 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 	int i, j;
 	double result;
 	struct steadystate_data *ss = &td->ss;
-	unsigned long new_val = ss->check_iops ? iops : bw;
+	unsigned long new_val;
 
 	ss->bw_data[ss->tail] = bw;
 	ss->iops_data[ss->tail] = iops;
 
+	if (ss->check_iops)
+		new_val = iops;
+	else
+		new_val = bw;
+
 	if (ss->tail < ss->head || (ss->tail - ss->head == ss->dur - 1)) {
 		if (ss->sum_y == 0) {	/* first time through */
 			for(i = 0; i < ss->dur; i++) {
-				ss->sum_y += ss->check_iops ? ss->iops_data[i] : ss->bw_data[i];
+				if (ss->check_iops)
+					ss->sum_y += ss->iops_data[i];
+				else
+					ss->sum_y += ss->bw_data[i];
 				j = ss->head + i;
 				if (j >= ss->dur)
 					j -= ss->dur;
-				ss->sum_xy += (ss->check_iops ? ss->iops_data[j] : ss->bw_data[j]) * i;
+				if (ss->check_iops)
+					ss->sum_xy += ss->iops_data[j];
+				else
+					ss->sum_xy += ss->bw_data[j];
 			}
 		} else {		/* easy to update the sums */
 			ss->sum_y -= ss->oldest_y;
@@ -83,19 +94,28 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 			ss->sum_xy = ss->sum_xy - ss->sum_y + ss->dur * new_val;
 		}
 
-		ss->oldest_y = ss->check_iops ? ss->iops_data[ss->head] : ss->bw_data[ss->head];
+		if (ss->check_iops)
+			ss->oldest_y = ss->iops_data[ss->head];
+		else
+			ss->oldest_y = ss->bw_data[ss->head];
 
 		/*
-		 * calculate slope as (sum_xy - sum_x * sum_y / n) / (sum_(x^2) - (sum_x)^2 / n)
-		 * This code assumes that all x values are equally spaced when they are often
-		 * off by a few milliseconds. This assumption greatly simplifies the
-		 * calculations.
+		 * calculate slope as (sum_xy - sum_x * sum_y / n) / (sum_(x^2)
+		 * - (sum_x)^2 / n) This code assumes that all x values are
+		 * equally spaced when they are often off by a few milliseconds.
+		 * This assumption greatly simplifies the calculations.
 		 */
-		ss->slope = (ss->sum_xy - (double) ss->sum_x * ss->sum_y / ss->dur) / (ss->sum_x_sq - (double) ss->sum_x * ss->sum_x / ss->dur);
-		ss->criterion = ss->pct ? 100.0 * ss->slope / (ss->sum_y / ss->dur) : ss->slope;
+		ss->slope = (ss->sum_xy - (double) ss->sum_x * ss->sum_y / ss->dur) /
+				(ss->sum_x_sq - (double) ss->sum_x * ss->sum_x / ss->dur);
+		if (ss->pct)
+			ss->criterion = 100.0 * ss->slope / (ss->sum_y / ss->dur);
+		else
+			ss->criterion = ss->slope;
 
-		dprint(FD_STEADYSTATE, "sum_y: %llu, sum_xy: %llu, slope: %f, criterion: %f, limit: %f\n",
-			ss->sum_y, ss->sum_xy, ss->slope, ss->criterion, ss->limit);
+		dprint(FD_STEADYSTATE, "sum_y: %llu, sum_xy: %llu, slope: %f, "
+					"criterion: %f, limit: %f\n",
+					ss->sum_y, ss->sum_xy, ss->slope,
+					ss->criterion, ss->limit);
 
 		result = ss->criterion * (ss->criterion < 0.0 ? -1.0 : 1.0);
 		if (result < ss->limit)
@@ -124,24 +144,43 @@ static bool steadystate_deviation(unsigned long iops, unsigned long bw,
 	if (ss->tail < ss->head || (ss->tail - ss->head == ss->dur - 1)) {
 		if (ss->sum_y == 0) {	/* first time through */
 			for(i = 0; i < ss->dur; i++)
-				ss->sum_y += ss->check_iops ? ss->iops_data[i] : ss->bw_data[i];
+				if (ss->check_iops)
+					ss->sum_y += ss->iops_data[i];
+				else
+					ss->sum_y += ss->bw_data[i];
 		} else {		/* easy to update the sum */
 			ss->sum_y -= ss->oldest_y;
-			ss->sum_y += ss->check_iops ? ss->iops_data[ss->tail] : ss->bw_data[ss->tail];
+			if (ss->check_iops)
+				ss->sum_y += ss->iops_data[ss->tail];
+			else
+				ss->sum_y += ss->bw_data[ss->tail];
 		}
 
-		ss->oldest_y = ss->check_iops ? ss->iops_data[ss->head] : ss->bw_data[ss->head];
+		if (ss->check_iops)
+			ss->oldest_y = ss->iops_data[ss->head];
+		else
+			ss->oldest_y = ss->bw_data[ss->head];
+
 		mean = (double) ss->sum_y / ss->dur;
 		ss->deviation = 0.0;
 
 		for (i = 0; i < ss->dur; i++) {
-			diff = (double) (ss->check_iops ? ss->iops_data[i] : ss->bw_data[i]) - mean;
+			if (ss->check_iops)
+				diff = ss->iops_data[i] - mean;
+			else
+				diff = ss->bw_data[i] - mean;
 			ss->deviation = max(ss->deviation, diff * (diff < 0.0 ? -1.0 : 1.0));
 		}
 
-		ss->criterion = ss->pct ? 100.0 * ss->deviation / mean : ss->deviation;
+		if (ss->pct)
+			ss->criterion = 100.0 * ss->deviation / mean;
+		else
+			ss->criterion = ss->deviation;
 
-		dprint(FD_STEADYSTATE, "sum_y: %llu, mean: %f, max diff: %f, objective: %f, limit: %f\n", ss->sum_y, mean, ss->deviation, ss->criterion, ss->limit);
+		dprint(FD_STEADYSTATE, "sum_y: %llu, mean: %f, max diff: %f, "
+					"objective: %f, limit: %f\n",
+					ss->sum_y, mean, ss->deviation,
+					ss->criterion, ss->limit);
 
 		if (ss->criterion < ss->limit)
 			return true;
@@ -169,7 +208,8 @@ void steadystate_check(void)
 	for_each_td(td, i) {
 		struct steadystate_data *ss = &td->ss;
 
-		if (!ss->dur || td->runstate <= TD_SETTING_UP || td->runstate >= TD_EXITED || ss->attained)
+		if (!ss->dur || td->runstate <= TD_SETTING_UP ||
+		    td->runstate >= TD_EXITED || ss->attained)
 			continue;
 
 		td_iops = 0;
@@ -219,12 +259,18 @@ void steadystate_check(void)
 		if (td->o.group_reporting && !ss->last_in_group)
 			continue;
 
-		/* don't begin checking criterion until ss->ramp_time is over for at least one thread in group */
+		/*
+		 * Don't begin checking criterion until ss->ramp_time is over
+		 * for at least one thread in group
+		 */
 		if (!group_ramp_time_over)
 			continue;
 
-		dprint(FD_STEADYSTATE, "steadystate_check() thread: %d, groupid: %u, rate_msec: %ld, iops: %lu, bw: %lu, head: %d, tail: %d\n",
-			i, td->groupid, rate_time, group_iops, group_bw, ss->head, ss->tail);
+		dprint(FD_STEADYSTATE, "steadystate_check() thread: %d, "
+					"groupid: %u, rate_msec: %ld, "
+					"iops: %lu, bw: %lu, head: %d, tail: %d\n",
+					i, td->groupid, rate_time, group_iops,
+					group_bw, ss->head, ss->tail);
 
 		if (steadystate_check_slope(&td->o))
 			ret = steadystate_slope(group_iops, group_bw, td);
