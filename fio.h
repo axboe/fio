@@ -791,14 +791,6 @@ enum {
 	FIO_CPUS_SPLIT,
 };
 
-enum {
-	FIO_STEADYSTATE_IOPS	= 0,
-	FIO_STEADYSTATE_IOPS_SLOPE,
-	FIO_STEADYSTATE_BW,
-	FIO_STEADYSTATE_BW_SLOPE,
-};
-
-
 extern void exec_trigger(const char *);
 extern void check_trigger_file(void);
 

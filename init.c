@@ -81,8 +81,6 @@ unsigned int *fio_debug_jobp = NULL;
 static char cmd_optstr[256];
 static int did_arg;
 
-bool steadystate = false;
-
 #define FIO_CLIENT_FLAG		(1 << 16)
 
 /*
@@ -1590,13 +1588,10 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		td->ss.ramp_time = o->ss_ramp_time;
 		td->ss.pct = o->ss_pct;
 
-		if (o->ss == FIO_STEADYSTATE_IOPS_SLOPE || o->ss == FIO_STEADYSTATE_BW_SLOPE) {
+		if (steadystate_check_slope(o))
 			td->ss.check_slope = true;
-			td->ss.evaluate = &steadystate_slope;
-		} else {
+		else
 			td->ss.check_slope = false;
-			td->ss.evaluate = &steadystate_deviation;
-		}
 
 		if (o->ss == FIO_STEADYSTATE_IOPS || o->ss == FIO_STEADYSTATE_IOPS_SLOPE)
 			td->ss.check_iops = true;
@@ -1620,8 +1615,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		td->ss.slope = 0.0;
 		td->ss.deviation = 0.0;
 		td->ts.ss = &td->ss;
-	}
-	else
+	} else
 		td->ts.ss = NULL;
 
 	/*

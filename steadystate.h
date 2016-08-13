@@ -1,11 +1,13 @@
 #ifndef FIO_STEADYSTATE_H
 #define FIO_STEADYSTATE_H
 
+#include "thread_options.h"
+
 extern void steadystate_check(void);
 extern void steadystate_setup(void);
 extern void steadystate_alloc(struct thread_data *);
-extern bool steadystate_deviation(unsigned long, unsigned long, struct thread_data *);
-extern bool steadystate_slope(unsigned long, unsigned long, struct thread_data *);
+
+extern bool steadystate;
 
 /*
  * For steady state detection
@@ -14,7 +16,6 @@ struct steadystate_data {
 	double limit;
 	unsigned long long dur;
 	unsigned long long ramp_time;
-	bool (*evaluate)(unsigned long, unsigned long, struct thread_data *);
 	bool check_iops;
 	bool check_slope;
 	bool pct;
@@ -42,5 +43,24 @@ struct steadystate_data {
 	unsigned long long prev_iops;
 	unsigned long long prev_bytes;
 };
+
+enum {
+	FIO_STEADYSTATE_IOPS	= 0,
+	FIO_STEADYSTATE_IOPS_SLOPE,
+	FIO_STEADYSTATE_BW,
+	FIO_STEADYSTATE_BW_SLOPE,
+};
+
+static inline bool steadystate_check_slope(struct thread_options *o)
+{
+	return o->ss == FIO_STEADYSTATE_IOPS_SLOPE ||
+		o->ss == FIO_STEADYSTATE_BW_SLOPE;
+}
+
+static inline bool steadystate_check_iops(struct thread_options *o)
+{
+	return o->ss == FIO_STEADYSTATE_IOPS ||
+		o->ss == FIO_STEADYSTATE_IOPS_SLOPE;
+}
 
 #endif
