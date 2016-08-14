@@ -125,7 +125,7 @@ static void *helper_thread_main(void *data)
 		if (!next_log)
 			next_log = DISK_UTIL_MSEC;
 
-		if (steadystate) {
+		if (steadystate_enabled) {
 			since_ss = mtime_since(&last_ss, &now);
 			if (since_ss >= STEADYSTATE_MSEC || STEADYSTATE_MSEC - since_ss < 10) {
 				steadystate_check();

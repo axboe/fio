@@ -7,7 +7,7 @@ extern void steadystate_check(void);
 extern void steadystate_setup(void);
 extern void steadystate_alloc(struct thread_data *);
 
-extern bool steadystate;
+extern bool steadystate_enabled;
 
 /*
  * For steady state detection
@@ -50,6 +50,8 @@ enum {
 	FIO_STEADYSTATE_BW,
 	FIO_STEADYSTATE_BW_SLOPE,
 };
+
+#define STEADYSTATE_MSEC	1000
 
 static inline bool steadystate_check_slope(struct thread_options *o)
 {

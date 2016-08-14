@@ -472,9 +472,6 @@ extern char *trigger_remote_cmd;
 extern long long trigger_timeout;
 extern char *aux_path;
 
-extern bool steadystate;
-#define STEADYSTATE_MSEC (1000)
-
 extern struct thread_data *threads;
 
 static inline void fio_ro_check(const struct thread_data *td, struct io_u *io_u)

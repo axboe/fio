@@ -1579,7 +1579,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	}
 
 	if (o->ss_dur) {
-		steadystate = true;
+		steadystate_enabled = true;
 		o->ss_dur /= 1000000L;
 
 		/* put all steady state info in one place */

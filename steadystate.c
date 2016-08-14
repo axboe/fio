@@ -4,14 +4,14 @@
 #include "steadystate.h"
 #include "helper_thread.h"
 
-bool steadystate = false;
+bool steadystate_enabled = false;
 
 void steadystate_setup(void)
 {
 	int i, prev_groupid;
 	struct thread_data *td, *prev_td;
 
-	if (!steadystate)
+	if (!steadystate_enabled)
 		return;
 
 	/*
