@@ -41,13 +41,14 @@ void fill_buffer_pattern(struct thread_data *td, void *p, unsigned int len)
 	(void)cpy_pattern(td->o.buffer_pattern, td->o.buffer_pattern_bytes, p, len);
 }
 
-void __fill_buffer(struct thread_options *o, unsigned long seed, void *p,
-		   unsigned int len)
+static void __fill_buffer(struct thread_options *o, unsigned long seed, void *p,
+			  unsigned int len)
 {
 	__fill_random_buf_percentage(seed, p, o->compress_percentage, len, len, o->buffer_pattern, o->buffer_pattern_bytes);
 }
 
-unsigned long fill_buffer(struct thread_data *td, void *p, unsigned int len)
+static unsigned long fill_buffer(struct thread_data *td, void *p,
+				 unsigned int len)
 {
 	struct frand_state *fs = &td->verify_state;
 	struct thread_options *o = &td->o;

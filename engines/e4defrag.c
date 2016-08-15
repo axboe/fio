@@ -54,7 +54,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "inplace",
-		.name	= "In Place",
+		.lname	= "In Place",
 		.type	= FIO_OPT_INT,
 		.off1	= offsetof(struct e4defrag_options, inplace),
 		.minval	= 0,

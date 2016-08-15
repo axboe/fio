@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <limits.h>
 
+#include "lib/strntol.h"
+
 long strntol(const char *str, size_t sz, char **end, int base)
 {
 	/* Expect that digit representation of LONG_MAX/MIN

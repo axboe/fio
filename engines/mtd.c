@@ -16,7 +16,7 @@
 #include "../verify.h"
 #include "../oslib/libmtd.h"
 
-libmtd_t desc;
+static libmtd_t desc;
 
 struct fio_mtd_data {
 	struct mtd_dev_info info;
@@ -168,7 +168,7 @@ static int fio_mtd_close_file(struct thread_data *td, struct fio_file *f)
 	return generic_close_file(td, f);
 }
 
-int fio_mtd_get_file_size(struct thread_data *td, struct fio_file *f)
+static int fio_mtd_get_file_size(struct thread_data *td, struct fio_file *f)
 {
 	struct mtd_dev_info info;
 

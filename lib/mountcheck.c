@@ -4,6 +4,8 @@
 #ifdef CONFIG_GETMNTENT
 #include <mntent.h>
 
+#include "lib/mountcheck.h"
+
 #define MTAB	"/etc/mtab"
 
 int device_is_mounted(const char *dev)

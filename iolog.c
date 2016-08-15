@@ -672,8 +672,8 @@ static inline unsigned long hist_sum(int j, int stride, unsigned int *io_u_plat)
 	return sum;
 }
 
-void flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
-			uint64_t sample_size)
+static void flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
+			       uint64_t sample_size)
 {
 	struct io_sample *s;
 	int log_offset;

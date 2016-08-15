@@ -1090,8 +1090,8 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 	log_buf(out, "\n");
 }
 
-void json_add_job_opts(struct json_object *root, const char *name,
-		       struct flist_head *opt_list, bool num_jobs)
+static void json_add_job_opts(struct json_object *root, const char *name,
+			      struct flist_head *opt_list, bool num_jobs)
 {
 	struct json_object *dir_object;
 	struct flist_head *entry;

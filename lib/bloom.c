@@ -35,7 +35,7 @@ static uint32_t bloom_fnv(const void *buf, uint32_t len, uint32_t seed)
 
 #define BLOOM_SEED	0x8989
 
-struct bloom_hash hashes[] = {
+static struct bloom_hash hashes[] = {
 	{
 		.seed = BLOOM_SEED,
 		.fn = jhash,

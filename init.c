@@ -47,7 +47,6 @@ static char **job_sections;
 static int nr_job_sections;
 
 int exitall_on_terminate = 0;
-int exitall_on_terminate_error = 0;
 int output_format = FIO_OUTPUT_NORMAL;
 int eta_print = FIO_ETA_AUTO;
 int eta_new_line = 0;
