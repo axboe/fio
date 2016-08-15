@@ -695,7 +695,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 					continue;
 				} else if (io_u->ddir == DDIR_TRIM) {
 					io_u->ddir = DDIR_READ;
-					io_u_set(io_u, IO_U_F_TRIMMED);
+					io_u_set(td, io_u, IO_U_F_TRIMMED);
 					break;
 				} else if (io_u->ddir == DDIR_WRITE) {
 					io_u->ddir = DDIR_READ;
@@ -1432,7 +1432,7 @@ static uint64_t do_dry_run(struct thread_data *td)
 		if (IS_ERR_OR_NULL(io_u))
 			break;
 
-		io_u_set(io_u, IO_U_F_FLIGHT);
+		io_u_set(td, io_u, IO_U_F_FLIGHT);
 		io_u->error = 0;
 		io_u->resid = 0;
 		if (ddir_rw(acct_ddir(io_u)))

@@ -677,7 +677,7 @@ static inline unsigned int td_min_bs(struct thread_data *td)
 	return min(td->o.min_bs[DDIR_TRIM], min_bs);
 }
 
-static inline int td_async_processing(struct thread_data *td)
+static inline bool td_async_processing(struct thread_data *td)
 {
 	return (td->flags & TD_F_NEED_LOCK) != 0;
 }
@@ -702,6 +702,24 @@ static inline void td_io_u_free_notify(struct thread_data *td)
 {
 	if (td_async_processing(td))
 		pthread_cond_signal(&td->free_cond);
+}
+
+static inline void td_flags_clear(struct thread_data *td, unsigned int *flags,
+				  unsigned int value)
+{
+	if (!td_async_processing(td))
+		*flags &= ~value;
+	else
+		__sync_fetch_and_and(flags, ~value);
+}
+
+static inline void td_flags_set(struct thread_data *td, unsigned int *flags,
+				unsigned int value)
+{
+	if (!td_async_processing(td))
+		*flags |= value;
+	else
+		__sync_fetch_and_or(flags, value);
 }
 
 extern const char *fio_get_arch_string(int);

@@ -260,7 +260,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	fio_ro_check(td, io_u);
 
 	assert((io_u->flags & IO_U_F_FLIGHT) == 0);
-	io_u_set(io_u, IO_U_F_FLIGHT);
+	io_u_set(td, io_u, IO_U_F_FLIGHT);
 
 	assert(fio_file_open(io_u->file));
 

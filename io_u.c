@@ -409,7 +409,7 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 				*is_random = 1;
 			} else {
 				*is_random = 0;
-				io_u_set(io_u, IO_U_F_BUSY_OK);
+				io_u_set(td, io_u, IO_U_F_BUSY_OK);
 				ret = get_next_seq_offset(td, f, ddir, &offset);
 				if (ret)
 					ret = get_next_rand_block(td, f, ddir, &b);
@@ -419,7 +419,7 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 			ret = get_next_seq_offset(td, f, ddir, &offset);
 		}
 	} else {
-		io_u_set(io_u, IO_U_F_BUSY_OK);
+		io_u_set(td, io_u, IO_U_F_BUSY_OK);
 		*is_random = 0;
 
 		if (td->o.rw_seq == RW_SEQ_SEQ) {
@@ -772,7 +772,7 @@ static void set_rw_ddir(struct thread_data *td, struct io_u *io_u)
 	    td->o.barrier_blocks &&
 	   !(td->io_issues[DDIR_WRITE] % td->o.barrier_blocks) &&
 	     td->io_issues[DDIR_WRITE])
-		io_u_set(io_u, IO_U_F_BARRIER);
+		io_u_set(td, io_u, IO_U_F_BARRIER);
 }
 
 void put_file_log(struct thread_data *td, struct fio_file *f)
@@ -794,7 +794,7 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 		put_file_log(td, io_u->file);
 
 	io_u->file = NULL;
-	io_u_set(io_u, IO_U_F_FREE);
+	io_u_set(td, io_u, IO_U_F_FREE);
 
 	if (io_u->flags & IO_U_F_IN_CUR_DEPTH) {
 		td->cur_depth--;
@@ -807,7 +807,7 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 
 void clear_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	io_u_clear(io_u, IO_U_F_FLIGHT);
+	io_u_clear(td, io_u, IO_U_F_FLIGHT);
 	put_io_u(td, io_u);
 }
 
@@ -823,11 +823,11 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 
 	td_io_u_lock(td);
 
-	io_u_set(__io_u, IO_U_F_FREE);
+	io_u_set(td, __io_u, IO_U_F_FREE);
 	if ((__io_u->flags & IO_U_F_FLIGHT) && ddir_rw(ddir))
 		td->io_issues[ddir]--;
 
-	io_u_clear(__io_u, IO_U_F_FLIGHT);
+	io_u_clear(td, __io_u, IO_U_F_FLIGHT);
 	if (__io_u->flags & IO_U_F_IN_CUR_DEPTH) {
 		td->cur_depth--;
 		assert(!(td->flags & TD_F_CHILD));
@@ -1457,7 +1457,7 @@ again:
 
 	if (io_u) {
 		assert(io_u->flags & IO_U_F_FREE);
-		io_u_clear(io_u, IO_U_F_FREE | IO_U_F_NO_FILE_PUT |
+		io_u_clear(td, io_u, IO_U_F_FREE | IO_U_F_NO_FILE_PUT |
 				 IO_U_F_TRIMMED | IO_U_F_BARRIER |
 				 IO_U_F_VER_LIST);
 
@@ -1465,7 +1465,7 @@ again:
 		io_u->acct_ddir = -1;
 		td->cur_depth++;
 		assert(!(td->flags & TD_F_CHILD));
-		io_u_set(io_u, IO_U_F_IN_CUR_DEPTH);
+		io_u_set(td, io_u, IO_U_F_IN_CUR_DEPTH);
 		io_u->ipo = NULL;
 	} else if (td_async_processing(td)) {
 		/*
@@ -1803,7 +1803,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	dprint_io_u(io_u, "io complete");
 
 	assert(io_u->flags & IO_U_F_FLIGHT);
-	io_u_clear(io_u, IO_U_F_FLIGHT | IO_U_F_BUSY_OK);
+	io_u_clear(td, io_u, IO_U_F_FLIGHT | IO_U_F_BUSY_OK);
 
 	/*
 	 * Mark IO ok to verify

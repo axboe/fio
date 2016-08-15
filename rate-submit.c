@@ -19,7 +19,7 @@ static int io_workqueue_fn(struct submit_worker *sw,
 
 	dprint(FD_RATE, "io_u %p queued by %u\n", io_u, gettid());
 
-	io_u_set(io_u, IO_U_F_NO_FILE_PUT);
+	io_u_set(td, io_u, IO_U_F_NO_FILE_PUT);
 
 	td->cur_depth++;
 
@@ -30,7 +30,7 @@ static int io_workqueue_fn(struct submit_worker *sw,
 		ret = io_u_queued_complete(td, 1);
 		if (ret > 0)
 			td->cur_depth -= ret;
-		io_u_clear(io_u, IO_U_F_FLIGHT);
+		io_u_clear(td, io_u, IO_U_F_FLIGHT);
 	} while (1);
 
 	dprint(FD_RATE, "io_u %p ret %d by %u\n", io_u, ret, gettid());
