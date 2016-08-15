@@ -109,16 +109,18 @@ typedef int (fio_opt_str_val_fn)(void *, long long *);
 typedef int (fio_opt_int_fn)(void *, int *);
 typedef int (fio_opt_str_set_fn)(void *);
 
-#define __td_var(start, offset)	((char *) start + (offset))
-
 struct thread_options;
 static inline void *td_var(struct thread_options *to, struct fio_option *o,
 			   unsigned int offset)
 {
-	if (o->prof_opts)
-		return __td_var(o->prof_opts, offset);
+	void *ret;
 
-	return __td_var(to, offset);
+	if (o->prof_opts)
+		ret = o->prof_opts;
+	else
+		ret = to;
+
+	return ret + offset;
 }
 
 static inline int parse_is_percent(unsigned long long val)
