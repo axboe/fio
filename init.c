@@ -677,7 +677,7 @@ static int fixup_options(struct thread_data *td)
 			"verify limited\n");
 		ret = warnings_fatal;
 	}
-	if (o->bs_unaligned && (o->odirect || td->io_ops->flags & FIO_RAWIO))
+	if (o->bs_unaligned && (o->odirect || td_ioengine_flagged(td, FIO_RAWIO)))
 		log_err("fio: bs_unaligned may not work with raw io\n");
 
 	/*
@@ -764,7 +764,7 @@ static int fixup_options(struct thread_data *td)
 
 	if (o->pre_read) {
 		o->invalidate_cache = 0;
-		if (td->io_ops->flags & FIO_PIPEIO) {
+		if (td_ioengine_flagged(td, FIO_PIPEIO)) {
 			log_info("fio: cannot pre-read files with an IO engine"
 				 " that isn't seekable. Pre-read disabled.\n");
 			ret = warnings_fatal;
@@ -772,7 +772,7 @@ static int fixup_options(struct thread_data *td)
 	}
 
 	if (!o->unit_base) {
-		if (td->io_ops->flags & FIO_BIT_BASED)
+		if (td_ioengine_flagged(td, FIO_BIT_BASED))
 			o->unit_base = 1;
 		else
 			o->unit_base = 8;
@@ -795,7 +795,7 @@ static int fixup_options(struct thread_data *td)
 	 * Windows doesn't support O_DIRECT or O_SYNC with the _open interface,
 	 * so fail if we're passed those flags
 	 */
-	if ((td->io_ops->flags & FIO_SYNCIO) && (td->o.odirect || td->o.sync_io)) {
+	if (td_ioengine_flagged(td, FIO_SYNCIO) && (td->o.odirect || td->o.sync_io)) {
 		log_err("fio: Windows does not support direct or non-buffered io with"
 				" the synchronous ioengines. Use the 'windowsaio' ioengine"
 				" with 'direct=1' and 'iodepth=1' instead.\n");
@@ -844,7 +844,7 @@ static int fixup_options(struct thread_data *td)
 	if (fio_option_is_set(&td->o, rand_seed))
 		td->o.rand_repeatable = 0;
 
-	if ((td->io_ops->flags & FIO_NOEXTEND) && td->o.file_append) {
+	if (td_ioengine_flagged(td, FIO_NOEXTEND) && td->o.file_append) {
 		log_err("fio: can't append/extent with IO engine %s\n", td->io_ops->name);
 		ret = 1;
 	}
@@ -1069,6 +1069,10 @@ int ioengine_load(struct thread_data *td)
 		*(struct thread_data **)td->eo = td;
 	}
 
+	if (td->o.odirect)
+		td->io_ops->flags |= FIO_RAWIO;
+
+	td_set_ioengine_flags(td);
 	return 0;
 }
 
@@ -1340,9 +1344,6 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (ioengine_load(td))
 		goto err;
 
-	if (o->odirect)
-		td->io_ops->flags |= FIO_RAWIO;
-
 	file_alloced = 0;
 	if (!o->filename && !td->files_index && !o->read_iolog_file) {
 		file_alloced = 1;
@@ -1373,7 +1374,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (td->eo)
 		*(struct thread_data **)td->eo = NULL;
 
-	if (td->io_ops->flags & FIO_DISKLESSIO) {
+	if (td_ioengine_flagged(td, FIO_DISKLESSIO)) {
 		struct fio_file *f;
 
 		for_each_file(td, f, i)
@@ -1537,7 +1538,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			if (is_backend && !recursed)
 				fio_server_send_add_job(td);
 
-			if (!(td->io_ops->flags & FIO_NOIO)) {
+			if (!td_ioengine_flagged(td, FIO_NOIO)) {
 				char *c1, *c2, *c3, *c4;
 				char *c5 = NULL, *c6 = NULL;
 

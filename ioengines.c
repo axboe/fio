@@ -272,7 +272,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	io_u->error = 0;
 	io_u->resid = 0;
 
-	if (td->io_ops->flags & FIO_SYNCIO) {
+	if (td_ioengine_flagged(td, FIO_SYNCIO)) {
 		if (fio_fill_issue_time(td))
 			fio_gettime(&io_u->issue_time, NULL);
 
@@ -346,7 +346,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 		}
 	}
 
-	if ((td->io_ops->flags & FIO_SYNCIO) == 0) {
+	if (!td_ioengine_flagged(td, FIO_SYNCIO)) {
 		if (fio_fill_issue_time(td))
 			fio_gettime(&io_u->issue_time, NULL);
 
@@ -375,7 +375,7 @@ int td_io_init(struct thread_data *td)
 			td->error = ret;
 	}
 
-	if (!ret && (td->io_ops->flags & FIO_NOIO))
+	if (!ret && td_ioengine_flagged(td, FIO_NOIO))
 		td->flags |= TD_F_NOIO;
 
 	return ret;
@@ -441,7 +441,7 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 		}
 	}
 
-	if (td->io_ops->flags & FIO_DISKLESSIO)
+	if (td_ioengine_flagged(td, FIO_DISKLESSIO))
 		goto done;
 
 	if (td->o.invalidate_cache && file_invalidate_cache(td, f))

@@ -52,7 +52,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	 */
 	if (td_read(td) ||
 	   (td_write(td) && td->o.overwrite && !td->o.file_append) ||
-	    (td_write(td) && td->io_ops->flags & FIO_NOEXTEND))
+	    (td_write(td) && td_ioengine_flagged(td, FIO_NOEXTEND)))
 		new_layout = 1;
 	if (td_write(td) && !td->o.overwrite && !td->o.file_append)
 		unlink_file = 1;
@@ -217,7 +217,7 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 	unsigned int bs;
 	char *b;
 
-	if (td->io_ops->flags & FIO_PIPEIO)
+	if (td_ioengine_flagged(td, FIO_PIPEIO))
 		return 0;
 
 	if (!fio_file_open(f)) {
@@ -827,7 +827,7 @@ int setup_files(struct thread_data *td)
 	 * device/file sizes are zero and no size given, punt
 	 */
 	if ((!total_size || total_size == -1ULL) && !o->size &&
-	    !(td->io_ops->flags & FIO_NOIO) && !o->fill_device &&
+	    !td_ioengine_flagged(td, FIO_NOIO) && !o->fill_device &&
 	    !(o->nr_files && (o->file_size_low || o->file_size_high))) {
 		log_err("%s: you need to specify size=\n", o->name);
 		td_verror(td, EINVAL, "total_file_size");
@@ -903,7 +903,7 @@ int setup_files(struct thread_data *td)
 
 		if (f->filetype == FIO_TYPE_FILE &&
 		    (f->io_size + f->file_offset) > f->real_file_size &&
-		    !(td->io_ops->flags & FIO_DISKLESSIO)) {
+		    !td_ioengine_flagged(td, FIO_DISKLESSIO)) {
 			if (!o->create_on_open) {
 				need_extend++;
 				extend_size += (f->io_size + f->file_offset);
@@ -1374,7 +1374,7 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 	/*
 	 * init function, io engine may not be loaded yet
 	 */
-	if (td->io_ops && (td->io_ops->flags & FIO_DISKLESSIO))
+	if (td->io_ops && td_ioengine_flagged(td, FIO_DISKLESSIO))
 		f->real_file_size = -1ULL;
 
 	f->file_name = smalloc_strdup(file_name);

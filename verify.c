@@ -802,7 +802,7 @@ int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 	 * If the IO engine is faking IO (like null), then just pretend
 	 * we verified everything.
 	 */
-	if (td->io_ops->flags & FIO_FAKEIO)
+	if (td_ioengine_flagged(td, FIO_FAKEIO))
 		return 0;
 
 	if (io_u->flags & IO_U_F_TRIMMED) {

@@ -491,7 +491,7 @@ void init_disk_util(struct thread_data *td)
 	unsigned int i;
 
 	if (!td->o.do_disk_util ||
-	    (td->io_ops->flags & (FIO_DISKLESSIO | FIO_NODISKUTIL)))
+	    td_ioengine_flagged(td, FIO_DISKLESSIO | FIO_NODISKUTIL))
 		return;
 
 	for_each_file(td, f, i)

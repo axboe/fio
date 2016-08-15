@@ -1024,7 +1024,7 @@ reap:
 		if (ret < 0)
 			break;
 		if (!ddir_rw_sum(td->bytes_done) &&
-		    !(td->io_ops->flags & FIO_NOIO))
+		    !td_ioengine_flagged(td, FIO_NOIO))
 			continue;
 
 		if (!in_ramp_time(td) && should_check_rate(td)) {
@@ -1175,7 +1175,7 @@ static int init_io_u(struct thread_data *td)
 	td->orig_buffer_size = (unsigned long long) max_bs
 					* (unsigned long long) max_units;
 
-	if ((td->io_ops->flags & FIO_NOIO) || !(td_read(td) || td_write(td)))
+	if (td_ioengine_flagged(td, FIO_NOIO) || !(td_read(td) || td_write(td)))
 		data_xfer = 0;
 
 	err = 0;
@@ -1195,7 +1195,7 @@ static int init_io_u(struct thread_data *td)
 	 * lucky and the allocator gives us an aligned address.
 	 */
 	if (td->o.odirect || td->o.mem_align || td->o.oatomic ||
-	    (td->io_ops->flags & FIO_RAWIO))
+	    td_ioengine_flagged(td, FIO_RAWIO))
 		td->orig_buffer_size += page_mask + td->o.mem_align;
 
 	if (td->o.mem_type == MEM_SHMHUGE || td->o.mem_type == MEM_MMAPHUGE) {
@@ -1214,7 +1214,7 @@ static int init_io_u(struct thread_data *td)
 		return 1;
 
 	if (td->o.odirect || td->o.mem_align || td->o.oatomic ||
-	    (td->io_ops->flags & FIO_RAWIO))
+	    td_ioengine_flagged(td, FIO_RAWIO))
 		p = PAGE_ALIGN(td->orig_buffer) + td->o.mem_align;
 	else
 		p = td->orig_buffer;
@@ -1288,7 +1288,7 @@ static int switch_ioscheduler(struct thread_data *td)
 	FILE *f;
 	int ret;
 
-	if (td->io_ops->flags & FIO_DISKLESSIO)
+	if (td_ioengine_flagged(td, FIO_DISKLESSIO))
 		return 0;
 
 	sprintf(tmp, "%s/queue/scheduler", td->sysfs_root);
@@ -1748,7 +1748,7 @@ static void *thread_main(void *data)
 
 		if (!o->do_verify ||
 		    o->verify == VERIFY_NONE ||
-		    (td->io_ops->flags & FIO_UNIDIR))
+		    td_ioengine_flagged(td, FIO_UNIDIR))
 			continue;
 
 		clear_io_state(td, 0);

@@ -110,9 +110,6 @@ static int io_workqueue_init_worker_fn(struct submit_worker *sw)
 	if (ioengine_load(td))
 		goto err;
 
-	if (td->o.odirect)
-		td->io_ops->flags |= FIO_RAWIO;
-
 	td->pid = gettid();
 
 	INIT_FLIST_HEAD(&td->io_log_list);

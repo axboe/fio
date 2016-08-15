@@ -556,7 +556,26 @@ enum {
 	TD_EXITED,
 	TD_REAPED,
 	TD_LAST,
+	TD_NR,
 };
+
+#define TD_ENG_FLAG_SHIFT	16
+#define TD_ENG_FLAG_MASK	((1U << 16) - 1)
+
+static inline enum fio_ioengine_flags td_ioengine_flags(struct thread_data *td)
+{
+	return (td->flags >> TD_ENG_FLAG_SHIFT) & TD_ENG_FLAG_MASK;
+}
+
+static inline void td_set_ioengine_flags(struct thread_data *td)
+{
+	td->flags |= (td->io_ops->flags << TD_ENG_FLAG_SHIFT);
+}
+
+static inline bool td_ioengine_flagged(struct thread_data *td, unsigned int val)
+{
+	return ((td->flags >> TD_ENG_FLAG_SHIFT) & val) != 0;
+}
 
 extern void td_set_runstate(struct thread_data *, int);
 extern int td_bump_runstate(struct thread_data *, int);

@@ -768,7 +768,7 @@ static void set_rw_ddir(struct thread_data *td, struct io_u *io_u)
 
 	io_u->ddir = io_u->acct_ddir = ddir;
 
-	if (io_u->ddir == DDIR_WRITE && (td->io_ops->flags & FIO_BARRIER) &&
+	if (io_u->ddir == DDIR_WRITE && td_ioengine_flagged(td, FIO_BARRIER) &&
 	    td->o.barrier_blocks &&
 	   !(td->io_issues[DDIR_WRITE] % td->o.barrier_blocks) &&
 	     td->io_issues[DDIR_WRITE])
@@ -843,7 +843,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	unsigned int is_random;
 
-	if (td->io_ops->flags & FIO_NOIO)
+	if (td_ioengine_flagged(td, FIO_NOIO))
 		goto out;
 
 	set_rw_ddir(td, io_u);
@@ -1622,7 +1622,7 @@ struct io_u *get_io_u(struct thread_data *td)
 	assert(fio_file_open(f));
 
 	if (ddir_rw(io_u->ddir)) {
-		if (!io_u->buflen && !(td->io_ops->flags & FIO_NOIO)) {
+		if (!io_u->buflen && !td_ioengine_flagged(td, FIO_NOIO)) {
 			dprint(FD_IO, "get_io_u: zero buflen on %p\n", io_u);
 			goto err_put;
 		}
