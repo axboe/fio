@@ -80,7 +80,9 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_HDFS,
 	},
 	{
-		.name	= "chunck_size",
+		.name	= "chunk_size",
+		.alias	= "chunck_size",
+		.lname	= "Chunk size",
 		.type	= FIO_OPT_INT,
 		.off1	= offsetof(struct hdfsio_options, chunck_size),
 		.def    = "1048576",
@@ -90,6 +92,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "single_instance",
+		.lname	= "Single Instance",
 		.type	= FIO_OPT_BOOL,
 		.off1	= offsetof(struct hdfsio_options, single_instance),
 		.def    = "1",
@@ -99,6 +102,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "hdfs_use_direct",
+		.lname	= "HDFS Use Direct",
 		.type	= FIO_OPT_BOOL,
 		.off1	= offsetof(struct hdfsio_options, use_direct),
 		.def    = "0",

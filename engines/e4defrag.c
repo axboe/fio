@@ -45,6 +45,7 @@ struct e4defrag_options {
 static struct fio_option options[] = {
 	{
 		.name	= "donorname",
+		.lname	= "Donor Name",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= offsetof(struct e4defrag_options, donor_name),
 		.help	= "File used as a block donor",
@@ -53,6 +54,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "inplace",
+		.name	= "In Place",
 		.type	= FIO_OPT_INT,
 		.off1	= offsetof(struct e4defrag_options, inplace),
 		.minval	= 0,

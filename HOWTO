@@ -1951,7 +1951,7 @@ be the starting port number since fio will use a range of ports.
 [mtd] skip_bad=bool	Skip operations against known bad blocks.
 
 [libhdfs] hdfsdirectory	libhdfs will create chunk in this HDFS directory
-[libhdfs] chunck_size	the size of the chunck to use for each file.
+[libhdfs] chunk_size	the size of the chunk to use for each file.
 
 
 6.0 Interpreting the output
