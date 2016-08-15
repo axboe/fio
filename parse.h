@@ -80,8 +80,6 @@ struct fio_option {
 	int pow2;			/* must be a power-of-2 */
 };
 
-typedef int (str_cb_fn)(void *, char *);
-
 extern int parse_option(char *, const char *, struct fio_option *, struct fio_option **, void *, struct flist_head *);
 extern void sort_options(char **, struct fio_option *, int);
 extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, void *, struct flist_head *);
@@ -107,7 +105,6 @@ extern int string_distance_ok(const char *s1, int dist);
 typedef int (fio_opt_str_fn)(void *, const char *);
 typedef int (fio_opt_str_val_fn)(void *, long long *);
 typedef int (fio_opt_int_fn)(void *, int *);
-typedef int (fio_opt_str_set_fn)(void *);
 
 struct thread_options;
 static inline void *td_var(struct thread_options *to, struct fio_option *o,
