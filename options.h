@@ -9,8 +9,6 @@
 #include "flist.h"
 #include "lib/types.h"
 
-#define td_var_offset(var)	((size_t) &((struct thread_options *)0)->var)
-
 int add_option(struct fio_option *);
 void invalidate_profile_options(const char *);
 extern char *exec_profile;
@@ -30,7 +28,7 @@ extern bool __fio_option_is_set(struct thread_options *, unsigned int off);
 
 #define fio_option_is_set(__td, name)					\
 ({									\
-	const unsigned int off = td_var_offset(name);			\
+	const unsigned int off = offsetof(struct thread_options, name);	\
 	bool __r = __fio_option_is_set((__td), off);			\
 	__r;								\
 })
