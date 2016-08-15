@@ -145,5 +145,9 @@ enum {
 	FIO_CLIENT_TYPE_GUI		= 2,
 };
 
+extern int sum_stat_clients;
+extern struct thread_stat client_ts;
+extern struct group_run_stats client_gs;
+
 #endif
 

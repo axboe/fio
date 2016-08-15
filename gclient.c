@@ -280,10 +280,6 @@ static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd
 	gdk_threads_leave();
 }
 
-extern int sum_stat_clients;
-extern struct thread_stat client_ts;
-extern struct group_run_stats client_gs;
-
 static int sum_stat_nr;
 
 static void gfio_thread_status_op(struct fio_client *client,
