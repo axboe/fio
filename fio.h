@@ -126,11 +126,10 @@ struct zone_split_index {
  * This describes a single thread/process executing a fio job.
  */
 struct thread_data {
-	struct thread_options o;
 	struct flist_head opt_list;
 	unsigned long flags;
+	struct thread_options o;
 	void *eo;
-	char verror[FIO_VERROR_SIZE];
 	pthread_t thread;
 	unsigned int thread_number;
 	unsigned int subjob_number;
@@ -394,6 +393,8 @@ struct thread_data {
 	void *prof_data;
 
 	void *pinned_mem;
+
+	char verror[FIO_VERROR_SIZE];
 };
 
 /*
