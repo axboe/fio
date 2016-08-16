@@ -240,6 +240,11 @@ struct jobs_eta {
 	uint8_t run_str[];
 } __attribute__((packed));
 
+struct io_u_plat_entry {
+	struct flist_head list;
+	unsigned int io_u_plat[FIO_IO_U_PLAT_NR];
+};
+
 extern struct fio_mutex *stat_mutex;
 
 extern struct jobs_eta *get_jobs_eta(bool force, size_t *size);

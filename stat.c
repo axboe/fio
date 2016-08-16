@@ -2221,7 +2221,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		
 		if (this_window >= iolog->hist_msec) {
 			unsigned int *io_u_plat;
-			unsigned int *dst;
+			struct io_u_plat_entry *dst;
 
 			/*
 			 * Make a byte-for-byte copy of the latency histogram
@@ -2231,10 +2231,11 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 			 * log file.
 			 */
 			io_u_plat = (unsigned int *) td->ts.io_u_plat[ddir];
-			dst = malloc(FIO_IO_U_PLAT_NR * sizeof(unsigned int));
-			memcpy(dst, io_u_plat,
+			dst = malloc(sizeof(struct io_u_plat_entry));
+			memcpy(&(dst->io_u_plat), io_u_plat,
 				FIO_IO_U_PLAT_NR * sizeof(unsigned int));
-			__add_log_sample(iolog, (unsigned long )dst, ddir, bs,
+			flist_add(&dst->list, &hw->list.list);
+			__add_log_sample(iolog, (unsigned long)dst, ddir, bs,
 						elapsed, offset);
 
 			/*
