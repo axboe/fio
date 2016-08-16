@@ -46,9 +46,7 @@
       to get weighted histograms.
     
     * We convert files given on the command line, assumed to be fio histogram files,
-      on-the-fly into their corresponding differenced files i.e. non-cumulative histograms
-      because fio outputs cumulative histograms, but we want histograms corresponding
-      to individual time intervals. An individual histogram file can contain the cumulative
+      An individual histogram file can contain the
       histograms for multiple different r/w directions (notably when --rw=randrw). This
       is accounted for by tracking each r/w direction separately. In the statistics
       reported we ultimately merge *all* histograms (regardless of r/w direction).
@@ -188,23 +186,8 @@ __HIST_COLUMNS = 1216
 __NON_HIST_COLUMNS = 3
 __TOTAL_COLUMNS = __HIST_COLUMNS + __NON_HIST_COLUMNS
     
-def sequential_diffs(head_row, times, rws, hists):
-    """ Take the difference of sequential (in time) histograms with the same
-        r/w direction, returning a new array of differenced histograms.  """
-    result = np.empty(shape=(0, __HIST_COLUMNS))
-    result_times = np.empty(shape=(1, 0))
-    for i in range(8):
-        idx = np.where(rws == i)
-        diff = np.diff(np.append(head_row[i], hists[idx], axis=0), axis=0).astype(int)
-        result = np.append(diff, result, axis=0)
-        result_times = np.append(times[idx], result_times)
-    idx = np.argsort(result_times)
-    return result[idx]
-
-def read_chunk(head_row, rdr, sz):
-    """ Read the next chunk of size sz from the given reader, computing the
-        differences across neighboring histogram samples.
-    """
+def read_chunk(rdr, sz):
+    """ Read the next chunk of size sz from the given reader. """
     try:
         """ StopIteration occurs when the pandas reader is empty, and AttributeError
             occurs if rdr is None due to the file being empty. """
@@ -212,32 +195,20 @@ def read_chunk(head_row, rdr, sz):
     except (StopIteration, AttributeError):
         return None    
 
-    """ Extract array of just the times, and histograms matrix without times column.
-        Then, take the sequential difference of each of the rows in the histogram
-        matrix. This is necessary because fio outputs *cumulative* histograms as
-        opposed to histograms with counts just for a particular interval. """
+    """ Extract array of just the times, and histograms matrix without times column. """
     times, rws, szs = new_arr[:,0], new_arr[:,1], new_arr[:,2]
     hists = new_arr[:,__NON_HIST_COLUMNS:]
-    hists_diff   = sequential_diffs(head_row, times, rws, hists)
     times = times.reshape((len(times),1))
-    arr = np.append(times, hists_diff, axis=1)
+    arr = np.append(times, hists, axis=1)
 
-    """ hists[-1] will be the row we need to start our differencing with the
-        next time we call read_chunk() on the same rdr """
-    return arr, hists[-1]
+    return arr
 
 def get_min(fps, arrs):
     """ Find the file with the current first row with the smallest start time """
-    return min([fp for fp in fps if not arrs[fp] is None], key=lambda fp: arrs.get(fp)[0][0][0])
+    return min([fp for fp in fps if not arrs[fp] is None], key=lambda fp: arrs.get(fp)[0][0])
 
 def histogram_generator(ctx, fps, sz):
     
-    """ head_row for a particular file keeps track of the last (cumulative)
-        histogram we read so that we have a reference point to subtract off
-        when computing sequential differences. """
-    head_row  = np.zeros(shape=(1, __HIST_COLUMNS))
-    head_rows = {fp: {i: head_row for i in range(8)} for fp in fps}
-
     # Create a chunked pandas reader for each of the files:
     rdrs = {}
     for fp in fps:
@@ -250,8 +221,8 @@ def histogram_generator(ctx, fps, sz):
             else:
                 raise(e)
 
-    # Initial histograms and corresponding head_rows:
-    arrs = {fp: read_chunk(head_rows[fp], rdr, sz) for fp,rdr in rdrs.items()}
+    # Initial histograms from disk:
+    arrs = {fp: read_chunk(rdr, sz) for fp,rdr in rdrs.items()}
     while True:
 
         try:
@@ -259,13 +230,12 @@ def histogram_generator(ctx, fps, sz):
             fp = get_min(fps, arrs)
         except ValueError:
             return
-        arr, head_row = arrs[fp]
+        arr = arrs[fp]
         yield np.insert(arr[0], 1, fps.index(fp))
-        arrs[fp] = arr[1:], head_row
-        head_rows[fp] = head_row
+        arrs[fp] = arr[1:]
 
-        if arrs[fp][0].shape[0] == 0:
-            arrs[fp] = read_chunk(head_rows[fp], rdrs[fp], sz)
+        if arrs[fp].shape[0] == 0:
+            arrs[fp] = read_chunk(rdrs[fp], sz)
 
 def _plat_idx_to_val(idx, edge=0.5, FIO_IO_U_PLAT_BITS=6, FIO_IO_U_PLAT_VAL=64):
     """ Taken from fio's stat.c for calculating the latency value of a bin

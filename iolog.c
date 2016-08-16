@@ -576,6 +576,9 @@ void setup_log(struct io_log **log, struct log_params *p,
 	       const char *filename)
 {
 	struct io_log *l;
+	int i;
+	struct io_u_plat_entry *entry;
+	struct flist_head *list;
 
 	l = scalloc(1, sizeof(*l));
 	INIT_FLIST_HEAD(&l->io_logs);
@@ -588,6 +591,16 @@ void setup_log(struct io_log **log, struct log_params *p,
 	l->hist_coarseness = p->hist_coarseness;
 	l->filename = strdup(filename);
 	l->td = p->td;
+
+	/* Initialize histogram lists for each r/w direction,
+	 * with initial io_u_plat of all zeros:
+	 */
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		list = &l->hist_window[i].list.list;
+		INIT_FLIST_HEAD(list);
+		entry = calloc(1, sizeof(struct io_u_plat_entry));
+		flist_add(&entry->list, list);
+	}
 
 	if (l->td && l->td->o.io_submit_mode != IO_MODE_OFFLOAD) {
 		struct io_logs *p;
@@ -661,13 +674,14 @@ void free_log(struct io_log *log)
 	sfree(log);
 }
 
-static inline unsigned long hist_sum(int j, int stride, unsigned int *io_u_plat)
+static inline unsigned long hist_sum(int j, int stride, unsigned int *io_u_plat,
+		unsigned int *io_u_plat_last)
 {
 	unsigned long sum;
 	int k;
 
 	for (k = sum = 0; k < stride; k++)
-		sum += io_u_plat[j + k];
+		sum += io_u_plat[j + k] - io_u_plat_last[j + k];
 
 	return sum;
 }
@@ -678,7 +692,9 @@ static void flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
 	struct io_sample *s;
 	int log_offset;
 	uint64_t i, j, nr_samples;
+	struct io_u_plat_entry *entry, *entry_before;
 	unsigned int *io_u_plat;
+	unsigned int *io_u_plat_before;
 
 	int stride = 1 << hist_coarseness;
 	
@@ -692,15 +708,24 @@ static void flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
 
 	for (i = 0; i < nr_samples; i++) {
 		s = __get_sample(samples, log_offset, i);
-		io_u_plat = (unsigned int *) (uintptr_t) s->val;
+		
+		entry = (struct io_u_plat_entry *) s->val;
+		io_u_plat = entry->io_u_plat;
+		
+		entry_before = flist_first_entry(&entry->list, struct io_u_plat_entry, list);
+		io_u_plat_before = entry_before->io_u_plat;
+		
 		fprintf(f, "%lu, %u, %u, ", (unsigned long)s->time,
 		        io_sample_ddir(s), s->bs);
 		for (j = 0; j < FIO_IO_U_PLAT_NR - stride; j += stride) {
-			fprintf(f, "%lu, ", hist_sum(j, stride, io_u_plat));
+			fprintf(f, "%lu, ", hist_sum(j, stride, io_u_plat, io_u_plat_before));
 		}
 		fprintf(f, "%lu\n", (unsigned long) 
-		        hist_sum(FIO_IO_U_PLAT_NR - stride, stride, io_u_plat));
-		free(io_u_plat);
+		        hist_sum(FIO_IO_U_PLAT_NR - stride, stride, io_u_plat,
+		                 io_u_plat_before));
+		
+		flist_del(&entry_before->list);
+		free(entry_before);
 	}
 }
 
