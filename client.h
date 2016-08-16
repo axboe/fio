@@ -131,7 +131,6 @@ extern struct fio_client *fio_client_add_explicit(struct client_ops *, const cha
 extern void fio_client_add_cmd_option(void *, const char *);
 extern int fio_client_add_ini_file(void *, const char *, bool);
 extern int fio_client_terminate(struct fio_client *);
-extern void fio_clients_terminate(void);
 extern struct fio_client *fio_get_client(struct fio_client *);
 extern void fio_put_client(struct fio_client *);
 extern int fio_client_update_options(struct fio_client *, struct thread_options *, uint64_t *);

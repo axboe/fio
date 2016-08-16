@@ -1247,7 +1247,7 @@ static char *make_filename(char *buf, size_t buf_size,struct thread_options *o,
 	return buf;
 }
 
-int parse_dryrun(void)
+bool parse_dryrun(void)
 {
 	return dump_cmdline || parse_only;
 }

@@ -109,10 +109,11 @@ struct io_log {
 	unsigned long avg_msec;
 	unsigned long avg_last;
 
-  /*
-   * Windowed latency histograms, for keeping track of when we need to
-   * save a copy of the histogram every approximately hist_msec milliseconds.
-   */
+	/*
+	 * Windowed latency histograms, for keeping track of when we need to
+	 * save a copy of the histogram every approximately hist_msec
+	 * milliseconds.
+	 */
 	struct io_hist hist_window[DDIR_RWDIR_CNT];
 	unsigned long hist_msec;
 	int hist_coarseness;

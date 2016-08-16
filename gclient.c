@@ -1008,7 +1008,7 @@ static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long min,
 	char *minp, *maxp;
 	char tmp[64];
 
-	if (!usec_to_msec(&min, &max, &mean, &dev))
+	if (usec_to_msec(&min, &max, &mean, &dev))
 		base = "(msec)";
 
 	minp = num2str(min, 6, 1, 0, 0);

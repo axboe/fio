@@ -557,7 +557,7 @@ int fio_client_terminate(struct fio_client *client)
 	return fio_net_send_quit(client->fd);
 }
 
-void fio_clients_terminate(void)
+static void fio_clients_terminate(void)
 {
 	struct flist_head *entry;
 	struct fio_client *client;

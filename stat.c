@@ -257,13 +257,13 @@ out:
 		free(ovals);
 }
 
-int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
-	     double *mean, double *dev)
+bool calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
+	      double *mean, double *dev)
 {
 	double n = (double) is->samples;
 
 	if (n == 0)
-		return 0;
+		return false;
 
 	*min = is->min_val;
 	*max = is->max_val;
@@ -274,7 +274,7 @@ int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 	else
 		*dev = 0;
 
-	return 1;
+	return true;
 }
 
 void show_group_stats(struct group_run_stats *rs, struct buf_output *out)
@@ -364,7 +364,7 @@ static void display_lat(const char *name, unsigned long min, unsigned long max,
 	const char *base = "(usec)";
 	char *minp, *maxp;
 
-	if (!usec_to_msec(&min, &max, &mean, &dev))
+	if (usec_to_msec(&min, &max, &mean, &dev))
 		base = "(msec)";
 
 	minp = num2str(min, 6, 1, 0, 0);
