@@ -362,8 +362,12 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 	if (f->last_pos[ddir] < f->real_file_size) {
 		uint64_t pos;
 
-		if (f->last_pos[ddir] == f->file_offset && o->ddir_seq_add < 0)
-			f->last_pos[ddir] = f->real_file_size;
+		if (f->last_pos[ddir] == f->file_offset && o->ddir_seq_add < 0) {
+			if (f->real_file_size > f->io_size)
+				f->last_pos[ddir] = f->io_size;
+			else
+				f->last_pos[ddir] = f->real_file_size;
+		}
 
 		pos = f->last_pos[ddir] - f->file_offset;
 		if (pos && o->ddir_seq_add) {
@@ -378,8 +382,14 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 			if (pos >= f->real_file_size) {
 				if (o->ddir_seq_add > 0)
 					pos = f->file_offset;
-				else
-					pos = f->real_file_size + o->ddir_seq_add;
+				else {
+					if (f->real_file_size > f->io_size)
+						pos = f->io_size;
+					else
+						pos = f->real_file_size;
+
+					pos += o->ddir_seq_add;
+				}
 			}
 		}
 
