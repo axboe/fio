@@ -18,14 +18,10 @@ struct io_stat {
 	fio_fp64_t S;
 };
 
-struct io_u_plat_list {
-	struct flist_head list;
-};
-
 struct io_hist {
 	uint64_t samples;
 	unsigned long hist_last;
-	struct io_u_plat_list list;
+	struct flist_head list;
 };
 
 /*

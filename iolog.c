@@ -596,7 +596,7 @@ void setup_log(struct io_log **log, struct log_params *p,
 	 * with initial io_u_plat of all zeros:
 	 */
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		list = &l->hist_window[i].list.list;
+		list = &l->hist_window[i].list;
 		INIT_FLIST_HEAD(list);
 		entry = calloc(1, sizeof(struct io_u_plat_entry));
 		flist_add(&entry->list, list);
@@ -708,22 +708,23 @@ static void flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
 
 	for (i = 0; i < nr_samples; i++) {
 		s = __get_sample(samples, log_offset, i);
-		
+
 		entry = (struct io_u_plat_entry *) s->val;
 		io_u_plat = entry->io_u_plat;
-		
+
 		entry_before = flist_first_entry(&entry->list, struct io_u_plat_entry, list);
 		io_u_plat_before = entry_before->io_u_plat;
-		
-		fprintf(f, "%lu, %u, %u, ", (unsigned long)s->time,
-		        io_sample_ddir(s), s->bs);
+
+		fprintf(f, "%lu, %u, %u, ", (unsigned long) s->time,
+						io_sample_ddir(s), s->bs);
 		for (j = 0; j < FIO_IO_U_PLAT_NR - stride; j += stride) {
-			fprintf(f, "%lu, ", hist_sum(j, stride, io_u_plat, io_u_plat_before));
+			fprintf(f, "%lu, ", hist_sum(j, stride, io_u_plat,
+						io_u_plat_before));
 		}
-		fprintf(f, "%lu\n", (unsigned long) 
+		fprintf(f, "%lu\n", (unsigned long)
 		        hist_sum(FIO_IO_U_PLAT_NR - stride, stride, io_u_plat,
-		                 io_u_plat_before));
-		
+					io_u_plat_before));
+
 		flist_del(&entry_before->list);
 		free(entry_before);
 	}

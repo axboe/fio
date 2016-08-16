@@ -2234,7 +2234,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 			dst = malloc(sizeof(struct io_u_plat_entry));
 			memcpy(&(dst->io_u_plat), io_u_plat,
 				FIO_IO_U_PLAT_NR * sizeof(unsigned int));
-			flist_add(&dst->list, &hw->list.list);
+			flist_add(&dst->list, &hw->list);
 			__add_log_sample(iolog, (unsigned long)dst, ddir, bs,
 						elapsed, offset);
 
