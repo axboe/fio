@@ -1069,10 +1069,8 @@ static int str_steadystate_cb(void *data, const char *str)
 	char *pct;
 	long long ll;
 
-	if (td->o.ss != FIO_STEADYSTATE_IOPS &&
-	    td->o.ss != FIO_STEADYSTATE_IOPS_SLOPE &&
-	    td->o.ss != FIO_STEADYSTATE_BW &&
-	    td->o.ss != FIO_STEADYSTATE_BW_SLOPE) {
+	if (td->o.ss != FIO_SS_IOPS && td->o.ss != FIO_SS_IOPS_SLOPE &&
+	    td->o.ss != FIO_SS_BW && td->o.ss != FIO_SS_BW_SLOPE) {
 		/* should be impossible to get here */
 		log_err("fio: unknown steady state criterion\n");
 		return 1;
@@ -1103,10 +1101,7 @@ static int str_steadystate_cb(void *data, const char *str)
 
 		td->o.ss_pct = true;
 		td->o.ss_limit.u.f = val;
-
-
-	} else if (td->o.ss == FIO_STEADYSTATE_IOPS ||
-		   td->o.ss == FIO_STEADYSTATE_IOPS_SLOPE) {
+	} else if (td->o.ss & __FIO_SS_IOPS) {
 		if (!str_to_float(nr, &val, 0)) {
 			log_err("fio: steadystate IOPS threshold postfix parsing failed\n");
 			free(nr);
@@ -1138,6 +1133,7 @@ static int str_steadystate_cb(void *data, const char *str)
 
 	}
 
+	td->ss.mode = td->o.ss;
 	return 0;
 }
 
@@ -4224,20 +4220,20 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "iops_slope:0.01%",
 		.posval	= {
 			  { .ival = "iops",
-			    .oval = FIO_STEADYSTATE_IOPS,
+			    .oval = FIO_SS_IOPS,
 			    .help = "maximum mean deviation of IOPS measurements",
 			  },
 			  { .ival = "iops_slope",
-			    .oval = FIO_STEADYSTATE_IOPS_SLOPE,
+			    .oval = FIO_SS_IOPS_SLOPE,
 			    .help = "slope calculated from IOPS measurements",
 			  },
 			  { .ival = "bw",
-			    .oval = FIO_STEADYSTATE_BW,
+			    .oval = FIO_SS_BW,
 			    .help = "maximum mean deviation of bandwidth measurements",
 			  },
 			  {
 			    .ival = "bw_slope",
-			    .oval = FIO_STEADYSTATE_BW_SLOPE,
+			    .oval = FIO_SS_BW_SLOPE,
 			    .help = "slope calculated from bandwidth measurements",
 			  },
 		},

@@ -5,7 +5,7 @@
 
 extern void steadystate_check(void);
 extern void steadystate_setup(void);
-extern void steadystate_alloc(struct thread_data *);
+extern void td_steadystate_init(struct thread_data *);
 
 extern bool steadystate_enabled;
 
@@ -16,10 +16,9 @@ struct steadystate_data {
 	double limit;
 	unsigned long long dur;
 	unsigned long long ramp_time;
-	bool check_iops;
-	bool check_slope;
 	bool pct;
 
+	unsigned int mode;
 	int attained;
 	int last_in_group;
 	int ramp_time_over;
@@ -45,24 +44,16 @@ struct steadystate_data {
 };
 
 enum {
-	FIO_STEADYSTATE_IOPS	= 0,
-	FIO_STEADYSTATE_IOPS_SLOPE,
-	FIO_STEADYSTATE_BW,
-	FIO_STEADYSTATE_BW_SLOPE,
+	__FIO_SS_IOPS	= 1,
+	__FIO_SS_BW	= 2,
+	__FIO_SS_SLOPE	= 4,
+
+	FIO_SS_IOPS		= __FIO_SS_IOPS,
+	FIO_SS_IOPS_SLOPE	= __FIO_SS_IOPS | __FIO_SS_SLOPE,
+	FIO_SS_BW		= __FIO_SS_BW,
+	FIO_SS_BW_SLOPE		= __FIO_SS_BW | __FIO_SS_SLOPE,
 };
 
 #define STEADYSTATE_MSEC	1000
-
-static inline bool steadystate_check_slope(struct thread_options *o)
-{
-	return o->ss == FIO_STEADYSTATE_IOPS_SLOPE ||
-		o->ss == FIO_STEADYSTATE_BW_SLOPE;
-}
-
-static inline bool steadystate_check_iops(struct thread_options *o)
-{
-	return o->ss == FIO_STEADYSTATE_IOPS ||
-		o->ss == FIO_STEADYSTATE_IOPS_SLOPE;
-}
 
 #endif

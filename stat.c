@@ -1266,8 +1266,8 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		char ss_buf[64];
 
 		snprintf(ss_buf, sizeof(ss_buf), "%s%s:%f%s",
-			ss->check_iops ? "iops" : "bw",
-			ss->check_slope ? "_slope" : "",
+			ss->mode & __FIO_SS_IOPS ? "iops" : "bw",
+			ss->mode & __FIO_SS_SLOPE ? "_slope" : "",
 			(float) ss->limit,
 			ss->pct ? "%" : "");
 

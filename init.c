@@ -1578,45 +1578,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			log_info("...\n");
 	}
 
-	if (o->ss_dur) {
-		steadystate_enabled = true;
-		o->ss_dur /= 1000000L;
-
-		/* put all steady state info in one place */
-		td->ss.dur = o->ss_dur;
-		td->ss.limit = o->ss_limit.u.f;
-		td->ss.ramp_time = o->ss_ramp_time;
-		td->ss.pct = o->ss_pct;
-
-		if (steadystate_check_slope(o))
-			td->ss.check_slope = true;
-		else
-			td->ss.check_slope = false;
-
-		if (o->ss == FIO_STEADYSTATE_IOPS || o->ss == FIO_STEADYSTATE_IOPS_SLOPE)
-			td->ss.check_iops = true;
-		else
-			td->ss.check_iops = false;
-
-		td->ss.bw_data = NULL;
-		td->ss.iops_data = NULL;
-		td->ss.ramp_time_over = (td->ss.ramp_time == 0);
-		td->ss.attained = 0;
-		td->ss.last_in_group = 0;
-		td->ss.head = 0;
-		td->ss.tail = 0;
-		td->ss.sum_x = o->ss_dur * (o->ss_dur - 1) / 2;
-		td->ss.sum_x_sq = (o->ss_dur - 1) * (o->ss_dur) * (2*o->ss_dur - 1) / 6;
-		td->ss.prev_bytes = 0;
-		td->ss.prev_iops = 0;
-		td->ss.sum_y = 0;
-		td->ss.oldest_y = 0;
-		td->ss.criterion = 0.0;
-		td->ss.slope = 0.0;
-		td->ss.deviation = 0.0;
-		td->ts.ss = &td->ss;
-	} else
-		td->ts.ss = NULL;
+	td_steadystate_init(td);
 
 	/*
 	 * recurse add identical jobs, clear numjobs and stonewall options

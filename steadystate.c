@@ -6,6 +6,17 @@
 
 bool steadystate_enabled = false;
 
+static void steadystate_alloc(struct thread_data *td)
+{
+	int i;
+
+	td->ss.bw_data = malloc(td->ss.dur * sizeof(unsigned long));
+	td->ss.iops_data = malloc(td->ss.dur * sizeof(unsigned long));
+	/* initialize so that it is obvious if the cache is not full in the output */
+	for (i = 0; i < td->ss.dur; i++)
+		td->ss.iops_data[i] = td->ss.bw_data[i] = 0;
+}
+
 void steadystate_setup(void)
 {
 	int i, prev_groupid;
@@ -46,17 +57,6 @@ void steadystate_setup(void)
 	}
 }
 
-void steadystate_alloc(struct thread_data *td)
-{
-	int i;
-
-	td->ss.bw_data = malloc(td->ss.dur * sizeof(unsigned long));
-	td->ss.iops_data = malloc(td->ss.dur * sizeof(unsigned long));
-	/* initialize so that it is obvious if the cache is not full in the output */
-	for (i = 0; i < td->ss.dur; i++)
-		td->ss.iops_data[i] = td->ss.bw_data[i] = 0;
-}
-
 static bool steadystate_slope(unsigned long iops, unsigned long bw,
 			      struct thread_data *td)
 {
@@ -68,7 +68,7 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 	ss->bw_data[ss->tail] = bw;
 	ss->iops_data[ss->tail] = iops;
 
-	if (ss->check_iops)
+	if (ss->mode & __FIO_SS_IOPS)
 		new_val = iops;
 	else
 		new_val = bw;
@@ -76,14 +76,14 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 	if (ss->tail < ss->head || (ss->tail - ss->head == ss->dur - 1)) {
 		if (ss->sum_y == 0) {	/* first time through */
 			for(i = 0; i < ss->dur; i++) {
-				if (ss->check_iops)
+				if (ss->mode & __FIO_SS_IOPS)
 					ss->sum_y += ss->iops_data[i];
 				else
 					ss->sum_y += ss->bw_data[i];
 				j = ss->head + i;
 				if (j >= ss->dur)
 					j -= ss->dur;
-				if (ss->check_iops)
+				if (ss->mode & __FIO_SS_IOPS)
 					ss->sum_xy += ss->iops_data[j];
 				else
 					ss->sum_xy += ss->bw_data[j];
@@ -94,7 +94,7 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 			ss->sum_xy = ss->sum_xy - ss->sum_y + ss->dur * new_val;
 		}
 
-		if (ss->check_iops)
+		if (ss->mode & __FIO_SS_IOPS)
 			ss->oldest_y = ss->iops_data[ss->head];
 		else
 			ss->oldest_y = ss->bw_data[ss->head];
@@ -144,19 +144,19 @@ static bool steadystate_deviation(unsigned long iops, unsigned long bw,
 	if (ss->tail < ss->head || (ss->tail - ss->head == ss->dur - 1)) {
 		if (ss->sum_y == 0) {	/* first time through */
 			for(i = 0; i < ss->dur; i++)
-				if (ss->check_iops)
+				if (ss->mode & __FIO_SS_IOPS)
 					ss->sum_y += ss->iops_data[i];
 				else
 					ss->sum_y += ss->bw_data[i];
 		} else {		/* easy to update the sum */
 			ss->sum_y -= ss->oldest_y;
-			if (ss->check_iops)
+			if (ss->mode & __FIO_SS_IOPS)
 				ss->sum_y += ss->iops_data[ss->tail];
 			else
 				ss->sum_y += ss->bw_data[ss->tail];
 		}
 
-		if (ss->check_iops)
+		if (ss->mode & __FIO_SS_IOPS)
 			ss->oldest_y = ss->iops_data[ss->head];
 		else
 			ss->oldest_y = ss->bw_data[ss->head];
@@ -165,7 +165,7 @@ static bool steadystate_deviation(unsigned long iops, unsigned long bw,
 		ss->deviation = 0.0;
 
 		for (i = 0; i < ss->dur; i++) {
-			if (ss->check_iops)
+			if (ss->mode & __FIO_SS_IOPS)
 				diff = ss->iops_data[i] - mean;
 			else
 				diff = ss->bw_data[i] - mean;
@@ -272,7 +272,7 @@ void steadystate_check(void)
 					i, td->groupid, rate_time, group_iops,
 					group_bw, ss->head, ss->tail);
 
-		if (steadystate_check_slope(&td->o))
+		if (td->o.ss & __FIO_SS_SLOPE)
 			ret = steadystate_slope(group_iops, group_bw, td);
 		else
 			ret = steadystate_deviation(group_iops, group_bw, td);
@@ -293,4 +293,29 @@ void steadystate_check(void)
 	}
 }
 
+void td_steadystate_init(struct thread_data *td)
+{
+	struct steadystate_data *ss = &td->ss;
+	struct thread_options *o = &td->o;
 
+	memset(ss, 0, sizeof(*ss));
+
+	if (!o->ss_dur)
+		return;
+
+	steadystate_enabled = true;
+	o->ss_dur /= 1000000L;
+
+	/* put all steady state info in one place */
+	ss->dur = o->ss_dur;
+	ss->limit = o->ss_limit.u.f;
+	ss->ramp_time = o->ss_ramp_time;
+	ss->pct = o->ss_pct;
+	ss->mode = o->ss;
+
+	ss->ramp_time_over = (td->ss.ramp_time == 0);
+	ss->sum_x = o->ss_dur * (o->ss_dur - 1) / 2;
+	ss->sum_x_sq = (o->ss_dur - 1) * (o->ss_dur) * (2*o->ss_dur - 1) / 6;
+
+	td->ts.ss = ss;
+}
