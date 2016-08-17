@@ -209,7 +209,7 @@ void steadystate_check(void)
 		struct steadystate_data *ss = &td->ss;
 
 		if (!ss->dur || td->runstate <= TD_SETTING_UP ||
-		    td->runstate >= TD_EXITED || ss->attained)
+		    td->runstate >= TD_EXITED || (ss->mode & __FIO_SS_ATTAINED))
 			continue;
 
 		td_iops = 0;
@@ -281,12 +281,12 @@ void steadystate_check(void)
 			if (td->o.group_reporting) {
 				for_each_td(td2, j) {
 					if (td2->groupid == td->groupid) {
-						td2->ss.attained = 1;
+						td2->ss.mode |= __FIO_SS_ATTAINED;
 						fio_mark_td_terminate(td2);
 					}
 				}
 			} else {
-				ss->attained = 1;
+				ss->mode |= __FIO_SS_ATTAINED;
 				fio_mark_td_terminate(td);
 			}
 		}
