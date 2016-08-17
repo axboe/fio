@@ -43,7 +43,7 @@ void steadystate_setup(void)
 
 		if (prev_groupid != td->groupid) {
 			if (prev_td != NULL) {
-				prev_td->ss.last_in_group = 1;
+				prev_td->ss.state |= __FIO_SS_LAST;
 				steadystate_alloc(prev_td);
 			}
 			prev_groupid = td->groupid;
@@ -52,7 +52,7 @@ void steadystate_setup(void)
 	}
 
 	if (prev_td != NULL && prev_td->o.group_reporting) {
-		prev_td->ss.last_in_group = 1;
+		prev_td->ss.state |= __FIO_SS_LAST;
 		steadystate_alloc(prev_td);
 	}
 }
@@ -68,7 +68,7 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 	ss->bw_data[ss->tail] = bw;
 	ss->iops_data[ss->tail] = iops;
 
-	if (ss->mode & __FIO_SS_IOPS)
+	if (ss->state & __FIO_SS_IOPS)
 		new_val = iops;
 	else
 		new_val = bw;
@@ -76,14 +76,14 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 	if (ss->tail < ss->head || (ss->tail - ss->head == ss->dur - 1)) {
 		if (ss->sum_y == 0) {	/* first time through */
 			for(i = 0; i < ss->dur; i++) {
-				if (ss->mode & __FIO_SS_IOPS)
+				if (ss->state & __FIO_SS_IOPS)
 					ss->sum_y += ss->iops_data[i];
 				else
 					ss->sum_y += ss->bw_data[i];
 				j = ss->head + i;
 				if (j >= ss->dur)
 					j -= ss->dur;
-				if (ss->mode & __FIO_SS_IOPS)
+				if (ss->state & __FIO_SS_IOPS)
 					ss->sum_xy += ss->iops_data[j];
 				else
 					ss->sum_xy += ss->bw_data[j];
@@ -94,7 +94,7 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 			ss->sum_xy = ss->sum_xy - ss->sum_y + ss->dur * new_val;
 		}
 
-		if (ss->mode & __FIO_SS_IOPS)
+		if (ss->state & __FIO_SS_IOPS)
 			ss->oldest_y = ss->iops_data[ss->head];
 		else
 			ss->oldest_y = ss->bw_data[ss->head];
@@ -144,19 +144,19 @@ static bool steadystate_deviation(unsigned long iops, unsigned long bw,
 	if (ss->tail < ss->head || (ss->tail - ss->head == ss->dur - 1)) {
 		if (ss->sum_y == 0) {	/* first time through */
 			for(i = 0; i < ss->dur; i++)
-				if (ss->mode & __FIO_SS_IOPS)
+				if (ss->state & __FIO_SS_IOPS)
 					ss->sum_y += ss->iops_data[i];
 				else
 					ss->sum_y += ss->bw_data[i];
 		} else {		/* easy to update the sum */
 			ss->sum_y -= ss->oldest_y;
-			if (ss->mode & __FIO_SS_IOPS)
+			if (ss->state & __FIO_SS_IOPS)
 				ss->sum_y += ss->iops_data[ss->tail];
 			else
 				ss->sum_y += ss->bw_data[ss->tail];
 		}
 
-		if (ss->mode & __FIO_SS_IOPS)
+		if (ss->state & __FIO_SS_IOPS)
 			ss->oldest_y = ss->iops_data[ss->head];
 		else
 			ss->oldest_y = ss->bw_data[ss->head];
@@ -165,7 +165,7 @@ static bool steadystate_deviation(unsigned long iops, unsigned long bw,
 		ss->deviation = 0.0;
 
 		for (i = 0; i < ss->dur; i++) {
-			if (ss->mode & __FIO_SS_IOPS)
+			if (ss->state & __FIO_SS_IOPS)
 				diff = ss->iops_data[i] - mean;
 			else
 				diff = ss->bw_data[i] - mean;
@@ -209,7 +209,7 @@ void steadystate_check(void)
 		struct steadystate_data *ss = &td->ss;
 
 		if (!ss->dur || td->runstate <= TD_SETTING_UP ||
-		    td->runstate >= TD_EXITED || (ss->mode & __FIO_SS_ATTAINED))
+		    td->runstate >= TD_EXITED || (ss->state & __FIO_SS_ATTAINED))
 			continue;
 
 		td_iops = 0;
@@ -223,13 +223,14 @@ void steadystate_check(void)
 		prev_groupid = td->groupid;
 
 		fio_gettime(&now, NULL);
-		if (ss->ramp_time && !ss->ramp_time_over)
+		if (ss->ramp_time && !(ss->state & __FIO_SS_RAMP_OVER)) {
 			/*
 			 * Begin recording data one second after ss->ramp_time
 			 * has elapsed
 			 */
 			if (utime_since(&td->epoch, &now) >= (ss->ramp_time + 1000000L))
-				ss->ramp_time_over = 1;
+				ss->state |= __FIO_SS_RAMP_OVER;
+		}
 
 		td_io_u_lock(td);
 		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
@@ -248,7 +249,7 @@ void steadystate_check(void)
 		 * prev_iops/bw the first time through after ss->ramp_time
 		 * is done.
 		 */
-		if (ss->ramp_time_over) {
+		if (ss->state & __FIO_SS_RAMP_OVER) {
 			group_bw += 1000 * (td_bytes - ss->prev_bytes) / rate_time;
 			group_iops += 1000 * (td_iops - ss->prev_iops) / rate_time;
 			++group_ramp_time_over;
@@ -256,7 +257,7 @@ void steadystate_check(void)
 		ss->prev_iops = td_iops;
 		ss->prev_bytes = td_bytes;
 
-		if (td->o.group_reporting && !ss->last_in_group)
+		if (td->o.group_reporting && !(ss->state & __FIO_SS_LAST))
 			continue;
 
 		/*
@@ -281,12 +282,12 @@ void steadystate_check(void)
 			if (td->o.group_reporting) {
 				for_each_td(td2, j) {
 					if (td2->groupid == td->groupid) {
-						td2->ss.mode |= __FIO_SS_ATTAINED;
+						td2->ss.state |= __FIO_SS_ATTAINED;
 						fio_mark_td_terminate(td2);
 					}
 				}
 			} else {
-				ss->mode |= __FIO_SS_ATTAINED;
+				ss->state |= __FIO_SS_ATTAINED;
 				fio_mark_td_terminate(td);
 			}
 		}
@@ -311,9 +312,11 @@ void td_steadystate_init(struct thread_data *td)
 	ss->limit = o->ss_limit.u.f;
 	ss->ramp_time = o->ss_ramp_time;
 	ss->pct = o->ss_pct;
-	ss->mode = o->ss;
 
-	ss->ramp_time_over = (td->ss.ramp_time == 0);
+	ss->state = o->ss;
+	if (!td->ss.ramp_time)
+		ss->state |= __FIO_SS_RAMP_OVER;
+
 	ss->sum_x = o->ss_dur * (o->ss_dur - 1) / 2;
 	ss->sum_x_sq = (o->ss_dur - 1) * (o->ss_dur) * (2*o->ss_dur - 1) / 6;
 

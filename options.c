@@ -1133,7 +1133,7 @@ static int str_steadystate_cb(void *data, const char *str)
 
 	}
 
-	td->ss.mode = td->o.ss;
+	td->ss.state = td->o.ss;
 	return 0;
 }
 
