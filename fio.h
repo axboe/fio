@@ -563,7 +563,8 @@ enum {
 
 static inline enum fio_ioengine_flags td_ioengine_flags(struct thread_data *td)
 {
-	return (td->flags >> TD_ENG_FLAG_SHIFT) & TD_ENG_FLAG_MASK;
+	return (enum fio_ioengine_flags)
+		((td->flags >> TD_ENG_FLAG_SHIFT) & TD_ENG_FLAG_MASK);
 }
 
 static inline void td_set_ioengine_flags(struct thread_data *td)
@@ -571,9 +572,10 @@ static inline void td_set_ioengine_flags(struct thread_data *td)
 	td->flags |= (td->io_ops->flags << TD_ENG_FLAG_SHIFT);
 }
 
-static inline bool td_ioengine_flagged(struct thread_data *td, unsigned int val)
+static inline bool td_ioengine_flagged(struct thread_data *td,
+				       enum fio_ioengine_flags flags)
 {
-	return ((td->flags >> TD_ENG_FLAG_SHIFT) & val) != 0;
+	return ((td->flags >> TD_ENG_FLAG_SHIFT) & flags) != 0;
 }
 
 extern void td_set_runstate(struct thread_data *, int);
