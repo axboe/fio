@@ -151,6 +151,17 @@ void set_genesis_time(void)
 	fio_gettime(&genesis, NULL);
 }
 
+void set_epoch_time(struct thread_data *td, int log_unix_epoch)
+{
+	fio_gettime(&td->epoch, NULL);
+	if (log_unix_epoch) {
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+		td->unix_epoch = (unsigned long long)(tv.tv_sec) * 1000 +
+		                 (unsigned long long)(tv.tv_usec) / 1000;
+	}
+}
+
 void fill_start_time(struct timeval *t)
 {
 	memcpy(t, &genesis, sizeof(genesis));

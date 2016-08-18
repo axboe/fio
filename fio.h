@@ -311,6 +311,7 @@ struct thread_data {
 
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
+	unsigned long long unix_epoch; /* Time job was started, unix epoch based. */
 	struct timeval last_issue;
 	long time_offset;
 	struct timeval tv_cache;
