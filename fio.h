@@ -563,7 +563,7 @@ enum {
 
 static inline enum fio_ioengine_flags td_ioengine_flags(struct thread_data *td)
 {
-	return (td->flags >> TD_ENG_FLAG_SHIFT) & TD_ENG_FLAG_MASK;
+	return fio_ioengine_flags((td->flags >> TD_ENG_FLAG_SHIFT) & TD_ENG_FLAG_MASK);
 }
 
 static inline void td_set_ioengine_flags(struct thread_data *td)
