@@ -1681,6 +1681,10 @@ log_store_compressed=bool	If set, fio will store the log files in a
 		the --inflate-log command line parameter. The files will be
 		stored with a .fz suffix.
 
+log_unix_epoch=bool	If set, fio will log Unix timestamps to the log
+		files produced by enabling write_type_log for each log type, instead
+		of the default zero-based timestamps.
+
 block_error_percentiles=bool	If set, record errors in trim block-sized
 		units from writes and trims and output a histogram of
 		how many trims it took to get to errors, and what kind

@@ -135,6 +135,7 @@ struct thread_options {
 	unsigned int log_offset;
 	unsigned int log_gz;
 	unsigned int log_gz_store;
+	unsigned int log_unix_epoch;
 	unsigned int norandommap;
 	unsigned int softrandommap;
 	unsigned int bs_unaligned;
@@ -393,11 +394,13 @@ struct thread_options_pack {
 	uint32_t log_offset;
 	uint32_t log_gz;
 	uint32_t log_gz_store;
+	uint32_t log_unix_epoch;
 	uint32_t norandommap;
 	uint32_t softrandommap;
 	uint32_t bs_unaligned;
 	uint32_t fsync_on_close;
 	uint32_t bs_is_seq_rand;
+	uint32_t pad1;
 
 	uint32_t random_distribution;
 	uint32_t exitall_error;

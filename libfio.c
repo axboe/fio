@@ -134,7 +134,6 @@ void clear_io_state(struct thread_data *td, int all)
 
 void reset_all_stats(struct thread_data *td)
 {
-	struct timeval tv;
 	int i;
 
 	reset_io_counters(td, 1);
@@ -148,11 +147,10 @@ void reset_all_stats(struct thread_data *td)
 		td->rwmix_issues = 0;
 	}
 
-	fio_gettime(&tv, NULL);
-	memcpy(&td->epoch, &tv, sizeof(tv));
-	memcpy(&td->start, &tv, sizeof(tv));
-	memcpy(&td->iops_sample_time, &tv, sizeof(tv));
-	memcpy(&td->bw_sample_time, &tv, sizeof(tv));
+	set_epoch_time(td, td->o.log_unix_epoch);
+	memcpy(&td->start, &td->epoch, sizeof(struct timeval));
+	memcpy(&td->iops_sample_time, &td->epoch, sizeof(struct timeval));
+	memcpy(&td->bw_sample_time, &td->epoch, sizeof(struct timeval));
 
 	lat_target_reset(td);
 	clear_rusage_stat(td);

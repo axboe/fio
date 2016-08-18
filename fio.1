@@ -1546,6 +1546,11 @@ If set, fio will store the log files in a compressed format. They can be
 decompressed with fio, using the \fB\-\-inflate-log\fR command line parameter.
 The files will be stored with a \fB\.fz\fR suffix.
 .TP
+.BI log_unix_epoch \fR=\fPbool
+If set, fio will log Unix timestamps to the log files produced by enabling
+\fBwrite_type_log\fR for each log type, instead of the default zero-based
+timestamps.
+.TP
 .BI block_error_percentiles \fR=\fPbool
 If set, record errors in trim block-sized units from writes and trims and output
 a histogram of how many trims it took to get to errors, and what kind of error

@@ -3648,6 +3648,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 #endif
 	{
+		.name = "log_unix_epoch",
+		.lname = "Log epoch unix",
+		.type = FIO_OPT_BOOL,
+		.off1 = offsetof(struct thread_options, log_unix_epoch),
+		.help = "Use Unix time in log files",
+		.category = FIO_OPT_C_LOG,
+		.group = FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "block_error_percentiles",
 		.lname	= "Block error percentiles",
 		.type	= FIO_OPT_BOOL,
