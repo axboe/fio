@@ -1426,6 +1426,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	}
 
 	if (o->hist_log_file) {
+#ifndef CONFIG_ZLIB
+		if (td->client_type) {
+			log_err("fio: --write_hist_log requires zlib in client/server mode\n");
+			goto err;
+		}
+#endif
 		struct log_params p = {
 			.td = td,
 			.avg_msec = o->log_avg_msec,

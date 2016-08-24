@@ -1654,12 +1654,111 @@ void fio_server_send_du(void)
 }
 
 #ifdef CONFIG_ZLIB
+
+static inline void __fio_net_prep_tail(z_stream *stream, void *out_pdu,
+					struct sk_entry **last_entry,
+					struct sk_entry *first)
+{
+	unsigned int this_len = FIO_SERVER_MAX_FRAGMENT_PDU - stream->avail_out;
+
+	*last_entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, out_pdu, this_len,
+				 NULL, SK_F_VEC | SK_F_INLINE | SK_F_FREE);
+	flist_add_tail(&(*last_entry)->list, &first->next);
+
+}
+
+/*
+ * Deflates the next input given, creating as many new packets in the
+ * linked list as necessary.
+ */
+static int __deflate_pdu_buffer(void *next_in, unsigned int next_sz, void **out_pdu,
+				struct sk_entry **last_entry, z_stream *stream,
+				struct sk_entry *first)
+{
+	int ret;
+
+	stream->next_in = next_in;
+	stream->avail_in = next_sz;
+	do {
+		if (! stream->avail_out) {
+
+			__fio_net_prep_tail(stream, *out_pdu, last_entry, first);
+
+			*out_pdu = malloc(FIO_SERVER_MAX_FRAGMENT_PDU);
+
+			stream->avail_out = FIO_SERVER_MAX_FRAGMENT_PDU;
+			stream->next_out = *out_pdu;
+		}
+
+		ret = deflate(stream, Z_BLOCK);
+
+		if (ret < 0) {
+			free(*out_pdu);
+			return 1;
+		}
+	} while (stream->avail_in);
+
+	return 0;
+}
+
+static int __fio_append_iolog_gz_hist(struct sk_entry *first, struct io_log *log,
+				      struct io_logs *cur_log, z_stream *stream)
+{
+	struct sk_entry *entry;
+	void *out_pdu;
+	int ret, i, j;
+	int sample_sz = log_entry_sz(log);
+
+	out_pdu = malloc(FIO_SERVER_MAX_FRAGMENT_PDU);
+	stream->avail_out = FIO_SERVER_MAX_FRAGMENT_PDU;
+	stream->next_out = out_pdu;
+
+	for (i = 0; i < cur_log->nr_samples; i++) {
+		struct io_sample *s;
+		struct io_u_plat_entry *cur_plat_entry, *prev_plat_entry;
+		unsigned int *cur_plat, *prev_plat;
+
+		s = get_sample(log, cur_log, i);
+		ret = __deflate_pdu_buffer(s, sample_sz, &out_pdu, &entry, stream, first);
+		if (ret)
+			return ret;
+
+		/* Do the subtraction on server side so that client doesn't have to
+		 * reconstruct our linked list from packets.
+		 */
+		cur_plat_entry  = s->plat_entry;
+		prev_plat_entry = flist_first_entry(&cur_plat_entry->list, struct io_u_plat_entry, list);
+		cur_plat  = cur_plat_entry->io_u_plat;
+		prev_plat = prev_plat_entry->io_u_plat;
+
+		for (j = 0; j < FIO_IO_U_PLAT_NR; j++) {
+			cur_plat[j] -= prev_plat[j];
+		}
+
+		flist_del(&prev_plat_entry->list);
+		free(prev_plat_entry);
+
+		ret = __deflate_pdu_buffer(cur_plat_entry, sizeof(*cur_plat_entry),
+					   &out_pdu, &entry, stream, first);
+
+		if (ret)
+			return ret;
+	}
+
+	__fio_net_prep_tail(stream, out_pdu, &entry, first);
+
+	return 0;
+}
+
 static int __fio_append_iolog_gz(struct sk_entry *first, struct io_log *log,
 				 struct io_logs *cur_log, z_stream *stream)
 {
 	unsigned int this_len;
 	void *out_pdu;
 	int ret;
+
+	if (log->log_type == IO_LOG_TYPE_HIST)
+		return __fio_append_iolog_gz_hist(first, log, cur_log, stream);
 
 	stream->next_in = (void *) cur_log->log;
 	stream->avail_in = cur_log->nr_samples * log_entry_sz(log);
@@ -1805,6 +1904,7 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	pdu.nr_samples = cpu_to_le64(iolog_nr_samples(log));
 	pdu.thread_number = cpu_to_le32(td->thread_number);
 	pdu.log_type = cpu_to_le32(log->log_type);
+	pdu.log_hist_coarseness = cpu_to_le32(log->hist_coarseness);
 
 	if (!flist_empty(&log->chunk_list))
 		pdu.compressed = __cpu_to_le32(STORE_COMPRESSED);

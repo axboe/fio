@@ -674,14 +674,19 @@ void free_log(struct io_log *log)
 	sfree(log);
 }
 
-static inline unsigned long hist_sum(int j, int stride, unsigned int *io_u_plat,
+inline unsigned long hist_sum(int j, int stride, unsigned int *io_u_plat,
 		unsigned int *io_u_plat_last)
 {
 	unsigned long sum;
 	int k;
 
-	for (k = sum = 0; k < stride; k++)
-		sum += io_u_plat[j + k] - io_u_plat_last[j + k];
+	if (io_u_plat_last) {
+		for (k = sum = 0; k < stride; k++)
+			sum += io_u_plat[j + k] - io_u_plat_last[j + k];
+	} else {
+		for (k = sum = 0; k < stride; k++)
+			sum += io_u_plat[j + k];
+	}
 
 	return sum;
 }
@@ -1062,9 +1067,9 @@ void flush_log(struct io_log *log, bool do_append)
 		
 		if (log == log->td->clat_hist_log)
 			flush_hist_samples(f, log->hist_coarseness, cur_log->log,
-			                   cur_log->nr_samples * log_entry_sz(log));
+			                   log_sample_sz(log, cur_log));
 		else
-			flush_samples(f, cur_log->log, cur_log->nr_samples * log_entry_sz(log));
+			flush_samples(f, cur_log->log, log_sample_sz(log, cur_log));
 		
 		sfree(cur_log);
 	}
