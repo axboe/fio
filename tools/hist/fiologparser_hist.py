@@ -255,6 +255,29 @@ def guess_max_from_bins(ctx, hist_cols):
 
 def main(ctx):
 
+    if ctx.job_file:
+        try:
+            from configparser import SafeConfigParser
+        except ImportError:
+            from ConfigParser import SafeConfigParser
+
+        cp = SafeConfigParser(allow_no_value=True)
+        with open(ctx.job_file, 'r') as fp:
+            cp.read(fp)
+
+        if ctx.interval is None:
+            # Auto detect --interval value
+            for s in cp.sections():
+                try:
+                    hist_msec = cp[s]['log_hist_msec']
+                    if hist_msec is not None:
+                        ctx.interval = int(hist_msec)
+                except KeyError:
+                    pass
+
+    if ctx.interval is None:
+        ctx.interval = 1000
+
     # Automatically detect how many columns are in the input files,
     # calculate the corresponding 'coarseness' parameter used to generate
     # those files, and calculate the appropriate bin latency values:
@@ -291,6 +314,14 @@ def main(ctx):
             arr = arr.astype(int)
             
             if arr.size > 0:
+                # Jump immediately to the start of the input, rounding
+                # down to the nearest multiple of the interval (useful when --log_unix_epoch
+                # was used to create these histograms):
+                if start == 0 and arr[0][0] - ctx.max_latency > end:
+                    start = arr[0][0] - ctx.max_latency
+                    start = start - (start % ctx.interval)
+                    end = start + ctx.interval
+
                 process_interval(ctx, arr, start, end)
                 
                 # Update arr to throw away samples we no longer need - samples which
@@ -321,9 +352,8 @@ if __name__ == '__main__':
         help='number of seconds of data to process at a time')
 
     arg('-i', '--interval',
-        default=1000,
         type=int,
-        help='interval width (ms)')
+        help='interval width (ms), default 1000 ms')
 
     arg('-d', '--divisor',
         required=False,
@@ -346,6 +376,13 @@ if __name__ == '__main__':
         default=19,
         type=int,
         help='FIO_IO_U_PLAT_GROUP_NR as defined in stat.h')
+
+    arg('--job-file',
+        default=None,
+        type=str,
+        help='Optional argument pointing to the job file used to create the '
+             'given histogram files. Useful for auto-detecting --log_hist_msec and '
+             '--log_unix_epoch (in fio) values.')
 
     main(p.parse_args())
 
