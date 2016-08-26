@@ -1242,31 +1242,33 @@ static void get_file_type(struct fio_file *f)
 	}
 }
 
-static int __is_already_allocated(const char *fname)
+static bool __is_already_allocated(const char *fname)
 {
 	struct flist_head *entry;
-	char *filename;
 
 	if (flist_empty(&filename_list))
-		return 0;
+		return false;
 
 	flist_for_each(entry, &filename_list) {
-		filename = flist_entry(entry, struct file_name, list)->filename;
+		struct file_name *fn;
 
-		if (strcmp(filename, fname) == 0)
-			return 1;
+		fn = flist_entry(entry, struct file_name, list);
+
+		if (!strcmp(fn->filename, fname))
+			return true;
 	}
 
-	return 0;
+	return false;
 }
 
-static int is_already_allocated(const char *fname)
+static bool is_already_allocated(const char *fname)
 {
-	int ret;
+	bool ret;
 
 	fio_file_hash_lock();
 	ret = __is_already_allocated(fname);
 	fio_file_hash_unlock();
+
 	return ret;
 }
 
@@ -1327,6 +1329,26 @@ static struct fio_file *alloc_new_file(struct thread_data *td)
 	return f;
 }
 
+bool exists_and_not_regfile(const char *filename)
+{
+	struct stat sb;
+
+	if (lstat(filename, &sb) == -1)
+		return false;
+
+#ifndef WIN32 /* NOT Windows */
+	if (S_ISREG(sb.st_mode))
+		return false;
+#else
+	/* \\.\ is the device namespace in Windows, where every file
+	 * is a device node */
+	if (S_ISREG(sb.st_mode) && strncmp(filename, "\\\\.\\", 4) != 0)
+		return false;
+#endif
+
+	return true;
+}
+
 int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 {
 	int cur_files = td->files_index;
@@ -1343,7 +1365,8 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 	sprintf(file_name + len, "%s", fname);
 
 	/* clean cloned siblings using existing files */
-	if (numjob && is_already_allocated(file_name))
+	if (numjob && is_already_allocated(file_name) &&
+	    !exists_and_not_regfile(fname))
 		return 0;
 
 	f = alloc_new_file(td);

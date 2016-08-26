@@ -903,26 +903,6 @@ static const char *get_engine_name(const char *str)
 	return p;
 }
 
-static int exists_and_not_regfile(const char *filename)
-{
-	struct stat sb;
-
-	if (lstat(filename, &sb) == -1)
-		return 0;
-
-#ifndef WIN32 /* NOT Windows */
-	if (S_ISREG(sb.st_mode))
-		return 0;
-#else
-	/* \\.\ is the device namespace in Windows, where every file
-	 * is a device node */
-	if (S_ISREG(sb.st_mode) && strncmp(filename, "\\\\.\\", 4) != 0)
-		return 0;
-#endif
-
-	return 1;
-}
-
 static void init_rand_file_service(struct thread_data *td)
 {
 	unsigned long nranges = td->o.nr_files << FIO_FSERVICE_SHIFT;

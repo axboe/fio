@@ -211,5 +211,6 @@ extern void free_release_files(struct thread_data *);
 extern void filesetup_mem_free(void);
 extern void fio_file_reset(struct thread_data *, struct fio_file *);
 extern int fio_files_done(struct thread_data *);
+extern bool exists_and_not_regfile(const char *);
 
 #endif
