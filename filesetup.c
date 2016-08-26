@@ -1292,7 +1292,6 @@ static void set_already_allocated(const char *fname)
 	}
 }
 
-
 static void free_already_allocated(void)
 {
 	struct flist_head *entry, *tmp;
@@ -1666,16 +1665,16 @@ void fio_file_reset(struct thread_data *td, struct fio_file *f)
 		lfsr_reset(&f->lfsr, td->rand_seeds[FIO_RAND_BLOCK_OFF]);
 }
 
-int fio_files_done(struct thread_data *td)
+bool fio_files_done(struct thread_data *td)
 {
 	struct fio_file *f;
 	unsigned int i;
 
 	for_each_file(td, f, i)
 		if (!fio_file_done(f))
-			return 0;
+			return false;
 
-	return 1;
+	return true;
 }
 
 /* free memory used in initialization phase only */
