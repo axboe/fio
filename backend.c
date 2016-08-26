@@ -1731,9 +1731,13 @@ static void *thread_main(void *data)
 		 * the rusage_sem, which would never get upped because
 		 * this thread is waiting for the stat mutex.
 		 */
-		check_update_rusage(td);
+		do {
+			check_update_rusage(td);
+			if (!fio_mutex_down_trylock(stat_mutex))
+				break;
+			usleep(1000);
+		} while (1);
 
-		fio_mutex_down(stat_mutex);
 		if (td_read(td) && td->io_bytes[DDIR_READ])
 			update_runtime(td, elapsed_us, DDIR_READ);
 		if (td_write(td) && td->io_bytes[DDIR_WRITE])
