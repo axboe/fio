@@ -1510,7 +1510,7 @@ static bool check_get_trim(struct thread_data *td, struct io_u *io_u)
 			get_trim = 1;
 		}
 
-		if (get_trim && !get_next_trim(td, io_u))
+		if (get_trim && get_next_trim(td, io_u))
 			return true;
 	}
 

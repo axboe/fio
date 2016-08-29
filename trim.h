@@ -4,8 +4,8 @@
 #include "fio.h"
 
 #ifdef FIO_HAVE_TRIM
-extern int __must_check get_next_trim(struct thread_data *td, struct io_u *io_u);
-extern int io_u_should_trim(struct thread_data *td, struct io_u *io_u);
+extern bool __must_check get_next_trim(struct thread_data *td, struct io_u *io_u);
+extern bool io_u_should_trim(struct thread_data *td, struct io_u *io_u);
 
 /*
  * Determine whether a given io_u should be logged for verify or
@@ -20,13 +20,13 @@ static inline void remove_trim_entry(struct thread_data *td, struct io_piece *ip
 }
 
 #else
-static inline int get_next_trim(struct thread_data *td, struct io_u *io_u)
+static inline bool get_next_trim(struct thread_data *td, struct io_u *io_u)
 {
-	return 1;
+	return false;
 }
-static inline int io_u_should_trim(struct thread_data *td, struct io_u *io_u)
+static inline bool io_u_should_trim(struct thread_data *td, struct io_u *io_u)
 {
-	return 0;
+	return false;
 }
 static inline void remove_trim_entry(struct thread_data *td, struct io_piece *ipo)
 {
