@@ -201,13 +201,10 @@ out_fail:
 
 void sinit(void)
 {
-	int i, ret;
+	int i = 0;
 
-	for (i = 0; i < MAX_POOLS; i++) {
-		ret = add_pool(&mp[i], smalloc_pool_size);
-		if (ret)
-			break;
-	}
+	while (i < MAX_POOLS && add_pool(&mp[i], smalloc_pool_size) == 0)
+		i++;
 
 	/*
 	 * If we added at least one pool, we should be OK for most
