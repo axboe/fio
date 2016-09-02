@@ -1251,6 +1251,44 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 	fio_client_dec_jobs_eta(eta, client->ops->eta);
 }
 
+static void client_flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
+				      uint64_t sample_size)
+{
+	struct io_sample *s;
+	int log_offset;
+	uint64_t i, j, nr_samples;
+	struct io_u_plat_entry *entry;
+	unsigned int *io_u_plat;
+
+	int stride = 1 << hist_coarseness;
+
+	if (!sample_size)
+		return;
+
+	s = __get_sample(samples, 0, 0);
+	log_offset = (s->__ddir & LOG_OFFSET_SAMPLE_BIT) != 0;
+
+	nr_samples = sample_size / __log_entry_sz(log_offset);
+
+	for (i = 0; i < nr_samples; i++) {
+
+		s = (struct io_sample *)((char *)__get_sample(samples, log_offset, i) +
+			i * sizeof(struct io_u_plat_entry));
+
+		entry = s->plat_entry;
+		io_u_plat = entry->io_u_plat;
+
+		fprintf(f, "%lu, %u, %u, ", (unsigned long) s->time,
+						io_sample_ddir(s), s->bs);
+		for (j = 0; j < FIO_IO_U_PLAT_NR - stride; j += stride) {
+			fprintf(f, "%lu, ", hist_sum(j, stride, io_u_plat, NULL));
+		}
+		fprintf(f, "%lu\n", (unsigned long)
+			hist_sum(FIO_IO_U_PLAT_NR - stride, stride, io_u_plat, NULL));
+
+	}
+}
+
 static int fio_client_handle_iolog(struct fio_client *client,
 				   struct fio_net_cmd *cmd)
 {
@@ -1294,8 +1332,13 @@ static int fio_client_handle_iolog(struct fio_client *client,
 			return 1;
 		}
 
-		flush_samples(f, pdu->samples,
-				pdu->nr_samples * sizeof(struct io_sample));
+		if (pdu->log_type == IO_LOG_TYPE_HIST) {
+			client_flush_hist_samples(f, pdu->log_hist_coarseness, pdu->samples,
+					   pdu->nr_samples * sizeof(struct io_sample));
+		} else {
+			flush_samples(f, pdu->samples,
+					pdu->nr_samples * sizeof(struct io_sample));
+		}
 		fclose(f);
 		return 0;
 	}
@@ -1395,7 +1438,11 @@ static struct cmd_iolog_pdu *convert_iolog_gz(struct fio_net_cmd *cmd,
 	 */
 	nr_samples = le64_to_cpu(pdu->nr_samples);
 
-	total = nr_samples * __log_entry_sz(le32_to_cpu(pdu->log_offset));
+	if (pdu->log_type == IO_LOG_TYPE_HIST)
+		total = nr_samples * (__log_entry_sz(le32_to_cpu(pdu->log_offset)) +
+					sizeof(struct io_u_plat_entry));
+	else
+		total = nr_samples * __log_entry_sz(le32_to_cpu(pdu->log_offset));
 	ret = malloc(total + sizeof(*pdu));
 	ret->nr_samples = nr_samples;
 
@@ -1478,6 +1525,7 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
 	ret->log_type		= le32_to_cpu(ret->log_type);
 	ret->compressed		= le32_to_cpu(ret->compressed);
 	ret->log_offset		= le32_to_cpu(ret->log_offset);
+	ret->log_hist_coarseness = le32_to_cpu(ret->log_hist_coarseness);
 
 	if (*store_direct)
 		return ret;
@@ -1487,6 +1535,9 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
 		struct io_sample *s;
 
 		s = __get_sample(samples, ret->log_offset, i);
+		if (ret->log_type == IO_LOG_TYPE_HIST)
+			s = (struct io_sample *)((void *)s + sizeof(struct io_u_plat_entry) * i);
+
 		s->time		= le64_to_cpu(s->time);
 		s->val		= le64_to_cpu(s->val);
 		s->__ddir	= le32_to_cpu(s->__ddir);
@@ -1496,6 +1547,12 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
 			struct io_sample_offset *so = (void *) s;
 
 			so->offset = le64_to_cpu(so->offset);
+		}
+
+		if (ret->log_type == IO_LOG_TYPE_HIST) {
+			s->plat_entry = (struct io_u_plat_entry *)(((void *)s) + sizeof(*s));
+			s->plat_entry->list.next = NULL;
+			s->plat_entry->list.prev = NULL;
 		}
 	}
 
