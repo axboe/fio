@@ -1294,7 +1294,7 @@ static int fio_client_handle_iolog(struct fio_client *client,
 {
 	struct cmd_iolog_pdu *pdu;
 	bool store_direct;
-	char * log_pathname;
+	char *log_pathname;
 
 	pdu = convert_iolog(cmd, &store_direct);
 	if (!pdu) {
