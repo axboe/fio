@@ -257,22 +257,22 @@ def main(ctx):
 
     if ctx.job_file:
         try:
-            from configparser import SafeConfigParser
+            from configparser import SafeConfigParser, NoOptionError
         except ImportError:
-            from ConfigParser import SafeConfigParser
+            from ConfigParser import SafeConfigParser, NoOptionError
 
         cp = SafeConfigParser(allow_no_value=True)
         with open(ctx.job_file, 'r') as fp:
-            cp.read(fp)
+            cp.readfp(fp)
 
         if ctx.interval is None:
             # Auto detect --interval value
             for s in cp.sections():
                 try:
-                    hist_msec = cp[s]['log_hist_msec']
+                    hist_msec = cp.get(s, 'log_hist_msec')
                     if hist_msec is not None:
                         ctx.interval = int(hist_msec)
-                except KeyError:
+                except NoOptionError:
                     pass
 
     if ctx.interval is None:
