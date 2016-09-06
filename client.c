@@ -1294,6 +1294,7 @@ static int fio_client_handle_iolog(struct fio_client *client,
 {
 	struct cmd_iolog_pdu *pdu;
 	bool store_direct;
+	char * log_pathname;
 
 	pdu = convert_iolog(cmd, &store_direct);
 	if (!pdu) {
@@ -1301,15 +1302,24 @@ static int fio_client_handle_iolog(struct fio_client *client,
 		return 1;
 	}
 
+	/* generate a unique pathname for the log file using hostname */
+	log_pathname = malloc(PATH_MAX+10);
+	if (!log_pathname) {
+		log_err("fio: memory allocation of unique pathname failed");
+		return -1;
+	}
+	sprintf(log_pathname, "%s.%s", pdu->name, client->hostname);
+
 	if (store_direct) {
 		ssize_t ret;
 		size_t sz;
 		int fd;
 
-		fd = open((const char *) pdu->name,
+		fd = open((const char *) log_pathname,
 				O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (fd < 0) {
-			log_err("fio: open log: %s\n", strerror(errno));
+			log_err("fio: open log %s: %s\n", 
+				log_pathname, strerror(errno));
 			return 1;
 		}
 
@@ -1325,10 +1335,10 @@ static int fio_client_handle_iolog(struct fio_client *client,
 		return 0;
 	} else {
 		FILE *f;
-
-		f = fopen((const char *) pdu->name, "w");
+		f = fopen((const char *) log_pathname, "w");
 		if (!f) {
-			log_err("fio: fopen log: %s\n", strerror(errno));
+			log_err("fio: fopen log %s : %s\n", 
+				log_pathname, strerror(errno));
 			return 1;
 		}
 
