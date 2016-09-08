@@ -1302,12 +1302,15 @@ static int fio_client_handle_iolog(struct fio_client *client,
 		return 1;
 	}
 
-	/* generate a unique pathname for the log file using hostname */
-	log_pathname = malloc(PATH_MAX+10);
+        /* allocate buffer big enough for next sprintf() call */
+	log_pathname = malloc( 10 + 
+			strlen((char * )pdu->name) + 
+			strlen(client->hostname));
 	if (!log_pathname) {
 		log_err("fio: memory allocation of unique pathname failed");
 		return -1;
 	}
+	/* generate a unique pathname for the log file using hostname */
 	sprintf(log_pathname, "%s.%s", pdu->name, client->hostname);
 
 	if (store_direct) {
