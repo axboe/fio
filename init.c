@@ -309,7 +309,7 @@ static void free_shm(void)
 	free(trigger_remote_cmd);
 	trigger_file = trigger_cmd = trigger_remote_cmd = NULL;
 
-	options_free(fio_options, &def_thread);
+	options_free(fio_options, &def_thread.o);
 	fio_filelock_exit();
 	scleanup();
 }
