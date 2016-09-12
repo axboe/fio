@@ -1489,6 +1489,10 @@ if test "$libhdfs" = "yes" ; then
   if test "$hdfs_conf_error" = "1" ; then
     exit 1
   fi
+  FIO_HDFS_CPU=$cpu
+  if test "$FIO_HDFS_CPU" = "x86_64" ; then
+    FIO_HDFS_CPU="amd64"
+  fi
 fi
 echo "HDFS engine                   $libhdfs"
 
@@ -1829,6 +1833,7 @@ if test "$gf_trim" = "yes" ; then
 fi
 if test "$libhdfs" = "yes" ; then
   output_sym "CONFIG_LIBHDFS"
+  echo "FIO_HDFS_CPU=$FIO_HDFS_CPU" >> $config_host_mak
   echo "JAVA_HOME=$JAVA_HOME" >> $config_host_mak
   echo "FIO_LIBHDFS_INCLUDE=$FIO_LIBHDFS_INCLUDE" >> $config_host_mak
   echo "FIO_LIBHDFS_LIB=$FIO_LIBHDFS_LIB" >> $config_host_mak
