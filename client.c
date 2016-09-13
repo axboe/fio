@@ -1183,7 +1183,7 @@ void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)
 	strcpy((char *) dst->run_str, (char *) je->run_str);
 }
 
-static void remove_reply_cmd(struct fio_client *client, struct fio_net_cmd *cmd)
+static bool remove_reply_cmd(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct fio_net_cmd_reply *reply = NULL;
 	struct flist_head *entry;
@@ -1199,12 +1199,13 @@ static void remove_reply_cmd(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	if (!reply) {
 		log_err("fio: client: unable to find matching tag (%llx)\n", (unsigned long long) cmd->tag);
-		return;
+		return false;
 	}
 
 	flist_del(&reply->list);
 	cmd->tag = reply->saved_tag;
 	free(reply);
+	return true;
 }
 
 int fio_client_wait_for_reply(struct fio_client *client, uint64_t tag)
@@ -1653,7 +1654,8 @@ int fio_handle_client(struct fio_client *client)
 	case FIO_NET_CMD_ETA: {
 		struct jobs_eta *je = (struct jobs_eta *) cmd->payload;
 
-		remove_reply_cmd(client, cmd);
+		if (!remove_reply_cmd(client, cmd))
+			break;
 		convert_jobs_eta(je);
 		handle_eta(client, cmd);
 		break;
