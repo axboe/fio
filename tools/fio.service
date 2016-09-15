@@ -1,0 +1,10 @@
+[Unit]
+
+Description=flexible I/O tester server
+After=network.target
+
+[Service]
+
+Type=simple
+PIDFile=/run/fio.pid
+ExecStart=/usr/bin/fio --server
