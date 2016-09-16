@@ -794,6 +794,23 @@ fi
 echo "CLOCK_MONOTONIC_PRECISE       $clock_monotonic_precise"
 
 ##########################################
+# clockid_t probe
+clockid_t="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <time.h>
+int main(int argc, char **argv)
+{
+  clockid_t cid = 0;
+  return clock_gettime(cid, NULL);
+}
+EOF
+if compile_prog "" "$LIBS" "clockid_t"; then
+  clockid_t="yes"
+fi
+echo "clockid_t                     $clockid_t"
+
+##########################################
 # gettimeofday() probe
 gettimeofday="no"
 cat > $TMPC << EOF
@@ -1721,6 +1738,9 @@ if test "$clock_monotonic_raw" = "yes" ; then
 fi
 if test "$clock_monotonic_precise" = "yes" ; then
   output_sym "CONFIG_CLOCK_MONOTONIC_PRECISE"
+fi
+if test "$clockid_t" = "yes"; then
+  output_sym "CONFIG_CLOCKID_T"
 fi
 if test "$gettimeofday" = "yes" ; then
   output_sym "CONFIG_GETTIMEOFDAY"
