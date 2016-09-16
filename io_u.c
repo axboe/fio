@@ -531,8 +531,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 	int ddir = io_u->ddir;
 	unsigned int buflen = 0;
 	unsigned int minbs, maxbs;
-	uint64_t frand_max;
-	unsigned long r;
+	uint64_t frand_max, r;
 
 	assert(ddir_rw(ddir));
 
@@ -561,7 +560,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 			if (buflen < minbs)
 				buflen = minbs;
 		} else {
-			long perc = 0;
+			long long perc = 0;
 			unsigned int i;
 
 			for (i = 0; i < td->o.bssplit_nr[ddir]; i++) {
@@ -569,7 +568,9 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 
 				buflen = bsp->bs;
 				perc += bsp->perc;
-				if ((r * 100UL <= frand_max * perc) &&
+				if (!perc)
+					break;
+				if ((r / perc <= frand_max / 100ULL) &&
 				    io_u_fits(td, io_u, buflen))
 					break;
 			}
