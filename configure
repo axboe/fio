@@ -798,10 +798,12 @@ echo "CLOCK_MONOTONIC_PRECISE       $clock_monotonic_precise"
 clockid_t="no"
 cat > $TMPC << EOF
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 int main(int argc, char **argv)
 {
-  clockid_t cid = 0;
+  clockid_t cid;
+  memset(&cid, 0, sizeof(cid));
   return clock_gettime(cid, NULL);
 }
 EOF
