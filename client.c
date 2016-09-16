@@ -1304,8 +1304,7 @@ static int fio_client_handle_iolog(struct fio_client *client,
 	}
 
         /* allocate buffer big enough for next sprintf() call */
-	log_pathname = malloc( 10 + 
-			strlen((char * )pdu->name) + 
+	log_pathname = malloc(10 + strlen((char *)pdu->name) +
 			strlen(client->hostname));
 	if (!log_pathname) {
 		log_err("fio: memory allocation of unique pathname failed");
@@ -1322,7 +1321,7 @@ static int fio_client_handle_iolog(struct fio_client *client,
 		fd = open((const char *) log_pathname,
 				O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (fd < 0) {
-			log_err("fio: open log %s: %s\n", 
+			log_err("fio: open log %s: %s\n",
 				log_pathname, strerror(errno));
 			return 1;
 		}
@@ -1341,7 +1340,7 @@ static int fio_client_handle_iolog(struct fio_client *client,
 		FILE *f;
 		f = fopen((const char *) log_pathname, "w");
 		if (!f) {
-			log_err("fio: fopen log %s : %s\n", 
+			log_err("fio: fopen log %s : %s\n",
 				log_pathname, strerror(errno));
 			return 1;
 		}
