@@ -714,7 +714,7 @@ static void flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
 	for (i = 0; i < nr_samples; i++) {
 		s = __get_sample(samples, log_offset, i);
 
-		entry = (struct io_u_plat_entry *) s->val;
+		entry = (struct io_u_plat_entry *) (uintptr_t) s->val;
 		io_u_plat = entry->io_u_plat;
 
 		entry_before = flist_first_entry(&entry->list, struct io_u_plat_entry, list);
