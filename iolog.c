@@ -1153,7 +1153,8 @@ static int gz_work(struct iolog_flush_data *data)
 				data->log->filename);
 	do {
 		if (c)
-			dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq, c->len);
+			dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq,
+				(unsigned long) c->len);
 		c = get_new_chunk(seq);
 		stream.avail_out = GZ_CHUNK;
 		stream.next_out = c->buf;
@@ -1190,7 +1191,7 @@ static int gz_work(struct iolog_flush_data *data)
 	total -= c->len;
 	c->len = GZ_CHUNK - stream.avail_out;
 	total += c->len;
-	dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq, c->len);
+	dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq, (unsigned long) c->len);
 
 	if (ret != Z_STREAM_END) {
 		do {
@@ -1201,7 +1202,8 @@ static int gz_work(struct iolog_flush_data *data)
 			c->len = GZ_CHUNK - stream.avail_out;
 			total += c->len;
 			flist_add_tail(&c->list, &list);
-			dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq, c->len);
+			dprint(FD_COMPRESS, "seq=%d, chunk=%lu\n", seq,
+				(unsigned long) c->len);
 		} while (ret != Z_STREAM_END);
 	}
 
