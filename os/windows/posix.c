@@ -232,10 +232,12 @@ char *dlerror(void)
 /* Copied from http://blogs.msdn.com/b/joshpoley/archive/2007/12/19/date-time-formats-and-conversions.aspx */
 void Time_tToSystemTime(time_t dosTime, SYSTEMTIME *systemTime)
 {
-    LARGE_INTEGER jan1970FT;
-    LARGE_INTEGER utcFT;
-    jan1970FT.QuadPart = 116444736000000000LL; // january 1st 1970
-    utcFT.QuadPart = ((unsigned __int64)dosTime) * 10000000 + jan1970FT.QuadPart;
+    FILETIME utcFT;
+    LONGLONG jan1970;
+
+    jan1970 = Int32x32To64(dosTime, 10000000) + 116444736000000000;
+    utcFT.dwLowDateTime = (DWORD)jan1970;
+    utcFT.dwHighDateTime = jan1970 >> 32;
 
     FileTimeToSystemTime((FILETIME*)&utcFT, systemTime);
 }
