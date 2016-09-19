@@ -669,6 +669,8 @@ static void show_thread_status_normal(struct thread_stat *ts,
 
 	if (!ddir_rw_sum(ts->io_bytes) && !ddir_rw_sum(ts->total_io_u))
 		return;
+		
+	memset(time_buf, 0, sizeof(time_buf));
 
 	time(&time_p);
 	os_ctime_r((const time_t *) &time_p, time_buf, sizeof(time_buf));
