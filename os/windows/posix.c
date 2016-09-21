@@ -250,7 +250,7 @@ char* ctime_r(const time_t *t, char *buf)
 
     Time_tToSystemTime(*t, &systime);
     /* We don't know how long `buf` is, but assume it's rounded up from the minimum of 25 to 32 */
-    StringCchPrintfA(buf, 31, "%s %s %d %02d:%02d:%02d %04d", dayOfWeek[systime.wDayOfWeek % 7], monthOfYear[(systime.wMonth - 1) % 12],
+    StringCchPrintfA(buf, 31, "%s %s %d %02d:%02d:%02d %04d\n", dayOfWeek[systime.wDayOfWeek % 7], monthOfYear[(systime.wMonth - 1) % 12],
 										 systime.wDay, systime.wHour, systime.wMinute, systime.wSecond, systime.wYear);
     return buf;
 }
