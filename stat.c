@@ -1650,7 +1650,8 @@ void __show_run_stats(void)
 
 		os_ctime_r((const time_t *) &now.tv_sec, time_buf,
 				sizeof(time_buf));
-		time_buf[strlen(time_buf) - 1] = '\0';
+		if (time_buf[strlen(time_buf) - 1] == '\n')
+			time_buf[strlen(time_buf) - 1] = '\0';
 
 		root = json_create_object();
 		json_object_add_value_string(root, "fio version", fio_version_string);
