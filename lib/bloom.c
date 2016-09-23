@@ -88,8 +88,8 @@ void bloom_free(struct bloom *b)
 	free(b);
 }
 
-static int __bloom_check(struct bloom *b, uint32_t *data, unsigned int nwords,
-			 int set)
+static bool __bloom_check(struct bloom *b, uint32_t *data, unsigned int nwords,
+			  bool set)
 {
 	uint32_t hash[N_HASHES];
 	int i, was_set;
@@ -113,7 +113,7 @@ static int __bloom_check(struct bloom *b, uint32_t *data, unsigned int nwords,
 	return was_set == N_HASHES;
 }
 
-int bloom_set(struct bloom *b, uint32_t *data, unsigned int nwords)
+bool bloom_set(struct bloom *b, uint32_t *data, unsigned int nwords)
 {
-	return __bloom_check(b, data, nwords, 1);
+	return __bloom_check(b, data, nwords, true);
 }
