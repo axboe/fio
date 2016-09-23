@@ -88,14 +88,14 @@ void bloom_free(struct bloom *b)
 	free(b);
 }
 
-static bool __bloom_check(struct bloom *b, uint32_t *data, unsigned int nwords,
+static bool __bloom_check(struct bloom *b, void *data, unsigned int len,
 			  bool set)
 {
 	uint32_t hash[N_HASHES];
 	int i, was_set;
 
 	for (i = 0; i < N_HASHES; i++) {
-		hash[i] = hashes[i].fn(data, nwords, hashes[i].seed);
+		hash[i] = hashes[i].fn(data, len, hashes[i].seed);
 		hash[i] = hash[i] % b->nentries;
 	}
 
@@ -115,5 +115,5 @@ static bool __bloom_check(struct bloom *b, uint32_t *data, unsigned int nwords,
 
 bool bloom_set(struct bloom *b, uint32_t *data, unsigned int nwords)
 {
-	return __bloom_check(b, data, nwords, true);
+	return __bloom_check(b, data, nwords * sizeof(uint32_t), true);
 }
