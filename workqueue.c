@@ -323,6 +323,8 @@ int workqueue_init(struct thread_data *td, struct workqueue *wq,
 		goto err;
 
 	wq->workers = smalloc(wq->max_workers * sizeof(struct submit_worker));
+	if (!wq->workers)
+		goto err;
 
 	for (i = 0; i < wq->max_workers; i++)
 		if (start_worker(wq, i, sk_out))

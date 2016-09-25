@@ -578,8 +578,12 @@ static int fio_net_queue_cmd(uint16_t opcode, void *buf, off_t size,
 	struct sk_entry *entry;
 
 	entry = fio_net_prep_cmd(opcode, buf, size, tagptr, flags);
-	fio_net_queue_entry(entry);
-	return 0;
+	if (entry) {
+		fio_net_queue_entry(entry);
+		return 0;
+	}
+
+	return 1;
 }
 
 static int fio_net_send_simple_stack_cmd(int sk, uint16_t opcode, uint64_t tag)
@@ -1999,10 +2003,8 @@ int fio_server_get_verify_state(const char *name, int threadnumber,
 	dprint(FD_NET, "server: request verify state\n");
 
 	rep = smalloc(sizeof(*rep));
-	if (!rep) {
-		log_err("fio: smalloc pool too small\n");
+	if (!rep)
 		return ENOMEM;
-	}
 
 	__fio_mutex_init(&rep->lock, FIO_MUTEX_LOCKED);
 	rep->data = NULL;

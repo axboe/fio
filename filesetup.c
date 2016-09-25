@@ -1319,7 +1319,6 @@ static struct fio_file *alloc_new_file(struct thread_data *td)
 
 	f = smalloc(sizeof(*f));
 	if (!f) {
-		log_err("fio: smalloc OOM\n");
 		assert(0);
 		return NULL;
 	}
@@ -1402,10 +1401,8 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 		f->real_file_size = -1ULL;
 
 	f->file_name = smalloc_strdup(file_name);
-	if (!f->file_name) {
-		log_err("fio: smalloc OOM\n");
+	if (!f->file_name)
 		assert(0);
-	}
 
 	get_file_type(f);
 
@@ -1608,10 +1605,8 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 
 		if (f->file_name) {
 			__f->file_name = smalloc_strdup(f->file_name);
-			if (!__f->file_name) {
-				log_err("fio: smalloc OOM\n");
+			if (!__f->file_name)
 				assert(0);
-			}
 
 			__f->filetype = f->filetype;
 		}

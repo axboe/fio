@@ -450,6 +450,8 @@ void *smalloc(size_t size)
 		break;
 	} while (1);
 
+	log_err("smalloc: OOM. Consider using --alloc-size to increase the "
+		"shared memory available.\n");
 	return NULL;
 }
 
