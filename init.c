@@ -2308,6 +2308,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		switch (c) {
 		case 'a':
 			smalloc_pool_size = atoi(optarg);
+			smalloc_pool_size <<= 10;
 			break;
 		case 't':
 			if (check_str_time(optarg, &def_timeout, 1)) {
