@@ -118,7 +118,8 @@ bool bloom_set(struct bloom *b, uint32_t *data, unsigned int nwords)
 	return __bloom_check(b, data, nwords * sizeof(uint32_t), true);
 }
 
-bool bloom_set_string(struct bloom *b, const char *data, unsigned int len)
+bool bloom_string(struct bloom *b, const char *data, unsigned int len,
+		  bool set)
 {
-	return __bloom_check(b, data, len, true);
+	return __bloom_check(b, data, len, set);
 }
