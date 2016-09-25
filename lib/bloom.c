@@ -60,8 +60,6 @@ static struct bloom_hash hashes[] = {
 
 #define N_HASHES	5
 
-#define MIN_ENTRIES	1073741824UL
-
 struct bloom *bloom_new(uint64_t entries)
 {
 	struct bloom *b;
@@ -72,7 +70,6 @@ struct bloom *bloom_new(uint64_t entries)
 	b = malloc(sizeof(*b));
 	b->nentries = entries;
 	no_uints = (entries + BITS_PER_INDEX - 1) / BITS_PER_INDEX;
-	no_uints = max((unsigned long) no_uints, MIN_ENTRIES);
 	b->map = calloc(no_uints, sizeof(uint32_t));
 	if (!b->map) {
 		free(b);
