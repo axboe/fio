@@ -26,7 +26,9 @@
 #define SMALLOC_BPL	(SMALLOC_BPB * SMALLOC_BPI)
 
 #define INITIAL_SIZE	16*1024*1024	/* new pool size */
-#define MAX_POOLS	8		/* maximum number of pools to setup */
+#define INITIAL_POOLS	8		/* maximum number of pools to setup */
+
+#define MAX_POOLS	16
 
 #define SMALLOC_PRE_RED		0xdeadbeefU
 #define SMALLOC_POST_RED	0x5aa55aa5U
@@ -149,11 +151,14 @@ static int find_next_zero(int word, int start)
 	return ffz(word) + start;
 }
 
-static int add_pool(struct pool *pool, unsigned int alloc_size)
+static bool add_pool(struct pool *pool, unsigned int alloc_size)
 {
 	int bitmap_blocks;
 	int mmap_flags;
 	void *ptr;
+
+	if (nr_pools == MAX_POOLS)
+		return false;
 
 #ifdef SMALLOC_REDZONE
 	alloc_size += sizeof(unsigned int);
@@ -191,21 +196,22 @@ static int add_pool(struct pool *pool, unsigned int alloc_size)
 		goto out_fail;
 
 	nr_pools++;
-	return 0;
+	return true;
 out_fail:
 	log_err("smalloc: failed adding pool\n");
 	if (pool->map)
 		munmap(pool->map, pool->mmap_size);
-	return 1;
+	return false;
 }
 
 void sinit(void)
 {
-	int i, ret;
+	bool ret;
+	int i;
 
-	for (i = 0; i < MAX_POOLS; i++) {
-		ret = add_pool(&mp[i], smalloc_pool_size);
-		if (ret)
+	for (i = 0; i < INITIAL_POOLS; i++) {
+		ret = add_pool(&mp[nr_pools], smalloc_pool_size);
+		if (!ret)
 			break;
 	}
 
