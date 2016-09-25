@@ -5,14 +5,18 @@
 #include "flist.h"
 #include "hash.h"
 #include "filehash.h"
+#include "lib/bloom.h"
 
 #define HASH_BUCKETS	512
 #define HASH_MASK	(HASH_BUCKETS - 1)
+
+#define BLOOM_SIZE	16*1024*1024
 
 unsigned int file_hash_size = HASH_BUCKETS * sizeof(struct flist_head);
 
 static struct flist_head *file_hash;
 static struct fio_mutex *hash_lock;
+static struct bloom *file_bloom;
 
 static unsigned short hash(const char *name)
 {
@@ -95,6 +99,11 @@ struct fio_file *add_file_hash(struct fio_file *f)
 	return alias;
 }
 
+bool file_bloom_exists(const char *fname, bool set)
+{
+	return bloom_string(file_bloom, fname, strlen(fname), set);
+}
+
 void file_hash_exit(void)
 {
 	unsigned int i, has_entries = 0;
@@ -110,6 +119,8 @@ void file_hash_exit(void)
 	file_hash = NULL;
 	fio_mutex_remove(hash_lock);
 	hash_lock = NULL;
+	bloom_free(file_bloom);
+	file_bloom = NULL;
 }
 
 void file_hash_init(void *ptr)
@@ -121,4 +132,5 @@ void file_hash_init(void *ptr)
 		INIT_FLIST_HEAD(&file_hash[i]);
 
 	hash_lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+	file_bloom = bloom_new(BLOOM_SIZE);
 }

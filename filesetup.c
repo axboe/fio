@@ -1242,12 +1242,14 @@ static void get_file_type(struct fio_file *f)
 	}
 }
 
-static bool __is_already_allocated(const char *fname)
+static bool __is_already_allocated(const char *fname, bool set)
 {
 	struct flist_head *entry;
+	bool ret;
 
-	if (flist_empty(&filename_list))
-		return false;
+	ret = file_bloom_exists(fname, set);
+	if (!ret)
+		return ret;
 
 	flist_for_each(entry, &filename_list) {
 		struct file_name *fn;
@@ -1266,7 +1268,7 @@ static bool is_already_allocated(const char *fname)
 	bool ret;
 
 	fio_file_hash_lock();
-	ret = __is_already_allocated(fname);
+	ret = __is_already_allocated(fname, false);
 	fio_file_hash_unlock();
 
 	return ret;
@@ -1280,7 +1282,7 @@ static void set_already_allocated(const char *fname)
 	fn->filename = strdup(fname);
 
 	fio_file_hash_lock();
-	if (!__is_already_allocated(fname)) {
+	if (!__is_already_allocated(fname, true)) {
 		flist_add_tail(&fn->list, &filename_list);
 		fn = NULL;
 	}

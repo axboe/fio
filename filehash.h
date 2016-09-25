@@ -1,6 +1,8 @@
 #ifndef FIO_FILE_HASH_H
 #define FIO_FILE_HASH_H
 
+#include "lib/types.h"
+
 extern unsigned int file_hash_size;
 
 extern void file_hash_init(void *);
@@ -10,5 +12,6 @@ extern struct fio_file *add_file_hash(struct fio_file *);
 extern void remove_file_hash(struct fio_file *);
 extern void fio_file_hash_lock(void);
 extern void fio_file_hash_unlock(void);
+extern bool file_bloom_exists(const char *, bool);
 
 #endif
