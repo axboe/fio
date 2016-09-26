@@ -5,6 +5,7 @@
 #include "flist.h"
 #include "hash.h"
 #include "filehash.h"
+#include "smalloc.h"
 #include "lib/bloom.h"
 
 #define HASH_BUCKETS	512
@@ -12,7 +13,7 @@
 
 #define BLOOM_SIZE	16*1024*1024
 
-unsigned int file_hash_size = HASH_BUCKETS * sizeof(struct flist_head);
+static unsigned int file_hash_size = HASH_BUCKETS * sizeof(struct flist_head);
 
 static struct flist_head *file_hash;
 static struct fio_mutex *hash_lock;
@@ -116,6 +117,7 @@ void file_hash_exit(void)
 	if (has_entries)
 		log_err("fio: file hash not empty on exit\n");
 
+	sfree(file_hash);
 	file_hash = NULL;
 	fio_mutex_remove(hash_lock);
 	hash_lock = NULL;
@@ -123,11 +125,12 @@ void file_hash_exit(void)
 	file_bloom = NULL;
 }
 
-void file_hash_init(void *ptr)
+void file_hash_init(void)
 {
 	unsigned int i;
 
-	file_hash = ptr;
+	file_hash = smalloc(file_hash_size);
+
 	for (i = 0; i < HASH_BUCKETS; i++)
 		INIT_FLIST_HEAD(&file_hash[i]);
 

@@ -334,7 +334,6 @@ static int setup_thread_area(void)
 	do {
 		size_t size = max_jobs * sizeof(struct thread_data);
 
-		size += file_hash_size;
 		size += sizeof(unsigned int);
 
 #ifndef CONFIG_NO_SHM
@@ -366,11 +365,10 @@ static int setup_thread_area(void)
 #endif
 
 	memset(threads, 0, max_jobs * sizeof(struct thread_data));
-	hash = (void *) threads + max_jobs * sizeof(struct thread_data);
-	fio_debug_jobp = (void *) hash + file_hash_size;
+	fio_debug_jobp = (void *) threads + max_jobs * sizeof(struct thread_data);
 	*fio_debug_jobp = -1;
-	file_hash_init(hash);
 
+	file_hash_init();
 	flow_init();
 
 	return 0;
