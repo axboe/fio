@@ -476,7 +476,7 @@ static inline void fio_ro_check(const struct thread_data *td, struct io_u *io_u)
 	assert(!(io_u->ddir == DDIR_WRITE && !td_write(td)));
 }
 
-#define REAL_MAX_JOBS		2048
+#define REAL_MAX_JOBS		4096
 
 static inline int should_fsync(struct thread_data *td)
 {
