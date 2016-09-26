@@ -322,8 +322,6 @@ static void free_shm(void)
  */
 static int setup_thread_area(void)
 {
-	void *hash;
-
 	if (threads)
 		return 0;
 
