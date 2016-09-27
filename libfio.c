@@ -34,6 +34,7 @@
 #include "os/os.h"
 #include "filelock.h"
 #include "helper_thread.h"
+#include "filehash.h"
 
 /*
  * Just expose an empty list, if the OS does not support disk util stats
@@ -375,6 +376,8 @@ int initialize_fio(char *envp[])
 		log_err("fio: failed initializing filelock subsys\n");
 		return 1;
 	}
+
+	file_hash_init();
 
 	/*
 	 * We need locale for number printing, if it isn't set then just

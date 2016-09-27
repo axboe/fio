@@ -298,7 +298,6 @@ void free_threads_shm(void)
 static void free_shm(void)
 {
 	if (threads) {
-		file_hash_exit();
 		flow_exit();
 		fio_debug_jobp = NULL;
 		free_threads_shm();
@@ -311,6 +310,7 @@ static void free_shm(void)
 
 	options_free(fio_options, &def_thread.o);
 	fio_filelock_exit();
+	file_hash_exit();
 	scleanup();
 }
 
@@ -366,7 +366,6 @@ static int setup_thread_area(void)
 	fio_debug_jobp = (void *) threads + max_jobs * sizeof(struct thread_data);
 	*fio_debug_jobp = -1;
 
-	file_hash_init();
 	flow_init();
 
 	return 0;
