@@ -233,6 +233,12 @@ struct thread_options {
 
 	char *read_iolog_file;
 	char *write_iolog_file;
+
+	unsigned int write_bw_log;
+	unsigned int write_lat_log;
+	unsigned int write_iops_log;
+	unsigned int write_hist_log;
+
 	char *bw_log_file;
 	char *lat_log_file;
 	char *iops_log_file;
@@ -492,6 +498,12 @@ struct thread_options_pack {
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];
 	uint8_t write_iolog_file[FIO_TOP_STR_MAX];
+
+	uint32_t write_bw_log;
+	uint32_t write_lat_log;
+	uint32_t write_iops_log;
+	uint32_t write_hist_log;
+
 	uint8_t bw_log_file[FIO_TOP_STR_MAX];
 	uint8_t lat_log_file[FIO_TOP_STR_MAX];
 	uint8_t iops_log_file[FIO_TOP_STR_MAX];

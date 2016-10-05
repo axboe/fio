@@ -1311,6 +1311,50 @@ static int str_size_cb(void *data, unsigned long long *__val)
 	return 0;
 }
 
+static int str_write_bw_log_cb(void *data, const char *str)
+{
+	struct thread_data *td = cb_data_to_td(data);
+
+	if (str)
+		td->o.bw_log_file = strdup(str);
+
+	td->o.write_bw_log = 1;
+	return 0;
+}
+
+static int str_write_lat_log_cb(void *data, const char *str)
+{
+	struct thread_data *td = cb_data_to_td(data);
+
+	if (str)
+		td->o.lat_log_file = strdup(str);
+
+	td->o.write_lat_log = 1;
+	return 0;
+}
+
+static int str_write_iops_log_cb(void *data, const char *str)
+{
+	struct thread_data *td = cb_data_to_td(data);
+
+	if (str)
+		td->o.iops_log_file = strdup(str);
+
+	td->o.write_iops_log = 1;
+	return 0;
+}
+
+static int str_write_hist_log_cb(void *data, const char *str)
+{
+	struct thread_data *td = cb_data_to_td(data);
+
+	if (str)
+		td->o.hist_log_file = strdup(str);
+
+	td->o.write_hist_log = 1;
+	return 0;
+}
+
 static int rw_verify(struct fio_option *o, void *data)
 {
 	struct thread_data *td = cb_data_to_td(data);
@@ -3507,8 +3551,9 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "write_bw_log",
 		.lname	= "Write bandwidth log",
-		.type	= FIO_OPT_STR_STORE,
+		.type	= FIO_OPT_STR,
 		.off1	= offsetof(struct thread_options, bw_log_file),
+		.cb	= str_write_bw_log_cb,
 		.help	= "Write log of bandwidth during run",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
@@ -3516,8 +3561,9 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "write_lat_log",
 		.lname	= "Write latency log",
-		.type	= FIO_OPT_STR_STORE,
+		.type	= FIO_OPT_STR,
 		.off1	= offsetof(struct thread_options, lat_log_file),
+		.cb	= str_write_lat_log_cb,
 		.help	= "Write log of latency during run",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
@@ -3525,8 +3571,9 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "write_iops_log",
 		.lname	= "Write IOPS log",
-		.type	= FIO_OPT_STR_STORE,
+		.type	= FIO_OPT_STR,
 		.off1	= offsetof(struct thread_options, iops_log_file),
+		.cb	= str_write_iops_log_cb,
 		.help	= "Write log of IOPS during run",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
@@ -3566,8 +3613,9 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "write_hist_log",
 		.lname	= "Write latency histogram logs",
-		.type	= FIO_OPT_STR_STORE,
+		.type	= FIO_OPT_STR,
 		.off1	= offsetof(struct thread_options, hist_log_file),
+		.cb	= str_write_hist_log_cb,
 		.help	= "Write log of latency histograms during run",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,

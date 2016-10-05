@@ -1389,7 +1389,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (setup_rate(td))
 		goto err;
 
-	if (o->lat_log_file) {
+	if (o->write_lat_log) {
 		struct log_params p = {
 			.td = td,
 			.avg_msec = o->log_avg_msec,
@@ -1400,6 +1400,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
+		const char *pre = o->lat_log_file ? o->lat_log_file : o->name;
 		const char *suf;
 
 		if (p.log_gz_store)
@@ -1407,20 +1408,20 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		gen_log_name(logname, sizeof(logname), "lat", o->lat_log_file,
+		gen_log_name(logname, sizeof(logname), "lat", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->lat_log, &p, logname);
 
-		gen_log_name(logname, sizeof(logname), "slat", o->lat_log_file,
+		gen_log_name(logname, sizeof(logname), "slat", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->slat_log, &p, logname);
 
-		gen_log_name(logname, sizeof(logname), "clat", o->lat_log_file,
+		gen_log_name(logname, sizeof(logname), "clat", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->clat_log, &p, logname);
 	}
 
-	if (o->hist_log_file) {
+	if (o->write_hist_log) {
 		struct log_params p = {
 			.td = td,
 			.avg_msec = o->log_avg_msec,
@@ -1431,6 +1432,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
+		const char *pre = o->hist_log_file ? o->hist_log_file : o->name;
 		const char *suf;
 
 #ifndef CONFIG_ZLIB
@@ -1445,12 +1447,12 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		gen_log_name(logname, sizeof(logname), "clat_hist", o->hist_log_file,
+		gen_log_name(logname, sizeof(logname), "clat_hist", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->clat_hist_log, &p, logname);
 	}
 
-	if (o->bw_log_file) {
+	if (o->write_bw_log) {
 		struct log_params p = {
 			.td = td,
 			.avg_msec = o->log_avg_msec,
@@ -1461,6 +1463,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
+		const char *pre = o->bw_log_file ? o->bw_log_file : o->name;
 		const char *suf;
 
 		if (fio_option_is_set(o, bw_avg_time))
@@ -1476,11 +1479,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		gen_log_name(logname, sizeof(logname), "bw", o->bw_log_file,
+		gen_log_name(logname, sizeof(logname), "bw", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->bw_log, &p, logname);
 	}
-	if (o->iops_log_file) {
+	if (o->write_iops_log) {
 		struct log_params p = {
 			.td = td,
 			.avg_msec = o->log_avg_msec,
@@ -1491,6 +1494,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
+		const char *pre = o->iops_log_file ? o->iops_log_file : o->name;
 		const char *suf;
 
 		if (fio_option_is_set(o, iops_avg_time))
@@ -1506,7 +1510,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		gen_log_name(logname, sizeof(logname), "iops", o->iops_log_file,
+		gen_log_name(logname, sizeof(logname), "iops", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->iops_log, &p, logname);
 	}
