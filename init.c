@@ -103,7 +103,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 	},
 	{
 		.name		= (char *) "bandwidth-log",
-		.has_arg	= required_argument,
+		.has_arg	= no_argument,
 		.val		= 'b' | FIO_CLIENT_FLAG,
 	},
 	{
