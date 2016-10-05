@@ -149,7 +149,7 @@ $ fio
 	--parse-only		Parse options only, don't start any IO
 	--output		Write output to file
 	--runtime		Runtime in seconds
-	--bandwidth-log		Generate per-job bandwidth logs
+	--bandwidth-log		Generate aggregate bandwidth logs
 	--minimal		Minimal (terse) output
 	--output-format=type	Output format (terse,json,json+,normal)
 	--terse-version=type	Terse version output format (default 3, or 2 or 4).
