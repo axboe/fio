@@ -2023,7 +2023,7 @@ static void __add_log_sample(struct io_log *iolog, unsigned long val,
 		s = get_sample(iolog, cur_log, cur_log->nr_samples);
 
 		s->val = val;
-		s->time = t + iolog->td->unix_epoch;
+		s->time = t + (iolog->td ? iolog->td->unix_epoch : 0);
 		io_sample_set_ddir(iolog, s, ddir);
 		s->bs = bs;
 
