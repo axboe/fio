@@ -3920,6 +3920,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "disable_bw_measurement",
+		.alias	= "disable_bw",
 		.lname	= "Disable bandwidth stats",
 		.type	= FIO_OPT_BOOL,
 		.off1	= offsetof(struct thread_options, disable_bw),
