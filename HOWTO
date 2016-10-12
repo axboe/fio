@@ -1066,6 +1066,10 @@ random_generator=str	Fio supports the following engines for generating
 
 nice=int	Run the job with the given nice value. See man nice(2).
 
+     On Windows, values less than -15 set the process class to "High";
+     -1 through -15 set "Above Normal"; 1 through 15 "Below Normal";
+     and above 15 "Idle" priority class.
+
 prio=int	Set the io priority value of this job. Linux limits us to
 		a positive value between 0 and 7, with 0 being the highest.
 		See man ionice(1). Refer to an appropriate manpage for

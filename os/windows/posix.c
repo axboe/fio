@@ -647,10 +647,19 @@ int setgid(gid_t gid)
 
 int nice(int incr)
 {
-	if (incr != 0) {
-		errno = EINVAL;
-		return -1;
-	}
+	DWORD prioclass = NORMAL_PRIORITY_CLASS;
+	
+	if (incr < -15)
+		prioclass = HIGH_PRIORITY_CLASS;
+	else if (incr < 0)
+		prioclass = ABOVE_NORMAL_PRIORITY_CLASS;
+	else if (incr > 15)
+		prioclass = IDLE_PRIORITY_CLASS;
+	else if (incr > 0)
+		prioclass = BELOW_NORMAL_PRIORITY_CLASS;
+	
+	if (!SetPriorityClass(GetCurrentProcess(), prioclass))
+		log_err("fio: SetPriorityClass failed\n");
 
 	return 0;
 }
