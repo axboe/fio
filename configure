@@ -1621,6 +1621,11 @@ echo "getmntent                     $getmntent"
 
 ##########################################
 # Check whether we have getmntinfo
+# These are originally added for BSDs, but may also work
+# on other operating systems with getmntinfo(3).
+
+# getmntinfo(3) for FreeBSD/DragonFlyBSD/OpenBSD.
+# Note that NetBSD needs -Werror to catch warning as error.
 getmntinfo="no"
 cat > $TMPC << EOF
 #include <stdio.h>
@@ -1632,10 +1637,27 @@ int main(int argc, char **argv)
   return getmntinfo(&st, MNT_NOWAIT);
 }
 EOF
-if compile_prog "" "" "getmntinfo"; then
+if compile_prog "-Werror" "" "getmntinfo"; then
   getmntinfo="yes"
 fi
 echo "getmntinfo                    $getmntinfo"
+
+# getmntinfo(3) for NetBSD.
+getmntinfo_statvfs="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <sys/statvfs.h>
+int main(int argc, char **argv)
+{
+  struct statvfs *st;
+  return getmntinfo(&st, MNT_NOWAIT);
+}
+EOF
+# Skip the test if the one with statfs arg is detected.
+if test "$getmntinfo" != "yes" && compile_prog "-Werror" "" "getmntinfo_statvfs"; then
+  getmntinfo_statvfs="yes"
+  echo "getmntinfo_statvfs            $getmntinfo_statvfs"
+fi
 
 ##########################################
 # Check whether we have _Static_assert
@@ -1882,6 +1904,9 @@ if test "$getmntent" = "yes" ; then
 fi
 if test "$getmntinfo" = "yes" ; then
   output_sym "CONFIG_GETMNTINFO"
+fi
+if test "$getmntinfo_statvfs" = "yes" ; then
+  output_sym "CONFIG_GETMNTINFO_STATVFS"
 fi
 if test "$static_assert" = "yes" ; then
   output_sym "CONFIG_STATIC_ASSERT"
