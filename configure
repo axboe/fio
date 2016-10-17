@@ -1628,7 +1628,7 @@ cat > $TMPC << EOF
 #include <sys/mount.h>
 int main(int argc, char **argv)
 {
-  struct statfs st;
+  struct statfs *st;
   return getmntinfo(&st, MNT_NOWAIT);
 }
 EOF
