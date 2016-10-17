@@ -346,7 +346,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 	unsigned long long offset;
 	unsigned int bytes;
 	int reads, writes, waits, fileno = 0, file_action = 0; /* stupid gcc */
-	char *fname, *act;
+	char *rfname, *fname, *act;
 	char *str, *p;
 	enum fio_ddir rw;
 
@@ -357,7 +357,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 	 * for doing verifications.
 	 */
 	str = malloc(4096);
-	fname = malloc(256+16);
+	rfname = fname = malloc(256+16);
 	act = malloc(256+16);
 
 	reads = writes = waits = 0;
@@ -365,8 +365,12 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 		struct io_piece *ipo;
 		int r;
 
-		r = sscanf(p, "%256s %256s %llu %u", fname, act, &offset,
+		r = sscanf(p, "%256s %256s %llu %u", rfname, act, &offset,
 									&bytes);
+
+		if (td->o.replay_redirect)
+			fname = td->o.replay_redirect;
+
 		if (r == 4) {
 			/*
 			 * Check action first
@@ -451,7 +455,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 
 	free(str);
 	free(act);
-	free(fname);
+	free(rfname);
 
 	if (writes && read_only) {
 		log_err("fio: <%s> skips replay of %d writes due to"
