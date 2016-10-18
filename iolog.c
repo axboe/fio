@@ -425,6 +425,8 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 				continue;
 			writes++;
 		} else if (rw == DDIR_WAIT) {
+			if (td->o.no_stall)
+				continue;
 			waits++;
 		} else if (rw == DDIR_INVAL) {
 		} else if (!ddir_sync(rw)) {
