@@ -1558,10 +1558,10 @@ read_iolog=str	Open an iolog with the specified file name and replay the
 
 replay_no_stall=int When replaying I/O with read_iolog the default behavior
 		is to attempt to respect the time stamps within the log and
-		replay them with the appropriate delay between IOPS.  By
+		replay them with the appropriate delay between IOPS. By
 		setting this variable fio will not respect the timestamps and
 		attempt to replay them as fast as possible while still
-		respecting ordering.  The result is the same I/O pattern to a
+		respecting ordering. The result is the same I/O pattern to a
 		given device, but different timings.
 
 replay_redirect=str While replaying I/O patterns using read_iolog the
@@ -1573,13 +1573,14 @@ replay_redirect=str While replaying I/O patterns using read_iolog the
 		mapping.  Replay_redirect causes all IOPS to be replayed onto
 		the single specified device regardless of the device it was
 		recorded from. i.e. replay_redirect=/dev/sdc would cause all
-		IO in the blktrace to be replayed onto /dev/sdc.  This means
-		multiple devices will be replayed onto a single, if the trace
-		contains multiple devices.  If you want multiple devices to be
-		replayed concurrently to multiple redirected devices you must
-		blkparse your trace into separate traces and replay them with
-		independent fio invocations.  Unfortuantely this also breaks
-		the strict time ordering between multiple device accesses.
+		IO in the blktrace or iolog to be replayed onto /dev/sdc.
+		This means multiple devices will be replayed onto a single
+		device, if the trace contains multiple devices. If you want
+		multiple devices to be replayed concurrently to multiple
+		redirected devices you must blkparse your trace into separate
+		traces and replay them with independent fio invocations.
+		Unfortuantely this also breaks the strict time ordering
+		between multiple device accesses.
 
 replay_align=int	Force alignment of IO offsets and lengths in a trace
 		to this power of 2 value.
