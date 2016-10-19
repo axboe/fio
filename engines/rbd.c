@@ -13,6 +13,12 @@
 #include <zipkin_c.h>
 #endif
 
+#ifdef CONFIG_RBD_POLL
+/* add for poll */
+#include <poll.h>
+#include <sys/eventfd.h>
+#endif
+
 struct fio_rbd_iou {
 	struct io_u *io_u;
 	rbd_completion_t completion;
@@ -29,6 +35,9 @@ struct rbd_data {
 	rbd_image_t image;
 	struct io_u **aio_events;
 	struct io_u **sort_events;
+#ifdef CONFIG_RBD_POLL
+	int fd; /* add for poll */
+#endif
 };
 
 struct rbd_options {
@@ -103,6 +112,11 @@ static int _fio_setup_rbd_data(struct thread_data *td,
 	rbd = calloc(1, sizeof(struct rbd_data));
 	if (!rbd)
 		goto failed;
+
+#ifdef CONFIG_RBD_POLL
+	/* add for poll, init fd: -1 */
+	rbd->fd = -1;
+#endif
 
 	rbd->aio_events = calloc(td->o.iodepth, sizeof(struct io_u *));
 	if (!rbd->aio_events)
@@ -188,7 +202,29 @@ static int _fio_rbd_connect(struct thread_data *td)
 		log_err("rbd_open failed.\n");
 		goto failed_open;
 	}
+
+#ifdef CONFIG_RBD_POLL
+	/* add for rbd poll */
+	rbd->fd = eventfd(0, EFD_NONBLOCK);
+	if (rbd->fd < 0) {
+		log_err("eventfd failed.\n");
+		goto failed_open;
+	}
+    
+	r = rbd_set_image_notification(rbd->image, rbd->fd, EVENT_TYPE_EVENTFD);
+	if (r < 0) {
+		log_err("rbd_set_image_notification failed.\n");
+		goto failed_notify;
+	}
+#endif
+
 	return 0;
+
+#ifdef CONFIG_RBD_POLL
+failed_notify:
+	close(rbd->fd);
+	rbd->fd = -1;
+#endif
 
 failed_open:
 	rados_ioctx_destroy(rbd->io_ctx);
@@ -204,6 +240,14 @@ static void _fio_rbd_disconnect(struct rbd_data *rbd)
 {
 	if (!rbd)
 		return;
+
+#ifdef CONFIG_RBD_POLL
+	/* close eventfd */
+	if (rbd->fd >= 0) {
+		close(rbd->fd);
+		rbd->fd = -1;
+	}
+#endif
 
 	/* shutdown everything */
 	if (rbd->image) {
@@ -304,10 +348,33 @@ static int rbd_iter_events(struct thread_data *td, unsigned int *events,
 	struct rbd_data *rbd = td->io_ops_data;
 	unsigned int this_events = 0;
 	struct io_u *io_u;
-	int i, sidx;
+	int i, sidx = 0;
 
-	sidx = 0;
+#ifdef CONFIG_RBD_POLL
+	int ret = 0;
+	int event_num = 0;
+	struct fio_rbd_iou *fri = NULL;
+	rbd_completion_t comps[min_evts];
+
+	struct pollfd pfd;
+	pfd.fd = rbd->fd;
+	pfd.events = POLLIN;
+
+	ret = poll(&pfd, 1, -1);
+	if (ret <= 0) {
+		return 0;
+	}
+        
+	assert(pfd.revents & POLLIN);
+
+	event_num = rbd_poll_io_events(rbd->image, comps, min_evts);
+
+	for (i = 0; i < event_num; i++) {
+		fri = rbd_aio_get_arg(comps[i]);
+		io_u = fri->io_u;
+#else
 	io_u_qiter(&td->io_u_all, io_u, i) {
+#endif
 		if (!(io_u->flags & IO_U_F_FLIGHT))
 			continue;
 		if (rbd_io_u_seen(io_u))
