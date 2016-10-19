@@ -1324,7 +1324,7 @@ int main(int argc, char **argv)
   int major, minor, extra;
   rbd_version(&major, &minor, &extra);
 
-  rados_ioctx_create(cluster, pool, &io_ctx);
+  os_ioctx_create(cluster, pool, &io_ctx);
   return 0;
 }
 EOF
@@ -1345,7 +1345,7 @@ int main(int argc, char **argv)
 {
   rbd_image_t image;
 
-  return rbd_invalidate_cache(image);
+  return rbd_incache(image);
 }
 EOF
 if compile_prog "" "-lrbd -lrados" "rbd"; then
