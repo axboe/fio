@@ -35,9 +35,7 @@ struct rbd_data {
 	rbd_image_t image;
 	struct io_u **aio_events;
 	struct io_u **sort_events;
-#ifdef CONFIG_RBD_POLL
 	int fd; /* add for poll */
-#endif
 };
 
 struct rbd_options {
@@ -113,10 +111,8 @@ static int _fio_setup_rbd_data(struct thread_data *td,
 	if (!rbd)
 		goto failed;
 
-#ifdef CONFIG_RBD_POLL
 	/* add for poll, init fd: -1 */
 	rbd->fd = -1;
-#endif
 
 	rbd->aio_events = calloc(td->o.iodepth, sizeof(struct io_u *));
 	if (!rbd->aio_events)
@@ -140,6 +136,35 @@ failed:
 	return 1;
 
 }
+
+#ifdef CONFIG_RBD_POLL
+static bool _fio_rbd_setup_poll(struct rbd_data *rbd)
+{
+	int r;
+
+	/* add for rbd poll */
+	rbd->fd = eventfd(0, EFD_NONBLOCK);
+	if (rbd->fd < 0) {
+		log_err("eventfd failed.\n");
+		return false;
+	}
+
+	r = rbd_set_image_notification(rbd->image, rbd->fd, EVENT_TYPE_EVENTFD);
+	if (r < 0) {
+		log_err("rbd_set_image_notification failed.\n");
+		close(rbd->fd);
+		rbd->fd = -1;
+		return false;
+	}
+
+	return true;
+}
+#else
+static bool _fio_rbd_setup_poll(struct rbd_data *rbd)
+{
+	return true;
+}
+#endif
 
 static int _fio_rbd_connect(struct thread_data *td)
 {
@@ -203,29 +228,14 @@ static int _fio_rbd_connect(struct thread_data *td)
 		goto failed_open;
 	}
 
-#ifdef CONFIG_RBD_POLL
-	/* add for rbd poll */
-	rbd->fd = eventfd(0, EFD_NONBLOCK);
-	if (rbd->fd < 0) {
-		log_err("eventfd failed.\n");
-		goto failed_open;
-	}
-    
-	r = rbd_set_image_notification(rbd->image, rbd->fd, EVENT_TYPE_EVENTFD);
-	if (r < 0) {
-		log_err("rbd_set_image_notification failed.\n");
-		goto failed_notify;
-	}
-#endif
+	if (!_fio_rbd_setup_poll(rbd))
+		goto failed_poll;
 
 	return 0;
 
-#ifdef CONFIG_RBD_POLL
-failed_notify:
-	close(rbd->fd);
-	rbd->fd = -1;
-#endif
-
+failed_poll:
+	rbd_close(rbd->image);
+	rbd->image = NULL;
 failed_open:
 	rados_ioctx_destroy(rbd->io_ctx);
 	rbd->io_ctx = NULL;
@@ -241,13 +251,11 @@ static void _fio_rbd_disconnect(struct rbd_data *rbd)
 	if (!rbd)
 		return;
 
-#ifdef CONFIG_RBD_POLL
 	/* close eventfd */
-	if (rbd->fd >= 0) {
+	if (rbd->fd != -1) {
 		close(rbd->fd);
 		rbd->fd = -1;
 	}
-#endif
 
 	/* shutdown everything */
 	if (rbd->image) {
@@ -361,10 +369,9 @@ static int rbd_iter_events(struct thread_data *td, unsigned int *events,
 	pfd.events = POLLIN;
 
 	ret = poll(&pfd, 1, -1);
-	if (ret <= 0) {
+	if (ret <= 0)
 		return 0;
-	}
-        
+
 	assert(pfd.revents & POLLIN);
 
 	event_num = rbd_poll_io_events(rbd->image, comps, min_evts);
