@@ -1335,6 +1335,32 @@ fi
 echo "Rados Block Device engine     $rbd"
 
 ##########################################
+# check for rbd_poll
+rbd_poll="no"
+if test "$rbd" = "yes"; then
+cat > $TMPC << EOF
+#include <rbd/librbd.h>
+#include <sys/eventfd.h>
+
+int main(int argc, char **argv)
+{
+  rbd_image_t image;
+  rbd_completion_t comp;
+
+  int fd = eventfd(0, EFD_NONBLOCK);
+  rbd_set_image_notification(image, fd, EVENT_TYPE_EVENTFD);
+  rbd_poll_io_events(image, comp, 1);
+
+  return 0;
+}
+EOF
+if compile_prog "" "-lrbd -lrados" "rbd"; then
+  rbd_poll="yes"
+fi
+echo "rbd_poll                      $rbd_poll"
+fi
+
+##########################################
 # check for rbd_invaidate_cache()
 rbd_inval="no"
 if test "$rbd" = "yes"; then
@@ -1852,6 +1878,9 @@ if test "$ipv6" = "yes" ; then
 fi
 if test "$rbd" = "yes" ; then
   output_sym "CONFIG_RBD"
+fi
+if test "$rbd_poll" = "yes" ; then
+  output_sym "CONFIG_RBD_POLL"
 fi
 if test "$rbd_inval" = "yes" ; then
   output_sym "CONFIG_RBD_INVAL"
