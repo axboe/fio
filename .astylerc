@@ -1,0 +1,26 @@
+# Bracket Style
+style=kr # K&R brackets
+
+# Indentation
+indent=force-tab=8 # Use tabs for indentation, spaces for minor alignment
+min-conditional-indent=0
+
+# Padding
+unpad-paren # Remove all spaces with parens that aren't requested below
+pad-oper # Put spaces around operators
+pad-header # Put spaces between if/while/for etc. and the first paren
+
+# Pointers
+align-pointer=name # Align the * next to the variable name
+
+# Line wrapping
+max-code-length=100 # 100 character line limit
+break-after-logical # For if statements, wrap to the next line after logical operator
+
+# Line endings
+lineend=linux # LF line endings
+
+# General options
+suffix=none
+recursive
+formatted
