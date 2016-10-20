@@ -74,7 +74,4 @@ static inline unsigned long long get_fs_free_size(const char *path)
 #define FIO_MADV_FREE	MADV_FREE
 #endif
 
-/* XXX NetBSD doesn't have getopt_long_only */
-#define	getopt_long_only	getopt_long
-
 #endif
