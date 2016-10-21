@@ -6,6 +6,9 @@
 #include <errno.h>
 #include <sys/param.h>
 #include <sys/statvfs.h>
+#include <sys/ioctl.h>
+#include <sys/dkio.h>
+#include <sys/disklabel.h>
 /* XXX hack to avoid conflicts between rbtree.h and <sys/tree.h> */
 #include <sys/sysctl.h>
 #undef RB_BLACK
@@ -15,7 +18,6 @@
 #include "../file.h"
 
 #undef  FIO_HAVE_ODIRECT
-#define FIO_USE_GENERIC_BDEV_SIZE
 #define FIO_USE_GENERIC_RAND
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_FS_STAT
@@ -34,6 +36,19 @@
 #define fio_swap64(x)	bswap64(x)
 
 typedef off_t off64_t;
+
+static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
+{
+	struct disklabel dl;
+
+	if (!ioctl(f->fd, DIOCGDINFO, &dl)) {
+		*bytes = ((unsigned long long)dl.d_secperunit) * dl.d_secsize;
+		return 0;
+	}
+
+	*bytes = 0;
+	return errno;
+}
 
 static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
