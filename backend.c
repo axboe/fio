@@ -1471,6 +1471,7 @@ static void *thread_main(void *data)
 	struct thread_data *td = fd->td;
 	struct thread_options *o = &td->o;
 	struct sk_out *sk_out = fd->sk_out;
+	int deadlock_loop_cnt;
 	int clear_state;
 	int ret;
 
@@ -1731,11 +1732,17 @@ static void *thread_main(void *data)
 		 * the rusage_sem, which would never get upped because
 		 * this thread is waiting for the stat mutex.
 		 */
+		deadlock_loop_cnt = 0;
 		do {
 			check_update_rusage(td);
 			if (!fio_mutex_down_trylock(stat_mutex))
 				break;
 			usleep(1000);
+			if (deadlock_loop_cnt++ > 5000) {
+				log_err("fio seems to be stuck grabbing stat_mutex, forcibly exiting\n");
+				td->error = EDEADLOCK;
+				goto err;
+			}
 		} while (1);
 
 		if (td_read(td) && td->io_bytes[DDIR_READ])
