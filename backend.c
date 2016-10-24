@@ -1723,6 +1723,14 @@ static void *thread_main(void *data)
 			}
 		}
 
+		/*
+		 * If we took too long to shut down, the main thread could
+		 * already consider us reaped/exited. If that happens, break
+		 * out and clean up.
+		 */
+		if (td->runstate >= TD_EXITED)
+			break;
+
 		clear_state = 1;
 
 		/*
