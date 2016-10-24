@@ -1748,7 +1748,7 @@ static void *thread_main(void *data)
 			usleep(1000);
 			if (deadlock_loop_cnt++ > 5000) {
 				log_err("fio seems to be stuck grabbing stat_mutex, forcibly exiting\n");
-				td->error = EDEADLOCK;
+				td->error = EDEADLK;
 				goto err;
 			}
 		} while (1);
