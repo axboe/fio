@@ -588,7 +588,7 @@ extern const char *runstate_to_name(int runstate);
  * Allow 60 seconds for a job to quit on its own, otherwise reap with
  * a vengeance.
  */
-#define FIO_REAP_TIMEOUT	60
+#define FIO_REAP_TIMEOUT	300
 
 #define TERMINATE_ALL		(-1U)
 extern void fio_terminate_threads(unsigned int);
