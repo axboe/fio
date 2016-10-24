@@ -22,6 +22,12 @@ void __fio_mutex_remove(struct fio_mutex *mutex)
 {
 	assert(mutex->magic == FIO_MUTEX_MAGIC);
 	pthread_cond_destroy(&mutex->cond);
+
+	/*
+	 * Ensure any subsequent attempt to grab this mutex will fail
+	 * with an assert, instead of just silently hanging.
+	 */
+	memset(mutex, 0, sizeof(*mutex));
 }
 
 void fio_mutex_remove(struct fio_mutex *mutex)
