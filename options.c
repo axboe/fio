@@ -1063,7 +1063,7 @@ static int str_random_distribution_cb(void *data, const char *str)
 
 static int str_steadystate_cb(void *data, const char *str)
 {
-	struct thread_data *td = data;
+	struct thread_data *td = cb_data_to_td(data);
 	double val;
 	char *nr;
 	char *pct;

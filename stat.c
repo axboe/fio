@@ -1276,7 +1276,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		json_object_add_value_string(tmp, "ss", ss_buf);
 		json_object_add_value_int(tmp, "duration", (int)ss->dur);
 		json_object_add_value_int(tmp, "steadystate_ramptime", ss->ramp_time / 1000000L);
-		json_object_add_value_int(tmp, "attained", ss->state & __FIO_SS_ATTAINED);
+		json_object_add_value_int(tmp, "attained", (ss->state & __FIO_SS_ATTAINED) > 0);
 
 		snprintf(ss_buf, sizeof(ss_buf), "%f%s", (float) ss->criterion, ss->pct ? "%" : "");
 		json_object_add_value_string(tmp, "criterion", ss_buf);

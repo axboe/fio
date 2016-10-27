@@ -84,9 +84,9 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 				if (j >= ss->dur)
 					j -= ss->dur;
 				if (ss->state & __FIO_SS_IOPS)
-					ss->sum_xy += ss->iops_data[j];
+					ss->sum_xy += i * ss->iops_data[j];
 				else
-					ss->sum_xy += ss->bw_data[j];
+					ss->sum_xy += i * ss->bw_data[j];
 			}
 		} else {		/* easy to update the sums */
 			ss->sum_y -= ss->oldest_y;
