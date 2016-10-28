@@ -771,18 +771,18 @@ static bool exceeds_number_ios(struct thread_data *td)
 	return number_ios >= (td->o.number_ios * td->loops);
 }
 
-static bool io_issue_bytes_exceeded(struct thread_data *td)
+static bool io_bytes_exceeded(struct thread_data *td, uint64_t *this_bytes)
 {
 	unsigned long long bytes, limit;
 
 	if (td_rw(td))
-		bytes = td->io_issue_bytes[DDIR_READ] + td->io_issue_bytes[DDIR_WRITE];
+		bytes = this_bytes[DDIR_READ] + this_bytes[DDIR_WRITE];
 	else if (td_write(td))
-		bytes = td->io_issue_bytes[DDIR_WRITE];
+		bytes = this_bytes[DDIR_WRITE];
 	else if (td_read(td))
-		bytes = td->io_issue_bytes[DDIR_READ];
+		bytes = this_bytes[DDIR_READ];
 	else
-		bytes = td->io_issue_bytes[DDIR_TRIM];
+		bytes = this_bytes[DDIR_TRIM];
 
 	if (td->o.io_limit)
 		limit = td->o.io_limit;
@@ -793,26 +793,14 @@ static bool io_issue_bytes_exceeded(struct thread_data *td)
 	return bytes >= limit || exceeds_number_ios(td);
 }
 
+static bool io_issue_bytes_exceeded(struct thread_data *td)
+{
+	return io_bytes_exceeded(td, td->io_issue_bytes);
+}
+
 static bool io_complete_bytes_exceeded(struct thread_data *td)
 {
-	unsigned long long bytes, limit;
-
-	if (td_rw(td))
-		bytes = td->this_io_bytes[DDIR_READ] + td->this_io_bytes[DDIR_WRITE];
-	else if (td_write(td))
-		bytes = td->this_io_bytes[DDIR_WRITE];
-	else if (td_read(td))
-		bytes = td->this_io_bytes[DDIR_READ];
-	else
-		bytes = td->this_io_bytes[DDIR_TRIM];
-
-	if (td->o.io_limit)
-		limit = td->o.io_limit;
-	else
-		limit = td->o.size;
-
-	limit *= td->loops;
-	return bytes >= limit || exceeds_number_ios(td);
+	return io_bytes_exceeded(td, td->this_io_bytes);
 }
 
 /*
