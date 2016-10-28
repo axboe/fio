@@ -4,8 +4,6 @@ Known issues/TODO (for steady-state)
 
 - Add output for --output-format=normal
 
-- Add example job files
-
 - Allow user to specify the frequency of measurements
 
 - Better documentation for output
