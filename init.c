@@ -1578,7 +1578,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			log_info("...\n");
 	}
 
-	td_steadystate_init(td);
+	if (td_steadystate_init(td))
+		goto err;
 
 	/*
 	 * recurse add identical jobs, clear numjobs and stonewall options

@@ -294,31 +294,52 @@ void steadystate_check(void)
 	}
 }
 
-void td_steadystate_init(struct thread_data *td)
+int td_steadystate_init(struct thread_data *td)
 {
 	struct steadystate_data *ss = &td->ss;
 	struct thread_options *o = &td->o;
+	struct thread_data *td2;
+	int j;
 
 	memset(ss, 0, sizeof(*ss));
 
-	if (!o->ss_dur)
-		return;
+	if (o->ss_dur) {
+		steadystate_enabled = true;
+		o->ss_dur /= 1000000L;
 
-	steadystate_enabled = true;
-	o->ss_dur /= 1000000L;
+		/* put all steady state info in one place */
+		ss->dur = o->ss_dur;
+		ss->limit = o->ss_limit.u.f;
+		ss->ramp_time = o->ss_ramp_time;
+		ss->pct = o->ss_pct;
 
-	/* put all steady state info in one place */
-	ss->dur = o->ss_dur;
-	ss->limit = o->ss_limit.u.f;
-	ss->ramp_time = o->ss_ramp_time;
-	ss->pct = o->ss_pct;
+		ss->state = o->ss;
+		if (!td->ss.ramp_time)
+			ss->state |= __FIO_SS_RAMP_OVER;
 
-	ss->state = o->ss;
-	if (!td->ss.ramp_time)
-		ss->state |= __FIO_SS_RAMP_OVER;
+		ss->sum_x = o->ss_dur * (o->ss_dur - 1) / 2;
+		ss->sum_x_sq = (o->ss_dur - 1) * (o->ss_dur) * (2*o->ss_dur - 1) / 6;
 
-	ss->sum_x = o->ss_dur * (o->ss_dur - 1) / 2;
-	ss->sum_x_sq = (o->ss_dur - 1) * (o->ss_dur) * (2*o->ss_dur - 1) / 6;
+		td->ts.ss = ss;
+	}
 
-	td->ts.ss = ss;
+	/* make sure that ss options are consistent within reporting group */
+	for_each_td(td2, j) {
+		if (td2->groupid == td->groupid) {
+			struct steadystate_data *ss2 = &td2->ss;
+
+			if (ss2->dur != ss->dur ||
+			    ss2->limit != ss->limit ||
+			    ss2->ramp_time != ss->ramp_time ||
+			    ss2->pct != ss->pct ||
+			    ss2->state != ss->state ||
+			    ss2->sum_x != ss->sum_x ||
+			    ss2->sum_x_sq != ss->sum_x_sq) {
+				td_verror(td, EINVAL, "job rejected: steadystate options must be consistent within reporting groups");
+				return 1;
+			}
+		}
+	}
+
+	return 0;
 }

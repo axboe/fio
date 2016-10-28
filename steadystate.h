@@ -5,7 +5,7 @@
 
 extern void steadystate_check(void);
 extern void steadystate_setup(void);
-extern void td_steadystate_init(struct thread_data *);
+extern int td_steadystate_init(struct thread_data *);
 
 extern bool steadystate_enabled;
 

@@ -6,11 +6,6 @@ Known issues/TODO (for steady-state)
 
 - Add example job files
 
-- group_reporting must be set for every job in a group
-
-- Undefined behavior when steady state options differ across jobs in a
-  single group
-
 - Allow user to specify the frequency of measurements
 
 - Better documentation for output
