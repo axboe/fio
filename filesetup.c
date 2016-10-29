@@ -1098,7 +1098,7 @@ static int check_rand_gen_limits(struct thread_data *td, struct fio_file *f,
 	if (!fio_option_is_set(&td->o, random_generator)) {
 		log_info("fio: Switching to tausworthe64. Use the "
 			 "random_generator= option to get rid of this "
-			 " warning.\n");
+			 "warning.\n");
 		td->o.random_generator = FIO_RAND_GEN_TAUSWORTHE64;
 		return 0;
 	}
