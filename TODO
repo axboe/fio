@@ -16,5 +16,3 @@ Known issues/TODO (for steady-state)
   ss->head is advanced to point to the second element in the buffer. if
   steady state is attained upon adding a new element, ss->head is not
   advanced so it actually does point to the head of the buffer.
-
-- Update man page (HOWTO already done)
