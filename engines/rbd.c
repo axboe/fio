@@ -595,7 +595,12 @@ static int fio_rbd_setup(struct thread_data *td)
 	if (r < 0) {
 		log_err("rbd_status failed.\n");
 		goto disconnect;
+	} else if (info.size == 0) {
+		log_err("image size should be larger than zero.\n");
+		r = -EINVAL;
+		goto disconnect;
 	}
+
 	dprint(FD_IO, "rbd-engine: image size: %lu\n", info.size);
 
 	/* taken from "net" engine. Pretend we deal with files,
