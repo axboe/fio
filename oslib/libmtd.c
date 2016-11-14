@@ -1116,6 +1116,7 @@ static int legacy_auto_oob_layout(const struct mtd_dev_info *mtd, int fd,
 		len = mtd->oob_size - start;
 		memcpy(oob + start, tmp_buf + start, len);
 	}
+	free(tmp_buf);
 
 	return 0;
 }
