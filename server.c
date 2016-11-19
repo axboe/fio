@@ -912,11 +912,11 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 		je->files_open		= cpu_to_le32(je->files_open);
 
 		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-			je->m_rate[i]	= cpu_to_le32(je->m_rate[i]);
-			je->t_rate[i]	= cpu_to_le32(je->t_rate[i]);
+			je->m_rate[i]	= cpu_to_le64(je->m_rate[i]);
+			je->t_rate[i]	= cpu_to_le64(je->t_rate[i]);
 			je->m_iops[i]	= cpu_to_le32(je->m_iops[i]);
 			je->t_iops[i]	= cpu_to_le32(je->t_iops[i]);
-			je->rate[i]	= cpu_to_le32(je->rate[i]);
+			je->rate[i]	= cpu_to_le64(je->rate[i]);
 			je->iops[i]	= cpu_to_le32(je->iops[i]);
 		}
 

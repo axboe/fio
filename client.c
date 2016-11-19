@@ -1135,11 +1135,11 @@ static void convert_jobs_eta(struct jobs_eta *je)
 	je->files_open		= le32_to_cpu(je->files_open);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		je->m_rate[i]	= le32_to_cpu(je->m_rate[i]);
-		je->t_rate[i]	= le32_to_cpu(je->t_rate[i]);
+		je->m_rate[i]	= le64_to_cpu(je->m_rate[i]);
+		je->t_rate[i]	= le64_to_cpu(je->t_rate[i]);
 		je->m_iops[i]	= le32_to_cpu(je->m_iops[i]);
 		je->t_iops[i]	= le32_to_cpu(je->t_iops[i]);
-		je->rate[i]	= le32_to_cpu(je->rate[i]);
+		je->rate[i]	= le64_to_cpu(je->rate[i]);
 		je->iops[i]	= le32_to_cpu(je->iops[i]);
 	}
 
