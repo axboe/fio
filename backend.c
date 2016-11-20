@@ -1864,8 +1864,8 @@ static void dump_td_info(struct thread_data *td)
 /*
  * Run over the job map and reap the threads that have exited, if any.
  */
-static void reap_threads(unsigned int *nr_running, unsigned int *t_rate,
-			 unsigned int *m_rate)
+static void reap_threads(unsigned int *nr_running, uint64_t *t_rate,
+			 uint64_t *m_rate)
 {
 	struct thread_data *td;
 	unsigned int cputhreads, realthreads, pending;
@@ -2103,7 +2103,8 @@ static bool waitee_running(struct thread_data *me)
 static void run_threads(struct sk_out *sk_out)
 {
 	struct thread_data *td;
-	unsigned int i, todo, nr_running, m_rate, t_rate, nr_started;
+	unsigned int i, todo, nr_running, nr_started;
+	uint64_t m_rate, t_rate;
 	uint64_t spent;
 
 	if (fio_gtod_offload && fio_start_gtod_thread())

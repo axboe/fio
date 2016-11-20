@@ -269,10 +269,10 @@ struct thread_data {
 	 * Rate state
 	 */
 	uint64_t rate_bps[DDIR_RWDIR_CNT];
-	unsigned long rate_next_io_time[DDIR_RWDIR_CNT];
+	uint64_t rate_next_io_time[DDIR_RWDIR_CNT];
 	unsigned long rate_bytes[DDIR_RWDIR_CNT];
 	unsigned long rate_blocks[DDIR_RWDIR_CNT];
-	unsigned long rate_io_issue_bytes[DDIR_RWDIR_CNT];
+	unsigned long long rate_io_issue_bytes[DDIR_RWDIR_CNT];
 	struct timeval lastrate[DDIR_RWDIR_CNT];
 	int64_t last_usec;
 	struct frand_state poisson_state;

@@ -131,8 +131,8 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 		}
 
 		o->rwmix[i] = le32_to_cpu(top->rwmix[i]);
-		o->rate[i] = le32_to_cpu(top->rate[i]);
-		o->ratemin[i] = le32_to_cpu(top->ratemin[i]);
+		o->rate[i] = le64_to_cpu(top->rate[i]);
+		o->ratemin[i] = le64_to_cpu(top->ratemin[i]);
 		o->rate_iops[i] = le32_to_cpu(top->rate_iops[i]);
 		o->rate_iops_min[i] = le32_to_cpu(top->rate_iops_min[i]);
 
@@ -505,8 +505,8 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 		}
 
 		top->rwmix[i] = cpu_to_le32(o->rwmix[i]);
-		top->rate[i] = cpu_to_le32(o->rate[i]);
-		top->ratemin[i] = cpu_to_le32(o->ratemin[i]);
+		top->rate[i] = cpu_to_le64(o->rate[i]);
+		top->ratemin[i] = cpu_to_le64(o->ratemin[i]);
 		top->rate_iops[i] = cpu_to_le32(o->rate_iops[i]);
 		top->rate_iops_min[i] = cpu_to_le32(o->rate_iops_min[i]);
 

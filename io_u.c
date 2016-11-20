@@ -659,7 +659,8 @@ int io_u_quiesce(struct thread_data *td)
 static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 {
 	enum fio_ddir odir = ddir ^ 1;
-	long usec, now;
+	long usec;
+	uint64_t now;
 
 	assert(ddir_rw(ddir));
 	now = utime_since_now(&td->start);

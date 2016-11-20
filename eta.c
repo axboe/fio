@@ -235,7 +235,7 @@ static unsigned long thread_eta(struct thread_data *td)
 			|| td->runstate == TD_SETTING_UP
 			|| td->runstate == TD_RAMP
 			|| td->runstate == TD_PRE_READING) {
-		int t_eta = 0, r_eta = 0;
+		int64_t t_eta = 0, r_eta = 0;
 		unsigned long long rate_bytes;
 
 		/*
@@ -285,7 +285,7 @@ static unsigned long thread_eta(struct thread_data *td)
 
 static void calc_rate(int unified_rw_rep, unsigned long mtime,
 		      unsigned long long *io_bytes,
-		      unsigned long long *prev_io_bytes, unsigned int *rate)
+		      unsigned long long *prev_io_bytes, uint64_t *rate)
 {
 	int i;
 
@@ -341,7 +341,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 {
 	struct thread_data *td;
 	int i, unified_rw_rep;
-	unsigned long rate_time, disp_time, bw_avg_time, *eta_secs;
+	uint64_t rate_time, disp_time, bw_avg_time, *eta_secs;
 	unsigned long long io_bytes[DDIR_RWDIR_CNT];
 	unsigned long long io_iops[DDIR_RWDIR_CNT];
 	struct timeval now;
@@ -367,8 +367,8 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 	if (!ddir_rw_sum(disp_io_bytes))
 		fill_start_time(&disp_prev_time);
 
-	eta_secs = malloc(thread_number * sizeof(unsigned long));
-	memset(eta_secs, 0, thread_number * sizeof(unsigned long));
+	eta_secs = malloc(thread_number * sizeof(uint64_t));
+	memset(eta_secs, 0, thread_number * sizeof(uint64_t));
 
 	je->elapsed_sec = (mtime_since_genesis() + 999) / 1000;
 
