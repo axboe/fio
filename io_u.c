@@ -659,7 +659,8 @@ int io_u_quiesce(struct thread_data *td)
 static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 {
 	enum fio_ddir odir = ddir ^ 1;
-	long usec, now;
+	long usec;
+	uint64_t now;
 
 	assert(ddir_rw(ddir));
 	now = utime_since_now(&td->start);
@@ -683,7 +684,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 
 		/*
 		 * Both directions are ahead of rate. sleep the min
-		 * switch if necissary
+		 * switch if necessary
 		 */
 		if (td->rate_next_io_time[ddir] <=
 			td->rate_next_io_time[odir]) {
