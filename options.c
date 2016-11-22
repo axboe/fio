@@ -1099,7 +1099,7 @@ static int str_steadystate_cb(void *data, const char *str)
 		if (parse_dryrun())
 			return 0;
 
-		td->o.ss_pct = true;
+		td->o.ss |= __FIO_SS_PCT;
 		td->o.ss_limit.u.f = val;
 	} else if (td->o.ss & __FIO_SS_IOPS) {
 		if (!str_to_float(nr, &val, 0)) {
@@ -1113,9 +1113,7 @@ static int str_steadystate_cb(void *data, const char *str)
 		if (parse_dryrun())
 			return 0;
 
-		td->o.ss_pct = false;
 		td->o.ss_limit.u.f = val;
-
 	} else {	/* bandwidth criterion */
 		if (str_to_decimal(nr, &ll, 1, td, 0, 0)) {
 			log_err("fio: steadystate BW threshold postfix parsing failed\n");
@@ -1128,9 +1126,7 @@ static int str_steadystate_cb(void *data, const char *str)
 		if (parse_dryrun())
 			return 0;
 
-		td->o.ss_pct = false;
 		td->o.ss_limit.u.f = (double) ll;
-
 	}
 
 	td->ss.state = td->o.ss;

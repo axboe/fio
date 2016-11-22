@@ -1269,7 +1269,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 			ss->state & __FIO_SS_IOPS ? "iops" : "bw",
 			ss->state & __FIO_SS_SLOPE ? "_slope" : "",
 			(float) ss->limit,
-			ss->pct ? "%" : "");
+			ss->state & __FIO_SS_PCT ? "%" : "");
 
 		tmp = json_create_object();
 		json_object_add_value_object(root, "steadystate", tmp);
@@ -1278,7 +1278,8 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		json_object_add_value_int(tmp, "steadystate_ramptime", ss->ramp_time / 1000000L);
 		json_object_add_value_int(tmp, "attained", (ss->state & __FIO_SS_ATTAINED) > 0);
 
-		snprintf(ss_buf, sizeof(ss_buf), "%f%s", (float) ss->criterion, ss->pct ? "%" : "");
+		snprintf(ss_buf, sizeof(ss_buf), "%f%s", (float) ss->criterion,
+			ss->state & __FIO_SS_PCT ? "%" : "");
 		json_object_add_value_string(tmp, "criterion", ss_buf);
 		json_object_add_value_float(tmp, "max_deviation", ss->deviation);
 		json_object_add_value_float(tmp, "slope", ss->slope);

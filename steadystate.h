@@ -16,7 +16,6 @@ struct steadystate_data {
 	double limit;
 	unsigned long long dur;
 	unsigned long long ramp_time;
-	bool pct;
 
 	unsigned int state;
 
@@ -47,6 +46,7 @@ enum {
 	__FIO_SS_ATTAINED	= 8,
 	__FIO_SS_RAMP_OVER	= 16,
 	__FIO_SS_DATA		= 32,
+	__FIO_SS_PCT		= 64,
 
 	FIO_SS_IOPS		= __FIO_SS_IOPS,
 	FIO_SS_IOPS_SLOPE	= __FIO_SS_IOPS | __FIO_SS_SLOPE,

@@ -215,7 +215,6 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->ss_dur = le64_to_cpu(top->ss_dur);
 	o->ss_ramp_time = le64_to_cpu(top->ss_ramp_time);
 	o->ss = le32_to_cpu(top->ss);
-	o->ss_pct = le32_to_cpu(top->ss_pct);
 	o->ss_limit.u.f = fio_uint64_to_double(le64_to_cpu(top->ss_limit.u.i));
 	o->zone_range = le64_to_cpu(top->zone_range);
 	o->zone_size = le64_to_cpu(top->zone_size);
@@ -521,7 +520,6 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->ss_dur = __cpu_to_le64(top->ss_dur);
 	top->ss_ramp_time = __cpu_to_le64(top->ss_ramp_time);
 	top->ss = cpu_to_le32(top->ss);
-	top->ss_pct = cpu_to_le32(top->ss_pct);
 	top->ss_limit.u.i = __cpu_to_le64(fio_double_to_uint64(o->ss_limit.u.f));
 	top->zone_range = __cpu_to_le64(o->zone_range);
 	top->zone_size = __cpu_to_le64(o->zone_size);

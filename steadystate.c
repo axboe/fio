@@ -107,7 +107,7 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 		 */
 		ss->slope = (ss->sum_xy - (double) ss->sum_x * ss->sum_y / ss->dur) /
 				(ss->sum_x_sq - (double) ss->sum_x * ss->sum_x / ss->dur);
-		if (ss->pct)
+		if (ss->state & __FIO_SS_PCT)
 			ss->criterion = 100.0 * ss->slope / (ss->sum_y / ss->dur);
 		else
 			ss->criterion = ss->slope;
@@ -172,7 +172,7 @@ static bool steadystate_deviation(unsigned long iops, unsigned long bw,
 			ss->deviation = max(ss->deviation, diff * (diff < 0.0 ? -1.0 : 1.0));
 		}
 
-		if (ss->pct)
+		if (ss->state & __FIO_SS_PCT)
 			ss->criterion = 100.0 * ss->deviation / mean;
 		else
 			ss->criterion = ss->deviation;
@@ -311,7 +311,6 @@ int td_steadystate_init(struct thread_data *td)
 		ss->dur = o->ss_dur;
 		ss->limit = o->ss_limit.u.f;
 		ss->ramp_time = o->ss_ramp_time;
-		ss->pct = o->ss_pct;
 
 		ss->state = o->ss;
 		if (!td->ss.ramp_time)
@@ -331,7 +330,6 @@ int td_steadystate_init(struct thread_data *td)
 			if (ss2->dur != ss->dur ||
 			    ss2->limit != ss->limit ||
 			    ss2->ramp_time != ss->ramp_time ||
-			    ss2->pct != ss->pct ||
 			    ss2->state != ss->state ||
 			    ss2->sum_x != ss->sum_x ||
 			    ss2->sum_x_sq != ss->sum_x_sq) {
