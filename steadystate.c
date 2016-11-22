@@ -43,7 +43,7 @@ void steadystate_setup(void)
 
 		if (prev_groupid != td->groupid) {
 			if (prev_td != NULL) {
-				prev_td->ss.state |= __FIO_SS_LAST;
+				prev_td->ss.state |= __FIO_SS_DATA;
 				steadystate_alloc(prev_td);
 			}
 			prev_groupid = td->groupid;
@@ -52,7 +52,7 @@ void steadystate_setup(void)
 	}
 
 	if (prev_td != NULL && prev_td->o.group_reporting) {
-		prev_td->ss.state |= __FIO_SS_LAST;
+		prev_td->ss.state |= __FIO_SS_DATA;
 		steadystate_alloc(prev_td);
 	}
 }
@@ -257,7 +257,7 @@ void steadystate_check(void)
 		ss->prev_iops = td_iops;
 		ss->prev_bytes = td_bytes;
 
-		if (td->o.group_reporting && !(ss->state & __FIO_SS_LAST))
+		if (td->o.group_reporting && !(ss->state & __FIO_SS_DATA))
 			continue;
 
 		/*
