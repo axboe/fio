@@ -657,6 +657,34 @@ static void show_block_infos(int nr_block_infos, uint32_t *block_infos,
 			 i == BLOCK_STATE_COUNT - 1 ? '\n' : ',');
 }
 
+static void show_ss_normal(struct thread_stat *ts, struct buf_output *out)
+{
+	char *p1, *p2;
+	struct steadystate_data *ss = ts->ss;
+	unsigned long long bw_mean, iops_mean;
+	const int i2p = is_power_of_2(ts->kb_base);
+
+	if (!ss->state)
+		return;
+
+	bw_mean = steadystate_bw_mean(ss);
+	iops_mean = steadystate_iops_mean(ss);
+
+	p1 = num2str(bw_mean / ts->kb_base, 6, ts->kb_base, i2p, ts->unit_base);
+	p2 = num2str(iops_mean, 6, 1, 0, 0);
+
+	log_buf(out, "  steadystate  : attained=%s, bw=%s/s, iops=%s, %s%s=%.3f%s\n",
+		ss->state & __FIO_SS_ATTAINED ? "yes" : "no",
+		p1, p2,
+		ss->state & __FIO_SS_IOPS ? "iops" : "bw",
+		ss->state & __FIO_SS_SLOPE ? " slope": " mean dev",
+		ss->criterion,
+		ss->state & __FIO_SS_PCT ? "%" : "");
+
+	free(p1);
+	free(p2);
+}
+
 static void show_thread_status_normal(struct thread_stat *ts,
 				      struct group_run_stats *rs,
 				      struct buf_output *out)
@@ -761,6 +789,9 @@ static void show_thread_status_normal(struct thread_stat *ts,
 	if (ts->nr_block_infos)
 		show_block_infos(ts->nr_block_infos, ts->block_infos,
 				  ts->percentile_list, out);
+
+	if (ts->ss)
+		show_ss_normal(ts, out);
 }
 
 static void show_ddir_status_terse(struct thread_stat *ts,
@@ -1255,13 +1286,10 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		}
 	}
 
-	/* steady state detection; move this behind json+? */
 	if (ts->ss) {
 		struct json_object *data;
 		struct json_array *iops, *bw;
 		struct steadystate_data *ss = ts->ss;
-		unsigned long long sum_iops, sum_bw;
-		double mean_iops, mean_bw;
 		int i, j, k;
 		char ss_buf[64];
 
@@ -1299,17 +1327,13 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 			j = ss->head;
 		else
 			j = ss->head == 0 ? ss->dur - 1 : ss->head - 1;
-		for (i = 0, sum_iops = 0, sum_bw = 0; i < ss->dur; i++) {
+		for (i = 0; i < ss->dur; i++) {
 			k = (j + i) % ss->dur;
-			sum_bw += ss->bw_data[k];
-			sum_iops += ss->iops_data[k];
 			json_array_add_value_int(bw, ss->bw_data[k]);
 			json_array_add_value_int(iops, ss->iops_data[k]);
 		}
-		mean_bw = (double) sum_bw / ss->dur;
-		mean_iops = (double) sum_iops / ss->dur;
-		json_object_add_value_float(data, "bw_mean", mean_bw);
-		json_object_add_value_float(data, "iops_mean", mean_iops);
+		json_object_add_value_int(data, "bw_mean", steadystate_bw_mean(ss));
+		json_object_add_value_int(data, "iops_mean", steadystate_iops_mean(ss));
 		json_object_add_value_array(data, "iops", iops);
 		json_object_add_value_array(data, "bw", bw);
 	}

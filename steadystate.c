@@ -38,6 +38,7 @@ void steadystate_setup(void)
 
 		if (!td->o.group_reporting) {
 			steadystate_alloc(td);
+			td->ss.state |= __FIO_SS_DATA;
 			continue;
 		}
 
@@ -340,4 +341,26 @@ int td_steadystate_init(struct thread_data *td)
 	}
 
 	return 0;
+}
+
+unsigned long long steadystate_bw_mean(struct steadystate_data *ss)
+{
+	int i;
+	unsigned long long sum;
+
+	for (i = 0, sum = 0; i < ss->dur; i++)
+		sum += ss->bw_data[i];
+
+	return sum / ss->dur;
+}
+
+unsigned long long steadystate_iops_mean(struct steadystate_data *ss)
+{
+	int i;
+	unsigned long long sum;
+
+	for (i = 0, sum = 0; i < ss->dur; i++)
+		sum += ss->iops_data[i];
+
+	return sum / ss->dur;
 }

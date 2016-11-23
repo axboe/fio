@@ -6,6 +6,8 @@
 extern void steadystate_check(void);
 extern void steadystate_setup(void);
 extern int td_steadystate_init(struct thread_data *);
+extern unsigned long long steadystate_bw_mean(struct steadystate_data *);
+extern unsigned long long steadystate_iops_mean(struct steadystate_data *);
 
 extern bool steadystate_enabled;
 
