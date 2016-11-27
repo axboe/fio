@@ -225,7 +225,11 @@ static unsigned long thread_eta(struct thread_data *td)
 			}
 		}
 
-		eta_sec = (unsigned long) (elapsed * (1.0 / perc)) - elapsed;
+		if (perc == 0.0) {
+			eta_sec = timeout;
+		} else {
+			eta_sec = (unsigned long) (elapsed * (1.0 / perc)) - elapsed;
+		}
 
 		if (td->o.timeout &&
 		    eta_sec > (timeout + done_secs - elapsed))
@@ -247,7 +251,10 @@ static unsigned long thread_eta(struct thread_data *td)
 			uint64_t start_delay = td->o.start_delay;
 			uint64_t ramp_time = td->o.ramp_time;
 
-			t_eta = __timeout + start_delay + ramp_time;
+			t_eta = __timeout + start_delay;
+			if (!td->ramp_time_over) {
+				t_eta += ramp_time;
+			}
 			t_eta /= 1000000ULL;
 
 			if ((td->runstate == TD_RAMP) && in_ramp_time(td)) {
