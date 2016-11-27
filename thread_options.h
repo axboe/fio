@@ -251,8 +251,8 @@ struct thread_options {
 	char *exec_prerun;
 	char *exec_postrun;
 
-	unsigned int rate[DDIR_RWDIR_CNT];
-	unsigned int ratemin[DDIR_RWDIR_CNT];
+	uint64_t rate[DDIR_RWDIR_CNT];
+	uint64_t ratemin[DDIR_RWDIR_CNT];
 	unsigned int ratecycle;
 	unsigned int io_submit_mode;
 	unsigned int rate_iops[DDIR_RWDIR_CNT];
@@ -516,8 +516,8 @@ struct thread_options_pack {
 	uint8_t exec_prerun[FIO_TOP_STR_MAX];
 	uint8_t exec_postrun[FIO_TOP_STR_MAX];
 
-	uint32_t rate[DDIR_RWDIR_CNT];
-	uint32_t ratemin[DDIR_RWDIR_CNT];
+	uint64_t rate[DDIR_RWDIR_CNT];
+	uint64_t ratemin[DDIR_RWDIR_CNT];
 	uint32_t ratecycle;
 	uint32_t io_submit_mode;
 	uint32_t rate_iops[DDIR_RWDIR_CNT];

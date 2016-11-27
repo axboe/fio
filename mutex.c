@@ -162,7 +162,7 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int msecs)
 	t.tv_nsec = tv_s.tv_usec * 1000;
 
 	t.tv_sec += msecs / 1000;
-	t.tv_nsec += ((msecs * 1000000) % 1000000000);
+	t.tv_nsec += ((msecs * 1000000ULL) % 1000000000);
 	if (t.tv_nsec >= 1000000000) {
 		t.tv_nsec -= 1000000000;
 		t.tv_sec++;
