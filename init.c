@@ -1679,7 +1679,7 @@ static int is_empty_or_comment(char *line)
 /*
  * This is our [ini] type file parser.
  */
-int __parse_jobs_ini(struct thread_data *td,
+static int __parse_jobs_ini(struct thread_data *td,
 		char *file, int is_buf, int stonewall_flag, int type,
 		int nested, char *name, char ***popts, int *aopts, int *nopts)
 {

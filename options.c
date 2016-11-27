@@ -22,7 +22,7 @@ char client_sockaddr_str[INET6_ADDRSTRLEN] = { 0 };
 
 #define cb_data_to_td(data)	container_of(data, struct thread_data, o)
 
-struct pattern_fmt_desc fmt_desc[] = {
+static struct pattern_fmt_desc fmt_desc[] = {
 	{
 		.fmt   = "%o",
 		.len   = FIELD_SIZE(struct io_u *, offset),

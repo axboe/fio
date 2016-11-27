@@ -123,7 +123,7 @@ struct group_run_stats {
 #define BLOCK_INFO_STATE(block_info)		\
 	((block_info) >> BLOCK_INFO_STATE_SHIFT)
 #define BLOCK_INFO(state, trim_cycles)	\
-	((trim_cycles) | ((state) << BLOCK_INFO_STATE_SHIFT))
+	((trim_cycles) | ((unsigned int) (state) << BLOCK_INFO_STATE_SHIFT))
 #define BLOCK_INFO_SET_STATE(block_info, state)	\
 	BLOCK_INFO(state, BLOCK_INFO_TRIMS(block_info))
 enum block_info_state {
