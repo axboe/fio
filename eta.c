@@ -259,9 +259,16 @@ static unsigned long thread_eta(struct thread_data *td)
 					t_eta -= ramp_left;
 			}
 		}
-		rate_bytes = ddir_rw_sum(td->o.rate);
+		rate_bytes = 0;
+		if (td_read(td))
+			rate_bytes  = td->o.rate[DDIR_READ];
+		if (td_write(td))
+			rate_bytes += td->o.rate[DDIR_WRITE];
+		if (td_trim(td))
+			rate_bytes += td->o.rate[DDIR_TRIM];
+
 		if (rate_bytes) {
-			r_eta = (bytes_total / 1024) / rate_bytes;
+			r_eta = bytes_total / rate_bytes;
 			r_eta += (td->o.start_delay / 1000000ULL);
 		}
 
