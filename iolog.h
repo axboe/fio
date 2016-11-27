@@ -24,15 +24,21 @@ struct io_hist {
 	struct flist_head list;
 };
 
+
+union io_sample_data {
+	uint64_t val;
+	struct io_u_plat_entry *plat_entry;
+};
+
+#define sample_val(value) ((union io_sample_data) { .val = value })
+#define sample_plat(plat) ((union io_sample_data) { .plat_entry = plat })
+
 /*
  * A single data sample
  */
 struct io_sample {
 	uint64_t time;
-	union {
-		uint64_t val;
-		struct io_u_plat_entry *plat_entry;
-	};
+	union io_sample_data data;
 	uint32_t __ddir;
 	uint32_t bs;
 };

@@ -1276,7 +1276,7 @@ static void client_flush_hist_samples(FILE *f, int hist_coarseness, void *sample
 		s = (struct io_sample *)((char *)__get_sample(samples, log_offset, i) +
 			i * sizeof(struct io_u_plat_entry));
 
-		entry = s->plat_entry;
+		entry = s->data.plat_entry;
 		io_u_plat = entry->io_u_plat;
 
 		fprintf(f, "%lu, %u, %u, ", (unsigned long) s->time,
@@ -1552,7 +1552,7 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
 			s = (struct io_sample *)((void *)s + sizeof(struct io_u_plat_entry) * i);
 
 		s->time		= le64_to_cpu(s->time);
-		s->val		= le64_to_cpu(s->val);
+		s->data.val	= le64_to_cpu(s->data.val);
 		s->__ddir	= le32_to_cpu(s->__ddir);
 		s->bs		= le32_to_cpu(s->bs);
 
@@ -1563,9 +1563,9 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
 		}
 
 		if (ret->log_type == IO_LOG_TYPE_HIST) {
-			s->plat_entry = (struct io_u_plat_entry *)(((void *)s) + sizeof(*s));
-			s->plat_entry->list.next = NULL;
-			s->plat_entry->list.prev = NULL;
+			s->data.plat_entry = (struct io_u_plat_entry *)(((void *)s) + sizeof(*s));
+			s->data.plat_entry->list.next = NULL;
+			s->data.plat_entry->list.prev = NULL;
 		}
 	}
 

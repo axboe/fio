@@ -1730,7 +1730,7 @@ static int __fio_append_iolog_gz_hist(struct sk_entry *first, struct io_log *log
 		/* Do the subtraction on server side so that client doesn't have to
 		 * reconstruct our linked list from packets.
 		 */
-		cur_plat_entry  = s->plat_entry;
+		cur_plat_entry  = s->data.plat_entry;
 		prev_plat_entry = flist_first_entry(&cur_plat_entry->list, struct io_u_plat_entry, list);
 		cur_plat  = cur_plat_entry->io_u_plat;
 		prev_plat = prev_plat_entry->io_u_plat;
@@ -1934,7 +1934,7 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 			struct io_sample *s = get_sample(log, cur_log, i);
 
 			s->time		= cpu_to_le64(s->time);
-			s->val		= cpu_to_le64(s->val);
+			s->data.val	= cpu_to_le64(s->data.val);
 			s->__ddir	= cpu_to_le32(s->__ddir);
 			s->bs		= cpu_to_le32(s->bs);
 

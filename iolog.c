@@ -720,7 +720,7 @@ static void flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
 	for (i = 0; i < nr_samples; i++) {
 		s = __get_sample(samples, log_offset, i);
 
-		entry = (struct io_u_plat_entry *) (uintptr_t) s->val;
+		entry = s->data.plat_entry;
 		io_u_plat = entry->io_u_plat;
 
 		entry_before = flist_first_entry(&entry->list, struct io_u_plat_entry, list);
@@ -759,16 +759,16 @@ void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 		s = __get_sample(samples, log_offset, i);
 
 		if (!log_offset) {
-			fprintf(f, "%lu, %lu, %u, %u\n",
+			fprintf(f, "%lu, %" PRId64 ", %u, %u\n",
 					(unsigned long) s->time,
-					(unsigned long) s->val,
+					s->data.val,
 					io_sample_ddir(s), s->bs);
 		} else {
 			struct io_sample_offset *so = (void *) s;
 
-			fprintf(f, "%lu, %lu, %u, %u, %llu\n",
+			fprintf(f, "%lu, %" PRId64 ", %u, %u, %llu\n",
 					(unsigned long) s->time,
-					(unsigned long) s->val,
+					s->data.val,
 					io_sample_ddir(s), s->bs,
 					(unsigned long long) so->offset);
 		}

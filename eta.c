@@ -482,9 +482,9 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 		calc_rate(unified_rw_rep, rate_time, io_bytes, rate_io_bytes,
 				je->rate);
 		memcpy(&rate_prev_time, &now, sizeof(now));
-		add_agg_sample(je->rate[DDIR_READ], DDIR_READ, 0);
-		add_agg_sample(je->rate[DDIR_WRITE], DDIR_WRITE, 0);
-		add_agg_sample(je->rate[DDIR_TRIM], DDIR_TRIM, 0);
+		add_agg_sample(sample_val(je->rate[DDIR_READ]), DDIR_READ, 0);
+		add_agg_sample(sample_val(je->rate[DDIR_WRITE]), DDIR_WRITE, 0);
+		add_agg_sample(sample_val(je->rate[DDIR_TRIM]), DDIR_TRIM, 0);
 	}
 
 	disp_time = mtime_since(&disp_prev_time, &now);
