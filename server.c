@@ -1546,7 +1546,6 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.ss_dur		= cpu_to_le64(ts->ss_dur);
 	p.ts.ss_state		= cpu_to_le32(ts->ss_state);
 	p.ts.ss_head		= cpu_to_le32(ts->ss_head);
-	p.ts.ss_sum_y		= cpu_to_le64(ts->ss_sum_y);
 	p.ts.ss_limit.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_limit.u.f));
 	p.ts.ss_slope.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_slope.u.f));
 	p.ts.ss_deviation.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_deviation.u.f));

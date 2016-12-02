@@ -950,7 +950,6 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->ss_dur		= le64_to_cpu(src->ss_dur);
 	dst->ss_state		= le32_to_cpu(src->ss_state);
 	dst->ss_head		= le32_to_cpu(src->ss_head);
-	dst->ss_sum_y		= le64_to_cpu(src->ss_sum_y);
 	dst->ss_limit.u.f 	= fio_uint64_to_double(le64_to_cpu(src->ss_limit.u.i));
 	dst->ss_slope.u.f 	= fio_uint64_to_double(le64_to_cpu(src->ss_slope.u.i));
 	dst->ss_deviation.u.f 	= fio_uint64_to_double(le64_to_cpu(src->ss_deviation.u.i));

@@ -217,7 +217,6 @@ struct thread_stat {
 	uint64_t ss_dur;
 	uint32_t ss_state;
 	uint32_t ss_head;
-	uint64_t ss_sum_y;
 
 	uint64_t *ss_iops_data;
 	uint64_t *ss_bw_data;

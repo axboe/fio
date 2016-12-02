@@ -73,21 +73,21 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 	else
 		new_val = bw;
 
-	if (ss->tail < ss->head || (ss->tail - ss->head == ss->dur - 1)) {
-		if (ss->sum_y == 0) {	/* first time through */
-			for(i = 0; i < ss->dur; i++) {
+	if (ss->state & __FIO_SS_BUFFER_FULL || ss->tail - ss->head == ss->dur - 1) {
+		if (!(ss->state & __FIO_SS_BUFFER_FULL)) {
+			/* first time through */
+			for(i = 0, ss->sum_y = 0; i < ss->dur; i++) {
 				if (ss->state & __FIO_SS_IOPS)
 					ss->sum_y += ss->iops_data[i];
 				else
 					ss->sum_y += ss->bw_data[i];
-				j = ss->head + i;
-				if (j >= ss->dur)
-					j -= ss->dur;
+				j = (ss->head + i) % ss->dur;
 				if (ss->state & __FIO_SS_IOPS)
 					ss->sum_xy += i * ss->iops_data[j];
 				else
 					ss->sum_xy += i * ss->bw_data[j];
 			}
+			ss->state |= __FIO_SS_BUFFER_FULL;
 		} else {		/* easy to update the sums */
 			ss->sum_y -= ss->oldest_y;
 			ss->sum_y += new_val;
@@ -141,13 +141,15 @@ static bool steadystate_deviation(unsigned long iops, unsigned long bw,
 	ss->bw_data[ss->tail] = bw;
 	ss->iops_data[ss->tail] = iops;
 
-	if (ss->tail < ss->head || (ss->tail - ss->head == ss->dur - 1)) {
-		if (ss->sum_y == 0) {	/* first time through */
-			for(i = 0; i < ss->dur; i++)
+	if (ss->state & __FIO_SS_BUFFER_FULL || ss->tail - ss->head == ss->dur - 1) {
+		if (!(ss->state & __FIO_SS_BUFFER_FULL)) {
+			/* first time through */
+			for(i = 0, ss->sum_y = 0; i < ss->dur; i++)
 				if (ss->state & __FIO_SS_IOPS)
 					ss->sum_y += ss->iops_data[i];
 				else
 					ss->sum_y += ss->bw_data[i];
+			ss->state |= __FIO_SS_BUFFER_FULL;
 		} else {		/* easy to update the sum */
 			ss->sum_y -= ss->oldest_y;
 			if (ss->state & __FIO_SS_IOPS)

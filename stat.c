@@ -1320,7 +1320,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		** otherwise it actually points to the second element
 		** in the list
 		*/
-		if ((ts->ss_state & __FIO_SS_ATTAINED) || ts->ss_sum_y == 0)
+		if ((ts->ss_state & __FIO_SS_ATTAINED) || !(ts->ss_state & __FIO_SS_BUFFER_FULL))
 			j = ts->ss_head;
 		else
 			j = ts->ss_head == 0 ? ts->ss_dur - 1 : ts->ss_head - 1;
@@ -1663,7 +1663,6 @@ void __show_run_stats(void)
 			ts->ss_state = td->ss.state;
 			ts->ss_dur = td->ss.dur;
 			ts->ss_head = td->ss.head;
-			ts->ss_sum_y = td->ss.sum_y;
 			ts->ss_bw_data = td->ss.bw_data;
 			ts->ss_iops_data = td->ss.iops_data;
 			ts->ss_limit.u.f = td->ss.limit;
