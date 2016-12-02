@@ -1,34 +1,33 @@
 #ifndef FIO_STEADYSTATE_H
 #define FIO_STEADYSTATE_H
 
+#include "stat.h"
 #include "thread_options.h"
+#include "lib/ieee754.h"
 
 extern void steadystate_check(void);
 extern void steadystate_setup(void);
 extern int td_steadystate_init(struct thread_data *);
-extern unsigned long long steadystate_bw_mean(struct steadystate_data *);
-extern unsigned long long steadystate_iops_mean(struct steadystate_data *);
+extern unsigned long long steadystate_bw_mean(struct thread_stat *);
+extern unsigned long long steadystate_iops_mean(struct thread_stat *);
 
 extern bool steadystate_enabled;
 
-/*
- * For steady state detection
- */
 struct steadystate_data {
 	double limit;
 	unsigned long long dur;
 	unsigned long long ramp_time;
 
-	unsigned int state;
+	uint32_t state;
 
 	unsigned int head;
 	unsigned int tail;
-	unsigned long *iops_data;
-	unsigned long *bw_data;
+	uint64_t *iops_data;
+	uint64_t *bw_data;
 
 	double slope;
-	double criterion;
 	double deviation;
+	double criterion;
 
 	unsigned long long sum_y;
 	unsigned long long sum_x;

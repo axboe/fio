@@ -1,7 +1,5 @@
 Known issues/TODO (for steady-state)
 
-- Does not work over a network connection
-
 - Allow user to specify the frequency of measurements
 
 - Better documentation for output

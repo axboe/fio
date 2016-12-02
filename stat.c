@@ -660,26 +660,25 @@ static void show_block_infos(int nr_block_infos, uint32_t *block_infos,
 static void show_ss_normal(struct thread_stat *ts, struct buf_output *out)
 {
 	char *p1, *p2;
-	struct steadystate_data *ss = ts->ss;
 	unsigned long long bw_mean, iops_mean;
 	const int i2p = is_power_of_2(ts->kb_base);
 
-	if (!ss->state)
+	if (!ts->ss_state)
 		return;
 
-	bw_mean = steadystate_bw_mean(ss);
-	iops_mean = steadystate_iops_mean(ss);
+	bw_mean = steadystate_bw_mean(ts);
+	iops_mean = steadystate_iops_mean(ts);
 
 	p1 = num2str(bw_mean / ts->kb_base, 6, ts->kb_base, i2p, ts->unit_base);
 	p2 = num2str(iops_mean, 6, 1, 0, 0);
 
 	log_buf(out, "  steadystate  : attained=%s, bw=%s/s, iops=%s, %s%s=%.3f%s\n",
-		ss->state & __FIO_SS_ATTAINED ? "yes" : "no",
+		ts->ss_state & __FIO_SS_ATTAINED ? "yes" : "no",
 		p1, p2,
-		ss->state & __FIO_SS_IOPS ? "iops" : "bw",
-		ss->state & __FIO_SS_SLOPE ? " slope": " mean dev",
-		ss->criterion,
-		ss->state & __FIO_SS_PCT ? "%" : "");
+		ts->ss_state & __FIO_SS_IOPS ? "iops" : "bw",
+		ts->ss_state & __FIO_SS_SLOPE ? " slope": " mean dev",
+		ts->ss_criterion.u.f,
+		ts->ss_state & __FIO_SS_PCT ? "%" : "");
 
 	free(p1);
 	free(p2);
@@ -790,7 +789,7 @@ static void show_thread_status_normal(struct thread_stat *ts,
 		show_block_infos(ts->nr_block_infos, ts->block_infos,
 				  ts->percentile_list, out);
 
-	if (ts->ss)
+	if (ts->ss_dur)
 		show_ss_normal(ts, out);
 }
 
@@ -1286,31 +1285,29 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		}
 	}
 
-	if (ts->ss) {
+	if (ts->ss_dur) {
 		struct json_object *data;
 		struct json_array *iops, *bw;
-		struct steadystate_data *ss = ts->ss;
 		int i, j, k;
 		char ss_buf[64];
 
 		snprintf(ss_buf, sizeof(ss_buf), "%s%s:%f%s",
-			ss->state & __FIO_SS_IOPS ? "iops" : "bw",
-			ss->state & __FIO_SS_SLOPE ? "_slope" : "",
-			(float) ss->limit,
-			ss->state & __FIO_SS_PCT ? "%" : "");
+			ts->ss_state & __FIO_SS_IOPS ? "iops" : "bw",
+			ts->ss_state & __FIO_SS_SLOPE ? "_slope" : "",
+			(float) ts->ss_limit.u.f,
+			ts->ss_state & __FIO_SS_PCT ? "%" : "");
 
 		tmp = json_create_object();
 		json_object_add_value_object(root, "steadystate", tmp);
 		json_object_add_value_string(tmp, "ss", ss_buf);
-		json_object_add_value_int(tmp, "duration", (int)ss->dur);
-		json_object_add_value_int(tmp, "steadystate_ramptime", ss->ramp_time / 1000000L);
-		json_object_add_value_int(tmp, "attained", (ss->state & __FIO_SS_ATTAINED) > 0);
+		json_object_add_value_int(tmp, "duration", (int)ts->ss_dur);
+		json_object_add_value_int(tmp, "attained", (ts->ss_state & __FIO_SS_ATTAINED) > 0);
 
-		snprintf(ss_buf, sizeof(ss_buf), "%f%s", (float) ss->criterion,
-			ss->state & __FIO_SS_PCT ? "%" : "");
+		snprintf(ss_buf, sizeof(ss_buf), "%f%s", (float) ts->ss_criterion.u.f,
+			ts->ss_state & __FIO_SS_PCT ? "%" : "");
 		json_object_add_value_string(tmp, "criterion", ss_buf);
-		json_object_add_value_float(tmp, "max_deviation", ss->deviation);
-		json_object_add_value_float(tmp, "slope", ss->slope);
+		json_object_add_value_float(tmp, "max_deviation", ts->ss_deviation.u.f);
+		json_object_add_value_float(tmp, "slope", ts->ss_slope.u.f);
 
 		data = json_create_object();
 		json_object_add_value_object(tmp, "data", data);
@@ -1323,17 +1320,17 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		** otherwise it actually points to the second element
 		** in the list
 		*/
-		if ((ss->state & __FIO_SS_ATTAINED) || ss->sum_y == 0)
-			j = ss->head;
+		if ((ts->ss_state & __FIO_SS_ATTAINED) || ts->ss_sum_y == 0)
+			j = ts->ss_head;
 		else
-			j = ss->head == 0 ? ss->dur - 1 : ss->head - 1;
-		for (i = 0; i < ss->dur; i++) {
-			k = (j + i) % ss->dur;
-			json_array_add_value_int(bw, ss->bw_data[k]);
-			json_array_add_value_int(iops, ss->iops_data[k]);
+			j = ts->ss_head == 0 ? ts->ss_dur - 1 : ts->ss_head - 1;
+		for (i = 0; i < ts->ss_dur; i++) {
+			k = (j + i) % ts->ss_dur;
+			json_array_add_value_int(bw, ts->ss_bw_data[k]);
+			json_array_add_value_int(iops, ts->ss_iops_data[k]);
 		}
-		json_object_add_value_int(data, "bw_mean", steadystate_bw_mean(ss));
-		json_object_add_value_int(data, "iops_mean", steadystate_iops_mean(ss));
+		json_object_add_value_int(data, "bw_mean", steadystate_bw_mean(ts));
+		json_object_add_value_int(data, "iops_mean", steadystate_iops_mean(ts));
 		json_object_add_value_array(data, "iops", iops);
 		json_object_add_value_array(data, "bw", bw);
 	}
@@ -1662,10 +1659,20 @@ void __show_run_stats(void)
 
 		sum_thread_stats(ts, &td->ts, idx == 1);
 
-		if (td->o.ss_dur)
-			ts->ss = &td->ss;
+		if (td->o.ss_dur) {
+			ts->ss_state = td->ss.state;
+			ts->ss_dur = td->ss.dur;
+			ts->ss_head = td->ss.head;
+			ts->ss_sum_y = td->ss.sum_y;
+			ts->ss_bw_data = td->ss.bw_data;
+			ts->ss_iops_data = td->ss.iops_data;
+			ts->ss_limit.u.f = td->ss.limit;
+			ts->ss_slope.u.f = td->ss.slope;
+			ts->ss_deviation.u.f = td->ss.deviation;
+			ts->ss_criterion.u.f = td->ss.criterion;
+		}
 		else
-			ts->ss = NULL;
+			ts->ss_dur = ts->ss_state = 0;
 	}
 
 	for (i = 0; i < nr_ts; i++) {

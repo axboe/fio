@@ -10,11 +10,13 @@ static void steadystate_alloc(struct thread_data *td)
 {
 	int i;
 
-	td->ss.bw_data = malloc(td->ss.dur * sizeof(unsigned long));
-	td->ss.iops_data = malloc(td->ss.dur * sizeof(unsigned long));
+	td->ss.bw_data = malloc(td->ss.dur * sizeof(uint64_t));
+	td->ss.iops_data = malloc(td->ss.dur * sizeof(uint64_t));
 	/* initialize so that it is obvious if the cache is not full in the output */
 	for (i = 0; i < td->ss.dur; i++)
 		td->ss.iops_data[i] = td->ss.bw_data[i] = 0;
+
+	td->ss.state |= __FIO_SS_DATA;
 }
 
 void steadystate_setup(void)
@@ -33,18 +35,16 @@ void steadystate_setup(void)
 	prev_groupid = -1;
 	prev_td = NULL;
 	for_each_td(td, i) {
-		if (td->ts.ss == NULL)
+		if (!td->ss.dur)
 			continue;
 
 		if (!td->o.group_reporting) {
 			steadystate_alloc(td);
-			td->ss.state |= __FIO_SS_DATA;
 			continue;
 		}
 
 		if (prev_groupid != td->groupid) {
 			if (prev_td != NULL) {
-				prev_td->ss.state |= __FIO_SS_DATA;
 				steadystate_alloc(prev_td);
 			}
 			prev_groupid = td->groupid;
@@ -53,7 +53,6 @@ void steadystate_setup(void)
 	}
 
 	if (prev_td != NULL && prev_td->o.group_reporting) {
-		prev_td->ss.state |= __FIO_SS_DATA;
 		steadystate_alloc(prev_td);
 	}
 }
@@ -319,8 +318,6 @@ int td_steadystate_init(struct thread_data *td)
 
 		ss->sum_x = o->ss_dur * (o->ss_dur - 1) / 2;
 		ss->sum_x_sq = (o->ss_dur - 1) * (o->ss_dur) * (2*o->ss_dur - 1) / 6;
-
-		td->ts.ss = ss;
 	}
 
 	/* make sure that ss options are consistent within reporting group */
@@ -343,24 +340,24 @@ int td_steadystate_init(struct thread_data *td)
 	return 0;
 }
 
-unsigned long long steadystate_bw_mean(struct steadystate_data *ss)
+unsigned long long steadystate_bw_mean(struct thread_stat *ts)
 {
 	int i;
 	unsigned long long sum;
 
-	for (i = 0, sum = 0; i < ss->dur; i++)
-		sum += ss->bw_data[i];
+	for (i = 0, sum = 0; i < ts->ss_dur; i++)
+		sum += ts->ss_bw_data[i];
 
-	return sum / ss->dur;
+	return sum / ts->ss_dur;
 }
 
-unsigned long long steadystate_iops_mean(struct steadystate_data *ss)
+unsigned long long steadystate_iops_mean(struct thread_stat *ts)
 {
 	int i;
 	unsigned long long sum;
 
-	for (i = 0, sum = 0; i < ss->dur; i++)
-		sum += ss->iops_data[i];
+	for (i = 0, sum = 0; i < ts->ss_dur; i++)
+		sum += ts->ss_iops_data[i];
 
-	return sum / ss->dur;
+	return sum / ts->ss_dur;
 }
