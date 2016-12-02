@@ -653,6 +653,9 @@ int io_u_quiesce(struct thread_data *td)
 			completed += ret;
 	}
 
+	if (td->flags & TD_F_REGROW_LOGS)
+		regrow_logs(td);
+
 	return completed;
 }
 

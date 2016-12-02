@@ -441,11 +441,8 @@ static int wait_for_completions(struct thread_data *td, struct timeval *time)
 	int min_evts = 0;
 	int ret;
 
-	if (td->flags & TD_F_REGROW_LOGS) {
-		ret = io_u_quiesce(td);
-		regrow_logs(td);
-		return ret;
-	}
+	if (td->flags & TD_F_REGROW_LOGS)
+		return io_u_quiesce(td);
 
 	/*
 	 * if the queue is full, we MUST reap at least 1 event
