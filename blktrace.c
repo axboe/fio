@@ -221,7 +221,7 @@ static void ipo_bytes_align(struct thread_options *o, struct io_piece *ipo)
 	if (!o->replay_align)
 		return;
 
-	ipo->offset &= ~(o->replay_align - 1);
+	ipo->offset &= ~(o->replay_align - (uint64_t)1);
 }
 
 
