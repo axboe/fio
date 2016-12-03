@@ -269,6 +269,14 @@ static inline bool inline_log(struct io_log *log)
 		log->log_type == IO_LOG_TYPE_SLAT;
 }
 
+static inline void ipo_bytes_align(unsigned int replay_align, struct io_piece *ipo)
+{
+	if (replay_align)
+		return;
+
+	ipo->offset &= ~(replay_align - (uint64_t)1);
+}
+
 extern void finalize_logs(struct thread_data *td, bool);
 extern void setup_log(struct io_log **, struct log_params *, const char *);
 extern void flush_log(struct io_log *, bool);

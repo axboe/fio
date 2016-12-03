@@ -454,7 +454,12 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 		if (rw == DDIR_WAIT) {
 			ipo->delay = offset;
 		} else {
-			ipo->offset = offset;
+			if (td->o.replay_scale)
+				ipo->offset = offset / td->o.replay_scale;
+			else
+				ipo->offset = offset;
+			ipo_bytes_align(td->o.replay_align, ipo);
+
 			ipo->len = bytes;
 			if (rw != DDIR_INVAL && bytes > td->o.max_bs[rw])
 				td->o.max_bs[rw] = bytes;
