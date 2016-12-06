@@ -218,13 +218,20 @@ struct thread_stat {
 	uint32_t ss_state;
 	uint32_t ss_head;
 
-	uint64_t *ss_iops_data;
-	uint64_t *ss_bw_data;
-
 	fio_fp64_t ss_limit;
 	fio_fp64_t ss_slope;
 	fio_fp64_t ss_deviation;
 	fio_fp64_t ss_criterion;
+
+	union {
+		uint64_t *ss_iops_data;
+		uint64_t pad3;
+	};
+
+	union {
+		uint64_t *ss_bw_data;
+		uint64_t pad4;
+	};
 } __attribute__((packed));
 
 struct jobs_eta {
