@@ -136,6 +136,7 @@ exit_val=0
 gfio_check="no"
 libhdfs="no"
 pmemblk="no"
+devdax="no"
 disable_lex=""
 prefix=/usr/local
 
@@ -174,6 +175,8 @@ for opt do
   ;;
   --enable-pmemblk) pmemblk="yes"
   ;;
+  --enable-devdax) devdax="yes"
+  ;;
   --disable-lex) disable_lex="yes"
   ;;
   --enable-lex) disable_lex="no"
@@ -205,6 +208,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-gfapi        Disable gfapi"
   echo "--enable-libhdfs       Enable hdfs support"
   echo "--enable-pmemblk       Enable NVML libpmemblk support"
+  echo "--enable-devdax        Enable NVM Device Dax support"
   echo "--disable-lex          Disable use of lex/yacc for math"
   echo "--enable-lex           Enable use of lex/yacc for math"
   echo "--disable-shm          Disable SHM support"
@@ -1566,6 +1570,10 @@ echo "MTD                           $mtd"
 # Report whether pmemblk engine is enabled
 echo "NVML libpmemblk engine        $pmemblk"
 
+##########################################
+# Report whether dev-dax engine is enabled
+echo "NVM Device Dax engine        $devdax"
+
 # Check if we have lex/yacc available
 yacc="no"
 yacc_is_bison="no"
@@ -1916,6 +1924,9 @@ if test "$mtd" = "yes" ; then
 fi
 if test "$pmemblk" = "yes" ; then
   output_sym "CONFIG_PMEMBLK"
+fi
+if test "$devdax" = "yes" ; then
+  output_sym "CONFIG_LINUX_DEVDAX"
 fi
 if test "$arith" = "yes" ; then
   output_sym "CONFIG_ARITHMETIC"
