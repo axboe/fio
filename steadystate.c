@@ -57,13 +57,13 @@ void steadystate_setup(void)
 	}
 }
 
-static bool steadystate_slope(unsigned long iops, unsigned long bw,
+static bool steadystate_slope(uint64_t iops, uint64_t bw,
 			      struct thread_data *td)
 {
 	int i, j;
 	double result;
 	struct steadystate_data *ss = &td->ss;
-	unsigned long new_val;
+	uint64_t new_val;
 
 	ss->bw_data[ss->tail] = bw;
 	ss->iops_data[ss->tail] = iops;
@@ -114,8 +114,9 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 
 		dprint(FD_STEADYSTATE, "sum_y: %llu, sum_xy: %llu, slope: %f, "
 					"criterion: %f, limit: %f\n",
-					ss->sum_y, ss->sum_xy, ss->slope,
-					ss->criterion, ss->limit);
+					(unsigned long long) ss->sum_y,
+					(unsigned long long) ss->sum_xy,
+					ss->slope, ss->criterion, ss->limit);
 
 		result = ss->criterion * (ss->criterion < 0.0 ? -1.0 : 1.0);
 		if (result < ss->limit)
@@ -129,7 +130,7 @@ static bool steadystate_slope(unsigned long iops, unsigned long bw,
 	return false;
 }
 
-static bool steadystate_deviation(unsigned long iops, unsigned long bw,
+static bool steadystate_deviation(uint64_t iops, uint64_t bw,
 				  struct thread_data *td)
 {
 	int i;
@@ -181,8 +182,8 @@ static bool steadystate_deviation(unsigned long iops, unsigned long bw,
 
 		dprint(FD_STEADYSTATE, "sum_y: %llu, mean: %f, max diff: %f, "
 					"objective: %f, limit: %f\n",
-					ss->sum_y, mean, ss->deviation,
-					ss->criterion, ss->limit);
+					(unsigned long long) ss->sum_y, mean,
+					ss->deviation, ss->criterion, ss->limit);
 
 		if (ss->criterion < ss->limit)
 			return true;
@@ -201,9 +202,8 @@ void steadystate_check(void)
 	unsigned long rate_time;
 	struct thread_data *td, *td2;
 	struct timeval now;
-	unsigned long group_bw = 0, group_iops = 0;
-	unsigned long long td_iops;
-	unsigned long long td_bytes;
+	uint64_t group_bw = 0, group_iops = 0;
+	uint64_t td_iops, td_bytes;
 	bool ret;
 
 	prev_groupid = -1;
@@ -271,9 +271,11 @@ void steadystate_check(void)
 
 		dprint(FD_STEADYSTATE, "steadystate_check() thread: %d, "
 					"groupid: %u, rate_msec: %ld, "
-					"iops: %lu, bw: %lu, head: %d, tail: %d\n",
-					i, td->groupid, rate_time, group_iops,
-					group_bw, ss->head, ss->tail);
+					"iops: %llu, bw: %llu, head: %d, tail: %d\n",
+					i, td->groupid, rate_time,
+					(unsigned long long) group_iops,
+					(unsigned long long) group_bw,
+					ss->head, ss->tail);
 
 		if (td->o.ss & __FIO_SS_SLOPE)
 			ret = steadystate_slope(group_iops, group_bw, td);
@@ -342,10 +344,10 @@ int td_steadystate_init(struct thread_data *td)
 	return 0;
 }
 
-unsigned long long steadystate_bw_mean(struct thread_stat *ts)
+uint64_t steadystate_bw_mean(struct thread_stat *ts)
 {
 	int i;
-	unsigned long long sum;
+	uint64_t sum;
 
 	for (i = 0, sum = 0; i < ts->ss_dur; i++)
 		sum += ts->ss_bw_data[i];
@@ -353,10 +355,10 @@ unsigned long long steadystate_bw_mean(struct thread_stat *ts)
 	return sum / ts->ss_dur;
 }
 
-unsigned long long steadystate_iops_mean(struct thread_stat *ts)
+uint64_t steadystate_iops_mean(struct thread_stat *ts)
 {
 	int i;
-	unsigned long long sum;
+	uint64_t sum;
 
 	for (i = 0, sum = 0; i < ts->ss_dur; i++)
 		sum += ts->ss_iops_data[i];

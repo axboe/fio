@@ -8,8 +8,8 @@
 extern void steadystate_check(void);
 extern void steadystate_setup(void);
 extern int td_steadystate_init(struct thread_data *);
-extern unsigned long long steadystate_bw_mean(struct thread_stat *);
-extern unsigned long long steadystate_iops_mean(struct thread_stat *);
+extern uint64_t steadystate_bw_mean(struct thread_stat *);
+extern uint64_t steadystate_iops_mean(struct thread_stat *);
 
 extern bool steadystate_enabled;
 
@@ -29,15 +29,15 @@ struct steadystate_data {
 	double deviation;
 	double criterion;
 
-	unsigned long long sum_y;
-	unsigned long long sum_x;
-	unsigned long long sum_x_sq;
-	unsigned long long sum_xy;
-	unsigned long long oldest_y;
+	uint64_t sum_y;
+	uint64_t sum_x;
+	uint64_t sum_x_sq;
+	uint64_t sum_xy;
+	uint64_t oldest_y;
 
 	struct timeval prev_time;
-	unsigned long long prev_iops;
-	unsigned long long prev_bytes;
+	uint64_t prev_iops;
+	uint64_t prev_bytes;
 };
 
 enum {
