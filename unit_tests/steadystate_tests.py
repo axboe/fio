@@ -20,6 +20,7 @@
 
 import os
 import json
+import pprint
 import tempfile
 import argparse
 import subprocess
@@ -67,6 +68,8 @@ def check(data, iops, slope, pct, limit, dur, criterion):
 
 if __name__ == '__main__':
     args = parse_args()
+
+    pp = pprint.PrettyPrinter(indent=4)
 
 #
 # test option parsing
@@ -163,12 +166,12 @@ if __name__ == '__main__':
                             dur=suite[jobnum]['ss_dur'],
                             criterion=job['steadystate']['criterion'])
                         if not objsame:
-                            line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1}, data: {2} '.format(job['steadystate']['criterion'], target, job['steadystate'])
+                            line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1} '.format(job['steadystate']['criterion'], target)
                         else:
                             if met:
-                                line = 'PASSED ' + line + ' target {0} < limit {1}, data {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate'])
+                                line = 'PASSED ' + line + ' target {0} < limit {1}'.format(target, suite[jobnum]['ss_limit'])
                             else:
-                                line = 'FAILED ' + line + ' target {0} < limit {1} but fio reports ss not attained, data: {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate'])
+                                line = 'FAILED ' + line + ' target {0} < limit {1} but fio reports ss not attained '.format(target, suite[jobnum]['ss_limit'])
                 else:
                     # check runtime, confirm criterion calculation, and confirm that criterion was not met
                     expected = suite[jobnum]['timeout'] * 1000
@@ -186,14 +189,14 @@ if __name__ == '__main__':
                             criterion=job['steadystate']['criterion'])
                         if not objsame:
                             if actual > (suite[jobnum]['ss_dur'] + suite[jobnum]['ss_ramp'])*1000:
-                                line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1}, data: {2} '.format(job['steadystate']['criterion'], target, job['steadystate'])
+                                line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1} '.format(job['steadystate']['criterion'], target)
                             else:
-                                line = 'PASSED ' + line + ' fio criterion {0} == 0.0 since ss_dur + ss_ramp has not elapsed, data: {1} '.format(job['steadystate']['criterion'], job['steadystate'])
+                                line = 'PASSED ' + line + ' fio criterion {0} == 0.0 since ss_dur + ss_ramp has not elapsed '.format(job['steadystate']['criterion'])
                         else:
                             if met:
-                                line = 'FAILED ' + line + ' target {0} < threshold {1} but fio reports ss not attained, data: {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate'])
+                                line = 'FAILED ' + line + ' target {0} < threshold {1} but fio reports ss not attained '.format(target, suite[jobnum]['ss_limit'])
                             else:
-                                line = 'PASSED ' + line + ' criterion {0} > threshold {1}, data {2}'.format(target, suite[jobnum]['ss_limit'], job['steadystate'])
+                                line = 'PASSED ' + line + ' criterion {0} > threshold {1}'.format(target, suite[jobnum]['ss_limit'])
             else:
                 expected = suite[jobnum]['timeout'] * 1000
                 actual = job['read']['runtime']
@@ -203,5 +206,7 @@ if __name__ == '__main__':
                     result = 'FAILED '
                 line = result + line + ' no ss, expected runtime {0} ~= actual runtime {1}'.format(expected, actual)
             print line
+            if 'steadystate' in job:
+                pp.pprint(job['steadystate'])
             jobnum += 1
         suitenum += 1
