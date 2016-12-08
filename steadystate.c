@@ -278,7 +278,7 @@ void steadystate_check(void)
 					(unsigned long long) group_bw,
 					ss->head, ss->tail);
 
-		if (td->o.ss & __FIO_SS_SLOPE)
+		if (ss->state & __FIO_SS_SLOPE)
 			ret = steadystate_slope(group_iops, group_bw, td);
 		else
 			ret = steadystate_deviation(group_iops, group_bw, td);
@@ -317,7 +317,7 @@ int td_steadystate_init(struct thread_data *td)
 		ss->limit = o->ss_limit.u.f;
 		ss->ramp_time = o->ss_ramp_time;
 
-		ss->state = o->ss;
+		ss->state = o->ss_state;
 		if (!td->ss.ramp_time)
 			ss->state |= __FIO_SS_RAMP_OVER;
 
