@@ -663,7 +663,7 @@ static void show_ss_normal(struct thread_stat *ts, struct buf_output *out)
 	unsigned long long bw_mean, iops_mean;
 	const int i2p = is_power_of_2(ts->kb_base);
 
-	if (!ts->ss_state)
+	if (!ts->ss_dur)
 		return;
 
 	bw_mean = steadystate_bw_mean(ts);

@@ -211,7 +211,8 @@ void steadystate_check(void)
 		struct steadystate_data *ss = &td->ss;
 
 		if (!ss->dur || td->runstate <= TD_SETTING_UP ||
-		    td->runstate >= TD_EXITED || (ss->state & __FIO_SS_ATTAINED))
+		    td->runstate >= TD_EXITED || !ss->state ||
+		    ss->state & __FIO_SS_ATTAINED)
 			continue;
 
 		td_iops = 0;
