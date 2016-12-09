@@ -12,8 +12,8 @@
 #
 # KNOWN ISSUES
 # only option parsing and read tests are carried out
-# the read test fails when ss_ramp > timeout because it tries to calculate the stopping criterion and finds that
-#     it does not match what fio reports
+# On Windows this script works under Cygwin but not from cmd.exe
+# On Windows I encounter frequent fio problems generating JSON output (nothing to decode)
 # min runtime:
 # if ss attained: min runtime = ss_dur + ss_ramp
 # if not attained: runtime = timeout
@@ -21,9 +21,8 @@
 import os
 import sys
 import json
+import uuid
 import pprint
-import tempfile
-import platform
 import argparse
 import subprocess
 from scipy import stats
@@ -107,118 +106,117 @@ if __name__ == '__main__':
 # if ss inactive
 #   check that runtime is what was specified
 #
-    reads = [ [ {'s': True, 'timeout': 100, 'numjobs': 1, 'ss_dur': 5, 'ss_ramp': 3, 'iops': True, 'slope': True, 'ss_limit': 0.1, 'pct': True},
-                {'s': False, 'timeout': 20, 'numjobs': 2},
-                {'s': True, 'timeout': 100, 'numjobs': 3, 'ss_dur': 10, 'ss_ramp': 5, 'iops': False, 'slope': True, 'ss_limit': 0.1, 'pct': True},
-                {'s': True, 'timeout': 10, 'numjobs': 3, 'ss_dur': 10, 'ss_ramp': 500, 'iops': False, 'slope': True, 'ss_limit': 0.1, 'pct': True} ],
+    reads = [ {'s': True, 'timeout': 100, 'numjobs': 1, 'ss_dur': 5, 'ss_ramp': 3, 'iops': True, 'slope': True, 'ss_limit': 0.1, 'pct': True},
+              {'s': False, 'timeout': 20, 'numjobs': 2},
+              {'s': True, 'timeout': 100, 'numjobs': 3, 'ss_dur': 10, 'ss_ramp': 5, 'iops': False, 'slope': True, 'ss_limit': 0.1, 'pct': True},
+              {'s': True, 'timeout': 10, 'numjobs': 3, 'ss_dur': 10, 'ss_ramp': 500, 'iops': False, 'slope': True, 'ss_limit': 0.1, 'pct': True},
             ]
 
-    accum = []
-    suitenum = 0
-    for suite in reads:
-        jobnum = 0
-        for job in suite:
-            if args.read == None:
-                if os.name == 'posix':
-                    args.read = '/dev/zero'
-                    parameters = [ "--size=128M" ]
-                else:
-                    print "ERROR: file for read testing must be specified on non-posix systems"
-                    sys.exit(1)
-            else:
-                parameters = []
+    if args.read == None:
+        if os.name == 'posix':
+            args.read = '/dev/zero'
+            extra = [ "--size=128M" ]
+        else:
+            print "ERROR: file for read testing must be specified on non-posix systems"
+            sys.exit(1)
+    else:
+        extra = []
 
-            parameters.extend([ "--name=job{0}".format(jobnum),
-                                "--thread",
-                                "--filename={0}".format(args.read),
-                                "--rw=randrw", "--rwmixread=100", "--stonewall",
-                                "--group_reporting", "--numjobs={0}".format(job['numjobs']),
-                                "--time_based", "--runtime={0}".format(job['timeout']) ])
-            if job['s']:
-               if job['iops']:
-                   ss = 'iops'
-               else:
-                   ss = 'bw'
-               if job['slope']:
-                   ss += "_slope"
-               ss += ":" + str(job['ss_limit'])
-               if job['pct']:
-                   ss += '%'
-               parameters.extend([ '--ss_dur={0}'.format(job['ss_dur']),
-                                   '--ss={0}'.format(ss),
-                                   '--ss_ramp={0}'.format(job['ss_ramp']) ])
-            accum.extend(parameters)
-            jobnum += 1
+    jobnum = 0
+    for job in reads:
 
-        tf = tempfile.NamedTemporaryFile(delete=False)
-	tf.close()
-        output = subprocess.check_output([args.fio,
-                                          "--output-format=json",
-                                          "--output={0}".format(tf.name)] + accum)
-        with open(tf.name, 'r') as source:
+        tf = uuid.uuid4().hex
+        parameters = [ "--name=job{0}".format(jobnum) ]
+        parameters.extend(extra)
+        parameters.extend([ "--thread",
+                            "--output-format=json",
+                            "--output={0}".format(tf),
+                            "--filename={0}".format(args.read),
+                            "--rw=randrw",
+                            "--rwmixread=100",
+                            "--stonewall",
+                            "--group_reporting",
+                            "--numjobs={0}".format(job['numjobs']),
+                            "--time_based",
+                            "--runtime={0}".format(job['timeout']) ])
+        if job['s']:
+           if job['iops']:
+               ss = 'iops'
+           else:
+               ss = 'bw'
+           if job['slope']:
+               ss += "_slope"
+           ss += ":" + str(job['ss_limit'])
+           if job['pct']:
+               ss += '%'
+           parameters.extend([ '--ss_dur={0}'.format(job['ss_dur']),
+                               '--ss={0}'.format(ss),
+                               '--ss_ramp={0}'.format(job['ss_ramp']) ])
+
+        output = subprocess.call([args.fio] + parameters)
+        with open(tf, 'r') as source:
             jsondata = json.loads(source.read())
-        os.remove(tf.name)
-        jobnum = 0
-        for job in jsondata['jobs']:
-            line = "suite {0}, {1}".format(suitenum, job['job options']['name'])
-            if suite[jobnum]['s']:
-                if job['steadystate']['attained'] == 1:
+        os.remove(tf)
+
+        for jsonjob in jsondata['jobs']:
+            line = "job {0}".format(jsonjob['job options']['name'])
+            if job['s']:
+                if jsonjob['steadystate']['attained'] == 1:
                     # check runtime >= ss_dur + ss_ramp, check criterion, check criterion < limit
-                    mintime = (suite[jobnum]['ss_dur'] + suite[jobnum]['ss_ramp']) * 1000
-                    actual = job['read']['runtime']
+                    mintime = (job['ss_dur'] + job['ss_ramp']) * 1000
+                    actual = jsonjob['read']['runtime']
                     if mintime > actual:
-                        line = 'FAILED ' + line + ' ss attained, runtime {0} < ss_dur {1} + ss_ramp {2}'.format(actual, suite[jobnum]['ss_dur'], suite[jobnum]['ss_ramp'])
+                        line = 'FAILED ' + line + ' ss attained, runtime {0} < ss_dur {1} + ss_ramp {2}'.format(actual, job['ss_dur'], job['ss_ramp'])
                     else:
-                        line = line + ' ss attained, runtime {0} > ss_dur {1} + ss_ramp {2},'.format(actual, suite[jobnum]['ss_dur'], suite[jobnum]['ss_ramp'])
-                        objsame, met, mean, target = check(data=job['steadystate']['data'],
-                            iops=suite[jobnum]['iops'],
-                            slope=suite[jobnum]['slope'],
-                            pct=suite[jobnum]['pct'],
-                            limit=suite[jobnum]['ss_limit'],
-                            dur=suite[jobnum]['ss_dur'],
-                            criterion=job['steadystate']['criterion'])
+                        line = line + ' ss attained, runtime {0} > ss_dur {1} + ss_ramp {2},'.format(actual, job['ss_dur'], job['ss_ramp'])
+                        objsame, met, mean, target = check(data=jsonjob['steadystate']['data'],
+                            iops=job['iops'],
+                            slope=job['slope'],
+                            pct=job['pct'],
+                            limit=job['ss_limit'],
+                            dur=job['ss_dur'],
+                            criterion=jsonjob['steadystate']['criterion'])
                         if not objsame:
-                            line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1} '.format(job['steadystate']['criterion'], target)
+                            line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1} '.format(jsonjob['steadystate']['criterion'], target)
                         else:
                             if met:
-                                line = 'PASSED ' + line + ' target {0} < limit {1}'.format(target, suite[jobnum]['ss_limit'])
+                                line = 'PASSED ' + line + ' target {0} < limit {1}'.format(target, job['ss_limit'])
                             else:
-                                line = 'FAILED ' + line + ' target {0} < limit {1} but fio reports ss not attained '.format(target, suite[jobnum]['ss_limit'])
+                                line = 'FAILED ' + line + ' target {0} < limit {1} but fio reports ss not attained '.format(target, job['ss_limit'])
                 else:
                     # check runtime, confirm criterion calculation, and confirm that criterion was not met
-                    expected = suite[jobnum]['timeout'] * 1000
-                    actual = job['read']['runtime']
+                    expected = job['timeout'] * 1000
+                    actual = jsonjob['read']['runtime']
                     if abs(expected - actual) > 10:
                         line = 'FAILED ' + line + ' ss not attained, expected runtime {0} != actual runtime {1}'.format(expected, actual)
                     else:
-                        line = line + ' ss not attained, runtime {0} != ss_dur {1} + ss_ramp {2},'.format(actual, suite[jobnum]['ss_dur'], suite[jobnum]['ss_ramp'])
-                        objsame, met, mean, target = check(data=job['steadystate']['data'],
-                            iops=suite[jobnum]['iops'],
-                            slope=suite[jobnum]['slope'],
-                            pct=suite[jobnum]['pct'],
-                            limit=suite[jobnum]['ss_limit'],
-                            dur=suite[jobnum]['ss_dur'],
-                            criterion=job['steadystate']['criterion'])
+                        line = line + ' ss not attained, runtime {0} != ss_dur {1} + ss_ramp {2},'.format(actual, job['ss_dur'], job['ss_ramp'])
+                        objsame, met, mean, target = check(data=jsonjob['steadystate']['data'],
+                            iops=job['iops'],
+                            slope=job['slope'],
+                            pct=job['pct'],
+                            limit=job['ss_limit'],
+                            dur=job['ss_dur'],
+                            criterion=jsonjob['steadystate']['criterion'])
                         if not objsame:
-                            if actual > (suite[jobnum]['ss_dur'] + suite[jobnum]['ss_ramp'])*1000:
-                                line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1} '.format(job['steadystate']['criterion'], target)
+                            if actual > (job['ss_dur'] + job['ss_ramp'])*1000:
+                                line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1} '.format(jsonjob['steadystate']['criterion'], target)
                             else:
-                                line = 'PASSED ' + line + ' fio criterion {0} == 0.0 since ss_dur + ss_ramp has not elapsed '.format(job['steadystate']['criterion'])
+                                line = 'PASSED ' + line + ' fio criterion {0} == 0.0 since ss_dur + ss_ramp has not elapsed '.format(jsonjob['steadystate']['criterion'])
                         else:
                             if met:
-                                line = 'FAILED ' + line + ' target {0} < threshold {1} but fio reports ss not attained '.format(target, suite[jobnum]['ss_limit'])
+                                line = 'FAILED ' + line + ' target {0} < threshold {1} but fio reports ss not attained '.format(target, job['ss_limit'])
                             else:
-                                line = 'PASSED ' + line + ' criterion {0} > threshold {1}'.format(target, suite[jobnum]['ss_limit'])
+                                line = 'PASSED ' + line + ' criterion {0} > threshold {1}'.format(target, job['ss_limit'])
             else:
-                expected = suite[jobnum]['timeout'] * 1000
-                actual = job['read']['runtime']
+                expected = job['timeout'] * 1000
+                actual = jsonjob['read']['runtime']
                 if abs(expected - actual) < 10:
                     result = 'PASSED '
                 else:
                     result = 'FAILED '
                 line = result + line + ' no ss, expected runtime {0} ~= actual runtime {1}'.format(expected, actual)
             print line
-            if 'steadystate' in job:
-                pp.pprint(job['steadystate'])
-            jobnum += 1
-        suitenum += 1
+            if 'steadystate' in jsonjob:
+                pp.pprint(jsonjob['steadystate'])
+        jobnum += 1
