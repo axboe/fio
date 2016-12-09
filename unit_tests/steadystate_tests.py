@@ -19,9 +19,11 @@
 # if not attained: runtime = timeout
 
 import os
+import sys
 import json
 import pprint
 import tempfile
+import platform
 import argparse
 import subprocess
 from scipy import stats
@@ -30,9 +32,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('fio',
                         help='path to fio executable');
-    parser.add_argument('read',
+    parser.add_argument('--read',
                         help='target for read testing')
-    parser.add_argument('write',
+    parser.add_argument('--write',
                         help='target for write testing')
     args = parser.parse_args()
 
@@ -116,12 +118,22 @@ if __name__ == '__main__':
     for suite in reads:
         jobnum = 0
         for job in suite:
-            parameters = [ "--name=job{0}".format(jobnum),
-                           "--thread",
-                           "--filename={0}".format(args.read),
-                           "--rw=randrw", "--rwmixread=100", "--stonewall",
-                           "--group_reporting", "--numjobs={0}".format(job['numjobs']),
-                           "--time_based", "--runtime={0}".format(job['timeout']) ]
+            if args.read == None:
+                if os.name == 'posix':
+                    args.read = '/dev/zero'
+                    parameters = [ "--size=128M" ]
+                else:
+                    print "ERROR: file for read testing must be specified on non-posix systems"
+                    sys.exit(1)
+            else:
+                parameters = []
+
+            parameters.extend([ "--name=job{0}".format(jobnum),
+                                "--thread",
+                                "--filename={0}".format(args.read),
+                                "--rw=randrw", "--rwmixread=100", "--stonewall",
+                                "--group_reporting", "--numjobs={0}".format(job['numjobs']),
+                                "--time_based", "--runtime={0}".format(job['timeout']) ])
             if job['s']:
                if job['iops']:
                    ss = 'iops'
