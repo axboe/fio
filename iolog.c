@@ -109,6 +109,11 @@ static int ipo_special(struct thread_data *td, struct io_piece *ipo)
 
 	switch (ipo->file_action) {
 	case FIO_LOG_OPEN_FILE:
+		if (td->o.replay_redirect && fio_file_open(f)) {
+			dprint(FD_FILE, "iolog: ignoring re-open of file %s\n",
+					f->file_name);
+			break;
+		}
 		ret = td_io_open_file(td, f);
 		if (!ret)
 			break;
@@ -396,8 +401,14 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 		} else if (r == 2) {
 			rw = DDIR_INVAL;
 			if (!strcmp(act, "add")) {
-				fileno = add_file(td, fname, 0, 1);
-				file_action = FIO_LOG_ADD_FILE;
+				if (td->o.replay_redirect &&
+				    get_fileno(td, fname) != -1) {
+					dprint(FD_FILE, "iolog: ignoring"
+						" re-add of file %s\n", fname);
+				} else {
+					fileno = add_file(td, fname, 0, 1);
+					file_action = FIO_LOG_ADD_FILE;
+				}
 				continue;
 			} else if (!strcmp(act, "open")) {
 				fileno = get_fileno(td, fname);
