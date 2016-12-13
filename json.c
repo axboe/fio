@@ -40,7 +40,7 @@ static struct json_value *json_create_value_int(long long number)
 	return value;
 }
 
-static struct json_value *json_create_value_float(float number)
+static struct json_value *json_create_value_float(double number)
 {
 	struct json_value *value = malloc(sizeof(struct json_value));
 
