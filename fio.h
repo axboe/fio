@@ -270,10 +270,10 @@ struct thread_data {
 	 * Rate state
 	 */
 	uint64_t rate_bps[DDIR_RWDIR_CNT];
-	unsigned long rate_next_io_time[DDIR_RWDIR_CNT];
+	uint64_t rate_next_io_time[DDIR_RWDIR_CNT];
 	unsigned long rate_bytes[DDIR_RWDIR_CNT];
 	unsigned long rate_blocks[DDIR_RWDIR_CNT];
-	unsigned long rate_io_issue_bytes[DDIR_RWDIR_CNT];
+	unsigned long long rate_io_issue_bytes[DDIR_RWDIR_CNT];
 	struct timeval lastrate[DDIR_RWDIR_CNT];
 	int64_t last_usec;
 	struct frand_state poisson_state;
@@ -312,6 +312,7 @@ struct thread_data {
 
 	struct timeval start;	/* start of this loop */
 	struct timeval epoch;	/* time job was started */
+	unsigned long long unix_epoch; /* Time job was started, unix epoch based. */
 	struct timeval last_issue;
 	long time_offset;
 	struct timeval tv_cache;
@@ -454,7 +455,6 @@ extern int read_only;
 extern int eta_print;
 extern int eta_new_line;
 extern unsigned long done_secs;
-extern char *job_section;
 extern int fio_gtod_offload;
 extern int fio_gtod_cpu;
 extern enum fio_cs fio_clock_source;
@@ -479,7 +479,7 @@ static inline void fio_ro_check(const struct thread_data *td, struct io_u *io_u)
 	assert(!(io_u->ddir == DDIR_WRITE && !td_write(td)));
 }
 
-#define REAL_MAX_JOBS		2048
+#define REAL_MAX_JOBS		4096
 
 static inline int should_fsync(struct thread_data *td)
 {
@@ -517,7 +517,7 @@ extern void td_fill_verify_state_seed(struct thread_data *);
 extern void add_job_opts(const char **, int);
 extern char *num2str(uint64_t, int, int, int, int);
 extern int ioengine_load(struct thread_data *);
-extern int parse_dryrun(void);
+extern bool parse_dryrun(void);
 extern int fio_running_or_pending_io_threads(void);
 extern int fio_set_fd_nonblocking(int, const char *);
 extern void sig_show_status(int sig);
@@ -567,7 +567,8 @@ enum {
 
 static inline enum fio_ioengine_flags td_ioengine_flags(struct thread_data *td)
 {
-	return (td->flags >> TD_ENG_FLAG_SHIFT) & TD_ENG_FLAG_MASK;
+	return (enum fio_ioengine_flags)
+		((td->flags >> TD_ENG_FLAG_SHIFT) & TD_ENG_FLAG_MASK);
 }
 
 static inline void td_set_ioengine_flags(struct thread_data *td)
@@ -575,9 +576,10 @@ static inline void td_set_ioengine_flags(struct thread_data *td)
 	td->flags |= (td->io_ops->flags << TD_ENG_FLAG_SHIFT);
 }
 
-static inline bool td_ioengine_flagged(struct thread_data *td, unsigned int val)
+static inline bool td_ioengine_flagged(struct thread_data *td,
+				       enum fio_ioengine_flags flags)
 {
-	return ((td->flags >> TD_ENG_FLAG_SHIFT) & val) != 0;
+	return ((td->flags >> TD_ENG_FLAG_SHIFT) & flags) != 0;
 }
 
 extern void td_set_runstate(struct thread_data *, int);
@@ -589,7 +591,7 @@ extern const char *runstate_to_name(int runstate);
  * Allow 60 seconds for a job to quit on its own, otherwise reap with
  * a vengeance.
  */
-#define FIO_REAP_TIMEOUT	60
+#define FIO_REAP_TIMEOUT	300
 
 #define TERMINATE_ALL		(-1U)
 extern void fio_terminate_threads(unsigned int);
@@ -646,17 +648,17 @@ extern void lat_target_reset(struct thread_data *);
 	}	\
 } while (0)
 
-static inline int fio_fill_issue_time(struct thread_data *td)
+static inline bool fio_fill_issue_time(struct thread_data *td)
 {
 	if (td->o.read_iolog_file ||
 	    !td->o.disable_clat || !td->o.disable_slat || !td->o.disable_bw)
-		return 1;
+		return true;
 
-	return 0;
+	return false;
 }
 
-static inline int __should_check_rate(struct thread_data *td,
-				      enum fio_ddir ddir)
+static inline bool __should_check_rate(struct thread_data *td,
+				       enum fio_ddir ddir)
 {
 	struct thread_options *o = &td->o;
 
@@ -665,23 +667,21 @@ static inline int __should_check_rate(struct thread_data *td,
 	 */
 	if (o->rate[ddir] || o->ratemin[ddir] || o->rate_iops[ddir] ||
 	    o->rate_iops_min[ddir])
-		return 1;
+		return true;
 
-	return 0;
+	return false;
 }
 
-static inline int should_check_rate(struct thread_data *td)
+static inline bool should_check_rate(struct thread_data *td)
 {
-	int ret = 0;
+	if (td->bytes_done[DDIR_READ] && __should_check_rate(td, DDIR_READ))
+		return true;
+	if (td->bytes_done[DDIR_WRITE] && __should_check_rate(td, DDIR_WRITE))
+		return true;
+	if (td->bytes_done[DDIR_TRIM] && __should_check_rate(td, DDIR_TRIM))
+		return true;
 
-	if (td->bytes_done[DDIR_READ])
-		ret |= __should_check_rate(td, DDIR_READ);
-	if (td->bytes_done[DDIR_WRITE])
-		ret |= __should_check_rate(td, DDIR_WRITE);
-	if (td->bytes_done[DDIR_TRIM])
-		ret |= __should_check_rate(td, DDIR_TRIM);
-
-	return ret;
+	return false;
 }
 
 static inline unsigned int td_max_bs(struct thread_data *td)

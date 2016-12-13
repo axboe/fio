@@ -131,8 +131,8 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 		}
 
 		o->rwmix[i] = le32_to_cpu(top->rwmix[i]);
-		o->rate[i] = le32_to_cpu(top->rate[i]);
-		o->ratemin[i] = le32_to_cpu(top->ratemin[i]);
+		o->rate[i] = le64_to_cpu(top->rate[i]);
+		o->ratemin[i] = le64_to_cpu(top->ratemin[i]);
 		o->rate_iops[i] = le32_to_cpu(top->rate_iops[i]);
 		o->rate_iops_min[i] = le32_to_cpu(top->rate_iops_min[i]);
 
@@ -187,6 +187,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->log_offset = le32_to_cpu(top->log_offset);
 	o->log_gz = le32_to_cpu(top->log_gz);
 	o->log_gz_store = le32_to_cpu(top->log_gz_store);
+	o->log_unix_epoch = le32_to_cpu(top->log_unix_epoch);
 	o->norandommap = le32_to_cpu(top->norandommap);
 	o->softrandommap = le32_to_cpu(top->softrandommap);
 	o->bs_unaligned = le32_to_cpu(top->bs_unaligned);
@@ -283,6 +284,10 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->replay_align = le32_to_cpu(top->replay_align);
 	o->replay_scale = le32_to_cpu(top->replay_scale);
 	o->per_job_logs = le32_to_cpu(top->per_job_logs);
+	o->write_bw_log = le32_to_cpu(top->write_bw_log);
+	o->write_lat_log = le32_to_cpu(top->write_lat_log);
+	o->write_iops_log = le32_to_cpu(top->write_iops_log);
+	o->write_hist_log = le32_to_cpu(top->write_hist_log);
 
 	o->trim_backlog = le64_to_cpu(top->trim_backlog);
 	o->rate_process = le32_to_cpu(top->rate_process);
@@ -383,6 +388,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->log_offset = cpu_to_le32(o->log_offset);
 	top->log_gz = cpu_to_le32(o->log_gz);
 	top->log_gz_store = cpu_to_le32(o->log_gz_store);
+	top->log_unix_epoch = cpu_to_le32(o->log_unix_epoch);
 	top->norandommap = cpu_to_le32(o->norandommap);
 	top->softrandommap = cpu_to_le32(o->softrandommap);
 	top->bs_unaligned = cpu_to_le32(o->bs_unaligned);
@@ -462,6 +468,10 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->replay_align = cpu_to_le32(o->replay_align);
 	top->replay_scale = cpu_to_le32(o->replay_scale);
 	top->per_job_logs = cpu_to_le32(o->per_job_logs);
+	top->write_bw_log = cpu_to_le32(o->write_bw_log);
+	top->write_lat_log = cpu_to_le32(o->write_lat_log);
+	top->write_iops_log = cpu_to_le32(o->write_iops_log);
+	top->write_hist_log = cpu_to_le32(o->write_hist_log);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		top->bs[i] = cpu_to_le32(o->bs[i]);
@@ -499,8 +509,8 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 		}
 
 		top->rwmix[i] = cpu_to_le32(o->rwmix[i]);
-		top->rate[i] = cpu_to_le32(o->rate[i]);
-		top->ratemin[i] = cpu_to_le32(o->ratemin[i]);
+		top->rate[i] = cpu_to_le64(o->rate[i]);
+		top->ratemin[i] = cpu_to_le64(o->ratemin[i]);
 		top->rate_iops[i] = cpu_to_le32(o->rate_iops[i]);
 		top->rate_iops_min[i] = cpu_to_le32(o->rate_iops_min[i]);
 

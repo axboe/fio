@@ -298,6 +298,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 		td->io_issues[ddir]--;
 		td->io_issue_bytes[ddir] -= buflen;
 		td->rate_io_issue_bytes[ddir] -= buflen;
+		io_u_clear(td, io_u, IO_U_F_FLIGHT);
 	}
 
 	/*
@@ -483,7 +484,12 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 
 		if (ret) {
 			td_verror(td, ret, "fio_set_odirect");
-			log_err("fio: the file system does not seem to support direct IO\n");
+			if (ret == ENOTTY) { /* ENOTTY suggests RAW device or ZFS */
+				log_err("fio: doing directIO to RAW devices or ZFS not supported\n");
+			} else {
+				log_err("fio: the file system does not seem to support direct IO\n");
+			}
+
 			goto err;
 		}
 	}

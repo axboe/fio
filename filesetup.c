@@ -1098,7 +1098,7 @@ static int check_rand_gen_limits(struct thread_data *td, struct fio_file *f,
 	if (!fio_option_is_set(&td->o, random_generator)) {
 		log_info("fio: Switching to tausworthe64. Use the "
 			 "random_generator= option to get rid of this "
-			 " warning.\n");
+			 "warning.\n");
 		td->o.random_generator = FIO_RAND_GEN_TAUSWORTHE64;
 		return 0;
 	}
@@ -1242,31 +1242,35 @@ static void get_file_type(struct fio_file *f)
 	}
 }
 
-static int __is_already_allocated(const char *fname)
+static bool __is_already_allocated(const char *fname, bool set)
 {
 	struct flist_head *entry;
-	char *filename;
+	bool ret;
 
-	if (flist_empty(&filename_list))
-		return 0;
+	ret = file_bloom_exists(fname, set);
+	if (!ret)
+		return ret;
 
 	flist_for_each(entry, &filename_list) {
-		filename = flist_entry(entry, struct file_name, list)->filename;
+		struct file_name *fn;
 
-		if (strcmp(filename, fname) == 0)
-			return 1;
+		fn = flist_entry(entry, struct file_name, list);
+
+		if (!strcmp(fn->filename, fname))
+			return true;
 	}
 
-	return 0;
+	return false;
 }
 
-static int is_already_allocated(const char *fname)
+static bool is_already_allocated(const char *fname)
 {
-	int ret;
+	bool ret;
 
 	fio_file_hash_lock();
-	ret = __is_already_allocated(fname);
+	ret = __is_already_allocated(fname, false);
 	fio_file_hash_unlock();
+
 	return ret;
 }
 
@@ -1278,7 +1282,7 @@ static void set_already_allocated(const char *fname)
 	fn->filename = strdup(fname);
 
 	fio_file_hash_lock();
-	if (!__is_already_allocated(fname)) {
+	if (!__is_already_allocated(fname, true)) {
 		flist_add_tail(&fn->list, &filename_list);
 		fn = NULL;
 	}
@@ -1289,7 +1293,6 @@ static void set_already_allocated(const char *fname)
 		free(fn);
 	}
 }
-
 
 static void free_already_allocated(void)
 {
@@ -1316,7 +1319,6 @@ static struct fio_file *alloc_new_file(struct thread_data *td)
 
 	f = smalloc(sizeof(*f));
 	if (!f) {
-		log_err("fio: smalloc OOM\n");
 		assert(0);
 		return NULL;
 	}
@@ -1325,6 +1327,26 @@ static struct fio_file *alloc_new_file(struct thread_data *td)
 	f->shadow_fd = -1;
 	fio_file_reset(td, f);
 	return f;
+}
+
+bool exists_and_not_regfile(const char *filename)
+{
+	struct stat sb;
+
+	if (lstat(filename, &sb) == -1)
+		return false;
+
+#ifndef WIN32 /* NOT Windows */
+	if (S_ISREG(sb.st_mode))
+		return false;
+#else
+	/* \\.\ is the device namespace in Windows, where every file
+	 * is a device node */
+	if (S_ISREG(sb.st_mode) && strncmp(filename, "\\\\.\\", 4) != 0)
+		return false;
+#endif
+
+	return true;
 }
 
 int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
@@ -1343,7 +1365,8 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 	sprintf(file_name + len, "%s", fname);
 
 	/* clean cloned siblings using existing files */
-	if (numjob && is_already_allocated(file_name))
+	if (numjob && is_already_allocated(file_name) &&
+	    !exists_and_not_regfile(fname))
 		return 0;
 
 	f = alloc_new_file(td);
@@ -1378,10 +1401,8 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 		f->real_file_size = -1ULL;
 
 	f->file_name = smalloc_strdup(file_name);
-	if (!f->file_name) {
-		log_err("fio: smalloc OOM\n");
+	if (!f->file_name)
 		assert(0);
-	}
 
 	get_file_type(f);
 
@@ -1584,10 +1605,8 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 
 		if (f->file_name) {
 			__f->file_name = smalloc_strdup(f->file_name);
-			if (!__f->file_name) {
-				log_err("fio: smalloc OOM\n");
+			if (!__f->file_name)
 				assert(0);
-			}
 
 			__f->filetype = f->filetype;
 		}
@@ -1643,16 +1662,16 @@ void fio_file_reset(struct thread_data *td, struct fio_file *f)
 		lfsr_reset(&f->lfsr, td->rand_seeds[FIO_RAND_BLOCK_OFF]);
 }
 
-int fio_files_done(struct thread_data *td)
+bool fio_files_done(struct thread_data *td)
 {
 	struct fio_file *f;
 	unsigned int i;
 
 	for_each_file(td, f, i)
 		if (!fio_file_done(f))
-			return 0;
+			return false;
 
-	return 1;
+	return true;
 }
 
 /* free memory used in initialization phase only */

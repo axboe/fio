@@ -4,6 +4,8 @@
 #ifdef CONFIG_GETMNTENT
 #include <mntent.h>
 
+#include "lib/mountcheck.h"
+
 #define MTAB	"/etc/mtab"
 
 int device_is_mounted(const char *dev)
@@ -30,13 +32,34 @@ int device_is_mounted(const char *dev)
 }
 
 #elif defined(CONFIG_GETMNTINFO)
-/* for BSDs */
+/* for most BSDs */
 #include <sys/param.h>
 #include <sys/mount.h>
 
 int device_is_mounted(const char *dev)
 {
 	struct statfs *st;
+	int i, ret;
+
+	ret = getmntinfo(&st, MNT_NOWAIT);
+	if (ret <= 0)
+		return 0;
+
+	for (i = 0; i < ret; i++) {
+		if (!strcmp(st[i].f_mntfromname, dev))
+			return 1;
+	}
+
+	return 0;
+}
+
+#elif defined(CONFIG_GETMNTINFO_STATVFS)
+/* for NetBSD */
+#include <sys/statvfs.h>
+
+int device_is_mounted(const char *dev)
+{
+	struct statvfs *st;
 	int i, ret;
 
 	ret = getmntinfo(&st, MNT_NOWAIT);

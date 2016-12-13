@@ -109,7 +109,7 @@ static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 
 	r = 0;
 restart:
-	memset(suspend_list, 0, sizeof(*suspend_list));
+	memset(suspend_list, 0, sizeof(suspend_list));
 	suspend_entries = 0;
 	io_u_qiter(&td->io_u_all, io_u, i) {
 		int err;

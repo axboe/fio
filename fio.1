@@ -30,7 +30,7 @@ dump of the latency buckets.
 Limit run time to \fIruntime\fR seconds.
 .TP
 .B \-\-bandwidth\-log
-Generate per-job bandwidth logs.
+Generate aggregate bandwidth logs.
 .TP
 .B \-\-minimal
 Print statistics in a terse, semicolon-delimited format.
@@ -764,7 +764,7 @@ Example #1:
 \fBiodepth_batch_complete_max\fR=<iodepth>
 .RE
 
-which means that we will retrieve at leat 1 IO and up to the
+which means that we will retrieve at least 1 IO and up to the
 whole submitted queue depth. If none of IO has been completed
 yet, we will wait.
 
@@ -1368,7 +1368,7 @@ fio will fill 1/2/3/4 bytes of the buffer at the time(it can be either a
 decimal or a hex number). The verify_pattern if larger than a 32-bit quantity
 has to be a hex number that starts with either "0x" or "0X". Use with
 \fBverify\fP=str. Also, verify_pattern supports %o format, which means that for
-each block offset will be written and then verifyied back, e.g.:
+each block offset will be written and then verified back, e.g.:
 .RS
 .RS
 \fBverify_pattern\fR=%o
@@ -1506,13 +1506,13 @@ If set, this generates bw/clat/iops log with per file private filenames. If
 not set, jobs with identical names will share the log filename. Default: true.
 .TP
 .BI write_bw_log \fR=\fPstr
-If given, write a bandwidth log of the jobs in this job file. Can be used to
-store data of the bandwidth of the jobs in their lifetime. The included
-fio_generate_plots script uses gnuplot to turn these text files into nice
-graphs. See \fBwrite_lat_log\fR for behaviour of given filename. For this
-option, the postfix is _bw.x.log, where x is the index of the job (1..N,
-where N is the number of jobs). If \fBper_job_logs\fR is false, then the
-filename will not include the job index. See the \fBLOG FILE FORMATS\fR
+If given, write a bandwidth log for this job. Can be used to store data of the
+bandwidth of the jobs in their lifetime. The included fio_generate_plots script
+uses gnuplot to turn these text files into nice graphs. See \fBwrite_lat_log\fR
+for behaviour of given filename. For this option, the postfix is _bw.x.log,
+where x is the index of the job (1..N, where N is the number of jobs). If
+\fBper_job_logs\fR is false, then the filename will not include the job index.
+See the \fBLOG FILE FORMATS\fR
 section.
 .TP
 .BI write_lat_log \fR=\fPstr
@@ -1589,6 +1589,11 @@ sensitive jobs, and background compression work.
 If set, fio will store the log files in a compressed format. They can be
 decompressed with fio, using the \fB\-\-inflate-log\fR command line parameter.
 The files will be stored with a \fB\.fz\fR suffix.
+.TP
+.BI log_unix_epoch \fR=\fPbool
+If set, fio will log Unix timestamps to the log files produced by enabling
+\fBwrite_type_log\fR for each log type, instead of the default zero-based
+timestamps.
 .TP
 .BI block_error_percentiles \fR=\fPbool
 If set, record errors in trim block-sized units from writes and trims and output
@@ -2364,7 +2369,7 @@ IO is a TRIM
 The \fIoffset\fR is the offset, in bytes, from the start of the file, for that
 particular IO. The logging of the offset can be toggled with \fBlog_offset\fR.
 
-If windowed logging is enabled though \fBlog_avg_msec\fR, then fio doesn't log
+If windowed logging is enabled through \fBlog_avg_msec\fR, then fio doesn't log
 individual IOs. Instead of logs the average values over the specified
 period of time. Since \fIdata direction\fR and \fIoffset\fR are per-IO values,
 they aren't applicable if windowed logging is enabled. If windowed logging

@@ -135,6 +135,7 @@ struct thread_options {
 	unsigned int log_offset;
 	unsigned int log_gz;
 	unsigned int log_gz_store;
+	unsigned int log_unix_epoch;
 	unsigned int norandommap;
 	unsigned int softrandommap;
 	unsigned int bs_unaligned;
@@ -236,6 +237,12 @@ struct thread_options {
 
 	char *read_iolog_file;
 	char *write_iolog_file;
+
+	unsigned int write_bw_log;
+	unsigned int write_lat_log;
+	unsigned int write_iops_log;
+	unsigned int write_hist_log;
+
 	char *bw_log_file;
 	char *lat_log_file;
 	char *iops_log_file;
@@ -248,8 +255,8 @@ struct thread_options {
 	char *exec_prerun;
 	char *exec_postrun;
 
-	unsigned int rate[DDIR_RWDIR_CNT];
-	unsigned int ratemin[DDIR_RWDIR_CNT];
+	uint64_t rate[DDIR_RWDIR_CNT];
+	uint64_t ratemin[DDIR_RWDIR_CNT];
 	unsigned int ratecycle;
 	unsigned int io_submit_mode;
 	unsigned int rate_iops[DDIR_RWDIR_CNT];
@@ -397,11 +404,13 @@ struct thread_options_pack {
 	uint32_t log_offset;
 	uint32_t log_gz;
 	uint32_t log_gz_store;
+	uint32_t log_unix_epoch;
 	uint32_t norandommap;
 	uint32_t softrandommap;
 	uint32_t bs_unaligned;
 	uint32_t fsync_on_close;
 	uint32_t bs_is_seq_rand;
+	uint32_t pad1;
 
 	uint32_t random_distribution;
 	uint32_t exitall_error;
@@ -498,6 +507,12 @@ struct thread_options_pack {
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];
 	uint8_t write_iolog_file[FIO_TOP_STR_MAX];
+
+	uint32_t write_bw_log;
+	uint32_t write_lat_log;
+	uint32_t write_iops_log;
+	uint32_t write_hist_log;
+
 	uint8_t bw_log_file[FIO_TOP_STR_MAX];
 	uint8_t lat_log_file[FIO_TOP_STR_MAX];
 	uint8_t iops_log_file[FIO_TOP_STR_MAX];
@@ -510,8 +525,8 @@ struct thread_options_pack {
 	uint8_t exec_prerun[FIO_TOP_STR_MAX];
 	uint8_t exec_postrun[FIO_TOP_STR_MAX];
 
-	uint32_t rate[DDIR_RWDIR_CNT];
-	uint32_t ratemin[DDIR_RWDIR_CNT];
+	uint64_t rate[DDIR_RWDIR_CNT];
+	uint64_t ratemin[DDIR_RWDIR_CNT];
 	uint32_t ratecycle;
 	uint32_t io_submit_mode;
 	uint32_t rate_iops[DDIR_RWDIR_CNT];

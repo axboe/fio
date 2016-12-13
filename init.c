@@ -48,7 +48,6 @@ static char **job_sections;
 static int nr_job_sections;
 
 int exitall_on_terminate = 0;
-int exitall_on_terminate_error = 0;
 int output_format = FIO_OUTPUT_NORMAL;
 int eta_print = FIO_ETA_AUTO;
 int eta_new_line = 0;
@@ -105,7 +104,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 	},
 	{
 		.name		= (char *) "bandwidth-log",
-		.has_arg	= required_argument,
+		.has_arg	= no_argument,
 		.val		= 'b' | FIO_CLIENT_FLAG,
 	},
 	{
@@ -300,7 +299,6 @@ void free_threads_shm(void)
 static void free_shm(void)
 {
 	if (threads) {
-		file_hash_exit();
 		flow_exit();
 		fio_debug_jobp = NULL;
 		free_threads_shm();
@@ -311,8 +309,9 @@ static void free_shm(void)
 	free(trigger_remote_cmd);
 	trigger_file = trigger_cmd = trigger_remote_cmd = NULL;
 
-	options_free(fio_options, &def_thread);
+	options_free(fio_options, &def_thread.o);
 	fio_filelock_exit();
+	file_hash_exit();
 	scleanup();
 }
 
@@ -324,8 +323,6 @@ static void free_shm(void)
  */
 static int setup_thread_area(void)
 {
-	void *hash;
-
 	if (threads)
 		return 0;
 
@@ -336,7 +333,6 @@ static int setup_thread_area(void)
 	do {
 		size_t size = max_jobs * sizeof(struct thread_data);
 
-		size += file_hash_size;
 		size += sizeof(unsigned int);
 
 #ifndef CONFIG_NO_SHM
@@ -368,10 +364,8 @@ static int setup_thread_area(void)
 #endif
 
 	memset(threads, 0, max_jobs * sizeof(struct thread_data));
-	hash = (void *) threads + max_jobs * sizeof(struct thread_data);
-	fio_debug_jobp = (void *) hash + file_hash_size;
+	fio_debug_jobp = (void *) threads + max_jobs * sizeof(struct thread_data);
 	*fio_debug_jobp = -1;
-	file_hash_init(hash);
 
 	flow_init();
 
@@ -905,26 +899,6 @@ static const char *get_engine_name(const char *str)
 	return p;
 }
 
-static int exists_and_not_regfile(const char *filename)
-{
-	struct stat sb;
-
-	if (lstat(filename, &sb) == -1)
-		return 0;
-
-#ifndef WIN32 /* NOT Windows */
-	if (S_ISREG(sb.st_mode))
-		return 0;
-#else
-	/* \\.\ is the device namespace in Windows, where every file
-	 * is a device node */
-	if (S_ISREG(sb.st_mode) && strncmp(filename, "\\\\.\\", 4) != 0)
-		return 0;
-#endif
-
-	return 1;
-}
-
 static void init_rand_file_service(struct thread_data *td)
 {
 	unsigned long nranges = td->o.nr_files << FIO_FSERVICE_SHIFT;
@@ -1249,7 +1223,7 @@ static char *make_filename(char *buf, size_t buf_size,struct thread_options *o,
 	return buf;
 }
 
-int parse_dryrun(void)
+bool parse_dryrun(void)
 {
 	return dump_cmdline || parse_only;
 }
@@ -1416,7 +1390,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (setup_rate(td))
 		goto err;
 
-	if (o->lat_log_file) {
+	if (o->write_lat_log) {
 		struct log_params p = {
 			.td = td,
 			.avg_msec = o->log_avg_msec,
@@ -1427,6 +1401,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
+		const char *pre = o->lat_log_file ? o->lat_log_file : o->name;
 		const char *suf;
 
 		if (p.log_gz_store)
@@ -1434,20 +1409,20 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		gen_log_name(logname, sizeof(logname), "lat", o->lat_log_file,
+		gen_log_name(logname, sizeof(logname), "lat", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->lat_log, &p, logname);
 
-		gen_log_name(logname, sizeof(logname), "slat", o->lat_log_file,
+		gen_log_name(logname, sizeof(logname), "slat", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->slat_log, &p, logname);
 
-		gen_log_name(logname, sizeof(logname), "clat", o->lat_log_file,
+		gen_log_name(logname, sizeof(logname), "clat", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->clat_log, &p, logname);
 	}
 
-	if (o->hist_log_file) {
+	if (o->write_hist_log) {
 		struct log_params p = {
 			.td = td,
 			.avg_msec = o->log_avg_msec,
@@ -1458,19 +1433,27 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
+		const char *pre = o->hist_log_file ? o->hist_log_file : o->name;
 		const char *suf;
+
+#ifndef CONFIG_ZLIB
+		if (td->client_type) {
+			log_err("fio: --write_hist_log requires zlib in client/server mode\n");
+			goto err;
+		}
+#endif
 
 		if (p.log_gz_store)
 			suf = "log.fz";
 		else
 			suf = "log";
 
-		gen_log_name(logname, sizeof(logname), "clat_hist", o->hist_log_file,
+		gen_log_name(logname, sizeof(logname), "clat_hist", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->clat_hist_log, &p, logname);
 	}
 
-	if (o->bw_log_file) {
+	if (o->write_bw_log) {
 		struct log_params p = {
 			.td = td,
 			.avg_msec = o->log_avg_msec,
@@ -1481,6 +1464,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
+		const char *pre = o->bw_log_file ? o->bw_log_file : o->name;
 		const char *suf;
 
 		if (fio_option_is_set(o, bw_avg_time))
@@ -1496,11 +1480,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		gen_log_name(logname, sizeof(logname), "bw", o->bw_log_file,
+		gen_log_name(logname, sizeof(logname), "bw", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->bw_log, &p, logname);
 	}
-	if (o->iops_log_file) {
+	if (o->write_iops_log) {
 		struct log_params p = {
 			.td = td,
 			.avg_msec = o->log_avg_msec,
@@ -1511,6 +1495,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
+		const char *pre = o->iops_log_file ? o->iops_log_file : o->name;
 		const char *suf;
 
 		if (fio_option_is_set(o, iops_avg_time))
@@ -1526,7 +1511,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		else
 			suf = "log";
 
-		gen_log_name(logname, sizeof(logname), "iops", o->iops_log_file,
+		gen_log_name(logname, sizeof(logname), "iops", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->iops_log, &p, logname);
 	}
@@ -1700,7 +1685,7 @@ static int is_empty_or_comment(char *line)
 /*
  * This is our [ini] type file parser.
  */
-int __parse_jobs_ini(struct thread_data *td,
+static int __parse_jobs_ini(struct thread_data *td,
 		char *file, int is_buf, int stonewall_flag, int type,
 		int nested, char *name, char ***popts, int *aopts, int *nopts)
 {
@@ -2026,7 +2011,7 @@ static void usage(const char *name)
 	printf("  --parse-only\t\tParse options only, don't start any IO\n");
 	printf("  --output\t\tWrite output to file\n");
 	printf("  --runtime\t\tRuntime in seconds\n");
-	printf("  --bandwidth-log\tGenerate per-job bandwidth logs\n");
+	printf("  --bandwidth-log\tGenerate aggregate bandwidth logs\n");
 	printf("  --minimal\t\tMinimal (terse) output\n");
 	printf("  --output-format=x\tOutput format (terse,json,json+,normal)\n");
 	printf("  --terse-version=x\tSet terse version output format to 'x'\n");
@@ -2336,6 +2321,8 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		switch (c) {
 		case 'a':
 			smalloc_pool_size = atoi(optarg);
+			smalloc_pool_size <<= 10;
+			sinit();
 			break;
 		case 't':
 			if (check_str_time(optarg, &def_timeout, 1)) {

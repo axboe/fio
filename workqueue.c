@@ -15,9 +15,8 @@ enum {
 	SW_F_IDLE	= 1 << 0,
 	SW_F_RUNNING	= 1 << 1,
 	SW_F_EXIT	= 1 << 2,
-	SW_F_EXITED	= 1 << 3,
-	SW_F_ACCOUNTED	= 1 << 4,
-	SW_F_ERROR	= 1 << 5,
+	SW_F_ACCOUNTED	= 1 << 3,
+	SW_F_ERROR	= 1 << 4,
 };
 
 static struct submit_worker *__get_submit_worker(struct workqueue *wq,
@@ -131,7 +130,7 @@ static void *worker_thread(void *data)
 {
 	struct submit_worker *sw = data;
 	struct workqueue *wq = sw->wq;
-	unsigned int eflags = 0, ret = 0;
+	unsigned int ret = 0;
 	FLIST_HEAD(local_list);
 
 	sk_out_assign(sw->sk_out);
@@ -206,9 +205,6 @@ handle_work:
 		wq->ops.update_acct_fn(sw);
 
 done:
-	pthread_mutex_lock(&sw->lock);
-	sw->flags |= (SW_F_EXITED | eflags);
-	pthread_mutex_unlock(&sw->lock);
 	sk_out_drop();
 	return NULL;
 }
@@ -327,6 +323,8 @@ int workqueue_init(struct thread_data *td, struct workqueue *wq,
 		goto err;
 
 	wq->workers = smalloc(wq->max_workers * sizeof(struct submit_worker));
+	if (!wq->workers)
+		goto err;
 
 	for (i = 0; i < wq->max_workers; i++)
 		if (start_worker(wq, i, sk_out))

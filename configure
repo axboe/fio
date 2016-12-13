@@ -794,6 +794,25 @@ fi
 echo "CLOCK_MONOTONIC_PRECISE       $clock_monotonic_precise"
 
 ##########################################
+# clockid_t probe
+clockid_t="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+int main(int argc, char **argv)
+{
+  clockid_t cid;
+  memset(&cid, 0, sizeof(cid));
+  return clock_gettime(cid, NULL);
+}
+EOF
+if compile_prog "" "$LIBS" "clockid_t"; then
+  clockid_t="yes"
+fi
+echo "clockid_t                     $clockid_t"
+
+##########################################
 # gettimeofday() probe
 gettimeofday="no"
 cat > $TMPC << EOF
@@ -1316,6 +1335,32 @@ fi
 echo "Rados Block Device engine     $rbd"
 
 ##########################################
+# check for rbd_poll
+rbd_poll="no"
+if test "$rbd" = "yes"; then
+cat > $TMPC << EOF
+#include <rbd/librbd.h>
+#include <sys/eventfd.h>
+
+int main(int argc, char **argv)
+{
+  rbd_image_t image;
+  rbd_completion_t comp;
+
+  int fd = eventfd(0, EFD_NONBLOCK);
+  rbd_set_image_notification(image, fd, EVENT_TYPE_EVENTFD);
+  rbd_poll_io_events(image, comp, 1);
+
+  return 0;
+}
+EOF
+if compile_prog "" "-lrbd -lrados" "rbd"; then
+  rbd_poll="yes"
+fi
+echo "rbd_poll                      $rbd_poll"
+fi
+
+##########################################
 # check for rbd_invaidate_cache()
 rbd_inval="no"
 if test "$rbd" = "yes"; then
@@ -1489,6 +1534,10 @@ if test "$libhdfs" = "yes" ; then
   if test "$hdfs_conf_error" = "1" ; then
     exit 1
   fi
+  FIO_HDFS_CPU=$cpu
+  if test "$FIO_HDFS_CPU" = "x86_64" ; then
+    FIO_HDFS_CPU="amd64"
+  fi
 fi
 echo "HDFS engine                   $libhdfs"
 
@@ -1598,6 +1647,11 @@ echo "getmntent                     $getmntent"
 
 ##########################################
 # Check whether we have getmntinfo
+# These are originally added for BSDs, but may also work
+# on other operating systems with getmntinfo(3).
+
+# getmntinfo(3) for FreeBSD/DragonFlyBSD/OpenBSD.
+# Note that NetBSD needs -Werror to catch warning as error.
 getmntinfo="no"
 cat > $TMPC << EOF
 #include <stdio.h>
@@ -1605,14 +1659,31 @@ cat > $TMPC << EOF
 #include <sys/mount.h>
 int main(int argc, char **argv)
 {
-  struct statfs st;
+  struct statfs *st;
   return getmntinfo(&st, MNT_NOWAIT);
 }
 EOF
-if compile_prog "" "" "getmntinfo"; then
+if compile_prog "-Werror" "" "getmntinfo"; then
   getmntinfo="yes"
 fi
 echo "getmntinfo                    $getmntinfo"
+
+# getmntinfo(3) for NetBSD.
+getmntinfo_statvfs="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <sys/statvfs.h>
+int main(int argc, char **argv)
+{
+  struct statvfs *st;
+  return getmntinfo(&st, MNT_NOWAIT);
+}
+EOF
+# Skip the test if the one with statfs arg is detected.
+if test "$getmntinfo" != "yes" && compile_prog "-Werror" "" "getmntinfo_statvfs"; then
+  getmntinfo_statvfs="yes"
+  echo "getmntinfo_statvfs            $getmntinfo_statvfs"
+fi
 
 ##########################################
 # Check whether we have _Static_assert
@@ -1718,6 +1789,9 @@ fi
 if test "$clock_monotonic_precise" = "yes" ; then
   output_sym "CONFIG_CLOCK_MONOTONIC_PRECISE"
 fi
+if test "$clockid_t" = "yes"; then
+  output_sym "CONFIG_CLOCKID_T"
+fi
 if test "$gettimeofday" = "yes" ; then
   output_sym "CONFIG_GETTIMEOFDAY"
 fi
@@ -1805,6 +1879,9 @@ fi
 if test "$rbd" = "yes" ; then
   output_sym "CONFIG_RBD"
 fi
+if test "$rbd_poll" = "yes" ; then
+  output_sym "CONFIG_RBD_POLL"
+fi
 if test "$rbd_inval" = "yes" ; then
   output_sym "CONFIG_RBD_INVAL"
 fi
@@ -1829,6 +1906,7 @@ if test "$gf_trim" = "yes" ; then
 fi
 if test "$libhdfs" = "yes" ; then
   output_sym "CONFIG_LIBHDFS"
+  echo "FIO_HDFS_CPU=$FIO_HDFS_CPU" >> $config_host_mak
   echo "JAVA_HOME=$JAVA_HOME" >> $config_host_mak
   echo "FIO_LIBHDFS_INCLUDE=$FIO_LIBHDFS_INCLUDE" >> $config_host_mak
   echo "FIO_LIBHDFS_LIB=$FIO_LIBHDFS_LIB" >> $config_host_mak
@@ -1855,6 +1933,9 @@ if test "$getmntent" = "yes" ; then
 fi
 if test "$getmntinfo" = "yes" ; then
   output_sym "CONFIG_GETMNTINFO"
+fi
+if test "$getmntinfo_statvfs" = "yes" ; then
+  output_sym "CONFIG_GETMNTINFO_STATVFS"
 fi
 if test "$static_assert" = "yes" ; then
   output_sym "CONFIG_STATIC_ASSERT"

@@ -20,5 +20,6 @@ extern bool ramp_time_over(struct thread_data *);
 extern bool in_ramp_time(struct thread_data *);
 extern void fio_time_init(void);
 extern void timeval_add_msec(struct timeval *, unsigned int);
+extern void set_epoch_time(struct thread_data *, int);
 
 #endif

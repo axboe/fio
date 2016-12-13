@@ -1,0 +1,12 @@
+# The most basic form of data verification. Write the device randomly
+# in 4K chunks, then read it back and verify the contents.
+[write-and-verify]
+rw=randwrite
+bs=4k
+direct=1
+ioengine=libaio
+iodepth=16
+verify=crc32c
+# Use /dev/XXX. For running this on a file instead, remove the filename
+# option and add a size=32G (or whatever file size you want) instead.
+filename=/dev/XXX

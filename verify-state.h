@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <limits.h>
 
 struct thread_rand32_state {
 	uint32_t s[4];

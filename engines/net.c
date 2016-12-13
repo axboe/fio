@@ -135,6 +135,7 @@ static struct fio_option options[] = {
 #ifdef CONFIG_TCP_NODELAY
 	{
 		.name	= "nodelay",
+		.lname	= "No Delay",
 		.type	= FIO_OPT_BOOL,
 		.off1	= offsetof(struct netio_options, nodelay),
 		.help	= "Use TCP_NODELAY on TCP connections",
@@ -153,6 +154,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "pingpong",
+		.lname	= "Ping Pong",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct netio_options, pingpong),
 		.help	= "Ping-pong IO requests",

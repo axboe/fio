@@ -137,7 +137,7 @@ failed:
 	return FIO_Q_COMPLETED;
 }
 
-int fio_gf_async_setup(struct thread_data *td)
+static int fio_gf_async_setup(struct thread_data *td)
 {
 	struct gf_data *g;
 	int r;

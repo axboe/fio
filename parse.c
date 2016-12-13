@@ -1250,7 +1250,7 @@ void fill_default_options(void *data, struct fio_option *options)
 			handle_option(o, o->def, data);
 }
 
-void option_init(struct fio_option *o)
+static void option_init(struct fio_option *o)
 {
 	if (o->type == FIO_OPT_DEPRECATED || o->type == FIO_OPT_UNSUPPORTED)
 		return;

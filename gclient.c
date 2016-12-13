@@ -280,10 +280,6 @@ static void gfio_disk_util_op(struct fio_client *client, struct fio_net_cmd *cmd
 	gdk_threads_leave();
 }
 
-extern int sum_stat_clients;
-extern struct thread_stat client_ts;
-extern struct group_run_stats client_gs;
-
 static int sum_stat_nr;
 
 static void gfio_thread_status_op(struct fio_client *client,
@@ -1012,7 +1008,7 @@ static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long min,
 	char *minp, *maxp;
 	char tmp[64];
 
-	if (!usec_to_msec(&min, &max, &mean, &dev))
+	if (usec_to_msec(&min, &max, &mean, &dev))
 		base = "(msec)";
 
 	minp = num2str(min, 6, 1, 0, 0);

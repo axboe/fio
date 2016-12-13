@@ -11,7 +11,7 @@
 #include "trim.h"
 
 #ifdef FIO_HAVE_TRIM
-int get_next_trim(struct thread_data *td, struct io_u *io_u)
+bool get_next_trim(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
 
@@ -19,9 +19,9 @@ int get_next_trim(struct thread_data *td, struct io_u *io_u)
 	 * this io_u is from a requeue, we already filled the offsets
 	 */
 	if (io_u->file)
-		return 0;
+		return true;
 	if (flist_empty(&td->trim_list))
-		return 1;
+		return false;
 
 	assert(td->trim_entries);
 	ipo = flist_first_entry(&td->trim_list, struct io_piece, trim_list);
@@ -53,7 +53,7 @@ int get_next_trim(struct thread_data *td, struct io_u *io_u)
 		if (r) {
 			dprint(FD_VERIFY, "failed file %s open\n",
 					io_u->file->file_name);
-			return 1;
+			return false;
 		}
 	}
 
@@ -64,17 +64,17 @@ int get_next_trim(struct thread_data *td, struct io_u *io_u)
 	io_u->xfer_buflen = io_u->buflen;
 
 	dprint(FD_VERIFY, "get_next_trim: ret io_u %p\n", io_u);
-	return 0;
+	return true;
 }
 
-int io_u_should_trim(struct thread_data *td, struct io_u *io_u)
+bool io_u_should_trim(struct thread_data *td, struct io_u *io_u)
 {
 	unsigned long long val;
 	uint64_t frand_max;
 	unsigned long r;
 
 	if (!td->o.trim_percentage)
-		return 0;
+		return false;
 
 	frand_max = rand_max(&td->trim_state);
 	r = __rand(&td->trim_state);

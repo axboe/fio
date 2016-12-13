@@ -11,113 +11,6 @@
             4000, 39, 1152, 1546.962, 1545.785, 1627.192, 1640.019, 1691.204, 1744
             ...
     
-    Notes:
-
-    * end-times are calculated to be uniform increments of the --interval value given,
-      regardless of when histogram samples are reported. Of note:
-        
-        * Intervals with no samples are omitted. In the example above this means
-          "no statistics from 2 to 3 seconds" and "39 samples influenced the statistics
-          of the interval from 3 to 4 seconds".
-        
-        * Intervals with a single sample will have the same value for all statistics
-        
-    * The number of samples is unweighted, corresponding to the total number of samples
-      which have any effect whatsoever on the interval.
-
-    * Min statistics are computed using value of the lower boundary of the first bin
-      (in increasing bin order) with non-zero samples in it. Similarly for max,
-      we take the upper boundary of the last bin with non-zero samples in it.
-      This is semantically identical to taking the 0th and 100th percentiles with a
-      50% bin-width buffer (because percentiles are computed using mid-points of
-      the bins). This enforces the following nice properties:
-
-        * min <= 50th <= 90th <= 95th <= 99th <= max
-
-        * min and max are strict lower and upper bounds on the actual
-          min / max seen by fio (and reported in *_clat.* with averaging turned off).
-
-    * Average statistics use a standard weighted arithmetic mean.
-
-    * Percentile statistics are computed using the weighted percentile method as
-      described here: https://en.wikipedia.org/wiki/Percentile#Weighted_percentile
-      See weights() method for details on how weights are computed for individual
-      samples. In process_interval() we further multiply by the height of each bin
-      to get weighted histograms.
-    
-    * We convert files given on the command line, assumed to be fio histogram files,
-      on-the-fly into their corresponding differenced files i.e. non-cumulative histograms
-      because fio outputs cumulative histograms, but we want histograms corresponding
-      to individual time intervals. An individual histogram file can contain the cumulative
-      histograms for multiple different r/w directions (notably when --rw=randrw). This
-      is accounted for by tracking each r/w direction separately. In the statistics
-      reported we ultimately merge *all* histograms (regardless of r/w direction).
-
-    * The value of *_GROUP_NR in stat.h (and *_BITS) determines how many latency bins
-      fio outputs when histogramming is enabled. Namely for the current default of
-      GROUP_NR=19, we get 1,216 bins with a maximum latency of approximately 17
-      seconds. For certain applications this may not be sufficient. With GROUP_NR=24
-      we have 1,536 bins, giving us a maximum latency of 541 seconds (~ 9 minutes). If
-      you expect your application to experience latencies greater than 17 seconds,
-      you will need to recompile fio with a larger GROUP_NR, e.g. with:
-        
-            sed -i.bak 's/^#define FIO_IO_U_PLAT_GROUP_NR 19\n/#define FIO_IO_U_PLAT_GROUP_NR 24/g' stat.h
-            make fio
-            
-      Quick reference table for the max latency corresponding to a sampling of
-      values for GROUP_NR:
-            
-            GROUP_NR | # bins | max latency bin value
-            19       | 1216   | 16.9 sec
-            20       | 1280   | 33.8 sec
-            21       | 1344   | 67.6 sec
-            22       | 1408   | 2  min, 15 sec
-            23       | 1472   | 4  min, 32 sec
-            24       | 1536   | 9  min, 4  sec
-            25       | 1600   | 18 min, 8  sec
-            26       | 1664   | 36 min, 16 sec
-      
-    * At present this program automatically detects the number of histogram bins in
-      the log files, and adjusts the bin latency values accordingly. In particular if
-      you use the --log_hist_coarseness parameter of fio, you get output files with
-      a number of bins according to the following table (note that the first
-      row is identical to the table above):
-
-      coarse \ GROUP_NR
-                  19     20    21     22     23     24     25     26
-             -------------------------------------------------------
-            0  [[ 1216,  1280,  1344,  1408,  1472,  1536,  1600,  1664],
-            1   [  608,   640,   672,   704,   736,   768,   800,   832],
-            2   [  304,   320,   336,   352,   368,   384,   400,   416],
-            3   [  152,   160,   168,   176,   184,   192,   200,   208],
-            4   [   76,    80,    84,    88,    92,    96,   100,   104],
-            5   [   38,    40,    42,    44,    46,    48,    50,    52],
-            6   [   19,    20,    21,    22,    23,    24,    25,    26],
-            7   [  N/A,    10,   N/A,    11,   N/A,    12,   N/A,    13],
-            8   [  N/A,     5,   N/A,   N/A,   N/A,     6,   N/A,   N/A]]
-
-      For other values of GROUP_NR and coarseness, this table can be computed like this:    
-        
-            bins = [1216,1280,1344,1408,1472,1536,1600,1664]
-            max_coarse = 8
-            fncn = lambda z: list(map(lambda x: z/2**x if z % 2**x == 0 else nan, range(max_coarse + 1)))
-            np.transpose(list(map(fncn, bins)))
-      
-      Also note that you can achieve the same downsampling / log file size reduction
-      by pre-processing (before inputting into this script) with half_bins.py.
-
-    * If you have not adjusted GROUP_NR for your (high latency) application, then you
-      will see the percentiles computed by this tool max out at the max latency bin
-      value as in the first table above, and in this plot (where GROUP_NR=19 and thus we see
-      a max latency of ~16.7 seconds in the red line):
-
-            https://www.cronburg.com/fio/max_latency_bin_value_bug.png
-    
-    * Motivation for, design decisions, and the implementation process are
-      described in further detail here:
-
-            https://www.cronburg.com/fio/cloud-latency-problem-measurement/
-
     @author Karl Cronburg <karl.cronburg@gmail.com>
 """
 import os
@@ -188,23 +81,8 @@ __HIST_COLUMNS = 1216
 __NON_HIST_COLUMNS = 3
 __TOTAL_COLUMNS = __HIST_COLUMNS + __NON_HIST_COLUMNS
     
-def sequential_diffs(head_row, times, rws, hists):
-    """ Take the difference of sequential (in time) histograms with the same
-        r/w direction, returning a new array of differenced histograms.  """
-    result = np.empty(shape=(0, __HIST_COLUMNS))
-    result_times = np.empty(shape=(1, 0))
-    for i in range(8):
-        idx = np.where(rws == i)
-        diff = np.diff(np.append(head_row[i], hists[idx], axis=0), axis=0).astype(int)
-        result = np.append(diff, result, axis=0)
-        result_times = np.append(times[idx], result_times)
-    idx = np.argsort(result_times)
-    return result[idx]
-
-def read_chunk(head_row, rdr, sz):
-    """ Read the next chunk of size sz from the given reader, computing the
-        differences across neighboring histogram samples.
-    """
+def read_chunk(rdr, sz):
+    """ Read the next chunk of size sz from the given reader. """
     try:
         """ StopIteration occurs when the pandas reader is empty, and AttributeError
             occurs if rdr is None due to the file being empty. """
@@ -212,32 +90,20 @@ def read_chunk(head_row, rdr, sz):
     except (StopIteration, AttributeError):
         return None    
 
-    """ Extract array of just the times, and histograms matrix without times column.
-        Then, take the sequential difference of each of the rows in the histogram
-        matrix. This is necessary because fio outputs *cumulative* histograms as
-        opposed to histograms with counts just for a particular interval. """
+    """ Extract array of just the times, and histograms matrix without times column. """
     times, rws, szs = new_arr[:,0], new_arr[:,1], new_arr[:,2]
     hists = new_arr[:,__NON_HIST_COLUMNS:]
-    hists_diff   = sequential_diffs(head_row, times, rws, hists)
     times = times.reshape((len(times),1))
-    arr = np.append(times, hists_diff, axis=1)
+    arr = np.append(times, hists, axis=1)
 
-    """ hists[-1] will be the row we need to start our differencing with the
-        next time we call read_chunk() on the same rdr """
-    return arr, hists[-1]
+    return arr
 
 def get_min(fps, arrs):
     """ Find the file with the current first row with the smallest start time """
-    return min([fp for fp in fps if not arrs[fp] is None], key=lambda fp: arrs.get(fp)[0][0][0])
+    return min([fp for fp in fps if not arrs[fp] is None], key=lambda fp: arrs.get(fp)[0][0])
 
 def histogram_generator(ctx, fps, sz):
     
-    """ head_row for a particular file keeps track of the last (cumulative)
-        histogram we read so that we have a reference point to subtract off
-        when computing sequential differences. """
-    head_row  = np.zeros(shape=(1, __HIST_COLUMNS))
-    head_rows = {fp: {i: head_row for i in range(8)} for fp in fps}
-
     # Create a chunked pandas reader for each of the files:
     rdrs = {}
     for fp in fps:
@@ -245,13 +111,13 @@ def histogram_generator(ctx, fps, sz):
             rdrs[fp] = pandas.read_csv(fp, dtype=int, header=None, chunksize=sz)
         except ValueError as e:
             if e.message == 'No columns to parse from file':
-                if not ctx.nowarn: sys.stderr.write("WARNING: Empty input file encountered.\n")
+                if ctx.warn: sys.stderr.write("WARNING: Empty input file encountered.\n")
                 rdrs[fp] = None
             else:
                 raise(e)
 
-    # Initial histograms and corresponding head_rows:
-    arrs = {fp: read_chunk(head_rows[fp], rdr, sz) for fp,rdr in rdrs.items()}
+    # Initial histograms from disk:
+    arrs = {fp: read_chunk(rdr, sz) for fp,rdr in rdrs.items()}
     while True:
 
         try:
@@ -259,13 +125,12 @@ def histogram_generator(ctx, fps, sz):
             fp = get_min(fps, arrs)
         except ValueError:
             return
-        arr, head_row = arrs[fp]
+        arr = arrs[fp]
         yield np.insert(arr[0], 1, fps.index(fp))
-        arrs[fp] = arr[1:], head_row
-        head_rows[fp] = head_row
+        arrs[fp] = arr[1:]
 
-        if arrs[fp][0].shape[0] == 0:
-            arrs[fp] = read_chunk(head_rows[fp], rdrs[fp], sz)
+        if arrs[fp].shape[0] == 0:
+            arrs[fp] = read_chunk(rdrs[fp], sz)
 
 def _plat_idx_to_val(idx, edge=0.5, FIO_IO_U_PLAT_BITS=6, FIO_IO_U_PLAT_VAL=64):
     """ Taken from fio's stat.c for calculating the latency value of a bin
@@ -390,6 +255,29 @@ def guess_max_from_bins(ctx, hist_cols):
 
 def main(ctx):
 
+    if ctx.job_file:
+        try:
+            from configparser import SafeConfigParser, NoOptionError
+        except ImportError:
+            from ConfigParser import SafeConfigParser, NoOptionError
+
+        cp = SafeConfigParser(allow_no_value=True)
+        with open(ctx.job_file, 'r') as fp:
+            cp.readfp(fp)
+
+        if ctx.interval is None:
+            # Auto detect --interval value
+            for s in cp.sections():
+                try:
+                    hist_msec = cp.get(s, 'log_hist_msec')
+                    if hist_msec is not None:
+                        ctx.interval = int(hist_msec)
+                except NoOptionError:
+                    pass
+
+    if ctx.interval is None:
+        ctx.interval = 1000
+
     # Automatically detect how many columns are in the input files,
     # calculate the corresponding 'coarseness' parameter used to generate
     # those files, and calculate the appropriate bin latency values:
@@ -426,6 +314,14 @@ def main(ctx):
             arr = arr.astype(int)
             
             if arr.size > 0:
+                # Jump immediately to the start of the input, rounding
+                # down to the nearest multiple of the interval (useful when --log_unix_epoch
+                # was used to create these histograms):
+                if start == 0 and arr[0][0] - ctx.max_latency > end:
+                    start = arr[0][0] - ctx.max_latency
+                    start = start - (start % ctx.interval)
+                    end = start + ctx.interval
+
                 process_interval(ctx, arr, start, end)
                 
                 # Update arr to throw away samples we no longer need - samples which
@@ -456,9 +352,8 @@ if __name__ == '__main__':
         help='number of seconds of data to process at a time')
 
     arg('-i', '--interval',
-        default=1000,
         type=int,
-        help='interval width (ms)')
+        help='interval width (ms), default 1000 ms')
 
     arg('-d', '--divisor',
         required=False,
@@ -471,16 +366,23 @@ if __name__ == '__main__':
         type=int,
         help='number of decimal places to print floats to')
 
-    arg('--nowarn',
-        dest='nowarn',
-        action='store_false',
-        default=True,
-        help='do not print any warning messages to stderr')
+    arg('--warn',
+        dest='warn',
+        action='store_true',
+        default=False,
+        help='print warning messages to stderr')
 
     arg('--group_nr',
         default=19,
         type=int,
         help='FIO_IO_U_PLAT_GROUP_NR as defined in stat.h')
+
+    arg('--job-file',
+        default=None,
+        type=str,
+        help='Optional argument pointing to the job file used to create the '
+             'given histogram files. Useful for auto-detecting --log_hist_msec and '
+             '--log_unix_epoch (in fio) values.')
 
     main(p.parse_args())
 

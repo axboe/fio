@@ -362,8 +362,12 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 	if (f->last_pos[ddir] < f->real_file_size) {
 		uint64_t pos;
 
-		if (f->last_pos[ddir] == f->file_offset && o->ddir_seq_add < 0)
-			f->last_pos[ddir] = f->real_file_size;
+		if (f->last_pos[ddir] == f->file_offset && o->ddir_seq_add < 0) {
+			if (f->real_file_size > f->io_size)
+				f->last_pos[ddir] = f->io_size;
+			else
+				f->last_pos[ddir] = f->real_file_size;
+		}
 
 		pos = f->last_pos[ddir] - f->file_offset;
 		if (pos && o->ddir_seq_add) {
@@ -378,8 +382,14 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 			if (pos >= f->real_file_size) {
 				if (o->ddir_seq_add > 0)
 					pos = f->file_offset;
-				else
-					pos = f->real_file_size + o->ddir_seq_add;
+				else {
+					if (f->real_file_size > f->io_size)
+						pos = f->io_size;
+					else
+						pos = f->real_file_size;
+
+					pos += o->ddir_seq_add;
+				}
 			}
 		}
 
@@ -521,8 +531,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 	int ddir = io_u->ddir;
 	unsigned int buflen = 0;
 	unsigned int minbs, maxbs;
-	uint64_t frand_max;
-	unsigned long r;
+	uint64_t frand_max, r;
 
 	assert(ddir_rw(ddir));
 
@@ -551,7 +560,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 			if (buflen < minbs)
 				buflen = minbs;
 		} else {
-			long perc = 0;
+			long long perc = 0;
 			unsigned int i;
 
 			for (i = 0; i < td->o.bssplit_nr[ddir]; i++) {
@@ -559,7 +568,9 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 
 				buflen = bsp->bs;
 				perc += bsp->perc;
-				if ((r * 100UL <= frand_max * perc) &&
+				if (!perc)
+					break;
+				if ((r / perc <= frand_max / 100ULL) &&
 				    io_u_fits(td, io_u, buflen))
 					break;
 			}
@@ -642,13 +653,17 @@ int io_u_quiesce(struct thread_data *td)
 			completed += ret;
 	}
 
+	if (td->flags & TD_F_REGROW_LOGS)
+		regrow_logs(td);
+
 	return completed;
 }
 
 static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 {
 	enum fio_ddir odir = ddir ^ 1;
-	long usec, now;
+	long usec;
+	uint64_t now;
 
 	assert(ddir_rw(ddir));
 	now = utime_since_now(&td->start);
@@ -1500,7 +1515,7 @@ static bool check_get_trim(struct thread_data *td, struct io_u *io_u)
 			get_trim = 1;
 		}
 
-		if (get_trim && !get_next_trim(td, io_u))
+		if (get_trim && get_next_trim(td, io_u))
 			return true;
 	}
 

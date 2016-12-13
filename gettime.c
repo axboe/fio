@@ -381,7 +381,7 @@ void fio_clock_init(void)
 
 uint64_t utime_since(const struct timeval *s, const struct timeval *e)
 {
-	long sec, usec;
+	int64_t sec, usec;
 
 	sec = e->tv_sec - s->tv_sec;
 	usec = e->tv_usec - s->tv_usec;

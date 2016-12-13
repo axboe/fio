@@ -578,8 +578,12 @@ static int fio_net_queue_cmd(uint16_t opcode, void *buf, off_t size,
 	struct sk_entry *entry;
 
 	entry = fio_net_prep_cmd(opcode, buf, size, tagptr, flags);
-	fio_net_queue_entry(entry);
-	return 0;
+	if (entry) {
+		fio_net_queue_entry(entry);
+		return 0;
+	}
+
+	return 1;
 }
 
 static int fio_net_send_simple_stack_cmd(int sk, uint16_t opcode, uint64_t tag)
@@ -622,7 +626,7 @@ static int fio_net_queue_quit(void)
 {
 	dprint(FD_NET, "server: sending quit\n");
 
-	return fio_net_queue_cmd(FIO_NET_CMD_QUIT, NULL, 0, 0, SK_F_SIMPLE);
+	return fio_net_queue_cmd(FIO_NET_CMD_QUIT, NULL, 0, NULL, SK_F_SIMPLE);
 }
 
 int fio_net_send_quit(int sk)
@@ -908,11 +912,11 @@ static int handle_send_eta_cmd(struct fio_net_cmd *cmd)
 		je->files_open		= cpu_to_le32(je->files_open);
 
 		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-			je->m_rate[i]	= cpu_to_le32(je->m_rate[i]);
-			je->t_rate[i]	= cpu_to_le32(je->t_rate[i]);
+			je->m_rate[i]	= cpu_to_le64(je->m_rate[i]);
+			je->t_rate[i]	= cpu_to_le64(je->t_rate[i]);
 			je->m_iops[i]	= cpu_to_le32(je->m_iops[i]);
 			je->t_iops[i]	= cpu_to_le32(je->t_iops[i]);
-			je->rate[i]	= cpu_to_le32(je->rate[i]);
+			je->rate[i]	= cpu_to_le64(je->rate[i]);
 			je->iops[i]	= cpu_to_le32(je->iops[i]);
 		}
 
@@ -1539,9 +1543,9 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.latency_window	= cpu_to_le64(ts->latency_window);
 	p.ts.latency_percentile.u.i = cpu_to_le64(fio_double_to_uint64(ts->latency_percentile.u.f));
 
-	p.ts.nr_block_infos	= le64_to_cpu(ts->nr_block_infos);
+	p.ts.nr_block_infos	= cpu_to_le64(ts->nr_block_infos);
 	for (i = 0; i < p.ts.nr_block_infos; i++)
-		p.ts.block_infos[i] = le32_to_cpu(ts->block_infos[i]);
+		p.ts.block_infos[i] = cpu_to_le32(ts->block_infos[i]);
 
 	p.ts.ss_dur		= cpu_to_le64(ts->ss_dur);
 	p.ts.ss_state		= cpu_to_le32(ts->ss_state);
@@ -1684,12 +1688,111 @@ void fio_server_send_du(void)
 }
 
 #ifdef CONFIG_ZLIB
+
+static inline void __fio_net_prep_tail(z_stream *stream, void *out_pdu,
+					struct sk_entry **last_entry,
+					struct sk_entry *first)
+{
+	unsigned int this_len = FIO_SERVER_MAX_FRAGMENT_PDU - stream->avail_out;
+
+	*last_entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, out_pdu, this_len,
+				 NULL, SK_F_VEC | SK_F_INLINE | SK_F_FREE);
+	flist_add_tail(&(*last_entry)->list, &first->next);
+
+}
+
+/*
+ * Deflates the next input given, creating as many new packets in the
+ * linked list as necessary.
+ */
+static int __deflate_pdu_buffer(void *next_in, unsigned int next_sz, void **out_pdu,
+				struct sk_entry **last_entry, z_stream *stream,
+				struct sk_entry *first)
+{
+	int ret;
+
+	stream->next_in = next_in;
+	stream->avail_in = next_sz;
+	do {
+		if (! stream->avail_out) {
+
+			__fio_net_prep_tail(stream, *out_pdu, last_entry, first);
+
+			*out_pdu = malloc(FIO_SERVER_MAX_FRAGMENT_PDU);
+
+			stream->avail_out = FIO_SERVER_MAX_FRAGMENT_PDU;
+			stream->next_out = *out_pdu;
+		}
+
+		ret = deflate(stream, Z_BLOCK);
+
+		if (ret < 0) {
+			free(*out_pdu);
+			return 1;
+		}
+	} while (stream->avail_in);
+
+	return 0;
+}
+
+static int __fio_append_iolog_gz_hist(struct sk_entry *first, struct io_log *log,
+				      struct io_logs *cur_log, z_stream *stream)
+{
+	struct sk_entry *entry;
+	void *out_pdu;
+	int ret, i, j;
+	int sample_sz = log_entry_sz(log);
+
+	out_pdu = malloc(FIO_SERVER_MAX_FRAGMENT_PDU);
+	stream->avail_out = FIO_SERVER_MAX_FRAGMENT_PDU;
+	stream->next_out = out_pdu;
+
+	for (i = 0; i < cur_log->nr_samples; i++) {
+		struct io_sample *s;
+		struct io_u_plat_entry *cur_plat_entry, *prev_plat_entry;
+		unsigned int *cur_plat, *prev_plat;
+
+		s = get_sample(log, cur_log, i);
+		ret = __deflate_pdu_buffer(s, sample_sz, &out_pdu, &entry, stream, first);
+		if (ret)
+			return ret;
+
+		/* Do the subtraction on server side so that client doesn't have to
+		 * reconstruct our linked list from packets.
+		 */
+		cur_plat_entry  = s->data.plat_entry;
+		prev_plat_entry = flist_first_entry(&cur_plat_entry->list, struct io_u_plat_entry, list);
+		cur_plat  = cur_plat_entry->io_u_plat;
+		prev_plat = prev_plat_entry->io_u_plat;
+
+		for (j = 0; j < FIO_IO_U_PLAT_NR; j++) {
+			cur_plat[j] -= prev_plat[j];
+		}
+
+		flist_del(&prev_plat_entry->list);
+		free(prev_plat_entry);
+
+		ret = __deflate_pdu_buffer(cur_plat_entry, sizeof(*cur_plat_entry),
+					   &out_pdu, &entry, stream, first);
+
+		if (ret)
+			return ret;
+	}
+
+	__fio_net_prep_tail(stream, out_pdu, &entry, first);
+
+	return 0;
+}
+
 static int __fio_append_iolog_gz(struct sk_entry *first, struct io_log *log,
 				 struct io_logs *cur_log, z_stream *stream)
 {
 	unsigned int this_len;
 	void *out_pdu;
 	int ret;
+
+	if (log->log_type == IO_LOG_TYPE_HIST)
+		return __fio_append_iolog_gz_hist(first, log, cur_log, stream);
 
 	stream->next_in = (void *) cur_log->log;
 	stream->avail_in = cur_log->nr_samples * log_entry_sz(log);
@@ -1835,6 +1938,7 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	pdu.nr_samples = cpu_to_le64(iolog_nr_samples(log));
 	pdu.thread_number = cpu_to_le32(td->thread_number);
 	pdu.log_type = cpu_to_le32(log->log_type);
+	pdu.log_hist_coarseness = cpu_to_le32(log->hist_coarseness);
 
 	if (!flist_empty(&log->chunk_list))
 		pdu.compressed = __cpu_to_le32(STORE_COMPRESSED);
@@ -1860,7 +1964,7 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 			struct io_sample *s = get_sample(log, cur_log, i);
 
 			s->time		= cpu_to_le64(s->time);
-			s->val		= cpu_to_le64(s->val);
+			s->data.val	= cpu_to_le64(s->data.val);
 			s->__ddir	= cpu_to_le32(s->__ddir);
 			s->bs		= cpu_to_le32(s->bs);
 
@@ -1913,7 +2017,7 @@ void fio_server_send_start(struct thread_data *td)
 
 	assert(sk_out->sk != -1);
 
-	fio_net_queue_cmd(FIO_NET_CMD_SERVER_START, NULL, 0, 0, SK_F_SIMPLE);
+	fio_net_queue_cmd(FIO_NET_CMD_SERVER_START, NULL, 0, NULL, SK_F_SIMPLE);
 }
 
 int fio_server_get_verify_state(const char *name, int threadnumber,
@@ -1929,10 +2033,8 @@ int fio_server_get_verify_state(const char *name, int threadnumber,
 	dprint(FD_NET, "server: request verify state\n");
 
 	rep = smalloc(sizeof(*rep));
-	if (!rep) {
-		log_err("fio: smalloc pool too small\n");
+	if (!rep)
 		return ENOMEM;
-	}
 
 	__fio_mutex_init(&rep->lock, FIO_MUTEX_LOCKED);
 	rep->data = NULL;

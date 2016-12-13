@@ -232,10 +232,12 @@ char *dlerror(void)
 /* Copied from http://blogs.msdn.com/b/joshpoley/archive/2007/12/19/date-time-formats-and-conversions.aspx */
 void Time_tToSystemTime(time_t dosTime, SYSTEMTIME *systemTime)
 {
-    LARGE_INTEGER jan1970FT;
-    LARGE_INTEGER utcFT;
-    jan1970FT.QuadPart = 116444736000000000LL; // january 1st 1970
-    utcFT.QuadPart = ((unsigned __int64)dosTime) * 10000000 + jan1970FT.QuadPart;
+    FILETIME utcFT;
+    LONGLONG jan1970;
+
+    jan1970 = Int32x32To64(dosTime, 10000000) + 116444736000000000;
+    utcFT.dwLowDateTime = (DWORD)jan1970;
+    utcFT.dwHighDateTime = jan1970 >> 32;
 
     FileTimeToSystemTime((FILETIME*)&utcFT, systemTime);
 }
@@ -248,7 +250,7 @@ char* ctime_r(const time_t *t, char *buf)
 
     Time_tToSystemTime(*t, &systime);
     /* We don't know how long `buf` is, but assume it's rounded up from the minimum of 25 to 32 */
-    StringCchPrintfA(buf, 31, "%s %s %d %02d:%02d:%02d %04d", dayOfWeek[systime.wDayOfWeek % 7], monthOfYear[(systime.wMonth - 1) % 12],
+    StringCchPrintfA(buf, 31, "%s %s %d %02d:%02d:%02d %04d\n", dayOfWeek[systime.wDayOfWeek % 7], monthOfYear[(systime.wMonth - 1) % 12],
 										 systime.wDay, systime.wHour, systime.wMinute, systime.wSecond, systime.wYear);
     return buf;
 }
@@ -645,10 +647,19 @@ int setgid(gid_t gid)
 
 int nice(int incr)
 {
-	if (incr != 0) {
-		errno = EINVAL;
-		return -1;
-	}
+	DWORD prioclass = NORMAL_PRIORITY_CLASS;
+	
+	if (incr < -15)
+		prioclass = HIGH_PRIORITY_CLASS;
+	else if (incr < 0)
+		prioclass = ABOVE_NORMAL_PRIORITY_CLASS;
+	else if (incr > 15)
+		prioclass = IDLE_PRIORITY_CLASS;
+	else if (incr > 0)
+		prioclass = BELOW_NORMAL_PRIORITY_CLASS;
+	
+	if (!SetPriorityClass(GetCurrentProcess(), prioclass))
+		log_err("fio: SetPriorityClass failed\n");
 
 	return 0;
 }

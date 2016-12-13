@@ -171,7 +171,7 @@ extern int fio_cpus_split(os_cpu_mask_t *mask, unsigned int cpu);
 #endif
 
 #ifndef FIO_MAX_JOBS
-#define FIO_MAX_JOBS		2048
+#define FIO_MAX_JOBS		4096
 #endif
 
 #ifndef CONFIG_SOCKLEN_T

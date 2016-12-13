@@ -216,15 +216,6 @@ static void t_bytes_align(struct thread_options *o, struct blk_io_trace *t)
 	t->bytes = (t->bytes + o->replay_align - 1) & ~(o->replay_align - 1);
 }
 
-static void ipo_bytes_align(struct thread_options *o, struct io_piece *ipo)
-{
-	if (!o->replay_align)
-		return;
-
-	ipo->offset &= ~(o->replay_align - 1);
-}
-
-
 /*
  * Store blk_io_trace data in an ipo for later retrieval.
  */
@@ -239,7 +230,7 @@ static void store_ipo(struct thread_data *td, unsigned long long offset,
 	ipo->offset = offset * bs;
 	if (td->o.replay_scale)
 		ipo->offset = ipo->offset / td->o.replay_scale;
-	ipo_bytes_align(&td->o, ipo);
+	ipo_bytes_align(td->o.replay_align, ipo);
 	ipo->len = bytes;
 	ipo->delay = ttime / 1000;
 	if (rw)
@@ -297,7 +288,7 @@ static void handle_trace_discard(struct thread_data *td,
 	ipo->offset = t->sector * bs;
 	if (td->o.replay_scale)
 		ipo->offset = ipo->offset / td->o.replay_scale;
-	ipo_bytes_align(&td->o, ipo);
+	ipo_bytes_align(td->o.replay_align, ipo);
 	ipo->len = t->bytes;
 	ipo->delay = ttime / 1000;
 	ipo->ddir = DDIR_TRIM;

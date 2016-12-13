@@ -1,4 +1,5 @@
 #include <string.h>
+#include "oslib/strlcat.h"
 
 size_t strlcat(char *dst, const char *src, size_t size)
 {

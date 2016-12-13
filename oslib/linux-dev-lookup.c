@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "../os/os.h"
+#include "oslib/linux-dev-lookup.h"
 
 int blktrace_lookup_device(const char *redirect, char *path, unsigned int maj,
 			   unsigned int min)

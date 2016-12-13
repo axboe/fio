@@ -165,7 +165,7 @@ static struct fio_filelock *fio_hash_get(uint32_t hash, int trylock)
 	return ff;
 }
 
-static int __fio_lock_file(const char *fname, int trylock)
+static bool __fio_lock_file(const char *fname, int trylock)
 {
 	struct fio_filelock *ff;
 	uint32_t hash;
@@ -180,16 +180,16 @@ static int __fio_lock_file(const char *fname, int trylock)
 
 	if (!ff) {
 		assert(!trylock);
-		return 1;
+		return true;
 	}
 
 	if (!trylock) {
 		fio_mutex_down(&ff->lock);
-		return 0;
+		return false;
 	}
 
 	if (!fio_mutex_down_trylock(&ff->lock))
-		return 0;
+		return false;
 
 	fio_mutex_down(&fld->lock);
 
@@ -206,13 +206,13 @@ static int __fio_lock_file(const char *fname, int trylock)
 
 	if (ff) {
 		fio_mutex_down(&ff->lock);
-		return 0;
+		return false;
 	}
 
-	return 1;
+	return true;
 }
 
-int fio_trylock_file(const char *fname)
+bool fio_trylock_file(const char *fname)
 {
 	return __fio_lock_file(fname, 1);
 }

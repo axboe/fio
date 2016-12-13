@@ -58,7 +58,6 @@ static struct fio_flow *flow_get(unsigned int id)
 	if (!flow) {
 		flow = smalloc(sizeof(*flow));
 		if (!flow) {
-			log_err("fio: smalloc pool exhausted\n");
 			fio_mutex_up(flow_lock);
 			return NULL;
 		}

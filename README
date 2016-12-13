@@ -149,7 +149,7 @@ $ fio
 	--parse-only		Parse options only, don't start any IO
 	--output		Write output to file
 	--runtime		Runtime in seconds
-	--bandwidth-log		Generate per-job bandwidth logs
+	--bandwidth-log		Generate aggregate bandwidth logs
 	--minimal		Minimal (terse) output
 	--output-format=type	Output format (terse,json,json+,normal)
 	--terse-version=type	Terse version output format (default 3, or 2 or 4).
@@ -169,7 +169,7 @@ $ fio
 	--status-interval=t	Force full status dump every 't' period passed
 	--section=name		Only run specified section in job file.
 				Multiple sections can be specified.
-	--alloc-size=kb		Set smalloc pool to this size in kb (def 1024)
+	--alloc-size=kb		Set smalloc pool to this size in kb (def 16384)
 	--warnings-fatal	Fio parser warnings are fatal
 	--max-jobs		Maximum number of threads/processes to support
 	--server=args		Start backend server. See Client/Server section.
@@ -233,7 +233,7 @@ sections.  The reserved 'global' section is always parsed and used.
 The --alloc-size switch allows one to use a larger pool size for smalloc.
 If running large jobs with randommap enabled, fio can run out of memory.
 Smalloc is an internal allocator for shared structures from a fixed size
-memory pool. The pool size defaults to 1024k and can grow to 128 pools.
+memory pool. The pool size defaults to 16M and can grow to 8 pools.
 
 NOTE: While running .fio_smalloc.* backing store files are visible in /tmp.
 

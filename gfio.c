@@ -459,10 +459,12 @@ static int send_job_file(struct gui_entry *ge)
 
 static void *server_thread(void *arg)
 {
+	fio_server_create_sk_key();
 	is_backend = 1;
 	gfio_server_running = 1;
 	fio_start_server(NULL);
 	gfio_server_running = 0;
+	fio_server_destroy_sk_key();
 	return NULL;
 }
 
