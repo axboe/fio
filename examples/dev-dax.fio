@@ -1,0 +1,45 @@
+[global]
+bs=2m
+ioengine=dev-dax
+norandommap
+time_based=1
+runtime=30
+group_reporting
+disable_lat=1
+disable_slat=1
+disable_clat=1
+clat_percentiles=0
+cpus_allowed_policy=split
+
+# For the dev-dax engine:
+#
+#   IOs always complete immediately
+#   IOs are always direct
+#
+iodepth=1
+direct=0
+thread=1
+numjobs=16
+#
+# The dev-dax engine does IO to DAX device that are special character
+# devices exported by the kernel (e.g. /dev/dax0.0). The device is
+# opened normally and then the region is accessible via mmap. We do
+# not use the O_DIRECT flag because the device is naturally direct
+# access. The O_DIRECT flags will result in failure. The engine
+# access the underlying NVDIMM directly once the mmapping is setup.
+#
+# Check the alignment requirement of your DAX device. Currently the default
+# should be 2M. Blocksize (bs) should meet alignment requirement.
+#
+# An example of creating a dev dax device node from pmem:
+# ndctl create-namespace --reconfig=namespace0.0 --mode=dax --force
+#
+filename=/dev/dax0.0
+
+[dev-dax-write]
+rw=randwrite
+stonewall
+
+[dev-dax-read]
+rw=randread
+stonewall

@@ -1770,6 +1770,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  },
 
 #endif
+#ifdef CONFIG_LINUX_DEVDAX
+			  { .ival = "dev-dax",
+			    .help = "DAX Device based IO engine",
+			  },
+#endif
 			  { .ival = "external",
 			    .help = "Load external engine (append name)",
 			  },

@@ -819,6 +819,9 @@ ioengine=str	Defines how the job issues io to the file. The following
 			pmemblk	Read and write through the NVML libpmemblk
 				interface.
 
+			dev-dax Read and write through a DAX device exposed
+				from persistent memory.
+
 			external Prefix to specify loading an external
 				IO engine object file. Append the engine
 				filename, eg ioengine=external:/tmp/foo.o
