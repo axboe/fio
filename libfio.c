@@ -152,6 +152,7 @@ void reset_all_stats(struct thread_data *td)
 	memcpy(&td->start, &td->epoch, sizeof(struct timeval));
 	memcpy(&td->iops_sample_time, &td->epoch, sizeof(struct timeval));
 	memcpy(&td->bw_sample_time, &td->epoch, sizeof(struct timeval));
+	memcpy(&td->ss.prev_time, &td->epoch, sizeof(struct timeval));
 
 	lat_target_reset(td);
 	clear_rusage_stat(td);

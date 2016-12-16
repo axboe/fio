@@ -1061,6 +1061,78 @@ static int str_random_distribution_cb(void *data, const char *str)
 	return 0;
 }
 
+static int str_steadystate_cb(void *data, const char *str)
+{
+	struct thread_data *td = cb_data_to_td(data);
+	double val;
+	char *nr;
+	char *pct;
+	long long ll;
+
+	if (td->o.ss_state != FIO_SS_IOPS && td->o.ss_state != FIO_SS_IOPS_SLOPE &&
+	    td->o.ss_state != FIO_SS_BW && td->o.ss_state != FIO_SS_BW_SLOPE) {
+		/* should be impossible to get here */
+		log_err("fio: unknown steady state criterion\n");
+		return 1;
+	}
+
+	nr = get_opt_postfix(str);
+	if (!nr) {
+		log_err("fio: steadystate threshold must be specified in addition to criterion\n");
+		free(nr);
+		return 1;
+	}
+
+	/* ENHANCEMENT Allow fio to understand size=10.2% and use here */
+	pct = strstr(nr, "%");
+	if (pct) {
+		*pct = '\0';
+		strip_blank_end(nr);
+		if (!str_to_float(nr, &val, 0))	{
+			log_err("fio: could not parse steadystate threshold percentage\n");
+			free(nr);
+			return 1;
+		}
+
+		dprint(FD_PARSE, "set steady state threshold to %f%%\n", val);
+		free(nr);
+		if (parse_dryrun())
+			return 0;
+
+		td->o.ss_state |= __FIO_SS_PCT;
+		td->o.ss_limit.u.f = val;
+	} else if (td->o.ss_state & __FIO_SS_IOPS) {
+		if (!str_to_float(nr, &val, 0)) {
+			log_err("fio: steadystate IOPS threshold postfix parsing failed\n");
+			free(nr);
+			return 1;
+		}
+
+		dprint(FD_PARSE, "set steady state IOPS threshold to %f\n", val);
+		free(nr);
+		if (parse_dryrun())
+			return 0;
+
+		td->o.ss_limit.u.f = val;
+	} else {	/* bandwidth criterion */
+		if (str_to_decimal(nr, &ll, 1, td, 0, 0)) {
+			log_err("fio: steadystate BW threshold postfix parsing failed\n");
+			free(nr);
+			return 1;
+		}
+
+		dprint(FD_PARSE, "set steady state BW threshold to %lld\n", ll);
+		free(nr);
+		if (parse_dryrun())
+			return 0;
+
+		td->o.ss_limit.u.f = (double) ll;
+	}
+
+	td->ss.state = td->o.ss_state;
+	return 0;
+}
+
 /*
  * Return next name in the string. Files are separated with ':'. If the ':'
  * is escaped with a '\', then that ':' is part of the filename and does not
@@ -4190,6 +4262,63 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.def	= "0",
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_MTD,
+	},
+	{
+		.name   = "steadystate",
+		.lname  = "Steady state threshold",
+		.alias  = "ss",
+		.type   = FIO_OPT_STR,
+		.off1   = offsetof(struct thread_options, ss_state),
+		.cb	= str_steadystate_cb,
+		.help   = "Define the criterion and limit to judge when a job has reached steady state",
+		.def	= "iops_slope:0.01%",
+		.posval	= {
+			  { .ival = "iops",
+			    .oval = FIO_SS_IOPS,
+			    .help = "maximum mean deviation of IOPS measurements",
+			  },
+			  { .ival = "iops_slope",
+			    .oval = FIO_SS_IOPS_SLOPE,
+			    .help = "slope calculated from IOPS measurements",
+			  },
+			  { .ival = "bw",
+			    .oval = FIO_SS_BW,
+			    .help = "maximum mean deviation of bandwidth measurements",
+			  },
+			  {
+			    .ival = "bw_slope",
+			    .oval = FIO_SS_BW_SLOPE,
+			    .help = "slope calculated from bandwidth measurements",
+			  },
+		},
+		.category = FIO_OPT_C_GENERAL,
+		.group  = FIO_OPT_G_RUNTIME,
+	},
+        {
+		.name   = "steadystate_duration",
+		.lname  = "Steady state duration",
+		.alias  = "ss_dur",
+		.type   = FIO_OPT_STR_VAL_TIME,
+		.off1   = offsetof(struct thread_options, ss_dur),
+		.help   = "Stop workload upon attaining steady state for specified duration",
+		.def    = "0",
+		.is_seconds = 1,
+		.is_time = 1,
+		.category = FIO_OPT_C_GENERAL,
+		.group  = FIO_OPT_G_RUNTIME,
+	},
+        {
+		.name   = "steadystate_ramp_time",
+		.lname  = "Steady state ramp time",
+		.alias  = "ss_ramp",
+		.type   = FIO_OPT_STR_VAL_TIME,
+		.off1   = offsetof(struct thread_options, ss_ramp_time),
+		.help   = "Delay before initiation of data collection for steady state job termination testing",
+		.def    = "0",
+		.is_seconds = 1,
+		.is_time = 1,
+		.category = FIO_OPT_C_GENERAL,
+		.group  = FIO_OPT_G_RUNTIME,
 	},
 	{
 		.name = NULL,

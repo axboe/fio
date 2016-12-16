@@ -1665,6 +1665,7 @@ static void *thread_main(void *data)
 	fio_getrusage(&td->ru_start);
 	memcpy(&td->bw_sample_time, &td->epoch, sizeof(td->epoch));
 	memcpy(&td->iops_sample_time, &td->epoch, sizeof(td->epoch));
+	memcpy(&td->ss.prev_time, &td->epoch, sizeof(td->epoch));
 
 	if (o->ratemin[DDIR_READ] || o->ratemin[DDIR_WRITE] ||
 			o->ratemin[DDIR_TRIM]) {
@@ -2415,6 +2416,12 @@ int fio_backend(struct sk_out *sk_out)
 	}
 
 	for_each_td(td, i) {
+		if (td->ss.dur) {
+			if (td->ss.iops_data != NULL) {
+				free(td->ss.iops_data);
+				free(td->ss.bw_data);
+			}
+		}
 		fio_options_free(td);
 		if (td->rusage_sem) {
 			fio_mutex_remove(td->rusage_sem);

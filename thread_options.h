@@ -170,6 +170,10 @@ struct thread_options {
 	unsigned long long start_delay_high;
 	unsigned long long timeout;
 	unsigned long long ramp_time;
+	unsigned int ss_state;
+	fio_fp64_t ss_limit;
+	unsigned long long ss_dur;
+	unsigned long long ss_ramp_time;
 	unsigned int overwrite;
 	unsigned int bw_avg_time;
 	unsigned int iops_avg_time;
@@ -434,6 +438,10 @@ struct thread_options_pack {
 	uint64_t start_delay_high;
 	uint64_t timeout;
 	uint64_t ramp_time;
+	uint64_t ss_dur;
+	uint64_t ss_ramp_time;
+	uint32_t ss_state;
+	fio_fp64_t ss_limit;
 	uint32_t overwrite;
 	uint32_t bw_avg_time;
 	uint32_t iops_avg_time;
@@ -494,6 +502,7 @@ struct thread_options_pack {
 	uint64_t trim_backlog;
 	uint32_t clat_percentiles;
 	uint32_t percentile_precision;
+	uint32_t padding;	/* REMOVE ME when possible to maintain alignment */
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];

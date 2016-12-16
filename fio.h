@@ -41,6 +41,7 @@
 #include "flow.h"
 #include "io_u_queue.h"
 #include "workqueue.h"
+#include "steadystate.h"
 
 #ifdef CONFIG_SOLARISAIO
 #include <sys/asynch.h>
@@ -394,6 +395,8 @@ struct thread_data {
 	void *prof_data;
 
 	void *pinned_mem;
+
+	struct steadystate_data ss;
 
 	char verror[FIO_VERROR_SIZE];
 };

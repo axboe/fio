@@ -1,0 +1,45 @@
+#
+# Example job file for steady state job termination
+# Use --output-format=json for detailed information
+#
+# For Windows, change the file names
+#
+
+[global]
+threads=1
+group_reporting=1
+time_based
+size=128m
+
+[ss-write]
+filename=/dev/null
+rw=write
+bs=128k
+numjobs=4
+runtime=5m
+ss=iops:10%
+ss_dur=30s
+ss_ramp=10s
+#
+# Begin ss detection 10s after job starts
+# Terminate job when largest deviation from mean IOPS is 10%
+# Use a rolling 30s window for deviations
+#
+
+
+[ss-read]
+new_group
+stonewall
+filename=/dev/zero
+rw=randread
+bs=4k
+numjobs=4
+runtime=5m
+ss=bw_slope:1%
+ss_dur=10s
+ss_ramp=5s
+#
+# Begin ss detection 5s after job starts
+# Terminate job when bandwidth slope is less than 1% of avg bw
+# Use a rolling 10s window for bw measurements
+#

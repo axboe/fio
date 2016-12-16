@@ -1,6 +1,7 @@
 #include "fio.h"
 #include "smalloc.h"
 #include "helper_thread.h"
+#include "steadystate.h"
 
 static struct helper_data {
 	volatile int exit;
@@ -69,14 +70,15 @@ void helper_thread_exit(void)
 static void *helper_thread_main(void *data)
 {
 	struct helper_data *hd = data;
-	unsigned int msec_to_next_event, next_log;
-	struct timeval tv, last_du;
+	unsigned int msec_to_next_event, next_log, next_ss = STEADYSTATE_MSEC;
+	struct timeval tv, last_du, last_ss;
 	int ret = 0;
 
 	sk_out_assign(hd->sk_out);
 
 	gettimeofday(&tv, NULL);
 	memcpy(&last_du, &tv, sizeof(tv));
+	memcpy(&last_ss, &tv, sizeof(tv));
 
 	fio_mutex_up(hd->startup_mutex);
 
@@ -84,7 +86,7 @@ static void *helper_thread_main(void *data)
 	while (!ret && !hd->exit) {
 		struct timespec ts;
 		struct timeval now;
-		uint64_t since_du;
+		uint64_t since_du, since_ss = 0;
 
 		timeval_add_msec(&tv, msec_to_next_event);
 		ts.tv_sec = tv.tv_sec;
@@ -98,6 +100,7 @@ static void *helper_thread_main(void *data)
 		if (hd->reset) {
 			memcpy(&tv, &now, sizeof(tv));
 			memcpy(&last_du, &now, sizeof(last_du));
+			memcpy(&last_ss, &now, sizeof(last_ss));
 			hd->reset = 0;
 		}
 
@@ -122,7 +125,22 @@ static void *helper_thread_main(void *data)
 		if (!next_log)
 			next_log = DISK_UTIL_MSEC;
 
-		msec_to_next_event = min(next_log, msec_to_next_event);
+		if (steadystate_enabled) {
+			since_ss = mtime_since(&last_ss, &now);
+			if (since_ss >= STEADYSTATE_MSEC || STEADYSTATE_MSEC - since_ss < 10) {
+				steadystate_check();
+				timeval_add_msec(&last_ss, since_ss);
+				if (since_ss > STEADYSTATE_MSEC)
+					next_ss = STEADYSTATE_MSEC - (since_ss - STEADYSTATE_MSEC);
+				else
+					next_ss = STEADYSTATE_MSEC;
+			}
+			else
+				next_ss = STEADYSTATE_MSEC - since_ss;
+                }
+
+		msec_to_next_event = min(min(next_log, msec_to_next_event), next_ss);
+		dprint(FD_HELPERTHREAD, "since_ss: %llu, next_ss: %u, next_log: %u, msec_to_next_event: %u\n", (unsigned long long)since_ss, next_ss, next_log, msec_to_next_event);
 
 		if (!is_backend)
 			print_thread_status();
@@ -142,6 +160,7 @@ int helper_thread_create(struct fio_mutex *startup_mutex, struct sk_out *sk_out)
 	hd = smalloc(sizeof(*hd));
 
 	setup_disk_util();
+	steadystate_setup();
 
 	hd->sk_out = sk_out;
 

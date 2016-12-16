@@ -297,7 +297,7 @@ irange	Integer range with suffix. Allows value range to be given, such
 	1k:4k. If the option allows two sets of ranges, they can be
 	specified with a ',' or '/' delimiter: 1k-4k/8k-32k. Also see
 	int.
-float_list	A list of floating numbers, separated by a ':' character.
+float_list	A list of floating point numbers, separated by a ':' character.
 
 With the above in mind, here follows the complete list of fio job
 parameters.
@@ -1217,6 +1217,48 @@ ramp_time=time	If set, fio will run the specified workload for this amount
 		that the ramp_time is considered lead in time for a job,
 		thus it will increase the total runtime if a special timeout
 		or runtime is specified.
+
+steadystate=str:float
+ss=str:float	Define the criterion and limit for assessing steady state
+		performance. The first parameter designates the criterion
+		whereas the second parameter sets the threshold. When the
+		criterion falls below the threshold for the specified duration,
+		the job will stop. For example, iops_slope:0.1% will direct fio
+		to terminate the job when the least squares regression slope
+		falls below 0.1% of the mean IOPS. If group_reporting is
+		enabled this will apply to all jobs in the group. Below is the
+		list of available steady state assessment criteria. All
+		assessments are carried out using only data from the rolling
+		collection window. Threshold limits can be expressed as a fixed
+		value or as a percentage of the mean in the collection window.
+			iops	Collect IOPS data. Stop the job if all
+				individual IOPS measurements are within the
+				specified limit of the mean IOPS (e.g., iops:2
+				means that all individual IOPS values must be
+				within 2 of the mean, whereas iops:0.2% means
+				that all individual IOPS values must be within
+				0.2% of	the mean IOPS to terminate the job).
+			iops_slope
+				Collect IOPS data and calculate the least
+				squares regression slope. Stop the job if the
+				slope falls below the specified limit.
+			bw	Collect bandwidth data. Stop the job if all
+				individual bandwidth measurements are within
+				the specified limit of the mean bandwidth.
+			bw_slope
+				Collect bandwidth data and calculate the least
+				squares regression slope. Stop the job if the
+				slope falls below the specified limit.
+
+steadystate_duration=time
+ss_dur=time	A rolling window of this duration will be used to judge whether
+		steady state has been reached. Data will be collected once per
+		second. The default is 0 which disables steady state detection.
+
+steadystate_ramp_time=time
+ss_ramp=time	Allow the job to run for the specified duration before
+		beginning data collection for checking the steady state job
+		termination criterion. The default is 0.
 
 invalidate=bool	Invalidate the buffer/page cache parts for this file prior
 		to starting io. Defaults to true.

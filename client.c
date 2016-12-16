@@ -946,6 +946,21 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->nr_block_infos	= le64_to_cpu(src->nr_block_infos);
 	for (i = 0; i < dst->nr_block_infos; i++)
 		dst->block_infos[i] = le32_to_cpu(src->block_infos[i]);
+
+	dst->ss_dur		= le64_to_cpu(src->ss_dur);
+	dst->ss_state		= le32_to_cpu(src->ss_state);
+	dst->ss_head		= le32_to_cpu(src->ss_head);
+	dst->ss_limit.u.f 	= fio_uint64_to_double(le64_to_cpu(src->ss_limit.u.i));
+	dst->ss_slope.u.f 	= fio_uint64_to_double(le64_to_cpu(src->ss_slope.u.i));
+	dst->ss_deviation.u.f 	= fio_uint64_to_double(le64_to_cpu(src->ss_deviation.u.i));
+	dst->ss_criterion.u.f 	= fio_uint64_to_double(le64_to_cpu(src->ss_criterion.u.i));
+
+	if (dst->ss_state & __FIO_SS_DATA) {
+		for (i = 0; i < dst->ss_dur; i++ ) {
+			dst->ss_iops_data[i] = le64_to_cpu(src->ss_iops_data[i]);
+			dst->ss_bw_data[i] = le64_to_cpu(src->ss_bw_data[i]);
+		}
+	}
 }
 
 static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
@@ -1617,6 +1632,7 @@ int fio_handle_client(struct fio_client *client)
 {
 	struct client_ops *ops = client->ops;
 	struct fio_net_cmd *cmd;
+	int size;
 
 	dprint(FD_NET, "client: handle %s\n", client->hostname);
 
@@ -1648,6 +1664,15 @@ int fio_handle_client(struct fio_client *client)
 		}
 	case FIO_NET_CMD_TS: {
 		struct cmd_ts_pdu *p = (struct cmd_ts_pdu *) cmd->payload;
+
+		dprint(FD_NET, "client: ts->ss_state = %u\n", (unsigned int) le32_to_cpu(p->ts.ss_state));
+		if (le32_to_cpu(p->ts.ss_state) & __FIO_SS_DATA) {
+			dprint(FD_NET, "client: received steadystate ring buffers\n");
+
+			size = le64_to_cpu(p->ts.ss_dur);
+			p->ts.ss_iops_data = (uint64_t *) ((struct cmd_ts_pdu *)cmd->payload + 1);
+			p->ts.ss_bw_data = p->ts.ss_iops_data + size;
+		}
 
 		convert_ts(&p->ts, &p->ts);
 		convert_gs(&p->rs, &p->rs);

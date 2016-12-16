@@ -1,0 +1,14 @@
+Known issues/TODO (for steady-state)
+
+- Allow user to specify the frequency of measurements
+
+- Better documentation for output
+
+- Report read, write, trim IOPS/BW separately
+
+- Semantics for the ring buffer ss->head are confusing. ss->head points
+  to the beginning of the buffer up through the point where the buffer
+  is filled for the first time. afterwards, when a new element is added,
+  ss->head is advanced to point to the second element in the buffer. if
+  steady state is attained upon adding a new element, ss->head is not
+  advanced so it actually does point to the head of the buffer.

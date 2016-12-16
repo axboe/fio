@@ -198,10 +198,10 @@ struct thread_stat {
 	 */
 	union {
 		uint16_t continue_on_error;
-		uint64_t pad2;
+		uint32_t pad2;
 	};
-	uint64_t total_err_count;
 	uint32_t first_error;
+	uint64_t total_err_count;
 
 	uint64_t nr_block_infos;
 	uint32_t block_infos[MAX_NR_BLOCK_INFOS];
@@ -210,9 +210,29 @@ struct thread_stat {
 	uint32_t unit_base;
 
 	uint32_t latency_depth;
+	uint32_t pad3;
 	uint64_t latency_target;
 	fio_fp64_t latency_percentile;
 	uint64_t latency_window;
+
+	uint64_t ss_dur;
+	uint32_t ss_state;
+	uint32_t ss_head;
+
+	fio_fp64_t ss_limit;
+	fio_fp64_t ss_slope;
+	fio_fp64_t ss_deviation;
+	fio_fp64_t ss_criterion;
+
+	union {
+		uint64_t *ss_iops_data;
+		uint64_t pad4;
+	};
+
+	union {
+		uint64_t *ss_bw_data;
+		uint64_t pad5;
+	};
 } __attribute__((packed));
 
 struct jobs_eta {

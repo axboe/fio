@@ -1139,6 +1139,50 @@ logging results, thus minimizing the runtime required for stable results. Note
 that the \fBramp_time\fR is considered lead in time for a job, thus it will
 increase the total runtime if a special timeout or runtime is specified.
 .TP
+.BI steadystate \fR=\fPstr:float "\fR,\fP ss" \fR=\fPstr:float
+Define the criterion and limit for assessing steady state performance. The
+first parameter designates the criterion whereas the second parameter sets the
+threshold. When the criterion falls below the threshold for the specified
+duration, the job will stop. For example, iops_slope:0.1% will direct fio
+to terminate the job when the least squares regression slope falls below 0.1%
+of the mean IOPS. If group_reporting is enabled this will apply to all jobs in
+the group. All assessments are carried out using only data from the rolling
+collection window. Threshold limits can be expressed as a fixed value or as a
+percentage of the mean in the collection window. Below are the available steady
+state assessment criteria.
+.RS
+.RS
+.TP
+.B iops
+Collect IOPS data. Stop the job if all individual IOPS measurements are within
+the specified limit of the mean IOPS (e.g., iops:2 means that all individual
+IOPS values must be within 2 of the mean, whereas iops:0.2% means that all
+individual IOPS values must be within 0.2% of the mean IOPS to terminate the
+job).
+.TP
+.B iops_slope
+Collect IOPS data and calculate the least squares regression slope. Stop the
+job if the slope falls below the specified limit.
+.TP
+.B bw
+Collect bandwidth data. Stop the job if all individual bandwidth measurements
+are within the specified limit of the mean bandwidth.
+.TP
+.B bw_slope
+Collect bandwidth data and calculate the least squares regression slope. Stop
+the job if the slope falls below the specified limit.
+.RE
+.RE
+.TP
+.BI steadystate_duration \fR=\fPtime "\fR,\fP ss_dur" \fR=\fPtime
+A rolling window of this duration will be used to judge whether steady state
+has been reached. Data will be collected once per second. The default is 0
+which disables steady state detection.
+.TP
+.BI steadystate_ramp_time \fR=\fPtime "\fR,\fP ss_ramp" \fR=\fPtime
+Allow the job to run for the specified duration before beginning data collection
+for checking the steady state job termination criterion. The default is 0.
+.TP
 .BI invalidate \fR=\fPbool
 Invalidate buffer-cache for the file prior to starting I/O.  Default: true.
 .TP

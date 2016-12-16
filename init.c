@@ -25,6 +25,7 @@
 #include "server.h"
 #include "idletime.h"
 #include "filelock.h"
+#include "steadystate.h"
 
 #include "oslib/getopt.h"
 #include "oslib/strcasestr.h"
@@ -1563,6 +1564,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			log_info("...\n");
 	}
 
+	if (td_steadystate_init(td))
+		goto err;
+
 	/*
 	 * recurse add identical jobs, clear numjobs and stonewall options
 	 * as they don't apply to sub-jobs
@@ -1578,6 +1582,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		td_new->o.stonewall = 0;
 		td_new->o.new_group = 0;
 		td_new->subjob_number = numjobs;
+		td_new->o.ss_dur = o->ss_dur * 1000000l;
+		td_new->o.ss_limit = o->ss_limit;
 
 		if (file_alloced) {
 			if (td_new->files) {
@@ -2119,6 +2125,14 @@ struct debug_level debug_levels[] = {
 	{ .name = "compress",
 	  .help = "Log compression logging",
 	  .shift = FD_COMPRESS,
+	},
+	{ .name = "steadystate",
+	  .help = "Steady state detection logging",
+	  .shift = FD_STEADYSTATE,
+	},
+	{ .name = "helperthread",
+	  .help = "Helper thread logging",
+	  .shift = FD_HELPERTHREAD,
 	},
 	{ .name = NULL, },
 };
