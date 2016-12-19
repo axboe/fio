@@ -476,8 +476,17 @@ fadvise_hint=bool By default, fio will use fadvise() to advise the kernel
 		on what IO patterns it is likely to issue. Sometimes you
 		want to test specific IO patterns without telling the
 		kernel about it, in which case you can disable this option.
-		If set, fio will use POSIX_FADV_SEQUENTIAL for sequential
-		IO and POSIX_FADV_RANDOM for random IO.
+		The following options are supported:
+
+			sequential	Use FADV_SEQUENTIAL
+			random		Use FADV_RANDOM
+			1		Backwards-compatible hint for basing
+					the hint on the fio workload. Will use
+					FADV_SEQUENTIAL for a sequential
+					workload, and FADV_RANDOM for a random
+					workload.
+			0		Backwards-compatible setting for not
+					issing a fadvise hint.
 
 fadvise_stream=int Notify the kernel what write stream ID to place these
 		writes under. Only supported on Linux. Note, this option

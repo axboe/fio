@@ -396,9 +396,27 @@ available on Linux. If using ZFS on Solaris this must be set to 'none'
 because ZFS doesn't support it. Default: 'posix'.
 .RE
 .TP
-.BI fadvise_hint \fR=\fPbool
+.BI fadvise_hint \fR=\fPstr
 Use \fBposix_fadvise\fR\|(2) to advise the kernel what I/O patterns
-are likely to be issued. Default: true.
+are likely to be issued. Accepted values are:
+.RS
+.RS
+.TP
+.B 0
+Backwards compatible hint for "no hint".
+.TP
+.B 1
+Backwards compatible hint for "advise with fio workload type". This
+uses \fBFADV_RANDOM\fR for a random workload, and \fBFADV_SEQUENTIAL\fR
+for a sequential workload.
+.TP
+.B sequential
+Advise using \fBFADV_SEQUENTIAL\fR
+.TP
+.B random
+Advise using \fBFADV_RANDOM\fR
+.RE
+.RE
 .TP
 .BI fadvise_stream \fR=\fPint
 Use \fBposix_fadvise\fR\|(2) to advise the kernel what stream ID the

@@ -110,6 +110,13 @@ enum {
 	RATE_PROCESS_POISSON = 1,
 };
 
+enum {
+	F_ADV_NONE = 0,
+	F_ADV_TYPE,
+	F_ADV_RANDOM,
+	F_ADV_SEQUENTIAL,
+};
+
 /*
  * Per-thread/process specific data. Only used for the network client
  * for now.
