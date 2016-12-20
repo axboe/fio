@@ -81,6 +81,7 @@ typedef struct aiocb os_aiocb_t;
 #define POSIX_FADV_DONTNEED	(0)
 #define POSIX_FADV_SEQUENTIAL	(0)
 #define POSIX_FADV_RANDOM	(0)
+#define POSIX_FADV_NORMAL	(0)
 #endif
 
 #ifndef FIO_HAVE_CPU_AFFINITY
