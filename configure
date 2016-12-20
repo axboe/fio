@@ -138,6 +138,7 @@ libhdfs="no"
 pmemblk="no"
 devdax="no"
 disable_lex=""
+disable_pmem="no"
 prefix=/usr/local
 
 # parse options
@@ -173,10 +174,6 @@ for opt do
   ;;
   --enable-libhdfs) libhdfs="yes"
   ;;
-  --enable-pmemblk) pmemblk="yes"
-  ;;
-  --enable-devdax) devdax="yes"
-  ;;
   --disable-lex) disable_lex="yes"
   ;;
   --enable-lex) disable_lex="no"
@@ -184,6 +181,8 @@ for opt do
   --disable-shm) no_shm="yes"
   ;;
   --disable-optimizations) disable_opt="yes"
+  ;;
+  --disable-pmem) disable_pmem="yes"
   ;;
   --help)
     show_help="yes"
@@ -207,9 +206,8 @@ if test "$show_help" = "yes" ; then
   echo "--disable-numa         Disable libnuma even if found"
   echo "--disable-gfapi        Disable gfapi"
   echo "--enable-libhdfs       Enable hdfs support"
-  echo "--enable-pmemblk       Enable NVML libpmemblk support"
-  echo "--enable-devdax        Enable NVM Device Dax support"
   echo "--disable-lex          Disable use of lex/yacc for math"
+  echo "--disable-pmem         Disable pmem based engines even if found"
   echo "--enable-lex           Enable use of lex/yacc for math"
   echo "--disable-shm          Disable SHM support"
   echo "--disable-optimizations Don't enable compiler optimizations"
@@ -1567,12 +1565,53 @@ fi
 echo "MTD                           $mtd"
 
 ##########################################
+# Check whether we have libpmem
+libpmem="no"
+cat > $TMPC << EOF
+#include <libpmem.h>
+int main(int argc, char **argv)
+{
+  int rc;
+  rc = pmem_is_pmem(0, 0);
+  return 0;
+}
+EOF
+if compile_prog "" "-lpmem" "libpmem"; then
+  libpmem="yes"
+fi
+echo "libpmem                       $libpmem"
+
+##########################################
+# Check whether we have libpmemblk
+libpmemblk="no"
+cat > $TMPC << EOF
+#include <libpmemblk.h>
+int main(int argc, char **argv)
+{
+  int rc;
+  rc = pmemblk_open("", 0);
+  return 0;
+}
+EOF
+if compile_prog "" "-lpmemblk -lpmem" "libpmemblk"; then
+  libpmemblk="yes"
+fi
+echo "libpmemblk                    $libpmemblk"
+
+if test "$libpmem" = "yes" && test "$disable_pmem" = "no"; then
+  devdax="yes"
+  if test "$libpmemblk" = "yes"; then
+    pmemblk="yes"
+  fi
+fi
+
+##########################################
 # Report whether pmemblk engine is enabled
 echo "NVML libpmemblk engine        $pmemblk"
 
 ##########################################
 # Report whether dev-dax engine is enabled
-echo "NVM Device Dax engine        $devdax"
+echo "NVML Device Dax engine        $devdax"
 
 # Check if we have lex/yacc available
 yacc="no"
