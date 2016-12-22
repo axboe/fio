@@ -398,12 +398,13 @@ rw=str		Type of io pattern. Accepted values are:
 
 			read		Sequential reads
 			write		Sequential writes
+			trim		Sequential trims
 			randwrite	Random writes
 			randread	Random reads
+			randtrim	Random trims
 			rw,readwrite	Sequential mixed reads and writes
 			randrw		Random mixed reads and writes
-			trimwrite	Mixed trims and writes. Blocks will be
-					trimmed first, then written to.
+			trimwrite	Sequential trim+write sequences
 
 		Fio defaults to read if the option is not specified.
 		For the mixed io types, the default is to split them 50/50.
@@ -444,7 +445,7 @@ kb_base=int	The base unit for a kilobyte. The defacto base is 2^10, 1024.
 		1024 or 1000, with 1024 being the default.
 
 unified_rw_reporting=bool	Fio normally reports statistics on a per
-		data direction basis, meaning that read, write, and trim are
+		data direction basis, meaning that reads, writes, and trims are
 		accounted and reported separately. If this option is set,
 		the fio will sum the results and report them as "mixed"
 		instead.

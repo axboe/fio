@@ -287,7 +287,7 @@ Sequential reads.
 Sequential writes.
 .TP
 .B trim
-Sequential trim (Linux block devices only).
+Sequential trims (Linux block devices only).
 .TP
 .B randread
 Random reads.
@@ -296,7 +296,7 @@ Random reads.
 Random writes.
 .TP
 .B randtrim
-Random trim (Linux block devices only).
+Random trims (Linux block devices only).
 .TP
 .B rw, readwrite
 Mixed sequential reads and writes.
@@ -305,8 +305,8 @@ Mixed sequential reads and writes.
 Mixed random reads and writes.
 .TP
 .B trimwrite
-Trim and write mixed workload. Blocks will be trimmed first, then the same
-blocks will be written to.
+Sequential trim and write mixed workload. Blocks will be trimmed first, then
+the same blocks will be written to.
 .RE
 .P
 Fio defaults to read if the option is not specified.
@@ -353,7 +353,7 @@ reasons. Allowed values are 1024 or 1000, with 1024 being the default.
 .TP
 .BI unified_rw_reporting \fR=\fPbool
 Fio normally reports statistics on a per data direction basis, meaning that
-read, write, and trim are accounted and reported separately. If this option is
+reads, writes, and trims are accounted and reported separately. If this option is
 set fio sums the results and reports them as "mixed" instead.
 .TP
 .BI randrepeat \fR=\fPbool
@@ -735,7 +735,7 @@ properly.
 Read, write and erase an MTD character device (e.g., /dev/mtd0). Discards are
 treated as erases. Depending on the underlying device type, the I/O may have
 to go in a certain pattern, e.g., on NAND, writing sequentially to erase blocks
-and discarding before overwriting. The writetrim mode works well for this
+and discarding before overwriting. The trimwrite mode works well for this
 constraint.
 .TP
 .B pmemblk
