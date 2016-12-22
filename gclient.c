@@ -908,10 +908,10 @@ static void gfio_show_latency_buckets(struct gfio_client *gc, GtkWidget *vbox,
 				      struct thread_stat *ts)
 {
 	double io_u_lat[FIO_IO_U_LAT_U_NR + FIO_IO_U_LAT_M_NR];
-	const char *ranges[] = { "2u", "4u", "10u", "20u", "50u", "100u",
-				 "250u", "500u", "750u", "1m", "2m",
-				 "4m", "10m", "20m", "50m", "100m",
-				 "250m", "500m", "750m", "1s", "2s", ">= 2s" };
+	const char *ranges[] = { "2us", "4us", "10us", "20us", "50us", "100us",
+				 "250us", "500us", "750us", "1ms", "2ms",
+				 "4ms", "10ms", "20ms", "50ms", "100ms",
+				 "250ms", "500ms", "750ms", "1s", "2s", ">= 2s" };
 	int start, end, i;
 	const int total = FIO_IO_U_LAT_U_NR + FIO_IO_U_LAT_M_NR;
 	GtkWidget *frame, *tree_view, *hbox, *completion_vbox, *drawing_area;
@@ -940,7 +940,7 @@ static void gfio_show_latency_buckets(struct gfio_client *gc, GtkWidget *vbox,
 		return;
 
 	tree_view = gfio_output_lat_buckets(&io_u_lat[start], &ranges[start], end - start + 1);
-	ge->lat_bucket_graph = setup_lat_bucket_graph("Latency Buckets", &io_u_lat[start], &ranges[start], end - start + 1, 700.0, 300.0);
+	ge->lat_bucket_graph = setup_lat_bucket_graph("Latency buckets", &io_u_lat[start], &ranges[start], end - start + 1, 700.0, 300.0);
 
 	frame = gtk_frame_new("Latency buckets");
 	gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 5);
