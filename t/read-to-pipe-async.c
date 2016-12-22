@@ -661,9 +661,9 @@ int main(int argc, char *argv[])
 
 	bytes /= 1024;
 	rate = (bytes * 1000UL * 1000UL) / utime_since(&s, &re);
-	fprintf(stderr, "Read rate (KB/sec) : %lu\n", rate);
+	fprintf(stderr, "Read rate (KiB/sec) : %lu\n", rate);
 	rate = (bytes * 1000UL * 1000UL) / utime_since(&s, &we);
-	fprintf(stderr, "Write rate (KB/sec): %lu\n", rate);
+	fprintf(stderr, "Write rate (KiB/sec): %lu\n", rate);
 
 	close(fd);
 	return 0;

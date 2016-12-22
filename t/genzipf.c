@@ -3,8 +3,8 @@
  * what an access pattern would look like.
  *
  * For instance, the following would generate a zipf distribution
- * with theta 1.2, using 262144 (1 GB / 4096) values and split the reporting into
- * 20 buckets:
+ * with theta 1.2, using 262144 (1 GiB / 4096) values and split the
+ * reporting into 20 buckets:
  *
  *	./t/fio-genzipf -t zipf -i 1.2 -g 1 -b 4096 -o 20
  *
@@ -49,7 +49,7 @@ enum {
 };
 
 static int dist_type = TYPE_ZIPF;
-static unsigned long gb_size = 500;
+static unsigned long gib_size = 500;
 static unsigned long block_size = 4096;
 static unsigned long output_nranges = DEF_NR_OUTPUT;
 static double percentage;
@@ -131,7 +131,7 @@ static int parse_options(int argc, char *argv[])
 			}
 			break;
 		case 'g':
-			gb_size = strtoul(optarg, NULL, 10);
+			gib_size = strtoul(optarg, NULL, 10);
 			break;
 		case 'i':
 			dist_val = atof(optarg);
@@ -291,9 +291,10 @@ int main(int argc, char *argv[])
 		return 1;
 
 	if (output_type != OUTPUT_CSV)
-		printf("Generating %s distribution with %f input and %lu GB size and %lu block_size.\n", dist_types[dist_type], dist_val, gb_size, block_size);
+		printf("Generating %s distribution with %f input and %lu GiB size and %lu block_size.\n",
+		       dist_types[dist_type], dist_val, gib_size, block_size);
 
-	nranges = gb_size * 1024 * 1024 * 1024ULL;
+	nranges = gib_size * 1024 * 1024 * 1024ULL;
 	nranges /= block_size;
 
 	if (dist_type == TYPE_ZIPF)

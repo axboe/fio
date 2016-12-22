@@ -39,7 +39,7 @@ static struct fio_option options[] = {
 		.lname	= "Tiobench size",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= offsetof(struct tiobench_options, size),
-		.help	= "Size in MB",
+		.help	= "Size in MiB",
 		.category = FIO_OPT_C_PROFILE,
 		.group	= FIO_OPT_G_TIOBENCH,
 	},
@@ -91,7 +91,7 @@ static struct fio_option options[] = {
 static int tb_prep_cmdline(void)
 {
 	/*
-	 * tiobench uses size as MB, so multiply up
+	 * tiobench uses size as MiB, so multiply up
 	 */
 	size *= 1024 * 1024ULL;
 	if (size)

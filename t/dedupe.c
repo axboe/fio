@@ -363,7 +363,7 @@ static void show_progress(struct worker_thread *threads, unsigned long total)
 		tdiff = mtime_since_now(&last_tv);
 		if (tdiff) {
 			this_items = (this_items * 1000) / (tdiff * 1024);
-			printf("%3.2f%% done (%luKB/sec)\r", perc, this_items);
+			printf("%3.2f%% done (%luKiB/sec)\r", perc, this_items);
 			last_nitems = nitems;
 			fio_gettime(&last_tv, NULL);
 		} else

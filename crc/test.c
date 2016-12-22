@@ -338,9 +338,9 @@ int fio_crctest(const char *type)
 				sprintf(pre, "\t");
 			else
 				sprintf(pre, "\t\t");
-			printf("%s:%s%8.2f MB/sec\n", t[i].name, pre, mb_sec);
+			printf("%s:%s%8.2f MiB/sec\n", t[i].name, pre, mb_sec);
 		} else
-			printf("%s:inf MB/sec\n", t[i].name);
+			printf("%s:inf MiB/sec\n", t[i].name);
 		first = 0;
 	}
 

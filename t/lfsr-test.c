@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 		v_size = numbers * sizeof(uint8_t);
 		v = malloc(v_size);
 		memset(v, 0, v_size);
-		printf("\nVerification table is %lf KBs\n", (double)(v_size) / 1024);
+		printf("\nVerification table is %lf KiB\n", (double)(v_size) / 1024);
 	}
 	v_start = v;
 

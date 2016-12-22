@@ -62,7 +62,7 @@ struct btrace_out {
 
 	uint64_t first_ttime[DDIR_RWDIR_CNT];
 	uint64_t last_ttime[DDIR_RWDIR_CNT];
-	uint64_t kb[DDIR_RWDIR_CNT];
+	uint64_t kib[DDIR_RWDIR_CNT];
 
 	uint64_t start_delay;
 };
@@ -406,7 +406,7 @@ static int handle_trace(struct blk_io_trace *t, struct btrace_pid *p)
 
 		i = inflight_find(t->sector + (t->bytes >> 9));
 		if (i) {
-			i->p->o.kb[t_to_rwdir(t)] += (t->bytes >> 10);
+			i->p->o.kib[t_to_rwdir(t)] += (t->bytes >> 10);
 			i->p->o.complete_seen = 1;
 			inflight_remove(i);
 		}
@@ -556,7 +556,7 @@ static int bs_cmp(const void *ba, const void *bb)
 	return bsb->nr - bsa->nr;
 }
 
-static unsigned long o_to_kb_rate(struct btrace_out *o, int rw)
+static unsigned long o_to_kib_rate(struct btrace_out *o, int rw)
 {
 	uint64_t usec = (o->last_ttime[rw] - o->first_ttime[rw]) / 1000ULL;
 	uint64_t val;
@@ -568,7 +568,7 @@ static unsigned long o_to_kb_rate(struct btrace_out *o, int rw)
 	if (!usec)
 		return 0;
 
-	val = o->kb[rw] * 1000ULL;
+	val = o->kib[rw] * 1000ULL;
 	return val / usec;
 }
 
@@ -623,7 +623,7 @@ static void __output_p_ascii(struct btrace_pid *p, unsigned long *ios)
 		printf("\tmerges: %lu (perc=%3.2f%%)\n", o->merges[i], perc);
 		perc = ((float) o->seq[i] * 100.0) / (float) o->ios[i];
 		printf("\tseq:    %lu (perc=%3.2f%%)\n", (unsigned long) o->seq[i], perc);
-		printf("\trate:   %lu KB/sec\n", o_to_kb_rate(o, i));
+		printf("\trate:   %lu KiB/sec\n", o_to_kib_rate(o, i));
 
 		for (j = 0; j < o->nr_bs[i]; j++) {
 			struct bs *bs = &o->bs[i][j];
@@ -746,7 +746,7 @@ static int __output_p_fio(struct btrace_pid *p, unsigned long *ios)
 		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 			unsigned long rate;
 
-			rate = o_to_kb_rate(o, i);
+			rate = o_to_kib_rate(o, i);
 			if (i)
 				printf(",");
 			if (rate)
@@ -810,7 +810,7 @@ static int prune_entry(struct btrace_out *o)
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		unsigned long this_rate;
 
-		this_rate = o_to_kb_rate(o, i);
+		this_rate = o_to_kib_rate(o, i);
 		if (this_rate < rate_threshold) {
 			remove_ddir(o, i);
 			this_rate = 0;
@@ -926,7 +926,7 @@ static int merge_entries(struct btrace_pid *pida, struct btrace_pid *pidb)
 		oa->ios[i] += ob->ios[i];
 		oa->merges[i] += ob->merges[i];
 		oa->seq[i] += ob->seq[i];
-		oa->kb[i] += ob->kb[i];
+		oa->kib[i] += ob->kib[i];
 		oa->first_ttime[i] = min(oa->first_ttime[i], ob->first_ttime[i]);
 		oa->last_ttime[i] = max(oa->last_ttime[i], ob->last_ttime[i]);
 		merge_bs(&oa->bs[i], &oa->nr_bs[i], ob->bs[i], ob->nr_bs[i]);
@@ -1021,7 +1021,7 @@ static int usage(char *argv[])
 	log_err("\t-n\tNumber IOS threshold to ignore task\n");
 	log_err("\t-f\tFio job file output\n");
 	log_err("\t-d\tUse this file/device for replay\n");
-	log_err("\t-r\tIgnore jobs with less than this KB/sec rate\n");
+	log_err("\t-r\tIgnore jobs with less than this KiB/sec rate\n");
 	log_err("\t-R\tSet rate in fio job (def=%u)\n", set_rate);
 	log_err("\t-D\tCap queue depth at this value (def=%u)\n", max_depth);
 	log_err("\t-c\tCollapse \"identical\" jobs (def=%u)\n", collapse_entries);
