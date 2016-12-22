@@ -115,7 +115,7 @@ if __name__ == '__main__':
     if args.read == None:
         if os.name == 'posix':
             args.read = '/dev/zero'
-            extra = [ "--size=128M" ]
+            extra = [ "--size=134217728" ]  # 128 MiB
         else:
             print "ERROR: file for read testing must be specified on non-posix systems"
             sys.exit(1)

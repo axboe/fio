@@ -144,7 +144,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.off1	= offsetof(struct act_options, write_size),
 		.help	= "Size of large block ops (writes)",
-		.def	= "128k",
+		.def	= "131072",
 		.category = FIO_OPT_C_PROFILE,
 		.group	= FIO_OPT_G_ACT,
 	},
@@ -220,7 +220,7 @@ static int act_add_dev_prep(const char *dev)
 		return 1;
 	if (act_add_opt("filename=%s", dev))
 		return 1;
-	if (act_add_opt("bs=1M"))
+	if (act_add_opt("bs=1048576"))
 		return 1;
 	if (act_add_opt("zero_buffers"))
 		return 1;
@@ -234,7 +234,7 @@ static int act_add_dev_prep(const char *dev)
 		return 1;
 	if (act_add_opt("filename=%s", dev))
 		return 1;
-	if (act_add_opt("bs=4k"))
+	if (act_add_opt("bs=4096"))
 		return 1;
 	if (act_add_opt("ioengine=libaio"))
 		return 1;

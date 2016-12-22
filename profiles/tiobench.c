@@ -49,7 +49,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.off1	= offsetof(struct tiobench_options, bs),
 		.help	= "Block size in bytes",
-		.def	= "4k",
+		.def	= "4096",
 		.category = FIO_OPT_C_PROFILE,
 		.group	= FIO_OPT_G_TIOBENCH,
 	},
