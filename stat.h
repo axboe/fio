@@ -7,7 +7,7 @@
 struct group_run_stats {
 	uint64_t max_run[DDIR_RWDIR_CNT], min_run[DDIR_RWDIR_CNT];
 	uint64_t max_bw[DDIR_RWDIR_CNT], min_bw[DDIR_RWDIR_CNT];
-	uint64_t io_kb[DDIR_RWDIR_CNT];
+	uint64_t iobytes[DDIR_RWDIR_CNT];
 	uint64_t agg[DDIR_RWDIR_CNT];
 	uint32_t kb_base;
 	uint32_t unit_base;

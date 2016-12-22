@@ -1444,7 +1444,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 		dst->min_run[i]		= cpu_to_le64(src->min_run[i]);
 		dst->max_bw[i]		= cpu_to_le64(src->max_bw[i]);
 		dst->min_bw[i]		= cpu_to_le64(src->min_bw[i]);
-		dst->io_kb[i]		= cpu_to_le64(src->io_kb[i]);
+		dst->iobytes[i]		= cpu_to_le64(src->iobytes[i]);
 		dst->agg[i]		= cpu_to_le64(src->agg[i]);
 	}
 

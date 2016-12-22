@@ -291,10 +291,10 @@ void show_group_stats(struct group_run_stats *rs, struct buf_output *out)
 		if (!rs->max_run[i])
 			continue;
 
-		p1 = num2str(rs->io_kb[i], 6, rs->kb_base, i2p, 8);
-		p2 = num2str(rs->agg[i], 6, rs->kb_base, i2p, rs->unit_base);
-		p3 = num2str(rs->min_bw[i], 6, rs->kb_base, i2p, rs->unit_base);
-		p4 = num2str(rs->max_bw[i], 6, rs->kb_base, i2p, rs->unit_base);
+		p1 = num2str(rs->iobytes[i], 6, 1, i2p, 8);
+		p2 = num2str(rs->agg[i], 6, 1, i2p, rs->unit_base);
+		p3 = num2str(rs->min_bw[i], 6, 1, i2p, rs->unit_base);
+		p4 = num2str(rs->max_bw[i], 6, 1, i2p, rs->unit_base);
 
 		log_buf(out, "%s: io=%s, aggrb=%s/s, minb=%s/s, maxb=%s/s,"
 			 " mint=%llumsec, maxt=%llumsec\n",
@@ -1418,7 +1418,7 @@ void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src)
 		if (dst->min_bw[i] && dst->min_bw[i] > src->min_bw[i])
 			dst->min_bw[i] = src->min_bw[i];
 
-		dst->io_kb[i] += src->io_kb[i];
+		dst->iobytes[i] += src->iobytes[i];
 		dst->agg[i] += src->agg[i];
 	}
 
@@ -1696,19 +1696,14 @@ void __show_run_stats(void)
 				rs->max_run[j] = ts->runtime[j];
 
 			bw = 0;
-			if (ts->runtime[j]) {
-				unsigned long runt = ts->runtime[j];
-				unsigned long long kb;
-
-				kb = ts->io_bytes[j] / rs->kb_base;
-				bw = kb * 1000 / runt;
-			}
+			if (ts->runtime[j])
+				bw = ts->io_bytes[j] * 1000 / ts->runtime[j];
 			if (bw < rs->min_bw[j])
 				rs->min_bw[j] = bw;
 			if (bw > rs->max_bw[j])
 				rs->max_bw[j] = bw;
 
-			rs->io_kb[j] += ts->io_bytes[j] / rs->kb_base;
+			rs->iobytes[j] += ts->io_bytes[j];
 		}
 	}
 
@@ -1719,7 +1714,7 @@ void __show_run_stats(void)
 
 		for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 			if (rs->max_run[ddir])
-				rs->agg[ddir] = (rs->io_kb[ddir] * 1000) /
+				rs->agg[ddir] = (rs->iobytes[ddir] * 1000) /
 						rs->max_run[ddir];
 		}
 	}

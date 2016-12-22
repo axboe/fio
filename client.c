@@ -972,7 +972,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 		dst->min_run[i]		= le64_to_cpu(src->min_run[i]);
 		dst->max_bw[i]		= le64_to_cpu(src->max_bw[i]);
 		dst->min_bw[i]		= le64_to_cpu(src->min_bw[i]);
-		dst->io_kb[i]		= le64_to_cpu(src->io_kb[i]);
+		dst->iobytes[i]		= le64_to_cpu(src->iobytes[i]);
 		dst->agg[i]		= le64_to_cpu(src->agg[i]);
 	}
 
