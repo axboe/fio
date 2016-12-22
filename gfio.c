@@ -1215,7 +1215,7 @@ static void about_dialog(GtkWidget *w, gpointer data)
 {
 	const char *authors[] = {
 		"Jens Axboe <axboe@kernel.dk>",
-		"Stephen Carmeron <stephenmcameron@gmail.com>",
+		"Stephen Cameron <stephenmcameron@gmail.com>",
 		NULL
 	};
 	const char *license[] = {
@@ -1386,7 +1386,7 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	g_signal_connect(ge->eta.names, "changed", G_CALLBACK(combo_entry_changed), ge);
 	g_signal_connect(ge->eta.names, "destroy", G_CALLBACK(combo_entry_destroy), ge);
 	ge->eta.iotype.entry = new_info_entry_in_frame(probe_box, "IO");
-	ge->eta.bs.entry = new_info_entry_in_frame(probe_box, "Blocksize (Read/Write)");
+	ge->eta.bs.entry = new_info_entry_in_frame(probe_box, "Blocksize (Read/Write/Trim)");
 	ge->eta.ioengine.entry = new_info_entry_in_frame(probe_box, "IO Engine");
 	ge->eta.iodepth.entry = new_info_entry_in_frame(probe_box, "IO Depth");
 	ge->eta.jobs = new_info_entry_in_frame(probe_box, "Jobs");
@@ -1395,11 +1395,11 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	probe_box = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(probe_frame), probe_box, FALSE, FALSE, 3);
 	ge->eta.read_bw = new_info_entry_in_frame_rgb(probe_box, "Read BW", GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
-	ge->eta.read_iops = new_info_entry_in_frame_rgb(probe_box, "IOPS", GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
+	ge->eta.read_iops = new_info_entry_in_frame_rgb(probe_box, "Read IOPS", GFIO_READ_R, GFIO_READ_G, GFIO_READ_B);
 	ge->eta.write_bw = new_info_entry_in_frame_rgb(probe_box, "Write BW", GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
-	ge->eta.write_iops = new_info_entry_in_frame_rgb(probe_box, "IOPS", GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
+	ge->eta.write_iops = new_info_entry_in_frame_rgb(probe_box, "Write IOPS", GFIO_WRITE_R, GFIO_WRITE_G, GFIO_WRITE_B);
 	ge->eta.trim_bw = new_info_entry_in_frame_rgb(probe_box, "Trim BW", GFIO_TRIM_R, GFIO_TRIM_G, GFIO_TRIM_B);
-	ge->eta.trim_iops = new_info_entry_in_frame_rgb(probe_box, "IOPS", GFIO_TRIM_R, GFIO_TRIM_G, GFIO_TRIM_B);
+	ge->eta.trim_iops = new_info_entry_in_frame_rgb(probe_box, "Trim IOPS", GFIO_TRIM_R, GFIO_TRIM_G, GFIO_TRIM_B);
 
 	/*
 	 * Only add this if we have a commit rate
