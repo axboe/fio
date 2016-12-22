@@ -530,19 +530,28 @@ void display_thread_status(struct jobs_eta *je)
 	}
 
 	p += sprintf(p, "Jobs: %d (f=%d)", je->nr_running, je->files_open);
-	if (je->m_rate[0] || je->m_rate[1] || je->t_rate[0] || je->t_rate[1]) {
+
+	/* rate limits, if any */
+	if (je->m_rate[0] || je->m_rate[1] || je->m_rate[2] ||
+	    je->t_rate[0] || je->t_rate[1] || je->t_rate[2]) {
 		char *tr, *mr;
 
-		mr = num2str(je->m_rate[0] + je->m_rate[1], 4, 0, je->is_pow2, 8);
-		tr = num2str(je->t_rate[0] + je->t_rate[1], 4, 0, je->is_pow2, 8);
-		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
+		mr = num2str(je->m_rate[0] + je->m_rate[1] + je->m_rate[2],
+				4, 0, je->is_pow2, N2S_BYTEPERSEC);
+		tr = num2str(je->t_rate[0] + je->t_rate[1] + je->t_rate[2],
+				4, 0, je->is_pow2, N2S_BYTEPERSEC);
+
+		p += sprintf(p, ", %s-%s", mr, tr);
 		free(tr);
 		free(mr);
-	} else if (je->m_iops[0] || je->m_iops[1] || je->t_iops[0] || je->t_iops[1]) {
-		p += sprintf(p, ", CR=%d/%d IOPS",
-					je->t_iops[0] + je->t_iops[1],
-					je->m_iops[0] + je->m_iops[1]);
+	} else if (je->m_iops[0] || je->m_iops[1] || je->m_iops[2] ||
+		   je->t_iops[0] || je->t_iops[1] || je->t_iops[2]) {
+		p += sprintf(p, ", %d-%d IOPS",
+					je->m_iops[0] + je->m_iops[1] + je->m_iops[2],
+					je->t_iops[0] + je->t_iops[1] + je->t_iops[2]);
 	}
+
+	/* current run string, % done, bandwidth, iops, eta */
 	if (je->eta_sec != INT_MAX && je->nr_running) {
 		char perc_str[32];
 		char *iops_str[DDIR_RWDIR_CNT];
@@ -553,7 +562,7 @@ void display_thread_status(struct jobs_eta *je)
 
 		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running ||
 		    je->eta_sec == -1)
-			strcpy(perc_str, "-.-% done");
+			strcpy(perc_str, "-.-%");
 		else {
 			double mult = 100.0;
 
@@ -562,22 +571,31 @@ void display_thread_status(struct jobs_eta *je)
 
 			eta_good = 1;
 			perc *= mult;
-			sprintf(perc_str, "%3.1f%% done", perc);
+			sprintf(perc_str, "%3.1f%%", perc);
 		}
 
 		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
-			rate_str[ddir] = num2str(je->rate[ddir], 5,
+			rate_str[ddir] = num2str(je->rate[ddir], 4,
 						1024, je->is_pow2, je->unit_base);
-			iops_str[ddir] = num2str(je->iops[ddir], 4, 1, 0, 0);
+			iops_str[ddir] = num2str(je->iops[ddir], 4, 1, 0, N2S_NONE);
 		}
 
 		left = sizeof(output) - (p - output) - 1;
 
-		l = snprintf(p, left, ": [%s] [%s] [%s/%s/%s /s] [%s/%s/%s iops] [eta %s]",
+		if (je->rate[DDIR_TRIM] || je->iops[DDIR_TRIM])
+			l = snprintf(p, left,
+				": [%s][%s][r=%s,w=%s,t=%s][r=%s,w=%s,t=%s IOPS][eta %s]",
 				je->run_str, perc_str, rate_str[DDIR_READ],
 				rate_str[DDIR_WRITE], rate_str[DDIR_TRIM],
 				iops_str[DDIR_READ], iops_str[DDIR_WRITE],
 				iops_str[DDIR_TRIM], eta_str);
+		else
+			l = snprintf(p, left,
+				": [%s][%s][r=%s,w=%s][r=%s,w=%s IOPS][eta %s]",
+				je->run_str, perc_str,
+				rate_str[DDIR_READ], rate_str[DDIR_WRITE],
+				iops_str[DDIR_READ], iops_str[DDIR_WRITE],
+				eta_str);
 		p += l;
 		if (l >= 0 && l < linelen_last)
 			p += sprintf(p, "%*s", linelen_last - l, "");

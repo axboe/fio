@@ -279,7 +279,8 @@ bool calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 
 void show_group_stats(struct group_run_stats *rs, struct buf_output *out)
 {
-	char *p1, *p2, *p3, *p4;
+	char *io, *agg, *min, *max;
+	char *ioalt, *aggalt, *minalt, *maxalt;
 	const char *str[] = { "   READ", "  WRITE" , "   TRIM"};
 	int i;
 
@@ -291,22 +292,28 @@ void show_group_stats(struct group_run_stats *rs, struct buf_output *out)
 		if (!rs->max_run[i])
 			continue;
 
-		p1 = num2str(rs->iobytes[i], 6, 1, i2p, 8);
-		p2 = num2str(rs->agg[i], 6, 1, i2p, rs->unit_base);
-		p3 = num2str(rs->min_bw[i], 6, 1, i2p, rs->unit_base);
-		p4 = num2str(rs->max_bw[i], 6, 1, i2p, rs->unit_base);
-
-		log_buf(out, "%s: io=%s, aggrb=%s/s, minb=%s/s, maxb=%s/s,"
-			 " mint=%llumsec, maxt=%llumsec\n",
+		io = num2str(rs->iobytes[i], 4, 1, i2p, N2S_BYTE);
+		ioalt = num2str(rs->iobytes[i], 4, 1, !i2p, N2S_BYTE);
+		agg = num2str(rs->agg[i], 4, 1, i2p, rs->unit_base);
+		aggalt = num2str(rs->agg[i], 4, 1, !i2p, rs->unit_base);
+		min = num2str(rs->min_bw[i], 4, 1, i2p, rs->unit_base);
+		minalt = num2str(rs->min_bw[i], 4, 1, !i2p, rs->unit_base);
+		max = num2str(rs->max_bw[i], 4, 1, i2p, rs->unit_base);
+		maxalt = num2str(rs->max_bw[i], 4, 1, !i2p, rs->unit_base);
+		log_buf(out, "%s: bw=%s (%s), %s-%s (%s-%s), io=%s (%s), run=%llu-%llumsec\n",
 				rs->unified_rw_rep ? "  MIXED" : str[i],
-				p1, p2, p3, p4,
+				agg, aggalt, min, max, minalt, maxalt, io, ioalt,
 				(unsigned long long) rs->min_run[i],
 				(unsigned long long) rs->max_run[i]);
 
-		free(p1);
-		free(p2);
-		free(p3);
-		free(p4);
+		free(io);
+		free(agg);
+		free(min);
+		free(max);
+		free(ioalt);
+		free(aggalt);
+		free(minalt);
+		free(maxalt);
 	}
 }
 
@@ -367,8 +374,8 @@ static void display_lat(const char *name, unsigned long min, unsigned long max,
 	if (usec_to_msec(&min, &max, &mean, &dev))
 		base = "(msec)";
 
-	minp = num2str(min, 6, 1, 0, 0);
-	maxp = num2str(max, 6, 1, 0, 0);
+	minp = num2str(min, 6, 1, 0, N2S_NONE);
+	maxp = num2str(max, 6, 1, 0, N2S_NONE);
 
 	log_buf(out, "    %s %s: min=%s, max=%s, avg=%5.02f,"
 		 " stdev=%5.02f\n", name, base, minp, maxp, mean, dev);
@@ -384,7 +391,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	unsigned long min, max, runt;
 	unsigned long long bw, iops;
 	double mean, dev;
-	char *io_p, *bw_p, *iops_p;
+	char *io_p, *bw_p, *bw_p_alt, *iops_p;
 	int i2p;
 
 	assert(ddir_rw(ddir));
@@ -396,19 +403,21 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	runt = ts->runtime[ddir];
 
 	bw = (1000 * ts->io_bytes[ddir]) / runt;
-	io_p = num2str(ts->io_bytes[ddir], 6, 1, i2p, 8);
-	bw_p = num2str(bw, 6, 1, i2p, ts->unit_base);
+	io_p = num2str(ts->io_bytes[ddir], 4, 1, i2p, N2S_BYTE);
+	bw_p = num2str(bw, 4, 1, i2p, ts->unit_base);
+	bw_p_alt = num2str(bw, 4, 1, !i2p, ts->unit_base);
 
 	iops = (1000 * (uint64_t)ts->total_io_u[ddir]) / runt;
-	iops_p = num2str(iops, 6, 1, 0, 0);
+	iops_p = num2str(iops, 4, 1, 0, N2S_NONE);
 
-	log_buf(out, "  %s: io=%s, bw=%s/s, iops=%s, runt=%6llumsec\n",
-				rs->unified_rw_rep ? "mixed" : str[ddir],
-				io_p, bw_p, iops_p,
-				(unsigned long long) ts->runtime[ddir]);
+	log_buf(out, "  %s: IOPS=%s, BW=%s (%s)(%s/%llumsec)\n",
+			rs->unified_rw_rep ? "mixed" : str[ddir],
+			iops_p, bw_p, bw_p_alt, io_p,
+			(unsigned long long) ts->runtime[ddir]);
 
 	free(io_p);
 	free(bw_p);
+	free(bw_p_alt);
 	free(iops_p);
 
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
@@ -426,7 +435,16 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	}
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg = 100.0, fkb_base = (double)rs->kb_base;
-		const char *bw_str = (rs->unit_base == 1 ? "Kbit" : "KB");
+		const char *bw_str;
+
+		if ((rs->unit_base == 1) && i2p)
+			bw_str = "Kibit";
+		else if (rs->unit_base == 1)
+			bw_str = "kbit";
+		else if (i2p)
+			bw_str = "KiB";
+		else
+			bw_str = "kB";
 
 		if (rs->unit_base == 1) {
 			min *= 8.0;
@@ -446,12 +464,11 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			max /= fkb_base;
 			mean /= fkb_base;
 			dev /= fkb_base;
-			bw_str = (rs->unit_base == 1 ? "Mbit" : "MB");
+			bw_str = (rs->unit_base == 1 ? "Mibit" : "MiB");
 		}
 
-		log_buf(out, "    bw (%-4s/s): min=%5lu, max=%5lu, per=%3.2f%%,"
-			 " avg=%5.02f, stdev=%5.02f\n", bw_str, min, max,
-							p_of_agg, mean, dev);
+		log_buf(out, "   bw (%5s/s): min=%5lu, max=%5lu, per=%3.2f%%, avg=%5.02f, stdev=%5.02f\n",
+			bw_str, min, max, p_of_agg, mean, dev);
 	}
 }
 
@@ -659,7 +676,7 @@ static void show_block_infos(int nr_block_infos, uint32_t *block_infos,
 
 static void show_ss_normal(struct thread_stat *ts, struct buf_output *out)
 {
-	char *p1, *p2;
+	char *p1, *p1alt, *p2;
 	unsigned long long bw_mean, iops_mean;
 	const int i2p = is_power_of_2(ts->kb_base);
 
@@ -669,18 +686,20 @@ static void show_ss_normal(struct thread_stat *ts, struct buf_output *out)
 	bw_mean = steadystate_bw_mean(ts);
 	iops_mean = steadystate_iops_mean(ts);
 
-	p1 = num2str(bw_mean / ts->kb_base, 6, ts->kb_base, i2p, ts->unit_base);
-	p2 = num2str(iops_mean, 6, 1, 0, 0);
+	p1 = num2str(bw_mean / ts->kb_base, 4, ts->kb_base, i2p, ts->unit_base);
+	p1alt = num2str(bw_mean / ts->kb_base, 4, ts->kb_base, !i2p, ts->unit_base);
+	p2 = num2str(iops_mean, 4, 1, 0, N2S_NONE);
 
-	log_buf(out, "  steadystate  : attained=%s, bw=%s/s, iops=%s, %s%s=%.3f%s\n",
+	log_buf(out, "  steadystate  : attained=%s, bw=%s (%s), iops=%s, %s%s=%.3f%s\n",
 		ts->ss_state & __FIO_SS_ATTAINED ? "yes" : "no",
-		p1, p2,
+		p1, p1alt, p2,
 		ts->ss_state & __FIO_SS_IOPS ? "iops" : "bw",
 		ts->ss_state & __FIO_SS_SLOPE ? " slope": " mean dev",
 		ts->ss_criterion.u.f,
 		ts->ss_state & __FIO_SS_PCT ? "%" : "");
 
 	free(p1);
+	free(p1alt);
 	free(p2);
 }
 
@@ -761,9 +780,9 @@ static void show_thread_status_normal(struct thread_stat *ts,
 					io_u_dist[1], io_u_dist[2],
 					io_u_dist[3], io_u_dist[4],
 					io_u_dist[5], io_u_dist[6]);
-	log_buf(out, "     issued    : total=r=%llu/w=%llu/d=%llu,"
-				 " short=r=%llu/w=%llu/d=%llu,"
-				 " drop=r=%llu/w=%llu/d=%llu\n",
+	log_buf(out, "     issued rwt: total=%llu,%llu,%llu,"
+				 " short=%llu,%llu,%llu,"
+				 " dropped=%llu,%llu,%llu\n",
 					(unsigned long long) ts->total_io_u[0],
 					(unsigned long long) ts->total_io_u[1],
 					(unsigned long long) ts->total_io_u[2],

@@ -207,32 +207,50 @@ static unsigned long long __get_mult_bytes(const char *p, void *data,
 		}
 	}
 
+	/* If kb_base is 1000, use true units.
+	 * If kb_base is 1024, use opposite units.
+	 */
 	if (!strncmp("pib", c, 3)) {
 		pow = 5;
-		mult = 1000;
+		if (kb_base == 1000)
+			mult = 1024;
+		else if (kb_base == 1024)
+			mult = 1000;
 	} else if (!strncmp("tib", c, 3)) {
 		pow = 4;
-		mult = 1000;
+		if (kb_base == 1000)
+			mult = 1024;
+		else if (kb_base == 1024)
+			mult = 1000;
 	} else if (!strncmp("gib", c, 3)) {
 		pow = 3;
-		mult = 1000;
+		if (kb_base == 1000)
+			mult = 1024;
+		else if (kb_base == 1024)
+			mult = 1000;
 	} else if (!strncmp("mib", c, 3)) {
 		pow = 2;
-		mult = 1000;
+		if (kb_base == 1000)
+			mult = 1024;
+		else if (kb_base == 1024)
+			mult = 1000;
 	} else if (!strncmp("kib", c, 3)) {
 		pow = 1;
-		mult = 1000;
-	} else if (!strncmp("p", c, 1) || !strncmp("pb", c, 2))
+		if (kb_base == 1000)
+			mult = 1024;
+		else if (kb_base == 1024)
+			mult = 1000;
+	} else if (!strncmp("p", c, 1) || !strncmp("pb", c, 2)) {
 		pow = 5;
-	else if (!strncmp("t", c, 1) || !strncmp("tb", c, 2))
+	} else if (!strncmp("t", c, 1) || !strncmp("tb", c, 2)) {
 		pow = 4;
-	else if (!strncmp("g", c, 1) || !strncmp("gb", c, 2))
+	} else if (!strncmp("g", c, 1) || !strncmp("gb", c, 2)) {
 		pow = 3;
-	else if (!strncmp("m", c, 1) || !strncmp("mb", c, 2))
+	} else if (!strncmp("m", c, 1) || !strncmp("mb", c, 2)) {
 		pow = 2;
-	else if (!strncmp("k", c, 1) || !strncmp("kb", c, 2))
+	} else if (!strncmp("k", c, 1) || !strncmp("kb", c, 2)) {
 		pow = 1;
-	else if (!strncmp("%", c, 1)) {
+	} else if (!strncmp("%", c, 1)) {
 		*percent = 1;
 		free(c);
 		return ret;

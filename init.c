@@ -31,6 +31,7 @@
 #include "oslib/strcasestr.h"
 
 #include "crc/test.h"
+#include "lib/pow2.h"
 
 const char fio_version_string[] = FIO_VERSION;
 
@@ -865,27 +866,6 @@ static int fixup_options(struct thread_data *td)
 	return ret;
 }
 
-/*
- * This function leaks the buffer
- */
-char *fio_uint_to_kmg(unsigned int val)
-{
-	char *buf = malloc(32);
-	char post[] = { 0, 'K', 'M', 'G', 'P', 'E', 0 };
-	char *p = post;
-
-	do {
-		if (val & 1023)
-			break;
-
-		val >>= 10;
-		p++;
-	} while (*p);
-
-	snprintf(buf, 32, "%u%c", val, *p);
-	return buf;
-}
-
 /* External engines are specified by "external:name.o") */
 static const char *get_engine_name(const char *str)
 {
@@ -1528,15 +1508,16 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			if (!td_ioengine_flagged(td, FIO_NOIO)) {
 				char *c1, *c2, *c3, *c4;
 				char *c5 = NULL, *c6 = NULL;
+				int i2p = is_power_of_2(o->kb_base);
 
-				c1 = fio_uint_to_kmg(o->min_bs[DDIR_READ]);
-				c2 = fio_uint_to_kmg(o->max_bs[DDIR_READ]);
-				c3 = fio_uint_to_kmg(o->min_bs[DDIR_WRITE]);
-				c4 = fio_uint_to_kmg(o->max_bs[DDIR_WRITE]);
+				c1 = num2str(o->min_bs[DDIR_READ], 4, 1, i2p, N2S_BYTE);
+				c2 = num2str(o->max_bs[DDIR_READ], 4, 1, i2p, N2S_BYTE);
+				c3 = num2str(o->min_bs[DDIR_WRITE], 4, 1, i2p, N2S_BYTE);
+				c4 = num2str(o->max_bs[DDIR_WRITE], 4, 1, i2p, N2S_BYTE);
 
 				if (!o->bs_is_seq_rand) {
-					c5 = fio_uint_to_kmg(o->min_bs[DDIR_TRIM]);
-					c6 = fio_uint_to_kmg(o->max_bs[DDIR_TRIM]);
+					c5 = num2str(o->min_bs[DDIR_TRIM], 4, 1, i2p, N2S_BYTE);
+					c6 = num2str(o->max_bs[DDIR_TRIM], 4, 1, i2p, N2S_BYTE);
 				}
 
 				log_info("%s: (g=%d): rw=%s, ", td->o.name,
@@ -1544,10 +1525,10 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 							ddir_str(o->td_ddir));
 
 				if (o->bs_is_seq_rand)
-					log_info("bs(seq/rand)=%s-%s/%s-%s, ",
+					log_info("bs=%s-%s,%s-%s, bs_is_seq_rand, ",
 							c1, c2, c3, c4);
 				else
-					log_info("bs=%s-%s/%s-%s/%s-%s, ",
+					log_info("bs=%s-%s,%s-%s,%s-%s, ",
 							c1, c2, c3, c4, c5, c6);
 
 				log_info("ioengine=%s, iodepth=%u\n",
