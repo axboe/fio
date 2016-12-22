@@ -15,7 +15,7 @@
 #include "../verify.h"
 
 /*
- * Limits us to 1GB of mapped files in total
+ * Limits us to 1GiB of mapped files in total
  */
 #define MMAP_TOTAL_SZ	(1 * 1024 * 1024 * 1024UL)
 

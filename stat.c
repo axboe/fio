@@ -812,7 +812,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	if (ts->runtime[ddir]) {
 		uint64_t runt = ts->runtime[ddir];
 
-		bw = ((1000 * ts->io_bytes[ddir]) / runt) / 1024;
+		bw = ((1000 * ts->io_bytes[ddir]) / runt) / 1024; /* KiB/s */
 		iops = (1000 * (uint64_t) ts->total_io_u[ddir]) / runt;
 	}
 
@@ -896,7 +896,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	if (ts->runtime[ddir]) {
 		uint64_t runt = ts->runtime[ddir];
 
-		bw = ((1000 * ts->io_bytes[ddir]) / runt) / 1024;
+		bw = ((1000 * ts->io_bytes[ddir]) / runt) / 1024; /* KiB/s */
 		iops = (1000.0 * (uint64_t) ts->total_io_u[ddir]) / runt;
 	}
 
@@ -2431,7 +2431,7 @@ static int add_bw_samples(struct thread_data *td, struct timeval *t)
 			continue; /* No entries for interval */
 
 		if (spent)
-			rate = delta * 1000 / spent / 1024;
+			rate = delta * 1000 / spent / 1024; /* KiB/s */
 		else
 			rate = 0;
 

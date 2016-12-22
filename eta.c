@@ -308,7 +308,7 @@ static void calc_rate(int unified_rw_rep, unsigned long mtime,
 
 		diff = io_bytes[i] - prev_io_bytes[i];
 		if (mtime)
-			this_rate = ((1000 * diff) / mtime) / 1024;
+			this_rate = ((1000 * diff) / mtime) / 1024; /* KiB/s */
 		else
 			this_rate = 0;
 

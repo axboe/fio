@@ -33,13 +33,13 @@ int fio_pin_memory(struct thread_data *td)
 	dprint(FD_MEM, "pinning %llu bytes\n", td->o.lockmem);
 
 	/*
-	 * Don't allow mlock of more than real_mem-128MB
+	 * Don't allow mlock of more than real_mem-128MiB
 	 */
 	phys_mem = os_phys_mem();
 	if (phys_mem) {
 		if ((td->o.lockmem + 128 * 1024 * 1024) > phys_mem) {
 			td->o.lockmem = phys_mem - 128 * 1024 * 1024;
-			log_info("fio: limiting mlocked memory to %lluMB\n",
+			log_info("fio: limiting mlocked memory to %lluMiB\n",
 							td->o.lockmem >> 20);
 		}
 	}

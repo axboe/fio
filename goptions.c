@@ -826,7 +826,7 @@ static struct gopt *gopt_new_str_val(struct gopt_job_view *gjv,
 				     unsigned long long *p, unsigned int idx)
 {
 	struct gopt_str_val *g;
-	const gchar *postfix[] = { "B", "KB", "MB", "GB", "PB", "TB", "" };
+	const gchar *postfix[] = { "B", "KiB", "MiB", "GiB", "PiB", "PiB", "" };
 	GtkWidget *label;
 	int i;
 
