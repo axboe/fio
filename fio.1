@@ -1,4 +1,4 @@
-.TH fio 1 "December 2014" "User Manual"
+.TH fio 1 "December 2016" "User Manual"
 .SH NAME
 fio \- flexible I/O tester
 .SH SYNOPSIS
@@ -147,19 +147,77 @@ parentheses). The types used are:
 String: a sequence of alphanumeric characters.
 .TP
 .I int
-SI integer: a whole number, possibly containing a suffix denoting the base unit
-of the value.  Accepted suffixes are `k', 'M', 'G', 'T', and 'P', denoting
-kilo (1024), mega (1024^2), giga (1024^3), tera (1024^4), and peta (1024^5)
-respectively. If prefixed with '0x', the value is assumed to be base 16
-(hexadecimal). A suffix may include a trailing 'b', for instance 'kb' is
-identical to 'k'. You can specify a base 10 value by using 'KiB', 'MiB','GiB',
-etc. This is useful for disk drives where values are often given in base 10
-values. Specifying '30GiB' will get you 30*1000^3 bytes.
-When specifying times the default suffix meaning changes, still denoting the
-base unit of the value, but accepted suffixes are 'D' (days), 'H' (hours), 'M'
-(minutes), 'S' Seconds, 'ms' (or msec) milli seconds, 'us' (or 'usec') micro
-seconds. Time values without a unit specify seconds.
-The suffixes are not case sensitive.
+Integer. A whole number value, which may contain an integer prefix
+and an integer suffix.
+
+[integer prefix]number[integer suffix]
+
+The optional integer prefix specifies the number's base. The default
+is decimal. 0x specifies hexadecimal.
+
+The optional integer suffix specifies the number's units, and includes
+an optional unit prefix and an optional unit.  For quantities
+of data, the default unit is bytes. For quantities of time,
+the default unit is seconds.
+
+With \fBkb_base=1000\fR, fio follows international standards for unit prefixes.
+To specify power-of-10 decimal values defined in the International
+System of Units (SI):
+.nf
+ki means kilo (K) or 1000
+mi means mega (M) or 1000**2
+gi means giga (G) or 1000**3
+ti means tera (T) or 1000**4
+pi means peta (P) or 1000**5
+.fi
+
+To specify power-of-2 binary values defined in IEC 80000-13:
+.nf
+k means kibi (Ki) or 1024
+m means mebi (Mi) or 1024**2
+g means gibi (Gi) or 1024**3
+t means tebi (Ti) or 1024**4
+p means pebi (Pi) or 1024**5
+.fi
+
+With \fBkb_base=1024\fR (the default), the unit prefixes are opposite from
+those specified in the SI and IEC 80000-13 standards to provide
+compatibility with old scripts.  For example, 4k means 4096.
+
+.nf
+Examples with \fBkb_base=1000\fR:
+4 KiB: 4096, 4096b, 4096B, 4k, 4kb, 4kB, 4K, 4KB
+1 MiB: 1048576, 1m, 1024k
+1 MB: 1000000, 1mi, 1000ki
+1 TiB: 1073741824, 1t, 1024m, 1048576k
+1 TB: 1000000000, 1ti, 1000mi, 1000000ki
+.fi
+
+.nf
+Examples with \fBkb_base=1024\fR (default):
+4 KiB: 4096, 4096b, 4096B, 4k, 4kb, 4kB, 4K, 4KB
+1 MiB: 1048576, 1m, 1024k
+1 MB: 1000000, 1mi, 1000ki
+1 TiB: 1073741824, 1t, 1024m, 1048576k
+1 TB: 1000000000, 1ti, 1000mi, 1000000ki
+.fi
+
+For quantities of data, an optional unit of 'B' may be included
+(e.g.,  'kb' is the same as 'k').
+
+The integer suffix is not case sensitive (e.g., m/mi mean mebi/mega,
+not milli). 'b' and 'B' both mean byte, not bit.
+
+To specify times (units are not case sensitive):
+.nf
+D means days
+H means hours
+M mean minutes
+s or sec means seconds (default)
+ms or msec means milliseconds
+us or usec means microseconds
+.fi
+
 .TP
 .I bool
 Boolean: a true or false value. `0' denotes false, `1' denotes true.
@@ -463,20 +521,32 @@ size of a file. If this option is set, then fio will append to the file
 instead. This has identical behavior to setting \fRoffset\fP to the size
 of a file. This option is ignored on non-regular files.
 .TP
-.BI blocksize \fR=\fPint[,int] "\fR,\fB bs" \fR=\fPint[,int]
-Block size for I/O units.  Default: 4k.  Values for reads, writes, and trims
-can be specified separately in the format \fIread\fR,\fIwrite\fR,\fItrim\fR
-either of which may be empty to leave that value at its default. If a trailing
-comma isn't given, the remainder will inherit the last value set.
+.BI blocksize \fR=\fPint[,int][,int] "\fR,\fB bs" \fR=\fPint[,int][,int]
+The block size in bytes for I/O units.  Default: 4096.
+A single value applies to reads, writes, and trims.
+Comma-separated values may be specified for reads, writes, and trims.
+Empty values separated by commas use the default value. A value not
+terminated in a comma applies to subsequent types.
+.nf
+Examples:
+bs=256k    means 256k for reads, writes and trims
+bs=8k,32k  means 8k for reads, 32k for writes and trims
+bs=8k,32k, means 8k for reads, 32k for writes, and default for trims
+bs=,8k     means default for reads, 8k for writes and trims
+bs=,8k,    means default for reads, 8k for writes, and default for writes
+.fi
 .TP
-.BI blocksize_range \fR=\fPirange[,irange] "\fR,\fB bsrange" \fR=\fPirange[,irange]
-Specify a range of I/O block sizes.  The issued I/O unit will always be a
-multiple of the minimum size, unless \fBblocksize_unaligned\fR is set.  Applies
-to both reads and writes if only one range is given, but can be specified
-separately with a comma separating the values. Example: bsrange=1k-4k,2k-8k.
-Also (see \fBblocksize\fR).
+.BI blocksize_range \fR=\fPirange[,irange][,irange] "\fR,\fB bsrange" \fR=\fPirange[,irange][,irange]
+A range of block sizes in bytes for I/O units.
+The issued I/O unit will always be a multiple of the minimum size, unless
+\fBblocksize_unaligned\fR is set.
+Comma-separated ranges may be specified for reads, writes, and trims
+as described in \fBblocksize\fR.
+.nf
+Example: bsrange=1k-4k,2k-8k.
+.fi
 .TP
-.BI bssplit \fR=\fPstr
+.BI bssplit \fR=\fPstr[,str][,str]
 This option allows even finer grained control of the block sizes issued,
 not just even splits between them. With this option, you can weight various
 block sizes for exact control of the issued IO for a job that has mixed
@@ -484,26 +554,28 @@ block sizes. The format of the option is bssplit=blocksize/percentage,
 optionally adding as many definitions as needed separated by a colon.
 Example: bssplit=4k/10:64k/50:32k/40 would issue 50% 64k blocks, 10% 4k
 blocks and 40% 32k blocks. \fBbssplit\fR also supports giving separate
-splits to reads and writes. The format is identical to what the
-\fBbs\fR option accepts, the read and write parts are separated with a
-comma.
+splits to reads, writes, and trims.
+Comma-separated values may be specified for reads, writes, and trims
+as described in \fBblocksize\fR.
 .TP
-.B blocksize_unaligned\fR,\fP bs_unaligned
-If set, any size in \fBblocksize_range\fR may be used.  This typically won't
+.B blocksize_unaligned\fR,\fB bs_unaligned
+If set, fio will issue I/O units with any size within \fBblocksize_range\fR,
+not just multiples of the minimum size.  This typically won't
 work with direct I/O, as that normally requires sector alignment.
-.TP
-.BI blockalign \fR=\fPint[,int] "\fR,\fB ba" \fR=\fPint[,int]
-At what boundary to align random IO offsets. Defaults to the same as 'blocksize'
-the minimum blocksize given.  Minimum alignment is typically 512b
-for using direct IO, though it usually depends on the hardware block size.
-This option is mutually exclusive with using a random map for files, so it
-will turn off that option.
 .TP
 .BI bs_is_seq_rand \fR=\fPbool
 If this option is set, fio will use the normal read,write blocksize settings as
-sequential,random instead. Any random read or write will use the WRITE
-blocksize settings, and any sequential read or write will use the READ
-blocksize setting.
+sequential,random blocksize settings instead. Any random read or write will
+use the WRITE blocksize settings, and any sequential read or write will use
+the READ blocksize settings.
+.TP
+.BI blockalign \fR=\fPint[,int][,int] "\fR,\fB ba" \fR=\fPint[,int][,int]
+Boundary to which fio will align random I/O units. Default: \fBblocksize\fR.
+Minimum alignment is typically 512b for using direct IO, though it usually
+depends on the hardware block size.  This option is mutually exclusive with
+using a random map for files, so it will turn off that option.
+Comma-separated values may be specified for reads, writes, and trims
+as described in \fBblocksize\fR.
 .TP
 .B zero_buffers
 Initialize buffers with all zeros. Default: fill buffers with random data.
@@ -963,7 +1035,7 @@ sizes. Like \fBbssplit\fR, it's possible to specify separate zones for reads,
 writes, and trims. If just one set is given, it'll apply to all of them.
 .RE
 .TP
-.BI percentage_random \fR=\fPint
+.BI percentage_random \fR=\fPint[,int][,int]
 For a random workload, set how big a percentage should be random. This defaults
 to 100%, in which case the workload is fully random. It can be set from
 anywhere from 0 to 100.  Setting it to 0 would make the workload fully
@@ -1032,28 +1104,29 @@ will be queued before we have to complete it and do our thinktime. In other
 words, this setting effectively caps the queue depth if the latter is larger.
 Default: 1.
 .TP
-.BI rate \fR=\fPint
+.BI rate \fR=\fPint[,int][,int]
 Cap bandwidth used by this job. The number is in bytes/sec, the normal postfix
 rules apply. You can use \fBrate\fR=500k to limit reads and writes to 500k each,
-or you can specify read and writes separately. Using \fBrate\fR=1m,500k would
-limit reads to 1MB/sec and writes to 500KB/sec. Capping only reads or writes
+or you can specify reads, write, and trim limits separately.
+Using \fBrate\fR=1m,500k would
+limit reads to 1MiB/sec and writes to 500KiB/sec. Capping only reads or writes
 can be done with \fBrate\fR=,500k or \fBrate\fR=500k,. The former will only
-limit writes (to 500KB/sec), the latter will only limit reads.
+limit writes (to 500KiB/sec), the latter will only limit reads.
 .TP
-.BI rate_min \fR=\fPint
+.BI rate_min \fR=\fPint[,int][,int]
 Tell \fBfio\fR to do whatever it can to maintain at least the given bandwidth.
 Failing to meet this requirement will cause the job to exit. The same format
-as \fBrate\fR is used for read vs write separation.
+as \fBrate\fR is used for read vs write vs trim separation.
 .TP
-.BI rate_iops \fR=\fPint
+.BI rate_iops \fR=\fPint[,int][,int]
 Cap the bandwidth to this number of IOPS. Basically the same as rate, just
 specified independently of bandwidth. The same format as \fBrate\fR is used for
-read vs write separation. If \fBblocksize\fR is a range, the smallest block
+read vs write vs trim separation. If \fBblocksize\fR is a range, the smallest block
 size is used as the metric.
 .TP
-.BI rate_iops_min \fR=\fPint
+.BI rate_iops_min \fR=\fPint[,int][,int]
 If this rate of I/O is not met, the job will exit. The same format as \fBrate\fR
-is used for read vs write separation.
+is used for read vs write vs trim separation.
 .TP
 .BI rate_process \fR=\fPstr
 This option controls how fio manages rated IO submissions. The default is
@@ -1257,7 +1330,7 @@ sum of the \fBiomem_align\fR and \fBbs\fR used.
 .TP
 .BI hugepage\-size \fR=\fPint
 Defines the size of a huge page.  Must be at least equal to the system setting.
-Should be a multiple of 1MB. Default: 4MB.
+Should be a multiple of 1MiB. Default: 4MiB.
 .TP
 .B exitall
 Terminate all jobs when one finishes.  Default: wait for each job to finish.
@@ -1891,7 +1964,7 @@ Preallocate donor's file on init
 .BI 1:
 allocate space immediately inside defragment event, and free right after event
 .RE
-.TP 
+.TP
 .BI (rbd)clustername \fR=\fPstr
 Specifies the name of the ceph cluster.
 .TP
@@ -1913,7 +1986,7 @@ While running, \fBfio\fR will display the status of the created jobs.  For
 example:
 .RS
 .P
-Threads: 1: [_r] [24.8% done] [ 13509/  8334 kb/s] [eta 00h:01m:31s]
+Jobs: 1: [_r] [24.8% done] [ 13509/  8334 kb/s] [eta 00h:01m:31s]
 .RE
 .P
 The characters in the first set of brackets denote the current status of each
@@ -2075,7 +2148,7 @@ change.  The fields are:
 .P
 Read status:
 .RS
-.B Total I/O \fR(KB)\fP, bandwidth \fR(KB/s)\fP, IOPS, runtime \fR(ms)\fP
+.B Total I/O \fR(KiB)\fP, bandwidth \fR(KiB/s)\fP, IOPS, runtime \fR(ms)\fP
 .P
 Submission latency:
 .RS
@@ -2101,7 +2174,7 @@ Bandwidth:
 .P
 Write status:
 .RS
-.B Total I/O \fR(KB)\fP, bandwidth \fR(KB/s)\fP, IOPS, runtime \fR(ms)\fP
+.B Total I/O \fR(KiB)\fP, bandwidth \fR(KiB/s)\fP, IOPS, runtime \fR(ms)\fP
 .P
 Submission latency:
 .RS
@@ -2364,7 +2437,7 @@ on the type of log, it will be one of the following:
 Value is in latency in usecs
 .TP
 .B Bandwidth log
-Value is in KB/sec
+Value is in KiB/sec
 .TP
 .B IOPS log
 Value is in IOPS
