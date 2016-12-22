@@ -364,26 +364,6 @@ static void gfio_update_client_eta(struct fio_client *client, struct jobs_eta *j
 	sprintf(tmp, "%u", je->files_open);
 	gtk_entry_set_text(GTK_ENTRY(ge->eta.files), tmp);
 
-#if 0
-	if (je->m_rate[0] || je->m_rate[1] || je->t_rate[0] || je->t_rate[1]) {
-	if (je->m_rate || je->t_rate) {
-		char *tr, *mr;
-
-		mr = num2str(je->m_rate, 4, 0, i2p);
-		tr = num2str(je->t_rate, 4, 0, i2p);
-		gtk_entry_set_text(GTK_ENTRY(ge->eta);
-		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
-		free(tr);
-		free(mr);
-	} else if (je->m_iops || je->t_iops)
-		p += sprintf(p, ", CR=%d/%d IOPS", je->t_iops, je->m_iops);
-
-	gtk_entry_set_text(GTK_ENTRY(ge->eta.cr_bw), "---");
-	gtk_entry_set_text(GTK_ENTRY(ge->eta.cr_iops), "---");
-	gtk_entry_set_text(GTK_ENTRY(ge->eta.cw_bw), "---");
-	gtk_entry_set_text(GTK_ENTRY(ge->eta.cw_iops), "---");
-#endif
-
 	if (je->eta_sec != INT_MAX && je->nr_running) {
 		char *iops_str[DDIR_RWDIR_CNT];
 		char *rate_str[DDIR_RWDIR_CNT];
@@ -456,26 +436,6 @@ static void gfio_update_all_eta(struct jobs_eta *je)
 		perc = (double) je->elapsed_sec / (double) (je->elapsed_sec + je->eta_sec);
 		eta_to_str(eta_str, je->eta_sec);
 	}
-
-#if 0
-	if (je->m_rate[0] || je->m_rate[1] || je->t_rate[0] || je->t_rate[1]) {
-	if (je->m_rate || je->t_rate) {
-		char *tr, *mr;
-
-		mr = num2str(je->m_rate, 4, 0, i2p);
-		tr = num2str(je->t_rate, 4, 0, i2p);
-		gtk_entry_set_text(GTK_ENTRY(ui->eta);
-		p += sprintf(p, ", CR=%s/%s KB/s", tr, mr);
-		free(tr);
-		free(mr);
-	} else if (je->m_iops || je->t_iops)
-		p += sprintf(p, ", CR=%d/%d IOPS", je->t_iops, je->m_iops);
-
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.cr_bw), "---");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.cr_iops), "---");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.cw_bw), "---");
-	gtk_entry_set_text(GTK_ENTRY(ui->eta.cw_iops), "---");
-#endif
 
 	entry_set_int_value(ui->eta.jobs, je->nr_running);
 
