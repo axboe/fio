@@ -36,6 +36,7 @@ struct rbd_data {
 	struct io_u **aio_events;
 	struct io_u **sort_events;
 	int fd; /* add for poll */
+	bool connected;
 };
 
 struct rbd_options {
@@ -110,6 +111,8 @@ static int _fio_setup_rbd_data(struct thread_data *td,
 	rbd = calloc(1, sizeof(struct rbd_data));
 	if (!rbd)
 		goto failed;
+
+	rbd->connected = false;
 
 	/* add for poll, init fd: -1 */
 	rbd->fd = -1;
@@ -529,6 +532,10 @@ failed:
 static int fio_rbd_init(struct thread_data *td)
 {
 	int r;
+	struct rbd_data *rbd = td->io_ops_data;
+	if (rbd->connected) {
+		return 0;
+	}
 
 	r = _fio_rbd_connect(td);
 	if (r) {
@@ -589,6 +596,7 @@ static int fio_rbd_setup(struct thread_data *td)
 		log_err("fio_rbd_connect failed.\n");
 		goto cleanup;
 	}
+	rbd->connected = true;
 
 	/* get size of the RADOS block device */
 	r = rbd_stat(rbd->image, &info, sizeof(info));
@@ -618,7 +626,6 @@ static int fio_rbd_setup(struct thread_data *td)
 	/* disconnect, then we were only connected to determine
 	 * the size of the RBD.
 	 */
-	_fio_rbd_disconnect(rbd);
 	return 0;
 
 disconnect:
