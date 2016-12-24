@@ -533,9 +533,9 @@ static int fio_rbd_init(struct thread_data *td)
 {
 	int r;
 	struct rbd_data *rbd = td->io_ops_data;
-	if (rbd->connected) {
+
+	if (rbd->connected)
 		return 0;
-	}
 
 	r = _fio_rbd_connect(td);
 	if (r) {
