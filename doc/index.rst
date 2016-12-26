@@ -6,16 +6,20 @@
 Welcome to FIO's documentation!
 ===============================
 
+**Version:** |release|
+
 Contents:
 
 .. toctree::
    :maxdepth: 3
    :numbered:
 
+	fio - Flexible I/O tester |version| <fio_doc>
+
+
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
 
