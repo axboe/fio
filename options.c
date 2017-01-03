@@ -1883,6 +1883,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "IO Size",
 		.type	= FIO_OPT_STR_VAL,
 		.off1	= offsetof(struct thread_options, io_limit),
+		.help	= "Total size of I/O to be performed",
 		.interval = 1024 * 1024,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_INVALID,
