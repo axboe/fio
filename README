@@ -97,7 +97,7 @@ and archives for the old list can be found here:
 Building
 --------
 
-Just type 'configure', 'make' and 'make install'.
+Just type './configure', 'make' and 'make install'.
 
 Note that GNU make is required. On BSDs it's available from devel/gmake
 within ports directory; on Solaris it's in the SUNWgmake package.
