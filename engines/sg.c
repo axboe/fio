@@ -579,7 +579,7 @@ static char *fio_sgio_errdetails(struct io_u *io_u)
 	char *msg, msgchunk[MAXMSGCHUNK], *ret = NULL;
 	int i;
 
-	msg = calloc(MAXERRDETAIL, 1);
+	msg = calloc(1, MAXERRDETAIL);
 
 	/*
 	 * can't seem to find sg_err.h, so I'll just echo the define values
