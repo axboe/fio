@@ -94,7 +94,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'o' | FIO_CLIENT_FLAG,
 	},
 	{
-		.name		= (char *) "timeout",
+		.name		= (char *) "runtime",
 		.has_arg	= required_argument,
 		.val		= 't' | FIO_CLIENT_FLAG,
 	},
@@ -1984,6 +1984,11 @@ static void show_debug_categories(void)
 #endif
 }
 
+/*
+ * Following options aren't printed by usage().
+ * --append-terse - Equivalent to --output-format=terse, see f6a7df53.
+ * --latency-log - Deprecated option.
+ */
 static void usage(const char *name)
 {
 	printf("%s\n", fio_version_string);
