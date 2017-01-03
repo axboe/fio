@@ -2063,7 +2063,7 @@ static bool check_mount_writes(struct thread_data *td)
 
 	return false;
 mounted:
-	log_err("fio: %s appears mounted, and 'allow_mounted_write' isn't set. Aborting.", f->file_name);
+	log_err("fio: %s appears mounted, and 'allow_mounted_write' isn't set. Aborting.\n", f->file_name);
 	return true;
 }
 

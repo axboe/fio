@@ -2538,7 +2538,7 @@ int fio_start_server(char *pidfile)
 
 	pid = fork();
 	if (pid < 0) {
-		log_err("fio: failed server fork: %s", strerror(errno));
+		log_err("fio: failed server fork: %s\n", strerror(errno));
 		free(pidfile);
 		return -1;
 	} else if (pid) {

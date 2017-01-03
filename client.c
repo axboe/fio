@@ -1322,7 +1322,7 @@ static int fio_client_handle_iolog(struct fio_client *client,
 	log_pathname = malloc(10 + strlen((char *)pdu->name) +
 			strlen(client->hostname));
 	if (!log_pathname) {
-		log_err("fio: memory allocation of unique pathname failed");
+		log_err("fio: memory allocation of unique pathname failed\n");
 		return -1;
 	}
 	/* generate a unique pathname for the log file using hostname */

@@ -881,7 +881,7 @@ static int fio_rdmaio_connect(struct thread_data *td, struct fio_file *f)
 	rd->send_buf.nr = htonl(td->o.iodepth);
 
 	if (ibv_post_send(rd->qp, &rd->sq_wr, &bad_wr) != 0) {
-		log_err("fio: ibv_post_send fail: %m");
+		log_err("fio: ibv_post_send fail: %m\n");
 		return 1;
 	}
 
@@ -932,7 +932,7 @@ static int fio_rdmaio_accept(struct thread_data *td, struct fio_file *f)
 	ret = rdma_poll_wait(td, IBV_WC_RECV) < 0;
 
 	if (ibv_post_send(rd->qp, &rd->sq_wr, &bad_wr) != 0) {
-		log_err("fio: ibv_post_send fail: %m");
+		log_err("fio: ibv_post_send fail: %m\n");
 		return 1;
 	}
 
@@ -965,7 +965,7 @@ static int fio_rdmaio_close_file(struct thread_data *td, struct fio_file *f)
 				     || (rd->rdma_protocol ==
 					 FIO_RDMA_MEM_READ))) {
 		if (ibv_post_send(rd->qp, &rd->sq_wr, &bad_wr) != 0) {
-			log_err("fio: ibv_post_send fail: %m");
+			log_err("fio: ibv_post_send fail: %m\n");
 			return 1;
 		}
 

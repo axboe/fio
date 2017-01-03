@@ -422,7 +422,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 				continue;
 			}
 		} else {
-			log_err("bad iolog2: %s", p);
+			log_err("bad iolog2: %s\n", p);
 			continue;
 		}
 
