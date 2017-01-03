@@ -65,7 +65,7 @@ tool (http://www.opencsw.org/get-it/pkgutil/) and then install fio via
 'pkgutil -i fio'.
 
 Windows:
-Bruce Cran <bruce@cran.org.uk> has fio packages for Windows at
+Rebecca Cran <rebecca+fio@bluestop.org> has fio packages for Windows at
 http://www.bluestop.org/fio/ .
 
 
