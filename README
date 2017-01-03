@@ -152,32 +152,32 @@ $ fio
 	--bandwidth-log		Generate aggregate bandwidth logs
 	--minimal		Minimal (terse) output
 	--output-format=type	Output format (terse,json,json+,normal)
-	--terse-version=type	Terse version output format (default 3, or 2 or 4).
+	--terse-version=type	Set terse version output format (default 3, or 2 or 4)
 	--version		Print version info and exit
 	--help			Print this page
 	--cpuclock-test		Perform test/validation of CPU clock
-	--crctest[=test]	Test speed of checksum functions
+	--crctest=type		Test speed of checksum functions
 	--cmdhelp=cmd		Print command help, "all" for all of them
 	--enghelp=engine	Print ioengine help, or list available ioengines
 	--enghelp=engine,cmd	Print help for an ioengine cmd
 	--showcmd		Turn a job file into command line options
-	--readonly		Turn on safety read-only checks, preventing
-				writes
 	--eta=when		When ETA estimate should be printed
 				May be "always", "never" or "auto"
 	--eta-newline=time	Force a new line for every 'time' period passed
 	--status-interval=t	Force full status dump every 't' period passed
+	--readonly		Turn on safety read-only checks, preventing writes
 	--section=name		Only run specified section in job file.
 				Multiple sections can be specified.
 	--alloc-size=kb		Set smalloc pool to this size in kb (def 16384)
 	--warnings-fatal	Fio parser warnings are fatal
-	--max-jobs		Maximum number of threads/processes to support
-	--server=args		Start backend server. See Client/Server section.
-	--client=host		Connect to specified backend(s).
-	--remote-config=file	Tell fio server to load this local file
+	--max-jobs=nr		Maximum number of threads/processes to support
+	--server=args		Start a backend fio server. See Client/Server section.
+	--client=hostname	Talk to remote backend(s) fio server at hostname
+	--daemonize=pidfile	Background fio server, write pid to file
+	--remote-config=file	Tell fio server to load this local job file
 	--idle-prof=option	Report cpu idleness on a system or percpu basis
 				(option=system,percpu) or run unit work
-				calibration only (option=calibrate).
+				calibration only (option=calibrate)
 	--inflate-log=log	Inflate and output compressed log
 	--trigger-file=file	Execute trigger cmd when file exists
 	--trigger-timeout=t	Execute trigger af this time
@@ -218,6 +218,8 @@ Currently, additional logging is available for:
 	net		Dump info related to networking connections
 	rate		Dump info related to IO rate switching
 	compress	Dump info related to log compress/decompress
+	steadystate	Dump info related to steady state detection
+	helperthread	Dump info related to helper thread
 	? or help	Show available debug options.
 
 One can specify multiple debug options: e.g. --debug=file,mem will enable

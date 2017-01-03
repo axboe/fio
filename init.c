@@ -1995,12 +1995,13 @@ static void usage(const char *name)
 	printf("  --runtime\t\tRuntime in seconds\n");
 	printf("  --bandwidth-log\tGenerate aggregate bandwidth logs\n");
 	printf("  --minimal\t\tMinimal (terse) output\n");
-	printf("  --output-format=x\tOutput format (terse,json,json+,normal)\n");
-	printf("  --terse-version=x\tSet terse version output format to 'x'\n");
+	printf("  --output-format=type\tOutput format (terse,json,json+,normal)\n");
+	printf("  --terse-version=type\tSet terse version output format"
+		" (default 3, or 2 or 4)\n");
 	printf("  --version\t\tPrint version info and exit\n");
 	printf("  --help\t\tPrint this page\n");
 	printf("  --cpuclock-test\tPerform test/validation of CPU clock\n");
-	printf("  --crctest\t\tTest speed of checksum functions\n");
+	printf("  --crctest=type\tTest speed of checksum functions\n");
 	printf("  --cmdhelp=cmd\t\tPrint command help, \"all\" for all of"
 		" them\n");
 	printf("  --enghelp=engine\tPrint ioengine help, or list"
@@ -2016,14 +2017,15 @@ static void usage(const char *name)
 	printf(" 't' period passed\n");
 	printf("  --readonly\t\tTurn on safety read-only checks, preventing"
 		" writes\n");
-	printf("  --section=name\tOnly run specified section in job file\n");
+	printf("  --section=name\tOnly run specified section in job file,"
+		" multiple sections can be specified\n");
 	printf("  --alloc-size=kb\tSet smalloc pool to this size in kb"
-		" (def 1024)\n");
+		" (def 16384)\n");
 	printf("  --warnings-fatal\tFio parser warnings are fatal\n");
 	printf("  --max-jobs=nr\t\tMaximum number of threads/processes to support\n");
 	printf("  --server=args\t\tStart a backend fio server\n");
 	printf("  --daemonize=pidfile\tBackground fio server, write pid to file\n");
-	printf("  --client=hostname\tTalk to remote backend fio server at hostname\n");
+	printf("  --client=hostname\tTalk to remote backend(s) fio server at hostname\n");
 	printf("  --remote-config=file\tTell fio server to load this local job file\n");
 	printf("  --idle-prof=option\tReport cpu idleness on a system or percpu basis\n"
 		"\t\t\t(option=system,percpu) or run unit work\n"
