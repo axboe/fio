@@ -59,15 +59,6 @@ static int do_rand_allocs(void)
 	return 0;
 }
 
-static int do_specific_alloc(unsigned long size)
-{
-	void *ptr;
-
-	ptr = smalloc(size);
-	sfree(ptr);
-	return 0;
-}
-
 int main(int argc, char *argv[])
 {
 	arch_init(argv);
@@ -75,9 +66,6 @@ int main(int argc, char *argv[])
 	debug_init();
 
 	do_rand_allocs();
-
-	/* smalloc bug, commit 271067a6 */
-	do_specific_alloc(671386584);
 
 	scleanup();
 	return 0;
