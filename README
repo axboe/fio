@@ -152,7 +152,6 @@ $ fio
 	--debug			Enable some debugging options (see below)
 	--parse-only		Parse options only, don't start any IO
 	--output		Write output to file
-	--runtime		Runtime in seconds
 	--bandwidth-log		Generate aggregate bandwidth logs
 	--minimal		Minimal (terse) output
 	--output-format=type	Output format (terse,json,json+,normal)

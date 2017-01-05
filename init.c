@@ -40,7 +40,6 @@ const char fio_version_string[] = FIO_VERSION;
 static char **ini_file;
 static int max_jobs = FIO_MAX_JOBS;
 static int dump_cmdline;
-static long long def_timeout;
 static int parse_only;
 
 static struct thread_data def_thread;
@@ -92,11 +91,6 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "output",
 		.has_arg	= required_argument,
 		.val		= 'o' | FIO_CLIENT_FLAG,
-	},
-	{
-		.name		= (char *) "runtime",
-		.has_arg	= required_argument,
-		.val		= 't' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "latency-log",
@@ -373,14 +367,6 @@ static int setup_thread_area(void)
 	return 0;
 }
 
-static void set_cmd_options(struct thread_data *td)
-{
-	struct thread_options *o = &td->o;
-
-	if (!o->timeout)
-		o->timeout = def_timeout;
-}
-
 static void dump_print_option(struct print_option *p)
 {
 	const char *delim;
@@ -451,10 +437,8 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 {
 	struct thread_data *td;
 
-	if (global) {
-		set_cmd_options(&def_thread);
+	if (global)
 		return &def_thread;
-	}
 	if (setup_thread_area()) {
 		log_err("error: failed to setup shm segment\n");
 		return NULL;
@@ -492,7 +476,6 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 	if (!parent->o.group_reporting || parent == &def_thread)
 		stat_number++;
 
-	set_cmd_options(td);
 	return td;
 }
 
@@ -1997,7 +1980,6 @@ static void usage(const char *name)
 	show_debug_categories();
 	printf("  --parse-only\t\tParse options only, don't start any IO\n");
 	printf("  --output\t\tWrite output to file\n");
-	printf("  --runtime\t\tRuntime in seconds\n");
 	printf("  --bandwidth-log\tGenerate aggregate bandwidth logs\n");
 	printf("  --minimal\t\tMinimal (terse) output\n");
 	printf("  --output-format=type\tOutput format (terse,json,json+,normal)\n");
@@ -2312,13 +2294,6 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			smalloc_pool_size = atoi(optarg);
 			smalloc_pool_size <<= 10;
 			sinit();
-			break;
-		case 't':
-			if (check_str_time(optarg, &def_timeout, 1)) {
-				log_err("fio: failed parsing time %s\n", optarg);
-				do_exit++;
-				exit_val = 1;
-			}
 			break;
 		case 'l':
 			log_err("fio: --latency-log is deprecated. Use per-job latency log options.\n");
