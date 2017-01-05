@@ -142,7 +142,7 @@ void get_ioengine(struct ioengine_ops **ioengine_ptr)
 	*ioengine_ptr = (struct ioengine_ops *) malloc(sizeof(struct ioengine_ops));
 	ioengine = *ioengine_ptr;
 
-	strcpy(ioengine->name, "cpp_null");
+	ioengine->name           = "cpp_null";
 	ioengine->version        = FIO_IOOPS_VERSION;
 	ioengine->queue          = fio_null_queue;
 	ioengine->commit         = fio_null_commit;
