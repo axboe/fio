@@ -65,6 +65,7 @@ struct bloom *bloom_new(uint64_t entries)
 	struct bloom *b;
 	size_t no_uints;
 
+	crc32c_arm64_probe();
 	crc32c_intel_probe();
 
 	b = malloc(sizeof(*b));

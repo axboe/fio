@@ -1210,7 +1210,9 @@ nothing:
 void fio_verify_init(struct thread_data *td)
 {
 	if (td->o.verify == VERIFY_CRC32C_INTEL ||
+	    td->o.verify == VERIFY_CRC32C_ARM64 ||
 	    td->o.verify == VERIFY_CRC32C) {
+		crc32c_arm64_probe();
 		crc32c_intel_probe();
 	}
 }

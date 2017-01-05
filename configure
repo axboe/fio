@@ -342,6 +342,8 @@ elif check_define __s390__ ; then
   fi
 elif check_define __arm__ ; then
   cpu="arm"
+elif check_define __aarch64__ ; then
+  cpu="aarch64"
 elif check_define __hppa__ ; then
   cpu="hppa"
 else
@@ -361,6 +363,9 @@ case "$cpu" in
   ;;
   armv*b|armv*l|arm)
     cpu="arm"
+  ;;
+  aarch64)
+    cpu="arm64"
   ;;
   hppa|parisc|parisc64)
     cpu="hppa"
@@ -1779,6 +1784,24 @@ if compile_prog "" "" "bool"; then
   have_bool="yes"
 fi
 echo "bool                          $have_bool"
+
+##########################################
+# check march=armv8-a+crc+crypto
+march_armv8_a_crc_crypto="no"
+if test "$cpu" = "arm64" ; then
+  cat > $TMPC <<EOF
+int main(void)
+{
+  return 0;
+}
+EOF
+  if compile_prog "-march=armv8-a+crc+crypto" "" ""; then
+    march_armv8_a_crc_crypto="yes"
+    CFLAGS="$CFLAGS -march=armv8-a+crc+crypto -DARCH_HAVE_CRC_CRYPTO"
+  fi
+fi
+echo "march_armv8_a_crc_crypto      $march_armv8_a_crc_crypto"
+
 
 #############################################################################
 

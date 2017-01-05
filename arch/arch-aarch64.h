@@ -27,4 +27,8 @@ static inline int arch_ffz(unsigned long bitmask)
 
 #define ARCH_HAVE_FFZ
 
+#ifdef ARCH_HAVE_CRC_CRYPTO
+#define ARCH_HAVE_ARM64_CRC_CRYPTO
+#endif
+
 #endif

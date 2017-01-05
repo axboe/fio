@@ -234,10 +234,10 @@ endif
 T_DEDUPE_OBJS = t/dedupe.o
 T_DEDUPE_OBJS += lib/rbtree.o t/log.o mutex.o smalloc.o gettime.o crc/md5.o \
 		lib/memalign.o lib/bloom.o t/debug.o crc/xxhash.o t/arch.o \
-		crc/murmur3.o crc/crc32c.o crc/crc32c-intel.o crc/fnv.o
+		crc/murmur3.o crc/crc32c.o crc/crc32c-intel.o crc/crc32c-arm64.o crc/fnv.o
 T_DEDUPE_PROGS = t/fio-dedupe
 
-T_VS_OBJS = t/verify-state.o t/log.o crc/crc32c.o crc/crc32c-intel.o t/debug.o
+T_VS_OBJS = t/verify-state.o t/log.o crc/crc32c.o crc/crc32c-intel.o crc/crc32c-arm64.o t/debug.o
 T_VS_PROGS = t/fio-verify-state
 
 T_PIPE_ASYNC_OBJS = t/read-to-pipe-async.o

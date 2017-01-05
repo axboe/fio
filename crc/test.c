@@ -291,6 +291,7 @@ int fio_crctest(const char *type)
 	int i, first = 1;
 	void *buf;
 
+	crc32c_arm64_probe();
 	crc32c_intel_probe();
 
 	if (!type)
