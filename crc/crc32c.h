@@ -46,9 +46,8 @@ static inline void crc32c_intel_probe(void)
 
 static inline uint32_t fio_crc32c(unsigned char const *buf, unsigned long len)
 {
-	if (crc32c_arm64_available) {
+	if (crc32c_arm64_available)
 		return crc32c_arm64(buf, len);
-	}
 
 	if (crc32c_intel_available)
 		return crc32c_intel(buf, len);

@@ -76,7 +76,7 @@ uint32_t crc32c_arm64(unsigned char const *data, unsigned long length)
 		data += sizeof(uint64_t);
 	}
 
-	if(!(len += 1024))
+	if (!(len += 1024))
 		return crc;
 
 	while ((len -= sizeof(uint64_t)) >= 0) {
@@ -103,11 +103,11 @@ uint32_t crc32c_arm64(unsigned char const *data, unsigned long length)
 void crc32c_arm64_probe(void)
 {
 	unsigned long hwcap;
+
 	if (!crc32c_probed) {
 		hwcap = getauxval(AT_HWCAP);
-		if (hwcap & HWCAP_CRC32) {
+		if (hwcap & HWCAP_CRC32)
 			crc32c_arm64_available = 1;
-		}
 		crc32c_probed = 1;
 	}
 }
