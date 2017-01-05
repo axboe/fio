@@ -564,22 +564,15 @@ static unsigned long long get_rand_start_delay(struct thread_data *td)
 	return delayrange;
 }
 
+/*
+ * <3 Johannes
+ */
 static unsigned int gcd(unsigned int m, unsigned int n)
 {
-	unsigned int r;
+	if (!n)
+		return m;
 
-	if (!m || !n)
-		return 0;
-
-	do {
-		r = m % n;
-		if (!r)
-			break;
-		m = n;
-		n = r;
-	} while (1);
-
-	return n;
+	return gcd(n, m % n);
 }
 
 /*
