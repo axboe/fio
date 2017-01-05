@@ -576,10 +576,6 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 			}
 		}
 
-		if (td->o.verify != VERIFY_NONE)
-			buflen = (buflen + td->o.verify_interval - 1) &
-				~(td->o.verify_interval - 1);
-
 		if (!td->o.bs_unaligned && is_power_of_2(minbs))
 			buflen &= ~(minbs - 1);
 

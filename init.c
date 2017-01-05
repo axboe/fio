@@ -564,6 +564,24 @@ static unsigned long long get_rand_start_delay(struct thread_data *td)
 	return delayrange;
 }
 
+static unsigned int gcd(unsigned int m, unsigned int n)
+{
+	unsigned int r;
+
+	if (!m || !n)
+		return 0;
+
+	do {
+		r = m % n;
+		if (!r)
+			break;
+		m = n;
+		n = r;
+	} while (1);
+
+	return n;
+}
+
 /*
  * Lazy way of fixing up options that depend on each other. We could also
  * define option callback handlers, but this is easier.
@@ -739,6 +757,15 @@ static int fixup_options(struct thread_data *td)
 			o->verify_interval = o->min_bs[DDIR_WRITE];
 		else if (td_read(td) && o->verify_interval > o->min_bs[DDIR_READ])
 			o->verify_interval = o->min_bs[DDIR_READ];
+
+		/*
+		 * Verify interval must be a factor or both min and max
+		 * write size
+		 */
+		if (o->verify_interval % o->min_bs[DDIR_WRITE] ||
+		    o->verify_interval % o->max_bs[DDIR_WRITE])
+			o->verify_interval = gcd(o->min_bs[DDIR_WRITE],
+							o->max_bs[DDIR_WRITE]);
 	}
 
 	if (o->pre_read) {
