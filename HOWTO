@@ -1517,11 +1517,6 @@ verify=str	If writing to a file, fio can verify the file contents
 				back to regular software crc32c, if not
 				supported by the system.
 
-			crc32c-arm64 Use hardware assisted crc32c calculation
-				provided on CRC enabled ARM 64-bits processors.
-				Falls back to regular software crc32c, if not
-				supported by the system.
-
 			crc32	Use a crc32 sum of the data area and store
 				it in the header of each block.
 
