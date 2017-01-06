@@ -1371,7 +1371,7 @@ static int fio_netio_setup(struct thread_data *td)
 	}
 
 	if (!td->io_ops_data) {
-		nd = malloc(sizeof(*nd));;
+		nd = malloc(sizeof(*nd));
 
 		memset(nd, 0, sizeof(*nd));
 		nd->listenfd = -1;
