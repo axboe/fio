@@ -425,8 +425,8 @@ static int fio_sgio_read_capacity(struct thread_data *td, unsigned int *bs,
 	 */
 	if (*max_lba == MAX_10B_LBA) {
 		hdr.cmd_len = 16;
-		hdr.cmdp[0] = 0x9e; // Read Capacity(16)
-		hdr.cmdp[1] = 0x10; // service action
+		hdr.cmdp[0] = 0x9e; // service action
+		hdr.cmdp[1] = 0x10; // Read Capacity(16)
 		hdr.cmdp[10] = (unsigned char) ((sizeof(buf) >> 24) & 0xff);
 		hdr.cmdp[11] = (unsigned char) ((sizeof(buf) >> 16) & 0xff);
 		hdr.cmdp[12] = (unsigned char) ((sizeof(buf) >> 8) & 0xff);
