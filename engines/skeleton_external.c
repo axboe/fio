@@ -126,7 +126,7 @@ static int fio_skeleton_close(struct thread_data *td, struct fio_file *f)
 
 /*
  * Note that the structure is exported, so that fio can get it via
- * dlsym(..., "ioengine");
+ * dlsym(..., "ioengine"); for (and only for) external engines.
  */
 struct ioengine_ops ioengine = {
 	.name		= "engine_name",
