@@ -281,8 +281,18 @@ CYGWIN*)
   if test -z "$CC" ; then
     if test ! -z "$build_32bit_win" && test "$build_32bit_win" = "yes"; then
       CC="i686-w64-mingw32-gcc"
+      if test -e "../zlib/contrib/vstudio/vc14/x86/ZlibStatReleaseWithoutAsm/zlibstat.lib"; then
+        echo "Building with zlib support"
+        output_sym "CONFIG_ZLIB"
+        echo "LIBS=../zlib/contrib/vstudio/vc14/x86/ZlibStatReleaseWithoutAsm/zlibstat.lib" >> $config_host_mak
+      fi
     else
       CC="x86_64-w64-mingw32-gcc"
+      if test -e "../zlib/contrib/vstudio/vc14/x64/ZlibStatReleaseWithoutAsm/zlibstat.lib"; then
+        echo "Building with zlib support"
+        output_sym "CONFIG_ZLIB"
+        echo "LIBS=../zlib/contrib/vstudio/vc14/x64/ZlibStatReleaseWithoutAsm/zlibstat.lib" >> $config_host_mak
+      fi
     fi
   fi
   output_sym "CONFIG_LITTLE_ENDIAN"
@@ -306,7 +316,8 @@ CYGWIN*)
   output_sym "CONFIG_TLS_THREAD"
   output_sym "CONFIG_IPV6"
   echo "CC=$CC" >> $config_host_mak
-  echo "BUILD_CFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
+  echo "BUILD_CFLAGS=$CFLAGS -I../zlib -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
+
   exit 0
   ;;
 esac
