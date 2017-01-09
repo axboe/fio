@@ -819,7 +819,8 @@ ioengine=str	Defines how the job issues io to the file. The following
 				synchronous using the SG_IO ioctl, or if
 				the target is an sg character device
 				we use read(2) and write(2) for asynchronous
-				io.
+				io. Requires filename option to specify either
+				block or character devices.
 
 			null	Doesn't transfer any data, just pretends
 				to. This is mainly used to exercise fio

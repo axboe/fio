@@ -525,7 +525,7 @@ static int fio_sgio_type_check(struct thread_data *td, struct fio_file *f)
 		}
 	} else {
 		td_verror(td, EINVAL, "wrong file type");
-		log_err("ioengine sg only works on block devices\n");
+		log_err("ioengine sg only works on block or character devices\n");
 		return 1;
 	}
 
@@ -788,6 +788,12 @@ static int fio_sgio_get_file_size(struct thread_data *td, struct fio_file *f)
 
 	if (fio_file_size_known(f))
 		return 0;
+
+	if (f->filetype != FIO_TYPE_BD && f->filetype != FIO_TYPE_CHAR) {
+		td_verror(td, EINVAL, "wrong file type");
+		log_err("ioengine sg only works on block or character devices\n");
+		return 1;
+	}
 
 	ret = fio_sgio_read_capacity(td, &bs, &max_lba);
 	if (ret ) {
