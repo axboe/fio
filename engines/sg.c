@@ -32,7 +32,6 @@ struct sgio_data {
 	int *fd_flags;
 	void *sgbuf;
 	unsigned int bs;
-	long long max_lba;
 	int type_checked;
 };
 
@@ -535,9 +534,10 @@ static int fio_sgio_type_check(struct thread_data *td, struct fio_file *f)
 
 	sd->bs = bs;
 	// Determine size of commands needed based on max_lba
-	sd->max_lba = max_lba;
-	if (max_lba > MAX_10B_LBA) {
-		dprint(FD_IO, "sgio_type_check: using 16 byte operations: max_lba = 0x%016llx\n", max_lba);
+	if (max_lba >= MAX_10B_LBA) {
+		dprint(FD_IO, "sgio_type_check: using 16 byte read/write "
+			"commands for lba above 0x%016llx/0x%016llx\n",
+			MAX_10B_LBA, max_lba);
 	}
 
 
