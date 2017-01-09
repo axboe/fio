@@ -630,6 +630,24 @@ static char *fio_sgio_errdetails(struct io_u *io_u)
 			case 0x0d:
 				strlcat(msg, "SG_ERR_DID_REQUEUE", MAXERRDETAIL);
 				break;
+			case 0x0e:
+				strlcat(msg, "SG_ERR_DID_TRANSPORT_DISRUPTED", MAXERRDETAIL);
+				break;
+			case 0x0f:
+				strlcat(msg, "SG_ERR_DID_TRANSPORT_FAILFAST", MAXERRDETAIL);
+				break;
+			case 0x10:
+				strlcat(msg, "SG_ERR_DID_TARGET_FAILURE", MAXERRDETAIL);
+				break;
+			case 0x11:
+				strlcat(msg, "SG_ERR_DID_NEXUS_FAILURE", MAXERRDETAIL);
+				break;
+			case 0x12:
+				strlcat(msg, "SG_ERR_DID_ALLOC_FAILURE", MAXERRDETAIL);
+				break;
+			case 0x13:
+				strlcat(msg, "SG_ERR_DID_MEDIUM_ERROR", MAXERRDETAIL);
+				break;
 			default:
 				strlcat(msg, "Unknown", MAXERRDETAIL);
 				break;
