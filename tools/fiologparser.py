@@ -45,7 +45,7 @@ def print_full(ctx, series):
     while (start < ftime):
         end = ftime if ftime < end else end
         results = [ts.get_value(start, end) for ts in series]
-        print "%s, %s" % (end, ', '.join(["%0.3f" % i for i in results]))
+        print("%s, %s" % (end, ', '.join(["%0.3f" % i for i in results])))
         start += ctx.interval
         end += ctx.interval
 
@@ -57,7 +57,7 @@ def print_sums(ctx, series):
     while (start < ftime):
         end = ftime if ftime < end else end
         results = [ts.get_value(start, end) for ts in series]
-        print "%s, %0.3f" % (end, sum(results))
+        print("%s, %0.3f" % (end, sum(results)))
         start += ctx.interval
         end += ctx.interval
 
@@ -69,7 +69,7 @@ def print_averages(ctx, series):
     while (start < ftime):
         end = ftime if ftime < end else end
         results = [ts.get_value(start, end) for ts in series]
-        print "%s, %0.3f" % (end, float(sum(results))/len(results))
+        print("%s, %0.3f" % (end, float(sum(results))/len(results)))
         start += ctx.interval
         end += ctx.interval
 
@@ -147,11 +147,11 @@ def print_default(ctx, series):
         end += ctx.interval
 
     total = 0
-    for i in xrange(0, len(averages)):
+    for i in range(0, len(averages)):
         total += averages[i]*weights[i]
-    print '%0.3f' % (total/sum(weights))
+    print('%0.3f' % (total/sum(weights)))
  
-class TimeSeries():
+class TimeSeries(object):
     def __init__(self, ctx, fn):
         self.ctx = ctx
         self.last = None 
@@ -185,7 +185,7 @@ class TimeSeries():
             value += sample.get_contribution(start, end)
         return value
 
-class Sample():
+class Sample(object):
     def __init__(self, ctx, start, end, value):
        self.ctx = ctx
        self.start = start
