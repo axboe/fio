@@ -50,12 +50,6 @@
  *
  *   See examples/pmemblk.fio for more.
  *
- * libpmemblk.so
- *   By default, the pmemblk engine will let the system find the libpmemblk.so
- *   that it uses.  You can use an alternative libpmemblk by setting the
- *   FIO_PMEMBLK_LIB environment variable to the full path to the desired
- *   libpmemblk.so.
- *
  */
 
 #include <stdio.h>
@@ -64,68 +58,15 @@
 #include <sys/uio.h>
 #include <errno.h>
 #include <assert.h>
-#include <dlfcn.h>
 #include <string.h>
+#include <libpmem.h>
+#include <libpmemblk.h>
 
 #include "../fio.h"
 
 /*
  * libpmemblk
  */
-struct PMEMblkpool_s;
-typedef struct PMEMblkpool_s PMEMblkpool;
-
-static PMEMblkpool *(*pmemblk_create) (const char *, size_t, size_t, mode_t);
-static PMEMblkpool *(*pmemblk_open) (const char *, size_t);
-static void (*pmemblk_close) (PMEMblkpool *);
-static size_t(*pmemblk_nblock) (PMEMblkpool *);
-static size_t(*pmemblk_bsize) (PMEMblkpool *);
-static int (*pmemblk_read) (PMEMblkpool *, void *, off_t);
-static int (*pmemblk_write) (PMEMblkpool *, const void *, off_t);
-
-int load_libpmemblk(const char *path)
-{
-	void *dl;
-
-	if (!path)
-		path = "libpmemblk.so";
-
-	dl = dlopen(path, RTLD_NOW | RTLD_NODELETE);
-	if (!dl)
-		goto errorout;
-
-	pmemblk_create = dlsym(dl, "pmemblk_create");
-	if (!pmemblk_create)
-		goto errorout;
-	pmemblk_open = dlsym(dl, "pmemblk_open");
-	if (!pmemblk_open)
-		goto errorout;
-	pmemblk_close = dlsym(dl, "pmemblk_close");
-	if (!pmemblk_close)
-		goto errorout;
-	pmemblk_nblock = dlsym(dl, "pmemblk_nblock");
-	if (!pmemblk_nblock)
-		goto errorout;
-	pmemblk_bsize = dlsym(dl, "pmemblk_bsize");
-	if (!pmemblk_bsize)
-		goto errorout;
-	pmemblk_read = dlsym(dl, "pmemblk_read");
-	if (!pmemblk_read)
-		goto errorout;
-	pmemblk_write = dlsym(dl, "pmemblk_write");
-	if (!pmemblk_write)
-		goto errorout;
-
-	return 0;
-
-errorout:
-	log_err("fio: unable to load libpmemblk: %s\n", dlerror());
-	if (dl)
-		dlclose(dl);
-
-	return -1;
-}
-
 typedef struct fio_pmemblk_file *fio_pmemblk_file_t;
 
 struct fio_pmemblk_file {
@@ -250,11 +191,6 @@ static fio_pmemblk_file_t pmb_open(const char *pathspec, int flags)
 
 	pmb = fio_pmemblk_cache_lookup(path);
 	if (!pmb) {
-		/* load libpmemblk if needed */
-		if (!pmemblk_open)
-			if (load_libpmemblk(getenv("FIO_PMEMBLK_LIB")))
-				goto error;
-
 		pmb = malloc(sizeof(*pmb));
 		if (!pmb)
 			goto error;
@@ -410,14 +346,11 @@ static int fio_pmemblk_queue(struct thread_data *td, struct io_u *io_u)
 	unsigned long long off;
 	unsigned long len;
 	void *buf;
-	int (*blkop) (PMEMblkpool *, void *, off_t) = (void *)pmemblk_write;
 
 	fio_ro_check(td, io_u);
 
 	switch (io_u->ddir) {
 	case DDIR_READ:
-		blkop = pmemblk_read;
-		/* fall through */
 	case DDIR_WRITE:
 		off = io_u->offset;
 		len = io_u->xfer_buflen;
@@ -435,7 +368,11 @@ static int fio_pmemblk_queue(struct thread_data *td, struct io_u *io_u)
 		off /= pmb->pmb_bsize;
 		len /= pmb->pmb_bsize;
 		while (0 < len) {
-			if (0 != blkop(pmb->pmb_pool, buf, off)) {
+			if (io_u->ddir == DDIR_READ &&
+			   0 != pmemblk_read(pmb->pmb_pool, buf, off)) {
+				io_u->error = errno;
+				break;
+			} else if (0 != pmemblk_write(pmb->pmb_pool, buf, off)) {
 				io_u->error = errno;
 				break;
 			}

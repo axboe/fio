@@ -51,8 +51,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
-#include <dlfcn.h>
 #include <libgen.h>
+#include <libpmem.h>
 
 #include "../fio.h"
 #include "../verify.h"
@@ -68,8 +68,6 @@ struct fio_devdax_data {
 	size_t devdax_sz;
 	off_t devdax_off;
 };
-
-static void * (*pmem_memcpy_persist)(void *dest, const void *src, size_t len);
 
 static int fio_devdax_file(struct thread_data *td, struct fio_file *f,
 			   size_t length, off_t off)
@@ -212,29 +210,11 @@ static int fio_devdax_queue(struct thread_data *td, struct io_u *io_u)
 static int fio_devdax_init(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
-	const char *path;
-	void *dl;
 
 	if ((o->rw_min_bs & page_mask) &&
 	    (o->fsync_blocks || o->fdatasync_blocks)) {
 		log_err("fio: mmap options dictate a minimum block size of "
 			"%llu bytes\n", (unsigned long long) page_size);
-		return 1;
-	}
-
-	path = getenv("FIO_PMEM_LIB");
-	if (!path)
-		path = "libpmem.so";
-
-	dl = dlopen(path, RTLD_NOW | RTLD_NODELETE);
-	if (!dl) {
-		log_err("fio: unable to open libpmem: %s\n", dlerror());
-		return 1;
-	}
-
-	pmem_memcpy_persist = dlsym(dl, "pmem_memcpy_persist");
-	if (!pmem_memcpy_persist) {
-		log_err("fio: unable to load libpmem: %s\n", dlerror());
 		return 1;
 	}
 

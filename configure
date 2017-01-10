@@ -1583,26 +1583,32 @@ int main(int argc, char **argv)
 EOF
 if compile_prog "" "-lpmem" "libpmem"; then
   libpmem="yes"
+  LIBS="-lpmem $LIBS"
 fi
 echo "libpmem                       $libpmem"
 
 ##########################################
 # Check whether we have libpmemblk
+# libpmem is a prerequisite
 libpmemblk="no"
-cat > $TMPC << EOF
+if test "$libpmem" = "yes"; then
+  cat > $TMPC << EOF
 #include <libpmemblk.h>
 int main(int argc, char **argv)
 {
-  int rc;
-  rc = pmemblk_open("", 0);
+  PMEMblkpool *pbp;
+  pbp = pmemblk_open("", 0);
   return 0;
 }
 EOF
-if compile_prog "" "-lpmemblk -lpmem" "libpmemblk"; then
-  libpmemblk="yes"
+  if compile_prog "" "-lpmemblk" "libpmemblk"; then
+    libpmemblk="yes"
+    LIBS="-lpmemblk $LIBS"
+  fi
 fi
 echo "libpmemblk                    $libpmemblk"
 
+# Choose the ioengines
 if test "$libpmem" = "yes" && test "$disable_pmem" = "no"; then
   devdax="yes"
   if test "$libpmemblk" = "yes"; then
@@ -1612,11 +1618,11 @@ fi
 
 ##########################################
 # Report whether pmemblk engine is enabled
-echo "NVML libpmemblk engine        $pmemblk"
+echo "NVML pmemblk engine           $pmemblk"
 
 ##########################################
 # Report whether dev-dax engine is enabled
-echo "NVML Device Dax engine        $devdax"
+echo "NVML dev-dax engine           $devdax"
 
 # Check if we have lex/yacc available
 yacc="no"
