@@ -203,9 +203,8 @@ static fio_pmemblk_file_t pmb_open(const char *pathspec, int flags)
 			    pmemblk_create(path, bsize, fsize, 0644);
 		}
 		if (!pmb->pmb_pool) {
-			log_err
-			    ("fio: enable to open pmemblk pool file (errno %d)\n",
-			     errno);
+			log_err("pmemblk: unable to open pmemblk pool file %s (%s)\n",
+			     path, strerror(errno));
 			goto error;
 		}
 
@@ -267,14 +266,14 @@ static int pmb_get_flags(struct thread_data *td, uint64_t *pflags)
 	if (!td->o.use_thread) {
 		if (!thread_warned) {
 			thread_warned = 1;
-			log_err("fio: must set thread=1 for pmemblk engine\n");
+			log_err("pmemblk: must set thread=1 for pmemblk engine\n");
 		}
 		return 1;
 	}
 
 	if (!td->o.odirect && !odirect_warned) {
 		odirect_warned = 1;
-		log_info("fio: direct == 0, but pmemblk is always direct\n");
+		log_info("pmemblk: direct == 0, but pmemblk is always direct\n");
 	}
 
 	if (td->o.allow_create)
