@@ -904,11 +904,13 @@ ioengine=str	Defines how the job issues io to the file. The following
 				overwriting. The writetrim mode works well
 				for this constraint.
 
-			pmemblk	Read and write through the NVML libpmemblk
-				interface.
+			pmemblk	Read and write using filesystem DAX to a file
+				on a filesystem mounted with DAX on a persistent
+				memory device through the NVML libpmemblk library.
 
-			dev-dax Read and write through a DAX device exposed
-				from persistent memory.
+			dev-dax Read and write using device DAX to a persistent
+				memory device (e.g., /dev/dax0.0) through the
+				NVML libpmem library.
 
 			external Prefix to specify loading an external
 				IO engine object file. Append the engine

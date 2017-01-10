@@ -811,10 +811,12 @@ and discarding before overwriting. The trimwrite mode works well for this
 constraint.
 .TP
 .B pmemblk
-Read and write through the NVML libpmemblk interface.
+Read and write using filesystem DAX to a file on a filesystem mounted with
+DAX on a persistent memory device through the NVML libpmemblk library.
 .TP
 .B dev-dax
-Read and write through a DAX device exposed from persistent memory.
+Read and write using device DAX to a persistent memory device
+(e.g., /dev/dax0.0) through the NVML libpmem library.
 .RE
 .P
 .RE
