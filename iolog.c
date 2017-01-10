@@ -277,7 +277,7 @@ restart:
 			overlap = 1;
 
 		if (overlap) {
-			dprint(FD_IO, "iolog: overlap %llu/%lu, %llu/%lu",
+			dprint(FD_IO, "iolog: overlap %llu/%lu, %llu/%lu\n",
 				__ipo->offset, __ipo->len,
 				ipo->offset, ipo->len);
 			td->io_hist_len--;
