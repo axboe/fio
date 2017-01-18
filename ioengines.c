@@ -618,15 +618,15 @@ int fio_show_ioengine_help(const char *engine)
 {
 	struct flist_head *entry;
 	struct thread_data td;
+	struct ioengine_ops *io_ops;
 	char *sep;
 	int ret = 1;
 
 	if (!engine || !*engine) {
 		log_info("Available IO engines:\n");
 		flist_for_each(entry, &engine_list) {
-			td.io_ops = flist_entry(entry, struct ioengine_ops,
-						list);
-			log_info("\t%s\n", td.io_ops->name);
+			io_ops = flist_entry(entry, struct ioengine_ops, list);
+			log_info("\t%s\n", io_ops->name);
 		}
 		return 0;
 	}
@@ -638,16 +638,16 @@ int fio_show_ioengine_help(const char *engine)
 
 	memset(&td, 0, sizeof(td));
 
-	td.io_ops = load_ioengine(&td, engine);
-	if (!td.io_ops) {
+	io_ops = load_ioengine(&td, engine);
+	if (!io_ops) {
 		log_info("IO engine %s not found\n", engine);
 		return 1;
 	}
 
-	if (td.io_ops->options)
-		ret = show_cmd_help(td.io_ops->options, sep);
+	if (io_ops->options)
+		ret = show_cmd_help(io_ops->options, sep);
 	else
-		log_info("IO engine %s has no options\n", td.io_ops->name);
+		log_info("IO engine %s has no options\n", io_ops->name);
 
 	free_ioengine(&td);
 
