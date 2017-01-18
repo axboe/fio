@@ -2785,7 +2785,7 @@ int parse_options(int argc, char *argv[])
 		if (did_arg)
 			return 0;
 
-		log_err("No jobs(s) defined\n\n");
+		log_err("No job(s) defined\n\n");
 
 		if (!did_arg) {
 			usage(argv[0]);
