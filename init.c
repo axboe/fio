@@ -1020,7 +1020,7 @@ int ioengine_load(struct thread_data *td)
 		 */
 		if (origeo) {
 			memcpy(td->eo, origeo, td->io_ops->option_struct_size);
-			options_mem_dupe(td->eo, td->io_ops->options);
+			options_mem_dupe(td->io_ops->options, td->eo);
 		} else {
 			memset(td->eo, 0, td->io_ops->option_struct_size);
 			fill_default_options(td->eo, td->io_ops->options);

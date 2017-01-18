@@ -1319,6 +1319,23 @@ void options_init(struct fio_option *options)
 	}
 }
 
+void options_mem_dupe(struct fio_option *options, void *data)
+{
+	struct fio_option *o;
+	char **ptr;
+
+	dprint(FD_PARSE, "dup options\n");
+
+	for (o = &options[0]; o->name; o++) {
+		if (o->type != FIO_OPT_STR_STORE)
+			continue;
+
+		ptr = td_var(data, o, o->off1);
+		if (*ptr)
+			*ptr = strdup(*ptr);
+	}
+}
+
 void options_free(struct fio_option *options, void *data)
 {
 	struct fio_option *o;

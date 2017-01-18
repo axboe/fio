@@ -86,6 +86,7 @@ extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, v
 extern int show_cmd_help(struct fio_option *, const char *);
 extern void fill_default_options(void *, struct fio_option *);
 extern void options_init(struct fio_option *);
+extern void options_mem_dupe(struct fio_option *, void *);
 extern void options_free(struct fio_option *, void *);
 
 extern void strip_blank_front(char **);
