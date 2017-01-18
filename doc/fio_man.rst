@@ -5,7 +5,7 @@
 (rev. |release|)
 
 
-.. include:: ../README
+.. include:: ../README.rst
 
 
-.. include:: ../HOWTO
+.. include:: ../HOWTO.rst
