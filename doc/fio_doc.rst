@@ -2,10 +2,10 @@ fio - Flexible I/O tester rev. |version|
 ========================================
 
 
-.. include:: ../README.rst
+.. include:: ../README
 
 
-.. include:: ../HOWTO.rst
+.. include:: ../HOWTO
 
 
 
