@@ -2055,7 +2055,7 @@ static bool check_mount_writes(struct thread_data *td)
 		return false;
 
 	for_each_file(td, f, i) {
-		if (f->filetype != FIO_TYPE_BD)
+		if (f->filetype != FIO_TYPE_BLOCK)
 			continue;
 		if (device_is_mounted(f->file_name))
 			goto mounted;

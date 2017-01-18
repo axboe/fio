@@ -15,7 +15,7 @@
  */
 enum fio_filetype {
 	FIO_TYPE_FILE = 1,		/* plain file */
-	FIO_TYPE_BD,			/* block device */
+	FIO_TYPE_BLOCK,			/* block device */
 	FIO_TYPE_CHAR,			/* character device */
 	FIO_TYPE_PIPE,			/* pipe */
 };

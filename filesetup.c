@@ -370,7 +370,7 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 
 	if (f->filetype == FIO_TYPE_FILE)
 		ret = file_size(td, f);
-	else if (f->filetype == FIO_TYPE_BD)
+	else if (f->filetype == FIO_TYPE_BLOCK)
 		ret = bdev_size(td, f);
 	else if (f->filetype == FIO_TYPE_CHAR)
 		ret = char_size(td, f);
@@ -420,7 +420,7 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 		ret = posix_fadvise(f->fd, off, len, POSIX_FADV_DONTNEED);
 		if (ret)
 			errval = ret;
-	} else if (f->filetype == FIO_TYPE_BD) {
+	} else if (f->filetype == FIO_TYPE_BLOCK) {
 		int retry_count = 0;
 
 		ret = blockdev_invalidate_cache(f);
@@ -709,7 +709,7 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 		struct stat sb;
 		char buf[256];
 
-		if (f->filetype == FIO_TYPE_BD || f->filetype == FIO_TYPE_CHAR) {
+		if (f->filetype == FIO_TYPE_BLOCK || f->filetype == FIO_TYPE_CHAR) {
 			if (f->real_file_size != -1ULL)
 				ret += f->real_file_size;
 			continue;
@@ -1228,12 +1228,12 @@ static void get_file_type(struct fio_file *f)
 	/* \\.\ is the device namespace in Windows, where every file is
 	 * a block device */
 	if (strncmp(f->file_name, "\\\\.\\", 4) == 0)
-		f->filetype = FIO_TYPE_BD;
+		f->filetype = FIO_TYPE_BLOCK;
 #endif
 
 	if (!stat(f->file_name, &sb)) {
 		if (S_ISBLK(sb.st_mode))
-			f->filetype = FIO_TYPE_BD;
+			f->filetype = FIO_TYPE_BLOCK;
 		else if (S_ISCHR(sb.st_mode))
 			f->filetype = FIO_TYPE_CHAR;
 		else if (S_ISFIFO(sb.st_mode))

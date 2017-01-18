@@ -252,7 +252,7 @@ static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int do_sync)
 	struct fio_file *f = io_u->file;
 	int ret;
 
-	if (f->filetype == FIO_TYPE_BD) {
+	if (f->filetype == FIO_TYPE_BLOCK) {
 		ret = fio_sgio_ioctl_doio(td, f, io_u);
 		td->error = io_u->error;
 	} else {
@@ -504,7 +504,7 @@ static int fio_sgio_type_check(struct thread_data *td, struct fio_file *f)
 	unsigned int bs = 0;
 	unsigned long long max_lba = 0;
 
-	if (f->filetype == FIO_TYPE_BD) {
+	if (f->filetype == FIO_TYPE_BLOCK) {
 		if (ioctl(f->fd, BLKSSZGET, &bs) < 0) {
 			td_verror(td, errno, "ioctl");
 			return 1;
@@ -537,7 +537,7 @@ static int fio_sgio_type_check(struct thread_data *td, struct fio_file *f)
 			MAX_10B_LBA, max_lba);
 	}
 
-	if (f->filetype == FIO_TYPE_BD) {
+	if (f->filetype == FIO_TYPE_BLOCK) {
 		td->io_ops->getevents = NULL;
 		td->io_ops->event = NULL;
 	}
@@ -789,7 +789,7 @@ static int fio_sgio_get_file_size(struct thread_data *td, struct fio_file *f)
 	if (fio_file_size_known(f))
 		return 0;
 
-	if (f->filetype != FIO_TYPE_BD && f->filetype != FIO_TYPE_CHAR) {
+	if (f->filetype != FIO_TYPE_BLOCK && f->filetype != FIO_TYPE_CHAR) {
 		td_verror(td, EINVAL, "wrong file type");
 		log_err("ioengine sg only works on block or character devices\n");
 		return 1;

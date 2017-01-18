@@ -351,7 +351,7 @@ static int fio_binject_open_file(struct thread_data *td, struct fio_file *f)
 	if (ret)
 		return 1;
 
-	if (f->filetype != FIO_TYPE_BD) {
+	if (f->filetype != FIO_TYPE_BLOCK) {
 		log_err("fio: binject only works with block devices\n");
 		goto err_close;
 	}

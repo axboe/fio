@@ -67,7 +67,7 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 	}
 
 #ifdef FIO_MADV_FREE
-	if (f->filetype == FIO_TYPE_BD)
+	if (f->filetype == FIO_TYPE_BLOCK)
 		(void) posix_madvise(fmd->mmap_ptr, fmd->mmap_sz, FIO_MADV_FREE);
 #endif
 
