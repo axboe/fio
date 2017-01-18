@@ -107,8 +107,7 @@ typedef int (fio_opt_str_val_fn)(void *, long long *);
 typedef int (fio_opt_int_fn)(void *, int *);
 
 struct thread_options;
-static inline void *td_var(struct thread_options *to, struct fio_option *o,
-			   unsigned int offset)
+static inline void *td_var(void *to, struct fio_option *o, unsigned int offset)
 {
 	void *ret;
 
