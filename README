@@ -1,18 +1,31 @@
-fio
----
+Overview and history
+--------------------
 
-fio is a tool that will spawn a number of threads or processes doing a
-particular type of io action as specified by the user. fio takes a
-number of global parameters, each inherited by the thread unless
-otherwise parameters given to them overriding that setting is given.
-The typical use of fio is to write a job file matching the io load
-one wants to simulate.
+Fio was originally written to save me the hassle of writing special test case
+programs when I wanted to test a specific workload, either for performance
+reasons or to find/reproduce a bug. The process of writing such a test app can
+be tiresome, especially if you have to do it often.  Hence I needed a tool that
+would be able to simulate a given I/O workload without resorting to writing a
+tailored test case again and again.
+
+A test work load is difficult to define, though. There can be any number of
+processes or threads involved, and they can each be using their own way of
+generating I/O. You could have someone dirtying large amounts of memory in an
+memory mapped file, or maybe several threads issuing reads using asynchronous
+I/O. fio needed to be flexible enough to simulate both of these cases, and many
+more.
+
+Fio spawns a number of threads or processes doing a particular type of I/O
+action as specified by the user. fio takes a number of global parameters, each
+inherited by the thread unless otherwise parameters given to them overriding
+that setting is given.  The typical use of fio is to write a job file matching
+the I/O load one wants to simulate.
 
 
 Source
 ------
 
-fio resides in a git repo, the canonical place is:
+Fio resides in a git repo, the canonical place is:
 
 	git://git.kernel.dk/fio.git
 
@@ -21,57 +34,25 @@ If git:// does not work, use the http protocol instead:
 
 	http://git.kernel.dk/fio.git
 
-Snapshots are frequently generated and fio-git-*.tar.gz include the git
+Snapshots are frequently generated and :file:`fio-git-*.tar.gz` include the git
 meta data as well. Other tarballs are archives of official fio releases.
 Snapshots can download from:
 
 	http://brick.kernel.dk/snaps/
 
-There are also two official mirrors. Both of these are automatically synced
-with the main repository, when changes are pushed. If the main repo is down
-for some reason, either one of these is safe to use as a backup:
+There are also two official mirrors. Both of these are automatically synced with
+the main repository, when changes are pushed. If the main repo is down for some
+reason, either one of these is safe to use as a backup:
 
 	git://git.kernel.org/pub/scm/linux/kernel/git/axboe/fio.git
+
 	https://git.kernel.org/pub/scm/linux/kernel/git/axboe/fio.git
 
 or
 
 	git://github.com/axboe/fio.git
+
 	https://github.com/axboe/fio.git
-
-
-Binary packages
----------------
-
-Debian:
-Starting with Debian "Squeeze", fio packages are part of the official
-Debian repository. http://packages.debian.org/search?keywords=fio
-
-Ubuntu:
-Starting with Ubuntu 10.04 LTS (aka "Lucid Lynx"), fio packages are part
-of the Ubuntu "universe" repository.
-http://packages.ubuntu.com/search?keywords=fio
-
-Red Hat, CentOS & Co:
-Dag Wieërs has RPMs for Red Hat related distros, find them here:
-http://dag.wieers.com/rpm/packages/fio/
-
-Mandriva:
-Mandriva has integrated fio into their package repository, so installing
-on that distro should be as easy as typing 'urpmi fio'.
-
-Solaris:
-Packages for Solaris are available from OpenCSW. Install their pkgutil
-tool (http://www.opencsw.org/get-it/pkgutil/) and then install fio via
-'pkgutil -i fio'.
-
-Windows:
-Rebecca Cran <rebecca+fio@bluestop.org> has fio packages for Windows at
-http://www.bluestop.org/fio/ .
-
-BSDs:
-Packages for BSDs may be available from their binary package repositories.
-Look for a package "fio" using their binary package managers.
 
 
 Mailing list
@@ -80,9 +61,9 @@ Mailing list
 The fio project mailing list is meant for anything related to fio including
 general discussion, bug reporting, questions, and development.
 
-An automated mail detailing recent commits is automatically sent to the
-list at most daily. The list address is fio@vger.kernel.org, subscribe
-by sending an email to majordomo@vger.kernel.org with
+An automated mail detailing recent commits is automatically sent to the list at
+most daily. The list address is fio@vger.kernel.org, subscribe by sending an
+email to majordomo@vger.kernel.org with
 
 	subscribe fio
 
@@ -95,261 +76,119 @@ and archives for the old list can be found here:
 	http://maillist.kernel.dk/fio-devel/
 
 
+Author
+------
+
+Fio was written by Jens Axboe <axboe@kernel.dk> to enable flexible testing of
+the Linux I/O subsystem and schedulers. He got tired of writing specific test
+applications to simulate a given workload, and found that the existing I/O
+benchmark/test tools out there weren't flexible enough to do what he wanted.
+
+Jens Axboe <axboe@kernel.dk> 20060905
+
+
+Binary packages
+---------------
+
+Debian:
+	Starting with Debian "Squeeze", fio packages are part of the official
+	Debian repository. http://packages.debian.org/search?keywords=fio.
+
+Ubuntu:
+	Starting with Ubuntu 10.04 LTS (aka "Lucid Lynx"), fio packages are part
+	of the Ubuntu "universe" repository.
+	http://packages.ubuntu.com/search?keywords=fio.
+
+Red Hat, CentOS & Co:
+	Dag Wieërs has RPMs for Red Hat related distros, find them here:
+	http://dag.wieers.com/rpm/packages/fio/.
+
+Mandriva:
+	Mandriva has integrated fio into their package repository, so installing
+	on that distro should be as easy as typing ``urpmi fio``.
+
+Solaris:
+	Packages for Solaris are available from OpenCSW. Install their pkgutil
+	tool (http://www.opencsw.org/get-it/pkgutil/) and then install fio via
+	``pkgutil -i fio``.
+
+Windows:
+	Rebecca Cran <rebecca+fio@bluestop.org> has fio packages for Windows at
+	http://www.bluestop.org/fio/ .
+
+BSDs:
+	Packages for BSDs may be available from their binary package repositories.
+	Look for a package "fio" using their binary package managers.
+
+
 Building
 --------
 
-Just type './configure', 'make' and 'make install'.
+Just type::
 
-Note that GNU make is required. On BSDs it's available from devel/gmake
-within ports directory; on Solaris it's in the SUNWgmake package.
-On platforms where GNU make isn't the default, type 'gmake' instead of 'make'.
+ $ ./configure
+ $ make
+ $ make install
 
-Configure will print the enabled options. Note that on Linux based
-platforms, the libaio development packages must be installed to use
-the libaio engine. Depending on distro, it is usually called
-libaio-devel or libaio-dev.
+Note that GNU make is required. On BSDs it's available from devel/gmake within
+ports directory; on Solaris it's in the SUNWgmake package.  On platforms where
+GNU make isn't the default, type ``gmake`` instead of ``make``.
+
+Configure will print the enabled options. Note that on Linux based platforms,
+the libaio development packages must be installed to use the libaio
+engine. Depending on distro, it is usually called libaio-devel or libaio-dev.
 
 For gfio, gtk 2.18 (or newer), associated glib threads, and cairo are required
-to be installed.  gfio isn't built automatically and can be enabled
-with a --enable-gfio option to configure.
+to be installed.  gfio isn't built automatically and can be enabled with a
+``--enable-gfio`` option to configure.
 
-To build FIO with a cross-compiler:
+To build fio with a cross-compiler::
+
  $ make clean
  $ make CROSS_COMPILE=/path/to/toolchain/prefix
+
 Configure will attempt to determine the target platform automatically.
 
-It's possible to build fio for ESX as well, use the --esx switch to
+It's possible to build fio for ESX as well, use the ``--esx`` switch to
 configure.
 
 
 Windows
--------
+~~~~~~~
 
-On Windows, Cygwin (http://www.cygwin.com/) is required in order to
-build fio. To create an MSI installer package install WiX 3.8 from
-http://wixtoolset.org and run dobuild.cmd from the
-os/windows directory.
+On Windows, Cygwin (http://www.cygwin.com/) is required in order to build
+fio. To create an MSI installer package install WiX 3.8 from
+http://wixtoolset.org and run :file:`dobuild.cmd` from the :file:`os/windows`
+directory.
 
 How to compile fio on 64-bit Windows:
 
- 1. Install Cygwin (http://www.cygwin.com/). Install 'make' and all
-    packages starting with 'mingw64-i686' and 'mingw64-x86_64'.
+ 1. Install Cygwin (http://www.cygwin.com/). Install **make** and all
+    packages starting with **mingw64-i686** and **mingw64-x86_64**.
  2. Open the Cygwin Terminal.
  3. Go to the fio directory (source files).
- 4. Run 'make clean && make -j'.
+ 4. Run ``make clean && make -j``.
 
-To build fio on 32-bit Windows, run './configure --build-32bit-win' before 'make'.
+To build fio on 32-bit Windows, run ``./configure --build-32bit-win`` before
+``make``.
 
-It's recommended that once built or installed, fio be run in a Command Prompt
-or other 'native' console such as console2, since there are known to be display
-and signal issues when running it under a Cygwin shell
-(see http://code.google.com/p/mintty/issues/detail?id=56 for details).
-
-
-Command line
-------------
-
-$ fio
-	--debug			Enable some debugging options (see below)
-	--parse-only		Parse options only, don't start any IO
-	--output		Write output to file
-	--bandwidth-log		Generate aggregate bandwidth logs
-	--minimal		Minimal (terse) output
-	--output-format=type	Output format (terse,json,json+,normal)
-	--terse-version=type	Set terse version output format (default 3, or 2 or 4)
-	--version		Print version info and exit
-	--help			Print this page
-	--cpuclock-test		Perform test/validation of CPU clock
-	--crctest=type		Test speed of checksum functions
-	--cmdhelp=cmd		Print command help, "all" for all of them
-	--enghelp=engine	Print ioengine help, or list available ioengines
-	--enghelp=engine,cmd	Print help for an ioengine cmd
-	--showcmd		Turn a job file into command line options
-	--eta=when		When ETA estimate should be printed
-				May be "always", "never" or "auto"
-	--eta-newline=time	Force a new line for every 'time' period passed
-	--status-interval=t	Force full status dump every 't' period passed
-	--readonly		Turn on safety read-only checks, preventing writes
-	--section=name		Only run specified section in job file.
-				Multiple sections can be specified.
-	--alloc-size=kb		Set smalloc pool to this size in kb (def 16384)
-	--warnings-fatal	Fio parser warnings are fatal
-	--max-jobs=nr		Maximum number of threads/processes to support
-	--server=args		Start a backend fio server. See Client/Server section.
-	--client=hostname	Talk to remote backend(s) fio server at hostname
-	--daemonize=pidfile	Background fio server, write pid to file
-	--remote-config=file	Tell fio server to load this local job file
-	--idle-prof=option	Report cpu idleness on a system or percpu basis
-				(option=system,percpu) or run unit work
-				calibration only (option=calibrate)
-	--inflate-log=log	Inflate and output compressed log
-	--trigger-file=file	Execute trigger cmd when file exists
-	--trigger-timeout=t	Execute trigger af this time
-	--trigger=cmd		Set this command as local trigger
-	--trigger-remote=cmd	Set this command as remote trigger
-	--aux-path=path		Use this path for fio state generated files
+It's recommended that once built or installed, fio be run in a Command Prompt or
+other 'native' console such as console2, since there are known to be display and
+signal issues when running it under a Cygwin shell (see
+http://code.google.com/p/mintty/issues/detail?id=56 for details).
 
 
-Any parameters following the options will be assumed to be job files,
-unless they match a job file parameter. Multiple job files can be listed 
-and each job file will be regarded as a separate group. fio will stonewall
-execution between each group.
+Documentation
+~~~~~~~~~~~~~
 
-The --readonly option is an extra safety guard to prevent users from
-accidentally starting a write workload when that is not desired.  Fio
-will only write if rw=write/randwrite/rw/randrw is given.  This extra
-safety net can be used as an extra precaution as --readonly will also
-enable a write check in the io engine core to prevent writes due to
-unknown user space bug(s).
+Fio uses Sphinx_ to generate documentation from the reStructuredText_ files.
+To build HTML formatted documentation run ``make -C doc html`` and direct your
+browser to :file:`./doc/output/html/index.html`.  To build manual page run
+``make -C doc man`` and then ``man doc/output/man/fio.1``.  To see what other
+output formats are supported run ``make -C doc help``.
 
-The --debug option triggers additional logging by fio.
-Currently, additional logging is available for:
-
-	process		Dump info related to processes
-	file		Dump info related to file actions
-	io		Dump info related to IO queuing
-	mem		Dump info related to memory allocations
-	blktrace	Dump info related to blktrace setup
-	verify		Dump info related to IO verification
-	all		Enable all debug options
-	random		Dump info related to random offset generation
-	parse		Dump info related to option matching and parsing
-	diskutil	Dump info related to disk utilization updates
-	job:x		Dump info only related to job number x
-	mutex		Dump info only related to mutex up/down ops
-	profile		Dump info related to profile extensions
-	time		Dump info related to internal time keeping
-	net		Dump info related to networking connections
-	rate		Dump info related to IO rate switching
-	compress	Dump info related to log compress/decompress
-	steadystate	Dump info related to steady state detection
-	helperthread	Dump info related to helper thread
-	? or help	Show available debug options.
-
-One can specify multiple debug options: e.g. --debug=file,mem will enable
-file and memory debugging.
-
-The --section option allows one to combine related jobs into one file.
-E.g. one job file could define light, moderate, and heavy sections. Tell fio to
-run only the "heavy" section by giving --section=heavy command line option.
-One can also specify the "write" operations in one section and "verify"
-operation in another section.  The --section option only applies to job
-sections.  The reserved 'global' section is always parsed and used.
-
-The --alloc-size switch allows one to use a larger pool size for smalloc.
-If running large jobs with randommap enabled, fio can run out of memory.
-Smalloc is an internal allocator for shared structures from a fixed size
-memory pool. The pool size defaults to 16MiB and can grow to 8 pools.
-
-NOTE: While running .fio_smalloc.* backing store files are visible in /tmp.
-
-
-Job file
---------
-
-See the HOWTO file for a complete description of job file syntax and
-parameters.  The --cmdhelp option also lists all options. If used with
-an option argument, --cmdhelp will detail the given option.  The job file
-format is in the ini style format, as that is easy for the user to review
-and modify.
-
-This README contains the terse version. Job files can describe big and
-complex setups that are not possible with the command line.  Job files
-are a good practice even for simple jobs since the file provides an
-easily accessed record of the workload and can include comments.
-
-See the examples/ directory for inspiration on how to write job files.  Note
-the copyright and license requirements currently apply to examples/ files.
-
-
-Client/server
--------------
-
-Normally fio is invoked as a stand-alone application on the machine
-where the IO workload should be generated. However, the frontend and
-backend of fio can be run separately. Ie the fio server can generate
-an IO workload on the "Device Under Test" while being controlled from
-another machine.
-
-Start the server on the machine which has access to the storage DUT:
-
-fio --server=args
-
-where args defines what fio listens to. The arguments are of the form
-'type,hostname or IP,port'. 'type' is either 'ip' (or ip4) for TCP/IP v4,
-'ip6' for TCP/IP v6, or 'sock' for a local unix domain socket.
-'hostname' is either a hostname or IP address, and 'port' is the port to
-listen to (only valid for TCP/IP, not a local socket). Some examples:
-
-1) fio --server
-
-   Start a fio server, listening on all interfaces on the default port (8765).
-
-2) fio --server=ip:hostname,4444
-
-   Start a fio server, listening on IP belonging to hostname and on port 4444.
-
-3) fio --server=ip6:::1,4444
-
-   Start a fio server, listening on IPv6 localhost ::1 and on port 4444.
-
-4) fio --server=,4444
-
-   Start a fio server, listening on all interfaces on port 4444.
-
-5) fio --server=1.2.3.4
-
-   Start a fio server, listening on IP 1.2.3.4 on the default port.
-
-6) fio --server=sock:/tmp/fio.sock
-
-   Start a fio server, listening on the local socket /tmp/fio.sock.
-
-Once a server is running, a "client" can connect to the fio server with:
-
-fio --local-args --client=<server> --remote-args <job file(s)>
-
-where --local-args are arguments for the client where it is
-running, 'server' is the connect string, and --remote-args and <job file(s)>
-are sent to the server. The 'server' string follows the same format as it
-does on the server side, to allow IP/hostname/socket and port strings.
-
-Fio can connect to multiple servers this way:
-
-fio --client=<server1> <job file(s)> --client=<server2> <job file(s)>
-
-If the job file is located on the fio server, then you can tell the server
-to load a local file as well. This is done by using --remote-config:
-
-fio --client=server --remote-config /path/to/file.fio
-
-Then fio will open this local (to the server) job file instead
-of being passed one from the client.
-
-If you have many servers (example: 100 VMs/containers), 
-you can input a pathname of a file containing host IPs/names as the parameter 
-value for the --client option.  For example, here is an example "host.list" 
-file containing 2 hostnames:
-
-host1.your.dns.domain
-host2.your.dns.domain
-
-The fio command would then be:
-
-fio --client=host.list <job file(s)>
-
-In this mode, you cannot input server-specific parameters or job files -- all
-servers receive the same job file.  
-
-In order to let fio --client runs use a shared filesystem 
-from multiple hosts, fio  --client now prepends the IP address of the 
-server to the filename.  For example, if fio is using directory /mnt/nfs/fio 
-and is writing filename fileio.tmp, with a --client hostfile containing 
-two hostnames h1 and h2 with IP addresses 192.168.10.120 and  192.168.10.121,
-then fio will create two files:
-
-	/mnt/nfs/fio/192.168.10.120.fileio.tmp
-	/mnt/nfs/fio/192.168.10.121.fileio.tmp
+.. _reStructuredText: http://www.sphinx-doc.org/rest.html
+.. _Sphinx: http://www.sphinx-doc.org
 
 
 Platforms
@@ -357,32 +196,31 @@ Platforms
 
 Fio works on (at least) Linux, Solaris, AIX, HP-UX, OSX, NetBSD, OpenBSD,
 Windows, FreeBSD, and DragonFly. Some features and/or options may only be
-available on some of the platforms, typically because those features only
-apply to that platform (like the solarisaio engine, or the splice engine on
-Linux).
+available on some of the platforms, typically because those features only apply
+to that platform (like the solarisaio engine, or the splice engine on Linux).
 
 Some features are not available on FreeBSD/Solaris even if they could be
-implemented, I'd be happy to take patches for that. An example of that is
-disk utility statistics and (I think) huge page support, support for that
-does exist in FreeBSD/Solaris.
+implemented, I'd be happy to take patches for that. An example of that is disk
+utility statistics and (I think) huge page support, support for that does exist
+in FreeBSD/Solaris.
 
 Fio uses pthread mutexes for signalling and locking and FreeBSD does not
 support process shared pthread mutexes. As a result, only threads are
 supported on FreeBSD. This could be fixed with sysv ipc locking or
 other locking alternatives.
 
-Other *BSD platforms are untested, but fio should work there almost out
-of the box. Since I don't do test runs or even compiles on those platforms,
-your mileage may vary. Sending me patches for other platforms is greatly
+Other \*BSD platforms are untested, but fio should work there almost out of the
+box. Since I don't do test runs or even compiles on those platforms, your
+mileage may vary. Sending me patches for other platforms is greatly
 appreciated. There's a lot of value in having the same test/benchmark tool
 available on all platforms.
 
-Note that POSIX aio is not enabled by default on AIX. Messages like these:
+Note that POSIX aio is not enabled by default on AIX. Messages like these::
 
     Symbol resolution failed for /usr/lib/libc.a(posix_aio.o) because:
         Symbol _posix_kaio_rdwr (number 2) is not exported from dependent module /unix.
 
-indicate one needs to enable POSIX aio. Run the following commands as root:
+indicate one needs to enable POSIX aio. Run the following commands as root::
 
     # lsdev -C -l posix_aio0
         posix_aio0 Defined  Posix Asynchronous I/O
@@ -390,20 +228,41 @@ indicate one needs to enable POSIX aio. Run the following commands as root:
     # lsdev -C -l posix_aio0
         posix_aio0 Available  Posix Asynchronous I/O
 
-POSIX aio should work now. To make the change permanent:
+POSIX aio should work now. To make the change permanent::
 
     # chdev -l posix_aio0 -P -a autoconfig='available'
         posix_aio0 changed
 
 
-Author
-------
+Running fio
+-----------
 
-Fio was written by Jens Axboe <axboe@kernel.dk> to enable flexible testing
-of the Linux IO subsystem and schedulers. He got tired of writing
-specific test applications to simulate a given workload, and found that
-the existing io benchmark/test tools out there weren't flexible enough
-to do what he wanted.
+Running fio is normally the easiest part - you just give it the job file
+(or job files) as parameters::
 
-Jens Axboe <axboe@kernel.dk> 20060905
+	$ fio [options] [jobfile] ...
 
+and it will start doing what the *jobfile* tells it to do. You can give more
+than one job file on the command line, fio will serialize the running of those
+files. Internally that is the same as using the :option:`stonewall` parameter
+described in the parameter section.
+
+If the job file contains only one job, you may as well just give the parameters
+on the command line. The command line parameters are identical to the job
+parameters, with a few extra that control global parameters.  For example, for
+the job file parameter :option:`iodepth=2 <iodepth>`, the mirror command line
+option would be :option:`--iodepth 2 <iodepth>` or :option:`--iodepth=2
+<iodepth>`. You can also use the command line for giving more than one job
+entry. For each :option:`--name <name>` option that fio sees, it will start a
+new job with that name.  Command line entries following a
+:option:`--name <name>` entry will apply to that job, until there are no more
+entries or a new :option:`--name <name>` entry is seen. This is similar to the
+job file options, where each option applies to the current job until a new []
+job entry is seen.
+
+fio does not need to run as root, except if the files or devices specified in
+the job section requires that. Some other options may also be restricted, such
+as memory locking, I/O scheduler switching, and decreasing the nice value.
+
+If *jobfile* is specified as ``-``, the job file will be read from standard
+input.
