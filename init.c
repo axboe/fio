@@ -2717,9 +2717,6 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 	}
 
 out_free:
-	if (pid_file)
-		free(pid_file);
-
 	return ini_idx;
 }
 
