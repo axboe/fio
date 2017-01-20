@@ -31,15 +31,15 @@ static const struct opt_group fio_opt_groups[] = {
 		.mask	= FIO_OPT_C_PROFILE,
 	},
 	{
+		.name	= "I/O engines",
+		.mask	= FIO_OPT_C_ENGINE,
+	},
+	{
 		.name	= NULL,
 	},
 };
 
 static const struct opt_group fio_opt_cat_groups[] = {
-	{
-		.name	= "Latency profiling",
-		.mask	= FIO_OPT_G_LATPROF,
-	},
 	{
 		.name	= "Rate",
 		.mask	= FIO_OPT_G_RATE,
@@ -125,13 +125,52 @@ static const struct opt_group fio_opt_cat_groups[] = {
 		.mask	= FIO_OPT_G_TIOBENCH,
 	},
 	{
-		.name	= "MTD",
+		.name	= "Error handling",
+		.mask	= FIO_OPT_G_ERR,
+	},
+	{
+		.name	= "Ext4 defrag I/O engine", /* e4defrag */
+		.mask	= FIO_OPT_G_E4DEFRAG,
+	},
+	{
+		.name	= "Network I/O engine", /* net */
+		.mask	= FIO_OPT_G_NETIO,
+	},
+	{
+		.name	= "RDMA I/O engine", /* rdma */
+		.mask	= FIO_OPT_G_RDMA,
+	},
+	{
+		.name	= "libaio I/O engine", /* libaio */
+		.mask	= FIO_OPT_G_LIBAIO,
+	},
+	{
+		.name	= "ACT Aerospike like benchmark profile",
+		.mask	= FIO_OPT_G_ACT,
+	},
+	{
+		.name	= "Latency profiling",
+		.mask	= FIO_OPT_G_LATPROF,
+	},
+	{
+		.name	= "RBD I/O engine", /* rbd */
+		.mask	= FIO_OPT_G_RBD,
+	},
+	{
+		.name	= "GlusterFS I/O engine", /* gfapi,gfapi_async */
+		.mask	= FIO_OPT_G_GFAPI,
+	},
+	{
+		.name	= "MTD I/O engine", /* mtd */
 		.mask	= FIO_OPT_G_MTD,
 	},
-
+	{
+		.name	= "libhdfs I/O engine", /* libhdfs */
+		.mask	= FIO_OPT_G_HDFS,
+	},
 	{
 		.name	= NULL,
-	}
+	},
 };
 
 static const struct opt_group *group_from_mask(const struct opt_group *ogs,
