@@ -22,7 +22,7 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.off1	= offsetof(struct cpu_options, cpuload),
 		.help	= "Use this percentage of CPU",
-		.category = FIO_OPT_C_GENERAL,
+		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
@@ -34,7 +34,7 @@ static struct fio_option options[] = {
 		.def	= "50000",
 		.parent = "cpuload",
 		.hide	= 1,
-		.category = FIO_OPT_C_GENERAL,
+		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
@@ -44,7 +44,7 @@ static struct fio_option options[] = {
 		.off1	= offsetof(struct cpu_options, exit_io_done),
 		.help	= "Exit when IO threads finish",
 		.def	= "0",
-		.category = FIO_OPT_C_GENERAL,
+		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
