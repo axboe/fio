@@ -123,7 +123,6 @@ struct io_u {
 		struct ibv_mr *mr;
 #endif
 		void *mmap_data;
-		uint64_t null;
 	};
 };
 
