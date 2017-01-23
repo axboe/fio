@@ -13,6 +13,7 @@
 #include <limits.h>
 #include <fcntl.h>
 
+#include "fio.h"
 #include "mutex.h"
 #include "arch/arch.h"
 #include "os/os.h"
@@ -248,7 +249,7 @@ static void *postred_ptr(struct block_hdr *hdr)
 	uintptr_t ptr;
 
 	ptr = (uintptr_t) hdr + hdr->size - sizeof(unsigned int);
-	ptr = (ptr + int_mask) & ~int_mask;
+	ptr = (uintptr_t) PTR_ALIGN(ptr, int_mask);
 
 	return (void *) ptr;
 }

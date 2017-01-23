@@ -76,9 +76,6 @@ int shm_id = 0;
 int temp_stall_ts;
 unsigned long done_secs = 0;
 
-#define PAGE_ALIGN(buf)	\
-	(char *) (((uintptr_t) (buf) + page_mask) & ~page_mask)
-
 #define JOB_START_TIMEOUT	(5 * 1000)
 
 static void sig_int(int sig)
@@ -1198,7 +1195,7 @@ static int init_io_u(struct thread_data *td)
 
 	if (td->o.odirect || td->o.mem_align || td->o.oatomic ||
 	    td_ioengine_flagged(td, FIO_RAWIO))
-		p = PAGE_ALIGN(td->orig_buffer) + td->o.mem_align;
+		p = PTR_ALIGN(td->orig_buffer, page_mask) + td->o.mem_align;
 	else
 		p = td->orig_buffer;
 

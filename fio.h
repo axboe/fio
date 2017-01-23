@@ -619,6 +619,11 @@ extern int __must_check allocate_io_mem(struct thread_data *);
 extern void free_io_mem(struct thread_data *);
 extern void free_threads_shm(void);
 
+#ifdef FIO_INTERNAL
+#define PTR_ALIGN(ptr, mask)	\
+	(char *) (((uintptr_t) (ptr) + (mask)) & ~(mask))
+#endif
+
 /*
  * Reset stats after ramp time completes
  */
