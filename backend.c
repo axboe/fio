@@ -1261,6 +1261,10 @@ static int init_io_u(struct thread_data *td)
 	return 0;
 }
 
+/*
+ * This function is Linux specific.
+ * FIO_HAVE_IOSCHED_SWITCH enabled currently means it's Linux.
+ */
 static int switch_ioscheduler(struct thread_data *td)
 {
 #ifdef FIO_HAVE_IOSCHED_SWITCH
@@ -1271,7 +1275,8 @@ static int switch_ioscheduler(struct thread_data *td)
 	if (td_ioengine_flagged(td, FIO_DISKLESSIO))
 		return 0;
 
-	sprintf(tmp, "%s/queue/scheduler", td->sysfs_root);
+	assert(td->files && td->files[0]);
+	sprintf(tmp, "%s/queue/scheduler", td->files[0]->du->sysfs_root);
 
 	f = fopen(tmp, "r+");
 	if (!f) {

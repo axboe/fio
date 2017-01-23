@@ -431,9 +431,6 @@ static struct disk_util *__init_per_file_disk_util(struct thread_data *td,
 		sprintf(path, "%s", tmp);
 	}
 
-	if (td->o.ioscheduler && !td->sysfs_root)
-		td->sysfs_root = strdup(path);
-
 	return disk_util_add(td, majdev, mindev, path);
 }
 
@@ -452,12 +449,8 @@ static struct disk_util *init_per_file_disk_util(struct thread_data *td,
 			mindev);
 
 	du = disk_util_exists(majdev, mindev);
-	if (du) {
-		if (td->o.ioscheduler && !td->sysfs_root)
-			td->sysfs_root = strdup(du->sysfs_root);
-
+	if (du)
 		return du;
-	}
 
 	/*
 	 * for an fs without a device, we will repeatedly stat through

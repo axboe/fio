@@ -205,8 +205,6 @@ struct thread_data {
 	void *iolog_buf;
 	FILE *iolog_f;
 
-	char *sysfs_root;
-
 	unsigned long rand_seeds[FIO_RAND_NR_OFFS];
 
 	struct frand_state bsrange_state;

@@ -1208,7 +1208,6 @@ void close_and_free_files(struct thread_data *td)
 	td->o.filename = NULL;
 	free(td->files);
 	free(td->file_locks);
-	free(td->sysfs_root);
 	td->files_index = 0;
 	td->files = NULL;
 	td->file_locks = NULL;
