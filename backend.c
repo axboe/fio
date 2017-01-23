@@ -1359,7 +1359,7 @@ static bool keep_running(struct thread_data *td)
 		uint64_t diff;
 
 		/*
-		 * If the difference is less than the minimum IO size, we
+		 * If the difference is less than the maximum IO size, we
 		 * are done.
 		 */
 		diff = limit - ddir_rw_sum(td->io_bytes);
