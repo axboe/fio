@@ -46,7 +46,6 @@ struct disk_util {
 	 */
 	struct flist_head slavelist;
 
-	char *name;
 	char *sysfs_root;
 	char path[PATH_MAX];
 	int major, minor;
