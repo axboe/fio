@@ -37,6 +37,7 @@ static void disk_util_free(struct disk_util *du)
 	}
 
 	fio_mutex_remove(du->lock);
+	free(du->sysfs_root);
 	sfree(du);
 }
 
@@ -305,7 +306,7 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 		return NULL;
 	}
 	strncpy((char *) du->dus.name, basename(path), FIO_DU_NAME_SZ - 1);
-	du->sysfs_root = path;
+	du->sysfs_root = strdup(path);
 	du->major = majdev;
 	du->minor = mindev;
 	INIT_FLIST_HEAD(&du->slavelist);
