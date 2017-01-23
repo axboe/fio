@@ -1271,7 +1271,7 @@ static GtkActionEntry menu_items[] = {
 	{ "Quit", GTK_STOCK_QUIT, NULL,   "<Control>Q", NULL, G_CALLBACK(quit_clicked) },
 	{ "About", GTK_STOCK_ABOUT, NULL,  NULL, NULL, G_CALLBACK(about_dialog) },
 };
-static gint nmenu_items = sizeof(menu_items) / sizeof(menu_items[0]);
+static gint nmenu_items = ARRAY_SIZE(menu_items);
 
 static const gchar *ui_string = " \
 	<ui> \

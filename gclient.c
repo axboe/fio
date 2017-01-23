@@ -48,7 +48,7 @@ static GtkActionEntry results_menu_items[] = {
 	{ "PrintFile", GTK_STOCK_PRINT, "Print", "<Control>P", NULL, G_CALLBACK(results_print) },
 	{ "CloseFile", GTK_STOCK_CLOSE, "Close", "<Control>W", NULL, G_CALLBACK(results_close) },
 };
-static gint results_nmenu_items = sizeof(results_menu_items) / sizeof(results_menu_items[0]);
+static gint results_nmenu_items = ARRAY_SIZE(results_menu_items);
 
 static const gchar *results_ui_string = " \
 	<ui> \
