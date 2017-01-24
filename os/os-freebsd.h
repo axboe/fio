@@ -22,6 +22,9 @@
 #define FIO_HAVE_TRIM
 #define FIO_HAVE_GETTID
 #define FIO_HAVE_CPU_AFFINITY
+/* Only have attach-to-open-removed when kern.ipc.shm_allow_removed is 1 */
+#undef  FIO_HAVE_SHM_ATTACH_REMOVED
+
 
 #define OS_MAP_ANON		MAP_ANON
 

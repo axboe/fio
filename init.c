@@ -356,6 +356,9 @@ static int setup_thread_area(void)
 		perror("shmat");
 		return 1;
 	}
+#ifdef FIO_HAVE_SHM_ATTACH_REMOVED
+	shmctl(shm_id, IPC_RMID, NULL);
+#endif
 #endif
 
 	memset(threads, 0, max_jobs * sizeof(struct thread_data));
