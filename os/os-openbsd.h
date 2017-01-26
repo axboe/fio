@@ -25,6 +25,9 @@
 
 #undef	FIO_HAVE_CPU_AFFINITY	/* XXX notyet */
 
+/* Only OpenBSD 5.1 and above have attach-to-open-removed semantics */
+#undef  FIO_HAVE_SHM_ATTACH_REMOVED
+
 #define OS_MAP_ANON		MAP_ANON
 
 #ifndef PTHREAD_STACK_MIN
