@@ -92,16 +92,17 @@ Binary packages
 
 Debian:
 	Starting with Debian "Squeeze", fio packages are part of the official
-	Debian repository. http://packages.debian.org/search?keywords=fio.
+	Debian repository. http://packages.debian.org/search?keywords=fio .
 
 Ubuntu:
 	Starting with Ubuntu 10.04 LTS (aka "Lucid Lynx"), fio packages are part
 	of the Ubuntu "universe" repository.
-	http://packages.ubuntu.com/search?keywords=fio.
+	http://packages.ubuntu.com/search?keywords=fio .
 
-Red Hat, CentOS & Co:
-	Dag Wieërs has RPMs for Red Hat related distros, find them here:
-	http://dag.wieers.com/rpm/packages/fio/.
+Red Hat, Fedora, CentOS & Co:
+	Starting with Fedora 9/Extra Packages for Enterprise Linux 4, fio
+	packages are part of the Fedora/EPEL repositories.
+	https://admin.fedoraproject.org/pkgdb/package/rpms/fio/ .
 
 Mandriva:
 	Mandriva has integrated fio into their package repository, so installing

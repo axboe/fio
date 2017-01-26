@@ -653,7 +653,7 @@ Time related parameters
 	even if the file(s) are completely read or written. It will simply loop over
 	the same workload as many times as the :option:`runtime` allows.
 
-.. option:: startdelay=irange
+.. option:: startdelay=irange(time)
 
 	Delay start of job for the specified number of seconds. Supports all time
 	suffixes to allow specification of hours, minutes, seconds and milliseconds
@@ -1945,13 +1945,13 @@ I/O depth
 I/O rate
 ~~~~~~~~
 
-.. option:: thinktime=int
+.. option:: thinktime=time
 
 	Stall the job x microseconds after an I/O has completed before issuing the
 	next. May be used to simulate processing being done by an application. See
 	:option:`thinktime_blocks` and :option:`thinktime_spin`.
 
-.. option:: thinktime_spin=int
+.. option:: thinktime_spin=time
 
 	Only valid if :option:`thinktime` is set - pretend to spend CPU time doing
 	something with the data received, before falling back to sleeping for the
@@ -2007,14 +2007,14 @@ I/O rate
 I/O latency
 ~~~~~~~~~~~
 
-.. option:: latency_target=int
+.. option:: latency_target=time
 
 	If set, fio will attempt to find the max performance point that the given
 	workload will run at while maintaining a latency below this target. The
 	values is given in microseconds.  See :option:`latency_window` and
 	:option:`latency_percentile`.
 
-.. option:: latency_window=int
+.. option:: latency_window=time
 
 	Used with :option:`latency_target` to specify the sample window that the job
 	is run at varying queue depths to test the performance. The value is given
@@ -2027,7 +2027,7 @@ I/O latency
 	defaults to 100.0, meaning that all IOs must be equal or below to the value
 	set by :option:`latency_target`.
 
-.. option:: max_latency=int
+.. option:: max_latency=time
 
 	If set, fio will exit the job if it exceeds this maximum latency. It will
 	exit with an ETIME error.
