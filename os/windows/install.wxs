@@ -58,7 +58,7 @@
 		<ComponentGroupRef Id="examples"/>
 	</Feature>
 
-	<Property Id="ARPURLINFOABOUT" Value="http://git.kernel.dk/?p=fio.git" />
+	<Property Id="ARPURLINFOABOUT" Value="http://git.kernel.dk/cgit/fio/" />
 	<Property Id='ARPCONTACT'>fio@vger.kernel.org</Property>
 	<Property Id='ARPHELPLINK'>http://www.spinics.net/lists/fio/</Property>
 	<Property Id='ARPURLUPDATEINFO'>http://bluestop.org/fio/</Property>
