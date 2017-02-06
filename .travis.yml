@@ -2,6 +2,9 @@ language: c
 compiler:
   - clang
   - gcc
+env:
+  global:
+    - MAKEFLAGS="-j 2"
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -qq -y libaio-dev libnuma-dev libz-dev
