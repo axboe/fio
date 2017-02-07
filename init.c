@@ -2326,17 +2326,22 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		case 'b':
 			write_bw_log = 1;
 			break;
-		case 'o':
+		case 'o': {
+			FILE *tmp;
+
 			if (f_out && f_out != stdout)
 				fclose(f_out);
 
-			f_out = fopen(optarg, "w+");
-			if (!f_out) {
-				perror("fopen output");
-				exit(1);
+			tmp = fopen(optarg, "w+");
+			if (!tmp) {
+				log_err("fio: output file open error: %s\n", strerror(errno));
+				exit_val = 1;
+				do_exit++;
+				break;
 			}
-			f_err = f_out;
+			f_err = f_out = tmp;
 			break;
+			}
 		case 'm':
 			output_format = FIO_OUTPUT_TERSE;
 			break;
