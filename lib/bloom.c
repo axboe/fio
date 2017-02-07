@@ -104,8 +104,10 @@ static bool __bloom_check(struct bloom *b, const void *data, unsigned int len,
 
 		if (b->map[index] & (1U << bit))
 			was_set++;
-		if (set)
+		else if (set)
 			b->map[index] |= 1U << bit;
+		else
+			break;
 	}
 
 	return was_set == N_HASHES;
