@@ -2,7 +2,7 @@
 #include <stdarg.h>
 #include "../minmax.h"
 
-int log_err(const char *format, ...)
+size_t log_err(const char *format, ...)
 {
 	char buffer[1024];
 	va_list args;
@@ -16,7 +16,7 @@ int log_err(const char *format, ...)
 	return fwrite(buffer, len, 1, stderr);
 }
 
-int log_info(const char *format, ...)
+size_t log_info(const char *format, ...)
 {
 	char buffer[1024];
 	va_list args;
