@@ -304,22 +304,51 @@ void *mmap(void *addr, size_t len, int prot, int flags,
 		int fildes, off_t off)
 {
 	DWORD vaProt = 0;
+	DWORD mapAccess = 0;
+	DWORD lenlow;
+	DWORD lenhigh;
+	HANDLE hMap;
 	void* allocAddr = NULL;
 
 	if (prot & PROT_NONE)
 		vaProt |= PAGE_NOACCESS;
 
-	if ((prot & PROT_READ) && !(prot & PROT_WRITE))
+	if ((prot & PROT_READ) && !(prot & PROT_WRITE)) {
 		vaProt |= PAGE_READONLY;
+		mapAccess = FILE_MAP_READ;
+	}
 
-	if (prot & PROT_WRITE)
+	if (prot & PROT_WRITE) {
 		vaProt |= PAGE_READWRITE;
+		mapAccess |= FILE_MAP_WRITE;
+	}
 
-	if ((flags & MAP_ANON) | (flags & MAP_ANONYMOUS))
+	lenlow = len & 0xFFFF;
+	lenhigh = len >> 16;
+	/* If the low DWORD is zero and the high DWORD is non-zero, `CreateFileMapping`
+	   will return ERROR_INVALID_PARAMETER. To avoid this, set both to zero. */
+	if (lenlow == 0) {
+		lenhigh = 0;
+	}
+
+	if (flags & MAP_ANON || flags & MAP_ANONYMOUS)
 	{
 		allocAddr = VirtualAlloc(addr, len, MEM_COMMIT, vaProt);
 		if (allocAddr == NULL)
 			errno = win_to_posix_error(GetLastError());
+	}
+	else
+	{
+		hMap = CreateFileMapping((HANDLE)_get_osfhandle(fildes), NULL, vaProt, lenhigh, lenlow, NULL);
+
+		if (hMap != NULL)
+		{
+			allocAddr = MapViewOfFile(hMap, mapAccess, off >> 16, off & 0xFFFF, len);
+		}
+
+		if (hMap == NULL || allocAddr == NULL)
+			errno = win_to_posix_error(GetLastError());
+
 	}
 
 	return allocAddr;
@@ -327,12 +356,24 @@ void *mmap(void *addr, size_t len, int prot, int flags,
 
 int munmap(void *addr, size_t len)
 {
-	if (!VirtualFree(addr, 0, MEM_RELEASE)) {
-		errno = win_to_posix_error(GetLastError());
-		return -1;
+	BOOL success;
+
+	/* We may have allocated the memory with either MapViewOfFile or
+		 VirtualAlloc. Therefore, try calling UnmapViewOfFile first, and if that
+		 fails, call VirtualFree. */
+	success = UnmapViewOfFile(addr);
+
+	if (!success)
+	{
+		success = VirtualFree(addr, 0, MEM_RELEASE);
 	}
 
-	return 0;
+	return !success;
+}
+
+int msync(void *addr, size_t len, int flags)
+{
+	return !FlushViewOfFile(addr, len);
 }
 
 int fork(void)
@@ -702,15 +743,7 @@ int getrusage(int who, struct rusage *r_usage)
 
 int posix_madvise(void *addr, size_t len, int advice)
 {
-	log_err("%s is not implemented\n", __func__);
 	return ENOSYS;
-}
-
-/* Windows doesn't support advice for memory pages. Just ignore it. */
-int msync(void *addr, size_t len, int flags)
-{
-	errno = ENOSYS;
-	return -1;
 }
 
 int fdatasync(int fildes)
