@@ -743,6 +743,18 @@ static int fixup_options(struct thread_data *td)
 			ret = warnings_fatal;
 		}
 
+		/*
+		 * Warn if verification is requested but no verification of any
+		 * kind can be started due to time constraints
+		 */
+		if (td_write(td) && o->do_verify && o->timeout &&
+		    o->time_based && !td_read(td) && !o->verify_backlog) {
+			log_info("fio: verification read phase will never "
+				 "start because write phase uses all of "
+				 "runtime\n");
+			ret = warnings_fatal;
+		}
+
 		if (!fio_option_is_set(o, refill_buffers))
 			o->refill_buffers = 1;
 
