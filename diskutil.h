@@ -114,6 +114,7 @@ extern int update_io_ticks(void);
 extern void setup_disk_util(void);
 extern void disk_util_prune_entries(void);
 #else
+/* keep this as a function to avoid a warning in handle_du() */
 static inline void print_disk_util(struct disk_util_stat *du,
 				   struct disk_util_agg *agg, int terse,
 				   struct buf_output *out)
