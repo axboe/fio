@@ -1240,7 +1240,7 @@ static void about_dialog(GtkWidget *w, gpointer data)
 		"program-name", "gfio",
 		"comments", "Gtk2 UI for fio",
 		"license", license_trans,
-		"website", "http://git.kernel.dk/?p=fio.git;a=summary",
+		"website", "http://git.kernel.dk/cgit/fio/",
 		"authors", authors,
 		"version", fio_version_string,
 		"copyright", "© 2012 Jens Axboe <axboe@kernel.dk>",
