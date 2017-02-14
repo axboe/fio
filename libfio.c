@@ -36,12 +36,7 @@
 #include "helper_thread.h"
 #include "filehash.h"
 
-/*
- * Just expose an empty list, if the OS does not support disk util stats
- */
-#ifndef FIO_HAVE_DISK_UTIL
 FLIST_HEAD(disk_list);
-#endif
 
 unsigned long arch_flags = 0;
 

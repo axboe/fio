@@ -18,8 +18,6 @@ static struct disk_util *last_du;
 
 static struct fio_mutex *disk_util_mutex;
 
-FLIST_HEAD(disk_list);
-
 static struct disk_util *__init_per_file_disk_util(struct thread_data *td,
 		int majdev, int mindev, char *path);
 
