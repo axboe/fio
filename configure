@@ -306,7 +306,6 @@ CYGWIN*)
       fi
     fi
   fi
-  output_sym "CONFIG_LITTLE_ENDIAN"
   if test ! -z "$build_32bit_win" && test "$build_32bit_win" = "yes"; then
     output_sym "CONFIG_32BIT"
   else
