@@ -1902,7 +1902,7 @@ static void init_icd(struct thread_data *td, struct io_completion_data *icd,
 	icd->nr = nr;
 
 	icd->error = 0;
-	for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++)
+	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
 		icd->bytes_done[ddir] = 0;
 }
 
@@ -1941,7 +1941,7 @@ int io_u_sync_complete(struct thread_data *td, struct io_u *io_u)
 		return -1;
 	}
 
-	for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++)
+	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
 		td->bytes_done[ddir] += icd.bytes_done[ddir];
 
 	return 0;
@@ -1980,7 +1980,7 @@ int io_u_queued_complete(struct thread_data *td, int min_evts)
 		return -1;
 	}
 
-	for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++)
+	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
 		td->bytes_done[ddir] += icd.bytes_done[ddir];
 
 	return ret;

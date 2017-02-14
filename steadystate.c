@@ -231,7 +231,7 @@ void steadystate_check(void)
 		}
 
 		td_io_u_lock(td);
-		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
+		for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 			td_iops += td->io_blocks[ddir];
 			td_bytes += td->io_bytes[ddir];
 		}

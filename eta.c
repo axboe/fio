@@ -440,7 +440,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 		if (td->runstate > TD_SETTING_UP) {
 			int ddir;
 
-			for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
+			for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 				if (unified_rw_rep) {
 					io_bytes[0] += td->io_bytes[ddir];
 					io_iops[0] += td->io_blocks[ddir];
@@ -574,7 +574,7 @@ void display_thread_status(struct jobs_eta *je)
 			sprintf(perc_str, "%3.1f%%", perc);
 		}
 
-		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
+		for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 			rate_str[ddir] = num2str(je->rate[ddir], 4,
 						1024, je->is_pow2, je->unit_base);
 			iops_str[ddir] = num2str(je->iops[ddir], 4, 1, 0, N2S_NONE);
@@ -601,7 +601,7 @@ void display_thread_status(struct jobs_eta *je)
 			p += sprintf(p, "%*s", linelen_last - l, "");
 		linelen_last = l;
 
-		for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
+		for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 			free(rate_str[ddir]);
 			free(iops_str[ddir]);
 		}

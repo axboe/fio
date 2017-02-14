@@ -2442,7 +2442,7 @@ static int add_bw_samples(struct thread_data *td, struct timeval *t)
 	/*
 	 * Compute both read and write rates for the interval.
 	 */
-	for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
+	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 		uint64_t delta;
 
 		delta = td->this_io_bytes[ddir] - td->stat_io_bytes[ddir];
@@ -2517,7 +2517,7 @@ static int add_iops_samples(struct thread_data *td, struct timeval *t)
 	/*
 	 * Compute both read and write rates for the interval.
 	 */
-	for (ddir = DDIR_READ; ddir < DDIR_RWDIR_CNT; ddir++) {
+	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 		uint64_t delta;
 
 		delta = td->this_io_blocks[ddir] - td->stat_io_blocks[ddir];
