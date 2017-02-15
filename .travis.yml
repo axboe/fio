@@ -1,4 +1,6 @@
 language: c
+os:
+  - linux
 compiler:
   - clang
   - gcc
@@ -6,5 +8,5 @@ env:
   global:
     - MAKEFLAGS="-j 2"
 before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -qq -y libaio-dev libnuma-dev libz-dev
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -qq update; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -qq -y libaio-dev libnuma-dev libz-dev; fi
