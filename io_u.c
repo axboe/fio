@@ -758,8 +758,10 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 		ddir = DDIR_READ;
 	else if (td_write(td))
 		ddir = DDIR_WRITE;
-	else
+	else if (td_trim(td))
 		ddir = DDIR_TRIM;
+	else
+		ddir = DDIR_INVAL;
 
 	td->rwmix_ddir = rate_ddir(td, ddir);
 	return td->rwmix_ddir;
