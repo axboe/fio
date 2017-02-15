@@ -500,9 +500,6 @@ int file_lookup_open(struct fio_file *f, int flags)
 	__f = lookup_file_hash(f->file_name);
 	if (__f) {
 		dprint(FD_FILE, "found file in hash %s\n", f->file_name);
-		/*
-		 * racy, need the __f->lock locked
-		 */
 		f->lock = __f->lock;
 		from_hash = 1;
 	} else {
