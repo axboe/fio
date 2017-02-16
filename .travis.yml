@@ -1,7 +1,28 @@
 language: c
+os:
+  - linux
 compiler:
   - clang
   - gcc
+env:
+  global:
+    - MAKEFLAGS="-j 2"
+matrix:
+  include:
+    - os: osx
+      compiler: clang # Workaround travis setting CC=["clang", "gcc"]
+    # Build using the 10.12 SDK but target and run on OSX 10.11
+#   - os: osx
+#     compiler: clang
+#     osx_image: xcode8
+#     env: SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk MACOSX_DEPLOYMENT_TARGET=10.11
+    # Build on the latest OSX version (will eventually become obsolete)
+    - os: osx
+      compiler: clang
+      osx_image: xcode8.2
+  exclude:
+    - os: osx
+      compiler: gcc
 before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -qq -y libaio-dev libnuma-dev libz-dev
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -qq update; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -qq -y libaio-dev libnuma-dev libz-dev; fi
