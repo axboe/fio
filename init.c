@@ -731,9 +731,14 @@ static int fixup_options(struct thread_data *td)
 		o->size = -1ULL;
 
 	if (o->verify != VERIFY_NONE) {
-		if (td_write(td) && o->do_verify && o->numjobs > 1) {
-			log_info("Multiple writers may overwrite blocks that "
-				"belong to other jobs. This can cause "
+		if (td_write(td) && o->do_verify && o->numjobs > 1 &&
+		    (o->filename ||
+		     !(o->unique_filename &&
+		       strstr(o->filename_format, "$jobname") &&
+		       strstr(o->filename_format, "$jobnum") &&
+		       strstr(o->filename_format, "$filenum")))) {
+			log_info("fio: multiple writers may overwrite blocks "
+				"that belong to other jobs. This can cause "
 				"verification failures.\n");
 			ret = warnings_fatal;
 		}
