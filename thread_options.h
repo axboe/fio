@@ -68,7 +68,7 @@ struct thread_options {
 	unsigned int unique_filename;
 
 	unsigned long long size;
-	unsigned long long io_limit;
+	unsigned long long io_size;
 	unsigned int size_percent;
 	unsigned int fill_device;
 	unsigned int file_append;
@@ -338,7 +338,7 @@ struct thread_options_pack {
 	uint32_t __proper_alignment_for_64b;
 
 	uint64_t size;
-	uint64_t io_limit;
+	uint64_t io_size;
 	uint32_t size_percent;
 	uint32_t fill_device;
 	uint32_t file_append;

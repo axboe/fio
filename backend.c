@@ -776,8 +776,8 @@ static bool io_bytes_exceeded(struct thread_data *td, uint64_t *this_bytes)
 	else
 		bytes = this_bytes[DDIR_TRIM];
 
-	if (td->o.io_limit)
-		limit = td->o.io_limit;
+	if (td->o.io_size)
+		limit = td->o.io_size;
 	else
 		limit = td->o.size;
 
@@ -851,11 +851,11 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 
 	total_bytes = td->o.size;
 	/*
-	* Allow random overwrite workloads to write up to io_limit
+	* Allow random overwrite workloads to write up to io_size
 	* before starting verification phase as 'size' doesn't apply.
 	*/
 	if (td_write(td) && td_random(td) && td->o.norandommap)
-		total_bytes = max(total_bytes, (uint64_t) td->o.io_limit);
+		total_bytes = max(total_bytes, (uint64_t) td->o.io_size);
 	/*
 	 * If verify_backlog is enabled, we'll run the verify in this
 	 * handler as well. For that case, we may need up to twice the
@@ -1355,8 +1355,8 @@ static bool keep_running(struct thread_data *td)
 	if (exceeds_number_ios(td))
 		return false;
 
-	if (td->o.io_limit)
-		limit = td->o.io_limit;
+	if (td->o.io_size)
+		limit = td->o.io_size;
 	else
 		limit = td->o.size;
 
@@ -1371,7 +1371,7 @@ static bool keep_running(struct thread_data *td)
 		if (diff < td_max_bs(td))
 			return false;
 
-		if (fio_files_done(td) && !td->o.io_limit)
+		if (fio_files_done(td) && !td->o.io_size)
 			return false;
 
 		return true;

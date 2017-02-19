@@ -993,8 +993,8 @@ int setup_files(struct thread_data *td)
 	 * stored entries.
 	 */
 	if (!o->read_iolog_file) {
-		if (o->io_limit)
-			td->total_io_size = o->io_limit * o->loops;
+		if (o->io_size)
+			td->total_io_size = o->io_size * o->loops;
 		else
 			td->total_io_size = o->size * o->loops;
 	}
