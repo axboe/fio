@@ -311,9 +311,7 @@ CYGWIN*)
   else
     output_sym "CONFIG_64BIT_LLP64"
   fi
-  output_sym "CONFIG_FADVISE"
   output_sym "CONFIG_SOCKLEN_T"
-  output_sym "CONFIG_FADVISE"
   output_sym "CONFIG_SFAA"
   output_sym "CONFIG_RUSAGE_THREAD"
   output_sym "CONFIG_WINDOWSAIO"
