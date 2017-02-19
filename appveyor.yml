@@ -1,0 +1,27 @@
+clone_depth: 50
+environment:
+  MAKEFLAGS: -j 2
+  matrix:
+    - platform: x86_64
+      BUILD_ARCH: x64
+      CYG_ROOT: C:\cygwin64
+      CONFIGURE_OPTIONS:
+    - platform: x86
+      BUILD_ARCH: x86
+      CYG_ROOT: C:\cygwin
+      CONFIGURE_OPTIONS: --build-32bit-win
+
+build_script:
+  - SET PATH=%CYG_ROOT%\bin;%PATH%
+  - 'bash.exe -lc "cd \"${APPVEYOR_BUILD_FOLDER}\" && ./configure ${CONFIGURE_OPTIONS} && make.exe'
+
+after_build:
+  - cd os\windows && dobuild.cmd %BUILD_ARCH%
+
+test_script:
+  - SET PATH=%CYG_ROOT%\bin;%PATH%
+  - 'bash.exe -lc "cd \"${APPVEYOR_BUILD_FOLDER}\" && file.exe fio.exe && make.exe test'
+
+artifacts:
+  - path: os\windows\*.msi
+    name: msi
