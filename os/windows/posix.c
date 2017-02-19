@@ -40,12 +40,6 @@ HRESULT WINAPI StringCchPrintfA(
   const char *pszFormat,
   ...);
 
-int vsprintf_s(
-  char *buffer,
-  size_t numberOfElements,
-  const char *format,
-  va_list argptr);
-
 int win_to_posix_error(DWORD winerr)
 {
 	switch (winerr)
