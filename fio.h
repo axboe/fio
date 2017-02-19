@@ -646,6 +646,9 @@ extern void lat_target_check(struct thread_data *);
 extern void lat_target_init(struct thread_data *);
 extern void lat_target_reset(struct thread_data *);
 
+/*
+ * Iterates all threads/processes within all the defined jobs
+ */
 #define for_each_td(td, i)	\
 	for ((i) = 0, (td) = &threads[0]; (i) < (int) thread_number; (i)++, (td)++)
 #define for_each_file(td, f, i)	\

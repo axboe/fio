@@ -90,6 +90,7 @@ struct fio_file {
 
 	/*
 	 * size of the file, offset into file, and io size from that offset
+	 * (be aware io_size is different from thread_options::io_size)
 	 */
 	uint64_t real_file_size;
 	uint64_t file_offset;

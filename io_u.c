@@ -62,6 +62,7 @@ static uint64_t last_block(struct thread_data *td, struct fio_file *f,
 
 	/*
 	 * Hmm, should we make sure that ->io_size <= ->real_file_size?
+	 * -> not for now since there is code assuming it could go either.
 	 */
 	max_size = f->io_size;
 	if (max_size > f->real_file_size)
