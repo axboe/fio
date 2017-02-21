@@ -2713,7 +2713,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		if (!ret) {
 			ret = add_job(td, td->o.name ?: "fio", 0, 0, client_type);
 			if (ret)
-				did_arg = 1;
+				exit(1);
 		}
 	}
 
