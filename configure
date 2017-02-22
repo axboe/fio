@@ -2041,6 +2041,9 @@ fi
 if test "$have_bool" = "yes" ; then
   output_sym "CONFIG_HAVE_BOOL"
 fi
+if test "$disable_opt" = "yes" ; then
+  output_sym "CONFIG_DISABLE_OPTIMIZATIONS"
+fi
 
 if test "$zlib" = "no" ; then
   echo "Consider installing zlib-dev (zlib-devel), some fio features depend on it."
