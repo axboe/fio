@@ -435,8 +435,8 @@ static void copy_opt_list(struct thread_data *dst, struct thread_data *src)
 /*
  * Return a free job structure.
  */
-static struct thread_data *get_new_job(int global, struct thread_data *parent,
-				       int preserve_eo, const char *jobname)
+static struct thread_data *get_new_job(bool global, struct thread_data *parent,
+				       bool preserve_eo, const char *jobname)
 {
 	struct thread_data *td;
 
@@ -1560,7 +1560,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	 */
 	numjobs = o->numjobs;
 	while (--numjobs) {
-		struct thread_data *td_new = get_new_job(0, td, 1, jobname);
+		struct thread_data *td_new = get_new_job(false, td, true, jobname);
 
 		if (!td_new)
 			goto err;
@@ -1621,11 +1621,11 @@ void add_job_opts(const char **o, int client_type)
 			sprintf(jobname, "%s", o[i] + 5);
 		}
 		if (in_global && !td_parent)
-			td_parent = get_new_job(1, &def_thread, 0, jobname);
+			td_parent = get_new_job(true, &def_thread, false, jobname);
 		else if (!in_global && !td) {
 			if (!td_parent)
 				td_parent = &def_thread;
-			td = get_new_job(0, td_parent, 0, jobname);
+			td = get_new_job(false, td_parent, false, jobname);
 		}
 		if (in_global)
 			fio_options_parse(td_parent, (char **) &o[i], 1);
@@ -1677,7 +1677,7 @@ static int __parse_jobs_ini(struct thread_data *td,
 		char *file, int is_buf, int stonewall_flag, int type,
 		int nested, char *name, char ***popts, int *aopts, int *nopts)
 {
-	unsigned int global = 0;
+	bool global = false;
 	char *string;
 	FILE *f;
 	char *p;
@@ -1786,7 +1786,7 @@ static int __parse_jobs_ini(struct thread_data *td,
 				first_sect = 0;
 			}
 
-			td = get_new_job(global, &def_thread, 0, name);
+			td = get_new_job(global, &def_thread, false, name);
 			if (!td) {
 				ret = 1;
 				break;
@@ -2475,7 +2475,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				if (is_section && skip_this_section(val))
 					continue;
 
-				td = get_new_job(global, &def_thread, 1, NULL);
+				td = get_new_job(global, &def_thread, true, NULL);
 				if (!td || ioengine_load(td)) {
 					if (td) {
 						put_job(td);
