@@ -764,6 +764,14 @@ static int fixup_options(struct thread_data *td)
 							o->max_bs[DDIR_WRITE]);
 	}
 
+	if (o->iodepth > 1 && !td_ioengine_flagged(td, FIO_SUBMITMANY) &&
+	    o->io_submit_mode == IO_MODE_INLINE && !o->verify_async) {
+		log_info("fio: iodepth=%d but %s IO engine can't submit more "
+			 "than one I/O at a time\n", o->iodepth,
+			 td->io_ops->name);
+		ret = warnings_fatal;
+	}
+
 	if (o->pre_read) {
 		if (o->invalidate_cache)
 			o->invalidate_cache = 0;
@@ -1036,6 +1044,9 @@ int ioengine_load(struct thread_data *td)
 
 	if (td->o.odirect)
 		td->io_ops->flags |= FIO_RAWIO;
+
+	if (!(td->io_ops->flags & FIO_SYNCIO))
+		td->io_ops->flags |= FIO_SUBMITMANY;
 
 	td_set_ioengine_flags(td);
 	return 0;
