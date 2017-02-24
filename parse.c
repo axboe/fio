@@ -167,7 +167,7 @@ static unsigned long long get_mult_time(const char *str, int len,
 	else if (!strcmp("h", c))
 		mult = 60 * 60 * 1000000UL;
 	else if (!strcmp("d", c))
-		mult = 24 * 60 * 60 * 1000000UL;
+		mult = 24 * 60 * 60 * 1000000ULL;
 
 	free(c);
 	return mult;
