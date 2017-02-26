@@ -47,7 +47,7 @@ int cond_init_pshared(pthread_cond_t *cond)
 		return ret;
 	}
 
-#ifdef FIO_HAVE_PSHARED_MUTEX
+#ifdef CONFIG_PSHARED
 	ret = pthread_condattr_setpshared(&cattr, PTHREAD_PROCESS_SHARED);
 	if (ret) {
 		log_err("pthread_condattr_setpshared: %s\n", strerror(ret));
@@ -77,7 +77,7 @@ int mutex_init_pshared(pthread_mutex_t *mutex)
 	/*
 	 * Not all platforms support process shared mutexes (FreeBSD)
 	 */
-#ifdef FIO_HAVE_PSHARED_MUTEX
+#ifdef CONFIG_PSHARED
 	ret = pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
 	if (ret) {
 		log_err("pthread_mutexattr_setpshared: %s\n", strerror(ret));
@@ -287,7 +287,7 @@ struct fio_rwlock *fio_rwlock_init(void)
 		log_err("pthread_rwlockattr_init: %s\n", strerror(ret));
 		goto err;
 	}
-#ifdef FIO_HAVE_PSHARED_MUTEX
+#ifdef CONFIG_PSHARED
 	ret = pthread_rwlockattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
 	if (ret) {
 		log_err("pthread_rwlockattr_setpshared: %s\n", strerror(ret));

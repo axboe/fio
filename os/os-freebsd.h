@@ -24,10 +24,6 @@
 #define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_SHM_ATTACH_REMOVED
 
-#if _POSIX_THREAD_PROCESS_SHARED > 0
-#define FIO_HAVE_PSHARED_MUTEX
-#endif
-
 #define OS_MAP_ANON		MAP_ANON
 
 #define fio_swap16(x)	bswap16(x)

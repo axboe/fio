@@ -605,6 +605,34 @@ fi
 echo "POSIX AIO fsync               $posix_aio_fsync"
 
 ##########################################
+# POSIX pshared attribute probe
+posix_pshared="no"
+cat > $TMPC <<EOF
+#include <unistd.h>
+int main(void)
+{
+#if defined(_POSIX_THREAD_PROCESS_SHARED) && ((_POSIX_THREAD_PROCESS_SHARED + 0) > 0)
+# if defined(__CYGWIN__)
+#  error "_POSIX_THREAD_PROCESS_SHARED is buggy on Cygwin"
+# elif defined(__APPLE__)
+#  include <AvailabilityMacros.h>
+#  include <TargetConditionals.h>
+#  if TARGET_OS_MAC && MAC_OS_X_VERSION_MIN_REQUIRED < 1070
+#   error "_POSIX_THREAD_PROCESS_SHARED is buggy/unsupported prior to OSX 10.7"
+#  endif
+# endif
+#else
+# error "_POSIX_THREAD_PROCESS_SHARED is unsupported"
+#endif
+  return 0;
+}
+EOF
+if compile_prog "" "$LIBS" "posix_pshared" ; then
+  posix_pshared=yes
+fi
+echo "POSIX pshared support         $posix_pshared"
+
+##########################################
 # solaris aio probe
 if test "$solaris_aio" != "yes" ; then
   solaris_aio="no"
@@ -1985,6 +2013,9 @@ if test "$posix_aio" = "yes" ; then
 fi
 if test "$posix_aio_fsync" = "yes" ; then
   output_sym "CONFIG_POSIXAIO_FSYNC"
+fi
+if test "$posix_pshared" = "yes" ; then
+  output_sym "CONFIG_PSHARED"
 fi
 if test "$linux_fallocate" = "yes" ; then
   output_sym "CONFIG_LINUX_FALLOCATE"

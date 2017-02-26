@@ -586,7 +586,7 @@ static int fixup_options(struct thread_data *td)
 	struct thread_options *o = &td->o;
 	int ret = 0;
 
-#ifndef FIO_HAVE_PSHARED_MUTEX
+#ifndef CONFIG_PSHARED
 	if (!o->use_thread) {
 		log_info("fio: this platform does not support process shared"
 			 " mutexes, forcing use of threads. Use the 'thread'"

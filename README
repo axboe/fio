@@ -205,10 +205,10 @@ implemented, I'd be happy to take patches for that. An example of that is disk
 utility statistics and (I think) huge page support, support for that does exist
 in FreeBSD/Solaris.
 
-Fio uses pthread mutexes for signalling and locking and FreeBSD does not
-support process shared pthread mutexes. As a result, only threads are
-supported on FreeBSD. This could be fixed with sysv ipc locking or
-other locking alternatives.
+Fio uses pthread mutexes for signalling and locking and some platforms do not
+support process shared pthread mutexes. As a result, on such platforms only
+threads are supported. This could be fixed with sysv ipc locking or other
+locking alternatives.
 
 Other \*BSD platforms are untested, but fio should work there almost out of the
 box. Since I don't do test runs or even compiles on those platforms, your
