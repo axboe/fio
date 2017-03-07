@@ -24,6 +24,14 @@ static int root_warn;
 
 static FLIST_HEAD(filename_list);
 
+/*
+ * List entry for filename_list
+ */
+struct file_name {
+	struct flist_head list;
+	char *filename;
+};
+
 static inline void clear_error(struct thread_data *td)
 {
 	td->error = 0;

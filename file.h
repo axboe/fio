@@ -151,11 +151,6 @@ struct fio_file {
 #define FILE_SET_ENG_DATA(f, data)	\
 	((f)->engine_data = (uintptr_t) (data))
 
-struct file_name {
-	struct flist_head list;
-	char *filename;
-};
-
 #define FILE_FLAG_FNS(name)						\
 static inline void fio_file_set_##name(struct fio_file *f)		\
 {									\
