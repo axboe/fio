@@ -377,12 +377,8 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 		ret = bdev_size(td, f);
 	else if (f->filetype == FIO_TYPE_CHAR)
 		ret = char_size(td, f);
-	else {
-		f->real_file_size = -1;
-		log_info("%s: failed to get file size of %s\n", td->o.name,
-					f->file_name);
-		return 1; /* avoid offset extends end error message */
-	}
+	else
+		f->real_file_size = -1ULL;
 
 	/*
 	 * Leave ->real_file_size with 0 since it could be expectation
@@ -392,10 +388,22 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 		return ret;
 
 	/*
+	 * If ->real_file_size is -1, a conditional for the message
+	 * "offset extends end" is always true, but it makes no sense,
+	 * so just return the same value here.
+	 */
+	if (f->real_file_size == -1ULL) {
+		log_info("%s: failed to get file size of %s\n", td->o.name,
+					f->file_name);
+		return 1;
+	}
+
+	if (td->o.start_offset && f->file_offset == 0)
+		dprint(FD_FILE, "offset of file %s not initialized yet\n",
+					f->file_name);
+	/*
 	 * ->file_offset normally hasn't been initialized yet, so this
-	 * is basically always false unless ->real_file_size is -1, but
-	 * if ->real_file_size is -1 this message doesn't make sense.
-	 * As a result, this message is basically useless.
+	 * is basically always false.
 	 */
 	if (f->file_offset > f->real_file_size) {
 		log_err("%s: offset extends end (%llu > %llu)\n", td->o.name,
