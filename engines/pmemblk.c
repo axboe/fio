@@ -86,10 +86,6 @@ struct fio_pmemblk_file {
 	size_t pmb_bsize;
 	size_t pmb_nblocks;
 };
-#define FIOFILEPMBSET(_f, _v)  do {                 \
-	(_f)->engine_data = (uint64_t)(uintptr_t)(_v);  \
-} while(0)
-#define FIOFILEPMBGET(_f)  ((fio_pmemblk_file_t)((_f)->engine_data))
 
 static fio_pmemblk_file_t Cache;
 
@@ -304,26 +300,26 @@ static int fio_pmemblk_open_file(struct thread_data *td, struct fio_file *f)
 	if (!pmb)
 		return 1;
 
-	FIOFILEPMBSET(f, pmb);
+	FILE_SET_ENG_DATA(f, pmb);
 	return 0;
 }
 
 static int fio_pmemblk_close_file(struct thread_data fio_unused *td,
 				  struct fio_file *f)
 {
-	fio_pmemblk_file_t pmb = FIOFILEPMBGET(f);
+	fio_pmemblk_file_t pmb = FILE_ENG_DATA(f);
 
 	if (pmb)
 		pmb_close(pmb, false);
 
-	FIOFILEPMBSET(f, NULL);
+	FILE_SET_ENG_DATA(f, NULL);
 	return 0;
 }
 
 static int fio_pmemblk_get_file_size(struct thread_data *td, struct fio_file *f)
 {
 	uint64_t flags = 0;
-	fio_pmemblk_file_t pmb = FIOFILEPMBGET(f);
+	fio_pmemblk_file_t pmb = FILE_ENG_DATA(f);
 
 	if (fio_file_size_known(f))
 		return 0;
@@ -340,7 +336,7 @@ static int fio_pmemblk_get_file_size(struct thread_data *td, struct fio_file *f)
 
 	fio_file_set_size_known(f);
 
-	if (!FIOFILEPMBGET(f))
+	if (!FILE_ENG_DATA(f))
 		pmb_close(pmb, true);
 
 	return 0;
@@ -349,7 +345,7 @@ static int fio_pmemblk_get_file_size(struct thread_data *td, struct fio_file *f)
 static int fio_pmemblk_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
-	fio_pmemblk_file_t pmb = FIOFILEPMBGET(f);
+	fio_pmemblk_file_t pmb = FILE_ENG_DATA(f);
 
 	unsigned long long off;
 	unsigned long len;

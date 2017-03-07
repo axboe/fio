@@ -18,7 +18,7 @@
 /*
  * Sync engine uses engine_data to store last offset
  */
-#define LAST_POS(f)	((f)->engine_data)
+#define LAST_POS(f)	((f)->engine_pos)
 
 struct syncio_data {
 	struct iovec *iovecs;

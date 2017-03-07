@@ -7,7 +7,7 @@
 
 #include "gfapi.h"
 
-#define LAST_POS(f)	((f)->engine_data)
+#define LAST_POS(f)	((f)->engine_pos)
 static int fio_gf_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
