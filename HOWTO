@@ -1426,7 +1426,9 @@ Buffers and memory
 .. option:: invalidate=bool
 
 	Invalidate the buffer/page cache parts for this file prior to starting
-	I/O. Defaults to true.
+	I/O if the platform and file type support it. Defaults to true.
+	This will be ignored if :option:`pre_read` is also specified for the
+	same job.
 
 .. option:: sync=bool
 

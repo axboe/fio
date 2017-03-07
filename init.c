@@ -764,7 +764,11 @@ static int fixup_options(struct thread_data *td)
 	}
 
 	if (o->pre_read) {
-		o->invalidate_cache = 0;
+		if (o->invalidate_cache) {
+			log_info("fio: ignore invalidate option for %s\n",
+				 o->name);
+			o->invalidate_cache = 0;
+		}
 		if (td_ioengine_flagged(td, FIO_PIPEIO)) {
 			log_info("fio: cannot pre-read files with an IO engine"
 				 " that isn't seekable. Pre-read disabled.\n");
