@@ -643,7 +643,7 @@ int io_u_quiesce(struct thread_data *td)
 	}
 
 	while (td->io_u_in_flight) {
-		int fio_unused ret;
+		int ret;
 
 		ret = io_u_queued_complete(td, 1);
 		if (ret > 0)
