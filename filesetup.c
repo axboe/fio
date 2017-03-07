@@ -966,9 +966,9 @@ int setup_files(struct thread_data *td)
 			if (!o->create_on_open) {
 				need_extend++;
 				extend_size += (f->io_size + f->file_offset);
+				fio_file_set_extend(f);
 			} else
 				f->real_file_size = f->io_size + f->file_offset;
-			fio_file_set_extend(f);
 		}
 	}
 
