@@ -693,7 +693,7 @@ static int get_file_sizes(struct thread_data *td)
 	int err = 0;
 
 	for_each_file(td, f, i) {
-		dprint(FD_FILE, "get file size for %p/%d/%p\n", f, i,
+		dprint(FD_FILE, "get file size for %p/%d/%s\n", f, i,
 								f->file_name);
 
 		if (td_io_get_file_size(td, f)) {
