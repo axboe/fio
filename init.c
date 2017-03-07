@@ -619,7 +619,7 @@ static int fixup_options(struct thread_data *td)
 	/*
 	 * Reads can do overwrites, we always need to pre-create the file
 	 */
-	if (td_read(td) || td_rw(td))
+	if (td_read(td))
 		o->overwrite = 1;
 
 	if (!o->min_bs[DDIR_READ])

@@ -490,7 +490,7 @@ static inline int should_fsync(struct thread_data *td)
 {
 	if (td->last_was_sync)
 		return 0;
-	if (td_write(td) || td_rw(td) || td->o.override_sync)
+	if (td_write(td) || td->o.override_sync)
 		return 1;
 
 	return 0;

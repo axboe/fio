@@ -1693,7 +1693,7 @@ static void *thread_main(void *data)
 
 		prune_io_piece_log(td);
 
-		if (td->o.verify_only && (td_write(td) || td_rw(td)))
+		if (td->o.verify_only && td_write(td))
 			verify_bytes = do_dry_run(td);
 		else {
 			uint64_t bytes_done[DDIR_RWDIR_CNT];
