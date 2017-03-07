@@ -22,9 +22,7 @@
 #define FIO_HAVE_TRIM
 #define FIO_HAVE_GETTID
 #define FIO_HAVE_CPU_AFFINITY
-/* Only have attach-to-open-removed when kern.ipc.shm_allow_removed is 1 */
-#undef  FIO_HAVE_SHM_ATTACH_REMOVED
-
+#define FIO_HAVE_SHM_ATTACH_REMOVED
 
 #define OS_MAP_ANON		MAP_ANON
 
@@ -135,5 +133,16 @@ static inline int os_trim(int fd, unsigned long long start,
 #ifdef MADV_FREE
 #define FIO_MADV_FREE	MADV_FREE
 #endif
+
+static inline int shm_attach_to_open_removed(void)
+{
+	int x;
+	size_t len = sizeof(x);
+
+	if (sysctlbyname("kern.ipc.shm_allow_removed", &x, &len, NULL, 0) < 0)
+		return 0;
+
+	return x > 0 ? 1 : 0;
+}
 
 #endif

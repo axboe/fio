@@ -386,4 +386,11 @@ static inline int gettid(void)
 }
 #endif
 
+#ifndef FIO_HAVE_SHM_ATTACH_REMOVED
+static inline int shm_attach_to_open_removed(void)
+{
+	return 0;
+}
+#endif
+
 #endif

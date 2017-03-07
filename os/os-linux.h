@@ -350,4 +350,9 @@ static inline ssize_t pwritev2(int fd, const struct iovec *iov, int iovcnt,
 #endif /* __NR_preadv2 */
 #endif /* CONFIG_PWRITEV2 */
 
+static inline int shm_attach_to_open_removed(void)
+{
+	return 1;
+}
+
 #endif
