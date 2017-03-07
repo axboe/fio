@@ -904,8 +904,7 @@ int setup_files(struct thread_data *td)
 		if (!o->file_size_low) {
 			/*
 			 * no file size or range given, file size is equal to
-			 * total size divided by number of files. If that is
-			 * zero, set it to the real file size. If the size
+			 * total size divided by number of files. If the size
 			 * doesn't divide nicely with the min blocksize,
 			 * make the first files bigger.
 			 */
@@ -915,8 +914,24 @@ int setup_files(struct thread_data *td)
 				f->io_size += bs;
 			}
 
-			if (!f->io_size)
+			/*
+			 * We normally don't come here, but if the result is 0,
+			 * set it to the real file size. This could be size of
+			 * the existing one if it already exists, but otherwise
+			 * will be set to 0. A new file won't be created because
+			 * ->io_size + ->file_offset equals ->real_file_size.
+			 */
+			if (!f->io_size) {
+				if (f->file_offset > f->real_file_size)
+					goto err_offset;
 				f->io_size = f->real_file_size - f->file_offset;
+				log_info("fio: forcing file %s size to %llu\n",
+					f->file_name,
+					(unsigned long long)f->io_size);
+				if (!f->io_size)
+					log_info("fio: file %s may be ignored\n",
+						f->file_name);
+			}
 		} else if (f->real_file_size < o->file_size_low ||
 			   f->real_file_size > o->file_size_high) {
 			if (f->file_offset > o->file_size_low)
