@@ -1008,9 +1008,15 @@ int setup_files(struct thread_data *td)
 	 */
 	if (need_extend) {
 		temp_stall_ts = 1;
-		if (output_format & FIO_OUTPUT_NORMAL)
-			log_info("%s: Laying out IO file(s) (%u file(s) / %lluMiB)\n",
-				 o->name, need_extend, extend_size >> 20);
+		if (output_format & FIO_OUTPUT_NORMAL) {
+			log_info("%s: Laying out IO file%s (%u file%s / %s%lluMiB)\n",
+				 o->name,
+				 need_extend > 1 ? "s" : "",
+				 need_extend,
+				 need_extend > 1 ? "s" : "",
+				 need_extend > 1 ? "total " : "",
+				 extend_size >> 20);
+		}
 
 		for_each_file(td, f, i) {
 			unsigned long long old_len = -1ULL, extend_len = -1ULL;
