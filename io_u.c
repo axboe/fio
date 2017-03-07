@@ -1960,7 +1960,7 @@ int io_u_queued_complete(struct thread_data *td, int min_evts)
 	int ret, ddir;
 	struct timespec ts = { .tv_sec = 0, .tv_nsec = 0, };
 
-	dprint(FD_IO, "io_u_queued_completed: min=%d\n", min_evts);
+	dprint(FD_IO, "io_u_queued_complete: min=%d\n", min_evts);
 
 	if (!min_evts)
 		tvp = &ts;
