@@ -20,6 +20,10 @@ enum {
 	VERIFY_CRC7,			/* crc7 sum data blocks */
 	VERIFY_SHA256,			/* sha256 sum data blocks */
 	VERIFY_SHA512,			/* sha512 sum data blocks */
+	VERIFY_SHA3_224,		/* sha3-224 sum data blocks */
+	VERIFY_SHA3_256,		/* sha3-256 sum data blocks */
+	VERIFY_SHA3_384,		/* sha3-384 sum data blocks */
+	VERIFY_SHA3_512,		/* sha3-512 sum data blocks */
 	VERIFY_XXHASH,			/* xxhash sum data blocks */
 	VERIFY_SHA1,			/* sha1 sum data blocks */
 	VERIFY_PATTERN,			/* verify specific patterns */
@@ -47,6 +51,18 @@ struct verify_header {
 
 struct vhdr_md5 {
 	uint32_t md5_digest[4];
+};
+struct vhdr_sha3_224 {
+	uint8_t sha[224 / 8];
+};
+struct vhdr_sha3_256 {
+	uint8_t sha[256 / 8];
+};
+struct vhdr_sha3_384 {
+	uint8_t sha[384 / 8];
+};
+struct vhdr_sha3_512 {
+	uint8_t sha[512 / 8];
 };
 struct vhdr_sha512 {
 	uint8_t sha512[128];

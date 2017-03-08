@@ -2355,6 +2355,18 @@ Verification
 		**sha1**
 			Use optimized sha1 as the checksum function.
 
+		**sha3-224**
+			Use optimized sha3-224 as the checksum function.
+
+		**sha3-256**
+			Use optimized sha3-256 as the checksum function.
+
+		**sha3-384**
+			Use optimized sha3-384 as the checksum function.
+
+		**sha3-512**
+			Use optimized sha3-512 as the checksum function.
+
 		**meta**
 			This option is deprecated, since now meta information is included in
 			generic verification header and meta verification happens by
