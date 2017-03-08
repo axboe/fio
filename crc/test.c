@@ -16,6 +16,7 @@
 #include "../crc/sha1.h"
 #include "../crc/sha256.h"
 #include "../crc/sha512.h"
+#include "../crc/sha3.h"
 #include "../crc/xxhash.h"
 #include "../crc/murmur3.h"
 #include "../crc/fnv.h"
@@ -47,6 +48,10 @@ enum {
 	T_MURMUR3	= 1U << 10,
 	T_JHASH		= 1U << 11,
 	T_FNV		= 1U << 12,
+	T_SHA3_224	= 1U << 13,
+	T_SHA3_256	= 1U << 14,
+	T_SHA3_384	= 1U << 15,
+	T_SHA3_512	= 1U << 16,
 };
 
 static void t_md5(struct test_type *t, void *buf, size_t size)
@@ -141,6 +146,62 @@ static void t_sha512(struct test_type *t, void *buf, size_t size)
 
 	for (i = 0; i < NR_CHUNKS; i++)
 		fio_sha512_update(&ctx, buf, size);
+}
+
+static void t_sha3_224(struct test_type *t, void *buf, size_t size)
+{
+	uint8_t sha[SHA3_224_DIGEST_SIZE];
+	struct fio_sha3_ctx ctx = { .sha = sha };
+	int i;
+
+	fio_sha3_224_init(&ctx);
+
+	for (i = 0; i < NR_CHUNKS; i++) {
+		fio_sha3_update(&ctx, buf, size);
+		fio_sha3_final(&ctx);
+	}
+}
+
+static void t_sha3_256(struct test_type *t, void *buf, size_t size)
+{
+	uint8_t sha[SHA3_256_DIGEST_SIZE];
+	struct fio_sha3_ctx ctx = { .sha = sha };
+	int i;
+
+	fio_sha3_256_init(&ctx);
+
+	for (i = 0; i < NR_CHUNKS; i++) {
+		fio_sha3_update(&ctx, buf, size);
+		fio_sha3_final(&ctx);
+	}
+}
+
+static void t_sha3_384(struct test_type *t, void *buf, size_t size)
+{
+	uint8_t sha[SHA3_384_DIGEST_SIZE];
+	struct fio_sha3_ctx ctx = { .sha = sha };
+	int i;
+
+	fio_sha3_384_init(&ctx);
+
+	for (i = 0; i < NR_CHUNKS; i++) {
+		fio_sha3_update(&ctx, buf, size);
+		fio_sha3_final(&ctx);
+	}
+}
+
+static void t_sha3_512(struct test_type *t, void *buf, size_t size)
+{
+	uint8_t sha[SHA3_512_DIGEST_SIZE];
+	struct fio_sha3_ctx ctx = { .sha = sha };
+	int i;
+
+	fio_sha3_512_init(&ctx);
+
+	for (i = 0; i < NR_CHUNKS; i++) {
+		fio_sha3_update(&ctx, buf, size);
+		fio_sha3_final(&ctx);
+	}
 }
 
 static void t_murmur3(struct test_type *t, void *buf, size_t size)
@@ -245,6 +306,26 @@ static struct test_type t[] = {
 		.name = "fnv",
 		.mask = T_FNV,
 		.fn = t_fnv,
+	},
+	{
+		.name = "sha3-224",
+		.mask = T_SHA3_224,
+		.fn = t_sha3_224,
+	},
+	{
+		.name = "sha3-256",
+		.mask = T_SHA3_256,
+		.fn = t_sha3_256,
+	},
+	{
+		.name = "sha3-384",
+		.mask = T_SHA3_384,
+		.fn = t_sha3_384,
+	},
+	{
+		.name = "sha3-512",
+		.mask = T_SHA3_512,
+		.fn = t_sha3_512,
 	},
 	{
 		.name = NULL,
