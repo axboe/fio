@@ -1943,6 +1943,10 @@ if test "$march_armv8_a_crc_crypto" != "yes" ; then
 fi
 if test "$cpu" = "arm64" ; then
   cat > $TMPC <<EOF
+#include <sys/auxv.h>
+#include <arm_acle.h>
+#include <arm_neon.h>
+
 int main(void)
 {
   return 0;
