@@ -2056,8 +2056,16 @@ static bool check_mount_writes(struct thread_data *td)
 	if (!td_write(td) || td->o.allow_mounted_write)
 		return false;
 
+	/*
+	 * If FIO_HAVE_CHARDEV_SIZE is defined, it's likely that chrdevs
+	 * are mkfs'd and mounted.
+	 */
 	for_each_file(td, f, i) {
+#ifdef FIO_HAVE_CHARDEV_SIZE
+		if (f->filetype != FIO_TYPE_BLOCK && f->filetype != FIO_TYPE_CHAR)
+#else
 		if (f->filetype != FIO_TYPE_BLOCK)
+#endif
 			continue;
 		if (device_is_mounted(f->file_name))
 			goto mounted;
