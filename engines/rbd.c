@@ -566,12 +566,7 @@ static int fio_rbd_setup(struct thread_data *td)
 	rbd_image_info_t info;
 	struct fio_file *f;
 	struct rbd_data *rbd = NULL;
-	int major, minor, extra;
 	int r;
-
-	/* log version of librbd. No cluster connection required. */
-	rbd_version(&major, &minor, &extra);
-	log_info("rbd engine: RBD version: %d.%d.%d\n", major, minor, extra);
 
 	/* allocate engine specific structure to deal with librbd. */
 	r = _fio_setup_rbd_data(td, &rbd);
