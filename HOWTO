@@ -886,7 +886,8 @@ Target file/device
 	If this isn't set, fio will abort jobs that are destructive (e.g. that write)
 	to what appears to be a mounted device or partition. This should help catch
 	creating inadvertently destructive tests, not realizing that the test will
-	destroy data on the mounted file system. Default: false.
+	destroy data on the mounted file system. Note that some platforms don't allow
+	writing against a mounted device regardless of this option. Default: false.
 
 .. option:: pre_read=bool
 
