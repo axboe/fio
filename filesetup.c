@@ -447,7 +447,7 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 			f->file_name);
 		ret = td->io_ops->invalidate(td, f);
 		if (ret < 0)
-			errval = ret;
+			errval = -ret;
 	} else if (f->filetype == FIO_TYPE_FILE) {
 		dprint(FD_IO, "declare unneeded cache %s: %llu/%llu\n",
 			f->file_name, off, len);
