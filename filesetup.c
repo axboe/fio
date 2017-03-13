@@ -442,20 +442,22 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 	if (len == -1ULL || off == -1ULL)
 		return 0;
 
-	dprint(FD_IO, "invalidate cache %s: %llu/%llu\n", f->file_name, off,
-								len);
-
 	if (td->io_ops->invalidate) {
+		dprint(FD_IO, "invalidate %s cache %s\n", td->io_ops->name,
+			f->file_name);
 		ret = td->io_ops->invalidate(td, f);
 		if (ret < 0)
 			errval = ret;
 	} else if (f->filetype == FIO_TYPE_FILE) {
+		dprint(FD_IO, "declare unneeded cache %s: %llu/%llu\n",
+			f->file_name, off, len);
 		ret = posix_fadvise(f->fd, off, len, POSIX_FADV_DONTNEED);
 		if (ret)
 			errval = ret;
 	} else if (f->filetype == FIO_TYPE_BLOCK) {
 		int retry_count = 0;
 
+		dprint(FD_IO, "drop page cache %s\n", f->file_name);
 		ret = blockdev_invalidate_cache(f);
 		while (ret < 0 && errno == EAGAIN && retry_count++ < 25) {
 			/*
@@ -477,8 +479,11 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 		}
 		if (ret < 0)
 			errval = errno;
-	} else if (f->filetype == FIO_TYPE_CHAR || f->filetype == FIO_TYPE_PIPE)
+	} else if (f->filetype == FIO_TYPE_CHAR ||
+		   f->filetype == FIO_TYPE_PIPE) {
+		dprint(FD_IO, "invalidate not supported %s\n", f->file_name);
 		ret = 0;
+	}
 
 	/*
 	 * Cache flushing isn't a fatal condition, and we know it will
