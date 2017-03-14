@@ -438,7 +438,7 @@ static uint64_t alloc_reply(uint64_t tag, uint16_t opcode)
 
 	reply = calloc(1, sizeof(*reply));
 	INIT_FLIST_HEAD(&reply->list);
-	fio_gettime(&reply->tv, NULL);
+	fio_gettime(&reply->ts, NULL);
 	reply->saved_tag = tag;
 	reply->opcode = opcode;
 

@@ -35,7 +35,7 @@ struct steadystate_data {
 	uint64_t sum_xy;
 	uint64_t oldest_y;
 
-	struct timeval prev_time;
+	struct timespec prev_time;
 	uint64_t prev_iops;
 	uint64_t prev_bytes;
 };

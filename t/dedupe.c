@@ -334,7 +334,7 @@ static void *thread_fn(void *data)
 static void show_progress(struct worker_thread *threads, unsigned long total)
 {
 	unsigned long last_nitems = 0;
-	struct timeval last_tv;
+	struct timespec last_tv;
 
 	fio_gettime(&last_tv, NULL);
 

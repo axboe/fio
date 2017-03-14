@@ -11,7 +11,7 @@ static volatile struct idle_prof_common ipc;
 static double calibrate_unit(unsigned char *data)
 {
 	unsigned long t, i, j, k;
-	struct timeval tps;
+	struct timespec tps;
 	double tunit = 0.0;
 
 	for (i = 0; i < CALIBRATE_RUNS; i++) {
@@ -183,7 +183,6 @@ static void calibration_stats(void)
 void fio_idle_prof_init(void)
 {
 	int i, ret;
-	struct timeval tp;
 	struct timespec ts;
 	pthread_attr_t tattr;
 	struct idle_prof_thread *ipt;
@@ -282,9 +281,8 @@ void fio_idle_prof_init(void)
 		pthread_mutex_lock(&ipt->init_lock);
 		while ((ipt->state != TD_EXITED) &&
 		       (ipt->state!=TD_INITIALIZED)) {
-			fio_gettime(&tp, NULL);
-			ts.tv_sec = tp.tv_sec + 1;
-			ts.tv_nsec = tp.tv_usec * 1000;
+			fio_gettime(&ts, NULL);
+			ts.tv_sec += 1;
 			pthread_cond_timedwait(&ipt->cond, &ipt->init_lock, &ts);
 		}
 		pthread_mutex_unlock(&ipt->init_lock);
@@ -325,7 +323,6 @@ void fio_idle_prof_stop(void)
 {
 	int i;
 	uint64_t runt;
-	struct timeval tp;
 	struct timespec ts;
 	struct idle_prof_thread *ipt;
 
@@ -343,9 +340,8 @@ void fio_idle_prof_stop(void)
 		pthread_mutex_lock(&ipt->start_lock);
 		while ((ipt->state != TD_EXITED) &&
 		       (ipt->state!=TD_NOT_CREATED)) {
-			fio_gettime(&tp, NULL);
-			ts.tv_sec = tp.tv_sec + 1;
-			ts.tv_nsec = tp.tv_usec * 1000;
+			fio_gettime(&ts, NULL);
+			ts.tv_sec += 1;
 			/* timed wait in case a signal is not received */
 			pthread_cond_timedwait(&ipt->cond, &ipt->start_lock, &ts);
 		}

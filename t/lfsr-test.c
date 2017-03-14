@@ -27,7 +27,7 @@ void usage()
 int main(int argc, char *argv[])
 {
 	int r;
-	struct timeval start, end;
+	struct timespec start, end;
 	struct fio_lfsr *fl;
 	int verify = 0;
 	unsigned int spin = 0;

@@ -132,7 +132,7 @@ static void fio_guasi_queued(struct thread_data *td, struct io_u **io_us, int nr
 {
 	int i;
 	struct io_u *io_u;
-	struct timeval now;
+	struct timespec now;
 
 	if (!fio_fill_issue_time(td))
 		return;

@@ -43,7 +43,7 @@ struct fio_net_cmd {
 
 struct fio_net_cmd_reply {
 	struct flist_head list;
-	struct timeval tv;
+	struct timespec ts;
 	uint64_t saved_tag;
 	uint16_t opcode;
 };

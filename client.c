@@ -48,7 +48,7 @@ struct client_ops fio_client_ops = {
 	.client_type	= FIO_CLIENT_TYPE_CLI,
 };
 
-static struct timeval eta_tv;
+static struct timespec eta_ts;
 
 static FLIST_HEAD(client_list);
 static FLIST_HEAD(eta_list);
@@ -1869,7 +1869,7 @@ static int handle_cmd_timeout(struct fio_client *client,
 }
 
 static int client_check_cmd_timeout(struct fio_client *client,
-				    struct timeval *now)
+				    struct timespec *now)
 {
 	struct fio_net_cmd_reply *reply;
 	struct flist_head *entry, *tmp;
@@ -1878,7 +1878,7 @@ static int client_check_cmd_timeout(struct fio_client *client,
 	flist_for_each_safe(entry, tmp, &client->cmd_list) {
 		reply = flist_entry(entry, struct fio_net_cmd_reply, list);
 
-		if (mtime_since(&reply->tv, now) < FIO_NET_CLIENT_TIMEOUT)
+		if (mtime_since(&reply->ts, now) < FIO_NET_CLIENT_TIMEOUT)
 			continue;
 
 		if (!handle_cmd_timeout(client, reply))
@@ -1896,10 +1896,10 @@ static int fio_check_clients_timed_out(void)
 {
 	struct fio_client *client;
 	struct flist_head *entry, *tmp;
-	struct timeval tv;
+	struct timespec ts;
 	int ret = 0;
 
-	fio_gettime(&tv, NULL);
+	fio_gettime(&ts, NULL);
 
 	flist_for_each_safe(entry, tmp, &client_list) {
 		client = flist_entry(entry, struct fio_client, list);
@@ -1907,7 +1907,7 @@ static int fio_check_clients_timed_out(void)
 		if (flist_empty(&client->cmd_list))
 			continue;
 
-		if (!client_check_cmd_timeout(client, &tv))
+		if (!client_check_cmd_timeout(client, &ts))
 			continue;
 
 		if (client->ops->timed_out)
@@ -1928,7 +1928,7 @@ int fio_handle_clients(struct client_ops *ops)
 	struct pollfd *pfds;
 	int i, ret = 0, retval = 0;
 
-	fio_gettime(&eta_tv, NULL);
+	fio_gettime(&eta_ts, NULL);
 
 	pfds = malloc(nr_clients * sizeof(struct pollfd));
 
@@ -1960,13 +1960,13 @@ int fio_handle_clients(struct client_ops *ops)
 		assert(i == nr_clients);
 
 		do {
-			struct timeval tv;
+			struct timespec ts;
 			int timeout;
 
-			fio_gettime(&tv, NULL);
-			if (mtime_since(&eta_tv, &tv) >= 900) {
+			fio_gettime(&ts, NULL);
+			if (mtime_since(&eta_ts, &ts) >= 900) {
 				request_client_etas(ops);
-				memcpy(&eta_tv, &tv, sizeof(tv));
+				memcpy(&eta_ts, &ts, sizeof(ts));
 
 				if (fio_check_clients_timed_out())
 					break;

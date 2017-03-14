@@ -64,7 +64,7 @@ struct disk_util {
 	 */
 	struct flist_head slaves;
 
-	struct timeval time;
+	struct timespec time;
 
 	struct fio_mutex *lock;
 	unsigned long users;

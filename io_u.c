@@ -20,7 +20,7 @@ struct io_completion_data {
 
 	int error;			/* output */
 	uint64_t bytes_done[DDIR_RWDIR_CNT];	/* output */
-	struct timeval time;		/* output */
+	struct timespec time;		/* output */
 };
 
 /*
@@ -1572,7 +1572,7 @@ static void small_content_scramble(struct io_u *io_u)
 		 * the buffer, given by the product of the usec time
 		 * and the actual offset.
 		 */
-		offset = (io_u->start_time.tv_usec ^ boffset) & 511;
+		offset = ((io_u->start_time.tv_nsec/1000) ^ boffset) & 511;
 		offset &= ~(sizeof(uint64_t) - 1);
 		if (offset >= 512 - sizeof(uint64_t))
 			offset -= sizeof(uint64_t);
