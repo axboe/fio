@@ -3866,6 +3866,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "stats",
+		.lname	= "Stats",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct thread_options, stats),
+		.help	= "Enable collection of stats",
+		.def	= "1",
+		.category = FIO_OPT_C_STAT,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "zero_buffers",
 		.lname	= "Zero I/O buffers",
 		.type	= FIO_OPT_STR_SET,

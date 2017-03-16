@@ -242,6 +242,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->ioprio_class = le32_to_cpu(top->ioprio_class);
 	o->file_service_type = le32_to_cpu(top->file_service_type);
 	o->group_reporting = le32_to_cpu(top->group_reporting);
+	o->stats = le32_to_cpu(top->stats);
 	o->fadvise_hint = le32_to_cpu(top->fadvise_hint);
 	o->fallocate_mode = le32_to_cpu(top->fallocate_mode);
 	o->zero_buffers = le32_to_cpu(top->zero_buffers);
@@ -426,6 +427,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->ioprio_class = cpu_to_le32(o->ioprio_class);
 	top->file_service_type = cpu_to_le32(o->file_service_type);
 	top->group_reporting = cpu_to_le32(o->group_reporting);
+	top->stats = cpu_to_le32(o->stats);
 	top->fadvise_hint = cpu_to_le32(o->fadvise_hint);
 	top->fallocate_mode = cpu_to_le32(o->fallocate_mode);
 	top->zero_buffers = cpu_to_le32(o->zero_buffers);

@@ -2593,6 +2593,12 @@ Measurements and reporting
 	all jobs in a file will be part of the same reporting group, unless
 	separated by a :option:`stonewall`.
 
+.. option:: stats
+
+	By default, fio collects and shows final output results for all jobs
+	that run. If this option is set to 0, then fio will ignore it in
+	the final stat output.
+
 .. option:: write_bw_log=str
 
 	If given, write a bandwidth log for this job. Can be used to store data of

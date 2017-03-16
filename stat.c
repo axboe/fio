@@ -1582,6 +1582,8 @@ void __show_run_stats(void)
 		}
 		if (last_ts == td->groupid)
 			continue;
+		if (!td->o.stats)
+			continue;
 
 		last_ts = td->groupid;
 		nr_ts++;
@@ -1599,6 +1601,8 @@ void __show_run_stats(void)
 	last_ts = -1;
 	idx = 0;
 	for_each_td(td, i) {
+		if (!td->o.stats)
+			continue;
 		if (idx && (!td->o.group_reporting ||
 		    (td->o.group_reporting && last_ts != td->groupid))) {
 			idx = 0;
@@ -2569,6 +2573,8 @@ int calc_log_samples(void)
 	fio_gettime(&now, NULL);
 
 	for_each_td(td, i) {
+		if (!td->o.stats)
+			continue;
 		if (in_ramp_time(td) ||
 		    !(td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING)) {
 			next = min(td->o.iops_avg_time, td->o.bw_avg_time);

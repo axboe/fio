@@ -1548,6 +1548,10 @@ Wait for preceding jobs in the job file to exit before starting this one.
 Start a new reporting group.  If not given, all jobs in a file will be part
 of the same reporting group, unless separated by a stonewall.
 .TP
+.BI stats \fR=\fPbool
+By default, fio collects and shows final output results for all jobs that run.
+If this option is set to 0, then fio will ignore it in the final stat output.
+.TP
 .BI numjobs \fR=\fPint
 Number of clones (processes/threads performing the same workload) of this job.
 Default: 1.

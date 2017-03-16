@@ -1734,6 +1734,9 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 	if (td->parent)
 		td = td->parent;
 
+	if (!td->o.stats)
+		return;
+
 	if (no_reduce)
 		lusec = utime_since(&io_u->issue_time, &icd->time);
 
@@ -1994,7 +1997,7 @@ int io_u_queued_complete(struct thread_data *td, int min_evts)
  */
 void io_u_queued(struct thread_data *td, struct io_u *io_u)
 {
-	if (!td->o.disable_slat && ramp_time_over(td)) {
+	if (!td->o.disable_slat && ramp_time_over(td) && td->o.stats) {
 		unsigned long slat_time;
 
 		slat_time = utime_since(&io_u->start_time, &io_u->issue_time);
