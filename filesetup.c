@@ -942,9 +942,6 @@ int setup_files(struct thread_data *td)
 				if (f->file_offset > f->real_file_size)
 					goto err_offset;
 				f->io_size = f->real_file_size - f->file_offset;
-				log_info("fio: forcing file %s size to %llu\n",
-					f->file_name,
-					(unsigned long long)f->io_size);
 				if (!f->io_size)
 					log_info("fio: file %s may be ignored\n",
 						f->file_name);
