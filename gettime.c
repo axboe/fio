@@ -380,6 +380,26 @@ void fio_clock_init(void)
 		log_info("fio: clocksource=cpu may not be reliable\n");
 }
 
+uint64_t ntime_since(const struct timespec *s, const struct timespec *e)
+{
+       int64_t sec, nsec;
+
+       sec = e->tv_sec - s->tv_sec;
+       nsec = e->tv_nsec - s->tv_nsec;
+       if (sec > 0 && nsec < 0) {
+               sec--;
+               nsec += 1000000000LL;
+       }
+
+       /*
+        * time warp bug on some kernels?
+        */
+       if (sec < 0 || (sec == 0 && nsec < 0))
+               return 0;
+
+       return nsec + (sec * 1000000000LL);
+}
+
 uint64_t utime_since(const struct timespec *s, const struct timespec *e)
 {
 	int64_t sec, usec;

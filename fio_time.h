@@ -4,7 +4,8 @@
 #include "lib/types.h"
 
 struct thread_data;
-extern uint64_t utime_since(const struct timespec *,const  struct timespec *);
+extern uint64_t ntime_since(const struct timespec *, const struct timespec *);
+extern uint64_t utime_since(const struct timespec *, const struct timespec *);
 extern uint64_t utime_since_now(const struct timespec *);
 extern uint64_t mtime_since(const struct timespec *, const struct timespec *);
 extern uint64_t mtime_since_now(const struct timespec *);
