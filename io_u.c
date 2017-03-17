@@ -533,7 +533,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 	unsigned int buflen = 0;
 	unsigned int minbs, maxbs;
 	uint64_t frand_max, r;
-	bool power_2 = false;
+	bool power_2;
 
 	assert(ddir_rw(ddir));
 
