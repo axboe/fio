@@ -533,6 +533,7 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 	unsigned int buflen = 0;
 	unsigned int minbs, maxbs;
 	uint64_t frand_max, r;
+	bool power_2 = false;
 
 	assert(ddir_rw(ddir));
 
@@ -577,9 +578,11 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 			}
 		}
 
-		if (!td->o.bs_unaligned && is_power_of_2(minbs))
+		power_2 = is_power_of_2(minbs);
+		if (!td->o.bs_unaligned && power_2)
 			buflen &= ~(minbs - 1);
-
+		else if (!td->o.bs_unaligned && !power_2) 
+			buflen -= buflen % minbs; 
 	} while (!io_u_fits(td, io_u, buflen));
 
 	return buflen;
