@@ -276,7 +276,7 @@ int fio_running_or_pending_io_threads(void)
 	int nr_io_threads = 0;
 
 	for_each_td(td, i) {
-		if (td->flags & TD_F_NOIO)
+		if (td->io_ops_init && td_ioengine_flagged(td, FIO_NOIO))
 			continue;
 		nr_io_threads++;
 		if (td->runstate < TD_EXITED)

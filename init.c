@@ -459,6 +459,7 @@ static struct thread_data *get_new_job(bool global, struct thread_data *parent,
 		copy_opt_list(td, parent);
 
 	td->io_ops = NULL;
+	td->io_ops_init = 0;
 	if (!preserve_eo)
 		td->eo = NULL;
 

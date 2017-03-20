@@ -368,16 +368,16 @@ int td_io_init(struct thread_data *td)
 
 	if (td->io_ops->init) {
 		ret = td->io_ops->init(td);
-		if (ret && td->o.iodepth > 1) {
-			log_err("fio: io engine init failed. Perhaps try"
-				" reducing io depth?\n");
-		}
+		if (ret)
+			log_err("fio: io engine %s init failed.%s\n",
+				td->io_ops->name,
+				td->o.iodepth > 1 ?
+				" Perhaps try reducing io depth?" : "");
+		else
+			td->io_ops_init = 1;
 		if (!td->error)
 			td->error = ret;
 	}
-
-	if (!ret && td_ioengine_flagged(td, FIO_NOIO))
-		td->flags |= TD_F_NOIO;
 
 	return ret;
 }

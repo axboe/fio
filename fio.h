@@ -74,7 +74,7 @@ enum {
 	TD_F_VER_NONE		= 1U << 5,
 	TD_F_PROFILE_OPS	= 1U << 6,
 	TD_F_COMPRESS		= 1U << 7,
-	TD_F_NOIO		= 1U << 8,
+	TD_F_RESERVED		= 1U << 8, /* not used */
 	TD_F_COMPRESS_LOG	= 1U << 9,
 	TD_F_VSTATE_SAVED	= 1U << 10,
 	TD_F_NEED_LOCK		= 1U << 11,
@@ -231,6 +231,7 @@ struct thread_data {
 	 * to any of the available IO engines.
 	 */
 	struct ioengine_ops *io_ops;
+	int io_ops_init;
 
 	/*
 	 * IO engine private data and dlhandle.
