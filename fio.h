@@ -121,7 +121,6 @@ enum {
  * Per-thread/process specific data. Only used for the network client
  * for now.
  */
-struct sk_out;
 void sk_out_assign(struct sk_out *);
 void sk_out_drop(void);
 

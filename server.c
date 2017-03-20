@@ -50,17 +50,6 @@ struct sk_entry {
 	struct flist_head next;	/* Other sk_entry's, if linked command */
 };
 
-struct sk_out {
-	unsigned int refs;	/* frees sk_out when it drops to zero.
-				 * protected by below ->lock */
-
-	int sk;			/* socket fd to talk to client */
-	struct fio_mutex lock;	/* protects ref and below list */
-	struct flist_head list;	/* list of pending transmit work */
-	struct fio_mutex wait;	/* wake backend when items added to list */
-	struct fio_mutex xmit;	/* held while sending data */
-};
-
 static char *fio_server_arg;
 static char *bind_sock;
 static struct sockaddr_in saddr_in;
