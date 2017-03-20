@@ -1748,7 +1748,8 @@ caveat that when used on the command line, they must come after the
 
 .. option:: cpuload=int : [cpuio]
 
-	Attempt to use the specified percentage of CPU cycles.
+	Attempt to use the specified percentage of CPU cycles. This is a mandatory
+	option when using cpuio I/O engine.
 
 .. option:: cpuchunks=int : [cpuio]
 
