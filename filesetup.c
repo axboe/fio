@@ -932,10 +932,11 @@ int setup_files(struct thread_data *td)
 			}
 
 			/*
-			 * We normally don't come here, but if the result is 0,
-			 * set it to the real file size. This could be size of
-			 * the existing one if it already exists, but otherwise
-			 * will be set to 0. A new file won't be created because
+			 * We normally don't come here for regular files, but
+			 * if the result is 0 for a regular file, set it to the
+			 * real file size. This could be size of the existing
+			 * one if it already exists, but otherwise will be set
+			 * to 0. A new file won't be created because
 			 * ->io_size + ->file_offset equals ->real_file_size.
 			 */
 			if (!f->io_size) {
