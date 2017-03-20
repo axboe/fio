@@ -1100,13 +1100,15 @@ I/O type
 	blocks given. For example, if you give 32 as a parameter, fio will sync the
 	file for every 32 writes issued. If fio is using non-buffered I/O, we may
 	not sync the file. The exception is the sg I/O engine, which synchronizes
-	the disk cache anyway.
+	the disk cache anyway. Defaults to 0, which means no sync every certain
+	number of writes.
 
 .. option:: fdatasync=int
 
 	Like :option:`fsync` but uses :manpage:`fdatasync(2)` to only sync data and
 	not metadata blocks.  In Windows, FreeBSD, and DragonFlyBSD there is no
 	:manpage:`fdatasync(2)`, this falls back to using :manpage:`fsync(2)`.
+	Defaults to 0, which means no sync data every certain number of writes.
 
 .. option:: write_barrier=int
 
@@ -1571,6 +1573,7 @@ I/O engine
 		**sync**
 			Basic :manpage:`read(2)` or :manpage:`write(2)`
 			I/O. :manpage:`lseek(2)` is used to position the I/O location.
+			See :option:`fsync` and :option:`fdatasync` for syncing write I/Os.
 
 		**psync**
 			Basic :manpage:`pread(2)` or :manpage:`pwrite(2)` I/O.  Default on
