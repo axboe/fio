@@ -719,25 +719,25 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 	/*
 	 * see if it's time to fsync
 	 */
-	if (td->o.fsync_blocks &&
-	   !(td->io_issues[DDIR_WRITE] % td->o.fsync_blocks) &&
-	     td->io_issues[DDIR_WRITE] && should_fsync(td))
+	if (td->o.fsync_blocks && td->io_issues[DDIR_WRITE] &&
+	    !(td->io_issues[DDIR_WRITE] % td->o.fsync_blocks) &&
+	    should_fsync(td))
 		return DDIR_SYNC;
 
 	/*
 	 * see if it's time to fdatasync
 	 */
-	if (td->o.fdatasync_blocks &&
-	   !(td->io_issues[DDIR_WRITE] % td->o.fdatasync_blocks) &&
-	     td->io_issues[DDIR_WRITE] && should_fsync(td))
+	if (td->o.fdatasync_blocks && td->io_issues[DDIR_WRITE] &&
+	    !(td->io_issues[DDIR_WRITE] % td->o.fdatasync_blocks) &&
+	    should_fsync(td))
 		return DDIR_DATASYNC;
 
 	/*
 	 * see if it's time to sync_file_range
 	 */
-	if (td->sync_file_range_nr &&
-	   !(td->io_issues[DDIR_WRITE] % td->sync_file_range_nr) &&
-	     td->io_issues[DDIR_WRITE] && should_fsync(td))
+	if (td->sync_file_range_nr && td->io_issues[DDIR_WRITE] &&
+	    !(td->io_issues[DDIR_WRITE] % td->sync_file_range_nr) &&
+	    should_fsync(td))
 		return DDIR_SYNC_FILE_RANGE;
 
 	if (td_rw(td)) {
