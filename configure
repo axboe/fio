@@ -166,6 +166,8 @@ for opt do
   ;;
   --disable-numa) disable_numa="yes"
   ;;
+  --disable-rdma) disable_rdma="yes"
+  ;;
   --disable-rbd) disable_rbd="yes"
   ;;
   --disable-rbd-blkin) disable_rbd_blkin="yes"
@@ -204,6 +206,7 @@ if test "$show_help" = "yes" ; then
   echo "--esx                   Configure build options for esx"
   echo "--enable-gfio           Enable building of gtk gfio"
   echo "--disable-numa          Disable libnuma even if found"
+  echo "--disable-rdma         Disable RDMA support even if found"
   echo "--disable-gfapi         Disable gfapi"
   echo "--enable-libhdfs        Enable hdfs support"
   echo "--disable-lex           Disable use of lex/yacc for math"
@@ -692,7 +695,7 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-if compile_prog "" "-libverbs" "libverbs" ; then
+if test "$disable_rdma" != "yes" && compile_prog "" "-libverbs" "libverbs" ; then
     libverbs="yes"
     LIBS="-libverbs $LIBS"
 fi
@@ -712,7 +715,7 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-if compile_prog "" "-lrdmacm" "rdma"; then
+if test "$disable_rdma" != "yes" && compile_prog "" "-lrdmacm" "rdma"; then
     rdmacm="yes"
     LIBS="-lrdmacm $LIBS"
 fi
