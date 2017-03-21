@@ -358,6 +358,23 @@ static void stat_calc_lat(struct thread_stat *ts, double *dst,
 	}
 }
 
+/*
+ * To keep the terse format unaltered, add all of the ns latency
+ * buckets to the first us latency bucket
+ */
+void stat_calc_lat_nu(struct thread_stat *ts, double *io_u_lat_u)
+{
+	unsigned long ntotal = 0, total = ddir_rw_sum(ts->total_io_u);
+	int i;
+
+	stat_calc_lat(ts, io_u_lat_u, ts->io_u_lat_u, FIO_IO_U_LAT_U_NR);
+
+	for (i = 0; i < FIO_IO_U_LAT_N_NR; i++)
+		ntotal += ts->io_u_lat_n[i];
+
+	io_u_lat_u[0] += 100.0 * (double) ntotal / (double) total;
+}
+
 void stat_calc_lat_n(struct thread_stat *ts, double *io_u_lat)
 {
 	stat_calc_lat(ts, io_u_lat, ts->io_u_lat_n, FIO_IO_U_LAT_N_NR);
@@ -860,12 +877,12 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 					(unsigned long long) ts->runtime[ddir]);
 
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
-		log_buf(out, ";%llu;%llu;%f;%f", min, max, mean, dev);
+		log_buf(out, ";%llu;%llu;%f;%f", min/1000, max/1000, mean/1000, dev/1000);
 	else
 		log_buf(out, ";%llu;%llu;%f;%f", 0ULL, 0ULL, 0.0, 0.0);
 
 	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
-		log_buf(out, ";%llu;%llu;%f;%f", min, max, mean, dev);
+		log_buf(out, ";%llu;%llu;%f;%f", min/1000, max/1000, mean/1000, dev/1000);
 	else
 		log_buf(out, ";%llu;%llu;%f;%f", 0ULL, 0ULL, 0.0, 0.0);
 
@@ -882,11 +899,11 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 			log_buf(out, ";0%%=0");
 			continue;
 		}
-		log_buf(out, ";%f%%=%llu", ts->percentile_list[i].u.f, ovals[i]);
+		log_buf(out, ";%f%%=%llu", ts->percentile_list[i].u.f, ovals[i]/1000);
 	}
 
 	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
-		log_buf(out, ";%llu;%llu;%f;%f", min, max, mean, dev);
+		log_buf(out, ";%llu;%llu;%f;%f", min/1000, max/1000, mean/1000, dev/1000);
 	else
 		log_buf(out, ";%llu;%llu;%f;%f", 0ULL, 0ULL, 0.0, 0.0);
 
@@ -1067,7 +1084,7 @@ static void show_thread_status_terse_v2(struct thread_stat *ts,
 
 	/* Calc % distribution of IO depths, usecond, msecond latency */
 	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
-	stat_calc_lat_u(ts, io_u_lat_u);
+	stat_calc_lat_nu(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 
 	/* Only show fixed 7 I/O depth levels*/
@@ -1132,7 +1149,7 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 
 	/* Calc % distribution of IO depths, usecond, msecond latency */
 	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
-	stat_calc_lat_u(ts, io_u_lat_u);
+	stat_calc_lat_nu(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 
 	/* Only show fixed 7 I/O depth levels*/
