@@ -543,6 +543,8 @@ Parameter types
 
 	If the option accepts an upper and lower range, use a colon ':' or
 	minus '-' to separate such values. See :ref:`irange <irange>`.
+	If the lower value specified happens to be larger than the upper value,
+	two values are swapped.
 
 .. _bool:
 
