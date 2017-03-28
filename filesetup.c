@@ -235,7 +235,8 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 	unsigned int bs;
 	char *b;
 
-	if (td_ioengine_flagged(td, FIO_PIPEIO))
+	if (td_ioengine_flagged(td, FIO_PIPEIO) ||
+	    td_ioengine_flagged(td, FIO_NOIO))
 		return 0;
 
 	if (!fio_file_open(f)) {
