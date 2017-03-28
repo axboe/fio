@@ -1121,7 +1121,7 @@ static char *make_filename(char *buf, size_t buf_size,struct thread_options *o,
 
 	if (!o->filename_format || !strlen(o->filename_format)) {
 		sprintf(buf, "%s.%d.%d", jobname, jobnum, filenum);
-		return NULL;
+		return buf;
 	}
 
 	for (f = &fpre_keywords[0]; f->keyword; f++)
