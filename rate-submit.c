@@ -5,7 +5,7 @@
  *
  */
 #include "fio.h"
-#include "ioengine.h"
+#include "ioengines.h"
 #include "lib/getrusage.h"
 #include "rate-submit.h"
 

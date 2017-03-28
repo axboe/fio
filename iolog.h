@@ -4,7 +4,7 @@
 #include "lib/rbtree.h"
 #include "lib/ieee754.h"
 #include "flist.h"
-#include "ioengine.h"
+#include "ioengines.h"
 
 /*
  * Use for maintaining statistics

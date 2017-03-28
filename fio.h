@@ -25,7 +25,7 @@
 #include "debug.h"
 #include "file.h"
 #include "io_ddir.h"
-#include "ioengine.h"
+#include "ioengines.h"
 #include "iolog.h"
 #include "helpers.h"
 #include "options.h"
