@@ -159,15 +159,18 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		}
 	}
 
-	b = malloc(td->o.max_bs[DDIR_WRITE]);
+	left = f->real_file_size;
+	bs = td->o.max_bs[DDIR_WRITE];
+	if (bs > left)
+		bs = left;
+
+	b = malloc(bs);
 	if (!b) {
 		td_verror(td, errno, "malloc");
 		goto err;
 	}
 
-	left = f->real_file_size;
 	while (left && !td->terminate) {
-		bs = td->o.max_bs[DDIR_WRITE];
 		if (bs > left)
 			bs = left;
 
@@ -245,7 +248,11 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 
 	old_runstate = td_bump_runstate(td, TD_PRE_READING);
 
+	left = f->io_size;
 	bs = td->o.max_bs[DDIR_READ];
+	if (bs > left)
+		bs = left;
+
 	b = malloc(bs);
 	if (!b) {
 		td_verror(td, errno, "malloc");
@@ -260,8 +267,6 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 		ret = 1;
 		goto error;
 	}
-
-	left = f->io_size;
 
 	while (left && !td->terminate) {
 		if (bs > left)
