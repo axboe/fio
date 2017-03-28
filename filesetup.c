@@ -160,6 +160,10 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	}
 
 	b = malloc(td->o.max_bs[DDIR_WRITE]);
+	if (!b) {
+		td_verror(td, errno, "malloc");
+		goto err;
+	}
 
 	left = f->real_file_size;
 	while (left && !td->terminate) {
@@ -243,6 +247,11 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 
 	bs = td->o.max_bs[DDIR_READ];
 	b = malloc(bs);
+	if (!b) {
+		td_verror(td, errno, "malloc");
+		ret = 1;
+		goto error;
+	}
 	memset(b, 0, bs);
 
 	if (lseek(f->fd, f->file_offset, SEEK_SET) < 0) {
