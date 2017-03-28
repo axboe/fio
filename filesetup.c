@@ -239,6 +239,9 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 	    td_ioengine_flagged(td, FIO_NOIO))
 		return 0;
 
+	if (f->filetype == FIO_TYPE_CHAR)
+		return 0;
+
 	if (!fio_file_open(f)) {
 		if (td->io_ops->open_file(td, f)) {
 			log_err("fio: cannot pre-read, failed to open file\n");
