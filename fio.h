@@ -39,6 +39,7 @@
 #include "server.h"
 #include "stat.h"
 #include "flow.h"
+#include "io_u.h"
 #include "io_u_queue.h"
 #include "workqueue.h"
 #include "steadystate.h"
