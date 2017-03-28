@@ -1119,10 +1119,11 @@ int pre_read_files(struct thread_data *td)
 	dprint(FD_FILE, "pre_read files\n");
 
 	for_each_file(td, f, i) {
-		pre_read_file(td, f);
+		if (pre_read_file(td, f))
+			return -1;
 	}
 
-	return 1;
+	return 0;
 }
 
 static int __init_rand_distribution(struct thread_data *td, struct fio_file *f)
