@@ -8,11 +8,11 @@ static unsigned long ns_granularity;
 
 void timeval_add_msec(struct timeval *tv, unsigned int msec)
 {
-	unsigned int adj_usec = 1000 * msec;
+	unsigned long adj_usec = 1000 * msec;
 
 	tv->tv_usec += adj_usec;
 	if (adj_usec >= 1000000) {
-		unsigned int adj_sec = adj_usec / 1000000;
+		unsigned long adj_sec = adj_usec / 1000000;
 
 		tv->tv_usec -=  adj_sec * 1000000;
 		tv->tv_sec += adj_sec;
