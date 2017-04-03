@@ -1836,9 +1836,6 @@ err:
 	if (o->write_iolog_file)
 		write_iolog_close(td);
 
-	fio_mutex_remove(td->mutex);
-	td->mutex = NULL;
-
 	td_set_runstate(td, TD_EXITED);
 
 	/*
@@ -2435,6 +2432,8 @@ int fio_backend(struct sk_out *sk_out)
 			fio_mutex_remove(td->rusage_sem);
 			td->rusage_sem = NULL;
 		}
+		fio_mutex_remove(td->mutex);
+		td->mutex = NULL;
 	}
 
 	free_disk_util();
