@@ -1862,14 +1862,6 @@ err:
 	return (void *) (uintptr_t) td->error;
 }
 
-static void dump_td_info(struct thread_data *td)
-{
-	log_err("fio: job '%s' (state=%d) hasn't exited in %lu seconds, it "
-		"appears to be stuck. Doing forceful exit of this job.\n",
-			td->o.name, td->runstate,
-			(unsigned long) time_since_now(&td->terminate_time));
-}
-
 /*
  * Run over the job map and reap the threads that have exited, if any.
  */
@@ -1954,7 +1946,11 @@ static void reap_threads(unsigned int *nr_running, uint64_t *t_rate,
 		if (td->terminate &&
 		    td->runstate < TD_FSYNCING &&
 		    time_since_now(&td->terminate_time) >= FIO_REAP_TIMEOUT) {
-			dump_td_info(td);
+			log_err("fio: job '%s' (state=%d) hasn't exited in "
+				"%lu seconds, it appears to be stuck. Doing "
+				"forceful exit of this job.\n",
+				td->o.name, td->runstate,
+				(unsigned long) time_since_now(&td->terminate_time));
 			td_set_runstate(td, TD_REAPED);
 			goto reaped;
 		}
