@@ -3,7 +3,9 @@
 #include <inttypes.h>
 
 #include "memalign.h"
-#include "../fio.h"
+
+#define PTR_ALIGN(ptr, mask)   \
+	(char *)((uintptr_t)((ptr) + (mask)) & ~(mask))
 
 struct align_footer {
 	unsigned int offset;
