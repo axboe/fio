@@ -86,7 +86,7 @@ done:
 
 	sprintf(tmp, "%llu", (unsigned long long) num);
 	decimals = maxlen - strlen(tmp);
-	if (decimals <= 1) {
+	if ((int)decimals <= 1) {
 		if (carry)
 			num++;
 		goto done;
