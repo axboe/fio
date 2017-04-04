@@ -2,7 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../fio.h"
+#include "../compiler/compiler.h"
+#include "num2str.h"
+
+#define ARRAY_SIZE(x)    (sizeof((x)) / (sizeof((x)[0])))
 
 /**
  * num2str() - Cheesy number->string conversion, complete with carry rounding error.
@@ -10,7 +13,7 @@
  * @maxlen: max number of digits in the output string (not counting prefix and units)
  * @base: multiplier for num (e.g., if num represents Ki, use 1024)
  * @pow2: select unit prefix - 0=power-of-10 decimal SI, nonzero=power-of-2 binary IEC
- * @units: select units - N2S_* macros defined in fio.h
+ * @units: select units - N2S_* macros defined in num2str.h
  * @returns a malloc'd buffer containing "number[<unit prefix>][<units>]"
  */
 char *num2str(uint64_t num, int maxlen, int base, int pow2, int units)

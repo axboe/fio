@@ -35,6 +35,7 @@
 #include "oslib/getopt.h"
 #include "lib/rand.h"
 #include "lib/rbtree.h"
+#include "lib/num2str.h"
 #include "client.h"
 #include "server.h"
 #include "stat.h"
@@ -522,7 +523,6 @@ extern void fio_options_mem_dupe(struct thread_data *);
 extern void td_fill_rand_seeds(struct thread_data *);
 extern void td_fill_verify_state_seed(struct thread_data *);
 extern void add_job_opts(const char **, int);
-extern char *num2str(uint64_t, int, int, int, int);
 extern int ioengine_load(struct thread_data *);
 extern bool parse_dryrun(void);
 extern int fio_running_or_pending_io_threads(void);
@@ -534,13 +534,6 @@ extern uintptr_t page_mask;
 extern uintptr_t page_size;
 extern int initialize_fio(char *envp[]);
 extern void deinitialize_fio(void);
-
-#define N2S_NONE	0
-#define N2S_BITPERSEC 	1	/* match unit_base for bit rates */
-#define N2S_PERSEC	2
-#define N2S_BIT		3
-#define N2S_BYTE	4
-#define N2S_BYTEPERSEC 	8	/* match unit_base for byte rates */
 
 #define FIO_GETOPT_JOB		0x89000000
 #define FIO_GETOPT_IOENGINE	0x98000000
