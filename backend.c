@@ -1457,6 +1457,7 @@ static void *thread_main(void *data)
 	struct thread_data *td = fd->td;
 	struct thread_options *o = &td->o;
 	struct sk_out *sk_out = fd->sk_out;
+	uint64_t bytes_done[DDIR_RWDIR_CNT];
 	int deadlock_loop_cnt;
 	int clear_state;
 	int ret;
@@ -1678,7 +1679,9 @@ static void *thread_main(void *data)
 					sizeof(td->bw_sample_time));
 	}
 
+	memset(bytes_done, 0, sizeof(bytes_done));
 	clear_state = 0;
+
 	while (keep_running(td)) {
 		uint64_t verify_bytes;
 
@@ -1697,8 +1700,6 @@ static void *thread_main(void *data)
 		if (td->o.verify_only && td_write(td))
 			verify_bytes = do_dry_run(td);
 		else {
-			uint64_t bytes_done[DDIR_RWDIR_CNT];
-
 			do_io(td, bytes_done);
 
 			if (!ddir_rw_sum(bytes_done)) {
@@ -1776,6 +1777,18 @@ static void *thread_main(void *data)
 		if (td->error || td->terminate)
 			break;
 	}
+
+	/*
+	 * If td ended up with no I/O when it should have had,
+	 * then something went wrong unless FIO_NOIO or FIO_DISKLESSIO.
+	 * (Are we not missing other flags that can be ignored ?)
+	 */
+	if ((td->o.size || td->o.io_size) && !ddir_rw_sum(bytes_done) &&
+	    !(td_ioengine_flagged(td, FIO_NOIO) ||
+	      td_ioengine_flagged(td, FIO_DISKLESSIO)))
+		log_err("%s: No I/O performed by %s, "
+			 "perhaps try --debug=io option for details?\n",
+			 td->o.name, td->io_ops->name);
 
 	td_set_runstate(td, TD_FINISHING);
 

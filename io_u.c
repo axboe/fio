@@ -899,8 +899,9 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (io_u->offset + io_u->buflen > io_u->file->real_file_size) {
-		dprint(FD_IO, "io_u %p, offset too large\n", io_u);
-		dprint(FD_IO, "  off=%llu/%lu > %llu\n",
+		dprint(FD_IO, "io_u %p, offset + buflen exceeds file size\n",
+			io_u);
+		dprint(FD_IO, "  offset=%llu/buflen=%lu > %llu\n",
 			(unsigned long long) io_u->offset, io_u->buflen,
 			(unsigned long long) io_u->file->real_file_size);
 		return 1;
