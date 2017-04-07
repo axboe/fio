@@ -100,6 +100,8 @@ enum {
 	FIO_DEDUPE_OFF,
 	FIO_RAND_POISSON_OFF,
 	FIO_RAND_ZONE_OFF,
+	FIO_RAND_POISSON2_OFF,
+	FIO_RAND_POISSON3_OFF,
 	FIO_RAND_NR_OFFS,
 };
 
@@ -281,8 +283,8 @@ struct thread_data {
 	unsigned long rate_blocks[DDIR_RWDIR_CNT];
 	unsigned long long rate_io_issue_bytes[DDIR_RWDIR_CNT];
 	struct timeval lastrate[DDIR_RWDIR_CNT];
-	int64_t last_usec;
-	struct frand_state poisson_state;
+	int64_t last_usec[DDIR_RWDIR_CNT];
+	struct frand_state poisson_state[DDIR_RWDIR_CNT];
 
 	/*
 	 * Enforced rate submission/completion workqueue
