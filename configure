@@ -185,6 +185,8 @@ for opt do
   ;;
   --disable-pmem) disable_pmem="yes"
   ;;
+  --disable-sheepdog) disable_sheepdog="yes"
+  ;;
   --enable-cuda) enable_cuda="yes"
   ;;
   --help)
@@ -215,6 +217,7 @@ if test "$show_help" = "yes" ; then
   echo "--enable-lex            Enable use of lex/yacc for math"
   echo "--disable-shm           Disable SHM support"
   echo "--disable-optimizations Don't enable compiler optimizations"
+  echo "--disable-sheepdog      Disable sheepdog support"
   echo "--enable-cuda           Enable GPUDirect RDMA support"
   exit $exit_val
 fi
@@ -1996,6 +1999,28 @@ EOF
   fi
 fi
 echo "march_armv8_a_crc_crypto      $march_armv8_a_crc_crypto"
+
+##########################################
+# check for sheepdog
+sheepdog="no"
+cat > $TMPC << EOF
+#include <netdb.h>
+#include <ctype.h>
+#include <fcntl.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/epoll.h>
+#include <sys/un.h>
+int main(void)
+{
+  return 0;
+}
+EOF
+if test "$disable_sheepdog" != "yes" && compile_prog "" "" "sheepdog"; then
+  sheepdog="yes"
+fi
+echo "Sheepdog engine               $sheepdog"
 
 ##########################################
 # cuda probe

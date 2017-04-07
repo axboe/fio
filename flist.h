@@ -184,19 +184,35 @@ static inline void flist_splice_init(struct flist_head *list,
  * flist_for_each	-	iterate over a list
  * @pos:	the &struct flist_head to use as a loop counter.
  * @head:	the head for your list.
+ * @member:     the name of the flist_struct within the struct.
  */
 #define flist_for_each(pos, head) \
 	for (pos = (head)->next; pos != (head); pos = pos->next)
+
+#define flist_for_each_prev(pos, head) \
+	for (pos = (head)->prev; pos != (head); pos = pos->prev)
+
+#define flist_for_each_entry(pos, head, member) \
+	for (pos = flist_entry((head)->next, typeof(*pos), member); \
+		&pos->member != (head); \
+		pos = flist_entry(pos->member.next, typeof(*pos), member))
 
 /**
  * flist_for_each_safe	-	iterate over a list safe against removal of list entry
  * @pos:	the &struct flist_head to use as a loop counter.
  * @n:		another &struct flist_head to use as temporary storage
  * @head:	the head for your list.
+ * @member:     the name of the flist_struct within the struct.
  */
 #define flist_for_each_safe(pos, n, head) \
 	for (pos = (head)->next, n = pos->next; pos != (head); \
 		pos = n, n = pos->next)
+
+#define flist_for_each_entry_safe(pos, n, head, member) \
+	for (pos = flist_entry((head)->next, typeof(*pos), member), \
+		n = flist_entry(pos->member.next, typeof(*pos), member); \
+		&pos->member != (head); \
+		pos = n, n = flist_entry(n->member.next, typeof(*n), member))
 
 extern void flist_sort(void *priv, struct flist_head *head,
 	int (*cmp)(void *priv, struct flist_head *a, struct flist_head *b));

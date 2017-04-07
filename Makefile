@@ -185,6 +185,10 @@ ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
   CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format -static
 endif
 
+ifdef CONFIG_SHEEPDOG
+  SOURCE += engines/sheepdog.c
+endif
+
 OBJS := $(SOURCE:.c=.o)
 
 FIO_OBJS = $(OBJS) fio.o

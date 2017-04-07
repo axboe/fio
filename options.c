@@ -1787,6 +1787,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "DAX Device based IO engine",
 			  },
 #endif
+#ifdef CONFIG_SHEEPDOG
+			  { .ival = "sheepdog",
+			    .help = "Sheepdog(sync) based engine",
+			  },
+#endif
 			  { .ival = "external",
 			    .help = "Load external engine (append name)",
 			  },

@@ -1732,6 +1732,11 @@ I/O engine
 			Read and write using device DAX to a persistent memory device (e.g.,
 			/dev/dax0.0) through the NVML libpmem library.
 
+		**sheepdog**
+			IO  engine  supporting  direct access to a virtual disk image (VDI)
+			of the distributed block  storage "sheepdog".
+			This ioengine defines engine specific options.
+
 		**external**
 			Prefix to specify loading an external I/O engine object file. Append
 			the engine filename, e.g. ``ioengine=external:/tmp/foo.o`` to load
@@ -1899,6 +1904,13 @@ caveat that when used on the command line, they must come after the
 .. option:: chunk_size : [libhdfs]
 
 	the size of the chunk to use for each file.
+
+.. option:: target : [sheepdog]
+
+	Specifies the target vdi information.
+	[Format of this argument] tcp:<sheepdog_host>:<sheepdog_port>:<vdi>
+	e.g. tcp:127.0.0.1:7000:testvdi
+	e.g. tcp:localhost:7001:testvdi2
 
 
 I/O depth

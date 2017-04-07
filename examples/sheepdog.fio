@@ -1,0 +1,25 @@
+#################################################
+#                                               #
+# Example of using the ioengine "sheepdog"      #
+#                                               #
+# [expected form of target]                     #
+# tcp:<sheepdog_host>:<sheepdog_port>:<vdiname> #
+#  e.g. target=tcp:127.0.0.1:7000:testvdi       #
+#  e.g. target=tcp:localhost:7001:vdi2          #                                     
+#                                               #
+#################################################
+[global]
+ioengine=sheepdog
+#sheepdog engine's specific option#
+target=tcp:localhost:7000:testvdi
+###################################
+kb_base=1024
+direct=1
+invalidate=1
+group_reporting
+
+[sheepdog_test]
+rw=randread
+size=1000M
+numjobs=4
+bs=1M
