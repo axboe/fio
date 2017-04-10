@@ -1675,6 +1675,11 @@ I/O engine
 			DDIR_TRIM
 				does fallocate(,mode = FALLOC_FL_KEEP_SIZE|FALLOC_FL_PUNCH_HOLE).
 
+		**ftruncate**
+			I/O engine that sends :manpage:`ftruncate(2)` operations in response
+			to write (DDIR_WRITE) events. Each ftruncate issued sets the file's
+			size to the current block offset. Block size is ignored.
+
 		**e4defrag**
 			I/O engine that does regular EXT4_IOC_MOVE_EXT ioctls to simulate
 			defragment activity in request to DDIR_WRITE event.

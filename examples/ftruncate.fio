@@ -1,0 +1,27 @@
+# Example ftruncate engine jobs
+
+[global]
+ioengine=ftruncate
+directory=/scratch
+size=102404k ; 100Mb+4k
+stonewall
+filename=truncate
+runtime=10s
+time_based
+direct=1
+#
+# bs option is stub here. Truncation is performed on the current block offset.
+# blocksize value is ignored
+bs=4k
+
+# truncate the file to 4Kbytes then repeatedly grow the file back to just over
+# its original size using subsequent truncates
+[grow-truncate]
+rw=write
+
+# Repeatedly change a file to a random size between 0Kbytes and 100Mb
+# using truncates
+[rand-truncate]
+rw=randwrite
+norandommap
+
