@@ -16,12 +16,16 @@
 #if defined(ARCH_HAVE_CPU_CLOCK)
 #ifndef ARCH_CPU_CLOCK_CYCLES_PER_USEC
 static unsigned long cycles_per_usec;
-static unsigned long inv_cycles_per_nsec;
-static uint64_t max_cycles_for_mult;
-#define NSEC_INV_FACTOR 4096
+static unsigned long long cycles_start;
+static unsigned long long clock_mult;
+static unsigned long long max_cycles_mask;
+static unsigned long long nsecs_for_max_cycles;
+static unsigned int clock_shift;
+static unsigned int max_cycles_shift;
+#define MAX_CLOCK_SEC 60*60
 #endif
 #ifdef ARCH_CPU_CLOCK_WRAPS
-static unsigned long long cycles_start, cycles_wrap;
+static unsigned int cycles_wrap;
 #endif
 #endif
 int tsc_reliable = 0;
@@ -168,7 +172,7 @@ static void __fio_gettime(struct timespec *tp)
 #endif
 #ifdef ARCH_HAVE_CPU_CLOCK
 	case CS_CPUCLOCK: {
-		uint64_t nsecs, t;
+		uint64_t nsecs, t, multiples;
 		struct tv_valid *tv;
 
 #ifdef CONFIG_TLS_THREAD
@@ -185,19 +189,18 @@ static void __fio_gettime(struct timespec *tp)
 			log_err("fio: double CPU clock wrap\n");
 			tv->warned = 1;
 		}
-
+#endif
+#ifdef ARCH_CPU_CLOCK_CYCLES_PER_USEC
+		nsecs = t / ARCH_CPU_CLOCK_CYCLES_PER_USEC * 1000;
+#else
 		t -= cycles_start;
+		multiples = t >> max_cycles_shift;
+		nsecs = multiples * nsecs_for_max_cycles;
+		nsecs += ((t & max_cycles_mask) * clock_mult) >> clock_shift;
 #endif
 		tv->last_cycles = t;
 		tv->last_tv_valid = 1;
-#ifdef ARCH_CPU_CLOCK_CYCLES_PER_USEC
-		nsecs = t * 1000 / ARCH_CPU_CLOCK_CYCLES_PER_USEC;
-#else
-		if (t < max_cycles_for_mult)
-			nsecs = (t * inv_cycles_per_nsec) / NSEC_INV_FACTOR;
-		else
-			nsecs = (t / NSEC_INV_FACTOR) * inv_cycles_per_nsec;
-#endif
+
 		tp->tv_sec = nsecs / 1000000000ULL;
 		tp->tv_nsec = nsecs % 1000000000ULL;
 		break;
@@ -263,7 +266,8 @@ static int calibrate_cpu_clock(void)
 {
 	double delta, mean, S;
 	uint64_t minc, maxc, avg, cycles[NR_TIME_ITERS];
-	int i, samples;
+	int i, samples, sft = 0;
+	unsigned long long tmp, max_ticks, max_mult;
 
 	cycles[0] = get_cycles_per_usec();
 	S = delta = mean = 0.0;
@@ -305,19 +309,55 @@ static int calibrate_cpu_clock(void)
 		dprint(FD_TIME, "cycles[%d]=%llu\n", i, (unsigned long long) cycles[i]);
 
 	avg /= samples;
+	cycles_per_usec = avg;
 	dprint(FD_TIME, "avg: %llu\n", (unsigned long long) avg);
 	dprint(FD_TIME, "min=%llu, max=%llu, mean=%f, S=%f\n",
 			(unsigned long long) minc,
 			(unsigned long long) maxc, mean, S);
 
-	cycles_per_usec = avg;
-	inv_cycles_per_nsec = NSEC_INV_FACTOR * 1000 / cycles_per_usec;
-	max_cycles_for_mult = ~0ULL / inv_cycles_per_nsec;
-	dprint(FD_TIME, "inv_cycles_per_nsec=%lu\n", inv_cycles_per_nsec);
-#ifdef ARCH_CPU_CLOCK_WRAPS
+	max_ticks = MAX_CLOCK_SEC * cycles_per_usec * 1000000ULL;
+        max_mult = ULLONG_MAX / max_ticks;
+        dprint(FD_TIME, "\n\nmax_ticks=%llu, __builtin_clzll=%d, max_mult=%llu\n",
+		max_ticks, __builtin_clzll(max_ticks), max_mult);
+
+        /*
+         * Find the largest shift count that will produce
+         * a multiplier that does not exceed max_mult
+         */
+        tmp = max_mult * cycles_per_usec / 1000;
+        while (tmp > 1) {
+                tmp >>= 1;
+                sft++;
+                dprint(FD_TIME, "tmp=%llu, sft=%u\n", tmp, sft);
+        }
+
+        clock_shift = sft;
+        clock_mult = (1ULL << sft) * 1000 / cycles_per_usec;
+	dprint(FD_TIME, "clock_shift=%u, clock_mult=%llu\n", clock_shift, clock_mult);
+
+	// Find the greatest power of 2 clock ticks that is less than the ticks in MAX_CLOCK_SEC_2STAGE
+	max_cycles_shift = max_cycles_mask = 0;
+	tmp = MAX_CLOCK_SEC * 1000000ULL * cycles_per_usec;
+	dprint(FD_TIME, "tmp=%llu, max_cycles_shift=%u\n", tmp, max_cycles_shift);
+	while (tmp > 1) {
+		tmp >>= 1;
+		max_cycles_shift++;
+		dprint(FD_TIME, "tmp=%llu, max_cycles_shift=%u\n", tmp, max_cycles_shift);
+	}
+	// if use use (1ULL << max_cycles_shift) * 1000 / cycles_per_usec here we will
+	// have a discontinuity every (1ULL << max_cycles_shift) cycles
+	nsecs_for_max_cycles = ((1ULL << max_cycles_shift) * clock_mult) >> clock_shift;
+
+	// Use a bitmask to calculate ticks % (1ULL << max_cycles_shift)
+	for (tmp = 0; tmp < max_cycles_shift; tmp++)
+		max_cycles_mask |= 1ULL << tmp;
+
+	dprint(FD_TIME, "max_cycles_shift=%u, 2^max_cycles_shift=%llu, nsecs_for_max_cycles=%llu, max_cycles_mask=%016llx\n",
+		max_cycles_shift, (1ULL << max_cycles_shift),
+		nsecs_for_max_cycles, max_cycles_mask);
+
 	cycles_start = get_cpu_clock();
 	dprint(FD_TIME, "cycles_start=%llu\n", cycles_start);
-#endif
 	return 0;
 }
 #else
@@ -387,15 +427,15 @@ uint64_t ntime_since(const struct timespec *s, const struct timespec *e)
        sec = e->tv_sec - s->tv_sec;
        nsec = e->tv_nsec - s->tv_nsec;
        if (sec > 0 && nsec < 0) {
-               sec--;
-               nsec += 1000000000LL;
+	       sec--;
+	       nsec += 1000000000LL;
        }
 
        /*
-        * time warp bug on some kernels?
-        */
+	* time warp bug on some kernels?
+	*/
        if (sec < 0 || (sec == 0 && nsec < 0))
-               return 0;
+	       return 0;
 
        return nsec + (sec * 1000000000LL);
 }
