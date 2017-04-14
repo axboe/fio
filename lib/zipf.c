@@ -6,7 +6,6 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include "ieee754.h"
-#include "../log.h"
 #include "zipf.h"
 #include "../minmax.h"
 #include "../hash.h"
