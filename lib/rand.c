@@ -36,7 +36,7 @@
 #include <string.h>
 #include <assert.h>
 #include "rand.h"
-#include "lib/pattern.h"
+#include "pattern.h"
 #include "../hash.h"
 
 int arch_random;
