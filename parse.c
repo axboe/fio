@@ -135,6 +135,7 @@ static unsigned long long get_mult_time(const char *str, int len,
 	const char *p = str;
 	char *c;
 	unsigned long long mult = 1;
+	int i;
 
 	/*
          * Go forward until we hit a non-digit, or +/- sign
@@ -153,7 +154,7 @@ static unsigned long long get_mult_time(const char *str, int len,
 	}
 
 	c = strdup(p);
-	for (int i = 0; i < strlen(c); i++)
+	for (i = 0; i < strlen(c); i++)
 		c[i] = tolower(c[i]);
 
 	if (!strncmp("us", c, 2) || !strncmp("usec", c, 4))
