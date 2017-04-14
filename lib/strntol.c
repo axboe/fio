@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#include "lib/strntol.h"
+#include "strntol.h"
 
 long strntol(const char *str, size_t sz, char **end, int base)
 {
