@@ -10,7 +10,7 @@
 /**
  * num2str() - Cheesy number->string conversion, complete with carry rounding error.
  * @num: quantity (e.g., number of blocks, bytes or bits)
- * @maxlen: max number of digits in the output string (not counting prefix and units)
+ * @maxlen: max number of digits in the output string (not counting prefix and units, but counting .)
  * @base: multiplier for num (e.g., if num represents Ki, use 1024)
  * @pow2: select unit prefix - 0=power-of-10 decimal SI, nonzero=power-of-2 binary IEC
  * @units: select units - N2S_* macros defined in num2str.h
@@ -23,9 +23,9 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, int units)
 	const char **unitprefix;
 	const char *unitstr[] = { "", "/s", "B", "bit", "B/s", "bit/s" };
 	const unsigned int thousand[] = { 1000, 1024 };
-	unsigned int modulo, decimals;
+	unsigned int modulo;
 	int unit_index = 0, post_index, carry = 0;
-	char tmp[32];
+	char tmp[32], fmt[32];
 	char *buf;
 
 	compiletime_assert(sizeof(sistr) == sizeof(iecstr), "unit prefix arrays must be identical sizes");
@@ -62,6 +62,9 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, int units)
 		break;
 	}
 
+	/*
+	 * Divide by K/Ki until string length of num <= maxlen.
+	 */
 	modulo = -1U;
 	while (post_index < sizeof(sistr)) {
 		sprintf(tmp, "%llu", (unsigned long long) num);
@@ -74,6 +77,9 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, int units)
 		post_index++;
 	}
 
+	/*
+	 * If no modulo, then we're done.
+	 */
 	if (modulo == -1U) {
 done:
 		if (post_index >= ARRAY_SIZE(sistr))
@@ -84,23 +90,25 @@ done:
 		return buf;
 	}
 
+	/*
+	 * If no room for decimals, then we're done.
+	 */
 	sprintf(tmp, "%llu", (unsigned long long) num);
-	decimals = maxlen - strlen(tmp);
-	if ((int)decimals <= 1) {
+	if ((int)(maxlen - strlen(tmp)) <= 1) {
 		if (carry)
 			num++;
 		goto done;
 	}
 
-	do {
-		sprintf(tmp, "%u", modulo);
-		if (strlen(tmp) <= decimals - 1)
-			break;
+	/*
+	 * Fill in everything and return the result.
+	 */
+	assert(maxlen - strlen(tmp) - 1 > 0);
+	assert(modulo < thousand[!!pow2]);
+	sprintf(fmt, "%%.%df", (int)(maxlen - strlen(tmp) - 1));
+	sprintf(tmp, fmt, (double)modulo / (double)thousand[!!pow2]);
 
-		modulo = (modulo + 9) / 10;
-	} while (1);
-
-	sprintf(buf, "%llu.%u%s%s", (unsigned long long) num, modulo,
+	sprintf(buf, "%llu.%s%s%s", (unsigned long long) num, &tmp[2],
 			unitprefix[post_index], unitstr[unit_index]);
 	return buf;
 }
