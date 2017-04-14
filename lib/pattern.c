@@ -1,6 +1,13 @@
-#include "fio.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <errno.h>
+#include <assert.h>
+
 #include "strntol.h"
 #include "pattern.h"
+#include "../minmax.h"
 #include "../oslib/strcasestr.h"
 
 /**
