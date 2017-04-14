@@ -4,7 +4,7 @@
 #ifdef CONFIG_GETMNTENT
 #include <mntent.h>
 
-#include "lib/mountcheck.h"
+#include "mountcheck.h"
 
 #define MTAB	"/etc/mtab"
 
