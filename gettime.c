@@ -402,8 +402,14 @@ uint64_t utime_since(const struct timeval *s, const struct timeval *e)
 uint64_t utime_since_now(const struct timeval *s)
 {
 	struct timeval t;
+#ifdef FIO_DEBUG_TIME
+	void *p = __builtin_return_address(0);
 
+	fio_gettime(&t, p);
+#else
 	fio_gettime(&t, NULL);
+#endif
+
 	return utime_since(s, &t);
 }
 
@@ -429,9 +435,14 @@ uint64_t mtime_since(const struct timeval *s, const struct timeval *e)
 uint64_t mtime_since_now(const struct timeval *s)
 {
 	struct timeval t;
+#ifdef FIO_DEBUG_TIME
 	void *p = __builtin_return_address(0);
 
 	fio_gettime(&t, p);
+#else
+	fio_gettime(&t, NULL);
+#endif
+
 	return mtime_since(s, &t);
 }
 
