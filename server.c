@@ -1497,10 +1497,10 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 		p.ts.io_u_complete[i]	= cpu_to_le32(ts->io_u_complete[i]);
 	}
 
-	for (i = 0; i < FIO_IO_U_LAT_U_NR; i++) {
+	for (i = 0; i < FIO_IO_U_LAT_U_NR; i++)
 		p.ts.io_u_lat_u[i]	= cpu_to_le32(ts->io_u_lat_u[i]);
+	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++)
 		p.ts.io_u_lat_m[i]	= cpu_to_le32(ts->io_u_lat_m[i]);
-	}
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++)
 		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
