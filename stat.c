@@ -98,7 +98,7 @@ static unsigned int plat_val_to_idx(unsigned int val)
  * Convert the given index of the bucket array to the value
  * represented by the bucket
  */
-static unsigned int plat_idx_to_val(unsigned int idx)
+static unsigned long long plat_idx_to_val(unsigned int idx)
 {
 	unsigned int error_bits, k, base;
 
@@ -972,12 +972,11 @@ static void add_ddir_status_json(struct thread_stat *ts,
 		clat_bins_object = json_create_object();
 		json_object_add_value_object(tmp_object, "bins", clat_bins_object);
 		for(i = 0; i < FIO_IO_U_PLAT_NR; i++) {
-			snprintf(buf, sizeof(buf), "%d", i);
-			json_object_add_value_int(clat_bins_object, (const char *)buf, ts->io_u_plat[ddir][i]);
+			if (ts->io_u_plat[ddir][i]) {
+				snprintf(buf, sizeof(buf), "%llu", plat_idx_to_val(i));
+				json_object_add_value_int(clat_bins_object, (const char *)buf, ts->io_u_plat[ddir][i]);
+			}
 		}
-		json_object_add_value_int(clat_bins_object, "FIO_IO_U_PLAT_BITS", FIO_IO_U_PLAT_BITS);
-		json_object_add_value_int(clat_bins_object, "FIO_IO_U_PLAT_VAL", FIO_IO_U_PLAT_VAL);
-		json_object_add_value_int(clat_bins_object, "FIO_IO_U_PLAT_NR", FIO_IO_U_PLAT_NR);
 	}
 
 	if (!calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev)) {
