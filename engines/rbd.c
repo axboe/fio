@@ -290,7 +290,7 @@ static void _fio_rbd_finish_aiocb(rbd_completion_t comp, void *data)
 	 */
 	ret = rbd_aio_get_return_value(fri->completion);
 	if (ret < 0) {
-		io_u->error = ret;
+		io_u->error = -ret;
 		io_u->resid = io_u->xfer_buflen;
 	} else
 		io_u->error = 0;
@@ -524,7 +524,7 @@ static int fio_rbd_queue(struct thread_data *td, struct io_u *io_u)
 failed_comp:
 	rbd_aio_release(fri->completion);
 failed:
-	io_u->error = r;
+	io_u->error = -r;
 	td_verror(td, io_u->error, "xfer");
 	return FIO_Q_COMPLETED;
 }
