@@ -59,6 +59,10 @@
 #define MPOL_LOCAL MPOL_MAX
 #endif
 
+#ifdef CONFIG_CUDA
+#include <cuda.h>
+#endif
+
 /*
  * offset generator types
  */
@@ -408,6 +412,18 @@ struct thread_data {
 	struct steadystate_data ss;
 
 	char verror[FIO_VERROR_SIZE];
+
+#ifdef CONFIG_CUDA
+	/*
+	 * for GPU memory management
+	 */
+	int gpu_dev_cnt;
+	int gpu_dev_id;
+	CUdevice  cu_dev;
+	CUcontext cu_ctx;
+	CUdeviceptr dev_mem_ptr;
+#endif	
+
 };
 
 /*

@@ -186,6 +186,8 @@ for opt do
   ;;
   --disable-pmem) disable_pmem="yes"
   ;;
+  --enable-cuda) enable_cuda="yes"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -206,7 +208,7 @@ if test "$show_help" = "yes" ; then
   echo "--esx                   Configure build options for esx"
   echo "--enable-gfio           Enable building of gtk gfio"
   echo "--disable-numa          Disable libnuma even if found"
-  echo "--disable-rdma         Disable RDMA support even if found"
+  echo "--disable-rdma          Disable RDMA support even if found"
   echo "--disable-gfapi         Disable gfapi"
   echo "--enable-libhdfs        Enable hdfs support"
   echo "--disable-lex           Disable use of lex/yacc for math"
@@ -214,6 +216,7 @@ if test "$show_help" = "yes" ; then
   echo "--enable-lex            Enable use of lex/yacc for math"
   echo "--disable-shm           Disable SHM support"
   echo "--disable-optimizations Don't enable compiler optimizations"
+  echo "--enable-cuda           Enable GPUDirect RDMA support"
   exit $exit_val
 fi
 
@@ -1990,6 +1993,21 @@ EOF
 fi
 echo "march_armv8_a_crc_crypto      $march_armv8_a_crc_crypto"
 
+##########################################
+# cuda probe
+cuda="no"
+cat > $TMPC << EOF
+#include <cuda.h>
+int main(int argc, char **argv)
+{
+  return cuInit(0);
+}
+EOF
+if test "$enable_cuda" == "yes"  && compile_prog "" "-lcuda" "cuda"; then
+  cuda="yes"
+  LIBS="-lcuda $LIBS"
+fi
+echo "cuda                          $cuda"
 
 #############################################################################
 
@@ -2210,9 +2228,11 @@ fi
 if test "$disable_opt" = "yes" ; then
   output_sym "CONFIG_DISABLE_OPTIMIZATIONS"
 fi
-
 if test "$zlib" = "no" ; then
   echo "Consider installing zlib-dev (zlib-devel), some fio features depend on it."
+fi
+if test "$cuda" = "yes" ; then
+  output_sym "CONFIG_CUDA"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak

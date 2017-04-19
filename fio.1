@@ -1309,6 +1309,9 @@ Same as \fBmmap\fR, but use huge files as backing.
 .TP
 .B mmapshared
 Same as \fBmmap\fR, but use a MMAP_SHARED mapping.
+.TP
+.B cudamalloc
+Use GPU memory as the buffers for GPUDirect RDMA benchmark. The ioengine must be \fBrdma\fR.
 .RE
 .P
 The amount of memory allocated is the maximum allowed \fBblocksize\fR for the

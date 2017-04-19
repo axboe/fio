@@ -2604,6 +2604,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Like mmap, but use huge pages",
 			  },
 #endif
+#ifdef CONFIG_CUDA
+			  { .ival = "cudamalloc",
+			    .oval = MEM_CUDA_MALLOC,
+			    .help = "Allocate GPU device memory for GPUDirect RDMA",
+			  },
+#endif
 		  },
 	},
 	{
@@ -3561,6 +3567,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "NUMA Memory Policy",
 		.type	= FIO_OPT_UNSUPPORTED,
 		.help	= "Build fio with libnuma-dev(el) to enable this option",
+	},
+#endif
+#ifdef CONFIG_CUDA
+	{
+		.name	= "gpu_dev_id",
+		.lname	= "GPU device ID",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, gpu_dev_id),
+		.help	= "Set GPU device ID for GPUDirect RDMA",
+		.def    = "0",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_INVALID,
 	},
 #endif
 	{

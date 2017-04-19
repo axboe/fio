@@ -20,6 +20,9 @@ enum fio_memtype {
 	MEM_MMAP,	/* use anonynomous mmap */
 	MEM_MMAPHUGE,	/* memory mapped huge file */
 	MEM_MMAPSHARED, /* use mmap with shared flag */
+#ifdef CONFIG_CUDA
+	MEM_CUDA_MALLOC,/* use GPU memory */
+#endif
 };
 
 #define ERROR_STR_MAX	128
@@ -198,6 +201,8 @@ struct thread_options {
 	unsigned short numa_mem_mode;
 	unsigned int numa_mem_prefer_node;
 	char *numa_memnodes;
+	unsigned int gpu_dev_id;
+
 	unsigned int iolog;
 	unsigned int rwmixcycle;
 	unsigned int rwmix[DDIR_RWDIR_CNT];
