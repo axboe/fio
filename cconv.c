@@ -96,6 +96,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->iodepth_batch = le32_to_cpu(top->iodepth_batch);
 	o->iodepth_batch_complete_min = le32_to_cpu(top->iodepth_batch_complete_min);
 	o->iodepth_batch_complete_max = le32_to_cpu(top->iodepth_batch_complete_max);
+	o->serialize_overlap = le32_to_cpu(top->serialize_overlap);
 	o->size = le64_to_cpu(top->size);
 	o->io_size = le64_to_cpu(top->io_size);
 	o->size_percent = le32_to_cpu(top->size_percent);
@@ -346,6 +347,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->iodepth_batch = cpu_to_le32(o->iodepth_batch);
 	top->iodepth_batch_complete_min = cpu_to_le32(o->iodepth_batch_complete_min);
 	top->iodepth_batch_complete_max = cpu_to_le32(o->iodepth_batch_complete_max);
+	top->serialize_overlap = cpu_to_le32(o->serialize_overlap);
 	top->size_percent = cpu_to_le32(o->size_percent);
 	top->fill_device = cpu_to_le32(o->fill_device);
 	top->file_append = cpu_to_le32(o->file_append);

@@ -1882,6 +1882,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_IO_BASIC,
 	},
 	{
+		.name	= "serialize_overlap",
+		.lname	= "Serialize overlap",
+		.off1	= offsetof(struct thread_options, serialize_overlap),
+		.type	= FIO_OPT_BOOL,
+		.help	= "Wait for in-flight IOs that collide to complete",
+		.parent	= "iodepth",
+		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
+	},
+	{
 		.name	= "io_submit_mode",
 		.lname	= "IO submit mode",
 		.type	= FIO_OPT_STR,
