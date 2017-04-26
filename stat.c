@@ -2427,19 +2427,21 @@ void add_bw_sample(struct thread_data *td, struct io_u *io_u,
 	td_io_u_unlock(td);
 }
 
-static int add_bw_samples(struct thread_data *td, struct timeval *t)
+static int __add_samples(struct thread_data *td, struct timeval *parent_tv,
+			 struct timeval *t, unsigned int avg_time,
+			 uint64_t *this_io_bytes, uint64_t *stat_io_bytes,
+			 struct io_stat *stat, struct io_log *log,
+			 bool is_kb)
 {
-	struct thread_stat *ts = &td->ts;
 	unsigned long spent, rate;
 	enum fio_ddir ddir;
 	unsigned int next, next_log;
 
-	next_log = td->o.bw_avg_time;
+	next_log = avg_time;
 
-	spent = mtime_since(&td->bw_sample_time, t);
-	if (spent < td->o.bw_avg_time &&
-	    td->o.bw_avg_time - spent >= LOG_MSEC_SLACK)
-		return td->o.bw_avg_time - spent;
+	spent = mtime_since(parent_tv, t);
+	if (spent < avg_time && avg_time - spent >= LOG_MSEC_SLACK)
+		return avg_time - spent;
 
 	td_io_u_lock(td);
 
@@ -2449,16 +2451,19 @@ static int add_bw_samples(struct thread_data *td, struct timeval *t)
 	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 		uint64_t delta;
 
-		delta = td->this_io_bytes[ddir] - td->stat_io_bytes[ddir];
+		delta = this_io_bytes[ddir] - stat_io_bytes[ddir];
 		if (!delta)
 			continue; /* No entries for interval */
 
-		if (spent)
-			rate = delta * 1000 / spent / 1024; /* KiB/s */
-		else
+		if (spent) {
+			if (is_kb)
+				rate = delta * 1000 / spent / 1024; /* KiB/s */
+			else
+				rate = (delta * 1000) / spent;
+		} else
 			rate = 0;
 
-		add_stat_sample(&ts->bw_stat[ddir], rate);
+		add_stat_sample(&stat[ddir], rate);
 
 		if (td->bw_log) {
 			unsigned int bs = 0;
@@ -2466,24 +2471,30 @@ static int add_bw_samples(struct thread_data *td, struct timeval *t)
 			if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
 				bs = td->o.min_bs[ddir];
 
-			next = add_log_sample(td, td->bw_log, sample_val(rate),
-					      ddir, bs, 0);
+			next = add_log_sample(td, log, sample_val(rate), ddir, bs, 0);
 			next_log = min(next_log, next);
 		}
 
-		td->stat_io_bytes[ddir] = td->this_io_bytes[ddir];
+		stat_io_bytes[ddir] = this_io_bytes[ddir];
 	}
 
-	timeval_add_msec(&td->bw_sample_time, td->o.bw_avg_time);
+	timeval_add_msec(parent_tv, avg_time);
 
 	td_io_u_unlock(td);
 
-	if (spent <= td->o.bw_avg_time)
-		next = td->o.bw_avg_time;
+	if (spent <= avg_time)
+		next = avg_time;
 	else
-		next = td->o.bw_avg_time - (1 + spent - td->o.bw_avg_time);
+		next = avg_time - (1 + spent - avg_time);
 
 	return min(next, next_log);
+}
+
+static int add_bw_samples(struct thread_data *td, struct timeval *t)
+{
+	return __add_samples(td, &td->bw_sample_time, t, td->o.bw_avg_time,
+				td->this_io_bytes, td->stat_io_bytes,
+				td->ts.bw_stat, td->bw_log, true);
 }
 
 void add_iops_sample(struct thread_data *td, struct io_u *io_u,
@@ -2505,61 +2516,9 @@ void add_iops_sample(struct thread_data *td, struct io_u *io_u,
 
 static int add_iops_samples(struct thread_data *td, struct timeval *t)
 {
-	struct thread_stat *ts = &td->ts;
-	unsigned long spent, iops;
-	enum fio_ddir ddir;
-	unsigned int next, next_log;
-
-	next_log = td->o.iops_avg_time;
-
-	spent = mtime_since(&td->iops_sample_time, t);
-	if (spent < td->o.iops_avg_time &&
-	    td->o.iops_avg_time - spent >= LOG_MSEC_SLACK)
-		return td->o.iops_avg_time - spent;
-
-	td_io_u_lock(td);
-
-	/*
-	 * Compute both read and write rates for the interval.
-	 */
-	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
-		uint64_t delta;
-
-		delta = td->this_io_blocks[ddir] - td->stat_io_blocks[ddir];
-		if (!delta)
-			continue; /* No entries for interval */
-
-		if (spent)
-			iops = (delta * 1000) / spent;
-		else
-			iops = 0;
-
-		add_stat_sample(&ts->iops_stat[ddir], iops);
-
-		if (td->iops_log) {
-			unsigned int bs = 0;
-
-			if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
-				bs = td->o.min_bs[ddir];
-
-			next = add_log_sample(td, td->iops_log,
-					      sample_val(iops), ddir, bs, 0);
-			next_log = min(next_log, next);
-		}
-
-		td->stat_io_blocks[ddir] = td->this_io_blocks[ddir];
-	}
-
-	timeval_add_msec(&td->iops_sample_time, td->o.iops_avg_time);
-
-	td_io_u_unlock(td);
-
-	if (spent <= td->o.iops_avg_time)
-		next = td->o.iops_avg_time;
-	else
-		next = td->o.iops_avg_time - (1 + spent - td->o.iops_avg_time);
-
-	return min(next, next_log);
+	return __add_samples(td, &td->iops_sample_time, t, td->o.iops_avg_time,
+				td->this_io_blocks, td->stat_io_blocks,
+				td->ts.iops_stat, td->iops_log, false);
 }
 
 /*
