@@ -1468,6 +1468,9 @@ Buffers and memory
 		**mmapshared**
 			Same as mmap, but use a MMAP_SHARED mapping.
 
+		**cudamalloc**
+			Use GPU memory as the buffers for GPUDirect RDMA benchmark.
+
 	The area allocated is a function of the maximum allowed bs size for the job,
 	multiplied by the I/O depth given. Note that for **shmhuge** and
 	**mmaphuge** to work, the system must have free huge pages allocated. This

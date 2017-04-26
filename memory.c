@@ -207,6 +207,75 @@ static void free_mem_malloc(struct thread_data *td)
 	free(td->orig_buffer);
 }
 
+#ifdef CONFIG_CUDA
+
+static int alloc_mem_cudamalloc(struct thread_data *td, size_t total_mem)
+{
+	CUresult ret;
+	char name[128];
+
+	ret = cuInit(0);
+	if (ret != CUDA_SUCCESS) {
+		log_err("fio: failed initialize cuda driver api\n");
+		return 1;
+	}
+
+	ret = cuDeviceGetCount(&td->gpu_dev_cnt);
+	if (ret != CUDA_SUCCESS) {
+		log_err("fio: failed get device count\n");
+		return 1;
+	}
+	dprint(FD_MEM, "found %d GPU devices\n", td->gpu_dev_cnt);
+
+	if (td->gpu_dev_cnt == 0) {
+		log_err("fio: no GPU device found. "
+			"Can not perform GPUDirect RDMA.\n");
+		return 1;
+	}
+
+	td->gpu_dev_id = td->o.gpu_dev_id;
+	ret = cuDeviceGet(&td->cu_dev, td->gpu_dev_id);
+	if (ret != CUDA_SUCCESS) {
+		log_err("fio: failed get GPU device\n");
+		return 1;
+	}
+
+	ret = cuDeviceGetName(name, sizeof(name), td->gpu_dev_id);
+	if (ret != CUDA_SUCCESS) {
+		log_err("fio: failed get device name\n");
+		return 1;
+	}
+	dprint(FD_MEM, "dev_id = [%d], device name = [%s]\n", \
+	       td->gpu_dev_id, name);
+
+	ret = cuCtxCreate(&td->cu_ctx, CU_CTX_MAP_HOST, td->cu_dev);
+	if (ret != CUDA_SUCCESS) {
+		log_err("fio: failed to create cuda context: %d\n", ret);
+		return 1;
+	}
+
+	ret = cuMemAlloc(&td->dev_mem_ptr, total_mem);
+	if (ret != CUDA_SUCCESS) {
+		log_err("fio: cuMemAlloc %zu bytes failed\n", total_mem);
+		return 1;
+	}
+	td->orig_buffer = (void *) td->dev_mem_ptr;
+
+	dprint(FD_MEM, "cudaMalloc %llu %p\n",				\
+	       (unsigned long long) total_mem, td->orig_buffer);
+	return 0;
+}
+
+static void free_mem_cudamalloc(struct thread_data *td)
+{
+	if ((void *) td->dev_mem_ptr != NULL)
+		cuMemFree(td->dev_mem_ptr);
+
+	if (cuCtxDestroy(td->cu_ctx) != CUDA_SUCCESS)
+		log_err("fio: failed to destroy cuda context\n");
+}
+#endif
+
 /*
  * Set up the buffer area we need for io.
  */
@@ -246,6 +315,10 @@ int allocate_io_mem(struct thread_data *td)
 	else if (td->o.mem_type == MEM_MMAP || td->o.mem_type == MEM_MMAPHUGE ||
 		 td->o.mem_type == MEM_MMAPSHARED)
 		ret = alloc_mem_mmap(td, total_mem);
+#ifdef CONFIG_CUDA
+	else if (td->o.mem_type == MEM_CUDA_MALLOC)
+		ret = alloc_mem_cudamalloc(td, total_mem);
+#endif
 	else {
 		log_err("fio: bad mem type: %d\n", td->o.mem_type);
 		ret = 1;
@@ -275,6 +348,10 @@ void free_io_mem(struct thread_data *td)
 	else if (td->o.mem_type == MEM_MMAP || td->o.mem_type == MEM_MMAPHUGE ||
 		 td->o.mem_type == MEM_MMAPSHARED)
 		free_mem_mmap(td, total_mem);
+#ifdef CONFIG_CUDA
+	else if (td->o.mem_type == MEM_CUDA_MALLOC)
+		free_mem_cudamalloc(td);
+#endif
 	else
 		log_err("Bad memory type %u\n", td->o.mem_type);
 

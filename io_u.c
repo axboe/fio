@@ -1654,6 +1654,10 @@ struct io_u *get_io_u(struct thread_data *td)
 				populate_verify_io_u(td, io_u);
 				do_scramble = 0;
 			}
+#ifdef CONFIG_CUDA
+			if (td->o.mem_type == MEM_CUDA_MALLOC)
+				do_scramble = 0;
+#endif
 		} else if (io_u->ddir == DDIR_READ) {
 			/*
 			 * Reset the buf_filled parameters so next time if the
@@ -1674,8 +1678,10 @@ out:
 	if (!td_io_prep(td, io_u)) {
 		if (!td->o.disable_lat)
 			fio_gettime(&io_u->start_time, NULL);
+
 		if (do_scramble)
 			small_content_scramble(io_u);
+
 		return io_u;
 	}
 err_put:
@@ -2042,6 +2048,10 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned int min_write,
 		    unsigned int max_bs)
 {
 	struct thread_options *o = &td->o;
+
+#ifdef CONFIG_CUDA
+	if (o->mem_type == MEM_CUDA_MALLOC)	return;
+#endif
 
 	if (o->compress_percentage || o->dedupe_percentage) {
 		unsigned int perc = td->o.compress_percentage;
