@@ -2479,9 +2479,10 @@ static int add_bw_samples(struct thread_data *td, struct timeval *t)
 	td_io_u_unlock(td);
 
 	if (spent <= td->o.bw_avg_time)
-		return min(next_log, td->o.bw_avg_time);
+		next = td->o.bw_avg_time;
+	else
+		next = td->o.bw_avg_time - (1 + spent - td->o.bw_avg_time);
 
-	next = td->o.bw_avg_time - (1 + spent - td->o.bw_avg_time);
 	return min(next, next_log);
 }
 
@@ -2554,9 +2555,10 @@ static int add_iops_samples(struct thread_data *td, struct timeval *t)
 	td_io_u_unlock(td);
 
 	if (spent <= td->o.iops_avg_time)
-		return min(next_log, td->o.iops_avg_time);
+		next = td->o.iops_avg_time;
+	else
+		next = td->o.iops_avg_time - (1 + spent - td->o.iops_avg_time);
 
-	next = td->o.iops_avg_time - (1 + spent - td->o.iops_avg_time);
 	return min(next, next_log);
 }
 
