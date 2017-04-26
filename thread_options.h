@@ -20,9 +20,7 @@ enum fio_memtype {
 	MEM_MMAP,	/* use anonynomous mmap */
 	MEM_MMAPHUGE,	/* memory mapped huge file */
 	MEM_MMAPSHARED, /* use mmap with shared flag */
-#ifdef CONFIG_CUDA
 	MEM_CUDA_MALLOC,/* use GPU memory */
-#endif
 };
 
 #define ERROR_STR_MAX	128
@@ -472,6 +470,8 @@ struct thread_options_pack {
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
 	uint8_t log_gz_cpumask[FIO_TOP_STR_MAX];
 #endif
+	uint32_t gpu_dev_id;
+	uint32_t pad;
 	uint32_t cpus_allowed_policy;
 	uint32_t iolog;
 	uint32_t rwmixcycle;
