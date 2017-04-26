@@ -339,7 +339,6 @@ struct thread_options_pack {
 	uint32_t iodepth_batch;
 	uint32_t iodepth_batch_complete_min;
 	uint32_t iodepth_batch_complete_max;
-	uint32_t __proper_alignment_for_64b;
 
 	uint64_t size;
 	uint64_t io_size;
@@ -414,7 +413,6 @@ struct thread_options_pack {
 	uint32_t bs_unaligned;
 	uint32_t fsync_on_close;
 	uint32_t bs_is_seq_rand;
-	uint32_t pad1;
 
 	uint32_t random_distribution;
 	uint32_t exitall_error;
