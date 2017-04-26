@@ -2003,7 +2003,7 @@ int main(int argc, char **argv)
   return cuInit(0);
 }
 EOF
-if test "$enable_cuda" == "yes"  && compile_prog "" "-lcuda" "cuda"; then
+if test "$enable_cuda" = "yes" && compile_prog "" "-lcuda" "cuda"; then
   cuda="yes"
   LIBS="-lcuda $LIBS"
 fi
