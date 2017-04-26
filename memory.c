@@ -207,10 +207,9 @@ static void free_mem_malloc(struct thread_data *td)
 	free(td->orig_buffer);
 }
 
-#ifdef CONFIG_CUDA
-
 static int alloc_mem_cudamalloc(struct thread_data *td, size_t total_mem)
 {
+#ifdef CONFIG_CUDA
 	CUresult ret;
 	char name[128];
 
@@ -264,17 +263,21 @@ static int alloc_mem_cudamalloc(struct thread_data *td, size_t total_mem)
 	dprint(FD_MEM, "cudaMalloc %llu %p\n",				\
 	       (unsigned long long) total_mem, td->orig_buffer);
 	return 0;
+#else
+	return -EINVAL;
+#endif
 }
 
 static void free_mem_cudamalloc(struct thread_data *td)
 {
-	if ((void *) td->dev_mem_ptr != NULL)
+#ifdef CONFIG_CUDA
+	if (td->dev_mem_ptr != NULL)
 		cuMemFree(td->dev_mem_ptr);
 
 	if (cuCtxDestroy(td->cu_ctx) != CUDA_SUCCESS)
 		log_err("fio: failed to destroy cuda context\n");
-}
 #endif
+}
 
 /*
  * Set up the buffer area we need for io.
@@ -315,10 +318,8 @@ int allocate_io_mem(struct thread_data *td)
 	else if (td->o.mem_type == MEM_MMAP || td->o.mem_type == MEM_MMAPHUGE ||
 		 td->o.mem_type == MEM_MMAPSHARED)
 		ret = alloc_mem_mmap(td, total_mem);
-#ifdef CONFIG_CUDA
 	else if (td->o.mem_type == MEM_CUDA_MALLOC)
 		ret = alloc_mem_cudamalloc(td, total_mem);
-#endif
 	else {
 		log_err("fio: bad mem type: %d\n", td->o.mem_type);
 		ret = 1;
@@ -348,10 +349,8 @@ void free_io_mem(struct thread_data *td)
 	else if (td->o.mem_type == MEM_MMAP || td->o.mem_type == MEM_MMAPHUGE ||
 		 td->o.mem_type == MEM_MMAPSHARED)
 		free_mem_mmap(td, total_mem);
-#ifdef CONFIG_CUDA
 	else if (td->o.mem_type == MEM_CUDA_MALLOC)
 		free_mem_cudamalloc(td);
-#endif
 	else
 		log_err("Bad memory type %u\n", td->o.mem_type);
 

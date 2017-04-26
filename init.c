@@ -1070,6 +1070,9 @@ static void init_flags(struct thread_data *td)
 
 	if (o->verify_async || o->io_submit_mode == IO_MODE_OFFLOAD)
 		td->flags |= TD_F_NEED_LOCK;
+
+	if (o->mem_type == MEM_CUDA_MALLOC)
+		td->flags &= ~TD_F_SCRAMBLE_BUFFERS;
 }
 
 static int setup_random_seeds(struct thread_data *td)
