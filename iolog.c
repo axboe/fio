@@ -284,7 +284,8 @@ restart:
 			td->io_hist_len--;
 			rb_erase(parent, &td->io_hist_tree);
 			remove_trim_entry(td, __ipo);
-			free(__ipo);
+			if (!(__ipo->flags & IP_F_IN_FLIGHT))
+				free(__ipo);
 			goto restart;
 		}
 	}
