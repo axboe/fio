@@ -696,7 +696,7 @@ void free_log(struct io_log *log)
 	sfree(log);
 }
 
-inline unsigned long hist_sum(int j, int stride, unsigned int *io_u_plat,
+unsigned long hist_sum(int j, int stride, unsigned int *io_u_plat,
 		unsigned int *io_u_plat_last)
 {
 	unsigned long sum;
