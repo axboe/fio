@@ -20,6 +20,10 @@
 #include "binject.h"
 #include "../file.h"
 
+#ifndef __has_builtin         // Optional of course.
+  #define __has_builtin(x) 0  // Compatibility with non-clang compilers.
+#endif
+
 #define FIO_HAVE_DISK_UTIL
 #define FIO_HAVE_IOSCHED_SWITCH
 #define FIO_HAVE_IOPRIO
@@ -219,9 +223,19 @@ static inline long os_random_long(os_random_state_t *rs)
 #define FIO_O_NOATIME	0
 #endif
 
-#define fio_swap16(x)	__bswap_16(x)
-#define fio_swap32(x)	__bswap_32(x)
-#define fio_swap64(x)	__bswap_64(x)
+/* Check for GCC or Clang byte swap intrinsics */
+#if (__has_builtin(__builtin_bswap16) && __has_builtin(__builtin_bswap32) \
+     && __has_builtin(__builtin_bswap64)) || (__GNUC__ > 4 \
+     || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)) /* fio_swapN */
+#define fio_swap16(x)	__builtin_bswap16(x)
+#define fio_swap32(x)	__builtin_bswap32(x)
+#define fio_swap64(x)	__builtin_bswap64(x)
+#else
+#include <byteswap.h>
+#define fio_swap16(x)	bswap_16(x)
+#define fio_swap32(x)	bswap_32(x)
+#define fio_swap64(x)	bswap_64(x)
+#endif /* fio_swapN */
 
 #define CACHE_LINE_FILE	\
 	"/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
