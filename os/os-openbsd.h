@@ -68,7 +68,7 @@ static inline unsigned long long os_phys_mem(void)
 
 static inline int gettid(void)
 {
-	return (int) pthread_self();
+	return (int)(intptr_t) pthread_self();
 }
 
 static inline unsigned long long get_fs_free_size(const char *path)
