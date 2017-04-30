@@ -14,7 +14,6 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include "../lib/rbtree.h"
 #include "../flist.h"
 #include "../log.h"
 #include "../mutex.h"
@@ -25,6 +24,7 @@
 #include "../os/os.h"
 #include "../gettime.h"
 #include "../fio_time.h"
+#include "../lib/rbtree.h"
 
 #include "../lib/bloom.h"
 #include "debug.h"
