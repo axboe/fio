@@ -84,14 +84,14 @@ static inline int shmctl (int __shmid, int __cmd, struct shmid_ds *__buf)
 static inline int shmget (key_t __key, size_t __size, int __shmflg)
 {
 	int fd,ret;
-	char key[11];
-	
+	char keybuf[11];
+
 	fd = open(ASHMEM_DEVICE, O_RDWR);
 	if (fd < 0)
 		return fd;
 
-	sprintf(key,"%d",__key);
-	ret = ioctl(fd, ASHMEM_SET_NAME, key);
+	sprintf(keybuf,"%d",__key);
+	ret = ioctl(fd, ASHMEM_SET_NAME, keybuf);
 	if (ret < 0)
 		goto error;
 
@@ -100,7 +100,7 @@ static inline int shmget (key_t __key, size_t __size, int __shmflg)
 		goto error;
 
 	return fd;
-	
+
 error:
 	close(fd);
 	return ret;
