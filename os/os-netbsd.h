@@ -25,7 +25,7 @@
 #define FIO_HAVE_FS_STAT
 #define FIO_HAVE_GETTID
 
-#undef	FIO_HAVE_CPU_AFFINITY	/* XXX notyet */
+#undef	FIO_HAVE_CPU_AFFINITY	/* doesn't exist */
 
 #define OS_MAP_ANON		MAP_ANON
 
