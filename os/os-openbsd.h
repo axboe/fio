@@ -9,6 +9,7 @@
 #include <sys/ioctl.h>
 #include <sys/dkio.h>
 #include <sys/disklabel.h>
+#include <sys/utsname.h>
 /* XXX hack to avoid conflicts between rbtree.h and <sys/tree.h> */
 #include <sys/sysctl.h>
 #undef RB_BLACK
@@ -90,9 +91,31 @@ static inline unsigned long long get_fs_free_size(const char *path)
 
 static inline int shm_attach_to_open_removed(void)
 {
+	struct utsname uts;
+	int major, minor;
+
+	if (uname(&uts) == -1)
+		return 0;
+
 	/*
-	 * XXX: Return 1 if >= OpenBSD 5.1 according to 97900ebf.
+	 * Return 1 if >= OpenBSD 5.1 according to 97900ebf,
+	 * assuming both major/minor versions are < 10.
 	 */
+	if (uts.release[0] > '9' || uts.release[0] < '0')
+		return 0;
+	if (uts.release[1] != '.')
+		return 0;
+	if (uts.release[2] > '9' || uts.release[2] < '0')
+		return 0;
+
+	major = uts.release[0] - '0';
+	minor = uts.release[2] - '0';
+
+	if (major > 5)
+		return 1;
+	if (major == 5 && minor >= 1)
+		return 1;
+
 	return 0;
 }
 
