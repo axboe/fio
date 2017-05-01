@@ -57,18 +57,17 @@
 #define MAP_HUGETLB 0x40000 /* arch specific */
 #endif
 
-
+#ifndef CONFIG_NO_SHM
 /*
  * The Android NDK doesn't currently export <sys/shm.h>, so define the
  * necessary stuff here.
  */
 
-#include <linux/shm.h>
+#include <sys/shm.h>
 #define SHM_HUGETLB    04000
 
 #include <stdio.h>
 #include <linux/ashmem.h>
-#include <sys/mman.h>
 
 #define ASHMEM_DEVICE	"/dev/ashmem"
 
@@ -126,6 +125,7 @@ static inline int shmdt (const void *__shmaddr)
 	size = *ptr;    //find mmap size which we stored at the beginning of the buffer
 	return munmap((void *)ptr, size + sizeof(size_t));
 }
+#endif
 
 #define SPLICE_DEF_SIZE	(64*1024)
 
