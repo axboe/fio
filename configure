@@ -904,6 +904,7 @@ if test "$clockid_t" != "yes" ; then
 fi
 cat > $TMPC << EOF
 #include <time.h>
+#include <string.h>
 int main(int argc, char **argv)
 {
   volatile clockid_t cid;
