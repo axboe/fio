@@ -908,7 +908,7 @@ cat > $TMPC << EOF
 int main(int argc, char **argv)
 {
   volatile clockid_t cid;
-  memset(&cid, 0, sizeof(cid));
+  memset((void*)&cid, 0, sizeof(cid));
   return 0;
 }
 EOF
