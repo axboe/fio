@@ -1243,7 +1243,7 @@ int main(void)
   gdk_threads_enter();
   gdk_threads_leave();
 
-  printf("%d", GTK_CHECK_VERSION(2, 18, 0));
+  return GTK_CHECK_VERSION(2, 18, 0) ? 0 : 1; /* 0 on success */
 }
 EOF
 GTK_CFLAGS=$(pkg-config --cflags gtk+-2.0 gthread-2.0)
@@ -1259,8 +1259,8 @@ if test "$?" != "0" ; then
   exit 1
 fi
 if compile_prog "$GTK_CFLAGS" "$GTK_LIBS" "gfio" ; then
-  r=$($TMPE)
-  if test "$r" != "0" ; then
+  $TMPE
+  if test "$?" = "0" ; then
     gfio="yes"
     GFIO_LIBS="$LIBS $GTK_LIBS"
     CFLAGS="$CFLAGS $GTK_CFLAGS"
