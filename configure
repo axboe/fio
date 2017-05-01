@@ -161,8 +161,7 @@ for opt do
   ;;
   --build-static) build_static="yes"
   ;;
-  --enable-gfio)
-  gfio_check="yes"
+  --enable-gfio) gfio_check="yes"
   ;;
   --disable-numa) disable_numa="yes"
   ;;
@@ -2126,7 +2125,7 @@ if test "$rusage_thread" = "yes" ; then
   output_sym "CONFIG_RUSAGE_THREAD"
 fi
 if test "$gfio" = "yes" ; then
-  echo "CONFIG_GFIO=y" >> $config_host_mak
+  output_sym "CONFIG_GFIO"
 fi
 if test "$esx" = "yes" ; then
   output_sym "CONFIG_ESX"
