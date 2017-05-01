@@ -37,18 +37,41 @@
  *    when ticks is at its maximum value.
  *
  *    So we have
+ *	max_ticks = MAX_CLOCK_SEC * 1000000000 * cycles_per_nsec
  *	max_ticks * clock_mult <= ULLONG_MAX
  *	max_ticks * MULTIPLIER / cycles_per_nsec <= ULLONG_MAX
- *      MULTIPLIER <= ULLONG_MAX / max_ticks * cycles_per_nsec
+ *      MULTIPLIER <= ULLONG_MAX * cycles_per_nsec / max_ticks
  *
  *    Then choose the largest clock_shift that satisfies
- *	2^clock_shift <= ULLONG_MAX / max_ticks * cycles_per_nsec
+ *	2^clock_shift <= ULLONG_MAX * cycles_per_nsec / max_ticks
  *
  *    Finally calculate the appropriate clock_mult associated with clock_shift
  *	clock_mult = 2^clock_shift / cycles_per_nsec
  *
  * 4) In the code below we have cycles_per_usec and use
  *	cycles_per_nsec = cycles_per_usec / 1000
+ *
+ *
+ * The code below implements 4 clock tick to nsec conversion strategies
+ *
+ *   i) 64-bit arithmetic for the (ticks * clock_mult) product with the
+ *	conversion valid for at most MAX_CLOCK_SEC
+ *
+ *  ii) NOT IMPLEMENTED Use 64-bit integers to emulate 128-bit multiplication
+ *	for the (ticks * clock_mult) product
+ *
+ * iii) 64-bit arithmetic with clock ticks to nsec conversion occurring in
+ *	two stages. The first stage counts the number of discrete, large chunks
+ *	of time that have elapsed. To this is added the time represented by
+ *	the remaining clock ticks. The advantage of this strategy is better
+ *	accuracy because the (ticks * clock_mult) product used for final
+ *	fractional chunk
+ *
+ *  iv) 64-bit arithmetic with the clock ticks to nsec conversion occuring in
+ *	two stages. This is carried out using locks to update the number of
+ *	large time chunks (MAX_CLOCK_SEC_2STAGE) that have elapsed.
+ *
+ *   v) 128-bit arithmetic used for the clock ticks to nsec conversion.
  *
  */
 
@@ -57,34 +80,42 @@
 #include <limits.h>
 #include <assert.h>
 #include <stdlib.h>
+#include "lib/seqlock.h"
 
 #define DEBUG 0
 #define MAX_CLOCK_SEC 365*24*60*60ULL
-#define MAX_CLOCK_SEC64 60*60ULL
+#define MAX_CLOCK_SEC_2STAGE 60*60ULL
 #define dprintf(...) if (DEBUG) { printf(__VA_ARGS__); }
 
 enum {
-	__CLOCK_64_BIT		= 1 << 0,
-	__CLOCK_128_BIT		= 1 << 1,
+	__CLOCK64_BIT		= 1 << 0,
+	__CLOCK128_BIT		= 1 << 1,
 	__CLOCK_MULT_SHIFT	= 1 << 2,
 	__CLOCK_EMULATE_128	= 1 << 3,
-	__CLOCK_REDUCE		= 1 << 4,
+	__CLOCK_2STAGE		= 1 << 4,
+	__CLOCK_LOCK		= 1 << 5,
 
-	CLOCK_64_MULT_SHIFT	= __CLOCK_64_BIT | __CLOCK_MULT_SHIFT,
-	CLOCK_64_EMULATE_128	= __CLOCK_64_BIT | __CLOCK_EMULATE_128,
-	CLOCK_64_2STAGE		= __CLOCK_64_BIT | __CLOCK_REDUCE,
-	CLOCK_128_MULT_SHIFT	= __CLOCK_128_BIT | __CLOCK_MULT_SHIFT,
+	CLOCK64_MULT_SHIFT	= __CLOCK64_BIT | __CLOCK_MULT_SHIFT,
+	CLOCK64_EMULATE_128	= __CLOCK64_BIT | __CLOCK_EMULATE_128,
+	CLOCK64_2STAGE		= __CLOCK64_BIT | __CLOCK_2STAGE,
+	CLOCK64_LOCK		= __CLOCK64_BIT | __CLOCK_LOCK,
+	CLOCK128_MULT_SHIFT	= __CLOCK128_BIT | __CLOCK_MULT_SHIFT,
 };
 
-unsigned int clock_shift;
+struct seqlock clock_seqlock;
+unsigned long long cycles_start;
+unsigned long long elapsed_nsec;
+
 unsigned int max_cycles_shift;
 unsigned long long max_cycles_mask;
-unsigned long long *nsecs;
-unsigned long long clock_mult;
 unsigned long long nsecs_for_max_cycles;
+
+unsigned int clock_shift;
+unsigned long long clock_mult;
+
+unsigned long long *nsecs;
 unsigned long long clock_mult64_128[2];
 __uint128_t clock_mult128;
-
 
 /*
  * Functions for carrying out 128-bit
@@ -97,6 +128,8 @@ __uint128_t clock_mult128;
  *
  * a[0] has the less significant bits
  * a[1] has the more significant bits
+ *
+ * NOT FULLY IMPLEMENTED
  */
 void do_mult(unsigned long long a[2], unsigned long long b, unsigned long long product[2])
 {
@@ -127,19 +160,27 @@ void do_shift(unsigned long long a[2], unsigned int count)
 		}
 }
 
-unsigned long long get_nsec(int mode, unsigned long long t)
+void update_clock(unsigned long long t)
+{
+	write_seqlock_begin(&clock_seqlock);
+	elapsed_nsec = (t >> max_cycles_shift) * nsecs_for_max_cycles;
+	cycles_start = t & ~max_cycles_mask;
+	write_seqlock_end(&clock_seqlock);
+}
+
+unsigned long long _get_nsec(int mode, unsigned long long t)
 {
 	switch(mode) {
-		case CLOCK_64_MULT_SHIFT: {
+		case CLOCK64_MULT_SHIFT: {
 			return (t * clock_mult) >> clock_shift;
 		}
-		case CLOCK_64_EMULATE_128: {
+		case CLOCK64_EMULATE_128: {
 			unsigned long long product[2];
 			do_mult(clock_mult64_128, t, product);
 			do_shift(product, clock_shift);
 			return product[0];
 		}
-		case CLOCK_64_2STAGE: {
+		case CLOCK64_2STAGE: {
 			unsigned long long multiples, nsec;
 			multiples = t >> max_cycles_shift;
 			dprintf("multiples=%llu\n", multiples);
@@ -147,7 +188,17 @@ unsigned long long get_nsec(int mode, unsigned long long t)
 			nsec += ((t & max_cycles_mask) * clock_mult) >> clock_shift;
 			return nsec;
 		}
-		case CLOCK_128_MULT_SHIFT: {
+		case CLOCK64_LOCK: {
+			unsigned int seq;
+			unsigned long long nsec;
+			do {
+				seq = read_seqlock_begin(&clock_seqlock);
+				nsec = elapsed_nsec;
+				nsec += ((t - cycles_start) * clock_mult) >> clock_shift;
+			} while (read_seqlock_retry(&clock_seqlock, seq));
+			return nsec;
+		}
+		case CLOCK128_MULT_SHIFT: {
 			return (unsigned long long)((t * clock_mult128) >> clock_shift);
 		}
 		default: {
@@ -156,13 +207,22 @@ unsigned long long get_nsec(int mode, unsigned long long t)
 	}
 }
 
+unsigned long long get_nsec(int mode, unsigned long long t)
+{
+	if (mode == CLOCK64_LOCK) {
+		update_clock(t);
+	}
+
+	return _get_nsec(mode, t);
+}
+
 void calc_mult_shift(int mode, void *mult, unsigned int *shift, unsigned long long max_sec, unsigned long long cycles_per_usec)
 {
 	unsigned long long max_ticks;
 	max_ticks = max_sec * cycles_per_usec * 1000000ULL;
 
 	switch (mode) {
-		case CLOCK_64_MULT_SHIFT: {
+		case CLOCK64_MULT_SHIFT: {
 			unsigned long long max_mult, tmp;
 			unsigned int sft = 0;
 
@@ -189,7 +249,7 @@ void calc_mult_shift(int mode, void *mult, unsigned int *shift, unsigned long lo
 			*((unsigned long long *)mult) = (unsigned long long) ((1ULL << sft) * 1000 / cycles_per_usec);
 			break;
 		}
-		case CLOCK_64_EMULATE_128: {
+		case CLOCK64_EMULATE_128: {
 			unsigned long long max_mult[2], tmp[2];
 			unsigned int sft = 0;
 
@@ -220,28 +280,28 @@ void calc_mult_shift(int mode, void *mult, unsigned int *shift, unsigned long lo
 //			*((unsigned long long *)mult) = (__uint128_t) (((__uint128_t)1 << sft) * 1000 / cycles_per_usec);
 			break;
 		}
-		case CLOCK_64_2STAGE: {
+		case CLOCK64_2STAGE: {
 			unsigned long long tmp;
 /*
  * This clock tick to nsec conversion requires two stages.
  *
- * Stage 1: Determine how many ~MAX_CLOCK_SEC64 periods worth of clock ticks
+ * Stage 1: Determine how many ~MAX_CLOCK_SEC_2STAGE periods worth of clock ticks
  * 	have elapsed and set nsecs to the appropriate value for those
- *	~MAX_CLOCK_SEC64 periods.
- * Stage 2: Subtract the ticks for the elapsed ~MAX_CLOCK_SEC64 periods from
+ *	~MAX_CLOCK_SEC_2STAGE periods.
+ * Stage 2: Subtract the ticks for the elapsed ~MAX_CLOCK_SEC_2STAGE periods from
  *	Stage 1. Convert remaining clock ticks to nsecs and add to previously
  *	set nsec value.
  *
  * To optimize the arithmetic operations, use the greatest power of 2 ticks
- * less than the number of ticks in MAX_CLOCK_SEC64 seconds.
+ * less than the number of ticks in MAX_CLOCK_SEC_2STAGE seconds.
  *
  */
 			// Use a period shorter than MAX_CLOCK_SEC here for better accuracy
-			calc_mult_shift(CLOCK_64_MULT_SHIFT, mult, shift, MAX_CLOCK_SEC64, cycles_per_usec);
+			calc_mult_shift(CLOCK64_MULT_SHIFT, mult, shift, MAX_CLOCK_SEC_2STAGE, cycles_per_usec);
 
-			// Find the greatest power of 2 clock ticks that is less than the ticks in MAX_CLOCK_SEC64
+			// Find the greatest power of 2 clock ticks that is less than the ticks in MAX_CLOCK_SEC_2STAGE
 			max_cycles_shift = max_cycles_mask = 0;
-			tmp = MAX_CLOCK_SEC64 * 1000000ULL * cycles_per_usec;
+			tmp = MAX_CLOCK_SEC_2STAGE * 1000000ULL * cycles_per_usec;
 			dprintf("tmp=%llu, max_cycles_shift=%u\n", tmp, max_cycles_shift);
 			while (tmp > 1) {
 				tmp >>= 1;
@@ -263,7 +323,24 @@ void calc_mult_shift(int mode, void *mult, unsigned int *shift, unsigned long lo
 
 			break;
 		}
-		case CLOCK_128_MULT_SHIFT: {
+		case CLOCK64_LOCK: {
+/*
+ * This clock tick to nsec conversion also requires two stages.
+ *
+ * Stage 1: Add to nsec the current running total of elapsed long periods
+ * Stage 2: Subtract from clock ticks the tick count corresponding to the
+ *	most recently elapsed long period. Convert the remaining ticks to
+ *	nsec and add to the previous nsec value.
+ *
+ * In practice the elapsed nsec from Stage 1 and the tick count subtracted
+ * in Stage 2 will be maintained in a separate thread.
+ *
+ */
+			calc_mult_shift(CLOCK64_2STAGE, mult, shift, MAX_CLOCK_SEC, cycles_per_usec);
+			cycles_start = 0;
+			break;
+		}
+		case CLOCK128_MULT_SHIFT: {
 			__uint128_t max_mult, tmp;
 			unsigned int sft = 0;
 
@@ -290,13 +367,13 @@ void calc_mult_shift(int mode, void *mult, unsigned int *shift, unsigned long lo
 				dprintf("tmp=0x%016llx%016llx, sft=%u\n",
 					(unsigned long long) (tmp >> 64),
 					(unsigned long long) tmp, sft);
- 			}
+			}
 
 			*shift = sft;
 			*((__uint128_t *)mult) = (__uint128_t) (((__uint128_t)1 << sft) * 1000 / cycles_per_usec);
 			break;
- 		}
- 	}
+		}
+	}
 }
 
 int discontinuity(int mode, int delta_ticks, int delta_nsec, unsigned long long start, unsigned long len)
@@ -358,19 +435,23 @@ long long test_clock(int mode, int cycles_per_usec, int fast_test, int quiet, in
 	max_ticks = MAX_CLOCK_SEC * (unsigned long long) cycles_per_usec * 1000000ULL;
 
 	switch(mode) {
-		case CLOCK_64_MULT_SHIFT: {
+		case CLOCK64_MULT_SHIFT: {
 			mult = &clock_mult;
 			break;
 		}
-		case CLOCK_64_EMULATE_128: {
+		case CLOCK64_EMULATE_128: {
 			mult = clock_mult64_128;
 			break;
 		}
-		case CLOCK_64_2STAGE: {
+		case CLOCK64_2STAGE: {
 			mult = &clock_mult;
 			break;
 		}
-		case CLOCK_128_MULT_SHIFT: {
+		case CLOCK64_LOCK: {
+			mult = &clock_mult;
+			break;
+		}
+		case CLOCK128_MULT_SHIFT: {
 			mult = &clock_mult128;
 			break;
 		}
@@ -379,7 +460,7 @@ long long test_clock(int mode, int cycles_per_usec, int fast_test, int quiet, in
 	nsecs = get_nsec(mode, max_ticks);
 	delta = nsecs/1000000 - MAX_CLOCK_SEC*1000;
 
-	if (mode == CLOCK_64_2STAGE) {
+	if (mode == CLOCK64_2STAGE) {
 		test_ns[0] = nsecs_for_max_cycles - 1;
 		test_ns[1] = nsecs_for_max_cycles;
 		test_ticks[0] = (1ULL << max_cycles_shift) - 1;
@@ -397,18 +478,19 @@ long long test_clock(int mode, int cycles_per_usec, int fast_test, int quiet, in
 		printf("cycles_per_usec=%d, delta_ticks=%d, delta_nsec=%d, max_ticks=%llu, shift=%u, 2^shift=%llu\n",
 			cycles_per_usec, delta_ticks, delta_nsec, max_ticks, clock_shift, (1ULL << clock_shift));
 		switch(mode) {
-			case CLOCK_64_2STAGE:
-			case CLOCK_64_MULT_SHIFT: {
+			case CLOCK64_LOCK:
+			case CLOCK64_2STAGE:
+			case CLOCK64_MULT_SHIFT: {
 				printf("clock_mult=%llu, clock_mult / 2^clock_shift=%f\n",
 					clock_mult, (double) clock_mult / (1ULL << clock_shift));
 				break;
 			}
-			case CLOCK_64_EMULATE_128: {
+			case CLOCK64_EMULATE_128: {
 				printf("clock_mult=0x%016llx%016llx\n",
 					clock_mult64_128[1], clock_mult64_128[0]);
 				break;
 			}
-			case CLOCK_128_MULT_SHIFT: {
+			case CLOCK128_MULT_SHIFT: {
 				printf("clock_mult=0x%016llx%016llx\n",
 					(unsigned long long) (clock_mult128 >> 64),
 					(unsigned long long) clock_mult128);
@@ -450,41 +532,41 @@ int main(int argc, char *argv[])
 	assert(nsecs != NULL);
 	days = MAX_CLOCK_SEC / 60 / 60 / 24;
 
-	test_clock(CLOCK_64_2STAGE, 3333, 1, 0, 0, 0);
-//	test_clock(CLOCK_64_MULT_SHIFT, 3333, 1, 0, 0, 0);
-//	test_clock(CLOCK_128_MULT_SHIFT, 3333, 1, 0, 0, 0);
+	test_clock(CLOCK64_LOCK, 3333, 1, 0, 0, 0);
+//	test_clock(CLOCK64_MULT_SHIFT, 3333, 1, 0, 0, 0);
+//	test_clock(CLOCK128_MULT_SHIFT, 3333, 1, 0, 0, 0);
 
 // Test 3 different clock types from 1000 to 10000 MHz
 // and calculate average error
 /*
 	for (i = 1000, mean = 0.0; i <= 10000; i++) {
-		error = test_clock(CLOCK_64_MULT_SHIFT, i, 1, 1, 0, 0);
+		error = test_clock(CLOCK64_MULT_SHIFT, i, 1, 1, 0, 0);
 		errors[i] = error > 0 ? error : -1LL * error;
 		mean += (double) errors[i] / 9000;
 	}
 	printf("  64-bit average error per %d days: %fms\n", days, mean);
 
 	for (i = 1000, mean = 0.0; i <= 10000; i++) {
-		error = test_clock(CLOCK_64_2STAGE, i, 1, 1, 0, 0);
+		error = test_clock(CLOCK64_2STAGE, i, 1, 1, 0, 0);
 		errors[i] = error > 0 ? error : -1LL * error;
 		mean += (double) errors[i] / 9000;
 	}
 	printf("  64-bit two-stage average error per %d days: %fms\n", days, mean);
 
 	for (i = 1000, mean = 0.0; i <= 10000; i++) {
-		error = test_clock(CLOCK_128_MULT_SHIFT, i, 1, 1, 0, 0);
+		error = test_clock(CLOCK128_MULT_SHIFT, i, 1, 1, 0, 0);
 		errors[i] = error > 0 ? error : -1LL * error;
 		mean += (double) errors[i] / 9000;
 	}
 	printf(" 128-bit average error per %d days: %fms\n", days, mean);
 */
-	test_clock(CLOCK_64_2STAGE, 1000, 1, 0, 1, 1);
-	test_clock(CLOCK_64_2STAGE, 1100, 1, 0, 11, 10);
-	test_clock(CLOCK_64_2STAGE, 3000, 1, 0, 3, 1);
-	test_clock(CLOCK_64_2STAGE, 3333, 1, 0, 3333, 1000);
-	test_clock(CLOCK_64_2STAGE, 3392, 1, 0, 424, 125);
-	test_clock(CLOCK_64_2STAGE, 4500, 1, 0, 9, 2);
-	test_clock(CLOCK_64_2STAGE, 5000, 1, 0, 5, 1);
+	test_clock(CLOCK64_LOCK, 1000, 1, 0, 1, 1);
+	test_clock(CLOCK64_LOCK, 1100, 1, 0, 11, 10);
+	test_clock(CLOCK64_LOCK, 3000, 1, 0, 3, 1);
+	test_clock(CLOCK64_LOCK, 3333, 1, 0, 3333, 1000);
+	test_clock(CLOCK64_LOCK, 3392, 1, 0, 424, 125);
+	test_clock(CLOCK64_LOCK, 4500, 1, 0, 9, 2);
+	test_clock(CLOCK64_LOCK, 5000, 1, 0, 5, 1);
 
 	free(nsecs);
 	return 0;
