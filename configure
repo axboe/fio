@@ -612,7 +612,9 @@ echo "POSIX AIO fsync               $posix_aio_fsync"
 
 ##########################################
 # POSIX pshared attribute probe
-posix_pshared="no"
+if test "$posix_pshared" != "yes" ; then
+  posix_pshared="no"
+fi
 cat > $TMPC <<EOF
 #include <unistd.h>
 int main(void)
@@ -1997,7 +1999,9 @@ echo "march_armv8_a_crc_crypto      $march_armv8_a_crc_crypto"
 
 ##########################################
 # cuda probe
-cuda="no"
+if test "$cuda" != "yes" ; then
+  cuda="no"
+fi
 cat > $TMPC << EOF
 #include <cuda.h>
 int main(int argc, char **argv)
