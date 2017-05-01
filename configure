@@ -1279,6 +1279,7 @@ if test "$gfio_check" = "yes" ; then
   echo "gtk 2.18 or higher            $gfio"
 fi
 
+##########################################
 # Check whether we have getrusage(RUSAGE_THREAD)
 if test "$rusage_thread" != "yes" ; then
   rusage_thread="no"
@@ -1473,7 +1474,6 @@ cat > $TMPC << EOF
 
 int main(int argc, char **argv)
 {
-
   rados_t cluster;
   rados_ioctx_t io_ctx;
   const char pool[] = "rbd";
@@ -1591,6 +1591,7 @@ if compile_prog "" "" "setvbuf"; then
 fi
 echo "setvbuf                       $setvbuf"
 
+##########################################
 # check for gfapi
 if test "$gfapi" != "yes" ; then
   gfapi="no"
@@ -1600,7 +1601,6 @@ cat > $TMPC << EOF
 
 int main(int argc, char **argv)
 {
-
   glfs_t *g = glfs_new("foo");
 
   return 0;
@@ -1794,6 +1794,7 @@ echo "NVML pmemblk engine           $pmemblk"
 # Report whether dev-dax engine is enabled
 echo "NVML dev-dax engine           $devdax"
 
+##########################################
 # Check if we have lex/yacc available
 yacc="no"
 yacc_is_bison="no"
