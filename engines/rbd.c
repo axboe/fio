@@ -618,9 +618,6 @@ static int fio_rbd_setup(struct thread_data *td)
 	f = td->files[0];
 	f->real_file_size = info.size;
 
-	/* disconnect, then we were only connected to determine
-	 * the size of the RBD.
-	 */
 	return 0;
 
 disconnect:
