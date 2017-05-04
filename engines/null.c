@@ -139,8 +139,7 @@ static void fio_null_cleanup(struct thread_data *td)
 
 static int fio_null_init(struct thread_data *td)
 {
-	struct null_data *nd = (struct null_data *)td->io_ops_data;
-	return null_init(td, &nd);
+	return null_init(td, (struct null_data **)&td->io_ops_data);
 }
 
 static struct ioengine_ops ioengine = {
