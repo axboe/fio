@@ -1306,8 +1306,17 @@ static int str_buffer_pattern_cb(void *data, const char *input)
 
 	assert(ret != 0);
 	td->o.buffer_pattern_bytes = ret;
-	if (!td->o.compress_percentage)
+
+	/*
+	 * If this job is doing any reading or has compression set,
+	 * ensure that we refill buffers for writes or we could be
+	 * invalidating the pattern through reads.
+	 */
+	if (!td->o.compress_percentage && !td_read(td))
 		td->o.refill_buffers = 0;
+	else
+		td->o.refill_buffers = 1;
+
 	td->o.scramble_buffers = 0;
 	td->o.zero_buffers = 0;
 
