@@ -1,7 +1,7 @@
 #ifndef FIO_TYPES_H
 #define FIO_TYPES_H
 
-#ifndef CONFIG_HAVE_BOOL
+#if !defined(CONFIG_HAVE_BOOL) && !defined(__cplusplus)
 typedef int bool;
 #ifndef false
 #define false	0
