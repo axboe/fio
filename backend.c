@@ -1142,6 +1142,17 @@ static void cleanup_io_u(struct thread_data *td)
 	free_file_completion_logging(td);
 }
 
+static void cleanup_ipo_orphans(struct thread_data *td)
+{
+	struct io_piece *ipo;
+
+	while (!flist_empty(&td->io_orphan_list)) {
+		ipo = flist_first_entry(&td->io_orphan_list, struct io_piece, list);
+		flist_del(&ipo->list);
+		free(ipo);
+	}
+}
+
 static int init_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
@@ -1483,6 +1494,7 @@ static void *thread_main(void *data)
 	INIT_FLIST_HEAD(&td->verify_list);
 	INIT_FLIST_HEAD(&td->trim_list);
 	INIT_FLIST_HEAD(&td->next_rand_list);
+	INIT_FLIST_HEAD(&td->io_orphan_list);
 	td->io_hist_tree = RB_ROOT;
 
 	ret = mutex_cond_init_pshared(&td->io_u_lock, &td->free_cond);
@@ -1825,6 +1837,7 @@ err:
 
 	close_and_free_files(td);
 	cleanup_io_u(td);
+	cleanup_ipo_orphans(td);
 	close_ioengine(td);
 	cgroup_shutdown(td, &cgroup_mnt);
 	verify_free_state(td);
