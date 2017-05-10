@@ -231,13 +231,12 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	 * writes. In this case, just reading back data in the order we wrote
 	 * it out is the faster but still safe.
 	 *
-	 * One exception is if we don't have a random map AND we are doing
-	 * verifies, in that case we need to check for duplicate blocks and
-	 * drop the old one, which we rely on the rb insert/lookup for
-	 * handling.
+	 * One exception is if we don't have a random map in which case we need
+	 * to check for duplicate blocks and drop the old one, which we rely on
+	 * the rb insert/lookup for handling.
 	 */
 	if (((!td->o.verifysort) || !td_random(td)) &&
-	      (file_randommap(td, ipo->file) || td->o.verify == VERIFY_NONE)) {
+	      file_randommap(td, ipo->file)) {
 		INIT_FLIST_HEAD(&ipo->list);
 		flist_add_tail(&ipo->list, &td->io_hist_list);
 		ipo->flags |= IP_F_ONLIST;
