@@ -315,11 +315,9 @@ static inline void make_pos_h_l(unsigned long *pos_h, unsigned long *pos_l,
 				off_t offset)
 {
 #if BITS_PER_LONG == 64
-#warning 64
 	*pos_l = offset;
 	*pos_h = 0;
 #else
-#warning 32
 	*pos_l = offset & 0xffffffff;
 	*pos_h = ((uint64_t) offset) >> 32;
 #endif
