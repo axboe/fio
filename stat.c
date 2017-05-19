@@ -2465,7 +2465,7 @@ static int __add_samples(struct thread_data *td, struct timeval *parent_tv,
 
 		add_stat_sample(&stat[ddir], rate);
 
-		if (td->bw_log) {
+		if (log) {
 			unsigned int bs = 0;
 
 			if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
@@ -2541,12 +2541,14 @@ int calc_log_samples(void)
 			next = min(td->o.iops_avg_time, td->o.bw_avg_time);
 			continue;
 		}
-		if (td->bw_log && !per_unit_log(td->bw_log)) {
+		if (!td->bw_log ||
+			(td->bw_log && !per_unit_log(td->bw_log))) {
 			tmp = add_bw_samples(td, &now);
 			if (tmp < next)
 				next = tmp;
 		}
-		if (td->iops_log && !per_unit_log(td->iops_log)) {
+		if (!td->iops_log ||
+			(td->iops_log && !per_unit_log(td->iops_log))) {
 			tmp = add_iops_samples(td, &now);
 			if (tmp < next)
 				next = tmp;
