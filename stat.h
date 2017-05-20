@@ -242,16 +242,16 @@ struct jobs_eta {
 	uint32_t nr_pending;
 	uint32_t nr_setting_up;
 
-	uint32_t files_open;
-
 	uint64_t m_rate[DDIR_RWDIR_CNT], t_rate[DDIR_RWDIR_CNT];
-	uint32_t m_iops[DDIR_RWDIR_CNT], t_iops[DDIR_RWDIR_CNT];
 	uint64_t rate[DDIR_RWDIR_CNT];
+	uint32_t m_iops[DDIR_RWDIR_CNT], t_iops[DDIR_RWDIR_CNT];
 	uint32_t iops[DDIR_RWDIR_CNT];
 	uint64_t elapsed_sec;
 	uint64_t eta_sec;
 	uint32_t is_pow2;
 	uint32_t unit_base;
+
+	uint32_t files_open;
 
 	/*
 	 * Network 'copy' of run_str[]

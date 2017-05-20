@@ -353,14 +353,17 @@ int initialize_fio(char *envp[])
 	 * can run into problems on archs that fault on unaligned fp
 	 * access (ARM).
 	 */
+	compiletime_assert((offsetof(struct thread_data, ts) % sizeof(void *)) == 0, "ts");
 	compiletime_assert((offsetof(struct thread_stat, percentile_list) % 8) == 0, "stat percentile_list");
 	compiletime_assert((offsetof(struct thread_stat, total_run_time) % 8) == 0, "total_run_time");
 	compiletime_assert((offsetof(struct thread_stat, total_err_count) % 8) == 0, "total_err_count");
 	compiletime_assert((offsetof(struct thread_stat, latency_percentile) % 8) == 0, "stat latency_percentile");
+	compiletime_assert((offsetof(struct thread_data, ts.clat_stat) % 8) == 0, "ts.clat_stat");
 	compiletime_assert((offsetof(struct thread_options_pack, zipf_theta) % 8) == 0, "zipf_theta");
 	compiletime_assert((offsetof(struct thread_options_pack, pareto_h) % 8) == 0, "pareto_h");
 	compiletime_assert((offsetof(struct thread_options_pack, percentile_list) % 8) == 0, "percentile_list");
 	compiletime_assert((offsetof(struct thread_options_pack, latency_percentile) % 8) == 0, "latency_percentile");
+	compiletime_assert((offsetof(struct jobs_eta, m_rate) % 8) == 0, "m_rate");
 
 	err = endian_check();
 	if (err) {
