@@ -340,9 +340,13 @@ static void json_print_array(struct json_array *array, struct buf_output *out)
 static void json_print_value(struct json_value *value, struct buf_output *out)
 {
 	switch (value->type) {
-	case JSON_TYPE_STRING:
-		log_buf(out, "\"%s\"", value->string);
-		break;
+	case JSON_TYPE_STRING: {
+			const char delimiter = '"';
+			buf_output_add(out, &delimiter, sizeof(delimiter));
+			buf_output_add(out, value->string, strlen(value->string));
+			buf_output_add(out, &delimiter, sizeof(delimiter));
+			break;
+		}
 	case JSON_TYPE_INTEGER:
 		log_buf(out, "%lld", value->integer_number);
 		break;
