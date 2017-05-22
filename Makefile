@@ -140,7 +140,7 @@ ifeq ($(CONFIG_TARGET_OS), Linux)
   LDFLAGS += -rdynamic
 endif
 ifeq ($(CONFIG_TARGET_OS), Android)
-  SOURCE += diskutil.c fifo.c blktrace.c trim.c profiles/tiobench.c \
+  SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c profiles/tiobench.c \
 		oslib/linux-dev-lookup.c
   LIBS += -ldl
   LDFLAGS += -rdynamic
