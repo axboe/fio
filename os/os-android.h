@@ -96,7 +96,8 @@ static inline int shmget(key_t __key, size_t __size, int __shmflg)
 	if (ret < 0)
 		goto error;
 
-	ret = ioctl(fd, ASHMEM_SET_SIZE, __size);
+	/* Stores size in first 8 bytes, allocate extra space */
+	ret = ioctl(fd, ASHMEM_SET_SIZE, __size + sizeof(uint64_t));
 	if (ret < 0)
 		goto error;
 
@@ -109,19 +110,20 @@ error:
 
 static inline void *shmat(int __shmid, const void *__shmaddr, int __shmflg)
 {
-	size_t *ptr, size = ioctl(__shmid, ASHMEM_GET_SIZE, NULL);
-	ptr = mmap(NULL, size + sizeof(size_t), PROT_READ | PROT_WRITE, MAP_SHARED, __shmid, 0);
-	*ptr = size;    //save size at beginning of buffer, for use with munmap
-	return &ptr[1];
+	size_t size = ioctl(__shmid, ASHMEM_GET_SIZE, NULL);
+	/* Needs to be 8-byte aligned to prevent SIGBUS on 32-bit ARM */
+	uint64_t *ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, __shmid, 0);
+	/* Save size at beginning of buffer, for use with munmap */
+	*ptr = size;
+	return ptr + 1;
 }
 
 static inline int shmdt (const void *__shmaddr)
 {
-	size_t *ptr, size;
-	ptr = (size_t *)__shmaddr;
-	ptr--;
-	size = *ptr;    //find mmap size which we stored at the beginning of the buffer
-	return munmap((void *)ptr, size + sizeof(size_t));
+	/* Find mmap size which we stored at the beginning of the buffer */
+	uint64_t *ptr = (uint64_t *)__shmaddr - 1;
+	size_t size = *ptr;
+	return munmap(ptr, size);
 }
 #endif
 
