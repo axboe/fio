@@ -59,19 +59,17 @@
 
 #ifndef CONFIG_NO_SHM
 /*
- * The Android NDK doesn't currently export <sys/shm.h>, so define the
- * necessary stuff here.
+ * Bionic doesn't support SysV shared memeory, so implement it using ashmem
  */
-
-#include <sys/shm.h>
-#define SHM_HUGETLB    04000
-
 #include <stdio.h>
 #include <linux/ashmem.h>
+#include <linux/shm.h>
+#define shmid_ds shmid64_ds
+#define SHM_HUGETLB    04000
 
 #define ASHMEM_DEVICE	"/dev/ashmem"
 
-static inline int shmctl (int __shmid, int __cmd, struct shmid_ds *__buf)
+static inline int shmctl(int __shmid, int __cmd, struct shmid_ds *__buf)
 {
 	int ret=0;
 	if (__cmd == IPC_RMID)
@@ -84,7 +82,7 @@ static inline int shmctl (int __shmid, int __cmd, struct shmid_ds *__buf)
 	return ret;
 }
 
-static inline int shmget (key_t __key, size_t __size, int __shmflg)
+static inline int shmget(key_t __key, size_t __size, int __shmflg)
 {
 	int fd,ret;
 	char keybuf[11];
@@ -109,7 +107,7 @@ error:
 	return ret;
 }
 
-static inline void *shmat (int __shmid, const void *__shmaddr, int __shmflg)
+static inline void *shmat(int __shmid, const void *__shmaddr, int __shmflg)
 {
 	size_t *ptr, size = ioctl(__shmid, ASHMEM_GET_SIZE, NULL);
 	ptr = mmap(NULL, size + sizeof(size_t), PROT_READ | PROT_WRITE, MAP_SHARED, __shmid, 0);
