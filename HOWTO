@@ -1290,7 +1290,7 @@ Block size
 			means default for reads, 8k for writes and trims.
 
 		**bs=,8k,**
-			means default for reads, 8k for writes, and default for writes.
+			means default for reads, 8k for writes, and default for trims.
 
 .. option:: blocksize_range=irange[,irange][,irange], bsrange=irange[,irange][,irange]
 
