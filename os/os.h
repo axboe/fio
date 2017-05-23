@@ -60,11 +60,6 @@ typedef struct aiocb os_aiocb_t;
 #endif
 #endif
 
-#ifdef FIO_HAVE_SGIO
-#include <linux/fs.h>
-#include <scsi/sg.h>
-#endif
-
 #ifndef CONFIG_STRSEP
 #include "../oslib/strsep.h"
 #endif

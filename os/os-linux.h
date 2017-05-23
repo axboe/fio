@@ -16,6 +16,8 @@
 #include <linux/unistd.h>
 #include <linux/raw.h>
 #include <linux/major.h>
+#include <linux/fs.h>
+#include <scsi/sg.h>
 
 #include "./os-linux-syscall.h"
 #include "binject.h"
