@@ -116,7 +116,6 @@ int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 ssize_t pread(int fildes, void *buf, size_t nbyte, off_t offset);
 ssize_t pwrite(int fildes, const void *buf, size_t nbyte,
 		off_t offset);
-extern void td_fill_rand_seeds(struct thread_data *);
 
 static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
@@ -239,7 +238,7 @@ static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
 	return 0;
 }
 
-static inline int init_random_state(struct thread_data *td, unsigned long *rand_seeds, int size)
+static inline int init_random_seeds(unsigned long *rand_seeds, int size)
 {
 	HCRYPTPROV hCryptProv;
 
@@ -258,7 +257,6 @@ static inline int init_random_state(struct thread_data *td, unsigned long *rand_
 	}
 
 	CryptReleaseContext(hCryptProv, 0);
-	td_fill_rand_seeds(td);
 	return 0;
 }
 

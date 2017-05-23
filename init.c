@@ -1080,8 +1080,12 @@ static int setup_random_seeds(struct thread_data *td)
 	unsigned long seed;
 	unsigned int i;
 
-	if (!td->o.rand_repeatable && !fio_option_is_set(&td->o, rand_seed))
-		return init_random_state(td, td->rand_seeds, sizeof(td->rand_seeds));
+	if (!td->o.rand_repeatable && !fio_option_is_set(&td->o, rand_seed)) {
+		int ret = init_random_seeds(td->rand_seeds, sizeof(td->rand_seeds));
+		if (!ret)
+			td_fill_rand_seeds(td);
+		return ret;
+	}
 
 	seed = td->o.rand_seed;
 	for (i = 0; i < 4; i++)
@@ -1376,7 +1380,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	prev_group_jobs++;
 
 	if (setup_random_seeds(td)) {
-		td_verror(td, errno, "init_random_state");
+		td_verror(td, errno, "setup_random_seeds");
 		goto err;
 	}
 

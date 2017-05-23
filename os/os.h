@@ -303,12 +303,7 @@ static inline long os_random_long(os_random_state_t *rs)
 #endif
 
 #ifdef FIO_USE_GENERIC_INIT_RANDOM_STATE
-extern void td_fill_rand_seeds(struct thread_data *td);
-/*
- * Initialize the various random states we need (random io, block size ranges,
- * read/write mix, etc).
- */
-static inline int init_random_state(struct thread_data *td, unsigned long *rand_seeds, int size)
+static inline int init_random_seeds(unsigned long *rand_seeds, int size)
 {
 	int fd;
 
@@ -323,7 +318,6 @@ static inline int init_random_state(struct thread_data *td, unsigned long *rand_
 	}
 
 	close(fd);
-	td_fill_rand_seeds(td);
 	return 0;
 }
 #endif
