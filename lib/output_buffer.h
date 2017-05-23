@@ -12,6 +12,6 @@ struct buf_output {
 void buf_output_init(struct buf_output *out);
 void buf_output_free(struct buf_output *out);
 size_t buf_output_add(struct buf_output *out, const char *buf, size_t len);
-size_t buf_output_flush(struct buf_output *out);
+void buf_output_clear(struct buf_output *out);
 
 #endif

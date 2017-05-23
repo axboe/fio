@@ -8,6 +8,12 @@
 
 size_t log_info_buf(const char *buf, size_t len)
 {
+	/*
+	 * buf could be NULL (not just "").
+	 */
+	if (!buf)
+		return 0;
+
 	if (is_backend) {
 		size_t ret = fio_server_text_output(FIO_LOG_INFO, buf, len);
 		if (ret != -1)

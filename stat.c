@@ -1825,8 +1825,10 @@ void __show_run_stats(void)
 	}
 
 	for (i = 0; i < FIO_OUTPUT_NR; i++) {
-		buf_output_flush(&output[i]);
-		buf_output_free(&output[i]);
+		struct buf_output *out = &output[i];
+		log_info_buf(out->buf, out->buflen);
+		buf_output_clear(out);
+		buf_output_free(out);
 	}
 
 	log_info_flush();
