@@ -10,6 +10,7 @@
 
 #include "flist.h"
 #include "fio.h"
+#include "blktrace.h"
 #include "blktrace_api.h"
 #include "oslib/linux-dev-lookup.h"
 

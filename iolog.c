@@ -19,6 +19,7 @@
 #include "trim.h"
 #include "filelock.h"
 #include "smalloc.h"
+#include "blktrace.h"
 
 static int iolog_flush(struct io_log *log);
 
