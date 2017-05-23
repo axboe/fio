@@ -1682,7 +1682,7 @@ int main(int argc, char **argv)
 EOF
 if compile_prog "" "" "s390_z196_facilities"; then
   $TMPE
-  if [[ $? -eq 0 ]]; then
+  if [ $? -eq 0 ]; then
   	s390_z196_facilities="yes"
   fi
 fi
