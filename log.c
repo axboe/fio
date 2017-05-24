@@ -29,78 +29,66 @@ size_t log_info_buf(const char *buf, size_t len)
 		return fwrite(buf, len, 1, f_out);
 }
 
-size_t log_valist(const char *str, va_list args)
+static size_t valist_to_buf(char **buffer, const char *fmt, va_list src_args)
 {
 	size_t len, cur = LOG_START_SZ;
-	char *buffer;
+	va_list args;
 
 	do {
-		buffer = calloc(1, cur);
+		*buffer = calloc(1, cur);
 
-		len = vsnprintf(buffer, cur, str, args);
+		va_copy(args, src_args);
+		len = vsnprintf(*buffer, cur, fmt, args);
+		va_end(args);
+
 		if (len < cur)
 			break;
 
 		cur = len + 1;
-		free(buffer);
+		free(*buffer);
 	} while (1);
 
-	cur = log_info_buf(buffer, len);
+	return len;
+}
+
+size_t log_valist(const char *fmt, va_list args)
+{
+	char *buffer;
+	size_t len;
+
+	len = valist_to_buf(&buffer, fmt, args);
+	len = log_info_buf(buffer, len);
 	free(buffer);
 
-	return cur;
+	return len;
 }
 
 size_t log_info(const char *format, ...)
 {
-	size_t len, cur = LOG_START_SZ;
-	char *buffer;
 	va_list args;
+	size_t ret;
 
-	do {
-		buffer = calloc(1, cur);
+	va_start(args, format);
+	ret = log_valist(format, args);
+	va_end(args);
 
-		va_start(args, format);
-		len = vsnprintf(buffer, cur, format, args);
-		va_end(args);
-
-		if (len < cur)
-			break;
-
-		cur = len + 1;
-		free(buffer);
-	} while (1);
-
-	cur = log_info_buf(buffer, len);
-	free(buffer);
-
-	return cur;
+	return ret;
 }
 
 size_t __log_buf(struct buf_output *buf, const char *format, ...)
 {
-	size_t len, cur = LOG_START_SZ;
 	char *buffer;
 	va_list args;
+	size_t len;
 
-	do {
-		buffer = calloc(1, cur);
+	va_start(args, format);
+	len = valist_to_buf(&buffer, format, args);
+	va_end(args);
 
-		va_start(args, format);
-		len = vsnprintf(buffer, cur, format, args);
-		va_end(args);
-
-		if (len < cur)
-			break;
-
-		cur = len + 1;
-		free(buffer);
-	} while (1);
-
-	cur = buf_output_add(buf, buffer, len);
+	len = buf_output_add(buf, buffer, len);
 	free(buffer);
 
-	return cur;
+	return len;
 }
 
 int log_info_flush(void)
@@ -113,24 +101,13 @@ int log_info_flush(void)
 
 size_t log_err(const char *format, ...)
 {
-	size_t ret, len, cur = LOG_START_SZ;
+	size_t ret, len;
 	char *buffer;
 	va_list args;
 
-	do {
-		buffer = calloc(1, cur);
-
-		va_start(args, format);
-		len = vsnprintf(buffer, cur, format, args);
-		va_end(args);
-
-		if (len < cur)
-			break;
-
-		cur = len + 1;
-		free(buffer);
-	} while (1);
-
+	va_start(args, format);
+	len = valist_to_buf(&buffer, format, args);
+	va_end(args);
 
 	if (is_backend) {
 		ret = fio_server_text_output(FIO_LOG_ERR, buffer, len);
