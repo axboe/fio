@@ -38,10 +38,10 @@ size_t log_valist(const char *str, va_list args)
 		buffer = calloc(1, cur);
 
 		len = vsnprintf(buffer, cur, str, args);
-		if (len <= cur)
+		if (len < cur)
 			break;
 
-		cur = len;
+		cur = len + 1;
 		free(buffer);
 	} while (1);
 
@@ -64,10 +64,10 @@ size_t log_info(const char *format, ...)
 		len = vsnprintf(buffer, cur, format, args);
 		va_end(args);
 
-		if (len <= cur)
+		if (len < cur)
 			break;
 
-		cur = len;
+		cur = len + 1;
 		free(buffer);
 	} while (1);
 
@@ -90,10 +90,10 @@ size_t __log_buf(struct buf_output *buf, const char *format, ...)
 		len = vsnprintf(buffer, cur, format, args);
 		va_end(args);
 
-		if (len <= cur)
+		if (len < cur)
 			break;
 
-		cur = len;
+		cur = len + 1;
 		free(buffer);
 	} while (1);
 
@@ -124,10 +124,10 @@ size_t log_err(const char *format, ...)
 		len = vsnprintf(buffer, cur, format, args);
 		va_end(args);
 
-		if (len <= cur)
+		if (len < cur)
 			break;
 
-		cur = len;
+		cur = len + 1;
 		free(buffer);
 	} while (1);
 
