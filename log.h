@@ -16,13 +16,15 @@ extern size_t log_valist(const char *str, va_list);
 extern size_t log_info_buf(const char *buf, size_t len);
 extern int log_info_flush(void);
 
-#define log_buf(buf, format, args...)		\
-do {						\
-	if ((buf) != NULL)			\
-		__log_buf(buf, format, ##args);	\
-	else					\
-		log_info(format, ##args);	\
-} while (0)
+#define log_buf(buf, format, args...)			\
+({							\
+	size_t __ret;					\
+	if ((buf) != NULL)				\
+		__ret = __log_buf(buf, format, ##args);	\
+	else						\
+		__ret = log_info(format, ##args);	\
+	__ret;						\
+})
 
 enum {
 	FIO_LOG_DEBUG	= 1,
