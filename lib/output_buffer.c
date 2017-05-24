@@ -17,6 +17,7 @@ void buf_output_init(struct buf_output *out)
 void buf_output_free(struct buf_output *out)
 {
 	free(out->buf);
+	buf_output_init(out);
 }
 
 size_t buf_output_add(struct buf_output *out, const char *buf, size_t len)
@@ -38,12 +39,4 @@ size_t buf_output_add(struct buf_output *out, const char *buf, size_t len)
 	memcpy(&out->buf[out->buflen], buf, len);
 	out->buflen += len;
 	return len;
-}
-
-void buf_output_clear(struct buf_output *out)
-{
-	if (out->buflen) {
-		memset(out->buf, 0, out->max_buflen);
-		out->buflen = 0;
-	}
 }

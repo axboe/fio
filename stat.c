@@ -1826,8 +1826,8 @@ void __show_run_stats(void)
 
 	for (i = 0; i < FIO_OUTPUT_NR; i++) {
 		struct buf_output *out = &output[i];
+
 		log_info_buf(out->buf, out->buflen);
-		buf_output_clear(out);
 		buf_output_free(out);
 	}
 
