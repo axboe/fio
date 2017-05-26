@@ -271,6 +271,7 @@ static void dump_buf(char *buf, unsigned int len, unsigned long long offset,
 	fd = open(fname, O_CREAT | O_TRUNC | O_WRONLY, 0644);
 	if (fd < 0) {
 		perror("open verify buf file");
+		free(ptr);
 		return;
 	}
 
