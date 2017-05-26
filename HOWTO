@@ -2467,6 +2467,7 @@ Verification
 	contents to one or more separate threads. If using this offload option, even
 	sync I/O engines can benefit from using an :option:`iodepth` setting higher
 	than 1, as it allows them to have I/O in flight while verifies are running.
+	Defaults to 0 async threads, i.e. verification is not asynchronous.
 
 .. option:: verify_async_cpus=str
 
@@ -2503,7 +2504,7 @@ Verification
 
 	<type> is "local" for a local run, "sock" for a client/server socket
 	connection, and "ip" (192.168.0.1, for instance) for a networked
-	client/server connection.
+	client/server connection. Defaults to true.
 
 .. option:: verify_state_load=bool
 
