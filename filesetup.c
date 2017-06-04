@@ -986,7 +986,14 @@ int setup_files(struct thread_data *td)
 			total_size = -1ULL;
 		else {
                         if (o->size_percent) {
-				f->io_size = (f->io_size * o->size_percent) / 100;
+				uint64_t file_size;
+
+				file_size = f->io_size + f->file_offset;
+				f->io_size = (file_size *
+					      o->size_percent) / 100;
+				if (f->io_size > (file_size - f->file_offset))
+					f->io_size = file_size - f->file_offset;
+
 				f->io_size -= (f->io_size % td_min_bs(td));
 			}
 			total_size += f->io_size;
