@@ -919,7 +919,8 @@ static void add_ddir_status_json(struct thread_stat *ts,
 		iops = (1000.0 * (uint64_t) ts->total_io_u[ddir]) / runt;
 	}
 
-	json_object_add_value_int(dir_object, "io_bytes", ts->io_bytes[ddir] >> 10);
+	json_object_add_value_int(dir_object, "io_bytes", ts->io_bytes[ddir]);
+	json_object_add_value_int(dir_object, "io_kbytes", ts->io_bytes[ddir] >> 10);
 	json_object_add_value_int(dir_object, "bw", bw);
 	json_object_add_value_float(dir_object, "iops", iops);
 	json_object_add_value_int(dir_object, "runtime", ts->runtime[ddir]);
