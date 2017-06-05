@@ -1072,10 +1072,11 @@ I/O type
 
 .. option:: offset=int
 
-	Start I/O at the given offset in the file. The data before the given offset
-	will not be touched. This effectively caps the file size at `real_size -
-	offset`. Can be combined with :option:`size` to constrain the start and
-	end range that I/O will be done within.
+	Start I/O at the provided offset in the file, given as either a fixed size or
+	a percentage. If a percentage is given, the next ``blockalign``-ed offset
+	will be used. Data before the given offset will not be touched. This
+	effectively caps the file size at `real_size - offset`. Can be combined with
+	:option:`size` to constrain the start and end range of the I/O workload.
 
 .. option:: offset_increment=int
 
