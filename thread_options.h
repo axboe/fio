@@ -200,6 +200,7 @@ struct thread_options {
 	unsigned int numa_mem_prefer_node;
 	char *numa_memnodes;
 	unsigned int gpu_dev_id;
+	unsigned int start_offset_percent;
 
 	unsigned int iolog;
 	unsigned int rwmixcycle;
@@ -469,7 +470,7 @@ struct thread_options_pack {
 	uint8_t log_gz_cpumask[FIO_TOP_STR_MAX];
 #endif
 	uint32_t gpu_dev_id;
-	uint32_t pad;
+	uint32_t start_offset_percent;
 	uint32_t cpus_allowed_policy;
 	uint32_t iolog;
 	uint32_t rwmixcycle;
