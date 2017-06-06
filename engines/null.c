@@ -149,7 +149,7 @@ void get_ioengine(struct ioengine_ops **ioengine_ptr)
 	ioengine.init           = fio_null_init;
 	ioengine.cleanup        = fio_null_cleanup;
 	ioengine.open_file      = fio_null_open;
-	ioengine.flags          = FIO_DISKLESSIO | FIO_FAKEIO;
+	ioengine.flags          = FIO_DISKLESSIO | FIO_FAKEIO | FIO_SUBMITMANY;
 }
 }
 #endif /* FIO_EXTERNAL_ENGINE */

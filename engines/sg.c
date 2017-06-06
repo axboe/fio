@@ -821,7 +821,7 @@ static struct ioengine_ops ioengine = {
 	.open_file	= fio_sgio_open,
 	.close_file	= generic_close_file,
 	.get_file_size	= fio_sgio_get_file_size,
-	.flags		= FIO_SYNCIO | FIO_RAWIO,
+	.flags		= FIO_SYNCIO | FIO_RAWIO | FIO_SUBMITMANY,
 };
 
 #else /* FIO_HAVE_SGIO */
