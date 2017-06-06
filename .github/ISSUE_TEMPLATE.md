@@ -1,0 +1,1 @@
+- [ ] I have read the information to include section of [REPORTING-BUGS](REPORTING-BUGS).
