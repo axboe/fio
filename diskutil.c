@@ -363,7 +363,7 @@ static int find_block_dir(int majdev, int mindev, char *path, int link_ok)
 		return 0;
 
 	while ((dir = readdir(D)) != NULL) {
-		char full_path[256];
+		char full_path[257];
 
 		if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, ".."))
 			continue;
