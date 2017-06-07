@@ -833,18 +833,22 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 uint64_t get_start_offset(struct thread_data *td, struct fio_file *f)
 {
 	struct thread_options *o = &td->o;
-	unsigned long long align_bs;  /* align the offset to this block size */
-	unsigned long long offset;  /* align_bs-aligned offset */
+	unsigned long long align_bs;
+	unsigned long long offset;
 
 	if (o->file_append && f->filetype == FIO_TYPE_FILE)
 		return f->real_file_size;
 
 	if (o->start_offset_percent > 0) {
-		/* if blockalign is provided, find the min across read, write, and trim */
+		/*
+		 * if blockalign is provided, find the min across read, write,
+		 * and trim
+		 */
 		if (fio_option_is_set(o, ba)) {
 			align_bs = (unsigned long long) min(o->ba[DDIR_READ], o->ba[DDIR_WRITE]);
 			align_bs = min((unsigned long long) o->ba[DDIR_TRIM], align_bs);
-		} else {  /* else take the minimum block size */
+		} else {
+			/* else take the minimum block size */
 			align_bs = td_min_bs(td);
 		}
 
@@ -852,14 +856,18 @@ uint64_t get_start_offset(struct thread_data *td, struct fio_file *f)
 		offset = (f->real_file_size * o->start_offset_percent / 100) +
 			(td->subjob_number * o->offset_increment);
 
-		/* block align the offset at the next available boundary at
-		   ceiling(offset / align_bs) * align_bs */
+		/*
+		 * block align the offset at the next available boundary at
+		 * ceiling(offset / align_bs) * align_bs
+		 */
 		offset = (offset / align_bs + (offset % align_bs != 0)) * align_bs;
 
-	} else {  /* start_offset_percent not set */
+	} else {
+		/* start_offset_percent not set */
 		offset = o->start_offset +
 				td->subjob_number * o->offset_increment;
 	}
+
 	return offset;
 }
 

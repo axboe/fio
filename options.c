@@ -1389,7 +1389,8 @@ static int str_offset_cb(void *data, unsigned long long *__val)
 	if (parse_is_percent(v)) {
 		td->o.start_offset = 0;
 		td->o.start_offset_percent = -1ULL - v;
-		dprint(FD_PARSE, "SET start_offset_percent %d\n", td->o.start_offset_percent);
+		dprint(FD_PARSE, "SET start_offset_percent %d\n",
+					td->o.start_offset_percent);
 	} else
 		td->o.start_offset = v;
 
