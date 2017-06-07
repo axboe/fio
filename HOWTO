@@ -2836,7 +2836,8 @@ Error handling
 .. option:: ignore_error=str
 
 	Sometimes you want to ignore some errors during test in that case you can
-	specify error list for each error type.
+	specify error list for each error type, instead of only being able to
+	ignore the default 'non-fatal error' using :option:`continue_on_error`.
 	``ignore_error=READ_ERR_LIST,WRITE_ERR_LIST,VERIFY_ERR_LIST`` errors for
 	given error type is separated with ':'. Error may be symbol ('ENOSPC',
 	'ENOMEM') or integer.  Example::
@@ -2844,7 +2845,8 @@ Error handling
 		ignore_error=EAGAIN,ENOSPC:122
 
 	This option will ignore EAGAIN from READ, and ENOSPC and 122(EDQUOT) from
-	WRITE.
+	WRITE. This option works by overriding :option:`continue_on_error` with
+	the list of errors for each error type if any.
 
 .. option:: error_dump=bool
 
