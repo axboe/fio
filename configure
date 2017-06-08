@@ -1972,6 +1972,7 @@ print_config "bool" "$have_bool"
 
 ##########################################
 # Check whether we have strndup()
+strndup="no"
 cat > $TMPC << EOF
 #include <string.h>
 #include <stdlib.h>
