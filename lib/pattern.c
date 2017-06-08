@@ -13,6 +13,7 @@
 #include "pattern.h"
 #include "../minmax.h"
 #include "../oslib/strcasestr.h"
+#include "../oslib/strndup.h"
 
 /**
  * parse_file() - parses binary file to fill buffer

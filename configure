@@ -1971,6 +1971,24 @@ fi
 print_config "bool" "$have_bool"
 
 ##########################################
+# Check whether we have strndup()
+cat > $TMPC << EOF
+#include <string.h>
+#include <stdlib.h>
+int main(int argc, char **argv)
+{
+  char *res = strndup("test string", 8);
+
+  free(res);
+  return 0;
+}
+EOF
+if compile_prog "" "" "strndup"; then
+  strndup="yes"
+fi
+print_config "strndup" "$strndup"
+
+##########################################
 # check march=armv8-a+crc+crypto
 if test "$march_armv8_a_crc_crypto" != "yes" ; then
   march_armv8_a_crc_crypto="no"
@@ -2226,6 +2244,9 @@ if test "$static_assert" = "yes" ; then
 fi
 if test "$have_bool" = "yes" ; then
   output_sym "CONFIG_HAVE_BOOL"
+fi
+if test "$strndup" = "yes" ; then
+  output_sym "CONFIG_HAVE_STRNDUP"
 fi
 if test "$disable_opt" = "yes" ; then
   output_sym "CONFIG_DISABLE_OPTIMIZATIONS"

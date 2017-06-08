@@ -107,6 +107,9 @@ endif
 ifndef CONFIG_STRLCAT
   SOURCE += oslib/strlcat.c
 endif
+ifndef CONFIG_HAVE_STRNDUP
+  SOURCE += oslib/strndup.c
+endif
 ifndef CONFIG_GETOPT_LONG_ONLY
   SOURCE += oslib/getopt_long.c
 endif
