@@ -4,11 +4,73 @@
 #include <limits.h>
 #include <errno.h>
 #include <assert.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "strntol.h"
 #include "pattern.h"
 #include "../minmax.h"
 #include "../oslib/strcasestr.h"
+
+/**
+ * parse_file() - parses binary file to fill buffer
+ * @beg - string input, extract filename from this
+ * @out - output buffer where parsed number should be put
+ * @out_len - length of the output buffer
+ * @filled - pointer where number of bytes successfully
+ *           parsed will be put
+ *
+ * Returns the end pointer where parsing has been stopped.
+ * In case of parsing error or lack of bytes in output buffer
+ * NULL will be returned.
+ */
+static const char *parse_file(const char *beg, char *out,
+			      unsigned int out_len,
+			      unsigned int *filled)
+{
+	const char *end;
+	char *file;
+	int fd;
+	ssize_t count;
+
+	if (!out_len)
+		goto err_out;
+
+	assert(*beg == '\'');
+	beg++;
+	end = strchr(beg, '\'');
+	if (!end)
+		goto err_out;
+
+	file = strndup(beg, end - beg);
+	if (file == NULL)
+		goto err_out;
+
+	fd = open(file, O_RDONLY);
+	if (fd < 0)
+		goto err_free_out;
+
+	count = read(fd, out, out_len);
+	if (count == -1)
+		goto err_free_close_out;
+
+	*filled = count;
+	close(fd);
+	free(file);
+
+	/* Catch up quote */
+	return end + 1;
+
+err_free_close_out:
+	close(fd);
+err_free_out:
+	free(file);
+err_out:
+	return NULL;
+
+}
 
 /**
  * parse_string() - parses string in double quotes, like "abc"
@@ -271,6 +333,9 @@ int parse_and_fill_pattern(const char *in, unsigned int in_len,
 		parsed_fmt = 0;
 
 		switch (*beg) {
+		case '\'':
+			end = parse_file(beg, out, out_len, &filled);
+			break;
 		case '"':
 			end = parse_string(beg, out, out_len, &filled);
 			break;
