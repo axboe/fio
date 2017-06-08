@@ -1,8 +1,6 @@
-#ifdef CONFIG_HAVE_STRNDUP
-
 #include <string.h>
 
-#else
+#ifndef CONFIG_HAVE_STRNDUP
 
 char *strndup(const char *s, size_t n);
 

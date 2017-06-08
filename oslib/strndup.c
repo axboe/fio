@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include <string.h>
+#include "strndup.h"
 
 #ifndef CONFIG_HAVE_STRNDUP
 
