@@ -184,7 +184,7 @@ re_read:
 			if (hdr->info & SG_INFO_CHECK) {
 				struct io_u *io_u;
 				io_u = (struct io_u *)(hdr->usr_ptr);
-				memcpy((void*)&(io_u->hdr), (void*)hdr, sizeof(struct sg_io_hdr));
+				memcpy(&io_u->hdr, hdr, sizeof(struct sg_io_hdr));
 				sd->events[i]->error = EIO;
 			}
 		}
