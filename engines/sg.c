@@ -759,8 +759,10 @@ static char *fio_sgio_errdetails(struct io_u *io_u)
 		}
 	}
 
-	if (!ret)
+	if (!ret) {
 		ret = strdup("SG Driver did not report a Host, Driver or Device check");
+		free(msg);
+	}
 
 	return ret;
 }
