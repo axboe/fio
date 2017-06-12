@@ -59,11 +59,12 @@ static int pollin_events(struct pollfd *pfds, int fds)
 	return 0;
 }
 
-static unsigned int binject_read_commands(struct thread_data *td, void *p,
+static unsigned int binject_read_commands(struct thread_data *td, void *buf,
 					  int left, int *err)
 {
 	struct fio_file *f;
 	int i, ret, events;
+	char *p = buf;
 
 one_more:
 	events = 0;
