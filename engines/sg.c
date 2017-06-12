@@ -572,17 +572,17 @@ static char *fio_sgio_errdetails(struct io_u *io_u)
 	struct sg_io_hdr *hdr = &io_u->hdr;
 #define MAXERRDETAIL 1024
 #define MAXMSGCHUNK  128
-	char *msg, msgchunk[MAXMSGCHUNK], *ret = NULL;
+	char *msg, msgchunk[MAXMSGCHUNK];
 	int i;
 
 	msg = calloc(1, MAXERRDETAIL);
+	strcpy(msg, "");
 
 	/*
 	 * can't seem to find sg_err.h, so I'll just echo the define values
 	 * so others can search on internet to find clearer clues of meaning.
 	 */
 	if (hdr->info & SG_INFO_CHECK) {
-		ret = msg;
 		if (hdr->host_status) {
 			snprintf(msgchunk, MAXMSGCHUNK, "SG Host Status: 0x%02x; ", hdr->host_status);
 			strlcat(msg, msgchunk, MAXERRDETAIL);
@@ -755,16 +755,14 @@ static char *fio_sgio_errdetails(struct io_u *io_u)
 		if (hdr->resid != 0) {
 			snprintf(msgchunk, MAXMSGCHUNK, "SG Driver: %d bytes out of %d not transferred. ", hdr->resid, hdr->dxfer_len);
 			strlcat(msg, msgchunk, MAXERRDETAIL);
-			ret = msg;
 		}
 	}
 
-	if (!ret) {
-		ret = strdup("SG Driver did not report a Host, Driver or Device check");
-		free(msg);
-	}
+	if (!(hdr->info & SG_INFO_CHECK) && !strlen(msg))
+		strncpy(msg, "SG Driver did not report a Host, Driver or Device check",
+			MAXERRDETAIL - 1);
 
-	return ret;
+	return msg;
 }
 
 /*
