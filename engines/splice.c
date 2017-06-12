@@ -32,7 +32,7 @@ static int fio_splice_read_old(struct thread_data *td, struct io_u *io_u)
 	struct fio_file *f = io_u->file;
 	int ret, ret2, buflen;
 	off_t offset;
-	void *p;
+	char *p;
 
 	offset = io_u->offset;
 	buflen = io_u->xfer_buflen;
@@ -77,7 +77,8 @@ static int fio_splice_read(struct thread_data *td, struct io_u *io_u)
 	struct iovec iov;
 	int ret , buflen, mmap_len;
 	off_t offset;
-	void *p, *map;
+	void *map;
+	char *p;
 
 	ret = 0;
 	offset = io_u->offset;
