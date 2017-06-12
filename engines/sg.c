@@ -124,7 +124,7 @@ static int fio_sgio_getevents(struct thread_data *td, unsigned int min,
 	}
 
 	while (left) {
-		void *p;
+		char *p;
 
 		dprint(FD_IO, "sgio_getevents: sd %p: left=%d\n", sd, left);
 
