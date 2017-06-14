@@ -36,6 +36,7 @@ struct syncio_data {
 struct psyncv2_options {
 	void *pad;
 	unsigned int hipri;
+	unsigned int stream;
 };
 
 static struct fio_option options[] = {
@@ -47,6 +48,29 @@ static struct fio_option options[] = {
 		.help	= "Set RWF_HIPRI for pwritev2/preadv2",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "stream",
+		.lname	= "Stream ID",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct psyncv2_options, stream),
+		.help	= "Set expected write life time",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_INVALID,
+		.posval = {
+			  { .ival = "short",
+			    .oval = RWF_WRITE_LIFE_SHORT,
+			  },
+			  { .ival = "medium",
+			    .oval = RWF_WRITE_LIFE_MEDIUM,
+			  },
+			  { .ival = "long",
+			    .oval = RWF_WRITE_LIFE_LONG,
+			  },
+			  { .ival = "extreme",
+			    .oval = RWF_WRITE_LIFE_EXTREME,
+			  },
+		},
 	},
 	{
 		.name	= NULL,
@@ -134,6 +158,8 @@ static int fio_pvsyncio2_queue(struct thread_data *td, struct io_u *io_u)
 
 	if (o->hipri)
 		flags |= RWF_HIPRI;
+	if (o->stream)
+		flags |= o->stream;
 
 	iov->iov_base = io_u->xfer_buf;
 	iov->iov_len = io_u->xfer_buflen;

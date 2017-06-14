@@ -319,6 +319,14 @@ static inline int fio_set_sched_idle(void)
 #define RWF_SYNC	0x00000004
 #endif
 
+#ifndef RWF_WRITE_LIFE_SHIFT
+#define RWF_WRITE_LIFE_SHIFT		4
+#define RWF_WRITE_LIFE_SHORT		(1 << RWF_WRITE_LIFE_SHIFT)
+#define RWF_WRITE_LIFE_MEDIUM		(2 << RWF_WRITE_LIFE_SHIFT)
+#define RWF_WRITE_LIFE_LONG		(3 << RWF_WRITE_LIFE_SHIFT)
+#define RWF_WRITE_LIFE_EXTREME		(4 << RWF_WRITE_LIFE_SHIFT)
+#endif
+
 #ifndef CONFIG_PWRITEV2
 #ifdef __NR_preadv2
 static inline void make_pos_h_l(unsigned long *pos_h, unsigned long *pos_l,
