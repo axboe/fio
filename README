@@ -108,6 +108,10 @@ Mandriva:
 	Mandriva has integrated fio into their package repository, so installing
 	on that distro should be as easy as typing ``urpmi fio``.
 
+Arch Linux:
+        An Arch Linux package is provided under the Community sub-repository:
+        https://www.archlinux.org/packages/?sort=&q=fio
+
 Solaris:
 	Packages for Solaris are available from OpenCSW. Install their pkgutil
 	tool (http://www.opencsw.org/get-it/pkgutil/) and then install fio via
