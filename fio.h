@@ -149,7 +149,7 @@ struct thread_data {
 	unsigned int thread_number;
 	unsigned int subjob_number;
 	unsigned int groupid;
-	struct thread_stat ts __attribute__ ((aligned));
+	struct thread_stat ts __attribute__ ((aligned(8)));
 
 	int client_type;
 
