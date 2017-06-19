@@ -472,13 +472,13 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 			goto err;
 		}
 	}
-#ifdef FIO_HAVE_STREAMID
-	if (td->o.fadvise_stream &&
+#ifdef FIO_HAVE_WRITE_HINT
+	if (fio_option_is_set(&td->o, write_hint) &&
 	    (f->filetype == FIO_TYPE_BLOCK || f->filetype == FIO_TYPE_FILE)) {
-		off_t stream = td->o.fadvise_stream;
+		uint64_t hint = td->o.write_hint;
 
-		if (posix_fadvise(f->fd, stream, f->io_size, POSIX_FADV_STREAMID) < 0) {
-			td_verror(td, errno, "fadvise streamid");
+		if (fcntl(f->fd, F_SET_RW_HINT, &hint) < 0) {
+			td_verror(td, errno, "fcntl write hint");
 			goto err;
 		}
 	}

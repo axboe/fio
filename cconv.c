@@ -156,6 +156,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->end_fsync = le32_to_cpu(top->end_fsync);
 	o->pre_read = le32_to_cpu(top->pre_read);
 	o->sync_io = le32_to_cpu(top->sync_io);
+	o->write_hint = le32_to_cpu(top->write_hint);
 	o->verify = le32_to_cpu(top->verify);
 	o->do_verify = le32_to_cpu(top->do_verify);
 	o->verifysort = le32_to_cpu(top->verifysort);
@@ -365,6 +366,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->end_fsync = cpu_to_le32(o->end_fsync);
 	top->pre_read = cpu_to_le32(o->pre_read);
 	top->sync_io = cpu_to_le32(o->sync_io);
+	top->write_hint = cpu_to_le32(o->write_hint);
 	top->verify = cpu_to_le32(o->verify);
 	top->do_verify = cpu_to_le32(o->do_verify);
 	top->verifysort = cpu_to_le32(o->verifysort);

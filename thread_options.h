@@ -102,6 +102,7 @@ struct thread_options {
 	unsigned int end_fsync;
 	unsigned int pre_read;
 	unsigned int sync_io;
+	unsigned int write_hint;
 	unsigned int verify;
 	unsigned int do_verify;
 	unsigned int verifysort;
@@ -376,6 +377,7 @@ struct thread_options_pack {
 	uint32_t end_fsync;
 	uint32_t pre_read;
 	uint32_t sync_io;
+	uint32_t write_hint;
 	uint32_t verify;
 	uint32_t do_verify;
 	uint32_t verifysort;
@@ -417,6 +419,7 @@ struct thread_options_pack {
 
 	uint32_t random_distribution;
 	uint32_t exitall_error;
+	uint32_t pad;
 
 	struct zone_split zone_split[DDIR_RWDIR_CNT][ZONESPLIT_MAX];
 	uint32_t zone_split_nr[DDIR_RWDIR_CNT];

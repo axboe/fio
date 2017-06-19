@@ -303,11 +303,23 @@ static inline int fio_set_sched_idle(void)
 }
 #endif
 
-#ifndef POSIX_FADV_STREAMID
-#define POSIX_FADV_STREAMID	8
+#ifndef F_GET_RW_HINT
+#ifndef F_LINUX_SPECIFIC_BASE
+#define F_LINUX_SPECIFIC_BASE	1024
+#endif
+#define F_GET_RW_HINT		(F_LINUX_SPECIFIC_BASE + 11)
+#define F_SET_RW_HINT		(F_LINUX_SPECIFIC_BASE + 12)
 #endif
 
-#define FIO_HAVE_STREAMID
+#ifndef RWH_WRITE_LIFE_NONE
+#define RWH_WRITE_LIFE_NONE	0
+#define RWH_WRITE_LIFE_SHORT	1
+#define RWH_WRITE_LIFE_MEDIUM	2
+#define RWH_WRITE_LIFE_LONG	3
+#define RWH_WRITE_LIFE_EXTREME	4
+#endif
+
+#define FIO_HAVE_WRITE_HINT
 
 #ifndef RWF_HIPRI
 #define RWF_HIPRI	0x00000001
