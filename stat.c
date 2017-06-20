@@ -520,7 +520,7 @@ static int show_lat(double *io_u_lat, int nr, const char **ranges,
 		if (new_line) {
 			if (line)
 				log_buf(out, "\n");
-			log_buf(out, "    lat (%s) : ", msg);
+			log_buf(out, "  clat (%s)  : ", msg);
 			new_line = 0;
 			line = 0;
 		}
