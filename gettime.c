@@ -31,8 +31,6 @@ static unsigned int cycles_wrap;
 int tsc_reliable = 0;
 
 struct tv_valid {
-	uint64_t last_cycles;
-	int last_tv_valid;
 	int warned;
 };
 #ifdef ARCH_HAVE_CPU_CLOCK
@@ -198,9 +196,6 @@ static void __fio_gettime(struct timespec *tp)
 		nsecs = multiples * nsecs_for_max_cycles;
 		nsecs += ((t & max_cycles_mask) * clock_mult) >> clock_shift;
 #endif
-		tv->last_cycles = t;
-		tv->last_tv_valid = 1;
-
 		tp->tv_sec = nsecs / 1000000000ULL;
 		tp->tv_nsec = nsecs % 1000000000ULL;
 		break;
