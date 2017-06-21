@@ -3104,16 +3104,20 @@ denote:
 		context and fault counters are summed.
 
 **IO depths**
-		The distribution of I/O depths over the job life time. The numbers are
-		divided into powers of 2, so for example the 16= entries includes depths
-		up to that value but higher than the previous entry. In other words, it
-		covers the range from 16 to 31.
+		The distribution of I/O depths over the job lifetime.  The numbers are
+		divided into powers of 2 and each entry covers depths from that value
+		up to those that are lower than the next entry -- e.g., 16= covers
+		depths from 16 to 31.  Note that the range covered by a depth
+		distribution entry can be different to the range covered by the
+		equivalent submit/complete distribution entry.
 
 **IO submit**
 		How many pieces of I/O were submitting in a single submit call. Each
 		entry denotes that amount and below, until the previous entry -- e.g.,
-		8=100% mean that we submitted anywhere in between 5-8 I/Os per submit
-		call.
+		16=100% means that we submitted anywhere between 9 to 16 I/Os per submit
+		call.  Note that the range covered by a submit distribution entry can
+		be different to the range covered by the equivalent depth distribution
+		entry.
 
 **IO complete**
 		Like the above submit number, but for completions instead.
