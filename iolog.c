@@ -643,6 +643,7 @@ void setup_log(struct io_log **log, struct log_params *p,
 		l->log_gz = 0;
 	else if (l->log_gz || l->log_gz_store) {
 		mutex_init_pshared(&l->chunk_lock);
+		mutex_init_pshared(&l->deferred_free_lock);
 		p->td->flags |= TD_F_COMPRESS_LOG;
 	}
 
@@ -1144,6 +1145,42 @@ size_t log_chunk_sizes(struct io_log *log)
 
 #ifdef CONFIG_ZLIB
 
+static bool warned_on_drop;
+
+static void iolog_put_deferred(struct io_log *log, void *ptr)
+{
+	if (!ptr)
+		return;
+
+	pthread_mutex_lock(&log->deferred_free_lock);
+	if (log->deferred < IOLOG_MAX_DEFER) {
+		log->deferred_items[log->deferred] = ptr;
+		log->deferred++;
+	} else if (!warned_on_drop) {
+		log_err("fio: had to drop log entry free\n");
+		warned_on_drop = true;
+	}
+	pthread_mutex_unlock(&log->deferred_free_lock);
+}
+
+static void iolog_free_deferred(struct io_log *log)
+{
+	int i;
+
+	if (!log->deferred)
+		return;
+
+	pthread_mutex_lock(&log->deferred_free_lock);
+
+	for (i = 0; i < log->deferred; i++) {
+		free(log->deferred_items[i]);
+		log->deferred_items[i] = NULL;
+	}
+
+	log->deferred = 0;
+	pthread_mutex_unlock(&log->deferred_free_lock);
+}
+
 static int gz_work(struct iolog_flush_data *data)
 {
 	struct iolog_compress *c = NULL;
@@ -1236,7 +1273,7 @@ static int gz_work(struct iolog_flush_data *data)
 	if (ret != Z_OK)
 		log_err("fio: deflateEnd %d\n", ret);
 
-	free(data->samples);
+	iolog_put_deferred(data->log, data->samples);
 
 	if (!flist_empty(&list)) {
 		pthread_mutex_lock(&data->log->chunk_lock);
@@ -1362,6 +1399,9 @@ int iolog_cur_flush(struct io_log *log, struct io_logs *cur_log)
 	cur_log->log = NULL;
 
 	workqueue_enqueue(&log->td->log_compress_wq, &data->work);
+
+	iolog_free_deferred(log);
+
 	return 0;
 }
 #else

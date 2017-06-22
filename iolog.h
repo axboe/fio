@@ -131,6 +131,11 @@ struct io_log {
 	pthread_mutex_t chunk_lock;
 	unsigned int chunk_seq;
 	struct flist_head chunk_list;
+
+	pthread_mutex_t deferred_free_lock;
+#define IOLOG_MAX_DEFER	8
+	void *deferred_items[IOLOG_MAX_DEFER];
+	unsigned int deferred;
 };
 
 /*
