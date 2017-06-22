@@ -264,7 +264,7 @@ struct log_params {
 
 static inline bool per_unit_log(struct io_log *log)
 {
-	return log && !log->avg_msec;
+	return log && (!log->avg_msec || log->log_gz || log->log_gz_store);
 }
 
 static inline bool inline_log(struct io_log *log)
