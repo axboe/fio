@@ -725,36 +725,41 @@ Target file/device
 	Prefix filenames with this directory. Used to place files in a different
 	location than :file:`./`.  You can specify a number of directories by
 	separating the names with a ':' character. These directories will be
-	assigned equally distributed to job clones creates with :option:`numjobs` as
+	assigned equally distributed to job clones created by :option:`numjobs` as
 	long as they are using generated filenames. If specific `filename(s)` are
 	set fio will use the first listed directory, and thereby matching the
 	`filename` semantic which generates a file each clone if not specified, but
 	let all clones use the same if set.
 
-	See the :option:`filename` option for escaping certain characters.
+	See the :option:`filename` option for information on how to escape "``:``" and
+	"``\``" characters within the directory path itself.
 
 .. option:: filename=str
 
 	Fio normally makes up a `filename` based on the job name, thread number, and
-	file number. If you want to share files between threads in a job or several
+	file number (see :option:`filename_format`). If you want to share files
+	between threads in a job or several
 	jobs with fixed file paths, specify a `filename` for each of them to override
 	the default. If the ioengine is file based, you can specify a number of files
 	by separating the names with a ':' colon. So if you wanted a job to open
 	:file:`/dev/sda` and :file:`/dev/sdb` as the two working files, you would use
 	``filename=/dev/sda:/dev/sdb``. This also means that whenever this option is
 	specified, :option:`nrfiles` is ignored. The size of regular files specified
-	by this option will be :option:`size` divided by number of files unless
+	by this option will be :option:`size` divided by number of files unless an
 	explicit size is specified by :option:`filesize`.
+
+	Each colon and backslash in the wanted path must be escaped with a ``\``
+	character.  For instance, if the path is :file:`/dev/dsk/foo@3,0:c` then you
+	would use ``filename=/dev/dsk/foo@3,0\:c`` and if the path is
+	:file:`F:\\filename` then you would use ``filename=F\:\\filename``.
 
 	On Windows, disk devices are accessed as :file:`\\\\.\\PhysicalDrive0` for
 	the first device, :file:`\\\\.\\PhysicalDrive1` for the second etc.
 	Note: Windows and FreeBSD prevent write access to areas
-	of the disk containing in-use data (e.g. filesystems).  If the wanted
-	`filename` does need to include a colon, then escape that with a ``\``
-	character. For instance, if the `filename` is :file:`/dev/dsk/foo@3,0:c`,
-	then you would use ``filename="/dev/dsk/foo@3,0\:c"``.  The
-	:file:`-` is a reserved name, meaning stdin or stdout.  Which of the two
-	depends on the read/write direction set.
+	of the disk containing in-use data (e.g. filesystems).
+
+	The filename "`-`" is a reserved name, meaning *stdin* or *stdout*.  Which
+	of the two depends on the read/write direction set.
 
 .. option:: filename_format=str
 
