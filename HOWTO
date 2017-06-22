@@ -470,10 +470,10 @@ Parameter types
     String. This is a sequence of alpha characters.
 
 **time**
-	Integer with possible time suffix. In seconds unless otherwise
-	specified, use e.g. 10m for 10 minutes. Accepts s/m/h for seconds, minutes,
-	and hours, and accepts 'ms' (or 'msec') for milliseconds, and 'us' (or
-	'usec') for microseconds.
+	Integer with possible time suffix.  Without a unit value is interpreted as
+	seconds unless otherwise specified.  Accepts a suffix of 'd' for days, 'h' for
+	hours, 'm' for minutes, 's' for seconds, 'ms' (or 'msec') for milliseconds and
+	'us' (or 'usec') for microseconds.  For example, use 10m for 10 minutes.
 
 .. _int:
 
