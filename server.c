@@ -2270,7 +2270,7 @@ int fio_server_parse_host(const char *host, int ipv6, struct in_addr *inp,
  * For local domain sockets:
  *	*ptr is the filename, *is_sock is 1.
  */
-int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
+int fio_server_parse_string(const char *str, char **ptr, bool *is_sock,
 			    int *port, struct in_addr *inp,
 			    struct in6_addr *inp6, int *ipv6)
 {
@@ -2279,13 +2279,13 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 	int lport = 0;
 
 	*ptr = NULL;
-	*is_sock = 0;
+	*is_sock = false;
 	*port = fio_net_port;
 	*ipv6 = 0;
 
 	if (!strncmp(str, "sock:", 5)) {
 		*ptr = strdup(str + 5);
-		*is_sock = 1;
+		*is_sock = true;
 
 		return 0;
 	}
@@ -2364,7 +2364,8 @@ int fio_server_parse_string(const char *str, char **ptr, int *is_sock,
 static int fio_handle_server_arg(void)
 {
 	int port = fio_net_port;
-	int is_sock, ret = 0;
+	bool is_sock;
+	int ret = 0;
 
 	saddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
 

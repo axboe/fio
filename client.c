@@ -318,7 +318,7 @@ struct fio_client *fio_client_add_explicit(struct client_ops *ops,
 	client->hostname = strdup(hostname);
 
 	if (type == Fio_client_socket)
-		client->is_sock = 1;
+		client->is_sock = true;
 	else {
 		int ipv6;
 
@@ -728,7 +728,7 @@ static int __fio_client_send_remote_ini(struct fio_client *client,
 	strcpy((char *) pdu->file, filename);
 	pdu->client_type = cpu_to_le16((uint16_t) client->type);
 
-	client->sent_job = 1;
+	client->sent_job = true;
 	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_LOAD_FILE, pdu, p_size,NULL, NULL);
 	free(pdu);
 	return ret;
@@ -781,7 +781,7 @@ static int __fio_client_send_local_ini(struct fio_client *client,
 	pdu->buf_len = __cpu_to_le32(sb.st_size);
 	pdu->client_type = cpu_to_le32(client->type);
 
-	client->sent_job = 1;
+	client->sent_job = true;
 	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_JOB, pdu, p_size, NULL, NULL);
 	free(pdu);
 	close(fd);
@@ -799,7 +799,7 @@ int fio_client_send_ini(struct fio_client *client, const char *filename,
 		ret = __fio_client_send_remote_ini(client, filename);
 
 	if (!ret)
-		client->sent_job = 1;
+		client->sent_job = true;
 
 	return ret;
 }
@@ -1003,7 +1003,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 		opt_list = &client->opt_lists[p->ts.thread_number - 1];
 
 	tsobj = show_thread_status(&p->ts, &p->rs, opt_list, NULL);
-	client->did_stat = 1;
+	client->did_stat = true;
 	if (tsobj) {
 		json_object_add_client_info(tsobj, client);
 		json_array_add_value_object(clients_array, tsobj);
@@ -1125,7 +1125,7 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct cmd_du_pdu *du = (struct cmd_du_pdu *) cmd->payload;
 
 	if (!client->disk_stats_shown) {
-		client->disk_stats_shown = 1;
+		client->disk_stats_shown = true;
 		log_info("\nDisk stats (read/write):\n");
 	}
 
