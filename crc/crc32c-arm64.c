@@ -19,7 +19,7 @@
 #define HWCAP_CRC32             (1 << 7)
 #endif /* HWCAP_CRC32 */
 
-int crc32c_arm64_available = 0;
+bool crc32c_arm64_available = false;
 
 #ifdef ARCH_HAVE_ARM64_CRC_CRYPTO
 
@@ -27,7 +27,7 @@ int crc32c_arm64_available = 0;
 #include <arm_acle.h>
 #include <arm_neon.h>
 
-static int crc32c_probed;
+static bool crc32c_probed;
 
 /*
  * Function to calculate reflected crc with PMULL Instruction
@@ -106,9 +106,8 @@ void crc32c_arm64_probe(void)
 
 	if (!crc32c_probed) {
 		hwcap = getauxval(AT_HWCAP);
-		if (hwcap & HWCAP_CRC32)
-			crc32c_arm64_available = 1;
-		crc32c_probed = 1;
+		crc32c_arm64_available = (hwcap & HWCAP_CRC32) != 0;
+		crc32c_probed = true;
 	}
 }
 

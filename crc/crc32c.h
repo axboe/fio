@@ -19,10 +19,11 @@
 #define CRC32C_H
 
 #include "../arch/arch.h"
+#include "../lib/types.h"
 
 extern uint32_t crc32c_sw(unsigned char const *, unsigned long);
-extern int crc32c_arm64_available;
-extern int crc32c_intel_available;
+extern bool crc32c_arm64_available;
+extern bool crc32c_intel_available;
 
 #ifdef ARCH_HAVE_ARM64_CRC_CRYPTO
 extern uint32_t crc32c_arm64(unsigned char const *, unsigned long);
