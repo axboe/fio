@@ -231,8 +231,9 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 
 
 	time_width = max(5, (int) (log10(maxv / divisor) + 1));
-	snprintf(fmt, sizeof(fmt), " %%%u.%ufth=[%%%dllu]%%c", precision+3, precision, time_width);
-	// fmt will be something like " %5.2fth=[%4llu]%c"
+	snprintf(fmt, sizeof(fmt), " %%%u.%ufth=[%%%dllu]%%c", precision + 3,
+			precision, time_width);
+	/* fmt will be something like " %5.2fth=[%4llu]%c" */
 	per_line = (80 - 7) / (precision + 10 + time_width);
 
 	for (j = 0; j < len; j++) {
@@ -260,8 +261,8 @@ out:
 		free(ovals);
 }
 
-bool calc_lat(struct io_stat *is, unsigned long long *min, unsigned long long *max,
-	      double *mean, double *dev)
+bool calc_lat(struct io_stat *is, unsigned long long *min,
+	      unsigned long long *max, double *mean, double *dev)
 {
 	double n = (double) is->samples;
 
@@ -390,8 +391,9 @@ void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat)
 	stat_calc_lat(ts, io_u_lat, ts->io_u_lat_m, FIO_IO_U_LAT_M_NR);
 }
 
-static void display_lat(const char *name, unsigned long long min, unsigned long long max,
-			double mean, double dev, struct buf_output *out)
+static void display_lat(const char *name, unsigned long long min,
+			unsigned long long max, double mean, double dev,
+			struct buf_output *out)
 {
 	const char *base = "(nsec)";
 	char *minp, *maxp;

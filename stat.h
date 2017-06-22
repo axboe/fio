@@ -314,8 +314,9 @@ extern int calc_log_samples(void);
 extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 extern int write_bw_log;
 
-static inline bool nsec_to_usec(unsigned long long *min, unsigned long long *max,
-				double *mean, double *dev)
+static inline bool nsec_to_usec(unsigned long long *min,
+				unsigned long long *max, double *mean,
+				double *dev)
 {
 	if (*min > 2000 && *max > 99999 && *dev > 1000.0) {
 		*min /= 1000;
@@ -328,8 +329,9 @@ static inline bool nsec_to_usec(unsigned long long *min, unsigned long long *max
 	return false;
 }
 
-static inline bool nsec_to_msec(unsigned long long *min, unsigned long long *max,
-				double *mean, double *dev)
+static inline bool nsec_to_msec(unsigned long long *min,
+				unsigned long long *max, double *mean,
+				double *dev)
 {
 	if (*min > 2000000 && *max > 99999999ULL && *dev > 1000000.0) {
 		*min /= 1000000;
@@ -341,6 +343,7 @@ static inline bool nsec_to_msec(unsigned long long *min, unsigned long long *max
 
 	return false;
 }
+
 /*
  * Worst level condensing would be 1:5, so allow enough room for that
  */

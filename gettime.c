@@ -311,9 +311,10 @@ static int calibrate_cpu_clock(void)
 			(unsigned long long) maxc, mean, S);
 
 	max_ticks = MAX_CLOCK_SEC * cycles_per_msec * 1000ULL;
-        max_mult = ULLONG_MAX / max_ticks;
-        dprint(FD_TIME, "\n\nmax_ticks=%llu, __builtin_clzll=%d, max_mult=%llu\n",
-		max_ticks, __builtin_clzll(max_ticks), max_mult);
+	max_mult = ULLONG_MAX / max_ticks;
+	dprint(FD_TIME, "\n\nmax_ticks=%llu, __builtin_clzll=%d, "
+			"max_mult=%llu\n", max_ticks,
+			__builtin_clzll(max_ticks), max_mult);
 
         /*
          * Find the largest shift count that will produce
@@ -326,30 +327,41 @@ static int calibrate_cpu_clock(void)
                 dprint(FD_TIME, "tmp=%llu, sft=%u\n", tmp, sft);
         }
 
-        clock_shift = sft;
-        clock_mult = (1ULL << sft) * 1000000 / cycles_per_msec;
-	dprint(FD_TIME, "clock_shift=%u, clock_mult=%llu\n", clock_shift, clock_mult);
+	clock_shift = sft;
+	clock_mult = (1ULL << sft) * 1000000 / cycles_per_msec;
+	dprint(FD_TIME, "clock_shift=%u, clock_mult=%llu\n", clock_shift,
+							clock_mult);
 
-	// Find the greatest power of 2 clock ticks that is less than the ticks in MAX_CLOCK_SEC_2STAGE
+	/*
+	 * Find the greatest power of 2 clock ticks that is less than the
+	 * ticks in MAX_CLOCK_SEC_2STAGE
+	 */
 	max_cycles_shift = max_cycles_mask = 0;
 	tmp = MAX_CLOCK_SEC * 1000ULL * cycles_per_msec;
-	dprint(FD_TIME, "tmp=%llu, max_cycles_shift=%u\n", tmp, max_cycles_shift);
+	dprint(FD_TIME, "tmp=%llu, max_cycles_shift=%u\n", tmp,
+							max_cycles_shift);
 	while (tmp > 1) {
 		tmp >>= 1;
 		max_cycles_shift++;
 		dprint(FD_TIME, "tmp=%llu, max_cycles_shift=%u\n", tmp, max_cycles_shift);
 	}
-	// if use use (1ULL << max_cycles_shift) * 1000 / cycles_per_msec here we will
-	// have a discontinuity every (1ULL << max_cycles_shift) cycles
-	nsecs_for_max_cycles = ((1ULL << max_cycles_shift) * clock_mult) >> clock_shift;
+	/*
+	 * if use use (1ULL << max_cycles_shift) * 1000 / cycles_per_msec
+	 * here we will have a discontinuity every
+	 * (1ULL << max_cycles_shift) cycles
+	 */
+	nsecs_for_max_cycles = ((1ULL << max_cycles_shift) * clock_mult)
+					>> clock_shift;
 
-	// Use a bitmask to calculate ticks % (1ULL << max_cycles_shift)
+	/* Use a bitmask to calculate ticks % (1ULL << max_cycles_shift) */
 	for (tmp = 0; tmp < max_cycles_shift; tmp++)
 		max_cycles_mask |= 1ULL << tmp;
 
-	dprint(FD_TIME, "max_cycles_shift=%u, 2^max_cycles_shift=%llu, nsecs_for_max_cycles=%llu, max_cycles_mask=%016llx\n",
-		max_cycles_shift, (1ULL << max_cycles_shift),
-		nsecs_for_max_cycles, max_cycles_mask);
+	dprint(FD_TIME, "max_cycles_shift=%u, 2^max_cycles_shift=%llu, "
+			"nsecs_for_max_cycles=%llu, "
+			"max_cycles_mask=%016llx\n",
+			max_cycles_shift, (1ULL << max_cycles_shift),
+			nsecs_for_max_cycles, max_cycles_mask);
 
 	cycles_start = get_cpu_clock();
 	dprint(FD_TIME, "cycles_start=%llu\n", cycles_start);
