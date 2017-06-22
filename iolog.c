@@ -1247,7 +1247,7 @@ static int gz_work(struct iolog_flush_data *data)
 	ret = 0;
 done:
 	if (data->free)
-		free(data);
+		sfree(data);
 	return ret;
 err:
 	while (!flist_empty(&list)) {
@@ -1348,7 +1348,7 @@ int iolog_cur_flush(struct io_log *log, struct io_logs *cur_log)
 {
 	struct iolog_flush_data *data;
 
-	data = malloc(sizeof(*data));
+	data = smalloc(sizeof(*data));
 	if (!data)
 		return 1;
 
