@@ -14,7 +14,7 @@ static inline void cpuid(unsigned int op,
 
 #define ARCH_HAVE_INIT
 
-extern int tsc_reliable;
+extern bool tsc_reliable;
 extern int arch_random;
 
 static inline void arch_init_intel(unsigned int level)

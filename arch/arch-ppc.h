@@ -117,12 +117,12 @@ static void atb_clocktest(void)
 #endif
 
 #define ARCH_HAVE_INIT
-extern int tsc_reliable;
+extern bool tsc_reliable;
 
 static inline int arch_init(char *envp[])
 {
 #if 0
-	tsc_reliable = 1;
+	tsc_reliable = true;
 	atb_clocktest();
 #endif
 	return 0;

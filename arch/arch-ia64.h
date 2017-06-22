@@ -28,10 +28,10 @@ static inline unsigned long long get_cpu_clock(void)
 }
 
 #define ARCH_HAVE_INIT
-extern int tsc_reliable;
+extern bool tsc_reliable;
 static inline int arch_init(char *envp[])
 {
-	tsc_reliable = 1;
+	tsc_reliable = true;
 	return 0;
 }
 

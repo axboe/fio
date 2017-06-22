@@ -1,6 +1,8 @@
 #ifndef ARCH_H
 #define ARCH_H
 
+#include "../lib/types.h"
+
 enum {
 	arch_x86_64 = 1,
 	arch_x86,

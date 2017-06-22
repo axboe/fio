@@ -28,7 +28,7 @@ static unsigned int max_cycles_shift;
 static unsigned int cycles_wrap;
 #endif
 #endif
-int tsc_reliable = 0;
+bool tsc_reliable = false;
 
 struct tv_valid {
 	int warned;
@@ -413,7 +413,7 @@ void fio_clock_init(void)
 	fio_clock_source_inited = fio_clock_source;
 
 	if (calibrate_cpu_clock())
-		tsc_reliable = 0;
+		tsc_reliable = false;
 
 	/*
 	 * If the arch sets tsc_reliable != 0, then it must be good enough
