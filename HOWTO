@@ -491,7 +491,7 @@ Parameter types
 	default unit is bytes. For quantities of time, the default unit is seconds
 	unless otherwise specified.
 
-	With :option:`kb_base` =1000, fio follows international standards for unit
+	With :option:`kb_base`\=1000, fio follows international standards for unit
 	prefixes.  To specify power-of-10 decimal values defined in the
 	International System of Units (SI):
 
@@ -509,7 +509,7 @@ Parameter types
 		* *T* -- means tebi (Ti) or 1024**4
 		* *P* -- means pebi (Pi) or 1024**5
 
-	With :option:`kb_base` =1024 (the default), the unit prefixes are opposite
+	With :option:`kb_base`\=1024 (the default), the unit prefixes are opposite
 	from those specified in the SI and IEC 80000-13 standards to provide
 	compatibility with old scripts.  For example, 4k means 4096.
 
@@ -519,7 +519,7 @@ Parameter types
 	The *integer suffix* is not case sensitive (e.g., m/mi mean mebi/mega,
 	not milli). 'b' and 'B' both mean byte, not bit.
 
-	Examples with :option:`kb_base` =1000:
+	Examples with :option:`kb_base`\=1000:
 
 		* *4 KiB*: 4096, 4096b, 4096B, 4ki, 4kib, 4kiB, 4Ki, 4KiB
 		* *1 MiB*: 1048576, 1mi, 1024ki
@@ -527,7 +527,7 @@ Parameter types
 		* *1 TiB*: 1099511627776, 1ti, 1024gi, 1048576mi
 		* *1 TB*: 1000000000, 1t, 1000m, 1000000k
 
-	Examples with :option:`kb_base` =1024 (default):
+	Examples with :option:`kb_base`\=1024 (default):
 
 		* *4 KiB*: 4096, 4096b, 4096B, 4k, 4kb, 4kB, 4K, 4KB
 		* *1 MiB*: 1048576, 1m, 1024k
@@ -1659,7 +1659,7 @@ I/O engine
 		**cpuio**
 			Doesn't transfer any data, but burns CPU cycles according to the
 			:option:`cpuload` and :option:`cpuchunks` options. Setting
-			:option:`cpuload` =85 will cause that job to do nothing but burn 85%
+			:option:`cpuload`\=85 will cause that job to do nothing but burn 85%
 			of the CPU. In case of SMP machines, use :option:`numjobs`
 			=<no_of_cpu> to get desired CPU usage, as the cpuload only loads a
 			single CPU at the desired rate. A job never finishes unless there is
@@ -1924,7 +1924,7 @@ I/O depth
 	for small degrees when :option:`verify_async` is in use).  Even async
 	engines may impose OS restrictions causing the desired depth not to be
 	achieved.  This may happen on Linux when using libaio and not setting
-	:option:`direct` =1, since buffered I/O is not async on that OS.  Keep an
+	:option:`direct`\=1, since buffered I/O is not async on that OS.  Keep an
 	eye on the I/O depth distribution in the fio output to verify that the
 	achieved depth is as expected. Default: 1.
 
@@ -1947,7 +1947,7 @@ I/O depth
 .. option:: iodepth_batch_complete_max=int
 
 	This defines maximum pieces of I/O to retrieve at once. This variable should
-	be used along with :option:`iodepth_batch_complete_min` =int variable,
+	be used along with :option:`iodepth_batch_complete_min`\=int variable,
 	specifying the range of min and max amount of I/O which should be
 	retrieved. By default it is equal to :option:`iodepth_batch_complete_min`
 	value.
@@ -2127,7 +2127,7 @@ I/O replay
 	same system can also result in a different major/minor mapping.
 	``replay_redirect`` causes all IOPS to be replayed onto the single specified
 	device regardless of the device it was recorded
-	from. i.e. :option:`replay_redirect` = :file:`/dev/sdc` would cause all I/O
+	from. i.e. :option:`replay_redirect`\= :file:`/dev/sdc` would cause all I/O
 	in the blktrace or iolog to be replayed onto :file:`/dev/sdc`.  This means
 	multiple devices will be replayed onto a single device, if the trace
 	contains multiple devices. If you want multiple devices to be replayed
@@ -2411,7 +2411,7 @@ Verification
 
 		**null**
 			Only pretend to verify. Useful for testing internals with
-			:option:`ioengine` `=null`, not for much else.
+			:option:`ioengine`\=null, not for much else.
 
 	This option can be used for repeated burn-in tests of a system to make sure
 	that the written data is also correctly read back. If the data direction
@@ -3371,7 +3371,7 @@ completions, etc.
 
 A trigger is invoked either through creation ('touch') of a specified file in
 the system, or through a timeout setting. If fio is run with
-:option:`--trigger-file` = :file:`/tmp/trigger-file`, then it will continually
+:option:`--trigger-file`\= :file:`/tmp/trigger-file`, then it will continually
 check for the existence of :file:`/tmp/trigger-file`. When it sees this file, it
 will fire off the trigger (thus saving state, and executing the trigger
 command).
