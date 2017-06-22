@@ -136,7 +136,7 @@ static void set_sig_handlers(void)
 /*
  * Check if we are above the minimum rate given.
  */
-static bool __check_min_rate(struct thread_data *td, struct timeval *now,
+static bool __check_min_rate(struct thread_data *td, struct timespec *now,
 			     enum fio_ddir ddir)
 {
 	unsigned long long bytes = 0;
@@ -223,7 +223,7 @@ static bool __check_min_rate(struct thread_data *td, struct timeval *now,
 	return false;
 }
 
-static bool check_min_rate(struct thread_data *td, struct timeval *now)
+static bool check_min_rate(struct thread_data *td, struct timespec *now)
 {
 	bool ret = false;
 
@@ -335,18 +335,18 @@ static int fio_file_fsync(struct thread_data *td, struct fio_file *f)
 	return ret;
 }
 
-static inline void __update_tv_cache(struct thread_data *td)
+static inline void __update_ts_cache(struct thread_data *td)
 {
-	fio_gettime(&td->tv_cache, NULL);
+	fio_gettime(&td->ts_cache, NULL);
 }
 
-static inline void update_tv_cache(struct thread_data *td)
+static inline void update_ts_cache(struct thread_data *td)
 {
-	if ((++td->tv_cache_nr & td->tv_cache_mask) == td->tv_cache_mask)
-		__update_tv_cache(td);
+	if ((++td->ts_cache_nr & td->ts_cache_mask) == td->ts_cache_mask)
+		__update_ts_cache(td);
 }
 
-static inline bool runtime_exceeded(struct thread_data *td, struct timeval *t)
+static inline bool runtime_exceeded(struct thread_data *td, struct timespec *t)
 {
 	if (in_ramp_time(td))
 		return false;
@@ -430,7 +430,7 @@ static void check_update_rusage(struct thread_data *td)
 	}
 }
 
-static int wait_for_completions(struct thread_data *td, struct timeval *time)
+static int wait_for_completions(struct thread_data *td, struct timespec *time)
 {
 	const int full = queue_full(td);
 	int min_evts = 0;
@@ -462,7 +462,7 @@ static int wait_for_completions(struct thread_data *td, struct timeval *time)
 
 int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
 		   enum fio_ddir ddir, uint64_t *bytes_issued, int from_verify,
-		   struct timeval *comp_time)
+		   struct timespec *comp_time)
 {
 	int ret2;
 
@@ -633,12 +633,12 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 		enum fio_ddir ddir;
 		int full;
 
-		update_tv_cache(td);
+		update_ts_cache(td);
 		check_update_rusage(td);
 
-		if (runtime_exceeded(td, &td->tv_cache)) {
-			__update_tv_cache(td);
-			if (runtime_exceeded(td, &td->tv_cache)) {
+		if (runtime_exceeded(td, &td->ts_cache)) {
+			__update_ts_cache(td);
+			if (runtime_exceeded(td, &td->ts_cache)) {
 				fio_mark_td_terminate(td);
 				break;
 			}
@@ -874,7 +874,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
 		(!flist_empty(&td->trim_list)) || !io_issue_bytes_exceeded(td) ||
 		td->o.time_based) {
-		struct timeval comp_time;
+		struct timespec comp_time;
 		struct io_u *io_u;
 		int full;
 		enum fio_ddir ddir;
@@ -884,11 +884,11 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		if (td->terminate || td->done)
 			break;
 
-		update_tv_cache(td);
+		update_ts_cache(td);
 
-		if (runtime_exceeded(td, &td->tv_cache)) {
-			__update_tv_cache(td);
-			if (runtime_exceeded(td, &td->tv_cache)) {
+		if (runtime_exceeded(td, &td->ts_cache)) {
+			__update_ts_cache(td);
+			if (runtime_exceeded(td, &td->ts_cache)) {
 				fio_mark_td_terminate(td);
 				break;
 			}
@@ -1686,7 +1686,7 @@ static void *thread_main(void *data)
 		uint64_t verify_bytes;
 
 		fio_gettime(&td->start, NULL);
-		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
+		memcpy(&td->ts_cache, &td->start, sizeof(td->start));
 
 		if (clear_state) {
 			clear_io_state(td, 0);
@@ -2202,7 +2202,7 @@ reap:
 
 	while (todo) {
 		struct thread_data *map[REAL_MAX_JOBS];
-		struct timeval this_start;
+		struct timespec this_start;
 		int this_jobs = 0, left;
 		struct fork_data *fd;
 

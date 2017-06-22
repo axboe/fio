@@ -1,6 +1,7 @@
 #ifndef FIO_SEQLOCK_H
 #define FIO_SEQLOCK_H
 
+#include "types.h"
 #include "../arch/arch.h"
 
 struct seqlock {

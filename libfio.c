@@ -144,10 +144,10 @@ void reset_all_stats(struct thread_data *td)
 	}
 
 	set_epoch_time(td, td->o.log_unix_epoch);
-	memcpy(&td->start, &td->epoch, sizeof(struct timeval));
-	memcpy(&td->iops_sample_time, &td->epoch, sizeof(struct timeval));
-	memcpy(&td->bw_sample_time, &td->epoch, sizeof(struct timeval));
-	memcpy(&td->ss.prev_time, &td->epoch, sizeof(struct timeval));
+	memcpy(&td->start, &td->epoch, sizeof(td->epoch));
+	memcpy(&td->iops_sample_time, &td->epoch, sizeof(td->epoch));
+	memcpy(&td->bw_sample_time, &td->epoch, sizeof(td->epoch));
+	memcpy(&td->ss.prev_time, &td->epoch, sizeof(td->epoch));
 
 	lat_target_reset(td);
 	clear_rusage_stat(td);

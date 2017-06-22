@@ -1381,7 +1381,7 @@ static int str_gtod_reduce_cb(void *data, int *il)
 	td->o.disable_bw = !!val;
 	td->o.clat_percentiles = !val;
 	if (val)
-		td->tv_cache_mask = 63;
+		td->ts_cache_mask = 63;
 
 	return 0;
 }

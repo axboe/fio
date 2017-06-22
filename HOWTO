@@ -3189,7 +3189,7 @@ Split up, the format is as follows:
 
         Total IO (KiB), bandwidth (KiB/sec), IOPS, runtime (msec)
         Submission latency: min, max, mean, stdev (usec)
-        Completion latency: min, max, mean, stdev(usec)
+        Completion latency: min, max, mean, stdev (usec)
         Completion latency percentiles: 20 fields (see below)
         Total latency: min, max, mean, stdev (usec)
         Bw (KiB/s): min, max, aggregate percentage of total, mean, stdev

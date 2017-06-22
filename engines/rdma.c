@@ -802,7 +802,7 @@ static void fio_rdmaio_queued(struct thread_data *td, struct io_u **io_us,
 			      unsigned int nr)
 {
 	struct rdmaio_data *rd = td->io_ops_data;
-	struct timeval now;
+	struct timespec now;
 	unsigned int i;
 
 	if (!fio_fill_issue_time(td))

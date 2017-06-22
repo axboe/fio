@@ -37,9 +37,9 @@ void update_rusage_stat(struct thread_data *td)
 	struct thread_stat *ts = &td->ts;
 
 	fio_getrusage(&td->ru_end);
-	ts->usr_time += mtime_since(&td->ru_start.ru_utime,
+	ts->usr_time += mtime_since_tv(&td->ru_start.ru_utime,
 					&td->ru_end.ru_utime);
-	ts->sys_time += mtime_since(&td->ru_start.ru_stime,
+	ts->sys_time += mtime_since_tv(&td->ru_start.ru_stime,
 					&td->ru_end.ru_stime);
 	ts->ctx += td->ru_end.ru_nvcsw + td->ru_end.ru_nivcsw
 			- (td->ru_start.ru_nvcsw + td->ru_start.ru_nivcsw);
@@ -58,7 +58,7 @@ void update_rusage_stat(struct thread_data *td)
  * group by looking at the index bits.
  *
  */
-static unsigned int plat_val_to_idx(unsigned int val)
+static unsigned int plat_val_to_idx(unsigned long long val)
 {
 	unsigned int msb, error_bits, base, offset, idx;
 
@@ -66,7 +66,7 @@ static unsigned int plat_val_to_idx(unsigned int val)
 	if (val == 0)
 		msb = 0;
 	else
-		msb = (sizeof(val)*8) - __builtin_clz(val) - 1;
+		msb = (sizeof(val)*8) - __builtin_clzll(val) - 1;
 
 	/*
 	 * MSB <= (FIO_IO_U_PLAT_BITS-1), cannot be rounded off. Use
@@ -135,16 +135,16 @@ static int double_cmp(const void *a, const void *b)
 }
 
 unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
-				   fio_fp64_t *plist, unsigned int **output,
-				   unsigned int *maxv, unsigned int *minv)
+				   fio_fp64_t *plist, unsigned long long **output,
+				   unsigned long long *maxv, unsigned long long *minv)
 {
 	unsigned long sum = 0;
 	unsigned int len, i, j = 0;
 	unsigned int oval_len = 0;
-	unsigned int *ovals = NULL;
+	unsigned long long *ovals = NULL;
 	int is_last;
 
-	*minv = -1U;
+	*minv = -1ULL;
 	*maxv = 0;
 
 	len = 0;
@@ -173,7 +173,7 @@ unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 
 			if (j == oval_len) {
 				oval_len += 100;
-				ovals = realloc(ovals, oval_len * sizeof(unsigned int));
+				ovals = realloc(ovals, oval_len * sizeof(*ovals));
 			}
 
 			ovals[j] = plat_idx_to_val(i);
@@ -201,9 +201,10 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 				  fio_fp64_t *plist, unsigned int precision,
 				  struct buf_output *out)
 {
-	unsigned int len, j = 0, minv, maxv;
-	unsigned int *ovals;
-	int is_last, per_line, scale_down;
+	unsigned int divisor, len, i, j = 0;
+	unsigned long long minv, maxv;
+	unsigned long long *ovals;
+	int is_last, per_line, scale_down, time_width;
 	char fmt[32];
 
 	len = calc_clat_percentiles(io_u_plat, nr, plist, &ovals, &maxv, &minv);
@@ -211,23 +212,31 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 		goto out;
 
 	/*
-	 * We default to usecs, but if the value range is such that we
-	 * should scale down to msecs, do that.
+	 * We default to nsecs, but if the value range is such that we
+	 * should scale down to usecs or msecs, do that.
 	 */
-	if (minv > 2000 && maxv > 99999) {
-		scale_down = 1;
+	if (minv > 2000000 && maxv > 99999999ULL) {
+		scale_down = 2;
+		divisor = 1000000;
 		log_buf(out, "    clat percentiles (msec):\n     |");
+	} else if (minv > 2000 && maxv > 99999) {
+		scale_down = 1;
+		divisor = 1000;
+		log_buf(out, "    clat percentiles (usec):\n     |");
 	} else {
 		scale_down = 0;
-		log_buf(out, "    clat percentiles (usec):\n     |");
+		divisor = 1;
+		log_buf(out, "    clat percentiles (nsec):\n     |");
 	}
 
-	snprintf(fmt, sizeof(fmt), "%%1.%uf", precision);
-	per_line = (80 - 7) / (precision + 14);
+
+	time_width = max(5, (int) (log10(maxv / divisor) + 1));
+	snprintf(fmt, sizeof(fmt), " %%%u.%ufth=[%%%dllu]%%c", precision + 3,
+			precision, time_width);
+	/* fmt will be something like " %5.2fth=[%4llu]%c" */
+	per_line = (80 - 7) / (precision + 10 + time_width);
 
 	for (j = 0; j < len; j++) {
-		char fbuf[16], *ptr = fbuf;
-
 		/* for formatting */
 		if (j != 0 && (j % per_line) == 0)
 			log_buf(out, "     |");
@@ -235,15 +244,10 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 		/* end of the list */
 		is_last = (j == len - 1);
 
-		if (plist[j].u.f < 10.0)
-			ptr += sprintf(fbuf, " ");
-
-		snprintf(ptr, sizeof(fbuf), fmt, plist[j].u.f);
-
-		if (scale_down)
+		for (i = 0; i < scale_down; i++)
 			ovals[j] = (ovals[j] + 999) / 1000;
 
-		log_buf(out, " %sth=[%5u]%c", fbuf, ovals[j], is_last ? '\n' : ',');
+		log_buf(out, fmt, plist[j].u.f, ovals[j], is_last ? '\n' : ',');
 
 		if (is_last)
 			break;
@@ -257,8 +261,8 @@ out:
 		free(ovals);
 }
 
-bool calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
-	      double *mean, double *dev)
+bool calc_lat(struct io_stat *is, unsigned long long *min,
+	      unsigned long long *max, double *mean, double *dev)
 {
 	double n = (double) is->samples;
 
@@ -355,6 +359,28 @@ static void stat_calc_lat(struct thread_stat *ts, double *dst,
 	}
 }
 
+/*
+ * To keep the terse format unaltered, add all of the ns latency
+ * buckets to the first us latency bucket
+ */
+void stat_calc_lat_nu(struct thread_stat *ts, double *io_u_lat_u)
+{
+	unsigned long ntotal = 0, total = ddir_rw_sum(ts->total_io_u);
+	int i;
+
+	stat_calc_lat(ts, io_u_lat_u, ts->io_u_lat_u, FIO_IO_U_LAT_U_NR);
+
+	for (i = 0; i < FIO_IO_U_LAT_N_NR; i++)
+		ntotal += ts->io_u_lat_n[i];
+
+	io_u_lat_u[0] += 100.0 * (double) ntotal / (double) total;
+}
+
+void stat_calc_lat_n(struct thread_stat *ts, double *io_u_lat)
+{
+	stat_calc_lat(ts, io_u_lat, ts->io_u_lat_n, FIO_IO_U_LAT_N_NR);
+}
+
 void stat_calc_lat_u(struct thread_stat *ts, double *io_u_lat)
 {
 	stat_calc_lat(ts, io_u_lat, ts->io_u_lat_u, FIO_IO_U_LAT_U_NR);
@@ -365,14 +391,17 @@ void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat)
 	stat_calc_lat(ts, io_u_lat, ts->io_u_lat_m, FIO_IO_U_LAT_M_NR);
 }
 
-static void display_lat(const char *name, unsigned long min, unsigned long max,
-			double mean, double dev, struct buf_output *out)
+static void display_lat(const char *name, unsigned long long min,
+			unsigned long long max, double mean, double dev,
+			struct buf_output *out)
 {
-	const char *base = "(usec)";
+	const char *base = "(nsec)";
 	char *minp, *maxp;
 
-	if (usec_to_msec(&min, &max, &mean, &dev))
+	if (nsec_to_msec(&min, &max, &mean, &dev))
 		base = "(msec)";
+	else if (nsec_to_usec(&min, &max, &mean, &dev))
+		base = "(usec)";
 
 	minp = num2str(min, 6, 1, 0, N2S_NONE);
 	maxp = num2str(max, 6, 1, 0, N2S_NONE);
@@ -388,8 +417,8 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			     int ddir, struct buf_output *out)
 {
 	const char *str[] = { " read", "write", " trim" };
-	unsigned long min, max, runt;
-	unsigned long long bw, iops;
+	unsigned long runt;
+	unsigned long long min, max, bw, iops;
 	double mean, dev;
 	char *io_p, *bw_p, *bw_p_alt, *iops_p;
 	int i2p;
@@ -467,7 +496,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			bw_str = (rs->unit_base == 1 ? "Mibit" : "MiB");
 		}
 
-		log_buf(out, "   bw (%5s/s): min=%5lu, max=%5lu, per=%3.2f%%, avg=%5.02f, stdev=%5.02f\n",
+		log_buf(out, "   bw (%5s/s): min=%5llu, max=%5llu, per=%3.2f%%, avg=%5.02f, stdev=%5.02f\n",
 			bw_str, min, max, p_of_agg, mean, dev);
 	}
 }
@@ -502,6 +531,14 @@ static int show_lat(double *io_u_lat, int nr, const char **ranges,
 	return shown;
 }
 
+static void show_lat_n(double *io_u_lat_n, struct buf_output *out)
+{
+	const char *ranges[] = { "2=", "4=", "10=", "20=", "50=", "100=",
+				 "250=", "500=", "750=", "1000=", };
+
+	show_lat(io_u_lat_n, FIO_IO_U_LAT_N_NR, ranges, "nsec", out);
+}
+
 static void show_lat_u(double *io_u_lat_u, struct buf_output *out)
 {
 	const char *ranges[] = { "2=", "4=", "10=", "20=", "50=", "100=",
@@ -521,12 +558,15 @@ static void show_lat_m(double *io_u_lat_m, struct buf_output *out)
 
 static void show_latencies(struct thread_stat *ts, struct buf_output *out)
 {
+	double io_u_lat_n[FIO_IO_U_LAT_N_NR];
 	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	double io_u_lat_m[FIO_IO_U_LAT_M_NR];
 
+	stat_calc_lat_n(ts, io_u_lat_n);
 	stat_calc_lat_u(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 
+	show_lat_n(io_u_lat_n, out);
 	show_lat_u(io_u_lat_u, out);
 	show_lat_m(io_u_lat_m, out);
 }
@@ -818,11 +858,10 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 				   struct group_run_stats *rs, int ddir,
 				   struct buf_output *out)
 {
-	unsigned long min, max;
-	unsigned long long bw, iops;
-	unsigned int *ovals = NULL;
+	unsigned long long min, max, minv, maxv, bw, iops;
+	unsigned long long *ovals = NULL;
 	double mean, dev;
-	unsigned int len, minv, maxv;
+	unsigned int len;
 	int i;
 
 	assert(ddir_rw(ddir));
@@ -840,14 +879,14 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 					(unsigned long long) ts->runtime[ddir]);
 
 	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
-		log_buf(out, ";%lu;%lu;%f;%f", min, max, mean, dev);
+		log_buf(out, ";%llu;%llu;%f;%f", min/1000, max/1000, mean/1000, dev/1000);
 	else
-		log_buf(out, ";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
+		log_buf(out, ";%llu;%llu;%f;%f", 0ULL, 0ULL, 0.0, 0.0);
 
 	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
-		log_buf(out, ";%lu;%lu;%f;%f", min, max, mean, dev);
+		log_buf(out, ";%llu;%llu;%f;%f", min/1000, max/1000, mean/1000, dev/1000);
 	else
-		log_buf(out, ";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
+		log_buf(out, ";%llu;%llu;%f;%f", 0ULL, 0ULL, 0.0, 0.0);
 
 	if (ts->clat_percentiles) {
 		len = calc_clat_percentiles(ts->io_u_plat[ddir],
@@ -862,13 +901,13 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 			log_buf(out, ";0%%=0");
 			continue;
 		}
-		log_buf(out, ";%f%%=%u", ts->percentile_list[i].u.f, ovals[i]);
+		log_buf(out, ";%f%%=%llu", ts->percentile_list[i].u.f, ovals[i]/1000);
 	}
 
 	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
-		log_buf(out, ";%lu;%lu;%f;%f", min, max, mean, dev);
+		log_buf(out, ";%llu;%llu;%f;%f", min/1000, max/1000, mean/1000, dev/1000);
 	else
-		log_buf(out, ";%lu;%lu;%f;%f", 0UL, 0UL, 0.0, 0.0);
+		log_buf(out, ";%llu;%llu;%f;%f", 0ULL, 0ULL, 0.0, 0.0);
 
 	if (ovals)
 		free(ovals);
@@ -882,19 +921,19 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 				p_of_agg = 100.0;
 		}
 
-		log_buf(out, ";%lu;%lu;%f%%;%f;%f", min, max, p_of_agg, mean, dev);
+		log_buf(out, ";%llu;%llu;%f%%;%f;%f", min, max, p_of_agg, mean, dev);
 	} else
-		log_buf(out, ";%lu;%lu;%f%%;%f;%f", 0UL, 0UL, 0.0, 0.0, 0.0);
+		log_buf(out, ";%llu;%llu;%f%%;%f;%f", 0ULL, 0ULL, 0.0, 0.0, 0.0);
 }
 
 static void add_ddir_status_json(struct thread_stat *ts,
 		struct group_run_stats *rs, int ddir, struct json_object *parent)
 {
-	unsigned long min, max;
+	unsigned long long min, max, minv, maxv;
 	unsigned long long bw;
-	unsigned int *ovals = NULL;
+	unsigned long long *ovals = NULL;
 	double mean, dev, iops;
-	unsigned int len, minv, maxv;
+	unsigned int len;
 	int i;
 	const char *ddirname[] = {"read", "write", "trim"};
 	struct json_object *dir_object, *tmp_object, *percentile_object, *clat_bins_object;
@@ -933,7 +972,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 		mean = dev = 0.0;
 	}
 	tmp_object = json_create_object();
-	json_object_add_value_object(dir_object, "slat", tmp_object);
+	json_object_add_value_object(dir_object, "slat_ns", tmp_object);
 	json_object_add_value_int(tmp_object, "min", min);
 	json_object_add_value_int(tmp_object, "max", max);
 	json_object_add_value_float(tmp_object, "mean", mean);
@@ -944,7 +983,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 		mean = dev = 0.0;
 	}
 	tmp_object = json_create_object();
-	json_object_add_value_object(dir_object, "clat", tmp_object);
+	json_object_add_value_object(dir_object, "clat_ns", tmp_object);
 	json_object_add_value_int(tmp_object, "min", min);
 	json_object_add_value_int(tmp_object, "max", max);
 	json_object_add_value_float(tmp_object, "mean", mean);
@@ -985,7 +1024,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 		mean = dev = 0.0;
 	}
 	tmp_object = json_create_object();
-	json_object_add_value_object(dir_object, "lat", tmp_object);
+	json_object_add_value_object(dir_object, "lat_ns", tmp_object);
 	json_object_add_value_int(tmp_object, "min", min);
 	json_object_add_value_int(tmp_object, "max", max);
 	json_object_add_value_float(tmp_object, "mean", mean);
@@ -1047,7 +1086,7 @@ static void show_thread_status_terse_v2(struct thread_stat *ts,
 
 	/* Calc % distribution of IO depths, usecond, msecond latency */
 	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
-	stat_calc_lat_u(ts, io_u_lat_u);
+	stat_calc_lat_nu(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 
 	/* Only show fixed 7 I/O depth levels*/
@@ -1112,7 +1151,7 @@ static void show_thread_status_terse_v3_v4(struct thread_stat *ts,
 
 	/* Calc % distribution of IO depths, usecond, msecond latency */
 	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
-	stat_calc_lat_u(ts, io_u_lat_u);
+	stat_calc_lat_nu(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 
 	/* Only show fixed 7 I/O depth levels*/
@@ -1173,6 +1212,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	struct json_object *root, *tmp;
 	struct jobs_eta *je;
 	double io_u_dist[FIO_IO_U_MAP_NR];
+	double io_u_lat_n[FIO_IO_U_LAT_N_NR];
 	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	double io_u_lat_m[FIO_IO_U_LAT_M_NR];
 	double usr_cpu, sys_cpu;
@@ -1217,6 +1257,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 
 	/* Calc % distribution of IO depths, usecond, msecond latency */
 	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
+	stat_calc_lat_n(ts, io_u_lat_n);
 	stat_calc_lat_u(ts, io_u_lat_u);
 	stat_calc_lat_m(ts, io_u_lat_m);
 
@@ -1232,9 +1273,17 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		json_object_add_value_float(tmp, (const char *)name, io_u_dist[i]);
 	}
 
+	/* Nanosecond latency */
+	tmp = json_create_object();
+	json_object_add_value_object(root, "latency_ns", tmp);
+	for (i = 0; i < FIO_IO_U_LAT_N_NR; i++) {
+		const char *ranges[] = { "2", "4", "10", "20", "50", "100",
+				 "250", "500", "750", "1000", };
+		json_object_add_value_float(tmp, ranges[i], io_u_lat_n[i]);
+	}
+	/* Microsecond latency */
 	tmp = json_create_object();
 	json_object_add_value_object(root, "latency_us", tmp);
-	/* Microsecond latency */
 	for (i = 0; i < FIO_IO_U_LAT_U_NR; i++) {
 		const char *ranges[] = { "2", "4", "10", "20", "50", "100",
 				 "250", "500", "750", "1000", };
@@ -1494,6 +1543,8 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 		dst->io_u_submit[k] += src->io_u_submit[k];
 	for (k = 0; k < FIO_IO_U_MAP_NR; k++)
 		dst->io_u_complete[k] += src->io_u_complete[k];
+	for (k = 0; k < FIO_IO_U_LAT_N_NR; k++)
+		dst->io_u_lat_n[k] += src->io_u_lat_n[k];
 	for (k = 0; k < FIO_IO_U_LAT_U_NR; k++)
 		dst->io_u_lat_u[k] += src->io_u_lat_u[k];
 	for (k = 0; k < FIO_IO_U_LAT_M_NR; k++)
@@ -1849,22 +1900,22 @@ void __show_running_run_stats(void)
 {
 	struct thread_data *td;
 	unsigned long long *rt;
-	struct timeval tv;
+	struct timespec ts;
 	int i;
 
 	fio_mutex_down(stat_mutex);
 
 	rt = malloc(thread_number * sizeof(unsigned long long));
-	fio_gettime(&tv, NULL);
+	fio_gettime(&ts, NULL);
 
 	for_each_td(td, i) {
 		td->update_rusage = 1;
 		td->ts.io_bytes[DDIR_READ] = td->io_bytes[DDIR_READ];
 		td->ts.io_bytes[DDIR_WRITE] = td->io_bytes[DDIR_WRITE];
 		td->ts.io_bytes[DDIR_TRIM] = td->io_bytes[DDIR_TRIM];
-		td->ts.total_run_time = mtime_since(&td->epoch, &tv);
+		td->ts.total_run_time = mtime_since(&td->epoch, &ts);
 
-		rt[i] = mtime_since(&td->start, &tv);
+		rt[i] = mtime_since(&td->start, &ts);
 		if (td_read(td) && td->ts.io_bytes[DDIR_READ])
 			td->ts.runtime[DDIR_READ] += rt[i];
 		if (td_write(td) && td->ts.io_bytes[DDIR_WRITE])
@@ -1899,7 +1950,7 @@ void __show_running_run_stats(void)
 }
 
 static int status_interval_init;
-static struct timeval status_time;
+static struct timespec status_time;
 static int status_file_disabled;
 
 #define FIO_STATUS_FILE		"fio-dump-status"
@@ -1955,7 +2006,7 @@ void check_for_running_stats(void)
 	}
 }
 
-static inline void add_stat_sample(struct io_stat *is, unsigned long data)
+static inline void add_stat_sample(struct io_stat *is, unsigned long long data)
 {
 	double val = data;
 	double delta;
@@ -2188,6 +2239,8 @@ void reset_io_stats(struct thread_data *td)
 		ts->io_u_complete[i] = 0;
 	}
 
+	for (i = 0; i < FIO_IO_U_LAT_N_NR; i++)
+		ts->io_u_lat_n[i] = 0;
 	for (i = 0; i < FIO_IO_U_LAT_U_NR; i++)
 		ts->io_u_lat_u[i] = 0;
 	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++)
@@ -2303,16 +2356,16 @@ void add_agg_sample(union io_sample_data data, enum fio_ddir ddir, unsigned int 
 }
 
 static void add_clat_percentile_sample(struct thread_stat *ts,
-				unsigned long usec, enum fio_ddir ddir)
+				unsigned long long nsec, enum fio_ddir ddir)
 {
-	unsigned int idx = plat_val_to_idx(usec);
+	unsigned int idx = plat_val_to_idx(nsec);
 	assert(idx < FIO_IO_U_PLAT_NR);
 
 	ts->io_u_plat[ddir][idx]++;
 }
 
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
-		     unsigned long usec, unsigned int bs, uint64_t offset)
+		     unsigned long long nsec, unsigned int bs, uint64_t offset)
 {
 	unsigned long elapsed, this_window;
 	struct thread_stat *ts = &td->ts;
@@ -2320,14 +2373,14 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	td_io_u_lock(td);
 
-	add_stat_sample(&ts->clat_stat[ddir], usec);
+	add_stat_sample(&ts->clat_stat[ddir], nsec);
 
 	if (td->clat_log)
-		add_log_sample(td, td->clat_log, sample_val(usec), ddir, bs,
+		add_log_sample(td, td->clat_log, sample_val(nsec), ddir, bs,
 			       offset);
 
 	if (ts->clat_percentiles)
-		add_clat_percentile_sample(ts, usec, ddir);
+		add_clat_percentile_sample(ts, nsec, ddir);
 
 	if (iolog && iolog->hist_msec) {
 		struct io_hist *hw = &iolog->hist_window[ddir];
@@ -2389,7 +2442,7 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 }
 
 void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
-		    unsigned long usec, unsigned int bs, uint64_t offset)
+		    unsigned long long nsec, unsigned int bs, uint64_t offset)
 {
 	struct thread_stat *ts = &td->ts;
 
@@ -2398,23 +2451,23 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	td_io_u_lock(td);
 
-	add_stat_sample(&ts->lat_stat[ddir], usec);
+	add_stat_sample(&ts->lat_stat[ddir], nsec);
 
 	if (td->lat_log)
-		add_log_sample(td, td->lat_log, sample_val(usec), ddir, bs,
+		add_log_sample(td, td->lat_log, sample_val(nsec), ddir, bs,
 			       offset);
 
 	td_io_u_unlock(td);
 }
 
 void add_bw_sample(struct thread_data *td, struct io_u *io_u,
-		   unsigned int bytes, unsigned long spent)
+		   unsigned int bytes, unsigned long long spent)
 {
 	struct thread_stat *ts = &td->ts;
 	unsigned long rate;
 
 	if (spent)
-		rate = bytes * 1000 / spent;
+		rate = (unsigned long) (bytes * 1000000ULL / spent);
 	else
 		rate = 0;
 
@@ -2430,8 +2483,8 @@ void add_bw_sample(struct thread_data *td, struct io_u *io_u,
 	td_io_u_unlock(td);
 }
 
-static int __add_samples(struct thread_data *td, struct timeval *parent_tv,
-			 struct timeval *t, unsigned int avg_time,
+static int __add_samples(struct thread_data *td, struct timespec *parent_tv,
+			 struct timespec *t, unsigned int avg_time,
 			 uint64_t *this_io_bytes, uint64_t *stat_io_bytes,
 			 struct io_stat *stat, struct io_log *log,
 			 bool is_kb)
@@ -2481,7 +2534,7 @@ static int __add_samples(struct thread_data *td, struct timeval *parent_tv,
 		stat_io_bytes[ddir] = this_io_bytes[ddir];
 	}
 
-	timeval_add_msec(parent_tv, avg_time);
+	timespec_add_msec(parent_tv, avg_time);
 
 	td_io_u_unlock(td);
 
@@ -2493,7 +2546,7 @@ static int __add_samples(struct thread_data *td, struct timeval *parent_tv,
 	return min(next, next_log);
 }
 
-static int add_bw_samples(struct thread_data *td, struct timeval *t)
+static int add_bw_samples(struct thread_data *td, struct timespec *t)
 {
 	return __add_samples(td, &td->bw_sample_time, t, td->o.bw_avg_time,
 				td->this_io_bytes, td->stat_io_bytes,
@@ -2517,7 +2570,7 @@ void add_iops_sample(struct thread_data *td, struct io_u *io_u,
 	td_io_u_unlock(td);
 }
 
-static int add_iops_samples(struct thread_data *td, struct timeval *t)
+static int add_iops_samples(struct thread_data *td, struct timespec *t)
 {
 	return __add_samples(td, &td->iops_sample_time, t, td->o.iops_avg_time,
 				td->this_io_blocks, td->stat_io_blocks,
@@ -2531,7 +2584,7 @@ int calc_log_samples(void)
 {
 	struct thread_data *td;
 	unsigned int next = ~0U, tmp;
-	struct timeval now;
+	struct timespec now;
 	int i;
 
 	fio_gettime(&now, NULL);

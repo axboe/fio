@@ -1167,7 +1167,7 @@ static void __fill_hdr(struct thread_data *td, struct io_u *io_u,
 	hdr->rand_seed = rand_seed;
 	hdr->offset = io_u->offset + header_num * td->o.verify_interval;
 	hdr->time_sec = io_u->start_time.tv_sec;
-	hdr->time_usec = io_u->start_time.tv_usec;
+	hdr->time_usec = io_u->start_time.tv_nsec / 1000;
 	hdr->thread = td->thread_number;
 	hdr->numberio = io_u->numberio;
 	hdr->crc32 = fio_crc32c(p, offsetof(struct verify_header, crc32));

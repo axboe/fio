@@ -15,19 +15,22 @@
 
 #if defined(ARCH_HAVE_CPU_CLOCK)
 #ifndef ARCH_CPU_CLOCK_CYCLES_PER_USEC
-static unsigned long cycles_per_usec;
-static unsigned long inv_cycles_per_usec;
-static uint64_t max_cycles_for_mult;
+static unsigned long cycles_per_msec;
+static unsigned long long cycles_start;
+static unsigned long long clock_mult;
+static unsigned long long max_cycles_mask;
+static unsigned long long nsecs_for_max_cycles;
+static unsigned int clock_shift;
+static unsigned int max_cycles_shift;
+#define MAX_CLOCK_SEC 60*60
 #endif
 #ifdef ARCH_CPU_CLOCK_WRAPS
-static unsigned long long cycles_start, cycles_wrap;
+static unsigned int cycles_wrap;
 #endif
 #endif
 int tsc_reliable = 0;
 
 struct tv_valid {
-	uint64_t last_cycles;
-	int last_tv_valid;
 	int warned;
 };
 #ifdef ARCH_HAVE_CPU_CLOCK
@@ -143,31 +146,31 @@ static int fill_clock_gettime(struct timespec *ts)
 }
 #endif
 
-static void __fio_gettime(struct timeval *tp)
+static void __fio_gettime(struct timespec *tp)
 {
 	switch (fio_clock_source) {
 #ifdef CONFIG_GETTIMEOFDAY
-	case CS_GTOD:
-		gettimeofday(tp, NULL);
+	case CS_GTOD: {
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+
+		tp->tv_sec = tv.tv_sec;
+		tp->tv_nsec = tv.tv_usec * 1000;
 		break;
+		}
 #endif
 #ifdef CONFIG_CLOCK_GETTIME
 	case CS_CGETTIME: {
-		struct timespec ts;
-
-		if (fill_clock_gettime(&ts) < 0) {
+		if (fill_clock_gettime(tp) < 0) {
 			log_err("fio: clock_gettime fails\n");
 			assert(0);
 		}
-
-		tp->tv_sec = ts.tv_sec;
-		tp->tv_usec = ts.tv_nsec / 1000;
 		break;
 		}
 #endif
 #ifdef ARCH_HAVE_CPU_CLOCK
 	case CS_CPUCLOCK: {
-		uint64_t usecs, t;
+		uint64_t nsecs, t, multiples;
 		struct tv_valid *tv;
 
 #ifdef CONFIG_TLS_THREAD
@@ -184,21 +187,17 @@ static void __fio_gettime(struct timeval *tp)
 			log_err("fio: double CPU clock wrap\n");
 			tv->warned = 1;
 		}
-
-		t -= cycles_start;
 #endif
-		tv->last_cycles = t;
-		tv->last_tv_valid = 1;
 #ifdef ARCH_CPU_CLOCK_CYCLES_PER_USEC
-		usecs = t / ARCH_CPU_CLOCK_CYCLES_PER_USEC;
+		nsecs = t / ARCH_CPU_CLOCK_CYCLES_PER_USEC * 1000;
 #else
-		if (t < max_cycles_for_mult)
-			usecs = (t * inv_cycles_per_usec) / 16777216UL;
-		else
-			usecs = t / cycles_per_usec;
+		t -= cycles_start;
+		multiples = t >> max_cycles_shift;
+		nsecs = multiples * nsecs_for_max_cycles;
+		nsecs += ((t & max_cycles_mask) * clock_mult) >> clock_shift;
 #endif
-		tp->tv_sec = usecs / 1000000;
-		tp->tv_usec = usecs % 1000000;
+		tp->tv_sec = nsecs / 1000000000ULL;
+		tp->tv_nsec = nsecs % 1000000000ULL;
 		break;
 		}
 #endif
@@ -209,9 +208,9 @@ static void __fio_gettime(struct timeval *tp)
 }
 
 #ifdef FIO_DEBUG_TIME
-void fio_gettime(struct timeval *tp, void *caller)
+void fio_gettime(struct timespec *tp, void *caller)
 #else
-void fio_gettime(struct timeval *tp, void fio_unused *caller)
+void fio_gettime(struct timespec *tp, void fio_unused *caller)
 #endif
 {
 #ifdef FIO_DEBUG_TIME
@@ -227,9 +226,9 @@ void fio_gettime(struct timeval *tp, void fio_unused *caller)
 }
 
 #if defined(ARCH_HAVE_CPU_CLOCK) && !defined(ARCH_CPU_CLOCK_CYCLES_PER_USEC)
-static unsigned long get_cycles_per_usec(void)
+static unsigned long get_cycles_per_msec(void)
 {
-	struct timeval s, e;
+	struct timespec s, e;
 	uint64_t c_s, c_e;
 	enum fio_cs old_cs = fio_clock_source;
 	uint64_t elapsed;
@@ -253,7 +252,7 @@ static unsigned long get_cycles_per_usec(void)
 	} while (1);
 
 	fio_clock_source = old_cs;
-	return (c_e - c_s) / elapsed;
+	return (c_e - c_s) * 1000 / elapsed;
 }
 
 #define NR_TIME_ITERS	50
@@ -262,12 +261,13 @@ static int calibrate_cpu_clock(void)
 {
 	double delta, mean, S;
 	uint64_t minc, maxc, avg, cycles[NR_TIME_ITERS];
-	int i, samples;
+	int i, samples, sft = 0;
+	unsigned long long tmp, max_ticks, max_mult;
 
-	cycles[0] = get_cycles_per_usec();
+	cycles[0] = get_cycles_per_msec();
 	S = delta = mean = 0.0;
 	for (i = 0; i < NR_TIME_ITERS; i++) {
-		cycles[i] = get_cycles_per_usec();
+		cycles[i] = get_cycles_per_msec();
 		delta = cycles[i] - mean;
 		if (delta) {
 			mean += delta / (i + 1.0);
@@ -304,19 +304,67 @@ static int calibrate_cpu_clock(void)
 		dprint(FD_TIME, "cycles[%d]=%llu\n", i, (unsigned long long) cycles[i]);
 
 	avg /= samples;
+	cycles_per_msec = avg;
 	dprint(FD_TIME, "avg: %llu\n", (unsigned long long) avg);
 	dprint(FD_TIME, "min=%llu, max=%llu, mean=%f, S=%f\n",
 			(unsigned long long) minc,
 			(unsigned long long) maxc, mean, S);
 
-	cycles_per_usec = avg;
-	inv_cycles_per_usec = 16777216UL / cycles_per_usec;
-	max_cycles_for_mult = ~0ULL / inv_cycles_per_usec;
-	dprint(FD_TIME, "inv_cycles_per_usec=%lu\n", inv_cycles_per_usec);
-#ifdef ARCH_CPU_CLOCK_WRAPS
+	max_ticks = MAX_CLOCK_SEC * cycles_per_msec * 1000ULL;
+	max_mult = ULLONG_MAX / max_ticks;
+	dprint(FD_TIME, "\n\nmax_ticks=%llu, __builtin_clzll=%d, "
+			"max_mult=%llu\n", max_ticks,
+			__builtin_clzll(max_ticks), max_mult);
+
+        /*
+         * Find the largest shift count that will produce
+         * a multiplier that does not exceed max_mult
+         */
+        tmp = max_mult * cycles_per_msec / 1000000;
+        while (tmp > 1) {
+                tmp >>= 1;
+                sft++;
+                dprint(FD_TIME, "tmp=%llu, sft=%u\n", tmp, sft);
+        }
+
+	clock_shift = sft;
+	clock_mult = (1ULL << sft) * 1000000 / cycles_per_msec;
+	dprint(FD_TIME, "clock_shift=%u, clock_mult=%llu\n", clock_shift,
+							clock_mult);
+
+	/*
+	 * Find the greatest power of 2 clock ticks that is less than the
+	 * ticks in MAX_CLOCK_SEC_2STAGE
+	 */
+	max_cycles_shift = max_cycles_mask = 0;
+	tmp = MAX_CLOCK_SEC * 1000ULL * cycles_per_msec;
+	dprint(FD_TIME, "tmp=%llu, max_cycles_shift=%u\n", tmp,
+							max_cycles_shift);
+	while (tmp > 1) {
+		tmp >>= 1;
+		max_cycles_shift++;
+		dprint(FD_TIME, "tmp=%llu, max_cycles_shift=%u\n", tmp, max_cycles_shift);
+	}
+	/*
+	 * if use use (1ULL << max_cycles_shift) * 1000 / cycles_per_msec
+	 * here we will have a discontinuity every
+	 * (1ULL << max_cycles_shift) cycles
+	 */
+	nsecs_for_max_cycles = ((1ULL << max_cycles_shift) * clock_mult)
+					>> clock_shift;
+
+	/* Use a bitmask to calculate ticks % (1ULL << max_cycles_shift) */
+	for (tmp = 0; tmp < max_cycles_shift; tmp++)
+		max_cycles_mask |= 1ULL << tmp;
+
+	dprint(FD_TIME, "max_cycles_shift=%u, 2^max_cycles_shift=%llu, "
+			"nsecs_for_max_cycles=%llu, "
+			"max_cycles_mask=%016llx\n",
+			max_cycles_shift, (1ULL << max_cycles_shift),
+			nsecs_for_max_cycles, max_cycles_mask);
+
 	cycles_start = get_cpu_clock();
 	dprint(FD_TIME, "cycles_start=%llu\n", cycles_start);
-#endif
 	return 0;
 }
 #else
@@ -379,12 +427,32 @@ void fio_clock_init(void)
 		log_info("fio: clocksource=cpu may not be reliable\n");
 }
 
-uint64_t utime_since(const struct timeval *s, const struct timeval *e)
+uint64_t ntime_since(const struct timespec *s, const struct timespec *e)
+{
+       int64_t sec, nsec;
+
+       sec = e->tv_sec - s->tv_sec;
+       nsec = e->tv_nsec - s->tv_nsec;
+       if (sec > 0 && nsec < 0) {
+	       sec--;
+	       nsec += 1000000000LL;
+       }
+
+       /*
+	* time warp bug on some kernels?
+	*/
+       if (sec < 0 || (sec == 0 && nsec < 0))
+	       return 0;
+
+       return nsec + (sec * 1000000000LL);
+}
+
+uint64_t utime_since(const struct timespec *s, const struct timespec *e)
 {
 	int64_t sec, usec;
 
 	sec = e->tv_sec - s->tv_sec;
-	usec = e->tv_usec - s->tv_usec;
+	usec = (e->tv_nsec - s->tv_nsec) / 1000;
 	if (sec > 0 && usec < 0) {
 		sec--;
 		usec += 1000000;
@@ -399,9 +467,9 @@ uint64_t utime_since(const struct timeval *s, const struct timeval *e)
 	return usec + (sec * 1000000);
 }
 
-uint64_t utime_since_now(const struct timeval *s)
+uint64_t utime_since_now(const struct timespec *s)
 {
-	struct timeval t;
+	struct timespec t;
 #ifdef FIO_DEBUG_TIME
 	void *p = __builtin_return_address(0);
 
@@ -413,12 +481,12 @@ uint64_t utime_since_now(const struct timeval *s)
 	return utime_since(s, &t);
 }
 
-uint64_t mtime_since(const struct timeval *s, const struct timeval *e)
+uint64_t mtime_since_tv(const struct timeval *s, const struct timeval *e)
 {
-	long sec, usec;
+	int64_t sec, usec;
 
 	sec = e->tv_sec - s->tv_sec;
-	usec = e->tv_usec - s->tv_usec;
+	usec = (e->tv_usec - s->tv_usec);
 	if (sec > 0 && usec < 0) {
 		sec--;
 		usec += 1000000;
@@ -432,9 +500,9 @@ uint64_t mtime_since(const struct timeval *s, const struct timeval *e)
 	return sec + usec;
 }
 
-uint64_t mtime_since_now(const struct timeval *s)
+uint64_t mtime_since_now(const struct timespec *s)
 {
-	struct timeval t;
+	struct timespec t;
 #ifdef FIO_DEBUG_TIME
 	void *p = __builtin_return_address(0);
 
@@ -446,7 +514,26 @@ uint64_t mtime_since_now(const struct timeval *s)
 	return mtime_since(s, &t);
 }
 
-uint64_t time_since_now(const struct timeval *s)
+uint64_t mtime_since(const struct timespec *s, const struct timespec *e)
+{
+	int64_t sec, usec;
+
+	sec = e->tv_sec - s->tv_sec;
+	usec = (e->tv_nsec - s->tv_nsec) / 1000;
+	if (sec > 0 && usec < 0) {
+		sec--;
+		usec += 1000000;
+	}
+
+	if (sec < 0 || (sec == 0 && usec < 0))
+		return 0;
+
+	sec *= 1000;
+	usec /= 1000;
+	return sec + usec;
+}
+
+uint64_t time_since_now(const struct timespec *s)
 {
 	return mtime_since_now(s) / 1000;
 }

@@ -26,8 +26,8 @@ struct idle_prof_thread {
 	pthread_t thread;
 	int cpu;
 	int state;
-	struct timeval tps;
-	struct timeval tpe;
+	struct timespec tps;
+	struct timespec tpe;
 	double cali_time; /* microseconds to finish a unit work */
 	double loops;
 	double idleness;
