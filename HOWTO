@@ -177,11 +177,13 @@ Command line options
 
 .. option:: --eta-newline=time
 
-	Force a new line for every `time` period passed.
+	Force a new line for every `time` period passed.  When the unit is omitted,
+	the value is interpreted in seconds.
 
 .. option:: --status-interval=time
 
-	Force full status dump every `time` period passed.
+	Force full status dump every `time` period passed.  When the unit is
+	omitted, the value is interpreted in seconds.
 
 .. option:: --section=name
 
@@ -486,7 +488,8 @@ Parameter types
 
 	The optional *integer suffix* specifies the number's units, and includes an
 	optional unit prefix and an optional unit.  For quantities of data, the
-	default unit is bytes. For quantities of time, the default unit is seconds.
+	default unit is bytes. For quantities of time, the default unit is seconds
+	unless otherwise specified.
 
 	With :option:`kb_base` =1000, fio follows international standards for unit
 	prefixes.  To specify power-of-10 decimal values defined in the
@@ -649,7 +652,7 @@ Time related parameters
 	Tell fio to terminate processing after the specified period of time.  It
 	can be quite hard to determine for how long a specified job will run, so
 	this parameter is handy to cap the total runtime to a given time.  When
-	the unit is omitted, the value is given in seconds.
+	the unit is omitted, the value is intepreted in seconds.
 
 .. option:: time_based
 
@@ -659,10 +662,9 @@ Time related parameters
 
 .. option:: startdelay=irange(time)
 
-	Delay start of job for the specified number of seconds. Supports all time
-	suffixes to allow specification of hours, minutes, seconds and milliseconds
-	-- seconds are the default if a unit is omitted.  Can be given as a range
-	which causes each thread to choose randomly out of the range.
+	Delay the start of job for the specified amount of time.  Can be a single
+	value or a range.  When given as a range, each thread will choose a value
+	randomly from within the range.  Value is in seconds if a unit is omitted.
 
 .. option:: ramp_time=time
 
@@ -1996,7 +1998,7 @@ I/O rate
 
 	Stall the job for the specified period of time after an I/O has completed before issuing the
 	next. May be used to simulate processing being done by an application.
-	When the unit is omitted, the value is given in microseconds.  See
+	When the unit is omitted, the value is interpreted in microseconds.  See
 	:option:`thinktime_blocks` and :option:`thinktime_spin`.
 
 .. option:: thinktime_spin=time
@@ -2004,7 +2006,7 @@ I/O rate
 	Only valid if :option:`thinktime` is set - pretend to spend CPU time doing
 	something with the data received, before falling back to sleeping for the
 	rest of the period specified by :option:`thinktime`.  When the unit is
-	omitted, the value is given in microseconds.
+	omitted, the value is interpreted in microseconds.
 
 .. option:: thinktime_blocks=int
 
@@ -2060,14 +2062,14 @@ I/O latency
 
 	If set, fio will attempt to find the max performance point that the given
 	workload will run at while maintaining a latency below this target.  When
-	the unit is omitted, the value is given in microseconds.  See
+	the unit is omitted, the value is interpreted in microseconds.  See
 	:option:`latency_window` and :option:`latency_percentile`.
 
 .. option:: latency_window=time
 
 	Used with :option:`latency_target` to specify the sample window that the job
 	is run at varying queue depths to test the performance.  When the unit is
-	omitted, the value is given in microseconds.
+	omitted, the value is interpreted in microseconds.
 
 .. option:: latency_percentile=float
 
@@ -2079,7 +2081,7 @@ I/O latency
 .. option:: max_latency=time
 
 	If set, fio will exit the job with an ETIMEDOUT error if it exceeds this
-	maximum latency. When the unit is omitted, the value is given in
+	maximum latency. When the unit is omitted, the value is interpreted in
 	microseconds.
 
 .. option:: rate_cycle=int
@@ -2586,13 +2588,13 @@ Steady state
 	A rolling window of this duration will be used to judge whether steady state
 	has been reached. Data will be collected once per second. The default is 0
 	which disables steady state detection.  When the unit is omitted, the
-	value is given in seconds.
+	value is interpreted in seconds.
 
 .. option:: steadystate_ramp_time=time, ss_ramp=time
 
 	Allow the job to run for the specified duration before beginning data
 	collection for checking the steady state job termination criterion. The
-	default is 0.  When the unit is omitted, the value is given in seconds.
+	default is 0.  When the unit is omitted, the value is interpreted in seconds.
 
 
 Measurements and reporting
@@ -2901,7 +2903,8 @@ Act profile options
 .. option:: test-duration=time
 	:noindex:
 
-	How long the entire test takes to run.  Default: 24h.
+	How long the entire test takes to run.  When the unit is omitted, the value
+	is given in seconds.  Default: 24h.
 
 .. option:: threads-per-queue=int
 	:noindex:
