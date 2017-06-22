@@ -121,7 +121,7 @@ Command line options
 .. option:: --output-format=type
 
 	Set the reporting format to `normal`, `terse`, `json`, or `json+`.  Multiple
-	formats can be selected, separate by a comma.  `terse` is a CSV based
+	formats can be selected, separated by a comma.  `terse` is a CSV based
 	format.  `json+` is like `json`, except it adds a full dump of the latency
 	buckets.
 
@@ -539,15 +539,15 @@ Parameter types
 
 		* *D* -- means days
 		* *H* -- means hours
-		* *M* -- mean minutes
+		* *M* -- means minutes
 		* *s* -- or sec means seconds (default)
 		* *ms* -- or *msec* means milliseconds
 		* *us* -- or *usec* means microseconds
 
 	If the option accepts an upper and lower range, use a colon ':' or
 	minus '-' to separate such values. See :ref:`irange <irange>`.
-	If the lower value specified happens to be larger than the upper value,
-	two values are swapped.
+	If the lower value specified happens to be larger than the upper value
+	the two values are swapped.
 
 .. _bool:
 
@@ -876,7 +876,7 @@ Target file/device
 .. option:: create_only=bool
 
 	If true, fio will only run the setup phase of the job.  If files need to be
-	laid out or updated on disk, only that will be done. The actual job contents
+	laid out or updated on disk, only that will be done -- the actual job contents
 	are not executed.  Default: false.
 
 .. option:: allow_file_create=bool
@@ -3385,7 +3385,7 @@ will then execute the trigger.
 Verification trigger example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Lets say we want to run a powercut test on the remote machine 'server'.  Our
+Let's say we want to run a powercut test on the remote machine 'server'.  Our
 write workload is in :file:`write-test.fio`. We want to cut power to 'server' at
 some point during the run, and we'll run this test from the safety or our local
 machine, 'localbox'. On the server, we'll start the fio backend normally::
@@ -3404,7 +3404,7 @@ on the server once it has received the trigger and sent us the write state. This
 will work, but it's not **really** cutting power to the server, it's merely
 abruptly rebooting it. If we have a remote way of cutting power to the server
 through IPMI or similar, we could do that through a local trigger command
-instead. Lets assume we have a script that does IPMI reboot of a given hostname,
+instead. Let's assume we have a script that does IPMI reboot of a given hostname,
 ipmi-reboot. On localbox, we could then have run fio with a local trigger
 instead::
 
@@ -3416,7 +3416,7 @@ execute ``ipmi-reboot server`` when that happened.
 Loading verify state
 ~~~~~~~~~~~~~~~~~~~~
 
-To load store write state, read verification job file must contain the
+To load stored write state, a read verification job file must contain the
 :option:`verify_state_load` option. If that is set, fio will load the previously
 stored state. For a local fio run this is done by loading the files directly,
 and on a client/server run, the server backend will ask the client to send the
@@ -3542,7 +3542,7 @@ servers receive the same job file.
 
 In order to let ``fio --client`` runs use a shared filesystem from multiple
 hosts, ``fio --client`` now prepends the IP address of the server to the
-filename.  For example, if fio is using directory :file:`/mnt/nfs/fio` and is
+filename.  For example, if fio is using the directory :file:`/mnt/nfs/fio` and is
 writing filename :file:`fileio.tmp`, with a :option:`--client` `hostfile`
 containing two hostnames ``h1`` and ``h2`` with IP addresses 192.168.10.120 and
 192.168.10.121, then fio will create two files::
