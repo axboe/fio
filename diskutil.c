@@ -84,7 +84,7 @@ static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 static void update_io_tick_disk(struct disk_util *du)
 {
 	struct disk_util_stat __dus, *dus, *ldus;
-	struct timeval t;
+	struct timespec t;
 
 	if (!du->users)
 		return;

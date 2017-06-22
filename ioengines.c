@@ -281,7 +281,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 		 */
 		if (td->o.read_iolog_file)
 			memcpy(&td->last_issue, &io_u->issue_time,
-					sizeof(struct timeval));
+					sizeof(io_u->issue_time));
 	}
 
 	if (ddir_rw(ddir)) {
@@ -356,7 +356,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 		 */
 		if (td->o.read_iolog_file)
 			memcpy(&td->last_issue, &io_u->issue_time,
-					sizeof(struct timeval));
+					sizeof(io_u->issue_time));
 	}
 
 	return ret;

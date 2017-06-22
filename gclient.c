@@ -930,8 +930,10 @@ static gint on_config_lat_drawing_area(GtkWidget *w, GdkEventConfigure *event,
 static void gfio_show_latency_buckets(struct gfio_client *gc, GtkWidget *vbox,
 				      struct thread_stat *ts)
 {
-	double io_u_lat[FIO_IO_U_LAT_U_NR + FIO_IO_U_LAT_M_NR];
-	const char *ranges[] = { "2us", "4us", "10us", "20us", "50us", "100us",
+	double io_u_lat[FIO_IO_U_LAT_N_NR + FIO_IO_U_LAT_U_NR + FIO_IO_U_LAT_M_NR];
+	const char *ranges[] = { "2ns", "4ns", "10ns", "20ns", "50ns", "100ns",
+				 "250ns", "500ns", "750ns", "1000ns", "2us",
+				 "4us", "10us", "20us", "50us", "100us",
 				 "250us", "500us", "750us", "1ms", "2ms",
 				 "4ms", "10ms", "20ms", "50ms", "100ms",
 				 "250ms", "500ms", "750ms", "1s", "2s", ">= 2s" };
@@ -940,8 +942,9 @@ static void gfio_show_latency_buckets(struct gfio_client *gc, GtkWidget *vbox,
 	GtkWidget *frame, *tree_view, *hbox, *completion_vbox, *drawing_area;
 	struct gui_entry *ge = gc->ge;
 
-	stat_calc_lat_u(ts, io_u_lat);
-	stat_calc_lat_m(ts, &io_u_lat[FIO_IO_U_LAT_U_NR]);
+	stat_calc_lat_n(ts, io_u_lat);
+	stat_calc_lat_u(ts, &io_u_lat[FIO_IO_U_LAT_N_NR]);
+	stat_calc_lat_m(ts, &io_u_lat[FIO_IO_U_LAT_N_NR + FIO_IO_U_LAT_U_NR]);
 
 	/*
 	 * Found out which first bucket has entries, and which last bucket
@@ -983,16 +986,18 @@ static void gfio_show_latency_buckets(struct gfio_client *gc, GtkWidget *vbox,
 	gtk_box_pack_start(GTK_BOX(hbox), tree_view, TRUE, TRUE, 3);
 }
 
-static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long min,
-			  unsigned long max, double mean, double dev)
+static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long long min,
+			  unsigned long long max, double mean, double dev)
 {
-	const char *base = "(usec)";
+	const char *base = "(nsec)";
 	GtkWidget *hbox, *label, *frame;
 	char *minp, *maxp;
 	char tmp[64];
 
-	if (usec_to_msec(&min, &max, &mean, &dev))
+	if (nsec_to_msec(&min, &max, &mean, &dev))
 		base = "(msec)";
+	else if (nsec_to_usec(&min, &max, &mean, &dev))
+		base = "(usec)";
 
 	minp = num2str(min, 6, 1, 0, N2S_NONE);
 	maxp = num2str(max, 6, 1, 0, N2S_NONE);
@@ -1019,7 +1024,7 @@ static void gfio_show_lat(GtkWidget *vbox, const char *name, unsigned long min,
 	free(maxp);
 }
 
-static GtkWidget *gfio_output_clat_percentiles(unsigned int *ovals,
+static GtkWidget *gfio_output_clat_percentiles(unsigned long long *ovals,
 					       fio_fp64_t *plist,
 					       unsigned int len,
 					       const char *base,
@@ -1030,10 +1035,10 @@ static GtkWidget *gfio_output_clat_percentiles(unsigned int *ovals,
 	GtkTreeSelection *selection;
 	GtkListStore *model;
 	GtkTreeIter iter;
-	int i;
+	int i, j;
 
 	for (i = 0; i < len; i++)
-		types[i] = G_TYPE_INT;
+		types[i] = G_TYPE_ULONG;
 
 	model = gtk_list_store_newv(len, types);
 
@@ -1056,15 +1061,15 @@ static GtkWidget *gfio_output_clat_percentiles(unsigned int *ovals,
 	gtk_list_store_append(model, &iter);
 
 	for (i = 0; i < len; i++) {
-		if (scale)
+		for (j = 0; j < scale; j++)
 			ovals[i] = (ovals[i] + 999) / 1000;
-		gtk_list_store_set(model, &iter, i, ovals[i], -1);
+		gtk_list_store_set(model, &iter, i, (unsigned long) ovals[i], -1);
 	}
 
 	return tree_view;
 }
 
-static struct graph *setup_clat_graph(char *title, unsigned int *ovals,
+static struct graph *setup_clat_graph(char *title, unsigned long long *ovals,
 				      fio_fp64_t *plist,
 				      unsigned int len,
 				      double xdim, double ydim)
@@ -1096,7 +1101,8 @@ static void gfio_show_clat_percentiles(struct gfio_client *gc,
 	unsigned int *io_u_plat = ts->io_u_plat[ddir];
 	unsigned long nr = ts->clat_stat[ddir].samples;
 	fio_fp64_t *plist = ts->percentile_list;
-	unsigned int *ovals, len, minv, maxv, scale_down;
+	unsigned int len, scale_down;
+	unsigned long long *ovals, minv, maxv;
 	const char *base;
 	GtkWidget *tree_view, *frame, *hbox, *drawing_area, *completion_vbox;
 	struct gui_entry *ge = gc->ge;
@@ -1107,16 +1113,19 @@ static void gfio_show_clat_percentiles(struct gfio_client *gc,
 		goto out;
 
 	/*
-	 * We default to usecs, but if the value range is such that we
-	 * should scale down to msecs, do that.
+	 * We default to nsecs, but if the value range is such that we
+	 * should scale down to usecs or msecs, do that.
 	 */
-	if (minv > 2000 && maxv > 99999) {
-		scale_down = 1;
+        if (minv > 2000000 && maxv > 99999999ULL) {
+                scale_down = 2;
 		base = "msec";
-	} else {
-		scale_down = 0;
+        } else if (minv > 2000 && maxv > 99999) {
+                scale_down = 1;
 		base = "usec";
-	}
+        } else {
+                scale_down = 0;
+		base = "nsec";
+        }
 
 	sprintf(tmp, "Completion percentiles (%s)", base);
 	tree_view = gfio_output_clat_percentiles(ovals, plist, len, base, scale_down);
@@ -1152,7 +1161,8 @@ static void gfio_show_ddir_status(struct gfio_client *gc, GtkWidget *mbox,
 {
 	const char *ddir_label[3] = { "Read", "Write", "Trim" };
 	GtkWidget *frame, *label, *box, *vbox, *main_vbox;
-	unsigned long min[3], max[3], runt;
+	unsigned long long min[3], max[3];
+	unsigned long runt;
 	unsigned long long bw, iops;
 	unsigned int flags = 0;
 	double mean[3], dev[3];

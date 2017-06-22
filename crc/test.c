@@ -392,7 +392,7 @@ int fio_crctest(const char *type)
 	fill_random_buf(&state, buf, CHUNK);
 
 	for (i = 0; t[i].name; i++) {
-		struct timeval tv;
+		struct timespec ts;
 		double mb_sec;
 		uint64_t usec;
 		char pre[3];
@@ -409,9 +409,9 @@ int fio_crctest(const char *type)
 			t[i].fn(&t[i], buf, CHUNK);
 		}
 
-		fio_gettime(&tv, NULL);
+		fio_gettime(&ts, NULL);
 		t[i].fn(&t[i], buf, CHUNK);
-		usec = utime_since_now(&tv);
+		usec = utime_since_now(&ts);
 
 		if (usec) {
 			mb_sec = (double) mb / (double) usec;

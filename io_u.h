@@ -31,8 +31,8 @@ enum {
  * The io unit
  */
 struct io_u {
-	struct timeval start_time;
-	struct timeval issue_time;
+	struct timespec start_time;
+	struct timespec issue_time;
 
 	struct fio_file *file;
 	unsigned int flags;

@@ -47,7 +47,7 @@ struct act_run_data {
 static struct act_run_data *act_run_data;
 
 struct act_prof_data {
-	struct timeval sample_tv;
+	struct timespec sample_tv;
 	struct act_slice *slices;
 	unsigned int cur_slice;
 	unsigned int nr_slices;

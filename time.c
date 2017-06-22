@@ -3,23 +3,23 @@
 
 #include "fio.h"
 
-static struct timeval genesis;
+static struct timespec genesis;
 static unsigned long ns_granularity;
 
-void timeval_add_msec(struct timeval *tv, unsigned int msec)
+void timespec_add_msec(struct timespec *ts, unsigned int msec)
 {
-	unsigned long adj_usec = 1000 * msec;
+	unsigned long adj_nsec = 1000000 * msec;
 
-	tv->tv_usec += adj_usec;
-	if (adj_usec >= 1000000) {
-		unsigned long adj_sec = adj_usec / 1000000;
+	ts->tv_nsec += adj_nsec;
+	if (adj_nsec >= 1000000000) {
+		unsigned long adj_sec = adj_nsec / 1000000000UL;
 
-		tv->tv_usec -=  adj_sec * 1000000;
-		tv->tv_sec += adj_sec;
+		ts->tv_nsec -=  adj_sec * 1000000000UL;
+		ts->tv_sec += adj_sec;
 	}
-	if (tv->tv_usec >= 1000000){
-		tv->tv_usec -= 1000000;
-		tv->tv_sec++;
+	if (ts->tv_nsec >= 1000000000UL){
+		ts->tv_nsec -= 1000000000UL;
+		ts->tv_sec++;
 	}
 }
 
@@ -28,7 +28,7 @@ void timeval_add_msec(struct timeval *tv, unsigned int msec)
  */
 uint64_t usec_spin(unsigned int usec)
 {
-	struct timeval start;
+	struct timespec start;
 	uint64_t t;
 
 	fio_gettime(&start, NULL);
@@ -41,7 +41,7 @@ uint64_t usec_spin(unsigned int usec)
 uint64_t usec_sleep(struct thread_data *td, unsigned long usec)
 {
 	struct timespec req;
-	struct timeval tv;
+	struct timespec tv;
 	uint64_t t = 0;
 
 	do {
@@ -111,13 +111,10 @@ static void parent_update_ramp(struct thread_data *td)
 
 bool ramp_time_over(struct thread_data *td)
 {
-	struct timeval tv;
-
 	if (!td->o.ramp_time || td->ramp_time_over)
 		return true;
 
-	fio_gettime(&tv, NULL);
-	if (utime_since(&td->epoch, &tv) >= td->o.ramp_time) {
+	if (utime_since_now(&td->epoch) >= td->o.ramp_time) {
 		td->ramp_time_over = 1;
 		reset_all_stats(td);
 		td_set_runstate(td, TD_RAMP);
@@ -138,8 +135,7 @@ void fio_time_init(void)
 	 * Check the granularity of the nanosleep function
 	 */
 	for (i = 0; i < 10; i++) {
-		struct timeval tv;
-		struct timespec ts;
+		struct timespec tv, ts;
 		unsigned long elapsed;
 
 		fio_gettime(&tv, NULL);
@@ -170,7 +166,7 @@ void set_epoch_time(struct thread_data *td, int log_unix_epoch)
 	}
 }
 
-void fill_start_time(struct timeval *t)
+void fill_start_time(struct timespec *t)
 {
 	memcpy(t, &genesis, sizeof(genesis));
 }

@@ -25,8 +25,8 @@
 #include "../os-windows.h"
 #include "../../lib/hweight.h"
 
-extern unsigned long mtime_since_now(struct timeval *);
-extern void fio_gettime(struct timeval *, void *);
+extern unsigned long mtime_since_now(struct timespec *);
+extern void fio_gettime(struct timespec *, void *);
 
 /* These aren't defined in the MinGW headers */
 HRESULT WINAPI StringCchCopyA(
@@ -852,7 +852,7 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 
 int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 {
-	struct timeval tv;
+	struct timespec tv;
 	DWORD ms_remaining;
 	DWORD ms_total = (rqtp->tv_sec * 1000) + (rqtp->tv_nsec / 1000000.0);
 

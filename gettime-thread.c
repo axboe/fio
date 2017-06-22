@@ -6,30 +6,30 @@
 #include "fio.h"
 #include "smalloc.h"
 
-struct timeval *fio_tv = NULL;
+struct timespec *fio_ts = NULL;
 int fio_gtod_offload = 0;
 static pthread_t gtod_thread;
 static os_cpu_mask_t fio_gtod_cpumask;
 
 void fio_gtod_init(void)
 {
-	if (fio_tv)
+	if (fio_ts)
 		return;
 
-	fio_tv = smalloc(sizeof(struct timeval));
-	if (!fio_tv)
+	fio_ts = smalloc(sizeof(*fio_ts));
+	if (!fio_ts)
 		log_err("fio: smalloc pool exhausted\n");
 }
 
 static void fio_gtod_update(void)
 {
-	if (fio_tv) {
+	if (fio_ts) {
 		struct timeval __tv;
 
 		gettimeofday(&__tv, NULL);
-		fio_tv->tv_sec = __tv.tv_sec;
+		fio_ts->tv_sec = __tv.tv_sec;
 		write_barrier();
-		fio_tv->tv_usec = __tv.tv_usec;
+		fio_ts->tv_nsec = __tv.tv_usec * 1000;
 		write_barrier();
 	}
 }

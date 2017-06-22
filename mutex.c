@@ -141,11 +141,15 @@ struct fio_mutex *fio_mutex_init(int value)
 	return NULL;
 }
 
-static bool mutex_timed_out(struct timeval *t, unsigned int msecs)
+static bool mutex_timed_out(struct timespec *t, unsigned int msecs)
 {
-	struct timeval now;
+	struct timeval tv;
+	struct timespec now;
 
-	gettimeofday(&now, NULL);
+	gettimeofday(&tv, NULL);
+	now.tv_sec = tv.tv_sec;
+	now.tv_nsec = tv.tv_usec * 1000;
+
 	return mtime_since(t, &now) >= msecs;
 }
 
@@ -177,7 +181,7 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int msecs)
 		 * way too early, double check.
 		 */
 		ret = pthread_cond_timedwait(&mutex->cond, &mutex->lock, &t);
-		if (ret == ETIMEDOUT && !mutex_timed_out(&tv_s, msecs))
+		if (ret == ETIMEDOUT && !mutex_timed_out(&t, msecs))
 			ret = 0;
 	}
 	mutex->waiters--;

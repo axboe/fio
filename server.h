@@ -43,13 +43,13 @@ struct fio_net_cmd {
 
 struct fio_net_cmd_reply {
 	struct flist_head list;
-	struct timeval tv;
+	struct timespec ts;
 	uint64_t saved_tag;
 	uint16_t opcode;
 };
 
 enum {
-	FIO_SERVER_VER			= 63,
+	FIO_SERVER_VER			= 64,
 
 	FIO_SERVER_MAX_FRAGMENT_PDU	= 1024,
 	FIO_SERVER_MAX_CMD_MB		= 2048,

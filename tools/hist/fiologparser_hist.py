@@ -373,7 +373,7 @@ if __name__ == '__main__':
         help='print warning messages to stderr')
 
     arg('--group_nr',
-        default=19,
+        default=29,
         type=int,
         help='FIO_IO_U_PLAT_GROUP_NR as defined in stat.h')
 
