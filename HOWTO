@@ -2701,6 +2701,7 @@ Measurements and reporting
 	very large size. Setting this option makes fio average the each log entry
 	over the specified period of time, reducing the resolution of the log.  See
 	:option:`log_max_value` as well. Defaults to 0, logging all entries.
+	Also see `Log File Formats`_.
 
 .. option:: log_hist_msec=int
 
@@ -3480,13 +3481,12 @@ The *offset* is the offset, in bytes, from the start of the file, for that
 particular I/O. The logging of the offset can be toggled with
 :option:`log_offset`.
 
-If windowed logging is enabled through :option:`log_avg_msec` then fio doesn't
-log individual I/Os. Instead of logs the average values over the specified period
-of time. Since 'data direction' and 'offset' are per-I/O values, they aren't
-applicable if windowed logging is enabled. If windowed logging is enabled and
-:option:`log_max_value` is set, then fio logs maximum values in that window
-instead of averages.
-
+Fio defaults to logging every individual I/O.  When IOPS are logged for individual
+I/Os the value entry will always be 1.  If windowed logging is enabled through
+:option:`log_avg_msec`, fio logs the average values over the specified period of time.
+If windowed logging is enabled and :option:`log_max_value` is set, then fio logs
+maximum values in that window instead of averages.  Since 'data direction' and
+'offset' are per-I/O values, they aren't applicable if windowed logging is enabled.
 
 Client/server
 -------------
