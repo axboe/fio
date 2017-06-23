@@ -189,7 +189,7 @@ static bool add_pool(struct pool *pool, unsigned int alloc_size)
 		goto out_fail;
 
 	pool->map = ptr;
-	pool->bitmap = (void *) ptr + (pool->nr_blocks * SMALLOC_BPL);
+	pool->bitmap = (unsigned int *)((char *) ptr + (pool->nr_blocks * SMALLOC_BPL));
 	memset(pool->bitmap, 0, bitmap_blocks * sizeof(unsigned int));
 
 	pool->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
