@@ -3496,7 +3496,7 @@ Start the server on the machine which has access to the storage DUT::
 
 	fio --server=args
 
-where args defines what fio listens to. The arguments are of the form
+where `args` defines what fio listens to. The arguments are of the form
 ``type,hostname`` or ``IP,port``. *type* is either ``ip`` (or ip4) for TCP/IP
 v4, ``ip6`` for TCP/IP v6, or ``sock`` for a local unix domain socket.
 *hostname* is either a hostname or IP address, and *port* is the port to listen
@@ -3524,7 +3524,7 @@ to (only valid for TCP/IP, not a local socket). Some examples:
 
 6) ``fio --server=sock:/tmp/fio.sock``
 
-   Start a fio server, listening on the local socket /tmp/fio.sock.
+   Start a fio server, listening on the local socket :file:`/tmp/fio.sock`.
 
 Once a server is running, a "client" can connect to the fio server with::
 
