@@ -3186,7 +3186,8 @@ is one long line of values, such as::
 
 The job description (if provided) follows on a second line.
 
-To enable terse output, use the :option:`--minimal` command line option. The
+To enable terse output, use the :option:`--minimal` or
+:option:`--output-format`\=terse command line options. The
 first value is the version of the terse output format. If the output has to be
 changed for some reason, this number will be incremented by 1 to signify that
 change.
