@@ -388,7 +388,7 @@ static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 	(void)paste_format_inplace(pattern, pattern_size,
 				   td->o.verify_fmt, td->o.verify_fmt_sz, io_u);
 
-	buf = (void *) hdr + header_size;
+	buf = (char *) hdr + header_size;
 	len = get_hdr_inc(td, io_u) - header_size;
 	mod = (get_hdr_inc(td, io_u) * vc->hdr_num + header_size) % pattern_size;
 
@@ -1188,9 +1188,10 @@ static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 			 unsigned int header_len)
 {
 	unsigned int data_len;
-	void *data, *p;
+	void *data;
+	char *p;
 
-	p = (void *) hdr;
+	p = (char *) hdr;
 
 	fill_hdr(td, io_u, hdr, header_num, header_len, io_u->rand_seed);
 

@@ -77,7 +77,7 @@ static inline size_t thread_io_list_sz(struct thread_io_list *s)
 
 static inline struct thread_io_list *io_list_next(struct thread_io_list *s)
 {
-	return (void *) s + thread_io_list_sz(s);
+	return (struct thread_io_list *)((char *) s + thread_io_list_sz(s));
 }
 
 static inline void verify_state_gen_name(char *out, size_t size,

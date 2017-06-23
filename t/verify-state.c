@@ -58,7 +58,8 @@ static void show(struct thread_io_list *s, size_t size)
 		show_s(s, no_s);
 		no_s++;
 		size -= __thread_io_list_sz(s->depth, s->nofiles);
-		s = (void *) s + __thread_io_list_sz(s->depth, s->nofiles);
+		s = (struct thread_io_list *)((char *) s +
+			__thread_io_list_sz(s->depth, s->nofiles));
 	} while (size != 0);
 }
 
