@@ -43,7 +43,7 @@ Deprecated, use \-\-output-format instead to select multiple formats.
 Display version information and exit.
 .TP
 .BI \-\-terse\-version \fR=\fPversion
-Set terse version output format (default 3, or 2 or 4)
+Set terse version output format (default 3, or 2, 4, 5)
 .TP
 .B \-\-help
 Display usage information and exit.
@@ -2161,10 +2161,11 @@ scripted use.
 A job description (if provided) follows on a new line.  Note that the first
 number in the line is the version number. If the output has to be changed
 for some reason, this number will be incremented by 1 to signify that
-change.  The fields are:
+change. Numbers in brackets (e.g. "[v3]") indicate which terse version
+introduced a field. The fields are:
 .P
 .RS
-.B terse version, fio version, jobname, groupid, error
+.B terse version, fio version [v3], jobname, groupid, error
 .P
 Read status:
 .RS
@@ -2188,7 +2189,11 @@ Total latency:
 .RE
 Bandwidth:
 .RS
-.B min, max, aggregate percentage of total, mean, standard deviation
+.B min, max, aggregate percentage of total, mean, standard deviation, number of samples [v5]
+.RE
+IOPS [v5]:
+.RS
+.B min, max, mean, standard deviation, number of samples
 .RE
 .RE
 .P
@@ -2214,8 +2219,17 @@ Total latency:
 .RE
 Bandwidth:
 .RS
-.B min, max, aggregate percentage of total, mean, standard deviation
+.B min, max, aggregate percentage of total, mean, standard deviation, number of samples [v5]
 .RE
+IOPS [v5]:
+.RS
+.B min, max, mean, standard deviation, number of samples
+.RE
+.RE
+.P
+Trim status [all but version 3]:
+.RS
+Similar to Read/Write status but for trims.
 .RE
 .P
 CPU usage:
@@ -2240,7 +2254,7 @@ Milliseconds:
 .RE
 .RE
 .P
-Disk utilization (1 for each disk used):
+Disk utilization (1 for each disk used) [v3]:
 .RS
 .B name, read ios, write ios, read merges, write merges, read ticks, write ticks, read in-queue time, write in-queue time, disk utilization percentage
 .RE

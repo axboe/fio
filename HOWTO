@@ -127,7 +127,7 @@ Command line options
 
 .. option:: --terse-version=type
 
-	Set terse version output format (default 3, or 2 or 4).
+	Set terse version output format (default 3, or 2 or 4 or 5).
 
 .. option:: --version
 
@@ -3168,11 +3168,12 @@ first value is the version of the terse output format. If the output has to be
 changed for some reason, this number will be incremented by 1 to signify that
 change.
 
-Split up, the format is as follows:
+Split up, the format is as follows (comments in brackets denote when a
+field was introduced or whether its specific to some terse version):
 
     ::
 
-        terse version, fio version, jobname, groupid, error
+	terse version, fio version [v3], jobname, groupid, error
 
     READ status::
 
@@ -3181,7 +3182,8 @@ Split up, the format is as follows:
         Completion latency: min, max, mean, stdev (usec)
         Completion latency percentiles: 20 fields (see below)
         Total latency: min, max, mean, stdev (usec)
-        Bw (KiB/s): min, max, aggregate percentage of total, mean, stdev
+	Bw (KiB/s): min, max, aggregate percentage of total, mean, stdev, number of samples [v5]
+	IOPS [v5]: min, max, mean, stdev, number of samples
 
     WRITE status:
 
@@ -3192,7 +3194,12 @@ Split up, the format is as follows:
         Completion latency: min, max, mean, stdev (usec)
         Completion latency percentiles: 20 fields (see below)
         Total latency: min, max, mean, stdev (usec)
-        Bw (KiB/s): min, max, aggregate percentage of total, mean, stdev
+	Bw (KiB/s): min, max, aggregate percentage of total, mean, stdev, number of samples [v5]
+	IOPS [v5]: min, max, mean, stdev, number of samples
+
+    TRIM status [all but version 3]:
+
+	Fields are similar to READ/WRITE status.
 
     CPU usage::
 
@@ -3210,7 +3217,7 @@ Split up, the format is as follows:
 
         <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000, 2000, >=2000
 
-    Disk utilization::
+    Disk utilization [v3]::
 
         Disk name, Read ios, write ios,
         Read merges, write merges,

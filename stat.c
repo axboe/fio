@@ -863,13 +863,13 @@ static void show_thread_status_normal(struct thread_stat *ts,
 
 static void show_ddir_status_terse(struct thread_stat *ts,
 				   struct group_run_stats *rs, int ddir,
-				   struct buf_output *out)
+				   int ver, struct buf_output *out)
 {
 	unsigned long long min, max, minv, maxv, bw, iops;
 	unsigned long long *ovals = NULL;
 	double mean, dev;
 	unsigned int len;
-	int i;
+	int i, bw_stat;
 
 	assert(ddir_rw(ddir));
 
@@ -919,7 +919,8 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	if (ovals)
 		free(ovals);
 
-	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
+	bw_stat = calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev);
+	if (bw_stat) {
 		double p_of_agg = 100.0;
 
 		if (rs->agg[ddir]) {
@@ -931,6 +932,19 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 		log_buf(out, ";%llu;%llu;%f%%;%f;%f", min, max, p_of_agg, mean, dev);
 	} else
 		log_buf(out, ";%llu;%llu;%f%%;%f;%f", 0ULL, 0ULL, 0.0, 0.0, 0.0);
+
+	if (ver == 5) {
+		if (bw_stat)
+			log_buf(out, ";%lu", (&ts->bw_stat[ddir])->samples);
+		else
+			log_buf(out, ";%lu", 0UL);
+
+		if (calc_lat(&ts->iops_stat[ddir], &min, &max, &mean, &dev))
+			log_buf(out, ";%llu;%llu;%f;%f;%lu", min, max,
+				mean, dev, (&ts->iops_stat[ddir])->samples);
+		else
+			log_buf(out, ";%llu;%llu;%f;%f;%lu", 0ULL, 0ULL, 0.0, 0.0, 0UL);
+	}
 }
 
 static void add_ddir_status_json(struct thread_stat *ts,
@@ -1087,12 +1101,12 @@ static void show_thread_status_terse_all(struct thread_stat *ts,
 			ts->name, ts->groupid, ts->error);
 
 	/* Log Read Status */
-	show_ddir_status_terse(ts, rs, DDIR_READ, out);
+	show_ddir_status_terse(ts, rs, DDIR_READ, ver, out);
 	/* Log Write Status */
-	show_ddir_status_terse(ts, rs, DDIR_WRITE, out);
+	show_ddir_status_terse(ts, rs, DDIR_WRITE, ver, out);
 	/* Log Trim Status */
-	if (ver == 2 || ver == 4)
-		show_ddir_status_terse(ts, rs, DDIR_TRIM, out);
+	if (ver == 2 || ver == 4 || ver == 5)
+		show_ddir_status_terse(ts, rs, DDIR_TRIM, ver, out);
 
 	/* CPU Usage */
 	if (ts->total_run_time) {
@@ -1376,7 +1390,7 @@ static void show_thread_status_terse(struct thread_stat *ts,
 				     struct group_run_stats *rs,
 				     struct buf_output *out)
 {
-	if (terse_version >= 2 && terse_version <= 4)
+	if (terse_version >= 2 && terse_version <= 5)
 		show_thread_status_terse_all(ts, rs, terse_version, out);
 	else
 		log_err("fio: bad terse version!? %d\n", terse_version);
