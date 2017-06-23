@@ -1572,7 +1572,7 @@ I/O size
 	and :option:`io_size` is set to 40GiB, then fio will do 40GiB of I/O within
 	the 0..20GiB region.
 
-.. option:: filesize=int
+.. option:: filesize=irange(int)
 
 	Individual file sizes. May be a range, in which case fio will select sizes
 	for files at random within the given range and limited to :option:`size` in
