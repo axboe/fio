@@ -361,7 +361,7 @@ static int setup_thread_area(void)
 #endif
 
 	memset(threads, 0, max_jobs * sizeof(struct thread_data));
-	fio_debug_jobp = (void *) threads + max_jobs * sizeof(struct thread_data);
+	fio_debug_jobp = (unsigned int *)(threads + max_jobs);
 	*fio_debug_jobp = -1;
 
 	flow_init();
