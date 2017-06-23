@@ -638,7 +638,7 @@ Job description
 	larger number of threads/processes doing the same thing. Each thread is
 	reported separately; to see statistics for all clones as a whole, use
 	:option:`group_reporting` in conjunction with :option:`new_group`.
-	See :option:`--max-jobs`.
+	See :option:`--max-jobs`.  Default: 1.
 
 
 Time related parameters
@@ -860,7 +860,7 @@ Target file/device
 
 	If true, serialize the file creation for the jobs.  This may be handy to
 	avoid interleaving of data files, which may greatly depend on the filesystem
-	used and even the number of processors in the system.
+	used and even the number of processors in the system.  Default: true.
 
 .. option:: create_fsync=bool
 
@@ -869,13 +869,13 @@ Target file/device
 .. option:: create_on_open=bool
 
 	Don't pre-setup the files for I/O, just create open() when it's time to do
-	I/O to that file.
+	I/O to that file.  Default: false.
 
 .. option:: create_only=bool
 
 	If true, fio will only run the setup phase of the job.  If files need to be
 	laid out or updated on disk, only that will be done. The actual job contents
-	are not executed.
+	are not executed.  Default: false.
 
 .. option:: allow_file_create=bool
 
@@ -897,16 +897,18 @@ Target file/device
 	given I/O operation. This will also clear the :option:`invalidate` flag,
 	since it is pointless to pre-read and then drop the cache. This will only
 	work for I/O engines that are seek-able, since they allow you to read the
-	same data multiple times. Thus it will not work on e.g. network or splice I/O.
+	same data multiple times. Thus it will not work on non-seekable I/O engines
+	(e.g. network, splice). Default: false.
 
 .. option:: unlink=bool
 
 	Unlink the job files when done. Not the default, as repeated runs of that
-	job would then waste time recreating the file set again and again.
+	job would then waste time recreating the file set again and again. Default:
+	false.
 
 .. option:: unlink_each_loop=bool
 
-	Unlink job files after each iteration or loop.
+	Unlink job files after each iteration or loop.  Default: false.
 
 .. option:: zonesize=int
 
@@ -1140,17 +1142,18 @@ I/O type
 	If true, writes to a file will always overwrite existing data. If the file
 	doesn't already exist, it will be created before the write phase begins. If
 	the file exists and is large enough for the specified write phase, nothing
-	will be done.
+	will be done. Default: false.
 
 .. option:: end_fsync=bool
 
-	If true, fsync file contents when a write stage has completed.
+	If true, :manpage:`fsync(2)` file contents when a write stage has completed.
+	Default: false.
 
 .. option:: fsync_on_close=bool
 
 	If true, fio will :manpage:`fsync(2)` a dirty file on close.  This differs
-	from end_fsync in that it will happen on every file close, not just at the
-	end of the job.
+	from :option:`end_fsync` in that it will happen on every file close, not
+	just at the end of the job.  Default: false.
 
 .. option:: rwmixread=int
 
@@ -2082,7 +2085,7 @@ I/O latency
 .. option:: rate_cycle=int
 
 	Average bandwidth for :option:`rate` and :option:`rate_min` over this number
-	of milliseconds.
+	of milliseconds. Defaults to 1000.
 
 
 I/O replay
@@ -2519,7 +2522,8 @@ Verification
 	If a verify termination trigger was used, fio stores the current write state
 	of each thread. This can be used at verification time so that fio knows how
 	far it should verify.  Without this information, fio will run a full
-	verification pass, according to the settings in the job file used.
+	verification pass, according to the settings in the job file used.  Default
+	false.
 
 .. option:: trim_percentage=int
 
