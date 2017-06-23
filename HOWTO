@@ -1722,13 +1722,13 @@ I/O engine
 			ioengine defines engine specific options.
 
 		**gfapi**
-			Using Glusterfs libgfapi sync interface to direct access to
-			Glusterfs volumes without having to go through FUSE.  This ioengine
+			Using GlusterFS libgfapi sync interface to direct access to
+			GlusterFS volumes without having to go through FUSE.  This ioengine
 			defines engine specific options.
 
 		**gfapi_async**
-			Using Glusterfs libgfapi async interface to direct access to
-			Glusterfs volumes without having to go through FUSE. This ioengine
+			Using GlusterFS libgfapi async interface to direct access to
+			GlusterFS volumes without having to go through FUSE. This ioengine
 			defines engine specific options.
 
 		**libhdfs**
@@ -2238,7 +2238,7 @@ Threads, processes and job synchronization
 
 	Set this job running on specified NUMA nodes' CPUs. The arguments allow
 	comma delimited list of cpu numbers, A-B ranges, or `all`. Note, to enable
-	numa options support, fio must be built on a system with libnuma-dev(el)
+	NUMA options support, fio must be built on a system with libnuma-dev(el)
 	installed.
 
 .. option:: numa_mem_policy=str
