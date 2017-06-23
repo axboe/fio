@@ -3488,9 +3488,9 @@ Client/server
 -------------
 
 Normally fio is invoked as a stand-alone application on the machine where the
-I/O workload should be generated. However, the frontend and backend of fio can
-be run separately. Ie the fio server can generate an I/O workload on the "Device
-Under Test" while being controlled from another machine.
+I/O workload should be generated. However, the backend and frontend of fio can
+be run separately i.e., the fio server can generate an I/O workload on the "Device
+Under Test" while being controlled by a client on another machine.
 
 Start the server on the machine which has access to the storage DUT::
 
