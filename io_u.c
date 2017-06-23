@@ -1602,7 +1602,7 @@ static void small_content_scramble(struct io_u *io_u)
 	unsigned int i, nr_blocks = io_u->buflen / 512;
 	uint64_t boffset;
 	unsigned int offset;
-	void *p, *end;
+	char *p, *end;
 
 	if (!nr_blocks)
 		return;
