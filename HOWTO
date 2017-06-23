@@ -878,7 +878,7 @@ Target file/device
 
 .. option:: create_fsync=bool
 
-	fsync the data file after creation. This is the default.
+	:manpage:`fsync(2)` the data file after creation. This is the default.
 
 .. option:: create_on_open=bool
 
@@ -1401,7 +1401,7 @@ Buffers and memory
 
 	If this is set, then fio will attempt to provide I/O buffer content (on
 	WRITEs) that compress to the specified level. Fio does this by providing a
-	mix of random data and a fixed pattern. The fixed pattern is either zeroes,
+	mix of random data and a fixed pattern. The fixed pattern is either zeros,
 	or the pattern specified by :option:`buffer_pattern`. If the pattern option
 	is used, it might skew the compression ratio slightly. Note that this is per
 	block size unit, for file/disk wide compression level that matches this
@@ -1482,7 +1482,7 @@ Buffers and memory
 			Same as shm, but use huge pages as backing.
 
 		**mmap**
-			Use mmap to allocate buffers. May either be anonymous memory, or can
+			Use :manpage:`mmap(2)` to allocate buffers. May either be anonymous memory, or can
 			be file backed if a filename is given after the option. The format
 			is `mem=mmap:/path/to/file`.
 
@@ -1621,7 +1621,7 @@ I/O engine
 
 		**libaio**
 			Linux native asynchronous I/O. Note that Linux may only support
-			queued behaviour with non-buffered I/O (set ``direct=1`` or
+			queued behavior with non-buffered I/O (set ``direct=1`` or
 			``buffered=0``).
 			This engine defines engine specific options.
 
@@ -1799,13 +1799,13 @@ caveat that when used on the command line, they must come after the
 
 .. option:: hostname=str : [netsplice] [net]
 
-	The host name or IP address to use for TCP or UDP based I/O.  If the job is
-	a TCP listener or UDP reader, the host name is not used and must be omitted
+	The hostname or IP address to use for TCP or UDP based I/O.  If the job is
+	a TCP listener or UDP reader, the hostname is not used and must be omitted
 	unless it is a valid UDP multicast address.
 
 .. option:: namenode=str : [libhdfs]
 
-	The host name or IP address of a HDFS cluster namenode to contact.
+	The hostname or IP address of a HDFS cluster namenode to contact.
 
 .. option:: port=int
 
@@ -2113,7 +2113,7 @@ I/O replay
 
 .. option:: read_iolog=str
 
-	Open an iolog with the specified file name and replay the I/O patterns it
+	Open an iolog with the specified filename and replay the I/O patterns it
 	contains. This can be used to store a workload and replay it sometime
 	later. The iolog given may also be a blktrace binary file, which allows fio
 	to replay a workload captured by :command:`blktrace`. See
@@ -2124,7 +2124,7 @@ I/O replay
 .. option:: replay_no_stall=int
 
 	When replaying I/O with :option:`read_iolog` the default behavior is to
-	attempt to respect the time stamps within the log and replay them with the
+	attempt to respect the timestamps within the log and replay them with the
 	appropriate delay between IOPS. By setting this variable fio will not
 	respect the timestamps and attempt to replay them as fast as possible while
 	still respecting ordering. The result is the same I/O pattern to a given
@@ -2199,8 +2199,8 @@ Threads, processes and job synchronization
 
 .. option:: cpumask=int
 
-	Set the CPU affinity of this job. The parameter given is a bitmask of
-	allowed CPU's the job may run on. So if you want the allowed CPUs to be 1
+	Set the CPU affinity of this job. The parameter given is a bit mask of
+	allowed CPUs the job may run on. So if you want the allowed CPUs to be 1
 	and 5, you would pass the decimal value of (1 << 1 | 1 << 5), or 34. See man
 	:manpage:`sched_setaffinity(2)`. This may not work on all supported
 	operating systems or kernel versions. This option doesn't work well for a
@@ -2226,7 +2226,7 @@ Threads, processes and job synchronization
 		**split**
 			Each job will get a unique CPU from the CPU set.
 
-	**shared** is the default behaviour, if the option isn't specified. If
+	**shared** is the default behavior, if the option isn't specified. If
 	**split** is specified, then fio will will assign one cpu per job. If not
 	enough CPUs are given for the jobs listed, then fio will roundrobin the CPUs
 	in the set.
@@ -2545,11 +2545,11 @@ Verification
 
 .. option:: trim_verify_zero=bool
 
-	Verify that trim/discarded blocks are returned as zeroes.
+	Verify that trim/discarded blocks are returned as zeros.
 
 .. option:: trim_backlog=int
 
-	Verify that trim/discarded blocks are returned as zeroes.
+	Verify that trim/discarded blocks are returned as zeros.
 
 .. option:: trim_backlog_batch=int
 
@@ -2645,7 +2645,7 @@ Measurements and reporting
 	If given, write a bandwidth log for this job. Can be used to store data of
 	the bandwidth of the jobs in their lifetime. The included
 	:command:`fio_generate_plots` script uses :command:`gnuplot` to turn these
-	text files into nice graphs. See :option:`write_lat_log` for behaviour of
+	text files into nice graphs. See :option:`write_lat_log` for behavior of
 	given filename. For this option, the postfix is :file:`_bw.x.log`, where `x`
 	is the index of the job (`1..N`, where `N` is the number of jobs). If
 	:option:`per_job_logs` is false, then the filename will not include the job
@@ -3286,7 +3286,7 @@ Each line represents a single I/O action in the following format::
 
 where `rw=0/1` for read/write, and the offset and length entries being in bytes.
 
-This format is not supported in fio versions => 1.20-rc3.
+This format is not supported in fio versions >= 1.20-rc3.
 
 
 Trace file format v2
