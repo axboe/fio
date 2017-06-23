@@ -2039,6 +2039,11 @@ I/O rate
 	suffix rules apply.  Comma-separated values may be specified for reads,
 	writes, and trims as described in :option:`blocksize`.
 
+	For example, using `rate=1m,500k` would limit reads to 1MiB/sec and writes to
+	500KiB/sec.  Capping only reads or writes can be done with `rate=,500k` or
+	`rate=500k,` where the former will only limit writes (to 500KiB/sec) and the
+	latter will only limit reads.
+
 .. option:: rate_min=int[,int][,int]
 
 	Tell fio to do whatever it can to maintain at least this bandwidth. Failing
