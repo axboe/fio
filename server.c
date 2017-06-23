@@ -1475,6 +1475,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 		convert_io_stat(&p.ts.slat_stat[i], &ts->slat_stat[i]);
 		convert_io_stat(&p.ts.lat_stat[i], &ts->lat_stat[i]);
 		convert_io_stat(&p.ts.bw_stat[i], &ts->bw_stat[i]);
+		convert_io_stat(&p.ts.iops_stat[i], &ts->iops_stat[i]);
 	}
 
 	p.ts.usr_time		= cpu_to_le64(ts->usr_time);

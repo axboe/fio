@@ -885,6 +885,7 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 		convert_io_stat(&dst->slat_stat[i], &src->slat_stat[i]);
 		convert_io_stat(&dst->lat_stat[i], &src->lat_stat[i]);
 		convert_io_stat(&dst->bw_stat[i], &src->bw_stat[i]);
+		convert_io_stat(&dst->iops_stat[i], &src->iops_stat[i]);
 	}
 
 	dst->usr_time		= le64_to_cpu(src->usr_time);

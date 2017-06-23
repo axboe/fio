@@ -499,6 +499,10 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		log_buf(out, "   bw (%5s/s): min=%5llu, max=%5llu, per=%3.2f%%, avg=%5.02f, stdev=%5.02f\n",
 			bw_str, min, max, p_of_agg, mean, dev);
 	}
+	if (calc_lat(&ts->iops_stat[ddir], &min, &max, &mean, &dev)) {
+		log_buf(out, "   iops : min=%5llu, max=%5llu, avg=%5.02f, "
+			"stdev=%5.02f\n", min, max, mean, dev);
+	}
 }
 
 static int show_lat(double *io_u_lat, int nr, const char **ranges,
@@ -1047,6 +1051,15 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	json_object_add_value_float(dir_object, "bw_agg", p_of_agg);
 	json_object_add_value_float(dir_object, "bw_mean", mean);
 	json_object_add_value_float(dir_object, "bw_dev", dev);
+
+	if (!calc_lat(&ts->iops_stat[ddir], &min, &max, &mean, &dev)) {
+		min = max = 0;
+		mean = dev = 0.0;
+	}
+	json_object_add_value_int(dir_object, "iops_min", min);
+	json_object_add_value_int(dir_object, "iops_max", max);
+	json_object_add_value_float(dir_object, "iops_mean", mean);
+	json_object_add_value_float(dir_object, "iops_stddev", dev);
 }
 
 static void show_thread_status_terse_v2(struct thread_stat *ts,
@@ -1507,6 +1520,7 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 			sum_stat(&dst->slat_stat[l], &src->slat_stat[l], first);
 			sum_stat(&dst->lat_stat[l], &src->lat_stat[l], first);
 			sum_stat(&dst->bw_stat[l], &src->bw_stat[l], first);
+			sum_stat(&dst->iops_stat[l], &src->iops_stat[l], first);
 
 			dst->io_bytes[l] += src->io_bytes[l];
 
@@ -1517,6 +1531,7 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], first);
 			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], first);
 			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], first);
+			sum_stat(&dst->iops_stat[0], &src->iops_stat[l], first);
 
 			dst->io_bytes[0] += src->io_bytes[l];
 
@@ -1598,6 +1613,7 @@ void init_thread_stat(struct thread_stat *ts)
 		ts->clat_stat[j].min_val = -1UL;
 		ts->slat_stat[j].min_val = -1UL;
 		ts->bw_stat[j].min_val = -1UL;
+		ts->iops_stat[j].min_val = -1UL;
 	}
 	ts->groupid = -1;
 }
