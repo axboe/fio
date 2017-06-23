@@ -135,16 +135,16 @@ Command line options
 
 .. option:: --help
 
-	Print this page.
+	Print a summary of the command line options and exit.
 
 .. option:: --cpuclock-test
 
 	Perform test and validation of internal CPU clock.
 
-.. option:: --crctest=test
+.. option:: --crctest=[test]
 
-    Test the speed of the builtin checksumming functions. If no argument is
-    given, all of them are tested. Or a comma separated list can be passed, in
+    Test the speed of the built-in checksumming functions. If no argument is
+    given all of them are tested. Alternatively, a comma separated list can be passed, in
     which case the given ones are tested.
 
 .. option:: --cmdhelp=command
@@ -198,11 +198,11 @@ Command line options
 
 .. option:: --alloc-size=kb
 
-    Set the internal smalloc pool to this size in kb (def 1024).  The
+    Set the internal smalloc pool to this size in KiB.  The
     ``--alloc-size`` switch allows one to use a larger pool size for smalloc.
     If running large jobs with randommap enabled, fio can run out of memory.
     Smalloc is an internal allocator for shared structures from a fixed size
-    memory pool. The pool size defaults to 16M and can grow to 8 pools.
+    memory pool and can grow to 16 pools. The pool size defaults to 16MiB.
 
     NOTE: While running :file:`.fio_smalloc.*` backing store files are visible
     in :file:`/tmp`.
@@ -236,9 +236,16 @@ Command line options
 
 .. option:: --idle-prof=option
 
-	Report cpu idleness on a system or percpu basis
-	``--idle-prof=system,percpu`` or
-	run unit work calibration only ``--idle-prof=calibrate``.
+	Report CPU idleness. *option* is one of the following:
+
+		**calibrate**
+			Run unit work calibration only and exit.
+
+		**system**
+			Show aggregate system idleness and unit work.
+
+		**percpu**
+			As **system** but also show per CPU idleness.
 
 .. option:: --inflate-log=log
 
