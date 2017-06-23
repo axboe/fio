@@ -882,8 +882,9 @@ Target file/device
 
 .. option:: create_on_open=bool
 
-	Don't pre-setup the files for I/O, just create open() when it's time to do
-	I/O to that file.  Default: false.
+	If true, don't pre-create files but allow the job's open() to create a file
+	when it's time to do I/O.  Default: false -- pre-create all necessary files
+	when the job starts.
 
 .. option:: create_only=bool
 
@@ -893,8 +894,8 @@ Target file/device
 
 .. option:: allow_file_create=bool
 
-	If true, fio is permitted to create files as part of its workload. This is
-	the default behavior. If this option is false, then fio will error out if
+	If true, fio is permitted to create files as part of its workload.  If this
+	option is false, then fio will error out if
 	the files it needs to use don't already exist. Default: true.
 
 .. option:: allow_mounted_write=bool
@@ -984,15 +985,16 @@ I/O type
 
 	Fio defaults to read if the option is not specified.  For the mixed I/O
 	types, the default is to split them 50/50.  For certain types of I/O the
-	result may still be skewed a bit, since the speed may be different. It is
-	possible to specify a number of I/O's to do before getting a new offset,
-	this is done by appending a ``:<nr>`` to the end of the string given.  For a
+	result may still be skewed a bit, since the speed may be different.
+
+	It is possible to specify the number of I/Os to do before getting a new
+	offset by appending ``:<nr>`` to the end of the string given.  For a
 	random read, it would look like ``rw=randread:8`` for passing in an offset
 	modifier with a value of 8. If the suffix is used with a sequential I/O
-	pattern, then the value specified will be added to the generated offset for
-	each I/O.  For instance, using ``rw=write:4k`` will skip 4k for every
-	write. It turns sequential I/O into sequential I/O with holes.  See the
-	:option:`rw_sequencer` option.
+	pattern, then the *<nr>* value specified will be **added** to the generated
+	offset for each I/O turning sequential I/O into sequential I/O with holes.
+	For instance, using ``rw=write:4k`` will skip 4k for every write.  Also see
+	the :option:`rw_sequencer` option.
 
 .. option:: rw_sequencer=str
 
@@ -1115,19 +1117,21 @@ I/O type
 
 .. option:: fsync=int
 
-	If writing to a file, issue a sync of the dirty data for every number of
-	blocks given. For example, if you give 32 as a parameter, fio will sync the
-	file for every 32 writes issued. If fio is using non-buffered I/O, we may
-	not sync the file. The exception is the sg I/O engine, which synchronizes
-	the disk cache anyway. Defaults to 0, which means no sync every certain
-	number of writes.
+	If writing to a file, issue an :manpage:`fsync(2)` (or its equivalent) of
+	the dirty data for every number of blocks given. For example, if you give 32
+	as a parameter, fio will sync the file after every 32 writes issued. If fio is
+	using non-buffered I/O, we may not sync the file. The exception is the sg
+	I/O engine, which synchronizes the disk cache anyway. Defaults to 0, which
+	means fio does not periodically issue and wait for a sync to complete. Also
+	see :option:`end_fsync` and :option:`fsync_on_close`.
 
 .. option:: fdatasync=int
 
 	Like :option:`fsync` but uses :manpage:`fdatasync(2)` to only sync data and
 	not metadata blocks.  In Windows, FreeBSD, and DragonFlyBSD there is no
-	:manpage:`fdatasync(2)`, this falls back to using :manpage:`fsync(2)`.
-	Defaults to 0, which means no sync data every certain number of writes.
+	:manpage:`fdatasync(2)` so this falls back to using :manpage:`fsync(2)`.
+	Defaults to 0, which means fio does not periodically issue and wait for a
+	data-only sync to complete.
 
 .. option:: write_barrier=int
 
@@ -1400,7 +1404,7 @@ Buffers and memory
 .. option:: buffer_compress_percentage=int
 
 	If this is set, then fio will attempt to provide I/O buffer content (on
-	WRITEs) that compress to the specified level. Fio does this by providing a
+	WRITEs) that compresses to the specified level. Fio does this by providing a
 	mix of random data and a fixed pattern. The fixed pattern is either zeros,
 	or the pattern specified by :option:`buffer_pattern`. If the pattern option
 	is used, it might skew the compression ratio slightly. Note that this is per
@@ -1455,8 +1459,8 @@ Buffers and memory
 
 .. option:: invalidate=bool
 
-	Invalidate the buffer/page cache parts for this file prior to starting
-	I/O if the platform and file type support it. Defaults to true.
+	Invalidate the buffer/page cache parts of the files to be used prior to
+	starting I/O if the platform and file type support it.  Defaults to true.
 	This will be ignored if :option:`pre_read` is also specified for the
 	same job.
 
@@ -1882,7 +1886,7 @@ caveat that when used on the command line, they must come after the
 
 .. option:: donorname=str : [e4defrag]
 
-	File will be used as a block donor(swap extents between files).
+	File will be used as a block donor (swap extents between files).
 
 .. option:: inplace=int : [e4defrag]
 
@@ -1961,7 +1965,7 @@ I/O depth
 	This defines maximum pieces of I/O to retrieve at once. This variable should
 	be used along with :option:`iodepth_batch_complete_min`\=int variable,
 	specifying the range of min and max amount of I/O which should be
-	retrieved. By default it is equal to :option:`iodepth_batch_complete_min`
+	retrieved. By default it is equal to the :option:`iodepth_batch_complete_min`
 	value.
 
 	Example #1::
@@ -1999,7 +2003,7 @@ I/O depth
 	has a bit of extra overhead, especially for lower queue depth I/O where it
 	can increase latencies. The benefit is that fio can manage submission rates
 	independently of the device completion rates. This avoids skewed latency
-	reporting if I/O gets back up on the device side (the coordinated omission
+	reporting if I/O gets backed up on the device side (the coordinated omission
 	problem).
 
 
@@ -2137,7 +2141,7 @@ I/O replay
 	from.  This is sometimes undesirable because on a different machine those
 	major/minor numbers can map to a different device.  Changing hardware on the
 	same system can also result in a different major/minor mapping.
-	``replay_redirect`` causes all IOPS to be replayed onto the single specified
+	``replay_redirect`` causes all I/Os to be replayed onto the single specified
 	device regardless of the device it was recorded
 	from. i.e. :option:`replay_redirect`\= :file:`/dev/sdc` would cause all I/O
 	in the blktrace or iolog to be replayed onto :file:`/dev/sdc`.  This means
@@ -2163,15 +2167,14 @@ Threads, processes and job synchronization
 
 .. option:: thread
 
-	Fio defaults to forking jobs, however if this option is given, fio will use
-	POSIX Threads function :manpage:`pthread_create(3)` to create threads instead
-	of forking processes.
+	Fio defaults to creating jobs by using fork, however if this option is
+	given, fio will create jobs by using POSIX Threads' function
+	:manpage:`pthread_create(3)` to create threads instead.
 
 .. option:: wait_for=str
 
-	Specifies the name of the already defined job to wait for. Single waitee
-	name only may be specified. If set, the job won't be started until all
-	workers of the waitee job are done.
+	If set, the current job won't be started until all workers of the specified
+	waitee job are done.
 
 	``wait_for`` operates on the job name basis, so there are a few
 	limitations. First, the waitee must be defined prior to the waiter job
@@ -2210,16 +2213,16 @@ Threads, processes and job synchronization
 
 .. option:: cpus_allowed=str
 
-	Controls the same options as :option:`cpumask`, but it allows a text setting
-	of the permitted CPUs instead. So to use CPUs 1 and 5, you would specify
-	``cpus_allowed=1,5``. This options also allows a range of CPUs. Say you
-	wanted a binding to CPUs 1, 5, and 8-15, you would set
-	``cpus_allowed=1,5,8-15``.
+	Controls the same options as :option:`cpumask`, but accepts a textual
+	specification of the permitted CPUs instead. So to use CPUs 1 and 5 you
+	would specify ``cpus_allowed=1,5``. This option also allows a range of CPUs
+	to be specified -- say you wanted a binding to CPUs 1, 5, and 8 to 15, you
+	would set ``cpus_allowed=1,5,8-15``.
 
 .. option:: cpus_allowed_policy=str
 
 	Set the policy of how fio distributes the CPUs specified by
-	:option:`cpus_allowed` or cpumask. Two policies are supported:
+	:option:`cpus_allowed` or :option:`cpumask`. Two policies are supported:
 
 		**shared**
 			All jobs will share the CPU set specified.
@@ -2245,11 +2248,11 @@ Threads, processes and job synchronization
 
 		<mode>[:<nodelist>]
 
-	``mode`` is one of the following memory policy: ``default``, ``prefer``,
-	``bind``, ``interleave``, ``local`` For ``default`` and ``local`` memory
-	policy, no node is needed to be specified.  For ``prefer``, only one node is
-	allowed.  For ``bind`` and ``interleave``, it allow comma delimited list of
-	numbers, A-B ranges, or `all`.
+	``mode`` is one of the following memory poicies: ``default``, ``prefer``,
+	``bind``, ``interleave`` or ``local``. For ``default`` and ``local`` memory
+	policies, no node needs to be specified.  For ``prefer``, only one node is
+	allowed.  For ``bind`` and ``interleave`` the ``nodelist`` may be as
+	follows: a comma delimited list of numbers, A-B ranges, or `all`.
 
 .. option:: cgroup=str
 
@@ -2305,8 +2308,9 @@ Threads, processes and job synchronization
 
 .. option:: exitall
 
-	When one job finishes, terminate the rest. The default is to wait for each
-	job to finish, sometimes that is not the desired action.
+	By default, fio will continue running all other jobs when one job finishes
+	but sometimes this is not the desired action.  Setting ``exitall`` will
+	instead make fio terminate all other jobs when one job finishes.
 
 .. option:: exec_prerun=str
 
@@ -2459,7 +2463,7 @@ Verification
 	If set, fio will fill the I/O buffers with this pattern. Fio defaults to
 	filling with totally random bytes, but sometimes it's interesting to fill
 	with a known pattern for I/O verification purposes. Depending on the width
-	of the pattern, fio will fill 1/2/3/4 bytes of the buffer at the time(it can
+	of the pattern, fio will fill 1/2/3/4 bytes of the buffer at the time (it can
 	be either a decimal or a hex number).  The ``verify_pattern`` if larger than
 	a 32-bit quantity has to be a hex number that starts with either "0x" or
 	"0X". Use with :option:`verify`. Also, ``verify_pattern`` supports %o
