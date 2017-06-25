@@ -2373,13 +2373,14 @@ Verification
 			header of each block.
 
 		**crc32c**
-			Use a crc32c sum of the data area and store it in the header of each
-			block.
+			Use a crc32c sum of the data area and store it in the header of
+			each block. This will automatically use hardware acceleration
+			(e.g. SSE4.2 on an x86 or CRC crypto extensions on ARM64) but will
+			fall back to software crc32c if none is found. Generally the
+			fatest checksum fio supports when hardware accelerated.
 
 		**crc32c-intel**
-			Use hardware assisted crc32c calculation provided on SSE4.2 enabled
-			processors. Falls back to regular software crc32c, if not supported
-			by the system.
+			Synonym for crc32c.
 
 		**crc32**
 			Use a crc32 sum of the data area and store it in the header of each
