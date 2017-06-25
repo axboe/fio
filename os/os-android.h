@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <sys/uio.h>
 #include <sys/syscall.h>
+#include <sys/sysmacros.h>
 #include <sys/vfs.h>
 #include <unistd.h>
 #include <fcntl.h>
