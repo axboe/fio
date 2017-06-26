@@ -497,13 +497,13 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		}
 
 		log_buf(out, "   bw (%5s/s): min=%5llu, max=%5llu, per=%3.2f%%, "
-			"avg=%5.02f, stdev=%5.02f, samples=%5lu\n",
+			"avg=%5.02f, stdev=%5.02f, samples=%" PRIu64 "\n",
 			bw_str, min, max, p_of_agg, mean, dev,
 			(&ts->bw_stat[ddir])->samples);
 	}
 	if (calc_lat(&ts->iops_stat[ddir], &min, &max, &mean, &dev)) {
 		log_buf(out, "   iops        : min=%5llu, max=%5llu, "
-			"avg=%5.02f, stdev=%5.02f, samples=%5lu\n",
+			"avg=%5.02f, stdev=%5.02f, samples=%" PRIu64 "\n",
 			min, max, mean, dev, (&ts->iops_stat[ddir])->samples);
 	}
 }
@@ -935,12 +935,12 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 
 	if (ver == 5) {
 		if (bw_stat)
-			log_buf(out, ";%lu", (&ts->bw_stat[ddir])->samples);
+			log_buf(out, ";%" PRIu64, (&ts->bw_stat[ddir])->samples);
 		else
 			log_buf(out, ";%lu", 0UL);
 
 		if (calc_lat(&ts->iops_stat[ddir], &min, &max, &mean, &dev))
-			log_buf(out, ";%llu;%llu;%f;%f;%lu", min, max,
+			log_buf(out, ";%llu;%llu;%f;%f;%" PRIu64, min, max,
 				mean, dev, (&ts->iops_stat[ddir])->samples);
 		else
 			log_buf(out, ";%llu;%llu;%f;%f;%lu", 0ULL, 0ULL, 0.0, 0.0, 0UL);
