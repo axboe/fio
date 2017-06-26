@@ -502,8 +502,8 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			(&ts->bw_stat[ddir])->samples);
 	}
 	if (calc_lat(&ts->iops_stat[ddir], &min, &max, &mean, &dev)) {
-		log_buf(out, "   iops : min=%5llu, max=%5llu, avg=%5.02f, "
-			"stdev=%5.02f, samples=%5lu\n",
+		log_buf(out, "   iops        : min=%5llu, max=%5llu, "
+			"avg=%5.02f, stdev=%5.02f, samples=%5lu\n",
 			min, max, mean, dev, (&ts->iops_stat[ddir])->samples);
 	}
 }
