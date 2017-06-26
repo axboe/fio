@@ -17,5 +17,5 @@ rw=write
 [write]
 stonewall
 block_error_percentiles=1
-rw=writetrim
+rw=trimwrite
 loops=4
