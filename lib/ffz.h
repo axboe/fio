@@ -27,10 +27,8 @@ static inline int ffs64(uint64_t word)
 		word >>= 2;
 		r += 2;
 	}
-	if (!(word & 1)) {
-		word >>= 1;
+	if (!(word & 1))
 		r += 1;
-	}
 
 	return r;
 }
