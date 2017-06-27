@@ -475,17 +475,17 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		else
 			bw_str = "kB";
 
+		if (rs->agg[ddir]) {
+			p_of_agg = mean * 100 / (double) (rs->agg[ddir] / 1024);
+			if (p_of_agg > 100.0)
+				p_of_agg = 100.0;
+		}
+
 		if (rs->unit_base == 1) {
 			min *= 8.0;
 			max *= 8.0;
 			mean *= 8.0;
 			dev *= 8.0;
-		}
-
-		if (rs->agg[ddir]) {
-			p_of_agg = mean * 100 / (double) (rs->agg[ddir] / 1024);
-			if (p_of_agg > 100.0)
-				p_of_agg = 100.0;
 		}
 
 		if (mean > fkb_base * fkb_base) {
@@ -924,7 +924,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 		double p_of_agg = 100.0;
 
 		if (rs->agg[ddir]) {
-			p_of_agg = mean * 100 / (double) rs->agg[ddir];
+			p_of_agg = mean * 100 / (double) (rs->agg[ddir] / 1024);
 			if (p_of_agg > 100.0)
 				p_of_agg = 100.0;
 		}
@@ -1055,7 +1055,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		if (rs->agg[ddir]) {
-			p_of_agg = mean * 100 / (double) rs->agg[ddir];
+			p_of_agg = mean * 100 / (double) (rs->agg[ddir] / 1024);
 			if (p_of_agg > 100.0)
 				p_of_agg = 100.0;
 		}
