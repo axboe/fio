@@ -911,11 +911,13 @@ If true, use buffered I/O.  This is the opposite of the \fBdirect\fR parameter.
 Default: true.
 .TP
 .BI offset \fR=\fPint
-Start I/O at the provided offset in the file, given as either a fixed size or a
-percentage. If a percentage is given, the next \fBblockalign\fR-ed offset will
-be used. Data before the given offset will not be touched. This effectively
-caps the file size at (real_size - offset). Can be combined with \fBsize\fR to
-constrain the start and end range of the I/O workload.
+Start I/O at the provided offset in the file, given as either a fixed size in
+bytes or a percentage. If a percentage is given, the next \fBblockalign\fR-ed
+offset will be used. Data before the given offset will not be touched. This
+effectively caps the file size at (real_size - offset). Can be combined with
+\fBsize\fR to constrain the start and end range of the I/O workload. A percentage
+can be specified by the percentage number plus 1 with preceding '-'. For example,
+-1 is parsed as 0%, -10 is parsed as 9%, -101 is parsed as 100%.
 .TP
 .BI offset_increment \fR=\fPint
 If this is provided, then the real offset becomes the
