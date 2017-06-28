@@ -1204,7 +1204,7 @@ I/O type
 		**pareto**
 				Pareto distribution
 
-		**gauss**
+		**normal**
 				Normal (Gaussian) distribution
 
 		**zoned**
@@ -1217,8 +1217,8 @@ I/O type
 	values will yield in terms of hit rates.  If you wanted to use **zipf** with
 	a `theta` of 1.2, you would use ``random_distribution=zipf:1.2`` as the
 	option. If a non-uniform model is used, fio will disable use of the random
-	map. For the **gauss** distribution, a normal deviation is supplied as a
-	value between 0 and 100.
+	map. For the **normal** distribution, a normal (Gaussian) deviation is
+	supplied as a value between 0 and 100.
 
 	For a **zoned** distribution, fio supports specifying percentages of I/O
 	access that should fall within what range of the file or device. For
