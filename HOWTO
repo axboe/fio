@@ -3117,9 +3117,9 @@ group) the output looks like::
 	     | 99.99th=[78119]
 	   bw (  KiB/s): min=  532, max=  686, per=0.10%, avg=622.87, stdev=24.82, samples=  100
 	   iops        : min=   76, max=   98, avg=88.98, stdev= 3.54, samples=  100
-	    lat (usec) : 250=0.04%, 500=64.11%, 750=4.81%, 1000=2.79%
-	    lat (msec) : 2=4.16%, 4=1.84%, 10=4.90%, 20=11.33%, 50=5.37%
-	    lat (msec) : 100=0.65%
+	  clat (usec)  : 250=0.04%, 500=64.11%, 750=4.81%, 1000=2.79%
+	  clat (msec)  : 2=4.16%, 4=1.84%, 10=4.90%, 20=11.33%, 50=5.37%
+	  clat (msec)  : 100=0.65%
 	  cpu          : usr=0.27%, sys=0.18%, ctx=12072, majf=0, minf=21
 	  IO depths    : 1=85.0%, 2=13.1%, 4=1.8%, 8=0.1%, 16=0.0%, 32=0.0%, >=64=0.0%
 	     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
@@ -3169,6 +3169,13 @@ writes in the example above).  In the order listed, they denote:
 **iops**
 		IOPS statistics based on samples. Same names as bw.
 
+**clat (nsec/usec/msec)**
+		Completion latency distribution. Unlike the separate read/write/trim
+		sections above, the data here and in the remaining sections apply to the
+		entire job as a whole. 250=0.04% means that 0.04% of the I/Os in the
+		job completed in under 250us. 500=64.11% means that 64.11% of the I/Os
+		completed in 250 to 499us.
+
 **cpu**
 		CPU usage. User and system time, along with the number of context
 		switches this thread went through, usage of system and user time, and
@@ -3200,11 +3207,9 @@ writes in the example above).  In the order listed, they denote:
 		short or dropped.
 
 **IO latencies**
-		The distribution of I/O completion latencies. This is the time from when
-		I/O leaves fio and when it gets completed.  The numbers follow the same
-		pattern as the I/O depths, meaning that 2=1.6% means that 1.6% of the
-		I/O completed within 2 msecs, 20=12.8% means that 12.8% of the I/O took
-		more than 10 msecs, but less than (or equal to) 20 msecs.
+		These values are for the :option:`--latency-target` and related options.
+		When these options are used, this section describe the I/O depth required
+		to meet the specified latency target.
 
 ..
 	Example output was based on the following:
