@@ -1,4 +1,4 @@
-.TH fio 1 "May 2017" "User Manual"
+.TH fio 1 "June 2017" "User Manual"
 .SH NAME
 fio \- flexible I/O tester
 .SH SYNOPSIS
@@ -916,8 +916,8 @@ bytes or a percentage. If a percentage is given, the next \fBblockalign\fR-ed
 offset will be used. Data before the given offset will not be touched. This
 effectively caps the file size at (real_size - offset). Can be combined with
 \fBsize\fR to constrain the start and end range of the I/O workload. A percentage
-can be specified by the percentage number plus 1 with preceding '-'. For example,
--1 is parsed as 0%, -10 is parsed as 9%, -101 is parsed as 100%.
+can be specified by a number between 1 and 100 followed by '%', for example,
+offset=20% to specify 20%.
 .TP
 .BI offset_increment \fR=\fPint
 If this is provided, then the real offset becomes the
