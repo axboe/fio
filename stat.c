@@ -1253,7 +1253,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 
 	/* Nanosecond latency */
 	tmp = json_create_object();
-	json_object_add_value_object(root, "latency_ns", tmp);
+	json_object_add_value_object(root, "clatency_ns", tmp);
 	for (i = 0; i < FIO_IO_U_LAT_N_NR; i++) {
 		const char *ranges[] = { "2", "4", "10", "20", "50", "100",
 				 "250", "500", "750", "1000", };
@@ -1261,7 +1261,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	}
 	/* Microsecond latency */
 	tmp = json_create_object();
-	json_object_add_value_object(root, "latency_us", tmp);
+	json_object_add_value_object(root, "clatency_us", tmp);
 	for (i = 0; i < FIO_IO_U_LAT_U_NR; i++) {
 		const char *ranges[] = { "2", "4", "10", "20", "50", "100",
 				 "250", "500", "750", "1000", };
@@ -1269,7 +1269,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	}
 	/* Millisecond latency */
 	tmp = json_create_object();
-	json_object_add_value_object(root, "latency_ms", tmp);
+	json_object_add_value_object(root, "clatency_ms", tmp);
 	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++) {
 		const char *ranges[] = { "2", "4", "10", "20", "50", "100",
 				 "250", "500", "750", "1000", "2000",
