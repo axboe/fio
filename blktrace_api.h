@@ -127,9 +127,4 @@ struct blk_user_trace_setup {
 	__u32 pid;
 };
 
-#define BLKTRACESETUP _IOWR(0x12,115,struct blk_user_trace_setup)
-#define BLKTRACESTART _IO(0x12,116)
-#define BLKTRACESTOP _IO(0x12,117)
-#define BLKTRACETEARDOWN _IO(0x12,118)
-
 #endif
