@@ -853,9 +853,12 @@ Target file/device
 		**pareto**
 			Use a *Pareto* distribution to decide what file to access.
 
-		**gauss**
+		**normal**
 			Use a *Gaussian* (normal) distribution to decide what file to
 			access.
+
+		**gauss**
+			Alias for normal.
 
 	For *random*, *roundrobin*, and *sequential*, a postfix can be appended to
 	tell fio how many I/Os to issue before switching to a new file. For example,
