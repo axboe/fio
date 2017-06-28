@@ -1410,6 +1410,8 @@ static int str_size_cb(void *data, unsigned long long *__val)
 	if (parse_is_percent(v)) {
 		td->o.size = 0;
 		td->o.size_percent = -1ULL - v;
+		dprint(FD_PARSE, "SET size_percent %d\n",
+					td->o.size_percent);
 	} else
 		td->o.size = v;
 
