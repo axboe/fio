@@ -436,6 +436,10 @@ are:
 .B none
 Do not pre-allocate space.
 .TP
+.B native
+Use a platform's native pre-allocation call but fall back to 'none' behavior if
+it fails/is not implemented.
+.TP
 .B posix
 Pre-allocate via \fBposix_fallocate\fR\|(3).
 .TP
@@ -450,8 +454,9 @@ Backward-compatible alias for 'posix'.
 .RE
 .P
 May not be available on all supported platforms. 'keep' is only
-available on Linux. If using ZFS on Solaris this must be set to 'none'
-because ZFS doesn't support it. Default: 'posix'.
+available on Linux. If using ZFS on Solaris this cannot be set to 'posix'
+because ZFS doesn't support it. Default: 'native' if any pre-allocation methods
+are available, 'none' if not.
 .RE
 .TP
 .BI fadvise_hint \fR=\fPstr

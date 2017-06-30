@@ -1049,6 +1049,10 @@ I/O type
 		**none**
 			Do not pre-allocate space.
 
+		**native**
+			Use a platform's native pre-allocation call but fall back to
+			**none** behavior if it fails/is not implemented.
+
 		**posix**
 			Pre-allocate via :manpage:`posix_fallocate(3)`.
 
@@ -1063,8 +1067,9 @@ I/O type
 			Backward-compatible alias for **posix**.
 
 	May not be available on all supported platforms. **keep** is only available
-	on Linux. If using ZFS on Solaris this must be set to **none** because ZFS
-	doesn't support it. Default: **posix**.
+	on Linux. If using ZFS on Solaris this cannot be set to **posix**
+	because ZFS doesn't support pre-allocation. Default: **native** if any
+	pre-allocation methods are available, **none** if not.
 
 .. option:: fadvise_hint=str
 

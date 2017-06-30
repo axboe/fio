@@ -63,6 +63,7 @@ enum fio_fallocate_mode {
 	FIO_FALLOCATE_NONE	= 1,
 	FIO_FALLOCATE_POSIX	= 2,
 	FIO_FALLOCATE_KEEP_SIZE	= 3,
+	FIO_FALLOCATE_NATIVE	= 4,
 };
 
 /*
