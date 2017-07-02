@@ -542,7 +542,7 @@ uint64_t time_since_now(const struct timespec *s)
     defined(CONFIG_SFAA)
 
 #define CLOCK_ENTRIES_DEBUG	100000
-#define CLOCK_ENTRIES_TEST	10000
+#define CLOCK_ENTRIES_TEST	1000
 
 struct clock_entry {
 	uint32_t seq;
