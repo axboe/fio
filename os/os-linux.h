@@ -392,4 +392,22 @@ static inline int shm_attach_to_open_removed(void)
 	return 1;
 }
 
+#ifdef CONFIG_LINUX_FALLOCATE
+#define FIO_HAVE_NATIVE_FALLOCATE
+static inline bool fio_fallocate(struct fio_file *f, uint64_t offset,
+				 uint64_t len)
+{
+	int ret;
+	ret = fallocate(f->fd, 0, 0, len);
+	if (ret == 0)
+		return true;
+
+	/* Work around buggy old glibc versions... */
+	if (ret > 0)
+		errno = ret;
+
+	return false;
+}
+#endif
+
 #endif

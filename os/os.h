@@ -361,4 +361,12 @@ static inline int shm_attach_to_open_removed(void)
 }
 #endif
 
+#ifndef FIO_HAVE_NATIVE_FALLOCATE
+static inline bool fio_fallocate(struct fio_file *f, uint64_t offset, uint64_t len)
+{
+	errno = ENOSYS;
+	return false;
+}
+#endif
+
 #endif

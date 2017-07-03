@@ -38,6 +38,25 @@ static inline void clear_error(struct thread_data *td)
 	td->verror[0] = '\0';
 }
 
+static inline int native_fallocate(struct thread_data *td, struct fio_file *f)
+{
+	bool success;
+
+	success = fio_fallocate(f, 0, f->real_file_size);
+	dprint(FD_FILE, "native fallocate of file %s size %llu was "
+			"%ssuccessful\n", f->file_name,
+			(unsigned long long) f->real_file_size,
+			!success ? "un": "");
+
+	if (success)
+		return 0;
+
+	if (errno == ENOSYS)
+		dprint(FD_FILE, "native fallocate is not implemented\n");
+
+	return -1;
+}
+
 static void fallocate_file(struct thread_data *td, struct fio_file *f)
 {
 	int r;
@@ -45,10 +64,16 @@ static void fallocate_file(struct thread_data *td, struct fio_file *f)
 	if (td->o.fill_device)
 		return;
 
-#ifdef CONFIG_POSIX_FALLOCATE
 	switch (td->o.fallocate_mode) {
+	case FIO_FALLOCATE_NATIVE:
+		r = native_fallocate(td, f);
+		if (r != 0)
+			log_err("fio: native_fallocate call failed: %s\n",
+					strerror(errno));
+		break;
 	case FIO_FALLOCATE_NONE:
 		break;
+#ifdef CONFIG_POSIX_FALLOCATE
 	case FIO_FALLOCATE_POSIX:
 		dprint(FD_FILE, "posix_fallocate file %s size %llu\n",
 				 f->file_name,
@@ -58,6 +83,7 @@ static void fallocate_file(struct thread_data *td, struct fio_file *f)
 		if (r > 0)
 			log_err("fio: posix_fallocate fails: %s\n", strerror(r));
 		break;
+#endif /* CONFIG_POSIX_FALLOCATE */
 #ifdef CONFIG_LINUX_FALLOCATE
 	case FIO_FALLOCATE_KEEP_SIZE:
 		dprint(FD_FILE, "fallocate(FALLOC_FL_KEEP_SIZE) "
@@ -74,7 +100,7 @@ static void fallocate_file(struct thread_data *td, struct fio_file *f)
 		log_err("fio: unknown fallocate mode: %d\n", td->o.fallocate_mode);
 		assert(0);
 	}
-#endif /* CONFIG_POSIX_FALLOCATE */
+
 }
 
 /*
