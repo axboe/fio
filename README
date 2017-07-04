@@ -59,7 +59,8 @@ Mailing list
 ------------
 
 The fio project mailing list is meant for anything related to fio including
-general discussion, bug reporting, questions, and development.
+general discussion, bug reporting, questions, and development. For bug reporting,
+see REPORTING-BUGS.
 
 An automated mail detailing recent commits is automatically sent to the list at
 most daily. The list address is fio@vger.kernel.org, subscribe by sending an
