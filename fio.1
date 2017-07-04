@@ -184,11 +184,10 @@ argument, \-\-cmdhelp will detail the given `option`.
 See the `examples/` directory in the fio source for inspiration on how to write
 job files. Note the copyright and license requirements currently apply to
 `examples/` files.
-.SH "JOB PARAMETERS"
-.SS Types
-Some parameters may take arguments of a specific type.
-Anywhere a numeric value is required, an arithmetic expression may be used,
-provided it is surrounded by parentheses. Supported operators are:
+.SH "JOB FILE PARAMETERS"
+Some parameters take an option of a given type, such as an integer or a
+string. Anywhere a numeric value is required, an arithmetic expression may be
+used, provided it is surrounded by parentheses. Supported operators are:
 .RS
 .RS
 .TP
@@ -208,7 +207,9 @@ provided it is surrounded by parentheses. Supported operators are:
 .P
 For time values in expressions, units are microseconds by default. This is
 different than for time values not in expressions (not enclosed in
-parentheses). The types used are:
+parentheses).
+.SH "PARAMETER TYPES"
+The following parameter types are used.
 .TP
 .I str
 String: a sequence of alphanumeric characters.
@@ -299,7 +300,8 @@ sets of ranges, they are separated with a `,' or `/' character. For example:
 .I float_list
 List of floating numbers: A list of floating numbers, separated by
 a ':' character.
-.SS "Parameter List"
+.SH "JOB DESCRIPTION"
+With the above in mind, here follows the complete list of fio job parameters.
 .TP
 .BI name \fR=\fPstr
 May be used to override the job name.  On the command line, this parameter
