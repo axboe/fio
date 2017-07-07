@@ -552,9 +552,9 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 	if (!io_u_fits(td, io_u, minbs))
 		return 0;
 
-	frand_max = rand_max(&td->bsrange_state);
+	frand_max = rand_max(&td->bsrange_state[ddir]);
 	do {
-		r = __rand(&td->bsrange_state);
+		r = __rand(&td->bsrange_state[ddir]);
 
 		if (!td->o.bssplit_nr[ddir]) {
 			buflen = 1 + (unsigned int) ((double) maxbs *

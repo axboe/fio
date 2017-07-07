@@ -91,6 +91,8 @@ enum {
 
 enum {
 	FIO_RAND_BS_OFF		= 0,
+	FIO_RAND_BS1_OFF,
+	FIO_RAND_BS2_OFF,
 	FIO_RAND_VER_OFF,
 	FIO_RAND_MIX_OFF,
 	FIO_RAND_FILE_OFF,
@@ -214,7 +216,7 @@ struct thread_data {
 
 	unsigned long rand_seeds[FIO_RAND_NR_OFFS];
 
-	struct frand_state bsrange_state;
+	struct frand_state bsrange_state[DDIR_RWDIR_CNT];
 	struct frand_state verify_state;
 	struct frand_state trim_state;
 	struct frand_state delay_state;
