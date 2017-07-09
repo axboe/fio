@@ -98,7 +98,7 @@ Command line options
 
 .. option:: --parse-only
 
-	Parse options only, don\'t start any I/O.
+	Parse options only, don't start any I/O.
 
 .. option:: --output=filename
 
