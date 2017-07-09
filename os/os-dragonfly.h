@@ -5,6 +5,7 @@
 
 #include <errno.h>
 #include <unistd.h>
+#include <sys/endian.h>
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/statvfs.h>
