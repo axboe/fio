@@ -425,6 +425,7 @@ void fio_clock_init(void)
 			fio_clock_source = CS_CPUCLOCK;
 	} else if (fio_clock_source == CS_CPUCLOCK)
 		log_info("fio: clocksource=cpu may not be reliable\n");
+	dprint(FD_TIME, "gettime: clocksource=%d\n", (int) fio_clock_source);
 }
 
 uint64_t ntime_since(const struct timespec *s, const struct timespec *e)
