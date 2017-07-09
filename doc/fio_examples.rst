@@ -60,3 +60,13 @@ Fixed rate submission
 
 .. literalinclude:: ../examples/fixed-rate-submission.fio
 	:language: ini
+
+Butterfly seek pattern
+-----------------------
+
+.. only:: builder_html
+
+:download:`Download butterfly.fio <../examples/butterfly.fio>`
+
+.. literalinclude:: ../examples/butterfly.fio
+	:language: ini
