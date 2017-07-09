@@ -16,7 +16,7 @@ matrix:
 #     compiler: clang
 #     osx_image: xcode8
 #     env: SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk MACOSX_DEPLOYMENT_TARGET=10.11
-    # Build on the latest OSX version (will eventually become obsolete)
+    # Build on the latest OSX version (will eventually become obsolete)
     - os: osx
       compiler: clang
       osx_image: xcode8.2
