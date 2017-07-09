@@ -14,6 +14,8 @@
 #define	nop		__asm__ __volatile__ ("nop")
 #define read_barrier()	__sync_synchronize()
 #define write_barrier()	__sync_synchronize()
+#else
+#error "unsupported ARM architecture"
 #endif
 
 #endif
