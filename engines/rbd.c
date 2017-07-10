@@ -517,6 +517,7 @@ static int fio_rbd_queue(struct thread_data *td, struct io_u *io_u)
 	} else {
 		dprint(FD_IO, "%s: Warning: unhandled ddir: %d\n", __func__,
 		       io_u->ddir);
+		r = -EINVAL;
 		goto failed_comp;
 	}
 
