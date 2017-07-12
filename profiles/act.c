@@ -89,6 +89,7 @@ static struct fio_option options[] = {
 		.help	= "Devices to use",
 		.category = FIO_OPT_C_PROFILE,
 		.group	= FIO_OPT_G_ACT,
+		.no_free = true,
 	},
 	{
 		.name	= "load",

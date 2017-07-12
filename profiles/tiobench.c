@@ -70,6 +70,7 @@ static struct fio_option options[] = {
 		.help	= "Test directory",
 		.category = FIO_OPT_C_PROFILE,
 		.group	= FIO_OPT_G_TIOBENCH,
+		.no_free = true,
 	},
 	{
 		.name	= "threads",
