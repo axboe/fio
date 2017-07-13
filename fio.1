@@ -564,10 +564,30 @@ Advise using \fBFADV_RANDOM\fR
 .RE
 .RE
 .TP
-.BI fadvise_stream \fR=\fPint
-Use \fBposix_fadvise\fR\|(2) to advise the kernel what stream ID the
-writes issued belong to. Only supported on Linux. Note, this option
-may change going forward.
+.BI write_hint \fR=\fPstr
+Use \fBfcntl\fR|(2) to advise the kernel what life time to expect from a write.
+Only supported on Linux, as of version 4.13. The values are all relative to
+each other, and no absolute meaning should be associated with them. Accepted
+values are:
+.RS
+.RS
+.TP
+.B none
+No particular life time associated with this file.
+.TP
+.B short
+Data written to this file has a short life time.
+.TP
+.B medium
+Data written to this file has a medium life time.
+.TP
+.B long
+Data written to this file has a long life time.
+.TP
+.B extreme
+Data written to this file has a very long life time.
+.RE
+.RE
 .TP
 .BI size \fR=\fPint
 Total size of I/O for this job.  \fBfio\fR will run until this many bytes have

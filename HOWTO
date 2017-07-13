@@ -1093,11 +1093,29 @@ I/O type
 		**random**
 			Advise using **FADV_RANDOM**.
 
-.. option:: fadvise_stream=int
+.. option:: write_hint=str
 
-	Use :manpage:`posix_fadvise(2)` to advise the kernel what stream ID the
-	writes issued belong to. Only supported on Linux. Note, this option may
-	change going forward.
+	Use :manpage:`fcntl(2)` to advise the kernel what life time to expect
+	from a write. Only supported on Linux, as of version 4.13. Accepted
+	values are:
+
+		**none**
+			No particular life time associated with this file.
+
+		**short**
+			Data written to this file has a short life time.
+
+		**medium**
+			Data written to this file has a medium life time.
+
+		**long**
+			Data written to this file has a long life time.
+
+		**extreme**
+			Data written to this file has a very long life time.
+
+	The values are all relative to each other, and no absolute meaning
+	should be associated with them.
 
 .. option:: offset=int
 
