@@ -1794,7 +1794,8 @@ logs contain 1216 latency bins. See the \fBLOG FILE FORMATS\fR section.
 .TP
 .BI log_offset \fR=\fPbool
 If this is set, the iolog options will include the byte offset for the IO
-entry as well as the other data values.
+entry as well as the other data values. Defaults to 0 meaning that offsets are
+not present in logs. See the \fBLOG FILE FORMATS\fR section.
 .TP
 .BI log_compression \fR=\fPint
 If this is set, fio will compress the IO logs as it goes, to keep the memory
@@ -2581,7 +2582,7 @@ the files over and load them from there.
 Fio supports a variety of log file formats, for logging latencies, bandwidth,
 and IOPS. The logs share a common format, which looks like this:
 
-.B time (msec), value, data direction, offset
+.B time (msec), value, data direction, block size (bytes), offset (bytes)
 
 Time for the log entry is always in milliseconds. The value logged depends
 on the type of log, it will be one of the following:
@@ -2616,15 +2617,16 @@ IO is a TRIM
 .PD
 .P
 
-The \fIoffset\fR is the offset, in bytes, from the start of the file, for that
-particular IO. The logging of the offset can be toggled with \fBlog_offset\fR.
+The entry's *block size* is always in bytes. The \fIoffset\fR is the offset, in
+bytes, from the start of the file, for that particular IO. The logging of the
+offset can be toggled with \fBlog_offset\fR.
 
 If windowed logging is enabled through \fBlog_avg_msec\fR, then fio doesn't log
 individual IOs. Instead of logs the average values over the specified
-period of time. Since \fIdata direction\fR and \fIoffset\fR are per-IO values,
-they aren't applicable if windowed logging is enabled. If windowed logging
-is enabled and \fBlog_max_value\fR is set, then fio logs maximum values in
-that window instead of averages.
+period of time. Since \fIdata direction\fR, \fIblock size\fR and \fIoffset\fR
+are per-IO values, if windowed logging is enabled they aren't applicable and
+will be 0. If windowed logging is enabled and \fBlog_max_value\fR is set, then
+fio logs maximum values in that window instead of averages.
 
 For histogram logging the logs look like this:
 
