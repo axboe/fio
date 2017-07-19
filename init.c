@@ -1000,14 +1000,22 @@ int ioengine_load(struct thread_data *td)
 {
 	const char *engine;
 
-	/*
-	 * Engine has already been loaded.
-	 */
-	if (td->io_ops)
-		return 0;
 	if (!td->o.ioengine) {
 		log_err("fio: internal fault, no IO engine specified\n");
 		return 1;
+	}
+
+	if (td->io_ops) {
+		/* An engine is loaded, but the requested ioengine
+		 * may have changed.
+		 */
+		if (!strcmp(td->io_ops->name, td->o.ioengine)) {
+			/* The right engine is already loaded */
+			return 0;
+		}
+
+		/* Unload the old engine. */
+		free_ioengine(td);
 	}
 
 	engine = get_engine_name(td->o.ioengine);
@@ -2530,7 +2538,6 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			}
 
 			if (!ret && !strcmp(opt, "ioengine")) {
-				free_ioengine(td);
 				if (ioengine_load(td)) {
 					put_job(td);
 					td = NULL;
