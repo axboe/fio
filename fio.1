@@ -453,7 +453,7 @@ the same blocks will be written to.
 Fio defaults to read if the option is not specified.
 For mixed I/O, the default split is 50/50. For certain types of io the result
 may still be skewed a bit, since the speed may be different. It is possible to
-specify a number of IO's to do before getting a new offset, this is done by
+specify a number of IOs to do before getting a new offset, this is done by
 appending a `:\fI<nr>\fR to the end of the string given. For a random read, it
 would look like \fBrw=randread:8\fR for passing in an offset modifier with a
 value of 8. If the postfix is used with a sequential IO pattern, then the value
@@ -478,8 +478,8 @@ Generate the same offset
 .P
 \fBsequential\fR is only useful for random IO, where fio would normally
 generate a new random offset for every IO. If you append eg 8 to randread, you
-would get a new random offset for every 8 IO's. The result would be a seek for
-only every 8 IO's, instead of for every IO. Use \fBrw=randread:8\fR to specify
+would get a new random offset for every 8 IOs. The result would be a seek for
+only every 8 IOs, instead of for every IO. Use \fBrw=randread:8\fR to specify
 that. As sequential IO is already sequential, setting \fBsequential\fR for that
 would not result in any differences.  \fBidentical\fR behaves in a similar
 fashion, except it sends the same offset 8 number of times before generating a
@@ -2252,7 +2252,7 @@ Finally, disk statistics are printed with reads first:
 Number of I/Os performed by all groups.
 .TP
 .B merge
-Number of merges in the I/O scheduler.
+Number of merges performed by the I/O scheduler.
 .TP
 .B ticks
 Number of ticks we kept the disk busy.
