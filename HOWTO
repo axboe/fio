@@ -1255,7 +1255,7 @@ I/O type
 
 	* 60% of accesses should be to the first 10%
 	* 30% of accesses should be to the next 20%
-	* 8% of accesses should be to to the next 30%
+	* 8% of accesses should be to the next 30%
 	* 2% of accesses should be to the next 40%
 
 	we can define that through zoning of the random accesses. For the above
