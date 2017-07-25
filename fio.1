@@ -2069,7 +2069,7 @@ For TCP network connections, tell fio to listen for incoming
 connections rather than initiating an outgoing connection. The
 hostname must be omitted if this option is used.
 .TP
-.BI (net)pingpong \fR=\fPbool
+.BI (net,netsplice)pingpong \fR=\fPbool
 Normally a network writer will just continue writing data, and a network reader
 will just consume packets. If pingpong=1 is set, a writer will send its normal
 payload to the reader, then wait for the reader to send the same payload back.
@@ -2079,10 +2079,10 @@ completion latency measures how long it took for the other end to receive and
 send back. For UDP multicast traffic pingpong=1 should only be set for a single
 reader when multiple readers are listening to the same address.
 .TP
-.BI (net)window_size \fR=\fPint
+.BI (net,netsplice)window_size \fR=\fPint
 Set the desired socket buffer size for the connection.
 .TP
-.BI (net)mss \fR=\fPint
+.BI (net,netsplice)mss \fR=\fPint
 Set the TCP maximum segment size (TCP_MAXSEG).
 .TP
 .BI (e4defrag)donorname \fR=\fPstr
