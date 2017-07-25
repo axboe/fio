@@ -528,8 +528,6 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 		}
 		if (ret < 0)
 			errval = errno;
-		else if (ret) /* probably not supported */
-			errval = ret;
 	} else if (f->filetype == FIO_TYPE_CHAR ||
 		   f->filetype == FIO_TYPE_PIPE) {
 		dprint(FD_IO, "invalidate not supported %s\n", f->file_name);
