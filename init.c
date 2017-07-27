@@ -781,6 +781,11 @@ static int fixup_options(struct thread_data *td)
 			o->unit_base = 8;
 	}
 
+#if !defined(CONFIG_POSIX_FALLOCATE) && !defined(FIO_HAVE_NATIVE_FALLOCATE)
+	/* Platform doesn't support fallocate so force set it to none */
+	o->fallocate_mode = FIO_FALLOCATE_NONE;
+#endif
+
 #ifndef CONFIG_FDATASYNC
 	if (o->fdatasync_blocks) {
 		log_info("fio: this platform does not support fdatasync()"
