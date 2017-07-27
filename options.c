@@ -2289,7 +2289,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent = "nrfiles",
 		.hide	= 1,
 	},
-#if defined(CONFIG_POSIX_FALLOCATE) || defined(FIO_HAVE_NATIVE_FALLOCATE)
+#ifdef FIO_HAVE_ANY_FALLOCATE
 	{
 		.name	= "fallocate",
 		.lname	= "Fallocate",
@@ -2333,14 +2333,14 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 #endif
 		},
 	},
-#else	/* CONFIG_POSIX_FALLOCATE */
+#else	/* FIO_HAVE_ANY_FALLOCATE */
 	{
 		.name	= "fallocate",
 		.lname	= "Fallocate",
 		.type	= FIO_OPT_UNSUPPORTED,
 		.help	= "Your platform does not support fallocate",
 	},
-#endif /* CONFIG_POSIX_FALLOCATE || FIO_HAVE_NATIVE_FALLOCATE */
+#endif /* FIO_HAVE_ANY_FALLOCATE */
 	{
 		.name	= "fadvise_hint",
 		.lname	= "Fadvise hint",

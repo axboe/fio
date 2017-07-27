@@ -100,7 +100,6 @@ static void fallocate_file(struct thread_data *td, struct fio_file *f)
 		log_err("fio: unknown fallocate mode: %d\n", td->o.fallocate_mode);
 		assert(0);
 	}
-
 }
 
 /*
