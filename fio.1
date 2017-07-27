@@ -2018,6 +2018,10 @@ iodepth_batch_complete=0).
 Set RWF_HIPRI on IO, indicating to the kernel that it's of
 higher priority than normal.
 .TP
+.BI (pvsync2)hipri_percentage
+When hipri is set this determines the probability of a pvsync2 IO being high
+priority. The default is 100%.
+.TP
 .BI (net,netsplice)hostname \fR=\fPstr
 The host name or IP address to use for TCP or UDP based IO.
 If the job is a TCP listener or UDP reader, the hostname is not

@@ -1819,6 +1819,11 @@ caveat that when used on the command line, they must come after the
 	Set RWF_HIPRI on I/O, indicating to the kernel that it's of higher priority
 	than normal.
 
+.. option:: hipri_percentage : [pvsync2]
+
+	When hipri is set this determines the probability of a pvsync2 IO being high
+	priority. The default is 100%.
+
 .. option:: cpuload=int : [cpuio]
 
 	Attempt to use the specified percentage of CPU cycles. This is a mandatory

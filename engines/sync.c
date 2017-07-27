@@ -14,6 +14,7 @@
 
 #include "../fio.h"
 #include "../optgroup.h"
+#include "../lib/rand.h"
 
 /*
  * Sync engine uses engine_data to store last offset
@@ -30,12 +31,15 @@ struct syncio_data {
 	unsigned long long last_offset;
 	struct fio_file *last_file;
 	enum fio_ddir last_ddir;
+
+	struct frand_state rand_state;
 };
 
 #ifdef FIO_HAVE_PWRITEV2
 struct psyncv2_options {
 	void *pad;
 	unsigned int hipri;
+	unsigned int hipri_percentage;
 };
 
 static struct fio_option options[] = {
@@ -45,6 +49,18 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct psyncv2_options, hipri),
 		.help	= "Set RWF_HIPRI for pwritev2/preadv2",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "hipri_percentage",
+		.lname	= "RWF_HIPRI_PERCENTAGE",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct psyncv2_options, hipri_percentage),
+		.minval	= 0,
+		.maxval	= 100,
+		.def    = "100",
+		.help	= "Probabilistically set RWF_HIPRI for pwritev2/preadv2",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_INVALID,
 	},
@@ -132,7 +148,8 @@ static int fio_pvsyncio2_queue(struct thread_data *td, struct io_u *io_u)
 
 	fio_ro_check(td, io_u);
 
-	if (o->hipri)
+	if (o->hipri &&
+	    (rand32_between(&sd->rand_state, 1, 100) <= o->hipri_percentage))
 		flags |= RWF_HIPRI;
 
 	iov->iov_base = io_u->xfer_buf;
@@ -363,6 +380,7 @@ static int fio_vsyncio_init(struct thread_data *td)
 	sd->last_offset = -1ULL;
 	sd->iovecs = malloc(td->o.iodepth * sizeof(struct iovec));
 	sd->io_us = malloc(td->o.iodepth * sizeof(struct io_u *));
+	init_rand(&sd->rand_state, 0);
 
 	td->io_ops_data = sd;
 	return 0;
