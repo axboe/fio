@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <sys/sysctl.h>
 #include <sys/disk.h>
+#include <sys/endian.h>
 #include <sys/thr.h>
 #include <sys/socket.h>
 #include <sys/param.h>

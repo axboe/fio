@@ -98,7 +98,7 @@ Command line options
 
 .. option:: --parse-only
 
-	Parse options only, don\'t start any I/O.
+	Parse options only, don't start any I/O.
 
 .. option:: --output=filename
 
@@ -1015,8 +1015,8 @@ I/O type
 
 	``sequential`` is only useful for random I/O, where fio would normally
 	generate a new random offset for every I/O. If you append e.g. 8 to randread,
-	you would get a new random offset for every 8 I/O's. The result would be a
-	seek for only every 8 I/O's, instead of for every I/O. Use ``rw=randread:8``
+	you would get a new random offset for every 8 I/Os. The result would be a
+	seek for only every 8 I/Os, instead of for every I/O. Use ``rw=randread:8``
 	to specify that. As sequential I/O is already sequential, setting
 	``sequential`` for that would not result in any differences.  ``identical``
 	behaves in a similar fashion, except it sends the same offset 8 number of
@@ -2761,7 +2761,8 @@ Measurements and reporting
 .. option:: log_offset=int
 
 	If this is set, the iolog options will include the byte offset for the I/O
-	entry as well as the other data values.
+	entry as well as the other data values. Defaults to 0 meaning that
+	offsets are not present in logs. Also see `Log File Formats`_.
 
 .. option:: log_compression=int
 
@@ -3242,7 +3243,7 @@ numbers denote:
 **ios**
 		Number of I/Os performed by all groups.
 **merge**
-		Number of merges I/O the I/O scheduler.
+		Number of merges performed by the I/O scheduler.
 **ticks**
 		Number of ticks we kept the disk busy.
 **in_queue**
@@ -3278,7 +3279,7 @@ changed for some reason, this number will be incremented by 1 to signify that
 change.
 
 Split up, the format is as follows (comments in brackets denote when a
-field was introduced or whether its specific to some terse version):
+field was introduced or whether it's specific to some terse version):
 
     ::
 
@@ -3531,9 +3532,10 @@ Log File Formats
 Fio supports a variety of log file formats, for logging latencies, bandwidth,
 and IOPS. The logs share a common format, which looks like this:
 
-    *time* (`msec`), *value*, *data direction*, *offset*
+    *time* (`msec`), *value*, *data direction*, *block size* (`bytes`),
+    *offset* (`bytes`)
 
-Time for the log entry is always in milliseconds. The *value* logged depends
+*Time* for the log entry is always in milliseconds. The *value* logged depends
 on the type of log, it will be one of the following:
 
     **Latency log**
@@ -3552,16 +3554,17 @@ on the type of log, it will be one of the following:
 	**2**
 		I/O is a TRIM
 
-The *offset* is the offset, in bytes, from the start of the file, for that
-particular I/O. The logging of the offset can be toggled with
-:option:`log_offset`.
+The entry's *block size* is always in bytes. The *offset* is the offset, in bytes,
+from the start of the file, for that particular I/O. The logging of the offset can be
+toggled with :option:`log_offset`.
 
 Fio defaults to logging every individual I/O.  When IOPS are logged for individual
-I/Os the value entry will always be 1.  If windowed logging is enabled through
+I/Os the *value* entry will always be 1. If windowed logging is enabled through
 :option:`log_avg_msec`, fio logs the average values over the specified period of time.
 If windowed logging is enabled and :option:`log_max_value` is set, then fio logs
-maximum values in that window instead of averages.  Since 'data direction' and
-'offset' are per-I/O values, they aren't applicable if windowed logging is enabled.
+maximum values in that window instead of averages. Since *data direction*, *block
+size* and *offset* are per-I/O values, if windowed logging is enabled they
+aren't applicable and will be 0.
 
 Client/Server
 -------------

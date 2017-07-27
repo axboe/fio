@@ -453,7 +453,7 @@ the same blocks will be written to.
 Fio defaults to read if the option is not specified.
 For mixed I/O, the default split is 50/50. For certain types of io the result
 may still be skewed a bit, since the speed may be different. It is possible to
-specify a number of IO's to do before getting a new offset, this is done by
+specify a number of IOs to do before getting a new offset, this is done by
 appending a `:\fI<nr>\fR to the end of the string given. For a random read, it
 would look like \fBrw=randread:8\fR for passing in an offset modifier with a
 value of 8. If the postfix is used with a sequential IO pattern, then the value
@@ -478,8 +478,8 @@ Generate the same offset
 .P
 \fBsequential\fR is only useful for random IO, where fio would normally
 generate a new random offset for every IO. If you append eg 8 to randread, you
-would get a new random offset for every 8 IO's. The result would be a seek for
-only every 8 IO's, instead of for every IO. Use \fBrw=randread:8\fR to specify
+would get a new random offset for every 8 IOs. The result would be a seek for
+only every 8 IOs, instead of for every IO. Use \fBrw=randread:8\fR to specify
 that. As sequential IO is already sequential, setting \fBsequential\fR for that
 would not result in any differences.  \fBidentical\fR behaves in a similar
 fashion, except it sends the same offset 8 number of times before generating a
@@ -1794,7 +1794,8 @@ logs contain 1216 latency bins. See the \fBLOG FILE FORMATS\fR section.
 .TP
 .BI log_offset \fR=\fPbool
 If this is set, the iolog options will include the byte offset for the IO
-entry as well as the other data values.
+entry as well as the other data values. Defaults to 0 meaning that offsets are
+not present in logs. See the \fBLOG FILE FORMATS\fR section.
 .TP
 .BI log_compression \fR=\fPint
 If this is set, fio will compress the IO logs as it goes, to keep the memory
@@ -2251,7 +2252,7 @@ Finally, disk statistics are printed with reads first:
 Number of I/Os performed by all groups.
 .TP
 .B merge
-Number of merges in the I/O scheduler.
+Number of merges performed by the I/O scheduler.
 .TP
 .B ticks
 Number of ticks we kept the disk busy.
@@ -2581,7 +2582,7 @@ the files over and load them from there.
 Fio supports a variety of log file formats, for logging latencies, bandwidth,
 and IOPS. The logs share a common format, which looks like this:
 
-.B time (msec), value, data direction, offset
+.B time (msec), value, data direction, block size (bytes), offset (bytes)
 
 Time for the log entry is always in milliseconds. The value logged depends
 on the type of log, it will be one of the following:
@@ -2616,15 +2617,16 @@ IO is a TRIM
 .PD
 .P
 
-The \fIoffset\fR is the offset, in bytes, from the start of the file, for that
-particular IO. The logging of the offset can be toggled with \fBlog_offset\fR.
+The entry's *block size* is always in bytes. The \fIoffset\fR is the offset, in
+bytes, from the start of the file, for that particular IO. The logging of the
+offset can be toggled with \fBlog_offset\fR.
 
 If windowed logging is enabled through \fBlog_avg_msec\fR, then fio doesn't log
 individual IOs. Instead of logs the average values over the specified
-period of time. Since \fIdata direction\fR and \fIoffset\fR are per-IO values,
-they aren't applicable if windowed logging is enabled. If windowed logging
-is enabled and \fBlog_max_value\fR is set, then fio logs maximum values in
-that window instead of averages.
+period of time. Since \fIdata direction\fR, \fIblock size\fR and \fIoffset\fR
+are per-IO values, if windowed logging is enabled they aren't applicable and
+will be 0. If windowed logging is enabled and \fBlog_max_value\fR is set, then
+fio logs maximum values in that window instead of averages.
 
 For histogram logging the logs look like this:
 

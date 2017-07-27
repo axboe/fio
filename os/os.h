@@ -369,4 +369,8 @@ static inline bool fio_fallocate(struct fio_file *f, uint64_t offset, uint64_t l
 }
 #endif
 
+#if defined(CONFIG_POSIX_FALLOCATE) || defined(FIO_HAVE_NATIVE_FALLOCATE)
+# define FIO_HAVE_ANY_FALLOCATE
+#endif
+
 #endif
