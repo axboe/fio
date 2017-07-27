@@ -67,7 +67,7 @@ static void fallocate_file(struct thread_data *td, struct fio_file *f)
 	switch (td->o.fallocate_mode) {
 	case FIO_FALLOCATE_NATIVE:
 		r = native_fallocate(td, f);
-		if (r != 0)
+		if (r != 0 && errno != ENOSYS)
 			log_err("fio: native_fallocate call failed: %s\n",
 					strerror(errno));
 		break;
