@@ -3122,9 +3122,9 @@ group) the output looks like::
 	     | 99.99th=[78119]
 	   bw (  KiB/s): min=  532, max=  686, per=0.10%, avg=622.87, stdev=24.82, samples=  100
 	   iops        : min=   76, max=   98, avg=88.98, stdev= 3.54, samples=  100
-	    lat (usec) : 250=0.04%, 500=64.11%, 750=4.81%, 1000=2.79%
-	    lat (msec) : 2=4.16%, 4=1.84%, 10=4.90%, 20=11.33%, 50=5.37%
-	    lat (msec) : 100=0.65%
+	  clat (usec)  : 250=0.04%, 500=64.11%, 750=4.81%, 1000=2.79%
+	  clat (msec)  : 2=4.16%, 4=1.84%, 10=4.90%, 20=11.33%, 50=5.37%
+	  clat (msec)  : 100=0.65%
 	  cpu          : usr=0.27%, sys=0.18%, ctx=12072, majf=0, minf=21
 	  IO depths    : 1=85.0%, 2=13.1%, 4=1.8%, 8=0.1%, 16=0.0%, 32=0.0%, >=64=0.0%
 	     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
@@ -3174,6 +3174,13 @@ writes in the example above).  In the order listed, they denote:
 **iops**
 		IOPS statistics based on samples. Same names as bw.
 
+**clat (nsec/usec/msec)**
+		Completion latency distribution. Unlike the separate read/write/trim
+		sections above, the data here and in the remaining sections apply to the
+		entire job as a whole. 250=0.04% means that 0.04% of the I/Os in the
+		job completed in under 250us. 500=64.11% means that 64.11% of the I/Os
+		completed in 250 to 499us.
+
 **cpu**
 		CPU usage. User and system time, along with the number of context
 		switches this thread went through, usage of system and user time, and
@@ -3205,11 +3212,9 @@ writes in the example above).  In the order listed, they denote:
 		short or dropped.
 
 **IO latencies**
-		The distribution of I/O completion latencies. This is the time from when
-		I/O leaves fio and when it gets completed.  The numbers follow the same
-		pattern as the I/O depths, meaning that 2=1.6% means that 1.6% of the
-		I/O completed within 2 msecs, 20=12.8% means that 12.8% of the I/O took
-		more than 10 msecs, but less than (or equal to) 20 msecs.
+		These values are for the :option:`--latency-target` and related options.
+		When these options are used, this section describe the I/O depth required
+		to meet the specified latency target.
 
 ..
 	Example output was based on the following:
@@ -3361,6 +3366,27 @@ Below is a single line containing short names for each of the fields in the
 minimal output v3, separated by semicolons::
 
 	terse_version_3;fio_version;jobname;groupid;error;read_kb;read_bandwidth;read_iops;read_runtime_ms;read_slat_min;read_slat_max;read_slat_mean;read_slat_dev;read_clat_min;read_clat_max;read_clat_mean;read_clat_dev;read_clat_pct01;read_clat_pct02;read_clat_pct03;read_clat_pct04;read_clat_pct05;read_clat_pct06;read_clat_pct07;read_clat_pct08;read_clat_pct09;read_clat_pct10;read_clat_pct11;read_clat_pct12;read_clat_pct13;read_clat_pct14;read_clat_pct15;read_clat_pct16;read_clat_pct17;read_clat_pct18;read_clat_pct19;read_clat_pct20;read_tlat_min;read_lat_max;read_lat_mean;read_lat_dev;read_bw_min;read_bw_max;read_bw_agg_pct;read_bw_mean;read_bw_dev;write_kb;write_bandwidth;write_iops;write_runtime_ms;write_slat_min;write_slat_max;write_slat_mean;write_slat_dev;write_clat_min;write_clat_max;write_clat_mean;write_clat_dev;write_clat_pct01;write_clat_pct02;write_clat_pct03;write_clat_pct04;write_clat_pct05;write_clat_pct06;write_clat_pct07;write_clat_pct08;write_clat_pct09;write_clat_pct10;write_clat_pct11;write_clat_pct12;write_clat_pct13;write_clat_pct14;write_clat_pct15;write_clat_pct16;write_clat_pct17;write_clat_pct18;write_clat_pct19;write_clat_pct20;write_tlat_min;write_lat_max;write_lat_mean;write_lat_dev;write_bw_min;write_bw_max;write_bw_agg_pct;write_bw_mean;write_bw_dev;cpu_user;cpu_sys;cpu_csw;cpu_mjf;cpu_minf;iodepth_1;iodepth_2;iodepth_4;iodepth_8;iodepth_16;iodepth_32;iodepth_64;lat_2us;lat_4us;lat_10us;lat_20us;lat_50us;lat_100us;lat_250us;lat_500us;lat_750us;lat_1000us;lat_2ms;lat_4ms;lat_10ms;lat_20ms;lat_50ms;lat_100ms;lat_250ms;lat_500ms;lat_750ms;lat_1000ms;lat_2000ms;lat_over_2000ms;disk_name;disk_read_iops;disk_write_iops;disk_read_merges;disk_write_merges;disk_read_ticks;write_ticks;disk_queue_time;disk_util
+
+
+JSON+ output
+------------
+
+The json+ output format is identical to the json output format except that it
+adds a full dump of the completion latency bins. Each `bins` object contains a
+set of (key, value) pairs where keys are latency durations and values count how
+many IOs had completion latencies of the corresponding duration. For example,
+consider:
+
+``"bins" : { "87552" : 1, "89600" : 1, "94720" : 1, "96768" : 1, "97792" : 1, "99840" : 1, "100864" : 2, "103936" : 6, "104960" : 534, "105984" : 5995, "107008" : 7529, ... }``
+
+This data indicates that one IO required 87,552ns to complete, two IOs required
+100,864ns to complete, and 7529 IOs required 107,008 ns to complete.
+
+Also included with fio is a Python script `fio_jsonplus_clat2csv` that takes
+json+ output and generates CSV-formatted latency data suitable for plotting.
+
+The latency durations actually represent the midpoints of latency intervals.
+For details refer to stat.h.
 
 
 Trace file format
