@@ -576,6 +576,8 @@ Parameter types
 **float_list**
 	A list of floating point numbers, separated by a ':' character.
 
+With the above in mind, here follows the complete list of fio job parameters.
+
 
 Units
 ~~~~~
@@ -620,9 +622,6 @@ Units
 		Byte based.
 	**1**
 		Bit based.
-
-
-With the above in mind, here follows the complete list of fio job parameters.
 
 
 Job description
