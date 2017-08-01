@@ -2595,7 +2595,7 @@ Verification
 
 .. option:: trim_backlog=int
 
-	Verify that trim/discarded blocks are returned as zeros.
+	Trim after this number of blocks are written.
 
 .. option:: trim_backlog_batch=int
 
