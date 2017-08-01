@@ -1529,6 +1529,7 @@ Buffers and memory
 
 		**cudamalloc**
 			Use GPU memory as the buffers for GPUDirect RDMA benchmark.
+			The ioengine must be rdma.
 
 	The area allocated is a function of the maximum allowed bs size for the job,
 	multiplied by the I/O depth given. Note that for **shmhuge** and
@@ -1857,7 +1858,7 @@ caveat that when used on the command line, they must come after the
 
    [libhdfs]
 
-		the listening port of the HFDS cluster namenode.
+		The listening port of the HFDS cluster namenode.
 
 .. option:: interface=str : [netsplice] [net]
 
@@ -1930,7 +1931,7 @@ caveat that when used on the command line, they must come after the
 	**0**
 		Default. Preallocate donor's file on init.
 	**1**
-		Allocate space immediately inside defragment event,	and free right
+		Allocate space immediately inside defragment event, and free right
 		after event.
 
 .. option:: clustername=str : [rbd]
@@ -1962,7 +1963,7 @@ caveat that when used on the command line, they must come after the
 
 .. option:: chunk_size : [libhdfs]
 
-	the size of the chunk to use for each file.
+	The size of the chunk to use for each file.
 
 
 I/O depth
@@ -2486,7 +2487,7 @@ Verification
 
 .. option:: verifysort_nr=int
 
-   Pre-load and sort verify blocks for a read workload.
+	Pre-load and sort verify blocks for a read workload.
 
 .. option:: verify_offset=int
 
