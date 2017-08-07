@@ -1392,7 +1392,7 @@ Block size
 	typically won't work with direct I/O, as that normally requires sector
 	alignment.
 
-.. option:: bs_is_seq_rand
+.. option:: bs_is_seq_rand=bool
 
 	If this option is set, fio will use the normal read,write blocksize settings
 	as sequential,random blocksize settings instead. Any random read or write
@@ -2166,7 +2166,7 @@ I/O replay
 	replay, the file needs to be turned into a blkparse binary data file first
 	(``blkparse <device> -o /dev/null -d file_for_fio.bin``).
 
-.. option:: replay_no_stall=int
+.. option:: replay_no_stall=bool
 
 	When replaying I/O with :option:`read_iolog` the default behavior is to
 	attempt to respect the timestamps within the log and replay them with the
@@ -2680,7 +2680,7 @@ Measurements and reporting
 	all jobs in a file will be part of the same reporting group, unless
 	separated by a :option:`stonewall`.
 
-.. option:: stats
+.. option:: stats=bool
 
 	By default, fio collects and shows final output results for all jobs
 	that run. If this option is set to 0, then fio will ignore it in
@@ -2763,7 +2763,7 @@ Measurements and reporting
 	you instead want to log the maximum value, set this option to 1. Defaults to
 	0, meaning that averaged values are logged.
 
-.. option:: log_offset=int
+.. option:: log_offset=bool
 
 	If this is set, the iolog options will include the byte offset for the I/O
 	entry as well as the other data values. Defaults to 0 meaning that
