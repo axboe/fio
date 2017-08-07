@@ -1,0 +1,164 @@
+#!/usr/bin/python
+#
+# fio_jsonplus_clat2csv
+#
+# This script converts fio's json+ completion latency data to CSV format.
+#
+# For example:
+#
+# Run the following fio jobs:
+# ../fio --output=fio-jsonplus.output --output-format=json+ --name=test1
+#  	--ioengine=null --time_based --runtime=5s --size=1G --rw=randrw
+# 	--name=test2 --ioengine=null --time_based --runtime=3s --size=1G
+# 	--rw=read --name=test3 --ioengine=null --time_based --runtime=4s
+# 	--size=8G --rw=write
+#
+# Then run:
+# fio_jsonplus_clat2csv fio-jsonplus.output fio-latency.csv
+#
+# You will end up with the following 3 files
+#
+# -rw-r--r-- 1 root root  6467 Jun 27 14:57 fio-latency_job0.csv
+# -rw-r--r-- 1 root root  3985 Jun 27 14:57 fio-latency_job1.csv
+# -rw-r--r-- 1 root root  4490 Jun 27 14:57 fio-latency_job2.csv
+#
+# fio-latency_job0.csv will look something like:
+#
+# clat_nsec, read_count, read_cumulative, read_percentile, write_count,
+# 	write_cumulative, write_percentile, trim_count, trim_cumulative,
+# 	trim_percentile,
+# 25, 1, 1, 1.50870705013e-07, , , , , , ,
+# 26, 12, 13, 1.96131916517e-06, 947, 947, 0.000142955890032, , , ,
+# 27, 843677, 843690, 0.127288105112, 838347, 839294, 0.126696959629, , , ,
+# 28, 1877982, 2721672, 0.410620573454, 1870189, 2709483, 0.409014312345, , , ,
+# 29, 4471, 2726143, 0.411295116376, 7718, 2717201, 0.410179395301, , , ,
+# 30, 2142885, 4869028, 0.734593687087, 2138164, 4855365, 0.732949340025, , , ,
+# ...
+# 2544, , , , 2, 6624404, 0.999997433738, , , ,
+# 2576, 3, 6628178, 0.99999788781, 4, 6624408, 0.999998037564, , , ,
+# 2608, 4, 6628182, 0.999998491293, 4, 6624412, 0.999998641391, , , ,
+# 2640, 3, 6628185, 0.999998943905, 2, 6624414, 0.999998943304, , , ,
+# 2672, 1, 6628186, 0.999999094776, 3, 6624417, 0.999999396174, , , ,
+# 2736, 1, 6628187, 0.999999245646, 1, 6624418, 0.99999954713, , , ,
+# 2768, 2, 6628189, 0.999999547388, 1, 6624419, 0.999999698087, , , ,
+# 2800, , , , 1, 6624420, 0.999999849043, , , ,
+# 2832, 1, 6628190, 0.999999698259, , , , , , ,
+# 4192, 1, 6628191, 0.999999849129, , , , , , ,
+# 5792, , , , 1, 6624421, 1.0, , , ,
+# 10304, 1, 6628192, 1.0, , , , , , ,
+#
+# The first line says that you had one read IO with 25ns clat,
+# the cumulative number of read IOs at or below 25ns is 1, and
+# 25ns is the 0.00001509th percentile for read latency
+#
+# The job had 2 write IOs complete in 2544ns,
+# 6624404 write IOs completed in 2544ns or less,
+# and this represents the 99.99974th percentile for write latency
+#
+# The last line says that one read IO had 10304ns clat,
+# 6628192 read IOs had 10304ns or shorter clat, and
+# 10304ns is the 100th percentile for read latency
+#
+
+import os
+import json
+import argparse
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('source',
+                        help='fio json+ output file containing completion '
+                             'latency data')
+    parser.add_argument('dest',
+                        help='destination file stub for latency data in CSV '
+                             'format. job number will be appended to filename')
+    args = parser.parse_args()
+
+    return args
+
+
+def percentile(idx, run_total):
+    total = run_total[len(run_total)-1]
+    if total == 0:
+        return 0
+
+    return float(run_total[idx]) / total
+
+
+def more_lines(indices, bins):
+    for key, value in indices.iteritems():
+        if value < len(bins[key]):
+            return True
+
+    return False
+
+
+def main():
+    args = parse_args()
+
+    with open(args.source, 'r') as source:
+        jsondata = json.loads(source.read())
+
+    for jobnum in range(0, len(jsondata['jobs'])):
+        bins = {}
+        run_total = {}
+        ddir_set = set(['read', 'write', 'trim'])
+
+        prev_ddir = None
+        for ddir in ddir_set:
+            bins[ddir] = [[int(key), value] for key, value in
+                          jsondata['jobs'][jobnum][ddir]['clat_ns']
+                          ['bins'].iteritems()]
+            bins[ddir] = sorted(bins[ddir], key=lambda bin: bin[0])
+
+            run_total[ddir] = [0 for x in range(0, len(bins[ddir]))]
+            if len(bins[ddir]) > 0:
+                run_total[ddir][0] = bins[ddir][0][1]
+                for x in range(1, len(bins[ddir])):
+                    run_total[ddir][x] = run_total[ddir][x-1] + \
+                        bins[ddir][x][1]
+
+        stub, ext = os.path.splitext(args.dest)
+        outfile = stub + '_job' + str(jobnum) + ext
+
+        with open(outfile, 'w') as output:
+            output.write("clat_nsec, ")
+            ddir_list = list(ddir_set)
+            for ddir in ddir_list:
+                output.write("{0}_count, {0}_cumulative, {0}_percentile, ".
+                             format(ddir))
+            output.write("\n")
+
+#
+# Have a counter for each ddir
+# In each round, pick the shortest remaining duration
+# and output a line with any values for that duration
+#
+            indices = {x: 0 for x in ddir_list}
+            while more_lines(indices, bins):
+                min_lat = 17112760320
+                for ddir in ddir_list:
+                    if indices[ddir] < len(bins[ddir]):
+                        min_lat = min(bins[ddir][indices[ddir]][0], min_lat)
+
+                output.write("{0}, ".format(min_lat))
+
+                for ddir in ddir_list:
+                    if indices[ddir] < len(bins[ddir]) and \
+                       min_lat == bins[ddir][indices[ddir]][0]:
+                        count = bins[ddir][indices[ddir]][1]
+                        cumulative = run_total[ddir][indices[ddir]]
+                        ptile = percentile(indices[ddir], run_total[ddir])
+                        output.write("{0}, {1}, {2}, ".format(count,
+                                     cumulative, ptile))
+                        indices[ddir] += 1
+                    else:
+                        output.write(", , , ")
+                output.write("\n")
+
+            print "{0} generated".format(outfile)
+
+
+if __name__ == '__main__':
+    main()
