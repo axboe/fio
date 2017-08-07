@@ -13,6 +13,7 @@
 #include <mtd/mtd-user.h>
 
 #include "../fio.h"
+#include "../optgroup.h"
 #include "../verify.h"
 #include "../oslib/libmtd.h"
 
@@ -20,6 +21,28 @@ static libmtd_t desc;
 
 struct fio_mtd_data {
 	struct mtd_dev_info info;
+};
+
+struct fio_mtd_options {
+	void *pad; /* avoid off1 == 0 */
+	unsigned int skip_bad;
+};
+
+static struct fio_option options[] = {
+	{
+		.name	= "skip_bad",
+		.lname	= "Skip operations against bad blocks",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct fio_mtd_options, skip_bad),
+		.help	= "Skip operations against known bad blocks.",
+		.hide	= 1,
+		.def	= "0",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_MTD,
+	},
+	{
+		.name	= NULL,
+	},
 };
 
 static int fio_mtd_maybe_mark_bad(struct thread_data *td,
@@ -55,6 +78,7 @@ static int fio_mtd_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	struct fio_mtd_data *fmd = FILE_ENG_DATA(f);
+	struct fio_mtd_options *o = td->eo;
 	int local_offs = 0;
 	int ret;
 
@@ -77,7 +101,7 @@ static int fio_mtd_queue(struct thread_data *td, struct io_u *io_u)
 			      (int)fmd->info.eb_size - eb_offs);
 		char *buf = ((char *)io_u->buf) + local_offs;
 
-		if (td->o.skip_bad) {
+		if (o->skip_bad) {
 			ret = fio_mtd_is_bad(td, fmd, io_u, eb);
 			if (ret == -1)
 				break;
@@ -190,6 +214,8 @@ static struct ioengine_ops ioengine = {
 	.close_file	= fio_mtd_close_file,
 	.get_file_size	= fio_mtd_get_file_size,
 	.flags		= FIO_SYNCIO | FIO_NOEXTEND,
+	.options	= options,
+	.option_struct_size	= sizeof(struct fio_mtd_options),
 };
 
 static void fio_init fio_mtd_register(void)
