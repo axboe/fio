@@ -87,6 +87,7 @@ enum {
 	TD_F_CHILD		= 1U << 12,
 	TD_F_NO_PROGRESS        = 1U << 13,
 	TD_F_REGROW_LOGS	= 1U << 14,
+	TD_F_MMAP_KEEP		= 1U << 15,
 };
 
 enum {

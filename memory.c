@@ -138,6 +138,9 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 	}
 
 	if (td->o.mmapfile) {
+		if (access(td->o.mmapfile, F_OK) == 0)
+			td->flags |= TD_F_MMAP_KEEP;
+
 		td->mmapfd = open(td->o.mmapfile, O_RDWR|O_CREAT, 0644);
 
 		if (td->mmapfd < 0) {
@@ -169,7 +172,7 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 		td->orig_buffer = NULL;
 		if (td->mmapfd != 1 && td->mmapfd != -1) {
 			close(td->mmapfd);
-			if (td->o.mmapfile)
+			if (td->o.mmapfile && !(td->flags & TD_F_MMAP_KEEP))
 				unlink(td->o.mmapfile);
 		}
 
@@ -187,7 +190,8 @@ static void free_mem_mmap(struct thread_data *td, size_t total_mem)
 	if (td->o.mmapfile) {
 		if (td->mmapfd != -1)
 			close(td->mmapfd);
-		unlink(td->o.mmapfile);
+		if (!(td->flags & TD_F_MMAP_KEEP))
+			unlink(td->o.mmapfile);
 		free(td->o.mmapfile);
 	}
 }
