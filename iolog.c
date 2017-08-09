@@ -284,7 +284,14 @@ restart:
 			td->io_hist_len--;
 			rb_erase(parent, &td->io_hist_tree);
 			remove_trim_entry(td, __ipo);
-			free(__ipo);
+			if (__ipo->flags & IP_F_IN_FLIGHT) {
+				__ipo->flags &= ~IP_F_ONRB;
+				__ipo->flags |= IP_F_UNLOGGED;
+				__ipo->flags |= IP_F_ONLIST;
+				flist_add_tail(&__ipo->list, &td->io_orphan_list);
+				write_barrier();
+			} else
+				free(__ipo);
 			goto restart;
 		}
 	}
@@ -314,14 +321,16 @@ void unlog_io_piece(struct thread_data *td, struct io_u *io_u)
 	if (!ipo)
 		return;
 
-	if (ipo->flags & IP_F_ONRB)
-		rb_erase(&ipo->rb_node, &td->io_hist_tree);
-	else if (ipo->flags & IP_F_ONLIST)
-		flist_del(&ipo->list);
+	if (!(ipo->flags & IP_F_UNLOGGED)) {
+		if (ipo->flags & IP_F_ONRB)
+			rb_erase(&ipo->rb_node, &td->io_hist_tree);
+		else if (ipo->flags & IP_F_ONLIST)
+			flist_del(&ipo->list);
 
-	free(ipo);
-	io_u->ipo = NULL;
-	td->io_hist_len--;
+		free(ipo);
+		io_u->ipo = NULL;
+		td->io_hist_len--;
+	}
 }
 
 void trim_io_piece(struct thread_data *td, const struct io_u *io_u)

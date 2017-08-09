@@ -367,6 +367,7 @@ struct thread_data {
 	 */
 	struct rb_root io_hist_tree;
 	struct flist_head io_hist_list;
+	struct flist_head io_orphan_list;
 	unsigned long io_hist_len;
 
 	/*
