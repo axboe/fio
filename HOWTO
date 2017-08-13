@@ -111,9 +111,6 @@ Command line options
 	format.  `json+` is like `json`, except it adds a full dump of the latency
 	buckets.
 
-.. option:: --runtime
-	Limit run time to runtime seconds.
-
 .. option:: --bandwidth-log
 
 	Generate aggregate bandwidth logs.
