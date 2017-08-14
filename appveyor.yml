@@ -13,7 +13,7 @@ environment:
 
 build_script:
   - SET PATH=%CYG_ROOT%\bin;%PATH%
-  - 'bash.exe -lc "cd \"${APPVEYOR_BUILD_FOLDER}\" && ./configure ${CONFIGURE_OPTIONS} && make.exe'
+  - 'bash.exe -lc "cd \"${APPVEYOR_BUILD_FOLDER}\" && ./configure --extra-cflags=\"-Werror\" ${CONFIGURE_OPTIONS} && make.exe'
 
 after_build:
   - cd os\windows && dobuild.cmd %BUILD_ARCH%
