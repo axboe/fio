@@ -587,6 +587,37 @@ static int unlink_all_files(struct thread_data *td)
 }
 
 /*
+ * Check if io_u will overlap an in-flight IO in the queue
+ */
+static bool in_flight_overlap(struct io_u_queue *q, struct io_u *io_u)
+{
+	bool overlap;
+	struct io_u *check_io_u;
+	unsigned long long x1, x2, y1, y2;
+	int i;
+
+	x1 = io_u->offset;
+	x2 = io_u->offset + io_u->buflen;
+	overlap = false;
+	io_u_qiter(q, check_io_u, i) {
+		if (check_io_u->flags & IO_U_F_FLIGHT) {
+			y1 = check_io_u->offset;
+			y2 = check_io_u->offset + check_io_u->buflen;
+
+			if (x1 < y2 && y1 < x2) {
+				overlap = true;
+				dprint(FD_IO, "in-flight overlap: %llu/%lu, %llu/%lu\n",
+						x1, io_u->buflen,
+						y1, check_io_u->buflen);
+				break;
+			}
+		}
+	}
+
+	return overlap;
+}
+
+/*
  * The main verify engine. Runs over the writes we previously submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
  */
@@ -716,7 +747,13 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 		if (!td->o.disable_slat)
 			fio_gettime(&io_u->start_time, NULL);
 
-		ret = td_io_queue(td, io_u);
+		if (td->o.serialize_overlap && td->cur_depth > 0) {
+			if (in_flight_overlap(&td->io_u_all, io_u))
+				ret = FIO_Q_BUSY;
+			else
+				ret = td_io_queue(td, io_u);
+		} else
+			ret = td_io_queue(td, io_u);
 
 		if (io_queue_event(td, io_u, &ret, ddir, NULL, 1, NULL))
 			break;
@@ -983,7 +1020,13 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 				td->rate_next_io_time[ddir] = usec_for_io(td, ddir);
 
 		} else {
-			ret = td_io_queue(td, io_u);
+			if (td->o.serialize_overlap && td->cur_depth > 0) {
+				if (in_flight_overlap(&td->io_u_all, io_u))
+					ret = FIO_Q_BUSY;
+				else
+					ret = td_io_queue(td, io_u);
+			} else
+				ret = td_io_queue(td, io_u);
 
 			if (should_check_rate(td))
 				td->rate_next_io_time[ddir] = usec_for_io(td, ddir);

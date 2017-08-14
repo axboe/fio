@@ -698,6 +698,23 @@ static int fixup_options(struct thread_data *td)
 	if (o->iodepth_batch_complete_min > o->iodepth_batch_complete_max)
 		o->iodepth_batch_complete_max = o->iodepth_batch_complete_min;
 
+	/*
+	 * There's no need to check for in-flight overlapping IOs if the job
+	 * isn't changing data or the maximum iodepth is guaranteed to be 1
+	 */
+	if (o->serialize_overlap && !(td->flags & TD_F_READ_IOLOG) &&
+	    (!(td_write(td) || td_trim(td)) || o->iodepth == 1))
+		o->serialize_overlap = 0;
+	/*
+	 * Currently can't check for overlaps in offload mode
+	 */
+	if (o->serialize_overlap && o->io_submit_mode == IO_MODE_OFFLOAD) {
+		log_err("fio: checking for in-flight overlaps when the "
+			"io_submit_mode is offload is not supported\n");
+		o->serialize_overlap = 0;
+		ret = warnings_fatal;
+	}
+
 	if (o->nr_files > td->files_index)
 		o->nr_files = td->files_index;
 

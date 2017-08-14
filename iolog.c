@@ -227,21 +227,16 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	}
 
 	/*
-	 * We don't need to sort the entries, if:
+	 * We don't need to sort the entries if we only performed sequential
+	 * writes. In this case, just reading back data in the order we wrote
+	 * it out is the faster but still safe.
 	 *
-	 *	Sequential writes, or
-	 *	Random writes that lay out the file as it goes along
-	 *
-	 * For both these cases, just reading back data in the order we
-	 * wrote it out is the fastest.
-	 *
-	 * One exception is if we don't have a random map AND we are doing
-	 * verifies, in that case we need to check for duplicate blocks and
-	 * drop the old one, which we rely on the rb insert/lookup for
-	 * handling.
+	 * One exception is if we don't have a random map in which case we need
+	 * to check for duplicate blocks and drop the old one, which we rely on
+	 * the rb insert/lookup for handling.
 	 */
-	if (((!td->o.verifysort) || !td_random(td) || !td->o.overwrite) &&
-	      (file_randommap(td, ipo->file) || td->o.verify == VERIFY_NONE)) {
+	if (((!td->o.verifysort) || !td_random(td)) &&
+	      file_randommap(td, ipo->file)) {
 		INIT_FLIST_HEAD(&ipo->list);
 		flist_add_tail(&ipo->list, &td->io_hist_list);
 		ipo->flags |= IP_F_ONLIST;
@@ -284,7 +279,8 @@ restart:
 			td->io_hist_len--;
 			rb_erase(parent, &td->io_hist_tree);
 			remove_trim_entry(td, __ipo);
-			free(__ipo);
+			if (!(__ipo->flags & IP_F_IN_FLIGHT))
+				free(__ipo);
 			goto restart;
 		}
 	}
