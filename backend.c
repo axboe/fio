@@ -617,6 +617,19 @@ static bool in_flight_overlap(struct io_u_queue *q, struct io_u *io_u)
 	return overlap;
 }
 
+static int io_u_submit(struct thread_data *td, struct io_u *io_u)
+{
+	/*
+	 * Check for overlap if the user asked us to, and we have
+	 * at least one IO in flight besides this one.
+	 */
+	if (td->o.serialize_overlap && td->cur_depth > 1 &&
+	    in_flight_overlap(&td->io_u_all, io_u))
+		return FIO_Q_BUSY;
+
+	return td_io_queue(td, io_u);
+}
+
 /*
  * The main verify engine. Runs over the writes we previously submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
@@ -747,13 +760,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 		if (!td->o.disable_slat)
 			fio_gettime(&io_u->start_time, NULL);
 
-		if (td->o.serialize_overlap && td->cur_depth > 0) {
-			if (in_flight_overlap(&td->io_u_all, io_u))
-				ret = FIO_Q_BUSY;
-			else
-				ret = td_io_queue(td, io_u);
-		} else
-			ret = td_io_queue(td, io_u);
+		ret = io_u_submit(td, io_u);
 
 		if (io_queue_event(td, io_u, &ret, ddir, NULL, 1, NULL))
 			break;
@@ -1020,13 +1027,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 				td->rate_next_io_time[ddir] = usec_for_io(td, ddir);
 
 		} else {
-			if (td->o.serialize_overlap && td->cur_depth > 0) {
-				if (in_flight_overlap(&td->io_u_all, io_u))
-					ret = FIO_Q_BUSY;
-				else
-					ret = td_io_queue(td, io_u);
-			} else
-				ret = td_io_queue(td, io_u);
+			ret = io_u_submit(td, io_u);
 
 			if (should_check_rate(td))
 				td->rate_next_io_time[ddir] = usec_for_io(td, ddir);
