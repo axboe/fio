@@ -31,7 +31,7 @@ static void results_draw_page(GtkPrintOperation *operation,
 			      gpointer data)
 {
 	cairo_t *cr;
-	char str[20];
+	char str[32];
 	double x, y;
 
 	cr = gtk_print_context_get_cairo_context(context);
