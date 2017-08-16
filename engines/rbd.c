@@ -605,7 +605,7 @@ static int fio_rbd_setup(struct thread_data *td)
 		goto cleanup;
 	}
 
-	dprint(FD_IO, "rbd-engine: image size: %lu\n", info.size);
+	dprint(FD_IO, "rbd-engine: image size: %" PRIu64 "\n", info.size);
 
 	/* taken from "net" engine. Pretend we deal with files,
 	 * even if we do not have any ideas about files.
