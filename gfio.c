@@ -1243,7 +1243,7 @@ static void about_dialog(GtkWidget *w, gpointer data)
 		"website", "http://git.kernel.dk/cgit/fio/",
 		"authors", authors,
 		"version", fio_version_string,
-		"copyright", "© 2012 Jens Axboe <axboe@kernel.dk>",
+		"copyright", "© 2012-2017 Jens Axboe <axboe@kernel.dk>",
 		"logo-icon-name", "fio",
 		/* Must be last: */
 		"wrap-license", TRUE,
