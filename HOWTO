@@ -3584,7 +3584,7 @@ and IOPS. The logs share a common format, which looks like this:
 on the type of log, it will be one of the following:
 
     **Latency log**
-		Value is latency in usecs
+		Value is latency in nsecs
     **Bandwidth log**
 		Value is in KiB/sec
     **IOPS log**
