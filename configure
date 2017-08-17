@@ -697,8 +697,7 @@ if test "$libverbs" != "yes" ; then
   libverbs="no"
 fi
 cat > $TMPC << EOF
-#include <stdio.h>
-#include <infiniband/arch.h>
+#include <infiniband/verbs.h>
 int main(int argc, char **argv)
 {
   struct ibv_pd *pd = ibv_alloc_pd(NULL);
