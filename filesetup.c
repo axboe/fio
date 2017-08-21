@@ -162,8 +162,14 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		if (err == ENOENT && !td->o.allow_create)
 			log_err("fio: file creation disallowed by "
 					"allow_file_create=0\n");
-		else
+		else {
+			if (err == EINVAL && (flags & OS_O_DIRECT))
+				log_err("fio: looks like your filesystem "
+					"does not support "
+					"direct=1/buffered=0\n");
+
 			td_verror(td, err, "open");
+		}
 		return 1;
 	}
 
