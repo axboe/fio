@@ -100,7 +100,8 @@ static unsigned int plat_val_to_idx(unsigned long long val)
  */
 static unsigned long long plat_idx_to_val(unsigned int idx)
 {
-	unsigned int error_bits, k, base;
+    unsigned int error_bits;
+    unsigned long long k, base;
 
 	assert(idx < FIO_IO_U_PLAT_NR);
 
@@ -111,7 +112,7 @@ static unsigned long long plat_idx_to_val(unsigned int idx)
 
 	/* Find the group and compute the minimum value of that group */
 	error_bits = (idx >> FIO_IO_U_PLAT_BITS) - 1;
-	base = 1 << (error_bits + FIO_IO_U_PLAT_BITS);
+	base = ((unsigned long long)1) << (error_bits + FIO_IO_U_PLAT_BITS);
 
 	/* Find its bucket number of the group */
 	k = idx % FIO_IO_U_PLAT_VAL;
