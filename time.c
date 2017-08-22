@@ -8,17 +8,17 @@ static unsigned long ns_granularity;
 
 void timespec_add_msec(struct timespec *ts, unsigned int msec)
 {
-	unsigned long adj_nsec = 1000000 * msec;
+	uint64_t adj_nsec = 1000000ULL * msec;
 
 	ts->tv_nsec += adj_nsec;
 	if (adj_nsec >= 1000000000) {
-		unsigned long adj_sec = adj_nsec / 1000000000UL;
+		uint64_t adj_sec = adj_nsec / 1000000000;
 
-		ts->tv_nsec -=  adj_sec * 1000000000UL;
+		ts->tv_nsec -= adj_sec * 1000000000;
 		ts->tv_sec += adj_sec;
 	}
-	if (ts->tv_nsec >= 1000000000UL){
-		ts->tv_nsec -= 1000000000UL;
+	if (ts->tv_nsec >= 1000000000){
+		ts->tv_nsec -= 1000000000;
 		ts->tv_sec++;
 	}
 }
