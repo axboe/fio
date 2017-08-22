@@ -100,8 +100,8 @@ static unsigned int plat_val_to_idx(unsigned long long val)
  */
 static unsigned long long plat_idx_to_val(unsigned int idx)
 {
-    unsigned int error_bits;
-    unsigned long long k, base;
+	unsigned int error_bits;
+	unsigned long long k, base;
 
 	assert(idx < FIO_IO_U_PLAT_NR);
 
