@@ -204,16 +204,20 @@ static inline uint64_t fio_swap64(uint64_t val)
 
 #ifndef FIO_HAVE_BYTEORDER_FUNCS
 #ifdef CONFIG_LITTLE_ENDIAN
+#define __be64_to_cpu(x)		fio_swap64(x)
 #define __le16_to_cpu(x)		(x)
 #define __le32_to_cpu(x)		(x)
 #define __le64_to_cpu(x)		(x)
+#define __cpu_to_be64(x)		fio_swap64(x)
 #define __cpu_to_le16(x)		(x)
 #define __cpu_to_le32(x)		(x)
 #define __cpu_to_le64(x)		(x)
 #else
+#define __be64_to_cpu(x)		(x)
 #define __le16_to_cpu(x)		fio_swap16(x)
 #define __le32_to_cpu(x)		fio_swap32(x)
 #define __le64_to_cpu(x)		fio_swap64(x)
+#define __cpu_to_be64(x)		(x)
 #define __cpu_to_le16(x)		fio_swap16(x)
 #define __cpu_to_le32(x)		fio_swap32(x)
 #define __cpu_to_le64(x)		fio_swap64(x)
@@ -221,6 +225,10 @@ static inline uint64_t fio_swap64(uint64_t val)
 #endif /* FIO_HAVE_BYTEORDER_FUNCS */
 
 #ifdef FIO_INTERNAL
+#define be64_to_cpu(val) ({			\
+	typecheck(uint64_t, val);		\
+	__be64_to_cpu(val);			\
+})
 #define le16_to_cpu(val) ({			\
 	typecheck(uint16_t, val);		\
 	__le16_to_cpu(val);			\
@@ -235,6 +243,10 @@ static inline uint64_t fio_swap64(uint64_t val)
 })
 #endif
 
+#define cpu_to_be64(val) ({			\
+	typecheck(uint64_t, val);		\
+	__cpu_to_be64(val);			\
+})
 #define cpu_to_le16(val) ({			\
 	typecheck(uint16_t, val);		\
 	__cpu_to_le16(val);			\
