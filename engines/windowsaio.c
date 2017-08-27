@@ -35,17 +35,7 @@ struct thread_ctx {
 	struct windowsaio_data *wd;
 };
 
-static BOOL timeout_expired(DWORD start_count, DWORD end_count);
-static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
-				unsigned int max, const struct timespec *t);
-static struct io_u *fio_windowsaio_event(struct thread_data *td, int event);
-static int fio_windowsaio_queue(struct thread_data *td,
-				  struct io_u *io_u);
-static void fio_windowsaio_cleanup(struct thread_data *td);
 static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter);
-static int fio_windowsaio_init(struct thread_data *td);
-static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f);
-static int fio_windowsaio_close_file(struct thread_data fio_unused *td, struct fio_file *f);
 
 static int fio_windowsaio_init(struct thread_data *td)
 {
@@ -151,7 +141,6 @@ static void fio_windowsaio_cleanup(struct thread_data *td)
 		td->io_ops_data = NULL;
 	}
 }
-
 
 static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 {
