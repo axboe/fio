@@ -15,6 +15,7 @@
 #include "os/os.h"
 #include "hash.h"
 #include "lib/axmap.h"
+#include "lib/memalign.h"
 
 #ifdef CONFIG_LINUX_FALLOCATE
 #include <linux/falloc.h>
@@ -161,8 +162,14 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		if (err == ENOENT && !td->o.allow_create)
 			log_err("fio: file creation disallowed by "
 					"allow_file_create=0\n");
-		else
+		else {
+			if (err == EINVAL && (flags & OS_O_DIRECT))
+				log_err("fio: looks like your filesystem "
+					"does not support "
+					"direct=1/buffered=0\n");
+
 			td_verror(td, err, "open");
+		}
 		return 1;
 	}
 
@@ -194,9 +201,9 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	if (bs > left)
 		bs = left;
 
-	b = malloc(bs);
+	b = fio_memalign(page_size, bs);
 	if (!b) {
-		td_verror(td, errno, "malloc");
+		td_verror(td, errno, "fio_memalign");
 		goto err;
 	}
 
@@ -249,14 +256,14 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 			f->io_size = f->real_file_size;
 	}
 
-	free(b);
+	fio_memfree(b, bs);
 done:
 	return 0;
 err:
 	close(f->fd);
 	f->fd = -1;
 	if (b)
-		free(b);
+		fio_memfree(b, bs);
 	return 1;
 }
 
