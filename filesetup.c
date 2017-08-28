@@ -104,6 +104,37 @@ static void fallocate_file(struct thread_data *td, struct fio_file *f)
 }
 
 /*
+ * Helper for OSes (e.g. macOS, Solaris) that have a distinct call to mark the
+ * file non-buffered instead of using the O_DIRECT flag with open.
+ */
+static int fio_directio(struct thread_data *td, struct fio_file *f)
+{
+#ifdef FIO_OS_DIRECTIO
+	int ret;
+
+	if (!td->o.odirect) {
+		return 0;
+	}
+
+	dprint(FD_FILE, "set directio on file %s\n", f->file_name);
+	ret = fio_set_odirect(f->fd);
+	if (ret) {
+		td_verror(td, ret, "fio_set_odirect");
+		if (ret == ENOTTY) { /* ENOTTY suggests RAW device or ZFS */
+			log_err("fio: doing direct IO to RAW devices or ZFS "
+				"not supported\n");
+		} else {
+			log_err("fio: looks like your filesystem does not "
+				"support direct=1/buffered=0\n");
+		}
+
+		return ret;
+	}
+#endif
+	return 0;
+}
+
+/*
  * Leaves f->fd open on success, caller must close
  */
 static int extend_file(struct thread_data *td, struct fio_file *f)
@@ -171,7 +202,8 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 			td_verror(td, err, "open");
 		}
 		return 1;
-	}
+	} else if (fio_directio(td, f) != 0)
+		goto err;
 
 	fallocate_file(td, f);
 
@@ -716,7 +748,8 @@ open_again:
 
 		td_verror(td, __e, buf);
 		return 1;
-	}
+	} else if (fio_directio(td, f) != 0)
+		goto err;
 
 	if (!from_hash && f->fd != -1) {
 		if (add_file_hash(f)) {
@@ -744,6 +777,11 @@ open_again:
 	}
 
 	return 0;
+err:
+	close(f->fd);
+	f->fd = -1;
+
+	return 1;
 }
 
 /*
