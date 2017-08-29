@@ -62,7 +62,8 @@ static inline unsigned long long get_cpu_clock(void)
 		"	cmpwi %0,0;\n"
 		"	beq-  90b;\n"
 	: "=r" (rval)
-	: "i" (SPRN_TBRL));
+	: "i" (SPRN_TBRL)
+	: "cr0");
 
 	return rval;
 }
