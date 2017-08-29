@@ -717,7 +717,7 @@ read. The two zone options can be used to only do I/O on zones of a file.
 .TP
 .BI direct \fR=\fPbool
 If value is true, use non\-buffered I/O. This is usually O_DIRECT. Note that
-ZFS on Solaris doesn't support direct I/O. On Windows the synchronous
+OpenBSD and ZFS on Solaris don't support direct I/O. On Windows the synchronous
 ioengines don't support direct I/O. Default: false.
 .TP
 .BI atomic \fR=\fPbool

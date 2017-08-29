@@ -947,7 +947,7 @@ I/O type
 .. option:: direct=bool
 
 	If value is true, use non-buffered I/O. This is usually O_DIRECT. Note that
-	ZFS on Solaris doesn't support direct I/O.  On Windows the synchronous
+	OpenBSD and ZFS on Solaris don't support direct I/O.  On Windows the synchronous
 	ioengines don't support direct I/O.  Default: false.
 
 .. option:: atomic=bool
