@@ -495,29 +495,8 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 	}
 #endif
 
-#ifdef FIO_OS_DIRECTIO
-	/*
-	 * Some OS's have a distinct call to mark the file non-buffered,
-	 * instead of using O_DIRECT (Solaris)
-	 */
-	if (td->o.odirect) {
-		int ret = fio_set_odirect(f->fd);
-
-		if (ret) {
-			td_verror(td, ret, "fio_set_odirect");
-#if defined(__sun__)
-			if (ret == ENOTTY) { /* ENOTTY suggests RAW device or ZFS */
-				log_err("fio: doing directIO to RAW devices or ZFS not supported\n");
-			} else {
-				log_err("fio: the file system does not seem to support direct IO\n");
-			}
-#else
-			log_err("fio: the file system does not seem to support direct IO\n");
-#endif
-			goto err;
-		}
-	}
-#endif
+	if (td->o.odirect && !OS_O_DIRECT && fio_set_directio(td, f))
+		goto err;
 
 done:
 	log_file(td, f, FIO_LOG_OPEN_FILE);
