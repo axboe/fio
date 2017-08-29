@@ -41,9 +41,9 @@ typedef unsigned int clockid_t;
 #endif
 
 #define FIO_OS_DIRECTIO
-static inline int fio_set_odirect(int fd)
+static inline int fio_set_odirect(struct fio_file *f)
 {
-	if (fcntl(fd, F_NOCACHE, 1) == -1)
+	if (fcntl(f->fd, F_NOCACHE, 1) == -1)
 		return errno;
 	return 0;
 }

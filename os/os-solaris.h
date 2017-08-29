@@ -85,9 +85,9 @@ static inline long os_random_long(os_random_state_t *rs)
 
 #define FIO_OS_DIRECTIO
 extern int directio(int, int);
-static inline int fio_set_odirect(int fd)
+static inline int fio_set_odirect(struct fio_file *f)
 {
-	if (directio(fd, DIRECTIO_ON) < 0)
+	if (directio(f->fd, DIRECTIO_ON) < 0)
 		return errno;
 
 	return 0;

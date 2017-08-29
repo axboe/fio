@@ -1862,7 +1862,7 @@ void filesetup_mem_free(void)
 int fio_set_directio(struct thread_data *td, struct fio_file *f)
 {
 #ifdef FIO_OS_DIRECTIO
-	int ret = fio_set_odirect(f->fd);
+	int ret = fio_set_odirect(f);
 
 	if (ret) {
 		td_verror(td, ret, "fio_set_directio");
