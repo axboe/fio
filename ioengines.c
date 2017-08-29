@@ -505,12 +505,15 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 
 		if (ret) {
 			td_verror(td, ret, "fio_set_odirect");
+#if defined(__sun__)
 			if (ret == ENOTTY) { /* ENOTTY suggests RAW device or ZFS */
 				log_err("fio: doing directIO to RAW devices or ZFS not supported\n");
 			} else {
 				log_err("fio: the file system does not seem to support direct IO\n");
 			}
-
+#else
+			log_err("fio: the file system does not seem to support direct IO\n");
+#endif
 			goto err;
 		}
 	}
