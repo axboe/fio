@@ -11,9 +11,9 @@
 #include <sys/dkio.h>
 #include <sys/disklabel.h>
 #include <sys/endian.h>
-/* XXX hack to avoid confilcts between rbtree.h and <sys/rb.h> */
-#define	rb_node	_rb_node
 #include <sys/sysctl.h>
+
+/* XXX hack to avoid confilcts between rbtree.h and <sys/rbtree.h> */
 #undef rb_node
 #undef rb_left
 #undef rb_right
@@ -25,8 +25,6 @@
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_FS_STAT
 #define FIO_HAVE_GETTID
-
-#undef	FIO_HAVE_CPU_AFFINITY	/* doesn't exist */
 
 #define OS_MAP_ANON		MAP_ANON
 
