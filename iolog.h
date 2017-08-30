@@ -117,7 +117,7 @@ struct io_log {
 	 */
 	struct io_stat avg_window[DDIR_RWDIR_CNT];
 	unsigned long avg_msec;
-	unsigned long avg_last;
+	unsigned long avg_last[DDIR_RWDIR_CNT];
 
 	/*
 	 * Windowed latency histograms, for keeping track of when we need to
