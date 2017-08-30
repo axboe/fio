@@ -84,8 +84,10 @@ Force a new line for every \fItime\fR period passed. When the unit is omitted,
 the value is interpreted in seconds.
 .TP
 .BI \-\-status\-interval \fR=\fPtime
-Force full status dump every \fItime\fR period passed. When the unit is omitted,
-the value is interpreted in seconds.
+Force a full status dump of cumulative (from job start) values at \fItime\fR
+intervals. This option does *not* provide per-period measurements. So
+values such as bandwidth are running averages. When the time unit is omitted,
+\fItime\fR is interpreted in seconds.
 .TP
 .BI \-\-section \fR=\fPname
 Only run specified section \fIname\fR in job file. Multiple sections can be specified.

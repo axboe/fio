@@ -182,8 +182,10 @@ Command line options
 
 .. option:: --status-interval=time
 
-	Force full status dump every `time` period passed.  When the unit is
-	omitted, the value is interpreted in seconds.
+	Force a full status dump of cumulative (from job start) values at `time`
+	intervals. This option does *not* provide per-period measurements. So
+	values such as bandwidth are running averages. When the time unit is omitted,
+	`time` is interpreted in seconds.
 
 .. option:: --section=name
 
