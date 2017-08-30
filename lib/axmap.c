@@ -184,6 +184,9 @@ static bool axmap_clear_fn(struct axmap_level *al, unsigned long offset,
 void axmap_clear(struct axmap *axmap, uint64_t bit_nr)
 {
 	axmap_handler(axmap, bit_nr, axmap_clear_fn, NULL);
+
+	if (bit_nr < axmap->first_free)
+		axmap->first_free = bit_nr;
 }
 
 struct axmap_set_data {
@@ -191,7 +194,7 @@ struct axmap_set_data {
 	unsigned int set_bits;
 };
 
-static unsigned long bit_masks[] = {
+static const unsigned long bit_masks[] = {
 	0x0000000000000000, 0x0000000000000001, 0x0000000000000003, 0x0000000000000007,
 	0x000000000000000f, 0x000000000000001f, 0x000000000000003f, 0x000000000000007f,
 	0x00000000000000ff, 0x00000000000001ff, 0x00000000000003ff, 0x00000000000007ff,
@@ -372,10 +375,9 @@ static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 
 static uint64_t axmap_first_free(struct axmap *axmap)
 {
-	if (firstfree_valid(axmap))
-		return axmap->first_free;
+	if (!firstfree_valid(axmap))
+		axmap->first_free = axmap_find_first_free(axmap, axmap->nr_levels - 1, 0);
 
-	axmap->first_free = axmap_find_first_free(axmap, axmap->nr_levels - 1, 0);
 	return axmap->first_free;
 }
 
