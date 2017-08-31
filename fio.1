@@ -1572,7 +1572,9 @@ Read and write using device DAX to a persistent memory device (e.g.,
 .B external
 Prefix to specify loading an external I/O engine object file. Append
 the engine filename, e.g. `ioengine=external:/tmp/foo.o' to load
-ioengine `foo.o' in `/tmp'.
+ioengine `foo.o' in `/tmp'. The path can be either
+absolute or relative. See `engines/skeleton_external.c' in the fio source for
+details of writing an external I/O engine.
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
 \fBioengine\fR is in use. These are used identically to normal parameters,

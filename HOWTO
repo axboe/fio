@@ -1791,7 +1791,9 @@ I/O engine
 		**external**
 			Prefix to specify loading an external I/O engine object file. Append
 			the engine filename, e.g. ``ioengine=external:/tmp/foo.o`` to load
-			ioengine :file:`foo.o` in :file:`/tmp`.
+			ioengine :file:`foo.o` in :file:`/tmp`. The path can be either
+			absolute or relative. See :file:`engines/skeleton_external.c` for
+			details of writing an external I/O engine.
 
 
 I/O engine specific parameters

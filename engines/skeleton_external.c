@@ -3,7 +3,8 @@
  *
  * Should be compiled with:
  *
- * gcc -Wall -O2 -g -shared -rdynamic -fPIC -o engine.o engine.c
+ * gcc -Wall -O2 -g -shared -rdynamic -fPIC -o skeleton_external.o skeleton_external.c
+ * (also requires -D_GNU_SOURCE -DCONFIG_STRSEP on Linux)
  *
  */
 #include <stdio.h>
@@ -13,12 +14,39 @@
 #include <assert.h>
 
 #include "../fio.h"
+#include "../optgroup.h"
 
 /*
  * The core of the module is identical to the ones included with fio,
  * read those. You cannot use register_ioengine() and unregister_ioengine()
  * for external modules, they should be gotten through dlsym()
  */
+
+/*
+ * The io engine can define its own options within the io engine source.
+ * The option member must not be at offset 0, due to the way fio parses
+ * the given option. Just add a padding pointer unless the io engine has
+ * something usable.
+ */
+struct fio_skeleton_options {
+	void *pad; /* avoid ->off1 of fio_option becomes 0 */
+	unsigned int dummy;
+};
+
+static struct fio_option options[] = {
+	{
+		.name	= "dummy",
+		.lname	= "ldummy",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct fio_skeleton_options, dummy),
+		.help	= "Set dummy",
+		.category = FIO_OPT_C_ENGINE, /* always use this */
+		.group	= FIO_OPT_G_INVALID, /* this can be different */
+	},
+	{
+		.name	= NULL,
+	},
+};
 
 /*
  * The ->event() hook is called to match an event number with an io_u.
@@ -140,4 +168,6 @@ struct ioengine_ops ioengine = {
 	.cleanup	= fio_skeleton_cleanup,
 	.open_file	= fio_skeleton_open,
 	.close_file	= fio_skeleton_close,
+	.options	= options,
+	.option_struct_size	= sizeof(struct fio_skeleton_options),
 };
