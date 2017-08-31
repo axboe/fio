@@ -912,20 +912,6 @@ static int fixup_options(struct thread_data *td)
 	return ret;
 }
 
-/* External engines are specified by "external:name.o") */
-static const char *get_engine_name(const char *str)
-{
-	char *p = strstr(str, ":");
-
-	if (!p)
-		return str;
-
-	p++;
-	strip_blank_front(&p);
-	strip_blank_end(p);
-	return p;
-}
-
 static void init_rand_file_service(struct thread_data *td)
 {
 	unsigned long nranges = td->o.nr_files << FIO_FSERVICE_SHIFT;
@@ -1057,7 +1043,10 @@ int ioengine_load(struct thread_data *td)
 		free_ioengine(td);
 	}
 
-	engine = get_engine_name(td->o.ioengine);
+	/*
+	 * Use ->ioengine_so_path if an external ioengine is specified.
+	 */
+	engine = td->o.ioengine_so_path ?: td->o.ioengine;
 	td->io_ops = load_ioengine(td, engine);
 	if (!td->io_ops) {
 		log_err("fio: failed to load engine %s\n", engine);
