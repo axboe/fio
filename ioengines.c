@@ -123,10 +123,13 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 	return ops;
 }
 
-struct ioengine_ops *load_ioengine(struct thread_data *td, const char *name)
+struct ioengine_ops *load_ioengine(struct thread_data *td)
 {
 	struct ioengine_ops *ops;
 	char engine[64];
+	char *name;
+
+	name = td->o.ioengine_so_path ?: td->o.ioengine;
 
 	dprint(FD_IO, "load ioengine %s\n", name);
 
@@ -573,7 +576,8 @@ int fio_show_ioengine_help(const char *engine)
 
 	memset(&td, 0, sizeof(td));
 
-	io_ops = load_ioengine(&td, engine);
+	td.o.ioengine = (char *)engine;
+	io_ops = load_ioengine(&td);
 	if (!io_ops) {
 		log_info("IO engine %s not found\n", engine);
 		return 1;

@@ -79,7 +79,7 @@ extern int td_io_close_file(struct thread_data *, struct fio_file *);
 extern int td_io_unlink_file(struct thread_data *, struct fio_file *);
 extern int __must_check td_io_get_file_size(struct thread_data *, struct fio_file *);
 
-extern struct ioengine_ops *load_ioengine(struct thread_data *, const char *);
+extern struct ioengine_ops *load_ioengine(struct thread_data *);
 extern void register_ioengine(struct ioengine_ops *);
 extern void unregister_ioengine(struct ioengine_ops *);
 extern void free_ioengine(struct thread_data *);

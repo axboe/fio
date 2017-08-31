@@ -1023,8 +1023,6 @@ void td_fill_rand_seeds(struct thread_data *td)
  */
 int ioengine_load(struct thread_data *td)
 {
-	const char *engine;
-
 	if (!td->o.ioengine) {
 		log_err("fio: internal fault, no IO engine specified\n");
 		return 1;
@@ -1043,13 +1041,9 @@ int ioengine_load(struct thread_data *td)
 		free_ioengine(td);
 	}
 
-	/*
-	 * Use ->ioengine_so_path if an external ioengine is specified.
-	 */
-	engine = td->o.ioengine_so_path ?: td->o.ioengine;
-	td->io_ops = load_ioengine(td, engine);
+	td->io_ops = load_ioengine(td);
 	if (!td->io_ops) {
-		log_err("fio: failed to load engine %s\n", engine);
+		log_err("fio: failed to load engine\n");
 		return 1;
 	}
 
