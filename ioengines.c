@@ -125,26 +125,29 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 
 struct ioengine_ops *load_ioengine(struct thread_data *td)
 {
-	struct ioengine_ops *ops;
-	char engine[64];
-	char *name;
+	struct ioengine_ops *ops = NULL;
+	const char *name = NULL;
 
-	name = td->o.ioengine_so_path ?: td->o.ioengine;
+	if (strcmp(td->o.ioengine, "external")) {
+		char engine[64];
 
-	dprint(FD_IO, "load ioengine %s\n", name);
+		name = td->o.ioengine;
+		engine[sizeof(engine) - 1] = '\0';
+		strncpy(engine, name, sizeof(engine) - 1);
 
-	engine[sizeof(engine) - 1] = '\0';
-	strncpy(engine, name, sizeof(engine) - 1);
+		/*
+		 * linux libaio has alias names, so convert to what we want
+		 */
+		if (!strncmp(engine, "linuxaio", 8) || !strncmp(engine, "aio", 3))
+			strcpy(engine, "libaio");
 
-	/*
-	 * linux libaio has alias names, so convert to what we want
-	 */
-	if (!strncmp(engine, "linuxaio", 8) || !strncmp(engine, "aio", 3))
-		strcpy(engine, "libaio");
-
-	ops = find_ioengine(engine);
-	if (!ops)
+		dprint(FD_IO, "load ioengine %s\n", engine);
+		ops = find_ioengine(engine);
+	} else if (td->o.ioengine_so_path) {
+		name = td->o.ioengine_so_path;
 		ops = dlopen_ioengine(td, name);
+	} else
+		log_err("fio: missing external ioengine path\n");
 
 	if (!ops) {
 		log_err("fio: engine %s not loadable\n", name);
