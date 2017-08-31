@@ -748,10 +748,27 @@ static int fixup_options(struct thread_data *td)
 		o->size = -1ULL;
 
 	if (o->verify != VERIFY_NONE) {
-		if (td_write(td) && o->do_verify && o->numjobs > 1) {
-			log_info("Multiple writers may overwrite blocks that "
-				"belong to other jobs. This can cause "
+		if (td_write(td) && o->do_verify && o->numjobs > 1 &&
+		    (o->filename ||
+		     !(o->unique_filename &&
+		       strstr(o->filename_format, "$jobname") &&
+		       strstr(o->filename_format, "$jobnum") &&
+		       strstr(o->filename_format, "$filenum")))) {
+			log_info("fio: multiple writers may overwrite blocks "
+				"that belong to other jobs. This can cause "
 				"verification failures.\n");
+			ret = warnings_fatal;
+		}
+
+		/*
+		 * Warn if verification is requested but no verification of any
+		 * kind can be started due to time constraints
+		 */
+		if (td_write(td) && o->do_verify && o->timeout &&
+		    o->time_based && !td_read(td) && !o->verify_backlog) {
+			log_info("fio: verification read phase will never "
+				 "start because write phase uses all of "
+				 "runtime\n");
 			ret = warnings_fatal;
 		}
 
