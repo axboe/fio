@@ -8,16 +8,6 @@
 #include "../lib/lfsr.h"
 #include "../lib/axmap.h"
 
-void *smalloc(size_t size)
-{
-	return malloc(size);
-}
-
-void sfree(void *ptr)
-{
-	free(ptr);
-}
-
 static int test_regular(size_t size, int seed)
 {
 	struct fio_lfsr lfsr;
