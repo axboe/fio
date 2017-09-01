@@ -143,17 +143,30 @@ static struct ioengine_ops *__load_ioengine(const char *name)
 struct ioengine_ops *load_ioengine(struct thread_data *td)
 {
 	struct ioengine_ops *ops = NULL;
-	const char *name = NULL;
+	const char *name;
 
-	if (strcmp(td->o.ioengine, "external")) {
-		name = td->o.ioengine;
-		ops = __load_ioengine(name);
-	} else if (td->o.ioengine_so_path) {
-		name = td->o.ioengine_so_path;
+	/*
+	 * Use ->ioengine_so_path if an external ioengine path is specified.
+	 * In this case, ->ioengine is "external" which also means the prefix
+	 * for external ioengines "external:" is properly used.
+	 */
+	name = td->o.ioengine_so_path ?: td->o.ioengine;
+
+	/*
+	 * Try to load ->ioengine first, and if failed try to dlopen(3) either
+	 * ->ioengine or ->ioengine_so_path.  This is redundant for an external
+	 * ioengine with prefix, and also leaves the possibility of unexpected
+	 * behavior (e.g. if the "external" ioengine exists), but we do this
+	 * so as not to break job files not using the prefix.
+	 */
+	ops = __load_ioengine(td->o.ioengine);
+	if (!ops)
 		ops = dlopen_ioengine(td, name);
-	} else
-		log_err("fio: missing external ioengine path\n");
 
+	/*
+	 * If ops is NULL, we failed to load ->ioengine, and also failed to
+	 * dlopen(3) either ->ioengine or ->ioengine_so_path as a path.
+	 */
 	if (!ops) {
 		log_err("fio: engine %s not loadable\n", name);
 		return NULL;
