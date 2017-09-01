@@ -110,7 +110,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 {
 	int new_layout = 0, unlink_file = 0, flags;
 	unsigned long long left;
-	unsigned int bs;
+	unsigned int bs, alloc_size = 0;
 	char *b = NULL;
 
 	if (read_only) {
@@ -204,7 +204,8 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	if (bs > left)
 		bs = left;
 
-	b = fio_memalign(page_size, bs);
+	alloc_size = bs;
+	b = fio_memalign(page_size, alloc_size);
 	if (!b) {
 		td_verror(td, errno, "fio_memalign");
 		goto err;
@@ -259,14 +260,14 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 			f->io_size = f->real_file_size;
 	}
 
-	fio_memfree(b, bs);
+	fio_memfree(b, alloc_size);
 done:
 	return 0;
 err:
 	close(f->fd);
 	f->fd = -1;
 	if (b)
-		fio_memfree(b, bs);
+		fio_memfree(b, alloc_size);
 	return 1;
 }
 
