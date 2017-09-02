@@ -2915,9 +2915,11 @@ Measurements and reporting
 .. option:: write_iops_log=str
 
 	Same as :option:`write_bw_log`, but writes an IOPS file (e.g.
-	:file:`name_iops.x.log`) instead. See :option:`write_bw_log` for
-	details about the filename format and `Log File Formats`_ for how data
-	is structured within the file.
+	:file:`name_iops.x.log`) instead. Because fio defaults to individual
+	I/O logging, the value entry in the IOPS log will be 1 unless windowed
+	logging (see :option:`log_avg_msec`) has been enabled. See
+	:option:`write_bw_log` for details about the filename format and `Log
+	File Formats`_ for how data is structured within the file.
 
 .. option:: log_avg_msec=int
 
@@ -3802,17 +3804,16 @@ on the type of log, it will be one of the following:
 	**2**
 		I/O is a TRIM
 
-The entry's *block size* is always in bytes. The *offset* is the offset, in bytes,
-from the start of the file, for that particular I/O. The logging of the offset can be
+The entry's *block size* is always in bytes. The *offset* is the position in bytes
+from the start of the file for that particular I/O. The logging of the offset can be
 toggled with :option:`log_offset`.
 
-Fio defaults to logging every individual I/O.  When IOPS are logged for individual
-I/Os the *value* entry will always be 1. If windowed logging is enabled through
-:option:`log_avg_msec`, fio logs the average values over the specified period of time.
-If windowed logging is enabled and :option:`log_max_value` is set, then fio logs
-maximum values in that window instead of averages. Since *data direction*, *block
-size* and *offset* are per-I/O values, if windowed logging is enabled they
-aren't applicable and will be 0.
+Fio defaults to logging every individual I/O but when windowed logging is set
+through :option:`log_avg_msec`, either the average (by default) or the maximum
+(:option:`log_max_value` is set) *value* seen over the specified period of time
+is recorded. Each *data direction* seen within the window period will aggregate
+its values in a separate row. Further, when using windowed logging the *block
+size* and *offset* entries will always contain 0.
 
 Client/Server
 -------------

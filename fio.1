@@ -2608,9 +2608,11 @@ within the file.
 .TP
 .BI write_iops_log \fR=\fPstr
 Same as \fBwrite_bw_log\fR, but writes an IOPS file (e.g.
-`name_iops.x.log') instead. See \fBwrite_bw_log\fR for
-details about the filename format and the \fBLOG FILE FORMATS\fR section for how data
-is structured within the file.
+`name_iops.x.log`) instead. Because fio defaults to individual
+I/O logging, the value entry in the IOPS log will be 1 unless windowed
+logging (see \fBlog_avg_msec\fR) has been enabled. See
+\fBwrite_bw_log\fR for details about the filename format and \fBLOG
+FILE FORMATS\fR for how data is structured within the file.
 .TP
 .BI log_avg_msec \fR=\fPint
 By default, fio will log an entry in the iops, latency, or bw log for every
@@ -3527,17 +3529,16 @@ I/O is a WRITE
 I/O is a TRIM
 .RE
 .P
-The entry's `block size' is always in bytes. The `offset' is the offset, in bytes,
-from the start of the file, for that particular I/O. The logging of the offset can be
+The entry's `block size' is always in bytes. The `offset' is the position in bytes
+from the start of the file for that particular I/O. The logging of the offset can be
 toggled with \fBlog_offset\fR.
 .P
-Fio defaults to logging every individual I/O. When IOPS are logged for individual
-I/Os the `value' entry will always be 1. If windowed logging is enabled through
-\fBlog_avg_msec\fR, fio logs the average values over the specified period of time.
-If windowed logging is enabled and \fBlog_max_value\fR is set, then fio logs
-maximum values in that window instead of averages. Since `data direction', `block size'
-and `offset' are per\-I/O values, if windowed logging is enabled they
-aren't applicable and will be 0.
+Fio defaults to logging every individual I/O but when windowed logging is set
+through \fBlog_avg_msec\fR, either the average (by default) or the maximum
+(\fBlog_max_value\fR is set) `value' seen over the specified period of time
+is recorded. Each `data direction' seen within the window period will aggregate
+its values in a separate row. Further, when using windowed logging the `block
+size' and `offset' entries will always contain 0.
 .SH CLIENT / SERVER
 Normally fio is invoked as a stand\-alone application on the machine where the
 I/O workload should be generated. However, the backend and frontend of fio can
