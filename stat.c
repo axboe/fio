@@ -2159,7 +2159,7 @@ static void __add_log_sample(struct io_log *iolog, union io_sample_data data,
 	if (iolog->disabled)
 		return;
 	if (flist_empty(&iolog->io_logs))
-		iolog->avg_last = t;
+		iolog->avg_last[ddir] = t;
 
 	cur_log = get_cur_log(iolog);
 	if (cur_log) {
@@ -2290,9 +2290,9 @@ static long add_log_sample(struct thread_data *td, struct io_log *iolog,
 	 * If period hasn't passed, adding the above sample is all we
 	 * need to do.
 	 */
-	this_window = elapsed - iolog->avg_last;
-	if (elapsed < iolog->avg_last)
-		return iolog->avg_last - elapsed;
+	this_window = elapsed - iolog->avg_last[ddir];
+	if (elapsed < iolog->avg_last[ddir])
+		return iolog->avg_last[ddir] - elapsed;
 	else if (this_window < iolog->avg_msec) {
 		int diff = iolog->avg_msec - this_window;
 
@@ -2300,9 +2300,9 @@ static long add_log_sample(struct thread_data *td, struct io_log *iolog,
 			return diff;
 	}
 
-	_add_stat_to_log(iolog, elapsed, td->o.log_max != 0);
+	__add_stat_to_log(iolog, ddir, elapsed, td->o.log_max != 0);
 
-	iolog->avg_last = elapsed - (this_window - iolog->avg_msec);
+	iolog->avg_last[ddir] = elapsed - (this_window - iolog->avg_msec);
 	return iolog->avg_msec;
 }
 
