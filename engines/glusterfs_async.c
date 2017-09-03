@@ -92,7 +92,7 @@ static void gf_async_cb(glfs_fd_t * fd, ssize_t ret, void *data)
 	struct io_u *io_u = data;
 	struct fio_gf_iou *iou = io_u->engine_data;
 
-	dprint(FD_IO, "%s ret %lu\n", __FUNCTION__, ret);
+	dprint(FD_IO, "%s ret %zd\n", __FUNCTION__, ret);
 	iou->io_complete = 1;
 }
 

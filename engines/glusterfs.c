@@ -165,11 +165,11 @@ int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
 	if (td_read(td)) {
 		if (glfs_lstat(g->fs, f->file_name, &sb)
 		    || sb.st_size < f->real_file_size) {
-			dprint(FD_FILE, "fio extend file %s from %ld to %ld\n",
-			       f->file_name, sb.st_size, f->real_file_size);
+			dprint(FD_FILE, "fio extend file %s from %jd to %" PRIu64 "\n",
+			       f->file_name, (intmax_t) sb.st_size, f->real_file_size);
 			ret = glfs_ftruncate(g->fd, f->real_file_size);
 			if (ret) {
-				log_err("failed fio extend file %s to %ld\n",
+				log_err("failed fio extend file %s to %" PRIu64 "\n",
 					f->file_name, f->real_file_size);
 			} else {
 				unsigned long long left;
@@ -190,7 +190,7 @@ int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
 
 					r = glfs_write(g->fd, b, bs, 0);
 					dprint(FD_IO,
-					       "fio write %d of %ld file %s\n",
+					       "fio write %d of %" PRIu64 " file %s\n",
 					       r, f->real_file_size,
 					       f->file_name);
 
