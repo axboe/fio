@@ -169,13 +169,26 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 
 	/*
 	 * Inform Windows whether we're going to be doing sequential or
-	 * random io so it can tune the Cache Manager
+	 * random IO so it can tune the Cache Manager
 	 */
-	if (td->o.td_ddir == TD_DDIR_READ  ||
-		td->o.td_ddir == TD_DDIR_WRITE)
-		flags |= FILE_FLAG_SEQUENTIAL_SCAN;
-	else
+	switch (td->o.fadvise_hint) {
+	case F_ADV_TYPE:
+		if (td_random(td))
+			flags |= FILE_FLAG_RANDOM_ACCESS;
+		else
+			flags |= FILE_FLAG_SEQUENTIAL_SCAN;
+		break;
+	case F_ADV_RANDOM:
 		flags |= FILE_FLAG_RANDOM_ACCESS;
+		break;
+	case F_ADV_SEQUENTIAL:
+		flags |= FILE_FLAG_SEQUENTIAL_SCAN;
+		break;
+	case F_ADV_NONE:
+		break;
+	default:
+		log_err("fio: unknown fadvise type %d\n", td->o.fadvise_hint);
+	}
 
 	if (!td_write(td) || read_only)
 		access = GENERIC_READ;
