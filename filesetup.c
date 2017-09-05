@@ -15,7 +15,6 @@
 #include "os/os.h"
 #include "hash.h"
 #include "lib/axmap.h"
-#include "lib/memalign.h"
 
 #ifdef CONFIG_LINUX_FALLOCATE
 #include <linux/falloc.h>
@@ -110,7 +109,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 {
 	int new_layout = 0, unlink_file = 0, flags;
 	unsigned long long left;
-	unsigned int bs, alloc_size = 0;
+	unsigned int bs;
 	char *b = NULL;
 
 	if (read_only) {
@@ -147,8 +146,6 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		flags |= O_CREAT;
 	if (new_layout)
 		flags |= O_TRUNC;
-	if (td->o.odirect)
-		flags |= OS_O_DIRECT;
 
 #ifdef WIN32
 	flags |= _O_BINARY;
@@ -162,14 +159,8 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		if (err == ENOENT && !td->o.allow_create)
 			log_err("fio: file creation disallowed by "
 					"allow_file_create=0\n");
-		else {
-			if (err == EINVAL && (flags & OS_O_DIRECT))
-				log_err("fio: looks like your filesystem "
-					"does not support "
-					"direct=1/buffered=0\n");
-
+		else
 			td_verror(td, err, "open");
-		}
 		return 1;
 	}
 
@@ -196,18 +187,14 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 		}
 	}
 
-	if (td->o.odirect && !OS_O_DIRECT && fio_set_directio(td, f))
-		goto err;
-
 	left = f->real_file_size;
 	bs = td->o.max_bs[DDIR_WRITE];
 	if (bs > left)
 		bs = left;
 
-	alloc_size = bs;
-	b = fio_memalign(page_size, alloc_size);
+	b = malloc(bs);
 	if (!b) {
-		td_verror(td, errno, "fio_memalign");
+		td_verror(td, errno, "malloc");
 		goto err;
 	}
 
@@ -260,14 +247,14 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 			f->io_size = f->real_file_size;
 	}
 
-	fio_memfree(b, alloc_size);
+	free(b);
 done:
 	return 0;
 err:
 	close(f->fd);
 	f->fd = -1;
 	if (b)
-		fio_memfree(b, alloc_size);
+		free(b);
 	return 1;
 }
 
