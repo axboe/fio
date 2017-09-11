@@ -970,6 +970,7 @@ static int handle_trigger_cmd(struct fio_net_cmd *cmd)
 	} else
 		fio_net_queue_cmd(FIO_NET_CMD_VTRIGGER, rep, sz, NULL, SK_F_FREE | SK_F_INLINE);
 
+	fio_terminate_threads(TERMINATE_ALL);
 	exec_trigger(buf);
 	return 0;
 }

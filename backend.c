@@ -1391,6 +1391,8 @@ static bool keep_running(struct thread_data *td)
 
 	if (td->done)
 		return false;
+	if (td->terminate)
+		return false;
 	if (td->o.time_based)
 		return true;
 	if (td->o.loops) {
@@ -2042,7 +2044,10 @@ static bool __check_trigger_file(void)
 static bool trigger_timedout(void)
 {
 	if (trigger_timeout)
-		return time_since_genesis() >= trigger_timeout;
+		if (time_since_genesis() >= trigger_timeout) {
+			trigger_timeout = 0;
+			return true;
+		}
 
 	return false;
 }
@@ -2051,7 +2056,7 @@ void exec_trigger(const char *cmd)
 {
 	int ret;
 
-	if (!cmd)
+	if (!cmd || cmd[0] == '\0')
 		return;
 
 	ret = system(cmd);
