@@ -105,7 +105,7 @@ static bool parent_update_ramp(struct thread_data *td)
 		return false;
 
 	reset_all_stats(parent);
-	parent->ramp_time_over = 1;
+	parent->ramp_time_over = true;
 	td_set_runstate(parent, TD_RAMP);
 	return true;
 }
@@ -116,7 +116,7 @@ bool ramp_time_over(struct thread_data *td)
 		return true;
 
 	if (utime_since_now(&td->epoch) >= td->o.ramp_time) {
-		td->ramp_time_over = 1;
+		td->ramp_time_over = true;
 		reset_all_stats(td);
 		td_set_runstate(td, TD_RAMP);
 

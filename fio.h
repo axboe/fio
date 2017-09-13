@@ -335,7 +335,7 @@ struct thread_data {
 	struct timespec terminate_time;
 	unsigned int ts_cache_nr;
 	unsigned int ts_cache_mask;
-	unsigned int ramp_time_over;
+	bool ramp_time_over;
 
 	/*
 	 * Time since last latency_window was started
