@@ -909,6 +909,20 @@ static int fixup_options(struct thread_data *td)
 		ret = 1;
 	}
 
+	if (fio_option_is_set(o, clat_percentiles) &&
+	    !fio_option_is_set(o, lat_percentiles)) {
+		o->lat_percentiles = !o->clat_percentiles;
+	} else if (fio_option_is_set(o, lat_percentiles) &&
+		   !fio_option_is_set(o, clat_percentiles)) {
+		o->clat_percentiles = !o->lat_percentiles;
+	} else if (fio_option_is_set(o, lat_percentiles) &&
+		   fio_option_is_set(o, clat_percentiles) &&
+		   o->lat_percentiles && o->clat_percentiles) {
+		log_err("fio: lat_percentiles and clat_percentiles are "
+			"mutually exclusive\n");
+		ret = 1;
+	}
+
 	return ret;
 }
 
@@ -1401,6 +1415,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	td->mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
 
 	td->ts.clat_percentiles = o->clat_percentiles;
+	td->ts.lat_percentiles = o->lat_percentiles;
 	td->ts.percentile_precision = o->percentile_precision;
 	memcpy(td->ts.percentile_list, o->percentile_list, sizeof(o->percentile_list));
 

@@ -2860,7 +2860,15 @@ Measurements and reporting
 
 .. option:: clat_percentiles=bool
 
-	Enable the reporting of percentiles of completion latencies.
+	Enable the reporting of percentiles of completion latencies.  This
+	option is mutually exclusive with :option:`lat_percentiles`.
+
+.. option:: lat_percentiles=bool
+
+	Enable the reporting of percentiles of IO latencies. This is similar
+	to :option:`clat_percentiles`, except that this includes the
+	submission latency. This option is mutually exclusive with
+	:option:`clat_percentiles`.
 
 .. option:: percentile_list=float_list
 

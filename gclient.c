@@ -1127,7 +1127,11 @@ static void gfio_show_clat_percentiles(struct gfio_client *gc,
 		base = "nsec";
         }
 
-	sprintf(tmp, "Completion percentiles (%s)", base);
+	if (ts->clat_percentiles)
+		sprintf(tmp, "Completion percentiles (%s)", base);
+	else
+		sprintf(tmp, "Latency percentiles (%s)", base);
+
 	tree_view = gfio_output_clat_percentiles(ovals, plist, len, base, scale_down);
 	ge->clat_graph = setup_clat_graph(tmp, ovals, plist, len, 700.0, 300.0);
 

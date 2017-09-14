@@ -200,12 +200,13 @@ unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
  */
 static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 				  fio_fp64_t *plist, unsigned int precision,
-				  struct buf_output *out)
+				  bool is_clat, struct buf_output *out)
 {
 	unsigned int divisor, len, i, j = 0;
 	unsigned long long minv, maxv;
 	unsigned long long *ovals;
 	int is_last, per_line, scale_down, time_width;
+	const char *pre = is_clat ? "clat" : " lat";
 	char fmt[32];
 
 	len = calc_clat_percentiles(io_u_plat, nr, plist, &ovals, &maxv, &minv);
@@ -219,15 +220,15 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 	if (minv > 2000000 && maxv > 99999999ULL) {
 		scale_down = 2;
 		divisor = 1000000;
-		log_buf(out, "    clat percentiles (msec):\n     |");
+		log_buf(out, "    %s percentiles (msec):\n     |", pre);
 	} else if (minv > 2000 && maxv > 99999) {
 		scale_down = 1;
 		divisor = 1000;
-		log_buf(out, "    clat percentiles (usec):\n     |");
+		log_buf(out, "    %s percentiles (usec):\n     |", pre);
 	} else {
 		scale_down = 0;
 		divisor = 1;
-		log_buf(out, "    clat percentiles (nsec):\n     |");
+		log_buf(out, "    %s percentiles (nsec):\n     |", pre);
 	}
 
 
@@ -457,11 +458,12 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
 		display_lat(" lat", min, max, mean, dev, out);
 
-	if (ts->clat_percentiles) {
+	if (ts->clat_percentiles || ts->lat_percentiles) {
 		show_clat_percentiles(ts->io_u_plat[ddir],
 					ts->clat_stat[ddir].samples,
 					ts->percentile_list,
-					ts->percentile_precision, out);
+					ts->percentile_precision,
+					ts->clat_percentiles, out);
 	}
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg = 100.0, fkb_base = (double)rs->kb_base;
@@ -896,7 +898,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	else
 		log_buf(out, ";%llu;%llu;%f;%f", 0ULL, 0ULL, 0.0, 0.0);
 
-	if (ts->clat_percentiles) {
+	if (ts->clat_percentiles || ts->lat_percentiles) {
 		len = calc_clat_percentiles(ts->io_u_plat[ddir],
 					ts->clat_stat[ddir].samples,
 					ts->percentile_list, &ovals, &maxv,
@@ -1011,7 +1013,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	json_object_add_value_float(tmp_object, "mean", mean);
 	json_object_add_value_float(tmp_object, "stddev", dev);
 
-	if (ts->clat_percentiles) {
+	if (ts->clat_percentiles || ts->lat_percentiles) {
 		len = calc_clat_percentiles(ts->io_u_plat[ddir],
 					ts->clat_stat[ddir].samples,
 					ts->percentile_list, &ovals, &maxv,
@@ -1645,6 +1647,7 @@ void __show_run_stats(void)
 		ts = &threadstats[j];
 
 		ts->clat_percentiles = td->o.clat_percentiles;
+		ts->lat_percentiles = td->o.lat_percentiles;
 		ts->percentile_precision = td->o.percentile_precision;
 		memcpy(ts->percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
 		opt_lists[j] = &td->opt_list;
@@ -2436,6 +2439,9 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 	if (td->lat_log)
 		add_log_sample(td, td->lat_log, sample_val(nsec), ddir, bs,
 			       offset);
+
+	if (ts->lat_percentiles)
+		add_clat_percentile_sample(ts, nsec, ddir);
 
 	td_io_u_unlock(td);
 }
