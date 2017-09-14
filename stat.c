@@ -143,7 +143,7 @@ unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 	unsigned int len, i, j = 0;
 	unsigned int oval_len = 0;
 	unsigned long long *ovals = NULL;
-	int is_last;
+	bool is_last;
 
 	*minv = -1ULL;
 	*maxv = 0;
@@ -166,7 +166,7 @@ unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 	/*
 	 * Calculate bucket values, note down max and min values
 	 */
-	is_last = 0;
+	is_last = false;
 	for (i = 0; i < FIO_IO_U_PLAT_NR && !is_last; i++) {
 		sum += io_u_plat[i];
 		while (sum >= (plist[j].u.f / 100.0 * nr)) {
@@ -183,7 +183,7 @@ unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 			if (ovals[j] > *maxv)
 				*maxv = ovals[j];
 
-			is_last = (j == len - 1);
+			is_last = (j == len - 1) != 0;
 			if (is_last)
 				break;
 
@@ -205,8 +205,9 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 	unsigned int divisor, len, i, j = 0;
 	unsigned long long minv, maxv;
 	unsigned long long *ovals;
-	int is_last, per_line, scale_down, time_width;
+	int per_line, scale_down, time_width;
 	const char *pre = is_clat ? "clat" : " lat";
+	bool is_last;
 	char fmt[32];
 
 	len = calc_clat_percentiles(io_u_plat, nr, plist, &ovals, &maxv, &minv);
@@ -244,7 +245,7 @@ static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 			log_buf(out, "     |");
 
 		/* end of the list */
-		is_last = (j == len - 1);
+		is_last = (j == len - 1) != 0;
 
 		for (i = 0; i < scale_down; i++)
 			ovals[j] = (ovals[j] + 999) / 1000;
@@ -511,20 +512,21 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	}
 }
 
-static int show_lat(double *io_u_lat, int nr, const char **ranges,
-		    const char *msg, struct buf_output *out)
+static bool show_lat(double *io_u_lat, int nr, const char **ranges,
+		     const char *msg, struct buf_output *out)
 {
-	int new_line = 1, i, line = 0, shown = 0;
+	bool new_line = true, shown = false;
+	int i, line = 0;
 
 	for (i = 0; i < nr; i++) {
 		if (io_u_lat[i] <= 0.0)
 			continue;
-		shown = 1;
+		shown = true;
 		if (new_line) {
 			if (line)
 				log_buf(out, "\n");
 			log_buf(out, "  lat (%s)   : ", msg);
-			new_line = 0;
+			new_line = false;
 			line = 0;
 		}
 		if (line)
@@ -532,13 +534,13 @@ static int show_lat(double *io_u_lat, int nr, const char **ranges,
 		log_buf(out, "%s%3.2f%%", ranges[i], io_u_lat[i]);
 		line++;
 		if (line == 5)
-			new_line = 1;
+			new_line = true;
 	}
 
 	if (shown)
 		log_buf(out, "\n");
 
-	return shown;
+	return true;
 }
 
 static void show_lat_n(double *io_u_lat_n, struct buf_output *out)
@@ -1590,8 +1592,8 @@ void __show_run_stats(void)
 	struct thread_data *td;
 	struct thread_stat *threadstats, *ts;
 	int i, j, k, nr_ts, last_ts, idx;
-	int kb_base_warned = 0;
-	int unit_base_warned = 0;
+	bool kb_base_warned = false;
+	bool unit_base_warned = false;
 	struct json_object *root = NULL;
 	struct json_array *array = NULL;
 	struct buf_output output[FIO_OUTPUT_NR];
@@ -1684,11 +1686,11 @@ void __show_run_stats(void)
 		} else if (ts->kb_base != td->o.kb_base && !kb_base_warned) {
 			log_info("fio: kb_base differs for jobs in group, using"
 				 " %u as the base\n", ts->kb_base);
-			kb_base_warned = 1;
+			kb_base_warned = true;
 		} else if (ts->unit_base != td->o.unit_base && !unit_base_warned) {
 			log_info("fio: unit_base differs for jobs in group, using"
 				 " %u as the base\n", ts->unit_base);
-			unit_base_warned = 1;
+			unit_base_warned = true;
 		}
 
 		ts->continue_on_error = td->o.continue_on_error;
@@ -1932,9 +1934,9 @@ void __show_running_run_stats(void)
 	fio_mutex_up(stat_mutex);
 }
 
-static int status_interval_init;
+static bool status_interval_init;
 static struct timespec status_time;
-static int status_file_disabled;
+static bool status_file_disabled;
 
 #define FIO_STATUS_FILE		"fio-dump-status"
 
@@ -1965,7 +1967,7 @@ static int check_status_file(void)
 		log_err("fio: failed to unlink %s: %s\n", fio_status_file_path,
 							strerror(errno));
 		log_err("fio: disabling status file updates\n");
-		status_file_disabled = 1;
+		status_file_disabled = true;
 	}
 
 	return 1;
@@ -1976,7 +1978,7 @@ void check_for_running_stats(void)
 	if (status_interval) {
 		if (!status_interval_init) {
 			fio_gettime(&status_time, NULL);
-			status_interval_init = 1;
+			status_interval_init = true;
 		} else if (mtime_since_now(&status_time) >= status_interval) {
 			show_running_run_stats();
 			fio_gettime(&status_time, NULL);
