@@ -837,7 +837,7 @@ static int fixup_options(struct thread_data *td)
 	 * Windows doesn't support O_DIRECT or O_SYNC with the _open interface,
 	 * so fail if we're passed those flags
 	 */
-	if (td_ioengine_flagged(td, FIO_SYNCIO) && (td->o.odirect || td->o.sync_io)) {
+	if (td_ioengine_flagged(td, FIO_SYNCIO) && (o->odirect || o->sync_io)) {
 		log_err("fio: Windows does not support direct or non-buffered io with"
 				" the synchronous ioengines. Use the 'windowsaio' ioengine"
 				" with 'direct=1' and 'iodepth=1' instead.\n");
@@ -863,8 +863,8 @@ static int fixup_options(struct thread_data *td)
 	 * Using a non-uniform random distribution excludes usage of
 	 * a random map
 	 */
-	if (td->o.random_distribution != FIO_RAND_DIST_RANDOM)
-		td->o.norandommap = 1;
+	if (o->random_distribution != FIO_RAND_DIST_RANDOM)
+		o->norandommap = 1;
 
 	/*
 	 * If size is set but less than the min block size, complain
@@ -878,16 +878,16 @@ static int fixup_options(struct thread_data *td)
 	/*
 	 * O_ATOMIC implies O_DIRECT
 	 */
-	if (td->o.oatomic)
-		td->o.odirect = 1;
+	if (o->oatomic)
+		o->odirect = 1;
 
 	/*
 	 * If randseed is set, that overrides randrepeat
 	 */
-	if (fio_option_is_set(&td->o, rand_seed))
-		td->o.rand_repeatable = 0;
+	if (fio_option_is_set(o, rand_seed))
+		o->rand_repeatable = 0;
 
-	if (td_ioengine_flagged(td, FIO_NOEXTEND) && td->o.file_append) {
+	if (td_ioengine_flagged(td, FIO_NOEXTEND) && o->file_append) {
 		log_err("fio: can't append/extent with IO engine %s\n", td->io_ops->name);
 		ret = 1;
 	}
@@ -902,10 +902,10 @@ static int fixup_options(struct thread_data *td)
 	if (!td->loops)
 		td->loops = 1;
 
-	if (td->o.block_error_hist && td->o.nr_files != 1) {
+	if (o->block_error_hist && o->nr_files != 1) {
 		log_err("fio: block error histogram only available "
 			"with a single file per job, but %d files "
-			"provided\n", td->o.nr_files);
+			"provided\n", o->nr_files);
 		ret = 1;
 	}
 
