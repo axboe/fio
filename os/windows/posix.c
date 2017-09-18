@@ -584,7 +584,8 @@ char *basename(char *path)
 	while (path[i] != '\\' && path[i] != '/' && i >= 0)
 		i--;
 
-	strncpy(name, path + i + 1, MAX_PATH);
+	name[MAX_PATH - 1] = '\0';
+	strncpy(name, path + i + 1, MAX_PATH - 1);
 
 	return name;
 }

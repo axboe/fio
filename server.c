@@ -856,7 +856,7 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 #ifdef CONFIG_BIG_ENDIAN
 	probe.bigendian = 1;
 #endif
-	strncpy((char *) probe.fio_version, fio_version_string, sizeof(probe.fio_version));
+	strncpy((char *) probe.fio_version, fio_version_string, sizeof(probe.fio_version) - 1);
 
 	probe.os	= FIO_OS;
 	probe.arch	= FIO_ARCH;
