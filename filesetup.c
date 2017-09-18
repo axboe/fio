@@ -1868,6 +1868,7 @@ int fio_set_directio(struct thread_data *td, struct fio_file *f)
 
 	return 0;
 #else
+	log_err("fio: direct IO is not supported on this host operating system\n");
 	return -1;
 #endif
 }
