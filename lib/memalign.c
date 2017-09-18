@@ -18,7 +18,7 @@ void *fio_memalign(size_t alignment, size_t size)
 
 	assert(!(alignment & (alignment - 1)));
 
-	ptr = malloc(size + alignment + size + sizeof(*f) - 1);
+	ptr = malloc(size + alignment + sizeof(*f) - 1);
 	if (ptr) {
 		ret = PTR_ALIGN(ptr, alignment - 1);
 		f = ret + size;
