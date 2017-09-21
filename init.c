@@ -2115,7 +2115,7 @@ static void usage(const char *name)
 	printf("  --inflate-log=log\tInflate and output compressed log\n");
 #endif
 	printf("  --trigger-file=file\tExecute trigger cmd when file exists\n");
-	printf("  --trigger-timeout=t\tExecute trigger af this time\n");
+	printf("  --trigger-timeout=t\tExecute trigger at this time\n");
 	printf("  --trigger=cmd\t\tSet this command as local trigger\n");
 	printf("  --trigger-remote=cmd\tSet this command as remote trigger\n");
 	printf("  --aux-path=path\tUse this path for fio state generated files\n");
