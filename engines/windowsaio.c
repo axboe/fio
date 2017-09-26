@@ -142,6 +142,44 @@ static void fio_windowsaio_cleanup(struct thread_data *td)
 	}
 }
 
+static int windowsaio_invalidate_cache(struct fio_file *f)
+{
+	DWORD error;
+	DWORD isharemode = (FILE_SHARE_DELETE | FILE_SHARE_READ |
+			FILE_SHARE_WRITE);
+	HANDLE ihFile;
+	int rc = 0;
+
+	/*
+	 * Encourage Windows to drop cached parts of a file by temporarily
+	 * opening it for non-buffered access. Note: this will only work when
+	 * the following is the only thing with the file open on the whole
+	 * system.
+	 */
+	dprint(FD_IO, "windowaio: attempt invalidate cache for %s\n",
+			f->file_name);
+	ihFile = CreateFile(f->file_name, 0, isharemode, NULL, OPEN_EXISTING,
+			FILE_FLAG_NO_BUFFERING, NULL);
+
+	if (ihFile != INVALID_HANDLE_VALUE) {
+		if (!CloseHandle(ihFile)) {
+			error = GetLastError();
+			log_info("windowsaio: invalidation fd close %s "
+				 "failed: error %d\n", f->file_name, error);
+			rc = 1;
+		}
+	} else {
+		error = GetLastError();
+		if (error != ERROR_FILE_NOT_FOUND) {
+			log_info("windowsaio: cache invalidation of %s failed: "
+					"error %d\n", f->file_name, error);
+			rc = 1;
+		}
+	}
+
+	return rc;
+}
+
 static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 {
 	int rc = 0;
@@ -199,6 +237,12 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 		openmode = OPEN_ALWAYS;
 	else
 		openmode = OPEN_EXISTING;
+
+	/* If we're going to use direct I/O, Windows will try and invalidate
+	 * its cache at that point so there's no need to do it here */
+	if (td->o.invalidate_cache && !td->o.odirect) {
+		windowsaio_invalidate_cache(f);
+	}
 
 	f->hFile = CreateFile(f->file_name, access, sharemode,
 		NULL, openmode, flags, NULL);
