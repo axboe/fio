@@ -1505,7 +1505,7 @@ static void *thread_main(void *data)
 	struct sk_out *sk_out = fd->sk_out;
 	uint64_t bytes_done[DDIR_RWDIR_CNT];
 	int deadlock_loop_cnt;
-	int clear_state;
+	bool clear_state, did_some_io;
 	int ret;
 
 	sk_out_assign(sk_out);
@@ -1726,7 +1726,8 @@ static void *thread_main(void *data)
 	}
 
 	memset(bytes_done, 0, sizeof(bytes_done));
-	clear_state = 0;
+	clear_state = false;
+	did_some_io = false;
 
 	while (keep_running(td)) {
 		uint64_t verify_bytes;
@@ -1765,7 +1766,7 @@ static void *thread_main(void *data)
 		if (td->runstate >= TD_EXITED)
 			break;
 
-		clear_state = 1;
+		clear_state = true;
 
 		/*
 		 * Make sure we've successfully updated the rusage stats
@@ -1804,6 +1805,9 @@ static void *thread_main(void *data)
 		    td_ioengine_flagged(td, FIO_UNIDIR))
 			continue;
 
+		if (ddir_rw_sum(bytes_done))
+			did_some_io = true;
+
 		clear_io_state(td, 0);
 
 		fio_gettime(&td->start, NULL);
@@ -1830,6 +1834,7 @@ static void *thread_main(void *data)
 	 * (Are we not missing other flags that can be ignored ?)
 	 */
 	if ((td->o.size || td->o.io_size) && !ddir_rw_sum(bytes_done) &&
+	    !did_some_io &&
 	    !(td_ioengine_flagged(td, FIO_NOIO) ||
 	      td_ioengine_flagged(td, FIO_DISKLESSIO)))
 		log_err("%s: No I/O performed by %s, "
