@@ -133,8 +133,10 @@ static struct ioengine_ops *__load_ioengine(const char *name)
 	/*
 	 * linux libaio has alias names, so convert to what we want
 	 */
-	if (!strncmp(engine, "linuxaio", 8) || !strncmp(engine, "aio", 3))
+	if (!strncmp(engine, "linuxaio", 8) || !strncmp(engine, "aio", 3)) {
+		dprint(FD_IO, "converting ioengine name: %s -> libaio\n", name);
 		strcpy(engine, "libaio");
+	}
 
 	dprint(FD_IO, "load ioengine %s\n", engine);
 	return find_ioengine(engine);
@@ -436,6 +438,7 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 {
 	assert(!fio_file_open(f));
 	assert(f->fd == -1);
+	assert(td->io_ops->open_file);
 
 	if (td->io_ops->open_file(td, f)) {
 		if (td->error == EINVAL && td->o.odirect)

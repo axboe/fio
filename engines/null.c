@@ -6,7 +6,11 @@
  *
  * It also can act as external C++ engine - compiled with:
  *
- * g++ -O2 -g -shared -rdynamic -fPIC -o null.so null.c -DFIO_EXTERNAL_ENGINE
+ * g++ -O2 -g -shared -rdynamic -fPIC -o cpp_null null.c -DFIO_EXTERNAL_ENGINE
+ *
+ * to test it execute:
+ *
+ * LD_LIBRARY_PATH=./engines ./fio examples/cpp_null.fio
  *
  */
 #include <stdio.h>
@@ -23,20 +27,17 @@ struct null_data {
 	int events;
 };
 
-static struct io_u *fio_null_event(struct thread_data *td, int event)
+static struct io_u *null_event(struct null_data *nd, int event)
 {
-	struct null_data *nd = (struct null_data *) td->io_ops_data;
-
 	return nd->io_us[event];
 }
 
-static int fio_null_getevents(struct thread_data *td, unsigned int min_events,
-			      unsigned int fio_unused max,
-			      const struct timespec fio_unused *t)
+static int null_getevents(struct null_data *nd, unsigned int min_events,
+			  unsigned int fio_unused max,
+			  const struct timespec fio_unused *t)
 {
-	struct null_data *nd = (struct null_data *) td->io_ops_data;
 	int ret = 0;
-	
+
 	if (min_events) {
 		ret = nd->events;
 		nd->events = 0;
@@ -45,10 +46,8 @@ static int fio_null_getevents(struct thread_data *td, unsigned int min_events,
 	return ret;
 }
 
-static int fio_null_commit(struct thread_data *td)
+static int null_commit(struct thread_data *td, struct null_data *nd)
 {
-	struct null_data *nd = (struct null_data *) td->io_ops_data;
-
 	if (!nd->events) {
 #ifndef FIO_EXTERNAL_ENGINE
 		io_u_mark_submit(td, nd->queued);
@@ -60,10 +59,9 @@ static int fio_null_commit(struct thread_data *td)
 	return 0;
 }
 
-static int fio_null_queue(struct thread_data *td, struct io_u *io_u)
+static int null_queue(struct thread_data *td, struct null_data *nd,
+		      struct io_u *io_u)
 {
-	struct null_data *nd = (struct null_data *) td->io_ops_data;
-
 	fio_ro_check(td, io_u);
 
 	if (td->io_ops->flags & FIO_SYNCIO)
@@ -75,25 +73,23 @@ static int fio_null_queue(struct thread_data *td, struct io_u *io_u)
 	return FIO_Q_QUEUED;
 }
 
-static int fio_null_open(struct thread_data fio_unused *td,
-			 struct fio_file fio_unused *f)
+static int null_open(struct null_data fio_unused *nd,
+		     struct fio_file fio_unused *f)
 {
 	return 0;
 }
 
-static void fio_null_cleanup(struct thread_data *td)
+static void null_cleanup(struct null_data *nd)
 {
-	struct null_data *nd = (struct null_data *) td->io_ops_data;
-
 	if (nd) {
 		free(nd->io_us);
 		free(nd);
 	}
 }
 
-static int fio_null_init(struct thread_data *td)
+static int null_init(struct thread_data *td, struct null_data **nd_ptr)
 {
-	struct null_data *nd = (struct null_data *) malloc(sizeof(*nd));
+	struct null_data *nd = (struct null_data *) malloc(sizeof(**nd_ptr));
 
 	memset(nd, 0, sizeof(*nd));
 
@@ -103,11 +99,49 @@ static int fio_null_init(struct thread_data *td)
 	} else
 		td->io_ops->flags |= FIO_SYNCIO;
 
-	td->io_ops_data = nd;
+	*nd_ptr = nd;
 	return 0;
 }
 
 #ifndef __cplusplus
+
+static struct io_u *fio_null_event(struct thread_data *td, int event)
+{
+	return null_event((struct null_data *)td->io_ops_data, event);
+}
+
+static int fio_null_getevents(struct thread_data *td, unsigned int min_events,
+			      unsigned int max, const struct timespec *t)
+{
+	struct null_data *nd = (struct null_data *)td->io_ops_data;
+	return null_getevents(nd, min_events, max, t);
+}
+
+static int fio_null_commit(struct thread_data *td)
+{
+	return null_commit(td, (struct null_data *)td->io_ops_data);
+}
+
+static int fio_null_queue(struct thread_data *td, struct io_u *io_u)
+{
+	return null_queue(td, (struct null_data *)td->io_ops_data, io_u);
+}
+
+static int fio_null_open(struct thread_data *td, struct fio_file *f)
+{
+	return null_open((struct null_data *)td->io_ops_data, f);
+}
+
+static void fio_null_cleanup(struct thread_data *td)
+{
+	null_cleanup((struct null_data *)td->io_ops_data);
+}
+
+static int fio_null_init(struct thread_data *td)
+{
+	return null_init(td, (struct null_data **)&td->io_ops_data);
+}
+
 static struct ioengine_ops ioengine = {
 	.name		= "null",
 	.version	= FIO_IOOPS_VERSION,
@@ -134,7 +168,91 @@ static void fio_exit fio_null_unregister(void)
 #else
 
 #ifdef FIO_EXTERNAL_ENGINE
+
+struct NullData {
+	NullData(struct thread_data *td)
+	{
+		null_init(td, &impl_);
+	}
+
+	~NullData()
+	{
+		null_cleanup(impl_);
+	}
+
+	static NullData *get(struct thread_data *td)
+	{
+		return reinterpret_cast<NullData *>(td->io_ops_data);
+	}
+
+	io_u *fio_null_event(struct thread_data *, int event)
+	{
+		return null_event(impl_, event);
+	}
+
+	int fio_null_getevents(struct thread_data *, unsigned int min_events,
+			       unsigned int max, const struct timespec *t)
+	{
+		return null_getevents(impl_, min_events, max, t);
+	}
+
+	int fio_null_commit(struct thread_data *td)
+	{
+		return null_commit(td, impl_);
+	}
+
+	int fio_null_queue(struct thread_data *td, struct io_u *io_u)
+	{
+		return null_queue(td, impl_, io_u);
+	}
+
+	int fio_null_open(struct thread_data *, struct fio_file *f)
+	{
+		return null_open(impl_, f);
+	}
+
+	struct null_data *impl_;
+};
+
 extern "C" {
+
+static struct io_u *fio_null_event(struct thread_data *td, int event)
+{
+	return NullData::get(td)->fio_null_event(td, event);
+}
+
+static int fio_null_getevents(struct thread_data *td, unsigned int min_events,
+			      unsigned int max, const struct timespec *t)
+{
+	return NullData::get(td)->fio_null_getevents(td, min_events, max, t);
+}
+
+static int fio_null_commit(struct thread_data *td)
+{
+	return NullData::get(td)->fio_null_commit(td);
+}
+
+static int fio_null_queue(struct thread_data *td, struct io_u *io_u)
+{
+	return NullData::get(td)->fio_null_queue(td, io_u);
+}
+
+static int fio_null_open(struct thread_data *td, struct fio_file *f)
+{
+	return NullData::get(td)->fio_null_open(td, f);
+}
+
+static int fio_null_init(struct thread_data *td)
+{
+	td->io_ops_data = new NullData(td);
+	return 0;
+}
+
+static void fio_null_cleanup(struct thread_data *td)
+{
+	delete NullData::get(td);
+}
+
 static struct ioengine_ops ioengine;
 void get_ioengine(struct ioengine_ops **ioengine_ptr)
 {
