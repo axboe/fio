@@ -63,6 +63,6 @@ int main(int argc, char *argv[])
 	}
 
 	printf("Passes=%lu, Fail=%lu\n", pass, fail);
-
+	free(buckets);
 	return 0;
 }
