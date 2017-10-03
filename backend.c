@@ -499,7 +499,6 @@ int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
 			if (ddir_rw(io_u->ddir))
 				td->ts.short_io_u[io_u->ddir]++;
 
-			f = io_u->file;
 			if (io_u->offset == f->real_file_size)
 				goto sync_done;
 
