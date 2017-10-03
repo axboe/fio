@@ -1382,7 +1382,7 @@ static int fio_client_handle_iolog(struct fio_client *client,
 	}
 
 out:
-	if (pdu && pdu != cmd->payload)
+	if (pdu && pdu != (void *) cmd->payload)
 		free(pdu);
 
 	if (log_pathname)
