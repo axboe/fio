@@ -1312,14 +1312,16 @@ static void client_flush_hist_samples(FILE *f, int hist_coarseness, void *sample
 static int fio_client_handle_iolog(struct fio_client *client,
 				   struct fio_net_cmd *cmd)
 {
-	struct cmd_iolog_pdu *pdu;
+	struct cmd_iolog_pdu *pdu = NULL;
 	bool store_direct;
-	char *log_pathname;
+	char *log_pathname = NULL;
+	int ret = 0;
 
 	pdu = convert_iolog(cmd, &store_direct);
 	if (!pdu) {
 		log_err("fio: failed converting IO log\n");
-		return 1;
+		ret = 1;
+		goto out;
 	}
 
         /* allocate buffer big enough for next sprintf() call */
@@ -1327,7 +1329,8 @@ static int fio_client_handle_iolog(struct fio_client *client,
 			strlen(client->hostname));
 	if (!log_pathname) {
 		log_err("fio: memory allocation of unique pathname failed\n");
-		return -1;
+		ret = -1;
+		goto out;
 	}
 	/* generate a unique pathname for the log file using hostname */
 	sprintf(log_pathname, "%s.%s", pdu->name, client->hostname);
@@ -1342,7 +1345,8 @@ static int fio_client_handle_iolog(struct fio_client *client,
 		if (fd < 0) {
 			log_err("fio: open log %s: %s\n",
 				log_pathname, strerror(errno));
-			return 1;
+			ret = 1;
+			goto out;
 		}
 
 		sz = cmd->pdu_len - sizeof(*pdu);
@@ -1351,17 +1355,19 @@ static int fio_client_handle_iolog(struct fio_client *client,
 
 		if (ret != sz) {
 			log_err("fio: short write on compressed log\n");
-			return 1;
+			ret = 1;
+			goto out;
 		}
 
-		return 0;
+		ret = 0;
 	} else {
 		FILE *f;
 		f = fopen((const char *) log_pathname, "w");
 		if (!f) {
 			log_err("fio: fopen log %s : %s\n",
 				log_pathname, strerror(errno));
-			return 1;
+			ret = 1;
+			goto out;
 		}
 
 		if (pdu->log_type == IO_LOG_TYPE_HIST) {
@@ -1372,8 +1378,17 @@ static int fio_client_handle_iolog(struct fio_client *client,
 					pdu->nr_samples * sizeof(struct io_sample));
 		}
 		fclose(f);
-		return 0;
+		ret = 0;
 	}
+
+out:
+	if (pdu && pdu != cmd->payload)
+		free(pdu);
+
+	if (log_pathname)
+		free(log_pathname);
+
+	return ret;
 }
 
 static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -1849,10 +1864,12 @@ static void request_client_etas(struct client_ops *ops)
 static int handle_cmd_timeout(struct fio_client *client,
 			      struct fio_net_cmd_reply *reply)
 {
+	uint16_t reply_opcode = reply->opcode;
+
 	flist_del(&reply->list);
 	free(reply);
 
-	if (reply->opcode != FIO_NET_CMD_SEND_ETA)
+	if (reply_opcode != FIO_NET_CMD_SEND_ETA)
 		return 1;
 
 	log_info("client <%s>: timeout on SEND_ETA\n", client->hostname);
