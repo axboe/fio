@@ -2346,6 +2346,7 @@ reap:
 				fio_terminate_threads(TERMINATE_ALL);
 				fio_abort = 1;
 				nr_started--;
+				free(fd);
 				break;
 			}
 			dprint(FD_MUTEX, "done waiting on startup_mutex\n");
