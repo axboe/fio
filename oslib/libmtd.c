@@ -1002,7 +1002,6 @@ int mtd_torture(libmtd_t desc, const struct mtd_dev_info *mtd, int fd, int eb)
 		}
 	}
 
-	err = 0;
 	normsg("PEB %d passed torture test, do not mark it a bad", eb);
 
 out:
