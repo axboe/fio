@@ -1577,6 +1577,10 @@ the engine filename, e.g. `ioengine=external:/tmp/foo.o' to load
 ioengine `foo.o' in `/tmp'. The path can be either
 absolute or relative. See `engines/skeleton_external.c' in the fio source for
 details of writing an external I/O engine.
+.TP
+.B filecreate
+Create empty files only.  \fBfilesize\fR still needs to be specified so that fio
+will run and grab latency results, but no IO will actually be done on the files.
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
 \fBioengine\fR is in use. These are used identically to normal parameters,

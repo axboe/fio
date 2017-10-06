@@ -1797,6 +1797,10 @@ I/O engine
 			absolute or relative. See :file:`engines/skeleton_external.c` for
 			details of writing an external I/O engine.
 
+		**filecreate**
+			Simply create the files and do no IO to them.  You still need to
+			set  `filesize` so that all the accounting still occurs, but no
+			actual IO will be done other than creating the file.
 
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
