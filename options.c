@@ -1843,6 +1843,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "DAX Device based IO engine",
 			  },
 #endif
+			  {
+			    .ival = "filecreate",
+			    .help = "File creation engine",
+			  },
 			  { .ival = "external",
 			    .help = "Load external engine (append name)",
 			    .cb = str_ioengine_external_cb,

@@ -69,11 +69,23 @@ static int queue_io(struct thread_data *td, struct io_u fio_unused *io_u)
 	return FIO_Q_COMPLETED;
 }
 
+/*
+ * Ensure that we at least have a block size worth of IO to do for each
+ * file. If the job file has td->o.size < nr_files * block_size, then
+ * fio won't do anything.
+ */
+static int get_file_size(struct thread_data *td, struct fio_file *f)
+{
+	f->real_file_size = td_min_bs(td);
+	return 0;
+}
+
 static struct ioengine_ops ioengine = {
 	.name		= "filecreate",
 	.version	= FIO_IOOPS_VERSION,
-	.open_file	= open_file,
 	.queue		= queue_io,
+	.get_file_size	= get_file_size,
+	.open_file	= open_file,
 	.close_file	= generic_close_file,
 	.flags		= FIO_DISKLESSIO | FIO_SYNCIO | FIO_FAKEIO,
 };
