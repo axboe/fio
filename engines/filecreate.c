@@ -76,7 +76,8 @@ static struct ioengine_ops ioengine = {
 	.get_file_size	= get_file_size,
 	.open_file	= open_file,
 	.close_file	= generic_close_file,
-	.flags		= FIO_DISKLESSIO | FIO_SYNCIO | FIO_FAKEIO,
+	.flags		= FIO_DISKLESSIO | FIO_SYNCIO | FIO_FAKEIO |
+				FIO_NOSTATS,
 };
 
 static void fio_init fio_filecreate_register(void)

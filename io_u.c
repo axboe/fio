@@ -1779,7 +1779,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 	if (td->parent)
 		td = td->parent;
 
-	if (!td->o.stats)
+	if (!td->o.stats || td_ioengine_flagged(td, FIO_NOSTATS))
 		return;
 
 	if (no_reduce)
