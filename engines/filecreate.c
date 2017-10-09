@@ -15,7 +15,6 @@
 static int open_file(struct thread_data *td, struct fio_file *f)
 {
 	struct timespec start, end;
-	int from_hash = 0;
 	int do_lat = !td->o.disable_lat;
 
 	dprint(FD_FILE, "fd open %s\n", f->file_name);
@@ -29,17 +28,10 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-open_again:
 	if (do_lat)
 		fio_gettime(&start, NULL);
-	from_hash = file_lookup_open(f, O_CREAT|O_RDWR);
-	if (do_lat) {
-		unsigned long long nsec;
 
-		fio_gettime(&end, NULL);
-		nsec = ntime_since(&start, &end);
-		add_lat_sample(td, DDIR_WRITE, nsec, 0, 0);
-	}
+	f->fd = open(f->file_name, O_CREAT|O_RDWR, 0600);
 
 	if (f->fd == -1) {
 		char buf[FIO_VERROR_SIZE];
@@ -47,18 +39,15 @@ open_again:
 
 		snprintf(buf, sizeof(buf), "open(%s)", f->file_name);
 		td_verror(td, e, buf);
+		return 1;
 	}
 
-	if (!from_hash && f->fd != -1) {
-		if (add_file_hash(f)) {
-			int fio_unused ret;
+	if (do_lat) {
+		unsigned long long nsec;
 
-			/*
-			 * OK to ignore, we haven't done anything with it
-			 */
-			ret = generic_close_file(td, f);
-			goto open_again;
-		}
+		fio_gettime(&end, NULL);
+		nsec = ntime_since(&start, &end);
+		add_lat_sample(td, DDIR_WRITE, nsec, 0, 0);
 	}
 
 	return 0;
