@@ -448,6 +448,14 @@ uint64_t ntime_since(const struct timespec *s, const struct timespec *e)
        return nsec + (sec * 1000000000LL);
 }
 
+uint64_t ntime_since_now(const struct timespec *s)
+{
+	struct timespec now;
+
+	fio_gettime(&now, NULL);
+	return ntime_since(s, &now);
+}
+
 uint64_t utime_since(const struct timespec *s, const struct timespec *e)
 {
 	int64_t sec, usec;

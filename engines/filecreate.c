@@ -14,7 +14,7 @@
 
 static int open_file(struct thread_data *td, struct fio_file *f)
 {
-	struct timespec start, end;
+	struct timespec start;
 	int do_lat = !td->o.disable_lat;
 
 	dprint(FD_FILE, "fd open %s\n", f->file_name);
@@ -43,10 +43,9 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 	}
 
 	if (do_lat) {
-		unsigned long long nsec;
+		uint64_t nsec;
 
-		fio_gettime(&end, NULL);
-		nsec = ntime_since(&start, &end);
+		nsec = ntime_since_now(&start);
 		add_lat_sample(td, DDIR_WRITE, nsec, 0, 0);
 	}
 
