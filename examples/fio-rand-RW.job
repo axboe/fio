@@ -1,0 +1,18 @@
+; fio-rand-RW.job for fiotest
+
+[global]
+name=fio-rand-RW
+filename=fio-rand-RW
+rw=randrw
+rwmixread=60
+rwmixwrite=40
+bs=4K
+direct=0
+numjobs=4
+time_based=1
+runtime=900
+
+[file1]
+size=10G
+ioengine=libaio
+iodepth=16
