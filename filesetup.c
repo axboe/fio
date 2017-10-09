@@ -1588,7 +1588,8 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 	if (f->filetype == FIO_TYPE_FILE)
 		td->nr_normal_files++;
 
-	set_already_allocated(file_name);
+	if (td->o.numjobs > 1)
+		set_already_allocated(file_name);
 
 	if (inc)
 		td->o.nr_files++;
