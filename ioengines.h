@@ -60,6 +60,7 @@ enum fio_ioengine_flags {
 	FIO_BIT_BASED	= 1 << 10,	/* engine uses a bit base (e.g. uses Kbit as opposed to KB) */
 	FIO_FAKEIO	= 1 << 11,	/* engine pretends to do IO */
 	FIO_NOSTATS	= 1 << 12,	/* don't do IO stats */
+	FIO_NOFILEHASH	= 1 << 13,	/* doesn't hash the files for lookup later. */
 };
 
 /*

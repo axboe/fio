@@ -1342,6 +1342,7 @@ void close_and_free_files(struct thread_data *td)
 {
 	struct fio_file *f;
 	unsigned int i;
+	bool use_free = td_ioengine_flagged(td, FIO_NOFILEHASH);
 
 	dprint(FD_FILE, "close files\n");
 
@@ -1361,13 +1362,19 @@ void close_and_free_files(struct thread_data *td)
 			td_io_unlink_file(td, f);
 		}
 
-		sfree(f->file_name);
+		if (use_free)
+			free(f->file_name);
+		else
+			sfree(f->file_name);
 		f->file_name = NULL;
 		if (fio_file_axmap(f)) {
 			axmap_free(f->io_axmap);
 			f->io_axmap = NULL;
 		}
-		sfree(f);
+		if (use_free)
+			free(f);
+		else
+			sfree(f);
 	}
 
 	td->o.filename = NULL;
@@ -1481,7 +1488,10 @@ static struct fio_file *alloc_new_file(struct thread_data *td)
 {
 	struct fio_file *f;
 
-	f = smalloc(sizeof(*f));
+	if (td_ioengine_flagged(td, FIO_NOFILEHASH))
+		f = calloc(1, sizeof(*f));
+	else
+		f = smalloc(sizeof(*f));
 	if (!f) {
 		assert(0);
 		return NULL;
@@ -1564,7 +1574,10 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 	if (td->io_ops && td_ioengine_flagged(td, FIO_DISKLESSIO))
 		f->real_file_size = -1ULL;
 
-	f->file_name = smalloc_strdup(file_name);
+	if (td_ioengine_flagged(td, FIO_NOFILEHASH))
+		f->file_name = strdup(file_name);
+	else
+		f->file_name = smalloc_strdup(file_name);
 	if (!f->file_name)
 		assert(0);
 
@@ -1769,7 +1782,10 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 		__f = alloc_new_file(td);
 
 		if (f->file_name) {
-			__f->file_name = smalloc_strdup(f->file_name);
+			if (td_ioengine_flagged(td, FIO_NOFILEHASH))
+				__f->file_name = strdup(f->file_name);
+			else
+				__f->file_name = smalloc_strdup(f->file_name);
 			if (!__f->file_name)
 				assert(0);
 
