@@ -12,7 +12,6 @@
 [global]
 create_on_open=1
 nrfiles=31250
-readwrite=write
 ioengine=filecreate
 fallocate=none
 filesize=4k
