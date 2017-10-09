@@ -46,7 +46,7 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 		uint64_t nsec;
 
 		nsec = ntime_since_now(&start);
-		add_lat_sample(td, DDIR_WRITE, nsec, 0, 0);
+		add_clat_sample(td, DDIR_READ, nsec, 0, 0);
 	}
 
 	return 0;
