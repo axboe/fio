@@ -113,6 +113,8 @@ All fio parser warnings are fatal, causing fio to exit with an error.
 .TP
 .BI \-\-max\-jobs \fR=\fPnr
 Set the maximum number of threads/processes to support to \fInr\fR.
+NOTE: On Linux, it may be necessary to increase the shared-memory limit
+(`/proc/sys/kernel/shmmax') if fio runs into errors while creating jobs.
 .TP
 .BI \-\-server \fR=\fPargs
 Start a backend server, with \fIargs\fR specifying what to listen to.
