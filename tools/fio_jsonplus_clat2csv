@@ -107,8 +107,16 @@ def main():
 
         prev_ddir = None
         for ddir in ddir_set:
+            if 'bins' in jsondata['jobs'][jobnum][ddir]['clat_ns']:
+                bins_loc = 'clat_ns'
+            elif 'bins' in jsondata['jobs'][jobnum][ddir]['lat_ns']:
+                bins_loc = 'lat_ns'
+            else:
+                raise RuntimeError("Latency bins not found. "
+                                   "Are you sure you are using json+ output?")
+
             bins[ddir] = [[int(key), value] for key, value in
-                          jsondata['jobs'][jobnum][ddir]['clat_ns']
+                          jsondata['jobs'][jobnum][ddir][bins_loc]
                           ['bins'].iteritems()]
             bins[ddir] = sorted(bins[ddir], key=lambda bin: bin[0])
 
@@ -123,7 +131,7 @@ def main():
         outfile = stub + '_job' + str(jobnum) + ext
 
         with open(outfile, 'w') as output:
-            output.write("clat_nsec, ")
+            output.write("{0}ec, ".format(bins_loc))
             ddir_list = list(ddir_set)
             for ddir in ddir_list:
                 output.write("{0}_count, {0}_cumulative, {0}_percentile, ".
