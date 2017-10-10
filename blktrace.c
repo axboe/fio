@@ -500,10 +500,8 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 		handle_trace(td, &t, ios, rw_bs);
 	} while (1);
 
-	for (i = 0; i < td->files_index; i++) {
-		f = td->files[i];
+	for_each_file(td, f, i)
 		trace_add_open_close_event(td, f->fileno, FIO_LOG_CLOSE_FILE);
-	}
 
 	fifo_free(fifo);
 	close(fd);
