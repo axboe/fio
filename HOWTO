@@ -217,6 +217,9 @@ Command line options
 .. option:: --max-jobs=nr
 
 	Set the maximum number of threads/processes to support to `nr`.
+	NOTE: On Linux, it may be necessary to increase the shared-memory
+	limit ('/proc/sys/kernel/shmmax') if fio runs into errors while
+	creating jobs.
 
 .. option:: --server=args
 
