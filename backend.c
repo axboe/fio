@@ -1929,11 +1929,7 @@ static void reap_threads(unsigned int *nr_running, uint64_t *t_rate,
 	for_each_td(td, i) {
 		int flags = 0;
 
-		/*
-		 * ->io_ops is NULL for a thread that has closed its
-		 * io engine
-		 */
-		if (td->io_ops && !strcmp(td->io_ops->name, "cpuio"))
+		 if (!strcmp(td->o.ioengine, "cpuio"))
 			cputhreads++;
 		else
 			realthreads++;
