@@ -12,6 +12,10 @@
 #include "../fio.h"
 #include "../filehash.h"
 
+struct fc_data {
+	enum fio_ddir stat_ddir;
+};
+
 static int open_file(struct thread_data *td, struct fio_file *f)
 {
 	struct timespec start;
@@ -43,10 +47,11 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 	}
 
 	if (do_lat) {
+		struct fc_data *data = td->io_ops_data;
 		uint64_t nsec;
 
 		nsec = ntime_since_now(&start);
-		add_clat_sample(td, DDIR_READ, nsec, 0, 0);
+		add_clat_sample(td, data->stat_ddir, nsec, 0, 0);
 	}
 
 	return 0;
@@ -68,9 +73,33 @@ static int get_file_size(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
+static int init(struct thread_data *td)
+{
+	struct fc_data *data;
+
+	data = calloc(1, sizeof(*data));
+
+	if (td_read(td))
+		data->stat_ddir = DDIR_READ;
+	else if (td_write(td))
+		data->stat_ddir = DDIR_WRITE;
+
+	td->io_ops_data = data;
+	return 0;
+}
+
+static void cleanup(struct thread_data *td)
+{
+	struct fc_data *data = td->io_ops_data;
+
+	free(data);
+}
+
 static struct ioengine_ops ioengine = {
 	.name		= "filecreate",
 	.version	= FIO_IOOPS_VERSION,
+	.init		= init,
+	.cleanup	= cleanup,
 	.queue		= queue_io,
 	.get_file_size	= get_file_size,
 	.open_file	= open_file,
