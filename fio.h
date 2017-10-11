@@ -80,14 +80,13 @@ enum {
 	TD_F_VER_NONE		= 1U << 5,
 	TD_F_PROFILE_OPS	= 1U << 6,
 	TD_F_COMPRESS		= 1U << 7,
-	TD_F_RESERVED		= 1U << 8, /* not used */
-	TD_F_COMPRESS_LOG	= 1U << 9,
-	TD_F_VSTATE_SAVED	= 1U << 10,
-	TD_F_NEED_LOCK		= 1U << 11,
-	TD_F_CHILD		= 1U << 12,
-	TD_F_NO_PROGRESS        = 1U << 13,
-	TD_F_REGROW_LOGS	= 1U << 14,
-	TD_F_MMAP_KEEP		= 1U << 15,
+	TD_F_COMPRESS_LOG	= 1U << 8,
+	TD_F_VSTATE_SAVED	= 1U << 9,
+	TD_F_NEED_LOCK		= 1U << 10,
+	TD_F_CHILD		= 1U << 11,
+	TD_F_NO_PROGRESS        = 1U << 12,
+	TD_F_REGROW_LOGS	= 1U << 13,
+	TD_F_MMAP_KEEP		= 1U << 14,
 };
 
 enum {
