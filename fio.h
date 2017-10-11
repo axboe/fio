@@ -87,6 +87,7 @@ enum {
 	__TD_F_NO_PROGRESS,
 	__TD_F_REGROW_LOGS,
 	__TD_F_MMAP_KEEP,
+	__TD_F_LAST,		/* not a real bit, keep last */
 };
 
 enum {

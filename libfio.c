@@ -365,6 +365,8 @@ int initialize_fio(char *envp[])
 	compiletime_assert((offsetof(struct thread_options_pack, latency_percentile) % 8) == 0, "latency_percentile");
 	compiletime_assert((offsetof(struct jobs_eta, m_rate) % 8) == 0, "m_rate");
 
+	compiletime_assert(__TD_F_LAST <= TD_ENG_FLAG_SHIFT, "TD_ENG_FLAG_SHIFT");
+
 	err = endian_check();
 	if (err) {
 		log_err("fio: endianness settings appear wrong.\n");
