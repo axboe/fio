@@ -1543,7 +1543,11 @@ static int create_work_dirs(struct thread_data *td, const char *fname)
 			break;
 		*end = '\0';
 		errno = 0;
+#ifdef CONFIG_HAVE_MKDIR_TWO
 		if (mkdir(path, 0600) && errno != EEXIST) {
+#else
+		if (mkdir(path) && errno != EEXIST) {
+#endif
 			log_err("fio: failed to create dir (%s): %d\n",
 				start, errno);
 			return 1;

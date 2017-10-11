@@ -353,6 +353,7 @@ CYGWIN*)
   tls_thread="yes"
   static_assert="yes"
   ipv6="yes"
+  mkdir_two="no"
   echo "BUILD_CFLAGS=$CFLAGS -I../zlib -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
   ;;
 esac
@@ -2047,6 +2048,22 @@ if test "$enable_cuda" = "yes" && compile_prog "" "-lcuda" "cuda"; then
 fi
 print_config "cuda" "$cuda"
 
+##########################################
+# mkdir() probe. mingw apparently has a one-argument mkdir :/
+mkdir_two="no"
+cat > $TMPC << EOF
+#include <sys/stat.h>
+#include <sys/types.h>
+int main(int argc, char **argv)
+{
+  return mkdir("/tmp/bla", 0600);
+}
+EOF
+if compile_prog "" "" "mkdir(a, b)"; then
+  mkdir_two="yes"
+fi
+print_config "mkdir(a, b)" "$mkdir_two"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -2274,6 +2291,9 @@ if test "$zlib" = "no" ; then
 fi
 if test "$cuda" = "yes" ; then
   output_sym "CONFIG_CUDA"
+fi
+if test "$mkdir_two" = "yes" ; then
+  output_sym "CONFIG_HAVE_MKDIR_TWO"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
