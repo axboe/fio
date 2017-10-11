@@ -252,7 +252,7 @@ static void dump_buf(char *buf, unsigned int len, unsigned long long offset,
 
 	memset(fname, 0, sizeof(fname));
 	if (aux_path)
-		sprintf(fname, "%s%s", aux_path, FIO_OS_PATH_SEPARATOR);
+		sprintf(fname, "%s%c", aux_path, FIO_OS_PATH_SEPARATOR);
 
 	strncpy(fname + strlen(fname), basename(ptr), buf_left - 1);
 
@@ -1726,7 +1726,7 @@ void verify_save_state(int mask)
 		char prefix[PATH_MAX];
 
 		if (aux_path)
-			sprintf(prefix, "%s%slocal", aux_path, FIO_OS_PATH_SEPARATOR);
+			sprintf(prefix, "%s%clocal", aux_path, FIO_OS_PATH_SEPARATOR);
 		else
 			strcpy(prefix, "local");
 

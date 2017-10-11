@@ -155,7 +155,7 @@ extern int fio_cpus_split(os_cpu_mask_t *mask, unsigned int cpu);
 #endif
 
 #ifndef FIO_OS_PATH_SEPARATOR
-#define FIO_OS_PATH_SEPARATOR	"/"
+#define FIO_OS_PATH_SEPARATOR	'/'
 #endif
 
 #ifndef FIO_PREFERRED_CLOCK_SOURCE
