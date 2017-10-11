@@ -37,7 +37,7 @@ int rand_r(unsigned *);
 
 #define FIO_PREFERRED_ENGINE		"windowsaio"
 #define FIO_PREFERRED_CLOCK_SOURCE	CS_CGETTIME
-#define FIO_OS_PATH_SEPARATOR		'\'
+#define FIO_OS_PATH_SEPARATOR		'\\'
 
 #define FIO_MAX_CPUS	MAXIMUM_PROCESSORS
 
