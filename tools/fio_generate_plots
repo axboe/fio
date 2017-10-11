@@ -93,19 +93,25 @@ plot () {
 
     i=0
     
-    for x in *_"$FILETYPE".log
+    for x in *_"$FILETYPE".log *_"$FILETYPE".*.log
     do
-        i=$((i+1))
-        PT=$(echo $x | sed s/_"$FILETYPE".log//g)
-        if [ ! -z "$PLOT_LINE" ]
-        then
-            PLOT_LINE=$PLOT_LINE", "
-        fi
+        if [ -e "$x" ]; then
+            i=$((i+1))
+            PT=$(echo $x | sed 's/\(.*\)_'$FILETYPE'\(.*\).log$/\1\2/')
+            if [ ! -z "$PLOT_LINE" ]
+            then
+                PLOT_LINE=$PLOT_LINE", "
+            fi
 
-        DEPTH=$(echo $PT | cut -d "-" -f 4)
-	    PLOT_LINE=$PLOT_LINE"'$x' using (\$1/1000):(\$2/$SCALE) title \"Queue depth $DEPTH\" with lines ls $i" 
-        
+            DEPTH=$(echo $PT | cut -d "-" -f 4)
+            PLOT_LINE=$PLOT_LINE"'$x' using (\$1/1000):(\$2/$SCALE) title \"Queue depth $DEPTH\" with lines ls $i" 
+        fi
     done
+
+    if [ $i -eq 0 ]; then
+       echo "No log files found"
+       exit 1
+    fi
 
     OUTPUT="set output \"$TITLE-$FILETYPE.svg\" "
 
