@@ -240,9 +240,8 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 
 	/* If we're going to use direct I/O, Windows will try and invalidate
 	 * its cache at that point so there's no need to do it here */
-	if (td->o.invalidate_cache && !td->o.odirect) {
+	if (td->o.invalidate_cache && !td->o.odirect)
 		windowsaio_invalidate_cache(f);
-	}
 
 	f->hFile = CreateFile(f->file_name, access, sharemode,
 		NULL, openmode, flags, NULL);
