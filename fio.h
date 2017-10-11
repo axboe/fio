@@ -611,12 +611,6 @@ enum {
 #define TD_ENG_FLAG_SHIFT	16
 #define TD_ENG_FLAG_MASK	((1U << 16) - 1)
 
-static inline enum fio_ioengine_flags td_ioengine_flags(struct thread_data *td)
-{
-	return (enum fio_ioengine_flags)
-		((td->flags >> TD_ENG_FLAG_SHIFT) & TD_ENG_FLAG_MASK);
-}
-
 static inline void td_set_ioengine_flags(struct thread_data *td)
 {
 	td->flags = (~(TD_ENG_FLAG_MASK << TD_ENG_FLAG_SHIFT) & td->flags) |
