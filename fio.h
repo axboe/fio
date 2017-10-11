@@ -87,6 +87,7 @@ enum {
 	__TD_F_NO_PROGRESS,
 	__TD_F_REGROW_LOGS,
 	__TD_F_MMAP_KEEP,
+	__TD_F_DIRS_CREATED,
 	__TD_F_LAST,		/* not a real bit, keep last */
 };
 
@@ -106,6 +107,7 @@ enum {
 	TD_F_NO_PROGRESS        = 1U << __TD_F_NO_PROGRESS,
 	TD_F_REGROW_LOGS	= 1U << __TD_F_REGROW_LOGS,
 	TD_F_MMAP_KEEP		= 1U << __TD_F_MMAP_KEEP,
+	TD_F_DIRS_CREATED	= 1U << __TD_F_DIRS_CREATED,
 };
 
 enum {

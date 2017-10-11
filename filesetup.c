@@ -1523,6 +1523,45 @@ bool exists_and_not_regfile(const char *filename)
 	return true;
 }
 
+static void create_work_dirs(struct thread_data *td, const char *fname)
+{
+	char path[PATH_MAX];
+	char *start, *end;
+	int dirfd;
+	bool need_close = true;
+
+	if (td->o.directory) {
+		dirfd = open(td->o.directory, O_DIRECTORY | O_RDONLY);
+		if (dirfd < 0) {
+			log_err("fio: failed to open dir (%s): %d\n",
+				td->o.directory, errno);
+			assert(0);
+		}
+	} else {
+		dirfd = AT_FDCWD;
+		need_close = false;
+	}
+
+	memcpy(path, fname, PATH_MAX);
+	start = end = path;
+	while ((end = strchr(end, FIO_OS_PATH_SEPARATOR)) != NULL) {
+		if (end == start)
+			break;
+		*end = '\0';
+		errno = 0;
+		if (mkdirat(dirfd, start, 0600) && errno != EEXIST) {
+			log_err("fio: failed to create dir (%s): %d\n",
+				start, errno);
+			assert(0);
+		}
+		*end = FIO_OS_PATH_SEPARATOR;
+		end++;
+	}
+	if (need_close)
+		close(dirfd);
+	td->flags |= TD_F_DIRS_CREATED;
+}
+
 int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 {
 	int cur_files = td->files_index;
@@ -1537,6 +1576,10 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 					td->o.unique_filename);
 
 	sprintf(file_name + len, "%s", fname);
+
+	if (strchr(fname, FIO_OS_PATH_SEPARATOR) &&
+	    !(td->flags & TD_F_DIRS_CREATED))
+		create_work_dirs(td, fname);
 
 	/* clean cloned siblings using existing files */
 	if (numjob && is_already_allocated(file_name) &&
