@@ -139,7 +139,7 @@ unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 				   fio_fp64_t *plist, unsigned long long **output,
 				   unsigned long long *maxv, unsigned long long *minv)
 {
-	unsigned long sum = 0;
+	unsigned long long sum = 0;
 	unsigned int len, i, j = 0;
 	unsigned int oval_len = 0;
 	unsigned long long *ovals = NULL;
