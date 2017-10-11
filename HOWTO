@@ -795,6 +795,13 @@ Target file/device
 	named :file:`testfiles.4`. The default of :file:`$jobname.$jobnum.$filenum`
 	will be used if no other format specifier is given.
 
+	If you specify a path then the directories will be created up to the
+	main directory for the file.  So for example if you specify
+	``filename_format=a/b/c/$jobnum`` then the directories a/b/c will be
+	created before the file setup part of the job.  If you specify
+	:option:`directory` then the path will be relative that directory,
+	otherwise it is treated as the absolute path.
+
 .. option:: unique_filename=bool
 
 	To avoid collisions between networked clients, fio defaults to prefixing any

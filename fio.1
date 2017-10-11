@@ -578,6 +578,12 @@ fio generate filenames that are shared between the two. For instance, if
 `testfiles.$filenum' is specified, file number 4 for any job will be
 named `testfiles.4'. The default of `$jobname.$jobnum.$filenum'
 will be used if no other format specifier is given.
+.P
+If you specify a path then the directories will be created up to the main
+directory for the file.  So for example if you specify `a/b/c/$jobnum` then the
+directories a/b/c will be created before the file setup part of the job.  If you
+specify \fBdirectory\fR then the path will be relative that directory, otherwise
+it is treated as the absolute path.
 .RE
 .TP
 .BI unique_filename \fR=\fPbool
