@@ -225,7 +225,20 @@ if test "$show_help" = "yes" ; then
 fi
 
 cross_prefix=${cross_prefix-${CROSS_COMPILE}}
-cc="${CC-${cross_prefix}gcc}"
+# Preferred compiler (can be overriden later after we know the platform):
+#  ${CC} (if set)
+#  ${cross_prefix}gcc (if cross-prefix specified)
+#  gcc if available
+#  clang if available
+if test -z "${CC}${cross_prefix}"; then
+  if has gcc; then
+    cc=gcc
+  elif has clang; then
+    cc=clang
+  fi
+else
+  cc="${CC-${cross_prefix}gcc}"
+fi
 
 if check_define __ANDROID__ ; then
   targetos="Android"
@@ -301,16 +314,16 @@ SunOS)
 CYGWIN*)
   # We still force some options, so keep this message here.
   echo "Forcing some known good options on Windows"
-  if test -z "$CC" ; then
+  if test -z "${CC}${cross_prefix}"; then
     if test ! -z "$build_32bit_win" && test "$build_32bit_win" = "yes"; then
-      CC="i686-w64-mingw32-gcc"
+      cc="i686-w64-mingw32-gcc"
       if test -e "../zlib/contrib/vstudio/vc14/x86/ZlibStatReleaseWithoutAsm/zlibstat.lib"; then
         echo "Building with zlib support"
         output_sym "CONFIG_ZLIB"
         echo "LIBS=../zlib/contrib/vstudio/vc14/x86/ZlibStatReleaseWithoutAsm/zlibstat.lib" >> $config_host_mak
       fi
     else
-      CC="x86_64-w64-mingw32-gcc"
+      cc="x86_64-w64-mingw32-gcc"
       if test -e "../zlib/contrib/vstudio/vc14/x64/ZlibStatReleaseWithoutAsm/zlibstat.lib"; then
         echo "Building with zlib support"
         output_sym "CONFIG_ZLIB"
@@ -340,10 +353,23 @@ CYGWIN*)
   tls_thread="yes"
   static_assert="yes"
   ipv6="yes"
-  echo "CC=$CC" >> $config_host_mak
   echo "BUILD_CFLAGS=$CFLAGS -I../zlib -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
   ;;
 esac
+
+# Now we know the target platform we can have another guess at the preferred
+# compiler when it wasn't explictly set
+if test -z "${CC}${cross_prefix}"; then
+  if test "$targetos" = "FreeBSD" || test "$targetos" = "Darwin"; then
+    if has clang; then
+      cc=clang
+    fi
+  fi
+fi
+if test -z "$cc"; then
+    echo "configure: failed to find compiler"
+    exit 1
+fi
 
 if test ! -z "$cpu" ; then
   # command line argument
@@ -414,18 +440,6 @@ case "$cpu" in
   echo "Unknown CPU"
   ;;
 esac
-
-if test -z "$CC" ; then
-  if test "$targetos" = "FreeBSD"; then
-    if has clang; then
-      CC=clang
-    else
-      CC=gcc
-    fi
-  fi
-fi
-
-cc="${CC-${cross_prefix}gcc}"
 
 ##########################################
 # check cross compile
