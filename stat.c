@@ -135,7 +135,7 @@ static int double_cmp(const void *a, const void *b)
 	return cmp;
 }
 
-unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
+unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long long nr,
 				   fio_fp64_t *plist, unsigned long long **output,
 				   unsigned long long *maxv, unsigned long long *minv)
 {
@@ -198,7 +198,7 @@ unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
 /*
  * Find and display the p-th percentile of clat
  */
-static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long nr,
+static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long long nr,
 				  fio_fp64_t *plist, unsigned int precision,
 				  bool is_clat, struct buf_output *out)
 {
