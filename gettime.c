@@ -15,7 +15,7 @@
 
 #if defined(ARCH_HAVE_CPU_CLOCK)
 #ifndef ARCH_CPU_CLOCK_CYCLES_PER_USEC
-static unsigned long cycles_per_msec;
+static unsigned long long cycles_per_msec;
 static unsigned long long cycles_start;
 static unsigned long long clock_mult;
 static unsigned long long max_cycles_mask;
