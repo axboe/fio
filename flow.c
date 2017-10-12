@@ -16,13 +16,17 @@ static struct fio_mutex *flow_lock;
 int flow_threshold_exceeded(struct thread_data *td)
 {
 	struct fio_flow *flow = td->flow;
-	int sign;
+	long long flow_counter;
 
 	if (!flow)
 		return 0;
 
-	sign = td->o.flow > 0 ? 1 : -1;
-	if (sign * flow->flow_counter > td->o.flow_watermark) {
+	if (td->o.flow > 0)
+		flow_counter = flow->flow_counter;
+	else
+		flow_counter = -flow->flow_counter;
+
+	if (flow_counter > td->o.flow_watermark) {
 		if (td->o.flow_sleep) {
 			io_u_quiesce(td);
 			usleep(td->o.flow_sleep);
