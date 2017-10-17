@@ -343,6 +343,8 @@ CYGWIN*)
   # Flags below are still necessary mostly for MinGW.
   socklen_t="yes"
   sfaa="yes"
+  sync_sync="yes"
+  cmp_swap="yes"
   rusage_thread="yes"
   fdatasync="yes"
   clock_gettime="yes" # clock_monotonic probe has dependency on this
@@ -705,6 +707,44 @@ if compile_prog "" "" "__sync_fetch_and_add()" ; then
     sfaa="yes"
 fi
 print_config "__sync_fetch_and_add" "$sfaa"
+
+##########################################
+# __sync_synchronize() test
+if test "$sync_sync" != "yes" ; then
+  sync_sync="no"
+fi
+cat > $TMPC << EOF
+#include <inttypes.h>
+
+int main(int argc, char **argv)
+{
+  __sync_synchronize();
+  return 0;
+}
+EOF
+if compile_prog "" "" "__sync_synchronize()" ; then
+    sync_sync="yes"
+fi
+print_config "__sync_synchronize" "$sync_sync"
+
+##########################################
+# __sync_val_compare_and_swap() test
+if test "$cmp_swap" != "yes" ; then
+  cmp_swap="no"
+fi
+cat > $TMPC << EOF
+#include <inttypes.h>
+
+int main(int argc, char **argv)
+{
+  int x = 0;
+  return __sync_val_compare_and_swap(&x, 1, 2);
+}
+EOF
+if compile_prog "" "" "__sync_val_compare_and_swap()" ; then
+    cmp_swap="yes"
+fi
+print_config "__sync_val_compare_and_swap" "$cmp_swap"
 
 ##########################################
 # libverbs probe
@@ -2107,6 +2147,12 @@ if test "$sync_file_range" = "yes" ; then
 fi
 if test "$sfaa" = "yes" ; then
   output_sym "CONFIG_SFAA"
+fi
+if test "$sync_sync" = "yes" ; then
+  output_sym "CONFIG_SYNC_SYNC"
+fi
+if test "$cmp_swap" = "yes" ; then
+  output_sym "CONFIG_CMP_SWAP"
 fi
 if test "$libverbs" = "yes" -a "$rdmacm" = "yes" ; then
   output_sym "CONFIG_RDMA"
