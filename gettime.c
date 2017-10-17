@@ -548,7 +548,7 @@ uint64_t time_since_now(const struct timespec *s)
 }
 
 #if defined(FIO_HAVE_CPU_AFFINITY) && defined(ARCH_HAVE_CPU_CLOCK)  && \
-    defined(CONFIG_SFAA)
+    defined(CONFIG_SYNC_SYNC) && defined(CONFIG_CMP_SWAP)
 
 #define CLOCK_ENTRIES_DEBUG	100000
 #define CLOCK_ENTRIES_TEST	1000
@@ -570,9 +570,10 @@ struct clock_thread {
 	struct clock_entry *entries;
 };
 
-static inline uint32_t atomic32_inc_return(uint32_t *seq)
+static inline uint32_t atomic32_compare_and_swap(uint32_t *ptr, uint32_t old,
+						 uint32_t new)
 {
-	return 1 + __sync_fetch_and_add(seq, 1);
+	return __sync_val_compare_and_swap(ptr, old, new);
 }
 
 static void *clock_thread_fn(void *data)
@@ -580,7 +581,6 @@ static void *clock_thread_fn(void *data)
 	struct clock_thread *t = data;
 	struct clock_entry *c;
 	os_cpu_mask_t cpu_mask;
-	uint32_t last_seq;
 	unsigned long long first;
 	int i;
 
@@ -604,7 +604,6 @@ static void *clock_thread_fn(void *data)
 	pthread_mutex_unlock(&t->started);
 
 	first = get_cpu_clock();
-	last_seq = 0;
 	c = &t->entries[0];
 	for (i = 0; i < t->nr_entries; i++, c++) {
 		uint32_t seq;
@@ -612,11 +611,15 @@ static void *clock_thread_fn(void *data)
 
 		c->cpu = t->cpu;
 		do {
-			seq = atomic32_inc_return(t->seq);
-			if (seq < last_seq)
+			seq = *t->seq;
+			if (seq == UINT_MAX)
 				break;
+			__sync_synchronize();
 			tsc = get_cpu_clock();
-		} while (seq != *t->seq);
+		} while (seq != atomic32_compare_and_swap(t->seq, seq, seq + 1));
+
+		if (seq == UINT_MAX)
+			break;
 
 		c->seq = seq;
 		c->tsc = tsc;
@@ -634,7 +637,7 @@ static void *clock_thread_fn(void *data)
 	 * The most common platform clock breakage is returning zero
 	 * indefinitely. Check for that and return failure.
 	 */
-	if (!t->entries[i - 1].tsc && !t->entries[0].tsc)
+	if (i > 1 && !t->entries[i - 1].tsc && !t->entries[0].tsc)
 		goto err;
 
 	fio_cpuset_exit(&cpu_mask);
