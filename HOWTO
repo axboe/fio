@@ -218,7 +218,7 @@ Command line options
 
 	Set the maximum number of threads/processes to support to `nr`.
 	NOTE: On Linux, it may be necessary to increase the shared-memory
-	limit ('/proc/sys/kernel/shmmax') if fio runs into errors while
+	limit (:file:`/proc/sys/kernel/shmmax`) if fio runs into errors while
 	creating jobs.
 
 .. option:: --server=args
@@ -233,7 +233,7 @@ Command line options
 .. option:: --client=hostname
 
 	Instead of running the jobs locally, send and run them on the given `hostname`
-	or set of `hostname`s.  See `Client/Server`_ section.
+	or set of `hostname`\s.  See `Client/Server`_ section.
 
 .. option:: --remote-config=file
 
@@ -1715,7 +1715,7 @@ I/O engine
 			Doesn't transfer any data, but burns CPU cycles according to the
 			:option:`cpuload` and :option:`cpuchunks` options. Setting
 			:option:`cpuload`\=85 will cause that job to do nothing but burn 85%
-			of the CPU. In case of SMP machines, use :option:`numjobs`=<nr_of_cpu>
+			of the CPU. In case of SMP machines, use :option:`numjobs`\=<nr_of_cpu>
 			to get desired CPU usage, as the cpuload only loads a
 			single CPU at the desired rate. A job never finishes unless there is
 			at least one non-cpuio job.
