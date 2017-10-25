@@ -556,8 +556,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			return 1;
 		}
 		if (o->minval && ull < o->minval) {
-			log_err("min value out of range: %llu"
-					" (%u min)\n", ull, o->minval);
+			log_err("min value out of range: %lld"
+					" (%d min)\n", ull, o->minval);
 			return 1;
 		}
 		if (o->posval[0].ival) {
