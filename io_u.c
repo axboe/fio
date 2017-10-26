@@ -323,6 +323,17 @@ fetch:
 	goto fetch;
 }
 
+static void loop_cache_invalidate(struct thread_data *td, struct fio_file *f)
+{
+	struct thread_options *o = &td->o;
+
+	if (o->invalidate_cache && !o->odirect) {
+		int fio_unused ret;
+
+		ret = file_invalidate_cache(td, f);
+	}
+}
+
 static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 			       enum fio_ddir ddir, uint64_t *b)
 {
@@ -334,6 +345,7 @@ static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 		fio_file_reset(td, f);
 		if (!get_next_rand_offset(td, f, ddir, b))
 			return 0;
+		loop_cache_invalidate(td, f);
 	}
 
 	dprint(FD_IO, "%s: rand offset failed, last=%llu, size=%llu\n",
@@ -358,6 +370,8 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 			f->last_pos[ddir] = 0;
 		else
 			f->last_pos[ddir] = f->last_pos[ddir] - io_size;
+
+		loop_cache_invalidate(td, f);
 	}
 
 	if (f->last_pos[ddir] < f->real_file_size) {
