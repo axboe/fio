@@ -2019,6 +2019,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "offset_align",
+		.lname	= "IO offset alignment",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, start_offset_align),
+		.help	= "Start IO from this offset alignment",
+		.def	= "0",
+		.interval = 512,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "offset_increment",
 		.lname	= "IO offset increment",
 		.type	= FIO_OPT_STR_VAL,

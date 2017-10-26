@@ -869,12 +869,10 @@ uint64_t get_start_offset(struct thread_data *td, struct fio_file *f)
 
 	if (o->start_offset_percent > 0) {
 		/*
-		 * if blockalign is provided, find the min across read, write,
-		 * and trim
+		 * if offset_align is provided, set initial offset
 		 */
-		if (fio_option_is_set(o, ba)) {
-			align_bs = (unsigned long long) min(o->ba[DDIR_READ], o->ba[DDIR_WRITE]);
-			align_bs = min((unsigned long long) o->ba[DDIR_TRIM], align_bs);
+		if (fio_option_is_set(o, start_offset_align)) {
+			align_bs = o->start_offset_align;
 		} else {
 			/* else take the minimum block size */
 			align_bs = td_min_bs(td);

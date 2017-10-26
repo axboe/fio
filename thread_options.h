@@ -78,6 +78,7 @@ struct thread_options {
 	unsigned long long file_size_low;
 	unsigned long long file_size_high;
 	unsigned long long start_offset;
+	unsigned long long start_offset_align;
 
 	unsigned int bs[DDIR_RWDIR_CNT];
 	unsigned int ba[DDIR_RWDIR_CNT];
@@ -355,6 +356,7 @@ struct thread_options_pack {
 	uint64_t file_size_low;
 	uint64_t file_size_high;
 	uint64_t start_offset;
+	uint64_t start_offset_align;
 
 	uint32_t bs[DDIR_RWDIR_CNT];
 	uint32_t ba[DDIR_RWDIR_CNT];
