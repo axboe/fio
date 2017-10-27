@@ -1285,13 +1285,15 @@ bool parse_dryrun(void)
 }
 
 static void gen_log_name(char *name, size_t size, const char *logtype,
-			 const char *logname, unsigned int num,
+			 const char *logname, const char *jobname, unsigned int num,
 			 const char *suf, int per_job)
 {
 	if (per_job)
-		snprintf(name, size, "%s_%s.%d.%s", logname, logtype, num, suf);
+		snprintf(name, size, "%s_%s_%s.%d.%s", logname, logtype,
+			jobname, num, suf);
 	else
-		snprintf(name, size, "%s_%s.%s", logname, logtype, suf);
+		snprintf(name, size, "%s_%s_%s.%s", logname, logtype,
+			jobname, suf);
 }
 
 static int check_waitees(char *waitee)
@@ -1468,15 +1470,15 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			suf = "log";
 
 		gen_log_name(logname, sizeof(logname), "lat", pre,
-				td->thread_number, suf, o->per_job_logs);
+				jobname, td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->lat_log, &p, logname);
 
 		gen_log_name(logname, sizeof(logname), "slat", pre,
-				td->thread_number, suf, o->per_job_logs);
+				jobname, td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->slat_log, &p, logname);
 
 		gen_log_name(logname, sizeof(logname), "clat", pre,
-				td->thread_number, suf, o->per_job_logs);
+				jobname, td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->clat_log, &p, logname);
 	}
 
@@ -1507,7 +1509,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			suf = "log";
 
 		gen_log_name(logname, sizeof(logname), "clat_hist", pre,
-				td->thread_number, suf, o->per_job_logs);
+				jobname, td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->clat_hist_log, &p, logname);
 	}
 
@@ -1539,7 +1541,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			suf = "log";
 
 		gen_log_name(logname, sizeof(logname), "bw", pre,
-				td->thread_number, suf, o->per_job_logs);
+				jobname, td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->bw_log, &p, logname);
 	}
 	if (o->write_iops_log) {
@@ -1570,7 +1572,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			suf = "log";
 
 		gen_log_name(logname, sizeof(logname), "iops", pre,
-				td->thread_number, suf, o->per_job_logs);
+				jobname, td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->iops_log, &p, logname);
 	}
 
