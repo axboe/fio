@@ -1815,9 +1815,9 @@ I/O engine
 			details of writing an external I/O engine.
 
 		**filecreate**
-			Simply create the files and do no IO to them.  You still need to
+			Simply create the files and do no I/O to them.  You still need to
 			set  `filesize` so that all the accounting still occurs, but no
-			actual IO will be done other than creating the file.
+			actual I/O will be done other than creating the file.
 
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2888,7 +2888,7 @@ Measurements and reporting
 
 .. option:: lat_percentiles=bool
 
-	Enable the reporting of percentiles of IO latencies. This is similar
+	Enable the reporting of percentiles of I/O latencies. This is similar
 	to :option:`clat_percentiles`, except that this includes the
 	submission latency. This option is mutually exclusive with
 	:option:`clat_percentiles`.

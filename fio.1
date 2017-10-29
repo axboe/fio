@@ -1593,8 +1593,9 @@ absolute or relative. See `engines/skeleton_external.c' in the fio source for
 details of writing an external I/O engine.
 .TP
 .B filecreate
-Create empty files only.  \fBfilesize\fR still needs to be specified so that fio
-will run and grab latency results, but no IO will actually be done on the files.
+Simply create the files and do no I/O to them.  You still need to set
+\fBfilesize\fR so that all the accounting still occurs, but no actual I/O will be
+done other than creating the file.
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
 \fBioengine\fR is in use. These are used identically to normal parameters,
@@ -2567,7 +2568,7 @@ Enable the reporting of percentiles of completion latencies. This option is
 mutually exclusive with \fBlat_percentiles\fR.
 .TP
 .BI lat_percentiles \fR=\fPbool
-Enable the reporting of percentiles of IO latencies. This is similar to
+Enable the reporting of percentiles of I/O latencies. This is similar to
 \fBclat_percentiles\fR, except that this includes the submission latency.
 This option is mutually exclusive with \fBclat_percentiles\fR.
 .TP
