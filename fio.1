@@ -2420,48 +2420,48 @@ the final stat output.
 .TP
 .BI write_bw_log \fR=\fPstr
 If given, write a bandwidth log for this job. Can be used to store data of
-the bandwidth of the jobs in their lifetime. The included
-\fBfio_generate_plots\fR script uses gnuplot to turn these
-text files into nice graphs. See \fBwrite_lat_log\fR for behavior of
-given filename. For this option, the postfix is `_bw.x.log', where `x'
-is the index of the job (1..N, where N is the number of jobs). If
-\fBper_job_logs\fR is false, then the filename will not include the job
-index. See \fBLOG FILE FORMATS\fR section.
+the bandwidth of the jobs in their lifetime.
+.RS
+.P
+If no str argument is given, the default filename of
+`jobname_type.x.log' is used. Even when the argument is given, fio
+will still append the type of log. So if one specifies:
+.RS
+.P
+write_bw_log=foo
+.RE
+.P
+The actual log name will be `foo_bw.x.log' where `x' is the index
+of the job (1..N, where N is the number of jobs). If
+\fBper_job_logs\fR is false, then the filename will not include the
+`.x` job index.
+.P
+The included \fBfio_generate_plots\fR script uses gnuplot to turn these
+text files into nice graphs. See the \fBLOG FILE FORMATS\fR section for how data is
+structured within the file.
+.RE
 .TP
 .BI write_lat_log \fR=\fPstr
-Same as \fBwrite_bw_log\fR, except that this option stores I/O
-submission, completion, and total latencies instead. If no filename is given
-with this option, the default filename of `jobname_type.log' is
-used. Even if the filename is given, fio will still append the type of
-log. So if one specifies:
-.RS
-.RS
-.P
-write_lat_log=foo
-.RE
-.P
-The actual log names will be `foo_slat.x.log', `foo_clat.x.log',
-and `foo_lat.x.log', where `x' is the index of the job (1..N, where N
-is the number of jobs). This helps \fBfio_generate_plots\fR find the
-logs automatically. If \fBper_job_logs\fR is false, then the filename
-will not include the job index. See \fBLOG FILE FORMATS\fR section.
-.RE
+Same as \fBwrite_bw_log\fR, except this option creates I/O
+submission (e.g., `name_slat.x.log'), completion (e.g.,
+`name_clat.x.log'), and total (e.g., `name_lat.x.log') latency
+files instead. See \fBwrite_bw_log\fR for details about the
+filename format and the \fBLOG FILE FORMATS\fR section for how data is structured
+within the files.
 .TP
 .BI write_hist_log \fR=\fPstr
-Same as \fBwrite_lat_log\fR, but writes I/O completion latency
-histograms. If no filename is given with this option, the default filename
-of `jobname_clat_hist.x.log' is used, where `x' is the index of the
-job (1..N, where N is the number of jobs). Even if the filename is given,
-fio will still append the type of log. If \fBper_job_logs\fR is false,
-then the filename will not include the job index. See \fBLOG FILE FORMATS\fR section.
+Same as \fBwrite_bw_log\fR but writes an I/O completion latency
+histogram file (e.g., `name_hist.x.log') instead. Note that this
+file will be empty unless \fBlog_hist_msec\fR has also been set.
+See \fBwrite_bw_log\fR for details about the filename format and
+the \fBLOG FILE FORMATS\fR section for how data is structured
+within the file.
 .TP
 .BI write_iops_log \fR=\fPstr
-Same as \fBwrite_bw_log\fR, but writes IOPS. If no filename is given
-with this option, the default filename of `jobname_type.x.log' is
-used, where `x' is the index of the job (1..N, where N is the number of
-jobs). Even if the filename is given, fio will still append the type of
-log. If \fBper_job_logs\fR is false, then the filename will not include
-the job index. See \fBLOG FILE FORMATS\fR section.
+Same as \fBwrite_bw_log\fR, but writes an IOPS file (e.g.
+`name_iops.x.log') instead. See \fBwrite_bw_log\fR for
+details about the filename format and the \fBLOG FILE FORMATS\fR section for how data
+is structured within the file.
 .TP
 .BI log_avg_msec \fR=\fPint
 By default, fio will log an entry in the iops, latency, or bw log for every
@@ -2477,8 +2477,8 @@ histograms. Computing latency percentiles from averages of intervals using
 \fBlog_avg_msec\fR is inaccurate. Setting this option makes fio log
 histogram entries over the specified period of time, reducing log sizes for
 high IOPS devices while retaining percentile accuracy. See
-\fBlog_hist_coarseness\fR as well. Defaults to 0, meaning histogram
-logging is disabled.
+\fBlog_hist_coarseness\fR and \fBwrite_hist_log\fR as well.
+Defaults to 0, meaning histogram logging is disabled.
 .TP
 .BI log_hist_coarseness \fR=\fPint
 Integer ranging from 0 to 6, defining the coarseness of the resolution of
