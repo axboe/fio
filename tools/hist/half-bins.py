@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/python2.7
 """ Cut the number bins in half in fio histogram output. Example usage:
 
         $ half-bins.py -c 2 output_clat_hist.1.log > smaller_clat_hist.1.log
@@ -35,4 +35,3 @@ if __name__ == '__main__':
             'e.g. coarseness of 4 merges each 2^4 = 16 consecutive '
             'bins.')
     main(p.parse_args())
-

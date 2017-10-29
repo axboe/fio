@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # fiologparser.py
 #
@@ -218,4 +218,3 @@ if __name__ == '__main__':
         print_all_stats(ctx, series)
     else:
         print_default(ctx, series)
-
