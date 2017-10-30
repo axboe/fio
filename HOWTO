@@ -1815,9 +1815,9 @@ I/O engine
 			details of writing an external I/O engine.
 
 		**filecreate**
-			Simply create the files and do no IO to them.  You still need to
+			Simply create the files and do no I/O to them.  You still need to
 			set  `filesize` so that all the accounting still occurs, but no
-			actual IO will be done other than creating the file.
+			actual I/O will be done other than creating the file.
 
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2060,7 +2060,7 @@ I/O depth
 	changing data and the overlapping region has a non-zero size. Setting
 	``serialize_overlap`` tells fio to avoid provoking this behavior by explicitly
 	serializing in-flight I/Os that have a non-zero overlap. Note that setting
-	this option can reduce both performance and the `:option:iodepth` achieved.
+	this option can reduce both performance and the :option:`iodepth` achieved.
 	Additionally this option does not work when :option:`io_submit_mode` is set to
 	offload. Default: false.
 
@@ -2722,47 +2722,46 @@ Measurements and reporting
 .. option:: write_bw_log=str
 
 	If given, write a bandwidth log for this job. Can be used to store data of
-	the bandwidth of the jobs in their lifetime. The included
-	:command:`fio_generate_plots` script uses :command:`gnuplot` to turn these
-	text files into nice graphs. See :option:`write_lat_log` for behavior of
-	given filename. For this option, the postfix is :file:`_bw.x.log`, where `x`
-	is the index of the job (`1..N`, where `N` is the number of jobs). If
-	:option:`per_job_logs` is false, then the filename will not include the job
-	index.  See `Log File Formats`_.
+	the bandwidth of the jobs in their lifetime.
+
+	If no str argument is given, the default filename of
+	:file:`jobname_type.x.log` is used. Even when the argument is given, fio
+	will still append the type of log. So if one specifies::
+
+		write_bw_log=foo
+
+	The actual log name will be :file:`foo_bw.x.log` where `x` is the index
+	of the job (`1..N`, where `N` is the number of jobs). If
+	:option:`per_job_logs` is false, then the filename will not include the
+	`.x` job index.
+
+	The included :command:`fio_generate_plots` script uses :command:`gnuplot` to turn these
+	text files into nice graphs. See `Log File Formats`_ for how data is
+	structured within the file.
 
 .. option:: write_lat_log=str
 
-	Same as :option:`write_bw_log`, except that this option stores I/O
-	submission, completion, and total latencies instead. If no filename is given
-	with this option, the default filename of :file:`jobname_type.log` is
-	used. Even if the filename is given, fio will still append the type of
-	log. So if one specifies::
-
-		write_lat_log=foo
-
-	The actual log names will be :file:`foo_slat.x.log`, :file:`foo_clat.x.log`,
-	and :file:`foo_lat.x.log`, where `x` is the index of the job (`1..N`, where `N`
-	is the number of jobs). This helps :command:`fio_generate_plots` find the
-	logs automatically. If :option:`per_job_logs` is false, then the filename
-	will not include the job index.  See `Log File Formats`_.
+	Same as :option:`write_bw_log`, except this option creates I/O
+	submission (e.g., `file:`name_slat.x.log`), completion (e.g.,
+	`file:`name_clat.x.log`), and total (e.g., `file:`name_lat.x.log`)
+	latency files instead. See :option:`write_bw_log` for details about
+	the filename format and `Log File Formats`_ for how data is structured
+	within the files.
 
 .. option:: write_hist_log=str
 
-	Same as :option:`write_lat_log`, but writes I/O completion latency
-	histograms. If no filename is given with this option, the default filename
-	of :file:`jobname_clat_hist.x.log` is used, where `x` is the index of the
-	job (`1..N`, where `N` is the number of jobs). Even if the filename is given,
-	fio will still append the type of log.  If :option:`per_job_logs` is false,
-	then the filename will not include the job index. See `Log File Formats`_.
+	Same as :option:`write_bw_log` but writes an I/O completion latency
+	histogram file (e.g., `file:`name_hist.x.log`) instead. Note that this
+	file will be empty unless :option:`log_hist_msec` has also been set.
+	See :option:`write_bw_log` for details about the filename format and
+	`Log File Formats`_ for how data is structured within the file.
 
 .. option:: write_iops_log=str
 
-	Same as :option:`write_bw_log`, but writes IOPS. If no filename is given
-	with this option, the default filename of :file:`jobname_type.x.log` is
-	used, where `x` is the index of the job (`1..N`, where `N` is the number of
-	jobs). Even if the filename is given, fio will still append the type of
-	log. If :option:`per_job_logs` is false, then the filename will not include
-	the job index. See `Log File Formats`_.
+	Same as :option:`write_bw_log`, but writes an IOPS file (e.g.
+	`file:`name_iops.x.log`) instead. See :option:`write_bw_log` for
+	details about the filename format and `Log File Formats`_ for how data
+	is structured within the file.
 
 .. option:: log_avg_msec=int
 
@@ -2780,15 +2779,16 @@ Measurements and reporting
 	:option:`log_avg_msec` is inaccurate. Setting this option makes fio log
 	histogram entries over the specified period of time, reducing log sizes for
 	high IOPS devices while retaining percentile accuracy.  See
-	:option:`log_hist_coarseness` as well. Defaults to 0, meaning histogram
-	logging is disabled.
+	:option:`log_hist_coarseness` and :option:`write_hist_log` as well.
+	Defaults to 0, meaning histogram logging is disabled.
 
 .. option:: log_hist_coarseness=int
 
 	Integer ranging from 0 to 6, defining the coarseness of the resolution of
 	the histogram logs enabled with :option:`log_hist_msec`. For each increment
 	in coarseness, fio outputs half as many bins. Defaults to 0, for which
-	histogram logs contain 1216 latency bins. See `Log File Formats`_.
+	histogram logs contain 1216 latency bins. See :option:`write_hist_log`
+	and `Log File Formats`_.
 
 .. option:: log_max_value=bool
 
@@ -2888,7 +2888,7 @@ Measurements and reporting
 
 .. option:: lat_percentiles=bool
 
-	Enable the reporting of percentiles of IO latencies. This is similar
+	Enable the reporting of percentiles of I/O latencies. This is similar
 	to :option:`clat_percentiles`, except that this includes the
 	submission latency. This option is mutually exclusive with
 	:option:`clat_percentiles`.
@@ -3258,7 +3258,7 @@ writes in the example above).  In the order listed, they denote:
 		short or dropped.
 
 **IO latency**
-		These values are for `--latency-target` and related options. When
+		These values are for :option:`latency_target` and related options. When
 		these options are engaged, this section describes the I/O depth required
 		to meet the specified latency target.
 

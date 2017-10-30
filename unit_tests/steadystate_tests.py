@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # steadystate_tests.py
 #
 # Test option parsing and functonality for fio's steady state detection feature.
 #
-# steadystate_tests.py ./fio file-for-read-testing file-for-write-testing
+# steadystate_tests.py --read file-for-read-testing --write file-for-write-testing ./fio
 #
 # REQUIREMENTS
 # Python 2.6+
