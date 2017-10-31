@@ -1252,7 +1252,7 @@ will provide \fBbuffer_compress_percentage\fR of blocksize random data,
 followed by the remaining zeroed. With this set to some chunk size smaller
 than the block size, fio can alternate random and zeroed data throughout the
 I/O buffer. This is particularly useful when bigger block sizes are used
-for a job.
+for a job. Defaults to 512.
 .TP
 .BI buffer_pattern \fR=\fPstr
 If set, fio will fill the I/O buffers with this pattern or with the contents

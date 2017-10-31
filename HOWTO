@@ -1464,7 +1464,7 @@ Buffers and memory
 	followed by the remaining zeroed. With this set to some chunk size smaller
 	than the block size, fio can alternate random and zeroed data throughout the
 	I/O buffer. This is particularly useful when bigger block sizes are used
-	for a job.
+	for a job. Defaults to 512.
 
 .. option:: buffer_pattern=str
 

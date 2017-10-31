@@ -4067,6 +4067,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent	= "buffer_compress_percentage",
 		.hide	= 1,
 		.help	= "Size of compressible region in buffer",
+		.def	= "512",
 		.interval = 256,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_IO_BUF,
