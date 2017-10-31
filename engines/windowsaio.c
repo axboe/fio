@@ -94,15 +94,13 @@ static int fio_windowsaio_init(struct thread_data *td)
 		if (!rc)
 			ctx = malloc(sizeof(struct thread_ctx));
 
-		if (!rc && ctx == NULL)
-		{
+		if (!rc && ctx == NULL) {
 			log_err("windowsaio: failed to allocate memory for thread context structure\n");
 			CloseHandle(hFile);
 			rc = 1;
 		}
 
-		if (!rc)
-		{
+		if (!rc) {
 			DWORD threadid;
 
 			ctx->iocp = hFile;
@@ -146,7 +144,7 @@ static int windowsaio_invalidate_cache(struct fio_file *f)
 {
 	DWORD error;
 	DWORD isharemode = (FILE_SHARE_DELETE | FILE_SHARE_READ |
-			FILE_SHARE_WRITE);
+				FILE_SHARE_WRITE);
 	HANDLE ihFile;
 	int rc = 0;
 
@@ -348,7 +346,8 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 				break;
 		}
 
-		if (dequeued >= min || (t != NULL && timeout_expired(start_count, end_count)))
+		if (dequeued >= min ||
+		    (t != NULL && timeout_expired(start_count, end_count)))
 			break;
 	} while (1);
 
@@ -371,10 +370,12 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 
 	switch (io_u->ddir) {
 	case DDIR_WRITE:
-		success = WriteFile(io_u->file->hFile, io_u->xfer_buf, io_u->xfer_buflen, NULL, lpOvl);
+		success = WriteFile(io_u->file->hFile, io_u->xfer_buf,
+					io_u->xfer_buflen, NULL, lpOvl);
 		break;
 	case DDIR_READ:
-		success = ReadFile(io_u->file->hFile, io_u->xfer_buf, io_u->xfer_buflen, NULL, lpOvl);
+		success = ReadFile(io_u->file->hFile, io_u->xfer_buf,
+					io_u->xfer_buflen, NULL, lpOvl);
 		break;
 	case DDIR_SYNC:
 	case DDIR_DATASYNC:
@@ -386,13 +387,11 @@ static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 		}
 
 		return FIO_Q_COMPLETED;
-		break;
 	case DDIR_TRIM:
 		log_err("windowsaio: manual TRIM isn't supported on Windows\n");
 		io_u->error = 1;
 		io_u->resid = io_u->xfer_buflen;
 		return FIO_Q_COMPLETED;
-		break;
 	default:
 		assert(0);
 		break;
@@ -423,7 +422,11 @@ static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter)
 	wd = ctx->wd;
 
 	do {
-		if (!GetQueuedCompletionStatus(ctx->iocp, &bytes, &ulKey, &ovl, 250) && ovl == NULL)
+		BOOL ret;
+
+		ret = GetQueuedCompletionStatus(ctx->iocp, &bytes, &ulKey,
+						&ovl, 250);
+		if (!ret && ovl == NULL)
 			continue;
 
 		fov = CONTAINING_RECORD(ovl, struct fio_overlapped, o);
