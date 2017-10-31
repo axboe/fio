@@ -855,8 +855,10 @@ static int fixup_options(struct thread_data *td)
 		if (o->compress_percentage == 100) {
 			o->zero_buffers = 1;
 			o->compress_percentage = 0;
-		} else if (!fio_option_is_set(o, refill_buffers))
+		} else if (!fio_option_is_set(o, refill_buffers)) {
 			o->refill_buffers = 1;
+			td->flags |= TD_F_REFILL_BUFFERS;
+		}
 	}
 
 	/*
