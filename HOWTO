@@ -1453,8 +1453,8 @@ Buffers and memory
 	mix of random data and a fixed pattern. The fixed pattern is either zeros,
 	or the pattern specified by :option:`buffer_pattern`. If the pattern option
 	is used, it might skew the compression ratio slightly. Note that this is per
-	block size unit, for file/disk wide compression level that matches this
-	setting, you'll also want to set :option:`refill_buffers`.
+	block size unit, see :option:`buffer_compress_chunk` for setting a finer
+	granularity of compression regions.
 
 .. option:: buffer_compress_chunk=int
 
@@ -1463,7 +1463,8 @@ Buffers and memory
 	will provide :option:`buffer_compress_percentage` of blocksize random data,
 	followed by the remaining zeroed. With this set to some chunk size smaller
 	than the block size, fio can alternate random and zeroed data throughout the
-	I/O buffer.
+	I/O buffer. This is particularly useful when bigger block sizes are used
+	for a job.
 
 .. option:: buffer_pattern=str
 

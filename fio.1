@@ -1242,8 +1242,8 @@ WRITEs) that compresses to the specified level. Fio does this by providing a
 mix of random data and a fixed pattern. The fixed pattern is either zeros,
 or the pattern specified by \fBbuffer_pattern\fR. If the pattern option
 is used, it might skew the compression ratio slightly. Note that this is per
-block size unit, for file/disk wide compression level that matches this
-setting, you'll also want to set \fBrefill_buffers\fR.
+block size unit, see \fBbuffer_compress_chunk\fR for setting a finer granularity
+of compressible regions.
 .TP
 .BI buffer_compress_chunk \fR=\fPint
 See \fBbuffer_compress_percentage\fR. This setting allows fio to manage
@@ -1251,7 +1251,8 @@ how big the ranges of random data and zeroed data is. Without this set, fio
 will provide \fBbuffer_compress_percentage\fR of blocksize random data,
 followed by the remaining zeroed. With this set to some chunk size smaller
 than the block size, fio can alternate random and zeroed data throughout the
-I/O buffer.
+I/O buffer. This is particularly useful when bigger block sizes are used
+for a job.
 .TP
 .BI buffer_pattern \fR=\fPstr
 If set, fio will fill the I/O buffers with this pattern or with the contents
