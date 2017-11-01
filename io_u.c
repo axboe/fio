@@ -361,16 +361,13 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 
 	assert(ddir_rw(ddir));
 
+	/*
+	 * If we reach the end for a time based run, reset us back to 0
+	 * and invalidate the cache, if we need to.
+	 */
 	if (f->last_pos[ddir] >= f->io_size + get_start_offset(td, f) &&
 	    o->time_based) {
-		struct thread_options *o = &td->o;
-		uint64_t io_size = f->io_size + (f->io_size % o->min_bs[ddir]);
-
-		if (io_size > f->last_pos[ddir])
-			f->last_pos[ddir] = 0;
-		else
-			f->last_pos[ddir] = f->last_pos[ddir] - io_size;
-
+		f->last_pos[ddir] = 0;
 		loop_cache_invalidate(td, f);
 	}
 
