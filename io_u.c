@@ -367,7 +367,7 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 	 */
 	if (f->last_pos[ddir] >= f->io_size + get_start_offset(td, f) &&
 	    o->time_based) {
-		f->last_pos[ddir] = 0;
+		f->last_pos[ddir] = f->file_offset;
 		loop_cache_invalidate(td, f);
 	}
 
