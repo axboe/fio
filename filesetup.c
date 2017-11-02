@@ -1737,10 +1737,10 @@ void unlock_file_all(struct thread_data *td, struct fio_file *f)
 		unlock_file(td, f);
 }
 
-static int recurse_dir(struct thread_data *td, const char *dirname)
+static bool recurse_dir(struct thread_data *td, const char *dirname)
 {
 	struct dirent *dir;
-	int ret = 0;
+	bool ret = false;
 	DIR *D;
 
 	D = opendir(dirname);
@@ -1749,7 +1749,7 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 
 		snprintf(buf, FIO_VERROR_SIZE, "opendir(%s)", dirname);
 		td_verror(td, errno, buf);
-		return 1;
+		return true;
 	}
 
 	while ((dir = readdir(D)) != NULL) {
@@ -1764,7 +1764,7 @@ static int recurse_dir(struct thread_data *td, const char *dirname)
 		if (lstat(full_path, &sb) == -1) {
 			if (errno != ENOENT) {
 				td_verror(td, errno, "stat");
-				ret = 1;
+				ret = true;
 				break;
 			}
 		}
