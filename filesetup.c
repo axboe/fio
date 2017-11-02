@@ -59,8 +59,6 @@ static int native_fallocate(struct thread_data *td, struct fio_file *f)
 
 static void fallocate_file(struct thread_data *td, struct fio_file *f)
 {
-	int r;
-
 	if (td->o.fill_device)
 		return;
 
@@ -71,7 +69,9 @@ static void fallocate_file(struct thread_data *td, struct fio_file *f)
 	case FIO_FALLOCATE_NONE:
 		break;
 #ifdef CONFIG_POSIX_FALLOCATE
-	case FIO_FALLOCATE_POSIX:
+	case FIO_FALLOCATE_POSIX: {
+		int r;
+
 		dprint(FD_FILE, "posix_fallocate file %s size %llu\n",
 				 f->file_name,
 				 (unsigned long long) f->real_file_size);
@@ -80,9 +80,12 @@ static void fallocate_file(struct thread_data *td, struct fio_file *f)
 		if (r > 0)
 			log_err("fio: posix_fallocate fails: %s\n", strerror(r));
 		break;
+		}
 #endif /* CONFIG_POSIX_FALLOCATE */
 #ifdef CONFIG_LINUX_FALLOCATE
-	case FIO_FALLOCATE_KEEP_SIZE:
+	case FIO_FALLOCATE_KEEP_SIZE: {
+		int r;
+
 		dprint(FD_FILE, "fallocate(FALLOC_FL_KEEP_SIZE) "
 				"file %s size %llu\n", f->file_name,
 				(unsigned long long) f->real_file_size);
@@ -92,6 +95,7 @@ static void fallocate_file(struct thread_data *td, struct fio_file *f)
 			td_verror(td, errno, "fallocate");
 
 		break;
+		}
 #endif /* CONFIG_LINUX_FALLOCATE */
 	default:
 		log_err("fio: unknown fallocate mode: %d\n", td->o.fallocate_mode);
