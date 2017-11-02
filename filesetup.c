@@ -255,24 +255,25 @@ err:
 	return 1;
 }
 
-static int pre_read_file(struct thread_data *td, struct fio_file *f)
+static bool pre_read_file(struct thread_data *td, struct fio_file *f)
 {
-	int ret = 0, r, did_open = 0, old_runstate;
+	int r, did_open = 0, old_runstate;
 	unsigned long long left;
 	unsigned int bs;
+	bool ret = true;
 	char *b;
 
 	if (td_ioengine_flagged(td, FIO_PIPEIO) ||
 	    td_ioengine_flagged(td, FIO_NOIO))
-		return 0;
+		return true;
 
 	if (f->filetype == FIO_TYPE_CHAR)
-		return 0;
+		return true;
 
 	if (!fio_file_open(f)) {
 		if (td->io_ops->open_file(td, f)) {
 			log_err("fio: cannot pre-read, failed to open file\n");
-			return 1;
+			return false;
 		}
 		did_open = 1;
 	}
@@ -287,7 +288,7 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 	b = malloc(bs);
 	if (!b) {
 		td_verror(td, errno, "malloc");
-		ret = 1;
+		ret = false;
 		goto error;
 	}
 	memset(b, 0, bs);
@@ -295,7 +296,7 @@ static int pre_read_file(struct thread_data *td, struct fio_file *f)
 	if (lseek(f->fd, f->file_offset, SEEK_SET) < 0) {
 		td_verror(td, errno, "lseek");
 		log_err("fio: failed to lseek pre-read file\n");
-		ret = 1;
+		ret = false;
 		goto error;
 	}
 
@@ -1174,7 +1175,7 @@ err_out:
 	return 1;
 }
 
-int pre_read_files(struct thread_data *td)
+bool pre_read_files(struct thread_data *td)
 {
 	struct fio_file *f;
 	unsigned int i;
@@ -1182,11 +1183,11 @@ int pre_read_files(struct thread_data *td)
 	dprint(FD_FILE, "pre_read files\n");
 
 	for_each_file(td, f, i) {
-		if (pre_read_file(td, f))
-			return -1;
+		if (!pre_read_file(td, f))
+			return false;
 	}
 
-	return 0;
+	return true;
 }
 
 static int __init_rand_distribution(struct thread_data *td, struct fio_file *f)

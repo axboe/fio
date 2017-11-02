@@ -1698,10 +1698,8 @@ static void *thread_main(void *data)
 	if (o->exec_prerun && exec_string(o, o->exec_prerun, (const char *)"prerun"))
 		goto err;
 
-	if (o->pre_read) {
-		if (pre_read_files(td) < 0)
-			goto err;
-	}
+	if (o->pre_read && !pre_read_files(td))
+		goto err;
 
 	fio_verify_init(td);
 
