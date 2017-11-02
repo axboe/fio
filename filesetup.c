@@ -49,12 +49,12 @@ static inline int native_fallocate(struct thread_data *td, struct fio_file *f)
 			!success ? "un": "");
 
 	if (success)
-		return 0;
+		return false;
 
 	if (errno == ENOSYS)
 		dprint(FD_FILE, "native fallocate is not implemented\n");
 
-	return -1;
+	return true;
 }
 
 static void fallocate_file(struct thread_data *td, struct fio_file *f)
@@ -66,10 +66,7 @@ static void fallocate_file(struct thread_data *td, struct fio_file *f)
 
 	switch (td->o.fallocate_mode) {
 	case FIO_FALLOCATE_NATIVE:
-		r = native_fallocate(td, f);
-		if (r != 0 && errno != ENOSYS)
-			log_err("fio: native_fallocate call failed: %s\n",
-					strerror(errno));
+		native_fallocate(td, f);
 		break;
 	case FIO_FALLOCATE_NONE:
 		break;
