@@ -1203,9 +1203,9 @@ static int init_io_u(struct thread_data *td)
 		data_xfer = 0;
 
 	err = 0;
-	err += io_u_rinit(&td->io_u_requeues, td->o.iodepth);
-	err += io_u_qinit(&td->io_u_freelist, td->o.iodepth);
-	err += io_u_qinit(&td->io_u_all, td->o.iodepth);
+	err += !io_u_rinit(&td->io_u_requeues, td->o.iodepth);
+	err += !io_u_qinit(&td->io_u_freelist, td->o.iodepth);
+	err += !io_u_qinit(&td->io_u_all, td->o.iodepth);
 
 	if (err) {
 		log_err("fio: failed setting up IO queues\n");
