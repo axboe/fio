@@ -1516,7 +1516,7 @@ bool exists_and_not_regfile(const char *filename)
 	return true;
 }
 
-static int create_work_dirs(struct thread_data *td, const char *fname)
+static bool create_work_dirs(struct thread_data *td, const char *fname)
 {
 	char path[PATH_MAX];
 	char *start, *end;
@@ -1543,13 +1543,13 @@ static int create_work_dirs(struct thread_data *td, const char *fname)
 #endif
 			log_err("fio: failed to create dir (%s): %d\n",
 				start, errno);
-			return 1;
+			return false;
 		}
 		*end = FIO_OS_PATH_SEPARATOR;
 		end++;
 	}
 	td->flags |= TD_F_DIRS_CREATED;
-	return 0;
+	return true;
 }
 
 int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
@@ -1569,7 +1569,7 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 
 	if (strchr(fname, FIO_OS_PATH_SEPARATOR) &&
 	    !(td->flags & TD_F_DIRS_CREATED) &&
-	    create_work_dirs(td, fname))
+	    !create_work_dirs(td, fname))
 		return 1;
 
 	/* clean cloned siblings using existing files */
