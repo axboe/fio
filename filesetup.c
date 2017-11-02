@@ -38,7 +38,7 @@ static inline void clear_error(struct thread_data *td)
 	td->verror[0] = '\0';
 }
 
-static inline int native_fallocate(struct thread_data *td, struct fio_file *f)
+static int native_fallocate(struct thread_data *td, struct fio_file *f)
 {
 	bool success;
 
