@@ -1692,7 +1692,7 @@ static void *thread_main(void *data)
 	if (td_io_init(td))
 		goto err;
 
-	if (init_random_map(td))
+	if (!init_random_map(td))
 		goto err;
 
 	if (o->exec_prerun && exec_string(o, o->exec_prerun, (const char *)"prerun"))

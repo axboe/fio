@@ -1213,14 +1213,14 @@ static void __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 		gauss_init(&f->gauss, nranges, td->o.gauss_dev.u.f, seed);
 }
 
-static int init_rand_distribution(struct thread_data *td)
+static bool init_rand_distribution(struct thread_data *td)
 {
 	struct fio_file *f;
 	unsigned int i;
 	int state;
 
 	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM)
-		return 0;
+		return false;
 
 	state = td_bump_runstate(td, TD_SETTING_UP);
 
@@ -1228,8 +1228,7 @@ static int init_rand_distribution(struct thread_data *td)
 		__init_rand_distribution(td, f);
 
 	td_restore_runstate(td, state);
-
-	return 1;
+	return true;
 }
 
 /*
@@ -1269,16 +1268,16 @@ static int check_rand_gen_limits(struct thread_data *td, struct fio_file *f,
 	return 0;
 }
 
-int init_random_map(struct thread_data *td)
+bool init_random_map(struct thread_data *td)
 {
 	unsigned long long blocks;
 	struct fio_file *f;
 	unsigned int i;
 
 	if (init_rand_distribution(td))
-		return 0;
+		return true;
 	if (!td_random(td))
-		return 0;
+		return true;
 
 	for_each_file(td, f, i) {
 		uint64_t fsize = min(f->real_file_size, f->io_size);
@@ -1286,7 +1285,7 @@ int init_random_map(struct thread_data *td)
 		blocks = fsize / (unsigned long long) td->o.rw_min_bs;
 
 		if (check_rand_gen_limits(td, f, blocks))
-			return 1;
+			return false;
 
 		if (td->o.random_generator == FIO_RAND_GEN_LFSR) {
 			unsigned long seed;
@@ -1311,14 +1310,14 @@ int init_random_map(struct thread_data *td)
 				" a large number of jobs, try the 'norandommap'"
 				" option or set 'softrandommap'. Or give"
 				" a larger --alloc-size to fio.\n");
-			return 1;
+			return false;
 		}
 
 		log_info("fio: file %s failed allocating random map. Running "
 			 "job without.\n", f->file_name);
 	}
 
-	return 0;
+	return true;
 }
 
 void close_files(struct thread_data *td)

@@ -209,7 +209,7 @@ extern void lock_file(struct thread_data *, struct fio_file *, enum fio_ddir);
 extern void unlock_file(struct thread_data *, struct fio_file *);
 extern void unlock_file_all(struct thread_data *, struct fio_file *);
 extern int add_dir_files(struct thread_data *, const char *);
-extern int init_random_map(struct thread_data *);
+extern bool init_random_map(struct thread_data *);
 extern void dup_files(struct thread_data *, struct thread_data *);
 extern int get_fileno(struct thread_data *, const char *);
 extern void free_release_files(struct thread_data *);
