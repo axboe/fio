@@ -1190,7 +1190,7 @@ bool pre_read_files(struct thread_data *td)
 	return true;
 }
 
-static int __init_rand_distribution(struct thread_data *td, struct fio_file *f)
+static void __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 {
 	unsigned int range_size, seed;
 	unsigned long nranges;
@@ -1211,8 +1211,6 @@ static int __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 		pareto_init(&f->zipf, nranges, td->o.pareto_h.u.f, seed);
 	else if (td->o.random_distribution == FIO_RAND_DIST_GAUSS)
 		gauss_init(&f->gauss, nranges, td->o.gauss_dev.u.f, seed);
-
-	return 1;
 }
 
 static int init_rand_distribution(struct thread_data *td)
