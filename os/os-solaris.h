@@ -66,7 +66,14 @@ static inline int blockdev_invalidate_cache(struct fio_file *f)
 
 static inline unsigned long long os_phys_mem(void)
 {
-	return 0;
+	long pagesize, pages;
+
+	pagesize = sysconf(_SC_PAGESIZE);
+	pages = sysconf(_SC_PHYS_PAGES);
+	if (pages == -1 || pagesize == -1)
+		return 0;
+
+	return (unsigned long long) pages * (unsigned long long) pagesize;
 }
 
 static inline void os_random_seed(unsigned long seed, os_random_state_t *rs)
