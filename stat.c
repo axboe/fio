@@ -956,7 +956,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 		struct group_run_stats *rs, int ddir, struct json_object *parent)
 {
 	unsigned long long min, max, minv, maxv;
-	unsigned long long bw;
+	unsigned long long bw_bytes, bw;
 	unsigned long long *ovals = NULL;
 	double mean, dev, iops;
 	unsigned int len;
@@ -975,17 +975,20 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	json_object_add_value_object(parent,
 		ts->unified_rw_rep ? "mixed" : ddirname[ddir], dir_object);
 
+	bw_bytes = 0;
 	bw = 0;
 	iops = 0.0;
 	if (ts->runtime[ddir]) {
 		uint64_t runt = ts->runtime[ddir];
 
-		bw = ((1000 * ts->io_bytes[ddir]) / runt) / 1024; /* KiB/s */
+		bw_bytes = ((1000 * ts->io_bytes[ddir]) / runt); /* Bytes/s */
+		bw = bw_bytes / 1024; /* KiB/s */
 		iops = (1000.0 * (uint64_t) ts->total_io_u[ddir]) / runt;
 	}
 
 	json_object_add_value_int(dir_object, "io_bytes", ts->io_bytes[ddir]);
 	json_object_add_value_int(dir_object, "io_kbytes", ts->io_bytes[ddir] >> 10);
+	json_object_add_value_int(dir_object, "bw_bytes", bw_bytes);
 	json_object_add_value_int(dir_object, "bw", bw);
 	json_object_add_value_float(dir_object, "iops", iops);
 	json_object_add_value_int(dir_object, "runtime", ts->runtime[ddir]);
