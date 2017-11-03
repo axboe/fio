@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 #include <sys/dkio.h>
 #include <sys/byteorder.h>
+#include <sys/statvfs.h>
 #include <pthread.h>
 
 #include "../file.h"
@@ -19,6 +20,7 @@
 #define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_CHARDEV_SIZE
 #define FIO_USE_GENERIC_BDEV_SIZE
+#define FIO_HAVE_FS_STAT
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_GETTID
 
@@ -74,6 +76,19 @@ static inline unsigned long long os_phys_mem(void)
 		return 0;
 
 	return (unsigned long long) pages * (unsigned long long) pagesize;
+}
+
+static inline unsigned long long get_fs_free_size(const char *path)
+{
+	unsigned long long ret;
+	struct statvfs s;
+
+	if (statvfs(path, &s) < 0)
+		return -1ULL;
+
+	ret = s.f_frsize;
+	ret *= (unsigned long long) s.f_bfree;
+	return ret;
 }
 
 static inline void os_random_seed(unsigned long seed, os_random_state_t *rs)
