@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 #include <sys/dkio.h>
 #include <sys/byteorder.h>
+#include <pthread.h>
 
 #include "../file.h"
 
