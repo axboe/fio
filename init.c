@@ -1465,7 +1465,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		const char *suf;
 
 		if (p.log_gz_store)
-			suf = "log.fz";
+			suf = "log.gz";
 		else
 			suf = "log";
 
@@ -1504,7 +1504,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 #endif
 
 		if (p.log_gz_store)
-			suf = "log.fz";
+			suf = "log.gz";
 		else
 			suf = "log";
 
@@ -1536,7 +1536,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		p.hist_coarseness = o->log_hist_coarseness;
 
 		if (p.log_gz_store)
-			suf = "log.fz";
+			suf = "log.gz";
 		else
 			suf = "log";
 
@@ -1567,7 +1567,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		p.hist_coarseness = o->log_hist_coarseness;
 
 		if (p.log_gz_store)
-			suf = "log.fz";
+			suf = "log.gz";
 		else
 			suf = "log";
 
