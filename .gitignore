@@ -1,5 +1,6 @@
 *.d
 *.o
+*.exe
 /.depend
 /FIO-VERSION-FILE
 /config-host.h
