@@ -15,6 +15,7 @@
 #include <sys/resource.h>
 
 #include "../file.h"
+#include "../lib/types.h"
 
 #define FIO_HAVE_ODIRECT
 #define FIO_USE_GENERIC_RAND
@@ -107,12 +108,9 @@ static inline void fio_cpu_set(os_cpu_mask_t *mask, int cpu)
 	CPUMASK_ORBIT(*mask, cpu);
 }
 
-static inline int fio_cpu_isset(os_cpu_mask_t *mask, int cpu)
+static inline bool fio_cpu_isset(os_cpu_mask_t *mask, int cpu)
 {
-	if (CPUMASK_TESTBIT(*mask, cpu))
-		return 1;
-
-	return 0;
+	return CPUMASK_TESTBIT(*mask, cpu) != 0;
 }
 
 static inline int fio_setaffinity(int pid, os_cpu_mask_t mask)

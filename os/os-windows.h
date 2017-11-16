@@ -17,6 +17,7 @@
 #include "../log.h"
 #include "../lib/hweight.h"
 #include "../oslib/strcasestr.h"
+#include "../lib/types.h"
 
 #include "windows/posix.h"
 
@@ -219,7 +220,7 @@ static inline void fio_cpu_set(os_cpu_mask_t *mask, int cpu)
 
 static inline int fio_cpu_isset(os_cpu_mask_t *mask, int cpu)
 {
-	return (*mask & (1ULL << cpu)) > 0;
+	return (*mask & (1ULL << cpu)) != 0;
 }
 
 static inline int fio_cpu_count(os_cpu_mask_t *mask)

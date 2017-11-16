@@ -16,6 +16,7 @@
 #include <pthread.h>
 
 #include "../file.h"
+#include "../lib/types.h"
 
 #define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_CHARDEV_SIZE
@@ -126,24 +127,25 @@ static inline int fio_set_odirect(struct fio_file *f)
 #define fio_cpu_clear(mask, cpu)	pset_assign(PS_NONE, (cpu), NULL)
 #define fio_cpu_set(mask, cpu)		pset_assign(*(mask), (cpu), NULL)
 
-static inline int fio_cpu_isset(os_cpu_mask_t *mask, int cpu)
+static inline bool fio_cpu_isset(os_cpu_mask_t *mask, int cpu)
 {
 	const unsigned int max_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	unsigned int num_cpus;
 	processorid_t *cpus;
-	int i, ret;
+	bool ret;
+	int i;
 
 	cpus = malloc(sizeof(*cpus) * max_cpus);
 
 	if (pset_info(*mask, NULL, &num_cpus, cpus) < 0) {
 		free(cpus);
-		return 0;
+		return false;
 	}
 
-	ret = 0;
+	ret = false;
 	for (i = 0; i < num_cpus; i++) {
 		if (cpus[i] == cpu) {
-			ret = 1;
+			ret = true;
 			break;
 		}
 	}
