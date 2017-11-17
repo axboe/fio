@@ -18,11 +18,11 @@ numjobs=1
 
 #
 # In case of 'scramble_buffers=1', the source buffer
-# is rewritetten with a random value every write operations.
+# is rewritten with a random value every write operations.
 #
-# But when 'scramble_buffers=0', the source buffer isn't rewritten.
-# So it will be likely that he source buffer is on CPU cache and
-# it seems to be high performance.
+# But when 'scramble_buffers=0' is set, the source buffer isn't
+# rewritten. So it will be likely that the source buffer is in CPU
+# cache and it seems to be high performance.
 #
 scramble_buffers=0
 
