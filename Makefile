@@ -135,6 +135,9 @@ endif
 ifdef CONFIG_LINUX_DEVDAX
   SOURCE += engines/dev-dax.c
 endif
+ifdef CONFIG_LIBPMEM
+  SOURCE += engines/libpmem.c
+endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \

@@ -142,6 +142,7 @@ gfio_check="no"
 libhdfs="no"
 pmemblk="no"
 devdax="no"
+pmem="no"
 disable_lex=""
 disable_pmem="no"
 prefix=/usr/local
@@ -1845,6 +1846,7 @@ print_config "libpmemblk" "$libpmemblk"
 
 # Choose the ioengines
 if test "$libpmem" = "yes" && test "$disable_pmem" = "no"; then
+  pmem="yes"
   devdax="yes"
   if test "$libpmemblk" = "yes"; then
     pmemblk="yes"
@@ -1858,6 +1860,10 @@ print_config "NVML pmemblk engine" "$pmemblk"
 ##########################################
 # Report whether dev-dax engine is enabled
 print_config "NVML dev-dax engine" "$devdax"
+
+##########################################
+# Report whether libpmem engine is enabled
+print_config "NVML libpmem engine" "$pmem"
 
 ##########################################
 # Check if we have lex/yacc available
@@ -2299,6 +2305,9 @@ if test "$pmemblk" = "yes" ; then
 fi
 if test "$devdax" = "yes" ; then
   output_sym "CONFIG_LINUX_DEVDAX"
+fi
+if test "$pmem" = "yes" ; then
+  output_sym "CONFIG_LIBPMEM"
 fi
 if test "$arith" = "yes" ; then
   output_sym "CONFIG_ARITHMETIC"
