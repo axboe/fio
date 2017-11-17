@@ -1,0 +1,73 @@
+[global]
+bs=4k
+size=8g
+ioengine=libpmem
+norandommap
+time_based=1
+group_reporting
+invalidate=1
+disable_lat=1
+disable_slat=1
+disable_clat=1
+clat_percentiles=0
+
+iodepth=1
+iodepth_batch=1
+thread=1
+numjobs=1
+
+#
+# In case of 'scramble_buffers=1', the source buffer
+# is rewritten with a random value every write operations.
+#
+# But when 'scramble_buffers=0' is set, the source buffer isn't
+# rewritten. So it will be likely that the source buffer is in CPU
+# cache and it seems to be high performance.
+#
+scramble_buffers=0
+
+#
+# direct=0:
+#   Using pmem_memcpy_nodrain() for write operation
+#
+# direct=1:
+#   Using pmem_memcpy_persist() for write operation
+#
+direct=0
+
+#
+# Setting for fio process's CPU Node and Memory Node
+#
+numa_cpu_nodes=0
+numa_mem_policy=bind:0
+
+#
+# split means that each job will get a unique CPU from the CPU set
+#
+cpus_allowed_policy=split
+
+#
+# The pmemblk engine does IO to files in a DAX-mounted filesystem.
+# The filesystem should be created on an NVDIMM (e.g /dev/pmem0)
+# and then mounted with the '-o dax' option.  Note that the engine
+# accesses the underlying NVDIMM directly, bypassing the kernel block
+# layer, so the usual filesystem/disk performance monitoring tools such
+# as iostat will not provide useful data.
+#
+directory=/mnt/pmem0
+
+[libpmem-seqwrite]
+rw=write
+stonewall
+
+#[libpmem-seqread]
+#rw=read
+#stonewall
+
+#[libpmem-randwrite]
+#rw=randwrite
+#stonewall
+
+#[libpmem-randread]
+#rw=randread
+#stonewall
