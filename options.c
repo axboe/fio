@@ -1851,6 +1851,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Load external engine (append name)",
 			    .cb = str_ioengine_external_cb,
 			  },
+#ifdef CONFIG_LIBPMEM
+			  { .ival = "libpmem",
+			    .help = "NVML libpmem based IO engine",
+			  },
+#endif
 		},
 	},
 	{

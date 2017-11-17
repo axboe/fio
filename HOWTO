@@ -1820,6 +1820,11 @@ I/O engine
 			set  `filesize` so that all the accounting still occurs, but no
 			actual I/O will be done other than creating the file.
 
+		**libpmem**
+			Read and write using mmap I/O to a file on a filesystem
+			mounted with DAX on a persistent memory device through the NVML
+			libpmem library.
+
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

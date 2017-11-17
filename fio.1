@@ -1597,6 +1597,11 @@ details of writing an external I/O engine.
 Simply create the files and do no I/O to them.  You still need to set
 \fBfilesize\fR so that all the accounting still occurs, but no actual I/O will be
 done other than creating the file.
+.TP
+.B libpmem
+Read and write using mmap I/O to a file on a filesystem
+mounted with DAX on a persistent memory device through the NVML
+libpmem library.
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
 \fBioengine\fR is in use. These are used identically to normal parameters,
