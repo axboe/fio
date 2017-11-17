@@ -52,14 +52,12 @@ static bool check_engine_ops(struct ioengine_ops *ops)
 void unregister_ioengine(struct ioengine_ops *ops)
 {
 	dprint(FD_IO, "ioengine %s unregistered\n", ops->name);
-	flist_del(&ops->list);
-	INIT_FLIST_HEAD(&ops->list);
+	flist_del_init(&ops->list);
 }
 
 void register_ioengine(struct ioengine_ops *ops)
 {
 	dprint(FD_IO, "ioengine %s registered\n", ops->name);
-	INIT_FLIST_HEAD(&ops->list);
 	flist_add_tail(&ops->list, &engine_list);
 }
 
