@@ -81,10 +81,9 @@ struct fio_libpmem_data {
 #define PROCMAXLEN 2048 /* maximum expected line length in /proc files */
 #define roundup(x, y)   ((((x) + ((y) - 1)) / (y)) * (y))
 
-static int Mmap_no_random;
+static bool Mmap_no_random;
 static void *Mmap_hint;
 static unsigned long long Mmap_align;
-static unsigned long long Pagesize = 0;
 
 /*
  * util_map_hint_align -- choose the desired mapping alignment
@@ -94,20 +93,9 @@ static unsigned long long Pagesize = 0;
  */
 static inline size_t util_map_hint_align(size_t len, size_t req_align)
 {
-	size_t align = 0;
+	size_t align = Mmap_align;
 
 	dprint(FD_IO, "DEBUG util_map_hint_align\n" );
-#ifndef WIN32
-	Mmap_align = Pagesize;
-#else
-	if (Mmap_align == 0) {
-		SYSTEM_INFO si;
-		GetSystemInfo(&si);
-		Mmap_align = si.dwAllocationGranularity;
-	}
-#endif
-
-	align = Mmap_align;
 
 	if (req_align)
 		align = req_align;
@@ -159,11 +147,8 @@ static char *util_map_hint_unused(void *minaddr, size_t len, size_t align)
 	dprint(FD_IO, "DEBUG util_map_hint_unused\n");
 	assert(align > 0);
 
-	/* XXX - replace sysconf() with util_get_sys_xxx() */
-	Pagesize = (unsigned long) sysconf(_SC_PAGESIZE);
-
 	if (raddr == NULL)
-		raddr += Pagesize;
+		raddr += page_size;
 
 	raddr = (char *)roundup((uintptr_t)raddr, align);
 
@@ -289,7 +274,7 @@ static char *util_map_hint(size_t len, size_t req_align)
 			dprint(FD_IO, "Invalid PMEM_MMAP_HINT\n");
 		} else {
 			Mmap_hint = (void *)val;
-			Mmap_no_random = 1;
+			Mmap_no_random = true;
 			dprint(FD_IO, "PMEM_MMAP_HINT set to %p\n", Mmap_hint);
 		}
 	}
@@ -586,6 +571,17 @@ static struct ioengine_ops ioengine = {
 
 static void fio_init fio_libpmem_register(void)
 {
+#ifndef WIN32
+	Mmap_align = page_size;
+#else
+	if (Mmap_align == 0) {
+		SYSTEM_INFO si;
+
+		GetSystemInfo(&si);
+		Mmap_align = si.dwAllocationGranularity;
+	}
+#endif
+
 	register_ioengine(&ioengine);
 }
 
