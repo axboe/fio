@@ -92,8 +92,7 @@ static unsigned long long Pagesize = 0;
  * Use 2MB/1GB page alignment only if the mapping length is at least
  * twice as big as the page size.
  */
-static inline size_t
-util_map_hint_align(size_t len, size_t req_align)
+static inline size_t util_map_hint_align(size_t len, size_t req_align)
 {
 	size_t align = 0;
 
@@ -144,7 +143,7 @@ static const char *sscanf_os = "%p-%p";
  * mappings.  It is not an error if mmap() ignores the hint and chooses
  * different address.
  */
-static char * util_map_hint_unused(void *minaddr, size_t len, size_t align)
+static char *util_map_hint_unused(void *minaddr, size_t len, size_t align)
 {
 	char *lo = NULL;        /* beginning of current range in maps file */
 	char *hi = NULL;        /* end of current range in maps file */
@@ -192,7 +191,8 @@ static char * util_map_hint_unused(void *minaddr, size_t len, size_t align)
 	dprint(FD_IO, "end of address space reached");
 	return MAP_FAILED;
 #else
-	if ((fp = fopen(OS_MAPFILE, "r")) == NULL) {
+	fp = fopen(OS_MAPFILE, "r");
+	if (!fp) {
 		log_err("!%s\n", OS_MAPFILE);
 		return MAP_FAILED;
 	}
@@ -265,7 +265,7 @@ static char * util_map_hint_unused(void *minaddr, size_t len, size_t align)
  *   the first unused, properly aligned region of given size, above the
  *   specified address.
  */
-static char * util_map_hint(size_t len, size_t req_align)
+static char *util_map_hint(size_t len, size_t req_align)
 {
 	char *addr;
 	size_t align = 0;
@@ -415,7 +415,7 @@ static int fio_libpmem_prep_full(struct thread_data *td, struct io_u *io_u)
 			f->io_size, io_u->offset);
 
 	if (io_u->offset != (size_t) io_u->offset ||
-			f->io_size != (size_t) f->io_size) {
+	    f->io_size != (size_t) f->io_size) {
 		fio_file_set_partial_mmap(f);
 		return EINVAL;
 	}
@@ -445,8 +445,8 @@ static int fio_libpmem_prep(struct thread_data *td, struct io_u *io_u)
 			io_u->buflen, fdd->libpmem_sz);
 
 	if (io_u->offset >= fdd->libpmem_off &&
-			io_u->offset + io_u->buflen <
-			fdd->libpmem_off + fdd->libpmem_sz)
+	    (io_u->offset + io_u->buflen <
+	     fdd->libpmem_off + fdd->libpmem_sz))
 		goto done;
 
 	/*
@@ -468,7 +468,7 @@ static int fio_libpmem_prep(struct thread_data *td, struct io_u *io_u)
 
 done:
 	io_u->mmap_data = fdd->libpmem_ptr + io_u->offset - fdd->libpmem_off
-		- f->file_offset;
+				- f->file_offset;
 	return 0;
 }
 
@@ -480,30 +480,30 @@ static int fio_libpmem_queue(struct thread_data *td, struct io_u *io_u)
 	dprint(FD_IO, "DEBUG fio_libpmem_queue\n");
 
 	switch (io_u->ddir) {
-		case DDIR_READ:
-			memcpy(io_u->xfer_buf, io_u->mmap_data, io_u->xfer_buflen);
-			break;
-		case DDIR_WRITE:
-			dprint(FD_IO, "DEBUG mmap_data=%p, xfer_buf=%p\n",
-					io_u->mmap_data, io_u->xfer_buf );
-			dprint(FD_IO,"td->o.odirect %d \n",td->o.odirect);
-			if(td->o.odirect == 1){
-				pmem_memcpy_persist(io_u->mmap_data,
+	case DDIR_READ:
+		memcpy(io_u->xfer_buf, io_u->mmap_data, io_u->xfer_buflen);
+		break;
+	case DDIR_WRITE:
+		dprint(FD_IO, "DEBUG mmap_data=%p, xfer_buf=%p\n",
+				io_u->mmap_data, io_u->xfer_buf );
+		dprint(FD_IO,"td->o.odirect %d \n",td->o.odirect);
+		if (td->o.odirect) {
+			pmem_memcpy_persist(io_u->mmap_data,
 						io_u->xfer_buf,
 						io_u->xfer_buflen);
-			} else {
-				pmem_memcpy_nodrain(io_u->mmap_data,
+		} else {
+			pmem_memcpy_nodrain(io_u->mmap_data,
 						io_u->xfer_buf,
 						io_u->xfer_buflen);
-			}
-			break;
-		case DDIR_SYNC:
-		case DDIR_DATASYNC:
-		case DDIR_SYNC_FILE_RANGE:
-			break;
-		default:
-			io_u->error = EINVAL;
-			break;
+		}
+		break;
+	case DDIR_SYNC:
+	case DDIR_DATASYNC:
+	case DDIR_SYNC_FILE_RANGE:
+		break;
+	default:
+		io_u->error = EINVAL;
+		break;
 	}
 
 	return FIO_Q_COMPLETED;
@@ -518,7 +518,7 @@ static int fio_libpmem_init(struct thread_data *td)
 	dprint(FD_IO, "DEBUG fio_libpmem_init\n");
 
 	if ((o->rw_min_bs & page_mask) &&
-			(o->fsync_blocks || o->fdatasync_blocks)) {
+	    (o->fsync_blocks || o->fdatasync_blocks)) {
 		log_err("libpmem: mmap options dictate a minimum block size of "
 				"%llu bytes\n",	(unsigned long long) page_size);
 		return 1;
@@ -560,7 +560,7 @@ static int fio_libpmem_close_file(struct thread_data *td, struct fio_file *f)
 	dprint(FD_IO,"DEBUG fio_libpmem_close_file\n");
 	dprint(FD_IO,"td->o.odirect %d \n",td->o.odirect);
 
-	if (td->o.odirect != 1) {
+	if (!td->o.odirect) {
 		dprint(FD_IO,"pmem_drain\n");
 		pmem_drain();
 	}
@@ -573,15 +573,15 @@ static int fio_libpmem_close_file(struct thread_data *td, struct fio_file *f)
 }
 
 static struct ioengine_ops ioengine = {
-	.name           = "libpmem",
-	.version        = FIO_IOOPS_VERSION,
-	.init           = fio_libpmem_init,
-	.prep           = fio_libpmem_prep,
-	.queue          = fio_libpmem_queue,
-	.open_file      = fio_libpmem_open_file,
-	.close_file     = fio_libpmem_close_file,
-	.get_file_size  = generic_get_file_size,
-	.flags          = FIO_SYNCIO |FIO_NOEXTEND,
+	.name		= "libpmem",
+	.version	= FIO_IOOPS_VERSION,
+	.init		= fio_libpmem_init,
+	.prep		= fio_libpmem_prep,
+	.queue		= fio_libpmem_queue,
+	.open_file	= fio_libpmem_open_file,
+	.close_file	= fio_libpmem_close_file,
+	.get_file_size	= generic_get_file_size,
+	.flags		= FIO_SYNCIO |FIO_NOEXTEND,
 };
 
 static void fio_init fio_libpmem_register(void)
