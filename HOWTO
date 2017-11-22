@@ -2748,8 +2748,8 @@ Measurements and reporting
 .. option:: write_lat_log=str
 
 	Same as :option:`write_bw_log`, except this option creates I/O
-	submission (e.g., `file:`name_slat.x.log`), completion (e.g.,
-	`file:`name_clat.x.log`), and total (e.g., `file:`name_lat.x.log`)
+	submission (e.g., :file:`name_slat.x.log`), completion (e.g.,
+	:file:`name_clat.x.log`), and total (e.g., :file:`name_lat.x.log`)
 	latency files instead. See :option:`write_bw_log` for details about
 	the filename format and `Log File Formats`_ for how data is structured
 	within the files.
@@ -2757,7 +2757,7 @@ Measurements and reporting
 .. option:: write_hist_log=str
 
 	Same as :option:`write_bw_log` but writes an I/O completion latency
-	histogram file (e.g., `file:`name_hist.x.log`) instead. Note that this
+	histogram file (e.g., :file:`name_hist.x.log`) instead. Note that this
 	file will be empty unless :option:`log_hist_msec` has also been set.
 	See :option:`write_bw_log` for details about the filename format and
 	`Log File Formats`_ for how data is structured within the file.
@@ -2765,7 +2765,7 @@ Measurements and reporting
 .. option:: write_iops_log=str
 
 	Same as :option:`write_bw_log`, but writes an IOPS file (e.g.
-	`file:`name_iops.x.log`) instead. See :option:`write_bw_log` for
+	:file:`name_iops.x.log`) instead. See :option:`write_bw_log` for
 	details about the filename format and `Log File Formats`_ for how data
 	is structured within the file.
 
