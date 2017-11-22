@@ -270,6 +270,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->clat_percentiles = le32_to_cpu(top->clat_percentiles);
 	o->lat_percentiles = le32_to_cpu(top->lat_percentiles);
 	o->percentile_precision = le32_to_cpu(top->percentile_precision);
+	o->sig_figs = le32_to_cpu(top->sig_figs);
 	o->continue_on_error = le32_to_cpu(top->continue_on_error);
 	o->cgroup_weight = le32_to_cpu(top->cgroup_weight);
 	o->cgroup_nodelete = le32_to_cpu(top->cgroup_nodelete);
@@ -458,6 +459,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->clat_percentiles = cpu_to_le32(o->clat_percentiles);
 	top->lat_percentiles = cpu_to_le32(o->lat_percentiles);
 	top->percentile_precision = cpu_to_le32(o->percentile_precision);
+	top->sig_figs = cpu_to_le32(o->sig_figs);
 	top->continue_on_error = cpu_to_le32(o->continue_on_error);
 	top->cgroup_weight = cpu_to_le32(o->cgroup_weight);
 	top->cgroup_nodelete = cpu_to_le32(o->cgroup_nodelete);

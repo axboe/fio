@@ -4127,6 +4127,19 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_STAT,
 		.group	= FIO_OPT_G_INVALID,
 	},
+	{
+		.name	= "significant_figures",
+		.lname	= "Significant figures",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, sig_figs),
+		.maxval	= 10,
+		.minval	= 1,
+		.help	= "Significant figures for output-format set to normal",
+		.def	= "4",
+		.interval = 1,
+		.category = FIO_OPT_C_STAT,
+		.group	= FIO_OPT_G_INVALID,
+	},
 
 #ifdef FIO_HAVE_DISK_UTIL
 	{

@@ -299,14 +299,14 @@ void show_group_stats(struct group_run_stats *rs, struct buf_output *out)
 		if (!rs->max_run[i])
 			continue;
 
-		io = num2str(rs->iobytes[i], 4, 1, i2p, N2S_BYTE);
-		ioalt = num2str(rs->iobytes[i], 4, 1, !i2p, N2S_BYTE);
-		agg = num2str(rs->agg[i], 4, 1, i2p, rs->unit_base);
-		aggalt = num2str(rs->agg[i], 4, 1, !i2p, rs->unit_base);
-		min = num2str(rs->min_bw[i], 4, 1, i2p, rs->unit_base);
-		minalt = num2str(rs->min_bw[i], 4, 1, !i2p, rs->unit_base);
-		max = num2str(rs->max_bw[i], 4, 1, i2p, rs->unit_base);
-		maxalt = num2str(rs->max_bw[i], 4, 1, !i2p, rs->unit_base);
+		io = num2str(rs->iobytes[i], rs->sig_figs, 1, i2p, N2S_BYTE);
+		ioalt = num2str(rs->iobytes[i], rs->sig_figs, 1, !i2p, N2S_BYTE);
+		agg = num2str(rs->agg[i], rs->sig_figs, 1, i2p, rs->unit_base);
+		aggalt = num2str(rs->agg[i], rs->sig_figs, 1, !i2p, rs->unit_base);
+		min = num2str(rs->min_bw[i], rs->sig_figs, 1, i2p, rs->unit_base);
+		minalt = num2str(rs->min_bw[i], rs->sig_figs, 1, !i2p, rs->unit_base);
+		max = num2str(rs->max_bw[i], rs->sig_figs, 1, i2p, rs->unit_base);
+		maxalt = num2str(rs->max_bw[i], rs->sig_figs, 1, !i2p, rs->unit_base);
 		log_buf(out, "%s: bw=%s (%s), %s-%s (%s-%s), io=%s (%s), run=%llu-%llumsec\n",
 				rs->unified_rw_rep ? "  MIXED" : str[i],
 				agg, aggalt, min, max, minalt, maxalt, io, ioalt,
@@ -435,12 +435,12 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	runt = ts->runtime[ddir];
 
 	bw = (1000 * ts->io_bytes[ddir]) / runt;
-	io_p = num2str(ts->io_bytes[ddir], 4, 1, i2p, N2S_BYTE);
-	bw_p = num2str(bw, 4, 1, i2p, ts->unit_base);
-	bw_p_alt = num2str(bw, 4, 1, !i2p, ts->unit_base);
+	io_p = num2str(ts->io_bytes[ddir], ts->sig_figs, 1, i2p, N2S_BYTE);
+	bw_p = num2str(bw, ts->sig_figs, 1, i2p, ts->unit_base);
+	bw_p_alt = num2str(bw, ts->sig_figs, 1, !i2p, ts->unit_base);
 
 	iops = (1000 * (uint64_t)ts->total_io_u[ddir]) / runt;
-	iops_p = num2str(iops, 4, 1, 0, N2S_NONE);
+	iops_p = num2str(iops, ts->sig_figs, 1, 0, N2S_NONE);
 
 	log_buf(out, "  %s: IOPS=%s, BW=%s (%s)(%s/%llumsec)\n",
 			rs->unified_rw_rep ? "mixed" : str[ddir],
@@ -738,9 +738,9 @@ static void show_ss_normal(struct thread_stat *ts, struct buf_output *out)
 	bw_mean = steadystate_bw_mean(ts);
 	iops_mean = steadystate_iops_mean(ts);
 
-	p1 = num2str(bw_mean / ts->kb_base, 4, ts->kb_base, i2p, ts->unit_base);
-	p1alt = num2str(bw_mean / ts->kb_base, 4, ts->kb_base, !i2p, ts->unit_base);
-	p2 = num2str(iops_mean, 4, 1, 0, N2S_NONE);
+	p1 = num2str(bw_mean / ts->kb_base, ts->sig_figs, ts->kb_base, i2p, ts->unit_base);
+	p1alt = num2str(bw_mean / ts->kb_base, ts->sig_figs, ts->kb_base, !i2p, ts->unit_base);
+	p2 = num2str(iops_mean, ts->sig_figs, 1, 0, N2S_NONE);
 
 	log_buf(out, "  steadystate  : attained=%s, bw=%s (%s), iops=%s, %s%s=%.3f%s\n",
 		ts->ss_state & __FIO_SS_ATTAINED ? "yes" : "no",
@@ -1690,6 +1690,7 @@ void __show_run_stats(void)
 
 			ts->kb_base = td->o.kb_base;
 			ts->unit_base = td->o.unit_base;
+			ts->sig_figs = td->o.sig_figs;
 			ts->unified_rw_rep = td->o.unified_rw_rep;
 		} else if (ts->kb_base != td->o.kb_base && !kb_base_warned) {
 			log_info("fio: kb_base differs for jobs in group, using"
@@ -1752,6 +1753,7 @@ void __show_run_stats(void)
 		rs = &runstats[ts->groupid];
 		rs->kb_base = ts->kb_base;
 		rs->unit_base = ts->unit_base;
+		rs->sig_figs = ts->sig_figs;
 		rs->unified_rw_rep += ts->unified_rw_rep;
 
 		for (j = 0; j < DDIR_RWDIR_CNT; j++) {

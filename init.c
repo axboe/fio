@@ -1589,14 +1589,14 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 				char *c5 = NULL, *c6 = NULL;
 				int i2p = is_power_of_2(o->kb_base);
 
-				c1 = num2str(o->min_bs[DDIR_READ], 4, 1, i2p, N2S_BYTE);
-				c2 = num2str(o->max_bs[DDIR_READ], 4, 1, i2p, N2S_BYTE);
-				c3 = num2str(o->min_bs[DDIR_WRITE], 4, 1, i2p, N2S_BYTE);
-				c4 = num2str(o->max_bs[DDIR_WRITE], 4, 1, i2p, N2S_BYTE);
+				c1 = num2str(o->min_bs[DDIR_READ], o->sig_figs, 1, i2p, N2S_BYTE);
+				c2 = num2str(o->max_bs[DDIR_READ], o->sig_figs, 1, i2p, N2S_BYTE);
+				c3 = num2str(o->min_bs[DDIR_WRITE], o->sig_figs, 1, i2p, N2S_BYTE);
+				c4 = num2str(o->max_bs[DDIR_WRITE], o->sig_figs, 1, i2p, N2S_BYTE);
 
 				if (!o->bs_is_seq_rand) {
-					c5 = num2str(o->min_bs[DDIR_TRIM], 4, 1, i2p, N2S_BYTE);
-					c6 = num2str(o->max_bs[DDIR_TRIM], 4, 1, i2p, N2S_BYTE);
+					c5 = num2str(o->min_bs[DDIR_TRIM], o->sig_figs, 1, i2p, N2S_BYTE);
+					c6 = num2str(o->max_bs[DDIR_TRIM], o->sig_figs, 1, i2p, N2S_BYTE);
 				}
 
 				log_info("%s: (g=%d): rw=%s, ", td->o.name,

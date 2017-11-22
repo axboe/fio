@@ -309,6 +309,8 @@ struct thread_options {
 	unsigned long long latency_window;
 	fio_fp64_t latency_percentile;
 
+	unsigned int sig_figs;
+
 	unsigned block_error_hist;
 
 	unsigned int replay_align;
@@ -583,6 +585,8 @@ struct thread_options_pack {
 	uint64_t latency_target;
 	uint64_t latency_window;
 	fio_fp64_t latency_percentile;
+
+	uint32_t sig_figs;
 
 	uint32_t block_error_hist;
 

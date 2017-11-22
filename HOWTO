@@ -2909,6 +2909,13 @@ Measurements and reporting
 	completion latency below which 99.5% and 99.9% of the observed latencies
 	fell, respectively.
 
+.. option:: significant_figures=int
+
+	If using :option:`--output-format` of `normal`, set the significant figures 
+	to this	value. Higher values will yield more precise IOPS and throughput 
+	units, while lower values will round. Requires a minimum value of 1 and a 
+	maximum value of 10. Defaults to 4.
+
 
 Error handling
 ~~~~~~~~~~~~~~

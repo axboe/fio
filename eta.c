@@ -537,9 +537,9 @@ void display_thread_status(struct jobs_eta *je)
 		char *tr, *mr;
 
 		mr = num2str(je->m_rate[0] + je->m_rate[1] + je->m_rate[2],
-				4, 0, je->is_pow2, N2S_BYTEPERSEC);
+				je->sig_figs, 0, je->is_pow2, N2S_BYTEPERSEC);
 		tr = num2str(je->t_rate[0] + je->t_rate[1] + je->t_rate[2],
-				4, 0, je->is_pow2, N2S_BYTEPERSEC);
+				je->sig_figs, 0, je->is_pow2, N2S_BYTEPERSEC);
 
 		p += sprintf(p, ", %s-%s", mr, tr);
 		free(tr);

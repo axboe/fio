@@ -2586,6 +2586,12 @@ numbers, and list the numbers in ascending order. For example,
 `\-\-percentile_list=99.5:99.9' will cause fio to report the values of
 completion latency below which 99.5% and 99.9% of the observed latencies
 fell, respectively.
+.TP
+.BI significant_figures \fR=\fPint
+If using \fB\-\-output\-format\fR of `normal', set the significant figures 
+to this value. Higher values will yield more precise IOPS and throughput 
+units, while lower values will round. Requires a minimum value of 1 and a 
+maximum value of 10. Defaults to 4.
 .SS "Error handling"
 .TP
 .BI exitall_on_error

@@ -11,6 +11,7 @@ struct group_run_stats {
 	uint64_t agg[DDIR_RWDIR_CNT];
 	uint32_t kb_base;
 	uint32_t unit_base;
+	uint32_t sig_figs;
 	uint32_t groupid;
 	uint32_t unified_rw_rep;
 } __attribute__((packed));
@@ -221,6 +222,8 @@ struct thread_stat {
 	fio_fp64_t latency_percentile;
 	uint64_t latency_window;
 
+	uint32_t sig_figs;
+
 	uint64_t ss_dur;
 	uint32_t ss_state;
 	uint32_t ss_head;
@@ -256,6 +259,8 @@ struct jobs_eta {
 	uint64_t eta_sec;
 	uint32_t is_pow2;
 	uint32_t unit_base;
+
+	uint32_t sig_figs;
 
 	uint32_t files_open;
 

@@ -942,6 +942,8 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->kb_base		= le32_to_cpu(src->kb_base);
 	dst->unit_base		= le32_to_cpu(src->unit_base);
 
+	dst->sig_figs		= le32_to_cpu(src->sig_figs);
+
 	dst->latency_depth	= le32_to_cpu(src->latency_depth);
 	dst->latency_target	= le64_to_cpu(src->latency_target);
 	dst->latency_window	= le64_to_cpu(src->latency_window);
@@ -982,6 +984,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 
 	dst->kb_base	= le32_to_cpu(src->kb_base);
 	dst->unit_base	= le32_to_cpu(src->unit_base);
+	dst->sig_figs	= le32_to_cpu(src->sig_figs);
 	dst->groupid	= le32_to_cpu(src->groupid);
 	dst->unified_rw_rep	= le32_to_cpu(src->unified_rw_rep);
 }
@@ -1167,6 +1170,7 @@ static void convert_jobs_eta(struct jobs_eta *je)
 	je->nr_threads		= le32_to_cpu(je->nr_threads);
 	je->is_pow2		= le32_to_cpu(je->is_pow2);
 	je->unit_base		= le32_to_cpu(je->unit_base);
+	je->sig_figs		= le32_to_cpu(je->sig_figs);
 }
 
 void fio_client_sum_jobs_eta(struct jobs_eta *dst, struct jobs_eta *je)

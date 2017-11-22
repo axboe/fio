@@ -1538,6 +1538,8 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.latency_window	= cpu_to_le64(ts->latency_window);
 	p.ts.latency_percentile.u.i = cpu_to_le64(fio_double_to_uint64(ts->latency_percentile.u.f));
 
+	p.ts.sig_figs		= cpu_to_le32(ts->sig_figs);
+
 	p.ts.nr_block_infos	= cpu_to_le64(ts->nr_block_infos);
 	for (i = 0; i < p.ts.nr_block_infos; i++)
 		p.ts.block_infos[i] = cpu_to_le32(ts->block_infos[i]);
