@@ -1237,22 +1237,29 @@ more clever block compression attempts, but it will stop naive dedupe of
 blocks. Default: true.
 .TP
 .BI buffer_compress_percentage \fR=\fPint
-If this is set, then fio will attempt to provide I/O buffer content (on
-WRITEs) that compresses to the specified level. Fio does this by providing a
-mix of random data and a fixed pattern. The fixed pattern is either zeros,
-or the pattern specified by \fBbuffer_pattern\fR. If the pattern option
-is used, it might skew the compression ratio slightly. Note that this is per
-block size unit, see \fBbuffer_compress_chunk\fR for setting a finer granularity
-of compressible regions.
+If this is set, then fio will attempt to provide I/O buffer content
+(on WRITEs) that compresses to the specified level. Fio does this by
+providing a mix of random data followed by fixed pattern data. The
+fixed pattern is either zeros, or the pattern specified by
+\fBbuffer_pattern\fR. If the \fBbuffer_pattern\fR option is used, it
+might skew the compression ratio slightly. Setting
+\fBbuffer_compress_percentage\fR to a value other than 100 will also
+enable \fBrefill_buffers\fR in order to reduce the likelihood that
+adjacent blocks are so similar that they over compress when seen
+together. See \fBbuffer_compress_chunk\fR for how to set a finer or
+coarser granularity of the random/fixed data regions. Defaults to unset
+i.e., buffer data will not adhere to any compression level.
 .TP
 .BI buffer_compress_chunk \fR=\fPint
-See \fBbuffer_compress_percentage\fR. This setting allows fio to manage
-how big the ranges of random data and zeroed data is. Without this set, fio
-will provide \fBbuffer_compress_percentage\fR of blocksize random data,
-followed by the remaining zeroed. With this set to some chunk size smaller
-than the block size, fio can alternate random and zeroed data throughout the
-I/O buffer. This is particularly useful when bigger block sizes are used
-for a job. Defaults to 512.
+This setting allows fio to manage how big the random/fixed data region
+is when using \fBbuffer_compress_percentage\fR. When
+\fBbuffer_compress_chunk\fR is set to some non-zero value smaller than the
+block size, fio can repeat the random/fixed region throughout the I/O
+buffer at the specified interval (which particularly useful when
+bigger block sizes are used for a job). When set to 0, fio will use a
+chunk size that matches the block size resulting in a single
+random/fixed region within the I/O buffer. Defaults to 512. When the
+unit is omitted, the value is interpreted in bytes.
 .TP
 .BI buffer_pattern \fR=\fPstr
 If set, fio will fill the I/O buffers with this pattern or with the contents
@@ -1295,7 +1302,9 @@ If set, fio will generate this percentage of identical buffers when
 writing. These buffers will be naturally dedupable. The contents of the
 buffers depend on what other buffer compression settings have been set. It's
 possible to have the individual buffers either fully compressible, or not at
-all. This option only controls the distribution of unique buffers.
+all \-\- this option only controls the distribution of unique buffers. Setting
+this option will also enable \fBrefill_buffers\fR to prevent every buffer
+being identical.
 .TP
 .BI invalidate \fR=\fPbool
 Invalidate the buffer/page cache parts of the files to be used prior to
