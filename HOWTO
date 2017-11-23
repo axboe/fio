@@ -1751,7 +1751,8 @@ I/O engine
 		**rdma**
 			The RDMA I/O engine supports both RDMA memory semantics
 			(RDMA_WRITE/RDMA_READ) and channel semantics (Send/Recv) for the
-			InfiniBand, RoCE and iWARP protocols.
+			InfiniBand, RoCE and iWARP protocols. This engine defines engine
+			specific options.
 
 		**falloc**
 			I/O engine that does regular fallocate to simulate data transfer as
@@ -1893,10 +1894,15 @@ with the caveat that when used on the command line, they must come after the
 		this will be the starting port number since fio will use a range of
 		ports.
 
-.. option:: hostname=str : [netsplice] [net]
+   [rdma]
 
-	The hostname or IP address to use for TCP or UDP based I/O.  If the job is
-	a TCP listener or UDP reader, the hostname is not used and must be omitted
+		The port to use for RDMA-CM communication. This should be the same value
+		on the client and the server side.
+
+.. option:: hostname=str : [netsplice] [net] [rdma]
+
+	The hostname or IP address to use for TCP, UDP or RDMA-CM based I/O.  If the job
+	is a TCP listener or UDP reader, the hostname is not used and must be omitted
 	unless it is a valid UDP multicast address.
 
 .. option:: interface=str : [netsplice] [net]
@@ -2002,6 +2008,21 @@ with the caveat that when used on the command line, they must come after the
 
 	The size of the chunk to use for each file.
 
+.. option:: verb=str : [rdma]
+
+	The RDMA verb to use on this side of the RDMA ioengine connection. Valid
+	values are write, read, send and recv. These correspond to the equivalent
+	RDMA verbs (e.g. write = rdma_write etc.). Note that this only needs to be
+	specified on the client side of the connection. See the examples folder.
+
+.. option:: bindname=str : [rdma]
+
+	The name to use to bind the local RDMA-CM connection to a local RDMA device.
+	This could be a hostname or an IPv4 or IPv6 address. On the server side this
+	will be passed into the rdma_bind_addr() function and on the client site it
+	will be used in the rdma_resolve_add() function. This can be useful when
+	multiple paths exist between the client and the server or in certain loopback
+	configurations.
 
 I/O depth
 ~~~~~~~~~
