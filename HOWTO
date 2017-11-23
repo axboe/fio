@@ -1434,9 +1434,12 @@ Buffers and memory
 .. option:: refill_buffers
 
 	If this option is given, fio will refill the I/O buffers on every
-	submit. The default is to only fill it at init time and reuse that
-	data. Only makes sense if zero_buffers isn't specified, naturally. If data
-	verification is enabled, `refill_buffers` is also automatically enabled.
+	submit. Only makes sense if :option:`zero_buffers` isn't specified,
+	naturally. Defaults to being unset i.e., the buffer is only filled at
+	init time and the data in it is reused when possible but if any of
+	:option:`verify`, :option:`buffer_compress_percentage` or
+	:option:`dedupe_percentage` are enabled then `refill_buffers` is also
+	automatically enabled.
 
 .. option:: scramble_buffers=bool
 
@@ -1448,23 +1451,30 @@ Buffers and memory
 
 .. option:: buffer_compress_percentage=int
 
-	If this is set, then fio will attempt to provide I/O buffer content (on
-	WRITEs) that compresses to the specified level. Fio does this by providing a
-	mix of random data and a fixed pattern. The fixed pattern is either zeros,
-	or the pattern specified by :option:`buffer_pattern`. If the pattern option
-	is used, it might skew the compression ratio slightly. Note that this is per
-	block size unit, see :option:`buffer_compress_chunk` for setting a finer
-	granularity of compression regions.
+	If this is set, then fio will attempt to provide I/O buffer content
+	(on WRITEs) that compresses to the specified level. Fio does this by
+	providing a mix of random data followed by fixed pattern data. The
+	fixed pattern is either zeros, or the pattern specified by
+	:option:`buffer_pattern`. If the `buffer_pattern` option is used, it
+	might skew the compression ratio slightly. Setting
+	`buffer_compress_percentage` to a value other than 100 will also
+	enable :option:`refill_buffers` in order to reduce the likelihood that
+	adjacent blocks are so similar that they over compress when seen
+	together. See :option:`buffer_compress_chunk` for how to set a finer or
+	coarser granularity for the random/fixed data region. Defaults to unset
+	i.e., buffer data will not adhere to any compression level.
 
 .. option:: buffer_compress_chunk=int
 
-	See :option:`buffer_compress_percentage`. This setting allows fio to manage
-	how big the ranges of random data and zeroed data is. Without this set, fio
-	will provide :option:`buffer_compress_percentage` of blocksize random data,
-	followed by the remaining zeroed. With this set to some chunk size smaller
-	than the block size, fio can alternate random and zeroed data throughout the
-	I/O buffer. This is particularly useful when bigger block sizes are used
-	for a job. Defaults to 512.
+	This setting allows fio to manage how big the random/fixed data region
+	is when using :option:`buffer_compress_percentage`. When
+	`buffer_compress_chunk` is set to some non-zero value smaller than the
+	block size, fio can repeat the random/fixed region throughout the I/O
+	buffer at the specified interval (which particularly useful when
+	bigger block sizes are used for a job). When set to 0, fio will use a
+	chunk size that matches the block size resulting in a single
+	random/fixed region within the I/O buffer. Defaults to 512. When the
+	unit is omitted, the value is interpreted in bytes.
 
 .. option:: buffer_pattern=str
 
@@ -1501,7 +1511,9 @@ Buffers and memory
 	writing. These buffers will be naturally dedupable. The contents of the
 	buffers depend on what other buffer compression settings have been set. It's
 	possible to have the individual buffers either fully compressible, or not at
-	all. This option only controls the distribution of unique buffers.
+	all -- this option only controls the distribution of unique buffers. Setting
+	this option will also enable :option:`refill_buffers` to prevent every buffer
+	being identical.
 
 .. option:: invalidate=bool
 
@@ -2748,8 +2760,8 @@ Measurements and reporting
 .. option:: write_lat_log=str
 
 	Same as :option:`write_bw_log`, except this option creates I/O
-	submission (e.g., `file:`name_slat.x.log`), completion (e.g.,
-	`file:`name_clat.x.log`), and total (e.g., `file:`name_lat.x.log`)
+	submission (e.g., :file:`name_slat.x.log`), completion (e.g.,
+	:file:`name_clat.x.log`), and total (e.g., :file:`name_lat.x.log`)
 	latency files instead. See :option:`write_bw_log` for details about
 	the filename format and `Log File Formats`_ for how data is structured
 	within the files.
@@ -2757,7 +2769,7 @@ Measurements and reporting
 .. option:: write_hist_log=str
 
 	Same as :option:`write_bw_log` but writes an I/O completion latency
-	histogram file (e.g., `file:`name_hist.x.log`) instead. Note that this
+	histogram file (e.g., :file:`name_hist.x.log`) instead. Note that this
 	file will be empty unless :option:`log_hist_msec` has also been set.
 	See :option:`write_bw_log` for details about the filename format and
 	`Log File Formats`_ for how data is structured within the file.
@@ -2765,7 +2777,7 @@ Measurements and reporting
 .. option:: write_iops_log=str
 
 	Same as :option:`write_bw_log`, but writes an IOPS file (e.g.
-	`file:`name_iops.x.log`) instead. See :option:`write_bw_log` for
+	:file:`name_iops.x.log`) instead. See :option:`write_bw_log` for
 	details about the filename format and `Log File Formats`_ for how data
 	is structured within the file.
 
