@@ -2870,13 +2870,8 @@ int parse_options(int argc, char *argv[])
 			return 0;
 
 		log_err("No job(s) defined\n\n");
-
-		if (!did_arg) {
-			usage(argv[0]);
-			return 1;
-		}
-
-		return 0;
+		usage(argv[0]);
+		return 1;
 	}
 
 	if (output_format & FIO_OUTPUT_NORMAL)
