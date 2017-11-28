@@ -78,7 +78,7 @@ unsigned int fio_debug_jobno = -1;
 unsigned int *fio_debug_jobp = NULL;
 
 static char cmd_optstr[256];
-static int did_arg;
+static bool did_arg;
 
 #define FIO_CLIENT_FLAG		(1 << 16)
 
@@ -2430,35 +2430,35 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			output_format |= FIO_OUTPUT_TERSE;
 			break;
 		case 'h':
-			did_arg = 1;
+			did_arg = true;
 			if (!cur_client) {
 				usage(argv[0]);
 				do_exit++;
 			}
 			break;
 		case 'c':
-			did_arg = 1;
+			did_arg = true;
 			if (!cur_client) {
 				fio_show_option_help(optarg);
 				do_exit++;
 			}
 			break;
 		case 'i':
-			did_arg = 1;
+			did_arg = true;
 			if (!cur_client) {
 				fio_show_ioengine_help(optarg);
 				do_exit++;
 			}
 			break;
 		case 's':
-			did_arg = 1;
+			did_arg = true;
 			dump_cmdline = 1;
 			break;
 		case 'r':
 			read_only = 1;
 			break;
 		case 'v':
-			did_arg = 1;
+			did_arg = true;
 			if (!cur_client) {
 				log_info("%s\n", fio_version_string);
 				do_exit++;
@@ -2494,7 +2494,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				do_exit++;
 			break;
 		case 'P':
-			did_arg = 1;
+			did_arg = true;
 			parse_only = 1;
 			break;
 		case 'x': {
@@ -2516,12 +2516,12 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 #ifdef CONFIG_ZLIB
 		case 'X':
 			exit_val = iolog_file_inflate(optarg);
-			did_arg++;
+			did_arg = true;
 			do_exit++;
 			break;
 #endif
 		case 'p':
-			did_arg = 1;
+			did_arg = true;
 			if (exec_profile)
 				free(exec_profile);
 			exec_profile = strdup(optarg);
@@ -2535,7 +2535,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				if (ret)
 					goto out_free;
 				td = NULL;
-				did_arg = 1;
+				did_arg = true;
 			}
 			if (!td) {
 				int is_section = !strncmp(opt, "name", 4);
@@ -2610,7 +2610,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			}
 			break;
 		case 'S':
-			did_arg = 1;
+			did_arg = true;
 #ifndef CONFIG_NO_SHM
 			if (nr_clients) {
 				log_err("fio: can't be both client and server\n");
@@ -2636,14 +2636,14 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		case 'I':
 			if ((ret = fio_idle_prof_parse_opt(optarg))) {
 				/* exit on error and calibration only */
-				did_arg = 1;
+				did_arg = true;
 				do_exit++;
 				if (ret == -1)
 					exit_val = 1;
 			}
 			break;
 		case 'C':
-			did_arg = 1;
+			did_arg = true;
 			if (is_backend) {
 				log_err("fio: can't be both client and server\n");
 				do_exit++;
@@ -2700,19 +2700,19 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			}
 			break;
 		case 'R':
-			did_arg = 1;
+			did_arg = true;
 			if (fio_client_add_ini_file(cur_client, optarg, true)) {
 				do_exit++;
 				exit_val = 1;
 			}
 			break;
 		case 'T':
-			did_arg = 1;
+			did_arg = true;
 			do_exit++;
 			exit_val = fio_monotonic_clocktest(1);
 			break;
 		case 'G':
-			did_arg = 1;
+			did_arg = true;
 			do_exit++;
 			exit_val = fio_crctest(optarg);
 			break;
