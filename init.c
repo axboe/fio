@@ -2725,6 +2725,11 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				exit_val = 1;
 				break;
 			}
+			if (val < 1000) {
+				log_err("fio: status interval too small\n");
+				do_exit++;
+				exit_val = 1;
+			}
 			status_interval = val / 1000;
 			break;
 			}
