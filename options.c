@@ -823,14 +823,6 @@ static int str_sfr_cb(void *data, const char *str)
 }
 #endif
 
-static int zone_cmp(const void *p1, const void *p2)
-{
-	const struct zone_split *zsp1 = p1;
-	const struct zone_split *zsp2 = p2;
-
-	return (int) zsp2->access_perc - (int) zsp1->access_perc;
-}
-
 static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 			   char *str)
 {
@@ -910,10 +902,6 @@ static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 		}
 	}
 
-	/*
-	 * now sort based on percentages, for ease of lookup
-	 */
-	qsort(o->zone_split[ddir], o->zone_split_nr[ddir], sizeof(struct zone_split), zone_cmp);
 	return 0;
 }
 
