@@ -158,6 +158,8 @@ void sk_out_drop(void);
 struct zone_split_index {
 	uint8_t size_perc;
 	uint8_t size_perc_prev;
+	uint64_t size;
+	uint64_t size_prev;
 };
 
 /*
@@ -813,6 +815,7 @@ enum {
 	FIO_RAND_DIST_PARETO,
 	FIO_RAND_DIST_GAUSS,
 	FIO_RAND_DIST_ZONED,
+	FIO_RAND_DIST_ZONED_ABS,
 };
 
 #define FIO_DEF_ZIPF		1.1

@@ -1254,6 +1254,9 @@ I/O type
 		**zoned**
 				Zoned random distribution
 
+		**zoned_abs**
+				Zone absolute random distribution
+
 	When using a **zipf** or **pareto** distribution, an input value is also
 	needed to define the access pattern. For **zipf**, this is the `Zipf
 	theta`. For **pareto**, it's the `Pareto power`. Fio includes a test
@@ -1278,10 +1281,23 @@ I/O type
 
 		random_distribution=zoned:60/10:30/20:8/30:2/40
 
-	similarly to how :option:`bssplit` works for setting ranges and percentages
-	of block sizes. Like :option:`bssplit`, it's possible to specify separate
-	zones for reads, writes, and trims. If just one set is given, it'll apply to
-	all of them.
+	A **zoned_abs** distribution works exactly like the **zoned**, except
+	that it takes absolute sizes. For example, let's say you wanted to
+	define access according to the following criteria:
+
+		* 60% of accesses should be to the first 20G
+		* 30% of accesses should be to the next 100G
+		* 10% of accesses should be to the next 500G
+
+	we can define an absolute zoning distribution with:
+
+		random_distribution=zoned_abs=60/20G:30/100G:10/500g
+
+	Similarly to how :option:`bssplit` works for setting ranges and
+	percentages of block sizes. Like :option:`bssplit`, it's possible to
+	specify separate zones for reads, writes, and trims. If just one set
+	is given, it'll apply to all of them. This goes for both **zoned**
+	**zoned_abs** distributions.
 
 .. option:: percentage_random=int[,int][,int]
 

@@ -1033,6 +1033,8 @@ Normal (Gaussian) distribution
 .TP
 .B zoned
 Zoned random distribution
+.B zoned_abs
+Zoned absolute random distribution
 .RE
 .P
 When using a \fBzipf\fR or \fBpareto\fR distribution, an input value is also
@@ -1068,7 +1070,27 @@ example, the user would do:
 random_distribution=zoned:60/10:30/20:8/30:2/40
 .RE
 .P
-similarly to how \fBbssplit\fR works for setting ranges and percentages
+A \fBzoned_abs\fR distribution works exactly like the\fBzoned\fR, except that
+it takes absolute sizes. For example, let's say you wanted to define access
+according to the following criteria:
+.RS
+.P
+.PD 0
+60% of accesses should be to the first 20G
+.P
+30% of accesses should be to the next 100G
+.P
+10% of accesses should be to the next 500G
+.PD
+.RE
+.P
+we can define an absolute zoning distribution with:
+.RS
+.P
+random_distribution=zoned:60/10:30/20:8/30:2/40
+.RE
+.P
+Similarly to how \fBbssplit\fR works for setting ranges and percentages
 of block sizes. Like \fBbssplit\fR, it's possible to specify separate
 zones for reads, writes, and trims. If just one set is given, it'll apply to
 all of them.

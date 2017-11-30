@@ -36,6 +36,8 @@ struct bssplit {
 struct zone_split {
 	uint8_t access_perc;
 	uint8_t size_perc;
+	uint8_t pad[6];
+	uint64_t size;
 };
 
 #define NR_OPTS_SZ	(FIO_MAX_OPTS / (8 * sizeof(uint64_t)))

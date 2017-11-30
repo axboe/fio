@@ -54,16 +54,19 @@ static int bs_cmp(const void *p1, const void *p2)
 	return (int) bsp1->perc - (int) bsp2->perc;
 }
 
+#define SPLIT_MAX_ENTRY	100
+
 struct split {
 	unsigned int nr;
-	unsigned int val1[100];
-	unsigned int val2[100];
+	unsigned int val1[SPLIT_MAX_ENTRY];
+	unsigned long long val2[SPLIT_MAX_ENTRY];
 };
 
 static int split_parse_ddir(struct thread_options *o, struct split *split,
-			    enum fio_ddir ddir, char *str)
+			    enum fio_ddir ddir, char *str, bool absolute)
 {
-	unsigned int i, perc;
+	unsigned long long perc;
+	unsigned int i;
 	long long val;
 	char *fname;
 
@@ -80,23 +83,35 @@ static int split_parse_ddir(struct thread_options *o, struct split *split,
 		if (perc_str) {
 			*perc_str = '\0';
 			perc_str++;
-			perc = atoi(perc_str);
-			if (perc > 100)
-				perc = 100;
-			else if (!perc)
+			if (absolute) {
+				if (str_to_decimal(perc_str, &val, 1, o, 0, 0)) {
+					log_err("fio: split conversion failed\n");
+					return 1;
+				}
+				perc = val;
+			} else {
+				perc = atoi(perc_str);
+				if (perc > 100)
+					perc = 100;
+				else if (!perc)
+					perc = -1U;
+			}
+		} else {
+			if (absolute)
+				perc = 0;
+			else
 				perc = -1U;
-		} else
-			perc = -1U;
+		}
 
 		if (str_to_decimal(fname, &val, 1, o, 0, 0)) {
-			log_err("fio: bssplit conversion failed\n");
+			log_err("fio: split conversion failed\n");
 			return 1;
 		}
 
 		split->val1[i] = val;
 		split->val2[i] = perc;
 		i++;
-		if (i == 100)
+		if (i == SPLIT_MAX_ENTRY)
 			break;
 	}
 
@@ -104,7 +119,8 @@ static int split_parse_ddir(struct thread_options *o, struct split *split,
 	return 0;
 }
 
-static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str)
+static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str,
+			bool data)
 {
 	unsigned int i, perc, perc_missing;
 	unsigned int max_bs, min_bs;
@@ -112,7 +128,7 @@ static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str)
 
 	memset(&split, 0, sizeof(split));
 
-	if (split_parse_ddir(o, &split, ddir, str))
+	if (split_parse_ddir(o, &split, ddir, str, data))
 		return 1;
 	if (!split.nr)
 		return 0;
@@ -176,9 +192,10 @@ static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str)
 	return 0;
 }
 
-typedef int (split_parse_fn)(struct thread_options *, enum fio_ddir, char *);
+typedef int (split_parse_fn)(struct thread_options *, enum fio_ddir, char *, bool);
 
-static int str_split_parse(struct thread_data *td, char *str, split_parse_fn *fn)
+static int str_split_parse(struct thread_data *td, char *str,
+			   split_parse_fn *fn, bool data)
 {
 	char *odir, *ddir;
 	int ret = 0;
@@ -187,37 +204,37 @@ static int str_split_parse(struct thread_data *td, char *str, split_parse_fn *fn
 	if (odir) {
 		ddir = strchr(odir + 1, ',');
 		if (ddir) {
-			ret = fn(&td->o, DDIR_TRIM, ddir + 1);
+			ret = fn(&td->o, DDIR_TRIM, ddir + 1, data);
 			if (!ret)
 				*ddir = '\0';
 		} else {
 			char *op;
 
 			op = strdup(odir + 1);
-			ret = fn(&td->o, DDIR_TRIM, op);
+			ret = fn(&td->o, DDIR_TRIM, op, data);
 
 			free(op);
 		}
 		if (!ret)
-			ret = fn(&td->o, DDIR_WRITE, odir + 1);
+			ret = fn(&td->o, DDIR_WRITE, odir + 1, data);
 		if (!ret) {
 			*odir = '\0';
-			ret = fn(&td->o, DDIR_READ, str);
+			ret = fn(&td->o, DDIR_READ, str, data);
 		}
 	} else {
 		char *op;
 
 		op = strdup(str);
-		ret = fn(&td->o, DDIR_WRITE, op);
+		ret = fn(&td->o, DDIR_WRITE, op, data);
 		free(op);
 
 		if (!ret) {
 			op = strdup(str);
-			ret = fn(&td->o, DDIR_TRIM, op);
+			ret = fn(&td->o, DDIR_TRIM, op, data);
 			free(op);
 		}
 		if (!ret)
-			ret = fn(&td->o, DDIR_READ, str);
+			ret = fn(&td->o, DDIR_READ, str, data);
 	}
 
 	return ret;
@@ -234,7 +251,7 @@ static int str_bssplit_cb(void *data, const char *input)
 	strip_blank_front(&str);
 	strip_blank_end(str);
 
-	ret = str_split_parse(td, str, bssplit_ddir);
+	ret = str_split_parse(td, str, bssplit_ddir, false);
 
 	if (parse_dryrun()) {
 		int i;
@@ -824,14 +841,14 @@ static int str_sfr_cb(void *data, const char *str)
 #endif
 
 static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
-			   char *str)
+			   char *str, bool absolute)
 {
 	unsigned int i, perc, perc_missing, sperc, sperc_missing;
 	struct split split;
 
 	memset(&split, 0, sizeof(split));
 
-	if (split_parse_ddir(o, &split, ddir, str))
+	if (split_parse_ddir(o, &split, ddir, str, absolute))
 		return 1;
 	if (!split.nr)
 		return 0;
@@ -840,7 +857,10 @@ static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 	o->zone_split_nr[ddir] = split.nr;
 	for (i = 0; i < split.nr; i++) {
 		o->zone_split[ddir][i].access_perc = split.val1[i];
-		o->zone_split[ddir][i].size_perc = split.val2[i];
+		if (absolute)
+			o->zone_split[ddir][i].size = split.val2[i];
+		else
+			o->zone_split[ddir][i].size_perc = split.val2[i];
 	}
 
 	/*
@@ -856,11 +876,12 @@ static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 		else
 			perc += zsp->access_perc;
 
-		if (zsp->size_perc == (uint8_t) -1U)
-			sperc_missing++;
-		else
-			sperc += zsp->size_perc;
-
+		if (!absolute) {
+			if (zsp->size_perc == (uint8_t) -1U)
+				sperc_missing++;
+			else
+				sperc += zsp->size_perc;
+		}
 	}
 
 	if (perc > 100 || sperc > 100) {
@@ -908,10 +929,11 @@ static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 static void __td_zone_gen_index(struct thread_data *td, enum fio_ddir ddir)
 {
 	unsigned int i, j, sprev, aprev;
+	uint64_t sprev_sz;
 
 	td->zone_state_index[ddir] = malloc(sizeof(struct zone_split_index) * 100);
 
-	sprev = aprev = 0;
+	sprev_sz = sprev = aprev = 0;
 	for (i = 0; i < td->o.zone_split_nr[ddir]; i++) {
 		struct zone_split *zsp = &td->o.zone_split[ddir][i];
 
@@ -920,10 +942,14 @@ static void __td_zone_gen_index(struct thread_data *td, enum fio_ddir ddir)
 
 			zsi->size_perc = sprev + zsp->size_perc;
 			zsi->size_perc_prev = sprev;
+
+			zsi->size = sprev_sz + zsp->size;
+			zsi->size_prev = sprev_sz;
 		}
 
 		aprev += zsp->access_perc;
 		sprev += zsp->size_perc;
+		sprev_sz += zsp->size;
 	}
 }
 
@@ -942,8 +968,10 @@ static void td_zone_gen_index(struct thread_data *td)
 		__td_zone_gen_index(td, i);
 }
 
-static int parse_zoned_distribution(struct thread_data *td, const char *input)
+static int parse_zoned_distribution(struct thread_data *td, const char *input,
+				    bool absolute)
 {
+	const char *pre = absolute ? "zoned_abs:" : "zoned:";
 	char *str, *p;
 	int i, ret = 0;
 
@@ -953,14 +981,14 @@ static int parse_zoned_distribution(struct thread_data *td, const char *input)
 	strip_blank_end(str);
 
 	/* We expect it to start like that, bail if not */
-	if (strncmp(str, "zoned:", 6)) {
+	if (strncmp(str, pre, strlen(pre))) {
 		log_err("fio: mismatch in zoned input <%s>\n", str);
 		free(p);
 		return 1;
 	}
-	str += strlen("zoned:");
+	str += strlen(pre);
 
-	ret = str_split_parse(td, str, zone_split_ddir);
+	ret = str_split_parse(td, str, zone_split_ddir, absolute);
 
 	free(p);
 
@@ -972,8 +1000,15 @@ static int parse_zoned_distribution(struct thread_data *td, const char *input)
 		for (j = 0; j < td->o.zone_split_nr[i]; j++) {
 			struct zone_split *zsp = &td->o.zone_split[i][j];
 
-			dprint(FD_PARSE, "\t%d: %u/%u\n", j, zsp->access_perc,
-								zsp->size_perc);
+			if (absolute) {
+				dprint(FD_PARSE, "\t%d: %u/%llu\n", j,
+						zsp->access_perc,
+						(unsigned long long) zsp->size);
+			} else {
+				dprint(FD_PARSE, "\t%d: %u/%u\n", j,
+						zsp->access_perc,
+						zsp->size_perc);
+			}
 		}
 	}
 
@@ -1012,7 +1047,9 @@ static int str_random_distribution_cb(void *data, const char *str)
 	else if (td->o.random_distribution == FIO_RAND_DIST_GAUSS)
 		val = 0.0;
 	else if (td->o.random_distribution == FIO_RAND_DIST_ZONED)
-		return parse_zoned_distribution(td, str);
+		return parse_zoned_distribution(td, str, false);
+	else if (td->o.random_distribution == FIO_RAND_DIST_ZONED_ABS)
+		return parse_zoned_distribution(td, str, true);
 	else
 		return 0;
 
@@ -2241,7 +2278,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = FIO_RAND_DIST_ZONED,
 			    .help = "Zoned random distribution",
 			  },
-
+			  { .ival = "zoned_abs",
+			    .oval = FIO_RAND_DIST_ZONED_ABS,
+			    .help = "Zoned absolute random distribution",
+			  },
 		},
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_RANDOM,

@@ -157,6 +157,80 @@ static int __get_next_rand_offset_gauss(struct thread_data *td,
 	return 0;
 }
 
+static int __get_next_rand_offset_zoned_abs(struct thread_data *td,
+					    struct fio_file *f,
+					    enum fio_ddir ddir, uint64_t *b)
+{
+	struct zone_split_index *zsi;
+	uint64_t offset, lastb;
+	uint64_t send, stotal;
+	static int warned;
+	unsigned int v;
+
+	lastb = last_block(td, f, ddir);
+	if (!lastb)
+		return 1;
+
+	if (!td->o.zone_split_nr[ddir]) {
+bail:
+		return __get_next_rand_offset(td, f, ddir, b, lastb);
+	}
+
+	/*
+	 * Generate a value, v, between 1 and 100, both inclusive
+	 */
+	v = rand32_between(&td->zone_state, 1, 100);
+
+	zsi = &td->zone_state_index[ddir][v - 1];
+	stotal = zsi->size_prev / td->o.ba[ddir];
+	send = zsi->size / td->o.ba[ddir];
+
+	/*
+	 * Should never happen
+	 */
+	if (send == -1U) {
+		if (!warned) {
+			log_err("fio: bug in zoned generation\n");
+			warned = 1;
+		}
+		goto bail;
+	} else if (send > lastb) {
+		/*
+		 * This happens if the user specifies ranges that exceed
+		 * the file/device size. We can't handle that gracefully,
+		 * so error and exit.
+		 */
+		log_err("fio: zoned_abs sizes exceed file size\n");
+		return 1;
+	}
+
+	/*
+	 * 'send' is some percentage below or equal to 100 that
+	 * marks the end of the current IO range. 'stotal' marks
+	 * the start, in percent.
+	 */
+	if (stotal)
+		offset = stotal;
+	else
+		offset = 0;
+
+	lastb = send - stotal;
+
+	/*
+	 * Generate index from 0..send-of-lastb
+	 */
+	if (__get_next_rand_offset(td, f, ddir, b, lastb) == 1)
+		return 1;
+
+	/*
+	 * Add our start offset, if any
+	 */
+	if (offset)
+		*b += offset;
+
+	return 0;
+}
+
 static int __get_next_rand_offset_zoned(struct thread_data *td,
 					struct fio_file *f, enum fio_ddir ddir,
 					uint64_t *b)
@@ -249,6 +323,8 @@ static int get_off_from_method(struct thread_data *td, struct fio_file *f,
 		return __get_next_rand_offset_gauss(td, f, ddir, b);
 	else if (td->o.random_distribution == FIO_RAND_DIST_ZONED)
 		return __get_next_rand_offset_zoned(td, f, ddir, b);
+	else if (td->o.random_distribution == FIO_RAND_DIST_ZONED_ABS)
+		return __get_next_rand_offset_zoned_abs(td, f, ddir, b);
 
 	log_err("fio: unknown random distribution: %d\n", td->o.random_distribution);
 	return 1;
