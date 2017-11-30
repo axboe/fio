@@ -616,7 +616,7 @@ static int fio_net_queue_quit(void)
 {
 	dprint(FD_NET, "server: sending quit\n");
 
-	return fio_net_queue_cmd(FIO_NET_CMD_QUIT, NULL, 0, NULL, SK_F_SIMPLE);
+	return fio_net_queue_cmd(FIO_NET_CMD_QUIT, NULL, 0, NULL, SK_F_SIMPLE | SK_F_INLINE);
 }
 
 int fio_net_send_quit(int sk)
@@ -636,7 +636,7 @@ static int fio_net_send_ack(struct fio_net_cmd *cmd, int error, int signal)
 
 	epdu.error = __cpu_to_le32(error);
 	epdu.signal = __cpu_to_le32(signal);
-	return fio_net_queue_cmd(FIO_NET_CMD_STOP, &epdu, sizeof(epdu), &tag, SK_F_COPY);
+	return fio_net_queue_cmd(FIO_NET_CMD_STOP, &epdu, sizeof(epdu), &tag, SK_F_COPY | SK_F_INLINE);
 }
 
 static int fio_net_queue_stop(int error, int signal)
@@ -951,7 +951,7 @@ static int handle_update_job_cmd(struct fio_net_cmd *cmd)
 	return 0;
 }
 
-static int handle_trigger_cmd(struct fio_net_cmd *cmd)
+static int handle_trigger_cmd(struct fio_net_cmd *cmd, struct flist_head *job_list)
 {
 	struct cmd_vtrigger_pdu *pdu = (struct cmd_vtrigger_pdu *) cmd->payload;
 	char *buf = (char *) pdu->cmd;
@@ -971,6 +971,7 @@ static int handle_trigger_cmd(struct fio_net_cmd *cmd)
 		fio_net_queue_cmd(FIO_NET_CMD_VTRIGGER, rep, sz, NULL, SK_F_FREE | SK_F_INLINE);
 
 	fio_terminate_threads(TERMINATE_ALL);
+	fio_server_check_jobs(job_list);
 	exec_trigger(buf);
 	return 0;
 }
@@ -1014,7 +1015,7 @@ static int handle_command(struct sk_out *sk_out, struct flist_head *job_list,
 		ret = handle_update_job_cmd(cmd);
 		break;
 	case FIO_NET_CMD_VTRIGGER:
-		ret = handle_trigger_cmd(cmd);
+		ret = handle_trigger_cmd(cmd, job_list);
 		break;
 	case FIO_NET_CMD_SENDFILE: {
 		struct cmd_sendfile_reply *in;
