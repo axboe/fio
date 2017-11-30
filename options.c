@@ -3458,7 +3458,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 	{
 		.name	= "max_latency",
-		.lname	= "Max Latency",
+		.lname	= "Max Latency (usec)",
 		.type	= FIO_OPT_INT,
 		.off1	= offsetof(struct thread_options, max_latency),
 		.help	= "Maximum tolerated IO latency (usec)",
