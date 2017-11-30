@@ -1409,10 +1409,10 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 }
 
 static void lat_fatal(struct thread_data *td, struct io_completion_data *icd,
-		      unsigned long tusec, unsigned long max_usec)
+		      unsigned long long tnsec, unsigned long long max_nsec)
 {
 	if (!td->error)
-		log_err("fio: latency of %lu usec exceeds specified max (%lu usec)\n", tusec, max_usec);
+		log_err("fio: latency of %llu nsec exceeds specified max (%llu nsec)\n", tnsec, max_nsec);
 	td_verror(td, ETIMEDOUT, "max latency exceeded");
 	icd->error = ETIMEDOUT;
 }
@@ -1862,24 +1862,23 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 		llnsec = ntime_since(&io_u->issue_time, &icd->time);
 
 	if (!td->o.disable_lat) {
-		unsigned long long tnsec, tusec;
+		unsigned long long tnsec;
 
 		tnsec = ntime_since(&io_u->start_time, &icd->time);
-		tusec = tnsec / 1000;
 		add_lat_sample(td, idx, tnsec, bytes, io_u->offset);
 
 		if (td->flags & TD_F_PROFILE_OPS) {
 			struct prof_io_ops *ops = &td->prof_io_ops;
 
 			if (ops->io_u_lat)
-				icd->error = ops->io_u_lat(td, tusec);
+				icd->error = ops->io_u_lat(td, tnsec);
 		}
 
-		if (td->o.max_latency && tusec > td->o.max_latency)
-			lat_fatal(td, icd, tusec, td->o.max_latency);
-		if (td->o.latency_target && tusec > td->o.latency_target) {
+		if (td->o.max_latency && tnsec > td->o.max_latency)
+			lat_fatal(td, icd, tnsec, td->o.max_latency);
+		if (td->o.latency_target && tnsec > td->o.latency_target) {
 			if (lat_target_failed(td))
-				lat_fatal(td, icd, tusec, td->o.latency_target);
+				lat_fatal(td, icd, tnsec, td->o.latency_target);
 		}
 	}
 

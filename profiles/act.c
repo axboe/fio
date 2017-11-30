@@ -288,10 +288,11 @@ static int act_prep_cmdline(void)
 	return 0;
 }
 
-static int act_io_u_lat(struct thread_data *td, uint64_t usec)
+static int act_io_u_lat(struct thread_data *td, uint64_t nsec)
 {
 	struct act_prof_data *apd = td->prof_data;
 	struct act_slice *slice;
+	uint64_t usec = nsec / 1000ULL;
 	int i, ret = 0;
 	double perm;
 
