@@ -1127,9 +1127,9 @@ static int str_steadystate_cb(void *data, const char *str)
 		if (parse_dryrun())
 			return 0;
 
-		td->o.ss_state |= __FIO_SS_PCT;
+		td->o.ss_state |= FIO_SS_PCT;
 		td->o.ss_limit.u.f = val;
-	} else if (td->o.ss_state & __FIO_SS_IOPS) {
+	} else if (td->o.ss_state & FIO_SS_IOPS) {
 		if (!str_to_float(nr, &val, 0)) {
 			log_err("fio: steadystate IOPS threshold postfix parsing failed\n");
 			free(nr);

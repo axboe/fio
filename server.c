@@ -1556,7 +1556,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	convert_gs(&p.rs, rs);
 
 	dprint(FD_NET, "ts->ss_state = %d\n", ts->ss_state);
-	if (ts->ss_state & __FIO_SS_DATA) {
+	if (ts->ss_state & FIO_SS_DATA) {
 		dprint(FD_NET, "server sending steadystate ring buffers\n");
 
 		ss_buf = malloc(sizeof(p) + 2*ts->ss_dur*sizeof(uint64_t));

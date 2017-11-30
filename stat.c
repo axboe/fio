@@ -743,12 +743,12 @@ static void show_ss_normal(struct thread_stat *ts, struct buf_output *out)
 	p2 = num2str(iops_mean, ts->sig_figs, 1, 0, N2S_NONE);
 
 	log_buf(out, "  steadystate  : attained=%s, bw=%s (%s), iops=%s, %s%s=%.3f%s\n",
-		ts->ss_state & __FIO_SS_ATTAINED ? "yes" : "no",
+		ts->ss_state & FIO_SS_ATTAINED ? "yes" : "no",
 		p1, p1alt, p2,
-		ts->ss_state & __FIO_SS_IOPS ? "iops" : "bw",
-		ts->ss_state & __FIO_SS_SLOPE ? " slope": " mean dev",
+		ts->ss_state & FIO_SS_IOPS ? "iops" : "bw",
+		ts->ss_state & FIO_SS_SLOPE ? " slope": " mean dev",
 		ts->ss_criterion.u.f,
-		ts->ss_state & __FIO_SS_PCT ? "%" : "");
+		ts->ss_state & FIO_SS_PCT ? "%" : "");
 
 	free(p1);
 	free(p1alt);
@@ -1353,19 +1353,19 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		char ss_buf[64];
 
 		snprintf(ss_buf, sizeof(ss_buf), "%s%s:%f%s",
-			ts->ss_state & __FIO_SS_IOPS ? "iops" : "bw",
-			ts->ss_state & __FIO_SS_SLOPE ? "_slope" : "",
+			ts->ss_state & FIO_SS_IOPS ? "iops" : "bw",
+			ts->ss_state & FIO_SS_SLOPE ? "_slope" : "",
 			(float) ts->ss_limit.u.f,
-			ts->ss_state & __FIO_SS_PCT ? "%" : "");
+			ts->ss_state & FIO_SS_PCT ? "%" : "");
 
 		tmp = json_create_object();
 		json_object_add_value_object(root, "steadystate", tmp);
 		json_object_add_value_string(tmp, "ss", ss_buf);
 		json_object_add_value_int(tmp, "duration", (int)ts->ss_dur);
-		json_object_add_value_int(tmp, "attained", (ts->ss_state & __FIO_SS_ATTAINED) > 0);
+		json_object_add_value_int(tmp, "attained", (ts->ss_state & FIO_SS_ATTAINED) > 0);
 
 		snprintf(ss_buf, sizeof(ss_buf), "%f%s", (float) ts->ss_criterion.u.f,
-			ts->ss_state & __FIO_SS_PCT ? "%" : "");
+			ts->ss_state & FIO_SS_PCT ? "%" : "");
 		json_object_add_value_string(tmp, "criterion", ss_buf);
 		json_object_add_value_float(tmp, "max_deviation", ts->ss_deviation.u.f);
 		json_object_add_value_float(tmp, "slope", ts->ss_slope.u.f);
@@ -1381,7 +1381,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		** otherwise it actually points to the second element
 		** in the list
 		*/
-		if ((ts->ss_state & __FIO_SS_ATTAINED) || !(ts->ss_state & __FIO_SS_BUFFER_FULL))
+		if ((ts->ss_state & FIO_SS_ATTAINED) || !(ts->ss_state & FIO_SS_BUFFER_FULL))
 			j = ts->ss_head;
 		else
 			j = ts->ss_head == 0 ? ts->ss_dur - 1 : ts->ss_head - 1;
