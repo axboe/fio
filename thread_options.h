@@ -26,7 +26,7 @@ enum fio_memtype {
 #define ERROR_STR_MAX	128
 
 #define BSSPLIT_MAX	64
-#define ZONESPLIT_MAX	64
+#define ZONESPLIT_MAX	256
 
 struct bssplit {
 	uint32_t bs;
