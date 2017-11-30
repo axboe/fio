@@ -1112,6 +1112,7 @@ int ioengine_load(struct thread_data *td)
 static void init_flags(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
+	int i;
 
 	if (o->verify_backlog)
 		td->flags |= TD_F_VER_BACKLOG;
@@ -1141,6 +1142,13 @@ static void init_flags(struct thread_data *td)
 
 	if (o->mem_type == MEM_CUDA_MALLOC)
 		td->flags &= ~TD_F_SCRAMBLE_BUFFERS;
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		if (option_check_rate(td, i)) {
+			td->flags |= TD_F_CHECK_RATE;
+			break;
+		}
+	}
 }
 
 static int setup_random_seeds(struct thread_data *td)

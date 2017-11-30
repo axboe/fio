@@ -88,6 +88,7 @@ enum {
 	__TD_F_REGROW_LOGS,
 	__TD_F_MMAP_KEEP,
 	__TD_F_DIRS_CREATED,
+	__TD_F_CHECK_RATE,
 	__TD_F_LAST,		/* not a real bit, keep last */
 };
 
@@ -108,6 +109,7 @@ enum {
 	TD_F_REGROW_LOGS	= 1U << __TD_F_REGROW_LOGS,
 	TD_F_MMAP_KEEP		= 1U << __TD_F_MMAP_KEEP,
 	TD_F_DIRS_CREATED	= 1U << __TD_F_DIRS_CREATED,
+	TD_F_CHECK_RATE		= 1U << __TD_F_CHECK_RATE,
 };
 
 enum {
@@ -610,8 +612,8 @@ enum {
 	TD_NR,
 };
 
-#define TD_ENG_FLAG_SHIFT	16
-#define TD_ENG_FLAG_MASK	((1U << 16) - 1)
+#define TD_ENG_FLAG_SHIFT	17
+#define TD_ENG_FLAG_MASK	((1U << 17) - 1)
 
 static inline void td_set_ioengine_flags(struct thread_data *td)
 {
@@ -700,8 +702,7 @@ static inline bool fio_fill_issue_time(struct thread_data *td)
 	return false;
 }
 
-static inline bool __should_check_rate(struct thread_data *td,
-				       enum fio_ddir ddir)
+static inline bool option_check_rate(struct thread_data *td, enum fio_ddir ddir)
 {
 	struct thread_options *o = &td->o;
 
@@ -715,13 +716,19 @@ static inline bool __should_check_rate(struct thread_data *td,
 	return false;
 }
 
+static inline bool __should_check_rate(struct thread_data *td,
+				       enum fio_ddir ddir)
+{
+	return (td->flags & TD_F_CHECK_RATE) != 0;
+}
+
 static inline bool should_check_rate(struct thread_data *td)
 {
-	if (td->bytes_done[DDIR_READ] && __should_check_rate(td, DDIR_READ))
+	if (__should_check_rate(td, DDIR_READ) && td->bytes_done[DDIR_READ])
 		return true;
-	if (td->bytes_done[DDIR_WRITE] && __should_check_rate(td, DDIR_WRITE))
+	if (__should_check_rate(td, DDIR_WRITE) && td->bytes_done[DDIR_WRITE])
 		return true;
-	if (td->bytes_done[DDIR_TRIM] && __should_check_rate(td, DDIR_TRIM))
+	if (__should_check_rate(td, DDIR_TRIM) && td->bytes_done[DDIR_TRIM])
 		return true;
 
 	return false;
