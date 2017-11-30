@@ -30,9 +30,6 @@
 static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 			 struct verify_header *hdr, unsigned int header_num,
 			 unsigned int header_len);
-static void fill_hdr(struct thread_data *td, struct io_u *io_u,
-		     struct verify_header *hdr, unsigned int header_num,
-		     unsigned int header_len, uint64_t rand_seed);
 static void __fill_hdr(struct thread_data *td, struct io_u *io_u,
 		       struct verify_header *hdr, unsigned int header_num,
 		       unsigned int header_len, uint64_t rand_seed);
