@@ -1673,7 +1673,7 @@ static bool check_get_verify(struct thread_data *td, struct io_u *io_u)
 static void small_content_scramble(struct io_u *io_u)
 {
 	unsigned int i, nr_blocks = io_u->buflen / 512;
-	uint64_t boffset;
+	uint64_t boffset, usec;
 	unsigned int offset;
 	char *p, *end;
 
@@ -1684,13 +1684,16 @@ static void small_content_scramble(struct io_u *io_u)
 	boffset = io_u->offset;
 	io_u->buf_filled_len = 0;
 
+	/* close enough for this purpose */
+	usec = io_u->start_time.tv_nsec >> 10;
+
 	for (i = 0; i < nr_blocks; i++) {
 		/*
 		 * Fill the byte offset into a "random" start offset of
 		 * the buffer, given by the product of the usec time
 		 * and the actual offset.
 		 */
-		offset = ((io_u->start_time.tv_nsec/1000) ^ boffset) & 511;
+		offset = (usec ^ boffset) & 511;
 		offset &= ~(sizeof(uint64_t) - 1);
 		if (offset >= 512 - sizeof(uint64_t))
 			offset -= sizeof(uint64_t);
