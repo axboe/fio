@@ -1669,32 +1669,40 @@ static bool check_get_verify(struct thread_data *td, struct io_u *io_u)
  */
 static void small_content_scramble(struct io_u *io_u)
 {
-	unsigned int i, nr_blocks = io_u->buflen / 512;
+	unsigned int i, nr_blocks = io_u->buflen >> 9;
 	unsigned int offset;
-	uint64_t boffset;
-	char *p, *end;
+	uint64_t boffset, *iptr;
+	char *p;
 
 	if (!nr_blocks)
 		return;
 
 	p = io_u->xfer_buf;
 	boffset = io_u->offset;
-	io_u->buf_filled_len = 0;
+
+	if (io_u->buf_filled_len)
+		io_u->buf_filled_len = 0;
+
+	/*
+	 * Generate random index between 0..7. We do chunks of 512b, if
+	 * we assume a cacheline is 64 bytes, then we have 8 of those.
+	 * Scramble content within the blocks in the same cacheline to
+	 * speed things up.
+	 */
+	offset = (io_u->start_time.tv_nsec ^ boffset) & 7;
 
 	for (i = 0; i < nr_blocks; i++) {
 		/*
-		 * Fill the byte offset into a "random" start offset of
-		 * the first half of the buffer.
+		 * Fill offset into start of cacheline, time into end
+		 * of cacheline
 		 */
-		offset = (io_u->start_time.tv_nsec ^ boffset) & 255;
-		offset &= ~(sizeof(boffset) - 1);
-		memcpy(p + offset, &boffset, sizeof(boffset));
+		iptr = (void *) p + (offset << 6);
+		*iptr = boffset;
 
-		/*
-		 * Fill the start time into the end of the buffer
-		 */
-		end = p + 512 - sizeof(io_u->start_time);
-		memcpy(end, &io_u->start_time, sizeof(io_u->start_time));
+		iptr = (void *) p + 64 - 2 * sizeof(uint64_t);
+		iptr[0] = io_u->start_time.tv_sec;
+		iptr[1] = io_u->start_time.tv_nsec;
+
 		p += 512;
 		boffset += 512;
 	}
