@@ -192,7 +192,7 @@ struct thread_options {
 	enum fio_memtype mem_type;
 	unsigned int mem_align;
 
-	unsigned int max_latency;
+	unsigned long long max_latency;
 
 	unsigned int stonewall;
 	unsigned int new_group;
@@ -429,7 +429,8 @@ struct thread_options_pack {
 
 	uint32_t random_distribution;
 	uint32_t exitall_error;
-	uint32_t pad;
+
+	uint32_t sync_file_range;
 
 	struct zone_split zone_split[DDIR_RWDIR_CNT][ZONESPLIT_MAX];
 	uint32_t zone_split_nr[DDIR_RWDIR_CNT];
@@ -468,8 +469,6 @@ struct thread_options_pack {
 	uint64_t lockmem;
 	uint32_t mem_type;
 	uint32_t mem_align;
-
-	uint32_t max_latency;
 
 	uint32_t stonewall;
 	uint32_t new_group;
@@ -521,6 +520,7 @@ struct thread_options_pack {
 	uint64_t trim_backlog;
 	uint32_t clat_percentiles;
 	uint32_t percentile_precision;
+	uint32_t pad;
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];
@@ -581,11 +581,9 @@ struct thread_options_pack {
 	uint64_t offset_increment;
 	uint64_t number_ios;
 
-	uint32_t sync_file_range;
-	uint32_t pad2;
-
 	uint64_t latency_target;
 	uint64_t latency_window;
+	uint64_t max_latency;
 	fio_fp64_t latency_percentile;
 
 	uint32_t sig_figs;
