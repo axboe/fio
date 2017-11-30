@@ -43,7 +43,7 @@ struct verify_header {
 	uint64_t rand_seed;
 	uint64_t offset;
 	uint32_t time_sec;
-	uint32_t time_usec;
+	uint32_t time_nsec;
 	uint16_t thread;
 	uint16_t numberio;
 	uint32_t crc32;
