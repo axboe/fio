@@ -61,7 +61,8 @@ struct split {
 };
 
 static int split_parse_ddir(struct thread_options *o, struct split *split,
-			    enum fio_ddir ddir, char *str, bool absolute)
+			    enum fio_ddir ddir, char *str, bool absolute,
+			    unsigned int max_splits)
 {
 	unsigned long long perc;
 	unsigned int i;
@@ -109,7 +110,7 @@ static int split_parse_ddir(struct thread_options *o, struct split *split,
 		split->val1[i] = val;
 		split->val2[i] = perc;
 		i++;
-		if (i == ZONESPLIT_MAX)
+		if (i == max_splits)
 			break;
 	}
 
@@ -126,7 +127,7 @@ static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str,
 
 	memset(&split, 0, sizeof(split));
 
-	if (split_parse_ddir(o, &split, ddir, str, data))
+	if (split_parse_ddir(o, &split, ddir, str, data, BSSPLIT_MAX))
 		return 1;
 	if (!split.nr)
 		return 0;
@@ -846,7 +847,7 @@ static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 
 	memset(&split, 0, sizeof(split));
 
-	if (split_parse_ddir(o, &split, ddir, str, absolute))
+	if (split_parse_ddir(o, &split, ddir, str, absolute, ZONESPLIT_MAX))
 		return 1;
 	if (!split.nr)
 		return 0;
