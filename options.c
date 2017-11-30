@@ -54,12 +54,10 @@ static int bs_cmp(const void *p1, const void *p2)
 	return (int) bsp1->perc - (int) bsp2->perc;
 }
 
-#define SPLIT_MAX_ENTRY	100
-
 struct split {
 	unsigned int nr;
-	unsigned int val1[SPLIT_MAX_ENTRY];
-	unsigned long long val2[SPLIT_MAX_ENTRY];
+	unsigned int val1[ZONESPLIT_MAX];
+	unsigned long long val2[ZONESPLIT_MAX];
 };
 
 static int split_parse_ddir(struct thread_options *o, struct split *split,
@@ -111,7 +109,7 @@ static int split_parse_ddir(struct thread_options *o, struct split *split,
 		split->val1[i] = val;
 		split->val2[i] = perc;
 		i++;
-		if (i == SPLIT_MAX_ENTRY)
+		if (i == ZONESPLIT_MAX)
 			break;
 	}
 
