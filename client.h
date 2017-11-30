@@ -39,6 +39,7 @@ struct fio_client {
 	int port;
 	int fd;
 	unsigned int refs;
+	unsigned int last_cmd;
 
 	char *name;
 

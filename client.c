@@ -1666,6 +1666,8 @@ int fio_handle_client(struct fio_client *client)
 	dprint(FD_NET, "client: got cmd op %s from %s (pdu=%u)\n",
 		fio_server_op(cmd->opcode), client->hostname, cmd->pdu_len);
 
+	client->last_cmd = cmd->opcode;
+
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
 		if (ops->quit)
@@ -1940,7 +1942,10 @@ static int fio_check_clients_timed_out(void)
 		else
 			log_err("fio: client %s timed out\n", client->hostname);
 
-		client->error = ETIMEDOUT;
+		if (client->last_cmd != FIO_NET_CMD_VTRIGGER)
+			client->error = ETIMEDOUT;
+		else
+			log_info("fio: ignoring timeout due to vtrigger\n");
 		remove_client(client);
 		ret = 1;
 	}
