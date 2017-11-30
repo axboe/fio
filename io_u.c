@@ -1687,15 +1687,15 @@ static void small_content_scramble(struct io_u *io_u)
 	for (i = 0; i < nr_blocks; i++) {
 		/*
 		 * Fill the byte offset into a "random" start offset of
-		 * the buffer, given by the product of the usec time
-		 * and the actual offset.
+		 * the first half of the buffer.
 		 */
-		offset = (io_u->start_time.tv_nsec ^ boffset) & 511;
-		offset &= ~(sizeof(uint64_t) - 1);
-		if (offset >= 512 - sizeof(uint64_t))
-			offset -= sizeof(uint64_t);
+		offset = (io_u->start_time.tv_nsec ^ boffset) & 255;
+		offset &= ~(sizeof(boffset) - 1);
 		memcpy(p + offset, &boffset, sizeof(boffset));
 
+		/*
+		 * Fill the start time into the end of the buffer
+		 */
 		end = p + 512 - sizeof(io_u->start_time);
 		memcpy(end, &io_u->start_time, sizeof(io_u->start_time));
 		p += 512;
