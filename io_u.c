@@ -1862,23 +1862,24 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 		llnsec = ntime_since(&io_u->issue_time, &icd->time);
 
 	if (!td->o.disable_lat) {
-		unsigned long long tnsec;
+		unsigned long long tnsec, tusec;
 
 		tnsec = ntime_since(&io_u->start_time, &icd->time);
+		tusec = tnsec / 1000;
 		add_lat_sample(td, idx, tnsec, bytes, io_u->offset);
 
 		if (td->flags & TD_F_PROFILE_OPS) {
 			struct prof_io_ops *ops = &td->prof_io_ops;
 
 			if (ops->io_u_lat)
-				icd->error = ops->io_u_lat(td, tnsec/1000);
+				icd->error = ops->io_u_lat(td, tusec);
 		}
 
-		if (td->o.max_latency && tnsec/1000 > td->o.max_latency)
-			lat_fatal(td, icd, tnsec/1000, td->o.max_latency);
-		if (td->o.latency_target && tnsec/1000 > td->o.latency_target) {
+		if (td->o.max_latency && tusec > td->o.max_latency)
+			lat_fatal(td, icd, tusec, td->o.max_latency);
+		if (td->o.latency_target && tusec > td->o.latency_target) {
 			if (lat_target_failed(td))
-				lat_fatal(td, icd, tnsec/1000, td->o.latency_target);
+				lat_fatal(td, icd, tusec, td->o.latency_target);
 		}
 	}
 
