@@ -162,8 +162,7 @@ static int __get_next_rand_offset_zoned_abs(struct thread_data *td,
 					    enum fio_ddir ddir, uint64_t *b)
 {
 	struct zone_split_index *zsi;
-	uint64_t offset, lastb;
-	uint64_t send, stotal;
+	uint64_t lastb, send, stotal;
 	static int warned;
 	unsigned int v;
 
@@ -181,6 +180,10 @@ bail:
 	 */
 	v = rand32_between(&td->zone_state, 1, 100);
 
+	/*
+	 * Find our generated table. 'send' is the end block of this zone,
+	 * 'stotal' is our start offset.
+	 */
 	zsi = &td->zone_state_index[ddir][v - 1];
 	stotal = zsi->size_prev / td->o.ba[ddir];
 	send = zsi->size / td->o.ba[ddir];
@@ -205,29 +208,12 @@ bail:
 	}
 
 	/*
-	 * 'send' is some percentage below or equal to 100 that
-	 * marks the end of the current IO range. 'stotal' marks
-	 * the start, in percent.
+	 * Generate index from 0..send-stotal
 	 */
-	if (stotal)
-		offset = stotal;
-	else
-		offset = 0;
-
-	lastb = send - stotal;
-
-	/*
-	 * Generate index from 0..send-of-lastb
-	 */
-	if (__get_next_rand_offset(td, f, ddir, b, lastb) == 1)
+	if (__get_next_rand_offset(td, f, ddir, b, send - stotal) == 1)
 		return 1;
 
-	/*
-	 * Add our start offset, if any
-	 */
-	if (offset)
-		*b += offset;
-
+	*b += stotal;
 	return 0;
 }
 
