@@ -1615,22 +1615,19 @@ static bool check_get_trim(struct thread_data *td, struct io_u *io_u)
 {
 	if (!(td->flags & TD_F_TRIM_BACKLOG))
 		return false;
+	if (!td->trim_entries)
+		return false;
 
-	if (td->trim_entries) {
-		int get_trim = 0;
-
-		if (td->trim_batch) {
-			td->trim_batch--;
-			get_trim = 1;
-		} else if (!(td->io_hist_len % td->o.trim_backlog) &&
-			 td->last_ddir != DDIR_READ) {
-			td->trim_batch = td->o.trim_batch;
-			if (!td->trim_batch)
-				td->trim_batch = td->o.trim_backlog;
-			get_trim = 1;
-		}
-
-		if (get_trim && get_next_trim(td, io_u))
+	if (td->trim_batch) {
+		td->trim_batch--;
+		if (get_next_trim(td, io_u))
+			return true;
+	} else if (!(td->io_hist_len % td->o.trim_backlog) &&
+		     td->last_ddir != DDIR_READ) {
+		td->trim_batch = td->o.trim_batch;
+		if (!td->trim_batch)
+			td->trim_batch = td->o.trim_backlog;
+		if (get_next_trim(td, io_u))
 			return true;
 	}
 
