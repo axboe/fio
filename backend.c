@@ -2318,6 +2318,7 @@ reap:
 					nr_started--;
 					break;
 				}
+				fd = NULL;
 				ret = pthread_detach(td->thread);
 				if (ret)
 					log_err("pthread_detach: %s",
