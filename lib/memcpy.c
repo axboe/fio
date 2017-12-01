@@ -187,9 +187,9 @@ static int setup_tests(void)
 	void *src, *dst;
 	int i;
 
-	if (posix_memalign(&src, page_size, BUF_SIZE))
-		return 1;
-	if (posix_memalign(&dst, page_size, BUF_SIZE))
+	src = malloc(BUF_SIZE);
+	dst = malloc(BUF_SIZE);
+	if (!src || !dst)
 		return 1;
 
 	init_rand_seed(&state, 0x8989, 0);
@@ -202,6 +202,12 @@ static int setup_tests(void)
 	}
 
 	return 0;
+}
+
+static void free_tests(void)
+{
+	free(tests[0].src);
+	free(tests[0].dst);
 }
 
 int fio_memcpy_test(const char *type)
@@ -259,5 +265,6 @@ int fio_memcpy_test(const char *type)
 		}
 	}
 
+	free_tests();
 	return 0;
 }
