@@ -72,16 +72,17 @@ static struct memcpy_test tests[] = {
 struct memcpy_type {
 	const char *name;
 	unsigned int mask;
-	void (*fn)(struct memcpy_type *, struct memcpy_test *);
+	void (*fn)(struct memcpy_test *);
 };
 
 enum {
 	T_MEMCPY	= 1U << 0,
 	T_MEMMOVE	= 1U << 1,
 	T_SIMPLE	= 1U << 2,
+	T_HYBRID	= 1U << 3,
 };
 
-#define do_test(t, test, fn)	do {					\
+#define do_test(test, fn)	do {					\
 	size_t left, this;						\
 	void *src, *dst;						\
 	int i;								\
@@ -102,14 +103,14 @@ enum {
 	}								\
 } while (0)
 
-static void t_memcpy(struct memcpy_type *t, struct memcpy_test *test)
+static void t_memcpy(struct memcpy_test *test)
 {
-	do_test(t, test, memcpy);
+	do_test(test, memcpy);
 }
 
-static void t_memmove(struct memcpy_type *t, struct memcpy_test *test)
+static void t_memmove(struct memcpy_test *test)
 {
-	do_test(t, test, memmove);
+	do_test(test, memmove);
 }
 
 static void simple_memcpy(void *dst, void const *src, size_t len)
@@ -121,9 +122,17 @@ static void simple_memcpy(void *dst, void const *src, size_t len)
 		*d++ = *s++;
 }
 
-static void t_simple(struct memcpy_type *t, struct memcpy_test *test)
+static void t_simple(struct memcpy_test *test)
 {
-	do_test(t, test, simple_memcpy);
+	do_test(test, simple_memcpy);
+}
+
+static void t_hybrid(struct memcpy_test *test)
+{
+	if (test->size >= 64)
+		do_test(test, simple_memcpy);
+	else
+		do_test(test, memcpy);
 }
 
 static struct memcpy_type t[] = {
@@ -142,7 +151,11 @@ static struct memcpy_type t[] = {
 		.mask = T_SIMPLE,
 		.fn = t_simple,
 	},
-
+	{
+		.name = "hybrid",
+		.mask = T_HYBRID,
+		.fn = t_hybrid,
+	},
 	{
 		.name = NULL,
 	},
@@ -248,13 +261,13 @@ int fio_memcpy_test(const char *type)
 		 * we've touched the data.
 		 */
 		usec_spin(100000);
-		t[i].fn(&t[i], &tests[0]);
+		t[i].fn(&tests[0]);
 
 		printf("%s\n", t[i].name);
 
 		for (j = 0; tests[j].name; j++) {
 			fio_gettime(&ts, NULL);
-			t[i].fn(&t[i], &tests[j]);
+			t[i].fn(&tests[j]);
 			usec = utime_since_now(&ts);
 
 			if (usec) {
