@@ -307,6 +307,7 @@ fio_devdax_get_file_size(struct thread_data *td, struct fio_file *f)
 	if (rc < 0) {
 		log_err("%s: fscanf on %s failed (%s)\n",
 			td->o.name, spath, strerror(errno));
+		fclose(sfile);
 		return 1;
 	}
 
