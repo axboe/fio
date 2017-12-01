@@ -110,8 +110,10 @@ static int split_parse_ddir(struct thread_options *o, struct split *split,
 		split->val1[i] = val;
 		split->val2[i] = perc;
 		i++;
-		if (i == max_splits)
+		if (i == max_splits) {
+			log_err("fio: hit max of %d split entries\n", i);
 			break;
+		}
 	}
 
 	split->nr = i;
