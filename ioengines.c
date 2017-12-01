@@ -309,8 +309,10 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (ddir_rw(ddir)) {
-		td->io_issues[ddir]++;
-		td->io_issue_bytes[ddir] += buflen;
+		if (!(io_u->flags & IO_U_F_VER_LIST)) {
+			td->io_issues[ddir]++;
+			td->io_issue_bytes[ddir] += buflen;
+		}
 		td->rate_io_issue_bytes[ddir] += buflen;
 	}
 
