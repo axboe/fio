@@ -1293,6 +1293,9 @@ I/O type
 
 		random_distribution=zoned_abs=60/20G:30/100G:10/500g
 
+	For both **zoned** and **zoned_abs**, fio supports defining up to
+	256 separate zones.
+
 	Similarly to how :option:`bssplit` works for setting ranges and
 	percentages of block sizes. Like :option:`bssplit`, it's possible to
 	specify separate zones for reads, writes, and trims. If just one set
@@ -1388,33 +1391,38 @@ Block size
 
 .. option:: bssplit=str[,str][,str]
 
-	Sometimes you want even finer grained control of the block sizes issued, not
-	just an even split between them.  This option allows you to weight various
-	block sizes, so that you are able to define a specific amount of block sizes
-	issued. The format for this option is::
+	Sometimes you want even finer grained control of the block sizes
+	issued, not just an even split between them.  This option allows you to
+	weight various block sizes, so that you are able to define a specific
+	amount of block sizes issued. The format for this option is::
 
 		bssplit=blocksize/percentage:blocksize/percentage
 
-	for as many block sizes as needed. So if you want to define a workload that
-	has 50% 64k blocks, 10% 4k blocks, and 40% 32k blocks, you would write::
+	for as many block sizes as needed. So if you want to define a workload
+	that has 50% 64k blocks, 10% 4k blocks, and 40% 32k blocks, you would
+	write::
 
 		bssplit=4k/10:64k/50:32k/40
 
-	Ordering does not matter. If the percentage is left blank, fio will fill in
-	the remaining values evenly. So a bssplit option like this one::
+	Ordering does not matter. If the percentage is left blank, fio will
+	fill in the remaining values evenly. So a bssplit option like this one::
 
 		bssplit=4k/50:1k/:32k/
 
-	would have 50% 4k ios, and 25% 1k and 32k ios. The percentages always add up
-	to 100, if bssplit is given a range that adds up to more, it will error out.
+	would have 50% 4k ios, and 25% 1k and 32k ios. The percentages always
+	add up to 100, if bssplit is given a range that adds up to more, it
+	will error out.
 
 	Comma-separated values may be specified for reads, writes, and trims as
 	described in :option:`blocksize`.
 
-	If you want a workload that has 50% 2k reads and 50% 4k reads, while having
-	90% 4k writes and 10% 8k writes, you would specify::
+	If you want a workload that has 50% 2k reads and 50% 4k reads, while
+	having 90% 4k writes and 10% 8k writes, you would specify::
 
 		bssplit=2k/50:4k/50,4k/90,8k/10
+
+	Fio supports defining up to 64 different weights for each data
+	direction.
 
 .. option:: blocksize_unaligned, bs_unaligned
 

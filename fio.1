@@ -1090,6 +1090,9 @@ we can define an absolute zoning distribution with:
 random_distribution=zoned:60/10:30/20:8/30:2/40
 .RE
 .P
+For both \fBzoned\fR and \fBzoned_abs\fR, fio supports defining up to 256
+separate zones.
+.P
 Similarly to how \fBbssplit\fR works for setting ranges and percentages
 of block sizes. Like \fBbssplit\fR, it's possible to specify separate
 zones for reads, writes, and trims. If just one set is given, it'll apply to
@@ -1219,6 +1222,8 @@ If you want a workload that has 50% 2k reads and 50% 4k reads, while having
 .P
 bssplit=2k/50:4k/50,4k/90,8k/10
 .RE
+.P
+Fio supports defining up to 64 different weights for each data direction.
 .RE
 .TP
 .BI blocksize_unaligned "\fR,\fB bs_unaligned"
