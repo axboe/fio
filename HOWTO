@@ -2950,20 +2950,20 @@ Measurements and reporting
 
 .. option:: percentile_list=float_list
 
-	Overwrite the default list of percentiles for completion latencies and the
-	block error histogram.  Each number is a floating number in the range
-	(0,100], and the maximum length of the list is 20. Use ``:`` to separate the
-	numbers, and list the numbers in ascending order. For example,
-	``--percentile_list=99.5:99.9`` will cause fio to report the values of
-	completion latency below which 99.5% and 99.9% of the observed latencies
-	fell, respectively.
+	Overwrite the default list of percentiles for completion latencies and
+	the block error histogram.  Each number is a floating number in the
+	range (0,100], and the maximum length of the list is 20. Use ``:`` to
+	separate the numbers, and list the numbers in ascending order. For
+	example, ``--percentile_list=99.5:99.9`` will cause fio to report the
+	values of completion latency below which 99.5% and 99.9% of the observed
+	latencies fell, respectively.
 
 .. option:: significant_figures=int
 
-	If using :option:`--output-format` of `normal`, set the significant figures 
-	to this	value. Higher values will yield more precise IOPS and throughput 
-	units, while lower values will round. Requires a minimum value of 1 and a 
-	maximum value of 10. Defaults to 4.
+	If using :option:`--output-format` of `normal`, set the significant
+	figures to this	value. Higher values will yield more precise IOPS and
+	throughput units, while lower values will round. Requires a minimum
+	value of 1 and a maximum value of 10. Defaults to 4.
 
 
 Error handling
