@@ -32,6 +32,7 @@
 
 #include "crc/test.h"
 #include "lib/pow2.h"
+#include "lib/memcpy.h"
 
 const char fio_version_string[] = FIO_VERSION;
 
@@ -232,6 +233,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "crctest",
 		.has_arg	= optional_argument,
 		.val		= 'G',
+	},
+	{
+		.name		= (char *) "memcpytest",
+		.has_arg	= optional_argument,
+		.val		= 'M',
 	},
 	{
 		.name		= (char *) "idle-prof",
@@ -2730,6 +2736,11 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			did_arg = true;
 			do_exit++;
 			exit_val = fio_crctest(optarg);
+			break;
+		case 'M':
+			did_arg = true;
+			do_exit++;
+			exit_val = fio_memcpy_test(optarg);
 			break;
 		case 'L': {
 			long long val;
