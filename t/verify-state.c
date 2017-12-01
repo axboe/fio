@@ -119,10 +119,12 @@ static int show_file(const char *file)
 	if (ret < 0) {
 		log_err("read: %s\n", strerror(errno));
 		close(fd);
+		free(buf);
 		return 1;
 	} else if (ret != sb.st_size) {
 		log_err("Short read\n");
 		close(fd);
+		free(buf);
 		return 1;
 	}
 
