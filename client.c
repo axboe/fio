@@ -1903,16 +1903,19 @@ static int client_check_cmd_timeout(struct fio_client *client,
 	int ret = 0;
 
 	flist_for_each_safe(entry, tmp, &client->cmd_list) {
+		unsigned int op;
+
 		reply = flist_entry(entry, struct fio_net_cmd_reply, list);
 
 		if (mtime_since(&reply->ts, now) < FIO_NET_CLIENT_TIMEOUT)
 			continue;
 
+		op = reply->opcode;
 		if (!handle_cmd_timeout(client, reply))
 			continue;
 
 		log_err("fio: client %s, timeout on cmd %s\n", client->hostname,
-						fio_server_op(reply->opcode));
+						fio_server_op(op));
 		ret = 1;
 	}
 
