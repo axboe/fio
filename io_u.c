@@ -1977,11 +1977,12 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		int ret;
 
 		td->io_blocks[ddir]++;
-		td->this_io_blocks[ddir]++;
 		td->io_bytes[ddir] += bytes;
 
-		if (!(io_u->flags & IO_U_F_VER_LIST))
+		if (!(io_u->flags & IO_U_F_VER_LIST)) {
+			td->this_io_blocks[ddir]++;
 			td->this_io_bytes[ddir] += bytes;
+		}
 
 		if (ddir == DDIR_WRITE)
 			file_log_write_comp(td, f, io_u->offset, bytes);
