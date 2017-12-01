@@ -42,9 +42,16 @@ struct gtod_cpu_data {
 static void *gtod_thread_main(void *data)
 {
 	struct fio_mutex *mutex = data;
+	int ret;
 
-	fio_setaffinity(gettid(), fio_gtod_cpumask);
+	ret = fio_setaffinity(gettid(), fio_gtod_cpumask);
+
 	fio_mutex_up(mutex);
+
+	if (ret == -1) {
+		log_err("gtod: setaffinity failed\n");
+		return NULL;
+	}
 
 	/*
 	 * As long as we have jobs around, update the clock. It would be nice
