@@ -189,8 +189,11 @@ static int setup_tests(void)
 
 	src = malloc(BUF_SIZE);
 	dst = malloc(BUF_SIZE);
-	if (!src || !dst)
+	if (!src || !dst) {
+		free(src);
+		free(dst);
 		return 1;
+	}
 
 	init_rand_seed(&state, 0x8989, 0);
 	fill_random_buf(&state, src, BUF_SIZE);
