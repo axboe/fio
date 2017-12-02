@@ -24,8 +24,8 @@ static void steadystate_alloc(struct thread_data *td)
 
 void steadystate_setup(void)
 {
-	int i, prev_groupid;
 	struct thread_data *td, *prev_td;
+	int i, prev_groupid;
 
 	if (!steadystate_enabled)
 		return;
@@ -47,17 +47,15 @@ void steadystate_setup(void)
 		}
 
 		if (prev_groupid != td->groupid) {
-			if (prev_td != NULL) {
+			if (prev_td)
 				steadystate_alloc(prev_td);
-			}
 			prev_groupid = td->groupid;
 		}
 		prev_td = td;
 	}
 
-	if (prev_td != NULL && prev_td->o.group_reporting) {
+	if (prev_td && prev_td->o.group_reporting)
 		steadystate_alloc(prev_td);
-	}
 }
 
 static bool steadystate_slope(uint64_t iops, uint64_t bw,
