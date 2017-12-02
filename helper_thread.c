@@ -134,8 +134,7 @@ static void *helper_thread_main(void *data)
 					next_ss = STEADYSTATE_MSEC - (since_ss - STEADYSTATE_MSEC);
 				else
 					next_ss = STEADYSTATE_MSEC;
-			}
-			else
+			} else
 				next_ss = STEADYSTATE_MSEC - since_ss;
                 }
 

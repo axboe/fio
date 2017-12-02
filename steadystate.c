@@ -6,6 +6,14 @@
 
 bool steadystate_enabled = false;
 
+void steadystate_free(struct thread_data *td)
+{
+	free(td->ss.iops_data);
+	free(td->ss.bw_data);
+	td->ss.iops_data = NULL;
+	td->ss.bw_data = NULL;
+}
+
 static void steadystate_alloc(struct thread_data *td)
 {
 	td->ss.bw_data = calloc(td->ss.dur, sizeof(uint64_t));

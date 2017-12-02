@@ -5,6 +5,7 @@
 #include "thread_options.h"
 #include "lib/ieee754.h"
 
+extern void steadystate_free(struct thread_data *);
 extern void steadystate_check(void);
 extern void steadystate_setup(void);
 extern int td_steadystate_init(struct thread_data *);

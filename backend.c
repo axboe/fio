@@ -2480,12 +2480,7 @@ int fio_backend(struct sk_out *sk_out)
 	}
 
 	for_each_td(td, i) {
-		if (td->ss.dur) {
-			if (td->ss.iops_data != NULL) {
-				free(td->ss.iops_data);
-				free(td->ss.bw_data);
-			}
-		}
+		steadystate_free(td);
 		fio_options_free(td);
 		if (td->rusage_sem) {
 			fio_mutex_remove(td->rusage_sem);
