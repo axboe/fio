@@ -1586,7 +1586,7 @@ print_config "rbd_poll" "$rbd_poll"
 fi
 
 ##########################################
-# check for rbd_invaidate_cache()
+# check for rbd_invalidate_cache()
 if test "$rbd_inval" != "yes" ; then
   rbd_inval="no"
 fi
