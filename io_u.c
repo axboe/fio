@@ -775,8 +775,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	if (td->o.io_submit_mode == IO_MODE_INLINE)
 		io_u_quiesce(td);
 
-	usec = usec_sleep(td, usec);
-
+	usec_sleep(td, usec);
 	return ddir;
 }
 

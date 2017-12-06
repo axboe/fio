@@ -844,14 +844,13 @@ static bool io_complete_bytes_exceeded(struct thread_data *td)
  */
 static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 {
-	uint64_t secs, remainder, bps, bytes, iops;
+	uint64_t bps = td->rate_bps[ddir];
 
 	assert(!(td->flags & TD_F_CHILD));
-	bytes = td->rate_io_issue_bytes[ddir];
-	bps = td->rate_bps[ddir];
 
 	if (td->o.rate_process == RATE_PROCESS_POISSON) {
-		uint64_t val;
+		uint64_t val, iops;
+
 		iops = bps / td->o.bs[ddir];
 		val = (int64_t) (1000000 / iops) *
 				-logf(__rand_0_1(&td->poisson_state[ddir]));
@@ -863,12 +862,42 @@ static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 		td->last_usec[ddir] += val;
 		return td->last_usec[ddir];
 	} else if (bps) {
-		secs = bytes / bps;
-		remainder = bytes % bps;
+		uint64_t bytes = td->rate_io_issue_bytes[ddir];
+		uint64_t secs = bytes / bps;
+		uint64_t remainder = bytes % bps;
+
 		return remainder * 1000000 / bps + secs * 1000000;
 	}
 
 	return 0;
+}
+
+static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir)
+{
+	unsigned long long b;
+	uint64_t total;
+	int left;
+
+	b = ddir_rw_sum(td->io_blocks);
+	if (b % td->o.thinktime_blocks)
+		return;
+
+	io_u_quiesce(td);
+
+	total = 0;
+	if (td->o.thinktime_spin)
+		total = usec_spin(td->o.thinktime_spin);
+
+	left = td->o.thinktime - total;
+	if (left)
+		total += usec_sleep(td, left);
+
+	/*
+	 * If we're ignoring thinktime for the rate, add the number of bytes
+	 * we would have done while sleeping.
+	 */
+	if (total && td->rate_bps[ddir] && td->o.rate_ign_think)
+		td->rate_io_issue_bytes[ddir] += (td->rate_bps[ddir] * 1000000) / total;
 }
 
 /*
@@ -955,6 +984,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 			int err = PTR_ERR(io_u);
 
 			io_u = NULL;
+			ddir = DDIR_INVAL;
 			if (err == -EBUSY) {
 				ret = FIO_Q_BUSY;
 				goto reap;
@@ -1062,23 +1092,8 @@ reap:
 		if (!in_ramp_time(td) && td->o.latency_target)
 			lat_target_check(td);
 
-		if (td->o.thinktime) {
-			unsigned long long b;
-
-			b = ddir_rw_sum(td->io_blocks);
-			if (!(b % td->o.thinktime_blocks)) {
-				int left;
-
-				io_u_quiesce(td);
-
-				if (td->o.thinktime_spin)
-					usec_spin(td->o.thinktime_spin);
-
-				left = td->o.thinktime - td->o.thinktime_spin;
-				if (left)
-					usec_sleep(td, left);
-			}
-		}
+		if (ddir_rw(ddir) && td->o.thinktime)
+			handle_thinktime(td, ddir);
 	}
 
 	check_update_rusage(td);

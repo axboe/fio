@@ -1955,6 +1955,12 @@ I/Os that gets adjusted based on I/O completion rates. If this is set to
 flow, known as the Poisson process
 (\fIhttps://en.wikipedia.org/wiki/Poisson_point_process\fR). The lambda will be
 10^6 / IOPS for the given workload.
+.TP
+.BI rate_ignore_thinktime \fR=\fPbool
+By default, fio will attempt to catch up to the specified rate setting, if any
+kind of thinktime setting was used. If this option is set, then fio will
+ignore the thinktime and continue doing IO at the specified rate, instead of
+entering a catch-up mode after thinktime is done.
 .SS "I/O latency"
 .TP
 .BI latency_target \fR=\fPtime

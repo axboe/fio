@@ -3460,6 +3460,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RATE,
 	},
 	{
+		.name	= "rate_ignore_thinktime",
+		.lname	= "Rate ignore thinktime",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct thread_options, rate_ign_think),
+		.help	= "Rated IO ignores thinktime settings",
+		.parent = "rate",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_RATE,
+	},
+	{
 		.name	= "max_latency",
 		.lname	= "Max Latency (usec)",
 		.type	= FIO_OPT_STR_VAL_TIME,

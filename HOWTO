@@ -2208,6 +2208,13 @@ I/O rate
 	(https://en.wikipedia.org/wiki/Poisson_point_process). The lambda will be
 	10^6 / IOPS for the given workload.
 
+.. option:: rate_ignore_thinktime=bool
+
+	By default, fio will attempt to catch up to the specified rate setting,
+	if any kind of thinktime setting was used. If this option is set, then
+	fio will ignore the thinktime and continue doing IO at the specified
+	rate, instead of entering a catch-up mode after thinktime is done.
+
 
 I/O latency
 ~~~~~~~~~~~
