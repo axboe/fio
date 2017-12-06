@@ -759,11 +759,11 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 			return odir;
 
 		/*
-		 * Both directions are ahead of rate. sleep the min
-		 * switch if necissary
+		 * Both directions are ahead of rate. sleep the min,
+		 * switch if necessary
 		 */
 		if (td->rate_next_io_time[ddir] <=
-			td->rate_next_io_time[odir]) {
+		    td->rate_next_io_time[odir]) {
 			usec = td->rate_next_io_time[ddir] - now;
 		} else {
 			usec = td->rate_next_io_time[odir] - now;
