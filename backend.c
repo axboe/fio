@@ -894,10 +894,13 @@ static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir)
 
 	/*
 	 * If we're ignoring thinktime for the rate, add the number of bytes
-	 * we would have done while sleeping.
+	 * we would have done while sleeping, minus one block to ensure we
+	 * start issuing immediately after the sleep.
 	 */
-	if (total && td->rate_bps[ddir] && td->o.rate_ign_think)
+	if (total && td->rate_bps[ddir] && td->o.rate_ign_think) {
 		td->rate_io_issue_bytes[ddir] += (td->rate_bps[ddir] * 1000000) / total;
+		td->rate_io_issue_bytes[ddir] -= td->o.min_bs[ddir];
+	}
 }
 
 /*
