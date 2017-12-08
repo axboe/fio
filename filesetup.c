@@ -1628,8 +1628,6 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 	}
 
 	td->files_index++;
-	if (f->filetype == FIO_TYPE_FILE)
-		td->nr_normal_files++;
 
 	if (td->o.numjobs > 1)
 		set_already_allocated(file_name);
@@ -1855,7 +1853,6 @@ void free_release_files(struct thread_data *td)
 	td->o.nr_files = 0;
 	td->o.open_files = 0;
 	td->files_index = 0;
-	td->nr_normal_files = 0;
 }
 
 void fio_file_reset(struct thread_data *td, struct fio_file *f)
