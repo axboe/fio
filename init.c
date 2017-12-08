@@ -2142,9 +2142,7 @@ static void usage(const char *name)
 	printf("  --trigger=cmd\t\tSet this command as local trigger\n");
 	printf("  --trigger-remote=cmd\tSet this command as remote trigger\n");
 	printf("  --aux-path=path\tUse this path for fio state generated files\n");
-	printf("\nFio was written by Jens Axboe <jens.axboe@oracle.com>");
-	printf("\n                   Jens Axboe <jaxboe@fusionio.com>");
-	printf("\n                   Jens Axboe <axboe@fb.com>\n");
+	printf("\nFio was written by Jens Axboe <axboe@kernel.dk>\n");
 }
 
 #ifdef FIO_INC_DEBUG
