@@ -898,8 +898,15 @@ static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir)
 	 * start issuing immediately after the sleep.
 	 */
 	if (total && td->rate_bps[ddir] && td->o.rate_ign_think) {
-		td->rate_io_issue_bytes[ddir] += (td->rate_bps[ddir] * 1000000) / total;
-		td->rate_io_issue_bytes[ddir] -= td->o.min_bs[ddir];
+		uint64_t missed = (td->rate_bps[ddir] * total) / 1000000ULL;
+		uint64_t over;
+
+		if (total >= 1000000)
+			over = td->o.min_bs[ddir];
+		else
+			over = (td->o.min_bs[ddir] * total) / 1000000ULL;
+
+		td->rate_io_issue_bytes[ddir] += (missed - over);
 	}
 }
 
