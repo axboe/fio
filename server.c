@@ -844,24 +844,23 @@ static int handle_jobline_cmd(struct fio_net_cmd *cmd)
 static int handle_probe_cmd(struct fio_net_cmd *cmd)
 {
 	struct cmd_client_probe_pdu *pdu = (struct cmd_client_probe_pdu *) cmd->payload;
-	struct cmd_probe_reply_pdu probe;
 	uint64_t tag = cmd->tag;
+	struct cmd_probe_reply_pdu probe = {
+#ifdef CONFIG_BIG_ENDIAN
+		.bigendian	= 1,
+#endif
+		.os		= FIO_OS,
+		.arch		= FIO_ARCH,
+		.bpp		= sizeof(void *),
+		.cpus		= __cpu_to_le32(cpus_online()),
+	};
 
 	dprint(FD_NET, "server: sending probe reply\n");
 
 	strcpy(me, (char *) pdu->server);
 
-	memset(&probe, 0, sizeof(probe));
 	gethostname((char *) probe.hostname, sizeof(probe.hostname));
-#ifdef CONFIG_BIG_ENDIAN
-	probe.bigendian = 1;
-#endif
 	strncpy((char *) probe.fio_version, fio_version_string, sizeof(probe.fio_version) - 1);
-
-	probe.os	= FIO_OS;
-	probe.arch	= FIO_ARCH;
-	probe.bpp	= sizeof(void *);
-	probe.cpus	= __cpu_to_le32(cpus_online());
 
 	/*
 	 * If the client supports compression and we do too, then enable it
@@ -1826,13 +1825,12 @@ static int __fio_append_iolog_gz(struct sk_entry *first, struct io_log *log,
 
 static int fio_append_iolog_gz(struct sk_entry *first, struct io_log *log)
 {
+	z_stream stream = {
+		.zalloc	= Z_NULL,
+		.zfree	= Z_NULL,
+		.opaque	= Z_NULL,
+	};
 	int ret = 0;
-	z_stream stream;
-
-	memset(&stream, 0, sizeof(stream));
-	stream.zalloc = Z_NULL;
-	stream.zfree = Z_NULL;
-	stream.opaque = Z_NULL;
 
 	if (deflateInit(&stream, Z_DEFAULT_COMPRESSION) != Z_OK)
 		return 1;
@@ -1998,11 +1996,11 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 
 void fio_server_send_add_job(struct thread_data *td)
 {
-	struct cmd_add_job_pdu pdu;
+	struct cmd_add_job_pdu pdu = {
+		.thread_number = cpu_to_le32(td->thread_number),
+		.groupid = cpu_to_le32(td->groupid),
+	};
 
-	memset(&pdu, 0, sizeof(pdu));
-	pdu.thread_number = cpu_to_le32(td->thread_number);
-	pdu.groupid = cpu_to_le32(td->groupid);
 	convert_thread_options_to_net(&pdu.top, &td->o);
 
 	fio_net_queue_cmd(FIO_NET_CMD_ADD_JOB, &pdu, sizeof(pdu), NULL,
@@ -2240,11 +2238,10 @@ int fio_server_parse_host(const char *host, int ipv6, struct in_addr *inp,
 		ret = inet_pton(AF_INET, host, inp);
 
 	if (ret != 1) {
-		struct addrinfo hints, *res;
-
-		memset(&hints, 0, sizeof(hints));
-		hints.ai_family = ipv6 ? AF_INET6 : AF_INET;
-		hints.ai_socktype = SOCK_STREAM;
+		struct addrinfo *res, hints = {
+			.ai_family = ipv6 ? AF_INET6 : AF_INET,
+			.ai_socktype = SOCK_STREAM,
+		};
 
 		ret = getaddrinfo(host, NULL, &hints, &res);
 		if (ret) {
@@ -2403,11 +2400,11 @@ static void sig_int(int sig)
 
 static void set_sig_handlers(void)
 {
-	struct sigaction act;
+	struct sigaction act = {
+		.sa_handler = sig_int,
+		.sa_flags = SA_RESTART,
+	};
 
-	memset(&act, 0, sizeof(act));
-	act.sa_handler = sig_int;
-	act.sa_flags = SA_RESTART;
 	sigaction(SIGINT, &act, NULL);
 }
 
