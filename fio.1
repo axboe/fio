@@ -77,7 +77,14 @@ the I/O engine core to prevent writes due to unknown user space bug(s).
 .TP
 .BI \-\-eta \fR=\fPwhen
 Specifies when real\-time ETA estimate should be printed. \fIwhen\fR may
-be `always', `never' or `auto'.
+be `always', `never' or `auto'. `auto' is the default, it prints ETA when
+requested if the output is a TTY. `always' disregards the output type, and
+prints ETA when requested. `never' never prints ETA.
+.TP
+.BI \-\-eta\-interval \fR=\fPtime
+By default, fio requests client ETA status roughly every second. With this
+option, the interval is configurable. Fio imposes a minimum allowed time to
+avoid flooding the console, less than 250 msec is not supported.
 .TP
 .BI \-\-eta\-newline \fR=\fPtime
 Force a new line for every \fItime\fR period passed. When the unit is omitted,

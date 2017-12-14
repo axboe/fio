@@ -348,6 +348,14 @@ static void calc_iops(int unified_rw_rep, unsigned long mtime,
 }
 
 /*
+ * Allow a little slack - if we're within 95% of the time, allow ETA.
+ */
+bool eta_time_within_slack(unsigned int time)
+{
+	return time > ((eta_interval_msec * 95) / 100);
+}
+
+/*
  * Print status of the jobs we know about. This includes rate estimates,
  * ETA, thread state, etc.
  */
@@ -489,10 +497,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 
 	disp_time = mtime_since(&disp_prev_time, &now);
 
-	/*
-	 * Allow a little slack, the target is to print it every 1000 msecs
-	 */
-	if (!force && disp_time < 900)
+	if (!force && !eta_time_within_slack(disp_time))
 		return false;
 
 	calc_rate(unified_rw_rep, disp_time, io_bytes, disp_io_bytes, je->rate);

@@ -173,7 +173,16 @@ Command line options
 .. option:: --eta=when
 
 	Specifies when real-time ETA estimate should be printed.  `when` may be
-	`always`, `never` or `auto`.
+	`always`, `never` or `auto`. `auto` is the default, it prints ETA
+	when requested if the output is a TTY. `always` disregards the output
+	type, and prints ETA when requested. `never` never prints ETA.
+
+.. option:: --eta-interval=time
+
+	By default, fio requests client ETA status roughly every second. With
+	this option, the interval is configurable. Fio imposes a minimum
+	allowed time to avoid flooding the console, less than 250 msec is
+	not supported.
 
 .. option:: --eta-newline=time
 

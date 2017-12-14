@@ -51,6 +51,7 @@ static int nr_job_sections;
 int exitall_on_terminate = 0;
 int output_format = FIO_OUTPUT_NORMAL;
 int eta_print = FIO_ETA_AUTO;
+unsigned int eta_interval_msec = 1000;
 int eta_new_line = 0;
 FILE *f_out = NULL;
 FILE *f_err = NULL;
@@ -152,6 +153,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "eta",
 		.has_arg	= required_argument,
 		.val		= 'e' | FIO_CLIENT_FLAG,
+	},
+	{
+		.name		= (char *) "eta-interval",
+		.has_arg	= required_argument,
+		.val		= 'O' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "eta-newline",
@@ -2504,8 +2510,31 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				log_err("fio: failed parsing eta time %s\n", optarg);
 				exit_val = 1;
 				do_exit++;
+				break;
 			}
 			eta_new_line = t / 1000;
+			if (!eta_new_line) {
+				log_err("fio: eta new line time too short\n");
+				exit_val = 1;
+				do_exit++;
+			}
+			break;
+			}
+		case 'O': {
+			long long t = 0;
+
+			if (check_str_time(optarg, &t, 1)) {
+				log_err("fio: failed parsing eta interval %s\n", optarg);
+				exit_val = 1;
+				do_exit++;
+				break;
+			}
+			eta_interval_msec = t / 1000;
+			if (eta_interval_msec < DISK_UTIL_MSEC) {
+				log_err("fio: eta interval time too short (%umsec min)\n", DISK_UTIL_MSEC);
+				exit_val = 1;
+				do_exit++;
+			}
 			break;
 			}
 		case 'd':

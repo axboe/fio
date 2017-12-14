@@ -2000,7 +2000,7 @@ int fio_handle_clients(struct client_ops *ops)
 			int timeout;
 
 			fio_gettime(&ts, NULL);
-			if (mtime_since(&eta_ts, &ts) >= 900) {
+			if (eta_time_within_slack(mtime_since(&eta_ts, &ts))) {
 				request_client_etas(ops);
 				memcpy(&eta_ts, &ts, sizeof(ts));
 

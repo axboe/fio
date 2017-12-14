@@ -505,6 +505,7 @@ extern uintptr_t page_mask, page_size;
 extern int read_only;
 extern int eta_print;
 extern int eta_new_line;
+extern unsigned int eta_interval_msec;
 extern unsigned long done_secs;
 extern int fio_gtod_offload;
 extern int fio_gtod_cpu;
@@ -524,6 +525,8 @@ extern long long trigger_timeout;
 extern char *aux_path;
 
 extern struct thread_data *threads;
+
+extern bool eta_time_within_slack(unsigned int time);
 
 static inline void fio_ro_check(const struct thread_data *td, struct io_u *io_u)
 {
