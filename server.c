@@ -1928,16 +1928,15 @@ static int fio_append_text_log(struct sk_entry *first, struct io_log *log)
 
 int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 {
-	struct cmd_iolog_pdu pdu;
+	struct cmd_iolog_pdu pdu = {
+		.nr_samples		= cpu_to_le64(iolog_nr_samples(log)),
+		.thread_number		= cpu_to_le32(td->thread_number),
+		.log_type		= cpu_to_le32(log->log_type),
+		.log_hist_coarseness	= cpu_to_le32(log->hist_coarseness),
+	};
 	struct sk_entry *first;
 	struct flist_head *entry;
 	int ret = 0;
-
-	memset(&pdu, 0, sizeof(pdu));
-	pdu.nr_samples = cpu_to_le64(iolog_nr_samples(log));
-	pdu.thread_number = cpu_to_le32(td->thread_number);
-	pdu.log_type = cpu_to_le32(log->log_type);
-	pdu.log_hist_coarseness = cpu_to_le32(log->hist_coarseness);
 
 	if (!flist_empty(&log->chunk_list))
 		pdu.compressed = __cpu_to_le32(STORE_COMPRESSED);
