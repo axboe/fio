@@ -228,12 +228,14 @@ void Time_tToSystemTime(time_t dosTime, SYSTEMTIME *systemTime)
 {
     FILETIME utcFT;
     LONGLONG jan1970;
+	SYSTEMTIME tempSystemTime;
 
     jan1970 = Int32x32To64(dosTime, 10000000) + 116444736000000000;
     utcFT.dwLowDateTime = (DWORD)jan1970;
     utcFT.dwHighDateTime = jan1970 >> 32;
 
-    FileTimeToSystemTime((FILETIME*)&utcFT, systemTime);
+    FileTimeToSystemTime((FILETIME*)&utcFT, &tempSystemTime);
+	SystemTimeToTzSpecificLocalTime(NULL, &tempSystemTime, systemTime);
 }
 
 char* ctime_r(const time_t *t, char *buf)
