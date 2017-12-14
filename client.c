@@ -1834,6 +1834,9 @@ static void request_client_etas(struct client_ops *ops)
 	struct client_eta *eta;
 	int skipped = 0;
 
+	if (eta_print == FIO_ETA_NEVER)
+		return;
+
 	dprint(FD_NET, "client: request eta (%d)\n", nr_clients);
 
 	eta = calloc(1, sizeof(*eta) + __THREAD_RUNSTR_SZ(REAL_MAX_JOBS));
