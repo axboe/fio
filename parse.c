@@ -491,7 +491,7 @@ static const char *opt_type_name(struct fio_option *o)
 	compiletime_assert(ARRAY_SIZE(opt_type_names) - 1 == FIO_OPT_UNSUPPORTED,
 				"opt_type_names[] index");
 
-	if (o->type >= 0 && o->type <= FIO_OPT_UNSUPPORTED)
+	if (o->type <= FIO_OPT_UNSUPPORTED)
 		return opt_type_names[o->type];
 
 	return "OPT_UNKNOWN?";
