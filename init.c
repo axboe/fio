@@ -1083,8 +1083,11 @@ int ioengine_load(struct thread_data *td)
 		 */
 		dlhandle = td->io_ops_dlhandle;
 		ops = load_ioengine(td);
-		if (ops == td->io_ops && dlhandle == td->io_ops_dlhandle)
+		if (ops == td->io_ops && dlhandle == td->io_ops_dlhandle) {
+			if (dlhandle)
+				dlclose(dlhandle);
 			return 0;
+		}
 
 		if (dlhandle && dlhandle != td->io_ops_dlhandle)
 			dlclose(dlhandle);
