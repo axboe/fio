@@ -11,6 +11,7 @@
 #include <sys/ipc.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dlfcn.h>
 
 #include "fio.h"
 #ifndef FIO_NO_HAVE_SHM_H
@@ -1064,6 +1065,9 @@ int ioengine_load(struct thread_data *td)
 	}
 
 	if (td->io_ops) {
+		struct ioengine_ops *ops;
+		void *dlhandle;
+
 		/* An engine is loaded, but the requested ioengine
 		 * may have changed.
 		 */
@@ -1071,6 +1075,19 @@ int ioengine_load(struct thread_data *td)
 			/* The right engine is already loaded */
 			return 0;
 		}
+
+		/*
+		 * Name of file and engine may be different, load ops
+		 * for this name and see if they match. If they do, then
+		 * the engine is unchanged.
+		 */
+		dlhandle = td->io_ops_dlhandle;
+		ops = load_ioengine(td);
+		if (ops == td->io_ops && dlhandle == td->io_ops_dlhandle)
+			return 0;
+
+		if (dlhandle && dlhandle != td->io_ops_dlhandle)
+			dlclose(dlhandle);
 
 		/* Unload the old engine. */
 		free_ioengine(td);
