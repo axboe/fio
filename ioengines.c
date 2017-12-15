@@ -194,8 +194,10 @@ void free_ioengine(struct thread_data *td)
 		td->eo = NULL;
 	}
 
-	if (td->io_ops_dlhandle)
+	if (td->io_ops_dlhandle) {
 		dlclose(td->io_ops_dlhandle);
+		td->io_ops_dlhandle = NULL;
+	}
 
 	td->io_ops = NULL;
 }
