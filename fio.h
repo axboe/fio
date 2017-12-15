@@ -800,11 +800,6 @@ static inline void td_flags_set(struct thread_data *td, unsigned int *flags,
 extern const char *fio_get_arch_string(int);
 extern const char *fio_get_os_string(int);
 
-#ifdef FIO_INTERNAL
-#define ARRAY_SIZE(x)    (sizeof((x)) / (sizeof((x)[0])))
-#define FIELD_SIZE(s, f) (sizeof(((typeof(s))0)->f))
-#endif
-
 enum {
 	__FIO_OUTPUT_TERSE	= 0,
 	__FIO_OUTPUT_JSON	= 1,
