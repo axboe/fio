@@ -585,7 +585,7 @@ void display_thread_status(struct jobs_eta *je)
 			iops_str[ddir] = num2str(je->iops[ddir], 4, 1, 0, N2S_NONE);
 		}
 
-		left = sizeof(output) - (p - output) - 1;
+		left = sizeof(output) - (p - output) - 2;
 
 		if (je->rate[DDIR_TRIM] || je->iops[DDIR_TRIM])
 			l = snprintf(p, left,
@@ -601,6 +601,8 @@ void display_thread_status(struct jobs_eta *je)
 				rate_str[DDIR_READ], rate_str[DDIR_WRITE],
 				iops_str[DDIR_READ], iops_str[DDIR_WRITE],
 				eta_str);
+		if (l > left)
+			l = left;
 		p += l;
 		if (l >= 0 && l < linelen_last)
 			p += sprintf(p, "%*s", linelen_last - l, "");
