@@ -565,6 +565,7 @@ void display_thread_status(struct jobs_eta *je)
 		size_t left;
 		int l;
 		int ddir;
+		int linelen;
 
 		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running ||
 		    je->eta_sec == -1)
@@ -606,9 +607,10 @@ void display_thread_status(struct jobs_eta *je)
 		if (l >= left)
 			l = left - 1;
 		p += l;
-		if (l >= 0 && l < linelen_last)
-			p += sprintf(p, "%*s", linelen_last - l, "");
-		linelen_last = l;
+		linelen = p - output;
+		if (l >= 0 && linelen < linelen_last)
+			p += sprintf(p, "%*s", linelen_last - linelen, "");
+		linelen_last = linelen;
 
 		for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 			free(rate_str[ddir]);
