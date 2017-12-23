@@ -531,6 +531,7 @@ void display_thread_status(struct jobs_eta *je)
 
 	if (eta_new_line_pending) {
 		eta_new_line_pending = 0;
+		linelen_last = 0;
 		p += sprintf(p, "\n");
 	}
 
