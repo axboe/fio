@@ -520,7 +520,7 @@ void display_thread_status(struct jobs_eta *je)
 	static int eta_new_line_init, eta_new_line_pending;
 	static int linelen_last;
 	static int eta_good;
-	char output[REAL_MAX_JOBS + 512], *p = output;
+	char output[__THREAD_RUNSTR_SZ(REAL_MAX_JOBS) + 512], *p = output;
 	char eta_str[128];
 	double perc = 0.0;
 
