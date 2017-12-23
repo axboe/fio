@@ -9,7 +9,7 @@
 #include "lib/pow2.h"
 
 static char __run_str[REAL_MAX_JOBS + 1];
-static char run_str[__THREAD_RUNSTR_SZ(REAL_MAX_JOBS)];
+static char run_str[__THREAD_RUNSTR_SZ(REAL_MAX_JOBS) + 1];
 
 static void update_condensed_str(char *rstr, char *run_str_condensed)
 {
