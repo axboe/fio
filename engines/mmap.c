@@ -33,9 +33,9 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
 	int flags = 0;
 
-	if (td_rw(td))
+	if (td_rw(td) && !td->o.verify_only)
 		flags = PROT_READ | PROT_WRITE;
-	else if (td_write(td)) {
+	else if (td_write(td) && !td->o.verify_only) {
 		flags = PROT_WRITE;
 
 		if (td->o.verify != VERIFY_NONE)
