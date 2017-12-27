@@ -9,7 +9,7 @@
 #include "lib/pow2.h"
 
 static char __run_str[REAL_MAX_JOBS + 1];
-static char run_str[__THREAD_RUNSTR_SZ(REAL_MAX_JOBS)];
+static char run_str[__THREAD_RUNSTR_SZ(REAL_MAX_JOBS) + 1];
 
 static void update_condensed_str(char *rstr, char *run_str_condensed)
 {
@@ -520,7 +520,7 @@ void display_thread_status(struct jobs_eta *je)
 	static int eta_new_line_init, eta_new_line_pending;
 	static int linelen_last;
 	static int eta_good;
-	char output[REAL_MAX_JOBS + 512], *p = output;
+	char output[__THREAD_RUNSTR_SZ(REAL_MAX_JOBS) + 512], *p = output;
 	char eta_str[128];
 	double perc = 0.0;
 
@@ -531,6 +531,7 @@ void display_thread_status(struct jobs_eta *je)
 
 	if (eta_new_line_pending) {
 		eta_new_line_pending = 0;
+		linelen_last = 0;
 		p += sprintf(p, "\n");
 	}
 
@@ -564,6 +565,7 @@ void display_thread_status(struct jobs_eta *je)
 		size_t left;
 		int l;
 		int ddir;
+		int linelen;
 
 		if ((!je->eta_sec && !eta_good) || je->nr_ramp == je->nr_running ||
 		    je->eta_sec == -1)
@@ -585,7 +587,7 @@ void display_thread_status(struct jobs_eta *je)
 			iops_str[ddir] = num2str(je->iops[ddir], 4, 1, 0, N2S_NONE);
 		}
 
-		left = sizeof(output) - (p - output) - 2;
+		left = sizeof(output) - (p - output) - 1;
 
 		if (je->rate[DDIR_TRIM] || je->iops[DDIR_TRIM])
 			l = snprintf(p, left,
@@ -601,12 +603,14 @@ void display_thread_status(struct jobs_eta *je)
 				rate_str[DDIR_READ], rate_str[DDIR_WRITE],
 				iops_str[DDIR_READ], iops_str[DDIR_WRITE],
 				eta_str);
-		if (l > left)
-			l = left;
+		/* If truncation occurred adjust l so p is on the null */
+		if (l >= left)
+			l = left - 1;
 		p += l;
-		if (l >= 0 && l < linelen_last)
-			p += sprintf(p, "%*s", linelen_last - l, "");
-		linelen_last = l;
+		linelen = p - output;
+		if (l >= 0 && linelen < linelen_last)
+			p += sprintf(p, "%*s", linelen_last - linelen, "");
+		linelen_last = linelen;
 
 		for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 			free(rate_str[ddir]);
