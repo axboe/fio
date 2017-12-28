@@ -156,14 +156,15 @@ static bool mutex_timed_out(struct timespec *t, unsigned int msecs)
 int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int msecs)
 {
 	struct timeval tv_s;
+	struct timespec base;
 	struct timespec t;
 	int ret = 0;
 
 	assert(mutex->magic == FIO_MUTEX_MAGIC);
 
 	gettimeofday(&tv_s, NULL);
-	t.tv_sec = tv_s.tv_sec;
-	t.tv_nsec = tv_s.tv_usec * 1000;
+	base.tv_sec = t.tv_sec = tv_s.tv_sec;
+	base.tv_nsec = t.tv_nsec = tv_s.tv_usec * 1000;
 
 	t.tv_sec += msecs / 1000;
 	t.tv_nsec += ((msecs * 1000000ULL) % 1000000000);
@@ -181,7 +182,7 @@ int fio_mutex_down_timeout(struct fio_mutex *mutex, unsigned int msecs)
 		 * way too early, double check.
 		 */
 		ret = pthread_cond_timedwait(&mutex->cond, &mutex->lock, &t);
-		if (ret == ETIMEDOUT && !mutex_timed_out(&t, msecs))
+		if (ret == ETIMEDOUT && !mutex_timed_out(&base, msecs))
 			ret = 0;
 	}
 	mutex->waiters--;
