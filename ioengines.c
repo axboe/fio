@@ -224,7 +224,8 @@ int td_io_prep(struct thread_data *td, struct io_u *io_u)
 	if (td->io_ops->prep) {
 		int ret = td->io_ops->prep(td, io_u);
 
-		dprint(FD_IO, "->prep(%p)=%d\n", io_u, ret);
+		dprint(FD_IO, "prep: io_u %p: ret=%d\n", io_u, ret);
+
 		if (ret)
 			unlock_file(td, io_u->file);
 		return ret;

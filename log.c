@@ -36,9 +36,38 @@ static size_t valist_to_buf(char **buffer, const char *fmt, va_list src_args)
 
 	do {
 		*buffer = calloc(1, cur);
+		if (!*buffer)
+			return 0;
 
 		va_copy(args, src_args);
 		len = vsnprintf(*buffer, cur, fmt, args);
+		va_end(args);
+
+		if (len < cur)
+			break;
+
+		cur = len + 1;
+		free(*buffer);
+	} while (1);
+
+	return len;
+}
+
+/* allocate buffer, fill with prefix string followed by vararg string */
+static size_t prevalist_to_buf(char **buffer, const char *pre, int prelen,
+		const char *fmt, va_list src_args)
+{
+	size_t len, cur = LOG_START_SZ;
+	va_list args;
+
+	do {
+		*buffer = calloc(1, cur);
+		if (!*buffer)
+			return 0;
+
+		va_copy(args, src_args);
+		memcpy(*buffer, pre, prelen);
+		len = prelen + vsnprintf(*buffer + prelen, cur - prelen, fmt, args);
 		va_end(args);
 
 		if (len < cur)
@@ -61,6 +90,31 @@ size_t log_valist(const char *fmt, va_list args)
 	free(buffer);
 
 	return len;
+}
+
+/* add prefix for the specified type in front of the valist */
+void log_prevalist(int type, const char *fmt, va_list args)
+{
+	char pre[32];
+	char *buffer;
+	size_t len;
+	size_t prelen;
+	pid_t pid;
+
+	pid = gettid();
+	if (fio_debug_jobp && *fio_debug_jobp != -1U
+	    && pid != *fio_debug_jobp)
+		return;
+
+	prelen = snprintf(pre, sizeof pre, "%-8s %-5u ", debug_levels[type].name, (int) pid);
+	if (prelen < 0)
+		return;
+
+	len = prevalist_to_buf(&buffer, pre, prelen, fmt, args);
+	len = log_info_buf(buffer, len);
+	free(buffer);
+
+	return;
 }
 
 size_t log_info(const char *format, ...)

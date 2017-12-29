@@ -971,9 +971,8 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (io_u->offset + io_u->buflen > io_u->file->real_file_size) {
-		dprint(FD_IO, "io_u %p, offset + buflen exceeds file size\n",
-			io_u);
-		dprint(FD_IO, "  offset=%llu/buflen=%lu > %llu\n",
+		dprint(FD_IO, "io_u %p, off=0x%llx + len=0x%lx exceeds file size=0x%llx\n",
+			io_u,
 			(unsigned long long) io_u->offset, io_u->buflen,
 			(unsigned long long) io_u->file->real_file_size);
 		return 1;
@@ -986,7 +985,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 		mark_random_map(td, io_u);
 
 out:
-	dprint_io_u(io_u, "fill_io_u");
+	dprint_io_u(io_u, "fill");
 	td->zone_bytes += io_u->buflen;
 	return 0;
 }
@@ -1939,7 +1938,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	enum fio_ddir ddir = io_u->ddir;
 	struct fio_file *f = io_u->file;
 
-	dprint_io_u(io_u, "io complete");
+	dprint_io_u(io_u, "complete");
 
 	assert(io_u->flags & IO_U_F_FLIGHT);
 	io_u_clear(td, io_u, IO_U_F_FLIGHT | IO_U_F_BUSY_OK);
