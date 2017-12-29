@@ -2,6 +2,7 @@
 #define FIO_TIME_H
 
 #include <time.h>
+#include <sys/time.h>
 #include "lib/types.h"
 
 struct thread_data;
