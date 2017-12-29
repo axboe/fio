@@ -98,7 +98,7 @@ void log_prevalist(int type, const char *fmt, va_list args)
 	char pre[32];
 	char *buffer;
 	size_t len;
-	size_t prelen;
+	int prelen;
 	pid_t pid;
 
 	pid = gettid();
@@ -107,14 +107,11 @@ void log_prevalist(int type, const char *fmt, va_list args)
 		return;
 
 	prelen = snprintf(pre, sizeof pre, "%-8s %-5u ", debug_levels[type].name, (int) pid);
-	if (prelen < 0)
-		return;
-
-	len = prevalist_to_buf(&buffer, pre, prelen, fmt, args);
-	len = log_info_buf(buffer, len);
-	free(buffer);
-
-	return;
+	if (prelen > 0) {
+		len = prevalist_to_buf(&buffer, pre, prelen, fmt, args);
+		len = log_info_buf(buffer, len);
+		free(buffer);
+	}
 }
 
 size_t log_info(const char *format, ...)
