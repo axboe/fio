@@ -938,6 +938,11 @@ static int fixup_options(struct thread_data *td)
 		ret = 1;
 	}
 
+	if (o->disable_lat)
+		o->lat_percentiles = 0;
+	if (o->disable_clat)
+		o->clat_percentiles = 0;
+
 	/*
 	 * Fix these up to be nsec internally
 	 */
