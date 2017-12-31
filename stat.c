@@ -460,8 +460,15 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		display_lat(" lat", min, max, mean, dev, out);
 
 	if (ts->clat_percentiles || ts->lat_percentiles) {
+		uint64_t samples;
+
+		if (ts->clat_percentiles)
+			samples = ts->clat_stat[ddir].samples;
+		else
+			samples = ts->lat_stat[ddir].samples;
+
 		show_clat_percentiles(ts->io_u_plat[ddir],
-					ts->clat_stat[ddir].samples,
+					samples,
 					ts->percentile_list,
 					ts->percentile_precision,
 					ts->clat_percentiles, out);
