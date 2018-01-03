@@ -1443,6 +1443,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 	dst->unit_base	= cpu_to_le32(src->unit_base);
 	dst->groupid	= cpu_to_le32(src->groupid);
 	dst->unified_rw_rep	= cpu_to_le32(src->unified_rw_rep);
+	dst->sig_figs	= cpu_to_le32(src->sig_figs);
 }
 
 /*

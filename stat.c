@@ -1490,6 +1490,8 @@ void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src)
 		dst->kb_base = src->kb_base;
 	if (!dst->unit_base)
 		dst->unit_base = src->unit_base;
+	if (!dst->sig_figs)
+		dst->sig_figs = src->sig_figs;
 }
 
 void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,

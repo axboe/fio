@@ -298,6 +298,7 @@ static void gfio_thread_status_op(struct fio_client *client,
 	client_ts.members++;
 	client_ts.thread_number = p->ts.thread_number;
 	client_ts.groupid = p->ts.groupid;
+	client_ts.sig_figs = p->ts.sig_figs;
 
 	if (++sum_stat_nr == sum_stat_clients) {
 		strcpy(client_ts.name, "All clients");

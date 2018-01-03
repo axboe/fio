@@ -1472,6 +1472,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	td->ts.lat_percentiles = o->lat_percentiles;
 	td->ts.percentile_precision = o->percentile_precision;
 	memcpy(td->ts.percentile_list, o->percentile_list, sizeof(o->percentile_list));
+	td->ts.sig_figs = o->sig_figs;
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		td->ts.clat_stat[i].min_val = ULONG_MAX;

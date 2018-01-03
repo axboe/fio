@@ -1024,6 +1024,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 	client_ts.thread_number = p->ts.thread_number;
 	client_ts.groupid = p->ts.groupid;
 	client_ts.unified_rw_rep = p->ts.unified_rw_rep;
+	client_ts.sig_figs = p->ts.sig_figs;
 
 	if (++sum_stat_nr == sum_stat_clients) {
 		strcpy(client_ts.name, "All clients");
