@@ -87,8 +87,13 @@ static unsigned int get_hdr_inc(struct thread_data *td, struct io_u *io_u)
 {
 	unsigned int hdr_inc;
 
+	/*
+	 * If we use bs_unaligned, buflen can be larger than the verify
+	 * interval (which just defaults to the smallest blocksize possible).
+	 */
 	hdr_inc = io_u->buflen;
-	if (td->o.verify_interval && td->o.verify_interval <= io_u->buflen)
+	if (td->o.verify_interval && td->o.verify_interval <= io_u->buflen &&
+	    !td->o.bs_unaligned)
 		hdr_inc = td->o.verify_interval;
 
 	return hdr_inc;
@@ -1175,7 +1180,6 @@ static void fill_hdr(struct thread_data *td, struct io_u *io_u,
 		     struct verify_header *hdr, unsigned int header_num,
 		     unsigned int header_len, uint64_t rand_seed)
 {
-
 	if (td->o.verify != VERIFY_PATTERN_NO_HDR)
 		__fill_hdr(td, io_u, hdr, header_num, header_len, rand_seed);
 }
