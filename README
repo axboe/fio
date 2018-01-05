@@ -120,7 +120,9 @@ Solaris:
 
 Windows:
 	Rebecca Cran <rebecca+fio@bluestop.org> has fio packages for Windows at
-	http://www.bluestop.org/fio/ .
+	https://www.bluestop.org/fio/ . The latest builds for Windows can also
+	be grabbed from https://ci.appveyor.com/project/axboe/fio by clicking
+	the latest x86 or x64 build, then selecting the ARTIFACTS tab.
 
 BSDs:
 	Packages for BSDs may be available from their binary package repositories.
