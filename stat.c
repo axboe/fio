@@ -1030,16 +1030,14 @@ static void add_ddir_status_json(struct thread_stat *ts,
 					ts->clat_stat[ddir].samples,
 					ts->percentile_list, &ovals, &maxv,
 					&minv);
+		if (len > FIO_IO_U_LIST_MAX_LEN)
+			len = FIO_IO_U_LIST_MAX_LEN;
 	} else
 		len = 0;
 
 	percentile_object = json_create_object();
 	json_object_add_value_object(tmp_object, "percentile", percentile_object);
-	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++) {
-		if (i >= len) {
-			json_object_add_value_int(percentile_object, "0.00", 0);
-			continue;
-		}
+	for (i = 0; i < len; i++) {
 		snprintf(buf, sizeof(buf), "%f", ts->percentile_list[i].u.f);
 		json_object_add_value_int(percentile_object, (const char *)buf, ovals[i]);
 	}
