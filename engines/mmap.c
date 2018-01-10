@@ -137,7 +137,7 @@ static int fio_mmapio_prep(struct thread_data *td, struct io_u *io_u)
 	 * It fits within existing mapping, use it
 	 */
 	if (io_u->offset >= fmd->mmap_off &&
-	    io_u->offset + io_u->buflen < fmd->mmap_off + fmd->mmap_sz)
+	    io_u->offset + io_u->buflen <= fmd->mmap_off + fmd->mmap_sz)
 		goto done;
 
 	/*

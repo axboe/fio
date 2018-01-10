@@ -157,7 +157,7 @@ static int fio_devdax_prep(struct thread_data *td, struct io_u *io_u)
 	 * It fits within existing mapping, use it
 	 */
 	if (io_u->offset >= fdd->devdax_off &&
-	    io_u->offset + io_u->buflen < fdd->devdax_off + fdd->devdax_sz)
+	    io_u->offset + io_u->buflen <= fdd->devdax_off + fdd->devdax_sz)
 		goto done;
 
 	/*

@@ -430,7 +430,7 @@ static int fio_libpmem_prep(struct thread_data *td, struct io_u *io_u)
 			io_u->buflen, fdd->libpmem_sz);
 
 	if (io_u->offset >= fdd->libpmem_off &&
-	    (io_u->offset + io_u->buflen <
+	    (io_u->offset + io_u->buflen <=
 	     fdd->libpmem_off + fdd->libpmem_sz))
 		goto done;
 
