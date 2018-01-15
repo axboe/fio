@@ -213,6 +213,7 @@ struct NullData {
 		return null_open(impl_, f);
 	}
 
+private:
 	struct null_data *impl_;
 };
 
