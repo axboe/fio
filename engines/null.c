@@ -106,34 +106,34 @@ static struct null_data *null_init(struct thread_data *td)
 
 static struct io_u *fio_null_event(struct thread_data *td, int event)
 {
-	return null_event((struct null_data *)td->io_ops_data, event);
+	return null_event(td->io_ops_data, event);
 }
 
 static int fio_null_getevents(struct thread_data *td, unsigned int min_events,
 			      unsigned int max, const struct timespec *t)
 {
-	struct null_data *nd = (struct null_data *)td->io_ops_data;
+	struct null_data *nd = td->io_ops_data;
 	return null_getevents(nd, min_events, max, t);
 }
 
 static int fio_null_commit(struct thread_data *td)
 {
-	return null_commit(td, (struct null_data *)td->io_ops_data);
+	return null_commit(td, td->io_ops_data);
 }
 
 static int fio_null_queue(struct thread_data *td, struct io_u *io_u)
 {
-	return null_queue(td, (struct null_data *)td->io_ops_data, io_u);
+	return null_queue(td, td->io_ops_data, io_u);
 }
 
 static int fio_null_open(struct thread_data *td, struct fio_file *f)
 {
-	return null_open((struct null_data *)td->io_ops_data, f);
+	return null_open(td->io_ops_data, f);
 }
 
 static void fio_null_cleanup(struct thread_data *td)
 {
-	null_cleanup((struct null_data *)td->io_ops_data);
+	null_cleanup(td->io_ops_data);
 }
 
 static int fio_null_init(struct thread_data *td)
