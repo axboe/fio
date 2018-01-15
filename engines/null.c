@@ -87,9 +87,9 @@ static void null_cleanup(struct null_data *nd)
 	}
 }
 
-static int null_init(struct thread_data *td, struct null_data **nd_ptr)
+static struct null_data *null_init(struct thread_data *td)
 {
-	struct null_data *nd = (struct null_data *) malloc(sizeof(**nd_ptr));
+	struct null_data *nd = (struct null_data *) malloc(sizeof(*nd));
 
 	memset(nd, 0, sizeof(*nd));
 
@@ -99,8 +99,7 @@ static int null_init(struct thread_data *td, struct null_data **nd_ptr)
 	} else
 		td->io_ops->flags |= FIO_SYNCIO;
 
-	*nd_ptr = nd;
-	return 0;
+	return nd;
 }
 
 #ifndef __cplusplus
@@ -139,7 +138,9 @@ static void fio_null_cleanup(struct thread_data *td)
 
 static int fio_null_init(struct thread_data *td)
 {
-	return null_init(td, (struct null_data **)&td->io_ops_data);
+	td->io_ops_data = null_init(td);
+	assert(td->io_ops_data);
+	return 0;
 }
 
 static struct ioengine_ops ioengine = {
@@ -172,7 +173,8 @@ static void fio_exit fio_null_unregister(void)
 struct NullData {
 	NullData(struct thread_data *td)
 	{
-		null_init(td, &impl_);
+		impl_ = null_init(td);
+		assert(impl_);
 	}
 
 	~NullData()
