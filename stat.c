@@ -200,18 +200,17 @@ unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long long n
  */
 static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long long nr,
 				  fio_fp64_t *plist, unsigned int precision,
-				  bool is_clat, struct buf_output *out)
+				  const char *pre, struct buf_output *out)
 {
 	unsigned int divisor, len, i, j = 0;
 	unsigned long long minv, maxv;
 	unsigned long long *ovals;
 	int per_line, scale_down, time_width;
-	const char *pre = is_clat ? "clat" : " lat";
 	bool is_last;
 	char fmt[32];
 
 	len = calc_clat_percentiles(io_u_plat, nr, plist, &ovals, &maxv, &minv);
-	if (!len)
+	if (!len || !ovals)
 		goto out;
 
 	/*
@@ -419,12 +418,25 @@ static void display_lat(const char *name, unsigned long long min,
 static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			     int ddir, struct buf_output *out)
 {
-	const char *str[] = { " read", "write", " trim" };
+	const char *str[] = { " read", "write", " trim", "sync" };
 	unsigned long runt;
 	unsigned long long min, max, bw, iops;
 	double mean, dev;
 	char *io_p, *bw_p, *bw_p_alt, *iops_p;
 	int i2p;
+
+	if (ddir_sync(ddir)) {
+		if (calc_lat(&ts->sync_stat, &min, &max, &mean, &dev)) {
+			log_buf(out, "  %s:\n", "fsync/fdatasync/sync_file_range");
+			display_lat(str[ddir], min, max, mean, dev, out);
+			show_clat_percentiles(ts->io_u_sync_plat,
+						ts->sync_stat.samples,
+						ts->percentile_list,
+						ts->percentile_precision,
+						str[ddir], out);
+		}
+		return;
+	}
 
 	assert(ddir_rw(ddir));
 
@@ -460,6 +472,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		display_lat(" lat", min, max, mean, dev, out);
 
 	if (ts->clat_percentiles || ts->lat_percentiles) {
+		const char *name = ts->clat_percentiles ? "clat" : " lat";
 		uint64_t samples;
 
 		if (ts->clat_percentiles)
@@ -470,8 +483,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		show_clat_percentiles(ts->io_u_plat[ddir],
 					samples,
 					ts->percentile_list,
-					ts->percentile_precision,
-					ts->clat_percentiles, out);
+					ts->percentile_precision, name, out);
 	}
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		double p_of_agg = 100.0, fkb_base = (double)rs->kb_base;
@@ -803,6 +815,9 @@ static void show_thread_status_normal(struct thread_stat *ts,
 
 	show_latencies(ts, out);
 
+	if (ts->sync_stat.samples)
+		show_ddir_status(rs, ts, DDIR_SYNC, out);
+
 	runtime = ts->total_run_time;
 	if (runtime) {
 		double runt = (double) runtime;
@@ -968,12 +983,12 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	double mean, dev, iops;
 	unsigned int len;
 	int i;
-	const char *ddirname[] = {"read", "write", "trim"};
+	const char *ddirname[] = { "read", "write", "trim", "sync" };
 	struct json_object *dir_object, *tmp_object, *percentile_object, *clat_bins_object = NULL;
 	char buf[120];
 	double p_of_agg = 100.0;
 
-	assert(ddir_rw(ddir));
+	assert(ddir_rw(ddir) || ddir_sync(ddir));
 
 	if (ts->unified_rw_rep && ddir != DDIR_READ)
 		return;
@@ -982,54 +997,76 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	json_object_add_value_object(parent,
 		ts->unified_rw_rep ? "mixed" : ddirname[ddir], dir_object);
 
-	bw_bytes = 0;
-	bw = 0;
-	iops = 0.0;
-	if (ts->runtime[ddir]) {
-		uint64_t runt = ts->runtime[ddir];
+	if (ddir_rw(ddir)) {
+		bw_bytes = 0;
+		bw = 0;
+		iops = 0.0;
+		if (ts->runtime[ddir]) {
+			uint64_t runt = ts->runtime[ddir];
 
-		bw_bytes = ((1000 * ts->io_bytes[ddir]) / runt); /* Bytes/s */
-		bw = bw_bytes / 1024; /* KiB/s */
-		iops = (1000.0 * (uint64_t) ts->total_io_u[ddir]) / runt;
+			bw_bytes = ((1000 * ts->io_bytes[ddir]) / runt); /* Bytes/s */
+			bw = bw_bytes / 1024; /* KiB/s */
+			iops = (1000.0 * (uint64_t) ts->total_io_u[ddir]) / runt;
+		}
+
+		json_object_add_value_int(dir_object, "io_bytes", ts->io_bytes[ddir]);
+		json_object_add_value_int(dir_object, "io_kbytes", ts->io_bytes[ddir] >> 10);
+		json_object_add_value_int(dir_object, "bw_bytes", bw_bytes);
+		json_object_add_value_int(dir_object, "bw", bw);
+		json_object_add_value_float(dir_object, "iops", iops);
+		json_object_add_value_int(dir_object, "runtime", ts->runtime[ddir]);
+		json_object_add_value_int(dir_object, "total_ios", ts->total_io_u[ddir]);
+		json_object_add_value_int(dir_object, "short_ios", ts->short_io_u[ddir]);
+		json_object_add_value_int(dir_object, "drop_ios", ts->drop_io_u[ddir]);
+
+		if (!calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev)) {
+			min = max = 0;
+			mean = dev = 0.0;
+		}
+		tmp_object = json_create_object();
+		json_object_add_value_object(dir_object, "slat_ns", tmp_object);
+		json_object_add_value_int(tmp_object, "min", min);
+		json_object_add_value_int(tmp_object, "max", max);
+		json_object_add_value_float(tmp_object, "mean", mean);
+		json_object_add_value_float(tmp_object, "stddev", dev);
+
+		if (!calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev)) {
+			min = max = 0;
+			mean = dev = 0.0;
+		}
+		tmp_object = json_create_object();
+		json_object_add_value_object(dir_object, "clat_ns", tmp_object);
+		json_object_add_value_int(tmp_object, "min", min);
+		json_object_add_value_int(tmp_object, "max", max);
+		json_object_add_value_float(tmp_object, "mean", mean);
+		json_object_add_value_float(tmp_object, "stddev", dev);
+	} else {
+		if (!calc_lat(&ts->sync_stat, &min, &max, &mean, &dev)) {
+			min = max = 0;
+			mean = dev = 0.0;
+		}
+
+		tmp_object = json_create_object();
+		json_object_add_value_object(dir_object, "lat_ns", tmp_object);
+		json_object_add_value_int(tmp_object, "min", min);
+		json_object_add_value_int(tmp_object, "max", max);
+		json_object_add_value_float(tmp_object, "mean", mean);
+		json_object_add_value_float(tmp_object, "stddev", dev);
 	}
-
-	json_object_add_value_int(dir_object, "io_bytes", ts->io_bytes[ddir]);
-	json_object_add_value_int(dir_object, "io_kbytes", ts->io_bytes[ddir] >> 10);
-	json_object_add_value_int(dir_object, "bw_bytes", bw_bytes);
-	json_object_add_value_int(dir_object, "bw", bw);
-	json_object_add_value_float(dir_object, "iops", iops);
-	json_object_add_value_int(dir_object, "runtime", ts->runtime[ddir]);
-	json_object_add_value_int(dir_object, "total_ios", ts->total_io_u[ddir]);
-	json_object_add_value_int(dir_object, "short_ios", ts->short_io_u[ddir]);
-	json_object_add_value_int(dir_object, "drop_ios", ts->drop_io_u[ddir]);
-
-	if (!calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev)) {
-		min = max = 0;
-		mean = dev = 0.0;
-	}
-	tmp_object = json_create_object();
-	json_object_add_value_object(dir_object, "slat_ns", tmp_object);
-	json_object_add_value_int(tmp_object, "min", min);
-	json_object_add_value_int(tmp_object, "max", max);
-	json_object_add_value_float(tmp_object, "mean", mean);
-	json_object_add_value_float(tmp_object, "stddev", dev);
-
-	if (!calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev)) {
-		min = max = 0;
-		mean = dev = 0.0;
-	}
-	tmp_object = json_create_object();
-	json_object_add_value_object(dir_object, "clat_ns", tmp_object);
-	json_object_add_value_int(tmp_object, "min", min);
-	json_object_add_value_int(tmp_object, "max", max);
-	json_object_add_value_float(tmp_object, "mean", mean);
-	json_object_add_value_float(tmp_object, "stddev", dev);
 
 	if (ts->clat_percentiles || ts->lat_percentiles) {
-		len = calc_clat_percentiles(ts->io_u_plat[ddir],
+		if (ddir_rw(ddir)) {
+			len = calc_clat_percentiles(ts->io_u_plat[ddir],
 					ts->clat_stat[ddir].samples,
 					ts->percentile_list, &ovals, &maxv,
 					&minv);
+		} else {
+			len = calc_clat_percentiles(ts->io_u_sync_plat,
+					ts->sync_stat.samples,
+					ts->percentile_list, &ovals, &maxv,
+					&minv);
+		}
+
 		if (len > FIO_IO_U_LIST_MAX_LEN)
 			len = FIO_IO_U_LIST_MAX_LEN;
 	} else
@@ -1048,12 +1085,22 @@ static void add_ddir_status_json(struct thread_stat *ts,
 			json_object_add_value_object(tmp_object, "bins", clat_bins_object);
 
 		for(i = 0; i < FIO_IO_U_PLAT_NR; i++) {
-			if (ts->io_u_plat[ddir][i]) {
-				snprintf(buf, sizeof(buf), "%llu", plat_idx_to_val(i));
-				json_object_add_value_int(clat_bins_object, (const char *)buf, ts->io_u_plat[ddir][i]);
+			if (ddir_rw(ddir)) {
+				if (ts->io_u_plat[ddir][i]) {
+					snprintf(buf, sizeof(buf), "%llu", plat_idx_to_val(i));
+					json_object_add_value_int(clat_bins_object, (const char *)buf, ts->io_u_plat[ddir][i]);
+				}
+			} else {
+				if (ts->io_u_sync_plat[i]) {
+					snprintf(buf, sizeof(buf), "%llu", plat_idx_to_val(i));
+					json_object_add_value_int(clat_bins_object, (const char *)buf, ts->io_u_sync_plat[i]);
+				}
 			}
 		}
 	}
+
+	if (!ddir_rw(ddir))
+		return;
 
 	if (!calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev)) {
 		min = max = 0;
@@ -1233,6 +1280,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	add_ddir_status_json(ts, rs, DDIR_READ, root);
 	add_ddir_status_json(ts, rs, DDIR_WRITE, root);
 	add_ddir_status_json(ts, rs, DDIR_TRIM, root);
+	add_ddir_status_json(ts, rs, DDIR_SYNC, root);
 
 	/* CPU Usage */
 	if (ts->total_run_time) {
@@ -1529,24 +1577,25 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 		}
 	}
 
+	sum_stat(&dst->sync_stat, &src->sync_stat, first);
 	dst->usr_time += src->usr_time;
 	dst->sys_time += src->sys_time;
 	dst->ctx += src->ctx;
 	dst->majf += src->majf;
 	dst->minf += src->minf;
 
-	for (k = 0; k < FIO_IO_U_MAP_NR; k++)
+	for (k = 0; k < FIO_IO_U_MAP_NR; k++) {
 		dst->io_u_map[k] += src->io_u_map[k];
-	for (k = 0; k < FIO_IO_U_MAP_NR; k++)
 		dst->io_u_submit[k] += src->io_u_submit[k];
-	for (k = 0; k < FIO_IO_U_MAP_NR; k++)
 		dst->io_u_complete[k] += src->io_u_complete[k];
-	for (k = 0; k < FIO_IO_U_LAT_N_NR; k++)
+	}
+	for (k = 0; k < FIO_IO_U_LAT_N_NR; k++) {
 		dst->io_u_lat_n[k] += src->io_u_lat_n[k];
-	for (k = 0; k < FIO_IO_U_LAT_U_NR; k++)
 		dst->io_u_lat_u[k] += src->io_u_lat_u[k];
-	for (k = 0; k < FIO_IO_U_LAT_M_NR; k++)
 		dst->io_u_lat_m[k] += src->io_u_lat_m[k];
+	}
+	for (k = 0; k < FIO_IO_U_PLAT_NR; k++)
+		dst->io_u_sync_plat[k] += src->io_u_sync_plat[k];
 
 	for (k = 0; k < DDIR_RWDIR_CNT; k++) {
 		if (!dst->unified_rw_rep) {
@@ -2231,8 +2280,11 @@ void reset_io_stats(struct thread_data *td)
 		ts->short_io_u[i] = 0;
 		ts->drop_io_u[i] = 0;
 
-		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
+		for (j = 0; j < FIO_IO_U_PLAT_NR; j++) {
 			ts->io_u_plat[i][j] = 0;
+			if (!i)
+				ts->io_u_sync_plat[j] = 0;
+		}
 	}
 
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
@@ -2355,6 +2407,15 @@ void add_agg_sample(union io_sample_data data, enum fio_ddir ddir, unsigned int 
 
 	iolog = agg_io_log[ddir];
 	__add_log_sample(iolog, data, ddir, bs, mtime_since_genesis(), 0);
+}
+
+void add_sync_clat_sample(struct thread_stat *ts, unsigned long long nsec)
+{
+	unsigned int idx = plat_val_to_idx(nsec);
+	assert(idx < FIO_IO_U_PLAT_NR);
+
+	ts->io_u_sync_plat[idx]++;
+	add_stat_sample(&ts->sync_stat, nsec);
 }
 
 static void add_clat_percentile_sample(struct thread_stat *ts,

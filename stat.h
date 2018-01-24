@@ -162,6 +162,7 @@ struct thread_stat {
 	struct io_stat clat_stat[DDIR_RWDIR_CNT]; /* completion latency */
 	struct io_stat slat_stat[DDIR_RWDIR_CNT]; /* submission latency */
 	struct io_stat lat_stat[DDIR_RWDIR_CNT]; /* total latency */
+	struct io_stat sync_stat;		/* fsync etc stats */
 	struct io_stat bw_stat[DDIR_RWDIR_CNT]; /* bandwidth stats */
 	struct io_stat iops_stat[DDIR_RWDIR_CNT]; /* IOPS stats */
 
@@ -188,6 +189,7 @@ struct thread_stat {
 	uint32_t io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	uint32_t io_u_lat_m[FIO_IO_U_LAT_M_NR];
 	uint32_t io_u_plat[DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR];
+	uint32_t io_u_sync_plat[FIO_IO_U_PLAT_NR];
 	uint32_t pad;
 
 	uint64_t total_io_u[DDIR_RWDIR_CNT];
@@ -318,6 +320,8 @@ extern void add_iops_sample(struct thread_data *, struct io_u *,
 				unsigned int);
 extern void add_bw_sample(struct thread_data *, struct io_u *,
 				unsigned int, unsigned long long);
+extern void add_sync_clat_sample(struct thread_stat *ts,
+					unsigned long long nsec);
 extern int calc_log_samples(void);
 
 extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];

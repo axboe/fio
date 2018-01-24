@@ -1921,7 +1921,8 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 
 		if (no_reduce && per_unit_log(td->iops_log))
 			add_iops_sample(td, io_u, bytes);
-	}
+	} else if (ddir_sync(idx) && !td->o.disable_clat)
+		add_sync_clat_sample(&td->ts, llnsec);
 
 	if (td->ts.nr_block_infos && io_u->ddir == DDIR_TRIM) {
 		uint32_t *info = io_u_block_info(td, io_u);
@@ -1959,6 +1960,12 @@ static void file_log_write_comp(const struct thread_data *td, struct fio_file *f
 		f->last_write_idx = 0;
 }
 
+static bool should_account(struct thread_data *td)
+{
+	return ramp_time_over(td) && (td->runstate == TD_RUNNING ||
+					   td->runstate == TD_VERIFYING);
+}
+
 static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 			 struct io_completion_data *icd)
 {
@@ -1992,6 +1999,8 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 			f->first_write = -1ULL;
 			f->last_write = -1ULL;
 		}
+		if (should_account(td))
+			account_io_completion(td, io_u, icd, ddir, io_u->buflen);
 		return;
 	}
 
@@ -2013,8 +2022,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		if (ddir == DDIR_WRITE)
 			file_log_write_comp(td, f, io_u->offset, bytes);
 
-		if (ramp_time_over(td) && (td->runstate == TD_RUNNING ||
-					   td->runstate == TD_VERIFYING))
+		if (should_account(td))
 			account_io_completion(td, io_u, icd, ddir, bytes);
 
 		icd->bytes_done[ddir] += bytes;
