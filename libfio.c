@@ -98,7 +98,7 @@ static void reset_io_counters(struct thread_data *td, int all)
 
 	td->zone_bytes = 0;
 
-	td->last_was_sync = 0;
+	td->last_was_sync = false;
 	td->rwmix_issues = 0;
 
 	/*
@@ -230,7 +230,7 @@ void fio_mark_td_terminate(struct thread_data *td)
 {
 	fio_gettime(&td->terminate_time, NULL);
 	write_barrier();
-	td->terminate = 1;
+	td->terminate = true;
 }
 
 void fio_terminate_threads(unsigned int group_id)

@@ -228,9 +228,9 @@ struct thread_data {
 	pid_t pid;
 	char *orig_buffer;
 	size_t orig_buffer_size;
-	volatile int terminate;
 	volatile int runstate;
-	unsigned int last_was_sync;
+	volatile bool terminate;
+	bool last_was_sync;
 	enum fio_ddir last_ddir;
 
 	int mmapfd;

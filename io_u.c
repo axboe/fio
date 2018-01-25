@@ -1994,7 +1994,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	}
 
 	if (ddir_sync(ddir)) {
-		td->last_was_sync = 1;
+		td->last_was_sync = true;
 		if (f) {
 			f->first_write = -1ULL;
 			f->last_write = -1ULL;
@@ -2004,7 +2004,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		return;
 	}
 
-	td->last_was_sync = 0;
+	td->last_was_sync = false;
 	td->last_ddir = ddir;
 
 	if (!io_u->error && ddir_rw(ddir)) {
