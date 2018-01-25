@@ -854,12 +854,13 @@ static void show_thread_status_normal(struct thread_stat *ts,
 					io_u_dist[1], io_u_dist[2],
 					io_u_dist[3], io_u_dist[4],
 					io_u_dist[5], io_u_dist[6]);
-	log_buf(out, "     issued rwt: total=%llu,%llu,%llu,"
-				 " short=%llu,%llu,%llu,"
-				 " dropped=%llu,%llu,%llu\n",
+	log_buf(out, "     issued rwts: total=%llu,%llu,%llu,%llu"
+				 " short=%llu,%llu,%llu,0"
+				 " dropped=%llu,%llu,%llu,0\n",
 					(unsigned long long) ts->total_io_u[0],
 					(unsigned long long) ts->total_io_u[1],
 					(unsigned long long) ts->total_io_u[2],
+					(unsigned long long) ts->total_io_u[3],
 					(unsigned long long) ts->short_io_u[0],
 					(unsigned long long) ts->short_io_u[1],
 					(unsigned long long) ts->short_io_u[2],
@@ -1609,6 +1610,8 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 		}
 	}
 
+	dst->total_io_u[DDIR_SYNC] += src->total_io_u[DDIR_SYNC];
+
 	for (k = 0; k < DDIR_RWDIR_CNT; k++) {
 		int m;
 
@@ -1647,6 +1650,7 @@ void init_thread_stat(struct thread_stat *ts)
 		ts->bw_stat[j].min_val = -1UL;
 		ts->iops_stat[j].min_val = -1UL;
 	}
+	ts->sync_stat.min_val = -1UL;
 	ts->groupid = -1;
 }
 
@@ -2286,6 +2290,8 @@ void reset_io_stats(struct thread_data *td)
 				ts->io_u_sync_plat[j] = 0;
 		}
 	}
+
+	ts->total_io_u[DDIR_SYNC] = 0;
 
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
 		ts->io_u_map[i] = 0;
