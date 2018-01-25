@@ -7,14 +7,16 @@ enum fio_ddir {
 	DDIR_TRIM = 2,
 	DDIR_SYNC = 3,
 
-	DDIR_RWDIR_CNT = 3,
-	DDIR_RWDIR_SYNC_CNT = 4,
-
 	DDIR_DATASYNC,
 	DDIR_SYNC_FILE_RANGE,
 	DDIR_WAIT,
 	DDIR_LAST,
 	DDIR_INVAL = -1,
+};
+
+enum {
+	DDIR_RWDIR_CNT = 3,
+	DDIR_RWDIR_SYNC_CNT = 4,
 };
 
 static inline const char *io_ddir_name(enum fio_ddir ddir)
