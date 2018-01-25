@@ -1049,6 +1049,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 
 		tmp_object = json_create_object();
 		json_object_add_value_object(dir_object, "lat_ns", tmp_object);
+		json_object_add_value_int(dir_object, "total_ios", ts->total_io_u[DDIR_SYNC]);
 		json_object_add_value_int(tmp_object, "min", min);
 		json_object_add_value_int(tmp_object, "max", max);
 		json_object_add_value_float(tmp_object, "mean", mean);
