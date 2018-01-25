@@ -159,10 +159,10 @@ struct thread_stat {
 	/*
 	 * bandwidth and latency stats
 	 */
+	struct io_stat sync_stat __attribute__((aligned(8)));/* fsync etc stats */
 	struct io_stat clat_stat[DDIR_RWDIR_CNT]; /* completion latency */
 	struct io_stat slat_stat[DDIR_RWDIR_CNT]; /* submission latency */
 	struct io_stat lat_stat[DDIR_RWDIR_CNT]; /* total latency */
-	struct io_stat sync_stat;		/* fsync etc stats */
 	struct io_stat bw_stat[DDIR_RWDIR_CNT]; /* bandwidth stats */
 	struct io_stat iops_stat[DDIR_RWDIR_CNT]; /* IOPS stats */
 
