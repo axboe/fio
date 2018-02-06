@@ -177,7 +177,7 @@ def print_all_stats(ctx, end, mn, ss_cnt, vs, ws, mx):
 
     avg = weighted_average(vs, ws)
     values = [mn, avg] + list(ps) + [mx]
-    row = [end, ss_cnt] + map(lambda x: float(x) / ctx.divisor, values)
+    row = [end, ss_cnt] + [float(x) / ctx.divisor for x in values]
     fmt = "%d, %d, %d, " + fmt_float_list(ctx, 5) + ", %d"
     print (fmt % tuple(row))
 
@@ -288,9 +288,9 @@ def main(ctx):
 
         max_cols = guess_max_from_bins(ctx, __HIST_COLUMNS)
         coarseness = int(np.log2(float(max_cols) / __HIST_COLUMNS))
-        bin_vals = np.array(map(lambda x: plat_idx_to_val_coarse(x, coarseness), np.arange(__HIST_COLUMNS)), dtype=float)
-        lower_bin_vals = np.array(map(lambda x: plat_idx_to_val_coarse(x, coarseness, 0.0), np.arange(__HIST_COLUMNS)), dtype=float)
-        upper_bin_vals = np.array(map(lambda x: plat_idx_to_val_coarse(x, coarseness, 1.0), np.arange(__HIST_COLUMNS)), dtype=float)
+        bin_vals = np.array([plat_idx_to_val_coarse(x, coarseness) for x in np.arange(__HIST_COLUMNS)], dtype=float)
+        lower_bin_vals = np.array([plat_idx_to_val_coarse(x, coarseness, 0.0) for x in np.arange(__HIST_COLUMNS)], dtype=float)
+        upper_bin_vals = np.array([plat_idx_to_val_coarse(x, coarseness, 1.0) for x in np.arange(__HIST_COLUMNS)], dtype=float)
 
     fps = [open(f, 'r') for f in ctx.FILE]
     gen = histogram_generator(ctx, fps, ctx.buff_size)
@@ -333,7 +333,8 @@ def main(ctx):
             start += ctx.interval
             end = start + ctx.interval
     finally:
-        map(lambda f: f.close(), fps)
+        for fp in fps:
+            fp.close()
 
 
 if __name__ == '__main__':
