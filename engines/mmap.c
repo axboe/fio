@@ -47,15 +47,6 @@ static bool fio_madvise_file(struct thread_data *td, struct fio_file *f,
 			return false;
 		}
 	}
-	if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_DONTNEED) < 0) {
-		td_verror(td, errno, "madvise");
-		return false;
-	}
-
-#ifdef FIO_MADV_FREE
-	if (f->filetype == FIO_TYPE_BLOCK)
-		(void) posix_madvise(fmd->mmap_ptr, fmd->mmap_sz, FIO_MADV_FREE);
-#endif
 
 	return true;
 }
@@ -85,6 +76,16 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 
 	if (!fio_madvise_file(td, f, length))
 		goto err;
+
+	if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_DONTNEED) < 0) {
+		td_verror(td, errno, "madvise");
+		goto err;
+	}
+
+#ifdef FIO_MADV_FREE
+	if (f->filetype == FIO_TYPE_BLOCK)
+		(void) posix_madvise(fmd->mmap_ptr, fmd->mmap_sz, FIO_MADV_FREE);
+#endif
 
 err:
 	if (td->error && fmd->mmap_ptr)
