@@ -1093,8 +1093,9 @@ I/O type
 
 .. option:: fadvise_hint=str
 
-	Use :manpage:`posix_fadvise(2)` to advise the kernel on what I/O patterns
-	are likely to be issued.  Accepted values are:
+	Use :manpage:`posix_fadvise(2)` or :manpage:`posix_fadvise(2)` to
+	advise the kernel on what I/O patterns are likely to be issued.
+	Accepted values are:
 
 		**0**
 			Backwards-compatible hint for "no hint".

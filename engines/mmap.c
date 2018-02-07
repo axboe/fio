@@ -27,6 +27,39 @@ struct fio_mmap_data {
 	off_t mmap_off;
 };
 
+static bool fio_madvise_file(struct thread_data *td, struct fio_file *f,
+			     size_t length)
+
+{
+	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
+
+	if (!td->o.fadvise_hint)
+		return true;
+
+	if (!td_random(td)) {
+		if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_SEQUENTIAL) < 0) {
+			td_verror(td, errno, "madvise");
+			return false;
+		}
+	} else {
+		if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_RANDOM) < 0) {
+			td_verror(td, errno, "madvise");
+			return false;
+		}
+	}
+	if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_DONTNEED) < 0) {
+		td_verror(td, errno, "madvise");
+		return false;
+	}
+
+#ifdef FIO_MADV_FREE
+	if (f->filetype == FIO_TYPE_BLOCK)
+		(void) posix_madvise(fmd->mmap_ptr, fmd->mmap_sz, FIO_MADV_FREE);
+#endif
+
+	return true;
+}
+
 static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 			 size_t length, off_t off)
 {
@@ -50,26 +83,8 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 		goto err;
 	}
 
-	if (!td_random(td)) {
-		if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_SEQUENTIAL) < 0) {
-			td_verror(td, errno, "madvise");
-			goto err;
-		}
-	} else {
-		if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_RANDOM) < 0) {
-			td_verror(td, errno, "madvise");
-			goto err;
-		}
-	}
-	if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_DONTNEED) < 0) {
-		td_verror(td, errno, "madvise");
+	if (!fio_madvise_file(td, f, length))
 		goto err;
-	}
-
-#ifdef FIO_MADV_FREE
-	if (f->filetype == FIO_TYPE_BLOCK)
-		(void) posix_madvise(fmd->mmap_ptr, fmd->mmap_sz, FIO_MADV_FREE);
-#endif
 
 err:
 	if (td->error && fmd->mmap_ptr)

@@ -2443,7 +2443,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.posval	= {
 			  { .ival = "0",
 			    .oval = F_ADV_NONE,
-			    .help = "Don't issue fadvise",
+			    .help = "Don't issue fadvise/madvise",
 			  },
 			  { .ival = "1",
 			    .oval = F_ADV_TYPE,

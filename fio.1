@@ -870,8 +870,8 @@ pre\-allocation methods are available, \fBnone\fR if not.
 .RE
 .TP
 .BI fadvise_hint \fR=\fPstr
-Use \fBposix_fadvise\fR\|(2) to advise the kernel what I/O patterns
-are likely to be issued. Accepted values are:
+Use \fBposix_fadvise\fR\|(2) or \fBposix_madvise\fR\|(2) to advise the kernel
+what I/O patterns are likely to be issued. Accepted values are:
 .RS
 .RS
 .TP
