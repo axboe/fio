@@ -95,6 +95,9 @@ endif
 ifdef CONFIG_WINDOWSAIO
   SOURCE += engines/windowsaio.c
 endif
+ifdef CONFIG_RADOS
+  SOURCE += engines/rados.c
+endif
 ifdef CONFIG_RBD
   SOURCE += engines/rbd.c
 endif

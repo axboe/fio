@@ -1,0 +1,24 @@
+######################################################################
+# Example test for the RADOS engine.
+#
+# Runs a 4k random write test against a RADOS via librados
+#
+# NOTE: Make sure you have either Ceph pool named 'rados' or change
+#       the pool parameter.
+######################################################################
+[global]
+#logging
+#write_iops_log=write_iops_log
+#write_bw_log=write_bw_log
+#write_lat_log=write_lat_log
+ioengine=rados
+clientname=admin
+pool=rados
+busy_poll=0
+rw=randwrite
+bs=4k
+
+[rbd_iodepth32]
+iodepth=32
+size=128m
+nr_files=32
