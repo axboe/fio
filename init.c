@@ -802,13 +802,14 @@ static int fixup_options(struct thread_data *td)
 			o->verify_interval = o->min_bs[DDIR_READ];
 
 		/*
-		 * Verify interval must be a factor or both min and max
+		 * Verify interval must be a factor of both min and max
 		 * write size
 		 */
-		if (o->verify_interval % o->min_bs[DDIR_WRITE] ||
-		    o->verify_interval % o->max_bs[DDIR_WRITE])
+		if (!o->verify_interval ||
+				o->min_bs[DDIR_WRITE] % o->verify_interval ||
+				o->max_bs[DDIR_WRITE] % o->verify_interval)
 			o->verify_interval = gcd(o->min_bs[DDIR_WRITE],
-							o->max_bs[DDIR_WRITE]);
+						 o->max_bs[DDIR_WRITE]);
 	}
 
 	if (o->pre_read) {
@@ -1585,7 +1586,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			p.avg_msec = min(o->log_avg_msec, o->bw_avg_time);
 		else
 			o->bw_avg_time = p.avg_msec;
-	
+
 		p.hist_msec = o->log_hist_msec;
 		p.hist_coarseness = o->log_hist_coarseness;
 
@@ -1616,7 +1617,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			p.avg_msec = min(o->log_avg_msec, o->iops_avg_time);
 		else
 			o->iops_avg_time = p.avg_msec;
-	
+
 		p.hist_msec = o->log_hist_msec;
 		p.hist_coarseness = o->log_hist_coarseness;
 
