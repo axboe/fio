@@ -806,10 +806,10 @@ static int fixup_options(struct thread_data *td)
 		 * write size
 		 */
 		if (!o->verify_interval ||
-				o->min_bs[DDIR_WRITE] % o->verify_interval ||
-				o->max_bs[DDIR_WRITE] % o->verify_interval)
+		    (o->min_bs[DDIR_WRITE] % o->verify_interval) ||
+		    (o->max_bs[DDIR_WRITE] % o->verify_interval))
 			o->verify_interval = gcd(o->min_bs[DDIR_WRITE],
-						 o->max_bs[DDIR_WRITE]);
+							o->max_bs[DDIR_WRITE]);
 	}
 
 	if (o->pre_read) {
