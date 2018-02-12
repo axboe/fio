@@ -39,6 +39,10 @@ static inline bool fio_did_warn(unsigned int mask)
 	return false;
 }
 
+enum {
+	FIO_WARN_ROOT_FLUSH	= 1,
+};
+
 #ifdef FIO_INC_DEBUG
 struct debug_level {
 	const char *name;

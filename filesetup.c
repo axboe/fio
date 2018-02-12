@@ -20,8 +20,6 @@
 #include <linux/falloc.h>
 #endif
 
-static int root_warn;
-
 static FLIST_HEAD(filename_list);
 
 /*
@@ -516,10 +514,9 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 			ret = blockdev_invalidate_cache(f);
 		}
 		if (ret < 0 && errno == EACCES && geteuid()) {
-			if (!root_warn) {
+			if (!fio_did_warn(FIO_WARN_ROOT_FLUSH)) {
 				log_err("fio: only root may flush block "
 					"devices. Cache flush bypassed!\n");
-				root_warn = 1;
 			}
 			ret = 0;
 		}
