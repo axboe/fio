@@ -163,7 +163,6 @@ static int __get_next_rand_offset_zoned_abs(struct thread_data *td,
 {
 	struct zone_split_index *zsi;
 	uint64_t lastb, send, stotal;
-	static int warned;
 	unsigned int v;
 
 	lastb = last_block(td, f, ddir);
@@ -192,10 +191,8 @@ bail:
 	 * Should never happen
 	 */
 	if (send == -1U) {
-		if (!warned) {
+		if (!fio_did_warn(FIO_WARN_ZONED_BUG))
 			log_err("fio: bug in zoned generation\n");
-			warned = 1;
-		}
 		goto bail;
 	} else if (send > lastb) {
 		/*
@@ -223,7 +220,6 @@ static int __get_next_rand_offset_zoned(struct thread_data *td,
 {
 	unsigned int v, send, stotal;
 	uint64_t offset, lastb;
-	static int warned;
 	struct zone_split_index *zsi;
 
 	lastb = last_block(td, f, ddir);
@@ -248,10 +244,8 @@ bail:
 	 * Should never happen
 	 */
 	if (send == -1U) {
-		if (!warned) {
+		if (!fio_did_warn(FIO_WARN_ZONED_BUG))
 			log_err("fio: bug in zoned generation\n");
-			warned = 1;
-		}
 		goto bail;
 	}
 
