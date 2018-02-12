@@ -2,6 +2,7 @@
 #define FIO_DEBUG_H
 
 #include <assert.h>
+#include "lib/types.h"
 #include "log.h"
 
 enum {
@@ -26,7 +27,17 @@ enum {
 	FD_DEBUG_MAX,
 };
 
-extern unsigned int fio_debug_jobno, *fio_debug_jobp;
+extern unsigned int fio_debug_jobno, *fio_debug_jobp, *fio_warned;
+
+static inline bool fio_did_warn(unsigned int mask)
+{
+	if (!(*fio_warned & mask)) {
+		*fio_warned |= mask;
+		return true;
+	}
+
+	return false;
+}
 
 #ifdef FIO_INC_DEBUG
 struct debug_level {

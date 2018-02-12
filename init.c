@@ -79,6 +79,7 @@ static int prev_group_jobs;
 unsigned long fio_debug = 0;
 unsigned int fio_debug_jobno = -1;
 unsigned int *fio_debug_jobp = NULL;
+unsigned int *fio_warned = NULL;
 
 static char cmd_optstr[256];
 static bool did_arg;
@@ -309,6 +310,7 @@ static void free_shm(void)
 	if (threads) {
 		flow_exit();
 		fio_debug_jobp = NULL;
+		fio_warned = NULL;
 		free_threads_shm();
 	}
 
@@ -341,7 +343,7 @@ static int setup_thread_area(void)
 	do {
 		size_t size = max_jobs * sizeof(struct thread_data);
 
-		size += sizeof(unsigned int);
+		size += 2 * sizeof(unsigned int);
 
 #ifndef CONFIG_NO_SHM
 		shm_id = shmget(0, size, IPC_CREAT | 0600);
@@ -376,6 +378,8 @@ static int setup_thread_area(void)
 	memset(threads, 0, max_jobs * sizeof(struct thread_data));
 	fio_debug_jobp = (unsigned int *)(threads + max_jobs);
 	*fio_debug_jobp = -1;
+	fio_warned = fio_debug_jobp + 1;
+	*fio_warned = 0;
 
 	flow_init();
 
