@@ -241,7 +241,6 @@ struct vcont {
 };
 
 #define DUMP_BUF_SZ	255
-static int dump_buf_warned;
 
 static void dump_buf(char *buf, unsigned int len, unsigned long long offset,
 		     const char *type, struct fio_file *f)
@@ -260,10 +259,8 @@ static void dump_buf(char *buf, unsigned int len, unsigned long long offset,
 
 	buf_left -= strlen(fname);
 	if (buf_left <= 0) {
-		if (!dump_buf_warned) {
+		if (!fio_did_warn(FIO_WARN_VERIFY_BUF))
 			log_err("fio: verify failure dump buffer too small\n");
-			dump_buf_warned = 1;
-		}
 		free(ptr);
 		return;
 	}

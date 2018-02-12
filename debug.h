@@ -41,6 +41,7 @@ static inline bool fio_did_warn(unsigned int mask)
 
 enum {
 	FIO_WARN_ROOT_FLUSH	= 1,
+	FIO_WARN_VERIFY_BUF	= 2,
 };
 
 #ifdef FIO_INC_DEBUG
