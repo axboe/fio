@@ -1141,8 +1141,6 @@ size_t log_chunk_sizes(struct io_log *log)
 
 #ifdef CONFIG_ZLIB
 
-static bool warned_on_drop;
-
 static void iolog_put_deferred(struct io_log *log, void *ptr)
 {
 	if (!ptr)
@@ -1152,10 +1150,8 @@ static void iolog_put_deferred(struct io_log *log, void *ptr)
 	if (log->deferred < IOLOG_MAX_DEFER) {
 		log->deferred_items[log->deferred] = ptr;
 		log->deferred++;
-	} else if (!warned_on_drop) {
+	} else if (!fio_did_warn(FIO_WARN_IOLOG_DROP))
 		log_err("fio: had to drop log entry free\n");
-		warned_on_drop = true;
-	}
 	pthread_mutex_unlock(&log->deferred_free_lock);
 }
 
