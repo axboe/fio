@@ -31,11 +31,10 @@ extern unsigned int fio_debug_jobno, *fio_debug_jobp, *fio_warned;
 
 static inline bool fio_did_warn(unsigned int mask)
 {
-	if (!(*fio_warned & mask)) {
-		*fio_warned |= mask;
+	if (*fio_warned & mask)
 		return true;
-	}
 
+	*fio_warned |= mask;
 	return false;
 }
 
