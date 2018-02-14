@@ -173,6 +173,8 @@ for opt do
   ;;
   --disable-rdma) disable_rdma="yes"
   ;;
+  --disable-rados) disable_rados="yes"
+  ;;
   --disable-rbd) disable_rbd="yes"
   ;;
   --disable-rbd-blkin) disable_rbd_blkin="yes"
@@ -1527,6 +1529,35 @@ fi
 print_config "IPv6 helpers" "$ipv6"
 
 ##########################################
+# check for rados
+if test "$rados" != "yes" ; then
+  rados="no"
+fi
+cat > $TMPC << EOF
+#include <rados/librados.h>
+
+int main(int argc, char **argv)
+{
+  rados_t cluster;
+  rados_ioctx_t io_ctx;
+  const char cluster_name[] = "ceph";
+  const char user_name[] = "client.admin";
+  const char pool[] = "rados";
+
+  /* The rados_create2 signature required was only introduced in ceph 0.65 */
+  rados_create2(&cluster, cluster_name, user_name, 0);
+  rados_ioctx_create(cluster, pool, &io_ctx);
+
+  return 0;
+}
+EOF
+if test "$disable_rados" != "yes"  && compile_prog "" "-lrados" "rados"; then
+  LIBS="-lrados $LIBS"
+  rados="yes"
+fi
+print_config "Rados engine" "$rados"
+
+##########################################
 # check for rbd
 if test "$rbd" != "yes" ; then
   rbd="no"
@@ -2261,6 +2292,9 @@ if test "$pwritev2" = "yes" ; then
 fi
 if test "$ipv6" = "yes" ; then
   output_sym "CONFIG_IPV6"
+fi
+if test "$rados" = "yes" ; then
+  output_sym "CONFIG_RADOS"
 fi
 if test "$rbd" = "yes" ; then
   output_sym "CONFIG_RBD"
