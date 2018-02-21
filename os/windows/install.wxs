@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
-	<?if $(env.FIO_ARCH) = x86 ?>
+	<?if $(sys.BUILDARCH) = x86 ?>
 		<?define ProgramDirectory = ProgramFilesFolder ?>
 	<?else?>
 		<?define ProgramDirectory = ProgramFiles64Folder ?>
@@ -10,9 +10,9 @@
 	<Product Id="*"
 	  Codepage="1252" Language="1033"
 	  Manufacturer="fio" Name="fio"
-	  UpgradeCode="2338A332-5511-43CF-B9BD-5C60496CCFCC" Version="3.5">
+	  UpgradeCode="2338A332-5511-43CF-B9BD-5C60496CCFCC" Version="$(var.FioVersionNumbers)">
 		<Package
-		  Description="Flexible IO Tester"
+		  Description="Flexible I/O Tester"
 		  InstallerVersion="301" Keywords="Installer,MSI,Database"
 		  Languages="1033" Manufacturer="fio"
 		  InstallScope="perMachine" InstallPrivileges="elevated" Compressed="yes"/>
@@ -48,7 +48,7 @@
 			</Directory>
 	</Directory>
 
-	<Feature Id="AlwaysInstall" Absent="disallow" ConfigurableDirectory="INSTALLDIR" Display="hidden" Level="1" Title="Flexible IO Tester">
+	<Feature Id="AlwaysInstall" Absent="disallow" ConfigurableDirectory="INSTALLDIR" Display="hidden" Level="1" Title="Flexible I/O Tester">
 		<ComponentRef Id="fio.exe"/>
 		<ComponentRef Id="HOWTO"/>
 		<ComponentRef Id="README"/>
