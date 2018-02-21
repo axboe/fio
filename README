@@ -172,7 +172,9 @@ directory.
 How to compile fio on 64-bit Windows:
 
  1. Install Cygwin (http://www.cygwin.com/). Install **make** and all
-    packages starting with **mingw64-i686** and **mingw64-x86_64**.
+    packages starting with **mingw64-i686** and **mingw64-x86_64**. Ensure
+    **mingw64-i686-zlib** and **mingw64-x86_64-zlib** are installed if you wish
+    to enable fio's log compression functionality.
  2. Open the Cygwin Terminal.
  3. Go to the fio directory (source files).
  4. Run ``make clean && make -j``.
