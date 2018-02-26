@@ -1810,6 +1810,11 @@ I/O engine
 			I/O engine that does regular EXT4_IOC_MOVE_EXT ioctls to simulate
 			defragment activity in request to DDIR_WRITE event.
 
+		**rados**
+			I/O engine supporting direct access to Ceph Reliable Autonomic
+			Distributed Object Store (RADOS) via librados. This ioengine
+			defines engine specific options.
+
 		**rbd**
 			I/O engine supporting direct access to Ceph Rados Block Devices
 			(RBD) via librbd without the need to use the kernel rbd driver. This
@@ -2011,7 +2016,7 @@ with the caveat that when used on the command line, they must come after the
 		Allocate space immediately inside defragment event, and free right
 		after event.
 
-.. option:: clustername=str : [rbd]
+.. option:: clustername=str : [rbd,rados]
 
 	Specifies the name of the Ceph cluster.
 
@@ -2019,16 +2024,21 @@ with the caveat that when used on the command line, they must come after the
 
 	Specifies the name of the RBD.
 
-.. option:: pool=str : [rbd]
+.. option:: pool=str : [rbd,rados]
 
-	Specifies the name of the Ceph pool containing RBD.
+	Specifies the name of the Ceph pool containing RBD or RADOS data.
 
-.. option:: clientname=str : [rbd]
+.. option:: clientname=str : [rbd,rados]
 
 	Specifies the username (without the 'client.' prefix) used to access the
 	Ceph cluster. If the *clustername* is specified, the *clientname* shall be
 	the full *type.id* string. If no type. prefix is given, fio will add
 	'client.' by default.
+
+.. option:: busy_poll=bool : [rbd,rados]
+
+        Poll store instead of waiting for completion. Usually this provides better
+        throughput at cost of higher(up to 100%) CPU utilization.
 
 .. option:: skip_bad=bool : [mtd]
 
