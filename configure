@@ -2376,7 +2376,7 @@ if test "$disable_opt" = "yes" ; then
   output_sym "CONFIG_DISABLE_OPTIMIZATIONS"
 fi
 if test "$zlib" = "no" ; then
-  echo "Consider installing zlib-dev (zlib-devel), some fio features depend on it."
+  echo "Consider installing zlib-dev (zlib-devel or zlib-static), some fio features depend on it."
 fi
 if test "$cuda" = "yes" ; then
   output_sym "CONFIG_CUDA"
