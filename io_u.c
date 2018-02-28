@@ -1012,7 +1012,7 @@ out:
 	return 0;
 }
 
-static void __io_u_mark_map(unsigned int *map, unsigned int nr)
+static void __io_u_mark_map(uint64_t *map, unsigned int nr)
 {
 	int idx = 0;
 

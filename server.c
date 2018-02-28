@@ -1497,21 +1497,21 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	}
 
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
-		p.ts.io_u_map[i]	= cpu_to_le32(ts->io_u_map[i]);
-		p.ts.io_u_submit[i]	= cpu_to_le32(ts->io_u_submit[i]);
-		p.ts.io_u_complete[i]	= cpu_to_le32(ts->io_u_complete[i]);
+		p.ts.io_u_map[i]	= cpu_to_le64(ts->io_u_map[i]);
+		p.ts.io_u_submit[i]	= cpu_to_le64(ts->io_u_submit[i]);
+		p.ts.io_u_complete[i]	= cpu_to_le64(ts->io_u_complete[i]);
 	}
 
 	for (i = 0; i < FIO_IO_U_LAT_N_NR; i++)
-		p.ts.io_u_lat_n[i]	= cpu_to_le32(ts->io_u_lat_n[i]);
+		p.ts.io_u_lat_n[i]	= cpu_to_le64(ts->io_u_lat_n[i]);
 	for (i = 0; i < FIO_IO_U_LAT_U_NR; i++)
-		p.ts.io_u_lat_u[i]	= cpu_to_le32(ts->io_u_lat_u[i]);
+		p.ts.io_u_lat_u[i]	= cpu_to_le64(ts->io_u_lat_u[i]);
 	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++)
-		p.ts.io_u_lat_m[i]	= cpu_to_le32(ts->io_u_lat_m[i]);
+		p.ts.io_u_lat_m[i]	= cpu_to_le64(ts->io_u_lat_m[i]);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++)
 		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
-			p.ts.io_u_plat[i][j] = cpu_to_le32(ts->io_u_plat[i][j]);
+			p.ts.io_u_plat[i][j] = cpu_to_le64(ts->io_u_plat[i][j]);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		p.ts.total_io_u[i]	= cpu_to_le64(ts->total_io_u[i]);
@@ -1748,7 +1748,7 @@ static int __fio_append_iolog_gz_hist(struct sk_entry *first, struct io_log *log
 	for (i = 0; i < cur_log->nr_samples; i++) {
 		struct io_sample *s;
 		struct io_u_plat_entry *cur_plat_entry, *prev_plat_entry;
-		unsigned int *cur_plat, *prev_plat;
+		uint64_t *cur_plat, *prev_plat;
 
 		s = get_sample(log, cur_log, i);
 		ret = __deflate_pdu_buffer(s, sample_sz, &out_pdu, &entry, stream, first);

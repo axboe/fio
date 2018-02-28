@@ -135,7 +135,7 @@ static int double_cmp(const void *a, const void *b)
 	return cmp;
 }
 
-unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long long nr,
+unsigned int calc_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 				   fio_fp64_t *plist, unsigned long long **output,
 				   unsigned long long *maxv, unsigned long long *minv)
 {
@@ -198,7 +198,7 @@ unsigned int calc_clat_percentiles(unsigned int *io_u_plat, unsigned long long n
 /*
  * Find and display the p-th percentile of clat
  */
-static void show_clat_percentiles(unsigned int *io_u_plat, unsigned long long nr,
+static void show_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 				  fio_fp64_t *plist, unsigned int precision,
 				  const char *pre, struct buf_output *out)
 {
@@ -323,7 +323,7 @@ void show_group_stats(struct group_run_stats *rs, struct buf_output *out)
 	}
 }
 
-void stat_calc_dist(unsigned int *map, unsigned long total, double *io_u_dist)
+void stat_calc_dist(uint64_t *map, unsigned long total, double *io_u_dist)
 {
 	int i;
 
@@ -342,7 +342,7 @@ void stat_calc_dist(unsigned int *map, unsigned long total, double *io_u_dist)
 }
 
 static void stat_calc_lat(struct thread_stat *ts, double *dst,
-			  unsigned int *src, int nr)
+			  uint64_t *src, int nr)
 {
 	unsigned long total = ddir_rw_sum(ts->total_io_u);
 	int i;
@@ -2460,7 +2460,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		this_window = elapsed - hw->hist_last;
 		
 		if (this_window >= iolog->hist_msec) {
-			unsigned int *io_u_plat;
+			uint64_t *io_u_plat;
 			struct io_u_plat_entry *dst;
 
 			/*
@@ -2470,7 +2470,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 			 * located in iolog.c after printing this sample to the
 			 * log file.
 			 */
-			io_u_plat = (unsigned int *) td->ts.io_u_plat[ddir];
+			io_u_plat = (uint64_t *) td->ts.io_u_plat[ddir];
 			dst = malloc(sizeof(struct io_u_plat_entry));
 			memcpy(&(dst->io_u_plat), io_u_plat,
 				FIO_IO_U_PLAT_NR * sizeof(unsigned int));
