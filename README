@@ -200,6 +200,38 @@ output formats are supported run ``make -C doc help``.
 .. _reStructuredText: http://www.sphinx-doc.org/rest.html
 .. _Sphinx: http://www.sphinx-doc.org
 
+Static Compilation
+~~~~~~~~~~~~~~~~~~
+
+Fio can be statically compiled using ``./configure --build-static``. Make sure to install static packages of desired libraries such as ``zlib-static``. Desired IO Engines such as ``libaio`` will also need to be statically included.
+
+static compilation with libaio
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+libaio can be statically compiled into fio. To do so, clone the libaio source and compile libaio:
+
+::
+
+    git clone https://pagure.io/libaio.git
+    cd libaio
+    make
+
+copy the archive library to your fio directory:
+
+::
+
+    cp libaio/src/libaio.a <your-fio-directory>
+
+
+Now run the following to compile fio statically with the libaio engine:
+
+::
+
+    cd <your-fio-directory>
+    LDFLAGS=-L. ./configure --build-static
+    make
+
+The resultant fio binary will now be able to be run statically with libaio as the ioengine
 
 Platforms
 ---------
