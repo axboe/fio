@@ -286,7 +286,7 @@ extern void finalize_logs(struct thread_data *td, bool);
 extern void setup_log(struct io_log **, struct log_params *, const char *);
 extern void flush_log(struct io_log *, bool);
 extern void flush_samples(FILE *, void *, uint64_t);
-extern unsigned long hist_sum(int, int, unsigned int *, unsigned int *);
+extern uint64_t hist_sum(int, int, uint64_t *, uint64_t *);
 extern void free_log(struct io_log *);
 extern void fio_writeout_logs(bool);
 extern void td_writeout_logs(struct thread_data *, bool);

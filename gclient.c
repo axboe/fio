@@ -1099,7 +1099,7 @@ static void gfio_show_clat_percentiles(struct gfio_client *gc,
 				       GtkWidget *vbox, struct thread_stat *ts,
 				       int ddir)
 {
-	unsigned int *io_u_plat = ts->io_u_plat[ddir];
+	uint64_t *io_u_plat = ts->io_u_plat[ddir];
 	unsigned long long nr = ts->clat_stat[ddir].samples;
 	fio_fp64_t *plist = ts->percentile_list;
 	unsigned int len, scale_down;
