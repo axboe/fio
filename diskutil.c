@@ -254,6 +254,8 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 		slavepath[linklen] = '\0';
 
 		sprintf(temppath, "%s/%s/dev", slavesdir, slavepath);
+		if (access(temppath, F_OK) != 0)
+			sprintf(temppath, "%s/%s/device/dev", slavesdir, slavepath);
 		if (read_block_dev_entry(temppath, &majdev, &mindev)) {
 			perror("Error getting slave device numbers.");
 			closedir(dirhandle);
