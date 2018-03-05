@@ -454,7 +454,7 @@ See \fB\-\-max\-jobs\fR. Default: 1.
 Tell fio to terminate processing after the specified period of time. It
 can be quite hard to determine for how long a specified job will run, so
 this parameter is handy to cap the total runtime to a given time. When
-the unit is omitted, the value is intepreted in seconds.
+the unit is omitted, the value is interpreted in seconds.
 .TP
 .BI time_based
 If set, fio will run for the duration of the \fBruntime\fR specified
@@ -1552,7 +1552,7 @@ single CPU at the desired rate. A job never finishes unless there is
 at least one non\-cpuio job.
 .TP
 .B guasi
-The GUASI I/O engine is the Generic Userspace Asyncronous Syscall
+The GUASI I/O engine is the Generic Userspace Asynchronous Syscall
 Interface approach to async I/O. See \fIhttp://www.xmailserver.org/guasi\-lib.html\fR
 for more info on GUASI.
 .TP
@@ -2134,7 +2134,7 @@ arguments:
 <mode>[:<nodelist>]
 .RE
 .P
-`mode' is one of the following memory poicies: `default', `prefer',
+`mode' is one of the following memory policies: `default', `prefer',
 `bind', `interleave' or `local'. For `default' and `local' memory
 policies, no node needs to be specified. For `prefer', only one node is
 allowed. For `bind' and `interleave' the `nodelist' may be as
@@ -2244,7 +2244,7 @@ Use a crc32c sum of the data area and store it in the header of
 each block. This will automatically use hardware acceleration
 (e.g. SSE4.2 on an x86 or CRC crypto extensions on ARM64) but will
 fall back to software crc32c if none is found. Generally the
-fatest checksum fio supports when hardware accelerated.
+fastest checksum fio supports when hardware accelerated.
 .TP
 .B crc32c\-intel
 Synonym for crc32c.
