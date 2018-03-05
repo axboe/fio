@@ -672,7 +672,7 @@ Time related parameters
 	Tell fio to terminate processing after the specified period of time.  It
 	can be quite hard to determine for how long a specified job will run, so
 	this parameter is handy to cap the total runtime to a given time.  When
-	the unit is omitted, the value is intepreted in seconds.
+	the unit is omitted, the value is interpreted in seconds.
 
 .. option:: time_based
 
@@ -1775,7 +1775,7 @@ I/O engine
 			at least one non-cpuio job.
 
 		**guasi**
-			The GUASI I/O engine is the Generic Userspace Asyncronous Syscall
+			The GUASI I/O engine is the Generic Userspace Asynchronous Syscall
 			Interface approach to async I/O. See
 
 			http://www.xmailserver.org/guasi-lib.html
@@ -2413,7 +2413,7 @@ Threads, processes and job synchronization
 
 		<mode>[:<nodelist>]
 
-	``mode`` is one of the following memory poicies: ``default``, ``prefer``,
+	``mode`` is one of the following memory policies: ``default``, ``prefer``,
 	``bind``, ``interleave`` or ``local``. For ``default`` and ``local`` memory
 	policies, no node needs to be specified.  For ``prefer``, only one node is
 	allowed.  For ``bind`` and ``interleave`` the ``nodelist`` may be as
@@ -2537,7 +2537,7 @@ Verification
 			each block. This will automatically use hardware acceleration
 			(e.g. SSE4.2 on an x86 or CRC crypto extensions on ARM64) but will
 			fall back to software crc32c if none is found. Generally the
-			fatest checksum fio supports when hardware accelerated.
+			fastest checksum fio supports when hardware accelerated.
 
 		**crc32c-intel**
 			Synonym for crc32c.
