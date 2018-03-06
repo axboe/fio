@@ -31,6 +31,9 @@ SCRIPTS = $(addprefix $(SRCDIR)/,tools/fio_generate_plots tools/plot/fio2gnuplot
 ifndef CONFIG_FIO_NO_OPT
   CFLAGS += -O3 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
 endif
+ifdef CONFIG_BUILD_NATIVE
+  CFLAGS += -march=native
+endif
 
 ifdef CONFIG_GFIO
   PROGS += gfio

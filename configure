@@ -145,6 +145,7 @@ devdax="no"
 pmem="no"
 disable_lex=""
 disable_pmem="no"
+disable_native="no"
 prefix=/usr/local
 
 # parse options
@@ -195,6 +196,8 @@ for opt do
   ;;
   --enable-cuda) enable_cuda="yes"
   ;;
+  --disable-native) disable_native="yes"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -224,6 +227,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-shm           Disable SHM support"
   echo "--disable-optimizations Don't enable compiler optimizations"
   echo "--enable-cuda           Enable GPUDirect RDMA support"
+  echo "--disable-native        Don't build for native host"
   exit $exit_val
 fi
 
@@ -2131,6 +2135,20 @@ if compile_prog "" "" "mkdir(a, b)"; then
 fi
 print_config "mkdir(a, b)" "$mkdir_two"
 
+##########################################
+# check for cc -march=native
+build_native="no"
+cat > $TMPC << EOF
+int main(int argc, char **argv)
+{
+  return 0;
+}
+EOF
+if test "$disable_native" = "no" && compile_prog "-march=native" "" "march=native"; then
+  build_native="yes"
+fi
+print_config "Build march=native" "$build_native"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -2376,6 +2394,9 @@ if test "$cuda" = "yes" ; then
 fi
 if test "$mkdir_two" = "yes" ; then
   output_sym "CONFIG_HAVE_MKDIR_TWO"
+fi
+if test "$build_native" = "yes" ; then
+  output_sym "CONFIG_BUILD_NATIVE"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
