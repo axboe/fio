@@ -498,8 +498,8 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 		}
 
 		if (posix_fadvise(f->fd, f->file_offset, f->io_size, flags) < 0) {
-			td_verror(td, errno, "fadvise");
-			goto err;
+			if (!fio_did_warn(FIO_WARN_FADVISE))
+				log_err("fio: fadvise hint failed\n");
 		}
 	}
 #ifdef FIO_HAVE_WRITE_HINT
