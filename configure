@@ -146,6 +146,7 @@ pmem="no"
 disable_lex=""
 disable_pmem="no"
 disable_native="no"
+march_set="no"
 prefix=/usr/local
 
 # parse options
@@ -2065,6 +2066,7 @@ EOF
   if compile_prog "-march=armv8-a+crc+crypto" "" ""; then
     march_armv8_a_crc_crypto="yes"
     CFLAGS="$CFLAGS -march=armv8-a+crc+crypto -DARCH_HAVE_CRC_CRYPTO"
+    march_set="yes"
   fi
 fi
 print_config "march_armv8_a_crc_crypto" "$march_armv8_a_crc_crypto"
@@ -2287,6 +2289,7 @@ fi
 if test "$s390_z196_facilities" = "yes" ; then
   output_sym "CONFIG_S390_Z196_FACILITIES"
   CFLAGS="$CFLAGS -march=z9-109"
+  march_set="yes"
 fi
 if test "$gfapi" = "yes" ; then
   output_sym "CONFIG_GFAPI"
@@ -2360,7 +2363,7 @@ fi
 if test "$mkdir_two" = "yes" ; then
   output_sym "CONFIG_HAVE_MKDIR_TWO"
 fi
-if test "$build_native" = "yes" ; then
+if test "$march_set" = "no" && test "$build_native" = "yes" ; then
   output_sym "CONFIG_BUILD_NATIVE"
 fi
 
