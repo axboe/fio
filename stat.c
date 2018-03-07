@@ -18,7 +18,7 @@
 #include "helper_thread.h"
 #include "smalloc.h"
 
-#define LOG_MSEC_SLACK	10
+#define LOG_MSEC_SLACK	1
 
 struct fio_mutex *stat_mutex;
 
@@ -2340,9 +2340,11 @@ static void _add_stat_to_log(struct io_log *iolog, unsigned long elapsed,
 		__add_stat_to_log(iolog, ddir, elapsed, log_max);
 }
 
-static long add_log_sample(struct thread_data *td, struct io_log *iolog,
-			   union io_sample_data data, enum fio_ddir ddir,
-			   unsigned int bs, uint64_t offset)
+static unsigned long add_log_sample(struct thread_data *td,
+				    struct io_log *iolog,
+				    union io_sample_data data,
+				    enum fio_ddir ddir, unsigned int bs,
+				    uint64_t offset)
 {
 	unsigned long elapsed, this_window;
 
@@ -2373,7 +2375,7 @@ static long add_log_sample(struct thread_data *td, struct io_log *iolog,
 	if (elapsed < iolog->avg_last[ddir])
 		return iolog->avg_last[ddir] - elapsed;
 	else if (this_window < iolog->avg_msec) {
-		int diff = iolog->avg_msec - this_window;
+		unsigned long diff = iolog->avg_msec - this_window;
 
 		if (inline_log(iolog) || diff > LOG_MSEC_SLACK)
 			return diff;
@@ -2562,7 +2564,7 @@ static int __add_samples(struct thread_data *td, struct timespec *parent_tv,
 {
 	unsigned long spent, rate;
 	enum fio_ddir ddir;
-	unsigned int next, next_log;
+	unsigned long next, next_log;
 
 	next_log = avg_time;
 
