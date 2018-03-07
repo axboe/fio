@@ -146,7 +146,7 @@ static bool _fio_rbd_setup_poll(struct rbd_data *rbd)
 	int r;
 
 	/* add for rbd poll */
-	rbd->fd = eventfd(0, EFD_NONBLOCK);
+	rbd->fd = eventfd(0, EFD_SEMAPHORE);
 	if (rbd->fd < 0) {
 		log_err("eventfd failed.\n");
 		return false;
@@ -366,25 +366,37 @@ static int rbd_iter_events(struct thread_data *td, unsigned int *events,
 	int event_num = 0;
 	struct fio_rbd_iou *fri = NULL;
 	rbd_completion_t comps[min_evts];
+	uint64_t counter;
+	bool completed;
 
 	struct pollfd pfd;
 	pfd.fd = rbd->fd;
 	pfd.events = POLLIN;
 
-	ret = poll(&pfd, 1, -1);
+	ret = poll(&pfd, 1, wait ? -1 : 0);
 	if (ret <= 0)
 		return 0;
-
-	assert(pfd.revents & POLLIN);
+	if (!(pfd.revents & POLLIN))
+		return 0;
 
 	event_num = rbd_poll_io_events(rbd->image, comps, min_evts);
 
 	for (i = 0; i < event_num; i++) {
 		fri = rbd_aio_get_arg(comps[i]);
 		io_u = fri->io_u;
+
+		/* best effort to decrement the semaphore */
+		ret = read(rbd->fd, &counter, sizeof(counter));
+		if (ret <= 0)
+			log_err("rbd_iter_events failed to decrement semaphore.\n");
+
+		completed = fri_check_complete(rbd, io_u, events);
+		assert(completed);
+
+		this_events++;
+	}
 #else
 	io_u_qiter(&td->io_u_all, io_u, i) {
-#endif
 		if (!(io_u->flags & IO_U_F_FLIGHT))
 			continue;
 		if (rbd_io_u_seen(io_u))
@@ -395,6 +407,7 @@ static int rbd_iter_events(struct thread_data *td, unsigned int *events,
 		else if (wait)
 			rbd->sort_events[sidx++] = io_u;
 	}
+#endif
 
 	if (!wait || !sidx)
 		return this_events;
