@@ -17,7 +17,7 @@ install:
   - SET PATH=%CYG_ROOT%\bin;%PATH% # NB: Changed env variables persist to later sections
 
 build_script:
-  - 'bash.exe -lc "cd \"${APPVEYOR_BUILD_FOLDER}\" && ./configure --extra-cflags=\"-Werror\" ${CONFIGURE_OPTIONS} && make.exe'
+  - 'bash.exe -lc "cd \"${APPVEYOR_BUILD_FOLDER}\" && ./configure --disable-native --extra-cflags=\"-Werror\" ${CONFIGURE_OPTIONS} && make.exe'
 
 after_build:
   - cd os\windows && dobuild.cmd %PLATFORM%
