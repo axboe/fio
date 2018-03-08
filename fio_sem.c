@@ -1,6 +1,11 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <assert.h>
+#ifdef CONFIG_VALGRIND_DEV
+#include <valgrind/valgrind.h>
+#else
+#define RUNNING_ON_VALGRIND 0
+#endif
 
 #include "log.h"
 #include "fio_sem.h"
@@ -12,13 +17,17 @@
 void __fio_sem_remove(struct fio_sem *sem)
 {
 	assert(sem->magic == FIO_SEM_MAGIC);
+	pthread_mutex_destroy(&sem->lock);
 	pthread_cond_destroy(&sem->cond);
 
 	/*
-	 * Ensure any subsequent attempt to grab this semaphore will fail
-	 * with an assert, instead of just silently hanging.
-	 */
-	memset(sem, 0, sizeof(*sem));
+	 * When not running on Valgrind, ensure any subsequent attempt to grab
+	 * this semaphore will fail with an assert, instead of just silently
+	 * hanging. When running on Valgrind, let Valgrind detect
+	 * use-after-free.
+         */
+	if (!RUNNING_ON_VALGRIND)
+		memset(sem, 0, sizeof(*sem));
 }
 
 void fio_sem_remove(struct fio_sem *sem)
@@ -32,6 +41,8 @@ int __fio_sem_init(struct fio_sem *sem, int value)
 	int ret;
 
 	sem->value = value;
+	/* Initialize .waiters explicitly for Valgrind. */
+	sem->waiters = 0;
 	sem->magic = FIO_SEM_MAGIC;
 
 	ret = mutex_cond_init_pshared(&sem->lock, &sem->cond);

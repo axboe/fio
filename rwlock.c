@@ -28,6 +28,7 @@ void fio_rwlock_unlock(struct fio_rwlock *lock)
 void fio_rwlock_remove(struct fio_rwlock *lock)
 {
 	assert(lock->magic == FIO_RWLOCK_MAGIC);
+	pthread_rwlock_destroy(&lock->lock);
 	munmap((void *) lock, sizeof(*lock));
 }
 

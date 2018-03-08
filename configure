@@ -2050,6 +2050,24 @@ fi
 print_config "strndup" "$strndup"
 
 ##########################################
+# <valgrind/drd.h> probe
+# Note: presence of <valgrind/drd.h> implies that <valgrind/valgrind.h> is
+# also available but not the other way around.
+if test "$valgrind_dev" != "yes" ; then
+  valgrind_dev="no"
+fi
+cat > $TMPC << EOF
+#include <valgrind/drd.h>
+int main(int argc, char **argv)
+{
+  return 0;
+}
+EOF
+if compile_prog "" "" "valgrind_dev"; then
+  valgrind_dev="yes"
+fi
+print_config "Valgrind headers" "$valgrind_dev"
+
 # check march=armv8-a+crc+crypto
 if test "$march_armv8_a_crc_crypto" != "yes" ; then
   march_armv8_a_crc_crypto="no"
@@ -2353,6 +2371,9 @@ if test "$strndup" = "yes" ; then
 fi
 if test "$disable_opt" = "yes" ; then
   output_sym "CONFIG_DISABLE_OPTIMIZATIONS"
+fi
+if test "$valgrind_dev" = "yes"; then
+  output_sym "CONFIG_VALGRIND_DEV"
 fi
 if test "$zlib" = "no" ; then
   echo "Consider installing zlib-dev (zlib-devel, some fio features depend on it."

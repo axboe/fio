@@ -12,6 +12,13 @@
 #include <sys/types.h>
 #include <limits.h>
 #include <fcntl.h>
+#ifdef CONFIG_VALGRIND_DEV
+#include <valgrind/valgrind.h>
+#else
+#define RUNNING_ON_VALGRIND 0
+#define VALGRIND_MALLOCLIKE_BLOCK(addr, size, rzB, is_zeroed) do { } while (0)
+#define VALGRIND_FREELIKE_BLOCK(addr, rzB) do { } while (0)
+#endif
 
 #include "fio.h"
 #include "fio_sem.h"
@@ -48,6 +55,12 @@ struct pool {
 	size_t next_non_full;
 	size_t mmap_size;
 };
+
+#ifdef SMALLOC_REDZONE
+#define REDZONE_SIZE sizeof(unsigned int)
+#else
+#define REDZONE_SIZE 0
+#endif
 
 struct block_hdr {
 	size_t size;
@@ -258,6 +271,10 @@ static void fill_redzone(struct block_hdr *hdr)
 {
 	unsigned int *postred = postred_ptr(hdr);
 
+	/* Let Valgrind fill the red zones. */
+	if (RUNNING_ON_VALGRIND)
+		return;
+
 	hdr->prered = SMALLOC_PRE_RED;
 	*postred = SMALLOC_POST_RED;
 }
@@ -265,6 +282,10 @@ static void fill_redzone(struct block_hdr *hdr)
 static void sfree_check_redzone(struct block_hdr *hdr)
 {
 	unsigned int *postred = postred_ptr(hdr);
+
+	/* Let Valgrind check the red zones. */
+	if (RUNNING_ON_VALGRIND)
+		return;
 
 	if (hdr->prered != SMALLOC_PRE_RED) {
 		log_err("smalloc pre redzone destroyed!\n"
@@ -333,6 +354,7 @@ void sfree(void *ptr)
 	}
 
 	if (pool) {
+		VALGRIND_FREELIKE_BLOCK(ptr, REDZONE_SIZE);
 		sfree_pool(pool, ptr);
 		return;
 	}
@@ -423,7 +445,7 @@ static void *smalloc_pool(struct pool *pool, size_t size)
 	return ptr;
 }
 
-void *smalloc(size_t size)
+static void *__smalloc(size_t size, bool is_zeroed)
 {
 	unsigned int i, end_pool;
 
@@ -439,6 +461,9 @@ void *smalloc(size_t size)
 
 			if (ptr) {
 				last_pool = i;
+				VALGRIND_MALLOCLIKE_BLOCK(ptr, size,
+							  REDZONE_SIZE,
+							  is_zeroed);
 				return ptr;
 			}
 		}
@@ -456,9 +481,14 @@ void *smalloc(size_t size)
 	return NULL;
 }
 
+void *smalloc(size_t size)
+{
+	return __smalloc(size, false);
+}
+
 void *scalloc(size_t nmemb, size_t size)
 {
-	return smalloc(nmemb * size);
+	return __smalloc(nmemb * size, true);
 }
 
 char *smalloc_strdup(const char *str)
