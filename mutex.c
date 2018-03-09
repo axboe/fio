@@ -240,10 +240,11 @@ void fio_mutex_up(struct fio_mutex *mutex)
 	if (!mutex->value && mutex->waiters)
 		do_wake = 1;
 	mutex->value++;
-	pthread_mutex_unlock(&mutex->lock);
 
 	if (do_wake)
 		pthread_cond_signal(&mutex->cond);
+
+	pthread_mutex_unlock(&mutex->lock);
 }
 
 void fio_rwlock_write(struct fio_rwlock *lock)
