@@ -748,9 +748,9 @@ int verify_io_u_async(struct thread_data *td, struct io_u **io_u_ptr)
 	}
 	flist_add_tail(&io_u->verify_list, &td->verify_list);
 	*io_u_ptr = NULL;
-	pthread_mutex_unlock(&td->io_u_lock);
 
 	pthread_cond_signal(&td->verify_cond);
+	pthread_mutex_unlock(&td->io_u_lock);
 	return 0;
 }
 
