@@ -470,7 +470,7 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 
 static int get_next_block(struct thread_data *td, struct io_u *io_u,
 			  enum fio_ddir ddir, int rw_seq,
-			  unsigned int *is_random)
+			  bool *is_random)
 {
 	struct fio_file *f = io_u->file;
 	uint64_t b, offset;
@@ -484,27 +484,27 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 		if (td_random(td)) {
 			if (should_do_random(td, ddir)) {
 				ret = get_next_rand_block(td, f, ddir, &b);
-				*is_random = 1;
+				*is_random = true;
 			} else {
-				*is_random = 0;
+				*is_random = false;
 				io_u_set(td, io_u, IO_U_F_BUSY_OK);
 				ret = get_next_seq_offset(td, f, ddir, &offset);
 				if (ret)
 					ret = get_next_rand_block(td, f, ddir, &b);
 			}
 		} else {
-			*is_random = 0;
+			*is_random = false;
 			ret = get_next_seq_offset(td, f, ddir, &offset);
 		}
 	} else {
 		io_u_set(td, io_u, IO_U_F_BUSY_OK);
-		*is_random = 0;
+		*is_random = false;
 
 		if (td->o.rw_seq == RW_SEQ_SEQ) {
 			ret = get_next_seq_offset(td, f, ddir, &offset);
 			if (ret) {
 				ret = get_next_rand_block(td, f, ddir, &b);
-				*is_random = 0;
+				*is_random = false;
 			}
 		} else if (td->o.rw_seq == RW_SEQ_IDENT) {
 			if (f->last_start[ddir] != -1ULL)
@@ -538,7 +538,7 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
  * the last io issued.
  */
 static int get_next_offset(struct thread_data *td, struct io_u *io_u,
-			   unsigned int *is_random)
+			   bool *is_random)
 {
 	struct fio_file *f = io_u->file;
 	enum fio_ddir ddir = io_u->ddir;
@@ -581,7 +581,7 @@ static inline bool io_u_fits(struct thread_data *td, struct io_u *io_u,
 }
 
 static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u,
-				    unsigned int is_random)
+				    bool is_random)
 {
 	int ddir = io_u->ddir;
 	unsigned int buflen = 0;
@@ -592,7 +592,7 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u,
 	assert(ddir_rw(ddir));
 
 	if (td->o.bs_is_seq_rand)
-		ddir = is_random ? DDIR_WRITE: DDIR_READ;
+		ddir = is_random ? DDIR_WRITE : DDIR_READ;
 
 	minbs = td->o.min_bs[ddir];
 	maxbs = td->o.max_bs[ddir];
@@ -931,7 +931,7 @@ static void __fill_io_u_zone(struct thread_data *td, struct io_u *io_u)
 
 static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	unsigned int is_random;
+	bool is_random;
 
 	if (td_ioengine_flagged(td, FIO_NOIO))
 		goto out;
