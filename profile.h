@@ -10,10 +10,6 @@ struct prof_io_ops {
 	int (*td_init)(struct thread_data *);
 	void (*td_exit)(struct thread_data *);
 
-	int (*fill_io_u_off)(struct thread_data *, struct io_u *, unsigned int *);
-	int (*fill_io_u_size)(struct thread_data *, struct io_u *, unsigned int);
-	struct fio_file *(*get_next_file)(struct thread_data *);
-
 	int (*io_u_lat)(struct thread_data *, uint64_t);
 };
 

@@ -575,13 +575,6 @@ static int __get_next_offset(struct thread_data *td, struct io_u *io_u,
 static int get_next_offset(struct thread_data *td, struct io_u *io_u,
 			   unsigned int *is_random)
 {
-	if (td->flags & TD_F_PROFILE_OPS) {
-		struct prof_io_ops *ops = &td->prof_io_ops;
-
-		if (ops->fill_io_u_off)
-			return ops->fill_io_u_off(td, io_u, is_random);
-	}
-
 	return __get_next_offset(td, io_u, is_random);
 }
 
@@ -658,13 +651,6 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u,
 				    unsigned int is_random)
 {
-	if (td->flags & TD_F_PROFILE_OPS) {
-		struct prof_io_ops *ops = &td->prof_io_ops;
-
-		if (ops->fill_io_u_size)
-			return ops->fill_io_u_size(td, io_u, is_random);
-	}
-
 	return __get_next_buflen(td, io_u, is_random);
 }
 
@@ -1387,13 +1373,6 @@ out:
 
 static struct fio_file *get_next_file(struct thread_data *td)
 {
-	if (td->flags & TD_F_PROFILE_OPS) {
-		struct prof_io_ops *ops = &td->prof_io_ops;
-
-		if (ops->get_next_file)
-			return ops->get_next_file(td);
-	}
-
 	return __get_next_file(td);
 }
 
