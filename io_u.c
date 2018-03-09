@@ -537,8 +537,8 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
  * until we find a free one. For sequential io, just return the end of
  * the last io issued.
  */
-static int __get_next_offset(struct thread_data *td, struct io_u *io_u,
-			     unsigned int *is_random)
+static int get_next_offset(struct thread_data *td, struct io_u *io_u,
+			   unsigned int *is_random)
 {
 	struct fio_file *f = io_u->file;
 	enum fio_ddir ddir = io_u->ddir;
@@ -572,12 +572,6 @@ static int __get_next_offset(struct thread_data *td, struct io_u *io_u,
 	return 0;
 }
 
-static int get_next_offset(struct thread_data *td, struct io_u *io_u,
-			   unsigned int *is_random)
-{
-	return __get_next_offset(td, io_u, is_random);
-}
-
 static inline bool io_u_fits(struct thread_data *td, struct io_u *io_u,
 			     unsigned int buflen)
 {
@@ -586,8 +580,8 @@ static inline bool io_u_fits(struct thread_data *td, struct io_u *io_u,
 	return io_u->offset + buflen <= f->io_size + get_start_offset(td, f);
 }
 
-static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
-				      unsigned int is_random)
+static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u,
+				    unsigned int is_random)
 {
 	int ddir = io_u->ddir;
 	unsigned int buflen = 0;
@@ -646,12 +640,6 @@ static unsigned int __get_next_buflen(struct thread_data *td, struct io_u *io_u,
 	} while (!io_u_fits(td, io_u, buflen));
 
 	return buflen;
-}
-
-static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u,
-				    unsigned int is_random)
-{
-	return __get_next_buflen(td, io_u, is_random);
 }
 
 static void set_rwmix_bytes(struct thread_data *td)
