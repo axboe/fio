@@ -53,7 +53,7 @@ struct debug_level {
 	unsigned long shift;
 	unsigned int jobno;
 };
-extern struct debug_level debug_levels[];
+extern const struct debug_level debug_levels[];
 
 extern unsigned long fio_debug;
 
