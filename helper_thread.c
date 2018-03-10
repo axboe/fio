@@ -156,7 +156,7 @@ int helper_thread_create(struct fio_mutex *startup_mutex, struct sk_out *sk_out)
 	struct helper_data *hd;
 	int ret;
 
-	hd = smalloc(sizeof(*hd));
+	hd = scalloc(1, sizeof(*hd));
 
 	setup_disk_util();
 	steadystate_setup();
