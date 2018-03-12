@@ -1860,13 +1860,14 @@ void __show_run_stats(void)
 		char time_buf[32];
 		struct timeval now;
 		unsigned long long ms_since_epoch;
+		time_t tv_sec;
 
 		gettimeofday(&now, NULL);
 		ms_since_epoch = (unsigned long long)(now.tv_sec) * 1000 +
 		                 (unsigned long long)(now.tv_usec) / 1000;
 
-		os_ctime_r((const time_t *) &now.tv_sec, time_buf,
-				sizeof(time_buf));
+		tv_sec = now.tv_sec;
+		os_ctime_r(&tv_sec, time_buf, sizeof(time_buf));
 		if (time_buf[strlen(time_buf) - 1] == '\n')
 			time_buf[strlen(time_buf) - 1] = '\0';
 
