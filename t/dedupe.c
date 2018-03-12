@@ -49,7 +49,7 @@ struct extent {
 };
 
 struct chunk {
-	struct rb_node rb_node;
+	struct fio_rb_node rb_node;
 	uint64_t count;
 	uint32_t hash[MD5_HASH_WORDS];
 	struct flist_head extent_list[0];
@@ -194,7 +194,7 @@ static struct chunk *alloc_chunk(void)
 
 static void insert_chunk(struct item *i)
 {
-	struct rb_node **p, *parent;
+	struct fio_rb_node **p, *parent;
 	struct chunk *c;
 	int diff;
 
@@ -497,7 +497,7 @@ static void show_stat(uint64_t nextents, uint64_t nchunks)
 
 static void iter_rb_tree(uint64_t *nextents, uint64_t *nchunks)
 {
-	struct rb_node *n;
+	struct fio_rb_node *n;
 
 	*nchunks = *nextents = 0;
 

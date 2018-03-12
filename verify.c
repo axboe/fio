@@ -1307,7 +1307,7 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		return 0;
 
 	if (!RB_EMPTY_ROOT(&td->io_hist_tree)) {
-		struct rb_node *n = rb_first(&td->io_hist_tree);
+		struct fio_rb_node *n = rb_first(&td->io_hist_tree);
 
 		ipo = rb_entry(n, struct io_piece, rb_node);
 

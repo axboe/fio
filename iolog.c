@@ -184,7 +184,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 void prune_io_piece_log(struct thread_data *td)
 {
 	struct io_piece *ipo;
-	struct rb_node *n;
+	struct fio_rb_node *n;
 
 	while ((n = rb_first(&td->io_hist_tree)) != NULL) {
 		ipo = rb_entry(n, struct io_piece, rb_node);
@@ -208,7 +208,7 @@ void prune_io_piece_log(struct thread_data *td)
  */
 void log_io_piece(struct thread_data *td, struct io_u *io_u)
 {
-	struct rb_node **p, *parent;
+	struct fio_rb_node **p, *parent;
 	struct io_piece *ipo, *__ipo;
 
 	ipo = malloc(sizeof(struct io_piece));
