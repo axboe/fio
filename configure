@@ -784,6 +784,40 @@ fi
 print_config "rdmacm" "$rdmacm"
 
 ##########################################
+# asprintf() and vasprintf() probes
+if test "$have_asprintf" != "yes" ; then
+  have_asprintf="no"
+fi
+cat > $TMPC << EOF
+#include <stdio.h>
+
+int main(int argc, char **argv)
+{
+  return asprintf(NULL, "%s", "str") == 0;
+}
+EOF
+if compile_prog "" "" "have_asprintf"; then
+    have_asprintf="yes"
+fi
+print_config "asprintf()" "$have_asprintf"
+
+if test "$have_vasprintf" != "yes" ; then
+  have_vasprintf="no"
+fi
+cat > $TMPC << EOF
+#include <stdio.h>
+
+int main(int argc, char **argv)
+{
+  return vasprintf(NULL, "%s", NULL) == 0;
+}
+EOF
+if compile_prog "" "" "have_vasprintf"; then
+    have_vasprintf="yes"
+fi
+print_config "vasprintf()" "$have_vasprintf"
+
+##########################################
 # Linux fallocate probe
 if test "$linux_fallocate" != "yes" ; then
   linux_fallocate="no"
@@ -2168,6 +2202,12 @@ if test "$posix_aio_fsync" = "yes" ; then
 fi
 if test "$posix_pshared" = "yes" ; then
   output_sym "CONFIG_PSHARED"
+fi
+if test "$have_asprintf" = "yes" ; then
+    output_sym "HAVE_ASPRINTF"
+fi
+if test "$have_vasprintf" = "yes" ; then
+    output_sym "HAVE_VASPRINTF"
 fi
 if test "$linux_fallocate" = "yes" ; then
   output_sym "CONFIG_LINUX_FALLOCATE"
