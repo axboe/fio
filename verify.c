@@ -245,33 +245,23 @@ struct vcont {
 static void dump_buf(char *buf, unsigned int len, unsigned long long offset,
 		     const char *type, struct fio_file *f)
 {
-	char *ptr, fname[DUMP_BUF_SZ];
-	size_t buf_left = DUMP_BUF_SZ;
+	char *ptr, *fname;
+	char sep[2] = { FIO_OS_PATH_SEPARATOR, 0 };
 	int ret, fd;
 
 	ptr = strdup(f->file_name);
 
-	memset(fname, 0, sizeof(fname));
-	if (aux_path)
-		sprintf(fname, "%s%c", aux_path, FIO_OS_PATH_SEPARATOR);
-
-	strncpy(fname + strlen(fname), basename(ptr), buf_left - 1);
-
-	buf_left -= strlen(fname);
-	if (buf_left <= 0) {
+	if (asprintf(&fname, "%s%s%s.%llu.%s", aux_path ? : "",
+		     aux_path ? sep : "", basename(ptr), offset, type) < 0) {
 		if (!fio_did_warn(FIO_WARN_VERIFY_BUF))
-			log_err("fio: verify failure dump buffer too small\n");
-		free(ptr);
-		return;
+			log_err("fio: not enough memory for dump buffer filename\n");
+		goto free_ptr;
 	}
-
-	snprintf(fname + strlen(fname), buf_left, ".%llu.%s", offset, type);
 
 	fd = open(fname, O_CREAT | O_TRUNC | O_WRONLY, 0644);
 	if (fd < 0) {
 		perror("open verify buf file");
-		free(ptr);
-		return;
+		goto free_fname;
 	}
 
 	while (len) {
@@ -288,6 +278,11 @@ static void dump_buf(char *buf, unsigned int len, unsigned long long offset,
 
 	close(fd);
 	log_err("       %s data dumped as %s\n", type, fname);
+
+free_fname:
+	free(fname);
+
+free_ptr:
 	free(ptr);
 }
 
