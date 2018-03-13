@@ -8,6 +8,7 @@
 #include <time.h>
 
 #include "fio.h"
+#include "fio_sem.h"
 #include "smalloc.h"
 
 #include "hash.h"
@@ -563,8 +564,7 @@ struct clock_thread {
 	pthread_t thread;
 	int cpu;
 	int debug;
-	pthread_mutex_t lock;
-	pthread_mutex_t started;
+	struct fio_sem lock;
 	unsigned long nr_entries;
 	uint32_t *seq;
 	struct clock_entry *entries;
@@ -600,8 +600,7 @@ static void *clock_thread_fn(void *data)
 		goto err;
 	}
 
-	pthread_mutex_lock(&t->lock);
-	pthread_mutex_unlock(&t->started);
+	fio_sem_down(&t->lock);
 
 	first = get_cpu_clock();
 	c = &t->entries[0];
@@ -702,9 +701,7 @@ int fio_monotonic_clocktest(int debug)
 		t->seq = &seq;
 		t->nr_entries = nr_entries;
 		t->entries = &entries[i * nr_entries];
-		pthread_mutex_init(&t->lock, NULL);
-		pthread_mutex_init(&t->started, NULL);
-		pthread_mutex_lock(&t->lock);
+		__fio_sem_init(&t->lock, FIO_SEM_LOCKED);
 		if (pthread_create(&t->thread, NULL, clock_thread_fn, t)) {
 			failed++;
 			nr_cpus = i;
@@ -715,13 +712,7 @@ int fio_monotonic_clocktest(int debug)
 	for (i = 0; i < nr_cpus; i++) {
 		struct clock_thread *t = &cthreads[i];
 
-		pthread_mutex_lock(&t->started);
-	}
-
-	for (i = 0; i < nr_cpus; i++) {
-		struct clock_thread *t = &cthreads[i];
-
-		pthread_mutex_unlock(&t->lock);
+		fio_sem_up(&t->lock);
 	}
 
 	for (i = 0; i < nr_cpus; i++) {
@@ -731,6 +722,7 @@ int fio_monotonic_clocktest(int debug)
 		pthread_join(t->thread, &ret);
 		if (ret)
 			failed++;
+		__fio_sem_remove(&t->lock);
 	}
 	free(cthreads);
 

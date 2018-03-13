@@ -231,7 +231,8 @@ T_AXMAP_OBJS += lib/lfsr.o lib/axmap.o
 T_AXMAP_PROGS = t/axmap
 
 T_LFSR_TEST_OBJS = t/lfsr-test.o
-T_LFSR_TEST_OBJS += lib/lfsr.o gettime.o t/log.o t/debug.o t/arch.o
+T_LFSR_TEST_OBJS += lib/lfsr.o gettime.o fio_sem.o pshared.o \
+		    t/log.o t/debug.o t/arch.o
 T_LFSR_TEST_PROGS = t/lfsr-test
 
 T_GEN_RAND_OBJS = t/gen-rand.o
