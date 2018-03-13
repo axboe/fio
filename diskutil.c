@@ -8,6 +8,11 @@
 #include <libgen.h>
 #include <math.h>
 #include <assert.h>
+#ifdef CONFIG_VALGRIND_DEV
+#include <valgrind/drd.h>
+#else
+#define DRD_IGNORE_VAR(x) do { } while (0)
+#endif
 
 #include "fio.h"
 #include "smalloc.h"
@@ -297,6 +302,7 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 	if (!du)
 		return NULL;
 
+	DRD_IGNORE_VAR(du->users);
 	memset(du, 0, sizeof(*du));
 	INIT_FLIST_HEAD(&du->list);
 	l = snprintf(du->path, sizeof(du->path), "%s/stat", path);

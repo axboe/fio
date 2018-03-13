@@ -1,3 +1,9 @@
+#ifdef CONFIG_VALGRIND_DEV
+#include <valgrind/drd.h>
+#else
+#define DRD_IGNORE_VAR(x) do { } while (0)
+#endif
+
 #include "fio.h"
 #include "smalloc.h"
 #include "helper_thread.h"
@@ -169,6 +175,8 @@ int helper_thread_create(struct fio_sem *startup_sem, struct sk_out *sk_out)
 		return 1;
 
 	hd->startup_sem = startup_sem;
+
+	DRD_IGNORE_VAR(helper_data);
 
 	ret = pthread_create(&hd->thread, NULL, helper_thread_main, hd);
 	if (ret) {

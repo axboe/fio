@@ -4,6 +4,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#ifdef CONFIG_VALGRIND_DEV
+#include <valgrind/drd.h>
+#else
+#define DRD_IGNORE_VAR(x) do { } while (0)
+#endif
 
 #include "fio.h"
 #include "lib/pow2.h"
@@ -668,6 +673,7 @@ void print_thread_status(void)
 
 void print_status_init(int thr_number)
 {
+	DRD_IGNORE_VAR(__run_str);
 	__run_str[thr_number] = 'P';
 	update_condensed_str(__run_str, run_str);
 }
