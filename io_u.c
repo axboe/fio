@@ -430,7 +430,11 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 	if (f->last_pos[ddir] < f->real_file_size) {
 		uint64_t pos;
 
-		if (f->last_pos[ddir] == f->file_offset && o->ddir_seq_add < 0) {
+		/*
+		 * Only rewind if we already hit the end
+		 */
+		if (f->last_pos[ddir] == f->file_offset &&
+		    f->file_offset && o->ddir_seq_add < 0) {
 			if (f->real_file_size > f->io_size)
 				f->last_pos[ddir] = f->io_size;
 			else
