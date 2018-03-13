@@ -199,7 +199,7 @@ enum {
  */
 struct io_piece {
 	union {
-		struct rb_node rb_node;
+		struct fio_rb_node rb_node;
 		struct flist_head list;
 	};
 	struct flist_head trim_list;

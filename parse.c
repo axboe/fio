@@ -172,7 +172,7 @@ static unsigned long long get_mult_time(const char *str, int len,
 
 	c = strdup(p);
 	for (i = 0; i < strlen(c); i++)
-		c[i] = tolower(c[i]);
+		c[i] = tolower((unsigned char)c[i]);
 
 	if (!strncmp("us", c, 2) || !strncmp("usec", c, 4))
 		mult = 1;
@@ -218,7 +218,7 @@ static unsigned long long __get_mult_bytes(const char *p, void *data,
 	c = strdup(p);
 
 	for (i = 0; i < strlen(c); i++) {
-		c[i] = tolower(c[i]);
+		c[i] = tolower((unsigned char)c[i]);
 		if (is_separator(c[i])) {
 			c[i] = '\0';
 			break;

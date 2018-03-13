@@ -252,6 +252,8 @@ elif check_define __linux__ ; then
   targetos="Linux"
 elif check_define __OpenBSD__ ; then
   targetos='OpenBSD'
+elif check_define __NetBSD__ ; then
+  targetos='NetBSD'
 elif check_define __sun__ ; then
   targetos='SunOS'
   CFLAGS="$CFLAGS -D_REENTRANT"
@@ -280,7 +282,7 @@ fi
 # cross-compiling to one of these OSes then you'll need to specify
 # the correct CPU with the --cpu option.
 case $targetos in
-AIX|OpenBSD)
+AIX|*BSD)
   # Unless explicitly enabled, turn off lex.
   # OpenBSD will hit syntax error when enabled.
   if test -z "$disable_lex" ; then

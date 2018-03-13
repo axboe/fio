@@ -34,7 +34,7 @@
 static inline struct page * rb_search_page_cache(struct inode * inode,
 						 unsigned long offset)
 {
-	struct rb_node * n = inode->i_rb_page_cache.rb_node;
+	struct fio_rb_node * n = inode->i_rb_page_cache.rb_node;
 	struct page * page;
 
 	while (n)
@@ -53,10 +53,10 @@ static inline struct page * rb_search_page_cache(struct inode * inode,
 
 static inline struct page * __rb_insert_page_cache(struct inode * inode,
 						   unsigned long offset,
-						   struct rb_node * node)
+						   struct fio_rb_node * node)
 {
-	struct rb_node ** p = &inode->i_rb_page_cache.rb_node;
-	struct rb_node * parent = NULL;
+	struct fio_rb_node ** p = &inode->i_rb_page_cache.rb_node;
+	struct fio_rb_node * parent = NULL;
 	struct page * page;
 
 	while (*p)
@@ -79,7 +79,7 @@ static inline struct page * __rb_insert_page_cache(struct inode * inode,
 
 static inline struct page * rb_insert_page_cache(struct inode * inode,
 						 unsigned long offset,
-						 struct rb_node * node)
+						 struct fio_rb_node * node)
 {
 	struct page * ret;
 	if ((ret = __rb_insert_page_cache(inode, offset, node)))
@@ -97,34 +97,34 @@ static inline struct page * rb_insert_page_cache(struct inode * inode,
 #include <stdlib.h>
 #include <inttypes.h>
 
-struct rb_node
+struct fio_rb_node
 {
 	intptr_t rb_parent_color;
 #define	RB_RED		0
 #define	RB_BLACK	1
-	struct rb_node *rb_right;
-	struct rb_node *rb_left;
+	struct fio_rb_node *rb_right;
+	struct fio_rb_node *rb_left;
 } __attribute__((aligned(sizeof(long))));
     /* The alignment might seem pointless, but allegedly CRIS needs it */
 
 struct rb_root
 {
-	struct rb_node *rb_node;
+	struct fio_rb_node *rb_node;
 };
 
 
-#define rb_parent(r)   ((struct rb_node *)((r)->rb_parent_color & ~3))
+#define rb_parent(r)   ((struct fio_rb_node *)((r)->rb_parent_color & ~3))
 #define rb_color(r)   ((r)->rb_parent_color & 1)
 #define rb_is_red(r)   (!rb_color(r))
 #define rb_is_black(r) rb_color(r)
 #define rb_set_red(r)  do { (r)->rb_parent_color &= ~1; } while (0)
 #define rb_set_black(r)  do { (r)->rb_parent_color |= 1; } while (0)
 
-static inline void rb_set_parent(struct rb_node *rb, struct rb_node *p)
+static inline void rb_set_parent(struct fio_rb_node *rb, struct fio_rb_node *p)
 {
 	rb->rb_parent_color = (rb->rb_parent_color & 3) | (uintptr_t)p;
 }
-static inline void rb_set_color(struct rb_node *rb, int color)
+static inline void rb_set_color(struct fio_rb_node *rb, int color)
 {
 	rb->rb_parent_color = (rb->rb_parent_color & ~1) | color;
 }
@@ -136,15 +136,16 @@ static inline void rb_set_color(struct rb_node *rb, int color)
 #define RB_EMPTY_NODE(node)	(rb_parent(node) == node)
 #define RB_CLEAR_NODE(node)	(rb_set_parent(node, node))
 
-extern void rb_insert_color(struct rb_node *, struct rb_root *);
-extern void rb_erase(struct rb_node *, struct rb_root *);
+extern void rb_insert_color(struct fio_rb_node *, struct rb_root *);
+extern void rb_erase(struct fio_rb_node *, struct rb_root *);
 
 /* Find logical next and previous nodes in a tree */
-extern struct rb_node *rb_first(struct rb_root *);
-extern struct rb_node *rb_next(const struct rb_node *);
+extern struct fio_rb_node *rb_first(struct rb_root *);
+extern struct fio_rb_node *rb_next(const struct fio_rb_node *);
 
-static inline void rb_link_node(struct rb_node * node, struct rb_node * parent,
-				struct rb_node ** rb_link)
+static inline void rb_link_node(struct fio_rb_node * node,
+				struct fio_rb_node * parent,
+				struct fio_rb_node ** rb_link)
 {
 	node->rb_parent_color = (uintptr_t)parent;
 	node->rb_left = node->rb_right = NULL;
