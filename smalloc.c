@@ -14,7 +14,7 @@
 #include <fcntl.h>
 
 #include "fio.h"
-#include "mutex.h"
+#include "fio_sem.h"
 #include "arch/arch.h"
 #include "os/os.h"
 #include "smalloc.h"
@@ -40,7 +40,7 @@ static const int int_mask = sizeof(int) - 1;
 #endif
 
 struct pool {
-	struct fio_mutex *lock;			/* protects this pool */
+	struct fio_sem *lock;			/* protects this pool */
 	void *map;				/* map of blocks */
 	unsigned int *bitmap;			/* blocks free/busy map */
 	size_t free_blocks;		/* free blocks */
@@ -192,7 +192,7 @@ static bool add_pool(struct pool *pool, unsigned int alloc_size)
 	pool->bitmap = (unsigned int *)((char *) ptr + (pool->nr_blocks * SMALLOC_BPL));
 	memset(pool->bitmap, 0, bitmap_blocks * sizeof(unsigned int));
 
-	pool->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+	pool->lock = fio_sem_init(FIO_SEM_UNLOCKED);
 	if (!pool->lock)
 		goto out_fail;
 
@@ -232,7 +232,7 @@ static void cleanup_pool(struct pool *pool)
 	munmap(pool->map, pool->mmap_size);
 
 	if (pool->lock)
-		fio_mutex_remove(pool->lock);
+		fio_sem_remove(pool->lock);
 }
 
 void scleanup(void)
@@ -309,12 +309,12 @@ static void sfree_pool(struct pool *pool, void *ptr)
 	i = offset / SMALLOC_BPL;
 	idx = (offset % SMALLOC_BPL) / SMALLOC_BPB;
 
-	fio_mutex_down(pool->lock);
+	fio_sem_down(pool->lock);
 	clear_blocks(pool, i, idx, size_to_blocks(hdr->size));
 	if (i < pool->next_non_full)
 		pool->next_non_full = i;
 	pool->free_blocks += size_to_blocks(hdr->size);
-	fio_mutex_up(pool->lock);
+	fio_sem_up(pool->lock);
 }
 
 void sfree(void *ptr)
@@ -348,7 +348,7 @@ static void *__smalloc_pool(struct pool *pool, size_t size)
 	unsigned int last_idx;
 	void *ret = NULL;
 
-	fio_mutex_down(pool->lock);
+	fio_sem_down(pool->lock);
 
 	nr_blocks = size_to_blocks(size);
 	if (nr_blocks > pool->free_blocks)
@@ -391,7 +391,7 @@ static void *__smalloc_pool(struct pool *pool, size_t size)
 		ret = pool->map + offset;
 	}
 fail:
-	fio_mutex_up(pool->lock);
+	fio_sem_up(pool->lock);
 	return ret;
 }
 

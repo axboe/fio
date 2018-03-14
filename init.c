@@ -1471,7 +1471,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			f->real_file_size = -1ULL;
 	}
 
-	td->mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
+	td->sem = fio_sem_init(FIO_SEM_LOCKED);
 
 	td->ts.clat_percentiles = o->clat_percentiles;
 	td->ts.lat_percentiles = o->lat_percentiles;

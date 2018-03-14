@@ -16,7 +16,7 @@
 
 #include "../flist.h"
 #include "../log.h"
-#include "../mutex.h"
+#include "../fio_sem.h"
 #include "../smalloc.h"
 #include "../minmax.h"
 #include "../crc/md5.h"
@@ -62,7 +62,7 @@ struct item {
 
 static struct rb_root rb_root;
 static struct bloom *bloom;
-static struct fio_mutex *rb_lock;
+static struct fio_sem *rb_lock;
 
 static unsigned int blocksize = 4096;
 static unsigned int num_threads;
@@ -75,7 +75,7 @@ static unsigned int use_bloom = 1;
 
 static uint64_t total_size;
 static uint64_t cur_offset;
-static struct fio_mutex *size_lock;
+static struct fio_sem *size_lock;
 
 static struct fio_file file;
 
@@ -102,7 +102,7 @@ static int get_work(uint64_t *offset, uint64_t *size)
 	uint64_t this_chunk;
 	int ret = 1;
 
-	fio_mutex_down(size_lock);
+	fio_sem_down(size_lock);
 
 	if (cur_offset < total_size) {
 		*offset = cur_offset;
@@ -112,7 +112,7 @@ static int get_work(uint64_t *offset, uint64_t *size)
 		ret = 0;
 	}
 
-	fio_mutex_up(size_lock);
+	fio_sem_up(size_lock);
 	return ret;
 }
 
@@ -215,9 +215,9 @@ static void insert_chunk(struct item *i)
 			if (!collision_check)
 				goto add;
 
-			fio_mutex_up(rb_lock);
+			fio_sem_up(rb_lock);
 			ret = col_check(c, i);
-			fio_mutex_down(rb_lock);
+			fio_sem_down(rb_lock);
 
 			if (!ret)
 				goto add;
@@ -241,7 +241,7 @@ static void insert_chunks(struct item *items, unsigned int nitems,
 {
 	int i;
 
-	fio_mutex_down(rb_lock);
+	fio_sem_down(rb_lock);
 
 	for (i = 0; i < nitems; i++) {
 		if (bloom) {
@@ -255,7 +255,7 @@ static void insert_chunks(struct item *items, unsigned int nitems,
 			insert_chunk(&items[i]);
 	}
 
-	fio_mutex_up(rb_lock);
+	fio_sem_up(rb_lock);
 }
 
 static void crc_buf(void *buf, uint32_t *hash)
@@ -383,7 +383,7 @@ static int run_dedupe_threads(struct fio_file *f, uint64_t dev_size,
 	total_size = dev_size;
 	total_items = dev_size / blocksize;
 	cur_offset = 0;
-	size_lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+	size_lock = fio_sem_init(FIO_SEM_UNLOCKED);
 
 	threads = malloc(num_threads * sizeof(struct worker_thread));
 	for (i = 0; i < num_threads; i++) {
@@ -414,7 +414,7 @@ static int run_dedupe_threads(struct fio_file *f, uint64_t dev_size,
 	*nextents = nitems;
 	*nchunks = nitems - *nchunks;
 
-	fio_mutex_remove(size_lock);
+	fio_sem_remove(size_lock);
 	free(threads);
 	return err;
 }
@@ -581,7 +581,7 @@ int main(int argc, char *argv[])
 	sinit();
 
 	rb_root = RB_ROOT;
-	rb_lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+	rb_lock = fio_sem_init(FIO_SEM_UNLOCKED);
 
 	ret = dedupe_check(argv[optind], &nextents, &nchunks);
 
@@ -592,7 +592,7 @@ int main(int argc, char *argv[])
 		show_stat(nextents, nchunks);
 	}
 
-	fio_mutex_remove(rb_lock);
+	fio_sem_remove(rb_lock);
 	if (bloom)
 		bloom_free(bloom);
 	scleanup();

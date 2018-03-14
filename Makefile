@@ -41,7 +41,7 @@ endif
 SOURCE :=	$(sort $(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/crc/*.c)) \
 		$(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/lib/*.c))) \
 		gettime.c ioengines.c init.c stat.c log.c time.c filesetup.c \
-		eta.c verify.c memory.c io_u.c parse.c mutex.c rwlock.c \
+		eta.c verify.c memory.c io_u.c parse.c fio_sem.c rwlock.c \
 		pshared.c options.c \
 		smalloc.c filehash.c profile.c debug.c engines/cpu.c \
 		engines/mmap.c engines/sync.c engines/null.c engines/net.c \
@@ -212,7 +212,7 @@ endif
 -include $(OBJS:.o=.d)
 
 T_SMALLOC_OBJS = t/stest.o
-T_SMALLOC_OBJS += gettime.o mutex.o pshared.o smalloc.o t/log.o t/debug.o \
+T_SMALLOC_OBJS += gettime.o fio_sem.o pshared.o smalloc.o t/log.o t/debug.o \
 		  t/arch.o
 T_SMALLOC_PROGS = t/stest
 
@@ -246,7 +246,7 @@ T_BTRACE_FIO_PROGS = t/fio-btrace2fio
 endif
 
 T_DEDUPE_OBJS = t/dedupe.o
-T_DEDUPE_OBJS += lib/rbtree.o t/log.o mutex.o pshared.o smalloc.o gettime.o \
+T_DEDUPE_OBJS += lib/rbtree.o t/log.o fio_sem.o pshared.o smalloc.o gettime.o \
 		crc/md5.o lib/memalign.o lib/bloom.o t/debug.o crc/xxhash.o \
 		t/arch.o crc/murmur3.o crc/crc32c.o crc/crc32c-intel.o \
 		crc/crc32c-arm64.o crc/fnv.o

@@ -16,7 +16,7 @@
 static unsigned int file_hash_size = HASH_BUCKETS * sizeof(struct flist_head);
 
 static struct flist_head *file_hash;
-static struct fio_mutex *hash_lock;
+static struct fio_sem *hash_lock;
 static struct bloom *file_bloom;
 
 static unsigned short hash(const char *name)
@@ -27,18 +27,18 @@ static unsigned short hash(const char *name)
 void fio_file_hash_lock(void)
 {
 	if (hash_lock)
-		fio_mutex_down(hash_lock);
+		fio_sem_down(hash_lock);
 }
 
 void fio_file_hash_unlock(void)
 {
 	if (hash_lock)
-		fio_mutex_up(hash_lock);
+		fio_sem_up(hash_lock);
 }
 
 void remove_file_hash(struct fio_file *f)
 {
-	fio_mutex_down(hash_lock);
+	fio_sem_down(hash_lock);
 
 	if (fio_file_hashed(f)) {
 		assert(!flist_empty(&f->hash_list));
@@ -46,7 +46,7 @@ void remove_file_hash(struct fio_file *f)
 		fio_file_clear_hashed(f);
 	}
 
-	fio_mutex_up(hash_lock);
+	fio_sem_up(hash_lock);
 }
 
 static struct fio_file *__lookup_file_hash(const char *name)
@@ -73,9 +73,9 @@ struct fio_file *lookup_file_hash(const char *name)
 {
 	struct fio_file *f;
 
-	fio_mutex_down(hash_lock);
+	fio_sem_down(hash_lock);
 	f = __lookup_file_hash(name);
-	fio_mutex_up(hash_lock);
+	fio_sem_up(hash_lock);
 	return f;
 }
 
@@ -88,7 +88,7 @@ struct fio_file *add_file_hash(struct fio_file *f)
 
 	INIT_FLIST_HEAD(&f->hash_list);
 
-	fio_mutex_down(hash_lock);
+	fio_sem_down(hash_lock);
 
 	alias = __lookup_file_hash(f->file_name);
 	if (!alias) {
@@ -96,7 +96,7 @@ struct fio_file *add_file_hash(struct fio_file *f)
 		flist_add_tail(&f->hash_list, &file_hash[hash(f->file_name)]);
 	}
 
-	fio_mutex_up(hash_lock);
+	fio_sem_up(hash_lock);
 	return alias;
 }
 
@@ -109,17 +109,17 @@ void file_hash_exit(void)
 {
 	unsigned int i, has_entries = 0;
 
-	fio_mutex_down(hash_lock);
+	fio_sem_down(hash_lock);
 	for (i = 0; i < HASH_BUCKETS; i++)
 		has_entries += !flist_empty(&file_hash[i]);
-	fio_mutex_up(hash_lock);
+	fio_sem_up(hash_lock);
 
 	if (has_entries)
 		log_err("fio: file hash not empty on exit\n");
 
 	sfree(file_hash);
 	file_hash = NULL;
-	fio_mutex_remove(hash_lock);
+	fio_sem_remove(hash_lock);
 	hash_lock = NULL;
 	bloom_free(file_bloom);
 	file_bloom = NULL;
@@ -134,6 +134,6 @@ void file_hash_init(void)
 	for (i = 0; i < HASH_BUCKETS; i++)
 		INIT_FLIST_HEAD(&file_hash[i]);
 
-	hash_lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+	hash_lock = fio_sem_init(FIO_SEM_UNLOCKED);
 	file_bloom = bloom_new(BLOOM_SIZE);
 }

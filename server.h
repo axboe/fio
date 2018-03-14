@@ -17,10 +17,10 @@ struct sk_out {
 				 * protected by below ->lock */
 
 	int sk;			/* socket fd to talk to client */
-	struct fio_mutex lock;	/* protects ref and below list */
+	struct fio_sem lock;	/* protects ref and below list */
 	struct flist_head list;	/* list of pending transmit work */
-	struct fio_mutex wait;	/* wake backend when items added to list */
-	struct fio_mutex xmit;	/* held while sending data */
+	struct fio_sem wait;	/* wake backend when items added to list */
+	struct fio_sem xmit;	/* held while sending data */
 };
 
 /*

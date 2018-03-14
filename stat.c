@@ -20,7 +20,7 @@
 
 #define LOG_MSEC_SLACK	1
 
-struct fio_mutex *stat_mutex;
+struct fio_sem *stat_sem;
 
 void clear_rusage_stat(struct thread_data *td)
 {
@@ -1946,9 +1946,9 @@ void __show_run_stats(void)
 
 void show_run_stats(void)
 {
-	fio_mutex_down(stat_mutex);
+	fio_sem_down(stat_sem);
 	__show_run_stats();
-	fio_mutex_up(stat_mutex);
+	fio_sem_up(stat_sem);
 }
 
 void __show_running_run_stats(void)
@@ -1958,7 +1958,7 @@ void __show_running_run_stats(void)
 	struct timespec ts;
 	int i;
 
-	fio_mutex_down(stat_mutex);
+	fio_sem_down(stat_sem);
 
 	rt = malloc(thread_number * sizeof(unsigned long long));
 	fio_gettime(&ts, NULL);
@@ -1984,7 +1984,7 @@ void __show_running_run_stats(void)
 			continue;
 		if (td->rusage_sem) {
 			td->update_rusage = 1;
-			fio_mutex_down(td->rusage_sem);
+			fio_sem_down(td->rusage_sem);
 		}
 		td->update_rusage = 0;
 	}
@@ -2001,7 +2001,7 @@ void __show_running_run_stats(void)
 	}
 
 	free(rt);
-	fio_mutex_up(stat_mutex);
+	fio_sem_up(stat_sem);
 }
 
 static bool status_interval_init;
@@ -2690,7 +2690,7 @@ int calc_log_samples(void)
 
 void stat_init(void)
 {
-	stat_mutex = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+	stat_sem = fio_sem_init(FIO_SEM_UNLOCKED);
 }
 
 void stat_exit(void)
@@ -2699,8 +2699,8 @@ void stat_exit(void)
 	 * When we have the mutex, we know out-of-band access to it
 	 * have ended.
 	 */
-	fio_mutex_down(stat_mutex);
-	fio_mutex_remove(stat_mutex);
+	fio_sem_down(stat_sem);
+	fio_sem_remove(stat_sem);
 }
 
 /*
