@@ -58,6 +58,7 @@
 #include "lib/mountcheck.h"
 #include "rate-submit.h"
 #include "helper_thread.h"
+#include "pshared.h"
 
 static struct fio_mutex *startup_mutex;
 static struct flist_head *cgroup_list;

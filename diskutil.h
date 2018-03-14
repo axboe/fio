@@ -5,6 +5,7 @@
 
 #include "lib/output_buffer.h"
 #include "helper_thread.h"
+#include "mutex.h"
 
 struct disk_util_stats {
 	uint64_t ios[2];

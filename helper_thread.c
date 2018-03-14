@@ -2,6 +2,7 @@
 #include "smalloc.h"
 #include "helper_thread.h"
 #include "steadystate.h"
+#include "pshared.h"
 
 static struct helper_data {
 	volatile int exit;

@@ -20,7 +20,6 @@
 #include "fifo.h"
 #include "arch/arch.h"
 #include "os/os.h"
-#include "mutex.h"
 #include "log.h"
 #include "debug.h"
 #include "file.h"
@@ -62,6 +61,8 @@
 #ifdef CONFIG_CUDA
 #include <cuda.h>
 #endif
+
+struct fio_mutex;
 
 /*
  * offset generator types

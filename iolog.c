@@ -20,6 +20,7 @@
 #include "filelock.h"
 #include "smalloc.h"
 #include "blktrace.h"
+#include "pshared.h"
 
 static int iolog_flush(struct io_log *log);
 
