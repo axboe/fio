@@ -1454,9 +1454,9 @@ static void *verify_async_thread(void *data)
 done:
 	pthread_mutex_lock(&td->io_u_lock);
 	td->nr_verify_threads--;
+	pthread_cond_signal(&td->free_cond);
 	pthread_mutex_unlock(&td->io_u_lock);
 
-	pthread_cond_signal(&td->free_cond);
 	return NULL;
 }
 
@@ -1492,9 +1492,12 @@ int verify_async_init(struct thread_data *td)
 
 	if (i != td->o.verify_async) {
 		log_err("fio: only %d verify threads started, exiting\n", i);
+
+		pthread_mutex_lock(&td->io_u_lock);
 		td->verify_thread_exit = 1;
-		write_barrier();
 		pthread_cond_broadcast(&td->verify_cond);
+		pthread_mutex_unlock(&td->io_u_lock);
+
 		return 1;
 	}
 
@@ -1503,11 +1506,9 @@ int verify_async_init(struct thread_data *td)
 
 void verify_async_exit(struct thread_data *td)
 {
-	td->verify_thread_exit = 1;
-	write_barrier();
-	pthread_cond_broadcast(&td->verify_cond);
-
 	pthread_mutex_lock(&td->io_u_lock);
+	td->verify_thread_exit = 1;
+	pthread_cond_broadcast(&td->verify_cond);
 
 	while (td->nr_verify_threads)
 		pthread_cond_wait(&td->free_cond, &td->io_u_lock);

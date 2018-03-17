@@ -856,8 +856,8 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 		assert(!(td->flags & TD_F_CHILD));
 	}
 	io_u_qpush(&td->io_u_freelist, io_u);
-	td_io_u_unlock(td);
 	td_io_u_free_notify(td);
+	td_io_u_unlock(td);
 }
 
 void clear_io_u(struct thread_data *td, struct io_u *io_u)
@@ -889,8 +889,8 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 	}
 
 	io_u_rpush(&td->io_u_requeues, __io_u);
-	td_io_u_unlock(td);
 	td_io_u_free_notify(td);
+	td_io_u_unlock(td);
 	*io_u = NULL;
 }
 
@@ -1558,6 +1558,7 @@ bool queue_full(const struct thread_data *td)
 struct io_u *__get_io_u(struct thread_data *td)
 {
 	struct io_u *io_u = NULL;
+	int ret;
 
 	if (td->stop_io)
 		return NULL;
@@ -1594,7 +1595,8 @@ again:
 		 * return one
 		 */
 		assert(!(td->flags & TD_F_CHILD));
-		assert(!pthread_cond_wait(&td->free_cond, &td->io_u_lock));
+		ret = pthread_cond_wait(&td->free_cond, &td->io_u_lock);
+		assert(ret == 0);
 		goto again;
 	}
 
