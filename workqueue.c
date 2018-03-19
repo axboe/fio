@@ -10,6 +10,7 @@
 #include "flist.h"
 #include "workqueue.h"
 #include "smalloc.h"
+#include "pshared.h"
 
 enum {
 	SW_F_IDLE	= 1 << 0,

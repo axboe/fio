@@ -11,13 +11,13 @@
 #include "flist.h"
 #include "filelock.h"
 #include "smalloc.h"
-#include "mutex.h"
+#include "fio_sem.h"
 #include "hash.h"
 #include "log.h"
 
 struct fio_filelock {
 	uint32_t hash;
-	struct fio_mutex lock;
+	struct fio_sem lock;
 	struct flist_head list;
 	unsigned int references;
 };
@@ -26,7 +26,7 @@ struct fio_filelock {
 	
 static struct filelock_data {
 	struct flist_head list;
-	struct fio_mutex lock;
+	struct fio_sem lock;
 
 	struct flist_head free_list;
 	struct fio_filelock ffs[MAX_FILELOCKS];
@@ -58,9 +58,9 @@ static struct fio_filelock *get_filelock(int trylock, int *retry)
 		if (ff || trylock)
 			break;
 
-		fio_mutex_up(&fld->lock);
+		fio_sem_up(&fld->lock);
 		usleep(1000);
-		fio_mutex_down(&fld->lock);
+		fio_sem_down(&fld->lock);
 		*retry = 1;
 	} while (1);
 
@@ -78,13 +78,13 @@ int fio_filelock_init(void)
 	INIT_FLIST_HEAD(&fld->list);
 	INIT_FLIST_HEAD(&fld->free_list);
 
-	if (__fio_mutex_init(&fld->lock, FIO_MUTEX_UNLOCKED))
+	if (__fio_sem_init(&fld->lock, FIO_SEM_UNLOCKED))
 		goto err;
 
 	for (i = 0; i < MAX_FILELOCKS; i++) {
 		struct fio_filelock *ff = &fld->ffs[i];
 
-		if (__fio_mutex_init(&ff->lock, FIO_MUTEX_UNLOCKED))
+		if (__fio_sem_init(&ff->lock, FIO_SEM_UNLOCKED))
 			goto err;
 		flist_add_tail(&ff->list, &fld->free_list);
 	}
@@ -101,7 +101,7 @@ void fio_filelock_exit(void)
 		return;
 
 	assert(flist_empty(&fld->list));
-	__fio_mutex_remove(&fld->lock);
+	__fio_sem_remove(&fld->lock);
 
 	while (!flist_empty(&fld->free_list)) {
 		struct fio_filelock *ff;
@@ -109,7 +109,7 @@ void fio_filelock_exit(void)
 		ff = flist_first_entry(&fld->free_list, struct fio_filelock, list);
 
 		flist_del_init(&ff->list);
-		__fio_mutex_remove(&ff->lock);
+		__fio_sem_remove(&ff->lock);
 	}
 
 	sfree(fld);
@@ -172,11 +172,11 @@ static bool __fio_lock_file(const char *fname, int trylock)
 
 	hash = jhash(fname, strlen(fname), 0);
 
-	fio_mutex_down(&fld->lock);
+	fio_sem_down(&fld->lock);
 	ff = fio_hash_get(hash, trylock);
 	if (ff)
 		ff->references++;
-	fio_mutex_up(&fld->lock);
+	fio_sem_up(&fld->lock);
 
 	if (!ff) {
 		assert(!trylock);
@@ -184,14 +184,14 @@ static bool __fio_lock_file(const char *fname, int trylock)
 	}
 
 	if (!trylock) {
-		fio_mutex_down(&ff->lock);
+		fio_sem_down(&ff->lock);
 		return false;
 	}
 
-	if (!fio_mutex_down_trylock(&ff->lock))
+	if (!fio_sem_down_trylock(&ff->lock))
 		return false;
 
-	fio_mutex_down(&fld->lock);
+	fio_sem_down(&fld->lock);
 
 	/*
 	 * If we raced and the only reference to the lock is us, we can
@@ -202,10 +202,10 @@ static bool __fio_lock_file(const char *fname, int trylock)
 		ff = NULL;
 	}
 
-	fio_mutex_up(&fld->lock);
+	fio_sem_up(&fld->lock);
 
 	if (ff) {
-		fio_mutex_down(&ff->lock);
+		fio_sem_down(&ff->lock);
 		return false;
 	}
 
@@ -229,12 +229,12 @@ void fio_unlock_file(const char *fname)
 
 	hash = jhash(fname, strlen(fname), 0);
 
-	fio_mutex_down(&fld->lock);
+	fio_sem_down(&fld->lock);
 
 	ff = fio_hash_find(hash);
 	if (ff) {
 		int refs = --ff->references;
-		fio_mutex_up(&ff->lock);
+		fio_sem_up(&ff->lock);
 		if (!refs) {
 			flist_del_init(&ff->list);
 			put_filelock(ff);
@@ -242,5 +242,5 @@ void fio_unlock_file(const char *fname)
 	} else
 		log_err("fio: file not found for unlocking\n");
 
-	fio_mutex_up(&fld->lock);
+	fio_sem_up(&fld->lock);
 }

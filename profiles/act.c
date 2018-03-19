@@ -38,7 +38,7 @@ struct act_slice {
 };
 
 struct act_run_data {
-	struct fio_mutex *mutex;
+	struct fio_sem *sem;
 	unsigned int pending;
 
 	struct act_slice *slices;
@@ -337,9 +337,9 @@ static int act_io_u_lat(struct thread_data *td, uint64_t nsec)
 
 static void get_act_ref(void)
 {
-	fio_mutex_down(act_run_data->mutex);
+	fio_sem_down(act_run_data->sem);
 	act_run_data->pending++;
-	fio_mutex_up(act_run_data->mutex);
+	fio_sem_up(act_run_data->sem);
 }
 
 static int show_slice(struct act_slice *slice, unsigned int slice_num)
@@ -396,7 +396,7 @@ static void put_act_ref(struct thread_data *td)
 	struct act_prof_data *apd = td->prof_data;
 	unsigned int i, slice;
 
-	fio_mutex_down(act_run_data->mutex);
+	fio_sem_down(act_run_data->sem);
 
 	if (!act_run_data->slices) {
 		act_run_data->slices = calloc(apd->nr_slices, sizeof(struct act_slice));
@@ -416,7 +416,7 @@ static void put_act_ref(struct thread_data *td)
 	if (!--act_run_data->pending)
 		act_show_all_stats();
 
-	fio_mutex_up(act_run_data->mutex);
+	fio_sem_up(act_run_data->sem);
 }
 
 static int act_td_init(struct thread_data *td)
@@ -464,7 +464,7 @@ static struct profile_ops act_profile = {
 static void fio_init act_register(void)
 {
 	act_run_data = calloc(1, sizeof(*act_run_data));
-	act_run_data->mutex = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+	act_run_data->sem = fio_sem_init(FIO_SEM_UNLOCKED);
 
 	if (register_profile(&act_profile))
 		log_err("fio: failed to register profile 'act'\n");
@@ -476,7 +476,7 @@ static void fio_exit act_unregister(void)
 		free((void *) act_opts[++org_idx]);
 
 	unregister_profile(&act_profile);
-	fio_mutex_remove(act_run_data->mutex);
+	fio_sem_remove(act_run_data->sem);
 	free(act_run_data->slices);
 	free(act_run_data);
 	act_run_data = NULL;

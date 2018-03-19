@@ -1,7 +1,14 @@
+#ifdef CONFIG_VALGRIND_DEV
+#include <valgrind/drd.h>
+#else
+#define DRD_IGNORE_VAR(x) do { } while (0)
+#endif
+
 #include "fio.h"
 #include "smalloc.h"
 #include "helper_thread.h"
 #include "steadystate.h"
+#include "pshared.h"
 
 static struct helper_data {
 	volatile int exit;
@@ -11,7 +18,7 @@ static struct helper_data {
 	pthread_t thread;
 	pthread_mutex_t lock;
 	pthread_cond_t cond;
-	struct fio_mutex *startup_mutex;
+	struct fio_sem *startup_sem;
 } *helper_data;
 
 void helper_thread_destroy(void)
@@ -83,7 +90,7 @@ static void *helper_thread_main(void *data)
 	memcpy(&last_du, &ts, sizeof(ts));
 	memcpy(&last_ss, &ts, sizeof(ts));
 
-	fio_mutex_up(hd->startup_mutex);
+	fio_sem_up(hd->startup_sem);
 
 	msec_to_next_event = DISK_UTIL_MSEC;
 	while (!ret && !hd->exit) {
@@ -151,7 +158,7 @@ static void *helper_thread_main(void *data)
 	return NULL;
 }
 
-int helper_thread_create(struct fio_mutex *startup_mutex, struct sk_out *sk_out)
+int helper_thread_create(struct fio_sem *startup_sem, struct sk_out *sk_out)
 {
 	struct helper_data *hd;
 	int ret;
@@ -167,7 +174,9 @@ int helper_thread_create(struct fio_mutex *startup_mutex, struct sk_out *sk_out)
 	if (ret)
 		return 1;
 
-	hd->startup_mutex = startup_mutex;
+	hd->startup_sem = startup_sem;
+
+	DRD_IGNORE_VAR(helper_data);
 
 	ret = pthread_create(&hd->thread, NULL, helper_thread_main, hd);
 	if (ret) {
@@ -177,8 +186,8 @@ int helper_thread_create(struct fio_mutex *startup_mutex, struct sk_out *sk_out)
 
 	helper_data = hd;
 
-	dprint(FD_MUTEX, "wait on startup_mutex\n");
-	fio_mutex_down(startup_mutex);
-	dprint(FD_MUTEX, "done waiting on startup_mutex\n");
+	dprint(FD_MUTEX, "wait on startup_sem\n");
+	fio_sem_down(startup_sem);
+	dprint(FD_MUTEX, "done waiting on startup_sem\n");
 	return 0;
 }

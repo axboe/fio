@@ -277,7 +277,7 @@ struct io_u_plat_entry {
 	uint64_t io_u_plat[FIO_IO_U_PLAT_NR];
 };
 
-extern struct fio_mutex *stat_mutex;
+extern struct fio_sem *stat_sem;
 
 extern struct jobs_eta *get_jobs_eta(bool force, size_t *size);
 

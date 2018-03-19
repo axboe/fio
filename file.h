@@ -125,7 +125,7 @@ struct fio_file {
 	 * if io is protected by a semaphore, this is set
 	 */
 	union {
-		struct fio_mutex *lock;
+		struct fio_sem *lock;
 		struct fio_rwlock *rwlock;
 	};
 

@@ -5,6 +5,7 @@
 
 #include "lib/output_buffer.h"
 #include "helper_thread.h"
+#include "fio_sem.h"
 
 struct disk_util_stats {
 	uint64_t ios[2];
@@ -66,7 +67,7 @@ struct disk_util {
 
 	struct timespec time;
 
-	struct fio_mutex *lock;
+	struct fio_sem *lock;
 	unsigned long users;
 };
 
@@ -75,7 +76,7 @@ static inline void disk_util_mod(struct disk_util *du, int val)
 	if (du) {
 		struct flist_head *n;
 
-		fio_mutex_down(du->lock);
+		fio_sem_down(du->lock);
 		du->users += val;
 
 		flist_for_each(n, &du->slavelist) {
@@ -84,7 +85,7 @@ static inline void disk_util_mod(struct disk_util *du, int val)
 			slave = flist_entry(n, struct disk_util, slavelist);
 			slave->users += val;
 		}
-		fio_mutex_up(du->lock);
+		fio_sem_up(du->lock);
 	}
 }
 static inline void disk_util_inc(struct disk_util *du)

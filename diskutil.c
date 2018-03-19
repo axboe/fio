@@ -8,6 +8,11 @@
 #include <libgen.h>
 #include <math.h>
 #include <assert.h>
+#ifdef CONFIG_VALGRIND_DEV
+#include <valgrind/drd.h>
+#else
+#define DRD_IGNORE_VAR(x) do { } while (0)
+#endif
 
 #include "fio.h"
 #include "smalloc.h"
@@ -17,7 +22,7 @@
 static int last_majdev, last_mindev;
 static struct disk_util *last_du;
 
-static struct fio_mutex *disk_util_mutex;
+static struct fio_sem *disk_util_sem;
 
 static struct disk_util *__init_per_file_disk_util(struct thread_data *td,
 		int majdev, int mindev, char *path);
@@ -35,7 +40,7 @@ static void disk_util_free(struct disk_util *du)
 		slave->users--;
 	}
 
-	fio_mutex_remove(du->lock);
+	fio_sem_remove(du->lock);
 	free(du->sysfs_root);
 	sfree(du);
 }
@@ -120,7 +125,7 @@ int update_io_ticks(void)
 
 	dprint(FD_DISKUTIL, "update io ticks\n");
 
-	fio_mutex_down(disk_util_mutex);
+	fio_sem_down(disk_util_sem);
 
 	if (!helper_should_exit()) {
 		flist_for_each(entry, &disk_list) {
@@ -130,7 +135,7 @@ int update_io_ticks(void)
 	} else
 		ret = 1;
 
-	fio_mutex_up(disk_util_mutex);
+	fio_sem_up(disk_util_sem);
 	return ret;
 }
 
@@ -139,18 +144,18 @@ static struct disk_util *disk_util_exists(int major, int minor)
 	struct flist_head *entry;
 	struct disk_util *du;
 
-	fio_mutex_down(disk_util_mutex);
+	fio_sem_down(disk_util_sem);
 
 	flist_for_each(entry, &disk_list) {
 		du = flist_entry(entry, struct disk_util, list);
 
 		if (major == du->major && minor == du->minor) {
-			fio_mutex_up(disk_util_mutex);
+			fio_sem_up(disk_util_sem);
 			return du;
 		}
 	}
 
-	fio_mutex_up(disk_util_mutex);
+	fio_sem_up(disk_util_sem);
 	return NULL;
 }
 
@@ -297,6 +302,7 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 	if (!du)
 		return NULL;
 
+	DRD_IGNORE_VAR(du->users);
 	memset(du, 0, sizeof(*du));
 	INIT_FLIST_HEAD(&du->list);
 	l = snprintf(du->path, sizeof(du->path), "%s/stat", path);
@@ -312,10 +318,10 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 	du->minor = mindev;
 	INIT_FLIST_HEAD(&du->slavelist);
 	INIT_FLIST_HEAD(&du->slaves);
-	du->lock = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+	du->lock = fio_sem_init(FIO_SEM_UNLOCKED);
 	du->users = 0;
 
-	fio_mutex_down(disk_util_mutex);
+	fio_sem_down(disk_util_sem);
 
 	flist_for_each(entry, &disk_list) {
 		__du = flist_entry(entry, struct disk_util, list);
@@ -324,7 +330,7 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 
 		if (!strcmp((char *) du->dus.name, (char *) __du->dus.name)) {
 			disk_util_free(du);
-			fio_mutex_up(disk_util_mutex);
+			fio_sem_up(disk_util_sem);
 			return __du;
 		}
 	}
@@ -335,7 +341,7 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 	get_io_ticks(du, &du->last_dus);
 
 	flist_add_tail(&du->list, &disk_list);
-	fio_mutex_up(disk_util_mutex);
+	fio_sem_up(disk_util_sem);
 
 	find_add_disk_slaves(td, path, du);
 	return du;
@@ -559,7 +565,7 @@ static void aggregate_slaves_stats(struct disk_util *masterdu)
 
 void disk_util_prune_entries(void)
 {
-	fio_mutex_down(disk_util_mutex);
+	fio_sem_down(disk_util_sem);
 
 	while (!flist_empty(&disk_list)) {
 		struct disk_util *du;
@@ -570,8 +576,8 @@ void disk_util_prune_entries(void)
 	}
 
 	last_majdev = last_mindev = -1;
-	fio_mutex_up(disk_util_mutex);
-	fio_mutex_remove(disk_util_mutex);
+	fio_sem_up(disk_util_sem);
+	fio_sem_remove(disk_util_sem);
 }
 
 void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
@@ -693,13 +699,13 @@ void show_disk_util(int terse, struct json_object *parent,
 	struct disk_util *du;
 	bool do_json;
 
-	if (!disk_util_mutex)
+	if (!disk_util_sem)
 		return;
 
-	fio_mutex_down(disk_util_mutex);
+	fio_sem_down(disk_util_sem);
 
 	if (flist_empty(&disk_list)) {
-		fio_mutex_up(disk_util_mutex);
+		fio_sem_up(disk_util_sem);
 		return;
 	}
 
@@ -722,10 +728,10 @@ void show_disk_util(int terse, struct json_object *parent,
 		}
 	}
 
-	fio_mutex_up(disk_util_mutex);
+	fio_sem_up(disk_util_sem);
 }
 
 void setup_disk_util(void)
 {
-	disk_util_mutex = fio_mutex_init(FIO_MUTEX_UNLOCKED);
+	disk_util_sem = fio_sem_init(FIO_SEM_UNLOCKED);
 }

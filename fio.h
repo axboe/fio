@@ -20,7 +20,6 @@
 #include "fifo.h"
 #include "arch/arch.h"
 #include "os/os.h"
-#include "mutex.h"
 #include "log.h"
 #include "debug.h"
 #include "file.h"
@@ -62,6 +61,8 @@
 #ifdef CONFIG_CUDA
 #include <cuda.h>
 #endif
+
+struct fio_sem;
 
 /*
  * offset generator types
@@ -198,7 +199,7 @@ struct thread_data {
 	struct timespec iops_sample_time;
 
 	volatile int update_rusage;
-	struct fio_mutex *rusage_sem;
+	struct fio_sem *rusage_sem;
 	struct rusage ru_start;
 	struct rusage ru_end;
 
@@ -341,7 +342,7 @@ struct thread_data {
 	uint64_t this_io_bytes[DDIR_RWDIR_CNT];
 	uint64_t io_skip_bytes;
 	uint64_t zone_bytes;
-	struct fio_mutex *mutex;
+	struct fio_sem *sem;
 	uint64_t bytes_done[DDIR_RWDIR_CNT];
 
 	/*

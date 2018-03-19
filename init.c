@@ -12,6 +12,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dlfcn.h>
+#ifdef CONFIG_VALGRIND_DEV
+#include <valgrind/drd.h>
+#else
+#define DRD_IGNORE_VAR(x) do { } while (0)
+#endif
 
 #include "fio.h"
 #ifndef FIO_NO_HAVE_SHM_H
@@ -333,6 +338,8 @@ static void free_shm(void)
  */
 static int setup_thread_area(void)
 {
+	int i;
+
 	if (threads)
 		return 0;
 
@@ -376,6 +383,8 @@ static int setup_thread_area(void)
 #endif
 
 	memset(threads, 0, max_jobs * sizeof(struct thread_data));
+	for (i = 0; i < max_jobs; i++)
+		DRD_IGNORE_VAR(threads[i]);
 	fio_debug_jobp = (unsigned int *)(threads + max_jobs);
 	*fio_debug_jobp = -1;
 	fio_warned = fio_debug_jobp + 1;
@@ -1471,7 +1480,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			f->real_file_size = -1ULL;
 	}
 
-	td->mutex = fio_mutex_init(FIO_MUTEX_LOCKED);
+	td->sem = fio_sem_init(FIO_SEM_LOCKED);
 
 	td->ts.clat_percentiles = o->clat_percentiles;
 	td->ts.lat_percentiles = o->lat_percentiles;
