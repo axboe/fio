@@ -7,7 +7,7 @@
 #include <malloc.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/fcntl.h>
+#include <fcntl.h>
 #include <sys/pset.h>
 #include <sys/mman.h>
 #include <sys/dkio.h>
