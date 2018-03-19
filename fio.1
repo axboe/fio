@@ -1523,7 +1523,7 @@ SCSI generic sg v3 I/O. May either be synchronous using the SG_IO
 ioctl, or if the target is an sg character device we use
 \fBread\fR\|(2) and \fBwrite\fR\|(2) for asynchronous
 I/O. Requires \fBfilename\fR option to specify either block or
-character devices.
+character devices. The sg engine includes engine specific options.
 .TP
 .B null
 Doesn't transfer any data, just pretends to. This is mainly used to
@@ -1820,6 +1820,14 @@ server side this will be passed into the rdma_bind_addr() function and
 on the client site it will be used in the rdma_resolve_add()
 function. This can be useful when multiple paths exist between the
 client and the server or in certain loopback configurations.
+.TP
+.BI (sg)readfua \fR=\fPbool
+With readfua option set to 1, read operations include the force
+unit access (fua) flag. Default: 0.
+.TP
+.BI (sg)writefua \fR=\fPbool
+With writefua option set to 1, write operations include the force
+unit access (fua) flag. Default: 0.
 .SS "I/O depth"
 .TP
 .BI iodepth \fR=\fPint

@@ -12,8 +12,42 @@
 #include <sys/poll.h>
 
 #include "../fio.h"
+#include "../optgroup.h"
 
 #ifdef FIO_HAVE_SGIO
+
+
+struct sg_options {
+	void *pad;
+	unsigned int readfua;
+	unsigned int writefua;
+};
+
+static struct fio_option options[] = {
+	{
+		.name	= "readfua",
+		.lname	= "sg engine read fua flag support",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct sg_options, readfua),
+		.help	= "Set FUA flag (force unit access) for all Read operations",
+		.def	= "0",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_SG,
+	},
+	{
+		.name	= "writefua",
+		.lname	= "sg engine write fua flag support",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct sg_options, writefua),
+		.help	= "Set FUA flag (force unit access) for all Write operations",
+		.def	= "0",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_SG,
+	},
+	{
+		.name	= NULL,
+	},
+};
 
 #define MAX_10B_LBA  0xFFFFFFFFULL
 #define SCSI_TIMEOUT_MS 30000   // 30 second timeout; currently no method to override
@@ -267,6 +301,7 @@ static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int do_sync)
 static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct sg_io_hdr *hdr = &io_u->hdr;
+	struct sg_options *o = td->eo;
 	struct sgio_data *sd = td->io_ops_data;
 	long long nr_blocks, lba;
 
@@ -286,6 +321,10 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 			hdr->cmdp[0] = 0x28; // read(10)
 		else
 			hdr->cmdp[0] = 0x88; // read(16)
+
+		if (o->readfua)
+			hdr->cmdp[1] |= 0x08;
+
 	} else if (io_u->ddir == DDIR_WRITE) {
 		sgio_hdr_init(sd, hdr, io_u, 1);
 
@@ -294,6 +333,10 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 			hdr->cmdp[0] = 0x2a; // write(10)
 		else
 			hdr->cmdp[0] = 0x8a; // write(16)
+
+		if (o->writefua)
+			hdr->cmdp[1] |= 0x08;
+
 	} else {
 		sgio_hdr_init(sd, hdr, io_u, 0);
 		hdr->dxfer_direction = SG_DXFER_NONE;
@@ -822,6 +865,8 @@ static struct ioengine_ops ioengine = {
 	.close_file	= generic_close_file,
 	.get_file_size	= fio_sgio_get_file_size,
 	.flags		= FIO_SYNCIO | FIO_RAWIO,
+	.options	= options,
+	.option_struct_size	= sizeof(struct sg_options)
 };
 
 #else /* FIO_HAVE_SGIO */

@@ -1747,6 +1747,7 @@ I/O engine
 			:manpage:`read(2)` and :manpage:`write(2)` for asynchronous
 			I/O. Requires :option:`filename` option to specify either block or
 			character devices.
+			The sg engine includes engine specific options.
 
 		**null**
 			Doesn't transfer any data, just pretends to.  This is mainly used to
@@ -2067,6 +2068,17 @@ with the caveat that when used on the command line, they must come after the
 	will be used in the rdma_resolve_add() function. This can be useful when
 	multiple paths exist between the client and the server or in certain loopback
 	configurations.
+
+.. option:: readfua=bool : [sg]
+
+	With readfua option set to 1, read operations include
+	the force unit access (fua) flag. Default is 0.
+
+.. option:: writefua=bool : [sg]
+
+	With writefua option set to 1, write operations include
+	the force unit access (fua) flag. Default is 0.
+
 
 I/O depth
 ~~~~~~~~~
