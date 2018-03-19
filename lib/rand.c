@@ -34,7 +34,6 @@
 */
 
 #include <string.h>
-#include <assert.h>
 #include "rand.h"
 #include "pattern.h"
 #include "../hash.h"

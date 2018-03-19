@@ -6,16 +6,10 @@
  * DDIR_WRITE does ftruncate
  *
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/uio.h>
 #include <errno.h>
-#include <assert.h>
-#include <fcntl.h>
+#include <unistd.h>
 
 #include "../fio.h"
-#include "../filehash.h"
 
 static int fio_ftruncate_queue(struct thread_data *td, struct io_u *io_u)
 {

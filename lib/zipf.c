@@ -1,11 +1,5 @@
 #include <math.h>
 #include <string.h>
-#include <inttypes.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <fcntl.h>
-#include "ieee754.h"
 #include "zipf.h"
 #include "../minmax.h"
 #include "../hash.h"

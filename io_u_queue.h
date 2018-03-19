@@ -2,6 +2,8 @@
 #define FIO_IO_U_QUEUE
 
 #include <assert.h>
+#include <stddef.h>
+
 #include "lib/types.h"
 
 struct io_u;

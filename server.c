@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <unistd.h>
-#include <limits.h>
 #include <errno.h>
 #include <sys/poll.h>
 #include <sys/types.h>
@@ -25,7 +23,7 @@
 #include "server.h"
 #include "crc/crc16.h"
 #include "lib/ieee754.h"
-#include "verify.h"
+#include "verify-state.h"
 #include "smalloc.h"
 
 int fio_net_port = FIO_NET_PORT;

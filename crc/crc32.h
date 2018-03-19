@@ -18,6 +18,8 @@
 #ifndef CRC32_H
 #define CRC32_H
 
+#include <inttypes.h>
+
 extern uint32_t fio_crc32(const void * const, unsigned long);
 
 #endif

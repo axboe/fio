@@ -4,16 +4,12 @@
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
-#include <libgen.h>
-#include <fcntl.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <netinet/in.h>
 
 #include "fio.h"
 #include "verify.h"
 #include "parse.h"
-#include "lib/fls.h"
 #include "lib/pattern.h"
 #include "options.h"
 #include "optgroup.h"

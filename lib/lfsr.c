@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <math.h>
 
 #include "lfsr.h"
 #include "../compiler/compiler.h"

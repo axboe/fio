@@ -4,7 +4,6 @@
 #include <inttypes.h>
 #include <assert.h>
 #include "types.h"
-#include "../arch/arch.h"
 
 #define FRAND32_MAX	(-1U)
 #define FRAND64_MAX	(-1ULL)

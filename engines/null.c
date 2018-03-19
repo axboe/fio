@@ -13,10 +13,7 @@
  * LD_LIBRARY_PATH=./engines ./fio examples/cpp_null.fio
  *
  */
-#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
 #include <assert.h>
 
 #include "../fio.h"

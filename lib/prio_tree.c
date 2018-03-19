@@ -11,6 +11,7 @@
  * 02Feb2004	Initial version
  */
 
+#include <assert.h>
 #include <stdlib.h>
 #include <limits.h>
 

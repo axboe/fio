@@ -2,7 +2,6 @@
 
 #include "fio.h"
 #include "steadystate.h"
-#include "helper_thread.h"
 
 bool steadystate_enabled = false;
 

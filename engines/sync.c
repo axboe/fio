@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <sys/uio.h>
 #include <errno.h>
-#include <assert.h>
 
 #include "../fio.h"
 #include "../optgroup.h"

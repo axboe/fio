@@ -1,6 +1,5 @@
 #include <math.h>
 #include <string.h>
-#include <stdio.h>
 #include "../hash.h"
 #include "gauss.h"
 

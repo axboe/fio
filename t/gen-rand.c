@@ -1,17 +1,11 @@
+#include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
-#include <assert.h>
-#include <math.h>
-#include <string.h>
 
 #include "../lib/types.h"
-#include "../log.h"
-#include "../lib/lfsr.h"
-#include "../lib/axmap.h"
-#include "../smalloc.h"
-#include "../minmax.h"
 #include "../lib/rand.h"
+#include "../log.h"
 
 int main(int argc, char *argv[])
 {

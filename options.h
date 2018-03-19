@@ -6,7 +6,6 @@
 #include <string.h>
 #include <inttypes.h>
 #include "parse.h"
-#include "flist.h"
 #include "lib/types.h"
 
 int add_option(struct fio_option *);

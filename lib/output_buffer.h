@@ -1,7 +1,7 @@
 #ifndef FIO_OUTPUT_BUFFER_H
 #define FIO_OUTPUT_BUFFER_H
 
-#include <unistd.h>
+#include <stddef.h>
 
 struct buf_output {
 	char *buf;

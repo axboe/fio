@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "fifo.h"
+#include "minmax.h"
 
 struct fifo *fifo_alloc(unsigned int size)
 {

@@ -13,7 +13,6 @@
  *
  */
 #include <string.h>
-#include <inttypes.h>
 
 #include "../os/os.h"
 

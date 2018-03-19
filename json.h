@@ -3,10 +3,6 @@
 
 #include "lib/output_buffer.h"
 
-struct json_object;
-struct json_array;
-struct json_pair;
-
 #define JSON_TYPE_STRING 0
 #define JSON_TYPE_INTEGER 1
 #define JSON_TYPE_FLOAT 2

@@ -1,13 +1,10 @@
 #include <stdio.h>
 #include <string.h>
-#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
 #include <dirent.h>
 #include <libgen.h>
-#include <math.h>
-#include <assert.h>
 #ifdef CONFIG_VALGRIND_DEV
 #include <valgrind/drd.h>
 #else

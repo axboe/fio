@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <assert.h>
 #include <sys/poll.h>
 
 #include "../fio.h"

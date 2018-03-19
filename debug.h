@@ -1,9 +1,7 @@
 #ifndef FIO_DEBUG_H
 #define FIO_DEBUG_H
 
-#include <assert.h>
 #include "lib/types.h"
-#include "log.h"
 
 enum {
 	FD_PROCESS	= 0,

@@ -1,8 +1,9 @@
 #ifndef FIO_IDLETIME_H
 #define FIO_IDLETIME_H
 
-#include "fio.h"
-#include "lib/output_buffer.h"
+#include <sys/time.h>
+#include <sys/types.h>
+#include "os/os.h"
 
 #define CALIBRATE_RUNS  10
 #define CALIBRATE_SCALE 1000

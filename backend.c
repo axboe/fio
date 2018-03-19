@@ -22,29 +22,17 @@
  *
  */
 #include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
-#include <limits.h>
 #include <signal.h>
-#include <time.h>
-#include <locale.h>
 #include <assert.h>
-#include <time.h>
 #include <inttypes.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <sys/ipc.h>
-#include <sys/mman.h>
 #include <math.h>
 
 #include "fio.h"
-#ifndef FIO_NO_HAVE_SHM_H
-#include <sys/shm.h>
-#endif
-#include "hash.h"
 #include "smalloc.h"
 #include "verify.h"
-#include "trim.h"
 #include "diskutil.h"
 #include "cgroup.h"
 #include "profile.h"

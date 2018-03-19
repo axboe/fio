@@ -17,7 +17,6 @@
  *
  */
 #include <string.h>
-#include <inttypes.h>
 
 #include "../lib/bswap.h"
 #include "sha256.h"

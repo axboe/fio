@@ -1,6 +1,8 @@
 #ifndef FIO_GETTIME_H
 #define FIO_GETTIME_H
 
+#include <sys/time.h>
+
 #include "arch/arch.h"
 
 /*

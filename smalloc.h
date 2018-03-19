@@ -1,6 +1,8 @@
 #ifndef FIO_SMALLOC_H
 #define FIO_SMALLOC_H
 
+#include <stddef.h>
+
 extern void *smalloc(size_t);
 extern void *scalloc(size_t, size_t);
 extern void sfree(void *);

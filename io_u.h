@@ -3,7 +3,6 @@
 
 #include "compiler/compiler.h"
 #include "os/os.h"
-#include "log.h"
 #include "io_ddir.h"
 #include "debug.h"
 #include "file.h"

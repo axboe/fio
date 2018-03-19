@@ -1,7 +1,14 @@
 #ifndef FIO_RATE_H
 #define FIO_RATE_H
 
+#include <inttypes.h>
+#include <pthread.h>
+
 #include "flist.h"
+#include "lib/types.h"
+
+struct sk_out;
+struct thread_data;
 
 struct workqueue_work {
 	struct flist_head list;

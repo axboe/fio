@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,7 +7,7 @@
 #include "rand.h"
 #include "../fio_time.h"
 #include "../gettime.h"
-#include "../fio.h"
+#include "../os/os.h"
 
 #define BUF_SIZE	32 * 1024 * 1024ULL
 

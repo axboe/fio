@@ -1,11 +1,8 @@
 /*
  * TRIM/DISCARD support
  */
-#include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
 #include <assert.h>
-#include <pthread.h>
 
 #include "fio.h"
 #include "trim.h"

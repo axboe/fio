@@ -1,9 +1,7 @@
 #ifndef FIO_STEADYSTATE_H
 #define FIO_STEADYSTATE_H
 
-#include "stat.h"
 #include "thread_options.h"
-#include "lib/ieee754.h"
 
 extern void steadystate_free(struct thread_data *);
 extern void steadystate_check(void);

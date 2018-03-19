@@ -4,13 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <ctype.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/ipc.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <dlfcn.h>
 #ifdef CONFIG_VALGRIND_DEV
 #include <valgrind/drd.h>

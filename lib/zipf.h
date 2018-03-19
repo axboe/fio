@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 #include "rand.h"
+#include "types.h"
 
 struct zipf_state {
 	uint64_t nranges;

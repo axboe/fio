@@ -1,4 +1,5 @@
 #include <stdlib.h>
+
 #include "strndup.h"
 
 #ifndef CONFIG_HAVE_STRNDUP

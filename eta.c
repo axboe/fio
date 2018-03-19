@@ -2,7 +2,6 @@
  * Status and ETA code
  */
 #include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
 #ifdef CONFIG_VALGRIND_DEV
 #include <valgrind/drd.h>

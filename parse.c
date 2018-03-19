@@ -3,18 +3,16 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <ctype.h>
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
-#include <stdlib.h>
-#include <math.h>
 #include <float.h>
 
 #include "compiler/compiler.h"
 #include "parse.h"
 #include "debug.h"
+#include "log.h"
 #include "options.h"
 #include "optgroup.h"
 #include "minmax.h"

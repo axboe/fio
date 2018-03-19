@@ -1,4 +1,5 @@
 #include <math.h>
+#include "fio.h"
 #include "json.h"
 #include "idletime.h"
 

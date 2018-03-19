@@ -1,6 +1,7 @@
 #ifndef FIO_TIME_H
 #define FIO_TIME_H
 
+#include <stdint.h>
 #include <time.h>
 #include <sys/time.h>
 #include "lib/types.h"

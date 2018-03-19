@@ -1,6 +1,8 @@
 #ifndef FIO_TD_ERROR_H
 #define FIO_TD_ERROR_H
 
+#include "io_ddir.h"
+
 /*
  * What type of errors to continue on when continue_on_error is used,
  * and what type of errors to ignore when ignore_error is used.

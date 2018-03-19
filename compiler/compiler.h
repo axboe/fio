@@ -1,6 +1,5 @@
 #ifndef FIO_COMPILER_H
 #define FIO_COMPILER_H
-#include <assert.h>
 
 #if __GNUC__ >= 4
 #include "compiler-gcc4.h"
