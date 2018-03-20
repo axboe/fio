@@ -24,7 +24,7 @@ runascmd = False
 err = sys.stderr.write
 
 class HistFileRdr():
-    """ Class to read a hist file line by line, buffering 
+    """ Class to read a hist file line by line, buffering
         a value array for the latest line, and allowing a preview
         of the next timestamp in next line
         Note: this does not follow a generator pattern, but must explicitly
@@ -33,36 +33,36 @@ class HistFileRdr():
     def __init__(self, file):
         self.fp = open(file, 'r')
         self.data = self.nextData()
-        
+
     def close(self):
         self.fp.close()
         self.fp = None
-        
+
     def nextData(self):
         self.data = None
-        if self.fp: 
+        if self.fp:
             line = self.fp.readline()
             if line == "":
                 self.close()
             else:
                 self.data = [int(x) for x in line.replace(' ', '').rstrip().split(',')]
-                
+
         return self.data
- 
+
     @property
     def curTS(self):
         ts = None
         if self.data:
             ts = self.data[0]
         return ts
-             
+
     @property
     def curDir(self):
         d = None
         if self.data:
             d = self.data[1]
         return d
-             
+
     @property
     def curBins(self):
         return self.data[3:]
@@ -253,7 +253,7 @@ def print_all_stats(ctx, end, mn, ss_cnt, vs, ws, mx, dir=dir):
     else:
         # max and min are decimal values if no divisor
         fmt = fmt + "%d, " + fmt_float_list(ctx, len(percs)+1) + ", %d"
-        
+
     print (fmt % tuple(row))
 
 def update_extreme(val, fncn, new_val):
@@ -271,10 +271,10 @@ def process_interval(ctx, iHist, iEnd, dir):
     """
     ss_cnt = 0 # number of samples affecting this interval
     mn_bin_val, mx_bin_val = None, None
-   
+
     # Update total number of samples affecting current interval histogram:
     ss_cnt += np.sum(iHist)
-        
+
     # Update min and max bin values
     idxs = np.nonzero(iHist != 0)[0]
     if idxs.size > 0:
@@ -327,7 +327,7 @@ def process_weighted_interval(ctx, samples, iStart, iEnd, printdirs):
                 mn_bin_val[textdir] = update_extreme(mn_bin_val[textdir], min, l_bvs[max(0,           mmidx[0]  - 1)])
                 mx_bin_val[textdir] = update_extreme(mx_bin_val[textdir], max, u_bvs[min(len(hs) - 1, mmidx[-1] + 1)])
 
-    for textdir in sorted(printdirs):            
+    for textdir in sorted(printdirs):
         if ss_cnt[textdir] > 0: print_all_stats(ctx, iEnd, mn_bin_val[textdir], ss_cnt[textdir], bin_vals, iHist[textdir], mx_bin_val[textdir], dir=textdir)
 
 def guess_max_from_bins(ctx, hist_cols):
@@ -359,7 +359,7 @@ def guess_max_from_bins(ctx, hist_cols):
             exit(1)
         else:
             raise RuntimeError(errmsg) 
-        
+
     return bins[idx[1][0]]
 
 def output_weighted_interval_data(ctx,printdirs):
@@ -374,7 +374,7 @@ def output_weighted_interval_data(ctx,printdirs):
         arr = np.empty(shape=(0,__TOTAL_COLUMNS + 1),dtype=int)
         more_data = True
         while more_data or len(arr) > 0:
-            
+
             # Read up to ctx.max_latency (default 20 seconds) of data from end of current interval.
             while len(arr) == 0 or arr[-1][0] < ctx.max_latency * 1000 + end:
                 try:
@@ -417,9 +417,9 @@ def output_interval_data(ctx,directions):
     start = 0
     end = ctx.interval
     while True:
-        
+
         more_data = False
-        
+
         # add bins from all files in target intervals
         arr = None
         numSamples = 0
@@ -435,35 +435,35 @@ def output_interval_data(ctx,directions):
                         arr = {}
                         for d in directions:
                             arr[d] = np.zeros(shape=(__HIST_COLUMNS), dtype=int)
-                    if 'm' in arr: 
+                    if 'm' in arr:
                         arr['m'] = np.add(arr['m'], fp.curBins)
-                    if 'r' in arr and curdirect == 0: 
+                    if 'r' in arr and curdirect == 0:
                         arr['r'] = np.add(arr['r'], fp.curBins)
-                    if 'w' in arr and curdirect == 1: 
+                    if 'w' in arr and curdirect == 1:
                         arr['w'] = np.add(arr['w'], fp.curBins)
-                    if 't' in arr and curdirect == 2: 
+                    if 't' in arr and curdirect == 2:
                         arr['t'] = np.add(arr['t'], fp.curBins)
-                        
+
                     more_data = True
                     fp.nextData()
                 elif ts:
                     more_data = True
-            
+
             # reached end of all files
-            # or gone through all files without finding sample in interval 
+            # or gone through all files without finding sample in interval
             if not more_data or not foundSamples:
                 break
-        
+
         if arr is not None:
             #print("{} size({}) samples({}) nonzero({}):".format(end, arr.size, numSamples, np.count_nonzero(arr)), str(arr), )
             for d in sorted(arr.keys()):
                 aval = arr[d]
                 process_interval(ctx, aval, end, d)
-        
+
         # reach end of all files
         if not more_data:
             break
-            
+
         start += ctx.interval
         end = start + ctx.interval
 
@@ -488,13 +488,13 @@ def main(ctx):
                         ctx.interval = int(hist_msec)
                 except NoOptionError:
                     pass
-    
+
     if not hasattr(ctx, 'percentiles'):
         ctx.percentiles = "90,95,99"
 
-    if ctx.directions: 
-        ctx.directions = ctx.directions.lower() 
-                
+    if ctx.directions:
+        ctx.directions = ctx.directions.lower()
+
     if ctx.interval is None:
         ctx.interval = 1000
 
@@ -596,13 +596,13 @@ if __name__ == '__main__':
     arg('--usbin',
         default=False,
         action='store_true',
-        help='histogram bin latencies are in us (fio versions < 2.99. fio uses ns for version >= 2.99')      
+        help='histogram bin latencies are in us (fio versions < 2.99. fio uses ns for version >= 2.99')
 
     arg('--directions',
         default=None,
         type=str,
         help='Optionally split results output by reads, writes, trims or mixed. '
-             'Value may be any combination of "rwtm" characters. '  
+             'Value may be any combination of "rwtm" characters. '
              'By default, only "mixed" results are output without a "dir" field. '
              'But, specifying the --directions option '
              'adds a "dir" field to the output content, and separate rows for each of the indicated '
