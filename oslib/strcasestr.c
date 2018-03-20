@@ -1,7 +1,8 @@
+#ifndef CONFIG_STRCASESTR
+
 #include <ctype.h>
 #include <stddef.h>
-
-#ifndef CONFIG_STRCASESTR
+#include "strcasestr.h"
 
 char *strcasestr(const char *s1, const char *s2)
 {

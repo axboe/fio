@@ -1,4 +1,7 @@
-#include <stdio.h>
+#ifndef CONFIG_STRSEP
+
+#include <stddef.h>
+#include "strsep.h"
 
 char *strsep(char **stringp, const char *delim)
 {
@@ -27,3 +30,5 @@ char *strsep(char **stringp, const char *delim)
 		} while (sc != 0);
 	} while (1);
 }
+
+#endif
