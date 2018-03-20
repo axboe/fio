@@ -2,8 +2,10 @@
 #define FIO_TIME_H
 
 #include <stdint.h>
+/* IWYU pragma: begin_exports */
 #include <time.h>
 #include <sys/time.h>
+/* IWYU pragma: end_exports */
 #include "lib/types.h"
 
 struct thread_data;

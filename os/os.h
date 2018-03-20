@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "../arch/arch.h"
+#include "../arch/arch.h" /* IWYU pragma: export */
 #include "../lib/types.h"
 
 enum {
@@ -27,6 +27,7 @@ enum {
 	os_nr,
 };
 
+/* IWYU pragma: begin_exports */
 #if defined(__ANDROID__)
 #include "os-android.h"
 #elif defined(__linux__)
@@ -67,6 +68,7 @@ typedef struct aiocb os_aiocb_t;
 #ifndef CONFIG_STRLCAT
 #include "../oslib/strlcat.h"
 #endif
+/* IWYU pragma: end_exports */
 
 #ifdef MSG_DONTWAIT
 #define OS_MSG_DONTWAIT	MSG_DONTWAIT

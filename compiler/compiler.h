@@ -1,6 +1,7 @@
 #ifndef FIO_COMPILER_H
 #define FIO_COMPILER_H
 
+/* IWYU pragma: begin_exports */
 #if __GNUC__ >= 4
 #include "compiler-gcc4.h"
 #elif __GNUC__ == 3
@@ -8,6 +9,7 @@
 #else
 #error Compiler too old, need gcc at least gcc 3.x
 #endif
+/* IWYU pragma: end_exports */
 
 #ifndef __must_check
 #define __must_check

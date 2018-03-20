@@ -34,6 +34,7 @@ extern unsigned long arch_flags;
 
 #define ARCH_CPU_CLOCK_WRAPS
 
+/* IWYU pragma: begin_exports */
 #if defined(__i386__)
 #include "arch-x86.h"
 #elif defined(__x86_64__)
@@ -66,6 +67,7 @@ extern unsigned long arch_flags;
 #endif
 
 #include "../lib/ffz.h"
+/* IWYU pragma: end_exports */
 
 #ifndef ARCH_HAVE_INIT
 static inline int arch_init(char *envp[])
