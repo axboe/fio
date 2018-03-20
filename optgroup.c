@@ -202,7 +202,8 @@ const struct opt_group *opt_group_from_mask(uint64_t *mask)
 
 const struct opt_group *opt_group_cat_from_mask(uint64_t *mask)
 {
+	compiletime_assert(__FIO_OPT_G_NR <= 8 * sizeof(uint64_t),
+				"__FIO_OPT_G_NR");
+
 	return group_from_mask(fio_opt_cat_groups, mask, FIO_OPT_G_INVALID);
 }
-
-compiletime_assert(__FIO_OPT_G_NR <= 8 * sizeof(uint64_t), "__FIO_OPT_G_NR");
