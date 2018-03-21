@@ -61,7 +61,7 @@ void __dprint(int type, const char *str, ...) __attribute__((format (printf, 2, 
 
 #define dprint(type, str, args...)			\
 	do {						\
-		if ((((1 << type)) & fio_debug) == 0)	\
+		if (((1 << type) & fio_debug) == 0)	\
 			break;				\
 		__dprint((type), (str), ##args);	\
 	} while (0)					\
