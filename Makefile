@@ -104,6 +104,7 @@ endif
 ifdef CONFIG_RBD
   SOURCE += engines/rbd.c
 endif
+SOURCE += oslib/asprintf.c
 ifndef CONFIG_STRSEP
   SOURCE += oslib/strsep.c
 endif
