@@ -528,6 +528,9 @@ static struct sk_entry *fio_net_prep_cmd(uint16_t opcode, void *buf,
 	struct sk_entry *entry;
 
 	entry = smalloc(sizeof(*entry));
+	if (!entry)
+		return NULL;
+
 	INIT_FLIST_HEAD(&entry->next);
 	entry->opcode = opcode;
 	if (flags & SK_F_COPY) {
@@ -1359,6 +1362,11 @@ static int accept_loop(int listen_sk)
 		dprint(FD_NET, "server: connect from %s\n", from);
 
 		sk_out = smalloc(sizeof(*sk_out));
+		if (!sk_out) {
+			close(sk);
+			return -1;
+		}
+
 		sk_out->sk = sk;
 		INIT_FLIST_HEAD(&sk_out->list);
 		__fio_sem_init(&sk_out->lock, FIO_SEM_UNLOCKED);
