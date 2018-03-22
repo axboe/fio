@@ -1,5 +1,3 @@
-#include <unistd.h>
-#include <math.h>
 #include <sys/time.h>
 #include <time.h>
 

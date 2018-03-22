@@ -18,7 +18,7 @@
 #include <sys/mman.h>
 #include <sys/uio.h>
 #include <sys/resource.h>
-#include <sys/poll.h>
+#include <poll.h>
 #include <sys/wait.h>
 #include <setjmp.h>
 

@@ -2,16 +2,9 @@
  * Clock functions
  */
 
-#include <unistd.h>
 #include <math.h>
-#include <sys/time.h>
-#include <time.h>
 
 #include "fio.h"
-#include "fio_sem.h"
-#include "smalloc.h"
-
-#include "hash.h"
 #include "os/os.h"
 
 #if defined(ARCH_HAVE_CPU_CLOCK)

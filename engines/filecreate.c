@@ -5,12 +5,10 @@
  * of the file creation.
  */
 #include <stdio.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 
 #include "../fio.h"
-#include "../filehash.h"
 
 struct fc_data {
 	enum fio_ddir stat_ddir;

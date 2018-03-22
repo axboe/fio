@@ -1,6 +1,5 @@
-#include <stdlib.h>
 #include <assert.h>
-#include <inttypes.h>
+#include <stdlib.h>
 
 #include "memalign.h"
 

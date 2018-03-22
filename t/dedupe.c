@@ -3,16 +3,12 @@
  * just scans the filename for extents of the given size, checksums them,
  * and orders them up.
  */
-#include <stdio.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <inttypes.h>
-#include <assert.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
 #include <fcntl.h>
+#include <inttypes.h>
+#include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 #include "../flist.h"
 #include "../log.h"

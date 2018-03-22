@@ -2,7 +2,6 @@
 #define _LINUX_PRIO_TREE_H
 
 #include <inttypes.h>
-#include "../hash.h"
 
 struct prio_tree_node {
 	struct prio_tree_node	*left;

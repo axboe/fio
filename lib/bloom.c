@@ -1,9 +1,7 @@
 #include <stdlib.h>
-#include <inttypes.h>
 
 #include "bloom.h"
 #include "../hash.h"
-#include "../minmax.h"
 #include "../crc/xxhash.h"
 #include "../crc/murmur3.h"
 #include "../crc/crc32c.h"

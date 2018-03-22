@@ -10,7 +10,7 @@ typedef int bool;
 #define true	1
 #endif
 #else
-#include <stdbool.h>
+#include <stdbool.h> /* IWYU pragma: export */
 #endif
 
 #endif

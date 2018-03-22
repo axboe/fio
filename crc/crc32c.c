@@ -30,8 +30,6 @@
  * any later version.
  *
  */
-#include <inttypes.h>
-
 #include "crc32c.h"
 
 /*

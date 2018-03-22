@@ -1,7 +1,8 @@
+#include <assert.h>
 #include <stdarg.h>
-#include <sys/types.h>
-#include <unistd.h>
+
 #include "debug.h"
+#include "log.h"
 
 #ifdef FIO_INC_DEBUG
 void __dprint(int type, const char *str, ...)

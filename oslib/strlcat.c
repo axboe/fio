@@ -1,3 +1,5 @@
+#ifndef CONFIG_STRLCAT
+
 #include <string.h>
 #include "strlcat.h"
 
@@ -22,3 +24,5 @@ size_t strlcat(char *dst, const char *src, size_t size)
 
 	return dstlen + srclen;
 }
+
+#endif

@@ -1,12 +1,8 @@
 #include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
-#include <signal.h>
-#include <time.h>
 #include <assert.h>
 
 #include "fio.h"
-#include "hash.h"
 #include "verify.h"
 #include "trim.h"
 #include "lib/rand.h"

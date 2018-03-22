@@ -12,7 +12,6 @@
  */
 
 #include <string.h>
-#include <inttypes.h>
 
 #include "../lib/bswap.h"
 #include "sha512.h"

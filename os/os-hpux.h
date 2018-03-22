@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include <sys/fcntl.h>
+#include <fcntl.h>
 #include <sys/fadvise.h>
 #include <sys/mman.h>
 #include <sys/mpctl.h>

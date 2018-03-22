@@ -15,7 +15,6 @@
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
 
-#include <inttypes.h>
 #include "crc32.h"
 
 static const uint32_t crctab[256] = {

@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <assert.h>
@@ -7,7 +8,6 @@
 #define RUNNING_ON_VALGRIND 0
 #endif
 
-#include "log.h"
 #include "fio_sem.h"
 #include "pshared.h"
 #include "os/os.h"

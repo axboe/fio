@@ -10,7 +10,7 @@ static inline void do_cpuid(unsigned int *eax, unsigned int *ebx,
 		: "memory");
 }
 
-#include "arch-x86-common.h"
+#include "arch-x86-common.h" /* IWYU pragma: export */
 
 #define FIO_ARCH	(arch_x86)
 

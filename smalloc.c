@@ -3,15 +3,8 @@
  * that can be shared across processes and threads
  */
 #include <sys/mman.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include <unistd.h>
-#include <inttypes.h>
-#include <sys/types.h>
-#include <limits.h>
-#include <fcntl.h>
 #ifdef CONFIG_VALGRIND_DEV
 #include <valgrind/valgrind.h>
 #else
@@ -22,7 +15,6 @@
 
 #include "fio.h"
 #include "fio_sem.h"
-#include "arch/arch.h"
 #include "os/os.h"
 #include "smalloc.h"
 #include "log.h"

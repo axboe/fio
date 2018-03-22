@@ -4,11 +4,9 @@
  * IO engine using the Linux native aio interface.
  *
  */
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <assert.h>
 #include <libaio.h>
 
 #include "../fio.h"

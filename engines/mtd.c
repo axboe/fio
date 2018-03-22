@@ -4,17 +4,14 @@
  * IO engine that reads/writes from MTD character devices.
  *
  */
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <mtd/mtd-user.h>
 
 #include "../fio.h"
 #include "../optgroup.h"
-#include "../verify.h"
 #include "../oslib/libmtd.h"
 
 static libmtd_t desc;

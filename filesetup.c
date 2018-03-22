@@ -5,8 +5,6 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <sys/stat.h>
-#include <sys/mman.h>
-#include <sys/types.h>
 
 #include "fio.h"
 #include "smalloc.h"

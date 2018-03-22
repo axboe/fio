@@ -9,13 +9,11 @@
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
-#include <assert.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <sys/poll.h>
-#include <sys/types.h>
+#include <poll.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>

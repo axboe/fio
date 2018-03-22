@@ -1,9 +1,10 @@
 #ifndef FIO_IOENGINE_H
 #define FIO_IOENGINE_H
 
+#include <stddef.h>
+
 #include "compiler/compiler.h"
-#include "os/os.h"
-#include "file.h"
+#include "flist.h"
 #include "io_u.h"
 
 #define FIO_IOOPS_VERSION	23

@@ -9,7 +9,6 @@
  * generic io engine that could be used for other projects.
  *
  */
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>

@@ -2,7 +2,6 @@
  * Shamelessly lifted from the 2.6 kernel (crypto/md5.c)
  */
 #include <string.h>
-#include <stdint.h>
 #include "md5.h"
 
 static void md5_transform(uint32_t *hash, uint32_t const *in)

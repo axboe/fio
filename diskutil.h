@@ -3,7 +3,6 @@
 #include "json.h"
 #define FIO_DU_NAME_SZ		64
 
-#include "lib/output_buffer.h"
 #include "helper_thread.h"
 #include "fio_sem.h"
 

@@ -1,11 +1,12 @@
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "../fio.h"
 #include "../gettime.h"
 #include "../fio_time.h"
-#include "../verify.h"
+#include "../lib/rand.h"
+#include "../os/os.h"
 
 #include "../crc/md5.h"
 #include "../crc/crc64.h"

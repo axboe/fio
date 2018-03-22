@@ -18,6 +18,8 @@
 #ifndef CRC32C_H
 #define CRC32C_H
 
+#include <inttypes.h>
+
 #include "../arch/arch.h"
 #include "../lib/types.h"
 

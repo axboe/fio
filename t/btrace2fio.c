@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <inttypes.h>
 #include <math.h>
@@ -12,6 +11,7 @@
 #include "../blktrace_api.h"
 #include "../os/os.h"
 #include "../log.h"
+#include "../minmax.h"
 #include "../oslib/linux-dev-lookup.h"
 
 #define TRACE_FIFO_SIZE	8192

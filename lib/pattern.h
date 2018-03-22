@@ -1,8 +1,6 @@
 #ifndef FIO_PARSE_PATTERN_H
 #define FIO_PARSE_PATTERN_H
 
-struct pattern_fmt;
-
 /**
  * Pattern format description. The input for 'parse_pattern'.
  * Describes format with its name and callback, which should

@@ -7,7 +7,6 @@
 #include <netinet/in.h>
 
 #include "stat.h"
-#include "os/os.h"
 #include "diskutil.h"
 
 #define FIO_NET_PORT 8765
@@ -217,8 +216,6 @@ extern int fio_server_parse_host(const char *, int, struct in_addr *, struct in6
 extern const char *fio_server_op(unsigned int);
 extern void fio_server_got_signal(int);
 
-struct thread_stat;
-struct group_run_stats;
 extern void fio_server_send_ts(struct thread_stat *, struct group_run_stats *);
 extern void fio_server_send_gs(struct group_run_stats *);
 extern void fio_server_send_du(void);

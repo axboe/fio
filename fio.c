@@ -21,12 +21,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  */
-#include <unistd.h>
-#include <locale.h>
-#include <time.h>
-
 #include "fio.h"
-#include "smalloc.h"
 
 int main(int argc, char *argv[], char *envp[])
 {

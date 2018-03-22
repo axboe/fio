@@ -1,9 +1,13 @@
 #ifndef FIO_TRIM_H
 #define FIO_TRIM_H
 
-#include "fio.h"
-
 #ifdef FIO_HAVE_TRIM
+#include "flist.h"
+#include "iolog.h"
+#include "compiler/compiler.h"
+#include "lib/types.h"
+#include "os/os.h"
+
 extern bool __must_check get_next_trim(struct thread_data *td, struct io_u *io_u);
 extern bool io_u_should_trim(struct thread_data *td, struct io_u *io_u);
 

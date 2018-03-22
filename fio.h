@@ -27,6 +27,7 @@
 #include "ioengines.h"
 #include "iolog.h"
 #include "helpers.h"
+#include "minmax.h"
 #include "options.h"
 #include "profile.h"
 #include "fio_time.h"

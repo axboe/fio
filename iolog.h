@@ -1,6 +1,8 @@
 #ifndef FIO_IOLOG_H
 #define FIO_IOLOG_H
 
+#include <stdio.h>
+
 #include "lib/rbtree.h"
 #include "lib/ieee754.h"
 #include "flist.h"

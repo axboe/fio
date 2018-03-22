@@ -1,13 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <limits.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <sys/poll.h>
+#include <poll.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>
@@ -23,7 +21,7 @@
 #include "server.h"
 #include "flist.h"
 #include "hash.h"
-#include "verify.h"
+#include "verify-state.h"
 
 static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd);

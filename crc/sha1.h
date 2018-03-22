@@ -1,6 +1,8 @@
 #ifndef FIO_SHA1
 #define FIO_SHA1
 
+#include <inttypes.h>
+
 /*
  * Based on the Mozilla SHA1 (see mozilla-sha1/sha1.h),
  * optimized to do word accesses rather than byte accesses,
