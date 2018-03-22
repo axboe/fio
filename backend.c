@@ -2477,7 +2477,8 @@ int fio_backend(struct sk_out *sk_out)
 	helper_thread_create(startup_sem, sk_out);
 
 	cgroup_list = smalloc(sizeof(*cgroup_list));
-	INIT_FLIST_HEAD(cgroup_list);
+	if (cgroup_list)
+		INIT_FLIST_HEAD(cgroup_list);
 
 	run_threads(sk_out);
 
@@ -2507,8 +2508,10 @@ int fio_backend(struct sk_out *sk_out)
 	}
 
 	free_disk_util();
-	cgroup_kill(cgroup_list);
-	sfree(cgroup_list);
+	if (cgroup_list) {
+		cgroup_kill(cgroup_list);
+		sfree(cgroup_list);
+	}
 	sfree(cgroup_mnt);
 
 	fio_sem_remove(startup_sem);

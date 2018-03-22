@@ -1608,8 +1608,9 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 		f->file_name = strdup(file_name);
 	else
 		f->file_name = smalloc_strdup(file_name);
-	if (!f->file_name)
-		assert(0);
+
+	/* can't handle smalloc failure from here */
+	assert(f->file_name);
 
 	get_file_type(f);
 
@@ -1814,9 +1815,9 @@ void dup_files(struct thread_data *td, struct thread_data *org)
 				__f->file_name = strdup(f->file_name);
 			else
 				__f->file_name = smalloc_strdup(f->file_name);
-			if (!__f->file_name)
-				assert(0);
 
+			/* can't handle smalloc failure from here */
+			assert(__f->file_name);
 			__f->filetype = f->filetype;
 		}
 

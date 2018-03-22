@@ -15,8 +15,6 @@ void fio_gtod_init(void)
 		return;
 
 	fio_ts = smalloc(sizeof(*fio_ts));
-	if (!fio_ts)
-		log_err("fio: smalloc pool exhausted\n");
 }
 
 static void fio_gtod_update(void)

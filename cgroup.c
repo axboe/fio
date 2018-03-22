@@ -147,6 +147,9 @@ int cgroup_setup(struct thread_data *td, struct flist_head *clist, char **mnt)
 {
 	char *root;
 
+	if (!clist)
+		return 1;
+
 	if (!*mnt) {
 		*mnt = find_cgroup_mnt(td);
 		if (!*mnt)
