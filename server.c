@@ -1701,8 +1701,8 @@ static inline void __fio_net_prep_tail(z_stream *stream, void *out_pdu,
 
 	*last_entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, out_pdu, this_len,
 				 NULL, SK_F_VEC | SK_F_INLINE | SK_F_FREE);
-	flist_add_tail(&(*last_entry)->list, &first->next);
-
+	if (*last_entry)
+		flist_add_tail(&(*last_entry)->list, &first->next);
 }
 
 /*
@@ -1718,9 +1718,10 @@ static int __deflate_pdu_buffer(void *next_in, unsigned int next_sz, void **out_
 	stream->next_in = next_in;
 	stream->avail_in = next_sz;
 	do {
-		if (! stream->avail_out) {
-
+		if (!stream->avail_out) {
 			__fio_net_prep_tail(stream, *out_pdu, last_entry, first);
+			if (*last_entry == NULL)
+				return 1;
 
 			*out_pdu = malloc(FIO_SERVER_MAX_FRAGMENT_PDU);
 
@@ -1784,8 +1785,7 @@ static int __fio_append_iolog_gz_hist(struct sk_entry *first, struct io_log *log
 	}
 
 	__fio_net_prep_tail(stream, out_pdu, &entry, first);
-
-	return 0;
+	return entry == NULL;
 }
 
 static int __fio_append_iolog_gz(struct sk_entry *first, struct io_log *log,
@@ -1824,6 +1824,10 @@ static int __fio_append_iolog_gz(struct sk_entry *first, struct io_log *log,
 
 		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, out_pdu, this_len,
 					 NULL, SK_F_VEC | SK_F_INLINE | SK_F_FREE);
+		if (!entry) {
+			free(out_pdu);
+			return 1;
+		}
 		flist_add_tail(&entry->list, &first->next);
 	} while (stream->avail_in);
 
@@ -1875,6 +1879,10 @@ static int fio_append_iolog_gz(struct sk_entry *first, struct io_log *log)
 
 		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, out_pdu, this_len,
 					 NULL, SK_F_VEC | SK_F_INLINE | SK_F_FREE);
+		if (!entry) {
+			free(out_pdu);
+			break;
+		}
 		flist_add_tail(&entry->list, &first->next);
 	} while (ret != Z_STREAM_END);
 
@@ -1895,6 +1903,7 @@ static int fio_append_gz_chunks(struct sk_entry *first, struct io_log *log)
 {
 	struct sk_entry *entry;
 	struct flist_head *node;
+	int ret = 0;
 
 	pthread_mutex_lock(&log->chunk_lock);
 	flist_for_each(node, &log->chunk_list) {
@@ -1903,16 +1912,20 @@ static int fio_append_gz_chunks(struct sk_entry *first, struct io_log *log)
 		c = flist_entry(node, struct iolog_compress, list);
 		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, c->buf, c->len,
 						NULL, SK_F_VEC | SK_F_INLINE);
+		if (!entry) {
+			ret = 1;
+			break;
+		}
 		flist_add_tail(&entry->list, &first->next);
 	}
 	pthread_mutex_unlock(&log->chunk_lock);
-
-	return 0;
+	return ret;
 }
 
 static int fio_append_text_log(struct sk_entry *first, struct io_log *log)
 {
 	struct sk_entry *entry;
+	int ret = 0;
 
 	while (!flist_empty(&log->io_logs)) {
 		struct io_logs *cur_log;
@@ -1925,10 +1938,14 @@ static int fio_append_text_log(struct sk_entry *first, struct io_log *log)
 
 		entry = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, cur_log->log, size,
 						NULL, SK_F_VEC | SK_F_INLINE);
+		if (!entry) {
+			ret = 1;
+			break;
+		}
 		flist_add_tail(&entry->list, &first->next);
 	}
 
-	return 0;
+	return ret;
 }
 
 int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
@@ -1983,6 +2000,8 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	 * Assemble header entry first
 	 */
 	first = fio_net_prep_cmd(FIO_NET_CMD_IOLOG, &pdu, sizeof(pdu), NULL, SK_F_VEC | SK_F_INLINE | SK_F_COPY);
+	if (!first)
+		return 1;
 
 	/*
 	 * Now append actual log entries. If log compression was enabled on
