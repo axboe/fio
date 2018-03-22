@@ -455,8 +455,10 @@ static int fio_sgio_read_capacity(struct thread_data *td, unsigned int *bs,
 		return ret;
 	}
 
-	*bs	 = (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | buf[7];
-	*max_lba = ((buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3]) & MAX_10B_LBA;  // for some reason max_lba is being sign extended even though unsigned.
+	*bs	 = ((unsigned long) buf[4] << 24) | ((unsigned long) buf[5] << 16) |
+		   ((unsigned long) buf[6] << 8) | (unsigned long) buf[7];
+	*max_lba = ((unsigned long) buf[0] << 24) | ((unsigned long) buf[1] << 16) |
+		   ((unsigned long) buf[2] << 8) | (unsigned long) buf[3];
 
 	/*
 	 * If max lba masked by MAX_10B_LBA equals MAX_10B_LBA,
