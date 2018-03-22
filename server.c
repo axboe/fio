@@ -1359,7 +1359,7 @@ static int accept_loop(int listen_sk)
 
 		dprint(FD_NET, "server: connect from %s\n", from);
 
-		sk_out = smalloc(sizeof(*sk_out));
+		sk_out = scalloc(1, sizeof(*sk_out));
 		if (!sk_out) {
 			close(sk);
 			return -1;
