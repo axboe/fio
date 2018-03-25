@@ -12,4 +12,9 @@ struct pollfd
 
 int poll(struct pollfd fds[], nfds_t nfds, int timeout);
 
+#define POLLOUT	1
+#define POLLIN	2
+#define POLLERR	0
+#define POLLHUP	1
+
 #endif /* POLL_H */
