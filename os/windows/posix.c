@@ -959,6 +959,7 @@ in_addr_t inet_network(const char *cp)
 	return hbo;
 }
 
+#ifdef CONFIG_WINDOWS_XP
 const char* inet_ntop(int af, const void *restrict src,
 		char *restrict dst, socklen_t size)
 {
@@ -1039,3 +1040,4 @@ int inet_pton(int af, const char *restrict src, void *restrict dst)
 
 	return ret;
 }
+#endif /* CONFIG_WINDOWS_XP */

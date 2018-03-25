@@ -13,6 +13,7 @@
 #include <stdlib.h>
 
 #include "../smalloc.h"
+#include "../debug.h"
 #include "../file.h"
 #include "../log.h"
 #include "../lib/hweight.h"
@@ -191,6 +192,10 @@ static inline int fio_set_sched_idle(void)
 	return (SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_IDLE))? 0 : -1;
 }
 
+#ifdef CONFIG_WINDOWS_XP
 #include "os-windows-xp.h"
+#else
+#include "os-windows-7.h"
+#endif
 
 #endif /* FIO_OS_WINDOWS_H */

@@ -167,6 +167,8 @@ for opt do
   ;;
   --build-32bit-win) build_32bit_win="yes"
   ;;
+  --target-win-ver=*) target_win_ver="$optarg"
+  ;;
   --build-static) build_static="yes"
   ;;
   --enable-gfio) gfio_check="yes"
@@ -213,6 +215,7 @@ if test "$show_help" = "yes" ; then
   echo "--cc=                   Specify compiler to use"
   echo "--extra-cflags=         Specify extra CFLAGS to pass to compiler"
   echo "--build-32bit-win       Enable 32-bit build on Windows"
+  echo "--target-win-ver=       Minimum version of Windows to target (XP or 7)"
   echo "--build-static          Build a static fio"
   echo "--esx                   Configure build options for esx"
   echo "--enable-gfio           Enable building of gtk gfio"
@@ -333,7 +336,21 @@ CYGWIN*)
     output_sym "CONFIG_32BIT"
   else
     output_sym "CONFIG_64BIT_LLP64"
+
+  target_win_ver=$(echo "$target_win_ver" | tr '[:lower:]' '[:upper:]')
+  if test -z "$target_win_ver"; then
+    # Default Windows API target
+    target_win_ver="7"
   fi
+  if test "$target_win_ver" = "XP"; then
+    output_sym "CONFIG_WINDOWS_XP"
+  elif test "$target_win_ver" = "7"; then
+    output_sym "CONFIG_WINDOWS_7"
+    CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0601"
+  else
+    fatal "Unknown target Windows version"
+  fi
+
   # We need this to be output_sym'd here because this is Windows specific.
   # The regular configure path never sets this config.
   output_sym "CONFIG_WINDOWSAIO"
@@ -498,6 +515,9 @@ fi
 print_config "Operating system" "$targetos"
 print_config "CPU" "$cpu"
 print_config "Big endian" "$bigendian"
+if test ! -z "$target_win_ver"; then
+  print_config "Target Windows version" "$target_win_ver"
+fi
 print_config "Compiler" "$cc"
 print_config "Cross compile" "$cross_compile"
 echo
