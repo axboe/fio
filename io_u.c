@@ -1762,7 +1762,7 @@ struct io_u *get_io_u(struct thread_data *td)
 			} else if ((td->flags & TD_F_SCRAMBLE_BUFFERS) &&
 				   !(td->flags & TD_F_COMPRESS))
 				do_scramble = 1;
-			if (td->flags & TD_F_VER_NONE) {
+			if (td->flags & TD_F_DO_VERIFY) {
 				populate_verify_io_u(td, io_u);
 				do_scramble = 0;
 			}
