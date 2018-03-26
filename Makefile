@@ -59,9 +59,6 @@ ifdef CONFIG_LIBHDFS
   SOURCE += engines/libhdfs.c
 endif
 
-ifdef CONFIG_64BIT_LLP64
-  CFLAGS += -DBITS_PER_LONG=32
-endif
 ifdef CONFIG_64BIT
   CFLAGS += -DBITS_PER_LONG=64
 endif

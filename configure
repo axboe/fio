@@ -332,10 +332,6 @@ CYGWIN*)
       cc="x86_64-w64-mingw32-gcc"
     fi
   fi
-  if test ! -z "$build_32bit_win" && test "$build_32bit_win" = "yes"; then
-    output_sym "CONFIG_32BIT"
-  else
-    output_sym "CONFIG_64BIT_LLP64"
 
   target_win_ver=$(echo "$target_win_ver" | tr '[:lower:]' '[:upper:]')
   if test -z "$target_win_ver"; then
@@ -357,9 +353,6 @@ CYGWIN*)
   # We now take the regular configuration path without having exit 0 here.
   # Flags below are still necessary mostly for MinGW.
   socklen_t="yes"
-  sfaa="yes"
-  sync_sync="yes"
-  cmp_swap="yes"
   rusage_thread="yes"
   fdatasync="yes"
   clock_gettime="yes" # clock_monotonic probe has dependency on this
@@ -367,11 +360,7 @@ CYGWIN*)
   gettimeofday="yes"
   sched_idle="yes"
   tcp_nodelay="yes"
-  tls_thread="yes"
-  static_assert="yes"
   ipv6="yes"
-  mkdir_two="no"
-  echo "BUILD_CFLAGS=$CFLAGS -include config-host.h -D_GNU_SOURCE" >> $config_host_mak
   ;;
 esac
 
