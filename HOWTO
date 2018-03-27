@@ -2935,7 +2935,8 @@ Measurements and reporting
 
 	Define the set of CPUs that are allowed to handle online log compression for
 	the I/O jobs. This can provide better isolation between performance
-	sensitive jobs, and background compression work.
+	sensitive jobs, and background compression work. See
+	:option:`cpus_allowed` for the format used.
 
 .. option:: log_store_compressed=bool
 
