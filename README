@@ -172,15 +172,18 @@ directory.
 How to compile fio on 64-bit Windows:
 
  1. Install Cygwin (http://www.cygwin.com/). Install **make** and all
-    packages starting with **mingw64-i686** and **mingw64-x86_64**. Ensure
-    **mingw64-i686-zlib** and **mingw64-x86_64-zlib** are installed if you wish
+    packages starting with **mingw64-x86_64**. Ensure
+    **mingw64-x86_64-zlib** are installed if you wish
     to enable fio's log compression functionality.
  2. Open the Cygwin Terminal.
  3. Go to the fio directory (source files).
  4. Run ``make clean && make -j``.
 
-To build fio on 32-bit Windows, run ``./configure --build-32bit-win`` before
-``make``.
+To build fio for 32-bit Windows, ensure the -i686 versions of the previously
+mentioned -x86_64 packages are installed and run ``./configure
+--build-32bit-win`` before ``make``. To build an fio that supports versions of
+Windows below Windows 7/Windows Server 2008 R2 also add ``--target-win-ver=xp``
+to the end of the configure line that you run before doing ``make``.
 
 It's recommended that once built or installed, fio be run in a Command Prompt or
 other 'native' console such as console2, since there are known to be display and
