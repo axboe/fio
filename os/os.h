@@ -27,6 +27,10 @@ enum {
 	os_nr,
 };
 
+typedef enum {
+        CPU_ARM64_CRC32C,
+} cpu_features;
+
 /* IWYU pragma: begin_exports */
 #if defined(__ANDROID__)
 #include "os-android.h"
@@ -385,6 +389,13 @@ static inline bool fio_fallocate(struct fio_file *f, uint64_t offset, uint64_t l
 
 #if defined(CONFIG_POSIX_FALLOCATE) || defined(FIO_HAVE_NATIVE_FALLOCATE)
 # define FIO_HAVE_ANY_FALLOCATE
+#endif
+
+#ifndef FIO_HAVE_CPU_HAS
+static inline bool os_cpu_has(cpu_features feature)
+{
+	return false;
+}
 #endif
 
 #endif

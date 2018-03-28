@@ -1,4 +1,9 @@
 #include "crc32c.h"
+#include "../os/os.h"
+
+bool crc32c_arm64_available = false;
+
+#ifdef ARCH_HAVE_CRC_CRYPTO
 
 #define CRC32C3X8(ITR) \
 	crc1 = __crc32cd(crc1, *((const uint64_t *)data + 42*1 + (ITR)));\
@@ -15,15 +20,6 @@
 	CRC32C3X8((ITR)*7+6) \
 	} while(0)
 
-#ifndef HWCAP_CRC32
-#define HWCAP_CRC32             (1 << 7)
-#endif /* HWCAP_CRC32 */
-
-bool crc32c_arm64_available = false;
-
-#ifdef ARCH_HAVE_ARM64_CRC_CRYPTO
-
-#include <sys/auxv.h>
 #include <arm_acle.h>
 #include <arm_neon.h>
 
@@ -102,13 +98,10 @@ uint32_t crc32c_arm64(unsigned char const *data, unsigned long length)
 
 void crc32c_arm64_probe(void)
 {
-	unsigned long hwcap;
-
 	if (!crc32c_probed) {
-		hwcap = getauxval(AT_HWCAP);
-		crc32c_arm64_available = (hwcap & HWCAP_CRC32) != 0;
+		crc32c_arm64_available = os_cpu_has(CPU_ARM64_CRC32C);
 		crc32c_probed = true;
 	}
 }
 
-#endif /* ARCH_HAVE_ARM64_CRC_CRYPTO */
+#endif /* ARCH_HAVE_CRC_CRYPTO */
