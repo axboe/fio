@@ -600,7 +600,7 @@ int main(void)
 EOF
 if compile_prog "" "" "posixaio" ; then
   posix_aio="yes"
-elif compile_prog "" "-lrt" "posixaio"; then
+elif compile_prog "" "-lrt" "posixaio -lrt"; then
   posix_aio="yes"
   posix_aio_lrt="yes"
   LIBS="-lrt $LIBS"

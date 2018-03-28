@@ -84,4 +84,4 @@ void crc32c_intel_probe(void)
 	}
 }
 
-#endif /* ARCH_HAVE_SSE */
+#endif /* ARCH_HAVE_SSE4_2 */

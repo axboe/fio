@@ -45,7 +45,7 @@ extern void crc32c_intel_probe(void);
 static inline void crc32c_intel_probe(void)
 {
 }
-#endif
+#endif /* ARCH_HAVE_SSE4_2 */
 
 static inline uint32_t fio_crc32c(unsigned char const *buf, unsigned long len)
 {
