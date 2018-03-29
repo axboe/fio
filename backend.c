@@ -1328,7 +1328,7 @@ static int init_io_u(struct thread_data *td)
 static int switch_ioscheduler(struct thread_data *td)
 {
 #ifdef FIO_HAVE_IOSCHED_SWITCH
-	char tmp[256], tmp2[128];
+	char tmp[256], tmp2[128], *p;
 	FILE *f;
 	int ret;
 
@@ -1372,9 +1372,11 @@ static int switch_ioscheduler(struct thread_data *td)
 	}
 	tmp[ret] = '\0';
 	/*
-	 * either a list of io schedulers or "none\n" is expected.
+	 * either a list of io schedulers or "none\n" is expected. Strip the
+	 * trailing newline.
 	 */
-	tmp[strlen(tmp) - 1] = '\0';
+	p = tmp;
+	strsep(&p, "\n");
 
 	/*
 	 * Write to "none" entry doesn't fail, so check the result here.
