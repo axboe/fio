@@ -27,7 +27,7 @@ extern uint32_t crc32c_sw(unsigned char const *, unsigned long);
 extern bool crc32c_arm64_available;
 extern bool crc32c_intel_available;
 
-#ifdef ARCH_HAVE_ARM64_CRC_CRYPTO
+#ifdef ARCH_HAVE_CRC_CRYPTO
 extern uint32_t crc32c_arm64(unsigned char const *, unsigned long);
 extern void crc32c_arm64_probe(void);
 #else
@@ -35,7 +35,7 @@ extern void crc32c_arm64_probe(void);
 static inline void crc32c_arm64_probe(void)
 {
 }
-#endif
+#endif /* ARCH_HAVE_CRC_CRYPTO */
 
 #ifdef ARCH_HAVE_SSE4_2
 extern uint32_t crc32c_intel(unsigned char const *, unsigned long);
@@ -45,7 +45,7 @@ extern void crc32c_intel_probe(void);
 static inline void crc32c_intel_probe(void)
 {
 }
-#endif
+#endif /* ARCH_HAVE_SSE4_2 */
 
 static inline uint32_t fio_crc32c(unsigned char const *buf, unsigned long len)
 {

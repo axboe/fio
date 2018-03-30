@@ -600,7 +600,7 @@ int main(void)
 EOF
 if compile_prog "" "" "posixaio" ; then
   posix_aio="yes"
-elif compile_prog "" "-lrt" "posixaio"; then
+elif compile_prog "" "-lrt" "posixaio -lrt"; then
   posix_aio="yes"
   posix_aio_lrt="yes"
   LIBS="-lrt $LIBS"
@@ -2108,18 +2108,23 @@ if test "$march_armv8_a_crc_crypto" != "yes" ; then
 fi
 if test "$cpu" = "arm64" ; then
   cat > $TMPC <<EOF
-#include <sys/auxv.h>
 #include <arm_acle.h>
 #include <arm_neon.h>
+#include <sys/auxv.h>
 
 int main(void)
 {
-  return 0;
+  /* Can we also do a runtime probe? */
+#if __linux__
+  return getauxval(AT_HWCAP);
+#else
+# error "Don't know how to do runtime probe for ARM CRC32c"
+#endif
 }
 EOF
-  if compile_prog "-march=armv8-a+crc+crypto" "" ""; then
+  if compile_prog "-march=armv8-a+crc+crypto" "" "ARM CRC32c"; then
     march_armv8_a_crc_crypto="yes"
-    CFLAGS="$CFLAGS -march=armv8-a+crc+crypto -DARCH_HAVE_CRC_CRYPTO"
+    CFLAGS="$CFLAGS -march=armv8-a+crc+crypto"
     march_set="yes"
   fi
 fi
@@ -2420,6 +2425,9 @@ if test "$zlib" = "no" ; then
   if test "$build_static" = "yes"; then
     echo "Note that some distros have separate packages for static libraries."
   fi
+fi
+if test "$march_armv8_a_crc_crypto" = "yes" ; then
+  output_sym "ARCH_HAVE_CRC_CRYPTO"
 fi
 if test "$cuda" = "yes" ; then
   output_sym "CONFIG_CUDA"
