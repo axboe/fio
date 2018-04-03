@@ -117,7 +117,7 @@ static inline void *td_var(void *to, struct fio_option *o, unsigned int offset)
 	else
 		ret = to;
 
-	return (char *) ret + offset;
+	return ret + offset;
 }
 
 static inline int parse_is_percent(unsigned long long val)
