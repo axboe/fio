@@ -71,10 +71,11 @@ static void show_option_range(const struct fio_option *o,
 			      size_t (*logger)(const char *format, ...))
 {
 	if (o->type == FIO_OPT_FLOAT_LIST) {
-		if (o->minfp == DBL_MIN && o->maxfp == DBL_MAX)
+		if (!o->minfp && !o->maxfp)
 			return;
 
-		logger("%20s: min=%f", "range", o->minfp);
+		if (o->minfp != DBL_MIN)
+			logger("%20s: min=%f", "range", o->minfp);
 		if (o->maxfp != DBL_MAX)
 			logger(", max=%f", o->maxfp);
 		logger("\n");
@@ -668,15 +669,17 @@ static int __handle_option(const struct fio_option *o, const char *ptr,
 			log_err("not a floating point value: %s\n", ptr);
 			return 1;
 		}
-		if (uf > o->maxfp) {
-			log_err("value out of range: %f"
-				" (range max: %f)\n", uf, o->maxfp);
-			return 1;
-		}
-		if (uf < o->minfp) {
-			log_err("value out of range: %f"
-				" (range min: %f)\n", uf, o->minfp);
-			return 1;
+		if (o->minfp || o->maxfp) {
+			if (uf > o->maxfp) {
+				log_err("value out of range: %f"
+					" (range max: %f)\n", uf, o->maxfp);
+				return 1;
+			}
+			if (uf < o->minfp) {
+				log_err("value out of range: %f"
+					" (range min: %f)\n", uf, o->minfp);
+				return 1;
+			}
 		}
 
 		flp = td_var(data, o, o->off1);
@@ -1315,10 +1318,6 @@ static void option_init(struct fio_option *o)
 	if (o->type == FIO_OPT_INT) {
 		if (!o->maxval)
 			o->maxval = UINT_MAX;
-	}
-	if (o->type == FIO_OPT_FLOAT_LIST) {
-		o->minfp = DBL_MIN;
-		o->maxfp = DBL_MAX;
 	}
 	if (o->type == FIO_OPT_STR_SET && o->def && !o->no_warn_def) {
 		log_err("Option %s: string set option with"
