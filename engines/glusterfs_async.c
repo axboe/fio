@@ -70,20 +70,17 @@ static void fio_gf_io_u_free(struct thread_data *td, struct io_u *io_u)
 
 static int fio_gf_io_u_init(struct thread_data *td, struct io_u *io_u)
 {
+    struct fio_gf_iou *io;
 	dprint(FD_FILE, "%s\n", __FUNCTION__);
-
-	if (!io_u->engine_data) {
-		struct fio_gf_iou *io;
-
-		io = malloc(sizeof(struct fio_gf_iou));
-		if (!io) {
-			td_verror(td, errno, "malloc");
-			return 1;
-		}
-		io->io_complete = 0;
-		io->io_u = io_u;
-		io_u->engine_data = io;
-	}
+    
+    io = malloc(sizeof(struct fio_gf_iou));
+    if (!io) {
+        td_verror(td, errno, "malloc");
+        return 1;
+    }
+    io->io_complete = 0;
+    io->io_u = io_u;
+    io_u->engine_data = io;
 	return 0;
 }
 
