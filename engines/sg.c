@@ -287,11 +287,11 @@ static int fio_sgio_doio(struct thread_data *td, struct io_u *io_u, int do_sync)
 
 	if (f->filetype == FIO_TYPE_BLOCK) {
 		ret = fio_sgio_ioctl_doio(td, f, io_u);
-		td->error = io_u->error;
+		td_verror(td, io_u->error, __func__);
 	} else {
 		ret = fio_sgio_rw_doio(f, io_u, do_sync);
 		if (do_sync)
-			td->error = io_u->error;
+			td_verror(td, io_u->error, __func__);
 	}
 
 	return ret;
