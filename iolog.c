@@ -978,7 +978,7 @@ int iolog_file_inflate(const char *file)
 	struct iolog_compress ic;
 	z_stream stream;
 	struct stat sb;
-	ssize_t ret;
+	size_t ret;
 	size_t total;
 	void *buf;
 	FILE *f;
@@ -1000,12 +1000,12 @@ int iolog_file_inflate(const char *file)
 	ic.seq = 1;
 
 	ret = fread(ic.buf, ic.len, 1, f);
-	if (ret < 0) {
+	if (ret == 0 && ferror(f)) {
 		perror("fread");
 		fclose(f);
 		free(buf);
 		return 1;
-	} else if (ret != 1) {
+	} else if (ferror(f) || (!feof(f) && ret != 1)) {
 		log_err("fio: short read on reading log\n");
 		fclose(f);
 		free(buf);
