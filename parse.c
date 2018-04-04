@@ -39,7 +39,7 @@ static const char *opt_type_names[] = {
 	"OPT_UNSUPPORTED",
 };
 
-static struct fio_option *__fio_options;
+static const struct fio_option *__fio_options;
 
 static int vp_cmp(const void *p1, const void *p2)
 {
@@ -49,7 +49,7 @@ static int vp_cmp(const void *p1, const void *p2)
 	return strlen(vp2->ival) - strlen(vp1->ival);
 }
 
-static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
+static void posval_sort(const struct fio_option *o, struct value_pair *vpmap)
 {
 	const struct value_pair *vp;
 	int entries;
@@ -67,14 +67,15 @@ static void posval_sort(struct fio_option *o, struct value_pair *vpmap)
 	qsort(vpmap, entries, sizeof(struct value_pair), vp_cmp);
 }
 
-static void show_option_range(struct fio_option *o,
+static void show_option_range(const struct fio_option *o,
 			      size_t (*logger)(const char *format, ...))
 {
 	if (o->type == FIO_OPT_FLOAT_LIST) {
-		if (o->minfp == DBL_MIN && o->maxfp == DBL_MAX)
+		if (!o->minfp && !o->maxfp)
 			return;
 
-		logger("%20s: min=%f", "range", o->minfp);
+		if (o->minfp != DBL_MIN)
+			logger("%20s: min=%f", "range", o->minfp);
 		if (o->maxfp != DBL_MAX)
 			logger(", max=%f", o->maxfp);
 		logger("\n");
@@ -89,7 +90,7 @@ static void show_option_range(struct fio_option *o,
 	}
 }
 
-static void show_option_values(struct fio_option *o)
+static void show_option_values(const struct fio_option *o)
 {
 	int i;
 
@@ -109,7 +110,7 @@ static void show_option_values(struct fio_option *o)
 		log_info("\n");
 }
 
-static void show_option_help(struct fio_option *o, int is_err)
+static void show_option_help(const struct fio_option *o, int is_err)
 {
 	const char *typehelp[] = {
 		"invalid",
@@ -484,7 +485,7 @@ static int str_match_len(const struct value_pair *vp, const char *str)
 			*ptr = (val);			\
 	} while (0)
 
-static const char *opt_type_name(struct fio_option *o)
+static const char *opt_type_name(const struct fio_option *o)
 {
 	compiletime_assert(ARRAY_SIZE(opt_type_names) - 1 == FIO_OPT_UNSUPPORTED,
 				"opt_type_names[] index");
@@ -495,8 +496,8 @@ static const char *opt_type_name(struct fio_option *o)
 	return "OPT_UNKNOWN?";
 }
 
-static int __handle_option(struct fio_option *o, const char *ptr, void *data,
-			   int first, int more, int curr)
+static int __handle_option(const struct fio_option *o, const char *ptr,
+			   void *data, int first, int more, int curr)
 {
 	int il=0, *ilp;
 	fio_fp64_t *flp;
@@ -668,15 +669,17 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 			log_err("not a floating point value: %s\n", ptr);
 			return 1;
 		}
-		if (uf > o->maxfp) {
-			log_err("value out of range: %f"
-				" (range max: %f)\n", uf, o->maxfp);
-			return 1;
-		}
-		if (uf < o->minfp) {
-			log_err("value out of range: %f"
-				" (range min: %f)\n", uf, o->minfp);
-			return 1;
+		if (o->minfp || o->maxfp) {
+			if (uf > o->maxfp) {
+				log_err("value out of range: %f"
+					" (range max: %f)\n", uf, o->maxfp);
+				return 1;
+			}
+			if (uf < o->minfp) {
+				log_err("value out of range: %f"
+					" (range min: %f)\n", uf, o->minfp);
+				return 1;
+			}
 		}
 
 		flp = td_var(data, o, o->off1);
@@ -892,7 +895,8 @@ static int __handle_option(struct fio_option *o, const char *ptr, void *data,
 	return ret;
 }
 
-static int handle_option(struct fio_option *o, const char *__ptr, void *data)
+static int handle_option(const struct fio_option *o, const char *__ptr,
+			 void *data)
 {
 	char *o_ptr, *ptr, *ptr2;
 	int ret, done;
@@ -970,11 +974,16 @@ struct fio_option *find_option(struct fio_option *options, const char *opt)
 	return NULL;
 }
 
-
-static struct fio_option *get_option(char *opt,
-				     struct fio_option *options, char **post)
+const struct fio_option *
+find_option_c(const struct fio_option *options, const char *opt)
 {
-	struct fio_option *o;
+	return find_option((struct fio_option *)options, opt);
+}
+
+static const struct fio_option *
+get_option(char *opt, const struct fio_option *options, char **post)
+{
+	const struct fio_option *o;
 	char *ret;
 
 	ret = strchr(opt, '=');
@@ -984,9 +993,9 @@ static struct fio_option *get_option(char *opt,
 		ret = opt;
 		(*post)++;
 		strip_blank_end(ret);
-		o = find_option(options, ret);
+		o = find_option_c(options, ret);
 	} else {
-		o = find_option(options, opt);
+		o = find_option_c(options, opt);
 		*post = NULL;
 	}
 
@@ -995,7 +1004,7 @@ static struct fio_option *get_option(char *opt,
 
 static int opt_cmp(const void *p1, const void *p2)
 {
-	struct fio_option *o;
+	const struct fio_option *o;
 	char *s, *foo;
 	int prio1, prio2;
 
@@ -1019,15 +1028,15 @@ static int opt_cmp(const void *p1, const void *p2)
 	return prio2 - prio1;
 }
 
-void sort_options(char **opts, struct fio_option *options, int num_opts)
+void sort_options(char **opts, const struct fio_option *options, int num_opts)
 {
 	__fio_options = options;
 	qsort(opts, num_opts, sizeof(char *), opt_cmp);
 	__fio_options = NULL;
 }
 
-static void add_to_dump_list(struct fio_option *o, struct flist_head *dump_list,
-			     const char *post)
+static void add_to_dump_list(const struct fio_option *o,
+			     struct flist_head *dump_list, const char *post)
 {
 	struct print_option *p;
 
@@ -1045,12 +1054,12 @@ static void add_to_dump_list(struct fio_option *o, struct flist_head *dump_list,
 }
 
 int parse_cmd_option(const char *opt, const char *val,
-		     struct fio_option *options, void *data,
+		     const struct fio_option *options, void *data,
 		     struct flist_head *dump_list)
 {
-	struct fio_option *o;
+	const struct fio_option *o;
 
-	o = find_option(options, opt);
+	o = find_option_c(options, opt);
 	if (!o) {
 		log_err("Bad option <%s>\n", opt);
 		return 1;
@@ -1065,8 +1074,8 @@ int parse_cmd_option(const char *opt, const char *val,
 	return 0;
 }
 
-int parse_option(char *opt, const char *input,
-		 struct fio_option *options, struct fio_option **o, void *data,
+int parse_option(char *opt, const char *input, const struct fio_option *options,
+		 const struct fio_option **o, void *data,
 		 struct flist_head *dump_list)
 {
 	char *post;
@@ -1151,10 +1160,10 @@ int string_distance_ok(const char *opt, int distance)
 	return distance <= len;
 }
 
-static struct fio_option *find_child(struct fio_option *options,
-				     struct fio_option *o)
+static const struct fio_option *find_child(const struct fio_option *options,
+					   const struct fio_option *o)
 {
-	struct fio_option *__o;
+	const struct fio_option *__o;
 
 	for (__o = options + 1; __o->name; __o++)
 		if (__o->parent && !strcmp(__o->parent, o->name))
@@ -1163,7 +1172,8 @@ static struct fio_option *find_child(struct fio_option *options,
 	return NULL;
 }
 
-static void __print_option(struct fio_option *o, struct fio_option *org,
+static void __print_option(const struct fio_option *o,
+			   const struct fio_option *org,
 			   int level)
 {
 	char name[256], *p;
@@ -1184,10 +1194,10 @@ static void __print_option(struct fio_option *o, struct fio_option *org,
 	log_info("%-24s: %s\n", name, o->help);
 }
 
-static void print_option(struct fio_option *o)
+static void print_option(const struct fio_option *o)
 {
-	struct fio_option *parent;
-	struct fio_option *__o;
+	const struct fio_option *parent;
+	const struct fio_option *__o;
 	unsigned int printed;
 	unsigned int level;
 
@@ -1208,9 +1218,9 @@ static void print_option(struct fio_option *o)
 	} while (printed);
 }
 
-int show_cmd_help(struct fio_option *options, const char *name)
+int show_cmd_help(const struct fio_option *options, const char *name)
 {
-	struct fio_option *o, *closest;
+	const struct fio_option *o, *closest;
 	unsigned int best_dist = -1U;
 	int found = 0;
 	int show_all = 0;
@@ -1284,9 +1294,9 @@ int show_cmd_help(struct fio_option *options, const char *name)
 /*
  * Handle parsing of default parameters.
  */
-void fill_default_options(void *data, struct fio_option *options)
+void fill_default_options(void *data, const struct fio_option *options)
 {
-	struct fio_option *o;
+	const struct fio_option *o;
 
 	dprint(FD_PARSE, "filling default options\n");
 
@@ -1308,10 +1318,6 @@ static void option_init(struct fio_option *o)
 	if (o->type == FIO_OPT_INT) {
 		if (!o->maxval)
 			o->maxval = UINT_MAX;
-	}
-	if (o->type == FIO_OPT_FLOAT_LIST) {
-		o->minfp = DBL_MIN;
-		o->maxfp = DBL_MAX;
 	}
 	if (o->type == FIO_OPT_STR_SET && o->def && !o->no_warn_def) {
 		log_err("Option %s: string set option with"
@@ -1346,9 +1352,9 @@ void options_init(struct fio_option *options)
 	}
 }
 
-void options_mem_dupe(struct fio_option *options, void *data)
+void options_mem_dupe(const struct fio_option *options, void *data)
 {
-	struct fio_option *o;
+	const struct fio_option *o;
 	char **ptr;
 
 	dprint(FD_PARSE, "dup options\n");
@@ -1363,9 +1369,9 @@ void options_mem_dupe(struct fio_option *options, void *data)
 	}
 }
 
-void options_free(struct fio_option *options, void *data)
+void options_free(const struct fio_option *options, void *data)
 {
-	struct fio_option *o;
+	const struct fio_option *o;
 	char **ptr;
 
 	dprint(FD_PARSE, "free options\n");

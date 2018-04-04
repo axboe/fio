@@ -1699,7 +1699,7 @@ static void small_content_scramble(struct io_u *io_u)
 
 /*
  * Return an io_u to be processed. Gets a buflen and offset, sets direction,
- * etc. The returned io_u is fully ready to be prepped and submitted.
+ * etc. The returned io_u is fully ready to be prepped, populated and submitted.
  */
 struct io_u *get_io_u(struct thread_data *td)
 {
@@ -1760,12 +1760,9 @@ struct io_u *get_io_u(struct thread_data *td)
 					td->o.min_bs[DDIR_WRITE],
 					io_u->buflen);
 			} else if ((td->flags & TD_F_SCRAMBLE_BUFFERS) &&
-				   !(td->flags & TD_F_COMPRESS))
+				   !(td->flags & TD_F_COMPRESS) &&
+				   !(td->flags & TD_F_DO_VERIFY))
 				do_scramble = 1;
-			if (td->flags & TD_F_VER_NONE) {
-				populate_verify_io_u(td, io_u);
-				do_scramble = 0;
-			}
 		} else if (io_u->ddir == DDIR_READ) {
 			/*
 			 * Reset the buf_filled parameters so next time if the

@@ -68,7 +68,7 @@ struct fio_option {
 	int hide_on_set;		/* hide on set, not on unset */
 	const char *inverse;		/* if set, apply opposite action to this option */
 	struct fio_option *inv_opt;	/* cached lookup */
-	int (*verify)(struct fio_option *, void *);
+	int (*verify)(const struct fio_option *, void *);
 	const char *prof_name;		/* only valid for specific profile */
 	void *prof_opts;
 	uint64_t category;		/* what type of option */
@@ -81,14 +81,18 @@ struct fio_option {
 	int no_free;
 };
 
-extern int parse_option(char *, const char *, struct fio_option *, struct fio_option **, void *, struct flist_head *);
-extern void sort_options(char **, struct fio_option *, int);
-extern int parse_cmd_option(const char *t, const char *l, struct fio_option *, void *, struct flist_head *);
-extern int show_cmd_help(struct fio_option *, const char *);
-extern void fill_default_options(void *, struct fio_option *);
+extern int parse_option(char *, const char *, const struct fio_option *,
+			const struct fio_option **, void *,
+			struct flist_head *);
+extern void sort_options(char **, const struct fio_option *, int);
+extern int parse_cmd_option(const char *t, const char *l,
+			    const struct fio_option *, void *,
+			    struct flist_head *);
+extern int show_cmd_help(const struct fio_option *, const char *);
+extern void fill_default_options(void *, const struct fio_option *);
 extern void options_init(struct fio_option *);
-extern void options_mem_dupe(struct fio_option *, void *);
-extern void options_free(struct fio_option *, void *);
+extern void options_mem_dupe(const struct fio_option *, void *);
+extern void options_free(const struct fio_option *, void *);
 
 extern void strip_blank_front(char **);
 extern void strip_blank_end(char *);
@@ -108,7 +112,8 @@ typedef int (fio_opt_str_val_fn)(void *, long long *);
 typedef int (fio_opt_int_fn)(void *, int *);
 
 struct thread_options;
-static inline void *td_var(void *to, struct fio_option *o, unsigned int offset)
+static inline void *td_var(void *to, const struct fio_option *o,
+			   unsigned int offset)
 {
 	void *ret;
 
@@ -117,7 +122,7 @@ static inline void *td_var(void *to, struct fio_option *o, unsigned int offset)
 	else
 		ret = to;
 
-	return (char *) ret + offset;
+	return ret + offset;
 }
 
 static inline int parse_is_percent(unsigned long long val)
