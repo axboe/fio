@@ -22,14 +22,22 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 	const char *sistr[] = { "", "k", "M", "G", "T", "P" };
 	const char *iecstr[] = { "", "Ki", "Mi", "Gi", "Ti", "Pi" };
 	const char **unitprefix;
-	const char *unitstr[] = { "", "/s", "B", "bit", "B/s", "bit/s" };
+	static const char *const unitstr[] = {
+		[N2S_NONE]	= "",
+		[N2S_PERSEC]	= "/s",
+		[N2S_BYTE]	= "B",
+		[N2S_BIT]	= "bit",
+		[N2S_BYTEPERSEC]= "B/s",
+		[N2S_BITPERSEC]	= "bit/s"
+	};
 	const unsigned int thousand[] = { 1000, 1024 };
 	unsigned int modulo;
-	int unit_index = 0, post_index, carry = 0;
+	int post_index, carry = 0;
 	char tmp[32], fmt[32];
 	char *buf;
 
 	compiletime_assert(sizeof(sistr) == sizeof(iecstr), "unit prefix arrays must be identical sizes");
+	assert(units < ARRAY_SIZE(unitstr));
 
 	buf = malloc(128);
 	if (!buf)
@@ -47,20 +55,15 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 	case N2S_NONE:
 		break;
 	case N2S_PERSEC:
-		unit_index = 1;
 		break;
 	case N2S_BYTE:
-		unit_index = 2;
 		break;
 	case N2S_BIT:
-		unit_index = 3;
 		num *= 8;
 		break;
 	case N2S_BYTEPERSEC:
-		unit_index = 4;
 		break;
 	case N2S_BITPERSEC:
-		unit_index = 5;
 		num *= 8;
 		break;
 	}
@@ -89,7 +92,7 @@ done:
 			post_index = 0;
 
 		sprintf(buf, "%llu%s%s", (unsigned long long) num,
-			unitprefix[post_index], unitstr[unit_index]);
+			unitprefix[post_index], unitstr[units]);
 		return buf;
 	}
 
@@ -112,6 +115,6 @@ done:
 	sprintf(tmp, fmt, (double)modulo / (double)thousand[!!pow2]);
 
 	sprintf(buf, "%llu.%s%s%s", (unsigned long long) num, &tmp[2],
-			unitprefix[post_index], unitstr[unit_index]);
+			unitprefix[post_index], unitstr[units]);
 	return buf;
 }
