@@ -14,10 +14,10 @@
  * @maxlen: max number of digits in the output string (not counting prefix and units, but counting .)
  * @base: multiplier for num (e.g., if num represents Ki, use 1024)
  * @pow2: select unit prefix - 0=power-of-10 decimal SI, nonzero=power-of-2 binary IEC
- * @units: select units - N2S_* macros defined in num2str.h
+ * @units: select units - N2S_* constants defined in num2str.h
  * @returns a malloc'd buffer containing "number[<unit prefix>][<units>]"
  */
-char *num2str(uint64_t num, int maxlen, int base, int pow2, int units)
+char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 {
 	const char *sistr[] = { "", "k", "M", "G", "T", "P" };
 	const char *iecstr[] = { "", "Ki", "Mi", "Gi", "Ti", "Pi" };
@@ -44,6 +44,8 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, int units)
 		base /= thousand[!!pow2];
 
 	switch (units) {
+	case N2S_NONE:
+		break;
 	case N2S_PERSEC:
 		unit_index = 1;
 		break;

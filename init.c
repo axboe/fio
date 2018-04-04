@@ -833,11 +833,11 @@ static int fixup_options(struct thread_data *td)
 		}
 	}
 
-	if (!o->unit_base) {
+	if (o->unit_base == N2S_NONE) {
 		if (td_ioengine_flagged(td, FIO_BIT_BASED))
-			o->unit_base = 1;
+			o->unit_base = N2S_BITPERSEC;
 		else
-			o->unit_base = 8;
+			o->unit_base = N2S_BYTEPERSEC;
 	}
 
 #ifndef FIO_HAVE_ANY_FALLOCATE
