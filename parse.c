@@ -71,13 +71,17 @@ static void show_option_range(const struct fio_option *o,
 			      size_t (*logger)(const char *format, ...))
 {
 	if (o->type == FIO_OPT_FLOAT_LIST) {
+		const char *sep = "";
 		if (!o->minfp && !o->maxfp)
 			return;
 
-		if (o->minfp != DBL_MIN)
-			logger("%20s: min=%f", "range", o->minfp);
+		logger("%20s: ", "range");
+		if (o->minfp != DBL_MIN) {
+			logger("min=%f", o->minfp);
+			sep = ", ";
+		}
 		if (o->maxfp != DBL_MAX)
-			logger(", max=%f", o->maxfp);
+			logger("%smax=%f", sep, o->maxfp);
 		logger("\n");
 	} else if (!o->posval[0].ival) {
 		if (!o->minval && !o->maxval)
