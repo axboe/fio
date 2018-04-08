@@ -1339,7 +1339,7 @@ static int fio_client_handle_iolog(struct fio_client *client,
 	sprintf(log_pathname, "%s.%s", pdu->name, client->hostname);
 
 	if (store_direct) {
-		ssize_t ret;
+		ssize_t wrote;
 		size_t sz;
 		int fd;
 
@@ -1353,10 +1353,10 @@ static int fio_client_handle_iolog(struct fio_client *client,
 		}
 
 		sz = cmd->pdu_len - sizeof(*pdu);
-		ret = write(fd, pdu->samples, sz);
+		wrote = write(fd, pdu->samples, sz);
 		close(fd);
 
-		if (ret != sz) {
+		if (wrote != sz) {
 			log_err("fio: short write on compressed log\n");
 			ret = 1;
 			goto out;
