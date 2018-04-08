@@ -350,6 +350,9 @@ uint64_t steadystate_bw_mean(struct thread_stat *ts)
 	int i;
 	uint64_t sum;
 
+	if (!ts->ss_dur)
+		return 0;
+
 	for (i = 0, sum = 0; i < ts->ss_dur; i++)
 		sum += ts->ss_bw_data[i];
 
@@ -360,6 +363,9 @@ uint64_t steadystate_iops_mean(struct thread_stat *ts)
 {
 	int i;
 	uint64_t sum;
+
+	if (!ts->ss_dur)
+		return 0;
 
 	for (i = 0, sum = 0; i < ts->ss_dur; i++)
 		sum += ts->ss_iops_data[i];
