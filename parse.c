@@ -1185,8 +1185,6 @@ static void __print_option(const struct fio_option *o,
 
 	if (!o)
 		return;
-	if (!org)
-		org = o;
 
 	p = name;
 	depth = level;
