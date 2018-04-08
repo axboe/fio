@@ -149,7 +149,7 @@ void eta_to_str(char *str, unsigned long eta_sec)
 		str += sprintf(str, "%02uh:", h);
 
 	str += sprintf(str, "%02um:", m);
-	str += sprintf(str, "%02us", s);
+	sprintf(str, "%02us", s);
 }
 
 /*
@@ -621,7 +621,7 @@ void display_thread_status(struct jobs_eta *je)
 			free(iops_str[ddir]);
 		}
 	}
-	p += sprintf(p, "\r");
+	sprintf(p, "\r");
 
 	printf("%s", output);
 
