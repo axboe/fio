@@ -102,7 +102,7 @@ struct axmap *axmap_new(unsigned long nr_bits)
 	}
 
 	axmap->nr_levels = levels;
-	axmap->levels = malloc(axmap->nr_levels * sizeof(struct axmap_level));
+	axmap->levels = calloc(axmap->nr_levels, sizeof(struct axmap_level));
 	axmap->nr_bits = nr_bits;
 
 	for (i = 0; i < axmap->nr_levels; i++) {
