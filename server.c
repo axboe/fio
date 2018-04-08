@@ -1199,7 +1199,6 @@ static int handle_connection(struct sk_out *sk_out)
 			.events	= POLLIN,
 		};
 
-		ret = 0;
 		do {
 			int timeout = 1000;
 
