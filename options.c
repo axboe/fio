@@ -1816,11 +1816,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "GUASI IO engine",
 			  },
 #endif
-#ifdef FIO_HAVE_BINJECT
-			  { .ival = "binject",
-			    .help = "binject direct inject block engine",
-			  },
-#endif
 #ifdef CONFIG_RDMA
 			  { .ival = "rdma",
 			    .help = "RDMA IO engine",

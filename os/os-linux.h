@@ -27,7 +27,6 @@
 #endif /* ARCH_HAVE_CRC_CRYPTO */
 
 #include "./os-linux-syscall.h"
-#include "binject.h"
 #include "../file.h"
 
 #ifndef __has_builtin         // Optional of course.
@@ -48,7 +47,6 @@
 #define FIO_HAVE_CGROUPS
 #define FIO_HAVE_FS_STAT
 #define FIO_HAVE_TRIM
-#define FIO_HAVE_BINJECT
 #define FIO_HAVE_GETTID
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_PWRITEV2

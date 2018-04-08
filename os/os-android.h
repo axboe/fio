@@ -18,7 +18,6 @@
 #include <asm/byteorder.h>
 
 #include "./os-linux-syscall.h"
-#include "binject.h"
 #include "../file.h"
 
 #ifndef __has_builtin         // Optional of course.
