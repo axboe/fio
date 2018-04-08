@@ -490,7 +490,6 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 	} else if (td_ioengine_flagged(td, FIO_DISKLESSIO)) {
 		dprint(FD_IO, "invalidate not supported by ioengine %s\n",
 		       td->io_ops->name);
-		ret = 0;
 	} else if (f->filetype == FIO_TYPE_FILE) {
 		dprint(FD_IO, "declare unneeded cache %s: %llu/%llu\n",
 			f->file_name, off, len);
@@ -517,14 +516,12 @@ static int __file_invalidate_cache(struct thread_data *td, struct fio_file *f,
 				log_err("fio: only root may flush block "
 					"devices. Cache flush bypassed!\n");
 			}
-			ret = 0;
 		}
 		if (ret < 0)
 			errval = errno;
 	} else if (f->filetype == FIO_TYPE_CHAR ||
 		   f->filetype == FIO_TYPE_PIPE) {
 		dprint(FD_IO, "invalidate not supported %s\n", f->file_name);
-		ret = 0;
 	}
 
 	/*
