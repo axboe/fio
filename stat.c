@@ -670,7 +670,6 @@ static int calc_block_percentiles(int nr_block_infos, uint32_t *block_infos,
 	if (len > 1)
 		qsort((void *)plist, len, sizeof(plist[0]), double_cmp);
 
-	nr_uninit = 0;
 	/* Start only after the uninit entries end */
 	for (nr_uninit = 0;
 	     nr_uninit < nr_block_infos
