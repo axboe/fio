@@ -1970,7 +1970,8 @@ static int __parse_jobs_ini(struct thread_data *td,
 			if (p[0] == '[') {
 				if (nested) {
 					log_err("No new sections in included files\n");
-					return 1;
+					ret = 1;
+					goto out;
 				}
 
 				skip_fgets = 1;
