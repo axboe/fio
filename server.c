@@ -2144,14 +2144,14 @@ static int fio_init_server_ip(void)
 #endif
 
 	if (use_ipv6) {
-		const void *src = &saddr_in6.sin6_addr;
+		void *src = &saddr_in6.sin6_addr;
 
 		addr = (struct sockaddr *) &saddr_in6;
 		socklen = sizeof(saddr_in6);
 		saddr_in6.sin6_family = AF_INET6;
 		str = inet_ntop(AF_INET6, src, buf, sizeof(buf));
 	} else {
-		const void *src = &saddr_in.sin_addr;
+		void *src = &saddr_in.sin_addr;
 
 		addr = (struct sockaddr *) &saddr_in;
 		socklen = sizeof(saddr_in);
@@ -2219,7 +2219,7 @@ static int fio_init_server_connection(void)
 
 	if (!bind_sock) {
 		char *p, port[16];
-		const void *src;
+		void *src;
 		int af;
 
 		if (use_ipv6) {

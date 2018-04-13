@@ -13,6 +13,7 @@
 #include <stdlib.h>
 
 #include "../smalloc.h"
+#include "../debug.h"
 #include "../file.h"
 #include "../log.h"
 #include "../lib/hweight.h"
@@ -21,7 +22,7 @@
 
 #include "windows/posix.h"
 
-/* Cygwin doesn't define rand_r if C99 or newer is being used */
+/* MinGW won't declare rand_r unless _POSIX is defined */
 #if defined(WIN32) && !defined(rand_r)
 int rand_r(unsigned *);
 #endif
@@ -40,15 +41,11 @@ int rand_r(unsigned *);
 #define FIO_PREFERRED_CLOCK_SOURCE	CS_CGETTIME
 #define FIO_OS_PATH_SEPARATOR		'\\'
 
-#define FIO_MAX_CPUS	MAXIMUM_PROCESSORS
-
 #define OS_MAP_ANON		MAP_ANON
 
 #define fio_swap16(x)	_byteswap_ushort(x)
 #define fio_swap32(x)	_byteswap_ulong(x)
 #define fio_swap64(x)	_byteswap_uint64(x)
-
-typedef DWORD_PTR os_cpu_mask_t;
 
 #define _SC_PAGESIZE			0x1
 #define _SC_NPROCESSORS_ONLN	0x2
@@ -76,11 +73,6 @@ typedef DWORD_PTR os_cpu_mask_t;
 
 /* Winsock doesn't support MSG_WAIT */
 #define OS_MSG_DONTWAIT	0
-
-#define POLLOUT	1
-#define POLLIN	2
-#define POLLERR	0
-#define POLLHUP	1
 
 #define SIGCONT	0
 #define SIGUSR1	1
@@ -172,73 +164,6 @@ static inline int gettid(void)
 	return GetCurrentThreadId();
 }
 
-static inline int fio_setaffinity(int pid, os_cpu_mask_t cpumask)
-{
-	HANDLE h;
-	BOOL bSuccess = FALSE;
-
-	h = OpenThread(THREAD_QUERY_INFORMATION | THREAD_SET_INFORMATION, TRUE, pid);
-	if (h != NULL) {
-		bSuccess = SetThreadAffinityMask(h, cpumask);
-		if (!bSuccess)
-			log_err("fio_setaffinity failed: failed to set thread affinity (pid %d, mask %.16llx)\n", pid, cpumask);
-
-		CloseHandle(h);
-	} else {
-		log_err("fio_setaffinity failed: failed to get handle for pid %d\n", pid);
-	}
-
-	return (bSuccess)? 0 : -1;
-}
-
-static inline int fio_getaffinity(int pid, os_cpu_mask_t *mask)
-{
-	os_cpu_mask_t systemMask;
-
-	HANDLE h = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, pid);
-
-	if (h != NULL) {
-		GetProcessAffinityMask(h, mask, &systemMask);
-		CloseHandle(h);
-	} else {
-		log_err("fio_getaffinity failed: failed to get handle for pid %d\n", pid);
-		return -1;
-	}
-
-	return 0;
-}
-
-static inline void fio_cpu_clear(os_cpu_mask_t *mask, int cpu)
-{
-	*mask &= ~(1ULL << cpu);
-}
-
-static inline void fio_cpu_set(os_cpu_mask_t *mask, int cpu)
-{
-	*mask |= 1ULL << cpu;
-}
-
-static inline int fio_cpu_isset(os_cpu_mask_t *mask, int cpu)
-{
-	return (*mask & (1ULL << cpu)) != 0;
-}
-
-static inline int fio_cpu_count(os_cpu_mask_t *mask)
-{
-	return hweight64(*mask);
-}
-
-static inline int fio_cpuset_init(os_cpu_mask_t *mask)
-{
-	*mask = 0;
-	return 0;
-}
-
-static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
-{
-	return 0;
-}
-
 static inline int init_random_seeds(unsigned long *rand_seeds, int size)
 {
 	HCRYPTPROV hCryptProv;
@@ -261,12 +186,16 @@ static inline int init_random_seeds(unsigned long *rand_seeds, int size)
 	return 0;
 }
 
-
 static inline int fio_set_sched_idle(void)
 {
 	/* SetThreadPriority returns nonzero for success */
 	return (SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_IDLE))? 0 : -1;
 }
 
+#ifdef CONFIG_WINDOWS_XP
+#include "os-windows-xp.h"
+#else
+#include "os-windows-7.h"
+#endif
 
 #endif /* FIO_OS_WINDOWS_H */

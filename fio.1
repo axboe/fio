@@ -2091,22 +2091,28 @@ systems since meaning of priority may differ.
 .BI prioclass \fR=\fPint
 Set the I/O priority class. See man \fBionice\fR\|(1).
 .TP
-.BI cpumask \fR=\fPint
-Set the CPU affinity of this job. The parameter given is a bit mask of
-allowed CPUs the job may run on. So if you want the allowed CPUs to be 1
-and 5, you would pass the decimal value of (1 << 1 | 1 << 5), or 34. See man
-\fBsched_setaffinity\fR\|(2). This may not work on all supported
-operating systems or kernel versions. This option doesn't work well for a
-higher CPU count than what you can store in an integer mask, so it can only
-control cpus 1\-32. For boxes with larger CPU counts, use
-\fBcpus_allowed\fR.
-.TP
 .BI cpus_allowed \fR=\fPstr
 Controls the same options as \fBcpumask\fR, but accepts a textual
-specification of the permitted CPUs instead. So to use CPUs 1 and 5 you
-would specify `cpus_allowed=1,5'. This option also allows a range of CPUs
-to be specified \-\- say you wanted a binding to CPUs 1, 5, and 8 to 15, you
-would set `cpus_allowed=1,5,8\-15'.
+specification of the permitted CPUs instead and CPUs are indexed from 0. So
+to use CPUs 0 and 5 you would specify `cpus_allowed=0,5'. This option also
+allows a range of CPUs to be specified \-\- say you wanted a binding to CPUs
+0, 5, and 8 to 15, you would set `cpus_allowed=0,5,8\-15'.
+.RS
+.P
+On Windows, when `cpus_allowed' is unset only CPUs from fio's current
+processor group will be used and affinity settings are inherited from the
+system. An fio build configured to target Windows 7 makes options that set
+CPUs processor group aware and values will set both the processor group
+and a CPU from within that group. For example, on a system where processor
+group 0 has 40 CPUs and processor group 1 has 32 CPUs, `cpus_allowed'
+values between 0 and 39 will bind CPUs from processor group 0 and
+`cpus_allowed' values between 40 and 71 will bind CPUs from processor
+group 1. When using `cpus_allowed_policy=shared' all CPUs specified by a
+single `cpus_allowed' option must be from the same processor group. For
+Windows fio builds not built for Windows 7, CPUs will only be selected from
+(and be relative to) whatever processor group fio happens to be running in
+and CPUs from other processor groups cannot be used.
+.RE
 .TP
 .BI cpus_allowed_policy \fR=\fPstr
 Set the policy of how fio distributes the CPUs specified by
@@ -2126,6 +2132,16 @@ Each job will get a unique CPU from the CPU set.
 enough CPUs are given for the jobs listed, then fio will roundrobin the CPUs
 in the set.
 .RE
+.TP
+.BI cpumask \fR=\fPint
+Set the CPU affinity of this job. The parameter given is a bit mask of
+allowed CPUs the job may run on. So if you want the allowed CPUs to be 1
+and 5, you would pass the decimal value of (1 << 1 | 1 << 5), or 34. See man
+\fBsched_setaffinity\fR\|(2). This may not work on all supported
+operating systems or kernel versions. This option doesn't work well for a
+higher CPU count than what you can store in an integer mask, so it can only
+control cpus 1\-32. For boxes with larger CPU counts, use
+\fBcpus_allowed\fR.
 .TP
 .BI numa_cpu_nodes \fR=\fPstr
 Set this job running on specified NUMA nodes' CPUs. The arguments allow
@@ -2603,7 +2619,8 @@ zlib.
 .BI log_compression_cpus \fR=\fPstr
 Define the set of CPUs that are allowed to handle online log compression for
 the I/O jobs. This can provide better isolation between performance
-sensitive jobs, and background compression work.
+sensitive jobs, and background compression work. See \fBcpus_allowed\fR for
+the format used.
 .TP
 .BI log_store_compressed \fR=\fPbool
 If set, fio will store the log files in a compressed format. They can be

@@ -12,8 +12,10 @@ typedef int in_addr_t;
 
 in_addr_t inet_network(const char *cp);
 
+#ifdef CONFIG_WINDOWS_XP
 const char *inet_ntop(int af, const void *restrict src,
         char *restrict dst, socklen_t size);
 int inet_pton(int af, const char *restrict src, void *restrict dst);
+#endif
 
 #endif /* ARPA_INET_H */

@@ -10,10 +10,10 @@ environment:
       CONFIGURE_OPTIONS:
     - platform: x86
       PACKAGE_ARCH: i686
-      CONFIGURE_OPTIONS: --build-32bit-win
+      CONFIGURE_OPTIONS: --build-32bit-win --target-win-ver=xp
 
 install:
-  - '%CYG_ROOT%\setup-x86_64.exe --quiet-mode --no-shortcuts --only-site --site "%CYG_MIRROR%" --packages "mingw64-%PACKAGE_ARCH%-zlib" > NULL'
+  - '%CYG_ROOT%\setup-x86_64.exe --quiet-mode --no-shortcuts --only-site --site "%CYG_MIRROR%" --packages "mingw64-%PACKAGE_ARCH%-zlib" > NUL'
   - SET PATH=%CYG_ROOT%\bin;%PATH% # NB: Changed env variables persist to later sections
 
 build_script:
