@@ -63,6 +63,7 @@ void log_file(struct thread_data *td, struct fio_file *f,
 static void iolog_delay(struct thread_data *td, unsigned long delay)
 {
 	uint64_t usec = utime_since_now(&td->last_issue);
+	unsigned long orig_delay = delay;
 	uint64_t this_delay;
 	struct timespec ts;
 
@@ -88,8 +89,8 @@ static void iolog_delay(struct thread_data *td, unsigned long delay)
 	}
 
 	usec = utime_since_now(&ts);
-	if (usec > delay)
-		td->time_offset = usec - delay;
+	if (usec > orig_delay)
+		td->time_offset = usec - orig_delay;
 	else
 		td->time_offset = 0;
 }
