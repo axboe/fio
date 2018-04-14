@@ -2311,6 +2311,14 @@ I/O replay
 	still respecting ordering. The result is the same I/O pattern to a given
 	device, but different timings.
 
+.. option:: replay_time_scale=int
+
+	When replaying I/O with :option:`read_iolog`, fio will honor the
+	original timing in the trace. With this option, it's possible to scale
+	the time. It's a percentage option, if set to 50 it means run at 50%
+	the original IO rate in the trace. If set to 200, run at twice the
+	original IO rate. Defaults to 100.
+
 .. option:: replay_redirect=str
 
 	While replaying I/O patterns using :option:`read_iolog` the default behavior

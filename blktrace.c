@@ -333,13 +333,19 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 		return;
 
 	if (!(t->action & BLK_TC_ACT(BLK_TC_NOTIFY))) {
-		if (!last_ttime || td->o.no_stall) {
-			last_ttime = t->time;
+		if (!last_ttime || td->o.no_stall)
 			delay = 0;
-		} else {
+		else if (td->o.replay_time_scale == 100)
 			delay = t->time - last_ttime;
-			last_ttime = t->time;
+		else {
+			double tmp = t->time - last_ttime;
+			double scale;
+
+			scale = (double) 100.0 / (double) td->o.replay_time_scale;
+			tmp *= scale;
+			delay = tmp;
 		}
+		last_ttime = t->time;
 	}
 
 	t_bytes_align(&td->o, t);

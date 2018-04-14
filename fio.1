@@ -2036,6 +2036,12 @@ respect the timestamps and attempt to replay them as fast as possible while
 still respecting ordering. The result is the same I/O pattern to a given
 device, but different timings.
 .TP
+.BI replay_time_scale \fR=\fPint
+When replaying I/O with \fBread_iolog\fR, fio will honor the original timing
+in the trace. With this option, it's possible to scale the time. It's a
+percentage option, if set to 50 it means run at 50% the original IO rate in
+the trace. If set to 200, run at twice the original IO rate. Defaults to 100.
+.TP
 .BI replay_redirect \fR=\fPstr
 While replaying I/O patterns using \fBread_iolog\fR the default behavior
 is to replay the IOPS onto the major/minor device that each IOP was recorded
