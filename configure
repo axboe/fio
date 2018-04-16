@@ -1894,15 +1894,15 @@ fi
 
 ##########################################
 # Report whether pmemblk engine is enabled
-print_config "NVML pmemblk engine" "$pmemblk"
+print_config "PMDK pmemblk engine" "$pmemblk"
 
 ##########################################
 # Report whether dev-dax engine is enabled
-print_config "NVML dev-dax engine" "$devdax"
+print_config "PMDK dev-dax engine" "$devdax"
 
 ##########################################
 # Report whether libpmem engine is enabled
-print_config "NVML libpmem engine" "$pmem"
+print_config "PMDK libpmem engine" "$pmem"
 
 ##########################################
 # Check if we have lex/yacc available

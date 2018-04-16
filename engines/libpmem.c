@@ -1,5 +1,5 @@
 /*
- * libpmem: IO engine that uses NVML libpmem to read and write data
+ * libpmem: IO engine that uses PMDK libpmem to read and write data
  *
  * Copyright (C) 2017 Nippon Telegraph and Telephone Corporation.
  *
