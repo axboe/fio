@@ -997,23 +997,26 @@ void td_fill_verify_state_seed(struct thread_data *td)
 
 static void td_fill_rand_seeds_internal(struct thread_data *td, bool use64)
 {
+	unsigned int read_seed = td->rand_seeds[FIO_RAND_BS_OFF];
+	unsigned int write_seed = td->rand_seeds[FIO_RAND_BS1_OFF];
+	unsigned int trim_seed = td->rand_seeds[FIO_RAND_BS2_OFF];
 	int i;
 
 	/*
 	 * trimwrite is special in that we need to generate the same
 	 * offsets to get the "write after trim" effect. If we are
 	 * using bssplit to set buffer length distributions, ensure that
-	 * we seed the trim and write generators identically.
+	 * we seed the trim and write generators identically. Ditto for
+	 * verify, read and writes must have the same seed, if we are doing
+	 * read verify.
 	 */
-	if (td_trimwrite(td)) {
-		init_rand_seed(&td->bsrange_state[DDIR_READ], td->rand_seeds[FIO_RAND_BS_OFF], use64);
-		init_rand_seed(&td->bsrange_state[DDIR_WRITE], td->rand_seeds[FIO_RAND_BS1_OFF], use64);
-		init_rand_seed(&td->bsrange_state[DDIR_TRIM], td->rand_seeds[FIO_RAND_BS1_OFF], use64);
-	} else {
-		init_rand_seed(&td->bsrange_state[DDIR_READ], td->rand_seeds[FIO_RAND_BS_OFF], use64);
-		init_rand_seed(&td->bsrange_state[DDIR_WRITE], td->rand_seeds[FIO_RAND_BS1_OFF], use64);
-		init_rand_seed(&td->bsrange_state[DDIR_TRIM], td->rand_seeds[FIO_RAND_BS2_OFF], use64);
-	}
+	if (td->o.verify != VERIFY_NONE)
+		write_seed = read_seed;
+	if (td_trimwrite(td))
+		trim_seed = write_seed;
+	init_rand_seed(&td->bsrange_state[DDIR_READ], read_seed, use64);
+	init_rand_seed(&td->bsrange_state[DDIR_WRITE], write_seed, use64);
+	init_rand_seed(&td->bsrange_state[DDIR_TRIM], trim_seed, use64);
 
 	td_fill_verify_state_seed(td);
 	init_rand_seed(&td->rwmix_state, td->rand_seeds[FIO_RAND_MIX_OFF], false);
