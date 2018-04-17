@@ -1854,12 +1854,12 @@ I/O engine
 
 		**pmemblk**
 			Read and write using filesystem DAX to a file on a filesystem
-			mounted with DAX on a persistent memory device through the NVML
+			mounted with DAX on a persistent memory device through the PMDK
 			libpmemblk library.
 
 		**dev-dax**
 			Read and write using device DAX to a persistent memory device (e.g.,
-			/dev/dax0.0) through the NVML libpmem library.
+			/dev/dax0.0) through the PMDK libpmem library.
 
 		**external**
 			Prefix to specify loading an external I/O engine object file. Append
@@ -1875,7 +1875,7 @@ I/O engine
 
 		**libpmem**
 			Read and write using mmap I/O to a file on a filesystem
-			mounted with DAX on a persistent memory device through the NVML
+			mounted with DAX on a persistent memory device through the PMDK
 			libpmem library.
 
 I/O engine specific parameters

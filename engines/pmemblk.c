@@ -1,5 +1,5 @@
 /*
- * pmemblk: IO engine that uses NVML libpmemblk to read and write data
+ * pmemblk: IO engine that uses PMDK libpmemblk to read and write data
  *
  * Copyright (C) 2016 Hewlett Packard Enterprise Development LP
  *

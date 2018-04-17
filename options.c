@@ -1851,7 +1851,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 #endif
 #ifdef CONFIG_PMEMBLK
 			  { .ival = "pmemblk",
-			    .help = "NVML libpmemblk based IO engine",
+			    .help = "PMDK libpmemblk based IO engine",
 			  },
 
 #endif
@@ -1870,7 +1870,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  },
 #ifdef CONFIG_LIBPMEM
 			  { .ival = "libpmem",
-			    .help = "NVML libpmem based IO engine",
+			    .help = "PMDK libpmem based IO engine",
 			  },
 #endif
 		},
