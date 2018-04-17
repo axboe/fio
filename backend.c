@@ -288,8 +288,7 @@ requeue:
 		put_io_u(td, io_u);
 		return true;
 	} else if (ret == FIO_Q_QUEUED) {
-		if (td_io_commit(td))
-			return true;
+		td_io_commit(td);
 		if (io_u_queued_complete(td, 1) < 0)
 			return true;
 	} else if (ret == FIO_Q_COMPLETED) {
@@ -301,8 +300,7 @@ requeue:
 		if (io_u_sync_complete(td, io_u) < 0)
 			return true;
 	} else if (ret == FIO_Q_BUSY) {
-		if (td_io_commit(td))
-			return true;
+		td_io_commit(td);
 		goto requeue;
 	}
 
@@ -453,8 +451,6 @@ int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
 		   enum fio_ddir ddir, uint64_t *bytes_issued, int from_verify,
 		   struct timespec *comp_time)
 {
-	int ret2;
-
 	switch (*ret) {
 	case FIO_Q_COMPLETED:
 		if (io_u->error) {
@@ -530,9 +526,7 @@ sync_done:
 		if (!from_verify)
 			unlog_io_piece(td, io_u);
 		requeue_io_u(td, &io_u);
-		ret2 = td_io_commit(td);
-		if (ret2 < 0)
-			*ret = ret2;
+		td_io_commit(td);
 		break;
 	default:
 		assert(*ret < 0);

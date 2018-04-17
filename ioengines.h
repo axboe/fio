@@ -76,7 +76,7 @@ extern int __must_check td_io_init(struct thread_data *);
 extern int __must_check td_io_prep(struct thread_data *, struct io_u *);
 extern int __must_check td_io_queue(struct thread_data *, struct io_u *);
 extern int __must_check td_io_getevents(struct thread_data *, unsigned int, unsigned int, const struct timespec *);
-extern int __must_check td_io_commit(struct thread_data *);
+extern void td_io_commit(struct thread_data *);
 extern int __must_check td_io_open_file(struct thread_data *, struct fio_file *);
 extern int td_io_close_file(struct thread_data *, struct fio_file *);
 extern int td_io_unlink_file(struct thread_data *, struct fio_file *);
