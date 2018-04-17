@@ -791,7 +791,8 @@ static int fio_rdmaio_recv(struct thread_data *td, struct io_u **io_us,
 	return i;
 }
 
-static int fio_rdmaio_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_rdmaio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct rdmaio_data *rd = td->io_ops_data;
 

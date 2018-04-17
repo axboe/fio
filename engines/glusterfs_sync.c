@@ -29,7 +29,7 @@ static int fio_gf_prep(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-static int fio_gf_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status fio_gf_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct gf_data *g = td->io_ops_data;
 	int ret = 0;

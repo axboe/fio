@@ -34,7 +34,7 @@ struct fas_data {
 	size_t sector_size;
 };
 
-static int queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct fas_data *d = FILE_ENG_DATA(io_u->file);
 	int rc;

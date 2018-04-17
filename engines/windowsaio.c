@@ -354,7 +354,8 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 	return dequeued;
 }
 
-static int fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_windowsaio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_overlapped *o = io_u->engine_data;
 	LPOVERLAPPED lpOvl = &o->o;

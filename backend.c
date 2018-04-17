@@ -268,7 +268,7 @@ static void cleanup_pending_aio(struct thread_data *td)
 static bool fio_io_sync(struct thread_data *td, struct fio_file *f)
 {
 	struct io_u *io_u = __get_io_u(td);
-	int ret;
+	enum fio_q_status ret;
 
 	if (!io_u)
 		return true;
@@ -598,7 +598,7 @@ static bool in_flight_overlap(struct io_u_queue *q, struct io_u *io_u)
 	return overlap;
 }
 
-static int io_u_submit(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status io_u_submit(struct thread_data *td, struct io_u *io_u)
 {
 	/*
 	 * Check for overlap if the user asked us to, and we have

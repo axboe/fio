@@ -127,7 +127,8 @@ static void fio_e4defrag_cleanup(struct thread_data *td)
 }
 
 
-static int fio_e4defrag_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_e4defrag_queue(struct thread_data *td, struct io_u *io_u)
 {
 
 	int ret;

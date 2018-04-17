@@ -462,7 +462,8 @@ static int fio_rbd_getevents(struct thread_data *td, unsigned int min,
 	return events;
 }
 
-static int fio_rbd_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_rbd_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct rbd_data *rbd = td->io_ops_data;
 	struct fio_rbd_iou *fri = io_u->engine_data;
