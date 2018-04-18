@@ -77,11 +77,6 @@ static uint64_t last_block(struct thread_data *td, struct fio_file *f,
 	return max_blocks;
 }
 
-struct rand_off {
-	struct flist_head list;
-	uint64_t off;
-};
-
 static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				  enum fio_ddir ddir, uint64_t *b,
 				  uint64_t lastb)
@@ -272,16 +267,8 @@ bail:
 	return 0;
 }
 
-static int flist_cmp(void *data, struct flist_head *a, struct flist_head *b)
-{
-	struct rand_off *r1 = flist_entry(a, struct rand_off, list);
-	struct rand_off *r2 = flist_entry(b, struct rand_off, list);
-
-	return r1->off - r2->off;
-}
-
-static int get_off_from_method(struct thread_data *td, struct fio_file *f,
-			       enum fio_ddir ddir, uint64_t *b)
+static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
+				enum fio_ddir ddir, uint64_t *b)
 {
 	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM) {
 		uint64_t lastb;
@@ -306,25 +293,6 @@ static int get_off_from_method(struct thread_data *td, struct fio_file *f,
 	return 1;
 }
 
-/*
- * Sort the reads for a verify phase in batches of verifysort_nr, if
- * specified.
- */
-static inline bool should_sort_io(struct thread_data *td)
-{
-	if (!td->o.verifysort_nr || !td->o.do_verify)
-		return false;
-	if (!td_random(td))
-		return false;
-	if (td->runstate != TD_VERIFYING)
-		return false;
-	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE ||
-	    td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE64)
-		return false;
-
-	return true;
-}
-
 static bool should_do_random(struct thread_data *td, enum fio_ddir ddir)
 {
 	unsigned int v;
@@ -335,44 +303,6 @@ static bool should_do_random(struct thread_data *td, enum fio_ddir ddir)
 	v = rand32_between(&td->seq_rand_state[ddir], 1, 100);
 
 	return v <= td->o.perc_rand[ddir];
-}
-
-static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
-				enum fio_ddir ddir, uint64_t *b)
-{
-	struct rand_off *r;
-	int i, ret = 1;
-
-	if (!should_sort_io(td))
-		return get_off_from_method(td, f, ddir, b);
-
-	if (!flist_empty(&td->next_rand_list)) {
-fetch:
-		r = flist_first_entry(&td->next_rand_list, struct rand_off, list);
-		flist_del(&r->list);
-		*b = r->off;
-		free(r);
-		return 0;
-	}
-
-	for (i = 0; i < td->o.verifysort_nr; i++) {
-		r = malloc(sizeof(*r));
-
-		ret = get_off_from_method(td, f, ddir, &r->off);
-		if (ret) {
-			free(r);
-			break;
-		}
-
-		flist_add(&r->list, &td->next_rand_list);
-	}
-
-	if (ret && !i)
-		return ret;
-
-	assert(!flist_empty(&td->next_rand_list));
-	flist_sort(NULL, &td->next_rand_list, flist_cmp);
-	goto fetch;
 }
 
 static void loop_cache_invalidate(struct thread_data *td, struct fio_file *f)

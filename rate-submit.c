@@ -115,7 +115,6 @@ static int io_workqueue_init_worker_fn(struct submit_worker *sw)
 	INIT_FLIST_HEAD(&td->io_hist_list);
 	INIT_FLIST_HEAD(&td->verify_list);
 	INIT_FLIST_HEAD(&td->trim_list);
-	INIT_FLIST_HEAD(&td->next_rand_list);
 	td->io_hist_tree = RB_ROOT;
 
 	td->o.iodepth = 1;

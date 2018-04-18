@@ -110,8 +110,6 @@ struct thread_options {
 	unsigned int write_hint;
 	unsigned int verify;
 	unsigned int do_verify;
-	unsigned int verifysort;
-	unsigned int verifysort_nr;
 	unsigned int verify_interval;
 	unsigned int verify_offset;
 	char verify_pattern[MAX_PATTERN_SIZE];
@@ -391,8 +389,6 @@ struct thread_options_pack {
 	uint32_t write_hint;
 	uint32_t verify;
 	uint32_t do_verify;
-	uint32_t verifysort;
-	uint32_t verifysort_nr;
 	uint32_t verify_interval;
 	uint32_t verify_offset;
 	uint8_t verify_pattern[MAX_PATTERN_SIZE];

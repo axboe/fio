@@ -162,8 +162,6 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->write_hint = le32_to_cpu(top->write_hint);
 	o->verify = le32_to_cpu(top->verify);
 	o->do_verify = le32_to_cpu(top->do_verify);
-	o->verifysort = le32_to_cpu(top->verifysort);
-	o->verifysort_nr = le32_to_cpu(top->verifysort_nr);
 	o->experimental_verify = le32_to_cpu(top->experimental_verify);
 	o->verify_state = le32_to_cpu(top->verify_state);
 	o->verify_interval = le32_to_cpu(top->verify_interval);
@@ -376,8 +374,6 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->write_hint = cpu_to_le32(o->write_hint);
 	top->verify = cpu_to_le32(o->verify);
 	top->do_verify = cpu_to_le32(o->do_verify);
-	top->verifysort = cpu_to_le32(o->verifysort);
-	top->verifysort_nr = cpu_to_le32(o->verifysort_nr);
 	top->experimental_verify = cpu_to_le32(o->experimental_verify);
 	top->verify_state = cpu_to_le32(o->verify_state);
 	top->verify_interval = cpu_to_le32(o->verify_interval);

@@ -1549,7 +1549,6 @@ static void *thread_main(void *data)
 	INIT_FLIST_HEAD(&td->io_hist_list);
 	INIT_FLIST_HEAD(&td->verify_list);
 	INIT_FLIST_HEAD(&td->trim_list);
-	INIT_FLIST_HEAD(&td->next_rand_list);
 	td->io_hist_tree = RB_ROOT;
 
 	ret = mutex_cond_init_pshared(&td->io_u_lock, &td->free_cond);

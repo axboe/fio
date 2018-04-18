@@ -405,8 +405,6 @@ struct thread_data {
 	struct flist_head trim_list;
 	unsigned long trim_entries;
 
-	struct flist_head next_rand_list;
-
 	/*
 	 * for fileservice, how often to switch to a new file
 	 */
