@@ -2340,16 +2340,6 @@ previously written file. If the data direction includes any form of write,
 the verify will be of the newly written data.
 .RE
 .TP
-.BI verifysort \fR=\fPbool
-If true, fio will sort written verify blocks when it deems it faster to read
-them back in a sorted manner. This is often the case when overwriting an
-existing file, since the blocks are already laid out in the file system. You
-can ignore this option unless doing huge amounts of really fast I/O where
-the red\-black tree sorting CPU time becomes significant. Default: true.
-.TP
-.BI verifysort_nr \fR=\fPint
-Pre\-load and sort verify blocks for a read workload.
-.TP
 .BI verify_offset \fR=\fPint
 Swap the verification header with data somewhere else in the block before
 writing. It is swapped back before verifying.
