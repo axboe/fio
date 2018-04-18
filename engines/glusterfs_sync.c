@@ -47,7 +47,8 @@ static int fio_gf_queue(struct thread_data *td, struct io_u *io_u)
 		ret = glfs_fdatasync(g->fd);
 	else {
 		log_err("unsupported operation.\n");
-		return -EINVAL;
+		io_u->error = EINVAL;
+		return FIO_Q_COMPLETED;
 	}
 	dprint(FD_FILE, "fio len %lu ret %d\n", io_u->xfer_buflen, ret);
 	if (io_u->file && ret >= 0 && ddir_rw(io_u->ddir))
