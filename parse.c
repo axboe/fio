@@ -36,6 +36,7 @@ static const char *opt_type_names[] = {
 	"OPT_FLOAT_LIST",
 	"OPT_STR_SET",
 	"OPT_DEPRECATED",
+	"OPT_SOFT_DEPRECATED",
 	"OPT_UNSUPPORTED",
 };
 
@@ -876,8 +877,9 @@ static int __handle_option(const struct fio_option *o, const char *ptr,
 		break;
 	}
 	case FIO_OPT_DEPRECATED:
-		log_info("Option %s is deprecated\n", o->name);
 		ret = 1;
+	case FIO_OPT_SOFT_DEPRECATED:
+		log_info("Option %s is deprecated\n", o->name);
 		break;
 	default:
 		log_err("Bad option type %u\n", o->type);
@@ -1235,7 +1237,8 @@ int show_cmd_help(const struct fio_option *options, const char *name)
 	for (o = &options[0]; o->name; o++) {
 		int match = 0;
 
-		if (o->type == FIO_OPT_DEPRECATED)
+		if (o->type == FIO_OPT_DEPRECATED ||
+		    o->type == FIO_OPT_SOFT_DEPRECATED)
 			continue;
 		if (!exec_profile && o->prof_name)
 			continue;
@@ -1309,7 +1312,8 @@ void fill_default_options(void *data, const struct fio_option *options)
 
 static void option_init(struct fio_option *o)
 {
-	if (o->type == FIO_OPT_DEPRECATED || o->type == FIO_OPT_UNSUPPORTED)
+	if (o->type == FIO_OPT_DEPRECATED || o->type == FIO_OPT_UNSUPPORTED ||
+	    o->type == FIO_OPT_SOFT_DEPRECATED)
 		return;
 	if (o->name && !o->lname)
 		log_err("Option %s: missing long option name\n", o->name);
