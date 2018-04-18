@@ -227,11 +227,7 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	}
 
 	/*
-	 * We don't need to sort the entries if we only performed sequential
-	 * writes. In this case, just reading back data in the order we wrote
-	 * it out is the faster but still safe.
-	 *
-	 * One exception is if we don't have a random map in which case we need
+	 * Only sort writes if we don't have a random map in which case we need
 	 * to check for duplicate blocks and drop the old one, which we rely on
 	 * the rb insert/lookup for handling.
 	 */
