@@ -283,15 +283,13 @@ static bool fio_io_sync(struct thread_data *td, struct fio_file *f)
 
 requeue:
 	ret = td_io_queue(td, io_u);
-	if (ret < 0) {
-		td_verror(td, io_u->error, "td_io_queue");
-		put_io_u(td, io_u);
-		return true;
-	} else if (ret == FIO_Q_QUEUED) {
+	switch (ret) {
+	case FIO_Q_QUEUED:
 		td_io_commit(td);
 		if (io_u_queued_complete(td, 1) < 0)
 			return true;
-	} else if (ret == FIO_Q_COMPLETED) {
+		break;
+	case FIO_Q_COMPLETED:
 		if (io_u->error) {
 			td_verror(td, io_u->error, "td_io_queue");
 			return true;
@@ -299,7 +297,8 @@ requeue:
 
 		if (io_u_sync_complete(td, io_u) < 0)
 			return true;
-	} else if (ret == FIO_Q_BUSY) {
+		break;
+	case FIO_Q_BUSY:
 		td_io_commit(td);
 		goto requeue;
 	}
