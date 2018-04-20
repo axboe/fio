@@ -610,11 +610,8 @@ int io_u_quiesce(struct thread_data *td)
 	 * io's that have been actually submitted to an async engine,
 	 * and cur_depth is meaningless for sync engines.
 	 */
-	if (td->io_u_queued || td->cur_depth) {
-		int fio_unused ret;
-
-		ret = td_io_commit(td);
-	}
+	if (td->io_u_queued || td->cur_depth)
+		td_io_commit(td);
 
 	while (td->io_u_in_flight) {
 		int ret;

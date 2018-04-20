@@ -199,7 +199,8 @@ static int fio_splice_write(struct thread_data *td, struct io_u *io_u)
 	return io_u->xfer_buflen;
 }
 
-static int fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_spliceio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct spliceio_data *sd = td->io_ops_data;
 	int ret = 0;

@@ -3,13 +3,15 @@
 
 #include <inttypes.h>
 
-#define N2S_NONE	0
-#define N2S_BITPERSEC	1	/* match unit_base for bit rates */
-#define N2S_PERSEC	2
-#define N2S_BIT		3
-#define N2S_BYTE	4
-#define N2S_BYTEPERSEC	8	/* match unit_base for byte rates */
+enum n2s_unit {
+	N2S_NONE	= 0,
+	N2S_PERSEC	= 1,
+	N2S_BYTE	= 2,
+	N2S_BIT		= 3,
+	N2S_BYTEPERSEC	= 4,
+	N2S_BITPERSEC	= 5,
+};
 
-extern char *num2str(uint64_t, int, int, int, int);
+extern char *num2str(uint64_t, int, int, int, enum n2s_unit);
 
 #endif

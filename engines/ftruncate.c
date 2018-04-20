@@ -11,7 +11,8 @@
 
 #include "../fio.h"
 
-static int fio_ftruncate_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_ftruncate_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	int ret;

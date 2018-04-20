@@ -93,8 +93,8 @@ static void gf_async_cb(glfs_fd_t * fd, ssize_t ret, void *data)
 	iou->io_complete = 1;
 }
 
-static int fio_gf_async_queue(struct thread_data fio_unused * td,
-			      struct io_u *io_u)
+static enum fio_q_status fio_gf_async_queue(struct thread_data fio_unused * td,
+					    struct io_u *io_u)
 {
 	struct gf_data *g = td->io_ops_data;
 	int r;

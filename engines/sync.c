@@ -110,7 +110,8 @@ static int fio_io_end(struct thread_data *td, struct io_u *io_u, int ret)
 }
 
 #ifdef CONFIG_PWRITEV
-static int fio_pvsyncio_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_pvsyncio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct syncio_data *sd = td->io_ops_data;
 	struct iovec *iov = &sd->iovecs[0];
@@ -137,7 +138,8 @@ static int fio_pvsyncio_queue(struct thread_data *td, struct io_u *io_u)
 #endif
 
 #ifdef FIO_HAVE_PWRITEV2
-static int fio_pvsyncio2_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_pvsyncio2_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct syncio_data *sd = td->io_ops_data;
 	struct psyncv2_options *o = td->eo;
@@ -169,7 +171,8 @@ static int fio_pvsyncio2_queue(struct thread_data *td, struct io_u *io_u)
 #endif
 
 
-static int fio_psyncio_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_psyncio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	int ret;
@@ -189,7 +192,8 @@ static int fio_psyncio_queue(struct thread_data *td, struct io_u *io_u)
 	return fio_io_end(td, io_u, ret);
 }
 
-static int fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_syncio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	int ret;
@@ -260,7 +264,8 @@ static void fio_vsyncio_set_iov(struct syncio_data *sd, struct io_u *io_u,
 	sd->queued++;
 }
 
-static int fio_vsyncio_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_vsyncio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct syncio_data *sd = td->io_ops_data;
 

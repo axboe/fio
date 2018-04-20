@@ -177,7 +177,8 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 	return r < 0 ? r : events;
 }
 
-static int fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_libaio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct libaio_data *ld = td->io_ops_data;
 

@@ -276,11 +276,11 @@ out:
 	return r;
 }
 
-int td_io_queue(struct thread_data *td, struct io_u *io_u)
+enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 {
 	const enum fio_ddir ddir = acct_ddir(io_u);
 	unsigned long buflen = io_u->xfer_buflen;
-	int ret;
+	enum fio_q_status ret;
 
 	dprint_io_u(io_u, "queue");
 	fio_ro_check(td, io_u);
@@ -361,18 +361,13 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 			td->ts.total_io_u[io_u->ddir]++;
 		}
 	} else if (ret == FIO_Q_QUEUED) {
-		int r;
-
 		td->io_u_queued++;
 
 		if (ddir_rw(io_u->ddir) || ddir_sync(io_u->ddir))
 			td->ts.total_io_u[io_u->ddir]++;
 
-		if (td->io_u_queued >= td->o.iodepth_batch) {
-			r = td_io_commit(td);
-			if (r < 0)
-				return r;
-		}
+		if (td->io_u_queued >= td->o.iodepth_batch)
+			td_io_commit(td);
 	}
 
 	if (!td_ioengine_flagged(td, FIO_SYNCIO)) {
@@ -410,14 +405,14 @@ int td_io_init(struct thread_data *td)
 	return ret;
 }
 
-int td_io_commit(struct thread_data *td)
+void td_io_commit(struct thread_data *td)
 {
 	int ret;
 
 	dprint(FD_IO, "calling ->commit(), depth %d\n", td->cur_depth);
 
 	if (!td->cur_depth || !td->io_u_queued)
-		return 0;
+		return;
 
 	io_u_mark_depth(td, td->io_u_queued);
 
@@ -432,8 +427,6 @@ int td_io_commit(struct thread_data *td)
 	 */
 	td->io_u_in_flight += td->io_u_queued;
 	td->io_u_queued = 0;
-
-	return 0;
 }
 
 int td_io_open_file(struct thread_data *td, struct fio_file *f)

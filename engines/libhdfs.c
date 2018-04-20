@@ -165,7 +165,8 @@ static int fio_hdfsio_prep(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-static int fio_hdfsio_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status
+fio_hdfsio_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct hdfsio_data *hd = td->io_ops_data;
 	struct hdfsio_options *options = td->eo;

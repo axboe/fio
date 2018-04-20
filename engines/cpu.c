@@ -53,7 +53,8 @@ static struct fio_option options[] = {
 };
 
 
-static int fio_cpuio_queue(struct thread_data *td, struct io_u fio_unused *io_u)
+static enum fio_q_status
+fio_cpuio_queue(struct thread_data *td, struct io_u fio_unused *io_u)
 {
 	struct cpu_options *co = td->eo;
 

@@ -7,12 +7,12 @@
 #include "flist.h"
 #include "io_u.h"
 
-#define FIO_IOOPS_VERSION	23
+#define FIO_IOOPS_VERSION	24
 
 /*
  * io_ops->queue() return values
  */
-enum {
+enum fio_q_status {
 	FIO_Q_COMPLETED	= 0,		/* completed sync */
 	FIO_Q_QUEUED	= 1,		/* queued, will complete async */
 	FIO_Q_BUSY	= 2,		/* no more room, call ->commit() */
@@ -26,7 +26,7 @@ struct ioengine_ops {
 	int (*setup)(struct thread_data *);
 	int (*init)(struct thread_data *);
 	int (*prep)(struct thread_data *, struct io_u *);
-	int (*queue)(struct thread_data *, struct io_u *);
+	enum fio_q_status (*queue)(struct thread_data *, struct io_u *);
 	int (*commit)(struct thread_data *);
 	int (*getevents)(struct thread_data *, unsigned int, unsigned int, const struct timespec *);
 	struct io_u *(*event)(struct thread_data *, int);
@@ -74,9 +74,9 @@ typedef void (*get_ioengine_t)(struct ioengine_ops **);
  */
 extern int __must_check td_io_init(struct thread_data *);
 extern int __must_check td_io_prep(struct thread_data *, struct io_u *);
-extern int __must_check td_io_queue(struct thread_data *, struct io_u *);
+extern enum fio_q_status __must_check td_io_queue(struct thread_data *, struct io_u *);
 extern int __must_check td_io_getevents(struct thread_data *, unsigned int, unsigned int, const struct timespec *);
-extern int __must_check td_io_commit(struct thread_data *);
+extern void td_io_commit(struct thread_data *);
 extern int __must_check td_io_open_file(struct thread_data *, struct fio_file *);
 extern int td_io_close_file(struct thread_data *, struct fio_file *);
 extern int td_io_unlink_file(struct thread_data *, struct fio_file *);
