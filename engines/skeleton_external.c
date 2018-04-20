@@ -90,8 +90,8 @@ static int fio_skeleton_cancel(struct thread_data *td, struct io_u *io_u)
  * io_u->xfer_buflen. Residual data count may be set in io_u->resid
  * for a short read/write.
  */
-static enum fio_q_status
-fio_skeleton_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status fio_skeleton_queue(struct thread_data *td,
+					    struct io_u *io_u)
 {
 	/*
 	 * Double sanity check to catch errant write on a readonly setup

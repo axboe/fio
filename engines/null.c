@@ -56,8 +56,8 @@ static int null_commit(struct thread_data *td, struct null_data *nd)
 	return 0;
 }
 
-static enum fio_q_status
-null_queue(struct thread_data *td, struct null_data *nd, struct io_u *io_u)
+static enum fio_q_status null_queue(struct thread_data *td,
+				    struct null_data *nd, struct io_u *io_u)
 {
 	fio_ro_check(td, io_u);
 
@@ -118,8 +118,8 @@ static int fio_null_commit(struct thread_data *td)
 	return null_commit(td, td->io_ops_data);
 }
 
-static enum fio_q_status
-fio_null_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status fio_null_queue(struct thread_data *td,
+					struct io_u *io_u)
 {
 	return null_queue(td, td->io_ops_data, io_u);
 }

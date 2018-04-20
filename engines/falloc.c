@@ -65,9 +65,10 @@ open_again:
 #endif
 #ifndef FALLOC_FL_PUNCH_HOLE
 #define FALLOC_FL_PUNCH_HOLE    0x02 /* de-allocates range */
-#endif 
-static enum fio_q_status
-fio_fallocate_queue(struct thread_data *td, struct io_u *io_u)
+#endif
+
+static enum fio_q_status fio_fallocate_queue(struct thread_data *td,
+					     struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	int ret;

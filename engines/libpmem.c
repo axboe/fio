@@ -457,8 +457,8 @@ done:
 	return 0;
 }
 
-static enum fio_q_status
-fio_libpmem_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status fio_libpmem_queue(struct thread_data *td,
+					   struct io_u *io_u)
 {
 	fio_ro_check(td, io_u);
 	io_u->error = 0;

@@ -251,8 +251,8 @@ static void fio_rados_cleanup(struct thread_data *td)
 	}
 }
 
-static enum fio_q_status
-fio_rados_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status fio_rados_queue(struct thread_data *td,
+					 struct io_u *io_u)
 {
 	struct rados_data *rados = td->io_ops_data;
 	struct fio_rados_iou *fri = io_u->engine_data;

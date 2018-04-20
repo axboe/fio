@@ -236,9 +236,9 @@ re_read:
 	return r;
 }
 
-static enum fio_q_status
-fio_sgio_ioctl_doio(struct thread_data *td, struct fio_file *f,
-		    struct io_u *io_u)
+static enum fio_q_status fio_sgio_ioctl_doio(struct thread_data *td,
+					     struct fio_file *f,
+					     struct io_u *io_u)
 {
 	struct sgio_data *sd = td->io_ops_data;
 	struct sg_io_hdr *hdr = &io_u->hdr;
@@ -378,8 +378,8 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-static enum fio_q_status
-fio_sgio_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status fio_sgio_queue(struct thread_data *td,
+					struct io_u *io_u)
 {
 	struct sg_io_hdr *hdr = &io_u->hdr;
 	int ret, do_sync = 0;

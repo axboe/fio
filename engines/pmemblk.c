@@ -342,8 +342,8 @@ static int fio_pmemblk_get_file_size(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
-static enum fio_q_status
-fio_pmemblk_queue(struct thread_data *td, struct io_u *io_u)
+static enum fio_q_status fio_pmemblk_queue(struct thread_data *td,
+					   struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	fio_pmemblk_file_t pmb = FILE_ENG_DATA(f);

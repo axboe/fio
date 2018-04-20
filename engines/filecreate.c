@@ -55,8 +55,8 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
-static enum fio_q_status
-queue_io(struct thread_data *td, struct io_u fio_unused *io_u)
+static enum fio_q_status queue_io(struct thread_data *td,
+				  struct io_u fio_unused *io_u)
 {
 	return FIO_Q_COMPLETED;
 }
