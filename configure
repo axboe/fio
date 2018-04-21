@@ -2218,10 +2218,10 @@ if test "$posix_pshared" = "yes" ; then
   output_sym "CONFIG_PSHARED"
 fi
 if test "$have_asprintf" = "yes" ; then
-    output_sym "HAVE_ASPRINTF"
+    output_sym "CONFIG_HAVE_ASPRINTF"
 fi
 if test "$have_vasprintf" = "yes" ; then
-    output_sym "HAVE_VASPRINTF"
+    output_sym "CONFIG_HAVE_VASPRINTF"
 fi
 if test "$linux_fallocate" = "yes" ; then
   output_sym "CONFIG_LINUX_FALLOCATE"
