@@ -169,7 +169,8 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 			events += r;
 		else if ((min && r == 0) || r == -EAGAIN) {
 			fio_libaio_commit(td);
-			usleep(100);
+			if (actual_min)
+				usleep(10);
 		} else if (r != -EINTR)
 			break;
 	} while (events < min);
