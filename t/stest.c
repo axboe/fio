@@ -18,7 +18,7 @@ struct elem {
 	unsigned int magic2;
 };
 
-FLIST_HEAD(list);
+static FLIST_HEAD(list);
 
 static int do_rand_allocs(void)
 {

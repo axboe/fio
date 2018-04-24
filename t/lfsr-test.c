@@ -7,7 +7,7 @@
 #include "../gettime.h"
 #include "../fio_time.h"
 
-void usage()
+static void usage(void)
 {
 	printf("Usage: lfsr-test 0x<numbers> [seed] [spin] [verify]\n");
 	printf("-------------------------------------------------------------\n");
