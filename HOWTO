@@ -2346,6 +2346,14 @@ I/O replay
 
 	Scale sector offsets down by this factor when replaying traces.
 
+.. option:: replay_skip=str
+
+	Sometimes it's useful to skip certain IO types in a replay trace.
+	This could be, for instance, eliminating the writes in the trace.
+	Or not replaying the trims/discards, if you are redirecting to
+	a device that doesn't support them. This option takes a comma
+	separated list of read, write, trim, sync.
+
 
 Threads, processes and job synchronization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

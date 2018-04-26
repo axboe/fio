@@ -2067,6 +2067,12 @@ value.
 Scale sector offsets down by this factor when replaying traces.
 .SS "Threads, processes and job synchronization"
 .TP
+.BI replay_skip \fR=\fPstr
+Sometimes it's useful to skip certain IO types in a replay trace. This could
+be, for instance, eliminating the writes in the trace. Or not replaying the
+trims/discards, if you are redirecting to a device that doesn't support them.
+This option takes a comma separated list of read, write, trim, sync.
+.TP
 .BI thread
 Fio defaults to creating jobs by using fork, however if this option is
 given, fio will create jobs by using POSIX Threads' function
