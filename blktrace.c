@@ -326,6 +326,25 @@ static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 	store_ipo(td, t->sector, t->bytes, rw, ttime, fileno, bs);
 }
 
+static void handle_trace_flush(struct thread_data *td, struct blk_io_trace *t,
+			       unsigned long long ttime)
+{
+	struct io_piece *ipo;
+	unsigned int bs;
+	int fileno;
+
+	ipo = calloc(1, sizeof(*ipo));
+	init_ipo(ipo);
+	fileno = trace_add_file(td, t->device, &bs);
+
+	ipo->delay = ttime / 1000;
+	ipo->ddir = DDIR_SYNC;
+	ipo->fileno = fileno;
+
+	dprint(FD_BLKTRACE, "store flush delay=%lu\n", ipo->delay);
+	queue_io_piece(td, ipo);
+}
+
 /*
  * We only care for queue traces, most of the others are side effects
  * due to internal workings of the block layer.
@@ -361,6 +380,8 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 		handle_trace_notify(t);
 	else if (t->action & BLK_TC_ACT(BLK_TC_DISCARD))
 		handle_trace_discard(td, t, delay, ios, bs);
+	else if (t->action & BLK_TC_ACT(BLK_TC_FLUSH))
+		handle_trace_flush(td, t, delay);
 	else
 		handle_trace_fs(td, t, delay, ios, bs);
 }
