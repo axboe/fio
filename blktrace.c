@@ -312,13 +312,9 @@ static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 
 	rw = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
 
-	/*
-	 * Need to figure out why 0 byte writes end up here sometimes, for
-	 * now just ignore them.
-	 */
-	if (!t->bytes)
-		return;
-	else if (t->bytes > rw_bs[rw])
+	assert(t->bytes);
+
+	if (t->bytes > rw_bs[rw])
 		rw_bs[rw] = t->bytes;
 
 	ios[rw]++;
