@@ -222,8 +222,9 @@ static void store_ipo(struct thread_data *td, unsigned long long offset,
 		      unsigned int bytes, int rw, unsigned long long ttime,
 		      int fileno, unsigned int bs)
 {
-	struct io_piece *ipo = malloc(sizeof(*ipo));
+	struct io_piece *ipo;
 
+	ipo = calloc(1, sizeof(*ipo));
 	init_ipo(ipo);
 
 	ipo->offset = offset * bs;
@@ -268,10 +269,11 @@ static void handle_trace_discard(struct thread_data *td,
 				 unsigned long long ttime,
 				 unsigned long *ios, unsigned int *rw_bs)
 {
-	struct io_piece *ipo = malloc(sizeof(*ipo));
+	struct io_piece *ipo;
 	unsigned int bs;
 	int fileno;
 
+	ipo = calloc(1, sizeof(*ipo));
 	init_ipo(ipo);
 	fileno = trace_add_file(td, t->device, &bs);
 

@@ -296,7 +296,7 @@ extern int iolog_cur_flush(struct io_log *, struct io_logs *);
 
 static inline void init_ipo(struct io_piece *ipo)
 {
-	memset(ipo, 0, sizeof(*ipo));
+	INIT_FLIST_HEAD(&ipo->list);
 	INIT_FLIST_HEAD(&ipo->trim_list);
 }
 

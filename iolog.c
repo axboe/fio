@@ -211,7 +211,7 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	struct fio_rb_node **p, *parent;
 	struct io_piece *ipo, *__ipo;
 
-	ipo = malloc(sizeof(struct io_piece));
+	ipo = calloc(1, sizeof(struct io_piece));
 	init_ipo(ipo);
 	ipo->file = io_u->file;
 	ipo->offset = io_u->offset;
@@ -440,7 +440,7 @@ static int read_iolog2(struct thread_data *td, FILE *f)
 		/*
 		 * Make note of file
 		 */
-		ipo = malloc(sizeof(*ipo));
+		ipo = calloc(1, sizeof(*ipo));
 		init_ipo(ipo);
 		ipo->ddir = rw;
 		if (rw == DDIR_WAIT) {
