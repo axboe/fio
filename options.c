@@ -342,6 +342,43 @@ static int ignore_error_type(struct thread_data *td, enum error_type_bit etype,
 
 }
 
+static int str_replay_skip_cb(void *data, const char *input)
+{
+	struct thread_data *td = cb_data_to_td(data);
+	char *str, *p, *n;
+	int ret = 0;
+
+	if (parse_dryrun())
+		return 0;
+
+	p = str = strdup(input);
+
+	strip_blank_front(&str);
+	strip_blank_end(str);
+
+	while (p) {
+		n = strchr(p, ',');
+		if (n)
+			*n++ = '\0';
+		if (!strcmp(p, "read"))
+			td->o.replay_skip |= 1u << DDIR_READ;
+		else if (!strcmp(p, "write"))
+			td->o.replay_skip |= 1u << DDIR_WRITE;
+		else if (!strcmp(p, "trim"))
+			td->o.replay_skip |= 1u << DDIR_TRIM;
+		else if (!strcmp(p, "sync"))
+			td->o.replay_skip |= 1u << DDIR_SYNC;
+		else {
+			log_err("Unknown skip type: %s\n", p);
+			ret = 1;
+			break;
+		}
+		p = n;
+	}
+	free(str);
+	return ret;
+}
+
 static int str_ignore_error_cb(void *data, const char *input)
 {
 	struct thread_data *td = cb_data_to_td(data);
@@ -3155,6 +3192,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent	= "read_iolog",
 		.hide	= 1,
 		.help	= "Scale time for replay events",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IOLOG,
+	},
+	{
+		.name	= "replay_skip",
+		.lname	= "Replay Skip",
+		.type	= FIO_OPT_STR,
+		.cb	= str_replay_skip_cb,
+		.off1	= offsetof(struct thread_options, replay_skip),
+		.parent	= "read_iolog",
+		.help	= "Skip certain IO types (read,write,trim,flush)",
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_IOLOG,
 	},

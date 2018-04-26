@@ -273,6 +273,9 @@ static void handle_trace_discard(struct thread_data *td,
 	unsigned int bs;
 	int fileno;
 
+	if (td->o.replay_skip & (1u << DDIR_TRIM))
+		return;
+
 	ipo = calloc(1, sizeof(*ipo));
 	init_ipo(ipo);
 	fileno = trace_add_file(td, t->device, &bs);
@@ -312,6 +315,14 @@ static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 
 	rw = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
 
+	if (rw) {
+		if (td->o.replay_skip & (1u << DDIR_WRITE))
+			return;
+	} else {
+		if (td->o.replay_skip & (1u << DDIR_READ))
+			return;
+	}
+
 	assert(t->bytes);
 
 	if (t->bytes > rw_bs[rw])
@@ -328,6 +339,9 @@ static void handle_trace_flush(struct thread_data *td, struct blk_io_trace *t,
 	struct io_piece *ipo;
 	unsigned int bs;
 	int fileno;
+
+	if (td->o.replay_skip & (1u << DDIR_SYNC))
+		return;
 
 	ipo = calloc(1, sizeof(*ipo));
 	init_ipo(ipo);
