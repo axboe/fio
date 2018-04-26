@@ -281,7 +281,6 @@ static void handle_trace_discard(struct thread_data *td,
 
 	td->o.size += t->bytes;
 
-	memset(ipo, 0, sizeof(*ipo));
 	INIT_FLIST_HEAD(&ipo->list);
 
 	ipo->offset = t->sector * bs;
