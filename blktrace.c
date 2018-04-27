@@ -334,7 +334,7 @@ static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 }
 
 static void handle_trace_flush(struct thread_data *td, struct blk_io_trace *t,
-			       unsigned long long ttime)
+			       unsigned long long ttime, unsigned long *ios)
 {
 	struct io_piece *ipo;
 	unsigned int bs;
@@ -351,6 +351,7 @@ static void handle_trace_flush(struct thread_data *td, struct blk_io_trace *t,
 	ipo->ddir = DDIR_SYNC;
 	ipo->fileno = fileno;
 
+	ios[DDIR_SYNC]++;
 	dprint(FD_BLKTRACE, "store flush delay=%lu\n", ipo->delay);
 	queue_io_piece(td, ipo);
 }
@@ -391,7 +392,7 @@ static void handle_trace(struct thread_data *td, struct blk_io_trace *t,
 	else if (t->action & BLK_TC_ACT(BLK_TC_DISCARD))
 		handle_trace_discard(td, t, delay, ios, bs);
 	else if (t->action & BLK_TC_ACT(BLK_TC_FLUSH))
-		handle_trace_flush(td, t, delay);
+		handle_trace_flush(td, t, delay, ios);
 	else
 		handle_trace_fs(td, t, delay, ios, bs);
 }
@@ -464,12 +465,14 @@ static void depth_end(struct blk_io_trace *t, int *this_depth, int *depth)
 int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 {
 	struct blk_io_trace t;
-	unsigned long ios[DDIR_RWDIR_CNT], skipped_writes;
-	unsigned int rw_bs[DDIR_RWDIR_CNT];
+	unsigned long ios[DDIR_RWDIR_SYNC_CNT] = { };
+	unsigned int rw_bs[DDIR_RWDIR_CNT] = { };
+	unsigned long skipped_writes;
 	struct fifo *fifo;
-	int fd, i, old_state;
+	int fd, i, old_state, max_depth;
 	struct fio_file *f;
-	int this_depth[DDIR_RWDIR_CNT], depth[DDIR_RWDIR_CNT], max_depth;
+	int this_depth[DDIR_RWDIR_CNT] = { };
+	int depth[DDIR_RWDIR_CNT] = { };
 
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
@@ -482,14 +485,6 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 	old_state = td_bump_runstate(td, TD_SETTING_UP);
 
 	td->o.size = 0;
-
-	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		ios[i] = 0;
-		rw_bs[i] = 0;
-		this_depth[i] = 0;
-		depth[i] = 0;
-	}
-
 	skipped_writes = 0;
 	do {
 		int ret = trace_fifo_get(td, fifo, fd, &t, sizeof(t));
@@ -572,7 +567,8 @@ int load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 		log_err("fio: %s skips replay of %lu writes due to read-only\n",
 						td->o.name, skipped_writes);
 
-	if (!ios[DDIR_READ] && !ios[DDIR_WRITE]) {
+	if (!ios[DDIR_READ] && !ios[DDIR_WRITE] && !ios[DDIR_TRIM] &&
+	    !ios[DDIR_SYNC]) {
 		log_err("fio: found no ios in blktrace data\n");
 		return 1;
 	} else if (ios[DDIR_READ] && !ios[DDIR_WRITE]) {
