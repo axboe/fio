@@ -1670,7 +1670,7 @@ static void *thread_main(void *data)
 	 * May alter parameters that init_io_u() will use, so we need to
 	 * do this first.
 	 */
-	if (init_iolog(td))
+	if (!init_iolog(td))
 		goto err;
 
 	if (init_io_u(td))

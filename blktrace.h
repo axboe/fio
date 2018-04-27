@@ -3,20 +3,20 @@
 
 #ifdef FIO_HAVE_BLKTRACE
 
-int is_blktrace(const char *, int *);
-int load_blktrace(struct thread_data *, const char *, int);
+bool is_blktrace(const char *, int *);
+bool load_blktrace(struct thread_data *, const char *, int);
 
 #else
 
-static inline int is_blktrace(const char *fname, int *need_swap)
+static inline bool is_blktrace(const char *fname, int *need_swap)
 {
-	return 0;
+	return false;
 }
 
-static inline int load_blktrace(struct thread_data *td, const char *fname,
-				int need_swap)
+static inline bool load_blktrace(struct thread_data *td, const char *fname,
+				 int need_swap)
 {
-	return 1;
+	return false;
 }
 
 #endif
