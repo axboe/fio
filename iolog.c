@@ -580,7 +580,7 @@ bool init_iolog(struct thread_data *td)
 	} else if (td->o.write_iolog_file)
 		ret = init_iolog_write(td);
 	else
-		ret = false;
+		ret = true;
 
 	if (!ret)
 		td_verror(td, EINVAL, "failed initializing iolog");
