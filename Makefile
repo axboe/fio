@@ -145,7 +145,7 @@ endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
-		oslib/linux-dev-lookup.c
+		oslib/linux-dev-lookup.c engines/sgunmap.c
   LIBS += -lpthread -ldl
   LDFLAGS += -rdynamic
 endif
