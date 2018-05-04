@@ -22,6 +22,9 @@
 
 # -- General configuration ------------------------------------------------
 
+from __future__ import absolute_import
+from __future__ import print_function
+
 # If your documentation needs a minimal Sphinx version, state it here.
 #
 # needs_sphinx = '1.0'

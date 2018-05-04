@@ -1,4 +1,5 @@
 #!/usr/bin/python2.7
+# Note: this script is python2 and python 3 compatible.
 #
 # steadystate_tests.py
 #
@@ -18,6 +19,8 @@
 # if ss attained: min runtime = ss_dur + ss_ramp
 # if not attained: runtime = timeout
 
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 import json
@@ -26,11 +29,12 @@ import pprint
 import argparse
 import subprocess
 from scipy import stats
+from six.moves import range
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('fio',
-                        help='path to fio executable');
+                        help='path to fio executable')
     parser.add_argument('--read',
                         help='target for read testing')
     parser.add_argument('--write',
@@ -45,7 +49,7 @@ def check(data, iops, slope, pct, limit, dur, criterion):
     data = data[measurement]
     mean = sum(data) / len(data)
     if slope:
-        x = range(len(data))
+        x = list(range(len(data)))
         m, intercept, r_value, p_value, std_err = stats.linregress(x,data)
         m = abs(m)
         if pct:
@@ -89,11 +93,11 @@ if __name__ == '__main__':
                   'output': "set steady state BW threshold to 12" },
               ]
     for test in parsing:
-        output = subprocess.check_output([args.fio] + test['args']);
-        if test['output'] in output:
-            print "PASSED '{0}' found with arguments {1}".format(test['output'], test['args'])
+        output = subprocess.check_output([args.fio] + test['args'])
+        if test['output'] in output.decode():
+            print("PASSED '{0}' found with arguments {1}".format(test['output'], test['args']))
         else:
-            print "FAILED '{0}' NOT found with arguments {1}".format(test['output'], test['args'])
+            print("FAILED '{0}' NOT found with arguments {1}".format(test['output'], test['args']))
 
 #
 # test some read workloads
@@ -117,7 +121,7 @@ if __name__ == '__main__':
             args.read = '/dev/zero'
             extra = [ "--size=134217728" ]  # 128 MiB
         else:
-            print "ERROR: file for read testing must be specified on non-posix systems"
+            print("ERROR: file for read testing must be specified on non-posix systems")
             sys.exit(1)
     else:
         extra = []
@@ -216,7 +220,7 @@ if __name__ == '__main__':
                 else:
                     result = 'FAILED '
                 line = result + line + ' no ss, expected runtime {0} ~= actual runtime {1}'.format(expected, actual)
-            print line
+            print(line)
             if 'steadystate' in jsonjob:
                 pp.pprint(jsonjob['steadystate'])
         jobnum += 1
