@@ -574,6 +574,7 @@ int td_io_get_file_size(struct thread_data *td, struct fio_file *f)
 int fio_show_ioengine_help(const char *engine)
 {
 	struct flist_head *entry;
+	struct thread_data td;
 	struct ioengine_ops *io_ops;
 	char *sep;
 	int ret = 1;
@@ -592,7 +593,10 @@ int fio_show_ioengine_help(const char *engine)
 		sep++;
 	}
 
-	io_ops = __load_ioengine(engine);
+	memset(&td, 0, sizeof(struct thread_data));
+	td.o.ioengine = (char *)engine;
+	io_ops = load_ioengine(&td);
+
 	if (!io_ops) {
 		log_info("IO engine %s not found\n", engine);
 		return 1;
@@ -603,5 +607,6 @@ int fio_show_ioengine_help(const char *engine)
 	else
 		log_info("IO engine %s has no options\n", io_ops->name);
 
+	free_ioengine(&td);
 	return ret;
 }
