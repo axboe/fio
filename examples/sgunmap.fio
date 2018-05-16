@@ -1,0 +1,27 @@
+#
+# Note: change filename=/dev/sdX to 
+# a device with no useful data
+#
+
+[global]
+ioengine=sgunmap
+bs=4k
+rw=randtrim
+norandommap=1
+randrepeat=0
+group_reporting=1
+time_based=1
+runtime=5
+filename=/dev/sdX
+
+[one-thread]
+numjobs=1
+iodepth=32
+iodepth_batch_submit=32
+
+[32-threads]
+numjobs=32
+iodepth=1
+iodepth_batch_submit=1
+stonewall
+

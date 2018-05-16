@@ -1749,6 +1749,18 @@ I/O engine
 			character devices.
 			The sg engine includes engine specific options.
 
+		**sgunmap**
+			Send UNMAP commands via SCSI generic sg v3 I/O.  This ioengine
+			provides a way to send multiple trim operations with a single
+			system call using the SG_IO ioctl.  Use :option:`iodepth_batch_submit' to
+			control how many operations are submitted each time.  This ioengine
+			masquerades as an asynchronous ioengine when the SG_IO ioctl
+			actually carries out synchronous IO.  This changes the interpretation
+			of the latencies measured by fio.  With **sgunmap**, **slat**
+			measures the time between an io_u's creation and ioctl completion.
+			**clat** measures the very short time between ioctl completion and
+			when fio reaps the completion.
+
 		**null**
 			Doesn't transfer any data, just pretends to.  This is mainly used to
 			exercise fio itself and for debugging/testing purposes.

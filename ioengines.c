@@ -350,7 +350,9 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 			 "invalid block size. Try setting direct=0.\n");
 	}
 
-	if (!td->io_ops->commit || io_u->ddir == DDIR_TRIM) {
+	if (!td->io_ops->commit ||
+	    (io_u->ddir == DDIR_TRIM && 
+	     !td_ioengine_flagged(td, FIO_ASYNCTRIM))) {
 		io_u_mark_submit(td, 1);
 		io_u_mark_complete(td, 1);
 	}
