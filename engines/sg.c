@@ -15,11 +15,17 @@
 
 #ifdef FIO_HAVE_SGIO
 
+enum {
+	FIO_SG_WRITE		= 1,
+	FIO_SG_WRITE_VERIFY	= 2,
+	FIO_SG_WRITE_SAME	= 3
+};
 
 struct sg_options {
 	void *pad;
 	unsigned int readfua;
 	unsigned int writefua;
+	unsigned int write_mode;
 };
 
 static struct fio_option options[] = {
@@ -40,6 +46,30 @@ static struct fio_option options[] = {
 		.off1	= offsetof(struct sg_options, writefua),
 		.help	= "Set FUA flag (force unit access) for all Write operations",
 		.def	= "0",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_SG,
+	},
+	{
+		.name	= "sg_write_mode",
+		.lname	= "specify sg write mode",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct sg_options, write_mode),
+		.help	= "Specify SCSI WRITE mode",
+		.def	= "write",
+		.posval = {
+			  { .ival = "write",
+			    .oval = FIO_SG_WRITE,
+			    .help = "Issue standard SCSI WRITE commands",
+			  },
+			  { .ival = "verify",
+			    .oval = FIO_SG_WRITE_VERIFY,
+			    .help = "Issue SCSI WRITE AND VERIFY commands",
+			  },
+			  { .ival = "same",
+			    .oval = FIO_SG_WRITE_SAME,
+			    .help = "Issue SCSI WRITE SAME commands",
+			  },
+		},
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_SG,
 	},
@@ -329,14 +359,30 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 		sgio_hdr_init(sd, hdr, io_u, 1);
 
 		hdr->dxfer_direction = SG_DXFER_TO_DEV;
-		if (lba < MAX_10B_LBA)
-			hdr->cmdp[0] = 0x2a; // write(10)
-		else
-			hdr->cmdp[0] = 0x8a; // write(16)
-
-		if (o->writefua)
-			hdr->cmdp[1] |= 0x08;
-
+		switch(o->write_mode) {
+		case FIO_SG_WRITE:
+			if (lba < MAX_10B_LBA)
+				hdr->cmdp[0] = 0x2a; // write(10)
+			else
+				hdr->cmdp[0] = 0x8a; // write(16)
+			if (o->writefua)
+				hdr->cmdp[1] |= 0x08;
+			break;
+		case FIO_SG_WRITE_VERIFY:
+			if (lba < MAX_10B_LBA)
+				hdr->cmdp[0] = 0x2e; // write and verify(10)
+			else
+				hdr->cmdp[0] = 0x8e; // write and verify(16)
+			break;
+			// BYTCHK is disabled by virtue of the memset in sgio_hdr_init
+		case FIO_SG_WRITE_SAME:
+			hdr->dxfer_len = sd->bs;
+			if (lba < MAX_10B_LBA)
+				hdr->cmdp[0] = 0x41; // write same(10)
+			else
+				hdr->cmdp[0] = 0x93; // write same(16)
+			break;
+		};
 	} else {
 		sgio_hdr_init(sd, hdr, io_u, 0);
 		hdr->dxfer_direction = SG_DXFER_NONE;
