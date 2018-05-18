@@ -2079,6 +2079,26 @@ with the caveat that when used on the command line, they must come after the
 	With writefua option set to 1, write operations include
 	the force unit access (fua) flag. Default is 0.
 
+.. option:: sg_write_mode=str : [sg]
+	Specify the type of write commands to issue. This option can take three values:
+
+	**write**
+		This is the default where write opcodes are issued as usual.
+	**verify**
+		Issue WRITE AND VERIFY commands. The BYTCHK bit is set to 0. This
+		directs the device to carry out a medium verification with no data
+		comparison. The writefua option is ignored with this selection.
+	**same**
+		Issue WRITE SAME commands. This transfers a single block to the device
+		and writes this same block of data to a contiguous sequence of LBAs
+		beginning at the specified offset. fio's block size parameter specifies
+		the amount of data written with each command. However, the amount of data
+		actually transferred to the device is equal to the device's block
+		(sector) size. For a device with 512 byte sectors, blocksize=8k will
+		write 16 sectors with each command. fio will still generate 8k of data
+		for each command but only the first 512 bytes will be used and
+		transferred to the device. The writefua option is ignored with this
+		selection.
 
 I/O depth
 ~~~~~~~~~
