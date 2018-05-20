@@ -34,6 +34,8 @@ struct rados_options {
 	char *pool_name;
 	char *client_name;
 	int busy_poll;
+	int cleanup;
+	int reuse;
 };
 
 static struct fio_option options[] = {
@@ -74,6 +76,26 @@ static struct fio_option options[] = {
 		.category = FIO_OPT_C_ENGINE,
 		.group    = FIO_OPT_G_RBD,
 	},
+        {
+                .name     = "cleanup",
+                .lname    = "cleanup after finishing",
+                .type     = FIO_OPT_BOOL,
+                .help     = "remove the object created by fio automaticly",
+                .off1     = offsetof(struct rados_options, cleanup),
+                .def      = "1",
+                .category = FIO_OPT_C_ENGINE,
+                .group    = FIO_OPT_G_RBD,
+        },
+        {
+                .name     = "reuse",
+                .lname    = "reuse group",
+                .type     = FIO_OPT_INT,
+                .help     = "reuse a group of object",
+                .off1     = offsetof(struct rados_options, reuse),
+                .def      = "-1",
+                .category = FIO_OPT_C_ENGINE,
+                .group    = FIO_OPT_G_RBD,
+        },
 	{
 		.name     = NULL,
 	},
@@ -196,10 +218,18 @@ static int _fio_rados_connect(struct thread_data *td)
 		oname_len = strlen(f->file_name) + 32;
 		rados->objects[i] = malloc(oname_len);
 		/* vary objects for different jobs */
-		snprintf(rados->objects[i], oname_len - 1,
-			"fio_rados_bench.%s.%x",
-			f->file_name, td->thread_number);
-		r = rados_write(rados->io_ctx, rados->objects[i], "", 0, 0);
+		if (o->reuse == -1) {
+			snprintf(rados->objects[i], oname_len - 1,
+				"fio_rados_bench.%s.%x",
+				f->file_name, td->thread_number);
+			r = rados_write(rados->io_ctx, rados->objects[i],
+					"", 0, 0);
+		}
+		else {
+			snprintf(rados->objects[i], oname_len - 1,
+				"fio_rados_bench.reuse.%x.%x",
+				o->reuse, i);
+		}
 		if (r < 0) {
 			free(rados->objects[i]);
 			rados->objects[i] = NULL;
@@ -221,12 +251,13 @@ failed_early:
 	return 1;
 }
 
-static void _fio_rados_disconnect(struct rados_data *rados)
+static void _fio_rados_disconnect(struct rados_data *rados, int cleanup)
 {
 	if (!rados)
 		return;
 
-	_fio_rados_rm_objects(rados);
+	if (cleanup)
+		_fio_rados_rm_objects(rados);
 
 	if (rados->io_ctx) {
 		rados_ioctx_destroy(rados->io_ctx);
@@ -242,9 +273,10 @@ static void _fio_rados_disconnect(struct rados_data *rados)
 static void fio_rados_cleanup(struct thread_data *td)
 {
 	struct rados_data *rados = td->io_ops_data;
+	struct rados_options *o = td->eo;
 
 	if (rados) {
-		_fio_rados_disconnect(rados);
+		_fio_rados_disconnect(rados, o->cleanup);
 		free(rados->objects);
 		free(rados->aio_events);
 		free(rados);
