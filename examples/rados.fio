@@ -15,10 +15,27 @@ ioengine=rados
 clientname=admin
 pool=rados
 busy_poll=0
-rw=randwrite
-bs=4k
 
 [rbd_iodepth32]
 iodepth=32
 size=128m
-nr_files=32
+nr_files=128
+rw=randwrite
+# whether cleanup the pool or not
+cleanup=0
+# reuse the object with namespace
+reuse=1
+bs=1M
+io_size=1G
+stonewall
+
+[rbd_iodepth64]
+iodepth=64
+size=128m
+nr_files=128
+rw=randread
+cleanup=1
+reuse=1
+bs=4k
+io_size=10M
+stonewall
