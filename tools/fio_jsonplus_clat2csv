@@ -1,4 +1,5 @@
 #!/usr/bin/python2.7
+# Note: this script is python2 and python3 compatible.
 #
 # fio_jsonplus_clat2csv
 #
@@ -60,9 +61,13 @@
 # 10304ns is the 100th percentile for read latency
 #
 
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import json
 import argparse
+import six
+from six.moves import range
 
 
 def parse_args():
@@ -87,7 +92,7 @@ def percentile(idx, run_total):
 
 
 def more_lines(indices, bins):
-    for key, value in indices.iteritems():
+    for key, value in six.iteritems(indices):
         if value < len(bins[key]):
             return True
 
@@ -116,8 +121,8 @@ def main():
                                    "Are you sure you are using json+ output?")
 
             bins[ddir] = [[int(key), value] for key, value in
-                          jsondata['jobs'][jobnum][ddir][bins_loc]
-                          ['bins'].iteritems()]
+                          six.iteritems(jsondata['jobs'][jobnum][ddir][bins_loc]
+                          ['bins'])]
             bins[ddir] = sorted(bins[ddir], key=lambda bin: bin[0])
 
             run_total[ddir] = [0 for x in range(0, len(bins[ddir]))]
@@ -165,7 +170,7 @@ def main():
                         output.write(", , , ")
                 output.write("\n")
 
-            print "{0} generated".format(outfile)
+            print("{0} generated".format(outfile))
 
 
 if __name__ == '__main__':
