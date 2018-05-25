@@ -1429,7 +1429,7 @@ Block size
 	If you want a workload that has 50% 2k reads and 50% 4k reads, while
 	having 90% 4k writes and 10% 8k writes, you would specify::
 
-		bssplit=2k/50:4k/50,4k/90,8k/10
+		bssplit=2k/50:4k/50,4k/90:8k/10
 
 	Fio supports defining up to 64 different weights for each data
 	direction.
