@@ -325,9 +325,9 @@ static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 	if (td->o.time_based ||
 	    (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)) {
 		fio_file_reset(td, f);
+		loop_cache_invalidate(td, f);
 		if (!get_next_rand_offset(td, f, ddir, b))
 			return 0;
-		loop_cache_invalidate(td, f);
 	}
 
 	dprint(FD_IO, "%s: rand offset failed, last=%llu, size=%llu\n",
