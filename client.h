@@ -77,6 +77,7 @@ struct fio_client {
 };
 
 typedef void (client_cmd_op)(struct fio_client *, struct fio_net_cmd *);
+typedef void (client_op)(struct fio_client *);
 typedef void (client_eta_op)(struct jobs_eta *je);
 typedef void (client_timed_out_op)(struct fio_client *);
 typedef void (client_jobs_eta_op)(struct fio_client *client, struct jobs_eta *je);
@@ -95,7 +96,7 @@ struct client_ops {
 	client_cmd_op		*add_job;
 	client_cmd_op		*update_job;
 	client_timed_out_op	*timed_out;
-	client_cmd_op		*stop;
+	client_op		*stop;
 	client_cmd_op		*start;
 	client_cmd_op		*job_start;
 	client_timed_out_op	*removed;

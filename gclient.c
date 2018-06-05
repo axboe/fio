@@ -641,7 +641,7 @@ static void gfio_client_timed_out(struct fio_client *client)
 	gdk_threads_leave();
 }
 
-static void gfio_client_stop(struct fio_client *client, struct fio_net_cmd *cmd)
+static void gfio_client_stop(struct fio_client *client)
 {
 	struct gfio_client *gc = client->client_data;
 
