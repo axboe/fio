@@ -17,7 +17,7 @@ static inline void cpuid(unsigned int op,
 extern bool tsc_reliable;
 extern int arch_random;
 
-static inline void arch_init_intel(unsigned int level)
+static inline void arch_init_intel(void)
 {
 	unsigned int eax, ebx, ecx = 0, edx;
 
@@ -44,7 +44,7 @@ static inline void arch_init_intel(unsigned int level)
 	arch_random = (ecx & (1U << 30)) != 0;
 }
 
-static inline void arch_init_amd(unsigned int level)
+static inline void arch_init_amd(void)
 {
 	unsigned int eax, ebx, ecx, edx;
 
@@ -69,9 +69,9 @@ static inline void arch_init(char *envp[])
 
 	str[12] = '\0';
 	if (!strcmp(str, "GenuineIntel"))
-		arch_init_intel(level);
+		arch_init_intel();
 	else if (!strcmp(str, "AuthenticAMD"))
-		arch_init_amd(level);
+		arch_init_amd();
 }
 
 #endif
