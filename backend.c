@@ -1529,7 +1529,7 @@ static void *thread_main(void *data)
 	} else
 		td->pid = gettid();
 
-	fio_local_clock_init(o->use_thread);
+	fio_local_clock_init();
 
 	dprint(FD_PROCESS, "jobs pid=%d started\n", (int) td->pid);
 

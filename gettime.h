@@ -20,7 +20,7 @@ extern void fio_gtod_init(void);
 extern void fio_clock_init(void);
 extern int fio_start_gtod_thread(void);
 extern int fio_monotonic_clocktest(int debug);
-extern void fio_local_clock_init(int);
+extern void fio_local_clock_init(void);
 
 extern struct timespec *fio_ts;
 

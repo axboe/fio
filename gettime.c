@@ -373,7 +373,7 @@ static int calibrate_cpu_clock(void)
 #endif // ARCH_HAVE_CPU_CLOCK
 
 #ifndef CONFIG_TLS_THREAD
-void fio_local_clock_init(int is_thread)
+void fio_local_clock_init(void)
 {
 	struct tv_valid *t;
 
@@ -389,7 +389,7 @@ static void kill_tv_tls_key(void *data)
 	free(data);
 }
 #else
-void fio_local_clock_init(int is_thread)
+void fio_local_clock_init(void)
 {
 }
 #endif
