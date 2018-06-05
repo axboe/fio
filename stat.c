@@ -1940,13 +1940,6 @@ void __show_run_stats(void)
 	free(opt_lists);
 }
 
-void show_run_stats(void)
-{
-	fio_sem_down(stat_sem);
-	__show_run_stats();
-	fio_sem_up(stat_sem);
-}
-
 void __show_running_run_stats(void)
 {
 	struct thread_data *td;
