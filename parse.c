@@ -69,7 +69,7 @@ static void posval_sort(const struct fio_option *o, struct value_pair *vpmap)
 }
 
 static void show_option_range(const struct fio_option *o,
-			      size_t (*logger)(const char *format, ...))
+			      ssize_t (*logger)(const char *format, ...))
 {
 	if (o->type == FIO_OPT_FLOAT_LIST) {
 		const char *sep = "";
@@ -132,7 +132,7 @@ static void show_option_help(const struct fio_option *o, int is_err)
 		"deprecated",
 		"unsupported",
 	};
-	size_t (*logger)(const char *format, ...);
+	ssize_t (*logger)(const char *format, ...);
 
 	if (is_err)
 		logger = log_err;

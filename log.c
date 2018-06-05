@@ -15,7 +15,7 @@ size_t log_info_buf(const char *buf, size_t len)
 		return 0;
 
 	if (is_backend) {
-		size_t ret = fio_server_text_output(FIO_LOG_INFO, buf, len);
+		ssize_t ret = fio_server_text_output(FIO_LOG_INFO, buf, len);
 		if (ret != -1)
 			return ret;
 	}
@@ -65,10 +65,10 @@ void log_prevalist(int type, const char *fmt, va_list args)
 	free(buf2);
 }
 
-size_t log_info(const char *format, ...)
+ssize_t log_info(const char *format, ...)
 {
 	va_list args;
-	size_t ret;
+	ssize_t ret;
 
 	va_start(args, format);
 	ret = log_valist(format, args);
@@ -102,9 +102,9 @@ int log_info_flush(void)
 	return fflush(f_out);
 }
 
-size_t log_err(const char *format, ...)
+ssize_t log_err(const char *format, ...)
 {
-	size_t ret;
+	ssize_t ret;
 	int len;
 	char *buffer;
 	va_list args;

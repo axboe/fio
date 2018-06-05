@@ -9,8 +9,8 @@
 extern FILE *f_out;
 extern FILE *f_err;
 
-extern size_t log_err(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
-extern size_t log_info(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
+extern ssize_t log_err(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
+extern ssize_t log_info(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
 extern size_t __log_buf(struct buf_output *, const char *format, ...) __attribute__ ((__format__ (__printf__, 2, 3)));
 extern size_t log_valist(const char *str, va_list);
 extern void log_prevalist(int type, const char *str, va_list);
